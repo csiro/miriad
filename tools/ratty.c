@@ -11,11 +11,11 @@ Usage:
 
  ratty [-s system] [-I incdir] [-D symbol] [-bglu [-n start inc] [in] [out]
 
-    system:  One of "f77" (generic unix compiler), "cft" (Cray FORTRAN
-             compiler), "vms" (VMS FORTRAN), "fx" (alliant unix
+    system:  One of "f77" (generic unix compiler), "unicos" (Cray FORTRAN
+             compiler), "vms" (VMS FORTRAN), "alliant" (alliant unix
              compiler), "convex" (convex unix compiler) or "sun"
              (sun unix compiler), "f2c" (NETLIBs f2c compiler),
-             "hpux", "alpha" or "sgi"
+             "hpux", "alpha" or "sgi", "linux"
 
     incdir:  Directory to search for include files.  The -I option may
              be used repeatedly, but must list only one directory for
@@ -61,16 +61,16 @@ ANSI-FORTRAN if the host machine does not support this extension.
 whatever the specified compiler supports.
 
 Certain directives are recognized if the target machine has
-vector processing capacities (compilers "cft", "fx" and "convex"):
+vector processing capacities (compilers "unicos", "alliant" and "convex"):
 
     #maxloop, followed by a number, is converted to "cdir$ shortloop"
-    on "cft" and to "cvd$  shortloop" on "fx".
+    on "unicos" and to "cvd$  shortloop" on "alliant".
 
-    #ivdep is converted to "cdir$ ivdep" on "cft", to "cvd$  nodepchk"
-    on "fx", and to "c$dir no_recurrence" on"convex".
+    #ivdep is converted to "cdir$ ivdep" on "unicos", to "cvd$  nodepchk"
+    on "alliant", and to "c$dir no_recurrence" on "convex".
 
-    #nooptimize is converted to "cdir$ nextscalar" on "cft" and to
-    "cvd$ noconcur" followed by "cvd$ novector" on "fx".
+    #nooptimize is converted to "cdir$ nextscalar" on "unicos" and to
+    "cvd$ noconcur" followed by "cvd$ novector" on "alliant".
 */
 /*-- */
 /************************************************************************/
@@ -142,23 +142,29 @@ int fclose(),fputc();
 struct system {char *name;int doloop,prog,vector,bslash;} systems[] = {
 	{ "unknown", FALSE, FALSE, FALSE, 0 },
 	{ "f77",     FALSE, FALSE, FALSE, 0 },
-	{ "cft",     FALSE, TRUE,  TRUE, -1 },
+	{ "f2c",     TRUE,  FALSE, FALSE, 1 },
+	{ "unicos",  FALSE, TRUE,  TRUE, -1 },
 	{ "vms",     TRUE,  FALSE, FALSE,-1 },
-	{ "fx",      TRUE,  FALSE, TRUE,  0 },
+	{ "alliant", TRUE,  FALSE, TRUE,  0 },
 	{ "convex",  TRUE,  FALSE, TRUE, -1 },
         { "trace",   TRUE,  FALSE, FALSE, 0 },
 	{ "sun",     TRUE,  FALSE, FALSE, 1 },
 	{ "sgi",     TRUE,  FALSE, FALSE, 0 },
-	{ "f2c",     TRUE,  FALSE, FALSE, 1 },
+	{ "linux",   TRUE,  FALSE, FALSE, 1 },
+	{ "hpux",    FALSE, FALSE, FALSE, 0 },
 	{ "alpha",   TRUE,  FALSE, FALSE, 1 }};
 #define SYS_F77    1
-#define SYS_CFT    2
-#define SYS_VMS    3
-#define SYS_FX     4
-#define SYS_CONVEX 5
-#define SYS_TRACE  6
-#define SYS_SUN    7
-#define SYS_F2C    8
+#define SYS_F2C    2
+#define SYS_CFT    3
+#define SYS_VMS    4
+#define SYS_FX     5
+#define SYS_CONVEX 6
+#define SYS_TRACE  7
+#define SYS_SUN    8
+#define SYS_SGI    9
+#define SYS_LINUX 10
+#define SYS_HPUX  11
+#define SYS_ALPHA 12
 #define NSYS (sizeof(systems)/sizeof(struct system))
 
 #define LOWER 90000	/* Ratty uses statement labels above this number. */
