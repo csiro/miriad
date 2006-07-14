@@ -32,11 +32,12 @@
 /*    rjs  01jan05   Changes to handle 64-bit offsets.			*/
 /*    rjs  18sep05   Changes to handle FORTRAN and C ints differing.	*/
 /*    rjs  26nov05   Changes to handle FORTRAN and C logicals differing.*/
+/*    mrc  14jul06   Compile with 'gcc -Wall' without warnings.         */
 /************************************************************************/
-#include <strings.h>
-#include <sys/types.h>
-#include <unistd.h>
 #include <limits.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/types.h>
 #include "miriad.h"
 #include "sysdep.h"
 

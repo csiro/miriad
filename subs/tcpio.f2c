@@ -9,18 +9,20 @@
 /*  rjs  23dec92   Rewrite in f2c format, mere all versions.		*/
 /*  mjs  21sep93   #define bcopy -> memcpy, bzero -> memset on sun.	*/
 /*  rjs  18sep05   Small change to stop lint whinges.			*/
+/*  mrc  14jul06   Get it to compile with 'gcc -Wall' without warnings. */
 /*									*/
 /************************************************************************/
 
-#include <stddef.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
 #include <ctype.h>
 #include <errno.h>
+#include <netdb.h>
+#include <stddef.h>
+#include <strings.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 
 #ifdef sun
 #define bcopy(a,b,c) memcpy((b),(a),(size_t)(c))
