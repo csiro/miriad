@@ -39,7 +39,7 @@
 /*-- 									*/
 
 
-#define VERSION_ID "version 1.0 11-Sep-92"
+#define VERSION_ID "version 1.0 11-Dec-95"
 
 /************************************************************************/
 /*  COMPILE DEFINE OPTIONS:                                             */
@@ -268,11 +268,15 @@ void motd()
   Give the message of the day.
 ------------------------------------------------------------------------*/
 {
-  char path[MAXBUF];
-  static char *command[] = { "help", "motd" };
+  char path[MAXBUF],line[MAXBUF];
+  FILE *f;
 
   filename(path,"MIRPDOC","motd",".doc");
-  if(!access(path,R_OK))dohelp(2,command);
+  f = fopen(path,"r");
+  if(f != NULL){
+    while(fgets(line,MAXBUF,f) != NULL)fputs(line,stdout);
+    fclose(f);
+  }
 }
 /************************************************************************/
 int getline(argv)
