@@ -34,7 +34,7 @@
 
   Type
     help tasks
-  for more information about Miriad tasks.
+  for more information about Miriad tasks.				*/
 
 /*-- 									*/
 
@@ -117,6 +117,7 @@
 /*		     missing.						*/
 /*    rjs   1dec93   go command can redirect standard output.		*/
 /*    rjs   4oct94   All machines shed csh with -cf.			*/
+/*    rjs  16feb95   New er command handling.				*/
 /*									*/
 /*    ToDo anyhow:                                                      */
 /*      check earlier if lastexit can be written, otherwise complain    */
@@ -172,6 +173,7 @@ int echo;
 int Qkeys = 0;      /* 0: keys were not updated     1: were */
 int input_level = 0;	     /* nesting level of INPUT command */
 FILE *fpinput[MAXINPUT];
+int   dopopen[MAXINPUT];
 
 /* forward references to make (ansi) compilers happy */
 
@@ -181,13 +183,13 @@ void dosetenv(),dounsetenv();
 #endif
 void get_vars(),save_vars(),doset(),dounset(),doinp(),dogo(),dohelp(),doq(),
      dotask(), dot(), dosource(), doer(), docd(), doload(), dosave(),
-     docommand(), doview(), dotput(), dotget(),motd();
+     docommand(), doview(), dotput(), dotget(),motd(),newenv();
 void filename(), bug();
 int  getline(),task_args();
 #if defined(INTERRUPT)
 void review();
-char *expand(),*translate();
 #endif
+char *xpand(),*tlate();
 
 #ifdef vms
 #include <errno.h>
@@ -249,7 +251,8 @@ char *av[];
 
     if(input_level>0 && more==0) {  /* if exit from input file */
         input_level--;                /* decrease stack of input filesx */
-        fclose(fpinput[input_level]); /* close that file */
+	if(dopopen[input_level]) pclose(fpinput[input_level]);
+	else			 fclose(fpinput[input_level]);
         more=1;                     /* and keep on trucking */
     }
   } /* while */
@@ -283,7 +286,6 @@ char *argv[];
   int n,inter,doset,i,l;
   char prompt[MAXBUF],buffer2[MAXBUF];
   char *s;
-  char *expand(),*translate();
 #ifdef READLINE
   char *readline();
 #endif
@@ -312,13 +314,14 @@ char *argv[];
 
   } else if(fgets(buffer2,MAXBUF-1,fpinput[input_level-1])==NULL) {
     input_level--;
-    fclose(fpinput[input_level]);
+    if(dopopen[input_level])pclose(fpinput[input_level]);
+    else		    fclose(fpinput[input_level]);
     buffer2[0] = 0;
   }
 
 /* Expand anything starting with a $ character. */
 
-  s = expand(buffer,buffer2);
+  s = xpand(buffer,buffer2);
   if(s == NULL)buffer[0] = 0;
   else	       *s = 0;
 
@@ -356,7 +359,7 @@ char *argv[];
   return(n);
 }
 /************************************************************************/
-char *expand(s,t)
+char *xpand(s,t)
 char *s,*t;
 /*
   Expand any $ characters into the equivalent text or environment variables.
@@ -370,14 +373,14 @@ char *s,*t;
       u = var;
       while( isalnum(*t) || *t == '_' ) *u++ = *t++;
       *u = 0;
-      u = translate(var);
-      s = (u == NULL ? NULL : expand(s,u));
+      u = tlate(var);
+      s = (u == NULL ? NULL : xpand(s,u));
     } else *s++ = *t++;
   }
   return(s);
 }
 /************************************************************************/
-char *translate(var)
+char *tlate(var)
 char *var;
 /*
   Return the value of a symbol or environment variable.
@@ -523,10 +526,10 @@ char *argv[];
   A quick edit of various keywords.
 ------------------------------------------------------------------------*/
 {
-  char *t,outpath[MAXBUF],inpath[MAXBUF];
-  int hashval,pid;
-  VARIABLE *v;
-  FILE *fd;
+  char line[MAXBUF];
+  int hashval;
+  char *t;
+  VARIABLE *v;  
 
 /* Check the arguments. */
 
@@ -555,25 +558,10 @@ char *argv[];
 
 /* Write the variable to the line-editors file. */
 
-  filename(inpath,"HOME","cle_in","");
-  filename(outpath,"HOME","cle_out","");
-  fd = fopen(inpath,"w");
-  if(fd == NULL){
-    fprintf(stderr,"### Could not write the needed file as %s\n",inpath);
-    return;
-  }
-  fprintf(fd,"     1 %s=%s\n",v->name,v->value);
-  fclose(fd);
-
-/* Spawn the line editor. */
-
-  system("cle_exe");
-
-/* Retrieve the variable. */
-
-  get_vars(outpath);  
-  unlink(inpath);
-  unlink(outpath);
+  sprintf(line,"ercmd \"%s=%s\"",v->name,v->value);
+  fpinput[input_level] = popen(line,"r");
+  dopopen[input_level] = TRUE;
+  input_level++;
 }
 #endif
 /************************************************************************/
@@ -617,6 +605,7 @@ char *argv[];
 	return;
   }
   fpinput[input_level] = fopen(argv[1],"r");
+  dopopen[input_level] = FALSE;
   if (fpinput[input_level] == NULL) {
     fprintf(stderr,"## File %s not found\n",argv[1]);
     return;
@@ -1260,7 +1249,7 @@ char *message;
 }
 #ifndef vms
 /************************************************************************/
-newenv(var,value)
+void newenv(var,value)
 char *var, *value;
 {
     char **ep, **newep, **epfrom, **epto, *cp;
@@ -1340,4 +1329,3 @@ void review()
        "Miriad shell cannot be interrupted, type 'help miriad' for info\n");
 }
 #endif
-
