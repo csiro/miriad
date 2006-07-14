@@ -29,6 +29,7 @@
 /*		     casting int to char*.				*/
 /*    rjs  27feb96   Added xyflush.					*/
 /************************************************************************/
+#include <string.h>
 #include "io.h"
 
 void rdhdd_c(),                    rdhda_c(),rdhdc_c();
