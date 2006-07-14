@@ -14,6 +14,7 @@
       -O    Specify an output directory for the files.
       -f    Pipe the output to standard output, rather than creating
             output files.
+      -x    Ignore "exclude" command.
       -?    Give a brief usage message.
 									*/
 /*-									*/
@@ -22,9 +23,10 @@
     Long ago rjs  Original version.
     02mar90  bpw  Full rewrite with extended functionality.
     19nov98  rjs  Full rewrite.
+    21jul99  rjs  Improved indenting algorithm somewhat. Added X command.
 ************************************************************************/
 
-#define VERSION "Doc: version 1.0 19-Nov-98"
+#define VERSION "Doc: version 1.0 21-Jul-99"
 #define private static
 #include <stdio.h>
 #include <strings.h>
@@ -44,11 +46,12 @@ int argc;
 char *argv[];
 {
   char *infile,*c1,*c2,*outfile,*s,*outdir;
-  int i,nin,redir;
+  int i,nin,redir,doex;
   FILE *infd,*outfd;
 
 /* Process the command line. */
 
+  doex = 1;
   redir = 0;
   outdir  = NULL;
   outfile = NULL;
@@ -63,6 +66,7 @@ char *argv[];
       while(*++s)switch(*s){
 	case '?': usage(); exit(0);
 	case 'p': break;
+	case 'x': doex = 0;  break;
 	case 'f': redir = 1; break;
 	case 'O':
 	case 'o': if(++i < argc){outdir  = argv[i]; argv[i] = NULL;} break;
@@ -100,7 +104,7 @@ char *argv[];
       getmodes(argv[i],&c1,&c2,&infile);
       infd = fopen(argv[i],"r");
       if(infd == NULL) { fprintf(stderr,"### Error opening %s\n",argv[i]); exit(1); }
-      process(infd,outfd,c1,c2,infile,outdir);
+      process(infd,outfd,c1,c2,infile,outdir,doex);
       fclose(infd);
     }
   }
@@ -154,8 +158,9 @@ char *name,**s1,**s2,**infile;
 
 }
 /**********************************************************************/
-private void process(fin,fout,s1,s2,infile,outdir)
+private void process(fin,fout,s1,s2,infile,outdir,doex)
 char *s1,*s2,*infile,*outdir;
+int doex;
 FILE *fin,*fout;
 /*
   This takes a Miriad .doc file (FILE *fin), and writes to the output
@@ -165,12 +170,14 @@ FILE *fin,*fout;
     fin		File descriptor of the input.
     fout	File descriptor of the output.
     s1,s2	Character strings introducing comments.
+    doex        Obey the "exclude" command.
 ----------------------------------------------------------------------*/
 {
 
 #define OUTSIDE  0
 #define PREAMBLE 1
 #define MAIN     2
+#define EXCLUDE  3
 
   char line[MAXLINE],task[MAXLINE],one[MAXLINE],author[MAXLINE],cat[MAXLINE];
   char indent[MAXLINE],outname[MAXLINE];
@@ -178,6 +185,8 @@ FILE *fin,*fout;
   char c;
   FILE *foutd;
   int dosub,doslash,s,mode;
+
+  *indent = 0;
 
 /* Process the input file. */
 
@@ -195,7 +204,9 @@ FILE *fin,*fout;
     switch(s){
       case '=':
       case '*':
-	if(mode == OUTSIDE){
+	if(mode == EXCLUDE ){
+	  mode = OUTSIDE;
+	}else if(mode == OUTSIDE){
 	  dosub = s == '*';
 	  u = task;
 	  while(*t != ' ' && *t != '-' && *t != 0 ){
@@ -247,16 +258,20 @@ FILE *fin,*fout;
 	}
 	break;
       case '-':
+      case 'X':
 	if(foutd != NULL && fout == NULL)fclose(foutd);
 	*task = *one = *cat = *author = 0;
 	foutd = NULL;
 	mode = OUTSIDE;
+	if(s == 'X' && doex)mode = EXCLUDE;
 	break;
       default:
-	if(mode == MAIN) fprintf(foutd,"%s\n",line);
+	if(mode == MAIN){
+	  getindent(indent,line);
+	  fprintf(foutd,"%s\n",line);
+        }
 	break;
     }
-    if(mode == MAIN) getindent(indent,line);
   }
   if(foutd != NULL && fout == NULL)fclose(fout);
 }
@@ -319,8 +334,13 @@ char *line,*c1,*c2;
 private void getindent(indent,line)
 char *indent,*line;
 {
-  while(isspace(*line)){line++; *indent++ = ' ';}
-  *indent++ = 0;
+  int i;
+  i = 0;
+  while(isspace(*line)){line++; i++;}
+  if(*line){
+    while(i--)*indent++ = ' ';
+    *indent++ = 0;
+  }
 }
 /**********************************************************************/
 private char *skip(line)
