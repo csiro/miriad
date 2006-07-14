@@ -21,8 +21,8 @@
 #include <errno.h>
 
 #ifdef sun
-#define bcopy(a,b,c) memcpy((b),(a),(c))
-#define bzero(a,b)   memset((a),0,(b))
+#define bcopy(a,b,c) memcpy((b),(a),(size_t)(c))
+#define bzero(a,b)   memset((a),0,(size_t)(b))
 #endif
 #ifdef vms
 extern int vmserrno;
@@ -108,7 +108,7 @@ fortran integer function tcpwrite(integer handle,integer buff,
   Write some crap out to the socket.
 ------------------------------------------------------------------------*/
 {
-  return(*(length.addr) == write(handle.val,(char *)buff.addr,length.val)
+  return(*(length.addr) == write(handle.val,(char *)buff.addr,(size_t)length.val)
 	? 0 : ERRNO);
 }
 /************************************************************************/
@@ -118,6 +118,6 @@ fortran integer function tcpread(integer handle,integer buff,
   Read some crap from the socket. 
 ------------------------------------------------------------------------*/
 {
-  *(nread.addr) = read(handle.val,(char *)buff.addr,length.val);
+  *(nread.addr) = read(handle.val,(char *)buff.addr,(size_t)length.val);
   return(nread.val >= 0 ? 0 : ERRNO);
 }
