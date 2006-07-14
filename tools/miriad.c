@@ -14,23 +14,23 @@
 
   The following are the recognised commands:
 
-    set <key> <value>          Set or show a keyword.
-    <key>=<value>              Set a keyword.
-    unset <key> [<key> ... ]   Unset keyword(s).
-    er <key>                   Line-edit a keyword value.
-    task [<task>]              Set/show default task.
-    inp [<task>]               Show settings of keywords to task.
-    go  [<task>] [> log] [&]   Run a task.
-    help [<task>] [-k key]     Help on a task or topic.
-    view [<task>]              Edit keyword file for task.
-    save/load [file]           Save/load global keyword file.
-    tget/tput [-l] [<task>]    Save/load task keyword file.
-    setenv env value           Set environment variable.
-    unsetenv env               Unset environment variable.
-    cd <dir>                   Change and/or show current directory
-    source <file>              Read commands from <file>
-    exit                       Exit miriad and save variables.
-    quit                       Exit miriad and do not save variables.
+    set <key> <value>           Set or show a keyword.
+    <key>=<value>               Set a keyword.
+    unset <key> [<key> ... ]    Unset keyword(s).
+    er <key>                    Line-edit a keyword value.
+    task [<task>]               Set/show default task.
+    inp [<task>]                Show settings of keywords to task.
+    go  [<task>] [> log] [&]    Run a task.
+    help [-k key] [-w] [<task>] Help on a task or topic.
+    view [<task>]               Edit keyword file for task.
+    save/load [file]            Save/load global keyword file.
+    tget/tput [-l] [<task>]     Save/load task keyword file.
+    setenv env value            Set environment variable.
+    unsetenv env                Unset environment variable.
+    cd <dir>                    Change and/or show current directory
+    source <file>               Read commands from <file>
+    exit                        Exit miriad and save variables.
+    quit                        Exit miriad and do not save variables.
 
   Type
     help tasks
@@ -39,7 +39,7 @@
 /*-- 									*/
 
 
-#define VERSION_ID "version 1.0 11-Dec-95"
+#define VERSION_ID "version 1.0 26-Oct-99"
 
 /************************************************************************/
 /*  COMPILE DEFINE OPTIONS:                                             */
@@ -48,8 +48,9 @@
 /*                                                                      */
 /*   <option>      <explanation>                                        */
 /*   --------      -------------                                        */
-/*  NOPATHSEARCH   if set, full $PATH is searched instead of $MIRBIN    */
-/*  NOINTERRUPT    if set, interrupts like ^\, ^C, ^Y are caught        */
+/*  NOPATHSEARCH   if set, search of full $PATH is disabled (uses       */
+/*                 $MIRBIN only).                                       */
+/*  NOINTERRUPT    if set, interrupts like ^\, ^C, ^Y are not caught    */
 /*  GETENV         set this if your OS has no char *getenv()            */
 /*  READLINE	   GNU readline library is available. In this case, link*/
 /*		   with -lreadline -ltermcap.				*/
@@ -115,6 +116,7 @@
 /*    rjs  16feb95   New er command handling.				*/
 /*    rjs   3may96   Tidy defines. Fiddle with reading input a bit.	*/
 /*    rjs   4jun96   Really attempt to kill off children.		*/
+/*    rjs  29oct99   help -w						*/
 /*									*/
 /*    ToDo anyhow:                                                      */
 /*      check earlier if lastexit can be written, otherwise complain    */
@@ -180,8 +182,8 @@ int   dopopen[MAXINPUT];
 char *getenv();
 void dosetenv(),dounsetenv();
 #endif
-void get_vars(),save_vars(),doset(),dounset(),doinp(),dogo(),dohelp(),doq(),
-     dotask(), dot(), dosource(), doer(), docd(), doload(), dosave(),
+void get_vars(),save_vars(),doset(),dounset(),doinp(),dogo(),dohelp(),
+     dotask(),dosource(), doer(), docd(), doload(), dosave(),
      docommand(), doview(), dotput(), dotget(),motd(),newenv();
 void filename(), bug();
 int  getline(),task_args();
@@ -259,7 +261,7 @@ char *av[];
       save_vars("lastexit");     /* Save all the parameters in lastexit. */
   else
       fprintf(stderr,"### Warning: Variables not saved in lastexit\n");
-
+  return(0);
 }
 /************************************************************************/
 void motd()
@@ -286,7 +288,7 @@ char *argv[];
   "set" command.
 ------------------------------------------------------------------------*/
 {
-  int n,inter,doset,i,l,ntrys,within;
+  int n,inter,doset,i,ntrys,within,l;
   char prompt[MAXBUF],buffer2[MAXBUF];
   char *s,quotec;
 #ifdef READLINE
@@ -381,7 +383,7 @@ char *s,*t;
   Expand any $ characters into the equivalent text or environment variables.
 ------------------------------------------------------------------------*/
 {
-  char var[MAXBUF],value[MAXBUF],*u;
+  char var[MAXBUF],*u;
 
   while(s != NULL && *t){
     if(*t == '$'){
@@ -437,7 +439,7 @@ char *argv[];
 ------------------------------------------------------------------------*/
 {
   char *s,*t,prev;
-  int hashval,found,i,len;
+  int hashval,i,len;
   VARIABLE *v;
 
 /* Check the arguments. */
@@ -611,8 +613,6 @@ char *argv[];
 /*
 ------------------------------------------------------------------------*/
 {
-  int i,n;
-
   if(argc > 2) fprintf(stderr,"### Extra arguments on line ignored.\n");
 
   if(argc==1) return;
@@ -677,7 +677,7 @@ char *argv[];
 {
   int i,n,dolocal;
   FILE *fd;
-  char path[MAXBUF],command[MAXBUF],*task,*s;
+  char path[MAXBUF],*task,*s;
 
   task = NULL;
   dolocal = FALSE;
@@ -899,33 +899,47 @@ char *argv[];
 /*
 ------------------------------------------------------------------------*/
 {
-  char path[MAXBUF],command[MAXBUF],*pager,*task;
-  int i,k;
-  void showbin();
+  char rest[MAXBUF],path[MAXBUF],command[MAXBUF],*task,*key,*s;
+  int i,doweb;
 
 /* Determine the thing we want help on. */
 
-  task = taskname;  k = 0;
-  if(argc > 1) if(*(argv[1]) != '-'){ task = argv[1]; k = 1; }
+  task = NULL;  key = NULL; doweb = FALSE; *rest = 0;
+  if(argc > 1){
+    for(i=1; i < argc; i++){
+      s = argv[i];
+      if(*rest){
+	strcat(rest," ");strcat(rest,s);
+      }else if (*s == '-'){
+	s++;
+        while(*s)switch(*s++){
+	  case 'w': doweb = TRUE;			break;
+	  case 'k': if( ++i < argc ) key = argv[i];	break;
+	}
+      }else if(*s == '|' || *s == '>' ){
+	strcpy(rest,s);
+      } else {
+	task = s;
+      }
+    }    
+  }
+  if(!task) task = taskname;
 
 /* Determine the pathname of the help file. */
 
   if(task_args(task) < 0){
     fprintf(stderr,"### Cannot find and/or read help for %s\n",task);
   }else{
+#ifdef vms
     sprintf(path,"%s.doc",task);
     if(access(path,R_OK))filename(path,"MIRPDOC",task,".doc");
-#ifdef vms
-    pager = "type/page";
-    sprintf(command, "%s %s",pager,path);
+    sprintf(command, "type/page %s",path);
 #else
-    if ( (pager = getenv("PAGER")) == NULL) pager = "more";
-    sprintf(command,"docfmt %s",path);
-    for(i=k+1; i < argc; i++){
-      strcat(command," ");
-      strcat(command,argv[i]);
-    }
-    strcat(command," | "); strcat(command,pager);
+    strcpy(command,"mirhelp ");
+    if(doweb)strcat(command,"-w ");
+    if(key){ strcat(command,"-k "); strcat(command,key); strcat(command," ");}
+    strcat(command,task);
+    if(*rest)strcat(command,rest);
 #endif
     system(command);
   }
@@ -1186,7 +1200,7 @@ char *task;
   This gets the arguments, and their values, for a particular task.
 ------------------------------------------------------------------------*/
 {
-  char line[MAXBUF],path[MAXBUF],keyword[MAXBUF],*s,*t;
+  char line[MAXBUF],path[MAXBUF],keyword[MAXBUF],*t;
   FILE *fd;
   VARIABLE *v;
   int n,hashval,found;
