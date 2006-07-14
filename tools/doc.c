@@ -25,9 +25,10 @@
     19nov98  rjs  Full rewrite.
     21jul99  rjs  Improved indenting algorithm somewhat. Added X command.
      6feb00  rjs  Support for Perl.
+    22may06  rjs  Change to appear cygwin.
 ************************************************************************/
 
-#define VERSION "Doc: version 1.0 6-feb-00"
+#define VERSION "Doc: version 1.0 22-May-06"
 #define private static
 #include <stdio.h>
 #include <string.h>
@@ -38,7 +39,7 @@
 #define FALSE 0
 
 private void process(),usage(),getmodes(),getindent();
-private int getline();
+private int get_line(FILE *in,char *a,char *b,char *c);
 private char *skip();
 
 /************************************************************************/
@@ -200,7 +201,7 @@ FILE *fin,*fout;
   foutd = NULL;
   mode = OUTSIDE;
 
-  while(s = getline(fin,line,s1,s2)){
+  while(s = get_line(fin,line,s1,s2)){
     t = skip(line);
     switch(s){
       case '=':
@@ -277,7 +278,7 @@ FILE *fin,*fout;
   if(foutd != NULL && fout == NULL)fclose(fout);
 }
 /**********************************************************************/
-private int getline(fin,line,c1,c2)
+private int get_line(fin,line,c1,c2)
 FILE *fin;
 char *line,*c1,*c2;
 {
