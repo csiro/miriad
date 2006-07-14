@@ -117,6 +117,7 @@
 /*    rjs   3may96   Tidy defines. Fiddle with reading input a bit.	*/
 /*    rjs   4jun96   Really attempt to kill off children.		*/
 /*    rjs  29oct99   help -w						*/
+/*    rjs  22may06   Change to appease cygwin.				*/
 /*									*/
 /*    ToDo anyhow:                                                      */
 /*      check earlier if lastexit can be written, otherwise complain    */
@@ -187,7 +188,7 @@ void get_vars(),save_vars(),doset(),dounset(),doinp(),dogo(),dohelp(),
      dotask(),dosource(), doer(), docd(), doload(), dosave(),
      docommand(), doview(), dotput(), dotget(),motd(),newenv();
 void filename(), bug();
-int  getline(),task_args();
+int  get_line(),task_args();
 #if defined(INTERRUPT)
 void review();
 #endif
@@ -224,7 +225,7 @@ char *av[];
 
   more = 1;
   while(more) {                      /* Loop to get a command. */
-    argc = getline(argv);
+    argc = get_line(argv);
     if(!argc);
     else if(!strcmp(argv[0],"set"))      {mecho = input_level == 0;
 					  doset(argc,argv);
@@ -281,7 +282,7 @@ void motd()
   }
 }
 /************************************************************************/
-int getline(argv)
+int get_line(argv)
 char *argv[];
 /*
   This prompts and reads a line from STDIN. It breaks it into tokens.
