@@ -1,0 +1,574 @@
+/************************************************************************/
+/*									*/
+/*	This converts from a FORTRAN calling sequence into a C.		*/
+/*									*/
+/*  History:								*/
+/*    rjs  Dark ages Original version.					*/
+/*    rjs  23aug89   Change to calling sequence of hdprobe.		*/
+/*    rjs   9oct89   Deleted bug,bugno,pack16,unpack16,delay from this	*/
+/*		     file. Only file i/o in this file now.		*/
+/*    rjs  18oct89   uvselect added.                                    */
+/*    rjs  30oct89   PAD call in hisread fixed                          */
+/*    rjs   1nov89   Fixed bug that had crept in during multiflow port.	*/
+/*    rjs  15nov89   Added dexpand.					*/
+/*    rjs  23apr90   Changed order of #include "io.h" and fortran.h,	*/
+/*		     for UNICOS.					*/
+/*    rjs  27apr90   Added hdelete.					*/
+/*    rjs  17oct90   Fixed bug in hwritea.				*/
+/*    rjs  22feb91   Added uvmark.					*/
+/*    rjs  27mar91   Added uvwflgwr.					*/
+/*    rjs  26mar92   Added uvsela.					*/
+/*    rjs  24aug92   Deleted uvmark, added				*/
+/*		     uvvarini,uvvarset,uvvarcpy,uvvarupd		*/
+/*    rjs  21dec92   Rewritten using intf2c syntax.			*/
+/*    rjs   3mar93   Add uvflush,hflush.				*/
+/*    rjs  26aug93   Add hrm and habort.				*/
+/*    rjs  30aug93   Add hseek and htell.				*/
+/*    rjs   5jan94   Added hmode,hexists.				*/
+/*									*/
+/************************************************************************/
+#include "io.h"
+
+void rdhdd_c(),                    rdhda_c(),rdhdc_c();
+void wrhdd_c(),wrhdr_c(),wrhdi_c(),wrhda_c(),wrhdc_c();
+void hdprobe_c(),hdcopy_c();
+void hisopen_c(),hisread_c(),hiswrite_c(),hisclose_c();
+void uvopen_c(),uvclose_c(),uvflush_c(),uvread_c(),uvwrite_c(),uvtrack_c(),uvprobvr_c(),
+	uvgetvr_c(),uvputvr_c(),uvcopyvr_c(),uvwread_c(),uvwwrite_c(),
+	uvflgwr_c(),uvwflgwr_c(),uvvarini_c(),uvvarset_c(),
+	uvvarcpy_c(),uvset_c(),uvvselect_c(),uvsela_c();
+int uvupdate_c(),uvvarupd_c(),dexpand_c();
+void xyopen_c(),xyclose_c(),xysetpl_c(),xyread_c(),xywrite_c(),xymkrd_c(),
+	xymkwr_c(),xyflgrd_c(),xyflgwr_c();
+
+/************************************************************************/
+fortran integer function dexpand(character template,character output)
+{
+  return(dexpand_c(template.zterm,output.addr,output.len));
+}
+/************************************************************************/
+fortran subroutine scropen(integer handle)
+{
+  scropen_c(handle.addr);
+}
+/************************************************************************/
+fortran subroutine scrclose(integer handle)
+{
+  scrclose_c(handle.val);
+}
+/************************************************************************/
+fortran subroutine scrread(integer handle,real buffer,
+	integer offset,integer length)
+{
+  scrread_c(handle.val,buffer.addr,offset.val,length.val);
+}
+/************************************************************************/
+fortran subroutine scrwrite(integer handle,real buffer,
+	integer offset,integer length)
+{
+  scrwrite_c(handle.val,buffer.addr,offset.val,length.val);
+}
+/************************************************************************/
+fortran subroutine uvopen(integer tno,character name,character status)
+{
+  uvopen_c(tno.addr,name.zterm,status.zterm);
+}
+/************************************************************************/
+fortran subroutine uvtrack(integer tno,character name,character switches)
+{
+  uvtrack_c(tno.val,name.zterm,switches.zterm);
+}
+/************************************************************************/
+fortran subroutine uvcopyvr(integer tin,integer tout)
+{
+  uvcopyvr_c(tin.val,tout.val);
+}
+/************************************************************************/
+fortran subroutine uvvarini(integer tno,integer handle)
+{
+  uvvarini_c(tno.val,handle.addr);
+}
+/************************************************************************/
+fortran subroutine uvvarset(integer handle,character name)
+{
+  uvvarset_c(handle.val,name.zterm);
+}
+/************************************************************************/
+fortran subroutine uvvarcpy(integer handle,integer tout)
+{
+  uvvarcpy_c(handle.val,tout.val);
+}
+/************************************************************************/
+fortran integer function uvvarupd(integer handle)
+{
+  return(uvvarupd_c(handle.val));
+}
+/************************************************************************/
+fortran subroutine uvflush(integer tno)
+{
+  uvflush_c(tno.val);
+}
+/************************************************************************/
+fortran subroutine uvclose(integer tno)
+{
+  uvclose_c(tno.val);
+}
+/************************************************************************/
+fortran integer function uvupdate(integer tno)
+{
+  return(uvupdate_c(tno.val));
+}
+/************************************************************************/
+fortran subroutine uvnext(integer tno)
+{
+  uvnext_c(tno.val);
+}
+/************************************************************************/
+fortran integer function uvscan(integer tno,character var)
+{
+  return(uvscan_c(tno.val,var.zterm));
+}
+/************************************************************************/
+fortran subroutine uvrewind(integer tno)
+{
+  uvrewind_c(tno.val);
+}
+/************************************************************************/
+fortran subroutine uvread(integer tno,double preamble,
+	complex data,logical flags,integer n,integer nread)
+{
+  uvread_c(tno.val,preamble.addr,data.addr,flags.addr,n.val,nread.addr);
+}
+/************************************************************************/
+fortran subroutine uvwread(integer tno,
+	complex data,logical flags,integer n,integer nread)
+{
+  uvwread_c(tno.val,data.addr,flags.addr,n.val,nread.addr);
+}
+/************************************************************************/
+fortran subroutine uvflgwr(integer tno,logical flags)
+{
+  uvflgwr_c(tno.val,flags.addr);
+}
+/************************************************************************/
+fortran subroutine uvwflgwr(integer tno,logical flags)
+{
+  uvwflgwr_c(tno.val,flags.addr);
+}
+/************************************************************************/
+fortran subroutine uvset(integer tno,character object,character type,
+	integer n,real p1,real p2,real p3)
+{
+  uvset_c(tno.val,object.zterm,type.zterm,n.val,p1.val,p2.val,p3.val);
+}
+/************************************************************************/
+fortran subroutine uvselect(integer tno,character object,
+	double p1,double p2,logical datasel)
+{
+  uvselect_c(tno.val,object.zterm,p1.val,p2.val,datasel.val);
+}
+/************************************************************************/
+fortran subroutine uvsela(integer tno,character object,character string,
+	logical datasel)
+{
+  uvsela_c(tno.val,object.zterm,string.zterm,datasel.val);
+}
+/************************************************************************/
+fortran subroutine uvinfo(integer tno,character object,double data)
+{
+  uvinfo_c(tno.val,object.zterm,data.addr);
+}
+/************************************************************************/
+fortran subroutine uvwrite(integer tno,double preamble,
+		complex data,logical flags,integer n)
+{
+  uvwrite_c(tno.val,preamble.addr,data.addr,flags.addr,n.val);
+}
+/************************************************************************/
+fortran subroutine uvwwrite(integer tno,complex data,logical flags,integer n)
+{
+  uvwwrite_c(tno.val,data.addr,flags.addr,n.val);
+}
+/************************************************************************/
+fortran subroutine uvprobvr(integer tno,character var,character type,
+	integer length,logical updated)
+{
+  uvprobvr_c(tno.val,var.zterm,type.addr,length.addr,updated.addr);
+}
+/************************************************************************/
+fortran subroutine uvrdvra(integer tno,character var,
+	character data,character def)
+{
+  uvrdvr_c(tno.val,H_BYTE,var.zterm,data.addr,def.zterm,data.len);
+  data.pad;
+}  
+/************************************************************************/
+fortran subroutine uvrdvri(integer tno,character var,integer data,integer def)
+{
+  uvrdvr_c(tno.val,H_INT,var.zterm,(char *)data.addr,(char *)def.addr,1);
+}
+/************************************************************************/
+fortran subroutine uvrdvrr(integer tno,character var,real data,real def)
+{
+  uvrdvr_c(tno.val,H_REAL,var.zterm,(char *)data.addr,(char *)def.addr,1);
+}
+/************************************************************************/
+fortran subroutine uvrdvrd(integer tno,character var,double data,double def)
+{
+  uvrdvr_c(tno.val,H_DBLE,var.zterm,(char *)data.addr,(char *)def.addr,1);
+}
+/************************************************************************/
+fortran subroutine uvrdvrc(integer tno,character var,complex data,complex def)
+{
+  uvrdvr_c(tno.val,H_CMPLX,var.zterm,(char *)data.addr,(char *)def.addr,1);
+}
+/************************************************************************/
+fortran subroutine uvgetvra(integer tno,character var,character data)
+{
+  uvgetvr_c(tno.val,H_BYTE,var.zterm,data.addr,data.len);
+  data.pad;
+}  
+/************************************************************************/
+fortran subroutine uvgetvri(integer tno,character var,integer data,integer n)
+{
+  uvgetvr_c(tno.val,H_INT,var.zterm,(char *)data.addr,n.val);
+}
+/************************************************************************/
+fortran subroutine uvgetvrj(integer tno,character var,integer data,integer n)
+{
+  uvgetvr_c(tno.val,H_INT2,var.zterm,(char *)data.addr,n.val);
+}
+/************************************************************************/
+fortran subroutine uvgetvrr(integer tno,character var,real data,integer n)
+{
+  uvgetvr_c(tno.val,H_REAL,var.zterm,(char *)data.addr,n.val);
+}
+/************************************************************************/
+fortran subroutine uvgetvrd(integer tno,character var,double data,integer n)
+{
+  uvgetvr_c(tno.val,H_DBLE,var.zterm,(char *)data.addr,n.val);
+}
+/************************************************************************/
+fortran subroutine uvgetvrc(integer tno,character var,complex data,integer n)
+{
+  uvgetvr_c(tno.val,H_CMPLX,var.zterm,(char *)data.addr,n.val);
+}
+/************************************************************************/
+fortran subroutine uvputvri(integer tno,character var,integer data,integer n)
+{
+  uvputvr_c(tno.val,H_INT,var.zterm,(char *)data.addr,n.val);
+}
+/************************************************************************/
+fortran subroutine uvputvrr(integer tno,character var,real data,integer n)
+{
+  uvputvr_c(tno.val,H_REAL,var.zterm,(char *)data.addr,n.val);
+}
+/************************************************************************/
+fortran subroutine uvputvrd(integer tno,character var,double data,integer n)
+{
+  uvputvr_c(tno.val,H_DBLE,var.zterm,(char *)data.addr,n.val);
+}
+/************************************************************************/
+fortran subroutine uvputvrc(integer tno,character var,complex data,integer n)
+{
+  uvputvr_c(tno.val,H_CMPLX,var.zterm,(char *)data.addr,n.val);
+}
+/************************************************************************/
+fortran subroutine uvputvra(integer tno,character var,character data)
+{
+  char *s;
+  s = data.zterm;
+  uvputvr_c(tno.val,H_BYTE,var.zterm,s,strlen(s));
+}
+/************************************************************************/
+fortran subroutine hopen(integer tno,character name,character status,
+	integer iostat)
+{
+  hopen_c(tno.addr,name.zterm,status.zterm,iostat.addr);
+}
+/************************************************************************/
+fortran subroutine hclose(integer tno)
+{
+  hclose_c(tno.val);
+}
+/************************************************************************/
+fortran subroutine hflush(integer tno,integer iostat)
+{
+  hflush_c(tno.val,iostat.addr);
+}
+/************************************************************************/
+fortran subroutine habort()
+{
+  habort_c();
+}
+/************************************************************************/
+fortran subroutine hrm(integer tno)
+{
+  hrm_c(tno.val);
+}
+/************************************************************************/
+fortran subroutine hdelete(integer tno,character name,integer iostat)
+{
+  hdelete_c(tno.val,name.zterm,iostat.addr);
+}
+/************************************************************************/
+fortran subroutine haccess(integer tno,integer item,
+	character name,character status,integer iostat)
+{
+  haccess_c(tno.val,(char **)item.addr,name.zterm,status.zterm,iostat.addr);
+}
+/************************************************************************/
+fortran subroutine hmode(integer tno,character mode)
+{
+  hmode_c(tno.val,mode.addr);
+  mode.pad;
+}
+/************************************************************************/
+fortran integer function hexists(integer tno,character item)
+{
+  return( hexists_c(tno.val,item.zterm) ? FORTRAN_TRUE : FORTRAN_FALSE);
+}
+/************************************************************************/
+fortran subroutine hdaccess(integer item,integer iostat)
+{
+  hdaccess_c((char *)item.val,iostat.addr);
+}
+/************************************************************************/
+fortran integer function hsize(integer item)
+{
+  return(hsize_c((char *)item.val));
+}
+/************************************************************************/
+fortran integer function htell(integer item)
+{
+  return(htell_c((char *)item.val));
+}
+/************************************************************************/
+fortran subroutine hseek(integer item,integer offset)
+{
+  hseek_c((char *)item.val,offset.val);
+}
+/************************************************************************/
+fortran subroutine hreada(integer item,character line,integer iostat)
+{
+  hreada_c((char *)item.val,line.addr,line.len,iostat.addr);
+  if(!iostat.val)line.pad;
+}
+/************************************************************************/
+fortran subroutine hwritea(integer item,character line,integer iostat)
+{
+  char *s;
+
+  s = line.zterm;
+  hwritea_c((char *)item.val,s,strlen(s)+1,iostat.addr);
+}
+/************************************************************************/
+fortran subroutine hreadb(integer item,character buffer,
+	integer offset,integer length,integer iostat)
+{
+  hreadb_c((char *)item.val,buffer.addr,offset.val,length.val,iostat.addr);
+}
+/************************************************************************/
+fortran subroutine hwriteb(integer item,character buffer,
+	integer offset,integer length,integer iostat)
+{
+  hwriteb_c((char *)item.val,buffer.addr,offset.val,length.val,iostat.addr);
+}
+/************************************************************************/
+fortran subroutine hreadj(integer item,integer buffer,
+	integer offset,integer length,integer iostat)
+{
+  hreadj_c((char *)item.val,buffer.addr,offset.val,length.val,iostat.addr);
+}
+/************************************************************************/
+fortran subroutine hwritej(integer item,integer buffer,
+	integer offset,integer length,integer iostat)
+{
+  hwritej_c((char *)item.val,buffer.addr,offset.val,length.val,iostat.addr);
+}
+/************************************************************************/
+fortran subroutine hreadi(integer item,integer buffer,
+	integer offset,integer length,integer iostat)
+{
+  hreadi_c((char *)item.val,buffer.addr,offset.val,length.val,iostat.addr);
+}
+/************************************************************************/
+fortran subroutine hwritei(integer item,integer buffer,
+	integer offset,integer length,integer iostat)
+{
+  hwritei_c((char *)item.val,buffer.addr,offset.val,length.val,iostat.addr);
+}
+/************************************************************************/
+fortran subroutine hreadr(integer item,real buffer,
+	integer offset,integer length,integer iostat)
+{
+  hreadr_c((char *)item.val,buffer.addr,offset.val,length.val,iostat.addr);
+}
+/************************************************************************/
+fortran subroutine hwriter(integer item,real buffer,
+	integer offset,integer length,integer iostat)
+{
+  hwriter_c((char *)item.val,buffer.addr,offset.val,length.val,iostat.addr);
+}
+/************************************************************************/
+fortran subroutine hreadd(integer item,double buffer,
+	integer offset,integer length,integer iostat)
+{
+  hreadd_c((char *)item.val,buffer.addr,offset.val,length.val,iostat.addr);
+}
+/************************************************************************/
+fortran subroutine hwrited(integer item,double buffer,
+	integer offset,integer length,integer iostat)
+{
+  hwrited_c((char *)item.val,buffer.addr,offset.val,length.val,iostat.addr);
+}
+/************************************************************************/
+fortran subroutine hisopen(integer tno,character status)
+{
+  hisopen_c(tno.val,status.zterm);
+}
+/************************************************************************/
+fortran subroutine hisread(integer tno,character line,logical eof)
+{
+  hisread_c(tno.val,line.addr,line.len,eof.addr);
+  if(eof.val != FORTRAN_TRUE)line.pad;
+}
+/************************************************************************/
+fortran subroutine hiswrite(integer tno,character line)
+{
+  hiswrite_c(tno.val,line.zterm);
+}
+/************************************************************************/
+fortran subroutine hisclose(integer tno)
+{
+  hisclose_c(tno.val);
+}
+/************************************************************************/
+fortran subroutine xyopen(integer tno,character name,character status,
+	integer naxis,integer axes)
+{
+  xyopen_c(tno.addr,name.zterm,status.zterm,naxis.val,axes.addr);
+}
+/************************************************************************/
+fortran subroutine xyclose(integer tno)
+{
+  xyclose_c(tno.val);
+}
+/************************************************************************/
+fortran subroutine xyread(integer tno,integer index,real buffer)
+{
+  xyread_c(tno.val,index.val,buffer.addr);
+}
+/************************************************************************/
+fortran subroutine xywrite(integer tno,integer index,real buffer)
+{
+  xywrite_c(tno.val,index.val,buffer.addr);
+}
+/************************************************************************/
+fortran subroutine xymkrd(integer tno,integer index,
+	integer buffer,integer n,integer nread)
+{
+  xymkrd_c(tno.val,index.val,buffer.addr,n.val,nread.addr);
+}
+/************************************************************************/
+fortran subroutine xymkwr(integer tno,integer index,integer buffer,integer n)
+{
+  xymkwr_c(tno.val,index.val,buffer.addr,n.val);
+}
+/************************************************************************/
+fortran subroutine xyflgrd(integer tno,integer index,logical buffer)
+{
+  xyflgrd_c(tno.val,index.val,buffer.addr);
+}
+/************************************************************************/
+fortran subroutine xyflgwr(integer tno,integer index,logical buffer)
+{
+  xyflgwr_c(tno.val,index.val,buffer.addr);
+}
+/************************************************************************/
+fortran subroutine xysetpl(integer tno,integer naxis,integer axes)
+{
+  xysetpl_c(tno.val,naxis.val,axes.addr);
+}
+/************************************************************************/
+fortran subroutine hdprobe(integer tno,character keyword,
+	character descr,character type,integer n)
+{
+  hdprobe_c(tno.val,keyword.zterm,descr.addr,descr.len,type.addr,n.addr);
+  descr.pad;
+  type.pad;
+}
+/************************************************************************/
+fortran subroutine rdhdr(integer tno,character keyword,
+	real value,real defval)
+{
+  double dvalue,ddefval;
+
+  ddefval = defval.val;
+  rdhdd_c(tno.val,keyword.zterm,&dvalue,ddefval);
+  *(value.addr) = dvalue;
+}
+/************************************************************************/
+fortran subroutine rdhdi(integer tno,character keyword,
+	integer value,integer defval)
+{
+  double dvalue,ddefval;
+
+  ddefval = defval.val;
+  rdhdd_c(tno.val,keyword.zterm,&dvalue,ddefval);
+  *(value.addr) = dvalue;
+}
+/************************************************************************/
+fortran subroutine rdhdd(integer tno,character keyword,
+	double value,double defval)
+{
+  rdhdd_c(tno.val,keyword.zterm,value.addr,defval.val);
+}
+/************************************************************************/
+fortran subroutine rdhda(integer tno,character keyword,
+	character value,character defval)
+{
+  rdhda_c(tno.val,keyword.zterm,value.addr,defval.zterm,value.len);
+  value.pad;
+}
+/************************************************************************/
+fortran subroutine rdhdc(integer tno,character keyword,
+	complex value,complex defval)
+{
+  rdhdc_c(tno.val,keyword.zterm,value.addr,defval.addr);
+}
+/************************************************************************/
+fortran subroutine wrhdr(integer tno,character keyword,real value)
+{
+  wrhdr_c(tno.val,keyword.zterm,value.val);
+}
+/************************************************************************/
+fortran subroutine wrhdd(integer tno,character keyword,double value)
+{
+  wrhdd_c(tno.val,keyword.zterm,value.val);
+}
+/************************************************************************/
+fortran subroutine wrhdi(integer tno,character keyword,integer value)
+{
+  wrhdi_c(tno.val,keyword.zterm,value.val);
+}
+/************************************************************************/
+fortran subroutine wrhdc(integer tno,character keyword,complex value)
+{
+  wrhdc_c(tno.val,keyword.zterm,value.addr);
+}
+/************************************************************************/
+fortran subroutine wrhda(integer tno,character keyword,character value)
+{
+  wrhda_c(tno.val,keyword.zterm,value.zterm);
+}
+/************************************************************************/
+fortran subroutine hdcopy(integer tIn,integer tOut,character keyword)
+{
+  hdcopy_c(tIn.val,tOut.val,keyword.zterm);
+}
+/************************************************************************/
+fortran logical function hdprsnt(integer tno,character keyword)
+{
+  return(hdprsnt_c(tno.val,keyword.zterm));
+}
