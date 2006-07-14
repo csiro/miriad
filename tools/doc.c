@@ -20,7 +20,7 @@ History:
   bpw 28aug90   More userfriendliness in the options. Repaired some
                 idiosyncrasies. LaTeX output files now called .ptex/.stex
   bpw 31aug90   Now really recognizes & directive. Allows _.-$ in modulenames.
-  bpw  5sep90   Implement recognition of c@ and /*@ directives , so that
+  bpw  5sep90   Implement recognition of c@ and @ directives , so that
                 keyword descriptions can be kept inside source-code files.
   bpw 24sep90   Add -w option
   bpw 26sep90   = directive to separate tasks from subroutines
@@ -46,6 +46,7 @@ History:
   bpw 09jan91   Get rid of 'define private static' because of convex compiler
   rjs 16jan91   FUDGE to not strip out blank characters in output .doc files.
   rjs 14mar96   Handle standard keywords somewhat differently.
+  rjs 15mar96   Eliminate some non-standard C.
 
 ********************************************************************/
 char *version = { "version 2.4 - 16-jan-91" };
@@ -175,10 +176,10 @@ instead. "sectiontype" can be either "section" or "subsection".
 Keywords ("%A" switch) are made into items (\\item[keyword]). 
 
 -p converts documentation in source files into "doc format". For each
-c= / c* (in fortran source) or /*= / /** (in c source) a new output
+c= / c* (in fortran source) or = / * (in c source) a new output
 file is produced. The output file gets extension ".doc" for tasks (i.e.
-the c= or /*= directive was used), extension ".cdoc" for scripts and
-commandfiles, and extension ".sdoc" for subroutines (use c* or /**).
+the c= or = directive was used), extension ".cdoc" for scripts and
+commandfiles, and extension ".sdoc" for subroutines (use c* or *).
 For subroutines documented within programs (test subroutines) the
 extension becomes ".tdoc".
 
@@ -206,15 +207,15 @@ For unix machines:
 (sort is needed because find does not produce an alphabetical list of
  filenames).
  or alternatively:
-   doc -Udit -x \\$MIRPROG $MIRPROG/* /* > tasks.latex
+   doc -Udit -x \\$MIRPROG $MIRPROG > tasks.latex
 
 To extract the documentation information from subroutines and make an
 alphabetcial list, use;
-   doc -udit $MIRSUBS/*
+   doc -udit $MIRSUBS
    cat *.tex *.slst > subs.latex
 
 To construct all the .sdoc files from the sourcefile information:
-   doc -p $MIRSUBS/*
+   doc -p $MIRSUBS
 
 3.5 option -m
 
@@ -229,7 +230,7 @@ On vms machines this file should contain:
    doc -m 'p1' -l list.file
    delete list.file;*
 on unix machines:                                              
-   doc -m $1 $MIRSUBS/*
+   doc -m $1 $MIRSUBS
 It will take a while for doc to search through all files though. This
 option is implemented within the command mir.help.             
 
@@ -275,8 +276,8 @@ output, use \\\\ in the documentation file.
 4.2 Sourcefile doc format
 
 Documentation information inside sourcecode is indicated in the way
-described below. For c files the comment character 'c' is '/*' instead
-(e.g. /**, /*:).
+described below. For c files the comment character 'c' is '' instead
+(e.g. *, :).
 When the -e option is used (dangerous!) directives have to start with
 either '#' (for unix scripts) or with '$!' (for vms command files).
 Otherwise the format and the results are the same. So, the
@@ -315,6 +316,9 @@ c* directive) will have extension .tdoc.
 
 #include <ctype.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 void     setarr();
 int      ndec(), nelc();
 logical  eol(), eof();
@@ -331,7 +335,7 @@ void     fn_dne(), fn_parse();
 FILE    *f_open();
 logical  rdline();
 void     type();
-char    *lognam(), getenv();
+char    *lognam();
 
 /************************************************************************/
 
@@ -340,7 +344,7 @@ char    *lognam(), getenv();
 /************************************************************************/
 
 /* the logical name / environment variable of the root */
-#ifdef vaxc
+#ifdef vms
 char    *root = { "MIR:[" }; char directory_separator = '.';
 #else
 char    *root = { "$MIR"  }; char directory_separator = '/';
@@ -813,9 +817,9 @@ char *filename;
                  if(copy) treat_description_line(&line[0]);
         }
 
-/* C_MODE: a line with a directive contains either /**, /*=, /*&, /*:, */
-/* /*+, /*- or /*@ as its first three characters. For lines starting   */
-/* with /* but not containing a directive the /* is stripped.           */
+/* C_MODE: a line with a directive contains either *, =, &, :, */
+/* +, - or @ as its first three characters. For lines starting   */
+/* with but not containing a directive the is stripped.           */
         if ( C_MODE ) {
             if( c1=='/' && c2=='*' ) {
                 if(  occurs( c3, "=*&:+-@<" ) && c3!='\0' )
@@ -948,7 +952,7 @@ void re_init()
 }
 
 /************************************************************************/
-/* end_module is invoked at the end of a file or with the c-- or /*--   */
+/* end_module is invoked at the end of a file or with the c-- or --   */
 /* directive. It resets the verbatim and description toggle switches    */
 /* and finishes up the indexline. If the -m switch is gives it checks   */
 /* whether the searched-for routine was found and makes DOC quit if it  */
@@ -1020,7 +1024,7 @@ char *line;
 
 /************************************************************************/
 /* handle_option_N is invoked whenever the input line started with %N,  */
-/* c=, c*, /*= or /**.                                                  */
+/* c=, c*, = or *.                                                      */
 /* After getting the modulename a number of checks is made and the      */
 /* appropriate action corresponding to the result of the check is       */
 /* taken. Only then is the real work done.                              */
@@ -1875,10 +1879,10 @@ logical eof(c) int c; { return ( c == EOF ); }
 /************************************************************************/
 /* translate the unlink to the remove function for unix machines        */
 remov(filename) char *filename; {
-#ifndef vaxc
+#ifndef vms
 unlink(filename);
 #endif
-#ifdef vaxc
+#ifdef vms
 remove(filename);
 #endif
 }
@@ -1886,7 +1890,7 @@ remove(filename);
 /* expand logical name for unix, don't for vms                          */
 char *lognam(envvar) char *envvar; {
 static char log_nam[NAMELEN];
-#ifdef vaxc
+#ifdef vms
 strconcat(log_nam, envvar, ":" );
 #else
 strconcat(log_nam, getenv(envvar), "/" );
