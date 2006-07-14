@@ -8,10 +8,12 @@
 /*  rjs  25jan90   Changed "addr" to "adr" to avoid a conflict on Convex*/
 /*  rjs  23dec92   Rewrite in f2c format, mere all versions.		*/
 /*  mjs  21sep93   #define bcopy -> memcpy, bzero -> memset on sun.	*/
+/*  rjs  18sep05   Small change to stop lint whinges.			*/
 /*									*/
 /************************************************************************/
 
 #include <stddef.h>
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -58,7 +60,7 @@ fortran subroutine tcpnode(character name,integer inet)
 
   p = name.zterm;
   *(inet.addr) = 0;
-  if(isdigit(*p)){
+  if(isdigit((int)(*p))){
     s = inet_addr(p);
     bcopy((char *)&s,(char *)inet.addr,sizeof(s));
   } else {
