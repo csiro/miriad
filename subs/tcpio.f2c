@@ -24,7 +24,7 @@
 #define bcopy(a,b,c) memcpy((b),(a),(c))
 #define bzero(a,b)   memset((a),0,(b))
 #endif
-#ifdef vaxc
+#ifdef vms
 extern int vmserrno;
 #  define ERRNO vmserrno
 #else
