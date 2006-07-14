@@ -14,7 +14,7 @@
       -O    Specify an output directory for the files.
       -f    Pipe the output to standard output, rather than creating
             output files.
-      -x    Ignore "exclude" command.
+      -x    Generate "extra" help files as well.
       -?    Give a brief usage message.
 									*/
 /*-									*/
@@ -24,9 +24,10 @@
     02mar90  bpw  Full rewrite with extended functionality.
     19nov98  rjs  Full rewrite.
     21jul99  rjs  Improved indenting algorithm somewhat. Added X command.
+     6feb00  rjs  Support for Perl.
 ************************************************************************/
 
-#define VERSION "Doc: version 1.0 21-Jul-99"
+#define VERSION "Doc: version 1.0 6-feb-00"
 #define private static
 #include <stdio.h>
 #include <string.h>
@@ -126,16 +127,16 @@ char *name,**s1,**s2,**infile;
   Possible extensions are:
   Extension	Language	Comment Char
   ---------	--------	------------
-    .c or .cc	C or C++	Normal C comments.
-    .f or .for	FORTRAN		C  or c
-    .csh or .sh	Unix shell	#
-    .com	VMS DCL		$!
+    .c or .cc	 C or C++	Normal C comments.
+    .f or .for	 FORTRAN	C  or c
+    .csh,.sh,.pl Shells		#
+    .com	 VMS DCL	$!
 ----------------------------------------------------------------------*/
 {
-#define NXT 8
-  static char *exts[] = {"c","cc","C","f","for","csh","sh","com"};
-  static char *c1[]   = {"/*","/*","/*","C","C","#","#","$!"};
-  static char *c2[]   = {"//","//","//","c","c","#","#","$!"};
+#define NXT 9
+  static char *exts[] = {"c","cc","C","f","for","csh","sh","pl","com"};
+  static char *c1[]   = {"/*","/*","/*","C","C","#","#","#","$!"};
+  static char *c2[]   = {"//","//","//","c","c","#","#","#","$!"};
 
   char *s;
   int l,mode,i;
