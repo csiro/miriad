@@ -47,6 +47,7 @@ History:
   rjs 16jan91   FUDGE to not strip out blank characters in output .doc files.
   rjs 14mar96   Handle standard keywords somewhat differently.
   rjs 15mar96   Eliminate some non-standard C.
+  rjs 13mar98   Eliminate check for pre-existence of file.
 
 ********************************************************************/
 char *version = { "version 2.4 - 16-jan-91" };
@@ -1188,20 +1189,6 @@ char modulename[];
 
     if(outstream!=stdout) fclose(outstream);
 
-    if( ( outstream = fopen( outfile, "r" ) )!=NULL ) {
-        fprintf(stderr,"Output file of module %s already present\n",modulename);
-        if( ask ) {
-            fprintf( stderr, "Overwrite existing file and continue? [y]/n >" );
-            c=getchar(); if( c=='N' || c=='n' ) exit(1);
-            if( c!='\n' ) c=getchar();
-        } else {
-            fprintf( stderr,
-                "and multiple occurences of a routine name are not allowed.\n");
-            fprintf( stderr,
-                "So, repair the documentation or use the doc option -a\n" ); 
-            exit(1);
-        }
-    }
     outstream = fopen( outfile, "w" );
 }
 
