@@ -3023,16 +3023,16 @@ char *line;
   Format the particular usage of this variable into something nice and neat.
 ------------------------------------------------------------------------*/
 {
-  char *type,*io,*spacer,*null,*inline;
+  char *type,*io,*spacer,*null,*cinline;
 
   null = "";
 
 /* Handle functions and externals as special cases. */
 
-  inline = null;
+  cinline = null;
   if(flags & (ROUTE_MASK|F_CALLED)){
     io = null;
-    if(flags & F_STATEMENT) inline="inline ";
+    if(flags & F_STATEMENT) cinline="inline ";
     if(flags & (F_VOID|F_GENERIC) ) flags &= (F_VOID|F_GENERIC);
     switch(flags & TYPE_MASK){
       case F_LOGICAL:	type = "logical function";	break;
@@ -3066,7 +3066,7 @@ char *line;
   else if(io != null && type != null)spacer = " ";
   else				     spacer = null;
 
-  strcpy(line,inline);
+  strcpy(line,cinline);
   strcat(line,io);
   strcat(line,spacer);
   strcat(line,type);
