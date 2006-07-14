@@ -28,25 +28,16 @@
 /*    rjs   5nov94   Correct declaration of hexists, and get rid of	*/
 /*		     casting int to char*.				*/
 /*    rjs  27feb96   Added xyflush.					*/
+/*    rjs  19mar97   Handle logical translation better. Tidying.	*/
 /************************************************************************/
 #include <string.h>
-#include "io.h"
-
-void rdhdd_c(),                    rdhda_c(),rdhdc_c();
-void wrhdd_c(),wrhdr_c(),wrhdi_c(),wrhda_c(),wrhdc_c();
-void hdprobe_c(),hdcopy_c();
-void hisopen_c(),hisread_c(),hiswrite_c(),hisclose_c();
-void uvopen_c(),uvclose_c(),uvflush_c(),uvread_c(),uvwrite_c(),uvtrack_c(),uvprobvr_c(),
-	uvgetvr_c(),uvputvr_c(),uvcopyvr_c(),uvwread_c(),uvwwrite_c(),
-	uvflgwr_c(),uvwflgwr_c(),uvvarini_c(),uvvarset_c(),
-	uvvarcpy_c(),uvset_c(),uvvselect_c(),uvsela_c();
-int uvupdate_c(),uvvarupd_c(),dexpand_c();
-void xyopen_c(),xyclose_c(),xysetpl_c(),xyread_c(),xywrite_c(),xymkrd_c(),
-	xymkwr_c(),xyflgrd_c(),xyflgwr_c(),xyflush_c();
+#include "miriad.h"
+#include "sysdep.h"
 
 /************************************************************************/
 fortran integer function dexpand(character template,character output)
 {
+  int dexpand_c();
   return(dexpand_c(template.zterm,output.addr,output.len));
 }
 /************************************************************************/
@@ -169,13 +160,17 @@ fortran subroutine uvset(integer tno,character object,character type,
 fortran subroutine uvselect(integer tno,character object,
 	double p1,double p2,logical datasel)
 {
-  uvselect_c(tno.val,object.zterm,p1.val,p2.val,datasel.val);
+  int flag;
+  flag = FORT_LOGICAL(datasel.val);
+  uvselect_c(tno.val,object.zterm,p1.val,p2.val,flag);
 }
 /************************************************************************/
 fortran subroutine uvsela(integer tno,character object,character string,
 	logical datasel)
 {
-  uvsela_c(tno.val,object.zterm,string.zterm,datasel.val);
+  int flag;
+  flag = FORT_LOGICAL(datasel.val);
+  uvsela_c(tno.val,object.zterm,string.zterm,flag);
 }
 /************************************************************************/
 fortran subroutine uvinfo(integer tno,character object,double data)
@@ -330,7 +325,7 @@ fortran subroutine hmode(integer tno,character mode)
 /************************************************************************/
 fortran logical function hexists(integer tno,character item)
 {
-  return( hexists_c(tno.val,item.zterm) ? FORTRAN_TRUE : FORTRAN_FALSE);
+  return( hexists_c(tno.val,item.zterm) ? FORT_TRUE : FORT_FALSE);
 }
 /************************************************************************/
 fortran subroutine hdaccess(integer item,integer iostat)
@@ -412,7 +407,7 @@ fortran subroutine hreadr(integer item,real buffer,
 fortran subroutine hwriter(integer item,real buffer,
 	integer offset,integer length,integer iostat)
 {
-  hwriter_c((char *)item.val,buffer.addr,offset.val,length.val,iostat.addr);
+  hwriter_c(item.val,buffer.addr,offset.val,length.val,iostat.addr);
 }
 /************************************************************************/
 fortran subroutine hreadd(integer item,double buffer,
@@ -435,7 +430,7 @@ fortran subroutine hisopen(integer tno,character status)
 fortran subroutine hisread(integer tno,character line,logical eof)
 {
   hisread_c(tno.val,line.addr,line.len,eof.addr);
-  if(eof.val != FORTRAN_TRUE)line.pad;
+  if(eof.val != FORT_TRUE)line.pad;
 }
 /************************************************************************/
 fortran subroutine hiswrite(integer tno,character line)
