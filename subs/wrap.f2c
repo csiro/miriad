@@ -33,6 +33,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <limits.h>
 #include "miriad.h"
 #include "sysdep.h"
 
@@ -337,7 +338,10 @@ fortran subroutine hdaccess(integer item,integer iostat)
 /************************************************************************/
 fortran integer function hsize(integer item)
 {
-  return(hsize_c(item.val));
+  off_t size;
+  size = hsize_c(item.val);
+  if((off_t)(INT_MAX) < size)size = (off_t)INT_MAX;
+  return((int)size);
 }
 /************************************************************************/
 fortran integer function htell(integer item)
