@@ -161,7 +161,8 @@ fortran subroutine uvwflgwr(integer tno,logical flags)
 fortran subroutine uvset(integer tno,character object,character type,
 	integer n,real p1,real p2,real p3)
 {
-  uvset_c(tno.val,object.zterm,type.zterm,n.val,p1.val,p2.val,p3.val);
+  uvset_c(tno.val,object.zterm,type.zterm,n.val,
+		(double)p1.val,(double)p2.val,(double)p3.val);
 }
 /************************************************************************/
 fortran subroutine uvselect(integer tno,character object,
@@ -317,7 +318,7 @@ fortran subroutine hdelete(integer tno,character name,integer iostat)
 fortran subroutine haccess(integer tno,integer item,
 	character name,character status,integer iostat)
 {
-  haccess_c(tno.val,(int *)item.addr,name.zterm,status.zterm,iostat.addr);
+  haccess_c(tno.val,item.addr,name.zterm,status.zterm,iostat.addr);
 }
 /************************************************************************/
 fortran subroutine hmode(integer tno,character mode)
@@ -542,7 +543,7 @@ fortran subroutine rdhdc(integer tno,character keyword,
 /************************************************************************/
 fortran subroutine wrhdr(integer tno,character keyword,real value)
 {
-  wrhdr_c(tno.val,keyword.zterm,value.val);
+  wrhdr_c(tno.val,keyword.zterm,(double)value.val);
 }
 /************************************************************************/
 fortran subroutine wrhdd(integer tno,character keyword,double value)
