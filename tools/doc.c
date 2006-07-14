@@ -26,11 +26,14 @@
     21jul99  rjs  Improved indenting algorithm somewhat. Added X command.
      6feb00  rjs  Support for Perl.
     22may06  rjs  Change to appear cygwin.
+    14jul06  mrc  Get it to compile with 'gcc -Wall' without warnings.
 ************************************************************************/
 
 #define VERSION "Doc: version 1.0 22-May-06"
 #define private static
+#include <ctype.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define MAXLINE 128
@@ -43,7 +46,7 @@ private int get_line(FILE *in,char *a,char *b,char *c);
 private char *skip();
 
 /************************************************************************/
-main(argc,argv)
+int main(argc,argv)
 int argc;
 char *argv[];
 {
@@ -140,7 +143,7 @@ char *name,**s1,**s2,**infile;
   static char *c2[]   = {"//","//","//","c","c","#","#","#","$!"};
 
   char *s;
-  int l,mode,i;
+  int l,i;
 
   s = name + strlen(name);
   while( s > name && *(s-1) != ']' && *(s-1) != '/') s--;
@@ -201,7 +204,7 @@ FILE *fin,*fout;
   foutd = NULL;
   mode = OUTSIDE;
 
-  while(s = get_line(fin,line,s1,s2)){
+  while((s = get_line(fin,line,s1,s2))){
     t = skip(line);
     switch(s){
       case '=':

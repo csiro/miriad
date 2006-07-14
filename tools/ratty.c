@@ -100,6 +100,7 @@ vector processing capacities (compilers "unicos", "alliant" and "convex"):
 /*    pjt   3jan95 Added f2c (used on linux)                            */
 /*    rjs  15aug95 Added sgi		                                */
 /*    rjs  22may06 Change to appease cygwin.				*/
+/*    mrc  14jul06 Get it to compile with 'gcc -Wall' without warnings. */
 /*									*/
 /************************************************************************/
 /* ToDos/Shortcomings:                                                  */
@@ -117,20 +118,19 @@ vector processing capacities (compilers "unicos", "alliant" and "convex"):
 #define private static
 #include <ctype.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define TRUE 1
 #define FALSE 0
 
 /* A few things to stop lint complaining. */
-
-char *strcpy(),*strcat();
-void *malloc();
-int fclose(),fputc();
 #define Strcpy (void)strcpy
 #define Strcat (void)strcat
 #define Fclose (void)fclose
 #define Fputc  (void)fputc
 #define Malloc(a) malloc((unsigned int)(a))
+
 /*
  * Define capacities of the various compilers. These are:
  *  doloop	is true if the compiler handles the VAX do/dowhile/enddo
@@ -188,7 +188,7 @@ private FILE *incopen();
 private int continuation,quoted=FALSE;
 private int lower,increment;
 /************************************************************************/
-main(argc,argv)
+int main(argc,argv)
 int argc;
 char *argv[];
 {
@@ -323,7 +323,7 @@ char *infile;
 
   if(gflag)strcpy(gfile,infile);            /* init -g filename */
 
-  while(type = get_line(in,line)){
+  while((type = get_line(in,line))){
     lines++;
     if(gflag){
         glines++;
@@ -817,7 +817,7 @@ char *s;
   type = ' ';
   first = TRUE;
   t = line;
-  while(c = *t++){
+  while((c = *t++)){
     if(c == ' ') *s++ = ' ';
     else if(c == '\t'){
       pad = 8 * ( (s - s0)/8 + 1 ) - (s - s0);
