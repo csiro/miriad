@@ -31,13 +31,15 @@
 /*    rjs  19mar97   Handle logical translation better. Tidying.	*/
 /************************************************************************/
 #include <string.h>
+#include <sys/types.h>
+#include <unistd.h>
 #include "miriad.h"
 #include "sysdep.h"
+
 
 /************************************************************************/
 fortran integer function dexpand(character template,character output)
 {
-  int dexpand_c();
   return(dexpand_c(template.zterm,output.addr,output.len));
 }
 /************************************************************************/
@@ -54,13 +56,13 @@ fortran subroutine scrclose(integer handle)
 fortran subroutine scrread(integer handle,real buffer,
 	integer offset,integer length)
 {
-  scrread_c(handle.val,buffer.addr,offset.val,length.val);
+  scrread_c(handle.val,buffer.addr,(off_t)offset.val,length.val);
 }
 /************************************************************************/
 fortran subroutine scrwrite(integer handle,real buffer,
 	integer offset,integer length)
 {
-  scrwrite_c(handle.val,buffer.addr,offset.val,length.val);
+  scrwrite_c(handle.val,buffer.addr,(off_t)offset.val,length.val);
 }
 /************************************************************************/
 fortran subroutine uvopen(integer tno,character name,character status)
