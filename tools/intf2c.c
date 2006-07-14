@@ -23,6 +23,10 @@ Usage:
     in:     Input file. Default is standard input.
     out:    Output file. Default is standard output.
 
+    -x      Define a FORTRAN INTEGER as a long int
+    -y      Define a FORTRAN REAL    as a double
+    -c      Invoke code to convert between FORTRAN and C integers.
+
 Intf2c and the C preprocessor:
 
 intf2c runs before the C preprocessor. This is good and bad. The
@@ -130,6 +134,7 @@ void arg_vms(),arg_extra(),arg_norm(),arg_uni(),arg_gen();
 void len_vms(),len_extra(),len_alliant(),len_uni();
 void addr_vms(),addr_norm(),addr_uni();
 void init_vms(),init_norm(),init_uni();
+int Handle_Fortran();
 
 SYSTEM systems[] = {
 	{ "vms",  "-1","0",
@@ -156,7 +161,7 @@ SYSTEM systems[] = {
 	   name_lower_,arg_extra,len_extra,  addr_norm,init_norm},
 	{ "unicos","_btol(1)","_btol(0)",
 	   name_upper, arg_uni,  len_uni,    addr_uni, init_uni},
-		    };
+ 		    };
 #define NSYSTEMS (sizeof(systems)/sizeof(SYSTEM))
 
 #define TYPE_REAL	0x01
@@ -180,7 +185,7 @@ SYSTEM *set_system_type();
 char *Get_Word(),*Get_Token(),*Lower_case();
 void process(),Handle_Arg(),Interface_Release(),usage();
 
-int lineno,nesting;
+int lineno,nesting,longint,longreal,longlog,cvtint,cvtlog;
 char last_char;
 /************************************************************************/
 main(argc,argv)
@@ -196,6 +201,7 @@ char *argv[];
 /* Handle the command line. Determine input and output files and the system. */
 
   input = output = NULL; sys_type = NULL;
+  cvtint = longint = longreal = longlog = 0;
   for(i=1; i < argc; i++){
     s = argv[i];
     if(*s == '-'){
@@ -205,6 +211,10 @@ char *argv[];
 	  if(++i < argc)
 	    sys_type = set_system_type(argv[i]);
 	  break;
+	case 'x': longint = 1; break;
+	case 'y': longreal = 1; break;
+	case 'z': longlog  = 1; break;
+	case 'c': cvtint = 1; cvtlog = 1; break;
 	case '?':
 	  usage();
 	  exit(0);
@@ -259,7 +269,7 @@ void usage()
 {
   int i;
   printf("intf2c: %s\n",VERSION_ID);
-  printf("Usage:\n\n   intf2c -s system [input] [output]\n\n");
+  printf("Usage:\n\n   intf2c [-x] [-y] -s system [input] [output]\n\n");
   printf("where system can be one of:");
   for(i=0; i < NSYSTEMS; i++)printf(" %s",systems[i].name);
   printf("\n");
@@ -289,9 +299,29 @@ SYSTEM *sys_type;
 
   printf("\n/* System dependent initialisation. */\n\n");
   (*(sys_type->init))();
-  printf("#define FORTRAN_TRUE  %s\n",sys_type->fortran_true);
-  printf("#define FORTRAN_FALSE %s\n\n",sys_type->fortran_false);
-  printf("char *zterm();\nvoid pad();\n");
+/*  printf("#define FORTRAN_TRUE  %s\n",sys_type->fortran_true);
+  printf("#define FORTRAN_FALSE %s\n\n",sys_type->fortran_false); */
+  if(cvtint)printf("#define FORTRAN_CVT_INT 1\n");
+  else printf("#define FORTRAN_CVT_INT 0\n");
+  if(cvtlog)printf("#define FORTRAN_CVT_LOG 1\n");
+  else printf("#define FORTRAN_CVT_LOG 0\n");
+
+  if(longint)printf("typedef long int fort_integer;\n");
+  else       printf("typedef int fort_integer;\n");
+  if(longlog)printf("typedef long int fort_logical;\n");
+  else       printf("typedef int fort_logical;\n");
+  if(longreal) printf("typedef double fort_real;\n");
+  else         printf("typedef float  fort_real;\n");
+  printf("typedef double fort_double;\n");
+
+  printf("char *zterm(char *string,int length);\n");
+  printf("void pad(char *string,int length);\n");
+  printf("int *iface_iarr(int n);\n");
+  printf("void iface_f2c_icvt(fort_integer *in,int *out,int n);\n");
+  printf("void iface_c2f_icvt(int *in,fort_integer *out,int n);\n");
+  printf("int *iface_larr(int n);\n");
+  printf("void iface_f2c_lcvt(fort_logical *in,int *out,int n);\n");
+  printf("void iface_c2f_lcvt(int *in,fort_logical *out,int n);\n");
 
   while((s = Get_Word(buf)) != NULL){
     inside = inside && nesting > 0;
@@ -506,12 +536,12 @@ int type;
 {
   char *s;
   switch(type){
-    case TYPE_REAL:	s = "float";		break;
-    case TYPE_INTEGER:	s = "int";		break;
+    case TYPE_REAL:	s = "fort_real";	break;
+    case TYPE_INTEGER:	s = "fort_integer";	break;
     case TYPE_CHAR:	s = "char";		break;
-    case TYPE_DOUBLE:	s = "double";		break;
-    case TYPE_LOGICAL:	s = "int";		break;
-    case TYPE_CMPLX:	s = "float";		break;
+    case TYPE_DOUBLE:	s = "fort_double";	break;
+    case TYPE_LOGICAL:	s = "fort_logical";	break;
+    case TYPE_CMPLX:	s = "fort_real";	break;
     case TYPE_VOID:	s = "void";		break;
     default:
       fprintf(stderr,"### Unrecognised type code (%d) in type_label\n",type);
