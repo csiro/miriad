@@ -132,8 +132,9 @@
 #include <fcntl.h>
 #include <ctype.h>
 #include <string.h>
-#if defined(INTERRUPT)
 #include <sys/types.h>
+#include <sys/wait.h>
+#if defined(INTERRUPT)
 #include <signal.h>
 #endif
 
