@@ -50,6 +50,7 @@
    rjs   25aug93 Don't complain about lack of initialisation for variables
 		 appearing in equivalences.
    rjs   20sep94 Eliminate bug dealing with blank lines.
+   rjs   30sep94 Check ends of ENDDO, ENDIF, ELSE statements.
 ******************************************************************************/
 
 #define VERSION_ID "25-Aug-93"
@@ -1329,6 +1330,8 @@ STATEMENT *f;
   Handle various block statements. Its pretty trivial.
 ------------------------------------------------------------------------*/
 {
+  s += f->length;
+  if(*s)error("Unexpected characters at end of line");
   set_block(f->flags);
 }
 /************************************************************************/
