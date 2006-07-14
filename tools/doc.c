@@ -45,6 +45,7 @@ History:
   bpw 28dec90   Now recognizes presence of .cdoc files on MIRPDOC
   bpw 09jan91   Get rid of 'define private static' because of convex compiler
   rjs 16jan91   FUDGE to not strip out blank characters in output .doc files.
+  rjs 14mar96   Handle standard keywords somewhat differently.
 
 ********************************************************************/
 char *version = { "version 2.4 - 16-jan-91" };
@@ -1274,7 +1275,7 @@ int domore;
       } else if( preformat==2 ) {
         fprintf( outstream, "%%A %s\n", keyword );
 	if(domore)fprintf( outstream,
-	  "\tStandard %s keyword. Use `help %s' for more information.\n",keyword,keyword);
+	  "\tStandard %s keyword. See the help on \"%s\" for more information.\n",keyword,keyword);
       } else {
         fprintf( outstream, "\n" );
         fprintf( outstream, "Keyword: %s\n", keyword );
