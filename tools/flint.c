@@ -51,9 +51,11 @@
 		 appearing in equivalences.
    rjs   20sep94 Eliminate bug dealing with blank lines.
    rjs   30sep94 Check ends of ENDDO, ENDIF, ELSE statements.
+   rjs   25nov95 Fix EQUIVALENCE handling, better treatment of exclamations,
+		 do-loop variables. Flag VMS record structures.
 ******************************************************************************/
 
-#define VERSION_ID "25-Aug-93"
+#define VERSION_ID "25-Nov-95"
 
 /*= flint - fortran source code verifier */
 /*& rjs pjt */
@@ -360,7 +362,7 @@ private void call_statement(),declaration_statement(),close_statement();
 private void simple_statement(),data_statement(),do_statement(),dowhile_statement();
 private void if_elseif_statement(),ignore_statement(),end_statement();
 private void prog_sub_func_statement(),goto_statement(),include_statement();
-private void equivalence_statement();
+private void equivalence_statement(),vms_record_statement();
 private void inquire_statement(),open_statement(),parameter_statement();
 private void read_write_statement(),rewind_statement(),common_statement();
 private void blockdata_statement(),block_statement();
@@ -913,6 +915,9 @@ private void define_statements()
     def_statement("enddo",block_statement,BLOCK_ENDDO,STATE_EXEC),
     def_statement("endif",block_statement,BLOCK_ENDIF,STATE_EXEC),
     def_statement("endfile(",rewind_statement,0,STATE_EXEC),
+    def_statement("endmap",vms_record_statement,0,STATE_DECL),
+    def_statement("endstructure",vms_record_statement,0,STATE_DECL),
+    def_statement("endunion",vms_record_statement,0,STATE_DECL),
     def_statement("equivalence(",equivalence_statement,0,STATE_DECL),
     def_statement("external",declaration_statement,F_EXTERNAL,STATE_DECL),
     def_statement("format(",ignore_statement,0,STATE_EXEC),
@@ -928,16 +933,20 @@ private void define_statements()
     def_statement("intent(unknown)",declaration_statement,F_POUT,STATE_DECL),
     def_statement("intrinsic",declaration_statement,F_EXTERNAL,STATE_DECL),
     def_statement("logical",declaration_statement,F_LOGICAL,STATE_DECL),
+    def_statement("map",vms_record_statement,0,STATE_DECL),
     def_statement("open(",open_statement,0,STATE_EXEC),
     def_statement("parameter",parameter_statement,0,STATE_DECL),
     def_statement("program",prog_sub_func_statement,F_VOID,STATE_PROG_SUB_FUNC),
     def_statement("read(",read_write_statement,F_OUT,STATE_EXEC),
     def_statement("real",declaration_statement,F_REAL,STATE_DECL),
+    def_statement("record/",vms_record_statement,0,STATE_DECL),
     def_statement("return",simple_statement,0,STATE_EXEC),
     def_statement("rewind(",rewind_statement,0,STATE_EXEC),
     def_statement("save",declaration_statement,F_SAVE,STATE_DECL),
+    def_statement("structure/",vms_record_statement,0,STATE_DECL),
     def_statement("subroutine",prog_sub_func_statement,F_VOID,STATE_PROG_SUB_FUNC),
     def_statement("stop",simple_statement,0,STATE_EXEC),
+    def_statement("union",vms_record_statement,0,STATE_DECL),
     def_statement("write(",read_write_statement,F_IN,STATE_EXEC)};
 
 #define N_STATEMENTS (sizeof(fortstat)/sizeof(STATEMENT))
@@ -992,7 +1001,7 @@ char *name;
 	    else if(isupper(*in))*out++ = *in - 'A' + 'a';
 	    else if(*in == '\'') {*out++ = *in; quotes++;}
 	    else if(*in == '!' && !(quotes % 2)){
-	      error("Exclamation comment on line");
+	      if(lcheck)error("Exclamation comment on line");
 	      *(in+1) = 0;
 	    } else                 *out++ = *in;
 	    in++;
@@ -1071,7 +1080,7 @@ int maxline,*flag,*colnum;
       else column++;
       s++;
     }
-    if(!*s)			       *flag = LINE_COMMENT;
+    if(!*s || *s == '!')	       *flag = LINE_COMMENT;
     else if(column >= 7 && isalpha(*s))*flag = LINE_NORMAL;
     else 			       *flag = LINE_BAD;
   }
@@ -1351,7 +1360,8 @@ STATEMENT *f;
   sd = s;
   s = handle_variable(s,name);
   if(name[0] && *s == '='){
-    type = set_variable(name,F_OUT|F_IN);
+    (void)set_variable(name,F_OUT);
+    type = set_variable(name,F_IN);
     if(!(type & F_INTEGER))error("DO loop variable is not an integer");
     do{
       sd = s+1;
@@ -1798,6 +1808,16 @@ STATEMENT *f;
   if(*s) error("Bad SUBROUTINE or FUNCTION statement");
 }
 /************************************************************************/
+private void vms_record_statement(s,f)
+char *s;
+STATEMENT *f;
+/*
+  Give warning about VMS record declarations.
+------------------------------------------------------------------------*/
+{
+  error("VMS record structures are not supported");
+}
+/************************************************************************/
 private void equivalence_statement(s,f)
 char *s;
 STATEMENT *f;
@@ -1825,8 +1845,8 @@ STATEMENT *f;
     if( *s == ',')s++;
     else if( *s == ')'){
       s++;
-      if(*(s+1) == ',') {
-	if(*(s+2) == '(')s += 2;
+      if(*s == ',') {
+	if(*(s+1) == '(')s += 2;
         else break;
       } else break;
     } else break;
