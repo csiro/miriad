@@ -118,6 +118,7 @@
 /*    rjs   4jun96   Really attempt to kill off children.		*/
 /*    rjs  29oct99   help -w						*/
 /*    rjs  22may06   Change to appease cygwin.				*/
+/*    mrc  14jul06   Compile with 'gcc -Wall' without warnings.         */
 /*									*/
 /*    ToDo anyhow:                                                      */
 /*      check earlier if lastexit can be written, otherwise complain    */
@@ -128,15 +129,22 @@
 /*        they can be used next to each other                           */
 /*                                                                      */
 /************************************************************************/
-#include <stdlib.h>
-#include <stdio.h>
-#include <fcntl.h>
 #include <ctype.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+
 #if defined(INTERRUPT)
 #include <signal.h>
+#endif
+
+#ifdef READLINE
+#include <readline/history.h>
+#include <readline/readline.h>
 #endif
 
 #ifndef R_OK
@@ -201,7 +209,7 @@ extern int errno;       /* or <errno.h> */
 extern char **environ;  /* point to environment */
 #endif
 /************************************************************************/
-main(ac,av)
+int main(ac,av)
 int ac;
 char *av[];
 {
@@ -290,11 +298,11 @@ char *argv[];
   "set" command.
 ------------------------------------------------------------------------*/
 {
-  int n,inter,doset,i,ntrys,within,l;
+  int n,inter,doset,i,ntrys,within;
   char prompt[MAXBUF],buffer2[MAXBUF];
   char *s,quotec;
 #ifdef READLINE
-  char *readline();
+  int  l;
 #endif
 
 /* Get a line from the user. */
@@ -901,8 +909,11 @@ char *argv[];
 /*
 ------------------------------------------------------------------------*/
 {
-  char rest[MAXBUF],path[MAXBUF],command[MAXBUF],*task,*key,*s;
+  char rest[MAXBUF],command[MAXBUF],*task,*key,*s;
   int i,doweb;
+#ifdef vms
+  char path[MAXBUF];
+#endif
 
 /* Determine the thing we want help on. */
 
@@ -1205,7 +1216,7 @@ char *task;
   char line[MAXBUF],path[MAXBUF],keyword[MAXBUF],*t;
   FILE *fd;
   VARIABLE *v;
-  int n,hashval,found;
+  int n,hashval;
 
 /* Check both the local directory, and the standard directory for the .doc
    file. */

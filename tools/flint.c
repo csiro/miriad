@@ -54,6 +54,7 @@
    rjs   25nov95 Fix EQUIVALENCE handling, better treatment of exclamations,
 		 do-loop variables. Flag VMS record structures.
    rjs   22may06 Change to appease cygwin.
+   mrc   14jul06 Get it to compile with 'gcc -Wall' without warnings.
 ******************************************************************************/
 
 #define VERSION_ID "22-May-06"
@@ -234,6 +235,8 @@
 #define private static
 #include <ctype.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 /* Define all the flags. */
 
@@ -387,7 +390,6 @@ private int set_variable(),inquire_variable(),set_label();
 private SYMBOL *set_routine(),*inquire_routine();
 private int isfunction(),issubstring(),get_arg_intent();
 private void banish_hollerith(),set_block(),end_label(),end_block();
-void *malloc();
 
 #define issymbol(s) (isalnum(s) || (s) == '_' || (s) == '$' || (s) == '%')
 
