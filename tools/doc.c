@@ -122,7 +122,7 @@ char *name,**s1,**s2,**infile;
   Possible extensions are:
   Extension	Language	Comment Char
   ---------	--------	------------
-    .c or .cc	C or C++	/* or //
+    .c or .cc	C or C++	Normal C comments.
     .f or .for	FORTRAN		C  or c
     .csh or .sh	Unix shell	#
     .com	VMS DCL		$!
