@@ -25,6 +25,7 @@
 /*    rjs  26aug93   Add hrm and habort.				*/
 /*    rjs  30aug93   Add hseek and htell.				*/
 /*    rjs   5jan94   Added hmode,hexists.				*/
+/*    rjs   4nov94   Change hexists to logical functoin.		*/
 /*									*/
 /************************************************************************/
 #include "io.h"
@@ -324,7 +325,7 @@ fortran subroutine hmode(integer tno,character mode)
   mode.pad;
 }
 /************************************************************************/
-fortran integer function hexists(integer tno,character item)
+fortran logical function hexists(integer tno,character item)
 {
   return( hexists_c(tno.val,item.zterm) ? FORTRAN_TRUE : FORTRAN_FALSE);
 }
