@@ -798,6 +798,8 @@ char *argv[];
     } else if( *s == '>'){
       if(*(s+1) != 0) output = s + 1;
       else if(++i < argc) output = argv[i];
+    } else if( *s == '&' && i == argc-1){
+      bg = 1;
     } else {
       task = argv[i];
     }
