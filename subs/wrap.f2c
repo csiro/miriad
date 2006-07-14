@@ -27,7 +27,7 @@
 /*    rjs   5jan94   Added hmode,hexists.				*/
 /*    rjs   5nov94   Correct declaration of hexists, and get rid of	*/
 /*		     casting int to char*.				*/
-/*									*/
+/*    rjs  27feb96   Added xyflush.					*/
 /************************************************************************/
 #include "io.h"
 
@@ -41,7 +41,7 @@ void uvopen_c(),uvclose_c(),uvflush_c(),uvread_c(),uvwrite_c(),uvtrack_c(),uvpro
 	uvvarcpy_c(),uvset_c(),uvvselect_c(),uvsela_c();
 int uvupdate_c(),uvvarupd_c(),dexpand_c();
 void xyopen_c(),xyclose_c(),xysetpl_c(),xyread_c(),xywrite_c(),xymkrd_c(),
-	xymkwr_c(),xyflgrd_c(),xyflgwr_c();
+	xymkwr_c(),xyflgrd_c(),xyflgwr_c(),xyflush_c();
 
 /************************************************************************/
 fortran integer function dexpand(character template,character output)
@@ -451,6 +451,11 @@ fortran subroutine xyopen(integer tno,character name,character status,
 	integer naxis,integer axes)
 {
   xyopen_c(tno.addr,name.zterm,status.zterm,naxis.val,axes.addr);
+}
+/************************************************************************/
+fortran subroutine xyflush(integer tno)
+{
+  xyflush_c(tno.val);
 }
 /************************************************************************/
 fortran subroutine xyclose(integer tno)
