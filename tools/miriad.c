@@ -20,7 +20,7 @@
     er <key>                   Line-edit a keyword value.
     task [<task>]              Set/show default task.
     inp [<task>]               Show settings of keywords to task.
-    go [-b] [<task>]           Run a task.
+    go  [<task>] [> log] [&]   Run a task.
     help [<task>] [-k key]     Help on a task or topic.
     view [<task>]              Edit keyword file for task.
     save/load [file]           Save/load global keyword file.
@@ -48,30 +48,25 @@
 /*                                                                      */
 /*   <option>      <explanation>                                        */
 /*   --------      -------------                                        */
-/*  PATHSEARCH     if set, full $PATH is searched instead of $MIRBIN    */
-/*  INTERRUPT      if set, interrupts like ^\, ^C, ^Y are caught        */
+/*  NOPATHSEARCH   if set, full $PATH is searched instead of $MIRBIN    */
+/*  NOINTERRUPT    if set, interrupts like ^\, ^C, ^Y are caught        */
 /*  GETENV         set this if your OS has no char *getenv()            */
 /*  READLINE	   GNU readline library is available. In this case, link*/
 /*		   with -lreadline -ltermcap.				*/
 /*  DO_CSHRC	   Shed csh with just the -c flag (not -cf).		*/
 /*									*/
 /*  vms		   Set if this is being compiled on VMS.		*/
-/*  sun		   Equivalent to -DPATHSEARCH -DINTERRUPT		*/
-/*  convex	   Equivalent to -DPATHSEARCH -DINTERRUPT		*/
-/*  hpux           Set if this is being compiled on a HP-UX machine.	*/
 /************************************************************************/
 
-#ifdef sun
-#  define PATHSEARCH 1
-#  define INTERRUPT  1
+#if defined(vms)
+#  define NOPATHSEARCH 1
+#  define NOINTERRUPT  1
 #endif
-#ifdef convex
+#if !defined(NOPATHSEARCH)
 #  define PATHSEARCH 1
-#  define INTERRUPT  1
 #endif
-#ifdef hpux
-#  define PATHSEARCH 1
-#  define INTERRUPT  1
+#if !defined(NOINTERRUPT)
+#  define INTERRUPT 1
 #endif
 
 /************************************************************************/
@@ -118,6 +113,8 @@
 /*    rjs   1dec93   go command can redirect standard output.		*/
 /*    rjs   4oct94   All machines shed csh with -cf.			*/
 /*    rjs  16feb95   New er command handling.				*/
+/*    rjs   3may96   Tidy defines. Fiddle with reading input a bit.	*/
+/*    rjs   4jun96   Really attempt to kill off children.		*/
 /*									*/
 /*    ToDo anyhow:                                                      */
 /*      check earlier if lastexit can be written, otherwise complain    */
@@ -134,6 +131,7 @@
 #include <ctype.h>
 #include <string.h>
 #if defined(INTERRUPT)
+#include <sys/types.h>
 #include <signal.h>
 #endif
 
@@ -169,9 +167,10 @@ struct {
 char buffer[MAXBUF];
 
 char taskname[MAXBUF];          /* current default name of task */
-int echo;
+int mecho;
 int Qkeys = 0;      /* 0: keys were not updated     1: were */
 int input_level = 0;	     /* nesting level of INPUT command */
+int pid = 0;		     /* Process ID of child */
 FILE *fpinput[MAXINPUT];
 int   dopopen[MAXINPUT];
 
@@ -205,7 +204,7 @@ char *av[];
   int i,more,argc;
   char *argv[MAXARG];
 
-  echo = 0;
+  mecho = 0;
   printf("Miriad shell %s\n",VERSION_ID);
 #if defined(INTERRUPT)
   signal(SIGTERM, review);            /* catch interrupts */
@@ -224,9 +223,9 @@ char *av[];
   while(more) {                      /* Loop to get a command. */
     argc = getline(argv);
     if(!argc);
-    else if(!strcmp(argv[0],"set"))      {echo = input_level == 0;
+    else if(!strcmp(argv[0],"set"))      {mecho = input_level == 0;
 					  doset(argc,argv);
-					  echo = 0;
+					  mecho = 0;
 					  Qkeys++; }
     else if(!strcmp(argv[0],"unset"))    {dounset(argc,argv); Qkeys++; }
     else if(!strcmp(argv[0],"inp"))      {doinp(argc,argv); }
@@ -287,9 +286,9 @@ char *argv[];
   "set" command.
 ------------------------------------------------------------------------*/
 {
-  int n,inter,doset,i,l;
+  int n,inter,doset,i,l,ntrys,within;
   char prompt[MAXBUF],buffer2[MAXBUF];
-  char *s;
+  char *s,quotec;
 #ifdef READLINE
   char *readline();
 #endif
@@ -298,20 +297,25 @@ char *argv[];
 
   if (input_level==0) {
     s = taskname;
-#ifdef READLINE
     sprintf(prompt,"%s%% ",s);
-    s = readline(prompt);
-    if(s != NULL){
-      l = strlen(s);
-      while(l-- > 0 && *(s+l) == ' ') *(s+l) = 0;
-      if(*s)add_history(s);
-      strcpy(buffer2,s);
-      free(s);
-    }
+    ntrys = 10;
+    s = NULL;
+    while(ntrys && s == NULL){
+      ntrys--;
+#ifdef READLINE
+      s = readline(prompt);
+      if(s != NULL){
+        l = strlen(s);
+        while(l-- > 0 && *(s+l) == ' ') *(s+l) = 0;
+        if(*s)add_history(s);
+        strcpy(buffer2,s);
+        free(s);
+      }
 #else
-    printf("%s%% ",s);
-    s = gets(buffer2);
+      printf("%s",prompt);
+      s = fgets(buffer2,MAXBUF,stdin);
 #endif
+    }
     if(s == NULL) strcpy(buffer2,"exit");
 
 /* Get a line from an input file. */
@@ -335,8 +339,16 @@ char *argv[];
   inter = 1;
   n = 0;
   doset = 0;
+  within = 0;
   while(*s){
-    if(*s == ' ' || *s == '\t' || *s == '\n' ){
+    if(within){
+      within = *s != quotec;
+    } else if(! within && (*s == '"' || *s == '\'')){
+      within = 1;
+      quotec = *s;
+      if(inter) argv[n++] = s;
+      inter = 0;
+    } else if(*s == ' ' || *s == '\t' || *s == '\n' ){
       inter = 1;
       *s = 0;
     } else if(*s == '#' || *s == '!'){
@@ -471,7 +483,7 @@ char *argv[];
     v->taught = FALSE;
     v->value = NULL;
   }
-  if(!v->user && !v->taught && echo)
+  if(!v->user && !v->taught && mecho)
      printf("[Creating new variable %s]\n",argv[1]);
   v->user = TRUE;
   if(v->value != NULL) free(v->value);
@@ -764,7 +776,7 @@ char *argv[];
 ------------------------------------------------------------------------*/
 {
   FILE *fd;
-  int i,n,pid,bg,length,fh;
+  int i,n,bg,length,fh;
   char *arg[MAXARGS+3],path[MAXBUF],parameter[MAXBUF],*s,**t,*runner;
   char *task,*output;
 
@@ -790,7 +802,12 @@ char *argv[];
       task = argv[i];
     }
   }
+
   if ( task == NULL) task = taskname;
+  s = (output != NULL ? output : task);
+  s = s + strlen(s) - 1;
+  if(*s == '&'){ *s = 0; bg = 1;}
+
   n = task_args(task);
   if(n < 0){
     fprintf(stderr,"### Found no documentation on task %s.\n",task);
@@ -870,6 +887,7 @@ char *argv[];
       bug("go: Failed to exec the subprocess");
     } else if (!bg) while(pid != wait(NULL));
   }
+  pid = 0;
 }
 #endif
 /************************************************************************/
@@ -1331,5 +1349,9 @@ void review()
 {
   fprintf(stderr,
        "Miriad shell cannot be interrupted, type 'help miriad' for info\n");
+
+/* Attempt to kill off any child process, if one exists. */
+
+  if(pid)kill((pid_t)pid,9);
 }
 #endif
