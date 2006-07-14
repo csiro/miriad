@@ -97,9 +97,10 @@ fortran subroutine fstrcpy(character out,character in)
 /*    rjs  27jul93 Handle subroutines with zero args.			*/
 /*    rjs   9aug93 Exit (rather than return) with 0 to appease VMS.     */
 /*    rjs  20nov94 Added Alphas.					*/
+/*    rjs  26jan95 Added f2c.						*/
 /************************************************************************/
 
-#define VERSION_ID "version 1.0 20-Dec-92"
+#define VERSION_ID "version 1.0 26-Jan-95"
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -136,6 +137,8 @@ SYSTEM systems[] = {
 	{ "hpux",   "1","0",
 	  name_lower,  arg_extra,len_extra,  addr_norm,init_norm},
 	{ "sun",    "1","0",
+	   name_lower_,arg_extra,len_extra,  addr_norm,init_norm},
+	{ "f2c",    "1","0",
 	   name_lower_,arg_extra,len_extra,  addr_norm,init_norm},
 	{ "bsd",    "1","0",
 	   name_lower_,arg_extra,len_extra,  addr_norm,init_norm},
@@ -568,7 +571,8 @@ char *buf;
   The global variables lineno and last_char are updated.
 ------------------------------------------------------------------------*/
 {
-  char *s,c;
+  char *s;
+  int c;
 
   c = getchar(); if(c == '\n') lineno++;
   while(isspace(c)){
