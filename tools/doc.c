@@ -29,7 +29,7 @@
 #define VERSION "Doc: version 1.0 21-Jul-99"
 #define private static
 #include <stdio.h>
-#include <strings.h>
+#include <string.h>
 
 #define MAXLINE 128
 
