@@ -14,7 +14,8 @@ Usage:
     system:  One of "f77" (generic unix compiler), "cft" (Cray FORTRAN
              compiler), "vms" (VMS FORTRAN), "fx" (alliant unix
              compiler), "convex" (convex unix compiler) or "sun"
-             (sun unix compiler), "hpux" or "alpha".
+             (sun unix compiler), "f2c" (NETLIBs f2c compiler),
+             "hpux", "alpha" or "sgi"
 
     incdir:  Directory to search for include files.  The -I option may
              be used repeatedly, but must list only one directory for
@@ -96,6 +97,8 @@ vector processing capacities (compilers "cft", "fx" and "convex"):
 /*    rjs  14jul92 Check for consistent use of the -b switch.           */
 /*    rjs  07jan93 Get #define to work.					*/
 /*    rjs  20nov94 Added alpha.						*/
+/*    pjt   3jan95 Added f2c (used on linux)                            */
+/*    rjs  15aug95 Added sgi		                                */
 /*									*/
 /************************************************************************/
 /* ToDos/Shortcomings:                                                  */
@@ -105,7 +108,7 @@ vector processing capacities (compilers "cft", "fx" and "convex"):
 /*  to be changed to:                                                   */
 /*      (uflag?textout("continue\n"):textout("CONTINUE\n"));            */
 /************************************************************************/
-#define VERSION_ID   "20-Nov-94"
+#define VERSION_ID   "15-Aug-95"
 
 #define max(a,b) ((a) > (b) ? (a) : (b) )
 #define min(a,b) ((a) < (b) ? (a) : (b) )
@@ -145,6 +148,8 @@ struct system {char *name;int doloop,prog,vector,bslash;} systems[] = {
 	{ "convex",  TRUE,  FALSE, TRUE, -1 },
         { "trace",   TRUE,  FALSE, FALSE, 0 },
 	{ "sun",     TRUE,  FALSE, FALSE, 1 },
+	{ "sgi",     TRUE,  FALSE, FALSE, 0 },
+	{ "f2c",     TRUE,  FALSE, FALSE, 1 },
 	{ "alpha",   TRUE,  FALSE, FALSE, 1 }};
 #define SYS_F77    1
 #define SYS_CFT    2
@@ -153,6 +158,7 @@ struct system {char *name;int doloop,prog,vector,bslash;} systems[] = {
 #define SYS_CONVEX 5
 #define SYS_TRACE  6
 #define SYS_SUN    7
+#define SYS_F2C    8
 #define NSYS (sizeof(systems)/sizeof(struct system))
 
 #define LOWER 90000	/* Ratty uses statement labels above this number. */
@@ -162,11 +168,11 @@ struct system {char *name;int doloop,prog,vector,bslash;} systems[] = {
 static FILE *out;
 static int dbslash,offlevel,level,sys,label,uselabel,depth,lines,routines,chars;
 static int comment,in_routine,gflag,lflag,uflag;
-static loops[MAXDEPTH],dowhile[MAXDEPTH];
+static int loops[MAXDEPTH],dowhile[MAXDEPTH];
 struct link_list {char *name; struct link_list *fwd;} *defines,*incdir;
 
 private void process(),message(),textout(),labelout(),numout(),blankout(),lowercase(),
-	cppline(),get_labelnos();
+	cppline(),get_labelnos(),usage();
 private struct link_list *add_list();
 private int getline(),reformat(),isdefine();
 private char *getparm(),*progtok(),*skipexp();
@@ -425,7 +431,8 @@ char *infile;
 /* IMPLICIT NONE statement. */
       } else if(!strcmp(token,"implicitnone") ||
 		!strcmp(token,"implicitundefined")){
-	if(sys == SYS_VMS || sys == SYS_FX || sys == SYS_CONVEX || sys == SYS_SUN) {
+	if(sys == SYS_VMS || sys == SYS_FX || sys == SYS_CONVEX || 
+           sys == SYS_SUN || sys == SYS_F2C) {
 	  blankout(indent); textout("implicit none\n");
 	} else if(sys == SYS_F77){
 	  blankout(indent); textout("implicit undefined (a-z)\n");
@@ -898,7 +905,7 @@ char *name;
   return(FALSE);
 }
 /************************************************************************/
-usage()
+private void usage()
 {
    int i;
 
