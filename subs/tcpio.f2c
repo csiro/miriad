@@ -1,0 +1,123 @@
+/************************************************************************/
+/*									*/
+/* Routines to access socket facilities from FORTRAN. The interface	*/
+/* is socket-like. Most (all?) the routines are trivial.		*/
+/*									*/
+/* History:								*/
+/*  rjs  Dark-ages Original version.					*/
+/*  rjs  25jan90   Changed "addr" to "adr" to avoid a conflict on Convex*/
+/*  rjs  23dec92   Rewrite in f2c format, mere all versions.		*/
+/*  mjs  21sep93   #define bcopy -> memcpy, bzero -> memset on sun.	*/
+/*									*/
+/************************************************************************/
+
+#include <stddef.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <ctype.h>
+#include <errno.h>
+
+#ifdef sun
+#define bcopy(a,b,c) memcpy((b),(a),(c))
+#define bzero(a,b)   memset((a),0,(b))
+#endif
+#ifdef vaxc
+extern int vmserrno;
+#  define ERRNO vmserrno
+#else
+#  define ERRNO errno
+#endif
+#ifdef trace
+extern int errno;
+#endif
+
+/************************************************************************/
+fortran subroutine tcpnode(character name,integer inet)
+/*
+
+  This returns the internet address of a host. If the host is not found, 
+  a zero address is returned.
+
+  Input:
+    name	Name of host.
+
+  Output:
+    inet	Inet address of host. If the host was not found, this
+		returns 0. Bytes are in network (not host!) order.
+
+------------------------------------------------------------------------*/
+{
+  char *p;
+  struct hostent *h;
+  unsigned long int s;
+
+/* It could be a dot-notation address or a name. Handle it right. */
+
+  p = name.zterm;
+  *(inet.addr) = 0;
+  if(isdigit(*p)){
+    s = inet_addr(p);
+    bcopy((char *)&s,(char *)inet.addr,sizeof(s));
+  } else {
+    h = gethostbyname(p);
+    if(h != NULL)bcopy(h->h_addr,(char *)inet.addr,h->h_length);
+#ifdef unicos
+    *(inet.addr) >>= 32;
+#endif
+  }
+}
+/************************************************************************/
+fortran integer function tcpsock(integer handle)
+/*
+  Perform a "socket" call.
+------------------------------------------------------------------------*/
+{
+  *(handle.addr) = socket(AF_INET,SOCK_STREAM,0);
+  return(handle.val < 0 ? ERRNO : 0);
+}
+/************************************************************************/
+fortran integer function tcpconn(integer handle,integer inet,integer port)
+/*
+  Perform a "connect" call.
+------------------------------------------------------------------------*/
+{
+   struct sockaddr_in sin;
+
+   sin.sin_family = AF_INET;
+   sin.sin_addr.s_addr = *(inet.addr);
+   sin.sin_port = htons(port.val);
+   bzero((char *)sin.sin_zero,sizeof(sin.sin_zero));
+   if(connect(handle.val,(struct sockaddr *)&sin,sizeof(sin)) < 0)return(ERRNO);
+   return(0);
+}
+/************************************************************************/
+fortran integer function tcpclose(integer handle)
+/*
+  Close down a socket.
+------------------------------------------------------------------------*/
+{
+  return(close(handle.val) ? 0 : ERRNO);
+}
+/************************************************************************/
+fortran integer function tcpwrite(integer handle,integer buff,
+	integer length)
+/*
+  Write some crap out to the socket.
+------------------------------------------------------------------------*/
+{
+  return(*(length.addr) == write(handle.val,(char *)buff.addr,length.val)
+	? 0 : ERRNO);
+}
+/************************************************************************/
+fortran integer function tcpread(integer handle,integer buff,
+	integer length,integer nread)
+/*
+  Read some crap from the socket. 
+------------------------------------------------------------------------*/
+{
+  *(nread.addr) = read(handle.val,(char *)buff.addr,length.val);
+  return(nread.val >= 0 ? 0 : ERRNO);
+}
