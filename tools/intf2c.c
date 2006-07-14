@@ -102,12 +102,14 @@ fortran subroutine fstrcpy(character out,character in)
 /*    rjs   9aug93 Exit (rather than return) with 0 to appease VMS.     */
 /*    rjs  20nov94 Added Alphas.					*/
 /*    rjs  26jan95 Added f2c.						*/
+/*    mrc  14jul06 Get it to compile with 'gcc -Wall' without warnings. */
 /************************************************************************/
 
 #define VERSION_ID "version 1.0 26-Jan-95"
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define MAXLEN 512
 #define TRUE 1
@@ -188,7 +190,7 @@ void process(),Handle_Arg(),Interface_Release(),usage();
 int lineno,nesting,longint,longreal,longlog,cvtint,cvtlog;
 char last_char;
 /************************************************************************/
-main(argc,argv)
+int main(argc,argv)
 int argc;
 char *argv[];
 {
@@ -206,7 +208,7 @@ char *argv[];
     s = argv[i];
     if(*s == '-'){
       s++;
-      while(c = *s++)switch(c){
+      while((c = *s++))switch(c){
 	case 's':
 	  if(++i < argc)
 	    sys_type = set_system_type(argv[i]);
