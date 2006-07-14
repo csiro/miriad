@@ -1143,7 +1143,7 @@ char *name;
   fd=fopen(name,"r");
   if (fd!=NULL) {               /* check that file !! */
     while(fgets(line,sizeof(line),fd) != NULL){
-        if (strlen(line)>0) {
+        if ((int)strlen(line) > 0) {
           if (strchr(line,'=')==NULL) {
             fprintf(stderr,"[Will not overwrite keywords to a file (%s)",name);
             fprintf(stderr," which does not look like a keyword file]\n");
@@ -1278,7 +1278,7 @@ char *var, *value;
         elen = strlen(*ep);                       /* length of this variable */
         cp = strchr(*ep,'=');                        /* look for an '=' sign */
         if ( (int)(cp - *ep) == vlen && strncmp(*ep,var,vlen)==0) { /* found */
-            if (vlen+strlen(value)+2 > elen) {                 /* reallocate */
+            if (vlen+(int)strlen(value)+2 > elen) {                 /* reallocate */
                 cp = malloc(vlen+strlen(value)+2);
                 if (cp==NULL) {
                     fprintf(stderr,"### No space to expand variable %s\n",var);
