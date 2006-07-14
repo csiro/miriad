@@ -17,7 +17,7 @@ Usage:
 
   intf2c -s system [in] [out]
 
-    system: One of "vaxc","hpux","sun","bsd","trace","alliant","convex",
+    system: One of "vms","hpux","sun","bsd","trace","alliant","convex",
             "unicos","alpha", "sgi", "linux". No default.
 
     in:     Input file. Default is standard input.
@@ -132,12 +132,12 @@ void addr_vms(),addr_norm(),addr_uni();
 void init_vms(),init_norm(),init_uni();
 
 SYSTEM systems[] = {
-	{ "vaxc",  "-1","0",
+	{ "vms",  "-1","0",
 	  name_lower,  arg_vms,  len_vms,    addr_vms, init_vms},
 	{ "hpux",   "1","0",
 	  name_lower,  arg_extra,len_extra,  addr_norm,init_norm},
 	{ "linux",  "1","0",
-	  name_lower,  arg_extra,len_extra,  addr_norm,init_norm},
+	  name_lower_,  arg_extra,len_extra,  addr_norm,init_norm},
 	{ "sun",    "1","0",
 	   name_lower_,arg_extra,len_extra,  addr_norm,init_norm},
 	{ "sgi",    "1","0",
