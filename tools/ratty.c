@@ -99,6 +99,7 @@ vector processing capacities (compilers "unicos", "alliant" and "convex"):
 /*    rjs  20nov94 Added alpha.						*/
 /*    pjt   3jan95 Added f2c (used on linux)                            */
 /*    rjs  15aug95 Added sgi		                                */
+/*    rjs  22may06 Change to appease cygwin.				*/
 /*									*/
 /************************************************************************/
 /* ToDos/Shortcomings:                                                  */
@@ -122,7 +123,8 @@ vector processing capacities (compilers "unicos", "alliant" and "convex"):
 
 /* A few things to stop lint complaining. */
 
-char *malloc(),*strcpy(),*strcat();
+char *strcpy(),*strcat();
+void *malloc();
 int fclose(),fputc();
 #define Strcpy (void)strcpy
 #define Strcat (void)strcat
@@ -180,7 +182,7 @@ struct link_list {char *name; struct link_list *fwd;} *defines,*incdir;
 private void process(),message(),textout(),labelout(),numout(),blankout(),lowercase(),
 	cppline(),get_labelnos(),usage();
 private struct link_list *add_list();
-private int getline(),reformat(),isdefine();
+private int get_line(),reformat(),isdefine();
 private char *getparm(),*progtok(),*skipexp();
 private FILE *incopen();
 private int continuation,quoted=FALSE;
@@ -321,7 +323,7 @@ char *infile;
 
   if(gflag)strcpy(gfile,infile);            /* init -g filename */
 
-  while(type = getline(in,line)){
+  while(type = get_line(in,line)){
     lines++;
     if(gflag){
         glines++;
@@ -371,7 +373,7 @@ char *infile;
 	    textout("if"); textout(s);
 	    while(bracketting){
 	      textout("\n");
-	      type = getline(in,line);
+	      type = get_line(in,line);
 	      if(type != '*'){
 		message("Bad DOWHILE statement");
 		bracketting = 0;
@@ -739,7 +741,7 @@ int *bracketting;
   return(s);
 }
 /************************************************************************/
-private int getline(in,line)
+private int get_line(in,line)
 FILE *in;
 char *line;
 /*
