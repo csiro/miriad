@@ -43,8 +43,9 @@ c 07sep05 - tw - noref option
 c 14sep05 - tw - polflag parameter
 c 15jul06 - tw - allow >2 IFs
 c 20jul06 - tw - remove polflag parameter (didn't work); tidy for miriad
+c 21jul06 - tw - fixed subtle error in cos(dc) correction
 c
-c $Id: mopfix.for,v 1.2 2006/07/24 04:50:01 cal103 Exp $
+c $Id: mopfix.for,v 1.3 2006/07/24 04:55:24 cal103 Exp $
 c-----------------------------------------------------------------------
 
 	program mopfix
@@ -80,7 +81,7 @@ c-----------------------------------------------------------------------
 	character*12 rangle,hangle
 
         character*50 vers
-        parameter ( vers = 'MOPFIX: version 20-jul-2006' )
+        parameter ( vers = 'MOPFIX: version 21-jul-2006' )
         call output(vers)
 
 *--------------------------------------------------------------
@@ -418,7 +419,7 @@ c Recompute uvw
 	     if (w .gt. 86400) w = w - 86400. ! in case ut timestamp > 86400
 	     u = rapos(iref) + (utrel - utrelp(iref)) * m1
 	     v = dcpos(iref) + (utrel - utrelp(iref)) * m2
-	     shift = (utrel-utrelp(iref)) * sqrt(m1**2+(m2*cos(dc0))**2)
+	     shift = (utrel-utrelp(iref)) * sqrt(m2**2+(m1*cos(dc0))**2)
 
 c Change flags if not reference
 	     if (.not. isref) then
