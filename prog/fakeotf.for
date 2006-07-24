@@ -28,9 +28,12 @@ c       System temps for channels A and B respectively.  If only one value
 c       is given, this is used for both channels.  This is also used to 
 c       determine the amount of noise in each spectrum.  Default is to use
 c       the original Tsys measurements from the input file.
-c       
+c--       
 c 21jun05 - tw - created
 c 20jul06 - tw - clean up for MOPS and miriad
+c
+c $Id: fakeotf.for,v 1.2 2006/07/24 04:48:48 cal103 Exp $
+c-----------------------------------------------------------------------
 
 	program fakeotf
 	implicit none
@@ -42,17 +45,16 @@ c 20jul06 - tw - clean up for MOPS and miriad
 	integer MAXCHAN
 	parameter (MAXCHAN=8192)
 
-	character ctime*10, rastr*12, dcstr*12, fitsfile*80
+	character ctime*10, rastr*12, dcstr*12
 	character infile*80, outfile*80, postab*20, src*16
 	integer jstat, flag, bin, if_no, source_no, baseline
-	real m1, m2, dra, ddc, dc0, utrel, midtime
 	real ut, weight(2*MAXCHAN), u, v, w, sc_buffer(1)
 	real width, amp0, amp, midch, func, imfwhm, noise,tsys(2),rms(2)
 	double precision ractr, dcctr, imsig, dist2
 	complex vis(2*MAXCHAN)
-	integer az, el, par, tsysa, tsysb
-	integer i, i1, i2, iref, j, nsp, nhead, ncyc
-	integer ln, npos, bw1, bw2, freq1, freq2, srclen
+	integer az, el, tsysa, tsysb
+	integer i, j, nsp, nhead, ncyc
+	integer bw1, bw2, freq1, freq2, srclen
 	logical isref, redotsys
 	integer iptr, bufdim, iant, numif
 	equivalence ( sc_buffer(1), sc_cal(1,1,1) )
@@ -381,4 +383,3 @@ c Unset flags
 
 	return
         end
-

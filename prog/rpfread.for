@@ -20,7 +20,7 @@ c@ options
 c       Extra processing options.
 c       'brief'  Output a one-line summary for each scan.
 c       'header' Output only the source/frequency header information.
-c
+c--
 c History:
 c 19 Feb 2004 by tw.
 c minor improvements - 20 Feb
@@ -32,6 +32,9 @@ c 10sep05 - tw - distinguish flagged and unflagged Ref spectra
 c 14jan06 - tw - allow for 2 pol, 2 IF MOPS data
 c 11jul06 - tw - rewritten for miriad, MOPS, ATCA data
 c 17jul05 - tw - increase precision for UT spectral timestamp
+c
+c $Id: rpfread.for,v 1.2 2006/07/24 04:50:52 cal103 Exp $
+c-----------------------------------------------------------------------
 
 	program rpfread
 	implicit none
@@ -52,9 +55,9 @@ c 17jul05 - tw - increase precision for UT spectral timestamp
 	integer jstat, flag, bin, if_no, source_no, baseline
 	integer gtpa,gtpb,sdoa,sdob,iant1,iant2
 	integer i, j, nsp, nhead, srclen, ncyc
-	integer ln, ierr, iptr, bufdim, iant, ifno
+	integer ln, iptr, bufdim, iant, ifno
 	integer freq1, bw1, freq2, bw2, nch1, nch2
-	integer tun,stat
+	integer tun
 	real    ut, u, v, w, weight(MAXCHAN*MAXPOL), sc_buffer(1)
 	real    rmin, rmax
 	real    az, el, par, tsysa, tsysb
@@ -448,4 +451,3 @@ c	   write(*,*) 'Pol ',i,' has ',if_nfreq(if_no),' chans'
 
 	return
         end
-
