@@ -30,7 +30,7 @@ c                   unflagged and only flagged based on maxgap above.
 c       'doextrap'  Use linear extrapolation if gap between flanking position
 c                   stamps exceeds maxgap.
 c       'noref'     Eliminate the reference scans from the file.
-c
+c--
 c 28jun04 - tw - created from rpfread and mapread
 c 13jul04 - tw - write OBSTYPE card for LiveData
 c 20jul04 - tw - fixed for Linux compiler
@@ -43,6 +43,9 @@ c 07sep05 - tw - noref option
 c 14sep05 - tw - polflag parameter
 c 15jul06 - tw - allow >2 IFs
 c 20jul06 - tw - remove polflag parameter (didn't work); tidy for miriad
+c
+c $Id: mopfix.for,v 1.2 2006/07/24 04:50:01 cal103 Exp $
+c-----------------------------------------------------------------------
 
 	program mopfix
 	implicit none
@@ -56,7 +59,7 @@ c 20jul06 - tw - remove polflag parameter (didn't work); tidy for miriad
 	integer MAXCHAN
 	parameter (MAXCHAN=8192)
 
-	character ctime*10, rastr*12, dcstr*12, fitsfile*80, wuvfmt*10
+	character ctime*10, rastr*12, dcstr*12
 	character infile*80, outfile*80, postab*20, src*16, cline*80
 	integer jstat, flag, bin, if_no, source_no, baseline
 	real m1, m2, dra, ddc, dc0, utrel, midtime
@@ -66,9 +69,9 @@ c 20jul06 - tw - remove polflag parameter (didn't work); tidy for miriad
 	double precision ftime(2)
 	complex vis(2*MAXCHAN)
 	integer az, el, tsysa, tsysb
-	integer i, i1, i2, iref, j, nsp, nhead, ncyc
-	integer ln, npos, ifac, bw1, bw2, freq1, freq2, srclen
-	logical dohms, extrap, keepflag, doextrap, isref, noref, dopos
+	integer i, i1, i2, iref, nsp, nhead, ncyc
+	integer ln, npos, bw1, bw2, freq1, freq2, srclen
+	logical extrap, keepflag, doextrap, isref, noref, dopos
 	integer iptr, bufdim, iant, ifno
 	equivalence ( sc_buffer(1), sc_cal(1,1,1) )
 
@@ -243,8 +246,8 @@ c write header to the output file (unless ref scans to be omitted)
 	    if (.not.(noref .and. isref)) then
 	       file = outfile
 	       jstat = -1
-	       call rpfitsout (jstat, vis, weight, baseline, ut, u, v, w,
-     :                        flag, bin, if_no, source_no)
+	       call rpfitsout (jstat, vis, weight, baseline, ut, u, v,
+     :                        w, flag, bin, if_no, source_no)
 	    endif
 
 c extract header position
@@ -317,8 +320,8 @@ c
 	     if (.not.(noref .and. isref)) then
 		file = outfile
 		jstat = 0
-		call rpfitsout (jstat, vis, weight, baseline, ut, u, v, w,
-     :                        flag, bin, if_no, source_no)
+		call rpfitsout (jstat, vis, weight, baseline, ut, u, v,
+     :                        w, flag, bin, if_no, source_no)
 	     endif
 
 	     goto 900
@@ -330,8 +333,8 @@ c CASE 3: CLOSE/REOPEN OPERATION
 	     if (.not.(noref .and. isref)) then
 		file = outfile
 		jstat = 3
-		call rpfitsout (jstat, vis, weight, baseline, ut, u, v, w,
-     :                        flag, bin, if_no, source_no)
+		call rpfitsout (jstat, vis, weight, baseline, ut, u, v,
+     :                        w, flag, bin, if_no, source_no)
 	     endif
 	     goto 900
 	  endif
