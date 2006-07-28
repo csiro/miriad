@@ -31,9 +31,10 @@ c 12aug05 - tw - distinguish Ref and Src spectra in u,v,w line
 c 10sep05 - tw - distinguish flagged and unflagged Ref spectra
 c 14jan06 - tw - allow for 2 pol, 2 IF MOPS data
 c 11jul06 - tw - rewritten for miriad, MOPS, ATCA data
-c 17jul05 - tw - increase precision for UT spectral timestamp
+c 17jul06 - tw - increase precision for UT spectral timestamp
+c 27jul06 - tw - fix bug in output call
 c
-c $Id: rpfread.for,v 1.2 2006/07/24 04:50:52 cal103 Exp $
+c $Id: rpfread.for,v 1.3 2006/07/28 04:11:13 cal103 Exp $
 c-----------------------------------------------------------------------
 
 	program rpfread
@@ -72,7 +73,7 @@ c-----------------------------------------------------------------------
 	character*12 dangle
 
 c program version
-	parameter (provers = 'RPFREAD: version 20-jul-2006')
+	parameter (provers = 'RPFREAD: version 27-jul-2006')
 
 *--------------------------------------------------------------
 
@@ -120,8 +121,7 @@ c Open the RPFITS file
 	end if
 
 	if (.not.brief) then
-	   write (tline, '(a,a)') ' Reading ', file
-	   call output(tline)
+	   call output(' Reading ' // file)
 	endif
 
 	nsp = 0
