@@ -24,7 +24,7 @@ foreach name ($*)
   switch($name)
     case *.for
       (cd $dir; $MIRBIN/ratty -s linux -b -I $MIRINC $name $tmp.f)
-      f77 -w -O -s -o $MIRBIN/$file $tmp.f `$MIRBIN/mirlibs`
+      f77 -ff90-intrinsics-hide -O -s -o $MIRBIN/$file $tmp.f `$MIRBIN/mirlibs`
       rm -f $tmp.f
       rm -f $doc
       $MIRBIN/doc -p $name
