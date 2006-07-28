@@ -4,7 +4,7 @@
 # Run ranlib if needed.
 
 if ( -e $MIRLIB/libmir.a ) then
-  if ( "`newer -i $MIRLIB/Last_ranlib $MIRLIB/libmir.a`" != "" ) then
+  if ( "`mirnewer -i $MIRLIB/Last_ranlib $MIRLIB/libmir.a`" != "" ) then
     echo "Running ranlib/building sharable library ..."
     ranlib $MIRLIB/libmir.a
     ld -shared -o $MIRLIB/libmir.so --whole-archive $MIRLIB/libmir.a
