@@ -31,17 +31,21 @@ foreach name ($*)
       $MIRBIN/doc -p $name
       if ( -e $doc ) then
         echo Updating $doc
-        mv $doc $MIRPDOC
+        mv -f $doc $MIRPDOC
       endif
       breaksw
     case *.c:
-      (cd $dir;cc -O -Dlinux -I$MIRINC -s -o $MIRBIN/$file $name)
+      (cd $dir; rm -f $MIRBIN/$file ; cc -O -Dlinux -I$MIRINC -s -o $MIRBIN/$file $name)
       breaksw
     case *.csh:
+      rm -f $MIRBIN/$file
       cp $name $MIRBIN/$file
       chmod +x $MIRBIN/$file
       breaksw
     case *.doc:
+      if ( -e $MIRPDOC/$name ) then
+        rm -f $MIRPDOC/$name
+      endif
       cp $name $MIRPDOC
       breaksw
     default:
