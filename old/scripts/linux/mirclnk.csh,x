@@ -33,10 +33,12 @@ foreach name ($*)
       if ( -e $doc ) then
         echo Updating $doc
         mv -f $doc $MIRPDOC
+        chmod 664 $MIRPDOC/$doc
       endif
       breaksw
     case *.c:
-      (cd $dir; rm -f $MIRBIN/$file ; cc -O -Dlinux -I$MIRINC -s -o $MIRBIN/$file $name)
+      (cd $dir; rm -f $MIRBIN/$file ; \
+       cc -O -Dlinux -I$MIRINC -s -o $MIRBIN/$file $name)
       chmod 775 $MIRBIN/$file
       breaksw
     case *.csh:
@@ -49,6 +51,7 @@ foreach name ($*)
         rm -f $MIRPDOC/$name
       endif
       cp $name $MIRPDOC
+      chmod 664 $MIRPDOC/$name
       breaksw
     default:
       echo Ignoring $name

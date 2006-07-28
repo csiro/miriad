@@ -20,6 +20,7 @@ foreach name ($*)
       if ( -e $doc ) then
         echo Updating $doc
         mv $doc $MIRPDOC
+        chmod 664 $MIRPDOC/$doc
       endif
       breaksw
     case *.c:
@@ -33,6 +34,7 @@ foreach name ($*)
       breaksw
     case *.doc:
       cp $name $MIRPDOC
+      chmod 664 $MIRPDOC/$name
       breaksw
     default:
       echo Ignoring $name
