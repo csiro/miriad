@@ -26,6 +26,7 @@ foreach name ($*)
       (cd $dir; $MIRBIN/ratty -s linux -b -I $MIRINC $name $tmp.f)
 #      f77 -ff90-intrinsics-hide -O -s -o $MIRBIN/$file $tmp.f `$MIRBIN/mirlibs`
       f77 -O -o $MIRBIN/$file $tmp.f `$MIRBIN/mirlibs`
+      chmod 775 $MIRBIN/$file
       rm -f $tmp.f
       rm -f $doc
       $MIRBIN/doc -p $name
@@ -36,11 +37,12 @@ foreach name ($*)
       breaksw
     case *.c:
       (cd $dir; rm -f $MIRBIN/$file ; cc -O -Dlinux -I$MIRINC -s -o $MIRBIN/$file $name)
+      chmod 775 $MIRBIN/$file
       breaksw
     case *.csh:
       rm -f $MIRBIN/$file
       cp $name $MIRBIN/$file
-      chmod +x $MIRBIN/$file
+      chmod 775 $MIRBIN/$file
       breaksw
     case *.doc:
       if ( -e $MIRPDOC/$name ) then

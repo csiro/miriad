@@ -13,6 +13,7 @@ foreach name ($*)
     case *.for
       (cd $dir; ratty -s sun -b -I $MIRINC $name $tmp.f)
       f77 -O2 -libmil -o $MIRBIN/$file $tmp.f `mirlibs`
+      chmod 775 $MIRBIN/$file
       rm -f $tmp.f
       rm -f $doc
       doc -p $name
@@ -23,11 +24,12 @@ foreach name ($*)
       breaksw
     case *.c:
       (cd $dir;cc -O -Dsun -I$MIRINC -o $MIRBIN/$file $name)
+      chmod 775 $MIRBIN/$file
       breaksw
     case *.csh:
       rm -f $MIRBIN/$file
       cp $name $MIRBIN/$file
-      chmod +x $MIRBIN/$file
+      chmod 775 $MIRBIN/$file
       breaksw
     case *.doc:
       cp $name $MIRPDOC
