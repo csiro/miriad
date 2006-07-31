@@ -1,7 +1,9 @@
 #!/bin/csh -f
+#-----------------------------------------------------------------------------
+# $Id: Weekly.sun4sol,x 1.2 2006/07/31 01:52:48 cal103 Exp $
+#-----------------------------------------------------------------------------
 
-unset prompt
-source ~/.cshrc
+source ~/.login
 
 echo "Running weekly update script for sun4sol machines"
 
@@ -9,10 +11,10 @@ echo "Running weekly update script for sun4sol machines"
 
 echo "Building miscellaneous documentation"
 cd $MIR/guides/user
+Buildchanges
 Buildcheat
 Buildtasks
-Buildchanges
-cp changes.txt cheat.doc tasks.doc $MIR/doc
+cp changes.doc cheat.doc tasks.doc $MIR/doc
 mv changes.doc cheat.doc tasks.doc $MIR/specdoc
 Buildhtmltask
 Buildmantask
