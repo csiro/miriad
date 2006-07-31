@@ -1,15 +1,18 @@
 #!/bin/csh
+#-----------------------------------------------------------------------------
+# $Id: Nightly.linux,x 1.2 2006/07/31 01:50:38 cal103 Exp $
+#-----------------------------------------------------------------------------
 
-unset prompt
-source ~/.cshrc
+source ~/.login
 
 echo " "
 echo "Checking RPFITS"
-if ( "`mirnewer -i $MIR/inc/rpfits.inc /usr/local/include/rpfits.inc`" != "" ) then
+if ("`mirnewer -i $MIR/inc/rpfits.inc /usr/local/include/rpfits.inc`" != "") then
   echo "Updating the version of rpfits.inc"
   cp /usr/local/include/rpfits.inc $MIR/inc/rpfits.inc
 endif
-if ( "`mirnewer -i $MIR/bindir/linux/librpfits.a /usr/local/lib/librpfits.a`" != "" ) then
+
+if ("`mirnewer -i $MIR/bindir/linux/librpfits.a /usr/local/lib/librpfits.a`" != "") then
   echo "Updating the version of librpfits.a"
   cp /usr/local/lib/librpfits.a $MIR/bindir/linux/librpfits.a
 endif

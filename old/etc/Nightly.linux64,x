@@ -1,7 +1,9 @@
 #!/bin/csh
+#-----------------------------------------------------------------------------
+# $Id: Nightly.linux64,x 1.2 2006/07/31 01:50:38 cal103 Exp $
+#-----------------------------------------------------------------------------
 
-unset prompt
-source ~/.cshrc
+source ~/.login
 
 echo "Running nightly update scripts for linux64 machines"
 echo y | mirupdate

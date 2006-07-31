@@ -1,7 +1,9 @@
 #!/bin/csh
+#-----------------------------------------------------------------------------
+# $Id: Nightly.sun4sol,x 1.2 2006/07/31 01:50:38 cal103 Exp $
+#-----------------------------------------------------------------------------
 
-unset prompt
-source ~/.cshrc
+source ~/.login
 
 echo " "
 echo "Checking for users needing help"
@@ -11,11 +13,12 @@ CheckBookings.csh
 echo " "
 echo "Checking RPFITS"
 cd $MIR
-if ( "`mirnewer -i $MIR/inc/rpfits.inc /usr/local/include/rpfits.inc`" != "" ) then
+if ("`mirnewer -i $MIR/inc/rpfits.inc /usr/local/include/rpfits.inc`" != "") then
   echo "Updating the version of rpfits.inc"
   cp /usr/local/include/rpfits.inc $MIR/inc/rpfits.inc
 endif
-if ( "`mirnewer -i $MIR/bindir/sun4sol/librpfits.a /usr/local/lib/librpfits.a`" != "" ) then
+
+if ("`mirnewer -i $MIR/bindir/sun4sol/librpfits.a /usr/local/lib/librpfits.a`" != "") then
   echo "Updating the version of librpfits.a"
   cp /usr/local/lib/librpfits.a $MIR/bindir/sun4sol/librpfits.a
 endif
@@ -26,4 +29,4 @@ mirexport
 
 echo " "
 echo "Updating sun4sol machines"
-echo y|mirupdate
+echo y | mirupdate
