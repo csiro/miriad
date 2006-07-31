@@ -1,0 +1,97 @@
+#! /bin/csh
+#		pdoc.csh
+#
+# get task, 1-liner, keywords
+
+rm -f cheat.doc
+touch cheat.doc
+chmod 664 cheat.doc
+
+echo "%D Miriad tasks and keyword summary"			>> cheat.doc
+echo "%: miscellaneous"						>> cheat.doc
+echo "%B"							>> cheat.doc
+echo "Creation date: `date`"					>> cheat.doc
+echo ' '							>> cheat.doc
+echo 'Task name conventions:'					>> cheat.doc
+echo ' '							>> cheat.doc
+echo '	im* .... operates on xyv images.'			>> cheat.doc
+echo '	uv* .... operates on uv datasets.'			>> cheat.doc
+echo '	tv* .... uses a TV device.'				>> cheat.doc
+echo '	gp* .... gain/polarisation calibration task (antenna based).' >> cheat.doc
+echo '	cg* .... PGPLOT-based image display tasks.'		>> cheat.doc
+echo '	zee* ... application programs often with application symbol.' >> cheat.doc
+echo '	or use common name (eg, clean).'			>> cheat.doc
+echo ' '							>> cheat.doc
+echo 'Keyword conventions:'					>> cheat.doc
+echo ' '							>> cheat.doc
+echo '	device ..... PGPLOT device.'				>> cheat.doc
+echo '	server ..... TV server/device.'				>> cheat.doc
+echo '	in ......... input image dataset.'			>> cheat.doc
+echo '	out ........ output dataset.'				>> cheat.doc
+echo '	vis ........ uv dataset.'				>> cheat.doc
+echo '	dataset .... calibration dataset.'			>> cheat.doc
+echo '	region ..... image region-of-interest.'			>> cheat.doc
+echo '	select ..... uv data selection.'			>> cheat.doc
+echo '	line ....... uv linetype.'				>> cheat.doc
+echo '	map/beam ... xy image.'					>> cheat.doc
+echo ' '							>> cheat.doc
+echo '          ----------------------------------------------'	>> cheat.doc
+#echo 'Tasks:'							>> cheat.doc
+#
+set awk_script = /tmp/$$.awk
+cat << "END_OF_FILE" > $awk_script
+#
+# pdoc.csh.awk - get task, 1-liner, keywords
+#
+BEGIN	{
+	b  = "";
+	nc = 0;
+	f  = sprintf("          ");
+	g  = sprintf("          ");
+	h  = sprintf("          ");
+	i  = sprintf("          ");
+	j  = sprintf("          ");
+#	print "--------  --------------------------------------------";
+	print "";
+	}
+#
+/%N/	{
+	a = $2;
+	}
+#
+/%D/	{
+	for (z=2; z<=NF; z++) b = sprintf("%s %s",b,$z); 
+	b = sprintf("%-9.8s%-70.70s",a,b);
+	print b;
+	}
+#
+/%A/	{
+	nc++;
+	if (nc <= 7)       f = sprintf("%s%-9.8s",f,$2);
+	else if (nc <= 14) g = sprintf("%s%-9.8s",g,$2);
+	else if (nc <= 21) h = sprintf("%s%-9.8s",h,$2);
+	else if (nc <= 28) i = sprintf("%s%-9.8s",i,$2);
+	else               j = sprintf("%s%-9.8s",j,$2);
+	}
+#
+END	{
+	if (nc >= 1)
+#	    print "";
+#	    print "          -------- -------- -------- -------- --------";
+	    {print f;
+	   }
+	if (nc >= 8)	print g;
+	if (nc >= 15)	print h;
+	if (nc >= 22)	print i;
+	if (nc >= 29)	print j;
+	}
+#
+"END_OF_FILE"
+foreach file ($MIRPDOC/*.doc)
+  set tail = $file:t
+  set tail = $tail:r
+  if ( -e $MIRBIN/$tail ) then
+    cat $file | awk -f $awk_script				>> cheat.doc
+  endif
+end
+#
