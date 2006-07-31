@@ -1,0 +1,8 @@
+#!/bin/sh
+
+  rm -f changes.doc
+  exec 1>changes.doc
+
+  sed -e "/^\*/d" $MIR/changes.txt | tail -27
+  echo ""
+  echo "See \$MIR/changes.txt for a history of earlier changes."
