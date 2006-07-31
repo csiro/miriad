@@ -1,29 +1,39 @@
-#!/bin/csh
+#!/bin/sh
 
 rm -f /tmp/$$.{1,2} tasks.doc
-touch /tmp/$$.{1,2} tasks.doc
-chmod 644 /tmp/$$.{1,2} tasks.doc
+trap "rm -f /tmp/$$.* ; trap 0" 0 1 2 3 15
 
-foreach file ( $MIRPDOC/*.doc )
-  set tail = $file:t
-  set tail = $tail:r
-  if ( -e $MIRBIN/$tail ) then
-    echo $tail >> /tmp/$$.1
+for FILE in $MIRPDOC/*.doc
+do
+  NAME=`echo "$FILE" | sed -e '{s|.*/||;s|\..*||;}'`
+
+  if [ -x "$MIRBIN/$NAME" ]
+  then
+    echo "$NAME" >> /tmp/$$.1
   else
-    echo $tail >> /tmp/$$.2
-  endif
-end
-echo "%D A list of Miriad tasks"	>> tasks.doc
-echo "%: miscellaneous"			>> tasks.doc
-echo "%B"				>> tasks.doc
-echo "	Available Miriad tasks are given below." >> tasks.doc
-echo "	Type"				>> tasks.doc
-echo "	  help <taskname>"		>> tasks.doc
-echo "	to get extra help."		>> tasks.doc
-echo " "				>> tasks.doc
-pr -6 -l1 -t /tmp/$$.1 >> tasks.doc
-echo " "				>> tasks.doc
-echo "	Other help topics available are">> tasks.doc
-echo " "				>> tasks.doc
-pr -6 -l1 -t /tmp/$$.2 >> tasks.doc
+    echo "$NAME" >> /tmp/$$.2
+  fi
+done
+
+exec 1>tasks.doc
+cat << EOT
+%D A list of Miriad tasks
+%: miscellaneous
+%B
+	Available Miriad tasks are given below.
+	Type
+	  help <taskname>
+	to get extra help.
+
+EOT
+
+pr -6 -l1 -t /tmp/$$.1
+
+cat << EOT
+
+	Other help topics available are
+
+EOT
+
+pr -6 -l1 -t /tmp/$$.2
 
