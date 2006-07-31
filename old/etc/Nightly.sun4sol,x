@@ -1,0 +1,29 @@
+#!/bin/csh
+
+unset prompt
+source ~/.cshrc
+
+echo " "
+echo "Checking for users needing help"
+cd $MIR/at_friends
+CheckBookings.csh
+
+echo " "
+echo "Checking RPFITS"
+cd $MIR
+if ( "`mirnewer -i $MIR/inc/rpfits.inc /usr/local/include/rpfits.inc`" != "" ) then
+  echo "Updating the version of rpfits.inc"
+  cp /usr/local/include/rpfits.inc $MIR/inc/rpfits.inc
+endif
+if ( "`mirnewer -i $MIR/bindir/sun4sol/librpfits.a /usr/local/lib/librpfits.a`" != "" ) then
+  echo "Updating the version of librpfits.a"
+  cp /usr/local/lib/librpfits.a $MIR/bindir/sun4sol/librpfits.a
+endif
+
+echo " "
+echo "Creating updates ..."
+mirexport
+
+echo " "
+echo "Updating sun4sol machines"
+echo y|mirupdate

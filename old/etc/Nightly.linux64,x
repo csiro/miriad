@@ -1,0 +1,7 @@
+#!/bin/csh
+
+unset prompt
+source ~/.cshrc
+
+echo "Running nightly update scripts for linux64 machines"
+echo y | mirupdate
