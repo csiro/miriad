@@ -1,4 +1,7 @@
 #! /bin/csh -ef
+#-----------------------------------------------------------------------------
+# $Id: mirclnk.csh,x 1.4 2006/08/01 00:10:46 cal103 Exp $
+#-----------------------------------------------------------------------------
 
 
 # Run ranlib if needed.
@@ -21,6 +24,7 @@ foreach name ($*)
   set dir = $name:h
   if ( $dir == $name ) set dir = "."
   echo Processing $name
+
   switch($name)
     case *.for
       (cd $dir; $MIRBIN/ratty -s linux -b -I $MIRINC $name $tmp.f)
@@ -36,27 +40,29 @@ foreach name ($*)
         chmod 664 $MIRPDOC/$doc
       endif
       breaksw
+
     case *.c:
-      (cd $dir; rm -f $MIRBIN/$file ; \
-       cc -O -Dlinux -I$MIRINC -s -o $MIRBIN/$file $name)
+      rm -f $MIRBIN/$file
+      (cd $dir; cc -O -Dlinux -I$MIRINC -s -o $MIRBIN/$file $name)
       chmod 775 $MIRBIN/$file
       breaksw
+
     case *.csh:
       rm -f $MIRBIN/$file
       cp $name $MIRBIN/$file
       chmod 775 $MIRBIN/$file
       breaksw
+
     case *.doc:
-      if ( -e $MIRPDOC/$name ) then
-        rm -f $MIRPDOC/$name
+      if ( -e $MIRPDOC/$doc ) then
+        rm -f $MIRPDOC/$doc
       endif
       cp $name $MIRPDOC
-      chmod 664 $MIRPDOC/$name
+      chmod 664 $MIRPDOC/$doc
       breaksw
+
     default:
       echo Ignoring $name
       breaksw
   endsw
 end
-
-
