@@ -13,7 +13,7 @@ c@ tformat
 c	Time format, choose "hms" for HH:MM:SS.S or "raw" for decimal.
 c       Default is decimal.
 c@ posout
-c       Optional text file to write out (u,v,w) values (Mopra only).
+c       Optional text file to write out (u,v,w) values (Mopra/PKS only).
 c       These contain the UT time (seconds), RA & DEC position stamps 
 c       for OTF mapping.  Default is not to write this file.
 c@ options
@@ -33,8 +33,9 @@ c 14jan06 - tw - allow for 2 pol, 2 IF MOPS data
 c 11jul06 - tw - rewritten for miriad, MOPS, ATCA data
 c 17jul06 - tw - increase precision for UT spectral timestamp
 c 27jul06 - tw - fix bug in output call
+c 02aug06 - tw - accommodate Parkes MB data, report obstype
 c
-c $Id: rpfread.for,v 1.3 2006/07/28 04:11:13 cal103 Exp $
+c $Id: rpfread.for,v 1.4 2006/08/03 00:13:02 cal103 Exp $
 c-----------------------------------------------------------------------
 
 	program rpfread
@@ -53,6 +54,7 @@ c-----------------------------------------------------------------------
 	logical dohms, isref, atca, brief, header, present(MAXOPT)
 	character ctime*10, rastr*12, dcstr*12, fitsfile*80, wuvfmt*10
 	character cdash*2, src*16, opts(MAXOPT)*8, posfile*40, tline*80
+	character fline*24
 	integer jstat, flag, bin, if_no, source_no, baseline
 	integer gtpa,gtpb,sdoa,sdob,iant1,iant2
 	integer i, j, nsp, nhead, srclen, ncyc
@@ -73,7 +75,7 @@ c-----------------------------------------------------------------------
 	character*12 dangle
 
 c program version
-	parameter (provers = 'RPFREAD: version 27-jul-2006')
+	parameter (provers = 'RPFREAD: version 02-Aug-2006')
 
 *--------------------------------------------------------------
 
@@ -81,15 +83,16 @@ c program version
 	atca = .false.
 	call keyini ()
 	call keya ('in', fitsfile, ' ')
-        if (fitsfile.eq.' ') then
-	   call bug('f','Input file must be given (in=)')
-	endif
 	call keya ('tformat', wuvfmt, 'raw')
 	call keya ('posout', posfile, '')
 	if (wuvfmt(1:3).eq.'hms') dohms = .true.
 	call options ('options',opts,present,2)
 	brief = present(1)
 	header = present(2)
+	if (.not.brief) call output(provers)
+        if (fitsfile.eq.' ') then
+	   call bug('f','Input file must be given (in=)')
+	endif
 	if (brief .and. header) then
 	   call bug('f','Only one option can be given')
 	endif
@@ -97,7 +100,6 @@ c program version
 
 *-------------------------------------------------------
 
-	if (.not.brief) call output(provers)
 	ln = len1(fitsfile)
 	write (file,'(A)') fitsfile(1:ln)
 
@@ -192,14 +194,16 @@ c load the header of the next scan
 c report some parameters
 
 	    if (.not.brief) then
-	       write (6, 100) su_name(1), rastr, dcstr, intime,' sec'
+	       write (6, 100) su_name(1), rastr(1:11), dcstr(1:11), 
+     *              intime, obstype(1:9)
 	       do i = 1, n_if
 		 write (6,101) i, if_bw(i)/1e6, if_nfreq(i), if_nstok(i)
 		 write (6,102) if_freq(i)/1e6,if_ref(i),if_sampl(i)
 	       enddo
 	       if (.not.header) write (6,*)
 	    endif
- 100	    format (' Source: ',a,' RA ',a,'  DEC ',a,'  cycle',i3,a)
+ 100	    format (' Source: ',a16,' RA ',a11,' DEC ',a11,'  cyc',i3,
+     *              's  obs ',a9)
  101	    format(' IF ',i2,' bw:',f7.2,' chans:',i5,' pols:',i2,$) 
  102	    format(' freq: ',f10.3,' @ chan: ',f5.0,'  nbit: ',i1)
 
@@ -267,9 +271,9 @@ c	     write(*,*)
 		   sdoa = sc_buffer(iptr+19)-sc_buffer(iptr+18)
 		   sdob = sc_buffer(iptr+21)-sc_buffer(iptr+20)
 		   if (.not.atca .and..not.brief .and. .not.header) then
-		      write(6,105) ifno, 1, tsysa, gtpa, sdoa
+		      write(6,105) iant, ifno, 1, tsysa, gtpa, sdoa
 		      if (if_nstok(ifno).gt.1) then
-			 write(6,105) ifno, 2, tsysb, gtpb, sdob
+			 write(6,105) iant, ifno, 2, tsysb, gtpb, sdob
 		      endif
 		   else if (.not.brief .and. .not.header) then
 		      write(6,106) iant,sc_ut,ifno,tsysa/10,tsysb/10
@@ -288,9 +292,9 @@ c	     write(*,*)
 	     endif
 
  104         format(' Az, El, par ang (deg): ',3f8.2)
- 105         format(' IF',i2,' Pol ',i1,': Tsys, GTP, SDO: '
+ 105         format(' Beam',i2,' IF',i2,' Pol ',i1,': Tsys, GTP, SDO: '
      :              ,f8.2,i10,i10)
- 106         format(' Ant ',i1,' UT ',f8.2,', Tsys for chan A,B IF '
+ 106         format(' Ant',i2,' UT ',f8.2,', Tsys for chan A,B IF '
      :              ,i1,': ',2f8.2)
  107	     format(a8,1x,a10,1x,a11,1x,a9,i7,i7,4i5,$)
  108	     format(a8,1x,a10,1x,a8,1x,a9,i4,i3,2i7,2i5,2i4,$)
@@ -332,30 +336,32 @@ c CASE 4: SPECTRUM TO READ IN
 	  else
              write(tline,114) iant1, iant2, if_no, ut, bin, intbase
 	  endif
- 110      format (' Spectrum for bsln ',i1,'-',i1,' IF ',i2,' at UT ',
+ 110      format (' Spectrum for bsln ',i2,'-',i2,' IF ',i2,' at UT ',
      :            a,'  bin ',i2,' inttime',f8.3)
- 114      format (' Spectrum for bsln ',i1,'-',i1,' IF ',i2,' at UT ',
+ 114      format (' Spectrum for bsln ',i2,'-',i2,' IF ',i2,' at UT ',
      :            f9.3,'  bin ',i2,' inttime',f8.3)
 	  if (.not.brief.and..not.header) call output(tline)
 	  if (atca) goto 900
 
 	  if (bin .eq. 1 .and. if_no .eq. 1) then
+	     write (fline, 116) cdash, iant1
 	     if (dohms) then
 		call format_time(w,ctime)
 		rastr = dangle(dble(u)*180.d0/(15.d0*pi))
 		dcstr = dangle(dble(v)*180.d0/pi)
-		write (tline, 111) cdash, ctime, rastr, dcstr
+		write (tline, 111) ctime, rastr, dcstr
 	     else
-		write (tline, 113) cdash, w, u*12./pi, v*180./pi
+		write (tline, 113) w, u*12./pi, v*180./pi
 	     endif
-	     if (.not.brief.and..not.header) call output(tline)
+	     if (.not.brief.and..not.header) call output(fline//tline)
 	     if (posfile .ne. '') then
-		write (11, 115) w, u*12./pi, v*180./pi
+		write (11, 115) w, u*12./pi, v*180./pi, iant1, iant2
 	     endif
 	  endif
- 111	  format (1x,a2,' Fake w,u,v: ',a,2x,a,2x,a)
- 113	  format (1x,a2,' Fake w,u,v: ',f11.3,2x,f11.7,2x,f11.7)
- 115	  format (f11.3,2x,f11.7,2x,f11.7)
+ 111	  format (a,2x,a,2x,a)
+ 113	  format (f11.3,2x,f11.7,2x,f11.7)
+ 115	  format (f11.3,2x,f11.7,2x,f11.7,5x,i2,'-',i2)
+ 116	  format (1x,a2,' Beam',i2,' Fake w,u,v: ')
 
 	  if (brief .or. header) goto 900
 
