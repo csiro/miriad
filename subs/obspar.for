@@ -17,6 +17,7 @@ c    rjs  27sep95 Added Parkes and nants.
 c    rjs  11oct95 Added subreflector diameter for atca.
 c    rjs  11mar96 Changed "nobeyama" to "nro10m", and added more info
 c		  on it.
+c    rjs  14mar96 Fixed bug I introduced on 11mar96.
 c************************************************************************
 c* ObsPrint -- Print list of known observatories.
 c: utility
@@ -180,6 +181,14 @@ c
 	call obsad('kittpeak/nants',	1.d0)
 	call obsad('kittpeak/systemp',	200.d0)
 c
+c  Nobeyama 45 m single dish.
+c  Jyperk and systemp given by Wright, from 3mm vlbi.
+c
+	call obsad('nobeyama45/antdiam',45.d0)
+	call obsad('nobeyama45/jyperk',	6.d0)
+	call obsad('nobeyama45/nants',	1.d0)
+	call obsad('nobeyama45/systemp',500.d0)
+c
 c  The Nobeyama mm array.
 c  Jyperk and systemp given by Wright, from 3mm vlbi.
 c
@@ -190,14 +199,6 @@ c
 	call obsad('nro10m/longitude',	obsdms( 1,138,29, 0.0))
 	call obsad('nro10m/nants',	6.0d0)
 	call obsad('nro10m/systemp',	300.d0)
-c
-c  Nobeyama 45 m single dish.
-c  Jyperk and systemp given by Wright, from 3mm vlbi.
-c
-	call obsad('nobeyama45/antdiam',45.d0)
-	call obsad('nobeyama45/jyperk',	6.d0)
-	call obsad('nobeyama45/nants',	1.d0)
-	call obsad('nobeyama45/systemp',500.d0)
 c
 c  Onsala Dish.
 c  Jyperk and systemp given by Wright, from 3mm vlbi.
