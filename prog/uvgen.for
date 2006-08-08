@@ -314,6 +314,7 @@ c    12jan99 rjs   Doc changes only.
 c     9may00 rjs   Write primary beam type out correctly.
 c    17may00 mchw  allow for saturated spectral absorption model.
 c    18may00 rjs   Merge rjs/mchw changes.
+c    27oct00 rjs   Call antbas to compute baseline number.
 c
 c  Bugs/Shortcomings:
 c    * Frequency and time smearing is not simulated.
@@ -342,7 +343,7 @@ c	pbfwhm=76,137,-0.2 simulates a primary beam pattern between
 c	10m and 6m antennas at 100 GHz. 
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version = 'Uvgen: version 1.0 18-May-00')
+	parameter(version = 'Uvgen: version 1.0 27-Oct-00')
 	integer ALTAZ,EQUATOR
 	parameter(ALTAZ=0,EQUATOR=1)
 	integer PolRR,PolLL,PolRL,PolLR,PolXX,PolYY,PolXY,PolYX
@@ -407,6 +408,7 @@ c
 	real rang
         integer PolsP2C,len1,tinNext
 	logical keyprsnt
+	double precision antbas
 c
 c  Data initialisation.
 c
@@ -960,7 +962,7 @@ c  Compute visibility for each baseline.
 c
 	    do n = 2, nant
 	      do m = 1, n-1
-	        preamble(5) = 256*m + n
+	        preamble(5) = antbas(m,n)
 	        bxx = b1(n) - b1(m)
 	        byy = b2(n) - b2(m)
 	        bzz = b3(n) - b3(m)
