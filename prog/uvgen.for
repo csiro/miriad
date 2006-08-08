@@ -76,6 +76,7 @@ c    20dec95 mchw  Added polarization switching.
 c    04jun96 mchw  Doc change only.
 c     5jun96 pjt   Better setting of random number seed
 c    06jun96 rjs   Fiddles to make lst and longitude more honest.
+c    10jun96 mchw  Atmospheric and elevation dependent systemp and tpower.
 c
 c  Bugs/Shortcomings:
 c    * Frequency and time smearing is not simulated.
@@ -119,7 +120,7 @@ c	equatorial system or as a local ground based coordinates measured to the
 c	north, east and in elevation. See the "baseunit" parameter to
 c	specify the coordinate system. Some standard antenna configurations
 c	can be found in $MIRCAT/*.ant for ATCA, BIMA and VLA telescopes.
-c	The BIMA antpos files (edit header line) can also be used with baseunit=1.
+c	The BIMA antpos files can also be used with baseunit=1.
 c@ baseunit
 c	This specifies the coordinate system used in the antenna file.
 c	A positive value for "baseunit" indicates an equatorial system,
@@ -194,6 +195,15 @@ c	X(linear polarization PA=0), Y(linear polarization PA=90).
 c	E.g. for 3 antennas, the polar=LLL,LRR,RRL,RLR cycles
 c	through all combinations of LCP and RCP for each baseline every
 c	4 integrations. The default is to use the stokes keyword.
+c@ leakage
+c	Polarization leakage errors, given as a percent. This gives the
+c	rms value of leakages of one polarisation feed into another.
+c	Polarization leakage errors are constant over the observation.
+c	To use this, you must set
+c	  stokes=xx,yy,xy,yx
+c	or
+c	  stokes=rr,ll,rl,lr
+c	The default is 0 (i.e. no polarization leakage).
 c@ lat
 c	Latitude of observatory, in degrees. Default is 40 degrees.
 c@ cycle
@@ -236,35 +246,33 @@ c	Antenna based phase noise, in degrees. This gives the phase
 c	noise, specified by the rms phase noise to be added to each
 c	antenna. Up to 4 values can be given to compute the phase noise
 c	  pnoise(1) + pnoise(2)*(baseline)**pnoise(3)*sinel**pnoise(4)
-c	where ``baseline'' is the baseline length in km. For
-c	Kolmogorov turbulence pnoise(3)=5/6 for baseline < outer scale
-c	and 0.33 for baseline > outer scale of turbulent layer.
-c	See also the ``gnoise'' parameter. The default is 0,0,0,0 (i.e.
+c	where ``baseline'' is the baseline length in km. Typical values
+c	for pnoise(2) are 1mm rms pathlength (e.g. 2 radians at 100 GHz),
+c	For Kolmogorov turbulence pnoise(3)=5/6 for baseline < 100m
+c	and 0.33 for baseline > 100m (outer scale of turbulence).
+c	pnoise(4)=-0.5 for a thick turbulent screen, and -1 for a thin layer.
+c	See also the ``gnoise'' parameter. Default is 0,0,0,0 (i.e.
 c	no phase error).
 c@ systemp
-c	System temperature for additive noise, in Kelvin. This is used
-c	to generate random Gaussian noise to add to each data point. The
-c	default is 0 K (i.e. no noise).
-c@ leakage
-c	Polarization leakage errors, given as a percent. This gives the
-c	rms value of leakages of one polarisation feed into another.
-c	Polarization leakage errors are constant over the observation.
-c	To use this, you must set
-c	  stokes=xx,yy,xy,yx
-c	or
-c	  stokes=rr,ll,rl,lr
-c	The default is 0 (i.e. no polarization leakage).
+c	System temperature used to compute additive random noise and
+c	total power. One or 3 values can be given; either the average
+c	single sideband systemp including the atmosphere (TELEPAR gives
+c	typical values), or the double sideband receiver temperature, 
+c	sky temperature, and zenith opacity, when systemp is computed as:
+c         systemp = 2.*(Trx + Tsky*(1-exp(-tau/sinel)))*exp(tau/sinel)
+c	where systemp, Trx and Tsky are in Kelvin. Typical values for Hat Ck
+c	Trx, Tsky, and tau are 75,290,0.15. (OBSTAU gives values for tau).
+c	systemp is used	to generate random Gaussian noise to add to each 
+c	data point. Default is 0,0,0 (i.e. no additive noise).
 c@ tpower
-c	Three numbers can be given to represent the total power variations
-c	due to receiver instability, telescope elevation dependence, and
-c	atmospheric noise. The total power is computed as:
-c	  tpower = systemp + trms + telev * cos(el) + tatm * antpnoise
-c	The receiver instablity is modeled as additive Gaussian noise.
+c	Two values can be given to represent the total power variations
+c	due to receiver instability (Trms), and atmospheric noise (Tatm). 
+c	         tpower = Trms * systemp +  Tatm * pnoise
+c	The receiver instablity is modeled as multiplicative Gaussian noise.
 c	The atmospheric noise is modeled to be correlated with the antenna
-c	phase noise. Units of trms, telev in Kelvin and tatm in Kelvin/radian.
-c	The systemp is not changed. Typical values for millimeter wavelengths
-c	are trms=1 K (10-4 * systemp) telev=100 K and tatm=0.5 K/radian.
-c	Default is tpower=0,0,0
+c	phase noise. Typical values at 3 millimeter wavelength
+c	are Trms=10-3 and Tatm=0.2 K/radian (280 degrees/K).
+c	Default is tpower=0,0
 c@ jyperk
 c	The system sensitivity, in Jy/K. Its value is given by 2*k/(eta * A)
 c	where k is Boltzmans constant (1.38e3 Jy m**2 / K), A is the physical
@@ -279,14 +287,10 @@ c	it "uvgen". If the dataset exists, visibilities are appended to
 c	the dataset, with an appropriate informational message.
 c--
 c------------------------------------------------------------------------
-	real sqrt2
 	character version*(*)
-	parameter(sqrt2=1.414214)
-	parameter(version = 'Uvgen: version 1.0 05-JUN-96')
+	parameter(version = 'Uvgen: version 1.0 10-JUN-96')
 	include 'mirconst.h'
 	include 'maxdim.h'
-	integer maxsrc,maxpol,maxpnt,maxpolar
-	parameter(maxsrc=1000,maxpol=4,maxpnt=100,maxpolar=20)
 	include 'uvgen.h'
 c
 	real corfin(4),corbw(4)
@@ -295,12 +299,12 @@ c
 	real wsignal(maxspect),tpower(MAXANT),pnoise(MAXANT)
 	logical flags(MAXCHAN)
 	logical donoise,dogains,doleak,dopoint
-	real sind,cosd,sinl,cosl,sinel,cosel,flux,dra,ddec
+	real sind,cosd,sinl,cosl,sinel,flux,dra,ddec
 	double precision freq,iffreq
 	real wmaj,wmin,wpa,poln,polpa,x,z,h,sinha,cosha,ha,haend
 	double precision bxx,byy,bzz,bxy,byx
 	real pbfwhm,center(2,MAXPNT),evector
-	integer n,nant,npnt,ipnt,i,j,jj,m,is,ic,nchan,nospect,ntemp
+	integer n,nant,npnt,ipnt,i,jj,m,is,ic,nchan,nospect,ntemp
 	double precision preamble(5),timeout
 	real b1(MAXANT),b2(MAXANT),b3(MAXANT),temp,psi,sinq,cosq,leakrms
 	real systemp(MAXANT*maxspect),inttime
@@ -318,8 +322,8 @@ c
 	integer NTELS
 	parameter(NTELS=3)
 	character sfile*64,antfile*64,corfile*64,outfile*64
-	real hbeg, hend, hint, arms, prms, tsys, utns
-	real trms,telev,tatm,cycleon,cycleoff
+	real hbeg, hend, hint, arms, prms, utns
+	real tsys,tsky,tau,trms,tatm,cycleon,cycleoff
 	double precision alat,along,sdec,sra,elev
 	integer pol(maxpol),npol,ipol,npolar,ipolar
 	character telescop*16,tels(NTELS)*8
@@ -435,10 +439,11 @@ c
 	call keyr('leakage',leakrms,0.)
 	leakrms = leakrms / 100.
 	call keyr('systemp',tsys,0.)
+	call keyr('systemp',tsky,0.)
+	call keyr('systemp',tau,0.)
 	call keyr('tpower',trms,0.)
-	call keyr('tpower',telev,0.)
 	call keyr('tpower',tatm,0.)
-	call keyr('jyperk',jyperk,150.0)
+	call keyr('jyperk',jyperk,150.)
 c
 	call keya('out',outfile,'uvgen')
 	if(outfile.eq.'uvgen')
@@ -536,6 +541,7 @@ c
 	ns = 0
 	call txtread(tunit,line,leng,status)
 	dowhile(status.eq.0.and.ns.lt.maxsrc)
+	 if(line(1:1).ne.'#')then
 	  read(line(1:leng),100) flux,dra,ddec,wmaj,wmin,wpa,poln,polpa
 100	  format(1x,8f10.4)
 	  ns = ns + 1
@@ -551,10 +557,11 @@ c
 	  pa(ns)  = polpa * pi/180
 	  write(line,101) ns,flux,dra,ddec,wmaj,wmin,wpa,poln,polpa
 101	  format(i2,F7.2,2F8.1,2F8.2,F8.1,F8.1,F8.2)
-	  call output(line)
-          umsg = 'UVGEN: '//line
-	  call hiswrite(unit, umsg )
-	  call txtread(tunit,line,leng,status)
+	 endif
+	 call output(line)
+         umsg = 'UVGEN: '//line
+	 call hiswrite(unit, umsg )
+	 call txtread(tunit,line,leng,status)
 	enddo
 c
 	call txtclose(tunit)
@@ -572,6 +579,7 @@ c
 	nant = 0
 	call txtread(tunit,line,leng,status)
 	dowhile(status.eq.0.and.nant.lt.MAXANT)
+	 if(line(1:1).ne.'#')then
 	  nant = nant + 1
 	  read(line(1:leng),'(3f12.4)') b1(nant),b2(nant),b3(nant)
 	  write(line,'(a,3f12.4)')'Inputs x,y,z:   ',
@@ -599,7 +607,8 @@ c
 	  write(line,'(a,3f12.4)') 'Equatorial (ns):',
      *				b1(nant),b2(nant),b3(nant)
 	  call output(line(1:53))
-	  call txtread(tunit,line,leng,status)
+	 endif
+	 call txtread(tunit,line,leng,status)
 	enddo
 c
 	call txtclose(tunit)
@@ -678,7 +687,7 @@ c
 c  Compute the effective longitude of the observatory.
 c
 	call jullst(timeout,0.d0,along)
-	along = mod(sra-along+2*PI,2*DPI)
+	along = mod(sra-along+2*DPI,2*DPI)
 	if(along.gt.DPI)along = along - 2*DPI
 	call uvputvrd(unit,'longitu',along,1)
 c
@@ -694,15 +703,6 @@ c
 c
 c  Fake some header information.
 c
-	systemp(1) = tsys
-	jj = 1
-	do j = 2,nant*max(nwide,nspect)
-	  jj = jj + 1
-	  systemp(jj)=tsys
-	end do
-	call uvputvrr(unit,'systemp',systemp,max(1,nant*nspect))
-	call uvputvrr(unit,'wsystemp',systemp,max(1,nant*nwide))
-
 	call uvputvrr(unit,'jyperk',jyperk,1)
 	inttime = max(3600*hint,1.)
 	call uvputvrr(unit,'inttime',inttime,1)
@@ -733,7 +733,7 @@ c
 	  call uvputvrr(unit,'wfreq',wfreq,nwide)
 	  call uvputvrr(unit,'wwidth',wwidth,nwide)
 	endif
-C
+c
 	do jj=1,nant
 	  antpos(jj) = b1(jj)
 	  antpos(jj+nant) = b2(jj)
@@ -741,45 +741,21 @@ C
         end do
 	call uvputvrd(unit,'antpos',antpos,nant*3)
 c
-c  Calculate random noise based on Tsys, integration time and bandwidth.
+c  Determine the rms for each polarisation using systemp at zenith.
 c
-	do i=1,nwide
-	  wrms(i,1) = jyperk*tsys / sqrt(2*wwidth(i)*1e9*inttime)
-	  wsignal(i) = 0
-	  do ipol=2,npol
-	    wrms(i,ipol) = wrms(i,1)
-	  enddo
-	enddo
-	do j = 1,nspect
-	  temp = jyperk * tsys / sqrt(2 * abs(sdf(j)) * 1e9 * inttime)
-	  do ipol=1,npol
-	    do i = ischan(j), ischan(j)+nschan(j)-1
-	      rrms(i,ipol) = temp
-	    enddo
-	  enddo
-	enddo
-c
-c  Divide noise levels by sqrt(2) if its a true Stokes correlation.
-c
-	do ipol=1,npol
-	  if(pol(ipol).gt.0)then
-	    do i=1,nwide
-	      wrms(i,ipol) = wrms(i,ipol)/sqrt2
-	    enddo
-	    do i=1,numchan
-	      rrms(i,ipol) = rrms(i,ipol)/sqrt2
-	    enddo
-	  endif
-	enddo
-c
-c  Determine the rms for each polarisation.
-c
+	if(Tsky*tau.gt.0.)then
+          systemp(1) = 2.*(Tsys + Tsky*(1-exp(-tau)))*exp(tau)
+	else
+          systemp(1) = Tsys
+	endif
+        call NoiseRms
+     *	  (unit,nant,npol,jyperk,systemp,pol,inttime,wrms,rrms,wsignal)
 c
 c  Write noise info to the history file.
 c
-	write(line,170) Tsys,Trms,Telev,Tatm
-170	format('Tsys(K): ',f6.0,'  Trms(K): ',f8.2,
-     *			'  Telev(K): ',f6.0,'  Tatm(K/rad): ',f5.2)
+	write(line,170) Tsys,Tsky,tau
+170	format('Tsys(K): ',f6.0,'  Tsky(K): ',f6.0,
+     *						'  tau(zenith): ',f6.2)
 	call output(line)
 	umsg = 'UVGEN: '//line
 	call hiswrite(unit, umsg )
@@ -911,13 +887,17 @@ c
 	    psi = atan2(sinq,cosq) + evector
 	    call uvputvrr(unit,'chi',psi,1)
 c
-c  Compute total power variations for each antenna.
+c  Compute systemp and tpower variations for each antenna.
 c
-	    if (trms + telev + tatm .gt. 0.) then
-	      cosel=sqrt(1.-sinel*sinel)
+	    if(Tsky*tau*sinel.gt.0.)then
+              temp = exp(-tau/sinel)
+              systemp(1) = 2.*(Tsys + Tsky*(1-temp)) / temp
+              call NoiseRms
+     *	  (unit,nant,npol,jyperk,systemp,pol,inttime,wrms,rrms,wsignal)
+	    endif
+	    if(trms.gt.0. .or. tatm.gt.0.) then
 	      do n = 1, nant
-	        tpower(n) = tsys + rang(1.,trms) + telev * cosel 
-     * 						 + tatm  * pnoise(n) 
+	        tpower(n) = rang(1.,trms)*systemp(1) + tatm*pnoise(n) 
 	      enddo
 	      call uvputvri(unit,'ntpower',nant,1)
 	      call uvputvrr(unit,'tpower',tpower,nant)
@@ -1434,7 +1414,7 @@ c	open or create source component list for model program
 c		mchw	july 1983
 c------------------------------------------------------------------------
 	integer status
-	character*90 line
+	character*120 line
         character*80 umsg
 c
 	integer leng
@@ -1676,3 +1656,59 @@ c
 	wwidth(2) = wwidth(1)
 c
 	end
+c********1*********2*********3*********4*********5*********6*********7*c
+        subroutine NoiseRms
+     *	  (unit,nant,npol,jyperk,systemp,pol,inttime,wrms,rrms,wsignal)
+	implicit none
+c
+c  Calculate random noise based on systemp, integration time and bandwidth.
+c
+	include 'maxdim.h'
+	include 'uvgen.h'
+	integer unit,nant,npol,pol(MAXPOL)
+	real jyperk,inttime
+	real wrms(MAXSPECT,MAXPOL),rrms(MAXCHAN,MAXPOL)
+	real systemp(MAXANT*MAXSPECT),wsignal(MAXSPECT)
+c---------------------------------------------------------------------
+	integer i,j,jj,ipol
+	real sqrt2,temp
+	parameter(sqrt2=1.414214)
+c
+	jj = 1
+	do j = 2,nant*max(nwide,nspect)
+	  jj = jj + 1
+	  systemp(jj)=systemp(1)
+	end do
+	call uvputvrr(unit,'systemp',systemp,max(1,nant*nspect))
+	call uvputvrr(unit,'wsystemp',systemp,max(1,nant*nwide))
+
+	do i=1,nwide
+	  wrms(i,1) = jyperk*systemp(1) / sqrt(2*wwidth(i)*1e9*inttime)
+	  wsignal(i) = 0
+	  do ipol=2,npol
+	    wrms(i,ipol) = wrms(i,1)
+	  enddo
+	enddo
+	do j = 1,nspect
+	  temp = jyperk * systemp(1) / sqrt(2*abs(sdf(j))*1e9*inttime)
+	  do ipol=1,npol
+	    do i = ischan(j), ischan(j)+nschan(j)-1
+	      rrms(i,ipol) = temp
+	    enddo
+	  enddo
+	enddo
+c
+c  Divide noise levels by sqrt(2) if its a true Stokes correlation.
+c
+	do ipol=1,npol
+	  if(pol(ipol).gt.0)then
+	    do i=1,nwide
+	      wrms(i,ipol) = wrms(i,ipol)/sqrt2
+	    enddo
+	    do i=1,numchan
+	      rrms(i,ipol) = rrms(i,ipol)/sqrt2
+	    enddo
+	  endif
+	enddo
+	end
+c********1*********2*********3*********4*********5*********6*********7*c
