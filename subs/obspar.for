@@ -23,6 +23,7 @@ c    mchw 18sep96 Added iram15m array on PdB.
 c    rjs  17dec96 More accurate positions for ATNF telescopes.
 c    mchw 20may97 Added CSO and JCMT. Updated HATCREEK.
 c    mchw 09jun97 Added evector to hatcreek
+c    rjs  24jun97 Correct height of ATCA.
 c************************************************************************
 c* ObsPrint -- Print list of known observatories.
 c: utility
@@ -153,7 +154,7 @@ c
 	call obsad('atca/ellimit',	12.0*dpi/180.d0)
 	call obsad('atca/evector',	0.25*dpi)
 	call obsad('atca/ew',		1.d0)
-	call obsad('atca/height',	2133.869d0)
+	call obsad('atca/height',	213.869d0)
 	call obsad('atca/jyperk',	13.d0)
 	call obsad('atca/latitude',	obsdms(-1, 30,18,46.3849))
 	call obsad('atca/longitude',	obsdms( 1,149,34, 0.4997))
