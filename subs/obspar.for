@@ -43,6 +43,7 @@ c    rjs  16sep93 Rename bsrch to binsrch.
 c    rjs   7mar94 Assume WSRT evector is -90 degrees (assume fixed dipoles).
 c    rjs  29jul94 Tolerate double-barrelled names (e.g. 'OVRO MMA').
 c    rjs   9aug94 Add "ew" parameter for ATCA and WSRT.
+c    rjs   5jul95 Added some penticon parameters.
 c------------------------------------------------------------------------
 	include 'obspar.h'
 	character name*24
@@ -164,6 +165,13 @@ c
 	call obsad('ovro/latitude',	obsdms( 1, 37,14, 0.00))
 	call obsad('ovro/longitude',	obsdms(-1,118,17, 0.00))
 	call obsad('ovro/systemp',	300.d0)
+c
+c  Some Penticton parameters.
+c
+	call obsad('penticton/antdiam',	9.0d0)
+	call obsad('penticton/height',	156.d0)
+	call obsad('penticton/latitude', obsdms( 1, 49,19,24.0))
+	call obsad('penticton/longitude',obsdms(-1,119,37,12.0))
 c
 c  Jyperk and systemp given by Wright, from 3mm vlbi.
 c
