@@ -312,6 +312,7 @@ c  The Very Large Array (NRAO).
 c  Values taken from the Green Book (pages 1-10, 1-16, 6-17).
 c
 	call obsad('vla/antdiam',	25.d0)
+	call obsad('vla/ellimit',	8.0d0*dpi/180.d0)
 	call obsad('vla/height',	2124.d0)
 	call obsad('vla/jyperk',	8.d0)
 	call obsad('vla/latitude',	obsdms( 1, 34, 4,43.497))
