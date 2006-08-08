@@ -2,8 +2,8 @@
 
 #  Generate a tar file containing files that have changed
 
-set exportdir = /nfs/ftp/software/miriad/updates
-set diffdir   = $MIR/diffs/changes
+set exportdir = $MIR/ftp/updates
+set diffdir   = $MIR/new
 
 set diffmode = 0
 foreach arg ($argv)
@@ -36,11 +36,12 @@ else
     set cond = ( )
   endif
   find cat inc linpack prog scripts spec specdoc subs tools \
-	\! -type d \! -name junk\* \! -name \*.o \
+	\! -type d \! -name junk\* \! -name \*.o \! -name rpfits.inc \
 	\! -name \*.log \! -name \*.dvi \! -name \*.def \
 	$cond \
 	-print > /tmp/${rhost}_files
   newer -i $MIR/export/Last_update_${rhost} ./README      >> /tmp/${rhost}_files
+  newer -i $MIR/export/Last_update_${rhost} ./Install     >> /tmp/${rhost}_files
   newer -i $MIR/export/Last_update_${rhost} ./changes.txt >> /tmp/${rhost}_files
 endif
 
@@ -50,7 +51,7 @@ echo There are some files to process
 
 # Determine the filename of the output tar file
 
-set date = `date +%y_%m_%d-%H%M`
+set date = `date +%Y_%m_%d-%H%M`
 
 if ( ! -d $MIR/export ) mkdir $MIR/export
 set file = $exportdir/${rhost}_${date}.tar
@@ -70,3 +71,4 @@ echo Tar file written at `date` by `whoami` >> $MIR/export/Last_update_${rhost}
 
 echo Generated tar file $file, containing
 cat /tmp/${rhost}_files
+rm /tmp/${rhost}_files
