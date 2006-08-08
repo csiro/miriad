@@ -18,6 +18,7 @@ c    rjs   2jun93 Better formating.
 c    rjs  15dec95 List observatories.
 c    rjs  06dec96 Print altitude.
 c    rjs  09jun97 Standardize keyword.
+c    dpr  22may01 Add XY-EW
 c------------------------------------------------------------------------
 	character version*(*)
 	integer MAXOBS
@@ -83,6 +84,7 @@ c
 	    n = n + 1
 	    if(value.eq.0)string = 'Alt-az'
 	    if(value.eq.1)string = 'Equatorial'
+	    if(value.eq.3)string = 'XY-EW'
 	    call output('Mount:               '//string)	
 	  endif
 c

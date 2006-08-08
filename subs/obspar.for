@@ -28,6 +28,7 @@ c    rjs/jm 11jul97 Correct longitude sign for IRAM15M, JCMT and CSO.
 c    mchw 05aug98 Added mount and nants to ovro.
 c    mchw 05feb99 Added carma for combined hatcreek and ovro arrays.
 c    rjs  31mar00 Added SEST.
+c    dpr  22may01 Added HOBART26M, CEDUNA30M, XYEW
 c************************************************************************
 c* ObsPrint -- Print list of known observatories.
 c: utility
@@ -73,9 +74,11 @@ c  This returns some known characteristics of various observervatories.
 c
 c  Input:
 c    observ	Name of the observatory. Current list is :
-c                 'ATCA', 'CSO', 'GMRT', 'HATCREEK', 'IRAM15M', 'JCMT',
+c                 'ATCA', 'CEDUNA30M', 'CSO', 'GMRT', 'HATCREEK', 
+c                 'HOBART26M', 'IRAM15M', 'JCMT',
 c                 'KITTPEAK', 'NOBEYAMA', 'NOBEYAMA45', 'ONSALA', 'OVRO',
-c		  'PARKES', 'PENTICTON', 'QUABBIN', 'VLA', 'WSRT'
+c		  'PARKES', 'PENTICTON', 'QUABBIN', 'VLA', 'WSRT',
+c                 
 c    object	The parameter of the observatory of interest. Possible
 c		values are:
 c		 'latitude '	Observatory latitude, in radians.
@@ -86,6 +89,7 @@ c		 'evector'	Offset angle of the feed to the local
 c				vertical.
 c		 'mount'	Telescope mount: 0 = alt-az
 c						 1   equitorial
+c                                                3   xy-ew
 c		 'antdiam'	Antenna diameter, in meters.
 c		 'subdiam'	Subreflector diameter.
 c		 'height'	Height above sea level, in meters
@@ -135,8 +139,8 @@ c------------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'obspar.h'
 c
-	double precision ALTAZ,EQUATOR
-	parameter(ALTAZ=0.d0,EQUATOR=1.d0)
+	double precision ALTAZ,EQUATOR,XYEW
+	parameter(ALTAZ=0.d0,EQUATOR=1.d0,XYEW=3.d0)
 c
 c  Externals.
 c
@@ -180,6 +184,16 @@ c
 	call obsad('carma/nants',	15.d0)
 	call obsad('carma/systemp',	200.d0)
 c
+c  The Ceduna 30m dish.
+c  Ref: Richard Dodson 22/05/01
+c
+	call obsad('ceduna30m/antdiam',	30.d0)
+	call obsad('ceduna30m/height', 161.d0)
+	call obsad('ceduna30m/latitude',  obsdms(-1, 31,52,05.04))
+	call obsad('ceduna30m/longitude', obsdms( 1,133,48,36.565))
+	call obsad('ceduna30m/mount',	ALTAZ)
+	call obsad('ceduna30m/nants',	1.d0)
+c
 c  CSO (from Oliver Lay -> MCHW 20may1997 - some values need confirmation)
 c
 	call obsad('cso/antdiam',	10.4d0)
@@ -210,6 +224,15 @@ c
 	call obsad('hatcreek/nants',   10.d0)
 	call obsad('hatcreek/subdiam',	0.61d0)
 	call obsad('hatcreek/systemp',	300.d0)
+c
+c  The Hobart 26m dish.
+c  Ref: misc NGS skd file from hobart
+	call obsad('hobart26m/antdiam',	26.d0)
+	call obsad('hobart26m/height',	66.12d0)
+	call obsad('hobart26m/latitude',  obsdms(-1, 42,48,12.9))
+	call obsad('hobart26m/longitude', obsdms( 1,147,26,25.9))
+	call obsad('hobart26m/mount',	XYEW)
+	call obsad('hobart26m/nants',	1.d0)
 c
 c  The IRAM mm array at PdB.
 c  Ref: S.Guillaoteau etal., 1992, A&A 262, 624.
