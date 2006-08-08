@@ -18,7 +18,7 @@
 	\! -name \*.log \! -name \*.dvi \! -name \*.def \
 	-newer $etc/Last_export \
 	-print > $files
-  mirnewer -i $etc/Last_export ./README      >> $files
+  mirnewer -i $etc/Last_export ./README.html >> $files
   mirnewer -i $etc/Last_export ./Install     >> $files
   mirnewer -i $etc/Last_export ./DISCLAIMER  >> $files
   mirnewer -i $etc/Last_export ./changes.txt >> $files
