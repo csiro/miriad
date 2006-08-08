@@ -15,7 +15,7 @@
 
   find cat inc linpack prog scripts spec specdoc subs tools \
 	\! -type d \! -name junk\* \! -name \*.o \! -name rpfits.inc \
-	\! -name \*.log \! -name \*.dvi \! -name \*.def \
+	\! -name \*.log \! -name \*.dvi \! -name \*.def \! -name RCS \
 	-newer $etc/Last_export \
 	-print > $files
   mirnewer -i $etc/Last_export ./README.html >> $files
