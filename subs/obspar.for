@@ -27,6 +27,7 @@ c    rjs  24jun97 Correct height of ATCA.
 c    rjs/jm 11jul97 Correct longitude sign for IRAM15M, JCMT and CSO.
 c    mchw 05aug98 Added mount and nants to ovro.
 c    mchw 05feb99 Added carma for combined hatcreek and ovro arrays.
+c    rjs  31mar00 Added SEST.
 c************************************************************************
 c* ObsPrint -- Print list of known observatories.
 c: utility
@@ -321,6 +322,13 @@ c
 	call obsad('quabbin/antdiam',	15.d0)
 	call obsad('quabbin/jyperk',	45.d0)
 	call obsad('quabbin/systemp',	240.d0)
+c
+c  SEST.
+c
+	call obsad('sest/antdiam',	15.d0)
+	call obsad('sest/height',	2400.d0)
+	call obsad('sest/latitude',	obsdms(-1,29,15,34.0))
+	call obsad('sest/longitude',	obsdms( 1,70,44,04.0))
 c
 c  The Very Large Array (NRAO).
 c  Values taken from the Green Book (pages 1-10, 1-16, 6-17).
