@@ -42,6 +42,7 @@ else
 	-print > /tmp/${rhost}_files.$$
   newer -i $MIR/export/Last_update_${rhost} ./README      >> /tmp/${rhost}_files.$$
   newer -i $MIR/export/Last_update_${rhost} ./Install     >> /tmp/${rhost}_files.$$
+  newer -i $MIR/export/Last_update_${rhost} ./DISCLAIMER  >> /tmp/${rhost}_files.$$
   newer -i $MIR/export/Last_update_${rhost} ./changes.txt >> /tmp/${rhost}_files.$$
 endif
 
