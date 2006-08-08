@@ -25,6 +25,7 @@ c    mchw 20may97 Added CSO and JCMT. Updated HATCREEK.
 c    mchw 09jun97 Added evector to hatcreek
 c    rjs  24jun97 Correct height of ATCA.
 c    rjs/jm 11jul97 Correct longitude sign for IRAM15M, JCMT and CSO.
+c    mchw 05aug98 Added mount and nants to ovro.
 c************************************************************************
 c* ObsPrint -- Print list of known observatories.
 c: utility
@@ -279,6 +280,8 @@ c
 	call obsad('ovro/jyperk',	74.d0)
 	call obsad('ovro/latitude',	obsdms( 1, 37,14, 0.00))
 	call obsad('ovro/longitude',	obsdms(-1,118,17, 0.00))
+	call obsad('ovro/mount',	ALTAZ)
+	call obsad('ovro/nants',	6.0d0)
 	call obsad('ovro/systemp',	300.d0)
 c
 c  Parkes.
