@@ -1,75 +1,81 @@
-#!/bin/csh -f
+#!/bin/csh -ef
 
-#  Generate a tar file containing files that have changed
+# Initialise.
 
-set exportdir = $MIR/ftp/updates
-set diffdir   = $MIR/new
+  set etc     = $MIR/etc
+  set updates = $MIR/ftp/updates
+  set scratch = /tmp/mirupd-dir-$$
+  set files   = /tmp/mirupd-files-$$
 
-set diffmode = 0
-foreach arg ($argv)
-  if ( "$arg" == "-d" ) then
-    set diffmode = 1
-  else
-    set rhost = $arg
-  endif
-end
-
-# Clean out the export directory of anything that has already been
-# received.
-
-touch  $exportdir/junk.Done
-foreach file ( $exportdir/*.Done )
-  rm -rf $file $file:r
-end
-
-# Generate the list of the files to update.
-
-if ( $diffmode ) then
-  cd $diffdir
-  ls > /tmp/${rhost}_files.$$
-  echo "-C $MIR changes.txt" >> /tmp/${rhost}_files.$$
-else
+  rm -f $updates/mirupd-99999999-9.tar.Z $updates/updates.txt $updates/junk
+  if ( ! -d $etc ) mkdir $etc
   cd $MIR
-  if ( -e $MIR/export/Last_update_${rhost} ) then
-    set cond = (-newer $MIR/export/Last_update_${rhost} )
-  else
-    set cond = ( )
-  endif
+
+# Determine which files need to be updated.
+
   find cat inc linpack prog scripts spec specdoc subs tools \
 	\! -type d \! -name junk\* \! -name \*.o \! -name rpfits.inc \
 	\! -name \*.log \! -name \*.dvi \! -name \*.def \
-	$cond \
-	-print > /tmp/${rhost}_files.$$
-  mirnewer -i $MIR/export/Last_update_${rhost} ./README      >> /tmp/${rhost}_files.$$
-  mirnewer -i $MIR/export/Last_update_${rhost} ./Install     >> /tmp/${rhost}_files.$$
-  mirnewer -i $MIR/export/Last_update_${rhost} ./DISCLAIMER  >> /tmp/${rhost}_files.$$
-  mirnewer -i $MIR/export/Last_update_${rhost} ./changes.txt >> /tmp/${rhost}_files.$$
-endif
+	-newer $etc/Last_export \
+	-print > $files
+  mirnewer -i $etc/Last_export ./README      >> $files
+  mirnewer -i $etc/Last_export ./Install     >> $files
+  mirnewer -i $etc/Last_export ./DISCLAIMER  >> $files
+  mirnewer -i $etc/Last_export ./changes.txt >> $files
+  if ( -z $files ) goto l100
 
-if ( -z /tmp/${rhost}_files.$$ ) exit
+# Generate the output tar file.
 
-echo There are some files to process
-
-# Determine the filename of the output tar file
-
-set date = `date +%Y_%m_%d-%H%M`
-
-if ( ! -d $MIR/export ) mkdir $MIR/export
-set file = $exportdir/${rhost}_${date}.tar
-
-# Create the output tar file.
-
-tar -cf $file `cat /tmp/${rhost}_files.$$`
-if ( $status ) exit
-compress -f $file
-if ( $status ) exit
+  set output = `date +%Y%m%d`
+  set output = mirupd-${output}-8.tar
+  if ( -f $updates/$output.Z ) set output = mirupd-99999999-9.tar
+  tar -cf $output `cat $files`
+  compress -f $output
+  mv $output.Z $updates
 
 # Remember the time that we did this.
 
-echo Tar file written at `date` by `whoami` >> $MIR/export/Last_update_${rhost}
+  if ( "$output" != "mirupd-99999999-9.tar" ) echo $output.Z >> $etc/Last_export
 
 # Send a message to let me know what was copied to the tar file.
 
-echo Generated tar file $file, containing
-cat /tmp/${rhost}_files.$$
-rm /tmp/${rhost}_files.$$
+  echo Generated tar file $output, containing
+  cat $files
+        
+# Now let us compress together files where this makes sense.
+
+l100:
+
+  rm -rf $files $scratch
+  cd $updates
+
+  foreach n ( 8 7 6 5 4 3 2 1 )
+    set list = ( `find . -name "mirupd-????????-$n.tar.Z" -print|sort` )
+    if ( $#list == 0 ) break
+    set limit = 4
+    if ( $n == 8 ) set limit = 7
+    while ( $#list > $limit )
+      set process = ( $list[1-4] )   
+      set list = ( $list[5-] )
+      mkdir $scratch
+      foreach f ( $process )
+        zcat $f | ( cd $scratch; tar -xmf -)
+      end
+      @ nm1 = $n - 1
+      set output = `echo $process[4]|sed -e "s/-$n\.tar\.Z/-$nm1\.tar/"`
+      tar -cf /tmp/$output -C $scratch .
+      compress -f /tmp/$output
+
+# Copy then rename. This way we can be sure that if the copy crashes,
+# that we do not get left with a half finished, corrupt file there.
+
+      cp /tmp/$output.Z junk
+      mv junk $output.Z
+      rm -r $scratch $process /tmp/$output.Z
+      echo Compressed $process into $output
+    end
+  end
+
+# Final tidy up.
+
+  ls mirupd-????????-?.tar.Z > updates.txt
