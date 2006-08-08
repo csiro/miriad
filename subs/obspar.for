@@ -19,6 +19,7 @@ c    rjs  11mar96 Changed "nobeyama" to "nro10m", and added more info
 c		  on it.
 c    rjs  14mar96 Fixed bug I introduced on 11mar96.
 c    rjs  11aug96 Added mopra, plus miscellaneous other parameters.
+c    mchw 18sep96 Added iram15m array on PdB.
 c************************************************************************
 c* ObsPrint -- Print list of known observatories.
 c: utility
@@ -64,7 +65,7 @@ c  THis returns some known characteristics of various observervatories.
 c
 c  Input:
 c    observ	Name of the observatory. Current list is :
-c		  'ATCA', 'GMRT', 'HATCREEK', 'KITTPEAK', 
+c                 'ATCA', 'GMRT', 'HATCREEK', 'IRAM15M', 'KITTPEAK',
 c	   	  'NOBEYAMA', 'NOBEYAMA45', 'ONSALA', 'OVRO'
 c		  'PARKES', 'PENTICTON', 'QUABBIN', 'VLA', 'WSRT'
 c    object	The parameter of the observatory of interest. Possible
@@ -172,6 +173,18 @@ c
 	call obsad('hatcreek/nants',   12.d0)
 	call obsad('hatcreek/subdiam',	0.61d0)
 	call obsad('hatcreek/systemp',	300.d0)
+c
+c  The IRAM mm array at PdB.
+c  Ref: S.Guillaoteau etal., 1992, A&A 262, 624.
+c
+        call obsad('iram15m/antdiam',   15.d0)
+        call obsad('iram15m/height',    2650.d0)
+        call obsad('iram15m/jyperk',    24.d0)
+        call obsad('iram15m/latitude',  obsdms( 1, 44,38,02.00))
+        call obsad('iram15m/longitude',obsdms(-1,5,54,28.40))
+        call obsad('iram15m/mount',     ALTAZ)
+        call obsad('iram15m/nants',     6.d0)
+        call obsad('iram15m/systemp',   300.d0)
 c
 c  The Kitt Peak mm single dish (NRAO).
 c  Jyperk and systemp given by Wright, from 3mm vlbi.
