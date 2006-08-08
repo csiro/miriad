@@ -1,56 +1,70 @@
 #!/bin/csh -f
-#
+
 #  Generate a tar file containing files that have changed
 
-set rhost = $1
-cd $MIR
+set exportdir = /nfs/ftp/software/miriad/updates
+set diffdir   = $MIR/diffs/changes
+
+set diffmode = 0
+foreach arg ($argv)
+  if ( "$arg" == "-d" ) then
+    set diffmode = 1
+  else
+    set rhost = $arg
+  endif
+end
+
+# Clean out the export directory of anything that has already been
+# received.
+
+touch  $exportdir/junk.Done
+foreach file ( $exportdir/*.Done )
+  rm -rf $file $file:r
+end
 
 # Generate the list of the files to update.
 
-if ( -e $MIRLIB/Last_update_${rhost} ) then
-  set cond = (-newer $MIRLIB/Last_update_${rhost} )
+if ( $diffmode ) then
+  cd $diffdir
+  ls > /tmp/${rhost}_files
+  echo "-C $MIR changes.txt" >> /tmp/${rhost}_files
 else
-  set cond = ( )
-endif
-find cat inc linpack man prog scripts spec specdoc subs tools \
+  cd $MIR
+  if ( -e $MIR/export/Last_update_${rhost} ) then
+    set cond = (-newer $MIR/export/Last_update_${rhost} )
+  else
+    set cond = ( )
+  endif
+  find cat inc linpack prog scripts spec specdoc subs tools \
 	\! -type d \! -name junk\* \! -name \*.o \
 	\! -name \*.log \! -name \*.dvi \! -name \*.def \
 	$cond \
 	-print > /tmp/${rhost}_files
+  newer -i $MIR/export/Last_update_${rhost} ./README      >> /tmp/${rhost}_files
+  newer -i $MIR/export/Last_update_${rhost} ./changes.txt >> /tmp/${rhost}_files
+endif
+
 if ( -z /tmp/${rhost}_files ) exit
 
 echo There are some files to process
 
 # Determine the filename of the output tar file
 
-set date = ( `date` )
-set month = $date[2]
-if ( $month == "Jan" ) set mon = 1
-if ( $month == "Feb" ) set mon = 2
-if ( $month == "Mar" ) set mon = 3
-if ( $month == "Apr" ) set mon = 4
-if ( $month == "May" ) set mon = 5
-if ( $month == "Jun" ) set mon = 6
-if ( $month == "Jul" ) set mon = 7
-if ( $month == "Aug" ) set mon = 8
-if ( $month == "Sep" ) set mon = 9
-if ( $month == "Oct" ) set mon = 10
-if ( $month == "Nov" ) set mon = 11
-if ( $month == "Dec" ) set mon = 12
+set date = `date +%y_%m_%d-%H%M`
 
-set base = $MIR/export/$rhost
 if ( ! -d $MIR/export ) mkdir $MIR/export
-if ( ! -d $base ) mkdir $base
-set file = $base/${date[6]}_${mon}_${date[3]}-${date[4]}.tar
+set file = $exportdir/${rhost}_${date}.tar
 
 # Create the output tar file.
 
 tar -cf $file `cat /tmp/${rhost}_files`
+if ( $status ) exit
 compress -f $file
+if ( $status ) exit
 
 # Remember the time that we did this.
 
-echo Tar file written at `date` by `whoami` >> $MIRLIB/Last_update_${rhost}
+echo Tar file written at `date` by `whoami` >> $MIR/export/Last_update_${rhost}
 
 # Send a message to let me know what was copied to the tar file.
 
