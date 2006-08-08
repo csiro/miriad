@@ -72,6 +72,7 @@ c    19jan95 mchw  Added atmospheric phase model to pnoise input.
 c    25jan95 mchw  Fix bug (lst = ha + ra)
 c    27nov95 mchw  Correct sign of source position angle.
 c    27nov95 rjs   (Re-)add some commas to appease g77.
+c    20dec95 mchw  Added polarization switching.
 c
 c  Bugs/Shortcomings:
 c    * Frequency and time smearing is not simulated.
@@ -175,6 +176,15 @@ c	will form a file with the 4 polarisations corresponding to an array
 c	with linear feeds.
 c	For linear feeds the convention is that the X feed has a position
 c	angle of 0, and the Y feed is 90 (measured north towards east).
+c@ polar
+c	Polarization patterns for generating time shared polarization data. 
+c	Up to MAXPOLAR=20 strings of the characters R and L, or X and Y, 
+c	to represent the polarization of each antenna
+c	R(right circular polarization), L(left circular polarization)
+c	X(linear polarization PA=0), Y(linear polarization PA=90).
+c	E.g. for 3 antennas, the polar=LLL,LRR,RRL,RLR cycles
+c	through all combinations of LCP and RCP for each baseline every
+c	4 integrations. The default is to use the stokes keyword.
 c@ lat
 c	Latitude of observatory, in degrees. Default is 40 degrees.
 c@ cycle
@@ -263,11 +273,11 @@ c------------------------------------------------------------------------
 	real sqrt2
 	character version*(*)
 	parameter(sqrt2=1.414214)
-	parameter(version = 'Uvgen: version 1.0 27-NOV-95' )
+	parameter(version = 'Uvgen: version 1.0 25-DEC-95' )
 	include 'mirconst.h'
 	include 'maxdim.h'
-	integer maxsrc,maxpol,maxpnt
-	parameter(maxsrc=1000,maxpol=4,maxpnt=100)
+	integer maxsrc,maxpol,maxpnt,maxpolar
+	parameter(maxsrc=1000,maxpol=4,maxpnt=100,maxpolar=20)
 	include 'uvgen.h'
 c
 	real corfin(4),corbw(4)
@@ -292,7 +302,7 @@ c
 	character line*132, umsg*80
 	complex gatm
 	real baseline,patm,pslope,pelev
-	logical doatm
+	logical doatm,dopolar
 c
 c  Parameters from the user.
 c
@@ -302,8 +312,10 @@ c
 	real hbeg, hend, hint, arms, prms, tsys, utns
 	real trms,telev,tatm,cycleon,cycleoff
 	double precision alat,sdec,sra,elev
-	integer pol(maxpol),npol,ipol
+	integer pol(maxpol),npol,ipol,npolar,ipolar
 	character telescop*16,tels(NTELS)*8
+	character polar(MAXPOLAR)*27,xpolar*27
+c	character polar(MAXPOLAR)*MAXANT,xpolar*MAXANT
 c
 c  Variables describing the source.
 c
@@ -322,6 +334,8 @@ c  Externals.
 c
 	complex expi
 	real rang
+        integer PolsP2C
+        integer len1
 c
 c  Data initialisation.
 c
@@ -367,6 +381,8 @@ c
 	sind = sin(sdec)
 	cosd = cos(sdec)
 	call GetPol(pol,npol,maxpol)
+	call mkeya('polar',polar,MAXPOLAR,npolar)
+	dopolar = npolar.gt.0
 	call keyt('lat',alat,'dms',40.d0*pi/180)
 	sinl=sin(alat)
 	cosl=cos(alat)
@@ -581,6 +597,12 @@ c
 	call txtclose(tunit)
 	if(nant.eq.MAXANT)
      *	  call bug('w','Max number of antenna positions read')
+	if(dopolar)then
+	  do ipolar=1,npolar
+	    if(len1(polar(ipolar)).lt.nant) call bug('f',
+     *            'Less than NANT characters in polarization cycle')
+	  enddo
+	endif
 c
 c  Get frequency/correlator parameters.
 c
@@ -807,6 +829,10 @@ c
 	  enddo
 	endif
 c
+c  Start the polarization switching cycle.
+c
+	ipolar = -1
+c
 c  Compute visibility for each hour angle.
 c
 	ha = hbeg
@@ -815,6 +841,13 @@ c
 	dec = sdec
 	dowhile(ha.lt.hend)
 	  haend = min(ha + cycleon,hend)
+c
+c  Increment the polarization switching cycle.
+c
+	if(dopolar) then
+	  ipolar = mod(ipolar+1,npolar)
+	  xpolar = polar(ipolar+1)
+	endif
 c
 c  Compute effective source parameters when mosaicing.
 c
@@ -885,6 +918,12 @@ c
 		preamble(3) = -byx*cosd + bzz*sind
 		baseline = 3.e-4 * sqrt(bxx*bxx + byy*byy + bzz*bzz)
 c
+c  Find the polcode for the polarization switching cycle.
+c
+		if(dopolar)then
+		  pol(1) = PolsP2C(xpolar(m:m)//xpolar(n:n))
+		endif
+c
 c  Calculate wideband correlations.
 c
 		if(nwide.gt.0)then
@@ -941,7 +980,8 @@ c
 c  Write data records.
 c
 		do ipol=1,npol
-		  if(npol.gt.1) call uvputvri(unit,'pol',pol(ipol),1)
+                  if(npol.gt.1.or.npolar.gt.1) 
+     *                  call uvputvri(unit,'pol',pol(ipol),1)
 	          if(numchan.gt.0) then
 		    if(nwide.gt.0)
      *		      call uvwwrite(unit,wcorr(1,ipol),flags,nwide)
