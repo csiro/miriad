@@ -9,17 +9,17 @@ c+
 c	TELEPAR gives the characteristics of various observatories.
 c	Its main use is to check that the characteristics are correct.
 c@ observ
-c	Name of the observatory. Several can be given. Possible values
-c	are atca,hatcreek,vla,wsrt,nobeyama,nobeyama45,ovro,onsala,
-c	quabbin.
+c	Name of the observatory. Several can be given. If none are
+c	given, TELEPAR simply lists the known observatories.
 c--
 c  History:
 c    rjs  20jun91 Original version.
 c    rjs   2jun93 Better formating.
+c    rjs  15dec95 List observatories.
 c------------------------------------------------------------------------
 	character version*(*)
 	integer MAXOBS
-	parameter(version='Telepar: version 1.0 2-Jun-93')
+	parameter(version='Telepar: version 1.0 15-Dec-95')
 	parameter(MAXOBS=16)
 	include 'mirconst.h'
 	character string*20,line*64,observs(MAXOBS)*12,observ*12
@@ -33,7 +33,10 @@ c
 	call keyini
 	call mkeya('observ',observs,MAXOBS,nobs)
 	call keyfin
-	if(nobs.eq.0)call bug('f','No observatory given')
+c
+	if(nobs.eq.0)then
+	  call obsPrint
+	endif
 c
 	do i=1,nobs
 	  call output('********************************')
