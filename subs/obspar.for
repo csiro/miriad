@@ -18,6 +18,7 @@ c    rjs  11oct95 Added subreflector diameter for atca.
 c    rjs  11mar96 Changed "nobeyama" to "nro10m", and added more info
 c		  on it.
 c    rjs  14mar96 Fixed bug I introduced on 11mar96.
+c    rjs  11aug96 Added mopra, plus miscellaneous other parameters.
 c************************************************************************
 c* ObsPrint -- Print list of known observatories.
 c: utility
@@ -81,6 +82,7 @@ c		 'subdiam'	Subreflector diameter.
 c		 'height'	Height above sea level, in meters
 c		 'ew'		Positive if the telescope is an E-W array.
 c	         'nants'        Number of antennas normally in the array.
+c		 'ellimit'	Elevation limit.
 c  Output:
 c    value	The value of the parameter.
 c    ok		True if the value was successfully found.
@@ -142,6 +144,7 @@ c
 c  The Australia Telescope Compact Array (ATNF).
 c
 	call obsad('atca/antdiam',	22.d0)
+	call obsad('atca/ellimit',	12.0*dpi/180.d0)
 	call obsad('atca/evector',	0.25*dpi)
 	call obsad('atca/ew',		1.d0)
 	call obsad('atca/height',	217.d0)
@@ -180,6 +183,15 @@ c
 	call obsad('kittpeak/longitude',obsdms(-1,111,36,51.12))
 	call obsad('kittpeak/nants',	1.d0)
 	call obsad('kittpeak/systemp',	200.d0)
+c
+c  The Mopra dish.
+c
+	call obsad('mopra/antdiam',	22.d0)
+	call obsad('mopra/height',	850.d0)
+	call obsad('mopra/latitude',	obsdms(-1, 31,16,04.451))
+	call obsad('mopra/longitude',	obsdms( 1,149,05,58.732))
+	call obsad('mopra/mount',	ALTAZ)
+	call obsad('mopra/nants',	1.d0)
 c
 c  Nobeyama 45 m single dish.
 c  Jyperk and systemp given by Wright, from 3mm vlbi.
@@ -224,6 +236,7 @@ c
 c  Parkes.
 c
 	call obsad('parkes/antdiam',	64.d0)
+	call obsad('parkes/ellimit',	30.5d0*dpi/180.d0)
 	call obsad('parkes/height',	391.79d0)
 	call obsad('parkes/latitude',	obsdms(-1, 32,59,59.8657)) 
 	call obsad('parkes/longitude',	obsdms( 1,148,15,44.3591))
