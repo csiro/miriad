@@ -82,6 +82,7 @@ c    16aug96 rjs   Change phase convention for circularly polarised data.
 c    25aug97 rjs   General tidy up.
 c    09oct97 rjs   Fix error in generating spectral datasets (introduced
 c		   7 weeks ago).
+c    02nov97 rjs   Change in calling sequence to tinOpen.
 c
 c  Bugs/Shortcomings:
 c    * Frequency and time smearing is not simulated.
@@ -516,7 +517,7 @@ c
 c  Read the source component file.
 c
 	ns = 0
-	call tinOpen(sfile)
+	call tinOpen(sfile,' ')
 	dowhile(tinNext().gt.0)
 	  call tinGetr(flux,0.0)
 	  call tinGetr(dra,0.0)
@@ -558,7 +559,7 @@ c
 	call hiswrite(unit,'UVGEN: Antenna positions :')
 	nant = 0
 c
-	call tinOpen(antfile)
+	call tinOpen(antfile,' ')
 	dowhile(tinNext().gt.0)
 	  nant = nant + 1
 	  if(nant.gt.MAXANT)call bug('f','Too many antennas')
@@ -598,7 +599,7 @@ c
 c
 c  Get frequency/correlator parameters.
 c
-	call tinOpen(corfile)
+	call tinOpen(corfile,' ')
 	if(tinNext().eq.0)call bug('f',
      *	  'Error reading from correlator file')
 	call tinGeti(nchan,0)
