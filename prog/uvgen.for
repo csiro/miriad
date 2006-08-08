@@ -312,6 +312,8 @@ c    01jul98 mchw  Added pbfwhm parameters to simulate primary beams.
 c			Fixed some errors in rms noise calculations.
 c    12jan99 rjs   Doc changes only.
 c     9may00 rjs   Write primary beam type out correctly.
+c    17may00 mchw  allow for saturated spectral absorption model.
+c    18may00 rjs   Merge rjs/mchw changes.
 c
 c  Bugs/Shortcomings:
 c    * Frequency and time smearing is not simulated.
@@ -340,7 +342,7 @@ c	pbfwhm=76,137,-0.2 simulates a primary beam pattern between
 c	10m and 6m antennas at 100 GHz. 
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version = 'Uvgen: version 1.0 09-May-00')
+	parameter(version = 'Uvgen: version 1.0 18-May-00')
 	integer ALTAZ,EQUATOR
 	parameter(ALTAZ=0,EQUATOR=1)
 	integer PolRR,PolLL,PolRL,PolLR,PolXX,PolYY,PolXY,PolYX
@@ -373,7 +375,7 @@ c
 	integer item, unit
 	character line*132, umsg*80
 	complex gatm
-	real baseline,patm,pslope,pelev,xx
+	real baseline,patm,pslope,pelev,xx,xxamp
 	logical doatm,dopolar,doellim,ok
 c
 c  Parameters from the user.
@@ -1014,8 +1016,9 @@ c
                         if(famp.ne.0. .and. fwid.ne.0.)then
                             xx = (real(freq)-fcen)/fwid
                             if(xx.lt.10.)then
-                              vis = vis * (1.+ famp * exp(-xx*xx))
-                              modI = modI * (1.+ famp * exp(-xx*xx))
+			      xxamp = max(0.,1.+ famp * exp(-xx*xx))
+			      vis = vis * xxamp
+                              modI = modI * xxamp
                             endif
 c
                           if(zeeman.ne.0.)then
@@ -1080,7 +1083,7 @@ c
 c
 c  All done. Summarize, tidy up and exit.
 c
-	write(line,'(i5,a,a)')
+	write(line,'(i7,a,a)')
      *	  Item,' records written to file: ',outfile
 	call output(line)
 	umsg = 'UVGEN: '//line
