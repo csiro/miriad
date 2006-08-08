@@ -452,7 +452,8 @@ c
 	  dtemp = 0
 	else
 	  call obspar(telescop,'mount',dtemp,ok)
-	  if(.not.ok)call bug('f','Unrecognized telescope: '//telescop)
+	  if(.not.ok)call bug('f','No mount defined for telescope: '
+     *                        //telescop)
 	  mount = nint(dtemp)
 	  call obspar(telescop,'evector',dtemp,ok)
 	  if(.not.ok)dtemp = 0
