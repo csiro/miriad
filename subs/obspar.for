@@ -24,6 +24,7 @@ c    rjs  17dec96 More accurate positions for ATNF telescopes.
 c    mchw 20may97 Added CSO and JCMT. Updated HATCREEK.
 c    mchw 09jun97 Added evector to hatcreek
 c    rjs  24jun97 Correct height of ATCA.
+c    rjs/jm 11jul97 Correct longitude sign for IRAM15M, JCMT and CSO.
 c************************************************************************
 c* ObsPrint -- Print list of known observatories.
 c: utility
@@ -171,7 +172,7 @@ c
 	call obsad('cso/height',	4080.0d0)
 	call obsad('cso/jyperk',	60.d0)
 	call obsad('cso/latitude',	obsdms( 1, 19,49,33.8))
-	call obsad('cso/longitude',	obsdms( 1,155,28,46.4))
+	call obsad('cso/longitude',	obsdms(-1,155,28,46.4))
 	call obsad('cso/mount',	ALTAZ)
 	call obsad('cso/nants',	2.d0)
 	call obsad('cso/systemp',	500.d0)
@@ -201,7 +202,7 @@ c
         call obsad('iram15m/height',    2650.d0)
         call obsad('iram15m/jyperk',    24.d0)
         call obsad('iram15m/latitude',  obsdms( 1, 44,38,02.00))
-        call obsad('iram15m/longitude',obsdms(-1,5,54,28.40))
+        call obsad('iram15m/longitude', obsdms( 1,5,54,28.40))
         call obsad('iram15m/mount',     ALTAZ)
         call obsad('iram15m/nants',     6.d0)
         call obsad('iram15m/systemp',   300.d0)
@@ -214,7 +215,7 @@ c
 	call obsad('jcmt/height',	4092.0d0)
 	call obsad('jcmt/jyperk',	40.d0)
 	call obsad('jcmt/latitude',	obsdms( 1, 19,49,33.8))
-	call obsad('jcmt/longitude',	obsdms( 1,155,28,46.4))
+	call obsad('jcmt/longitude',	obsdms(-1,155,28,46.4))
 	call obsad('jcmt/mount',	ALTAZ)
 	call obsad('jcmt/nants',	2.d0)
 	call obsad('jcmt/subdiam',	0.75d0)
