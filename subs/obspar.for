@@ -258,6 +258,9 @@ c
 c  GMRT.
 c
 	call obsad('gmrt/antdiam',	45.d0)
+	call obsad('gmrt/height',	650.0d0)
+	call obsad('gmrt/latitude',	obsdms( 1,19,06,0.0))
+	call obsad('gmrt/longitude',	obsdms(-1,74,03,0.0))
 c
 c  The HATCREEK mm array (BIMA).
 c  Jyperk and systemp given by Wright, from 3mm vlbi.

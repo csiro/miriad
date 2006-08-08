@@ -19,10 +19,11 @@ c    rjs  15dec95 List observatories.
 c    rjs  06dec96 Print altitude.
 c    rjs  09jun97 Standardize keyword.
 c    dpr  22may01 Add XY-EW
+c    mchw 26aug03 Add Nasmyth
 c------------------------------------------------------------------------
 	character version*(*)
 	integer MAXOBS
-	parameter(version='Telepar: version 1.0 09-JUN-96')
+	parameter(version='Telepar: version 3.0 26-AUG-03')
 	parameter(MAXOBS=16)
 	include 'mirconst.h'
 	character string*20,line*64,observs(MAXOBS)*12,observ*12
@@ -85,6 +86,7 @@ c
 	    if(value.eq.0)string = 'Alt-az'
 	    if(value.eq.1)string = 'Equatorial'
 	    if(value.eq.3)string = 'XY-EW'
+	    if(value.eq.4)string = 'Nasmyth'
 	    call output('Mount:               '//string)	
 	  endif
 c

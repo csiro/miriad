@@ -317,6 +317,7 @@ c    18may00 rjs   Merge rjs/mchw changes.
 c    27oct00 rjs   Call antbas to compute baseline number.
 c    22may01 dpr   Marginal XY-EW support
 c    08dec02 rjs   Fixed bug in determining whether source is up or not.
+c    13mar05 rjs   Add antenna azimuth and elevation to output dataset.
 c
 c  Bugs/Shortcomings:
 c    * Frequency and time smearing is not simulated.
@@ -365,6 +366,7 @@ c
 	real sind,cosd,sinl,cosl,sinel,flux,dra,ddec
 	double precision freq,iffreq,dtemp
 	real wmaj,wmin,wpa,poln,polpa,polvv,x,z,h,sinha,cosha,ha,haend
+	double precision antaz,antel
 	double precision bxx,byy,bzz,bxy,byx
 	real pbfwhm(3),center(2,MAXPNT),evector
 	integer mount
@@ -938,6 +940,11 @@ c
 	    cosq = sinl*cosd - cosl*sind*cosha
 	    sinel=sinl*sind+cosl*cosd*cosha
 c
+	    antaz = atan2(-cosd*sinha,cosl*sind-sinl*cosd*cosha)
+	    antel = asin(sinel)
+	    call uvputvrd(unit,'antaz',180.d0/DPI*antaz,1)
+	    call uvputvrd(unit,'antel',180.d0/DPI*antel,1)
+c
 c  Offset the parallactic angle by evector.
 c
 	    if(mount.eq.EQUATOR)then
@@ -1012,6 +1019,7 @@ c
 c  Calculate spectral data.  Compute model spectra, and add random noise.
 c
 	        if(numchan.gt.0) then
+		  oldI = 0
 		  do ipol=1,npol
 		    do is = 1, nspect
 		      do ic = ischan(is), ischan(is)+nschan(is)-1
