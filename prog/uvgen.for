@@ -69,6 +69,8 @@ c    15sep94 mchw  Change the site keyword to be the 'telescop' uv-variable.
 c    21sep94 mchw  Better value for sfreq in coramhat.
 c    28sep94 rjs   Merge mchw/rjs changes.
 c    19jan95 mchw  Added atmospheric phase model to pnoise input.
+c    25jan95 mchw  Fix bug (lst = ha + ra)
+c    30aug95 rjs   Add some commas for g77
 c
 c  Bugs/Shortcomings:
 c    * Frequency and time smearing is not simulated.
@@ -260,7 +262,7 @@ c------------------------------------------------------------------------
 	real sqrt2
 	character version*(*)
 	parameter(sqrt2=1.414214)
-	parameter(version = 'Uvgen: version 1.0 19-JAN-95' )
+	parameter(version = 'Uvgen: version 1.0 25-JAN-95' )
 	include 'mirconst.h'
 	include 'maxdim.h'
 	integer maxsrc,maxpol,maxpnt
@@ -739,8 +741,8 @@ c
 c  Write noise info to the history file.
 c
 	write(line,170) Tsys,Trms,Telev,Tatm
-170	format('Tsys(K): ',f6.0,'  Trms(K): 'f8.2,
-     *			'  Telev(K): ',f6.0,'  Tatm(K/rad): 'f5.2)
+170	format('Tsys(K): ',f6.0,'  Trms(K): ',f8.2,
+     *			'  Telev(K): ',f6.0,'  Tatm(K/rad): ',f5.2)
 	call output(line)
 	umsg = 'UVGEN: '//line
 	call hiswrite(unit, umsg )
@@ -838,7 +840,7 @@ c
 	  endif
 c
 	  dowhile(ha.lt.haend)
-	    lst = ha * pi / 12
+	    lst = ha * pi / 12 + ra
 	    if (lst.lt.0.d0) lst = lst + 2*pi
 	    h = lst - ra
 	    call uvputvrd(unit,'ut',lst,1)
