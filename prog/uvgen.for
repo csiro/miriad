@@ -68,6 +68,7 @@ c    29aug94 rjs   Write w axis value.
 c    15sep94 mchw  Change the site keyword to be the 'telescop' uv-variable.
 c    21sep94 mchw  Better value for sfreq in coramhat.
 c    28sep94 rjs   Merge mchw/rjs changes.
+c    19jan95 mchw  Added atmospheric phase model to pnoise input.
 c
 c  Bugs/Shortcomings:
 c    * Frequency and time smearing is not simulated.
@@ -211,7 +212,12 @@ c	The default is 0 (i.e. no gain error).
 c@ pnoise
 c	Antenna based phase noise, in degrees. This gives the phase
 c	noise, specified by the rms phase noise to be added to each
-c	antenna. See also the ``gnoise'' parameter. The default is 0 (i.e.
+c	antenna. Up to 4 values can be given to compute the phase noise
+c	  pnoise(1) + pnoise(2)*(baseline)**pnoise(3)*sinel**pnoise(4)
+c	where ``baseline'' is the baseline length in km. For
+c	Kolmogorov turbulence pnoise(3)=5/6 for baseline < outer scale
+c	and 0.33 for baseline > outer scale of turbulent layer.
+c	See also the ``gnoise'' parameter. The default is 0,0,0,0 (i.e.
 c	no phase error).
 c@ systemp
 c	System temperature for additive noise, in Kelvin. This is used
@@ -254,7 +260,7 @@ c------------------------------------------------------------------------
 	real sqrt2
 	character version*(*)
 	parameter(sqrt2=1.414214)
-	parameter(version = 'Uvgen: version 1.0 29-Aug-94' )
+	parameter(version = 'Uvgen: version 1.0 19-JAN-95' )
 	include 'mirconst.h'
 	include 'maxdim.h'
 	integer maxsrc,maxpol,maxpnt
@@ -281,6 +287,9 @@ c
 	integer item, unit, iostat
 	integer tunit,leng,status
 	character line*132, umsg*80
+	complex gatm
+	real baseline,patm,pslope,pelev
+	logical doatm
 c
 c  Parameters from the user.
 c
@@ -315,6 +324,7 @@ c  Data initialisation.
 c
 	data flags /MAXCHAN*.true./
 	data tels/'hatcreek','other   ','atca    '/
+	data gatm/(1.,0.)/
 c	data nospect/0/,famp/0./,fcen/0./,fwid/0./
 c
 c  Get command line arguments.
@@ -391,6 +401,10 @@ c
 	arms = arms /100.
 	call keyr('pnoise',prms,0.)
 	prms = prms * pi/180
+	call keyr('pnoise',patm,0.)
+	patm = patm * pi/180
+	call keyr('pnoise',pslope,0.)
+	call keyr('pnoise',pelev,0.)
 	call keyr('leakage',leakrms,0.)
 	leakrms = leakrms / 100.
 	call keyr('systemp',tsys,0.)
@@ -436,8 +450,9 @@ c
 	call output(line)
 c
 	donoise = tsys.gt.0
-	dogains = arms.gt.0.or.prms.gt.0
+	dogains = arms.gt.0.or.prms.gt.0.or.patm.gt.0.
 	doleak = leakrms.gt.0
+	doatm = patm.gt.0.
 	if(doleak)then
 	  doleak = npol.eq.4
 	  if(doleak)doleak = (pol(1).eq.-1.and.pol(4).eq.-4).or.
@@ -833,6 +848,7 @@ c
 	    cosha = cos(h)
 	    sinq = cosl*sinha
 	    cosq = sinl*cosd - cosl*sind*cosha
+	    sinel=sinl*sind+cosl*cosd*cosha
 c
 c  Offset the parallactic angle by evector.
 c
@@ -842,15 +858,14 @@ c
 c  Compute total power variations for each antenna.
 c
 	    if (trms + telev + tatm .gt. 0.) then
-	      sinel=sinl*sind+cosl*cosd*cosha
 	      cosel=sqrt(1.-sinel*sinel)
 	      do n = 1, nant
 	        tpower(n) = tsys + rang(1.,trms) + telev * cosel 
      * 						 + tatm  * pnoise(n) 
-	      end do
+	      enddo
 	      call uvputvri(unit,'ntpower',nant,1)
 	      call uvputvrr(unit,'tpower',tpower,nant)
-	    end if
+	    endif
 c
 c  Compute visibility for each baseline.
 c
@@ -865,6 +880,7 @@ c
 	        preamble(1) = bxy
 	        preamble(2) =  byx*sind + bzz*cosd
 		preamble(3) = -byx*cosd + bzz*sind
+		baseline = 3.e-4 * sqrt(bxx*bxx + byy*byy + bzz*bzz)
 c
 c  Calculate wideband correlations.
 c
@@ -879,12 +895,14 @@ c
 	              wcorr(is,ipol) = vis
 	            enddo
 		  enddo
+		  if(doatm) gatm = expi(
+     *		     rang(0.,patm * baseline**pslope * sinel**pelev))	
 		  if(doleak)
      *		     call PolLeak(wcorr,nwide,maxspect,npol,
      *			leak(1,m),leak(1,n))
 		  if(dogains)
      *		     call AntGain(wcorr,nwide,maxspect,npol,
-     *			Gain(m)*conjg(gain(n)))
+     *			Gain(m)*conjg(gain(n)*gatm))
 		  if(donoise)
      *		     call NoiseAdd(wcorr,nwide,maxspect,npol,wrms)
 	        endif
