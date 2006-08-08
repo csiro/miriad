@@ -1,0 +1,388 @@
+#    observatories.dat
+#
+#    Stuart Weston - Auckland University of Technology, July 2006
+#
+#    To allow greater flexability in adding new observatories or
+#    changing existing rather than have hard coded entrys in the
+#    code of the subroutine "obsinit". It was felt a better approach
+#    would be to read a file. This would allow users to easily add or
+#    change entries without recompiling the code.
+#
+#    List must currently be ordered alphabeticaly by observatory
+#
+#    Name       Name of the observatory
+#
+#    Paramater	The parameter of the observatory of interest. Possible
+#		values are:
+#		 'latitude '	Observatory latitude in radians.
+#                                s   - the sign of the angle
+#                                deg - Degrees (must be positive)
+#                                m   - minutes
+#                                sec - seconds
+#		 'longitude'	Observatory longitude in radians.
+#                                s   - the sign of the angle
+#                                deg - Degrees (must be positive)
+#                                m   - minutes
+#                                sec - seconds
+#		 'jyperk'	Typical system gain in Jy     K.
+#		 'systemp'	Typical system temperature in K.
+#		 'evector'	Offset angle of the feed to the local
+#				vertical, fraction of 180.
+#		 'mount'	Telescope mount: 0 = alt-az
+#						 1   equitorial
+#                                                3   xy-ew
+#                                                4   nasmyth
+#		 'antdiam'	Antenna diameter in meters.
+#		 'subdiam'	Subreflector diameter.
+#		 'height'	Height above sea level in meters
+#		 'ew'		Positive if the telescope is an E-W array.
+#	         'nants'        Number of antennas normally in the array.
+#		 'ellimit'	Elevation limit, in degrees.
+#
+#    Value       Value for a paramater
+#
+#    Typical line would be:
+#    
+#    PARKES     antdiam 64d0
+#
+#    Note: there is a limit to how many entries can be stored in miriad. See
+#    obspar.h MAXPARMS
+#
+#------------------------------------------------------------------------
+#
+#  ALMA - will need to be updated. From Simon Radford:
+# At the Grenoble meeting Chajnantor South was chosen as the nominal 
+# array center. In 1999 November we measured this with a differential GPS:
+# 
+#                             N            E          alt
+# Chajnantor South        7453228.830  627807.166  5016.792
+# 
+# where the coordinates are UTM [m] on the Prov. S. Am. 1956 datum which 
+# we use for mapping and civil construction. This position is 544 m south 
+# and 35 m east of the NRAO container. By long integration with a 
+# navigation GPS I measured the position of the NRAO container (Memos 
+# 261 312):
+# 
+# NRAO  container         7453772      627772      5060
+# 
+# on the same datum. Again using this datum the latitude and longitude of 
+# the NRAO container are:
+# 
+#    23deg 1'  9.42''  South    67deg 45' 11.44''  West
+# 
+# Note these coordinates are based on the PSAm56 datum and are not the 
+# "astronomical" latitude and longitude. The native datum for GPS the 
+# WGS84 datum is very close to the astronomical coordinate system 
+# determined from VLBI. In this datum the NRAO container is at:
+# 
+#    23deg 1' 22.42''  South    67deg 45' 17.74''  West
+#
+alma	 antdiam        12.d0
+alma     ellimit	12.0
+alma     evector	0.25
+alma     height	        5017.d0
+alma     jyperk	        40.7d0
+alma     latitude	-1 23 01 22.42
+alma     longitude	1 67 47 17.74
+alma     mount	        ALTAZ
+alma     nants	        64.d0
+alma     systemp	40.d0
+#
+#
+#  The Australia Telescope Compact Array (ATNF.
+#  Latitude longitude and height refer to station 35. Info from
+#  John Reynolds. Geodeti# coordinates on WGS84
+#
+atca     antdiam	22.d0
+atca     ellimit	12.0
+atca     evector	0.25
+atca     ew		1.d0
+atca     height		236.87d0
+atca     jyperk		13.d0
+atca     latitude	-1 30 18 46.3849
+atca     longitude	 1 149 33 0.4997
+atca     mount	        ALTAZ
+atca     nants	        6.d0
+atca     subdiam	2.8d0
+atca     systemp	50.d0
+#
+#  CARMA (Combined California Array  - geometri# mean of 10.4 and 6.1m
+#
+carma     antdiam	8.0d0
+carma     ellimit	5.0
+carma     evector	0.5
+carma     height	2200.0d0
+carma     jyperk	80.d0
+carma     latitude      1 37 16 43.00
+carma     longitude     -1 118 8 32.00
+carma     mount	        ALTAZ
+carma     nants	        15.d0
+carma     systemp	200.d0
+#
+#  The Ceduna 30m dish.
+#  Ref: Richard Dodson 22     05     01
+#
+ceduna30m     antdiam	30.d0
+ceduna30m     height    161.d0
+ceduna30m     latitude  -1 31 52 05.04
+ceduna30m     longitude 1 133 48 36.565
+ceduna30m     mount	ALTAZ
+ceduna30m     nants	1.d0
+#
+#  CSO (from Oliver Lay -> MCHW 20may1997 - some values need confirmation
+#
+cso     antdiam		10.4d0
+cso     ellimit		5.0
+cso     evector		0.5
+cso     height		4080.0d0
+cso     jyperk		60.d0
+cso     latitude	1 19 49 33.8
+cso     longitude	-1 155 28 46.4
+cso     mount		ALTAZ
+cso     nants		2.d0
+cso     systemp		500.d0
+#
+#  GMRT.
+gmrt     antdiam	45.d0
+gmrt     height	        650.0d0
+gmrt     latitude	1 19 06 0.0
+gmrt     longitude	-1 74 03 0.0
+#
+#  The HATCREEK mm array (BIMA.
+#  Jyperk and systemp given by Wright from 3mm vlbi.
+#
+hatcreek     antdiam	6.1d0
+hatcreek     evector	0.0d0
+hatcreek     height	1043.d0
+hatcreek     jyperk	120.d0
+hatcreek     latitude   1 40 49 2.50
+hatcreek     longitude  -1 121 28 18.49
+hatcreek     mount	ALTAZ
+hatcreek     nants      10.d0
+hatcreek     subdiam	0.61d0
+hatcreek     systemp	300.d0
+#
+#  The Hobart 26m dish.
+#  Ref: mis# NGS skd file from hobart
+hobart26m     antdiam	26.d0
+hobart26m     height	66.12d0
+hobart26m     latitude  -1 42 48 12.9
+hobart26m     longitude 1 147 26 25.9
+hobart26m     mount	XYEW
+hobart26m     nants	1.d0
+#
+#  The IRAM mm array at PdB.
+#  Ref: S.Guillaoteau etal. 1992 A&A 262 624.
+#
+iram15m     antdiam   15.d0
+iram15m     height    2650.d0
+iram15m     jyperk    24.d0
+iram15m     latitude  1 44 38 02.00
+iram15m     longitude 1 5 54 28.40
+iram15m     mount     ALTAZ
+iram15m     nants     6.d0
+iram15m     systemp   300.d0
+#
+#  JCMT (from Oliver Lay -> MCHW 20may1997
+#
+jcmt     antdiam	15.0d0
+jcmt     ellimit	5.0
+jcmt     evector	0.5
+jcmt     height	        4092.0d0
+jcmt     jyperk	        40.d0
+jcmt     latitude	1 19 49 33.8
+jcmt     longitude	-1 155 28 46.4
+jcmt     mount	        ALTAZ
+jcmt     nants	        2.d0
+jcmt     subdiam	0.75d0
+jcmt     systemp	500.d0
+#
+#  The Kitt Peak mm single dish (NRAO.
+#  Jyperk and systemp given by Wright from 3mm vlbi.
+#
+kittpeak     antdiam	12.d0
+kittpeak     height	1938.d0
+kittpeak     jyperk	55.d0
+kittpeak     latitude	1 31 57 12.10
+kittpeak     longitude  -1 111 36 51.12
+kittpeak     mount      ALTAZ
+kittpeak     nants	1.d0
+kittpeak     systemp	200.d0
+#
+#  The Mopra dish.
+#
+mopra     antdiam	22.d0
+mopra     height	866.44d0
+mopra     latitude	-1 31 16 04.127
+mopra     longitude	1 149 05 58.706
+mopra     mount	        ALTAZ
+mopra     nants	        1.d0
+#
+#  Nobeyama 45 m single dish.
+#  Jyperk and systemp given by Wright from 3mm vlbi.
+#
+nobeyama45     antdiam  45.d0
+nobeyama45     jyperk	6.d0
+nobeyama45     nants	1.d0
+nobeyama45     systemp  500.d0
+#
+#  The Nobeyama mm array.
+#  Jyperk and systemp given by Wright from 3mm vlbi.
+#
+nro10m     antdiam	10.d0
+nro10m     height	1350.d0
+nro10m     jyperk	74.d0
+nro10m     latitude	1 35 56 0.0
+nro10m     longitude	1 138 29 0.0
+nro10m     nants	6.0d0
+nro10m     systemp	300.d0
+#
+#  Onsala Dish.
+#  Jyperk and systemp given by Wright from 3mm vlbi.
+#
+onsala     antdiam	20.d0
+onsala     height	10.d0
+onsala     jyperk	28.d0
+onsala     latitude	1 57 23 46.60
+onsala     longitude	1 11 55 45.40
+onsala     nants	1.d0
+onsala     systemp	250.d0
+#
+#  Owens Valley Radio Observatory (mm array.
+#  Jyperk and systemp given by Wright from 3mm vlbi.
+#
+ovro     antdiam	10.4d0
+ovro     height	        1222.d0
+ovro     jyperk	        74.d0
+ovro     latitude	1 37 14 0.00
+ovro     longitude	-1 118 17 0.00
+ovro     mount	        ALTAZ
+ovro     nants	        6.0d0
+ovro     systemp	300.d0
+#
+#  Parkes.
+#
+parkes     antdiam	64.d0
+parkes     ellimit	30.5d0
+parkes     height	414.80d0
+parkes     latitude	-1 32 59 54.263 
+parkes     longitude	1 148 15 48.636
+parkes     mount	ALTAZ
+parkes     nants	1.d0
+parkes     subdiam	3.0d0
+#
+#  Some Penticton parameters.
+#
+penticton     antdiam	9.0d0
+penticton     height	156.d0
+penticton     latitude  1 49 19 24.0
+penticton     longitude -1 119 37 12.0
+#
+#  Jyperk and systemp given by Wright from 3mm vlbi.
+#
+quabbin     antdiam	15.d0
+quabbin     jyperk	45.d0
+quabbin     systemp	240.d0
+#
+#  RPA - seti array near Leuchner
+#
+rpa     antdiam       3.6d0
+rpa     ellimit       8.0d0
+rpa     height        238.d0
+rpa     jyperk        418.d0
+rpa     latitude      1 37 55 3.6
+rpa     longitude     -1 122 9 21.0
+rpa     mount         ALTAZ
+rpa     nants         6.d0
+rpa     systemp       60.d0
+#
+#  SEST.
+#
+sest     antdiam	15.d0
+sest     height	        2400.d0
+sest     latitude	-1 29 15 34.0
+sest     longitude	1 70 44 04.0
+#
+#  Submillimeter Array (SMA.
+#  Supplied by Ramprasad Rao
+#
+sma     antdiam	        6.0d0
+sma     height	        4080.0d0
+sma     jyperk	        130.d0
+sma     latitude	1 19 49 33.8
+sma     longitude	-1 155 28 46.4
+sma     mount	        NASMYTH
+sma     nants	        8.0d0
+#
+#  SZA - Sunyaev-Zeldovich Array of eight 3.5m antennas - part of CARMA.
+#
+sza     antdiam         3.5d0
+sza     ellimit         5.0
+sza     evector         0.5
+sza     height          2400.0d0
+sza     jyperk          383.d0
+sza     latitude        1 37 14 0.00
+sza     longitude       -1 118 17 0.00
+sza     mount           ALTAZ
+sza     nants           8.d0
+sza     systemp         200.d0
+#
+#  SZA10 - SZA cross correlalations of 3.5m and 10.4m antennas - part of CARMA.
+#
+sza10     antdiam     6.0d0
+sza10     ellimit     5.0
+sza10     evector     0.5
+sza10     height      2400.0d0
+sza10     jyperk      128.d0
+sza10     latitude    1 37 14 0.00
+sza10     longitude   -1 118 17 0.00
+sza10     mount       ALTAZ
+sza10     nants       8.d0
+sza10     systemp     200.d0
+#
+#  SZA6 - SZA cross correlalations of 3.5m and 6.1m antennas - part of CARMA.
+#
+sza6     antdiam     4.6d0
+sza6     ellimit     5.0
+sza6     evector     0.5
+sza6     height      2400.0d0
+sza6     jyperk      220.d0
+sza6     latitude    1 37 14 0.00
+sza6     longitude   -1 118 17 0.00
+sza6     mount       ALTAZ
+sza6     nants       8.d0
+sza6     systemp     200.d0
+#
+#  The Very Large Array (NRAO.
+#  Values taken from the Green Book (pages 1-10 1-16 6-17.
+#
+vla     antdiam	        25.d0
+vla     ellimit	        8.0d0
+vla     height	        2124.d0
+vla     jyperk	        8.d0
+vla     latitude	1 34 4 43.497
+vla     longitude	-1 107 37 3.819
+vla     mount		ALTAZ
+vla     nants		27.d0
+vla     systemp	60.d0
+#
+#
+#  Westerbork Synthesis Radio Telescope (NFRA.
+#  Latitude and longitude given by Noordam which differ from the
+#  the values in the ephemeris (lat=52:55:00.90 long=6:35:15.00
+#
+wsrt     antdiam	25.d0
+wsrt     evector	-0.5
+wsrt     ew		1.d0
+wsrt     height	        5.d0
+wsrt     jyperk	        8.d0
+wsrt     latitude 	1 52 43 53.84
+wsrt     longitude	1  6 36 15.01
+wsrt     mount	        EQUATOR
+wsrt     nants	        14.d0
+#       gmx (Jan 27 2004: Added system temperature
+#       see http:/www.astron.nl/wsrt/wsrtGuide/node6.html
+wsrt     systemp	30.0d0
+#
+#
+#************************************************************************
