@@ -77,6 +77,8 @@ c    04jun96 mchw  Doc change only.
 c     5jun96 pjt   Better setting of random number seed
 c    06jun96 rjs   Fiddles to make lst and longitude more honest.
 c    10jun96 mchw  Atmospheric and elevation dependent systemp and tpower.
+c    10jul96 mchw  No default for output uv-data file.
+c    16aug96 rjs   Change phase convention for circularly polarised data.
 c
 c  Bugs/Shortcomings:
 c    * Frequency and time smearing is not simulated.
@@ -282,13 +284,13 @@ c	efficiency (0.88) and an antenna efficiency (0.65 at 6 cm). The
 c	overall result is jyperk=12.7. The default jyperk=150, a typical
 c	value for the Hat Creek 6.1 m antennas.
 c@ out
-c	This gives the name of the output Miriad data file. The default
-c	it "uvgen". If the dataset exists, visibilities are appended to
+c	This gives the name of the output Miriad data file. There is
+c	no default. If the dataset exists, visibilities are appended to
 c	the dataset, with an appropriate informational message.
 c--
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version = 'Uvgen: version 1.0 10-JUN-96')
+	parameter(version = 'Uvgen: version 1.0 16-Aug-96')
 	include 'mirconst.h'
 	include 'maxdim.h'
 	include 'uvgen.h'
@@ -445,9 +447,9 @@ c
 	call keyr('tpower',tatm,0.)
 	call keyr('jyperk',jyperk,150.)
 c
-	call keya('out',outfile,'uvgen')
-	if(outfile.eq.'uvgen')
-     *	  call bug('w','Output file will be UVGEN')
+	call keya('out',outfile,' ')
+	if(outfile.eq.' ')
+     *	  call bug('f','Output file must be given')
 	call keyfin
 c
 c  Determine the rise and set times of the source, at the minimum
@@ -1336,24 +1338,21 @@ c    pa		Position angle of the polarisation, in radians.
 c  Output:
 c    cont	The computed visibility.
 c------------------------------------------------------------------------
+	include 'mirconst.h'
 	integer PolI,PolRR,PolLL,PolRL,PolLR,PolXX,PolYY,PolXY,PolYX
 	parameter(PolI=1,PolRR=-1,PolLL=-2,PolRL=-3,PolLR=-4)
 	parameter(	 PolXX=-5,PolYY=-6,PolXY=-7,PolYX=-8)
-	real pi
-	parameter(pi=3.141592653589793)
+c
 	real p,umaj,umin,uvmaj,uvmin,gaus,flux
 	complex vis
+	logical inten
 	double precision u,v,w
 	integer j
-	logical inten(-8:1)
 c
 c  Externals.
 c
 	complex expi
-c
-	data inten/.false.,.false.,.true.,.true.,
-     *		   .false.,.false.,.true.,.true.,
-     *		   .false.,.true./
+	logical polspara
 c
 c  Convert u and v to wavelengths.
 c
@@ -1364,10 +1363,11 @@ c
 c  Loop over the source components. Avoid as much work as possible by
 c  checking for situations where the component contributes nothing.
 c
+	inten = polspara(code)
 	cont = (0.,0.)
 	do j = 1,ns
 	  flux = 0
-	  if(per(j).ne.0.or.inten(code))then
+	  if(per(j).ne.0.or.inten)then
 	    uvmaj = 1. / ( pi * 0.6 * smaj(j) )
 	    uvmin = 1. / ( pi * 0.6 * smin(j) )
 	    umaj = (u * sin(spa(j)) + v * cos(spa(j))) / uvmaj
@@ -1377,12 +1377,9 @@ c
 	  endif
 c
 c  Determine the contribution for the various polarisations.
-c  NOTE! I have multiplied the RL and LR correlations by expi(2*psi),
-c  as it is the VLA convention to perform this on line. The polarisation
-c  handling software in Miriad assumes this!!!!
 c
 	  if (flux.ne.0)then
-	    if((per(j).eq.0.and.inten(code)).or.
+	    if((per(j).eq.0.and.inten).or.
      *		code.eq.PolI.or.code.eq.PolRR.or.code.eq.PolLL)then
 	      vis = 1
 	    else if(code.eq.PolXX)then
@@ -1392,9 +1389,9 @@ c
 	    else if(code.eq.PolXY.or.code.eq.PolYX)then
 	      vis = per(j) * sin(2.* (pa(j) - psi))
 	    else if(code.eq.PolRL)then
-	      vis = per(j) * expi(-2.* (pa(j)))
+	      vis = per(j) * expi(-2.* (pa(j) - psi))
 	    else if(code.eq.PolLR)then
-	      vis = per(j) * expi( 2.* (pa(j)))
+	      vis = per(j) * expi( 2.* (pa(j) - psi))
 	    else
 	      call bug('f','Unsupported polarization, in ModVis')
 	    endif
