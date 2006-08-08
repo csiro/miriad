@@ -40,10 +40,10 @@ else
 	\! -name \*.log \! -name \*.dvi \! -name \*.def \
 	$cond \
 	-print > /tmp/${rhost}_files.$$
-  newer -i $MIR/export/Last_update_${rhost} ./README      >> /tmp/${rhost}_files.$$
-  newer -i $MIR/export/Last_update_${rhost} ./Install     >> /tmp/${rhost}_files.$$
-  newer -i $MIR/export/Last_update_${rhost} ./DISCLAIMER  >> /tmp/${rhost}_files.$$
-  newer -i $MIR/export/Last_update_${rhost} ./changes.txt >> /tmp/${rhost}_files.$$
+  mirnewer -i $MIR/export/Last_update_${rhost} ./README      >> /tmp/${rhost}_files.$$
+  mirnewer -i $MIR/export/Last_update_${rhost} ./Install     >> /tmp/${rhost}_files.$$
+  mirnewer -i $MIR/export/Last_update_${rhost} ./DISCLAIMER  >> /tmp/${rhost}_files.$$
+  mirnewer -i $MIR/export/Last_update_${rhost} ./changes.txt >> /tmp/${rhost}_files.$$
 endif
 
 if ( -z /tmp/${rhost}_files.$$ ) exit
