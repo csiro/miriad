@@ -80,6 +80,8 @@ c    10jun96 mchw  Atmospheric and elevation dependent systemp and tpower.
 c    10jul96 mchw  No default for output uv-data file.
 c    16aug96 rjs   Change phase convention for circularly polarised data.
 c    25aug97 rjs   General tidy up.
+c    09oct97 rjs   Fix error in generating spectral datasets (introduced
+c		   7 weeks ago).
 c
 c  Bugs/Shortcomings:
 c    * Frequency and time smearing is not simulated.
@@ -629,7 +631,7 @@ c
 	if(telescop.eq.'HATCREEK')then
 	  call coramhat(nospect,nchan,corfin,corbw,freq,iffreq)
 	else
-	  call coramoth(nospect,nchan,corfin,corbw,freq)
+	  call coramoth(nospect,nchan,corfin,corbw,freq,iffreq)
 	endif
 c
 c  Give some messages to the user.
@@ -1381,12 +1383,12 @@ c
 	enddo
 	end
 c************************************************************************
-	subroutine coramoth(nospect,nchan,corfin,corbw,freq)
+	subroutine coramoth(nospect,nchan,corfin,corbw,freq,iffreq)
 c
 	implicit none
 	integer nospect,nchan
 	real corfin(4),corbw(4)
-	double precision freq
+	double precision freq,iffreq
 c
 c  Derives spectra parameters from correlator setup.
 c
@@ -1406,7 +1408,7 @@ c  Determine down-conversion chain characteristics.
 c
 	if(nospect.ne.1)
      *	  call bug('f','Invalid nspect in correlator file')
-	freqif = 4e-3*corbw(1)
+	freqif = iffreq
 	lo1 = freq - freqif
 	lo2 = 0.d0
 c
@@ -1420,7 +1422,7 @@ c
 c
 c  Fill in spectral correlator details.
 c
-	if(numchan.eq.0)then
+	if(nchan.eq.0)then
 	  nspect  = 0
 	  numchan = 0
 	else
