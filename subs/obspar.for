@@ -22,6 +22,7 @@ c    rjs  11aug96 Added mopra, plus miscellaneous other parameters.
 c    mchw 18sep96 Added iram15m array on PdB.
 c    rjs  17dec96 More accurate positions for ATNF telescopes.
 c    mchw 20may97 Added CSO and JCMT. Updated HATCREEK.
+c    mchw 09jun97 Added evector to hatcreek
 c************************************************************************
 c* ObsPrint -- Print list of known observatories.
 c: utility
@@ -161,7 +162,7 @@ c
 	call obsad('atca/subdiam',	2.8d0)
 	call obsad('atca/systemp',	50.d0)
 c
-c  CSO (from Oliver Lay -> MCHW 20may1997)
+c  CSO (from Oliver Lay -> MCHW 20may1997 - some values need confirmation)
 c
 	call obsad('cso/antdiam',	10.4d0)
 	call obsad('cso/ellimit',	5.0*dpi/180.d0)
@@ -182,6 +183,7 @@ c  The HATCREEK mm array (BIMA).
 c  Jyperk and systemp given by Wright, from 3mm vlbi.
 c
 	call obsad('hatcreek/antdiam',	6.1d0)
+	call obsad('hatcreek/evector',	0.0d0)
 	call obsad('hatcreek/height',	1043.d0)
 	call obsad('hatcreek/jyperk',	120.d0)
 	call obsad('hatcreek/latitude', obsdms( 1, 40,49, 2.50))
