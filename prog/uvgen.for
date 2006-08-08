@@ -65,6 +65,9 @@ c			Generalize hybrid correlator model.
 c    18aug94 rjs   Exact geometry for point sources, and better
 c		   geometry for other sources.
 c    29aug94 rjs   Write w axis value.
+c    15sep94 mchw  Change the site keyword to be the 'telescop' uv-variable.
+c    21sep94 mchw  Better value for sfreq in coramhat.
+c    28sep94 rjs   Merge mchw/rjs changes.
 c
 c  Bugs/Shortcomings:
 c    * Frequency and time smearing is not simulated.
@@ -116,7 +119,7 @@ c	used in the antenna file, and nanoseconds. The default value is +1,
 c	which means that the antenna file gives the antenna position in an
 c	equatorial system measured in nanoseconds. Remember 1 ns is equivalent
 c	to 0.3 meters.
-c@ site
+c@ telescop
 c	This can take on the value of "hatcreek", "atca" or "other".
 c	This determines miscellaneous parameters. In particular, this
 c	determines the interpretation of the correlator setup file
@@ -149,8 +152,10 @@ c	Frequency and 2nd IF frequency for the model in GHz.
 c	Defaults are 100,0.250 GHz. 
 c	The IF parameter is currently ignored if the telescope is not 
 c	hatcreek.
-c@ dec
-c	Source declination in degrees. Default=30 degrees.
+c@ radec
+c	Source right ascension and declination. These can be given in
+c	hh:mm:ss,dd:mm:ss format, or as decimal hours and decimal
+c	degrees. The default is 0,30.
 c@ harange
 c	Hour Angle range (start,stop,step) in hours. Default is
 c	-6 hrs to + 6 hrs, with a sample interval=0.1 (6 minute)
@@ -279,14 +284,14 @@ c
 c
 c  Parameters from the user.
 c
-	integer NSITES
-	parameter(NSITES=3)
+	integer NTELS
+	parameter(NTELS=3)
 	character sfile*64,antfile*64,corfile*64,outfile*64
 	real hbeg, hend, hint, arms, prms, tsys, utns
 	real trms,telev,tatm,cycleon,cycleoff
 	double precision alat,sdec,sra,elev
 	integer pol(maxpol),npol,ipol
-	character site*16,sites(NSITES)*8
+	character telescop*16,tels(NTELS)*8
 c
 c  Variables describing the source.
 c
@@ -309,7 +314,7 @@ c
 c  Data initialisation.
 c
 	data flags /MAXCHAN*.true./
-	data sites/'hatcreek','other   ','atca    '/
+	data tels/'hatcreek','other   ','atca    '/
 c	data nospect/0/,famp/0./,fcen/0./,fwid/0./
 c
 c  Get command line arguments.
@@ -328,9 +333,9 @@ c
 	  call bug('w','Ant file will be uvgen.ant')
 	endif
 c
-	call keymatch('site',NSITES,sites,1,site,ntemp)
-	if(ntemp.eq.0) site = sites(1)
-	call ucase(site)
+	call keymatch('telescop',NTELS,tels,1,telescop,ntemp)
+	if(ntemp.eq.0) telescop = tels(1)
+	call ucase(telescop)
 c
 	call keya('corr',corfile,' ')
 	if(corfile.eq.' ')then
@@ -343,8 +348,8 @@ c
 	call keyd('freq',iffreq,0.250d0)
 	call keyt('time',timeout,'atime',0.d0)
 	if(timeout.le.1)call dayjul('80JAN01',timeout)
-	call keyt('dec',sdec,'dms',30.d0*pi/180.)
-	sra = 0
+	call keyt('radec',sra,'hms',0.d0)
+	call keyt('radec',sdec,'dms',30.d0*dpi/180.)
 	call keyt('elev',elev,'dms',15.d0*pi/180.)
 	sind = sin(sdec)
 	cosd = cos(sdec)
@@ -582,7 +587,7 @@ c
 c
 c  Calculate spectra frequencies from correlator setup
 c
-	if(site.eq.'HATCREEK')then
+	if(telescop.eq.'HATCREEK')then
 	  call coramhat(nospect,nchan,corfin,corbw,freq,iffreq)
 	else
 	  call coramoth(nospect,nchan,corfin,corbw,freq)
@@ -625,13 +630,13 @@ c
 c
 c  Miscellaneous.
 c
-	if(site.eq.'ATCA')then
+	if(telescop.eq.'ATCA')then
 	  evector = pi/4
 	else
 	  evector = 0
 	endif
 	call uvputvrr(unit,'evector',evector,1)
-	call uvputvra(unit,'telescop',site)
+	call uvputvra(unit,'telescop',telescop)
 c
 c  Fake some header information.
 c
@@ -1570,7 +1575,7 @@ c
 	  nspect = nospect
 	  do i = 1,nspect
 	    sdf(i) = 1e-3 * corbw(i) / nchan
-	    sfreq(i) = 1e-3 * corfin(i)
+	    sfreq(i) = lo1 + lo2 + 1e-3 * corfin(i)
 	    ischan(i) = (i-1)*nchan + 1
 	    nschan(i) = nchan
 	  enddo
