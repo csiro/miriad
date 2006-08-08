@@ -88,6 +88,7 @@ c    17may98 mchw  Add Gaussian spectral line and Zeeman keyword.
 c    27may98 mchw  Replace correlator file with keywords.
 c    01jul98 mchw  Added pbfwhm parameters to simulate primary beams.
 c			Fixed some errors in rms noise calculations.
+c    12jan99 rjs   Doc changes only.
 c
 c  Bugs/Shortcomings:
 c    * Frequency and time smearing is not simulated.
@@ -136,7 +137,7 @@ c	north, east and in elevation. See the "baseunit" parameter to
 c	specify the coordinate system. Some standard antenna configurations
 c	can be found in $MIRCAT/*.ant for ATCA, BIMA and VLA telescopes.
 c	The BIMA and VLA antenna tables, use with baseunit=1, whereas for
-c	the ATCA, use baseunit=51.0204.
+c	the ATCA, use baseunit=-51.0204.
 c
 c	The text file is free-format, with commas or blanks used to separate
 c	the values. Comments (starting with #) can be included in the file.
@@ -151,8 +152,8 @@ c	equatorial system measured in nanoseconds.
 c	E.g. 	baseunit=-1 for topocentric coordinates in nanosecs, 
 c		baseunit=3.33564 for geocentric coordinates in meters.
 c@ telescop
-c	This parameter determined the feed angle (i.e. the parallactic
-c	angle plus the feed offset angle - evector) variation. It is also
+c	This parameter determine the feed angle variation (i.e. the parallactic
+c	angle plus the feed offset angle - evector). It is also
 c	used to set the name of the telescop variable in the output dataset.
 c	If can take two values, the first gives the antenna mount type, and
 c	can be "altaz" or "equatorial". The second value gives the feed
@@ -168,8 +169,8 @@ c       Defines the correlator setup. The values are:
 c	  nchan:       Number of channels in each spectral window. Use 0
 c	               for a wideband only file.
 c	  nspect:      Number of spectral windows. Default 1; maximum 4.
-c	  f1,f2,...:   "nspect" values giving the center frequency of each
-c	               window, in MHz. Default 0.
+c	  f1,f2,...:   "nspect" values giving the offset for the center 
+c	               frequency of each window, in MHz. Default 0.
 c	  df1,df2,...: "nspect" values giving the total widths of each
 c	               spectral window, in MHz. Default 1000.
 c       No checking is made for valid combinations. 
