@@ -1,9 +1,56 @@
 c************************************************************************
+c
+c  A set of routines giving information about observatories.
+c
+c  History:
+c    rjs  20jun91 Original version.
+c    rjs   2jul91 Corrected Westerbork parameters, as suggested by pjt.
+c    rjs   2jun93 Near complete rewrite, to give it greater flexibility.
+c	          Add also more parameters.
+c    mchw 15jul93 Add some more parameters.
+c    rjs  16sep93 Rename bsrch to binsrch.
+c    rjs   7mar94 Assume WSRT evector is -90 degrees (assume fixed dipoles).
+c    rjs  29jul94 Tolerate double-barrelled names (e.g. 'OVRO MMA').
+c    rjs   9aug94 Add "ew" parameter for ATCA and WSRT.
+c    rjs   5jul95 Added some penticon parameters.
+c    rjs  27sep95 Added Parkes and nants.
+c    rjs  11oct95 Added subreflector diameter for atca.
+c
+c************************************************************************
+c* ObsPrint -- Print list of known observatories.
+c: utility
+c& rjs
+c+
+	subroutine obsPrint
+c
+	implicit none
+c
+c  This prints a list of the known observatories.
+c--
+c------------------------------------------------------------------------
+	include 'obspar.h'
+	character tel*32
+	integer l,i
+c
+	call obsInit
+c
+	tel = ' '
+	call output('Known observatories are:')
+	do i=1,nparms
+	  l = index(parname(i),'/')
+	  if(parname(i)(1:l-1).ne.tel)then
+	    tel = parname(i)(1:l-1)
+	    call output('   '//tel)
+	  endif
+	enddo
+c
+	end
+c************************************************************************
 c* ObsPar - Get characteristics of a particular observatory.
 c: utility
 c& rjs
 c+
-	subroutine obspar(observ,object,value,ok)
+	subroutine obsPar(observ,object,value,ok)
 c
 	implicit none
 	character observ*(*),object*(*)
@@ -36,37 +83,19 @@ c  Output:
 c    value	The value of the parameter.
 c    ok		True if the value was successfully found.
 c--
-c  History:
-c    rjs  20jun91 Original version.
-c    rjs   2jul91 Corrected Westerbork parameters, as suggested by pjt.
-c    rjs   2jun93 Near complete rewrite, to give it greater flexibility.
-c	          Add also more parameters.
-c    mchw 15jul93 Add some more parameters.
-c    rjs  16sep93 Rename bsrch to binsrch.
-c    rjs   7mar94 Assume WSRT evector is -90 degrees (assume fixed dipoles).
-c    rjs  29jul94 Tolerate double-barrelled names (e.g. 'OVRO MMA').
-c    rjs   9aug94 Add "ew" parameter for ATCA and WSRT.
-c    rjs   5jul95 Added some penticon parameters.
-c    rjs  27sep95 Added Parkes and nants.
-c    rjs  11oct95 Added subreflector diameter for atca.
 c------------------------------------------------------------------------
 	include 'obspar.h'
 	character name*24
 	integer l
 c
-	logical first
-	save first
-c
 c  Externals.
 c
 	integer len1,binsrcha
 c
-	data first/.true./
 c
 c  Initialise the list of known parameters, if necessary.
 c
-	if(first)call obsinit
-	first = .false.
+	call obsInit
 c
 c  Determine the name of the parameter that we want, and locate it.
 c
@@ -100,6 +129,12 @@ c  Externals.
 c
 	double precision obsdms
 c
+	logical first
+	save first
+	data first/.true./
+c
+	if(.not.first)return
+	first = .false.
 	nparms = 0
 c
 c  The Australia Telescope Compact Array (ATNF).
