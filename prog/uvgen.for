@@ -74,6 +74,8 @@ c    27nov95 mchw  Correct sign of source position angle.
 c    27nov95 rjs   (Re-)add some commas to appease g77.
 c    20dec95 mchw  Added polarization switching.
 c    04jun96 mchw  Doc change only.
+c     5jun96 pjt   Better setting of random number seed
+c    06jun96 rjs   Fiddles to make lst and longitude more honest.
 c
 c  Bugs/Shortcomings:
 c    * Frequency and time smearing is not simulated.
@@ -152,8 +154,11 @@ c	   In particular, the visibility value for a channel is scaled by
 c	   a factor:
 c	    1 + famp*( 1-min(1,|(f-fcen)/fwid|) )
 c@ time
-c	The start time of the observation. This is in the form
-c	  yymmmdd.ddd or yymmmdd:hh:mm:ss.s
+c	The time of the observation (this corresponds to ha=0). This is in
+c	the form
+c	  yymmmdd.ddd
+c	or
+c	  yymmmdd:hh:mm:ss.s
 c	The default is 80JAN01.0. A function of this is also used
 c	as a seed for the random number generator.
 c@ freq
@@ -277,7 +282,7 @@ c------------------------------------------------------------------------
 	real sqrt2
 	character version*(*)
 	parameter(sqrt2=1.414214)
-	parameter(version = 'Uvgen: version 1.0 04-JUN-96')
+	parameter(version = 'Uvgen: version 1.0 05-JUN-96')
 	include 'mirconst.h'
 	include 'maxdim.h'
 	integer maxsrc,maxpol,maxpnt,maxpolar
@@ -315,7 +320,7 @@ c
 	character sfile*64,antfile*64,corfile*64,outfile*64
 	real hbeg, hend, hint, arms, prms, tsys, utns
 	real trms,telev,tatm,cycleon,cycleoff
-	double precision alat,sdec,sra,elev
+	double precision alat,along,sdec,sra,elev
 	integer pol(maxpol),npol,ipol,npolar,ipolar
 	character telescop*16,tels(NTELS)*8
 	character polar(MAXPOLAR)*27,xpolar*27
@@ -345,7 +350,6 @@ c  Data initialisation.
 c
 	data flags /MAXCHAN*.true./
 	data tels/'hatcreek','other   ','atca    '/
-	data gatm/(1.,0.)/
 c	data nospect/0/,famp/0./,fcen/0./,fwid/0./
 c
 c  Get command line arguments.
@@ -670,7 +674,13 @@ c
 	call uvputvrd(unit,'freq',freq,1)
 	call uvputvrd(unit,'freqif',freqif,1)
 	call uvputvrd(unit,'latitud',alat,1)
-	call uvputvrd(unit,'longitu',0.d0,1)
+c
+c  Compute the effective longitude of the observatory.
+c
+	call jullst(timeout,0.d0,along)
+	along = mod(sra-along+2*PI,2*DPI)
+	if(along.gt.DPI)along = along - 2*DPI
+	call uvputvrd(unit,'longitu',along,1)
 c
 c  Miscellaneous.
 c
@@ -804,7 +814,9 @@ c
 c  Miscellaneous initialization.
 c
 	item = 0
-	call Randset(nint(10*timeout))
+c	call Randset(nint(10*timeout))
+        call Randset(nint(timeout) +
+     *               nint(10000000 * (timeout - int(timeout))))
 c	timeout = int(timeout-0.5) + 0.5
 c
 c  Initialise the effective source parameters, to account for pointing
@@ -832,6 +844,10 @@ c
 	    call hiswrite(unit,'UVGEN: '//line)
 	  enddo
 	endif
+c
+c  Set atmospheric gain.
+c
+	gatm = 1
 c
 c  Start the polarization switching cycle.
 c
@@ -883,7 +899,7 @@ c
 	    h = lst - ra
 	    call uvputvrd(unit,'ut',lst,1)
 	    call uvputvrd(unit,'lst',lst,1)
-	    preamble(4) = timeout + ha/24.
+	    preamble(4) = timeout + 365.25/366.25*ha/24.
 	    sinha = sin(h)
 	    cosha = cos(h)
 	    sinq = cosl*sinha
