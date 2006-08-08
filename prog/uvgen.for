@@ -62,13 +62,18 @@ c    26oct93 rjs   Use keyt and correct calculations of u,v when doing
 c		   mosaiced experiment.
 c    03mar94 mchw  Added elevation limit. Standard keywords dec and elev.
 c			Generalize hybrid correlator model.
+c    18aug94 rjs   Exact geometry for point sources, and better
+c		   geometry for other sources.
+c    29aug94 rjs   Write w axis value.
+c
 c  Bugs/Shortcomings:
 c    * Frequency and time smearing is not simulated.
 c    * Primary beam is a gaussian -- which is too ideal.
 c    * Primary beam is not a function of frequency.
+c    * Geometry for extended sources could be improved.
 c------------------------------------------------------------------------
 c= UVGEN - Compute visibilities for a model source.
-c& mchw
+c& rjs
 c: uv analysis, map making
 c+
 c	UVGEN is a MIRIAD task which computes visibility data for a model
@@ -112,8 +117,10 @@ c	which means that the antenna file gives the antenna position in an
 c	equatorial system measured in nanoseconds. Remember 1 ns is equivalent
 c	to 0.3 meters.
 c@ site
-c	This can take on the value of "hatcreek" or "other". This determines
-c	the interpretation of the correlator setup parameters (see below).
+c	This can take on the value of "hatcreek", "atca" or "other".
+c	This determines miscellaneous parameters. In particular, this
+c	determines the interpretation of the correlator setup file
+c	(see below), the "evector" variable and the telescope name.
 c	The default is "hatcreek".
 c@ corr
 c	This gives the name of a text file specifying the correlator
@@ -140,15 +147,15 @@ c	as a seed for the random number generator.
 c@ freq
 c	Frequency and 2nd IF frequency for the model in GHz.
 c	Defaults are 100,0.250 GHz. 
-c       The IF parameter is currently ignored if the telescope is not 
-c       hatcreek.
+c	The IF parameter is currently ignored if the telescope is not 
+c	hatcreek.
 c@ dec
 c	Source declination in degrees. Default=30 degrees.
 c@ harange
 c	Hour Angle range (start,stop,step) in hours. Default is
 c	-6 hrs to + 6 hrs, with a sample interval=0.1 (6 minute)
 c@ elev
-c	Elevation limit in degrees. Default=15 degrees.	Both harange
+c	Elevation limit in degrees. Default=15 degrees. Both harange
 c	and elev are used to limit the extent of the u-v track.
 c@ stokes
 c	This selects the polarization parameters formed. Up to 4
@@ -236,14 +243,13 @@ c	value for the Hat Creek 6.1 m antennas.
 c@ out
 c	This gives the name of the output Miriad data file. The default
 c	it "uvgen". If the dataset exists, visibilities are appended to
-c       the dataset, with an appropriate informational message.
-c	Note: be careful what your starting time= is, if you cared.
+c	the dataset, with an appropriate informational message.
 c--
 c------------------------------------------------------------------------
 	real sqrt2
 	character version*(*)
 	parameter(sqrt2=1.414214)
-	parameter(version = 'Uvgen: version 1.0 03-Mar-94' )
+	parameter(version = 'Uvgen: version 1.0 29-Aug-94' )
 	include 'mirconst.h'
 	include 'maxdim.h'
 	integer maxsrc,maxpol,maxpnt
@@ -259,9 +265,10 @@ c
 	real sind,cosd,sinl,cosl,sinel,cosel,flux,dra,ddec
 	double precision freq,iffreq
 	real wmaj,wmin,wpa,poln,polpa,x,z,h,sinha,cosha,ha,haend
-	real bxx,byy,bzz,pbfwhm,center(2,MAXPNT)
-	integer n,nant,npnt,ipnt,i,j,jj,m,is,ic,nchan,nospect
-	double precision preamble(4),timeout
+	double precision bxx,byy,bzz,bxy,byx
+	real pbfwhm,center(2,MAXPNT),evector
+	integer n,nant,npnt,ipnt,i,j,jj,m,is,ic,nchan,nospect,ntemp
+	double precision preamble(5),timeout
 	real b1(MAXANT),b2(MAXANT),b3(MAXANT),temp,psi,sinq,cosq,leakrms
 	real systemp(MAXANT*maxspect),inttime
 	double precision restfreq(maxspect),lst
@@ -272,12 +279,14 @@ c
 c
 c  Parameters from the user.
 c
+	integer NSITES
+	parameter(NSITES=3)
 	character sfile*64,antfile*64,corfile*64,outfile*64
 	real hbeg, hend, hint, arms, prms, tsys, utns
 	real trms,telev,tatm,cycleon,cycleoff
-	double precision alat,sdec,elev
-	character site*16
+	double precision alat,sdec,sra,elev
 	integer pol(maxpol),npol,ipol
+	character site*16,sites(NSITES)*8
 c
 c  Variables describing the source.
 c
@@ -285,7 +294,7 @@ c
 	real ta(maxsrc),sx(maxsrc),sy(maxsrc),smaj(maxsrc),smin(maxsrc)
 	real spa(maxsrc),per(maxsrc),pa(maxsrc)
 	real smajd(maxsrc),smind(maxsrc),tad(maxsrc),sxd(maxsrc),
-     *	     syd(maxsrc)
+     *	     syd(maxsrc),szd(maxsrc)
 c
 c  Model spectra and noise.
 c
@@ -300,7 +309,8 @@ c
 c  Data initialisation.
 c
 	data flags /MAXCHAN*.true./
-	data nospect/0/,famp/0./,fcen/0./,fwid/0./
+	data sites/'hatcreek','other   ','atca    '/
+c	data nospect/0/,famp/0./,fcen/0./,fwid/0./
 c
 c  Get command line arguments.
 c
@@ -318,9 +328,9 @@ c
 	  call bug('w','Ant file will be uvgen.ant')
 	endif
 c
-	call keya('site',site,'hatcreek')
-	if(site.ne.'hatcreek'.and.site.ne.'other')
-     *	  call bug('f','Illegal value of site parameter: '//site)
+	call keymatch('site',NSITES,sites,1,site,ntemp)
+	if(ntemp.eq.0) site = sites(1)
+	call ucase(site)
 c
 	call keya('corr',corfile,' ')
 	if(corfile.eq.' ')then
@@ -334,6 +344,7 @@ c
 	call keyt('time',timeout,'atime',0.d0)
 	if(timeout.le.1)call dayjul('80JAN01',timeout)
 	call keyt('dec',sdec,'dms',30.d0*pi/180.)
+	sra = 0
 	call keyt('elev',elev,'dms',15.d0*pi/180.)
 	sind = sin(sdec)
 	cosd = cos(sdec)
@@ -438,13 +449,14 @@ c  in append mode.
 c
         call hopen(unit,outfile,'old',iostat)
         if(iostat.eq.0) then
-           call hclose(unit)
-           call uvopen(unit,outfile,'append')
-           call hisopen(unit,'append')
+	  call hclose(unit)
+	  call uvopen(unit,outfile,'append')
+	  call hisopen(unit,'append')
         else
-           call uvopen(unit,outfile,'new')
-           call hisopen(unit,'write')
+	  call uvopen(unit,outfile,'new')
+	  call hisopen(unit,'write')
         endif
+	call uvset(unit,'preamble','uvw/time/baseline',0,0.,0.,0.)
         call hiswrite(unit,'UVGEN: Miriad '//version)
         call hisinput(unit,'UVGEN')
         umsg = 'UVGEN: '//line
@@ -454,7 +466,7 @@ c
 c  Open the source components file.
 c
 	call modcomp(sfile,tunit)
-
+c
 	call hiswrite(unit,'UVGEN: Source specifications:')
 	write(line,'(a)')'     Flux  Offset   Offset   Major  Minor  '//
      *    'Axis   Polar    Polar'
@@ -570,7 +582,7 @@ c
 c
 c  Calculate spectra frequencies from correlator setup
 c
-	if(site.eq.'hatcreek')then
+	if(site.eq.'HATCREEK')then
 	  call coramhat(nospect,nchan,corfin,corbw,freq,iffreq)
 	else
 	  call coramoth(nospect,nchan,corfin,corbw,freq)
@@ -584,6 +596,13 @@ c
 	umsg = 'UVGEN: '//line
 	call hiswrite(unit, umsg)
 c
+c  If its a wide-only dataset, tell uvset as much.
+c
+	if(numchan.eq.0)then
+	  if(nwide.eq.0)call bug('f','No channels to be generated')
+	  call uvset(unit,'data','wide',0,1.,1.,1.)
+	endif
+c
 c  Fill data header record.
 c
 	call wrhda(unit,'obstype','crosscorrelation')
@@ -591,8 +610,8 @@ c
 	call uvputvra(unit,'operator','uvgen')
 	call uvputvra(unit,'version',version)
 c
-	call uvputvrd(unit,'ra',0.d0,1)
-	call uvputvrd(unit,'obsra',0.d0,1)
+	call uvputvrd(unit,'ra',sra,1)
+	call uvputvrd(unit,'obsra',sra,1)
 	call uvputvrd(unit,'dec',sdec,1)
 	call uvputvrd(unit,'obsdec',sdec,1)
 	if(pbfwhm.gt.0)call uvputvrr(unit,'pbfwhm',3600*180/pi*pbfwhm,1)
@@ -603,6 +622,16 @@ c
 	call uvputvrd(unit,'freqif',freqif,1)
 	call uvputvrd(unit,'latitud',alat,1)
 	call uvputvrd(unit,'longitu',0.d0,1)
+c
+c  Miscellaneous.
+c
+	if(site.eq.'ATCA')then
+	  evector = pi/4
+	else
+	  evector = 0
+	endif
+	call uvputvrr(unit,'evector',evector,1)
+	call uvputvra(unit,'telescop',site)
 c
 c  Fake some header information.
 c
@@ -733,8 +762,8 @@ c  Initialise the effective source parameters, to account for pointing
 c  center and 
 c
 	dopoint = npnt.gt.1
-	if(.not.dopoint)call GetSrc(unit,pbfwhm,center(1,1),
-     *	    ns,ta,smaj,smin,spa,sx,sy,tad,smajd,smind,sxd,syd)
+	if(.not.dopoint)call GetSrc(pbfwhm,sra,sdec,center(1,1),
+     *	    ns,ta,smaj,smin,spa,sx,sy,tad,smajd,smind,sxd,syd,szd)
 c
 c  Determine the polarization leakage parameters.
 c
@@ -759,7 +788,7 @@ c  Compute visibility for each hour angle.
 c
 	ha = hbeg
 	ipnt = 0
-	ra = 0
+	ra = sra
 	dec = sdec
 	dowhile(ha.lt.hend)
 	  haend = min(ha + cycleon,hend)
@@ -768,12 +797,15 @@ c  Compute effective source parameters when mosaicing.
 c
 	  ipnt = mod(ipnt,npnt) + 1
 	  if(dopoint)then
-	    call GetSrc(unit,pbfwhm,center(1,ipnt),
-     *	      ns,ta,smaj,smin,spa,sx,sy,tad,smajd,smind,sxd,syd)
-	    dec = sdec + center(1,ipnt)
+	    call uvputvrr(unit,'dra',center(1,ipnt),1)
+	    call uvputvrr(unit,'ddec',center(2,ipnt),1)
+	    call GetSrc(pbfwhm,sra,sdec,center(1,ipnt),
+     *	      ns,ta,smaj,smin,spa,sx,sy,tad,smajd,smind,sxd,syd,szd)
+	    dec = sdec + center(2,ipnt)
 	    sind = sin(dec)
 	    cosd = cos(dec)
-	    ra = center(1,ipnt) / cosd
+	    ra = sra + center(1,ipnt) / cos(sdec)
+	    if(ra.lt.0) ra = ra + 2*dpi
 	  endif
 c
 c  Compute new antenna gains.
@@ -791,16 +823,15 @@ c
 	    h = lst - ra
 	    call uvputvrd(unit,'ut',lst,1)
 	    call uvputvrd(unit,'lst',lst,1)
-	    preamble(3) = timeout + ha/24.
+	    preamble(4) = timeout + ha/24.
 	    sinha = sin(h)
 	    cosha = cos(h)
 	    sinq = cosl*sinha
 	    cosq = sinl*cosd - cosl*sind*cosha
 c
-c  FUDGE!!!!!!!!
-c  Offset the parallactic angle by 45 degrees, to simulate the AT!
+c  Offset the parallactic angle by evector.
 c
-	    psi = atan2(sinq,cosq) + pi/4
+	    psi = atan2(sinq,cosq) + evector
 	    call uvputvrr(unit,'chi',psi,1)
 c
 c  Compute total power variations for each antenna.
@@ -820,20 +851,23 @@ c  Compute visibility for each baseline.
 c
 	    do n = 2, nant
 	      do m = 1, n-1
-	        preamble(4) = 256.*m + n
+	        preamble(5) = 256*m + n
 	        bxx = b1(n) - b1(m)
 	        byy = b2(n) - b2(m)
 	        bzz = b3(n) - b3(m)
-	        preamble(1) = bxx * sinha + byy * cosha
-	        preamble(2) = (-bxx*cosha + byy*sinha) * sind + bzz*cosd
+		bxy = bxx * sinha + byy * cosha
+		byx =-bxx * cosha + byy * sinha
+	        preamble(1) = bxy
+	        preamble(2) =  byx*sind + bzz*cosd
+		preamble(3) = -byx*cosd + bzz*sind
 c
 c  Calculate wideband correlations.
 c
 		if(nwide.gt.0)then
 	          do ipol = 1, npol
 		    do is = 1,nwide
-		      call modvis(preamble(1),preamble(2),
-     *			dble(wfreq(is)),ns,tad,sxd,syd,smaj,smind,
+		      call modvis(preamble(1),preamble(2),preamble(3),
+     *			dble(wfreq(is)),ns,tad,sxd,syd,szd,smaj,smind,
      *			spa,per,pa,pol(ipol),psi,vis)
 		      wsignal(is) = wsignal(is) + 
      *					real(vis)**2 + aimag(vis)**2
@@ -857,8 +891,8 @@ c
 		    do is = 1, nspect
 		      do ic = ischan(is), ischan(is)+nschan(is)-1
 		        freq = sfreq(is) + (ic-ischan(is))*sdf(is)
-		        call modvis(preamble(1),preamble(2),
-     *			  freq,ns,tad,sxd,syd,smajd,
+		        call modvis(preamble(1),preamble(2),preamble(3),
+     *			  freq,ns,tad,sxd,syd,szd,smajd,
      *			  smind,spa,per,pa,pol(ipol),psi,vis)
 		        if (famp.ne.0. .and. fwid.ne.0.)
      *		          vis = vis * (1.+ famp *
@@ -882,17 +916,14 @@ c  Write data records.
 c
 		do ipol=1,npol
 		  if(npol.gt.1) call uvputvri(unit,'pol',pol(ipol),1)
-		  if(nwide.gt.0)then
-		    call uvwwrite(unit,wcorr(1,ipol),flags,nwide)
-		  endif
 	          if(numchan.gt.0) then
+		    if(nwide.gt.0)
+     *		      call uvwwrite(unit,wcorr(1,ipol),flags,nwide)
 	            call uvwrite(unit,preamble,chan(1,ipol),flags,
      *								numchan)
 	          else
-		    call uvputvrd(unit,'coord',preamble,2)
-	            call uvputvrd(unit,'time',preamble(3),1)
-	            call uvputvrr(unit,'baseline',real(preamble(4)),1)
-	            call uvnext(unit)
+		    call uvwrite(unit,preamble,wcorr(1,ipol),flags,
+     *								nwide)
 	          endif
 	          item = item + 1
 	        enddo
@@ -931,42 +962,53 @@ c
 	call uvclose(unit)
 	end
 c************************************************************************
-	subroutine GetSrc(unit,pbfwhm,center,
-     *	    ns,ta,smaj,smin,spa,sx,sy,tad,smajd,smind,sxd,syd)
+	subroutine GetSrc(pbfwhm,ra0,dec0,center,
+     *	    ns,ta,smaj,smin,spa,sx,sy,tad,smajd,smind,sxd,syd,szd)
 c
 	implicit none
-	integer unit,ns
+	integer ns
+	double precision ra0,dec0
 	real pbfwhm,center(2)
 	real ta(ns),smaj(ns),smin(ns),spa(ns),sx(ns),sy(ns)
-	real tad(ns),smajd(ns),smind(ns),sxd(ns),syd(ns)
+	real tad(ns),smajd(ns),smind(ns),sxd(ns),syd(ns),szd(ns)
 c
 c  Calculate the effective source parameters, considering the primary
 c  beam, and offset pointing.
 c
+c  Input:
+c    unit	Handle of the output data-set. Only used if
+c
 c------------------------------------------------------------------------
 	integer i
+	double precision ra,dec,rap,decp,cosdec0
+	real ll,mm
 c
-c  Write the pointing offsets to the file.
+c  Get the true pointing center RA and DEC.
 c
-	call uvputvrr(unit,'dra',center(1),1)
-	call uvputvrr(unit,'ddec',center(2),1)
+	cosdec0 = cos(dec0)
+	rap  = ra0  + center(1)/cosdec0
+	decp = dec0 + center(2)          
 c
-c  Go through, computing the appropriate parameters.
+c  Derive the true direction cosines relative to the pointing centre.
 c
 	do i=1,ns
+	  ra  = ra0  + sx(i) / cosdec0
+	  dec = dec0 + sy(i)
+	  ll = sin(ra-rap) * cos(dec)
+	  mm = sin(dec)*cos(decp) - cos(ra-rap) * cos(dec) * sin(decp)
 	  call points(pbfwhm,
-     *     smaj(i),smin(i),spa(i),ta(i),sx(i)-center(1),sy(i)-center(2),
-     *	   smajd(i),smind(i),tad(i),sxd(i),syd(i))
+     *     smaj(i),smin(i),spa(i),ta(i),ll,mm,smajd(i),smind(i),tad(i),
+     *	   sxd(i),syd(i),szd(i))
 	enddo
 c
 	end
 c************************************************************************
 	subroutine points(fwhmpb,fwhm1, fwhm2, pa,flux, x0, y0,
-     *				 fwhm1d,fwhm2d,   fluxd,x0d,y0d)
+     *				 fwhm1d,fwhm2d,   fluxd,x0d,y0d,z0d)
 c
 	implicit none
 	real fwhmpb,fwhm1,fwhm2,pa,flux,x0,y0
-	real fwhm1d,fwhm2d,fluxd,x0d,y0d
+	real fwhm1d,fwhm2d,fluxd,x0d,y0d,z0d
 c
 c  Determine the parameters of a gaussian source, attenuated by a
 c  primary beam.
@@ -977,11 +1019,11 @@ c		value indicates an infinite primary beam.
 c    fwhm1,fwhm2 Gaussian FWHM of the source (radians).
 c    pa		Position angle of the source (radians).
 c    flux	Source flux.
-c    x0,y0	Source offset position (radians).
+c    x0,y0	True direction cosines.
 c  Output:
 c    fwhm1d,fwhm2d Gaussian FWHM of the source after attenuation (radians).
-c    fluxd	Source flux after attenuation.
-c    x0d,y0d	Source offset position after attenuation (radians).
+c    fluxd	 Source flux after attenuation.
+c    x0d,y0d,z0d Direction cosines after attenuation (radians).
 c------------------------------------------------------------------------
 	real x1,y1,temp
 c
@@ -1007,6 +1049,8 @@ c
 	  fwhm2d = fwhm2
 	  fluxd = flux
 	endif
+c
+	z0d = sqrt(1 - x0d*x0d - y0d*y0d)
 c
 	end
 c************************************************************************
@@ -1195,13 +1239,13 @@ c
 c
 	end
 c************************************************************************
-	subroutine modvis (uns,vns,freq,ns,ta,sx,sy,smaj,smin,spa,
-     *				per,pa,code,psi,cont)
+	subroutine modvis (uns,vns,wns,freq,ns,ta,sx,sy,sz,
+     *		smaj,smin,spa,per,pa,code,psi,cont)
 c
 	implicit none
-	double precision uns,vns,freq
+	double precision uns,vns,wns,freq
 	integer ns,code
-	real ta(ns),sx(ns),sy(ns),smaj(ns),smin(ns)
+	real ta(ns),sx(ns),sy(ns),sz(ns),smaj(ns),smin(ns)
 	real spa(ns),per(ns),pa(ns)
 	real psi
 	complex cont
@@ -1211,14 +1255,14 @@ c  polarized Gaussian components, observed with linear or circular feeds,
 c  at paralactic angle PSI.
 c
 c  Input:
-c    uns,vns	The (u,v) coordinate of the visibility, in nanosec.
+c    uns,vns,wns The (u,v,w) coordinate of the visibility, in nanosec.
 c    freq	The frequency of the visibility, in GHz.
 c    code	Polarisation code (AIPS/FITS style).
 c    ns		Number of gaussians in the model.
 c    psi	Parallactic angle, in radians.
 c	The following give parameters of the gaussians.
 c    ta		Peak flux, in Jy.
-c    sx,sy	Offset ra and dec, in radians.
+c    sx,sy,sz	l,m,n direction cosines.
 c    smaj,smin	Gaussian source FWHM size in the image plane.
 c    spa	Gaussian position angle, in radians.
 c    per	Fractional polarisation (in range [0,1]).
@@ -1233,7 +1277,7 @@ c------------------------------------------------------------------------
 	parameter(pi=3.141592653589793)
 	real p,umaj,umin,uvmaj,uvmin,gaus,flux
 	complex vis
-	double precision u,v
+	double precision u,v,w
 	integer j
 	logical inten(-8:1)
 c
@@ -1249,6 +1293,7 @@ c  Convert u and v to wavelengths.
 c
 	u = uns * freq
 	v = vns * freq
+	w = wns * freq
 c
 c  Loop over the source components. Avoid as much work as possible by
 c  checking for situations where the component contributes nothing.
@@ -1287,10 +1332,10 @@ c
 	    else
 	      call bug('f','Unsupported polarization, in ModVis')
 	    endif
-	    p=2*pi*(u*sx(j)+v*sy(j))
+	    p=2*pi*(u*sx(j)+v*sy(j)+w*(sz(j)-1))
 	    cont = cont + vis * expi(p) * flux
 	  endif
-	end do
+	enddo
 	end
 c************************************************************************
 	subroutine modcomp(sfile,tunit)
@@ -1396,10 +1441,15 @@ c------------------------------------------------------------------------
 	character*120 line
 	integer leng,nospect,numchn,i
 	real famp,fcen,fwid
-	data nospect/0/,numchn/0/,famp/0./,fcen/0./,fwid/0./
+c	data nospect/0/,numchn/0/,famp/0./,fcen/0./,fwid/0./
 c
 c  Initialize variables.
 c
+	nospect = 0
+	numchn = 0
+	famp = 0
+	fcen = 0
+	fwid = 0
 	do i=1,4
 	  corfin(i) = 0.
 	  corbw(i) = 0.
