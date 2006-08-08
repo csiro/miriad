@@ -15,7 +15,8 @@ c    rjs   9aug94 Add "ew" parameter for ATCA and WSRT.
 c    rjs   5jul95 Added some penticon parameters.
 c    rjs  27sep95 Added Parkes and nants.
 c    rjs  11oct95 Added subreflector diameter for atca.
-c
+c    rjs  11mar96 Changed "nobeyama" to "nro10m", and added more info
+c		  on it.
 c************************************************************************
 c* ObsPrint -- Print list of known observatories.
 c: utility
@@ -182,9 +183,13 @@ c
 c  The Nobeyama mm array.
 c  Jyperk and systemp given by Wright, from 3mm vlbi.
 c
-	call obsad('nobeyama/antdiam',	10.d0)
-	call obsad('nobeyama/jyperk',	74.d0)
-	call obsad('nobeyama/systemp',	300.d0)
+	call obsad('nro10m/antdiam',	10.d0)
+	call obsad('nro10m/height',	1350.d0)
+	call obsad('nro10m/jyperk',	74.d0)
+	call obsad('nro10m/latitude',	obsdms( 1, 35,56, 0.0))
+	call obsad('nro10m/longitude',	obsdms( 1,138,29, 0.0))
+	call obsad('nro10m/nants',	6.0d0)
+	call obsad('nro10m/systemp',	300.d0)
 c
 c  Nobeyama 45 m single dish.
 c  Jyperk and systemp given by Wright, from 3mm vlbi.
