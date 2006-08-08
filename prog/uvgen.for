@@ -316,6 +316,7 @@ c    17may00 mchw  allow for saturated spectral absorption model.
 c    18may00 rjs   Merge rjs/mchw changes.
 c    27oct00 rjs   Call antbas to compute baseline number.
 c    22may01 dpr   Marginal XY-EW support
+c    08dec02 rjs   Fixed bug in determining whether source is up or not.
 c
 c  Bugs/Shortcomings:
 c    * Frequency and time smearing is not simulated.
@@ -344,7 +345,7 @@ c	pbfwhm=76,137,-0.2 simulates a primary beam pattern between
 c	10m and 6m antennas at 100 GHz. 
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version = 'Uvgen: version 1.0 27-Oct-00')
+	parameter(version = 'Uvgen: version 1.0 08-Dec-02')
 	integer ALTAZ,EQUATOR,XYEW
 	parameter(ALTAZ=0,EQUATOR=1,XYEW=3)
 	integer PolRR,PolLL,PolRL,PolLR,PolXX,PolYY,PolXY,PolYX
@@ -536,14 +537,14 @@ c  elevation angle.
 c
 	if(doellim)then
 	  sinel = sin(elev)
-	  temp = (sinel - sinl*sind ) / ( cosl*cosd )
-	  if(abs(temp).gt.1)then
-	    if(sdec*alat.lt.0)then
+	  if(abs(sinel - sinl*sind ).gt.abs(cosl*cosd))then
+	    if(sinel - sinl*sind - cosl*cosd.gt.0)then
 	      call bug('f','Source never rises above elevation limit.')
 	    else
 	      call output('Source never sets below elevation limit.')
 	    endif
 	  else
+	    temp = (sinel - sinl*sind ) / ( cosl*cosd )
 	    temp = acos(temp)
 	    temp = 12/pi * temp
 	    write(line,'(a,f5.1,a,f5.1,a)') 'Hour angle limit is ',temp,
