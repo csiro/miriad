@@ -2,6 +2,228 @@ c***********************************************************************
 	program  uvgen
 	implicit none
 c
+c= UVGEN - Compute visibilities for a model source.
+c& rjs
+c: uv analysis, map making
+c+
+c	UVGEN is a MIRIAD task which computes visibility data for a model
+c	source distribution at u-v data points specified by a set of
+c	antenna positions, hour angle range and sample interval. The model
+c	is specified by a set of Gaussian sources with given positions and
+c	flux densities. Analytic expressions are used to calculate the
+c	value of the visibilities. The calculation includes the response to
+c	polarized sources with linear and circularly polarized feeds. U-V
+c	trajectories for all pairs of antennas are computed.
+c@ source
+c	The name of a text file containing the source components, one
+c	component per line. There is no default.  The source components
+c	are elliptical Gaussian components. Each line consists of at least
+c	three and up to nine values:
+c	  flux,dra,ddec,bmaj,bmin,bpa,iflux,ipa,vflux
+c	where
+c	  flux:          Total flux in Jy.
+c	  dra,ddec:      Position offset from the phase center in arcsec.
+c	  bmaj,bmin,bpa: The full width to half maximum of the major and
+c	                 minor axes, and the position angle of the major
+c	                 axis measured from north to the east. The default
+c	                 half width is 0."0001.
+c	  iflux,ipa:     The sources can be partially linearly polarized.
+c	                 This information is given as a percentage
+c	                 polarization and position angle. The default is 0.
+c	  vflux:         Percentage circular polarization. The default is 0.
+c	The text file is free-format, with commas or blanks used to separate
+c	the values. Comments (starting with #) can be included in the file.
+c@ ant
+c	The name of a text file containing the position of the antennas.
+c	There is no default. Each line of the text file gives three values,
+c	being the x, y and z location of an antenna.
+c	The antenna positions can be given in either a right handed
+c	equatorial system or as a local ground based coordinates measured to the
+c	north, east and in elevation. See the "baseunit" parameter to
+c	specify the coordinate system. Some standard antenna configurations
+c	can be found in $MIRCAT/*.ant for ATCA, BIMA and VLA telescopes.
+c	The BIMA and VLA antenna tables, use with baseunit=1, whereas for
+c	the ATCA, use baseunit=-51.0204.
+c
+c	The text file is free-format, with commas or blanks used to separate
+c	the values. Comments (starting with #) can be included in the file.
+c@ baseunit
+c	This specifies the coordinate system used in the antenna file.
+c	A positive value for "baseunit" indicates an equatorial system,
+c	whereas a negative value indicates a local system. The magnitude of
+c	"baseunit" gives the conversion factor between the baseline units
+c	used in the antenna file, and nanoseconds. The default value is +1,
+c	which means that the antenna file gives the antenna position in an
+c	equatorial system measured in nanoseconds.
+c	E.g. 	baseunit=-1 for topocentric coordinates in nanosecs, 
+c		baseunit=3.33564 for geocentric coordinates in meters.
+c@ telescop
+c	This parameter determine the feed angle variation (i.e. the parallactic
+c	angle plus the feed offset angle - evector). It is also
+c	used to set the name of the telescop variable in the output dataset.
+c	If can take two values, the first gives the antenna mount type, and
+c	can be "altaz" or "equatorial". The second value gives the feed
+c	offset angle ("evector") in degrees. The default is 0.
+c
+c	Alternatively, you can give the name of a known telescope for this
+c	parameter. In this case, the mount type and feed offset angle will
+c	be that of that particular telescope.
+c
+c	The default value is "hatcreek" (which is equivalent to "altaz,0").
+c@ corr
+c       Defines the correlator setup. The values are:
+c	  nchan:       Number of channels in each spectral window. Use 0
+c	               for a wideband only file.
+c	  nspect:      Number of spectral windows. Default 1; maximum 4.
+c	  f1,f2,...:   "nspect" values giving the offset for the center 
+c	               frequency of each window, in MHz. Default 0.
+c	  df1,df2,...: "nspect" values giving the total widths of each
+c	               spectral window, in MHz. Default 1000.
+c       No checking is made for valid combinations. 
+c	Default is wideband only for each spectral window.
+c@ spectra
+c	Model a Gaussian spectral line.
+c	The spectral line model line consists of three values:
+c	  famp:	       The line to continuum ratio
+c	  fcen:	       Line freq (GHz)
+c	  fwid:	       Line width (GHz).
+c       Default is no spectral line.
+c@ time
+c	The time of the observation (this corresponds to ha=0). This is in
+c	the form
+c	  yymmmdd.ddd
+c	or
+c	  yymmmdd:hh:mm:ss.s
+c	The default is 80JAN01.0. A function of this is also used
+c	as a seed for the random number generator.
+c@ freq
+c	Frequency and IF frequency in GHz.
+c	Defaults are 100,0.0 GHz. 
+c@ radec
+c	Source right ascension and declination. These can be given in
+c	hh:mm:ss,dd:mm:ss format, or as decimal hours and decimal
+c	degrees. The default is 0,30.
+c@ harange
+c	Hour Angle range (start,stop,step) in hours. Default is
+c	-6 hrs to + 6 hrs, with a sample interval=0.1 (6 minute)
+c@ ellim
+c	Elevation limit in degrees. The default is not to limit
+c	uv coverage by elevation. If set, then hour angles below the
+c	limit are not "observed".
+c@ stokes
+c	This selects the polarization parameters formed. Up to 4
+c	polarizations can be formed in one run . They can be 'i' (default),
+c	'xx', 'yy', 'xy', 'yx, 'lr', 'rl', 'rr' or 'll'. For example:
+c	  stokes=xx,yy,xy,yx
+c	will form a file with the 4 polarisations corresponding to an array
+c	with linear feeds.
+c	For linear feeds the convention is that the X feed has a position
+c	angle of 0, and the Y feed is 90 (measured north towards east).
+c@ polar
+c	Polarization patterns for generating time shared polarization data. 
+c	Up to MAXPOLAR=20 strings of the characters R and L, or X and Y, 
+c	to represent the polarization of each antenna
+c	R(right circular polarization), L(left circular polarization)
+c	X(linear polarization PA=0), Y(linear polarization PA=90).
+c	E.g. for 3 antennas, the polar=LLL,LRR,RRL,RLR cycles
+c	through all combinations of LCP and RCP for each baseline every
+c	4 integrations. The default is to use the stokes keyword.
+c@ leakage
+c	Polarization leakage errors, given as a percent. This gives the
+c	rms value of leakages of one polarisation feed into another.
+c	Polarization leakage errors are constant over the observation.
+c	To use this, you must set
+c	  stokes=xx,yy,xy,yx
+c	or
+c	  stokes=rr,ll,rl,lr
+c	The default is 0 (i.e. no polarization leakage).
+c@ zeeman
+c       Zeeman effect; the keyword gives the product B * Z, where,
+c          Stokes V = B * Z * dI/dnu + Leakage * I
+c          B = line of sight field, and Z = Zeeman splitting term.
+c	This generates a circular polarization for a spectral line.
+c       Default = 0.
+c@ lat
+c	Latitude of observatory, in degrees. Default is 40 degrees.
+c@ cycle
+c	This gives two values, being the time on-source, and the time
+c	off-source cycle times, both in hours. This allows simulation of
+c	time segments lost while observing calibrators, etc. For example,
+c	if simulating an observation which observes the source for 24 minutes
+c	and then is off-source (observing a calibrator) for 6 minutes, use:
+c	  cycle=0.4,0.1
+c	Similarly, if simulating this calibrator, use:
+c	  cycle=0.1,0.4
+c	The default is harange(3),0 (i.e. do not interrupt the observations).
+c@ pbfwhm
+c	This dictates the primary beam model used in the simulation. It gives
+c	the FWHM of a gaussian primary beam, in arcseconds.
+c	The default is no primary beam attenuation.
+c@ center
+c	Offset observing centers for a mosaiced observation, in arcseconds.
+c	Two values (x and y offset) are required per pointing. Several
+c	values can be given. Default is 0,0 (i.e. a plain, single pointing
+c	observation). The time spent on each pointing is given by the value of
+c	``cycle(1)''. Note that the default value of cycle(1) means that the
+c	observing center changes every integration.
+c@ gnoise
+c	Antenna based gain noise, given as a percentage. This gives the
+c	multiplicative gain variations, specified by the rms amplitude to be
+c	added to the gain of each antenna at each sample interval. The
+c	gain error stays constant over the period given by the ``cycle(1)''
+c	parameter (see above). Thus ``cycle(1)'' can be varied to give
+c	different atmosphere/instrument stabilities. Note that the default
+c	of the ``cycle'' parameter means that the gain changes every
+c	integration. 
+c
+c	A gain error can also be used to mimic random pointing errors
+c	provided the source is a point source.
+c	The default is 0 (i.e. no gain error).
+c@ pnoise
+c	Antenna based phase noise, in degrees. This gives the phase
+c	noise, specified by the rms phase noise to be added to each
+c	antenna. Up to 4 values can be given to compute the phase noise
+c	  pnoise(1) + pnoise(2)*(baseline)**pnoise(3)*sinel**pnoise(4)
+c	where ``baseline'' is the baseline length in km. Typical values
+c	for pnoise(2) are 1mm rms pathlength (e.g. 2 radians at 100 GHz),
+c	For Kolmogorov turbulence pnoise(3)=5/6 for baseline < 100m
+c	and 0.33 for baseline > 100m (outer scale of turbulence).
+c	pnoise(4)=-0.5 for a thick turbulent screen, and -1 for a thin layer.
+c	See also the ``gnoise'' parameter. Default is 0,0,0,0 (i.e.
+c	no phase error).
+c@ systemp
+c	System temperature used to compute additive random noise and
+c	total power. One or 3 values can be given; either the average
+c	single sideband systemp including the atmosphere (TELEPAR gives
+c	typical values), or the double sideband receiver temperature, 
+c	sky temperature, and zenith opacity, when systemp is computed as:
+c         systemp = 2.*(Trx + Tsky*(1-exp(-tau/sinel)))*exp(tau/sinel)
+c	where systemp, Trx and Tsky are in Kelvin. Typical values for Hat Ck
+c	Trx, Tsky, and tau are 75,290,0.15. (OBSTAU gives values for tau).
+c	systemp is used	to generate random Gaussian noise to add to each 
+c	data point. Default is 0,0,0 (i.e. no additive noise).
+c@ tpower
+c	Two values can be given to represent the total power variations
+c	due to receiver instability (Trms), and atmospheric noise (Tatm). 
+c	         tpower = Trms * systemp +  Tatm * pnoise
+c	The receiver instablity is modeled as multiplicative Gaussian noise.
+c	The atmospheric noise is modeled to be correlated with the antenna
+c	phase noise. Typical values at 3 millimeter wavelength
+c	are Trms=10-3 and Tatm=0.2 K/radian (280 degrees/K).
+c	Default is tpower=0,0
+c@ jyperk
+c	The system sensitivity, in Jy/K. Its value is given by 2*k/(eta * A)
+c	where k is Boltzmans constant (1.38e3 Jy m**2 / K), A is the physical
+c	area of each antenna (pi/4 * D**2), and eta is an efficiency.
+c	For the ATCA, D is 22 meters, and eta is composed of a correlator
+c	efficiency (0.88) and an antenna efficiency (0.65 at 6 cm). The
+c	overall result is jyperk=12.7. The default jyperk=150, a typical
+c	value for the Hat Creek 6.1 m antennas.
+c@ out
+c	This gives the name of the output Miriad data file. There is
+c	no default. If the dataset exists, visibilities are appended to
+c	the dataset, with an appropriate informational message.
+c--
 c  UVGEN computes model visibility data from source components file
 c  and antennas file.
 c
@@ -89,166 +311,16 @@ c    27may98 mchw  Replace correlator file with keywords.
 c    01jul98 mchw  Added pbfwhm parameters to simulate primary beams.
 c			Fixed some errors in rms noise calculations.
 c    12jan99 rjs   Doc changes only.
+c     9may00 rjs   Write primary beam type out correctly.
 c
 c  Bugs/Shortcomings:
 c    * Frequency and time smearing is not simulated.
 c    * Primary beam is a gaussian -- which is too ideal.
 c    * Primary beam is not a function of frequency.
 c    * Geometry for extended sources could be improved.
-c------------------------------------------------------------------------
-c= UVGEN - Compute visibilities for a model source.
-c& rjs
-c: uv analysis, map making
-c+
-c	UVGEN is a MIRIAD task which computes visibility data for a model
-c	source distribution at u-v data points specified by a set of
-c	antenna positions, hour angle range and sample interval. The model
-c	is specified by a set of Gaussian sources with given positions and
-c	flux densities. Analytic expressions are used to calculate the
-c	value of the visibilities. The calculation includes the response to
-c	polarized sources with linear and circularly polarized feeds. U-V
-c	trajectories for all pairs of antennas are computed.
-c@ source
-c	The name of a text file containing the source components, one
-c	component per line. There is no default.  The source components
-c	are elliptical Gaussian components. Each line consists of at least
-c	three and up to nine values:
-c	  flux,dra,ddec,bmaj,bmin,bpa,iflux,ipa,vflux
-c	where
-c	  flux:          Total flux in Jy.
-c	  dra,ddec:      Position offset from the phase center in arcsec.
-c	  bmaj,bmin,bpa: The full width to half maximum of the major and
-c	                 minor axes, and the position angle of the major
-c	                 axis measured from north to the east. The default
-c	                 half width is 0."0001.
-c	  iflux,ipa:     The sources can be partially linearly polarized.
-c	                 This information is given as a percentage
-c	                 polarization and position angle. The default is 0.
-c	  vflux:         Percentage circular polarization. The default is 0.
-c	The text file is free-format, with commas or blanks used to separate
-c	the values. Comments (starting with #) can be included in the file.
-c@ ant
-c	The name of a text file containing the position of the antennas.
-c	There is no default. Each line of the text file gives three values,
-c	being the x, y and z location of an antenna.
-c	The antenna positions can be given in either a right handed
-c	equatorial system or as a local ground based coordinates measured to the
-c	north, east and in elevation. See the "baseunit" parameter to
-c	specify the coordinate system. Some standard antenna configurations
-c	can be found in $MIRCAT/*.ant for ATCA, BIMA and VLA telescopes.
-c	The BIMA and VLA antenna tables, use with baseunit=1, whereas for
-c	the ATCA, use baseunit=-51.0204.
 c
-c	The text file is free-format, with commas or blanks used to separate
-c	the values. Comments (starting with #) can be included in the file.
-c@ baseunit
-c	This specifies the coordinate system used in the antenna file.
-c	A positive value for "baseunit" indicates an equatorial system,
-c	whereas a negative value indicates a local system. The magnitude of
-c	"baseunit" gives the conversion factor between the baseline units
-c	used in the antenna file, and nanoseconds. The default value is +1,
-c	which means that the antenna file gives the antenna position in an
-c	equatorial system measured in nanoseconds.
-c	E.g. 	baseunit=-1 for topocentric coordinates in nanosecs, 
-c		baseunit=3.33564 for geocentric coordinates in meters.
-c@ telescop
-c	This parameter determine the feed angle variation (i.e. the parallactic
-c	angle plus the feed offset angle - evector). It is also
-c	used to set the name of the telescop variable in the output dataset.
-c	If can take two values, the first gives the antenna mount type, and
-c	can be "altaz" or "equatorial". The second value gives the feed
-c	offset angle ("evector") in degrees. The default is 0.
+c  The following is the documentation for the unimplemented 2-gaussian beam.
 c
-c	Alternatively, you can give the name of a known telescope for this
-c	parameter. In this case, the mount type and feed offset angle will
-c	be that of that particular telescope.
-c
-c	The default value is "hatcreek" (which is equivalent to "altaz,0").
-c@ corr
-c       Defines the correlator setup. The values are:
-c	  nchan:       Number of channels in each spectral window. Use 0
-c	               for a wideband only file.
-c	  nspect:      Number of spectral windows. Default 1; maximum 4.
-c	  f1,f2,...:   "nspect" values giving the offset for the center 
-c	               frequency of each window, in MHz. Default 0.
-c	  df1,df2,...: "nspect" values giving the total widths of each
-c	               spectral window, in MHz. Default 1000.
-c       No checking is made for valid combinations. 
-c	Default is wideband only for each spectral window.
-c@ spectra
-c	Make a Gaussian spectral line.
-c	The spectral line model line consists of three values:
-c	  famp:	       The line to continuum ratio
-c	  fcen:	       Line freq (GHz)
-c	  fwid:	       Line width (GHz).
-c       Default is no spectral line.
-c@ time
-c	The time of the observation (this corresponds to ha=0). This is in
-c	the form
-c	  yymmmdd.ddd
-c	or
-c	  yymmmdd:hh:mm:ss.s
-c	The default is 80JAN01.0. A function of this is also used
-c	as a seed for the random number generator.
-c@ freq
-c	Frequency and IF frequency in GHz.
-c	Defaults are 100,0.0 GHz. 
-c@ radec
-c	Source right ascension and declination. These can be given in
-c	hh:mm:ss,dd:mm:ss format, or as decimal hours and decimal
-c	degrees. The default is 0,30.
-c@ harange
-c	Hour Angle range (start,stop,step) in hours. Default is
-c	-6 hrs to + 6 hrs, with a sample interval=0.1 (6 minute)
-c@ ellim
-c	Elevation limit in degrees. The default is not to limit
-c	uv coverage by elevation. If set, then hour angles below the
-c	limit are not "observed".
-c@ stokes
-c	This selects the polarization parameters formed. Up to 4
-c	polarizations can be formed in one run . They can be 'i' (default),
-c	'xx', 'yy', 'xy', 'yx, 'lr', 'rl', 'rr' or 'll'. For example:
-c	  stokes=xx,yy,xy,yx
-c	will form a file with the 4 polarisations corresponding to an array
-c	with linear feeds.
-c	For linear feeds the convention is that the X feed has a position
-c	angle of 0, and the Y feed is 90 (measured north towards east).
-c@ polar
-c	Polarization patterns for generating time shared polarization data. 
-c	Up to MAXPOLAR=20 strings of the characters R and L, or X and Y, 
-c	to represent the polarization of each antenna
-c	R(right circular polarization), L(left circular polarization)
-c	X(linear polarization PA=0), Y(linear polarization PA=90).
-c	E.g. for 3 antennas, the polar=LLL,LRR,RRL,RLR cycles
-c	through all combinations of LCP and RCP for each baseline every
-c	4 integrations. The default is to use the stokes keyword.
-c@ leakage
-c	Polarization leakage errors, given as a percent. This gives the
-c	rms value of leakages of one polarisation feed into another.
-c	Polarization leakage errors are constant over the observation.
-c	To use this, you must set
-c	  stokes=xx,yy,xy,yx
-c	or
-c	  stokes=rr,ll,rl,lr
-c	The default is 0 (i.e. no polarization leakage).
-c@ zeeman
-c       Zeeman effect; the keyword gives the product B * Z, where,
-c          Stokes V = B * Z * dI/dnu + Leakage * I
-c          B = line of sight field, and Z = Zeeman splitting term.
-c	This generates a circular polarization for a spectral line.
-c       Default = 0.
-c@ lat
-c	Latitude of observatory, in degrees. Default is 40 degrees.
-c@ cycle
-c	This gives two values, being the time on-source, and the time
-c	off-source cycle times, both in hours. This allows simulation of
-c	time segments lost while observing calibrators, etc. For example,
-c	if simulating an observation which observes the source for 24 minutes
-c	and then is off-source (observing a calibrator) for 6 minutes, use:
-c	  cycle=0.4,0.1
-c	Similarly, if simulating this calibrator, use:
-c	  cycle=0.1,0.4
-c	The default is harange(3),0 (i.e. do not interrupt the observations).
 c@ pbfwhm
 c	A primary beam pattern may be specified by three values:
 c	the FWHM for two concentric Gaussian beams, and the fraction of
@@ -266,75 +338,9 @@ c	E.g. pbfwhm=60,480,0.1  simulates a primary beam pattern with an
 c	error beam with FWHM=480'' and 10% of the amplitude of the main beam.
 c	pbfwhm=76,137,-0.2 simulates a primary beam pattern between
 c	10m and 6m antennas at 100 GHz. 
-c	NOTE: Only a single Gaussian beam is currently implemented (July98). 
-c@ center
-c	Offset observing centers for a mosaiced observation, in arcseconds.
-c	Two values (x and y offset) are required per pointing. Several
-c	values can be given. Default is 0,0 (i.e. a plain, single pointing
-c	observation). The time spent on each pointing is given by the value of
-c	``cycle(1)''. Note that the default value of cycle(1) means that the
-c	observing center changes every integration.
-c@ gnoise
-c	Antenna based gain noise, given as a percentage. This gives the
-c	multiplicative gain variations, specified by the rms amplitude to be
-c	added to the gain of each antenna at each sample interval. The
-c	gain error stays constant over the period given by the ``cycle(1)''
-c	parameter (see above). Thus ``cycle(1)'' can be varied to give
-c	different atmosphere/instrument stabilities. Note that the default
-c	of the ``cycle'' parameter means that the gain changes every
-c	integration. 
-c
-c	A gain error can also be used to mimic random pointing errors
-c	provided the source is a point source.
-c	The default is 0 (i.e. no gain error).
-c@ pnoise
-c	Antenna based phase noise, in degrees. This gives the phase
-c	noise, specified by the rms phase noise to be added to each
-c	antenna. Up to 4 values can be given to compute the phase noise
-c	  pnoise(1) + pnoise(2)*(baseline)**pnoise(3)*sinel**pnoise(4)
-c	where ``baseline'' is the baseline length in km. Typical values
-c	for pnoise(2) are 1mm rms pathlength (e.g. 2 radians at 100 GHz),
-c	For Kolmogorov turbulence pnoise(3)=5/6 for baseline < 100m
-c	and 0.33 for baseline > 100m (outer scale of turbulence).
-c	pnoise(4)=-0.5 for a thick turbulent screen, and -1 for a thin layer.
-c	See also the ``gnoise'' parameter. Default is 0,0,0,0 (i.e.
-c	no phase error).
-c@ systemp
-c	System temperature used to compute additive random noise and
-c	total power. One or 3 values can be given; either the average
-c	single sideband systemp including the atmosphere (TELEPAR gives
-c	typical values), or the double sideband receiver temperature, 
-c	sky temperature, and zenith opacity, when systemp is computed as:
-c         systemp = 2.*(Trx + Tsky*(1-exp(-tau/sinel)))*exp(tau/sinel)
-c	where systemp, Trx and Tsky are in Kelvin. Typical values for Hat Ck
-c	Trx, Tsky, and tau are 75,290,0.15. (OBSTAU gives values for tau).
-c	systemp is used	to generate random Gaussian noise to add to each 
-c	data point. Default is 0,0,0 (i.e. no additive noise).
-c@ tpower
-c	Two values can be given to represent the total power variations
-c	due to receiver instability (Trms), and atmospheric noise (Tatm). 
-c	         tpower = Trms * systemp +  Tatm * pnoise
-c	The receiver instablity is modeled as multiplicative Gaussian noise.
-c	The atmospheric noise is modeled to be correlated with the antenna
-c	phase noise. Typical values at 3 millimeter wavelength
-c	are Trms=10-3 and Tatm=0.2 K/radian (280 degrees/K).
-c	Default is tpower=0,0
-c@ jyperk
-c	The system sensitivity, in Jy/K. Its value is given by 2*k/(eta * A)
-c	where k is Boltzmans constant (1.38e3 Jy m**2 / K), A is the physical
-c	area of each antenna (pi/4 * D**2), and eta is an efficiency.
-c	For the ATCA, D is 22 meters, and eta is composed of a correlator
-c	efficiency (0.88) and an antenna efficiency (0.65 at 6 cm). The
-c	overall result is jyperk=12.7. The default jyperk=150, a typical
-c	value for the Hat Creek 6.1 m antennas.
-c@ out
-c	This gives the name of the output Miriad data file. There is
-c	no default. If the dataset exists, visibilities are appended to
-c	the dataset, with an appropriate informational message.
-c--
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version = 'Uvgen: version 1.0 01-Jul-98')
+	parameter(version = 'Uvgen: version 1.0 09-May-00')
 	integer ALTAZ,EQUATOR
 	parameter(ALTAZ=0,EQUATOR=1)
 	integer PolRR,PolLL,PolRL,PolLR,PolXX,PolYY,PolXY,PolYX
@@ -473,7 +479,7 @@ c
 c
 c  Mosaicing/primary beam parameters.
 c
-	call keyr('pbfwhm',pbfwhm(1),-1.)
+	call keyr('pbfwhm',pbfwhm(1),0.)
 	pbfwhm(1) = pi/180/3600 * pbfwhm(1)
 	call keyr('pbfwhm',pbfwhm(2),-1.)
 	pbfwhm(2) = pi/180/3600 * pbfwhm(2)
@@ -720,7 +726,7 @@ c
 	call uvputvrd(unit,'obsra',sra,1)
 	call uvputvrd(unit,'dec',sdec,1)
 	call uvputvrd(unit,'obsdec',sdec,1)
-	if(pbfwhm(1).gt.0)
+	if(pbfwhm(1).ge.0)
      *		call uvputvrr(unit,'pbfwhm',3600*180/pi*pbfwhm(1),1)
 c
 	call uvputvrd(unit,'lo1',lo1,1)
