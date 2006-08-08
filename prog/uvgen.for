@@ -70,7 +70,8 @@ c    21sep94 mchw  Better value for sfreq in coramhat.
 c    28sep94 rjs   Merge mchw/rjs changes.
 c    19jan95 mchw  Added atmospheric phase model to pnoise input.
 c    25jan95 mchw  Fix bug (lst = ha + ra)
-c    30aug95 rjs   Add some commas for g77
+c    27nov95 mchw  Correct sign of source position angle.
+c    27nov95 rjs   (Re-)add some commas to appease g77.
 c
 c  Bugs/Shortcomings:
 c    * Frequency and time smearing is not simulated.
@@ -262,7 +263,7 @@ c------------------------------------------------------------------------
 	real sqrt2
 	character version*(*)
 	parameter(sqrt2=1.414214)
-	parameter(version = 'Uvgen: version 1.0 25-JAN-95' )
+	parameter(version = 'Uvgen: version 1.0 27-NOV-95' )
 	include 'mirconst.h'
 	include 'maxdim.h'
 	integer maxsrc,maxpol,maxpnt
@@ -521,7 +522,7 @@ c
 	  if(wmin .eq. 0.) wmin = 0.0001
 	  smaj(ns) = wmaj * pi/180/3600
 	  smin(ns) = wmin * pi/180/3600
-	  spa(ns)  = wpa  * pi/180
+	  spa(ns)  =  wpa * pi/180
 	  per(ns) = poln / 100.
 	  pa(ns)  = polpa * pi/180
 	  write(line,101) ns,flux,dra,ddec,wmaj,wmin,wpa,poln,polpa
@@ -1329,8 +1330,8 @@ c
 	  if(per(j).ne.0.or.inten(code))then
 	    uvmaj = 1. / ( pi * 0.6 * smaj(j) )
 	    uvmin = 1. / ( pi * 0.6 * smin(j) )
-	    umaj = (u * cos(spa(j)) - v * sin(spa(j))) / uvmaj
-	    umin = (u * sin(spa(j)) + v * cos(spa(j))) / uvmin
+	    umaj = (u * sin(spa(j)) + v * cos(spa(j))) / uvmaj
+	    umin = (u * cos(spa(j)) - v * sin(spa(j))) / uvmin
 	    gaus = umaj*umaj + umin*umin
 	    if (gaus .lt. 20) flux = ta(j) * exp(-gaus)
 	  endif
