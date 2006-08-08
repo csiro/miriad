@@ -16,10 +16,11 @@ c  History:
 c    rjs  20jun91 Original version.
 c    rjs   2jun93 Better formating.
 c    rjs  15dec95 List observatories.
+c    rjs  06dec96 Print altitude.
 c------------------------------------------------------------------------
 	character version*(*)
 	integer MAXOBS
-	parameter(version='Telepar: version 1.0 15-Dec-95')
+	parameter(version='Telepar: version 1.0 06-Dec-96')
 	parameter(MAXOBS=16)
 	include 'mirconst.h'
 	character string*20,line*64,observs(MAXOBS)*12,observ*12
@@ -60,10 +61,19 @@ c
 	    call output('Longitude:           '//string)	
 	  endif
 c
+	  call obspar(observ,'height',value,ok)
+	  if(ok)then
+	    n = n + 1
+	    write(line,'(a,f6.1,a)')'Height               ',value,
+     *				  ' metres'
+	    call output(line)
+	  endif
+c
 	  call obspar(observ,'evector',value,ok)
 	  if(ok)then
 	    n = n + 1
-	    write(line,'(a,f7.1)')'Feed Offset angle:',180/pi*value
+	    write(line,'(a,f7.1,a)')'Feed Offset angle:',180/pi*value,
+     *				    ' degrees'
 	    call output(line)
 	  endif
 c
