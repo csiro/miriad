@@ -13,9 +13,10 @@ c
 c  THis returns some known characteristics of various observervatories.
 c
 c  Input:
-c    observ	Name of the observatory. For example:
-c		  'HATCREEK', 'VLA', 'ATCA' (Australia Telescope)
-c		  'WSRT' (Westerbork).
+c    observ	Name of the observatory. Current list is :
+c		  'ATCA', 'GMRT', 'HATCREEK', 'KITTPEAK', 
+c	   	  'NOBEYAMA', 'NOBEYAMA45', 'ONSALA', 'OVRO'
+c		  'PARKES', 'PENTICTON', 'QUABBIN', 'VLA', 'WSRT'
 c    object	The parameter of the observatory of interest. Possible
 c		values are:
 c		 'latitude '	Observatory latitude, in radians.
@@ -27,6 +28,7 @@ c				vertical.
 c		 'mount'	Telescope mount: 0 = alt-az
 c						 1   equitorial
 c		 'antdiam'	Antenna diameter, in meters.
+c		 'subdiam'	Subreflector diameter.
 c		 'height'	Height above sea level, in meters
 c		 'ew'		Positive if the telescope is an E-W array.
 c	         'nants'        Number of antennas normally in the array.
@@ -186,6 +188,7 @@ c
 	call obsad('parkes/longitude',	obsdms( 1,148,15,44.3591))
 	call obsad('parkes/mount',	ALTAZ)
 	call obsad('parkes/nants',	1.d0)
+	call obsad('parkes/subdiam',	3.0d0)
 c
 c  Some Penticton parameters.
 c
