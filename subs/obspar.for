@@ -20,6 +20,7 @@ c		  on it.
 c    rjs  14mar96 Fixed bug I introduced on 11mar96.
 c    rjs  11aug96 Added mopra, plus miscellaneous other parameters.
 c    mchw 18sep96 Added iram15m array on PdB.
+c    rjs  17dec96 More accurate positions for ATNF telescopes.
 c************************************************************************
 c* ObsPrint -- Print list of known observatories.
 c: utility
@@ -143,15 +144,17 @@ c
 	nparms = 0
 c
 c  The Australia Telescope Compact Array (ATNF).
+c  Latitude, longitude and height refer to station 35. Info from
+c  John Reynolds (IAU 1976 spheroid).
 c
 	call obsad('atca/antdiam',	22.d0)
 	call obsad('atca/ellimit',	12.0*dpi/180.d0)
 	call obsad('atca/evector',	0.25*dpi)
 	call obsad('atca/ew',		1.d0)
-	call obsad('atca/height',	217.d0)
+	call obsad('atca/height',	2133.869d0)
 	call obsad('atca/jyperk',	13.d0)
-	call obsad('atca/latitude',	obsdms(-1, 30,18,52.02))
-	call obsad('atca/longitude',	obsdms( 1,149,34, 0.94))
+	call obsad('atca/latitude',	obsdms(-1, 30,18,46.3849))
+	call obsad('atca/longitude',	obsdms( 1,149,34, 0.4997))
 	call obsad('atca/mount',	ALTAZ)
 	call obsad('atca/nants',	6.d0)
 	call obsad('atca/subdiam',	2.8d0)
@@ -200,9 +203,9 @@ c
 c  The Mopra dish.
 c
 	call obsad('mopra/antdiam',	22.d0)
-	call obsad('mopra/height',	850.d0)
-	call obsad('mopra/latitude',	obsdms(-1, 31,16,04.451))
-	call obsad('mopra/longitude',	obsdms( 1,149,05,58.732))
+	call obsad('mopra/height',	866.047d0)
+	call obsad('mopra/latitude',	obsdms(-1, 31,16,04.3195))
+	call obsad('mopra/longitude',	obsdms( 1,149,05,58.7740))
 	call obsad('mopra/mount',	ALTAZ)
 	call obsad('mopra/nants',	1.d0)
 c
@@ -250,9 +253,9 @@ c  Parkes.
 c
 	call obsad('parkes/antdiam',	64.d0)
 	call obsad('parkes/ellimit',	30.5d0*dpi/180.d0)
-	call obsad('parkes/height',	391.79d0)
-	call obsad('parkes/latitude',	obsdms(-1, 32,59,59.8657)) 
-	call obsad('parkes/longitude',	obsdms( 1,148,15,44.3591))
+	call obsad('parkes/height',	411.756d0)
+	call obsad('parkes/latitude',	obsdms(-1, 32,59,54.2552)) 
+	call obsad('parkes/longitude',	obsdms( 1,148,15,48.6393))
 	call obsad('parkes/mount',	ALTAZ)
 	call obsad('parkes/nants',	1.d0)
 	call obsad('parkes/subdiam',	3.0d0)
