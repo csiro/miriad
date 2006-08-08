@@ -62,8 +62,8 @@ c	This parameter determine the feed angle variation (i.e. the parallactic
 c	angle plus the feed offset angle - evector). It is also
 c	used to set the name of the telescop variable in the output dataset.
 c	If can take two values, the first gives the antenna mount type, and
-c	can be "altaz" or "equatorial". The second value gives the feed
-c	offset angle ("evector") in degrees. The default is 0.
+c	can be "altaz", "xyew", or "equatorial". The second value gives 
+c       the feed offset angle ("evector") in degrees. The default is 0.
 c
 c	Alternatively, you can give the name of a known telescope for this
 c	parameter. In this case, the mount type and feed offset angle will
@@ -315,6 +315,7 @@ c     9may00 rjs   Write primary beam type out correctly.
 c    17may00 mchw  allow for saturated spectral absorption model.
 c    18may00 rjs   Merge rjs/mchw changes.
 c    27oct00 rjs   Call antbas to compute baseline number.
+c    22may01 dpr   Marginal XY-EW support
 c
 c  Bugs/Shortcomings:
 c    * Frequency and time smearing is not simulated.
@@ -344,8 +345,8 @@ c	10m and 6m antennas at 100 GHz.
 c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version = 'Uvgen: version 1.0 27-Oct-00')
-	integer ALTAZ,EQUATOR
-	parameter(ALTAZ=0,EQUATOR=1)
+	integer ALTAZ,EQUATOR,XYEW
+	parameter(ALTAZ=0,EQUATOR=1,XYEW=3)
 	integer PolRR,PolLL,PolRL,PolLR,PolXX,PolYY,PolXY,PolYX
 	parameter(PolRR=-1,PolLL=-2,PolRL=-3,PolLR=-4)
 	parameter(       PolXX=-5,PolYY=-6,PolXY=-7,PolYX=-8)
@@ -442,6 +443,9 @@ c
 	  dtemp = 0
 	else if(telescop.eq.'EQUATORIAL')then
 	  mount = EQUATOR
+	  dtemp = 0
+        else if(telescop.eq.'XYEW') then
+	  mount = XYEW
 	  dtemp = 0
 	else
 	  call obspar(telescop,'mount',dtemp,ok)
@@ -935,10 +939,10 @@ c
 c
 c  Offset the parallactic angle by evector.
 c
-	    if(mount.eq.ALTAZ)then
-	      psi = atan2(sinq,cosq) + evector
-	    else
+	    if(mount.eq.EQUATOR)then
 	      psi = evector
+	    else
+	      psi = atan2(sinq,cosq) + evector
 	    endif
 	    call uvputvrr(unit,'chi',psi,1)
 c
