@@ -26,9 +26,16 @@ c    mchw 09jun97 Added evector to hatcreek
 c    rjs  24jun97 Correct height of ATCA.
 c    rjs/jm 11jul97 Correct longitude sign for IRAM15M, JCMT and CSO.
 c    mchw 05aug98 Added mount and nants to ovro.
-c    mchw 05feb99 Added carma for combined hatcreek and ovro arrays.
+c    mchw 05feb99 Added CARMA for combined hatcreek and ovro arrays.
 c    rjs  31mar00 Added SEST.
 c    dpr  22may01 Added HOBART26M, CEDUNA30M, XYEW
+c    mchw 24may01 Added RPA
+c    mchw 03jan02 Added SZA
+c    mchw 09jul02 Added ALMA
+c    mchw 26aug03 Added SMA
+c    gxm  27jan04 Added generic systemp for WSRT (to please wsrtfits).
+c    mchw 07jul04 Added SMA10 and SZA6 cross correlations for CARMA.
+c    pjt  24sep04 Final location of CARMA at Cedar Flats
 c************************************************************************
 c* ObsPrint -- Print list of known observatories.
 c: utility
@@ -74,10 +81,11 @@ c  This returns some known characteristics of various observervatories.
 c
 c  Input:
 c    observ	Name of the observatory. Current list is :
-c                 'ATCA', 'CEDUNA30M', 'CSO', 'GMRT', 'HATCREEK', 
-c                 'HOBART26M', 'IRAM15M', 'JCMT',
+c                 'ALMA', 'ATCA', 'CARMA', CEDUNA30M', 'CSO', 'GMRT',
+c                 'HATCREEK', 'HOBART26M', 'IRAM15M', 'JCMT',
 c                 'KITTPEAK', 'NOBEYAMA', 'NOBEYAMA45', 'ONSALA', 'OVRO',
-c		  'PARKES', 'PENTICTON', 'QUABBIN', 'VLA', 'WSRT',
+c		  'PARKES', 'PENTICTON', 'QUABBIN', 'RPA', 'SZA', 'SZA10', 'SZA6', 'VLA', 
+c		  'WSRT'
 c                 
 c    object	The parameter of the observatory of interest. Possible
 c		values are:
@@ -90,6 +98,7 @@ c				vertical.
 c		 'mount'	Telescope mount: 0 = alt-az
 c						 1   equitorial
 c                                                3   xy-ew
+c                                                4   nasmyth
 c		 'antdiam'	Antenna diameter, in meters.
 c		 'subdiam'	Subreflector diameter.
 c		 'height'	Height above sea level, in meters
@@ -139,8 +148,8 @@ c------------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'obspar.h'
 c
-	double precision ALTAZ,EQUATOR,XYEW
-	parameter(ALTAZ=0.d0,EQUATOR=1.d0,XYEW=3.d0)
+	double precision ALTAZ,EQUATOR,NASMYTH,XYEW
+	parameter(ALTAZ=0.d0,EQUATOR=1.d0,NASMYTH=4.d0,XYEW=3.d0)
 c
 c  Externals.
 c
@@ -153,6 +162,45 @@ c
 	if(.not.first)return
 	first = .false.
 	nparms = 0
+c
+c  ALMA - will need to be updated. From Simon Radford:
+c At the Grenoble meeting, Chajnantor South was chosen as the nominal 
+c array center. In 1999 November, we measured this with a differential GPS:
+c 
+c                             N            E          alt
+c Chajnantor South        7453228.830  627807.166  5016.792
+c 
+c where the coordinates are UTM [m] on the Prov. S. Am. 1956 datum, which 
+c we use for mapping and civil construction. This position is 544 m south 
+c and 35 m east of the NRAO container. By long integration with a 
+c navigation GPS, I measured the position of the NRAO container (Memos 
+c 261, 312):
+c 
+c NRAO  container         7453772      627772      5060
+c 
+c on the same datum. Again using this datum, the latitude and longitude of 
+c the NRAO container are:
+c 
+c    23deg 1'  9.42''  South    67deg 45' 11.44''  West
+c 
+c Note these coordinates are based on the PSAm56 datum and are not the 
+c "astronomical" latitude and longitude. The native datum for GPS, the 
+c WGS84 datum, is very close to the astronomical coordinate system 
+c determined from VLBI. In this datum, the NRAO container is at:
+c 
+c    23deg 1' 22.42''  South    67deg 45' 17.74''  West
+c
+	call obsad('alma/antdiam',	12.d0)
+	call obsad('alma/ellimit',	12.0*dpi/180.d0)
+	call obsad('alma/evector',	0.25*dpi)
+	call obsad('alma/height',	5017.d0)
+	call obsad('alma/jyperk',	40.7d0)
+	call obsad('alma/latitude',	obsdms(-1, 23,01,22.42))
+	call obsad('alma/longitude',	obsdms( 1,67,47, 17.74))
+	call obsad('alma/mount',	ALTAZ)
+	call obsad('alma/nants',	64.d0)
+	call obsad('alma/systemp',	40.d0)
+c
 c
 c  The Australia Telescope Compact Array (ATNF).
 c  Latitude, longitude and height refer to station 35. Info from
@@ -176,10 +224,10 @@ c
 	call obsad('carma/antdiam',	8.0d0)
 	call obsad('carma/ellimit',	5.0*dpi/180.d0)
 	call obsad('carma/evector',	0.5*dpi)
-	call obsad('carma/height',	3000.0d0)
+	call obsad('carma/height',	2200.0d0)
 	call obsad('carma/jyperk',	80.d0)
-        call obsad('carma/latitude',     obsdms( 1, 37,14, 0.00))
-        call obsad('carma/longitude',    obsdms(-1,118,17, 0.00))
+        call obsad('carma/latitude',     obsdms( 1, 37,16, 43.00))
+        call obsad('carma/longitude',    obsdms(-1,118, 8, 32.00))
 	call obsad('carma/mount',	ALTAZ)
 	call obsad('carma/nants',	15.d0)
 	call obsad('carma/systemp',	200.d0)
@@ -268,6 +316,7 @@ c
 	call obsad('kittpeak/jyperk',	55.d0)
 	call obsad('kittpeak/latitude',	obsdms( 1, 31,57,12.10))
 	call obsad('kittpeak/longitude',obsdms(-1,111,36,51.12))
+        call obsad('kittpeak/mount',     ALTAZ)
 	call obsad('kittpeak/nants',	1.d0)
 	call obsad('kittpeak/systemp',	200.d0)
 c
@@ -346,12 +395,74 @@ c
 	call obsad('quabbin/jyperk',	45.d0)
 	call obsad('quabbin/systemp',	240.d0)
 c
+c  RPA - seti array near Leuchner
+c
+        call obsad('rpa/antdiam',       3.6d0)
+        call obsad('rpa/ellimit',       8.0d0*dpi/180.d0)
+        call obsad('rpa/height',        238.d0)
+        call obsad('rpa/jyperk',        418.d0)
+        call obsad('rpa/latitude',      obsdms( 1, 37,55, 3.6))
+        call obsad('rpa/longitude',     obsdms(-1,122, 9,21.0))
+        call obsad('rpa/mount',         ALTAZ)
+        call obsad('rpa/nants',         6.d0)
+        call obsad('rpa/systemp',       60.d0)
+c
 c  SEST.
 c
 	call obsad('sest/antdiam',	15.d0)
 	call obsad('sest/height',	2400.d0)
 	call obsad('sest/latitude',	obsdms(-1,29,15,34.0))
 	call obsad('sest/longitude',	obsdms( 1,70,44,04.0))
+c
+c  Submillimeter Array (SMA).
+c  Supplied by Ramprasad Rao
+c
+	call obsad('sma/antdiam',	6.0d0)
+	call obsad('sma/height',	4080.0d0)
+	call obsad('sma/jyperk',	130.d0)
+	call obsad('sma/latitude',	obsdms( 1, 19,49,33.8))
+	call obsad('sma/longitude',	obsdms(-1,155,28,46.4))
+	call obsad('sma/mount',	NASMYTH)
+	call obsad('sma/nants',	8.0d0)
+c
+c  SZA - Sunyaev-Zel'dovich Array of eight 3.5m antennas - part of CARMA.
+c
+        call obsad('sza/antdiam',     3.5d0)
+        call obsad('sza/ellimit',     5.0*dpi/180.d0)
+        call obsad('sza/evector',     0.5*dpi)
+        call obsad('sza/height',      2400.0d0)
+        call obsad('sza/jyperk',      383.d0)
+        call obsad('sza/latitude',     obsdms( 1, 37,14, 0.00))
+        call obsad('sza/longitude',    obsdms(-1,118,17, 0.00))
+        call obsad('sza/mount',       ALTAZ)
+        call obsad('sza/nants',       8.d0)
+        call obsad('sza/systemp',     200.d0)
+c
+c  SZA10 - SZA cross correlalations of 3.5m and 10.4m antennas - part of CARMA.
+c
+        call obsad('sza10/antdiam',     6.0d0)
+        call obsad('sza10/ellimit',     5.0*dpi/180.d0)
+        call obsad('sza10/evector',     0.5*dpi)
+        call obsad('sza10/height',      2400.0d0)
+        call obsad('sza10/jyperk',      128.d0)
+        call obsad('sza10/latitude',     obsdms( 1, 37,14, 0.00))
+        call obsad('sza10/longitude',    obsdms(-1,118,17, 0.00))
+        call obsad('sza10/mount',       ALTAZ)
+        call obsad('sza10/nants',       8.d0)
+        call obsad('sza10/systemp',     200.d0)
+c
+c  SZA6 - SZA cross correlalations of 3.5m and 6.1m antennas - part of CARMA.
+c
+        call obsad('sza6/antdiam',     4.6d0)
+        call obsad('sza6/ellimit',     5.0*dpi/180.d0)
+        call obsad('sza6/evector',     0.5*dpi)
+        call obsad('sza6/height',      2400.0d0)
+        call obsad('sza6/jyperk',      220.d0)
+        call obsad('sza6/latitude',     obsdms( 1, 37,14, 0.00))
+        call obsad('sza6/longitude',    obsdms(-1,118,17, 0.00))
+        call obsad('sza6/mount',       ALTAZ)
+        call obsad('sza6/nants',       8.d0)
+        call obsad('sza6/systemp',     200.d0)
 c
 c  The Very Large Array (NRAO).
 c  Values taken from the Green Book (pages 1-10, 1-16, 6-17).
@@ -379,6 +490,10 @@ c
 	call obsad('wsrt/longitude',	obsdms( 1,  6,36,15.01))
 	call obsad('wsrt/mount',	EQUATOR)
 	call obsad('wsrt/nants',	14.d0)
+c       gmx (Jan 27, 2004): Added system temperature
+c       see http://www.astron.nl/wsrt/wsrtGuide/node6.html
+	call obsad('wsrt/systemp',	30.0d0)
+c
 c
 	end
 c************************************************************************
