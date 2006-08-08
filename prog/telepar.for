@@ -8,7 +8,7 @@ c: utility
 c+
 c	TELEPAR gives the characteristics of various observatories.
 c	Its main use is to check that the characteristics are correct.
-c@ observ
+c@ telescop
 c	Name of the observatory. Several can be given. If none are
 c	given, TELEPAR simply lists the known observatories.
 c--
@@ -17,10 +17,11 @@ c    rjs  20jun91 Original version.
 c    rjs   2jun93 Better formating.
 c    rjs  15dec95 List observatories.
 c    rjs  06dec96 Print altitude.
+c    rjs  09jun97 Standardize keyword.
 c------------------------------------------------------------------------
 	character version*(*)
 	integer MAXOBS
-	parameter(version='Telepar: version 1.0 06-Dec-96')
+	parameter(version='Telepar: version 1.0 09-JUN-96')
 	parameter(MAXOBS=16)
 	include 'mirconst.h'
 	character string*20,line*64,observs(MAXOBS)*12,observ*12
@@ -32,7 +33,7 @@ c
 c
 	call output(version)
 	call keyini
-	call mkeya('observ',observs,MAXOBS,nobs)
+	call mkeya('telescop',observs,MAXOBS,nobs)
 	call keyfin
 c
 	if(nobs.eq.0)then
