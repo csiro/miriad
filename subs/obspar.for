@@ -26,6 +26,7 @@ c    mchw 09jun97 Added evector to hatcreek
 c    rjs  24jun97 Correct height of ATCA.
 c    rjs/jm 11jul97 Correct longitude sign for IRAM15M, JCMT and CSO.
 c    mchw 05aug98 Added mount and nants to ovro.
+c    mchw 05feb99 Added carma for combined hatcreek and ovro arrays.
 c************************************************************************
 c* ObsPrint -- Print list of known observatories.
 c: utility
@@ -164,6 +165,19 @@ c
 	call obsad('atca/nants',	6.d0)
 	call obsad('atca/subdiam',	2.8d0)
 	call obsad('atca/systemp',	50.d0)
+c
+c  CARMA (Combined California Array  - geometric mean of 10.4 and 6.1m)
+c
+	call obsad('carma/antdiam',	8.0d0)
+	call obsad('carma/ellimit',	5.0*dpi/180.d0)
+	call obsad('carma/evector',	0.5*dpi)
+	call obsad('carma/height',	3000.0d0)
+	call obsad('carma/jyperk',	80.d0)
+        call obsad('carma/latitude',     obsdms( 1, 37,14, 0.00))
+        call obsad('carma/longitude',    obsdms(-1,118,17, 0.00))
+	call obsad('carma/mount',	ALTAZ)
+	call obsad('carma/nants',	15.d0)
+	call obsad('carma/systemp',	200.d0)
 c
 c  CSO (from Oliver Lay -> MCHW 20may1997 - some values need confirmation)
 c
