@@ -26,8 +26,8 @@ end
 
 if ( $diffmode ) then
   cd $diffdir
-  ls > /tmp/${rhost}_files
-  echo "-C $MIR changes.txt" >> /tmp/${rhost}_files
+  ls > /tmp/${rhost}_files.$$
+  echo "-C $MIR changes.txt" >> /tmp/${rhost}_files.$$
 else
   cd $MIR
   if ( -e $MIR/export/Last_update_${rhost} ) then
@@ -39,13 +39,13 @@ else
 	\! -type d \! -name junk\* \! -name \*.o \! -name rpfits.inc \
 	\! -name \*.log \! -name \*.dvi \! -name \*.def \
 	$cond \
-	-print > /tmp/${rhost}_files
-  newer -i $MIR/export/Last_update_${rhost} ./README      >> /tmp/${rhost}_files
-  newer -i $MIR/export/Last_update_${rhost} ./Install     >> /tmp/${rhost}_files
-  newer -i $MIR/export/Last_update_${rhost} ./changes.txt >> /tmp/${rhost}_files
+	-print > /tmp/${rhost}_files.$$
+  newer -i $MIR/export/Last_update_${rhost} ./README      >> /tmp/${rhost}_files.$$
+  newer -i $MIR/export/Last_update_${rhost} ./Install     >> /tmp/${rhost}_files.$$
+  newer -i $MIR/export/Last_update_${rhost} ./changes.txt >> /tmp/${rhost}_files.$$
 endif
 
-if ( -z /tmp/${rhost}_files ) exit
+if ( -z /tmp/${rhost}_files.$$ ) exit
 
 echo There are some files to process
 
@@ -58,7 +58,7 @@ set file = $exportdir/${rhost}_${date}.tar
 
 # Create the output tar file.
 
-tar -cf $file `cat /tmp/${rhost}_files`
+tar -cf $file `cat /tmp/${rhost}_files.$$`
 if ( $status ) exit
 compress -f $file
 if ( $status ) exit
@@ -70,5 +70,5 @@ echo Tar file written at `date` by `whoami` >> $MIR/export/Last_update_${rhost}
 # Send a message to let me know what was copied to the tar file.
 
 echo Generated tar file $file, containing
-cat /tmp/${rhost}_files
-rm /tmp/${rhost}_files
+cat /tmp/${rhost}_files.$$
+rm /tmp/${rhost}_files.$$
