@@ -73,6 +73,7 @@ c    25jan95 mchw  Fix bug (lst = ha + ra)
 c    27nov95 mchw  Correct sign of source position angle.
 c    27nov95 rjs   (Re-)add some commas to appease g77.
 c    20dec95 mchw  Added polarization switching.
+c    04jun96 mchw  Doc change only.
 c
 c  Bugs/Shortcomings:
 c    * Frequency and time smearing is not simulated.
@@ -114,7 +115,9 @@ c	of the antennas, and then generates the antenna file.
 c	The antenna positions can be given in either a right handed
 c	equatorial system or as a local ground based coordinates measured to the
 c	north, east and in elevation. See the "baseunit" parameter to
-c	specify the coordinate system.
+c	specify the coordinate system. Some standard antenna configurations
+c	can be found in $MIRCAT/*.ant for ATCA, BIMA and VLA telescopes.
+c	The BIMA antpos files (edit header line) can also be used with baseunit=1.
 c@ baseunit
 c	This specifies the coordinate system used in the antenna file.
 c	A positive value for "baseunit" indicates an equatorial system,
@@ -122,8 +125,9 @@ c	whereas a negative value indicates a local system. The magnitude of
 c	"baseunit" gives the conversion factor between the baseline units
 c	used in the antenna file, and nanoseconds. The default value is +1,
 c	which means that the antenna file gives the antenna position in an
-c	equatorial system measured in nanoseconds. Remember 1 ns is equivalent
-c	to 0.3 meters.
+c	equatorial system measured in nanoseconds.
+c	E.g. 	baseunit=-1 for topocentric coordinates in nanosecs, 
+c		baseunit=3.33564 for geocentric coordinates in meters.
 c@ telescop
 c	This can take on the value of "hatcreek", "atca" or "other".
 c	This determines miscellaneous parameters. In particular, this
@@ -273,7 +277,7 @@ c------------------------------------------------------------------------
 	real sqrt2
 	character version*(*)
 	parameter(sqrt2=1.414214)
-	parameter(version = 'Uvgen: version 1.0 25-DEC-95' )
+	parameter(version = 'Uvgen: version 1.0 04-JUN-96')
 	include 'mirconst.h'
 	include 'maxdim.h'
 	integer maxsrc,maxpol,maxpnt,maxpolar
