@@ -29,6 +29,7 @@ c						 1   equitorial
 c		 'antdiam'	Antenna diameter, in meters.
 c		 'height'	Height above sea level, in meters
 c		 'ew'		Positive if the telescope is an E-W array.
+c	         'nants'        Number of antennas normally in the array.
 c  Output:
 c    value	The value of the parameter.
 c    ok		True if the value was successfully found.
@@ -44,6 +45,8 @@ c    rjs   7mar94 Assume WSRT evector is -90 degrees (assume fixed dipoles).
 c    rjs  29jul94 Tolerate double-barrelled names (e.g. 'OVRO MMA').
 c    rjs   9aug94 Add "ew" parameter for ATCA and WSRT.
 c    rjs   5jul95 Added some penticon parameters.
+c    rjs  27sep95 Added Parkes and nants.
+c    rjs  11oct95 Added subreflector diameter for atca.
 c------------------------------------------------------------------------
 	include 'obspar.h'
 	character name*24
@@ -88,6 +91,9 @@ c------------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'obspar.h'
 c
+	double precision ALTAZ,EQUATOR
+	parameter(ALTAZ=0.d0,EQUATOR=1.d0)
+c
 c  Externals.
 c
 	double precision obsdms
@@ -103,7 +109,9 @@ c
 	call obsad('atca/jyperk',	13.d0)
 	call obsad('atca/latitude',	obsdms(-1, 30,18,52.02))
 	call obsad('atca/longitude',	obsdms( 1,149,34, 0.94))
-	call obsad('atca/mount',	0.d0)
+	call obsad('atca/mount',	ALTAZ)
+	call obsad('atca/nants',	6.d0)
+	call obsad('atca/subdiam',	2.8d0)
 	call obsad('atca/systemp',	50.d0)
 c
 c  GMRT.
@@ -118,7 +126,8 @@ c
 	call obsad('hatcreek/jyperk',	160.d0)
 	call obsad('hatcreek/latitude', obsdms( 1, 40,49, 2.50))
 	call obsad('hatcreek/longitude',obsdms(-1,121,28,18.49))
-	call obsad('hatcreek/mount',	0.d0)
+	call obsad('hatcreek/mount',	ALTAZ)
+	call obsad('hatcreek/nants',   12.d0)
 	call obsad('hatcreek/subdiam',	0.61d0)
 	call obsad('hatcreek/systemp',	300.d0)
 c
@@ -130,6 +139,7 @@ c
 	call obsad('kittpeak/jyperk',	55.d0)
 	call obsad('kittpeak/latitude',	obsdms( 1, 31,57,12.10))
 	call obsad('kittpeak/longitude',obsdms(-1,111,36,51.12))
+	call obsad('kittpeak/nants',	1.d0)
 	call obsad('kittpeak/systemp',	200.d0)
 c
 c  The Nobeyama mm array.
@@ -144,6 +154,7 @@ c  Jyperk and systemp given by Wright, from 3mm vlbi.
 c
 	call obsad('nobeyama45/antdiam',45.d0)
 	call obsad('nobeyama45/jyperk',	6.d0)
+	call obsad('nobeyama45/nants',	1.d0)
 	call obsad('nobeyama45/systemp',500.d0)
 c
 c  Onsala Dish.
@@ -154,6 +165,7 @@ c
 	call obsad('onsala/jyperk',	28.d0)
 	call obsad('onsala/latitude',	obsdms( 1, 57,23,46.60))
 	call obsad('onsala/longitude',	obsdms( 1, 11,55,45.40))
+	call obsad('onsala/nants',	1.d0)
 	call obsad('onsala/systemp',	250.d0)
 c
 c  Owens Valley Radio Observatory (mm array).
@@ -165,6 +177,15 @@ c
 	call obsad('ovro/latitude',	obsdms( 1, 37,14, 0.00))
 	call obsad('ovro/longitude',	obsdms(-1,118,17, 0.00))
 	call obsad('ovro/systemp',	300.d0)
+c
+c  Parkes.
+c
+	call obsad('parkes/antdiam',	64.d0)
+	call obsad('parkes/height',	391.79d0)
+	call obsad('parkes/latitude',	obsdms(-1, 32,59,59.8657)) 
+	call obsad('parkes/longitude',	obsdms( 1,148,15,44.3591))
+	call obsad('parkes/mount',	ALTAZ)
+	call obsad('parkes/nants',	1.d0)
 c
 c  Some Penticton parameters.
 c
@@ -187,7 +208,8 @@ c
 	call obsad('vla/jyperk',	8.d0)
 	call obsad('vla/latitude',	obsdms( 1, 34, 4,43.497))
 	call obsad('vla/longitude',	obsdms(-1,107,37, 3.819))
-	call obsad('vla/mount',		0.d0)
+	call obsad('vla/mount',		ALTAZ)
+	call obsad('vla/nants',		27.d0)
 	call obsad('vla/systemp',	60.d0)
 c
 c  Westerbork Synthesis Radio Telescope (NFRA).
@@ -201,7 +223,8 @@ c
 	call obsad('wsrt/jyperk',	8.d0)
 	call obsad('wsrt/latitude', 	obsdms( 1, 52,43,53.84))
 	call obsad('wsrt/longitude',	obsdms( 1,  6,36,15.01))
-	call obsad('wsrt/mount',	1.d0)
+	call obsad('wsrt/mount',	EQUATOR)
+	call obsad('wsrt/nants',	14.d0)
 c
 	end
 c************************************************************************
