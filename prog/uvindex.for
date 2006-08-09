@@ -57,13 +57,15 @@ c    rjs  18oct96  Don't output a line when just dra/ddec changes.
 c    rjs  08jan97  options=mosaic
 c    rjs  08jun97  Fix bug in error message
 c    rjs  15jun00  Simple handling of blank source name.
+c
+c $Id: uvindex.for,v 1.2 2006/08/09 04:35:22 cal103 Exp $
 c----------------------------------------------------------------------c
 	include 'mirconst.h'
 	include 'maxdim.h'
 	character*(*) version
 	integer MAXSRC,MAXFREQ,MAXSPECT
 	integer PolMin,PolMax,PolI
-	parameter(MAXSRC=2048,MAXFREQ=128,MAXSPECT=18)
+	parameter(MAXSRC=8192,MAXFREQ=128,MAXSPECT=18)
 	parameter(PolMin=-8,PolMax=4,PolI=1)
 	parameter(version='UVINDEX: version 1.0 15-Jun-00')
 c
