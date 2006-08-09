@@ -45,6 +45,7 @@ c    nebk 28mar94  Add keyword interval
 c    rjs  23aug94  Minor formatting change.
 c    rjs   2nov94  Changed the way sources were stored, and increased
 c		   the number of sources/pointings.
+c    rjs  16nov94  Fix bug introduced in the above.
 c----------------------------------------------------------------------c
 	include 'mirconst.h'
 	include 'maxdim.h'
@@ -348,7 +349,8 @@ c
 	      more = .not.found
 	    else if(sources(isrc).eq.' ')then
 	      more = .false.
-	    else
+	    endif
+	    if(more)then
 	      isrc = isrc + 1
 	      if(isrc.gt.MAXSRC) isrc = 1
 	    endif
