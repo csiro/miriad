@@ -17,6 +17,10 @@ c	Reissue source information if no data for this period in minutes.
 c	The default is 60 minutes.
 c@ log
 c	The output log file. Default is the terminal.
+c@ options
+c	Extra processing options. Currently there is but one of these:
+c	  mosaic  Do not generate messages for different pointings
+c	          of a mosaic.
 c--
 c
 c  History:
@@ -50,6 +54,7 @@ c    rjs  16nov94  Fix bug introduced in the above.
 c    rjs   1may96  Compute and print out total observing time.
 c    mchw 01aug96  Increased MAXSPECT=18.
 c    rjs  18oct96  Don't output a line when just dra/ddec changes.
+c    rjs  08jan97  options=mosaic
 c----------------------------------------------------------------------c
 	include 'mirconst.h'
 	include 'maxdim.h'
@@ -58,7 +63,7 @@ c----------------------------------------------------------------------c
 	integer PolMin,PolMax,PolI
 	parameter(MAXSRC=2048,MAXFREQ=32,MAXSPECT=18)
 	parameter(PolMin=-8,PolMax=4,PolI=1)
-	parameter(version='UVINDEX: version 1.0 01-AUG-96')
+	parameter(version='UVINDEX: version 1.0 18-Jan-97')
 c
 	integer pols(PolMin:PolMax),pol
 	integer lIn,i,j,j1,nvis,nants,l
@@ -67,7 +72,7 @@ c
 	real dra,ddec,interval,inttime
 c
 	integer ifreq,nfreq,vfreq
-	logical newfreq
+	logical newfreq,mosaic
 	integer nwide(MAXFREQ),nchan(MAXFREQ),nspect(MAXFREQ)
 	integer nschan(MAXSPECT,MAXFREQ)
 	real wfreqs(MAXSPECT,3,MAXFREQ)
@@ -93,6 +98,7 @@ c
 	call keya('vis',vis,' ')
         call keyr('interval',interval,0.0)
 	call keya('log',logf,' ')
+	call GetOpt(mosaic)
 	call keyfin
 c
 c  Check that the inputs are reasonable.
@@ -175,7 +181,7 @@ c  accordingly.
 c
 	  newsrc = .false.
 	  newfreq= .false.
-	  if(uvvarupd(vsource))call GetSrc(lIn,newsrc,isrc,nsrc,
+	  if(uvvarupd(vsource))call GetSrc(lIn,mosaic,newsrc,isrc,nsrc,
      *		sources,ra0,dec0,pntoff,solar,MAXSRC)
 	  if(uvvarupd(vfreq))  call GetFreq(lIn,newfreq,ifreq,nfreq,
      *		nchan,nspect,nschan,sfreqs,nwide,wfreqs,
@@ -291,19 +297,38 @@ c
 c
 	end
 c************************************************************************
-	subroutine GetSrc(lIn,newsrc,isrc,nsrc,
+	subroutine GetOpt(mosaic)
+c
+	implicit none
+	logical mosaic
+c------------------------------------------------------------------------
+	integer NOPTS
+	parameter(NOPTS=1)
+	character opts(NOPTS)*8
+	logical present(NOPTS)
+	data opts/'mosaic  '/
+c
+	call options('options',opts,present,NOPTS)
+	mosaic = present(1)
+	end
+c************************************************************************
+	subroutine GetSrc(lIn,mosaic,newsrc,isrc,nsrc,
      *		sources,ra0,dec0,pntoff,solar,MAXSRC)
 c
 	implicit none
 	integer MAXSRC
 	integer lIn,isrc,nsrc
-	logical newsrc,solar(MAXSRC)
+	logical newsrc,solar(MAXSRC),mosaic
 	character sources(MAXSRC)*(*)
 	double precision ra0(MAXSRC),dec0(MAXSRC)
 	real pntoff(2,MAXSRC)
 c
 c  Determine whether we have a new source and pointing or not.
 c
+c  Input:
+c    mosaic	Treat the observation as a mosaic.
+c  Output:
+c    newsrc	True if the source has changes.
 c------------------------------------------------------------------------
 c
 c  Tolerance in assuming a new pointing is 1 arcsec.
@@ -315,7 +340,7 @@ c
 	double precision ra,dec
 	real dra,ddec
 	logical more,refed,found
-	integer hash,i
+	integer hash,i,i1,i2
 c
 c  Externals.
 c
@@ -390,7 +415,17 @@ c
 	  endif
 	endif
 c
-	newsrc = sources(isrc).ne.osource
+	if(mosaic)then
+	  i1 = index(sources(isrc),'_')
+	  i2 = index(osource,'_')
+	  if(i1.eq.0.or.i2.eq.0)then
+	    newsrc = sources(isrc).ne.osource
+	  else
+	    newsrc = sources(isrc)(1:i1).ne.osource(1:i2)
+	  endif
+	else
+	  newsrc = sources(isrc).ne.osource
+	endif
 c
 	end
 c************************************************************************
