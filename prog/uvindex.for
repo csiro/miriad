@@ -63,7 +63,7 @@ c----------------------------------------------------------------------c
 	character*(*) version
 	integer MAXSRC,MAXFREQ,MAXSPECT
 	integer PolMin,PolMax,PolI
-	parameter(MAXSRC=2048,MAXFREQ=32,MAXSPECT=18)
+	parameter(MAXSRC=2048,MAXFREQ=128,MAXSPECT=18)
 	parameter(PolMin=-8,PolMax=4,PolI=1)
 	parameter(version='UVINDEX: version 1.0 15-Jun-00')
 c
