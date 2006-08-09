@@ -43,18 +43,20 @@ c		   bug.
 c    rjs  26jan94  New message when there is a jump in time.
 c    nebk 28mar94  Add keyword interval
 c    rjs  23aug94  Minor formatting change.
+c    rjs   2nov94  Changed the way sources were stored, and increased
+c		   the number of sources/pointings.
 c----------------------------------------------------------------------c
 	include 'mirconst.h'
 	include 'maxdim.h'
 	character*(*) version
-	integer MAXSRC,MAXPNT,MAXFREQ,MAXSPECT
+	integer MAXSRC,MAXFREQ,MAXSPECT
 	integer PolMin,PolMax,PolI
-	parameter(MAXPNT=512,MAXSRC=128,MAXFREQ=32,MAXSPECT=16)
+	parameter(MAXSRC=2048,MAXFREQ=32,MAXSPECT=16)
 	parameter(PolMin=-8,PolMax=4,PolI=1)
-	parameter(version='UVINDEX: version 1.0 28-Mar-94')
+	parameter(version='UVINDEX: version 1.0 2-Nov-94')
 c
 	integer pols(PolMin:PolMax),pol
-	integer lIn,i,j,nvis,nants,l
+	integer lIn,i,j,j1,nvis,nants,l
 	character vis*64,logf*64,date*18,line*80,ras*14,decs*14
 	double precision time,tprev
 	real dra,ddec,interval
@@ -66,12 +68,12 @@ c
 	real wfreqs(MAXSPECT,3,MAXFREQ)
 	double precision sfreqs(MAXSPECT,3,MAXFREQ)
 c
-	integer isrc,ipnt,nsrc,vsource
+	integer isrc,nsrc,vsource
 	logical newsrc,solar(MAXSRC)
-	integer npnt(MAXSRC)
 	double precision ra0(MAXSRC),dec0(MAXSRC)
-	real pntoff(2,MAXPNT,MAXSRC)
-	character sources(MAXSRC)*16
+	real pntoff(2,MAXSRC)
+	character sources(MAXSRC)*16,prevsrc*16
+	integer indx(MAXSRC)
 c
 c  Externals
 c
@@ -91,6 +93,12 @@ c
 c  Check that the inputs are reasonable.
 c
 	if(vis.eq.' ') call bug ('f', 'Input name must be given')
+c
+c  Initialise the source table.
+c
+	do i=1,MAXSRC
+	  sources(i) = ' '
+	enddo
 c
 c  Open an old visibility file, and apply selection criteria.
 c
@@ -160,8 +168,8 @@ c  accordingly.
 c
 	  newsrc = .false.
 	  newfreq= .false.
-	  if(uvvarupd(vsource))call GetSrc(lIn,newsrc,isrc,ipnt,nsrc,
-     *		sources,ra0,dec0,npnt,pntoff,solar,MAXSRC,MAXPNT)
+	  if(uvvarupd(vsource))call GetSrc(lIn,newsrc,isrc,nsrc,
+     *		sources,ra0,dec0,pntoff,solar,MAXSRC)
 	  if(uvvarupd(vfreq))  call GetFreq(lIn,newfreq,ifreq,nfreq,
      *		nchan,nspect,nschan,sfreqs,nwide,wfreqs,
      *		MAXFREQ,MAXSPECT)
@@ -234,19 +242,29 @@ c
 	call LogWrit(
      *	  ' Source                   RA            DEC        '//
      *	  '     dra(arcsec) ddec(arcsec)')
-	do j=1,nsrc
-	  ras = hangle(ra0(j))
-	  decs = rangle(dec0(j))
-	  write(line,'(a,7x,a,a,2f13.2)')sources(j),ras,decs,
-     *		180*3600/pi * pntoff(1,1,j),
-     *		180*3600/pi * pntoff(2,1,j)
-	  call LogWrit(line)
-	  do i=2,npnt(j)
-	    dra  = 180*3600/pi * pntoff(1,i,j)
-	    ddec = 180*3600/pi * pntoff(2,i,j)
-	    write(line,'(51x,2f13.2)')dra,ddec
-	    call LogWrit(line)
-	  enddo
+c
+c  Sort the sources.
+c
+	call hsorta(MAXSRC,sources,indx)
+	prevsrc = ' '
+	do j=1,MAXSRC
+	  j1 = indx(j)
+	  if(sources(j1).ne.' ')then
+	    if(sources(j1).ne.prevsrc)then
+	      ras = hangle(ra0(j1))
+	      decs = rangle(dec0(j1))
+	      write(line,'(a,7x,a,a,2f13.2)')sources(j1),ras,decs,
+     *		180*3600/pi * pntoff(1,j1),
+     *		180*3600/pi * pntoff(2,j1)
+	      call LogWrit(line)
+	    else
+	      dra  = 180*3600/pi * pntoff(1,j1)
+	      ddec = 180*3600/pi * pntoff(2,j1)
+	      write(line,'(51x,2f13.2)')dra,ddec
+	      call LogWrit(line)
+	    endif
+	  endif
+	  prevsrc = sources(j1)
 	enddo
 	call LogWrit(' ')
 	call LogWrit('------------------------------------------------')
@@ -254,16 +272,16 @@ c
 c
 	end
 c************************************************************************
-	subroutine GetSrc(lIn,newsrc,isrc,ipnt,nsrc,
-     *		sources,ra0,dec0,npnt,pntoff,solar,MAXSRC,MAXPNT)
+	subroutine GetSrc(lIn,newsrc,isrc,nsrc,
+     *		sources,ra0,dec0,pntoff,solar,MAXSRC)
 c
 	implicit none
-	integer MAXSRC,MAXPNT
-	integer lIn,isrc,ipnt,nsrc,npnt(MAXSRC)
+	integer MAXSRC
+	integer lIn,isrc,nsrc
 	logical newsrc,solar(MAXSRC)
 	character sources(MAXSRC)*(*)
 	double precision ra0(MAXSRC),dec0(MAXSRC)
-	real pntoff(2,MAXPNT,MAXSRC)
+	real pntoff(2,MAXSRC)
 c
 c  Determine whether we have a new source and pointing or not.
 c
@@ -277,11 +295,13 @@ c
 	character source*16
 	double precision ra,dec
 	real dra,ddec
-	logical more
+	logical more,refed,found
+	integer hash,i
 c
 c  Externals.
 c
 	logical DetSolar
+	integer len1
 c
 c  Get source parameters.
 c
@@ -293,71 +313,81 @@ c
 c
 c  Is it a new source?
 c
+	refed = .false.
 	if(nsrc.eq.0)then
 	  newsrc = .true.
 	else
-	  newsrc = source.ne.sources(isrc)
+	  if(source.eq.sources(isrc))then
+	    if(.not.solar(isrc))
+     *	      call GetDelta(dra,ddec,ra,dec,ra0(isrc),dec0(isrc))
+	    newsrc = abs(dra-pntoff(1,isrc)).gt.tol.or.
+     *		     abs(ddec-pntoff(2,isrc)).gt.tol
+	    refed = .true.
+	  else
+	    newsrc = .true.
+	  endif
 	endif
 c
 c  Process a new source.
 c
 	if(newsrc)then
-	  isrc = 1
+	  hash = 0
+	  do i=1,len1(source)
+	    hash = 3*hash + ichar(source(i:i))
+	  enddo
+	  isrc = mod(hash,MAXSRC) + 1
 	  more = .true.
-	  dowhile(isrc.le.nsrc.and.more)
-	    more = source.ne.sources(isrc)
-	    if(more)isrc = isrc + 1
+	  found = .false.
+	  dowhile(more)
+	    if(sources(isrc).eq.source)then
+	      if(.not.refed.and..not.solar(isrc))
+     *	        call GetDelta(dra,ddec,ra,dec,ra0(isrc),dec0(isrc))
+	      refed = .true.
+	      found = abs(dra-pntoff(1,isrc)).lt.tol.and.
+     *		      abs(ddec-pntoff(2,isrc)).lt.tol
+	      more = .not.found
+	    else if(sources(isrc).eq.' ')then
+	      more = .false.
+	    else
+	      isrc = isrc + 1
+	      if(isrc.gt.MAXSRC) isrc = 1
+	    endif
 	  enddo
 c
-c  If its a totally new source, add it to our list of sources.
+c  Did we find this source?
 c
-	  if(more)then
+	  if(.not.found)then
 	    nsrc = nsrc + 1
-	    if(nsrc.gt.MAXSRC)call bug('f','Too many sources')
+	    if(nsrc.ge.MAXSRC)call bug('f','Too many sources')
 	    sources(isrc) = source
 	    ra0(isrc) = ra
 	    dec0(isrc) = dec
 	    solar(isrc) = DetSolar(lIn,source)
-	    ipnt = 1
-	    npnt(isrc) = 1
-	    pntoff(1,ipnt,isrc) = dra
-	    pntoff(2,ipnt,isrc) = ddec
+	    pntoff(1,isrc) = dra
+	    pntoff(2,isrc) = ddec
 	  endif
 	endif
 c
-c  For objects that are outside the solar system, the dra and ddec
-c  are the (dra,ddec) have a contribution which is the difference
-c  between the reference (ra,dec) and the current (ra,dec).
-c  For solar system objects, (ra,dec) will vary with time, and are
-c  always assumed to point at the centre of the object.
+	end
+c************************************************************************
+	subroutine GetDelta(dra,ddec,ra,dec,ra0,dec0)
 c
-	if(.not.solar(isrc))then
-	  dra = dra +   (ra-ra0(isrc))*cos(dec)
-	  ddec = ddec + (dec-dec0(isrc))
-	endif
+	implicit none
+	double precision ra,dec,ra0,dec0
+	real dra,ddec
 c
-c  Is it a new pointing.
+c  Reference a dra,ddec to the true reference.
 c
-	if( abs(dra -pntoff(1,ipnt,isrc)).gt.tol.or.
-     *	    abs(ddec-pntoff(2,ipnt,isrc)).gt.tol)then
-	  ipnt = 1
-	  more = .true.
-	  dowhile(ipnt.le.npnt(isrc).and.more)
-	    more = abs(dra -pntoff(1,ipnt,isrc)).gt.tol.or.
-     *	    	   abs(ddec-pntoff(2,ipnt,isrc)).gt.tol
-	    if(more)ipnt = ipnt + 1
-	  enddo
+c  Input:
+c    ra0,dec0
+c  Input/Output:
+c   dra,ddec,ra,dec
 c
-c  Its a new pointing. so add it to our pointing list.
-c
-	  if(more)then
-	    npnt(isrc) = npnt(isrc) + 1
-	    if(npnt(isrc).gt.MAXPNT)call bug('f','Too many pointing')
-	    pntoff(1,ipnt,isrc) = dra
-	    pntoff(2,ipnt,isrc) = ddec
-	  endif
-	endif
-c
+c------------------------------------------------------------------------
+	dra = dra * cos(dec0)/cos(dec) + (ra-ra0)*cos(dec0)
+	ddec = ddec + (dec-dec0)
+	ra = ra0
+	dec = dec0
 	end
 c************************************************************************
 	logical function DetSolar(lIn,source)
