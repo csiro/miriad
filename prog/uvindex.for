@@ -14,6 +14,7 @@ c@ vis
 c	The input visibility file. No default.
 c@ interval
 c	Reissue source information if no data for this period in minutes.
+c	The default is 60 minutes.
 c@ log
 c	The output log file. Default is the terminal.
 c--
@@ -46,6 +47,7 @@ c    rjs  23aug94  Minor formatting change.
 c    rjs   2nov94  Changed the way sources were stored, and increased
 c		   the number of sources/pointings.
 c    rjs  16nov94  Fix bug introduced in the above.
+c    rjs   1may96  Compute and print out total observing time.
 c----------------------------------------------------------------------c
 	include 'mirconst.h'
 	include 'maxdim.h'
@@ -59,8 +61,8 @@ c
 	integer pols(PolMin:PolMax),pol
 	integer lIn,i,j,j1,nvis,nants,l
 	character vis*64,logf*64,date*18,line*80,ras*14,decs*14
-	double precision time,tprev
-	real dra,ddec,interval
+	double precision time,tprev,total
+	real dra,ddec,interval,inttime
 c
 	integer ifreq,nfreq,vfreq
 	logical newfreq
@@ -87,7 +89,7 @@ c
 	call output(version)
 	call keyini
 	call keya('vis',vis,' ')
-        call keyr('interval',interval,-1.0)
+        call keyr('interval',interval,0.0)
 	call keya('log',logf,' ')
 	call keyfin
 c
@@ -154,6 +156,8 @@ c
 	ifreq = 0
 	tprev = 0.
         interval = interval/24.0/60.0
+	if(interval.le.0)interval = 1.d0/24.d0
+	total = 0.d0
 c
 c  Scan through the uvdata noting when a number of things change.
 c
@@ -177,16 +181,23 @@ c
 c
 c  If something has changed, give a summary of things.
 c
-	  if(newsrc.or.newfreq.or.time.gt.tprev+1.d0/24.d0.or.
-     *	     time.lt.tprev.or.(interval.gt.0.0.and.
-     *       time.gt.tprev+interval))then
+	  if(newsrc.or.newfreq.or.time.gt.tprev+interval.or.
+     *	     time.lt.tprev)then
 	    call JulDay(time,'H',date)
 	    call uvrdvri(lIn,'nants',nants,0)
 	    write(line,'(a,x,a,i3,i10,i9,i7,i8)')date,sources(isrc),
      *		nants,nchan(ifreq),nwide(ifreq),ifreq,nvis
 	    call LogWrit(line)
 	  endif
-	  tprev = time
+c
+c  Increment the total observing time if this is a new integration.
+c
+	  call uvrdvrr(lIn,'inttime',inttime,30.0)
+	  inttime = inttime/86400
+	  if(abs(time-tprev).gt.1.d0/86400.d0)then
+	    tprev = time
+	    total = total + inttime
+	  endif
 	enddo
 c
 c  Give a summary to the user.
@@ -201,6 +212,11 @@ c
 	call LogWrit(' ')
 	call LogWrit('------------------------------------------------')
 	call LogWrit(' ')
+c
+	total = 24*total
+	write(line,'(a,f6.2,a)')'Total observing time is',total,' hours'
+	call LogWrit(line)
+	call LogWrit(' ')	
 	call LogWrit('The input data-set contains '//
      *		'the following frequency configurations:')
 	do ifreq=1,nfreq
