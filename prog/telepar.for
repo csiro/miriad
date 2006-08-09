@@ -23,13 +23,15 @@ c    mchw 26aug03 Add Nasmyth
 c    sdw  8jul06  Doesnt print all characteristics !
 c                 added subdiam,ew,nants,ellimt
 c                 also tried to improve formatting.
+c
+c $Id: telepar.for,v 1.3 2006/08/09 23:51:41 cal103 Exp $
 c------------------------------------------------------------------------
 	character version*(*)
 	integer MAXOBS
 	parameter(version='Telepar: version 3.1 8-JUL-06')
 	parameter(MAXOBS=16)
 	include 'mirconst.h'
-	character string*13,line*64,observs(MAXOBS)*12,observ*12
+	character string*13,observs(MAXOBS)*12,observ*12
 	logical ok
 	integer nobs,i,n
 	double precision value
