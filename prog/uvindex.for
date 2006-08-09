@@ -12,6 +12,8 @@ c	and spectral line channels, the observing frequency, and
 c	polarization are listed in the output.
 c@ vis
 c	The input visibility file. No default.
+c@ interval
+c	Reissue source information if no data for this period in minutes.
 c@ log
 c	The output log file. Default is the terminal.
 c--
@@ -39,6 +41,8 @@ c    rjs   5nov93  Longer source names.
 c    rjs  30nov93  Correct units of first pointing offset. Fix formating
 c		   bug.
 c    rjs  26jan94  New message when there is a jump in time.
+c    nebk 28mar94  Add keyword interval
+c    rjs  23aug94  Minor formatting change.
 c----------------------------------------------------------------------c
 	include 'mirconst.h'
 	include 'maxdim.h'
@@ -47,13 +51,13 @@ c----------------------------------------------------------------------c
 	integer PolMin,PolMax,PolI
 	parameter(MAXPNT=512,MAXSRC=128,MAXFREQ=32,MAXSPECT=16)
 	parameter(PolMin=-8,PolMax=4,PolI=1)
-	parameter(version='UVINDEX: version 1.0 5-Nov-93')
+	parameter(version='UVINDEX: version 1.0 28-Mar-94')
 c
 	integer pols(PolMin:PolMax),pol
 	integer lIn,i,j,nvis,nants,l
 	character vis*64,logf*64,date*18,line*80,ras*14,decs*14
 	double precision time,tprev
-	real dra,ddec
+	real dra,ddec,interval
 c
 	integer ifreq,nfreq,vfreq
 	logical newfreq
@@ -80,6 +84,7 @@ c
 	call output(version)
 	call keyini
 	call keya('vis',vis,' ')
+        call keyr('interval',interval,-1.0)
 	call keya('log',logf,' ')
 	call keyfin
 c
@@ -139,6 +144,7 @@ c
 	isrc = 0
 	ifreq = 0
 	tprev = 0.
+        interval = interval/24.0/60.0
 c
 c  Scan through the uvdata noting when a number of things change.
 c
@@ -163,7 +169,8 @@ c
 c  If something has changed, give a summary of things.
 c
 	  if(newsrc.or.newfreq.or.time.gt.tprev+1.d0/24.d0.or.
-     *				  time.lt.tprev)then
+     *	     time.lt.tprev.or.(interval.gt.0.0.and.
+     *       time.gt.tprev+interval))then
 	    call JulDay(time,'H',date)
 	    call uvrdvri(lIn,'nants',nants,0)
 	    write(line,'(a,x,a,i3,i10,i9,i7,i8)')date,sources(isrc),
@@ -177,7 +184,7 @@ c  Give a summary to the user.
 c
 	call uvrdvrd(lIn,'time',time,0.d0)
 	call JulDay(time,'H',date)
-	write(line,'(a,a,i23)') date,' Total number of records',nvis
+	write(line,'(a,a,i30)') date,' Total number of records',nvis
 	call LogWrit(line)
 c
 c  Frequency setup summary.
@@ -577,3 +584,4 @@ c
 	  call logwrit(line)
 	enddo
 	end
+
