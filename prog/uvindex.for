@@ -1,0 +1,579 @@
+c**********************************************************************c
+	program uvindex
+	implicit none
+c
+c= UVINDEX - Scan a uvdata file, and note when uvvariables change.
+c& mchw
+c: uv analysis, checking
+c+
+c	UVINDEX is a Miriad program which scans a uvdata file.
+c	Changes in source name, pointing center, number of wideband
+c	and spectral line channels, the observing frequency, and
+c	polarization are listed in the output.
+c@ vis
+c	The input visibility file. No default.
+c@ log
+c	The output log file. Default is the terminal.
+c--
+c
+c  History:
+c    mchw 29nov90  Initial version.
+c    mchw 14dec90  Cleaned up. Used LogWrit.
+c    mchw 08jan91  List pointing centers.
+c    mchw 19mar91  Initialized some variables for cray. Added recnum.
+c    rjs   9may92  Altered listing for multi-source/multi-pointing files.
+c    mchw 25jun92  Added count of polarizations.
+c    rjs  10jul92  Labelled polarisation counts.
+c    rjs  22jan93  Bug when there is no (0,0) offset pointing.
+c		   Various standardisation.
+c    mchw 09feb93  Changed ra,dec to double precision.
+c    mchw 19feb93  Format change for 2048 channels.
+c    pjt  10mar93  fixed problems with length in logwrite() - no need
+c    pjt  15apr93  maxpnt -> 512 for SUN etc. fixing wrong ddec table
+c    pjt  23apr93  need special case if data contain unknown polarization
+c    rjs  16jul93  Significant rewrite. More efficient scanning and treatment
+c		   of polarisations. Better freq summary.
+c    rjs  30aug93  Call logclose.
+c    rjs  16sep93  Rename bsrch to binsrch.
+c    rjs   5nov93  Longer source names.
+c    rjs  30nov93  Correct units of first pointing offset. Fix formating
+c		   bug.
+c    rjs  26jan94  New message when there is a jump in time.
+c----------------------------------------------------------------------c
+	include 'mirconst.h'
+	include 'maxdim.h'
+	character*(*) version
+	integer MAXSRC,MAXPNT,MAXFREQ,MAXSPECT
+	integer PolMin,PolMax,PolI
+	parameter(MAXPNT=512,MAXSRC=128,MAXFREQ=32,MAXSPECT=16)
+	parameter(PolMin=-8,PolMax=4,PolI=1)
+	parameter(version='UVINDEX: version 1.0 5-Nov-93')
+c
+	integer pols(PolMin:PolMax),pol
+	integer lIn,i,j,nvis,nants,l
+	character vis*64,logf*64,date*18,line*80,ras*14,decs*14
+	double precision time,tprev
+	real dra,ddec
+c
+	integer ifreq,nfreq,vfreq
+	logical newfreq
+	integer nwide(MAXFREQ),nchan(MAXFREQ),nspect(MAXFREQ)
+	integer nschan(MAXSPECT,MAXFREQ)
+	real wfreqs(MAXSPECT,3,MAXFREQ)
+	double precision sfreqs(MAXSPECT,3,MAXFREQ)
+c
+	integer isrc,ipnt,nsrc,vsource
+	logical newsrc,solar(MAXSRC)
+	integer npnt(MAXSRC)
+	double precision ra0(MAXSRC),dec0(MAXSRC)
+	real pntoff(2,MAXPNT,MAXSRC)
+	character sources(MAXSRC)*16
+c
+c  Externals
+c
+	integer len1,uvscan
+	character rangle*14,hangle*14,PolsC2P*2,itoaf*8
+	logical uvvarupd
+c
+c  Get the parameters given by the user.
+c
+	call output(version)
+	call keyini
+	call keya('vis',vis,' ')
+	call keya('log',logf,' ')
+	call keyfin
+c
+c  Check that the inputs are reasonable.
+c
+	if(vis.eq.' ') call bug ('f', 'Input name must be given')
+c
+c  Open an old visibility file, and apply selection criteria.
+c
+	call uvopen(lIn,vis,'old')
+c
+c  Open log file and write title.
+c
+	call LogOpen(logf,' ')
+	if (logf.ne.' ')call LogWrit(version)
+	call LogWrit(' ')
+	line = 'Summary listing for data-set '//vis
+	call LogWrit(line(1:len1(line)))
+	call LogWrit(' ')
+	write(line,'(7x,a,8x,a,7x,a,a,a,a,a,8x,a)') 'Time','Source',
+     *	  ' Antennas',' Spectral',' Wideband','  Freq ',' Record'
+	call LogWrit(line(1:len1(line)))
+	write(line,'(19x,a,7x,a,a,a,a,a)')		  ' Name ',
+     *	  '         ',' Channels',' Channels',' Config','   No. '
+	call LogWrit(line(1:len1(line)))
+	call LogWrit(' ')
+c
+c  Set up a variable handle to track changes in the source.
+c
+	call uvvarini(lIn,vsource)
+	call uvvarset(vsource,'source')
+	call uvvarset(vsource,'ra')
+	call uvvarset(vsource,'dec')
+	call uvvarset(vsource,'dra')
+	call uvvarset(vsource,'ddec')
+c
+c  Set up a variable handle to track changes in the correlator/freq setup.
+c
+	call uvvarini(lIn,vfreq)
+	call uvvarset(vfreq,'nchan')
+	call uvvarset(vfreq,'nspect')
+	call uvvarset(vfreq,'nschan')
+	call uvvarset(vfreq,'sfreq')
+	call uvvarset(vfreq,'sdf')
+	call uvvarset(vfreq,'nwide')
+	call uvvarset(vfreq,'wfreq')
+	call uvvarset(vfreq,'wwidth')
+c
+c  Initialise the counters.
+c
+	nsrc = 0
+	nvis = 0
+	nfreq = 0
+	do i=PolMin,PolMax
+	  pols(i) = 0
+	enddo
+	isrc = 0
+	ifreq = 0
+	tprev = 0.
+c
+c  Scan through the uvdata noting when a number of things change.
+c
+	do while(uvscan(lin,' ').eq.0)
+	  nvis = nvis + 1
+	  call uvrdvrd(lIn,'time',time,0.d0)
+	  call uvrdvri(lIn,'pol',pol,PolI)
+	  if(pol.lt.PolMin.or.Pol.gt.PolMax)pol = 0
+	  pols(pol) = pols(pol) + 1
+c
+c  Determine if anything has changed, and update the records
+c  accordingly.
+c
+	  newsrc = .false.
+	  newfreq= .false.
+	  if(uvvarupd(vsource))call GetSrc(lIn,newsrc,isrc,ipnt,nsrc,
+     *		sources,ra0,dec0,npnt,pntoff,solar,MAXSRC,MAXPNT)
+	  if(uvvarupd(vfreq))  call GetFreq(lIn,newfreq,ifreq,nfreq,
+     *		nchan,nspect,nschan,sfreqs,nwide,wfreqs,
+     *		MAXFREQ,MAXSPECT)
+c
+c  If something has changed, give a summary of things.
+c
+	  if(newsrc.or.newfreq.or.time.gt.tprev+1.d0/24.d0.or.
+     *				  time.lt.tprev)then
+	    call JulDay(time,'H',date)
+	    call uvrdvri(lIn,'nants',nants,0)
+	    write(line,'(a,x,a,i3,i10,i9,i7,i8)')date,sources(isrc),
+     *		nants,nchan(ifreq),nwide(ifreq),ifreq,nvis
+	    call LogWrit(line)
+	  endif
+	  tprev = time
+	enddo
+c
+c  Give a summary to the user.
+c
+	call uvrdvrd(lIn,'time',time,0.d0)
+	call JulDay(time,'H',date)
+	write(line,'(a,a,i23)') date,' Total number of records',nvis
+	call LogWrit(line)
+c
+c  Frequency setup summary.
+c
+	call LogWrit(' ')
+	call LogWrit('------------------------------------------------')
+	call LogWrit(' ')
+	call LogWrit('The input data-set contains '//
+     *		'the following frequency configurations:')
+	do ifreq=1,nfreq
+	  call LogWrit(' ')
+	  call logwrit('Frequency Configuration '//itoaf(ifreq))
+	  if(nchan(ifreq).gt.0)call SpecSum(
+     *	    nspect(ifreq),nschan(1,ifreq),sfreqs(1,1,ifreq),MAXSPECT)
+	  if(nwide(ifreq).gt.0)call WideSum(
+     *	    nwide(ifreq),wfreqs(1,1,ifreq),MAXSPECT)
+	enddo
+c
+c  Polarisation summary.
+c
+	call LogWrit(' ')
+	call LogWrit('------------------------------------------------')
+	call LogWrit(' ')
+	call LogWrit(
+     *	  'The input data-set contains the following polarizations:')
+	do i=PolMin,PolMax
+	  if(i.ne.0.and.pols(i).gt.0)then
+	    line = 'There were '//itoaf(pols(i))
+	    l = len1(line)
+	    line(l+1:) = ' records of polarization '//PolsC2P(i)
+	    call LogWrit(line)
+          endif
+	enddo
+	if(pols(0).ne.0)then
+ 	  write(line,'(a,i6,a)')
+     *      'Unrecognised polarization ',pols(i),' records'
+	  call LogWrit(line)
+	endif
+c
+c  Pointing centres summary.
+c
+	call LogWrit(' ')
+	call LogWrit('------------------------------------------------')
+	call LogWrit(' ')
+	call LogWrit(
+     *	  'The input data-set contains the following pointings:')
+	call LogWrit(
+     *	  ' Source                   RA            DEC        '//
+     *	  '     dra(arcsec) ddec(arcsec)')
+	do j=1,nsrc
+	  ras = hangle(ra0(j))
+	  decs = rangle(dec0(j))
+	  write(line,'(a,7x,a,a,2f13.2)')sources(j),ras,decs,
+     *		180*3600/pi * pntoff(1,1,j),
+     *		180*3600/pi * pntoff(2,1,j)
+	  call LogWrit(line)
+	  do i=2,npnt(j)
+	    dra  = 180*3600/pi * pntoff(1,i,j)
+	    ddec = 180*3600/pi * pntoff(2,i,j)
+	    write(line,'(51x,2f13.2)')dra,ddec
+	    call LogWrit(line)
+	  enddo
+	enddo
+	call LogWrit(' ')
+	call LogWrit('------------------------------------------------')
+	call LogClose
+c
+	end
+c************************************************************************
+	subroutine GetSrc(lIn,newsrc,isrc,ipnt,nsrc,
+     *		sources,ra0,dec0,npnt,pntoff,solar,MAXSRC,MAXPNT)
+c
+	implicit none
+	integer MAXSRC,MAXPNT
+	integer lIn,isrc,ipnt,nsrc,npnt(MAXSRC)
+	logical newsrc,solar(MAXSRC)
+	character sources(MAXSRC)*(*)
+	double precision ra0(MAXSRC),dec0(MAXSRC)
+	real pntoff(2,MAXPNT,MAXSRC)
+c
+c  Determine whether we have a new source and pointing or not.
+c
+c------------------------------------------------------------------------
+c
+c  Tolerance in assuming a new pointing is 1 arcsec.
+c
+	include 'mirconst.h'
+	real tol
+	parameter(tol=pi/180.0/3600.0)
+	character source*16
+	double precision ra,dec
+	real dra,ddec
+	logical more
+c
+c  Externals.
+c
+	logical DetSolar
+c
+c  Get source parameters.
+c
+	call uvrdvra(lIn,'source',source,' ')
+	call uvrdvrd(lIn,'ra',ra,0.d0)
+	call uvrdvrd(lIn,'dec',dec,0.d0)
+	call uvrdvrr(lIn,'dra',dra,0.)
+	call uvrdvrr(lIn,'ddec',ddec,0.)
+c
+c  Is it a new source?
+c
+	if(nsrc.eq.0)then
+	  newsrc = .true.
+	else
+	  newsrc = source.ne.sources(isrc)
+	endif
+c
+c  Process a new source.
+c
+	if(newsrc)then
+	  isrc = 1
+	  more = .true.
+	  dowhile(isrc.le.nsrc.and.more)
+	    more = source.ne.sources(isrc)
+	    if(more)isrc = isrc + 1
+	  enddo
+c
+c  If its a totally new source, add it to our list of sources.
+c
+	  if(more)then
+	    nsrc = nsrc + 1
+	    if(nsrc.gt.MAXSRC)call bug('f','Too many sources')
+	    sources(isrc) = source
+	    ra0(isrc) = ra
+	    dec0(isrc) = dec
+	    solar(isrc) = DetSolar(lIn,source)
+	    ipnt = 1
+	    npnt(isrc) = 1
+	    pntoff(1,ipnt,isrc) = dra
+	    pntoff(2,ipnt,isrc) = ddec
+	  endif
+	endif
+c
+c  For objects that are outside the solar system, the dra and ddec
+c  are the (dra,ddec) have a contribution which is the difference
+c  between the reference (ra,dec) and the current (ra,dec).
+c  For solar system objects, (ra,dec) will vary with time, and are
+c  always assumed to point at the centre of the object.
+c
+	if(.not.solar(isrc))then
+	  dra = dra +   (ra-ra0(isrc))*cos(dec)
+	  ddec = ddec + (dec-dec0(isrc))
+	endif
+c
+c  Is it a new pointing.
+c
+	if( abs(dra -pntoff(1,ipnt,isrc)).gt.tol.or.
+     *	    abs(ddec-pntoff(2,ipnt,isrc)).gt.tol)then
+	  ipnt = 1
+	  more = .true.
+	  dowhile(ipnt.le.npnt(isrc).and.more)
+	    more = abs(dra -pntoff(1,ipnt,isrc)).gt.tol.or.
+     *	    	   abs(ddec-pntoff(2,ipnt,isrc)).gt.tol
+	    if(more)ipnt = ipnt + 1
+	  enddo
+c
+c  Its a new pointing. so add it to our pointing list.
+c
+	  if(more)then
+	    npnt(isrc) = npnt(isrc) + 1
+	    if(npnt(isrc).gt.MAXPNT)call bug('f','Too many pointing')
+	    pntoff(1,ipnt,isrc) = dra
+	    pntoff(2,ipnt,isrc) = ddec
+	  endif
+	endif
+c
+	end
+c************************************************************************
+	logical function DetSolar(lIn,source)
+c
+	implicit none
+	integer lIn
+	character source*(*)
+c
+c  Attempt to determine whether the current object of interest is a
+c  solar system object. This will probably fail for objects such as
+c  comets.
+c------------------------------------------------------------------------
+	character string*16
+	real plmaj,plmin
+	integer i
+c
+c  A table of solar system objects. NOTE: The entries must be in
+c  alphabetic order and lower case.
+c
+	integer NSOLAR
+	parameter(NSOLAR=11)
+	character solar(NSOLAR)*8
+c
+c  Externals.
+c
+	integer binsrcha
+c
+	data solar/'earth   ','jupiter ','mars    ','mercury ',
+     *	'moon    ','neptune ','pluto   ','saturn  ','sun     ',
+     *	'uranus  ','venus   '/
+c
+c  Look for the source name in the list of solar system objects.
+c
+	string = source
+	call lcase(string)
+	i = binsrcha(string,solar,NSOLAR)
+	if(i.ne.0)then
+	  DetSolar = .true.
+c
+c  If it was not found in the list of known solar system objects,
+c  see if it has plmaj and plmin variables. If so, its probably
+c  a solar system object.
+c
+	else
+	  call uvrdvrr(lIn,'plmaj',plmaj,0.)
+	  call uvrdvrr(lIn,'plmin',plmin,0.)
+	  DetSolar = abs(plmaj)+abs(plmin).gt.0
+	endif
+	end
+c************************************************************************
+	subroutine GetFreq(lIn,newfreq,ifreq,nfreq,
+     *		nchan,nspect,nschan,sfreqs,nwide,
+     *		wfreqs,MAXFREQ,MAXSPECT)
+c
+	implicit none
+	integer MAXFREQ,MAXSPECT
+	integer lIn,ifreq,nfreq,nchan(MAXFREQ),nspect(MAXFREQ)
+	integer nschan(MAXSPECT,MAXFREQ),nwide(MAXFREQ)
+	double precision sfreqs(MAXSPECT,3,MAXFREQ)
+	real wfreqs(MAXSPECT,3,MAXFREQ)
+	logical newfreq
+c
+c  Keep track of frequency/correlator setups. Determine whether we
+c  have a new correlator or freq setup.
+c
+c  The frequency setup arrays, sfreqs and wfreqs (spectral and wide
+c  frequencies respectively) contain three values,
+c	freqs(?,1,?) is the start frequency in the first record.
+c	freqs(?,2,?) is the bandwidth or channel increment.
+c       freqs(?,3,?) is the start frequency in the last record.
+c  The start frequency in the first and last record can differ, owing to
+c  slow changes in the frequency caused by Doppler tracking and the like.
+c------------------------------------------------------------------------
+	integer itmp,i
+	logical more
+c
+c  Externals.
+c
+	logical FreqEq
+c
+	itmp = nfreq + 1
+	if(itmp.gt.MAXFREQ)call bug('f','Frequency table overflow')
+c
+c  Load the current freq/correlator description.
+c
+	call uvrdvri(lIn,'nchan',nchan(itmp),0)
+	call uvrdvri(lIn,'nspect',nspect(itmp),0)
+	if(nspect(itmp).gt.MAXSPECT)call bug('f','Too many windows')
+	call uvrdvri(lIn,'nwide',nwide(itmp),0)
+	if(nwide(itmp).gt.MAXSPECT)call bug('f','Too many wide chans')
+	if(nchan(itmp).gt.0)then
+	  call uvgetvrd(lIn,'sfreq', sfreqs(1,1,itmp),nspect(itmp))
+	  call uvgetvrd(lIn,'sdf',   sfreqs(1,2,itmp),nspect(itmp))
+	  call uvgetvri(lIn,'nschan',nschan(1,itmp),nspect(itmp))
+	endif
+	if(nwide(itmp).gt.0)then
+	  call uvgetvrr(lIn,'wfreq', wfreqs(1,1,itmp),nwide(itmp))
+	  call uvgetvrr(lIn,'wwidth',wfreqs(1,2,itmp),nwide(itmp))
+	endif
+c
+c  Is it a new frequency/correlator setup?
+c
+	if(nfreq.eq.0)then
+	  newfreq = .true.
+	else
+	  newfreq = .not.FreqEq(ifreq,itmp,nchan,nspect,nschan,sfreqs,
+     *			nwide,wfreqs,MAXSPECT,MAXFREQ)
+	endif
+c
+c  Process a new frequency.
+c
+	if(newfreq)then
+	  ifreq = 1
+	  more = .true.
+	  dowhile(ifreq.le.nfreq.and.more)
+	    more = .not.FreqEq(ifreq,itmp,nchan,nspect,nschan,sfreqs,
+     *			nwide,wfreqs,MAXSPECT,MAXFREQ)
+	    if(more)ifreq = ifreq + 1
+	  enddo
+c
+c  If its a totally new frequency, complete the description of it.
+c  Most of the description is already in the right place.
+c
+	  if(more)nfreq = nfreq + 1
+	endif
+c
+c  Update the start frequency column of the last record.
+c
+	do i=1,nspect(ifreq)
+	  sfreqs(i,3,ifreq) = sfreqs(i,1,itmp)
+	enddo
+	do i=1,nwide(ifreq)
+	  wfreqs(i,3,ifreq) = wfreqs(i,1,itmp)
+	enddo
+c
+	end
+c************************************************************************
+	logical function FreqEq(i1,i2,nchan,nspect,nschan,sfreqs,
+     *		nwide,wfreqs,MAXSPECT,MAXFREQ)
+c
+	implicit none
+	integer MAXSPECT,MAXFREQ
+	integer i1,i2,nchan(MAXFREQ),nspect(MAXFREQ)
+	integer nschan(MAXSPECT,MAXFREQ),nwide(MAXFREQ)
+	double precision sfreqs(MAXSPECT,3,MAXFREQ)
+	real wfreqs(MAXSPECT,3,MAXFREQ)
+c
+c  Determine whether two correlator/frequency setups are the same.
+c  For them to be the same, nchan, nwide, nspec, nschan have to
+c  match exactly. wwidth and sdf has to match to 1%, and sfreq and
+c  wfreq have to match to within half a channel.
+c
+c------------------------------------------------------------------------
+	integer i
+	real w
+c
+	FreqEq = .false.
+	if(nchan(i1).ne.nchan(i2).or.
+     *	   nspect(i1).ne.nspect(i2).or.
+     *	   nwide(i1).ne.nwide(i2))return
+c
+	do i=1,nspect(i1)
+	  if(nschan(i,i1).ne.nschan(i,i2))return
+	  w = abs(sfreqs(i,2,i1))
+	  if(abs(sfreqs(i,2,i1)-sfreqs(i,2,i2)).gt.0.01*w)return
+	  if(abs(sfreqs(i,3,i1)-sfreqs(i,1,i2)).gt.0.5*w)return
+	enddo
+c
+	do i=1,nwide(i1)
+	  w = abs(wfreqs(i,2,i1))
+	  if(abs(wfreqs(i,2,i1)-wfreqs(i,2,i2)).gt.0.01*w)return
+	  if(abs(wfreqs(i,3,i1)-wfreqs(i,1,i2)).gt.0.5*w)return
+	enddo
+c
+	FreqEq = .true.
+	end
+c************************************************************************
+	subroutine SpecSum(nspect,nschan,sfreqs,MAXSPECT)
+c
+	implicit none
+	integer nspect,nschan(nspect),MAXSPECT
+	double precision sfreqs(MAXSPECT,3)
+c
+c  Write a summary about this spectral correlator configuration.
+c  Assume Doppler tracking is being used if the difference between
+c  the first and last start frequencies is more than 0.1 of a channel.
+c------------------------------------------------------------------------
+	character line*80,vary*16
+	integer i
+c
+	call logwrit('  Spectral Channels  Freq(chan=1)  Increment')
+	do i=1,nspect
+	  if(abs(sfreqs(i,1)-sfreqs(i,3)).gt.0.1*abs(sfreqs(i,2)))then
+	    vary = ' Doppler tracked'
+	  else
+	    vary = ' '
+	  endif
+	  write(line,'(i17,f14.5,f13.6,a,a)')
+     *		nschan(i),sfreqs(i,1),sfreqs(i,2),' GHz',vary
+	  call logwrit(line)
+	enddo
+	end
+c************************************************************************
+	subroutine WideSum(nwide,wfreqs,MAXSPECT)
+c
+	implicit none
+	integer nwide,MAXSPECT
+	real wfreqs(MAXSPECT,3)
+c
+c  Write a summary about this wideband correlator configuration.
+c------------------------------------------------------------------------
+	character line*80,vary*8
+	integer i
+c
+	call logwrit('  Wideband Channels  Frequency     Bandwidth')
+	do i=1,nwide
+	  if(abs(wfreqs(i,1)-wfreqs(i,3)).gt.0.1*abs(wfreqs(i,2)))then
+	    vary = ' Varying'
+	  else
+	    vary = ' '
+	  endif
+	  write(line,'(17x,f14.5,f13.6,a,a)')
+     *		wfreqs(i,1),wfreqs(i,2),' GHz',vary
+	  call logwrit(line)
+	enddo
+	end
