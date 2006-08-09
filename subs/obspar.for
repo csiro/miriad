@@ -39,6 +39,8 @@ c    pjt  24sep04 Final location of CARMA at Cedar Flats
 c    sdw  06jul06 Change to read observatory data from a paramater file,
 c                 allow greater flexability. Rather than having data hard
 c                 coded into the program.
+c
+c $Id: obspar.for,v 1.3 2006/08/09 02:34:22 cal103 Exp $
 c************************************************************************
 c* ObsPrint -- Print list of known observatories.
 c: utility
@@ -80,30 +82,15 @@ c
 	double precision value
 	logical ok
 c
-c  This returns known characteristics of various observervatories.
-c  from the observatories.dat file.
+c  Return the specified telescope parameter obtained from
+c  observatories.dat.
 c
 c  Input:
 c    observ	Name of the observatory. 
 c                 
-c    object	The parameter of the observatory of interest. Possible
-c		values are:
-c		 'latitude '	Observatory latitude, in radians.
-c		 'longitude'	Observatory longitude, in radians.
-c		 'jyperk'	Typical system gain, in Jy/K.
-c		 'systemp'	Typical system temperature, in K.
-c		 'evector'	Offset angle of the feed to the local
-c				vertical, fraction of 360 degrees.
-c		 'mount'	Telescope mount: 0 = alt-az
-c						 1   equitorial
-c                                                3   xy-ew
-c                                                4   nasmyth
-c		 'antdiam'	Antenna diameter, in meters.
-c		 'subdiam'	Subreflector diameter.
-c		 'height'	Height above sea level, in meters
-c		 'ew'		Positive if the telescope is an E-W array.
-c	         'nants'        Number of antennas normally in the array.
-c		 'ellimit'	Elevation limit, in degrees.
+c    object     Name of the parameter, refer to observatories.dat for a
+c               list of recognized names.
+c
 c  Output:
 c    value	The value of the parameter.
 c    ok		True if the value was successfully found.
@@ -144,7 +131,7 @@ c------------------------------------------------------------------------
 	include 'obspar.h'
 c
 	double precision ALTAZ,EQUATOR,NASMYTH,XYEW
-	parameter(ALTAZ=0.d0,EQUATOR=1.d0,NASMYTH=4.d0,XYEW=3.d0)
+	parameter(ALTAZ=0.d0, EQUATOR=1.d0, XYEW=3.d0, NASMYTH=4.d0)
 c
         double precision value
         character*24 input,param,observatory,cvalue
@@ -168,15 +155,15 @@ c
 	first = .false.
 	nparms = 0
 c
-c       Has a local MIRPARAM been set pointing to a different location
+c       Has a local MIRSHARE been set pointing to a different location
 c       for a observatories.dat, ie a local version
 c       If it isn't set then assume a 
-c       default of $MIR/param/observatories.dat
-        call getenv('MIRPARAM',mir_root)
+c       default of $MIR/share/observatories.dat
+        call getenv('MIRSHARE',mir_root)
         if (mir_root(1:1).eq.' ') then
            call getenv('MIR',mir_root)
 c          build the filename to open
-           obsfile='/param/observatories.dat'        
+           obsfile='/share/observatories.dat'        
            file=mir_root(1:index(mir_root,' ')-1)//
      +          obsfile(1:index(obsfile,' '))
         else
@@ -201,8 +188,8 @@ c       Open and read the observatories.dat
              if (line(1:3).eq.'EOF') goto 10
 
 c            Ignore comment lines in file, ie line(1:1)='#'
-             if (line(1:1).ne.'#') then
-               read(line,*) observatory,param
+             if (line(1:1).ne.'#' .and. line.ne.' ') then
+               read(line,*) observatory, param
                input=observatory(1:index(observatory,' ')-1)//'/'//
      +               param(1:index(param,' ')-1)
 
@@ -210,14 +197,15 @@ c              Allow for param = mount, latitude or longitude
 
                if (param(1:5).eq.'mount') then
                  read(line,*)observatory,param,cvalue
-                 if(cvalue(1:5).eq.'ALTAZ') 
-     +              call obsad(input,ALTAZ)
-                 if(cvalue(1:7).eq.'EQUATOR') 
-     +              call obsad(input,EQUATOR)
-                 if(cvalue(1:7).eq.'NASMYTH') 
-     +              call obsad(input,NASMYTH)
-                 if(cvalue(1:5).eq.'XYEW')
-     +              call obsad(input,XYEW)
+                 if (cvalue(1:5).eq.'ALTAZ') then
+                    call obsad(input,ALTAZ)
+                 else if (cvalue(1:7).eq.'EQUATOR') then
+                    call obsad(input,EQUATOR)
+                 else if (cvalue(1:5).eq.'XYEW')then
+                    call obsad(input,XYEW)
+                 else if (cvalue(1:7).eq.'NASMYTH') then
+                    call obsad(input,NASMYTH)
+                 end if
                else if (param(1:8).eq.'latitude') then
                   read(line,*)observatory,param,sign,deg,min,sec
                   call obsad(input,obsdms(sign,deg,min,sec))
@@ -232,7 +220,7 @@ c              For ellimit & evector convert
                   call obsad(input,value*dpi/180.d0) 
                else if (param(1:7).eq.'evector') then
                   read(line,*)observatory,param,value   
-                  call obsad(input,value*dpi) 
+                  call obsad(input,value*dpi/180.0) 
                else
                  read(line,*)observatory,param,value   
                  call obsad(input,value)
