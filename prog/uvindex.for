@@ -48,15 +48,16 @@ c    rjs   2nov94  Changed the way sources were stored, and increased
 c		   the number of sources/pointings.
 c    rjs  16nov94  Fix bug introduced in the above.
 c    rjs   1may96  Compute and print out total observing time.
+c    mchw 01aug96  Increased MAXSPECT=18.
 c----------------------------------------------------------------------c
 	include 'mirconst.h'
 	include 'maxdim.h'
 	character*(*) version
 	integer MAXSRC,MAXFREQ,MAXSPECT
 	integer PolMin,PolMax,PolI
-	parameter(MAXSRC=2048,MAXFREQ=32,MAXSPECT=16)
+	parameter(MAXSRC=2048,MAXFREQ=32,MAXSPECT=18)
 	parameter(PolMin=-8,PolMax=4,PolI=1)
-	parameter(version='UVINDEX: version 1.0 2-Nov-94')
+	parameter(version='UVINDEX: version 1.0 01-AUG-96')
 c
 	integer pols(PolMin:PolMax),pol
 	integer lIn,i,j,j1,nvis,nants,l
