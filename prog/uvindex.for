@@ -55,6 +55,7 @@ c    rjs   1may96  Compute and print out total observing time.
 c    mchw 01aug96  Increased MAXSPECT=18.
 c    rjs  18oct96  Don't output a line when just dra/ddec changes.
 c    rjs  08jan97  options=mosaic
+c    rjs  08jun97  Fix bug in error message
 c----------------------------------------------------------------------c
 	include 'mirconst.h'
 	include 'maxdim.h'
@@ -63,7 +64,7 @@ c----------------------------------------------------------------------c
 	integer PolMin,PolMax,PolI
 	parameter(MAXSRC=2048,MAXFREQ=32,MAXSPECT=18)
 	parameter(PolMin=-8,PolMax=4,PolI=1)
-	parameter(version='UVINDEX: version 1.0 18-Jan-97')
+	parameter(version='UVINDEX: version 1.0 08-Jun-97')
 c
 	integer pols(PolMin:PolMax),pol
 	integer lIn,i,j,j1,nvis,nants,l
@@ -253,7 +254,7 @@ c
 	enddo
 	if(pols(0).ne.0)then
  	  write(line,'(a,i6,a)')
-     *      'Unrecognised polarization ',pols(i),' records'
+     *      'Unrecognised polarization ',pols(0),' records'
 	  call LogWrit(line)
 	endif
 c
