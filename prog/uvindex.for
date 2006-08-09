@@ -49,6 +49,7 @@ c		   the number of sources/pointings.
 c    rjs  16nov94  Fix bug introduced in the above.
 c    rjs   1may96  Compute and print out total observing time.
 c    mchw 01aug96  Increased MAXSPECT=18.
+c    rjs  18oct96  Don't output a line when just dra/ddec changes.
 c----------------------------------------------------------------------c
 	include 'mirconst.h'
 	include 'maxdim.h'
@@ -310,7 +311,7 @@ c
 	include 'mirconst.h'
 	real tol
 	parameter(tol=pi/180.0/3600.0)
-	character source*16
+	character source*16,osource*16
 	double precision ra,dec
 	real dra,ddec
 	logical more,refed,found
@@ -333,8 +334,10 @@ c  Is it a new source?
 c
 	refed = .false.
 	if(nsrc.eq.0)then
+	  osource = ' '
 	  newsrc = .true.
 	else
+	  osource = sources(isrc)
 	  if(source.eq.sources(isrc))then
 	    if(.not.solar(isrc))
      *	      call GetDelta(dra,ddec,ra,dec,ra0(isrc),dec0(isrc))
@@ -386,6 +389,8 @@ c
 	    pntoff(2,isrc) = ddec
 	  endif
 	endif
+c
+	newsrc = sources(isrc).ne.osource
 c
 	end
 c************************************************************************
