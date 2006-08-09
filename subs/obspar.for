@@ -40,7 +40,7 @@ c    sdw  06jul06 Change to read observatory data from a paramater file,
 c                 allow greater flexability. Rather than having data hard
 c                 coded into the program.
 c
-c $Id: obspar.for,v 1.3 2006/08/09 02:34:22 cal103 Exp $
+c $Id: obspar.for,v 1.4 2006/08/09 23:48:29 cal103 Exp $
 c************************************************************************
 c* ObsPrint -- Print list of known observatories.
 c: utility
@@ -136,7 +136,7 @@ c
         double precision value
         character*24 input,param,observatory,cvalue
 c  Define File handling param's
-        integer iostat,lu,length,istart,ifin
+        integer iostat,lu,length
         character*80 obsfile,line,mir_root
         character*80 file
 c  Lat / Long variables
