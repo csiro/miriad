@@ -56,6 +56,7 @@ c    mchw 01aug96  Increased MAXSPECT=18.
 c    rjs  18oct96  Don't output a line when just dra/ddec changes.
 c    rjs  08jan97  options=mosaic
 c    rjs  08jun97  Fix bug in error message
+c    rjs  15jun00  Simple handling of blank source name.
 c----------------------------------------------------------------------c
 	include 'mirconst.h'
 	include 'maxdim.h'
@@ -64,7 +65,7 @@ c----------------------------------------------------------------------c
 	integer PolMin,PolMax,PolI
 	parameter(MAXSRC=2048,MAXFREQ=32,MAXSPECT=18)
 	parameter(PolMin=-8,PolMax=4,PolI=1)
-	parameter(version='UVINDEX: version 1.0 08-Jun-97')
+	parameter(version='UVINDEX: version 1.0 15-Jun-00')
 c
 	integer pols(PolMin:PolMax),pol
 	integer lIn,i,j,j1,nvis,nants,l
@@ -350,7 +351,7 @@ c
 c
 c  Get source parameters.
 c
-	call uvrdvra(lIn,'source',source,' ')
+	call uvrdvra(lIn,'source',source,'-unknown-')
 	call uvrdvrd(lIn,'ra',ra,0.d0)
 	call uvrdvrd(lIn,'dec',dec,0.d0)
 	call uvrdvrr(lIn,'dra',dra,0.)
