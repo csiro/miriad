@@ -138,6 +138,7 @@
 /*  rjs  18mar97 Plug minor memory leak.				*/
 /*  rjs  15sep97 Fix error in pointing selection.			*/
 /*  rjs  09oct97 Check for restfreq==0 when converting to velocity.	*/
+/*  rjs  15oct97 Minor correction definition of felocity.		*/
 /*----------------------------------------------------------------------*/
 /*									*/
 /*		Handle UV files.					*/
@@ -4153,10 +4154,10 @@ LINE_INFO *line;
 
   if(line->linetype == LINE_FELOCITY){
     line->linetype = LINE_VELOCITY;
-    fac = CKMS / (CKMS + line->fstart + vobs );
+    fac = CKMS / (CKMS + line->fstart);
     line->fstep  *= fac * fac;
     line->fwidth *= fac * fac;
-    line->fstart = fac * (line->fstart + vobs) - vobs;
+    line->fstart = fac * line->fstart;
   }
 }
 /************************************************************************/
@@ -4598,7 +4599,7 @@ int mode;
 {
   LINE_INFO *line;
   int n,i,j,offset,step;
-  double temp;
+  double temp,fdash;
   float *wfreq,*wwide,vobs;
   int *nschan;
   double *sdf,*sfreq,*restfreq;
@@ -4630,14 +4631,16 @@ int mode;
 	}
 	if(mode == VELO){
 	  if(*restfreq <= 0)BUG('f',"Cannot determine velocity as rest frequency is 0");
-	  temp += CKMS * ( 1 - ( *sfreq + offset * *sdf ) / *restfreq ) - vobs;
+	  fdash = *sfreq + offset * *sdf + *restfreq * vobs/CKMS;
+	  temp += CKMS * ( 1 - fdash / *restfreq );
         }else if(mode == FELO){
 	  if(*restfreq <= 0)BUG('f',"Cannot determine velocity as rest frequency is 0");
-	  temp += CKMS * ( *restfreq / ( *sfreq + offset * *sdf ) - 1 ) - vobs;
+	  fdash = *sfreq + offset * *sdf + *restfreq * vobs/CKMS;
+	  temp += CKMS * ( *restfreq / fdash - 1 );
 	}else if(mode == RFREQ) temp += *restfreq;
 	else if(mode == BW)    temp += (*sdf > 0 ? *sdf : - *sdf);
 	else if(mode == FREQ)
-	  temp += *sfreq + offset * *sdf + vobs/CKMS * *restfreq;
+	  temp  += *sfreq + offset * *sdf + *restfreq * vobs/CKMS;
 	else if(mode == SFREQ)
 	  temp += *sfreq + offset * *sdf;
 	offset++;
