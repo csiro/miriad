@@ -125,6 +125,7 @@
 /*		 code.							*/
 /*  rjs  30sep94 Fixed planet bug, which I must have introduced recently*/
 /*  rjs  21oct94 Fix misleading error message.				*/
+/*  rjs   6nov94 Change item and variable handle to an integer.		*/
 /*----------------------------------------------------------------------*/
 /*									*/
 /*		Handle UV files.					*/
@@ -155,7 +156,7 @@
 /*  Each open UV data file is described by the UV structure, which in	*/
 /*  turn contains a number of substructures.				*/
 /*									*/
-/*  *item	This is the item-handle to access the variable		*/
+/*  item	This is the item-handle to access the variable		*/
 /*		stream.							*/
 /*  nvar	The number of different variables in the		*/
 /*		variable stream.					*/
@@ -341,7 +342,7 @@ typedef struct varpnt{
 		} VARPNT;
 
 typedef struct varhand{
-	int tno,callno;
+	int tno,callno,index;
 	struct varhand *fwd;
 	VARPNT *varhd;
 		} VARHAND;
@@ -415,7 +416,7 @@ typedef struct {
 		} FLAGS;
 
 typedef struct {
-	char *item;
+	int item;
 	int nvar,offset,max_offset,saved_nvar,tno,flags,callno,maxvis,mark;
 	int presize;
 	FLAGS corr_flags,wcorr_flags;
@@ -441,7 +442,10 @@ typedef struct {
 	WINDOW *win;
 		} UV;
 
+#define MAXVHANDS 20
+
 static UV *uvs[MAXOPEN];
+static VARHAND *varhands[MAXVHANDS];
 static WINDOW truewin;
 static AMP noamp;
 static int first=TRUE;
@@ -818,6 +822,11 @@ private void uv_init()
   truewin.n     = MAXWIN;
   truewin.select= FALSE;
   for(i=0; i < MAXWIN; i++) truewin.wins[i] = TRUE;
+
+/* Initialise the table of variable handles. */
+
+  for(i=0; i < MAXVHANDS; i++)varhands[i] = NULL;
+
 }
 /************************************************************************/
 private void uv_freeuv(uv)
@@ -832,6 +841,7 @@ UV *uv;
   vh = uv->vhans;
   while(vh != NULL){
     vp = vh->varhd;
+    varhands[vh->index] = NULL;
     while(vp != NULL){
       vpt = vp;
       vp = vp->fwd;
@@ -883,7 +893,7 @@ private UV *uv_getuv(tno)
   VARIABLE *v;
 
   uv = (UV *)Malloc(sizeof(UV));
-  uv->item	= NULL;
+  uv->item	= 0;
   uv->tno	= tno;
   uv->vhans	= NULL;
   uv->nvar	= 0;
@@ -954,7 +964,8 @@ UV *uv;
   Write out a variable name table.
 ------------------------------------------------------------------------*/
 {
-  char *item,line[MAXLINE];
+  int item;
+  char line[MAXLINE];
   int iostat,i;
   VARIABLE *v;
 
@@ -978,7 +989,8 @@ UV *uv;
   value is being overriden.
 ------------------------------------------------------------------------*/
 {
-  char *item,*b,varname[MAXLINE],vartype[MAXLINE],descr[MAXLINE];
+  int item;
+  char *b,varname[MAXLINE],vartype[MAXLINE],descr[MAXLINE];
   VARIABLE *v;
   int tno,iostat,n,ok;
 
@@ -1022,7 +1034,8 @@ UV *uv;
   variables.
 ------------------------------------------------------------------------*/
 {
-  char *item,line[MAXLINE],name[MAXNAM+1],ctype;
+  int item;
+  char line[MAXLINE],name[MAXNAM+1],ctype;
   int iostat,type;
 
   haccess_c(uv->tno,&item,"vartable","read",&iostat);
@@ -1241,17 +1254,25 @@ int tno,*vhan;
 /*--									*/
 /*----------------------------------------------------------------------*/
 {
+  int i;
   VARHAND *vh;
   UV *uv;
 
   uv = uvs[tno];
-  vh = (VARHAND *)Malloc(sizeof(VARHAND));
+
+/* Locate a space handle slot. */
+
+  for(i=0; i < MAXVHANDS; i++)if(varhands[i] == NULL)break;
+  if(i == MAXVHANDS)BUG('f',"Ran out of variable handle slots, in UVVARINI");
+  varhands[i] = vh = (VARHAND *)Malloc(sizeof(VARHAND));
+  
+  vh->index = i;
   vh->callno = 0;
   vh->tno = tno;
   vh->varhd = NULL;
   vh->fwd = uv->vhans;
   uv->vhans = vh;
-  *vhan = (int)vh;
+  *vhan = i+1;
 }
 /************************************************************************/
 void uvvarset_c(vhan,var)
@@ -1262,7 +1283,7 @@ char *var;
   VARIABLE *v;
   VARPNT *vp;
 
-  vh = (VARHAND *)vhan;
+  vh = varhands[vhan-1];
   v = uv_locvar(vh->tno,var);
   if(v != NULL){
     vp = (VARPNT *)Malloc(sizeof(VARPNT));
@@ -1280,7 +1301,7 @@ int vhan,tout;
   VARPNT *vp;
   int callno;
 
-  vh = (VARHAND *)vhan;
+  vh = varhands[vhan-1];
   callno = vh->callno;
   vh->callno = uvs[vh->tno]->callno;
 
@@ -1299,7 +1320,7 @@ int vhan;
   VARPNT *vp;
   int callno;
 
-  vh = (VARHAND *)vhan;
+  vh = varhands[vhan-1];
   callno = vh->callno;
   vh->callno = uvs[vh->tno]->callno;
 
@@ -2386,7 +2407,7 @@ char *ps;
 /************************************************************************/
 void uvset_c(tno,object,type,n,p1,p2,p3)
 int tno,n;
-float p1,p2,p3;
+double p1,p2,p3;
 char *object,*type;
 /**uvset -- Set up the uv linetype, and other massaging steps.		*/
 /*&rjs                                                                  */
@@ -2523,7 +2544,7 @@ int n;
 /************************************************************************/
 private void uvset_planet(uv,p1,p2,p3)
 UV *uv;
-float p1,p2,p3;
+double p1,p2,p3;
 /*
   Set the reference parameters for a planet, for scaling and rotation.
 ------------------------------------------------------------------------*/
@@ -2561,7 +2582,7 @@ private void uvset_linetype(line,type,n,start,width,step)
 LINE_INFO *line;
 char *type;
 int n;
-float start,width,step;
+double start,width,step;
 /*
   Decode the line type.
   Input:
@@ -2973,8 +2994,8 @@ private int uvread_select(uv)
 UV *uv;
 {
   int i1,i2,bl,pol,n,nants,inc,selectit,selprev,discard;
-  float *point,pointerr,dra,ddec,diameter;
-  double time,t0,uu,vv,uv2,uv2f,ra,dec,skyfreq;
+  float *point,pointerr,dra,ddec;
+  double time,t0,uu,vv,uv2,uv2f,ra,dec,skyfreq,diameter;
   SELECT *sel;
   OPERS *op;
   WINDOW *win;
@@ -3296,7 +3317,7 @@ int length;
 /************************************************************************/
 private int uvread_shadowed(uv,diameter)
 UV *uv;
-float diameter;
+double diameter;
 /*
     This determines if a particular baseline is shadowed.
 
@@ -3350,7 +3371,7 @@ UV *uv;
 ------------------------------------------------------------------------*/
 {
   UVW *uvw;
-  double ha,dec,sinh,cosh,sind,cosd;
+  double ha,dec,sinha,cosha,sind,cosd;
   double *posx,*posy,*posz,bx,by,bz,bxy,byx;
   int i;
 
@@ -3362,7 +3383,7 @@ UV *uv;
 
   ha = *(double *)(uv->lst->buf) - *(double *)(uv->obsra->buf);
   dec = *(double *)(uv->obsdec->buf);
-  sinh = sin(ha);  cosh = cos(ha);
+  sinha = sin(ha);  cosha = cos(ha);
   sind = sin(dec); cosd = cos(dec);
 
   posx = (double *)(uv->antpos->buf);
@@ -3372,8 +3393,8 @@ UV *uv;
     bx = *posx++;
     by = *posy++;
     bz = *posz++;
-    bxy =  bx*sinh + by*cosh;
-    byx = -bx*cosh + by*sinh;
+    bxy =  bx*sinha + by*cosha;
+    byx = -bx*cosha + by*sinha;
     uvw->uu[i] = bxy;
     uvw->vv[i] = byx*sind + bz*cosd;
     uvw->ww[i] = -byx*cosd + bz*sind;
@@ -4095,9 +4116,9 @@ int nchan;
     for(i=0; i < nchan; i++){
       amp2 = *df * *df + *(df+1) * *(df+1);
       if(amplo2 <= amp2 && amp2 <= amphi2)
-	*flags = (*flags == FORT_TRUE & !discard ? FORT_TRUE : FORT_FALSE);
+	*flags = ((*flags == FORT_TRUE && !discard) ? FORT_TRUE : FORT_FALSE);
       else
-	*flags = (*flags == FORT_TRUE &  discard ? FORT_TRUE : FORT_FALSE);
+	*flags = ((*flags == FORT_TRUE &&  discard) ? FORT_TRUE : FORT_FALSE);
       df += 2; flags++;
     }
 
@@ -4111,9 +4132,9 @@ int nchan;
       ii = tscale * *(di+1);
       amp2 = rr * rr + ii * ii;
       if(amplo2 <= amp2 && amp2 <= amphi2)
-	*flags = (*flags == FORT_TRUE & !discard ? FORT_TRUE : FORT_FALSE);
+	*flags = ((*flags == FORT_TRUE && !discard) ? FORT_TRUE : FORT_FALSE);
       else
-	*flags = (*flags == FORT_TRUE &  discard ? FORT_TRUE : FORT_FALSE);
+	*flags = ((*flags == FORT_TRUE &&  discard) ? FORT_TRUE : FORT_FALSE);
       di += 2; flags++;
     }
   }
