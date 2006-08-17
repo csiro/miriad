@@ -127,6 +127,7 @@
 /*  rjs  21oct94 Fix misleading error message.				*/
 /*  rjs   6nov94 Change item and variable handle to an integer.		*/
 /*  rjs  30nov94 Increase size of varnam by 1 char, in uvset_preamble.	*/
+/*  rjs   9dec94 Less fussy when w coordinate is needed.		*/
 /*----------------------------------------------------------------------*/
 /*									*/
 /*		Handle UV files.					*/
@@ -2753,7 +2754,7 @@ double *preamble;
 	i2 = bl % 256 - 1;
 	ww = uv->uvw->ww[i2] - uv->uvw->ww[i1];
       } else if(uv->flags & UVF_DOW) {
-	ww = coord[2];
+	ww = (VARLEN(uv->coord) >= 3 ? coord[2] : 0.0);
       }
       scale = (uv->flags & UVF_WAVELENGTH ? uv_getskyfreq(uv,uv->win) : 1.0);
       *preamble++ = scale * ( uv->pluu * uu + uv->pluv * vv );
@@ -3488,8 +3489,13 @@ int tno;
 
   uv->coord = uv_checkvar(tno,"coord",H_DBLE);
   if( VARLEN(uv->coord) < ( uv->flags & UVF_DOW ? 3 : 2 ) ){
-    uv->flags |= UVF_REDO_UVW;
-    uv->need_uvw = TRUE;
+    if(uv_locvar(tno,"obsra") != NULL && uv_locvar(tno,"obsdec") != NULL &&
+       uv_locvar(tno,"lst")   != NULL && uv_locvar(tno,"antpos") != NULL){
+      uv->flags |= UVF_REDO_UVW;
+      uv->need_uvw = TRUE;
+    } else {
+      BUG('w',"Unable to compute w coordinate -- setting this to zero");
+    }
   }
   uv->time  = uv_checkvar(tno,"time",H_DBLE);
   uv->bl    = uv_checkvar(tno,"baseline",H_REAL);
