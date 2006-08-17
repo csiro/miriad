@@ -55,6 +55,9 @@ c	           been corrected for parallactic angle).
 c	  lefty    Assume that the FITS antenna table uses a
 c	           left-handed coordinate system (rather than the
 c	           more normal right-handed system).
+c	  varwt    The visibility weight in the FITS file should
+c	           be interpretted as the reciprocal of the noise
+c	           variance on that visibility.
 c
 c	These options for op=uvout only.
 c	  nocal    Do not apply the gains table to the data.
@@ -306,13 +309,15 @@ c    rjs  26-feb-99  Used new subroutine "fitdate" to be more robust to
 c		     corrupted dates.
 c    rjs  20-jul-99  uvout writes AIPS SU tables.
 c    rjs  30-aug-99  Changed some "PI" to "DPI"
+c    rjs  11-nov-99  options=varwt
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 30-Aug-99')
+	parameter(version='Fits: version 1.1 11-Nov-99')
 	character in*128,out*128,op*8,uvdatop*12
 	integer velsys
 	real altrpix,altrval
-	logical altr,docal,dopol,dopass,dss,dochi,nod2,compress,lefty
+	logical altr,docal,dopol,dopass,dss,dochi,nod2,compress
+	logical lefty,varwt
 c
 c  Get the input parameters.
 c
@@ -328,7 +333,8 @@ c
 c
 c  Get options.
 c
-        call getopt(docal,dopol,dopass,dss,nod2,dochi,compress,lefty)
+        call getopt(docal,dopol,dopass,dss,nod2,dochi,compress,
+     *							lefty,varwt)
         if(op.eq.'uvout') then
           uvdatop = 'sdlb3'
 	  if(docal)uvdatop(7:7) = 'c'
@@ -347,7 +353,7 @@ c  Handle the five cases.
 c
 	if(op.eq.'uvin')then
 	  call uvin(in,out,velsys,altr,altrpix,altrval,dochi,
-     *					compress,lefty,version)
+     *				    compress,lefty,varwt,version)
 	else if(op.eq.'uvout')then
 	  call uvout(out,version)
 	else if(op.eq.'xyin')then
@@ -432,10 +438,10 @@ c
 	end
 c************************************************************************
       subroutine getopt(docal,dopol,dopass,dss,nod2,dochi,
-     *						compress,lefty)
+     *						compress,lefty,varwt)
 c
       implicit none
-      logical docal,dopol,dopass,dss,dochi,nod2,compress,lefty
+      logical docal,dopol,dopass,dss,dochi,nod2,compress,lefty,varwt
 c
 c     Get a couple of the users options from the command line
 c
@@ -448,14 +454,16 @@ c    nod2    Handle NOD2 image.
 c    dochi   Attempt to calculate the parallactic angle.
 c    compress Store data in compressed format.
 c    lefty   Assume antenna table uses a left-handed system.
-c
+c    varwt   Interpret the visibility weight as the reciprocal of the
+c	     noise variance.
 c------------------------------------------------------------------------
       integer nopt
-      parameter (nopt = 8)
+      parameter (nopt = 9)
       character opts(nopt)*8
       logical present(nopt)
       data opts /'nocal   ','nopol   ','nopass  ','dss     ',
-     *		 'nod2    ','nochi   ','compress','lefty   '/
+     *		 'nod2    ','nochi   ','compress','lefty   ',
+     *		 'varwt   '/
 c
       call options ('options', opts, present, nopt)
       docal    = .not.present(1)
@@ -466,6 +474,7 @@ c
       dochi    = .not.present(6)
       compress =      present(7)
       lefty    =      present(8)
+      varwt    =      present(9)
 c
       end
 c************************************************************************
@@ -503,19 +512,16 @@ c
 	end
 c************************************************************************
 	subroutine uvin(in,out,velsys,altr,altrpix,altrval,dochi,
-     *					compress,lefty,version)
+     *					compress,lefty,varwt,version)
 c
 	implicit none
 	character in*(*),out*(*)
 	integer velsys
-	logical altr,dochi,compress,lefty
+	logical altr,dochi,compress,lefty,varwt
 	real altrpix,altrval
 	character version*(*)
 c
-c  Read in a UV FITS file. The MIRIAD uv file does not have something
-c  corresponding to the FITS weight array. Get around this by assuming
-c  that the weights are a measure of the integration time in seconds.
-c  This at least leads to something that is proportionally correct.
+c  Read in a UV FITS file. 
 c
 c  Inputs:
 c    in		Name of the input uv FITS file.
@@ -527,6 +533,8 @@ c    altrval	The user given value for altrval.
 c    dochi	Attempt to calculate the parallactic angle.
 c    compress   Store the data in compressed format.
 c    lefty      Assume the antenna table uses a left-handed system.
+c    varwt	Interpret the visibility weight as the reciprocal of the
+c		noise variance.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer PolXX,PolYY,PolXY,PolYX
@@ -534,12 +542,14 @@ c------------------------------------------------------------------------
 c
 	integer MAXTIME
 	parameter(MAXTIME=10240)
-	integer lu,tno,nvis,npol,nfreq,i,j,bitpix
+	integer lu,tno,nvis,npol,nfreq,i,j,bitpix,nif
 	integer ant1,ant2,nants,bl,nconfig,config,srcid,freqid
 	integer itemp,offset,P,Pol0,PolInc
 	logical flags(maxchan),zerowt,found,anfound
 	logical conj,sfudge
 	complex corr(maxchan)
+	real fac,swt
+	integer nwt
 	real visibs(7+12*maxchan)
 	double precision preamble(5),T0,uu,vv,ww,time
 	real times(MAXTIME),inttime
@@ -582,7 +592,7 @@ c
 c  Load antenna, source and frequency information. Set frequency information.
 c
 	call TabLoad(lu,uvSrcId.ne.0,uvFreqId.ne.0,
-     *			telescop,anfound,Pol0,PolInc,dochi,lefty)
+     *		telescop,anfound,Pol0,PolInc,nif,dochi,lefty)
 	call TabVeloc(velsys,altr,altrval,altrpix)
 c
 c  Load any FG tables.
@@ -625,6 +635,11 @@ c
 	  sfudge = .true.
 	endif
 c
+c  Determine the noise scaling factor.
+c
+	fac = 1
+	if(Pol0.gt.0)fac = 2
+c
 c  Write out the telescope.
 c
 	if(telescop.ne.' ')call uvputvra(tno,'telescop',telescop)
@@ -637,8 +652,15 @@ c
 c
 c  Initialise things to work out the integration time.
 c
-	call uvputvrr(tno,'inttime',10.0,1)
-	ntimes = 0
+	if(varwt)then
+	  call DoTime(lu,nvis,uvT,uvBl,visibs,
+     *				times,MAXTIME,inttime)
+	  ntimes = MAXTIME + 1
+	else
+	  inttime = 10
+	  ntimes = 0
+	endif
+	call uvputvrr(tno,'inttime',inttime,1)
 c
 c  Copy the data itself. The conversion of units is as follows:
 c   Variable		FUVREAD		  UVWRITE
@@ -715,6 +737,22 @@ c  Write out the necessary table information.
 c
 	  call TabWrite(tno,srcid,freqid,config,time)
 c
+c  Determine Jyperk if varwt is true.
+c
+	  if(varwt)then
+	    nwt = 0
+	    swt = 0
+	    offset = uvData
+	    do j=1,npol*nfreq/nif
+	      if(abs(visibs(offset+2)).gt.0)then
+		swt = swt + abs(visibs(offset+2))
+		nwt = nwt + 1
+	      endif
+	      offset = offset + 3
+	    enddo
+	    if(nwt.gt.0)call TabVar(tno,fac*nwt/swt,inttime)
+	  endif
+c
 c  Store the correlation data.
 c
 	  preamble(1) = uu
@@ -750,13 +788,8 @@ c
 c  Work out the integration time now, and use override mechanism to set
 c  it in the data-set.
 c
-	call GetInt(times,ntimes,inttime)
-	if(inttime.gt.0)then
-	  call wrhdr(tno,'inttime',inttime)
-	else
-	  call bug('w','Unable to estimate integration time')
-	  call bug('w','  ... assuming 10 seconds')
-	endif
+	if(.not.varwt)call GetInt(times,ntimes,inttime)
+	call wrhdr(tno,'inttime',inttime)
 	itime = itoaf(nint(inttime))
 	litime = len1(itime)
 	call output('The estimated integration time of a sample is '//
@@ -776,6 +809,34 @@ c
 	call fuvclose(lu)
 	call hisclose(tno)
 	call uvclose(tno)
+	end
+c************************************************************************
+	subroutine DoTime(lu,nvis,uvT,uvBl,visibs,times,
+     *						maxtimes,inttime)
+c
+	implicit none
+	integer lu,nvis,uvT,uvBl,maxtimes
+	real visibs(*),times(maxtimes),inttime
+c
+c  Guestimate the integration time of a sample.
+c------------------------------------------------------------------------
+	integer bl,refbl,i,ntimes
+c
+	i = 0
+	ntimes = 0
+	dowhile(ntimes.lt.MAXTIMES.and.i.lt.nvis)
+	  i = i + 1	  
+	  call fuvread(lu,visibs,i,1)
+	  bl = int(visibs(uvBl) + 0.01)
+	  if(i.eq.1)refbl = bl
+	  if(bl.eq.refbl)then
+	    ntimes = ntimes + 1
+	    times(ntimes) = visibs(uvT)
+	  endif
+	enddo
+c
+	call GetInt(times,ntimes,inttime)
+c
 	end
 c************************************************************************
 	subroutine Negate(nfreq,corr)
@@ -1164,11 +1225,11 @@ c
 	end
 c************************************************************************
 c************************************************************************
-	subroutine TabLoad(lu,dosu,dofq,tel,anfound,Pol0,PolInc,
+	subroutine TabLoad(lu,dosu,dofq,tel,anfound,Pol0,PolInc,nif0,
      *	  dochi,lefty)
 c
 	implicit none
-	integer lu,Pol0,PolInc
+	integer lu,Pol0,PolInc,nif0
 	logical dosu,dofq,anfound,dochi,lefty
 	character tel*(*)
 c
@@ -1190,6 +1251,7 @@ c    lefty	Assume the antenna table uses a left-handed system.
 c  Output:
 c    tel	Telescope name.
 c    anfound	True if antenna tables were found.
+c    nif0       Number of IFs
 c    Pol0	Code for first polarisation.
 c    PolInc	Increment between polarisations.
 c------------------------------------------------------------------------
@@ -1252,6 +1314,7 @@ c
 	  if(ctype.eq.'FREQ')call fitrdhdi(lu,'NAXIS'//num,nchan,1)
 	enddo
 	if(nif.gt.MAXIF)call bug('f','Too many IFs')
+	nif0 = nif
 c
 c  Polarisation information.
 c
@@ -1595,6 +1658,25 @@ c
 c
 	call Sortie(sindx,srcids,nsrc)
 c
+	end
+c************************************************************************
+	subroutine TabVar(tno,var,inttime)
+c
+	implicit none
+	integer tno
+	real var,inttime
+c
+c  Determine the Jyperk from variance, integration time, channel bandwidth
+c  and system temperature.
+c
+c------------------------------------------------------------------------
+	include 'fits.h'
+	real temp
+c
+	temp = 50.
+	if(systok)temp = systemp
+c
+	call uvputvrr(tno,'jyperk',sqrt(abs(2*inttime*dnu*var))/temp,1)
 	end
 c************************************************************************
 	subroutine TabRefT0(t)
@@ -2090,6 +2172,7 @@ c
 	  call uvputvrd(tno,'freq',sfreq0,1)
 	  call uvputvrd(tno,'sdf',sdf0,nif)
 	  call uvputvrd(tno,'restfreq',rfreq0,nif)
+	  dnu = sdf0(1)*1e9
 	endif
 c
 c  Recompute the equation of the equinox every day.
@@ -2506,7 +2589,7 @@ c
 c
 c  Copy the history.
 c
-	call CopyHist(tIn,tOut)
+	call CopyHist(tIn,tOut,version)
 c
 c  We now have all the data we want in a scratch file. Copy this
 c  data to the output FITS file.
@@ -3805,7 +3888,7 @@ c
 c  Handle the output header.
 c
 	call axisout(lu,tno,naxis)
-	call hdout(tno,lu)
+	call hdout(tno,lu,version)
 	string = 'Miriad '//version
 	call fitwrhda(lu,'ORIGIN',string)
 c
@@ -3990,10 +4073,11 @@ c
 	call coGetd(tno,'crval'//itoaf(iax),lat)
 	end
 c************************************************************************
-	subroutine hdout(tno,lu)
+	subroutine hdout(tno,lu,version)
 c
 	implicit none
 	integer lu,tno
+	character version*(*)
 c
 c  Convert the header of a FITS file into a MIRIAD data items and history
 c  files.
@@ -4060,12 +4144,13 @@ c
 c
 c  Write out the history file as HISTORY comments.
 c
-	call copyHist(tno,lu)
+	call copyHist(tno,lu,version)
 	end
 c************************************************************************
-	subroutine CopyHist(tIn,tOut)
+	subroutine CopyHist(tIn,tOut,version)
 c
 	integer tin,tout
+	character version*(*)
 c
 c  Copy out the history comments.
 c
@@ -4075,7 +4160,15 @@ c    tOut	The handle of the output FITS file.
 c
 c------------------------------------------------------------------------
 	logical eof
-	character card*132,line*80
+	character card*132,line*80,name*32
+	integer narg,i,l1,l2,length,lu,iostat
+	logical dofile
+	character file*256
+	double precision julian
+c
+c  Externals.
+c
+	integer iargc,len1
 c
 	call hisopen(tIn,'read')
 	call hisread(tIn,card,eof)
@@ -4085,6 +4178,57 @@ c
 	  call hisread(tIn,card,eof)
 	enddo
 	call hisclose(tIn)
+c
+c  Write some extra FITS history.
+c
+	narg = iargc()
+	name = 'HISTORY FITS:'
+	l2 = len(line)
+	l1 = len1(name)
+	line = name(1:l1)//' Miriad fits: '//version
+	call fitcdio(tOut,line)
+	call TodayJul(julian)
+	call JulDay(julian, 'H', file)
+	line = name(1:l1)//' Executed on: '//file(1:len1(file))
+	call fitcdio(tOut,line)
+	line(l1+1:) = ' Command line inputs follow:'
+	call fitcdio(tOut,line)
+c
+	line(l1+1:l1+4) = ' '
+	l1 = l1 + 5
+c
+	dofile = .false.
+	do i=1,narg
+	  if(dofile)then
+	    call getarg(i,file)
+	    call txtopen(lu,file,'old',iostat)
+	    if(iostat.ne.0)then
+	      call bug('w','Error opening input parameter file')
+	      call bugno('w',iostat)
+	    else
+	      call txtread(lu,line(l1:l2),length,iostat)
+	      dowhile(iostat.eq.0)
+		length = min(l2,length + l1 - 1)
+		call fitcdio(tOut,line(1:length))
+		call txtread(lu,line(l1:l2),length,iostat)
+	      enddo
+	      call txtclose(lu)
+	    endif
+	    dofile = .false.
+	  else
+	    call getarg(i,line(l1:l2))
+	    if(line(l1:l2).eq.'-f')then
+	      dofile = .true.
+	    else
+	      call fitcdio(tOut,line(1:l2))
+	    endif
+	  endif
+	enddo
+c
+	line = 
+     *	 'HISTORY FITS: NOTE: Use options=varwt if loading into Miriad'
+	call fitcdio(tOut,line)
+c
 	end
 c************************************************************************
 	subroutine histin(lu,tno,version)
