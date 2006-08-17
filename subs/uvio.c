@@ -120,7 +120,9 @@
 /*  rjs  23dec93 Added uvinfo(..,'felocity'..), and removed a few for   */
 /*		 wideband channels that did not make much sense.	*/
 /*  rjs  05jan94 Trivial doc changes only.				*/
-/*  rjs  21jul94 Minor change to planet rotation code.			*/
+/*  rjs  21jul94 Slightly better planet handling.			*/
+/*  rjs   1aug94 Internal u-v-w re-calculation. Changes to the shadowing*/
+/*		 code.							*/
 /*----------------------------------------------------------------------*/
 /*									*/
 /*		Handle UV files.					*/
@@ -241,6 +243,9 @@
 #define UVF_RUNS	0x1000	/* Does uvwrite receive flags in runs
 				   specification? */
 #define UVF_INIT	0x2000	/* Set on first call to uvread or uvwrite. */
+#define UVF_UPDATED_UVW 0x4000	/* Set if things needed for uvw have changed. */
+#define UVF_REDO_UVW	0x8000	/* Set if u-v-w are to be recomputed. */
+#define UVF_DOW		0x10000	/* Set if the caller wants w returned. */
 
 #define UV_ALIGN	8
 #define UV_HDR_SIZE	4
@@ -249,6 +254,7 @@
 #define HASHSIZE      123
 #define MAXVAR	      256
 #define MAXNAM		8
+#define MAXPRE		9
 #define MAXLINE	      128
 #define VAR_SIZE	0
 #define VAR_DATA	1
@@ -296,9 +302,14 @@ char *mkopen_c();
 #define uvputvrc_c(tno,name,value,n) \
 	uvputvr_c(tno,H_CMPLX,name,(char *)(value),n)
 
-#define NUM_CHAN(var) ((var).type == H_INT2 || (var).type == H_REAL ?	\
-	(var).length / (2*external_size[(var).type]) :			\
-	(var).length /    external_size[(var).type]  )
+#define VARLEN(var)  ( (var)->length / external_size[(var)->type] )
+#define VARTYPE(var) ( type_flag[(var)->type] )
+
+#define NUMCHAN(var) ((var)->type == H_INT2 || (var)->type == H_REAL ?	\
+	(var)->length / (2*external_size[(var)->type]) :		\
+	(var)->length /    external_size[(var)->type]  )
+
+#define MYABS(x) ( (x) > 0 ? (x) : -(x) )
 
 /*----------------------------------------------------------------------*/
 /*									*/
@@ -337,9 +348,9 @@ typedef struct varhand{
 #define LINE_CHANNEL	1
 #define LINE_WIDE	2
 #define LINE_VELOCITY	3
+#define LINE_FELOCITY	4
 
 #include "maxdimc.h"
-#define MAXWINS  16	/* Max no. of windows - used in uv selection only.*/
 #define SEL_VIS   1
 #define SEL_TIME  2
 #define SEL_UVN   3
@@ -368,7 +379,7 @@ typedef struct {
 		} AMP;
 
 typedef struct {
-	int wins[MAXWINS];
+	int wins[MAXWIN];
 	int first,last,n,select;
 		} WINDOW;
 
@@ -387,6 +398,10 @@ typedef struct select {
 		} SELECT;
 
 typedef struct {
+	int nants;
+	double uu[MAXANT],vv[MAXANT],ww[MAXANT];} UVW;
+
+typedef struct {
 	int linetype;
 	int start,width,step,n;
 	float fstart,fwidth,fstep,*wts;
@@ -400,16 +415,17 @@ typedef struct {
 typedef struct {
 	char *item;
 	int nvar,offset,max_offset,saved_nvar,tno,flags,callno,maxvis,mark;
+	int presize;
 	FLAGS corr_flags,wcorr_flags;
 	VARIABLE *coord,*corr,*time,*bl,*tscale,*nschan,*axisrms;
 	VARIABLE *sfreq,*sdf,*restfreq,*wcorr,*wfreq,*veldop,*vsource;
 	VARIABLE *plmaj,*plmin,*plangle,*dra,*ddec,*ra,*dec,*pol,*on;
 	VARIABLE *obsra,*obsdec,*lst,*antpos,*antdiam,*source;
-	VARIABLE *vhash[HASHSIZE];
+	VARIABLE *vhash[HASHSIZE],*prevar[MAXPRE];
 	VARIABLE variable[MAXVAR];
         LINE_INFO data_line,ref_line,actual_line;
 	int need_skyfreq,need_point,need_planet,need_dra,need_ddec,
-	    need_ra,need_dec,need_pol,need_on,need_shadow,need_src,
+	    need_ra,need_dec,need_pol,need_on,need_uvw,need_src,
 	    need_win;
 	float ref_plmaj,ref_plmin,ref_plangle,plscale,pluu,pluv,plvu,plvv;
 	double skyfreq;
@@ -419,6 +435,7 @@ typedef struct {
 	int apply_amp,apply_win;
 	AMP *amp;
 	SIGMA2 sigma2;
+	UVW *uvw;
 	WINDOW *win;
 		} UV;
 
@@ -431,10 +448,12 @@ void uvputvr_c();
 private void uvinfo_chan(),uvinfo_variance();
 private void uv_init(),uv_freeuv(),uv_free_select();
 private void uvread_defline(),uvread_init(),uvread_velocity(),uvread_flags();
+private void uvread_defvelline();
 private void uvread_updated_planet(),uvread_reference();
+private void uvread_updated_uvw(),uvread_preamble();
 private void uv_vartable_out(),uv_vartable_in();
 private void uvset_coord(),uvset_linetype(),uvset_planet();
-private void uvset_selection();
+private void uvset_selection(),uvset_preamble();
 private void uv_addopers(),uv_override();
 private UV *uv_getuv();
 private VARIABLE *uv_mkvar(),*uv_locvar(),*uv_checkvar();
@@ -518,7 +537,7 @@ char *fname;
             case VAR_SIZE:
                 hreadi_c(uv->item,&v->length,offset+UV_HDR_SIZE,H_INT_SIZE,
                                         &iostat);
-                printf("SIZE: %-9s %d\n",v->name,v->length);
+                printf("SIZE: %-9s Count=%d,Type=%c\n",v->name,VARLEN(v),VARTYPE(v));
                 v->buf = Realloc(v->buf, (v->length*intsize)/extsize);
                 offset += UV_ALIGN;
                 break;
@@ -793,10 +812,10 @@ private void uv_init()
   noamp.select = FALSE;
 
   truewin.first = 0;
-  truewin.last  = MAXWINS-1;
-  truewin.n     = MAXWINS;
+  truewin.last  = MAXWIN-1;
+  truewin.n     = MAXWIN;
   truewin.select= FALSE;
-  for(i=0; i < MAXWINS; i++) truewin.wins[i] = TRUE;
+  for(i=0; i < MAXWIN; i++) truewin.wins[i] = TRUE;
 }
 /************************************************************************/
 private void uv_freeuv(uv)
@@ -826,6 +845,7 @@ UV *uv;
   if(uv->wcorr_flags.flags != NULL ) free((char *)uv->wcorr_flags.flags);
   if(uv->sigma2.table != NULL)free((char *)uv->sigma2.table);
   uv_free_select(uv->select);
+  if(uv->uvw != NULL) free((char *)(uv->uvw));
   free((char *)uv);
 }
 /************************************************************************/
@@ -865,6 +885,7 @@ private UV *uv_getuv(tno)
   uv->tno	= tno;
   uv->vhans	= NULL;
   uv->nvar	= 0;
+  uv->presize   = 0;
   uv->saved_nvar= 0;
   uv->offset    = 0;
   uv->max_offset= 0;
@@ -874,9 +895,10 @@ private UV *uv_getuv(tno)
   uv->mark	= 0;
   uv->select    = NULL;
   uv->need_skyfreq = uv->need_point = uv->need_planet = FALSE;
-  uv->need_pol	   = uv->need_on    = uv->need_shadow = FALSE;
+  uv->need_pol	   = uv->need_on    = uv->need_uvw    = FALSE;
   uv->need_src	   = uv->need_win		      = FALSE;
   uv->need_dra	   = uv->need_ddec  = uv->need_ra     = uv->need_dec = FALSE;
+  uv->uvw = NULL;
   uv->ref_plmaj = uv->ref_plmin = uv->ref_plangle = 0;
   uv->plscale = 1;
   uv->pluu = uv->plvv = 1;
@@ -937,7 +959,7 @@ UV *uv;
   haccess_c(uv->tno,&item,"vartable","write",&iostat);
   CHECK(iostat,(message,"Error opening vartable, in UVCLOSE(vartable_out)"));
   for(i=0, v = uv->variable; i < uv->nvar; i++,v++){
-    Sprintf(line,"%c %s",type_flag[v->type],v->name);
+    Sprintf(line,"%c %s",VARTYPE(v),v->name);
     hwritea_c(item,line,strlen(line)+1,&iostat);
     CHECK(iostat,(message,"Error writing to vartable, in UVCLOSE(vartable_out)"));
   }
@@ -1171,7 +1193,7 @@ int tin,tout;
   uv = uvs[tin];
   if(uv->flags & UVF_COPY) for(i=0, v=uv->variable; i < uv->nvar; i++,v++){
     if(v->callno >= uv->mark && (v->flags & UVF_COPY))
-      uvputvr_c(tout,v->type,v->name,v->buf,v->length/external_size[v->type]);
+      uvputvr_c(tout,v->type,v->name,v->buf,VARLEN(v));
   }
 }
 /************************************************************************/
@@ -1263,7 +1285,7 @@ int vhan,tout;
   for(vp = vh->varhd; vp != NULL; vp = vp->fwd){
     v = vp->v;
     if(v->callno > callno)
-      uvputvr_c(tout,v->type,v->name,v->buf,v->length/external_size[v->type]);
+      uvputvr_c(tout,v->type,v->name,v->buf,VARLEN(v));
   }
 }
 /************************************************************************/
@@ -1484,8 +1506,8 @@ int *length,*updated;
     *length = 0;
     *updated = FORT_FALSE;
   } else {
-    *type =  type_flag[v->type];
-    *length = v->length / external_size[v->type];
+    *type   = VARTYPE(v);
+    *length = VARLEN(v);
     *updated = (v->callno >= uv->mark ? FORT_TRUE : FORT_FALSE);
   }
 }
@@ -1761,7 +1783,7 @@ VARIABLE *vt;
     if(changed){
       v->callno = uv->callno;
       uv->flags |= v->flags & (UVF_UPDATED | UVF_UPDATED_PLANET |
-			       UVF_UPDATED_SKYFREQ | UVF_COPY);
+			       UVF_UPDATED_SKYFREQ | UVF_UPDATED_UVW | UVF_COPY);
     }
   }
   uv->offset = offset;
@@ -1797,9 +1819,9 @@ float *data;
 /*----------------------------------------------------------------------*/
 {
   UV *uv;
-  int i,nchan,i1,i2;
+  int i,nchan,i1,i2,nuvw;
   float maxval,scale,*p,temp;
-  double *d;
+  double *d,dtemp;
   int *q;
   char *counter,*status;
   FLAGS *flags_info;
@@ -1845,7 +1867,6 @@ float *data;
         uv->coord->buf = Malloc(2*sizeof(double));
         d = (double *)(uv->coord->buf);
         *d = *(preamble) + 1000;
-        *(d+1) = *(preamble+1) + 1000;
       }
     }
 
@@ -1882,7 +1903,7 @@ float *data;
 
 /* Update the size of the variable, if necessary. */
 
-  nchan = NUM_CHAN(*v);
+  nchan = NUMCHAN(v);
   if(n != nchan) uvputvri_c(tno,counter,&n,1);
 
 /* Write out the flagging info. */
@@ -1923,18 +1944,23 @@ float *data;
 /* Write out the preamble. */
 
   d = (double *)(uv->coord->buf);
-  if( *d != *preamble || *(d+1) != *(preamble+1)){
-    uvputvrd_c(tno,"coord",preamble,2);
+  nuvw = (uv->flags & UVF_DOW ? 3 : 2);
+  if( *d != *preamble || *(d+1) != *(preamble+1) || 
+      ( nuvw == 3 && *(d+2) != *(preamble+2) ) ){
+    uvputvrd_c(tno,"coord",preamble,nuvw);
     *d = *preamble;
     *(d+1) = *(preamble+1);
+    if(nuvw == 3) *(d+2) = *(preamble+2);
+  }
+  preamble += nuvw;
+
+  dtemp = *preamble++;
+  if( dtemp != *(double *)(uv->time->buf) ){
+    uvputvrd_c(tno,"time",&dtemp,1);
+    *(double *)(uv->time->buf) = dtemp;
   }
 
-  if( *(preamble+2) != *(double *)(uv->time->buf) ){
-    uvputvrd_c(tno,"time",preamble+2,1);
-    *(double *)(uv->time->buf) = *(preamble+2);
-  }
-
-  temp = *(preamble+3);
+  temp = *preamble++;
   if( temp != *(float *)(uv->bl->buf) ){
     i1 = temp;
     i2 = i1 / 256;
@@ -1997,7 +2023,7 @@ int *flags,n;
 /* Update the size of the variable, if necessary. */
 
   v = uv->wcorr;
-  nchan = NUM_CHAN(*v);
+  nchan = NUMCHAN(v);
   if(n != nchan) uvputvri_c(tno,"nwide",&n,1);
 
 /* Write out the flagging info. */
@@ -2248,7 +2274,7 @@ double p1,p2;
   } else if(!strcmp(object,"shadow")){
     if(p1 != 0 || p2 < 0) BUG('f',"Bad antenna diameter, in UVSELECT.");
     uv_addopers(sel,SEL_SHADOW,discard,p1,p2,(char *)NULL);
-    uv->need_shadow = TRUE;
+    uv->need_uvw = TRUE;
     
 /* Amplitude selection. */
 
@@ -2266,15 +2292,15 @@ double p1,p2;
 
   } else if(!strcmp(object,"window")){
     if(!sel->win.select)
-      for(i=0; i < MAXWINS; i++)sel->win.wins[i] = discard;
+      for(i=0; i < MAXWIN; i++)sel->win.wins[i] = discard;
     i = p1 + 0.5;
-    if(i < 1 || i > MAXWINS) BUG('f',"Too many windows");
+    if(i < 1 || i > MAXWIN) BUG('f',"Too many windows");
     sel->win.wins[i-1] = !discard;
     uv->need_win = TRUE;
 
     sel->win.select = TRUE;
     sel->win.n = 0;
-    for(i=0; i < MAXWINS; i++) if(sel->win.wins[i]){
+    for(i=0; i < MAXWIN; i++) if(sel->win.wins[i]){
       if(sel->win.n == 0) sel->win.first = i;
       sel->win.last = i;
       sel->win.n++;
@@ -2398,6 +2424,8 @@ char *object,*type;
     uvset_coord(uv,type);
   } else if(!strcmp(object,"planet")) {
     uvset_planet(uv,p1,p2,p3);
+  } else if(!strcmp(object,"preamble")) {
+    uvset_preamble(uv,type);
   } else if(!strcmp(object,"selection")) {
     uvset_selection(uv,type,n);
   } else if(!strcmp(object,"flags")) {
@@ -2420,6 +2448,57 @@ char *object,*type;
       ERROR('f',(message,"Unsupported correlation type %s, in UVSET",type));
   } else {
     ERROR('w',(message,"Unrecognised object \"%s\" ignored, in UVSET.",object));
+  }
+}
+/************************************************************************/
+private void uvset_preamble(uv,type)
+UV *uv;
+char *type;
+/*
+  Set the preamble that the user wants to use.
+------------------------------------------------------------------------*/
+{
+  char varnam[MAXNAM],*s;
+  int n,ok;
+  VARIABLE *v;
+
+  uv->flags &= ~UVF_DOW;
+  if(uv->flags & UVF_NEW){
+    uv->presize = 3;
+    if(!strcmp(type,"uvw/time/baseline"))uv->flags |= UVF_DOW;
+    else if(strcmp(type,"uv/time/baseline")){
+      ERROR('f',(message,"Unsupported preamble \"%s\",in UVSET.",type));}
+  } else {
+    n = 0;
+    while(*type){
+      if(n >= MAXPRE){
+	ERROR('f',(message,"Too many parameters in preamble \"%s\".",type));}
+
+/* Get the variable name. */
+
+      s = varnam;
+      while(*type != 0 && *type != '/')*s++ = *type++;
+      if(*type == '/')type++;
+      *s = 0;
+
+/* Locate the appropriate variable. */
+
+      if(!strcmp(varnam,"uv")){
+	v = uv->prevar[n] = uv_locvar(uv->tno,"coord");
+	ok = (v != NULL && v->type == H_DBLE);
+      } else if(!strcmp(varnam,"uvw")){
+	v = uv->prevar[n] = uv_locvar(uv->tno,"coord");
+	uv->flags |= UVF_DOW;
+	ok = (v != NULL && v->type == H_DBLE);
+      } else {
+	v = uv->prevar[n] = uv_locvar(uv->tno,varnam);
+	ok = (v == NULL || v->type == H_INT  || 
+			   v->type == H_REAL || v->type == H_DBLE);
+      }
+      if(!ok){ERROR('f',(message,"Invalid preamble \"%s\".",type));}
+      n++;
+    }
+    uv->presize = n;
   }
 }
 /************************************************************************/
@@ -2495,10 +2574,12 @@ float start,width,step;
     step	Increment between channels.
 ------------------------------------------------------------------------*/
 {
-  if(!strcmp(type,"velocity")){
-    if(width < 0 || step == 0) BUG('f',"Bad width or step in UVSET(line)");
-    if(n < 1) BUG('f',"Bad number of channels, in UVSET(line).");
-    line->linetype = LINE_VELOCITY;
+  if(!strcmp(type,"velocity") || !strcmp(type,"felocity")){
+    if(width < 0) BUG('f',"Bad width in UVSET(line)");
+    if(n < 0) BUG('f',"Bad number of channels, in UVSET(line).");
+    if((width == 0 || n == 0) && (step != 0 || start != 0 || width != 0))
+      BUG('f',"Invalid line parameters in UVSET(line)");
+    line->linetype = (*type == 'v' ? LINE_VELOCITY : LINE_FELOCITY);
     line->n = n;
     line->fstart = start; line->fwidth = width; line->fstep  = step;
   } else if(!strcmp(type,"wide")) {
@@ -2561,9 +2642,7 @@ float *data;
 {
   UV *uv;
   int more,nchan;
-  double *p,uu,vv,skyfreq;
   VARIABLE *v;
-
   uv = uvs[tno];
 
 /* Initialise everything if this is the first call to uvread. */
@@ -2588,11 +2667,11 @@ float *data;
       if(uv_scan(uv,(VARIABLE *)NULL) != 0)return;
       if(!(uv->flags & UVF_INIT)) uvread_init(tno);
       if(uv->corr != NULL)if(uv->corr->callno == uv->callno){
-        nchan = NUM_CHAN(*(uv->corr));
+        nchan = NUMCHAN(uv->corr);
         uv->corr_flags.offset += nchan;
       }
       if(uv->wcorr != NULL)if(uv->wcorr->callno == uv->callno){
-        nchan = NUM_CHAN(*(uv->wcorr));
+        nchan = NUMCHAN(uv->wcorr);
         uv->wcorr_flags.offset += nchan;
       }
     } while(v->callno < uv->callno);
@@ -2608,6 +2687,7 @@ float *data;
 /* Update the planet parameters, if needed. */
 
   if(uv->flags & UVF_UPDATED_PLANET) uvread_updated_planet(uv);
+  if(uv->flags & UVF_UPDATED_UVW)    uvread_updated_uvw(uv);
 
 /* Apply linetype processing and planet scaling. */
 
@@ -2616,22 +2696,53 @@ float *data;
 
 /* Get preamble variables. */
 
-  uu = *((double *)(uv->coord->buf));
-  vv = *((double *)(uv->coord->buf) + 1);
-  if(uv->flags & UVF_WAVELENGTH){
-    skyfreq = uv_getskyfreq(uv,uv->win);
-    uu *= skyfreq;
-    vv *= skyfreq;
-  }
-  p = preamble;
-  *p++ = uv->pluu * uu + uv->pluv * vv;
-  *p++ = uv->plvu * uu + uv->plvv * vv;
-  *p++ = *((double *)(uv->time->buf));
-  *p++ = *((float *)(uv->bl->buf));  
+  uvread_preamble(uv,preamble);
 
 /* Divide by the reference line if there is one. */
 
   if(uv->ref_line.linetype != LINE_NONE) uvread_reference(uv,data,flags,*nread);
+}
+/************************************************************************/
+private void uvread_preamble(uv,preamble)
+UV *uv;
+double *preamble;
+/*
+  Get the preamble associated with this record.
+------------------------------------------------------------------------*/
+{
+  VARIABLE *v;
+  double scale,uu,vv,ww,*coord;
+  int bl,i1,i2,i;
+
+
+  for(i=0; i < uv->presize; i++){
+    v = uv->prevar[i];
+    if(v == NULL){
+      *preamble++ = 0;
+    } else if(v == uv->coord){
+      coord = (double *)(uv->coord->buf);
+      uu = coord[0];
+      vv = coord[1];
+      if(uv->flags & UVF_REDO_UVW){
+	bl = *((float *)(uv->bl->buf)) + 0.5;
+	i1 = bl / 256 - 1;
+	i2 = bl % 256 - 1;
+	ww = uv->uvw->ww[i2] - uv->uvw->ww[i1];
+      } else if(uv->flags & UVF_DOW) {
+	ww = coord[2];
+      }
+      scale = (uv->flags & UVF_WAVELENGTH ? uv_getskyfreq(uv,uv->win) : 1.0);
+      *preamble++ = scale * ( uv->pluu * uu + uv->pluv * vv );
+      *preamble++ = scale * ( uv->plvu * uu + uv->plvv * vv );
+      if(uv->flags & UVF_DOW ) *preamble++ = scale * ww;
+    } else if(v->type == H_DBLE){
+      *preamble++ = *(double *)(v->buf);
+    } else if(v->type == H_REAL){
+      *preamble++ = *(float *)(v->buf);
+    } else if(v->type == H_INT){
+      *preamble++ = *(int *)(v->buf);
+    }
+  }
 }
 /************************************************************************/
 void uvwread_c(tno,data,flags,n,nread)
@@ -2691,7 +2802,7 @@ float *data;
    }
   v = uv->wcorr;
 
-  line.n = NUM_CHAN(*v);
+  line.n = NUMCHAN(v);
   line.linetype = LINE_WIDE;
   line.width = line.step = 1;
   line.start = 0;
@@ -2754,12 +2865,18 @@ WINDOW *win;
 /* Check the validity of any window specification. */
 
   if(win->first != 0){
-    if(win->first >= uv->nschan->length / external_size[uv->nschan->type])
+    if(win->first >= VARLEN(uv->nschan))
       BUG('f',"Invalid window selection, in UVREAD(skyfreq)");
-  } 
+  }
 
-  if(uv->data_line.linetype == LINE_VELOCITY) start = win->first;
-  else{
+  if(uv->data_line.linetype == LINE_VELOCITY){
+    start = win->first;
+    if(uv->data_line.n == 0 || uv->data_line.fwidth == 0)
+      uvread_defvelline(uv,&(uv->data_line),win);
+  } else if(uv->data_line.linetype == LINE_FELOCITY){
+    start = win->first;
+    uvread_defvelline(uv,&(uv->data_line),win);
+  } else {
     start = uv->data_line.start;
     if( win->first != 0 && uv->data_line.linetype == LINE_CHANNEL){
       nschan = (int *)uv->nschan->buf;
@@ -2826,7 +2943,7 @@ UV *uv;
   
 /* Determine planet rotation and scaling factor. */
 
-  if(uv->ref_plmaj * uv->ref_plmin == 0){
+  if(uv->ref_plmaj * uv->ref_plmin){
     uv->ref_plmaj = *(float *)uv->plmaj->buf;
     uv->ref_plmin = *(float *)uv->plmin->buf;
     uv->ref_plangle = *(float *)uv->plangle->buf;
@@ -2938,7 +3055,7 @@ UV *uv;
       i2 = min( bl / 256, bl % 256);
       discard = !op->discard;
       point = (float *)(uv->axisrms->buf);
-      nants = uv->axisrms->length / (2*external_size[uv->axisrms->type]);
+      nants = VARLEN(uv->axisrms)/2;
       if(i2 < 1 || i1 > nants){
 	BUG('f',"Bad antenna numbers when checking pointing, in UVREAD(select)"); }
       pointerr = max( *(point+2*i1),*(point+2*i1-1));
@@ -3134,7 +3251,7 @@ endloop:
 /* Check the validity of the window selection. */
 
   if(selprev && uv->win->first != 0){
-    if(uv->win->first >= uv->nschan->length / external_size[uv->nschan->type])
+    if(uv->win->first >= VARLEN(uv->nschan))
       BUG('f',"Invalid window selection, in UVREAD(select)");
   } 
 
@@ -3186,9 +3303,14 @@ float diameter;
       diameter	The dish diameter, in meters.
 ------------------------------------------------------------------------*/
 {
-  int nants,i,j,i1,i2,bl;
-  double ha,dec,sinh,cosh,sind,cosd,bx,by,bz,bxy,byx,u,v,w,limit;
-  double *posx,*posy,*posz,*posx0,*posy0,*posz0;
+  int nants,i,j,i1,i2,i0,bl;
+  double u,v,w,limit;
+  UVW *uvw;
+
+/* Get the table of U,V,W coordinates. */
+
+  if(uv->flags & UVF_UPDATED_UVW) uvread_updated_uvw(uv);
+  uvw = uv->uvw;
 
 /* Convert the diameter to nanosec, and square it. */
 
@@ -3197,12 +3319,42 @@ float diameter;
 
 /* Set the number of antennae as the number of positions that we have. */
 
-  nants = uv->antpos->length / ( 3 * external_size[uv->antpos->type] );
+  nants = uv->uvw->nants;
   bl = *((float *)(uv->bl->buf)) + 0.5;
-  i1 = max( bl / 256, bl % 256);
-  i2 = min( bl / 256, bl % 256);
-  if(i2 < 1 || i1 > nants){
-	BUG('f',"Bad antenna numbers when checking shadowing, in UVREAD(select)"); }
+  i1 = bl / 256 - 1;
+  i2 = bl % 256 - 1;
+  if(i1 < 0 || i2 >= nants){
+    BUG('f',"Bad antenna numbers when checking shadowing, in UVREAD(select)"); }
+
+  for(j=0; j < 2; j++){
+    i0 = ( j == 0 ? i1 : i2);
+    if(i1 == i2 && j == 1)return(0);
+    for(i=0; i < nants; i++){
+      if(i != i0){
+        u = uvw->uu[i] - uvw->uu[i0];
+        v = uvw->vv[i] - uvw->vv[i0];
+        w = uvw->ww[i] - uvw->ww[i0];
+        if(u*u + v*v <= limit && w >= 0) return(1);
+      }
+    }
+  }
+  return(0);
+}
+/************************************************************************/
+private void uvread_updated_uvw(uv)
+UV *uv;
+/*
+  Update the table of vectors used to computer u,v,w.
+------------------------------------------------------------------------*/
+{
+  UVW *uvw;
+  double ha,dec,sinh,cosh,sind,cosd;
+  double *posx,*posy,*posz,bx,by,bz,bxy,byx;
+  int i;
+
+  if(uv->uvw == NULL)uv->uvw = (UVW *)Malloc(sizeof(UVW));
+  uvw = uv->uvw;
+  uvw->nants = VARLEN(uv->antpos)/3;
 
 /* Get trig functions of the hour angle and the declination. */
 
@@ -3211,36 +3363,23 @@ float diameter;
   sinh = sin(ha);  cosh = cos(ha);
   sind = sin(dec); cosd = cos(dec);
 
-  for(j=0; j < 2; j++){
-    if(i1 == i2 && j == 1)return(0);
-    posx = (double *)(uv->antpos->buf);
-    posy = posx + nants;
-    posz = posy + nants;
-    if(j == 0){
-      posx0 = posx + i1 - 1;
-      posy0 = posy + i1 - 1;
-      posz0 = posz + i1 - 1;
-    } else {
-      posx0 = posx + i2 - 1;
-      posy0 = posy + i2 - 1;
-      posz0 = posz + i2 - 1;
-    }
-    for(i=0; i < nants; i++){
-      if(posx != posx0){
-        bx = *posx - *posx0;
-        by = *posy - *posy0;
-        bz = *posz - *posz0;
-        bxy =  bx*sinh + by*cosh;
-        byx = -bx*cosh + by*sinh;
-        u = bxy;
-        v = byx*sind + bz*cosd;
-        w = -byx*cosd + bz*sind;
-        if(u*u + v*v <= limit && w >= 0) return(1);
-      }
-      posx++; posy++; posz++;
-    }
+  posx = (double *)(uv->antpos->buf);
+  posy = posx + uvw->nants;
+  posz = posy + uvw->nants;
+  for(i=0; i < uvw->nants; i++){
+    bx = *posx++;
+    by = *posy++;
+    bz = *posz++;
+    bxy =  bx*sinh + by*cosh;
+    byx = -bx*cosh + by*sinh;
+    uvw->uu[i] = bxy;
+    uvw->vv[i] = byx*sind + bz*cosd;
+    uvw->ww[i] = -byx*cosd + bz*sind;
   }
-  return(0);
+
+/* Remember that the table has been updated. */
+
+  uv->flags &= ~UVF_UPDATED_UVW;
 }
 /************************************************************************/
 private void uvread_defline(tno)
@@ -3300,8 +3439,10 @@ int tno;
 
   if(uv->data_line.linetype == LINE_CHANNEL  ||
      uv->data_line.linetype == LINE_VELOCITY ||
+     uv->data_line.linetype == LINE_FELOCITY ||
      uv->ref_line.linetype  == LINE_CHANNEL  ||
-     uv->ref_line.linetype  == LINE_VELOCITY ){
+     uv->ref_line.linetype  == LINE_VELOCITY ||
+     uv->ref_line.linetype  == LINE_FELOCITY ){
     if(uv->corr_flags.handle == NULL && uv->corr_flags.exists){
       uv->corr_flags.handle = mkopen_c(uv->tno,"flags","old");
       uv->corr_flags.exists = uv->corr_flags.handle != NULL;
@@ -3322,15 +3463,30 @@ int tno;
 /* Make sure we have the info to get the preamble. */
 
   uv->coord = uv_checkvar(tno,"coord",H_DBLE);
+  if( VARLEN(uv->coord) < ( uv->flags & UVF_DOW ? 3 : 2 ) ){
+    uv->flags |= UVF_REDO_UVW;
+    uv->need_uvw = TRUE;
+  }
   uv->time  = uv_checkvar(tno,"time",H_DBLE);
   uv->bl    = uv_checkvar(tno,"baseline",H_REAL);
 
+/* Set up the default preamble if one has not already been set. */
+
+  if(uv->presize == 0){
+    uv->presize = 3;
+    uv->prevar[0] = uv->coord;
+    uv->prevar[1] = uv->time;
+    uv->prevar[2] = uv->bl;
+  }
+
 /* Get info to decode correlation data. */
 
-  if( uv->data_line.linetype == LINE_CHANNEL ||
+  if( uv->data_line.linetype == LINE_CHANNEL  ||
       uv->data_line.linetype == LINE_VELOCITY ||
-      uv->ref_line.linetype  == LINE_CHANNEL ||
-      uv->ref_line.linetype  == LINE_VELOCITY ){
+      uv->data_line.linetype == LINE_FELOCITY ||
+      uv->ref_line.linetype  == LINE_CHANNEL  ||
+      uv->ref_line.linetype  == LINE_VELOCITY ||
+      uv->ref_line.linetype  == LINE_FELOCITY ){
     if(uv->corr == NULL)
       BUG('f',"Corr data missing, when channel linetype requested");
     if(uv->corr->type == H_INT2){
@@ -3347,11 +3503,19 @@ int tno;
   if(uv->need_pol)   uv->pol     = uv_checkvar(tno,"pol",H_INT);
   if(uv->need_on)    uv->on      = uv_checkvar(tno,"on",H_INT);
   if(uv->need_src)   uv->source  = uv_checkvar(tno,"source",H_BYTE);
-  if(uv->need_shadow){
+  if(uv->need_uvw){
     uv->obsra = uv_checkvar(tno,"obsra",H_DBLE);
     uv->obsdec = uv_checkvar(tno,"obsdec",H_DBLE);
     uv->lst = uv_checkvar(tno,"lst",H_DBLE);
     uv->antpos = uv_checkvar(tno,"antpos",H_DBLE);
+
+    uv->obsra->flags |= UVF_UPDATED_UVW;
+    uv->obsdec->flags |= UVF_UPDATED_UVW;
+    uv->lst->flags |= UVF_UPDATED_UVW;
+    uv->antpos->flags |= UVF_UPDATED_UVW;
+
+    uv->flags |= UVF_UPDATED_UVW;
+
     if( ( uv->antdiam = uv_locvar(tno,"antdiam") ) != NULL)
       uv->antdiam = uv_checkvar(tno,"antdiam",H_REAL);
   }
@@ -3360,7 +3524,9 @@ int tno;
    data. */
 
   if( uv->data_line.linetype == LINE_VELOCITY ||
-      uv->ref_line.linetype  == LINE_VELOCITY){
+      uv->ref_line.linetype  == LINE_VELOCITY ||
+      uv->data_line.linetype == LINE_FELOCITY ||
+      uv->ref_line.linetype  == LINE_FELOCITY){
     uv->nschan = uv_checkvar(tno,"nschan",H_INT);
     uv->sfreq  = uv_checkvar(tno,"sfreq",H_DBLE);
     uv->sdf    = uv_checkvar(tno,"sdf",H_DBLE);
@@ -3397,7 +3563,8 @@ int tno;
       uv->sfreq->flags  |= UVF_UPDATED_SKYFREQ;
       uv->sdf->flags    |= UVF_UPDATED_SKYFREQ;
 
-    } else if(uv->data_line.linetype == LINE_VELOCITY){
+    } else if(uv->data_line.linetype == LINE_VELOCITY ||
+	      uv->data_line.linetype == LINE_FELOCITY ){
       uv->veldop->flags    |= UVF_UPDATED_SKYFREQ;
       uv->restfreq->flags  |= UVF_UPDATED_SKYFREQ;
       uv->vsource->flags   |= UVF_UPDATED_SKYFREQ;
@@ -3564,12 +3731,12 @@ int *flags,nsize;
     v = uv->corr;
     flag_info = &(uv->corr_flags);
   }
-  nchan = NUM_CHAN(*v);
+  nchan = NUMCHAN(v);
   if(! flag_info->init ) uvread_flags(uv,v,flag_info,nchan);
 
 /* Handle velocity linetype. */
 
-  if(line->linetype == LINE_VELOCITY){
+  if(line->linetype == LINE_VELOCITY || line->linetype == LINE_FELOCITY){
     uvread_velocity(uv,line,data,flags,nsize,actual);
     return(line->n);
   }
@@ -3579,7 +3746,7 @@ int *flags,nsize;
   start = line->start;
   if(line->linetype == LINE_CHANNEL && uv->win->select && uv->apply_win){
     win = uv->win;
-    nspect = uv->nschan->length / external_size[uv->nschan->type];
+    nspect = VARLEN(uv->nschan);
     if(win->last >= nspect)
       BUG('f',"Invalid window selection, in UVREAD(channel)");
     nschan = (int *)uv->nschan->buf;
@@ -3691,6 +3858,11 @@ int *flags,nsize;
   int *di,*di1;
   float *df,*df1;
 
+/* Set the default line if needed. */
+
+  if(line->n == 0 || line->fstep == 0 || line->linetype == LINE_FELOCITY)
+      uvread_defvelline(uv,line,uv->win);
+
 /* A few simple checks. */
 
   if(line->n <= 0)
@@ -3723,8 +3895,8 @@ int *flags,nsize;
 
 /* Initialise lots of rubbish. */
 
-  nspect = uv->nschan->length / external_size[uv->nschan->type];
-  if(nspect > MAXWINS) BUG('f',"Too many windows, in UVREAD(velocity)");
+  nspect = VARLEN(uv->nschan);
+  if(nspect > MAXWIN) BUG('f',"Too many windows, in UVREAD(velocity)");
 
   temp = line->fstep;
   if(temp < 0) temp = -temp;
@@ -3817,6 +3989,59 @@ int *flags,nsize;
   }
 }
 /************************************************************************/
+private void uvread_defvelline(uv,line,win)
+UV *uv;
+WINDOW *win;
+LINE_INFO *line;
+/*
+  Determine a good, default, velocity line.
+
+  Input:
+    win		The window to use.
+  Input/Output:
+    line	n,fstart,fwidth,fstep are set if needed.
+------------------------------------------------------------------------*/
+{
+  double f0,df,rfreq,fac;
+  int n;
+  float vobs;
+
+/* Get the frequency, etc, description of the first window. */
+
+  if(win->first != 0){
+    if(win->first >= VARLEN(uv->nschan))
+      BUG('f',"Invalid window selection, in UVREAD(skyfreq)");
+  }
+
+  vobs =  *(float *)uv->veldop->buf - *(float *)uv->vsource->buf;
+  f0 = *((double *)uv->sfreq->buf + win->first);
+  df = *((double *)uv->sdf->buf + win->first);
+  n  = *((int *)uv->nschan->buf + win->first);
+  rfreq = *((double *)uv->restfreq->buf + win->first);
+  if(rfreq <= 0)BUG('f',"Invalid rest frequency when setting default linetype");
+
+/* Set the defaults. */
+
+  if(line->n == 0 || line->fwidth == 0){
+    line->linetype = LINE_VELOCITY;
+    line->fwidth = -CKMS * df / rfreq;
+    line->fstep = MYABS(line->fwidth);
+    if(line->n == 0) line->n = n;
+    n = (n - line->n) / 2;
+    line->fstart = CKMS * ( 1 - (f0+n*df)/rfreq ) - vobs;
+  }
+
+/* Translate a felocity linetype into a velocity one, if needed. */
+
+  if(line->linetype == LINE_FELOCITY){
+    line->linetype = LINE_VELOCITY;
+    fac = CKMS / (CKMS + line->fstart + vobs );
+    line->fstep  *= fac * fac;
+    line->fwidth *= fac * fac;
+    line->fstart = fac * (line->fstart + vobs) - vobs;
+  }
+}
+/************************************************************************/
 private void uvread_flags(uv,v,flag_info,nchan)
 UV *uv;
 VARIABLE *v;
@@ -3833,7 +4058,7 @@ int nchan;
   int *flags;
 
   flag_info->init = TRUE;
-  nchan = NUM_CHAN(*v);
+  nchan = NUMCHAN(v);
 
 /* Allocate space and read the flags. */
 
@@ -3936,7 +4161,7 @@ int tno,*flags;
      flags_info->handle == NULL || width != 1)
     BUG('f',"Illegal request when trying to write to flagging file, in UVFLGWR");
 
-  nchan = NUM_CHAN(*v);
+  nchan = NUMCHAN(v);
   offset = flags_info->offset - nchan + uv->actual_line.start;
   n = min(uv->actual_line.n,nchan);
   mkwrite_c(flags_info->handle,MK_FLAGS,flags,offset,n,n);
@@ -3978,7 +4203,7 @@ int tno,*flags;
   if(flags_info->handle == NULL)
     BUG('f',"No flagging file exists, in UVWFLGWR\n");
 
-  nchan = NUM_CHAN(*v);
+  nchan = NUMCHAN(v);
   offset = flags_info->offset - nchan;
   mkwrite_c(flags_info->handle,MK_FLAGS,flags,offset,nchan,nchan);
 }
@@ -4203,7 +4428,7 @@ double *data;
    variance. */
 
     uv->sigma2.nants = nants;
-    nsyst = tsys->length / external_size[tsys->type];
+    nsyst = VARLEN(tsys);
     syst = (float *)(tsys->buf);
     factor = jyperk*jyperk/inttime/(2.0e9*bw) * uv->plscale;
     tab = uv->sigma2.table;
@@ -4250,7 +4475,6 @@ int mode;
   float *wfreq,*wwide,vobs;
   int *nschan;
   double *sdf,*sfreq,*restfreq;
-  double rfreq;
 
 /* Get the velocity of the "channel" line type. */
 
@@ -4354,3 +4578,4 @@ int mode;
     }
   }
 }
+
