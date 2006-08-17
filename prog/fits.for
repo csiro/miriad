@@ -37,10 +37,16 @@ c	Normal uv selection, used when op=uvout.
 c@ stokes
 c	Normal Stokes selection, used when op=uvout
 c@ options
+c	This option applies for op=uvin only.
+c	  nochi   Assume that the parallactic angle of the telescope is
+c	          a constant 0 (or that the data are from circularly polarised
+c	          feeds and have already been corrected for parallactic angle).
+c
 c	These options for op=uvout only.
 c	  nocal   Do not apply the gains table to the data.
-c	  nopol   Do not apply the polarization leakage table to the data
-c	  nopass  Do not apply the bandpass table correctsions to the data
+c	  nopol   Do not apply the polarization leakage table to the data.
+c	  nopass  Do not apply the bandpass table correctsions to the data.
+c
 c	This option applies for op=xyin only.
 c	  dss     Expect an image produced by the Digital Sky Survey,
 c	          and convert (partially!) its header.
@@ -256,13 +262,14 @@ c		     in subroutine AXISIN (AIPS manuals say percent_pol
 c		     but my empirical evidence is contrary.  Recognize 
 c		     LL,MM as RA---SIN and DEC--SIN.
 c    rjs  07-aug-96  Correct scaling of axis type.
+c    rjs  16-aug-96  Added options=nochi.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 7-Aug-96')
+	parameter(version='Fits: version 1.1 16-Aug-96')
 	character in*64,out*64,op*8,uvdatop*12
 	integer velsys
 	real altrpix,altrval
-	logical altr,docal,dopol,dopass,dss
+	logical altr,docal,dopol,dopass,dss,dochi
 c
 c  Get the input parameters.
 c
@@ -278,7 +285,7 @@ c
 c
 c  Get options.
 c
-        call getopt(docal,dopol,dopass,dss)
+        call getopt(docal,dopol,dopass,dss,dochi)
         if(op.eq.'uvout') then
           uvdatop = 'sdlb3'
 	  if(docal)uvdatop(7:7) = 'c'
@@ -296,7 +303,7 @@ c
 c  Handle the five cases.
 c
 	if(op.eq.'uvin')then
-	  call uvin(in,out,velsys,altr,altrpix,altrval,version)
+	  call uvin(in,out,velsys,altr,altrpix,altrval,dochi,version)
 	else if(op.eq.'uvout')then
 	  call uvout(out,version)
 	else if(op.eq.'xyin')then
@@ -380,10 +387,10 @@ c
 	endif
 	end
 c************************************************************************
-      subroutine getopt(docal, dopol, dopass, dss)
+      subroutine getopt(docal, dopol, dopass, dss, dochi)
 c
       implicit none
-      logical docal, dopol, dopass, dss
+      logical docal, dopol, dopass, dss, dochi
 c
 c     Get a couple of the users options from the command line
 c
@@ -392,19 +399,21 @@ c    docal   Apply gain calibration
 c    dopol   Apply polarization calibration
 c    dopass  Apply bandpass calibration
 c    dss     Handle DSS image.
+c    dochi   Attempt to calculate the parallactic angle.
 c
 c------------------------------------------------------------------------
       integer nopt
-      parameter (nopt = 4)
+      parameter (nopt = 5)
       character opts(nopt)*6
       logical present(nopt)
-      data opts /'nocal ', 'nopol ','nopass','dss   '/
+      data opts /'nocal ', 'nopol ','nopass','dss   ','nochi '/
 c
       call options ('options', opts, present, nopt)
       docal = .not.present(1)
       dopol = .not.present(2)
       dopass= .not.present(3)
       dss   =      present(4)
+      dochi = .not.present(5)
 c
       end
 c************************************************************************
@@ -441,12 +450,13 @@ c
 	call fitclose(lu)
 	end
 c************************************************************************
-	subroutine uvin(in,out,velsys,altr,altrpix,altrval,version)
+	subroutine uvin(in,out,velsys,altr,altrpix,altrval,dochi,
+     *							version)
 c
 	implicit none
 	character in*(*),out*(*)
 	integer velsys
-	logical altr
+	logical altr,dochi
 	real altrpix,altrval
 	character version*(*)
 c
@@ -462,7 +472,7 @@ c    velsys	Velocity system.
 c    altr	True if the user specified altrpix and altrval.
 c    altrpix	The user given value for altrpix.
 c    altrval	The user given value for altrval.
-c
+c    dochi	Attempt to calculate the parallactic angle.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer PolXX,PolYY,PolXY,PolYX
@@ -517,7 +527,7 @@ c
 c  Load antenna, source and frequency information. Set frequency information.
 c
 	call TabLoad(lu,uvSrcId.ne.0,uvFreqId.ne.0,
-     *				telescop,anfound,Pol0,PolInc)
+     *				telescop,anfound,Pol0,PolInc,dochi)
 	call TabVeloc(velsys,altr,altrval,altrpix)
 c
 c  Load any FG tables.
@@ -1099,11 +1109,11 @@ c
 	end
 c************************************************************************
 c************************************************************************
-	subroutine TabLoad(lu,dosu,dofq,tel,anfound,Pol0,PolInc)
+	subroutine TabLoad(lu,dosu,dofq,tel,anfound,Pol0,PolInc,dochi)
 c
 	implicit none
 	integer lu,Pol0,PolInc
-	logical dosu,dofq,anfound
+	logical dosu,dofq,anfound,dochi
 	character tel*(*)
 c
 c  Determine some relevant parameters about the FITS file. Attempt to
@@ -1119,6 +1129,7 @@ c
 c  Input:
 c    lu		Handle of the input FITS file.
 c    dosu,dofq	Expect a multisource/multi-freq file.
+c    dochi	Attempt to compute the parallactic angle.
 c  Output:
 c    tel	Telescope name.
 c    anfound	True if antenna tables were found.
@@ -1200,6 +1211,7 @@ c  Also determine the only values for systemp and jyperk.
 c
 	call telpar(telescop,systemp,systok,jyperk,jok,
      *	  llok,lat,long,emok,evec,mount)
+	emok = emok.and.dochi
 	freqref(1) = 1e-9 * Coord(uvCrval,uvFreq)	  
 c
 c  Load the antenna table.
