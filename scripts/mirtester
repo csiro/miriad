@@ -1,0 +1,70 @@
+#!/bin/csh -f
+
+set tests = ()
+set verb = 0
+set vverb = 0
+set tidy = 1
+foreach arg ($argv)
+  set earg = ( `echo $arg | sed -e 's/./& /g'` )
+  if ( $#earg > 1 && "$earg[1]" == "-" ) then
+    foreach s ( $earg[2-] )
+      if ( "$s" == "t" ) then
+	set tidy = 0
+      else if ( "$s" == "V" ) then
+        set vverb = 1
+      else if ( "$s" == "v" ) then
+	set verb = 1
+      else
+	echo "### Unrecognised flag: $s"
+	exit 1
+      endif
+    end
+  else
+    set tests = ($tests $arg)
+  endif
+end
+
+if ( $#tests == 0 ) then
+  set tests = ( *.csh *.sh )
+endif
+
+unalias rm
+set testdir = `date "+%y%m%d"`
+set testdir = "tests-$testdir"
+if ( -d $testdir ) rm -rf $testdir
+mkdir $testdir
+echo "Test results will be written to directory $testdir"
+
+set failed = 0
+foreach t ($tests)
+  set r = $t:r
+  chmod +x $t
+  mkdir $testdir/$r
+  cd $testdir/$r
+  if ( $vverb && $t =~ *.csh ) then
+    csh -v ../../$t
+    set stat = $status
+  else if ( $verb ) then
+    ../../$t
+    set stat = $status
+  else
+    ../../$t >& $r.log
+    set stat = $status
+  endif
+  cd ../..
+  if ( $stat != 0 ) then
+    echo "FAILED     Test: $t"
+    @ failed = $failed + 1
+  else
+    echo "Passed     Test: $t"
+    if ( $tidy ) then
+      rm -rf $testdir/$r
+    endif
+  endif
+end
+
+if ( $failed > 0 ) then
+  echo "### $failed tests FAILED"
+else if ( $tidy ) then
+  rm -rf $testdir
+endif
