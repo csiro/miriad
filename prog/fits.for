@@ -266,9 +266,10 @@ c    rjs  16-aug-96  Added options=nochi.
 c    rjs  17-oct-96  Make the visibility weight equal to 1/sigma**2.
 c		     Discard OBSRA and BLANK in reading in images.
 c    rjs  07-feb-97  Increase max string length.
+c    rjs  21-feb-97  Better treatment of missing evector. More messages.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 07-Feb-97')
+	parameter(version='Fits: version 1.1 21-Feb-97')
 	character in*128,out*128,op*8,uvdatop*12
 	integer velsys
 	real altrpix,altrval
@@ -1214,6 +1215,8 @@ c  Also determine the only values for systemp and jyperk.
 c
 	call telpar(telescop,systemp,systok,jyperk,jok,
      *	  llok,lat,long,emok,evec,mount)
+	if(.not.emok.and.dochi)call bug('w',
+     *	  'Insufficient information to determine parallactic angle')
 	emok = emok.and.dochi
 	freqref(1) = 1e-9 * Coord(uvCrval,uvFreq)	  
 c
@@ -1816,10 +1819,14 @@ c
 c
 c  Mount and evector.
 c
-	  call obspar(telescop,'evector',dtemp,polinfo)
-	  if(polinfo)chioff = dtemp
-	  call obspar(telescop,'mount',dtemp,ok)
-	  polinfo = polinfo.and.ok
+	  call obspar(telescop,'evector',dtemp,ok)
+	  if(ok)then
+	    chioff = dtemp
+	  else
+	    chioff = 0
+	    call output('Assuming feed angle is 0 degrees')
+	  endif
+	  call obspar(telescop,'mount',dtemp,polinfo)
 	  if(polinfo)mount = nint(dtemp)
 	endif
 c
