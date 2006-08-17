@@ -41,6 +41,10 @@ c	  linetype,nchan,start,width,step
 c
 c	"Linetype" is either "channel", "wide" or "velocity". "Nchan" is
 c	the number of channels in the output.
+c@region
+c	The region of interest. The default is the entire input image.
+c	See the Users Manual for instructions on how to specify this.
+c       Used when op=xyout
 c@ select
 c	Normal uv selection, used when op=uvout.
 c@ stokes
@@ -316,11 +320,15 @@ c    rjs  04-Oct-00  Make xyout work for arbitrarily large images.
 c    rjs  10-oct-00  Really do the above this time!
 c    dpr  01-nov-00  Change CROTAn to AIPS convention for xyout
 c    dpr  27-nov-00  fix stokes convention for xyin
+c    dpr  05-apr-01  Add region key for op=xyout
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 27-nov-00')
+	parameter(version='Fits: version 1.1 05-apr-01')
+	integer maxboxes
+	parameter(maxboxes=2048)
 	character in*128,out*128,op*8,uvdatop*12
 	integer velsys
+	integer boxes(maxboxes)
 	real altrpix,altrval
 	logical altr,docal,dopol,dopass,dss,dochi,nod2,compress
 	logical lefty,varwt
@@ -336,6 +344,7 @@ c
 	if(op.ne.'print') call keya('out',out,' ')
 c
         if(op.eq.'uvin')call GetVel(velsys,altr,altrval,altrpix)
+	if(op.eq.'xyout') call BoxInput('region',in,boxes,maxboxes)
 c
 c  Get options.
 c
@@ -365,7 +374,7 @@ c
 	else if(op.eq.'xyin')then
 	  call xyin(in,out,version,dss,nod2)
 	else if(op.eq.'xyout')then
-	  call xyout(in,out,version)
+	  call xyout(in,out,version,boxes)
 	else if(op.eq.'print')then
 	  call prthd(in)
 	endif
@@ -3854,10 +3863,11 @@ c
 	if(neg)value = -value
 	end
 c************************************************************************
-	subroutine xyout(in,out,version)
+	subroutine xyout(in,out,version,boxes)
 c
 	implicit none
 	character in*(*),out*(*),version*(*)
+	integer boxes(*)
 c
 c  Write out a image FITS file.
 c
@@ -3865,36 +3875,49 @@ c  Inputs:
 c    in		Name of the input Miriad image file.
 c    out	Name of the output FITS file.
 c    version	Version of this program.
+c    boxes      Region of interest specification
 c
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'maxnax.h'
 	include 'mem.h'
 	integer pArray,pFlags
-	integer naxis,tno,lu,j,nsize(MAXNAX),axes(MAXNAX)
+	integer naxis,tno,lu,i,j,j0,nsize(MAXNAX)
+	integer blc(maxnax),trc(maxnax),Nout(MAXNAX)
+	integer Inplane(maxnax),Outplane(maxnax),one(maxnax)
 	character string*64
-	logical doflag
+	logical doflag,done
 c
 c  Externals.
 c
-	logical Inc3More,FitBlank,hdprsnt
+	logical FitBlank,hdprsnt
 c
 c  Open the input MIRIAD file and determine a few things about it.
 c
 	call xyopen(tno,in,'old',MAXNAX,nsize)
+	if(nsize(1).gt.maxdim)
+     *	  call bug('f','Image too big for me to handle')
 	call coInit(tno)
 	doflag = hdprsnt(tno,'mask')
 	call rdhdi(tno,'naxis',naxis,0)
+	call BoxSet(boxes,MAXNAX,nsize,' ')
 	naxis = min(naxis,MAXNAX)
+c
+c  Determine portion of image to copy.
+c
+	call BoxInfo(boxes,MAXNAX,blc,trc)
+	do i=1,maxnax
+	  Nout(i) = (trc(i) - blc(i) + 1)
+	enddo
 c
 c  Open the output FITS file.
 c
-	call fxyopen(lu,out,'new',naxis,nsize)
+	call fxyopen(lu,out,'new',naxis,Nout)
 	doflag = FitBlank(lu,doflag)
 c
 c  Handle the output header.
 c
-	call axisout(lu,tno,naxis)
+	call axisout(lu,tno,naxis,blc)
 	call hdout(tno,lu,version)
 	string = 'Miriad '//version
 	call fitwrhda(lu,'ORIGIN',string)
@@ -3903,20 +3926,39 @@ c  Copy the data.
 c
 	call memAlloc(pArray,nsize(1),'r')
 	if(doflag)call memAlloc(pFlags,nsize(1),'l')
-	call IncIni(naxis,nsize,axes)
-	dowhile(Inc3More(naxis,nsize,axes))
-	  if(naxis.gt.2)then
-	    call xysetpl(tno,naxis-2,axes(3))
-	    call fxysetpl(lu,naxis-2,axes(3))
-	  endif
-	  do j=1,nsize(2)
-	    call xyread(tno,j,memr(pArray))
-	    call fxywrite(lu,j,memr(pArray))
+c
+c  Initialise the plane indices.
+c
+	do i=3,MAXNAX
+	  one(i-2) = 1
+	  Inplane(i-2) = blc(i)
+	  Outplane(i-2) = 1
+	enddo
+
+c	call IncIni(naxis,nsize,axes)
+c	dowhile(Inc3More(naxis,nsize,axes))
+	done = .false.
+	do while(.not.done)
+	  call xysetpl(tno,maxnax-2,Inplane)
+	  call fxysetpl(lu,maxnax-2,Outplane)
+c
+c	  if(naxis.gt.2)then
+c	    call xysetpl(tno,naxis-2,axes(3))
+c	    call fxysetpl(lu,naxis-2,axes(3))
+c	  endif
+	  j0 = blc(2)
+	  do j=1,Nout(2)
+	    call xyread(tno,j0,memr(pArray))
+	    call fxywrite(lu,j,memr(pArray + blc(1) - 1))
+
 	    if(doflag)then
-	      call xyflgrd(tno,j,meml(pFlags))
-	      call fxyflgwr(lu,j,meml(pFlags))
+	      call xyflgrd(tno,j0,meml(pFlags))
+	      call fxyflgwr(lu,j,meml(pFlags + blc(1) - 1))
 	    endif
+	    j0 = j0 + 1
 	  enddo
+	  call planeinc(maxnax-2,1,blc(3),trc(3),Inplane,done)
+	  call planeinc(maxnax-2,one,one,Nout(3),Outplane,done)
 	enddo
 	call memFree(pArray,nsize(1),'r')
 	if(doflag)call memFree(pFlags,nsize(1),'l')
@@ -3928,11 +3970,37 @@ c
 	call fxyclose(lu)
 c
 	end
+
 c************************************************************************
-	subroutine axisout(lu,tno,naxis)
+	subroutine planeinc(n,incr,blc,trc,plane,done)
 c
 	implicit none
-	integer lu,tno,naxis
+	integer n,blc(n),trc(n),plane(n),incr(n)
+	logical done
+c
+c  Move to the next plane.
+c
+c------------------------------------------------------------------------
+	integer k
+c
+	k = 1
+	done = .true.
+c
+	do while(done.and.k.le.n)
+	  done = plane(k).ge.trc(k)
+	  if(done)then
+	    plane(k) = blc(k)
+	  else
+	    plane(k) = plane(k) + incr(k)
+	  endif
+	  k = k + 1
+	enddo
+	end
+c************************************************************************
+	subroutine axisout(lu,tno,naxis,blc)
+c
+	implicit none
+	integer lu,tno,naxis,blc(naxis)
 c
 c  This copies (performing any necessary scaling) the BMAJ, BMIN, 
 c  CDELT, CROTA, CRVAL, CRPIX and CTYPE keywords
@@ -3943,6 +4011,9 @@ c  Inputs:
 c    lu		Handle of the input FITS image.
 c    tno	Handle of the output MIRIAD image.
 c    naxis	Number of dimensions of the image.
+c    blc        Bottom-left hand corner pixel value for axis
+c               used to determine crpix if a subregion was
+c               selected
 c
 c------------------------------------------------------------------------
 	include 'mirconst.h'
@@ -4026,7 +4097,7 @@ c
 	    scale = 1.
 	  endif
 	  call fitwrhdd(lu,'CDELT'//num,scale*cdelt)
-	  call fitwrhdd(lu,'CRPIX'//num,crpix)
+	  call fitwrhdd(lu,'CRPIX'//num,crpix - blc(i) + 1)
 	  call fitwrhdd(lu,'CRVAL'//num,scale*crval)
 	  if(ctype.ne.' ')call fitwrhda(lu,'CTYPE'//num,ctype)
 	enddo
