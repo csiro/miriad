@@ -144,6 +144,8 @@
 /*  rjs  31aug99 Correct an error message.				*/
 /*  rjs   2sep99 Added average channel flagging tolerance.		*/
 /*  rjs  16sep99 Corrections to velocity definitions.			*/
+/*  rjs   4may00 Correct incorrect resetting of callno in uvrewind for  */
+/*               variables that have been overridden.                   */
 /*----------------------------------------------------------------------*/
 /*									*/
 /*		Handle UV files.					*/
@@ -1246,7 +1248,8 @@ int tno;
   uv = uvs[tno];
 
   uv->callno = uv->mark = 0;
-  for(i=0, v = uv->variable; i < uv->nvar; i++, v++) v->callno = 0;
+  for(i=0, v = uv->variable; i < uv->nvar; i++, v++) 
+    v->callno = ( (v->flags & UVF_OVERRIDE) ? 1 : 0);
   for(vh = uv->vhans; vh != NULL; vh = vh->fwd) vh->callno = 0;
   uv->offset = 0;
   uv->corr_flags.offset = 0;
