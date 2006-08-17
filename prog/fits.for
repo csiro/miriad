@@ -275,9 +275,10 @@ c    rjs  21-feb-97  Better treatment of missing evector. More messages.
 c    rjs  21-mar-97  Write antenna tables for options=uvout.
 c    rjs  06-may-97  Support apparent coordinates in SU table.
 c    rjs  08-may-97  Write all FITS keywords in standard format.
+c    rjs  02-jul-97  Handle cellscal keyword.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 08-May-97')
+	parameter(version='Fits: version 1.1 02-Jul-97')
 	character in*128,out*128,op*8,uvdatop*12
 	integer velsys
 	real altrpix,altrval
@@ -3009,7 +3010,8 @@ c------------------------------------------------------------------------
 	real bmaj,bmin,bpa
 	double precision cdelt,crota,crval,crpix,scale
 	double precision restfreq,obsra,obsdec,dtemp
-	real xshift,yshift
+	character cellscal*16
+c	real xshift,yshift
 	logical differ,ok,ew,ewdone
 c
 c  Externals.
@@ -3132,10 +3134,12 @@ c
 	if(btype.ne.' ')call wrbtype(tno,btype)
 	call fitrdhdd(lu,'RESTFREQ',restfreq,-1.d0)
 	if(restfreq.gt.0) call wrhdd(tno,'restfreq',1.0d-9*restfreq)
-	call fitrdhdr(lu,'XSHIFT',xshift,0.)
-	if(xshift.ne.0) call wrhdr(tno,'xshift',(pi/180)*xshift)
-	call fitrdhdr(lu,'YSHIFT',yshift,0.)
-	if(yshift.ne.0) call wrhdr(tno,'yshift',(pi/180)*yshift)
+c	call fitrdhdr(lu,'XSHIFT',xshift,0.)
+c	if(xshift.ne.0) call wrhdr(tno,'xshift',(pi/180)*xshift)
+c	call fitrdhdr(lu,'YSHIFT',yshift,0.)
+c	if(yshift.ne.0) call wrhdr(tno,'yshift',(pi/180)*yshift)
+	call fitrdhda(lu,'CELLSCAL',cellscal,'CONSTANT')
+	if(cellscal.ne.' ')call wrhda(tno,'cellscal',cellscal)
 	call fitrdhdr(lu,'BMAJ',bmaj,0.)
 	if(bmaj.ne.0) call wrhdr(tno,'bmaj',(pi/180)*bmaj)
 	call fitrdhdr(lu,'BMIN',bmin,0.)
@@ -3324,7 +3328,8 @@ c------------------------------------------------------------------------
 	character num*2,ctype*32,date*32
 	real cdelt,crota,crpix,scale,bmaj,bmin
 	double precision restfreq,crval,obstime
-	real xshift,yshift
+	character cellscal*16
+c	real xshift,yshift
 c
 c  Externals.
 c
@@ -3376,10 +3381,12 @@ c
 	endif
 	call rdhdd(tno,'restfreq',restfreq,-1.d0)
 	if(restfreq.gt.0) call fitwrhdd(lu,'RESTFREQ',1.0d9*restfreq)
-	call rdhdr(tno,'xshift',xshift,0.)
-	if(xshift.ne.0) call fitwrhdr(lu,'XSHIFT',(180/pi)*xshift)
-	call rdhdr(tno,'yshift',yshift,0.)
-	if(yshift.ne.0) call fitwrhdr(lu,'YSHIFT',(180/pi)*yshift)
+	call rdhda(tno,'cellscal',cellscal,'1/F')
+	if(cellscal.ne.' ')call fitwrhda(lu,'CELLSCAL',cellscal)
+c	call rdhdr(tno,'xshift',xshift,0.)
+c	if(xshift.ne.0) call fitwrhdr(lu,'XSHIFT',(180/pi)*xshift)
+c	call rdhdr(tno,'yshift',yshift,0.)
+c	if(yshift.ne.0) call fitwrhdr(lu,'YSHIFT',(180/pi)*yshift)
 	call rdhdr(tno,'bmaj',bmaj,0.)
 	if(bmaj.ne.0) call fitwrhdr(lu,'BMAJ',(180/pi)*bmaj)
 	call rdhdr(tno,'bmin',bmin,0.)
@@ -3503,7 +3510,7 @@ c    stokes     Stokes parameter used in conversion
 c
 c------------------------------------------------------------------------
 	integer nlong,nshort,nextra
-	parameter(nlong=30,nshort=9,nextra=7)
+	parameter(nlong=31,nshort=9,nextra=7)
 	character card*80,key*8,type*8
 	logical more,discard,ok,found
 	integer i,k1,k2
@@ -3526,8 +3533,8 @@ c
      *	  '        ', .true.,  'ALTRPIX ', .false., 'ALTRVAL ', .false.,
      *    'BITPIX  ', .false., 'BLANK   ', .false., 'BLOCKED ', .false.,
      *	  'BMAJ    ', .false., 'BMIN    ', .false., 'BSCALE  ', .false.,
-     *	  'BUNIT   ', .false.,
-     *	  'BZERO   ', .false., 'COMMAND ', .true.,  'COMMENT ', .true.,
+     *	  'BUNIT   ', .false., 'BZERO   ', .false., 'CELLSCAL', .false.,
+     *	  'COMMAND ', .true.,  'COMMENT ', .true.,
      *	  'DATE    ', .false., 'DATE-MAP ', .false.,'DATE-OBS', .false.,
      *	  'END     ', .false., 'EXTEND  ', .false.,
      *	  'GCOUNT  ', .false., 'GROUPS  ', .false., 'HISTORY ', .true.,
