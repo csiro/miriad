@@ -137,6 +137,7 @@
 /*		 scaling.						*/
 /*  rjs  18mar97 Plug minor memory leak.				*/
 /*  rjs  15sep97 Fix error in pointing selection.			*/
+/*  rjs  09oct97 Check for restfreq==0 when converting to velocity.	*/
 /*----------------------------------------------------------------------*/
 /*									*/
 /*		Handle UV files.					*/
@@ -4625,13 +4626,15 @@ int mode;
       for(i=0; i < line->width; i++){
 	if(offset == *nschan){
 	  offset = 0;
-	  sfreq++; sdf++; nschan++;
+	  sfreq++; sdf++; nschan++; restfreq++;
 	}
-	if(mode == VELO)
+	if(mode == VELO){
+	  if(*restfreq <= 0)BUG('f',"Cannot determine velocity as rest frequency is 0");
 	  temp += CKMS * ( 1 - ( *sfreq + offset * *sdf ) / *restfreq ) - vobs;
-        else if(mode == FELO)
+        }else if(mode == FELO){
+	  if(*restfreq <= 0)BUG('f',"Cannot determine velocity as rest frequency is 0");
 	  temp += CKMS * ( *restfreq / ( *sfreq + offset * *sdf ) - 1 ) - vobs;
-	else if(mode == RFREQ) temp += *restfreq;
+	}else if(mode == RFREQ) temp += *restfreq;
 	else if(mode == BW)    temp += (*sdf > 0 ? *sdf : - *sdf);
 	else if(mode == FREQ)
 	  temp += *sfreq + offset * *sdf + vobs/CKMS * *restfreq;
