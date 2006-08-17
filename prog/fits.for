@@ -275,9 +275,11 @@ c    rjs  07-jul-97  Improve handling of EPOCH/EQUINOX and pointing parameters.
 c    rjs  08-jul-97  Fix bug introduced yesterday.
 c    rjs  12-jul-97  Added options=nod2.
 c    rjs  16-jul-97  Added options=compress.
+c    rjs  01-aug-97  Made FITS date string variables longer, to
+c		     allow for new FITS standard.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 16-Jul-97')
+	parameter(version='Fits: version 1.1 1-Aug-97')
 	character in*128,out*128,op*8,uvdatop*12
 	integer velsys
 	real altrpix,altrval
@@ -1167,7 +1169,7 @@ c
 	integer nval,i,j,t,nxyz,n,naxis,itemp
 	double precision xyz(3,MAXANT),xc,yc,zc,r0,d0
 	double precision r,sint,cost,temp,eporef
-	character type*1,units*16,ctype*8,rdate*16
+	character type*1,units*16,ctype*8,rdate*32
 	integer sta(MAXANT)
 c
 c  Externals.
@@ -2498,7 +2500,7 @@ c------------------------------------------------------------------------
 	include 'mirconst.h'
 c
 	real zero(3)
-	character anname*8,rdate*8
+	character anname*8,rdate*32
 	double precision iatutc,gstia0,gstia1,degpdy,xyzd(3)
 	integer i
 c
@@ -3015,7 +3017,7 @@ c------------------------------------------------------------------------
 	include 'mirconst.h'
 	integer i,polcode,l,nx,ny
 	character num*2,ctype*32,bunit*32,types(5)*25,btype*32
-	character telescop*16,rdate*16,atemp*16,observer*16,cellscal*16
+	character telescop*16,rdate*32,atemp*16,observer*16,cellscal*16
 	real bmaj,bmin,bpa,temp,epoch
 	double precision cdelt,crota,crval,crpix,scale
 	double precision restfreq,obsra,obsdec,dtemp
