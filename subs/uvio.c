@@ -142,6 +142,7 @@
 /*  rjs  22oct97 Change in the format of "on" selection.		*/
 /*  rjs  30aug99 Increase MAXVHANDS to 64				*/
 /*  rjs  31aug99 Correct an error message.				*/
+/*  rjs   2sep99 Added average channel flagging tolerance.		*/
 /*----------------------------------------------------------------------*/
 /*									*/
 /*		Handle UV files.					*/
@@ -438,7 +439,7 @@ typedef struct {
 typedef struct {
 	int item;
 	int nvar,offset,max_offset,saved_nvar,tno,flags,callno,maxvis,mark;
-	int presize;
+	int presize,gflag;
 	FLAGS corr_flags,wcorr_flags;
 	VARIABLE *coord,*corr,*time,*bl,*tscale,*nschan,*axisrms;
 	VARIABLE *sfreq,*sdf,*restfreq,*wcorr,*wfreq,*veldop,*vsource;
@@ -957,6 +958,7 @@ private UV *uv_getuv(tno)
   uv->vhans	= NULL;
   uv->nvar	= 0;
   uv->presize   = 0;
+  uv->gflag     = 1;
   uv->saved_nvar= 0;
   uv->offset    = 0;
   uv->max_offset= 0;
@@ -2530,6 +2532,9 @@ char *object,*type;
     uvset_preamble(uv,type);
   } else if(!strcmp(object,"selection")) {
     uvset_selection(uv,type,n);
+  } else if(!strcmp(object,"gflag")) {
+    if(n < 1)bug_c('f',"Invalid value for average channel flagging tolerance");
+    uv->gflag = n;
   } else if(!strcmp(object,"flags")) {
     if(!strcmp(type,"logical"))
       uv->flags &= ~UVF_RUNS;
@@ -3843,6 +3848,9 @@ int *flags,nsize;
   int rei,imi,nc,start,width,step,*flagin,nchan,*nschan;
   float scale,ref,imf,*df,*d;
   FLAGS *flag_info;
+  int ggflag;
+
+  ggflag = uv->gflag;
 
 /* Determine the relevant variable and flagging info, and get the flags. */
 
@@ -3927,7 +3935,7 @@ int *flags,nsize;
         else di += 2;
       }
       if(nc > 0){
-        *d++ = rei*scale/nc; *d++ = imi*scale/nc; *flags++ = FORT_TRUE;
+        *d++ = rei*scale/nc; *d++ = imi*scale/nc; *flags++ = ( nc >= ggflag ? FORT_TRUE : FORT_FALSE);
       } else {
         *d++ = 0; *d++ = 0; *flags++ = FORT_FALSE;
       }
@@ -3945,7 +3953,7 @@ int *flags,nsize;
         else df += 2;
       }
       if(nc > 0){
-        *d++ = scale*ref/nc; *d++ = scale*imf/nc; *flags++ = FORT_TRUE;
+        *d++ = scale*ref/nc; *d++ = scale*imf/nc; *flags++ = ( nc >= ggflag ? FORT_TRUE : FORT_FALSE);
       } else {
         *d++ = 0; *d++ = 0; *flags++ = FORT_FALSE;
       }
