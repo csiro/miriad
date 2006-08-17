@@ -19,6 +19,7 @@
 /*  rjs  6nov94   Change "item handle" to an integer.			*/
 /*  rjs 15may96   Fiddles with roundup macro.				*/
 /*  pjt 27mar99   make history a static, so nobody can see it :-)	*/
+/*  rjs 29apr99   Get hdprobe to check for string buffer overflow.	*/
 /************************************************************************/
 
 #include <stdlib.h>
@@ -647,14 +648,15 @@ int *n,length;
 /*----------------------------------------------------------------------*/
 {
   int item;
-  char s[ITEM_HDR_SIZE];
+  char s[ITEM_HDR_SIZE],buf[MAXSIZE];
   float rtemp,ctemp[2];
-  int iostat,unknown,size,i,itemp,offset;
+  int iostat,unknown,size,i,itemp,offset,bufit;
   double dtemp;
   int2 jtemp;
 
   haccess_c(tno,&item,keyword,"read",&iostat);
   *n = 0;
+  bufit = 0;
   Strcpy(type,"nonexistent");				if(iostat)return;
   size = hsize_c(item);
   unknown = FALSE;
@@ -671,7 +673,8 @@ int *n,length;
       if(size % H_REAL_SIZE) unknown = TRUE;
       else if(size == H_REAL_SIZE){
 	hreadr_c(item,&rtemp,offset,H_REAL_SIZE,&iostat);	check(iostat);
-	Sprintf(descr,"%-14.7g",rtemp);
+	Sprintf(buf,"%-14.7g",rtemp);
+	bufit = 1;
       }
     } else if(!memcmp(s,int_item,ITEM_HDR_SIZE)){
       offset = mroundup(ITEM_HDR_SIZE,H_INT_SIZE);
@@ -681,7 +684,8 @@ int *n,length;
       if(size % H_INT_SIZE) unknown = TRUE;
       else if(size == H_INT_SIZE){
 	hreadi_c(item,&itemp,offset,H_INT_SIZE,&iostat);	check(iostat);
-	Sprintf(descr,"%d",itemp);
+	Sprintf(buf,"%d",itemp);
+	bufit = 1;
       }
     } else if(!memcmp(s,int2_item,ITEM_HDR_SIZE)){
       offset = mroundup(ITEM_HDR_SIZE,H_INT2_SIZE);
@@ -691,7 +695,8 @@ int *n,length;
       if(size % H_INT2_SIZE) unknown = TRUE;
       else if(size == H_INT2_SIZE){
 	hreadj_c(item,&jtemp,offset,H_INT2_SIZE,&iostat);	check(iostat);
-	Sprintf(descr,"%d",jtemp);
+	Sprintf(buf,"%d",jtemp);
+	bufit = 1;
       }
     } else if(!memcmp(s,dble_item,ITEM_HDR_SIZE)){
       offset = mroundup(ITEM_HDR_SIZE,H_DBLE_SIZE);
@@ -701,7 +706,8 @@ int *n,length;
       if(size % H_DBLE_SIZE) unknown = TRUE;
       else if(size == H_DBLE_SIZE){
 	hreadd_c(item,&dtemp,offset,H_DBLE_SIZE,&iostat);	check(iostat);
-	Sprintf(descr,"%-20.10g",dtemp);
+	Sprintf(buf,"%-20.10g",dtemp);
+	bufit = 1;
       }
     } else if(!memcmp(s,cmplx_item,ITEM_HDR_SIZE)){
       offset = mroundup(ITEM_HDR_SIZE,H_CMPLX_SIZE);
@@ -711,16 +717,18 @@ int *n,length;
       if(size % H_CMPLX_SIZE) unknown = TRUE;
       else if(size == H_CMPLX_SIZE){
 	hreadr_c(item,ctemp,offset,H_CMPLX_SIZE,&iostat);	check(iostat);
-	Sprintf(descr,"(%-14.7g,%-14.7g)",ctemp[0],ctemp[1]);
+	Sprintf(buf,"(%-14.7g,%-14.7g)",ctemp[0],ctemp[1]);
+	bufit = 1;
       }
     } else if(!memcmp(s,char_item,ITEM_HDR_SIZE)){
       offset = ITEM_HDR_SIZE;
       size -= offset;
-      size = min(size,length-1);
+      size = min(size,MAXSIZE-1);
       *n = 1;
       Strcpy(type,"character");
-      hreadb_c(item,descr,ITEM_HDR_SIZE,size,&iostat);		check(iostat);
-      *(descr+size) = 0;
+      hreadb_c(item,buf,ITEM_HDR_SIZE,size,&iostat);		check(iostat);
+      *(buf+size) = 0;
+      bufit = 1;
     } else if(!memcmp(s,binary_item,ITEM_HDR_SIZE)){
       *n = size;
        Strcpy(type,"binary");
@@ -735,5 +743,8 @@ int *n,length;
   if(unknown){
     Strcpy(type,"unknown");
     *n = size + ITEM_HDR_SIZE;
+  } else if(bufit){
+    if(strlen(buf) > length - 1)bug_c('f',"Descr buffer overflow in hdprobe");
+    strcpy(descr,buf);
   }
 }
