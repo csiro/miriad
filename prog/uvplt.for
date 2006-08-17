@@ -43,6 +43,7 @@ c	  parang                   [parallactic angle in degrees]
 c         lst                      [local sidereal time in decimal hours]
 c         az                       [azimuth in degrees]
 c         el                       [elevation in degrees]
+c         airmass                  [airmass=1/sin(el)]
 c	NOTE: parang is the true parallactic angle of the source, which can
 c	be quite different from the angle between source and antenna feed
 c	(Miriad variable chi).
@@ -61,6 +62,7 @@ c	  If axis = hangle                [hh,mm,ss.s;    6 values]
 c         If axis = dhangle               [decimal hours; 2 values]
 c	  If axis = parang                [degrees;       2 values]
 c         If axis = az or el              [degrees;       2 values]
+c         If axis = airmass               [natural units; 2 values]
 c         If axis = lst                   [decimal hours; 2 values]
 c
 c	Default is to self-scale (see also OPTIONS=XIND).
@@ -321,6 +323,7 @@ c    rjs  26sep00  Correct uvangle code.
 c    rjs  10jan01  Added az,el,lst to possible axes.
 c    rjs  20jan01  Change definition of nbases in uvfish to allow for
 c		   possible presence of autocorrelations.
+c    rjs  02mar01  Added airmass to possible axes.
 c
 c To do:
 c
@@ -617,7 +620,8 @@ c  if required.
 c
 	  if(xaxis.eq.'parang'.or.yaxis.eq.'parang'.or.
      +       xaxis.eq.'az'.or.yaxis.eq.'az'.or. 
-     +       xaxis.eq.'el'.or.yaxis.eq.'el')then
+     +       xaxis.eq.'el'.or.yaxis.eq.'el'.or.
+     +	     xaxis.eq.'airmass'.or.yaxis.eq.'airmass')then
 	    call uvrdvrd(lin,'ra',dtemp,0.d0)
             call uvrdvrd (lin, 'obsra', ra, dtemp)
 	    call uvrdvrd(lin,'dec',dtemp,0.d0)
@@ -627,7 +631,8 @@ c
 	    if(xaxis.eq.'parang'.or.yaxis.eq.'parang')
      +	      call parang(ra,dec,lst,lat,paran)
 	    if(xaxis.eq.'az'.or.yaxis.eq.'az'.or.
-     +	       xaxis.eq.'el'.or.yaxis.eq.'el')
+     +	       xaxis.eq.'el'.or.yaxis.eq.'el'.or.
+     +	       xaxis.eq.'airmass'.or.yaxis.eq.'airmass')
      +	      call azel(ra,dec,lst,lat,az,el)
 	  endif
 c
@@ -2545,12 +2550,12 @@ c
 c Types of axes allowed
 c
       integer naxmax, nax
-      parameter (naxmax = 18)
+      parameter (naxmax = 19)
       character axtyp(naxmax)*10
       data axtyp /  'time      ','dtime     ','uvdistance','uu        ',
      + 'vv        ','uc        ','vc        ','uvangle   ','amplitude ',
      + 'phase     ','real      ','imag      ','hangle    ','dhangle   ',
-     + 'parang    ','lst       ','az        ','el        '/
+     + 'parang    ','lst       ','az        ','el        ','airmass   '/
 c-----------------------------------------------------------------------
       call keyini
 c
@@ -3462,6 +3467,8 @@ c-----------------------------------------------------------------------
         label = 'Azimuth (degrees)'
       else if (axis.eq.'el') then
         label = 'Elevation (degrees)'
+      else if (axis.eq.'airmass')then
+	label = 'Airmass [1/sin(el)]'
       else if (axis.eq.'uvdistance') then
         label = '(u\u2\d + v\u2\d)\u1/2\d'//units
       else if (axis.eq.'uu' .or. axis.eq.'uc') then
@@ -3548,6 +3555,8 @@ c-----------------------------------------------------------------------
         val = 180./PI * az
       else if (axis.eq.'el') then
         val = 180./PI * el
+      else if (axis.eq.'airmass') then
+	val = 1/sin(el)
       else if (axis.eq.'dtime') then
 c
 c Fractional days
