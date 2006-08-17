@@ -2444,10 +2444,10 @@ c
 	Coord(uvCrval,uvFreq) = f0
 	Coord(uvCdelt,uvFreq) = df
 	Coord(uvCrpix,uvFreq) = 1
-	Coord(uvCrval,uvRa) = 180./pi * (ra+dra/cos(dec))
+	Coord(uvCrval,uvRa) = 180.d0/dpi * (ra+dra/cos(dec))
 	Coord(uvCdelt,uvRa) = 1
 	Coord(uvCrpix,uvRa) = 1
-	Coord(uvCrval,uvDec) = 180./pi * (dec+ddec)
+	Coord(uvCrval,uvDec) = 180.d0/dpi * (dec+ddec)
 	Coord(uvCdelt,uvDec) = 1
 	Coord(uvCrpix,uvDec) = 1
 c
