@@ -337,7 +337,7 @@ static char var_eor_hdr[UV_HDR_SIZE]={0,0,VAR_EOR,0};
 
 typedef struct variable{
 	char *buf,name[MAXNAM+1];
-	int length,flags,type,index,callno;
+	int length,flength,flags,type,index,callno;
 	struct variable *fwd;
 		} VARIABLE;
 
@@ -982,7 +982,7 @@ private UV *uv_getuv(tno)
   uv->bl = NULL;
 
   for(i=0, v = uv->variable; i < MAXVAR; i++, v++){
-    v->length = 0;
+    v->length = v->flength = 0;
     v->buf = NULL;
     v->flags = 0;
     v->type = 0;
@@ -1040,18 +1040,25 @@ UV *uv;
       hdprobe_c(tno,varname,descr,MAXLINE,vartype,&n);
       ok = (n == 1 && (	(v->type == H_DBLE && !strcmp(vartype,"double"))    ||
 			(v->type == H_REAL && !strcmp(vartype,"real"))	    ||
+			(v->type == H_BYTE && !strcmp(vartype,"character")) ||
 			(v->type == H_INT  && !strcmp(vartype,"integer"))));
-      b = Malloc(internal_size[v->type]);
+      if(v->type == H_BYTE) {
+	n = strlen(descr);
+        b = Malloc(n+1);
+      } else {
+	b = Malloc(internal_size[v->type]);
+      }
       if(ok)switch(v->type){
-	  case H_INT:	rdhdi_c(tno,varname,(int *)b,0);		break;
-	  case H_REAL:	rdhdr_c(tno,varname,(float *)b,0.0);		break;
-	  case H_DBLE:	rdhdd_c(tno,varname,(double *)b,(double)0.0);	break;
-	  default:	ok = FALSE;
+          case H_INT:   rdhdi_c(tno,varname,(int *)b,0);                break;
+          case H_REAL:  rdhdr_c(tno,varname,(float *)b,0.0);            break;
+	  case H_BYTE:  strcpy(b,descr);				break;
+          case H_DBLE:  rdhdd_c(tno,varname,(double *)b,(double)0.0);   break;
+          default:      ok = FALSE;
       }
       if(ok){
 	v->flags |= UVF_OVERRIDE;
 	v->buf = b;
-	v->length = external_size[v->type];
+	v->length = n*external_size[v->type];
 	v->callno = 1;
       } else {
 	free(b);
@@ -1799,19 +1806,22 @@ VARIABLE *vt;
 
 /* Process a specification of a variables length. Allocate buffers if needed. */
      case VAR_SIZE:
-      hreadi_c(uv->item,&v->length,offset+UV_HDR_SIZE,H_INT_SIZE,&iostat);
+      hreadi_c(uv->item,&v->flength,offset+UV_HDR_SIZE,H_INT_SIZE,&iostat);
       CHECK(iostat,(message,"Error reading a variable-length for %s, while UV scanning",v->name));
-      if(v->length <= 0)
+      if(v->flength <= 0)
 	ERROR('f',(message,"Variable %s has length of %d, when scanning",
-			v->name,v->length));
-      if(v->length % extsize)
+			v->name,v->flength));
+      if(v->flength % extsize)
         ERROR('f',(message,
 	  "Non-integral no. elements in variable %s, when scanning",v->name));
-      v->buf = Realloc( v->buf, (v->length * intsize)/extsize );
-      if(v->flags & UVF_OVERRIDE && v->length > extsize)
-        for(i=1, b = v->buf + intsize; i < v->length/extsize; i++,b += intsize)
-	  memcpy(b,v->buf,intsize);
-      changed = TRUE;
+      if(!(v->flags & UVF_OVERRIDE) || v->type != H_BYTE){
+        v->length = v->flength;
+        v->buf = Realloc( v->buf, (v->flength * intsize)/extsize );
+        if(v->flags & UVF_OVERRIDE && v->flength > extsize)
+          for(i=1, b = v->buf + intsize; i < v->flength/extsize; i++,b += intsize)
+	    memcpy(b,v->buf,intsize);
+        changed = TRUE;
+      }
       offset += UV_ALIGN;
       break;
 
@@ -1820,11 +1830,11 @@ VARIABLE *vt;
      case VAR_DATA:
       offset += roundup(UV_HDR_SIZE,extsize);
       if(!(v->flags & UVF_OVERRIDE)){
-	hread_c(uv->item,v->type,v->buf,offset,v->length,&iostat);
+	hread_c(uv->item,v->type,v->buf,offset,v->flength,&iostat);
 	CHECK(iostat,(message,"Error reading a variable value for %s, while UV scanning",v->name));
 	changed = TRUE;
       }
-      offset = roundup(offset+v->length,UV_ALIGN);
+      offset = roundup(offset+v->flength,UV_ALIGN);
       found |= (v == vt);
       break;
 
