@@ -70,9 +70,18 @@ c	           to the data.
 c	  nopass   Do not apply the bandpass table correctsions
 c	           to the data.
 c
-c	This option applies for op=xyin only.
-c	  dss      Use the conventions of Digital Sky Survey FITS
-c	           files, and convert (partially!) its header.
+c	These options apply for op=xyin only.
+c	  rawdss   Use the conventions for raw Digital Sky Survey FITS
+c	           files, and convert (partially!) the header. A raw
+c                  DSS FITS file has header items such as PLTSCALE,
+c                  XPIXELSZ, YPIXELSZ etc. If you are unsure if your DSS
+c                  image is raw or conventional FITS, run:
+c                    Task FITS:
+c                      in=mydss.fits
+c                      op=print
+c                  and look for those header items. Note that DSS images
+c                  retrieved using SkyView have a conventional fits header,
+c                  and do not require options=rawdss.
 c	  nod2     Use the conventions of NOD2 FITS files.
 c@ velocity
 c	Velocity information. This is only used for op=uvin,
@@ -321,9 +330,10 @@ c    rjs  10-oct-00  Really do the above this time!
 c    dpr  01-nov-00  Change CROTAn to AIPS convention for xyout
 c    dpr  27-nov-00  fix stokes convention for xyin
 c    dpr  05-apr-01  Add region key for op=xyout
+c    dpr  10-may-01  Change dss to rawdss
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 05-apr-01')
+	parameter(version='Fits: version 1.1 10-may-01')
 	integer maxboxes
 	parameter(maxboxes=2048)
 	character in*128,out*128,op*8,uvdatop*12
@@ -473,12 +483,12 @@ c    varwt   Interpret the visibility weight as the reciprocal of the
 c	     noise variance.
 c------------------------------------------------------------------------
       integer nopt
-      parameter (nopt = 9)
+      parameter (nopt = 10)
       character opts(nopt)*8
-      logical present(nopt)
-      data opts /'nocal   ','nopol   ','nopass  ','dss     ',
+      logical present(nopt),olddss
+      data opts /'nocal   ','nopol   ','nopass  ','rawdss  ',
      *		 'nod2    ','nochi   ','compress','lefty   ',
-     *		 'varwt   '/
+     *		 'varwt   ','dss     '/
 c
       call options ('options', opts, present, nopt)
       docal    = .not.present(1)
@@ -490,6 +500,12 @@ c
       compress =      present(7)
       lefty    =      present(8)
       varwt    =      present(9)
+      olddss   =      present(10)
+c
+      if (olddss) then
+	call bug('w','Option DSS is deprecated. Please use RAWDSS')
+        dss=.true.
+      endif
 c
       end
 c************************************************************************
