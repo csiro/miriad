@@ -263,9 +263,11 @@ c		     but my empirical evidence is contrary.  Recognize
 c		     LL,MM as RA---SIN and DEC--SIN.
 c    rjs  07-aug-96  Correct scaling of axis type.
 c    rjs  16-aug-96  Added options=nochi.
+c    rjs  17-oct-96  Make the visibility weight equal to 1/sigma**2.
+c		     Discard OBSRA and BLANK in reading in images.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 16-Aug-96')
+	parameter(version='Fits: version 1.1 17-Oct-96')
 	character in*64,out*64,op*8,uvdatop*12
 	integer velsys
 	real altrpix,altrval
