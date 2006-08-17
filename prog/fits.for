@@ -42,20 +42,21 @@ c	Normal uv selection, used when op=uvout.
 c@ stokes
 c	Normal Stokes selection, used when op=uvout
 c@ options
-c	This option applies for op=uvin only.
-c	  nochi   Assume that the parallactic angle of the telescope is
-c	          a constant 0 (or that the data are from circularly polarised
-c	          feeds and have already been corrected for parallactic angle).
+c	These options applies for op=uvin only.
+c	  compress Store the data in compressed uv format.
+c	  nochi    Assume that the parallactic angle of the telescope is
+c	           a constant 0 (or that the data are from circularly polarised
+c	           feeds and have already been corrected for parallactic angle).
 c
 c	These options for op=uvout only.
-c	  nocal   Do not apply the gains table to the data.
-c	  nopol   Do not apply the polarization leakage table to the data.
-c	  nopass  Do not apply the bandpass table correctsions to the data.
+c	  nocal    Do not apply the gains table to the data.
+c	  nopol    Do not apply the polarization leakage table to the data.
+c	  nopass   Do not apply the bandpass table correctsions to the data.
 c
 c	This option applies for op=xyin only.
-c	  dss     Use the conventions of Digital Sky Survey FITS files,
-c	          and convert (partially!) its header.
-c	  nod2    Use the conventions of NOD2 FITS files.
+c	  dss      Use the conventions of Digital Sky Survey FITS files,
+c	           and convert (partially!) its header.
+c	  nod2     Use the conventions of NOD2 FITS files.
 c@ velocity
 c	Velocity information. This is only used for op=uvin,
 c	and is only relevant for line observations. The default is
@@ -272,14 +273,15 @@ c    rjs  08-may-97  Write all FITS keywords in standard format.
 c    rjs  02-jul-97  Handle cellscal keyword.
 c    rjs  07-jul-97  Improve handling of EPOCH/EQUINOX and pointing parameters.
 c    rjs  08-jul-97  Fix bug introduced yesterday.
-c    rjs  12-jul-97  Added options=nod2
+c    rjs  12-jul-97  Added options=nod2.
+c    rjs  16-jul-97  Added options=compress.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 12-Jul-97')
+	parameter(version='Fits: version 1.1 16-Jul-97')
 	character in*128,out*128,op*8,uvdatop*12
 	integer velsys
 	real altrpix,altrval
-	logical altr,docal,dopol,dopass,dss,dochi,nod2
+	logical altr,docal,dopol,dopass,dss,dochi,nod2,compress
 c
 c  Get the input parameters.
 c
@@ -295,7 +297,7 @@ c
 c
 c  Get options.
 c
-        call getopt(docal,dopol,dopass,dss,nod2,dochi)
+        call getopt(docal,dopol,dopass,dss,nod2,dochi,compress)
         if(op.eq.'uvout') then
           uvdatop = 'sdlb3'
 	  if(docal)uvdatop(7:7) = 'c'
@@ -313,7 +315,8 @@ c
 c  Handle the five cases.
 c
 	if(op.eq.'uvin')then
-	  call uvin(in,out,velsys,altr,altrpix,altrval,dochi,version)
+	  call uvin(in,out,velsys,altr,altrpix,altrval,dochi,
+     *					compress,version)
 	else if(op.eq.'uvout')then
 	  call uvout(out,version)
 	else if(op.eq.'xyin')then
@@ -397,10 +400,10 @@ c
 	endif
 	end
 c************************************************************************
-      subroutine getopt(docal, dopol, dopass, dss, nod2, dochi)
+      subroutine getopt(docal,dopol,dopass,dss,nod2,dochi,compress)
 c
       implicit none
-      logical docal, dopol, dopass, dss, dochi, nod2
+      logical docal, dopol, dopass, dss, dochi, nod2, compress
 c
 c     Get a couple of the users options from the command line
 c
@@ -411,21 +414,24 @@ c    dopass  Apply bandpass calibration
 c    dss     Handle DSS image.
 c    nod2    Handle NOD2 image.
 c    dochi   Attempt to calculate the parallactic angle.
+c    compress Store data in compressed format.
 c
 c------------------------------------------------------------------------
       integer nopt
-      parameter (nopt = 6)
-      character opts(nopt)*6
+      parameter (nopt = 7)
+      character opts(nopt)*8
       logical present(nopt)
-      data opts /'nocal ', 'nopol ','nopass','dss   ','nod2  ','nochi '/
+      data opts /'nocal   ','nopol   ','nopass  ','dss     ',
+     *		 'nod2    ','nochi   ','compress'/
 c
       call options ('options', opts, present, nopt)
-      docal = .not.present(1)
-      dopol = .not.present(2)
-      dopass= .not.present(3)
-      dss   =      present(4)
-      nod2  =      present(5)
-      dochi = .not.present(6)
+      docal    = .not.present(1)
+      dopol    = .not.present(2)
+      dopass   = .not.present(3)
+      dss      =      present(4)
+      nod2     =      present(5)
+      dochi    = .not.present(6)
+      compress =      present(7)
 c
       end
 c************************************************************************
@@ -463,12 +469,12 @@ c
 	end
 c************************************************************************
 	subroutine uvin(in,out,velsys,altr,altrpix,altrval,dochi,
-     *							version)
+     *					compress,version)
 c
 	implicit none
 	character in*(*),out*(*)
 	integer velsys
-	logical altr,dochi
+	logical altr,dochi,compress
 	real altrpix,altrval
 	character version*(*)
 c
@@ -485,6 +491,7 @@ c    altr	True if the user specified altrpix and altrval.
 c    altrpix	The user given value for altrpix.
 c    altrval	The user given value for altrval.
 c    dochi	Attempt to calculate the parallactic angle.
+c    compress   Store the data in compressed format.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer PolXX,PolYY,PolXY,PolYX
@@ -524,7 +531,8 @@ c
 	call uvopen(tno,out,'new')
 	call hisopen(tno,'append')
 	call hdin(lu,tno,version,.true.)
-	if(abs(bitpix).gt.16) call uvset(tno,'corr','r',0,0.,0.,0.)
+	if(.not.compress.and.abs(bitpix).gt.16)
+     *	  call uvset(tno,'corr','r',0,0.,0.,0.)
 c
 c  Determine if its a multisource file, and set the random parameters to
 c  handle accordingly.
