@@ -17,6 +17,8 @@
 #    Dark-ages rjs  Original version
 #    22-feb-01 rjs  Added matching for possible tasks.
 #    02-mar-01 rjs  Slight change to make it compatible with more UNIX systems.
+#    18-mar-03 rjs  Fixed ordering of honouring the -w and MIRPAGER env. var.
+
 set noglob
 
 set task = ""
@@ -55,10 +57,10 @@ if ( "$task" == "" ) set task = "miriad"
 
 # Determine the pager to use.
 
-if ( $?MIRPAGER ) then
-  set mypager = $MIRPAGER
-else if ( $doweb ) then
+if ( $doweb ) then
   set mypager = "netscape"
+else if ( $?MIRPAGER ) then
+  set mypager = $MIRPAGER
 else if ( $?PAGER ) then
   set mypager = $PAGER
 else
