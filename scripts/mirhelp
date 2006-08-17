@@ -53,13 +53,28 @@ end
 
 if ( "$task" == "" ) set task = "miriad"
 
-if ( $doweb ) then
-  set web = "http://www.atnf.csiro.au/computing/software/miriad/$task.html"
-  if  ( "$key" != "" ) set web = "$web#$key"
+# Determine the pager to use.
+
+if ( $?MIRPAGER ) then
+  set mypager = $MIRPAGER
+else if ( $doweb ) then
+  set mypager = "netscape"
+else if ( $?PAGER ) then
+  set mypager = $PAGER
+else
+  set mypager = "more"
+endif
+
+set web = "http://www.atnf.csiro.au/computing/software/miriad/$task.html"
+if  ( "$key" != "" ) set web = "$web#$key"
+
+if ( "$mypager" == "netscape" ) then
   netscape -remote "OpenURL($web)"
   if ( $status ) then
     netscape -install "$web" &
   endif
+else if ( "$mypager" == "lynx" ) then
+  lynx -use_mouse "$web"
 else
   set file = $MIRPDOC/$task.doc
   if ( -f $task.doc ) set file = $task.doc
@@ -82,8 +97,7 @@ else
     endif
   else
     if ( "$key" != "" ) set file = "$file -k $key"
-    if ( ! $?PAGER ) set PAGER = "more"
-    docfmt $file | $PAGER
+    docfmt $file | $mypager
   endif
 endif
 exit 0
@@ -97,3 +111,9 @@ echo " "
 echo "  Options:"
 echo "   -w   View help in a netscape browser"
 echo "   -k   Give help on a specific keyword"
+echo " "
+echo "  Environment Variables:"
+echo "    MIRPAGER  Paging program to be used. This can be either"
+echo "              a text paging task (e.g. more) or netscape or lynx."
+echo "    PAGER     A text paging program (e.g. more) used if MIRPAGER"
+echo "              is not set. The default is 'more'."
