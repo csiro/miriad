@@ -146,6 +146,7 @@
 /*  rjs  16sep99 Corrections to velocity definitions.			*/
 /*  rjs   4may00 Correct incorrect resetting of callno in uvrewind for  */
 /*               variables that have been overridden.                   */
+/*  rjs  16jun00 Handle bad baseline numbers more gracefully.	        */
 /*----------------------------------------------------------------------*/
 /*									*/
 /*		Handle UV files.					*/
@@ -3104,8 +3105,11 @@ UV *uv;
       i1 = max( bl / 256, bl % 256);
       i2 = min( bl / 256, bl % 256);
       if(i2 < 1 || i1 > MAXANT){
-	BUG('f',"Bad antenna numbers when doing selection, in UVREAD(select)"); }
-      discard = sel->ants[(i1*(i1-1))/2+i2-1];
+	BUG('w',(message,"Discarded data with bad antenna numbers when selecting: baseline number is %d\n",bl));
+	discard = TRUE;
+      }else{
+        discard = sel->ants[(i1*(i1-1))/2+i2-1];
+      }
       if(discard) goto endloop;
     }
     if( n >= sel->noper ) goto endloop;
