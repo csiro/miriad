@@ -292,10 +292,11 @@ c		     from the vis dataset.
 c    pjt  15-sep-98  Recognise galactic and ecliptic coordinates the right way
 c    rjs  25-sep-98  Correct handling of OBSRA and OBSDEC in op=xyin.
 c    rjs  27-oct-98  Check in CD keyword for image pixel increment.
-c    rjs  20-nov-98  Better handling of some projections and rotation.
+c    rjs  20-nov-98  Better handling of image projections and rotation.
+c    rjs  25-nov-98  More work on better handling of image projection and rotation.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 20-Nov-98')
+	parameter(version='Fits: version 1.1 25-Nov-98')
 	character in*128,out*128,op*8,uvdatop*12
 	integer velsys
 	real altrpix,altrval
@@ -3115,23 +3116,20 @@ c    naxis	Number of dimensions of the image.
 c
 c------------------------------------------------------------------------
 	include 'mirconst.h'
-	integer i,polcode,l,nx,ny
-	character num*2,ctype*32,bunit*32,types(5)*25,btype*32
+	include 'maxnax.h'
+	integer i,polcode,nx,ny,ilong,ilat
+	character num*2,bunit*32,types(5)*25,btype*32
 	character telescop*16,rdate*32,atemp*16,observer*16,cellscal*16
-	character object*32,pbtype*16,keyw*8
+	character object*32,pbtype*16
 	real bmaj,bmin,bpa,epoch,equinox,rms,vobs,pbfwhm
-	double precision cdelt,crota,crval,crpix,scale
-	double precision restfreq,obsra,obsdec,dtemp,cdelta,cdeltb
-	logical differ,ok,rotok,rotted
-c	logical ew,ewdone
-	double precision dec,dra
-	character nra*2
-	logical rra,fdec
+	double precision restfreq,obsra,obsdec,dtemp
+	double precision llrot
+	double precision cdelt(MAXNAX),crval(MAXNAX),crpix(MAXNAX)
+	character ctype(MAXNAX)*8
 c
 c  Externals.
 c
 	character itoaf*2
-	integer len1
 	double precision epo2jul
 c
 c                   1234567890123456789012345
@@ -3154,152 +3152,6 @@ c
 c
 	call fitrdhda(lu,'BUNIT',bunit,' ')
 	call fitrdhda(lu,'BTYPE',btype,' ')
-	rotted = .false.
-	differ = .false.
-c	ewdone = .false.
-	rra = .false.
-	fdec = .false.
-	nx = 0
-	ny = 0
-	do i=1,naxis
-	  ok = .true.
-	  num = itoaf(i)
-c
-c  To cope with IRAF images, look in CDi_i, CDiiijjj and CDELTi for the
-c  increment.
-c
-	  keyw = 'CD'//num
-	  l = len1(keyw)
-	  keyw(l+1:) = '_'//num
-	  call fitrdhdd(lu,keyw,cdelta,1.d0)
-	  write(keyw,'(a,i3.3,i3.3)')'CD',i,i
-	  call fitrdhdd(lu,keyw,cdeltb,cdelta)
-	  call fitrdhdd(lu,'CDELT'//num,cdelt,cdeltb)
-	  call fitrdhda(lu,'CTYPE'//num,ctype,' ')
-	  call fitrdhdd(lu,'CROTA'//num,crota,0.d0)
-	  call fitrdhdd(lu,'CRPIX'//num,crpix,1.d0)
-	  call fitrdhdd(lu,'CRVAL'//num,crval,0.d0)
-c
-	  l = len1(ctype)
-	  dowhile(l.gt.0.and.ctype(l:l).eq.'-')
-	    ctype(l:l) = ' '
-	    l = l - 1
-	  enddo
-	  if(ctype.eq.' ')then
-	    if(i.eq.1)then
-	      ctype = 'RA---CAR'
-	    else if(i.eq.2)then
-	      ctype = 'DEC--CAR'
-	    endif
-	  else if (ctype.eq.'DEC')then
-	    ctype = 'DEC--CAR'
-	  else if (ctype.eq.'LL') then
-            ctype= 'RA---SIN'
-            call bug ('w', 'Converting LL to RA---SIN')
-          else if (ctype.eq.'MM') then
-            ctype = 'DEC--SIN'
-            call bug ('w', 'Converting MM to DEC--SIN')
-          endif
-c
-	  rotok = .false.
-c
-c  Handle the RA axis.
-c
-	  if(ctype.eq.'RA'.or.ctype(1:3).eq.'RA-')then
-	    scale = pi/180d0
-	    rotok = .true.
-	    call fitrdhdd(lu,'OBSRA',obsra,crval)
-	    differ = differ.or.(abs(obsra-crval).gt.abs(cdelt))
-	    call fitrdhdi(lu,'NAXIS'//num,nx,0)
-c
-	    if(ctype.eq.'RA')then
-	      rra = .true.
-	      dra = scale*cdelt
-	      nra = num
-	    endif
-c
-c  Handle the DEC axis.
-c
-	  else if(ctype.eq.'DEC'.or.ctype(1:4).eq.'DEC-')then
-	    scale = pi/180d0
-	    rotok = .true.
-	    call fitrdhdd(lu,'OBSDEC',obsdec,crval) 
-	    differ = differ.or.(abs(obsdec-crval).gt.abs(cdelt))
-	    call fitrdhdi(lu,'NAXIS'//num,ny,0)
-	    fdec = .true.
-	    dec = scale*crval
-c
-c  Handle other angular axes.
-c
-	  else if(ctype.eq.'ANGLE')then
-	    scale = pi/180d0
-	  else if(ctype(1:4).eq.'GLON'.or.
-     *		  ctype(1:4).eq.'GLAT'.or.
-     *		  ctype(1:4).eq.'ELON'.or.
-     *		  ctype(1:4).eq.'ELAT')then
-	    scale = pi/180.
-	    rotok = .true.
-c
-c  Handle velocity and frequency axes.
-c
-	  else if(ctype(1:4).eq.'VELO'.or.ctype(1:4).eq.'FELO')then
-	    scale = 1d-3
-	  else if(ctype(1:4).eq.'FREQ')then
-	    scale = 1d-9
-c
-c  AIPS writes out miscellaneous information about the axis type
-c  on the Stokes axis.
-c
-	  else if(ctype(1:6).eq.'STOKES')then
-	    polcode = nint(crval+(1-crpix)*cdelt)
-	    ok = polcode.ge.-8.and.polcode.le.4.and.polcode.ne.0
-	    if(polcode.ge.5.and.polcode.le.9)btype=types(polcode-4)
-	    scale = 1d0
-	  else
-	    scale = 1d0
-	  endif
-c
-c  If there is a "SIN" projection code, and the telescope is an
-c  EW one, convert the projection to NCP (after giving a message).
-c
-c	  if(ctype.eq.'RA---SIN'.or.ctype.eq.'DEC--SIN')then
-c	    if(.not.ewdone)then
-c	      ewdone = .true.
-c	      ew = telescop.ne.' '
-c	      if(ew)call obspar(telescop,'ew',dtemp,ew)
-c	      if(ew) ew = dtemp.gt.0
-c	      if(ew)call bug('w',
-c     *		'Changing projections to NCP for east-west telescope')
-c	    endif
-c	    if(ew)ctype(5:8) = '-NCP'
-c	  endif
-	  if(ok)then
-	    call wrhdd(tno,'cdelt'//num,scale*cdelt)
-	    call wrhdd(tno,'crpix'//num,crpix)
-	    call wrhdd(tno,'crval'//num,scale*crval)
-	    if(ctype.ne.' ') call wrhda(tno,'ctype'//num,ctype)
-c
-c  Store rotation.
-c
-	    if(abs(crota).gt.0.001)then
-	      if(rotok.and..not.rotted)then
-	        call wrhdd(tno,'llrot',DPI/180.d0*crota)
-		call bug('w','This image has a sky rotation')
-		call bug('w',
-     *		  'Sky rotations are poorly supported by Miriad')
-		rotted = .true.
-	      else
-	        call bug('w','Rotation not supported for axis '//ctype)
-	      endif
-	    endif
-	  endif
-	enddo
-c
-	if(rra.and.fdec)then
-	  dra = dra*cos(dec)
-	  call wrhda(tno,'ctype'//nra,'RA---CAR')
-	  call wrhdd(tno,'cdelt'//nra,dra)
-	endif
 c
 	call fitrdhdr(lu,'rms',rms,0.)
 	if(rms.gt.0)call wrhdr(tno,'rms',rms)
@@ -3307,16 +3159,72 @@ c
 	atemp = telescop
 	if(pbfwhm.ne.0)call pbEncode(atemp,'gaus',PI/180/3600*pbfwhm)
 	call fitrdhda(lu,'pbtype',pbtype,atemp)
-	if(pbtype.ne.telescop)call wrhda(tno,'pbtype',pbtype)
 c
-	if(differ.and.nx.gt.0.and.ny.gt.0)then
-          call output('Phase and pointing centers differ ...'//
-     *          ' saving pointing information')
-          call mosInit(nx,ny)
-	  if(rms.le.0)rms = 1
-          call mosSet(1,PI/180*obsra,PI/180*obsdec,rms,pbtype)
-          call mosSave(tno)
-  	endif
+c  Get the axis coordinate information.
+c
+	call cord(lu,naxis,ctype,crval,crpix,cdelt,llrot,ilong,ilat)
+c
+c  Handle the OBSRA and OBSDEC keywords.
+c
+	if(ilong.ne.0.and.ilat.ne.0)then
+	  if(ctype(ilong)(1:5).eq.'RA---'.and.
+     *	     ctype(ilat )(1:5).eq.'DEC--')then
+	    call fitrdhdd(lu,'OBSRA' ,obsra, crval(ilong))
+	    call fitrdhdd(lu,'OBSDEC',obsdec,crval(ilat))
+	    if(abs(obsra-crval(ilong)).gt.abs(cdelt(ilong)).or.
+     *	       abs(obsdec-crval(ilat)).gt.abs(cdelt(ilat)))then
+	      call fitrdhdi(lu,'NAXIS'//itoaf(ilong),nx,0)
+	      call fitrdhdi(lu,'NAXIS'//itoaf(ilat), ny,0)
+              call output('Phase and pointing centers differ ...'//
+     *					' saving pointing information')
+	      call mosInit(nx,ny)
+	      if(rms.le.0)rms = 1
+	      call mosSet(1,DPI/180d0*obsra,DPI/180d0*obsdec,rms,pbtype)
+	      call mosSave(tno)
+	    else if(pbtype.ne.telescop)then
+	      call wrhda(tno,'pbtype',pbtype)
+	    endif
+	  endif
+	endif
+c
+c  Perform unit conversion of coordinate system and write them out.
+c
+	do i=1,naxis
+	  num = itoaf(i)
+	  if(ctype(i)(1:5).eq.'RA---'.or.ctype(i)(1:5).eq.'DEC--'.or.
+     *	     ctype(i)(1:5).eq.'GLON-'.or.ctype(i)(1:5).eq.'GLAT-'.or.
+     *	     ctype(i)(1:5).eq.'ELON-'.or.ctype(i)(1:5).eq.'ELAT-'.or.
+     *	     ctype(i).eq.'ANGLE')then
+	    crval(i) = DPI/180.d0 * crval(i)
+	    cdelt(i) = DPI/180.d0 * cdelt(i)
+          else if(ctype(i)(1:4).eq.'VELO'.or.
+     *		  ctype(i)(1:4).eq.'FELO')then
+	    crval(i) = 1d-3 * crval(i)
+	    cdelt(i) = 1d-3 * cdelt(i)
+          else if(ctype(i)(1:4).eq.'FREQ')then
+	    crval(i) = 1d-9 * crval(i)
+	    cdelt(i) = 1d-9 * cdelt(i)
+	  else if(ctype(i).eq.'STOKES')then
+	    polcode = nint(crval(i)+(1-crpix(i))*cdelt(i))
+	    if(polcode.lt.-8.or.polcode.gt.4.or.polcode.ne.0)then
+	      ctype(i) = 'ASTOKES'
+	      if(polcode.ge.5.and.polcode.le.9)btype=types(polcode-4)
+	    endif
+	  endif
+c
+	  if(ctype(i).ne.' ')call wrhda(tno,'ctype'//num,ctype(i))
+	  call wrhdd(tno,'crval'//num,crval(i))
+	  call wrhdd(tno,'cdelt'//num,cdelt(i))
+	  call wrhdd(tno,'crpix'//num,crpix(i))
+	enddo
+c
+	if(llrot.ne.0)then
+	  call wrhdd(tno,'llrot',llrot)
+	  call bug('w','This image has a sky rotation')
+	  call bug('w','Sky rotations are poorly supported by Miriad')
+	endif
+c
+c  Determine dates.
 c
 	call geteqep(lu,'EPOCH',epoch)
 	call geteqep(lu,'EQUINOX',equinox)
@@ -3349,6 +3257,209 @@ c
 	if(bmaj*bmin.ne.0)call wrhdr(tno,'bpa',bpa)
 c
 	end
+c************************************************************************
+	subroutine cord(lu,naxis,ctype,crval,crpix,cdelt,llrot,
+     *							ilong,ilat)
+c
+	implicit none
+	integer lu,naxis,ilong,ilat
+	character ctype(naxis)*(*)
+	double precision crval(naxis),crpix(naxis),cdelt(naxis),llrot
+c
+c  Load in FITS coordinate system and fiddle it into a Miriad coordinate
+c  system.
+c------------------------------------------------------------------------
+	include 'mirconst.h'
+	integer i,j,l
+	double precision dtemp
+	character num*2
+	character templat*8
+c
+c  Externals.
+c
+	character itoaf*2,pc*8,cd1*8,cd2*8
+	integer len1
+c
+	data templat/'-----CAR'/
+c
+	ilong = 0
+	ilat = 0
+c
+	do i=1,naxis
+	  num = itoaf(i)
+	  call fitrdhda(lu,'CTYPE'//num,ctype(i),' ')
+	  call fitrdhdd(lu,'CRPIX'//num,crpix(i),1.0d0)
+	  call fitrdhdd(lu,'CRVAL'//num,crval(i),0.0d0)
+c
+	  call fitrdhdd(lu,cd1(i,i),cdelt(i),1.d0)
+	  call fitrdhdd(lu,cd2(i,i),dtemp,cdelt(i))
+	  call fitrdhdd(lu,'CDELT'//num,cdelt(i),dtemp)
+c
+	  if(ctype(i).eq.' '.and.i.eq.1)ctype(i) = 'RA---SIN'
+	  if(ctype(i).eq.' '.and.i.eq.2)ctype(i) = 'DEC--SIN'
+c
+	  if(ctype(i).eq.'RA'  .or.ctype(i)(1:5).eq.'RA---'.or.
+     *	     ctype(i).eq.'GLON'.or.ctype(i)(1:5).eq.'GLON-'.or.
+     *	     ctype(i).eq.'ELON'.or.ctype(i)(1:5).eq.'ELON-')then
+	    ilong = i
+	  else if(ctype(i).eq.'DEC' .or.ctype(i)(1:5).eq.'DEC--'.or.
+     *		  ctype(i).eq.'GLAT'.or.ctype(i)(1:5).eq.'GLAT-'.or.
+     *		  ctype(i).eq.'ELAT'.or.ctype(i)(1:5).eq.'ELAT-')then
+	    ilat = i
+	  endif
+	enddo
+c
+c  Check for skew/rotations that cannot be handled.
+c
+	do j=1,naxis
+	  do i=1,naxis
+	    if(i.ne.j.and..not.(
+     *		(i.eq.ilong.and.j.eq.ilat).or.
+     *		(j.eq.ilong.and.i.eq.ilat)))then
+	      call fitrdhdd(lu,pc(i,j),dtemp,0.d0)
+	      if(dtemp.ne.0)call bug('w',
+     *		'Cannot handle non-zero FITS skewness parameter '//
+     *		pc(i,j))
+	      call fitrdhdd(lu,cd1(i,j),dtemp,0.d0)
+	      if(dtemp.ne.0)call bug('w',
+     *		'Cannot handle non-zero FITS skewness parameter '//
+     *		cd1(i,j))
+	      call fitrdhdd(lu,cd2(i,j),dtemp,0.d0)
+	      if(dtemp.ne.0)call bug('w',
+     *		'Cannot handle non-zero FITS skewness parameter '//
+     *		cd2(i,j))
+	    endif
+	  enddo
+	  if(j.ne.ilat.and.j.ne.ilong)then
+	    call fitrdhdd(lu,'CROTA'//itoaf(j),dtemp,0.d0)
+	    if(dtemp.ne.0)call bug('w',
+     *		'Cannot handle non-zero FITS rotation parameter '//
+     *		itoaf(j))
+	  endif
+	enddo
+c
+c  Determine the rotation.
+c
+	if(ilat.ne.0.and.ilong.ne.0)then
+	  call cdget(lu,ilong,ilat,cdelt(ilong),cdelt(ilat),llrot)
+c
+c  Convert projectionless latitude/longitude into -CAR projection type.
+c
+	  if(ctype(ilong)(6:).eq.' '.and.ctype(ilat)(6:).eq.' ')then
+	    l = len1(ctype(ilong))
+	    ctype(ilong)(l+1:) = templat(l+1:)
+	    l = len1(ctype(ilat))
+	    ctype(ilat)(l+1:) =  templat(l+1:)
+	    if(abs(llrot).gt.1e-3)call bug('w',
+     *		'Cannot handle rotation with -CAR projection')
+	    llrot = 0
+	    cdelt(ilong) = cdelt(ilong)*cos(DPI/180.d0*crval(ilat))
+	  endif
+	endif
+c
+	end
+c************************************************************************
+	subroutine cdget(lu,ilong,ilat,cdelt1,cdelt2,llrot)
+c
+	implicit none
+	integer lu,ilong,ilat
+	double precision cdelt1,cdelt2,llrot
+c
+c  Get the longitude/latitude transformation matrix.
+c------------------------------------------------------------------------
+	include 'mirconst.h'
+	double precision crota,pc11,pc12,pc21,pc22,cd11,cd12,cd21,cd22
+	double precision dtemp
+c
+c  Externals.
+c
+	character itoaf*2,pc*8,cd1*8,cd2*8
+c
+	call fitrdhdd(lu,'CDELT'//itoaf(ilong),cdelt1,1.d0)
+	call fitrdhdd(lu,'CDELT'//itoaf(ilat),cdelt2,1.d0)
+	call fitrdhdd(lu,'CROTA'//itoaf(ilat),crota,0.d0)
+	crota = DPI/180.d0 * crota
+c
+	call fitrdhdd(lu,pc(ilong,ilong),pc11,cos(crota))
+	if(crota.ne.0)then
+	  call fitrdhdd(lu,pc(ilong,ilat), pc12,
+     *					-sin(crota)*cdelt2/cdelt1)
+	  call fitrdhdd(lu,pc(ilat,ilong), pc21,
+     *					 sin(crota)*cdelt1/cdelt2)
+	else
+	  pc12 = 0
+	  pc21 = 0
+	endif
+	call fitrdhdd(lu,pc(ilat,ilat),  pc22,cos(crota))
+c
+	call fitrdhdd(lu,cd1(ilong,ilong),dtemp,pc11*cdelt1)
+	call fitrdhdd(lu,cd2(ilong,ilong),cd11,dtemp)
+c
+	call fitrdhdd(lu,cd1(ilong,ilat),dtemp,pc12*cdelt1)
+	call fitrdhdd(lu,cd2(ilong,ilat),cd12,dtemp)
+c
+	call fitrdhdd(lu,cd1(ilat,ilong),dtemp,pc21*cdelt2)
+	call fitrdhdd(lu,cd2(ilat,ilong),cd21,dtemp)
+c
+	call fitrdhdd(lu,cd1(ilat,ilat),dtemp,pc22*cdelt2)
+	call fitrdhdd(lu,cd2(ilat,ilat),cd22,dtemp)
+c
+c  We have the CD parameters. Now convert these to cdelt1,cdelt2,llrot
+c
+	llrot = atan(cd21/cd11)
+	dtemp = atan(-cd12/cd22)
+	if(abs(dtemp-llrot).gt.1e-3)then
+	  call bug('w',
+     *	    'Image plane is skew, which Miriad does not support')
+	  call bug('w','Using some mean rotation')
+	endif
+	llrot = 0.5*(llrot + dtemp)
+	cdelt1 = cd11/cos(llrot)
+	cdelt2 = cd22/cos(llrot)
+c
+	end
+c************************************************************************
+	character*(*) function pc(i,j)
+c
+	implicit none
+	integer i,j
+c
+c------------------------------------------------------------------------
+	character keyw*8
+	write(keyw,'(a,i3.3,i3.3)')'PC',i,j
+	pc = keyw
+	end
+c************************************************************************
+	character*(*) function cd1(i,j)
+c
+	implicit none
+	integer i,j
+c
+c------------------------------------------------------------------------
+	character keyw*8
+	write(keyw,'(a,i3.3,i3.3)')'CD',i,j
+	cd1 = keyw
+	end
+c************************************************************************
+	character*(*) function cd2(i,j)
+c
+	implicit none
+	integer i,j
+c
+c------------------------------------------------------------------------
+	character keyw*8
+	integer l
+c
+c  Externals.
+c
+	integer len1
+	character itoaf*2
+c
+	keyw = 'CD'//itoaf(i)
+	l = len1(keyw)
+	cd2 = keyw(1:l)//'_'//itoaf(j)
+	end
+
 c************************************************************************
 	subroutine geteqep(lu,key,value)
 c
@@ -3529,6 +3640,7 @@ c
 c  Open the input MIRIAD file and determine a few things about it.
 c
 	call xyopen(tno,in,'old',MAXNAX,nsize)
+	call coInit(tno)
 	doflag = hdprsnt(tno,'mask')
 	if(nsize(1).gt.maxdim)
      *	  call bug('f','Image too big to handle')
@@ -3567,6 +3679,7 @@ c
 c
 c  All said and done. Go to sleep.
 c
+	call coFin(tno)
 	call xyclose(tno)
 	call fxyclose(lu)
 c
@@ -3591,9 +3704,11 @@ c------------------------------------------------------------------------
 	include 'mirconst.h'
 	integer i,npnt
 	character num*2,ctype*32,date*32
-	real cdelt,crota,crpix,bmaj,bmin,rms
-	double precision restfreq,crval,obstime,obsra,obsdec,scale
+	real bmaj,bmin,rms
+	double precision restfreq,crval,cdelt,crota,crpix
+	double precision obstime,obsra,obsdec,scale,lat
 	character cellscal*16,telescop*16
+	logical givegls
 c
 c  Externals.
 c
@@ -3614,12 +3729,10 @@ c
 	endif
 	if(telescop.ne.' ')call fitwrhda(lu,'TELESCOP',telescop)
 c
+	givegls = .true.
 	do i=1,naxis
+	  call coAxGet(tno,i,ctype,crpix,crval,cdelt)
 	  num = itoaf(i)
-	  call rdhda(tno,'ctype'//num,ctype,' ')
-	  call rdhdr(tno,'cdelt'//num,cdelt,1.)
-	  call rdhdr(tno,'crpix'//num,crpix,1.)
-	  call rdhdd(tno,'crval'//num,crval,0.d0)
 c
 c  Determine scale factor.
 c
@@ -3630,8 +3743,34 @@ c
      *	     ctype(1:5).eq.'ELON-'.or.
      *	     ctype(1:5).eq.'ELAT-')then
 	    scale = 180.d0/DPI
-	    call rdhdr(tno,'llrot',crota,0.0)
-	    if(crota.ne.0)call fitwrhdr(lu,'CROTA'//num,180.0/PI*crota)
+c
+	    call coGetd(tno,'llrot',crota)
+c
+c  Fiddle to the FITS convention.
+c
+	    if(     ctype.eq.'RA---CAR'.or.ctype.eq.'GLON-CAR'.or.
+     *	            ctype.eq.'ELON-CAR')then
+	      if(crota.ne.0)call bug('w','Rotation of CAR'//
+     *		' projection not supported in output FITS file')
+	      call striper(ctype)
+	      call getlat(tno,lat)
+	      cdelt = cdelt/cos(lat)
+	      crota = 0
+	    else if(ctype.eq.'DEC--CAR'.or.ctype.eq.'GLAT-CAR'.or.
+     *		    ctype.eq.'ELAT-CAR')then
+	      call striper(ctype)
+	      crota = 0
+	    else if(ctype(5:8).eq.'-GLS'.and.givegls)then
+	      call bug('w',
+     *		'The output uses the old convention for GLS projection')
+	      call fitcdio(lu,
+     *	        'HISTORY This FITS file uses the old GLS convention')
+	      call fitcdio(lu,
+     *		'HISTORY See AIPS Memo 46 for details')
+	      givegls = .false.
+	    endif
+	    if(crota.ne.0)call fitwrhdd(lu,'CROTA'//num,180.0/DPI*crota)
+c
 	  else if(ctype.eq.'ANGLE')then
 	    scale =180.d0/DPI
 	  else if(ctype(1:4).eq.'FREQ')then
@@ -3642,27 +3781,63 @@ c
 	    scale = 1.
 	  endif
 	  call fitwrhdd(lu,'CDELT'//num,scale*cdelt)
-	  call fitwrhdr(lu,'CRPIX'//num,crpix)
+	  call fitwrhdd(lu,'CRPIX'//num,crpix)
 	  call fitwrhdd(lu,'CRVAL'//num,scale*crval)
 	  if(ctype.ne.' ')call fitwrhda(lu,'CTYPE'//num,ctype)
 	enddo
 c
 c  Write out other coordinates.
 c
-	call rdhdd(tno,'obstime',obstime,-1.d0)
+	call coGetd(tno,'obstime',obstime)
 	if(obstime.gt.0) then
 	  call julday(obstime,'F',date)
 	  call fitwrhda(lu,'DATE-OBS',date)
 	endif
-	call rdhdd(tno,'restfreq',restfreq,-1.d0)
+	call coGetd(tno,'restfreq',restfreq)
 	if(restfreq.gt.0) call fitwrhdd(lu,'RESTFREQ',1.0d9*restfreq)
-	call rdhda(tno,'cellscal',cellscal,'1/F')
+	call coGeta(tno,'cellscal',cellscal)
 	if(cellscal.ne.' ')call fitwrhda(lu,'CELLSCAL',cellscal)
+c
 	call rdhdr(tno,'bmaj',bmaj,0.)
 	if(bmaj.ne.0) call fitwrhdr(lu,'BMAJ',(180/pi)*bmaj)
 	call rdhdr(tno,'bmin',bmin,0.)
 	if(bmin.ne.0) call fitwrhdr(lu,'BMIN',(180/pi)*bmin)
 c
+	end
+c************************************************************************
+	subroutine striper(ctype)
+c
+	implicit none
+	character ctype*(*)
+c
+c------------------------------------------------------------------------
+	integer i
+	logical more
+c
+	ctype(5:) = ' '
+	i = 4
+	more = ctype(i:i).eq.'-'
+	dowhile(more)
+	  ctype(i:i) = ' '
+	  i = i - 1
+	  more = i.gt.0
+	  if(more)more = ctype(i:i).eq.'-'
+	enddo
+c
+	end
+c************************************************************************
+	subroutine getlat(tno,lat)
+c
+	implicit none
+	integer tno
+	double precision lat
+c------------------------------------------------------------------------
+	integer iax
+c
+	character itoaf*2
+c
+	call coFindAx(tno,'latitude',iax)
+	call coGetd(tno,'crval'//itoaf(iax),lat)
 	end
 c************************************************************************
 	subroutine hdout(tno,lu)
@@ -3679,7 +3854,7 @@ c    lu		Handle of the output FITS file.
 c
 c------------------------------------------------------------------------
 	integer nshort,nlong
-	parameter(nshort=6,nlong=12)
+	parameter(nshort=6,nlong=11)
 	character short(nshort)*5,long(nlong)*8
 	integer iostat,item,n,ival
 	real rval
@@ -3692,9 +3867,9 @@ c
 	integer len1,binsrcha
 c
 	data short/'cdelt','crota','crpix','crval','ctype','naxis'/
-	data long/'bmaj    ','bmin    ','cellscal','history ',
-     *		  'image   ','mask    ','mostable','obsdec  ',
-     *		  'obsra   ','obstime ','restfreq','telescop'/
+	data long/'bmaj    ','bmin    ','cellscal',
+     *		  'history ','image   ','llrot   ','mask    ',
+     *		  'mostable','obstime ','restfreq','telescop'/
 c
 c  Short items have numbers attached.
 c  Open the "special item" which gives the names of all the items in the
@@ -3777,7 +3952,7 @@ c    version
 c
 c------------------------------------------------------------------------
 	integer nlong,nshort
-	parameter(nlong=46,nshort=9)
+	parameter(nlong=47,nshort=9)
 	character card*80
 	logical more,discard,found,unrec
 	integer i
@@ -3795,8 +3970,8 @@ c
 	data (long(i),history(i),i=1,nlong)/
      *	  '        ', .true.,  'ALTRPIX ', .false., 'ALTRVAL ', .false.,
      *    'BITPIX  ', .false., 'BLANK   ', .false., 'BLOCKED ', .false.,
-     *	  'BMAJ    ', .false., 'BMIN    ', .false., 'BSCALE  ', .false.,
-     *	  'BTYPE   ', .false.,
+     *	  'BMAJ    ', .false., 'BMIN    ', .false., 'BPA     ', .false.,
+     *	  'BSCALE  ', .false., 'BTYPE   ', .false.,
      *	  'BUNIT   ', .false., 'BZERO   ', .false., 'CELLSCAL', .false.,
      *	  'COMMAND ', .true.,  'COMMENT ', .true.,
      *	  'DATE    ', .false., 'DATE-MAP', .false., 'DATE-OBS', .false.,
