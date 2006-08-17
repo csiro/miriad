@@ -44,6 +44,8 @@ c         lst                      [local sidereal time in decimal hours]
 c         az                       [azimuth in degrees]
 c         el                       [elevation in degrees]
 c         airmass                  [airmass=1/sin(el)]
+c         jyperk                   [system gain, in Jy/K]
+c         rms                      [theoretical visibility noise rms, in flux units]
 c	NOTE: parang is the true parallactic angle of the source, which can
 c	be quite different from the angle between source and antenna feed
 c	(Miriad variable chi).
@@ -63,6 +65,8 @@ c         If axis = dhangle               [decimal hours; 2 values]
 c	  If axis = parang                [degrees;       2 values]
 c         If axis = az or el              [degrees;       2 values]
 c         If axis = airmass               [natural units; 2 values]
+c         If axis = jyperk                [Jy/K;          2 values]
+c         If axis = rms                   [flux units;    2 values]
 c         If axis = lst                   [decimal hours; 2 values]
 c
 c	Default is to self-scale (see also OPTIONS=XIND).
@@ -325,6 +329,7 @@ c    rjs  20jan01  Change definition of nbases in uvfish to allow for
 c		   possible presence of autocorrelations.
 c    rjs  02mar01  Added airmass to possible axes.
 c    rjs  04may03  getlst could return the wrong value in some circumstances.
+c    rjs  20sep04  Added jyperk and rms.
 c
 c To do:
 c
@@ -426,7 +431,7 @@ c
       double precision preamble(4), fday, dayav, baseday, day, 
      +  ha, ra, dec, lst, lat, az, el, dtemp
       real size(2), xmin, xmax, ymin, ymax, u, v, uvdist, uvpa, xvalr,
-     +  yvalr, paran
+     +  yvalr, paran, jyperk, rms
       integer lin, ivis, nread, dayoff, j,  nx, ny, inc, hann, tunit,
      +  ofile, ifile, jfile, vupd, ip, nkeep, npnts
       character in*64, xaxis*10, yaxis*10, pdev*80, comment*80, 
@@ -455,7 +460,7 @@ c
       data npts, plpts, basmsk /ifac1*0, ifac1*0, ifac2*0/
       data polmsk /13*0/
 c-----------------------------------------------------------------------
-      call output ('UvPlt: version 1.0 20-Jan-01')
+      call output ('UvPlt: version 1.0 20-Sep-04')
 c
 c  Get the parameters given by the user and check them for blunders
 c
@@ -616,6 +621,15 @@ c
             ha = ha * 12.0d0*3600.0d0/dpi
           endif
 c
+c  Fish out jyperk or rms if required.
+c
+	  if(xaxis.eq.'jyperk'.or.yaxis.eq.'jyperk')then
+	    call uvDatgtr('jyperk',jyperk)
+	  endif
+	  if(xaxis.eq.'rms'.or.yaxis.eq.'rms')then
+	    call uvDatgtr('variance',rms)
+	  endif
+c
 c  Fish out the parallactic angle,azimuth or elevation
 c  if required.
 c
@@ -650,10 +664,10 @@ c
 c Set x and y values
 c
               call setval (xaxis, ha, u, v, uvdist, uvpa, fday,
-     +                     paran, lst, az, el,
+     +                     paran, lst, az, el, jyperk, rms,
      +			   data(j), j, freq, xvalr, xgood)
               call setval (yaxis, ha, u, v, uvdist, uvpa, fday, 
-     +                     paran, lst, az, el,
+     +                     paran, lst, az, el, jyperk, rms,
      +                     data(j), j, freq, yvalr, ygood)
               if (xgood .and. ygood) then
                 if (doave) then
@@ -2552,12 +2566,13 @@ c
 c Types of axes allowed
 c
       integer naxmax, nax
-      parameter (naxmax = 19)
+      parameter (naxmax = 21)
       character axtyp(naxmax)*10
       data axtyp /  'time      ','dtime     ','uvdistance','uu        ',
      + 'vv        ','uc        ','vc        ','uvangle   ','amplitude ',
      + 'phase     ','real      ','imag      ','hangle    ','dhangle   ',
-     + 'parang    ','lst       ','az        ','el        ','airmass   '/
+     + 'parang    ','lst       ','az        ','el        ','airmass   ',
+     + 'jyperk    ','rms       '/
 c-----------------------------------------------------------------------
       call keyini
 c
@@ -3469,6 +3484,10 @@ c-----------------------------------------------------------------------
         label = 'Azimuth (degrees)'
       else if (axis.eq.'el') then
         label = 'Elevation (degrees)'
+      else if (axis.eq.'jyperk')then
+	label = 'System gain [Jy/K]'
+      else if (axis.eq.'rms')then
+	label = 'Theoretical noise rms [Jy]'
       else if (axis.eq.'airmass')then
 	label = 'Airmass [1/sin(el)]'
       else if (axis.eq.'uvdistance') then
@@ -3505,13 +3524,13 @@ c
 c
 c************************************************************************
       subroutine setval (axis, ha, u, v, uvdist, uvpa, fday, 
-     +                   parang, lst, az, el,
+     +                   parang, lst, az, el, jyperk, rms,
      +			 data, ichan, freq, val, ok)
 c
       implicit none
       complex data
       double precision fday, freq(*), ha, lst, az, el
-      real val, u, v, uvdist, uvpa, parang
+      real val, u, v, uvdist, uvpa, parang, jyperk, rms
       character axis*(*)
       integer ichan
       logical ok
@@ -3530,6 +3549,8 @@ c    parang   Parallactic Angle
 c    lst      LST in radians.
 c    az       Azimuth in radians.
 c    el       Elevation in radians.
+c    jyperk   System gain, in Jy/K.
+c    rms      Theoretical visibility noise variance, in flux units.
 c    data     Complex visibility
 c    ichan    CHannel number
 c    freq     Array of frequencies for each channel
@@ -3559,6 +3580,10 @@ c-----------------------------------------------------------------------
         val = 180./PI * el
       else if (axis.eq.'airmass') then
 	val = 1/sin(el)
+      else if (axis.eq.'jyperk') then
+	val = jyperk
+      else if (axis.eq.'rms') then
+	val = sqrt(rms)
       else if (axis.eq.'dtime') then
 c
 c Fractional days
