@@ -311,6 +311,7 @@ c    swa  03sep99  Add options=notitle.
 c    rjs  10mar00  Set maxbase2=91.
 c    rjs  28mar00  Fix colour indices when there are more than NCOL
 c		   inputs.
+c    rjs  04may00  Tidy up requirement for lat,long,lst and more.
 c
 c To do:
 c
@@ -410,7 +411,7 @@ c
      +  plpts(maxbase,maxpol,maxfile), a1a2(maxbase,2)
 c
       double precision preamble(4), fday, dayav, baseday, day, 
-     +  ha, ra, dec, lst, lat
+     +  ha, ra, dec, lst, lat, dtemp
       real size(2), xmin, xmax, ymin, ymax, u, v, uvdist, uvpa, xvalr,
      +  yvalr, paran
       integer lin, ivis, nread, dayoff, j,  nx, ny, inc, hann, tunit,
@@ -441,7 +442,7 @@ c
       data npts, plpts, basmsk /ifac1*0, ifac1*0, ifac2*0/
       data polmsk /13*0/
 c-----------------------------------------------------------------------
-      call output ('UvPlt: version 10-Mar-00')
+      call output ('UvPlt: version 4-May-00')
 c
 c  Get the parameters given by the user and check them for blunders
 c
@@ -534,13 +535,6 @@ c
           call goodat ( nread, goodf, nkeep)
           if (nkeep.eq.0) goto 950
 c
-          call uvrdvrd (lin, 'obsra', ra, 0.0d0)
-	  call uvrdvrd (lin, 'obsdec',dec,0.0d0)
-	  call uvrdvrd (lin, 'lst',   lst,0.0d0)
-	  call getlat  (lin, lat)
-	  call parang(ra,dec,lst,lat,paran)
-          paran = paran * 180.0 / dpi
-c
           ivis = ivis + 1
           day = preamble(3) + 0.5
 c
@@ -583,10 +577,39 @@ c
 c Get info from preamble
 c
           if (dowave) then
-            call getwvl (lin, xaxis, yaxis, ra, donano, preamble, 
-     +                   u, v, uvdist, uvpa, ha)
+            call getwvl (donano, preamble, u, v, uvdist, uvpa)
             call uvinfo (lin, 'sfreq', freq)
-           end if
+          endif
+c
+c Fish out hour angle if required.
+c
+          if (xaxis.eq.'hangle' .or. xaxis.eq.'dhangle' .or.
+     +        yaxis.eq.'hangle' .or. yaxis.eq.'dhangle') then
+	    call uvrdvrd(lin,'ra',dtemp,0.d0)
+	    call uvrdvrd(lin,'obsra',ra,dtemp)
+	    call getlst(lin,lst)
+            ha = (lst - ra) 
+            if (ha.gt.dpi) then
+              ha = ha - 2.0d0*dpi
+            else if (ha.lt.-dpi) then
+              ha = ha + 2.0*dpi
+            end if
+            ha = ha * 12.0d0*3600.0d0/dpi
+          endif
+c
+c  Fish out the parallactic angle if required.
+c
+	  if(xaxis.eq.'parang'.or.yaxis.eq.'parang')then
+	    call uvrdvrd(lin,'ra',dtemp,0.d0)
+            call uvrdvrd (lin, 'obsra', ra, dtemp)
+	    call uvrdvrd(lin,'dec',dtemp,0.d0)
+	    call uvrdvrd(lin, 'obsdec',dec,dtemp)
+	    call getlst(lin, lst)
+	    call getlat(lin, lat)
+	    call parang(ra,dec,lst,lat,paran)
+            paran = paran * 180.0 / dpi
+	  endif
+c
           fday = day - dayoff
 c
 c Loop over channels for this visibility, accumulating, or 
@@ -1833,6 +1856,44 @@ c
       end if
 c
       end
+c************************************************************************
+      subroutine getlst (lin, lst)
+c
+      implicit none
+      integer lin
+      double precision lst
+c
+c  Get lst of the current data point.
+c
+c  Input:
+c    lin         Handle of file
+c  Output:
+c    lst         LAST in radians
+c-----------------------------------------------------------------------
+      double precision time,ra,long,dtemp
+      character type*1
+      integer length
+      logical ok
+c
+c  Externals.
+c
+      double precision eqeq
+c
+      lst = 0.0d0
+      call uvprobvr (lin, 'lst', type, length, ok)
+      if (type(1:1).eq.' ') then
+	call uvrdvrd (lin, 'ra', dtemp, 0.d0)
+	call uvrdvrd (lin, 'obsra', ra, dtemp)
+	call getlong(lin,long)
+        call jullst (time, long, lst)
+	lst = lst + eqeq(time)
+      else
+         call uvrdvrd (lin, 'lst', lst, 0.0d0)
+      end if
+c
+      end
+c
+c
 c
 c
       subroutine getlong (lin, long)
@@ -2238,38 +2299,27 @@ c
 c
       end
 c
+c************************************************************************
+      subroutine getwvl (donano, preamble, u, v, uvdist, uvpa)
 c
-      subroutine getwvl (lin, xaxis, yaxis, ra, donano, preamble, 
-     +                   u, v, uvdist, uvpa, ha)
+      implicit none
+      double precision preamble(2)
+      real u, v, uvdist, uvpa
+      logical donano
 c-----------------------------------------------------------------------
 c     Get some things from the preamble
 c
 c  Input:
 c    lin          Handle of vis file
-c    x,yaxis      Axis types
-c    ra           Apparent ra (radians)
 c    donano       True for wavelengths in nanoseconds, else kilo-lambda
 c    preamble     u and v in raw form (nsec or lambda)
 c  Output:
 c    u,v          u and v in form selected by user (nsec or klambda)
 c    uvdist       sqrt(u**2 + v**2)
 c    uvpa         Position angle of u,v clockwise from v axis
-c    ha           Hour angle in seconds
-c
 c-----------------------------------------------------------------------
-      implicit none
-c 
-      double precision preamble(4), ha, ra
-      real u, v, uvdist, uvpa
-      logical donano
-      integer lin
-      character*(*) xaxis, yaxis
 cc
       include 'mirconst.h'
-      double precision lst, rtod, rtos, long
-      parameter (rtod = 180.0d0/dpi, rtos = 12.0d0*3600.0d0/dpi)
-c
-      double precision eqeq
 c-----------------------------------------------------------------------
       u = preamble(1)
       v = preamble(2)
@@ -2282,42 +2332,17 @@ c
       uvdist = sqrt(u*u + v*v)
 c 
       if (u.ne.0.0 .or. v.ne.0.0) then
-        uvpa = rtod * atan2(u, v) 
+        uvpa = DPI/180.d0 * atan2(u, v) 
       else
 c
 c Signal this one no good
 c
         uvpa = 999.0
       end if
-c
-c Fish out hour angle if required; some datasets
-c will have neither longitude nor telescope so be gentle
-c
-      if (xaxis.eq.'hangle' .or. xaxis.eq.'dhangle' .or.
-     +    yaxis.eq.'hangle' .or. yaxis.eq.'dhangle') then    
-c
-c Get observatory longitude in radians
-c
-        call getlong (lin, long)
-c
-c Get lst in radians and find HA, +/- pi
-c
-        call jullst (preamble(3), long, lst)
-	lst = lst + eqeq(preamble(3))
-        ha = (lst - ra) 
-        if (ha.gt.dpi) then
-          ha = ha - 2.0d0*dpi
-        else if (ha.lt.-dpi) then
-          ha = ha + 2.0*dpi
-        end if
-        ha = ha * rtos
-      end if
-c
       end
-c
-c
+c************************************************************************
       subroutine goodat ( n, flags, nkeep)
-c-----------------------------------------------------------------------
+c
 c     See if there is any wanted data in this visibility
 c
 c  Input
