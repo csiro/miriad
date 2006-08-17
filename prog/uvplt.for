@@ -103,6 +103,10 @@ c 		 done then).
 c
 c	 nobase  Plot all baselines on the same plot, otherwise
 c	         each baseline is plotted on a separate sub-plot.
+c
+c        notitle Do not write any title on the plot.  Probably most useful 
+c                if plotting all baselines on the same plot (using the
+c                "nobase" option).
 c	 
 c	 2pass   Normally uvplt makes assumptions about what it is
 c	 	 expecting to find in the data with regards polarizations
@@ -303,6 +307,7 @@ c    rjs  14feb97  If the user sets nxy in options=nobase, then honour it.
 c    nebk 18jun98  Document nofqav options better
 c    rjs  19nov98  Minor correction to computation of LST, and recompute from
 c		   scratch the parallactic angle.
+c    swa  03sep99  Add options=notitle.
 c
 c To do:
 c
@@ -413,7 +418,7 @@ c
      +  dovec(2), dorms(3), doall, doflag, dobase, doperr, dointer,
      +  dolog, dozero, doequal, donano, dosrc, doavall, bwarn(2), 
      +  skip, xgood, ygood, doxind, doyind, dowrap, none, dosymb, 
-     +  dodots, false(2), allfull, docol, twopass, dofqav
+     +  dodots, false(2), allfull, docol, twopass, dofqav, dotitle
 c
 c Externals
 c
@@ -441,7 +446,7 @@ c
      +   tunit, dorms, dovec, doflag, doall, dobase, dointer, doperr,
      +   dolog, dozero, doequal, donano, dosrc, doavall, doxind, 
      +   doyind, dowrap, dosymb, dodots, docol, inc, nx, ny, pdev, 
-     +   logf, comment, size, hann, ops, twopass, dofqav)
+     +   logf, comment, size, hann, ops, twopass, dofqav, dotitle)
       call chkinp (xaxis, yaxis, xmin, xmax, ymin, ymax, dayav,
      +   dodoub, dowave, doave, dovec, dorms, dointer, doperr,
      +   dowrap, hann, xrtest, yrtest)
@@ -711,7 +716,7 @@ c
      +     xxmax, yymin, yymax, pdev, pl1dim, pl2dim, pl3dim, pl4dim,
      +     maxbase, maxpol, maxfile, nbases, npols, npts, buffer(ip), 
      +     xo, yo, elo, eho, nx, ny, a1a2, order, size, polmsk, 
-     +     doavall, docol)
+     +     doavall, docol, dotitle)
 c
       call logclose
       call memfree (ip, maxbuf2, 'r')
@@ -1912,7 +1917,8 @@ c
       subroutine getopt (dorms, dovec, doflag, doall, doday, dohour,
      +  dosec, dobase, dointer, doperr, dolog, dozero, doequal,
      +  donano, docal, dopass, dopol, dosrc, doavall, doxind, 
-     +  doyind, dowrap, dosymb, dodots, docol, twopass, dofqav)
+     +  doyind, dowrap, dosymb, dodots, docol, twopass, dofqav,
+     +  dotitle)
 c-----------------------------------------------------------------------
 c     Get user options
 c
@@ -1925,6 +1931,7 @@ c     doday     Averaging time in days if true, else minutes
 c     dohour    Averaging time in hours if true, esle minutes
 c     dosec     Averaging time in seconds if true, else minutes
 c     dobase    True if user wants each baseline on a differnet plot
+c     dotitle   If false then don't write plot title
 c     dointer   True if user wants to interactively fiddle with the
 c               plot after first drawing it.
 c     doperr    If true then the automatically determined Y window
@@ -1951,10 +1958,10 @@ c
       logical dorms(3), dovec(2), doall, doflag, dobase, dointer, 
      +  doperr, dolog, dozero, doequal, donano, docal, dopol, dosrc,
      +  doday, dohour, dosec, doavall, doxind, doyind, dowrap, 
-     +  dosymb, dodots, dopass, docol, twopass, dofqav
+     +  dosymb, dodots, dopass, docol, twopass, dofqav, dotitle
 cc
       integer nopt
-      parameter (nopt = 28)
+      parameter (nopt = 29)
 c
       character opts(nopt)*8
       logical present(nopt)
@@ -1964,7 +1971,8 @@ c
      +           'nocal   ', 'source  ', 'nopol   ', 'days    ', 
      +           'hours   ', 'avall   ', 'xind    ', 'yind    ', 
      +           'unwrap  ', 'symbols ', 'dots    ', 'nopass  ',
-     +           'nocolour', '2pass   ', 'mrms    ', 'nofqav  '/
+     +           'nocolour', '2pass   ', 'mrms    ', 'nofqav  ',
+     +           'notitle '/
 c-----------------------------------------------------------------------
       call options ('options', opts, present, nopt)
 c
@@ -2006,6 +2014,7 @@ c
       docol    = .not.present(25)
       twopass  =      present(26)
       dofqav   = .not.present(28)
+      dotitle  = .not.present(29)
 c
       end
 c
@@ -2416,7 +2425,8 @@ c
      +    dayav, tunit, dorms, dovec, doflag, doall, dobase, dointer,
      +    doperr, dolog, dozero, doequal, donano, dosrc, doavall, 
      +    doxind, doyind, dowrap, dosymb, dodots, docol, inc, nx, ny, 
-     +    pdev, logf, comment, size, hann, ops, twopass, dofqav )
+     +    pdev, logf, comment, size, hann, ops, twopass, dofqav,
+     +    dotitle )
 c-----------------------------------------------------------------------
 c     Get the user's inputs 
 c
@@ -2434,6 +2444,7 @@ c    dovec        True for vector averging, else scalar; x and y
 c    doflag       Plot flagged visbiltites only else plot unflagged
 c    doall        Plot flagged and unflagged.  Overrides DOFLAG
 c    dobase       User wants baselines on separaet plots
+c    dotitle      If false then don't write plot title
 c    dointer      User gets to play interactively with the plot
 c    doperr       If true then the automatically determined Y window
 c                 includes the ends of the error bars
@@ -2460,6 +2471,7 @@ c    size         PGPLOT character sizes for the labels and symbols
 c    hann         Hanning smoothing length
 c    twopass      Make two passes through the data
 c    dofqav       Average frequency channels before plotting.
+c    dotitle      When false don't write plot title
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -2469,7 +2481,7 @@ c
       logical dorms(3), dovec(2), doflag, doall, dobase, dointer, 
      +  doperr, dolog, dozero, doequal, donano, docal, dopol, dosrc,
      +  doavall, doxind, doyind, dowrap, dosymb, dodots, dopass, 
-     +  docol, twopass, dofqav
+     +  docol, twopass, dofqav, dotitle
       integer nx, ny, inc, hann, maxco, ilen, ilen2, tunit
 cc
       integer i
@@ -2493,7 +2505,7 @@ c
       call getopt (dorms, dovec, doflag, doall, doday, dohour, dosec,
      +   dobase, dointer, doperr, dolog, dozero, doequal, donano, 
      +   docal, dopass, dopol, dosrc, doavall, doxind, doyind, 
-     +   dowrap, dosymb, dodots, docol, twopass, dofqav)
+     +   dowrap, dosymb, dodots, docol, twopass, dofqav, dotitle)
 c
       ops = 'sdlp'
       i = 4
@@ -2792,7 +2804,7 @@ c
      +   xxmax, yymin, yymax, pdev, pl1dim, pl2dim, pl3dim, pl4dim, 
      +   maxbase, maxpol, maxfile, nbases, npols, npts, buffer, xo, 
      +   yo, elo, eho, nx, ny, a1a2, order, size, polmsk, 
-     +   doavall, docol)
+     +   doavall, docol, dotitle)
 c-----------------------------------------------------------------------
 c     Draw the plot
 c
@@ -2812,6 +2824,7 @@ c   dowrap         False to unwrap phases
 c   dosymb         Plot each file with a differnet symbol
 c   dodots         Plot averaged data as dots rather than filled circles
 c   docol          Plot differnt files in different colours if one polarization
+c   dotitle        False to not write plot title
 c   title          Title for plot
 c   x,yaxis        X and Y axis types
 c   x,ymin,max     User specified plot extrema
@@ -2850,7 +2863,7 @@ c
      +  yopt*10
       logical doave, dorms(2), dobase, dointer, dolog, dozero, doequal,
      +  donano, doxind, doyind, dowrap, doperr, dosymb, dodots, doavall,
-     +  docol
+     +  docol, dotitle
 cc
       real xmnall, xmxall, ymnall, ymxall, xlo, xhi, ylo, yhi
       integer ierr, il1, il2, sym, ip, jf, lp, kp, k, ii,
@@ -3130,7 +3143,9 @@ c
               call pgpage
               call pgtbox (xopt, 0.0, 0, yopt, 0.0, 0)
               call pglab (xlabel, ylabel, ' ')
-              call pltitle (npol, polstr, title, cols, doavall)
+              if (dotitle) then
+                call pltitle (npol, polstr, title, cols, doavall)
+              end if
 c
 c  Plot points and errors
 c
