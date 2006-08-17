@@ -251,9 +251,11 @@ c    rjs  23-sep-94  Handle w axis in uvout.
 c    rjs  26-sep-95  Somewhat better handling of odd input axes.
 c    rjs   7-nov-95  options=dss.
 c    rjs  05-dec-95  Negate the cdelt1 increment when options=dss.
+c    nebk 12-jan-96  Replace "percent_polarization" by "polarized_intensity"
+c		     ins subroutine AXISIN
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 5-Dec-95')
+	parameter(version='Fits: version 1.1 12-Jan-96')
 	character in*64,out*64,op*8,uvdatop*12
 	integer velsys
 	real altrpix,altrval
@@ -2839,7 +2841,7 @@ c
 	integer len1
 c
 c                   1234567890123456789012345
-	data types/'percent_polarization     ',
+	data types/'polarized_intensity      ',
      *		   'fractional_polarization  ',
      *		   'position_angle           ',
      *		   'spectral_index           ',
