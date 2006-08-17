@@ -130,6 +130,7 @@
 /*  rjs   9dec94 Less fussy when w coordinate is needed.		*/
 /*  rjs   6jan95 Make buffer for "w" coordinate large enough!		*/
 /*  rjs  13jan95 Added pulsar bin selection.				*/
+/*  rjs  22feb95 Relax linetype step limitation in uvflgwr.		*/
 /*----------------------------------------------------------------------*/
 /*									*/
 /*		Handle UV files.					*/
@@ -4196,7 +4197,7 @@ int tno,*flags;
 /*--									*/
 /*----------------------------------------------------------------------*/
 {
-  int nchan,width,offset,n;
+  int nchan,width,step,offset,n,i;
   UV *uv;
   VARIABLE *v;
   FLAGS *flags_info;
@@ -4211,7 +4212,8 @@ int tno,*flags;
     flags_info = &(uv->wcorr_flags);
   }
 
-  width = max(uv->actual_line.width, uv->actual_line.step);
+  width = uv->actual_line.width;
+  step  = uv->actual_line.step;
   if(uv->actual_line.linetype == LINE_VELOCITY ||
      flags_info->handle == NULL || width != 1)
     BUG('f',"Illegal request when trying to write to flagging file, in UVFLGWR");
@@ -4219,7 +4221,15 @@ int tno,*flags;
   nchan = NUMCHAN(v);
   offset = flags_info->offset - nchan + uv->actual_line.start;
   n = min(uv->actual_line.n,nchan);
-  mkwrite_c(flags_info->handle,MK_FLAGS,flags,offset,n,n);
+  if(step == 1){
+    mkwrite_c(flags_info->handle,MK_FLAGS,flags,offset,n,n);
+  } else {
+    for(i = 0; i < n; i++){
+      mkwrite_c(flags_info->handle,MK_FLAGS,flags,offset,1,1);
+      offset += step;
+      flags++;
+    }
+  }
 }
 /************************************************************************/
 void uvwflgwr_c(tno,flags)
