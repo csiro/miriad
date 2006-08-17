@@ -331,6 +331,7 @@ c    rjs  02mar01  Added airmass to possible axes.
 c    rjs  04may03  getlst could return the wrong value in some circumstances.
 c    rjs  20sep04  Added jyperk and rms.
 c    rjs  09may06  Disable planet processing.
+c    rjs  07jun06  Neater messages.
 c
 c To do:
 c
@@ -3405,8 +3406,9 @@ c
      +  plfidx
       logical dobase
 cc
-      character str1*2, itoaf*2
+      character str1*2,aline*80
       integer i, j
+      character itoaf*2,stcat*80
 c-----------------------------------------------------------------------
 c
 c Loop over size of BUFFER polarization dimension
@@ -3427,20 +3429,24 @@ c
                  call bug ('w',
      +            'Buffer for baseline '//itoaf(a1a2(i,1))//'-'//
      +            itoaf(a1a2(i,2))//', pol''n '//itoaf(j)//
-     +            ' filled for file # '//str1)
+     +            ' filled for file # '//itoaf(ifile))
                else
-                 call bug ('w',
-     +            'Buffer for baseline '//itoaf(a1a2(i,1))//'-'//
-     +            itoaf(a1a2(i,2))//', pol''n '//itoaf(j)//
-     +            ' filled while reading file # '//str1)
+		  aline = stcat(
+     *			stcat('Buffer for baseline '//itoaf(a1a2(i,1)),
+     *			      '-'//itoaf(a1a2(i,2))),
+     *			stcat(', pol''n '//itoaf(j),
+     *			      ' filled while reading file # '//
+     *				itoaf(ifile)))
+		  call bug('w',aline)
                end if
             else
                if (pl4dim.gt.1) then
                  call bug ('w', 'Plot buffer filled for polarization '//
-     +                     itoaf(j)//' for file #'//str1)  
+     +                     itoaf(j)//' for file # '//itoaf(ifile))  
                else
                  call bug ('w', 'Plot buffer filled for polarization '//
-     +                     itoaf(j)//' while reading file #'//str1)  
+     +                     itoaf(j)//' while reading file # '
+     *			   //itoaf(ifile))  
                end if
             end if
           end if
@@ -3776,13 +3782,18 @@ cc
       character aline*80
       integer len1, i, nsum, j
       logical more, nunloc
+c
+c  Externals.
+c
+	character itoaf*8,stcat*80
+c
 c-----------------------------------------------------------------------
       if (pl4dim.gt.1) then
-        write(aline,'(a,i7,a,i2)')
-     +        'Read ', ivis, ' visibilities from file ', ifile
+	aline = stcat('Read '//itoaf(ivis),
+     *		      ' visibilities from file '//itoaf(ifile))
       else
-        write(aline,'(a,i7,a)')
-     +        'Read ', ivis, ' visibilities from all files'
+	aline = stcat('Read '//itoaf(ivis),
+     *		      ' visibilities from all files')
       end if
       call logwrite (aline(1:len1(aline)), more)
       call logwrite (' ',more)
@@ -3796,9 +3807,10 @@ c
           end do
           if (nsum.gt.0) then
             nunloc = .false.
-            write (aline, 100) a1a2(i,1), a1a2(i,2), nsum
-100         format ('Baseline ', i2, '-', i2, 
-     +              '  plot ', i6, ' points')
+	    aline = stcat(
+     *		      stcat('Baseline '//itoaf(a1a2(i,1)),
+     *			    '-'//itoaf(a1a2(i,2))),
+     *		      stcat(', plot '//itoaf(nsum),' points'))
             call logwrite (aline(1:len1(aline)), more)
           end if
         end do
@@ -3809,8 +3821,7 @@ c
         end do
         if (nsum.gt.0) then
           nunloc = .false.
-          write (aline, 200)  nsum
-200       format ('Plot ', i6, ' points')
+	  aline = stcat('Plot '//itoaf(nsum),' points')
           call logwrite (aline(1:len1(aline)), more)
         end if
       end if

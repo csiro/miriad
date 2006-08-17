@@ -45,7 +45,7 @@ endif
 
 # Set the files/directories to include.
 
-set incs = ( Install README DISCLAIMER changes.txt bin cat doc inc lib linpack guides prog scripts specdoc \
+set incs = ( Install README.html DISCLAIMER changes.txt bin cat doc inc lib linpack guides prog scripts specdoc \
 	    spec subs tools pgplot bindir )
 
 # Tell stupid tar to look in $MIR for everything.
