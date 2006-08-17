@@ -48,8 +48,7 @@ foreach arg ($argv)
   endif
 end
 
-set message = "No task name given"
-if ( "$task" == "" ) goto usage
+if ( "$task" == "" ) set task = "miriad"
 
 if ( $doweb ) then
   set web = "http://www.atnf.csiro.au/computing/software/miriad/$task.html"
