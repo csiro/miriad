@@ -77,10 +77,11 @@ c	  noapply Do not apply the scale factor - just evaluate it.
 c--
 c  History:
 c    rjs     15jan06 Original version adapted from plboot.
+c    rjs     19jan06 Fix call to subroutine with //char*(*) arg.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
-	parameter(version='mfBoot: version 1.0 15-Jan-06')
+	parameter(version='mfBoot: version 1.0 19-Jan-06')
 	integer MAXVIS,MAXPNT
 	parameter(MAXVIS=32,MAXPNT=10000)
 c
@@ -321,6 +322,7 @@ c------------------------------------------------------------------------
 	real a,b,cospa,sinpa,pltb,bmaj,bmin,bpa,rms2
         double precision sub(3),dist
 	logical ok
+	character line*80
 c
 c  Externals.
 c
@@ -358,8 +360,10 @@ c
 	  enddo
 	else
 	  call calstoke(source,'i',sfreq,model,nchan,ierr)
-	  if(ierr.gt.1)
-     *	    call bug('f','Source is not recognised: '//source)
+	  if(ierr.gt.1)then
+	    line = 'Source is not recognised: '//source
+	    call bug('f',line)
+	  endif
 	endif
 c
 	d = 0
