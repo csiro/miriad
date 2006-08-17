@@ -311,9 +311,10 @@ c    rjs  20-jul-99  uvout writes AIPS SU tables.
 c    rjs  30-aug-99  Changed some "PI" to "DPI"
 c    rjs  11-nov-99  options=varwt
 c    rjs  11-apr-00  In uvout, multisource files were always being generated.
+c    rjs  10-may-00  In xyout, increase size of descr buffer.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 11-Nov-99')
+	parameter(version='Fits: version 1.1 10-may-00')
 	character in*128,out*128,op*8,uvdatop*12
 	integer velsys
 	real altrpix,altrval
@@ -4094,7 +4095,7 @@ c------------------------------------------------------------------------
 	integer iostat,item,n,ival
 	real rval
 	double precision dval
-	character key*12,line*80,descr*32,type*16,ukey*12
+	character key*12,line*80,descr*80,type*16,ukey*12
 	logical discard
 c
 c  Externals.
