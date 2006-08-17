@@ -126,6 +126,7 @@
 /*  rjs  30sep94 Fixed planet bug, which I must have introduced recently*/
 /*  rjs  21oct94 Fix misleading error message.				*/
 /*  rjs   6nov94 Change item and variable handle to an integer.		*/
+/*  rjs  30nov94 Increase size of varnam by 1 char, in uvset_preamble.	*/
 /*----------------------------------------------------------------------*/
 /*									*/
 /*		Handle UV files.					*/
@@ -2481,7 +2482,7 @@ char *type;
   Set the preamble that the user wants to use.
 ------------------------------------------------------------------------*/
 {
-  char varnam[MAXNAM],*s;
+  char varnam[MAXNAM+1],*s;
   int n,ok;
   VARIABLE *v;
 
