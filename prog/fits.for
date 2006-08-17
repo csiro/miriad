@@ -291,9 +291,10 @@ c		     for observatory latitude/longitude if it was missing
 c		     from the vis dataset.
 c    pjt  15-sep-98  Recognise galactic and ecliptic coordinates the right way
 c    rjs  25-sep-98  Correct handling of OBSRA and OBSDEC in op=xyin.
+c    rjs  27-oct-98  Check in CD keyword for image pixel increment.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 25-sep-98')
+	parameter(version='Fits: version 1.1 27-Oct-98')
 	character in*128,out*128,op*8,uvdatop*12
 	integer velsys
 	real altrpix,altrval
@@ -3116,10 +3117,10 @@ c------------------------------------------------------------------------
 	integer i,polcode,l,nx,ny
 	character num*2,ctype*32,bunit*32,types(5)*25,btype*32
 	character telescop*16,rdate*32,atemp*16,observer*16,cellscal*16
-	character object*32,pbtype*16
+	character object*32,pbtype*16,keyw*8
 	real bmaj,bmin,bpa,epoch,equinox,rms,vobs,pbfwhm
 	double precision cdelt,crota,crval,crpix,scale
-	double precision restfreq,obsra,obsdec,dtemp
+	double precision restfreq,obsra,obsdec,dtemp,cdelta,cdeltb
 c	real xshift,yshift
 	logical differ,ok,ew,ewdone
 c
@@ -3156,8 +3157,18 @@ c
 	do i=1,naxis
 	  ok = .true.
 	  num = itoaf(i)
+c
+c  To cope with IRAF images, look in CDi_i, CDiiijjj and CDELTi for the
+c  increment.
+c
+	  keyw = 'CD'//num
+	  l = len1(keyw)
+	  keyw(l+1:) = '_'//num
+	  call fitrdhdd(lu,keyw,cdelta,1.d0)
+	  write(keyw,'(a,i3.3,i3.3)')'CD',i,i
+	  call fitrdhdd(lu,keyw,cdeltb,cdelta)
+	  call fitrdhdd(lu,'CDELT'//num,cdelt,cdeltb)
 	  call fitrdhda(lu,'CTYPE'//num,ctype,' ')
-	  call fitrdhdd(lu,'CDELT'//num,cdelt,1.d0)
 	  call fitrdhdd(lu,'CROTA'//num,crota,0.d0)
 	  call fitrdhdd(lu,'CRPIX'//num,crpix,1.d0)
 	  call fitrdhdd(lu,'CRVAL'//num,crval,0.d0)
