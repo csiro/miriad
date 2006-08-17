@@ -476,7 +476,7 @@ static AMP noamp;
 static int first=TRUE;
 
 void uvputvr_c();
-private void uvinfo_chan(),uvinfo_variance();
+private void uvinfo_chan(),uvinfo_variance(),uvbasant_c();
 private void uv_init(),uv_freeuv(),uv_free_select();
 private void uvread_defline(),uvread_init(),uvread_velocity(),uvread_flags();
 private void uvread_defvelline();
@@ -1921,7 +1921,7 @@ float *data;
 /*----------------------------------------------------------------------*/
 {
   UV *uv;
-  int i,nchan,i1,i2,nuvw;
+  int i,nchan,i1,i2,nuvw,itemp;
   float maxval,scale,*p,temp;
   double *d,dtemp;
   int *q;
@@ -2064,9 +2064,8 @@ float *data;
 
   temp = *preamble++;
   if( temp != *(float *)(uv->bl->buf) ){
-    i1 = temp;
-    i2 = i1 / 256;
-    i1 %= 256;
+    itemp = temp;
+    uvbasant_c(itemp,&i1,&i2);
     uv->flags |= ( i1 == i2 ? UVF_AUTO : UVF_CROSS);
     uvputvrr_c(tno,"baseline",&temp,1);
     *(float *)(uv->bl->buf) = temp;
@@ -2837,8 +2836,8 @@ double *preamble;
       vv = coord[1];
       if(uv->flags & UVF_REDO_UVW){
 	bl = *((float *)(uv->bl->buf)) + 0.5;
-	i1 = bl / 256 - 1;
-	i2 = bl % 256 - 1;
+        uvbasant_c(bl,&i1,&i2);
+        i1--; i2--;
 	ww = uv->uvw->ww[i2] - uv->uvw->ww[i1];
       } else if(uv->flags & UVF_DOW) {
 	ww = (VARLEN(uv->coord) >= 3 ? coord[2] : 0.0);
@@ -3102,13 +3101,12 @@ UV *uv;
 
     if(sel->selants){
       bl = *((float *)(uv->bl->buf)) + 0.5;
-      i1 = max( bl / 256, bl % 256);
-      i2 = min( bl / 256, bl % 256);
-      if(i2 < 1 || i1 > MAXANT){
+      uvbasant_c(bl,&i1,&i2);
+      if(i1 < 1 || i2 > MAXANT){
 	ERROR('w',(message,"Discarded data with bad antenna numbers when selecting: baseline number is %d\n",bl));
 	discard = TRUE;
       }else{
-        discard = sel->ants[(i1*(i1-1))/2+i2-1];
+        discard = sel->ants[(i2*(i2-1))/2+i1-1];
       }
       if(discard) goto endloop;
     }
@@ -3166,12 +3164,11 @@ UV *uv;
 
     if(op->type == SEL_POINT){
       bl = *((float *)(uv->bl->buf)) + 0.5;
-      i1 = max( bl / 256, bl % 256);
-      i2 = min( bl / 256, bl % 256);
+      uvbasant_c(bl,&i1,&i2);
       discard = !op->discard;
       point = (float *)(uv->axisrms->buf);
       nants = VARLEN(uv->axisrms)/2;
-      if(i2 < 1 || i1 > nants){
+      if(i1 < 1 || i2 > nants){
 	BUG('f',"Bad antenna numbers when checking pointing, in UVREAD(select)"); }
       pointerr = max( *(point+2*i1-2),*(point+2*i1-1));
       pointerr = max( *(point+2*i2-2), pointerr);
@@ -3450,8 +3447,8 @@ double diameter;
 
   nants = uv->uvw->nants;
   bl = *((float *)(uv->bl->buf)) + 0.5;
-  i1 = bl / 256 - 1;
-  i2 = bl % 256 - 1;
+  uvbasant_c(bl,&i1,&i2);
+  i1--;i2--;
   if(i1 < 0 || i2 >= nants){
     BUG('f',"Bad antenna numbers when checking shadowing, in UVREAD(select)"); }
 
@@ -4598,10 +4595,9 @@ double *data;
 /* All is up to date and OK. Return the result. */
     
   bl = *((float *)(uv->bl->buf)) + 0.5;
-  i1 = max( bl / 256, bl % 256);
-  i2 = min( bl / 256, bl % 256);
-  if(i2 < 1 || i1 > uv->sigma2.nants)return;
-  bl = (i1*(i1-1))/2+i2-1;
+  uvbasant_c(bl,&i1,&i2);
+  if(i1 < 1 || i2 > uv->sigma2.nants)return;
+  bl = (i2*(i2-1))/2+i1-1;
   *data = uv->sigma2.table[bl];
 
 /* If its a Stokes parameter, multiply the variance by one half. */
@@ -4737,3 +4733,20 @@ int mode;
     }
   }
 }
+/************************************************************************/
+private void uvbasant_c(baseline,i1,i2)
+int baseline;
+int *i1,*i2;
+{
+    int mant;
+    *i2 = baseline;
+    if(*i2 > 65536){
+     *i2 -= 65536;
+      mant = 2048;
+    }else{
+      mant = 256;
+    }
+    *i1= *i2 / mant;
+    *i2 %= mant;
+}
+
