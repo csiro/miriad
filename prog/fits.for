@@ -294,9 +294,10 @@ c    rjs  25-sep-98  Correct handling of OBSRA and OBSDEC in op=xyin.
 c    rjs  27-oct-98  Check in CD keyword for image pixel increment.
 c    rjs  20-nov-98  Better handling of image projections and rotation.
 c    rjs  25-nov-98  More work on better handling of image projection and rotation.
+c    rjs  07-jan-99  Write dates in new FITS format.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 25-Nov-98')
+	parameter(version='Fits: version 1.1 07-Jan-99')
 	character in*128,out*128,op*8,uvdatop*12
 	integer velsys
 	real altrpix,altrval
@@ -2648,7 +2649,7 @@ c
 	call fitwrhdd(tOut,'GSTIA0',gstia0)
 	call fitwrhdd(tOut,'DEGPDY',degpdy)
 	call fitwrhdd(tOut,'FREQ',  rfreq)
-	call julday(rtime,'F',rdate)
+	call julday(rtime,'T',rdate)
 	call fitwrhda(tOut,'RDATE',rdate)
 	call fitwrhdd(tOut,'POLARX',0.d0)
 	call fitwrhdd(tOut,'POLARY',0.d0)
@@ -3790,7 +3791,7 @@ c  Write out other coordinates.
 c
 	call coGetd(tno,'obstime',obstime)
 	if(obstime.gt.0) then
-	  call julday(obstime,'F',date)
+	  call julday(obstime,'T',date)
 	  call fitwrhda(lu,'DATE-OBS',date)
 	endif
 	call coGetd(tno,'restfreq',restfreq)
