@@ -11,9 +11,13 @@ c	because there is not a perfect correspondence between all information
 c	in a FITS and Miriad file, some information may be lost in the
 c	conversion step. This is particularly true for uv files.
 c
-c	WARNING: When writing uv FITS files, fits can only handle single
-c	source, single frequency band, single array configuration. Minimal
+c	WARNING: When writing uv FITS files, fits can handle single
+c	frequency band, single array configuration only. Minimal
 c	checks are made to see that these restrictions are observed!
+c
+c       References:
+c	  For a description of the standard, see
+c	    http://fits.gsfc.nasa.gov/fits_home.html
 c
 c@ in
 c	Name of the input file (either a FITS or MIRIAD file name, depending
@@ -44,21 +48,24 @@ c	Normal Stokes selection, used when op=uvout
 c@ options
 c	These options applies for op=uvin only.
 c	  compress Store the data in compressed uv format.
-c	  nochi    Assume that the parallactic angle of the telescope is
-c	           a constant 0 (or that the data are from circularly polarised
-c	           feeds and have already been corrected for parallactic angle).
-c	  lefty    Assume that the FITS antenna table uses a left-handed
-c	           coordinate system (rather than the more normal right-handed
-c	           system).
+c	  nochi    Assume that the parallactic angle of the
+c	           telescope is a constant 0 (or that the data are
+c	           from circularly polarised feeds and have already
+c	           been corrected for parallactic angle).
+c	  lefty    Assume that the FITS antenna table uses a
+c	           left-handed coordinate system (rather than the
+c	           more normal right-handed system).
 c
 c	These options for op=uvout only.
 c	  nocal    Do not apply the gains table to the data.
-c	  nopol    Do not apply the polarization leakage table to the data.
-c	  nopass   Do not apply the bandpass table correctsions to the data.
+c	  nopol    Do not apply the polarization leakage table
+c	           to the data.
+c	  nopass   Do not apply the bandpass table correctsions
+c	           to the data.
 c
 c	This option applies for op=xyin only.
-c	  dss      Use the conventions of Digital Sky Survey FITS files,
-c	           and convert (partially!) its header.
+c	  dss      Use the conventions of Digital Sky Survey FITS
+c	           files, and convert (partially!) its header.
 c	  nod2     Use the conventions of NOD2 FITS files.
 c@ velocity
 c	Velocity information. This is only used for op=uvin,
@@ -111,7 +118,7 @@ c      Percent polarisation not correctly handled.
 c    * SHould have a "ccin" option to read AIPS clean component tables and convert
 c      to Miriad images.
 c    * uvout could be infintely smarter (handle multiple windows, write
-c      FQ, SU and AN tables, etc.
+c      FQ tables, etc).
 c    * In uvin 'RESTFREQ' from AIPS SU table is ignored. Also
 c      POLAA and POLAB are ignored.
 c    * A general mechanism to override wrong stuff from the FITS header
@@ -297,9 +304,11 @@ c    rjs  25-nov-98  More work on better handling of image projection and rotati
 c    rjs  07-jan-99  Write dates in new FITS format.
 c    rjs  26-feb-99  Used new subroutine "fitdate" to be more robust to
 c		     corrupted dates.
+c    rjs  20-jul-99  uvout writes AIPS SU tables.
+c    rjs  30-aug-99  Changed some "PI" to "DPI"
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 26-Feb-99')
+	parameter(version='Fits: version 1.1 30-Aug-99')
 	character in*128,out*128,op*8,uvdatop*12
 	integer velsys
 	real altrpix,altrval
@@ -2232,8 +2241,8 @@ c------------------------------------------------------------------------
 	parameter(uvCrval=1,uvCdelt=2,uvCrpix=3)
 	parameter(uvStokes=1,uvFreq=2,uvRa=3,uvDec=4)
 c
-	integer uvU,uvV,uvW,uvBl,uvT,uvRandom,uvData
-	parameter(uvU=1,uvV=2,uvW=3,uvBl=4,uvT=5,uvRandom=5)
+	integer uvU,uvV,uvW,uvBl,uvT,uvSrc,uvRandom,uvData
+	parameter(uvU=1,uvV=2,uvW=3,uvBl=4,uvT=5,uvSrc=6,uvRandom=6)
 	parameter(uvData=uvRandom+1)
 c
 	integer Polmin,Polmax,maxPol,PolRR,PolXX
@@ -2244,23 +2253,31 @@ c
 	real OutData(uvRandom+1+3*maxchan)
 c
 	integer i,i0
-	integer tIn,tScr,tOut
+	integer tIn,tScr,tOut,vSrc
 	integer nread,nvis,nVisRef,offset,length,velref,nchan
+	integer nSrc,iSrc
 	integer ant1,ant2
-	real wt,epoch,dra,ddec,dra0,ddec0
-	double precision ra,dec,restfreq,preamble(5),Coord(3,4)
+	real wt,epoch
+	double precision pntra,pntdec,restfreq,preamble(5),Coord(3,4)
 	double precision f0,df,v0,dv,repsi,fepsi,vepsi,T0
 	character string*64,ltype*32,veltype*32,vtype(6)*8
-	character source*32,observer*32,telescop*32
+	character observer*32,telescop*32
 	integer pols(PolMin:PolMax),P,badpol,npol,Pol0,PolInc
 	integer nants,mount
 	character polty*2,type*1
 	logical updated
 	double precision xyz(3*MAXANT),lat,long,height
 c
-	integer NPARM
-	parameter(NPARM=5)
-	character parms(NPARM)*8
+	integer MAXSRC
+	parameter(MAXSRC=512)
+	double precision ras(MAXSRC),decs(MAXSRC)
+	double precision aras(MAXSRC),adecs(MAXSRC)
+	character sources(MAXSRC)*16
+c
+	integer MAXPARMS
+	parameter(MAXPARMS=6)
+	integer nparms
+	character parms(MAXPARMS)*8
 c
 c  Externals.
 c
@@ -2268,7 +2285,7 @@ c
         logical uvdatopn
 c
 	data parms/'UU      ','VV      ','WW      ',
-     *		   'BASELINE','DATE    '/
+     *		   'BASELINE','DATE    ','SOURCE  '/
 	data vtype/'FELO-LSR','FELO-HEL','FELO-OBS',
      *		   'VELO-LSR','VELO-HEL','VELO-OBS'/
 c
@@ -2281,13 +2298,27 @@ c
 c  Open up and initialise the input file. Also get the scratch file.
 c
         if (.not.uvdatopn(tin))call bug('f','Error opening input file')
+	call uvVarIni(tin,vSrc)
+	call uvVarSet(vSrc,'source')
+	call uvVarSet(vSrc,'dra')
+	call uvVarSet(vSrc,'ddec')
 	call scropen(tScr)
 c
 c  Read through the input, determining the min and max values of all the
 c  parameters that we need.
 c
+	nSrc = 0
+	iSrc = 0
+	ras(1) = 0
+	decs(1) = 0
+	sources(1) = ' '
+c
 	call uvdatrd(preamble,data,flags,maxchan,nread)
 	if(nread.eq.0)call bug('f','No data to write out!')
+	call SrcUpd(tIn,vSrc,iSrc,ras,decs,aras,adecs,sources,
+     *							nSrc,MAXSRC)
+	call uvrdvrd(tIn,'pntra',pntra,ras(1))
+	call uvrdvrd(tIn,'pntdec',pntdec,decs(1))
         nchan = nread
 c
 	nvis = 0
@@ -2297,13 +2328,6 @@ c
 c  Get things which define the coordinate system.
 c
 	call uvrdvrr(tIn,'epoch',epoch,1950.)
-	call uvrdvrd(tIn,'ra',ra,0.d0)
-	call uvrdvrd(tIn,'dec',dec,0.d0)
-	call uvrdvrr(tIn,'dra',dra,0.)
-	call uvrdvrr(tIn,'ddec',ddec,0.)
-	dra0 = dra
-	ddec0 = ddec
-c
 	call uvfit2(tIn,'sfreq',nread,df,f0,fepsi)
 	if(fepsi.gt.0.1*abs(df))call bug('w',
      *	    'Channel frequencies deviated by > 10% from linearity')
@@ -2323,6 +2347,7 @@ c
 	  if(restfreq.gt.0)then
 	    call uvrdvra(tIn,'veltype',veltype,'VELO-LSR')
 	    call uvfit2(tIn,'velocity',nread,dv,v0,vepsi)
+	    v0 = 1000.d0 * v0
 	    if(vepsi.gt.0.1*abs(dv))call bug('w',
      *	      'Channel velocities deviate by > 10% from linearity')
 	    velref = 0
@@ -2335,7 +2360,6 @@ c
 c
 c  Get other book keeping.
 c
-	call uvrdvra(tIn,'source',source,out)
 	call uvrdvra(tIn,'telescop',telescop,' ')
 	call uvrdvra(tIn,'observer',observer,' ')
 c
@@ -2357,19 +2381,11 @@ c
 	endif
 c
 c  Read the data. Check that we are dealing with a single pointing.
-c  If the polarisation ocde is OK, do some conversions, and write to
+c  If the polarisation code is OK, do some conversions, and write to
 c  a scratch file.
 c
 	badpol = 0
 	dowhile(nread.eq.nchan)
-c
-	  call uvrdvrr(tIn,'dra',dra,0.)
-	  call uvrdvrr(tIn,'ddec',ddec,0.)
-	  if(dra.ne.dra0.or.ddec.ne.ddec0)then
-	    call output('FITS will handle only one pointing center')
-	    call bug('f','Pointing offsets changed in Input file')
-	  endif
-c
 	  call uvdatgti('pol',P)
 	  if(P.ge.PolMin.and.P.le.PolMax.and.P.ne.0)then
 	    nvis = nvis + 1
@@ -2395,6 +2411,7 @@ c
 	    OutData(uvW+1) = -1e-9 * preamble(3)
 	    OutData(uvT+1) = preamble(4) - T0
 	    OutData(uvBl+1) = 256*ant1 + ant2
+	    OutData(uvSrc+1) = iSrc
 	    OutData(1) = P
 	    i0 = uvData
 	    do i=1,nchan
@@ -2413,6 +2430,8 @@ c
 	    badpol = badpol + 1
 	  endif
 	  call uvdatrd(preamble,data,flags,maxchan,nread)
+	  call SrcUpd(tIn,vSrc,iSrc,ras,decs,aras,adecs,sources,
+     *							nSrc,MAXSRC)
 	enddo
 c
 c  Summarise what we read.
@@ -2420,7 +2439,7 @@ c
 	if(badpol.gt.0) call bug('w',
      *	  'Visibilities with bad pol codes: '//itoaf(badpol))
 	if(nread.gt.0) call bug('f','Bad number of channels')
-	if(nvis.le.0) call bug('f','No visibilities found')	
+	if(nvis.le.0)  call bug('f','No visibilities found')	
 c
 c  Determine the polarisations that we are going to output.
 c
@@ -2444,10 +2463,10 @@ c
 	Coord(uvCrval,uvFreq) = f0
 	Coord(uvCdelt,uvFreq) = df
 	Coord(uvCrpix,uvFreq) = 1
-	Coord(uvCrval,uvRa) = 180.d0/dpi * (ra+dra/cos(dec))
+	Coord(uvCrval,uvRa) = 180.d0/dpi * ras(1)
 	Coord(uvCdelt,uvRa) = 1
 	Coord(uvCrpix,uvRa) = 1
-	Coord(uvCrval,uvDec) = 180.d0/dpi * (dec+ddec)
+	Coord(uvCrval,uvDec) = 180.d0/dpi * decs(1)
 	Coord(uvCdelt,uvDec) = 1
 	Coord(uvCrpix,uvDec) = 1
 c
@@ -2456,12 +2475,14 @@ c  FITLD requires that the OBJECT keyword be written out as early
 c  as possible.
 c
 	call fuvopen(tOut,out,'new',nVisRef,npol,nchan)
-	if(source.ne.' ')call fitwrhda(tOut,'OBJECT',source)
 	call fuvSetT0(tOut,T0)
-	call fuvSetPa(tOut,NPARM,parms)
+	nparms = 5
+	if(nSrc.gt.1)nparms = 6
+	call fuvSetPa(tOut,nparms,parms)
 	call fuvWrhd(tOut,Coord)
-	call fitwrhdd(tOut,'OBSRA',Coord(uvCrval,uvRa))
-	call fitwrhdd(tOut,'OBSDEC',Coord(uvCrval,uvDec))
+	if(sources(1).ne.' ')call fitwrhda(tOut,'OBJECT',sources(1))
+	call fitwrhdd(tOut,'OBSRA', 180.0d0/DPI*pntra)
+	call fitwrhdd(tOut,'OBSDEC',180.0d0/DPI*pntdec)
 	call fitwrhdr(tOut,'EPOCH',epoch)
 c
 c  Spectral line and velocity information.
@@ -2470,7 +2491,7 @@ c
 	  call fitwrhdd(tOut,'RESTFREQ',restfreq)
 	  if(velref.gt.0)call fitwrhdi(tOut,'VELREF',velref)
 	  call fitwrhdr(tOut,'ALTRPIX',1.0)
-	  call fitwrhdr(tOut,'ALTRVAL',real(1000.0*v0))
+	  call fitwrhdr(tOut,'ALTRVAL',real(v0))
 	endif
 c
 c  Other miscellaneous information.
@@ -2490,7 +2511,13 @@ c
 c  We now have all the data we want in a scratch file. Copy this
 c  data to the output FITS file.
 c
-	call uvoutWr(tScr,tOut,nvis,nVisRef,npol,nchan,Pol0,PolInc)
+	call uvoutWr(tScr,tOut,nvis,nVisRef,npol,nchan,Pol0,PolInc,
+     *	  nSrc.gt.1)
+c
+c  Write the source file.
+c
+	if(nSrc.gt.1)call SrcWrite(tOut,nSrc,sources,
+     *	  ras,decs,aras,adecs,epoch,restfreq,df,v0)
 c
 c  Write the antenna file.
 c
@@ -2507,6 +2534,57 @@ c
 	call uvdatcls
 	call scrclose(tScr)
 	call fuvclose(tOut)
+c
+	end
+c************************************************************************
+	subroutine SrcUpd(tIn,vSrc,iSrc,ras,decs,aras,adecs,
+     *						sources,nSrc,MAXSRC)
+c
+	integer tIn,vSrc,iSrc,nSrc,MAXSRC
+	double precision ras(MAXSRC),decs(MAXSRC)
+	double precision aras(MAXSRC),adecs(MAXSRC)
+	character sources(MAXSRC)*(*)
+c
+c------------------------------------------------------------------------
+	character source*32
+	integer i
+	double precision ra,dec,dra,ddec
+c
+c  Externals.
+c
+	logical uvVarUpd
+c
+c  Change in source. Get the source name, ra and dec.
+c
+	if(uvVarUpd(vSrc).or.nSrc.eq.0)then
+	  call uvrdvra(tIn,'source',source,' ')
+	  if(len(source).gt.len(sources(1)))
+     *	    source(len(sources(1))+1:) =  ' '
+	  call uvrdvrd(tIn,'ra',ra,0.d0)
+	  call uvrdvrd(tIn,'dec',dec,0.d0)
+	  call uvrdvrd(tIn,'dra',dra,0.d0)
+	  call uvrdvrd(tIn,'ddec',ddec,0.d0)
+	  ra = ra + dra/cos(dec)
+	  dec = dec + ddec
+	  iSrc = 0
+	  i = 1
+	  dowhile(i.lt.nSrc.and.iSrc.eq.0)
+	    if(ras(i).eq.ra.and.decs(i).eq.dec.and.
+     *	      sources(i).eq.source)iSrc = i
+	    i = i + 1
+	  enddo
+c
+	  if(iSrc.eq.0)then
+	    nSrc = nSrc + 1
+	    iSrc= nSrc
+	    if(nSrc.gt.MAXSRC)call bug('f','Source table overflow')
+	    sources(iSrc) = source
+	    ras(iSrc) = ra
+	    decs(iSrc) = dec
+	    call uvrdvrd(tIn,'obsra',aras(iSrc),ras(iSrc))
+	    call uvrdvrd(tIn,'obsdec',adecs(iSrc),decs(iSrc))
+	  endif
+	endif
 c
 	end
 c************************************************************************
@@ -2582,6 +2660,71 @@ c
 c
 	end
 c************************************************************************
+	subroutine SrcWrite(tOut,nSrc,sources,ras,decs,aras,adecs,epoch,
+     *	  restfreq,df,v0)
+c
+	implicit none
+	integer tOut,nSrc
+	double precision ras(nSrc),decs(nSrc),aras(nSrc),adecs(nSrc)
+	double precision restfreq,df,v0
+	character sources(nSrc)*(*)
+	real epoch
+c
+c------------------------------------------------------------------------
+	include 'mirconst.h'
+	integer i
+c
+	call ftabdini(tOut,'AIPS SU')
+	call ftabdef(tOut,'ID. NO.',  'I',' ',      nSrc,1)
+	call ftabdef(tOut,'SOURCE',   'A',' ',      nSrc,
+     *						len(sources(1)))
+	call ftabdef(tOut,'QUAL',     'I',' ',      nSrc,1)
+	call ftabdef(tOut,'CALCODE',  'A',' ',      nSrc,4)
+	call ftabdef(tOut,'IFLUX',    'R','JY',     nSrc,1)
+	call ftabdef(tOut,'QFLUX',    'R','JY',     nSrc,1)
+	call ftabdef(tOut,'UFLUX',    'R','JY',     nSrc,1)
+	call ftabdef(tOut,'VFLUX',    'R','JY',     nSrc,1)
+	call ftabdef(tOut,'FREQOFF',  'D','HZ',     nSrc,1)
+	call ftabdef(tOut,'BANDWIDTH','D','HZ',     nSrc,1)
+	call ftabdef(tOut,'RAEPO',    'D','DEGREES',nSrc,1)
+	call ftabdef(tOut,'DECEPO',   'D','DEGREES',nSrc,1) 
+	call ftabdef(tOut,'EPOCH',    'D','YEARS',  nSrc,1)
+	call ftabdef(tOut,'RAAPP',    'D','DEGREES',nSrc,1)
+	call ftabdef(tOut,'DECAPP',   'D','DEGREES',nSrc,1)
+	call ftabdef(tOut,'LSRVEL',   'D','M/SEC',  nSrc,1)
+	call ftabdef(tOut,'RESTFREQ', 'D','HZ',     nSrc,1)
+	call ftabdef(tOut,'PMRA',     'D','DEG/DAY',nSrc,1)
+	call ftabdef(tOut,'PMDEC',    'D','DEG/DAY',nSrc,1)
+	call ftabdfin(tOut)
+c
+	call fitwrhdi(tOut,'NO_IF',1)
+	call fitwrhda(tOut,'VELTYP','OBS')
+	call fitwrhda(tOut,'VELDEF','RADIO')
+c
+	do i=1,nSrc
+	  call ftabputi(tOut,'ID. NO.',  i,i)
+	  call ftabputa(tOut,'SOURCE',   i,sources(i))
+	  call ftabputi(tOut,'QUAL',     i,0)
+	  call ftabputa(tOut,'CALCODE',  i,'    ')
+	  call ftabputr(tOut,'IFLUX',    i,0.0)
+	  call ftabputr(tOut,'QFLUX',    i,0.0)
+	  call ftabputr(tOut,'UFLUX',    i,0.0)
+	  call ftabputr(tOut,'VFLUX',    i,0.0)
+	  call ftabputd(tOut,'FREQOFF',  i,0.d0)
+	  call ftabputd(tOut,'BANDWIDTH',i,df)
+	  call ftabputd(tOut,'RAEPO',    i,180.d0/DPI*ras(i))
+	  call ftabputd(tOut,'DECEPO',   i,180.d0/DPI*decs(i))
+	  call ftabputd(tOut,'EPOCH',    i,dble(epoch))
+	  call ftabputd(tOut,'RAAPP',    i,180.d0/DPI*aras(i))
+	  call ftabputd(tOut,'DECAPP',   i,180.d0/DPI*adecs(i))
+	  call ftabputd(tOut,'LSRVEL',   i,v0)
+	  call ftabputd(tOut,'RESTFREQ', i,restfreq)
+	  call ftabputd(tOut,'PMRA',     i,0.d0)
+	  call ftabputd(tOut,'PMDEC',    i,0.d0)
+	enddo
+c
+	end
+c************************************************************************
 	subroutine AntWrite(tOut,rtime,rfreq,telescop,polty,mount,
      *			xyz,nants,lat,long,height)
 c
@@ -2624,11 +2767,11 @@ c  Determine various things to do with time.
 c
 	iatutc = deltime(rtime,'tai')
 	call jullst(rtime-iatutc,0.d0,gstia0)
-	gstia0 = 180/PI * (gstia0 + eqeq(rtime-iatutc))
+	gstia0 = 180d0/DPI * (gstia0 + eqeq(rtime-iatutc))
 	if(gstia0.lt.0)  gstia0 = gstia0 + 360
 	if(gstia0.ge.360)gstia0 = gstia0 - 360
 	call jullst(rtime-iatutc+1.d0,0.d0,gstia1)
-	gstia1 = 180/PI * (gstia1 + eqeq(rtime-iatutc+1.d0))
+	gstia1 = 180d0/DPI * (gstia1 + eqeq(rtime-iatutc+1.d0))
 	if(gstia1.lt.0)  gstia1 = gstia1 + 360
 	if(gstia1.ge.360)gstia1 = gstia1 - 360
 	degpdy = gstia1 - gstia0 + 360
@@ -2682,9 +2825,10 @@ c
 	end
 c************************************************************************
 	subroutine uvoutWr(tScr,tOut,nvis,nVisRef,npol,nchan,Pol0,
-     *								PolInc)
+     *							PolInc,doSrc)
 c
 	integer tScr,tOut,nvis,nVisRef,npol,nchan,Pol0,PolInc
+	logical doSrc
 c
 c  This reads visibilities back from the scratch file, and forms a
 c  visibility record the way FITS likes it. That is the visibility
@@ -2701,6 +2845,7 @@ c    npol	The dimension of the Stokes axis in the output file.
 c    nchan	The number of frequency channels in the output file.
 c    Pol0	The code of the first polarisation.
 c    PolInc	The increment between polarisations.
+c    doSrc	True if we should write the source number.
 c------------------------------------------------------------------------
 c  Records are copied or discarded according to whether the reference
 c  polarisation is present or not. If not, the record is discarded. Currently
@@ -2710,12 +2855,13 @@ c
 	include 'maxdim.h'
 	integer maxPol,RefPol,PolMin,PolMax
 	parameter(RefPol=1,PolMin=-8,PolMax=4,maxPol=4)
-	integer uvU,uvV,uvW,uvBl,uvT,uvRandom,uvData
-	parameter(uvU=1,uvV=2,uvW=3,uvBl=4,uvT=5,uvRandom=5)
+	integer uvU,uvV,uvW,uvBl,uvT,uvSrc,uvRandom,uvData
+	parameter(uvU=1,uvV=2,uvW=3,uvBl=4,uvT=5,uvSrc=6,uvRandom=6)
 	parameter(uvData=uvRandom+1)
 c
 	integer pols(PolMin:PolMax),discard(PolMin:PolMax),pnt(maxPol)
 	integer ncopy,totcopy,l,l2,InPnt,OutPnt,Bl,P,iP,i,j,jd,k,length
+	integer iSrc
 	logical copied(maxPol)
 	character num*8,num2*8
 	real In(uvRandom+1+3*maxchan),Out(uvRandom+3*maxPol*maxchan)
@@ -2757,6 +2903,7 @@ c
 	totcopy = 0
 	Time = 0
 	Bl = 0
+	iSrc = 0
 	jd = 0
 	wt = 0
 c
@@ -2773,7 +2920,16 @@ c
 	  else if(npol.eq.1)then
 	    jd = jd + 1
 	    totcopy = totcopy + 1
-	    call fuvwrite(tOut,in(2),jd,1)
+	    if(doSrc)then
+	      call fuvwrite(tOut,in(2),jd,1)
+	    else
+	      in(7) = in(6)
+	      in(6) = in(5)
+	      in(5) = in(4)
+	      in(4) = in(3)
+	      in(3) = in(2)
+	      call fuvwrite(tOut,in(3),jd,1)
+	    endif
 	  else
 c
 c  We have a good polarisation, and we are handling more than 1 polarisations.
@@ -2785,6 +2941,7 @@ c  If the "reference" polarisation is present, blnak out any channels which
 c  are missing data, and finally write out the previous good record.
 c
 	    if(nint(In(uvBl+1)).ne.Bl.or.In(uvT+1).ne.Time.or.
+     *	       nint(In(uvSrc+1)).ne.iSrc.or.
      *	       (copied(RefPol).and.copied(iP)))then
 	      if(.not.copied(RefPol))then
 	        do i=1,npol
@@ -2808,15 +2965,18 @@ c
 	      Out(uvW) = In(uvW+1)
 	      Out(uvT) = In(uvT+1)
 	      Out(uvBl) = In(uvBl+1)
+	      Out(uvSrc) = In(uvSrc+1)
 	      Bl = nint(In(uvBl+1))
 	      Time = In(uvT+1)
+	      iSrc = nint(In(uvSrc+1))
 	      Wt = abs(In(uvData+3))
 	    endif
 c
 c  We have to add visibilities to the currently existing record.
 c
 	    InPnt = uvData
-	    OutPnt = uvRandom + 3*(iP-1)
+	    OutPnt = uvRandom - 1 + 3*(iP-1)
+	    if(doSrc)OutPnt = OutPnt + 1
 	    do k=1,nchan
 	      out(OutPnt+1) = in(InPnt+1)
 	      out(OutPnt+2) = in(InPnt+2)
