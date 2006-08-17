@@ -245,9 +245,10 @@ c    rjs  19-aug-94  Don't make character strings upper case, in hdout.
 c    rjs  29-aug-94  Handle w axis in uvin.
 c    rjs  13-sep-94  Recognise 'VELOCITY' and 'FELOCITY' axes.
 c    rjs  23-sep-94  Handle w axis in uvout.
+c    rjs  26-sep-95  Somewhat better handling of odd input axes.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 23-Sep-94')
+	parameter(version='Fits: version 1.1 26-Sep-95')
 	character in*64,out*64,op*8,uvdatop*12
 	integer velsys
 	real altrpix,altrval
@@ -2813,7 +2814,7 @@ c    naxis	Number of dimensions of the image.
 c
 c------------------------------------------------------------------------
 	include 'mirconst.h'
-	integer i,polcode
+	integer i,polcode,l
 	character num*2,ctype*32,bunit*32,types(5)*25,btype*32
 	character telescop*16,rdate*16
 	real bmaj,bmin,bpa
@@ -2825,6 +2826,8 @@ c
 c  Externals.
 c
 	character itoaf*2
+	integer len1
+c
 c                   1234567890123456789012345
 	data types/'percent_polarization     ',
      *		   'fractional_polarization  ',
@@ -2847,6 +2850,11 @@ c
 	  if(abs(crota).gt.0.001)call bug('w',
      *	    'Coordinate axis rotations not supported')
 c
+	  l = len1(ctype)
+	  dowhile(l.gt.0.and.ctype(l:l).eq.'-')
+	    ctype(l:l) = ' '
+	    l = l - 1
+	  enddo
 	  if(ctype.eq.' ')then
 	    if(i.eq.1)then
 	      ctype = 'RA---SIN'
@@ -2854,11 +2862,11 @@ c
 	      ctype = 'DEC--SIN'
 	    endif
 	  endif
-	  if(ctype(1:5).eq.'RA---')then
+	  if(ctype(1:2).eq.'RA')then
 	    scale = pi/180d0
 	    call fitrdhdd(lu,'OBSRA',obsra,crval)
 	    differ = differ.or.(abs(obsra-crval).gt.abs(cdelt))
-	  else if(ctype(1:5).eq.'DEC--')then
+	  else if(ctype(1:3).eq.'DEC')then
 	    scale = pi/180d0
 	    call fitrdhdd(lu,'OBSDEC',obsdec,crval) 
 	    differ = differ.or.(abs(obsdec-crval).gt.abs(cdelt))
