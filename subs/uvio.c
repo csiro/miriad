@@ -123,6 +123,8 @@
 /*  rjs  21jul94 Slightly better planet handling.			*/
 /*  rjs   1aug94 Internal u-v-w re-calculation. Changes to the shadowing*/
 /*		 code.							*/
+/*  rjs  30sep94 Fixed planet bug, which I must have introduced recently*/
+/*  rjs  21oct94 Fix misleading error message.				*/
 /*----------------------------------------------------------------------*/
 /*									*/
 /*		Handle UV files.					*/
@@ -2943,7 +2945,7 @@ UV *uv;
   
 /* Determine planet rotation and scaling factor. */
 
-  if(uv->ref_plmaj * uv->ref_plmin){
+  if(uv->ref_plmaj * uv->ref_plmin <= 0){
     uv->ref_plmaj = *(float *)uv->plmaj->buf;
     uv->ref_plmin = *(float *)uv->plmin->buf;
     uv->ref_plangle = *(float *)uv->plangle->buf;
@@ -2993,7 +2995,7 @@ UV *uv;
       i1 = max( bl / 256, bl % 256);
       i2 = min( bl / 256, bl % 256);
       if(i2 < 1 || i1 > MAXANT){
-	BUG('f',"Bad antenna numbers when checking pointing, in UVREAD(select)"); }
+	BUG('f',"Bad antenna numbers when doing selection, in UVREAD(select)"); }
       discard = sel->ants[(i1*(i1-1))/2+i2-1];
       if(discard) goto endloop;
     }
