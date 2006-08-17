@@ -143,6 +143,7 @@
 /*  rjs  30aug99 Increase MAXVHANDS to 64				*/
 /*  rjs  31aug99 Correct an error message.				*/
 /*  rjs   2sep99 Added average channel flagging tolerance.		*/
+/*  rjs  16sep99 Corrections to velocity definitions.			*/
 /*----------------------------------------------------------------------*/
 /*									*/
 /*		Handle UV files.					*/
@@ -3024,7 +3025,7 @@ WINDOW *win;
   } else if(uv->data_line.linetype == LINE_VELOCITY){
     restfreq = *((double *)uv->restfreq->buf + start);
     vobs   = *(float  *)uv->veldop->buf - *(float *)uv->vsource->buf;
-    uv->skyfreq = restfreq * (1 - (uv->data_line.fstart + vobs) / CKMS);
+    uv->skyfreq = restfreq*(1 - uv->data_line.fstart/CKMS)/(1 + vobs/CKMS);
 
 /* WIDE channels. */
 
@@ -4052,7 +4053,7 @@ int *flags,nsize;
 
   for(n=0; n < nspect; n++){
     if(*wins++){
-      v = (CKMS * (*restfreq - *sfreq) / *restfreq - vobs - line->fstart )
+      v = (CKMS * (1 - *sfreq*(1+vobs/CKMS) / *restfreq) - line->fstart )
 		/ line->fstep;
       idv = -CKMS * *sdf / (*restfreq * line->fstep);
       idv2 = 0.5 * idv;
@@ -4158,7 +4159,7 @@ LINE_INFO *line;
     line->fstep = MYABS(line->fwidth);
     if(line->n == 0) line->n = n;
     n = (n - line->n) / 2;
-    line->fstart = CKMS * ( 1 - (f0+n*df)/rfreq ) - vobs;
+    line->fstart = CKMS * ( 1 - (f0+n*df)*(1+vobs/CKMS)/rfreq );
   }
 
 /* Translate a felocity linetype into a velocity one, if needed. */
@@ -4642,16 +4643,16 @@ int mode;
 	}
 	if(mode == VELO){
 	  if(*restfreq <= 0)BUG('f',"Cannot determine velocity as rest frequency is 0");
-	  fdash = *sfreq + offset * *sdf + *restfreq * vobs/CKMS;
+	  fdash = (*sfreq + offset * *sdf)*(1 + vobs/CKMS);
 	  temp += CKMS * ( 1 - fdash / *restfreq );
         }else if(mode == FELO){
 	  if(*restfreq <= 0)BUG('f',"Cannot determine velocity as rest frequency is 0");
-	  fdash = *sfreq + offset * *sdf + *restfreq * vobs/CKMS;
+	  fdash = (*sfreq + offset * *sdf)*(1 + vobs/CKMS);
 	  temp += CKMS * ( *restfreq / fdash - 1 );
 	}else if(mode == RFREQ) temp += *restfreq;
 	else if(mode == BW)    temp += (*sdf > 0 ? *sdf : - *sdf);
 	else if(mode == FREQ)
-	  temp  += *sfreq + offset * *sdf + *restfreq * vobs/CKMS;
+	  temp += (*sfreq + offset * *sdf)*(1 + vobs/CKMS);
 	else if(mode == SFREQ)
 	  temp += *sfreq + offset * *sdf;
 	offset++;
@@ -4700,18 +4701,22 @@ int mode;
       vobs =   *(float *)(uv_checkvar(uv->tno,"veldop",H_REAL)->buf) -
 	       *(float *)(uv_checkvar(uv->tno,"vsource",H_REAL)->buf);
       for(i=0; i<n; i++){
-	temp = line->fstart + i * line->fstep + vobs;
-	*data++ = CKMS*temp / (CKMS-temp) - vobs;
+	temp = line->fstart + i * line->fstep;
+	*data++ = CKMS*temp / (CKMS-temp);
       }
     } else if(mode == RFREQ){
       restfreq = (double *)(uv_checkvar(uv->tno,"restfreq",H_DBLE)->buf) +
 		 uv->win->first;
       for(i=0; i<n; i++) *data++ = *restfreq;
-    } else if(mode == FREQ || mode == SFREQ){
-      restfreq = (double *)(uv_checkvar(uv->tno,"restfreq",H_DBLE)->buf) +
-		 uv->win->first;
+    } else if(mode == FREQ){
       for(i=0; i<n; i++)
         *data++ = *restfreq * (1 - (line->fstart + i *line->fstep)/CKMS);
+    } else if(mode == SFREQ){
+      vobs =   *(float *)(uv_checkvar(uv->tno,"veldop",H_REAL)->buf) -
+	       *(float *)(uv_checkvar(uv->tno,"vsource",H_REAL)->buf);
+      for(i=0; i<n; i++)
+        *data++ = *restfreq * (1 - (line->fstart + i *line->fstep)/CKMS)/
+							   (1+vobs/CKMS);
     } else if(mode == BW){
       restfreq = (double *)(uv_checkvar(uv->tno,"restfreq",H_DBLE)->buf) +
 		uv->win->first;
