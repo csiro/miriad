@@ -333,6 +333,7 @@ c    dpr  05-apr-01  Add region key for op=xyout
 c    dpr  10-may-01  Change dss to rawdss
 c    dpr  11-may-01  Check history exists before copying it
 c    dpr  26-jun-01  Relax antenna table format restrictions
+c    dpr  02-jul-01  Relax AN restrictions properly (I hope!!)
 c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='Fits: version 1.1 26-jun-01')
@@ -589,6 +590,7 @@ c
 	integer ntimes,refbase,litime
 	integer uvU,uvV,uvW,uvBl,uvT,uvSrcId,uvFreqId,uvData
 	character telescop*32,itime*8
+	integer antloc(MAXANT)
 c
 c  Externals.
 c
@@ -625,7 +627,8 @@ c
 c  Load antenna, source and frequency information. Set frequency information.
 c
 	call TabLoad(lu,uvSrcId.ne.0,uvFreqId.ne.0,
-     *		telescop,anfound,Pol0,PolInc,nif,dochi,lefty)
+     *		telescop,anfound,Pol0,PolInc,nif,dochi,lefty,
+     *          nants,antloc)
 	call TabVeloc(velsys,altr,altrval,altrpix)
 c
 c  Load any FG tables.
@@ -703,7 +706,6 @@ c     W			  sec		  nanosec
 c     Time	  Offset Julian days	Julian days
 c
 	nconfig = 0
-	nants = 0
 	zerowt = .false.
 	srcid = 1
 	freqid = 1
@@ -753,8 +755,16 @@ c
 	    ant1 = ant2
 	    ant2 = itemp
 	  endif
+c  This is allows fits files with no AN table, but
+c  for those with an AN table, and antenna numbers which
+c  do not start at 1 it keeps the nants from the table
+          if (anfound) then
+	    ant1=antloc(ant1)
+	    ant2=antloc(ant2)
+          else 
+	    nants = max(nants,ant1,ant2)
+	  end if
 	  bl = 256*ant1 + ant2
-	  nants = max(nants,ant1,ant2)
 	  nconfig = max(config,nconfig)
 c
 c  Determine some times at whcih data are observed. Use these later to
@@ -1259,12 +1269,14 @@ c
 c************************************************************************
 c************************************************************************
 	subroutine TabLoad(lu,dosu,dofq,tel,anfound,Pol0,PolInc,nif0,
-     *	  dochi,lefty)
+     *	  dochi,lefty,numants,antloc)
 c
 	implicit none
 	integer lu,Pol0,PolInc,nif0
 	logical dosu,dofq,anfound,dochi,lefty
 	character tel*(*)
+	integer numants
+	integer antloc(*)
 c
 c  Determine some relevant parameters about the FITS file. Attempt to
 c  ferrit this information from all nooks and crannies. In general use
@@ -1287,6 +1299,9 @@ c    anfound	True if antenna tables were found.
 c    nif0       Number of IFs
 c    Pol0	Code for first polarisation.
 c    PolInc	Increment between polarisations.
+c    numants    Total number of antennas in AN table
+c    antloc     AN table indices for antenna station numbers
+c               zero if station number not used.
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'fits.h'
@@ -1307,9 +1322,10 @@ c
 	character itoaf*2
 	double precision fuvGetT0,Epo2jul,Jul2epo
 c
-c  Set default source and freq ids.
+c  Set default nants, source and freq ids.
 c
 	inited = .false.
+	numants = 0
 c
 c  Get some preliminary info from the main header.
 c
@@ -1381,23 +1397,24 @@ c
      *	    call bug('f','Something is screwy with the antenna table')
 	  if(n.gt.MAXANT)call bug('f','Too many antennas for me')
 c
-c  Check that the station number corresponds to the row in the table.
-c  Run through the list until we find a bad antenna number.
+c  Set up antloc to handle entries where table row and station
+c  number are different
+c
+	  do i=1,MAXANT
+	    antloc(i)=0
+	  end do
 c
 	  call ftabGeti(lu,'NOSTA',0,sta)
-	  i = 0
-	  more = .true.
-	  dowhile(more)
-	    i = i + 1
-	    more = i.le.n
-	    if(more) more = sta(i).eq.i
+c
+	  do i=1,n
+	    antloc(sta(i))=i
 	  enddo
 c
-	  if(i.le.n)then
-c	    n = i-1
+	  if(sta(n).ne.n)then
 	    call bug('w',
      *	      ' Some antennas were missing from the antenna table ')
 	  endif
+	  numants = numants + n
 	  nants(nconfig) = n
 c
 c  Get the reference freqeuncy. Note that multiple bugs in AIPS
