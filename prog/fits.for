@@ -310,6 +310,7 @@ c		     corrupted dates.
 c    rjs  20-jul-99  uvout writes AIPS SU tables.
 c    rjs  30-aug-99  Changed some "PI" to "DPI"
 c    rjs  11-nov-99  options=varwt
+c    rjs  11-apr-00  In uvout, multisource files were always being generated.
 c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='Fits: version 1.1 11-Nov-99')
@@ -2651,7 +2652,7 @@ c
 	  dec = dec + ddec
 	  iSrc = 0
 	  i = 1
-	  dowhile(i.lt.nSrc.and.iSrc.eq.0)
+	  dowhile(i.le.nSrc.and.iSrc.eq.0)
 	    if(ras(i).eq.ra.and.decs(i).eq.dec.and.
      *	      sources(i).eq.source)iSrc = i
 	    i = i + 1
