@@ -10,6 +10,11 @@ c	FITS to Miriad format, and from Miriad to FITS format. Note that
 c	because there is not a perfect correspondence between all information
 c	in a FITS and Miriad file, some information may be lost in the
 c	conversion step. This is particularly true for uv files.
+c
+c	WARNING: When writing uv FITS files, fits can only handle single
+c	source, single frequency band, single array configuration. Minimal
+c	checks are made to see that these restrictions are observed!
+c
 c@ in
 c	Name of the input file (either a FITS or MIRIAD file name, depending
 c	on OP). No default.
@@ -267,9 +272,10 @@ c    rjs  17-oct-96  Make the visibility weight equal to 1/sigma**2.
 c		     Discard OBSRA and BLANK in reading in images.
 c    rjs  07-feb-97  Increase max string length.
 c    rjs  21-feb-97  Better treatment of missing evector. More messages.
+c    rjs  21-mar-97  Write antenna tables for options=uvout.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 21-Feb-97')
+	parameter(version='Fits: version 1.1 21-Mar-97')
 	character in*128,out*128,op*8,uvdatop*12
 	integer velsys
 	real altrpix,altrval
@@ -2187,8 +2193,8 @@ c
 	parameter(uvU=1,uvV=2,uvW=3,uvBl=4,uvT=5,uvRandom=5)
 	parameter(uvData=uvRandom+1)
 c
-	integer Polmin,Polmax,maxPol
-	parameter(PolMin=-8,PolMax=4,maxPol=4)
+	integer Polmin,Polmax,maxPol,PolRR,PolXX
+	parameter(PolMin=-8,PolMax=4,maxPol=4,PolXX=-5,PolRR=-1)
 c
 	complex Data(maxchan)
 	logical Flags(maxchan)
@@ -2204,6 +2210,10 @@ c
 	character string*64,ltype*32,veltype*32,vtype(6)*8
 	character source*32,observer*32,telescop*32
 	integer pols(PolMin:PolMax),P,badpol,npol,Pol0,PolInc
+	integer nants,mount
+	character polty*2,type*1
+	logical updated
+	double precision xyz(3*MAXANT),lat,long,height
 c
 	integer NPARM
 	parameter(NPARM=5)
@@ -2244,8 +2254,8 @@ c
 c  Get things which define the coordinate system.
 c
 	call uvrdvrr(tIn,'epoch',epoch,1950.)
-	call uvrdvrd(tIn,'ra',ra,0.)
-	call uvrdvrd(tIn,'dec',dec,0.)
+	call uvrdvrd(tIn,'ra',ra,0.d0)
+	call uvrdvrd(tIn,'dec',dec,0.d0)
 	call uvrdvrr(tIn,'dra',dra,0.)
 	call uvrdvrr(tIn,'ddec',ddec,0.)
 	dra0 = dra
@@ -2290,6 +2300,21 @@ c  Set the reference date.
 c
 	T0 = preamble(4)
 	T0 = int(T0 - 0.5d0) + 0.5d0
+c
+c  Load antenna table information.
+c
+	call uvprobvr(tIn,'antpos',type,nants,updated)
+	if(mod(nants,3).ne.0)
+     *	  call bug('f','Antpos variable looks bad')
+	nants = nants/3
+	if(nants.gt.MAXANT)nants = 0
+	if(nants.gt.0)then
+	  call uvgetvrd(tIn,'antpos',xyz,3*nants)
+	  call uvrdvri(tIn,'mount',mount,1)
+	  call uvrdvrd(tIn,'latitud',lat,0.d0)
+	  call uvrdvrd(tIn,'longitu',long,0.d0)
+	  call uvrdvrd(tIn,'height',height,0.d0)
+	endif
 c
 c  Read the data. Check that we are dealing with a single pointing.
 c  If the polarisation ocde is OK, do some conversions, and write to
@@ -2362,6 +2387,13 @@ c
 	call PolCheck(pols,PolMin,PolMax,npol,Pol0,PolInc)
 	if(npol.gt.maxPol)
      *	  call bug('f','Too many polarisations for me to handle')
+	if(pol0.le.PolXX)then
+	  polty = 'XY'
+	else if(pol0.le.PolRR)then
+	  polty = 'RL'
+	else
+	  polty = '  '
+	endif
 	nVisRef = pols(Pol0)
 c
 c  Create the output FITS file, and write its header.
@@ -2420,11 +2452,120 @@ c  data to the output FITS file.
 c
 	call uvoutWr(tScr,tOut,nvis,nVisRef,npol,nchan,Pol0,PolInc)
 c
+c  Write the antenna file.
+c
+	if(nants.gt.0)then
+	  call output('Writing FITS antenna table')
+	  call AntWrite(tOut,t0,f0,telescop,polty,mount,
+     *			xyz,nants,lat,long,height)
+	else
+	  call bug('w','Insufficent information for antenna table')
+	endif
+c
 c  Everything is done. Close up shop.
 c
 	call uvdatcls
 	call scrclose(tScr)
 	call fuvclose(tOut)
+c
+	end
+c************************************************************************
+	subroutine AntWrite(tOut,rtime,rfreq,telescop,polty,mount,
+     *			xyz,nants,lat,long,height)
+c
+	implicit none
+	integer tOut,nants,mount
+	double precision rtime,rfreq
+	double precision xyz(nants,3),lat,long,height
+	character telescop*(*),polty*(*)
+c
+c  Write an antenna table into the output.
+c------------------------------------------------------------------------
+	include 'mirconst.h'
+c
+	real zero(3)
+	character anname*8,rdate*8
+	double precision iatutc,gstia0,gstia1,degpdy,xyzd(3)
+	integer i
+c
+c  Externals.
+c
+	character itoaf*4
+	double precision deltime,eqeq
+c
+	call ftabdini(tOut,'AIPS AN')
+	call ftabdef(tOut,'ANNAME', 'A',' ',      nants,len(anname))
+	call ftabdef(tOut,'STABXYZ','D','METERS', nants,3)
+	call ftabdef(tOut,'ORBPARM','D',' ',      nants,0)
+	call ftabdef(tOut,'NOSTA',  'I',' ',      nants,1)
+	call ftabdef(tOut,'MNTSTA', 'I',' ',      nants,1)
+	call ftabdef(tOut,'STAXOF', 'R','METERS', nants,1)
+	call ftabdef(tOut,'POLTYA', 'A',' ',      nants,1)
+	call ftabdef(tOut,'POLAA',  'R','DEGREES',nants,1)
+	call ftabdef(tOut,'POLCALA','R',' ',      nants,3)
+	call ftabdef(tOut,'POLTYB', 'A',' ',      nants,1)
+	call ftabdef(tOut,'POLAB',  'R','DEGREES',nants,1)
+	call ftabdef(tOut,'POLCALB','R',' ',      nants,3)
+	call ftabdfin(tOut)
+c
+c  Determine various things to do with time.
+c
+	iatutc = deltime(rtime,'tai')
+	call jullst(rtime-iatutc,0.d0,gstia0)
+	gstia0 = 180/PI * (gstia0 + eqeq(rtime-iatutc))
+	if(gstia0.lt.0)  gstia0 = gstia0 + 360
+	if(gstia0.ge.360)gstia0 = gstia0 - 360
+	call jullst(rtime-iatutc+1.d0,0.d0,gstia1)
+	gstia1 = 180/PI * (gstia1 + eqeq(rtime-iatutc+1.d0))
+	if(gstia1.lt.0)  gstia1 = gstia1 + 360
+	if(gstia1.ge.360)gstia1 = gstia1 - 360
+	degpdy = gstia1 - gstia0 + 360
+	if(degpdy.lt.360)degpdy = degpdy + 360
+c
+c  Fill out information in the antenna table header.
+c
+	call llh2xyz(lat,long,height,xyzd(1),xyzd(2),xyzd(3))
+	call fitwrhdd(tOut,'ARRAYX',xyzd(1))
+	call fitwrhdd(tOut,'ARRAYY',xyzd(2))
+	call fitwrhdd(tOut,'ARRAYZ',xyzd(3))
+	call fitwrhdd(tOut,'GSTIA0',gstia0)
+	call fitwrhdd(tOut,'DEGPDY',degpdy)
+	call fitwrhdd(tOut,'FREQ',  rfreq)
+	call julfdate(rtime,rdate)
+	call fitwrhda(tOut,'RDATE',rdate)
+	call fitwrhdd(tOut,'POLARX',0.d0)
+	call fitwrhdd(tOut,'POLARY',0.d0)
+	call fitwrhdd(tOut,'UT1UTC',0.d0)
+	call fitwrhdd(tOut,'DATUTC',0.d0)
+	call fitwrhda(tOut,'TIMSYS','UTC')
+	call fitwrhda(tOut,'ARRNAM',telescop)
+	call fitwrhdi(tOut,'NUMORB',0)
+	call fitwrhdi(tOut,'NOPCAL',3)
+	call fitwrhdi(tOut,'FREQID',-1)
+	call fitwrhdd(tOut,'IATUTC',86400d0*iatutc)
+c
+c  Zero out the unused fields.
+c
+	zero(1) = 0
+	zero(2) = 0
+	zero(3) = 0
+	do i=1,nants
+	  anname = 'ANT'//itoaf(i)
+	  call ftabputa(tOut,'ANNAME', i,anname)
+	  xyzd(1) = DCMKS*1d-9*xyz(i,1)
+	  xyzd(2) = DCMKS*1d-9*xyz(i,2)
+	  xyzd(3) = DCMKS*1d-9*xyz(i,3)
+	  call ftabputd(tOut,'STABXYZ',i,xyzd)
+	  call ftabputi(tOut,'NOSTA',  i,i)
+	  call ftabputi(tOut,'MNTSTA', i,mount)
+	  call ftabputr(tOut,'STAXOF', i,0.0)
+	  call ftabputa(tOut,'POLTYA', i,polty(1:1))
+	  call ftabputr(tOut,'POLAA',  i,0.0)
+	  call ftabputr(tOut,'POLCALA',i,zero)
+	  call ftabputa(tOut,'POLTYB', i,polty(2:2))
+	  call ftabputr(tOut,'POLAB',  i,0.0)
+	  call ftabputr(tOut,'POLCALB',i,zero)
+	enddo
 c
 	end
 c************************************************************************
