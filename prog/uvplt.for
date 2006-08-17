@@ -309,6 +309,8 @@ c    rjs  19nov98  Minor correction to computation of LST, and recompute from
 c		   scratch the parallactic angle.
 c    swa  03sep99  Add options=notitle.
 c    rjs  10mar00  Set maxbase2=91.
+c    rjs  28mar00  Fix colour indices when there are more than NCOL
+c		   inputs.
 c
 c To do:
 c
@@ -2866,10 +2868,12 @@ c
      +  donano, doxind, doyind, dowrap, doperr, dosymb, dodots, doavall,
      +  docol, dotitle
 cc
+      integer NCOL
+      parameter(NCOL=12)
       real xmnall, xmxall, ymnall, ymxall, xlo, xhi, ylo, yhi
       integer ierr, il1, il2, sym, ip, jf, lp, kp, k, ii,
-     +  ipl1, ipl2, npol, i, j, cols1(12), cols2(12), cols(12), nb, np, 
-     +  ipt, il, ilen
+     +  ipl1, ipl2, npol, i, j, cols1(NCOL), cols2(NCOL), cols(NCOL),
+     +  nb, np, ipt, il, ilen, icol
       character xlabel*100, ylabel*100, ans*1, devdef*80, 
      +  str*80, units*10
       character*2 fmt(2), polstr(12)*2, hard*3
@@ -3086,11 +3090,11 @@ c DOn't use yellow for hardcopy
 c
             call pgqinf ('hardcopy', hard, ilen)
             if (hard.eq.'YES') then
-              do i = 1, 12
+              do i = 1, NCOL
                 cols(i) = cols2(i)
               end do
             else
-              do i = 1, 12
+              do i = 1, NCOL
                 cols(i) = cols1(i)
               end do
             end if
@@ -3151,9 +3155,11 @@ c
 c  Plot points and errors
 c
               do lp = 1, np
-                if (np.ne.1 .and. .not.doavall) call pgsci (cols(lp))
+	        icol = mod(lp-1,NCOL)+1
+                if (np.ne.1 .and. .not.doavall) call pgsci (cols(icol))
                 do jf = 1, pl4dim
-                  if (np.eq.1 .and. docol) call pgsci (cols(jf))
+	          icol = mod(jf-1,NCOL)+1
+                  if (np.eq.1 .and. docol) call pgsci (cols(icol))
                   if (dosymb) then
                     sym = jf
                     if (sym.eq.2) then
