@@ -104,6 +104,23 @@
 /*  rjs   9dec92 Fixed bug in shadowing, introduced 12 jun?		*/
 /*  rjs  24dec92 Doc change only, at pjt's request.			*/
 /*  rjs  10jan93 Add variance calculation to uvinfo. Get rid of int2.	*/
+/*  rjs  12feb93 uvrdvr{i,r,d} now interconvert between int,float,double*/
+/*  rjs  12feb93 uvselection of ra and dec cope with them being either  */
+/*		 float or double.					*/
+/*  rjs   3mar93 uvflush -- the way of the future.			*/
+/*  rjs  16mar93 Always write vartable for new file if nvar==0.         */
+/*  rjs  29mar93 Changed formula for calculation of variance.		*/
+/*  rjs  11may93 Get rid of abs() function, which accidently stayed.    */
+/*  rjs  13may93 Fix bug dealing with select=window in			*/
+/*		 uvinfo(..,'variance'..)				*/
+/*  rjs  21jul93 Divide variance by 2 for Stokes parameters.		*/
+/*  mjs  26aug93 cast strlen (elim ansi warning on solaris).		*/
+/*  rjs  16nov93 Handle planet scaling when there are a mix of planets  */
+/*		 and other sources.					*/
+/*  rjs  23dec93 Added uvinfo(..,'felocity'..), and removed a few for   */
+/*		 wideband channels that did not make much sense.	*/
+/*  rjs  05jan94 Trivial doc changes only.				*/
+/*  rjs  21jul94 Minor change to planet rotation code.			*/
 /*----------------------------------------------------------------------*/
 /*									*/
 /*		Handle UV files.					*/
@@ -173,7 +190,7 @@
 /*	vsource		plmaj		plmin		plangle		*/
 /*	ra		dec		pol		on		*/
 /*	obsra		obsdec		lst		antpos		*/
-/*	antdiam		source						*/
+/*	antdiam		source		pol				*/
 /*									*/
 /* The VARIABLE structure						*/
 /* ======================						*/
@@ -193,7 +210,7 @@
 /*		list to be formed for hashing.				*/
 /*									*/
 /*----------------------------------------------------------------------*/
-#define VERSION_ID "16-Sep-92 rjs"
+#define VERSION_ID "3-Mar-93 rjs"
 
 #define private static
 
@@ -382,7 +399,7 @@ typedef struct {
 
 typedef struct {
 	char *item;
-	int nvar,offset,tno,flags,callno,maxvis,mark;
+	int nvar,offset,max_offset,saved_nvar,tno,flags,callno,maxvis,mark;
 	FLAGS corr_flags,wcorr_flags;
 	VARIABLE *coord,*corr,*time,*bl,*tscale,*nschan,*axisrms;
 	VARIABLE *sfreq,*sdf,*restfreq,*wcorr,*wfreq,*veldop,*vsource;
@@ -486,7 +503,7 @@ char *fname;
 
     offset = uv->offset;    /* should be 0 at start */
     printf("0x%8x FILE: %s\n",offset,fname);
-    for(;;) {               /* infinite loop */
+    while(offset < uv->max_offset) {
 	printf("0x%8x ",offset);
         hreadb_c(uv->item,s,offset,UV_HDR_SIZE,&iostat);   /* get header */ 
         if (iostat == -1) return(iostat);   /* End Of File */
@@ -597,6 +614,7 @@ char *name,*status;
     uv = uv_getuv(*tno);
     haccess_c(*tno,&uv->item,"visdata","read",&iostat);
     CHECK(iostat,(message,"Error accessing visdata for %s, in UVOPEN(old)",name));
+    rdhdi_c(*tno,"vislen",&(uv->max_offset),hsize_c(uv->item));
     uv_vartable_in(uv);
     uv_override(uv);
 
@@ -627,7 +645,8 @@ char *name,*status;
     haccess_c(*tno,&uv->item,"visdata","append",&iostat);
     CHECK(iostat,(message,"Error accessing visdata for %s, in UVOPEN(append)",name));
     uv->flags = UVF_APPEND;
-    uv->offset = roundup(hsize_c(uv->item),UV_ALIGN);
+    rdhdi_c(*tno,"vislen",&(uv->offset),hsize_c(uv->item));
+    uv->offset = roundup(uv->offset,UV_ALIGN);
     uv_vartable_in(uv);
 
 /* Read items and fill in the appropriate value. */
@@ -667,27 +686,19 @@ int tno;
   UV *uv;
   int iostat;
 
+  void uvflush_c();
+
   uv = uvs[tno];
 
 /* Finished with the flagging information. */
 
   if(uv->corr_flags.handle != NULL) mkclose_c(uv->corr_flags.handle);
   if(uv->wcorr_flags.handle != NULL) mkclose_c(uv->wcorr_flags.handle);
+  uv->corr_flags.handle = uv->wcorr_flags.handle = NULL;
 
-/* Write out the variable table and the total number of correlations, if its
-   a new file. */
+/* Flush out all stuff appropriate for a new or append file. */
 
-  if(uv->flags & (UVF_NEW|UVF_APPEND)){
-    uv_vartable_out(uv);
-    if( ( uv->flags & (UVF_AUTO|UVF_CROSS) ) == (UVF_AUTO|UVF_CROSS))
-      wrhda_c(tno,"obstype","mixed-auto-cross");
-    else if(uv->flags & UVF_AUTO)
-      wrhda_c(tno,"obstype","autocorrelation");
-    else if(uv->flags & UVF_CROSS)
-      wrhda_c(tno,"obstype","crosscorrelation");
-    wrhdi_c(tno,"ncorr",uv->corr_flags.offset);
-    wrhdi_c(tno,"nwcorr",uv->wcorr_flags.offset);
-  }
+  if(uv->flags & (UVF_NEW|UVF_APPEND))uvflush_c(tno);
 
 /* Close the visibility data stream, release structures, and close the
    whole thing. */
@@ -699,12 +710,67 @@ int tno;
   hclose_c(tno);
 }
 /************************************************************************/
+void uvflush_c(tno)
+int tno;
+/**uvflush -- Flush buffers of a uv dataset to disk.			*/
+/*&rjs                                                                  */
+/*:uv-i/o								*/
+/*+ FORTRAN call sequence:
+	subroutine uvflush(tno)
+	integer tno
+
+  This close a uv data file.
+  Input:
+    tno		Make sure anything buffered up is flushed to disk. The
+		disk file should be readable (up to data written here)
+		even if the caller or computer crashes.			*/
+/*--									*/
+/*----------------------------------------------------------------------*/
+{
+  UV *uv;
+  int iostat;
+
+  uv = uvs[tno];
+
+  if(!(uv->flags & (UVF_NEW|UVF_APPEND)))return;
+
+/* Flush the masks out. */
+
+  if(uv->corr_flags.handle != NULL) mkflush_c(uv->corr_flags.handle);
+  if(uv->wcorr_flags.handle != NULL) mkflush_c(uv->wcorr_flags.handle);
+
+/* Rewrite vartable, if needed. */
+
+  if(uv->saved_nvar < uv->nvar || (uv->nvar == 0 && (uv->flags & UVF_NEW))) uv_vartable_out(uv);
+  uv->saved_nvar = uv->nvar;
+
+/* Rewrite the description indicating the type of the data. */
+
+  if( ( uv->flags & (UVF_AUTO|UVF_CROSS) ) == (UVF_AUTO|UVF_CROSS))
+    wrhda_c(tno,"obstype","mixed-auto-cross");
+  else if(uv->flags & UVF_AUTO)
+    wrhda_c(tno,"obstype","autocorrelation");
+  else if(uv->flags & UVF_CROSS)
+    wrhda_c(tno,"obstype","crosscorrelation");
+
+/* Write out things to help recover the EOF. */
+
+  wrhdi_c(tno,"nwcorr",uv->wcorr_flags.offset);
+  wrhdi_c(tno,"ncorr",uv->corr_flags.offset);
+  wrhdi_c(tno,"vislen",uv->offset);
+
+/* Finally flush out everything to disk. */
+
+  hflush_c(tno,&iostat);
+  CHECK(iostat,(message,"Error calling hflush, in UVFLSH"));
+}
+/************************************************************************/
 private void uv_init()
 /*
   Initalise everything imaginable.
 ------------------------------------------------------------------------*/
 {
-  int i,*di;
+  int i;
 
   first = FALSE;
 
@@ -739,7 +805,6 @@ UV *uv;
   Free a uv structure.
 ------------------------------------------------------------------------*/
 {
-  int i;
   VARHAND *vh,*vht;
   VARPNT *vp,*vpt;
 
@@ -800,7 +865,9 @@ private UV *uv_getuv(tno)
   uv->tno	= tno;
   uv->vhans	= NULL;
   uv->nvar	= 0;
+  uv->saved_nvar= 0;
   uv->offset    = 0;
+  uv->max_offset= 0;
   uv->flags	= 0;
   uv->callno	= 0;
   uv->maxvis	= 0;
@@ -951,8 +1018,8 @@ UV *uv;
     (void)uv_mkvar(uv->tno,name,type);
   }
   hdaccess_c(item,&iostat);
+  uv->saved_nvar = uv->nvar;
 }
-
 /************************************************************************/
 private VARIABLE *uv_mkvar(tno,name,type)
 int tno,type;
@@ -971,7 +1038,7 @@ char *name;
   if(v != NULL) return(v);
 
 /* Check that the variable has a good name. */
-  if(strlen(name) > MAXNAM)
+  if((int)strlen(name) > MAXNAM)
     ERROR('f',(message,"The variable name %s is too long, in UVPUTVR",name));
 
 /* We are going to have to create it. */
@@ -1041,7 +1108,7 @@ int tno;
   } else {
     uv->mark = uv->callno + 1;
     uv->flags &= ~(UVF_UPDATED | UVF_COPY);
-    (void)uv_scan(uv,NULL);
+    (void)uv_scan(uv,(VARIABLE *)NULL);
   }
 }
 /************************************************************************/
@@ -1253,22 +1320,60 @@ char *var,*data,*def;
 /*----------------------------------------------------------------------*/
 {
   VARIABLE *v;
-  int deflt;
+  int deflt,oktype;
 
   v = uv_locvar(tno,var);
+  oktype = TRUE;
   deflt = (v == NULL);
-  if(!deflt) deflt = (v->buf == NULL);
+  if(!deflt) deflt = (v->buf == NULL) || (v->length == 0);
   if(!deflt){
-    if( type != v->type )
-      ERROR('f',(message,"Variable %s has wrong type, in UVRDVR",var));
-    if( type == H_BYTE ) n--;
-    n = internal_size[type] * min(n,v->length/external_size[type]);
-    memcpy(data,v->buf,n);
+    switch(type){
+      case H_BYTE:
+	oktype = (v->type == H_BYTE);
+	n = min(n-1,v->length);
+	if(oktype)memcpy(data,v->buf,n);
+	break;
+      case H_INT:
+	switch(v->type){
+	  case H_INT:	*(int *)data = *(int *)(v->buf);	break;
+	  case H_REAL:	*(int *)data = *(float *)(v->buf);	break;
+	  case H_DBLE:	*(int *)data = *(double *)(v->buf);	break;
+	  default:	oktype = FALSE;				break;
+	}
+	break;
+      case H_REAL:
+	switch(v->type){
+	  case H_INT:	*(float *)data = *(int *)(v->buf);	break;
+	  case H_REAL:	*(float *)data = *(float *)(v->buf);	break;
+	  case H_DBLE:	*(float *)data = *(double *)(v->buf);	break;
+	  default:	oktype = FALSE;				break;
+	}
+	break;
+      case H_DBLE:
+	switch(v->type){
+	  case H_INT:	*(double *)data = *(int *)(v->buf);	break;
+	  case H_REAL:	*(double *)data = *(float *)(v->buf);	break;
+	  case H_DBLE:	*(double *)data = *(double *)(v->buf);	break;
+	  default:	oktype = FALSE;				break;
+	}
+	break;
+      case H_CMPLX:
+	oktype = (v->type == H_CMPLX);
+	if(oktype)memcpy(data,v->buf,internal_size[type]);
+	break;
+      default:
+	oktype = FALSE;
+    }
   }else{
-    if( type == H_BYTE ) n = min(n-1,strlen(def));
-    n *= internal_size[type];
+    if( type == H_BYTE ) n = min(n-1,(int)strlen(def));
+    else		 n = internal_size[type];
     memcpy(data,def,n);
   }
+
+/* Give a fatal error message if there is a type mismatch. */
+
+  if(!oktype)
+    ERROR('f',(message,"Type incompatiblity for variable %s, in UVRDVR",var));
 
 /* Null terminate the data, if its a character string. */
 
@@ -1593,8 +1698,9 @@ VARIABLE *vt;
   found = (vt == NULL);
   terminate = FALSE;
   while(!terminate){
+    if(offset >= uv->max_offset) return(-1);
     hreadb_c(uv->item,s,offset,UV_HDR_SIZE,&iostat);
-    if(iostat == -1)return(iostat);
+    if(iostat == -1)return(-1);
     else CHECK(iostat,(message,"Error reading a record header, while UV scanning"));
 
 /* Remember that this was updated, and set the "updated" flag if necessary.
@@ -1800,7 +1906,8 @@ float *data;
     p = data;
     for(i=0; i < 2*n; i++){
       temp = *p++;
-      maxval = max(maxval,abs(temp));
+      if(temp < 0)temp = -temp;
+      maxval = max(maxval,temp);
     }
     if(maxval == 0) maxval = 1;
     scale = maxval / 32767;
@@ -2011,7 +2118,7 @@ double p1,p2;
 {
   UV *uv;
   SELECT *sel;
-  int i,i1,i2,discard,value;
+  int i,i1,i2,discard;
 
   uv = uvs[tno];
 
@@ -2056,40 +2163,40 @@ double p1,p2;
 
   } else if(!strcmp(object,"time")){
     if(p1 >= p2) BUG('f',"Min time is greater than or equal to max time, in UVSELECT.");
-    uv_addopers(sel,SEL_TIME,discard,p1,p2,NULL);
+    uv_addopers(sel,SEL_TIME,discard,p1,p2,(char *)NULL);
 
 /* Selection by "on" parameter. */
 
   } else if(!strcmp(object,"on")){
-    uv_addopers(sel,SEL_ON,discard,0.0,0.0,NULL);
+    uv_addopers(sel,SEL_ON,discard,0.0,0.0,(char *)NULL);
     uv->need_on = TRUE;
 
 /* Selection by polarisation. */
 
   } else if(!strcmp(object,"polarization")){
-    uv_addopers(sel,SEL_POL,discard,p1,p1,NULL);
+    uv_addopers(sel,SEL_POL,discard,p1,p1,(char *)NULL);
     uv->need_pol = TRUE;
 
 /* Subfield parameters, dra and ddec. */
 
   } else if(!strcmp(object,"dra")){
     if(p1 >= p2) BUG('f',"Min dra is greater than or equal to max dra, in UVSELECT.");
-    uv_addopers(sel,SEL_DRA,discard,p1,p2,NULL);
+    uv_addopers(sel,SEL_DRA,discard,p1,p2,(char *)NULL);
     uv->need_dra = TRUE;
   } else if(!strcmp(object,"ddec")){
     if(p1 >= p2) BUG('f',"Min ddec is greater than or equal to max ddec, in UVSELECT.");
-    uv_addopers(sel,SEL_DDEC,discard,p1,p2,NULL);
+    uv_addopers(sel,SEL_DDEC,discard,p1,p2,(char *)NULL);
     uv->need_ddec = TRUE;
 
 /* Phase centre parameters, ra and dec. */
 
   } else if(!strcmp(object,"ra")){
     if(p1 >= p2) BUG('f',"Min ra is greater than or equal to max ra, in UVSELECT.");
-    uv_addopers(sel,SEL_RA,discard,p1,p2,NULL);
+    uv_addopers(sel,SEL_RA,discard,p1,p2,(char *)NULL);
     uv->need_ra = TRUE;
   } else if(!strcmp(object,"dec")){
     if(p1 >= p2) BUG('f',"Min dec is greater than or equal to max dec, in UVSELECT.");
-    uv_addopers(sel,SEL_DEC,discard,p1,p2,NULL);
+    uv_addopers(sel,SEL_DEC,discard,p1,p2,(char *)NULL);
     uv->need_dec = TRUE;
 
 /* Selection by uv baseline. */
@@ -2097,7 +2204,7 @@ double p1,p2;
   } else if(!strcmp(object,"uvrange")){
     if(p1 >= p2) BUG('f',"Min uv is greater than or equal to max uv in UVSELECT");
     if(p1 < 0)   BUG('f',"Min uv is negative, in UVSELECT");
-    uv_addopers(sel,SEL_UV,discard,p1*p1,p2*p2,NULL);
+    uv_addopers(sel,SEL_UV,discard,p1*p1,p2*p2,(char *)NULL);
     uv->need_skyfreq = TRUE;
 
 /* Select by sky frequency of the first channel. */
@@ -2105,7 +2212,7 @@ double p1,p2;
   } else if(!strcmp(object,"frequency")){
      if(p1 >= p2 || p1 <= 0) BUG('f',
         "Illegal values for sky frequency selection, in UVSELECT");
-     uv_addopers(sel,SEL_FREQ,discard,p1,p2,NULL);
+     uv_addopers(sel,SEL_FREQ,discard,p1,p2,(char *)NULL);
      uv->need_skyfreq = TRUE;
 
 /* Selection by uv baseline, given in nanosec. */
@@ -2113,14 +2220,14 @@ double p1,p2;
   } else if(!strcmp(object,"uvnrange")){
     if(p1 >= p2) BUG('f',"Min uv is greater than or equal to max uv in UVSELECT");
     if(p1 < 0)   BUG('f',"Min uv is negative, in UVSELECT");
-    uv_addopers(sel,SEL_UVN,discard,p1*p1,p2*p2,NULL);
+    uv_addopers(sel,SEL_UVN,discard,p1*p1,p2*p2,(char *)NULL);
 
 /* Selection by pointing parameter. */
 
   } else if(!strcmp(object,"pointing")){
     if(p1 >= p2) BUG('f',"Min pointing is greater than or equal to max pointing, in UVSELECT");
     if(p1 < 0)   BUG('f',"Min pointing is negative, in UVSELECT");
-    uv_addopers(sel,SEL_POINT,discard,p1,p2,NULL);
+    uv_addopers(sel,SEL_POINT,discard,p1,p2,(char *)NULL);
     uv->need_point = TRUE;
 
 /* Selection by visibility number. */
@@ -2128,19 +2235,19 @@ double p1,p2;
   } else if(!strcmp(object,"visibility")){
     if(p1 > p2) BUG('f',"Min visib is greater than max visib, in UVSELECT");
     if(p1 < 1)   BUG('f',"Min visibility is negative, in UVSELECT");
-    uv_addopers(sel,SEL_VIS,discard,p1,p2,NULL);
+    uv_addopers(sel,SEL_VIS,discard,p1,p2,(char *)NULL);
 
 /* Selection by visibility increment. */
 
   } else if(!strcmp(object,"increment")){
     if(p1 < 1) BUG('f',"Bad increment selected, in UVSELECT.");
-    uv_addopers(sel,SEL_INC,discard,p1,0.0,NULL);
+    uv_addopers(sel,SEL_INC,discard,p1,0.0,(char *)NULL);
 
 /* Selection by shadowing. */
 
   } else if(!strcmp(object,"shadow")){
     if(p1 != 0 || p2 < 0) BUG('f',"Bad antenna diameter, in UVSELECT.");
-    uv_addopers(sel,SEL_SHADOW,discard,p1,p2,NULL);
+    uv_addopers(sel,SEL_SHADOW,discard,p1,p2,(char *)NULL);
     uv->need_shadow = TRUE;
     
 /* Amplitude selection. */
@@ -2478,7 +2585,7 @@ float *data;
   while(more){
     if(uv->maxvis > 0 && uv->callno > uv->maxvis) return;
     do {
-      if(uv_scan(uv,NULL) != 0)return;
+      if(uv_scan(uv,(VARIABLE *)NULL) != 0)return;
       if(!(uv->flags & UVF_INIT)) uvread_init(tno);
       if(uv->corr != NULL)if(uv->corr->callno == uv->callno){
         nchan = NUM_CHAN(*(uv->corr));
@@ -2542,9 +2649,11 @@ float *data;
 
   This reads a single wideband visibility record from the data file.
   This should generally be called after uvread. It performs no scanning
-  before returning the data. Thus it always returns data (even if uvread
-  has detected end-of-file). Otherwise uvwread generally performs the
-  same massaging steps as uvread.
+  before returning the data. Thus it always returns any wideband data
+  (even if uvread has detected end-of-file). Although uvwread is independent
+  of the linetype set with uvset, it otherwise generally performs the
+  same massaging steps as uvread (e.g. data selection, amplitude flagging
+  and planet scaling).
 
   Input:
     tno		Handle of the uv data set.
@@ -2637,7 +2746,7 @@ WINDOW *win;
   This computes the sky frequency for a particular something.
 ------------------------------------------------------------------------*/
 {
-  int i,i0,offset,*nschan,start,width,nspect;
+  int i,i0,*nschan,start;
   float vobs;
   double *sdf,*sfreq,restfreq;
   double temp;
@@ -2717,7 +2826,7 @@ UV *uv;
   
 /* Determine planet rotation and scaling factor. */
 
-  if(uv->ref_plmaj * uv->ref_plmin * uv->ref_plangle == 0){
+  if(uv->ref_plmaj * uv->ref_plmin == 0){
     uv->ref_plmaj = *(float *)uv->plmaj->buf;
     uv->ref_plmin = *(float *)uv->plmin->buf;
     uv->ref_plangle = *(float *)uv->plangle->buf;
@@ -2732,6 +2841,10 @@ UV *uv;
       uv->pluv = -sin(theta) * (plmaj / uv->ref_plmaj);
       uv->plvu = -uv->pluv;
       uv->plvv =  uv->pluu;
+    } else {
+      uv->plscale = 1;
+      uv->pluu = uv->plvv = 1;
+      uv->plvu = uv->pluv = 0;
     }
   }
   uv->flags &= ~UVF_UPDATED_PLANET;
@@ -2884,9 +2997,11 @@ UV *uv;
 
     if(op->type == SEL_RA){
       discard = !op->discard;
-      ra = *(float *)(uv->ra->buf);
+      if(uv->ra->type == H_REAL)ra = *(float  *)(uv->ra->buf);
+      else			ra = *(double *)(uv->ra->buf);
       if(uv->need_dra){
-	dec = *(float *)(uv->dec->buf);
+        if(uv->dec->type == H_REAL)dec = *(float  *)(uv->dec->buf);
+        else			   dec = *(double *)(uv->dec->buf);
 	if(uv->need_ddec)dec += *(float *)(uv->ddec->buf);
 	ra += *(float *)(uv->dra->buf) / cos(dec);
       }
@@ -2901,7 +3016,8 @@ UV *uv;
 /* Apply DEC selection. */
 
     if(op->type == SEL_DEC){
-      dec = *(float *)(uv->dec->buf);
+      if(uv->dec->type == H_REAL)dec = *(float  *)(uv->dec->buf);
+      else			 dec = *(double *)(uv->dec->buf);
       if(uv->need_ddec)dec += *(float *)(uv->ddec->buf);
       discard = !op->discard;
       while(n < sel->noper && op->type == SEL_DEC){
@@ -3294,13 +3410,17 @@ int tno;
    but we cannot do without ra and dec if they are needed. */
 
   if(uv->need_ra) {
-    uv->ra = uv_checkvar(tno,"ra",H_REAL);
+    uv->ra = uv_checkvar(tno,"ra",0);
+    if(uv->ra->type != H_REAL && uv->ra->type != H_DBLE)
+      BUG('f',"Variable ra has the wrong type, in UVREAD(ini)");
     uv->need_dra = uv_locvar(tno,"dra") != NULL;
     if(uv->need_dra) uv->need_dec = TRUE;
   }
 
   if(uv->need_dec) {
-    uv->dec = uv_checkvar(tno,"dec",H_REAL);
+    uv->dec = uv_checkvar(tno,"dec",0);
+    if(uv->dec->type != H_REAL && uv->dec->type != H_DBLE)
+      BUG('f',"Variable dec has the wrong type, in UVREAD(ini)");
     uv->need_ddec = TRUE;
   }
 
@@ -3563,7 +3683,7 @@ int *flags,nsize;
     flags	Flags indicating whether the data is good or not.
 ------------------------------------------------------------------------*/
 {
-  float idv,idv2,odv2,dv2,scale,wt,v,vobs;
+  float idv,idv2,odv2,dv2,scale,wt,v,vobs,temp;
   double *sfreq,*sdf,*restfreq;
   int nspect,first,last,fout,lout,i,j,n;
   int *nschan,*flagin,*flagin1,*flagout,*wins,doint2;
@@ -3606,7 +3726,9 @@ int *flags,nsize;
   nspect = uv->nschan->length / external_size[uv->nschan->type];
   if(nspect > MAXWINS) BUG('f',"Too many windows, in UVREAD(velocity)");
 
-  odv2 = 0.5 * line->fwidth/abs(line->fstep);
+  temp = line->fstep;
+  if(temp < 0) temp = -temp;
+  odv2 = 0.5 * line->fwidth/temp;
   sfreq =    (double *)uv->sfreq->buf;
   sdf =      (double *)uv->sdf->buf;
   restfreq = (double *)uv->restfreq->buf;
@@ -3631,7 +3753,8 @@ int *flags,nsize;
       v = (CKMS * (*restfreq - *sfreq) / *restfreq - vobs - line->fstart )
 		/ line->fstep;
       idv = -CKMS * *sdf / (*restfreq * line->fstep);
-      idv2 = 0.5 * abs(idv);
+      idv2 = 0.5 * idv;
+      if(idv2 < 0) idv2 = - idv2;
       dv2 = idv2 + odv2;
       if(idv > 0){
         fout = ceil((-dv2-v)/idv);
@@ -3914,11 +4037,12 @@ double *data;
 /*--									*/
 /*----------------------------------------------------------------------*/
 {
-#define VEL   1
-#define RFREQ 2
-#define BW    3
-#define FREQ  4
-#define SFREQ 5
+#define VELO  1
+#define FELO  2
+#define RFREQ 3
+#define BW    4
+#define FREQ  5
+#define SFREQ 6
 
   UV *uv;
   uv = uvs[tno];
@@ -3962,7 +4086,8 @@ double *data;
 
 /* Various bits and pieces of channel information. */
 
-  } else if(!strcmp(object,"velocity"))	uvinfo_chan(uv,data,VEL);
+  } else if(!strcmp(object,"velocity"))	uvinfo_chan(uv,data,VELO);
+  else if(!strcmp(object,"felocity"))   uvinfo_chan(uv,data,FELO);
   else if(!strcmp(object,"restfreq"))	uvinfo_chan(uv,data,RFREQ);
   else if(!strcmp(object,"bandwidth"))  uvinfo_chan(uv,data,BW);
   else if(!strcmp(object,"frequency"))  uvinfo_chan(uv,data,FREQ);
@@ -3978,10 +4103,23 @@ double *data;
   Determine the variance of the first channel of the last data read with
   uvread.
 
-  variance = JyperK**2 * T1*T2/Bandwidth/IntTime
+  For raw polarisation parameters,
+
+  variance = JyperK**2 * T1*T2/(2*Bandwidth*IntTime)
+
+  where
+
+  JyperK = 2*k/eta*A
+
+  where A is the antenna area, eta is an efficiency (both surface efficiency
+  and correlator efficiency), and k is Boltzmans constant.
+
+  For Stokes parameters, the variance returned is half the above variance,
+  as its assumed that two things have been summed to get the Stokes
+  parameter.
 ------------------------------------------------------------------------*/
 {
-  double var,*restfreq,*tab;
+  double *restfreq,*tab;
   float bw,inttime,jyperk,*syst,*t1,*t2,factor;
   int i,j,bl,i1,i2,nants,offset,nsyst,*nschan,start;
   LINE_INFO *line;
@@ -3995,6 +4133,8 @@ double *data;
 /* Have we initialised the table? If not, intialise as much as possible. */
 
   if(!uv->sigma2.missing && uv->sigma2.table == NULL){
+    if( (uv->pol = uv_locvar(uv->tno,"pol") ) != NULL)
+      (void)uv_checkvar(uv->tno,"pol",H_INT);
     uvvarini_c(uv->tno,&(uv->sigma2.vhan));
     uvvarset_c(uv->sigma2.vhan,"nants");
     uvvarset_c(uv->sigma2.vhan,"inttime");
@@ -4035,9 +4175,9 @@ double *data;
     inttime = *(float *)(uv_checkvar(uv->tno,"inttime",H_REAL)->buf);
     jyperk  = *(float *)(uv_checkvar(uv->tno,"jyperk",H_REAL)->buf);
     if(line->linetype == LINE_CHANNEL){
-      offset = uv->win->first;
-      nschan = (int *)(uv_checkvar(uv->tno,"nschan",H_INT)->buf) + offset;
+      nschan = (int *)(uv_checkvar(uv->tno,"nschan",H_INT)->buf);
       start = line->start;
+      offset = 0;
       while(start >= *nschan){
 	start -= *nschan++;
 	offset++;
@@ -4065,7 +4205,7 @@ double *data;
     uv->sigma2.nants = nants;
     nsyst = tsys->length / external_size[tsys->type];
     syst = (float *)(tsys->buf);
-    factor = jyperk*jyperk/inttime/(1.0e9*bw);
+    factor = jyperk*jyperk/inttime/(2.0e9*bw) * uv->plscale;
     tab = uv->sigma2.table;
     if(nsyst < nants){
       factor *= *syst * *syst;
@@ -4091,6 +4231,10 @@ double *data;
   if(i2 < 1 || i1 > uv->sigma2.nants)return;
   bl = (i1*(i1-1))/2+i2-1;
   *data = uv->sigma2.table[bl];
+
+/* If its a Stokes parameter, multiply the variance by one half. */
+
+  if(uv->pol != NULL && *((int*)(uv->pol->buf)) > 0) *data *= 0.5;
 }
 /************************************************************************/
 private void uvinfo_chan(uv,data,mode)
@@ -4101,7 +4245,6 @@ int mode;
 ------------------------------------------------------------------------*/
 {
   LINE_INFO *line;
-  VARIABLE *v;
   int n,i,j,offset,step;
   double temp;
   float *wfreq,*wwide,vobs;
@@ -4112,7 +4255,6 @@ int mode;
 /* Get the velocity of the "channel" line type. */
 
   line = &(uv->actual_line);
-  v = (line->linetype == LINE_WIDE ? uv->wcorr : uv->corr );
   n = line->n;
 
   if(line->linetype == LINE_CHANNEL){
@@ -4135,8 +4277,10 @@ int mode;
 	  offset = 0;
 	  sfreq++; sdf++; nschan++;
 	}
-	if(mode == VEL)
+	if(mode == VELO)
 	  temp += CKMS * ( 1 - ( *sfreq + offset * *sdf ) / *restfreq ) - vobs;
+        else if(mode == FELO)
+	  temp += CKMS * ( *restfreq / ( *sfreq + offset * *sdf ) - 1 ) - vobs;
 	else if(mode == RFREQ) temp += *restfreq;
 	else if(mode == BW)    temp += (*sdf > 0 ? *sdf : - *sdf);
 	else if(mode == FREQ)
@@ -4155,27 +4299,20 @@ int mode;
    frequency of the first wide channel. */
 
   } else if(line->linetype == LINE_WIDE){
-    step = line->step - line->width;
-    if(mode == VEL || mode == FREQ || mode == SFREQ || mode == RFREQ ){
-      if( mode == VEL)
-	vobs =	*(float *)(uv_checkvar(uv->tno,"veldop",H_REAL)->buf) -
-		*(float *)(uv_checkvar(uv->tno,"vsource",H_REAL)->buf);
+    if(mode == RFREQ || mode == VELO || mode == FELO){
+      BUG('f',"Invalid object for wide linetype, in UVINFO\n");
+    } else if(mode == FREQ || mode == SFREQ){
+      step = line->step - line->width;
       wfreq = (float *)(uv_checkvar(uv->tno,"wfreq",H_REAL)->buf);
-      rfreq = *wfreq;
       wfreq += line->start;
       for(j=0; j < n; j++){
 	temp = 0;
-	for(i=0; i < line->width; i++)
-	  if(mode == VEL)	temp += CKMS*(1-(*wfreq++ /rfreq))-vobs;
-	  else if( mode == FREQ || mode == SFREQ || mode == RFREQ )
-	    temp += *wfreq++;
+	for(i=0; i < line->width; i++) temp += *wfreq++;
 	*data++ = temp/line->width;
 	wfreq += step;
       }
-/*    } else if(mode == RFREQ){
-      rfreq = *(float *)(uv_checkvar(uv->tno,"wfreq",H_REAL)->buf);
-      for(j=0; j < n; j++) *data++ = rfreq; */
     } else if(mode == BW){
+      step = line->step - line->width;
       wwide = (float *)(uv_checkvar(uv->tno,"wwidth",H_REAL)->buf);
       wwide += line->start;
       for(j=0; j < n; j++){
@@ -4189,8 +4326,16 @@ int mode;
 /* Velocity channel information. This is pretty trivial. */
 
   } else if(line->linetype == LINE_VELOCITY){
-    if(mode == VEL){
+
+    if(mode == VELO){
       for(i=0; i<n; i++) *data++ = line->fstart + i * line->fstep;
+    } else if(mode == FELO){
+      vobs =   *(float *)(uv_checkvar(uv->tno,"veldop",H_REAL)->buf) -
+	       *(float *)(uv_checkvar(uv->tno,"vsource",H_REAL)->buf);
+      for(i=0; i<n; i++){
+	temp = line->fstart + i * line->fstep + vobs;
+	*data++ = CKMS*temp / (CKMS-temp) - vobs;
+      }
     } else if(mode == RFREQ){
       restfreq = (double *)(uv_checkvar(uv->tno,"restfreq",H_DBLE)->buf) +
 		 uv->win->first;
