@@ -332,9 +332,10 @@ c    dpr  27-nov-00  fix stokes convention for xyin
 c    dpr  05-apr-01  Add region key for op=xyout
 c    dpr  10-may-01  Change dss to rawdss
 c    dpr  11-may-01  Check history exists before copying it
+c    dpr  26-jun-01  Relax antenna table format restrictions
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 11-may-01')
+	parameter(version='Fits: version 1.1 26-jun-01')
 	integer maxboxes
 	parameter(maxboxes=2048)
 	character in*128,out*128,op*8,uvdatop*12
@@ -1393,11 +1394,9 @@ c
 	  enddo
 c
 	  if(i.le.n)then
-	    n = i-1
+c	    n = i-1
 	    call bug('w',
-     *	      'Suspect antenna table. Discarding location info for ')
-	    call bug('w',
-     *	      'antenna numbers greater than '//itoaf(n))
+     *	      ' Some antennas were missing from the antenna table ')
 	  endif
 	  nants(nconfig) = n
 c
