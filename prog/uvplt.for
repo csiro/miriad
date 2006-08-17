@@ -284,6 +284,8 @@ c    nebk 17mar94  Add OPTIONS=2PASS  and change to OPTIONS=NOCOLOUR
 c    nebk 15jan95  Be less restrictive on use of -u and -v
 c    nebk 11mar95  No yellow for hardcopy devices
 c    nebk 22spe95  Add axis=parang
+c    nebk 03oct95  Fix calculation of hour angle.
+c    rjs  01dec95  Improve an error message.
 c
 c To do:
 c
@@ -414,7 +416,7 @@ c
       data npts, plpts, basmsk /ifac1*0, ifac1*0, ifac2*0/
       data polmsk /13*0/
 c-----------------------------------------------------------------------
-      call output ('UvPlt: version 22-Sep-95')
+      call output ('UvPlt: version 03-Oct-95')
       call output ('New axis=parang available')
 c
 c  Get the parameters given by the user and check them for blunders
@@ -1674,6 +1676,8 @@ c
 cc
       character str*80
       integer i, j
+c
+      character itoaf*2
 c-----------------------------------------------------------------------
 c
 c  Loop over the allocated plot BUFFER sizes for the baseline and
@@ -1691,11 +1695,12 @@ c
 c
       if (pl4dim.gt.1) then
         write (str,100) plfidx
-100     format ('Plot buffer allocation for file ', i2, ' exhausted')
+        str = 'Plot buffer allocation for file '//itoaf(plfidx)//
+     *	  ' exhauste; some data lost'
       else
-        str = 'Plot buffer allocation exhausted'
+        str = 'Plot buffer allocation exhausted; some data lost'
       end if
-      call output (str)
+      call bug('w', str)
 c
 999   end
 c
@@ -2135,9 +2140,13 @@ c Get lst in radians and find HA, +/- pi
 c
       call jullst (preamble(3), long, lst)
       ha = (lst - ra) 
-      if (ha.gt.dpi) ha = ha - 2.0d0*dpi
+      if (ha.gt.dpi) then
+        ha = ha - 2.0d0*dpi
+      else if (ha.lt.-dpi) then
+        ha = ha + 2.0*dpi
+      end if
       ha = ha * rtos
-
+c
       end
 c
 c
