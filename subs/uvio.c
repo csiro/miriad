@@ -128,6 +128,7 @@
 /*  rjs   6nov94 Change item and variable handle to an integer.		*/
 /*  rjs  30nov94 Increase size of varnam by 1 char, in uvset_preamble.	*/
 /*  rjs   9dec94 Less fussy when w coordinate is needed.		*/
+/*  rjs   6jan94 Make buffer for "w" coordinate large enough!		*/
 /*----------------------------------------------------------------------*/
 /*									*/
 /*		Handle UV files.					*/
@@ -1889,7 +1890,7 @@ float *data;
       uv->coord = uv_mkvar(tno,"coord",H_DBLE);
       uv->coord->flags |= UVF_NOCHECK;
       if(uv->coord->buf == NULL){
-        uv->coord->buf = Malloc(2*sizeof(double));
+        uv->coord->buf = Malloc(3*sizeof(double));
         d = (double *)(uv->coord->buf);
         *d = *(preamble) + 1000;
       }
