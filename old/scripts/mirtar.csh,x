@@ -1,0 +1,82 @@
+#!/bin/csh -f
+
+#  Create a tar tape of the Miriad environment.
+
+set device = $1
+set arch = $2
+if ( "$arch" == "" ) set arch = none
+
+#  Determine the valid architectures.
+
+set archs = ()
+@ found = ( "$arch" == "all"  || "$arch" == "none" )
+foreach t ( `ls $MIR/bin` )
+  set name = $t:r
+  if ( -d $MIR/bin/$name && -d $MIR/lib/$name ) then
+    if ( "$name" == "$arch" ) then
+      set found = 1
+    else
+      set archs = ($archs $name)
+    endif
+  endif
+end
+
+if ( ! $found ) then
+  echo "Binaries for architecture $arch not found"
+  set arch = ()
+else if ( "$arch" == "all" ) then
+  set arch = ( $archs )
+  set archs = ()
+else if ( "$arch" == "none" ) then
+  set arch = ()
+endif
+
+
+if ( "$device" == "" || ! $found ) then
+  echo "Usage:"
+  echo "  mirtar device arch"
+  if ( "$arch" == "" ) then
+    echo "    where arch is one of: all none $archs"
+  else
+    echo "    where arch is one of: all none $arch $archs"
+  endif
+  exit 0
+endif
+
+# Set the files/directories to include.
+
+set incs = ( Install README DISCLAIMER changes.txt bin cat doc inc lib linpack guides prog scripts specdoc \
+	    spec subs tools pgplot bindir )
+
+# Tell stupid tar to look in $MIR for everything.
+
+set args = ( )
+foreach inc ( $incs )
+  set args = ( $args -C $MIR $inc )
+end
+
+# Set the files/directories to exclude.
+
+set exc = /tmp/$$.exclude
+rm -f $exc
+
+foreach t ( $archs )
+  echo bin/$t			>> $exc
+  echo lib/$t			>> $exc
+end
+
+foreach t ( $arch )
+  echo lib/$t/Last_update	>> $exc
+end
+
+echo spec/werong		>> $exc
+echo spec/wip			>> $exc
+echo spec/mirtool		>> $exc
+echo spec/panel			>> $exc
+echo spec/msss			>> $exc
+echo spec/imcalc		>> $exc
+echo spec/mosaic		>> $exc
+
+# Finally tar everything up.
+
+tar -cfXFF $device $exc $args
