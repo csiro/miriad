@@ -80,7 +80,7 @@ c	  lsr     Velocity is the radio definition wrt the LSR frame.
 c	  bary    Velocity is the radio definition wrt the barycenter.
 c	  optlsr  Velocity is the optical definition wrt the LSR frame.
 c	  optbary Velocity is the optical definition wrt the barycenter.
-c	  obs	  Velocity wrt the observatory.
+c	  obs     Velocity wrt the observatory.
 c	  
 c	The reference value gives the velocity, at the reference channel,
 c	in km/s. If the reference value and reference channel are
@@ -107,17 +107,10 @@ c    * SHould have a "ccin" option to read AIPS clean component tables and conve
 c      to Miriad images.
 c    * uvout could be infintely smarter (handle multiple windows, write
 c      FQ, SU and AN tables, etc.
-c    * In uvin, reading 'RESTFREQ' from AIPS SU table causes an alignment
-c      violation (which fitsio.for forgives). We are unable to read
-c      POLAA and POLAB because of alignment violations.
+c    * In uvin 'RESTFREQ' from AIPS SU table is ignored. Also
+c      POLAA and POLAB are ignored.
 c    * A general mechanism to override wrong stuff from the FITS header
 c      is needed. Probably need the user to give an auxillary text file.
-c  Other problems:
-c    In Miriad obsra/obsdec are used to store the apparent phase center (coordinates
-c    in the current epoch) of the observation. The FITS standard uses OBSRA/OBSDEC
-c    to store the pointing center of the observation (at the epoch given by the
-c    EPOCH keyword). Miriad does not support differing phase and pointing
-c    centers. FITS does not have a place for coordinates in the current epoch.
 c
 c  History:
 c    rjs         89
@@ -276,9 +269,10 @@ c    rjs  21-mar-97  Write antenna tables for options=uvout.
 c    rjs  06-may-97  Support apparent coordinates in SU table.
 c    rjs  08-may-97  Write all FITS keywords in standard format.
 c    rjs  02-jul-97  Handle cellscal keyword.
+c    rjs  07-jul-97  Improve handling of EPOCH/EQUINOX and pointing parameters.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 02-Jul-97')
+	parameter(version='Fits: version 1.1 07-Jul-97')
 	character in*128,out*128,op*8,uvdatop*12
 	integer velsys
 	real altrpix,altrval
@@ -3004,10 +2998,10 @@ c    naxis	Number of dimensions of the image.
 c
 c------------------------------------------------------------------------
 	include 'mirconst.h'
-	integer i,polcode,l
+	integer i,polcode,l,nx,ny
 	character num*2,ctype*32,bunit*32,types(5)*25,btype*32
 	character telescop*16,rdate*16
-	real bmaj,bmin,bpa
+	real bmaj,bmin,bpa,temp,epoch
 	double precision cdelt,crota,crval,crpix,scale
 	double precision restfreq,obsra,obsdec,dtemp
 	character cellscal*16
@@ -3018,6 +3012,7 @@ c  Externals.
 c
 	character itoaf*2
 	integer len1
+	double precision epo2jul
 c
 c                   1234567890123456789012345
 	data types/'polarized_intensity      ',
@@ -3026,10 +3021,18 @@ c                   1234567890123456789012345
      *		   'spectral_index           ',
      *		   'optical_depth            '/
 c
+c  Attempt to determine telescope type.
+c
+	call fitrdhda(lu,'TELESCOP',telescop,' ')
+	if(telescop.eq.' ')
+     *	  call fitrdhda(lu,'INSTRUME',telescop,' ')
+c
 	call fitrdhda(lu,'BUNIT',bunit,' ')
 	btype = ' '
 	differ = .false.
 	ewdone = .false.
+	nx = 0
+	ny = 0
 	do i=1,naxis
 	  ok = .true.
 	  num = itoaf(i)
@@ -3064,10 +3067,12 @@ c
 	    scale = pi/180d0
 	    call fitrdhdd(lu,'OBSRA',obsra,crval)
 	    differ = differ.or.(abs(obsra-crval).gt.abs(cdelt))
+	    call fitrdhdi(lu,'NAXIS'//num,nx,0)
 	  else if(ctype(1:3).eq.'DEC')then
 	    scale = pi/180d0
 	    call fitrdhdd(lu,'OBSDEC',obsdec,crval) 
 	    differ = differ.or.(abs(obsdec-crval).gt.abs(cdelt))
+	    call fitrdhdi(lu,'NAXIS'//num,ny,0)
 	  else if(ctype.eq.'ANGLE')then
 	    scale = pi/180d0
 	  else if(ctype(1:5).eq.'GLON-'.or.
@@ -3098,9 +3103,6 @@ c
 	  if(ctype(5:8).eq.'-SIN')then
 	    if(.not.ewdone)then
 	      ewdone = .true.
-	      call fitrdhda(lu,'TELESCOP',telescop,' ')
-	      if(telescop.eq.' ')
-     *		call fitrdhda(lu,'INSTRUME',telescop,' ')
 	      ew = telescop.ne.' '
 	      if(ew)call obspar(telescop,'ew',dtemp,ew)
 	      if(ew) ew = dtemp.gt.0
@@ -3117,27 +3119,34 @@ c
 	  endif
 	enddo
 c
-	if(differ)then
-	  call bug('w','Phase and pointing center differ')
-	  call output('Differing phase and pointing centers'//
-     *		' are not supported')
-	  call output('Pointing center will be treated as'//
-     *		' being the same as the phase center')
-	endif
+	if(differ.and.nx.gt.0.and.ny.gt.0)then
+          call output('Phase and pointing centers differ ...'//
+     *          ' saving pointing information')
+          call mosInit(nx,ny)
+          call mosSet(1,obsra,obsdec,1.0,telescop)
+          call mosSave(tno)
+  	endif
+c
+        call fitrdhdr(lu,'EPOCH',temp,0.)
+        call fitrdhdr(lu,'EQUINOX',epoch,temp)
+        if(epoch.gt.1800)call wrhdr(tno,'epoch',epoch)
 c
 	call fitrdhda(lu,'DATE-OBS',rdate,' ')
 	if(rdate.ne.' ')then
 	  call fdatejul(rdate,dtemp)
 	  call wrhdd(tno,'obstime',dtemp)
+	else
+	  call fitrdhdr(lu,'EQUINOX',temp,0.)
+	  call fitrdhdr(lu,'EPOCH',epoch,temp)
+	  if(epoch.gt.1800)then
+	    dtemp = Epo2Jul(dble(epoch),' ')
+	    call wrhdd(tno,'obstime',dtemp)
+	  endif
 	endif
 	if(bunit.ne.' ')call wrhda(tno,'bunit',bunit)
 	if(btype.ne.' ')call wrbtype(tno,btype)
 	call fitrdhdd(lu,'RESTFREQ',restfreq,-1.d0)
 	if(restfreq.gt.0) call wrhdd(tno,'restfreq',1.0d-9*restfreq)
-c	call fitrdhdr(lu,'XSHIFT',xshift,0.)
-c	if(xshift.ne.0) call wrhdr(tno,'xshift',(pi/180)*xshift)
-c	call fitrdhdr(lu,'YSHIFT',yshift,0.)
-c	if(yshift.ne.0) call wrhdr(tno,'yshift',(pi/180)*yshift)
 	call fitrdhda(lu,'CELLSCAL',cellscal,'CONSTANT')
 	if(cellscal.ne.' ')call wrhda(tno,'cellscal',cellscal)
 	call fitrdhdr(lu,'BMAJ',bmaj,0.)
@@ -3324,16 +3333,25 @@ c    naxis	Number of dimensions of the image.
 c
 c------------------------------------------------------------------------
 	include 'mirconst.h'
-	integer i
+	integer i,npnt
 	character num*2,ctype*32,date*32
-	real cdelt,crota,crpix,scale,bmaj,bmin
-	double precision restfreq,crval,obstime
-	character cellscal*16
-c	real xshift,yshift
+	real cdelt,crota,crpix,bmaj,bmin,rms
+	double precision restfreq,crval,obstime,obsra,obsdec,scale
+	character cellscal*16,pbtype*16
 c
 c  Externals.
 c
 	character itoaf*2
+c
+c  Load the mosaic table.
+c
+	call mosLoad(tno,npnt)
+	if(npnt.gt.1)call bug('w',
+     *	  'Mosaicing information not stored in output FITS file')
+	call mosGet(1,obsra,obsdec,rms,pbtype)
+	call fitwrhdd(lu,'OBSRA',180.d0/DPI * obsra)
+	call fitwrhdd(lu,'OBSDEC',180.d0/DPI * obsdec)
+	call fitwrhda(lu,'TELESCOP',pbtype)
 c
 	do i=1,naxis
 	  num = itoaf(i)
@@ -3346,26 +3364,24 @@ c
 c  Determine scale factor.
 c
 	  if(ctype(1:5).eq.'RA---')then
-	    scale = 180./pi
-	    call fitwrhdd(lu,'OBSRA',scale*crval)
+	    scale = 180.d0/DPI
 	  else if(ctype(1:5).eq.'DEC--')then
-	    scale = 180./pi
-	    call fitwrhdd(lu,'OBSDEC',scale*crval)
+	    scale = 180.d0/DPI
 	  else if(ctype.eq.'ANGLE')then
-	    scale =180./pi
+	    scale =180.d0/DPI
 	  else if(ctype(1:5).eq.'GLON-'.or.
      *		  ctype(1:5).eq.'GLAT-'.or.
      *		  ctype(1:5).eq.'ELON-'.or.
      *		  ctype(1:5).eq.'ELAT-')then
-	    scale = 180./pi
+	    scale = 180.d0/DPI
 	  else if(ctype(1:4).eq.'FREQ')then
-	    scale = 1e9
+	    scale = 1d9
 	  else if(ctype(1:4).eq.'VELO'.or.ctype(1:4).eq.'FELO')then
-	    scale = 1e3
+	    scale = 1d3
 	  else
 	    scale = 1.
 	  endif
-	  call fitwrhdr(lu,'CDELT'//num,scale*cdelt)
+	  call fitwrhdd(lu,'CDELT'//num,scale*cdelt)
 	  call fitwrhdr(lu,'CROTA'//num,crota)
 	  call fitwrhdr(lu,'CRPIX'//num,crpix)
 	  call fitwrhdd(lu,'CRVAL'//num,scale*crval)
@@ -3383,10 +3399,6 @@ c
 	if(restfreq.gt.0) call fitwrhdd(lu,'RESTFREQ',1.0d9*restfreq)
 	call rdhda(tno,'cellscal',cellscal,'1/F')
 	if(cellscal.ne.' ')call fitwrhda(lu,'CELLSCAL',cellscal)
-c	call rdhdr(tno,'xshift',xshift,0.)
-c	if(xshift.ne.0) call fitwrhdr(lu,'XSHIFT',(180/pi)*xshift)
-c	call rdhdr(tno,'yshift',yshift,0.)
-c	if(yshift.ne.0) call fitwrhdr(lu,'YSHIFT',(180/pi)*yshift)
 	call rdhdr(tno,'bmaj',bmaj,0.)
 	if(bmaj.ne.0) call fitwrhdr(lu,'BMAJ',(180/pi)*bmaj)
 	call rdhdr(tno,'bmin',bmin,0.)
@@ -3408,7 +3420,7 @@ c    lu		Handle of the output FITS file.
 c
 c------------------------------------------------------------------------
 	integer nshort,nlong
-	parameter(nshort=6,nlong=9)
+	parameter(nshort=6,nlong=8)
 	character short(nshort)*5,long(nlong)*8
 	integer iostat,item,n,ival
 	real rval
@@ -3421,8 +3433,8 @@ c
 	integer len1,binsrcha
 c
 	data short/'cdelt','crota','crpix','crval','ctype','naxis'/
-	data long/'bmaj   ','bmin   ','history ','image   ',
-     *     'obsdec  ','obsra   ','restfreq','xshift  ','yshift  '/
+	data long/'obsdec  ','obsra   ','restfreq','telescop',
+     *		  'obstime ','cellscal','bmaj    ','bmin    '/
 c
 c  Short items have numbers attached.
 c  Open the "special item" which gives the names of all the items in the
@@ -3510,7 +3522,7 @@ c    stokes     Stokes parameter used in conversion
 c
 c------------------------------------------------------------------------
 	integer nlong,nshort,nextra
-	parameter(nlong=31,nshort=9,nextra=7)
+	parameter(nlong=33,nshort=9,nextra=6)
 	character card*80,key*8,type*8
 	logical more,discard,ok,found
 	integer i,k1,k2
@@ -3527,7 +3539,7 @@ c  comments, or keywords to be discarded. Some of these are handled
 c  as special cases elsewhere. Short keywords have numbers attached.
 c
 	data (uvextra(i),i=1,nextra)/
-     *	  'EPOCH   ','INSTRUME','OBJECT  ','OBSDEC  ','OBSERVER',
+     *	  'INSTRUME','OBJECT  ','OBSDEC  ','OBSERVER',
      *	  'OBSRA   ','TELESCOP'/
 	data (long(i),history(i),i=1,nlong)/
      *	  '        ', .true.,  'ALTRPIX ', .false., 'ALTRVAL ', .false.,
@@ -3535,8 +3547,9 @@ c
      *	  'BMAJ    ', .false., 'BMIN    ', .false., 'BSCALE  ', .false.,
      *	  'BUNIT   ', .false., 'BZERO   ', .false., 'CELLSCAL', .false.,
      *	  'COMMAND ', .true.,  'COMMENT ', .true.,
-     *	  'DATE    ', .false., 'DATE-MAP ', .false.,'DATE-OBS', .false.,
-     *	  'END     ', .false., 'EXTEND  ', .false.,
+     *	  'DATE    ', .false., 'DATE-MAP ',.false., 'DATE-OBS', .false.,
+     *	  'END     ', .false., 'EPOCH    ',.false., 'EQUINOX ', .false.,
+     *	  'EXTEND  ', .false.,
      *	  'GCOUNT  ', .false., 'GROUPS  ', .false., 'HISTORY ', .true.,
      *	  'OBSDEC  ', .false., 'OBSRA   ', .false., 'ORIGIN  ', .false.,
      *	  'PCOUNT  ', .false., 'RESTFREQ', .false., 'SIMPLE  ', .false.,
