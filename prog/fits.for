@@ -277,6 +277,7 @@ c    rjs  12-jul-97  Added options=nod2.
 c    rjs  16-jul-97  Added options=compress.
 c    rjs  01-aug-97  Made FITS date string variables longer, to
 c		     allow for new FITS standard.
+c    rjs  05-aug-97  More robust in interpretation of epoch keyword.
 c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='Fits: version 1.1 1-Aug-97')
@@ -3146,7 +3147,13 @@ c
           call mosSave(tno)
   	endif
 c
-        call fitrdhdr(lu,'EPOCH',temp,0.)
+	call fitrdhda(lu,'EPOCH',atemp,' ')
+	if(atemp(1:1).eq.'.'.or.atemp(1:1).eq.'1'.or.
+     *				atemp(1:1).eq.'2')then
+	  call fitrdhdr(lu,'EPOCH',temp,0.)
+	else
+	  temp = 0
+	endif
         call fitrdhdr(lu,'EQUINOX',epoch,temp)
         if(epoch.gt.1800)call wrhdr(tno,'epoch',epoch)
 c
