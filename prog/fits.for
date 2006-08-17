@@ -250,9 +250,10 @@ c    rjs  13-sep-94  Recognise 'VELOCITY' and 'FELOCITY' axes.
 c    rjs  23-sep-94  Handle w axis in uvout.
 c    rjs  26-sep-95  Somewhat better handling of odd input axes.
 c    rjs   7-nov-95  options=dss.
+c    rjs  05-dec-95  Negate the cdelt1 increment when options=dss.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 7-Nov-95')
+	parameter(version='Fits: version 1.1 5-Dec-95')
 	character in*64,out*64,op*8,uvdatop*12
 	integer velsys
 	real altrpix,altrval
@@ -2983,8 +2984,8 @@ c
 c
 	crpix1 = objctx - cnpix1 + 1
 	crpix2 = objcty - cnpix2 + 1
-	cdelt1 = dpi/180.d0/3600.d0 * xpixelsz * pltscale * 1e-3
-	cdelt2 = dpi/180.d0/3600.d0 * ypixelsz * pltscale * 1e-3
+	cdelt1 = -dpi/180.d0/3600.d0 * xpixelsz * pltscale * 1e-3
+	cdelt2 =  dpi/180.d0/3600.d0 * ypixelsz * pltscale * 1e-3
 	call decval(crval1,objctra)
 	crval1 = dpi/12.d0 * crval1
 	call decval(crval2,objctdec)
