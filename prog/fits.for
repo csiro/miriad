@@ -295,9 +295,11 @@ c    rjs  27-oct-98  Check in CD keyword for image pixel increment.
 c    rjs  20-nov-98  Better handling of image projections and rotation.
 c    rjs  25-nov-98  More work on better handling of image projection and rotation.
 c    rjs  07-jan-99  Write dates in new FITS format.
+c    rjs  26-feb-99  Used new subroutine "fitdate" to be more robust to
+c		     corrupted dates.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 07-Jan-99')
+	parameter(version='Fits: version 1.1 26-Feb-99')
 	character in*128,out*128,op*8,uvdatop*12
 	integer velsys
 	real altrpix,altrval
@@ -1193,7 +1195,7 @@ c
 	integer nval,i,j,t,nxyz,n,naxis,itemp
 	double precision xyz(3,MAXANT),xc,yc,zc,r0,d0
 	double precision r,sint,cost,temp,eporef
-	character type*1,units*16,ctype*8,rdate*32
+	character type*1,units*16,ctype*8
 	integer sta(MAXANT)
 c
 c  Externals.
@@ -1218,12 +1220,8 @@ c
 c
 c  Determine reference time.
 c
-	call fitrdhda(lu,'DATE-OBS',rdate,' ')
-	if(rdate.eq.' ')then
-	  timeref = fuvGetT0(lu)
-	else
-	  call dayjul(rdate,timeref)
-	endif
+	call fitdate(lu,'DATE-OBS',timeref)
+	if(timeref.eq.0)timeref = fuvGetT0(lu)
 c
 c  Get velocity definition information, just in case this is a spectral
 c  line observation.
@@ -1613,7 +1611,7 @@ c  it to a true UT1 time (as best as we can). This involves both
 c  an offset between the time system and UT1, and offsets to remove
 c  fudges performed by AIPS DBCON.
 c------------------------------------------------------------------------
-	character rdate*32,timsys*16,line*80
+	character timsys*16,line*80
 	double precision jrdate,datutc,ut1utc
 	integer ltsys
 c
@@ -1632,12 +1630,8 @@ c
 c
 c  Determine the reference time.
 c
-	call fitrdhda(lu,'RDATE',rdate,' ')
-	if(rdate.ne.' ')then
-	  call dayjul(rdate,jrdate)
-	else
-	  jrdate = jdateobs
-	endif
+	call fitdate(lu,'RDATE',jrdate)
+	if(jrdate.eq.0)jrdate = jdateobs
 c
 c  If there is not DATA to UTC time correction present, check if the
 c  time is IAT time. If so, work our the time difference.
@@ -3120,7 +3114,7 @@ c------------------------------------------------------------------------
 	include 'maxnax.h'
 	integer i,polcode,nx,ny,ilong,ilat
 	character num*2,bunit*32,types(5)*25,btype*32
-	character telescop*16,rdate*32,atemp*16,observer*16,cellscal*16
+	character telescop*16,atemp*16,observer*16,cellscal*16
 	character object*32,pbtype*16
 	real bmaj,bmin,bpa,epoch,equinox,rms,vobs,pbfwhm
 	double precision restfreq,obsra,obsdec,dtemp
@@ -3233,14 +3227,9 @@ c
 	if(equinox.lt.1800)equinox = epoch
 	if(equinox.gt.1800)call wrhdr(tno,'epoch',equinox)
 c
-	call fitrdhda(lu,'DATE-OBS',rdate,' ')
-	if(rdate.ne.' ')then
-	  call dayjul(rdate,dtemp)
-	  call wrhdd(tno,'obstime',dtemp)
-	else if(epoch.gt.1800)then
-	  dtemp = Epo2Jul(dble(epoch),' ')
-	  call wrhdd(tno,'obstime',dtemp)
-	endif
+	call fitdate(lu,'DATE-OBS',dtemp)
+	if(dtemp.eq.0)dtemp = Epo2Jul(dble(epoch),' ')
+	call wrhdd(tno,'obstime',dtemp)
 c
 	if(bunit.ne.' ')call wrhda(tno,'bunit',bunit)
 	if(btype.ne.' ')call wrbtype(tno,btype)
