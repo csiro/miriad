@@ -18,6 +18,7 @@
 #    22-feb-01 rjs  Added matching for possible tasks.
 #    02-mar-01 rjs  Slight change to make it compatible with more UNIX systems.
 #    18-mar-03 rjs  Fixed ordering of honouring the -w and MIRPAGER env. var.
+#    31-may-06 rjs   Added mozilla as a browser.
 
 set noglob
 
@@ -58,7 +59,7 @@ if ( "$task" == "" ) set task = "miriad"
 # Determine the pager to use.
 
 if ( $doweb ) then
-  set mypager = "netscape"
+  set mypager = "mozilla"
 else if ( $?MIRPAGER ) then
   set mypager = $MIRPAGER
 else if ( $?PAGER ) then
@@ -74,6 +75,11 @@ if ( "$mypager" == "netscape" ) then
   netscape -remote "OpenURL($web)"
   if ( $status ) then
     netscape -install "$web" &
+  endif
+else if ( "$mypager" == "mozilla" ) then
+  mozilla -remote "OpenURL($web)"
+  if ( $status ) then
+    mozilla -install "$web" &
   endif
 else if ( "$mypager" == "lynx" ) then
   lynx -use_mouse "$web"
@@ -111,7 +117,7 @@ echo "  Usage:"
 echo "    mirhelp [-w] [-k keyword] task"
 echo " "
 echo "  Options:"
-echo "   -w   View help in a netscape browser"
+echo "   -w   View help in a mozilla browser"
 echo "   -k   Give help on a specific keyword"
 echo " "
 echo "  Environment Variables:"
