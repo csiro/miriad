@@ -14,13 +14,8 @@ c	The input visibility file(s). Multiple input files and wild card
 c	card expansion are supported.    
 c	No default
 c@ line
-c	Line type of the data in the format
-c	  type,nchan,start,width,step
-c	Here "type" can be one of:  channel, wide or velocity
-c	If you select more than one channel, they will all appear
-c	on the plot.  If you want to average channels together,
-c	then use WIDTH appropriately.
-c	Default is channel,1,1,1,1
+c	This is the normal linetype specification. See the help on "line"
+c	for more information. The default is all channels.
 c@ select
 c	This selects which visibilities to be used. Default is all
 c	visibilities. See the Users Guide for information about how
@@ -92,9 +87,14 @@ c	in time ordered data.
 c	Default is 1.
 c@ options
 c	Task enrichment options. Minimum match is effective. 
-c	 nocal   Don't apply the gain corrections
-c	 nopol   Don't apply the polarization leakage corrections
-c	 nopass  Don't apply the bandpass corrections
+c	 nocal   Do not apply the gain corrections
+c	 nopol   Do not apply the polarization leakage corrections
+c	 nopass  Do not apply the bandpass corrections
+c
+c	 nofqav  By default, uvplt averages together all channels from
+c	         a visibility record before plotting. The nofqav option
+c	         disables this, and causes individual channels to be
+c	         plotted.
 c
 c	 nobase  Plot all baselines on the same plot, otherwise
 c	         each baseline is plotted on a separate sub-plot.
@@ -292,6 +292,7 @@ c    nebk 06dec95  Push MAXBASE2 upto 36 for Hat Creek.  Does not affect ATCA
 c    nebk 09jan95  Only work out longitude if really needed; some data sets
 c		   don't have it.
 c    nebk 22may96  Add options=mrms
+c    rjs  06jun96  Change frequency behaviour to default to all channels.
 c
 c To do:
 c
@@ -402,7 +403,7 @@ c
      +  dovec(2), dorms(3), doall, doflag, dobase, doperr, dointer,
      +  dolog, dozero, doequal, donano, dosrc, doavall, bwarn(2), 
      +  skip, xgood, ygood, doxind, doyind, dowrap, none, dosymb, 
-     +  dodots, false(2), allfull, docol, twopass, keep
+     +  dodots, false(2), allfull, docol, twopass, keep, dofqav
 c
 c Externals
 c
@@ -423,7 +424,8 @@ c
       data polmsk /13*0/
 c-----------------------------------------------------------------------
       call output ('UvPlt: version 22-May-96')
-      call output ('New options=mrms')
+      call output ('New frequency behaviour '//
+     *	'(see parameters line and options=nofqav)')
       call output (' ')
 c
 c  Get the parameters given by the user and check them for blunders
@@ -432,7 +434,7 @@ c
      +   tunit, dorms, dovec, doflag, doall, dobase, dointer, doperr,
      +   dolog, dozero, doequal, donano, dosrc, doavall, doxind, 
      +   doyind, dowrap, dosymb, dodots, docol, inc, nx, ny, pdev, 
-     +   logf, comment, size, hann, ops, twopass)
+     +   logf, comment, size, hann, ops, twopass, dofqav)
       call chkinp (xaxis, yaxis, xmin, xmax, ymin, ymax, dayav,
      +   dodoub, dowave, doave, dovec, dorms, dointer, doperr,
      +   dowrap, hann, xrtest, yrtest)
@@ -445,7 +447,8 @@ c Read through data set accumulating descriptive information or use
 c variables of first integration to guess at what's in the file
 c
       if (twopass) then
-        call uvdes (doflag, doall, maxant, maxbase, maxchan, basmsk,
+        call uvdes (doflag, doall, dofqav, maxant, maxbase, maxchan,
+     +    basmsk,
      +    polmsk, data, goodf, nfiles, npols, nbases, baseday, dayoff)
       else
         call uvfish (nfiles, npols, nbases, baseday, dayoff)
@@ -499,7 +502,8 @@ c
 c
 c Read first visibility
 c
-        call uvdatrd (preamble, data, goodf, maxchan, nread)
+        call getdat (preamble, data, goodf, maxchan, nread,
+     *               dofqav, doflag, doall)
 c
 c Make plot title when we get some data from a file
 c
@@ -510,7 +514,7 @@ c
 c
 c Is there some data we want in this visibility ?
 c
-          call goodat (doflag, doall, nread, goodf, keep)
+          call goodat ( nread, goodf, keep)
           if (.not.keep) goto 950
 c
           call uvrdvrd (lin, 'obsra', ra, 0.0d0)
@@ -572,8 +576,7 @@ c
           j = 0
           do while (j.lt.nread)
             j = j + 1
-            if ( (doflag .and. .not.goodf(j)) .or.
-     +           (.not.doflag .and. goodf(j)) .or. doall) then
+            if ( goodf(j)) then
 c
 c Set x and y values
 c
@@ -632,8 +635,8 @@ c
 c
 c Read next visibility
 c
-950       if (.not.allfull) call uvdatrd (preamble, data, goodf, 
-     +                                    maxchan, nread)
+950       if (.not.allfull) call getdat (preamble, data, goodf, 
+     *        maxchan, nread, dofqav, doflag, doall)
         end do
 c
 c Issue a message if any (but not all) of the baseline/polarization 
@@ -1715,6 +1718,65 @@ c
 999   end
 c
 c
+      subroutine getdat(preamble,data,flags,maxchan,nread,
+     *                  dofqav,doflag,doall)
+c-----------------------------------------------------------------------
+c  Get a visibility. If needed, perform channel averaging.
+c
+c  Input:
+c    maxchan	Maximum number of channels that can be read.
+c    dofqav	If true, average all good channels into a single channel.
+c    doflag	If true, treat the flagged data as the desirable ones.
+c    doall	If true, ignore the data flags completely.
+c
+c  Output:
+c    preamble	Normal preamble.
+c    data	Correlation data.
+c    flags	Data flags.
+c    nread	Number of output channels (after freqency averaging).
+c------------------------------------------------------------------------
+      implicit none
+      integer maxchan,nread
+      double precision preamble(4)
+      complex data(maxchan)
+      logical flags(maxchan),dofqav,doflag,doall
+      integer i,n
+      complex sum
+c-----------------------------------------------------------------------
+      call uvdatrd(preamble,data,flags,maxchan,nread)
+c
+c  Fudge the flags so the user gets what he or she wants!
+c
+      if(doall)then
+        do i=1,nread
+          flags(i) = .true.
+        enddo
+      else if(doflag)then
+        do i=1,nread
+          flags(i) = .not.flags(i)
+        enddo
+      endif
+c
+c  Average all the channels together, if required.
+c
+      if(nread.gt.1.and.dofqav)then
+        n = 0
+        sum = 0
+        do i=1,nread
+          if(flags(i))then
+            sum = sum + data(i)
+            n = n + 1
+          endif
+        enddo
+        nread = 1
+        flags(1) = n.gt.0
+        data(1)  = 0
+        if(flags(1))data(1) = sum/n
+      endif
+c
+      end
+c
+c
       subroutine getdev (devdef, il, pdev)
 c-----------------------------------------------------------------------
 c     Get plot device from user
@@ -1794,7 +1856,7 @@ c
       subroutine getopt (dorms, dovec, doflag, doall, doday, dohour,
      +  dosec, dobase, dointer, doperr, dolog, dozero, doequal,
      +  donano, docal, dopass, dopol, dosrc, doavall, doxind, 
-     +  doyind, dowrap, dosymb, dodots, docol, twopass)
+     +  doyind, dowrap, dosymb, dodots, docol, twopass, dofqav)
 c-----------------------------------------------------------------------
 c     Get user options
 c
@@ -1826,16 +1888,17 @@ c     dosymb    True if plot each file with differnet symbol
 c     dodots    Plot averaged data as dots instead of filled circles
 c     docol     Plot different files in differnet colours
 c     twopass   Make two passes through the data
+c     dofqav	Average channels before plotting.
 c-----------------------------------------------------------------------
       implicit none
 c
-      logical dorms(2), dovec(2), doall, doflag, dobase, dointer, 
+      logical dorms(3), dovec(2), doall, doflag, dobase, dointer, 
      +  doperr, dolog, dozero, doequal, donano, docal, dopol, dosrc,
      +  doday, dohour, dosec, doavall, doxind, doyind, dowrap, 
-     +  dosymb, dodots, dopass, docol, twopass
+     +  dosymb, dodots, dopass, docol, twopass, dofqav
 cc
       integer nopt
-      parameter (nopt = 27)
+      parameter (nopt = 28)
 c
       character opts(nopt)*8
       logical present(nopt)
@@ -1845,7 +1908,7 @@ c
      +           'nocal   ', 'source  ', 'nopol   ', 'days    ', 
      +           'hours   ', 'avall   ', 'xind    ', 'yind    ', 
      +           'unwrap  ', 'symbols ', 'dots    ', 'nopass  ',
-     +           'nocolour', '2pass   ', 'mrms    '/
+     +           'nocolour', '2pass   ', 'mrms    ', 'nofqav  '/
 c-----------------------------------------------------------------------
       call options ('options', opts, present, nopt)
 c
@@ -1886,6 +1949,7 @@ c
       dopass   = .not.present(24)
       docol    = .not.present(25)
       twopass  =      present(26)
+      dofqav   = .not.present(28)
 c
       end
 c
@@ -2181,13 +2245,11 @@ c
       end
 c
 c
-      subroutine goodat (doflag, doall, n, flags, keep)
+      subroutine goodat ( n, flags, keep)
 c-----------------------------------------------------------------------
 c     See if there is any wanted data in this visibility
 c
 c  Input
-c    doflag    Plot flagged data
-c    doall     Plot all data
 c    n         Number of channels
 c    flags     Channel flags, true if unflagged
 c  Output
@@ -2195,37 +2257,20 @@ c    keep      True if visibility wanted
 c-----------------------------------------------------------------------
       implicit none
       integer n
-      logical doflag, doall, flags(n), keep
+      logical flags(n), keep
 cc
       integer i
 c-----------------------------------------------------------------------
       keep = .false.
-      if (doall) then
-c
-c Plot all data
-c
-        keep = .true.
-      else if (doflag) then
-c
-c Plot flagged data
-c
-        do i = 1, n
-          if (.not.flags(i)) then
-            keep = .true.
-            return
-          end if
-        end do
-      else
 c
 c Plot unflagged data
 c
-        do i = 1, n
-          if (flags(i)) then
-            keep = .true.
-            return
-          end if
-        end do
-      end if    
+      do i = 1, n
+        if (flags(i)) then
+          keep = .true.
+          return
+        end if
+      end do
 c
       end
 
@@ -2315,7 +2360,7 @@ c
      +    dayav, tunit, dorms, dovec, doflag, doall, dobase, dointer,
      +    doperr, dolog, dozero, doequal, donano, dosrc, doavall, 
      +    doxind, doyind, dowrap, dosymb, dodots, docol, inc, nx, ny, 
-     +    pdev, logf, comment, size, hann, ops, twopass)
+     +    pdev, logf, comment, size, hann, ops, twopass, dofqav )
 c-----------------------------------------------------------------------
 c     Get the user's inputs 
 c
@@ -2358,6 +2403,7 @@ c    comment      COmment to put in log file
 c    size         PGPLOT character sizes for the labels and symbols
 c    hann         Hanning smoothing length
 c    twopass      Make two passes through the data
+c    dofqav       Average frequency channels before plotting.
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -2367,7 +2413,7 @@ c
       logical dorms(3), dovec(2), doflag, doall, dobase, dointer, 
      +  doperr, dolog, dozero, doequal, donano, docal, dopol, dosrc,
      +  doavall, doxind, doyind, dowrap, dosymb, dodots, dopass, 
-     +  docol, twopass
+     +  docol, twopass, dofqav
       integer nx, ny, inc, hann, maxco, ilen, ilen2, tunit
 cc
       integer i
@@ -2391,10 +2437,10 @@ c
       call getopt (dorms, dovec, doflag, doall, doday, dohour, dosec,
      +   dobase, dointer, doperr, dolog, dozero, doequal, donano, 
      +   docal, dopass, dopol, dosrc, doavall, doxind, doyind, 
-     +   dowrap, dosymb, dodots, docol, twopass)
+     +   dowrap, dosymb, dodots, docol, twopass, dofqav)
 c
-      ops = 'sdl1p'
-      i = 5
+      ops = 'sdlp'
+      i = 4
       if (.not.donano) then
         i = i + 1
         ops(i:i) = 'w'
@@ -3751,7 +3797,8 @@ c
       end
 c
 c
-      subroutine uvdes (doflag, doall, maxant, maxbase, maxchan, 
+      subroutine uvdes (doflag, doall, dofqav, maxant, maxbase,
+     +   maxchan, 
      +   basmsk, polmsk, data, goodf, nfiles, npols, nbases, 
      +   baseday, dayoff)
 c-----------------------------------------------------------------------
@@ -3761,6 +3808,7 @@ c
 c  Output:
 c    doflag    Plot flagged data
 c    doall     Plot all data
+c    dofqav    Average all channels into 1.
 c    nfiles    Number of files read
 c    npols     Number of polarizations encountered
 c    nbases    Number of baselines encountered
@@ -3772,7 +3820,7 @@ c
       double precision baseday
       integer maxchan, dayoff
       complex data(maxchan)
-      logical goodf(maxchan), doall, doflag
+      logical goodf(maxchan), doall, doflag, dofqav
       integer nfiles, npols, nbases, polmsk(-8:4), maxant, maxbase,
      +  basmsk(maxant+maxbase)
 cc
@@ -3795,7 +3843,8 @@ c
 c
 c Read first visbility (making variables available)
 c
-        call uvdatrd (preamble, data, goodf, maxchan, nread)
+        call getdat (preamble, data, goodf, maxchan, nread,
+     *					dofqav, doflag, doall)
 c
         if (i.eq.1) then
 c
@@ -3810,7 +3859,7 @@ c
 c
 c Does this visibility have any data that we want ?
 c
-          call goodat (doflag, doall, nread, goodf, keep)
+          call goodat ( nread, goodf, keep)
 c
 c Find new polarization
 c
@@ -3843,7 +3892,8 @@ c
 c
 c Read another visibility
 c
-          call uvdatrd (preamble, data, goodf, maxchan, nread)
+          call getdat (preamble, data, goodf, maxchan, nread,
+     *					dofqav, doflag, doall)
         end do
         call uvdatcls
       end do
@@ -3964,3 +4014,4 @@ c
       call uvdatrew
 c
       end
+************************************************************************
