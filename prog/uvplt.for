@@ -319,6 +319,8 @@ c		   inputs.
 c    rjs  04may00  Tidy up requirement for lat,long,lst and more.
 c    rjs  26sep00  Correct uvangle code.
 c    rjs  10jan01  Added az,el,lst to possible axes.
+c    rjs  20jan01  Change definition of nbases in uvfish to allow for
+c		   possible presence of autocorrelations.
 c
 c To do:
 c
@@ -449,7 +451,7 @@ c
       data npts, plpts, basmsk /ifac1*0, ifac1*0, ifac2*0/
       data polmsk /13*0/
 c-----------------------------------------------------------------------
-      call output ('UvPlt: version 1.0 11-Jan-01')
+      call output ('UvPlt: version 1.0 20-Jan-01')
 c
 c  Get the parameters given by the user and check them for blunders
 c
@@ -4151,7 +4153,7 @@ c programs such as UVCAT just copy NANTS over, even if you select
 c a subset of baseline.  RJS very stubborn (what's new) on this issue.  
 c
       call uvrdvri (lin, 'nants', nants, 0)
-      nbases = nants * (nants-1) / 2
+      nbases = nants * (nants+1) / 2
 c
 c Close uv file and reinitialize UVDAT routines
 c
