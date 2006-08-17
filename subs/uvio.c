@@ -141,6 +141,7 @@
 /*  rjs  15oct97 Minor correction definition of felocity.		*/
 /*  rjs  22oct97 Change in the format of "on" selection.		*/
 /*  rjs  30aug99 Increase MAXVHANDS to 64				*/
+/*  rjs  31aug99 Correct an error message.				*/
 /*----------------------------------------------------------------------*/
 /*									*/
 /*		Handle UV files.					*/
@@ -2616,7 +2617,7 @@ int n;
   } else if(!strcmp(type,"window")){
     uv->apply_win = n > 0;
   } else {
-    ERROR('w',(message,"Unrecognised type %s ignored, in UVSET(amplitude)"));
+    ERROR('w',(message,"Unrecognised type %s ignored, in UVSET(amplitude)",type));
   }
 }
 /************************************************************************/
