@@ -341,9 +341,10 @@ c		     inputs.
 c    rjs  04-jul-05  More robust to some weirdo variants.
 c    rjs  19-sep-05  Better defaults for velocity info, and better
 c		     velocity formula. Handle AIPS OB tables.
+c    rjs  24-sep-05  Increase max number of sources in op=uvout
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 19-Sep-05')
+	parameter(version='Fits: version 1.1 24-Sep-05')
 	integer maxboxes
 	parameter(maxboxes=2048)
 	character in*128,out*128,op*8,uvdatop*12
@@ -2485,7 +2486,7 @@ c
 	double precision xyz(3*MAXANT),lat,long,height
 c
 	integer MAXSRC
-	parameter(MAXSRC=512)
+	parameter(MAXSRC=2048)
 	double precision ras(MAXSRC),decs(MAXSRC)
 	double precision aras(MAXSRC),adecs(MAXSRC)
 	character sources(MAXSRC)*16

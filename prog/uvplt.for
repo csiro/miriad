@@ -330,6 +330,7 @@ c		   possible presence of autocorrelations.
 c    rjs  02mar01  Added airmass to possible axes.
 c    rjs  04may03  getlst could return the wrong value in some circumstances.
 c    rjs  20sep04  Added jyperk and rms.
+c    rjs  09may06  Disable planet processing.
 c
 c To do:
 c
@@ -460,7 +461,7 @@ c
       data npts, plpts, basmsk /ifac1*0, ifac1*0, ifac2*0/
       data polmsk /13*0/
 c-----------------------------------------------------------------------
-      call output ('UvPlt: version 1.0 20-Sep-04')
+      call output ('UvPlt: version 1.0 09-May-06')
 c
 c  Get the parameters given by the user and check them for blunders
 c
@@ -2581,8 +2582,8 @@ c
      +   docal, dopass, dopol, dosrc, doavall, doxind, doyind, 
      +   dowrap, dosymb, dodots, docol, twopass, dofqav, dotitle)
 c
-      ops = 'sdlp'
-      i = 4
+      ops = 'sdl'
+      i = 3
       if (.not.donano) then
         i = i + 1
         ops(i:i) = 'w'
