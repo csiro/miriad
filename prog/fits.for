@@ -334,7 +334,8 @@ c    dpr  10-may-01  Change dss to rawdss
 c    dpr  11-may-01  Check history exists before copying it
 c    dpr  26-jun-01  Relax antenna table format restrictions
 c    dpr  02-jul-01  Relax AN restrictions properly (I hope!!)
-c    rjs  04-oct-0   Get GLS history comment right.
+c    rjs  04-oct-01  Get GLS history comment right.
+c    nebk 08-jan-02  In AntWrite, set POLAA and POLAB to 45/135 for ATCA
 c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='Fits: version 1.1 04-Oct-01')
@@ -2950,10 +2951,16 @@ c
 	  call ftabputi(tOut,'MNTSTA', i,mount)
 	  call ftabputr(tOut,'STAXOF', i,0.0)
 	  call ftabputa(tOut,'POLTYA', i,polty(1:1))
-	  call ftabputr(tOut,'POLAA',  i,0.0)
+          if (telescop.eq.'ATCA') then
+   	     call ftabputr(tOut,'POLAA',  i, 45.0)
+	     call ftabputr(tOut,'POLAB',  i, 135.0)
+          else 
+   	     call ftabputr(tOut,'POLAA',  i, 0.0)
+	     call ftabputr(tOut,'POLAB',  i, 0.0)
+          end if
 	  call ftabputr(tOut,'POLCALA',i,zero)
 	  call ftabputa(tOut,'POLTYB', i,polty(2:2))
-	  call ftabputr(tOut,'POLAB',  i,0.0)
+
 	  call ftabputr(tOut,'POLCALB',i,zero)
 	enddo
 c
