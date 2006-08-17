@@ -252,7 +252,9 @@ c    rjs  26-sep-95  Somewhat better handling of odd input axes.
 c    rjs   7-nov-95  options=dss.
 c    rjs  05-dec-95  Negate the cdelt1 increment when options=dss.
 c    nebk 12-jan-96  Replace "percent_polarization" by "polarized_intensity"
-c		     ins subroutine AXISIN
+c		     in subroutine AXISIN (AIPS manuals say percent_pol
+c		     but my empirical evidence is contrary.  Recognize 
+c		     LL,MM as RA---SIN and DEC--SIN.
 c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='Fits: version 1.1 12-Jan-96')
@@ -2873,7 +2875,14 @@ c
 	    else if(i.eq.2)then
 	      ctype = 'DEC--SIN'
 	    endif
-	  endif
+	  else if (ctype.eq.'LL') then
+            ctype= 'RA---SIN'
+            call bug ('w', 'Converting LL to RA---SIN')
+          else if (ctype.eq.'MM') then
+            ctype = 'DEC--SIN'
+            call bug ('w', 'Converting MM to DEC--SIN')
+          endif
+c
 	  if(ctype(1:2).eq.'RA')then
 	    scale = pi/180d0
 	    call fitrdhdd(lu,'OBSRA',obsra,crval)
