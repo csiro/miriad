@@ -4709,9 +4709,13 @@ int mode;
 		 uv->win->first;
       for(i=0; i<n; i++) *data++ = *restfreq;
     } else if(mode == FREQ){
+      restfreq = (double *)(uv_checkvar(uv->tno,"restfreq",H_DBLE)->buf) +
+		 uv->win->first;
       for(i=0; i<n; i++)
         *data++ = *restfreq * (1 - (line->fstart + i *line->fstep)/CKMS);
     } else if(mode == SFREQ){
+      restfreq = (double *)(uv_checkvar(uv->tno,"restfreq",H_DBLE)->buf) +
+		 uv->win->first;
       vobs =   *(float *)(uv_checkvar(uv->tno,"veldop",H_REAL)->buf) -
 	       *(float *)(uv_checkvar(uv->tno,"vsource",H_REAL)->buf);
       for(i=0; i<n; i++)
