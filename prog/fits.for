@@ -270,9 +270,10 @@ c    rjs  06-may-97  Support apparent coordinates in SU table.
 c    rjs  08-may-97  Write all FITS keywords in standard format.
 c    rjs  02-jul-97  Handle cellscal keyword.
 c    rjs  07-jul-97  Improve handling of EPOCH/EQUINOX and pointing parameters.
+c    rjs  08-jul-97  Fix bug introduced yesterday.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 07-Jul-97')
+	parameter(version='Fits: version 1.1 08-Jul-97')
 	character in*128,out*128,op*8,uvdatop*12
 	integer velsys
 	real altrpix,altrval
@@ -3337,21 +3338,26 @@ c------------------------------------------------------------------------
 	character num*2,ctype*32,date*32
 	real cdelt,crota,crpix,bmaj,bmin,rms
 	double precision restfreq,crval,obstime,obsra,obsdec,scale
-	character cellscal*16,pbtype*16
+	character cellscal*16,telescop*16
 c
 c  Externals.
 c
 	character itoaf*2
+	logical hdprsnt
 c
 c  Load the mosaic table.
 c
-	call mosLoad(tno,npnt)
-	if(npnt.gt.1)call bug('w',
+	if(hdprsnt(tno,'mostable'))then
+	  call mosLoad(tno,npnt)
+	  if(npnt.gt.1)call bug('w',
      *	  'Mosaicing information not stored in output FITS file')
-	call mosGet(1,obsra,obsdec,rms,pbtype)
-	call fitwrhdd(lu,'OBSRA',180.d0/DPI * obsra)
-	call fitwrhdd(lu,'OBSDEC',180.d0/DPI * obsdec)
-	call fitwrhda(lu,'TELESCOP',pbtype)
+	  call mosGet(1,obsra,obsdec,rms,telescop)
+	  call fitwrhdd(lu,'OBSRA',180.d0/DPI * obsra)
+	  call fitwrhdd(lu,'OBSDEC',180.d0/DPI * obsdec)
+	else
+	  call rdhda(tno,'telescop',telescop,' ')
+	endif
+	if(telescop.ne.' ')call fitwrhda(lu,'TELESCOP',telescop)
 c
 	do i=1,naxis
 	  num = itoaf(i)
@@ -3420,7 +3426,7 @@ c    lu		Handle of the output FITS file.
 c
 c------------------------------------------------------------------------
 	integer nshort,nlong
-	parameter(nshort=6,nlong=8)
+	parameter(nshort=6,nlong=12)
 	character short(nshort)*5,long(nlong)*8
 	integer iostat,item,n,ival
 	real rval
@@ -3433,8 +3439,9 @@ c
 	integer len1,binsrcha
 c
 	data short/'cdelt','crota','crpix','crval','ctype','naxis'/
-	data long/'obsdec  ','obsra   ','restfreq','telescop',
-     *		  'obstime ','cellscal','bmaj    ','bmin    '/
+	data long/'bmaj    ','bmin    ','cellscal','history ',
+     *		  'image   ','mask    ','mostable','obsdec  ',
+     *		  'obsra   ','obstime ','restfreq','telescop'/
 c
 c  Short items have numbers attached.
 c  Open the "special item" which gives the names of all the items in the
