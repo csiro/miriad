@@ -16,18 +16,21 @@
 /*		  it returns.						*/
 /*  rjs 23feb93   Rename a defined parameter only.			*/
 /*  rjs 10aug93   Use hexists in hdprsnt.				*/
+/*  rjs  6nov94   Change "item handle" to an integer.			*/
 /************************************************************************/
 
+#include <stdlib.h>
 #include <ctype.h>
+#include <stdio.h>
+
 #include "io.h"
 #define check(iostat) if(iostat)bugno_c('f',iostat)
 #define MAXSIZE 1024
 #define MAXLINE 80
 
-char *history[MAXOPEN];
+int history[MAXOPEN];
 
 void bugno_c(),bug_c();
-char *strcpy(),*sprintf();
 #define Sprintf (void)sprintf
 #define Strcpy  (void)strcpy
 void hisopen_c(),hiswrite_c(),hisclose_c(),hdcopy_c(),hdprobe_c();
@@ -139,7 +142,7 @@ int tno;
 void wrhdr_c(thandle,keyword,value)
 int thandle;
 char *keyword;
-float value;
+double value;
 /** wrhdr -- Write a real valued header variable.			*/
 /*& mjs									*/
 /*: header-i/o								*/
@@ -158,7 +161,7 @@ float value;
 /*--									*/
 /*----------------------------------------------------------------------*/
 {
-  char *item;
+  int item;
   float temp;
   int iostat,offset;
 
@@ -193,7 +196,7 @@ double value;
 /*--									*/
 /*----------------------------------------------------------------------*/
 {
-  char *item;
+  int item;
   int iostat,offset;
 
   haccess_c(thandle,&item,keyword,"write",&iostat);		check(iostat);
@@ -226,7 +229,7 @@ int value;
 /*--									*/
 /*----------------------------------------------------------------------*/
 {
-  char *item;
+  int item;
   int iostat,offset;
 
   haccess_c(thandle,&item,keyword,"write",&iostat);		check(iostat);
@@ -258,7 +261,7 @@ float *value;
 /*--									*/
 /*----------------------------------------------------------------------*/
 {
-  char *item;
+  int item;
   int iostat,offset;
 
   haccess_c(thandle,&item,keyword,"write",&iostat);		check(iostat);
@@ -291,7 +294,7 @@ char *value;
 /*--									*/
 /*----------------------------------------------------------------------*/
 {
-  char *item;
+  int item;
   int iostat;
 
   haccess_c(thandle,&item,keyword,"write",&iostat);		check(iostat);
@@ -303,7 +306,8 @@ char *value;
 void rdhdr_c(thandle,keyword,value,defval)
 int thandle;
 char *keyword;
-float *value,defval;
+float *value;
+double defval;
 /** rdhdr -- Read a real-valued header variable.			*/
 /*& mjs									*/
 /*: header-i/o								*/
@@ -393,7 +397,8 @@ double *value,defval;
 /*--									*/
 /*----------------------------------------------------------------------*/
 {
-  char *item,s[ITEM_HDR_SIZE];
+  int item;
+  char s[ITEM_HDR_SIZE];
   int iostat,length,itemp,offset;
   float rtemp;
 
@@ -459,7 +464,8 @@ float *value,*defval;
 /*--									*/
 /*----------------------------------------------------------------------*/
 {
-  char *item,s[ITEM_HDR_SIZE];
+  int item;
+  char s[ITEM_HDR_SIZE];
   int iostat,length,offset;
 
 /* Firstly assume the variable is missing. Try to get it. If successful
@@ -508,7 +514,8 @@ char *value,*defval;
 /*--									*/
 /*----------------------------------------------------------------------*/
 {
-  char *item,s[ITEM_HDR_SIZE];
+  int item;
+  char s[ITEM_HDR_SIZE];
   int iostat,dodef,length;
 
 /* Firstly assume the variable is missing. Try to get it. If successful
@@ -556,7 +563,7 @@ char *keyword;
 /*----------------------------------------------------------------------*/
 {
   char buf[MAXSIZE];
-  char *item_in,*item_out;
+  int item_in,item_out;
   int length,offset,iostat,size;
 
   haccess_c(tin,&item_in,keyword,"read",&iostat);	if(iostat)return;
@@ -636,7 +643,8 @@ int *n,length;
 /*--									*/
 /*----------------------------------------------------------------------*/
 {
-  char *item,s[ITEM_HDR_SIZE];
+  int item;
+  char s[ITEM_HDR_SIZE];
   float rtemp,ctemp[2];
   int iostat,unknown,size,i,itemp,offset;
   double dtemp;
