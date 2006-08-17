@@ -263,7 +263,6 @@ c		     but my empirical evidence is contrary.  Recognize
 c		     LL,MM as RA---SIN and DEC--SIN.
 c    rjs  07-aug-96  Correct scaling of axis type.
 c    rjs  16-aug-96  Added options=nochi.
-c    rjs  17-oct-96  Discard OBSRA and BLANK values in op=xyin.
 c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='Fits: version 1.1 16-Aug-96')
@@ -2189,7 +2188,7 @@ c
 	integer tIn,tScr,tOut
 	integer nread,nvis,nVisRef,offset,length,velref,nchan
 	integer ant1,ant2
-	real inttime,epoch,dra,ddec,dra0,ddec0
+	real wt,epoch,dra,ddec,dra0,ddec0
 	double precision ra,dec,restfreq,preamble(5),Coord(3,4)
 	double precision f0,df,v0,dv,repsi,fepsi,vepsi,T0
 	character string*64,ltype*32,veltype*32,vtype(6)*8
@@ -2299,7 +2298,12 @@ c
 	  call uvdatgti('pol',P)
 	  if(P.ge.PolMin.and.P.le.PolMax.and.P.ne.0)then
 	    nvis = nvis + 1
-	    call uvrdvrr(tIn,'inttime',inttime,1.)
+	    call uvdatgtr('variance',wt)
+	    if(wt.eq.0)then
+	      call uvrdvrr(tIn,'inttime',wt,1.)
+	    else
+	      wt = 1/wt
+	    endif
 c
 c  Convert baseline number to normal AIPS form. Note the different conventions!
 c
@@ -2322,9 +2326,9 @@ c
 	      OutData(i0+1) = real(Data(i))
 	      OutData(i0+2) = -aimag(Data(i))
 	      if(flags(i))then
-	        OutData(i0+3) = inttime
+	        OutData(i0+3) = wt
 	      else
-	        OutData(i0+3) = -inttime
+	        OutData(i0+3) = -wt
 	      endif
 	      i0 = i0 + 3
 	    enddo
