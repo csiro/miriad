@@ -289,9 +289,10 @@ c    rjs  21-apr-98  Increase max number of antenna configs.
 c    rjs  19-aug-98  Added options=lefty and made the uv writer check obspar
 c		     for observatory latitude/longitude if it was missing
 c		     from the vis dataset.
+c    pjt  15-sep-98  Recognise galactic and ecliptic coordinates the right way
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 18-Aug-98')
+	parameter(version='Fits: version 1.1 15-sep-98')
 	character in*128,out*128,op*8,uvdatop*12
 	integer velsys
 	real altrpix,altrval
@@ -3193,10 +3194,10 @@ c
 	    call fitrdhdi(lu,'NAXIS'//num,ny,0)
 	  else if(ctype.eq.'ANGLE')then
 	    scale = pi/180d0
-	  else if(ctype(1:5).eq.'GLON-'.or.
-     *		  ctype(1:5).eq.'GLAT-'.or.
-     *		  ctype(1:5).eq.'ELON-'.or.
-     *		  ctype(1:5).eq.'ELAT-')then
+	  else if(ctype(1:4).eq.'GLON'.or.
+     *		  ctype(1:4).eq.'GLAT'.or.
+     *		  ctype(1:4).eq.'ELON'.or.
+     *		  ctype(1:4).eq.'ELAT')then
 	    scale = pi/180.
 	  else if(ctype(1:4).eq.'VELO'.or.ctype(1:4).eq.'FELO')then
 	    scale = 1d-3
