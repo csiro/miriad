@@ -128,7 +128,8 @@
 /*  rjs   6nov94 Change item and variable handle to an integer.		*/
 /*  rjs  30nov94 Increase size of varnam by 1 char, in uvset_preamble.	*/
 /*  rjs   9dec94 Less fussy when w coordinate is needed.		*/
-/*  rjs   6jan94 Make buffer for "w" coordinate large enough!		*/
+/*  rjs   6jan95 Make buffer for "w" coordinate large enough!		*/
+/*  rjs  13jan95 Added pulsar bin selection.				*/
 /*----------------------------------------------------------------------*/
 /*									*/
 /*		Handle UV files.					*/
@@ -372,6 +373,7 @@ typedef struct varhand{
 #define SEL_UV   13
 #define SEL_FREQ 14
 #define SEL_SHADOW 15
+#define SEL_BIN  16
 
 typedef struct {
 	int type,discard;
@@ -426,13 +428,13 @@ typedef struct {
 	VARIABLE *coord,*corr,*time,*bl,*tscale,*nschan,*axisrms;
 	VARIABLE *sfreq,*sdf,*restfreq,*wcorr,*wfreq,*veldop,*vsource;
 	VARIABLE *plmaj,*plmin,*plangle,*dra,*ddec,*ra,*dec,*pol,*on;
-	VARIABLE *obsra,*obsdec,*lst,*antpos,*antdiam,*source;
+	VARIABLE *obsra,*obsdec,*lst,*antpos,*antdiam,*source,*bin;
 	VARIABLE *vhash[HASHSIZE],*prevar[MAXPRE];
 	VARIABLE variable[MAXVAR];
         LINE_INFO data_line,ref_line,actual_line;
 	int need_skyfreq,need_point,need_planet,need_dra,need_ddec,
 	    need_ra,need_dec,need_pol,need_on,need_uvw,need_src,
-	    need_win;
+	    need_win,need_bin;
 	float ref_plmaj,ref_plmin,ref_plangle,plscale,pluu,pluv,plvu,plvv;
 	double skyfreq;
         int skyfreq_start;
@@ -911,7 +913,7 @@ private UV *uv_getuv(tno)
   uv->select    = NULL;
   uv->need_skyfreq = uv->need_point = uv->need_planet = FALSE;
   uv->need_pol	   = uv->need_on    = uv->need_uvw    = FALSE;
-  uv->need_src	   = uv->need_win		      = FALSE;
+  uv->need_src	   = uv->need_win   = uv->need_bin    = FALSE;
   uv->need_dra	   = uv->need_ddec  = uv->need_ra     = uv->need_dec = FALSE;
   uv->uvw = NULL;
   uv->ref_plmaj = uv->ref_plmin = uv->ref_plangle = 0;
@@ -2301,6 +2303,13 @@ double p1,p2;
     if(p1 != 0 || p2 < 0) BUG('f',"Bad antenna diameter, in UVSELECT.");
     uv_addopers(sel,SEL_SHADOW,discard,p1,p2,(char *)NULL);
     uv->need_uvw = TRUE;
+
+/* Pulsar bin selection. */
+
+  } else if(!strcmp(object,"bin")){
+    if(p1 < 1 || p2 < p1) BUG('f',"Bad pulsar bin number, in UVSELECT.");
+    uv_addopers(sel,SEL_BIN,discard,p1,p2,(char *)NULL);
+    uv->need_bin = TRUE;
     
 /* Amplitude selection. */
 
@@ -2996,7 +3005,7 @@ UV *uv;
 private int uvread_select(uv)
 UV *uv;
 {
-  int i1,i2,bl,pol,n,nants,inc,selectit,selprev,discard;
+  int i1,i2,bl,pol,n,nants,inc,selectit,selprev,discard,binlo,binhi;
   float *point,pointerr,dra,ddec;
   double time,t0,uu,vv,uv2,uv2f,ra,dec,skyfreq,diameter;
   SELECT *sel;
@@ -3251,6 +3260,20 @@ UV *uv;
 	  BUG('f',"No antenna diameter info available, in UVREAD(shadow_select)");
         if(uvread_shadowed(uv,diameter))
 	  discard = op->discard;
+        op++; n++;
+      }
+      if(discard || n >= sel->noper) goto endloop;
+    }
+
+/* Apply apply pulsar bin selection. */
+
+    if(op->type == SEL_BIN){
+      discard = !op->discard;
+      while(n < sel->noper && op->type == SEL_BIN){
+	binlo = op->loval + 0.5;
+	binhi = op->hival + 0.5;
+        if(binlo <= *(int *)(uv->bin->buf) &&
+	   *(int *)(uv->bin->buf) <= binhi ) discard = op->discard;
         op++; n++;
       }
       if(discard || n >= sel->noper) goto endloop;
@@ -3534,6 +3557,7 @@ int tno;
   if(uv->need_pol)   uv->pol     = uv_checkvar(tno,"pol",H_INT);
   if(uv->need_on)    uv->on      = uv_checkvar(tno,"on",H_INT);
   if(uv->need_src)   uv->source  = uv_checkvar(tno,"source",H_BYTE);
+  if(uv->need_bin)   uv->bin	 = uv_checkvar(tno,"bin",H_INT);
   if(uv->need_uvw){
     uv->obsra = uv_checkvar(tno,"obsra",H_DBLE);
     uv->obsdec = uv_checkvar(tno,"obsdec",H_DBLE);
