@@ -339,9 +339,11 @@ c    nebk 08-jan-02  In AntWrite, set POLAA and POLAB to 45/135 for ATCA
 c    rjs  29-dec-03  Be more robust to poorly formed CTYPE labels in 
 c		     inputs.
 c    rjs  04-jul-05  More robust to some weirdo variants.
+c    rjs  19-sep-05  Better defaults for velocity info, and better
+c		     velocity formula. Handle AIPS OB tables.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 04-Jul-05')
+	parameter(version='Fits: version 1.1 19-Sep-05')
 	integer maxboxes
 	parameter(maxboxes=2048)
 	character in*128,out*128,op*8,uvdatop*12
@@ -1312,13 +1314,13 @@ c------------------------------------------------------------------------
 	include 'fits.h'
 c
 	logical badapp,badepo,more,found,badmnt
-	double precision Coord(3,4),rfreq
-	double precision height,veldef
+	double precision Coord(3,4),rfreq,freq
+	double precision veldef
 	character defsrc*16,num*2
 	real defepoch,diff
 	integer nval,i,j,t,nxyz,n,naxis,itemp
 	double precision xyz(3,MAXANT),xc,yc,zc,r0,d0
-	double precision r,sint,cost,temp,eporef
+	double precision temp,eporef,vddef
 	character type*1,units*16,ctype*8
 	integer sta(MAXANT)
 c
@@ -1352,9 +1354,20 @@ c  Get velocity definition information, just in case this is a spectral
 c  line observation.
 c
 	call fitrdhdd(lu,'RESTFREQ',rfreq,0.d0)
-	call fitrdhdd(lu,'ALTRVAL',veldef,0.d0)
 	call fitrdhdr(lu,'ALTRPIX',velref,real(Coord(uvCrpix,uvFreq)))
-	call fitrdhdi(lu,'VELREF',velsys,3)
+	call fitrdhdi(lu,'VELREF',velsys,257)
+	freq = (velref-Coord(uvCrpix,uvFreq))*Coord(uvCdelt,uvFreq)
+     *		 + Coord(uvCrval,uvFreq)
+	if(rfreq.gt.0.and.freq.gt.0)then
+	  if(velsys.lt.256)then
+	    vddef = CMKS*(rfreq-freq)/freq
+	  else
+	    vddef = CMKS*(rfreq-freq)/rfreq
+	  endif
+	else
+	  vddef = 0
+	endif
+	call fitrdhdd(lu,'ALTRVAL',veldef,vddef)
 c
 c  See what the dimension of the IF axis according to the header.
 c
@@ -1464,56 +1477,59 @@ c
 	  call fitrdhdd(lu,'ARRAYY',yc,0.d0)
 	  call fitrdhdd(lu,'ARRAYZ',zc,0.d0)
 	  call ftabGetd(lu,'STABXYZ',0,xyz)
-c
-c  Determine the latitude, longitude and height of the first antenna
-c  (which is taken to be the observatory lat,long,height). Handle
-c  geocentric and local coordinates.
-c
-	  if(abs(xc)+abs(yc)+abs(zc).eq.0)then
-	    call xyz2llh(xyz(1,1),xyz(2,1),xyz(3,1),
-     *		       lat(nconfig),long(nconfig),height)
-	  else
-	    call xyz2llh(xc,yc,zc,
-     *		       lat(nconfig),long(nconfig),height)
-	  endif
+	  call antproc(lefty,xc,yc,zc,xyz,n,antpos(1,nconfig),
+     *		lat(nconfig),long(nconfig))
 	  llok = .true.
-c
-c  Convert them to the Miriad system: y is local East, z is parallel to pole
-c  Units are nanosecs.
-c
-	  if(abs(xc)+abs(yc)+abs(yc).eq.0)then
-	    r = sqrt(xyz(1,1)*xyz(1,1) + xyz(2,1)*xyz(2,1))
-	    cost = xyz(1,1) / r
-	    sint = xyz(2,1) / r
-	    do i=1,n
-	      temp = xyz(1,i)*cost + xyz(2,i)*sint - r
-	      antpos(i,nconfig)     = (1d9/DCMKS) * temp
-	      temp = -xyz(1,i)*sint + xyz(2,i)*cost
-	      antpos(i+n,nconfig)   = (1d9/DCMKS) * temp
-	      antpos(i+2*n,nconfig) = (1d9/DCMKS) * (xyz(3,i)-xyz(3,1))
-	    enddo
-	  else
-	    do i=1,n
-	      antpos(i,nconfig)     = (1d9/DCMKS) * xyz(1,i)
- 	      antpos(i+n,nconfig)   = (1d9/DCMKS) * xyz(2,i)
-	      antpos(i+2*n,nconfig) = (1d9/DCMKS) * xyz(3,i)
-	    enddo
-	  endif
-c
-c  If the antenna table uses a left-handed system, convert it to a 
-c  right-handed system.
-c
-	  if(lefty)then
-	    long(nconfig) = -long(nconfig)
-	    do i=1,n
-	      antpos(i+n,nconfig) = -antpos(i+n,nconfig)
-	    enddo
-	  endif
-c
-c  Get the next AN table.
-c
 	  call ftabNxt(lu,'AIPS AN',found)
 	enddo
+c
+c  If no antenna table was found, try for an OB table!
+c
+	if(.not.anfound)then
+	found = .false.
+	  call ftabLoc(lu,'AIPS OB',found)
+	  anfound = found
+	  if(found)then
+	    call output('Reading AIPS OB table')
+c
+	    nconfig = 1
+	    call ftabInfo(lu,'ORBXYZ',type,units,n,nxyz)
+c
+	    if(nxyz.ne.3.or.n.le.0.or.type.ne.'D')
+     *	      call bug('f','Something is screwy with the OB table')
+	    if(n.gt.MAXANT)call bug('f','Too many antennas for me')
+c
+	    do i=1,MAXANT
+	      antloc(i)=0
+	    end do
+c
+	    call ftabGeti(lu,'ANTENNA_NO',0,sta)
+c
+	    do i=1,n
+	      antloc(sta(i))=i
+	    enddo
+c
+	    if(sta(n).ne.n)call bug('w',
+     *	      ' Some antennas were missing from the antenna table ')
+	    numants = numants + n
+	    nants(nconfig) = n
+	    freqref(nconfig) = 1e-9*Coord(uvCrval,uvFreq)
+	    timeoff(nconfig) = 0
+	    mount(nconfig) = 0
+	    emok = .false.
+	    badmnt = .true.
+c
+c  Get the antenna coordinates.
+c
+	    call fitrdhdd(lu,'ARRAYX',xc,0.d0)
+	    call fitrdhdd(lu,'ARRAYY',yc,0.d0)
+	    call fitrdhdd(lu,'ARRAYZ',zc,0.d0)
+	    call ftabGetd(lu,'ORBXYZ',0,xyz)
+	    call antproc(lefty,xc,yc,zc,xyz,n,antpos(1,nconfig),
+     *		lat(nconfig),long(nconfig))
+	    llok = .true.
+	  endif
+	endif
 c
 c  Summarise info about the antenna characteristics.
 c
@@ -1710,6 +1726,66 @@ c
 	enddo
 c
 	call Sortie(sindx,srcids,nsrc)
+c
+	end
+c************************************************************************
+	subroutine antproc(lefty,xc,yc,zc,xyz,n,antpos,lat,long)
+c
+	implicit none
+	integer n
+	double precision xc,yc,zc,antpos(n,3),lat,long,xyz(3,n)
+	logical lefty
+c
+c  Fiddle the antenna information.
+c
+c------------------------------------------------------------------------
+	include 'mirconst.h'
+	double precision r,cost,sint,height,temp
+	integer i
+c
+c  Determine the latitude, longitude and height of the first antenna
+c  (which is taken to be the observatory lat,long,height). Handle
+c  geocentric and local coordinates.
+c
+	if(abs(xc)+abs(yc)+abs(zc).eq.0)then
+	  call xyz2llh(xyz(1,1),xyz(2,1),xyz(3,1),
+     *	      lat,long,height)
+	else
+	  call xyz2llh(xc,yc,zc,
+     *	       lat,long,height)
+	endif
+c
+c  Convert them to the Miriad system: y is local East, z is parallel to pole
+c  Units are nanosecs.
+c
+	if(abs(xc)+abs(yc)+abs(yc).eq.0)then
+	  r = sqrt(xyz(1,1)*xyz(1,1) + xyz(2,1)*xyz(2,1))
+	  cost = xyz(1,1) / r
+	  sint = xyz(2,1) / r
+	  do i=1,n
+	    temp = xyz(1,i)*cost + xyz(2,i)*sint - r
+	    antpos(i,1) = (1d9/DCMKS) * temp
+	    temp = -xyz(1,i)*sint + xyz(2,i)*cost
+	    antpos(i,2) = (1d9/DCMKS) * temp
+	    antpos(i,3) = (1d9/DCMKS) * (xyz(3,i)-xyz(3,1))
+	  enddo
+	else
+	  do i=1,n
+	    antpos(i,1) = (1d9/DCMKS) * xyz(1,i)
+ 	    antpos(i,2) = (1d9/DCMKS) * xyz(2,i)
+	    antpos(i,3) = (1d9/DCMKS) * xyz(3,i)
+	  enddo
+	endif
+c
+c  If the antenna table uses a left-handed system, convert it to a 
+c  right-handed system.
+c
+	if(lefty)then
+	  long = -long
+	  do i=1,n
+	    antpos(i,2) = -antpos(i,2)
+	  enddo
+	endif
 c
 	end
 c************************************************************************
@@ -1928,9 +2004,9 @@ c
      *					restfreq.eq.0)then
 	  veldop = 0
 	else if(velsys.eq.HELRADIO.or.velsys.eq.LSRRADIO)then
-	  veldop = 1e-3*cmks*(1-fref/restfreq) - veldop
+	  veldop = 0.001*CMKS*(restfreq/fref*(1-veldop/(0.001*CMKS))-1)
 	else if(velsys.eq.HELOPTIC.or.velsys.eq.LSROPTIC)then
-	  veldop = 1e-3*cmks*(restfreq/fref-1) - veldop
+	  veldop = 0.001*CMKS*(restfreq/fref/(1+veldop/(0.001*CMKS))-1)
 	else
 	  call bug('f','Unrecognised velocity system, in VelCvt')
 	endif
@@ -2255,8 +2331,12 @@ c  Compute and save the radial velocity. Compute a new velocity every
 c  minute.
 c
 	newvel = velcomp .and. ( abs(dT).gt.60./(24.*3600.) .or. newsrc
-     *		.or. newconfg ) .and. llok
+     *		.or. newconfg )
 	if(newvel)then
+	  if(.not.llok)then
+	    call bug('w','Cannot compute velocities ...')
+	    call bug('f','Observatory location is not known')
+	  endif
 	  call VelRad(velsys.eq.LSRRADIO,
      *	    time,raapp(srcidx),decapp(srcidx),
      *	    epoch(srcidx),raepo(srcidx),decepo(srcidx),lst,
