@@ -148,6 +148,8 @@
 /*               variables that have been overridden.                   */
 /*  rjs  16jun00 Handle bad baseline numbers more gracefully.	        */
 /*  dpr  17apr01 Increase MAXVHANDS                                     */
+/*  rjs  27jul04 Handle uvinfo_variance Tsys table in a more elegant    */
+/*               fashion to deal with many antennas.                    */
 /*----------------------------------------------------------------------*/
 /*									*/
 /*		Handle UV files.					*/
@@ -1002,6 +1004,7 @@ private UV *uv_getuv(tno)
   uv->ref_line.linetype  = LINE_NONE;
 
   uv->sigma2.table = NULL;
+  uv->sigma2.nants = 0;
   uv->sigma2.missing = FALSE;
 
   uv->corr = NULL;
@@ -3767,6 +3770,7 @@ int tno;
   if(uv->sigma2.table != NULL){
     free((char *)(uv->sigma2.table));
     uv->sigma2.table = NULL;
+    uv->sigma2.nants = 0;
   }
     
 /* Determine the max visibility that the user is interested in. */
@@ -4530,8 +4534,6 @@ double *data;
       uv->sigma2.missing |= (uv_locvar(uv->tno,"wsystemp") == NULL) |
 			    (uv_locvar(uv->tno,"wwidth")   == NULL);
     }
-    if(!uv->sigma2.missing)
-      uv->sigma2.table = (double *)Malloc(sizeof(double)*(MAXANT*(MAXANT+1))/2);
   }
 
 /* Return if we do not have enough info to determine the variance. */
@@ -4571,6 +4573,11 @@ double *data;
 
 /* We have everything we ever wanted: jyperk,inttime,bw and Tsys. Compute
    variance. */
+
+    if(nants > uv->sigma2.nants){
+      if(uv->sigma2.table != NULL)free((char *)(uv->sigma2.table));
+      uv->sigma2.table = (double *)Malloc(sizeof(double)*(nants*(nants+1))/2);
+    }
 
     uv->sigma2.nants = nants;
     nsyst = VARLEN(tsys);
