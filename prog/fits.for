@@ -53,8 +53,9 @@ c	  nopol   Do not apply the polarization leakage table to the data.
 c	  nopass  Do not apply the bandpass table correctsions to the data.
 c
 c	This option applies for op=xyin only.
-c	  dss     Expect an image produced by the Digital Sky Survey,
+c	  dss     Use the conventions of Digital Sky Survey FITS files,
 c	          and convert (partially!) its header.
+c	  nod2    Use the conventions of NOD2 FITS files.
 c@ velocity
 c	Velocity information. This is only used for op=uvin,
 c	and is only relevant for line observations. The default is
@@ -271,13 +272,14 @@ c    rjs  08-may-97  Write all FITS keywords in standard format.
 c    rjs  02-jul-97  Handle cellscal keyword.
 c    rjs  07-jul-97  Improve handling of EPOCH/EQUINOX and pointing parameters.
 c    rjs  08-jul-97  Fix bug introduced yesterday.
+c    rjs  12-jul-97  Added options=nod2
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 08-Jul-97')
+	parameter(version='Fits: version 1.1 12-Jul-97')
 	character in*128,out*128,op*8,uvdatop*12
 	integer velsys
 	real altrpix,altrval
-	logical altr,docal,dopol,dopass,dss,dochi
+	logical altr,docal,dopol,dopass,dss,dochi,nod2
 c
 c  Get the input parameters.
 c
@@ -293,7 +295,7 @@ c
 c
 c  Get options.
 c
-        call getopt(docal,dopol,dopass,dss,dochi)
+        call getopt(docal,dopol,dopass,dss,nod2,dochi)
         if(op.eq.'uvout') then
           uvdatop = 'sdlb3'
 	  if(docal)uvdatop(7:7) = 'c'
@@ -315,7 +317,7 @@ c
 	else if(op.eq.'uvout')then
 	  call uvout(out,version)
 	else if(op.eq.'xyin')then
-	  call xyin(in,out,version,dss)
+	  call xyin(in,out,version,dss,nod2)
 	else if(op.eq.'xyout')then
 	  call xyout(in,out,version)
 	else if(op.eq.'print')then
@@ -395,10 +397,10 @@ c
 	endif
 	end
 c************************************************************************
-      subroutine getopt(docal, dopol, dopass, dss, dochi)
+      subroutine getopt(docal, dopol, dopass, dss, nod2, dochi)
 c
       implicit none
-      logical docal, dopol, dopass, dss, dochi
+      logical docal, dopol, dopass, dss, dochi, nod2
 c
 c     Get a couple of the users options from the command line
 c
@@ -407,21 +409,23 @@ c    docal   Apply gain calibration
 c    dopol   Apply polarization calibration
 c    dopass  Apply bandpass calibration
 c    dss     Handle DSS image.
+c    nod2    Handle NOD2 image.
 c    dochi   Attempt to calculate the parallactic angle.
 c
 c------------------------------------------------------------------------
       integer nopt
-      parameter (nopt = 5)
+      parameter (nopt = 6)
       character opts(nopt)*6
       logical present(nopt)
-      data opts /'nocal ', 'nopol ','nopass','dss   ','nochi '/
+      data opts /'nocal ', 'nopol ','nopass','dss   ','nod2  ','nochi '/
 c
       call options ('options', opts, present, nopt)
       docal = .not.present(1)
       dopol = .not.present(2)
       dopass= .not.present(3)
       dss   =      present(4)
-      dochi = .not.present(5)
+      nod2  =      present(5)
+      dochi = .not.present(6)
 c
       end
 c************************************************************************
@@ -2878,11 +2882,11 @@ c
 c
 	end
 c************************************************************************
-	subroutine xyin(in,out,version,dss)
+	subroutine xyin(in,out,version,dss,nod2)
 c
 	implicit none
 	character in*(*),out*(*),version*(*)
-	logical dss
+	logical dss,nod2
 c
 c  Read in an image FITS file.
 c
@@ -2890,6 +2894,7 @@ c  Inputs:
 c    in		Name of the input image FITS file.
 c    out	Name of the output MIRIAD file.
 c    dss	Expect a DSS image. Handle header accordingly!
+c    nod2	Expect a NOD2 image.
 c
 c  Internal Variables:
 c    lu		Handle of the FITS file.
@@ -2953,6 +2958,7 @@ c  Handle the header.
 c
 	call axisin(lu,tno,naxis)
 	if(dss)call dssfudge(lu,tno)
+	if(nod2)call nodfudge(lu,tno)
 c
 c  Close up shop.
 c
@@ -3001,11 +3007,10 @@ c------------------------------------------------------------------------
 	include 'mirconst.h'
 	integer i,polcode,l,nx,ny
 	character num*2,ctype*32,bunit*32,types(5)*25,btype*32
-	character telescop*16,rdate*16
+	character telescop*16,rdate*16,atemp*16,observer*16,cellscal*16
 	real bmaj,bmin,bpa,temp,epoch
 	double precision cdelt,crota,crval,crpix,scale
 	double precision restfreq,obsra,obsdec,dtemp
-	character cellscal*16
 c	real xshift,yshift
 	logical differ,ok,ew,ewdone
 c
@@ -3022,11 +3027,14 @@ c                   1234567890123456789012345
      *		   'spectral_index           ',
      *		   'optical_depth            '/
 c
-c  Attempt to determine telescope type.
+c  Attempt to determine observer and telescope type.
 c
-	call fitrdhda(lu,'TELESCOP',telescop,' ')
-	if(telescop.eq.' ')
-     *	  call fitrdhda(lu,'INSTRUME',telescop,' ')
+	call fitrdhda(lu,'USER',atemp,' ')
+	call fitrdhda(lu,'OBSERVER',observer,atemp)
+	if(observer.ne.' ')call wrhda(tno,'observer',observer)
+	call fitrdhda(lu,'INSTRUME',atemp,' ')
+	call fitrdhda(lu,'TELESCOP',telescop,atemp)
+	if(telescop.ne.' ')call wrhda(tno,'telescop',telescop)
 c
 	call fitrdhda(lu,'BUNIT',bunit,' ')
 	btype = ' '
@@ -3156,6 +3164,40 @@ c
 	if(bmin.ne.0) call wrhdr(tno,'bmin',(pi/180)*bmin)
 	call fitrdhdr(lu,'BPA',bpa,0.)
 	if(bmaj*bmin.ne.0)call wrhdr(tno,'bpa',bpa)
+c
+	end
+c************************************************************************
+	subroutine nodfudge(lu,tno)
+c
+	implicit none
+	integer lu,tno
+c
+c------------------------------------------------------------------------
+	integer itemp
+	double precision crval1,crval2,cdelt1,cdelt2,crpix1,crpix2
+c
+	call bug('i','Assuming equinox of coordinates is B1950')
+	call bug('i','Assuming TAN projection')
+c
+	call rdhdi(tno,'naxis1',itemp,0)
+	crpix1 = itemp/2 + 1
+	call rdhdi(tno,'naxis2',itemp,0)
+	crpix2 = itemp/2 + 1
+	call rdhdd(tno,'crval1',crval1,0.d0)
+	call rdhdd(tno,'cdelt1',cdelt1,1.d0)
+	call rdhdd(tno,'crval2',crval2,0.d0)
+	call rdhdd(tno,'cdelt2',cdelt2,1.d0)
+	crval1 = crval1 + cdelt1*(crpix1-1)
+	crval2 = crval2 + cdelt2*(crpix2-1)
+	cdelt1 = cdelt1 * cos(crval2)
+	call wrhda(tno,'ctype1','RA---TAN')
+	call wrhdd(tno,'cdelt1',cdelt1)
+	call wrhdd(tno,'crval1',crval1)
+	call wrhdd(tno,'crpix1',crpix1)
+	call wrhda(tno,'ctype2','DEC--TAN')
+	call wrhdd(tno,'crval2',crval2)
+	call wrhdd(tno,'crpix2',crpix2)
+	call wrhdr(tno,'epoch',1950.0)
 c
 	end
 c************************************************************************
@@ -3529,7 +3571,7 @@ c    stokes     Stokes parameter used in conversion
 c
 c------------------------------------------------------------------------
 	integer nlong,nshort,nextra
-	parameter(nlong=33,nshort=9,nextra=6)
+	parameter(nlong=36,nshort=9,nextra=3)
 	character card*80,key*8,type*8
 	logical more,discard,ok,found
 	integer i,k1,k2
@@ -3545,21 +3587,21 @@ c  A table of keywords (common to uv and xy) that are either history
 c  comments, or keywords to be discarded. Some of these are handled
 c  as special cases elsewhere. Short keywords have numbers attached.
 c
-	data (uvextra(i),i=1,nextra)/
-     *	  'INSTRUME','OBJECT  ','OBSDEC  ','OBSERVER',
-     *	  'OBSRA   ','TELESCOP'/
+	data (uvextra(i),i=1,nextra)/'OBJECT  ','OBSDEC  ','OBSRA   '/
 	data (long(i),history(i),i=1,nlong)/
      *	  '        ', .true.,  'ALTRPIX ', .false., 'ALTRVAL ', .false.,
      *    'BITPIX  ', .false., 'BLANK   ', .false., 'BLOCKED ', .false.,
      *	  'BMAJ    ', .false., 'BMIN    ', .false., 'BSCALE  ', .false.,
      *	  'BUNIT   ', .false., 'BZERO   ', .false., 'CELLSCAL', .false.,
      *	  'COMMAND ', .true.,  'COMMENT ', .true.,
-     *	  'DATE    ', .false., 'DATE-MAP ',.false., 'DATE-OBS', .false.,
-     *	  'END     ', .false., 'EPOCH    ',.false., 'EQUINOX ', .false.,
-     *	  'EXTEND  ', .false.,
-     *	  'GCOUNT  ', .false., 'GROUPS  ', .false., 'HISTORY ', .true.,
-     *	  'OBSDEC  ', .false., 'OBSRA   ', .false., 'ORIGIN  ', .false.,
+     *	  'DATE    ', .false., 'DATE-MAP', .false., 'DATE-OBS', .false.,
+     *	  'END     ', .false., 'EPOCH   ', .false., 'EQUINOX ', .false.,
+     *	  'EXTEND  ', .false., 'GCOUNT  ', .false., 'GROUPS  ', .false.,
+     *	  'HISTORY ', .true.,  'INSTRUME', .false.,
+     *	  'OBSDEC  ', .false., 'OBSERVER', .false., 'OBSRA   ', .false.,
+     *	  'ORIGIN  ', .false.,
      *	  'PCOUNT  ', .false., 'RESTFREQ', .false., 'SIMPLE  ', .false.,
+     *	  'TELESCOP', .false.,
      *	  'VELREF  ', .false., 'XSHIFT  ', .false., 'YSHIFT  ', .false./
 	data short/'CDELT','CROTA','CRPIX','CRVAL','CTYPE','NAXIS',
      *	  'PSCAL','PTYPE','PZERO'/
