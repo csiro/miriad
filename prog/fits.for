@@ -1156,14 +1156,14 @@ c
 	real defepoch,diff
 	integer nval,i,j,t,nxyz,n,naxis,itemp
 	double precision xyz(3,MAXANT),xc,yc,zc,r0,d0
-	double precision r,sint,cost,temp
+	double precision r,sint,cost,temp,eporef
 	character type*1,units*16,ctype*8,rdate*16
 	integer sta(MAXANT)
 c
 c  Externals.
 c
 	character itoaf*2
-	double precision fuvGetT0,Epo2jul
+	double precision fuvGetT0,Epo2jul,Jul2epo
 c
 c  Set default source and freq ids.
 c
@@ -1477,7 +1477,9 @@ c
 	badepo = .false.
 	do i=1,nsrc
 	  call lcase(source(i))
-	  if(epoch(i).lt.1850.0.or.epoch(i).gt.2150.0)then
+	  if(nint(epoch(i)+1).eq.0)then
+	    epoch(i) = Jul2Epo(timeref,' ')
+	  else if(epoch(i).lt.1850.0.or.epoch(i).gt.2150.0)then
 	    badepo = .true.
 	    epoch(i) = defepoch
 	  endif
@@ -1489,10 +1491,12 @@ c
 c
 c  If the apparent RA and DEC look bad, recompute them.
 c
-	  if(diff.gt.1.or.3600*diff.lt.1)then
+	  eporef = epo2jul(epoch(i),' ')
+	  if((diff.gt.1.and.abs(eporef-timeref).gt.1)
+     *		.or.3600*diff.lt.1)then
 	    badapp = .true.
-	    call Precess(Epo2Jul(epoch(i),' '),raepo(i),decepo(i),
-     *			 timeref,	       raapp(i),decapp(i))
+	    call Precess(eporef, raepo(i),decepo(i),
+     *			 timeref,raapp(i),decapp(i))
 	    call Nutate(timeref,raapp(i),decapp(i),r0,d0)
 	    call Aberrate(timeref,r0,d0,raapp(i),decapp(i))
 	  endif
