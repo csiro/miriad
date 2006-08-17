@@ -315,9 +315,10 @@ c    rjs  10-may-00  In xyout, increase size of descr buffer.
 c    rjs  04-Oct-00  Make xyout work for arbitrarily large images.
 c    rjs  10-oct-00  Really do the above this time!
 c    dpr  01-nov-00  Change CROTAn to AIPS convention for xyout
+c    dpr  27-nov-00  fix stokes convention for xyin
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 01-nov-00')
+	parameter(version='Fits: version 1.1 27-nov-00')
 	character in*128,out*128,op*8,uvdatop*12
 	integer velsys
 	real altrpix,altrval
@@ -3449,7 +3450,9 @@ c
 	    cdelt(i) = 1d-9 * cdelt(i)
 	  else if(ctype(i).eq.'STOKES')then
 	    polcode = nint(crval(i)+(1-crpix(i))*cdelt(i))
-	    if(polcode.lt.-8.or.polcode.gt.4.or.polcode.ne.0)then
+c  dpr 27-nov-00 ->
+	    if(polcode.lt.-8.or.polcode.gt.4.or.polcode.eq.0)then
+c  <- dpr 27-nov-00 
 	      ctype(i) = 'ASTOKES'
 	      if(polcode.ge.5.and.polcode.le.9)btype=types(polcode-4)
 	    endif
