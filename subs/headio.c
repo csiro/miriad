@@ -20,6 +20,7 @@
 /*  rjs 15may96   Fiddles with roundup macro.				*/
 /*  pjt 27mar99   make history a static, so nobody can see it :-)	*/
 /*  rjs 29apr99   Get hdprobe to check for string buffer overflow.	*/
+/*  dpr 11may01   Descriptive error for hisopen_c                       */
 /************************************************************************/
 
 #include <stdlib.h>
@@ -64,7 +65,9 @@ char *status;
 /*----------------------------------------------------------------------*/
 {
   int iostat;
-  haccess_c(tno,&history[tno],"history",status,&iostat);	check(iostat);
+  haccess_c(tno,&history[tno],"history",status,&iostat);
+  if(iostat) {bug_c('e',"Problem with history item");};
+  check(iostat);
 }
 /************************************************************************/
 void hiswrite_c(tno,text)
