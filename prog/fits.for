@@ -282,9 +282,10 @@ c    rjs  22-aug-97  More robust again. Also treat unrecognised keywords
 c		     as history comments.
 c    rjs  25-aug-97  Fix up bug I created on Friday.
 c    rjs  20-sep-97  Replace julfdate and fdatejul with julday and dayjul.
+c    rjs  21-apr-98  Increase max number of antenna configs.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 20-Sep-97')
+	parameter(version='Fits: version 1.1 21-Apr-98')
 	character in*128,out*128,op*8,uvdatop*12
 	integer velsys
 	real altrpix,altrval
