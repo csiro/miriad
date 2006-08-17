@@ -125,8 +125,10 @@ c	         say, if one point is 179 deg and the next -179,
 c		 they will be plotted as 179 and 181 deg.  NOTE:
 c		 Unwrapping noise can be VERY misleading.
 c
-c	 rms     Draw error bars on the plot if averaging is invoked. The
-c	         half length of the error bars is 1 standard deviation.
+c	 rms     Draw error bars (+/- 1 standard deviation) on the plot if 
+c		 averaging is invoked. 
+c	 mrms    Draw error bars (+/- 1 standard deviation in the mean)
+c		 on the plot if averaging is invoked. 
 c	 noerr   The automatically worked out min and max plot limits
 c	         will NOT include the ends of the error bars.
 c
@@ -289,6 +291,7 @@ c    rjs  01dec95  Improve an error message.
 c    nebk 06dec95  Push MAXBASE2 upto 36 for Hat Creek.  Does not affect ATCA
 c    nebk 09jan95  Only work out longitude if really needed; some data sets
 c		   don't have it.
+c    nebk 22may96  Add options=mrms
 c
 c To do:
 c
@@ -396,7 +399,7 @@ c
       character in*64, xaxis*10, yaxis*10, pdev*80, comment*80, 
      +  logf*80, str*2, title*100, ops*9
       logical xrtest, yrtest, more, dodoub, reset, doave, dowave,
-     +  dovec(2), dorms(2), doall, doflag, dobase, doperr, dointer,
+     +  dovec(2), dorms(3), doall, doflag, dobase, doperr, dointer,
      +  dolog, dozero, doequal, donano, dosrc, doavall, bwarn(2), 
      +  skip, xgood, ygood, doxind, doyind, dowrap, none, dosymb, 
      +  dodots, false(2), allfull, docol, twopass, keep
@@ -419,7 +422,9 @@ c
       data npts, plpts, basmsk /ifac1*0, ifac1*0, ifac2*0/
       data polmsk /13*0/
 c-----------------------------------------------------------------------
-      call output ('UvPlt: version 08-Jan-96')
+      call output ('UvPlt: version 22-May-96')
+      call output ('New options=mrms')
+      call output (' ')
 c
 c  Get the parameters given by the user and check them for blunders
 c
@@ -817,7 +822,9 @@ c     The end of an averaging interval has been reached.  Work out
 c     the averaged qantities and dump them to the plot buffer.
 c
 c  Input:
-c    dorms         If true work out standard deviation; x and y
+c    dorms         True to plot error bars when averaging; x and y
+c	 	   dorms(3) = false for standard deviation, true for 
+c		   standard deviation of the mean
 c    dovec         If true using vector averaging; x and y
 c    dobase        If true each baseline on a separate sub-plot
 c    dodoub        If true plot -u and -v as well as u and v
@@ -863,7 +870,7 @@ c
 c-----------------------------------------------------------------------
       implicit none
 c
-      logical doavall, dorms(2), dovec(2), dobase, dodoub, yrtest, 
+      logical doavall, dorms(3), dovec(2), dobase, dodoub, yrtest, 
      +  xrtest
       integer pl1dim, pl2dim, pl3dim, pl4dim, maxbase, maxpol,
      +  maxfile, nbases, npols
@@ -894,10 +901,10 @@ c
       if (doavall) np = 1
 c
       do i = 1, np
-        call avquant (dorms(1), dovec(1), xaxis, nb, nsum(1,i),
+        call avquant(dorms(1), dorms(3), dovec(1), xaxis, nb, nsum(1,i),
      +     xsumr(1,i), xsumsqr(1,i), xsumi(1,i), xsumsqi(1,i), 
      +     xave(1,i), xsig(1,i))
-        call avquant (dorms(2), dovec(2), yaxis, nb, nsum(1,i),
+        call avquant(dorms(2), dorms(3), dovec(2), yaxis, nb, nsum(1,i),
      +     ysumr(1,i), ysumsqr(1,i), ysumi(1,i), ysumsqi(1,i), 
      +     yave(1,i), ysig(1,i))
       end do
@@ -941,13 +948,14 @@ c
       end
 c
 c
-      subroutine avquant (dorms, dovec, axis, nbasst, nsum, sumr,
-     +                    sumsqr, sumi, sumsqi, ave, sig)
+      subroutine avquant (dorms, errmean, dovec, axis, nbasst, nsum, 
+     +                    sumr, sumsqr, sumi, sumsqi, ave, sig)
 c-----------------------------------------------------------------------
 c     Work out the average and rms from the solution interval
 c
 c  Input:
 c    dorms     If true work out standard deviation
+c    errmean   If true, work out standard deviation in the mean
 c    dovec     If true using vector averaging
 c    axis      Type of y axis
 c    nbasst    Number of baselines to work out averages for
@@ -964,7 +972,7 @@ c
 c-----------------------------------------------------------------------
       implicit none
 c
-      logical dorms, dovec
+      logical dorms, errmean, dovec
       character axis*(*)
       integer nbasst, nsum(nbasst)
       real sumr(nbasst), sumi(nbasst), sumsqr(nbasst), sumsqi(nbasst),
@@ -1008,6 +1016,7 @@ c
               else
                 sig(i) = 0.0
               end if
+              if (errmean) sig(i) = sig(i) / sqrt(real(nsum(i)))
             end if
           end if
         end do
@@ -1292,7 +1301,9 @@ c   Input/output:
 c     dovec       Vector averaging, else scalar averaging; x and y
 c                 User just asks for vector averaging, and uvplt tries
 c                 to work out if it can do this on both axes or just one.
-c     dorms       True if plotting error bars; x and y
+c     dorms       True to plot error bars when averaging; x and y
+c		  dorms(3) = false for standard deviation, true for 
+c		  standard deviation of the mean
 c     doperr      If true then the automatically determined Y window
 c                 includes the ends of the error bars
 c     dowrap      Do not unwrap phase
@@ -1316,7 +1327,7 @@ c
       double precision dayav
       real xmin, xmax, ymin, ymax
       logical dointer, dodoub, dowave, doave, dovec(2), xrtest, yrtest,
-     +  dorms(2), doperr, dowrap
+     +  dorms(3), doperr, dowrap
 c-----------------------------------------------------------------------
 c
 c Hanning only useful for certain y-axis settings
@@ -1824,7 +1835,7 @@ c
      +  dosymb, dodots, dopass, docol, twopass
 cc
       integer nopt
-      parameter (nopt = 26)
+      parameter (nopt = 27)
 c
       character opts(nopt)*8
       logical present(nopt)
@@ -1834,11 +1845,21 @@ c
      +           'nocal   ', 'source  ', 'nopol   ', 'days    ', 
      +           'hours   ', 'avall   ', 'xind    ', 'yind    ', 
      +           'unwrap  ', 'symbols ', 'dots    ', 'nopass  ',
-     +           'nocolour', '2pass   '/
+     +           'nocolour', '2pass   ', 'mrms    '/
 c-----------------------------------------------------------------------
       call options ('options', opts, present, nopt)
-      dorms(1) =      present(1)
-      dorms(2) =      present(1)
+c
+      dorms(1) = .false.
+      dorms(2) = .false.
+      dorms(3) = .false.
+      if (present(1) .and. present(27)) then
+        call bug ('f', 'Can''t have options=rms,mrms')
+      else if (present(1) .or. present(27)) then
+        dorms(1) = .true.
+        dorms(2) = .true.
+        if (present(27)) dorms(3) = .true.
+      end if
+c
       dovec(1) = .not.present(2)
       dovec(2) = .not.present(2)
       doflag   =      present(3)
@@ -2306,6 +2327,8 @@ c    x,ymin,max   User given extrema for plots.
 c    dayav        Averaging interval in days
 c    tunit        Converts averaging time in units given by user to days
 c    dorms        True to plot error bars when averaging; x and y
+c		  dorms(3) = false for standard deviation, true for 
+c		  standard deviation of the mean
 c    dovec        True for vector averging, else scalar; x and y
 c    doflag       Plot flagged visbiltites only else plot unflagged
 c    doall        Plot flagged and unflagged.  Overrides DOFLAG
@@ -2341,7 +2364,7 @@ c
       character*(*) xaxis, yaxis, pdev, logf, comment
       double precision dayav
       real xmin, xmax, ymin, ymax, size(2)
-      logical dorms(2), dovec(2), doflag, doall, dobase, dointer, 
+      logical dorms(3), dovec(2), doflag, doall, dobase, dointer, 
      +  doperr, dolog, dozero, doequal, donano, docal, dopol, dosrc,
      +  doavall, doxind, doyind, dowrap, dosymb, dodots, dopass, 
      +  docol, twopass
