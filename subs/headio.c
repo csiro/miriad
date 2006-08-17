@@ -24,6 +24,7 @@
 /*  pjt 22jun02   MIR4 prototypes and using int8 for long integers      */
 /*  rjs 02jan05   Fix up bug in rdhdl. Tidy.				*/
 /*  rjs 26nov05   Better handling of logical values.			*/
+/*  rjs 28jun06   Correct doc comment.					*/
 /************************************************************************/
 
 #include <stdlib.h>
@@ -231,7 +232,7 @@ void wrhdi_c(int thandle,Const char *keyword,int value)
 }
 /************************************************************************/
 void wrhdl_c(int thandle,Const char *keyword,int8 value)
-/** wrhdi -- Write an integer*8 valued header variable.			*/
+/** wrhdl -- Write an integer*8 valued header variable.			*/
 /*& pjt									*/
 /*: header-i/o								*/
 /*+ FORTRAN call sequence:
@@ -390,12 +391,12 @@ void rdhdi_c(int thandle,Const char *keyword,int *value,int defval)
 }
 /************************************************************************/
 void rdhdl_c(int thandle,Const char *keyword,int8 *value,int8 defval)
-/** rdhdl -- Read an integer-valued header variable.			*/
+/** rdhdl -- Read an integer*8-valued header variable.			*/
 /*& mjs									*/
 /*: header-i/o								*/
 /*+ FORTRAN call sequence:
 
-	subroutine rdhdi(tno,keyword,value,default)
+	subroutine rdhdl(tno,keyword,value,default)
 	integer tno
 	character keyword*(*)
 	integer*8 value,default

@@ -13,7 +13,7 @@
 
 # Determine which files need to be updated.
 
-  find cat inc linpack prog scripts share spec specdoc subs tools \
+  find cat inc linpack prog scripts share spec specdoc subs tests tools \
 	\! -type d \! -name junk\* \! -name \*.o \! -name rpfits.inc \
 	\! -name \*.log \! -name \*.dvi \! -name \*.def \! -name RCS \
 	-newer $etc/Last_export \
