@@ -280,6 +280,7 @@ c		     allow for new FITS standard.
 c    rjs  05-aug-97  More robust in interpretation of epoch keyword.
 c    rjs  22-aug-97  More robust again. Also treat unrecognised keywords
 c		     as history comments.
+c    rjs  25-aug-97  Fix up bug I created on Friday.
 c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='Fits: version 1.1 22-Aug-97')
@@ -3200,20 +3201,21 @@ c
 	character key*(*)
 	real value
 c------------------------------------------------------------------------
-	character string*32
+	character card*80,type*8
 	integer k1,k2
 	logical ok
 	double precision dtemp
 c
-	integer len1
-c
-	call fitrdhda(lu,key,string,' ')
-	call ucase(string)
-	k2 = len1(string)
-	k1 = 1
-	if(string(1:1).eq.'J'.or.string(1:1).eq.'B')k1 = 2
-	if(k1.le.k2)then
-	  call atodf(string(k1:k2),dtemp,ok)
+	call fitsrch(lu,key,ok)
+	if(ok)then
+	  call fitcdio(lu,card)
+	  call ucase(card)
+	  call getvalue(card,type,k1,k2)
+	  ok = k1.le.k2
+	endif
+	if(ok)then
+	  if(card(k1:k1).eq.'B'.or.card(k1:k1).eq.'J')k1 = k1 + 1
+	  call atodf(card(k1:k2),dtemp,ok)
 	  if(.not.ok)call bug('f','Error decoding EPOCH/EQUINOX')
 	  value = dtemp
 	else
