@@ -44,6 +44,7 @@ c	  uvdistance               [sqrt(u**2+v**2)]
 c	  uvangle                  [uv pos'n angle clockwise from v axis]
 c	  hangle                   [hour angle in HH MM SS.S]
 c	  dhangle                  [hour angle in decimal hours]
+c	  parang                   [parallactic angle in degrees]
 c
 c	Defaults are axis=time,amp  (x and y axes).
 c@ xrange
@@ -57,6 +58,7 @@ c	  If axis = amplitude, real, imag [natural units; 2 values]
 c	  If axis = phase                 [degrees;       2 values]
 c	  If axis = hangle                [hh,mm,ss.s;    6 values]
 c         If axis = dhangle               [decimal hours; 2 values]
+c	  If axis = parang                [degrees;       2 values]
 c
 c	Default is to self-scale (see also OPTIONS=XIND).
 c@ yrange
@@ -281,6 +283,7 @@ c    nebk 18jun93  Add options=colour
 c    nebk 17mar94  Add OPTIONS=2PASS  and change to OPTIONS=NOCOLOUR
 c    nebk 15jan95  Be less restrictive on use of -u and -v
 c    nebk 11mar95  No yellow for hardcopy devices
+c    nebk 22spe95  Add axis=parang
 c
 c To do:
 c
@@ -339,6 +342,7 @@ c-----------------------------------------------------------------------
       implicit none
 c
       include 'maxdim.h'
+      include 'mirconst.h'
 c
       integer maxbase2, maxco, maxpol, maxfile
       parameter (maxbase2 = 15, maxco = 7, maxpol = 4, maxfile = 30)
@@ -381,7 +385,7 @@ c
       double precision preamble(4), fday, dayav, baseday, day, 
      +  ha, ra
       real size(2), xmin, xmax, ymin, ymax, u, v, uvdist, uvpa, xvalr,
-     +  yvalr
+     +  yvalr, parang, evec
       integer lin, ivis, nread, dayoff, j,  nx, ny, inc, hann, tunit,
      +  ofile, ifile, jfile, vupd, ip
       character in*64, xaxis*10, yaxis*10, pdev*80, comment*80, 
@@ -410,7 +414,8 @@ c
       data npts, plpts, basmsk /ifac1*0, ifac1*0, ifac2*0/
       data polmsk /13*0/
 c-----------------------------------------------------------------------
-      call output ('UvPlt: version 11-Mar-95')
+      call output ('UvPlt: version 22-Sep-95')
+      call output ('New axis=parang available')
 c
 c  Get the parameters given by the user and check them for blunders
 c
@@ -500,6 +505,10 @@ c
           if (.not.keep) goto 950
 c
           call uvrdvrd (lin, 'obsra', ra, 0.0d0)
+          call uvrdvrr (lin, 'chi', parang, 0.0)
+          call uvrdvrr (lin, 'evector', evec, 0.0)
+          parang = (parang-evec) * 180.0 / dpi
+c
           ivis = ivis + 1
           day = preamble(3) + 0.5
 c
@@ -545,7 +554,7 @@ c
             call getwvl (lin, ra, donano, preamble, u, v, uvdist, 
      +                   uvpa, ha)
             call uvinfo (lin, 'sfreq', freq)
-          end if
+           end if
           fday = day - dayoff
 c
 c Loop over channels for this visibility, accumulating, or 
@@ -560,9 +569,9 @@ c
 c Set x and y values
 c
               call setval (xaxis, ha, u, v, uvdist, uvpa, fday,
-     +                     data(j), j, freq, xvalr, xgood)
+     +                     parang, data(j), j, freq, xvalr, xgood)
               call setval (yaxis, ha, u, v, uvdist, uvpa, fday, 
-     +                     data(j), j, freq, yvalr, ygood)
+     +                     parang, data(j), j, freq, yvalr, ygood)
               if (xgood .and. ygood) then
                 if (doave) then
 c
@@ -2329,11 +2338,11 @@ c
 c Types of axes allowed
 c
       integer naxmax, nax
-      parameter (naxmax = 14)
+      parameter (naxmax = 15)
       character axtyp(naxmax)*10
       data axtyp /'time', 'dtime', 'uvdistance', 'uu', 'vv', 'uc', 
      +  'vc', 'uvangle', 'amplitude', 'phase', 'real', 'imag',
-     +  'hangle', 'dhangle'/
+     +  'hangle', 'dhangle', 'parang'/
 c-----------------------------------------------------------------------
       call keyini
 c
@@ -3230,6 +3239,8 @@ c-----------------------------------------------------------------------
         label = 'Hour Angle'
       else if (axis.eq.'dhangle') then
         label = 'Hour Angle (hours)'
+      else if (axis.eq.'parang') then
+        label = 'Parallactic Angle (degrees)'
       else if (axis.eq.'uvdistance') then
         label = '(u\u2\d + v\u2\d)\u1/2\d'//units
       else if (axis.eq.'uu' .or. axis.eq.'uc') then
@@ -3263,8 +3274,8 @@ c
       end
 c
 c
-      subroutine setval (axis, ha, u, v, uvdist, uvpa, fday, data, 
-     +                   ichan, freq, val, ok)
+      subroutine setval (axis, ha, u, v, uvdist, uvpa, fday, 
+     +                   parang, data, ichan, freq, val, ok)
 c-----------------------------------------------------------------------
 c     Set the value of the desired quantity
 c
@@ -3276,6 +3287,7 @@ c    u,v      u and v in Klambda
 c    uvdist   sqrt(u**2 + v**2) in Klambda
 c    uvpa     uv position angle (999 if coudn't evaluate)
 c    fday     Fractional day since begining of observation
+c    parang   Parallactic Angle
 c    data     Complex visibility
 c    ichan    CHannel number
 c    freq     Array of frequencies for each channel
@@ -3288,7 +3300,7 @@ c-----------------------------------------------------------------------
 c
       complex data
       double precision fday, freq(*), ha
-      real val, u, v, uvdist, uvpa
+      real val, u, v, uvdist, uvpa, parang
       character axis*(*)
       integer ichan
       logical ok
@@ -3303,6 +3315,8 @@ c-----------------------------------------------------------------------
       else if (axis.eq.'uvangle') then
         val = uvpa
         if (uvpa.eq.999.0) ok = .false.
+      else if (axis.eq.'parang') then
+        val = parang
       else if (axis.eq.'dtime') then
 c
 c Fractional days
