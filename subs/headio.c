@@ -18,6 +18,7 @@
 /*  rjs 10aug93   Use hexists in hdprsnt.				*/
 /*  rjs  6nov94   Change "item handle" to an integer.			*/
 /*  rjs 15may96   Fiddles with roundup macro.				*/
+/*  pjt 27mar99   make history a static, so nobody can see it :-)	*/
 /************************************************************************/
 
 #include <stdlib.h>
@@ -30,7 +31,7 @@
 #define MAXSIZE 1024
 #define MAXLINE 80
 
-int history[MAXOPEN];
+static int history[MAXOPEN];
 
 void bugno_c(),bug_c();
 #define Sprintf (void)sprintf
