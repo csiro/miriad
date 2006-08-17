@@ -265,10 +265,11 @@ c    rjs  07-aug-96  Correct scaling of axis type.
 c    rjs  16-aug-96  Added options=nochi.
 c    rjs  17-oct-96  Make the visibility weight equal to 1/sigma**2.
 c		     Discard OBSRA and BLANK in reading in images.
+c    rjs  07-feb-97  Increase max string length.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 17-Oct-96')
-	character in*64,out*64,op*8,uvdatop*12
+	parameter(version='Fits: version 1.1 07-Feb-97')
+	character in*128,out*128,op*8,uvdatop*12
 	integer velsys
 	real altrpix,altrval
 	logical altr,docal,dopol,dopass,dss,dochi
@@ -1080,7 +1081,7 @@ c
 	else
 	  if(nx.ne.nval.or.ny.ne.nrow.or.type.ne.'I')
      *	    call bug('f','FG table has an odd shape')
-	  call ftabGeti(lIn,name,MemI(pnt))
+	  call ftabGeti(lIn,name,0,MemI(pnt))
 	endif
 	end
 c************************************************************************
@@ -1106,7 +1107,7 @@ c
 	else
 	  if(nx.ne.nval.or.ny.ne.nrow.or.type.ne.'R')
      *	    call bug('f','FG table has an odd shape')
-	  call ftabGetr(lIn,name,MemR(pnt))
+	  call ftabGetr(lIn,name,0,MemR(pnt))
 	endif
 	end
 c************************************************************************
@@ -1235,7 +1236,7 @@ c
 c  Check that the station number corresponds to the row in the table.
 c  Run through the list until we find a bad antenna number.
 c
-	  call ftabGeti(lu,'NOSTA',sta)
+	  call ftabGeti(lu,'NOSTA',0,sta)
 	  i = 0
 	  more = .true.
 	  dowhile(more)
@@ -1277,7 +1278,7 @@ c
 c
 c  Determine mount type. Miriad insists all the mounts are the same.
 c
-	  call ftabGeti(lu,'MNTSTA',sta)
+	  call ftabGeti(lu,'MNTSTA',0,sta)
 	  mount(nconfig) = sta(1)
 	  badmnt = .false.
 	  do i=1,n
@@ -1294,7 +1295,7 @@ c
 	  call fitrdhdd(lu,'ARRAYX',xc,0.d0)
 	  call fitrdhdd(lu,'ARRAYY',yc,0.d0)
 	  call fitrdhdd(lu,'ARRAYZ',zc,0.d0)
-	  call ftabGetd(lu,'STABXYZ',xyz)
+	  call ftabGetd(lu,'STABXYZ',0,xyz)
 c
 c  Determine the latitude, longitude and height of the first antenna
 c  (which is taken to be the observatory lat,long,height). Handle
@@ -1359,10 +1360,10 @@ c
 	  if(itemp.ne.nif)
      *	    call bug('f','Inconsistent number of IFs')
 	  call output('Reading AIPS FQ table')
-	  call ftabGeti(lu,'FRQSEL',freqids)
+	  call ftabGeti(lu,'FRQSEL',0,freqids)
 	  if(.not.dofq)freqids(1) = 1
-	  call ftabGetd(lu,'IF FREQ',sfreq)
-	  call ftabGetr(lu,'CH WIDTH',sdf)
+	  call ftabGetd(lu,'IF FREQ',0,sfreq)
+	  call ftabGetr(lu,'CH WIDTH',0,sdf)
 	else
 c
 c  Load a CH table, if its present.
@@ -1373,7 +1374,7 @@ c
 	    if(nif.gt.MAXIF)call bug('f','Too many IFs')
 	    if(nval.ne.1.or.type.ne.'I')
      *	      call bug('f','Something screwy with CH table')
-	    call ftabGeti(lu,'IF NO.',freqids)
+	    call ftabGeti(lu,'IF NO.',0,freqids)
 c
 c  Check that the if table is in the standard order.
 c
@@ -1385,7 +1386,7 @@ c
 	    call output('Reading AIPS CH table')
 	    nfreq = 1
 	    freqids(1) = 1
-	    call ftabGetd(lu,'FREQUENCY OFFSET',sfreq)
+	    call ftabGetd(lu,'FREQUENCY OFFSET',0,sfreq)
 	    do i=1,nif
 	      sdf(i) = Coord(uvCdelt,uvFreq)
 	    enddo
@@ -1446,19 +1447,19 @@ c
 	  if(nval.ne.1.or.type.ne.'I')
      *	    call bug('f','Something screwy with SU table')
 	  call output('Reading AIPS SU table')
-	  call ftabGeti(lu,'ID. NO.',srcids)
-	  call ftabGeta(lu,'SOURCE',source)
-	  call ftabGetd(lu,'RAEPO',raepo)
-	  call ftabGetd(lu,'DECEPO',decepo)
-	  call ftabGetd(lu,'RAAPP',raapp)
-	  call ftabGetd(lu,'DECAPP',decapp)
-	  call ftabGetd(lu,'EPOCH',epoch)
-	  call ftabGetd(lu,'FREQOFF',freqoff)
-	  call ftabGetd(lu,'LSRVEL',restfreq)
+	  call ftabGeti(lu,'ID. NO.',0,srcids)
+	  call ftabGeta(lu,'SOURCE',0,source)
+	  call ftabGetd(lu,'RAEPO',0,raepo)
+	  call ftabGetd(lu,'DECEPO',0,decepo)
+	  call ftabGetd(lu,'RAAPP',0,raapp)
+	  call ftabGetd(lu,'DECAPP',0,decapp)
+	  call ftabGetd(lu,'EPOCH',0,epoch)
+	  call ftabGetd(lu,'FREQOFF',0,freqoff)
+	  call ftabGetd(lu,'LSRVEL',0,restfreq)
 	  do i=1,nsrc
 	    veldop(i) = restfreq((i-1)*nif+1)
 	  enddo
-	  call ftabGetd(lu,'RESTFREQ',restfreq)
+	  call ftabGetd(lu,'RESTFREQ',0,restfreq)
 	endif
 c
 c  Check that everything looks OK.
