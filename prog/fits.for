@@ -338,9 +338,10 @@ c    rjs  04-oct-01  Get GLS history comment right.
 c    nebk 08-jan-02  In AntWrite, set POLAA and POLAB to 45/135 for ATCA
 c    rjs  29-dec-03  Be more robust to poorly formed CTYPE labels in 
 c		     inputs.
+c    rjs  04-jul-05  More robust to some weirdo variants.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 29-Dec-03')
+	parameter(version='Fits: version 1.1 04-Jul-05')
 	integer maxboxes
 	parameter(maxboxes=2048)
 	character in*128,out*128,op*8,uvdatop*12
@@ -3534,8 +3535,8 @@ c
 	if(equinox.gt.1800)call wrhdr(tno,'epoch',equinox)
 c
 	call fitdate(lu,'DATE-OBS',dtemp)
-	if(dtemp.eq.0)dtemp = Epo2Jul(dble(epoch),' ')
-	call wrhdd(tno,'obstime',dtemp)
+	if(dtemp.le.0.and.epoch.gt.1800)dtemp = Epo2Jul(dble(epoch),' ')
+	if(dtemp.gt.0)call wrhdd(tno,'obstime',dtemp)
 c
 	if(bunit.ne.' ')call wrhda(tno,'bunit',bunit)
 	if(btype.ne.' ')call wrbtype(tno,btype)
@@ -3566,11 +3567,11 @@ c  Load in FITS coordinate system and fiddle it into a Miriad coordinate
 c  system.
 c------------------------------------------------------------------------
 	include 'mirconst.h'
-	integer i,j,l,l1,l2
-	double precision dtemp
+	integer i,j,k,l,l1,l2
+	double precision dtemp,scale
 	logical more
 	character num*2
-	character templat*8,ctemp*12
+	character templat*8,ctemp*12,ctemp1*12
 c
 c  Externals.
 c
@@ -3584,12 +3585,28 @@ c
 c
 	do i=1,naxis
 	  num = itoaf(i)
-	  call fitrdhda(lu,'CTYPE'//num,ctemp,' ')
+	  call fitrdhda(lu,'CTYPE'//num,ctemp1,' ')
+	  ctemp = ' '
+	  j = 0
+	  do k=1,len(ctemp1)
+	    if(ctemp1(k:k).ne.' ')then
+	      j = j + 1
+	      ctemp(j:j) = ctemp1(k:k)
+	    endif
+	  enddo
+	  call ucase(ctemp)
+c
 	  if(ctemp.eq.' '.and.i.eq.1)ctemp = 'RA---SIN'
 	  if(ctemp.eq.' '.and.i.eq.2)ctemp = 'DEC--SIN'
+	  if(ctemp.eq.'VLSR')then
+	    ctemp = 'VELO-LSR'
+	    scale = 1000.0
+	  else
+	    scale = 1.0
+	  endif
+c
 	  l1 = index(ctemp,'-') - 1
 	  l2 = len1(ctemp)
-	  call ucase(ctemp)
 	  if(l1.le.0)then
 	    ctype(i) = ctemp
 	  else
@@ -3604,10 +3621,13 @@ c
 	  endif
 	  call fitrdhdd(lu,'CRPIX'//num,crpix(i),1.0d0)
 	  call fitrdhdd(lu,'CRVAL'//num,crval(i),0.0d0)
+	  
 c
 	  call fitrdhdd(lu,cd1(i,i),cdelt(i),1.d0)
 	  call fitrdhdd(lu,cd2(i,i),dtemp,cdelt(i))
 	  call fitrdhdd(lu,'CDELT'//num,cdelt(i),dtemp)
+	  cdelt(i) = scale*cdelt(i)
+	  crval(i) = scale*crval(i)
 c
 c
 	  if(ctype(i).eq.'RA'  .or.ctype(i)(1:5).eq.'RA---'.or.
