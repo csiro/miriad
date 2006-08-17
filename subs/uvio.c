@@ -135,6 +135,7 @@
 /*  rjs  15may96 Fiddles with roundup macro.				*/
 /*  rjs  22nov96 Minor correction (spheroid correction) to planet flux  */
 /*		 scaling.						*/
+/*  rjs  18mar97 Plug minor memory leak.				*/
 /*----------------------------------------------------------------------*/
 /*									*/
 /*		Handle UV files.					*/
@@ -879,6 +880,8 @@ UV *uv;
   Free a uv structure.
 ------------------------------------------------------------------------*/
 {
+  int i;
+  VARIABLE *v;
   VARHAND *vh,*vht;
   VARPNT *vp,*vpt;
 
@@ -895,6 +898,12 @@ UV *uv;
     vh = vh->fwd;
     free((char *)vht);
   }
+
+/* Free buffers associated with variables. */
+
+  for(i=0, v = uv->variable; i < MAXVAR; i++, v++)
+    if(v->buf != NULL)free(v->buf);
+
   if(uv->data_line.wts	!= NULL) free((char *)uv->data_line.wts);
   if(uv->ref_line.wts	!= NULL) free((char *)uv->ref_line.wts);
   if(uv->corr_flags.flags != NULL) free((char *)uv->corr_flags.flags);
