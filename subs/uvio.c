@@ -475,6 +475,10 @@ private double uv_getskyfreq();
 
 /************************************************************************/
 #ifdef TESTBED
+static char *M[] = {
+  "JAN", "FEB", "MAR", "APR", "MAY", "JUN",
+  "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"
+};
 /*  The following compiles a main program to give exercise to some of the
  *  uvio routines. It is essentially a debugging device (both for bad
  *  files and bad behaviour of uvio!).
@@ -507,7 +511,7 @@ char *av[];
     }
 
     fn = av[1];
-    if (strlen(fn) > 4) {            /* see if vis= was used */
+    if ((int)strlen(fn) > 4) {       /* see if vis= was used */
         if (strncmp(fn,"vis=",4)==0)
             fn += 4;                /* if so, increase pointer */
     }
@@ -558,6 +562,33 @@ char *fname;
                 hread_c(uv->item,v->type,v->buf,offset,v->length,
                                         &iostat);
                 printf("DATA: %-9s",v->name);
+		if (strcmp(v->name,"time") == 0) {
+			int z,a,b,c,d,e,alpha,month,year,day,hr,minute,sec;
+			int dsec,nchar;
+			char string[100];
+			double f;
+
+                        dp = (double *) v->buf;
+                        z = *dp + 0.5 + (1.0/1728000.0);
+                        f = *dp + 0.5 + (1.0/1728000.0) - z;
+                        if (z<2299161){a=z;}else{
+			  alpha = ((z - 1867216.25) / 36524.25);
+			  a = z + 1 + alpha - (int)(0.25 * alpha);
+			}
+			b = a + 1524;    c = (b - 122.1) / 365.25;
+			d = 365.25 * c;  e = (b - d) / 30.6001;
+			f += (b - d - (int)(30.6001 * e));
+			day = f;         hr = 24 * (f - day);
+			minute = 60 * (24 * (f - day) - hr);
+			sec = 600 * (60 * (24 * (f - day) - hr) - minute);
+			dsec = sec % 10; sec /= 10;
+			month = (e<=13) ? e - 1 : e - 13;
+			year = (month>2) ? c - 4716 : c - 4715;
+			year %= 100;
+                        printf(" %20.10lg ",*dp);
+                        printf("  %2.2d%s%2.2d:%2.2d:%2.2d:%2.2d.%1d\n",
+			  year,M[month-1],day,hr,minute,sec,dsec);
+		}else
 		switch (v->type) {
                   case H_BYTE:
 			strncpy(buffer,v->buf,v->length);
@@ -4643,4 +4674,3 @@ int mode;
     }
   }
 }
-
