@@ -133,6 +133,8 @@
 /*  rjs  22feb95 Relax linetype step limitation in uvflgwr.		*/
 /*  rjs  17apr96 uv_override can convert between numeric types.		*/
 /*  rjs  15may96 Fiddles with roundup macro.				*/
+/*  rjs  22nov96 Minor correction (spheroid correction) to planet flux  */
+/*		 scaling.						*/
 /*----------------------------------------------------------------------*/
 /*									*/
 /*		Handle UV files.					*/
@@ -222,7 +224,7 @@
 /*		list to be formed for hashing.				*/
 /*									*/
 /*----------------------------------------------------------------------*/
-#define VERSION_ID "3-Mar-93 rjs"
+#define VERSION_ID "22-Nov-96 rjs"
 
 #define private static
 
@@ -3037,7 +3039,7 @@ UV *uv;
     plmin = *(float *)uv->plmin->buf;
     plangle = *(float *)uv->plangle->buf;
     if(plmaj > 0.0 && plmin > 0.0){
-      uv->plscale = (uv->ref_plmaj * uv->ref_plmin) / (plmaj * plmin ) ;
+      uv->plscale = (uv->ref_plmaj * uv->ref_plmaj) / (plmaj * plmaj ) ;
       theta = PI/180 * (plangle - uv->ref_plangle);
       uv->pluu =  cos(theta) * (plmaj / uv->ref_plmaj);
       uv->pluv = -sin(theta) * (plmaj / uv->ref_plmaj);
