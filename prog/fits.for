@@ -313,9 +313,10 @@ c    rjs  11-nov-99  options=varwt
 c    rjs  11-apr-00  In uvout, multisource files were always being generated.
 c    rjs  10-may-00  In xyout, increase size of descr buffer.
 c    rjs  04-Oct-00  Make xyout work for arbitrarily large images.
+c    rjs  10-oct-00  Really do the above this time!
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 04-Oct-00')
+	parameter(version='Fits: version 1.1 10-Oct-00')
 	character in*128,out*128,op*8,uvdatop*12
 	integer velsys
 	real altrpix,altrval
@@ -3879,8 +3880,6 @@ c
 	call xyopen(tno,in,'old',MAXNAX,nsize)
 	call coInit(tno)
 	doflag = hdprsnt(tno,'mask')
-	if(nsize(1).gt.maxdim)
-     *	  call bug('f','Image too big to handle')
 	call rdhdi(tno,'naxis',naxis,0)
 	naxis = min(naxis,MAXNAX)
 c
