@@ -282,7 +282,7 @@ c
 	if(op.ne.'print'.and.out.eq.' ')
      *	  call bug('f','Output file name is missing')
 c
-c  Handle the four cases.
+c  Handle the five cases.
 c
 	if(op.eq.'uvin')then
 	  call uvin(in,out,velsys,altr,altrpix,altrval,version)
@@ -2815,7 +2815,7 @@ c------------------------------------------------------------------------
 	include 'mirconst.h'
 	integer i,polcode
 	character num*2,ctype*32,bunit*32,types(5)*25,btype*32
-	character telescop*16
+	character telescop*16,rdate*16
 	real bmaj,bmin,bpa
 	double precision cdelt,crota,crval,crpix,scale
 	double precision restfreq,obsra,obsdec,dtemp
@@ -2917,6 +2917,11 @@ c
      *		' being the same as the phase center')
 	endif
 c
+	call fitrdhda(lu,'DATE-OBS',rdate,' ')
+	if(rdate.ne.' ')then
+	  call fdatejul(rdate,dtemp)
+	  call wrhdd(tno,'obstime',dtemp)
+	endif
 	if(bunit.ne.' ')call wrhda(tno,'bunit',bunit)
 	if(btype.ne.' ')call wrbtype(tno,btype)
 	call fitrdhdd(lu,'RESTFREQ',restfreq,-1.d0)
@@ -3022,9 +3027,9 @@ c
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	integer i
-	character num*2,ctype*32
+	character num*2,ctype*32,date*32
 	real cdelt,crota,crpix,scale,bmaj,bmin
-	double precision restfreq,crval
+	double precision restfreq,crval,obstime
 	real xshift,yshift
 c
 c  Externals.
@@ -3068,6 +3073,11 @@ c
 c
 c  Write out other coordinates.
 c
+	call rdhdd(tno,'obstime',obstime,-1.d0)
+	if(obstime.gt.0) then
+	  call julfdate(obstime,date)
+	  call fitwrhda(lu,'DATE-OBS',date)
+	endif
 	call rdhdd(tno,'restfreq',restfreq,-1.d0)
 	if(restfreq.gt.0) call fitwrhdd(lu,'RESTFREQ',1.0d9*restfreq)
 	call rdhdr(tno,'xshift',xshift,0.)
@@ -3189,7 +3199,7 @@ c    stokes     Stokes parameter used in conversion
 c
 c------------------------------------------------------------------------
 	integer nlong,nshort,nextra
-	parameter(nlong=28,nshort=9,nextra=7)
+	parameter(nlong=29,nshort=9,nextra=7)
 	character card*80,key*8,type*8
 	logical more,discard,ok,found
 	integer i,k1,k2
@@ -3214,8 +3224,8 @@ c
      *	  'BMAJ    ', .false., 'BMIN    ', .false., 'BSCALE  ', .false.,
      *	  'BUNIT   ', .false.,
      *	  'BZERO   ', .false., 'COMMAND ', .true.,  'COMMENT ', .true.,
-     *	  'DATE    ', .false.,
-     *	  'DATE-MAP', .false., 'END     ', .false., 'EXTEND  ', .false.,
+     *	  'DATE    ', .false., 'DATE-MAP ', .false.,'DATE-OBS', .false.,
+     *	  'END     ', .false., 'EXTEND  ', .false.,
      *	  'GCOUNT  ', .false., 'GROUPS  ', .false., 'HISTORY ', .true.,
      *	  'OBSDEC  ', .false., 'OBSDEC  ', .false., 'ORIGIN  ', .false.,
      *	  'PCOUNT  ', .false., 'RESTFREQ', .false., 'SIMPLE  ', .false.,
