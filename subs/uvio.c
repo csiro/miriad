@@ -132,6 +132,7 @@
 /*  rjs  13jan95 Added pulsar bin selection.				*/
 /*  rjs  22feb95 Relax linetype step limitation in uvflgwr.		*/
 /*  rjs  17apr96 uv_override can convert between numeric types.		*/
+/*  rjs  15may96 Fiddles with roundup macro.				*/
 /*----------------------------------------------------------------------*/
 /*									*/
 /*		Handle UV files.					*/
@@ -279,6 +280,9 @@
 /*----------------------------------------------------------------------*/
 
 char *mkopen_c();
+void mkclose_c(),mkflush_c(),mkread_c(),mkwrite_c();
+void bug_c(),bugno_c(),rdhdi_c(),rdhda_c(),rdhdr_c(),rdhdd_c();
+void wrhda_c(),wrhdi_c(),hdprobe_c();
 
 #define Sscanf (void)sscanf
 #define Sprintf (void)sprintf
@@ -559,7 +563,7 @@ char *fname;
                 offset += UV_ALIGN;
                 break;
             case VAR_DATA:
-                offset += roundup(UV_HDR_SIZE,extsize);
+                offset += mroundup(UV_HDR_SIZE,extsize);
                 hread_c(uv->item,v->type,v->buf,offset,v->length,
                                         &iostat);
                 printf("DATA: %-9s",v->name);
@@ -620,7 +624,7 @@ char *fname;
                         printf("  (Invalid data type %d)\n",v->type);
                         break;       
                 }
-                offset = roundup(offset+v->length,UV_ALIGN);
+                offset = mroundup(offset+v->length,UV_ALIGN);
                 break;
             case VAR_EOR:
                 printf("========== EOR (%d) ========\n",++eor_count);
@@ -709,7 +713,7 @@ char *name,*status;
     CHECK(iostat,(message,"Error accessing visdata for %s, in UVOPEN(append)",name));
     uv->flags = UVF_APPEND;
     rdhdi_c(*tno,"vislen",&(uv->offset),hsize_c(uv->item));
-    uv->offset = roundup(uv->offset,UV_ALIGN);
+    uv->offset = mroundup(uv->offset,UV_ALIGN);
     uv_vartable_in(uv);
 
 /* Read items and fill in the appropriate value. */
@@ -1667,10 +1671,10 @@ char *data;
     var_data_hdr[0] = v->index;
     hwriteb_c(uv->item,var_data_hdr,uv->offset,UV_HDR_SIZE,&iostat);
     CHECK(iostat,(message,"Error writing variable-value header for %s, in UVPUTVR",var));
-    uv->offset += roundup(UV_HDR_SIZE,size);
+    uv->offset += mroundup(UV_HDR_SIZE,size);
     hwrite_c(uv->item,type,data,uv->offset,v->length,&iostat);
     CHECK(iostat,(message,"Error writing variable-value for %s, in UVPUTVR",var));
-    uv->offset = roundup( uv->offset+v->length, UV_ALIGN);
+    uv->offset = mroundup( uv->offset+v->length, UV_ALIGN);
     if(v->callno++ > CHECK_THRESH) {
       v->flags |= UVF_NOCHECK;
     } else if(!(v->flags & UVF_NOCHECK)){
@@ -1832,13 +1836,13 @@ VARIABLE *vt;
 /* Process the data of a variable. If we want to keep track of the value
    of this variable, read it. */
      case VAR_DATA:
-      offset += roundup(UV_HDR_SIZE,extsize);
+      offset += mroundup(UV_HDR_SIZE,extsize);
       if(!(v->flags & UVF_OVERRIDE)){
 	hread_c(uv->item,v->type,v->buf,offset,v->flength,&iostat);
 	CHECK(iostat,(message,"Error reading a variable value for %s, while UV scanning",v->name));
 	changed = TRUE;
       }
-      offset = roundup(offset+v->flength,UV_ALIGN);
+      offset = mroundup(offset+v->flength,UV_ALIGN);
       found |= (v == vt);
       break;
 
