@@ -78,12 +78,13 @@ c--
 c  History:
 c    rjs     15jan06 Original version adapted from plboot.
 c    rjs     19jan06 Fix call to subroutine with //char*(*) arg.
+c    rjs     09may06 Increase size of MAXPNT.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
 	parameter(version='mfBoot: version 1.0 19-Jan-06')
 	integer MAXVIS,MAXPNT
-	parameter(MAXVIS=32,MAXPNT=10000)
+	parameter(MAXVIS=32,MAXPNT=1000000)
 c
 	character vis(MAXVIS)*64,source*32,line*64,device*64,mode*8
 	character psource*32
