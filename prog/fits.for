@@ -290,9 +290,10 @@ c    rjs  19-aug-98  Added options=lefty and made the uv writer check obspar
 c		     for observatory latitude/longitude if it was missing
 c		     from the vis dataset.
 c    pjt  15-sep-98  Recognise galactic and ecliptic coordinates the right way
+c    rjs  25-sep-98  Correct handling of OBSRA and OBSDEC in op=xyin.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 15-sep-98')
+	parameter(version='Fits: version 1.1 25-sep-98')
 	character in*128,out*128,op*8,uvdatop*12
 	integer velsys
 	real altrpix,altrval
@@ -3251,7 +3252,7 @@ c
      *          ' saving pointing information')
           call mosInit(nx,ny)
 	  if(rms.le.0)rms = 1
-          call mosSet(1,obsra,obsdec,rms,pbtype)
+          call mosSet(1,PI/180*obsra,PI/180*obsdec,rms,pbtype)
           call mosSave(tno)
   	endif
 c
