@@ -140,6 +140,7 @@
 /*  rjs  09oct97 Check for restfreq==0 when converting to velocity.	*/
 /*  rjs  15oct97 Minor correction definition of felocity.		*/
 /*  rjs  22oct97 Change in the format of "on" selection.		*/
+/*  rjs  30aug99 Increase MAXVHANDS to 64				*/
 /*----------------------------------------------------------------------*/
 /*									*/
 /*		Handle UV files.					*/
@@ -460,7 +461,7 @@ typedef struct {
 	WINDOW *win;
 		} UV;
 
-#define MAXVHANDS 20
+#define MAXVHANDS 64
 
 static UV *uvs[MAXOPEN];
 static VARHAND *varhands[MAXVHANDS];
