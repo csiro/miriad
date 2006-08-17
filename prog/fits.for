@@ -314,9 +314,10 @@ c    rjs  11-apr-00  In uvout, multisource files were always being generated.
 c    rjs  10-may-00  In xyout, increase size of descr buffer.
 c    rjs  04-Oct-00  Make xyout work for arbitrarily large images.
 c    rjs  10-oct-00  Really do the above this time!
+c    dpr  01-nov-00  Change CROTAn to AIPS convention for xyout
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 10-Oct-00')
+	parameter(version='Fits: version 1.1 01-nov-00')
 	character in*128,out*128,op*8,uvdatop*12
 	integer velsys
 	real altrpix,altrval
@@ -4009,7 +4010,8 @@ c
      *		'HISTORY See AIPS Memo 46 for details')
 	      givegls = .false.
 	    endif
-	    if(crota.ne.0)call fitwrhdd(lu,'CROTA'//num,180.0/DPI*crota)
+	    if(crota.ne.0 .and. i.eq.2)
+     *         call fitwrhdd(lu,'CROTA'//num,180.0/DPI*crota)
 c
 	  else if(ctype.eq.'ANGLE')then
 	    scale =180.d0/DPI
