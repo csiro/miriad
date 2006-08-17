@@ -255,9 +255,10 @@ c    nebk 12-jan-96  Replace "percent_polarization" by "polarized_intensity"
 c		     in subroutine AXISIN (AIPS manuals say percent_pol
 c		     but my empirical evidence is contrary.  Recognize 
 c		     LL,MM as RA---SIN and DEC--SIN.
+c    rjs  07-aug-96  Correct scaling of axis type.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 12-Jan-96')
+	parameter(version='Fits: version 1.1 7-Aug-96')
 	character in*64,out*64,op*8,uvdatop*12
 	integer velsys
 	real altrpix,altrval
@@ -2891,6 +2892,8 @@ c
 	    scale = pi/180d0
 	    call fitrdhdd(lu,'OBSDEC',obsdec,crval) 
 	    differ = differ.or.(abs(obsdec-crval).gt.abs(cdelt))
+	  else if(ctype.eq.'ANGLE')then
+	    scale = pi/180d0
 	  else if(ctype(1:5).eq.'GLON-'.or.
      *		  ctype(1:5).eq.'GLAT-'.or.
      *		  ctype(1:5).eq.'ELON-'.or.
@@ -3169,6 +3172,8 @@ c
 	  else if(ctype(1:5).eq.'DEC--')then
 	    scale = 180./pi
 	    call fitwrhdd(lu,'OBSDEC',scale*crval)
+	  else if(ctype.eq.'ANGLE')then
+	    scale =180./pi
 	  else if(ctype(1:5).eq.'GLON-'.or.
      *		  ctype(1:5).eq.'GLAT-'.or.
      *		  ctype(1:5).eq.'ELON-'.or.
