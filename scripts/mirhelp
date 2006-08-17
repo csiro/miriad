@@ -55,13 +55,19 @@ if ( $doweb ) then
   set web = "http://www.atnf.csiro.au/computing/software/miriad/$task.html"
   if  ( "$key" != "" ) set web = "$web#$key"
   netscape -remote "OpenURL($web)"
-  if ( $status ) netscape -install "$web"
+  if ( $status ) then
+    netscape -install "$web" &
+  endif
 else
   set file = $MIRPDOC/$task.doc
   if ( -f $task.doc ) set file = $task.doc
-  if ( "$key" != "" ) set file = "$file -k $key"
-  if ( ! $?PAGER ) set PAGER = "more"
-  docfmt $file | $PAGER
+  if ( ! -f $file ) then
+    echo "#### Fatal: Help not found on topic $task"
+  else
+    if ( "$key" != "" ) set file = "$file -k $key"
+    if ( ! $?PAGER ) set PAGER = "more"
+    docfmt $file | $PAGER
+  endif
 endif
 exit 0
 
@@ -69,9 +75,8 @@ usage:
 if ( "$message" != "" ) echo "### Fatal: $message"
 echo " "
 echo "  Usage:"
-echo "    mirhelp [-w?] [-k keyword] task"
+echo "    mirhelp [-w] [-k keyword] task"
 echo " "
 echo "  Options:"
-echo "   -w   Direct help to netscape browser"
-echo "   -?   Give this help message"
+echo "   -w   View help in a netscape browser"
 echo "   -k   Give help on a specific keyword"
