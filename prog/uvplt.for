@@ -324,6 +324,7 @@ c    rjs  10jan01  Added az,el,lst to possible axes.
 c    rjs  20jan01  Change definition of nbases in uvfish to allow for
 c		   possible presence of autocorrelations.
 c    rjs  02mar01  Added airmass to possible axes.
+c    rjs  04may03  getlst could return the wrong value in some circumstances.
 c
 c To do:
 c
@@ -1913,6 +1914,7 @@ c
 	call uvrdvrd (lin, 'ra', dtemp, 0.d0)
 	call uvrdvrd (lin, 'obsra', ra, dtemp)
 	call getlong(lin,long)
+	call uvrdvrd(lin,'time',time,0.d0)
         call jullst (time, long, lst)
 	lst = lst + eqeq(time)
       else
