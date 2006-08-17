@@ -16,7 +16,7 @@
 #  History:
 #    Dark-ages rjs  Original version
 #    22-feb-01 rjs  Added matching for possible tasks.
-
+#    02-mar-01 rjs  Slight change to make it compatible with more UNIX systems.
 set noglob
 
 set task = ""
@@ -74,7 +74,7 @@ else
     end
     set noglob
     unset nonomatch
-    if("$matches" == "${task}*")then
+    if ( "$matches" == "${task}*" ) then
       echo "### Fatal: No task matching '$task' was found"
     else
       echo "### Warning: A task called '$task' was not found"
