@@ -1674,7 +1674,6 @@ c
      +  npts(maxbase,maxpol)
       logical allfull
 cc
-      character str*80
       integer i, j
 c
       character itoaf*2
@@ -1694,13 +1693,11 @@ c
       end do
 c
       if (pl4dim.gt.1) then
-        write (str,100) plfidx
-        str = 'Plot buffer allocation for file '//itoaf(plfidx)//
-     *	  ' exhauste; some data lost'
+        call bug('w','Plot buffer allocation for file '//
+     *	  itoaf(plfidx)//' exhausted; some data lost')
       else
-        str = 'Plot buffer allocation exhausted; some data lost'
+        call bug('w','Plot buffer allocation exhausted; some data lost')
       end if
-      call bug('w', str)
 c
 999   end
 c
