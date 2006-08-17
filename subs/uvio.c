@@ -1881,7 +1881,7 @@ float *data;
 
 	subroutine uvwrite(tno,preamble,data,flags,n)
 	integer tno,n
-	double precision preamble(4)
+	double precision preamble(*)
 	complex data(n)
 	logical flags(n)
 
@@ -2693,7 +2693,7 @@ double start,width,step;
 /************************************************************************/
 void uvread_c(tno,preamble,data,flags,n,nread)
 int tno,n,*flags,*nread;
-double preamble[4];
+double *preamble;
 float *data;
 /**uvread -- Read in some uv correlation data.				*/
 /*&rjs                                                                  */
@@ -2702,7 +2702,7 @@ float *data;
 
 	subroutine uvread(tno,preamble,data,flags,n,nread)
 	integer tno,n,nread
-	double precision preamble(4)
+	double precision preamble(*)
 	complex data(n)
 	logical flags(n)
 
@@ -2716,8 +2716,8 @@ float *data;
     tno		Handle of the uv data set.
     n		Max number of channels that can be read.
   Output:
-    preamble	A double array of 4 elements giving u,v, time and
-		baseline number (in that order).
+    preamble	A double array of elements giving things such as
+		u,v, time and baseline number. Setable using uvset.
     data	A real array of at least n complex elements (or 2n real
 		elements). This returns the correlation data.
     flags	Logical array of at least n elements. A true value for
