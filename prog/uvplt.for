@@ -293,7 +293,7 @@ c    nebk 09jan95  Only work out longitude if really needed; some data sets
 c		   don't have it.
 c    nebk 22may96  Add options=mrms
 c    rjs  06jun96  Change frequency behaviour to default to all channels.
-c
+c    rjs  30jul96  2pass tries to guess the number of points needed.
 c To do:
 c
 c   Vector averaging rms not yet implemented
@@ -381,7 +381,7 @@ c
 c
 c Plotting pointers, dimensions and masks
 c
-      integer polmsk(-8:4), basmsk(maxant+maxbase)
+      integer polmsk(-8:4), basmsk(maxbase)
       integer nfiles, npols, nbases, pl1dim, pl2dim, pl3dim, 
      +  pl4dim, maxpnt, xo, yo, elo(2), eho(2), plfidx, pidx, 
      +  plbidx, stbidx
@@ -396,14 +396,14 @@ c
       real size(2), xmin, xmax, ymin, ymax, u, v, uvdist, uvpa, xvalr,
      +  yvalr, parang, evec
       integer lin, ivis, nread, dayoff, j,  nx, ny, inc, hann, tunit,
-     +  ofile, ifile, jfile, vupd, ip
+     +  ofile, ifile, jfile, vupd, ip, nkeep, npnts
       character in*64, xaxis*10, yaxis*10, pdev*80, comment*80, 
      +  logf*80, str*2, title*100, ops*9
       logical xrtest, yrtest, more, dodoub, reset, doave, dowave,
      +  dovec(2), dorms(3), doall, doflag, dobase, doperr, dointer,
      +  dolog, dozero, doequal, donano, dosrc, doavall, bwarn(2), 
      +  skip, xgood, ygood, doxind, doyind, dowrap, none, dosymb, 
-     +  dodots, false(2), allfull, docol, twopass, keep, dofqav
+     +  dodots, false(2), allfull, docol, twopass, dofqav
 c
 c Externals
 c
@@ -415,7 +415,7 @@ c Initialize
 c
       integer ifac1, ifac2
       parameter (ifac1 = maxpol*maxbase*maxfile, 
-     +           ifac2 = maxant+maxbase)
+     +           ifac2 = maxbase)
       data false, bwarn /.false., .false., .false., .false./
       data none, allfull /.true., .false./
       data ivis, title /0, ' '/
@@ -423,10 +423,7 @@ c
       data npts, plpts, basmsk /ifac1*0, ifac1*0, ifac2*0/
       data polmsk /13*0/
 c-----------------------------------------------------------------------
-      call output ('UvPlt: version 22-May-96')
-      call output ('New frequency behaviour '//
-     *	'(see parameters line and options=nofqav)')
-      call output (' ')
+      call output ('UvPlt: version 30-Jul-96')
 c
 c  Get the parameters given by the user and check them for blunders
 c
@@ -446,10 +443,13 @@ c
 c Read through data set accumulating descriptive information or use
 c variables of first integration to guess at what's in the file
 c
+      maxbuf2 = membuf()
       if (twopass) then
         call uvdes (doflag, doall, dofqav, maxant, maxbase, maxchan,
-     +    basmsk,
-     +    polmsk, data, goodf, nfiles, npols, nbases, baseday, dayoff)
+     +    basmsk, polmsk, data, goodf, nfiles, npols, nbases, npnts,
+     +    baseday, dayoff)
+        if(dodoub)npnts = 2*npnts
+        maxbuf2 = max(2*(npnts+1),maxbuf2)
       else
         call uvfish (nfiles, npols, nbases, baseday, dayoff)
       end if
@@ -458,7 +458,6 @@ c
 c
 c Allocate all the memory we can have.
 c
-      maxbuf2 = membuf()
       call memalloc (ip, maxbuf2, 'r')
 c
 c Chop up the plot buffer according to what we have learned or think
@@ -514,8 +513,8 @@ c
 c
 c Is there some data we want in this visibility ?
 c
-          call goodat ( nread, goodf, keep)
-          if (.not.keep) goto 950
+          call goodat ( nread, goodf, nkeep)
+          if (nkeep.eq.0) goto 950
 c
           call uvrdvrd (lin, 'obsra', ra, 0.0d0)
           call uvrdvrr (lin, 'chi', parang, 0.0)
@@ -2245,7 +2244,7 @@ c
       end
 c
 c
-      subroutine goodat ( n, flags, keep)
+      subroutine goodat ( n, flags, nkeep)
 c-----------------------------------------------------------------------
 c     See if there is any wanted data in this visibility
 c
@@ -2253,23 +2252,20 @@ c  Input
 c    n         Number of channels
 c    flags     Channel flags, true if unflagged
 c  Output
-c    keep      True if visibility wanted
+c    keep      Number of visibilities to keep.
 c-----------------------------------------------------------------------
       implicit none
-      integer n
-      logical flags(n), keep
+      integer n, nkeep
+      logical flags(n)
 cc
       integer i
 c-----------------------------------------------------------------------
-      keep = .false.
+      nkeep = 0
 c
 c Plot unflagged data
 c
       do i = 1, n
-        if (flags(i)) then
-          keep = .true.
-          return
-        end if
+        if (flags(i)) nkeep = nkeep + 1
       end do
 c
       end
@@ -3799,7 +3795,7 @@ c
 c
       subroutine uvdes (doflag, doall, dofqav, maxant, maxbase,
      +   maxchan, 
-     +   basmsk, polmsk, data, goodf, nfiles, npols, nbases, 
+     +   basmsk, polmsk, data, goodf, nfiles, npols, nbases, npnts,
      +   baseday, dayoff)
 c-----------------------------------------------------------------------
 c     Read through the data once, finding out the number of
@@ -3812,6 +3808,7 @@ c    dofqav    Average all channels into 1.
 c    nfiles    Number of files read
 c    npols     Number of polarizations encountered
 c    nbases    Number of baselines encountered
+c    npnts     Number of valid points encountered.
 c    baseday   Reference day from first file
 c    dayoff    Offset to subtract from day to make fractional days
 c-----------------------------------------------------------------------
@@ -3822,14 +3819,15 @@ c
       complex data(maxchan)
       logical goodf(maxchan), doall, doflag, dofqav
       integer nfiles, npols, nbases, polmsk(-8:4), maxant, maxbase,
-     +  basmsk(maxant+maxbase)
+     +  basmsk(maxbase), npnts
 cc
       double precision preamble(4)
-      integer lin, nread, ia1, ia2, polidx, basidx, i
+      integer lin, nread, ia1, ia2, polidx, basidx, i, nkeep
       character*80 line
 c
-      logical uvdatopn, open, keep
+      logical uvdatopn
 c-----------------------------------------------------------------------
+      npnts = 0
       npols = 0
       nbases = 0
       call output (' ')
@@ -3839,7 +3837,7 @@ c Loop over files
 c
       call uvdatgti ('nfiles', nfiles)
       do i = 1, nfiles
-        open = uvdatopn(lin)
+	if(.not.uvDatOpn(lin))call bug('f','Error opening inputs')
 c
 c Read first visbility (making variables available)
 c
@@ -3859,11 +3857,11 @@ c
 c
 c Does this visibility have any data that we want ?
 c
-          call goodat ( nread, goodf, keep)
+          call goodat ( nread, goodf, nkeep)
 c
 c Find new polarization
 c
-          if (keep) then
+          if (nkeep.gt.0) then
             call uvdatgti ('pol', polidx)
             if (polidx.lt.-8 .or. polidx.gt.4) call bug ('f',
      +         'Invalid polarization encountered')
@@ -3877,7 +3875,6 @@ c
             call basant (preamble(4), ia1, ia2)
             basidx = ia1 + ia2*(ia2-1)/2
             if (ia1.gt.maxant .or. ia2.gt.maxant) then
-              call output (' ')
               write (line, 150) ia1, ia2, maxant
 150           format ('Antenna number too large for baseline ', i2,
      +                '-', i2, ' Need antenna # < ', i2)
@@ -3889,6 +3886,8 @@ c
               basmsk(basidx) = nbases
             end if
           end if
+c
+	  npnts = npnts + nkeep
 c
 c Read another visibility
 c
@@ -3934,8 +3933,9 @@ c
       integer nfiles, npols, nbases, dayoff
 cc
       integer pols(12), pols2(12), lin, i, j, npols2, nants
+      logical found
 c
-      logical uvdatopn, uvdatprb, open, found
+      logical uvdatopn, uvdatprb
 c-----------------------------------------------------------------------
 c
 c Extract number of files
@@ -3985,7 +3985,7 @@ c
 c If the user didn't select anything, read the first set of
 c polarizations from the first file
 c
-      open = uvdatopn(lin)
+      if(.not.uvdatopn(lin))call bug('f','Error opening input')
       call uvnext (lin)
 c
 c Get reference day
