@@ -3105,7 +3105,7 @@ UV *uv;
       i1 = max( bl / 256, bl % 256);
       i2 = min( bl / 256, bl % 256);
       if(i2 < 1 || i1 > MAXANT){
-	BUG('w',(message,"Discarded data with bad antenna numbers when selecting: baseline number is %d\n",bl));
+	ERROR('w',(message,"Discarded data with bad antenna numbers when selecting: baseline number is %d\n",bl));
 	discard = TRUE;
       }else{
         discard = sel->ants[(i1*(i1-1))/2+i2-1];
