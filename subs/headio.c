@@ -17,9 +17,11 @@
 /*  rjs 23feb93   Rename a defined parameter only.			*/
 /*  rjs 10aug93   Use hexists in hdprsnt.				*/
 /*  rjs  6nov94   Change "item handle" to an integer.			*/
+/*  rjs 15may96   Fiddles with roundup macro.				*/
 /************************************************************************/
 
 #include <stdlib.h>
+#include <string.h>
 #include <ctype.h>
 #include <stdio.h>
 
@@ -168,7 +170,7 @@ double value;
   temp = value;
   haccess_c(thandle,&item,keyword,"write",&iostat);		check(iostat);
   hwriteb_c(item,real_item,0,ITEM_HDR_SIZE,&iostat);		check(iostat);
-  offset = roundup(ITEM_HDR_SIZE,H_REAL_SIZE);
+  offset = mroundup(ITEM_HDR_SIZE,H_REAL_SIZE);
   hwriter_c(item,&temp,offset,H_REAL_SIZE,&iostat);		check(iostat);
   hdaccess_c(item,&iostat);					check(iostat);
 }
@@ -201,7 +203,7 @@ double value;
 
   haccess_c(thandle,&item,keyword,"write",&iostat);		check(iostat);
   hwriteb_c(item,dble_item,0,ITEM_HDR_SIZE,&iostat);		check(iostat);
-  offset = roundup(ITEM_HDR_SIZE,H_DBLE_SIZE);
+  offset = mroundup(ITEM_HDR_SIZE,H_DBLE_SIZE);
   hwrited_c(item,&value,offset,H_DBLE_SIZE,&iostat);		check(iostat);
   hdaccess_c(item,&iostat);					check(iostat);
 }
@@ -234,7 +236,7 @@ int value;
 
   haccess_c(thandle,&item,keyword,"write",&iostat);		check(iostat);
   hwriteb_c(item,int_item,0,ITEM_HDR_SIZE,&iostat);		check(iostat);
-  offset = roundup(ITEM_HDR_SIZE,H_INT_SIZE);
+  offset = mroundup(ITEM_HDR_SIZE,H_INT_SIZE);
   hwritei_c(item,&value,offset,H_INT_SIZE,&iostat);		check(iostat);
   hdaccess_c(item,&iostat);					check(iostat);
 }
@@ -266,7 +268,7 @@ float *value;
 
   haccess_c(thandle,&item,keyword,"write",&iostat);		check(iostat);
   hwriteb_c(item,cmplx_item,0,ITEM_HDR_SIZE,&iostat);		check(iostat);
-  offset = roundup(ITEM_HDR_SIZE,H_CMPLX_SIZE);
+  offset = mroundup(ITEM_HDR_SIZE,H_CMPLX_SIZE);
   hwritec_c(item,value,offset,H_CMPLX_SIZE,&iostat);		check(iostat);
   hdaccess_c(item,&iostat);					check(iostat);
 }
@@ -415,19 +417,19 @@ double *value,defval;
     hreadb_c(item,s,0,ITEM_HDR_SIZE,&iostat);		check(iostat);
     iostat = 0;
     if(      !memcmp(s,int_item, ITEM_HDR_SIZE)){
-      offset = roundup(ITEM_HDR_SIZE,H_INT_SIZE);
+      offset = mroundup(ITEM_HDR_SIZE,H_INT_SIZE);
       if(offset + H_INT_SIZE == length){
 	hreadi_c(item,&itemp,offset,H_INT_SIZE,&iostat);
 	*value = itemp;
       }
     } else if(!memcmp(s,real_item,ITEM_HDR_SIZE)){
-      offset = roundup(ITEM_HDR_SIZE,H_REAL_SIZE);
+      offset = mroundup(ITEM_HDR_SIZE,H_REAL_SIZE);
       if(offset + H_REAL_SIZE == length){
         hreadr_c(item,&rtemp,offset,H_REAL_SIZE,&iostat);
         *value = rtemp;
       }
     } else if(!memcmp(s,dble_item,ITEM_HDR_SIZE)){
-      offset = roundup(ITEM_HDR_SIZE,H_DBLE_SIZE);
+      offset = mroundup(ITEM_HDR_SIZE,H_DBLE_SIZE);
       if(offset + H_DBLE_SIZE == length){
 	hreadd_c(item,value, offset,H_DBLE_SIZE,&iostat);
       }
@@ -474,7 +476,7 @@ float *value,*defval;
   *value = *defval;
   *(value+1) = *(defval+1);
   haccess_c(thandle,&item,keyword,"read",&iostat);	if(iostat)return;
-  offset = roundup(ITEM_HDR_SIZE,H_CMPLX_SIZE);
+  offset = mroundup(ITEM_HDR_SIZE,H_CMPLX_SIZE);
   length = hsize_c(item) - offset;
   if(length == H_CMPLX_SIZE){
     hreadb_c(item,s,0,ITEM_HDR_SIZE,&iostat);		check(iostat);
@@ -661,7 +663,7 @@ int *n,length;
   } else {
     hreadb_c(item,s,0,ITEM_HDR_SIZE,&iostat);			check(iostat);
     if(!memcmp(s,real_item,ITEM_HDR_SIZE)){
-      offset = roundup(ITEM_HDR_SIZE,H_REAL_SIZE);
+      offset = mroundup(ITEM_HDR_SIZE,H_REAL_SIZE);
       size -= offset;
       Strcpy(type,"real");
       *n = size / H_REAL_SIZE;
@@ -671,7 +673,7 @@ int *n,length;
 	Sprintf(descr,"%-14.7g",rtemp);
       }
     } else if(!memcmp(s,int_item,ITEM_HDR_SIZE)){
-      offset = roundup(ITEM_HDR_SIZE,H_INT_SIZE);
+      offset = mroundup(ITEM_HDR_SIZE,H_INT_SIZE);
       size -= offset;
       Strcpy(type,"integer");
       *n = size / H_INT_SIZE;
@@ -681,7 +683,7 @@ int *n,length;
 	Sprintf(descr,"%d",itemp);
       }
     } else if(!memcmp(s,int2_item,ITEM_HDR_SIZE)){
-      offset = roundup(ITEM_HDR_SIZE,H_INT2_SIZE);
+      offset = mroundup(ITEM_HDR_SIZE,H_INT2_SIZE);
       size -= offset;
       Strcpy(type,"integer*2");
       *n = size / H_INT2_SIZE;
@@ -691,7 +693,7 @@ int *n,length;
 	Sprintf(descr,"%d",jtemp);
       }
     } else if(!memcmp(s,dble_item,ITEM_HDR_SIZE)){
-      offset = roundup(ITEM_HDR_SIZE,H_DBLE_SIZE);
+      offset = mroundup(ITEM_HDR_SIZE,H_DBLE_SIZE);
       size -= offset;
       Strcpy(type,"double");
       *n = size / H_DBLE_SIZE;
@@ -701,7 +703,7 @@ int *n,length;
 	Sprintf(descr,"%-20.10g",dtemp);
       }
     } else if(!memcmp(s,cmplx_item,ITEM_HDR_SIZE)){
-      offset = roundup(ITEM_HDR_SIZE,H_CMPLX_SIZE);
+      offset = mroundup(ITEM_HDR_SIZE,H_CMPLX_SIZE);
       size -= offset;
       Strcpy(type,"complex");
       *n = size / H_CMPLX_SIZE;
