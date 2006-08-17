@@ -263,6 +263,7 @@ c		     but my empirical evidence is contrary.  Recognize
 c		     LL,MM as RA---SIN and DEC--SIN.
 c    rjs  07-aug-96  Correct scaling of axis type.
 c    rjs  16-aug-96  Added options=nochi.
+c    rjs  17-oct-96  Discard OBSRA and BLANK values in op=xyin.
 c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='Fits: version 1.1 16-Aug-96')
@@ -3333,7 +3334,7 @@ c    stokes     Stokes parameter used in conversion
 c
 c------------------------------------------------------------------------
 	integer nlong,nshort,nextra
-	parameter(nlong=29,nshort=9,nextra=7)
+	parameter(nlong=30,nshort=9,nextra=7)
 	character card*80,key*8,type*8
 	logical more,discard,ok,found
 	integer i,k1,k2
@@ -3354,14 +3355,14 @@ c
      *	  'OBSRA   ','TELESCOP'/
 	data (long(i),history(i),i=1,nlong)/
      *	  '        ', .true.,  'ALTRPIX ', .false., 'ALTRVAL ', .false.,
-     *    'BITPIX  ', .false., 'BLOCKED ', .false.,
+     *    'BITPIX  ', .false., 'BLANK   ', .false., 'BLOCKED ', .false.,
      *	  'BMAJ    ', .false., 'BMIN    ', .false., 'BSCALE  ', .false.,
      *	  'BUNIT   ', .false.,
      *	  'BZERO   ', .false., 'COMMAND ', .true.,  'COMMENT ', .true.,
      *	  'DATE    ', .false., 'DATE-MAP ', .false.,'DATE-OBS', .false.,
      *	  'END     ', .false., 'EXTEND  ', .false.,
      *	  'GCOUNT  ', .false., 'GROUPS  ', .false., 'HISTORY ', .true.,
-     *	  'OBSDEC  ', .false., 'OBSDEC  ', .false., 'ORIGIN  ', .false.,
+     *	  'OBSDEC  ', .false., 'OBSRA   ', .false., 'ORIGIN  ', .false.,
      *	  'PCOUNT  ', .false., 'RESTFREQ', .false., 'SIMPLE  ', .false.,
      *	  'VELREF  ', .false., 'XSHIFT  ', .false., 'YSHIFT  ', .false./
 	data short/'CDELT','CROTA','CRPIX','CRVAL','CTYPE','NAXIS',
