@@ -312,6 +312,7 @@ c    rjs  10mar00  Set maxbase2=91.
 c    rjs  28mar00  Fix colour indices when there are more than NCOL
 c		   inputs.
 c    rjs  04may00  Tidy up requirement for lat,long,lst and more.
+c    rjs  26sep00  Correct uvangle code.
 c
 c To do:
 c
@@ -2332,7 +2333,7 @@ c
       uvdist = sqrt(u*u + v*v)
 c 
       if (u.ne.0.0 .or. v.ne.0.0) then
-        uvpa = DPI/180.d0 * atan2(u, v) 
+        uvpa = 180.0/DPI * atan2(u, v) 
       else
 c
 c Signal this one no good
