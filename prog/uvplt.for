@@ -287,6 +287,8 @@ c    nebk 22spe95  Add axis=parang
 c    nebk 03oct95  Fix calculation of hour angle.
 c    rjs  01dec95  Improve an error message.
 c    nebk 06dec95  Push MAXBASE2 upto 36 for Hat Creek.  Does not affect ATCA
+c    nebk 09jan95  Only work out longitude if really needed; some data sets
+c		   don't have it.
 c
 c To do:
 c
@@ -417,7 +419,7 @@ c
       data npts, plpts, basmsk /ifac1*0, ifac1*0, ifac2*0/
       data polmsk /13*0/
 c-----------------------------------------------------------------------
-      call output ('UvPlt: version 06-Dec-95')
+      call output ('UvPlt: version 08-Jan-96')
 c
 c  Get the parameters given by the user and check them for blunders
 c
@@ -553,8 +555,8 @@ c
 c Get info from preamble
 c
           if (dowave) then
-            call getwvl (lin, ra, donano, preamble, u, v, uvdist, 
-     +                   uvpa, ha)
+            call getwvl (lin, xaxis, yaxis, ra, donano, preamble, 
+     +                   u, v, uvdist, uvpa, ha)
             call uvinfo (lin, 'sfreq', freq)
            end if
           fday = day - dayoff
@@ -1760,9 +1762,11 @@ c------------------------------------------------------------------------
       long = 0.0d0
       call uvprobvr (lin, 'longitu', type, length, ok)
       if (type(1:1).eq.' ') then
+         call bug ('w', 'No longitude variable; trying telescope')
          call uvprobvr (lin, 'telescop', type, length, ok)
          if (type(1:1).eq.' ') then
-            call bug ('f', 'No longitude or telesope variables')
+            call bug ('f', 
+     +      'No telescope variable either, can''t work out longitude')
          else
             call uvrdvra (lin, 'telescop', telescop, ' ')
             call obspar (telescop, 'longitude', long, ok)
@@ -2082,13 +2086,14 @@ c
       end
 c
 c
-      subroutine getwvl (lin, ra, donano, preamble, u, v, uvdist, 
-     +                   uvpa, ha)
+      subroutine getwvl (lin, xaxis, yaxis, ra, donano, preamble, 
+     +                   u, v, uvdist, uvpa, ha)
 c-----------------------------------------------------------------------
 c     Get some things from the preamble
 c
 c  Input:
 c    lin          Handle of vis file
+c    x,yaxis      Axis types
 c    ra           Apparent ra (radians)
 c    donano       True for wavelengths in nanoseconds, else kilo-lambda
 c    preamble     u and v in raw form (nsec or lambda)
@@ -2105,6 +2110,7 @@ c
       real u, v, uvdist, uvpa
       logical donano
       integer lin
+      character*(*) xaxis, yaxis
 cc
       include 'mirconst.h'
       double precision lst, rtod, rtos, long
@@ -2129,20 +2135,27 @@ c
         uvpa = 999.0
       end if
 c
+c Fish out hour angle if required; some datasets
+c will have neither longitude nor telescope so be gentle
+c
+      if (xaxis.eq.'hangle' .or. xaxis.eq.'dhangle' .or.
+     +    yaxis.eq.'hangle' .or. yaxis.eq.'dhangle') then    
+c
 c Get observatory longitude in radians
 c
-      call getlong (lin, long)
+        call getlong (lin, long)
 c
 c Get lst in radians and find HA, +/- pi
 c
-      call jullst (preamble(3), long, lst)
-      ha = (lst - ra) 
-      if (ha.gt.dpi) then
-        ha = ha - 2.0d0*dpi
-      else if (ha.lt.-dpi) then
-        ha = ha + 2.0*dpi
+        call jullst (preamble(3), long, lst)
+        ha = (lst - ra) 
+        if (ha.gt.dpi) then
+          ha = ha - 2.0d0*dpi
+        else if (ha.lt.-dpi) then
+          ha = ha + 2.0*dpi
+        end if
+        ha = ha * rtos
       end if
-      ha = ha * rtos
 c
       end
 c
