@@ -273,9 +273,11 @@ c		     Discard OBSRA and BLANK in reading in images.
 c    rjs  07-feb-97  Increase max string length.
 c    rjs  21-feb-97  Better treatment of missing evector. More messages.
 c    rjs  21-mar-97  Write antenna tables for options=uvout.
+c    rjs  06-may-97  Support apparent coordinates in SU table.
+c    rjs  08-may-97  Write all FITS keywords in standard format.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 21-Mar-97')
+	parameter(version='Fits: version 1.1 08-May-97')
 	character in*128,out*128,op*8,uvdatop*12
 	integer velsys
 	real altrpix,altrval
@@ -3401,8 +3403,10 @@ c------------------------------------------------------------------------
 	integer nshort,nlong
 	parameter(nshort=6,nlong=9)
 	character short(nshort)*5,long(nlong)*8
-	integer iostat,item,n,length
-	character key*12,line*80,descr*32,type*16
+	integer iostat,item,n,ival
+	real rval
+	double precision dval
+	character key*12,line*80,descr*32,type*16,ukey*12
 	logical discard
 c
 c  Externals.
@@ -3425,19 +3429,25 @@ c
      *		    binsrcha(key(1:5),short,nshort).ne.0
 	  if(.not.discard)then
 	    call hdprobe(tno,key,descr,type,n)
-	    if(n.eq.1.and.
-     *	      (type.eq.'integer*2' .or. type.eq.'integer' .or.
-     *	       type.eq.'real'      .or. type.eq.'double'  .or.
-     *	       type.eq.'character'))then
-	      call ucase(key)
-	      if(type.eq.'character')then
-	        length = max(8,len1(descr))
-		line = key(1:8)//'= '''//descr(1:length)//''''
+	    if(n.eq.1)then
+	      ukey = key
+	      call ucase(ukey)
+	      if(type.eq.'integer*2'.or.type.eq.'integer')then
+		call rdhdi(tno,key,ival,0)
+		call fitwrhdi(lu,ukey,ival)
+	      else if(type.eq.'real')then
+		call rdhdr(tno,key,rval,0.)
+		call fitwrhdr(lu,ukey,rval)
+	      else if(type.eq.'double')then
+		call rdhdd(tno,key,dval,0.d0)
+		call fitwrhdd(lu,ukey,dval)
+	      else if(type.eq.'character')then
+		call fitwrhda(lu,ukey,descr(1:len1(descr)))
 	      else
 		call ucase(descr)
 		line = key(1:8)//'= '//descr
+	        call fitcdio(lu,line)
 	      endif
-	      call fitcdio(lu,line)
 	    endif
 	  endif
 	  call hreada(item,key,iostat)
