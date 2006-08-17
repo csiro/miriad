@@ -131,6 +131,7 @@
 /*  rjs   6jan95 Make buffer for "w" coordinate large enough!		*/
 /*  rjs  13jan95 Added pulsar bin selection.				*/
 /*  rjs  22feb95 Relax linetype step limitation in uvflgwr.		*/
+/*  rjs  17apr96 uv_override can convert between numeric types.		*/
 /*----------------------------------------------------------------------*/
 /*									*/
 /*		Handle UV files.					*/
@@ -1029,7 +1030,7 @@ UV *uv;
   int item;
   char *b,varname[MAXLINE],vartype[MAXLINE],descr[MAXLINE];
   VARIABLE *v;
-  int tno,iostat,n,ok;
+  int tno,iostat,n,ok,isnumeric,ischar;
 
   tno = uv->tno;
   haccess_c(uv->tno,&item,".","read",&iostat);
@@ -1038,10 +1039,13 @@ UV *uv;
     v = uv_locvar(tno,varname);
     if(v != NULL){
       hdprobe_c(tno,varname,descr,MAXLINE,vartype,&n);
-      ok = (n == 1 && (	(v->type == H_DBLE && !strcmp(vartype,"double"))    ||
-			(v->type == H_REAL && !strcmp(vartype,"real"))	    ||
-			(v->type == H_BYTE && !strcmp(vartype,"character")) ||
-			(v->type == H_INT  && !strcmp(vartype,"integer"))));
+      isnumeric = 
+	(v->type == H_DBLE || v->type == H_REAL || v->type == H_INT) &&
+        (!strcmp(vartype,"double") || !strcmp(vartype,"real") ||
+	 !strcmp(vartype,"integer"));
+      ischar =  (v->type == H_BYTE && !strcmp(vartype,"character"));
+      ok = ( n == 1 && (isnumeric || ischar) );
+
       if(v->type == H_BYTE) {
 	n = strlen(descr);
         b = Malloc(n+1);
