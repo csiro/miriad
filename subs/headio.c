@@ -23,6 +23,7 @@
 /*  dpr 11may01   Descriptive error for hisopen_c                       */
 /*  pjt 22jun02   MIR4 prototypes and using int8 for long integers      */
 /*  rjs 02jan05   Fix up bug in rdhdl. Tidy.				*/
+/*  rjs 26nov05   Better handling of logical values.			*/
 /************************************************************************/
 
 #include <stdlib.h>
@@ -114,8 +115,8 @@ void hisread_c(int tno,char *text,size_t length,int *eof)
 {
   int iostat;
   hreada_c(history[tno],text,length,&iostat);
-  if(iostat == 0) *eof = FORT_FALSE;
-  else if(iostat == -1) *eof = FORT_TRUE;
+  if(iostat == 0) *eof = 0;
+  else if(iostat == -1) *eof = 1;
   else bugno_c('f',iostat);
 }
 /************************************************************************/
@@ -676,8 +677,8 @@ int hdprsnt_c(int tno,Const char *keyword)
 /*--									*/
 /*----------------------------------------------------------------------*/
 {
-  if(hexists_c(tno,keyword))return(FORT_TRUE);
-  else			    return(FORT_FALSE);
+  if(hexists_c(tno,keyword))return(1);
+  else			    return(0);
 }
 /************************************************************************/
 void hdprobe_c(int tno,Const char *keyword,char *descr,size_t length,char *type,int *n)

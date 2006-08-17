@@ -159,6 +159,7 @@
 /*  pjt  14jan03 fix another forgotten int -> int8                      */
 /*  pjt  13may03 MAXIANT usage to limit MAXANT                          */
 /*  rjs  02jan05 Partial merge of BIMA and ATNF versions.		*/
+/*  rjs  26nov05 Added function uvdim_c					*/
 /*----------------------------------------------------------------------*/
 /*									*/
 /*		Handle UV files.					*/
@@ -961,7 +962,7 @@ SELECT *sel;
   }
 }
 /************************************************************************/
-private UV *uv_getuv(tno)
+private UV *uv_getuv(int tno)
 /*
   Allocate a structure describing a uv file.
 ------------------------------------------------------------------------*/
@@ -1324,7 +1325,7 @@ int tno;
 /*--									*/
 /*----------------------------------------------------------------------*/
 {
-  return(uvs[tno]->flags & UVF_UPDATED ? FORT_TRUE : FORT_FALSE);
+  return(uvs[tno]->flags & UVF_UPDATED ? 1 : 0);
 }
 /************************************************************************/
 void uvvarini_c(tno,vhan)
@@ -1417,9 +1418,9 @@ int vhan;
 
   for(vp = vh->varhd; vp != NULL; vp = vp->fwd){
     v = vp->v;
-    if(v->callno > callno) return(FORT_TRUE);
+    if(v->callno > callno) return(1);
   }
-  return(FORT_FALSE);
+  return(0);
 }
 /************************************************************************/
 void uvrdvr_c(int tno,int type,Const char *var,char *data,char *def,int n)
@@ -1614,7 +1615,7 @@ void uvprobvr_c(int tno,Const char *var,char *type,int *length,int *updated)
   } else {
     *type   = VARTYPE(v);
     *length = VARLEN(v);
-    *updated = (v->callno >= uv->mark ? FORT_TRUE : FORT_FALSE);
+    *updated = (v->callno >= uv->mark ? 1 : 0);
   }
 }
 /************************************************************************/
@@ -2713,6 +2714,28 @@ double start,width,step;
     ERROR('w',(message,
       "Unrecognised line type \"%s\" ignored, in UVSET",type));
   }
+}
+/************************************************************************/
+int uvdim_c(tno)
+int tno;
+/**uvdim - Number of channels.						*/
+/*&rjs                                                                  */
+/*:uv-i/o								*/
+/*+ FORTRAN call sequence:
+
+	integer function uvdim(tno)
+	integer tno
+
+  Input:
+    tno		Handle of the uv data set.
+  Output:
+    uvdim	Number of channels.
+/*--									*/
+/*----------------------------------------------------------------------*/
+{
+  UV *uv;
+  uv = uvs[tno];
+  return(uv->actual_line.n);
 }
 /************************************************************************/
 void uvread_c(tno,preamble,data,flags,n,nread)
@@ -4584,7 +4607,7 @@ double *data;
 
 /* Is the table of variances out of date? If so recompute it. */
 
-  if(uvvarupd_c(uv->sigma2.vhan) == FORT_TRUE){
+  if(uvvarupd_c(uv->sigma2.vhan)){
     nants = *(int *)(uv_checkvar(uv->tno,"nants",H_INT)->buf);
     inttime = *(float *)(uv_checkvar(uv->tno,"inttime",H_REAL)->buf);
     jyperk  = *(float *)(uv_checkvar(uv->tno,"jyperk",H_REAL)->buf);
