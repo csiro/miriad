@@ -278,9 +278,11 @@ c    rjs  16-jul-97  Added options=compress.
 c    rjs  01-aug-97  Made FITS date string variables longer, to
 c		     allow for new FITS standard.
 c    rjs  05-aug-97  More robust in interpretation of epoch keyword.
+c    rjs  22-aug-97  More robust again. Also treat unrecognised keywords
+c		     as history comments.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 1-Aug-97')
+	parameter(version='Fits: version 1.1 22-Aug-97')
 	character in*128,out*128,op*8,uvdatop*12
 	integer velsys
 	real altrpix,altrval
@@ -533,7 +535,7 @@ c  that the output MIRIAD file will contain the correlations in real format.
 c
 	call uvopen(tno,out,'new')
 	call hisopen(tno,'append')
-	call hdin(lu,tno,version,.true.)
+	call histin(lu,tno,version)
 	if(.not.compress.and.abs(bitpix).gt.16)
      *	  call uvset(tno,'corr','r',0,0.,0.,0.)
 c
@@ -2935,7 +2937,7 @@ c
 	naxis = min(naxis,MAXNAX)
 	call xyopen(tno,out,'new',naxis,nsize)
 	call hisopen(tno,'append')
-	call hdin(lu,tno,version,.false.)
+	call histin(lu,tno,version)
 c
 c  Copy the image data itself.
 c
@@ -3019,7 +3021,8 @@ c------------------------------------------------------------------------
 	integer i,polcode,l,nx,ny
 	character num*2,ctype*32,bunit*32,types(5)*25,btype*32
 	character telescop*16,rdate*32,atemp*16,observer*16,cellscal*16
-	real bmaj,bmin,bpa,temp,epoch
+	character object*32,pbtype*16
+	real bmaj,bmin,bpa,epoch,equinox,rms,vobs,pbfwhm
 	double precision cdelt,crota,crval,crpix,scale
 	double precision restfreq,obsra,obsdec,dtemp
 c	real xshift,yshift
@@ -3046,9 +3049,11 @@ c
 	call fitrdhda(lu,'INSTRUME',atemp,' ')
 	call fitrdhda(lu,'TELESCOP',telescop,atemp)
 	if(telescop.ne.' ')call wrhda(tno,'telescop',telescop)
+	call fitrdhda(lu,'OBJECT',object,' ')
+	if(object.ne.' ')call wrhda(tno,'object',object)
 c
 	call fitrdhda(lu,'BUNIT',bunit,' ')
-	btype = ' '
+	call fitrdhda(lu,'BTYPE',btype,' ')
 	differ = .false.
 	ewdone = .false.
 	nx = 0
@@ -3139,38 +3144,42 @@ c
 	  endif
 	enddo
 c
+	call fitrdhdr(lu,'rms',rms,0.)
+	if(rms.gt.0)call wrhdr(tno,'rms',rms)
+	call fitrdhdr(lu,'pbfwhm',pbfwhm,0.)
+	atemp = telescop
+	if(pbfwhm.ne.0)call pbEncode(atemp,'gaus',PI/180/3600*pbfwhm)
+	call fitrdhda(lu,'pbtype',pbtype,atemp)
+	if(atemp.ne.telescop)call wrhda(tno,'pbtype',pbtype)
+c
 	if(differ.and.nx.gt.0.and.ny.gt.0)then
           call output('Phase and pointing centers differ ...'//
      *          ' saving pointing information')
           call mosInit(nx,ny)
-          call mosSet(1,obsra,obsdec,1.0,telescop)
+	  if(rms.le.0)rms = 1
+          call mosSet(1,obsra,obsdec,rms,pbtype)
           call mosSave(tno)
   	endif
 c
-	call fitrdhda(lu,'EPOCH',atemp,' ')
-	if(atemp(1:1).eq.'.'.or.atemp(1:1).eq.'1'.or.
-     *				atemp(1:1).eq.'2')then
-	  call fitrdhdr(lu,'EPOCH',temp,0.)
-	else
-	  temp = 0
-	endif
-        call fitrdhdr(lu,'EQUINOX',epoch,temp)
-        if(epoch.gt.1800)call wrhdr(tno,'epoch',epoch)
+	call geteqep(lu,'EPOCH',epoch)
+	call geteqep(lu,'EQUINOX',equinox)
+	if(epoch.lt.1800)epoch = equinox
+	if(equinox.lt.1800)equinox = epoch
+	if(equinox.gt.1800)call wrhdr(tno,'epoch',equinox)
 c
 	call fitrdhda(lu,'DATE-OBS',rdate,' ')
 	if(rdate.ne.' ')then
 	  call fdatejul(rdate,dtemp)
 	  call wrhdd(tno,'obstime',dtemp)
-	else
-	  call fitrdhdr(lu,'EQUINOX',temp,0.)
-	  call fitrdhdr(lu,'EPOCH',epoch,temp)
-	  if(epoch.gt.1800)then
-	    dtemp = Epo2Jul(dble(epoch),' ')
-	    call wrhdd(tno,'obstime',dtemp)
-	  endif
+	else if(epoch.gt.1800)then
+	  dtemp = Epo2Jul(dble(epoch),' ')
+	  call wrhdd(tno,'obstime',dtemp)
 	endif
+c
 	if(bunit.ne.' ')call wrhda(tno,'bunit',bunit)
 	if(btype.ne.' ')call wrbtype(tno,btype)
+	call fitrdhdr(lu,'VOBS',vobs,0.)
+	if(vobs.ne.0)call wrhdr(tno,'vobs',vobs)
 	call fitrdhdd(lu,'RESTFREQ',restfreq,-1.d0)
 	if(restfreq.gt.0) call wrhdd(tno,'restfreq',1.0d-9*restfreq)
 	call fitrdhda(lu,'CELLSCAL',cellscal,'CONSTANT')
@@ -3181,6 +3190,35 @@ c
 	if(bmin.ne.0) call wrhdr(tno,'bmin',(pi/180)*bmin)
 	call fitrdhdr(lu,'BPA',bpa,0.)
 	if(bmaj*bmin.ne.0)call wrhdr(tno,'bpa',bpa)
+c
+	end
+c************************************************************************
+	subroutine geteqep(lu,key,value)
+c
+	implicit none
+	integer lu
+	character key*(*)
+	real value
+c------------------------------------------------------------------------
+	character string*32
+	integer k1,k2
+	logical ok
+	double precision dtemp
+c
+	integer len1
+c
+	call fitrdhda(lu,key,string,' ')
+	call ucase(string)
+	k2 = len1(string)
+	k1 = 1
+	if(string(1:1).eq.'J'.or.string(1:1).eq.'B')k1 = 2
+	if(k1.le.k2)then
+	  call atodf(string(k1:k2),dtemp,ok)
+	  if(.not.ok)call bug('f','Error decoding EPOCH/EQUINOX')
+	  value = dtemp
+	else
+	  value = 0
+	endif
 c
 	end
 c************************************************************************
@@ -3568,64 +3606,62 @@ c
 	call hisclose(tIn)
 	end
 c************************************************************************
-	subroutine hdin(lu,tno,version,isuv)
+	subroutine histin(lu,tno,version)
 c
 	implicit none
 	integer lu,tno
 	character version*(*)
-	logical isuv
 c
-c  Convert the header of a FITS file into a MIRIAD data items and history
-c  files.
+c  Create the history file.
 c
 c  Input:
 c    lu		Handle of the input FITS file.
 c    tno	Handle of the output MIRIAD file.
-c    in         Input FITS file
-c    isuv	True if we are processing a UV file.
-c    out        Output MIRIAD file
-c    stokes     Stokes parameter used in conversion
+c    version   
 c
 c------------------------------------------------------------------------
-	integer nlong,nshort,nextra
-	parameter(nlong=36,nshort=9,nextra=3)
-	character card*80,key*8,type*8
-	logical more,discard,ok,found
-	integer i,k1,k2
-	double precision value
+	integer nlong,nshort
+	parameter(nlong=46,nshort=9)
+	character card*80
+	logical more,discard,found,unrec
+	integer i
 	logical history(nlong)
-	character long(nlong)*8,short(nshort)*5,uvextra(nextra)*8
+	character long(nlong)*8,short(nshort)*5
 c
 c  Externals.
 c
-	integer binsrcha,len1
+	integer binsrcha
 c
 c  A table of keywords (common to uv and xy) that are either history
 c  comments, or keywords to be discarded. Some of these are handled
 c  as special cases elsewhere. Short keywords have numbers attached.
 c
-	data (uvextra(i),i=1,nextra)/'OBJECT  ','OBSDEC  ','OBSRA   '/
 	data (long(i),history(i),i=1,nlong)/
      *	  '        ', .true.,  'ALTRPIX ', .false., 'ALTRVAL ', .false.,
      *    'BITPIX  ', .false., 'BLANK   ', .false., 'BLOCKED ', .false.,
      *	  'BMAJ    ', .false., 'BMIN    ', .false., 'BSCALE  ', .false.,
+     *	  'BTYPE   ', .false.,
      *	  'BUNIT   ', .false., 'BZERO   ', .false., 'CELLSCAL', .false.,
      *	  'COMMAND ', .true.,  'COMMENT ', .true.,
      *	  'DATE    ', .false., 'DATE-MAP', .false., 'DATE-OBS', .false.,
      *	  'END     ', .false., 'EPOCH   ', .false., 'EQUINOX ', .false.,
      *	  'EXTEND  ', .false., 'GCOUNT  ', .false., 'GROUPS  ', .false.,
-     *	  'HISTORY ', .true.,  'INSTRUME', .false.,
+     *	  'HISTORY ', .true.,  'INSTRUME', .false., 'LSTART  ', .false.,
+     *	  'LSTEP   ', .false., 'LTYPE   ', .false., 'LWISTH  ', .false.,
+     *	  'OBJECT  ', .false.,
      *	  'OBSDEC  ', .false., 'OBSERVER', .false., 'OBSRA   ', .false.,
-     *	  'ORIGIN  ', .false.,
-     *	  'PCOUNT  ', .false., 'RESTFREQ', .false., 'SIMPLE  ', .false.,
-     *	  'TELESCOP', .false.,
-     *	  'VELREF  ', .false., 'XSHIFT  ', .false., 'YSHIFT  ', .false./
+     *	  'ORIGIN  ', .false., 'PBFWHM  ', .false., 'PBTYPE  ', .false.,
+     *	  'PCOUNT  ', .false., 'RESTFREQ', .false., 'RMS     ', .false.,
+     *	  'SIMPLE  ', .false., 'TELESCOP', .false.,
+     *	  'VELREF  ', .false., 'VOBS    ', .false., 'XSHIFT  ', .false.,
+     *	  'YSHIFT  ', .false./
 	data short/'CDELT','CROTA','CRPIX','CRVAL','CTYPE','NAXIS',
      *	  'PSCAL','PTYPE','PZERO'/
 c
 c  Search for the 'SIMPLE' keyword, which effectively sets the pointer
 c  at the first card in the file.
 c
+	unrec = .false.
 	call fitsrch(lu,'SIMPLE',found)
 	if(.not.found)call bug('f','Weird bug')
 c
@@ -3644,50 +3680,13 @@ c
 	    if(history(i)) call hiscard(tno,card)
 	    more = card(1:8).ne.'END'
 	  else
-	    if(isuv) discard = binsrcha(card(1:8),uvextra,nextra).ne.0
-	    if(.not.discard) discard =
-     *		binsrcha(card(1:5),short,nshort).ne.0
+	    discard = binsrcha(card(1:5),short,nshort).ne.0
 	  endif
-c
-c  Process the card. First determine whether it represents an integer,
-c  real, logical, double precision or string. Then create the appropriate
-c  item.
-c
-	  if(.not.discard)then
-	    call GetValue(card,type,k1,k2)
-	    key = card(1:8)
-	    call lcase(key)
-	    if(type.eq.'ascii')then
-	      do i=k1,k2
-		if(card(i:i).lt.' ')card(i:i) = ' '
-	      enddo
-	      if(len1(card(k1:k2)).gt.0)then
-		call wrhda(tno,key,card(k1:k2))
-	      else
-		call bug('w','Zero length ascii keyword: '//key)
-		call hiswrite(tno,card)
-	      endif
-	    else if(type.eq.'unknown'.or.type.eq.'logical')then
-	      call bug('w','Discarding keyword '//key)
-	      call hiswrite(tno,card)
-c
-c  Handle a numeric keyword.
-c
-	    else
-	      call atodf(card(k1:k2),value,ok)
-	      if(.not.ok)then
-		call bug('w','Error decoding keyword '//key)
-		call hiswrite(tno,card)
-	      else if(type.eq.'integer')then
-		call wrhdi(tno,key,nint(value))
-	      else if(type.eq.'real')then
-		call wrhdr(tno,key,real(value))
-	      else if(type.eq.'double')then
-		call wrhdd(tno,key,value)
-	      endif
-	    endif
-	  endif
+	  unrec = unrec.or..not.discard
+	  if(.not.discard)call hiswrite(tno,card)
 	enddo
+	if(unrec)call bug('w',
+     *	  'Some unrecognised cards were written to the history file')
 c
 c  Add new history
 c
@@ -3714,6 +3713,7 @@ c    card	The card.
 c
 c------------------------------------------------------------------------
 	integer k1,k2
+	logical more
 c
 c  Externals.
 c
@@ -3725,6 +3725,11 @@ c
 	if(k2-k1.gt.len('HISTORY'))then
 	  if(card(k2-6:k2).eq.'HISTORY') k2 = len1(card(1:k2-7))
 	endif
+	more = .true.
+	dowhile(k1.le.k2.and.more)
+	  more = card(k1:k1).le.' '.or.card(k1:k1).eq.'='
+	  if(more) k1 = k1 + 1
+	enddo
 	if(k1.le.k2) call hiswrite(tno,card(k1:k2))
 	end
 c************************************************************************
