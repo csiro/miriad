@@ -136,6 +136,7 @@
 /*  rjs  22nov96 Minor correction (spheroid correction) to planet flux  */
 /*		 scaling.						*/
 /*  rjs  18mar97 Plug minor memory leak.				*/
+/*  rjs  15sep97 Fix error in pointing selection.			*/
 /*----------------------------------------------------------------------*/
 /*									*/
 /*		Handle UV files.					*/
@@ -3154,8 +3155,8 @@ UV *uv;
       nants = VARLEN(uv->axisrms)/2;
       if(i2 < 1 || i1 > nants){
 	BUG('f',"Bad antenna numbers when checking pointing, in UVREAD(select)"); }
-      pointerr = max( *(point+2*i1),*(point+2*i1-1));
-      pointerr = max( *(point+2*i2), pointerr);
+      pointerr = max( *(point+2*i1-2),*(point+2*i1-1));
+      pointerr = max( *(point+2*i2-2), pointerr);
       pointerr = max( *(point+2*i2-1), pointerr);
     
       while(n < sel->noper && op->type == SEL_POINT){
