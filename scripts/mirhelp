@@ -13,6 +13,9 @@
 #    -k    Get help about a specific task keyword.
 # 
 #--
+#  History:
+#    Dark-ages rjs  Original version
+#    22-feb-01 rjs  Added matching for possible tasks.
 
 set noglob
 
@@ -61,7 +64,22 @@ else
   set file = $MIRPDOC/$task.doc
   if ( -f $task.doc ) set file = $task.doc
   if ( ! -f $file ) then
-    echo "#### Fatal: Help not found on topic $task"
+    set matches = ()
+    unset noglob
+    set nonomatch
+    foreach f ($MIRPDOC/${task}*.doc)
+      set t = $f:t
+      set t = $t:r
+      set matches = ($matches $t)
+    end
+    set noglob
+    unset nonomatch
+    if("$matches" == "${task}*")then
+      echo "### Fatal: No task matching '$task' was found"
+    else
+      echo "### Warning: A task called '$task' was not found"
+      echo "### Warning: Possible matches are: $matches"
+    endif
   else
     if ( "$key" != "" ) set file = "$file -k $key"
     if ( ! $?PAGER ) set PAGER = "more"
