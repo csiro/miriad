@@ -40,6 +40,9 @@ c	  uvangle                  [uv pos'n angle clockwise from v axis]
 c	  hangle                   [hour angle in HH MM SS.S]
 c	  dhangle                  [hour angle in decimal hours]
 c	  parang                   [parallactic angle in degrees]
+c	NOTE: parang is the true parallactic angle of the source, which can
+c	be quite different from the angle between source and antenna feed
+c	(Miriad variable chi).
 c
 c	Defaults are axis=time,amp  (x and y axes).
 c@ xrange
@@ -297,7 +300,9 @@ c    nebk 22may96  Add options=mrms
 c    rjs  06jun96  Change frequency behaviour to default to all channels.
 c    rjs  30jul96  2pass tries to guess the number of points needed.
 c    rjs  14feb97  If the user sets nxy in options=nobase, then honour it.
-c    nebk 18/06/98 Document nofqav options better
+c    nebk 18jun98  Document nofqav options better
+c    rjs  19nov98  Minor correction to computation of LST, and recompute from
+c		   scratch the parallactic angle.
 c
 c To do:
 c
@@ -397,9 +402,9 @@ c
      +  plpts(maxbase,maxpol,maxfile), a1a2(maxbase,2)
 c
       double precision preamble(4), fday, dayav, baseday, day, 
-     +  ha, ra
+     +  ha, ra, dec, lst, lat
       real size(2), xmin, xmax, ymin, ymax, u, v, uvdist, uvpa, xvalr,
-     +  yvalr, parang, evec
+     +  yvalr, paran
       integer lin, ivis, nread, dayoff, j,  nx, ny, inc, hann, tunit,
      +  ofile, ifile, jfile, vupd, ip, nkeep, npnts
       character in*64, xaxis*10, yaxis*10, pdev*80, comment*80, 
@@ -522,9 +527,11 @@ c
           if (nkeep.eq.0) goto 950
 c
           call uvrdvrd (lin, 'obsra', ra, 0.0d0)
-          call uvrdvrr (lin, 'chi', parang, 0.0)
-          call uvrdvrr (lin, 'evector', evec, 0.0)
-          parang = (parang-evec) * 180.0 / dpi
+	  call uvrdvrd (lin, 'obsdec',dec,0.0d0)
+	  call uvrdvrd (lin, 'lst',   lst,0.0d0)
+	  call getlat  (lin, lat)
+	  call parang(ra,dec,lst,lat,paran)
+          paran = paran * 180.0 / dpi
 c
           ivis = ivis + 1
           day = preamble(3) + 0.5
@@ -585,9 +592,9 @@ c
 c Set x and y values
 c
               call setval (xaxis, ha, u, v, uvdist, uvpa, fday,
-     +                     parang, data(j), j, freq, xvalr, xgood)
+     +                     paran, data(j), j, freq, xvalr, xgood)
               call setval (yaxis, ha, u, v, uvdist, uvpa, fday, 
-     +                     parang, data(j), j, freq, yvalr, ygood)
+     +                     paran, data(j), j, freq, yvalr, ygood)
               if (xgood .and. ygood) then
                 if (doave) then
 c
@@ -1532,7 +1539,7 @@ c
         pl3dim = min(npols,maxpol)
       end if
 c
-c Work out file dimension of plot buffer. Can't have files in
+c Work out file dimension of plot buffer. Cannot have files in
 c different colours if plotting more than one polarization
 c as the different polarizations get the colours
 c
@@ -1834,12 +1841,16 @@ c-----------------------------------------------------------------------
 c
       character type*1, telescop*10
       integer length
-      logical ok
+      logical ok, printed
+      save printed
+      data printed/.false./
 c------------------------------------------------------------------------ 
       long = 0.0d0
       call uvprobvr (lin, 'longitu', type, length, ok)
       if (type(1:1).eq.' ') then
-         call bug ('w', 'No longitude variable; trying telescope')
+         if(.not.printed)call bug ('w', 
+     *		'No longitude variable; trying telescope')
+	 printed = .true.
          call uvprobvr (lin, 'telescop', type, length, ok)
          if (type(1:1).eq.' ') then
             call bug ('f', 
@@ -1852,6 +1863,47 @@ c------------------------------------------------------------------------
          end if
       else
          call uvrdvrd (lin, 'longitu', long, 0.0d0)
+      end if
+c
+      end
+c
+c
+      subroutine getlat (lin, lat)
+c-----------------------------------------------------------------------
+c     Get latitude from variable or obspar subroutine
+c
+c  Input:
+c    lin         Handle of file
+c  Output:
+c    lat        Latitude in radians
+c-----------------------------------------------------------------------
+      integer lin
+      double precision lat
+c
+      character type*1, telescop*10
+      integer length
+      logical ok, printed
+      save printed
+      data printed/.false./
+c------------------------------------------------------------------------ 
+      lat = 0.0d0
+      call uvprobvr (lin, 'latitud', type, length, ok)
+      if (type(1:1).eq.' ') then
+         if(.not.printed)call bug ('w', 
+     *		'No latitude variable; trying telescope')
+	 printed = .true.
+         call uvprobvr (lin, 'telescop', type, length, ok)
+         if (type(1:1).eq.' ') then
+            call bug ('f', 
+     +      'No telescope variable either, can''t work out latitude')
+         else
+            call uvrdvra (lin, 'telescop', telescop, ' ')
+            call obspar (telescop, 'latitude', lat, ok)
+            if (.not.ok) call bug('f', 
+     +          'No valid latitude found for '//telescop)
+         end if
+      else
+         call uvrdvrd (lin, 'latitud', lat, 0.0d0)
       end if
 c
       end
@@ -2204,6 +2256,8 @@ cc
       include 'mirconst.h'
       double precision lst, rtod, rtos, long
       parameter (rtod = 180.0d0/dpi, rtos = 12.0d0*3600.0d0/dpi)
+c
+      double precision eqeq
 c-----------------------------------------------------------------------
       u = preamble(1)
       v = preamble(2)
@@ -2237,6 +2291,7 @@ c
 c Get lst in radians and find HA, +/- pi
 c
         call jullst (preamble(3), long, lst)
+	lst = lst + eqeq(preamble(3))
         ha = (lst - ra) 
         if (ha.gt.dpi) then
           ha = ha - 2.0d0*dpi
