@@ -47,6 +47,9 @@ c	  compress Store the data in compressed uv format.
 c	  nochi    Assume that the parallactic angle of the telescope is
 c	           a constant 0 (or that the data are from circularly polarised
 c	           feeds and have already been corrected for parallactic angle).
+c	  lefty    Assume that the FITS antenna table uses a left-handed
+c	           coordinate system (rather than the more normal right-handed
+c	           system).
 c
 c	These options for op=uvout only.
 c	  nocal    Do not apply the gains table to the data.
@@ -283,13 +286,16 @@ c		     as history comments.
 c    rjs  25-aug-97  Fix up bug I created on Friday.
 c    rjs  20-sep-97  Replace julfdate and fdatejul with julday and dayjul.
 c    rjs  21-apr-98  Increase max number of antenna configs.
+c    rjs  19-aug-98  Added options=lefty and made the uv writer check obspar
+c		     for observatory latitude/longitude if it was missing
+c		     from the vis dataset.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 21-Apr-98')
+	parameter(version='Fits: version 1.1 18-Aug-98')
 	character in*128,out*128,op*8,uvdatop*12
 	integer velsys
 	real altrpix,altrval
-	logical altr,docal,dopol,dopass,dss,dochi,nod2,compress
+	logical altr,docal,dopol,dopass,dss,dochi,nod2,compress,lefty
 c
 c  Get the input parameters.
 c
@@ -305,7 +311,7 @@ c
 c
 c  Get options.
 c
-        call getopt(docal,dopol,dopass,dss,nod2,dochi,compress)
+        call getopt(docal,dopol,dopass,dss,nod2,dochi,compress,lefty)
         if(op.eq.'uvout') then
           uvdatop = 'sdlb3'
 	  if(docal)uvdatop(7:7) = 'c'
@@ -324,7 +330,7 @@ c  Handle the five cases.
 c
 	if(op.eq.'uvin')then
 	  call uvin(in,out,velsys,altr,altrpix,altrval,dochi,
-     *					compress,version)
+     *					compress,lefty,version)
 	else if(op.eq.'uvout')then
 	  call uvout(out,version)
 	else if(op.eq.'xyin')then
@@ -408,10 +414,11 @@ c
 	endif
 	end
 c************************************************************************
-      subroutine getopt(docal,dopol,dopass,dss,nod2,dochi,compress)
+      subroutine getopt(docal,dopol,dopass,dss,nod2,dochi,
+     *						compress,lefty)
 c
       implicit none
-      logical docal, dopol, dopass, dss, dochi, nod2, compress
+      logical docal,dopol,dopass,dss,dochi,nod2,compress,lefty
 c
 c     Get a couple of the users options from the command line
 c
@@ -423,14 +430,15 @@ c    dss     Handle DSS image.
 c    nod2    Handle NOD2 image.
 c    dochi   Attempt to calculate the parallactic angle.
 c    compress Store data in compressed format.
+c    lefty   Assume antenna table uses a left-handed system.
 c
 c------------------------------------------------------------------------
       integer nopt
-      parameter (nopt = 7)
+      parameter (nopt = 8)
       character opts(nopt)*8
       logical present(nopt)
       data opts /'nocal   ','nopol   ','nopass  ','dss     ',
-     *		 'nod2    ','nochi   ','compress'/
+     *		 'nod2    ','nochi   ','compress','lefty   '/
 c
       call options ('options', opts, present, nopt)
       docal    = .not.present(1)
@@ -440,6 +448,7 @@ c
       nod2     =      present(5)
       dochi    = .not.present(6)
       compress =      present(7)
+      lefty    =      present(8)
 c
       end
 c************************************************************************
@@ -477,12 +486,12 @@ c
 	end
 c************************************************************************
 	subroutine uvin(in,out,velsys,altr,altrpix,altrval,dochi,
-     *					compress,version)
+     *					compress,lefty,version)
 c
 	implicit none
 	character in*(*),out*(*)
 	integer velsys
-	logical altr,dochi,compress
+	logical altr,dochi,compress,lefty
 	real altrpix,altrval
 	character version*(*)
 c
@@ -500,6 +509,7 @@ c    altrpix	The user given value for altrpix.
 c    altrval	The user given value for altrval.
 c    dochi	Attempt to calculate the parallactic angle.
 c    compress   Store the data in compressed format.
+c    lefty      Assume the antenna table uses a left-handed system.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer PolXX,PolYY,PolXY,PolYX
@@ -555,7 +565,7 @@ c
 c  Load antenna, source and frequency information. Set frequency information.
 c
 	call TabLoad(lu,uvSrcId.ne.0,uvFreqId.ne.0,
-     *				telescop,anfound,Pol0,PolInc,dochi)
+     *			telescop,anfound,Pol0,PolInc,dochi,lefty)
 	call TabVeloc(velsys,altr,altrval,altrpix)
 c
 c  Load any FG tables.
@@ -1137,11 +1147,12 @@ c
 	end
 c************************************************************************
 c************************************************************************
-	subroutine TabLoad(lu,dosu,dofq,tel,anfound,Pol0,PolInc,dochi)
+	subroutine TabLoad(lu,dosu,dofq,tel,anfound,Pol0,PolInc,
+     *	  dochi,lefty)
 c
 	implicit none
 	integer lu,Pol0,PolInc
-	logical dosu,dofq,anfound,dochi
+	logical dosu,dofq,anfound,dochi,lefty
 	character tel*(*)
 c
 c  Determine some relevant parameters about the FITS file. Attempt to
@@ -1158,6 +1169,7 @@ c  Input:
 c    lu		Handle of the input FITS file.
 c    dosu,dofq	Expect a multisource/multi-freq file.
 c    dochi	Attempt to compute the parallactic angle.
+c    lefty	Assume the antenna table uses a left-handed system.
 c  Output:
 c    tel	Telescope name.
 c    anfound	True if antenna tables were found.
@@ -1359,6 +1371,16 @@ c
 	    enddo
 	  endif
 c
+c  If the antenna table uses a left-handed system, convert it to a 
+c  right-handed system.
+c
+	  if(lefty)then
+	    long(nconfig) = -long(nconfig)
+	    do i=1,n
+	      antpos(i+n,nconfig) = -antpos(i+n,nconfig)
+	    enddo
+	  endif
+c
 c  Get the next AN table.
 c
 	  call ftabNxt(lu,'AIPS AN',found)
@@ -1366,9 +1388,8 @@ c
 c
 c  Summarise info about the antenna characteristics.
 c
-	if(nconfig.eq.0)then
-	  call bug('w','No antenna table was found')
-	endif
+	if(nconfig.eq.0)call bug('w',
+     *	    'No antenna table was found')
 	if(.not.llok)call bug('w',
      *	    'Telescope latitude/longitude could not be determined')
 c
@@ -2332,10 +2353,7 @@ c
 	if(nants.gt.MAXANT)nants = 0
 	if(nants.gt.0)then
 	  call uvgetvrd(tIn,'antpos',xyz,3*nants)
-	  call uvrdvri(tIn,'mount',mount,1)
-	  call uvrdvrd(tIn,'latitud',lat,0.d0)
-	  call uvrdvrd(tIn,'longitu',long,0.d0)
-	  call uvrdvrd(tIn,'height',height,0.d0)
+	  call getarr(tIn,mount,lat,long,height)
 	endif
 c
 c  Read the data. Check that we are dealing with a single pointing.
@@ -2489,6 +2507,78 @@ c
 	call uvdatcls
 	call scrclose(tScr)
 	call fuvclose(tOut)
+c
+	end
+c************************************************************************
+	subroutine getarr(tIn,mount,lat,long,height)
+c
+	implicit none
+	integer tIn,mount
+	double precision lat,long,height
+c------------------------------------------------------------------------
+	character telescop*32,type*1
+	double precision dval
+	integer n
+	logical updated,ok
+c
+c  Determine the telescope.
+c
+	call uvrdvra(tin,'telescop',telescop,' ')
+c
+c  Determine the mount.
+c
+	call uvprobvr(tIn,'mount',type,n,updated)
+	ok = n.eq.1
+	if(ok)then
+	  call uvrdvri(tIn,'mount',mount,0)
+	else if(telescop.ne.' ')then
+	  call obspar(telescop,'mount',dval,ok)
+	  if(ok)mount = nint(dval)
+	endif
+	if(.not.ok)then
+	  call bug('w',
+     *	    'Antenna mount could not be determined -- assuming alt/az')
+	  mount = 0
+	endif
+c
+c  Determine the latitude.
+c
+	call uvprobvr(tIn,'latitud',type,n,updated)
+	ok = n.eq.1
+	if(ok)then
+	  call uvrdvrd(tIn,'latitud',lat,0.d0)
+	else if(telescop.ne.' ')then
+	  call obspar(telescop,'latitude',lat,ok)
+	endif
+	if(.not.ok)then
+	  lat = 0.d0
+	  call bug('w','Telescope latitude could not be determined')
+	endif
+c
+c  Determine the longitude.
+c
+	call uvprobvr(tIn,'longitu',type,n,updated)
+	ok = n.eq.1
+	if(ok)then
+	  call uvrdvrd(tIn,'longitu',long,0.d0)
+	else if(telescop.ne.' ')then
+	  call obspar(telescop,'longitude',long,ok)
+	endif
+	if(.not.ok)then
+	  call bug('w','Telescope longitude could not be determined')
+	  long = 0.d0
+	endif
+c
+c  Determine the height.
+c
+	call uvprobvr(tIn,'height',type,n,updated)
+	ok = n.eq.1
+	if(ok)then
+	  call uvrdvrd(tIn,'height',height,0.d0)
+	else if(telescop.ne.' ')then
+	  call obspar(telescop,'height',height,ok)
+	endif
+	if(.not.ok)height = 0.d0
 c
 	end
 c************************************************************************
