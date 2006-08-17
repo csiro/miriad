@@ -336,9 +336,11 @@ c    dpr  26-jun-01  Relax antenna table format restrictions
 c    dpr  02-jul-01  Relax AN restrictions properly (I hope!!)
 c    rjs  04-oct-01  Get GLS history comment right.
 c    nebk 08-jan-02  In AntWrite, set POLAA and POLAB to 45/135 for ATCA
+c    rjs  29-dec-03  Be more robust to poorly formed CTYPE labels in 
+c		     inputs.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 04-Oct-01')
+	parameter(version='Fits: version 1.1 29-Dec-03')
 	integer maxboxes
 	parameter(maxboxes=2048)
 	character in*128,out*128,op*8,uvdatop*12
@@ -3564,10 +3566,11 @@ c  Load in FITS coordinate system and fiddle it into a Miriad coordinate
 c  system.
 c------------------------------------------------------------------------
 	include 'mirconst.h'
-	integer i,j,l
+	integer i,j,l,l1,l2
 	double precision dtemp
+	logical more
 	character num*2
-	character templat*8
+	character templat*8,ctemp*12
 c
 c  Externals.
 c
@@ -3581,7 +3584,24 @@ c
 c
 	do i=1,naxis
 	  num = itoaf(i)
-	  call fitrdhda(lu,'CTYPE'//num,ctype(i),' ')
+	  call fitrdhda(lu,'CTYPE'//num,ctemp,' ')
+	  if(ctemp.eq.' '.and.i.eq.1)ctemp = 'RA---SIN'
+	  if(ctemp.eq.' '.and.i.eq.2)ctemp = 'DEC--SIN'
+	  l1 = index(ctemp,'-') - 1
+	  l2 = len1(ctemp)
+	  call ucase(ctemp)
+	  if(l1.le.0)then
+	    ctype(i) = ctemp
+	  else
+	    ctype(i) = ctemp(1:l1)//'------'
+	    l1 = l2
+	    more = .true.
+	    dowhile(l1.gt.1.and.more)
+	      more = ctemp(l1-1:l1-1).ne.'-'
+	      if(more)l1 = l1 - 1
+	    enddo
+	    ctype(i)(6:8) = ctemp(l1:l2)
+	  endif
 	  call fitrdhdd(lu,'CRPIX'//num,crpix(i),1.0d0)
 	  call fitrdhdd(lu,'CRVAL'//num,crval(i),0.0d0)
 c
@@ -3589,8 +3609,6 @@ c
 	  call fitrdhdd(lu,cd2(i,i),dtemp,cdelt(i))
 	  call fitrdhdd(lu,'CDELT'//num,cdelt(i),dtemp)
 c
-	  if(ctype(i).eq.' '.and.i.eq.1)ctype(i) = 'RA---SIN'
-	  if(ctype(i).eq.' '.and.i.eq.2)ctype(i) = 'DEC--SIN'
 c
 	  if(ctype(i).eq.'RA'  .or.ctype(i)(1:5).eq.'RA---'.or.
      *	     ctype(i).eq.'GLON'.or.ctype(i)(1:5).eq.'GLON-'.or.
