@@ -152,6 +152,13 @@
 /*               fashion to deal with many antennas.                    */
 /*  rjs  16aug04 Add selection based on LST, elevation and HA - but	*/
 /*		 only when the relevant uv variables are in the dataset.*/
+/*  rjs  16jan01 introduced large antennae numbers                      */
+/*  pjt  11mar01 documented the 16jan01 changes for large ant numbers   */
+/*  dpr  17apr01 Increase MAXVHANDS                                     */
+/*  pjt  20jun02 MIR4 prototypes                                        */
+/*  pjt  14jan03 fix another forgotten int -> int8                      */
+/*  pjt  13may03 MAXIANT usage to limit MAXANT                          */
+/*  rjs  02jan05 Partial merge of BIMA and ATNF versions.		*/
 /*----------------------------------------------------------------------*/
 /*									*/
 /*		Handle UV files.					*/
@@ -241,7 +248,7 @@
 /*		list to be formed for hashing.				*/
 /*									*/
 /*----------------------------------------------------------------------*/
-#define VERSION_ID "16-Aug-04 rjs"
+#define VERSION_ID "02-Jan-05 rjs"
 
 #define private static
 
@@ -252,7 +259,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include "miriad.h"
 #include "io.h"
+#include "maxdimc.h"
 
 #define UVF_COPY	0x01	/* Set if this variable is to be copied by
 				   the uvcopy routine. */
@@ -297,11 +306,6 @@
 /*	A few definitions to coax lint to like my code.			*/
 /*									*/
 /*----------------------------------------------------------------------*/
-
-char *mkopen_c();
-void mkclose_c(),mkflush_c(),mkread_c(),mkwrite_c();
-void bug_c(),bugno_c(),rdhdi_c(),rdhda_c(),rdhdr_c(),rdhdd_c();
-void wrhda_c(),wrhdi_c(),hdprobe_c();
 
 #define Sscanf (void)sscanf
 #define Sprintf (void)sprintf
@@ -382,7 +386,6 @@ typedef struct varhand{
 #define LINE_VELOCITY	3
 #define LINE_FELOCITY	4
 
-#include "maxdimc.h"
 #define SEL_VIS   1
 #define SEL_TIME  2
 #define SEL_UVN   3
@@ -446,12 +449,14 @@ typedef struct {
 
 typedef struct {
 	char *handle;
-	int offset,nflags,*flags,exists,init;
+	int nflags,*flags,exists,init;
+        off_t offset;
 		} FLAGS;
 
 typedef struct {
 	int item;
-	int nvar,offset,max_offset,saved_nvar,tno,flags,callno,maxvis,mark;
+	int nvar,saved_nvar,tno,flags,callno,maxvis,mark;
+	off_t offset, max_offset;
 	int presize,gflag;
 	FLAGS corr_flags,wcorr_flags;
 	VARIABLE *coord,*corr,*time,*bl,*tscale,*nschan,*axisrms;
@@ -484,7 +489,6 @@ static WINDOW truewin;
 static AMP noamp;
 static int first=TRUE;
 
-void uvputvr_c();
 private void uvinfo_chan(),uvinfo_variance(),uvbasant_c();
 private void uv_init(),uv_freeuv(),uv_free_select();
 private void uvread_defline(),uvread_init(),uvread_velocity(),uvread_flags();
@@ -529,7 +533,6 @@ char *av[];
 {
     int tno;
     char *fn;
-    void uvopen_c(), uvclose_c();
 
     printf("%s Version %s\n",av[0],VERSION_ID);
     if (ac!=2) {
@@ -556,7 +559,8 @@ char *fname;
     double *dp;
     float *fp;
     short *sp;
-    int offset, iostat, intsize, extsize, i, *ip, eor_count=0;
+    int iostat, intsize, extsize, i, *ip, eor_count=0;
+    off_t offset;
     VARIABLE *v;
     UV *uv;
     char s[UV_HDR_SIZE], *b, buffer[128];
@@ -662,9 +666,7 @@ char *fname;
 }
 #endif
 /************************************************************************/
-void uvopen_c(tno,name,status)
-int *tno;
-char *name,*status;
+void uvopen_c(int *tno,Const char *name,Const char *status)
 /**UvOpen -- Open a uv data file.					*/
 /*&rjs                                                                  */
 /*:uv-i/o								*/
@@ -689,6 +691,7 @@ char *name,*status;
   UV *uv;
   int iostat;
   char line[MAXLINE];
+  int8 ltemp;
 
   if(first)uv_init();
 
@@ -704,7 +707,8 @@ char *name,*status;
     uv = uv_getuv(*tno);
     haccess_c(*tno,&uv->item,"visdata","read",&iostat);
     CHECK(iostat,(message,"Error accessing visdata for %s, in UVOPEN(old)",name));
-    rdhdi_c(*tno,"vislen",&(uv->max_offset),hsize_c(uv->item));
+    rdhdl_c(*tno,"vislen",&ltemp,(int8)hsize_c(uv->item));
+    uv->max_offset = ltemp;
     uv_vartable_in(uv);
     uv_override(uv);
 
@@ -735,7 +739,8 @@ char *name,*status;
     haccess_c(*tno,&uv->item,"visdata","append",&iostat);
     CHECK(iostat,(message,"Error accessing visdata for %s, in UVOPEN(append)",name));
     uv->flags = UVF_APPEND;
-    rdhdi_c(*tno,"vislen",&(uv->offset),hsize_c(uv->item));
+    rdhdl_c(*tno,"vislen",&ltemp,(int8)hsize_c(uv->item));
+    uv->offset = ltemp;
     uv->offset = mroundup(uv->offset,UV_ALIGN);
     uv_vartable_in(uv);
 
@@ -744,8 +749,10 @@ char *name,*status;
     rdhda_c(*tno,"obstype",line,"",MAXLINE);
     if(!strcmp(line,"autocorrelation"))		uv->flags |= UVF_AUTO;
     else if(!strcmp(line,"crosscorrelation"))	uv->flags |= UVF_CROSS;
-    rdhdi_c(*tno,"ncorr",&(uv->corr_flags.offset),-1);
-    rdhdi_c(*tno,"nwcorr",&(uv->wcorr_flags.offset),-1);
+    rdhdl_c(*tno,"ncorr",&ltemp,(int8)(-1));
+    uv->corr_flags.offset = ltemp;
+    rdhdl_c(*tno,"nwcorr",&ltemp,(int8)(-1));
+    uv->wcorr_flags.offset = ltemp;
     if(uv->corr_flags.offset < 0 || uv->wcorr_flags.offset < 0)
       BUG('f',"Cannot append to uv file without 'ncorr' and/or 'nwcorr' items");
 
@@ -775,8 +782,6 @@ int tno;
 {
   UV *uv;
   int iostat;
-
-  void uvflush_c();
 
   uv = uvs[tno];
 
@@ -845,9 +850,9 @@ int tno;
 
 /* Write out things to help recover the EOF. */
 
-  wrhdi_c(tno,"nwcorr",uv->wcorr_flags.offset);
-  wrhdi_c(tno,"ncorr",uv->corr_flags.offset);
-  wrhdi_c(tno,"vislen",uv->offset);
+  wrhdl_c(tno,"nwcorr",uv->wcorr_flags.offset);
+  wrhdl_c(tno,"ncorr",uv->corr_flags.offset);
+  wrhdl_c(tno,"vislen",uv->offset);
 
 /* Finally flush out everything to disk. */
 
@@ -1363,9 +1368,7 @@ int tno,*vhan;
   *vhan = i+1;
 }
 /************************************************************************/
-void uvvarset_c(vhan,var)
-int vhan;
-char *var;
+void uvvarset_c(int vhan,Const char *var)
 {
   VARHAND *vh;
   VARIABLE *v;
@@ -1419,9 +1422,7 @@ int vhan;
   return(FORT_FALSE);
 }
 /************************************************************************/
-void uvrdvr_c(tno,type,var,data,def,n)
-int tno,type,n;
-char *var,*data,*def;
+void uvrdvr_c(int tno,int type,Const char *var,char *data,char *def,int n)
 /**uvrdvr -- Return the value of a UV variable.				*/
 /*&rjs                                                                  */
 /*:uv-i/o								*/
@@ -1513,10 +1514,7 @@ char *var,*data,*def;
   if( type == H_BYTE ) *(data + n) = 0;
 }
 /************************************************************************/
-void uvgetvr_c(tno,type,var,data,n)
-int tno,type,n;
-char *var;
-char *data;
+void uvgetvr_c(int tno,int type,Const char *var,char *data,int n)
 /**uvgetvr -- Get the values of a uv variable.				*/
 /*&rjs                                                                  */
 /*:uv-i/o								*/
@@ -1574,10 +1572,7 @@ char *data;
   if( type == H_BYTE ) *(data + v->length) = 0;
 }
 /************************************************************************/
-void uvprobvr_c(tno,var,type,length,updated)
-int tno;
-char *var,*type;
-int *length,*updated;
+void uvprobvr_c(int tno,Const char *var,char *type,int *length,int *updated)
 /**uvprobvr -- Return information about a variable.			*/
 /*&rjs                                                                  */
 /*:uv-i/o								*/
@@ -1623,10 +1618,7 @@ int *length,*updated;
   }
 }
 /************************************************************************/
-void uvputvr_c(tno,type,var,data,n)
-int tno,type,n;
-char *var;
-char *data;
+void uvputvr_c(int tno,int type,Const char *var,Const char *data,int n)
 /**uvputvr -- Write the value of a uv variable.				*/
 /*&rjs                                                                  */
 /*:uv-i/o								*/
@@ -1692,7 +1684,7 @@ char *data;
   if( !changed ) {
     length = internal_size[type] * n;
     in1 = v->buf;
-    in2 = data;
+    in2 = (char *)data;
     for( i = 0; i < length; i++ ) {
       if(*in1++ != *in2++){
 	changed = TRUE;
@@ -1722,9 +1714,7 @@ char *data;
   }
 }
 /************************************************************************/
-void uvtrack_c(tno,name,switches)
-int tno;
-char *name,*switches;
+void uvtrack_c(int tno,Const char *name,Const char *switches)
 /**uvtrack -- Set flags and switches associated with a uv variable.	*/
 /*&rjs                                                                  */
 /*:uv-i/o								*/
@@ -1771,9 +1761,7 @@ char *name,*switches;
   }
 }
 /************************************************************************/
-int uvscan_c(tno,var)
-int tno;
-char *var;
+int uvscan_c(int tno,Const char *var)
 /**uvscan -- Scan a uv file until a variable changes.			*/
 /*&rjs                                                                  */
 /*:uv-i/o								*/
@@ -1822,7 +1810,8 @@ VARIABLE *vt;
     vt		Structure describing variable to terminate scan when found.
 ------------------------------------------------------------------------*/
 {
-  int offset,iostat,intsize,extsize,terminate,found,changed,i;
+  int iostat,intsize,extsize,terminate,found,changed,i;
+  off_t offset;
   VARIABLE *v;
   char s[UV_HDR_SIZE],*b;
 
@@ -1904,10 +1893,7 @@ VARIABLE *vt;
   return(0);
 }
 /************************************************************************/
-void uvwrite_c(tno,preamble,data,flags,n)
-int tno,n,*flags;
-double *preamble;
-float *data;
+void uvwrite_c(int tno,Const double *preamble,Const float *data,Const int *flags,int n)
 /**uvwrite -- Write correlation data to a uv file.			*/
 /*&rjs                                                                  */
 /*:uv-i/o								*/
@@ -1955,7 +1941,7 @@ float *data;
       uv->corr->flags |= UVF_NOCHECK;
       if(uv->corr_flags.handle == NULL){
         status = (uv->corr_flags.offset == 0 ? "new" : "old");
-	uv->corr_flags.handle = mkopen_c(uv->tno,"flags",status);
+	uv->corr_flags.handle = (char *)mkopen_c(uv->tno,"flags",status);
       }
       if( uv->corr_flags.handle == NULL)
 	BUG('f',"Failed to open the corr flags, in UVWRITE");
@@ -1965,7 +1951,7 @@ float *data;
       uv->wcorr->flags |= UVF_NOCHECK;
       if( uv->wcorr_flags.handle == NULL){
         status = (uv->wcorr_flags.offset == 0 ? "new" : "old");
-	uv->wcorr_flags.handle = mkopen_c(uv->tno,"wflags",status);
+	uv->wcorr_flags.handle = (char *)mkopen_c(uv->tno,"wflags",status);
       }
       if( uv->wcorr_flags.handle == NULL)
 	BUG('f',"Failed to open the  wcorr flags, in UVWRITE");
@@ -2038,7 +2024,7 @@ float *data;
     if(v->length != 2*n*H_INT2_SIZE)
       v->buf = Realloc(v->buf,2*n*sizeof(int));
     maxval = 0;
-    p = data;
+    p = (float *)data;
     for(i=0; i < 2*n; i++){
       temp = *p++;
       if(temp < 0)temp = -temp;
@@ -2048,7 +2034,7 @@ float *data;
     scale = maxval / 32767;
     uvputvrr_c(tno,"tscale",&scale,1);
     scale = 32767 / maxval;
-    p = data;
+    p = (float *)data;
     q = (int *)v->buf;
     for(i=0; i < 2*n; i++) *q++ = scale * *p++;
     q = (int *)v->buf;
@@ -2088,10 +2074,7 @@ float *data;
   uvnext_c(tno);
 }
 /************************************************************************/
-void uvwwrite_c(tno,data,flags,n)
-int tno;
-float *data;
-int *flags,n;
+void uvwwrite_c(int tno,Const float *data,Const int *flags,int n)
 /**uvwwrite -- Write wide-band correlation data to a uv file.		*/
 /*&rjs                                                                  */
 /*:uv-i/o								*/
@@ -2128,7 +2111,7 @@ int *flags,n;
   }
   if( uv->wcorr_flags.handle == NULL) {
     status = (uv->wcorr_flags.offset == 0 ? "new" : "old" );
-    uv->wcorr_flags.handle = mkopen_c(uv->tno,"wflags",status);
+    uv->wcorr_flags.handle = (char *)mkopen_c(uv->tno,"wflags",status);
     if(uv->wcorr_flags.handle == NULL)
       BUG('f',"Failed to open the wcorr flags, in UVWWRITE");
   }
@@ -2154,10 +2137,7 @@ int *flags,n;
   uvputvrc_c(tno,v->name,data,n);
 }
 /************************************************************************/
-void uvsela_c(tno,object,string,datasel)
-int tno;
-char *object,*string;
-int datasel;
+void uvsela_c(int tno,Const char *object,Const char *string,int datasel)
 /** uvsela -- Select or reject uv data, based on a character string	*/
 /*&rjs									*/
 /*:uv-i/o								*/
@@ -2216,11 +2196,7 @@ int datasel;
   }
 }
 /************************************************************************/
-void uvselect_c(tno,object,p1,p2,datasel)
-int tno;
-char *object;
-int datasel;
-double p1,p2;
+void uvselect_c(int tno,Const char *object,double p1,double p2,int datasel)
 /**uvselect -- Select or reject uv data.				*/
 /*&rjs                                                                  */
 /*:uv-i/o								*/
@@ -2517,10 +2493,7 @@ char *ps;
   }
 }
 /************************************************************************/
-void uvset_c(tno,object,type,n,p1,p2,p3)
-int tno,n;
-double p1,p2,p3;
-char *object,*type;
+void uvset_c(int tno,Const char *object,Const char *type,int n,double p1,double p2,double p3)
 /**uvset -- Set up the uv linetype, and other massaging steps.		*/
 /*&rjs                                                                  */
 /*:uv-i/o								*/
@@ -2933,7 +2906,7 @@ float *data;
     }
   }
   if(uv->wcorr_flags.handle == NULL && uv->wcorr_flags.exists){
-    uv->wcorr_flags.handle = mkopen_c(uv->tno,"wflags","old");
+    uv->wcorr_flags.handle = (char *)mkopen_c(uv->tno,"wflags","old");
     uv->wcorr_flags.exists =  uv->wcorr_flags.handle != NULL;
     if(!uv->wcorr_flags.exists)
       BUG('w',"No flags found for wcorr -- assuming data are good");
@@ -3642,7 +3615,7 @@ int tno;
      uv->ref_line.linetype  == LINE_VELOCITY ||
      uv->ref_line.linetype  == LINE_FELOCITY ){
     if(uv->corr_flags.handle == NULL && uv->corr_flags.exists){
-      uv->corr_flags.handle = mkopen_c(uv->tno,"flags","old");
+      uv->corr_flags.handle = (char *)mkopen_c(uv->tno,"flags","old");
       uv->corr_flags.exists = uv->corr_flags.handle != NULL;
       if(!uv->corr_flags.exists)
         BUG('w',"No flags found for corr -- assuming data are good");
@@ -3651,7 +3624,7 @@ int tno;
   if(uv->data_line.linetype == LINE_WIDE ||
      uv->ref_line.linetype  == LINE_WIDE ){
     if(uv->wcorr_flags.handle == NULL && uv->wcorr_flags.exists){
-      uv->wcorr_flags.handle = mkopen_c(uv->tno,"wflags","old");
+      uv->wcorr_flags.handle = (char *)mkopen_c(uv->tno,"wflags","old");
       uv->wcorr_flags.exists =  uv->wcorr_flags.handle != NULL;
       if(!uv->wcorr_flags.exists)
         BUG('w',"No flags found for wcorr -- assuming data are good");
@@ -4329,8 +4302,7 @@ int nchan;
   }
 }
 /************************************************************************/
-void uvflgwr_c(tno,flags)
-int tno,*flags;
+void uvflgwr_c(int tno,Const int *flags)
 /**uvflgwr -- Write uv flags after a read.				*/
 /*&rjs                                                                  */
 /*:uv-i/o								*/
@@ -4353,10 +4325,11 @@ int tno,*flags;
 /*--									*/
 /*----------------------------------------------------------------------*/
 {
-  int nchan,width,step,offset,n,i;
+  int nchan,width,step,n,i;
   UV *uv;
   VARIABLE *v;
   FLAGS *flags_info;
+  off_t offset;
 
   uv = uvs[tno];
 
@@ -4388,8 +4361,7 @@ int tno,*flags;
   }
 }
 /************************************************************************/
-void uvwflgwr_c(tno,flags)
-int tno,*flags;
+void uvwflgwr_c(int tno,Const int *flags)
 /**uvwflgwr -- Write uv flags after a read.				*/
 /*&rjs                                                                  */
 /*:uv-i/o								*/
@@ -4410,7 +4382,8 @@ int tno,*flags;
 /*--									*/
 /*----------------------------------------------------------------------*/
 {
-  int nchan,offset;
+  int nchan;
+  off_t offset;
   UV *uv;
   VARIABLE *v;
   FLAGS *flags_info;
@@ -4429,10 +4402,7 @@ int tno,*flags;
   mkwrite_c(flags_info->handle,MK_FLAGS,flags,offset,nchan,nchan);
 }
 /************************************************************************/
-void uvinfo_c(tno,object,data)
-int tno;
-char *object;
-double *data;
+void uvinfo_c(int tno,Const char *object,double *data)
 /**uvinfo -- Get information about the last data read with uvread.	*/
 /*&rjs                                                                  */
 /*:uv-i/o								*/
@@ -4829,4 +4799,3 @@ int *i1,*i2;
     *i1= *i2 / mant;
     *i2 %= mant;
 }
-
