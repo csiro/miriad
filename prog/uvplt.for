@@ -94,7 +94,9 @@ c
 c	 nofqav  By default, uvplt averages together all channels from
 c	         a visibility record before plotting. The nofqav option
 c	         disables this, and causes individual channels to be
-c	         plotted.
+c	         plotted.  Note that this option is not active when
+c		 time averaging is invoked (frequency averaging is always
+c 		 done then).
 c
 c	 nobase  Plot all baselines on the same plot, otherwise
 c	         each baseline is plotted on a separate sub-plot.
@@ -295,6 +297,7 @@ c    nebk 22may96  Add options=mrms
 c    rjs  06jun96  Change frequency behaviour to default to all channels.
 c    rjs  30jul96  2pass tries to guess the number of points needed.
 c    rjs  14feb97  If the user sets nxy in options=nobase, then honour it.
+c    nebk 18/06/98 Document nofqav options better
 c
 c To do:
 c
