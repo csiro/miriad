@@ -286,6 +286,7 @@ c    nebk 11mar95  No yellow for hardcopy devices
 c    nebk 22spe95  Add axis=parang
 c    nebk 03oct95  Fix calculation of hour angle.
 c    rjs  01dec95  Improve an error message.
+c    nebk 06dec95  Push MAXBASE2 upto 36 for Hat Creek.  Does not affect ATCA
 c
 c To do:
 c
@@ -347,7 +348,7 @@ c
       include 'mirconst.h'
 c
       integer maxbase2, maxco, maxpol, maxfile
-      parameter (maxbase2 = 15, maxco = 7, maxpol = 4, maxfile = 30)
+      parameter (maxbase2 = 36, maxco = 7, maxpol = 4, maxfile = 30)
 c
       complex data(maxchan)
       double precision freq(maxchan)
@@ -416,8 +417,7 @@ c
       data npts, plpts, basmsk /ifac1*0, ifac1*0, ifac2*0/
       data polmsk /13*0/
 c-----------------------------------------------------------------------
-      call output ('UvPlt: version 03-Oct-95')
-      call output ('New axis=parang available')
+      call output ('UvPlt: version 06-Dec-95')
 c
 c  Get the parameters given by the user and check them for blunders
 c
@@ -3552,6 +3552,7 @@ c
           call logwrite (aline(1:len1(aline)), more)
         end if
       end if
+      call output (' ')
 c
       if (pl4dim.gt.1) then
         if (nunloc) call logwrite
