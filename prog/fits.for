@@ -334,9 +334,10 @@ c    dpr  10-may-01  Change dss to rawdss
 c    dpr  11-may-01  Check history exists before copying it
 c    dpr  26-jun-01  Relax antenna table format restrictions
 c    dpr  02-jul-01  Relax AN restrictions properly (I hope!!)
+c    rjs  04-oct-0   Get GLS history comment right.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 26-jun-01')
+	parameter(version='Fits: version 1.1 04-Oct-01')
 	integer maxboxes
 	parameter(maxboxes=2048)
 	character in*128,out*128,op*8,uvdatop*12
@@ -4054,7 +4055,7 @@ c
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	integer i,npnt
-	character num*2,ctype*32,date*32
+	character num*2,ctype*32,date*32,card*80
 	real bmaj,bmin,rms
 	double precision restfreq,crval,cdelt,crota,crpix
 	double precision obstime,obsra,obsdec,scale,lat
@@ -4114,10 +4115,10 @@ c
 	    else if(ctype(5:8).eq.'-GLS'.and.givegls)then
 	      call bug('w',
      *		'The output uses the old convention for GLS projection')
-	      call fitcdio(lu,
-     *	        'HISTORY This FITS file uses the old GLS convention')
-	      call fitcdio(lu,
-     *		'HISTORY See AIPS Memo 46 for details')
+	      card='HISTORY This FITS file uses the old GLS convention'
+	      call fitcdio(lu,card)
+	      card='HISTORY See AIPS Memo 46 for details'
+	      call fitcdio(lu,card)
 	      givegls = .false.
 	    endif
 	    if(crota.ne.0 .and. i.eq.2)
