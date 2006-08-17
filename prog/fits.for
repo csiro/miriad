@@ -41,6 +41,9 @@ c	These options for op=uvout only.
 c	  nocal   Do not apply the gains table to the data.
 c	  nopol   Do not apply the polarization leakage table to the data
 c	  nopass  Do not apply the bandpass table correctsions to the data
+c	This option applies for op=xyin only.
+c	  dss     Expect an image produced by the Digital Sky Survey,
+c	          and convert (partially!) its header.
 c@ velocity
 c	Velocity information. This is only used for op=uvin,
 c	and is only relevant for line observations. The default is
@@ -246,13 +249,14 @@ c    rjs  29-aug-94  Handle w axis in uvin.
 c    rjs  13-sep-94  Recognise 'VELOCITY' and 'FELOCITY' axes.
 c    rjs  23-sep-94  Handle w axis in uvout.
 c    rjs  26-sep-95  Somewhat better handling of odd input axes.
+c    rjs   7-nov-95  options=dss.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 26-Sep-95')
+	parameter(version='Fits: version 1.1 7-Nov-95')
 	character in*64,out*64,op*8,uvdatop*12
 	integer velsys
 	real altrpix,altrval
-	logical altr,docal,dopol,dopass
+	logical altr,docal,dopol,dopass,dss
 c
 c  Get the input parameters.
 c
@@ -266,10 +270,10 @@ c
 c
         if(op.eq.'uvin')call GetVel(velsys,altr,altrval,altrpix)
 c
-c Set UVDAT flags
+c  Get options.
 c
+        call getopt(docal,dopol,dopass,dss)
         if(op.eq.'uvout') then
-          call getopt (docal, dopol, dopass)
           uvdatop = 'sdlb3'
 	  if(docal)uvdatop(7:7) = 'c'
 	  if(dopol)uvdatop(8:8) = 'e'
@@ -290,7 +294,7 @@ c
 	else if(op.eq.'uvout')then
 	  call uvout(out,version)
 	else if(op.eq.'xyin')then
-	  call xyin(in,out,version)
+	  call xyin(in,out,version,dss)
 	else if(op.eq.'xyout')then
 	  call xyout(in,out,version)
 	else if(op.eq.'print')then
@@ -370,10 +374,10 @@ c
 	endif
 	end
 c************************************************************************
-      subroutine getopt (docal, dopol, dopass)
+      subroutine getopt(docal, dopol, dopass, dss)
 c
       implicit none
-      logical docal, dopol, dopass
+      logical docal, dopol, dopass, dss
 c
 c     Get a couple of the users options from the command line
 c
@@ -381,18 +385,20 @@ c  Output:
 c    docal   Apply gain calibration
 c    dopol   Apply polarization calibration
 c    dopass  Apply bandpass calibration
+c    dss     Handle DSS image.
 c
 c------------------------------------------------------------------------
       integer nopt
-      parameter (nopt = 3)
+      parameter (nopt = 4)
       character opts(nopt)*6
       logical present(nopt)
-      data opts /'nocal ', 'nopol ','nopass'/
+      data opts /'nocal ', 'nopol ','nopass','dss   '/
 c
       call options ('options', opts, present, nopt)
       docal = .not.present(1)
       dopol = .not.present(2)
       dopass= .not.present(3)
+      dss   =      present(4)
 c
       end
 c************************************************************************
@@ -2696,16 +2702,18 @@ c
 c
 	end
 c************************************************************************
-	subroutine xyin(in,out,version)
+	subroutine xyin(in,out,version,dss)
 c
 	implicit none
 	character in*(*),out*(*),version*(*)
+	logical dss
 c
 c  Read in an image FITS file.
 c
 c  Inputs:
 c    in		Name of the input image FITS file.
 c    out	Name of the output MIRIAD file.
+c    dss	Expect a DSS image. Handle header accordingly!
 c
 c  Internal Variables:
 c    lu		Handle of the FITS file.
@@ -2768,6 +2776,7 @@ c
 c  Handle the header.
 c
 	call axisin(lu,tno,naxis)
+	if(dss)call dssfudge(lu,tno)
 c
 c  Close up shop.
 c
@@ -2945,6 +2954,94 @@ c
 	call fitrdhdr(lu,'BPA',bpa,0.)
 	if(bmaj*bmin.ne.0)call wrhdr(tno,'bpa',bpa)
 c
+	end
+c************************************************************************
+	subroutine dssfudge(lu,tno)
+c
+	implicit none
+	integer lu,tno
+c
+c  Convert a DSS header into a normal Miriad one.
+c
+c------------------------------------------------------------------------
+	include 'mirconst.h'
+	real xpixelsz,ypixelsz,pltscale,objctx,objcty,cnpix1,cnpix2
+	double precision crval1,crval2,cdelt1,cdelt2,crpix1,crpix2
+	character objctra*16,objctdec*16
+c
+c  Get information from the header of the DSS file.
+c
+	call fitrdhdr(lu,'XPIXELSZ',xpixelsz,0.)
+	call fitrdhdr(lu,'YPIXELSZ',ypixelsz,0.)
+	call fitrdhdr(lu,'PLTSCALE',pltscale,0.)
+	call fitrdhdr(lu,'OBJCTX',objctx,0.)
+	call fitrdhdr(lu,'OBJCTY',objcty,0.)
+	call fitrdhda(lu,'OBJCTRA',objctra,' ')
+	call fitrdhda(lu,'OBJCTDEC',objctdec,' ')
+	call fitrdhdr(lu,'CNPIX1',cnpix1,0.)
+	call fitrdhdr(lu,'CNPIX2',cnpix2,0.)
+c
+	crpix1 = objctx - cnpix1 + 1
+	crpix2 = objcty - cnpix2 + 1
+	cdelt1 = dpi/180.d0/3600.d0 * xpixelsz * pltscale * 1e-3
+	cdelt2 = dpi/180.d0/3600.d0 * ypixelsz * pltscale * 1e-3
+	call decval(crval1,objctra)
+	crval1 = dpi/12.d0 * crval1
+	call decval(crval2,objctdec)
+	crval2 = dpi/180.d0 * crval2
+c
+	call wrhdr(tno,'epoch',2000.0)
+	call wrhdd(tno,'crpix1',crpix1)
+	call wrhdd(tno,'crpix2',crpix2)
+	call wrhdd(tno,'cdelt1',cdelt1)
+	call wrhdd(tno,'cdelt2',cdelt2)
+	call wrhdd(tno,'crval1',crval1)
+	call wrhdd(tno,'crval2',crval2)
+	call wrhda(tno,'ctype1','RA---CAR')
+	call wrhda(tno,'ctype2','DEC--CAR')
+	end
+c************************************************************************
+	subroutine decval(value,string)
+c
+	implicit none
+	double precision value
+	character string*(*)
+c
+c------------------------------------------------------------------------
+	integer k1,k2,length
+	character token*16
+	double precision v1,v2,v3
+	logical neg,ok
+c
+c  Externals.
+c
+	integer len1
+c
+	k1 = 1
+	k2 = len1(string)
+	call getfield(string,k1,k2,token,length)
+	neg = token(1:1).eq.'-'
+	ok = (.not.neg.and.length.ge.1).or.(neg.and.length.ge.2)
+	if(ok)then
+	  if(neg)then
+	    call atodf(token(2:length),v1,ok)
+	  else
+	    call atodf(token(1:length),v1,ok)
+	  endif
+	endif
+	call getfield(string,k1,k2,token,length)
+	ok = ok.and.length.ge.1
+	if(ok)call atodf(token(1:length),v2,ok)
+	call getfield(string,k1,k2,token,length)
+	ok = ok.and.length.ge.1
+	if(ok)call atodf(token(1:length),v3,ok)
+c
+c  Check for errors.
+c
+	if(.not.ok)call bug('f','Error decoding DSS header item')
+c
+	value = v1 + v2/60.d0 + v3/3600.d0
+	if(neg)value = -value
 	end
 c************************************************************************
 	subroutine xyout(in,out,version)
