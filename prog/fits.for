@@ -331,9 +331,10 @@ c    dpr  01-nov-00  Change CROTAn to AIPS convention for xyout
 c    dpr  27-nov-00  fix stokes convention for xyin
 c    dpr  05-apr-01  Add region key for op=xyout
 c    dpr  10-may-01  Change dss to rawdss
+c    dpr  11-may-01  Check history exists before copying it
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 10-may-01')
+	parameter(version='Fits: version 1.1 11-may-01')
 	integer maxboxes
 	parameter(maxboxes=2048)
 	character in*128,out*128,op*8,uvdatop*12
@@ -2397,6 +2398,7 @@ c  Externals.
 c
 	character itoaf*8
         logical uvdatopn
+	logical hdprsnt
 c
 	data parms/'UU      ','VV      ','WW      ',
      *		   'BASELINE','DATE    ','SOURCE  '/
@@ -2620,7 +2622,9 @@ c
 c
 c  Copy the history.
 c
-	call CopyHist(tIn,tOut,version)
+	if (hdprsnt(tIn,'history ')) then
+	  call CopyHist(tIn,tOut,version)
+	end if
 c
 c  We now have all the data we want in a scratch file. Copy this
 c  data to the output FITS file.
@@ -4198,6 +4202,7 @@ c
 c  Externals.
 c
 	integer len1,binsrcha
+	logical hdprsnt
 c
 	data short/'cdelt','crota','crpix','crval','ctype','naxis'/
 	data long/'bmaj    ','bmin    ','cellscal',
@@ -4243,7 +4248,9 @@ c
 c
 c  Write out the history file as HISTORY comments.
 c
-	call copyHist(tno,lu,version)
+	if (hdprsnt(tno,'history ')) then
+	  call copyHist(tno,lu,version)
+	end if
 	end
 c************************************************************************
 	subroutine CopyHist(tIn,tOut,version)
