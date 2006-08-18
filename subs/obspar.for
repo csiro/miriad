@@ -40,7 +40,7 @@ c    sdw  06jul06 Change to read observatory data from a paramater file,
 c                 allow greater flexability. Rather than having data hard
 c                 coded into the program.
 c
-c $Id: obspar.for,v 1.4 2006/08/09 23:48:29 cal103 Exp $
+c $Id: obspar.for,v 1.5 2006/08/18 04:49:29 cal103 Exp $
 c************************************************************************
 c* ObsPrint -- Print list of known observatories.
 c: utility
@@ -135,11 +135,8 @@ c
 c
         double precision value
         character*24 input,param,observatory,cvalue
-c  Define File handling param's
         integer iostat,lu,length
-        character*80 obsfile,line,mir_root
-        character*80 file
-c  Lat / Long variables
+        character*80 line, obsfile
         integer sign,deg,min
         real    sec
 c
@@ -154,32 +151,22 @@ c
 	if(.not.first)return
 	first = .false.
 	nparms = 0
-c
-c       Has a local MIRSHARE been set pointing to a different location
-c       for a observatories.dat, ie a local version
-c       If it isn't set then assume a 
-c       default of $MIR/share/observatories.dat
-        call getenv('MIRSHARE',mir_root)
-        if (mir_root(1:1).eq.' ') then
-           call getenv('MIR',mir_root)
-c          build the filename to open
-           obsfile='/share/observatories.dat'        
-           file=mir_root(1:index(mir_root,' ')-1)//
-     +          obsfile(1:index(obsfile,' '))
-        else
-c          build the filename to open
-           obsfile='/observatories.dat'        
-           file=mir_root(1:index(mir_root,' ')-1)//
-     +          obsfile(1:index(obsfile,' '))
+
+c       Locate observatories.dat.
+        call getenv('MIROBS',obsfile)
+        if (obsfile.eq.' ') then
+c          Use $MIRCAT/observatories.dat.
+           call getenv('MIRCAT',obsfile)
+           obsfile = obsfile(:index(obsfile, ' ')-1) //
+     *                 '/observatories.dat'        
         end if 
 
-        call output('Reading '//file)
-c
-c       Open and read the observatories.dat
+        call output('Reading ' // obsfile)
 
-        call txtopen(lu,file,'old',iostat)
+c       Open and read observatories.dat.
+        call txtopen(lu,obsfile,'old',iostat)
         if(iostat.ne.0) then
-           call bug('w','Error opening observatories.dat')
+           call bug('w','Error opening' // obsfile)
            call bugno('w',iostat)
         else
            dowhile(iostat.eq.0)
@@ -191,7 +178,7 @@ c            Ignore comment lines in file, ie line(1:1)='#'
              if (line(1:1).ne.'#' .and. line.ne.' ') then
                read(line,*) observatory, param
                input=observatory(1:index(observatory,' ')-1)//'/'//
-     +               param(1:index(param,' ')-1)
+     *               param(1:index(param,' ')-1)
 
 c              Allow for param = mount, latitude or longitude
 
