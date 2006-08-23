@@ -421,7 +421,11 @@ char *infile;
 	    labelout(lineno); blankout(indent-5); textout("continue\n");
 	  }
           oldglines = glines;
+	  sprintf(msg,"c >>> %s\n",token);
+	  textout(msg);
 	  process(in2,token);
+	  sprintf(msg,"c <<< %s\n",token);
+	  textout(msg);
 	  Fclose(in2);
           glines = oldglines;
 	}
