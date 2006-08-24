@@ -40,7 +40,7 @@ c    sdw  06jul06 Change to read observatory data from a paramater file,
 c                 allow greater flexability. Rather than having data hard
 c                 coded into the program.
 c
-c $Id: obspar.for,v 1.5 2006/08/18 04:49:29 cal103 Exp $
+c $Id: obspar.for,v 1.6 2006/08/24 03:13:46 mirmgr Exp $
 c************************************************************************
 c* ObsPrint -- Print list of known observatories.
 c: utility
@@ -167,7 +167,7 @@ c       Open and read observatories.dat.
         call txtopen(lu,obsfile,'old',iostat)
         if(iostat.ne.0) then
            call bug('w','Error opening' // obsfile)
-           call bugno('w',iostat)
+           call bugno('f',iostat)
         else
            dowhile(iostat.eq.0)
              call txtread(lu,line,length,iostat)
