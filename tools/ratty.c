@@ -120,6 +120,7 @@ vector processing capacities (compilers "unicos", "alliant" and "convex"):
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #define TRUE 1
 #define FALSE 0
@@ -317,7 +318,7 @@ char *infile;
 ------------------------------------------------------------------------*/
 {
   int type,lineno,lineno1,indent,bracketting, glines=0, oldglines;
-  char *s,*s0,line[MAXLINE],token[MAXLINE],msg[MAXLINE];
+  char *s,*s0,line[MAXLINE],pathname[MAXLINE],token[MAXLINE],msg[MAXLINE];
   char gfile[MAXLINE];
   FILE *in2;
 
@@ -411,7 +412,7 @@ char *infile;
 	s0 = token;
 	while(*s && *s != '\'')*s0++ = *s++;
 	*s0 = 0;
-	in2 = incopen(token);
+	in2 = incopen(token,pathname);
 	if(in2 == NULL){
 	  sprintf(msg,"Error opening include file %s",token);
 	  message(msg);
@@ -421,10 +422,10 @@ char *infile;
 	    labelout(lineno); blankout(indent-5); textout("continue\n");
 	  }
           oldglines = glines;
-	  sprintf(msg,"c >>> %s\n",token);
+	  sprintf(msg,"c >>> %s\n",pathname);
 	  textout(msg);
 	  process(in2,token);
-	  sprintf(msg,"c <<< %s\n",token);
+	  sprintf(msg,"c <<< %s\n",pathname);
 	  textout(msg);
 	  Fclose(in2);
           glines = oldglines;
@@ -877,29 +878,34 @@ char *name;
   return(list);
 }
 /************************************************************************/
-private FILE *incopen(name)
-char *name;
+private FILE *incopen(name,pathname)
+char *name,*pathname;
 /*
   Attempt to open an include file.
 ------------------------------------------------------------------------*/
 {
   FILE *fd;
-  char *s,c,line[MAXLINE];
+  char c,*s;
   struct link_list *t;
 
 /* Try the plain, unadulterated name. */
 
-  if((fd = fopen(name,"r")) != NULL) return(fd);
+  if((fd = fopen(name,"r")) != NULL) {
+    getcwd(pathname,MAXLINE);
+    strcat(pathname,"/");
+    strcat(pathname,name);
+    return(fd);
+  }
 
 /* Otherwise try appending it to the list of include file directories. */
 
   for(t = incdir; t != NULL; t = t->fwd){
     s = t->name;
-    Strcpy(line,s);
+    Strcpy(pathname,s);
     c = *(s + strlen(s) - 1);
-    if(isalnum(c))Strcat(line,"/");
-    strcat(line,name);
-    if((fd = fopen(line,"r")) != NULL) break;
+    if(isalnum(c))Strcat(pathname,"/");
+    strcat(pathname,name);
+    if((fd = fopen(pathname,"r")) != NULL) break;
   }
   return(fd);
 }
