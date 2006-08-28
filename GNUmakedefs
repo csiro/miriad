@@ -1,0 +1,561 @@
+#=============================================================================
+# GNUmakedefs
+#-----------------------------------------------------------------------------
+# This generic GNU makefile is included by all other Miriad makefiles so that
+# commonly used variables and rules can be defined in one place.  However,
+#
+#                      DO NOT MODIFY THIS FILE
+#
+# since changes will be lost if a newer version is installed.  Overriding
+# definitions should instead be made in the site-specific makedefs file,
+# $MIRARCH/GNUmakedefs, which is included by this file.
+#
+# Original: 2006/08/19, Mark Calabretta, ATNF
+# $Id: GNUmakedefs,v 1.1 2006/08/28 01:42:03 cal103 Exp $
+#-----------------------------------------------------------------------------
+# We rely only on the MIR and MIRBIN environment variables.
+ARCH := $(notdir $(MIRBIN))
+
+#=============================================================================
+#                        START OF DEFAULT DEFINITIONS
+#=============================================================================
+# Compiler options.  The *OPT and *DBG variables are for code development
+# (debug) and system (optimized) compilation.  They should be defined in terms
+# of the corresponding *STD variables with flags common to both.
+#
+# These variables may be overridden on the GNU 'make' command line, e.g.
+# gmake FCDBG=-O2.  
+#-----------------------------------------------------------------------------
+
+# Source code checkout.
+CO       := co
+COFLAGS  := -f
+
+# Miriad's Fortran preprocessor and options.
+RATTY     = $(MIRBIND)/ratty
+RATFLAGS := -s $(ARCH) -b
+
+# Fortran compiler and debug/optimize flags.
+FC       := f77
+FCSTD    :=
+FCDBG     = -g $(FCSTD)
+FCOPT     = -O -fPIC $(FCSTD)
+
+# Miriad's Fortran-C preprocessor.
+INTF2C    = $(MIRBIND)/intf2c
+F2CFLAGS := -s $(ARCH)
+
+# C preprocessor debug/optimize flags.
+CPPSTD   := -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE
+CPPDBG    = $(CPPSTD)
+CPPOPT    = $(CPPSTD)
+
+# C compiler and debug/optimize flags.
+CC       := cc
+CSTD     :=
+CDBG      = -g $(CSTD)
+COPT      = -O2 -fPIC $(CSTD)
+
+# Object library utilities.  Most versions of 'ar' now generate an index
+# automatically after each invokation and it is not necessary to invoke
+# ranlib separately.  It is defeated here by setting RANLIB to ":".
+AR       := ar
+ARFLAGS  := ruv
+RANLIB   := :
+
+# Linker debug/optimize flags (FC is used to do the linking).
+LDSTD    :=
+LDDBG     = $(LDSTD)
+LDOPT     = -s $(LDSTD)
+
+# Internally set make options.
+MAKEFLAGS := -i $(MAKEFLAGS)
+
+# External libraries linker options.
+#-----------------------------------------------------------------------------
+
+# RPFITS: a full pathname must be specified for the library because it is a
+# dependency of some tasks.
+RPFITSLIB := /usr/local/lib/librpfits.a
+
+# LINPACK: leave as is to use the version supplied with Miriad.
+LINPACKLIB = -L$(MIRLIBD) -llinpack
+
+# PGPLOT (FORTRAN plotting package).
+PGPLOTLIB  = -L/usr/local/lib -lpgplot -lpng
+
+# X11.
+X11LIB     = -L/usr/X11R6/lib -lX11
+
+#=============================================================================
+#                         END OF DEFAULT DEFINITIONS
+#=============================================================================
+
+# Get installation-specific redefinitions of the defaults defined above.
+-include $(MIR)/$(ARCH)/GNUmakedefs
+
+#-----------------------------------------------------------------------------
+
+# Basic variables.
+override SHELL    := /bin/sh
+override PID      := $(shell echo $$$$)
+override JOBIDENT := $(USER)@$(HOST):$(PID)
+override comma    := ,
+override null     :=
+override space    := $(null) $(null)
+override backsl   := $(null)\$(null)
+override tab      := $(null)	$(null)
+
+# Variable $; consists of a single newline.
+override define ;
+
+
+endef
+
+# Indentation levels.
+I1 := $(tab)
+I2 := $(I1)$(null)    $(null)
+I3 := $(I1)$(tab)
+I4 := $(I3)$(null)    $(null)
+I5 := $(I3)$(tab)
+I6 := $(I5)$(null)    $(null)
+I7 := $(I5)$(tab)
+I8 := $(I7)$(null)    $(null)
+MAKEINDENT := $(I$(MAKELEVEL))
+
+# If we're within $(MIRROOT)/... it's a system compile, else programmer.
+MIRDIR  := $(shell cd $$MIR && /bin/pwd)
+THISDIR := $(shell /bin/pwd)
+ifeq "$(findstring $(MIRDIR),$(THISDIR))" ""
+  MAKEMODE = programmer
+else
+  MAKEMODE = system
+endif
+
+# Miriad code directories.
+MIRROOT  := $(MIR)
+MIRINCD  := $(MIRROOT)/inc
+MIRTOOLD := $(MIRROOT)/tools
+MIRSUBSD := $(MIRROOT)/subs
+MIRPROGD := $(MIRROOT)/prog
+
+# This determines whether the RCS source repositories are present.
+MIRRCS   := $(wildcard $(MIRROOT)/RCS)
+
+# Miriad code directories.
+CODESUBD := $(shell echo $(THISDIR)/ | sed -e '{s=^.*/miriad/==;s=/*$$==;}')
+CODEDIR  := $(MIRROOT)/$(CODESUBD)
+
+ifdef MIRRCS
+  RCSDIR   := $(MIRRCS)/$(CODESUBD)
+  CHKDIR   := $(CODEDIR)
+else
+  RCSDIR   :=
+  CHKDIR   :=
+endif
+
+# Subdirectories that contain a makefile (for recursion).
+ifdef MIRRCS
+  SUBDIRS  := $(wildcard $(RCSDIR)/*/GNUmakefile,v)
+  SUBDIRS  := $(notdir $(patsubst %/GNUmakefile$(comma)v,%,$(SUBDIRS)))
+else
+  SUBDIRS  := $(wildcard $(CODEDIR)/*/GNUmakefile)
+  SUBDIRS  := $(notdir $(patsubst %/GNUmakefile,%,$(SUBDIRS)))
+endif
+
+CODESUBS := $(addprefix $(CODEDIR)/,$(SUBDIRS))
+
+# Miriad system directories.
+MIRARCHD := $(MIRROOT)/$(ARCH)
+MIRAUXD  := $(MIRARCHD)/aux
+MIRBIND  := $(MIRARCHD)/bin
+MIRLIBD  := $(MIRARCHD)/lib
+MIRTMPD  := $(MIRARCHD)/tmp
+
+SYSDIRS  := $(MIRARCHD) $(MIRAUXD) $(MIRBIND) $(MIRLIBD) $(MIRTMPD)
+
+# Programmer directories.
+ifeq "$(MAKEMODE)" "programmer"
+  PGMRROOT := $(shell echo $(THISDIR)/ | sed -e 's=\(^.*/miriad\).*=\1=')
+  PGMRINCD := $(PGMRROOT)/inc
+  PGMRARCH := $(PGMRROOT)/$(ARCH)
+  PGMRLIBD := $(PGMRARCH)/lib
+  PGMRBIND := $(PGMRARCH)/bin
+
+  ifeq "$(wildcard $(PGMRLIBD))" ""
+    $(shell mkdir -p $(PGMRLIBD))
+  endif
+
+  ifeq "$(wildcard $(PGMRBIND))" ""
+    $(shell mkdir -p $(PGMRBIND))
+  endif
+endif
+
+
+# All files in the miriad directory.
+ifdef MIRRCS
+  MIRSRCS  := $(subst $(comma)v,,$(notdir $(wildcard $(RCSDIR)/*,v)))
+
+  # For now we must include source files that haven't been checked in.
+  MIRSRCS  := $(sort $(MIRSRCS) $(notdir $(wildcard $(CODEDIR)/*)))
+else
+  MIRSRCS  := $(notdir $(wildcard $(CODEDIR)/*))
+endif
+
+# Filter out subdirectories.
+ALLSUBD  := $(notdir $(patsubst %/.,%,$(wildcard $(CODEDIR)/*/.)))
+MIRSRCS  := $(filter-out $(ALLSUBD),$(MIRSRCS))
+
+#-----------------------------------------------------------------------------
+
+# The search path for operating system specific subroutines is defined as
+#
+#   $(MIRSUBD)/unix/$(SUBS$(ARCH)):$(MIRSUBD)/unix:$(MIRSUBD)
+#
+# For example, if ARCH is linux64, using SUBSlinux below the path is
+#
+#   $MIR/subs/unix/alpha_linux:$MIR/subs/unix:$MIR/subs
+
+SUBSalpha      := alpha_linux
+SUBSconvex     := convex
+SUBScygwin     := alpha_linux
+SUBSdarwin     := 
+SUBShpux       := hpux
+SUBSi86sol     := alpha_linux
+SUBSirix       := 
+SUBSirix64     := irix64
+SUBSlinux      := alpha_linux
+SUBSlinux-ia64 := alpha_linux
+SUBSlinux64    := alpha_linux
+SUBSsun4       := 
+SUBSsun4sol    :=
+SUBSunicos     := unicos
+
+
+#-----------------------------------------------------------------------------
+# Variables destined for propagation to the environment must be simply
+# expanded and must not have non-alphanumeric characters in their names;
+# convert them now.
+#-----------------------------------------------------------------------------
+# Subdirectories (used within rule command sequences).
+export SUBDIRS
+export CODESUBS
+
+
+#-----------------------------------------------------------------------------
+# Canned rule definitions for dependency analysis.  $(backsl) is used to
+# insert a literal backslash.
+#-----------------------------------------------------------------------------
+# Locking mechanism to guard against multiple builds updating the dependency
+# list simultaneously.  The lock file is ignored if it's more than 60s old.
+# Otherwise, wait for up to 32s for it to disappear.
+define wait-lock
+  -@ echo ""
+  -@ echo "Updating dependencies for $<"
+  -@ if [ -f "$(DPNDLOCK)" ] ; then $(backsl)
+       tract -q60 "$(DPNDLOCK)" && $(backsl)
+         $(RM) "$(DPNDLOCK)" ; $(backsl)
+       for i in 9 8 7 6 5 4 3 2 1 ; do $(backsl)
+         [ ! -f "$(DPNDLOCK)" ] && break ; $(backsl)
+         echo "	waiting for lock file ($$i)..." ; $(backsl)
+         sleep 3 ; $(backsl)
+       done ; $(backsl)
+       if [ -f "$(DPNDLOCK)" ] ; then $(backsl)
+         echo "About to forcibly break lock..." ; $(backsl)
+         sleep 5 ; $(backsl)
+       fi ; $(backsl)
+     fi
+  -@ touch $(DPNDLIST)
+   @ TARGET='$$(DPNDTIME)($*) : ' ; $(backsl)
+       sed -n -e "\#^$$TARGET#!p" $(DPNDLIST) > $(DPNDLOCK)
+endef
+
+# Command sequence for updating the dpendency timestamp and cleaning up.
+# Absence of the lock file is taken as a signal that something went wrong.
+define update-time
+   @ if [ -f "$(DPNDLOCK)" ] ; then $(backsl)
+       $(RM) $(DPNDLOCK) ; $(backsl)
+       cat /dev/null > $(MIRTMPD)/$* ; $(backsl)
+       $(AR) r $(DPNDTIME) $(MIRTMPD)/$* ; $(backsl)
+       $(RM) $(MIRTMPD)/$** ; $(backsl)
+     fi
+endef
+
+
+#-----------------------------------------------------------------------------
+# Pattern rules applicable to all Miriad makefiles.
+#-----------------------------------------------------------------------------
+ifdef MIRRCS
+   # General rule for checkout if the RCS repositories exist.
+   $(MIRROOT)/% :: $(MIRRCS)/%,v
+	@ $(CO) $(COFLAGS) $< $@ 2>&1 | \
+	    sed -n \
+	        -e '1N' \
+	        -e '2s/.*\//	/' \
+	        -e '2s/\nrevision//' \
+	        -e '2s/$$//p'
+	@ chmod 444 $@
+
+   # Kill this to stop automatic checkout into programmer workspaces.
+   %:: RCS/%,v
+
+   %,v : ;
+endif
+
+
+#-----------------------------------------------------------------------------
+# General static rules applicable to all Miriad makefiles.
+#-----------------------------------------------------------------------------
+
+.PHONY : all allsys clean cleaner cleanest cleansys help show sysdirs
+
+# Declare this as the default rule.
+ifeq "$(MAKEMODE)" "programmer"
+  all ::
+else
+  allsys ::
+endif
+
+# System-oriented rules.
+#-----------------------
+# At the minimum the allsys rule checks out sources if the RCS repositories
+# exist.  Additional dependencies may be defined for allsys in the including
+# makefile.
+allsys :: $(CHKDIR) sysdirs
+
+# Target without any dependencies or commands which when used as a dependency
+# forces a target to be remade.
+FORCE :
+
+# Useful for just remaking included files, especially dependency lists.
+null : ;
+
+ifdef MIRRCS
+  chkout : $(CODEDIR)
+	-@ for i in $$SUBDIRS ; do \
+	     if [ "$Q" != "@" -o "$(MAKELEVEL)" = 0 ] ; then \
+	       echo "" ; \
+	       echo gmake[$(MAKELEVEL)]: $(MAKE) -C $(CODEDIR)/$$i $@ ; \
+	     else \
+	       echo $@[$(MAKELEVEL)]:"$(MAKEINDENT)"$$i ; \
+	     fi ; \
+	     $(MAKE) -C $$i $@ ; \
+	   done
+endif
+
+# Rules for creating system directories.
+sysdirs : $(SYSDIRS)
+
+$(SYSDIRS) :
+	 @ if [ ! -d "$@" ] ; then \
+	     mkdir $@ ; \
+	     chmod ug=rwx,g+s,o=rx $@ ; \
+	     echo "" ; \
+	     echo "Created directory $@" ; \
+	   fi
+
+cleansys ::
+	   $(RM) $(MIRTMPD)/*
+	-@ for i in $$SUBDIRS ; do \
+           if [ "$Q" != "@" -o "$(MAKELEVEL)" = 0 ] ; then \
+	      echo "" ; \
+	      echo gmake[$(MAKELEVEL)]: $(MAKE) -C $(CODEDIR)/$$i $@ ; \
+	   else \
+	      echo $@[$(MAKELEVEL)]:"$(MAKEINDENT)"$$i ; \
+	   fi ; \
+	   $(MAKE) -C $$i $@ ; \
+	done
+
+# Programmer-oriented rules.
+#---------------------------
+ifeq "$(MAKEMODE)" "programmer"
+  # Rule for updating the GNUmakefile itself.
+  ifneq "$(wildcard $(RCSDIR)/GNUmakefile,v)" ""
+     GNUmakefile : $(RCSDIR)/GNUmakefile,v
+	  @ $(CO) $(COFLAGS) $< $@
+	  @ chmod 444 $@
+  endif
+
+  clean ::
+	-  $(RM) *~ *% a.out core
+
+  cleaner :: clean
+	-@ FILES="$(wildcard $(MIRSRCS))" ; DLIST="" ; \
+	   for i in $$FILES ; do \
+	     [ -w $$i ] || DLIST="$$i $$DLIST" ; \
+	   done ; \
+	   if [ "$$DLIST" != "" ] ; then \
+	     echo "" ; \
+	     echo "Delete up-to-date, checked-in file(s):" ; \
+	     echo $$DLIST ; \
+	     $(RM) $$DLIST ; \
+	   fi
+
+  cleanest :: cleaner ;
+endif
+
+
+# Diagnostics rules.
+#-------------------
+# DIY rule.
+command :
+	$(COMMAND)
+
+# Print the environment as seen by makefile rules.
+printenv :
+	-@ printenv | sort
+
+# Rule for eval'ing variable definitions into environment variables.
+eval_vars :
+        ifdef VARS
+	   @ echo "$(foreach V,$(VARS),$V=\"$($V)\") ; export $(VARS)"
+        endif
+
+show ::
+	-@ echo ""
+	-@ echo "Variables defined in GNUmakedefs"
+	-@ echo "================================"
+	-@ echo ""
+	-@ echo "MIR        = $(MIR)"
+	-@ echo "ARCH       = $(ARCH)"
+	-@ echo ""
+	-@ echo "Preprocessors, compilers, etc. and their flags."
+	-@ echo "-----------------------------------------------"
+	-@ echo "CO         = $(CO)"
+	-@ echo "COFLAGS    = $(COFLAGS)"
+	-@ echo ""
+	-@ echo "RATTY      = $(RATTY)"
+	-@ echo "RATFLAGS   = $(RATFLAGS)"
+	-@ echo ""
+	-@ echo "FC         = $(FC)"
+	-@ echo "FCSTD      = $(FCSTD)"
+	-@ echo "FCDBG      = $(FCDBG)"
+	-@ echo "FCOPT      = $(FCOPT)"
+	-@ echo ""
+	-@ echo "INTF2C     = $(INTF2C)"
+	-@ echo "F2CFLAGS   = $(F2CFLAGS)"
+	-@ echo ""
+	-@ echo "CPPSTD     = $(CPPSTD)"
+	-@ echo "CPPDBG     = $(CPPDBG)"
+	-@ echo "CPPOPT     = $(CPPOPT)"
+	-@ echo ""
+	-@ echo "CC         = $(CC)"
+	-@ echo "CSTD       = $(CSTD)"
+	-@ echo "CDBG       = $(CDBG)"
+	-@ echo "COPT       = $(COPT)"
+	-@ echo ""
+	-@ echo "AR         = $(AR)"
+	-@ echo "ARFLAGS    = $(ARFLAGS)"
+	-@ echo "RANLIB     = $(RANLIB)"
+	-@ echo ""
+	-@ echo "LDSTD      = $(LDSTD)"
+	-@ echo "LDDBG      = $(LDDBG)"
+	-@ echo "LDOPT      = $(LDOPT)"
+	-@ echo ""
+	-@ echo "MAKEFLAGS  = $(MAKEFLAGS)"
+	-@ echo ""
+	-@ echo "Third-party libraries"
+	-@ echo "---------------------"
+	-@ echo "RPFITSLIB  = $(RPFITSLIB)"
+	-@ echo "LINPACKLIB = $(LINPACKLIB)"
+	-@ echo "PGPLOTLIB  = $(PGPLOTLIB)"
+	-@ echo "X11LIB     = $(X11LIB)"
+	-@ echo ""
+	-@ echo "Fundamental variables."
+	-@ echo "----------------------"
+	-@ echo "SHELL   =$(SHELL)"
+	-@ echo "PID     =$(PID)"
+	-@ echo "comma   =$(comma)"
+	-@ echo "<null>  =<$(null)>"
+	-@ echo "<space> =<$(space)>"
+	-@ echo "<;>     =<" $(;)		echo ">"
+	-@ echo ""
+	-@ echo ""
+	-@ echo "MIRDIR     = $(MIRDIR)"
+	-@ echo "THISDIR    = $(THISDIR)"
+	-@ echo "MAKEMODE   = $(MAKEMODE)"
+	-@ echo ""
+	-@ echo "Miriad code directories"
+	-@ echo "-----------------------"
+	-@ echo "MIRINCD    = $(MIRINCD)"
+	-@ echo "MIRSUBSD   = $(MIRSUBSD)"
+	-@ echo "MIRPROGD   = $(MIRPROGD)"
+	-@ echo ""
+	-@ echo "MIRRCS     = $(MIRRCS)"
+	-@ echo "CODESUBD   = $(CODESUBD)"
+	-@ echo "CODEDIR    = $(CODEDIR)"
+	-@ echo "RCSDIR     = $(RCSDIR)"
+	-@ echo "CHKDIR     = $(CHKDIR)"
+	-@ echo "SUBDIRS    = $(SUBDIRS)"
+	-@ echo "CODESUBS   = $(CODESUBS)"
+	-@ echo ""
+	-@ echo "Miriad system directories"
+	-@ echo "-------------------------"
+	-@ echo "MIRARCHD   = $(MIRARCHD)"
+	-@ echo "MIRAUXD    = $(MIRAUXD)"
+	-@ echo "MIRBIND    = $(MIRBIND)"
+	-@ echo "MIRLIBD    = $(MIRLIBD)"
+	-@ echo "MIRTMPD    = $(MIRTMPD)"
+	-@ echo ""
+ifeq "$(MAKEMODE)" "programmer"
+	-@ echo "Programmer directories"
+	-@ echo "----------------------"
+	-@ echo "PGMRROOT   = $(PGMRROOT)"
+	-@ echo "PGMRINCD   = $(PGMRINCD)"
+	-@ echo "PGMRARCH   = $(PGMRARCH)"
+	-@ echo "PGMRLIBD   = $(PGMRLIBD)"
+	-@ echo "PGMRBIND   = $(PGMRBIND)"
+	-@ echo ""
+endif
+	-@ echo "Miriad source list"
+	-@ echo "------------------"
+	-@ echo "ALLSUBD    = $(ALLSUBD)"
+	-@ echo "MIRSRCS    = $(MIRSRCS)"
+
+# Help.
+#------
+
+help ::
+	-@ echo ""
+	-@ echo "General targets defined in GNUmakedefs"
+	-@ echo "======================================"
+	-@ echo ""
+	-@ echo "This list of targets while incomplete does include all those"
+	-@ echo "likely to be of use.  Where a target is defined as a variable"
+	-@ echo "(given in upper case) the value of the variable may be"
+	-@ echo "printed via the 'show' target."
+	-@ echo ""
+	-@ echo "There are two main types of target, system-oriented for"
+	-@ echo "building the miriad system, and programmer-oriented for"
+	-@ echo "code development."
+	-@ echo ""
+	-@ echo "System"
+	-@ echo "------"
+	-@ echo "     allsys: (default target) recursively rebuild everything."
+	-@ echo "       null: do nothing except to update the makefile and"
+	-@ echo "             all included files as a side effect."
+	-@ echo "     chkout: recursively checkout all sources."
+	-@ echo "    sysdirs: create all system directories."
+	-@ echo "  (SYSDIRS): create a system directory."
+	-@ echo "   cleansys: recursively purge selected files from the"
+	-@ echo "             system directories, usually in preparation for"
+	-@ echo "             a complete rebuild."
+	-@ echo ""
+	-@ echo "Programmer"
+	-@ echo "----------"
+	-@ echo "        all: (default target) rebuild all in this directory."
+	-@ echo "      clean: delete intermediate files."
+	-@ echo "    cleaner: clean, and also delete source files checked out"
+	-@ echo "             without a lock (no write permission)."
+	-@ echo "   cleanest: cleaner, and also delete purify cache."
+	-@ echo ""
+	-@ echo "Diagnostics"
+	-@ echo "-----------"
+	-@ echo "    command: execute COMMAND."
+	-@ echo "   printenv: print the environment as seen by makefile"
+	-@ echo "             commands."
+	-@ echo "  eval_vars: print variables specified by VARS in a form"
+	-@ echo "             suitable for eval'ing into the environment."
+	-@ echo "  show_vars: print variables specified by VARS."
+	-@ echo "       show: print all makefile variables."
+	-@ echo "       help: print this."
