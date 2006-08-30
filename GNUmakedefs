@@ -11,7 +11,7 @@
 # $MIRARCH/GNUmakedefs, which is included by this file.
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakedefs,v 1.2 2006/08/30 04:45:31 cal103 Exp $
+# $Id: GNUmakedefs,v 1.3 2006/08/30 04:58:36 cal103 Exp $
 #-----------------------------------------------------------------------------
 # We rely only on the MIR and MIRBIN environment variables.
 MIRROOT  := $(MIR)
@@ -335,6 +335,18 @@ FORCE :
 null : ;
 
 ifdef MIRRCS
+  ifneq "$(wildcard $(MIRRCS)/GNUmakedefs,v)" ""
+    $(MIRROOT)/GNUmakedefs : $(MIRRCS)/GNUmakedefs,v
+	 -@ $(CO) $(COFLAGS) $< $@
+	 -@ chmod 664 $@
+  endif
+
+  ifneq "$(wildcard $(RCSDIR)/GNUmakefile,v)" ""
+    GNUmakefile : $(RCSDIR)/GNUmakefile,v
+	  @ $(CO) $(COFLAGS) $< $@
+	  @ chmod 444 $@
+  endif
+  
   chkout : $(CODEDIR)
 	-@ for i in $$SUBDIRS ; do \
 	     if [ "$Q" != "@" -o "$(MAKELEVEL)" = 0 ] ; then \
@@ -345,6 +357,8 @@ ifdef MIRRCS
 	     fi ; \
 	     $(MAKE) -C $$i $@ ; \
 	   done
+
+  $(CODEDIR) : $(MIRSRCS:%=$(CODEDIR)/%)
 endif
 
 # Rules for creating system directories.
