@@ -11,10 +11,15 @@
 # $MIRARCH/GNUmakedefs, which is included by this file.
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakedefs,v 1.1 2006/08/28 01:42:03 cal103 Exp $
+# $Id: GNUmakedefs,v 1.2 2006/08/30 04:45:31 cal103 Exp $
 #-----------------------------------------------------------------------------
 # We rely only on the MIR and MIRBIN environment variables.
-ARCH := $(notdir $(MIRBIN))
+MIRROOT  := $(MIR)
+ARCH     := $(notdir $(MIRBIN))
+
+MIRARCHD := $(MIRROOT)/$(ARCH)
+MIRBIND  := $(MIRARCHD)/bin
+MIRLIBD  := $(MIRARCHD)/lib
 
 #=============================================================================
 #                        START OF DEFAULT DEFINITIONS
@@ -32,7 +37,7 @@ CO       := co
 COFLAGS  := -f
 
 # Miriad's Fortran preprocessor and options.
-RATTY     = $(MIRBIND)/ratty
+RATTY    := $(MIRBIND)/ratty
 RATFLAGS := -s $(ARCH) -b
 
 # Fortran compiler and debug/optimize flags.
@@ -42,7 +47,7 @@ FCDBG     = -g $(FCSTD)
 FCOPT     = -O -fPIC $(FCSTD)
 
 # Miriad's Fortran-C preprocessor.
-INTF2C    = $(MIRBIND)/intf2c
+INTF2C   := $(MIRBIND)/intf2c
 F2CFLAGS := -s $(ARCH)
 
 # C preprocessor debug/optimize flags.
@@ -71,21 +76,24 @@ LDOPT     = -s $(LDSTD)
 # Internally set make options.
 MAKEFLAGS := -i $(MAKEFLAGS)
 
-# External libraries linker options.
+# Linker options for external libraries.
 #-----------------------------------------------------------------------------
 
 # RPFITS: a full pathname must be specified for the library because it is a
 # dependency of some tasks.
-RPFITSLIB := /usr/local/lib/librpfits.a
+RPFITSLIB  := /usr/local/lib/librpfits.a
 
 # LINPACK: leave as is to use the version supplied with Miriad.
-LINPACKLIB = -L$(MIRLIBD) -llinpack
+LINPACKLIB := -L$(MIRLIBD) -llinpack
 
 # PGPLOT (FORTRAN plotting package).
-PGPLOTLIB  = -L/usr/local/lib -lpgplot -lpng
+PGPLOTLIB  := -L/usr/local/lib -lpgplot -lpng
 
 # X11.
-X11LIB     = -L/usr/X11R6/lib -lX11
+X11LIB     := -L/usr/X11R6/lib -lX11
+
+# Clear this if you don't have the GNU readline library.
+READLINELIB := -lreadline -ltermcap
 
 #=============================================================================
 #                         END OF DEFAULT DEFINITIONS
@@ -133,7 +141,6 @@ else
 endif
 
 # Miriad code directories.
-MIRROOT  := $(MIR)
 MIRINCD  := $(MIRROOT)/inc
 MIRTOOLD := $(MIRROOT)/tools
 MIRSUBSD := $(MIRROOT)/subs
@@ -147,29 +154,26 @@ CODESUBD := $(shell echo $(THISDIR)/ | sed -e '{s=^.*/miriad/==;s=/*$$==;}')
 CODEDIR  := $(MIRROOT)/$(CODESUBD)
 
 ifdef MIRRCS
-  RCSDIR   := $(MIRRCS)/$(CODESUBD)
-  CHKDIR   := $(CODEDIR)
+  RCSDIR := $(MIRRCS)/$(CODESUBD)
+  CHKDIR := $(CODEDIR)
 else
-  RCSDIR   :=
-  CHKDIR   :=
+  RCSDIR :=
+  CHKDIR :=
 endif
 
 # Subdirectories that contain a makefile (for recursion).
 ifdef MIRRCS
-  SUBDIRS  := $(wildcard $(RCSDIR)/*/GNUmakefile,v)
-  SUBDIRS  := $(notdir $(patsubst %/GNUmakefile$(comma)v,%,$(SUBDIRS)))
+  SUBDIRS := $(wildcard $(RCSDIR)/*/GNUmakefile,v)
+  SUBDIRS := $(notdir $(patsubst %/GNUmakefile$(comma)v,%,$(SUBDIRS)))
 else
-  SUBDIRS  := $(wildcard $(CODEDIR)/*/GNUmakefile)
-  SUBDIRS  := $(notdir $(patsubst %/GNUmakefile,%,$(SUBDIRS)))
+  SUBDIRS := $(wildcard $(CODEDIR)/*/GNUmakefile)
+  SUBDIRS := $(notdir $(patsubst %/GNUmakefile,%,$(SUBDIRS)))
 endif
 
 CODESUBS := $(addprefix $(CODEDIR)/,$(SUBDIRS))
 
-# Miriad system directories.
-MIRARCHD := $(MIRROOT)/$(ARCH)
+# Remaining Miriad system directories.
 MIRAUXD  := $(MIRARCHD)/aux
-MIRBIND  := $(MIRARCHD)/bin
-MIRLIBD  := $(MIRARCHD)/lib
 MIRTMPD  := $(MIRARCHD)/tmp
 
 SYSDIRS  := $(MIRARCHD) $(MIRAUXD) $(MIRBIND) $(MIRLIBD) $(MIRTMPD)
@@ -460,6 +464,7 @@ show ::
 	-@ echo "LINPACKLIB = $(LINPACKLIB)"
 	-@ echo "PGPLOTLIB  = $(PGPLOTLIB)"
 	-@ echo "X11LIB     = $(X11LIB)"
+	-@ echo "READLINELIB= $(READLINELIB)"
 	-@ echo ""
 	-@ echo "Fundamental variables."
 	-@ echo "----------------------"
