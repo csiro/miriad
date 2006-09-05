@@ -106,6 +106,7 @@ c    rjs  19jan94 Relax alignment requirements in chkdes2 so that values
 c		  need only align to 1%.
 c    nebk 28feb94 Default values to RDHDD must be double precision
 c    nebk 29mar95 Add fractional polarization images to output
+c    nebk 25may95 Ref. pix. of output stuffed because of type mismatch
 c	
 c------------------------------------------------------------------------
       implicit none
@@ -113,7 +114,7 @@ c
       include 'maxdim.h'
       include 'maxnax.h'
       character version*(*)
-      parameter (version = 'ImPol: version 29-Mar-95')
+      parameter (version = 'ImPol: version 25-May-95')
 cc
       real iline(maxdim), qline(maxdim), uline(maxdim), pline(maxdim), 
      +  mline(maxdim), paline(maxdim), epline(maxdim), emline(maxdim),
@@ -646,7 +647,7 @@ c
       do i = 1, naxis
         istr = itoaf(i)
         call wrhdd (lout, 'crval'//istr, crval(i))
-        call wrhdr (lout, 'crpix'//istr, crpix(i))
+        call wrhdd (lout, 'crpix'//istr, crpix(i))
         call wrhdd (lout, 'cdelt'//istr, cdelt(i))
         call wrhda (lout, 'ctype'//istr, ctype(i))
       end do
