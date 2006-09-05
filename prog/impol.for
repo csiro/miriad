@@ -10,7 +10,8 @@ c	Stokes Q and U images.  Position angle is positive N -> E.
 c@ in
 c	Upto three values; the Q, U and I images, respectively.
 c	The I image is only needed if you want to compute the
-c	fractional polarization image as well.
+c	fractional polarization image as well or if you want to 
+c	blank the output based upon an I S/N ratio.
 c	Wild card expansion is supported. 
 c@ poli
 c	Up to two values; the output polarized intensity image and
@@ -23,21 +24,26 @@ c	to input an I image to keyword "in" for this.
 c@ pa
 c	Up to two values; the output position angle image and optionally,
 c	its associated error image (which will not be constant).  These
-c	will be in degress (but see OPTIONS=RADIANS),
+c	will be in degrees (but see OPTIONS=RADIANS),
 c	Default is no output images.
 c@ sigma
 c	Up to 2 values; the mean standard deviation of the noise in 
 c	the Q & U images (i.e. one number for them both),  and the
-c	standard deviation of the I image (needed for keyword "polm"
-c	error image).  Required when debiasing or blanking; try to 
-c	make the Q,U value as accurate as possible for the debiasing.
+c	standard deviation of the I image.  
+c
+c	These are required for debiasing (Q,U only), or for generating
+c	output error images, or for blanking the output. Try to make the 
+c	Q,U value as accurate as possible for the debiasing.
 c	Perhaps measure it from a V image
 c	No default for sigma_QU, sigma_I defaults to sigma_QU
 c@ sncut
-c	This is the S/N ratio, P/SIGMA, below which the output images
-c	are blanked (see also options=zero below). It is generally 
-c	recommended that an SNCUT of at least 2 is used.
-c	The default is 2.0
+c	Up to 2 values.  The first is the S/N ratio, P/SIGMA_QU, below 
+c	which the output images are blanked (see also options=zero below).
+c	It is generally recommended that an SNCUT of at least 2 is used.
+c	The second value, which is only valid when you have input an I
+c	image and sigma, is the S/N ratio, I/SIGMA_I, below which output
+c	images are blanked (defaults to no I based blanking)
+c	The default is 2.0 and 0.0
 c@ pacut
 c	The output images are blanked if the error in the position
 c	angle image (degrees or radians depending on OPTIONS) is greater
@@ -107,19 +113,19 @@ c		  need only align to 1%.
 c    nebk 28feb94 Default values to RDHDD must be double precision
 c    nebk 29mar95 Add fractional polarization images to output
 c    nebk 25may95 Ref. pix. of output stuffed because of type mismatch
-c	
+c    nebk 09jun95 Add I/sigma_I blanking
 c------------------------------------------------------------------------
       implicit none
 c
       include 'maxdim.h'
       include 'maxnax.h'
       character version*(*)
-      parameter (version = 'ImPol: version 25-May-95')
+      parameter (version = 'ImPol: version 09-Jun-95')
 cc
       real iline(maxdim), qline(maxdim), uline(maxdim), pline(maxdim), 
      +  mline(maxdim), paline(maxdim), epline(maxdim), emline(maxdim),
      +  epaline(maxdim), iepoch, qepoch, uepoch, sigmaqu, sigmai, 
-     +  rm, snclip, paclip
+     +  rm, snclip(2), paclip
       double precision icdelt(maxnax), qcdelt(maxnax), ucdelt(maxnax), 
      +  icrval(maxdim), qcrval(maxnax), ucrval(maxnax),
      +  icrpix(maxnax), qcrpix(maxnax), ucrpix(maxnax)
@@ -153,6 +159,8 @@ c-------------------------------------------------------------------------
       call output (version)
       call output
      +('IMPOL can now compute fractional polarization and error images')
+      call output ('IMPOL can now blank based upon the I image SNR')
+      call output (' ')
 c
 c Get the inputs
 c
@@ -162,7 +170,8 @@ c
       call mkeya ('polm', mout, 2, nmout)
       call mkeya ('pa', paout, 2, npaout)
       call getopt (debias, radians, relax, zero)
-      call keyr ('sncut', snclip, 2.0)
+      call keyr ('sncut', snclip(1), 2.0)
+      call keyr ('sncut', snclip(2), 0.0)
       call keyr ('pacut', paclip, 0.0)
       call keyr ('sigma', sigmaqu, 0.0)
       call keyr ('sigma', sigmai, sigmaqu)
@@ -189,7 +198,8 @@ c
       if (doimage .and. npout.eq.0 .and. npaout.eq.0 .and. nmout.eq.0)
      +  call bug ('f', 'You must specify an output image')
 c
-      snclip = max(snclip,0.0)
+      snclip(1) = max(snclip(1),0.0)
+      snclip(2) = max(snclip(2),0.0)
       blstr = 'blanked'
       if (zero) blstr = 'zeroed'
       if (npaout.eq.0) rm = 0.0
@@ -197,10 +207,13 @@ c
       bflag = 'f'
       if (relax) bflag = 'w'
 c
+      sigmaqu = abs(sigmaqu)
+      sigmai = abs(sigmai)
+c
 c Issue some messages if producing an output image
 c
       if (doimage) then
-        write (line, 10) blstr, snclip
+        write (line, 10) blstr, snclip(1)
 10      format ('Output ', a, ' when     P/sigma < ', f6.2)
         call output (line)
 c
@@ -213,9 +226,9 @@ c
           call output (line)
         end if
 c
-        if (snclip.lt.2.0) call bug ('w', 'Interpreting polarized '
+        if (snclip(1).lt.2.0) call bug ('w', 'Interpreting polarized '
      +    //'images below P/SIG=2 can be hazardous')
-        if ((snclip.gt.0.0 .or. paclip.gt.0.0 .or. debias) .and. 
+        if ((snclip(1).gt.0.0 .or. paclip.gt.0.0 .or. debias) .and. 
      +       sigmaqu.le.0.0) 
      +     call bug ('f', 'You must specify sigma')
 c
@@ -226,7 +239,7 @@ c
           else
             call bug ('w', 
      +      'The polarized intensity image will not be debiased')
-            if (snclip.lt.2.0) call bug ('w',
+            if (snclip(1).lt.2.0) call bug ('w',
      +   'The polarized intensity image will not be blanked with SNCUT')
           end if
         end if
@@ -678,7 +691,7 @@ c
       integer li, lq, lu, lpout(2), lmout(2), lpaout(2), naxis, 
      +  size(naxis)
       real iline(*), qline(*), uline(*), pline(*), mline(*), paline(*),
-     +  epline(*), emline(*), epaline(*), snclip, paclip, sigmai,
+     +  epline(*), emline(*), epaline(*), snclip(2), paclip, sigmai,
      +  sigmaqu, rm
       double precision crval(naxis), cdelt(naxis), crpix(naxis)
       logical iflags(*), qflags(*), uflags(*), pflags(*), mflags(*),
@@ -692,7 +705,7 @@ cc
 c
       integer i, j, k, frqax
       double precision fac
-      real psq, sigsq, snclipsq, freq, snr, parot, p, paerr
+      real psq, sigsq, snclipsq, freq, psnr, isnr, parot, p, paerr
       character ustr*8, aline*80
       logical ok
 c-----------------------------------------------------------------------
@@ -732,7 +745,7 @@ c
       end if
 c
       sigsq = sigmaqu * sigmaqu
-      snclipsq = snclip * snclip
+      snclipsq = snclip(1) * snclip(1)
       paclip = fac * paclip
 c
 c Loop over planes
@@ -767,14 +780,17 @@ c
           call xyread  (lu, j, uline)
           call xyflgrd (lu, j, uflags)
 c
-c Work out everything possibel fro this row
+c Work out everything possible from this row
 c
           do i = 1, size(1)
             psq = qline(i)**2 + uline(i)**2
-            snr = 1.0
-            if (snclip.gt.0.0) snr = psq / sigsq
+            psnr = 1.0
+            if (snclip(1).gt.0.0) psnr = psq / sigsq
             paerr = -1.0
             if (paclip.gt.0.0) paerr = fac * sigmaqu / sqrt(psq)
+            isnr = 1.0
+            if (li.ne.0 .and. sigmai.gt.0.0 .and. snclip(2).gt.0.0)
+     +        isnr = iline(i) / sigmai
 c
 c Init all output arrays with zeros and bad flags
 c
@@ -793,9 +809,11 @@ c Undefined, so don't allow the "zero" blanking option
 c
               pflags(i) = .false.
               mflags(i) = .false.
-            else if (snr.gt.snclipsq .and. paerr.lt.paclip) then
+            else if (psnr.gt.snclipsq .and. isnr.gt.snclip(2) .and.
+     +               paerr.lt.paclip) then
 c
-c Passed the P/sigma cutoff and p.a. error cutoff so debias P if desired
+c Passed the P/sigma cutoff, the I/sigma cutoff, and the p.a. error 
+c cutoff so debias P if desired
 c
               ok = .true.
               if (debias) psq = psq - sigsq
@@ -844,8 +862,9 @@ c
               end if
             else
 c
-c Failed the PCUT and p.a.error tests. Don't allow "zero"  blanking here
-c as PCUT could be quite high and zero not a good estimate of P
+c Failed the PCUT, ICUT and p.a.error tests. Don't allow "zero"  
+c blanking here as PCUT could be quite high and zero not a good 
+c estimate of P
 c
               pflags(i) = .false.
               mflags(i) = .false.
