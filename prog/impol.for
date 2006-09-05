@@ -114,13 +114,14 @@ c    nebk 28feb94 Default values to RDHDD must be double precision
 c    nebk 29mar95 Add fractional polarization images to output
 c    nebk 25may95 Ref. pix. of output stuffed because of type mismatch
 c    nebk 09jun95 Add I/sigma_I blanking
+c    nebk 22aug96 Check for I=0
 c------------------------------------------------------------------------
       implicit none
 c
       include 'maxdim.h'
       include 'maxnax.h'
       character version*(*)
-      parameter (version = 'ImPol: version 09-Jun-95')
+      parameter (version = 'ImPol: version 22-Aug-96')
 cc
       real iline(maxdim), qline(maxdim), uline(maxdim), pline(maxdim), 
      +  mline(maxdim), paline(maxdim), epline(maxdim), emline(maxdim),
@@ -780,37 +781,39 @@ c
           call xyread  (lu, j, uline)
           call xyflgrd (lu, j, uflags)
 c
-c Work out everything possible from this row
+c Work out everything possible from this row. By default, snclip(2)=0
+c so ISNR=1 means no I based blanking by default
 c
           do i = 1, size(1)
-            psq = qline(i)**2 + uline(i)**2
+            psq = 0.0
+            if (uline(i).ne.0.0 .and. qline(i).ne.0.0)
+     +        psq = qline(i)**2 + uline(i)**2
             psnr = 1.0
             if (snclip(1).gt.0.0) psnr = psq / sigsq
-            paerr = -1.0
-            if (paclip.gt.0.0) paerr = fac * sigmaqu / sqrt(psq)
             isnr = 1.0
             if (li.ne.0 .and. sigmai.gt.0.0 .and. snclip(2).gt.0.0)
      +        isnr = iline(i) / sigmai
+c
+c Work out p.a. error.  If this fails because q=u=0, doesn't
+c matter because nothing more will be worked out under these
+c conditions and all output will be blanked
+c
+            paerr = -1.0
+            if (paclip.gt.0.0 .and. psq.gt.0.0)
+     +        paerr = fac * sigmaqu / sqrt(psq)
 c
 c Init all output arrays with zeros and bad flags
 c
             call allblnk (pline(i), pflags(i), epline(i), epflags(i),
      +         mline(i), mflags(i), emline(i), emflags(i),
      +         paline(i), paflags(i), epaline(i), epaflags(i))
-            if (zero) then
-              pflags(i) = .true.
-              mflags(i) = .true.
-            end if
 c
-            if ( (uline(i).eq.0.0 .and. qline(i).eq.0.0) .or.
-     +           (.not.qflags(i) .or. .not.uflags(i)) ) then
+c See what we can validly work out
 c
-c Undefined, so don't allow the "zero" blanking option
-c
-              pflags(i) = .false.
-              mflags(i) = .false.
-            else if (psnr.gt.snclipsq .and. isnr.gt.snclip(2) .and.
-     +               paerr.lt.paclip) then
+            if ( (uline(i).ne.0.0 .or. qline(i).ne.0.0)    .and.
+     +            qflags(i) .and. uflags(i)                .and.
+     +            psnr.gt.snclipsq .and. isnr.gt.snclip(2) .and.
+     +            paerr.lt.paclip) then
 c
 c Passed the P/sigma cutoff, the I/sigma cutoff, and the p.a. error 
 c cutoff so debias P if desired
@@ -833,7 +836,7 @@ c
                 pflags(i) = .true.
                 epflags(i) = .true.
 c
-                if (li.ne.0) then
+                if (li.ne.0 .and. iline(i).ne.0.0) then
                   mline(i) = pline(i) / iline(i)
                   emline(i) = 
      +              sqrt((sigmaqu/pline(i))**2 + (sigmai/iline(i))**2)
@@ -843,31 +846,19 @@ c
 c
                 paline(i) = 
      +            fac * (atan2(uline(i),qline(i))/2.0 - parot) 
-                epaline(i) = fac * sigmaqu / p
+                epaline(i) = fac * sigmaqu / pline(i)
                 paflags(i) = .true.
                 epaflags(i) = .true.
               else
 c
-c Blank poli, polm and p.a. if we can't debias poli. Zero
-c is OK estimate for P and m if we can't debias
+c If we can't debias poli, user can ask for zero as
+c estimate for P and m
 c
-                call allblnk (
-     +            pline(i), pflags(i), epline(i), epflags(i),
-     +            mline(i), mflags(i), emline(i), emflags(i),
-     +            paline(i), paflags(i), epaline(i), epaflags(i))
                 if (zero) then
                   pflags(i) = .true.
-                   mflags(i) = .true.
+                  mflags(i) = .true.
                 end if
               end if
-            else
-c
-c Failed the PCUT, ICUT and p.a.error tests. Don't allow "zero"  
-c blanking here as PCUT could be quite high and zero not a good 
-c estimate of P
-c
-              pflags(i) = .false.
-              mflags(i) = .false.
             end if
           end do
 c
@@ -882,7 +873,7 @@ c
             call xyflgwr (lpout(2), j, epflags)
           end if
 c
-c Write out fractional polairzation and error
+c Write out fractional polarization and error
 c
           if (lmout(1).ne.0) then
             call xywrite (lmout(1), j, mline)
