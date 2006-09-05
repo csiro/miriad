@@ -8,22 +8,31 @@ c	IMPOL computes the total linearly polarized intensity
 c	(optionally debiasing it) and position angle images from 
 c	Stokes Q and U images.  Position angle is positive N -> E.
 c@ in
-c	Two values; the Q and U images, respectively.
+c	Upto three values; the Q, U and I images, respectively.
+c	The I image is only needed if you want to compute the
+c	fractional polarization image as well.
 c	Wild card expansion is supported. 
 c@ poli
 c	Up to two values; the output polarized intensity image and
 c	optionally, its associated error image (which will be constant).
 c	Default is no output images.
+c@ polm
+c	Up to values; the output fractional polarization image
+c	and optionally, its associated error image.  You need
+c	to input an I image to keyword "in" for this.
 c@ pa
 c	Up to two values; the output position angle image and optionally,
 c	its associated error image (which will not be constant).  These
 c	will be in degress (but see OPTIONS=RADIANS),
 c	Default is no output images.
 c@ sigma
-c	The mean standard deviation of the noise in the Q and U images.
-c	Required when debiasing or blanking; try to make it as accurate
-c	a value as possible.  Perhaps measure it from a V image
-c	No default.
+c	Up to 2 values; the mean standard deviation of the noise in 
+c	the Q & U images (i.e. one number for them both),  and the
+c	standard deviation of the I image (needed for keyword "polm"
+c	error image).  Required when debiasing or blanking; try to 
+c	make the Q,U value as accurate as possible for the debiasing.
+c	Perhaps measure it from a V image
+c	No default for sigma_QU, sigma_I defaults to sigma_QU
 c@ sncut
 c	This is the S/N ratio, P/SIGMA, below which the output images
 c	are blanked (see also options=zero below). It is generally 
@@ -53,7 +62,8 @@ c		   a very good reason for using this option (e.g. a detection
 c		   experiment).  See VLA memo no. 161 by Patrick Leahy for 
 c		   more details of bias removal.
 c
-c	"zero"     When the output pixel is clipped, setting OPTIONS=ZERO
+c	"zero"     When the output pixel is clipped because the debiasing
+c		   fails (P**2 may become negative), setting OPTIONS=ZERO
 c		   will cause the output polarized intensity image (not the
 c		   position angle image) pixel to be set to 0.0 rather than 
 c		   being masked out.   This is very important if you are 
@@ -95,30 +105,37 @@ c    nebk 14nov93 Keyword pacut called paclip in code and doc changes.
 c    rjs  19jan94 Relax alignment requirements in chkdes2 so that values
 c		  need only align to 1%.
 c    nebk 28feb94 Default values to RDHDD must be double precision
+c    nebk 29mar95 Add fractional polarization images to output
+c	
 c------------------------------------------------------------------------
       implicit none
 c
       include 'maxdim.h'
       include 'maxnax.h'
       character version*(*)
-      parameter (version = 'ImPol: version 28-Feb-94')
+      parameter (version = 'ImPol: version 29-Mar-95')
 cc
-      real qline(maxdim), uline(maxdim), pline(maxdim), paline(maxdim),
-     +epline(maxdim), epaline(maxdim), qepoch, uepoch, qcrpix(maxnax),
-     +ucrpix(maxnax), sigma, rm, snclip, paclip
-      double precision qcdelt(maxnax), ucdelt(maxnax), qcrval(maxnax),
-     +ucrval(maxnax)
+      real iline(maxdim), qline(maxdim), uline(maxdim), pline(maxdim), 
+     +  mline(maxdim), paline(maxdim), epline(maxdim), emline(maxdim),
+     +  epaline(maxdim), iepoch, qepoch, uepoch, sigmaqu, sigmai, 
+     +  rm, snclip, paclip
+      double precision icdelt(maxnax), qcdelt(maxnax), ucdelt(maxnax), 
+     +  icrval(maxdim), qcrval(maxnax), ucrval(maxnax),
+     +  icrpix(maxnax), qcrpix(maxnax), ucrpix(maxnax)
 c
-      integer lq, lu, lpout(2), lpaout(2), qsize(maxnax), usize(maxnax),
-     +qnaxis, unaxis, qstkax, ustkax, npout, npaout
+      integer li, lq, lu, lpout(2), lpaout(2), lmout(2), isize(maxnax),
+     +  qsize(maxnax), usize(maxnax), inaxis, qnaxis, unaxis, istkax,
+     +  qstkax, ustkax, npout, npaout, nmout, nin
 c
-      character qin*64, uin*64, pout(2)*64, paout(2)*64, ustr*8,
-     +qctype(maxnax)*9, uctype(maxnax)*9, bflag, line*80, blstr*7,
-     +device*80
+      character ins(3)*64, iin*64, qin*64, uin*64, pout(2)*64, 
+     +  paout(2)*64, mout(2)*64, ustr*8, ictype(maxnax)*9, 
+     +  qctype(maxnax)*9, uctype(maxnax)*9, 
+     +  bflag, line*80, blstr*7, device*80
 c
-      logical radians, debias, qflags(maxdim), uflags(maxdim),
-     +pflags(maxdim), epflags(maxdim), paflags(maxdim), 
-     +epaflags(maxdim), relax, zero, doimage
+      logical radians, debias, iflags(maxdim), qflags(maxdim), 
+     +  uflags(maxdim), pflags(maxdim), mflags(maxdim), epflags(maxdim), 
+     +  emflags(maxdim), paflags(maxdim), epaflags(maxdim), relax, 
+     +  zero, doimage
 c
       integer len1
       integer nkeys
@@ -130,50 +147,54 @@ c
      +    'obsra   ','obsdec  ','observer','xshift  ','yshift  ',
      +    'bmaj    ','bmin    ','bpa     ','pbfwhm  ','lstart  ',
      +    'lstep   ','ltype   ','lwidth  ','vobs    '/
-      data lpout, lpaout /2*0, 2*0/
+      data li, lpout, lmout, lpaout /0, 2*0, 2*0, 2*0/
 c-------------------------------------------------------------------------
       call output (version)
+      call output
+     +('IMPOL can now compute fractional polarization and error images')
 c
 c Get the inputs
 c
       call keyini
-c
-      call keyf ('in', qin, ' ')
-      call keyf ('in', uin, ' ')
+      call mkeyf ('in', ins, 3, nin)
       call mkeya ('poli', pout, 2, npout)
+      call mkeya ('polm', mout, 2, nmout)
       call mkeya ('pa', paout, 2, npaout)
-      doimage = .true.
-      if (qin.eq.' ' .and. uin.eq.' ' .and. npout.eq.0 .and.
-     +    npaout.eq.0) then
-        doimage = .false.
-      else
-        if (qin.eq.' ' .or. uin.eq.' ') call bug ('f', 
-     +      'You must specify both Q and U input images')
-        if (npout.eq.0 .and. npaout.eq.0) 
-     +     call bug ('f', 'You must specify an output image')
-      end if       
-c
       call getopt (debias, radians, relax, zero)
-c
       call keyr ('sncut', snclip, 2.0)
-      snclip = max(snclip,0.0)
       call keyr ('pacut', paclip, 0.0)
+      call keyr ('sigma', sigmaqu, 0.0)
+      call keyr ('sigma', sigmai, sigmaqu)
+      call keyr ('rm', rm, 0.0)
+      call keya ('device', device, ' ')
+      call keyfin
+c
+c Process the inputs
+c
+      doimage = .true.
+      if (device.eq.' ') then 
+        if (nin.eq.0) call bug ('f', 'Nothing to do')
+      else
+        if (nin.eq.0) doimage = .false.
+      end if
+c
+      if (doimage .and. nin.lt.2) 
+     +  call bug ('f', 'Not enough input images')
+      qin = ins(1)
+      uin = ins(2)
+      iin = ' '
+      if (nin.eq.3) iin = ins(3)
+c
+      if (doimage .and. npout.eq.0 .and. npaout.eq.0 .and. nmout.eq.0)
+     +  call bug ('f', 'You must specify an output image')
+c
+      snclip = max(snclip,0.0)
       blstr = 'blanked'
       if (zero) blstr = 'zeroed'
-c 
-      call keyr ('sigma', sigma, 0.0)
-c
-      call keyr ('rm', rm, 0.0)
       if (npaout.eq.0) rm = 0.0
 c
       bflag = 'f'
       if (relax) bflag = 'w'
-c
-      call keya ('device', device, ' ')
-      if (.not.doimage .and. device.eq.' ') call bug ('f',
-     +   'You have given me nothing to do')
-c
-      call keyfin
 c
 c Issue some messages if producing an output image
 c
@@ -194,7 +215,7 @@ c
         if (snclip.lt.2.0) call bug ('w', 'Interpreting polarized '
      +    //'images below P/SIG=2 can be hazardous')
         if ((snclip.gt.0.0 .or. paclip.gt.0.0 .or. debias) .and. 
-     +       sigma.le.0.0) 
+     +       sigmaqu.le.0.0) 
      +     call bug ('f', 'You must specify sigma')
 c
         if (npout.gt.0) then
@@ -213,10 +234,23 @@ c
 c Open the input images 
 c
       if (doimage) then
+c
+c I
+c
+        if (iin.ne.' ') call openin (bflag, maxdim, maxnax, iin, li, 
+     +      inaxis, isize, iepoch, icrpix, icdelt, icrval, ictype, 
+     +      istkax)
+        if (istkax.ne.0 .and. icrval(istkax).ne.1) call bug (bflag, 
+     +     iin(1:len1(iin))//' does not appear to be an I image')
+c
+c Q
+c
         call openin (bflag, maxdim, maxnax, qin, lq, qnaxis, qsize, 
      +     qepoch, qcrpix, qcdelt, qcrval, qctype, qstkax)
         if (qstkax.ne.0 .and. qcrval(qstkax).ne.2) call bug (bflag, 
      +     qin(1:len1(qin))//' does not appear to be a Q image')
+c
+c U
 c
         call openin (bflag, maxdim, maxnax, uin, lu, unaxis, usize,
      +      uepoch, ucrpix, ucdelt, ucrval, uctype, ustkax)
@@ -228,43 +262,61 @@ c
         call chkdes (bflag, qin, uin, qnaxis, unaxis, qsize, usize, 
      +     qcrpix, ucrpix, qcdelt, ucdelt, qcrval, ucrval, qepoch,
      +     uepoch, qctype, uctype, qstkax, ustkax)
+        if (iin.ne.' ') call chkdes (bflag, qin, iin, qnaxis, inaxis, 
+     +     qsize, isize, qcrpix, icrpix, qcdelt, icdelt, qcrval, 
+     +     icrval, qepoch, iepoch, qctype, ictype, qstkax, istkax)
 c
-c Strip the Stokes axis from the input header
+c Strip the Stokes axis from the input header (use the Q header
+c from now on as they are all consistent)
 c
         call axstrip (qstkax, qnaxis, qsize, qcrval, qcrpix, qcdelt,
      +                qctype)
 c
-c Open polarized intensity images as required
+c Open output images. Start with polarized intensity
 c
         if (npout.gt.0) call openout (lq, qnaxis, qsize, nkeys, keyw,
-     +     qcrval, qcrpix, qcdelt, qctype, pout(1), .false., 
-     +     version, lpout(1))
+     +     qcrval, qcrpix, qcdelt, qctype, pout(1), 
+     +     'polarized_intensity', version, lpout(1))
         if (npout.eq.2) call openout (lq, qnaxis, qsize, nkeys, keyw,
-     +     qcrval, qcrpix, qcdelt, qctype, pout(2), .false., 
-     +     version, lpout(2))
+     +     qcrval, qcrpix, qcdelt, qctype, pout(2), 
+     +     'polarized_intensity', version, lpout(2))
 c
-c Open position angle images as required
+c Fractional polarization
+c
+        if (nmout.gt.0) call openout (lq, qnaxis, qsize, nkeys, keyw,
+     +     qcrval, qcrpix, qcdelt, qctype, mout(1), 
+     +     'fractional_polarization', version, lmout(1))
+        if (nmout.eq.2) call openout (lq, qnaxis, qsize, nkeys, keyw,
+     +     qcrval, qcrpix, qcdelt, qctype, mout(2),
+     +     'fractional_polarization', version, lmout(2))
+c
+c Position angle 
 c
         if (npaout.gt.0) call openout (lq, qnaxis, qsize, nkeys, keyw,
-     +     qcrval, qcrpix, qcdelt, qctype, paout(1), .true., 
+     +     qcrval, qcrpix, qcdelt, qctype, paout(1), 'position_angle',
      +     version, lpaout(1))
         if (npaout.eq.2) call openout (lq, qnaxis, qsize, nkeys, keyw,
-     +     qcrval, qcrpix, qcdelt, qctype, paout(2), .true.,
+     +     qcrval, qcrpix, qcdelt, qctype, paout(2), 'position_angle',
      +     version, lpaout(2))
 c
 c Now compute and write out the output image(s)
 c
-        call polout (lq, lu, lpout, lpaout, qnaxis, qsize, qcrpix, 
-     +   qcrval, qcdelt, qctype, debias, radians, snclip, paclip,
-     +   sigma, rm, qline, uline, pline, paline, epline, epaline,
-     +   qflags, uflags, pflags, paflags, epflags, epaflags, zero)
+        call polout (lq, lu, li, lpout, lmout, lpaout, qnaxis, qsize, 
+     +   qcrpix, qcrval, qcdelt, qctype, debias, radians, snclip, 
+     +   paclip, sigmai, sigmaqu, rm, iline, qline, uline, pline, 
+     +   mline, paline, epline, emline, epaline, iflags, qflags, 
+     +   uflags, pflags, mflags, paflags, epflags, emflags, 
+     +   epaflags, zero)
 c
 c Close up
 c
+        if (li.ne.0) call xyclose (li)
         call xyclose (lq)
         call xyclose (lu)
         if (lpout(1).ne.0) call xyclose (lpout(1))
         if (lpout(2).ne.0) call xyclose (lpout(2))
+        if (lmout(1).ne.0) call xyclose (lmout(1))
+        if (lmout(2).ne.0) call xyclose (lmout(2))
         if (lpaout(1).ne.0) call xyclose (lpaout(1))
         if (lpaout(2).ne.0) call xyclose (lpaout(2))
       end if
@@ -331,8 +383,8 @@ c-----------------------------------------------------------------------
       implicit none
 c
       integer maxdim, maxnax, lun, naxis, size(maxnax), stkax
-      double precision cdelt(maxnax), crval(maxnax)
-      real epoch, crpix(maxnax)
+      double precision cdelt(maxnax), crval(maxnax), crpix(maxnax)
+      real epoch
       character*(*) ctype(maxnax), in, bflag*1
 cc
       integer len1, i
@@ -384,8 +436,8 @@ c------------------------------------------------------------------------
       implicit none
 c
       integer lun, naxis, size(naxis)
-      real crpix(naxis), epoch
-      double precision cdelt(naxis), crval(naxis)
+      real epoch
+      double precision cdelt(naxis), crval(naxis), crpix(naxis)
       character*(*) ctype(naxis)
 cc
       integer i
@@ -394,7 +446,7 @@ c---------------------------------------------------------------------
       do i = 1, naxis
         str = itoaf(i)
 c
-        call rdhdr (lun, 'crpix'//str, crpix(i), real(size(i))/2.0)
+        call rdhdd (lun, 'crpix'//str, crpix(i), dble(size(i))/2.0d0)
         call rdhdd (lun, 'cdelt'//str, cdelt(i), 1.0d0)
         call rdhda (lun, 'ctype'//str, ctype(i), ' ')
         call rdhdd (lun, 'crval'//str, crval(i), 0.0d0)
@@ -427,8 +479,9 @@ c-----------------------------------------------------------------------
 c
       integer naxis1, naxis2, size1(*), size2(*), stkax1, stkax2
       character*(*) im1, im2, ctype1(*), ctype2(*), bflag
-      real crpix1(*), crpix2(*), epoch1, epoch2
-      double precision crval1(*), crval2(*), cdelt1(*), cdelt2(*)
+      real epoch1, epoch2
+      double precision crval1(*), crval2(*), cdelt1(*), cdelt2(*),
+     +  crpix1(*), crpix2(*)
 cc
       integer k, l1, l2, len1
       character line*130
@@ -465,10 +518,10 @@ c
         call chkds2 (bflag, 'crpix', k, im1(1:l1), im2(1:l2), 
      +               crpix1(k), crpix2(k))
         call chkds2 (bflag, 'cdelt', k, im1(1:l1), im2(1:l2), 
-     +               real(cdelt1(k)), real(cdelt2(k)))
+     +               cdelt1(k), cdelt2(k))
         if (k.ne.stkax1 .or. k.ne.stkax2)
      +    call chkds2 (bflag, 'crval', k, im1(1:l1), im2(1:l2), 
-     +                 real(crval1(k)), real(crval2(k)))
+     +                 crval1(k), crval2(k))
       end do
 c
       end
@@ -489,7 +542,7 @@ c-----------------------------------------------------------------------
 c
       character*(*) type, im1, im2, bflag
       integer iaxis
-      real des1, des2
+      double precision des1, des2
 cc
       character line*130
 c-----------------------------------------------------------------------
@@ -522,8 +575,7 @@ c----------------------------------------------------------------------
       implicit none
 c
       integer iax, naxis, size(naxis)
-      real crpix(naxis)
-      double precision crval(naxis), cdelt(naxis)
+      double precision crval(naxis), cdelt(naxis), crpix(naxis)
       character*(*) ctype(naxis)
 cc
       integer i
@@ -549,7 +601,7 @@ c
 c
 c
       subroutine openout (lin, naxis, size, nkeys, keyw, crval, crpix,
-     +                    cdelt, ctype, out, angle, version, lout)
+     +                    cdelt, ctype, out, btype, version, lout)
 c-----------------------------------------------------------------------
 c     Open an output image, copy header keywords across and write
 c     the history
@@ -565,7 +617,10 @@ c   crpix  Reference pixels
 c   cdelt  Increments
 c   ctype  Axis types
 c   out    Name of output image
-c   angle  True if output is position angle, else polarized intensity
+c   btype  The type of image being opened. 
+c            'fractional_polarization'
+c	     'polarized_intensity'
+c            'position_angle'
 c   versionVersion of this program
 c  Output
 c   lout   Handle for output image
@@ -574,10 +629,8 @@ c-----------------------------------------------------------------------
       implicit none
 c
       integer lin, lout, naxis, size(naxis), nkeys
-      real crpix(naxis)
-      double precision crval(naxis), cdelt(naxis)
-      character*(*) keyw(nkeys), out, version, ctype(naxis)
-      logical angle
+      double precision crval(naxis), cdelt(naxis), crpix(naxis)
+      character*(*) keyw(nkeys), out, version, ctype(naxis), btype*(*)
 cc
       integer i
       character itoaf*1, istr*1, aline*80
@@ -597,12 +650,7 @@ c
         call wrhdd (lout, 'cdelt'//istr, cdelt(i))
         call wrhda (lout, 'ctype'//istr, ctype(i))
       end do
-c
-      if (angle) then
-        call wrbtype (lout, 'position_angle')
-      else
-        call wrbtype (lout, 'polarized_intensity')
-      end if
+      call wrbtype (lout, btype)
 c
       call hisopen  (lout, 'append')
       aline = 'IMPOL: Miriad '//version
@@ -613,10 +661,12 @@ c
       end
 c
 c
-      subroutine polout (lq, lu, lpout, lpaout, naxis, size, crpix, 
-     +   crval, cdelt, ctype, debias, radians, snclip, paclip,
-     +   sigma, rm, qline, uline, pline, paline, epline, epaline, 
-     +   qflags, uflags, pflags, paflags, epflags, epaflags, zero)
+      subroutine polout (lq, lu, li, lpout, lmout, lpaout, naxis, 
+     +   size, crpix, crval, cdelt, ctype, debias, radians, snclip, 
+     +   paclip, sigmai, sigmaqu, rm, iline, qline, uline, pline, 
+     +   mline, paline, epline, emline, epaline, iflags, qflags, 
+     +   uflags, pflags, mflags, paflags, epflags, emflags, 
+     +   epaflags, zero)
 c-----------------------------------------------------------------------
 c     Compute some combinaiton of polarized intensity, position angle 
 c     image and associated error images
@@ -624,13 +674,15 @@ c
 c-----------------------------------------------------------------------
       implicit none
 c
-      integer lq, lu, lpout(2), lpaout(2), naxis, size(naxis)
-      real crpix(naxis), qline(*), uline(*), pline(*), paline(*), 
-     +epline(*), epaline(*), snclip, paclip, sigma, rm
-      double precision crval(naxis), cdelt(naxis)
-
-      logical qflags(*), uflags(*), pflags(*), paflags(*), epflags(*),
-     +epaflags(*), radians, debias, zero
+      integer li, lq, lu, lpout(2), lmout(2), lpaout(2), naxis, 
+     +  size(naxis)
+      real iline(*), qline(*), uline(*), pline(*), mline(*), paline(*),
+     +  epline(*), emline(*), epaline(*), snclip, paclip, sigmai,
+     +  sigmaqu, rm
+      double precision crval(naxis), cdelt(naxis), crpix(naxis)
+      logical iflags(*), qflags(*), uflags(*), pflags(*), mflags(*),
+     +  paflags(*), epflags(*), emflags(*), epaflags(*), radians, 
+     +  debias, zero
       character*(*) ctype(naxis)
 cc
       include 'mirconst.h'
@@ -639,8 +691,9 @@ cc
 c
       integer i, j, k, frqax
       double precision fac
-      real psq, sigsq, snclipsq, freq, snr, parot, p
+      real psq, sigsq, snclipsq, freq, snr, parot, p, paerr
       character ustr*8, aline*80
+      logical ok
 c-----------------------------------------------------------------------
       fac = 1.0
       ustr = ' radians'
@@ -677,9 +730,11 @@ c
         parot = 0.0
       end if
 c
-      sigsq = sigma * sigma
+      sigsq = sigmaqu * sigmaqu
       snclipsq = snclip * snclip
       paclip = fac * paclip
+c
+c Loop over planes
 c
       do k = 1, size(3)
         if (rm.ne.0.0 .and. frqax.eq.3 .and. size(frqax).gt.1) then
@@ -687,86 +742,116 @@ c
           parot = rm * (dcmks / freq)**2 
         end if
 c
-        call xysetpl (lq,   1, k)
-        call xysetpl (lu,   1, k)
+c Set planes
+c
+        if (li.ne.0) call xysetpl (li, 1, k)
+        call xysetpl (lq, 1, k)
+        call xysetpl (lu, 1, k)
         if (lpout(1).ne.0) call xysetpl (lpout(1), 1, k)
         if (lpout(2).ne.0) call xysetpl (lpout(2), 1, k)
+        if (lmout(1).ne.0) call xysetpl (lmout(1), 1, k)
+        if (lmout(2).ne.0) call xysetpl (lmout(2), 1, k)
         if (lpaout(1).ne.0) call xysetpl (lpaout(1), 1, k)
         if (lpaout(2).ne.0) call xysetpl (lpaout(2), 1, k)
 c
+c Read lines of data
+c
         do j = 1, size(2)
+          if (li.ne.0) then
+            call xyread  (li, j, iline)
+            call xyflgrd (li, j, iflags)
+          end if
           call xyread  (lq, j, qline)
           call xyflgrd (lq, j, qflags)
           call xyread  (lu, j, uline)
           call xyflgrd (lu, j, uflags)
 c
-c Work out everything, but only write out what is requested
+c Work out everything possibel fro this row
 c
           do i = 1, size(1)
             psq = qline(i)**2 + uline(i)**2
             snr = 1.0
             if (snclip.gt.0.0) snr = psq / sigsq
+            paerr = -1.0
+            if (paclip.gt.0.0) paerr = fac * sigmaqu / sqrt(psq)
 c
-            call allblnk (pline(i), pflags(i), epline(i), 
-     +         epflags(i), paline(i), paflags(i), epaline(i),
-     +         epaflags(i))
-            if (zero) pflags(i) = .true.
+c Init all output arrays with zeros and bad flags
+c
+            call allblnk (pline(i), pflags(i), epline(i), epflags(i),
+     +         mline(i), mflags(i), emline(i), emflags(i),
+     +         paline(i), paflags(i), epaline(i), epaflags(i))
+            if (zero) then
+              pflags(i) = .true.
+              mflags(i) = .true.
+            end if
 c
             if ( (uline(i).eq.0.0 .and. qline(i).eq.0.0) .or.
      +           (.not.qflags(i) .or. .not.uflags(i)) ) then
 c
 c Undefined, so don't allow the "zero" blanking option
 c
-              pflags(i)   = .false.
-            else if (snr.gt.snclipsq) then
+              pflags(i) = .false.
+              mflags(i) = .false.
+            else if (snr.gt.snclipsq .and. paerr.lt.paclip) then
 c
-c Passed the S/N ration criterion; work out poli and p.a.
-c 
-              pline(i) = sqrt(psq)
-              epline(i) = sigma
-              pflags(i) = .true.
-              epflags(i) = .true.
+c Passed the P/sigma cutoff and p.a. error cutoff so debias P if desired
 c
-              paline(i) = fac * (atan2(uline(i),qline(i))/2.0 - parot)
-              epaline(i) = fac * sigma / sqrt(psq)
-              paflags(i) = .true.
-              epaflags(i) = .true.
+              ok = .true.
+              if (debias) psq = psq - sigsq
+              if (psq.gt.0.0) then
+                p = sqrt(psq)
+              else
+                ok = .false.
+              end if
 c
-              if (paclip.gt.0.0 .and. epaline(i).gt.paclip) then
+              if (ok) then
 c
-c Failed the p.a. error blanking test.   Don't allow "zero"
-c blanking here. Blank both poli and p.a.
+c Work out all the output quantities here. Use debiased
+c P for errors now
 c
-                call allblnk (pline(i), pflags(i), epline(i), 
-     +            epflags(i), paline(i), paflags(i), epaline(i),
-     +            epaflags(i))
+                pline(i) = p
+                epline(i) = sigmaqu
+                pflags(i) = .true.
+                epflags(i) = .true.
+c
+                if (li.ne.0) then
+                  mline(i) = pline(i) / iline(i)
+                  emline(i) = 
+     +              sqrt((sigmaqu/pline(i))**2 + (sigmai/iline(i))**2)
+                  mflags(i) = .true.
+                  emflags(i) = .true.
+                end if
+c
+                paline(i) = 
+     +            fac * (atan2(uline(i),qline(i))/2.0 - parot) 
+                epaline(i) = fac * sigmaqu / p
+                paflags(i) = .true.
+                epaflags(i) = .true.
               else
 c
-c Debias polarized intensity if required
+c Blank poli, polm and p.a. if we can't debias poli. Zero
+c is OK estimate for P and m if we can't debias
 c
-                if (debias) then
-                  p = psq - sigsq
-                  if (p.gt.0.0) then
-                    pline(i) = sqrt(p)
-                  else
-c
-c Blank poli and p.a. if we can't debias poli
-c
-                    call allblnk (pline(i), pflags(i), epline(i), 
-     +                epflags(i), paline(i), paflags(i), epaline(i),
-     +                epaflags(i))
-c
-c Zero is a reasonable estimate for this pixel so if requested,
-c leave the flag mask at good for the poli image
-c
-                    if (zero) pflags(i) = .true.
-                  end if
+                call allblnk (
+     +            pline(i), pflags(i), epline(i), epflags(i),
+     +            mline(i), mflags(i), emline(i), emflags(i),
+     +            paline(i), paflags(i), epaline(i), epaflags(i))
+                if (zero) then
+                  pflags(i) = .true.
+                   mflags(i) = .true.
                 end if
               end if
+            else
+c
+c Failed the PCUT and p.a.error tests. Don't allow "zero"  blanking here
+c as PCUT could be quite high and zero not a good estimate of P
+c
+              pflags(i) = .false.
+              mflags(i) = .false.
             end if
           end do
 c
-c Write them out
+c Write out polarized intensity and error
 c
           if (lpout(1).ne.0) then
             call xywrite (lpout(1), j, pline)
@@ -776,6 +861,19 @@ c
             call xywrite (lpout(2), j, epline)
             call xyflgwr (lpout(2), j, epflags)
           end if
+c
+c Write out fractional polairzation and error
+c
+          if (lmout(1).ne.0) then
+            call xywrite (lmout(1), j, mline)
+            call xyflgwr (lmout(1), j, mflags)
+          end if
+          if (lmout(2).ne.0) then
+            call xywrite (lmout(2), j, emline)
+            call xyflgwr (lmout(2), j, emflags)
+          end if
+c
+c Write out position angle and error
 c
           if (lpaout(1).ne.0) then
             call xywrite (lpaout(1), j, paline)
@@ -801,15 +899,22 @@ c
       end
 c
 c
-      subroutine allblnk (p, pf, ep, epf, pa, paf, epa, epaf)
+      subroutine allblnk (p, pf, ep, epf, m, mf, em, emf, pa, paf, 
+     +                    epa, epaf)
       implicit none
-      real p, ep, pa, epa
-      logical pf, epf, paf, epaf
+      real p, ep, m, em, pa, epa
+      logical pf, epf, mf, emf, paf, epaf
 c
       p = 0.0
       pf = .false.
       ep = 0.0
       epf = .false.
+c
+      m = 0.0
+      mf = .false.
+      em = 0.0
+      emf = .false.
+c      
       pa = 0.0
       paf = .false.
       epa = 0.0
