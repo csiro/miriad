@@ -121,13 +121,14 @@ c    rjs  02jul97 cellscal change.
 c    rjs  23jul97 added pbtype.
 c    nebk 13mar98 position angle error was factor of 2 too big
 c    nebk 27jul00 as above but in another location.  thanks Bryan
+c    mchw 14may02 added bunit to polarized intensity.
 c------------------------------------------------------------------------
       implicit none
 c
       include 'maxdim.h'
       include 'maxnax.h'
       character version*(*)
-      parameter (version = 'ImPol: version 27-Jul-2000')
+      parameter (version = 'ImPol: version 14-May-2002')
 cc
       real iline(maxdim), qline(maxdim), uline(maxdim), pline(maxdim), 
      +  mline(maxdim), paline(maxdim), epline(maxdim), emline(maxdim),
@@ -625,7 +626,7 @@ c     Open an output image, copy header keywords across and write
 c     the history
 c
 c  Input
-c   lin    Image to copy keuwrods from
+c   lin    Image to copy keywords from
 c   naxis  Number of axes
 c   size   Size of axes
 c   nkeys  Number of header keywords to copy
@@ -686,7 +687,7 @@ c
      +   uflags, pflags, mflags, paflags, epflags, emflags, 
      +   epaflags, zero)
 c-----------------------------------------------------------------------
-c     Compute some combinaiton of polarized intensity, position angle 
+c     Compute some combination of polarized intensity, position angle 
 c     image and associated error images
 c
 c-----------------------------------------------------------------------
@@ -892,14 +893,20 @@ c
           if (lpaout(1).ne.0) then
             call xywrite (lpaout(1), j, paline)
             call xyflgwr (lpaout(1), j, paflags)
-          end if
+          endif
           if (lpaout(2).ne.0) then
             call xywrite (lpaout(2), j, epaline)
             call xyflgwr (lpaout(2), j, epaflags)
-          end if
-        end do
-      end do
+          endif
+        enddo
+      enddo
 c
+      if (lpout(1).ne.0) then
+        call wrhda   (lpout(1), 'bunit', 'JY/BEAM')
+      endif
+      if (lpout(1).ne.0) then
+        call wrhda   (lpout(2), 'bunit', 'JY/BEAM')
+      endif
       if (lpaout(1).ne.0) then
         if (radians) then
           call wrhda (lpaout(1), 'bunit', 'RADIANS')
@@ -907,8 +914,8 @@ c
         else
           call wrhda (lpaout(1), 'bunit', 'DEGREES')
           if (lpaout(2).ne.0) call wrhda (lpaout(2), 'bunit', 'DEGREES')
-        end if
-      end if
+        endif
+      endif
 c
       end
 c
