@@ -120,13 +120,14 @@ c                 to be multipled by the fractional polarization
 c    rjs  02jul97 cellscal change.
 c    rjs  23jul97 added pbtype.
 c    nebk 13mar98 position angle error was factor of 2 too big
+c    nebk 27jul00 as above but in another location.  thanks Bryan
 c------------------------------------------------------------------------
       implicit none
 c
       include 'maxdim.h'
       include 'maxnax.h'
       character version*(*)
-      parameter (version = 'ImPol: version 13-Mar-98')
+      parameter (version = 'ImPol: version 27-Jul-2000')
 cc
       real iline(maxdim), qline(maxdim), uline(maxdim), pline(maxdim), 
      +  mline(maxdim), paline(maxdim), epline(maxdim), emline(maxdim),
@@ -848,7 +849,7 @@ c
 c
                 paline(i) = 
      +            fac * (atan2(uline(i),qline(i))/2.0 - parot) 
-                epaline(i) = fac * sigmaqu / pline(i)
+                epaline(i) = 0.5 * fac * sigmaqu / pline(i)
                 paflags(i) = .true.
                 epaflags(i) = .true.
               else
