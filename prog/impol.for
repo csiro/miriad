@@ -115,13 +115,15 @@ c    nebk 29mar95 Add fractional polarization images to output
 c    nebk 25may95 Ref. pix. of output stuffed because of type mismatch
 c    nebk 09jun95 Add I/sigma_I blanking
 c    nebk 22aug96 Check for I=0
+c    nebk 18dec96 Error for fractional polarization was wrong.  It needed
+c                 to be multipled by the fractional polarization
 c------------------------------------------------------------------------
       implicit none
 c
       include 'maxdim.h'
       include 'maxnax.h'
       character version*(*)
-      parameter (version = 'ImPol: version 22-Aug-96')
+      parameter (version = 'ImPol: version 18-Dec-96')
 cc
       real iline(maxdim), qline(maxdim), uline(maxdim), pline(maxdim), 
      +  mline(maxdim), paline(maxdim), epline(maxdim), emline(maxdim),
@@ -158,9 +160,6 @@ c
       data li, lpout, lmout, lpaout /0, 2*0, 2*0, 2*0/
 c-------------------------------------------------------------------------
       call output (version)
-      call output
-     +('IMPOL can now compute fractional polarization and error images')
-      call output ('IMPOL can now blank based upon the I image SNR')
       call output (' ')
 c
 c Get the inputs
@@ -838,7 +837,7 @@ c
 c
                 if (li.ne.0 .and. iline(i).ne.0.0) then
                   mline(i) = pline(i) / iline(i)
-                  emline(i) = 
+                  emline(i) = mline(i) * 
      +              sqrt((sigmaqu/pline(i))**2 + (sigmai/iline(i))**2)
                   mflags(i) = .true.
                   emflags(i) = .true.
