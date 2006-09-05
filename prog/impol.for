@@ -119,13 +119,14 @@ c    nebk 18dec96 Error for fractional polarization was wrong.  It needed
 c                 to be multipled by the fractional polarization
 c    rjs  02jul97 cellscal change.
 c    rjs  23jul97 added pbtype.
+c    nebk 13mar98 position angle error was factor of 2 too big
 c------------------------------------------------------------------------
       implicit none
 c
       include 'maxdim.h'
       include 'maxnax.h'
       character version*(*)
-      parameter (version = 'ImPol: version 18-Dec-96')
+      parameter (version = 'ImPol: version 13-Mar-98')
 cc
       real iline(maxdim), qline(maxdim), uline(maxdim), pline(maxdim), 
      +  mline(maxdim), paline(maxdim), epline(maxdim), emline(maxdim),
@@ -801,7 +802,7 @@ c conditions and all output will be blanked
 c
             paerr = -1.0
             if (paclip.gt.0.0 .and. psq.gt.0.0)
-     +        paerr = fac * sigmaqu / sqrt(psq)
+     +        paerr = 0.5 * fac * sigmaqu / sqrt(psq)
 c
 c Init all output arrays with zeros and bad flags
 c
