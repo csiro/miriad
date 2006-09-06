@@ -229,6 +229,8 @@ c
 30        format ('Output images ', a, ' when sigma(P.A.) > ',
      +            1pe10.4, a)
           call output (line)
+        else
+          paclip = 0.0
         end if
 c
         if (snclip(1).lt.2.0) call bug ('w', 'Interpreting polarized '
@@ -747,7 +749,6 @@ c         Find frequency of pixel one.
 
       sigsq = sigmaqu * sigmaqu
       snclipsq = snclip(1) * snclip(1)
-      paclip = paclip * fac
 
 c     Loop over planes.
       do k = 1, size(3)
