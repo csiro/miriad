@@ -786,77 +786,69 @@ c           Output values are zeroed and flagged by default.
      +         mline(i), mflags(i), emline(i), emflags(i),
      +         paline(i), paflags(i), epaline(i), epaflags(i))
 
-c           Square of the polarized intensity.
-            if (uline(i).ne.0.0 .and. qline(i).ne.0.0) then
-              psq = qline(i)**2 + uline(i)**2
-            else
-              psq = 0.0
-            end if
-
-c           Square of the polarized intensity SNR.
-            if (snclip(1).gt.0.0) then
-              psnr = psq / sigsq
-            else
-              psnr = 1.0
-            end if
-
-c           Stokes-I SNR.
-            if (li.ne.0 .and. sigmai.gt.0.0 .and. snclip(2).gt.0.0) then
-              isnr = iline(i) / sigmai
-            else
-c             By default, snclip(2)=0 so ISNR=1 means no I-based
-c             blanking by default.
-              isnr = 1.0
-            end if
-
-c           P.A. error.
-            if (paclip.gt.0.0 .and. psq.gt.0.0) then
-              paerr = 0.5 * (sigmaqu / sqrt(psq)) * fac
-            else
-c             If it failed because q=u=0, doesn't matter because
-c             nothing more will be worked out under these conditions and
-c             all output will be blanked.
-              paerr = -1.0
-            end if
-
 c           See what we can validly work out.
-            if ((uline(i).ne.0.0 .or. qline(i).ne.0.0)    .and.
-     +           qflags(i) .and. uflags(i)                .and.
-     +           psnr.gt.snclipsq .and. isnr.gt.snclip(2) .and.
-     +           paerr.lt.paclip) then
+            if (qline(i).ne.0.0 .and. uline(i).ne.0.0 .and.
+     +          qflags(i) .and. uflags(i)) then
+c             Square of the polarized intensity.
+              psq = qline(i)**2 + uline(i)**2
 
-c             Passed the P/sigma cutoff, the I/sigma cutoff, and the
-c             p.a. error cutoff so debias P if desired.
-              if (debias) psq = psq - sigsq
-
-              if (psq.gt.0.0) then
-c               Work out all the output quantities here.  Use debiased
-c               P for errors now.
-                pline(i)   = sqrt(psq)
-                epline(i)  = sigmaqu
-                pflags(i)  = .true.
-                epflags(i) = .true.
-
-                if (li.ne.0 .and. iline(i).ne.0.0) then
-                  mline(i)  = pline(i) / iline(i)
-                  emline(i) = mline(i) *
-     +              sqrt((sigmaqu/pline(i))**2 + (sigmai/iline(i))**2)
-                  mflags(i) = .true.
-                  emflags(i) = .true.
-                end if
-
-                paline(i)   = (atan2(uline(i),qline(i))/2.0 - parot) *
-     +                           fac
-                epaline(i)  = 0.5 * (sigmaqu / pline(i)) * fac
-                paflags(i)  = .true.
-                epaflags(i) = .true.
-
+c             Square of the polarized intensity SNR.
+              if (snclip(1).gt.0.0) then
+                psnr = psq / sigsq
               else
-c               Debiassing failed.
-                if (zero) then
-c                 Use zero as the estimate for P and m.
-                  pflags(i) = .true.
-                  mflags(i) = .true.
+                psnr = 1.0
+              end if
+
+c             Stokes-I SNR.
+              if (snclip(2).gt.0.0 .and. sigmai.gt.0.0 .and.
+     +            li.ne.0) then
+                isnr = iline(i) / sigmai
+              else
+c               By default, snclip(2)=0 so ISNR=1 means no I-based
+c               blanking by default.
+                isnr = 1.0
+              end if
+
+c             P.A. error.
+              if (paclip.gt.0.0 .and. psq.gt.0.0) then
+                paerr = 0.5 * (sigmaqu / sqrt(psq)) * fac
+              else
+                paerr = -1.0
+              end if
+
+              if (psnr.gt.snclipsq .and. isnr.gt.snclip(2) .and.
+     +            paerr.lt.paclip) then
+c               If required, debias P and use that for errors now.
+                if (debias) psq = psq - sigsq
+
+                if (psq.gt.0.0) then
+c                 Work out all the output quantities.
+                  pline(i)   = sqrt(psq)
+                  epline(i)  = sigmaqu
+                  pflags(i)  = .true.
+                  epflags(i) = .true.
+
+                  if (li.ne.0 .and. iline(i).ne.0.0) then
+                    mline(i)  = pline(i) / iline(i)
+                    emline(i) = mline(i) *
+     +                sqrt((sigmaqu/pline(i))**2 + (sigmai/iline(i))**2)
+                    mflags(i) = .true.
+                    emflags(i) = .true.
+                  end if
+
+                  paline(i)   = (atan2(uline(i),qline(i))/2.0 - parot) *
+     +                             fac
+                  epaline(i)  = 0.5 * (sigmaqu / pline(i)) * fac
+                  paflags(i)  = .true.
+                  epaflags(i) = .true.
+
+                else
+c                 Debiassing failed.
+                  if (zero) then
+c                   Use zero as the estimate for P and m.
+                    pflags(i) = .true.
+                    mflags(i) = .true.
+                  end if
                 end if
               end if
             end if
