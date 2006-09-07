@@ -30,6 +30,16 @@ c	number of IFs written out. A value of 0 is used for a continuum
 c	observation. For example, if you have two IFs, the first of
 c	which is HI, and the second is continuum, use
 c	    restfreq=1.420405752,0
+c@ posout
+c       Name of an output ascii file to contain a log of the antenna positions.
+c       Format is MJD, antenna, RA (rad), DEC (rad).
+c@ posin
+c       Name of an input ascii file which contains the antenna positions.
+c       Format is MJD, antenna, RA (rad), DEC (rad). If a filename is
+c       given, the antenna positions in the rpfits file are ignored.
+c       Usually this file will be that written by the posout parameter.
+c       The advantage of this is that excessive interpolation is avoided
+c       in cases where the antenna positions lag the correlator data.
 c@ options
 c	This gives extra processing options. Several can be given,
 c	separated by comas.
@@ -82,6 +92,7 @@ c	            mode. The output dataset contains no bins, but instead
 c	            appears as data measured with small cycle times.
 c	  'pmps'    Undo `poor man's phase switching'. This is an obscure option
 c	            that you should not generally use.
+c         'detail'  Give a more detailed error log when loading. 
 c@ nfiles
 c	This gives one or two numbers, being the number of files to skip,
 c	followed by the number of files to process. This is only
@@ -215,14 +226,15 @@ c------------------------------------------------------------------------
 	integer MAXFILES
 	parameter(MAXFILES=128)
 	character version*(*)
-	parameter(version='WbLod: version 1.1 09-Oct-03')
+	parameter(version='WbLod: version 1.3 24-Oct-05')
 c
-	character in(MAXFILES)*64,out*64,line*64
-	integer tno
-	integer ifile,ifsel,nfreq,iostat,nfiles,i
-	double precision rfreq(2)
+	character in(MAXFILES)*64,out*80,line*64,posout*132
+	integer tno,lpi,lpo
+	integer ifile,ifsel,nfreq,iostat,nfiles,i,j,k
+	double precision rfreq(2),t1
+	real r1,d1
 	logical doauto,docross,docomp,dosam,relax,unflag,dohann,dobary
-	logical doif,birdie,dowt,dopmps,doxyp,polflag,hires
+	logical doif,birdie,dowt,dopmps,doxyp,polflag,hires,detail
 	integer fileskip,fileproc,scanskip,scanproc
 
 	include 'wbcomm.h'
@@ -230,11 +242,13 @@ c
 c  Externals.
 c
 	character rperr*32,itoaf*8
+	integer len1
 
 c  Initialise hires coordinate buffers
 
 	do i=1,atcamax
 	   mant(i)=0
+	   sbuf(i)=1
 	end do
 	fgbadpos=0
 	fgbadtmp=0
@@ -252,8 +266,11 @@ c
      *	  call bug('f','Output name must be given')
         call keyi('ifsel',ifsel,0)
         call mkeyd('restfreq',rfreq,2,nfreq)
+        call keya('posin',posin,' ')
+        call keya('posout',posout,' ')
 	call getopt(doauto,docross,docomp,dosam,doxyp,relax,unflag,
-     *		dohann,birdie,dobary,doif,dowt,dopmps,polflag,hires)
+     *		dohann,birdie,dobary,doif,dowt,dopmps,polflag,hires,
+     *          detail)
 	call keyi('nfiles',fileskip,0)
 	call keyi('nfiles',fileproc,nfiles-fileskip)
 	if(nfiles.gt.1.and.fileproc+fileskip.gt.nfiles)
@@ -279,6 +296,56 @@ c
         call uvputvrd(tno,'ra',0.0d0,1)
         call uvputvrd(tno,'dec',0.0d0,1)
 c
+c  Open the position log files
+c
+	if(posin.ne. ' ') then
+          call txtopen(lpi, posin, 'old', iostat)
+          if(iostat.ne.0) call bug ('f', 'Error opening posin')
+	end if
+
+	if(posout.ne. ' ') then
+          call txtopen(lpo, posout, 'new', iostat)
+          if(iostat.ne.0) call bug ('f', 'Error opening posout')
+	  line='# Output from wblod'
+	  call txtwrite(lpo,line,len1(line),iostat)
+	  if(iostat.ne.0) call bug ('f', 'Error writing posout')
+          line='# MJD, ANTENNA, RA, DEC (J2000,rad)'
+	  call txtwrite(lpo,line,len1(line),iostat)
+	  if(iostat.ne.0) call bug ('f', 'Error writing posout')
+	end if
+
+	do i=1,atcamax
+	   sant(i)=0
+	end do
+c
+c  Read the posin file
+c
+	if(posin.ne. ' ') then
+	  k=0
+	  call output('Reading posin...')
+ 100	  call txtread(lpi,line,j,iostat)
+          if(iostat.gt.0.or.iostat.lt.-1) then
+            call bug ('f', 'Error reading posin')
+	  end if
+	  if(line(1:1).ne.'#') then
+	     read(line,*) t1, i, r1, d1
+	     if(i.lt.2.or.i.gt.4) call bug('f','Invalid antenna number')
+	     k=k+1
+	     sant(i)=sant(i)+1
+	     sut(i,sant(i))=t1
+	     sra(i,sant(i))=r1
+	     sdec(i,sant(i))=d1
+	  end if
+          if(iostat.eq.-1) then
+	     write(line,'(i8)') k
+	     call output('Number of positions read = '//line)
+	  else
+	     goto 100
+	  end if
+	end if
+	
+
+c
 c  Do some history processing.
 c
 	call hisopen(tno,'write')
@@ -302,7 +369,7 @@ c
 	    if(iostat.ne.0)call bug('f','Error skipping RPFITS file')
 	  else
 	    call PokeIni(tno,dosam,doxyp,dohann,birdie,dowt,dopmps,
-     *		dobary,doif,hires)
+     *		dobary,doif,hires,detail)
 	    if(nfiles.eq.1)then
 	      i = 1
 	    else
@@ -315,7 +382,7 @@ c
 	    endif
 	    call RPDisp(in(i),scanskip,scanproc,doauto,docross,
      *			relax,unflag,polflag,ifsel,rfreq,nfreq,hires,
-     *                  iostat)
+     *                  detail,posout,lpo,iostat)
 	  endif
 	enddo
 c
@@ -332,14 +399,27 @@ c
 	call hisclose(tno)
 	call uvclose(tno)
 c
+c  Close position files
+c
+	if(posin.ne.' ') then
+	  call txtclose(lpi)
+	endif
+
+	if(posout.ne.' ') then
+	  call txtclose(lpo)
+	endif
+
+c
 	end
 c************************************************************************
 	subroutine GetOpt(doauto,docross,docomp,dosam,doxyp,relax,
-     *	  unflag,dohann,birdie,dobary,doif,dowt,dopmps,polflag,hires)
+     *	  unflag,dohann,birdie,dobary,doif,dowt,dopmps,polflag,hires,
+     *    detail)
 c
 	implicit none
 	logical doauto,docross,dosam,relax,unflag,dohann,dobary
 	logical docomp,doif,birdie,dowt,dopmps,doxyp,polflag,hires
+	logical detail
 c
 c  Get the user options.
 c
@@ -360,15 +440,16 @@ c    dowt	Reweight the lag spectrum.
 c    dopmps	Undo "poor man's phase switching"
 c    polflag	Flag all polarisations if any are bad.
 c    hires      Convert bin-mode to high time resolution data.
+c    detail     Report more errors
 c------------------------------------------------------------------------
 	integer nopt
-	parameter(nopt=15)
+	parameter(nopt=16)
 	character opts(nopt)*8
 	logical present(nopt)
 	data opts/'noauto  ','nocross ','compress','relax   ',
      *		  'unflag  ','samcorr ','hanning ','bary    ',
      *		  'noif    ','birdie  ','reweight','xycorr  ',
-     *		  'nopflag ','hires   ','pmps    '/
+     *		  'nopflag ','hires   ','pmps    ','detail  '/
 	call options('options',opts,present,nopt)
 	doauto = .not.present(1)
 	docross = .not.present(2)
@@ -388,6 +469,7 @@ c LSS force options=hires
 c	hires   = present(14)
 	hires   = .true.
 	dopmps  = present(15)
+	detail  = present(16)
 c
 	if((dosam.or.doxyp).and.relax)call bug('f',
      *	  'You cannot use options samcorr or xycorr with relax')
@@ -437,12 +519,12 @@ c
 c************************************************************************
 c************************************************************************
 	subroutine PokeIni(tno1,dosam1,doxyp1,dohann1,birdie1,dowt1,
-     *					dopmps1,dobary1,doif1,hires1)
+     *		           dopmps1,dobary1,doif1,hires1,detail1)
 c
 	implicit none
 	integer tno1
 	logical dosam1,doxyp1,dohann1,doif1,dobary1,birdie1,dowt1
-	logical dopmps1,hires1
+	logical dopmps1,hires1,detail1
 c
 c  Initialise the Poke routines.
 c------------------------------------------------------------------------
@@ -461,6 +543,7 @@ c
 	dowt   = dowt1
 	dopmps = dopmps1
 	hires  = hires1
+	detail = detail1
 c
 	if(dowt)call LagWt(wts,2*ATCONT-2,0.04)
 c
@@ -1084,25 +1167,26 @@ c
 	integer i1,i2,if,p,bl,nchan,npol,ipnt,ischan(ATIF)
 	integer tbinhi,tbin,binhi,binlo,bin
 c LSS
-	integer nco,iant,jant,ixp,inout
+	integer nco,iant,jant,ixp,inout,k
 	character calday*18
-	real kamp, kph, tsysprod
+	real kamp, kamp1, kph, tsysprod
 
 	complex vis(MAXCHAN)
 	logical flags(MAXCHAN)
 	double precision preamble(5),vel,lst,tdash
 	double precision delta,rain(ATANT),dain(ATANT)
 	double precision RAMAX, DECMAX, TSYSMAX
+	double precision stime,maxtime,mintime
+
 	real UTWIN, RLIMIT, RATE1, RATE2, dtra1
 
 c  Maximum pointing difference between antennas to accept
 
-	parameter (RAMAX=dpi*30.0/(3600.0*180.0))
-	parameter (DECMAX=dpi*30.0/(3600.0*180.0))
-	parameter (UTWIN=1.0,RLIMIT=50.0)
+	parameter (RAMAX=dpi*60.0/(3600.0*180.0))
+	parameter (DECMAX=dpi*60.0/(3600.0*180.0))
+	parameter (UTWIN=2.0,RLIMIT=50.0)
 
-c  Tsys limit
-
+c  Tsys limit (600 Jy for 2004 survey)
 	parameter (TSYSMAX=600.0)
 
 	real buf(3*ATANT*ATIF)
@@ -1162,6 +1246,34 @@ c	  xit=inttim*nbin(1)
 	endif
 
 	inout=0
+
+c
+c  If reading an external position table, load the relevant data
+c
+	if(posin .ne. ' ') then
+	  do iant=2,4
+	     k=0
+	     do i=sbuf(iant),sant(iant)
+		stime=2400000.5d0+sut(iant,i)
+		mintime=time-(inttim*nbin(1)/2.0+1.0)/86400.0d0
+		maxtime=time+(inttim*nbin(1)/2.0+1.0)/86400.0d0
+	        if(stime.gt.mintime) then
+		   k=k+1
+		   if(k.gt.maxco) then
+                      call bug('f','Trying to read too many hires'
+     *                      //' coordinates')
+		   end if
+		   tut(iant,k)=(stime-time)*86400.0d0
+		   tra(iant,k)=sra(iant,i)
+		   tdec(iant,k)=sdec(iant,i)
+		end if
+		if(stime.gt.maxtime) goto 50
+	     end do
+ 50	     mant(iant)=k
+	     sbuf(iant)=i-20
+	     if(sbuf(iant).lt.1) sbuf(iant)=1
+	  end do
+        end if
 
 	do tbin=1,tbinhi
 	  call jullst(tdash,long,lst)
@@ -1254,6 +1366,12 @@ c		  end if
 c  No UT match
 
 	     inout=inout+1
+	     if(detail) then
+c		write(*,*) delta, iant,1,tut(iant,1),
+c     1            mant(iant),tut(iant,mant(iant))
+	       call julday(tdash, 'H', calday)
+               call bug('w',calday//' - missing position')
+             end if
              rain(iant)=0.0
 	     dain(iant)=0.0
 
@@ -1282,11 +1400,12 @@ c  Compare antenna coordinates, and average or flag
 
 	  nco=0
 	  do iant=2,4
-	     do jant=2,iant
+ 	     do jant=2,iant
 		if(iant.ne.jant) then
 	           if(rain(iant).ne.0.0.and.rain(jant).ne.0.0.and.
      *                dain(iant).ne.0.0.and.dain(jant).ne.0.0.and.
-     *                abs(rain(iant)-rain(jant)).lt.RAMAX.and.
+     *                abs(cos(dain(iant))*(rain(iant)-rain(jant)))
+     *                    .lt.RAMAX.and.
      *                abs(dain(iant)-dain(jant)).lt.DECMAX) then
 	               chuck(iant,jant)=.false.
 	               rain(1)=rain(1)+rain(iant)+rain(jant)
@@ -1311,14 +1430,23 @@ c  cope with one antenna being in wrong position)
 	  end if
 
 c LSS
-c  System temperatures at two IFs
+	  do i=1,atcamax
+	     tsysk1(i)=tsysif1(i)
+	     tsysk2(i)=tsysif2(i)
+	  end do
 
-          call uvputvrr(tno,'systemp',tsysif1,atcamax)
-          call uvputvrr(tno,'systemp2',tsysif2,atcamax)
+c LSS System temperatures at two IFs
+
+c Bad CA02 Tsys values from 2005-09-09_1631 to 2005-09-10_1132 only
+c	  tsysk1(2)=tsysk1(2)/4.0
+
+          call uvputvrr(tno,'systemp',tsysk1,atcamax)
+          call uvputvrr(tno,'systemp2',tsysk2,atcamax)
 
 c  Flag bad tsys values
 
-	  tsysprod=tsysif1(2)*tsysif1(3)*tsysif1(4)
+	  tsysprod=tsysk1(2)*tsysk1(3)*tsysk1(4)
+c	     write(*,*) (tsysk1(i),i=2,4),(tsysk2(j),j=2,4)
 	  if(tsysprod.gt.TSYSMAX**3) then
 	    do iant=2,4
 	       do jant=2,iant
@@ -1450,9 +1578,10 @@ c LSS
 			       flags(i)=.false.
 			    end do
 			 end if
-c LSS channel 0 filter
+c LSS channel 0 filter (updated 10 Sept 2005)
  	                 call amphase(vis(1),kamp,kph)
-	                 if(kamp.gt.0.02) then
+ 	                 call amphase(vis(4),kamp1,kph)
+	                 if(kamp.gt.0.02.and.kamp.gt.4.0*kamp1) then
 			    fgbadch=fgbadch+1
 	                    call julday(time, 'H', calday)
                             call bug('w',calday//
@@ -1461,6 +1590,16 @@ c LSS channel 0 filter
 			       flags(i)=.false.
 			    end do
 			 end if
+c LSS - Tsys enabled data must be disabled here
+c (e.g. 2005-09-09_1631 to 2005-09-10_0541)
+c			 write(*,*) i1,i2,nchan,tsysif1(i1),tsysif1(i2)
+c			 if(tsysif1(i1).gt.0.0.and.tsysif1(i2).
+c     *                                             gt.0.0) then
+c			   do i=1,nchan
+c			      vis(i)=vis(i)*500.0/sqrt(tsysif1(i1)*
+c     *                                                 tsysif1(i2))
+c			   end do
+c			 end if
 
 		      end if
 		      call uvputvri(tno,'pol',polcode(1,p),1)
@@ -1478,9 +1617,9 @@ c
 	tdash = tdash + inttim/86400.0d0
 
 	enddo
-	if(inout.gt.0) then
+	if(inout.gt.0.and..not.detail) then
 	    call julday(time, 'H', calday)
-            call bug('w',calday//' - missing UT matches in cycle')
+            call bug('w',calday//' - missing positions in cycle')
 	end if
 c
 c  Reset the counters, etc.
@@ -1910,11 +2049,12 @@ c------------------------------------------------------------------------
 	end
 c************************************************************************
 	subroutine RPDisp(in,scanskip,scanproc,doauto,docross,
-     *		relax,unflag,polflag,ifsel,userfreq,nuser,hires,iostat)
+     *		relax,unflag,polflag,ifsel,userfreq,nuser,hires,
+     *          detail,posout,lpo,iostat)
 c
 	implicit none
-	character in*(*)
-	integer scanskip,scanproc,ifsel,nuser,iostat
+	character in*(*),posout*(*),line*132
+	integer scanskip,scanproc,ifsel,nuser,lpo,iostat
 	double precision userfreq(*)
 	logical doauto,docross,relax,unflag,polflag
 c
@@ -1972,17 +2112,19 @@ c
 	logical antvalid(ANT_MAX)
 	double precision jday0,time,tprev
 c
-	logical hires
+	logical hires,detail
 	integer m,irec,maxsc,idel,iant,maxtbuf,k,kmant(ANT_MAX)
 	integer ibad,badlim
 	real tq
 
-	real RLIMIT, RATE1, RATE2
+	real RLIMIT, RATE1, RATE2, RATE3, newdec
 	character*18 calday
 
-	parameter(RLIMIT=50.0,BADLIM=4)
-	real*4 sc_buffer(MAX_SC*MAX_IF*ANT_MAX)
+c  Usually BADLIM=4
 
+	parameter(RLIMIT=100.0,BADLIM=40)
+	real*4 sc_buffer(MAX_SC*MAX_IF*ANT_MAX)
+	integer len1
 	equivalence (sc_buffer(1),sc_cal(1,1,1))
 
 	include 'wbcomm.h'
@@ -2144,18 +2286,19 @@ c LSS
 
 	if(hires.and.(sc_q.gt.20).and.NewhTime) then
 
-c	   write(*,*) jstat,baselin, sc_ut
+c	   write(*,*) jstat,baselin, sc_ut, time
 
 	   if(abs(sc_ut-hutprevsc).gt.5.0) then
 	      call julday(time, 'H', calday)
 	      call bug('w',calday//' - missing cycle(s)')
 	   end if
 
-c Buffer positional data from previous cycle 
+c Buffer positional data from previous cycle(s)
 
 	   do i=1,atcamax
 	      maxtbuf=100
-	      if(mant(i).ne.0) then
+	      if(posin .eq. ' ') then
+	       if(mant(i).ne.0) then
 		 if(maxtbuf.gt.mant(i)) maxtbuf=mant(i)
 		 do j=1,maxtbuf
 		    k=mant(i)-maxtbuf+j
@@ -2164,8 +2307,11 @@ c Buffer positional data from previous cycle
 		    tdec(i,j)=tdec(i,k)
 		 end do
 		 mant(i)=maxtbuf
-              end if
-	      kmant(i)=mant(i)
+               end if
+	       kmant(i)=mant(i)
+	      else
+	       kmant(i)=0
+	      end if
 	   end do
 
 c  Read in new Tsys and positional data
@@ -2192,7 +2338,10 @@ c  Items 5-8 are: freq(IF2), Tsys(2), Tsys(3), Tsys(4)
 	     tsysif2(i)=sc_buffer(i+4)
 	   end do
 
-	   do m=1,maxsc
+c  Skip last record which sometimes seems to contain a bad DEC
+
+	   if(posin .eq. ' ') then
+	    do m=1,maxsc-4
 	      irec=int((m-1)/4)+1
 	      idel=m-(irec-1)*4
 c  2003 data
@@ -2219,7 +2368,7 @@ c  Ensure UT is mod(86400) so rpfits file can straddle midnight
 
 		 if(tq.lt.-86000.0) tq=tq+86400.0
 
-cc DANGER - for bad file ONLY - doesn't work
+cc DANGER - for bad file ONLY - doesn't work - use wbfilt!
 c
 c	         if(sc_ut.gt.61112.0) then
 c	            tq=tq-4.05
@@ -2231,16 +2380,18 @@ c	         end if
 		 tdec(iant,mant(iant))=tq
 	       end if
 c		 if(irec.eq.1.and.idel.eq.2) write(*,*) 'ACC UT1 ',
-c	1	      iant,tq
+c	1	      sc_ut, iant,tq
 c		 if(irec.eq.(int((maxsc-1)/4)).and.idel.eq.2) 
 c	1	      write(*,*) 'ACC UT2 ',iant,tq
 
-	   end do
+	    end do
+	   end if
 
 c Filter positional data in Dec (acc problems) 
 c Assume first position always good
 
-	   do iant=2,4
+	   if(posin .eq. ' ') then
+	    do iant=2,4
 	      ibad=0
 	      do j=kmant(iant)+2,mant(iant)
 		if(ibad.le.BADLIM) then
@@ -2254,22 +2405,84 @@ c  Avoid 24h
 		   rate2=(180.0*60.0/dpi)*(tdec(iant,j-1)-tdec(iant,j))
      *                   /(tut(iant,j-1)-tut(iant,j))
 		   if(abs(rate1*cos(tdec(iant,j))).gt.rlimit) then
-		     tra(iant,j)=tra(iant,j-1)
+c
+c  Uncomment next line to activate RA fix
+c
+c		     tra(iant,j)=tra(iant,j-1)
 	             ibad=ibad+1
+		     if(detail) then
+	               call julday(time+tut(iant,j)/86400.0d0, 
+     *                             'H', calday)
+		       call bug('w',calday//' - bad RA (not fixed)')
+		     end if
 		   end if
+
+c  Try ad hoc fix
+
 		   if(abs(rate2).gt.rlimit) then
-		     tdec(iant,j)=tdec(iant,j-1)
-		     ibad=ibad+1
+		      newdec=-1.05735d0-tdec(iant,j)
+		      rate3=(180.0*60.0/dpi)*(tdec(iant,j-1)-newdec)
+     *                   /(tut(iant,j-1)-tut(iant,j))
+		      if(abs(rate3).lt.rlimit) then
+			 rate2=rate3
+c
+c  Uncomment next line to activate DEC fix (due to 180 deg Az error)
+c
+c			 tdec(iant,j)=newdec
+		         if(detail) then
+			   call julday(time+tut(iant,j)/86400.0d0, 
+     *                             'H', calday)
+		           call bug('w',calday//
+     *                               ' - bad DEC (fixable)')
+			 end if
+		      else
+c		         tdec(iant,j)=tdec(iant,j-1)
+		         ibad=ibad+1
+		         if(detail) then
+	                    call julday(time+tut(iant,j)/86400.0d0, 
+     *                             'H', calday)
+		            call bug('w',calday//
+     *                               ' - bad DEC (unable to fix)')
+		         end if
+		      end if
 		   end if
 		  end if
                 end if
+c
+c  Write out positional data
+c
+
+		if(posout.ne.' ') then
+		  if(j .eq. (kmant(iant)+2) ) then
+		   line=' '
+		   write(line,'(f13.7,1x,i2,1x,f9.6,1x,f9.6)') 
+     1                  (jday0+(sc_ut+tut(iant,j-1))/86400.0d0-
+     2                   2400000.5d0),iant,tra(iant,j-1),
+     3                   tdec(iant,j-1)
+	           call txtwrite(lpo,line,len1(line),iostat)
+	           if(iostat.ne.0) then
+                     call bug ('f', 'Error writing posout')
+                   end if
+		  end if
+		  line=' '
+		  write(line,'(f13.7,1x,i2,1x,f9.6,1x,f9.6)') 
+     1                 (jday0+(sc_ut+tut(iant,j))/86400.0d0-
+     2                  2400000.5d0),iant,tra(iant,j),tdec(iant,j)
+	          call txtwrite(lpo,line,len1(line),iostat)
+	          if(iostat.ne.0) then
+                    call bug ('f', 'Error writing posout')
+                  end if
+		end if
 	      end do
 	      if(ibad.gt.BADLIM) then
 	         call julday(time, 'H', calday)
 		 call bug('w',calday//
      1                        ' - too many bad positions in cycle')
 	      end if
-	   end do
+	    end do
+	   end if
+
+
 	   hutprevsc = sc_ut
 	 end if
 
