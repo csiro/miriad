@@ -20,12 +20,12 @@ c
 	logical flag(ATIF,ATPOL,ATBASE,ATBIN),dosw(ATBASE)
 	integer nused,tno,nants
 	logical dosam,dohann,birdie,doif,dobary,newfreq,newsc,newpnt
-	logical dowt,dopmps,doxyp,hires
+        logical dowt,dopmps,doxyp,hires,detail
 	real wts(2*ATCONT-2)
 	double precision obsra,obsdec,lat,long,ra,dec
-	character sname*64
+        character sname*64
 c
-	common/atlodd/sname
+        common/atlodd/sname
 	common/atlodc/sfreq,sdf,restfreq,time,obsra,obsdec,lat,long,
      *	    ra,dec,
      *	  data,
@@ -35,4 +35,4 @@ c
      *	    bchan,
      *	  flag,dosw,dosam,dohann,birdie,dowt,dopmps,doxyp,doif,dobary,
      *	    newfreq,hires,
-     *	  newsc,newpnt
+     *	  newsc,newpnt,detail
