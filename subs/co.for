@@ -54,6 +54,7 @@ c    rjs  15dec98 More complete handling of sky rotation.
 c    rjs   8jan98 Fix errors in cogaucvt when angle is non-zero and pixel
 c		  increments differ.
 c    rjs   8sep99 More robust algorithm in comixed.
+c    rjs  10may00 Comment out some code to hopefully get a better wrap algorithm.
 c************************************************************************
 c* coInit -- Initialise coordinate conversion routines.
 c& rjs
@@ -2536,11 +2537,15 @@ c
 	sinyval = sin(yval)
 	cosyval = cos(yval)
 	Dalp = x1 - xval
-	if(Dalp.lt.-DPI)then
-	  Dalp = Dalp + 2*DPI
-	else if(Dalp.gt.DPI)then
-	  Dalp = Dalp - 2*DPI
-	endif
+c
+c  Commented out these code to hopefully deal better with Anne Green's data.
+c  This should only affect CAR and GLS projections.
+c
+c	if(Dalp.lt.-DPI)then
+c	  Dalp = Dalp + 2*DPI
+c	else if(Dalp.gt.DPI)then
+c	  Dalp = Dalp - 2*DPI
+c	endif
 c
 	if(proj.eq.'ncp')then
 	  L = sin(Dalp) * cos(y1)
