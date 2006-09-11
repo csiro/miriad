@@ -66,6 +66,8 @@ c  History:
 c    rjs  31aug93 Original version.
 c    mjs  23sep93 bsrcha -> binsrcha, per miriad-wide change.
 c    rjs  28nov93 Parallactic recomputation.
+c    rjs  15jul95 Why doesn't options=jupaxis get mentioned in this
+c		  history. I have improved it a bit.
 c  Bugs:
 c    * Much more needs to be added.
 c------------------------------------------------------------------------
@@ -305,21 +307,33 @@ c  Determine the position angle of Jupiter's magnetosphere at a
 c  particular time.
 c------------------------------------------------------------------------
 	include 'mirconst.h'
-	double precision period,t200
+	double precision period,t200a,t200b
+	real pna,pnb
 c
 c  Period of the magnetospehere in days, and a reference time in Julian
 c    9:55:29.37 times fudge factor.
 c
 	parameter(period=((29.37/60.d0+55)/60.d0+9)/24.d0*(1+1.46e-4))
 c
-c  The reference time -- 94jul9:12:50
+c  The reference times -- 94jul9:12:50
+c			  95jul12:04:52
 c
-	parameter(t200=2449543.0347222d0)
+	parameter(t200a=2449543.0347222d0,pna=20.6)
+	parameter(t200b=2449910.7027778d0,pnb=10.0)
 c
-	real psi
+	real psi,pn
+	double precision t200
+c
+	if(abs(time-t200a).lt.abs(time-t200b))then
+	  t200 = t200a
+	  pn = pna
+	else
+	  t200 = t200b
+	  pn = pnb
+	endif
 c
 	psi = 2*pi*(time-t200)/period
-	jupangle = 20.6 - 10*sin(psi)
+	jupangle = pn - 10*sin(psi)
 	end
 c************************************************************************
 	subroutine ChiInit(lIn,chiupd)
