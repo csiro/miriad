@@ -31,6 +31,7 @@ c    rjs   2nov92 Documentation changes only.
 c    rjs  23sep93 improve misleading error messages.
 c    rjs  22jul94 Added ra and dec selection.
 c    rjs   4sep94 Remove char*(*) from subroutine call.
+c    rjs  13jan95 Added pulsar bin selection.
 c
 c  Routines are:
 c    subroutine SelInput(key,sels,maxsels)
@@ -76,6 +77,7 @@ c			first channel.
 c    source(src1,src2...) Select by source.
 c    ra(hh:mm:ss,hh:mm:ss) Select by RA.
 c    dec(dd:mm:ss,dd:mm:ss) Select by DEC.
+c    bin(lo,hi)		Select pulsar bin
 c
 c  The input command would look something like:
 c    select=time(t1,t2),uv(uv1,uv2),...
@@ -351,6 +353,7 @@ c  Process each subcommand.
 c  Handle fairly normal loval/hival type selection.
 c
 	  if(   seltype.eq.VISNO.or.seltype.eq.INC.or.
+     *		seltype.eq.BIN.or.
      *		seltype.eq.UV.or.seltype.eq.POINT.or.
      *		seltype.eq.AMP.or.seltype.eq.UVN.or.
      *		seltype.eq.DRA.or.seltype.eq.DDEC.or.
@@ -367,7 +370,8 @@ c
 	      else if(seltype.eq.FREQ)then
 		vals(2) = 1.01 * vals(2)
 		vals(1) = 0.99 * vals(1)
-	      else if(seltype.ne.VISNO.and.seltype.ne.INC)then
+	      else if(seltype.ne.VISNO.and.seltype.ne.INC.and.
+     *		      seltype.ne.BIN)then
 		vals(1) = 0
 		if(seltype.eq.AMP) sgn = -sgn
 	      endif
