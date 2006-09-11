@@ -1,13 +1,59 @@
 c************************************************************************
+c* LagWt
+c& rjs
+c: atca
+c+
 	subroutine LagWt(wts,nwts,fac)
 c
 	implicit none
 	integer nwts
 	real wts(nwts),fac
 c
-c  Determine the best re-weighting scheme to apply. This involves
-c  solving a minimax problem to determine the optimum filter coefficients.
-c  A simple Remez exchange algorithm is used.
+c  This subroutine determines the "optimum" lag re-weighting scheme to
+c  apply to ATCA continuum data to eliminate the so-called Gibbs problem.
+c
+c  Inputs:
+c    nwts	Total number of lag weights. For the 33-channel continuum
+c		system, nwts will be 64.
+c    fac	Spectral impulse response width. This gives the half-width
+c		of the spectral impulse response, in units of normalised
+c		frequency,i.e. in the range (0,0.5).
+c  Output:
+c    wts	The factors to re-weight the lag spectrum by.
+c
+c  This subroutine finds the lag weights that minimises the absolute
+c  maximum spectral sidelobe outside the response of the main lobe.
+c  This is a minimax problem, akin to the filter design procedures
+c  of McClellan and Parks. The software here reforms the problem
+c  as a minimax one of finding coefficients a_i of the function
+c
+c    f(theta) = Sum_i (  a_i * (cos(i*theta) - 1) )
+c
+c  which make f(theta) approximate -1 in the range of theta
+c  [2*pi*fac,pi].
+c
+c  This minimax problem is solved using a Remez exchange algorithm.
+c  The functions (cos(i*theta)-1) are tabulated in a lookup table.
+c
+c  The coefficients are then converted back to the appropriate
+c  lag re-weighting coefficients, and placed in the output array
+c  in the folded order produced by the FFT routines (the data will
+c  be in this order after they are FFTed back to the lag domain).
+c
+c  References
+c    McClellan J.H., Parks and Rabiner, 1975, "A computer program for
+c    designing optimum FIR linear phase digital filters", IEEE Transc
+c    Audio Electroacoustics, vol AU-21, p 506-526.
+c
+c    Rabiner and Gold, 1975, Theory and Application of Digital Signal
+c    Processing, Prentice-Hall.
+c
+c    Cheney, E.W., 1966, Introduction to Approximation Theory, McGraw-Hill,
+c    NY.
+c--
+c  History:
+c    xxmar95 rjs  Original version.
+c    06apr95 rjs  More comments/documentation.
 c------------------------------------------------------------------------
 	integer MAXCOEFF
 	parameter(MAXCOEFF=31)
@@ -16,7 +62,7 @@ c------------------------------------------------------------------------
 	integer indx(MAXCOEFF+1),zero(MAXCOEFF+2)
 	integer pEval,pA,pGrid
 	logical convrg
-	character line*64
+c	character line*64
 	include 'maxdim.h'
 	include 'mem.h'
 c
@@ -30,7 +76,7 @@ c
 	call memAlloc(pGrid,ncoeff*ngrid,'d')
 	call memAlloc(pA,(ncoeff+1)*(ncoeff+1),'d')
 c
-c  Initialise the cosine table.
+c  Initialise the cosine lookup table.
 c
 	call IniTab(memD(pGrid),ngrid,ncoeff,fac)
 c
@@ -51,10 +97,10 @@ c
 c
 c  Report on the spectral sidelobe level.
 c
-	write(line,10)'Maximum spectral sidelobe after reweighting is',
-     *		      real(abs(coeff(ncoeff+1)))
-  10	format(a,1pe8.1)
-	call output(line)
+c	write(line,10)'Maximum spectral sidelobe after reweighting is',
+c     *		      real(abs(coeff(ncoeff+1)))
+c  10	format(a,1pe8.1)
+c	call output(line)
 c
 c  Determine normalisation coefficient.
 c
@@ -64,12 +110,12 @@ c
 	enddo
 c
 c  Copy the coefficients to the output, putting them in the strange
-c  order, and normalising.
+c  order, normalising, and accounting for the current lag weights.
 c
 	wts(1) = 1
 	wts(ncoeff+2) = 1
 	scale = 0.5d0/temp
-c# ivdep
+c
 	do i=1,ncoeff
 	  temp = scale*coeff(i)/(1.0d0-i/dble(ncoeff+1))
 	  wts(i+1)      = temp
