@@ -140,6 +140,7 @@ c	         but at a hugh time penalty.
 c	  median This uses a median approach. This is generally robust to 
 c	         bad data and sidelobes, has a even larger time penalty
 c	         and produces images that cannot be deconvolved.
+c	NOTE: Dft and median modes are not supported with options=mosaic.
 c@ slop
 c	`Slop factor'. When forming spectral cubes, INVERT normally insists
 c	that all channels in a given visibility spectrum must be good before
@@ -168,9 +169,9 @@ c	scale may not be comparable from plane to plane.
 c--
 c  History
 c    rjs  16sep94 Started ...
-c  Things to do 
-c    3D transform for shifts.
-c    average vobs and obsdate
+c    rjs  27oct94 First released version.
+c  Bugs:
+c    - It would be nice to have a primary-beam dependent default image size.
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'maxdim.h'
@@ -178,8 +179,8 @@ c------------------------------------------------------------------------
 c
 	character version*(*)
 	parameter(version='Invert: version 1.0 27-Oct-94')
-	integer MAXPOL
-	parameter(MAXPOL=4)
+	integer MAXPOL,MAXRUNS
+	parameter(MAXPOL=4,MAXRUNS=4*MAXDIM)
 c
 	real cellx,celly,fwhmx,fwhmy,freq0,slop,supx,supy
 	real umax,vmax,wdu,wdv,tu,tv,rms
@@ -196,6 +197,8 @@ c
 	integer tno,tvis
 	integer nUWts,nMMap
 	integer UWts,Map,MMap
+c
+	integer nRuns,Runs(3,MAXRUNS)
 c
 c  Externals.
 c
@@ -217,8 +220,8 @@ c
 c
 	doset = keyprsnt('offset')
 	if(mosaic)then
-	  call keyt('radec',offset(1),'hms',0.d0)
-	  call keyt('radec',offset(2),'dms',0.d0)
+	  call keyt('offset',offset(1),'hms',0.d0)
+	  call keyt('offset',offset(2),'dms',0.d0)
 	else
 	  call keyd('offset',offset(1),0.d0)
 	  call keyd('offset',offset(2),0.d0)
@@ -329,6 +332,8 @@ c
 	else
 	  npnt = 1
 	endif
+	if(npnt.ne.1.and.mode.ne.'fft')
+     *	  call bug('f','Only mode=fft is supported with options=mosaic')
 	call HdSet(cellx,celly,ra0,dec0,proj,freq0)
 	call HdCoObj(coObj)
 c
@@ -394,7 +399,7 @@ c
 c  Tell the user about the noise level in the output images.
 c
 	write(line,'(a,1pg10.3)')'Theoretical rms noise:',
-     *					Rms/sqrt(real(npnt))
+     *					Rms*sqrt(real(npnt))
 	call output(line)
 	if(mosaic) Rms = 0
 c
@@ -477,8 +482,10 @@ c
 		call output('Mosaicing the image ...')
 	      endif
 	      call MosMIni(coObj,real(i))
-	      call Mosaicer(memr(Map),memr(MMap),nx,ny,npnt,mnx,mny)
+	      call Mosaicer(memr(Map),memr(MMap),nx,ny,npnt,mnx,mny,
+     *		Runs,MAXRUNS,nRuns)
 	      call MosMFin
+	      call PutRuns(tno,Runs,nRuns,0,0,mnx,mny)
 	    else
 	      MMap = Map
 	    endif
