@@ -36,6 +36,7 @@ c    rjs  26sep95 More tolerant of screwy headers.
 c    rjs  22oct95 Comment out warning about assuming its a linear
 c		  coordinate system.
 c    nebk 20nov95 Terrible error. Initialize docelest to false in cocvt.f
+c    rjs  16oct96 Correct cartesian conversions near RA=0.
 c************************************************************************
 c* coInit -- Initialise coordinate conversion routines.
 c& rjs
@@ -2108,6 +2109,11 @@ c  Convert from RA,y to x,DEC.
 c
 	else if(y1pix)then
 	  Dalp = x1 - xval
+          if(Dalp.lt.-DPI)then
+            Dalp = Dalp + 2*DPI
+          else if(Dalp.gt.DPI)then
+            Dalp = Dalp - 2*DPI
+          endif
 	  M = (y1 - ypix) * dy
 c
 	  if(proj.eq.'ncp')then
@@ -2123,7 +2129,7 @@ c
 c
 	  else if(proj.eq.'car')then
 	    L = Dalp * cos(yval)
-	    y2 = yval + y1
+	    y2 = yval + M
 c
 	  else if(proj.eq.'tan')then
 	    y2 = atan(cos(Dalp)*(sinyval + M*cosyval)/
@@ -2230,6 +2236,11 @@ c  Convert from RA,DEC to x,y.
 c
 	else
 	  Dalp = x1 - xval
+          if(Dalp.lt.-DPI)then   
+            Dalp = Dalp + 2*DPI
+          else if(Dalp.gt.DPI)then
+            Dalp = Dalp - 2*DPI
+          endif   
 c
 	  if(proj.eq.'ncp')then
 	    L = sin(Dalp) * cos(y1)
