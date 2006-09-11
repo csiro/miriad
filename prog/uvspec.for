@@ -101,6 +101,7 @@ c    rjs  17oct95 Correct initialisation bug when first integration is all
 c		  bad.
 c    rjs  19oct95 options=all
 c    rjs  16nov95 Use different colours and PGRNGE.
+c    rjs  14dec95 Increase buffer in averaging (MAXAVER).
 c  Bugs:
 c------------------------------------------------------------------------
 	include 'mirconst.h'
@@ -131,7 +132,6 @@ c
 c  Get the input parameters.
 c
 	call output(version)
-        call bug ('i', 'New options=all available')
 	call keyini
 	call GetOpt(uvflags,ampsc,rms,nobase,avall,dodots,doflag,doall)
 	call GetAxis(xaxis,yaxis)
