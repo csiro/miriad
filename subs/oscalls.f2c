@@ -1,0 +1,247 @@
+/************************************************************************/
+/*									*/
+/*	System dependent routines.					*/
+/*									*/
+/*									*/
+/* Some typical operating system (OS) dependant calls:			*/
+/*									*/
+/*  mitime			return current time (hour,min,sec)	*/
+/*  midate			return current date (day,month,year)	*/
+/*  rmdata(dataset)		delete a dataset			*/
+/*  filedel(file)		delete a file (unlink/			*/
+/*  command(cmd)		issue OS command (spawn/system/)	*/
+/*  mgetenv(value,envname)	translate environment variables		*/
+/*  delay(secs)			wait a while.				*/
+/*									*/
+/*  History:								*/
+/*									*/
+/*    00jan90  pjt  created						*/
+/*    25jun91  pjt  added filedel() from filedel.for		 	*/
+/*    23dec92  rjs  translate to "f2c", include delay.			*/
+/*    25aug93  mjs  include 3rd arg to setitimer (ansi, for solaris).	*/
+/*    30sep93  mjs  rename delay -> delayf				*/
+/*    12mar94  mjs  elim unused subroutine (no compile on solaris)      */
+/************************************************************************/
+
+#define MAXLEN 128
+#include <stddef.h>
+#include <time.h>
+#include <signal.h>
+#include <stdlib.h>
+#include <errno.h>
+#ifdef trace
+extern int errno;
+#endif
+
+/************************************************************************/
+fortran subroutine mitime(integer data)
+/** mitime -- return current time (hour,min,sec)			*/
+/*& pjt									*/
+/*: utilities								*/
+/*+ FORTRAN call sequence
+      SUBROUTINE mitime(array)
+      INTEGER array(3)
+
+  This returns the current time.
+
+  Output:
+    array  The current time. array(1) is hours (24 clock).
+			     array(2)    minutes
+			     array(3)    seconds			*/
+/*--									*/
+/*----------------------------------------------------------------------*/
+{
+  struct tm *t;
+  time_t tt;
+
+  tt = time(0);
+  t = localtime(&tt);
+  data.addr[0] = t->tm_hour;
+  data.addr[1] = t->tm_min;
+  data.addr[2] = t->tm_sec;
+}
+/************************************************************************/
+fortran subroutine midate(integer data)
+/** midate -- return current date (day,month,year)			*/
+/*& pjt									*/
+/*: utilities								*/
+/*+ FORTRAN call sequence
+      SUBROUTINE midate(array)
+      INTEGER array(3)
+
+  This returns the current date.
+
+  Output:
+    array  The current date. array(1) is day of the month.
+			     array(2)    month (range 1 to 12)
+			     array(3)    year (e.g. 1992).		*/
+/*--									*/
+/*----------------------------------------------------------------------*/
+{
+  struct tm *t;
+  time_t tt;
+
+  tt = time(0);
+  t = localtime(&tt);
+  data.addr[0] = t->tm_mday;
+  data.addr[1] = t->tm_mon + 1;
+  data.addr[2] = t->tm_year + 1900;
+}
+/************************************************************************/
+fortran subroutine rmdata(character string)
+/** rmdata -- delete a miriad dataset					*/
+/*& pjt									*/
+/*: utilities								*/
+/*+ FORTRAN call sequence
+      SUBROUTINE rmdata(fname)
+      CHARACTER fname*(*)
+
+  Delete a MIRIAD dataset:
+  For UNIX:      /bin/rm -r dataset
+  For VMS:       rmdir dataset 
+		  (assuming this command procedure has been installed)	*/
+/*--									*/
+/*----------------------------------------------------------------------*/
+{
+  char out[MAXLEN];
+
+#ifdef vaxc
+  strcpy(out,"rmdir ");
+#else
+  strcpy(out,"rm -r ");
+#endif
+  strcat(out,string.zterm);
+  (void)system(out);
+}
+/************************************************************************/
+fortran subroutine filedel(character string,integer iostat)
+/** filedel -- delete a file						*/
+/*& pjt									*/
+/*: utilities								*/
+/*+ FORTRAN call sequence:
+      SUBROUTINE filedel (name, iostat)
+
+      CHARACTER*(*) name
+      INTEGER       iostat
+
+  Input:     
+     name      Name of the file to be deleted
+  Output:
+     iostat    Error Status of filedel. Will be non-zero in case
+               of an error.
+
+  Filedel is implemented on most UNIX system by the unlink
+  system call.								*/
+/*--									*/
+/*----------------------------------------------------------------------*/
+{
+#ifdef vaxc
+  *(iostat.addr) = delete(string.zterm);
+  if(iostat.val) *(iostat.addr) = vaxc$errno;
+#else
+  *(iostat.addr) = unlink(string.zterm);
+  if(iostat.val) *(iostat.addr) = errno;
+#endif
+}
+/************************************************************************/
+fortran subroutine command(character string)
+/** command - issue an operating system command				*/
+/*& pjt									*/
+/*: utilities								*/
+/*+ FORTRAN call sequence
+      SUBROUTINE command(cmd)
+
+      CHARACTER cmd*(*)
+
+ COMMAND issues an operating system command, as supplied by the input
+ character string 'cmd'.
+
+ Input:
+     cmd       character string of the command to be performed		*/
+/*--									*/
+/*----------------------------------------------------------------------*/
+{
+  (void)system(string.zterm);
+}
+/************************************************************************/
+fortran subroutine mgetenv(character out,character in)
+/** mgetenv - Translate environment variable on any machine		*/
+/*& pjt									*/
+/*: utilities								*/
+/*+ FORTRAN call sequence
+      SUBROUTINE mgetenv( outval, envnam )
+      CHARACTER*(*) envnam,outval
+
+ As something as simple as the translation of an enviroment variable is
+ done differently on different machines, this MIRIAD subroutine provides
+ a simple way for MIRIAD programmers to pretend it is the same.
+
+   Input:
+      envnam      The environment variable to be translated
+   Output:
+      outval      It returns a translated character string.
+
+ For VMS is simply returns the input envnam itself.
+ For most normal UNIX implementations getenv(3) is called.		*/
+/*--									*/
+/* History:
+   bpw  07may91  Created
+   pjt  22may91  Asked permission to take over this subr from bpw
+                 and messed with doc and upper case fortran code.
+   rjs  23dec92  Change call sequence.					*/
+/*----------------------------------------------------------------------*/
+{
+  char *s;
+#ifdef vaxc
+  s = in.zterm;
+#else
+  s = getenv(in.zterm);
+#endif
+  if(s == NULL)s = "";
+  strcpy(out.addr,s);
+  out.pad;
+}
+/************************************************************************/
+fortran subroutine delayf(real seconds)
+/** delay - Wait a number of seconds.					*/
+/*& pjt									*/
+/*: utilities								*/
+/*+ FORTRAN call sequence
+      SUBROUTINE delayf( seconds )
+      REAL seconds
+
+ This routine waits a certain period, before returning to the caller.
+
+   Input:
+      seconds     The number of seconds to wait.			*/
+/*--									*/
+/*----------------------------------------------------------------------*/
+/* History:
+    rjs  Dark-ages Original version.
+    rjs   8oct89   Make it FORTRAN callable.
+    rjs  23dec92   Included into oscalls.f2c.
+------------------------------------------------------------------------*/
+{
+#ifdef vaxc
+  lib$wait(seconds.addr);
+#else
+#ifdef unicos
+  int secs;
+  secs = seconds.val + 0.5;
+  if(secs > 0)sleep(secs);
+#else
+#include <sys/time.h>
+  int secs;
+  struct itimerval timer;
+
+  timer.it_interval.tv_sec = 0;
+  timer.it_interval.tv_usec = 0;
+  timer.it_value.tv_sec = seconds.val;
+  timer.it_value.tv_usec = 1000000 * (seconds.val - timer.it_value.tv_sec);
+  (void)signal(SIGALRM,SIG_IGN);
+  (void)setitimer(ITIMER_REAL,&timer,NULL);
+  secs = seconds.val + 2;
+  sleep(secs);
+#endif
+#endif
+}
