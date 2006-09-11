@@ -60,6 +60,7 @@ c    rjs  11may98    Better handling of IEEE NaNs and Inf, and blanking of
 c		     floating point FITS files.
 c    rjs  25jan99    Write uv FITS date in new FITS format.
 c    rjs  26feb99    Included "fitdate" to help with problems with AIPS dates.
+c    rjs  19jul99    Write EXTVER card into extension tables.
 c
 c  Bugs and Shortcomings:
 c    * IF frequency axis is not handled on output of uv data.
@@ -3729,6 +3730,7 @@ c
 	  call fitwrhda(lu,'TUNIT'//num,ColUnits(j,lu))
 	enddo
 	call fitwrhda(lu,'EXTNAME',ExtName(indx,lu))
+	call fitwrhdi(lu,'EXTVER', 1)
 c
 	end
 c************************************************************************
