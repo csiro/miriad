@@ -62,13 +62,14 @@ c		  multiple X axes.
 c    rjs  27apr95 Handle case where a variable does not appear in the first
 c		  records.
 c    rjs  13oct95 xrange and yrange handle times in normal Miriad format.
+c    rjs  02feb01 Added options=equal.
 c  Bugs:
 c    ?? Perfect?
 c------------------------------------------------------------------------
 	character version*(*)
 	integer MAXPNTS
 	parameter(MAXPNTS=100000)
-	parameter(version='VarPlt: version 1.1 13-Oct-95')
+	parameter(version='VarPlt: version 1.1 02-Feb-01')
 	logical doplot,dolog,dotime,dounwrap
 	character vis*64,device*64,logfile*64,xaxis*16,yaxis*16
 	character xtype*1,ytype*1,xunit*16,yunit*16,calday*24
@@ -76,7 +77,7 @@ c------------------------------------------------------------------------
 	double precision xscale,xoff,yscale,yoff
 	double precision xtime1,xtime2,ytime1,ytime2
 	integer nx,ny,tIn,xdim1,xdim2,ydim1,ydim2,n0,n1,maxpnt,npnts
-	logical xaver,yaver,compress,dtime,overlay,more
+	logical xaver,yaver,compress,dtime,overlay,more,equal
 c
 c  Externals.
 c
@@ -102,7 +103,7 @@ c
 	call keya('yaxis',yaxis,' ')
 	if(yaxis.eq.' ')
      *	  call bug('f','Yaxis variable name must be given')
-	call GetOpt(compress,dtime,overlay,dounwrap)
+	call GetOpt(compress,dtime,overlay,dounwrap,equal)
 	if(xaxis.eq.'time')then
 	  call keyt('xrange',xtime1,'time',0.d0)
 	  call keyt('xrange',xtime2,'time',0.d0)
@@ -197,7 +198,7 @@ c
 	    call bug('f','Error opening graphics device')
 	  endif
 	  call pgsch(real(max(nx,ny))**0.4)
-	  call Plotit(npnts,dotime,overlay,vis,
+	  call Plotit(npnts,dotime,equal,overlay,vis,
      *	    xvals,xdim1,xdim2,xaxis,xrange,xunit,
      *	    yvals,ydim1,ydim2,yaxis,yrange,yunit)
 	  call pgend
@@ -248,10 +249,10 @@ c
 c
 	end
 c************************************************************************
-	subroutine GetOpt(compress,dtime,overlay,dounwrap)
+	subroutine GetOpt(compress,dtime,overlay,dounwrap,equal)
 c
 	implicit none
-	logical compress,dtime,overlay,dounwrap
+	logical compress,dtime,overlay,dounwrap,equal
 c
 c  Get extra processing options.
 c
@@ -260,18 +261,21 @@ c    compress	True if we are to compress the variables.
 c    dtime	Show time as fractions of a day (xaxis only).
 c    overlay	Do all the plots on one plot.
 c    dounwrap   Unwrap phases
+c    equal	Make axes equal scales.
 c------------------------------------------------------------------------
 	integer nopts
-	parameter(nopts=4)
+	parameter(nopts=5)
 	character opts(nopts)*8
 	logical present(nopts)
-	data opts/'compress','dtime   ','overlay ','unwrap  '/
+	data opts/'compress','dtime   ','overlay ','unwrap  ',
+     *		  'equal   '/
 c
 	call options('options',opts,present,nopts)
 	compress = present(1)
 	dtime    = present(2)
 	overlay  = present(3)
 	dounwrap = present(4)
+	equal    = present(5)
 	end
 c************************************************************************
         subroutine compact(vals,n1,n2,n3)
@@ -452,7 +456,7 @@ c
 	enddo
 	end
 c************************************************************************
-	subroutine Plotit(npnts,dotime,overlay,vis,
+	subroutine Plotit(npnts,dotime,equal,overlay,vis,
      *	    xvals,xdim1,xdim2,xaxis,xrange,xunit,
      *	    yvals,ydim1,ydim2,yaxis,yrange,yunit)
 c
@@ -460,7 +464,7 @@ c
 	integer npnts,xdim1,xdim2,ydim1,ydim2
 	real xrange(2),yrange(2)
 	character xaxis*(*),yaxis*(*),xunit*(*),yunit*(*),vis*(*)
-	logical dotime,overlay
+	logical dotime,overlay,equal
 	real xvals(*),yvals(*)
 c------------------------------------------------------------------------
 	integer x1,x2,y1,y2,xoff,yoff,kx,ky
@@ -492,7 +496,7 @@ c
 c
 c  Do the plots.
 c
-	if(overlay)call PGSet(dotime,vis,
+	if(overlay)call PGSet(dotime,equal,vis,
      *	  xaxis,xunit,xlo,xhi,1,1,1,1,yaxis,yunit,ylo,yhi,1,1,1,1)
 c	  
 	ky = 0
@@ -511,7 +515,7 @@ c
 		  call Extract(xvals(kx),xdim1*xdim2,npnts,xvals(xoff))
 		  if(xr)call GetScale(xvals(xoff),npnts,xlo,xhi)
 		endif
-	        if(.not.overlay)call PGSet(dotime,vis,
+	        if(.not.overlay)call PGSet(dotime,equal,vis,
      *		  xaxis,xunit,xlo,xhi,x1,xdim1,x2,xdim2,
      *		  yaxis,yunit,ylo,yhi,y1,ydim1,y2,ydim2)
 		call pgpt(npnts,xvals(xoff),yvals(yoff),1)
@@ -546,12 +550,12 @@ c------------------------------------------------------------------------
 	enddo
 	end
 c************************************************************************
-	subroutine PGSet(dotime,vis,
+	subroutine PGSet(dotime,equal,vis,
      *                   xaxis,xunit,xlo,xhi,x1,xdim1,x2,xdim2,
      *		         yaxis,yunit,ylo,yhi,y1,ydim1,y2,ydim2)
 c
 	implicit none
-	logical dotime
+	logical dotime,equal
 	character xaxis*(*),yaxis*(*),xunit*(*),yunit*(*),vis*(*)
 	integer x1,x2,xdim1,xdim2,y1,y2,ydim1,ydim2
 	real xlo,xhi,ylo,yhi
@@ -564,7 +568,11 @@ c------------------------------------------------------------------------
 	character xlabel*32,ylabel*32
 	call pgpage
 	call pgvstd
-	call pgswin(xlo,xhi,ylo,yhi)
+	if(equal)then
+	  call pgwnad(xlo,xhi,ylo,yhi)
+	else
+	  call pgswin(xlo,xhi,ylo,yhi)
+	endif
 	if(dotime)then
 	  call pgtbox('BCNSTHZO',0.,0,'BCNST',0.,0)
 	else
