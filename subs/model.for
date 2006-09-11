@@ -26,6 +26,8 @@ c    rjs  23jan91 Fixed bug in ModFFT which crept in on 19nov90.
 c    rjs   5apr91 More tolerant of big difference between vis phase center
 c		  and map center. Simple polarisation processing. Use
 c		  MemAlloc routine.
+c    rjs   2aug91 Changed "pol" to "polarization" in simple polarization
+c	          handling.
 c************************************************************************
 c*ModelIni -- Ready the uv data file for processing by the Model routine.
 c&mchw
@@ -118,7 +120,7 @@ c
 	    call ModelPol(tmod,polm)
 	    if(polm.ne.0.and.polv.eq.0)then
 	      call uvselect(tvis,'and',0.d0,0.d0,.true.)
-	      call uvselect(tvis,'pol',dble(polm),0.d0,.true.)
+	      call uvselect(tvis,'polarization',dble(polm),0.d0,.true.)
 	      call output('Selecting polarization type '//PolsC2P(polm))
 	    else if(polm.ne.0.and.polv.ne.polm)then
 	      call bug('f','Map and vis are made of different pols')
