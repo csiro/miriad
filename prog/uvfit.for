@@ -107,12 +107,13 @@ c    rjs   1sep94  Error estimates!
 c    bmg  08may96  Added fitting for a thin, spherical shell
 c    bmg  29may96  Added fitting for a thin face-on ring. I have coded
 c                  spheres and thick shells, but they don't work yet!
+c    rjs  18mar97  Handle multiple files, autocorr data, better message.
 c------------------------------------------------------------------------
 	integer MAXVAR
 	parameter(MAXVAR=20)
 	include 'maxdim.h'
 	character version*(*)
-        parameter(version='version 1.0 23-Jul-94')
+        parameter(version='version 1.0 18-Mar-97')
 	include 'uvfit.h'
 c
 	character out*64,ltype*16
@@ -133,7 +134,7 @@ c  Get the inputs.
 c
 	call output('Uvfit: '//version)
 	call keyini
-	call uvDatInp('vis','sdlpxbcef')
+	call uvDatInp('vis','sdlpcef')
 	call LoadSrc
 	call keya('out',out,' ')
 	call GetOpt(dores)
@@ -149,33 +150,33 @@ c
 c  Open the visibility file, and read all the data.
 c
 	call output('Reading the data ...')
-        if(.not.uvDatOpn(lIn))
-     *	  call bug('f','Error opening input file')
         nvis = 0
-	call uvDatRd(preamble,data,flags,MAXCHAN,nread)
-        dowhile(nread.ge.1)
-	  call uvinfo(lIn,'sfreq',sfreq)
-	  do i=1,nread
-	    if(flags(i))then
-	      nvis = nvis + 1
-	      if(nvis.gt.MAXVIS)call bug('f','Buffer overflow')
-	      u(nvis) = preamble(1)*sfreq(i)
-	      v(nvis) = preamble(2)*sfreq(i)
-	      vis(nvis) = data(i)
-	    endif
-	  enddo
+	dowhile(uvDatOpn(lIn))
 	  call uvDatRd(preamble,data,flags,MAXCHAN,nread)
-        enddo
-        if(nvis.le.0)call bug('f','No valid data')
-        call output('Number of visibilities: '//itoaf(nvis))
-        call uvDatCls
+          dowhile(nread.ge.1)
+	    call uvinfo(lIn,'sfreq',sfreq)
+	    do i=1,nread
+	      if(flags(i))then
+	        nvis = nvis + 1
+	        if(nvis.gt.MAXVIS)call bug('f','Buffer overflow')
+	        u(nvis) = preamble(1)*sfreq(i)
+	        v(nvis) = preamble(2)*sfreq(i)
+	        vis(nvis) = data(i)
+	      endif
+	    enddo
+	    call uvDatRd(preamble,data,flags,MAXCHAN,nread)
+	  enddo
+	  call uvDatCls
+	enddo
+        if(nvis.le.0)call bug('f','No valid data found')
+        call output('Total number of correlations: '//itoaf(nvis))
 c
 c  Pack the things that we are going to solve for.
 c
 	call PackPar(x,nvar,MAXVAR)
 	if(out.eq.' '.and.nvar.eq.0)
      *	  call bug('f','Nothing to be done -- check inputs!')
-	if(nvar.ge.2*nvis)call bug('f','Too few visibilities to fit')
+	if(nvar.ge.2*nvis)call bug('f','Too few correlations to fit')
 c
 c  Call the least squares solver.
 c
