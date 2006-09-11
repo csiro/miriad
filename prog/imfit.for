@@ -108,6 +108,7 @@ c    rjs  26jan95 Eliminate non-standard string concatenation.
 c    rjs  06apr95 Get solver to work with relative coordinates, to
 c		  eliminate divergence problem.
 c    rjs  01nov95 Better fiddles in gaufid.
+c    rjs  02dec96 Print out RA and DEC as well.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'maxnax.h'
@@ -340,7 +341,8 @@ c
 	    if(topix)then
 	      call coCvt(lIn,'ow/ow/ap',in,'ap/ap/ap',out)
 	    else
-	      call coCvt(lIn,'ap/ap/ap',in,'ow/ow/ap',out)
+	      call coCvt(lIn,'ap/ap/ap',in,'ow/ow',out)
+	      call coCvt(lIn,'ap/ap/ap',in,'aw/aw',radec(1,i))
 	    endif
 	    l0(i) = out(1)
 	    m0(i) = out(2)
@@ -905,6 +907,10 @@ c
 	parameter(NOBJS=5)
 	character objects(NOBJS)*8
 c
+c  Externals.
+c
+	character hangle*24,rangle*24
+c
 	data objects(DISK)    /'disk    '/
 	data objects(GAUSSIAN)/'gaussian'/
 	data objects(LEVEL)   /'level   '/
@@ -996,6 +1002,12 @@ c
   45	        format('  Positional errors (arcsec):',2f9.2)
 	        call output(line)
 	      endif
+	      line = '  Right Ascension:                '//
+     *			hangle(radec(1,i))
+	      call output(line)
+	      line = '  Declination:                    '//
+     *			rangle(radec(1,i))
+	      call output(line)
 	    endif
 	    if(srctype(i).ne.POINT)then
 	      call GauFid(fwhm1(i),fwhm2(i),sfac*sfwhm1(i),
