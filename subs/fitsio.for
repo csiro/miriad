@@ -65,6 +65,7 @@ c    rjs  28sep99    Change in number of digits printed in fitwrhd to
 c		     work around GILDAS flaw.
 c    rjs  21mar00    Transpose axes of visibility arrays on uvin where
 c		     necessary.
+c    rjs   4jun05    Fudges to help cope better with files > 2 Gbytes.
 c
 c  Bugs and Shortcomings:
 c    * IF frequency axis is not handled on output of uv data.
@@ -690,7 +691,7 @@ c    lu		File descriptor.
 c--
 c------------------------------------------------------------------------
 	integer bitpix,naxis,n1,Bytes,nProgRan,nFileRan
-	integer ipol,ifreq,icmplx,iif,ncmplx,nif,nt1,nt2,nt3
+	integer ipol,ifreq,icmplx,iif,ncmplx,nif,nt1,nt2,nt3,itemp
 	logical groups,dofloat
 	include 'fitsio.h'
 c
@@ -760,6 +761,14 @@ c
 	  if(nFileRan.le.0)
      *	    call bug('f','No random parameters available')
 	  nProgRan = 0
+c
+c  Check that the file is not shorter than implied.
+c
+	  itemp = DatSize(lu)/(bytes*(nFileRan+ncmplx*npol*nfreq))
+	  if(itemp.lt.nvis)then
+	    nvis = itemp
+	    call bug('w','Some visibility records appear to be missing')
+	  endif
 c
 	  call fitrdhdr(lu,'BSCALE', bscale(lu),1.)
 	  call fitrdhdr(lu,'BZERO',  bzero(lu), 0.)
@@ -2678,7 +2687,7 @@ c    lu		The handle of the FITS file.
 c    off	Offset of the header block.
 c------------------------------------------------------------------------
 	integer bitpix,gcount,pcount,naxis,offset,totsize,iostat,i,axis
-	integer size
+	integer size,itemp
 	character string*8
 	logical found
 	include 'fitsio.h'
@@ -2762,9 +2771,16 @@ c
           end if
 c
 	  ncards(lu) = 0
-	  DatSize(lu) = abs(bitpix)/8 * gcount * (pcount + size)
-	  if(DatSize(lu).gt.totsize-DatOff(lu))call bug('f',
-     *	    'FITS file is smaller than header suggests')
+	  DatSize(lu) = abs(bitpix)/8 * (pcount + size)
+	  itemp = (totsize-DatOff(lu))/DatSize(lu)
+	  if(itemp.lt.gcount)then
+	    if(itemp.eq.0)
+     *		call bug('f','Serious inconsistency in file size')
+	    call bug('w','File size inconsistency: '//
+     *			 'Some data may be lost')
+	    gcount = itemp
+	  endif
+	  DatSize(lu) = DatSize(lu)*gcount
 	endif
 c
 c  All said and done.
