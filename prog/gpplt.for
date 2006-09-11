@@ -94,12 +94,14 @@ c		  formatting.
 c    rjs  25apr95 Significant rework. Unwrap phases consistently.
 c    rjs  17aug95 Failed to take reciprocal of bandpass.
 c    rjs  19sep95 Fix write statement in printing polarisation sol'ns.
+c    rjs  12dec96 Fix bug in GainPlt2 related to getting times stamps and
+c		  flagging wrong.
 c  Bugs:
 c------------------------------------------------------------------------
 	integer MAXSELS
 	character version*(*)
 	parameter(MAXSELS=256)
-	parameter(version='GpPlt: version 19-Sep-95')
+	parameter(version='GpPlt: version 12-Dec-96')
 	include 'gpplt.h'
 	integer iostat,tIn,nx,ny,nfeeds,nants,nsols,ierr,symbol,nchan
 	integer ntau
@@ -978,7 +980,7 @@ c
 		Gain = G(offset+(isol-1)*nfeeds*nants)
 		if(abs(real(Gain))+abs(aimag(Gain)).gt.0)then
 		  ng = ng + 1
-		  x(ng) = time(ng)
+		  x(ng) = time(isol)
 		  y(ng) = GetVal(Gain,Value(offset))
 		endif
 	      enddo
