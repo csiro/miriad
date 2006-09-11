@@ -128,12 +128,13 @@ c    28aug05 rjs  Include correction for instrumental phase of CA05.
 c    12dec05 rjs  It failed to use the select keyword.
 c    29jan06 rjs  Major revisions.
 c    18feb06 rjs  Various tidy up and change in defaults.
+c    24feb06 rjs  Fix bug in tsyscal=none and some tidying.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
 	character version*(*)
 	integer MAXSELS,ATANT
-	parameter(version='AtFix: version 1.0 18-Feb-06')
+	parameter(version='AtFix: version 1.0 24-Feb-06')
 	parameter(MAXSELS=256,ATANT=6)
 c
 	real sels(MAXSELS),xyz(3*MAXANT)
@@ -1000,7 +1001,6 @@ c
 	else if(tsyscal.eq.'interpolate')then
 	  tmode = TMINTERP
 	else
-	write(*,*)'|',tsyscal,'|'
 	  call bug('f','Invalid tsyscal mode')
 	endif
 c
@@ -1054,15 +1054,21 @@ c
 	  call uvrdvrd(lVis,'time',ttime(ntcal),0.d0)
 	  tfreq(ntcal) = ifreq1
 	endif
+	if(neednew.and..not.needupd)then
+	  call bug('w',
+     *	  'New frequency without new system temperature measurement')
+	  needupd = .true.
+	endif
+
 	if(needupd)then
 	  call tcalLoad(lVis,doatm,ifreq1,nants,MAXANT,MAXWIN,
      *	    xtsys(1,1,ntcal),ytsys(1,1,ntcal),
      *	    xtrec(1,1,ntcal),ytrec(1,1,ntcal))
 	  tvalid(ntcal) = .true.
-	else if(neednew)then
-	  call bug('w',
-     *	  'New frequency without new system temperature measurement')
-	  tvalid(ntcal) = .false.
+c	else if(neednew)then
+c	  call bug('w',
+c     *	  'New frequency without new system temperature measurement')
+c	  tvalid(ntcal) = .false.
 	endif
 c
 	end
@@ -1081,12 +1087,13 @@ c
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer i,j,k,nwin
-	real fac(MAXWIN),Tb(MAXWIN)
+	real fac(MAXWIN),Tb(MAXWIN),freq(MAXWIN)
 	real buffx(MAXANT*MAXWIN),buffy(MAXANT*MAXWIN)
 c
 	if(doatm)then
 	  call tcalFTB(lVis,ifreq,fac,Tb,MAXWIN,nwin)
 	else
+	  call freqMFrq(ifreq,MAXWIN,nwin,freq)
 	  do j=1,nwin
 	    fac(j) = 1
 	    Tb(j) = 0
@@ -1098,7 +1105,6 @@ c
 c
 	call uvgetvrr(lVis,'xtsys',buffx,nants*nwin)
 	call uvgetvrr(lVis,'ytsys',buffy,nants*nwin)
-c
 c
 	k = 1
 	do j=1,nwin
@@ -1159,12 +1165,6 @@ c
 c  External.
 c
 	logical uvvarUpd
-        INTEGER COUNT
-        DATA COUNT/0/
-        COUNT = COUNT + 1
-        IF(COUNT.eq.41)then
-          write(*,*)'HELLO'
-        ENDIF
 c
 c
 	if(uvvarUpd(vtcal2))call tcalNew(lVis,lOut,tbp(1))
@@ -1211,6 +1211,7 @@ c
 	      fac = sqrt(num/denom)
 	    endif
 c
+	if(i1.eq.1.and.i2.eq.1)write(*,*)fac
 	    do i=1,nsc(j)
 	      k = k + 1
 	      data(k) = fac * data(k)
