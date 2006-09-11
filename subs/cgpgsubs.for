@@ -120,6 +120,8 @@ c		         AXLABCG.  Add temporary tick enquiry fuges through
 c		         QTIKCG, PGTBX1-3CG
 c     nebk   19oct95     Bias wedges by pixr(1) rather than image min
 c                        when log or square root transfer function
+c     nebk   22nov95     Fix problem with top/right labelling of multi-panel
+c 	                 plots. Remove WEDISP from call sequence of VPSIZCG
 c**********************************************************************
 c
 c* annboxCG -- Annotate plot with information from a box image 
@@ -1409,7 +1411,7 @@ c
       real tick(2),  tickl(2), wpix(4)
       integer nxsub, nysub, i, j, krng(2), ip
       character costr*8, xopt*20, yopt*20, itoaf*1, gentyp*4
-      logical zero(2)
+      logical zero(2), dotime(2)
 c-----------------------------------------------------------------------
 c
 c Save pixel window
@@ -1561,7 +1563,12 @@ c
       nysub = 0
       tick(1) = 0.0
       tick(2) = 0.0
-      call qtikcg (xopt, yopt, tick(1), tick(2), nxsub, nysub, 
+      dotime(1) = .false.
+      dotime(2) = .false.
+      if (labtyp(1).eq.'hms' .or. labtyp(1).eq.'dms') dotime(1) = .true.
+      if (labtyp(2).eq.'hms' .or. labtyp(2).eq.'dms') dotime(2) = .true.
+c
+      call qtikcg (dotime, tick(1), tick(2), nxsub, nysub, 
      +             tickl(1), tickl(2))
       tickd(1) = abs(tick(1))
       tickd(2) = abs(tick(2))
@@ -2062,14 +2069,14 @@ c: plotting
 c+
       subroutine vpsizcg (dofull, dofid, ncon, gin, vin, nspec, bin,
      +  maxlev, nlevs, srtlev, levs, slev, nx, ny, pcs, xdispl, 
-     +  ydispb, gaps, dotr, wedcod, wedwid, wedisp, tfdisp, labtyp, 
+     +  ydispb, gaps, dotr, wedcod, wedwid, tfdisp, labtyp, 
      +  vxmin, vymin, vymax, vxgap, vygap, vxsize, vysize, tfvp, wdgvp)
 c
       implicit none
       integer maxlev, nlevs(*), srtlev(maxlev,*), nx, ny, ncon, 
      +  wedcod, nspec
       real vxmin, vymin, vymax, vxgap, vygap, vxsize, vysize, pcs,
-     +  ydispb, xdispl,  wedwid, wedisp, tfvp(4), tfdisp, wdgvp(4),
+     +  ydispb, xdispl,  wedwid, tfvp(4), tfdisp, wdgvp(4),
      +  levs(maxlev,*), slev
       logical dofid, dofull, gaps, dotr
       character*(*) gin, vin, bin, labtyp(2)*(*)
@@ -2102,7 +2109,6 @@ c     wedcod      1 -> one wedge to right of all subplots
 c                 2 -> one wedge to right per subplot
 c                 3 -> one wedge per subplot inside subplot
 c     wedwid      Fraction of full viewport for wedge width (wedcod=1)
-c     wedisp      Displacement of wedge from right axis in char heights
 c     tfdisp      Displacement of transfer function plot from right 
 c                 axis in char heights
 c     labtyp      Axis labels
@@ -2156,9 +2162,9 @@ c edge of subplot in ndc
 c
         dvwl = 2.0 * xht
         if (dotr) then
-          dvwd = (wedisp + xdispl - 1) * xht
+          dvwd = xdispl * xht
         else
-          dvwd  = wedisp * xht
+          dvwd  = xht
         end if
 c
 c Total width taken up by wedge in ndc
@@ -2541,7 +2547,7 @@ c
       end
 c
 c
-      subroutine qtikcg (xopt, yopt, xtick, ytick, nxsub, nysub,
+      subroutine qtikcg (dotime, xtick, ytick, nxsub, nysub,
      *                   xtickl, ytickl)
 c-----------------------------------------------------------------------
 c This subroutine works out some things about ticks.  It returns
@@ -2550,8 +2556,7 @@ c a big fudge and replicates algorithms; in future it will
 c be replaced by a not-yet-standard pgplot routine called PGQTIK
 c
 c Inputs
-c  xopt   PG(T)BOX x-axis options string
-c  yopt   PG(T)BOX y-axis options string
+c  dotime True if time labelling wanted for X or Y axes
 c Input/output
 c  xtick  The x-tick in seconds
 c  ytick  The y-tick in seconds
@@ -2566,7 +2571,7 @@ c-----------------------------------------------------------------------
       implicit none
       real xtick, ytick, xtickl, ytickl
       integer nxsub, nysub
-      character*(*) xopt, yopt
+      logical dotime(2)
 cc
       integer tscalex, tscaley, nsub
       real xmin, xmax, ymin, ymax, vx1, vx2, vy1, vy2, xsp, ysp, 
@@ -2592,7 +2597,7 @@ c
 c
 c Now work out the tick stuff for the X axis
 c
-      if (index(xopt,'Z').ne.0) then
+      if (dotime(1)) then
 c
 c For time labelling code stolen from PGTBX1-3
 c
@@ -2621,9 +2626,9 @@ c
       end if
       xtickl = xsp*0.6*(ymax-ymin)/ylen
 c
-c Now work out the tick stuff for the X axis
+c Now work out the tick stuff for the Y axis
 c
-      if (index(yopt,'Z').ne.0) then
+      if (dotime(2)) then
         call pgtbx1cg ('Y', .false., .false., ymin, ymax, ytick,
      +                 nysub, tscaley)
       else 
