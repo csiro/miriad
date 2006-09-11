@@ -162,7 +162,7 @@ c    mchw 03jan94 Exclude flagged data. Re-normalize passband to unit gain.
 c    mchw 10apr94 Put MAXWIN into maxdim.h
 c    djw  16jul94 List of poly orders; dimension npoly(2*MAXWIN) 
 c    mchw 08sep94 Suppress plots for constant (autocorrelation) data.
-c
+c    rjs  29mar96 Handle autocorrelation data.
 c  Bugs:
 c    * This can write out either massaged channels, or massaged wides,
 c      but not both simultaneously.
@@ -513,11 +513,12 @@ c    flags	The data flags.
 c    nread	The number of channels.
 c------------------------------------------------------------------------
 	include 'uvgains.h'
-	integer i,p,bl,pol
+	integer i,p,bl,pol,i1,i2
 c
 c  Determine the baseline number, and conjugate the data if necessary.
 c
-	call uvgetbl(preambl,data,nread,bl)
+	call BasAnt(preambl(4),i1,i2)
+	bl = ((i2-1)*i2)/2 + i1
 c
 c  Zero up to, and including, this baseline.
 c
@@ -971,7 +972,3 @@ c
 	endif
 c
         end
-c********1*********2*********3*********4*********5*********6*********7*c
-
-
-
