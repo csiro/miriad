@@ -42,6 +42,8 @@ c    rjs  17may92 Clipping message, to appease NEBK.
 c    rjs  15feb93 Changes to make ra/dec variables double.
 c    mchw 02may93 Added default flux to apriori option.
 c    mchw 02jul93 Change flux limit to zero (all entries in flux table)
+c    rjs   6jul93 Do not exceed MAXDIM in model calculation. Fix
+c		  clippind message for cross hand polarisations.
 c************************************************************************
 c*ModelIni -- Ready the uv data file for processing by the Model routine.
 c&mchw
@@ -428,8 +430,9 @@ c
 	if(nz.le.0) call bug('f','Bad value for NAXIS3')
 	if(mfs.and.nz.gt.2)
      *	  call bug('f','Invalid value for NAXIS3 for MFS data')
-	nxd = nextpow2(nx+1)
-	nyd = nextpow2(ny+1)
+	nxd = min(MAXDIM,nextpow2(nx+1))
+	nyd = min(MAXDIM,nextpow2(ny+1))
+	if(nxd.lt.nx.or.nyd.lt.ny)call bug('f','Model too big')
 	call rdhdr(tmod,'cdelt1',du,0.)
 	call rdhdr(tmod,'cdelt2',dv,0.)
 	if(du*dv.eq.0) call bug('f',
@@ -698,7 +701,7 @@ c
 	  if(.not.PolsPara(polm))nclip = 2
 	endif
 	write(val,'(1pg9.2)')Level
-	if(nclip*Level.ne.0.and.nclip.ne.1)then
+	if(nclip*Level.ne.0.and.nclip.eq.0)then
 	  call output('No clipping being Performed on the model')
 	else if(nclip.eq.1)then
 	  call output('Clipping model when: pixval < '//val)
