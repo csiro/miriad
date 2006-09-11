@@ -75,7 +75,7 @@ c************************************************************************
 	real function chat(x)
 c
 	implicit none
-	real x,t
+	real x
 c
 c  Polynomial approximation to Bracewell's Chinese hat - chat - function.
 c
@@ -84,6 +84,7 @@ c
 c  This is the autocorrelation of uniform disks
 c
 c------------------------------------------------------------------------
+	real t
 	t = abs(x)
 	if(t.gt.1)then
 	  chat = 0
