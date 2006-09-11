@@ -68,14 +68,15 @@ c    rjs   7sep94 Original version.
 c    rjs  14sep95 Bring it up to scratch.
 c    rjs  19sep95 Reset the valid flag on a baseline after an integration.
 c    rjs   9nov95 Time axis was mislabelled by 1 integration.
+c    pjt  20jun96 Larger MAXPLOTS for BIMA (20 -> 90)
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
 	integer MAXPNTS,MAXPLOTS,MAXTRIP
 	integer PolMin,PolMax,MAXPOL
 	character version*(*)
-	parameter(version='version 9-Nov-95')
-	parameter(MAXPNTS=5000,MAXPLOTS=20)
+	parameter(version='version 20-Jun-96')
+	parameter(MAXPNTS=5000,MAXPLOTS=90)
 	parameter(MAXTRIP=(MAXANT*(MAXANT-1)*(MAXANT-2))/6)
 	parameter(PolMin=-8,PolMax=4,MAXPOL=2)
 c
