@@ -52,11 +52,12 @@ c	If in doubt, see the on-line history of configurations:
 c	  http://www.narrabri.atnf.csiro.au/operations/array_configurations/config_hist.html
 c
 c@ dantpos
-c	For poorly understood reasons, the effective locations of the antennas
-c	appear to be a function of frequency. Currently the on-line system uses
-c	the antenna locations derived from centimetre wavelength observations.
-c	If millimetre wavelength solutions for the baseline lengths are available,
-c	you will want to correct your data to account for these.
+c	Currently the on-line system uses the antenna locations derived from 
+c	preliminary centimetre wavelength observations.
+c	If a higher precision millimetre wavelength solution for the baseline 
+c	lengths is available, you will want to correct your data to account for this.
+c
+c	This also invokes corrections of known instrumental phase errors.
 c
 c	The inputs are the equatorial coordinate offsets entered in the
 c	following order (NO checking is done for consistency):
@@ -134,12 +135,13 @@ c    11oct04 rjs  Use jyperk=10 rather than 13 in Tsys correction.
 c    24jun05 rjs  Updated gain/elevation curve at 3mm
 c    10aug05 rjs  Fixed horrible bug related to filling in the array.
 c	          Subsequent shadowing calculation would not work!
+c    19aug05 rjs  Include correction for instrumental phase of CA01.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
 	character version*(*)
 	integer MAXSELS,ATANT
-	parameter(version='AtFix: version 1.0 10-Aug-05')
+	parameter(version='AtFix: version 1.0 19-Aug-05')
 	parameter(MAXSELS=256,ATANT=6)
 c
 	real sels(MAXSELS),xyz(3*MAXANT)
@@ -438,7 +440,7 @@ c
 c
 c  Apply baseline correction, if needed.
 c
-	  if(dobl)call blcorr(data,freq,nchan,ra,dec,lst,
+	  if(dobl)call blcorr(data,freq,nchan,ra,dec,lst,el,
      *				preamble(5),delta,ATANT)
 c
 	  if(npol.gt.0)then
@@ -1107,18 +1109,19 @@ c
 c
 	end
 c************************************************************************
-	subroutine blcorr(data,freq,nchan,ra,dec,lst,bl,xyz,nant)
+	subroutine blcorr(data,freq,nchan,ra,dec,lst,el,bl,xyz,nant)
 c
 	implicit none
 	integer nchan,nant
 	complex data(nchan)
-	double precision ra,dec,lst,bl,freq(nchan)
+	double precision ra,dec,lst,el,bl,freq(nchan)
 	real xyz(3,nant)
 c
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	integer ant1,ant2,i
 	real delX,delY,delZ,theta,antphz,cosha,sinha,cosdec,sindec
+	real offset
 	complex w
 	double precision HA
 c
@@ -1129,6 +1132,16 @@ c
 	delX = xyz(1,ant2) - xyz(1,ant1)
 	delY = xyz(2,ant2) - xyz(2,ant1)
 	delZ = xyz(3,ant2) - xyz(3,ant1)
+c
+c  The following is the model of the elevation dependence
+c  of the phase of CA01.
+c
+	if(ant1.eq.1)then
+	  offset = 7.4563 - (15.2243 - 7.2267*el)*el
+	  offset = offset * 1e-3 / CMKS * 1e9
+	else
+	  offset = 0
+	endif
 	if(abs(delX)+abs(delY)+abs(delZ).ne.0)then
           HA = lst - ra
           cosHA = cos(HA)
@@ -1136,7 +1149,7 @@ c
           cosdec = cos(dec)
           sindec = sin(dec)
           antphz = 2*DPI*((delX*cosHA - delY*sinHA)*cosdec +
-     *			   delZ*sindec)
+     *			   delZ*sindec + offset)
 c
 	  do i=1,nchan
 	    theta = -antphz*freq(i)
