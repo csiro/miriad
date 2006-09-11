@@ -15,6 +15,10 @@ c  Choose which random number style we are to use. We have three choices:
 c  vms, cft or unix style. You also have the choice of including the
 c  "ran" function.
 c
+#ifdef sgi
+#  define sgi_style
+#  define defined
+#endif
 #ifdef vms
 #  define vms_style
 #  define defined
@@ -58,7 +62,10 @@ c  Input:
 c    seed	Some "random" integer value, which is the seed to be
 c		used.
 c--
-c------------------------------------------------------------------------
+c------------------------------------------------------------------------`
+#ifdef sgi_style
+	call srand(seed)
+#endif
 #ifdef cft_style
 	call ranset(seed)
 #endif
@@ -101,6 +108,12 @@ c		in [0,1].
 c
 c------------------------------------------------------------------------
 	integer i
+#ifdef sgi_style
+	double precision rand
+	do i=1,n
+	  data(i) = rand()
+	enddo
+#endif
 #ifdef cft_style
 	real ranf
 	do i=1,n
@@ -118,7 +131,7 @@ c------------------------------------------------------------------------
 #ifdef unix_style
 	real rand
 	do i=1,n
-	  data(i) = rand(0)
+	  data(i) = rand()
 	enddo
 #endif
 	end
