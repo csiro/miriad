@@ -31,23 +31,23 @@ c@ spar
 c	This gives initial estimates of source parameters.  For
 c	each object given by the `object' keyword, either 3 (for
 c	point sources) or 6 (for disks and gaussians) values should be
-c	given.
+c	given. The values are as follows:
+c	  Object Type             SPAR values
+c	  -----------             -----------
+c	   point                   flux,x,y
+c	   gaussian                flux,x,y,bmaj,bmin,pa
+c	   disk                    flux,x,y,bmaj,bmin,pa
 c
-c	The 3 parameters for point sources are:
-c	  flux,offset_ra,offset_dec
-c
-c	The 6 parameters for gaussians and disks are: 
-c	  flux,offset_ra,offset_dec,bmaj,bmin,pa
-c
-c	Here `flux' is the total flux of the component,
-c	offset_ra and offset_dec are the offset (in arcsec) of the
-c	component, bmaj and bmin are the disk or gaussian FWHM (major
-c	and minor axes), in arcsec, and pa is the position angle
-c	(measured from North towards East) of an elliptical gaussian
-c	or disk.
-c
-c	For circular gaussians and disks, the bmin and bpa arguments
-c	must still be present.
+c	Here "flux" is the total flux density of the component,
+c	"x" and "y" are the offset positions (in arcsec) of the object
+c	relative to the observing center, "bmaj" and "bmin" are the major
+c	and minor axes FWHM (in arcsec), and "pa" is the position angle
+c	of an elliptical component (in degrees). The position angle is
+c	measured from north through east.
+c	You must give initial estimaes for all parameters for each object
+c	(this includes parameters that are redundant or meaningless,
+c	such as "bmin" and "pa" for components that are constrained to be
+c	circular).
 c
 c	The more complex the set of objects being fitted for, the more
 c	important it is to give a good estimate of the source parameters.
@@ -99,6 +99,7 @@ c    rjs  10nov93  Work on multi-channel data.
 c    rjs  24jan94  Change ownership
 c    rjs  23jul94  Major rewrite. No error estimates for the time
 c		   being.
+c    rjs   1sep94  Error estimates!
 c------------------------------------------------------------------------
 	integer MAXVAR
 	parameter(MAXVAR=20)
@@ -107,27 +108,19 @@ c------------------------------------------------------------------------
         parameter(version='version 1.0 23-Jul-94')
 	include 'uvfit.h'
 c
-	real tol,epsfcn
-	parameter(tol=1e-3,epsfcn=1e-2)
-c
 	character out*64,ltype*16
 	integer lIn,lOut
-	integer nread,ifail,i,nvar,npol,pol
-	real x(MAXVAR)
+	integer nread,ifail1,ifail2,i,nvar,npol,pol
+	real x(MAXVAR),rms,covar(MAXVAR*MAXVAR)
 	double precision preamble(4),sfreq(MAXCHAN)
 	complex data(MAXCHAN),Model(MAXCHAN)
 	logical flags(MAXCHAN),dores
-	integer fvec,wa,iwa(MAXVAR),lwa
 c
 c  Externals.
 c
         character itoaf*8
 	logical uvDatOpn
         external FUNCTION
-c
-c  Dynamic memory commons.
-c
-	include 'mem.h'
 c
 c  Get the inputs.
 c
@@ -173,37 +166,29 @@ c
 c  Pack the things that we are going to solve for.
 c
 	call PackPar(x,nvar,MAXVAR)
+	if(out.eq.' '.and.nvar.eq.0)
+     *	  call bug('f','Nothing to be done -- check inputs!')
+	if(nvar.ge.2*nvis)call bug('f','Too few visibilities to fit')
 c
-c  Call the nllsqu solver.
+c  Call the least squares solver.
 c
 	if(nvar.gt.0)then
-	  lwa = 2*nvis*nvar + 5*nvar + 2*nvis
-	  call memalloc(wa,lwa,'r')
-	  call memalloc(fvec,nvis,'c')
 	  call output('Performing the fitting process ...')
-	  call lmdiff(FUNCTION,2*nvis,nvar,x,memc(fvec),epsfcn,tol,
-     *	    ifail,iwa,memr(wa),lwa)
-	  call memfree(fvec,nvis,'c')
-	  call memfree(wa,lwa,'r')
+	  call lsqfit(FUNCTION,2*nvis,nvar,x,covar,rms,ifail1,ifail2)
 	  call Upackpar(x,nvar)
+	  if(ifail2.eq.0)call UpackCov(covar,nvar)
+	  if(ifail1.ne.0)then
+	    call bug('w','Failed to converge: ifail='//itoaf(ifail1))
+	  else if(ifail2.ne.ifail1)then
+	    call bug('w','Failed to determine covariance matrix')
+	  endif
 	else
 	  call bug('w','There are no free parameters')
-	  ifail = 1
 	endif
-c
-c  Do the least squares fit.
-c
-	if(ifail.eq.0)then
-	  ifail = 1
-	else if(ifail.ge.1.and.ifail.le.3)then
-	  ifail = 0
-	endif
-        if(ifail.ne.0)call bug('w','Failed to converge: ifail='
-     *      //itoaf(ifail))
 c
 c  Report on the results.
 c
-	call Report
+	if(nvar.gt.0)call Report(rms)
 c
 c  Write out the results.
 c
@@ -366,6 +351,57 @@ c
 c
 	end
 c************************************************************************
+	subroutine UPackCov(covar,nvar)
+c
+	implicit none
+	integer nvar
+	real covar(nvar,nvar)
+c
+c  Unpack the covariance matrix.
+c------------------------------------------------------------------------
+	include 'mirconst.h'
+	include 'uvfit.h'
+	integer i,n
+c
+	n = 0
+	do i=1,nsrc
+	  if(vflux(i))then
+	    n = n + 1
+	    sflux(i) = sqrt(abs(covar(n,n)))
+	  endif
+	  if(vl0(i))then
+	    n = n + 1
+	    sl0(i) = pi/180/3600 * sqrt(abs(covar(n,n)))
+	  endif
+	  if(vm0(i))then
+	    n = n + 1
+	    sm0(i) = pi/180/3600 * sqrt(abs(covar(n,n)))
+	  endif
+c
+c  Gaussian and disk sources.
+c
+	  if(srctype(i).eq.DISK.or.srctype(i).eq.GAUSSIAN)then
+	    if(vfwhm1(i))then
+	      n = n + 1
+	      sfwhm1(i) = pi/180/3600 * sqrt(abs(covar(n,n)))
+	      if(circ(i))sfwhm2(i) = sfwhm1(i)
+	    endif
+	    if(vfwhm2(i))then
+	      n = n + 1
+	      sfwhm2(i) = pi/180/3600 * sqrt(abs(covar(n,n)))
+	    endif
+	    if(vpa(i))then
+	      n = n + 1
+	      spa(i) = pi/180 * sqrt(abs(covar(n,n)))
+	    endif
+	  endif
+	enddo
+c
+	if(n.ne.nvar)
+     *	  call bug('f','Inconsistent number of free parameters')
+c
+	end
+c************************************************************************
 	subroutine FUNCTION(m,nvar,x,fvec,iflag)
 c
 	implicit none
@@ -491,14 +527,16 @@ c
 	dores = present(1)
 	end
 c************************************************************************
-	subroutine Report
+	subroutine Report(rms)
+c
 	implicit none
+	real rms
 c
 c  Report on the source component solution.
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'uvfit.h'
-	real f1,f2,p,t
+	real f1,f2,p,t,sf1,sf2,sp
 	integer i
 	character line*80
 c
@@ -512,25 +550,45 @@ c
 c
 	call output('------------------------------------------------')
 c
+	write(line,5)rms
+    5	format('RMS residual is',1pe10.3)
+	call output(line)
+	call output(' ')
+c
 	do i=1,nsrc
 	  write(line,10)i,objects(srctype(i))
    10	  format('Source',i3,', Object type: ',a)
 	  call output(line)
-	  write(line,20)flux(i)
-   20	  format('  Flux:',1pg34.4)
+	  if(sflux(i).gt.0)then
+	    write(line,20)flux(i),sflux(i)
+	  else
+	    write(line,20)flux(i)
+	  endif
+   20	  format('  Flux: ',1pg34.4,:,' +/- ',1pe8.2)
 	  call output(line)
 	  write(line,25)3600*180/pi*l0(i),3600*180/pi*m0(i)
-   25	  format('  Offset Position (arcsec): ',2f9.2)
+   25	  format('  Offset Position (arcsec):  ',2f9.2)
 	  call output(line)
+	  if(sl0(i)+sm0(i).gt.0)then
+	    write(line,26)3600*180/pi*sl0(i),3600*180/pi*sm0(i)
+   26	    format('  Positional errors (arcsec):    ',1p2e9.2)
+	    call output(line)
+	  endif
 c
 	  if(srctype(i).eq.GAUSSIAN.or.srctype(i).eq.DISK)then
 	    f1 = 3600*180/pi * fwhm1(i)
 	    f2 = 3600*180/pi * fwhm2(i)
+	    sf1 = 3600*180/pi * sfwhm1(i)
+	    sf2 = 3600*180/pi * sfwhm2(i)
 	    p = 180/pi * pa(i)
+	    sp = 180/pi * spa(i)
 	    if(f1.lt.f2)then
 	      t = f1
 	      f1 = f2
 	      f2 = t
+	      t = sf1
+	      sf1 = sf2
+	      t = sf2
 	      p = p + 90
 	    endif
 	    p = mod(p,180.)
@@ -540,9 +598,19 @@ c
 	    write(line,30)f1,f2
    30	    format('  Major,minor axes (arcsec):',2f9.2)
 	    call output(line)
+	    if(sf1+sf2.gt.0)then
+	      write(line,31)sf1,sf2
+   31	      format('  Axes errors (arcsec):     ',1p2e9.2)
+	      call output(line)
+	    endif
 	    write(line,40)p
-   40	    format('  Position angle (degrees):',f9.1)
+   40	    format('  Position angle (degrees):  ',f9.1)
 	    call output(line)
+	    if(sp.gt.0)then
+	      write(line,41)sp
+   41	      format('  Pos. angle error (degrees):',1pe9.2)
+	      call output(line)
+	    endif
 	  endif
 	enddo
 	call output('------------------------------------------------')
@@ -583,6 +651,15 @@ c
 	  i = binsrcha(object,objects,NOBJS)
 	  srctype(nsrc) = objtype(i)
 c
+c  Set all the parameters to the default.
+c
+	  sflux(nsrc) = 0
+	  sl0(nsrc) = 0
+	  sm0(nsrc) = 0
+	  sfwhm1(nsrc) = 0
+	  sfwhm2(nsrc) = 0
+	  spa(nsrc) = 0
+c
 c  Get the source parameters.
 c
 	  call keyr('spar',flux(nsrc),0.)
@@ -609,6 +686,7 @@ c
 	  vflux(nsrc) = index(fix,'f').eq.0
 	  vl0(nsrc)   = index(fix,'x').eq.0
 	  vm0(nsrc)   = index(fix,'y').eq.0
+	  
 	  if(srctype(nsrc).eq.GAUSSIAN.or.srctype(nsrc).eq.DISK)then
 	    vfwhm1(nsrc)= index(fix,'a').eq.0
 	    circ(nsrc) = index(fix,'c').ne.0
