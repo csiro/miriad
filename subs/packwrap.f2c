@@ -1,0 +1,8 @@
+fortran subroutine packi2(integer in,integer out,integer n)
+{
+  pack16_c(in.addr,(char *)(out.addr),n.val);
+}
+fortran subroutine unpacki2(integer in,integer out,integer n)
+{
+  unpack16_c((char *)(in.addr),out.addr,n.val);
+}
