@@ -134,6 +134,7 @@ c     nebk   16jul98     CHNSELCG was messing up regions like image(3),image(7)
 c     nebk   09sep98     RAZEROCG only got it right if the ref value was
 c                        close to zero.  Failed if close to 2pi
 c    nebk    30nov98     Finally make a decent algorithm for RAZEROCG
+c     rjs    15dec98     Some tidying.
 c***********************************************************************
 c
 c* angconCG -- Convert radians to and from seconds of time/arc
@@ -1380,24 +1381,21 @@ c--
 c-----------------------------------------------------------------------
       include 'mirconst.h'
       integer i
-      double precision crval, crpix, cdelt, x1, zp
-      character gentyp*4, itoaf*1
+      double precision zp
+      character gentyp*4
 c-----------------------------------------------------------------------
       call coinit(lun)
       do i = 1, 2
-        zero(i) = .false.
-        call rdhdd (lun, 'crval'//itoaf(i), crval, 0.0d0)
-        call rdhdd (lun, 'crpix'//itoaf(i), crpix, 0.0d0)
-        call rdhdd (lun, 'cdelt'//itoaf(i), cdelt, 0.0d0)
         call axtypco (lun, 0, i, gentyp)
         if (gentyp.eq.'RA' .or. gentyp.eq.'LONG') then
-c
-          x1 = 0.0
-          call cocvt1(lun, i, 'aw', x1, 'ap', zp)
-          if (blc(i).lt.zp .and. trc(i).gt.zp) zero(i) = .true.
+          call cocvt1(lun, i, 'aw', 0.d0, 'ap', zp)
+          zero(i) = blc(i).lt.zp .and. trc(i).gt.zp
+        else
+          zero(i) = .false.
         end if
       end do
 c
+      call cofin(lun)
       end
 c
 c* readbCG -- Read in mask image mask
