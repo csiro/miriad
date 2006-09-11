@@ -262,7 +262,7 @@ c                  pixels are re-calculated with a larger area. Also deal
 c                  with blanks in SEARCH and LOADDAT (blanks now correctly
 c                  dealt with throughout). Tidied up subroutine descriptions,
 c                  etc.
-c
+c    rjs  18mar96  Some FORTRAN standardisation.
 c
 c To do:
 c
@@ -1480,7 +1480,7 @@ c print out ascii art if required
 c
       if (asciiart) then
        do i = maxline,1,-1
-        if ((ascpic(i).ne.'').or.(i.eq.1).or.(i.eq.maxline))
+        if ((ascpic(i).ne.' ').or.(i.eq.1).or.(i.eq.maxline))
      +      call output(ascpic(i))
        end do
       end if
@@ -1516,8 +1516,8 @@ c    lIn      Handle of the coordinate system.
 c    k
 c    topix
 c------------------------------------------------------------------------
-      include 'sfind.h'
       implicit none
+      include 'sfind.h'
       integer lIn,k
       logical topix
       double precision in(3),out(3)
@@ -1669,7 +1669,7 @@ c
         return
       end if
       do i = 1,maxline
-       ascpic(i) = ''
+       ascpic(i) = ' '
       end do
 c
 c Choose only those pixels within a *circle* of radius 2*boxsize which are
