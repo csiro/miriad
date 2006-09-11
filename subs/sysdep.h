@@ -22,6 +22,8 @@
  *                otherwise it is undefined.  Also added ARGS definition
  *                to aide forward declartion prototyping.
  *    rjs 20nov94 Added "alpha" ifdef.
+ *    rjs 19mar97 Add FORTRAN_LOGICAL define and check that miriad.h declarations
+ *		  have not been done before doing them again.
  */
 
 #ifndef Null
@@ -41,6 +43,8 @@
  *    extern void keyput_c ARGS((const char *task, char *arg));
  */
 
+#ifndef MIRIAD_TYPES_DEFINED
+#define MIRIAD_TYPES_DEFINED 1
 #ifdef __STDC__
 #if (__STDC__ == 1)
 typedef void Void;
@@ -57,6 +61,7 @@ typedef char Void;
 #define Const /* NULL */
 #define ARGS(alist) ()
 #endif /* __STDC__ */
+#endif
 
 typedef int int2;
 
@@ -69,6 +74,7 @@ typedef int int2;
 #ifdef vaxc
 #define FORT_TRUE -1
 #define FORT_FALSE 0
+#define FORT_LOGICAL(a) (0x01 & (a))
 #define BUFDBUFF 1
 #define BUFALIGN 512
 #define BUFSIZE 16384
@@ -85,6 +91,7 @@ typedef int int2;
 #include <fortran.h>
 #define FORT_TRUE  _btol(1)
 #define FORT_FALSE _btol(0)
+#define FORT_LOGICAL(a) (_ltob((&(a))))
 #define BUFDBUFF 0
 #define BUFALIGN 8
 #define BUFSIZE 16384
@@ -104,6 +111,7 @@ typedef int int2;
 #  define FORT_TRUE 1
 #endif
 #define FORT_FALSE 0
+#define FORT_LOGICAL(a) ((a) != FORT_FALSE)
 
 #define BUFDBUFF 0
 
