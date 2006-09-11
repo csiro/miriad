@@ -170,6 +170,7 @@ c		  * Set ATANT to 15 in atlod.h
 c		  * Comment out checks for invalid antennas in antchk
 c		  * Get rid of skip when jstat.eq.5 in RPDISP.
 c    rjs  22sep97 Replace call to fdatejul with dayjul.
+c    rjs  07jan98 Better printing of source names.
 c
 c  Program Structure:
 c    Miriad atlod can be divided into three rough levels. The high level
@@ -195,7 +196,7 @@ c------------------------------------------------------------------------
 	integer MAXFILES
 	parameter(MAXFILES=128)
 	character version*(*)
-	parameter(version='AtLod: version 22-Sep-97')
+	parameter(version='AtLod: version 07-Jan-98')
 c
 	character in(MAXFILES)*64,out*64,line*64
 	integer tno
@@ -665,21 +666,13 @@ c  Flush out source information.
 c------------------------------------------------------------------------
 	include 'atlod.h'
 	double precision r1,d1,pntra,pntdec
-	character line*80
+	character line*80,sdash*80
 	integer length,l
 c
 c  Externals.
 c
 	integer len1
 	double precision Epo2Jul
-c
-c  Give a message about a new source.
-c
-	if(srcnam.ne.sname)then
-	  line = 'Source: '//srcnam
-	  call output(line)
-	  sname = srcnam
-	endif
 c
 c  Save ra and dec.
 c
@@ -704,21 +697,29 @@ c
 c  Fiddle the source name to be all lower case, and eliminate
 c  any special characters or spaces.
 c
-	line = srcnam
-	length = min(len1(srcnam),len(line))
-	call lcase(line(1:length))
+	sdash = srcnam
+	length = min(len1(srcnam),len(sdash))
+	if(length.gt.0)call lcase(sdash(1:length))
 	do l=1,length
-	  if((line(l:l).ge.'a'.and.line(l:l).le.'z').or.
-     *	     (line(l:l).ge.'0'.and.line(l:l).le.'9').or.
-     *	      line(l:l).eq.'+'.or.line(l:l).eq.'-'.or.
-     *	      line(l:l).eq.'.')then
+	  if((sdash(l:l).ge.'a'.and.sdash(l:l).le.'z').or.
+     *	     (sdash(l:l).ge.'0'.and.sdash(l:l).le.'9').or.
+     *	      sdash(l:l).eq.'+'.or. sdash(l:l).eq.'-'.or.
+     *	      sdash(l:l).eq.'.')then
 	    continue
 	  else
-	    line(l:l) = '_'
+	    sdash(l:l) = '_'
 	  endif
 	enddo
 c
-	if(length.gt.0)call uvputvra(tno,'source',line(1:length))
+c  Give a message about a new source.
+c
+	if(srcnam.ne.sname.and.length.gt.0)then
+	  line = 'Source: '//sdash(1:length)
+	  call output(line)
+	  sname = srcnam
+	endif
+c
+	if(length.gt.0)call uvputvra(tno,'source',sdash(1:length))
 	call uvputvrd(tno,'ra',ra,1)
 	call uvputvrd(tno,'dec',dec,1)
 	if(pntra.ne.ra)call uvputvrd(tno,'pntra',pntra,1)
