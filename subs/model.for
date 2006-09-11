@@ -40,6 +40,7 @@ c    rjs  26apr92 Added check for clip level processing.
 c    rjs  10may92 Reworked the way clipping is done.
 c    rjs  17may92 Clipping message, to appease NEBK.
 c    rjs  15feb93 Changes to make ra/dec variables double.
+c    mchw 02may93 Added default flux to apriori option.
 c************************************************************************
 c*ModelIni -- Ready the uv data file for processing by the Model routine.
 c&mchw
@@ -544,7 +545,7 @@ c
 	      j = j + 1
 	    enddo
 	    call ModStat(calscale,tvis,Out(nhead+1),nread,
-     *		calget,VisPow,ModPow)
+     *		calget,level,VisPow,ModPow)
 	    call scrwrite(tscr,Out,nvis*length,length)
 	    nvis = nvis + 1
 	  endif
@@ -1073,7 +1074,7 @@ c
 	      enddo
 	    endif
 c
-	    call ModStat(calscale,tvis,Out(nhead+1),nchan,calget,
+	    call ModStat(calscale,tvis,Out(nhead+1),nchan,calget,level,
      *		VisPow,ModPow)
 	    call scrwrite(tscr,Out,nvis*length,length)
 	    nvis = nvis + 1
@@ -1085,12 +1086,13 @@ c
      *	  'Stopped reading vis data when number of channels changed')
 	end
 c************************************************************************
-	subroutine ModStat(calscale,tvis,Out,nchan,calget,VisPow,ModPow)
+	subroutine ModStat(calscale,tvis,Out,nchan,calget,level,
+     *							VisPow,ModPow)
 c
 	implicit none
 	logical calscale
 	integer tvis,nchan
-	real Out(5*nchan),VisPow,ModPow
+	real Out(5*nchan),VisPow,ModPow,level
 	external calget
 c
 c  This routine does a few steps common to both point-source and model
@@ -1105,6 +1107,7 @@ c    tvis	Handle of the input visibility file.
 c    nchan
 c    Out	These are the actual and model correlations.
 c    calget	Service routine to return the flux of the calibrator.
+c    level	The default flux or level of the model.
 c  Input/Output:
 c    VisPow	Updated to reflect the added power.
 c    ModPow	Updated to reflect the added power.
@@ -1113,10 +1116,10 @@ c------------------------------------------------------------------------
 	real a
 c
 	if(calscale)then
-	  call ModGet(calget,tvis,nchan,a)
+	  call ModGet(calget,tvis,nchan,a,level)
 	  do i=1,5*nchan,5
-	    Out(i+2) = a * Out(i+2)
-	    Out(i+3) = a * Out(i+3)
+	    Out(i+2) = a / level * Out(i+2)
+	    Out(i+3) = a / level * Out(i+3)
 	    if(Out(i+4).gt.0)then
 	      VisPow = VisPow + Out(i  )*Out(i  ) + Out(i+1)*Out(i+1)
 	      ModPow = ModPow + Out(i+2)*Out(i+2) + Out(i+3)*Out(i+3)
@@ -1132,7 +1135,7 @@ c
 	endif
 	end
 c************************************************************************
-	subroutine ModGet(calget,tvis,nchan,a)
+	subroutine ModGet(calget,tvis,nchan,a,level)
 c
 	implicit none
 	integer tvis
@@ -1146,13 +1149,14 @@ c  Input:
 c    tvis	Handle of the visibility data file.
 c    nchan	Number of channels.
 c    calget	Service routine to return the flux of the calibrator.
+c    level	The default flux or level of the model.
 c  Output:
 c    a		Flux of the calibrator.
 c------------------------------------------------------------------------
 	include 'model.h'
 	character source*16,source1*16,type*1
 	logical more,update,isplanet
-	real flux,freq
+	real flux,freq,level
 	double precision day,dfreq,delta
 	integer n,iostat,length
 c
@@ -1194,9 +1198,9 @@ c
 	    isplanet = flux.gt.0
 	  endif
 	  if(.not.isplanet)then
-	    flux = 0
+	    flux = level
 	    call CalGet(' ',source1,freq,100.,day,1000.,flux,iostat)
-	    if(iostat.ne.0) call bug('f',
+	    if(iostat.ne.0) call bug('w',
      *		'Error determining flux of '//source)
 	  endif
 c
