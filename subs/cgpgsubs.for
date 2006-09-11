@@ -16,6 +16,7 @@ c  confmtcg :  Format contour levels
 c  conturcg :  Draw contour plot
 c  erswincg :  Erase window
 c  lab3cg   :  Label sub-plot with value and/or pixel of third axis
+c  setgrcg  :  Set up a black and white lookup table and apply it
 c  setlabcg :  Set axis label displacements 
 c  strerscg :  Erase rectangle on plot and write string into it
 c  strfmtcg :  Format a number into a string with PGNUMB
@@ -101,6 +102,7 @@ c                        routines to label with true world value of third
 c                        third axis
 c     nebk   23dec94     Strings (str1:4) not long enough in ANNWINCG
 c                        Increase length of STR1 in CONFMTCG
+c     nebk   05jan95     Replace PGGRAY by new PGIMAG. Add SETGRCG
 c**********************************************************************
 c
 c* annboxCG -- Annotate plot with information from a box image 
@@ -1218,6 +1220,31 @@ c
 c
       end
 c
+c
+c* setgrCG -- Set a grey scale lookup table and apply it
+c& nebk
+c: plotting
+c+
+      subroutine setgrcg 
+c
+      implicit none
+c
+c  Set up a greyscale lookup table and apply it to the current device
+c--
+c------------------------------------------------------------------------
+      real gl(2), gr(2), gg(2), gb(2)
+c
+      save gl, gr, gg, gb
+      data gl /0.0, 1.0/
+      data gr /0.0, 1.0/
+      data gg /0.0, 1.0/
+      data gb /0.0, 1.0/
+c------------------------------------------------------------------------
+      call pgctab (gl, gr, gg, gb, 2, 1.0, 0.5)
+c
+      end
+c
+c
 c* setlabCG -- Set label options strings and axis displacements
 c& nebk
 c: plotting
@@ -1929,8 +1956,8 @@ c Draw the wedge and label
 c
       call pgsvp (wdgvp(1), wdgvp(3), wdgvp(2), wdgvp(4))
       call pgswin (0.9, 1.1, 1.0, real(nbins2))
-      call pggray (memr(ipw), 1, nbins2, 1, 1, 1, nbins2, 
-     +             fg2, bg2, tr)
+      call pgimag (memr(ipw), 1, nbins2, 1, 1, 1, nbins2, 
+     +             bg2, fg2, tr)
       call pgswin (0.0, 1.0, bg, fg)
       if (label) then
 c
