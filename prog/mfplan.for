@@ -47,6 +47,7 @@ c	  infinity Minimise the worst gap in the uv coverage. The default
 c	           is to minimise the rms gap in the uv coverage. The
 c	           infinity option is the best option if you have very good
 c	           uv coverage. Otherwise it produces poorer results.
+c	  colours  Plot each configuration with a different colour
 c@ device
 c	PGPLOT device. If this is given, then a plot of the u-v coverage
 c	is made. Default is no plot.
@@ -61,13 +62,14 @@ c    nebk 23sep93 Add 6.0 arrays to silence akt (no easy feat)
 c    rjs   7oct93 Change default frequencies to silence akt (certainly no easy
 c		  feat).
 c    rjs  04jul97 "fixed" keyword.
+c    nebk 13oct97 Add 210m array.  Draw arrys in colours
 c  Bugs:
 c------------------------------------------------------------------------
 	character version*(*)
 	integer nants,nbl,MAXCONFG,NCONFGS,MAXBANDS
 	parameter(nants=6,nbl=(nants*(nants-1))/2,MAXBANDS=128)
-	parameter(MAXCONFG=32,NCONFGS=18)
-	parameter(version='MfPlan: version 1.0 7-Oct-93 ')
+	parameter(MAXCONFG=32,NCONFGS=19)
+	parameter(version='MfPlan: version 1.0 13-Oct-97 ')
 c
 	real bands(2,MAXBANDS),uni(MAXBANDS+1)
 	integer nbands
@@ -79,7 +81,7 @@ c
 	real T,E,oldE,p,rand(3),maxbase
 	integer nfail,nsucc,trials,nfix
 	character config*8,device*16,label*80,line*64
-	logical no128,inf
+	logical no128,inf,docol
 c
 c  Externals.
 c
@@ -91,29 +93,31 @@ c
 	character name(NCONFGS)*5
 	integer uu(NANTS,NCONFGS)
   	data name(1),(uu(i,1),i=1,6)/'0.122',  0,  2,  4,  6,  8,392/
-	data name(2),(uu(i,2),i=1,6)/'0.375',  2, 10, 14, 16, 32,392/
-	data name(3),(uu(i,3),i=1,6)/'0.75a',147,163,172,190,195,392/
-	data name(4),(uu(i,4),i=1,6)/'0.75b', 98,109,113,140,148,392/
-	data name(5),(uu(i,5),i=1,6)/'0.75c', 64, 84,100,110,113,392/
-	data name(6),(uu(i,6),i=1,6)/'0.75d',100,102,128,140,147,392/
-	data name(7),(uu(i,7),i=1,6)/'1.5a ',100,110,147,168,196,392/
-	data name(8),(uu(i,8),i=1,6)/'1.5b ',111,113,163,182,195,392/
-	data name(9),(uu(i,9),i=1,6)/'1.5c ', 98,128,173,190,195,392/
-	data name(10),(uu(i,10),i=1,6)/'1.5d ',102,109,140,182,196,392/
-	data name(11),(uu(i,11),i=1,6)/'3.0a ',  4, 45,102,173,195,392/
-	data name(12),(uu(i,12),i=1,6)/'3.0b ',  2, 64,147,182,196,392/
-	data name(13),(uu(i,13),i=1,6)/'3.0c ',  0, 10,113,140,182,392/
-	data name(14),(uu(i,14),i=1,6)/'3.0d ',  8, 32, 84,168,173,392/
-	data name(15),(uu(i,15),i=1,6)/'6.0a ',  4, 45,102,173,195,392/
-	data name(16),(uu(i,16),i=1,6)/'6.0b ',  2, 64,147,182,196,392/
-	data name(17),(uu(i,17),i=1,6)/'6.0c ',  0, 10,113,140,182,392/
-	data name(18),(uu(i,18),i=1,6)/'6.0d ',  8, 32, 84,168,173,392/
+        data name(2),(uu(i,2),i=1,6)/'0.210', 98,100,102,109,112,392/
+	data name(3),(uu(i,3),i=1,6)/'0.375',  2, 10, 14, 16, 32,392/
+	data name(4),(uu(i,4),i=1,6)/'0.75a',147,163,172,190,195,392/
+	data name(5),(uu(i,5),i=1,6)/'0.75b', 98,109,113,140,148,392/
+	data name(6),(uu(i,6),i=1,6)/'0.75c', 64, 84,100,110,113,392/
+	data name(7),(uu(i,7),i=1,6)/'0.75d',100,102,128,140,147,392/
+	data name(8),(uu(i,8),i=1,6)/'1.5a ',100,110,147,168,196,392/
+	data name(9),(uu(i,9),i=1,6)/'1.5b ',111,113,163,182,195,392/
+	data name(10),(uu(i,10),i=1,6)/'1.5c ', 98,128,173,190,195,392/
+	data name(11),(uu(i,11),i=1,6)/'1.5d ',102,109,140,182,196,392/
+	data name(12),(uu(i,12),i=1,6)/'3.0a ',  4, 45,102,173,195,392/
+	data name(13),(uu(i,13),i=1,6)/'3.0b ',  2, 64,147,182,196,392/
+	data name(14),(uu(i,14),i=1,6)/'3.0c ',  0, 10,113,140,182,392/
+	data name(15),(uu(i,15),i=1,6)/'3.0d ',  8, 32, 84,168,173,392/
+	data name(16),(uu(i,16),i=1,6)/'6.0a ',  4, 45,102,173,195,392/
+	data name(17),(uu(i,17),i=1,6)/'6.0b ',  2, 64,147,182,196,392/
+	data name(18),(uu(i,18),i=1,6)/'6.0c ',  0, 10,113,140,182,392/
+	data name(19),(uu(i,19),i=1,6)/'6.0d ',  8, 32, 84,168,173,392/
+
 c
 c Get the users input.
 c
 	call output(version)
 	call keyini
-	call GetOpt(no128,inf)
+	call GetOpt(no128,inf,docol)
 	call GetBands(bands,uni,MAXBANDS,nbands,
      *	  maxfreq,freqsum,no128)
 	call keyi('nfreq',nfreq,2)
@@ -221,13 +225,13 @@ c
 c  Plot the final solution.
 c
 	if(device.ne.' ')call Plotit(device,nconfg,nans,coord,
-     *					freqs,bls,label(1:llabel))
+     *                               freqs,bls,docol,label(1:llabel))
 	end
 c************************************************************************
-	subroutine GetOpt(no128,inf)
+	subroutine GetOpt(no128,inf,docol)
 c
 	implicit none
-	logical no128,inf
+	logical no128,inf,docol
 c
 c  Get task enrichment parameters.
 c
@@ -235,15 +239,16 @@ c  Output:
 c    no128	Avoid multiples of 128 MHz.
 c------------------------------------------------------------------------
 	integer nopts
-	parameter(nopts=2)
+	parameter(nopts=3)
 	character opts(nopts)*8
 	logical present(nopts)
 c
-	data opts/'no128   ','infinity'/
+	data opts/'no128   ','infinity','colours'/
 	call options('options',opts,present,nopts)
 c
 	no128 = present(1)
 	inf   = present(2)
+        docol = present(3)
 	end
 c************************************************************************
 	subroutine GetBands(bands,uni,maxbands,nbands,
@@ -342,12 +347,14 @@ c
 	GetFrq = 0.001*nint(1000*f)
 	end
 c************************************************************************
-	subroutine Plotit(device,nconfg,nants,coord,freqs,bls,label)
+	subroutine Plotit(device,nconfg,nants,coord,freqs,bls,
+      *                   docol,label)
 c
 	implicit none
 	integer nconfg,nants,coord(nants,nconfg)
 	real freqs(nconfg),bls((nconfg*nants*(nants-1))/2)
 	character device*(*),label*(*)
+        logical docol
 c
 c  Plot the uv coverage.
 c------------------------------------------------------------------------
@@ -355,7 +362,7 @@ c------------------------------------------------------------------------
 	integer NPTS
 	parameter(NPTS=128)
 	real x(NPTS),y(NPTS)
-	integer i,j,k,l,n,np
+	integer i,j,k,l,n,np,nbase,icol
 	real factor,maxbase,theta
 c
 c  Externals.
@@ -382,6 +389,7 @@ c
 	enddo
 	n = nconfg*nants*(nants-1)/2
 	maxbase = 1.05*maxbase
+        nbase = nants*(nants-1)/2
 c
 c  Initialise PGPLOT.
 c
@@ -393,6 +401,8 @@ c
 	call pgwnad(-maxbase,maxbase,-maxbase,maxbase)
 	call pgtbox('BCNST',0.,0,'BCNST',0.,0)
 	call pglab('u (k\gl)','v (k\gl)',label)
+        icol = 1
+        if (docol) icol = 0
 	do j=1,n
 	  np = max(10,int(sqrt(bls(j)/maxbase)*NPTS)+1)
 	  do i=1,np
@@ -400,6 +410,8 @@ c
 	    x(i) = bls(j)*cos(theta)
 	    y(i) = bls(j)*sin(theta)
 	  enddo
+          if (docol .and. mod(j,nbase).eq.1) icol = icol + 1
+          call pgsci(icol)
 	  call pgline(np,x,y)
 	enddo
 	call pgend
