@@ -131,6 +131,8 @@ c     nebk   02may96     COmments in ANGCONCG were no longer the truth
 c     nebk   16oct96     Make sure all LONG axes are trapped for zero 
 c                        crossing too in RAZEROCG
 c     nebk   16jul98     CHNSELCG was messing up regions like image(3),image(7)
+c     nebk   09sep98     RAZEROCG only got it right if the ref value was
+c                        close to zero.  Failed if close to 2pi
 c***********************************************************************
 c
 c* angconCG -- Convert radians to and from seconds of time/arc
@@ -1375,6 +1377,7 @@ c     Output
 c       zero   True if that axis is a) RA and b) crosses 0
 c--
 c-----------------------------------------------------------------------
+      include 'mirconst.h'
       integer i
       double precision crval, crpix, cdelt, x1, x2
       character gentyp*4, itoaf*1
@@ -1388,7 +1391,19 @@ c-----------------------------------------------------------------------
         if (gentyp.eq.'RA' .or. gentyp.eq.'LONG') then
           x1 = (blc(i)-crpix)*cdelt + crval
           x2 = (trc(i)-crpix)*cdelt + crval
-          if (x1*x2.lt.0) zero(i) = .true.
+          if (x1*x2.lt.0) then
+c
+c The ref pix must be close to 0rad
+c
+             zero(i) = .true.
+          else 
+c
+c The ref pix might be close to 2pi rad
+c
+             x1 = x1 - 2 * DPI
+             x2 = x2 - 2 * DPI
+             if (x1*x2.lt.0) zero(i) = .true.
+          end if
         end if
       end do
 c
