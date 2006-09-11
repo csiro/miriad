@@ -38,7 +38,7 @@ c    * Descriptions in brief mode could be a bit more verbose!
 c------------------------------------------------------------------------
 	character version*(*)
 	integer MAXIN
-	parameter(version='Prthd: version 1.0 24-Oct-94')
+	parameter(version='Prthd: version 24-Oct-94')
 	parameter(MAXIN=256)
 	integer tno,i,iostat,nin
 	character in(MAXIN)*64,logf*64,line*80
@@ -207,22 +207,6 @@ c
 	call logwrite('Map flux units: '//aval1,more)
       endif
 c
-c  Rms noise.
-c
-      call rdhdr (tno, 'rms', rval1, -1.0)
-      if(rval1.gt.0)then
-        write (line,'(a,1pe10.3)')'Nominal Theoretical Rms: ',rval1
-        call logwrite(line,more)
-      endif
-c
-c  Primary beam parameters.
-c
-      call rdhdr (tno, 'pbfwhm', rval1, -1.0)
-      if(rval1.gt.0)then
-        write (line,'(a,g10.3)')'Primary beam size (arcsec): ',rval1
-        call logwrite(line,more)
-      endif
-c
 c  Synthesised beam parameters.
 c
       call rdhdr(tno,'bmaj',rval1,0.)
@@ -249,32 +233,59 @@ c
       call rdhdd (tno, 'obstime', dval, 0.d0)
       if(dval.gt.0)then
 	call julday(dval,'H',aval1)
-	line = 'Average Time of observation: '//aval1
+	line =
+     *	  'Average Time of observation: '//aval1
 	call logwrite(line,more)
       endif
       call rdhdr (tno, 'epoch', rval1, 0.0)
       if(rval1.gt.0)then
-	write (line, '(a,f8.2,a)') 'Epoch:',rval1,' years'
+	if(rval1.lt.1984)then
+	  aval1 = 'B'
+	else
+	  aval1 = 'J'
+	endif
+	il1 = len1(aval1)
+	write (line, '(a,a,f7.2,a)')
+     *	  'Equinox:                     ',aval1(1:1),rval1
 	call logwrite(line,more)
       endif
       call rdhdd(tno,'restfreq',dval,0.d0)
       if(dval.gt.0)then
-	write(line,'(a,f13.6,a)')'Rest frequency:',dval,' GHz'
+	write(line,'(a,f13.6,a)')
+     *	  'Rest frequency:         ',dval,' GHz'
 	call logwrite(line,more)
       endif
       if(hdprsnt(tno,'vobs'))then
 	call rdhdr(tno,'vobs',rval1,0.0)
-	write(line,'(a,f8.2,a)') 'Observatory radial velocity:',
-     *				rval1,' km/s'
+	write(line,'(a,f8.2,a)')
+     *	  'Observatory radial velocity:',rval1,' km/s'
 	call logwrite(line,more)
       endif
       
+c
+c  Rms noise.
+c
+      call rdhdr (tno, 'rms', rval1, -1.0)
+      if(rval1.gt.0)then
+        write (line,'(a,1pe10.3)')
+     *	  'Nominal Theoretical Rms:    ',rval1
+        call logwrite(line,more)
+      endif
+c
+c  Primary beam parameters.
+c
+      call rdhdr (tno, 'pbfwhm', rval1, -1.0)
+      if(rval1.gt.0)then
+        write (line,'(a,1pg10.3)')
+     *	  'Primary beam size (arcsec): ',rval1
+        call logwrite(line,more)
+      endif
 c
 c  Number of clean components.
 c
       call rdhdi(tno,'niters',ival,0)
       if(ival.gt.0)call logwrite(
-     *	'Number of iterations: '//itoaf(ival),more)
+     *	  'Number of iterations:       '//itoaf(ival),more)
 c
 c  Check for extra tables, etc.
 c
