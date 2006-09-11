@@ -57,13 +57,15 @@ c		  of cdim2.
 c    nebk 01jun94 DOc change
 c    rjs  23sep94 Fixed bug determining default axis ranges when there were
 c		  multiple X axes.
+c    rjs  27apr95 Handle case where a variable does not appear in the first
+c		  records.
 c  Bugs:
 c    ?? Perfect?
 c------------------------------------------------------------------------
 	character version*(*)
 	integer MAXPNTS
 	parameter(MAXPNTS=100000)
-	parameter(version='VarPlt: version 1.1 23-Sep-94')
+	parameter(version='VarPlt: version 1.1 27-Apr-95')
 	logical doplot,dolog,dotime,dounwrap
 	character vis*64,device*64,logfile*64,xaxis*16,yaxis*16
 	character xtype*1,ytype*1,xunit*16,yunit*16,calday*24
@@ -106,7 +108,6 @@ c
 c  Open up all the inputs.
 c
 	call uvopen(tIn,vis,'old')
-	call uvnext(tIn)
 	call VarChar(tIn,xaxis,xtype,xdim1,xdim2,xunit,xscale,xoff)
 	call VarChar(tIn,yaxis,ytype,ydim1,ydim2,yunit,yscale,yoff)
 	call uvrewind(tIn)
@@ -639,26 +640,27 @@ c------------------------------------------------------------------------
 	double precision xdrun(MAXRUNS),ydrun(MAXRUNS)
 	integer xirun(MAXRUNS),yirun(MAXRUNS)
 	real xrrun(MAXRUNS),yrrun(MAXRUNS)
-	integer xpnt,ypnt,iostat,k
+	integer xpnt,ypnt,xdims,ydims,iostat,k
+	logical xupd,yupd
+	character xt*1,yt*1
 c
 c  Externals.
 c
 	integer uvscan
-	logical uvupdate
 c
 	if(max(xdim,ydim).gt.MAXRUNS)
      *	  call bug('f','Too many variables to hold in buffer')
 	npnts = 0
 	xpnt = 0
 	ypnt = 0
-	call uvtrack(tIn,xaxis,'u')
-	call uvtrack(tIn,yaxis,'u')
 c
 c  Read the data.
 c
 	iostat = uvscan(tIn,' ')
 	dowhile(iostat.eq.0.and.npnts.lt.maxpnt)
-	  if(uvupdate(tIn))then
+	  call uvprobvr(tIn,xaxis,xt,xdims,xupd)
+	  call uvprobvr(tIn,yaxis,yt,ydims,yupd)
+	  if((xupd.or.yupd).and.(xdims.eq.xdim.and.ydims.eq.ydim))then
 	    if(max(xpnt+xdim,ypnt+ydim).gt.MAXRUNS)then
 	      k = min(xpnt/xdim,maxpnt-npnts)
 	      call TransF(k,npnts,
@@ -812,8 +814,12 @@ c    scale,offset Conversion factors. User-val = scale*(raw-val - offset)
 c
 c------------------------------------------------------------------------
 	include 'mirconst.h'
-	integer i
+	integer i,iostat
 	logical update
+c
+c  Externals.
+c
+	integer uvscan
 c
 c  The following table gives the info about known variables. THIS MUST BE
 c  IN ALPHABETIC ORDER. This table does not include variables which have
@@ -908,10 +914,19 @@ c
 	ndim1 = 0
 	ndim2 = 0
 	tmp = name
-	call uvprobvr(tno,name,type,ndim1,update)
-	if(type.eq.' ')call bug('f','Variable not in the file: '//tmp)
-	if(type.ne.'r'.and.type.ne.'d'.and.type.ne.'i')
-     *	  call bug('f','Cannot plot variables of this datatype: '//tmp)
+c
+c  Wait until we have a valid record for this variable.
+c
+	ndim1 = 0
+	iostat = 0
+	dowhile(iostat.eq.0.and.ndim1.eq.0)
+	  call uvprobvr(tno,name,type,ndim1,update)
+	  if(type.eq.' ')call bug('f','Variable not in the file: '//tmp)
+	  if(type.ne.'r'.and.type.ne.'d'.and.type.ne.'i')
+     *	   call bug('f','Cannot plot variables of this datatype: '//tmp)
+	  if(ndim1.eq.0)iostat = uvscan(tno,' ')
+	enddo
+c
 	if(ndim1.le.0)
      *	  call bug('f','Needed length info not initialise for: '//tmp)
 c
