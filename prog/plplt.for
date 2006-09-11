@@ -2,7 +2,7 @@ c************************************************************************
 	program plplt
 	implicit none
 c
-c= plplot - Plot the visibility function for a planet
+c= plplt - Plot the visibility function for a planet
 c& rjs
 c: uv analysis
 c+
@@ -28,7 +28,8 @@ c
 c--
 c  History
 c    rjs  15jun99 Original version.
-c    rjs  04feb02 General tidy up to bring it up to standard.
+c    rjs  04feb01 General tidy up to bring it up to standard.
+c    rjs  12feb01 More minor tidying.
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 c
@@ -73,6 +74,7 @@ c
 	if(uvrange(1).ge.uvrange(2).or.uvrange(1).lt.0)
      *				call bug('f','Invalid uvrange')
 	call keyt('epoch',epoch,'atime',0.d0)
+	if(epoch.le.0)call bug('f','An epoch must be given')
 	call keyr('pltb',pltb,0.)
 	if(pltb.lt.0)call bug('f','Invalid value for pltb')
 	call keyfin
