@@ -95,6 +95,7 @@ c    rjs  31jul97 Make it work for wide-only files.
 c    rjs  20jan99 The frequency assigned to a channel was not being
 c		  correctly computed when line width was not equal to
 c		  line step.
+c    rjs   7oct04 Set senmodel parameter.
 c
 c  Problems:
 c    * Should do simple spectral index fit.
@@ -105,7 +106,7 @@ c------------------------------------------------------------------------
 	parameter(MAXPOL=2)
 c
 	character version*(*)
-	parameter(version='MfCal: version 1.0 20-Jan-99')
+	parameter(version='MfCal: version 1.0 7-Oct-04')
 c
 	integer tno
 	integer pWGains,pFreq,pSource,pPass,pGains,pTau
@@ -1192,6 +1193,7 @@ c
 c  Loop over everything.
 c
 	call uvDatRd(preamble,Data,flags,MAXCHAN,nchan)
+	call defsmodl(tno)
 	call uvrdvra(tno,'source',source,' ')
 	call uvrdvri(tno,'nants',nants,0)
 	if(nants.le.0.or.nants.gt.MAXANT)
