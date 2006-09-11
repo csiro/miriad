@@ -32,6 +32,7 @@ c    rjs   04dec92    Rewrite keyi, so that mchw's new hex/octal conversion
 c		      routine is used.
 c    rjs   19sep95    Extra checks.
 c    rjs   19feb97    More robust to spaces in .def files.
+c    rjs   25jul97    Better reading of .def and @ files.
 c************************************************************************
 c* KeyIni -- Initialise the `key' routines.
 c& pjt
@@ -93,15 +94,10 @@ c
 	    call txtopen(lun,arg,'old',status)
 	    if(status.ne.0) call bug('f','KeyIni: ' //
      *	        'Failed to open parameter file ' // arg(1:len1(arg)))
-    	    call txtread(lun,arg,arglen,status)
-	    do while(status.eq.0)
-	      if(arglen.ge.len(arg)) then
-                call output('Reading '//arg)
-                call bug('f','Input parameter too long for buffer')
-              endif
-	      if(arglen.ne.0)arglen = len1(arg(1:arglen))
-	      if(arglen.ne.0)call keyput(arglen,arg)
-	      call txtread(lun,arg,arglen,status)
+	    call keylget(lun,arg,arglen)
+	    do while(arglen.gt.0)
+	      call keyput(arglen,arg)
+	      call keylget(lun,arg,arglen)
 	    enddo
 	    call txtclose(lun)
 c
@@ -332,12 +328,8 @@ c
 c  Read in another line, from an @ file.
 c
 c------------------------------------------------------------------------
-	integer buflen,i1,i2,iostat,length
+	integer buflen,i1,i2,length
 	include 'key.h'
-c
-c  Externals.
-c
-	integer len1
 c
 	if(nkeys.eq.0)then
 	  buflen = 0
@@ -347,16 +339,10 @@ c
 c
 	i1 = buflen + 1
 	i2 = len(pbuf)
-	iostat = 0
-	length = 0
-	dowhile(length.le.0.and.iostat.eq.0)
-	  call txtread(lun,pbuf(i1:i2),length,iostat)
-	  length = min(length,i2 - i1 + 1)
-	  length = len1(pbuf(i1:i1+length-1))
-	enddo
-	if(iostat.eq.-1)then
+	call keylget(lun,pbuf(i1:i2),length)
+	if(length.eq.0)then
 	  call txtclose(lun)
-	else if(iostat.eq.0)then
+	else
 	  if(i1+length-1.gt.i2) call bug('f','KeyRead: Line too long')
 	  if(nkeys.eq.maxkeys) call bug('f','KeyRead: Too many keys')
 	  nkeys = nkeys + 1
@@ -365,9 +351,55 @@ c
 	  k1(nkeys) = buflen + 1
 	  k2(nkeys) = buflen + length
 	  lu(nkeys) = lun
-	else
-	  call bugno('f',iostat)
 	endif
+c
+	end
+c************************************************************************
+	subroutine keylget(lun,line,length)
+c
+	integer lun,length
+	character line*(*)
+c
+c  Get a line, handling comments and trimming off extra commas, etc.
+c------------------------------------------------------------------------
+	integer iostat,i,l
+	logical within,more
+	character c*1
+c
+	length = 0
+	iostat = 0
+	dowhile(length.eq.0.and.iostat.eq.0)
+	  call txtread(lun,line,length,iostat)
+	  if(iostat.eq.0)then
+	    i = 0
+	    l = 0
+	    more = .true.
+	    within = .false.
+	    dowhile(i.lt.length.and.more)
+	      i = i + 1
+	      if(within)then
+		within = line(i:i).ne.c
+		l = i
+	      else if(line(i:i).eq.'"'.or.line(i:i).eq.'''')then
+		within = .true.
+		c = line(i:i)
+		l = i
+	      else if(line(i:i).eq.'#')then
+		more = .false.
+	      else if(line(i:i).gt.' '.and.line(i:i).ne.',')then
+		l = i
+	      endif
+	    enddo
+	    length = l
+	    if(within)call bug('f','Unbalanced quotes on line')
+	  else if(iostat.eq.-1)then
+	    length = 0
+	  else
+	    call bug('w','Error reading @ or .def file')
+	    call bugno('f',iostat)
+	  endif
+	enddo
+c
 	end
 c************************************************************************
 c* KeyPrsnt -- Determine if a keyword is present on the command line.
