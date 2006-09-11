@@ -128,6 +128,7 @@ c     nebk   29nov95     Use only W2WCO routines in NAXLABCG and friends,
 c                        rather than directly using co.for routines
 c     nebk   18dec95     Add argument DOABUT to VPSIZCG. Fix truncated
 c                        strings in ANNINICG and ANNWINCG
+c     nebk   31jan96     More sig figs for pixel label in LAB3CG
 c**********************************************************************
 c
 c* annboxCG -- Annotate plot with information from a box image 
@@ -1306,7 +1307,7 @@ c
         pix = ipl
       else
         pix = (ipl+ipl+plav-1) / 2.0
-        call strfmtcg (real(pix), 2, str1, i1)
+        call strfmtcg (real(pix), 5, str1, i1)
       end if
 c
 c Prepare value label.  The units depend upon what type of axis the
@@ -1897,7 +1898,7 @@ c
       character*(*) str
 c
 c  Format a number with a specified number of significant figures 
-c  with the pgplot routine pgnumb. It chooses automatically decimal
+c  with the PGPLOT routine pgnumb. It chooses automatically decimal
 c  or exponential notation.  Pgplot superscripting escape sequences
 c  may be embedded in the string in the latter case.
 c
