@@ -30,16 +30,6 @@ c		      Add -? flag.
 c    nebk  23nov92    Add mkeyd.  rjs spits dummy.
 c    rjs   04dec92    Rewrite keyi, so that mchw's new hex/octal conversion
 c		      routine is used.
-c    rjs   04jan93    Eliminate progname, and call buglabel instead. General
-c		      tidying.
-c     jm   11jan93    Modified keyini to strip off the leading path
-c		      information of the application name so the command
-c		      line arguments work correctly.  Modified keyput to
-c		      pass in the task name and to handle local variable
-c		      names.  Added local integer function keyindex to
-c		      find the index of the entry associated with the
-c		      input key word.  Modified keyput, keyget, and
-c		      keyprsnt to use the function keyindex.
 c************************************************************************
 c* KeyIni -- Initialise the `key' routines.
 c& pjt
@@ -67,7 +57,7 @@ c	arg		The argument buffer
 c
 c------------------------------------------------------------------------
 	integer status,lun,arglen,argnum,narg
-	character arg*512,argv0*32,task*32
+	character arg*512
 c
 c  Externals.
 c
@@ -77,20 +67,11 @@ c
 c  Initialise the common variables.
 c
 	nkeys = 0
+        qhelp = .FALSE.
 c
-c  Get the program name, and tell the bug routines what it really is.
-c  Then strip off leading path characters so only the task name remains.
+c  Get the programname
 c
         call getarg(0,argv0)
-	call buglabel(argv0)
-	arglen = len1(argv0)
-	argnum = arglen
-	do while ((argnum .gt. 0) .and.
-     *            (argv0(argnum:argnum) .ne. ']') .and.
-     *            (argv0(argnum:argnum) .ne. '/'))
-	  argnum = argnum - 1
-	enddo
-	task = argv0(argnum+1:arglen)
 c
 c  Loop through the arguments
 c
@@ -117,21 +98,28 @@ c
                   call bug('f',
      *		  'KeyIni: Input parameter too long for buffer')
               endif
-	      call keyput(task,arglen,arg)
+	      call keyput(arglen,arg)
 	      call txtread(lun,arg,arglen,status)
 	    enddo
 	    call txtclose(lun)
 c
+c  If '-h' various help options are given and program never passes beyond
+c  keyfin
+c
+          else if (arg .eq. '-h') then
+            qhelp = .TRUE.
+            call bug('w','KeyIni: -h flag not yet implemented')
+c
 c  If -? give help.
 c
 	  else if(arg.eq.'-?')then
-	    call command('mirhelp '//task)
+	    call command('mirhelp '//argv0)
 	    stop
 c
 c  If '-k' give listing of keywords for this program via the doc program
 c
           else if(arg .eq. '-k') then
-	    call command('doc '//task)
+	    call command('doc '//argv0)
             stop
 c
 c  Other flags are not understood yet
@@ -148,16 +136,15 @@ c
                  call bug('f',
      *		'KeyIni: Input parameter too long for buffer')
             endif
-	    call keyput(task,arglen,arg)
+	    call keyput(arglen,arg)
 	  endif
 	enddo
 c
 	end
 c************************************************************************
-	subroutine keyput(task,arglen,arg)
+	subroutine keyput(arglen,arg)
 c
 	implicit none
-	character task*(*)
 	integer arglen
 	character arg*(*)
 c
@@ -166,58 +153,23 @@ c  parameters as counted strings in the PBUF buffer.
 c
 c------------------------------------------------------------------------
 	integer next,lvalue,lkey,buflen
-	integer slash,equals
-	integer i, idx
 	character key*8
-	logical global
 	include 'key.h'
 c
 c  Externals.
 c
-	integer keyindex
+	logical keyprsnt
 c
-c  Get the keyword.
+c  Get the keyword
 c
-	global = .TRUE.
 	next = 1
 	call gettok(arg,next,arglen,key,lkey)
-c
-c  Search for the local keyword character.  If it exists, it must appear
-c  before the equal sign with text that precedes and follows it.  If the
-c  key is local, the key and value will be saved only if the task name
-c  matches the text before the local flag character.
-c
-	slash = next
-	call scanchar(arg,slash,arglen,'/')
-	equals = next
-	call scanchar(arg,equals,arglen,'=')
-	if ((slash .lt. equals) .and. (slash .lt. arglen)) then
-	  lkey = min(lkey,len(key))
-	  if (key(1:lkey) .ne. task(1:lkey)) return
-	  global = .FALSE.
-	  call spanchar(arg,next,arglen,' ')
-	  call spanchar(arg,next,arglen,'/')
-	  call gettok(arg,next,arglen,key,lkey)
-	endif
 	if(lkey.le.0.or.lkey.gt.len(key))
-     *	  call bug('i', 'KeyPut: Keyword zero length or too long.')
+     *	  call bug('i',	'KeyPut: Keyword zero length or too long')
 c
-c  See if we already have this keyword. If so and if the key is global,
-c  then return.  If the key is local and exists, then remove the previous
-c  reference to this key before saving the local version.
+c  See if we already have this keyword
 c
-	idx = keyindex(key(1:lkey))
-	if(idx .ne. 0) then
-	  if(global) return
-	  nkeys = nkeys - 1
-	  do i=idx,nkeys
-	    expanded(i) = expanded(i+1)
-	    lu(i) = lu(i+1)
-	    k1(i) = k1(i+1)
-	    k2(i) = k2(i+1)
-	    keys(i) = keys(i+1)
-	  enddo
-	endif
+	if( keyprsnt(key) ) return
 c
 	call spanchar(arg,next,arglen,' ')
 	call spanchar(arg,next,arglen,'=')
@@ -254,17 +206,21 @@ c  Locate a keyword within a parameter buffer.
 c
 c------------------------------------------------------------------------
 	include 'key.h'
-	integer idx,i,lun,iostat
+	integer lkey,idx,i,lun,iostat
 	logical more,expd
 	character line*64
 c
-	integer keyindex
-c
 c  See if we can find the keyword.
 c
+	lkey = min(len(keys(1)),len(key))
 	more = .true.
 	dowhile(more)
-	  idx = keyindex(key)
+	  idx = 0
+	  i = nkeys
+	  dowhile(idx.eq.0.and.i.gt.0)
+	    if(keys(i).eq.key(1:lkey)) idx = i
+	    i = i - 1
+	  enddo
 c
 c  Return if nothing was found.
 c
@@ -301,7 +257,7 @@ c
 	    if(length.gt.1.and.value(1:1).eq.'@')then
 	      call txtopen(lun,value(2:length),'old',iostat)
 	      if(iostat.ne.0) then
-		line = 'KeyGet: Error opening @ file'//value(2:length)
+		line = 'KeyGet: Error opening @ file '//value(2:length)
 		call bug('w',line)
 		call bugno('f',iostat)
               endif 
@@ -404,30 +360,6 @@ c
 	endif
 	end
 c************************************************************************
-	integer function keyindex(key)
-c
-	implicit none
-	character key*(*)
-c
-c  Returns the index of the keyword; 0 if it can not find the key.
-c
-c------------------------------------------------------------------------
-	include 'key.h'
-	integer lkey,i,idx
-c
-c  See if we can find the keyword.
-c
-	lkey = min(len(keys(1)),len(key))
-	idx = 0
-	i = nkeys
-	dowhile(idx.eq.0.and.i.gt.0)
-	  if(keys(i).eq.key(1:lkey)) idx = i
-	  i = i - 1
-	enddo
-	keyindex = idx
-	return
-	end
-c************************************************************************
 c* KeyPrsnt -- Determine if a keyword is present on the command line.
 c& pjt
 c: user-input,command-line
@@ -447,9 +379,19 @@ c    keyprsnt	Indicates whether the keyword is present.
 c
 c--
 c------------------------------------------------------------------------
-	integer keyindex
+	integer lkey,i,idx
+	include 'key.h'
 c
-	keyprsnt = keyindex(key).gt.0
+c  See if we can find the keyword.
+c
+	lkey = min(len(keys(1)),len(key))
+	idx = 0
+	i = nkeys
+	dowhile(idx.eq.0.and.i.gt.0)
+	  if(keys(i).eq.key(1:lkey)) idx = i
+	  i = i - 1
+	enddo
+	keyprsnt = idx.gt.0
 	end
 c************************************************************************
 c* KeyFin -- Finish access to the 'key' routines.
@@ -471,12 +413,18 @@ c
 c  Externals.
 c
 	integer len1
+        character*80 umsg
 c
 	do i=1,nkeys
 	  lkey = len1(keys(i))
-	  call bug('w','KeyFin: Parameter '//keys(i)(1:lkey)//
-     *	         ' not used or not exhausted')
+          umsg = 'KeyFin: Parameter '//keys(i)(1:lkey)//
+     *	         ' not used or not exhausted'
+	  call bug('w', umsg )
 	enddo
+        if (qhelp) then
+            call output('*** end of help ***')
+            stop
+        endif
 	end
 c************************************************************************
 c* Keyf -- Retrieve a filename string (with wildcards) from the command line.
@@ -885,3 +833,24 @@ c
 	if(more) call bug('f','MKeyA: Buffer overflow')
         end
 
+c************************************************************************
+c* progname -- return name of the program currently running
+c& pjt
+c: user-input,command-line,program-name
+c+
+	subroutine progname(name)
+c
+	implicit none
+	character name*(*)
+c
+c  Retrieve the name of the program currently running
+c
+c  Output:
+c    name       The name
+c--
+c------------------------------------------------------------------------
+        include 'key.h'
+
+        name = argv0
+
+        end
