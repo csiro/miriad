@@ -129,12 +129,13 @@ c    17sep03 rjs  New gain/elevation curve at 3mm.
 c    19oct03 rjs  Update array tables.
 c    14nov03 rjs  Fix bug in getjpk
 c    06dec03 rjs  Fish out met parameters from the dataset directly.
+c    19sep04 rjs  Changes to the way Tsys scaling is handled.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
 	character version*(*)
 	integer MAXSELS,ATANT
-	parameter(version='AtFix: version 1.0 06-Dec-03')
+	parameter(version='AtFix: version 1.0 19-Sep-03')
 	parameter(MAXSELS=256,ATANT=6)
 c
 	real sels(MAXSELS),xyz(3*MAXANT)
@@ -159,7 +160,7 @@ c
 c  Externals.
 c
 	logical uvvarUpd,selProbe,hdPrsnt,keyprsnt
-	real elescale,getjpk
+	real elescale
 c
 	call output(version)
 	call keyini
@@ -168,6 +169,9 @@ c
 	call keya('out',out,' ')
 	call keya('mdata',mdata,' ')
 	call mkeya('array',array,MAXANT,nant)
+	do i=1,nant
+	  call ucase(array(i))
+	enddo
 c
 	do i=1,ATANT
 	  delta(1,i) = 0
@@ -315,7 +319,7 @@ c
 	ptime = preamble(4) - 1
 c
 	dowhile(nchan.gt.0)
-c	  call uvrdvrr(lVis,'jyperk',jyperk,0.0)
+	  call uvrdvrr(lVis,'jyperk',jyperk,0.0)
 	  call varCopy(lVis,lOut)
 	  call uvrdvri(lVis,'pol',pol,0)
 	  call uvrdvri(lVis,'npol',npol,0)
@@ -331,8 +335,31 @@ c
 	  endif
 	  call felget(lVis,vgmet,nif,nschan,freq0,freq,nchan,
      *                                                  ra,dec,lat)
-	  jyperk = getjpk(freq0(1)*1e-9)
 	  dojpk = .false.
+c
+c  Apply the Tsys correction, if needed.
+c
+	  tcorr = 1
+	  if(dotsys)call uvrdvri(lVis,'tcorr',tcorr,0)
+	  if(tcorr.eq.0)then
+	    if(uvvarUpd(vtsys))then
+	      call uvprobvr(lVis,'xtsys',type,length,updated)
+	      nants = length/nif
+	      if(nants*nif.ne.length.or.nants.le.0.or.nants.gt.MAXANT
+     *	        .or.type.ne.'r')call bug('f','Invalid tsys parameter')
+	      if(na.ne.nants)
+     *		call bug('f','Inconsistency in number of IFs')
+	      call uvgetvrr(lVis,'xtsys',xtsys,nants*nif)
+	      call uvprobvr(lVis,'ytsys',type,length,updated)
+	      if(nants*nif.ne.length.or.type.ne.'r')
+     *			      call bug('f','Invalid ytsys parameter')
+	      call uvgetvrr(lVis,'ytsys',ytsys,nants*nif)
+	    endif
+c
+	    call basant(preamble(5),i1,i2)
+	    call tsysap(data,nchan,nschan,xtsys,ytsys,
+     *	      nants,nif,i1,i2,pol,jyperk)
+	  endif
 c
 c  Do antenna table correction, if needed.
 c
@@ -407,32 +434,8 @@ c
 c
 c  Apply baseline correction, if needed.
 c
-	if(dobl)call blcorr(data,freq,nchan,ra,dec,lst,
+	  if(dobl)call blcorr(data,freq,nchan,ra,dec,lst,
      *				preamble(5),delta,ATANT)
-c
-c  Apply the Tsys correction, if needed.
-c
-	  tcorr = 1
-	  if(dotsys)call uvrdvri(lVis,'tcorr',tcorr,0)
-	  if(tcorr.eq.0)then
-	    if(uvvarUpd(vtsys))then
-	      call uvprobvr(lVis,'xtsys',type,length,updated)
-	      nants = length/nif
-	      if(nants*nif.ne.length.or.nants.le.0.or.nants.gt.MAXANT
-     *	        .or.type.ne.'r')call bug('f','Invalid tsys parameter')
-	      if(na.ne.nants)
-     *		call bug('f','Inconsistency in number of IFs')
-	      call uvgetvrr(lVis,'xtsys',xtsys,nants*nif)
-	      call uvprobvr(lVis,'ytsys',type,length,updated)
-	      if(nants*nif.ne.length.or.type.ne.'r')
-     *			      call bug('f','Invalid ytsys parameter')
-	      call uvgetvrr(lVis,'ytsys',ytsys,nants*nif)
-	    endif
-c
-	    call basant(preamble(5),i1,i2)
-	    call tsysap(data,nchan,nschan,xtsys,ytsys,
-     *	      nants,nif,i1,i2,pol)
-	  endif
 c
 	  if(npol.gt.0)then
 	    call uvputvri(lOut,'npol',npol,1)
@@ -452,11 +455,11 @@ c
 	end
 c************************************************************************
 	subroutine tsysap(data,nchan,nschan,xtsys,ytsys,nants,nif,
-     *							    i1,i2,pol)
+     *						    i1,i2,pol,jyperk)
 c
 	implicit none
 	integer nchan,nants,nif,nschan(nif),i1,i2,pol
-	real xtsys(nants,nif),ytsys(nants,nif)
+	real xtsys(nants,nif),ytsys(nants,nif),jyperk
 	complex data(nchan)
 c
 c------------------------------------------------------------------------
@@ -468,21 +471,22 @@ c
 	i = 0
 	do k=1,nif
 	  if(i+nschan(k).gt.nchan)call bug('f','Invalid description')
+	  if(pol.eq.XX)then
+	    T1T2 = xtsys(i1,k)*xtsys(i2,k)
+	  else if(pol.eq.YY)then
+	    T1T2 = ytsys(i1,k)*ytsys(i2,k)
+	  else if(pol.eq.XY)then
+	    T1T2 = xtsys(i1,k)*ytsys(i2,k)
+	  else if(pol.eq.YX)then
+	    T1T2 = ytsys(i1,k)*xtsys(i2,k)
+	  else
+	    call bug('f','Invalid polarization code')
+	  endif
+	  T1T2 = sqrt(T1T2)*jyperk/(13.0*50.0)
+c
 	  do j=1,nschan(k)
 	    i = i + 1
-	    if(pol.eq.XX)then
-	      T1T2 = xtsys(i1,k)*xtsys(i2,k)
-	    else if(pol.eq.YY)then
-	      T1T2 = ytsys(i1,k)*ytsys(i2,k)
-	    else if(pol.eq.XY)then
-	      T1T2 = xtsys(i1,k)*ytsys(i2,k)
-	    else if(pol.eq.YX)then
-	      T1T2 = ytsys(i1,k)*xtsys(i2,k)
-	    else
-	      call bug('f','Invalid polarization code')
-	    endif
-c
-	    data(i) = data(i)*sqrt(T1T2)/50.0
+	    data(i) = data(i)*T1T2
 	  enddo
 	enddo
 c
@@ -1054,11 +1058,11 @@ c	data (wpc(6,j),j=1,3)/1.0000, 0.0000,     0.0000/
 c
 c  Gain curve deduced from Ravi's data of 04-Sep-03.
 c
-	data (wpc(1,j),j=1,3)/1.0000, 0.0000,     0.0000/
+	data (wpc(1,j),j=1,3)/0.4877, 1.7936e-2, -1.5699e-4/
 	data (wpc(2,j),j=1,3)/0.4877, 1.7936e-2, -1.5699e-4/
 	data (wpc(3,j),j=1,3)/0.7881, 0.8458e-2, -0.8442e-4/
 	data (wpc(4,j),j=1,3)/0.7549, 1.2585e-2, -1.6153e-4/
-	data (wpc(5,j),j=1,3)/1.0000, 0.0000,     0.0000/
+	data (wpc(5,j),j=1,3)/0.4877, 1.7936e-2, -1.5699e-4/
 	data (wpc(6,j),j=1,3)/1.0000, 0.0000,     0.0000/
 c
 	call basant(baseline, ant1, ant2)
