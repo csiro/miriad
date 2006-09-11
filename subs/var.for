@@ -25,6 +25,7 @@ c    rjs  07sep93 Merge mjs and rjs versions.
 c    mchw 10mar94 Added antaz,antel to uvvariables.
 c    rjs   6sep94 XYphase fiddles. Use MAXWIN.
 c    rjs   9sep94 Support felocity linetype.
+c    mchw  5jan95 Added pressmb to uv-variables.
 c************************************************************************
 c*VarInit -- Initialise the copy routines.
 c:uv-data
@@ -80,7 +81,7 @@ c
 	integer i
 c
 	integer nvar,nline,nwide,nvelo
-	parameter(nvar=63,nline=8,nwide=3,nvelo=4)
+	parameter(nvar=64,nline=8,nwide=3,nvelo=4)
         character var(nvar)*8,line(nline)*8,wide(nwide)*8,velo(nvelo)*8
 c
 c  Variables to check for a change, for line=channel.
@@ -108,7 +109,8 @@ c
      *	   'mount   ','nants   ','ntemp   ','ntpower ','obsdec  ',
      *	   'observer','obsra   ','on      ','operator','pbfwhm  ',
      *	   'phaselo1','phaselo2','phasem1 ','plangle ','plmaj   ',
-     *	   'plmin   ','pltb    ','precipmm','ra      ','relhumid',
+     *	   'plmin   ','pltb    ','precipmm','pressmb ',
+     *	   'ra      ','relhumid',
      *	   'source  ','telescop','temp    ','tpower  ','ut      ',
      *	   'veldop  ','veltype ','version ','vsource ','winddir ',
      *	   'windmph ','delay0  '/
