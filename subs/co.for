@@ -19,6 +19,7 @@ c    subroutine coWrite(lu)
 c
 c  History:
 c    rjs   9aug94 Original version.
+c    rjs  13sep94 Support 'VELOCITY' and 'FELOCITY' axes.
 c************************************************************************
 c* coInit -- Initialise coordinate conversion routines.
 c& rjs
@@ -839,7 +840,7 @@ c------------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'co.h'
 	integer i,k
-	double precision xp(MAXNAX),xw(MAXNAX)
+	double precision xp(MAXNAX),xw(MAXNAX),delta
 	double precision xp1(MAXNAX),xw1(MAXNAX),xp2(MAXNAX),xw2(MAXNAX)
 c
 c  Externals.
@@ -877,12 +878,15 @@ c
 	      xp1(i) = xp(i)
 	      xp2(i) = xp(i)
 	      cdelt1(i) = xw2(i) - xw1(i)
+	      delta     = xw(i) - crval1(i)
 	      if(cotype(i,k).eq.LON)then
 	        if(cdelt1(i).lt.-dpi)cdelt1(i) = cdelt1(i) + 2*dpi
 	        if(cdelt1(i).gt. dpi)cdelt1(i) = cdelt1(i) - 2*dpi
+		if(delta    .lt.-dpi)delta     = delta     + 2*dpi
+		if(delta    .gt. dpi)delta     = delta     - 2*dpi
 	      endif
 	      cdelt1(i) = 0.5d0 * cdelt1(i)
-	      crpix1(i) = xp(i) - (xw(i)-crval1(i))/cdelt1(i)
+	      crpix1(i) = xp(i) - delta/cdelt1(i)
 	      if(cotype(i,k).eq.LON)
      *	        cdelt1(i) = cdelt1(i) * cos( crval(ilat(k),k) )
 	      if(cotype(i,k).ne.FELO)ctype1(i)(6:8) = 'CAR'
@@ -962,7 +966,7 @@ c
 c  Others.
 c
         else
-	  if(aval(1:5).eq.'FELO-'.or.aval(1:5).eq.'VELO-')then
+	  if(aval(1:4).eq.'FELO'.or.aval(1:4).eq.'VELO')then
 	    units = 'km/sec'
 	  else if(aval(1:4).eq.'FREQ')then
 	    units = 'GHz'
@@ -1125,6 +1129,15 @@ c	ewdone = .false.
 	  call rdhdd(lus(k),'crpix'//num,crpix(i,k),0.d0)
 	  call rdhdd(lus(k),'cdelt'//num,cdelt(i,k),0.d0)
 	  call rdhda(lus(k),'ctype'//num,ctype(i,k),' ')
+	  if(cdelt(i,k).eq.0)then
+	    if(ctype(i,k).ne.' ')then
+	      call bug('w',
+     *		'Axis increment (cdelt) is 0 for '//ctype(i,k))
+	      call bug('w','Assuming an axis increment of 1')
+	    endif
+	    cdelt(i,k) = 1
+	  endif
+
 c
 c	  if(ctype(i,k)(5:8).eq.'-SIN')then
 c	    if(.not.ewdone)then
@@ -1152,7 +1165,7 @@ c------------------------------------------------------------------------
 	include 'co.h'
 c
 	integer NTYPES
-	parameter(NTYPES=12)
+	parameter(NTYPES=14)
 	character types(NTYPES)*8
 	integer itypes(NTYPES)
 c
@@ -1172,6 +1185,7 @@ c
      *	  'ELAT    ',	LAT,
      *	  'ELON    ',	LON,
      *	  'FELO    ',	FELO,
+     *	  'FELOCITY',	FELO,
      *	  'FREQ    ',	FREQ,
      *	  'GLAT    ',	LAT,
      *	  'GLON    ',	LON,
@@ -1179,6 +1193,7 @@ c
      *	  'STOKES  ',	LINEAR,
      *	  'UU      ',	LINEAR,
      *	  'VELO    ',	VELO,
+     *	  'VELOCITY',	VELO,
      *	  'VV      ',	LINEAR/
 c
 c  Get the first part, and check for a match.
@@ -1214,7 +1229,9 @@ c
 	    call bug('w',umsg)
 	    proj = 'car'
 	  endif
-	else if(itype.eq.0.and.type.ne.' ')then
+	else if(type.eq.' ')then
+	  itype = LINEAR
+	else if(itype.eq.0)then
 	  l = len1(type)
 	  umsg = 'Assuming axis '//type(1:l)//
      *		' is a linear coordinate system'
