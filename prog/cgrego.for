@@ -22,6 +22,7 @@ c History:
 c   nebk 10apr98   Finally got fed up and did this
 c   rjs  18may98   Correct fortran to make it compile on Alphas.
 c   nebk 11jun99   Handle plane in region
+c   rjs  14aug99    Correct some non-standard fortran.
 c------------------------------------------------------------------------
       implicit none
       character version*(*)
@@ -80,7 +81,7 @@ c
       integer lunout, iline
       character*(*) line
 cc
-      character lineout*132, prefix*30, text*80
+      character lineout*132, prefix*30, text*80,temp*512
       character*18 preamble(3)
       character*20 first, second, third, fourth, sfirst, ssecond
       character plane*4
@@ -122,7 +123,8 @@ c
          return
       end if
       i2 = len1(line)
-      line = line(i1:i2)
+      temp = line(i1:i2)
+      line = temp
 c
 c Find first two numbers
 c
@@ -146,7 +148,8 @@ c
         call bug ('f', 'Too few points for region')
         return
       end if
-      line = line(i2+1:)
+      temp = line(i2+1:)
+      line = temp
 c
 c Find trailing plane if any
 c
@@ -203,7 +206,8 @@ c
           call txtwrite(lunout, lineout, len1(lineout), iostat)
           if (iostat.ne.0) call bug ('f', 'Error writing overlay file')
 c
-          line = line(i4+1:)
+          temp = line(i4+1:)
+          line = temp
         end if
       end do
 c
