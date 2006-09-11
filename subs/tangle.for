@@ -4,6 +4,7 @@ c  History:
 c    18oct93 rjs   Original version.
 c    25nov93 rjs   Incorrect error check.
 c    29sep94 rjs   Date type of today.
+c    30sep98 rjs   Allow angles with plus signs.
 c************************************************************************
 c* mkeyt - Retrieve multiple angles or times from the command line.
 c& rjs
@@ -138,7 +139,7 @@ c
 c
 c------------------------------------------------------------------------
 	include 'mirconst.h'
-	logical minus,point
+	logical minus,point,plus
 	double precision v(3),f
 	character c*1
 	integer l,l1,l2,digits,nval
@@ -156,7 +157,8 @@ c
 	l1 = 1
 	l2 = len1(angle)
 	minus = angle(1:1).eq.'-'
-	if(minus)l1 = l1 + 1
+	plus  = angle(1:1).eq.'+'
+	if(minus.or.plus)l1 = l1 + 1
 c
 c  Get the strings.
 c
