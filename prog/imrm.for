@@ -1,4 +1,4 @@
-      program imrm
+	program imrm
 c-----------------------------------------------------------------------
 c= IMRM - Compute rotation measure image from position angle images
 c& nebk
@@ -196,6 +196,7 @@ c    nebk 21jun97   Was plotting garbage on some platforms if
 c                   some output points were blanked.  Also in hedinfo
 c                   rdhdd was being called with default real arg.
 c    rjs  02jul97   cellscal change.
+c    rjs  23jul97   added pbtype.
 c------------------------------------------------------------------------
       implicit none
 c
@@ -236,7 +237,7 @@ c
      +  ambig, accum, yind, guess
 c
       integer nkeys
-      parameter (nkeys = 45)
+      parameter (nkeys = 46)
       character keyw(nkeys)*8
 c
       data keyw/     'cdelt1  ','cdelt2  ','cdelt3  ',
@@ -246,7 +247,7 @@ c
      +    'ctype1  ','ctype2  ','ctype3  ','ctype4  ','ctype5  ',
      +    'obstime ','epoch   ','history ','instrume','niters  ',
      +    'object  ','restfreq','telescop','vobs    ','obsra   ',
-     +    'obsdec  ','observer','cellscal ','bmaj    ',
+     +    'obsdec  ','observer','cellscal','bmaj    ','pbtype ',
      +    'bmin    ','bpa     ','pbfwhm  ','lstart  ','lstep   ',
      +    'ltype   ','lwidth  ','vobs    '/
       data nbl /6*0/
