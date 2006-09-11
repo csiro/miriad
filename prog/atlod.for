@@ -117,6 +117,7 @@ c    rjs  29aug94 w axis changes.
 c    rjs   2sep94 Read multiple files.
 c    rjs  21sep94 Change sign convention for XY and YX. Discard dettached
 c		  antennas.
+c    rjs   3nov94 Eliminate spurious error message.
 c
 c  Program Structure:
 c    Miriad atlod can be divided into three rough levels. The high level
@@ -499,9 +500,11 @@ c------------------------------------------------------------------------
 	include 'atlod.h'
 	double precision r1,d1
 	character line*80
+	integer length,l
 c
 c  Externals.
 c
+	integer len1
 	double precision Epo2Jul
 c
 c  Give a message about a new source.
@@ -527,6 +530,22 @@ c
 	  obsdec = obsdec1
 	endif
 c
+c  Fiddle the source name to be all lower case, and eliminate
+c  any special characters or spaces.
+c
+	line = srcnam
+	length = min(len1(srcnam),len(line))
+	call lcase(srcnam(1:length))
+	do l=1,length
+	  if((line(l:l).ge.'a'.and.line(l:l).le.'z').or.
+     *	     (line(l:l).ge.'0'.and.line(l:l).le.'9').or.
+     *	      line(l:l).eq.'+'.or.line(l:l).eq.'-'.or.
+     *	      line(l:l).eq.'.')then
+	    continue
+	  else
+	    line(l:l) = '_'
+	  endif
+	enddo
 	call uvputvra(tno,'source',srcnam)
 	call uvputvrd(tno,'ra',ra,1)
 	call uvputvrd(tno,'dec',dec,1)
@@ -1238,7 +1257,7 @@ c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer MAXPOL,MAXSIM
 	parameter(MAXPOL=4,MAXSIM=4)
-	include '/usr/local/include/rpfits.inc'
+	include 'rpfits.inc'
 	integer scanno,i1,i2,baseln,i,id
 	logical NewScan,NewSrc,NewFreq,NewTime,Accum,ok
 	logical flags(MAXPOL)
@@ -1253,7 +1272,7 @@ c------------------------------------------------------------------------
 	real xsamp(3,MAX_IF,ANT_MAX),ysamp(3,MAX_IF,ANT_MAX)
 	real xtsys(MAX_IF,ANT_MAX),ytsys(MAX_IF,ANT_MAX)
 	real chi,tint
-	double precision jday0,time
+	double precision jday0,time,tprev
 c
 c  Open the RPFITS file.
 c
@@ -1269,6 +1288,7 @@ c
 	Ssrcno = 0
 	Ssimno = 0
 	scanno = 1
+	tprev = 0
 c
 c  Loop the loop getting data.
 c
@@ -1433,8 +1453,9 @@ c	      tint = 0
 c
 c  Reinitialise things.
 c
-	      if(ut.lt.utprev-4)call bug('w',
+	      if(86400*(time-tprev).lt.-1)call bug('w',
      *				'Data are out of time order')
+	      tprev = time
 	      utprev = ut
 	      Accum = .true.
 	      Ssrcno = srcno
@@ -1495,7 +1516,7 @@ c
 c
 c  Open the RPFITS file.
 c------------------------------------------------------------------------
-	include '/usr/local/include/rpfits.inc'
+	include 'rpfits.inc'
 c
 	integer flag,baseln,bin,ifno,srcno
 	real ut,u,v,w,weight
