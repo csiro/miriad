@@ -75,6 +75,9 @@ c    rjs  06jan98 Change uvgetvrr to uvrdvrr when getting chi.
 c    rjs  06jan98 Change in uvlkcorr to sidestep a compiler bug on IRIX machines.
 c    rjs  26mar98 Comment change only.
 c    rjs   6sep99 Added "lflag" parameter to "line" keyword.
+c    rjs  18sep04 Support the variance being scaled by the noise level.
+c    rjs  06jan05 I messed up on 18 Sep. Fix bug in uvpolini related to
+c		  correcting the variance of polarised measurements.
 c
 c  User-Callable Routines:
 c    uvDatInp(key,flags)
@@ -300,7 +303,7 @@ c------------------------------------------------------------------------
 	include 'uvdat.h'
 	integer length
 	logical update,present,shortcut,willpass
-	character obstype*16,type*1,umsg*80
+	character obstype*16,type*1,umsg*80,senmodel*16
 c
 c  Externals.
 c
@@ -372,6 +375,11 @@ c
 c  Setup the gains routines, if necessary.
 c
 	  WillCal = docal.and.hdprsnt(tno,'gains')
+	  dogsv = .false.
+	  if(willcal)then
+	    call rdhda(tno,'senmodel',senmodel,' ')
+	    dogsv = senmodel.eq.'GSV'
+	  endif
 	  willpass = dopass.and.(hdprsnt(tno,'bandpass').or.
      *	  	hdprsnt(tno,'cgains').or.hdprsnt(tno,'wgains'))
 	  if(willpass.and.
@@ -517,8 +525,10 @@ c
 	  call uvPolGet(preamble,data,flags,n,nread)
 	else
 	  call uvread(tno,preamble,data,flags,n,nread)
+	  GWt = 1
 	  if(WillCal.and.nread.gt.0)call uvGnFac(preamble(idxT),
-     *	    real(preamble(idxBL)),0,.false.,data,flags,nread)
+     *	    real(preamble(idxBL)),0,.false.,data,flags,nread,GWt)
+	  GWt = GWt*GWt
 	endif
 c
 c  Fill in velocity/felocity defaults if needed.
@@ -736,8 +746,9 @@ c------------------------------------------------------------------------
 	include 'uvdat.h'
 	integer ntmp,indx(PolMin:PolMax),P,nP,i,j,k,type(maxPol)
 	logical NoChi,circ2,circx,lin2,linx,doLkCorr
-	real Cos2Chi,Sin2Chi
+	real Cos2Chi,Sin2Chi,wt(maxPol),temp
 	logical raw,caled(maxPol)
+	
 c
 c  Initialise the indx array.
 c
@@ -967,32 +978,38 @@ c
 c  Calculate the sum of the weights of the coefficients -- to that
 c  we can work out the correct variance later on.
 c
-	  SumWts(i) = 0
-	  do j=1,ncoeff(i)
-	    SumWts(i) = SumWts(i) + real(coeffs(j,i))**2
-     *				  + aimag(coeffs(j,i))**2
-	  enddo
-	  if(doaver(i)) SumWts(i) = SumWts(i) / (ncoeff(i)**2)
 c
 c  Correct the data that we need to correct.
 c
+	  SumWts(i) = 0
 	  if(WillCal)then
 	    do j=1,ncoeff(i)
 	      k = indx(type(j))
 	      indices(j,i) = k
-	      if(.not.caled(k))call uvGnFac(Spreambl(idxT),
-     *		real(Spreambl(idxBL)),type(j),.false.,Sdata(1,k),
-     *		Sflags(1,k),Snread)
-	      caled(k) = .true.
+	      if(.not.caled(k))then
+		call uvGnFac(Spreambl(idxT),
+     *		  real(Spreambl(idxBL)),type(j),.false.,Sdata(1,k),
+     *		  Sflags(1,k),Snread,wt(k))
+	        caled(k) = .true.
+	      endif
+	      temp = real(coeffs(j,i))**2 + aimag(coeffs(j,i))**2
+	      if(dogsv)then
+	        SumWts(i) = SumWts(i) + wt(k)*wt(k)*temp
+	      else
+	        SumWts(i) = SumWts(i) + temp
+	      endif
 	    enddo
 c
 c  Else determine the indices of the data that corresponds.
 c
 	  else
 	    do j=1,ncoeff(i)
+	      temp = real(coeffs(j,i))**2 + aimag(coeffs(j,i))**2
+	      SumWts(i) = SumWts(i) + temp
 	      indices(j,i) = indx(type(j))
 	    enddo
 	  endif
+	  if(doaver(i)) SumWts(i) = SumWts(i) / (ncoeff(i)**2)
 	enddo
 c
 	uvPolIni = .true.
@@ -1067,7 +1084,8 @@ c
 	  if(nread.ne.0.and.WillCal)then
 	    call uvgetvrr(tno,'baseline',baseline,1)
 	    call uvgetvrd(tno,'time',time,1)
-	    call uvGnFac(time,baseline,0,.true.,data,flags,nread)
+	    call uvGnFac(time,baseline,0,.true.,data,flags,nread,GWt)
+	    Gwt = GWt*GWt
 	  endif
 	endif
 c
@@ -1205,7 +1223,22 @@ c
 	if(object.eq.'variance')then
 	  call uvinfo(tno,'variance',variance)
 	  rval = variance
-	  if(WillPol)rval = SumWts(iPol) * rval
+	  if(WillPol)then
+	    rval = SumWts(iPol) * rval
+	  elseif(dogsv)then
+	    rval = GWt * rval
+	  endif
+	else if(object.eq.'jyperk')then
+	  call uvrdvrr(tno,'jyperk',rval,0.)
+	  if(WillPol)then
+	    if(ncoeff(iPol).gt.1.and.Pols(iPol).gt.0)then
+	      rval = sqrt(2*SumWts(iPol)) * rval
+	    else
+	      rval = sqrt(SumWts(iPol)) * rval
+	    endif
+	  elseif(dogsv)then
+	    rval = sqrt(GWt) * rval
+	  endif
 	else
 	  call bug('f','Unrecognised object in uvDatGtr')
 	endif
