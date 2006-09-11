@@ -56,6 +56,7 @@ c     18aug92 pjt   Added units option, to appease Bikram.
 c     12mar93 pjt   maxnax now from maxdim.h
 c      5apr94 pjt   fixed units bug when 2nd axis is an angle
 c      9jun94 pjt   region= clarification + export bug fix 5apr94
+c     08may00 rjs   Change incorrect call of keyf to keya
 c------------------------------------------------------------------------
 c
       INCLUDE 'maxdim.h'
@@ -97,7 +98,7 @@ c
       CALL keyr('scale',scale,1.0)
       CALL keya('mode',mode,'nemo')
       CALL keya('format',format,' ')
-      CALL keyf('log',logfile,' ')
+      CALL keya('log',logfile,' ')
       CALL keya('units',units,'rel')
       IF (units(1:1).EQ.'r') THEN
          doabs = .FALSE.

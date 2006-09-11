@@ -102,7 +102,7 @@ c--
 c  History:
 c    nebk 13sep95 Original version
 c    rjs   2jul98 Increase ize of pbtype variable.
-c
+c    rjs  08may00 Change incorrect call to keyf to keya.
 c------------------------------------------------------------------------
       implicit none
 c
@@ -137,7 +137,7 @@ c Get the inputs
 c
       call keyini
       call keyf ('beam', in, ' ')
-      call keyf ('out', out, ' ')
+      call keya ('out', out, ' ')
       call keyd ('flux', smin, 0.0d0)
       call keyd ('flux', smax, 0.0d0)
       call keyd ('flux', sb, 0.0d0)

@@ -12,6 +12,7 @@ c   )
 c   pjt    20apr93    Added reset= and submitted
 c   pjt    26apr93    allow the reverse: set flags based on wide band flags
 c   pjt    22dec94    reflag wide if narrows are flagged and no out= given
+c   rjs    08may00    Change incorrect call of keyf to keya.
 c***********************************************************************
 c= uvwide - recompute wide band from narrow band
 c& pjt
@@ -102,7 +103,7 @@ c
       CALL keyini
 c
       CALL keyf('vis', infile, ' ')
-      CALL keyf('out', outfile, ' ')
+      CALL keya('out', outfile, ' ')
       CALL keyl('reset',reset,.TRUE.)
       CALL keyl('narrow',donarrow,.FALSE.)
       CALL keyfin
