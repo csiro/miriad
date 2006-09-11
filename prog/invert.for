@@ -91,6 +91,12 @@ c	"felocity". The default is "channel" if spectral data is present
 c	in the data-set. Otherwise the default is ``wide''.
 c	If the ``mfs'' option is being used, then the default ``nchan'' is all
 c	channels, otherwise the default is just the first channel.
+c@ ref
+c	Line type of the reference channel, specified in a similar to the
+c	"line" parameter. Specifically, it is in the form:
+c	  linetype,start,width
+c	Before mapping, the visibility data are divided by the reference
+c	channel. The default is no reference channel.
 c@ select
 c	This allows a subset of the uv data to be used in the mapping
 c	process. See the Users Manual for information on how to specify
@@ -168,17 +174,110 @@ c	peak value will vary from plane to plane, and so the flux density
 c	scale may not be comparable from plane to plane.
 c--
 c  History
-c    rjs  16sep94 Started ...
-c    rjs  27oct94 First released version.
+c    rjs        89  Initial version
+c    nebk  29apr89  Added option to shift map centre from phase centre.
+c    nebk  31may89  Change IMSIZE to two dimensions and
+c                   put third dimension of image into LINE.
+c    rjs   27jun89  Protected the case of cdelt3 being left as zero.
+c    nebk  27jul89  Fixed bug which confused fwhmx and fwhmy.
+c    rjs   16aug89  Improved some formatting.
+c    rjs   18oct89  Support of uv selection. Added needed changes to support
+c		    the new calling sequence for planet rotation/scaling.
+c    rjs    7nov89  Increased line buffer size in HISTORY.
+c    rjs   13nov89  Multiple input files, systemp weighting, better history
+c		    comments.
+c    rjs   14feb90  Handle multi-pointing files. More checking that source,
+c		    channel velocity, ra and dec remain constant. Corrected pi!
+c		    Replaced velocalc with uvfit. More statistics.
+c    rjs   22feb90  Corrected bug which did not discard out of range
+c		    visibilities. Cosmetic changes.
+c    rjs   23mar90  Changes to support applying calibration on the fly.
+c		    Version number.
+c    rjs   28mar90  Changed the default of JyperK.
+c    rjs   29mar90  Corrected spelling mistake "sytemp" in the options list.
+c    pjt    2may90  included maxdim.h in getvis for maxchan
+c    mchw  21may90  Better error messages.
+c    mchw  10Jul90  Worked on documentation.
+c    rjs   16oct90  Checks that the data is cross-correlation data.
+c    mchw  09Nov90  Added pbfwhm to map header.
+c    mchw  20dec90  Added theoretical rms noise to history.
+c			Minor docs and dots in AppWts.
+c    rjs   10jan91  An extra check for zero visibilities to map.
+c    rjs    5feb91  New call sequence to the uvdat routines. Able to
+c		    map one stokes parameter. "sloppy" option.
+c    rjs   15mar91  Grid beam the same time as the maps. Multiple
+c		    pols/stokes at a time. Bandwidth synthesis.
+c    rjs   18apr91  Fixed documentation comment. Changed a common block.
+c		    Corrected call sequence of hclose.
+c    rjs   23apr91  Reverted default line-type to 1 channel only.
+c    rjs    1may91  Doc improvements (??) and an extra user message.
+c    rjs   11jun91  More doc improvements (??) and extra user messages.
+c    rjs   28jun91  Flag to perform polarisation leakage correction.
+c    rjs    3jul91  Changes to checking for data in files, to appease
+c		    Lauren. Changed crval1,crval2 to double to appease pjt.
+c    rjs   28aug91  An extra check of the input parameters.
+c    nebk  30aug91  Improve documentation for options=mfs
+c    rjs   12sep91  Slight change for systemp weighting.
+c    rjs   19sep91  Check if the output files already exit.
+c    rjs   18feb92  Documentation enhancement to appease lgm.
+c    rjs   18mar92  Better memory allocation.
+c    rjs    3apr92  Calls to MemBuf.
+c    nebk  05may92  Tell user when finished
+c    rjs   26may92  Write btype keyword. Change spectral index sign convention
+c		    for mfs beams.
+c    mchw  09jun92  Check RA & DEC change lt 1% of cdelt's. Improve doc shift.
+c    rjs   11jun92  More doc changes.
+c    rjs   25jun92  Single channel gets labelled with frequency.
+c    rjs    1jul92  Doc changes only.
+c    rjs   27jul92  Fiddles with the velocity/frequency labelling, and on
+c		    where the linetype is retrieved from.
+c    mchw  14aug92  Changed systemp weighting to include JyperK.
+c    rjs   26aug92  Add nopass option.
+c    rjs   29aug92  Add "slow" and "vslow" options.
+c    rjs   25sep92  Recalculate the bandwidth often. Better description
+c		    of systemp weighting.
+c    mchw  11feb93  Read uvvariables ra, dec as double precision.
+c    rjs   29mar93  Use uvinfo(...,'variance'...) to get rms. Fix erroneous
+c		    calls to uvrdvrd.
+c    rjs   29jun93  Tell user whats going wrong when uvinfo fails to
+c		    determine variance, when systemp weighting used.
+c    mchw  39jun93  Option to make imaginary image for non Hermitian data.
+c    rjs    1jul93  Doc changes and merge of mchw/rjs versions.
+c    rjs   21jul93  Get rid of calls to uvinfo(..,'frequency'...). Better
+c		    error messages (suggested by Lauren Likkel). Noise
+c		    fiddle (use uvDatGtr(..'variance'..).
+c    rjs   23jul93  Only write pbfwhm parameter if its valid.
+c    rjs   24aug93  Change "shift" to "offset", to be consistent.
+c    rjs   31aug93  vsloppy option.
+c    rjs   24sep93  Long time bug dealing with insufficient space in the
+c		    weight array under certain conditions.
+c    rjs    8oct93  Increase buffer size.
+c    rjs   15nov93  Image sizes do not need to be powers of 2. Double option.
+c    rjs   13jan93  Use double precision to avoid roundoff error, when
+c		    beam scale factor.
+c    rjs    9aug94  Remember if its an E-W array. Also minor change to
+c		    usage of dra, to bring it into line with whats written
+c		    in the uv var "bible".
+c    rjs   11aug94  Better scaling for sloppy and vsloppy options. Also
+c		    describe this in the help.
+c    rjs   17aug94  Slightly better determination of the offset.
+c    rjs   16sep94  Doc only.
+c    rjs   16sep94  Started rewrite -- to support mosaicing, and to generally
+c		    tidy it up.
+c    rjs   27oct94  First released version. with mosaicing.
+c    rjs   18nov94  Eliminate rounding error problem in calculating freq0.
+c	            Better messages for natural weighting. ref linetype.
 c  Bugs:
 c    - It would be nice to have a primary-beam dependent default image size.
+c    - The uniform weighting scheme for mosaiced observations is not
+c      perfect.
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'maxdim.h'
 	include 'mem.h'
 c
 	character version*(*)
-	parameter(version='Invert: version 1.0 27-Oct-94')
+	parameter(version='Invert: version 1.0 18-Nov-94')
 	integer MAXPOL,MAXRUNS
 	parameter(MAXPOL=4,MAXRUNS=4*MAXDIM)
 c
@@ -814,12 +913,14 @@ c
 c
 	if(Sup.gt.0)then
 	  wd = max(gd,1/sup)
+	  wn = 2*nint( uvmax / wd ) + 1
 	else if(defWt)then
 	  wd = gd
+	  wn = 2*nint( uvmax / wd ) + 1
 	else
-	  wd = 3*uvmax
+	  wd = 1/abs(Cell)
+	  wn = 1
 	endif
-	wn = 2*nint( uvmax / wd ) + 1
 c
 	if(gn.gt.maxdim)call bug('f',
      *	  'Maximum permitted image size is '//itoaf(maxdim))
@@ -1105,11 +1206,11 @@ c
 c
 c  Set the processing flags for the uvDat routines.
 c
-	uvflags = 'xwplds3'
-	if(.not.present(1))uvflags(8:8)   = 'c'
-	if(.not.present(2))uvflags(9:9)   = 'e'
-	if(.not.present(3))uvflags(10:10) = 'f'
-	if(.not.mfs)	   uvflags(11:11) = '1'
+	uvflags = 'xwplds3r'
+	if(.not.present(1))uvflags(9:9)   = 'c'
+	if(.not.present(2))uvflags(10:10) = 'e'
+	if(.not.present(3))uvflags(11:11) = 'f'
+	if(.not.mfs)	   uvflags(12:12) = '1'
 	end
 c************************************************************************
 	subroutine GetVis(doimag,systemp,mosaic,mfs,npol,tscr,slop,
@@ -1150,7 +1251,7 @@ c------------------------------------------------------------------------
 	complex data(MAXCHAN,MAXPOL),out(MAXLEN),ctemp
 	logical flags(MAXCHAN,MAXPOL),more
 	real uumax,vvmax,rms2,Wt,SumWt
-	double precision uvw(5)
+	double precision uvw(5),dSumWt,dfreq0
 c
 c  Externals.
 c
@@ -1173,6 +1274,7 @@ c
 	  ChanWt(i) = 0
 	enddo
 	SumWt = 0
+	dSumWt = 0
 c
 	offset = 0
 	nvis = 0
@@ -1181,7 +1283,7 @@ c
 	vvmax = vmax
 	umax = 0
 	vmax = 0
-	freq0 = 0
+	dfreq0 = 0
 c
 c  Loop over all the data.
 c  Determine whether to accept this record, and copy it to the output
@@ -1220,7 +1322,7 @@ c
 	  if(mfs)then
 	    call ProcMFS (tno,uvw,Wt,rms2,pnt,data,flags,
      *		npol,MAXCHAN,nread,nvis,nbad,out,MAXLEN,nlen,
-     *		uumax,vvmax,umax,vmax,SumWt,freq0)
+     *		uumax,vvmax,umax,vmax,dSumWt,dfreq0)
 	  else
 	    call ProcSpec(tno,uvw,Wt,rms2,pnt,data,flags,
      *		npol,MAXCHAN,nread,nvis,nbad,out,MAXLEN,nlen,
@@ -1247,7 +1349,7 @@ c  Fiddle slop gain factor. Get MFS mean frequency.
 c
 	if(mfs)then
 	  nchan = 1
-	  freq0 = exp(freq0/SumWt)
+	  freq0 = exp(dfreq0/dSumWt)
 	  do i=1,npol
 	    ChanWt(i) = 1
 	  enddo
@@ -1266,14 +1368,15 @@ c
 c
 	end
 c************************************************************************
-	subroutine ProcMFS (tno,uvw,Wt,rms2,pnt,data,flags,
+	subroutine ProcMFS(tno,uvw,Wt,rms2,pnt,data,flags,
      *		npol,mchan,nchan,nvis,nbad,out,MAXLEN,nlen,
      *		uumax,vvmax,umax,vmax,SumWt,freq0)
 c
 	implicit none
 	integer tno,pnt,nchan,npol,mchan,nvis,nbad,MAXLEN,nlen
 	double precision uvw(3)
-	real rms2,uumax,vvmax,umax,vmax,freq0,Wt,SumWt
+	real rms2,uumax,vvmax,umax,vmax,Wt
+	double precision freq0,SumWt
 	complex data(mchan,npol),out(MAXLEN)
 	logical flags(mchan,npol)
 c
