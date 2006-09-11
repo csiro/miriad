@@ -60,6 +60,8 @@ c    nebk 29mar94 Don't reissue calibration messages after uvdatrew
 c    rjs  21jul94 Give message about planet rotation position angle.
 c    rjs  26jul94 More accurate equation used in polarisation leakage
 c		  correction.
+c    rjs   9sep94 Support felocity and default values for this and velo.
+c    rjs  23sep94 W coordinate support.
 c
 c  User-Callable Routines:
 c    uvDatInp(key,flags)
@@ -118,10 +120,11 @@ c		 'b'	Input must be a single file.
 c		 'c'	Apply gain/phase and delay corrections.
 c		 'e'	Apply polarisation leakage corrections.
 c		 'f'	Apply bandpass corrections.
+c		 '3'    Return w in the preamble (as preamble(3)).
 c--
 c------------------------------------------------------------------------
 	include 'uvdat.h'
-	integer offset,length,i,n,nout
+	integer offset,length,i,n
 	character In*128
 	logical dostokes,dosingle
 c
@@ -129,13 +132,6 @@ c  Externals.
 c
 	integer len1
 	logical SelProbe
-c
-c  Line types.
-c
-	integer NTYPES
-	parameter(NTYPES=3)
-	character types(NTYPES)*8
-	data types/'channel ','velocity','wide    '/
 c
 c  Initialise miscellaneous parameters.
 c
@@ -151,6 +147,17 @@ c
 	dosingle = index(flags,'b').gt.0
 	dosels   = index(flags,'d').gt.0
 	doleak	 = index(flags,'e').gt.0
+	dow	 = index(flags,'3').gt.0
+	if(dow)then
+	  npream = 5
+	  idxT = 4
+	  idxBL = 5
+	else
+	  npream = 4
+	  idxT = 3
+	  idxBL = 4
+	endif
+c
 	if(auto.and.cross)
      *	  call bug('f','Data cannot be both auto and cross correlation')
 	plinit   = .false.
@@ -185,27 +192,14 @@ c
 c  Determine the input linetype.
 c
 	if(dodata)then
-	  nchan = 0
-	  if(index(flags,'1').gt.0) nchan = 1
-	  call keymatch('line',NTYPES,types,1,line,nout)
-	  call keyi('line',nchan,nchan)
-	  call keyr('line',lstart,1.)
-	  call keyr('line',lwidth,1.)
-	  call keyr('line',lstep,lwidth)
-	else
-	  line = ' '
-	  nchan = 0
-	  lstart = 1.
-	  lwidth = 1.
-	  lstep  = lwidth
+	  call keyline(line,nchan,lstart,lwidth,lstep)
+	  if(nchan.eq.0.and.index(flags,'1').gt.0)nchan = 1
 	endif
 c
 c  Determine the reference line, if required.
 c
 	if(doref)then
-	  call keymatch('ref',NTYPES,types,1,ref,nout)
-	  call keyr('ref',rstart,1.)
-	  call keyr('ref',rwidth,1.)
+	  call keyrline(ref,rstart,rwidth)
 	  doref = ref.ne.' '
 	endif
 c
@@ -303,6 +297,8 @@ c
 	if(pnt.le.nIn)then
 	  call uvopen(tno,InBuf(k1(pnt):k2(pnt)),'old')
 	  if(dosels)call SelApply(tno,sels,.true.)
+	  if(dow)call uvset(tno,'preamble','uvw/time/baseline',
+     *							0,0.,0.,0.)
 c
 c  Linetype, etc, setup.
 c
@@ -361,7 +357,8 @@ c
 	  WillCal = docal.and.hdprsnt(tno,'gains')
 	  willpass = dopass.and.(hdprsnt(tno,'bandpass').or.
      *	  	hdprsnt(tno,'cgains').or.hdprsnt(tno,'wgains'))
-	  if(willpass.and.line.eq.'velocity')then
+	  if(willpass.and.
+     *		(line.eq.'velocity'.or.line.eq.'felocity'))then
 	    umsg = 'Cannot apply bandpass correction, for '//
      *	      'velocity linetype, to '//InBuf(k1(pnt):k2(pnt))
 	    call bug('w',umsg)
@@ -475,7 +472,7 @@ c+
 c
 	implicit none
 	integer n,nread
-	double precision preamble(4)
+	double precision preamble(*)
 	complex data(n)
 	logical flags(n)
 c
@@ -493,6 +490,7 @@ c    nread	The number of channels read.
 c--
 c------------------------------------------------------------------------
 	include 'uvdat.h'
+	double precision linepar(6)
 	character umsg*64
 c
 c  Get the data.
@@ -501,8 +499,20 @@ c
 	  call uvPolGet(preamble,data,flags,n,nread)
 	else
 	  call uvread(tno,preamble,data,flags,n,nread)
-	  if(WillCal.and.nread.gt.0)call uvGnFac(preamble(3),
-     *	    real(preamble(4)),0,.false.,data,flags,nread)
+	  if(WillCal.and.nread.gt.0)call uvGnFac(preamble(idxT),
+     *	    real(preamble(idxBL)),0,.false.,data,flags,nread)
+	endif
+c
+c  Fill in velocity/felocity defaults if needed.
+c
+	if(nchan*lwidth.eq.0.and.
+     *	  (line.eq.'velocity'.or.line.eq.'felocity'))then
+	  call uvinfo(tno,'line',linepar)
+	  line = 'velocity'
+	  nchan = nint(linepar(2))
+	  lstart = linepar(3)
+	  lwidth = linepar(4)
+	  lstep  = linepar(5)
 	endif
 c
 c  Perform planet initialisation if necessary.
@@ -563,7 +573,7 @@ c
 c************************************************************************
 	subroutine uvPolGet(preamble,data,flags,n,nread)
 c
-	double precision preamble(4)
+	double precision preamble(*)
 	integer n,nread
 	complex data(n)
 	logical flags(n)
@@ -625,10 +635,9 @@ c
 	  iPol = 0
 	  return
 	endif
-	preamble(1) = Spreambl(1)
-	preamble(2) = Spreambl(2)
-	preamble(3) = Spreambl(3)
-	preamble(4) = Spreambl(4)
+	do i=1,npream
+	  preamble(i) = Spreambl(i)
+	enddo
 c
 c  Use linear combinations of the
 c  measured polarisations to get the desired one. Several polarisations
@@ -905,8 +914,8 @@ c  cannot do the work. In this case, ncoeff(i) is set to zero.
 c
 c  Correct there coefficients for polarisation leakage.
 c
-	  if(doLkCorr) call uvLkCorr(Spreambl(4),maxPol,ncoeff(i),type,
-     *	      coeffs(1,i),Leaks,nLeaks)
+	  if(doLkCorr) call uvLkCorr(Spreambl(idxBL),maxPol,ncoeff(i),
+     *	      type,coeffs(1,i),Leaks,nLeaks)
 c
 c  Calculate the sum of the weights of the coefficients -- to that
 c  we can work out the correct variance later on.
@@ -924,8 +933,8 @@ c
 	    do j=1,ncoeff(i)
 	      k = indx(type(j))
 	      indices(j,i) = k
-	      if(.not.caled(k))call uvGnFac(Spreambl(3),
-     *		real(Spreambl(4)),type(j),.false.,Sdata(1,k),
+	      if(.not.caled(k))call uvGnFac(Spreambl(idxT),
+     *		real(Spreambl(idxBL)),type(j),.false.,Sdata(1,k),
      *		Sflags(1,k),Snread)
 	      caled(k) = .true.
 	    enddo
@@ -1132,9 +1141,6 @@ c  Input:
 c    object	This is a string describing the information to return.
 c		Possible values are:
 c		 'variance'Returns variance of the data.
-c		 'lstart'  Returns the linetype start value, in "rval".
-c		 'lwidth'  Returns the linetype width value, in "rval".
-c		 'lstep'   Returns the linetype step  value, in "rval".
 c  Output:
 c    rval	Real valued output.
 c--
@@ -1146,24 +1152,6 @@ c
 	  call uvinfo(tno,'variance',variance)
 	  rval = variance
 	  if(WillPol)rval = SumWts(iPol) * rval
-	else if(object.eq.'lstart')then
-	  if(dodata)then
-	    rval = lstart
-	  else
-	    rval = 1
-	  endif
-	else if(object.eq.'lwidth')then
-	  if(dodata)then
-	    rval = lwidth
-	  else
-	    rval = 1
-	  endif
-	else if(object.eq.'lstep')then
-	  if(dodata)then
-	    rval = lstep
-	  else
-	    rval = 1
-	  endif
 	else
 	  call bug('f','Unrecognised object in uvDatGtr')
 	endif
