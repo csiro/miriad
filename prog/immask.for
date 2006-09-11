@@ -12,6 +12,7 @@ c    pjt 13may94    handle larger cubes in output format
 c    pjt  8jun94    region= clarification
 c    pjt  4apr96    complain if logic= is not valid, and work in lower case
 c    vjm  5sep96    attempt to unmangle documentation
+c    dpr  8dec00    include vjm's doc suggestions
 c***********************************************************************
 c= immask - mask an image dataset
 c& pjt
@@ -34,6 +35,10 @@ c       immask in=ngc_289_20cm region=@cgcurs.region flag=false logic=and
 c
 c   To undo all masking, delete the mask item from the header:
 c       delhd in=ngc_289_6cm/mask
+c
+c   To mask all the pixels EXCEPT a chosen region (eg you want to blank out
+c   the nasty-looking edges of a CCD image)
+c       immask in=myimage flag=good region=@good.region logic=not
 c   
 c   To change the masking, you must specify a value for the LOGIC keyword.
 c   Otherwise IMMASK merely reports the current numbers of masked and
@@ -90,7 +95,7 @@ c  Internal parameters.
       CHARACTER  PVERSION*(*)
       INTEGER MAXBOXES, MAXRUNS, MAXNAX
 
-      PARAMETER (PVERSION = 'Version 1.0 4-apr-96')
+      PARAMETER (PVERSION = 'Version 1.0 8-dec-00')
       PARAMETER (MAXBOXES=4096, MAXRUNS=3*MAXDIM, MAXNAX=3)
 c
 c  Internal variables.
