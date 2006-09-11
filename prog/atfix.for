@@ -137,12 +137,13 @@ c    10aug05 rjs  Fixed horrible bug related to filling in the array.
 c	          Subsequent shadowing calculation would not work!
 c    19aug05 rjs  Include correction for instrumental phase of CA01.
 c    28aug05 rjs  Include correction for instrumental phase of CA05.
+c    12dec05 rjs  It failed to use the select keyword.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
 	character version*(*)
 	integer MAXSELS,ATANT
-	parameter(version='AtFix: version 1.0 28-Aug-05')
+	parameter(version='AtFix: version 1.0 12-Dec-05')
 	parameter(MAXSELS=256,ATANT=6)
 c
 	real sels(MAXSELS),xyz(3*MAXANT)
@@ -235,6 +236,7 @@ c
 c  Get ready to copy the data.
 c
 	call uvopen(lVis,vis,'old')
+	call SelApply(lVis,sels,.true.)
 	call uvset(lVis,'preamble','uvw/time/baseline',0,0.,0.,0.)
 	call varInit(lVis,'channel')
 c
