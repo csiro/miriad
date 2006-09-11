@@ -104,6 +104,7 @@ c    rjs  19oct95 options=all
 c    rjs  16nov95 Use different colours and PGRNGE.
 c    rjs  14dec95 Increase buffer in averaging (MAXAVER).
 c    rjs  19aug97 Added axis=lag
+c    rjs  31oct97 Use colours in the label.
 c  Bugs:
 c------------------------------------------------------------------------
 	include 'mirconst.h'
@@ -112,7 +113,7 @@ c------------------------------------------------------------------------
         parameter (maxco=15)
 c
 	character version*(*)
-	parameter(version='UvSpec: version 1.0 19-Oct-95')
+	parameter(version='UvSpec: version 1.0 31-Oct-97')
 	character uvflags*8,device*64,xaxis*12,yaxis*12,logf*64
 	character xtitle*64,ytitle*64
 	logical ampsc,rms,nobase,avall,first,buffered,doflush,dodots
@@ -941,6 +942,8 @@ c------------------------------------------------------------------------
 	character pollab*32
 	double precision T0
 	real yranged(2)
+	real xlen,ylen,xloc
+	integer k1,k2
 c
 c  Externals.
 c
@@ -1036,6 +1039,27 @@ c
 	l = len1(title)
 	xl = len1(xtitle)
 	yl = len1(ytitle)
-	call pglab(xtitle(1:xl),ytitle(1:yl),title(1:l))
+c
+	if(npol.eq.1)then
+	  call pglab(xtitle(1:xl),ytitle(1:yl),title(1:l))
+	else
+	  call pglen(5,title(1:l),xlen,ylen)
+	  xloc = 0.5 - 0.5*xlen
+c
+	  k1 = 1
+	  do i=1,npol
+	    k2 = k1 + len1(polsc2p(pol(i))) - 1
+	    if(i.ne.npol)k2 = k2 + 1
+	    call pgsci(i)
+	    call pgmtxt('T',2.0,xloc,0.,title(k1:k2))
+	    call pglen(5,title(k1:k2),xlen,ylen)
+	    xloc = xloc + xlen
+	    k1 = k2 + 1
+	  enddo
+	  call pgsci(1)
+	  k2 = l
+	  call pgmtxt('T',2.0,xloc,0.,title(k1:k2))
+	endif
+	  
 	end
 
