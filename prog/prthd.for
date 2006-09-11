@@ -33,6 +33,7 @@ c    rjs  24nov93 Correct units of xshift and yshift.
 c    rjs  24jul94 Message about aipsfg tables.
 c    rjs  15aug94 More decimal places for restfreq.
 c    rjs  24oct94 More information for images.
+c    rjs  26sep95 Somewhat more tolerant of screwy headers.
 c  Bugs and Shortcomings:
 c    * Descriptions in brief mode could be a bit more verbose!
 c------------------------------------------------------------------------
@@ -333,14 +334,14 @@ c
         call rdhdd (tno, 'cdelt'//str, cdelt,0.0d0)
 c
 c  RA.
-        if (aval(1:4).eq.'RA--') then
+        if (aval(1:4).eq.'RA--'.or.aval.eq.'RA') then
 	  radec = hangle(crval)
           write (line, 20) aval(1:8), n, radec,
      *                          crpix,180*3600/pi*cdelt,'  arcsec'
 20        format (a8, i7, 3x, a11, f10.2, 3x, 1pe13.6,a)
 c
 c  DEC, Galactic and Ecliptic coordinates.
-        else if (aval(1:4).eq.'DEC-'.or.
+        else if (aval(1:4).eq.'DEC-'.or.aval.eq.'DEC'.or.
      *		 aval(1:4).eq.'GLON'.or.aval(1:4).eq.'GLAT'.or.
      *		 aval(1:4).eq.'ELON'.or.aval(1:4).eq.'ELAT') then
 	  radec = rangle(crval)
