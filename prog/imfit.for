@@ -88,13 +88,13 @@ c	(which is presumably a gaussian or disk) has a fixed flux, and
 c	is circular.
 c	The default is to assume that everything can vary.
 c@ out
-c	The optional output data-set. The default is not to create an
-c	output data-set. If an output dataset name is given, then
-c	either the model or residual image can be saved.
+c	The optional output data-set. This is a miriad image. The default
+c       is not to create an output data-set. If an output dataset name is 
+c       given, then either the model or residual image can be saved.
 c@ options
 c	Extra processing options. Several can be given, separated by commas.
 c	Minimum match is used. Possible values are:
-c	  residual The output data-set is the residual visibilities.
+c	  residual The output data-set is the residual image.
 c	           If an output is being created, the default is to make
 c	           this the fitted model.
 c--
