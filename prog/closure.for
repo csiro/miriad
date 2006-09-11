@@ -27,10 +27,10 @@ c	closing errors.
 c@ vis
 c	The input visibility datasets. Several datasets can be given.
 c@ select
-c	Standard visibility selection. See help on select for more
+c	Standard visibility selection. See help on "select" for more
 c	information.
 c@ line
-c	Standard visibility linetype. See the help line" for more information.
+c	Standard visibility linetype. See the help "line" for more information.
 c@ stokes
 c	Normal Stokes/polaization selection. Correlations other than
 c	parallel-hand ones are ignored.
