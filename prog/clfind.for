@@ -897,8 +897,8 @@ c     subroutine of clfind
 c     reads the header of file with handle = in
 c-----------------------------------------------------------
 
-      include 'header.h'
-c      include 'clfind.h'
+c      include 'header.h'
+      include 'clfind.h'
 
       integer in
       double precision dummy
