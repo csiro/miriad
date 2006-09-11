@@ -6,6 +6,58 @@ c  History:
 c    rjs  xxdec95 Original version.
 c    rjs  18dec95 Make sub-Earth point a right handed coordinate system.
 c    rjs  17jun96 Added some parameters about the Earth.
+c    rjs  04feb01 Added subroutine pltbs.
+c
+c  Bugs:
+c    pltbs has a long way to go to make it more useful.
+c************************************************************************
+	real function pltbs(iplanet,freq)
+c
+	implicit none
+	integer iplanet
+	real freq
+c
+c  Data are taken from Ulich (AJ, 86, 1619 (1981)).
+c------------------------------------------------------------------------
+	integer NPLANET
+	parameter(NPLANET=9)
+	real pltb(NPLANET)
+	save pltb
+	data pltb/300.0,438.0,300.0,194.0,138.0,133.0,134.0,127.0,99.0/
+	pltbs = pltb(iplanet)
+	end
+c************************************************************************
+	integer function plLook(source)
+c
+	implicit none
+	character source*(*)
+c
+c  Identify a planet.
+c
+c------------------------------------------------------------------------
+	character source1*32
+	integer ip
+c
+	integer NPLANETS
+	parameter(NPLANETS=9)
+	character planets(NPLANETS)*8
+	integer np(NPLANETS)
+c
+c  Externals.
+c
+	integer binsrcha
+c
+        data planets/'earth   ','jupiter ','mars    ','mercury ',
+     *    'neptune ','pluto   ','saturn  ','uranus  ','venus   '/
+	data np     / 3,         5,        4,          1,
+     *	   8,	      9,         6,	   7,	       2/
+c
+	source1 = source
+	call lcase(source1)
+	ip = binsrcha(source1,planets,NPLANETS)
+	if(ip.gt.0)ip = np(ip)
+	plLook = ip
+	end
 c************************************************************************
 	subroutine plradec(jday,np,ra,dec)
 c
