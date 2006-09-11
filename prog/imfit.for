@@ -109,13 +109,14 @@ c    rjs  06apr95 Get solver to work with relative coordinates, to
 c		  eliminate divergence problem.
 c    rjs  01nov95 Better fiddles in gaufid.
 c    rjs  02dec96 Print out RA and DEC as well.
+c    rjs  12dec96 Correct bug in the above.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'maxnax.h'
 	include 'mem.h'
 c
 	character version*(*)
-	parameter(version='version 1.0 18-Jan-96')
+	parameter(version='version 1.0 12-Dec-96')
 	integer MAXBOX,MAXVAR
 	parameter(MAXBOX=1024,MAXVAR=30)
 c
@@ -1006,7 +1007,7 @@ c
      *			hangle(radec(1,i))
 	      call output(line)
 	      line = '  Declination:                    '//
-     *			rangle(radec(1,i))
+     *			rangle(radec(2,i))
 	      call output(line)
 	    endif
 	    if(srctype(i).ne.POINT)then
