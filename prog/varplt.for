@@ -64,13 +64,14 @@ c		  records.
 c    rjs  13oct95 xrange and yrange handle times in normal Miriad format.
 c    rjs  02feb01 Added options=equal.
 c    rjs  16nov03 Added extra variables. pressmb, wind,winddir,axismax
+c    rjs  10may05 Increase buffer size.
 c  Bugs:
 c    ?? Perfect?
 c------------------------------------------------------------------------
 	character version*(*)
 	integer MAXPNTS
-	parameter(MAXPNTS=100000)
-	parameter(version='VarPlt: version 1.1 16-Nov-03')
+	parameter(MAXPNTS=1000000)
+	parameter(version='VarPlt: version 1.1 10-May-05')
 	logical doplot,dolog,dotime,dounwrap
 	character vis*64,device*64,logfile*64,xaxis*16,yaxis*16
 	character xtype*1,ytype*1,xunit*16,yunit*16,calday*24
