@@ -68,7 +68,8 @@ c------------------------------------------------------------------------
 	parameter(version='GpCopy: version 3-Dec-94')
 	logical dopol,docal,dopass,docopy
 	integer iostat,tIn,tOut
-	character vis*64,out*64,mode*8
+	character vis*64,out*64,mode*8,line*64
+	double precision interval
 c
 c  Externals.
 c
@@ -129,6 +130,13 @@ c
 	    call GnApply(tIn,tOut)
 	  else
 	    call output('Copying gain table')
+	    if(hdprsnt(tIn,'interval'))then
+	      call rdhdd(tIn,'interval',interval,0.d0)
+	      write(line,'(a,f7.2)')
+     *		'Interpolation tolerance set to (minutes):',
+     *		24*60*interval
+	      call output(line)
+	    endif
 	    call hdcopy(tIn,tOut,'interval')
 	    call hdcopy(tIn,tOut,'nsols')
 	    call hdcopy(tIn,tOut,'ngains')
