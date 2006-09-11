@@ -289,6 +289,8 @@ c		    Beam axis order for options=sdb,mfs,mosaic for npnt=1.
 c		    Interpolate mode with the slop factor.
 c		    Robust parameter.
 c    nebk  29sep95  Fix typo for irked user; "unform -> uniform"
+c    rjs   30oct95  slop=xxx,interp was not workin g as advertised.
+c
 c  Bugs:
 c    - It would be nice to have a primary-beam dependent default image size.
 c------------------------------------------------------------------------
@@ -297,7 +299,7 @@ c------------------------------------------------------------------------
 	include 'mem.h'
 c
 	character version*(*)
-	parameter(version='Invert: version 1.0 29-Sep-95')
+	parameter(version='Invert: version 1.0 30-Oct-95')
 	integer MAXPOL,MAXRUNS
 	parameter(MAXPOL=4,MAXRUNS=4*MAXDIM)
 c
@@ -1759,7 +1761,7 @@ c
 	      endif
 	    endif
 c
-	    badpatch = flags(i,j)
+	    badpatch = .not.flags(i,j)
 	    if(.not.badpatch) i0 = i
 	    flags(i,j) = .true.
 	  enddo
