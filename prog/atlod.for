@@ -210,6 +210,7 @@ c    rjs  30dec03 Doc change only.
 c    rjs  15feb04 Save input RPFITS name and calcode.
 c    rjs  10jun04 Handle change in xy correlation at 12mm.
 c    rjs  11sep04 Add rain guage and seeing monitor data to output.
+c    rjs  23oct04 Fix pntra and pntdec bug - always write them out.
 c
 c  Program Structure:
 c    Miriad atlod can be divided into three rough levels. The high level
@@ -235,7 +236,7 @@ c------------------------------------------------------------------------
 	integer MAXFILES
 	parameter(MAXFILES=128)
 	character version*(*)
-	parameter(version='AtLod: version 1.0 11-Sep-04')
+	parameter(version='AtLod: version 1.0 23-Oct-04')
 c
 	character in(MAXFILES)*64,out*64,line*64
 	integer tno
@@ -877,8 +878,8 @@ c
 	if(length.gt.0)call uvputvra(tno,'source',sdash(1:length))
 	call uvputvrd(tno,'ra',ra,1)
 	call uvputvrd(tno,'dec',dec,1)
-	if(pntra.ne.ra)call uvputvrd(tno,'pntra',pntra,1)
-	if(pntdec.ne.dec)call uvputvrd(tno,'pntdec',pntdec,1)
+	call uvputvrd(tno,'pntra',pntra,1)
+	call uvputvrd(tno,'pntdec',pntdec,1)
 	call uvputvrd(tno,'obsra',obsra,1)
 	call uvputvrd(tno,'obsdec',obsdec,1)
 c
