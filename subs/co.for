@@ -1715,10 +1715,17 @@ c
 c  The projection code (characters 6:8) should be the same,
 c  and make sure We should have a RA/DEC, GLAT/GLON, ELAT/ELON pair.
 c
-	ok = (qual1.eq.qual2).and.
-     *	     ((type1.eq.'DEC'.and.type2.eq.'RA').or.
-     *	      (type1.eq.'GLAT'.and.type2.eq.'GLON').or.
-     *	      (type1.eq.'ELAT'.and.type2.eq.'ELON'))
+	ok = .true.
+	if(qual1.ne.qual2)then
+	  ok = .false.
+	  call bug('w','Incompatible projection types')
+	else if(.not.((type1.eq.'DEC'.and.type2.eq.'RA').or.
+     *	              (type1.eq.'GLAT'.and.type2.eq.'GLON').or.
+     *	              (type1.eq.'ELAT'.and.type2.eq.'ELON')))then
+	  ok = .false.
+	  call bug('w','Incompatible latitude/longitude system')
+	endif
+c
 	end
 c************************************************************************
 	subroutine CoExt(ctype,type,qual)
