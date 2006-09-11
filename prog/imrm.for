@@ -191,6 +191,7 @@ c    mjs  12mar93   Use maxnax.h file instead of setting own value.
 c    nebk 11nov93   Add options=ambiguous and output blanking info
 c    nebk 30jan95   Work on ambiguity algorithm, add keywords "rmi",
 c		    "device", "nxy", "csize", "options=acc,gues,yind"
+c    nebk 28mar95   Trying to plot nowhere if device blank
 c------------------------------------------------------------------------
       implicit none
 c
@@ -202,7 +203,7 @@ c
       double precision r2d
       integer maxim
       character version*40
-      parameter (version = 'ImRM: version 30-Jan-95' )
+      parameter (version = 'ImRM: version 28-Mar-95' )
       parameter (maxim = 10, r2d = 180.0d0/dpi)
 cc
       real lsq(maxim), pa(maxim), pa2(maxim), wt(maxim)
@@ -663,8 +664,8 @@ c
 c
 c Plots
 c
-      call plotit (device, nx, ny, accum, yind, size(1,1), size(2,1),
-     +             nim, lsq, memr(ipyd), memr(ipyf), cs)
+      if (device.ne.' ') call plotit (device, nx, ny, accum, yind,
+     +  size(1,1), size(2,1), nim, lsq, memr(ipyd), memr(ipyf), cs)
       call memfree (ipyd, psize, 'r')
       call memfree (ipyf, psize, 'r')
 
