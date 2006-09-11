@@ -132,12 +132,14 @@ c    06dec03 rjs  Fish out met parameters from the dataset directly.
 c    19sep04 rjs  Changes to the way Tsys scaling is handled.
 c    11oct04 rjs  Use jyperk=10 rather than 13 in Tsys correction.
 c    24jun05 rjs  Updated gain/elevation curve at 3mm
+c    10aug05 rjs  Fixed horrible bug related to filling in the array.
+c	          Subsequent shadowing calculation would not work!
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
 	character version*(*)
 	integer MAXSELS,ATANT
-	parameter(version='AtFix: version 1.0 24-Jun-05')
+	parameter(version='AtFix: version 1.0 10-Aug-05')
 	parameter(MAXSELS=256,ATANT=6)
 c
 	real sels(MAXSELS),xyz(3*MAXANT)
@@ -700,10 +702,14 @@ c  FAC is the basic 15.3 m increment of the ATCA expressed in nanosec.
 c
 	real FAC
 	parameter(FAC=51.0204)
+	double precision lat
 	integer i,j
 	character line*80
 	logical ok
 	real x,y
+c
+	call obspar('ATCA','latitude',lat,ok)
+	if(.not.ok)call bug('f','Failed to find Narrabris latitude')
 c
 	do i=1,nant
 	  line = 'Unrecognised station name: '//array(i)
@@ -718,9 +724,9 @@ c
 	  else
 	    call bug('f',line)
 	  endif
-	  xyz(i)        = FAC*x
+	  xyz(i)        = FAC*x*sin(-lat)
 	  xyz(i+nant)   = FAC*y
-	  xyz(i+2*nant) = 0 
+	  xyz(i+2*nant) = FAC*x*cos(-lat)
 	enddo
 c
 	end
