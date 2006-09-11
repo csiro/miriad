@@ -169,6 +169,7 @@ c		  can be read:
 c		  * Set ATANT to 15 in atlod.h
 c		  * Comment out checks for invalid antennas in antchk
 c		  * Get rid of skip when jstat.eq.5 in RPDISP.
+c    rjs  22sep97 Replace call to fdatejul with dayjul.
 c
 c  Program Structure:
 c    Miriad atlod can be divided into three rough levels. The high level
@@ -194,7 +195,7 @@ c------------------------------------------------------------------------
 	integer MAXFILES
 	parameter(MAXFILES=128)
 	character version*(*)
-	parameter(version='AtLod: version 05-Dec-96')
+	parameter(version='AtLod: version 22-Sep-97')
 c
 	character in(MAXFILES)*64,out*64,line*64
 	integer tno
@@ -1701,7 +1702,7 @@ c
 	  else
 	    ok = scanno.gt.scanskip
 	    if(ok.and.NewScan)then
-	      call FDateJul(datobs,jday0)
+	      call dayjul(datobs,jday0)
 	      time = ut / (3600.d0*24.d0) + jday0
 	      call SimMap(if_num,n_if,if_simul,if_chain,ifsel,
      *		  If2Sim,nifs,Sim2If,Sif,MAXSIM)
