@@ -33,16 +33,24 @@ c		     appears in column labels.
 c    rjs  24dec92    Fudges to get around FITLD bug.
 c    rjs  22feb93    Include maxdim.h,maxnax.h. Rename MAXBUF parameter.
 c    rjs   8mar93    fuvrdhd and fuvwrhd now use corrd to be 3x4.
+c    rjs   6jul93    Handle blanking.
+c    rjs  22jul93    Tolerance of X format in Tables. Handle more columns.
+c    rjs  30nov93    Tolerant of degenerate tables.
+c    rjs   7mar94    Tolerant of RA and DEC labelling in uv files which are
+c		     a bit different from AIPS.
+c    rjs  19jul94    Support uu-ncp,vv-ncp, etc.
+c    rjs  25jul94    Better (?) support for uu-?, vv-?.
+c    rjs  29jul94    Handle uu-l,vv-l,ww-l, and times with bzero==0.
+c    rjs   2aug94    Recognised XTENSION='BINTABLE'
 c
 c  Bugs and Shortcomings:
-c    * IF frequency axis is not handled on output.
-c    * Only a subset of random parameters are handled.
-c    * Blanked pixels are not handled.
+c    * IF frequency axis is not handled on output or uv data.
 c    * YYYUUUCCCKKK. See ftabGetD: Miriad's alignment requirements are
 c      really more relaxed if we are not on a Cray. FITS files do not obey
 c      the Miriad alignment requirement. It would be a large amount of work
 c      to circumvent this. For the time being just ignore the problem!!
-c
+c      Places where the alignment requirements are violated are in
+c      AIPS SU table (RESTFREQ) and AIPS AN table (POLAA, POLAB).
 c  Basic FITS Data I/O:
 c  ====================
 c
@@ -51,12 +59,12 @@ c  FXYCLOSE	- Close up shop.
 c  FXYREAD,FXYWRITE - Perform i/o on a row of data. For old files this
 c		  can be random (sequential is more efficient though)
 c		  For new files it must be sequential.
+c  FXYFLGRD,FXYFLGWR - Read and write pixel blanking info.
 c  FXYSETPL	- Set the plane to access.
 c
 c  FUVOPEN	- Open FITS uv file.
 c  FUVCLOSE	- Close FITS uv file.
 c  FUVREAD/FUVWRITE - Read/write uv data.
-c  FUVSETLM	- Sets the limits of various thingos for UV files.
 c  FUVRDHD	- Read some header info.
 c  FUVWRHD	- Writes some header info.
 c
@@ -86,6 +94,8 @@ c  Internal FITS header handling routines
 c  ======================================
 c  FITOPEN	- Opens or creates a FITS file. Does some checks.
 c  FITCLOSE	- Closes a FITS file.
+c  FITBLANK	- Set/return blanking mode.
+c
 c  FITHDINI	- Initialise reading of an old header.
 c  FITHDFIN	- Complete a new header.
 c  FITSRCH	- Searches for a keyword in the header of an old file.
@@ -98,7 +108,7 @@ c  ===========================
 c  maxnax	For images, this gives the max number of dimensions. So
 c		of the code will not work if this is more than 9.
 c  dBypPix	The default number of bytes per pixel when creating an
-c		output FITS file. Only 2 and 4 are supported.
+c		output FITS file. Much code implicitly assumes its 4.
 c  maxcards	Size of card cache.
 c  maxsize	Size of array, used to temporarily buffer data.
 c  maxcol	Max. number of columns in a table.
@@ -308,6 +318,43 @@ c
 	PixBase(lu) = BypPix(lu) * size * axes(1,lu) + DatBase(lu)
 	end
 c************************************************************************
+c* FitBlank -- Set and check the FITS blank mode.
+c& rjs
+c: fits
+c+
+	logical function FitBlank(lu,mode)
+c
+	implicit none
+	integer lu
+	logical mode
+c
+c  FitFlg returns the current blanking mode. If .true., this indicates
+c  that the FITS file (either input or output) could contain blanked pixels
+c  or correlations.
+c
+c  For a new file, the "mode" argument can be used to indicate whether the
+c  output could contain blanked values. To set a value as blanked, you
+c  must call the appropriate "flgwr" routine. If you are going to call the
+c  flgwr routines, you must indicate that blanking is to be handled
+c  before any data is written.
+c
+c  For old files, the "mode" argument is ignored.
+c
+c  Input:
+c    mode
+c--
+c  NOTE: This assumes that floating point pixels are being written!!!
+c------------------------------------------------------------------------
+	include 'fitsio.h'
+c
+	if(new(lu).and.BlankVal(lu).eq.0.and.mode)then
+	  call fitwrhdi(lu,'BLANK',-1)
+	  BlankVal(lu) = -1
+	endif
+c
+	FitBlank = BlankVal(lu).ne.0
+	end
+c************************************************************************
 c* FxyRead -- Read a row of data from a FITS image.
 c& rjs
 c: fits
@@ -323,62 +370,133 @@ c
 c  Input:
 c    lu		File descriptor.
 c    indx	Index of the row to access.
+c  Output:
 c    data	Array containing the pixel info.
 c--
 c------------------------------------------------------------------------
-	integer ktot,k,ltot,l,offset,iostat
-	real bs, bz
+	integer i,offset,length,iostat,blank
+	real bs,bz,temp
 	include 'fitsio.h'
 c
 c  Check that it is the right sort of operation for this file.
 c
 	if(new(lu))call bug('f','Cannot read new FITS file')
+	if(axes(1,lu).gt.MAXSIZE)
+     *	  call bug('f','First dimension too big, in FXYREAD')
 c
 c  Copy the data, doing the conversion on the way. Optimise for the case where
 c  BZERO is 0.
 c
-	k = 0
-	ktot = axes(1,lu)
-	offset = PixBase(lu) + BypPix(lu)*(indx-1)*axes(1,lu)
+	length = axes(1,lu)
+	offset = PixBase(lu) + BypPix(lu)*(indx-1)*length
 	bs = bscale(lu)
 	bz = bzero(lu)
+	blank = BlankVal(lu)
 c
-c  Do the floating point case.
+c  Do the floating point case. Blank the data if needed.
 c
 	if(float(lu))then
-	  call hreadr(item(lu),data,offset,BypPix(lu)*ktot,iostat)
+	  call hreadr(item(lu),data,offset,BypPix(lu)*length,iostat)
 	  if(iostat.ne.0)call bugno('f',iostat)
-	  if(bs.ne.1.or.bz.ne.0)then
-	    do k=1,ktot
-	      data(k) = bs * data(k) + bz
+c
+	  if(blank.ne.0)then
+	    call hreadi(item(lu),array,offset,BypPix(lu)*length,iostat)
+	    if(iostat.ne.0)call bugno('f',iostat)
+	    temp = -bz/bs
+	    do i=1,length
+	      if(array(i).eq.blank) data(i) = temp
 	    enddo
 	  endif
 c
-c  Do the scaled integer case.
+	  if(bs.ne.1.or.bz.ne.0)then
+	    do i=1,length
+	      data(i) = bs * data(i) + bz
+	    enddo
+	  endif
+c
+c  Do the scaled integer case. Blank if needed.
 c
 	else
-	  dowhile(k.lt.ktot)
-	    ltot = min(ktot-k,maxsize)
-	    if(BypPix(lu).eq.2)then
-	      call hreadj(item(lu),array,offset,BypPix(lu)*ltot,iostat)
-	    else
-	      call hreadi(item(lu),array,offset,BypPix(lu)*ltot,iostat)
-	    endif
-	    if(iostat.ne.0)call bugno('f',iostat)
-	    if(bz.eq.0)then
-	      do l=1,ltot
-	        data(k+l) = bs * array(l)
-	      enddo
-	    else
-	      do l=1,ltot
-	        data(k+l) = bs * array(l) + bz
-	      enddo
-	    endif
+	  if(BypPix(lu).eq.2)then
+	    call hreadj(item(lu),array,offset,BypPix(lu)*length,iostat)
+	  else
+	    call hreadi(item(lu),array,offset,BypPix(lu)*length,iostat)
+	  endif
+	  if(iostat.ne.0)call bugno('f',iostat)
+	  if(bz.eq.0)then
+	    do i=1,length
+	      data(i) = bs * array(i)
+	    enddo
+	  else
+	    do i=1,length
+	      data(i) = bs * array(i) + bz
+	    enddo
+	  endif
 c
-	    k = k + ltot
-	    offset = offset + BypPix(lu)*ltot
+	  if(blank.ne.0)then
+	    do i=1,length
+	      if(array(i).eq.blank) data(i) = 0
+	    enddo
+	  endif
+c
+	endif
+	end
+c************************************************************************
+c* FxyFlgRd -- Read a row of pixel flags from a FITS image.
+c& rjs
+c: fits
+c+
+	subroutine fxyflgrd(lu,indx,flags)
+c
+	implicit none
+	integer lu,indx
+	logical flags(*)
+c
+c  Read a row of pixel flags from a FITS image.
+c
+c  Input:
+c    lu		File descriptor.
+c    indx	Index of the row to access.
+c  Output:
+c    flags	Output pixel flags.
+c--
+c------------------------------------------------------------------------
+	integer i,offset,length,iostat,blank
+	include 'fitsio.h'
+c
+c  Check that it is the right sort of operation for this file.
+c
+	if(new(lu))call bug('f','Cannot read new FITS file')
+	if(axes(1,lu).gt.MAXSIZE)
+     *	  call bug('f','First dimension too big, in FITXYFLGRD')
+c
+c  Initialise.
+c
+	length = axes(1,lu)
+	offset = PixBase(lu) + BypPix(lu)*(indx-1)*length
+	blank = BlankVal(lu)
+c
+c  If there was no BLANK keyword, assume all the data are good.
+c
+	if(blank.eq.0)then
+	  do i=1,length
+	    flags(i) = .true.
+	  enddo
+c
+c  Otherwise reread the data, and determine the flagged values.
+c
+	else
+	  if(BypPix(lu).eq.2)then
+	    call hreadj(item(lu),array,offset,BypPix(lu)*length,iostat)
+	  else
+	    call hreadi(item(lu),array,offset,BypPix(lu)*length,iostat)
+	  endif
+	  if(iostat.ne.0)call bugno('f',iostat)
+	  do i=1,length
+	    flags(i) = array(i).ne.blank
 	  enddo
 	endif
+c
 	end
 c************************************************************************
 c* FxyWrite -- Write a row of a FITS image.
@@ -422,6 +540,76 @@ c
 	offset = PixBase(lu) + BypPix(lu)*(indx-1)*axes(1,lu)
 	call hwriter(item(lu),data,offset,BypPix(lu)*axes(1,lu),iostat)
 	if(iostat.ne.0)call bugno('f',iostat)
+	end
+c************************************************************************
+c* FxyFlgWr -- Write flags for a row of a FITS image.
+c& rjs
+c: fits
+c+
+	subroutine fxyflgwr(lu,indx,flags)
+c
+	implicit none
+	integer lu,indx
+	logical flags(*)
+c
+c  Write a row of pixel flags for a FITS image.
+c
+c  Input:
+c    lu		File descriptor.
+c    indx	Index of the row to access.
+c    flags	The pixel flags.
+c--
+c  NOTE: This assumes that float(lu), bscale(lu) and bzero(lu) are
+c	 .true., 1.0 and 0.0 respectively! THIS ASSUMPTION depends on the
+c	 code in fxyopen!
+c------------------------------------------------------------------------
+	integer offset,iostat,k,kmax,l,lmax,blank,i
+	include 'fitsio.h'
+c
+c  Externals.
+c
+	integer isrchieq
+c
+c  Check that it is the right sort of operation for this file.
+c
+	if(.not.new(lu))call bug('f','Cannot write old FITS file')
+	if(BlankVal(lu).eq.0)
+     *	  call bug('f','FXYFLG must be falled before FXYFLGWR')
+c
+c  If its a new file, and this is the first call to perform data i/o on it
+c  (not header i/o), handle the header properly.
+c
+	if(DatBase(lu).eq.0)then
+	  call fithdfin(lu)
+	  PixBase(lu) = DatBase(lu)
+	endif
+c
+c  This assumes that we have floating point pixels.
+c
+	Blank = BlankVal(lu)
+	offset = PixBase(lu) + BypPix(lu)*(indx-1)*axes(1,lu)
+c
+c  Convert the flags into a run-length encoding, and then write out
+c  the magic value blanked version.
+c
+	lmax = 0
+	kmax = axes(1,lu)
+	k = isrchieq(kmax,flags,1,.false.)
+	dowhile(k.le.kmax)
+	  l = isrchieq(kmax-k+1,flags(k),1,.true.) - 1
+	  if(l.gt.lmax)then
+	    do i=lmax+1,l
+	      array(i) = Blank
+	    enddo
+	    lmax = l
+	  endif
+	  call hwritei(item(lu),array,BypPix(lu)*(k-1)+offset,
+     *				      BypPix(lu)*l,iostat)
+	  if(iostat.ne.0)call bugno('f',iostat)
+	  k = k + l
+	  if(k.le.kmax)k = isrchieq(kmax-k+1,flags(k),1,.false.) + k - 1
+	enddo
+c
 	end
 c************************************************************************
 c* FxyClose -- Close a FITS image file.
@@ -697,10 +885,11 @@ c    TimOff	Offset time to add.
 c
 c------------------------------------------------------------------------
 	character ptype*8,dateobs*24,umsg*64
-	integer i,j
+	integer i,j,Tindx
 	logical found,getjday
 	real bs,bz
-	double precision jday
+	logical fdiv
+	double precision jday,freq,time1
 c
 c  Externals.
 c
@@ -710,6 +899,7 @@ c  Initialise the thingos for the random parameters.
 c
 	getjday = .false.
 	TimOff = 0
+	Tindx = 0
 	do i=1,nRanProg
 	  indices1(i) = 0
 	  indices2(i) = 0
@@ -725,7 +915,19 @@ c
 	  call fitrdhdr(lu,'PSCAL'//itoaf(i),bs,1.)
 	  call fitrdhdr(lu,'PZERO'//itoaf(i),bz,0.)
 c
-	  if(ptype.eq.'TIME1')then
+c  Convert some somewhat different forms to something standard.
+c
+	  fdiv = .false.
+	  if(ptype(1:3).eq.'UU'.or.ptype(1:3).eq.'UU-')then
+	    fdiv = ptype.eq.'UU-L'
+	    ptype = 'UU'
+	  else if(ptype(1:3).eq.'VV'.or.ptype(1:3).eq.'VV-')then
+	    fdiv = ptype.eq.'VV-L'
+	    ptype = 'VV'
+	  else if(ptype(1:3).eq.'WW'.or.ptype(1:3).eq.'WW-')then
+	    fdiv = ptype.eq.'WW-L'
+	    ptype = 'WW'
+	  else if(ptype.eq.'TIME1')then
 	    getjday = .true.
 	    ptype = 'DATE'
 	  endif
@@ -742,8 +944,14 @@ c
 c  Remember it if we need it.
 c
 	  if(found)then
+	    if(fdiv)then
+	      call fuvFreq(lu,freq)
+	      bz = bz / freq
+	      bs = bs / freq
+	    endif
 	    if(ptype.eq.'DATE')then
 	      TimOff = TimOff + bz
+	      TIndx = j
 	    else
 	      zeros(j) = zeros(j) + bz
 	    endif
@@ -772,6 +980,19 @@ c
 	  endif
 	  call FDateJul(dateobs,jday)
 	  TimOff = TimOff + jday
+	endif
+c
+c  Fiddle the time, if needed, to avoid a rounding problem.
+c
+	if(Tindx.ne.0)then
+	  if(indices2(Tindx).ne.0)then
+	    call fuvGrand(lu,Tindx,Time1)
+	    Time1 = nint(Time1)
+	    if(abs(Time1).gt.100)then
+	      zeros(Tindx) = zeros(Tindx) - Time1
+	      TimOff = TimOff + Time1
+	    endif
+	  endif
 	endif
 c
 c  Check what we have.
@@ -931,9 +1152,9 @@ c
 	    indx = uvStokes
 	  else if(ctype.eq.'FREQ')then
 	    indx = uvFreq
-	  else if(ctype.eq.'RA')then
+	  else if(ctype(1:2).eq.'RA')then
 	    indx = uvRa
-	  else if(ctype.eq.'DEC')then
+	  else if(ctype(1:3).eq.'DEC')then
 	    indx = uvDec
 	  else
 	    indx = 0
@@ -1005,7 +1226,10 @@ c
 	  ltot = n * PpVisf
 	  if(float(lu))then
 	    call hreadr(item(lu),rarray,offset,4*ltot,iostat)
-	    call fuvrtrn2(lu,n,rarray,PpVisf,visdat(k*PpVisp+1),PpVisp)
+	    if(BlankVal(lu).ne.0)
+     *	      call hreadi(item(lu),array,offset,4*ltot,iostat)
+	    call fuvrtrn2(lu,n,rarray,array,
+     *		PpVisf,visdat(k*PpVisp+1),PpVisp)
 	  else if(BypPix(lu).eq.2)then
 	    call hreadj(item(lu),array,offset,2*ltot,iostat)
 	    call fuvrtrn1(lu,n,array,PpVisf,visdat(k*PpVisp+1),PpVisp)
@@ -1149,10 +1373,10 @@ c
 	  do i=1,pols(lu)*freqs(lu)
 	    if(ncomplex(lu).eq.3)then
 	      call fuvmltv1(n,in(iin),PpVisi,out(iout),PpViso,
-     *			bscale(lu),bzero(lu),WtScal(lu))
+     *			bscale(lu),bzero(lu),WtScal(lu),BlankVal(lu))
 	    else
 	      call fuvmltv2(n,in(iin),PpVisi,out(iout),PpViso,
-     *			bscale(lu),bzero(lu))
+     *			bscale(lu),bzero(lu),BlankVal(lu))
 	    endif
 	    iin = iin + ncomplex(lu)
 	    iout = iout + 3
@@ -1161,10 +1385,10 @@ c
 	  do i=1,n
 	    if(ncomplex(lu).eq.3)then
 	      call fuvmltv1(pols(lu)*freqs(lu),in(iin),ncomplex(lu),
-     *		out(iout),3,bscale(lu),bzero(lu),WtScal(lu))
+     *	       out(iout),3,bscale(lu),bzero(lu),WtScal(lu),BlankVal(lu))
 	    else
 	      call fuvmltv2(pols(lu)*freqs(lu),in(iin),ncomplex(lu),
-     *		out(iout),3,bscale(lu),bzero(lu))
+     *	       out(iout),3,bscale(lu),bzero(lu),BlankVal(lu))
 	    endif
 	    iin = iin + PpVisi
 	    iout = iout + PpViso
@@ -1172,11 +1396,12 @@ c
 	endif
 	end
 c************************************************************************
-	subroutine fuvrtrn2(lu,n,in,PpVisi,out,PpViso)
+	subroutine fuvrtrn2(lu,n,in,mask,PpVisi,out,PpViso)
 c
 	implicit none
 	integer lu,n,PpVisi,PpViso
 	real in(*),out(*)
+	integer mask(*)
 c
 c  This reads and scales uv data read from a FITS file.
 c  Input is REAL values.
@@ -1188,6 +1413,7 @@ c  Inputs:
 c    lu		File descriptor.
 c    n		Number of visibilities to scale and transfer.
 c    in		Real array of unscaled visibilities.
+c    mask	Blanking mask.
 c    PpVisi	Elements per visibility in the input array. The
 c		size of IN will be PpVisi*n elements.
 c    PpViso	Elements per visibility in the output array. The
@@ -1225,11 +1451,11 @@ c
 	if(n.gt.pols(lu)*freqs(lu))then
 	  do i=1,pols(lu)*freqs(lu)
 	    if(ncomplex(lu).eq.3)then
-	      call fuvmltv3(n,in(iin),PpVisi,out(iout),PpViso,
-     *			bscale(lu),bzero(lu),WtScal(lu))
+	      call fuvmltv3(n,in(iin),mask(iin),PpVisi,out(iout),
+     *		PpViso,bscale(lu),bzero(lu),WtScal(lu),BlankVal(lu))
 	    else
-	      call fuvmltv4(n,in(iin),PpVisi,out(iout),PpViso,
-     *			bscale(lu),bzero(lu))
+	      call fuvmltv4(n,in(iin),mask(iin),PpVisi,out(iout),
+     *		PpViso,bscale(lu),bzero(lu),BlankVal(lu))
 	    endif
 	    iin = iin + ncomplex(lu)
 	    iout = iout + 3
@@ -1237,11 +1463,13 @@ c
 	else
 	  do i=1,n
 	    if(ncomplex(lu).eq.3)then
-	      call fuvmltv3(pols(lu)*freqs(lu),in(iin),ncomplex(lu),
-     *		out(iout),3,bscale(lu),bzero(lu),WtScal(lu))
+	      call fuvmltv3(pols(lu)*freqs(lu),in(iin),mask(iin),
+     *		ncomplex(lu),out(iout),3,bscale(lu),bzero(lu),
+     *		WtScal(lu),BlankVal(lu))
 	    else
-	      call fuvmltv4(pols(lu)*freqs(lu),in(iin),ncomplex(lu),
-     *		out(iout),3,bscale(lu),bzero(lu))
+	      call fuvmltv4(pols(lu)*freqs(lu),in(iin),mask(iin),
+     *		ncomplex(lu),out(iout),3,bscale(lu),bzero(lu),
+     *		BlankVal(lu))
 	    endif
 	    iin = iin + PpVisi
 	    iout = iout + PpViso
@@ -1264,10 +1492,10 @@ c------------------------------------------------------------------------
 	enddo
 	end
 c************************************************************************
-	subroutine fuvmltv1(n,a,na,b,nb,bscale,bzero,wtscal)
+	subroutine fuvmltv1(n,a,na,b,nb,bscale,bzero,wtscal,blank)
 c
 	implicit none
-	integer n,na,nb,a(*)
+	integer n,na,nb,a(*),blank
 	real b(*)
 	real bscale,bzero,wtscal
 c
@@ -1298,17 +1526,33 @@ c# ivdep
 	    k = k + na
 	  enddo
 	endif
+c
+c  Set visibilities to zero if they were magic value blanked.
+c  Because there is an associated weight, we assume that the
+c  weight correctly reflects the flagged state.
+c
+	k = 1
+	if(blank.ne.0)then
+c# ivdep
+	  do j=1,n*nb,nb
+	    if(a(k).eq.blank.or.a(k+1).eq.blank)then
+	      b(j) = 0
+	      b(j+1) = 0
+	    endif
+	    k = k + na
+	  enddo
+	endif
 	end
 c************************************************************************
-	subroutine fuvmltv2(n,a,na,b,nb,bscale,bzero)
+	subroutine fuvmltv2(n,a,na,b,nb,bscale,bzero,blank)
 c
 	implicit none
-	integer n,na,nb,a(*)
+	integer n,na,nb,a(*),blank
 	real b(*)
 	real bscale,bzero
 c
 c  Scale the visibility data(2 elements,integer) to a real array.
-c  Optimise the case where BZERO is 0.
+c  Optimise the case where BZERO is 0 and where there is no blanking.
 c------------------------------------------------------------------------
 	integer j,k
 c
@@ -1330,20 +1574,49 @@ c# ivdep
 	    k = k + na
 	  enddo
 	endif
+c
+c  Apply blanking if needed.
+c
+	k = 1
+	if(blank.ne.0)then
+c# ivdep
+	  do j=1,n*nb,nb
+	    if(a(k).eq.blank.or.a(k+1).eq.blank)then
+	      b(j)   = 0
+	      b(j+1) = 0
+	      b(j+2) = -1
+	    endif
+	    k = k + na
+	  enddo
+	endif
 	end
 c************************************************************************
-	subroutine fuvmltv3(n,a,na,b,nb,bscale,bzero,wtscal)
+	subroutine fuvmltv3(n,a,mask,na,b,nb,bscale,bzero,wtscal,blank)
 c
 	implicit none
-	integer n,na,nb
+	integer n,na,nb,blank
 	real a(*),b(*)
+	integer mask(*)
 	real bscale,bzero,wtscal
 c
 c  Scale the visibility data(3 elements,real) to a real array.
 c  Optimise the case where BZERO is 0 and BSCALE is 1.
 c------------------------------------------------------------------------
 	integer j,k
-	real wtbscale,wtbzero
+	real wtbscale,wtbzero,temp
+c
+c  Apply blanking if needed.
+c
+	if(blank.ne.0)then
+	  k = 1
+	  temp = -bzero/bscale
+c# ivdep
+	  do j=1,n*nb,nb
+	    if(mask(k).eq.blank)   a(k)   = temp
+	    if(mask(k+1).eq.blank) a(k+1) = temp
+	    k = k + na
+	  enddo
+	endif
 c
 	k = 1
 	if(bzero.eq.0.and.bscale.eq.1.and.wtscal.eq.1)then
@@ -1376,17 +1649,44 @@ c# ivdep
 	endif
 	end
 c************************************************************************
-	subroutine fuvmltv4(n,a,na,b,nb,bscale,bzero)
+	subroutine fuvmltv4(n,a,mask,na,b,nb,bscale,bzero,blank)
 c
 	implicit none
-	integer n,na,nb
+	integer n,na,nb,blank
 	real a(*),b(*)
+	integer mask(*)
 	real bscale,bzero
 c
 c  Scale the visibility data(2 elements,real) to a real array.
 c  Optimise the case where BZERO is 0 and BSCALE is 1.
 c------------------------------------------------------------------------
 	integer j,k
+	real temp
+c
+c  Apply blanking if needed.
+c
+	if(blank.ne.0)then
+	  k = 1
+	  temp = -bzero/bscale
+c# ivdep
+	  do j=1,n*nb,nb
+	    if(mask(k).eq.blank.or.mask(k+1).eq.blank)then
+	      a(k) = temp
+	      a(k+1) = temp
+	      b(j+2) = -1
+	    else
+	      b(j+2) = 1
+	    endif
+	    k = k + na
+	  enddo
+	else
+c# ivdep
+	  do j=1,n*nb,nb
+	    b(j+2) = 1
+	  enddo
+	endif
+c
+c  Copy the data.
 c
 	k = 1
 	if(bzero.eq.0.and.bscale.eq.1)then
@@ -1394,7 +1694,6 @@ c# ivdep
 	  do j=1,n*nb,nb
 	    b(j) = a(k)
 	    b(j+1) = a(k+1)
-	    b(j+2) = 1
 	    k = k + na
 	  enddo
 	else if(bzero.ne.0)then
@@ -1402,7 +1701,6 @@ c# ivdep
 	  do j=1,n*nb,nb
 	    b(j) = bscale * a(k) + bzero
 	    b(j+1) = bscale * a(k+1) + bzero
-	    b(j+2) = 1
 	    k = k + na
 	  enddo
 	else
@@ -1410,7 +1708,6 @@ c# ivdep
 	  do j=1,n*nb,nb
 	    b(j) = bscale * a(k)
 	    b(j+1) = bscale * a(k+1)
-	    b(j+2) = 1
 	    k = k + na
 	  enddo
 	endif
@@ -1460,13 +1757,19 @@ c
 	real b(*),bscale1,bscale2,bzero
 c
 c  Scale a random parameter(double,integer) to a real.
-c  Optimise this case when BZERO is zero.
+c  Optimise this case when BZERO is zero. Also do the case where
+c  BZERO is non-zero in double precision,to avoid rounding problems.
 c------------------------------------------------------------------------
 	integer j,k
+	double precision bs1,bs2,bz
+c
 	k = 1
 	if(bzero.ne.0)then
+	  bs1 = bscale1
+	  bs2 = bscale2
+	  bz = bzero
 	  do j=1,n*nb,nb
-	    b(j) = bscale1*a1(k) + bscale2*a2(k) + bzero
+	    b(j) = bs1*a1(k) + bs2*a2(k) + bz
 	    k = k + na
 	  enddo
 	else
@@ -1516,13 +1819,19 @@ c
 	real b(*),bscale1,bscale2,bzero
 c
 c  Scale a random parameter(double,float) to a real.
-c  Optimise this case when BZERO is zero.
+c  Optimise this case when BZERO is zero. Also do the case where BZERO
+c  is non-zero in double precision, to avoid rounding problems.
 c------------------------------------------------------------------------
 	integer j,k
+	double precision bs1,bs2,bz
+c
 	k = 1
 	if(bzero.ne.0)then
+	  bs1 = bscale1
+	  bs2 = bscale2
+	  bz  = bzero
 	  do j=1,n*nb,nb
-	    b(j) = bscale1*a1(k) + bscale2*a2(k) + bzero
+	    b(j) = bs1*a1(k) + bs2*a2(k) + bz
 	    k = k + na
 	  enddo
 	else
@@ -1532,6 +1841,93 @@ c------------------------------------------------------------------------
 	  enddo
 	endif
 	end
+c************************************************************************
+	subroutine fuvGrand(lu,indx,rparam)
+c
+	implicit none
+	integer lu,indx
+	double precision rparam
+c
+c  Get the value of the first value of a particular random parameter
+c  in the dataset.
+c
+c  Input:
+c    lu		Handle of the FITS dataset.
+c    indx	Index of the random parameter in fitsio's internal tables.
+c  Output:
+c    rparam	The value of the first occurrence of the random
+c		parameter.
+c------------------------------------------------------------------------
+	include 'fitsio.h'
+	integer iostat
+c
+	rparam = zeros(indx,lu)
+	if(indices1(indx,lu).eq.0)return
+c
+	if(nRanFile(lu).gt.maxsize)
+     *	  call bug('f','Cannot fit the random parameters into buffer')
+	if(float(lu))then
+	  call hreadr(item(lu),rarray,Datbase(lu),4*nRanFile(lu),iostat)
+	  if(iostat.ne.0)then
+	    call bug('w','Error reading FITS file')
+	    call bugno('f',iostat)
+	  endif
+	  rparam = rparam +
+     *	    dble(scales1(indx,lu))*rarray(indices1(indx,lu))
+	  if(indices2(indx,lu).ne.0) rparam = rparam +
+     *	    dble(scales2(indx,lu))*rarray(indices2(indx,lu))
+	else
+	  if(BypPix(lu).eq.2)then
+	    call hreadj(item(lu),array,Datbase(lu),2*nRanFile(lu),
+     *								iostat)
+	  else
+	    call hreadi(item(lu),array,Datbase(lu),4*nRanFile(lu),
+     *								iostat)
+	  endif
+	  if(iostat.ne.0)then
+	    call bug('w','Error reading FITS file')
+	    call bugno('f',iostat)
+	  endif
+	  rparam = rparam +
+     *	    dble(scales1(indx,lu))*array(indices1(indx,lu))
+	  if(indices2(indx,lu).ne.0) rparam = rparam +
+     *	    dble(scales2(indx,lu))*array(indices2(indx,lu))
+	endif
+c
+c
+	end
+c************************************************************************
+	subroutine fuvFreq(lu,freq)
+c
+	implicit none
+	integer lu
+	double precision freq
+c
+c  Get the reference frequency from the header.
+c------------------------------------------------------------------------
+	integer i,naxis
+	character ctype*16,num*2
+	logical found
+c
+c  Externals.
+c
+	character itoaf*2
+c
+	freq = 0
+	call fitrdhdi(lu,'NAXIS',naxis,0)
+	if(naxis.le.2)call bug('f','Invalid uv FITS header')
+	i = 1
+	found = .false.
+	dowhile(.not.found.and.i.lt.naxis)
+	  i = i + 1
+	  num = itoaf(i)
+	  call fitrdhda(lu,'CTYPE'//num,ctype,' ')
+	  found = ctype.eq.'FREQ'
+	  if(found)call fitrdhdd(lu,'CRVAL'//num,freq,0.d0)
+	enddo
+c
+	if(freq.le.0)call bug('f','Unable to determine frequency')
+	end	
 c************************************************************************
 	subroutine fuvwt(lu,factor)
 c
@@ -2086,7 +2482,12 @@ c
 	HdOff(lu) = -1
 	ok = fithdini(lu,0)
 	if(.not.ok)call bug('f','Input is not a FITS file')
-	if(new(lu)) call fitwrhdl(lu,'SIMPLE',.true.)
+	if(new(lu))then
+	  call fitwrhdl(lu,'SIMPLE',.true.)
+	  BlankVal(lu) = 0
+	else
+	  call fitrdhdi(lu,'BLANK',BlankVal(lu),0)
+	endif
 c
 	end
 c************************************************************************
@@ -2485,6 +2886,44 @@ c  Output:
 c    found	True if the table was sucessfully found.
 c--
 c------------------------------------------------------------------------
+c
+c  Skip to the table.
+c
+	call ftabSkip(lu,name,found)
+c
+c  If found, load the info about the table.
+c
+	if(found)call ftabLoad(lu,found)
+c
+	end
+c************************************************************************
+c* ftabSkip -- Skip to the next table of a particular kind, in a FITS file.
+c& rjs
+c: fits
+c+
+	subroutine ftabSkip(lu,name,found)
+c
+	implicit none
+	integer lu
+	character name*(*)
+	logical found
+c
+c  This scans a FITS file, from the current position, looking for a table of
+c  a particular kind.
+c
+c  Input:
+c    lu		Handle of the input FITS file.
+c    name	Name of the table. This is the value of the EXTNAME
+c		FITS keyword. Normally it will be something like:
+c		  'AIPS SU ' -- AIPS source table.
+c		  'AIPS FQ ' -- AIPS frequency table.
+c		  'AIPS CC ' -- AIPS clean component table.
+c		A special case is name = ' ', which just loads
+c		the next table.
+c  Output:
+c    found	True if the table was sucessfully found.
+c--
+c------------------------------------------------------------------------
 	integer offset,indx
 	character ename*16
 	include 'fitsio.h'
@@ -2542,22 +2981,20 @@ c
 	    found = name.eq.ename.or.name.eq.' '
 	  enddo
 	endif
-c
-c  We have found the table. Now load the description of the table.
-c
-	call ftabLoad(lu)
-c
 	end
 c************************************************************************
-	subroutine ftabLoad(lu)
+	subroutine ftabLoad(lu,ok)
 c
 	implicit none
 	integer lu
+	logical ok
 c
 c  Load the info about the current table.
 c
 c  Input:
 c    lu		Handle of the input FITS file.
+c  Output:
+c    ok		True if all seems OK.
 c------------------------------------------------------------------------
 	character string*16,num*2
 	integer offset,i,j,Form,Cnt,ncol
@@ -2567,15 +3004,16 @@ c  Externals.
 c
 	character itoaf*2
 c
+c
+	ok = .false.
 	call fitrdhda(lu,'XTENSION',string,' ')
-	if(string.ne.'A3DTABLE'.and.string.ne.'3DTABLE')
-     *	  call bug('f','Not a binary table')
+	if(string.ne.'A3DTABLE'.and.string.ne.'3DTABLE'.and.
+     *	   string.ne.'BINTABLE')return
 	call fitrdhdi(lu,'NAXIS1',width(lu),0)
 	call fitrdhdi(lu,'NAXIS2',rows(lu),0)
 	call fitrdhdi(lu,'TFIELDS',ncol,0)
 c
-	if(width(lu).le.0.or.rows(lu).le.0.or.ncol.le.0)
-     *	  call bug('f','Invalid table description')
+	if(width(lu).le.0.or.rows(lu).le.0.or.ncol.le.0)return
 c
 	offset = 0
 	j = 0
@@ -2585,24 +3023,25 @@ c
 	  call ftabForm(string,Form,Cnt)
 	  if(Cnt.gt.0)then
 	    j = j + 1
-	    if(j.gt.MAXCOL)
-     *	      call bug('f','Too many columns for me to handle')
+	    if(j.gt.MAXCOL)return
 	    call fitrdhda(lu,'TTYPE'//num,ColType(j,lu),' ')
 	    call fitrdhda(lu,'TUNIT'//num,ColUnits(j,lu),' ')
 	    ColForm(j,lu) = Form
 	    ColCnt(j,lu) = Cnt
 	    ColOff(j,lu) = offset
-	    offset = offset + ColCnt(j,lu)
+	    offset = offset + (ColCnt(j,lu)+7)/8
 	  endif
 	enddo
 c
-	if(j.le.0)call bug('f','Degenerate table')
+	if(j.le.0)return
 	cols(lu) = j
 c
 c  A consistency check.
 c
 	if(offset.gt.width(lu))
      *	  call bug('f','Table width inconsistency')
+c
+	ok = .true.
 	end
 c************************************************************************
 	subroutine ftabForm(string,ColForm,ColCnt)
@@ -2618,7 +3057,7 @@ c  Input:
 c    string	A string in the form of <number><character>, e.g. "1J".
 c  Output:
 c    ColForm	The form type.
-c    ColCnt	The form count.
+c    ColCnt	The form count, in bits.
 c------------------------------------------------------------------------
 	integer i
 	logical more
@@ -2640,7 +3079,7 @@ c
 	if(i.gt.len(string).or.ColCnt.lt.0)call bug('f',
      *	  'Bad FORM string in FITS table description')
 c
-	ColForm = index('IJAED',string(i:i))
+	ColForm = index('IJAEDX',string(i:i))
 	if(ColForm.eq.0)call bug('f',
      *	  'Bad FORM string in FITS table description')
 c
@@ -2673,13 +3112,13 @@ c--
 c------------------------------------------------------------------------
 	integer i
 c
-	character string*5
+	character string*6
 	include 'fitsio.h'
 c
 c  Externals.
 c
 	integer ftabSize,ftabColn
-	data string/'IIARD'/
+	data string/'IIARDX'/
 c
 c  Did we fail to find match? Is so, return indicating that it was not found.
 c
@@ -2746,7 +3185,7 @@ c
 c  Check that the i/o routines alignment requirement is met.
 c
 	size = ftabSize(ColForm(i,lu))
-	if(mod(ColOff(i,lu),size).ne.0)then
+	if(mod(ColOff(i,lu),size/8).ne.0)then
 	  call bug('w','Alignment violation, while reading FITS table')
 	  umsg = 'Offending parameter is '//name
 	  call bug('f',umsg)
@@ -2758,9 +3197,9 @@ c
 	offset = DatOff(lu) + ColOff(i,lu)
 	do j=1,rows(lu)
 	  if(ColForm(i,lu).eq.FormJ)then
-	    call hreadj(item(lu),data(idx),offset,ColCnt(i,lu),iostat)
+	    call hreadj(item(lu),data(idx),offset,ColCnt(i,lu)/8,iostat)
 	  else if(ColForm(i,lu).eq.FormI)then
-	    call hreadi(item(lu),data(idx),offset,ColCnt(i,lu),iostat)
+	    call hreadi(item(lu),data(idx),offset,ColCnt(i,lu)/8,iostat)
 	  endif
 	  if(iostat.ne.0)then
 	    call bug('w','I/O error while reading FITS table')
@@ -2818,7 +3257,7 @@ c
 c  Check that the i/o routines alignment requirement is met.
 c
 	size = ftabSize(ColForm(i,lu))
-	if(mod(ColOff(i,lu),size).ne.0)then
+	if(mod(ColOff(i,lu),size/8).ne.0)then
 	  call bug('w','Alignment violation, while reading FITS table')
 	  umsg = 'Offending parameter is '//name
 	  call bug('f',umsg)
@@ -2829,7 +3268,7 @@ c
 	idx = 1
 	offset = DatOff(lu) + ColOff(i,lu)
 	do j=1,rows(lu)
-	  call hreadr(item(lu),data(idx),offset,ColCnt(i,lu),iostat)
+	  call hreadr(item(lu),data(idx),offset,ColCnt(i,lu)/8,iostat)
 	  if(iostat.ne.0)then
 	    call bug('w','I/O error while reading FITS table')
 	    call bugno('f',iostat)
@@ -2890,7 +3329,7 @@ c  alignment requirement. It would be a large amount of work to circumvent
 c  this. For the time being just ignore the problem!!
 c
 	size = ftabSize(ColForm(i,lu))
-	if(mod(ColOff(i,lu),size).ne.0)then
+	if(mod(ColOff(i,lu),size/8).ne.0)then
 #ifdef cft
 	  call bug('w','Alignment violation, while reading FITS table')
 	  umsg = 'Offending parameter is '//name
@@ -2903,7 +3342,7 @@ c
 	idx = 1
 	offset = DatOff(lu) + ColOff(i,lu)
 	do j=1,rows(lu)
-	  call hreadd(item(lu),data(idx),offset,ColCnt(i,lu),iostat)
+	  call hreadd(item(lu),data(idx),offset,ColCnt(i,lu)/8,iostat)
 	  if(iostat.ne.0)then
 	    call bug('w','I/O error while reading FITS table')
 	    call bugno('f',iostat)
@@ -2959,7 +3398,7 @@ c
 c
 c  Determine the length to read each time.
 c
-	length = min(len(data(1)),ColCnt(i,lu))
+	length = min(len(data(1)),ColCnt(i,lu)/8)
 c
 c  All it OK. So just read the data.
 c
@@ -3021,17 +3460,18 @@ c
 c  Input:
 c    Form	One of FormI,FormJ,... etc
 c  Output:
-c    ftabSize	Size of one of the elements, in bytes.
+c    ftabSize	Size of one of the elements, in bits.
 c------------------------------------------------------------------------
 	include 'fitsio.h'
 c
 	integer FormSize(NForms)
 	save FormSize
-	data FormSize(FormJ)/2/
-	data FormSize(FormI)/4/
-	data FormSize(FormA)/1/
-	data FormSize(FormE)/4/
-	data FormSize(FormD)/8/
+	data FormSize(FormJ)/16/
+	data FormSize(FormI)/32/
+	data FormSize(FormA)/ 8/
+	data FormSize(FormE)/32/
+	data FormSize(FormD)/64/
+	data FormSize(FormX)/ 1/
 c
 	ftabSize = FormSize(Form)
 	end
