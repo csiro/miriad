@@ -96,6 +96,11 @@ c                        CONLINCG.  Add box type images to VPSIZCG
 c     nebk   12jul94     Mess about with scale algorithm in VPADJCG
 c     nebk   02aug94     LAB3CG was getting value wrong when channels
 c                        averaged together
+c     nebk   24aug94     Change LAB3CG to use COSUBS coordinate conversion
+c                        routines to label with true world value of third
+c                        third axis
+c     nebk   23dec94     Strings (str1:4) not long enough in ANNWINCG
+c                        Increase length of STR1 in CONFMTCG
 c**********************************************************************
 c
 c* annboxCG -- Annotate plot with information from a box image 
@@ -127,9 +132,12 @@ c    ypos    World y coordinate for next text line
 c--
 c-----------------------------------------------------------------------
       character src*50, str1*132, str2*132, str3*132, str4*132,
-     +  units*20, btype*30
+     +  units*20, btype*30, rtoaf*20
       integer len1, iu, i1, i2, i3, i4
 c-----------------------------------------------------------------------
+c
+c File and objects
+c
       call rdhda (lb, 'object', src, ' ')
       if (src.ne.' ') then
          str2 = ' ('//src(1:len1(src))//')'
@@ -158,9 +166,12 @@ c
 c
 c Format scale factors and peak value
 c
-      call strfmtcg (bfac(4), 4, str2, i2)
-      call strfmtcg (bfac(5), 4, str3, i3)
-      call strfmtcg (bfac(1), 4, str4, i4)
+      str2 = rtoaf(bfac(4),0,4)
+      i2 = len1(str2)
+      str3 = rtoaf(bfac(5),0,4)
+      i3 = len1(str3)
+      str4 = rtoaf(bfac(1),0,4)
+      i4 = len1(str4)
 c
       str1(i1+1:) = ' |B\dmax\u|='//str4(1:i4)//' '//units(1:iu)//
      +              ', x,y-scale='//str2(1:i2)//','//str3(1:i3)//' '//
@@ -176,12 +187,12 @@ c* annconCG -- Annotate plot with information from a contour image
 c& nebk
 c: plotting
 c+
-      subroutine annconcg (lc, cin, slev, nlevs, levs, srtlev, yinc, 
-     +                     xpos, ypos)
+      subroutine annconcg (lc, cin, slev, nlevs, levs, srtlev, dmm,
+     +                     yinc, xpos, ypos)
 c
       implicit none
       integer nlevs, lc, srtlev(nlevs)
-      real slev, xpos, ypos, yinc, levs(nlevs)
+      real slev, xpos, ypos, yinc, levs(nlevs), dmm(2)
       character*(*) cin
 c
 c  Annotate plot with contour image information
@@ -193,6 +204,7 @@ c    slev      Scale factor that levels are scaled by
 c    nlevs     Number of levels
 c    levs      Contour levels
 c    srtlev    Array  giving levels in increasing order
+c    dmm       Data min/max
 c    yinc      Y increment between bases of successive lines of text
 c              in normalized device coordinates
 c    xpos      X location for text
@@ -201,33 +213,45 @@ c    ypos      Y location for text.  On output, is the location for
 c              the next line.
 c--
 c-----------------------------------------------------------------------
-      character str1*132, str2*132, str3*132, src*20
+      character str1*132, str2*132, str3*132, src*20, rtoaf*20, units*20
       integer i1, i2, i3, len1, nlines
 c-----------------------------------------------------------------------
-c
-c Scale factors
-c
-      write (str1, 100) slev
-100   format ('Contours scaled by ', 1pe12.4)
-      i1 = len1(str1)
 c
 c Source name
 c
       call rdhda (lc, 'object', src, ' ')
       if (src.ne.' ') then
-        str2 = ' Contour image: '//cin(1:len1(cin))//' ('//
+        str1 = ' Contour image: '//cin(1:len1(cin))//' ('//
      +         src(1:len1(src))//')'
       else
-        str2 = ' Contour image: '//cin(1:len1(cin))
+        str1 = ' Contour image: '//cin(1:len1(cin))
       end if
+      i1 = len1(str1)
+c
+c Write data min and max
+c
+      str2 = rtoaf(dmm(1),0,4)
       i2 = len1(str2)
-      if (slev.ne.1.0) then
-        str3 = str2(1:i2)//'   '//str1(1:i1)
-      else
-        str3 = str2
-      end if
+      str3 = rtoaf(dmm(2),0,4)
       i3 = len1(str3)
-      call pgtext (xpos, ypos, str3(1:i3))
+      str1(i1+1:) = '  Min/max='//str2(1:i2)//
+     +              '/'//str3(1:i3)
+      i1 = len1(str1)
+c
+c Scale factors
+c
+      str2 = '  Contours x '//rtoaf(slev,0,4)
+      i2 = len1(str2)
+      if (slev.ne.1.0) str1(i1+1:) = str2(1:i2)
+      i1 = len1(str1)
+c
+c Tack on units
+c
+      call rdhda (lc, 'bunit', units, ' ')
+      if (units.ne.' ') str1(i1+1:) = ' '//units(1:len1(units))
+      i1 = len1(str1)
+c
+      call pgtext (xpos, ypos, str1(1:i1))
       ypos = ypos - yinc
 c
 c Write out contour levels
@@ -288,12 +312,12 @@ c* anngrsCG -- Annotate plot with information from a grey scale image
 c& nebk
 c: plotting
 c+
-      subroutine anngrscg (lg, gin, npixr, pixr, trfun, 
+      subroutine anngrscg (lg, gin, npixr, pixr, trfun, dmm,
      +                     yinc, xpos, ypos)
 c
       implicit none
       integer lg, npixr
-      real pixr(2), yinc, xpos, ypos
+      real pixr(2), yinc, xpos, ypos, dmm(2)
       character*(*) gin, trfun
 c
 c  Annotate plot with grey scale image information
@@ -306,45 +330,62 @@ c    pixr    Grey scale intensity range
 c    trfun   Transfer function type
 c    yinc    World increment between text lines
 c    xpos    World x coordinate for text lines
+c    dmm     Min and max displayed for this image
 c  Input/output
 c    ypos    World y coordinate for next text line
 c--
 c-----------------------------------------------------------------------
       character src1*50, str1*132, str2*132, str3*132, 
-     +  str4*132, units*9
-      integer len1, i1, i2, i3, i4
+     +  units*9, rtoaf*20
+      integer len1, i1, i2, i3
 c-----------------------------------------------------------------------
+c
+c Write image name
+c
       call rdhda (lg, 'object', src1, ' ')
       if (src1.ne.' ') then
-        str2 = ' Grey scale image: '//gin(1:len1(gin))//' ('//
+        str1 = ' Grey scale image: '//gin(1:len1(gin))//' ('//
      +          src1(1:len1(src1))//')'
       else
-        str2 = ' Grey scale image: '//gin(1:len1(gin))
+        str1 = ' Grey scale image: '//gin(1:len1(gin))
       end if
-      i2 = len1(str2)
+      i1 = len1(str1)
 c
+c Write data min and max
+c
+      str2 = rtoaf(dmm(1),0,4)
+      str3 = rtoaf(dmm(2),0,4)
+      str1(i1+1:) = '  Min/max='//str2(1:len1(str2))//
+     +              '/'//str3(1:len1(str3))
+      i1 = len1(str1)
+c
+c Write grey scale ranges
+c
+      call rdhda (lg, 'bunit', units, ' ')
       if (npixr.eq.1) then
-        write (str1, 100) pixr(1), pixr(2)
-100     format ('Range = ', 1pe10.3, ' to ', 1pe10.3)
+        str2 = rtoaf(pixr(1),0,4)
+        i2 = len1(str2)
+        str3 = rtoaf(pixr(2),0,4)
+        i3 = len1(str3)
+c
+        str1(i1+1:) = '  Range = '//str2(1:i2)//' to '//str3(1:i3)
         i1 = len1(str1)
 c
-        str3 = str2(1:i2)//'    '//str1(1:i1)
-        i3 = len1(str3)
-c
-        call rdhda (lg, 'bunit', units, ' ')
         if (units.ne.' ') then
-          str4 = str3(1:i3)//' '//units(1:len1(units))//
-     +           ' ('//trfun//')'
+          str1(i1+1:) = ' '//units(1:len1(units))//' ('//trfun//')'
         else
-          str4 = str3(1:i3)//' ('//trfun//')'
+          str1(i1+1:) = ' ('//trfun//')'
         end if
-        i4 = len1(str4)
-        call pgtext (xpos, ypos, str4(1:i4))
       else
-        str3 = str2(1:i2)//'    '//'Various ranges'
-        i3 = len1(str3)
-        call pgtext (xpos, ypos, str3(1:i3))
+        if (units.ne.' ') then
+          str1(i1+1:) = ' '//units(1:len1(units))//'  Various ranges'
+        else
+          str1(i1+1:) = '  Various ranges'
+        end if
       end if
+      i1 = len1(str1)
+c
+      call pgtext (xpos, ypos, str1(1:i1))
       ypos = ypos - yinc
 c
       end
@@ -521,7 +562,7 @@ c
       xpos2 = xpos2 + xlen
 c
       do i = 1, nspec
-        str2 = rtoaf (iscale(i), 0, 3)
+        str2 = rtoaf (iscale(i),0,4)
         i2 = len1(str2)
         str1 = spin(i)(1:len1(spin(i)))//' ('//str2(1:i2)//'),'
         i1 = len1(str1)
@@ -566,6 +607,9 @@ c-----------------------------------------------------------------------
      +  units*20, btype*30
       integer len1, i1, i2, i3, iu
 c-----------------------------------------------------------------------
+c
+c Image name
+c
       call rdhda (lv(1), 'object', src1, ' ')
       if (src1.ne.' ') then
          str3 = ' ('//src1(1:len1(src1))//')'
@@ -586,6 +630,8 @@ c
       str1 = ' Vector images: '//vin(1)(1:len1(vin(1)))//
      +         str2(1:i2)//', '//vin(2)(1:len1(vin(2)))//str3(1:i3)
       i1 = len1(str1)
+c
+c Units
 c
       call rdhda (lv(1), 'bunit', units, ' ')
       call rdbtype (lv(1), btype, ' ')
@@ -649,7 +695,7 @@ c    ypos      Y location for text.  On output, is the location for
 c              the next line.
 c--
 c-----------------------------------------------------------------------
-      character*4 str1, str2, str3, str4
+      character*8 str1, str2, str3, str4
       character*132 stra, strb, strc, strd, stre, line*200
       character gentyp*4, units*10
       integer i1, i2, i3, i4, ia, ib, ic, id, ie, il, iu
@@ -882,7 +928,7 @@ c--
 c-----------------------------------------------------------------------
       real xw1, xw2, yw1, yw2, x1, y1, x2, y2, dx
       integer i1, i2, len1, k
-      character str1*132, str2*30
+      character str1*1000, str2*30
 c-----------------------------------------------------------------------
       call pgqwin (xw1, xw2, yw1, yw2)      
       dx = abs(xw2 - xw1)
@@ -1037,40 +1083,37 @@ c* lab3CG -- Label sub-plot with value and/or pixel of 3rd axis
 c& nebk
 c: plotting
 c+
-      subroutine lab3cg (doerase, doval, dopix, crpix, cdelt, crval, 
-     +                   ctype, labtyp, ipl, plav)
+      subroutine lab3cg (lun, doerase, doval, dopix, labtyp, ipl, plav)
 c
       implicit none
-      double precision cdelt(*), crval(*), crpix(*)
-      integer ipl, plav
+      integer ipl, plav, lun
       logical doval, dopix, doerase
-      character*(*) ctype(*)
       character*6  labtyp(2)
 c
 c  Label the plot with the third axis values or pixel or both
 c
 c  Input
+c    lun        Handle of image
 c    doerase    .true. to erase the background behind the string
 c    doval      .true. if writing value
 c    dopix      .true. if writing pixel
-c    crpix      Array of reference pixels
-c    cdelt      Array of pixel increments
-c    crval      Array of reference values
-c    ctype      Array of axis types
 c    labtyp     Axis label types
 c    ipl        Start plane of image being plotted
 c    plav       Number of planes being averaged for current sub-plot
 c--
 c----------------------------------------------------------------------
-      double precision val3, v1, v2, pix
+      double precision pix, val3
       real mx, my, x1, x2, y1, y2, xb(4), yb(4), dx, dy
       character str1*30, str2*30, str3*60, types(3)*4, ltype*6
-      integer i1, is2, ie2, i3
-      logical ok
+      integer i1, i3, is2, ie2
 c
-      integer len1
-      character dangle*30, dangleh*30
+      include 'maxnax.h'
+      integer len1, naxis
+      character*30 hangleh, rangle
+      character*9 ctypes(maxnax)
 c------------------------------------------------------------------------
+      call rdhdi (lun, 'naxis', naxis, 0)
+      if (naxis.lt.3) return
 c
 c Prepare pixel label
 c
@@ -1079,19 +1122,21 @@ c
         pix = ipl
       else
         pix = (ipl+ipl+plav-1) / 2.0
-        call strfmtcg (real(pix), 1, str1, i1)
+        call strfmtcg (real(pix), 2, str1, i1)
       end if
 c
 c Prepare value label.  The units depend upon what type of axis the
 c third axis is, and what the units of the complementary axis is
 c
+      call initco (lun)
       if (doval) then
-        call axtypcg (3, ctype, types)
-        if (types(3).eq.'VELO' .or. types(3).eq.'FREQ' .or.
-     +      types(3).eq.'UV' .or. types(3).eq.'NONE') then
-c
-c Simple linear axis value label
-c
+        call ctypeco (lun, 3, 0, ctypes)
+        call axtypcg (3, ctypes, types)
+        if (types(3).eq.'VELO') then
+          ltype = 'abskms'
+        else if (types(3).eq.'FREQ') then
+          ltype = 'absghz'
+        else if (types(3).eq.'UV' .or. types(3).eq.'NONE') then
           ltype = 'abslin'
         else if (types(3).eq.'RA' .or. types(3).eq.'LONG') then
 c  
@@ -1124,34 +1169,17 @@ c
         end if
 c
 c Now compute the value of the third axis in the desired units
-c Also convert the increment between sub-plots to these units
-c
-        call pix2wcg (.false., pix, 3, ltype, 3, crval, crpix, 
-     +                cdelt, ctype, val3, ok)
-c
-        call pix2wcg (.false., dble(plav), 3, ltype, 3, crval, crpix, 
-     +                cdelt, ctype, v1, ok)
-        call pix2wcg (.false., 0.0d0, 3, ltype, 3, crval, crpix, 
-     +                cdelt, ctype, v2, ok)
+c and format it
+c 
+        call w2wsco (lun, 3, 'abspix', ' ', pix, ltype, ' ', val3)
+        call finco (lun)
 c
 c Format value
 c
         if (ltype.eq.'hms') then
-c
-c  Pix2wcg returns RA in seconds of time; dangleh wants hours
-c
-          val3 = val3 / (3600.0d0 * 24.0d0)
-c
-c Unwrap if necessary
-c 
-          if (val3.lt.0.0d0) val3 = 24.0d0 + val3
-          str2 = dangleh(val3)
+          str2 = hangleh(val3)
         else if (ltype.eq.'dms') then
-c
-c  Pix2wcg returns DEC in seconds of arc; dangle wants degrees
-c
-          val3 = val3 / 3600.0d0
-          str2 = dangle(val3)
+          str2 = rangle(val3)
         else 
           call strfmtcg (real(val3), 6, str2, ie2)
         end if  
@@ -1346,8 +1374,13 @@ c--
 c-----------------------------------------------------------------------
       integer mm, pp
 c-----------------------------------------------------------------------
-      pp = int(log10(abs(xnum))) - ns
-      mm = nint(xnum/10.0**pp)
+      if (xnum.ne.0.0) then
+        pp = int(log10(abs(xnum))) - ns
+        mm = nint(xnum/10.0**pp)
+      else
+        mm = 0
+        pp = 1
+      end if
 c
       call pgnumb (mm, pp, 0, str, is)
 c
