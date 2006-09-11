@@ -32,6 +32,16 @@ c	    restfreq=1.420405752,0
 c@ options
 c	This gives extra processing options. Several can be given,
 c	separated by comas.
+c	  'birdie'  ATCA self-interference can corrupt channels at integral
+c	            multiples of 128 MHz. The birdie option flags these
+c	            channels. Additionally, in continuum (33 channels/128MHz)
+c	            mode, the birdie option dicards every second channel, plus
+c	            some edge channels. The channels discarded
+c	            are those most likely affected by the self-interference.
+c	            Discarding these channels does not have a
+c	            sensitivity penalty, because the effective channel
+c	            bandwidth is twice the channel separation.
+c	  'reweight' Re-weight the lag spectrum to eliminate the "Gibbs" phenomena.
 c	  'compress' Write output data in compressed format.
 c	  'noauto'  Discard autocorrelation data. The default is to
 c	            copy the autocorrelation data.
@@ -59,15 +69,6 @@ c	            By default ATLOD attempts to map the simultaneous
 c	            frequencies to the IF axis. This will not be possible
 c	            if there are a different number of polarisations in
 c	            the different IFs.
-c	  'birdie'  This option discards every second channel in continuum
-c	            (33 channels/128MHz) mode. The set of channels which is
-c	            discarded are those most likely affected by self-
-c	            interference from the LO. Some edge channels are also
-c	            discarded and the channel nearest a multple of the LO
-c	            frequency is flagged. This option does not have a
-c	            sensitivity penalty, because the effective channel
-c	            bandwidth in continuum mode is twice the channel separation.
-c	  'reweight' Re-weight the lag spectrum to eliminate the "Gibbs" phenomena.
 c@ nfiles
 c	This gives one or two numbers, being the number of files to skip,
 c	followed by the number of files to process. This is only
@@ -144,6 +145,8 @@ c    nebk 03mar95 Add options=birdie and record file names in history.
 c    rjs  14mar95 Discard channels for options=birdie.
 c    rjs  27mar95 Options=reweight.
 c    rjs  26apr95 Make options=unflag always behave as advertised.
+c    rjs  20sep95 Option=birdie flags the birdie channel in spectral
+c		  line mode.
 c
 c  Program Structure:
 c    Miriad atlod can be divided into three rough levels. The high level
@@ -474,7 +477,6 @@ c
 c------------------------------------------------------------------------
 	include 'atlod.h'
 	integer p,t
-	double precision flo
 c
 c  Externals.
 c
@@ -498,13 +500,9 @@ c  If we are working in "birdie" mode, compute the channel with the
 c  128MHz LO signal in it.
 c
 	if(birdie.and.nfreq(if).eq.33)then
-	  flo = sfreq(if) + 0.5*(nfreq(if)-1)*sdf(if)
-	  flo = 0.128d0 * nint(flo/0.128d0)
-	  t = nint((flo - sfreq(if))/sdf(if)) + 1
-	  if(t.le.0) t = t + nint(0.128d0/abs(sdf(if)))
+	  call birdchan(sfreq(if),sdf(if),nfreq(if),t)
 c
 	  edge(if) = 3 + mod(t,2)
-	  bchan(if) = (t - edge(if) - 1)/2 + 1
 	  sfreq(if) = sfreq(if) + edge(if)*sdf(if)
 	  sdf(if) = 2*sdf(if)
 	  nfreq(if) = (nfreq(if)-2*edge(if)+1)/2
@@ -517,6 +515,14 @@ c
 	  nfreq(if) = (nfreq(if)-2*edge(if)+1)/2
 	endif
 c
+c  If birdie mode, flag out the birdie channel.
+c
+	if(birdie)then
+	  call birdchan(sfreq(if),sdf(if),nfreq(if),bchan(if))
+	else
+	  bchan(if) = 0
+	endif
+c
 	nstoke(if) = nstok
 	restfreq(if) = 1e-9 * rfreq
 c
@@ -526,6 +532,20 @@ c
 c
 	newfreq = .true.
 c
+	end
+c************************************************************************
+	subroutine birdchan(sfreq,sdf,nfreq,chan)
+c
+	implicit none
+	integer nfreq,chan
+	double precision sfreq,sdf
+c------------------------------------------------------------------------
+	double precision flo
+c
+	flo = sfreq + 0.5*(nfreq-1)*sdf
+	flo = 0.128d0 * nint(flo/0.128d0)
+	chan = nint((flo - sfreq)/sdf) + 1
+	if(chan.le.0) chan = chan + nint(0.128d0/abs(sdf))
 	end
 c************************************************************************
 	subroutine PokeSC(ant,if,chi1,xtsys1,ytsys1,xyphase1,xyamp1,
@@ -1034,11 +1054,11 @@ c
 c
 	end
 c************************************************************************
-	subroutine DatCpy(nstoke,nfreq,nfreq1,dohann,birdie,edge,
+	subroutine DatCpy(nstoke,nfreq,nfreq1,dohann,skip,edge,
      *					doconj,doneg,in,out)
 c
 	integer nstoke,nfreq,nfreq1,edge
-	logical dohann,doconj,doneg,birdie
+	logical dohann,doconj,doneg,skip
 	complex in(nstoke,nfreq1),out(nfreq)
 c
 c  Copy the data to an output buffer, conjugating and going
@@ -1055,7 +1075,7 @@ c
 	    id = id + 2
 	  enddo
 c
-	else if(birdie)then
+	else if(skip)then
 	  if(nfreq.ne.(nfreq1-2*edge+1)/2)
      *		call bug('f','Incorrect dim info, in DatCpy')
 	  id = edge + 1
