@@ -131,6 +131,8 @@ c                        strings in ANNINICG and ANNWINCG
 c     nebk   31jan96     More sig figs for pixel label in LAB3CG
 c     nebk   02may96     NAXLABCG was in a tangle for RA=0 crossing axes
 c                        when *not* labelled as 'hms'
+c     nebk   31oct96     Make sure zp is correct if just one plane
+c                        in NAXLABCG
 c**********************************************************************
 c
 c* annboxCG -- Annotate plot with information from a box image 
@@ -1476,7 +1478,11 @@ c
 c Absolute pixel of third axis appropriate for this image, and
 c work out pixel blc and trc of corners of displayed image.
 c
-      zp = dble(krng(1)) + dble(krng(2)-1)/2.0d0
+      if (krng(1).eq.krng(2)) then
+         zp = krng(1)
+      else
+         zp = dble(krng(1)) + dble(krng(2)-1)/2.0d0
+      end if
       blcd(1) = blc(1) - 0.5d0
       blcd(2) = blc(2) - 0.5d0
       trcd(1) = trc(1) + 0.5d0
