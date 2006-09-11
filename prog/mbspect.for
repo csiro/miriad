@@ -6,7 +6,7 @@ c  	MBSPECT makes an average spectrum of a specified region of a
 c	Miriad image. The average spectrum can be plotted and/or written
 c	out as an ascii file for further analysis.
 c
-c= MBSPECT - Make spectrum from a Miriad image.
+c= MBSPECT - Make spectrum and measure velocities from a Miriad image.
 c& lss
 c: image analysis and display.
 c+
@@ -27,7 +27,8 @@ c       MbSpect.
 c@ coord
 c       The position, in world coordinates, for which the spectrum is
 c       required, e.g. coord=12:00:13,-42:00:43. The cube must have
-c       an RA and a DEC axis. No default.
+c       an RA and a DEC axis. The pixel with the nearest position is
+c       chosen. No default.
 c@ width
 c       Two numbers, being the spatial width of the box in pixels (in RA
 c       and DEC) within which the spectrum is averaged (or integrated).
@@ -105,7 +106,7 @@ c@ log
 c       Write spectrum to this ascii file. Spectral axis units are as
 c       specified by the xaxis keyword. Default is no output file.
 c@ comment
-c	A one-line comment which is written into the logfile.
+c	A one-line comment which is written into the logfile and any plot.
 c--
 c
 c  History:
@@ -130,7 +131,9 @@ c
         real work1(maxdim),weight(maxdim),work2(4*maxdim)
 	real coeffs(maxco),hwork(maxco),yrange(2),xrange(2)
 	double precision restfreq, coord(2), scoord(3), dtrc(3),dtemp
+	double precision rcoord(3), etrc(3)
 	real xdmin, xdmax, ydmin, ydmax, fac, temp, clip(2)
+	real xv(2), yv(2), xw(2), yw(2), epoch
 	real bmaj,bmin,bpa,cdelt1,cdelt2,cdelt3,cdeltr,cdeltd
 	integer lIn,lOut,raxis,daxis,vaxis,i,nsmth,nchan,iostat
 	integer width(2),poly,nmask
@@ -139,14 +142,17 @@ c
 	character title*130, line*72,comment*80, str*3, word*80
 	character*9 object,date,rctype*9,dctype*9,vctype*9
 	character*16 unit0
+	character ra1*13, ra2*13, dec1*13, dec2*13
 c
 c  Externals.
 c
 	integer len1, pgbeg
-        character itoaf*3
+        character itoaf*3, hangle*32, rangle*32
         logical   keyprsnt
-
-        call output( 'MbSpect: '//version )
+c
+c  Remove program ID, so this can pipe gif and ps files straight to web
+c
+c        call output( 'MbSpect: '//version )
 c
 c  Get inputs
 c
@@ -263,6 +269,10 @@ c
 	  end if
 	end if
 c
+c  Find equinox
+c
+	call rdhdr(lin,'epoch',epoch,0.)
+c
 c  x-axis
 c
 	if(xaxis.eq.' ') xaxis=vctype(1:4)
@@ -279,6 +289,27 @@ c
 	   trc(i)=nint(dtrc(i))
 	   blc(i)=trc(i)
 	end do
+c
+c  Formatted value for requested coordinate
+c
+	ra1=hangle(coord(1))
+	dec1=rangle(coord(2))
+c
+c  Formatted value for actual coordinate, if yaxis is sum or average
+c
+	if(yaxis.eq.'point'.and.(width(1).gt.1.0.or.
+     *                              width(2).gt.1.0)) then
+	   ra2=ra1
+	   dec2=dec1
+	else
+	  do i=1,3
+	     rcoord(i)=0.0
+	     etrc(i)=dble(trc(i))
+	  end do
+	  call coCvt(lIn,'ap/ap/ap',etrc,'aw/aw/aw',rcoord)
+	  ra2=hangle(rcoord(raxis))
+	  dec2=rangle(rcoord(daxis))
+	end if
 c
 c  Give box a spatial width
 c
@@ -376,7 +407,7 @@ c
 c  mbspect title
 c
 	call imheader(lIn,object,restfreq,date)
-	title=object
+	title=' '
 c
 c  Get plot axes, convert units, and write labels.
 c
@@ -495,6 +526,34 @@ c
 	     call pgsci(1)
 	  end if
 	  call pglab (xlabel,ylabel,title)
+c
+c  Extra information
+c
+	  call pgqvp(0,xv(1),xv(2),yv(1),yv(2))
+	  call pgqwin(xw(1),xw(2),yw(1),yw(2))
+	  call pgsvp(xv(1),xv(2),yv(2),1.0)
+	  call pgswin(0.0,1.0,0.0,1.0)
+	  call pgsch(0.8)
+	  call pgscf(1)
+	  call pgtext(0.0,0.8,'Object: '//object)
+	  call pgtext(0.0,0.6,'Requested: '//ra1//dec1)
+	  call pgtext(0.0,0.4,'Actual    : '//ra2//dec2)
+	  title='Equinox  :'
+	  if(epoch.ne.0.0) then
+	     if(epoch.eq.1950.0) then
+	       title='Equinox  : B1950'
+	     else if(epoch.eq.2000.0) then
+	       title='Equinox  : J2000'
+	     else
+	       write(title(13:16), '(i4)') int(epoch)
+	     end if
+	  end if
+	  call pgtext(0.0,0.2,title)
+	  call pgptext(1.0,0.8,0.0,1.0,comment)
+	  call pgsvp(xv(1),xv(2),yv(1),yv(2))
+	  call pgswin(xw(1),xw(2),yw(1),yw(2))
+	  call pgsch(1.0)
+	  call pgscf(2)
 	endif
 
 c
