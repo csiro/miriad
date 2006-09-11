@@ -16,8 +16,8 @@ c@ in2
 c       The second input image.  No default
 c@ region
 c	Region to select data to compare. Only pixels where both input 
-c	maps were unmasked will be compared. The full region description
-c	has not been implemented yet. See also IMMASK.
+c	maps were unmasked will be compared. Only a rectangular region
+c	of interest is supported.
 c@ cut
 c       Cutoff applied to data. By default not used, all data used.
 c@ tol
@@ -47,6 +47,8 @@ c                  implemented cut=; pgbegin as function, (all from apr-92)
 c     4mar93 pjt   tmpdim.h until memalloc() done properly
 c    13mar93 mjs   pgplot subr names have less than 7 chars.
 c     8jun94 pjt   region= clarification
+c    14may96 rjs   Fix bugs, implement region selection, better messages,
+c		   some tidying. Shoddy job pjt.
 c
 c  Various things to do or to think about:
 c   - fit portions of data with LSQFIT
@@ -62,31 +64,28 @@ c     only the dimensions are checked, but really one
 c     should also check if crpix, cdelt and crval are 
 c     consistent.
 c-----------------------------------------------------------------------
-      INCLUDE 'tmpdim.h'
-c -- temporary big one until new MAXDIM
-c      INTEGER MAXDIM
-c      PARAMETER (MAXDIM=1024)
+      INCLUDE 'maxdim.h'
 c
       CHARACTER PVERSION*(*)
-      INTEGER NAXIS, MAXPTS
-      PARAMETER(NAXIS=3, MAXPTS=MAXBUF/2)
-      PARAMETER(PVERSION='Version 1.0 4-mar-93')
+      INTEGER NAXIS, MAXPTS,  MAXBOXES
+      PARAMETER(NAXIS=3, MAXPTS=MAXBUF/2, MAXBOXES=1024)
+      PARAMETER(PVERSION='Version 1.0 14-May-96')
 c
       CHARACTER in1*80,in2*80,line*256,logfile*80
       INTEGER row,plane,i,dcount,llog,iostat,tolcount
-      INTEGER lin1,lin2,size1(NAXIS),size2(NAXIS)
+      INTEGER lin1,lin2,size1(NAXIS),size2(NAXIS),blc(NAXIS),trc(NAXIS)
       REAL buf1(MAXDIM),buf2(MAXDIM), d1(MAXPTS), d2(MAXPTS),tol,cut
       REAL dmin, dmax,dminh,dmaxh,dminv,dmaxv,limx(2),limy(2),diff
-      REAL diffmin, diffmax
+      REAL boxes(MAXBOXES)
       LOGICAL mask1(MAXDIM), mask2(MAXDIM), first, doplot
       LOGICAL dolog,dolimx,dolimy,docut
       CHARACTER device*40
-c
 c
 c  Externals.
 c
       LOGICAL keyprsnt
       INTEGER len1, pgbeg
+      CHARACTER itoaf*8
 c-----------------------------------------------------------------------
       CALL output( 'IMCMP: '//PVERSION)
 c
@@ -95,6 +94,7 @@ c
       CALL keyini
       CALL keyf('in1',in1,' ')
       CALL keyf('in2',in2,' ')
+      CALL boxinput('region',in1,boxes,MAXBOXES)
       CALL keyr('tol',tol,0.0)
       doplot = keyprsnt('device')
       IF(doplot) CALL keya('device',device,' ')
@@ -137,21 +137,23 @@ c
          ENDIF
       ENDDO
       CALL assertl(size1(1).LE.MAXDIM,'Image too big for me')
+      CALL boxset(boxes,NAXIS,size1,'s')
+      CALL boxinfo(boxes,NAXIS,blc,trc)
 c
 c  copy the maps and masks into the output, plane by plane, row by row
 c  NOTE: the region limits should be added here
 c 
       first = .TRUE.
       dcount = 0
-      DO plane = 1,size1(3)
+      DO plane = blc(3),trc(3)
          CALL xysetpl(lin1,1,size1(3))
          CALL xysetpl(lin2,1,size1(3))
-         DO row=1,size1(2)
+         DO row=blc(2),trc(2)
  	    CALL xyread(lin1,row,buf1)
             CALL xyflgrd(lin1,row,mask1)
  	    CALL xyread(lin2,row,buf2)
             CALL xyflgrd(lin2,row,mask2)
-            DO i=1,size1(1)
+            DO i=blc(1),trc(1)
                IF(mask1(i).AND.mask2(i)) THEN
                   IF(.NOT.docut .OR.
      *               (docut .AND. buf1(i).GT.cut .AND. buf2(i).GT.cut))
@@ -182,25 +184,17 @@ c
       CALL xyclose(lin2)
       IF(dcount.EQ.MAXPTS) CALL bug('w',
      *      'Too many points in image; only first few taken')
-      WRITE(line,'(I10,'' data; Min and max in maps are:'',2e18.6)') 
-     *              dcount,dmin,dmax
+      CALL output('Number of pixels selected: '//itoaf(dcount))
+      WRITE(line,'(''Image min and max values are:'',1p2e18.6)') 
+     *              dmin,dmax
       CALL output(line)
       tolcount = 0
       DO i=1,dcount
-         diff=buf1(i)-buf2(i)
-         IF(i.EQ.1) THEN
-            diffmin=diff
-            diffmax=diff
-         ELSE
-            diffmin=MIN(diffmin,diff)
-            diffmax=MIN(diffmax,diff)
-         ENDIF
+         diff=d1(i)-d2(i)
          IF(ABS(diff).GT.tol) tolcount=tolcount+1
       ENDDO
-      WRITE(line,'(I10,'' datapoints differ beyond tol='',e18.6)')
-     *     tolcount,tol
-      CALL output(line)
-        
+      CALL output('Number of pixles differing by more than tol: '//
+     *	itoaf(tolcount))
 c
 c  Write the data to a file if log option is present
 c
