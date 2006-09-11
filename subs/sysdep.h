@@ -16,19 +16,47 @@
  *                Void typedef permits proper casting in both ANSI
  *                and non-ANSI archs.  Also added definition to permit
  *                the use of const in non-ANSI declarations.
- *    rjs 20nov94 Added alphas.
+ *     jm 17nov94 Changed the conditional definition around the typedef
+ *                of Void because Sun defines __STDC__ even when it is
+ *                zero!  Defined PROTOTYPE as 1 if __STDC__ is set to 1;
+ *                otherwise it is undefined.  Also added ARGS definition
+ *                to aide forward declartion prototyping.
+ *    rjs 20nov94 Added "alpha" ifdef.
  */
 
 #ifndef Null
 #define Null '\0'
 #endif
 
+/*
+ *  Void is typedef'd to the proper word depending on the level of
+ *  ANSI conformance.  Also, if ANSI conforming, Const is typedef'd
+ *  to const; otherwise, Const is defined as a NULL statement.
+ *
+ *  PROTOTYPE is defined only if function prototypes are correctly
+ *  understood.
+ *
+ *  ARGS defines a macro that aides in presenting prototypes.
+ *  Use it as (double parentheses required):
+ *    extern void keyput_c ARGS((const char *task, char *arg));
+ */
+
 #ifdef __STDC__
+#if (__STDC__ == 1)
 typedef void Void;
+typedef const Const;
+#define PROTOTYPE 1
+#define ARGS(alist) alist
 #else
 typedef char Void;
-#define const /* NULL */
-#endif /*__STDC__*/
+#define Const /* NULL */
+#define ARGS(alist) ()
+#endif /* (__STDC__ == 1) */
+#else
+typedef char Void;
+#define Const /* NULL */
+#define ARGS(alist) ()
+#endif /* __STDC__ */
 
 typedef int int2;
 
@@ -107,4 +135,3 @@ typedef int int2;
 #  define unpack32_c(a,b,c) memcpy((char *)(b),(a),sizeof(int)*(c))
 #endif
 #endif
-
