@@ -120,6 +120,7 @@ c     nebk   19jul94     Allow roundoff tolerance in CHKDESCG
 c     nebk   27aug94     Convert OL2PIXCG to use correct coordinate 
 c                        conversion routines via COSUBS.FOR
 c     nebk   15jan95     Add SAVDESCG
+c     nebk   14apr95     Add HARD and DOFID arguments to WEDGINCCG
 c***********************************************************************
 c
 c* apptrfCG -- Apply transfer function to image
@@ -2757,38 +2758,61 @@ c* wedginCG -- See if grey scale wedges are inside or outside subplots
 c& nebk
 c: plotting
 c+
-      subroutine wedgincg (dowedge, nx, ny, npixr, trfun, wedcod)
+      subroutine wedgincg (hard, dofid, dowedge, nx, ny, npixr, 
+     +                     trfun, wedcod)
 c
       implicit none
-      logical dowedge
+      logical dowedge, dofid
       integer nx, ny, npixr, wedcod
-      character trfun*3
+      character trfun*3, hard*3
 c
 c Work out whether the grey scale wedges are to be drawn inside
 c or outside the subplots, and whether there will be one or many
 c  
 c Input
+c  hard      'YES' if writing to hardcopy PGPLOT device
+c  dofid     True if user has requested OFM fiddle option
 c  dowedge   True if user requests wedge
 c  nx,ny     Number of subplots in x and y directions
 c  npixr     NUmber of grey scale "range" groups given by user
 c  trfun     Transfer function type of first "range" group
 c Output
-c wedcod     1 -> one wedge to right of all subplots
+c wedcod     0 -> No wedges
+c            1 -> one wedge to right of all subplots
 c            2 -> one wedge to right per subplot
 c            3 -> one wedge per subplot inside subplot
 c--
 c-----------------------------------------------------------------------
-      if (dowedge) then
-        if (nx*ny.eq.1 .or. (npixr.eq.1 .and. trfun.ne.'heq')) then
-          wedcod = 1
-        else if (ny.gt.1.and.nx.eq.1 .and. ((npixr.eq.1 .and. 
-     +           trfun.eq.'heq') .or. npixr.gt.1)) then
-          wedcod = 2
-        else 
-          wedcod = 3
-        end if
-      else    
+      if (.not.dowedge) then
         wedcod = 0
+      else      
+        if (hard.eq.'YES') then
+          if (nx*ny.eq.1) then
+            wedcod = 1   
+          else
+            if (dofid) then
+              wedcod = 3
+            else
+              if (npixr.eq.1 .and. trfun.ne.'heq') then
+                wedcod = 1
+              else if (ny.gt.1.and.nx.eq.1 .and. ((npixr.eq.1 .and. 
+     +                 trfun.eq.'heq') .or. npixr.gt.1)) then
+                wedcod = 2
+              else
+                wedcod = 3
+              end if
+            end if
+          end if
+        else
+          if (nx*ny.eq.1 .or. (npixr.eq.1 .and. trfun.ne.'heq')) then
+              wedcod = 1
+          else if (ny.gt.1.and.nx.eq.1 .and. ((npixr.eq.1 .and. 
+     +             trfun.eq.'heq') .or. npixr.gt.1)) then
+            wedcod = 2
+          else 
+            wedcod = 3
+          end if
+        end if
       end if
 c
       end
