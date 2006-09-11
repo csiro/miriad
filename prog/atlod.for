@@ -59,6 +59,17 @@ c	            By default ATLOD attempts to map the simultaneous
 c	            frequencies to the IF axis. This will not be possible
 c	            if there are a different number of polarisations in
 c	            the different IFs.
+c	  'birdie'  flag out birdies in any 33 channel and 128MHz mode
+c		    continuum data.  Birdies occur at N*128MHz. If  the
+c		    birdie is in channel I, this options flags out channels
+c		    I-5,I-3,I-1,I,I+1,I+3,I+5.  This is necessary because
+c		    the birdie will ring through the spectrum owing to the 
+c		    triangular lag weighting function (F.T.to a SinC squared 
+c		    in the frequency domain).  Note that since adjacent 
+c		    channels are not independent, you are not losing any 
+c		    significant signal-to-noise ratio by doing this, and
+c		    you will eradicate the phase centre artifacts that
+c		    they can cause.
 c@ nfiles
 c	This gives one or two numbers, being the number of files to skip,
 c	followed by the number of files to process. This is only
@@ -131,6 +142,7 @@ c    rjs  25jan95 Write the fudged source name (rather than just
 c		  discarding it!!).
 c    nebk 18feb95 Write out a correct fudged source name rather than
 c		  a totally scrambled one.  Mr. S must be on drugs again.
+c    nebk 03mar95 Add options=birdie and record file names in history
 c
 c  Program Structure:
 c    Miriad atlod can be divided into three rough levels. The high level
@@ -156,23 +168,27 @@ c------------------------------------------------------------------------
 	integer MAXFILES
 	parameter(MAXFILES=128)
 	character version*(*)
-	parameter(version='AtLod: version 18-Feb-95')
+	parameter(version='AtLod: version 09-Mar-95')
 c
 	character in(MAXFILES)*64,out*64
 	integer tno
-	integer ifile,ifsel,nfreq,iostat,nfiles,i
+	integer ifile,ifsel,nfreq,iostat,nfiles,i,lt
 	double precision rfreq(2)
 	logical doauto,docross,docomp,dosam,relax,unflag,dohann,dobary
-	logical doif
+	logical doif,birdie
 	integer fileskip,fileproc,scanskip,scanproc
 c
 c  Externals.
 c
 	character itoaf*8
+        integer len1
 c
 c  Get the input parameters.
 c
 	call output(version)
+        call output ('Options=birdie now available to flag out ')
+        call output ('N*128MHz birdies in 33 channel 128MHz mode')
+        call output (' ')
 	call keyini
 	call mkeyf('in',in,MAXFILES,nfiles)
 	if(nfiles.eq.0)
@@ -183,7 +199,7 @@ c
         call keyi('ifsel',ifsel,0)
         call mkeyd('restfreq',rfreq,2,nfreq)
 	call getopt(doauto,docross,docomp,dosam,relax,unflag,
-     *					dohann,dobary,doif)
+     *		    dohann,dobary,doif,birdie)
 	call keyi('nfiles',fileskip,0)
 	call keyi('nfiles',fileproc,nfiles-fileskip)
 	if(nfiles.gt.1.and.fileproc+fileskip.gt.nfiles)
@@ -229,7 +245,7 @@ c
 	    endif
 	    call PokeIni(tno,dosam,dohann,dobary,doif)
 	    call RPDisp(in(i),scanskip,scanproc,doauto,docross,
-     *				relax,unflag,ifsel,rfreq,nfreq,iostat)
+     *			relax,birdie,unflag,ifsel,rfreq,nfreq,iostat)
 	  endif
 	enddo
 c
@@ -238,6 +254,12 @@ c
 	call hisopen(tno,'write')
 	call hiswrite(tno,'ATLOD: Miriad'//version)
 	call hisinput(tno,'ATLOD')
+        call hiswrite(tno,'ATLOD: Summary of files read')
+        do i = 1, nfiles
+          out = itoaf(i)
+          lt = len1(out)
+          call hiswrite(tno,'ATLOD:    file '//out(1:lt)//' = '//in(i))
+        enddo
 	call hisclose(tno)
 c
 c  Close up shop.
@@ -251,11 +273,11 @@ c
 	end
 c************************************************************************
 	subroutine GetOpt(doauto,docross,docomp,dosam,relax,unflag,
-     *						dohann,dobary,doif)
+     *				dohann,dobary,doif,birdie)
 c
 	implicit none
 	logical doauto,docross,dosam,relax,unflag,dohann,dobary
-	logical docomp,doif
+	logical docomp,doif,birdie
 c
 c  Get the user options.
 c
@@ -269,14 +291,15 @@ c    doif	Map the simultaneous frequencies to the IF axis.
 c    relax
 c    unflag
 c    dobary	Compute barycentric radial velocities.
+c    birdie     Flag out 128MHz birdies
 c------------------------------------------------------------------------
 	integer nopt
-	parameter(nopt=9)
+	parameter(nopt=10)
 	character opts(nopt)*8
 	logical present(nopt)
 	data opts/'noauto  ','nocross ','compress','relax   ',
      *		  'unflag  ','samcorr ','hanning ','bary    ',
-     *		  'noif    '/
+     *		  'noif    ','birdie  '/
 	call options('options',opts,present,nopt)
 	doauto = .not.present(1)
 	docross = .not.present(2)
@@ -287,6 +310,7 @@ c------------------------------------------------------------------------
         dohann  = present(7)
 	dobary  = present(8)
 	doif    = .not.present(9)
+        birdie  = present(10)
 c
 	if(dosam.and.relax)call bug('f',
      *	  'You cannot use options samcorr and relax simultaneously')
@@ -787,7 +811,8 @@ c
 		    ipnt = pnt(if,p,bl,bin)
 		    if(ipnt.gt.0)then
 		      call PolPut(tno,polcode(if,p),dosw(bl))
-		      call GetFlag(flag(if,p,bl,bin),nfreq(if),flags)
+		      call GetFlag(nobird(if),bflags(1,if),
+     *                  flag(if,p,bl,bin),nfreq(if),flags)
 		      call uvputvri(tno,'bin',bin,1)
 		      call uvputvrr(tno,'inttime',inttime(bl),1)
 		      call uvwrite(tno,preamble,data(ipnt),flags,
@@ -831,8 +856,9 @@ c
 	        if(npol.gt.0)then
 		  call uvputvri(tno,'npol',npol,1)
 	          do p=1,nstoke(1)
-		    call GetDat(data,nused,pnt(1,p,bl,bin),
-     *			flag(1,p,bl,bin),nfreq,nifs,vis,flags,nchan)
+		    call GetDat(nobird,bflags,data,nused,
+     *			pnt(1,p,bl,bin),flag(1,p,bl,bin),nfreq,
+     *                  nifs,vis,flags,nchan)
 		    if(nchan.gt.0)then
 		      call uvputvri(tno,'bin',bin,1)
 		      call uvputvri(tno,'pol',polcode(1,p),1)
@@ -994,11 +1020,11 @@ c
 c
 	end
 c************************************************************************
-	subroutine GetFlag(flag,n,flags)
+	subroutine GetFlag(nobird,bflags,flag,n,flags)
 c
 	implicit none
 	integer n
-	logical flag,flags(n)
+	logical flag,flags(n),nobird,bflags(*)
 c
 c  Set the flags.
 c------------------------------------------------------------------------
@@ -1007,6 +1033,14 @@ c
 	do i=1,n
 	  flags(i) = flag
 	enddo
+c
+        if(.not.nobird) then
+          do i = 1, n
+            if (.not.bflags(i)) then
+              flags(i) = .false.
+            end if
+          enddo
+        end if
 c
 	end
 c************************************************************************
@@ -1108,16 +1142,17 @@ c
 c
 	end
 c************************************************************************
-	subroutine GetDat(data,nvis,pnt,flag,nfreq,nifs,vis,flags,nchan)
+	subroutine GetDat(nobird,bflags,data,nvis,pnt,flag,nfreq,nifs,
+     *                    vis,flags,nchan)
 c
 	implicit none
 	integer nvis,nifs,pnt(nifs),nfreq(nifs),nchan
-	logical flag(nifs),flags(*)
+	logical flag(nifs),flags(*),nobird(nifs),bflags(33,nifs)
 	complex vis(*),data(nvis)
 c
-c  Construct a visibility record constructed from multiple IFs.
+c  Construct a visibility record from multiple IFs.
 c------------------------------------------------------------------------
-	integer n,ipnt,i,nchand
+	integer n,ipnt,i,nchand,k
 c
 	nchan = 0
 	nchand = 0
@@ -1137,6 +1172,13 @@ c
 	      flags(i) = flag(n)
 	      ipnt = ipnt + 1
 	    enddo
+            if (.not.nobird(n)) then
+              k = 1
+              do i = nchan+1,nchan+nfreq(n)
+                if (.not.bflags(k,n)) flags(i) = .false.
+                k = k + 1
+              enddo
+            endif
 	    nchan = nchan + nfreq(n)
 	  endif
 	  nchand = nchand + nfreq(n)
@@ -1258,14 +1300,14 @@ c------------------------------------------------------------------------
 	if(iostat.eq.0)call RPClose(iostat)
 	end
 c************************************************************************
-	subroutine RPDisp(in,scanskip,scanproc,doauto,docross,
-     *			relax,unflag,ifsel,userfreq,nuser,iostat)
+	subroutine RPDisp(in,scanskip,scanproc,doauto,docross,relax,
+     *			  birdie,unflag,ifsel,userfreq,nuser,iostat)
 c
 	implicit none
 	character in*(*)
 	integer scanskip,scanproc,ifsel,nuser,iostat
 	double precision userfreq(*)
-	logical doauto,docross,relax,unflag
+	logical doauto,docross,relax,unflag,birdie
 c
 c  Process an RPFITS file. Dispatch information to the
 c  relevant Poke routine. Then eventually flush it out with PokeFlsh.
@@ -1276,6 +1318,7 @@ c    scanproc	Number of scans to process. If 0, process all scans.
 c    doauto	Save autocorrelation data.
 c    docross	Save crosscorrelation data.
 c    relax	Save data even if it lacks a SYSCAL record.
+c    birdie     Flag birdies
 c    unflag	Save data even though it may appear flagged.
 c    ifsel	IF to select. 0 means select all IFs.
 c    userfreq	User-given rest frequency to override the value in
@@ -1455,12 +1498,15 @@ c
 		    call PokeIF(i,if_nfreq(id),if_invert(id)*if_bw(id),
      *			if_freq(id),if_ref(id),rfreq,
      *			if_nstok(id),if_cstok(1,id))
+                    call setbfl (birdie, i)
 		  enddo
+
 		endif
 		if(NewScan)call PokeInfo(scanno,time)
 		if(NewScan.or.NewSrc)call PokeSrc(su_name(srcno),
      *		  su_ra(srcno),su_dec(srcno),
      *		  su_rad(srcno),su_decd(srcno))
+
 	      endif
 c
 c  Flush out any buffered SYSCAL records.
@@ -1930,6 +1976,52 @@ c
 	enddo
 c
 	end
+c
+c
+      subroutine setbfl (birdie, if)
+c
+      implicit none
+c
+      include 'atlod.h'
+      integer if
+      logical birdie
+c
+c
+c  Look for birdies if 128MHz 33 channel data
+c------------------------------------------------------------------------
+      double precision fb, fc
+      integer jb, ib, i
+c
+      if (birdie .and. nfreq(if).eq.33) then
+c
+c Find nearest N*128MHz birdie
+c
+        fc = (sfreq(if) + 16*sdf(if)) * 1.0e3
+        jb = nint(fc/128.0d0)
+        fb = jb * 128.0d0
+        ib = (fb/1.0d3-sfreq(if))/sdf(if) + 1
+c        write (*,*) 'fc=',fc
+c        write (*,*) 'Birdie at ', ib, fb
+c
+c Flag it out
+c 
+        do i = 1, 33
+          bflags(i,if) = .true.
+        end do
+        if (ib-5.ge.2) bflags(ib-5,if) = .false.
+        if (ib-3.ge.2) bflags(ib-3,if) = .false.
+        if (ib-1.ge.2) bflags(ib-1,if) = .false.
+        bflags(ib,if)                  = .false.
+        if (ib+1.le.nfreq(if)) bflags(ib+1,if) = .false.
+        if (ib+3.le.nfreq(if)) bflags(ib+3,if) = .false.
+        if (ib+5.le.nfreq(if)) bflags(ib+5,if) = .false.
+        nobird(if) = .false.
+      else
+        nobird(if) = .true.
+      end if
+c
+      end
+
 c************************************************************************
 c************************************************************************
 c
