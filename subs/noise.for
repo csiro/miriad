@@ -12,6 +12,7 @@ c    rjs  25jan95  Mods for linux.
 c    rjs  18aug95  Get it to work on SGI.
 c    rjs  18sep95  Did I screw up in the above??I don't understand whats
 c		   happened to the code.
+c    rjs  24oct99  Added "save" statement in "ran" function.
 c************************************************************************
 c
 c  Choose which random number style we are to use. We have three choices:
@@ -70,7 +71,6 @@ c------------------------------------------------------------------------`
 #ifdef vms_style
 	integer iseed
 	common/noisecom/iseed
-	data iseed/12345/
 	iseed = seed
 #endif
 #ifdef unix_style
@@ -121,7 +121,15 @@ c------------------------------------------------------------------------
 #ifdef vms_style
 	real ran
 	integer iseed
+	logical first
+	save first
 	common/noisecom/iseed
+	data first/.true./
+	if(first)then
+	  iseed = 12345
+	  first = .false.
+	endif
+	
 	do i=1,n
 	  data(i) = ran(iseed)
 	enddo
@@ -213,7 +221,7 @@ c
 c
       integer seed
       logical first
-      save first
+      save first,r,ix1,ix2,ix3
       data first/.true./
 c
       if (iseed.ne.0.or.first) then
