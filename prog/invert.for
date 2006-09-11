@@ -268,6 +268,8 @@ c    rjs   27oct94  First released version. with mosaicing.
 c    rjs   18nov94  Eliminate rounding error problem in calculating freq0.
 c	            Better messages for natural weighting. ref linetype.
 c    rjs   28nov94  Determine the weights in a pointing-dependent manner.
+c    rjs    3dec94  Some changes to make it work nicerer with single pointing
+c		    mosaics.
 c  Bugs:
 c    - It would be nice to have a primary-beam dependent default image size.
 c    - The uniform weighting scheme for mosaiced observations is not
@@ -278,7 +280,7 @@ c------------------------------------------------------------------------
 	include 'mem.h'
 c
 	character version*(*)
-	parameter(version='Invert: version 1.0 28-Nov-94')
+	parameter(version='Invert: version 1.0 3-Dec-94')
 	integer MAXPOL,MAXRUNS
 	parameter(MAXPOL=4,MAXRUNS=4*MAXDIM)
 c
@@ -437,6 +439,13 @@ c
 	call HdSet(cellx,celly,ra0,dec0,proj,freq0)
 	call HdCoObj(coObj)
 c
+c  Tell about the mean frequency, if necessary.
+c
+	if(mfs)then
+	  write(line,'(a,1pg9.3)')'Mean Frequency(GHz):    ',freq0
+	  call output(line)
+	endif
+c
 c  Do the geometry and shift calculations. At the end of this, coObj
 c  fully describes the coordinate system of the output.
 c
@@ -490,19 +499,15 @@ c
 	if(nUWts.gt.0)call MemFree(UWts,nUWts,'r')
 	if(mosaic)call mosGFin
 c
-c  Tell about the mean frequency, if necessary.
-c
-	if(mfs)then
-	  write(line,'(a,1pg9.3)')'Mean Frequency(GHz):    ',freq0
-	  call output(line)
-	endif
-c
 c  Tell the user about the noise level in the output images.
 c
 	write(line,'(a,1pg10.3)')'Theoretical rms noise:',
      *					Rms*sqrt(real(npnt))
 	call output(line)
-	if(mosaic) Rms = 0
+	if(npnt.gt.1)then
+	  call output(' ... assuming pointings do not overlap')
+	  Rms = 0
+	endif
 c
 c  Reopen the first visibility dataset, to extract history from.
 c
@@ -578,13 +583,13 @@ c
 	    call Mapper(k,Map)
 	    if(mosaic)then
 	      if(nchan.gt.1)then
-		call output('Mosaicing plane '//itoaf(i))
+		 call output('Mosaicing plane '//itoaf(i))
 	      else
 		call output('Mosaicing the image ...')
 	      endif
 	      call MosMIni(coObj,real(i))
 	      call Mosaicer(memr(Map),memr(MMap),nx,ny,npnt,mnx,mny,
-     *		Runs,MAXRUNS,nRuns)
+     *		  Runs,MAXRUNS,nRuns)
 	      call MosMFin
 	      call PutRuns(tno,Runs,nRuns,0,0,mnx,mny)
 	    else
