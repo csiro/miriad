@@ -55,5 +55,13 @@
 
 void hopen_c(),hclose_c(),haccess_c(),hdaccess_c(),hio_c(),
 	hreada_c(),hwritea_c(),hdelete_c(),habort_c(),hrm_c(),hseek_c(),
-	hmode_c();
+	hmode_c(),hflush_c();
 int hsize_c(),hexists_c(),htell_c();
+
+/* Other handy definitions. */
+
+#define TRUE 			1
+#define FALSE			0
+#define max(a,b) ((a)>(b)?(a):(b))
+#define min(a,b) ((a)<(b)?(a):(b))
+#define mroundup(a,b) ((b)*(((a)+(b)-1)/(b)))
