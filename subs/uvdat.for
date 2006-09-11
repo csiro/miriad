@@ -67,6 +67,7 @@ c    rjs  10nov95 uvDatSet can disable calibration/Stokes conversion.
 c		  Initialise nPol.
 c    rjs  06dec95 line=chan,0 defaults to selecting all channels.
 c    nebk 10dec95 Be a bit cleverer (?) with reissuing calibration messages
+c    rjs  28may96 Initialise "line" variable to a blank!
 c
 c  User-Callable Routines:
 c    uvDatInp(key,flags)
@@ -200,6 +201,7 @@ c
 c
 c  Determine the input linetype.
 c
+	line = ' '
 	if(dodata)then
 	  call keyline(line,nchan,lstart,lwidth,lstep)
 	  if(line.eq.' '.and.index(flags,'1').gt.0)nchan = 1
