@@ -110,12 +110,15 @@ c--
 c
 c  History:
 c    lss  26jul99  Copied "imspect" to "mbspect" for HIPASS-specific chores
+c    rjs  29aug99  Some FORTRAN standardization.
+c    rjs   3sep99  Change pgpt1 to pgpt calls.
+c    lss   3sep99  pgpt bug when order negative; added rms output line
 c----------------------------------------------------------------------c
 	include 'maxdim.h'
 	integer maxco,maxnax,naxis,maxch
  	character version*(*)
 
-	parameter(version='version 1.0 28-Aug-99')
+	parameter(version='version 1.0 3-Sep-99')
 
 	parameter(maxco=15,maxnax=3)
 	parameter(maxch=32)
@@ -386,7 +389,7 @@ c
 c  Polynomal fit
 c
 	if(poly.ge.0) then
-	   call polyfit(poly,nchan,value,work2,weight,mask,nmask,
+	   call polyfit(poly,nchan,value,work2,weight,mask,nmask,unit0,
      *      spec,fit)
 	end if
 c
@@ -506,9 +509,6 @@ c
 c  Measure spectral parameters
 c
 	if(measure)then
-	   call output('--------------------')
-	   call output('Spectral parameters:')
-	   call output('--------------------')
 	   call vmom(nchan,value,spec,fit,xaxis,unit0,clip,xrange,
      *               profile,work,work1,poly,subpoly,device)
 	endif
@@ -1027,7 +1027,7 @@ c
       end
 c
 c
-      subroutine polyfit(poly,nchan,value,work2,weight,mask,nmask,
+      subroutine polyfit(poly,nchan,value,work2,weight,mask,nmask,unit0,
      *                   spec,fit)
 c-----------------------------------------------------------------------
 c     Polynomial fit of spectrum
@@ -1041,6 +1041,7 @@ c     weight       Weight array (maxdim)
 c     spec         Spectrum.
 c     mask         Mask array
 c     nmask        Number of mask pairs
+c     unit0        yaxis units
 c   Outputs:
 c     weight       Weight array (maxdim)
 c     fit         Polynomial fit
@@ -1050,11 +1051,13 @@ c
       integer nchan,poly,nmask
       real spec(*),value(*),fit(*),work2(*),weight(*)
       real mask(2,nmask),xlim1,xlim2
+      character*(*) unit0
 cc
       real clip
       integer i,j,ifail,npts,niter
       double precision dfit
       real coef(11),serr,test2,work3(24)
+      character*80 line
 c-----------------------------------------------------------------------
 
 c  Number of clipping iterations
@@ -1159,7 +1162,13 @@ c  Iteration count
       niter=niter-1
       goto 100
 
- 1000 end	
+ 1000 write(line(1:80), 1010) serr, unit0
+ 1010	format('#FR   Clipped rms: ', f9.4,1x, a)
+      call output(line)
+      write(line(1:80), 1020) npts, nchan
+ 1020	format('#FN   (', i4, ' out of ', i4,  ' channels)')
+      call output(line)
+      end	
 
 c
       subroutine vmom (nchan,value,spec,fit,xaxis,unit0,clip,xrange,
@@ -1194,7 +1203,7 @@ c
       logical subpoly
 cc
       integer i, len1, i50a(2), i50b(2), i20a(2), i20b(2), j
-      integer imax, imin, imaxa, imaxb, fmax
+      integer imax, imin, imaxa, imaxb, fmax, jprof
       real spmax,spmin,spmaxa,spmaxb,v50a,v50b,v20a,v20b
       real v50,v20,w50,w20,prof(2),d(5),sg
       double precision mom0,mom1,mom2,delta,rmom0,rmom1,rmom2,dt
@@ -1244,6 +1253,7 @@ c
              j=j+1
 	     work(j)=work(i)
 	     work1(j)=work1(i)
+	     if(j.eq.1) jprof=i-1
 	  end if
 	end do
 	npts=j
@@ -1464,21 +1474,21 @@ c
 c  Approximate offsets above fitted polynomial
 c
 	 if(poly.ge.0.and..not.subpoly) then
-           d(1)=fit(fmax)
-           d(2)=fit(i50a(1))
-           d(3)=fit(i50b(1))
-           d(4)=fit(i20a(1))
-           d(5)=fit(i20b(1))
+           d(1)=fit(fmax+jprof)
+           d(2)=fit(i50a(1)+jprof)
+           d(3)=fit(i50b(1)+jprof)
+           d(4)=fit(i20a(1)+jprof)
+           d(5)=fit(i20b(1)+jprof)
 	 end if
 	 call pgsci(2)
-         call pgpt1(work(fmax),sg*spmaxa+d(1),-10)
+         call pgpt(1,work(fmax),sg*spmaxa+d(1),-10)
 	 if(.not.skip50) then
-           call pgpt1(v50a,sg*spmaxa/2.0+d(2),4)
-           call pgpt1(v50b,sg*spmaxb/2.0+d(3),4)
+           call pgpt(1,v50a,sg*spmaxa/2.0+d(2),4)
+           call pgpt(1,v50b,sg*spmaxb/2.0+d(3),4)
 	 end if
 	 if(.not.skip20) then
-           call pgpt1(v20a,sg*spmaxa/5.0+d(4),4)
-           call pgpt1(v20b,sg*spmaxb/5.0+d(5),4)
+           call pgpt(1,v20a,sg*spmaxa/5.0+d(4),4)
+           call pgpt(1,v20b,sg*spmaxb/5.0+d(5),4)
 	 end if
 	 call pgsci(1)
        end if
@@ -1591,20 +1601,20 @@ c  Plot results
 c
        if(device.ne.' ') then
 	 if(poly.ge.0.and..not.subpoly) then
-           d(1)=fit(fmax)
-           d(2)=fit(i50a(1))
-           d(3)=fit(i50b(1))
-           d(4)=fit(i20a(1))
-           d(5)=fit(i20b(1))
+           d(1)=fit(fmax+jprof)
+           d(2)=fit(i50a(1)+jprof)
+           d(3)=fit(i50b(1)+jprof)
+           d(4)=fit(i20a(1)+jprof)
+           d(5)=fit(i20b(1)+jprof)
 	 end if
 	 call pgsci(2)
 	 if(.not.skip50) then
-           call pgpt1(v50a,sg*spmaxa/2.0+d(2),5)
-           call pgpt1(v50b,sg*spmaxb/2.0+d(3),5)
+           call pgpt(1,v50a,sg*spmaxa/2.0+d(2),5)
+           call pgpt(1,v50b,sg*spmaxb/2.0+d(3),5)
 	 end if
 	 if(.not.skip20) then
-           call pgpt1(v20a,sg*spmaxa/5.0+d(4),5)
-           call pgpt1(v20b,sg*spmaxb/5.0+d(5),5)
+           call pgpt(1,v20a,sg*spmaxa/5.0+d(4),5)
+           call pgpt(1,v20b,sg*spmaxb/5.0+d(5),5)
 	 end if
 	 call pgsci(1)
        end if
