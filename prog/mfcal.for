@@ -65,7 +65,7 @@ c	            less than 50% of the channels are unflagged, the
 c	            interpolation (extrapolation) is not done and those
 c	            channels will not have a bandpass solution
 c	  oldflux   This causes MFCAL to use a pre-August 1994 ATCA flux
-c	            density scale. See the help on `oldflux' for more
+c	            density scale. See the help on "oldflux" for more
 c	            information.
 c@ tol
 c	Solution convergence tolerance. Default is 0.001.
