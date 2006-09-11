@@ -121,6 +121,7 @@ c                        AXFNDCG, AXTYPCG, COSDECCG, PIX2WCG, PIX2WFCG,
 c                        SAVDESCG, SETDESCG, SUNITCG, W2PIXCG, W2WCG, W2WFCG
 c     nebk   29nov95     New call for CTYPECO, new ANGCONCG internals,
 c			 new routine RAZEROCG
+c     nebk   04dec95     DOLABCG was forgetting some right hand labels
 c***********************************************************************
 c
 c* angconCG -- Convert radians to and from seconds of time/arc
@@ -593,8 +594,12 @@ c--
 c-----------------------------------------------------------------------
       integer jplot
 c-----------------------------------------------------------------------
+c
+c Number if subplot on current page
+c
       jplot = mod(iplot,nx*ny)
       if (jplot.eq.0) jplot = nx*ny
+c      
       doaxlab = .false.
       doaylab = .false.
       donxlab(1) = .false.
@@ -604,34 +609,37 @@ c-----------------------------------------------------------------------
 c
       if (.not.gaps) then
 c
-c When sub-plots abut each other, only label left/bottom along the 
-c left most and bottom axes
+c Only put character and numeric labels along the bottom for the bottom row
 c
-        if (labtyp(1).ne.'none' .and. 
-     +     (jplot.ge.nx*ny-nx+1 .or. iplot.ge.nz-nlast+1 .or.
-     +      iplot+nx.gt.nz)) then
-          doaxlab = .true.
-          donxlab(1) = .true.
-        end if
+        if (labtyp(1).ne.'none') then
+          if (jplot.ge.nx*ny-nx+1 .or. iplot.ge.nz-nlast+1 .or.
+     +      iplot+nx.gt.nz) then
+            doaxlab = .true.
+            donxlab(1) = .true.
+          end if
 c
 c Only put top numeric labels on top row of subplots
 c
-        if (labtyp(1).ne.'none' .and. dotr .and. 
-     +      jplot.le.nx) donxlab(2) = .true.
+          if (dotr .and. jplot.le.nx) donxlab(2) = .true.
+        end if
 c
 c Now y axis
 c
-        if (labtyp(2).ne.'none' .and. 
-     +      (mod(jplot,nx).eq.1 .or. nx.eq.1)) then
-          doaylab = .true.
-          donylab(1) = .true.
-        end if
+        if (labtyp(2).ne.'none') then
+c
+c Only put character and numeric labels along the left 
+c for the leftmost column
+c
+          if (mod(jplot,nx).eq.1 .or. nx.eq.1) then
+            doaylab = .true.
+            donylab(1) = .true.
+          end if
 c
 c Only write right axis label if rightmost subplot
 c
-        if (labtyp(2).ne.'none' .and. dotr .and. 
-     +      (jplot.eq.nx .or. jplot.eq.nz .or. jplot.eq.nx*ny))
-     +    donylab(2) = .true.
+          if (dotr .and. (mod(jplot,nx).eq.0 .or. iplot.eq.nz))
+     +       donylab(2) = .true.
+        end if
       else       
 c
 c Each subplot separated by gaps, always write labels
