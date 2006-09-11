@@ -294,6 +294,7 @@ c    rjs   30oct95  slop=xxx,interp was not workin g as advertised.
 c    rjs    1nov95  Default value for imsize. Better default cell and sup.
 c		    Sub-uniform weighting.
 c    rjs   12nov95  Check imsize somewhat better.
+c    rjs   13dec95  Eliminate min image size.
 c  Bugs:
 c
 c------------------------------------------------------------------------
@@ -387,6 +388,7 @@ c
 	  call bug('i','Robust value resulting in natural weights')
 	  supx = 0
 	  supy = 0
+	  defWt = .false.
 	endif
 	call keyr('slop',slop,0.)
 	if(slop.lt.0.or.slop.gt.1)call bug('f','Invalid slop value')
@@ -480,12 +482,6 @@ c
 	  bnx = nx
 	  bny = ny
 	endif
-	if(mode.eq.'fft')then
-	  nx = max(nx,16)
-	  ny = max(ny,16)
-	  bnx = max(bnx,16)
-	  bny = max(bny,16)
-	endif
 c
 c  Tell about the mean frequency, if necessary.
 c
@@ -527,14 +523,11 @@ c
 	  call Memalloc(UWts,nUWts,'r')
 	  call WtCalc(tscr,memr(UWts),wdu,wdv,wnu,wnv,npnt,
      *						nvis,npol*nchan)
+	  if(robust.gt.-4)
+     *	    call WtRobust(robust,memr(UWts),wnu,wnv,npnt)
 	else
 	   UWts = 1
 	   nUWts = 0
-	endif
-c
-	if(.not.Natural.and.robust.gt.-4)then
-	  call output('Making weights robust ...')
-	  call WtRobust(robust,memr(UWts),wnu,wnv,npnt)
 	endif
 c
 c  Apply the weights, shifts and geometric corrections, and then free
