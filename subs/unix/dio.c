@@ -8,7 +8,7 @@
 /*	These routines are intended to run on BSD UNIX and UNICOS. No	*/
 /*	attempt has been made to make them any more portable than this.	*/
 /*	There are some minor differences between the two, which are 	*/
-/*	selectively compiled depending if BSD is defined.
+/*	selectively compiled depending if BSD is defined.		*/
 /*	1. The mkdir system service is not present on some systems, and	*/
 /*	   may require superuser priveleges to implement using mknod.	*/
 /*	   In this case, use 'popen("mkdir ...","r",...)'		*/
@@ -23,21 +23,23 @@
 /*      26-jan-90  rjs Reincluded <stdio.h>, which is needed by Unicos.	*/
 /*	27-apr-90  rjs Added ddelete_c routine.				*/
 /*      26-aug-93  rjs Added hrmdir.					*/
+/*	 5-nov-94  rjs Improve POSIX compliance.			*/
 /************************************************************************/
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#  include <fcntl.h>
-#  include <dirent.h>
-#  define direct dirent
+#include <stddef.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <dirent.h>
+#define direct dirent
 #ifndef NULL
 #  define NULL 0
 #endif
-#  define L_XTND 2
-#  define L_SET 0
 #include <stdio.h>
 #if defined(_trace_)
-extern int errno;
+  extern int errno;
 #endif
 #include <errno.h>
 
@@ -46,9 +48,7 @@ extern int errno;
 #define Malloc(x) malloc((unsigned)(x))
 #define Strcat (void)strcat
 #define Strcpy (void)strcpy
-#define Lseek(a,b,c) (int)lseek(a,(long)(b),c)
-long lseek();
-char *strcpy(),*strcat(),*malloc();
+#define Lseek(a,b,c) (int)lseek(a,(off_t)(b),c)
 
 struct dent { char path[MAXPATH];
 		DIR *dir;};
@@ -164,7 +164,7 @@ char *name,*status;
   else bug_c('f',"dopen_c: Unrecognised status");
 
   if((*fd = open(name,flags,0644)) < 0){*iostat = errno; return;}
-  *size = Lseek(*fd,0,L_XTND);
+  *size = Lseek(*fd,0,SEEK_END);
 
 /* If its a scratch file, unlink it now, so that the file will disappear
    when it is closed (or this program crashes). */
@@ -191,7 +191,7 @@ char *buffer;
 {
   int nread;
 
-  if(Lseek(fd,offset,L_SET) < 0) { *iostat = errno; return; }
+  if(Lseek(fd,offset,SEEK_SET) < 0) { *iostat = errno; return; }
   nread = read(fd,buffer,length);
   if(nread < 0) *iostat = errno; 
   else if(nread != length) *iostat = EIO;
@@ -206,14 +206,14 @@ char *buffer;
 {
   int nwrite;
 
-  if(Lseek(fd,offset,L_SET) < 0) { *iostat = errno; return; }
+  if(Lseek(fd,offset,SEEK_SET) < 0) { *iostat = errno; return; }
   nwrite = write(fd,buffer,length);
   if(nwrite < 0) *iostat = errno; 
   else if(nwrite != length) *iostat = EIO;
 }
 /************************************************************************/
 /*ARGSUSED*/
-dwait_c(fd,iostat)
+void dwait_c(fd,iostat)
 int fd,*iostat;
 /*
   This nominally waits for i/o to a file to finish. Things work synchronously
@@ -241,20 +241,20 @@ int length;
   char line[MAXPATH],*s;
   int l;
 
-  strcpy(line,"echo ");
-  strcat(line,template);
+  Strcpy(line,"echo ");
+  Strcat(line,template);
   fd = popen(line,"r");
   if(fd == NULL) return(-1);
   s = output;
   while(fgets(s,length,fd)){
     l = strlen(s);
-    if( length-l <= 1 ){pclose(fd); return(-1);}
+    if( length-l <= 1 ){(void)pclose(fd); return(-1);}
     *(s+l-1) = ',';
     s += l;
     length -= l;
   }
   if(s != output) *--s = 0;
-  pclose(fd);
+  (void)pclose(fd);
   return(s-output);
 }
 /************************************************************************/
@@ -280,7 +280,7 @@ char *contxt;
 {
   struct dent *d;
   d = (struct dent *)contxt;
-  closedir(d->dir);
+  (void)closedir(d->dir);
   free(contxt);
 }
 /************************************************************************/
@@ -307,7 +307,7 @@ int length;
   else{
     Strcpy(path,dp->d_name);
     Strcpy(npath,d->path);    Strcat(npath,path);
-    stat(npath,&buf);
+    (void)stat(npath,&buf);
     if(S_IFDIR & buf.st_mode)Strcat(path,"/");
   }
 }
