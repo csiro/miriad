@@ -34,6 +34,8 @@ c    rjs   1nov91 Slightly better (though still crude) polarisation
 c		  handling. Handling of mfs data and shifts of models.
 c    rjs  29jan91 Fixed sign error in the direction of the shift, in
 c		  ModShift.
+c    rjs  30mar92 Pointing selection always performed in ModelIni, if
+c		  'p' flag given. Better error messages(?).
 c************************************************************************
 c*ModelIni -- Ready the uv data file for processing by the Model routine.
 c&mchw
@@ -73,10 +75,10 @@ c------------------------------------------------------------------------
 	parameter(PolI=1,PolRR=-1,PolLL=-2,PolXX=-5,PolYY=-6)
 c
 	double precision ra,dec,cosd,tol,tmp
-	logical update,doPol
-	integer length,nchan,polm,polv
+	logical doPol
+	integer nchan,polm,polv
 	real lstart,lwidth,lstep
-	character tra*1,tdec*1,ltype*64
+	character ltype*64
 c
 c  Externals.
 c
@@ -104,20 +106,15 @@ c
 c  Determine if the visibility file contains offset pointing parameters.
 c
 	if(index(flags,'p').ne.0)then
-	  call uvprobvr(tvis,'dra',tra,length,update)
-	  call uvprobvr(tvis,'ddec',tdec,length,update)
-c
-	  if(tra.eq.'r'.or.tdec.eq.'r')then
-	    call rdhdd(tmod,'crval1',ra,0.d0)
-	    call rdhdd(tmod,'crval2',dec,0.d0)
-	    call rdhdd(tmod,'cdelt1',tol,0.d0)
-	    call rdhdd(tmod,'cdelt2',tmp,0.d0)
-	    tol = 3*max(abs(tol),abs(tmp))
-	    cosd = abs(cos(dec))
-	    call uvselect(tvis,'and',0.d0,0.d0,.true.)
-	    call uvselect(tvis,'ra',ra-tol*cosd,ra+tol*cosd,.true.)
-	    call uvselect(tvis,'dec',dec-tol,dec+tol,.true.)
-	  endif
+	  call rdhdd(tmod,'crval1',ra,0.d0)
+	  call rdhdd(tmod,'crval2',dec,0.d0)
+	  call rdhdd(tmod,'cdelt1',tol,0.d0)
+	  call rdhdd(tmod,'cdelt2',tmp,0.d0)
+	  tol = 3*max(abs(tol),abs(tmp))
+	  cosd = abs(cos(dec))
+	  call uvselect(tvis,'and',0.d0,0.d0,.true.)
+	  call uvselect(tvis,'ra',ra-tol*cosd,ra+tol*cosd,.true.)
+	  call uvselect(tvis,'dec',dec-tol,dec+tol,.true.)
 	endif
 c
 c  See what we can work out about the polarisation of both the map
@@ -424,6 +421,8 @@ c
 	ModPow = 0
 c
 	call uvread(tvis,preamble,In,flags,maxchan,nchan)
+	if(nchan.eq.0)
+     *	  call bug('f','No visibility data selected, in Model(map)')
 	if(nchan.ne.nz.and..not.mfs)
      *	  call bug('f','The number of model and data channels differ')
 c
