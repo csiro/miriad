@@ -827,9 +827,9 @@ c     *  dofstd(5),'+/-',dofstd(6)
 	write (string,
      *  '(1x,a5,a4,f8.5,a3,a7,a3,f8.5,a3,a7,a3,f8.5,a3,a7)') 
      *  'std  ', ' : ',
-     *  dofstd(1),'','',' ',
-     *  dofstd(3),'','',' ',
-     *  dofstd(5),'',''
+     *  dofstd(1),' ',' ',' ',
+     *  dofstd(3),' ',' ',' ',
+     *  dofstd(5),' ',' '
 	call output(string)
 	
 c
@@ -846,9 +846,9 @@ c
 	write (string,
      *  '(1x,a9,f8.5,a3,a7,a3,f8.5,a3,a7,a3,f8.5,a3,a7)') 
      *  'std err: ',
-     *  dofstd(1),'','',' ',
-     *  dofstd(2),'','',' ',
-     *  dofstd(3),'',''
+     *  dofstd(1),' ',' ',' ',
+     *  dofstd(2),' ',' ',' ',
+     *  dofstd(3),' ',' '
 	call output(string)
 	
 
