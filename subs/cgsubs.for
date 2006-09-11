@@ -126,6 +126,7 @@ c     nebk   30jan96     In CHNSELCG remove the restictions on channel
 c                        averaging and incrementing which previously
 c			 groups of channels could not overlap
 c     rjs     8mar96     Change ctype*9 to ctype*32
+c     nebk   26apr96     Km -> km is setlabcg.  rats.
 c***********************************************************************
 c
 c* angconCG -- Convert radians to and from seconds of time/arc
@@ -1837,14 +1838,14 @@ c
         else if (labtyp(iax).eq.'abskms') then
           label = str(1:l2)//' (km s\u-1\d)'
         else if (labtyp(iax).eq.'relkms') then
-          label = str(1:l2)//' offset (Km s\u-1\d)'
+          label = str(1:l2)//' offset (km s\u-1\d)'
         else if (labtyp(iax).eq.'relnat') then
           if (irad.eq.1) then
             label = str(1:l2)//' offset (radians)'
           else if (ifrq.eq.1) then
             label = str(1:l2)//' offset (GHz)'
           else if (ivel.eq.1) then
-            label = str(1:l2)//' offset (Km s\u-1\d)'
+            label = str(1:l2)//' offset (km s\u-1\d)'
           else if (iuv.eq.1) then
             label = str(1:l2)//' offset (\gl)'
           else
@@ -1856,7 +1857,7 @@ c
           else if (ifrq.eq.1) then
             label = str(1:l2)//' (GHz)'
           else if (ivel.eq.1) then
-            label = str(1:l2)//' (Km s\u-1\d)'
+            label = str(1:l2)//' (km s\u-1\d)'
           else if (iuv.eq.1) then
             label = str(1:l2)//' (\gl)'
           else
