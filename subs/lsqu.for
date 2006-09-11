@@ -310,9 +310,9 @@ c--
         a2   = ( npnt*sumxy - sumx*sumy ) / ( npnt*sumsqy - sumy**2 )
         b1   = ( sumy - a1*sumx ) / npnt
         b2   = ( sumx - a2*sumy ) / npnt
-        sigx =   sumsqx/npnt - sumx*sumx/npnt/npnt
-        sigy =   sumsqy/npnt - sumy*sumy/npnt/npnt
-        corr = ( sumxy/npnt  - sumx*sumy/npnt/npnt ) / sqrt(sigx*sigy)
+        sigx = sqrt(  sumsqx/npnt - sumx*sumx/npnt/npnt )
+        sigy = sqrt(  sumsqy/npnt - sumy*sumy/npnt/npnt )
+        corr = ( sumxy/npnt  - sumx*sumy/npnt/npnt ) / (sigx*sigy)
       endif
       
       return
