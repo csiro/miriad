@@ -131,12 +131,13 @@ c    14nov03 rjs  Fix bug in getjpk
 c    06dec03 rjs  Fish out met parameters from the dataset directly.
 c    19sep04 rjs  Changes to the way Tsys scaling is handled.
 c    11oct04 rjs  Use jyperk=10 rather than 13 in Tsys correction.
+c    24jun05 rjs  Updated gain/elevation curve at 3mm
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
 	character version*(*)
 	integer MAXSELS,ATANT
-	parameter(version='AtFix: version 1.0 11-Oct-04')
+	parameter(version='AtFix: version 1.0 24-Jun-05')
 	parameter(MAXSELS=256,ATANT=6)
 c
 	real sels(MAXSELS),xyz(3*MAXANT)
@@ -1059,11 +1060,17 @@ c	data (wpc(6,j),j=1,3)/1.0000, 0.0000,     0.0000/
 c
 c  Gain curve deduced from Ravi's data of 04-Sep-03.
 c
-	data (wpc(1,j),j=1,3)/0.4877, 1.7936e-2, -1.5699e-4/
-	data (wpc(2,j),j=1,3)/0.4877, 1.7936e-2, -1.5699e-4/
-	data (wpc(3,j),j=1,3)/0.7881, 0.8458e-2, -0.8442e-4/
-	data (wpc(4,j),j=1,3)/0.7549, 1.2585e-2, -1.6153e-4/
-	data (wpc(5,j),j=1,3)/0.4877, 1.7936e-2, -1.5699e-4/
+c	data (wpc(2,j),j=1,3)/0.4877, 1.7936e-2, -1.5699e-4/
+c	data (wpc(3,j),j=1,3)/0.7881, 0.8458e-2, -0.8442e-4/
+c	data (wpc(4,j),j=1,3)/0.7549, 1.2585e-2, -1.6153e-4/
+c
+c  Data from Bob on 21-May-2004
+c
+	data (wpc(1,j),j=1,3)/0.4917, 1.7709e-2, -1.5423e-4/
+	data (wpc(2,j),j=1,3)/0.2262, 2.3075e-2, -1.7204e-4/
+	data (wpc(3,j),j=1,3)/0.3060, 2.1610e-2, -1.6821e-4/
+	data (wpc(4,j),j=1,3)/0.7939, 0.8148e-2, -0.8054e-4/
+	data (wpc(5,j),j=1,3)/0.4487, 1.7665e-2, -1.4149e-4/
 	data (wpc(6,j),j=1,3)/1.0000, 0.0000,     0.0000/
 c
 	call basant(baseline, ant1, ant2)
@@ -1082,6 +1089,7 @@ c
 c  3mm correction.
 c
 	else if(70e9.le.freq0 .and. freq0.le.120e9)then
+	  elev = max(elev,40.0)
 	  g1=wpc(ant1,1) + elev*(wpc(ant1,2)+elev*wpc(ant1,3))
 	  g2=wpc(ant2,1) + elev*(wpc(ant2,2)+elev*wpc(ant2,3))
 	else
