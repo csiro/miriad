@@ -55,6 +55,7 @@ c    rjs  30sep96 Major clean up and improved polarisation handling.
 c    rjs  11may97 Correct sign of Stokes-V (not again!!).
 c    rjs  26sep97 Re-add mhw's "zero" option.
 c    rjs  09jan97 Break a statement into two to avoid a compiler bug.
+c    rjs  27may99 Better check for no visibility data.
 c************************************************************************
 c*ModelIni -- Ready the uv data file for processing by the Model routine.
 c&rjs
@@ -322,9 +323,9 @@ c
 	nvis = 0
 c
 	call uvread(tvis,preamble,In,flags,maxchan,nchan)
-	call coInit(tvis)
 	if(nchan.eq.0)
      *	  call bug('f','No visibility data selected, in Model(map)')
+	call coInit(tvis)
 	if(nchan.ne.nz.and..not.mfs)
      *	  call bug('f','The number of model and data channels differ')
 c
@@ -914,6 +915,8 @@ c
 c  Get the first record.
 c
 	call uvread(tvis,preamble,In,flags,maxchan,nchan)
+	if(nchan.eq.0)
+     *	  call bug('f','No visibility data selected, in Model(map)')
 	call coInit(tvis)
 c
 c  If there is an offset to the point source, determine its true
