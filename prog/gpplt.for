@@ -96,12 +96,13 @@ c    rjs  17aug95 Failed to take reciprocal of bandpass.
 c    rjs  19sep95 Fix write statement in printing polarisation sol'ns.
 c    rjs  12dec96 Fix bug in GainPlt2 related to getting times stamps and
 c		  flagging wrong.
+c    rjs  10jun97 Correct amptiude to amplitude.
 c  Bugs:
 c------------------------------------------------------------------------
 	integer MAXSELS
 	character version*(*)
 	parameter(MAXSELS=256)
-	parameter(version='GpPlt: version 12-Dec-96')
+	parameter(version='GpPlt: version 10-Jun-97')
 	include 'gpplt.h'
 	integer iostat,tIn,nx,ny,nfeeds,nants,nsols,ierr,symbol,nchan
 	integer ntau
@@ -1459,7 +1460,7 @@ c------------------------------------------------------------------------
 	logical present(nopt)
 	character opts(nopt)*9
 c
-	data opts/'ampltiude','phase    ','real     ','imaginary'/
+	data opts/'amplitude','phase    ','real     ','imaginary'/
 c
 	call options('yaxis',opts,present,nopt)
 	doamp   = present(1)
