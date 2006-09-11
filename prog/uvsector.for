@@ -52,11 +52,13 @@ c    rjs   1dec94 Tell about the offending LST.
 c    rjs   4dec94 Correctly compute HA, LST, and noapply mode.
 c    nebk 02feb96 Make clearer to user that data are not flagged 
 c                 when options=noapply
+c    rjs  24feb98 Make the angle-determining code more robust to
+c		  (nearly) vertical and horizontal regions.
 c---------------------------------------------------------------------------
 	include 'mirconst.h'
 	character version*(*)
 	integer MAXSELS,MAXBOX,MAXIN
-	parameter(version='UvSector: version 02-Feb-96')
+	parameter(version='UvSector: version 24-Feb-98')
 	parameter(MAXSELS=1024,MAXBOX=1024,MAXIN=32)
 c
 	real sels(MAXSELS)
@@ -269,10 +271,10 @@ c------------------------------------------------------------------------
 	integer run(3,MAXRUN),nrun,nsize(MAXNAX),tIn
 	integer i,j,n,xmin,xmax,ymin,ymax,x,y
 	integer ira,idec
-	real SumX,SumY,SumXX,SumYY,SumXY,pnts
+	double precision SumX,SumY,SumXX,SumYY,SumXY,pnts
 	double precision cdelt1,cdelt2,crval1,crval2,t
 	character line*80
-	real r,rx,ry,rxy,theta
+	real r,rx,ry,rxy,theta,c,s
 c
 c  Externals
 c
@@ -336,13 +338,24 @@ c
 	ry = SumYY - SumY*SumY/pnts
 	rx = SumXX - SumX*SumX/pnts
 	rxy= SumXY - SumX*SumY/pnts
-	if(rx.ne.0.and.ry.ne.0)then
-	  r = abs(rxy) / sqrt(rx*ry)
-	  if(r.lt.0.5)call bug('f','The region is not narrow enough')
-	  if(r.lt.0.9)call bug('w','The region is not very narrow')
+	if(ry.gt.rx)then
+	  uvpa = PI/2.0 - atan2(cdelt1*rxy, cdelt2*ry)
+	  s = ry
+	  c = rxy
+	else
+	  uvpa = atan2(cdelt2*rxy, cdelt1*rx)
+	  c = rx
+	  s = rxy
 	endif
 c
-	uvpa = atan2(cdelt2*rxy, cdelt1*rx)
+	if(abs(cdelt2*rxy)+abs(cdelt1*rx).eq.0)
+     *	  call bug('f','Cannot determine tilt of region')
+c
+	r = c*c*rx + s*s*ry + 2*c*s*rxy
+	ry = sqrt(s*s*rx + c*c*ry - 2*c*s*rxy)
+	rx = sqrt(r)
+	if(rx.lt.2*ry)call bug('f','The region is not narrow enough')
+	if(rx.lt.10*ry)call bug('w','The region is not very narrow')
 c
 c  If RA and DEC were reverse, fiddle the uvpa
 c
