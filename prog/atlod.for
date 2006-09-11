@@ -150,6 +150,7 @@ c    rjs  20sep95 Option=birdie flags the birdie channel in spectral
 c		  line mode.
 c    rjs  27sep95 Flagging stats. Will Mr K still whinge? Probably!
 c    rjs   6nov95 xycorr option.
+c    rjs  29may96 Write out nbin variable.
 c
 c  Program Structure:
 c    Miriad atlod can be divided into three rough levels. The high level
@@ -404,7 +405,9 @@ c
 c
 c  Reset the counters, etc.
 c
-	maxbin = 0
+	do if=1,ATIF
+	  nbin(if) = 0
+	enddo
 	do bin=1,ATBIN
 	  do bl=1,ATBASE
 	    do p=1,ATPOL
@@ -807,7 +810,7 @@ c
 	  ipnt = nused + 1
 	  pnt(if,p,bl,bin) = ipnt
 	  flag(if,p,bl,bin) = flag1(p)
-	  maxbin = max(maxbin,bin)
+	  nbin(if) = max(nbin(if),bin)
 	  nused = nused + nfreq(if)
 	  if(nused.gt.ATDATA)call bug('f','Buffer overflow in PokeData')
 	  doneg = polcode(if,p).eq.PolXY.or.polcode(if,p).eq.PolYX
@@ -958,6 +961,9 @@ c  Check that we can do what is asked.
 c
 	if(newfreq.and.doif)then
 	  do if=2,nifs
+	    if(nbin(if).ne.nbin(1))    call bug('f',
+     *		'Number of bins differ between IFs. '//
+     *		'Use options=noif.')
 	    if(nstoke(if).ne.nstoke(1))call bug('f',
      *		'Number of polarisations differ between IFs. '//
      *		'Use options=noif.')
@@ -983,7 +989,8 @@ c
 	    call uvputvrd(tno,'restfreq',restfreq(if),1)
 	    if(newsc)call ScOut(tno,chi,xtsys,ytsys,xyphase,xyamp,
      *		xsampler,ysampler,ATIF,ATANT,nants,if,if,buf)
-	    do bin=1,maxbin
+	    do bin=1,nbin(if)
+	      call uvputvri(tno,'nbin',nbin(if),1)
 	      bl = 0
 	      do i2=1,nants
 	        do i1=1,i2
@@ -1025,10 +1032,11 @@ c
 	    call uvputvrd(tno,'sfreq', sfreq,nifs)
 	    call uvputvrd(tno,'sdf',   sdf,nifs)
 	    call uvputvrd(tno,'restfreq',restfreq,nifs)
+	    call uvputvri(tno,'nbin',    nbin(1),1)
 	  endif
 	  if(newsc)call ScOut(tno,chi,xtsys,ytsys,xyphase,xyamp,
      *		xsampler,ysampler,ATIF,ATANT,nants,1,nifs,buf)
-	  do bin=1,maxbin
+	  do bin=1,nbin(1)
 	    bl = 0
 	    do i2=1,nants
 	      do i1=1,i2
@@ -1060,18 +1068,21 @@ c
 c
 c  Reset the counters, etc.
 c
-	do bin=1,maxbin
-	  do bl=1,ATBASE
-	    do p=1,ATPOL
-	      do if=1,ATIF
-	        pnt(if,p,bl,bin) = 0
+	do bl=1,ATBASE
+	  do p=1,ATPOL
+	    do if=1,nifs
+	      do bin=1,nbin(if)
+		pnt(if,p,bl,bin) = 0
 	      enddo
 	    enddo
 	  enddo
 	enddo
 c
+	do if=1,nifs
+	  nbin(if) = 0
+	enddo	  
+c
 	nused = 0
-	maxbin = 0
 	newsc   = .false.
 	newfreq = .false.
 	newpnt  = .false.
