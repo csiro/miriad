@@ -60,6 +60,7 @@ c    rjs  17jan93 Copy cgains and wgains.
 c    rjs  24nov94 Implement merging of gain tables.
 c    rjs   3dec94 Implement applying of gain tables.
 c    mchw 04jan95 Doc change only.
+c    rjs  17aug95 More messages.
 c  Bugs:
 c    None?
 c------------------------------------------------------------------------
@@ -121,8 +122,10 @@ c
 	if(docal)then
 	  docal = .not.docopy.and.hdprsnt(tOut,'gains')
 	  if(mode.eq.'merge'.and.docal)then
+	    call output('Merging gain table')
 	    call GnMerge(tIn,tOut)
 	  else if(mode.eq.'apply'.and.docal)then
+	    call output('Applying gain table')
 	    call GnApply(tIn,tOut)
 	  else
 	    call output('Copying gain table')
