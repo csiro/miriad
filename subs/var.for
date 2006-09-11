@@ -27,6 +27,7 @@ c    rjs   6sep94 XYphase fiddles. Use MAXWIN.
 c    rjs   9sep94 Support felocity linetype.
 c    mchw  5jan95 Added pressmb to uv-variables.
 c    rjs  13jan95 Added "bin" to uv-variables.
+c    mchw 15mar96 Added delay to uvvariables.
 c************************************************************************
 c*VarInit -- Initialise the copy routines.
 c:uv-data
@@ -82,7 +83,7 @@ c
 	integer i
 c
 	integer nvar,nline,nwide,nvelo
-	parameter(nvar=65,nline=8,nwide=3,nvelo=4)
+	parameter(nvar=66,nline=8,nwide=3,nvelo=4)
         character var(nvar)*8,line(nline)*8,wide(nwide)*8,velo(nvelo)*8
 c
 c  Variables to check for a change, for line=channel.
@@ -114,7 +115,7 @@ c
      *	   'ra      ','relhumid',
      *	   'source  ','telescop','temp    ','tpower  ','ut      ',
      *	   'veldop  ','veltype ','version ','vsource ','winddir ',
-     *	   'windmph ','delay0  '/
+     *	   'windmph ','delay   ','delay0  '/
 c------------------------------------------------------------------------
 	avall = .false.
 c
@@ -657,4 +658,4 @@ c------------------------------------------------------------------------
 	common/VarCom/vhandc,vhandu,avall
 c
 	avall = doav
-	end	
+	end
