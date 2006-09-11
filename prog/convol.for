@@ -88,6 +88,7 @@ c    rjs   15mar95 Add options=final.
 c    rjs   06jan97 Improve output headers.
 c    rjs   02jul97 cellscal change.
 c    rjs   05dec97 Change order of boxmask and boxinfo calls.
+c    bpw   12mar99 Increase size of map/beam/out to 512 to allow directories
 c  Bugs:
 c------------------------------------------------------------------------
 	include 'maxdim.h'
@@ -95,10 +96,10 @@ c------------------------------------------------------------------------
 	include 'mirconst.h'
 	integer maxbox,maxruns
 	character version*(*)
-	parameter(version='Convol: version 1.0 05-Dec-97' )
+	parameter(version='Convol: version 1.0 12-mar-99' )
 	parameter(maxruns=3*maxdim)
 	parameter(maxbox=1024)
-	character map*32,beam*32,out*32
+	character map*512,beam*512,out*512
 	integer nsize(MAXNAX),naxis,ifail
 	integer lMap,lBeam,lOut,iref,jref,blc(3),trc(3)
 	integer xmin,xmax,ymin,ymax,nx,ny,n1,n2,xoff,yoff
