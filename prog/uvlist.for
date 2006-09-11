@@ -21,6 +21,7 @@ c	  variables List uv variables.
 c	  sigma     List the value and rms of the first data channel.
 c	  spectral  List spectral and velocity information.
 c	  array     List antenna and array information.
+c	  source    List information about the source.
 c	If no listing options are given, uvlist uses options=brief,data.
 c	The following options determine the application of calibration
 c	corrections to the data, for the data list options. The default
@@ -108,16 +109,17 @@ c    1aug95 rjs  - Fix minor bug which only shows up on sgi machine.
 c   28sep95 rjs  - Added options=array
 c   29nov95 rjs  - Cope with value being unset.
 c   18may96 rjs  - Correct formating bug in ListSepc
+c   28aug96 rjs  - List source information.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
-	parameter(version='Uvlist: version 1.0 18-May-96')
+	parameter(version='Uvlist: version 1.0 28-Aug-96')
 c
 	character out*50,last*1,date*18,uvflags*8
 	complex data(MAXCHAN)
 	logical flags(MAXCHAN)
 	logical dovar,dodata,dospect,dobrief,docal,dopol,dopass,dosigma
-	logical doarray,more
+	logical doarray,dosrc,more
 	double precision lst,pmbl(4)
 	real rms2
 	integer lIn,vars
@@ -131,9 +133,9 @@ c  Read the inputs.
 c
 	call output(version)
  	call keyini
-	call GetOpt(dovar,dodata,dospect,dosigma,doarray,
+	call GetOpt(dovar,dodata,dospect,dosigma,doarray,dosrc,
      *			dobrief,docal,dopol,dopass)
-	if(dospect.or.doarray.or.dovar.or..not.dobrief)then
+	if(dospect.or.doarray.or.dosrc.or.dovar.or..not.dobrief)then
 	  call keyi('recnum',numrec,1)
 	else
 	  call keyi('recnum',numrec,20)
@@ -218,6 +220,13 @@ c
 	  if(doarray)then
 	    call listarr(lIn)
 	    last = 'a'
+	  endif
+c
+c  List information about the source, if required.
+c
+	  if(dosrc)then
+	    call listsrc(lIn)
+	    last = 'o'
 	  endif
 c
 c  List the spectra info, if required.
@@ -439,29 +448,29 @@ c
 	call LogWrite(' ',more)
 	end
 c************************************************************************
-	subroutine GetOpt(dovar,dodata,dospect,dosigma,doarray,dobrief,
-     *						docal,dopol,dopass)
+	subroutine GetOpt(dovar,dodata,dospect,dosigma,doarray,dosrc,
+     *					dobrief,docal,dopol,dopass)
 c
 	implicit none
 	logical dovar,dodata,dospect,dobrief,docal,dopol,dopass,dosigma
-	logical doarray
+	logical doarray,dosrc
 c
 c  Determine which of the options is to be done. Default is
 c  "brief" "data".
 c
 c  Outputs:
-c    dovar,dodata,dospect,dosigma,doarray Things to list.
+c    dovar,dodata,dospect,dosigma,doarray,dosrc Things to list.
 c    dobrief		   Do it in brief or verbose mode.
 c    docal,dopol,dopass	   Calibration switches.
 c------------------------------------------------------------------------
 	integer nopts
-	parameter(nopts=10)
+	parameter(nopts=11)
 	character opts(nopts)*9
 	logical present(nopts)
 c
 	data opts/'brief    ','full     ','data     ','variables',
      *		  'spectral ','sigma    ','nocal    ','nopol    ',
-     *		  'nopass   ','array    '/
+     *		  'nopass   ','array    ','source   '/
 c
 	call options('options',opts,present,nopts)
 c
@@ -476,7 +485,9 @@ c
 	dopol = .not.present(8)
 	dopass= .not.present(9)
 	doarray = present(10)
-	if(.not.(dovar.or.dospect.or.dosigma.or.doarray))dodata = .true.
+	dosrc   = present(11)
+	if(.not.(dovar.or.dospect.or.dosigma.or.doarray.or.dosrc))
+     *							dodata = .true.
 c
 	end
 C************************************************************************
@@ -981,6 +992,63 @@ c
 	else
 	  call LogWrite('These uvdata have no spectra',more)
 	endif
+	end
+c************************************************************************
+	subroutine listsrc(lIn)
+c
+	implicit none
+	integer lIn
+c
+c
+c------------------------------------------------------------------------
+	include 'mirconst.h'
+	character source*32,line*48
+	double precision ra,dec
+	real pltb,plangle,plmaj,plmin,dra,ddec
+c
+c  Externals.
+c
+	character hangle*20,rangle*20
+c
+c
+	call uvrdvra(lIn,'source',source,' ')
+	if(source.ne.' ')call output('Source: '//source)
+c
+	call uvrdvrd(lIn,'ra',ra,0.d0)
+	line = 'RA:  '//hangle(ra)
+	call output(line)
+c
+	call uvrdvrd(lIn,'dec',dec,0.d0)
+	line = 'DEC: '//rangle(dec)
+	call output(line)
+c
+	call uvrdvrr(lIn,'dra',dra,0.)
+	call uvrdvrr(lIn,'ddec',ddec,0.)
+	if(abs(dra)+abs(ddec).gt.0)then
+	  write(line,'(a,f7.1,a,f7.1,a)') 
+     *	  	   'Offset RA:',180/PI*3600*dra,
+     *		', Offset DEC:',180/PI*3600*ddec,' arcsec'
+	  call output(line)
+	endif
+c
+	call uvrdvrr(lIn,'pltb',pltb,0.)
+	if(pltb.gt.0)then
+	  write(line,'(a,f6.1,a)')'Planet temperature:',pltb,' K'
+	  call output(line)
+	endif
+c
+	call uvrdvrr(lIn,'plmaj',plmaj,0.)
+	call uvrdvrr(lIn,'plmin',plmin,0.)
+	call uvrdvrr(lIn,'plangle',plangle,0.)
+	if(abs(plmaj*plmin).gt.0)then
+	  write(line,'(a,f7.1,a,f7.1,a)')
+     *		'Planet axes:',plmaj,' by',plmin,' arcsec'
+	  call output(line)
+	  write(line,'(a,f7.1,a)')
+     *		'Planet position angle:',plangle,' degrees'
+	  call output(line)
+	endif
+c
 	end
 c************************************************************************
 	subroutine listarr(lIn)
