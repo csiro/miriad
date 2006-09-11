@@ -28,7 +28,8 @@ c@ coord
 c       The position, in world coordinates, for which the spectrum is
 c       required, e.g. coord=12:00:13,-42:00:43. The cube must have
 c       an RA and a DEC axis. The pixel with the nearest position is
-c       chosen. No default.
+c       chosen. The default is the centre of the image (not necessarily
+c       the reference pixel).
 c@ width
 c       Two numbers, being the spatial width of the box in pixels (in RA
 c       and DEC) within which the spectrum is averaged (or integrated).
@@ -77,6 +78,12 @@ c               the x and y axis labels are omitted. Typically, this is
 c               used to generate publication-quality n x m matrix plots
 c               (the source name, if required should be inserted into 
 c               the comment field).
+c       posfit  If width>1, a source position is estimated from a Gaussian
+c               fit to the moment map. The moment map is formed using the 
+c               velocity range specified by the profile parameter. If
+c               yaxis=point, this new position is used when forming
+c               the spectrum (the region set by the initial coord 
+c               parameter and the width parameter is not changed).
 c       measure Measure various spectral parameters on plotted spectrum.
 c               If a profile window is set, the line is only measured 
 c               within this window. If the order keyword is used, the fit
@@ -136,17 +143,21 @@ c    pjt  20sep99  fixed obvious syntax error - does anybody use flint anymore
 c    lss  18apr02  Added axis label scaling (csize)
 c    lss   8may02  Added alternative axis labelling, lengthened in,out,
 c                  log strings
+c    lss   3jun02  coordinate now has a default, subroutines vaxis1 and vaxis3
+c                  replaced by vaxis13
+c    lss  14jun02  added a position-fitting option
 c----------------------------------------------------------------------c
 	include 'maxdim.h'
 	integer maxco,maxnax,naxis,maxch
  	character version*(*)
 
-	parameter(version='version 08-May-2002')
+	parameter(version='version 1.0 20-Sep-99')
 
 	parameter(maxco=15,maxnax=3)
 	parameter(maxch=32)
 c
 	integer blc(maxnax),trc(maxnax),nsize(maxnax)
+	integer pblc(maxnax),ptrc(maxnax)
         real wpix(maxdim),fit(maxdim),mask(2,maxch),profile(2)
 	real lab1,lab2
 	real spec(maxdim),chan(maxdim),value(maxdim),work(maxdim)
@@ -155,18 +166,18 @@ c
 	double precision restfreq, coord(2), scoord(3), dtrc(3),dtemp
 	double precision rcoord(3), etrc(3)
 	real xdmin, xdmax, ydmin, ydmax, fac, temp, clip(2)
-	real xv(2), yv(2), xw(2), yw(2), epoch
+	real xv(2), yv(2), xw(2), yw(2), epoch, serr
 	real bmaj,bmin,bpa,cdelt1,cdelt2,cdelt3,cdeltr,cdeltd
 	integer lIn,lOut,raxis,daxis,vaxis,i,nsmth,nchan,iostat
-	integer width(2),poly,nmask
+	integer width(2),poly,nmask,imax,jmax, ierr
         logical none, deriv1, deriv2, histo, measure
-	logical pstyle1, pstyle2, subpoly
+	logical pstyle1, pstyle2, posfit, subpoly
 	character*132 in,out,logf
         character*64 xlabel,ylabel,device,xaxis,yaxis, cpoly
 	character title*130, line*72,comment*80, str*3, word*80
 	character*9 object,date,rctype*9,dctype*9,vctype*9
 	character*16 unit0
-	character ra1*13, ra2*13, dec1*13, dec2*13
+	character ra1*13, ra2*13, dec1*13, dec2*13, fitnote*13
 c
 c  Externals.
 c
@@ -185,8 +196,8 @@ c
         call keya('out',out,' ')
         call keyt('coord',coord(1),'hms',0.0d0)
         call keyt('coord',coord(2),'dms',0.0d0)
-        if (coord(1).eq.0.0d0.and.coord(2).eq.0.0d0)
-     *    call bug ('f', 'No default permitted for coord')
+c        if (coord(1).eq.0.0d0.and.coord(2).eq.0.0d0)
+c     *    call bug ('f', 'No default permitted for coord')
         call keyi('width',width(1),1)
         call keyi('width',width(2),width(1))
         if(mod(width(1),2).ne.1.or.mod(width(2),2).ne.1)
@@ -234,7 +245,8 @@ c
  120	   poly=abs(poly)
 	   if(poly.gt.10) goto 100
         endif
-        call getopt (deriv1, deriv2, histo, measure, pstyle1, pstyle2)
+        call getopt (deriv1, deriv2, histo, measure, pstyle1, pstyle2,
+     +               posfit)
 	call keya('device',device,' ')
         call keyr('csize',csize(1),0.0)
         call keyr('csize',csize(2),csize(1))
@@ -273,26 +285,36 @@ c
 	call GetDaxis(lIn,daxis,dctype)
 	if(raxis.eq.0) call bug('f','DEC axis was not found')
 c
-c  Find beam size, if needed
+c  Find beam size
+c
+        call rdhdr(lIn,'bmaj',bmaj,0.)
+        call rdhdr(lIn,'bmin',bmin,0.)
+        call rdhdr(lIn,'bpa',bpa,0.)
+	call rdhdr(lIn,'cdelt'//itoaf(raxis),cdeltr,0.)
+	call rdhdr(lIn,'cdelt'//itoaf(daxis),cdeltd,0.)
+	call rdhdr(lIn,'cdelt1',cdelt1,0.)
+	call rdhdr(lIn,'cdelt2',cdelt2,0.)
+	call rdhdr(lIn,'cdelt3',cdelt3,0.)
+c
+c  Demand coordinate increments
+c
+	if(cdelt1.eq.0.0.or.cdelt2.eq.0.0.or.cdelt3.eq.0.0) then
+           call bug('f','coordinate increment is zero')
+        end if
+
+c
+c  Mandatory for certain operations
 c
 	if(yaxis.eq.'sum'.or.yaxis.eq.'point') then
-          call rdhdr(lIn,'bmaj',bmaj,0.)
-          call rdhdr(lIn,'bmin',bmin,0.)
-          call rdhdr(lIn,'bpa',bpa,0.)
 	  if(bmaj.eq.0.0.or.bmin.eq.0.0) 
      *     call bug('f','beam parameters not found')
-	  call rdhdr(lIn,'cdelt'//itoaf(raxis),cdeltr,0.)
-	  call rdhdr(lIn,'cdelt'//itoaf(daxis),cdeltd,0.)
-	  call rdhdr(lIn,'cdelt1',cdelt1,0.)
-	  call rdhdr(lIn,'cdelt2',cdelt2,0.)
-	  call rdhdr(lIn,'cdelt3',cdelt3,0.)
-	  if(yaxis.eq.'point') then
+	end if
+	if(yaxis.eq.'point') then
 c
 c  Only deal with circular beams just now
 c
 	    if(bmaj.ne.bmin) 
      *       call bug('f','can only deal with circular beam')
-	  end if
 	end if
 c
 c  Find equinox
@@ -307,14 +329,29 @@ c
 c  Find region of interest
 c
 	call coInit(lIn)
-	scoord(raxis)=coord(1)
-	scoord(daxis)=coord(2)
-	scoord(vaxis)=0.0
-	call coCvt(lIn,'aw/aw/aw',scoord,'ap/ap/ap',dtrc)
-	do i=1,3
-	   trc(i)=nint(dtrc(i))
-	   blc(i)=trc(i)
-	end do
+c
+c  No coordinates given (centre of image)
+c
+        if (coord(1).eq.0.0d0.or.coord(2).eq.0.0d0) then
+          do i=1,3
+	     trc(i)=nint(nsize(i)/2.0+1.0)
+	     blc(i)=trc(i)
+	     dtrc(i)=dble(trc(i))
+	  end do
+	  call coCvt(lIn,'ap/ap/ap',dtrc,'aw/aw/aw',scoord)
+	else
+c
+c  Coordinate given
+c
+	  scoord(raxis)=coord(1)
+	  scoord(daxis)=coord(2)
+	  scoord(vaxis)=0.0
+	  call coCvt(lIn,'aw/aw/aw',scoord,'ap/ap/ap',dtrc)
+	  do i=1,3
+	     trc(i)=nint(dtrc(i))
+	     blc(i)=trc(i)
+	  end do
+	end if
 c
 c  Formatted value for requested coordinate
 c
@@ -344,7 +381,7 @@ c
 	blc(daxis)=blc(daxis)-width(2)/2
 	trc(daxis)=trc(daxis)+width(2)/2
 c
-c  Find pixel range for spectral axis
+c  Find pixel range for full spectral axis
 c
 	blc(vaxis)=1
 	trc(vaxis)=nsize(vaxis)
@@ -370,7 +407,6 @@ c
 	      endif
 	   end if
 	endif
-	call coFin(lIn)
 c
 c  Check if coordinate inside cubes
 c
@@ -406,21 +442,90 @@ c
 	if(trc(vaxis).gt.nsize(vaxis)) trc(vaxis)=nsize(vaxis)
 
 c
+c  Find pixel range for spectral profile range
+c
+	do i=1,3
+	  pblc(i)=blc(i)
+	  ptrc(i)=trc(i)
+	end do
+        if(profile(1).ne.0.0 .or. profile(2).ne.0.0) then
+          if(xrange(1).ne.0.0.or.xrange(2).ne.0.0) then
+	     if(xrange(2).gt.xrange(1)) then
+	       if(profile(1).lt.xrange(1).or.profile(2).gt.xrange(2))
+     *          call bug('f','Profile window extends beyond xrange')
+	     else
+               if(profile(1).gt.xrange(1).or.profile(2).lt.xrange(2))
+     *          call bug('f','Profile window extends beyond xrange')
+	     end if
+	   end if
+	   if(xaxis.eq.'frequency'.or.xaxis.eq.'FREQ') then
+	      fac=1000.0
+	   else
+	      fac=1.0
+	   end if
+	  if(xaxis.eq.'channel') then
+	    pblc(vaxis)=int(profile(1))
+	    ptrc(vaxis)=int(profile(2))
+	  else
+	    call coCvt1(lIn,vaxis,'aw',dble(profile(1)/fac),'ap',dtemp)
+	    pblc(vaxis)=int(dtemp)
+	    call coCvt1(lIn,vaxis,'aw',dble(profile(2)/fac),'ap',dtemp)
+	    ptrc(vaxis)=int(dtemp)
+	    if(ptrc(vaxis).gt.pblc(vaxis)) then
+	      pblc(vaxis)=pblc(vaxis)+1
+            else
+	      ptrc(vaxis)=ptrc(vaxis)+1
+	    endif
+	  end if
+	endif
+c
+c  Reset spectral boundaries if invalid
+c
+	if(pblc(vaxis).gt.ptrc(vaxis)) then
+	  temp=pblc(vaxis)
+	  pblc(vaxis)=ptrc(vaxis)
+	  ptrc(vaxis)=temp
+	endif
+	if(pblc(vaxis).lt.1.or.ptrc(vaxis).gt.nsize(vaxis))
+     *     call bug('w', 'Region partially outside image - resetting'//
+     *            ' spectral boundary')
+	if(pblc(vaxis).lt.1) pblc(vaxis)=1
+	if(ptrc(vaxis).gt.nsize(vaxis)) ptrc(vaxis)=nsize(vaxis)
+c
 c  Set up the region of interest.
 c
 	nchan = trc(vaxis)-blc(vaxis)+1
 c
+c  Reject vaxis=2
+c
+	if(vaxis.eq.2) then
+	  call bug('f','this image orientation is not implemented')
+	end if
+c
+c  Fit for position
+c
+	if(posfit)then
+	  if(width(1).le.1.and.width(2).le.1) then
+	     call bug('f','width parameter too small')
+	  end if
+ 	  if(vaxis.eq.3) then
+	     imax=abs(ptrc(1)-pblc(1))+1
+	     jmax=abs(ptrc(2)-pblc(2))+1
+	  else
+	     imax=abs(ptrc(2)-pblc(2))+1
+	     jmax=abs(ptrc(3)-pblc(3))+1
+	  end if
+	  call pfit(lIn,naxis,pblc,ptrc,nchan,vaxis,imax,jmax,
+     1              cdelt1,cdelt2,cdelt3,bmaj,bmin,bpa,dtrc,ra2,
+     2              dec2,none,ierr)
+	  if(none) call bug('f','No good pixels in selected region')
+	end if
+	call coFin(lIn)
+c
 c  Integrate the spectrum over the specified region.
 c
-	if(vaxis.eq.1) then
-	  call vaxis1(lIn,naxis,dtrc,blc,trc,cdelt2,cdelt3,bmaj,
-     *             bmin,yaxis,nchan,chan,spec,wpix,none)
-	else if(vaxis.eq.3) then
-	  call vaxis3(lIn,naxis,dtrc,blc,trc,cdelt1,cdelt2,bmaj,
-     *             bmin,yaxis,nchan,chan,spec,wpix,none)
-	else
-	  call bug('f','this image orientation is not implemented')
-	endif
+	call vaxis13(lIn,naxis,dtrc,blc,trc,cdelt1,cdelt2,cdelt3,bmaj,
+     *             bmin,yaxis,nchan,vaxis,chan,spec,wpix,none)
 	if(none) call bug('f','No good pixels in selected region')
 c
 c  Optionally Hanning smooth spectrum.
@@ -448,7 +553,7 @@ c  Polynomal fit
 c
 	if(poly.ge.0) then
 	   call polyfit(poly,nchan,value,work2,weight,mask,nmask,unit0,
-     *      spec,fit)
+     *      spec,fit,serr)
 	end if
 c
 c  Subtract fit now if required
@@ -499,8 +604,16 @@ c
 c  Make plots if requested.
 c       
 	  call pgscf(2)
+
+c  Label sizes
+
 	  lab1=1.1
-	  lab2=1.1
+	  if(pstyle1.or.pstyle2) then
+	     lab2=1.1
+	  else
+	     lab2=0.8
+	  end if
+
 	  if(csize(1).ne.0.0) lab1=lab1*csize(1)
 	  if(csize(2).ne.0.0) lab2=lab2*csize(2)
 	  call pgsch (lab1)
@@ -563,44 +676,51 @@ c	  call pgenv (xdmin, xdmax, ydmin, ydmax, 0, 0)
 	     call pgsls(1)
 	     call pgsci(1)
 	  end if
-	  if(pstyle1) then
-	    call pglab (xlabel,ylabel,comment)
-	  else
-	    if (.not.pstyle2) call pglab (xlabel,ylabel,' ')
+
+c  Axis labelling, except for options=pstyle2
+
+	  if (.not.pstyle2) call pglab (xlabel,ylabel,' ')
 c
-c  Extra information
+c  Title and extra information
 c
 	  
-	    call pgqvp(0,xv(1),xv(2),yv(1),yv(2))
-	    call pgqwin(xw(1),xw(2),yw(1),yw(2))
-	    call pgsvp(xv(1),xv(2),yv(2),1.0)
-	    call pgswin(0.0,1.0,0.0,1.0)
-	    call pgsch(lab2)
-	    if(pstyle2) then
-	       call pgptxt(0.5, 0.5, 0.0, 0.5,comment)
-	    else
-	       call pgscf(1)
-	       call pgtext(0.0,0.8,'Object: '//object)
-	       call pgtext(0.0,0.6,'Requested: '//ra1//dec1)
-	       call pgtext(0.0,0.4,'Actual    : '//ra2//dec2)
-	       title='Equinox  :'
-	       if(epoch.ne.0.0) then
-	          if(epoch.eq.1950.0) then
-	            title='Equinox  : B1950'
-	          else if(epoch.eq.2000.0) then
-	            title='Equinox  : J2000'
-	          else
-	            write(title(13:16), '(i4)') int(epoch)
-	          end if
-	       end if
-	       call pgtext(0.0,0.2,title)
-	       call pgptext(1.0,0.8,0.0,1.0,comment)
-	       call pgsvp(xv(1),xv(2),yv(1),yv(2))
-	       call pgswin(xw(1),xw(2),yw(1),yw(2))
-	       call pgsch(1.0)
-	       call pgscf(2)
-             endif
-	   endif
+	  call pgqvp(0,xv(1),xv(2),yv(1),yv(2))
+	  call pgqwin(xw(1),xw(2),yw(1),yw(2))
+	  call pgsvp(xv(1),xv(2),yv(2),1.0)
+	  call pgswin(0.0,1.0,0.0,1.0)
+	  call pgsch(lab2)
+	  if(pstyle1.or.pstyle2) then
+	     call pgptxt(0.5, 0.5, 0.0, 0.5,comment)
+	  else
+	     call pgscf(1)
+	     call pgtext(0.0,0.8,'Object: '//object)
+	     call pgtext(0.0,0.6,'Requested: '//ra1//dec1)
+	     fitnote=' '
+	     if(posfit) then
+		if(ierr.eq.0) then
+		  fitnote=' (fit)'
+		else
+		  fitnote=' (fit failed)'
+		end if
+             end if
+	     call pgtext(0.0,0.4,'Actual    : '//ra2//dec2//fitnote)
+	     title='Equinox  :'
+	     if(epoch.ne.0.0) then
+	        if(epoch.eq.1950.0) then
+	          title='Equinox  : B1950'
+	        else if(epoch.eq.2000.0) then
+	          title='Equinox  : J2000'
+	        else
+	          write(title(13:16), '(i4)') int(epoch)
+	        end if
+	     end if
+	     call pgtext(0.0,0.2,title)
+	     call pgptext(1.0,0.8,0.0,1.0,comment)
+	  end if
+	  call pgsvp(xv(1),xv(2),yv(1),yv(2))
+	  call pgswin(xw(1),xw(2),yw(1),yw(2))
+	  call pgscf(2)
+	  call pgsch(1.0)
 	end if
 
 c
@@ -616,8 +736,9 @@ c
 c  Measure spectral parameters
 c
 	if(measure)then
-	   call vmom(nchan,value,spec,fit,xaxis,unit0,clip,xrange,
-     *               profile,work,work1,poly,subpoly,device)
+	   if(posfit) call output('#     ...updating position')
+	   call vmom(nchan,value,spec,fit,xaxis,unit0,clip,
+     *               profile,work,work1,poly,subpoly,device,serr)
 	endif
 c
 c  Close graphics
@@ -762,6 +883,7 @@ c
 c----------------------------------------------------------------------c
 	integer axis,naxis
 	character*9 ctype
+
 c
 c  Externals.
 c
@@ -780,47 +902,88 @@ c
 	enddo
 	end
 c********1*********2*********3*********4*********5*********6*********7*c
-	subroutine vaxis1(lIn,naxis,dtrc,blc,trc,cdelt2,cdelt3,bmaj,
-     *               bmin,yaxis,nchan,chan,spec,wpix,none)
+	subroutine pfit(lIn,naxis,blc,trc,nchan,vaxis,imax,jmax,
+     1                  cdelt1,cdelt2,cdelt3,bmaj,bmin,bpa,dtrc,rac,
+     2                  dec,none,ierr)
 c
 	implicit none
-	integer lIn,naxis,blc(naxis),trc(naxis),nchan
-	real chan(nchan),spec(nchan),wpix(nchan)
-	real dr,dd,fac,bmaj,bmin,cdelt2,cdelt3
+	integer lIn,naxis,blc(naxis),trc(naxis),nchan,vaxis
+	integer imax,jmax
+	real bmaj,bmin,bpa,cdelt1,cdelt2,cdelt3
 	double precision dtrc(*)
-	character*(*) yaxis
+	character rac*13,dec*13
+
         logical none
 c
-c  get integrated spectrum for vaxis=1
+c  get moment map for vaxis=1 or 3
 c
 c  Inputs:
 c    lIn	The handle of the image.
 c    naxis	Number of image axes.
-c    yaxis      Can be 'average', 'sum' or 'point'
-c    dtrc       Pixel position of object of interest (yaxis='point')
 c    blc,trc	Corners of region of interest.
-c    cdelt2     Axis 2 spatial increment in radians
-c    cdelt3     Axis 3 increment in radians
-c    bmaj       Major axis in radians
-c    bmin       Minor axis in radians
 c    nchan	Number of channels.
+c    vaxis      Velocity axis
+c    imax       Maximum spatial pixels 
+c    jmax       Maximum spatial pixels
+c    cdelt1     Increment on 1-axis
+c    cdelt2     Increment on 2-axis
+c    cdelt3     Increment on 3-axis
+c    bmaj,bmin,bpa Beam parameters
+c
 c  Output:
-c    chan	Array of channel numbers.
-c    spec	Integrated spectrum.
-c    wpix	Number or weight of spatial pixels used for each channel
+c    dtrc       Fitted position in pixel coordinates
+c    rac        Fitted RA (formatted)
+c    dec        Fitted DEC (formatted)
 c    none       True if no good pixels selected
 c----------------------------------------------------------------------c
 	include 'maxdim.h'
-	real buf(maxdim)
-	logical flags(maxdim)
-	integer i,j,k,indx
+        include 'mbspect.h'
+
+	real buf(maxdim),pmom(imax,jmax)
+	real pi, d2r, tmp, flux
+	double precision xmom(naxis), coord(naxis), dwtrc(3)
+	character line*80
+	logical flags(maxdim), flagpos
+	integer i,j,k, indx, jndx, kndx, i1,i2
+	integer m, npar, ifail1, ifail2, ierr
+	character ract*13,dect*13
+
+
+c  Number of free parameters
+
+	parameter(npar=7)
+	real xf(npar), covar(npar,npar), exf(npar), rms
+
+	parameter  (pi = 3.141592654, d2r = pi/180.)
+
 c
-	do i = 1, nchan
-	  spec(i)  = 0.0
-	  chan(i)  = i + blc(1) -1
-          wpix(i) = 0.0
-	enddo
-        none = .true.
+c  Externals
+c
+	character*32 hangle,rangle
+	external mbgauss
+c
+        none = .true. 
+	ierr=0
+
+c  Initialise moment matrix
+
+	do i=1,imax
+	   do j=1,jmax
+	      pmom(i,j)=0.0
+	   end do
+	end do
+
+c  Checks
+
+	if(maxdata.lt.(imax*jmax)) then
+	   call bug('f', 'Region too big for position fit')
+	end if
+	if(npar.ge.(imax*jmax)) then
+	   call bug('f', 'Region too small for position fit')
+	end if
+
+c
+c  Calculate moment map
 c
 	do k = blc(3),trc(3)
 	  call xysetpl(lIn,1,k)
@@ -829,35 +992,262 @@ c
 	    call xyflgrd (lIn,j,flags)
 	    do i = blc(1),trc(1)
 	      if(flags(i)) then
-		indx = i-blc(1)+1
-		if(yaxis.eq.'point') then
-		  dr=(real(j)-real(dtrc(2)))*cdelt2
-		  dd=(real(k)-real(dtrc(3)))*cdelt3
-		  fac=exp(-2.0*log(4.0)*(dr**2+dd**2)/(bmaj*bmin))
+		indx=i-blc(1)+1
+		jndx=j-blc(2)+1
+		kndx=k-blc(3)+1
+		if(vaxis.eq.3) then
+		   pmom(indx,jndx)=pmom(indx,jndx)+buf(i)
 		else
-		  fac=1.0
+		   pmom(jndx,kndx)=pmom(jndx,kndx)+buf(i)
 		end if
-		spec(indx) = spec(indx) + fac*buf(i)
-		wpix(indx) = wpix(indx) + fac**2
                 none = .false.
 	      endif
 	    enddo
 	  enddo
 	enddo
+
+c  Number of data points
+
+	m=imax*jmax
+
+	ifail1=0
+	ifail2=0
+c
+c  Initial guesses (flux,centre in RA,DEC,major axis,minor axis, pa, dc offset)
+c
+	i1=imax/2+1
+	i2=jmax/2+1
+	xf(1)=pmom(i1,i2)
+	xf(2)=real(i1)
+	xf(3)=real(i2)
+	if(vaxis.eq.3) then
+	  if(bmaj.eq.0.0.or.bmin.eq.0.0) then
+	    xf(4)=2.0
+	    xf(5)=2.0
+	  else
+
+c  Funny approximation (assumes major axis parallel with 1-axis)
+
+	    xf(4)=abs(bmaj/cdelt1)
+	    xf(5)=abs(bmin/cdelt2)
+	  end if
+	else
+	  if(bmaj.eq.0.0.or.bmin.eq.0.0) then
+	    xf(4)=2.0
+	    xf(5)=2.0
+	  else
+	    xf(4)=abs(bmaj/cdelt2)
+	    xf(5)=abs(bmin/cdelt3)
+	  end if
+	end if
+	xf(6)=bpa
+	xf(7)=0.0
+c
+c  Data arrays
+c
+	k=0
+	do i=1,imax
+	   do j=1,jmax
+	      k=k+1
+	      pdata(k)=pmom(i,j)
+	      xdata(k)=real(i)
+	      ydata(k)=real(j)
+	   end do
+	end do
+c
+c  Fit Gaussian + dc offset to moment map
+c
+	call lsqfit(mbgauss,m,npar,xf,covar,rms,ifail1,ifail2)
+
+	if(ifail1.ne.0) call bug('f', 'Position fitting failed')
+	if(ifail2.ne.0) 
+     *           call bug('f', 'Position error determination failed')
+c
+c  Errors
+c
+	do i=1,npar
+	   exf(i)=sqrt(covar(i,i))
+	end do
+c
+c  Transform coordinates
+c
+	do i=1,3
+	  xmom(i)=blc(i)
+	end do
+	if(vaxis.eq.3) then
+	   xmom(1)=blc(1)-1.0+xf(2)
+	   xmom(2)=blc(2)-1.0+xf(3)
+	   dwtrc(1)=dble(xmom(1))
+	   dwtrc(2)=dble(xmom(2))
+	else
+	   xmom(2)=blc(2)-1.0+xf(2)
+	   xmom(3)=blc(3)-1.0+xf(3)
+	   dwtrc(2)=dble(xmom(2))
+	   dwtrc(3)=dble(xmom(3))
+	end if
+c
+c  Real coordinates
+c
+	call coCvt(lIn,'ap/ap/ap',xmom,'aw/aw/aw',coord)
+
+	if(vaxis.eq.3) then
+	  ract=hangle(coord(1))
+	  dect=rangle(coord(2))
+	  xf(1)=xf(1)*abs(cdelt3)
+	  xf(4)=sqrt((sin(d2r*xf(6))*cdelt1)**2+
+     *               (cos(d2r*xf(6))*cdelt2)**2)*xf(4)*3600.0/d2r
+          xf(5)=sqrt((cos(d2r*xf(6))*cdelt1)**2+
+     *               (sin(d2r*xf(6))*cdelt2)**2)*xf(5)*3600.0/d2r
+	  xf(7)=xf(7)*abs(cdelt3)
+	else
+	  ract=hangle(coord(2))
+	  dect=rangle(coord(3))
+	  xf(1)=xf(1)*abs(cdelt1)
+	  xf(4)=sqrt((sin(d2r*xf(6))*cdelt2)**2+
+     *               (cos(d2r*xf(6))*cdelt3)**2)*xf(4)*3600.0/d2r
+          xf(5)=sqrt((cos(d2r*xf(6))*cdelt2)**2+
+     *               (sin(d2r*xf(6))*cdelt3)**2)*xf(5)*3600.0/d2r
+	  xf(7)=xf(7)*abs(cdelt1)
+	end if
+c
+c  Rearrange variables and errors if major axis<minor axis
+c
+	if(xf(4).lt.xf(5)) then
+	   tmp=xf(4)
+	   xf(4)=xf(5)
+	   xf(5)=tmp
+	   xf(6)=xf(6)-90.0
+	   tmp=exf(4)
+	   exf(4)=exf(5)
+	   exf(5)=tmp
+	end if
+	if(cos(d2r*xf(6)).eq.0.0) then
+	   xf(6)=90.0
+	else
+	   xf(6)=atan(sin(d2r*xf(6))/cos(d2r*xf(6)))/d2r
+	end if
+	
+c
+c  Flag bad position errors
+c
+	flagpos=.false.
+	if(exf(2).gt.1.0.or.exf(3).gt.1.0) flagpos=.true.
+c
+c  Errors in real coordinates
+c
+	if(vaxis.eq.3) then
+	  exf(1)=exf(1)*abs(cdelt3)
+	  exf(2)=exf(2)*abs(cdelt1)
+	  exf(3)=exf(3)*abs(cdelt2)
+	  exf(4)=sqrt((sin(d2r*xf(6))*cdelt1)**2+
+     *                (cos(d2r*xf(6))*cdelt2)**2)*exf(4)*3600.0/d2r
+          exf(5)=sqrt((cos(d2r*xf(6))*cdelt1)**2+
+     *                (sin(d2r*xf(6))*cdelt2)**2)*exf(5)*3600.0/d2r
+	  exf(7)=exf(7)*abs(cdelt3)
+	else
+	  exf(1)=exf(1)*abs(cdelt1)
+	  exf(2)=sqrt(exf(2))*abs(cdelt2)
+	  exf(3)=sqrt(exf(3))*abs(cdelt3)
+	  exf(4)=sqrt((sin(d2r*xf(6))*cdelt2)**2+
+     *                (cos(d2r*xf(6))*cdelt3)**2)*exf(4)*3600.0/d2r
+          exf(5)=sqrt((cos(d2r*xf(6))*cdelt2)**2+
+     *                (sin(d2r*xf(6))*cdelt3)**2)*exf(5)*3600.0/d2r
+	  exf(7)=exf(7)*abs(cdelt1)
+	end if
+c
+c  Fit parameters
+c
+	call output('#     POSITION FITTING')
+	write(line,25) xf(1), exf(1)
+  25	format('#P1   Peak value:',1pg27.4,:,' +/- ', 1pg12.4)
+	call output(line)
+	if(bmaj.ne.0.0.and.bmin.ne.0.0) then
+	  flux=xf(1)*xf(4)*xf(5)*(d2r/3600)**2/(bmaj*bmin)
+	  write(line,35) flux
+  35	  format('#P2   Total integrated flux:',1pg16.4)
+	  call output(line)
+	end if
+	write(line,45) 3600.0*exf(2)/d2r, 3600.0*exf(3)/d2r
+  45	format('#P3   Positional errors (arcsec):',2f10.3)
+	call output(line)
+	line = '#P4   Right Ascension:                '//ract
+	call output(line)
+	line = '#P5   Declination:                    '//dect
+	call output(line)
+	write(line,50) 'Major',xf(4), exf(4)
+  50	format('#P6   ',a,' axis (arcsec):',f16.3,:,' +/-',f7.3)
+	call output(line)
+	write(line,50) 'Minor',xf(5), exf(5)
+	call output(line)
+	write(line,60) xf(6), exf(6)
+  60	format('#P7   Position angle (degrees):',f11.2,:,' +/-',f11.2)
+	call output(line)
+	write(line,80) xf(7), exf(7)
+  80	format('#P8   Offset Level:',f26.4,:,' +/-',1pg9.2)
+	call output(line)
+
+	if(flagpos) then
+	  call output('   *** Position error seems large'//
+     *                ' - reverting to input coordinates ***')
+	  ierr=1
+	else
+	  rac=ract
+	  dec=dect
+	  if(vaxis.eq.3) then
+	     dtrc(1)=dwtrc(1)
+	     dtrc(2)=dwtrc(2)
+	  else
+	     dtrc(2)=dwtrc(2)
+	     dtrc(3)=dwtrc(3)
+	  end if
+	end if
+
 	end
 c********1*********2*********3*********4*********5*********6*********7*c
-	subroutine vaxis3(lIn,naxis,dtrc,blc,trc,cdelt1,cdelt2,bmaj,
-     *               bmin,yaxis,nchan,chan,spec,wpix,none)
+	subroutine mbgauss(m,n,xf,fvec,iflag)
+	integer i,m,n,iflag
+	real xf(n), fvec(m)
+
+c  Trig functions need more precision for minimization code
+
+	double precision cospa,sinpa,xscal,yscal,xx,yy,xp,yp,t,pi,d2r
+	double precision xmaj, xmin
+
+	parameter  (pi = 3.141592654, d2r = pi/180.)
+
+	include 'mbspect.h'
+
+	xmaj=dble(xf(4))
+	xmin=dble(xf(5))
+        cospa = cos(d2r*dble(xf(6)))
+        sinpa = sin(d2r*dble(xf(6)))
+        xscal = 4.0*log(2.d0)/(xmaj**2)
+        yscal = 4.0*log(2.d0)/(xmin**2)
+
+        do i=1,m
+          xx = -(xdata(i) - xf(2))
+          yy =   ydata(i) - xf(3)
+          xp =  xx*sinpa + yy*cospa
+          yp = -xx*cospa + yy*sinpa
+          t = xscal*(xp*xp) + yscal*(yp*yp)
+          if(t.lt.70) fvec(i) = xf(7) + xf(1) * real(exp(-t))
+	  fvec(i)=pdata(i)-fvec(i)
+        enddo
+
+	end
+c********1*********2*********3*********4*********5*********6*********7*c
+	subroutine vaxis13(lIn,naxis,dtrc,blc,trc,cdelt1,cdelt2,cdelt3,
+     *               bmaj,bmin,yaxis,nchan,vaxis,chan,spec,wpix,none)
 c
 	implicit none
-	integer lIn,naxis,blc(naxis),trc(naxis),nchan
+	integer lIn,naxis,blc(naxis),trc(naxis),nchan,vaxis
 	real chan(nchan),spec(nchan),wpix(nchan)
-	real dr,dd,fac,bmaj,bmin,cdelt1,cdelt2
+	real dr,dd,fac,bmaj,bmin,cdelt1,cdelt2,cdelt3
 	double precision dtrc(*)
 	character*(*) yaxis
         logical none
 c
-c  get integrated spectrum for vaxis=3
+c  get integrated spectrum for vaxis=1 or 3
 c
 c  Inputs:
 c    lIn	The handle of the image.
@@ -865,11 +1255,13 @@ c    naxis	Number of image axes.
 c    yaxis      Can be 'average', 'sum' or 'point'
 c    dtrc       Pixel position of object of interest (yaxis='point')
 c    blc,trc	Corners of region of interest.
-c    cdelt1     Axis 1 spatial increment in radians
-c    cdelt2     Axis 2 increment in radians
+c    cdelt1     Axis 1 increment (radians if spatial axis)
+c    cdelt2     Axis 2 increment
+c    cdelt3     Axis 3 increment
 c    bmaj       Major axis in radians
 c    bmin       Minor axis in radians
 c    nchan	Number of channels.
+c    vaxis      Velocity axis
 c  Output:
 c    chan	Array of channel numbers.
 c    spec	Integrated spectrum.
@@ -883,25 +1275,34 @@ c----------------------------------------------------------------------c
 c
 	do i = 1, nchan
 	  spec(i)  = 0.0
+	  chan(i) = i + blc(vaxis) -1
    	  wpix(i) = 0.0
 	enddo
         none = .true. 
 c
 	do k = blc(3),trc(3)
 	  call xysetpl(lIn,1,k)
-	  indx = k-blc(3)+1
-	  chan(indx) = k
 	  do j = blc(2),trc(2)
 	    call xyread(lIn,j,buf)
 	    call xyflgrd (lIn,j,flags)
 	    do i = blc(1),trc(1)
 	      if(flags(i)) then
 		if(yaxis.eq.'point') then
-		  dr=(real(i)-real(dtrc(1)))*cdelt1
-		  dd=(real(j)-real(dtrc(2)))*cdelt2
+		  if(vaxis.eq.3) then 
+		    dr=(real(i)-real(dtrc(1)))*cdelt1
+		    dd=(real(j)-real(dtrc(2)))*cdelt2
+		  else
+		    dr=(real(j)-real(dtrc(2)))*cdelt2
+		    dd=(real(k)-real(dtrc(3)))*cdelt3
+		  end if
 		  fac=exp(-2.0*log(4.0)*(dr**2+dd**2)/(bmaj*bmin))
 		else
 		  fac=1.0
+		end if
+		if(vaxis.eq.3) then
+	          indx = k-blc(vaxis)+1
+		else
+		  indx = i-blc(vaxis)+1
 		end if
 		spec(indx) = spec(indx) + fac*buf(i)
 		wpix(indx) = wpix(indx) + fac**2
@@ -997,7 +1398,7 @@ c
             if (wpix(i).gt.0.0) then
                spec(i) = spec(i)/wpix(i)
             else
-               call bug ('f', 'Error normalizing integrated spectrum')
+               call bug ('f', 'Some channels have zero weight')
             end if
 	  enddo
 	  if(bunit(1:7).eq.'JY/BEAM') then
@@ -1057,7 +1458,7 @@ c----------------------------------------------------------------------c
 c
 c
       subroutine getopt (deriv1, deriv2, histo, measure, pstyle1,
-     1                   pstyle2)
+     1                   pstyle2,posfit)
 c----------------------------------------------------------------------
 c     Decode options array into named variables.
 c
@@ -1068,19 +1469,21 @@ c     histo      True means plot a histogram rather than a curve
 c     measure    True means measure spectral parameters
 c     pstyle1    True means use alternative plot style
 c     pstyle2    True means use alternative plot style 2
+c     posfit     True means fit for source position
 c
 c-----------------------------------------------------------------------
       implicit none
 c
-      logical deriv1, deriv2, histo, measure, pstyle1, pstyle2
+      logical deriv1, deriv2, histo, measure, pstyle1, pstyle2,
+     +        posfit
 cc
       integer maxopt
-      parameter (maxopt = 6)
+      parameter (maxopt = 7)
 c
       character opshuns(maxopt)*7
       logical present(maxopt)
       data opshuns /'1deriv', '2deriv', 'histo', 'measure','pstyle1',
-     1              'pstyle2'/
+     1              'pstyle2','posfit'/
 c-----------------------------------------------------------------------
       call options ('options', opshuns, present, maxopt)
 c
@@ -1091,6 +1494,7 @@ c
       measure = present(4)
       pstyle1= present(5)
       pstyle2= present(6)
+      posfit=present(7)
 c
       end
 c
@@ -1141,7 +1545,7 @@ c
 c
 c
       subroutine polyfit(poly,nchan,value,work2,weight,mask,nmask,unit0,
-     *                   spec,fit)
+     *                   spec,fit,serr)
 c-----------------------------------------------------------------------
 c     Polynomial fit of spectrum
 c
@@ -1157,7 +1561,8 @@ c     nmask        Number of mask pairs
 c     unit0        yaxis units
 c   Outputs:
 c     weight       Weight array (maxdim)
-c     fit         Polynomial fit
+c     fit          Polynomial fit
+c     serr         rms
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -1284,8 +1689,8 @@ c  Iteration count
       end	
 
 c
-      subroutine vmom (nchan,value,spec,fit,xaxis,unit0,clip,xrange,
-     *                 profile,work,work1,poly,subpoly,device)
+      subroutine vmom (nchan,value,spec,fit,xaxis,unit0,clip,
+     *                 profile,work,work1,poly,subpoly,device,serr)
 c-----------------------------------------------------------------------
 c     Take moments of spectrum
 c
@@ -1298,20 +1703,19 @@ c     xaxis	Units for xaxis. Can be 'channel','frequency','optical',
 c               'radio' or (default) units in image.
 c     unit0     Brightness units
 c     clip      clip levels
-c     xrange    range of x values (default is full range)
 c     profile   Measure within this range of x-values
 c     work      Work array (maxdim)
 c     work1     Work array (maxdim)
 c     poly      Polynomial order
 c     subpoly   Subtract polynomial
 c     device    pgplot device
+c     serr      rms in spectrum
 c-----------------------------------------------------------------------
       implicit none
 c
       integer nchan,npts,poly
-      real profile(*),fit(*)
+      real profile(*),fit(*), serr
       real spec(nchan), value(nchan), clip(*), work(*), work1(*)
-      real xrange(2)
       character*(*) xaxis, unit0, device
       logical subpoly
 cc
@@ -1320,6 +1724,7 @@ cc
       real spmax,spmin,spmaxa,spmaxb,v50a,v50b,v20a,v20b
       real v50,v20,w50,w20,prof(2),d(5),sg
       double precision mom0,mom1,mom2,delta,rmom0,rmom1,rmom2,dt
+      double precision mom0mean
       character*16 ulabel, unit1, unit2
       character*80 line
       logical skip20, skip50
@@ -1352,15 +1757,6 @@ c  Mask the spectrum outside the profile window
 c
       j=0
       if(prof(1).ne.0.0.or.prof(2).ne.0.0) then
-        if(xrange(1).ne.0.0.or.xrange(2).ne.0.0) then
-	   if(xrange(2).gt.xrange(1)) then
-	     if(prof(1).lt.xrange(1).or.prof(2).gt.xrange(2))
-     *        call bug('f','Profile window extends beyond xrange')
-	   else
-             if(prof(1).gt.xrange(1).or.prof(2).lt.xrange(2))
-     *        call bug('f','Profile window extends beyond xrange')
-	   end if
-	end if
 	do i=1,nchan
 	  if(work(i).gt.prof(1).and.work(i).lt.prof(2)) then
              j=j+1
@@ -1379,6 +1775,7 @@ c
 c  Zeroth, first moment, maximum and minimum
 c
       mom0=0.0
+      mom0mean=0.0
       mom1=0.0
       spmax=work1(1)
       spmin=spmax
@@ -1387,12 +1784,14 @@ c
       delta=abs(work(2)-work(1))
       if(work1(1).lt.clip(1).or.work1(1).gt.clip(2)) then
         mom0=work1(1)*delta
+        mom0mean=work1(1)/real(npts)
         mom1=work(1)*work1(1)*delta
       endif
       do i=2,npts
 	 delta=abs(work(i)-work(i-1))
 	 if(work1(i).lt.clip(1).or.work1(i).gt.clip(2)) then
 	   mom0=mom0+work1(i)*delta
+           mom0mean=mom0mean+work1(i)/real(npts)
 	   mom1=mom1+work(i)*work1(i)*delta
 	 end if
 	 if(work1(i).gt.spmax) then
@@ -1404,6 +1803,7 @@ c
 	    imin=i
          end if
       end do
+
 c
 c  Normalise
 c
@@ -1455,6 +1855,7 @@ c
 c
 c  Log results
 c
+      call output('#     SPECTRAL FITTING')
       line=' '
       write(line,60) xaxis
  60	format('#MC   xaxis: ',a)
@@ -1469,6 +1870,11 @@ c
       write(line,85) npts
  85	format('#NP   Number of spectral points: ', i5)
       call output(line)
+      if(serr.gt.0.0) then
+         write(line,87) spmax/serr
+ 87	 format('#SN1  Peak S/N ratio = ', f10.2)
+	 call output(line)
+      end if
       write(line,90) clip(1), clip(2), unit0
  90	format('#CL   Clipping inside range (',f9.3,',',f9.3, ')', 1x,a)
       call output(line)
@@ -1477,6 +1883,11 @@ c
       write(line,100) real(mom0),real(mom1),real(mom2)
  100	format('#MM       ',3(6x,f10.3))
       call output(line)
+      if(serr.gt.0.0) then
+         write(line,102) real(mom0mean)/serr
+ 102	 format('#SN2  Mean S/N ratio = ', f10.2)
+	 call output(line)
+      end if
       call output('      Robust moments: 0               1'//
      *            '               2')
       write(line,105) real(rmom0),real(rmom1),real(rmom2)
