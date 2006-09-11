@@ -39,7 +39,7 @@ c	as there is not a correspondence a visibility listed and a visibility
 c	in the data-set.
 c@ line
 c	For options=data, this gives the normal uv linetype, with the normal
-c	defaults. See the help on ``line'' for more information.
+c	defaults. See the help on "line" for more information.
 c@ recnum   
 c	The number of output records. This is used to cut off long outputs.
 c	The default is either 1 or 20, depending on the options.
