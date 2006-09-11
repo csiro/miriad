@@ -3,14 +3,27 @@ c  History:
 c    25aug97 rjs	Original version.
 c     8sep97 rjs	Better error message.
 c    29oct97 rjs        tinLen was terribly flawed ... fix it.
+c    02nov97 rjs	Better error messages. Flag parameter in tinopen.
 c************************************************************************
-	subroutine tinOpen(name)
+	subroutine tinOpen(name,flags)
 c
 	implicit none
-	character name*(*)
+	character name*(*),flags*(*)
+c
+c  Open a text file, and ready things for reading of a text file.
+c
+c  Inputs:
+c    name	Name of the text file to process.
+c    flags	Extra processing flags:
+c		  'n'  Do not allow defaults
+c		  's'  Steam-mode. Treat end-of-line like any other
+c		       space.
 c------------------------------------------------------------------------
 	include 'tin.h'
 	integer iostat
+c
+	stream = index(flags,'s').ne.0
+	nodef  = index(flags,'n').ne.0
 c
 	call txtopen(lIn,name,'old',iostat)
 	if(iostat.ne.0)then
@@ -46,7 +59,7 @@ c
 c
 	length = tinNext()
 	if(length.gt.len(line1))
-     *	  call bug('f','Input string too short in tinLine')
+     *	  call tinBug('Input string too short in tinLine')
 	if(length.gt.0)line1 = line(1:length)
 	end
 c************************************************************************
@@ -68,7 +81,7 @@ c
 	dowhile(k2.eq.0.and.iostat.eq.0)
 	  call txtread(lIn,line,k2,iostat)
 	  if(k2.gt.len(line))
-     *		call bug('f','Text file line too long for me!')
+     *	    call tinBug('Text file line too long for me!')
           if(iostat.eq.0)then
             i = 0  
             l = 0
@@ -92,7 +105,7 @@ c
               endif
             enddo
             k2 = l
-            if(within)call bug('f','Unbalanced quotes on line')
+            if(within)call tinBug('Unbalanced quotes on line')
           else if(iostat.eq.-1)then
             k2 = 0
           else
@@ -109,7 +122,7 @@ c************************************************************************
 c
 	implicit none
 c
-c  Return the number of non=blank characters in the current line.
+c  Return the number of non-blank characters left in the current line.
 c
 c------------------------------------------------------------------------
 	include 'tin.h'
@@ -141,13 +154,12 @@ c
 	implicit none
 	double precision value,default
 c------------------------------------------------------------------------
-	include 'tin.h'
 	character string*48
 	integer length
 	logical ok
 	double precision dval
 c
-	call getfield(line,k1,k2,string,length)
+	call tinGet(string,length)
 c
 	if(length.eq.0)then
 	  value = default
@@ -156,7 +168,7 @@ c
 	  if(ok)then
 	    value = dval
 	  else
-	    call bug('f','Error reading numeric value from text file')
+	    call tinbug('Error reading numeric value from text file')
 	  endif
 	endif
 c
@@ -167,13 +179,12 @@ c
 	implicit none
 	integer value,default
 c------------------------------------------------------------------------
-	include 'tin.h'
 	character string*48
 	integer length
 	logical ok
 	integer ival
 c
-	call getfield(line,k1,k2,string,length)
+	call tinGet(string,length)
 c
 	if(length.eq.0)then
 	  value = default
@@ -182,7 +193,7 @@ c
 	  if(ok)then
 	    value = ival
 	  else
-	    call bug('f','Error reading numeric value from text file')
+	    call tinbug('Error reading numeric value from text file')
 	  endif
 	endif
 c
@@ -196,12 +207,11 @@ c
 c  Skip a number of tokens in the input stream.
 c
 c------------------------------------------------------------------------
-	include 'tin.h'
 	integer i,length
 	character value*128
 c
 	do i=1,n
-	  call getfield(line,k1,k2,value,length)
+	  call tinGet(value,length)
 	enddo
 c
 	end
@@ -211,10 +221,9 @@ c
 	implicit none
 	character value*(*),default*(*)
 c------------------------------------------------------------------------
-	include 'tin.h'
 	integer length
 c
-	call getfield(line,k1,k2,value,length)
+	call tinGet(value,length)
 c
 	if(length.eq.0)value = default
 	end
@@ -248,12 +257,11 @@ c  Output:
 c    value      The value retrieved.
 c--
 c------------------------------------------------------------------------
-	include 'tin.h'
 	character string*48
 	integer length
 	logical ok
 c
-	call getfield(line,k1,k2,string,length)
+	call tinGet(string,length)
 c
 	if(length.eq.0)then
 	  value = default
@@ -263,13 +271,48 @@ c
 	else if(fmt.eq.'time'.or.fmt.eq.'atime')then
 	  call dectime(string,value,fmt,ok)
 	else
-	  call bug('f','Unrecognised format in tinGett')
+	  call tinbug('Unrecognised format in tinGett')
 	endif
-	if(.not.ok)then
-	  if(length.gt.0)
-     *	    call bug('w','Error decoding '//string(1:length))
-	  call bug('f','Error decoding text file angle or time')
-	endif
+	if(.not.ok)
+     *	  call tinbug('Error decoding text file angle or time')
 c
 	end
-
+c************************************************************************
+	subroutine tinGet(string,length)
+c
+	implicit none
+	character string*(*)
+	integer length
+c------------------------------------------------------------------------
+	include 'tin.h'
+	integer itemp
+c
+c  Externals.
+c
+	integer tinNext
+c
+	call getfield(line,k1,k2,string,length)
+	if(length.eq.0.and.stream)then
+	  itemp = tinNext()
+	  call getfield(line,k1,k2,string,length)
+	endif
+	if(nodef.and.length.eq.0)
+     *		call tinBug('Values missing in this line')
+	end
+c************************************************************************
+	subroutine tinBug(string)
+c
+	implicit none
+	character string*(*)
+c------------------------------------------------------------------------
+	include 'tin.h'
+	integer l
+c
+	integer len1
+c
+	l = min(k2,len(line))
+	if(l.gt.0)l = len1(line(1:l))
+	if(l.gt.0)call bug('w','Error processing text file string '//
+     *	  line(1:l))
+	call bug('f',string)
+	end
