@@ -59,17 +59,15 @@ c	            By default ATLOD attempts to map the simultaneous
 c	            frequencies to the IF axis. This will not be possible
 c	            if there are a different number of polarisations in
 c	            the different IFs.
-c	  'birdie'  flag out birdies in any 33 channel and 128MHz mode
-c		    continuum data.  Birdies occur at N*128MHz. If  the
-c		    birdie is in channel I, this options flags out channels
-c		    I-5,I-3,I-1,I,I+1,I+3,I+5.  This is necessary because
-c		    the birdie will ring through the spectrum owing to the 
-c		    triangular lag weighting function (F.T.to a SinC squared 
-c		    in the frequency domain).  Note that since adjacent 
-c		    channels are not independent, you are not losing any 
-c		    significant signal-to-noise ratio by doing this, and
-c		    you will eradicate the phase centre artifacts that
-c		    they can cause.
+c	  'birdie'  This option discards every second channel in continuum
+c	            (33 channels/128MHz) mode. The set of channels which is
+c	            discarded are those most likely affected by self-
+c	            interference from the LO. Some edge channels are also
+c	            discarded and the channel nearest a multple of the LO
+c	            frequency is flagged. This option does not have a
+c	            sensitivity penalty, because the effective channel
+c	            bandwidth in continuum mode is twice the channel separation.
+c	  'reweight' Re-weight the lag spectrum to eliminate the "Gibss" phenomena.
 c@ nfiles
 c	This gives one or two numbers, being the number of files to skip,
 c	followed by the number of files to process. This is only
@@ -142,7 +140,9 @@ c    rjs  25jan95 Write the fudged source name (rather than just
 c		  discarding it!!).
 c    nebk 18feb95 Write out a correct fudged source name rather than
 c		  a totally scrambled one.  Mr. S must be on drugs again.
-c    nebk 03mar95 Add options=birdie and record file names in history
+c    nebk 03mar95 Add options=birdie and record file names in history.
+c    rjs  14mar95 Discard channels for options=birdie.
+c    rjs  27mar95 Options=reweight.
 c
 c  Program Structure:
 c    Miriad atlod can be divided into three rough levels. The high level
@@ -168,27 +168,26 @@ c------------------------------------------------------------------------
 	integer MAXFILES
 	parameter(MAXFILES=128)
 	character version*(*)
-	parameter(version='AtLod: version 09-Mar-95')
+	parameter(version='AtLod: version 27-Mar-95')
 c
-	character in(MAXFILES)*64,out*64
+	character in(MAXFILES)*64,out*64,line*64
 	integer tno
-	integer ifile,ifsel,nfreq,iostat,nfiles,i,lt
+	integer ifile,ifsel,nfreq,iostat,nfiles,i
 	double precision rfreq(2)
 	logical doauto,docross,docomp,dosam,relax,unflag,dohann,dobary
-	logical doif,birdie
+	logical doif,birdie,dowt
 	integer fileskip,fileproc,scanskip,scanproc
 c
 c  Externals.
 c
 	character itoaf*8
-        integer len1
 c
 c  Get the input parameters.
 c
 	call output(version)
-        call output ('Options=birdie now available to flag out ')
-        call output ('N*128MHz birdies in 33 channel 128MHz mode')
-        call output (' ')
+	call output('Options=birdie,reweight are available to discard')
+	call output(' suspect channels and eliminate Gibbs phenomena')
+	call output(' in continuum mode')
 	call keyini
 	call mkeyf('in',in,MAXFILES,nfiles)
 	if(nfiles.eq.0)
@@ -199,7 +198,7 @@ c
         call keyi('ifsel',ifsel,0)
         call mkeyd('restfreq',rfreq,2,nfreq)
 	call getopt(doauto,docross,docomp,dosam,relax,unflag,
-     *		    dohann,dobary,doif,birdie)
+     *					dohann,birdie,dobary,doif,dowt)
 	call keyi('nfiles',fileskip,0)
 	call keyi('nfiles',fileproc,nfiles-fileskip)
 	if(nfiles.gt.1.and.fileproc+fileskip.gt.nfiles)
@@ -220,6 +219,12 @@ c
 	call uvset(tno,'preamble','uvw/time/baseline',0,0.,0.,0.)
 	call Fixed(tno,dobary)
 c
+c  Do some history processing.
+c
+	call hisopen(tno,'write')
+	call hiswrite(tno,'ATLOD: Miriad '//version)
+	call hisinput(tno,'ATLOD')
+c
 c  Process a number of files.
 c
 	ifile = 0
@@ -237,47 +242,44 @@ c
 	    if(iostat.ne.0)call bug('f','Error skipping RPFITS file')
 	  else
 	    if(nfiles.eq.1)then
-	      call output('Processing file '//itoaf(ifile))
 	      i = 1
 	    else
-	      call output('Processing file '//in(ifile))
 	      i = ifile
 	    endif
-	    call PokeIni(tno,dosam,dohann,dobary,doif)
+	    if(i.ne.ifile)then
+	      call output('Processing file '//itoaf(ifile))
+	    else
+	      call output('Processing file '//in(ifile))
+	      line = 'ATLOD: Processed file '//in(ifile)
+	      call hiswrite(tno,line)
+	    endif
+	    call PokeIni(tno,dosam,dohann,birdie,dowt,dobary,doif)
 	    call RPDisp(in(i),scanskip,scanproc,doauto,docross,
-     *			relax,birdie,unflag,ifsel,rfreq,nfreq,iostat)
+     *				relax,unflag,ifsel,rfreq,nfreq,iostat)
 	  endif
 	enddo
 c
-c  Write some history.
-c
-	call hisopen(tno,'write')
-	call hiswrite(tno,'ATLOD: Miriad'//version)
-	call hisinput(tno,'ATLOD')
-        call hiswrite(tno,'ATLOD: Summary of files read')
-        do i = 1, nfiles
-          out = itoaf(i)
-          lt = len1(out)
-          call hiswrite(tno,'ATLOD:    file '//out(1:lt)//' = '//in(i))
-        enddo
-	call hisclose(tno)
-c
 c  Close up shop.
 c
-	call uvclose(tno)
 	if(iostat.ne.0)then
-	  call bug('w','RPFIT i/o error: jstat='//itoaf(iostat))
+	  line = 'RPFITS i/o error: jstat='//itoaf(iostat)
+	  call bug('w',line)
 	  call bug('w','Prematurely finishing because of errors')
+	  call hiswrite(tno,'ATLOD: '//line)
+	  call hiswrite(tno,
+     *		 'ATLOD: Prematurely finishing because of errors')
 	endif
+	call hisclose(tno)
+	call uvclose(tno)
 c
 	end
 c************************************************************************
 	subroutine GetOpt(doauto,docross,docomp,dosam,relax,unflag,
-     *				dohann,dobary,doif,birdie)
+     *					dohann,birdie,dobary,doif,dowt)
 c
 	implicit none
 	logical doauto,docross,dosam,relax,unflag,dohann,dobary
-	logical docomp,doif,birdie
+	logical docomp,doif,birdie,dowt
 c
 c  Get the user options.
 c
@@ -287,19 +289,21 @@ c    docross	Set if the user wants cross-correlationdata.
 c    docomp	Write compressed data.
 c    dosam	Correct for sampler statistics.
 c    dohann     Hanning smooth spectra
+c    birdie	Discard bad channels in continuum mode.
 c    doif	Map the simultaneous frequencies to the IF axis.
 c    relax
 c    unflag
 c    dobary	Compute barycentric radial velocities.
-c    birdie     Flag out 128MHz birdies
+c    birdie
+c    dowt	Reweight the lag spectrum.
 c------------------------------------------------------------------------
 	integer nopt
-	parameter(nopt=10)
+	parameter(nopt=11)
 	character opts(nopt)*8
 	logical present(nopt)
 	data opts/'noauto  ','nocross ','compress','relax   ',
      *		  'unflag  ','samcorr ','hanning ','bary    ',
-     *		  'noif    ','birdie  '/
+     *		  'noif    ','birdie  ','reweight'/
 	call options('options',opts,present,nopt)
 	doauto = .not.present(1)
 	docross = .not.present(2)
@@ -310,7 +314,8 @@ c------------------------------------------------------------------------
         dohann  = present(7)
 	dobary  = present(8)
 	doif    = .not.present(9)
-        birdie  = present(10)
+	birdie  = present(10)
+	dowt    = present(11)
 c
 	if(dosam.and.relax)call bug('f',
      *	  'You cannot use options samcorr and relax simultaneously')
@@ -359,11 +364,12 @@ c
 	end
 c************************************************************************
 c************************************************************************
-	subroutine PokeIni(tno1,dosam1,dohann1,dobary1,doif1)
+	subroutine PokeIni(tno1,dosam1,dohann1,birdie1,dowt1,
+     *						dobary1,doif1)
 c
 	implicit none
 	integer tno1
-	logical dosam1,dohann1,doif1,dobary1
+	logical dosam1,dohann1,doif1,dobary1,birdie1,dowt1
 c
 c  Initialise the Poke routines.
 c------------------------------------------------------------------------
@@ -376,6 +382,10 @@ c
 	dohann = dohann1
 	doif   = doif1
 	dobary = dobary1
+	birdie = birdie1
+	dowt   = dowt1
+c
+	if(dowt)call LagWt(wts,2*ATCONT-2,0.04)
 c
 	newsc = .false.
 	newfreq = .false.
@@ -462,7 +472,8 @@ c  Save the frequency/IF information.
 c
 c------------------------------------------------------------------------
 	include 'atlod.h'
-	integer p
+	integer p,t
+	double precision flo
 c
 c  Externals.
 c
@@ -474,16 +485,35 @@ c
 c
 	nfreq(if) = nfreq1
 	if(nfreq(if).gt.1)then
-	  sdf(if) = 1e-9*bw / (nfreq1 - 1)
+	  sdf(if) = 1e-9*bw / (nfreq(if) - 1)
 	else
 	  sdf(if) = 1e-9*abs(bw)
 	endif
 	sfreq(if) = 1e-9*freq - (ref-1)*sdf(if)
+	edge(if) = 0
+	bchan(if) = 0
+c
+c  If we are working in "birdie" mode, compute the channel with the
+c  128MHz LO signal in it.
+c
+	if(birdie.and.nfreq(if).eq.33)then
+	  flo = sfreq(if) + 0.5*(nfreq(if)-1)*sdf(if)
+	  flo = 0.128d0 * nint(flo/0.128d0)
+	  t = nint((flo - sfreq(if))/sdf(if)) + 1
+	  if(t.le.0) t = t + nint(0.128d0/abs(sdf(if)))
+c
+	  edge(if) = 3 + mod(t,2)
+	  bchan(if) = (t - edge(if) - 1)/2 + 1
+	  sfreq(if) = sfreq(if) + edge(if)*sdf(if)
+	  sdf(if) = 2*sdf(if)
+	  nfreq(if) = (nfreq(if)-2*edge(if)+1)/2
+	endif
 c
 	if(dohann.and.nfreq(if).gt.33)then
-	  sfreq(if) = sfreq(if) + sdf(if)
+	  edge(if) = 1
+	  sfreq(if) = sfreq(if) + edge(if)*sdf(if)
 	  sdf(if) = 2*sdf(if)
-	  nfreq(if) = (nfreq(if)-1)/2
+	  nfreq(if) = (nfreq(if)-2*edge(if)+1)/2
 	endif
 c
 	nstoke(if) = nstok
@@ -662,6 +692,8 @@ c
 	include 'mirconst.h'
 	integer ipnt,i1,i2,bl,p
 	logical doconj,doneg
+	real rscr(2*ATCONT-2)
+	complex cscr(ATCONT)
 c
 	if(if.gt.nifs)call bug('f',
      *		'Incorrect IF number')
@@ -693,6 +725,11 @@ c
 	  inttime(bl) = 15
 	endif
 c
+c  Reweight the data, if needed.
+c
+	if(dowt.and.nfreq(if).eq.ATCONT)
+     *	  call Reweight(vis,cscr,rscr,nstoke(if),nfreq(if),wts)
+c
 c  Allocate buffer slots for each polarisation. Save the flags, Copy the
 c  data to the output. Do sampler corrections.
 c
@@ -706,9 +743,37 @@ c
 	  if(nused.gt.ATDATA)call bug('f','Buffer overflow in PokeData')
 	  doneg = polcode(if,p).eq.PolXY.or.polcode(if,p).eq.PolYX
 	  call DatCpy(nstoke(if),nfreq(if),nfreq1,
-     *		dohann.and.nfreq1.gt.33,doconj,doneg,vis(p),data(ipnt))
+     *		dohann.and.nfreq1.gt.33,birdie.and.nfreq1.eq.33,
+     *		edge(if),doconj,doneg,vis(p),data(ipnt))
 	  if(dosam)call SamCorr(nfreq(if),data(ipnt),polcode(if,p),
      *		i2,i1,if,time,xsampler,ysampler,ATIF,ATANT)
+	enddo
+c
+	end
+c************************************************************************
+	subroutine Reweight(vis,cscr,rscr,npol,nchan,wts)
+c
+	implicit none
+	integer npol,nchan
+	complex vis(npol,nchan),cscr(nchan)
+	real wts(2*nchan-2),rscr(2*nchan-2)
+c
+c  Reweight the lag spectrum.
+c------------------------------------------------------------------------
+	integer i,p
+c
+	do p=1,npol
+	  do i=1,nchan
+	    cscr(i) = vis(p,i)
+	  enddo
+	  call fftcr(cscr,rscr,-1,2*nchan-2)
+	  do i=1,2*nchan-2
+	    rscr(i) = rscr(i)*wts(i)/real(2*nchan-2)
+	  enddo
+	  call fftrc(rscr,cscr, 1,2*nchan-2)
+	  do i=1,nchan
+	    vis(p,i) = cscr(i)
+	  enddo
 	enddo
 c
 	end
@@ -811,8 +876,8 @@ c
 		    ipnt = pnt(if,p,bl,bin)
 		    if(ipnt.gt.0)then
 		      call PolPut(tno,polcode(if,p),dosw(bl))
-		      call GetFlag(nobird(if),bflags(1,if),
-     *                  flag(if,p,bl,bin),nfreq(if),flags)
+		      call GetFlag(flag(if,p,bl,bin),nfreq(if),
+     *						  bchan(if),flags)
 		      call uvputvri(tno,'bin',bin,1)
 		      call uvputvrr(tno,'inttime',inttime(bl),1)
 		      call uvwrite(tno,preamble,data(ipnt),flags,
@@ -856,9 +921,9 @@ c
 	        if(npol.gt.0)then
 		  call uvputvri(tno,'npol',npol,1)
 	          do p=1,nstoke(1)
-		    call GetDat(nobird,bflags,data,nused,
-     *			pnt(1,p,bl,bin),flag(1,p,bl,bin),nfreq,
-     *                  nifs,vis,flags,nchan)
+		    call GetDat(data,nused,pnt(1,p,bl,bin),
+     *			flag(1,p,bl,bin),nfreq,bchan,nifs,
+     *			vis,flags,nchan)
 		    if(nchan.gt.0)then
 		      call uvputvri(tno,'bin',bin,1)
 		      call uvputvri(tno,'pol',polcode(1,p),1)
@@ -968,11 +1033,11 @@ c
 c
 	end
 c************************************************************************
-	subroutine DatCpy(nstoke,nfreq,nfreq1,dohann,doconj,doneg,
-     *							     in,out)
+	subroutine DatCpy(nstoke,nfreq,nfreq1,dohann,birdie,edge,
+     *					doconj,doneg,in,out)
 c
-	integer nstoke,nfreq,nfreq1
-	logical dohann,doconj,doneg
+	integer nstoke,nfreq,nfreq1,edge
+	logical dohann,doconj,doneg,birdie
 	complex in(nstoke,nfreq1),out(nfreq)
 c
 c  Copy the data to an output buffer, conjugating and going
@@ -981,33 +1046,39 @@ c------------------------------------------------------------------------
 	integer i,id
 c
 	if(dohann)then
-	  if(nfreq.ne.(nfreq1-1)/2)
+	  if(nfreq.ne.(nfreq1-2*edge+1)/2)
      *		call bug('f','Incorrect dim info, in DatCpy')
-	  id = 2
-	  if(doneg)then
-	    do i=1,nfreq
-	      out(i) = -0.25*(in(1,id-1)+in(1,id+1)) + 0.5*in(1,id)
-	      id = id + 2
-	    enddo
-	  else
-	    do i=1,nfreq
-	      out(i) = 0.25*(in(1,id-1)+in(1,id+1)) + 0.5*in(1,id)
-	      id = id + 2
-	    enddo
-	  endif
+	  id = edge + 1
+	  do i=1,nfreq
+	    out(i) = 0.25*(in(1,id-1)+in(1,id+1)) + 0.5*in(1,id)
+	    id = id + 2
+	  enddo
+c
+	else if(birdie)then
+	  if(nfreq.ne.(nfreq1-2*edge+1)/2)
+     *		call bug('f','Incorrect dim info, in DatCpy')
+	  id = edge + 1
+	  do i=1,nfreq
+	    out(i) = in(1,id)
+	    id = id + 2
+	  enddo
 c
 	else
-	  if(nfreq.ne.nfreq1)
+	  if(nfreq.ne.nfreq1-2*edge)
      *		call bug('f','Incorrect dim info, in DatCpy')
-	  if(doneg)then
-	    do i=1,nfreq
-	      out(i) = -in(1,i)
-	    enddo
-	  else
-	    do i=1,nfreq
-	      out(i) = in(1,i)
-	    enddo
-	  endif
+	  id = edge + 1
+	  do i=1,nfreq
+	    out(i) = in(1,id)
+	    id = id + 1
+	  enddo
+	endif
+c
+c  Do we need to negate?
+c
+	if(doneg)then
+	  do i=1,nfreq
+	    out(i) = -out(i)
+	  enddo
 	endif
 c
 c  Do we need to conjugate?
@@ -1020,11 +1091,11 @@ c
 c
 	end
 c************************************************************************
-	subroutine GetFlag(nobird,bflags,flag,n,flags)
+	subroutine GetFlag(flag,n,bchan,flags)
 c
 	implicit none
-	integer n
-	logical flag,flags(n),nobird,bflags(*)
+	integer n,bchan
+	logical flag,flags(n)
 c
 c  Set the flags.
 c------------------------------------------------------------------------
@@ -1033,14 +1104,7 @@ c
 	do i=1,n
 	  flags(i) = flag
 	enddo
-c
-        if(.not.nobird) then
-          do i = 1, n
-            if (.not.bflags(i)) then
-              flags(i) = .false.
-            end if
-          enddo
-        end if
+	if(bchan.ge.1.and.bchan.le.n)flags(bchan) = .false.
 c
 	end
 c************************************************************************
@@ -1142,17 +1206,17 @@ c
 c
 	end
 c************************************************************************
-	subroutine GetDat(nobird,bflags,data,nvis,pnt,flag,nfreq,nifs,
-     *                    vis,flags,nchan)
+	subroutine GetDat(data,nvis,pnt,flag,nfreq,bchan,nifs,
+     *						vis,flags,nchan)
 c
 	implicit none
-	integer nvis,nifs,pnt(nifs),nfreq(nifs),nchan
-	logical flag(nifs),flags(*),nobird(nifs),bflags(33,nifs)
+	integer nvis,nifs,pnt(nifs),nfreq(nifs),bchan(nifs),nchan
+	logical flag(nifs),flags(*)
 	complex vis(*),data(nvis)
 c
-c  Construct a visibility record from multiple IFs.
+c  Construct a visibility record constructed from multiple IFs.
 c------------------------------------------------------------------------
-	integer n,ipnt,i,nchand,k
+	integer n,ipnt,i,nchand
 c
 	nchan = 0
 	nchand = 0
@@ -1172,13 +1236,8 @@ c
 	      flags(i) = flag(n)
 	      ipnt = ipnt + 1
 	    enddo
-            if (.not.nobird(n)) then
-              k = 1
-              do i = nchan+1,nchan+nfreq(n)
-                if (.not.bflags(k,n)) flags(i) = .false.
-                k = k + 1
-              enddo
-            endif
+	    if(bchan(n).ge.1.and.bchan(n).le.nfreq(n))
+     *			flags(nchan+bchan(n)) = .false.
 	    nchan = nchan + nfreq(n)
 	  endif
 	  nchand = nchand + nfreq(n)
@@ -1300,14 +1359,14 @@ c------------------------------------------------------------------------
 	if(iostat.eq.0)call RPClose(iostat)
 	end
 c************************************************************************
-	subroutine RPDisp(in,scanskip,scanproc,doauto,docross,relax,
-     *			  birdie,unflag,ifsel,userfreq,nuser,iostat)
+	subroutine RPDisp(in,scanskip,scanproc,doauto,docross,
+     *			relax,unflag,ifsel,userfreq,nuser,iostat)
 c
 	implicit none
 	character in*(*)
 	integer scanskip,scanproc,ifsel,nuser,iostat
 	double precision userfreq(*)
-	logical doauto,docross,relax,unflag,birdie
+	logical doauto,docross,relax,unflag
 c
 c  Process an RPFITS file. Dispatch information to the
 c  relevant Poke routine. Then eventually flush it out with PokeFlsh.
@@ -1318,7 +1377,6 @@ c    scanproc	Number of scans to process. If 0, process all scans.
 c    doauto	Save autocorrelation data.
 c    docross	Save crosscorrelation data.
 c    relax	Save data even if it lacks a SYSCAL record.
-c    birdie     Flag birdies
 c    unflag	Save data even though it may appear flagged.
 c    ifsel	IF to select. 0 means select all IFs.
 c    userfreq	User-given rest frequency to override the value in
@@ -1498,15 +1556,12 @@ c
 		    call PokeIF(i,if_nfreq(id),if_invert(id)*if_bw(id),
      *			if_freq(id),if_ref(id),rfreq,
      *			if_nstok(id),if_cstok(1,id))
-                    call setbfl (birdie, i)
 		  enddo
-
 		endif
 		if(NewScan)call PokeInfo(scanno,time)
 		if(NewScan.or.NewSrc)call PokeSrc(su_name(srcno),
      *		  su_ra(srcno),su_dec(srcno),
      *		  su_rad(srcno),su_decd(srcno))
-
 	      endif
 c
 c  Flush out any buffered SYSCAL records.
@@ -1976,52 +2031,6 @@ c
 	enddo
 c
 	end
-c
-c
-      subroutine setbfl (birdie, if)
-c
-      implicit none
-c
-      include 'atlod.h'
-      integer if
-      logical birdie
-c
-c
-c  Look for birdies if 128MHz 33 channel data
-c------------------------------------------------------------------------
-      double precision fb, fc
-      integer jb, ib, i
-c
-      if (birdie .and. nfreq(if).eq.33) then
-c
-c Find nearest N*128MHz birdie
-c
-        fc = (sfreq(if) + 16*sdf(if)) * 1.0e3
-        jb = nint(fc/128.0d0)
-        fb = jb * 128.0d0
-        ib = (fb/1.0d3-sfreq(if))/sdf(if) + 1
-c        write (*,*) 'fc=',fc
-c        write (*,*) 'Birdie at ', ib, fb
-c
-c Flag it out
-c 
-        do i = 1, 33
-          bflags(i,if) = .true.
-        end do
-        if (ib-5.ge.2) bflags(ib-5,if) = .false.
-        if (ib-3.ge.2) bflags(ib-3,if) = .false.
-        if (ib-1.ge.2) bflags(ib-1,if) = .false.
-        bflags(ib,if)                  = .false.
-        if (ib+1.le.nfreq(if)) bflags(ib+1,if) = .false.
-        if (ib+3.le.nfreq(if)) bflags(ib+3,if) = .false.
-        if (ib+5.le.nfreq(if)) bflags(ib+5,if) = .false.
-        nobird(if) = .false.
-      else
-        nobird(if) = .true.
-      end if
-c
-      end
-
 c************************************************************************
 c************************************************************************
 c
