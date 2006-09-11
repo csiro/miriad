@@ -92,18 +92,16 @@ c	robustness, but the theoretical noise level will also decrease.
 c
 c	The default is no down-weighting (robust=-infinity).
 c@ line
-c	Standard "line" parameter, with the normal defaults. See the
-c	help on "line" for more information.
-c	More specifically, the "line" parameter consists of a string
-c	followed by up to four numbers, viz:
+c	Standard "line" parameter, with the normal defaults. In particular,
+c	the default is to image all channels. See the help on "line" for 
+c	more information.
+c	The "line" parameter consists of a string followed by up to 
+c	four numbers, viz:
 c
 c	  linetype,nchan,start,width,step
 c
 c	where ``linetype'' is one of "channel", "wide", "velocity" or
-c	"felocity". The default is "channel" if spectral data is present
-c	in the data-set. Otherwise the default is ``wide''.
-c	If the ``mfs'' option is being used, then the default ``nchan'' is all
-c	channels, otherwise the default is just the first channel.
+c	"felocity".
 c@ ref
 c	Line type of the reference channel, specified in a similar to the
 c	"line" parameter. Specifically, it is in the form:
@@ -344,6 +342,8 @@ c  Get the input parameters. Convert all angular things into
 c  radians as soon as possible!!
 c
 	call output(version)
+	call bug('i',
+     *	  'The default for the "line" parameter is now all channels')
 	call keyini
 	call keya('beam',beam,' ')
 	call mkeya('map',maps,MAXPOL,nmap)
@@ -1358,7 +1358,7 @@ c
 	if(.not.present(1))uvflags(9:9)   = 'c'
 	if(.not.present(2))uvflags(10:10) = 'e'
 	if(.not.present(3))uvflags(11:11) = 'f'
-	if(.not.mfs)	   uvflags(12:12) = '1'
+c	if(.not.mfs)	   uvflags(12:12) = '1'
 	end
 c************************************************************************
 	subroutine GetVis(doimag,systemp,mosaic,mfs,npol,tscr,slop,
@@ -1401,15 +1401,28 @@ c------------------------------------------------------------------------
 	logical flags(MAXCHAN,MAXPOL),more
 	real uumax,vvmax,rms2,Wt,SumWt
 	double precision uvw(5),dSumWt,dfreq0
+	character num*8
 c
 c  Externals.
 c
 	character itoaf*8
+	integer len1
 c
 c  Get the first record.
 c
 	tno = 0
 	call GetRec(tno,uvw,data,flags,npol,MAXCHAN,nchan)
+c
+	if(mfs)then
+	  call output('Making MFS images')
+	else if(nchan.eq.1)then
+	  call output('Making single plane images')
+	else
+	  num = itoaf(nchan)
+	  i = len1(num)
+	  call output('Making cubes with '//num(1:i)//' planes')
+	endif
+c
 	nread = nchan
 	more = nchan.gt.0
 	if(.not.mfs.and.nchan.gt.mchan)
