@@ -36,6 +36,7 @@ c    pjt  12oct98 Added cable,jyperka,obsline,project,themt,tsis,tif2
 c                 (they are currently all BIMA specific)
 c    rjs  16oct98 Reduce the number of continuation lines in above
 c		  change to bring it in line with FORTRAN standard.
+c    pjt  25oct98 Added tau230,rmspath (BIMA specific)
 c
 c************************************************************************
 c*VarInit -- Initialise the copy routines.
@@ -92,7 +93,7 @@ c
 	integer i
 c
 	integer nvar,nline,nwide,nvelo
-	parameter(nvar=84,nline=8,nwide=3,nvelo=4)
+	parameter(nvar=86,nline=8,nwide=3,nvelo=4)
         character var(nvar)*8,line(nline)*8,wide(nwide)*8,velo(nvelo)*8
 c
 c  Variables to check for a change, for line=channel.
@@ -126,7 +127,8 @@ c
      *	   'temp    ','themt   ','tif2    ','tpower  ','tsis    ',
      *	   'ut      ','veldop  ','veltype ','version ','vsource ',
      *	   'winddir ','windmph ','delay   ','delay0  ','xtsys   ',
-     *	   'ytsys   ','xsampler','ysampler','xyamp   ','pbtype  '/
+     *	   'ytsys   ','xsampler','ysampler','xyamp   ','pbtype  ',
+     *     'tau230  ','rmspath '/
 c------------------------------------------------------------------------
 	avall = .false.
 c
