@@ -58,6 +58,7 @@ c    rjs  09jan97 Break a statement into two to avoid a compiler bug.
 c    rjs  27may99 Better check for no visibility data.
 c    rjs  12oct99 Change in subroutine name only.
 c    rjs  14dec99 Support for visibility datasets as models.
+c    rjs  14aug00 Re-Added "sources" file support.
 c************************************************************************
 c*ModelIni -- Ready the uv data file for processing by the Model routine.
 c&rjs
@@ -289,7 +290,7 @@ c
 	double precision xref1,yref1,xref2,yref2,ud,vd
 	real Out(maxlen),uu,vv,u,v
 	logical accept,flags(maxchan),doshift,GotFreq
-c	logical domodl
+	logical domodl
 	complex Buffer((maxbuf+1)/2)
 	complex In(maxchan),Intp(maxchan+1)
 	double precision sfreq(maxchan),freq0
@@ -320,7 +321,7 @@ c
 c
 c  If there is a components file present, process this as well.
 c
-c	domodl = hdprsnt(tmod,'sources')
+	domodl = hdprsnt(tmod,'sources')
 c
 c  If its a MFCLEAN model, then get then reference frequency.
 c
@@ -368,7 +369,7 @@ c
 c
 c  Determine the model to subtract.
 c
-c	if(domodl)call modpini(tvis,tmod)
+	if(domodl)call modpini(tvis,tmod)
 c
 c  Loop the loop.
 c
@@ -437,10 +438,10 @@ c
 	      call ModShift(ud,vd,xref1,yref1,xref2,yref2,sfreq,
      *							Intp,nread)
 	    endif
-c	    if(domodl)then
-c	      if(.not.GotFreq)call uvinfo(tvis,'sfreq',sfreq)
-c	      call Modpcomp(preamble,nread,sfreq,Intp)
-c	    endif
+	    if(domodl)then
+	      if(.not.GotFreq)call uvinfo(tvis,'sfreq',sfreq)
+	      call Modpcomp(preamble,nread,sfreq,Intp)
+	    endif
 c
 c  Copy the data to the output, and determine statistics.
 c
