@@ -706,13 +706,13 @@ c-----------------------------------------------------------------------
       else if (type.eq.'relghz') then
         units = 'offset GHz'
       else if (type.eq.'abskms') then
-        units = 'Km/s'
+        units = 'km/s'
       else if (type.eq.'relkms') then
-        units = 'offset Km/s'
+        units = 'offset km/s'
       else if (type.eq.'absnat' .or. type.eq.'relnat') then
         call axtypco (lun, 0, iax, gtype)
         if (gtype.eq.'VELO') then
-          units2 = 'Km/s'
+          units2 = 'km/s'
         else if (gtype.eq.'FREQ') then
           units2 = 'GHz'
         else if (gtype.eq.'UV') then
@@ -772,7 +772,7 @@ c               'arcsec'     in arcsec
 c	        'arcmin'     in arcmin
 c               '*  pix'     in pixels
 c               '*  ghz'     in GHz
-c               '*  kms'     in Km/s
+c               '*  kms'     in km/s
 c               '*  nat'     in natural axis coordinates
 c    typeo   Array of output coordinate types from above list
 c            requested.
@@ -958,7 +958,7 @@ c               'arcsec'     in arcsec
 c		'arcmin'     in arcmin
 c               '*  pix'     in pixels
 c               '*  ghz'     in GHz
-c               '*  kms'     in Km/s
+c               '*  kms'     in km/s
 c               '*  nat'     in natural axis coordinates
 c    typeo   Array of output coordinate types from above list
 c            requested.
@@ -1065,7 +1065,7 @@ c               'arcsec'     in arcsec
 c		'arcmin'     in arcmin
 c               '*  pix'     in pixels
 c               '*  ghz'     in GHz
-c               '*  kms'     in Km/s
+c               '*  kms'     in km/s
 c               '*  nat'     in natural axis coordinates
 c    typeo   Output coordinate type from above list
 c    stypeo  'radio', 'optical', 'frequency'.  If a spectral coordinate
@@ -1153,7 +1153,7 @@ c               'arcsec'     in arcsec
 c		'arcmin'     in arcmin
 c               '*  pix'     in pixels
 c               '*  ghz'     in GHz
-c               '*  kms'     in Km/s
+c               '*  kms'     in km/s
 c    typeo   Output coordinate type from above list
 c    stypeo  'radio', 'optical', 'frequency'.  If a spectral coordinate
 c            is given, this indicates what convention it is to be
