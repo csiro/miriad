@@ -37,12 +37,19 @@ c	  'noauto'  Discard autocorrelation data. The default is to
 c	            copy the autocorrelation data.
 c	  'nocross' Discard cross-correlation data. The default is to
 c	            copy the cross correlation data.
-c	  'relax'   Do not discard visibilities if they lack syscal info.
-c	            The default is to drop visibilities if they have
-c	            not been preceded by a valid SYSCAL record.
-c	  'unflag'  Save any data that is flagged. By default
-c	            ATLOD discards data that is flagged.
-c	  'samcorr' Correct the data for incorrect sampler statistics.
+c	  'relax'   Do not flag visibilities based on SYSCAL information.
+c	            The default is to flag and drop visibilities if they have
+c	            not been preceded by a valid SYSCAL record, or if the
+c	            the values in the SYSCAL record look bad. SYSCAL
+c	            values are checked for sampler statistics being within
+c	            3% of 17.3%, or 0.5% of 50.0%, and that the XY phase
+c	            is within 10 degrees of the running median XY phase.
+c	  'unflag'  Save any data that is flagged. By default ATLOD
+c	            discards most data that is flagged.
+c	  'samcorr' Correct the pre-Dec93 data for incorrect sampler
+c	            statistics. Since December 1993, sampler corrections
+c	            are performed online -- Miriad ignores the samcorr
+c	            option for this data.
 c	  'hanning' Hanning smooth spectra and drop every other channel
 c	            This option is ignored for 128-MHz, 33-channel data.
 c	  'bary'    Use the barycentre as the velocity rest frame. The
@@ -1256,10 +1263,10 @@ c		the RPFITS file.
 c    nuser	Number of user-specificed rest frequencies.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
-	integer MAXPOL,MAXSIM
-	parameter(MAXPOL=4,MAXSIM=4)
+	integer MAXPOL,MAXSIM,MAXXYP
+	parameter(MAXPOL=4,MAXSIM=4,MAXXYP=5)
 	include 'rpfits.inc'
-	integer scanno,i1,i2,baseln,i,id
+	integer scanno,i1,i2,baseln,i,id,j
 	logical NewScan,NewSrc,NewFreq,NewTime,Accum,ok
 	logical flags(MAXPOL)
 	integer jstat,flag,bin,ifno,srcno,simno,Ssrcno,Ssimno
@@ -1267,12 +1274,19 @@ c------------------------------------------------------------------------
 	integer Sif(MAX_IF)
 	real ut,utprev,utprevsc,u,v,w,weight(MAXCHAN*MAXPOL)
 	complex vis(MAXCHAN*MAXPOL)
+c
+c  Variables to track the sysc records.
+c
 	logical scinit(MAX_IF,ANT_MAX),scbuf(MAX_IF,ANT_MAX)
-	logical antvalid(ANT_MAX)
+	logical xflag(MAX_IF,ANT_MAX),yflag(MAX_IF,ANT_MAX)
+	integer tag(MAXXYP,MAX_IF,ANT_MAX),nxyp(MAX_IF,ANT_MAX)
+	real xyp(MAXXYP,MAX_IF,ANT_MAX)
 	real xyphase(MAX_IF,ANT_MAX),xyamp(MAX_IF,ANT_MAX)
 	real xsamp(3,MAX_IF,ANT_MAX),ysamp(3,MAX_IF,ANT_MAX)
 	real xtsys(MAX_IF,ANT_MAX),ytsys(MAX_IF,ANT_MAX)
 	real chi,tint
+c
+	logical antvalid(ANT_MAX)
 	double precision jday0,time,tprev
 c
 c  Open the RPFITS file.
@@ -1280,7 +1294,15 @@ c
 	call RPOpen(in,iostat)
 	if(iostat.ne.0)return
 c
-	call AtFlush(scinit,scbuf,MAX_IF,ANT_MAX)
+c  Initialise.
+c
+	call AtFlush(scinit,scbuf,xflag,yflag,MAX_IF,ANT_MAX)
+c
+	do j=1,ANT_MAX
+	  do i=1,MAX_IF
+	    nxyp(i,j) = 0
+	  enddo
+	enddo
 c
 	utprev   = -1
 	utprevsc = -1
@@ -1349,13 +1371,13 @@ c
 	  else if(baseln.eq.-1)then
 	    NewTime = abs(sc_ut-utprevsc).gt.4
 	    if(NewScan.or.an_found.or.NewTime)then
-	      call AtFlush(scinit,scbuf,MAX_IF,ANT_MAX)
+	      call AtFlush(scinit,scbuf,xflag,yflag,MAX_IF,ANT_MAX)
 	      Accum = .false.
 	      utprevsc = sc_ut
 	    endif
 	    call SetSC(scinit,scbuf,MAX_IF,ANT_MAX,sc_q,sc_if,sc_ant,
      *		sc_cal,if_invert,xyphase,xyamp,xtsys,ytsys,xsamp,ysamp,
-     *		chi)
+     *		chi,nxyp,xyp,tag,MAXXYP,xflag,yflag)
 c
 c  Data record. Check whether we want to accept it.
 c  If OK, and we have a new scan, calculate the new scan info.
@@ -1378,7 +1400,7 @@ c
 	    NewSrc = srcno.ne.Ssrcno
 	    if(Accum.and.(NewScan.or.an_found.or.NewSrc.or.NewFreq.or.
      *							NewTime))then
-	      call AtFlush(scinit,scbuf,MAX_IF,ANT_MAX)
+	      call AtFlush(scinit,scbuf,xflag,yflag,MAX_IF,ANT_MAX)
 	      Accum = .false.
 	    endif
 c
@@ -1397,7 +1419,6 @@ c
 c  If we are going to accept it, see if we need to flush the buffers.
 c
 	    if(ok)then
-c
 c
 c  Initialise the Poke routines with new info as required.
 c
@@ -1440,7 +1461,8 @@ c  Determine the flags for each polarisation based on the sampler
 c  statistics if the samplers have been initialised.
 c
 	      call GetFg(if_nstok(ifno),if_cstok(1,ifno),flag,
-     *		scinit,xsamp,ysamp,MAX_IF,ANT_MAX,ifno,i1,i2,
+     *		xflag(ifno,i1).or.relax,yflag(ifno,i1).or.relax,
+     *		xflag(ifno,i2).or.relax,yflag(ifno,i2).or.relax,
      *		flags)
 c
 c  Send the data record to the Poke routines.
@@ -1568,41 +1590,34 @@ c
 c
 	end
 c************************************************************************
-	subroutine GetFg(nstok,cstok,flag,
-     *		scinit,xsamp,ysamp,MAXIF,MAXANT,ifno,i1,i2,
+	subroutine GetFg(nstok,cstok,flag,xflag1,yflag1,xflag2,yflag2,
      *		flags)
 c
 	implicit none
-	integer nstok,MAXIF,MAXANT,ifno,i1,i2,flag
+	integer nstok,flag
 	character cstok(nstok)*(*)
-	logical flags(nstok),scinit(MAXIF,MAXANT)
-	real xsamp(3,MAXIF,MAXANT),ysamp(3,MAXIF,MAXANT)
+	logical flags(nstok),xflag1,yflag1,xflag2,yflag2
 c
 c  Flag a polarisation either if "flag" indicates that the entire record
-c  is bad, or if the sampler statistics have not been seen, or if the
-c  samplers are more than 10% away from their nominal values.
+c  is bad, or if the syscal-based flags are bad.
 c------------------------------------------------------------------------
 	integer p
+
 c
-c  Externals.
-c
-	logical SampFlag
-c
-	if(.not.scinit(ifno,i1).or..not.scinit(ifno,i2)
-     *			       .or.flag.ne.0)then
+	if(flag.ne.0)then
 	  do p=1,nstok
 	    flags(p) = .false.
 	  enddo
 	else
 	  do p=1,nstok
 	    if(cstok(p).eq.'XX')then
-	      flags(p) = SampFlag(xsamp(1,ifno,i1),xsamp(1,ifno,i2))
+	      flags(p) = xflag1.and.xflag2
 	    else if(cstok(p).eq.'YY')then
-	      flags(p) = SampFlag(ysamp(1,ifno,i1),ysamp(1,ifno,i2))
+	      flags(p) = yflag1.and.yflag2
 	    else if(cstok(p).eq.'XY')then
-	      flags(p) = SampFlag(xsamp(1,ifno,i1),ysamp(1,ifno,i2))
+	      flags(p) = xflag1.and.yflag2
 	    else if(cstok(p).eq.'YX')then
-	      flags(p) = SampFlag(ysamp(1,ifno,i1),xsamp(1,ifno,i2))
+	      flags(p) = yflag1.and.xflag2
 	    else
 	      call bug('f','Unrecognised polarisation type, in GetFg')
 	    endif
@@ -1611,36 +1626,125 @@ c
 c
 	end
 c************************************************************************
-	logical function SampFlag(samp1,samp2)
+	subroutine syscflag(xsamp,ysamp,xyphase,nxyp,maxxyp,tag,xyp,
+     *					xflag,yflag)
 c
 	implicit none
-	real samp1(3),samp2(3)
+	real xsamp(3),ysamp(3),xyphase
+	integer nxyp,maxxyp,tag(maxxyp)
+	real xyp(maxxyp)
+	logical xflag,yflag
 c
-c  Flag data if the sampler statistics are bad. Samplers are deemed to
-c  be bad if they deviate by 3% from 17.3 or 0.5% from 50.0
+c  Determine data flags based on the values of syscal statistics.
+c
+c  The data will be flagged bad if:
+c    * The sampler stats deviate by 3% from 17.3%, or 0.5% from 50.0%
+c    * There is a 10 degree change in the xyphase relative to the median
+c      of the "nxyp" values.
 c
 c  Input:
-c    samp1,samp2  Sampler statistics for the two antennas.
+c    xsamp	The x sampler statistics (percent).
+c    ysamp	The y sampler statistics (percent).
+c    xyphase	The online xyphase measurement (radians).
+c    maxxyp	The max number of xy phase 
+c  Input/Output:
+c    nxyp	Number of buffered xyphase measurements.
+c    tag	Tags for xyphase measurements. The oldest xyphase measurement
+c		has the smallest tag value.
+c    xyp	Buffered xyphase measurements. These are always
+c		sorted into ascending order. In radians.
 c  Output:
-c    SampFlag	  True if all the sampler stats are OK. False otherwise.
+c    xflag	Flag for the X channel.
+c    yflag	Flag for the y channel.
 c------------------------------------------------------------------------
-	SampFlag =max(abs(samp1(2)-50.0),abs(samp2(2)-50.0)).lt.0.5.and.
-     *		  max(abs(samp1(1)-17.3),abs(samp2(1)-17.3),
-     *		      abs(samp1(3)-17.3),abs(samp2(3)-17.3)).lt.3.0
+	include 'mirconst.h'
+	integer i,tmax,tmin,nxyp2
+	real mxyp
+	logical more
+c
+c  Find the xyphase with the biggest and smallest tags.
+c
+	if(nxyp.gt.0)then
+	  tmax = 1
+	  tmin = 1
+	  do i=2,nxyp
+	    if(tag(i).gt.tag(tmax))tmax = i
+	    if(tag(i).lt.tag(tmin))tmin = i
+	  enddo
+	  tmax = tag(tmax) + 1
+	else
+	  tmax = 1
+	endif
+c
+c  If the buffer is full, discard the xyphase with the minimum tag,
+c  by squeezing it out.
+c
+	if(nxyp.eq.maxxyp)then
+	  do i=tmin+1,nxyp
+	    xyp(i-1) = xyp(i)
+	    tag(i-1) = tag(i)
+	  enddo
+	else
+	  nxyp = nxyp + 1
+	endif
+c
+c  Merge in the new xyphase.
+c
+	i = nxyp
+	more = i.gt.1
+	dowhile(more)
+	  more = xyp(i-1).gt.xyphase
+	  if(more)then
+	    xyp(i) = xyp(i-1)
+	    tag(i) = tag(i-1)
+	    i = i - 1
+	    more = i.gt.1
+	  endif
+	enddo
+	xyp(i) = xyphase
+	tag(i) = tmax
+c
+c  Determine the median xyphase
+c
+	nxyp2 = nxyp/2
+	if(2*nxyp2.ne.nxyp)then
+	  mxyp = xyp(nxyp2+1)
+	else
+	  mxyp = 0.5*(xyp(nxyp2)+xyp(nxyp2+1))
+	endif
+c
+c  Flag both x and y as bad if there is a glitch in the xy phase.
+c  Otherwise flag according to the goodness of the sampler stats.
+c
+	if(abs(xyphase-mxyp).gt.10.*pi/180.)then
+	  xflag = .false.
+	  yflag = .false.
+	else
+	  xflag = abs(xsamp(2)-50.0).lt.0.5 .and.
+     *		  abs(xsamp(1)-17.3).lt.3.0 .and.
+     *		  abs(xsamp(3)-17.3).lt.3.0
+	  yflag = abs(ysamp(2)-50.0).lt.0.5 .and.
+     *		  abs(ysamp(1)-17.3).lt.3.0 .and.
+     *		  abs(ysamp(3)-17.3).lt.3.0
+	endif
+c
 	end
 c************************************************************************
 	subroutine SetSC(scinit,scbuf,MAXIF,MAXANT,nq,nif,nant,
      *		syscal,invert,xyphase,xyamp,xtsys,ytsys,xsamp,ysamp,
-     *		chi)
+     *		chi,nxyp,xyp,tag,MAXXYP,xflag,yflag)
 c
 	implicit none
-	integer MAXIF,MAXANT,nq,nif,nant,invert(MAXIF)
+	integer MAXIF,MAXANT,MAXXYP,nq,nif,nant,invert(MAXIF)
 	real syscal(nq,nif,nant)
 	logical scinit(MAXIF,MAXANT),scbuf(MAXIF,MAXANT)
 	real xyphase(MAXIF,MAXANT),xyamp(MAXIF,MAXANT)
 	real xtsys(MAXIF,MAXANT),ytsys(MAXIF,MAXANT)
 	real xsamp(3,MAXIF,MAXANT),ysamp(3,MAXIF,MAXANT)
 	real chi
+	real xyp(MAXXYP,MAXIF,MAXANT)
+	integer tag(MAXXYP,MAXIF,MAXANT),nxyp(MAXIF,MAXANT)
+	logical xflag(MAXIF,MAXANT),yflag(MAXIF,MAXANT)
 c
 c  Copy across SYSCAL records. Do any necessary fiddles on the way.
 c------------------------------------------------------------------------
@@ -1669,6 +1773,9 @@ c
 	      ysamp(1,ij,ik) = syscal(9,j,k)
 	      ysamp(2,ij,ik) = syscal(10,j,k)
 	      ysamp(3,ij,ik) = syscal(11,j,k)
+	      call syscflag(xsamp(1,ij,ik),ysamp(1,ij,ik),
+     *		xyphase(ij,ik),nxyp(ij,ik),maxxyp,tag(1,ij,ik),
+     *		xyp(1,ij,ik),xflag(ij,ik),yflag(ij,ik))
 	      if(.not.done.and.syscal(12,j,k).ne.0)then
 		chi = pi/180 * syscal(12,j,k) + pi/4
 		done = .true.
@@ -1679,11 +1786,12 @@ c
 c
 	end
 c************************************************************************
-	subroutine AtFlush(scinit,scbuf,MAXIF,MAXANT)
+	subroutine AtFlush(scinit,scbuf,xflag,yflag,MAXIF,MAXANT)
 c
 	implicit none
 	integer MAXIF,MAXANT
 	logical scinit(MAXIF,MAXANT),scbuf(MAXIF,MAXANT)
+	logical xflag(MAXIF,MAXANT),yflag(MAXIF,MAXANT)
 c
 c------------------------------------------------------------------------
 	integer i,j
@@ -1692,6 +1800,8 @@ c
 	  do i=1,MAXIF
 	    scinit(i,j) = .false.
 	    scbuf(i,j)  = .false.
+	    xflag(i,j)  = .false.
+	    yflag(i,j)  = .false.
 	  enddo
 	enddo
 c
