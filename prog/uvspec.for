@@ -94,6 +94,7 @@ c    rjs   8mar94 Handle data which are not in time order.
 c    nebk 22mar94 Add options=flagged
 c    rjs  17aug94 Better offset handling.
 c    rjs  26sep95 Discard bad spectra as soon as possible.
+c    rjs  28sep95 Fix bug I introduced two days ago.
 c  Bugs:
 c------------------------------------------------------------------------
 	include 'mirconst.h'
@@ -631,7 +632,7 @@ c  Does this spectrum contain some good data.
 c
 	ok = .false.
 	do i=1,nread
-	  ok = ok.or.(flags(nread).neqv.doflag)
+	  ok = ok.or.(flags(i).neqv.doflag)
 	enddo
 	if(.not.ok)return
 c
