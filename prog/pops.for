@@ -1,4 +1,4 @@
-***********************************************************************
+c***********************************************************************
 	program pops
 	implicit none
 c
@@ -34,16 +34,18 @@ c   rjs  12dec95  Extract lstjul to ephem.for
 c   rjs  13apr97  Print out modified julian date.
 c   rjs  10jun97  Change observ to telescop.
 c   rjs  08sep97  Rename routine "azel" to "doazel", and call ehem's azel.
+c   rjs  24sep98  Check for known elevation limit.
 c Bugs:
 c   * The precession, nutation and aberration are pretty simple. No
 c     correction for the FK4 zero-point or elliptic terms of aberrations.
 c-----------------------------------------------------------------------
+	include 'mirconst.h'
 	character version*(*)
-	parameter(version='Pops: version 1.0 08-Sep-97')
+	parameter(version='Pops: version 1.0 24-Sep-98')
 c
 	character string*64,observ*32
 	double precision r0,d0,rm,dm,rt,dt,ra,da,jday1,jday2
-	double precision lat,long
+	double precision lat,long,ellimit
 	character jds*11,mjds*9
 	logical ok
 	integer lobs
@@ -71,6 +73,8 @@ c
 c  Determine observatory lat and long.
 c
 	if(observ.ne.'geocenter')then
+	  call obspar(observ,'ellimit',ellimit,ok)
+	  if(.not.ok)ellimit = 12*PI/180
 	  call obspar(observ,'latitude',lat,ok)
 	  if(ok)call obspar(observ,'longitude',long,ok)
 	  if(.not.ok)then
@@ -80,6 +84,7 @@ c
 	else
 	  lat = 0
 	  long = 0
+	  ellimit = 0
 	endif
 	lobs = len1(observ)
 c
@@ -128,7 +133,7 @@ c  Determine source rise and set times.
 c
 	if(observ.ne.'geocenter')then
 	  call doazel(jday2,lat,long,ra,da)
-	  call riseset(jday2,lat,long,ra,da)
+	  call riseset(jday2,lat,long,ra,da,180*ellimit/PI)
 	endif
 c 
 	end
@@ -167,10 +172,10 @@ c
 	call output(line)
 	end
 c************************************************************************
-	subroutine riseset(jday,lat,long,ra,dec)
+	subroutine riseset(jday,lat,long,ra,dec,ellimit)
 c
 	implicit none
-	double precision jday,lat,long,ra,dec
+	double precision jday,lat,long,ra,dec,ellimit
 c
 c  Echo out the source rise and set times (assume 13 degrees minimum
 c  elevation).
@@ -186,18 +191,20 @@ c------------------------------------------------------------------------
 	character string*32
 c
 	double precision LstJul
+	character itoaf*2
 c
 	sinl = sin(lat)
 	cosl = cos(lat)
 	sind = sin(dec)
 	cosd = cos(dec)
-	sinel = sin(12.*pi/180.)
+	sinel = sin(ellimit*pi/180.)
 c
 	call output(' ')
 	temp = (sinel - sinl*sind ) / (cosl*cosd)
 	if(abs(temp).gt.1)then
 	  if(dec*lat.lt.0)then
-	    call bug('w','Source never rises to 12 deg elevation')
+	    call bug('w','Source never rises to '//
+     *			itoaf(nint(ellimit))//' deg elevation')
 	  else
 	    call output('Source is always above the horizon')
 	  endif
@@ -212,7 +219,8 @@ c
 c
 c  Convert from LST to UT.
 c
-	  call output('For a minimum elevation of 12 degrees ...')
+	  call output('For a minimum elevation of '//
+     *				itoaf(nint(ellimit))//' degrees ...')
 	  rise = LstJul(rise,jday,long)
 	  call julday(rise,'H',string)
 	  call output('Source rises at UT '//string)
