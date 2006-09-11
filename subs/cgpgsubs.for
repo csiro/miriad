@@ -102,7 +102,7 @@ c                        third axis
 c     nebk   23dec94     Strings (str1:4) not long enough in ANNWINCG
 c                        Increase length of STR1 in CONFMTCG
 c     nebk   05jan95     Replace PGGRAY by new PGIMAG. 
-c     nebk   14feb95     Add "reverse" argument to wedge routines
+c     nebk   14apr95     Label grey scales as "pixel maps" in ANNGRSCG
 c**********************************************************************
 c
 c* annboxCG -- Annotate plot with information from a box image 
@@ -310,7 +310,7 @@ c
 c
       end
 c
-c* anngrsCG -- Annotate plot with information from a grey scale image
+c* anngrsCG -- Annotate plot with information from a pixel map image
 c& nebk
 c: plotting
 c+
@@ -322,13 +322,13 @@ c
       real pixr(2), yinc, xpos, ypos, dmm(2)
       character*(*) gin, trfun
 c
-c  Annotate plot with grey scale image information
+c  Annotate plot with pixel map image information
 c
 c  Input:
-c    lg      Handle for grey scale image
-c    gin     Grey scale image
+c    lg      Handle for pixel map image
+c    gin     pixel map image
 c    npixr   Number of greys scale range groups given by user
-c    pixr    Grey scale intensity range
+c    pixr    pixel map intensity range
 c    trfun   Transfer function type
 c    yinc    World increment between text lines
 c    xpos    World x coordinate for text lines
@@ -346,10 +346,10 @@ c Write image name
 c
       call rdhda (lg, 'object', src1, ' ')
       if (src1.ne.' ') then
-        str1 = ' Grey scale image: '//gin(1:len1(gin))//' ('//
+        str1 = ' Pixel map image: '//gin(1:len1(gin))//' ('//
      +          src1(1:len1(src1))//')'
       else
-        str1 = ' Grey scale image: '//gin(1:len1(gin))
+        str1 = ' Pixel map image: '//gin(1:len1(gin))
       end if
       i1 = len1(str1)
 c
@@ -361,7 +361,7 @@ c
      +              '/'//str3(1:len1(str3))
       i1 = len1(str1)
 c
-c Write grey scale ranges
+c Write pixel map ranges
 c
       call rdhda (lg, 'bunit', units, ' ')
       if (npixr.eq.1) then
@@ -1828,23 +1828,22 @@ c
       end
 c
 c
-c* wedgCG -- Draw grey scale wedge in specified viewport
+c* wedgCG -- Draw pixel map wedge in specified viewport
 c& nebk
 c: plotting
 c+
-      subroutine wedgcg (reverse, label, trfun, groff, nbins, cumhis, 
-     +                   wdgvp, a1, a2)
+      subroutine wedgcg (label, trfun, groff, nbins, cumhis, wdgvp, 
+     +                   a1, a2)
 c
       implicit none
       integer nbins
       real wdgvp(4), a1, a2, groff, cumhis(nbins)
       character trfun*3
-      logical label, reverse
+      logical label
 c
 c Draw a vertical grey-scale wedge in the specified viewport
 c
 c Input
-c  reverseIf true reverse order of min and max given to PGIMAG
 c  label  True means label wedge to right else none
 c  trfun  Transfer function type applied to image.  One of 'lin',
 c         'log', 'heq' or 'sqr'
@@ -1933,13 +1932,8 @@ c Draw the wedge and label
 c
       call pgsvp (wdgvp(1), wdgvp(3), wdgvp(2), wdgvp(4))
       call pgswin (0.9, 1.1, 1.0, real(nbins2))
-      if (reverse) then
-        call pgimag (memr(ipw), 1, nbins2, 1, 1, 1, nbins2, 
-     +               b2, b1, tr)
-      else
-        call pgimag (memr(ipw), 1, nbins2, 1, 1, 1, nbins2, 
-     +               b1, b2, tr)
-      end if
+      call pgimag (memr(ipw), 1, nbins2, 1, 1, 1, nbins2, 
+     +             b1, b2, tr)
       call pgswin (0.0, 1.0, a1, a2)
       if (label) then
 c
@@ -1969,20 +1963,18 @@ c* wedgeCG -- Decide if it is time to draw a wedge and do so if so
 c& nebk
 c: plotting
 c+
-      subroutine wedgecg (reverse, wedcod, wedwid, jj, trfun, groff, 
-     +                    nbins, cumhis, wdgvp, a1, a2)
+      subroutine wedgecg (wedcod, wedwid, jj, trfun, groff, nbins,
+     +                    cumhis, wdgvp, a1, a2)
 c
       implicit none
       real groff, cumhis(*), wdgvp(4), a1, a2, wedwid
       integer wedcod, jj, nbins
       character trfun*3
-      logical reverse
 c
-c Work out whether the grey scale wedges are to be drawn inside
+c Work out whether the pixel map wedges are to be drawn inside
 c or outside the subplots, and whether there will be one or many
 c  
 c Input
-c  reverseIf true reverse order of data min and max given to PGIMAG
 c  wedcod 1 -> one wedge to right of all subplots
 c         2 -> one wedge to right per subplot
 c         3 -> one wedge per subplot inside subplot
@@ -1994,13 +1986,13 @@ c  nbins  Number of bins used in histogram equalization of image
 c  cumhis Cumulative histogram for histogram equalization returned
 c         by HEQCG
 c  wdgvp  Viewport to draw wedge in (wedcod=1)
-c  a1,a2  Grey scale max and min
+c  a1,a2  pixel map max and min
 c         Use the values of A1 and A2 that were sent to PGGRAY.
 c         These values should be those appropriate to before 
 c         any application of transfer functions (log etc) and 
 c         adding of offsets
 c  nx,ny  Number of subplots in x and y directions
-c  npixr  NUmber of grey scale "range" groups given by user
+c  npixr  NUmber of pixel map "range" groups given by user
 c  trfun  Transfer function type of first "range" group
 c--
 c-----------------------------------------------------------------------
@@ -2012,7 +2004,7 @@ c-----------------------------------------------------------------------
 c
       if (wedcod.eq.1) then
         if (jj.eq.1) then
-          call wedgcg (reverse, .true., trfun, groff, nbins, cumhis, 
+          call wedgcg (.true., trfun, groff, nbins, cumhis, 
      +                 wdgvp, a1, a2)
         end if
       else if (wedcod.eq.2) then
@@ -2020,14 +2012,14 @@ c
         wv(2) = vy1
         wv(3) = wv(1) + wedfrc
         wv(4) = vy2
-        call wedgcg (reverse, .true., trfun, groff, nbins, cumhis, 
+        call wedgcg (.true., trfun, groff, nbins, cumhis, 
      +               wv, a1, a2)
       else
         wv(1) = vx2 - wedfrc
         wv(2) = vy1
         wv(3) = vx2
         wv(4) = vy2
-        call wedgcg (reverse, .false., trfun, groff, nbins, cumhis, 
+        call wedgcg (.false., trfun, groff, nbins, cumhis, 
      +               wv, a1, a2)
       end if
 c
