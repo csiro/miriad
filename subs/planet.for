@@ -7,9 +7,12 @@ c    rjs  xxdec95 Original version.
 c    rjs  18dec95 Make sub-Earth point a right handed coordinate system.
 c    rjs  17jun96 Added some parameters about the Earth.
 c    rjs  04feb01 Added subroutine pltbs.
+c    rjs  03mar01 Improved brightness temps for the planets from Ulrich etc.
 c
 c  Bugs:
-c    pltbs has a long way to go to make it more useful.
+c    Need to understand the brightness temperature fluctuations of the
+c    planets better (e.g. phase, distance from Sun, inclination of
+c    Saturn's rings, weather).
 c************************************************************************
 	real function pltbs(iplanet,freq)
 c
@@ -17,14 +20,182 @@ c
 	integer iplanet
 	real freq
 c
-c  Data are taken from Ulich (AJ, 86, 1619 (1981)).
+c  Return the brightness temperature of a planet.
+c
+c  Inputs:
+c    iplanet  Planet number in range 1-9.
+c    freq     Observing frequency, in GHz.
+c  Output:
+c    pltbs    Brightness temperature, in Kelvin.
+c
 c------------------------------------------------------------------------
+	integer NVEN
+	parameter(NVEN=3)
+	real ven(2,NVEN)
+c
+	integer NMAR
+	parameter(NMAR=3)
+	real mar(2,NMAR)
+c
+	integer NJUP
+	parameter(NJUP=40)
+	real jup(2,NJUP)
+c
+	integer NSAT
+	parameter(NSAT=4)
+	real sat(2,NSAT)
+c
 	integer NPLANET
 	parameter(NPLANET=9)
 	real pltb(NPLANET)
-	save pltb
-	data pltb/300.0,438.0,300.0,194.0,138.0,133.0,134.0,127.0,99.0/
-	pltbs = pltb(iplanet)
+c
+	real pltbintp
+c
+	save pltb,jup,ven,mar,sat
+c------------------------------------------------------------------------
+c  Misc planets
+c     Ref: Ulich, AJ, 86, 1619 (1981).
+c
+c	          Mer   Ven   Ear   Mar   Jup   Sat   Ura   Nep   Plu
+	data pltb/440.0,  0.0,288.0,  0.0,  0.0,  0.0,134.1,126.9,68.0/
+c------------------------------------------------------------------------
+c  Venus
+c     Ref: Ulich, AJ, 86, 1619 (1981).
+c
+c                      Freq(GHz)        Temp (Kelvin)
+c                      -----            ------
+	data ven(1,1) / 31.4/, ven(2,1) /466.0/
+	data ven(1,2) / 90.0/, ven(2,2) /367.1/
+	data ven(1,3) /150.0/, ven(2,3) /294.0/
+c------------------------------------------------------------------------
+c  Mars
+c     Ref: Ulich, AJ, 86, 1619 (1981).
+c
+c                     Freq(GHz)         Temp (Kelvin)
+c                      -----             -----
+	data mar(1,1) / 31.4/, mar(2,1) /194.3/
+	data mar(1,2) / 90.0/, mar(2,2) /206.8/
+	data mar(1,3) /150.0/, mar(2,3) /206.0/
+c------------------------------------------------------------------------
+c  Jupiter
+c    Ref: Digitised from de Pater & Massie, Icarus, 62, 143 (1985)
+c
+c                      Freq (GHz)                Temp (Kelvin)
+c                      -------------             ------------- 
+	data jup(1,1) /9.8380085e-01/, jup(2,1) /4.4896755e+02/
+	data jup(1,2) /1.0439904e+00/, jup(2,2) /4.2728614e+02/
+	data jup(1,3) /1.1412491e+00/, jup(2,3) /4.0663717e+02/
+	data jup(1,4) /1.2725089e+00/, jup(2,4) /3.7669617e+02/
+	data jup(1,5) /1.4908442e+00/, jup(2,5) /3.4469027e+02/
+	data jup(1,6) /1.6459416e+00/, jup(2,6) /3.2920354e+02/
+	data jup(1,7) /1.9093594e+00/, jup(2,7) /3.0442478e+02/
+	data jup(1,8) /2.3272980e+00/, jup(2,8) /2.8377581e+02/
+	data jup(1,9) /2.8649334e+00/, jup(2,9) /2.6415929e+02/
+	data jup(1,10)/3.4920372e+00/, jup(2,10)/2.4970501e+02/
+	data jup(1,11)/4.1318879e+00/, jup(2,11)/2.3834808e+02/
+	data jup(1,12)/5.5602589e+00/, jup(2,12)/2.2182891e+02/
+	data jup(1,13)/6.7773410e+00/, jup(2,13)/2.1253687e+02/
+	data jup(1,14)/8.2608296e+00/, jup(2,14)/2.0221239e+02/
+	data jup(1,15)/1.0069038e+01/, jup(2,15)/1.9188791e+02/
+	data jup(1,16)/1.1680494e+01/, jup(2,16)/1.8362832e+02/
+	data jup(1,17)/1.3958190e+01/, jup(2,17)/1.7227139e+02/
+	data jup(1,18)/1.6515769e+01/, jup(2,18)/1.5678466e+02/
+	data jup(1,19)/1.8970283e+01/, jup(2,19)/1.4646018e+02/
+	data jup(1,20)/2.0533338e+01/, jup(2,20)/1.3923304e+02/
+	data jup(1,21)/2.2446234e+01/, jup(2,21)/1.3407080e+02/
+	data jup(1,22)/2.4056421e+01/, jup(2,22)/1.3407080e+02/
+	data jup(1,23)/2.5782114e+01/, jup(2,23)/1.3510324e+02/
+	data jup(1,24)/2.6823249e+01/, jup(2,24)/1.3716814e+02/
+	data jup(1,25)/3.0205775e+01/, jup(2,25)/1.4439528e+02/
+	data jup(1,26)/3.5740420e+01/, jup(2,26)/1.5265487e+02/
+	data jup(1,27)/4.0647746e+01/, jup(2,27)/1.5781711e+02/
+	data jup(1,28)/4.8574054e+01/, jup(2,28)/1.6401180e+02/
+	data jup(1,29)/6.0990659e+01/, jup(2,29)/1.6917404e+02/
+	data jup(1,30)/7.2883835e+01/, jup(2,30)/1.7227139e+02/
+	data jup(1,31)/9.1514558e+01/, jup(2,31)/1.7330383e+02/
+	data jup(1,32)/1.1490771e+02/, jup(2,32)/1.7227139e+02/
+	data jup(1,33)/1.6409107e+02/, jup(2,33)/1.6814159e+02/
+	data jup(1,34)/1.9803915e+02/, jup(2,34)/1.6814159e+02/
+	data jup(1,35)/2.3665677e+02/, jup(2,35)/1.6504425e+02/
+	data jup(1,36)/2.8001972e+02/, jup(2,36)/1.6297935e+02/
+	data jup(1,37)/3.3462355e+02/, jup(2,37)/1.5884956e+02/
+	data jup(1,38)/4.1192584e+02/, jup(2,38)/1.5265487e+02/
+	data jup(1,39)/4.8740358e+02/, jup(2,39)/1.4542773e+02/
+	data jup(1,40)/5.7671121e+02/, jup(2,40)/1.3303835e+02/
+c------------------------------------------------------------------------
+c  Saturn
+c     Ref: 31.4,90,150 GHz -- Ulich, AJ, 86, 1619 (1981).
+c          1.4 GHz         -- ATCA measurement by Sault (1999?)
+c
+c                      Freq(GHz)         Temp (Kelvin)
+c                      -----             -----
+	data sat(1,1) /  1.4/, sat(2,1) /194.0/
+	data sat(1,2) / 31.4/, sat(2,2) /133.0/
+	data sat(1,3) / 90.0/, sat(2,3) /149.3/
+	data sat(1,4) /150.0/, sat(2,4) /137.0/
+c
+c  Process the appropriate planet.
+c
+	goto(100,20,100,40,50,60,100,100,100),iplanet
+c
+c Venus
+c
+  20	pltbs = pltbintp(freq,ven,NVEN)
+	return
+c
+c Mars
+c
+  40	pltbs = pltbintp(freq,mar,NMAR)
+	return
+c
+c Jupiter
+c
+  50	pltbs = pltbintp(freq,jup,NJUP)
+	return
+c
+c Saturn
+c
+  60	pltbs = pltbintp(freq,sat,NSAT)
+	return
+c
+c  All the rest.
+c	
+ 100	pltbs = pltb(iplanet)
+c
+	end
+c************************************************************************
+	real function pltbintp(freq,planet,np)
+c
+	implicit none
+	integer np
+	real freq,planet(2,np)
+c
+c  Interpolate the brightness temperature of Jupiter.
+c
+c------------------------------------------------------------------------
+	integer i,j,k
+	real fi,fj
+c
+	if(freq.le.planet(1,1))then
+	  pltbintp = planet(2,1)
+	else if(freq.ge.planet(1,np))then
+	  pltbintp = planet(2,np)
+	else
+	  i = 1
+	  j = np
+	  dowhile(i+1.lt.j)
+	    k = (i+j)/2
+	    if(freq.gt.planet(1,k))then
+	      i = k
+	    else
+	      j = k
+	    endif
+	  enddo
+	  fj = (freq-planet(1,i))/(planet(1,j)-planet(1,i))
+	  fi = 1-fj
+	  pltbintp = fj*planet(2,j) + fi*planet(2,i)
+	endif
+c
 	end
 c************************************************************************
 	integer function plLook(source)
