@@ -30,6 +30,7 @@ c   rjs  27oct93  Use keyt routines.
 c   rjs  19nov93  Velocity calculation was incorrectly getting
 c		  geocentric velocities. Better formatting.
 c   rjs   9feb93  Give source elevation and azimuth as well.
+c   rjs  12dec95  Extract lstjul to ephem.for
 c Bugs:
 c   * The precession, nutation and aberration are pretty simple. No
 c     correction for the FK4 zero-point or elliptic terms of aberrations.
@@ -218,34 +219,6 @@ c
 	  call output('Source sets  at UT '//string)
 	endif
 c
-	end
-c************************************************************************
-	double precision function LstJul(lst,jday,long)
-c
-	implicit none
-	double precision lst,jday,long
-c
-c  Convert an LST to a Julian day.
-c
-c------------------------------------------------------------------------
-	include 'mirconst.h'
-	double precision myday,mylst,delta
-	logical more
-c
-	double precision eqeq
-c
-	myday = jday
-	more = .true.
-	dowhile(more)
-	  call jullst(myday,long,mylst)
-	  mylst = mylst + eqeq(myday)
-	  delta = - (mylst - lst) * 365.25d0/366.25d0/(2*pi)
-	  if(delta.gt.0.5)delta = delta - 1
-	  if(delta.lt.-0.5) delta = delta + 1
-	  myday = myday + delta
-	  more = abs(delta).gt.1/(24.*3600.)
-	enddo
-	LstJul = myday
 	end
 c************************************************************************
 	subroutine VelRad(jday,ra,da,rm,dm,vhel,vlsr,lat,long,doobs)
