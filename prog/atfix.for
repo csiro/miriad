@@ -48,8 +48,8 @@ c	the north spur, you should generally give the list of station
 c	names, as the standard array configuration names assume the
 c	standard antenna order (not the shuffled order).
 c
-c	If in doubt, see the help on "confighist" for a history of 
-c	array configurations.
+c	If in doubt, see the on-line history of configurations:
+c	  http://www.narrabri.atnf.csiro.au/operations/array_configurations/config_hist.html
 c
 c@ mdata
 c	Setting this parameter invokes an amplitude correction to the data
@@ -118,12 +118,13 @@ c    04may03 rjs  Original version.
 c    15may03 rjs  Better jyperk.
 c    14aug03 rjs  Fix bug causing seg violation.
 c    17sep03 rjs  New gain/elevation curve at 3mm.
+c    19oct03 rjs  Undate array tables.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
 	character version*(*)
 	integer MAXSELS,ATANT
-	parameter(version='AtFix: version 1.0 17-Sep-03')
+	parameter(version='AtFix: version 1.0 19-Oct-03')
 	parameter(MAXSELS=256,ATANT=6)
 c
 	real sels(MAXSELS),xyz(3*MAXANT)
@@ -554,7 +555,7 @@ c    array  Name of the stations used in that array.
 c
 c------------------------------------------------------------------------
 	integer ATANT,NARRAYS
-	parameter(ATANT=6,NARRAYS=30)
+	parameter(ATANT=6,NARRAYS=33)
 c
 	integer i,j
 	character anames(NARRAYS)*6,arrays(ATANT,NARRAYS)*4
@@ -619,7 +620,12 @@ c
      *	'H75B  ','W104','N5  ','N2  ','W106','W109','W392'/
 	data anames(30),(arrays(i,30),i=1,ATANT)/
      *	'NS214 ','W106','N2  ','N7  ','N11 ','N14 ','W392'/
-
+	data anames(31),(arrays(i,31),i=1,ATANT)/
+     *	'H214B ','W98 ','W104','N14 ','N5  ','W113','W392'/
+	data anames(32),(arrays(i,32),i=1,ATANT)/
+     *	'WBCOR ','W112','W102','W104','W106','W125','W392'/
+	data anames(33),(arrays(i,33),i=1,ATANT)/
+     *	'EW352B','W112','W102','W104','W109','W125','W392'/
 c
 	if(nant.ne.ATANT)call bug('f','Incompatible number of antennas')
 c
