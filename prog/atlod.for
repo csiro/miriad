@@ -76,6 +76,9 @@ c	  'nopflag' If at least one polarisation of a set of 2 or 4 polarimetric
 c	            spectra are bad, ATLOD normally flags all of the
 c	            polarisations. Option nopflag changes this so that only
 c	            the nominally bad spectrum is flagged.
+c	  'hires'   Treat bin data as measurements in the high time resolution
+c	            mode. The output dataset contains no bins, but instead
+c	            appears as data measured with small cycle times.
 c@ nfiles
 c	This gives one or two numbers, being the number of files to skip,
 c	followed by the number of files to process. This is only
