@@ -1,8 +1,7 @@
       program clstats
       implicit none
 c
-c= clstats - Reads in clfind assign file and calculates
-c     	     dispersions, masses, etc for each clump
+c= clstats - Calculates dispersions, masses, etc for each clump from clfind file
 c& jpw
 c
 c
@@ -15,8 +14,6 @@ c
 c  which implies that to convert to a mass, multiply by
 c
 c  10^20 * meanmol * m(H_2) * Area
-c
-c  --- KEYWORDS ---
 c
 c@ in
 c       file name of data cube

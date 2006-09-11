@@ -2,18 +2,19 @@
       implicit none
 c --------------------------------------------------------------------
 c
-c= clfind - Program to find clumps by tracing contours
-c     (in 3D), proceeding to lower levels and
-c     following merging of said clumps.
-c     ---> see full description/testing/application
-c          in Williams, de Geus, & Blitz, ApJ, 428, 693.
-c          (email: jwilliams@astro.berkeley.edu)
-c
+c= clfind - Find clumps by tracing contours (in 3D)
 c& jpw
-c: utility to find clumps
+c: utility
 c
 c+
-c  CLFIND is a MIRIAD task which finds the clumps in a 3-d cube.
+c  CLFIND is a MIRIAD task which finds the clumps in a 3-d cube,
+c  by tracing contours, proceeding to lower levels and following
+c  merging of said clumps. For full description/testing/application in
+c    Williams, de Geus, & Blitz, ApJ, 428, 693.
+c  Also see
+c    http://cfa-www.harvard.edu/~jpw/clfind.html
+c  for a general description and access to a postscript memo.
+c
 c
 c@ in
 c     The input image containing the data cube.  (No default)
