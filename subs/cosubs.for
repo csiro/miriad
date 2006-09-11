@@ -44,6 +44,8 @@ c	               removed useless access to multiple axes in CHKAXCO
 c    nebk   18dec95    Recognize new CTYPE "angle"
 c    rjs    06feb96    Increase ctype string in chkaxco.
 c    nebk   26apr96    Make AXTYPCO more flexible in recognizing velocity axes
+c    rjs    17jul97    Get rid of calls to rdhd, and just use coordinate
+c		       object as source of information.
 c******************************************************************************
 c
 c* axfndCO -- Find a specified generic axis in an image
@@ -374,12 +376,15 @@ c    ctype  CTYPE (upper case)
 c    il     Length of string prior to project "--*" string
 c--
 c-----------------------------------------------------------------------
-      character itoaf*1, str*6
       integer len1, il2
+      character str*6, itoaf*2
+      double precision crpix,crval,cdelt
 c----------------------------------------------------------------------- 
-      str = 'ctype'//itoaf(iax)
-      call rdhda (lun, str, ctype, ' ')
-      if (ctype.eq.' ') call bug ('f', 'CTYPECO: '//str//' is blank')
+      call coAxGet(lun,iax,ctype,crpix,crval,cdelt)      
+      if (ctype.eq.' ')then
+	str = 'ctype'//itoaf(iax)
+	call bug ('f', 'CTYPECO: '//str//' is blank')
+      endif
 c
       il2 = len1(ctype)
       il = 1
@@ -1080,11 +1085,13 @@ c-----------------------------------------------------------------------
       integer i
 cc
       integer naxis
+      double precision dtemp
 c-----------------------------------------------------------------------
 c
 c Load reference pixel for dummy locations
 c
-      call rdhdi (lun, 'naxis', naxis, 0)
+      call cogetd(lun,'naxis',dtemp)
+      naxis = nint(dtemp)
       if (iax.le.0 .or. iax.gt.naxis)  
      +  call bug ('f', 'W2WSCO: invalid axis number')
       do i = 1, naxis
@@ -1166,11 +1173,13 @@ c-----------------------------------------------------------------------
       integer i, lstrlen(maxnax)
 cc
       integer naxis
+      double precision dtemp
 c-----------------------------------------------------------------------
 c
 c Load dummy array values and actual value into conversion arrays
 c
-      call rdhdi (lun, 'naxis', naxis, 0)
+      call cogetd(lun,'naxis',dtemp)
+      naxis = nint(dtemp)
       if (iax.le.0 .or. iax.gt.naxis)  
      +  call bug ('f', 'W2WSFCO: invalid axis number')
       do i = 1, naxis
