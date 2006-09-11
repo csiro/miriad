@@ -9,6 +9,9 @@ c    mjs  24feb93  Added some doc lines; no code mods.
 c    rjs   7jul93  Include "ran" function here.
 c    mjs  09mar94  Mods for sgi-only (mips).
 c    rjs  25jan95  Mods for linux.
+c    rjs  18aug95  Get it to work on SGI.
+c    rjs  18sep95  Did I screw up in the above??I don't understand whats
+c		   happened to the code.
 c************************************************************************
 c
 c  Choose which random number style we are to use. We have three choices:
@@ -131,7 +134,7 @@ c------------------------------------------------------------------------
 #ifdef unix_style
 	real rand
 	do i=1,n
-	  data(i) = rand()
+	  data(i) = rand(0)
 	enddo
 #endif
 	end
