@@ -28,26 +28,10 @@ c	or leakage parameters have been modified, GPCAL will write out
 c	their current values to the appropriate items.
 c
 c	Conventions: Unfortunately there has been a number of changes in
-c	the `sign conventions' used within Miriad. These changes have resulted
-c	in the signs of GPCAL solutions changing. In most cases, there is
-c	no problem. However if you wish to compare solutions that were
-c	derived at different times, then you may need to perform some
-c	negation/conjugation of the data. A summary of changes follow:
-c	  1may91-9sep92   FITS was not correctly coping with the baseline
-c	                  number (e.g. baseline 1-2 was being stored as baseline
-c	                  2-1). U-V coordinates, however, were correct.
-c	                  This will not have any affect, unless u-v
-c	                  coordinates are recalculated (using uvedit).
-c	  9sep92          FITS baseline numbering was corrected. This results
-c	                  in the gpcal leakage solutions being the conjugate
-c	                  of there previous value. This change also affects
-c	                  the equation to convert an AIPS XY phase into a
-c	                  Miriad XY phase.
-c	  9sep92-29sep92  Data measured with circularly polarised feeds (e.g.
-c	                  VLA data), and read in with FITS, had RL and LR
-c	                  incorrectly labeled. This will result in an incorrect
-c	                  sign for U.
-c	  
+c	the `sign conventions' used within Miriad. For a discussion of the
+c	conventions, past sign errors and how they affect you, see the
+c	memo ``The Sign of Stokes-V, etc'' by Bob Sault.
+c
 c@ vis
 c	Input visibility data file. The data must contain raw linear
 c	polarisations. No default. The visibility data must be in time
@@ -55,13 +39,17 @@ c	order.
 c@ select
 c	Standard uv selection. Default is all data.
 c@ line
-c	Standard line-type specification. Only one channel must be given.
-c	The default is all the channel data (or all the wide data, if
-c	there is no channel data).
+c	Standard line-type specification. Multiple channels can be given.
+c	Generally it is better to give multiple channels, rather than
+c	averaging them into a `channel-0'. The default is all the channel
+c	data (or all the wide data, if there is no channel data).
 c@ flux
-c	The values of the I,Q,U,V Stokes parameters. Default is 1,0,0,0.
+c	The values of the I,Q,U,V Stokes parameters. If no values are
+c	given, and it is a source known to GPCAL, GPCAL uses its known
+c	flux as the default. If GPCAL does not know the source, the
+c	lux is determined by assuming that the rms gain amplitude is 1.
 c	If the option `qusolve' is used, the given fluxes for Q and U are
-c	used as the initial estimates.
+c	used as the initial estimates. Also see the `oldflux' option.
 c@ refant
 c	The reference antenna. Default is 3. The reference antenna needs to be
 c	present throughout the observation. Any solution intervals where the
@@ -77,7 +65,7 @@ c	gives the max gap size in a solution interval. A new solution interval
 c	is started when	either the max time length is exceeded, or a gap
 c	larger than the	max gap is encountered. The default is max length
 c	is 5 minutes, and the max gap size is the same as the max length.
-c	The polarisation characteristics and XY phases are assumed to be
+c	The polarisation characteristics are assumed to be
 c	constant over the observation.
 c@ tol
 c	Error tolerance. Default 0.001.
@@ -92,7 +80,8 @@ c	permutations, the more obscure or useless of which are not
 c	supported. The option values are used to turn on or off some
 c	of the solvers. Several options	can be given, separated by
 c	commas. Minimum match is used.
-c
+c	  "nopass"     Do not apply bandpass correction. The default is
+c	               to apply bandpass correction if possible.
 c	  "noamphase"  Do not solve for the amplitude and phase. The 
 c	               default is to solve for amplitude and phase.
 c	  "nopol"      Do not solve for the instrumental polarisation
@@ -117,11 +106,10 @@ c	               of the X feed on the reference antenna. The source
 c	               must be at least 5% polarised. This can
 c	               be combined with ``nopol'', in which case GPCAL
 c	               solves for X feed of the reference antenna only.
-c
-c	There are some restrictions on combining the options:
-c	 * nopol inhibits solving for the XY phases on all antennas except
-c	   the reference antenna.
-c	 * qusolve cannot be used with nopol.
+c	   "oldflux"   This causes GPCAL to use a pre-August 1994 ATCA flux
+c	               density scale. See the help on `oldflux' for more
+c	               information.
+c	Some combinations of these options are not supported.
 c--
 c  History:
 c    rjs,nebk 1may91 Original version.
@@ -171,12 +159,30 @@ c		     go negative.
 c    rjs     30oct92 Change minant to minants.
 c    rjs     22nov92 Added ntau keyword to output gains file.
 c    rjs     16feb93 More decimal places in a message.
+c    rjs      9mar93 Qusolve when not solving for leakages.
+c    nebk    07jun93 Minor formatting change
+c    rjs     24jun93 Hasn't gone anywhere.
+c    rjs     28jul93 Fiddle gain scaling if no flux is given.
+c    rjs     10aug93 Applies bandpass corrections. Handles multi-channel
+c		     data.
+c    rjs     18oct93 Doc correction only.
+c    rjs     13dec93 Sign convention of V change.
+c    rjs     23mar94 Check for existence of closures, and do the appropriate
+c		     things if there aren't any.
+c    rjs     25mar94 Minor correction to the above change.
+c    rjs      3aug94 options=oldflux.
+c
+c  Bugs:
+c    * Polarisation solutions when using noamp are wrong! The equations it
+c      solves for have a fudge to account for a bias introduced by the
+c      amplitude solver.
+c    * Need a constant X/Y gain option.
 c------------------------------------------------------------------------
 	include 'gpcal.h'
 	integer MAXITER
 	character version*(*)
 	parameter(MAXITER=30)
-	parameter(version='Gpcal: version 1.0 16-Feb-92')
+	parameter(version='Gpcal: version 1.0 3-Aug-94')
 c
 	integer tIn
 	double precision interval(2), freq
@@ -185,7 +191,8 @@ c
 	integer refant,minant,nants,nbl,nxyphase,nsoln,niter,i,j,jmax
 	integer maxsoln
 	logical amphsol,polsol,xysol,xyvary,xyref,polref,qusolve,defflux
-	character line*64, source*32
+	logical usepol,useref,dopass,polcal,notrip,oldflx
+	character line*80,source*32,uvflags*8
 c
 	complex D(2,MAXANT),xyp(MAXANT),Gains(2,MAXDANTS)
  	complex OldD(2,MAXANT),OldGains(2,MAXDANTS)
@@ -206,13 +213,16 @@ c  Get inputs.
 c
 	call output(version)
 	call keyini
-	call uvDatInp('vis','dlb')
+	call GetOpt(dopass,amphsol,
+     *		polsol,xysol,xyref,xyvary,polref,qusolve,oldflx)
+	uvflags = 'dlb'
+	if(dopass) uvflags = 'dlbf'
+	call uvDatInp('vis',uvflags)
 	defflux = .not.keyprsnt('flux')
 	call keyr('flux',flux(1),1.)
 	call keyr('flux',flux(2),0.)
 	call keyr('flux',flux(3),0.)
 	call keyr('flux',flux(4),0.)
-	call GetOpt(amphsol,polsol,xysol,xyref,xyvary,polref,qusolve)
 	call keyi('refant',refant,3)
 	call keyi('minants',minant,2)
 	call mkeyr('xyphase',xyphase,MAXANT,nxyphase)
@@ -235,11 +245,19 @@ c
 	  interval(2) = 1
 	endif
 c
+c  Determine the polarisation solver to use.
+c
+	polcal = abs(flux(2))+abs(flux(3))+abs(flux(4)).gt.0
+	usepol = (xysol.and..not.xyvary).or.polsol.or.qusolve
+	useref = polref.and..not.polsol
+	if(usepol.and.useref)
+     *	  call bug('f','Unsupported combination of options')
+c
 c  Indicate that we only want to get back raw linear polarisations.
 c
 	call uvDatSet('stokes',-5)
 	call uvDatSet('stokes',-6)
-	if(polsol.or.polref)then
+	if(usepol.or.useref.or.xyref.or.polcal)then
 	  call uvDatSet('stokes',-7)
 	  call uvDatSet('stokes',-8)
 	endif
@@ -277,33 +295,37 @@ c
 c  Read the data, forming the sums that we need.
 c
 	call output('Reading the data ...')
-	call DatRead(tIn,polsol.or.polref,nants,nbl,maxsoln,
-     *	  interval,refant,minant,time,nsoln,present,
+	call DatRead(tIn,useref.or.usepol.or.xyref.or.polcal,
+     *	  nants,nbl,maxsoln,
+     *	  interval,refant,minant,time,nsoln,present,notrip,
      *	  Vis,VisCos,VisSin,SumS,SumC,SumS2,SumCS,Count,
      *	  source, freq)
 c
 c  Initialize the flux array
 c
-      if(defflux)call getiquv(source,freq,flux)
-      write(line,'(''Using IQUV = '',4(f8.4,'',''))') flux
+      if(defflux)call getiquv(source,freq,oldflx,flux,defflux)
 c
+      if(defflux.and..not.qusolve)call bug('w',
+     *	  'It is unwise to omit OPTION=QUSOLVE when flux is unknown')
       if(flux(1).le.0)call bug('f','Invalid total flux value')
       pcent = sqrt( flux(2)**2 + flux(3)**2 + flux(4)**2)/flux(1)
       if(polref.and.pcent.eq.0.and..not.qusolve) call bug('f',
      *	  'You must give values for Q,U,V to use option POLREF')
       if(polref.and.pcent.lt.0.05) call bug('w',
      *	  'Source appears only weakly polarised')
-      call writeo (tIn, line)
 c
 c  Initialise the gains.
 c
 	call GainIni(nants,nsoln,Gains,xyp)
 c
+c  Determine which polarisation solver to use.
+c
+c
 c  Iterate until we have converged.
 c
 	niter = 0
 	epsi = tol + 1
-	if(polsol)then
+	if(usepol.or.useref)then
 	  ttol = 0.01
 	else
 	  ttol = tol
@@ -339,16 +361,16 @@ c
 c
 c  Solve for all the polarisation characteristics.
 c
-	  if(polsol)then
-	    call PolSolve(nsoln,nants,nbl,flux,refant,qusolve,
-     *	      xysol.and..not.xyvary,xyref.and..not.xyvary,polref,D,
-     *	      Gains,xyp,epsi1,present,Vis,VisCos,VisSin,
+	  if(usepol)then
+	    call PolSolve(nsoln,nants,nbl,flux,refant,polsol,polref,
+     *	      qusolve,xysol.and..not.xyvary,xyref.and..not.xyvary,
+     *	      notrip,D,Gains,xyp,epsi1,present,Vis,VisCos,VisSin,
      *	      SumS,SumC,SumS2,SumCS,Count)
 	    write(line,'(a,i2,a,f7.3)')'Iter=',niter,
      *		', Polarisation Solution Error: ',epsi1
 	    call output(line)
 	    epsi = max(epsi,epsi1)
-	  else if(polref)then
+	  else if(useref)then
 	    call RefSolve(nsoln,nants,nbl,flux,xyref.and..not.xyvary,D,
      *	      Gains,xyp,epsi1,Vis,VisCos,VisSin,
      *	      SumS,SumC,SumS2,SumCS,Count)
@@ -358,7 +380,7 @@ c
 	    epsi = max(epsi,epsi1)
 	  endif
 c
-	  if((polsol.or.polref).and.amphsol)then
+	  if((usepol.or.useref).and.amphsol)then
 	    call CompareG(nants,nsoln,D,Gains,Flux,
      *		OldD,OldGains,OldFlux,epsi)
 	    write(line,'(a,i2,a,f7.3)')'Iter=',niter,
@@ -371,9 +393,14 @@ c
 	if(niter.ge.MAXITER)
      *	  call bug('w','Failed to converge ... saving solution anyway')
 c
+c  If no flux was given, scale the gains so that they have an rms of
+c  1. Determine what flux this implies.
+c
+	if(defflux)call GainScal(flux,Gains,2*nants*nsoln)
+c
 c  Tell about the source polarisation.
 c
-	if(qusolve)then
+	if(qusolve.or.defflux)then
           write(line,'(a,f8.3)')'I flux density: ', flux(1)
           call writeo(tIn,line)
 c
@@ -388,12 +415,12 @@ c  Tell about the XY phases.
 c
 	if((xysol.or.xyref.or.nxyphase.gt.0).and..not.xyvary)then
 	  call writeo(tIn,'XY phases (degrees)')
-	  do j=1,nants,10
-	    jmax = min(j+9,nants)
+	  do j=1,nants,7
+	    jmax = min(j+7,nants)
 	    do i=j,jmax
 	      xyphase(i) = atan2(aimag(xyp(i)),real(xyp(i)))
 	    enddo
-	    write(line,'(1x,a,i2,a,i2,a,10f6.1)')'Xyphase(',j,'-',jmax,
+	    write(line,'(1x,a,i2,a,i2,a,7f7.1)')'Xyphase(',j,'-',jmax,
      *	      ') = ',(180/pi*xyphase(i),i=j,jmax)
 	    call writeo(tIn,line)
           enddo
@@ -1031,7 +1058,7 @@ c------------------------------------------------------------------------
 	integer cr0(0:3,4),ci0(0:3,4)
 	complex a(4,MAXBASE),b(4,MAXBASE),c(4,MAXBASE)
 c
-	data ar0/ 0, 0,4,0,  0, 0,-4,0,  0, 0, 0,0,  0, 0, 0,0/
+	data ar0/ 0, 0,-4,0,  0, 0,4,0,  0, 0, 0,0,  0, 0, 0,0/
 	data ai0/ 0, 0,0,0,  0, 0, 0,0,  0, 0, 0,0,  0, 0, 0,0/
 	data br0/ 0, 3,0,0,  0,-3, 0,0,  0,-2, 0,0,  0,-2, 0,0/
 	data bi0/ 0, 0,0,0,  0, 0, 0,0,  0, 0,-2,0,  0, 0, 2,0/
@@ -1105,19 +1132,19 @@ c
 	do j=2,nants
 	  do i=1,j-1
 	    k = k + 1
-	    a(XX,k) = flux(1) - cmplx(0.,flux(4))*(D(X,i)-conjg(D(X,j)))
+	    a(XX,k) = flux(1) + cmplx(0.,flux(4))*(D(X,i)-conjg(D(X,j)))
 	    b(XX,k) = flux(2) + flux(3)*(D(X,i) + conjg(D(X,j)))
 	    c(XX,k) = flux(3) - flux(2)*(D(X,i) + conjg(D(X,j)))
 c
-	    a(YY,k) = flux(1) + cmplx(0.,flux(4))*(D(Y,i)-conjg(D(Y,j)))
+	    a(YY,k) = flux(1) - cmplx(0.,flux(4))*(D(Y,i)-conjg(D(Y,j)))
 	    b(YY,k) =-flux(2) + flux(3)*(D(Y,i)+conjg(D(Y,j)))
 	    c(YY,k) =-flux(3) - flux(2)*(D(Y,i)+conjg(D(Y,j)))
 c
-	    a(XY,k) = flux(1)*(D(X,i)+conjg(D(Y,j))) + cmplx(0.,flux(4))
+	    a(XY,k) = flux(1)*(D(X,i)+conjg(D(Y,j))) - cmplx(0.,flux(4))
 	    b(XY,k) = flux(3) - flux(2)*(D(X,i) - conjg(D(Y,j)))
 	    c(XY,k) =-flux(2) - flux(3)*(D(X,i) - conjg(D(Y,j)))
 c
-	    a(YX,k) = flux(1)*(D(Y,i)+conjg(D(X,j))) - cmplx(0.,flux(4))
+	    a(YX,k) = flux(1)*(D(Y,i)+conjg(D(X,j))) + cmplx(0.,flux(4))
 	    b(YX,k) = flux(3) + flux(2)*(D(Y,i) - conjg(D(X,j)))
 	    c(YX,k) =-flux(2) + flux(3)*(D(Y,i) - conjg(D(X,j)))
 	  enddo
@@ -1125,13 +1152,13 @@ c
 c
 	end
 c************************************************************************
-	subroutine PolSolve(nsoln,nants,nbl,flux,refant,
-     *	    qusolve,xysol,xyref,polref,D,Gains,xyp,epsi,
+	subroutine PolSolve(nsoln,nants,nbl,flux,refant,polsol,polref,
+     *	    qusolve,xysol,xyref,notrip,D,Gains,xyp,epsi,
      *	    present,Vis,VisCos,VisSin,SumS,SumC,SumS2,SumCS,Count)
 c
 	implicit none
 	integer nsoln,nants,nbl,refant
-	logical xysol,qusolve,xyref,polref
+	logical xysol,qusolve,xyref,polsol,polref,notrip
 	real flux(4),epsi
 	complex D(2,nants),Gains(2,nants,nsoln),xyp(nants)
 c
@@ -1164,6 +1191,7 @@ c    nsoln	Number of solution intervals.
 c    nants,nbl	Number of antennae and baselines.
 c    qusolve	If true, solve for Q and U.
 c    xyref	Solve for reference antenna XY phase.
+c    notrip	True if there are no good closures in the data.
 c    polref	Solve for the reference antenna X feed alignment,
 c		differential ellipticity.
 c    xysol	If true, solve for the XY phase.
@@ -1205,13 +1233,18 @@ c
 	  endif
 	endif
 c
+c  D(Y,refant) will be solved for, unless "notrip" is true. In the later case
+c  make sure it is zero.
+c
+	D(Y,refant) = 0
+c
 c  We solve simultaneously for the antenna phase error, Q and U, as well
 c  as the leakage terms. First determine how many unknowns there are, and
 c  assign a index to each of them.
 c  QUvar,Tvar,Dvar give the indices for Q, antenna phase, and leakage terms.
 c
-	call GetVarNo(nants,nbl,xyref,polref1,qusolve,xysol,refant,
-     *	  present,QUvar,Tvar,Dvar,nvar,Vars)
+	call GetVarNo(nants,nbl,polsol,polref1,qusolve,xysol,xyref,
+     *	  notrip,refant,present,QUvar,Tvar,Dvar,nvar,Vars)
 c
 c  We are going to solve the system Ax = b. Generate A and b.
 c
@@ -1416,13 +1449,13 @@ c
 	  k = k + 1
 	  V(XX,k) = V(XX,k) - D *
      *	    (-flux(2)*SumS(k) + flux(3)*SumC(k)
-     *	        + cmplx(0.,flux(4)*Count(k)))
+     *	        - cmplx(0.,flux(4)*Count(k)))
 	  VC(XX,k) = VC(XX,k) - D *
      *	    ( -flux(2)*SumCS(k) + flux(3)*(Count(k)-SumS2(k))
-     *		+ cmplx(0.,flux(4)*SumC(k)))
+     *		- cmplx(0.,flux(4)*SumC(k)))
 	  VS(XX,k) = VS(XX,k) - D *
      *	    (-flux(2)*SumS2(k) + flux(3)*SumCS(k)
-     *		+ cmplx(0.,flux(4)*SumS(k)))
+     *		- cmplx(0.,flux(4)*SumS(k)))
 	  V(YX,k) = V(YX,k)   - D *
      *	    (flux(1)*Count(k) - flux(2)*SumC(k) - flux(3)*SumS(k))
 	  VC(YX,k) = VC(YX,k) - D *
@@ -1440,13 +1473,13 @@ c
 	  k = k + j - 2
 	  V(XX,k) = V(XX,k) - D *
      *	    (-flux(2)*SumS(k) + flux(3)*SumC(k)
-     *		- cmplx(0.,flux(4)*Count(k)))
+     *		+ cmplx(0.,flux(4)*Count(k)))
 	  VC(XX,k) = VC(XX,k) - D *
      *	    ( -flux(2)*SumCS(k) + flux(3)*(Count(k)-SumS2(k))
-     *		- cmplx(0.,flux(4)*SumC(k)))
+     *		+ cmplx(0.,flux(4)*SumC(k)))
 	  VS(XX,k) = VS(XX,k) - D *
      *	    (-flux(2)*SumS2(k) + flux(3)*SumCS(k)
-     *		- cmplx(0.,flux(4)*SumS(k)))
+     *		+ cmplx(0.,flux(4)*SumS(k)))
 	  V(XY,k) = V(XY,k)   - D *
      *	    (flux(1)*Count(k) - flux(2)*SumC(k) - flux(3)*SumS(k))
 	  VC(XY,k) = VC(XY,k) - D *
@@ -1520,10 +1553,10 @@ c
 	integer ar0(0:8,4),ai0(0:8,4),br0(0:8,4),bi0(0:8,4)
 	integer cr0(0:8,4),ci0(0:8,4)
 c                 0  Q  U T1 D1r i T2 D2r i   0  Q  U T1 D1r i T2 D2r i
-	data ar0/ 1, 0, 0, 0, 0, 4, 0, 0, 4,  1, 0, 0, 0, 0,-4, 0, 0,-4,
-     *		  0, 0, 0,-4, 1, 0, 4, 1, 0,  0, 0, 0, 4, 1, 0,-4, 1, 0/
- 	data ai0/ 0, 0, 0, 1,-4, 0,-1, 4, 0,  0, 0, 0, 1, 4, 0,-1,-4, 0,
-     *		  4, 0, 0, 0, 0, 1, 0, 0,-1, -4, 0, 0, 0, 0, 1, 0, 0,-1/
+	data ar0/ 1, 0, 0, 0, 0,-4, 0, 0,-4,  1, 0, 0, 0, 0, 4, 0, 0, 4,
+     *		  0, 0, 0, 4, 1, 0,-4, 1, 0,  0, 0, 0,-4, 1, 0, 4, 1, 0/
+ 	data ai0/ 0, 0, 0, 1, 4, 0,-1,-4, 0,  0, 0, 0, 1,-4, 0,-1, 4, 0,
+     *		 -4, 0, 0, 0, 0, 1, 0, 0,-1,  4, 0, 0, 0, 0, 1, 0, 0,-1/
 	data br0/ 2, 0, 0, 0, 3, 0, 0, 3, 0, -2, 0, 0, 0, 3, 0, 0, 3, 0,
      *		  3, 0, 1, 0,-2, 0, 0, 2, 0,  3, 0, 1, 0, 2, 0, 0,-2, 0/
 	data bi0/ 0, 0, 0, 2, 0, 3,-2, 0,-3,  0, 0, 0,-2, 0, 3, 2, 0,-3,
@@ -1589,12 +1622,12 @@ c
 	enddo
 	end
 c************************************************************************
-	subroutine GetVarNo(nants,nbl,xyref,polref,qusolve,xysol,refant,
-     *	  present,QUvar,Tvar,Dvar,nvar,Vars)
+	subroutine GetVarNo(nants,nbl,polsol,polref,qusolve,xysol,xyref,
+     *	  notrip,refant,present,QUvar,Tvar,Dvar,nvar,Vars)
 c
 	implicit none
 	integer nants,nbl,refant
-	logical xyref,polref,qusolve,xysol,present(nants)
+	logical xyref,polsol,polref,qusolve,xysol,present(nants),notrip
 	integer QUvar,Tvar(2,nants),Dvar(2,2,nants),nvar,Vars(8,4,nbl)
 c
 c  This assigns each of the things we have to solve for a number,
@@ -1604,7 +1637,8 @@ c
 c  Input:
 c    nants,nbl	Number of antennae and baselines.
 c    present	True if the antenna is present in the data.
-c    qusolve,xysol,xyref,polref Logicals, which determine what we solve for.
+c    qusolve,xysol,xyref,polref,polsol,notrip Logicals, which determine
+c		what we solve for.
 c    refant	The reference antenna number.
 c  Output:
 c    QUvar	Gives the variable number of Q
@@ -1645,7 +1679,7 @@ c
 c
 c  Do not solve for leakage terms of missing antennas!
 c
-	  if(.not.present(i))then
+	  if(.not.present(i).or..not.polsol)then
 	    Dvar(1,X,i) = 0
 	    Dvar(2,X,i) = 0
 	    Dvar(1,Y,i) = 0
@@ -1667,14 +1701,20 @@ c
 	    nvar = nvar + 3
 c
 c  Do not solve for the leakage terms of the X feed of the reference antenna
-c  if "polref" was not specified.
+c  if "polref" was not specified. Do not solve for the characteristics of
+c  the Y antenna if there are no closures (we cannot).
 c
 	  else
 	    Dvar(1,X,i) = 0
 	    Dvar(2,X,i) = 0
-	    Dvar(1,Y,i) = nvar + 1
-	    Dvar(2,Y,i) = nvar + 2
-	    nvar = nvar + 2
+	    if(notrip)then
+	      Dvar(1,Y,i) = 0
+	      Dvar(2,Y,i) = 0
+	    else
+	      Dvar(1,Y,i) = nvar + 1
+	      Dvar(2,Y,i) = nvar + 2
+	      nvar = nvar + 2
+	    endif
 	  endif
 	enddo
 	if(nvar.lt.1)call bug('f','No variables to solve for??')
@@ -1778,13 +1818,13 @@ c
 	end
 c************************************************************************
 	subroutine DatRead(tIn,polsol,nants,nbl,maxsoln,
-     *	  interval,refant,minant,time,nsoln,present,
+     *	  interval,refant,minant,time,nsoln,present,notrip,
      *	  Vis,VisCos,VisSin,SumS,SumC,SumS2,SumCS,Count,
      *	  source,freq)
 c
 	implicit none
 	integer nsoln,nants,nbl,maxsoln,tIn,refant,minant
-	logical polsol,present(nants)
+	logical polsol,present(nants),notrip
 	double precision interval(2),freq
 	character source*(*)
 	complex Vis(4,nbl,maxsoln)
@@ -1809,56 +1849,89 @@ c  Output:
 c    time	The time for each solution interval.
 c    nsoln	Number of solution intervals.
 c    present	Logical indicating whether the antenna is present at all.
+c    notrip	Flag which is true if there are no closures present.
 c    Vis,VisCos,VisSin,SumC,SumS,SumS2,SumCS,Count
 c		Accumulated statistics.
 c------------------------------------------------------------------------
 	include 'gpcal.h'
-	integer i,j,k,l,i1,i2,bl,totvis,ngood,nauto,nread,nbad,n
-	double precision preamble(4),tfirst,tlast
+	integer i,j,k,l,i1,i2,bl,totvis,ngood,nauto,nchan,nbad,n,nread
+	integer ncorr,nr,b1,b2,b3
+	double precision preamble(4),tfirst,tlast,epsi
 	real Cos2Chi,Sin2Chi,chi
-	logical accept,flag(4)
-	complex data(4)
+	logical accept,flag(MAXCHAN,4),okscan,trip
+	complex data(MAXCHAN,4),d(4)
 c
 c  Externals.
 c
 	character itoaf*8
-	integer naccept
+	logical doaccept
 c
 	call uvrewind(tIn)
-	call uvDatRd(preamble,Data(XX),flag(XX),1,nread)
-	if(nread.ne.1)call bug('f','No data read from input file')
+	call uvDatRd(preamble,Data(1,XX),flag(1,XX),MAXCHAN,nchan)
+	if(nchan.eq.0)call bug('f','No data read from input file')
 c
 c  Get the source and frequency of the first data.
 c
 	call uvrdvra(tIn,'source',source,' ')
-	call uvinfo(tIn,'frequency',freq)
+	call uvfit1(tIn,'frequency',nchan,freq,epsi)
 c
 c  Get the data. Read the remaining correlations for this record.
 c
+	n = 0
+	nr = 2
+	if(polsol)nr = 4
 	nsoln = 0
 	tfirst = 0
 	tlast = 0
-	data(XY) = (0.,0.)
-	data(YX) = (0.,0.)
 	totvis = 0
 	ngood = 0
 	nbad = 0
 	nauto = 0
-	dowhile(nread.eq.1)
+	dowhile(nchan.gt.0)
 	  totvis = totvis + 1
-	  call uvDatRd(preamble,Data(YY),flag(YY),1,nread)
-	  accept = flag(XX).and.flag(YY)
+c
+c  Read the other polarisations and determine the overall flags.
+c
+	  do j=2,nr
+	    call uvDatRd(preamble,Data(1,j),flag(1,j),MAXCHAN,nread)
+	    if(nread.ne.nchan)
+     *	      call bug('f','Inconsistent number of polarisation chans')
+	  enddo
+c
+c  Accumulate the polarisations.
+c
+	  ncorr = 0
+	  d(XX) = 0
+	  d(YY) = 0
+	  d(XY) = 0
+	  d(YX) = 0
 	  if(polsol)then
-	    call uvDatRd(preamble,Data(XY),flag(XY),1,nread)
-	    call uvDatRd(preamble,Data(YX),flag(YX),1,nread)
-	    accept = accept.and.flag(XY).and.flag(YX)
+	    do j=1,nchan
+	      if(flag(j,XX).and.flag(j,YY).and.
+     *	         flag(j,XY).and.flag(j,YX))then
+		ncorr = ncorr + 1
+		d(XX) = d(XX) + data(j,XX)
+		d(YY) = d(YY) + data(j,YY)
+		d(XY) = d(XY) + data(j,XY)
+		d(YX) = d(YX) + data(j,YX)
+	      endif
+	    enddo
+	  else
+	    do j=1,nchan
+	      if(flag(j,XX).and.flag(j,YY))then
+		ncorr = ncorr + 1
+		d(XX) = d(XX) + data(j,XX)
+		d(YY) = d(YY) + data(j,YY)
+	      endif
+	    enddo
 	  endif
 c
-	  i2 = nint(preamble(4))
-	  i1 = i2 / 256
-	  i2 = i2 - 256*i1
-	  accept = accept.and.i1.gt.0.and.i1.le.nants.and.
-     *			      i2.gt.0.and.i2.le.nants.and.i1.ne.i2
+c  Determine if we will accept this visibility.
+c
+	  call basant(preamble(4),i1,i2)
+	  accept = ncorr.gt.0.and.i1.gt.0.and.i1.le.nants.and.
+     *			          i2.gt.0.and.i2.le.nants.and.
+     *				  i1.ne.i2
 c
 c  If its a good record, process it. Initialise a new scan slot if needed.
 c
@@ -1868,9 +1941,9 @@ c
      *		preamble(3).gt.tlast+interval(2))then
 	      if(nsoln.ne.0)then
 		time(nsoln) = (tfirst+tlast)/2
-		n = naccept(time(nsoln),Count(1,nsoln),nants,nbl,
-     *							refant,minant)
-		if(n.gt.0)then
+		okscan = doaccept(time(nsoln),Count(1,nsoln),
+     *					n,nants,nbl,refant,minant)
+		if(okscan)then
 		  ngood = ngood + n
 		else
 		  nsoln = nsoln - 1
@@ -1878,6 +1951,7 @@ c
 	      endif
 c
 	      nsoln = nsoln + 1
+	      n = 0
 c
 	      if(nsoln.gt.maxsoln)
      *		call bug('f','Too many solution intervals')
@@ -1901,43 +1975,39 @@ c
 c
 	    tlast = max(tlast,preamble(3))
 c
-	    if(i1.lt.i2)then
-	      bl = (i2-1)*(i2-2)/2 + i1
-	    else
-	      bl = (i1-1)*(i1-2)/2 + i2
-	      do i=1,4
-		data(i) = conjg(data(i))
-	      enddo
-	    endif
+	    bl = (i2-1)*(i2-2)/2 + i1
+c
+c  Accumulate the statistics.
 c
 	    call uvrdvrr(tIn,'chi',chi,0.)
 	    Cos2Chi = cos(2*chi)
 	    Sin2Chi = sin(2*chi)
 	    do i=1,4
-	      Vis(i,bl,nsoln) = Vis(i,bl,nsoln) + Data(i)
-	      VisCos(i,bl,nsoln) = VisCos(i,bl,nsoln)+Data(i)*Cos2Chi
-	      VisSin(i,bl,nsoln) = VisSin(i,bl,nsoln)+Data(i)*Sin2Chi
+	      Vis(i,bl,nsoln) = Vis(i,bl,nsoln)       + d(i)
+	      VisCos(i,bl,nsoln) = VisCos(i,bl,nsoln) + d(i)*Cos2Chi
+	      VisSin(i,bl,nsoln) = VisSin(i,bl,nsoln) + d(i)*Sin2Chi
 	    enddo
-	    Count(bl,nsoln) = Count(bl,nsoln) + 1
-	    SumS(bl,nsoln) = SumS(bl,nsoln) + Sin2Chi
-	    SumC(bl,nsoln) = SumC(bl,nsoln) + Cos2Chi
-	    SumCS(bl,nsoln) = SumCS(bl,nsoln) + Cos2Chi*Sin2Chi
-	    SumS2(bl,nsoln) = SumS2(bl,nsoln) + Sin2Chi*Sin2Chi
+	    Count(bl,nsoln) = Count(bl,nsoln) + ncorr
+	    SumS(bl,nsoln)  = SumS(bl,nsoln)  + ncorr * Sin2Chi
+	    SumC(bl,nsoln)  = SumC(bl,nsoln)  + ncorr * Cos2Chi
+	    SumCS(bl,nsoln) = SumCS(bl,nsoln) + ncorr * Cos2Chi*Sin2Chi
+	    SumS2(bl,nsoln) = SumS2(bl,nsoln) + ncorr * Sin2Chi*Sin2Chi
+	    n = n + 1
 	  else if(i1.eq.i2)then
 	    nauto = nauto + 1
 	  else
 	    nbad = nbad + 1
 	  endif
-	  call uvDatRd(preamble,Data(XX),flag(XX),1,nread)
+	  call uvDatRd(preamble,Data(1,XX),flag(1,XX),MAXCHAN,nchan)
 	enddo
 c
 c  Check if the last time interval is to be accepted.
 c
 	if(nsoln.ne.0)then
 	  time(nsoln) = (tfirst+tlast)/2
-	  n = naccept(time(nsoln),Count(1,nsoln),nants,nbl,
-     *							refant,minant)
-	  if(n.gt.0)then
+	  okscan = doaccept(time(nsoln),Count(1,nsoln),
+     *				n,nants,nbl,refant,minant)
+	  if(okscan)then
 	    ngood = ngood + n
 	  else
 	    nsoln = nsoln - 1
@@ -1998,6 +2068,23 @@ c
 	  enddo
 	enddo
 c
+c  Determine whether there are any closures present.
+c
+	trip = .false.
+	do k=3,nants
+	  do j=2,k-1
+	    do i=1,j-1
+	      b1 = (k-1)*(k-2)/2 + j
+	      b2 = (j-1)*(j-2)/2 + i
+	      b3 = (k-1)*(k-2)/2 + i
+	      trip = trip.or.(Count(b1,0).gt.0.and.
+     *			      Count(b2,0).gt.0.and.
+     *			      Count(b3,0).gt.0)
+	    enddo
+	  enddo
+	enddo
+	notrip = .not.trip
+c
 c  Give warning messages.
 c
 	k = 0
@@ -2005,12 +2092,16 @@ c
 	  if(.not.present(i)) call bug('w',
      *	    'No data present for antenna '//itoaf(i))
 	enddo
+	if(notrip)then
+	  call bug('w','No closures were present')
+	  call bug('w','Quality of solution will suffer')
+	endif
 	end
 c************************************************************************
-	integer function naccept(time,Count,nants,nbl,refant,minant)
+	logical function doaccept(time,Count,n,nants,nbl,refant,minant)
 c
 	implicit none
-	integer nants,nbl,refant,minant
+	integer nants,nbl,refant,minant,n
 	integer Count(nbl)
 	double precision time
 c
@@ -2019,16 +2110,16 @@ c  antennae are present in the data.
 c
 c  Input:
 c    time	Time corresponding to this interval.
+c    n		Number of visibilities in this interval.
 c    refant
 c    minant
 c    nants,nbl
 c    Count	Number of visibility records for each baseline.
 c  Output:
-c    naccept	Number of visibilities being accepted. If zero, then
-c		this time period is to be discarded.
+c    doaccept	True if we are to accept this solution interval.
 c------------------------------------------------------------------------
 	include 'gpcal.h'
-	integer i,j,k,n,npresent,lnvis
+	integer i,j,k,npresent,lnvis
 	logical present(MAXANT)
 	character string*32,nvis*8,line*80
 c
@@ -2042,12 +2133,10 @@ c
 	enddo
 c
 	k = 0
-	n = 0
 	do j=2,nants
 	  do i=1,j-1
 	    k = k + 1
 	    if(Count(k).gt.0)then
-	      n = n + Count(k)
 	      present(i) = .true.
 	      present(j) = .true.
 	    endif
@@ -2059,16 +2148,15 @@ c
 	  if(present(k))npresent = npresent + 1
 	enddo
 c
-	if(npresent.lt.minant.or..not.present(refant).and.n.gt.0)then
+	doaccept = npresent.ge.minant.and.present(refant)
+	if(.not.doaccept)then
 	  nvis = itoaf(n)
 	  lnvis = len1(nvis)
 	  call JulDay(time,'H',string)
 	  line = 'Discarding '//nvis(1:lnvis)//
      *		' visibilities, being the scan near '//string
 	  call bug('w',line)
-	  n = 0
 	endif
-	naccept = n
 	end
 c************************************************************************
 	subroutine PolIni(tIn,xyphase,nxyphase,D,xyp,nants)
@@ -2248,6 +2336,54 @@ c
 	  
 	end
 c************************************************************************
+	subroutine GainScal(flux,Gains,ngains)
+c
+	implicit none
+	integer ngains
+	complex Gains(ngains)
+	real flux(4)
+c
+c  Scale the gains and the flux so that the rms gain is 1.
+c
+c  Input:
+c    ngains	Number of gains.
+c  Input/Output:
+c    Gains	The gains.
+c    flux	Nominal source flux.
+c------------------------------------------------------------------------
+	real Sum2,t
+	integer n,i
+c
+	n = 0
+	Sum2 = 0
+	do i=1,ngains
+	  t = real(Gains(i))**2 + aimag(Gains(i))**2
+	  if(t.gt.0)then
+	    Sum2 = Sum2 + t
+	    n = n + 1
+	  endif
+	enddo
+c
+c  Return if all the gains are flagged bad.
+c
+	if(Sum2.eq.0)return
+c
+c  Scale the gains.
+c
+	t = sqrt(n/Sum2)
+	do i=1,ngains
+	  Gains(i) = t*Gains(i)
+	enddo
+c
+c  Scale the fluxes.
+c
+	t = Sum2/n
+	do i=1,4
+	  flux(i) = t*flux(i)
+	enddo
+c
+	end
+c************************************************************************
 	subroutine LeakTab(tIn,D,nants)
 c
 	implicit none
@@ -2301,15 +2437,17 @@ c
 	call output(line)
 	end
 c************************************************************************
-	subroutine GetOpt(amphsol,polsol,xysol,xyref,xyvary,polref,
-     *								qusolve)
+	subroutine GetOpt(dopass,amphsol,polsol,xysol,xyref,
+     *				xyvary,polref,qusolve,oldflux)
 c
 	implicit none
-	logical amphsol,polsol,xysol,xyvary,xyref,polref,qusolve
+	logical dopass,amphsol,polsol,xysol,xyvary,xyref,polref,qusolve
+	logical oldflux
 c
 c  Get processing options.
 c
 c  Output:
+c    dopass	Apply bandpass correction if possible.
 c    amphsol	Solve for antenna gains.
 c    polsol	Solve for polarisation corrections.
 c    xysol	Solve for the xy phases (except for the reference antenna).
@@ -2318,13 +2456,15 @@ c    xyref	Solve for the xy phase of the reference.
 c    polref	Solve for reference antenna misalignment and differential
 c               ellipticity.
 c    qusolve	Solve for Q and U as well as everything else.
+c    oldflux	Use pre-Aug 1994 ATCA flux scale.
 c------------------------------------------------------------------------
 	integer nopt
-	parameter(nopt=7)
+	parameter(nopt=9)
 	logical present(nopt)
 	character opts(nopt)*10
 	data opts/'noamphase ','nopol     ','polref    ','noxy      ',
-     *    	  'xyref     ','qusolve   ','xyvary    '/
+     *    	  'xyref     ','qusolve   ','xyvary    ','nopass    ',
+     *		  'oldflux   '/
 c
 	call options('options',opts,present,nopt)
 	amphsol = .not.present(1)
@@ -2334,16 +2474,17 @@ c
 	xyref   = present(5)
 	qusolve = present(6)
 	xyvary  = present(7)
+	dopass  = .not.present(8)
+	oldflux = present(9)
 c
-	if(qusolve.and..not.polsol)call bug('f',
-     *	  'Option QUSOLVE cannot be used with NOPOL')
-	if(xysol.and..not.(polsol.or.xyvary))then
-	    call bug('w',
-     *	  'Option NOXY is being used, as option NOPOL was given')
-	  xysol = .false.
+	if(.not.polsol.and.polref.and.
+     *	  ((xysol.and..not.xyvary).or.qusolve))then
+     	  call bug('w','Unsupported combination of options')
+	  call bug('f','Include either the NOXY or XYVARY option')
 	endif
-	if(xyref.and..not.(polsol.or.polref.or.xyvary))call bug('f',
-     *	  'Option XYREF must be used with either POLREF or not NOPOL')
+	if(.not.xysol.and.xyref.and.
+     *	  (polsol.or.qusolve.or.xyvary.or..not.polref))
+     *	  call bug('f','Unsupported combination of options')
 	if(.not.xysol.and.xyvary)call bug('f',
      *	  'Option NOXY cannot be used with XYVARY')
 	if(.not.amphsol.and..not.polsol.and..not.polref.and.
@@ -2356,34 +2497,51 @@ c
 c
 	end
 c************************************************************************
-      subroutine getiquv(source,freq,flux)
+      subroutine getiquv(source,freq,oldflux,flux,defflux)
       implicit none
 c
       character source*(*)
       double precision freq
       real flux(4)
+      logical defflux,oldflux
 c
 c     Provide a model of I,Q,U, and V for selected calibrators
 c
 c  Input:
 c     source   Name of the source.
 c     freq     Observing frequency.
+c     oldflux  Use old 1934-638 flux density scale.
 c  Output:
 c     flux     I,Q,U, and V.  All set according to the some default value.
+c     defflux  True if the source was not found, and default of 1,0,0,0 used.
 c----------------------------------------------------------------------
       integer ierr
-      character umsg*80
+      character umsg*80,src*16
 c
+      src = source
+      if(src.eq.'1934-638'.or.src.eq.'1934'.or.
+     *		      src.eq.'1939-637')then
+	if(oldflux)then
+	  src = 'old1934'
+	  call output('Using pre-Aug94 ATCA flux scale for 1934-638')
+	else
+	  call bug('w','Using post-Aug94 ATCA flux scale for 1934-638')
+	endif
+      endif
       ierr = 2
-      if(source.ne.' ')call calstoke(source,'i',freq,flux(1),1,ierr)
+      if(src.ne.' ')call calstoke(src,'i',freq,flux(1),1,ierr)
       if(ierr.ne.2)then
-	call calstoke(source,'q',freq,flux(2),1,ierr)
-	call calstoke(source,'u',freq,flux(3),1,ierr)
-	call calstoke(source,'v',freq,flux(4),1,ierr)
+	defflux = .false.
+	call calstoke(src,'q',freq,flux(2),1,ierr)
+	call calstoke(src,'u',freq,flux(3),1,ierr)
+	call calstoke(src,'v',freq,flux(4),1,ierr)
 	umsg = 'Frequency extrapolation was needed to '//
      *	  'determine Stokes parameters of '//source
 	if(ierr.eq.1)call bug('w',umsg)
+        write(umsg,'(''Using IQUV = '',4(f8.4,'',''))') flux
+	call output(umsg)
       else
+	defflux = .true.
 	flux(1) = 1
 	flux(2) = 0
 	flux(3) = 0
