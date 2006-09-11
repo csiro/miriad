@@ -27,15 +27,16 @@ c    rjs  13jun91 Eliminated chi offset fiddle.
 c    rjs  24apr91 PGPLOT standardisation.
 c    mjs  13mar93 pgplot subr names have less than 7 chars.
 c    nebk 29jun93 Add 'O' to PGTBOX options (omit leading zeros)
+c    rjs  14oct98 Plot sin(2*chi) as well as cos(2*chi).
 c
 c  Bugs:
-c   * Currently the log file is ignored, and a plot is always made.
+c
 c------------------------------------------------------------------------
+	include 'mirconst.h'
 	character version*(*)
-	double precision pi
 	integer npts
-	parameter(version='ParaPlot: version 1.0 29-Jun-93')
-	parameter(pi=3.141592653589793d0,npts=256)
+	parameter(version='ParaPlot: version 1.0 14-Oct-98')
+	parameter(npts=256)
 c
 	double precision lat,elev,dec,rise,set,temp,delta,a,b
 	double precision theta
@@ -43,7 +44,7 @@ c
 	logical more
 	character device*32,logfile*32,line*64
 	real t,xlo,xhi,ylo1,yhi1,ylo2,yhi2
-	real time(npts),chi(npts),el(npts),c2chi(npts)
+	real time(npts),chi(npts),el(npts),c2chi(npts),s2chi(npts)
 c
 c  Externals.
 c
@@ -103,21 +104,22 @@ c
 	  call parang(0.d0,dec,theta,lat,t)
 	  chi(i)   = 180/pi * t
 	  c2chi(i) = cos(2*t)
+	  s2chi(i) = sin(2*t)
 	  el(i)    = 180/pi * asin(a + b*cos(theta))
 	  if(i.eq.1)then
 	    xlo = time(1)
 	    xhi = xlo
 	    ylo1 = min(chi(1),el(1))
 	    yhi1 = max(chi(1),el(1))
-	    ylo2 = c2chi(1)
+	    ylo2 = min(c2chi(1),s2chi(1))
 	    yhi2 = ylo1
 	  else
 	    xlo = min(xlo,time(i))
 	    xhi = max(xhi,time(i))
 	    ylo1 = min(ylo1,chi(i),el(i))
 	    yhi1 = max(yhi1,chi(i),el(i))
-	    ylo2 = min(ylo2,c2chi(i))
-	    yhi2 = max(yhi2,c2chi(i))
+	    ylo2 = min(ylo2,c2chi(i),s2chi(i))
+	    yhi2 = max(yhi2,c2chi(i),s2chi(i))
 	  endif
 	  theta = theta + delta
 	enddo
@@ -147,7 +149,9 @@ c
 	  call pgswin(xlo,xhi,-1.0,1.0)
 	  call pgtbox('BCNSTHZO',0.,0,'BCNST',0.,0)
 	  call pgline(npts,time,c2chi)
-	  call pglab('Hour Angle','Cos(2\gx)',' ')
+	  call pglab('Hour Angle','Cos(2\gx) and Sin(2\gx)',' ')
+	  call pgsls(2)
+	  call pgline(npts,time,s2chi)
 	  call pgend
 	endif
 c
