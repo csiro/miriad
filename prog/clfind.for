@@ -945,7 +945,7 @@ c.....and how they merge together at lower levels)
 c      include 'header.h'
 
       integer nclump,nmax
-      integer i,j,k,n3,n2,n3
+      integer i,j,k,n2,n3
       integer nmerge,ngy0,ngy,nps
       real t(*)
       character*80 line

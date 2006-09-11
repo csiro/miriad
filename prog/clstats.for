@@ -176,7 +176,7 @@ c      include 'header.h'
 
       integer i,j,k,nc,imax,ncmax
       integer i1,j1,k1,i2,j2,k2
-      integer nclump,nmin,npixels,lenline
+      integer nclump,npixels,lenline
       real pi,rad2asec
       real sx2,sx,sy2,sy,sv2,sv,dv
       real x1,y1,v1,xp,yp,vp,tp,tave,ts
@@ -240,7 +240,7 @@ c.....and find it's coded index
         ts=tsum(nc)
         if (ts.le.0.0) goto 20
 
-        flag=''
+        flag=' '
         if(edge(nc)) flag='E'
 
 c.......Relative peak positions in arcseconds
