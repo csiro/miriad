@@ -30,6 +30,8 @@ c    rjs   2aug91 Changed "pol" to "polarization" in simple polarization
 c	          handling.
 c    rjs  30aug91 Correct determination of u-v when computing model off
 c		  the phase center.
+c    rjs   1nov91 Slightly better (though still crude) polarisation
+c		  handling. Handling of mfs data and shifts of models.
 c************************************************************************
 c*ModelIni -- Ready the uv data file for processing by the Model routine.
 c&mchw
@@ -56,23 +58,28 @@ c    tmod	The handle of the model image.
 c    tvis	The handle of the input visibility data.
 c    sels	The uv selection intermediate array.
 c    flags	A character variable, each character of which specifies
-c		a processing stp.
+c		a processing step.
 c		 'l'	Set up the linetype.
 c		 'p'	Set up the pointing parameters.
-c		 's'	Polarisation selection.
+c		 's'	Perform polarisation selection.
+c		 't'	Source is polarised.
 c--
 c------------------------------------------------------------------------
 	double precision pi
 	parameter(pi=3.141592653589793d0)
+	integer PolI,PolXX,PolYY,PolRR,PolLL
+	parameter(PolI=1,PolRR=-1,PolLL=-2,PolXX=-5,PolYY=-6)
+c
 	double precision ra,dec,cosd,tol,tmp
-	logical update
+	logical update,doPol
 	integer length,nchan,polm,polv
 	real lstart,lwidth,lstep
-	character tra*1,tdec*1,tpol*1,ltype*64
+	character tra*1,tdec*1,ltype*64
 c
 c  Externals.
 c
 	character PolsC2P*2
+	logical PolsPara
 c
 c  Rewind the uv data file and apply the user selection.
 c
@@ -111,62 +118,104 @@ c
 	  endif
 	endif
 c
-c  Determine if the visibility file contains multiple polarisations.
-c  Only perform polarisation selection if both the visibility file and
-c  the model contain polarisation information.
+c  See what we can work out about the polarisation of both the map
+c  and the visibility data.
 c
 	if(index(flags,'s').ne.0)then
-	  call uvprobvr(tvis,'pol',tpol,length,update)
-	  if(tpol.eq.'i')then
-	    call rdhdi(tvis,'pol',polv,0)
-	    call ModelPol(tmod,polm)
-	    if(polm.ne.0.and.polv.eq.0)then
+	  doPol = index(flags,'t').ne.0
+	  call ModelPol(tmod,polm,tvis,polv)
+c
+c  Handle a polarisaed source. Model and visibility have to agree.
+c
+	  if(doPol)then
+	    if(polm.eq.polv)then
+	      continue
+	    else if(polv.ne.0)then
+	      call bug('f',
+     *	        'Model and visibility are not the same polarisation')
+	    else
 	      call uvselect(tvis,'and',0.d0,0.d0,.true.)
 	      call uvselect(tvis,'polarization',dble(polm),0.d0,.true.)
 	      call output('Selecting polarization type '//PolsC2P(polm))
-	    else if(polm.ne.0.and.polv.ne.polm)then
-	      call bug('f','Map and vis are made of different pols')
+	    endif
+c
+c  Handle an unpolarised source. As long as they are both intensity-type
+c  polarisations, all is OK.
+c
+	  else
+	    if(.not.PolsPara(polm))call bug('f',
+     *	      'Polarized model used for nominally unpolarised data')
+	    if(polv.ne.0)then
+	      if(.not.PolsPara(polv))call bug('f',
+     *		'Incompatible model and visibility polarisations')
+	    else
+	      call uvselect(tvis,'and',0.d0,0.d0,.true.)
+	      call uvselect(tvis,'polarization',dble(PolI), 0d0,.true.)
+	      call uvselect(tvis,'polarization',dble(PolRR),0d0,.true.)
+	      call uvselect(tvis,'polarization',dble(PolLL),0d0,.true.)
+	      call uvselect(tvis,'polarization',dble(PolXX),0d0,.true.)
+	      call uvselect(tvis,'polarization',dble(PolYY),0d0,.true.)
 	    endif
 	  endif
 	endif
 c
 	end
 c************************************************************************
-	subroutine ModelPol(tmod,pol)
+	subroutine ModelPol(tmod,polm,tvis,polv)
 c
 	implicit none
-	integer tmod,pol
+	integer tmod,polm,tvis,polv
 c
-c  Determine the polarisation type of a model.
+c  Determine the polarisation type of the model and the visibility data.
 c
 c  Input:
 c    tmod	The handle of the input model.
+c    tvis	The handle of the input visibility.
 c  Output:
-c    pol	The polarisation type. If this could not be determined,
-c		then 0 is returned.
+c    polm	The polarisation type of the map. If this info is missing
+c		then Stokes-I is assumed.
+c    polv	The polarisation type of the visibility data. If this info
+c		is missing, then Stokes-I is assumed. If the information
+c		is indeterminant, then 0 is returned.
 c------------------------------------------------------------------------
-	integer naxis,i,n
-	character ctype*16,num*2
+	integer StokesI
+	parameter(StokesI=1)
+	integer naxis,i,n,length
+	character ctype*16,num*2,tpol*1
+	logical update
 	real crval,crpix,cdelt
 c
 c  Externals.
 c
 	character itoaf*2
 c
+c  Determine the polarisation type of the model.
+c
 	call rdhdi(tmod,'naxis',naxis,0)
-	pol = 0
+	polm = StokesI
 	do i=3,naxis
 	  num = itoaf(i)
 	  call rdhda(tmod,'ctype'//num,ctype,' ')
 	  n = 0
 	  if(ctype.eq.'STOKES') call rdhdi(tmod,'naxis'//num,n,0)
+	  if(n.gt.1)call bug('f','Cannot handle polarisation cubes')
 	  if(n.eq.1) then
 	    call rdhdr(tmod,'crval'//num,crval,1.)
 	    call rdhdr(tmod,'crpix'//num,crpix,1.)
 	    call rdhdr(tmod,'cdelt'//num,cdelt,1.)
-	    pol = nint( crval + (1-crpix)*cdelt )
+	    polm = nint( crval + (1-crpix)*cdelt )
 	  endif
 	enddo
+c
+c  Determine the polarisation type of the visibility data.
+c
+	call uvprobvr(tvis,'pol',tpol,length,update)
+	if(tpol.eq.'i')then
+	  call rdhdi(tvis,'pol',polv,0)
+	else
+	  polv = StokesI
+	endif
+c
 	end
 c************************************************************************
 c*Model -- Calculate model visibilities, given a model image.
@@ -198,7 +247,9 @@ c		 'c'  Calibration scaling. Look up the source in the
 c		      calibrators file, to determine the flux of the source.
 c		 'a'  Autoscale. After model calculation, the model is scaled
 c		      so that it has the same power as the visibilities.
-c		 'h'	Use image header for phase center.
+c		 'h'  Use image header for phase center.
+c		 'm'  Multi-freq data. The model is either one or two
+c		      planes, which were formed using INVERT's mfs option.
 c    offset	The offset, in arcsec, in RA and DEC, of the point
 c		source model. This is only used if tmod.eq.0.
 c    level	Either a clip level to apply to the data (tmod.ne.0), or
@@ -239,11 +290,7 @@ c  deemed good or bad.
 c
 c  Bugs and Shortcomings:
 c    * The FFT of the entire cube must fit into memory.
-c    * Disk models (planets) are not supported.
 c    * Calibration scaling is not handled yet.
-c    * It would be nice to give a frequency-independent model, and
-c      replicate it for all planes. Strictly we should do some extra
-c      stretching of the model at different frequencies.
 c--
 c------------------------------------------------------------------------
 	include 'maxdim.h'
@@ -252,17 +299,18 @@ c------------------------------------------------------------------------
 c
 	real Out(maxlen),a,VisPow,ModPow
 	integer i,j,length
-	logical calscale,imhead
+	logical calscale,imhead,mfs
 c
 	call ModInit
 	call ScrOpen(tscr)
 	call uvset(tvis,'coord','wavelength',0,0.,0.,0.)
 	calscale = index(flags,'c').ne.0
 	imhead = index(flags,'h').ne.0
+	mfs = index(flags,'m').ne.0
 c
 	if(tmod.ne.0)then
 	  call ModMap(calscale,tvis,tmod,level,tscr,nhead,header,
-     *	    imhead,nchan,nvis,VisPow,ModPow)
+     *	    imhead,mfs,nchan,nvis,VisPow,ModPow)
 	else
 	  call ModPnt(calscale,tvis,offset,level,tscr,nhead,header,
      *	    nchan,nvis,VisPow,ModPow)
@@ -292,10 +340,10 @@ c
 	end
 c************************************************************************
 	subroutine ModMap(calscale,tvis,tmod,level,tscr,nhead,header,
-     *	    imhead,nchan,nvis,VisPow,ModPow)
+     *	    imhead,mfs,nchan,nvis,VisPow,ModPow)
 c
 	implicit none
-	logical calscale,imhead
+	logical calscale,imhead,mfs
 	integer tvis,tscr,nhead,nchan,nvis,tmod
 	real level,ModPow,VisPow
 	external header
@@ -320,13 +368,14 @@ c------------------------------------------------------------------------
 	parameter(maxgcf=2048,width=6)
 	parameter(maxlen=5*maxchan+10)
 c
-	integer length,nx,ny,nxd,nyd,nu,nv,ngcf,u0,v0,nread,i,j,pnt
+	integer length,nx,ny,nz,nxd,nyd,nu,nv,ngcf,u0,v0,nread,i,j,pnt
 	double precision preamble(4)
-	real du,dv,umax,vmax,xref,yref,gcf(maxgcf)
-	real Out(maxlen),uu,vv
-	logical accept,flags(maxchan),doshift
+	real du,dv,umax,vmax,xref1,yref1,xref2,yref2,gcf(maxgcf)
+	real Out(maxlen),uu,vv,u,v
+	logical accept,flags(maxchan),doshift,GotFreq
 	complex Buffer((maxbuf+1)/2)
-	complex In(maxchan),Intp(maxchan)
+	complex In(maxchan),Intp(maxchan+1)
+	double precision sfreq(maxchan),freq(maxchan),freq0
 	common Buffer
 c
 c  Externals.
@@ -339,13 +388,20 @@ c
 	call rdhdi(tmod,'naxis2',ny,1)
 	if(nx.le.1.or.ny.le.1)
      *	  call bug('f','MODEL: Input model is not two dimensional')
-	call rdhdi(tmod,'naxis3',nchan,1)
+	call rdhdi(tmod,'naxis3',nz,1)
+	if(nz.le.0) call bug('f','Bad value for NAXIS3')
+	if(mfs.and.nz.gt.2)
+     *	  call bug('f','Invalid value for NAXIS3 for MFS data')
 	nxd = nextpow2(nx+1)
 	nyd = nextpow2(ny+1)
 	call rdhdr(tmod,'cdelt1',du,0.)
 	call rdhdr(tmod,'cdelt2',dv,0.)
 	if(du*dv.eq.0) call bug('f',
      *    'MODEL: cdelt1 or cdelt2 is missing from the model')
+c
+c  If its a MFCLEAN model, then get then reference frequency.c
+c
+	if(mfs.and.nz.eq.2)call ModRef(tmod,freq0)
 c
 c  Calculate various thingos.
 c
@@ -355,62 +411,98 @@ c
 	nv = nyd
 	u0 = width/2
 	v0 = nyd/2 + 1
-	umax = 0.5*(nxd-1-width) * abs(du)
-	vmax = 0.5*(nyd-1-width) * abs(dv)
-	call MemAlloc(pnt,2*nu*nv*nchan+1,'r')
+	umax = 0.5*(nxd-1-width)
+	vmax = 0.5*(nyd-1-width)
+	call MemAlloc(pnt,2*nu*nv*nz+1,'r')
 c
 	nvis = 0
 	VisPow = 0
 	ModPow = 0
-	length = nhead + 5*nchan
 c
-	call uvread(tvis,preamble,In,flags,maxchan,nread)
-	if(nread.ne.nchan)
+	call uvread(tvis,preamble,In,flags,maxchan,nchan)
+	if(nchan.ne.nz.and..not.mfs)
      *	  call bug('f','The number of model and data channels differ')
 c
 c  Now that we have the info, we can find the FFT of the model.
 c
-	call ModFFT(tvis,tmod,nx,ny,nchan,nxd,nyd,level,imhead,
-     *		Buffer(pnt/2+1),nv,nu,xref,yref)
+	call ModFFT(tvis,tmod,nx,ny,nz,nxd,nyd,level,imhead,
+     *		Buffer(pnt/2+1),nv,nu,mfs,xref1,yref1,xref2,yref2)
 	ngcf = width*((maxgcf-1)/width) + 1
-	doshift = abs(xref)+abs(yref).gt.0
+	doshift = abs(xref1)+abs(yref1)+abs(xref2)+abs(yref2).gt.0
 	call gcffun('spheroidal',gcf,ngcf,width,1.)
 c
 c  Loop the loop.
 c
+	nread = nchan
+	length = nhead + 5*nread
 	dowhile(nread.eq.nchan)
-	  call header(tvis,preamble,In,flags,nchan,accept,Out,nhead)
+	  call header(tvis,preamble,In,flags,nread,accept,Out,nhead)
 	  if(accept)then
-	    if(abs(preamble(1)).gt.umax.or.abs(preamble(2)).gt.vmax)then
-	      j = 1
-	      do i=nhead+1,nhead+5*nchan,5
-		Out(i  ) = real(In(j))
-		Out(i+1) = aimag(In(j))
-		Out(i+2) = 0
-		Out(i+3) = 0
-		Out(i+4) = -1
-		j = j + 1
+	    GotFreq = .true.
+	    sfreq(1) = 1
+	    u = preamble(1) / du
+	    v = preamble(2) / dv
+c
+c  Handle the case of a single image being replicated along the frequency
+c  axis.
+c
+	    if(mfs)then
+	      if(nread.gt.1)call uvinfo(tvis,'sfreq',sfreq)
+	      if(nz.eq.2)   call uvinfo(tvis,'frequency',freq)
+	      u = u / sfreq(1)
+	      v = v / sfreq(1)
+	      do j=1,nread
+		uu = u * sfreq(j)
+		vv = v * sfreq(j)
+		if(abs(uu).gt.umax.or.abs(vv).gt.vmax)then
+		  Intp(j) = 0
+		  flags(j) = .false.
+		else
+		  call ModGrid(uu,vv,Buffer(pnt/2+1),nu,nv,nz,u0,v0,
+     *		    gcf,ngcf,Intp(j))
+		  if(nz.eq.2) Intp(j) = Intp(j) +
+     *			log(real(freq0/freq(j)))*Intp(j+1)
+		endif
 	      enddo
+c
+c  Handle the case of a data cube.
+c
 	    else
-	      uu = preamble(1)/du
-	      vv = preamble(2)/dv
-	      call ModGrid(uu,vv,Buffer(pnt/2+1),nu,nv,nchan,u0,v0,
-     *		gcf,ngcf,Intp)
-	      if(doshift) call ModShift(preamble,xref,yref,Intp,nchan)
-	      j = 1
-	      do i=nhead+1,nhead+5*nchan,5
-		Out(i  ) = real(In(j))
-		Out(i+1) = aimag(In(j))
-		Out(i+2) = real(Intp(j))
-		Out(i+3) = aimag(Intp(j))
-		Out(i+4) = 1
-		if(.not.flags(j)) Out(i+4) = -1
-		j = j + 1
-	      enddo
-	      call ModStat(calscale,tvis,Out(nhead+1),
-     *					nchan,VisPow,ModPow)
+	      if(abs(u).gt.umax.or.abs(v).gt.vmax)then
+		do j=1,nread
+		  Intp(j) = 0.
+		  flags(j) = .false.
+		  sfreq(j) = 1
+		enddo
+	      else
+	        call ModGrid(u,v,Buffer(pnt/2+1),nu,nv,nread,u0,v0,
+     *		  gcf,ngcf,Intp)
+		GotFreq = nread.eq.1
+	      endif
 	    endif
 c
+c  Perform a shift, if necessary.
+c
+	    if(doshift)then
+	      if(.not.GotFreq)call uvinfo(tvis,'sfreq',sfreq)
+	      call ModShift(preamble,xref1,yref1,xref2,yref2,sfreq,
+     *							Intp,nread)
+	    endif
+c
+c  Copy the data to the output, and determine statistics.
+c
+	    j = 1
+	    do i=nhead+1,nhead+5*nread,5
+	      Out(i  ) = real(In(j))
+	      Out(i+1) = aimag(In(j))
+	      Out(i+2) = real(Intp(j))
+	      Out(i+3) = aimag(Intp(j))
+	      Out(i+4) = 1
+	      if(.not.flags(j)) Out(i+4) = -1
+	      j = j + 1
+	    enddo
+	    call ModStat(calscale,tvis,Out(nhead+1),
+     *					nread,VisPow,ModPow)
 	    call scrwrite(tscr,Out,nvis*length,length)
 	    nvis = nvis + 1
 	  endif
@@ -419,17 +511,56 @@ c
 c
 	if(nread.ne.0) call bug('w',
      *	  'Stopped reading vis data when number of channels changed')
-	call MemFree(pnt,2*nu*nv*nchan+1,'r')
+	call MemFree(pnt,2*nu*nv*nz+1,'r')
+	end
+c************************************************************************
+	subroutine ModRef(tmod,freq0)
+c
+	implicit none
+	integer tmod
+	double precision freq0
+c
+c  Get the reference frequency of an MFS map.
+c
+c  Input:
+c    tmod	Handle of the model.
+c  Output:
+c    freq0	The reference frequency.
+c------------------------------------------------------------------------
+	integer i,naxis
+	character ctype*16,num*2
+	double precision crval,crpix,cdelt
+c
+c  Externals.
+c
+	character itoaf*2
+c
+	call rdhdi(tmod,'naxis',naxis,0)
+c
+	freq0 = 0
+	do i=3,naxis
+	  num = itoaf(i)
+	  call rdhda(tmod,'ctype'//num,ctype,' ')
+	  if(ctype(1:4).eq.'FREQ')then
+	    call rdhdd(tmod,'crval'//num,crval,0.d0)
+	    call rdhdd(tmod,'crpix'//num,crpix,1.d0)
+	    call rdhdd(tmod,'cdelt'//num,cdelt,0.d0)
+	    freq0 = crval + (1-crpix)*cdelt
+	  endif
+	enddo
+c
+	if(freq0.le.0)call bug('f',
+     *	  'Unable to determine MFS reference frequency')
 	end
 c************************************************************************
 	subroutine ModFFT(tvis,tmod,nx,ny,nchan,nxd,nyd,level,imhead,
-     *	  Buffer,nv,nu,xref,yref)
+     *	  Buffer,nv,nu,mfs,xref1,yref1,xref2,yref2)
 c
 	implicit none
 	integer tvis,tmod,nx,ny,nchan,nxd,nyd,nv,nu
 	complex Buffer(nv,nu,nchan)
-	real xref,yref,level
-	logical imhead
+	real xref1,yref1,xref2,yref2,level
+	logical imhead,mfs
 c
 c  Input:
 c    tvis
@@ -440,16 +571,23 @@ c    nxd,nyd
 c    nv,nu
 c    level
 c    imhead	Use image header for phase center.
+c    mfs	If true, then the input model is a multi-freq synthesis
+c		image.
 c  Output:
-c    xref,yref	Offset, in radians, between the model and the visibility
-c		phase center.
+c    xref1,yref1
+c    xref2,yref2 Amount to shift the model. The total shift is the sum of the
+c		 frequency-independent portion, and the frequency-dependent
+c		 portion. The frequency-independent portion caused by a map
+c		 whose reference pixel is at a fractional pixel. The frequency-
+c		 dependent portion is due to the map and visibility phase
+c		 centres being at different pixels.
 c    Buffer
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer width
 	parameter(width=6)
 	integer k,iref,jref
-	real vra,vdec,dra,ddec,mra,mdec
+	real vra,vdec,dra,ddec,mra,mdec,xref,yref
 	real xcorr(maxdim),ycorr(maxdim)
 c
 c  Determine the location of the visibility phase center in the image.
@@ -476,8 +614,6 @@ c
 	if(ddec*dra.eq.0)
      *	  call bug('f','Pixel increment missing in model header')
 c
-	xref = cos(vdec) * (vra  - mra ) / dra  + xref
-	yref =             (vdec - mdec) / ddec + yref
 	iref = nint(xref)
 	jref = nint(yref)
 	if(abs(nx/2+1-iref).gt.nx/2.or.abs(ny/2+1-jref).gt.ny/2)then
@@ -485,8 +621,16 @@ c
 	  iref = nx/2 + 1
 	  jref = ny/2 + 1
 	endif
-	xref = dra  * (xref - iref)
-	yref = ddec * (yref - jref)
+	xref1 = dra  * (xref - iref)
+	yref1 = ddec * (yref - jref)
+	xref2 = cos(vdec) * (vra  - mra )
+	yref2 =             (vdec - mdec)
+	if(mfs)then
+	  xref2 = xref2 + xref1
+	  xref1 = 0
+	  yref2 = yref2 + yref1
+	  yref1 = 0
+	endif
 c
 c  Set up the gridding correction function.
 c
@@ -594,33 +738,43 @@ c
 c
 	end
 c************************************************************************
-	subroutine ModShift(preamble,xref,yref,Intp,nchan)
+	subroutine ModShift(preamble,xref1,yref1,xref2,yref2,freq,
+     *							Intp,nchan)
 c
 	implicit none
 	integer nchan
-	double precision preamble(2)
-	real xref,yref
+	real xref1,yref1,xref2,yref2
+	double precision freq(nchan),preamble(2)
 	complex Intp(nchan)
 c
 c  Apply a phase rotation, which corresponds to a given image domain shift.
 c
 c  Input:
-c    preamble(2)	The u and v value of the point, in wavelengths.
-c    xref,yref		The shift to apply in the image domain, in radians
-c			on the sky.
+c    preamble	 The u and v value of the firsst channel, in wavelengths.
+c    freq	 The sky frequencies of the channels.
+c    xref1,yref1
+c    xref2,yref2 Amount to shift the model. The total shift is the sum of the
+c		 frequency-independent portion, and the frequency-dependent
+c		 portion. The frequency-independent portion caused by a map
+c		 whose reference pixel is at a fractional pixel. The frequency-
+c		 dependent portion is due to the map and visibility phase
+c		 centres being at different pixels.
 c    nchan		The number of channels to rotate.
 c  Input/Output:
 c    Intp		The data to be phase rotated.
 c------------------------------------------------------------------------
 	real pi
 	parameter(pi=3.141592653589793)
-	real theta
+	real theta,t1,t2
 	integer i
 	complex W
 c
-	theta = 2*pi*(preamble(1)*xref + preamble(2)*yref)
-	W = cmplx(cos(theta),sin(theta))
+	t1 = 2*pi*( preamble(1)*xref1 + preamble(2)*yref1 )
+	t2 = 2*pi*( preamble(1)*xref2 + preamble(2)*yref2 ) / freq(1)
+c
 	do i=1,nchan
+	  theta = t1 + t2 * freq(i)
+	  W = cmplx(cos(theta),sin(theta))
 	  Intp(i) = W * Intp(i)
 	enddo
 c	  
