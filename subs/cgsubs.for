@@ -3,11 +3,12 @@ c     A collection of subroutines shared by the programs CGDISP,
 c     CGSPEC, CGCURS, CGSLICE, REGRID, IMBIN and UVSUB. 
 c
 c
+c  angconcg :  Convert between radians and labtyp angular units
 c  apptrfcg :  Apply transfer function to image
 c  axabscg  :  Return an "abs" axis label type for given generic axis type
 c  axfndcg  :  Find a generic axis type
 c  axtypcg  :  Returns generic axis label type of given axis
-c  chkdescg :  COmpare a real axis descriptor from two images
+c  chkdescg :  Compare a real axis descriptor from two images
 c  chkdimcg :  Check image dimensions acceptable
 c  chnselcg :  Make list of CHAN and REGION selected channel groups
 c  conlevcg :  Compute contour levels
@@ -34,10 +35,12 @@ c              subimage pixels
 c  readbcg  :  Read blanking mask form mask image
 c  readimcg :  Read in image dealing with averaging and blanking
 c  savdescg :  Make a copy of the axis descriptors
+c  setccscg :  Set rjs coordinate conversion strings for tick labelling
 c  setcolcg :  Set a PGPLOT colour for multiple line graphics on 1 plot
 c  setdescg :  Set axis descriptors for an image by copying from another
 c  strprpcg :  Prepare string by stripping extra white space and
 c              delimitering fields by commas
+c  stroptcg :  Strip characters from options string
 c  subinccg :  Step to next sub-plot
 c  sunitcg  :  Set pixel units base upon requested label type
 c  wedgincg :  Work out if greys cale wedges inside ro outside subplots
@@ -122,7 +125,76 @@ c                        conversion routines via COSUBS.FOR
 c     nebk   15jan95     Add SAVDESCG
 c     nebk   14apr95     Add HARD and DOFID arguments to WEDGINCCG
 c     nebk   11aug95     Add arcmin labels
+c     nebk   03sep95     Add STROPTCG, ANGCONCG, SETCCSCG
 c***********************************************************************
+c
+c* angconCG -- Convert angular coordinates to and from radians
+c& nebk
+c: plotting
+c+
+      subroutine angconcg (id, labtyp, wi, wo)
+      implicit none
+      character*(*) labtyp
+      double precision wi, wo
+      integer id
+c
+c  Convert angular (as indictaed by axis label type) world coordinate 
+c  to radians from a variety of units.  For non-angular label types 
+c  no conversion is done
+c
+c  Input
+c    id       1 -> convert from radians
+c	      2 -> convert to   radians
+c    labtyp   axis label type which gives the non radian unit
+c	         hms    seconds of time
+c		 dms    arc seconds
+c               *sec    arc seconds
+c	        *min    arc minutes
+c	        *deg    degrees
+c  Input
+c    wi       world coordinate 
+c  Output
+c    wo       converted world coordinate 
+c--
+c-----------------------------------------------------------------------
+      include 'mirconst.h'
+      double precision as2r, st2r, d2r
+      parameter (as2r=dpi/3600.d0/180.d0, st2r=dpi/3600.d0/12.0d0)
+      parameter (d2r = dpi/180.0d0)
+c-----------------------------------------------------------------------
+      if (id.eq.1) then
+        if (labtyp.eq.'hms') then
+          wo = wi / st2r
+        else if (labtyp.eq.'dms') then
+          wo = wi / as2r
+        else if (labtyp(4:6).eq.'sec') then
+          wo = wi / as2r
+        else if (labtyp(4:6).eq.'min') then
+          wo = wi / as2r / 60.0d0
+        else if (labtyp(4:6).eq.'deg') then
+          wo = wi / d2r
+        else
+          wo = wi
+        end if
+      else if (id.eq.2) then
+        if (labtyp.eq.'hms') then
+          wo = wi * st2r
+        else if (labtyp.eq.'dms') then
+          wo = wi * as2r
+        else if (labtyp(4:6).eq.'sec') then
+          wo = wi * as2r
+        else if (labtyp(4:6).eq.'min') then
+          wo = wi * as2r * 60.0d0
+        else if (labtyp(4:6).eq.'deg') then
+          wo = wi * d2r
+        else
+          wo = wi
+        end if
+      else
+        call bug ('f', 'ANGCONCG: unrecognized conversion code')
+      end if      
+c 
+      end
 c
 c* apptrfCG -- Apply transfer function to image
 c& nebk
@@ -2507,6 +2579,53 @@ c-----------------------------------------------------------------------
 c
       end
 c
+c* setccsCG -- Set rjs coordinate conversion strings for ticking
+c& nebk
+c: plotting
+c+
+      subroutine setccscg (labtyp, ccstr)
+      implicit none
+      character*(*) labtyp(2), ccstr
+c
+c  For the non-linear tick labelling, we need to convert from world
+c  coordinates to absolute pixels.  Depending upon the axis label
+c  type, we set an rjs style conversion string indicating what type
+c  of input coordinate we are converting.  Note that the third
+c  axis is always dealt with in absolute pixels only.
+c
+c  Input
+c    labtyp  Axis label types
+c  Output
+c    ccstr   String appropriate for rjs style coordinate transformation
+c--
+c-----------------------------------------------------------------------
+      integer i, ip
+c-----------------------------------------------------------------------
+c
+c Loop over first two axes
+c 
+      ip = 1
+      do i =1, 2
+        if (labtyp(i).eq.'hms' .or. labtyp(i).eq.'dms' .or.
+     +      labtyp(i).eq.'absdeg' .or. labtyp(i).eq.'abskms' .or.
+     +      labtyp(i).eq.'absghz' .or. labtyp(i).eq.'abslin') then
+          ccstr(ip:ip+2) = 'aw/'
+        else if (labtyp(i).eq.'arcsec' .or. labtyp(i).eq.'arcmin' .or.
+     +           labtyp(i).eq.'reldeg' .or. labtyp(i).eq.'relkms' .or.
+     +           labtyp(i).eq.'relghz' .or. labtyp(i).eq.'rellin') then
+          ccstr(ip:ip+2) = 'ow/'
+        else if (labtyp(i).eq.'abspix' .or. labtyp(i).eq.'none') then
+          ccstr(ip:ip+2) = 'ap/'
+        else if (labtyp(i).eq.'relpix') then
+          ccstr(ip:ip+2) = 'op/'
+        end if
+        ip = ip + 3
+      end do
+c
+      ccstr(6:) = '/ap'
+c
+      end 
+c
 c* setcolCG --  Set multiple line graphics PGPLOT colours
 c& nebk
 c: plotting
@@ -2658,6 +2777,33 @@ c
       lena = lenb
 c
       end 
+c
+c* stroptCG -- Strip PGTBOX options string of tick and grid characters
+c& nebk
+c: plotting
+c+
+      subroutine stroptcg (str, opt)
+      implicit none
+c
+      character*(*) opt, str
+c
+c  Strip out the specified characters from the options string
+c
+c  Input
+c    str    Strip these characters out
+c  Inout/output
+c    opt    PGTBOX options string
+c--
+c-----------------------------------------------------------------------
+      integer len1, il, ip, i
+c-----------------------------------------------------------------------
+      il = len1(str)
+      do i = 1, il
+        ip = index(opt,str(i:i))
+        if (ip.ne.0) opt(ip:ip) = ' '
+      end do
+c
+      end
 c
 c* subincCG -- Step to next sub-plot
 c& nebk
