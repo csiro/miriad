@@ -35,12 +35,13 @@ c    rjs  15aug94 More decimal places for restfreq.
 c    rjs  24oct94 More information for images.
 c    rjs  26sep95 Somewhat more tolerant of screwy headers.
 c    rjs  14dec95 Support "ANGLE" ctype value.
+c    mchw 14jun96 Replace rangle and hangle, with rangleh and hangleh.
 c  Bugs and Shortcomings:
 c    * Descriptions in brief mode could be a bit more verbose!
 c------------------------------------------------------------------------
 	character version*(*)
 	integer MAXIN
-	parameter(version='Prthd: version 24-Oct-94')
+	parameter(version='Prthd: version 14-JUN-96')
 	parameter(MAXIN=256)
 	integer tno,i,iostat,nin
 	character in(MAXIN)*64,logf*64,line*80
@@ -317,7 +318,7 @@ c
 c  Externals.
 c
       integer len1
-      character itoaf*2,rangle*32,hangle*32,PolsC2P*2
+      character itoaf*2,rangleh*32,hangleh*32,PolsC2P*2
 c
       call logwrite('--------------------------------'//
      *		  '--------------------------------',more)
@@ -336,7 +337,7 @@ c
 c
 c  RA.
         if (aval(1:4).eq.'RA--'.or.aval.eq.'RA') then
-	  radec = hangle(crval)
+	  radec = hangleh(crval)
           write (line, 20) aval(1:8), n, radec,
      *                          crpix,180*3600/pi*cdelt,'  arcsec'
 20        format (a8, i7, 3x, a11, f10.2, 3x, 1pe13.6,a)
@@ -345,7 +346,7 @@ c  DEC, Galactic and Ecliptic coordinates.
         else if (aval(1:4).eq.'DEC-'.or.aval.eq.'DEC'.or.
      *		 aval(1:4).eq.'GLON'.or.aval(1:4).eq.'GLAT'.or.
      *		 aval(1:4).eq.'ELON'.or.aval(1:4).eq.'ELAT') then
-	  radec = rangle(crval)
+	  radec = rangleh(crval)
           write (line, 30) aval(1:8), n, radec,
      *                          crpix,180*3600/pi*cdelt,'  arcsec'
 30        format (a8, i7, 2x, a12, f10.2, 3x, 1pe13.6,a)
@@ -427,7 +428,7 @@ c
 c  Externals.
 c
       integer len1
-      character itoaf*8,PolsC2P*2,hangle*12,rangle*12
+      character itoaf*8,PolsC2P*2,hangleh*12,rangleh*12
       logical hdprsnt
 c
 c  Close and reopen the file as a visibility file.
@@ -579,13 +580,13 @@ c
       else
 	aval1(1:9) = itoaf(nint(epoch))
       endif
-      line = aval1(1:9)//'Source RA: '//hangle(ra)//
-     *			     '  Dec: '//rangle(dec)
+      line = aval1(1:9)//'Source RA: '//hangleh(ra)//
+     *			     '  Dec: '//rangleh(dec)
       call logwrite(line,more)
       call uvrdvrd(tno,'obsra',obsra,0.d0)
       call uvrdvrd(tno,'obsdec',obsdec,0.d0)
-      line = 'Apparent Source RA: '//hangle(obsra)//
-     *	         '  Dec: '//rangle(obsdec)
+      line = 'Apparent Source RA: '//hangleh(obsra)//
+     *	         '  Dec: '//rangleh(obsdec)
       call logwrite(line,more)
       call uvprobvr(tno,'dra',type,length,updated)
       present = type.ne.' '
