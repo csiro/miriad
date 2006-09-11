@@ -39,6 +39,8 @@ c	  one        Write the first dataset.
 c	With the exception of the visibility data itself, all three
 c	possibilities will produce identical datasets. This includes
 c	identical flagging information.
+c	Any of these modes can be prefixed with a minus sign. In this case
+c	the output visibilities are negated.
 c@ tol
 c	Interpolation tolerance, in minutes. This gives the maximum
 c	gap between two integrations to interpolate across. The default is
@@ -47,6 +49,7 @@ c--
 c  History:
 c    04-jun-96 rjs  Preliminary version.
 c    20-jun-96 rjs  Bring it up to scratch.
+c    14-aug-96 rjs  Added ability to negate the output.
 c  Bugs/Shortcomings:
 c    * Should handle the conjugate symmetry property, and match data over
 c      a wider range of HA.
@@ -66,10 +69,12 @@ c
 	integer tIn,tOut,nchan,pol,i,npol
 c
 	integer NMODES
-	parameter(NMODES=3)
-	character modes(NMODES)*12,mode*12
+	parameter(NMODES=6)
+	character modes(NMODES)*12,mode*12,ctemp*12
+	logical negate
 	integer nout
-	data modes/'difference  ','one         ','two         '/
+	data modes/'difference  ','one         ','two         ',
+     *		   '-difference ','-one        ','-two        '/
 c
 c  Get the input parameters.
 c
@@ -80,6 +85,11 @@ c
 	call keya('out',out,' ')
 	call keymatch('mode',NMODES,modes,1,mode,nout)
 	if(nout.eq.0)mode = modes(1)
+	negate = mode(1:1).eq.'-'
+	if(negate)then
+	  ctemp = mode
+	  mode  = ctemp(2:)
+	endif
 	call keyr('tol',tol,2.0)
 	call SelInput('select',sels,MAXSELS)
 	call keyfin
@@ -132,6 +142,14 @@ c
 	    do i=1,nchan
 	      mdata(i)  = data(i) - mdata(i)
 	      mflags(i) = flags(i).and.mflags(i)
+	    enddo
+	  endif
+c
+c  Negate if required.
+c
+	  if(negate)then
+	    do i=1,nchan
+	      mdata(i) = -mdata(i)
 	    enddo
 	  endif
 c
