@@ -15,6 +15,7 @@
  *                 double quotes around a value.
  *    pjt  03sep98 fixed malloc(size+1) bug with interesting side-effects
  *		   on linux and HP-UX	
+ *    rjs  30aug99 Increase MAXSTRING to 1024
  ***********************************************************************
  */
 
@@ -35,7 +36,7 @@ extern int dexpand_c();
 
 #define KEYTRUE        1
 #define KEYFALSE       0
-#define MAXSTRING    512
+#define MAXSTRING    1024
 
 typedef struct ckeys {
     char *key;   /* Pointer to a malloc'd string holding the key name. */
