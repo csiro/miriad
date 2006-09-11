@@ -60,6 +60,7 @@ c	  'samcorr' Correct the pre-Dec93 data for incorrect sampler
 c	            statistics. Since December 1993, sampler corrections
 c	            are performed online -- Miriad ignores the samcorr
 c	            option for this data.
+c	  'xycorr'  Apply the on-line measurement of the XY phase.
 c	  'hanning' Hanning smooth spectra and drop every other channel
 c	            This option is ignored for 128-MHz, 33-channel data.
 c	  'bary'    Use the barycentre as the velocity rest frame. The
@@ -72,7 +73,7 @@ c	            the different IFs.
 c@ nfiles
 c	This gives one or two numbers, being the number of files to skip,
 c	followed by the number of files to process. This is only
-c	useful when the input is a tape defive containing multiple files.
+c	useful when the input is a tape device containing multiple files.
 c	The default is 0,1 (i.e. skip none, process 1 file).
 c
 c	NOTE: Using this feature to skip many files on a tape is VERY
@@ -148,6 +149,7 @@ c    rjs  26apr95 Make options=unflag always behave as advertised.
 c    rjs  20sep95 Option=birdie flags the birdie channel in spectral
 c		  line mode.
 c    rjs  27sep95 Flagging stats. Will Mr K still whinge? Probably!
+c    rjs   6nov95 xycorr option.
 c
 c  Program Structure:
 c    Miriad atlod can be divided into three rough levels. The high level
@@ -180,7 +182,7 @@ c
 	integer ifile,ifsel,nfreq,iostat,nfiles,i
 	double precision rfreq(2)
 	logical doauto,docross,docomp,dosam,relax,unflag,dohann,dobary
-	logical doif,birdie,dowt
+	logical doif,birdie,dowt,doxyp
 	integer fileskip,fileproc,scanskip,scanproc
 c
 c  Externals.
@@ -199,7 +201,7 @@ c
      *	  call bug('f','Output name must be given')
         call keyi('ifsel',ifsel,0)
         call mkeyd('restfreq',rfreq,2,nfreq)
-	call getopt(doauto,docross,docomp,dosam,relax,unflag,
+	call getopt(doauto,docross,docomp,dosam,doxyp,relax,unflag,
      *					dohann,birdie,dobary,doif,dowt)
 	call keyi('nfiles',fileskip,0)
 	call keyi('nfiles',fileproc,nfiles-fileskip)
@@ -243,19 +245,17 @@ c
 	    endif
 	    if(iostat.ne.0)call bug('f','Error skipping RPFITS file')
 	  else
+	    call PokeIni(tno,dosam,doxyp,dohann,birdie,dowt,dobary,doif)
 	    if(nfiles.eq.1)then
 	      i = 1
 	    else
 	      i = ifile
 	    endif
 	    if(i.ne.ifile)then
-	      call output('Processing file '//itoaf(ifile))
+	      call liner('Processing file '//itoaf(ifile))
 	    else
-	      call output('Processing file '//in(ifile))
-	      line = 'ATLOD: Processed file '//in(ifile)
-	      call hiswrite(tno,line)
+	      call liner('Processing file '//in(ifile))
 	    endif
-	    call PokeIni(tno,dosam,dohann,birdie,dowt,dobary,doif)
 	    call RPDisp(in(i),scanskip,scanproc,doauto,docross,
      *				relax,unflag,ifsel,rfreq,nfreq,iostat)
 	  endif
@@ -276,12 +276,12 @@ c
 c
 	end
 c************************************************************************
-	subroutine GetOpt(doauto,docross,docomp,dosam,relax,unflag,
-     *					dohann,birdie,dobary,doif,dowt)
+	subroutine GetOpt(doauto,docross,docomp,dosam,doxyp,
+     *			relax,unflag,dohann,birdie,dobary,doif,dowt)
 c
 	implicit none
 	logical doauto,docross,dosam,relax,unflag,dohann,dobary
-	logical docomp,doif,birdie,dowt
+	logical docomp,doif,birdie,dowt,doxyp
 c
 c  Get the user options.
 c
@@ -290,6 +290,7 @@ c    doauto	Set if the user want autocorrelation data.
 c    docross	Set if the user wants cross-correlationdata.
 c    docomp	Write compressed data.
 c    dosam	Correct for sampler statistics.
+c    doxyp	Correct the data with the measured xy phase.
 c    dohann     Hanning smooth spectra
 c    birdie	Discard bad channels in continuum mode.
 c    doif	Map the simultaneous frequencies to the IF axis.
@@ -300,12 +301,12 @@ c    birdie
 c    dowt	Reweight the lag spectrum.
 c------------------------------------------------------------------------
 	integer nopt
-	parameter(nopt=11)
+	parameter(nopt=12)
 	character opts(nopt)*8
 	logical present(nopt)
 	data opts/'noauto  ','nocross ','compress','relax   ',
      *		  'unflag  ','samcorr ','hanning ','bary    ',
-     *		  'noif    ','birdie  ','reweight'/
+     *		  'noif    ','birdie  ','reweight','xycorr  '/
 	call options('options',opts,present,nopt)
 	doauto = .not.present(1)
 	docross = .not.present(2)
@@ -318,9 +319,10 @@ c------------------------------------------------------------------------
 	doif    = .not.present(9)
 	birdie  = present(10)
 	dowt    = present(11)
+	doxyp   = present(12)
 c
-	if(dosam.and.relax)call bug('f',
-     *	  'You cannot use options samcorr and relax simultaneously')
+	if((dosam.or.doxyp).and.relax)call bug('f',
+     *	  'You cannot use options samcorr or xycorr wtih relax')
 	end
 c************************************************************************
 	subroutine Fixed(tno,dobary)
@@ -366,12 +368,12 @@ c
 	end
 c************************************************************************
 c************************************************************************
-	subroutine PokeIni(tno1,dosam1,dohann1,birdie1,dowt1,
+	subroutine PokeIni(tno1,dosam1,doxyp1,dohann1,birdie1,dowt1,
      *						dobary1,doif1)
 c
 	implicit none
 	integer tno1
-	logical dosam1,dohann1,doif1,dobary1,birdie1,dowt1
+	logical dosam1,doxyp1,dohann1,doif1,dobary1,birdie1,dowt1
 c
 c  Initialise the Poke routines.
 c------------------------------------------------------------------------
@@ -381,6 +383,7 @@ c------------------------------------------------------------------------
 c
 	tno    = tno1
 	dosam  = dosam1
+	doxyp  = doxyp1
 	dohann = dohann1
 	doif   = doif1
 	dobary = dobary1
@@ -441,6 +444,53 @@ c
 	length = len1(line)
 	line(length+1:) = ' started at '//date
 	call output(line)
+	end
+c************************************************************************
+	subroutine PokeStat(nrec,fgbad,fgoffsrc,fginvant,fgsysc,fgsam)
+c
+	implicit none
+	integer nrec,fgbad,fgoffsrc,fginvant,fgsysc,fgsam
+c
+c  Report statistics on this file.
+c------------------------------------------------------------------------
+c
+c  Externals.
+c
+	character itoaf*8,pcent*6
+c
+	call output('---------------------------------------')
+	call liner(
+     *		'Total number of spectra selected: '//itoaf(nrec+fgbad))
+	if(fgbad.gt.0)call liner(
+     *		'Number of invalid data records: '//itoaf(fgbad))
+	call output(' ')
+	call liner('Summary of spectra flagged')
+	call liner('Flagging Reason            Fraction')
+	call liner('---------------            --------')
+	if(fgoffsrc.gt.0)call liner(
+     *		'Antenna off-source/off-line '//pcent(fgoffsrc,nrec))
+	if(fginvant.gt.0)call liner(
+     *		'Antenna disabled            '//pcent(fginvant,nrec))
+	if(fgsysc.gt.0)call liner(
+     *		'Missing SYSCAL record       '//pcent(fgsysc,nrec))
+	if(fgsam.gt.0)call liner(
+     *		'Bad SYSCAL values           '//pcent(fgsam,nrec))
+	call output('---------------------------------------')
+c
+	end
+c************************************************************************
+	subroutine liner(string)
+c
+	implicit none
+	character string*(*)
+c
+c------------------------------------------------------------------------
+	character line*72
+	include 'atlod.h'
+c
+	call output(string)
+	line = 'ATLOD:    '//string
+	call hiswrite(tno,line)
 	end
 c************************************************************************
 	subroutine Poke1st(time1,nifs1,nants1)
@@ -709,7 +759,7 @@ c------------------------------------------------------------------------
 c
 	include 'atlod.h'
 	include 'mirconst.h'
-	integer ipnt,i1,i2,bl,p
+	integer ipnt,i1,i2,bl,p,pol
 	logical doconj,doneg
 	real rscr(2*ATCONT-2)
 	complex cscr(ATCONT)
@@ -766,7 +816,59 @@ c
      *		edge(if),doconj,doneg,vis(p),data(ipnt))
 	  if(dosam)call SamCorr(nfreq(if),data(ipnt),polcode(if,p),
      *		i2,i1,if,time,xsampler,ysampler,ATIF,ATANT)
+c
+c  Do XY phase correction if needed.
+c
+	  if(doxyp)then
+	    if(dosw(bl))then
+	      pol = polcode(if,p)
+	      if(pol.eq.PolXY)then
+		pol = PolYX
+	      else if(pol.eq.PolYX)then
+		pol = PolXY
+	      endif
+	      call XypCorr(nfreq(if),data(ipnt),pol,
+     *		i1,i2,if,xyphase,ATIF,ATANT)
+	    else
+	      call XYpCorr(nfreq(if),data(ipnt),polcode(if,p),
+     *		i2,i1,if,xyphase,ATIF,ATANT)
+	    endif
+	  endif
 	enddo
+c
+	end
+c************************************************************************
+	subroutine XypCorr(nfreq,vis,pol,i1,i2,if,xyphase,ATIF,ATANT)
+c
+	implicit none
+	integer nfreq,pol,i1,i2,if,ATIF,ATANT
+	complex vis(nfreq)
+	real xyphase(ATIF,ATANT)
+c
+c  Correct the data with the measured XY phase.
+c------------------------------------------------------------------------
+	integer PolXX,PolYY,PolXY,PolYX
+	parameter(PolXX=-5,PolYY=-6,PolXY=-7,PolYX=-8)
+	integer i
+	complex fac
+	real theta
+c
+	if(pol.eq.PolYY)then
+	  theta = xyphase(if,i1) - xyphase(if,i2)
+	else if(pol.eq.PolXY)then
+	  theta =                - xyphase(if,i2)
+	else if(pol.eq.PolYX)then
+	  theta = xyphase(if,i1)
+	else
+	  theta = 0
+	endif
+c
+	if(theta.ne.0)then
+	  fac = cmplx(cos(theta),-sin(theta))
+	  do i=1,nfreq
+	    vis(i) = fac*vis(i)
+	  enddo
+	endif
 c
 	end
 c************************************************************************
@@ -1433,10 +1535,6 @@ c
 	logical antvalid(ANT_MAX)
 	double precision jday0,time,tprev
 c
-c  Externals.
-c
-	character itoaf*8,pcent*6
-c
 c  Open the RPFITS file.
 c
 	call RPOpen(in,iostat)
@@ -1668,47 +1766,13 @@ c
 c
 c  Give summary about flagging.
 c
-	if(fgbad.gt.0)
-     *	  call bug('w','Number of invalid data records: '//itoaf(fgbad))
-	if(fgoffsrc+fginvant+fgsysc+fgsam.gt.0)then
-	  call output('---------------------------------------')
-	  call output('Total number of spectra selected: '//itoaf(nrec))
-	  call output(' ')
-	  call output('Summary of spectra flagged')
-	  call output('Flagging Reason        Fraction')
-	  call output('---------------        --------')
-	  if(fgoffsrc.gt.0)
-     *	  call output('Antenna off-source      '//pcent(fgoffsrc,nrec))
-	  if(fginvant.gt.0)
-     *	  call output('Antenna disabled        '//pcent(fginvant,nrec))
-	  if(fgsysc.gt.0)
-     *	  call output('Missing SYSCAL record   '//pcent(fgsysc,nrec))
-	  if(fgsam.gt.0)
-     *	  call output('Bad SYSCAL values       '//pcent(fgsam,nrec))
-	  call output('---------------------------------------')
-	endif
+	call PokeStat(nrec,fgbad,fgoffsrc,fginvant,fgsysc,fgsam)
 c
 c  We are done. Close up, and return the error code.
 c
 	call RPClose(iostat)
 	if(iostat.eq.0.and.jstat.ne.3)iostat = jstat
 c
-	end
-c************************************************************************
-	character*(*) function pcent(frac,total)
-c
-	implicit none
-	integer frac,total
-c------------------------------------------------------------------------
-	character val*5
-	real x
-	x = real(100*frac)/real(total)
-	if(x.gt.9.99)then
-	  write(val,'(f5.1)')x
-	else
-	  write(val,'(f5.2,a)')x
-	endif
-	pcent = val//'%'
 	end
 c************************************************************************
 	subroutine RPEOF(jstat)
@@ -1783,6 +1847,22 @@ c
      *		      call bug('f','Input file is not in RPFITS format')
 	end
 c************************************************************************
+c************************************************************************
+	character*(*) function pcent(frac,total)
+c
+	implicit none
+	integer frac,total
+c------------------------------------------------------------------------
+	character val*5
+	real x
+	x = real(100*frac)/real(total)
+	if(x.gt.9.99)then
+	  write(val,'(f5.1)')x
+	else
+	  write(val,'(f5.2,a)')x
+	endif
+	pcent = val//'%'
+	end
 c************************************************************************
 	subroutine ChkAnt(x,y,z,antvalid,nant)
 c
