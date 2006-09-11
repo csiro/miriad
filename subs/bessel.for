@@ -5,7 +5,7 @@ c
 c  History:
 c    nebk 24aug92 Original version.
 c    nebk 27aug92 Use symmetries to expand argument range
-c
+c    bmg/rjs 29may96 Added BessJ0.
 c************************************************************************
 c* BessI0 -- Compute modified Bessel function I0
 c& nebk
@@ -52,8 +52,7 @@ c
       end if
 c
       end
-c
-c
+c************************************************************************
 c* BessI1 -- Compute modified Bessel function I1
 c& nebk
 c: utilities,numbers
@@ -103,6 +102,61 @@ c
       end if
 c
       end
-
-
-
+c************************************************************************
+c*BessJ0 -- Calculate j0(x)
+c:special-functions,bessel-functions
+c*
+	double precision function bessj0(arg)
+c
+	implicit none
+	double precision arg
+c
+c   BESSJ0 calculates the bessel function,  j0(x) from the
+c   polynomial approximations. See Abramowitz and Stegun, Handbook of
+c   Mathematical Functions, sections 9.4.1 and 9.4.3, pages 369-370.
+c
+c  Input:
+c    arg	The value of x.
+c  Output:
+c    bessj0	The calculated value of j0(x)
+c--
+c  rjs   ???89 
+c  nebk  10sep89  Install missing ENDIF. 
+c  bmg   22may96  Modified j1xbyx to work for j0x
+c------------------------------------------------------------------c
+      double precision f,x,t
+c
+c  For the range -3.le.arg.le.+3, the maximum error is 5 e-8.
+c
+      if(abs(arg).lt.3)then
+	X = (ARG/3.)*(ARG/3.)
+	BESSJ0 = 1.0
+     *		  + X*(	- 2.2499997
+     *	          + X*(	+ 1.2656208
+     *	          + X*(	- 0.3163866
+     *	          + X*(	+ 0.0444479
+     *	          + X*(	- 0.0039444
+     *	          + X*(	+ 0.0002100))))))
+c
+c   for the range  abs(arg).gt.3.  , max. error is 7 e-8
+c
+      else
+	X = 3./ABS(ARG)
+	F = .79788456	+ X*( -.00000077
+     *			+ X*( -.00552740
+     *			+ X*( -.00009512
+     *			+ X*( +.00137237
+     *			+ X*( -.00072805
+     *			+ X*( +.00014476 ))))))
+	T = ARG - 0.78539816
+     *			+ X*(-.04166397
+     *			+ X*(-.00003954
+     *			+ X*(+.00262573
+     *			+ X*(-.00054125
+     *			+ X*(-.00029333
+     *			+ X*(+.00013558 ))))))
+	BESSJ0 = F*COS(T)/SQRT(ARG)
+      end if
+c
+      END
+	

@@ -11,19 +11,18 @@
 /*    rjs      3jul04 Use strerror routine.				*/
 /************************************************************************/
 
-#include "sysdep.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "miriad.h"
+#include "sysdep.h"
 
-static char *errmsg_c();
-void bug_c();
+private char *errmsg_c();
 
 char *Name = NULL;
 int reentrant=0;
 /************************************************************************/
-void buglabel_c(name)
-char *name;
+void buglabel_c(Const char *name)
 /** buglabel -- Give the "program name" to be used as a label in messages. */
 /*& mjs									*/
 /*: error-handling							*/
@@ -45,9 +44,7 @@ char *name;
   strcpy(Name,name);
 }
 /************************************************************************/
-void bugno_c(s,n)
-char s;
-int n;
+void bugno_c(char s,int n)
 /** bugno -- Issue an error message, given a system error number.	*/
 /*& mjs									*/
 /*: error-handling							*/
@@ -71,8 +68,7 @@ int n;
   else bug_c(s,errmsg_c(n));
 }
 /************************************************************************/
-void bug_c(s,m)
-char s,*m;
+void bug_c(char s,Const char *m)
 /** bug -- Issue an error message, given by the caller.			*/
 /*& mjs									*/
 /*: error-handling							*/
@@ -115,7 +111,7 @@ char s,*m;
   }
 }
 /************************************************************************/
-static char *errmsg_c(n)
+private char *errmsg_c(n)
 int n;
 /*
   Return the error message associated with some error number.

@@ -21,6 +21,7 @@
 /*    25aug93  mjs  include 3rd arg to setitimer (ansi, for solaris).	*/
 /*    30sep93  mjs  rename delay -> delayf				*/
 /*    12mar94  mjs  elim unused subroutine (no compile on solaris)      */
+/*    20jun02  pjt  pedantic                                            */
 /************************************************************************/
 
 #define MAXLEN 128
@@ -29,9 +30,8 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <errno.h>
-#ifdef trace
-extern int errno;
-#endif
+#include <unistd.h>
+#include <string.h>
 
 /************************************************************************/
 fortran subroutine mitime(integer data)

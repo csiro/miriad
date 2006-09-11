@@ -4,6 +4,10 @@ c     nov75      Written by D.E. Amos and S.L. Daniel.
 c                Modified by A.H. Morris
 c    9sep93 rjs  Stolen from NSWC library and further modified.
 c   16dec94 rjs  Included cin.
+c   11apr97 rjs  Added dsinc function.
+c
+c  Bugs:
+c    si and cin should really be call dsi and dcin.
 c************************************************************************
 c* si - Sine integral
 c& rjs
@@ -128,7 +132,7 @@ c
 c
       end
 c************************************************************************
-c* si - Cosine integral
+c* cin - Cosine integral
 c& rjs
 c: utilities
 c+
@@ -254,3 +258,30 @@ c
    50 cin=econ+log(ax)
       return
       end
+c************************************************************************
+	double precision function dsinc(x)
+c
+	implicit none
+	double precision x
+c
+c  Return the value of Bracewell's sinc function.
+c
+c------------------------------------------------------------------------
+	include 'mirconst.h'
+	double precision t
+c
+c  For small x, use a simple Taylor series expansion.
+c
+	if(abs(x).lt.0.05)then
+	  t = x * x
+	  dsinc = 1 - (1.644934067 - 0.811742426*t)*t
+c
+c  Otherwise use the sine function.
+c
+	else
+	  t = DPI*x
+	  dsinc = sin(t)/t
+	endif
+c
+	end
+

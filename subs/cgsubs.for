@@ -136,6 +136,7 @@ c                        close to zero.  Failed if close to 2pi
 c    nebk    30nov98     Finally make a decent algorithm for RAZEROCG
 c     rjs    15dec98     Some tidying.
 c     rjs    06jan99     Yet another go at a decent algorithm for RAZEROCG
+c    nebk    14nov01     Add abs max to min/max vector returned by readimcg
 c***********************************************************************
 c
 c* angconCG -- Convert radians to and from seconds of time/arc
@@ -1531,7 +1532,7 @@ c+
      +                     trc, norm, nimage, image, blanks, dmm)
 c
       implicit none
-      real blank, image(*), dmm(2)
+      real blank, image(*), dmm(3)
       integer nimage(*), lun, ibin(2), jbin(2), krng(2), blc(3),
      +  trc(3)
       logical blanks, init, norm
@@ -1559,7 +1560,7 @@ c                location.  Will be zero for blanked pixels
 c    image       Output image (binned, normalized)
 c    blanks      True if blanks in output image
 c  Input/output
-c    dmm         Data min and max so far
+c    dmm         Data min, max, abs max so far
 c
 c--
 c------------------------------------------------------------------------
@@ -1675,6 +1676,7 @@ c
           if (norm) image(i) = image(i) / real(nimage(i))
           dmm(1) = min(dmm(1),image(i))
           dmm(2) = max(dmm(2),image(i))
+          dmm(3) = max(dmm(3),abs(image(i)))
         else
           blanks = .true.
           image(i) = blank

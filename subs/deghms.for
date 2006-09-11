@@ -33,7 +33,8 @@ c   bpw    12aug91   Add rounding of degrees
 c   bpw    08nov91   Add a range test, because one user found it is possible
 c                    that radhms is called with degrees, giving weird degrees
 c                    inside deghms.
-c   bow    16feb93   inputs and calculations now are double precision
+c   bpw    16feb93   inputs and calculations now are double precision
+c   pjt     1feb95   some extra EXTERNALs for f2c/linux
 c
 c-----------------------------------------------------------------------
 
@@ -48,6 +49,7 @@ c-----------------------------------------------------------------------
       double precision a1, d1, round
       double precision radian
       parameter ( round = 0.5/360000. )
+      external rtfmt
       radian=dacos(-1.d0)/180.
 
       a1 = a + round

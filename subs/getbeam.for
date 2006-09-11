@@ -5,7 +5,7 @@ c+
 	subroutine GetBeam(lIn,naxis,bunit,bmaj,bmin,omega,cbof)
 	implicit none
 	integer lIn,naxis
-	character*10 bunit
+	character bunit*(*)
 	real bmaj,bmin,omega,cbof
 c
 c  Get beam from image header.
@@ -47,8 +47,10 @@ c
 	call rdhda(lIn,'bunit',bunit,' ')
 	call rdhdr(lIn,'bmaj',bmaj,0.)
 	call rdhdr(lIn,'bmin',bmin,0.)
-	if(count.eq.2.and.bunit.eq.'JY/BEAM'
-     *		.and.bmaj*bmin*omega.ne.0.)then
+
+       if(count.eq.2 
+     *          .and. bunit(1:7).eq.'JY/BEAM'
+     *		.and. bmaj*bmin*omega.ne.0.0)then
 	  cbof = abs(bmaj*bmin/omega)*pi/(4.*log(2.))
 	  omega = pi * bmaj * bmin /(4.*log(2.))
 	else if(count.eq.2.and.bunit.eq.'JY/PIXEL'.and.omega.ne.0.)then

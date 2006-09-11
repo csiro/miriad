@@ -34,6 +34,7 @@ c History:
 c   bpw   11sep90   created
 c   bpw   20jun91   corrected document (dsfetra instead of dsfetr)
 c   mjs   20jun91   changed dsfetr call to dsfetra call below
+c   pjt   15mar95   fixed statement for f2c (linux)
 c
 c-----------------------------------------------------------------------
 

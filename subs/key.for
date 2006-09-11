@@ -36,6 +36,8 @@ c    rjs   25jul97    Better reading of .def and @ files.
 c    rjs   16dec97    Added keyinic and keyputc routines. Some tidying.
 c    rjs   30aug99    Increase a buffer.
 c    rjs    7apr00    keyf checks for file existence.
+c    rjs   11dec02    There was a bug reading @ files with files of
+c		      very particular names.
 c************************************************************************
 c* KeyIni -- Initialise the `key' routines.
 c& pjt
@@ -207,6 +209,7 @@ c
 	k1(nkeys) = buflen + 1
 	k2(nkeys) = buflen + lvalue
 	lu(nkeys) = 0
+	luc(nkeys) = .false.
 	expanded(nkeys) = .false.
 	pbuf(buflen+1:buflen+lvalue) = arg(next:arglen)
 	end
@@ -222,7 +225,7 @@ c
 c------------------------------------------------------------------------
 	include 'key.h'
 	integer lkey,idx,i,lun,iostat
-	logical more,expd
+	logical more,expd,lucn
 	character line*64
 c
 c  See if we can find the keyword.
@@ -253,10 +256,12 @@ c  Trim back the buffer, if this keyword was exhausted.
 c
 	    if(k1(idx).gt.k2(idx))then
 	      lun = lu(idx)
+	      lucn = luc(idx)
 	      nkeys = nkeys - 1
 	      do i=idx,nkeys
 		expanded(i) = expanded(i+1)
 		lu(i) = lu(i+1)
+		luc(i) = luc(i+1)
 		k1(i) = k1(i+1)
 		k2(i) = k2(i+1)
 		keys(i) = keys(i+1)
@@ -264,7 +269,7 @@ c
 c
 c  Read in more stuff, if there is more to go.
 c
-	      if(lun.ne.0)call keyread(lun,key)
+	      if(lucn)call keyread(lun,key)
 	    endif
 c
 c  If the value starts with a @ character, open the given file name
@@ -325,6 +330,7 @@ c
 	  k1(nkeys) = buflen + 1
 	  k2(nkeys) = buflen + length
 	  lu(nkeys) = 0
+	  luc(nkeys) = .false.
 	endif
 	end
 c************************************************************************
@@ -359,6 +365,7 @@ c
 	  expanded(nkeys) = .true.
 	  k1(nkeys) = buflen + 1
 	  k2(nkeys) = buflen + length
+	  luc(nkeys) = .true.
 	  lu(nkeys) = lun
 	endif
 c

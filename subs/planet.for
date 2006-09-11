@@ -9,6 +9,8 @@ c    rjs  17jun96 Added some parameters about the Earth.
 c    rjs  04feb01 Added subroutine pltbs.
 c    rjs  03mar01 Improved brightness temps for the planets from Ulrich etc.
 c    rjs  31jul01 Empirical fix to Mercury's temperature.
+c    rjs  20nov01 Included Bryan Butler's brightness temp data of Venus.
+c    paj  16dec02 Improved brightness temp for Uranus and Neptune
 c
 c  Bugs:
 c    Need to understand the brightness temperature fluctuations of the
@@ -31,11 +33,11 @@ c    pltbs    Brightness temperature, in Kelvin.
 c
 c------------------------------------------------------------------------
 	integer NVEN
-	parameter(NVEN=3)
+	parameter(NVEN=75)
 	real ven(2,NVEN)
 c
 	integer NMAR
-	parameter(NMAR=3)
+	parameter(NMAR=5)
 	real mar(2,NMAR)
 c
 	integer NJUP
@@ -46,42 +48,135 @@ c
 	parameter(NSAT=4)
 	real sat(2,NSAT)
 c
+        integer NURA
+	parameter(NURA=26)
+	real ura(2,NURA)
+c
+	integer NNEP
+	parameter(NNEP=24)
+	real nep(2,NNEP)
+c	
 	integer NPLANET
 	parameter(NPLANET=9)
 	real pltb(NPLANET)
 c
 	real pltbintp
 c
-	save pltb,jup,ven,mar,sat
+	save pltb,jup,ven,mar,sat, ura, nep
 c------------------------------------------------------------------------
 c  Misc planets
 c     Ref: Ulich, AJ, 86, 1619 (1981).
 c     Mercury deduced from own observations.
 c
 c	          Mer   Ven   Ear   Mar   Jup   Sat   Ura   Nep   Plu
-	data pltb/660.0,  0.0,288.0,  0.0,  0.0,  0.0,134.1,126.9,68.0/
+	data pltb/660.0,  0.0,288.0,  0.0,  0.0,  0.0,  0.0,  0.0,68.0/
 c------------------------------------------------------------------------
 c  Venus
-c     Ref: Ulich, AJ, 86, 1619 (1981).
+c     Ref: Bryan Butler bbutler@nrao.edu (personal communication, 19 Nov 2001)
 c
-c                      Freq(GHz)        Temp (Kelvin)
-c                      -----            ------
-	data ven(1,1) / 31.4/, ven(2,1) /466.0/
-	data ven(1,2) / 90.0/, ven(2,2) /367.1/
-	data ven(1,3) /150.0/, ven(2,3) /294.0/
+c     For wavelengths shorter than 4cm, the points are a theoretical
+c     model fitted to observed data. For wavelengths longer than
+c     4cm, the points are just an empirical fit to observed data.
+c
+c                        Freq(GHz)        Temp (Kelvin)
+c                        -----            ------
+        data ven(1, 1)/  0.303/, ven(2, 1)/520.0/
+        data ven(1, 2)/  0.333/, ven(2, 2)/525.0/
+        data ven(1, 3)/  0.366/, ven(2, 3)/530.0/
+        data ven(1, 4)/  0.403/, ven(2, 4)/535.0/
+        data ven(1, 5)/  0.443/, ven(2, 5)/540.0/
+        data ven(1, 6)/  0.487/, ven(2, 6)/545.0/
+        data ven(1, 7)/  0.536/, ven(2, 7)/550.0/
+        data ven(1, 8)/  0.590/, ven(2, 8)/555.0/
+        data ven(1, 9)/  0.649/, ven(2, 9)/560.0/
+        data ven(1,10)/  0.714/, ven(2,10)/565.0/
+        data ven(1,11)/  0.785/, ven(2,11)/570.0/
+        data ven(1,12)/  0.864/, ven(2,12)/575.0/
+        data ven(1,13)/  0.950/, ven(2,13)/580.0/
+        data ven(1,14)/  1.045/, ven(2,14)/586.0/
+        data ven(1,15)/  1.149/, ven(2,15)/592.0/
+        data ven(1,16)/  1.264/, ven(2,16)/598.0/
+        data ven(1,17)/  1.391/, ven(2,17)/604.0/
+        data ven(1,18)/  1.530/, ven(2,18)/610.0/
+        data ven(1,19)/  1.683/, ven(2,19)/617.0/
+        data ven(1,20)/  1.851/, ven(2,20)/624.0/
+        data ven(1,21)/  2.036/, ven(2,21)/631.0/
+        data ven(1,22)/  2.240/, ven(2,22)/638.0/
+        data ven(1,23)/  2.464/, ven(2,23)/646.0/
+        data ven(1,24)/  2.710/, ven(2,24)/655.0/
+        data ven(1,25)/  2.981/, ven(2,25)/664.0/
+        data ven(1,26)/  3.280/, ven(2,26)/671.0/
+        data ven(1,27)/  3.608/, ven(2,27)/676.0/
+        data ven(1,28)/  3.968/, ven(2,28)/679.0/
+        data ven(1,29)/  4.365/, ven(2,29)/680.0/
+        data ven(1,30)/  4.802/, ven(2,30)/680.0/
+        data ven(1,31)/  5.282/, ven(2,31)/679.0/
+        data ven(1,32)/  5.810/, ven(2,32)/676.0/
+        data ven(1,33)/  6.391/, ven(2,33)/671.0/
+        data ven(1,34)/  7.030/, ven(2,34)/665.0/
+        data ven(1,35)/  7.733/, ven(2,35)/657.0/
+        data ven(1,36)/  8.507/, ven(2,36)/648.0/
+        data ven(1,37)/  9.357/, ven(2,37)/638.9/
+        data ven(1,38)/ 10.293/, ven(2,38)/626.5/
+        data ven(1,39)/ 11.322/, ven(2,39)/613.0/
+        data ven(1,40)/ 12.454/, ven(2,40)/598.7/
+        data ven(1,41)/ 13.700/, ven(2,41)/583.8/
+        data ven(1,42)/ 15.070/, ven(2,42)/568.7/
+        data ven(1,43)/ 16.577/, ven(2,43)/553.7/
+        data ven(1,44)/ 18.235/, ven(2,44)/538.8/
+        data ven(1,45)/ 20.058/, ven(2,45)/524.1/
+        data ven(1,46)/ 22.064/, ven(2,46)/509.9/
+        data ven(1,47)/ 24.270/, ven(2,47)/496.1/
+        data ven(1,48)/ 26.697/, ven(2,48)/482.8/
+        data ven(1,49)/ 29.367/, ven(2,49)/469.8/
+        data ven(1,50)/ 32.304/, ven(2,50)/457.3/
+        data ven(1,51)/ 35.534/, ven(2,51)/445.3/
+        data ven(1,52)/ 39.087/, ven(2,52)/433.8/
+        data ven(1,53)/ 42.996/, ven(2,53)/422.8/
+        data ven(1,54)/ 47.296/, ven(2,54)/412.3/
+        data ven(1,55)/ 52.025/, ven(2,55)/402.3/
+        data ven(1,56)/ 57.228/, ven(2,56)/392.7/
+        data ven(1,57)/ 62.951/, ven(2,57)/383.6/
+        data ven(1,58)/ 69.246/, ven(2,58)/374.9/
+        data ven(1,59)/ 76.170/, ven(2,59)/366.7/
+        data ven(1,60)/ 83.787/, ven(2,60)/358.7/
+        data ven(1,61)/ 92.166/, ven(2,61)/351.1/
+        data ven(1,62)/101.383/, ven(2,62)/343.7/
+        data ven(1,63)/111.521/, ven(2,63)/336.6/
+        data ven(1,64)/122.673/, ven(2,64)/329.6/
+        data ven(1,65)/134.940/, ven(2,65)/322.8/
+        data ven(1,66)/148.434/, ven(2,66)/316.1/
+        data ven(1,67)/163.278/, ven(2,67)/309.7/
+        data ven(1,68)/179.605/, ven(2,68)/303.5/
+        data ven(1,69)/197.566/, ven(2,69)/297.6/
+        data ven(1,70)/217.322/, ven(2,70)/292.1/
+        data ven(1,71)/239.055/, ven(2,71)/286.8/
+        data ven(1,72)/262.960/, ven(2,72)/282.0/
+        data ven(1,73)/289.256/, ven(2,73)/277.7/
+        data ven(1,74)/318.182/, ven(2,74)/273.8/
+        data ven(1,75)/350.000/, ven(2,75)/270.2/
 c------------------------------------------------------------------------
 c  Mars
 c     Ref: Ulich, AJ, 86, 1619 (1981).
+c          Rudy, DJ, Icarus, 71, 159 (1987)
 c
-c  The value of Muhleman & Berge(1991) at 2.66 mm is 197+/-6K. 
-c    They argue that the spectrum is very flat longwards of a few mm.
+c  The value of Muhleman & Berge (1991) at 2.66 mm is 197+/-6K. 
+c  They argue that the spectrum is very flat longwards of a few mm.
 c  The value of Janssen & Welch (1973) at 1.35cm is 181+/-11K.
+c  Bryan Butler (personal communication Nov 2001) says the brightness
+c  temperature is 192 and 190 K at 8.64 and 4.8 GHz, and that there
+c  is some variation with the side facing the Earth.
+c  Note also, as in Ulich (1981), that the brightness temperature of Mars
+c  varies with distance from the Sun, in the orbit, with T_b prop R^-0.5 
 c
 c                     Freq(GHz)         Temp (Kelvin)
 c                      -----             -----
-	data mar(1,1) / 31.4/, mar(2,1) /194.3/
-	data mar(1,2) / 90.0/, mar(2,2) /206.8/
-	data mar(1,3) /150.0/, mar(2,3) /206.0/
+	
+	data mar(1,1) /  4.9/, mar(2,1) /187.0/
+	data mar(1,2) / 15.0/, mar(2,2) /189.0/
+	data mar(1,3) / 31.4/, mar(2,3) /194.3/
+	data mar(1,4) / 90.0/, mar(2,4) /206.8/
+	data mar(1,5) /150.0/, mar(2,5) /206.0/
 c------------------------------------------------------------------------
 c  Jupiter
 c    Ref: Digitised from de Pater & Massie, Icarus, 62, 143 (1985)
@@ -144,10 +239,81 @@ c                      -----             -----
 	data sat(1,2) / 31.4/, sat(2,2) /133.0/
 	data sat(1,3) / 90.0/, sat(2,3) /149.3/
 	data sat(1,4) /150.0/, sat(2,4) /137.0/
+c------------------------------------------------------------------------
+c  Uranus
+c     Ref: Digitised from de Pater, I, ARA&A, 28, 347 (1990)
+c
+c     Spectrum interpolated from the model curve in the review de Pater 
+c     (1990). Above 150 GHz, the fit of Griffin & Orton, Icarus, 105, 537
+c     (1993) agrees to within a few K.
+c
+c                      Freq(GHz)         Temp (Kelvin)
+c                      -----             -----
+	data ura(1,1)  / 0.948/, ura(2,1)  / 268 /
+	data ura(1,2)  / 1.19 /, ura(2,2)  / 264 /
+	data ura(1,3)  / 1.50 /, ura(2,3)  / 260 /
+	data ura(1,4)  / 1.89 /, ura(2,4)  / 256 /
+	data ura(1,5)  / 2.38 /, ura(2,5)  / 252 /
+	data ura(1,6)  / 3.00 /, ura(2,6)  / 247 /
+	data ura(1,7)  / 3.77 /, ura(2,7)  / 242 /
+	data ura(1,8)  / 4.75 /, ura(2,8)  / 236 /
+	data ura(1,9)  / 5.98 /, ura(2,9)  / 229 /
+	data ura(1,10) / 7.53 /, ura(2,10) / 221 /
+	data ura(1,11) / 9.48 /, ura(2,11) / 211 /
+	data ura(1,12) / 11.9 /, ura(2,12) / 201 /
+	data ura(1,13) / 15.0 /, ura(2,13) / 190 /
+	data ura(1,14) / 18.9 /, ura(2,14) / 181 /
+	data ura(1,15) / 23.8 /, ura(2,15) / 173 /
+	data ura(1,16) / 30.0 /, ura(2,16) / 165 /
+	data ura(1,17) / 37.7 /, ura(2,17) / 157 /
+	data ura(1,18) / 47.5 /, ura(2,18) / 151 /
+	data ura(1,19) / 59.8 /, ura(2,19) / 145 /
+	data ura(1,20) / 75.3 /, ura(2,20) / 139 /
+	data ura(1,21) / 94.8 /, ura(2,21) / 132 /
+	data ura(1,22) / 119.0/, ura(2,22) / 123 /
+	data ura(1,23) / 150.0/, ura(2,23) / 114 /
+	data ura(1,24) / 189.0/, ura(2,24) / 105 /
+	data ura(1,25) / 238.0/, ura(2,25) /  96 /
+	data ura(1,26) / 300.0/, ura(2,26) /  87 /
+c------------------------------------------------------------------------
+c  Neptune
+c     Ref: Digitised from de Pater, I, ARA&A, 28, 347 (1990)
+c
+c     Spectrum interpolated from the model curve in the review de Pater 
+c     (1990). Above 150 GHz, the fit of Griffin & Orton, Icarus, 105, 537
+c     (1993) agrees to within 10 K.
+c
+c                      Freq(GHz)         Temp (Kelvin)
+c                      -----             -----
+	data nep(1,1)  / 1.50 /, nep(2,1)  / 315 /
+	data nep(1,2)  / 1.89 /, nep(2,2)  / 293 /
+	data nep(1,3)  / 2.38 /, nep(2,3)  / 270 /
+	data nep(1,4)  / 3.00 /, nep(2,4)  / 250 /
+	data nep(1,5)  / 3.77 /, nep(2,5)  / 230 /
+	data nep(1,6)  / 4.75 /, nep(2,6)  / 205 /
+	data nep(1,7)  / 5.98 /, nep(2,7)  / 190 /
+	data nep(1,8)  / 7.53 /, nep(2,8)  / 175 /
+	data nep(1,9)  / 9.48 /, nep(2,9)  / 165 /
+	data nep(1,10) / 11.9 /, nep(2,10) / 156 /
+	data nep(1,11) / 15.0 /, nep(2,11) / 145 /
+	data nep(1,12) / 18.9 /, nep(2,12) / 140 /
+	data nep(1,13) / 23.8 /, nep(2,13) / 135 /
+	data nep(1,14) / 30.0 /, nep(2,14) / 132 /
+	data nep(1,15) / 37.7 /, nep(2,15) / 130 /
+	data nep(1,16) / 47.5 /, nep(2,16) / 128 /
+	data nep(1,17) / 59.8 /, nep(2,17) / 126 /
+	data nep(1,18) / 75.3 /, nep(2,18) / 124 /
+	data nep(1,19) / 94.8 /, nep(2,19) / 122 /
+	data nep(1,20) / 119.0/, nep(2,20) / 118 /
+	data nep(1,21) / 150.0/, nep(2,21) / 113 /
+	data nep(1,22) / 189.0/, nep(2,22) / 107 /
+	data nep(1,23) / 238.0/, nep(2,23) /  99 /
+	data nep(1,24) / 300.0/, nep(2,24) /  90 /
+c------------------------------------------------------------------------
 c
 c  Process the appropriate planet.
 c
-	goto(100,20,100,40,50,60,100,100,100),iplanet
+	goto(100,20,100,40,50,60,70,80,100),iplanet
 c
 c Venus
 c
@@ -169,6 +335,16 @@ c
   60	pltbs = pltbintp(freq,sat,NSAT)
 	return
 c
+c Uranus
+c
+  70	pltbs = pltbintp(freq,ura,NURA)
+	return
+c
+c Neptune
+c
+  80	pltbs = pltbintp(freq,nep,NNEP)
+	return
+c
 c  All the rest.
 c	
  100	pltbs = pltb(iplanet)
@@ -182,6 +358,7 @@ c
 	real freq,planet(2,np)
 c
 c  Interpolate the brightness temperature of Jupiter.
+c  and other planets with tables of brightness temperature
 c
 c------------------------------------------------------------------------
 	integer i,j,k

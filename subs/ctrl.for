@@ -51,16 +51,19 @@ c  Currently this is a TCP/IP socket to a "panel" server accessed
 c  through the routines called `panel' and `xpanel' in MIRIAD.
 c
 c  Input:
-c    name       Name of the device used in TVOPEN.  This contains
-c               the name of the host running the panel server.
-c               This has the form:
-c                 type@name1  or  type@name1/name2
-c               Here ``name1'' and ``name2'' are the physical device
-c               names, or the name of the server (for network display
-c               servers).  ``Type'' is the device or server type.
-c               These are described in detail in the User's manual.
-c               If ``name2'' exists, this is used as the panel name;
-c               otherwise, ``name1'' is used.
+c    name       Name of the server device used in TVOPEN.  This
+c               contains the name of the host running the panel server.
+c               This can have any of the following forms:
+c                 type@name1
+c                 type@name1/name2
+c                 type@name1/name2:port
+c               where name1 and name2 represent physical device names
+c               or the name of the server (for network display servers).
+c               Type is the device or server type (ignored by this
+c               routine) and is described in detail in the User's manual.
+c               If name2 exists, this is used as the panel device name;
+c               otherwise, name1 is used.  If the optional port argument
+c               is provided, it overrides the default value.
 c  Output:
 c    ctrl       A logical flag that is true if the input device can
 c               drive a ctrl panel; otherwise, ctrl is false.
@@ -68,7 +71,9 @@ c--
 c-----------------------------------------------------------------------
 c
       integer length, status, i1, i2, msglen
+      integer port
       character errmsg*80, panel*25
+      logical okay
 c
 c  Externals.
 c
@@ -95,7 +100,18 @@ c
       else
         panel = name(i1+1:length)
       endif
-      call CtrlInit(panel, status)
+c
+c  Set up to use the default port number.
+c
+      port = 0
+      i1 = index(panel,':')
+      if ((i1 .gt. 1) .and. (i1 .lt. len1(panel))) then
+        call atoif(panel(i1+1:),port,okay)
+        if (.not. okay)
+     *    call bug('f', 'Panel port number incorrectly formatted.')
+        panel = panel(1:i1-1)
+      endif
+      call CtrlPort(panel, port, status)
       Ctrl = (status.eq.0)
       return
       end
@@ -114,6 +130,10 @@ c  This opens up a connection to the "control panel".  Currently this is
 c  a TCP/IP socket to a "panel" server accessed through the routines
 c  called `panel' and `xpanel' in MIRIAD.
 c
+c  NOTE:  This is really internal code and should NOT be called.
+c         Use ctrlopen() instead.
+c         This documentation is kept for backwards compatibility.
+c
 c  Input:
 c    name	Name of the host running the panel server.
 c  Output:
@@ -122,8 +142,42 @@ c		indicate some failure in attempted to connect to the
 c		server.
 c--
 c------------------------------------------------------------------------
+c  Depreciated code that uses the default port number.
+c
+	call CtrlPort(name,0,status)
+	end
+c************************************************************************
+c*CtrlPort -- Initialise the panel panel.
+c& jm
+c:control-panel,user-interaction
+c+
+	subroutine CtrlPort(name,port,status)
+c
+	implicit none
+	character name*(*)
+	integer port
+	integer status
+c
+c  This opens up a connection to the "control panel".  Currently this is
+c  a TCP/IP socket to a "panel" server accessed through the routines
+c  called `panel' and `xpanel' in MIRIAD.
+c
+c  NOTE:  This is really internal code and should NOT be called.
+c         Use ctrlopen() instead.
+c         This documentation is kept for backwards compatibility.
+c
+c  Input:
+c    name	Name of the host running the panel server.
+c    port	Port number to connect to.  If this is negative or 0,
+c        	the default value of DefPort is used (see ctrl.h).
+c  Output:
+c    status	Completion status.  Zero indicates success. Other values
+c		indicate some failure in attempted to connect to the
+c		server.
+c--
+c------------------------------------------------------------------------
 	include 'ctrl.h'
-	integer inet
+	integer cport, inet
 c
 c  Externals.
 c
@@ -135,7 +189,9 @@ c
 	if(inet.eq.0)return
 	Status = TcpSock(handle)
 	if(Status.ne.0)call bugno('f',Status)
-	Status = TcpConn(handle,inet,port)
+	cport = port
+	if (cport .le. 0) cport = DefPort
+	Status = TcpConn(handle,inet,cport)
 	end
 c************************************************************************
 c*CtrlView -- Pop up the control panel on the workstation screen.

@@ -16,7 +16,6 @@ c
 	  call uvrdvra(tno,'telescop',telescop,' ')
 c
 	  call lcase(telescop)
-	call output(telescop)
 	  if(telescop.eq.'atca')then
 	    call wrhda(tno,'senmodel','GSV')
 	  else

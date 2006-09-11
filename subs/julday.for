@@ -48,6 +48,7 @@ c		     are now handled by dayjul().
 c    rjs    25sep97  Added subroutine julcal.
 c    rjs    09jan97  Make datepars tolerant of spaces in names.
 c    rjs    02jan06  General clean up and generalisation of format.
+c    rjs    05feb06  Correct bug in above dealing with 'dtime' formats.
 c***********************************************************************
 c* JulDay -- Format a Julian day into a conventional calendar day.
 c& jm
@@ -314,7 +315,7 @@ c
 	if((c.ge.'a'.and.c.le.'z').or.(c.ge.'A'.and.c.le.'Z'))then
 	  sep = ' '
 	else if(c.eq.':')then
-	  call decangle(calday(i:length),julian,'dtime',more)
+	  call decangle(calday(id:length),julian,'dtime',more)
 	  if(.not.more)call daybug(calday,'Invalid format')
 	  return
 	else

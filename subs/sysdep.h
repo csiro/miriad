@@ -24,51 +24,20 @@
  *    rjs 20nov94 Added "alpha" ifdef.
  *    rjs 19mar97 Add FORTRAN_LOGICAL define and check that miriad.h declarations
  *		  have not been done before doing them again.
+ *    pjt 14jun01 use WORDS_BIGENDIAN to figure out the pack routines
+ *                removed 'trace' clutter from the old multiflow
+ *    pjt 24jun01 PPC/powerpc is a BIGENDIAN (linux) machine
+ *    pjt 21jun02 MIR4
+ *    rjs 01jan05 Tidy up
  */
 
-#ifndef Null
-#define Null '\0'
-#endif
-
-/*
- *  Void is typedef'd to the proper word depending on the level of
- *  ANSI conformance.  Also, if ANSI conforming, Const is defined
- *  to const; otherwise, Const is defined as a NULL statement.
- *
- *  PROTOTYPE is defined only if function prototypes are correctly
- *  understood.
- *
- *  ARGS defines a macro that aides in presenting prototypes.
- *  Use it as (double parentheses required):
- *    extern void keyput_c ARGS((const char *task, char *arg));
- */
-
-#ifndef MIRIAD_TYPES_DEFINED
-#define MIRIAD_TYPES_DEFINED 1
-#ifdef __STDC__
-#if (__STDC__ == 1)
-typedef void Void;
-#define Const const
-#define PROTOTYPE 1
-#define ARGS(s) s
-#else
-typedef char Void;
-#define Const /* NULL */
-#define ARGS(s) ()
-#endif /* (__STDC__ == 1) */
-#else
-typedef char Void;
-#define Const /* NULL */
-#define ARGS(s) ()
-#endif /* __STDC__ */
-#endif
-
-typedef int int2;
+#if !defined(MIR_SYSDEP_H)
+#define MIR_SYSDEP_H
 
 /************************************************************************/
-/*									*/
-/*			VMS definitions.				*/
-/*									*/
+/*                                                                      */
+/*                      VMS definitions.                                */
+/*                                                                      */
 /************************************************************************/
 
 #ifdef vms
@@ -105,22 +74,17 @@ typedef int int2;
 /************************************************************************/
 
 #ifndef defined_params
-#if defined(convex) || defined(alpha)
+#if defined(convex) || defined(alpha) || defined(__alpha)
 #  define FORT_TRUE  -1
 #else
 #  define FORT_TRUE 1
 #endif
+
 #define FORT_FALSE 0
 #define FORT_LOGICAL(a) ((a) != FORT_FALSE)
 
 #define BUFDBUFF 0
-
-#if defined(trace)
-#  define BUFALIGN 8
-#else
-#  define BUFALIGN 2
-#endif
-
+#define BUFALIGN 2
 #define BUFSIZE 16384
 
 /* Some machines have the "strerror" routine. Linux whinges significantly
@@ -130,23 +94,36 @@ typedef int int2;
 #  define HAS_STRERROR
 #endif
 
-/* The Multiflow machine does not have the memcpy routine. Use bcopy
-   instead.								*/
-
-#if defined(trace)
-#  define memcpy(a,b,c) bcopy((b),(a),(c))
-#  define memcmp(a,b,c) bcmp((a),(b),(c))
-#endif
-
 /*  Short cut routines when no conversion is necessary. These are
-    used for any IEEE floating point machine with FITS ordered bytes.	*/
+    used for any IEEE floating point machine with big endian (same as FITS)
+    ordered bytes.	
 
-#if defined(sun) || defined(alliant) || defined(trace) || defined(convex) || defined(hpux) || defined(sgi)
+*/
+
+void pack16_c(int *in, char *out, int n);
+void unpack16_c(char *in, int *out, int n);
+void pack64_c(int8 *in, char *out, int n);
+void unpack64_c(char *in, int8 *out, int n);
+
+# if defined (sun) || defined(alliant) || defined(trace) || defined (convex) || defined (mips) || defined(sgi) || defined(hpux) || defined(powerpc)
+
 #  define packr_c(a,b,c)    memcpy((b),(char *)(a),sizeof(float)*(c))
 #  define unpackr_c(a,b,c)  memcpy((char *)(b),(a),sizeof(float)*(c))
 #  define packd_c(a,b,c)    memcpy((b),(char *)(a),sizeof(double)*(c))
 #  define unpackd_c(a,b,c)  memcpy((char *)(b),(a),sizeof(double)*(c))
 #  define pack32_c(a,b,c)   memcpy((b),(char *)(a),sizeof(int)*(c))
 #  define unpack32_c(a,b,c) memcpy((char *)(b),(a),sizeof(int)*(c))
+
+#else
+
+void pack32_c(int *in, char *out, int n);
+void unpack32_c(char *in, int *out, int n);
+void packr_c(float *in, char *out, int n);
+void unpackr_c(char *in, float *out, int n);
+void packd_c(double *in, char *out, int n);
+void unpackd_c(char *in, double *out, int n);
+
 #endif
 #endif
+
+#endif /* MIR_SYSDEP_H */

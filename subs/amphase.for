@@ -1,5 +1,6 @@
 c************************************************************************
 c*AmPhase -- Compute amplitude and phase.
+c& pjt
 c:complex-data,uv-data
 c+
       subroutine amphase (data, amp, phase)

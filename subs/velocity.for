@@ -8,6 +8,7 @@ c  by P.T.Wallace (circa 1986).
 c
 c  History:
 c    13jul93 rjs  Original Miriad version.
+c     2nov01 rjs  Changed definition of LSR velocity by 0.3 km/s
 c************************************************************************
       SUBROUTINE VEARTH (JDAY, POS, VEL)
 c
@@ -148,11 +149,9 @@ c
 *     VEL	Velocity of the Sun.
 *------------------------------------------------------------------------
 
-*  Solar motion (C.W.Allen, Astrophyscial Quantities, 3rd ed., section 120.)
+*  Speed = 20 km/s
 *
-*  Speed = 19.7 km/s
-*
-*  Apex = RA 271 deg, Dec +30deg, 1900.0
+*  Apex = RA 270 deg, Dec +30deg, 1900.0
 *  = 18 07 50.3, +30 00 52, J2000.0
 *
 *  This is expressed in the form of a J2000.0 x,y,z vector:
@@ -161,7 +160,7 @@ c
 *      VA(2) = Y = -SPEED*SIN(RA)*COS(DEC)
 *      VA(3) = Z = -SPEED*SIN(DEC)
       REAL VA(3)
-      DATA VA / -0.58327, +17.04825, -9.85429 /
+      DATA VA / -0.29000, +17.31726, -10.00141 /
       VEL(1) = VA(1)
       VEL(2) = VA(2)
       VEL(3) = VA(3)

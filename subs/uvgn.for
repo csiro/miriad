@@ -24,6 +24,7 @@ c    26jun97 rjs  Correct channel numbering when there are multiple
 c		  windows and bandpass averaging taking place.
 c    10dec97 rjs  Check gain table size is correct.
 c    24feb97 rjs  Make "bandpass calibration" work for wide-only files.
+c    01jan05 rjs  Double precision baselines and use basant.
 c************************************************************************
 	subroutine uvGnIni(tno1,dogains1,dopass1)
 	implicit none
@@ -228,8 +229,8 @@ c
 	integer nread
 	complex data(nread)
 	logical flags(nread),dowide
-	double precision time
-	real baseline,grms
+	double precision time,baseline
+	real grms
 	integer pol
 c
 c  Determine the gain factor for a particular visibility.
@@ -283,9 +284,7 @@ c
 c
 c  Determine the gain indices based on antenna numbers.
 c
-	ant2 = nint(baseline)
-	ant1 = ant2 / 256
-	ant2 = ant2 - 256 * ant1
+	call basant(baseline,ant1,ant2)
 	if(ant1.lt.1.or.ant1.gt.nants.or.ant2.lt.1.or.ant2.gt.nants)
      *	  goto 100
 c

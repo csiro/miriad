@@ -16,6 +16,7 @@ c    nebk 03nov92 Original version.
 c    nebk 27apr93 Rename erf to errfun
 c    nebk 12nov93 Prevent some underflow messages on exponentials
 c    nebk 06jan94 Call new ExpUN for underflow messages
+c    rks  29jan06 Change in gammln to work around a compiler bug.
 c
 c************************************************************************
 c* GammP -- Find incomplete Gamma function P(a,x)
@@ -221,7 +222,7 @@ c    xx     r     Argument
 c--
 c
 c-----------------------------------------------------------------------
-      double precision cof(6), stp, fpf, x, tmp, ser
+      double precision cof(6), stp, fpf, x, tmp, ser, xxx(6)
       integer j
 c
       save cof, stp
@@ -235,8 +236,10 @@ c-----------------------------------------------------------------------
       tmp = (x + 0.5)*log(tmp) - tmp
       ser = 1.0
       do j = 1, 6
-        x = x + 1.0
-        ser = ser + cof(j)/x
+        xxx(j) = x + j
+      enddo
+      do j = 1, 6
+        ser = ser + cof(j)/xxx(j)
       end do
       gammln = tmp + log(stp*ser)
 c

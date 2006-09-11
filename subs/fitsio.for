@@ -66,6 +66,8 @@ c		     work around GILDAS flaw.
 c    rjs  21mar00    Transpose axes of visibility arrays on uvin where
 c		     necessary.
 c    rjs   4jun05    Fudges to help cope better with files > 2 Gbytes.
+c    rjs  18sep05    Fix up type inconsistency bug.
+c    rjs  20sep05    Correct handling of degenerate extension tables.
 c
 c  Bugs and Shortcomings:
 c    * IF frequency axis is not handled on output of uv data.
@@ -603,7 +605,7 @@ c------------------------------------------------------------------------
 c
 c  Externals.
 c
-	integer isrchieq
+	integer isrchl
 c
 c  Check that it is the right sort of operation for this file.
 c
@@ -629,9 +631,9 @@ c  the magic value blanked version.
 c
 	lmax = 0
 	kmax = axes(1,lu)
-	k = isrchieq(kmax,flags,1,.false.)
+	k = isrchl(kmax,flags,.false.)
 	dowhile(k.le.kmax)
-	  l = isrchieq(kmax-k+1,flags(k),1,.true.) - 1
+	  l = isrchl(kmax-k+1,flags(k),.true.) - 1
 	  if(l.gt.lmax)then
 	    do i=lmax+1,l
 	      array(i) = Blank
@@ -642,10 +644,24 @@ c
      *				      BypPix(lu)*l,iostat)
 	  if(iostat.ne.0)call bugno('f',iostat)
 	  k = k + l
-	  if(k.le.kmax)k = isrchieq(kmax-k+1,flags(k),1,.false.) + k - 1
+	  if(k.le.kmax)k = isrchl(kmax-k+1,flags(k),.false.) + k - 1
 	enddo
 c
 	end
+c************************************************************************
+	integer function isrchl(n,array,target)
+c
+	implicit none
+	integer n
+	logical array(n),target
+c
+c------------------------------------------------------------------------
+        integer i
+        do i=1,n
+          if(array(i).eqv.target)goto 200
+        enddo
+ 200    isrchl = i
+        end
 c************************************************************************
 c* FxyClose -- Close a FITS image file.
 c& rjs
@@ -2766,13 +2782,18 @@ c
 	       call fitrdhdi(lu,'NAXIS'//itoaf(i),axis,1)
 	       if(axis.lt.0)call bug('f',
      *	         'Bad value in fundamental parameter in FITS file')
-	       size = size * max(axis,1)
+	       if(i.eq.1)axis = max(axis,1)
+	       size = size * axis
 	     enddo
           end if
 c
 	  ncards(lu) = 0
 	  DatSize(lu) = abs(bitpix)/8 * (pcount + size)
-	  itemp = (totsize-DatOff(lu))/DatSize(lu)
+	  if(DatSize(lu).gt.0)then
+	    itemp = (totsize-DatOff(lu))/DatSize(lu)
+	  else
+	    itemp = 1
+	  endif
 	  if(itemp.lt.gcount)then
 	    if(itemp.eq.0)
      *		call bug('f','Serious inconsistency in file size')

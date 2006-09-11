@@ -1,0 +1,69 @@
+/************************************************************************/
+/*									*/
+/*  Convert between FORTRAN and C data types.				*/
+/*                                                                      */
+/*  History:                                                            */
+/*    18sep05 rjs  Original version.                                    */
+/*    26nov05 rjs  Supported logicals as well.				*/
+/*                                                                      */
+/************************************************************************/
+
+#include <stddef.h>
+#include <stdlib.h>
+
+#define BUFF_MIN 1024
+static int *buffer;
+static int bsize = 0;
+/************************************************************************/
+int *iface_iarr(int n)
+{
+  if(n < BUFF_MIN)n = BUFF_MIN;
+  if(n > bsize){
+    if(bsize > 0){
+      buffer = (int *)realloc(buffer,n*sizeof(int));
+    }else{
+      buffer = (int *)malloc(n*sizeof(int));
+    }
+    bsize = n;
+  }
+  return buffer;
+}
+/************************************************************************/
+int *iface_larr(int n)
+{
+  if(n < BUFF_MIN)n = BUFF_MIN;
+  if(n > bsize){
+    if(bsize > 0){
+      buffer = (int *)realloc(buffer,n*sizeof(int));
+    }else{
+      buffer = (int *)malloc(n*sizeof(int));
+    }
+    bsize = n;
+  }
+  return buffer;
+}
+/************************************************************************/
+void iface_f2c_icvt(fort_integer *in,int *out,int n)
+{
+  int i;
+  for(i=0;i<n;i++)*out++ = *in++;
+}
+/************************************************************************/
+void iface_c2f_icvt(int *in,fort_integer *out,int n)
+{
+  int i;
+  for(i=0;i<n;i++)*out++ = *in++;
+}
+/************************************************************************/
+void iface_f2c_lcvt(fort_logical *in,int *out,int n)
+{
+  int i;
+  for(i=0;i<n;i++)*out++ = *in++;
+}
+/************************************************************************/
+void iface_c2f_lcvt(int *in,fort_logical *out,int n)
+{
+  int i;
+  for(i=0;i<n;i++)*out++ = *in++;
+}
+

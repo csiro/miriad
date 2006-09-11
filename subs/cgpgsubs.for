@@ -137,6 +137,7 @@ c     nebk   14fen97     Add argumebnt val3form to LAB3CG
 c     rjs    15apr97     Mr K was not checking for ANGL axis type in
 c			 LAB3CG -- and causing things to vomit.
 c     rjs    10nov97     Make more robust to things missing from headers.
+c     jwr    08jul04     Replaced MemAlloc where MemFree was meant
 c**********************************************************************
 c
 c* annboxCG -- Annotate plot with information from a box image 
@@ -2528,7 +2529,7 @@ c
 c
 c Free up memory
 c
-      call memalloc (ipw, nbins2, 'r')
+      call memfree (ipw, nbins2, 'r')
 c
       end
 c

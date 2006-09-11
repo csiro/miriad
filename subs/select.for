@@ -36,6 +36,7 @@ c    rjs  22oct97 Change format of "on" selection.
 c    rjs  16jun00 Check for bad antenna numbers.
 c    rjs  28jul00 Correct bug introduced in the above.
 c    rjs  27oct00 Handle change in baseline numbering convention.
+c    rjs  16aug04 Handle elevation and HA selection.
 c
 c  Routines are:
 c    subroutine SelInput(key,sels,maxsels)
@@ -82,6 +83,9 @@ c    source(src1,src2...) Select by source.
 c    ra(hh:mm:ss,hh:mm:ss) Select by RA.
 c    dec(dd:mm:ss,dd:mm:ss) Select by DEC.
 c    bin(lo,hi)		Select pulsar bin
+c    ha(hstart,hend)    Select on hour angle (values in decimal hours or hh:mm:ss)
+c    lst(lst1,lst2)     Select on LST (value as above).
+c    elevation(el1,el2) Select on elevation (angles in degrees).
 c
 c  The input command would look something like:
 c    select=time(t1,t2),uv(uv1,uv2),...
@@ -136,6 +140,10 @@ c		  'frequency'		Frequency selection.
 c		  'source'		Select by source.
 c		  'ra'			Select by RA.
 c		  'dec'			Select by DEC.
+c		  'bin'			Select on bin number.
+c		  'ha'			Select on hour angle.
+c		  'lst'			Select on LST.
+c		  'elevation'		Select on elevation.
 c		Note that this does not support all objects to uvselect.
 c		The object name may have a suffix of '?' (e.g. 'window?')
 c		in which case the "value" argument is ignored, and SelProbe
@@ -367,7 +375,8 @@ c
      *		seltype.eq.UV.or.seltype.eq.POINT.or.
      *		seltype.eq.AMP.or.seltype.eq.UVN.or.
      *		seltype.eq.DRA.or.seltype.eq.DDEC.or.
-     *		seltype.eq.SHADOW.or.seltype.eq.FREQ)then
+     *		seltype.eq.SHADOW.or.seltype.eq.FREQ.or.
+     *		seltype.eq.ELEV.or.seltype.eq.HA)then
 	    call SelDcde(spec,k1,k2,vals,n,2,'real')
 c
 c  Expand to two parameters, using some default mechanism.
@@ -394,6 +403,9 @@ c
 	    if(seltype.eq.DRA.or.seltype.eq.DDEC)then
 	      vals(1) = vals(1) * pi/180/3600
 	      vals(2) = vals(2) * pi/180/3600
+	    else if(seltype.eq.HA)then
+	      vals(1) = vals(1) * pi/12
+	      vals(2) = vals(2) * pi/12
 	    else if(seltype.eq.UV)then
 	      vals(1) = 1000 * vals(1)
 	      vals(2) = 1000 * vals(2)
@@ -412,6 +424,16 @@ c
 c
 c  Handle RA and DEC selection.
 c
+	  else if(seltype.eq.LST)then
+	    call SelDcde(spec,k1,k2,vals,n,2,'ra') 
+	    if(offset+4.gt.MAXSELS)
+     *		call Selbug(spec,'Selection too complex')
+	    sels(offset+LOVAL) = vals(1)
+	    sels(offset+HIVAL) = vals(2)
+	    sels(offset+ITYPE) = sgn*seltype
+	    sels(offset+NSIZE) = 4
+	    offset = offset + 4
+	    nsels = nsels + 1
 	  else if(seltype.eq.RA.or.seltype.eq.DEC)then
 	    if(seltype.eq.RA)call SelDcde(spec,k1,k2,vals,n,2,'ra')
 	    if(seltype.eq.DEC)call SelDcde(spec,k1,k2,vals,n,2,'dec')

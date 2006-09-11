@@ -1,8 +1,35 @@
+/************************************************************************/
+/*									*/
+/*	Pack integers into the machine-independent 16-bit format.	*/
+/*									*/
+/*  History:								*/
+/*    rjs Dark ages Original version					*/
+/*    rjs 18sep05   Changes to support FORTRAN and C ints differing.	*/
+/*									*/
+/************************************************************************/
+
 #include <stddef.h>
 #include <stdlib.h>
 #include "miriad.h"
 #include "sysdep.h"
 
+#if FORTRAN_CVT_INT
+fortran subroutine packi2(integer in,integer out,integer n)
+{
+  int *tin;
+  tin = iface_iarr(n.val);
+  iface_f2c_icvt(in.addr,tin,n.val);
+  pack16_c(tin,(char *)(out.addr),n.val);
+}
+fortran subroutine unpacki2(integer in,integer out,integer n)
+{
+  int *tout;
+  tout = iface_iarr(n.val);
+  unpack16_c((char *)(in.addr),tout,n.val);
+  iface_c2f_icvt(tout,out.addr,n.val);
+}
+
+#else
 fortran subroutine packi2(integer in,integer out,integer n)
 {
   pack16_c(in.addr,(char *)(out.addr),n.val);
@@ -11,3 +38,4 @@ fortran subroutine unpacki2(integer in,integer out,integer n)
 {
   unpack16_c((char *)(in.addr),out.addr,n.val);
 }
+#endif

@@ -5,6 +5,7 @@ c    rjs 21feb91   Added the LlsquIni,LLsquAcc and LLsquSol routines, for
 c		   problems where the design matrix is too large to fix into
 c		   memory (original version).
 c    mjs 28feb91   Broke it out of lsqu.for to get 1 owner per sourcefile.
+c    rjs 18sep05   Fix up type inconsistency flaw.
 c************************************************************************
 c* LlsquIni - Initalize the "large" linear least square routines.
 c& rjs
@@ -101,7 +102,8 @@ c+
 c
 	implicit none
 	integer n,ifail
-	real B(n,n),x(n),pivot(n)
+	real B(n,n),x(n)
+	integer pivot(n)
 c
 c  Input:
 c    n		Number of unknowns.

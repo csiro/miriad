@@ -16,6 +16,7 @@
  *    pjt  03sep98 fixed malloc(size+1) bug with interesting side-effects
  *		   on linux and HP-UX	
  *    rjs  30aug99 Increase MAXSTRING to 1024
+ *    rjs  26nov05 Eliminate FORTRAN logical values.
  ***********************************************************************
  */
 
@@ -471,7 +472,7 @@ void keyfin_c(void)
 }
 
 /***********************************************************************/
-/*  Returns FORT_TRUE if keyword is present; FORT_FALSE otherwise. */
+/*  Returns TRUE if keyword is present; FALSE otherwise. */
 int keyprsnt_c(Const char *keyword)
 /** KeyPrsnt -- Determine if a keyword is present on the command line. */
 /*& pjt */
@@ -498,7 +499,7 @@ int keyprsnt_c(Const char *keyword)
     t = getKey(keyword);
     isPresent = ((t != (KEYS *)NULL) &&
                  (t->value != (char *)NULL) &&
-                 (*(t->value) != Null)) ? FORT_TRUE : FORT_FALSE;
+                 (*(t->value) != Null)) ? 1 : 0;
 
     return(isPresent);
 }
@@ -762,7 +763,7 @@ void keyl_c(Const char *keyword, int *value, int keydef)
         break;
     }
 
-    *value = (state == KEYTRUE) ? FORT_TRUE : FORT_FALSE;
+    *value = (state == KEYTRUE) ? 1 : 0;
     return;
 }
 
@@ -792,10 +793,10 @@ void keyl_c(Const char *keyword, int *value, int keydef)
       char errmsg[MAXSTRING];                       \
       register int count = 0;                       \
                                                     \
-      while ((count < nmax) && (keyprsnt_c(keyword) == FORT_TRUE)) \
+      while ((count < nmax) && keyprsnt_c(keyword)) \
         task(keyword, &value[count++], defval);     \
                                                     \
-      if (keyprsnt_c(keyword) == FORT_TRUE) {       \
+      if (keyprsnt_c(keyword)) {       \
         (void)sprintf(errmsg, "%s: Buffer overflow for keyword [%s].", \
           name, keyword);                           \
         (void)bug_c('f', errmsg);                   \

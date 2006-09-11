@@ -75,9 +75,9 @@ c    rjs  06jan98 Change uvgetvrr to uvrdvrr when getting chi.
 c    rjs  06jan98 Change in uvlkcorr to sidestep a compiler bug on IRIX machines.
 c    rjs  26mar98 Comment change only.
 c    rjs   6sep99 Added "lflag" parameter to "line" keyword.
+c    pjt  18jan03 extra char for f2c interfaces
 c    rjs  18sep04 Support the variance being scaled by the noise level.
-c    rjs  06jan05 I messed up on 18 Sep. Fix bug in uvpolini related to
-c		  correcting the variance of polarised measurements.
+c    rjs  01jan05 Change arg of uvgnfac to double precision.
 c
 c  User-Callable Routines:
 c    uvDatInp(key,flags)
@@ -258,7 +258,7 @@ c  Output:
 c    nPol	The number of polarisations requested.
 c    Pols	The desired polarisations.
 c------------------------------------------------------------------------
-	character type*2
+	character type*3
 c
 c  Externals.
 c
@@ -527,7 +527,7 @@ c
 	  call uvread(tno,preamble,data,flags,n,nread)
 	  GWt = 1
 	  if(WillCal.and.nread.gt.0)call uvGnFac(preamble(idxT),
-     *	    real(preamble(idxBL)),0,.false.,data,flags,nread,GWt)
+     *	    preamble(idxBL),0,.false.,data,flags,nread,GWt)
 	  GWt = GWt*GWt
 	endif
 c
@@ -988,7 +988,7 @@ c
 	      indices(j,i) = k
 	      if(.not.caled(k))then
 		call uvGnFac(Spreambl(idxT),
-     *		  real(Spreambl(idxBL)),type(j),.false.,Sdata(1,k),
+     *		  Spreambl(idxBL),type(j),.false.,Sdata(1,k),
      *		  Sflags(1,k),Snread,wt(k))
 	        caled(k) = .true.
 	      endif
@@ -1068,7 +1068,7 @@ c--
 c------------------------------------------------------------------------
 	include 'uvdat.h'
 	double precision time
-	real baseline
+	double precision baseline
 c
 c  Handle the case of no data.
 c
@@ -1082,7 +1082,7 @@ c
      *		'Cannot perform polarisation processing, in uvDatWRd')
 	  call uvwread(tno,data,flags,n,nread)
 	  if(nread.ne.0.and.WillCal)then
-	    call uvgetvrr(tno,'baseline',baseline,1)
+	    call uvgetvrd(tno,'baseline',baseline,1)
 	    call uvgetvrd(tno,'time',time,1)
 	    call uvGnFac(time,baseline,0,.true.,data,flags,nread,GWt)
 	    Gwt = GWt*GWt

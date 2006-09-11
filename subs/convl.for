@@ -6,6 +6,7 @@ c    rjs  11sep89  Improved documentation.
 c    rjs  25jan90  Minor documentation improvement.
 c    pjt   3may90  Bug call verbosity
 c    rjs   3apr91  Calls the MemAlloc and MemFree routines.
+c    rjs  10sep96  Eliminate common.
 c************************************************************************
 c* ConvlIni -- Initialize the convolution routines.
 c& rjs
@@ -38,7 +39,6 @@ c------------------------------------------------------------------------
 	real Trans(maxbuf)
 	real Data(maxdim)
 	complex CData1(maxdim),CData2(maxdim),Rotv(maxdim)
-	common/ConvlCom/Cdata1,CData2,Rotv,Data
 	common Trans
 c
 	call MemAlloc(pnt,(n1+2)*n2,'r')
@@ -139,7 +139,6 @@ c------------------------------------------------------------------------
 	real Data(maxdim)
 	complex CData1(maxdim),CData2(maxdim)
 	real Trans(maxbuf)
-	common/ConvlCom/Cdata1,CData2,Data
 	common Trans
 c
 	call MemAlloc(pnt,(n1+2)*ny,'r')

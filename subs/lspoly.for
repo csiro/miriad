@@ -40,6 +40,7 @@ c    mchw  --apr93 Extracted from a task and installed as a sub.
 c    mjs   22apr93 Added in-code docs.
 c    pjt   23apr93 Eliminate flint complaints.
 c    pjt   14dec93 Documented X-X(1) offsets !!!
+c     jm   10nov95 Fixed so xlo=xhi doesn't divide by zero.
 c
 c-----------------------------------------------------------------------
       real a(10,10),d(9),xmp(9),bc(45),t(25),p(10),free(10)
@@ -104,8 +105,13 @@ c
 	  if(x(i).gt.xhi) xhi=x(i)
 	  if(x(i).lt.xlo) xlo=x(i)
       enddo
-      xmid=0.5*(xhi+xlo)
-      xfac=2./(xhi-xlo)
+      if (xhi .eq. xlo) then
+        xmid=0.0
+        xfac=1.0
+      else
+        xmid=0.5*(xhi+xlo)
+        xfac=2./(xhi-xlo)
+      endif
 c
 c  Form the normal equations.
 c	a(i,j) is augmented normal matrix, n by nm.

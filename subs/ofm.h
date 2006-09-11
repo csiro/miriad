@@ -20,7 +20,6 @@ c fidun   says that a fiddle has been done to OFMA
 c hedun   says that histogram equalization has been done this
 c         call to ofmmod
 c nocurs  says that device does not have a cursor
-c dofcc   says it is possible to generate fixed zero colour contours
 c ci0     is the colour index at the intensity=0 boundary for
 c         fixed zero colour contours
 c
@@ -40,10 +39,10 @@ c
      + tfvp(4), tfcs
       integer na, iofm, ci1, ci2, fid(maxlev), ci0
       character*4 tflab
-      logical fidun, tfpic, hedun, ofmdun, dofcc, nocurs
+      logical fidun, tfpic, hedun, ofmdun, nocurs
 c
       common /ofm1/ ofmb, ofma, ofms, savact, savsav
       common /ofm2/ fid, iofm, na, ci1, ci2, ci0
-      common /ofm3/ fidun, tfpic, hedun, ofmdun, dofcc, nocurs
+      common /ofm3/ fidun, tfpic, hedun, ofmdun, nocurs
       common /ofm4/ xt, yt, tfvp, tfcs
       common /ofm5/ tflab

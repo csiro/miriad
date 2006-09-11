@@ -1,3 +1,5 @@
+#include "miriad.h"
+
 /************************************************************************/
 fortran subroutine bugno(character severity,integer n)
 {

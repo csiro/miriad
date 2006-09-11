@@ -1,5 +1,5 @@
-	integer port,BufSize,MaxItems
-	parameter(port=5001,BufSize=2048,MaxItems=32)
+	integer DefPort,BufSize,MaxItems
+	parameter(DefPort=5001,BufSize=2048,MaxItems=32)
 	integer DEFINE,DISPLAY,CLEAR,CHECK,WAIT,SET
 	integer DONE
 	parameter(DEFINE=1,DISPLAY=2,CLEAR=3,CHECK=4,WAIT=5,SET=6)

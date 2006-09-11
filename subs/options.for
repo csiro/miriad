@@ -9,6 +9,7 @@ c                 so successive KEYMATCH calls with the same KEYWORD
 c                 can be used
 c    rjs  02jul92 Insensitive to case. Input must be in lower case.
 c    nebk 21feb95 Small format changes to KEYMATCH
+c    rjs  27sep95 Improve error messages.
 c************************************************************************
 c*Options -- Get command line options.
 c:user-input
@@ -142,7 +143,7 @@ c
             iopt = i
           endif
         enddo
-        umsg = '"'//string(1:l)//'" is unrecognised for keyword "'//
+        umsg = 'Value "'//string(1:l)//'" is not valid for keyword "'//
      +         key//'". Choose from'
         if(iopt.eq.0) then
           call output (umsg)
@@ -150,7 +151,8 @@ c
             umsg = '   '//types(j)
             call output (umsg)
           end do
-          call bug('f', ' ')
+	  umsg = 'Correct keyword: '//key
+          call bug('f', umsg)
         end if
 c
         nout = nout + 1

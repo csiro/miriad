@@ -1,5 +1,6 @@
-c*sortidxd -- index sort of a an array of double precision values
-c:sorting, indexing
+c* sortidxd -- index sort of a an array of double precision values
+c& pjt
+c: sorting, indexing
 c+
       subroutine sortidxd (n, x ,idx)
 c
@@ -46,8 +47,9 @@ c
       return
       end
 
-c*sortidxr -- index sort of a an array of real values
-c:sorting, indexing
+c* sortidxr -- index sort of a an array of real values
+c& pjt
+c: sorting, indexing
 c+
       subroutine sortidxr (n, x ,idx)
 c
@@ -81,8 +83,9 @@ c
       return
       end
 
-c*sortidxi -- index sort of a an array of integer values
-c:sorting, indexing
+c* sortidxi -- index sort of a an array of integer values
+c& pjt
+c: sorting, indexing
 c+
       subroutine sortidxi (n, x ,idx)
 c
@@ -116,8 +119,9 @@ c
       return
       end
 
-c*sortidxa -- index sort of a an array of character values
-c:sorting, indexing
+c* sortidxa -- index sort of a an array of character values
+c& pjt
+c: sorting, indexing
 c+
       subroutine sortidxa (n, x ,idx)
 c

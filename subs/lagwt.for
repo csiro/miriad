@@ -54,12 +54,13 @@ c--
 c  History:
 c    xxmar95 rjs  Original version.
 c    06apr95 rjs  More comments/documentation.
+c    18sep05 rjs  Eliminate mixed use of doubles/integers arrays.
 c------------------------------------------------------------------------
 	integer MAXCOEFF
 	parameter(MAXCOEFF=31)
 	integer i,ncoeff,ngrid
 	double precision coeff(MAXCOEFF+1),temp,scale
-	integer indx(MAXCOEFF+1),zero(MAXCOEFF+2)
+	integer indx(MAXCOEFF+1),zero(MAXCOEFF+2),pivot(MAXCOEFF+1)
 	integer pEval,pA,pGrid
 	logical convrg
 c	character line*64
@@ -92,7 +93,7 @@ c
 	convrg = .false.
 	dowhile(.not.convrg)
 	  call exchange(ncoeff,coeff,indx,memD(pGrid),ngrid,zero,
-     *	    memD(pEval),memD(pA),convrg)
+     *	    memD(pEval),pivot,memD(pA),convrg)
 	enddo
 c
 c  Report on the spectral sidelobe level.
@@ -130,10 +131,11 @@ c
 c
 	end
 c************************************************************************
-	subroutine exchange(n,coeff,indx,grid,m,zero,eval,a,convrg)
+	subroutine exchange(n,coeff,indx,grid,m,zero,eval,pivot,
+     *	  a,convrg)
 c
 	implicit none
-	integer m,n,indx(n+1),zero(n+2)
+	integer m,n,indx(n+1),zero(n+2),pivot(n+1)
 	double precision coeff(n+1),grid(m,n),eval(m),a(n+1,n+1)
 	logical convrg
 c
@@ -157,9 +159,9 @@ c
 c
 c  Solve for the coefficients.
 c
-	call dgefa(a,n+1,n+1,eval,ifail)
+	call dgefa(a,n+1,n+1,pivot,ifail)
 	if(ifail.ne.0)call bug('f','Matrix inversion failed')
-	call dgesl(a,n+1,n+1,eval,coeff,1)
+	call dgesl(a,n+1,n+1,pivot,coeff,1)
 c
 c  Evaluate the function at out grid.
 c

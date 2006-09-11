@@ -108,6 +108,11 @@ c
 c  Reference:
 c    Liebe, An updated model for millimeter wave propogation in moist air,
 c    Radio Science, 20, 1069-1089 (1985).
+c
+c  History:
+c    rjs 31dec05 Use full Boltzman equation for the astronomical contribution
+c                to Tsys. CMB radiation is not well approximated by Rayleigh-Jeans
+c	         above ~10 GHz.
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 c
@@ -120,7 +125,7 @@ c
 	complex refdry,refvap
 c
 	tau = 0
-	Tb = T0
+	Tb = HMKS*nu/KMKS/(exp(HMKS*nu/KMKS/T0)-1)
 	Ldry = 0
 	Lvap = 0
 c

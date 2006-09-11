@@ -59,6 +59,7 @@ c    rjs  27may99 Better check for no visibility data.
 c    rjs  12oct99 Change in subroutine name only.
 c    rjs  14dec99 Support for visibility datasets as models.
 c    rjs  14aug00 Re-Added "sources" file support.
+c    rjs  18sep05 Type mismatch error.
 c************************************************************************
 c*ModelIni -- Ready the uv data file for processing by the Model routine.
 c&rjs
@@ -94,7 +95,7 @@ c------------------------------------------------------------------------
 c
 	double precision ra,dec,cosd,tol,tmp
 	integer nchan,npnt
-	integer rms
+	real rms
 	real lstart,lwidth,lstep
 	character ltype*64,pbtype*32
 c
