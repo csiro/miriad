@@ -136,12 +136,13 @@ c    24jun05 rjs  Updated gain/elevation curve at 3mm
 c    10aug05 rjs  Fixed horrible bug related to filling in the array.
 c	          Subsequent shadowing calculation would not work!
 c    19aug05 rjs  Include correction for instrumental phase of CA01.
+c    28aug05 rjs  Include correction for instrumental phase of CA05.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
 	character version*(*)
 	integer MAXSELS,ATANT
-	parameter(version='AtFix: version 1.0 19-Aug-05')
+	parameter(version='AtFix: version 1.0 28-Aug-05')
 	parameter(MAXSELS=256,ATANT=6)
 c
 	real sels(MAXSELS),xyz(3*MAXANT)
@@ -1125,6 +1126,9 @@ c------------------------------------------------------------------------
 	complex w
 	double precision HA
 c
+	real factor(6)
+	data factor/1.0,0.0,0.0,0.0,0.25,0.0/
+c
 	call basant(bl,ant1,ant2)
 	if(min(ant1,ant2).lt.1.or.max(ant1,ant2).gt.nant)
      *	  call bug('f','Invalid antenna number')
@@ -1136,12 +1140,10 @@ c
 c  The following is the model of the elevation dependence
 c  of the phase of CA01.
 c
-	if(ant1.eq.1)then
-	  offset = 7.4563 - (15.2243 - 7.2267*el)*el
-	  offset = offset * 1e-3 / CMKS * 1e9
-	else
-	  offset = 0
-	endif
+	offset = 7.4563 - (15.2243 - 7.2267*el)*el
+	offset = offset * 1e-3 / CMKS * 1e9 * 
+     *		(factor(ant1)-factor(ant2))
+c
 	if(abs(delX)+abs(delY)+abs(delZ).ne.0)then
           HA = lst - ra
           cosHA = cos(HA)
