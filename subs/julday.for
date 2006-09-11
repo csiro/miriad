@@ -46,6 +46,7 @@ c                    Major modification of dayjul to handle new formats.
 c                    Removed julfdate() and datefjul() routines (these
 c                    are now handled by dayjul().
 c    rjs    25sep97  Added subroutine julcal.
+c    rjs    09jan97  Make datepars tolerant of spaces in names.
 c***********************************************************************
 c* JulDay -- Format a Julian day into a conventional calendar day.
 c& jm
@@ -598,7 +599,9 @@ c
       if (alpha) then
         do while ((ok) .and. (a .lt. z))
           j = ichar(calday(a:a)) - zero
-          if (Isalphaf(calday(a:a))) then
+	  if (calday(a:a).eq.' ')then
+	    continue
+          else if (Isalphaf(calday(a:a))) then
             if (mon .ne. ' ') then
               ok = .FALSE.
             else
@@ -647,7 +650,9 @@ c
       else
         do while ((ok) .and. (a .lt. z))
           j = ichar(calday(a:a)) - zero
-          if ((j .ge. 0) .and. (j .le. 9)) then
+	  if(calday(a:a).eq.' ')then
+	    continue
+          else if ((j .ge. 0) .and. (j .le. 9)) then
             iarray(k) = (iarray(k) * 10) + j
           else if (calday(a:a) .eq. delim) then
             k = k + 1
@@ -764,6 +769,12 @@ c
         write (*,*) ' '
       enddo
 c
+      string = '18/ 1/95'
+      write (*,*) 'string => ', string
+      call dayjul(string, jul2)
+      write (*,*) 'DayJul => ', jul2
+      write (*,*) ' '
+c      
       string = '98feb01'
       write (*,*) 'string => ', string
       call dayjul(string, jul2)
