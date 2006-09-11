@@ -195,7 +195,8 @@ c    rjs     23jun97 Get gpcal options=nopol,qusolve to work when a pol'n
 c		     solution is already present.
 c    rjs     15aug97 Change to normalisation, options=vsolve and fiddles
 c		     to the doc comments.
-c
+c    rjs     22may98 Turn off xyref on early iterations of weakly polarised
+c		     source.
 c  Bugs:
 c    * Polarisation solutions when using noamp are wrong! The equations it
 c      solves for have a fudge to account for a bias introduced by the
@@ -1301,18 +1302,18 @@ c------------------------------------------------------------------------
 	complex expix(MAXANT),expiy(MAXANT),dD(2,MAXANT),Sum1,Sum2
 	complex dDx,dDy
 	real b(6*MAXANT+1),A((6*MAXANT+1)*(6*MAXANT+1)),temp,dv
-	logical polref1
+	logical polref1,xyref1
 c
 c  Determine if we are really going to do polref.
 c
 	polref1 = polref
-	if(polref)then
-	  if(qusolve)then
-	    temp = flux(2)*flux(2) + flux(3)*flux(3) + flux(4)*flux(4)
-	    if(temp.lt.1e-4*flux(1)*flux(1))then
-	      call bug('w','Turning off POLREF for this iteration')
-	      polref1 = .false.
-	    endif
+	xyref1  = xyref
+	if((polref.or.xyref).and.qusolve)then
+	  temp = flux(2)*flux(2) + flux(3)*flux(3) + flux(4)*flux(4)
+	  if(temp.lt.1e-4*flux(1)*flux(1))then
+	    call bug('w','Turning off XYREF/POLREF for this iteration')
+	    polref1 = .false.
+	    xyref1 = .false.
 	  endif
 	endif
 c
@@ -1321,7 +1322,7 @@ c  as the leakage terms. First determine how many unknowns there are, and
 c  assign a index to each of them.
 c  QUvar,Tvar,Dvar give the indices for Q, antenna phase, and leakage terms.
 c
-	call GetVarNo(nants,nbl,polsol,polref1,qusolve,xysol,xyref,
+	call GetVarNo(nants,nbl,polsol,polref1,qusolve,xysol,xyref1,
      *	  notrip,refant,present,QUvar,Tvar,Dvar,nvar,Vars)
 c
 c  We are going to solve the system Ax = b. Generate A and b.
