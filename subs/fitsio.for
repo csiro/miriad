@@ -52,15 +52,12 @@ c    lss  17dec96    Change ftabget routines to handle reading single
 c		     rows of a column.
 c    rjs  14mar97    Handle FITS tables with FORM strings of type 'C'.
 c		     Handle (simplistically) variable length array facility.
+c    rjs  18mar97    Remove checks for alignment violation, as this requirement
+c		     in hio has been eliminated.
 c
 c  Bugs and Shortcomings:
-c    * IF frequency axis is not handled on output or uv data.
-c    * YYYUUUCCCKKK. See ftabGetD: Miriad's alignment requirements are
-c      really more relaxed if we are not on a Cray. FITS files do not obey
-c      the Miriad alignment requirement. It would be a large amount of work
-c      to circumvent this. For the time being just ignore the problem!!
-c      Places where the alignment requirements are violated are in
-c      AIPS SU table (RESTFREQ) and AIPS AN table (POLAA, POLAB).
+c    * IF frequency axis is not handled on output of uv data.
+c
 c  Basic FITS Data I/O:
 c  ====================
 c
@@ -3100,10 +3097,6 @@ c
 	endif
 c
 	c = string(i:i)
-c	if(c.eq.'C')then
-c	  ColCnt = 2*ColCnt
-c	  c = 'E'
-c	endif
 	ColForm = index('IJAEDXLCMP',c)
 	if(ColForm.eq.0)call bug('f',
      *	  'Bad FORM string in FITS table description')
@@ -3215,16 +3208,7 @@ c
 	  call bug('f',umsg)
 	endif
 c
-c  Check that the i/o routines alignment requirement is met.
-c
 	size = ftabSize(ColForm(i,lu))
-#ifndef sun
-	if(mod(ColOff(i,lu),size/8).ne.0)then
-	  call bug('w','Alignment violation, while reading FITS table')
-	  umsg = 'Offending parameter is '//name
-	  call bug('f',umsg)
-	endif
-#endif
 c
 c  All it OK. So just read the data.
 c
@@ -3305,16 +3289,7 @@ c
 	  call bug('f',umsg)
 	endif
 c
-c  Check that the i/o routines alignment requirement is met.
-c
 	size = ftabSize(ColForm(i,lu))
-#ifndef sun
-	if(mod(ColOff(i,lu),size/8).ne.0)then
-	  call bug('w','Alignment violation, while reading FITS table')
-	  umsg = 'Offending parameter is '//name
-	  call bug('f',umsg)
-	endif
-#endif
 c
 c  All it OK. So just read the data.
 c
@@ -3388,16 +3363,7 @@ c  Does row exist?
 c
 	if(irow.gt.rows(lu))call bug('f','Requested row does not exist')
 c
-c  Check that the i/o routines alignment requirement is met.
-c
 	size = ftabSize(ColForm(i,lu))
-#ifndef sun
-	if(mod(ColOff(i,lu),size/8).ne.0)then
-	  call bug('w','Alignment violation, while reading FITS table')
-	  umsg = 'Offending parameter is '//name
-	  call bug('f',umsg)
-	endif
-#endif
 c
 c  All it OK. So just read the data.
 c
@@ -3474,20 +3440,7 @@ c
 	  call bug('f',umsg)
 	endif
 c
-c  Check that the i/o routines alignment requirement is met.
-c  YYYUUUCCCKKK. Miriad's alignment requirements are really more
-c  relaxed if we are not on a Cray. FITS files do not obey the Miriad
-c  alignment requirement. It would be a large amount of work to circumvent
-c  this. For the time being just ignore the problem!!
-c
 	size = ftabSize(ColForm(i,lu))
-	if(mod(ColOff(i,lu),size/8).ne.0)then
-#ifdef cft
-	  call bug('w','Alignment violation, while reading FITS table')
-	  umsg = 'Offending parameter is '//name
-	  call bug('f',umsg)
-#endif
-	endif
 c
 c  All it OK. So just read the data.
 c
