@@ -69,6 +69,8 @@ c    rjs  06dec95 line=chan,0 defaults to selecting all channels.
 c    nebk 10dec95 Be a bit cleverer (?) with reissuing calibration messages
 c    rjs  28may96 Initialise "line" variable to a blank!
 c    rjs  31jul96 Support QQ and UU.
+c    rjs  16aug96 Change phasing convention for circularly polarised feeds,
+c		  and add QQ and UU support for circulars.
 c
 c  User-Callable Routines:
 c    uvDatInp(key,flags)
@@ -852,9 +854,10 @@ c  Form Stokes Q from raw polarisations.
 c
 	  else if(Pols(i).eq.PolQ)then
 	    if(circx)then
+	      if(NoChi)call uvPolChi(NoChi,Cos2Chi,Sin2Chi)
 	      ncoeff(i) = 2
-	      coeffs(1,i) = (0.5,0.0)
-	      coeffs(2,i) = (0.5,0.0)
+	      coeffs(1,i) = (0.5,0.0) * cmplx(Cos2Chi,-Sin2Chi)
+	      coeffs(2,i) = (0.5,0.0) * cmplx(Cos2Chi, Sin2Chi)
 	      type(1) = PolRL
 	      type(2) = PolLR
 	    else if(lin2.and.linx)then
@@ -874,9 +877,10 @@ c  Form Stokes U from raw polarisations.
 c
 	  else if(Pols(i).eq.PolU)then
 	    if(circx)then
+	      if(NoChi)call uvPolChi(NoChi,Cos2Chi,Sin2Chi)
 	      ncoeff(i) = 2
-	      coeffs(1,i) = (0.0,-0.5)
-	      coeffs(2,i) = (0.0, 0.5)
+	      coeffs(1,i) = (0.0,-0.5) * cmplx(Cos2Chi, Sin2Chi)
+	      coeffs(2,i) = (0.0, 0.5) * cmplx(Cos2Chi,-Sin2Chi)
 	      type(1) = PolLR
 	      type(2) = PolRL
 	    else if(lin2.and.linx)then
@@ -909,17 +913,33 @@ c
 	      type(2) = PolYX
 	    endif
 	  else if(Pols(i).eq.PolQQ)then
-	    ncoeff(i) = 2
-	    coeffs(1,i) = ( 0.5,0.0)
-	    coeffs(2,i) = (-0.5,0.0)
-	    type(1) = PolXX
-	    type(2) = PolYY
+	    if(circx)then
+	      ncoeff(i) = 2
+	      coeffs(1,i) = (0.5,0.0)
+	      coeffs(2,i) = (0.5,0.0)
+	      type(1) = PolRL
+	      type(2) = PolLR
+	    elseif(lin2)then
+	      ncoeff(i) = 2
+	      coeffs(1,i) = ( 0.5,0.0)
+	      coeffs(2,i) = (-0.5,0.0)
+	      type(1) = PolXX
+	      type(2) = PolYY
+	    endif
 	  else if(Pols(i).eq.PolUU)then
-	    ncoeff(i) = 2
-	    coeffs(1,i) = (0.5,0.0)
-	    coeffs(2,i) = (0.5,0.0)
-	    type(1) = PolXY
-	    type(2) = PolYX
+	    if(circx)then
+	      ncoeff(i) = 2
+	      coeffs(1,i) = (0.0,-0.5)
+	      coeffs(2,i) = (0.0, 0.5)
+	      type(1) = PolLR
+	      type(2) = PolRL
+	    else if(linx)then
+	      ncoeff(i) = 2
+	      coeffs(1,i) = (0.5,0.0)
+	      coeffs(2,i) = (0.5,0.0)
+	      type(1) = PolXY
+	      type(2) = PolYX
+	    endif
 	  endif
 c
 c  If polarisation leakage correction should be performed, but we do not
