@@ -55,11 +55,11 @@ c	            values are checked for sampler statistics being within
 c	            3% of 17.3%, or 0.5% of 50.0%, that the XY phase
 c	            is within 10 degrees of its running median, and that
 c	            the XY amplitudes are within 1 Jy or 10% of its running
-c	            median.
-c         'mmrelax' This is a subset of options=relax. It flags based on
-c	            sampler statistics, but skips tests based on the XY phase
-c	            and XY amplitude. This is appropriate for the interim
-c	            3mm system, which does not have a noise diode system.
+c	            median. The tests for xy phase and amplitude are
+c	            skipped for 3mm data (as there is no noise calibration
+c	            signal).
+c         'mmrelax' This option is ignored, and is present for historical
+c	            reasons.
 c	  'unflag'  Save any data that is flagged. By default ATLOD
 c	            discards most data that is flagged.
 c	  'samcorr' Correct the pre-Dec93 data for incorrect sampler
@@ -197,6 +197,7 @@ c    rjs  25may02 Generate "tcorr" variable to keep track of whether
 c		  Tsys scaling has been performed or not.
 c    rjs  16jul03 Do not flip sign of XY and YX correlations for 12mm
 c                 package.
+c    rjs  19jul03 Removed option=mmrelax, and made this automatic!
 c
 c  Program Structure:
 c    Miriad atlod can be divided into three rough levels. The high level
@@ -222,13 +223,13 @@ c------------------------------------------------------------------------
 	integer MAXFILES
 	parameter(MAXFILES=128)
 	character version*(*)
-	parameter(version='AtLod: version 1.0 16-Jul-03')
+	parameter(version='AtLod: version 1.0 19-Jul-03')
 c
 	character in(MAXFILES)*64,out*64,line*64
 	integer tno
 	integer ifile,ifsel,nfreq,iostat,nfiles,i
 	double precision rfreq(2)
-	logical doauto,docross,docomp,dosam,relax,mmrelax,unflag,dohann
+	logical doauto,docross,docomp,dosam,relax,unflag,dohann
 	logical dobary,doif,birdie,dowt,dopmps,doxyp,polflag,hires,sing
 	integer fileskip,fileproc,scanskip,scanproc
 c
@@ -248,7 +249,7 @@ c
      *	  call bug('f','Output name must be given')
         call keyi('ifsel',ifsel,0)
         call mkeyd('restfreq',rfreq,2,nfreq)
-	call getopt(doauto,docross,docomp,dosam,doxyp,relax,mmrelax,
+	call getopt(doauto,docross,docomp,dosam,doxyp,relax,
      *	  sing,unflag,dohann,birdie,dobary,doif,dowt,dopmps,polflag,
      *	  hires)
 	call keyi('nfiles',fileskip,0)
@@ -306,7 +307,7 @@ c
 	      call liner('Processing file '//in(ifile))
 	    endif
 	    call RPDisp(in(i),scanskip,scanproc,doauto,docross,
-     *		relax,mmrelax,sing,unflag,polflag,ifsel,rfreq,nfreq,
+     *		relax,sing,unflag,polflag,ifsel,rfreq,nfreq,
      *		iostat)
 	  endif
 	enddo
@@ -326,12 +327,11 @@ c
 c
 	end
 c************************************************************************
-	subroutine GetOpt(doauto,docross,docomp,dosam,doxyp,relax,
-     *	  mmrelax,sing,
+	subroutine GetOpt(doauto,docross,docomp,dosam,doxyp,relax,sing,
      *	  unflag,dohann,birdie,dobary,doif,dowt,dopmps,polflag,hires)
 c
 	implicit none
-	logical doauto,docross,dosam,relax,mmrelax,unflag,dohann,dobary
+	logical doauto,docross,dosam,relax,unflag,dohann,dobary
 	logical docomp,doif,birdie,dowt,dopmps,doxyp,polflag,hires,sing
 c
 c  Get the user options.
@@ -353,7 +353,6 @@ c    dowt	Reweight the lag spectrum.
 c    dopmps	Undo "poor man's phase switching"
 c    polflag	Flag all polarisations if any are bad.
 c    hires      Convert bin-mode to high time resolution data.
-c    mmrelax    
 c    sing	Single dish mode.
 c------------------------------------------------------------------------
 	integer nopt
@@ -381,15 +380,13 @@ c------------------------------------------------------------------------
 	polflag = .not.present(13)
 	hires   = present(14)
 	dopmps  = present(15)
-	mmrelax = present(16)
+c
+c  Option mmrelax is now ignored (set automatically!).
+c	mmrelax = present(16)
 	sing    = present(17)
 c
 	if((dosam.or.doxyp).and.relax)call bug('f',
      *	  'You cannot use options samcorr or xycorr with relax')
-	if(doxyp.and.mmrelax)call bug('f',
-     *	  'You cannot use options xycorr with mmrelax')
-	if(relax.and.mmrelax)call bug('f',
-     *	  'You cannot use options=relax and mmrelax together')
 	end
 c************************************************************************
 	subroutine Fixed(tno,dobary)
@@ -1668,13 +1665,13 @@ c------------------------------------------------------------------------
 	end
 c************************************************************************
 	subroutine RPDisp(in,scanskip,scanproc,doauto,docross,relax,
-     *	  mmrelax,sing,unflag,polflag,ifsel,userfreq,nuser,iostat)
+     *	  sing,unflag,polflag,ifsel,userfreq,nuser,iostat)
 c
 	implicit none
 	character in*(*)
 	integer scanskip,scanproc,ifsel,nuser,iostat
 	double precision userfreq(*)
-	logical doauto,docross,relax,mmrelax,unflag,polflag,sing
+	logical doauto,docross,relax,unflag,polflag,sing
 c
 c  Process an RPFITS file. Dispatch information to the
 c  relevant Poke routine. Then eventually flush it out with PokeFlsh.
@@ -1685,7 +1682,6 @@ c    scanproc	Number of scans to process. If 0, process all scans.
 c    doauto	Save autocorrelation data.
 c    docross	Save crosscorrelation data.
 c    relax	Save data even if the SYSCAL record is bad.
-c    mmrelax	Save data even if the XY phase/XY amp are bad.
 c    sing
 c    polflag	Flag all polarisations if any are bad.
 c    unflag	Save data even though it may appear flagged.
@@ -1701,7 +1697,7 @@ c------------------------------------------------------------------------
 	include 'rpfits.inc'
 	integer scanno,i1,i2,baseln,i,id,j
 	logical NewScan,NewSrc,NewFreq,NewTime,Accum,ok,badbit
-	logical flags(MAXPOL),corrfud,kband
+	logical flags(MAXPOL),corrfud,kband,wband
 	integer jstat,flag,bin,ifno,srcno,simno,Ssrcno,Ssimno
 	integer If2Sim(MAX_IF),nifs(MAX_IF),Sim2If(MAXSIM,MAX_IF)
 	integer Sif(MAX_IF)
@@ -1743,6 +1739,9 @@ c
 	    nxyp(i,j) = 0
 	  enddo
 	enddo
+c
+	kband = .false.
+	wband = .false.
 c
 c  Initialise flagging information.
 c
@@ -1846,7 +1845,7 @@ c
      *		sc_cal,if_invert,polflag,
      *		xyphase,xyamp,xtsys,ytsys,xsamp,ysamp,
      *		chi,tcorr,
-     *		nxyp,xyp,ptag,xya,atag,MAXXYP,xflag,yflag,mmrelax)
+     *		nxyp,xyp,ptag,xya,atag,MAXXYP,xflag,yflag,wband)
 c
 c  Data record. Check whether we want to accept it.
 c  If OK, and we have a new scan, calculate the new scan info.
@@ -1934,11 +1933,13 @@ c
 	        if(an_found)call PokeAnt(nant,x,y,z,sing)
 	        if(NewScan.or.NewFreq)then
 		  kband = .false.
+		  wband = .false.
 		  do i=1,nifs(simno)
 		    id = Sim2If(i,simno)
 		    if(nuser.ge.i)rfreq = 1e9*userfreq(i)
 		    kband = kband.or.
      *			   (if_freq(id).gt.13e9.and.if_freq(id).lt.28e9)
+		    wband = wband.or.if_freq(id).gt.75e9
 		    call PokeIF(i,if_nfreq(id),if_invert(id)*if_bw(id),
      *			if_freq(id),if_ref(id),rfreq,
      *			if_nstok(id),if_cstok(1,id))
