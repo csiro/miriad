@@ -94,6 +94,10 @@ c	            Parkes). This is usually used together with option 'relax'.
 c	  'caldata' Save visibilities associated with certain system
 c	            calibrations. Currently this consists of reference pointing
 c	            calibration and "paddle" measurements.
+c	  'nocacal' Flag data that atlod suspects is taken during a CACAL scann.
+c		    There is potential for error in atlod determining which data
+c		    are and are not part of a cacal scan. Use this with caution.
+c         'nopol'   Discard data that is not "parallel hand" Stokes type.
 c@ nfiles
 c	This gives one or two numbers, being the number of files to skip,
 c	followed by the number of files to process. This is only
@@ -211,6 +215,12 @@ c    rjs  15feb04 Save input RPFITS name and calcode.
 c    rjs  10jun04 Handle change in xy correlation at 12mm.
 c    rjs  11sep04 Add rain guage and seeing monitor data to output.
 c    rjs  23oct04 Fix pntra and pntdec bug - always write them out.
+c    rjs  16jun05 Detect CACAL data. Better flagging stats messages.
+c    rjs  17sep05 Correct date for sampler correction code.
+c    rjs  15oct05 Check for buffer overflows. Increase buffer size. Better
+c	          flagging statistics.
+c    rjs  02jan06 Save reference pointing information. 8MHz debirdie algorithm.
+c		  Added nopol option.
 c
 c  Program Structure:
 c    Miriad atlod can be divided into three rough levels. The high level
@@ -233,18 +243,18 @@ c    and flushes it to the output file when all is ready. The Poke
 c    layer is in charge of any massaging that needs to be done to the
 c    data (e.g. hanning smoothing, sampler correction).
 c------------------------------------------------------------------------
-	integer MAXFILES
-	parameter(MAXFILES=128)
+	integer MAXFILES,MAXTIMES
+	parameter(MAXFILES=128,MAXTIMES=32)
 	character version*(*)
-	parameter(version='AtLod: version 1.0 23-Oct-04')
+	parameter(version='AtLod: version 1.0 02-Jan-06')
 c
-	character in(MAXFILES)*64,out*64,line*64
-	integer tno
+	character in(MAXFILES)*64,out*64,line*64,t1*18,t2*18
+	integer tno,ntimes
 	integer ifile,ifsel,nfreq,iostat,nfiles,i
-	double precision rfreq(2)
+	double precision rfreq(2),times(2,MAXTIMES)
 	logical doauto,docross,docomp,dosam,relax,unflag,dohann
 	logical dobary,doif,birdie,dowt,dopmps,doxyp,doop
-	logical polflag,hires,sing,docaldat
+	logical polflag,hires,sing,docaldat,nocacal,nopol
 	integer fileskip,fileproc,scanskip,scanproc
 c
 c  Externals.
@@ -265,8 +275,9 @@ c
         call mkeyd('restfreq',rfreq,2,nfreq)
 	call getopt(doauto,docross,docaldat,docomp,dosam,doxyp,doop,
      *	  relax,
-     *	  sing,unflag,dohann,birdie,dobary,doif,dowt,dopmps,polflag,
-     *	  hires)
+     *	  sing,unflag,dohann,birdie,dobary,doif,dowt,dopmps,
+     *	  nopol,polflag,
+     *	  hires,nocacal)
 	call keyi('nfiles',fileskip,0)
 	call keyi('nfiles',fileproc,nfiles-fileskip)
 	if(nfiles.gt.1.and.fileproc+fileskip.gt.nfiles)
@@ -279,6 +290,7 @@ c
      *	  call bug('f','Invalid NSCANS parameter')
 	call keyfin
 c
+	call cacalIni
 c
 c  Open the output and initialise it.
 c
@@ -322,8 +334,8 @@ c
 	      call liner('Processing file '//in(ifile))
 	    endif
 	    call RPDisp(in(i),scanskip,scanproc,doauto,docross,
-     *		docaldat,relax,sing,unflag,polflag,ifsel,rfreq,nfreq,
-     *		iostat)
+     *		docaldat,relax,sing,unflag,nopol,polflag,ifsel,
+     *		rfreq,nfreq,iostat)
 	  endif
 	enddo
 c
@@ -337,25 +349,81 @@ c
 	  call hiswrite(tno,
      *		 'ATLOD: Prematurely finishing because of errors')
 	endif
+	call uvflush(tno)
+c
+c  Report on what appear to be runs on cacal.
+c
+	call cacalFin(times,MAXTIMES,ntimes)
+	call liner(' ')
+	if(ntimes.eq.0)call liner('No CACAL data was detected')
+	do i=1,ntimes
+	  call julday(times(1,i),'H',t1)
+	  call julday(times(2,i),'H',t2)
+	  line = 'Probable CACAL data from '//t1//' to '//t2
+	  call liner(line)
+	enddo
+c
+c  All said and done.
+c
 	call hisclose(tno)
 	call uvclose(tno)
+c
+	if(nocacal.and.ntimes.gt.0)then
+	  call output('Flagging probable CACAL data ...')
+	  call uvopen(tno,out,'old')
+	  call caflag(tno,times,ntimes)
+	  call uvclose(tno)
+	endif
+c
+	end
+c************************************************************************
+	subroutine caflag(tno,times,ntimes)
+c
+	implicit none
+	integer tno,ntimes
+	double precision times(2,ntimes)
+c------------------------------------------------------------------------
+	include 'maxdim.h'
+	complex data(MAXCHAN)
+	logical flags(MAXCHAN),doflag
+	double precision preamble(4),time
+	integer nchan,i
+c
+	call uvrewind(tno)
+	call uvread(tno,preamble,data,flags,MAXCHAN,nchan)
+	dowhile(nchan.gt.0)
+	  doflag = .false.
+	  time = preamble(3)
+	  do i=1,ntimes
+	    doflag = doflag.or.
+     *		     (times(1,i).le.time.and.time.lt.times(2,i))
+	  enddo
+	  if(doflag)then
+	    do i=1,nchan
+	      flags(i) = .false.
+	    enddo
+	    call uvflgwr(tno,flags)
+	  endif
+	  call uvread(tno,preamble,data,flags,MAXCHAN,nchan)
+	enddo
 c
 	end
 c************************************************************************
 	subroutine GetOpt(doauto,docross,docaldat,docomp,dosam,doxyp,
      *	  doop,relax,sing,
-     *	  unflag,dohann,birdie,dobary,doif,dowt,dopmps,polflag,hires)
+     *	  unflag,dohann,birdie,dobary,doif,dowt,dopmps,
+     *	  nopol,polflag,hires,nocacal)
 c
 	implicit none
 	logical doauto,docross,dosam,relax,unflag,dohann,dobary,doop
 	logical docomp,doif,birdie,dowt,dopmps,doxyp,polflag,hires,sing
-	logical docaldat
+	logical docaldat,nocacal,nopol
 c
 c  Get the user options.
 c
 c  Output:
 c    doauto	Set if the user want autocorrelation data.
-c    docross	Set if the user wants cross-correlationdata.
+c    docross	Set if the user wants cross-correlation data.
 c    docaldat	Do not flag calibration data.
 c    docomp	Write compressed data.
 c    dosam	Correct for sampler statistics.
@@ -370,12 +438,13 @@ c    dobary	Compute barycentric radial velocities.
 c    birdie
 c    dowt	Reweight the lag spectrum.
 c    dopmps	Undo "poor man's phase switching"
+c    nopol	Select only parallel-hand polarisations.
 c    polflag	Flag all polarisations if any are bad.
 c    hires      Convert bin-mode to high time resolution data.
 c    sing	Single dish mode.
 c------------------------------------------------------------------------
 	integer nopt
-	parameter(nopt=19)
+	parameter(nopt=21)
 	character opts(nopt)*8
 	logical present(nopt)
 	data opts/'noauto  ','nocross ','compress','relax   ',
@@ -383,7 +452,7 @@ c------------------------------------------------------------------------
      *		  'noif    ','birdie  ','reweight','xycorr  ',
      *		  'opcorr  ',
      *		  'nopflag ','hires   ','pmps    ','mmrelax ',
-     *		  'single  ','caldata '/
+     *		  'single  ','caldata ','nocacal ','nopol   '/
 	call options('options',opts,present,nopt)
 	doauto = .not.present(1)
 	docross = .not.present(2)
@@ -406,6 +475,8 @@ c  Option mmrelax is now ignored (set automatically!).
 c	mmrelax = present(16)
 	sing    = present(18)
 	docaldat= present(19)
+	nocacal = present(20)
+	nopol   = present(21)
 c
 	if((dosam.or.doxyp.or.doop).and.relax)call bug('f',
      *	  'You cannot use options samcorr, xycorr or opcorr with relax')
@@ -558,19 +629,23 @@ c
 	if(fgbad.gt.0)call liner(
      *		'Number of invalid data records: '//itoaf(fgbad))
 	call output(' ')
-	call liner('Summary of spectra flagged')
-	call liner('Flagging Reason            Fraction')
-	call liner('---------------            --------')
-	if(fgoffsrc.gt.0)call liner(
+	if(fgoffsrc+fginvant+fgsysc+fgsam+fgcal.gt.0)then
+	  call liner('Summary of spectra flagged')
+	  call liner('Flagging Reason            Fraction')
+	  call liner('---------------            --------')
+	  if(fgoffsrc.gt.0)call liner(
      *		'Antenna off-source/off-line '//pcent(fgoffsrc,nrec))
-	if(fginvant.gt.0)call liner(
+	  if(fginvant.gt.0)call liner(
      *		'Antenna disabled            '//pcent(fginvant,nrec))
-	if(fgsysc.gt.0)call liner(
+	  if(fgsysc.gt.0)call liner(
      *		'Missing SYSCAL record       '//pcent(fgsysc,nrec))
-	if(fgsam.gt.0)call liner(
+	  if(fgsam.gt.0)call liner(
      *		'Bad SYSCAL values           '//pcent(fgsam,nrec))
-	if(fgcal.gt.0)call liner(
+	  if(fgcal.gt.0)call liner(
      *		'Discarded cal data          '//pcent(fgcal,nrec))
+	else
+	  call liner('There was no flagged data')
+	endif
 	call liner('---------------------------------------')
 c
 	end
@@ -602,16 +677,25 @@ c
 	call hiswrite(tno,line)
 	end
 c************************************************************************
-	subroutine sortcds(ncard,card,sctype)
+	subroutine sortcds(ncard,card,sctype,refpnt,nants,okref)
 c
 	implicit none
-	integer ncard
+	integer ncard,nants
+	logical okref
+	real refpnt(2,nants)
 	character card(ncard)*(*),sctype*(*)
 c
 c  Write out selected cards to the history file.
 c
 c------------------------------------------------------------------------
-	integer i
+	integer i,cacalval
+	logical ok
+c
+	okref = .false.
+	do i=1,nants
+	  refpnt(1,i) = 0
+	  refpnt(2,i) = 0
+	enddo
 c
 	do i=1,ncard
 c	  if(card(i)(1:8).eq.'OBSLOG' .or.card(i)(1:8).eq.'ATTEN'   .or.
@@ -621,11 +705,86 @@ c     *	    card(i)(1:8).eq.'POINTCOR'.or.card(i)(1:8).eq.'POINTINF'
 c     *								)then
 	  if(card(i)(1:8).eq.'OBSLOG')then
 	    call liners(card(i)(20:))
+	  else if(card(i)(1:8).eq.'POINTCOR')then
+	    call crackpnt(card(i),refpnt,nants,ok)
+	    if(.not.ok)then
+	      call bug('w','Error decoding reference pointing card')
+	    else
+	      okref = .true.
+	    endif
+	  else if(card(i)(1:8).eq.'CACALCNT')then
+	    call cardvali(card(i),cacalval)
+	    call cacalCnt(cacalval)
 	  else if(card(i)(1:8).eq.'SCANTYPE')then
 	    sctype = card(i)(11:)
 	    call lcase(sctype)
 	  endif
 	enddo
+c
+	end
+c************************************************************************
+	subroutine crackpnt(line,refpnt,nants,ok)
+c
+	implicit none
+	character line*(*)
+	integer nants
+	real refpnt(2,nants)
+	logical ok
+c
+c------------------------------------------------------------------------
+	integer k1,k2,iant,length
+	character token*8
+c
+c  Externals.
+c
+	integer len1
+c
+	ok = .false.
+	k1 =10
+	k2 = len1(line)
+c
+	call getfield(line,k1,k2,token,length)
+	if(token(1:3).ne.'CA0')return
+	iant = ichar(token(4:4)) - ichar('0')
+	if(iant.le.0.or.iant.gt.nants)return
+	call getfield(line,k1,k2,token,length)
+	if(token.ne.'Az=')return
+	call getfield(line,k1,k2,token,length)
+	if(length.eq.0)return
+	call atorf(token,refpnt(1,iant),ok)
+	if(.not.ok)return
+	call getfield(line,k1,k2,token,length)
+	if(token.ne.'El=')return
+	call getfield(line,k1,k2,token,length)
+	if(length.eq.0)return
+	call atorf(token,refpnt(2,iant),ok)
+	if(.not.ok)return
+	ok = .true.
+	end
+c************************************************************************
+	subroutine cardvali(card,ival)
+c
+	implicit none
+	integer ival
+	character card*(*)
+c------------------------------------------------------------------------
+	integer i,j
+	double precision out
+	logical ok
+c
+        i = index(card,'=') + 1
+        dowhile(card(i:i).eq.' '.and.i.le.len(card))
+          i = i + 1
+        enddo
+        j = i - 1
+        do while(card(j+1:j+1).ne.' '.and.card(j+1:j+1).ne.'/')
+          j = j + 1
+        enddo   
+        ok = .false.   
+        if(j.ge.i)call atodf(card(i:j),out,ok)
+        if(.not.ok)
+     *      call bug('f','Conversion error in decoding FITS card')
+	ival = nint(out)
 c
 	end
 c************************************************************************
@@ -773,6 +932,22 @@ c
 	enddo
 	mcount = mcount1
 c
+	end
+c************************************************************************
+	subroutine pokeref(refpnt1,nant1)
+c
+	implicit none
+	integer nant1
+	real refpnt1(2,nant1)
+c------------------------------------------------------------------------
+	include 'atlod.h'
+	integer i
+c
+	do i=1,nant1
+	  refpnt(1,i) = refpnt1(1,i)
+	  refpnt(2,i) = refpnt1(2,i)
+	enddo
+	refnant = nant1
 	end
 c************************************************************************
 	subroutine PokeSC(ant,if,chi1,tcorr1,
@@ -1012,6 +1187,14 @@ c
 	if(dowt.and.nfreq1.eq.ATCONT)
      *	  call Reweight(vis,cscr,rscr,nstoke(if),nfreq1,wts)
 c
+c  Do the 8 MHz de-birdie'ing operation.
+c
+	if(birdie.and.
+     *	   abs(abs(nfreq(if)*sdf(if))-0.008).lt.0.0001)then
+	  call do8(vis,nstoke(if),nfreq(if),sfreq(if),sdf(if))
+	endif
+	
+c
 c  Allocate buffer slots for each polarisation. Save the flags, Copy the
 c  data to the output. Do sampler corrections.
 c
@@ -1049,6 +1232,47 @@ c
 	    endif
 	  endif
 	enddo
+c
+	end
+c************************************************************************
+	subroutine do8(vis,npol,nfreq,sfreq,sdf)
+c
+	implicit none
+	integer nfreq,npol
+	complex vis(npol,nfreq)
+	double precision sfreq,sdf
+c------------------------------------------------------------------------
+	include 'maxdim.h'
+	double precision flo
+	integer chan,i,j,n
+	complex cbuff(MAXDIM+1),ctmp
+	real    rbuff(2*MAXDIM)
+c
+	if(abs(sdf).eq.0)call bug('f',
+     *	  'Cannot use options=birdie when channel width is unknown')
+	flo = sfreq + 0.5*(nfreq-1)*sdf
+	flo = 0.128d0 * nint(flo/0.128d0)
+	chan = nint((flo - sfreq)/sdf) + 1
+	if(chan.le.0) chan = chan + nint(0.128d0/abs(sdf))
+	if(chan.le.nfreq)then
+	  if(nfreq.gt.MAXDIM+1)
+     *	    call bug('f','Buffer overflow when debirding 8MHz')
+	  n = 2*nfreq-2
+	  do j=1,npol
+	    do i=1,nfreq
+	      cbuff(i) = vis(j,i)
+	    enddo
+	    ctmp = cbuff(chan)
+	    cbuff(chan) = 0
+	    call fftcr(cbuff,rbuff,-1,n)
+	    rbuff(nfreq) = 0
+	    call fftrc(rbuff,cbuff,1,n)
+	    cbuff(chan) = n*ctmp
+	    do i=1,nfreq
+	      vis(j,i) = cbuff(i)/n
+	    enddo
+	  enddo
+	endif
 c
 	end
 c************************************************************************
@@ -1187,10 +1411,12 @@ c  Flush out a saved integration.
 c------------------------------------------------------------------------
 	include 'atlod.h'
 	include 'mirconst.h'
+	integer NDATA
+	parameter(NDATA=MAXCHAN*MAXWIN)
 	integer i1,i2,if,p,bl,nchan,npol,ipnt,ischan(ATIF)
 	integer tbinhi,tbin,binhi,binlo,bin
-	complex vis(MAXCHAN)
-	logical flags(MAXCHAN)
+	complex vis(NDATA)
+	logical flags(NDATA)
 	double precision preamble(5),vel,lst,tdash,az,el
 	real buf(3*ATANT*ATIF),fac(ATIF),freq0(ATIF),Tb(ATIF),tfac
 	real jyperk
@@ -1236,6 +1462,12 @@ c
 	else
 	  tdash  = time
 	  tbinhi = 1
+	endif
+c
+c  Write out the reference pointing data.
+c
+	if(refnant.gt.0)then
+	  call uvputvrr(tno,'refpnt',refpnt,2*refnant)
 	endif
 c
 c  Write out the met data.
@@ -1395,7 +1627,7 @@ c
 	          do p=1,nstoke(1)
 		    call GetDat(data,nused,pnt(1,p,bl,bin),
      *			flag(1,p,bl,bin),nfreq,fac,bchan,nifs,
-     *			vis,flags,nchan)
+     *			vis,flags,NDATA,nchan)
 		    if(nchan.gt.0)then
 		      if(.not.hires)call uvputvri(tno,'bin',bin,1)
 		      call uvputvri(tno,'pol',polcode(1,p),1)
@@ -1429,6 +1661,8 @@ c
 	  nbin(if) = 0
 	enddo	  
 c
+	mcount = 0
+	refnant = 0
 	nused = 0
 	newsc   = .false.
 	newfreq = .false.
@@ -1726,12 +1960,13 @@ c
 	end
 c************************************************************************
 	subroutine GetDat(data,nvis,pnt,flag,nfreq,fac,bchan,nifs,
-     *						vis,flags,nchan)
+     *					vis,flags,ndata,nchan)
 c
 	implicit none
 	integer nvis,nifs,pnt(nifs),nfreq(nifs),bchan(nifs),nchan
-	logical flag(nifs),flags(*)
-	complex vis(*),data(nvis)
+	integer ndata
+	logical flag(nifs),flags(ndata)
+	complex vis(ndata),data(nvis)
 	real fac(nifs)
 c
 c  Construct a visibility record constructed from multiple IFs.
@@ -1741,6 +1976,8 @@ c
 	nchan = 0
 	nchand = 0
 	do n=1,nifs
+	  if(nchand+nfreq(n).gt.ndata)
+     *			call bug('f','Buffer overflow in GetDat')
 	  ipnt = pnt(n)
 	  if(ipnt.gt.0)then
 	    if(nchan.lt.nchand)then
@@ -1812,7 +2049,7 @@ c  Correct the data for the incorrect sampler statistics.
 c
 c------------------------------------------------------------------------
 	double precision J20Jun91,J21Aug93,J11Dec93
-	parameter(J20Jun91=24484527.5d0,J21Aug93=2449220.5d0)
+	parameter(J20Jun91=2448427.5d0,J21Aug93=2449220.5d0)
 	parameter(J11Dec93=2449332.5d0)
 	integer PolXX,PolYY,PolXY,PolYX
 	parameter(PolXX=-5,PolYY=-6,PolXY=-7,PolYX=-8)
@@ -1880,13 +2117,13 @@ c------------------------------------------------------------------------
 	end
 c************************************************************************
 	subroutine RPDisp(in,scanskip,scanproc,doauto,docross,docaldat,
-     *	  relax,sing,unflag,polflag,ifsel,userfreq,nuser,iostat)
+     *	  relax,sing,unflag,nopol,polflag,ifsel,userfreq,nuser,iostat)
 c
 	implicit none
 	character in*(*)
 	integer scanskip,scanproc,ifsel,nuser,iostat
 	double precision userfreq(*)
-	logical doauto,docross,relax,unflag,polflag,sing,docaldat
+	logical doauto,docross,relax,unflag,polflag,sing,docaldat,nopol
 c
 c  Process an RPFITS file. Dispatch information to the
 c  relevant Poke routine. Then eventually flush it out with PokeFlsh.
@@ -1899,6 +2136,7 @@ c    docross	Save crosscorrelation data.
 c    docaldat	Do not flag calibration data.
 c    relax	Save data even if the SYSCAL record is bad.
 c    sing
+c    nopol	Select only the parallel-hand polarisations.
 c    polflag	Flag all polarisations if any are bad.
 c    unflag	Save data even though it may appear flagged.
 c    ifsel	IF to select. 0 means select all IFs.
@@ -1908,8 +2146,8 @@ c    nuser	Number of user-specificed rest frequencies.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
-	integer MAXPOL,MAXSIM,MAXXYP
-	parameter(MAXPOL=4,MAXSIM=4,MAXXYP=5)
+	integer MAXPOL,MAXSIM,MAXXYP,NDATA
+	parameter(MAXPOL=4,MAXSIM=4,MAXXYP=5,NDATA=MAXCHAN*MAXPOL)
 	double precision J01Jul04
 	parameter(J01Jul04=2453187.5d0)
 	include 'rpfits.inc'
@@ -1920,9 +2158,18 @@ c------------------------------------------------------------------------
 	integer If2Sim(MAX_IF),nifs(MAX_IF),Sim2If(MAXSIM,MAX_IF)
 	integer Sif(MAX_IF)
 	real ut,utprev,utprevsc,u,v,w,weight(MAXCHAN*MAXPOL)
-	complex vis(MAXCHAN*MAXPOL)
+	complex vis(NDATA)
 	double precision reftime,ra0,dec0,pntra,pntdec
 	character calcode*16,sctype*16
+c
+c  The following has to agree with the first dimension of if_cstok in 
+c  rpfits.inc.
+c
+	integer MPOL
+	parameter(MPOL=4)
+	integer nstoke(MAX_IF)
+	character cstoke(MPOL,MAX_IF)*4
+	logical pselect(MPOL,MAX_IF)
 c
 c  Information on flagging.
 c
@@ -1941,6 +2188,11 @@ c
 	real xsamp(3,MAX_IF,ANT_MAX),ysamp(3,MAX_IF,ANT_MAX)
 	real xtsys(MAX_IF,ANT_MAX),ytsys(MAX_IF,ANT_MAX)
 	real chi,tint,mdata(9)
+c
+c  Variables for reference pointing.
+c
+	logical okref
+	real refpnt(2,ANT_MAX)
 c
 	logical antvalid(ANT_MAX)
 	integer mcount
@@ -1968,7 +2220,9 @@ c
 c	if(card(1)(25:30).ne.'RPFITS')
 c     *		      call bug('f','Input file is not in RPFITS format')
 	sctype = 'unknown'
-	if(ncard.gt.0)call sortcds(ncard,card,sctype)
+	okref = .false.
+	if(ncard.gt.0)call sortcds(ncard,card,sctype,
+     *					refpnt,ANT_MAX,okref)
 c
 c  Initialise.
 c
@@ -2019,7 +2273,8 @@ c
 	    jstat = -1
 	    call rpfitsin(jstat,vis,weight,baseln,ut,u,v,w,flag,
      *						bin,ifno,srcno)
-	    if(ncard.gt.0)call sortcds(ncard,card,sctype)
+	    if(ncard.gt.0)
+     *		call sortcds(ncard,card,sctype,refpnt,ANT_MAX,okref)
 	    NewScan = .true.
 	    scanno = scanno + 1
 c
@@ -2120,6 +2375,8 @@ c
 	      call SimMap(if_num,n_if,if_simul,if_chain,ifsel,
      *		  If2Sim,nifs,Sim2If,Sif,MAXSIM)
 	      call ChkAnt(x,y,z,antvalid,nant,sing)
+	      call PolMap(nopol,MPOL,n_if,if_nstok,if_cstok,
+     *		nstoke,cstoke,pselect)
 	    endif
 c
 c  Determine whether to flush the buffers.
@@ -2144,16 +2401,15 @@ c
      *		   bin.ge.0
 	      if(.not.ok)fgbad = fgbad + 1
 	    endif
-	    if(ok)then
-	      ok = (sctype.ne.'point'.and.sctype.ne.'paddle')
-     *			.or.docaldat
-	      if(.not.ok)fgcal = fgcal + 1
-	    endif
             if(ok)ok = If2Sim(ifno).gt.0
 	    if(ok) then
-	      nspec = if_nstok(ifno)
+	      nspec = nstoke(ifno)
 	      nrec = nrec + nspec
-	      if(flag.ne.0)then
+	      if((sctype.eq.'point'.or.sctype.eq.'paddle').and.
+     *			.not.docaldat)then
+	        flag = 1
+	        fgcal = fgcal + nspec
+	      else if(flag.ne.0)then
 		fgoffsrc = fgoffsrc + nspec
 	      else if(.not.(antvalid(i1).and.antvalid(i2)))then
 		flag = 1
@@ -2189,11 +2445,15 @@ c
 		    wband = wband.or.if_freq(id).gt.75e9
 		    call PokeIF(i,if_nfreq(id),if_invert(id)*if_bw(id),
      *			if_freq(id),if_ref(id),rfreq,
-     *			if_nstok(id),if_cstok(1,id))
+     *			nstoke(id),cstoke(1,id))
 		  enddo
 		endif
-		if(NewScan)call PokeInfo(scanno,time)
 		calcode = su_cal(srcno)
+		if(su_name(srcno).eq.'1934-638')calcode = 'c'
+		if(NewScan)then
+		  call cacalTyp(calcode,time)
+		  call PokeInfo(scanno,time)
+		endif
 	 	pntra = su_pra(srcno)
 		pntdec = su_pdec(srcno)
 		if(pntra.eq.0.or.pntdec.eq.0)then
@@ -2216,8 +2476,12 @@ c		if(NewScan.or.NewSrc)then
 		endif
 	      endif
 c
-c  Flush out the met data if needed.
+c  Flush out the met data and reference pointing if needed.
 c
+	      if(okref)then
+		call PokeRef(refpnt,nant)
+		okref = .false.
+	      endif
 	      if(mcount.gt.0)then
 		call PokeMet(mdata,mcount)
 		mcount = 0
@@ -2242,7 +2506,7 @@ c
 c  Determine the flags for each polarisation based on the sampler
 c  statistics if the samplers have been initialised.
 c
-	      call GetFg(if_nstok(ifno),if_cstok(1,ifno),flag,
+	      call GetFg(nstoke(ifno),cstoke(1,ifno),flag,
      *		xflag(ifno,i1).or.relax,yflag(ifno,i1).or.relax,
      *		xflag(ifno,i2).or.relax,yflag(ifno,i2).or.relax,
      *		flags,fgsam)
@@ -2255,8 +2519,19 @@ c	      tint = 0
 	      if(tint.eq.0)tint = intime
 	      if(tint.eq.0)tint = 15.0
 	      flipper = .not.kband.or.time.gt.J01Jul04
+c
+c  It is pretty late to be checking for a buffer overflow, but RPFITSIN's
+c  interface does not guard against it at all! So at least we are checking!
+c
+	      if(if_nfreq(ifno)*if_nstok(ifno).gt.NDATA)
+     *		call bug('f','Buffer overflow within rpfitsin')
+c
+	      if(nstoke(ifno).ne.if_nstok(ifno))
+     *		call vissy(vis,if_nfreq(ifno),if_nstok(ifno),
+     *		  pselect(1,ifno))
+c
 	      call PokeData(u,v,w,baseln,Sif(ifno),bin,
-     *		vis,if_nfreq(ifno),if_nstok(ifno),flags,
+     *		vis,if_nfreq(ifno),nstoke(ifno),flags,
      *		tint,if_invert(ifno).lt.0,flipper,.not.wband)
 c
 c  Reinitialise things.
@@ -2395,6 +2670,80 @@ c
 	if(jstat.ne.0)return
 	end
 c************************************************************************
+	subroutine PolMap(nopol,mpol,nif,nstin,cstin,nstout,cstout,
+     *								pselect)
+c
+	implicit none
+	integer nif,mpol
+	integer nstin(nif),nstout(nif)
+	logical pselect(mpol,nif),nopol
+	character cstin(mpol,nif)*(*),cstout(mpol,nif)*(*)
+c
+c  Weed out non-parallel-hand polarisations from the list of Stokes
+c  parameters.
+c
+c  Input:
+c    nif
+c    nstin
+c    cstin
+c  Output:
+c    nstout
+c    cstout
+c    pselect
+c------------------------------------------------------------------------
+	integer i,j
+	character token*4
+c
+	if(nopol)then
+	  do j=1,nif
+	    nstout(j) = 0
+	    do i=1,nstin(j)
+	      token = cstin(i,j)
+	      call ucase(token)
+	      if(token.eq.'XX'.or.token.eq.'YY'.or.
+     *	         token.eq.'RR'.or.token.eq.'LL'.or.token.eq.'I')then
+	        nstout(j) = nstout(j) + 1
+	        cstout(nstout(j),j) = cstin(i,j)
+	        pselect(i,j) = .true.
+	      else
+	        pselect(i,j) = .false.
+	      endif
+	    enddo
+	  enddo
+	else
+	  do j=1,nif
+	    nstout(j) = nstin(j)
+	    do i=1,nstin(j)
+	      cstout(i,j) = cstin(i,j)
+	      pselect(i,j) = .true.
+	    enddo
+	  enddo
+	endif
+c
+	end
+c************************************************************************
+	subroutine vissy(vis,nchan,nstin,pselect)
+c
+	implicit none
+	integer nchan,nstin
+	complex vis(nstin*nchan)
+	logical pselect(nstin)
+c------------------------------------------------------------------------
+	integer ki,ko,i,j
+c
+	ki = 0
+	ko = 0
+	do j=1,nchan
+	  do i=1,nstin
+	    ki = ki + 1
+	    if(pselect(i))then
+	      ko = ko + 1
+	      vis(ko) = vis(ki)
+	    endif
+	  enddo
+	enddo
+c
+	end
 c************************************************************************
 	character*(*) function pcent(frac,total)
 c
@@ -2604,9 +2953,9 @@ c------------------------------------------------------------------------
 	if(freq.lt.15)then
 	  getjpk = 13
 	else if(freq.lt.30)then
-	  getjpk = 15
+	  getjpk = 13
 	else
-	  getjpk = 25
+	  getjpk = 13
 	endif
 c
 	end
@@ -2826,6 +3175,92 @@ c
 c
 	end
 c************************************************************************
+	subroutine cacalIni
+c
+	implicit none
+c------------------------------------------------------------------------
+	integer MAXTIMES
+	parameter(MAXTIMES=32)
+	integer bcal,scal,ntimes
+	double precision stime,times(2,MAXTIMES)
+	common/cacalcom/times,stime,ntimes,scal,bcal
+c
+	scal = -1
+	bcal = -1
+	stime = 0
+	ntimes = 0
+	end
+c************************************************************************
+	subroutine cacalCnt(count)
+c
+	implicit none
+	integer count
+c------------------------------------------------------------------------
+	integer MAXTIMES
+	parameter(MAXTIMES=32)
+	integer bcal,scal,ntimes
+	double precision stime,times(2,MAXTIMES)
+	common/cacalcom/times,stime,ntimes,scal,bcal
+c
+	bcal = count
+ 	end
+c************************************************************************
+	subroutine cacalTyp(calcode,time)
+c
+	implicit none
+	character calcode*(*)
+	double precision time
+c------------------------------------------------------------------------
+	integer MAXTIMES
+	parameter(MAXTIMES=32)
+	integer bcal,scal,ntimes
+	double precision stime,times(2,MAXTIMES)
+	common/cacalcom/times,stime,ntimes,scal,bcal
+c
+	if(bcal.ge.0)then
+	  if(scal.ge.0..and.bcal.gt.scal.and.
+     *	     time-stime.gt.0.and.time-stime.le.0.5/24.0)then
+	    ntimes = ntimes + 1
+	    if(ntimes.gt.MAXTIMES)
+     *		call bug('f','Buffer overflow in cacalTyp')
+	    times(1,ntimes) = stime
+	    times(2,ntimes) = time
+	  endif
+	  if(index(calcode,'c').ne.0.or.index(calcode,'C').ne.0)then
+	    scal = bcal
+	    stime = time
+	  else
+	    scal = -1
+	  endif
+	  bcal = -1
+	endif
+c
+	end
+c************************************************************************
+	subroutine cacalFin(time1,MAXTIME1,ntime1)
+c
+	implicit none
+	integer MAXTIME1,ntime1
+	double precision time1(2,MAXTIME1)
+c------------------------------------------------------------------------
+	integer MAXTIMES
+	parameter(MAXTIMES=32)
+	integer bcal,scal,ntimes
+	double precision stime,times(2,MAXTIMES)
+	common/cacalcom/times,stime,ntimes,scal,bcal
+c
+	integer i
+c
+	if(ntimes.gt.MAXTIME1)
+     *	  call bug('f','Buffer overflow in cacalFin')
+	do i=1,ntimes
+	  time1(1,i) = times(1,i)
+	  time1(2,i) = times(2,i)
+	enddo
+	ntime1 = ntimes
+c	  
+	end
+c************************************************************************
 c************************************************************************
 c
 c  The following code was contributed by WEW via NEBK.
@@ -2873,7 +3308,7 @@ C BEGIN
 C In the following, a is the gain that was applied on line. 
 C It is calculated from
 C  a = average correlator count / digital correlator gain at
-C      zero correlatoion
+C      zero correlation
 
       IF (SSEXP.GT.17.2) THEN
 C          5.444705 = 6.19 / 1.1368844
@@ -2886,12 +3321,8 @@ C          5.392175663 = 6.13 / 1.1368324
 C
       TWOBIT_GAIN_ADJUST = A /
      *     TWOBIT_GAIN_R0( QN1, QZ1, QP1, QN2, QZ2, QP2 )
-
-      RETURN
-
       END
-
-
+c************************************************************************
       REAL FUNCTION GAIN_PARAM( LEVEL_PERCENT )
 C----------------------------------------------------------------------
 C
@@ -2918,10 +3349,7 @@ C Find level ( RMS = 1.0 ) appropriate to this statistic
       GAIN_PARAM = EXP( -X * X / 2.0 )
 
       END
-
-
-
-
+c************************************************************************
       REAL FUNCTION GAUSS_LEVEL( FRACTION_ABOVE_LEVEL )
 C----------------------------------------------------------------------
 C
@@ -2979,7 +3407,7 @@ C Algorithm works for ( 0.0 < p <= 0.5 )  hence
 
 
 
-
+c************************************************************************
       REAL FUNCTION TWOBIT_GAIN_R0( QN1, QZ1, QP1, QN2, QZ2, QP2 )
 C----------------------------------------------------------------------
 C
@@ -3002,20 +3430,10 @@ C BEGIN
      *                G_QUAD( QZ1, QN1, QZ2, QP2 ) +
      *                  G_QUAD( QZ1, QP1, QZ2, QN2 ) +
      *                    G_QUAD( QZ1, QN1, QZ2, QN2 ) )
-
-      RETURN
-
       END
-
-
-
+c************************************************************************
       REAL FUNCTION G_QUAD( QZ1, QP1, QZ2, QP2 )
-
       REAL QZ1, QP1, QZ2, QP2
-
       G_QUAD = 9 * QP1 * QP2 +
      *         3 * ( QZ1 * QP2 + QP1 * QZ2 ) + QZ1 * QZ2
-
-      RETURN
-
       END
