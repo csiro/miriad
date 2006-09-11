@@ -55,6 +55,7 @@ c		     Handle (simplistically) variable length array facility.
 c    rjs  18mar97    Remove checks for alignment violation, as this requirement
 c		     in hio has been eliminated.
 c    rjs  21mar97    Support writing of binary tables.
+c    rjs  20sep97    Replace julfdate,fdatejul with julday,dayjul.
 c
 c  Bugs and Shortcomings:
 c    * IF frequency axis is not handled on output of uv data.
@@ -987,7 +988,7 @@ c
 	    call bug('w','Assuming observation date is 01/01/90')
 	    dateobs = '01/01/90'
 	  endif
-	  call FDateJul(dateobs,jday)
+	  call dayJul(dateobs,jday)
 	  TimOff = TimOff + jday
 	endif
 c
@@ -1062,7 +1063,7 @@ c------------------------------------------------------------------------
 	character string*24
 c
 	jday0 = int(T0 - 0.5d0) + 0.5d0
-	call JulFDate(jday0,string)
+	call Julday(jday0,'F',string)
 	call fitwrhda(lu,'DATE-OBS',string)
 	TimOff(lu) = T0
 	end
