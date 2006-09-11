@@ -107,13 +107,14 @@ c    rjs  15sep94 Support object=point and object=beam.
 c    rjs  26jan95 Eliminate non-standard string concatenation.
 c    rjs  06apr95 Get solver to work with relative coordinates, to
 c		  eliminate divergence problem.
+c    rjs  01nov95 Better fiddles in gaufid.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'maxnax.h'
 	include 'mem.h'
 c
 	character version*(*)
-	parameter(version='version 1.0 06-Apr-95')
+	parameter(version='version 1.0 01-Nov-95')
 	integer MAXBOX,MAXVAR
 	parameter(MAXBOX=1024,MAXVAR=20)
 c
@@ -1062,8 +1063,8 @@ c------------------------------------------------------------------------
 	include 'mirconst.h'
 	real t
 c
-	f1 = 3600*180/pi * fwhm1
-	f2 = 3600*180/pi * fwhm2
+	f1 = 3600*180/pi * abs(fwhm1)
+	f2 = 3600*180/pi * abs(fwhm2)
 	sf1 = 3600*180/pi * sfwhm1
 	sf2 = 3600*180/pi * sfwhm2
 	p = 180./pi * pa
