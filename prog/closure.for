@@ -67,13 +67,14 @@ c  History:
 c    rjs   7sep94 Original version.
 c    rjs  14sep95 Bring it up to scratch.
 c    rjs  19sep95 Reset the valid flag on a baseline after an integration.
+c    rjs   9nov95 Time axis was mislabelled by 1 integration.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
 	integer MAXPNTS,MAXPLOTS,MAXTRIP
 	integer PolMin,PolMax,MAXPOL
 	character version*(*)
-	parameter(version='version 19-Sep-95')
+	parameter(version='version 9-Nov-95')
 	parameter(MAXPNTS=5000,MAXPLOTS=20)
 	parameter(MAXTRIP=(MAXANT*(MAXANT-1)*(MAXANT-2))/6)
 	parameter(PolMin=-8,PolMax=4,MAXPOL=2)
@@ -203,7 +204,7 @@ c
 c  Flush the integration buffers if needed.
 c
 	      if(abs(t-tprev).gt.1./(3600.*24.))then
-		call IntFlush(nants,npol,t,avall,init,memc,corrpnt,
+		call IntFlush(nants,npol,tprev,avall,init,memc,corrpnt,
      *		  meml,flagpnt,nchan,sigma2,MAXBASE,MAXPOL,
      *		  ntrip,trip,triptime,tripsig2,MAXTRIP)
 		tprev = t
