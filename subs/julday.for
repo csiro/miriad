@@ -748,6 +748,7 @@ c
       return
       end
 #ifdef TEST
+c************************************************************************
       program test
       character string*50
       character fmt(5)*1
