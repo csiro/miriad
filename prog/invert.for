@@ -297,6 +297,7 @@ c    rjs   12nov95  Check imsize somewhat better.
 c    rjs   13dec95  Eliminate min image size.
 c    rjs   29feb96  Call xyflush after each plane.
 c    rjs   12jul96  Be fore forgiving if beam too big -- just make it smaller.
+c    rjs   20jun97  Correct handling of multiple stokes in slopintp.
 c  Bugs:
 c
 c------------------------------------------------------------------------
@@ -305,7 +306,7 @@ c------------------------------------------------------------------------
 	include 'mem.h'
 c
 	character version*(*)
-	parameter(version='Invert: version 1.0 1-Nov-95')
+	parameter(version='Invert: version 1.0 20-Jun-97')
 	integer MAXPOL,MAXRUNS
 	parameter(MAXPOL=4,MAXRUNS=4*MAXDIM)
 c
@@ -1637,7 +1638,7 @@ c
 	implicit none
 	integer tno,nchan,npol,MAXCHAN,nvis,nbad,MAXLEN,nrec,ncorr
 	double precision uvw(3)
-	real rms2,umax,vmax,uumax,vvmax,ChanWt(nchan),slop,Wt,SumWt
+	real rms2,umax,vmax,uumax,vvmax,ChanWt(npol*nchan),slop,Wt,SumWt
 	complex data(MAXCHAN,npol),out(MAXLEN)
 	logical flags(MAXCHAN,npol)
 	character slopmode*(*)
@@ -1690,7 +1691,7 @@ c
 c  Interpolate the bad correlations, if that is required.
 c
 	if(ok.and.somebad.and.slopmode.eq.'interpolate')
-     *	  call SlopIntp(Data,flags,nchan,npol)
+     *	  call SlopIntp(Data,flags,nchan,npol,MAXCHAN)
 c
 c  If we are to accept it, then zero out any bad correlations.
 c
@@ -1730,12 +1731,12 @@ c
 c
 	end
 c************************************************************************
-	subroutine SlopIntp(Data,flags,nchan,npol)
+	subroutine SlopIntp(Data,flags,nchan,npol,MAXCHAN)
 c
 	implicit none
-	integer nchan,npol
-	complex Data(nchan,npol)
-	logical flags(nchan,npol)
+	integer nchan,npol,MAXCHAN
+	complex Data(MAXCHAN,npol)
+	logical flags(MAXCHAN,npol)
 c
 c  Linearly interpolate bad channels.
 c
