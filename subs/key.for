@@ -34,6 +34,7 @@ c    rjs   19sep95    Extra checks.
 c    rjs   19feb97    More robust to spaces in .def files.
 c    rjs   25jul97    Better reading of .def and @ files.
 c    rjs   16dec97    Added keyinic and keyputc routines. Some tidying.
+c    rjs   30aug99    Increase a buffer.
 c************************************************************************
 c* KeyIni -- Initialise the `key' routines.
 c& pjt
@@ -61,7 +62,7 @@ c	arg		The argument buffer
 c
 c------------------------------------------------------------------------
 	integer status,lun,arglen,argnum,narg
-	character arg*512,argv0*32
+	character arg*1024,argv0*32
 c
 c  Externals.
 c
