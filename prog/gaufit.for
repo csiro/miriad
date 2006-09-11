@@ -134,7 +134,7 @@ c     bpw  2mar93 Adapt for masking in xyzio
 c     bpw 14dec93 Add call logclose
 c     bpw 14nov94 Fix erroneous 'Center outside range' for cdelt3<0
 c     pjt 15mar95 add 'external rtfmt' for ANSI f2c
-
+c     rjs 20oct98 Changes to avoid floating point underflow in exp() function
 c************************************************************************
 
 c The main program first gets all inputs and then calls the workhorse.
@@ -171,7 +171,7 @@ c limlist:     ranges for amp/int,ctr,fwhm/disp
       program gaufit
 
       character*50 version
-      parameter    ( version = 'gaufit: version 1.0 15-mar-95' )
+      parameter    ( version = 'gaufit: version 1.0 20-Oct-98' )
 
       include      'maxdim.h'
 
@@ -777,7 +777,7 @@ c pixels and back. Sets bad fit results to zero. Finds the rms.
       integer   nchan
       integer   i, j, k, npar, nfit
       real      x(MAXCHAN), sig(MAXCHAN), rms
-      real      chisq
+      real      chisq, expon
       external  gaussfun
       logical   first
       save      first, npar, x, sig, nfit
@@ -829,8 +829,13 @@ c calculate rms of residual
             model(i) = 0.
             do k = 1, ngauss
                j = 3*(k-1)
-               model(i) = model(i) + gausspar(j+1) *
-     *         exp( -0.5*( (x(i)-gausspar(j+2))*gausspar(j+3) )**2 )
+	       expon = 0.5*( (x(i)-gausspar(j+2))*gausspar(j+3) )**2
+	       if(expon.gt.40)then
+		 expon = 0
+	       else
+		 expon = exp(-expon)
+	       endif
+               model(i) = model(i) + gausspar(j+1) * expon
             enddo
             residual(i) = data(i) - model(i)
             rms         = rms + residual(i)*residual(i) 
@@ -1295,7 +1300,12 @@ c************************************************************************
       y = 0.
       do i = 1, npars-1, 3
         arg   =  (x-pars(i+1)) * pars(i+2)
-        expon = exp( -0.5*arg**2 )
+	expon = 0.5*arg**2
+	if(expon.gt.40)then
+	  expon = 0
+	else
+          expon = exp( -expon )
+	endif
         y     = y + pars(i)*expon
         if( compgrad ) then
            fac         = pars(i) * expon * arg
