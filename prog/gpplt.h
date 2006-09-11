@@ -8,4 +8,3 @@ c
 	integer maxTimes,maxGains
 	parameter(maxTimes=2*MAXCHAN*MAXANT)
 	parameter(maxGains=2*MAXCHAN*MAXANT)
-
