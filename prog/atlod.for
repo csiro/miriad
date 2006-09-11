@@ -79,6 +79,8 @@ c	            the nominally bad spectrum is flagged.
 c	  'hires'   Treat bin data as measurements in the high time resolution
 c	            mode. The output dataset contains no bins, but instead
 c	            appears as data measured with small cycle times.
+c	  'pmps'    Undo `poor man's phase switching'. This is an obscure option
+c	            that you should not generally use.
 c@ nfiles
 c	This gives one or two numbers, being the number of files to skip,
 c	followed by the number of files to process. This is only
@@ -180,6 +182,8 @@ c    rjs  14may98 Handle higher time resolution.
 c    rjs  04oct98 Extra check for validity of a record.
 c    rjs  12nov98 options=hires now supports high time resolution bin mode.
 c    rjs  31aug99 Check for bad RPFITS value for sdf.
+c    rjs  11jun00 Include pmps switch. More robust to bad number of channels
+c		  etc in RPFITS file. Increase buffer space.
 c
 c  Program Structure:
 c    Miriad atlod can be divided into three rough levels. The high level
@@ -205,14 +209,14 @@ c------------------------------------------------------------------------
 	integer MAXFILES
 	parameter(MAXFILES=128)
 	character version*(*)
-	parameter(version='AtLod: version 1.0 31-Aug-99')
+	parameter(version='AtLod: version 1.0 12-Jun-00')
 c
 	character in(MAXFILES)*64,out*64,line*64
 	integer tno
 	integer ifile,ifsel,nfreq,iostat,nfiles,i
 	double precision rfreq(2)
 	logical doauto,docross,docomp,dosam,relax,unflag,dohann,dobary
-	logical doif,birdie,dowt,doxyp,polflag,hires
+	logical doif,birdie,dowt,dopmps,doxyp,polflag,hires
 	integer fileskip,fileproc,scanskip,scanproc
 c
 c  Externals.
@@ -232,7 +236,7 @@ c
         call keyi('ifsel',ifsel,0)
         call mkeyd('restfreq',rfreq,2,nfreq)
 	call getopt(doauto,docross,docomp,dosam,doxyp,relax,unflag,
-     *			dohann,birdie,dobary,doif,dowt,polflag,hires)
+     *		dohann,birdie,dobary,doif,dowt,dopmps,polflag,hires)
 	call keyi('nfiles',fileskip,0)
 	call keyi('nfiles',fileproc,nfiles-fileskip)
 	if(nfiles.gt.1.and.fileproc+fileskip.gt.nfiles)
@@ -275,8 +279,8 @@ c
 	    endif
 	    if(iostat.ne.0)call bug('f','Error skipping RPFITS file')
 	  else
-	    call PokeIni(tno,dosam,doxyp,dohann,birdie,dowt,dobary,doif,
-     *		hires)
+	    call PokeIni(tno,dosam,doxyp,dohann,birdie,dowt,dopmps,
+     *		dobary,doif,hires)
 	    if(nfiles.eq.1)then
 	      i = 1
 	    else
@@ -308,11 +312,11 @@ c
 	end
 c************************************************************************
 	subroutine GetOpt(doauto,docross,docomp,dosam,doxyp,relax,
-     *	  unflag,dohann,birdie,dobary,doif,dowt,polflag,hires)
+     *	  unflag,dohann,birdie,dobary,doif,dowt,dopmps,polflag,hires)
 c
 	implicit none
 	logical doauto,docross,dosam,relax,unflag,dohann,dobary
-	logical docomp,doif,birdie,dowt,doxyp,polflag,hires
+	logical docomp,doif,birdie,dowt,dopmps,doxyp,polflag,hires
 c
 c  Get the user options.
 c
@@ -330,17 +334,18 @@ c    unflag
 c    dobary	Compute barycentric radial velocities.
 c    birdie
 c    dowt	Reweight the lag spectrum.
+c    dopmps	Undo "poor man's phase switching"
 c    polflag	Flag all polarisations if any are bad.
 c    hires      Convert bin-mode to high time resolution data.
 c------------------------------------------------------------------------
 	integer nopt
-	parameter(nopt=14)
+	parameter(nopt=15)
 	character opts(nopt)*8
 	logical present(nopt)
 	data opts/'noauto  ','nocross ','compress','relax   ',
      *		  'unflag  ','samcorr ','hanning ','bary    ',
      *		  'noif    ','birdie  ','reweight','xycorr  ',
-     *		  'nopflag ','hires   '/
+     *		  'nopflag ','hires   ','pmps    '/
 	call options('options',opts,present,nopt)
 	doauto = .not.present(1)
 	docross = .not.present(2)
@@ -356,6 +361,7 @@ c------------------------------------------------------------------------
 	doxyp   = present(12)
 	polflag = .not.present(13)
 	hires   = present(14)
+	dopmps  = present(15)
 c
 	if((dosam.or.doxyp).and.relax)call bug('f',
      *	  'You cannot use options samcorr or xycorr with relax')
@@ -405,12 +411,12 @@ c
 c************************************************************************
 c************************************************************************
 	subroutine PokeIni(tno1,dosam1,doxyp1,dohann1,birdie1,dowt1,
-     *						dobary1,doif1,hires1)
+     *					dopmps1,dobary1,doif1,hires1)
 c
 	implicit none
 	integer tno1
 	logical dosam1,doxyp1,dohann1,doif1,dobary1,birdie1,dowt1
-	logical hires1
+	logical dopmps1,hires1
 c
 c  Initialise the Poke routines.
 c------------------------------------------------------------------------
@@ -427,6 +433,7 @@ c
 	dobary = dobary1
 	birdie = birdie1
 	dowt   = dowt1
+	dopmps = dopmps1
 	hires  = hires1
 c
 	if(dowt)call LagWt(wts,2*ATCONT-2,0.04)
@@ -854,6 +861,11 @@ c
 	  inttime(bl) = 10
 	endif
 	inttim = max(inttim,inttime(bl))
+c       
+c  Remove the phase switching.
+c
+	if(dopmps)
+     *	  call deswitch(vis,nstoke(if),nfreq1,time,inttime(bl),i1,i2)
 c
 c  Reweight the data, if needed.
 c
@@ -895,6 +907,44 @@ c
      *		i2,i1,if,xyphase,ATIF,ATANT)
 	    endif
 	  endif
+	enddo
+c
+	end
+c************************************************************************
+	subroutine deswitch(vis,npol,nchan,time,inttime,i1,i2)
+c
+	implicit none
+	integer npol,nchan,i1,i2
+	complex vis(nchan,npol)
+	double precision time
+	real inttime
+c
+c  Correct for on-line phase switching.
+c
+c------------------------------------------------------------------------
+	integer i,j,istate
+	real s
+	double precision rinttime
+c
+        integer states(8,6)
+        data states/
+     *  +1,-1,+1,-1,+1,-1,+1,-1,
+     *  +1,+1,-1,-1,+1,+1,-1,-1,
+     *  +1,-1,-1,+1,+1,-1,-1,+1,
+     *  +1,+1,+1,+1,-1,-1,-1,-1,
+     *  +1,+1,-1,-1,-1,-1,+1,+1,
+     *  +1,+1,+1,+1,+1,+1,+1,+1/
+c
+	rinttime = 5.d0 * nint(inttime/5.0) / 86400.d0
+        istate = mod(nint(mod(time,1.0d0)/rinttime),8) + 1
+c
+	s = 1
+	if(states(istate,i1).ne.states(istate,i2)) s = -1
+c
+	do j=1,npol
+	  do i=1,nchan
+	    vis(i,j) = s * vis(i,j)
+	  enddo
 	enddo
 c
 	end
@@ -1913,7 +1963,8 @@ c
 c
 c  Give summary about flagging.
 c
-	call liner('RPFITS file version is'//version)
+	if(version.le.' ')version='unknown'
+	call liner('RPFITS file version is '//version)
 	call PokeStat(nrec,fgbad,fgoffsrc,fginvant,fgsysc,fgsam)
 c
 c  We are done. Close up, and return the error code.
@@ -2264,7 +2315,7 @@ c
 	  do j=1,nif
 	    ik = nint(syscal(1,j,k))
 	    ij = nint(syscal(2,j,k))
-	    ok = ij.gt.0.and.ik.gt.0
+	    ok = ij.gt.0.and.ik.gt.0.and.ij.le.maxif.and.ik.le.maxant
 	    if(ok.and.nq.ge.13) ok = syscal(13,j,k).eq.0
 	    if(ok)then
 	      scinit(ij,ik) = .true.
