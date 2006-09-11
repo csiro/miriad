@@ -126,6 +126,8 @@ c     nebk   23nov95     Add argument CONLAB to CONTURCG to label contours
 c                        and new call for CTYPECO
 c     nebk   29nov95     Use only W2WCO routines in NAXLABCG and friends,
 c                        rather than directly using co.for routines
+c     nebk   18dec95     Add argument DOABUT to VPSIZCG. Fix truncated
+c                        strings in ANNINICG and ANNWINCG
 c**********************************************************************
 c
 c* annboxCG -- Annotate plot with information from a box image 
@@ -456,7 +458,7 @@ c
       double precision win(maxnax)
       real xht, yht, xhta, yhta, acs, ychinc, yoff, ygap
       character str1*132, str2*132, gentyp*4, typeo(maxnax)*6, 
-     +  typei(maxnax)*6, refstr(maxnax)*20, ctype*9, 
+     +  typei(maxnax)*6, refstr(maxnax)*30, ctype*9, 
      +  itoaf*1
       integer len1, naxis, maxis, ip, il1, i, ir(maxnax), il
 c-----------------------------------------------------------------------
@@ -527,7 +529,7 @@ c
       call initco (lh)
       call setoaco (lh, 'abs', maxis, 0, typeo)
       call w2wfco (lh, maxis, typei, ' ', win, typeo, ' ', .false.,
-     +            refstr, ir)
+     +             refstr, ir)
       call finco (lh)
       do i = 1, maxis
         ip = len1(str1) + 2
@@ -719,9 +721,9 @@ c              the next line.
 c--
 c-----------------------------------------------------------------------
       double precision cdelt3
-      character*8 str1, str2, str3, str4
+      character*30 str1, str2, str3, str4
       character*132 stra, strb, strc, strd, stre, line*200
-      character gentyp*4, units*10
+      character units*10
       integer i1, i2, i3, i4, ia, ib, ic, id, ie, il, iu, naxis3
 c
       integer len1
@@ -766,17 +768,10 @@ c
         call strfmtcg (real(abs(kbin(1)*cdelt3)), 4, str1, i1)
         call strfmtcg (real(abs(kbin(2)*cdelt3)), 4, str2, i2)
 c
-        call axtypco (lh, 0, 3, gentyp)
-        if (gentyp.eq.'FREQ') then
-          units = 'GHz'
-        else if (gentyp.eq.'VELO') then
-          units = 'Km/s'
-        else 
-          units = 'none'
-        end if
+        call sunitco (lh, 3, 'absnat', units)
         iu = len1(units)
 c  
-        if (units.eq.'none') then
+        if (units.eq.' ') then
           strd = '='//str1(1:i1)//'/'//str2(1:i2)
         else
           strd = '='//str1(1:i1)//'/'//str2(1:i2)//' ('//
@@ -1908,7 +1903,7 @@ c  may be embedded in the string in the latter case.
 c
 c  Input:
 c    xnum    The number = mm * 10**pp
-c    ns      Number of desired signifcant figures
+c    ns      Number of desired significant figures
 c  Output:
 c    str     Formatted string
 c    is      Length of string
@@ -2115,8 +2110,9 @@ c: plotting
 c+
       subroutine vpsizcg (dofull, dofid, ncon, gin, vin, nspec, bin,
      +  maxlev, nlevs, srtlev, levs, slev, nx, ny, pcs, xdispl, 
-     +  ydispb, gaps, dotr, wedcod, wedwid, tfdisp, labtyp, 
-     +  vxmin, vymin, vymax, vxgap, vygap, vxsize, vysize, tfvp, wdgvp)
+     +  ydispb, gaps, doabut, dotr, wedcod, wedwid, tfdisp, labtyp, 
+     +  vxmin, vymin, vymax, vxgap, vygap, vxsize, vysize, 
+     +  tfvp, wdgvp)
 c
       implicit none
       integer maxlev, nlevs(*), srtlev(maxlev,*), nx, ny, ncon, 
@@ -2124,7 +2120,7 @@ c
       real vxmin, vymin, vymax, vxgap, vygap, vxsize, vysize, pcs,
      +  ydispb, xdispl,  wedwid, tfvp(4), tfdisp, wdgvp(4),
      +  levs(maxlev,*), slev
-      logical dofid, dofull, gaps, dotr
+      logical dofid, dofull, gaps, dotr, doabut
       character*(*) gin, vin, bin, labtyp(2)*(*)
 c
 c   Work out view port that encompasses all sub-plots and allows
@@ -2149,6 +2145,7 @@ c     xdispl      Displacement of y-axis char. label from axis in char hghts
 c     ydispb      Displacement of x-axis char. label from axis in char hghts
 c     gaps        If true then don't leave gaps between sub-plots else
 c                 leave gaps between sub-plots & label each window
+c     doabut      No white space at all around subplots
 c     dotr        Means as well as labelling plot on left and bottom axes,
 c		  also label it at the top and right.
 c     wedcod      1 -> one wedge to right of all subplots
@@ -2335,6 +2332,7 @@ c
           if (dotr) vxgap = vxgap + xdispl*xht
         else
           vxgap = xht/3
+          if (doabut) vxgap = 0.0
         end if
         vxsize = ((vxmax - vxmin) - ((nx - 1) * vxgap)) / nx
       else
@@ -2348,6 +2346,7 @@ c
           if (dotr) vygap = vygap + yht
         else
           vygap = yht/3
+          if (doabut) vygap = 0.0
         end if
         vysize = ((vymax - vymin) - ((ny - 1) * vygap)) / ny
       else
