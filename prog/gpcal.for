@@ -183,6 +183,8 @@ c    rjs      3aug94 options=oldflux.
 c    rjs     26sep95 Check for ill-determined solution.
 c    mchw    08aug96 fix minibug for more antennas.
 c    rjs     12may97 Added options=circular.
+c    rjs     23jun97 Get gpcal options=nopol,qusolve to work when a pol'n
+c		     solution is already present.
 c
 c  Bugs:
 c    * Polarisation solutions when using noamp are wrong! The equations it
@@ -194,7 +196,7 @@ c------------------------------------------------------------------------
 	integer MAXITER
 	character version*(*)
 	parameter(MAXITER=30)
-	parameter(version='Gpcal: version 1.0 08-AUG-96')
+	parameter(version='Gpcal: version 1.0 23-Jun-97')
 c
 	integer tIn
 	double precision interval(2), freq
@@ -1281,13 +1283,12 @@ c------------------------------------------------------------------------
 	integer Dvar(2,2,MAXANT),QUvar,Tvar(2,MAXANT),nvar,ifail
 	integer Vars(8,4,MAXBASE),pivot(6*MAXANT+1)
 	integer i,j
-	complex expix(MAXANT),expiy(MAXANT),D1
+	complex expix(MAXANT),expiy(MAXANT)
 	real b(6*MAXANT+1),A((6*MAXANT+1)*(6*MAXANT+1)),temp
 	logical polref1
 c
 c  Determine if we are really going to do polref.
 c
-	D1 = D(X,refant)
 	polref1 = polref
 	if(polref)then
 	  if(qusolve)then
@@ -1295,18 +1296,9 @@ c
 	    if(temp.lt.1e-4*flux(1)*flux(1))then
 	      call bug('w','Turning off POLREF for this iteration')
 	      polref1 = .false.
-	    else
-	      D1 = cmplx(real(D(X,refant)),0.)
 	    endif
-	  else
-	    D1 = (0.,0.)
 	  endif
 	endif
-c
-c  D(Y,refant) will be solved for, unless "notrip" is true. In the later case
-c  make sure it is zero.
-c
-	D(Y,refant) = 0
 c
 c  We solve simultaneously for the antenna phase error, Q and U, as well
 c  as the leakage terms. First determine how many unknowns there are, and
@@ -1318,7 +1310,7 @@ c
 c
 c  We are going to solve the system Ax = b. Generate A and b.
 c
-	call PolAcc(nsoln,nants,nbl,Gains,D1,polref1,refant,flux,Vars,
+	call PolAcc(nsoln,nants,nbl,Gains,D,flux,Vars,
      *	  A,b,nvar,Vis,VisCos,VisSin,SumS,SumC,SumS2,SumCS,Count,
      *	  circular)
 c
@@ -1370,14 +1362,13 @@ c
 c
 	end
 c************************************************************************
-	subroutine PolAcc(nsoln,nants,nbl,Gains,D,polref,refant,flux,
+	subroutine PolAcc(nsoln,nants,nbl,Gains,D,flux,
      *	  Vars,A,b,nvar,Vis,VisCos,VisSin,SumS,SumC,SumS2,SumCS,Count,
      *	  circular)
 c
 	implicit none
-	logical polref
-	integer nsoln,nants,nbl,nvar,refant
-	complex Gains(2,nants,nsoln),D
+	integer nsoln,nants,nbl,nvar
+	complex Gains(2,nants,nsoln),D(2,nants)
 	integer Vars(8,4,nbl)
 	real A(nvar,nvar),b(nvar),flux(4)
 	logical circular
@@ -1417,9 +1408,9 @@ c
 	call SumVis(nsoln,nants,nbl,Gains,Count(1,1),
      *	  Vis,VisCos,VisSin,V,VS,VC)
 c
-c  Correct the sums for the leakage of the reference antenna.
+c  Correct the sums for the current leakage estimates.
 c
-	if(.not.polref)call DCorrect(nants,nbl,V,VC,VS,D,refant,flux,
+	call DCorrect(nants,nbl,V,VC,VS,D,flux,
      *	  Count(1,0),SumC(1,0),SumS(1,0),SumCS(1,0),SumS2(1,0),
      *	  circular)
 c
@@ -1447,11 +1438,6 @@ c
      *		      + real(V(m,k) )*ar(j,m) + aimag(V(m,k) )*ai(j,m)
      *		      + real(VC(m,k))*br(j,m) + aimag(VC(m,k))*bi(j,m)
      *		      + real(VS(m,k))*cr(j,m) + aimag(VS(m,k))*ci(j,m)
-     *		      - Cconst(0,j,m)  *Count(k,0)
-     *		      - Csin2(0,j,m)   *SumS2(k,0)
-     *		      - Csin(0,j,m)    *SumS(k,0)
-     *		      - Ccos(0,j,m)    *SumC(k,0)
-     *		      - Ccossin(0,j,m) *SumCS(k,0)
 	      endif
 	    enddo
 	  enddo
@@ -1487,12 +1473,12 @@ c
 	enddo
 	end
 c************************************************************************
-	subroutine DCorrect(nants,nbl,V,VC,VS,D0,refant,flux,
+	subroutine DCorrect(nants,nbl,V,VC,VS,D,flux,
      *	  Count,SumC,SumS,SumCS,SumS2,circular)
 c
 	implicit none
-	integer nants,nbl,refant,Count(nbl)
-	complex V(4,nbl),VC(4,nbl),VS(4,nbl),D0
+	integer nants,nbl,Count(nbl)
+	complex V(4,nbl),VC(4,nbl),VS(4,nbl),D(2,nants)
 	real flux(4),SumC(nbl),SumS(nbl),SumCS(nbl),SumS2(nbl)
 	logical circular
 c
@@ -1509,59 +1495,30 @@ c  Input/Output:
 c    V,VC,VS
 c------------------------------------------------------------------------
 	include 'gpcal.h'
-	integer j,k
-	complex D1,D(4),a(4),b(4),c(4)
-c
-c  Return straight away if there is nothing to do.
-c
-	if(real(D0).eq.0.and.aimag(D0).eq.0)return
+	integer i,j,k,p
+	complex a(4,MAXBASE),b(4,MAXBASE),c(4,MAXBASE)
 c
 c  Determine the nominal response in each thingo.
 c
-	do j=1,4
-	  D(j) = 0
+	call GetVis(nants,nbl,flux,D,a,b,c,circular)
+c
+c  Correct for the known leakages.
+c
+	k = 0
+	do j=2,nants
+	  do i=1,j-1
+	    k = k + 1
+	    do p=1,4
+	      V(p,k)  = V(p,k)  - ( a(p,k)*Count(k) +
+     *			b(p,k)*SumC(k)		    + c(p,k)*SumS(k) )
+	      VC(p,k) = VC(p,k) - ( a(p,k)*SumC(k)  +
+     *			b(p,k)*(Count(k)-SumS2(k))  + c(p,k)*SumCS(k) )
+	      VS(p,k) = VS(p,k) - ( a(p,k)*SumS(k)  +
+     *			b(p,k)*SumCS(k) 	    + c(p,k)*SumS2(k) )
+	    enddo
+	  enddo
 	enddo
-	call GetVis(2,1,flux,D,a,b,c,circular)
 c
-c  Correct the antennas before the reference antenna.
-c
-	D1 = conjg(D0)
-	k = (refant-1)*(refant-2) / 2
-	do j=1,refant-1
-	  k = k + 1
-	  V(XX,k) = V(XX,k) - D1 *
-     *	    (a(XY)*Count(k) + b(XY)*SumC(k) + c(XY)*SumS(k))
-	  VC(XX,k) = VC(XX,k) - D1 *
-     *	    (a(XY)*SumC(k) + b(XY)*(Count(k)-SumS2(k)) + c(XY)*SumCS(k))
-	  VS(XX,k) = VS(XX,k) - D1 *
-     *	    (a(XY)*SumS(k) + b(XY)*SumCS(k) + c(XY)*SumS2(k))
-	  V(YX,k) = V(YX,k)   - D1 *
-     *	    (a(YY)*Count(k) + b(YY)*SumC(k) +c(YY)*SumS(k))
-	  VC(YX,k) = VC(YX,k) - D1 *
-     *	    (a(YY)*SumC(k) + b(YY)*(Count(k)-SumS2(k)) + c(YY)*SumCS(k))
-	  VS(YX,k) = VS(YX,k) - D1 *
-     *	    (a(YY)*SumS(k) + b(YY)*SumCS(k) + c(YY)*SumS2(k))
-	enddo
-	k = k + 1
-c
-c  Correct the antennas after the reference antenna.
-c
-	D1 = D0
-	do j=refant+1,nants
-	  k = k + j - 2
-	  V(XX,k) = V(XX,k) - D1 *
-     *	    (a(YX)*Count(k) + b(YX)*SumC(k) + c(YX)*SumS(k))
-	  VC(XX,k) = VC(XX,k) - D1 *
-     *	    (a(YX)*SumC(k) + b(YX)*(Count(k)-SumS2(k)) + c(YX)*SumCS(k))
-	  VS(XX,k) = VS(XX,k) - D1 *
-     *	    (a(YX)*SumS(k) + b(YX)*SumCS(k) + c(YX)*SumS2(k))
-	  V(XY,k) = V(XY,k) - D1 *
-     *	    (a(YY)*Count(k) + b(YY)*SumC(k) +c(YY)*SumS(k))
-	  VC(XY,k) = VC(XY,k) - D1 *
-     *	    (a(YY)*SumC(k) + b(YY)*(Count(k)-SumS2(k)) + c(YY)*SumCS(k))
-	  VS(XY,k) = VS(XY,k) - D1 *
-     *	    (a(YY)*SumS(k) + b(YY)*SumCS(k) + c(YY)*SumS2(k))
-	enddo
 	end
 c************************************************************************
 	subroutine PolCoeff(flux,Cconst,Csin,Ccos,Csin2,Ccossin,
@@ -1872,23 +1829,20 @@ c    D		The leakage parameter.
 c    epsi	Error measure.
 c------------------------------------------------------------------------
 	real t1,t2
-	complex t,delta
 c
 	if(Indx1.gt.0)then
 	  t1 = x(Indx1)
 	else
-	  t1 = real(D)
+	  t1 = 0
 	endif
 	if(Indx2.gt.0)then
 	  t2 = x(Indx2)
 	else
-	  t2 = aimag(D)
+	  t2 = 0
 	endif
 c
-	t = cmplx(t1,t2)
-	delta = t - D
-	epsi = max(epsi,real(delta)**2+aimag(delta)**2)
-	D = t
+	epsi = max(epsi,t1**2+t2**2)
+	D = D + cmplx(t1,t2)
 	end
 c************************************************************************
 	subroutine UnpackT(Indx,x,nvar,Gain,epsi)
