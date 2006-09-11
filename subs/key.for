@@ -33,6 +33,7 @@ c		      routine is used.
 c    rjs   19sep95    Extra checks.
 c    rjs   19feb97    More robust to spaces in .def files.
 c    rjs   25jul97    Better reading of .def and @ files.
+c    rjs   16dec97    Added keyinic and keyputc routines. Some tidying.
 c************************************************************************
 c* KeyIni -- Initialise the `key' routines.
 c& pjt
@@ -60,17 +61,15 @@ c	arg		The argument buffer
 c
 c------------------------------------------------------------------------
 	integer status,lun,arglen,argnum,narg
-	character arg*512
+	character arg*512,argv0*32
 c
 c  Externals.
 c
 	integer iargc,len1
-	include 'key.h'
 c
 c  Initialise the common variables.
 c
-	nkeys = 0
-        qhelp = .FALSE.
+	call keyinic
 c
 c  Get the programname
 c
@@ -101,24 +100,11 @@ c
 	    enddo
 	    call txtclose(lun)
 c
-c  If '-h' various help options are given and program never passes beyond
-c  keyfin
-c
-          else if (arg .eq. '-h') then
-            qhelp = .TRUE.
-            call bug('w','KeyIni: -h flag not yet implemented')
-c
 c  If -? give help.
 c
 	  else if(arg.eq.'-?')then
 	    call command('mirhelp '//argv0)
 	    stop
-c
-c  If '-k' give listing of keywords for this program via the doc program
-c
-          else if(arg .eq. '-k') then
-	    call command('doc '//argv0)
-            stop
 c
 c  Other flags are not understood yet
 c
@@ -130,14 +116,35 @@ c
 	  else
 	    arglen = len1(arg)
 	    if(arglen.eq.len(arg)) then
-                 call output('Read: '//arg)
-                 call bug('f',
+              call output('Read: '//arg)
+              call bug('f',
      *		'KeyIni: Input parameter too long for buffer')
             endif
 	    call keyput(arglen,arg)
 	  endif
 	enddo
 c
+	end
+c************************************************************************
+	subroutine keyinic
+c
+	implicit none
+	include 'key.h'
+c
+c  Initialise the common variables.
+c
+	nkeys = 0
+	end
+c************************************************************************
+	subroutine keyputc(string)
+c
+	implicit none
+	character string*(*)
+c
+c  Add a keyword to the buffer.
+c------------------------------------------------------------------------
+	integer len1
+	call keyput(len1(string),string)
 	end
 c************************************************************************
 	subroutine keyput(arglen,arg)
@@ -192,7 +199,7 @@ c
 	  buflen = k2(nkeys)
 	endif
 	if(nkeys.eq.maxkeys.or.buflen+lvalue.gt.maxlen)
-     *	  call bug('f','KeyInit: Parameter buffer overflow')
+     *	  call bug('f','KeyIni: Parameter buffer overflow')
 	nkeys = nkeys + 1
 	keys(nkeys) = key(1:lkey)
 	k1(nkeys) = buflen + 1
@@ -463,10 +470,6 @@ c
      *	         ' not used or not exhausted'
 	  call bug('w', umsg )
 	enddo
-        if (qhelp) then
-            call output('*** end of help ***')
-            stop
-        endif
 	end
 c************************************************************************
 c* Keyf -- Retrieve a filename string (with wildcards) from the command line.
@@ -873,26 +876,4 @@ c
 	  more = keyprsnt(key)
 	enddo
 	if(more) call bug('f','MKeyA: Buffer overflow')
-        end
-
-c************************************************************************
-c* progname -- return name of the program currently running
-c& pjt
-c: user-input,command-line,program-name
-c+
-	subroutine progname(name)
-c
-	implicit none
-	character name*(*)
-c
-c  Retrieve the name of the program currently running
-c
-c  Output:
-c    name       The name
-c--
-c------------------------------------------------------------------------
-        include 'key.h'
-
-        name = argv0
-
         end
