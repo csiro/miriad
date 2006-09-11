@@ -127,6 +127,8 @@ c     nebk   14apr95     Add HARD and DOFID arguments to WEDGINCCG
 c     nebk   11aug95     Add arcmin labels
 c     nebk   03sep95     Add STROPTCG, ANGCONCG, SETCCSCG
 c     rjs    26sep95     Always label epoch with 'B' or 'J'.
+c     nebk   19oct95     Bias images by pixr(1) rather than image min
+c			 when log or square root transfer function
 c***********************************************************************
 c
 c* angconCG -- Convert angular coordinates to and from radians
@@ -209,17 +211,18 @@ c
       real groff, image(*), pixr(2), cumhis(*)
       character trfun*3
 c
-c  Take the log of an image with an offset added
+c  Apply the desired transfer function to the image
 c
 c  Input:
-c   pixr     Intensity range with bias and logs/sqrt taken if necessary
+c   pixr     Intensity range with NO bias or logs/sqrt taken 
 c   trfun    Transfer function.  "lin", "log", "heq" or "sqr"
 c   groff    Bias to make image positive if necessary
 c   size     Size of image
 c   nimage   Normalization image
 c   nbins    Number of bins for histogram equalization
 c  Input/output:
-c   image    Image.  Log taken on output
+c   image    Image.  Transfer function applied on output. Pixels
+c	     below pixr(1) are set equal to pixr(1)
 c   his      Image histogram for histogram equalization
 c   cumhis   Cumulative histogram for histogram equalization
 c            Values for each bin are the intensities assigned to 
@@ -232,11 +235,17 @@ c---------------------------------------------------------------------
 c---------------------------------------------------------------------
       if (trfun.eq.'log') then
         do i = 1, size
-          if (nimage(i).ne.0) image(i) = log10(image(i) + groff)
+          if (nimage(i).ne.0) then
+            if (image(i).lt.pixr(1)) image(i) = pixr(1)
+            image(i) = log10(image(i)-groff)
+          end if
         end do
       else if (trfun.eq.'sqr') then
         do i = 1, size
-          if (nimage(i).ne.0) image(i) = sqrt(image(i) + groff)
+          if (nimage(i).ne.0) then
+            if (image(i).lt.pixr(1)) image(i) = pixr(1)
+            image(i) = sqrt(image(i)-groff)
+          end if
         end do
       else if (trfun.eq.'heq') then
         call heqcg (pixr, size, nimage, image, nbins, his, cumhis)
@@ -921,8 +930,7 @@ c    groff    DC bias to avoid negatives in image if logs taken
 c    blankg   Value to use for blanked pixels
 c--
 c-----------------------------------------------------------------------
-      real gmini, gdmin, gdmax
-c-----------------------------------------------------------------------
+      real fac
 c
 c Set default range to data min to max
 c
@@ -930,31 +938,33 @@ c
         call imminmax (lgin, gnaxis, gsize, pixr(1), pixr(2))
       else if (pixr(1).eq.pixr(2)) then
         call bug ('w', 
-     +    'GRFIXCG: Zero grey scale range, reset to image range')
+     +  'GRFIXCG: Zero pixel map range, reset to image intensity range')
         call imminmax (lgin, gnaxis, gsize, pixr(1), pixr(2))
       end if
 c
-c Work out offset if log transfer function for grey scale requested
+c Work out offset if log or square root transfer function requested
 c
       pixr2(1) = pixr(1)
       pixr2(2) = pixr(2)
+      groff = 0.0
+      fac = 100.0
       if (trfun.eq.'log' .or. trfun.eq.'sqr') then
-        groff = 0.0
-        call imminmax (lgin, gnaxis, gsize, gdmin, gdmax)
-        gmini = min(pixr2(1), pixr2(2), gdmin)
-        if (gmini.le.0.0) groff = abs(gmini) + 0.01*(gdmax - gdmin)
+        if (pixr(1).eq.0.0 .and. pixr(2).eq.0.0) call imminmax (lgin, 
+     +      gnaxis, gsize, pixr(1), pixr(2))
+        if (pixr(1).le.0.0) groff = pixr(1) - (pixr(2)-pixr(1))/fac
+c
         if (trfun.eq.'log') then
-          pixr2(1) = log10(pixr2(1)+groff)
-          pixr2(2) = log10(pixr2(2)+groff)
+          pixr2(1) = log10(pixr(1)-groff)
+          pixr2(2) = log10(pixr(2)-groff)
         else 
-          pixr2(1) = sqrt(pixr2(1)+groff)
-          pixr2(2) = sqrt(pixr2(2)+groff)
+          pixr2(1) = sqrt(pixr(1)-groff)
+          pixr2(2) = sqrt(pixr(2)-groff)
         end if
       end if
 c
-c Set blanked pixel value to white.   
+c Set blanked pixel value to background colour
 c
-      blankg = pixr2(1) - (0.01*(pixr2(2)-pixr2(1)))
+      blankg = pixr2(1) - (0.0001*(pixr2(2)-pixr2(1)))
 c
       end
 c
@@ -1017,8 +1027,7 @@ c  Apply histogram equalization to an image directly.  128 bins
 c  are used in the histogram.
 c
 c  Input
-c   pixr   Display intensity range with bias added and logs/sqrt 
-c          taken if necessary
+c   pixr   Display intensity range 
 c   n      Number of pixels
 c   nimage Normalization image
 c   nbins  Number of bins in histogram
