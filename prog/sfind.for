@@ -200,6 +200,10 @@ c         to enable detection of negative sources without recourse to MATHS.
 c         This feature may be used for detecting sources in polarisation
 c         maps.
 c
+c       "pbcorr" Corrects the flux density value calculated for each source
+c         for the effect of the primary beam attenuation. This is dealt with
+c         correctly for mosaics as well as single pointings.
+c
 c@ csize
 c       Two values.  Character sizes in units of the PGPLOT default
 c       (which is ~ 1/40 of the view surface height) for the plot axis
@@ -285,6 +289,11 @@ c    rjs  21aug97  Move calls to initco and finco.
 c    amh  20apr98  Add line when writing to log to indicate which image is
 c                  being analysed. Also added hash marks before each line of
 c                  header output for ease of later file interpretation.
+c    amh  16oct98  bug causing the 'region' option to give incorrect
+c                  source parameters has been fixed.
+c    amh  09nov98  added option 'pbcorr' to correct for primary beam
+c                  attenuation in images, including mosaics. Uses the mosLoad
+c                  and mosVal routines written by rjs.
 c
 c To do:
 c
@@ -322,7 +331,8 @@ c
      +  grpbeg(maxchan), ngrp(maxchan), srtlev(maxlev), his(nbins)
       integer nx, ny, nlevs, lin, naxis, k, ierr, pgbeg, iostat, ipage,
      +  ibin(2), jbin(2), kbin(2), krng(2), nlast, ngrps,
-     +  llog, jj, wedcod, labcol, poscol, statcol, regcol, rmsbox
+     +  llog, jj, wedcod, labcol, poscol, statcol, regcol, rmsbox,
+     +  npnt
 c
       character labtyp(2)*6
       character in*64, pdev*64, xlabel*40, ylabel*40, trfun*3, levtyp*1
@@ -331,14 +341,14 @@ c
      +  donylab(2), dopixel, gaps, doabut, 
      +  doaxlab, doaylab,
      +  mark, doerase, dowedge, dofid,
-     +  grid, nofit, asciiart, auto, negative
+     +  grid, nofit, asciiart, auto, negative, pbcor
 c
       data ipage, scale /0, 0.0, 0.0/
       data dmm /1.0e30, -1.0e30/
       data gaps, doabut, dotr /.false., .false., .false./
 c-----------------------------------------------------------------------
       call output (' ')
-      call output ('Sfind: version 1.3, 20-Apr-98')
+      call output ('Sfind: version 1.4, 09-Nov-98')
       call output (' ')
 c
 c Get user inputs
@@ -346,7 +356,7 @@ c
       call inputs (maxlev, in, ibin, jbin, kbin, levtyp, slev, levs, 
      +   nlevs, pixr, trfun, pdev, labtyp, do3val, do3pix, eqscale, 
      +   nx, ny, cs, dopixel, mark, doerase, dowedge, dofid, grid,
-     +   cut, rmsbox, xrms, nofit, asciiart, auto, negative)
+     +   cut, rmsbox, xrms, nofit, asciiart, auto, negative, pbcor)
 c
 c Open log files
 c
@@ -363,6 +373,7 @@ c Open image
 c
       call opimcg (maxnax, in, lin, size, naxis)
       call initco (lin)
+      if (pbcor) call mosLoad(lin,npnt)
 c
 c Finish key inputs for region of interest now
 c
@@ -547,7 +558,7 @@ c Interactive graphical source finding routine
 c
          call search (lin, win(1), win(2), memr(ipim), memi(ipnim),
      +     blc, ibin, jbin, krng, llog, mark, cut, rmsbox, xrms, 
-     +     nofit, asciiart, auto, negative, in)
+     +     nofit, asciiart, auto, negative, pbcor, in)
 c
 c Increment sub-plot viewport locations and row counter
 c
@@ -589,7 +600,7 @@ c The source-detection subroutine.
 c
         call search(lin, win(1), win(2), memr(ipim),
      +     memi(ipnim), blc, ibin, jbin, krng, llog, mark, cut,
-     +     rmsbox, xrms, nofit, asciiart, auto, negative, in)
+     +     rmsbox, xrms, nofit, asciiart, auto, negative, pbcor, in)
        end do
 c
 c Close up
@@ -618,7 +629,7 @@ c
 c
       subroutine search (lin, nx, ny, image, nimage, blc, ibin, jbin,
      +   krng, llog, mark, cut, rmsbox, xrms, nofit, asciiart, auto,
-     +   negative, in)
+     +   negative, pbcor, in)
 c-----------------------------------------------------------------------
 c  This is the master subroutine for the detecting of sources and the
 c interactive decision bit. It detects bright pixels, determines whether they
@@ -652,6 +663,7 @@ c     asciiart  display ascii representations of each source during
 c               interactive source selection
 c     auto      skip all the interactive bits of source flagging.
 c     negative  inverts image: positive pixels become negative and vice versa
+c     pbcor     true to correct fluxes by primary beam attenuation
 c     in        image name
 c
 c-----------------------------------------------------------------------
@@ -660,7 +672,7 @@ c
       integer nx, ny, blc(2), llog, ibin, jbin, lin, nimage(nx,ny),
      +  krng(2)
       real image(nx,ny)
-      logical mark, nofit, asciiart, auto, negative
+      logical mark, nofit, asciiart, auto, negative, pbcor
       character in*(*)
 cc
       double precision wa(2), posns(2)
@@ -669,6 +681,7 @@ cc
       real pkfl, intfl, amaj, amin, posa
       real xposerr, yposerr, pkflerr
       real bvol, bmaj, bmin, bpa, bvolp, bmajp
+      real gain, mvlrms
       integer iostat, len1, iloc, bin(2), l, m, radeclen(2), rmsbox
       integer sources, ysources, k, i, j
       character cch*1, line*160, typei(2)*6, radec(2)*80, typeo(2)*6
@@ -830,6 +843,15 @@ c Convert location (peak or fitted) to formatted coordinate string
 c
         call w2wfco (lin, 2, typei, ' ', posns,  typeo, ' ',
      +               .true., radec, radeclen)
+c
+c if 'pbcor' selected, correct the flux densities (peak and integrated)
+c by the gain (primary beam attenuation) at the position of the source
+c
+        if (pbcor) then
+         call mosVal(lin,'aw/aw',posns,gain,mvlrms)
+         pkfl = pkfl/gain
+         intfl = intfl/gain
+        end if
 c
 c Write output line to screen, but only if "auto" option not selected
 c
@@ -1100,7 +1122,7 @@ c
 c
       subroutine decopt  (do3val, do3pix, eqscale, mark, doerase, 
      +                    dowedge, dofid, grid, nofit, asciiart, auto,
-     +                    negative)
+     +                    negative, pbcor)
 c----------------------------------------------------------------------
 c     Decode options array into named variables.
 c
@@ -1119,21 +1141,23 @@ c               interactive source selection
 c     auto      True means skip all interactive bits, including displaying
 c               image
 c     negative  inverts image: positive pixels become negative and vice versa
+c     pbcor     true to correct fluxes by primary beam attenuation
 c-----------------------------------------------------------------------
       implicit none
 c
       logical do3val, do3pix, eqscale, mark, doerase,
-     + dofid, dowedge, grid, nofit, asciiart, auto, negative
+     + dofid, dowedge, grid, nofit, asciiart, auto, negative, pbcor
 cc
       integer maxopt
-      parameter (maxopt = 12)
+      parameter (maxopt = 13)
 c
       character opshuns(maxopt)*8
       logical present(maxopt)
       data opshuns /'3value  ', '3pixel  ', 'unequal ',
      +              'mark    ', 'noerase ', 'wedge   ',
      +              'fiddle  ', 'grid    ', 'nofit   ',
-     +              'asciiart', 'auto    ', 'negative'/
+     +              'asciiart', 'auto    ', 'negative',
+     +              'pbcorr  '/
 c-----------------------------------------------------------------------
       call optcg ('options', opshuns, present, maxopt)
 c
@@ -1149,6 +1173,7 @@ c
       asciiart =      present(10)
       auto     =      present(11)
       negative =      present(12)
+      pbcor    =      present(13)
 c
 c circumvent possible irritating bug of ascii pictures being printed out
 c in auto mode by overriding asciiart parameter.
@@ -1164,7 +1189,8 @@ c
       subroutine inputs (maxlev, in, ibin, jbin, kbin, levtyp, slev,
      +   levs, nlevs, pixr, trfun, pdev, labtyp, do3val, do3pix, 
      +   eqscale, nx, ny, cs, dopixel, mark, doerase, dowedge, dofid,
-     +   grid, cut, rmsbox, xrms, nofit, asciiart, auto, negative)
+     +   grid, cut, rmsbox, xrms, nofit, asciiart, auto, negative,
+     +   pbcor)
 c-----------------------------------------------------------------------
 c     Get the unfortunate user's long list of inputs
 c
@@ -1206,6 +1232,7 @@ c              interactive source selection
 c   auto       true means skip all interactive sections of program, including
 c              image display
 c   negative   inverts image: positive pixels become negative and vice versa
+c   pbcor      true to correct fluxes by primary beam attenuation
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -1213,7 +1240,8 @@ c
       real levs(maxlev), pixr(2), cs(2), slev, cut, xrms
       character*(*) labtyp(2), in, pdev, trfun, levtyp
       logical do3val, do3pix, eqscale, dopixel, mark,
-     + doerase, dowedge, dofid, grid, nofit, asciiart, auto, negative
+     + doerase, dowedge, dofid, grid, nofit, asciiart, auto, negative,
+     + pbcor
 cc
       integer ntype, nlab, ntype2, nimtype
       parameter (ntype = 14, ntype2 = 3)
@@ -1279,7 +1307,7 @@ c
 c
       call decopt (do3val, do3pix, eqscale,
      +             mark, doerase, dowedge, dofid, grid,
-     +             nofit, asciiart, auto, negative)
+     +             nofit, asciiart, auto, negative, pbcor)
       if (.not.dopixel) then
         dofid = .false.
         dowedge = .false.
@@ -1849,15 +1877,6 @@ c
       xoff = xt / real(ndata)
       yoff = yt / real(ndata)
 c
-c convert xoff,yoff from binned subimage pixels to full image pixels
-c
-      wa(1) = dble(xoff)
-      wa(2) = dble(yoff)
-      call ppconcg(2, blc(1), bin(1), wa(1))
-      call ppconcg(2, blc(2), bin(2), wa(2))
-      xoff = real(wa(1))
-      yoff = real(wa(2))
-c
       end
 c
 c
@@ -2194,12 +2213,12 @@ c
           intfl = 0.
       endif
       posns(1) = l0(1)
-        posns(2) = m0(1)
-        call coCvt(lIn,'ow/ow',posns,'aw/aw',newpos)
-        posns(1) = newpos(1)
-        posns(2) = newpos(2)
-        xposerr =3600*180/pi*sfac*sl0(1)
-        yposerr =3600*180/pi*sfac*sm0(1)
+      posns(2) = m0(1)
+      call coCvt(lIn,'ow/ow',posns,'aw/aw',newpos)
+      posns(1) = newpos(1)
+      posns(2) = newpos(2)
+      xposerr =3600*180/pi*sfac*sl0(1)
+      yposerr =3600*180/pi*sfac*sm0(1)
       call GauFid(fwhm1(1),fwhm2(1),sfac*sfwhm1(1),
      +            sfac*sfwhm2(1),pa(1),sfac*spa(1),f1,f2,sf1,sf2,p,sp)
         amaj = f1
