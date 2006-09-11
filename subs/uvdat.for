@@ -71,8 +71,9 @@ c    rjs  28may96 Initialise "line" variable to a blank!
 c    rjs  31jul96 Support QQ and UU.
 c    rjs  16aug96 Change phasing convention for circularly polarised feeds,
 c		  and add QQ and UU support for circulars.
-c    rjs  06jan97 Change uvgetvrr to uvrdvrr when getting chi.
+c    rjs  06jan98 Change uvgetvrr to uvrdvrr when getting chi.
 c    rjs  06jan98 Change in uvlkcorr to sidestep a compiler bug on IRIX machines.
+c    rjs  26mar98 Comment change only.
 c
 c  User-Callable Routines:
 c    uvDatInp(key,flags)
@@ -89,10 +90,7 @@ c    uvDatPrb(object,dval)
 c
 c  Bugs and Shortcomings:
 c    uvDatWRd does not return processed polarisations.
-c    Only circular and linear polarisation.
-c    There is a inconsistency between the leakage correction of circular
-c     polarisations and the conversion to Stokes. Leakage correction is
-c     NOT correct.
+c    Only circular and linear polarisation. Only uniform parallactic angle.
 c************************************************************************
 c* uvDatInp -- Get command line uv data parameters.
 c& rjs
