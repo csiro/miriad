@@ -54,6 +54,7 @@ c    mhw  05jan96 Add zero option for Model and ModMap
 c    rjs  30sep96 Major clean up and improved polarisation handling.
 c    rjs  11may97 Correct sign of Stokes-V (not again!!).
 c    rjs  26sep97 Re-add mhw's "zero" option.
+c    rjs  09jan97 Break a statement into two to avoid a compiler bug.
 c************************************************************************
 c*ModelIni -- Ready the uv data file for processing by the Model routine.
 c&rjs
@@ -664,7 +665,9 @@ c
      *		   wv5*Grd(jv+2,ju-1,i) + wv6*Grd(jv+3,ju-1,i) ) +
      *     wu3 * ( wv1*Grd(jv-2,ju  ,i) + wv2*Grd(jv-1,ju  ,i) +
      *		   wv3*Grd(jv  ,ju  ,i) + wv4*Grd(jv+1,ju  ,i) +
-     *		   wv5*Grd(jv+2,ju  ,i) + wv6*Grd(jv+3,ju  ,i) ) +
+     *		   wv5*Grd(jv+2,ju  ,i) + wv6*Grd(jv+3,ju  ,i) )
+c
+	  Intp(i) = Intp(i) + 
      *	   wu4 * ( wv1*Grd(jv-2,ju+1,i) + wv2*Grd(jv-1,ju+1,i) +
      *		   wv3*Grd(jv  ,ju+1,i) + wv4*Grd(jv+1,ju+1,i) +
      *		   wv5*Grd(jv+2,ju+1,i) + wv6*Grd(jv+3,ju+1,i) ) +
