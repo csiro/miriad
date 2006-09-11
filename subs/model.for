@@ -1,8 +1,10 @@
 c************************************************************************
-c NOTE: This is one of the routines where maxdim.h can play a crucial role
-c	because often there is not enough memory.
-c
-c	in ModMap: bufsize ~ 4.nx.ny.nz (nx,ny,nz = cubesize)
+c  Bugs and Shortcomings:
+c    This is one of the routines where maxdim.h can play a crucial role
+c      because often there is not enough memory -- in ModMap:
+c      bufsize ~ 4.nx.ny.nz (nx,ny,nz = cubesize)
+c    Handles polarisations through the select mechanism, rather than the
+c      uvDat way.
 c
 c  History:
 c    rjs  13mar90 Original version.
@@ -21,6 +23,9 @@ c    rjs   2nov90 Fixed bug affecting points where u=0, in ModPlane.
 c    mchw 19nov90 Added flag "h" to use image header for phase center.
 c    rjs  16jan91 Check for a zero model.
 c    rjs  23jan91 Fixed bug in ModFFT which crept in on 19nov90.
+c    rjs   5apr91 More tolerant of big difference between vis phase center
+c		  and map center. Simple polarisation processing. Use
+c		  MemAlloc routine.
 c************************************************************************
 c*ModelIni -- Ready the uv data file for processing by the Model routine.
 c&mchw
@@ -50,15 +55,20 @@ c    flags	A character variable, each character of which specifies
 c		a processing stp.
 c		 'l'	Set up the linetype.
 c		 'p'	Set up the pointing parameters.
+c		 's'	Polarisation selection.
 c--
 c------------------------------------------------------------------------
-	double precision pi,tol
-	parameter(pi=3.141592653589793d0,tol=10.d0/3600.d0/180.d0*pi)
-	double precision ra,dec,cosd
+	double precision pi
+	parameter(pi=3.141592653589793d0)
+	double precision ra,dec,cosd,tol,tmp
 	logical update
-	integer length,nchan
+	integer length,nchan,polm,polv
 	real lstart,lwidth,lstep
-	character tra*1,tdec*1,ltype*64
+	character tra*1,tdec*1,tpol*1,ltype*64
+c
+c  Externals.
+c
+	character PolsC2P*2
 c
 c  Rewind the uv data file and apply the user selection.
 c
@@ -87,12 +97,72 @@ c
 	  if(tra.eq.'r'.or.tdec.eq.'r')then
 	    call rdhdd(tmod,'crval1',ra,0.d0)
 	    call rdhdd(tmod,'crval2',dec,0.d0)
+	    call rdhdd(tmod,'cdelt1',tol,0.d0)
+	    call rdhdd(tmod,'cdelt2',tmp,0.d0)
+	    tol = 3*max(abs(tol),abs(tmp))
 	    cosd = abs(cos(dec))
 	    call uvselect(tvis,'and',0.d0,0.d0,.true.)
 	    call uvselect(tvis,'ra',ra-tol*cosd,ra+tol*cosd,.true.)
 	    call uvselect(tvis,'dec',dec-tol,dec+tol,.true.)
 	  endif
 	endif
+c
+c  Determine if the visibility file contains multiple polarisations.
+c  Only perform polarisation selection if both the visibility file and
+c  the model contain polarisation information.
+c
+	if(index(flags,'s').ne.0)then
+	  call uvprobvr(tvis,'pol',tpol,length,update)
+	  if(tpol.eq.'i')then
+	    call rdhdi(tvis,'pol',polv,0)
+	    call ModelPol(tmod,polm)
+	    if(polm.ne.0.and.polv.eq.0)then
+	      call uvselect(tvis,'and',0.d0,0.d0,.true.)
+	      call uvselect(tvis,'pol',dble(polm),0.d0,.true.)
+	      call output('Selecting polarization type '//PolsC2P(polm))
+	    else if(polm.ne.0.and.polv.ne.polm)then
+	      call bug('f','Map and vis are made of different pols')
+	    endif
+	  endif
+	endif
+c
+	end
+c************************************************************************
+	subroutine ModelPol(tmod,pol)
+c
+	implicit none
+	integer tmod,pol
+c
+c  Determine the polarisation type of a model.
+c
+c  Input:
+c    tmod	The handle of the input model.
+c  Output:
+c    pol	The polarisation type. If this could not be determined,
+c		then 0 is returned.
+c------------------------------------------------------------------------
+	integer naxis,i,n
+	character ctype*16,num*2
+	real crval,crpix,cdelt
+c
+c  Externals.
+c
+	character itoaf*2
+c
+	call rdhdi(tmod,'naxis',naxis,0)
+	pol = 0
+	do i=3,naxis
+	  num = itoaf(i)
+	  call rdhda(tmod,'ctype'//num,ctype,' ')
+	  n = 0
+	  if(ctype.eq.'STOKES') call rdhdi(tmod,'naxis'//num,n,0)
+	  if(n.eq.1) then
+	    call rdhdr(tmod,'crval'//num,crval,1.)
+	    call rdhdr(tmod,'crpix'//num,crpix,1.)
+	    call rdhdr(tmod,'cdelt'//num,cdelt,1.)
+	    pol = nint( crval + (1-crpix)*cdelt )
+	  endif
+	enddo
 	end
 c************************************************************************
 c*Model -- Calculate model visibilities, given a model image.
@@ -242,16 +312,18 @@ c    VisPow
 c    ModPow
 c------------------------------------------------------------------------
 	include 'maxdim.h'
-	integer BufSize,maxgcf,width,maxlen
-	parameter(BufSize = maxbuf/2,maxgcf=2048,width=6)
+	integer maxgcf,width,maxlen
+	parameter(maxgcf=2048,width=6)
 	parameter(maxlen=5*maxchan+10)
 c
-	integer length,nx,ny,nxd,nyd,nu,nv,ngcf,u0,v0,nread,i,j
+	integer length,nx,ny,nxd,nyd,nu,nv,ngcf,u0,v0,nread,i,j,pnt
 	double precision preamble(4)
 	real du,dv,umax,vmax,xref,yref,gcf(maxgcf)
 	real Out(maxlen),uu,vv
 	logical accept,flags(maxchan),doshift
-	complex Buffer(BufSize),In(maxchan),Intp(maxchan)
+	complex Buffer((maxbuf+1)/2)
+	complex In(maxchan),Intp(maxchan)
+	common Buffer
 c
 c  Externals.
 c
@@ -281,8 +353,7 @@ c
 	v0 = nyd/2 + 1
 	umax = 0.5*(nxd-1-width) * abs(du)
 	vmax = 0.5*(nyd-1-width) * abs(dv)
-	if(nu*nv*nchan.gt.BufSize)
-     *	 call bug('f','MODEL: Buffer overflow when calculating model')
+	call MemAlloc(pnt,2*nu*nv*nchan+1,'r')
 c
 	nvis = 0
 	VisPow = 0
@@ -296,7 +367,7 @@ c
 c  Now that we have the info, we can find the FFT of the model.
 c
 	call ModFFT(tvis,tmod,nx,ny,nchan,nxd,nyd,level,imhead,
-     *		Buffer,nv,nu,xref,yref)
+     *		Buffer(pnt/2+1),nv,nu,xref,yref)
 	ngcf = width*((maxgcf-1)/width) + 1
 	doshift = abs(xref)+abs(yref).gt.0
 	call gcffun('spheroidal',gcf,ngcf,width,1.)
@@ -319,7 +390,8 @@ c
 	    else
 	      uu = preamble(1)/du
 	      vv = preamble(2)/dv
-	      call ModGrid(uu,vv,Buffer,nu,nv,nchan,u0,v0,gcf,ngcf,Intp)
+	      call ModGrid(uu,vv,Buffer(pnt/2+1),nu,nv,nchan,u0,v0,
+     *		gcf,ngcf,Intp)
 	      if(doshift) call ModShift(preamble,xref,yref,Intp,nchan)
 	      j = 1
 	      do i=nhead+1,nhead+5*nchan,5
@@ -343,6 +415,7 @@ c
 c
 	if(nread.ne.0) call bug('w',
      *	  'Stopped reading vis data when number of channels changed')
+	call MemFree(pnt,2*nu*nv*nchan+1,'r')
 	end
 c************************************************************************
 	subroutine ModFFT(tvis,tmod,nx,ny,nchan,nxd,nyd,level,imhead,
@@ -403,10 +476,13 @@ c
 	yref =             (vdec - mdec) / ddec + yref
 	iref = nint(xref)
 	jref = nint(yref)
+	if(abs(nx/2+1-iref).gt.nx/2.or.abs(ny/2+1-jref).gt.ny/2)then
+	  call bug('w','Visibility phase center is far from map center')
+	  iref = nx/2 + 1
+	  jref = ny/2 + 1
+	endif
 	xref = dra  * (xref - iref)
 	yref = ddec * (yref - jref)
-	if(iref.lt.1.or.iref.gt.nx.or.jref.lt.1.or.jref.gt.ny)
-     *	  call bug('f','Visibility phase center is off the map')
 c
 c  Set up the gridding correction function.
 c
