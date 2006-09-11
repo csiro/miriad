@@ -133,6 +133,7 @@ c     bpw 15dec92 Adapt for changed fndaxnumc
 c     bpw  2mar93 Adapt for masking in xyzio
 c     bpw 14dec93 Add call logclose
 c     bpw 14nov94 Fix erroneous 'Center outside range' for cdelt3<0
+c     pjt 15mar95 add 'external rtfmt' for ANSI f2c
 
 c************************************************************************
 
@@ -170,7 +171,7 @@ c limlist:     ranges for amp/int,ctr,fwhm/disp
       program gaufit
 
       character*50 version
-      parameter    ( version = 'gaufit: version 1.0 14-nov-94' )
+      parameter    ( version = 'gaufit: version 1.0 15-mar-95' )
 
       include      'maxdim.h'
 
@@ -1220,6 +1221,8 @@ c************************************************************************
       integer       unit, iostat
       integer       i
       real          x
+
+      external rtfmt
       
       nf(1) = nfigi( coords(1) )
       nf(2) = nfigi( coords(2) )
