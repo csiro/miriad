@@ -35,6 +35,7 @@ c    rjs   19feb97    More robust to spaces in .def files.
 c    rjs   25jul97    Better reading of .def and @ files.
 c    rjs   16dec97    Added keyinic and keyputc routines. Some tidying.
 c    rjs   30aug99    Increase a buffer.
+c    rjs    7apr00    keyf checks for file existence.
 c************************************************************************
 c* KeyIni -- Initialise the `key' routines.
 c& pjt
@@ -495,11 +496,16 @@ c    value	The returned value.
 c--
 c------------------------------------------------------------------------
 	integer lvalue
+	character line*80
 c
 c  Get the value.
 c
 	call keyget(key,'*',value,lvalue)
 	if(lvalue.eq.0) value = default
+	if(value.ne.' ')then
+	  line = 'File does not exist: '//value
+	  call assertf(value,.true.,line)
+	endif
 	end
 c************************************************************************
 c* Keya -- Retrieve a character string from the command line.
