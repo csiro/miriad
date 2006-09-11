@@ -50,6 +50,9 @@ c    rjs  16dec96    Improve FITS compliance when loading binary tables.
 c		     Increase number of columns in binary tables.
 c    lss  17dec96    Change ftabget routines to handle reading single
 c		     rows of a column.
+c    rjs  14mar97    Handle FITS tables with FORM strings of type 'C'.
+c		     Handle (simplistically) variable length array facility.
+c
 c  Bugs and Shortcomings:
 c    * IF frequency axis is not handled on output or uv data.
 c    * YYYUUUCCCKKK. See ftabGetD: Miriad's alignment requirements are
@@ -81,6 +84,7 @@ c  FTABLOC	- Locate a particular FITS table.
 c  FTABINFO	- Information about values in the current table.
 c  FTABGETI	- Get integer data from the table.
 c  FTABGETR	- Get real data from the table.
+c  FTABGETC	- Get complex data from the table.
 c  FTABGETD	- Get double precision data from the table.
 c  FTABGETA	- Get ascii data from the table.
 c
@@ -3073,6 +3077,7 @@ c    ColForm	The form type.
 c    ColCnt	The form count, in bits.
 c------------------------------------------------------------------------
 	integer i
+	character c*1
 	logical more
 c
 	integer ftabSize
@@ -3094,7 +3099,12 @@ c
 	  call bug('f','Bad FORM string in FITS table description')
 	endif
 c
-	ColForm = index('IJAEDXL',string(i:i))
+	c = string(i:i)
+c	if(c.eq.'C')then
+c	  ColCnt = 2*ColCnt
+c	  c = 'E'
+c	endif
+	ColForm = index('IJAEDXLCMP',c)
 	if(ColForm.eq.0)call bug('f',
      *	  'Bad FORM string in FITS table description')
 c
@@ -3208,11 +3218,13 @@ c
 c  Check that the i/o routines alignment requirement is met.
 c
 	size = ftabSize(ColForm(i,lu))
+#ifndef sun
 	if(mod(ColOff(i,lu),size/8).ne.0)then
 	  call bug('w','Alignment violation, while reading FITS table')
 	  umsg = 'Offending parameter is '//name
 	  call bug('f',umsg)
 	endif
+#endif
 c
 c  All it OK. So just read the data.
 c
@@ -3296,11 +3308,96 @@ c
 c  Check that the i/o routines alignment requirement is met.
 c
 	size = ftabSize(ColForm(i,lu))
+#ifndef sun
 	if(mod(ColOff(i,lu),size/8).ne.0)then
 	  call bug('w','Alignment violation, while reading FITS table')
 	  umsg = 'Offending parameter is '//name
 	  call bug('f',umsg)
 	endif
+#endif
+c
+c  All it OK. So just read the data.
+c
+	idx = 1
+	offset = DatOff(lu) + ColOff(i,lu)
+        if (irow .lt .1) then
+           ifirst = 1
+           ilast = rows(lu)
+        else
+           ifirst = irow
+           ilast = irow
+           offset = offset + (irow-1)*width(lu)
+        end if
+	do j=ifirst, ilast
+	  call hreadr(item(lu),data(idx),offset,ColCnt(i,lu)/8,iostat)
+	  if(iostat.ne.0)then
+	    call bug('w','I/O error while reading FITS table')
+	    call bugno('f',iostat)
+	  endif
+	  idx = idx + ColCnt(i,lu)/size
+	  offset = offset + width(lu)
+	enddo
+	end
+c************************************************************************
+c* ftabGetC -- Get complex data from the current FITS table.
+c& rjs
+c: fits
+c+
+	subroutine ftabGetC(lu,name,irow,data)
+c
+	implicit none
+	integer lu, irow
+	complex data(*)
+	character name*(*)
+c
+c  Get real data from the current FITS table.
+c
+c  Input:
+c    lu		Handle of the FITS file.
+c    name	Name of the parameter to return
+c    irow       Row number to return (0=all)
+c  Output:
+c    data	The data values.
+c--
+c------------------------------------------------------------------------
+	integer i,j,iostat,size,idx,offset,ifirst,ilast
+	character umsg*64
+	include 'fitsio.h'
+c
+c  Externals.
+c
+	integer ftabColn,ftabSize
+c
+c  Find this parameter in the table.
+c
+	i = ftabColn(lu,name)
+	if(i.le.0)then
+	  umsg = 'FITS table does not have the parameter: '//name
+	  call bug('f',umsg)
+	endif
+c
+c  Is this complex-valued?
+c
+	if(ColForm(i,lu).ne.FormC)then
+	  umsg = 'Cannot convert FITS table parameter '//
+     *		name//' to complex'
+	  call bug('f',umsg)
+	endif
+c
+c  Does row exist?
+c
+	if(irow.gt.rows(lu))call bug('f','Requested row does not exist')
+c
+c  Check that the i/o routines alignment requirement is met.
+c
+	size = ftabSize(ColForm(i,lu))
+#ifndef sun
+	if(mod(ColOff(i,lu),size/8).ne.0)then
+	  call bug('w','Alignment violation, while reading FITS table')
+	  umsg = 'Offending parameter is '//name
+	  call bug('f',umsg)
+	endif
+#endif
 c
 c  All it OK. So just read the data.
 c
@@ -3557,6 +3654,9 @@ c
 	data FormSize(FormD)/64/
 	data FormSize(FormX)/ 1/
 	data FormSize(FormL)/ 8/
+	data FormSize(FormC)/64/
+	data FormSize(FormM)/128/
+	data FormSize(FormP)/ 64/
 c
 	ftabSize = FormSize(Form)
 	end
