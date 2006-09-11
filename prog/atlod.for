@@ -171,6 +171,7 @@ c		  * Comment out checks for invalid antennas in antchk
 c		  * Get rid of skip when jstat.eq.5 in RPDISP.
 c    rjs  22sep97 Replace call to fdatejul with dayjul.
 c    rjs  07jan98 Better printing of source names.
+c    rjs  06apr98 Increase the max size of an integration.
 c
 c  Program Structure:
 c    Miriad atlod can be divided into three rough levels. The high level
@@ -196,7 +197,7 @@ c------------------------------------------------------------------------
 	integer MAXFILES
 	parameter(MAXFILES=128)
 	character version*(*)
-	parameter(version='AtLod: version 07-Jan-98')
+	parameter(version='AtLod: version 08-Apr-98')
 c
 	character in(MAXFILES)*64,out*64,line*64
 	integer tno
