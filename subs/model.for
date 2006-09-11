@@ -47,6 +47,8 @@ c		  clippind message for cross hand polarisations.
 c    rjs   3aug93 Make sure the FFT is at least 16 in size.
 c    rjs  16sep93 Rename bsrch to binsrch.
 c    rjs  11nov93 Correct definition of alpha for mfs work.
+c    rjs  17aug93 Handle offsets somewhat better, using co routines.
+c		  W-axis change.
 c************************************************************************
 c*ModelIni -- Ready the uv data file for processing by the Model routine.
 c&mchw
@@ -80,8 +82,7 @@ c		 's'	Perform polarisation selection.
 c		 't'	Source is polarised.
 c--
 c------------------------------------------------------------------------
-	double precision pi
-	parameter(pi=3.141592653589793d0)
+	include 'mirconst.h'
 	integer PolI,PolXX,PolYY,PolRR,PolLL
 	parameter(PolI=1,PolRR=-1,PolLL=-2,PolXX=-5,PolYY=-6)
 c
@@ -133,10 +134,12 @@ c  and the visibility data.
 c
 	if(index(flags,'s').ne.0)then
 	  doPol = index(flags,'t').ne.0
+	  call coInit(tmod)
 	  call ModPolM(tmod,polm)
+	  call coFin(tmod)
 	  call ModPolV(tvis,polv)
 c
-c  Handle a polarisaed source. Model and visibility have to agree.
+c  Handle a polarised source. Model and visibility have to agree.
 c
 	  if(doPol)then
 	    if(polm.eq.polv)then
@@ -168,80 +171,6 @@ c
 	      call uvselect(tvis,'polarization',dble(PolYY),0d0,.true.)
 	    endif
 	  endif
-	endif
-c
-	end
-c************************************************************************
-	subroutine ModPolM(tmod,polm)
-c
-	implicit none
-	integer tmod,polm
-c
-c  Determine the polarisation type of the model.
-c
-c  Input:
-c    tmod	The handle of the input model.
-c  Output:
-c    polm	The polarisation type of the map. If this info is missing
-c		then Stokes-I is assumed.
-c------------------------------------------------------------------------
-	integer StokesI
-	parameter(StokesI=1)
-	integer naxis,i,n
-	character ctype*16,num*2
-	real crval,crpix,cdelt
-c
-c  Externals.
-c
-	character itoaf*2
-c
-c  Determine the polarisation type of the model.
-c
-	call rdhdi(tmod,'naxis',naxis,0)
-	polm = StokesI
-	do i=3,naxis
-	  num = itoaf(i)
-	  call rdhda(tmod,'ctype'//num,ctype,' ')
-	  n = 0
-	  if(ctype.eq.'STOKES') call rdhdi(tmod,'naxis'//num,n,0)
-	  if(n.gt.1)call bug('f','Cannot handle polarisation cubes')
-	  if(n.eq.1) then
-	    call rdhdr(tmod,'crval'//num,crval,1.)
-	    call rdhdr(tmod,'crpix'//num,crpix,1.)
-	    call rdhdr(tmod,'cdelt'//num,cdelt,1.)
-	    polm = nint( crval + (1-crpix)*cdelt )
-	  endif
-	enddo
-c
-	end
-c************************************************************************
-	subroutine ModPolV(tvis,polv)
-c
-	implicit none
-	integer tvis,polv
-c
-c  Determine the polarisation type of the visibility data.
-c
-c  Input:
-c    tvis	The handle of the input visibility.
-c  Output:
-c    polv	The polarisation type of the visibility data. If this info
-c		is missing, then Stokes-I is assumed. If the information
-c		is indeterminant, then 0 is returned.
-c------------------------------------------------------------------------
-	integer StokesI
-	parameter(StokesI=1)
-	integer length
-	character tpol*1
-	logical update
-c
-c  Determine the polarisation type of the visibility data.
-c
-	call uvprobvr(tvis,'pol',tpol,length,update)
-	if(tpol.eq.'i')then
-	  call rdhdi(tvis,'pol',polv,0)
-	else
-	  polv = StokesI
 	endif
 c
 	end
@@ -339,6 +268,10 @@ c
 	integer i,j,length
 	logical calscale,imhead,mfs,doclip
 c
+c  Initialise the coordinate handles.
+c
+	if(tmod.ne.0)call coInit(tmod)
+c
 	call ModInit
 	call ScrOpen(tscr)
 	call uvset(tvis,'coord','wavelength',0,0.,0.,0.)
@@ -356,6 +289,11 @@ c
 	endif
 	if(ModPow.le.0) call bug('w','Model visibilities are all zero')
 	if(VisPow.le.0) call bug('w','All visibilities are zero')
+c
+c  Release the coordinate system handles.
+c
+	call coFin(tvis)
+	if(tmod.ne.0)call coFin(tmod)
 c
 c  If we are to autoscale, then run through the output, rescaling all the
 c  data so that power is conserved.
@@ -433,8 +371,8 @@ c
 	if(nz.le.0) call bug('f','Bad value for NAXIS3')
 	if(mfs.and.nz.gt.2)
      *	  call bug('f','Invalid value for NAXIS3 for MFS data')
-	nxd = max(min(MAXDIM,nextpow2(nx+1)),16)
-	nyd = max(min(MAXDIM,nextpow2(ny+1)),16)
+	nxd = max(min(MAXDIM,nextpow2(2*nx)),16)
+	nyd = max(min(MAXDIM,nextpow2(2*ny)),16)
 	if(nxd.lt.nx.or.nyd.lt.ny)call bug('f','Model too big')
 	call rdhdr(tmod,'cdelt1',du,0.)
 	call rdhdr(tmod,'cdelt2',dv,0.)
@@ -443,7 +381,7 @@ c
 c
 c  If its a MFCLEAN model, then get then reference frequency.
 c
-	if(mfs.and.nz.eq.2)call ModRef(tmod,freq0)
+	if(mfs.and.nz.eq.2)call ModFreqM(tmod,freq0)
 c
 c  Calculate various thingos.
 c
@@ -462,6 +400,7 @@ c
 	ModPow = 0
 c
 	call uvread(tvis,preamble,In,flags,maxchan,nchan)
+	call coInit(tvis)
 	if(nchan.eq.0)
      *	  call bug('f','No visibility data selected, in Model(map)')
 	if(nchan.ne.nz.and..not.mfs)
@@ -567,43 +506,83 @@ c
 	call MemFree(pnt,2*nu*nv*nz+1,'r')
 	end
 c************************************************************************
-	subroutine ModRef(tmod,freq0)
+	subroutine ModPolM(tmod,polm)
+c
+	implicit none
+	integer tmod,polm
+c
+c  Determine the polarisation type of the model.
+c
+c  Input:
+c    tmod	The handle of the input model.
+c  Output:
+c    polm	The polarisation type of the map. If this info is missing
+c		then Stokes-I is assumed.
+c------------------------------------------------------------------------
+	integer StokesI
+	parameter(StokesI=1)
+	integer iax
+	double precision t
+c
+	call coFindAx(tmod,'stokes',iax)
+	if(iax.ne.0)then
+	  call coCvt1(tmod,iax,'ap',1.d0,'aw',t)
+	  polm = nint(t)	  
+	else
+	  polm = StokesI
+	endif
+	end
+c************************************************************************
+	subroutine ModPolV(tvis,polv)
+c
+	implicit none
+	integer tvis,polv
+c
+c  Determine the polarisation type of the visibility data.
+c
+c  Input:
+c    tvis	The handle of the input visibility.
+c  Output:
+c    polv	The polarisation type of the visibility data. If this info
+c		is missing, then Stokes-I is assumed. If the information
+c		is indeterminant, then 0 is returned.
+c------------------------------------------------------------------------
+	integer StokesI
+	parameter(StokesI=1)
+	integer length
+	character tpol*1
+	logical update
+c
+c  Determine the polarisation type of the visibility data.
+c
+	call uvprobvr(tvis,'pol',tpol,length,update)
+	if(tpol.eq.'i')then
+	  call rdhdi(tvis,'pol',polv,0)
+	else
+	  polv = StokesI
+	endif
+c
+	end
+c************************************************************************
+	subroutine ModFreqM(tmod,freq0)
 c
 	implicit none
 	integer tmod
 	double precision freq0
 c
-c  Get the reference frequency of an MFS map.
+c  Get the reference frequency of the model.
 c
 c  Input:
 c    tmod	Handle of the model.
 c  Output:
 c    freq0	The reference frequency.
 c------------------------------------------------------------------------
-	integer i,naxis
-	character ctype*16,num*2
-	double precision crval,crpix,cdelt
+	integer iax
 c
-c  Externals.
-c
-	character itoaf*2
-c
-	call rdhdi(tmod,'naxis',naxis,0)
-c
-	freq0 = 0
-	do i=3,naxis
-	  num = itoaf(i)
-	  call rdhda(tmod,'ctype'//num,ctype,' ')
-	  if(ctype(1:4).eq.'FREQ')then
-	    call rdhdd(tmod,'crval'//num,crval,0.d0)
-	    call rdhdd(tmod,'crpix'//num,crpix,1.d0)
-	    call rdhdd(tmod,'cdelt'//num,cdelt,0.d0)
-	    freq0 = crval + (1-crpix)*cdelt
-	  endif
-	enddo
-c
-	if(freq0.le.0)call bug('f',
+	call coFindAx(tmod,'freq',iax)
+	if(iax.eq.0)call bug('f',
      *	  'Unable to determine MFS reference frequency')
+	call coCvt1(tmod,iax,'op',0.d0,'aw',freq0)
 	end
 c************************************************************************
 	subroutine ModFFT(tvis,tmod,nx,ny,nchan,nxd,nyd,level,polm,
@@ -623,7 +602,8 @@ c    nchan
 c    nxd,nyd
 c    nv,nu
 c    level
-c    imhead	Use image header for phase center.
+c    imhead	Assume visibility observing center and image reference
+c		pixel are the same location.
 c    mfs	If true, then the input model is a multi-freq synthesis
 c		image.
 c  Output:
@@ -641,30 +621,16 @@ c------------------------------------------------------------------------
 	parameter(width=6)
 	integer k,iref,jref,nclip
 	real xref,yref
-	double precision vra,vdec,mra,mdec,dra,ddec
+	double precision dra,ddec
 	real xcorr(maxdim),ycorr(maxdim)
 	character val*9
+	double precision x1(2),x2(2)
 c
 c  Externals.
 c
-	logical PolsPara
+	logical PolsPara,coCompar
 c
-c  Determine the location of the visibility phase center in the image.
-c
-	call rdhdd(tmod,'crval1',mra,0.d0)
-	call rdhdd(tmod,'crval2',mdec,0.d0)
-c
-	if(imhead)then
-	  vra = mra
-	  vdec = mdec
-	else
-	  call uvrdvrd(tvis,'ra',vra,0.d0)
-	  call uvrdvrd(tvis,'dra',dra,0.d0)
-	  call uvrdvrd(tvis,'dec',vdec,0.d0)
-	  call uvrdvrd(tvis,'ddec',ddec,0.d0)
-	  vdec = vdec + ddec
-	  vra = vra + dra/cos(vdec)
-	endif
+c  Determine the properties of the model coordinate system.
 c
 	call rdhdd(tmod,'cdelt1',dra,0.d0)
 	call rdhdd(tmod,'cdelt2',ddec,0.d0)
@@ -682,9 +648,26 @@ c
 	endif
 	xref1 = dra  * (xref - iref)
 	yref1 = ddec * (yref - jref)
-	xref2 = cos(vdec) * (vra  - mra )
-	yref2 =             (vdec - mdec)
-	if(mfs)then
+c
+c  Determine the shift required to phase the model to the visibility dataset.
+c
+	if(imhead)then
+	  xref2 = 0
+	  yref2 = 0
+	else
+	  x1(1) = 0
+	  x1(2) = 0
+	  call coCvt(tmod,'op/op',x1,'aw/aw',x2)
+	  call coCvt(tvis,'aw/aw',x2,'op/op',x1)
+	  xref2 = -x1(1)
+	  yref2 = -x1(2)
+c	  if(.not.coCompar(tvis,tmod,'projection'))call bug('w',
+c     *	    'Projection geometry of model and visibility differ')
+	endif
+c
+c  All shifts are the same for a model with a single plane.
+c
+	if(mfs.or.nchan.eq.1)then
 	  xref2 = xref2 + xref1
 	  xref1 = 0
 	  yref2 = yref2 + yref1
@@ -699,7 +682,6 @@ c  Determine the clipping mode. If no clipping is to be done, then
 c  nclip = 0. If the model is an intensity-type polarisation (nclip=1)
 c  then any value below "Level" is clipped. Otherwise (nclip=2) any data
 c  in the range -Level to Level is clipped.
-c
 c
 	nclip = 0
 	if(doclip)then
@@ -843,8 +825,7 @@ c    nchan		The number of channels to rotate.
 c  Input/Output:
 c    Intp		The data to be phase rotated.
 c------------------------------------------------------------------------
-	real pi
-	parameter(pi=3.141592653589793)
+	include 'mirconst.h'
 	real theta,t1,t2
 	integer i
 	complex W
@@ -1025,9 +1006,9 @@ c
 	external header,calget
 c------------------------------------------------------------------------
 	include 'maxdim.h'
-	real pi
+	include 'mirconst.h'
 	integer maxlen
-	parameter(pi=3.141592653589793,maxlen=5*maxchan+10)
+	parameter(maxlen=5*maxchan+10)
 c
 	integer nread,length,j,i
 	real xref,yref,theta,temp,Out(maxlen)
@@ -1035,15 +1016,31 @@ c
 	logical accept,flags(maxchan)
 	complex In(maxchan)
 	double precision skyfreq(maxchan)
-c
-	xref = (offset(1)/3600.) * (pi/180)
-	yref = (offset(2)/3600.) * (pi/180)
+	double precision off(2),lm(2)
 c
 	ModPow = 0
 	VisPow = 0
 	nvis = 0
 c
+c  Get the first record.
+c
 	call uvread(tvis,preamble,In,flags,maxchan,nchan)
+	call coInit(tvis)
+c
+c  If there is an offset to the point source, determine its true
+c  position.
+c
+	if(abs(offset(1))+abs(offset(2)).gt.0)then
+	  off(1) = (offset(1)/3600.) * (pi/180)
+	  off(2) = (offset(2)/3600.) * (pi/180)
+	  call coCvt(tvis,'ow/ow',off,'op/op',lm)
+	  xref = lm(1)
+	  yref = lm(2)
+	else
+	  xref = 0
+	  yref = 0
+	endif
+c
 	nread = nchan
 	length = nhead + 5*nchan
 c
@@ -1268,11 +1265,12 @@ c    freq	Observing frequency, in GHz.
 c  Output:
 c    ModPlant	The flux of the planet for this baseline.
 c------------------------------------------------------------------------
-	real pi,h,c,k
-	parameter(pi=3.141592653589793,h=6.6252e-34,c=2.99792458e8)
-	parameter(k=1.38045e-23)
-	double precision coord(2)
+	include 'mirconst.h'
+	double precision coord(3)
 	real plmaj,plmin,plangle,pltb,u,v,flux,cosi,sini,beta,omega
+	character type*1
+	integer length
+	logical update
 c
 c  Externals.
 c
@@ -1284,7 +1282,11 @@ c    u,v -- nanosec.
 c    plmaj,plmin -- arcsec.
 c    plangle -- degrees
 c    pltb -- Kelvin
-	call uvgetvrd(tvis,'coord',coord,2)
+c
+	call uvprobvr(tvis,'coord',type,length,update)
+	if(type.ne.'d'.or.length.lt.2.or.length.gt.3)
+     *	  call bug('f','Screwy uvw coordinate, in ModPlant')
+	call uvgetvrd(tvis,'coord',coord,length)
 	u = coord(1)
 	v = coord(2)
 	call uvgetvrr(tvis,'plmaj',plmaj,1)
@@ -1294,9 +1296,9 @@ c    pltb -- Kelvin
 c
 c  Unit conversion.
 c
-	plangle = pi/180 * plangle
-	plmaj = pi * plmaj / 180 / 3600 
-	plmin = pi * plmin / 180 / 3600
+	plangle = PI/180 * plangle
+	plmaj = PI * plmaj / 180 / 3600 
+	plmin = PI * plmin / 180 / 3600
 c
 c  We have the characteristics of the source. Now compute the flux (in Jy).
 c    plange -- radians.
@@ -1308,11 +1310,11 @@ c  The factor 1e26 converts between W/m**2/Hz to Janksy.
 c
 	cosi = cos(plangle)
 	sini = sin(plangle)
-	beta = pi * sqrt((plmaj*(u*cosi-v*sini))**2
+	beta = PI * sqrt((plmaj*(u*cosi-v*sini))**2
      *	  	       + (plmin*(u*sini+v*cosi))**2)
 	omega = pi/4 * plmaj*plmin
-	flux = omega * 2*(h*1e26)/(c*c)*(freq**3*1e27)/
-     *	 ( exp(((h/k)*1e9)*freq/pltb) - 1. )
+	flux = omega * 2*(HMKS*1e26)/(CMKS*CMKS)*(freq**3*1e27)/
+     *	 ( exp(((HMKS/KMKS)*1e9)*freq/pltb) - 1. )
 	ModPlant = 2.*j1xbyx(beta*freq) * flux
 	end		
 c************************************************************************
