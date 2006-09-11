@@ -32,6 +32,7 @@ c    rjs  13sep94 Support 'VELOCITY' and 'FELOCITY' axes.
 c    rjs  12oct94 Added a good many things ... for mosaicing.
 c    rjs  23nov94 A dummy statement to stop the alpha compiler complaining.
 c    rjs  30jan95 Added cogeom.
+c    rjs  26sep95 More tolerant of screwy headers.
 c************************************************************************
 c* coInit -- Initialise coordinate conversion routines.
 c& rjs
@@ -1353,7 +1354,6 @@ c
 	      crpix1(i) = xp(i) - delta/cdelt1(i)
 	      if(cotype(i,k).eq.LON)
      *	        cdelt1(i) = cdelt1(i) * cos( crval(ilat(k),k) )
-	      if(cotype(i,k).ne.FELO)ctype1(i)(6:8) = 'CAR'
 	    else
 	      cdelt1(i) = cdelt(i,k)
 	      crpix1(i) = crpix(i,k)
@@ -1535,25 +1535,56 @@ c
 c
 c  Check that two celestial coordinates represent a consistent pair.
 c------------------------------------------------------------------------
-	character type1*16,type2*16
+	character type1*16,type2*16,qual1*16,qual2*16
 c
 c  "Sort" them.
 c
 	if(ctype1.lt.ctype2)then
-	  type1 = ctype1
-	  type2 = ctype2
+	  call CoExt(ctype1,type1,qual1)
+	  call CoExt(ctype2,type2,qual2)
 	else
-	  type1 = ctype2
-	  type2 = ctype1
+	  call CoExt(ctype2,type1,qual1)
+	  call CoExt(ctype1,type2,qual2)
 	endif
 c
 c  The projection code (characters 6:8) should be the same,
 c  and make sure We should have a RA/DEC, GLAT/GLON, ELAT/ELON pair.
 c
-	ok = (type1(6:8).eq.type2(6:8)).and.
-     *	     ((type1(1:5).eq.'DEC--'.and.type2(1:5).eq.'RA---').or.
-     *	      (type1(1:5).eq.'GLAT-'.and.type2(1:5).eq.'GLON-').or.
-     *	      (type1(1:5).eq.'ELAT-'.and.type2(1:5).eq.'ELON-'))
+	ok = (qual1.eq.qual2).and.
+     *	     ((type1.eq.'DEC'.and.type2.eq.'RA').or.
+     *	      (type1.eq.'GLAT'.and.type2.eq.'GLON').or.
+     *	      (type1.eq.'ELAT'.and.type2.eq.'ELON'))
+	end
+c************************************************************************
+	subroutine CoExt(ctype,type,qual)
+c
+	implicit none
+	character ctype*(*),type*(*),qual*(*)
+c------------------------------------------------------------------------
+	integer l,i,length
+	logical doqual
+c
+c  Externals.
+c
+	integer len1
+c
+	doqual = .false.
+	l = 0
+	type = ' '
+	qual = ' '
+	length = len1(ctype)
+	do i=1,length
+	  l = l + 1
+	  if(ctype(i:i).eq.'-')then
+	    l = 0
+	    doqual = .true.
+	  else if(doqual)then
+	    qual(l:l) = ctype(i:i)
+	  else
+	    type(l:l) = ctype(i:i)
+	  endif
+	enddo
+c
 	end
 c************************************************************************
 	subroutine CoInitXY(k)
