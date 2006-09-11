@@ -63,6 +63,8 @@ c		  correction.
 c    rjs   9sep94 Support felocity and default values for this and velo.
 c    rjs  23sep94 W coordinate support.
 c    rjs  31jul95 Handle plangle in the polarization conversion software.
+c    rjs  10nov95 uvDatSet can disable calibration/Stokes conversion.
+c		  Initialise nPol.
 c
 c  User-Callable Routines:
 c    uvDatInp(key,flags)
@@ -168,6 +170,7 @@ c
 	pnt = 0
 	tno = 0
 	nPolF = 0
+	nPol = 0
 c
 c  Get the input file names.
 c
@@ -1220,6 +1223,8 @@ c		Stokes/polarisations will be returned. Valid codes for
 c		polarisations are:
 c		I 1, Q 2, U 3, V 4, RR -1, LL -2, RL -3, LR -4,
 c		XX -5, YY -6, XY -7, YX -8, II 0.
+c    'disable'  This turns off calibration and Stokes conversion
+c		(but not visibility selection or linetype processing).
 c--
 c------------------------------------------------------------------------
 	include 'uvdat.h'
@@ -1231,6 +1236,11 @@ c
 	  if(value.lt.PolMin.or.value.gt.PolMax)
      *	    call bug('f','Invalid polarisation, in uvDatSet')
 	  pols(npol) = value
+	else if(object.eq.'disable')then
+	  docal = .false.
+	  dopass = .false.
+	  doleak = .false.
+	  nPol = 0
 	else
 	  call bug('f','Invalid object in uvDatSet')
 	endif
