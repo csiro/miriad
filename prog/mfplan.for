@@ -30,6 +30,13 @@ c	Array configuration. Several values can be given. Valid values are:
 c	3.0a (6.0a), 3.0b (6.0b), 3.0c (6.0c), 3.0d (6.0d), 1.5a, 1.5b,
 c	1.5c, 1.5d, 0.75a, 0.75b, 0.75c, 0.75d, 0.375, 0.122. These correspond 
 c	to the 14 standard ATCA configurations.
+c@ fixed
+c	List of fixed frequencies that are fixed (not varied) by MFPLAN.
+c	Usually these correspond to frequencies used in completed
+c	observations. The first "nfreq" frequencies will be
+c	associated with the first configuration, the second "nfreq"
+c	frequencies correspond to the second configuration, etc.
+c	The default is that all frequencies are varied.
 c@ options
 c	Extra processing options. Several can be given, separated by commas.
 c	Minimum match is used. Possible values are:
@@ -53,6 +60,7 @@ c    rjs  20sep93 Infinity option.
 c    nebk 23sep93 Add 6.0 arrays to silence akt (no easy feat)
 c    rjs   7oct93 Change default frequencies to silence akt (certainly no easy
 c		  feat).
+c    rjs  04jul97 "fixed" keyword.
 c  Bugs:
 c------------------------------------------------------------------------
 	character version*(*)
@@ -69,7 +77,7 @@ c
 	real oldfreq,maxfreq,freqsum
 	integer i,j,k,l,llabel
 	real T,E,oldE,p,rand(3),maxbase
-	integer nfail,nsucc,trials
+	integer nfail,nsucc,trials,nfix
 	character config*8,device*16,label*80,line*64
 	logical no128,inf
 c
@@ -147,13 +155,14 @@ c
 	llabel = llabel - 1
 c
 	if(nconfg.le.0)call bug('f','No configurations given')
+	call mkeyr('fixed',freqs,nconfg-1,nfix)
 	call keya('device',device,' ')
 	call keyfin
 c
 c  Get the initial guess at the frequencies.
 c
-	call uniform(freqs,nconfg)
-	do i=1,nconfg
+	call uniform(freqs(nfix+1),nconfg-nfix)
+	do i=nfix+1,nconfg
 	  freqs(i) = GetFrq(freqs(i),bands,uni,nbands,freqsum,no128)
 	enddo
 	E = eval(nconfg,nans,coord,freqs,bls,idx,maxbase,inf)
@@ -169,7 +178,7 @@ c
 c  Get a new possible solution.
 c
 	  call uniform(rand,3)
-	  i = nconfg*rand(1) + 1
+	  i = (nconfg-nfix)*rand(1) + 1 + nfix
 	  oldfreq = freqs(i)
 	  oldE = E
 	  freqs(i) = GetFrq(rand(2),bands,uni,nbands,freqsum,no128)
