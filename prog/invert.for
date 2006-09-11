@@ -151,7 +151,7 @@ c	           mosaic of these pointings.
 c	  imaginary Make imaginary image for non-Hermitian data (holography).
 c	  amplitude Produce a image using the data amplitudes only. The
 c	            phases of the data are set to zero.
-c         phase     Produce an image using the data phase only. The amplitudes
+c	  phase     Produce an image using the data phase only. The amplitudes
 c	            of the data are set to 1.
 c@ mode
 c	This determines the algorithm to be used in imaging.
@@ -173,7 +173,7 @@ c	that all channels in a given visibility spectrum must be good before
 c	accepting the spectrum for imaging. This keyword allows this rule to
 c	be relaxed. It consists of two parts: a tolerance and a method for
 c	replacing the bad channels.
-c	
+c
 c	The tolerance is a value between 0 and 1, giving the fraction of
 c	channels that INVERT will tolerate as being bad before the spectrum
 c	is totally discarded. The default is 0, indicating that INVERT will
@@ -295,6 +295,8 @@ c    rjs    1nov95  Default value for imsize. Better default cell and sup.
 c		    Sub-uniform weighting.
 c    rjs   12nov95  Check imsize somewhat better.
 c    rjs   13dec95  Eliminate min image size.
+c    rjs   29feb96  Call xyflush after each plane.
+c    rjs   12jul96  Be fore forgiving if beam too big -- just make it smaller.
 c  Bugs:
 c
 c------------------------------------------------------------------------
@@ -374,8 +376,6 @@ c
 	call keyi('imsize',nx,0)
 	call keyi('imsize',ny,nx)
 	if(max(nx,ny).gt.MAXDIM)call bug('f','Output image too big')
-	if(double.and.2*max(nx,ny).gt.MAXDIM)
-     *				call bug('f','Output beam too big')
 c
 	defWt = .not.keyprsnt('sup')
 	call keyr('sup',supx,0.)
@@ -476,6 +476,8 @@ c
 	nx = min(nx,MAXDIM)
 	ny = min(ny,MAXDIM)
 	if(double)then
+	  if(2*max(nx,ny)-1.gt.MAXDIM)call bug('w',
+     *	    'Reducing beam size of be maximum image size')
 	  bnx = min(2*nx - 1,MAXDIM)
 	  bny = min(2*ny - 1,MAXDIM)
 	else
@@ -698,6 +700,7 @@ c
 	do j=1,ny
 	  call xywrite(tno,j,Dat(1,j))
 	enddo
+	call xyflush(tno)
 	end
 c************************************************************************
 	subroutine BeamMake(tno,beam,coIn,mosaic,sdb,bnx,bny,npnt,
@@ -806,6 +809,8 @@ c
 	call hisWrite(tno,line)
 	call hisInput(tno,'INVERT')
 	call hisClose(tno)
+c
+	call xyflush(tno)
 c
 	end
 c************************************************************************
