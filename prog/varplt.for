@@ -66,6 +66,7 @@ c    rjs  02feb01 Added options=equal.
 c    rjs  16nov03 Added extra variables. pressmb, wind,winddir,axismax
 c    rjs  10may05 Increase buffer size.
 c    rjs  26may05 Add pntra,pntdec to list of know variables.
+c    rjs  19jun05 More spaces in log file.
 c
 c  Bugs:
 c    ?? Perfect?
@@ -73,7 +74,7 @@ c------------------------------------------------------------------------
 	character version*(*)
 	integer MAXPNTS
 	parameter(MAXPNTS=1000000)
-	parameter(version='VarPlt: version 1.1 26-May-05')
+	parameter(version='VarPlt: version 1.1 19-Jun-05')
 	logical doplot,dolog,dotime,dounwrap
 	character vis*64,device*64,logfile*64,xaxis*16,yaxis*16
 	character xtype*1,ytype*1,xunit*16,yunit*16,calday*24
@@ -428,18 +429,20 @@ c
 	real vals(nvals)
 	logical dotime,first
 c------------------------------------------------------------------------
+	integer ctime,cnum
+	parameter(ctime=12,cnum=15)
 	integer isec,imin,ihr,iday,i
 	logical dospace,more
 c
 	dospace = .not.first
 	do i=1,nvals
 	  if(length.eq.0.and.dospace)then
-	    line(1:12) = ' '
-	    length = 12
-	  else if(length+12.gt.len(line))then
+	    line(1:ctime) = ' '
+	    length = ctime
+	  else if(length+cnum.gt.len(line))then
 	    call LogWrite(line(1:length),more)
-	    line(1:12) = ' '
-	    length = 12
+	    line(1:ctime) = ' '
+	    length = ctime
 	    dospace = .true.
 	  endif
 	  if(dotime)then
@@ -451,12 +454,14 @@ c
 	    isec = isec - 3600*ihr
 	    imin = isec /60
 	    isec = isec - 60*imin
-	    write(line(length+1:length+12),'(i2,a,i2.2,a,i2.2,a,i2.2)')
+	    write(line(length+1:length+ctime),
+     *		'(i2,a,i2.2,a,i2.2,a,i2.2)')
      *		iday,' ',ihr,':',imin,':',isec
+	    length = length + ctime
 	  else
-	    write(line(length+1:length+12),'(1pg12.5)')vals(i)
+	    write(line(length+1:length+cnum),'(1pg15.8)')vals(i)
+	    length = length + cnum
 	  endif
-	  length = length + 12
 	enddo
 	end
 c************************************************************************
