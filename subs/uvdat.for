@@ -68,6 +68,7 @@ c		  Initialise nPol.
 c    rjs  06dec95 line=chan,0 defaults to selecting all channels.
 c    nebk 10dec95 Be a bit cleverer (?) with reissuing calibration messages
 c    rjs  28may96 Initialise "line" variable to a blank!
+c    rjs  31jul96 Support QQ and UU.
 c
 c  User-Callable Routines:
 c    uvDatInp(key,flags)
@@ -264,6 +265,10 @@ c
 	  nPol = nPol + 1
 	  if(type.eq.'ii'.or.type.eq.'II')then
 	    Pols(nPol) = 0
+	  else if(type.eq.'qq'.or.type.eq.'QQ')then
+	    Pols(nPol) = 5
+	  else if(type.eq.'uu'.or.type.eq.'UU')then
+	    Pols(nPol) = 6
 	  else
 	    Pols(nPol) = PolsP2C(type)
 	  endif
@@ -903,6 +908,18 @@ c
 	      type(1) = PolXY
 	      type(2) = PolYX
 	    endif
+	  else if(Pols(i).eq.PolQQ)then
+	    ncoeff(i) = 2
+	    coeffs(1,i) = ( 0.5,0.0)
+	    coeffs(2,i) = (-0.5,0.0)
+	    type(1) = PolXX
+	    type(2) = PolYY
+	  else if(Pols(i).eq.PolUU)then
+	    ncoeff(i) = 2
+	    coeffs(1,i) = (0.5,0.0)
+	    coeffs(2,i) = (0.5,0.0)
+	    type(1) = PolXY
+	    type(2) = PolYX
 	  endif
 c
 c  If polarisation leakage correction should be performed, but we do not
@@ -1076,6 +1093,8 @@ c
 	  if(nPol.gt.0) then
 	    ival(1) = Pols(max(iPol,1))
 	    if(ival(1).eq.PolII) ival(1) = PolI
+	    if(ival(1).eq.PolQQ) ival(1) = PolQ
+	    if(ival(1).eq.PolUU) ival(1) = PolU
 	  else
 	    call uvrdvri(tno,'pol',ival,PolI)
 	  endif
@@ -1115,6 +1134,8 @@ c
 	    do i=1,npol
 	      ival(i) = pols(i)
 	      if(ival(i).eq.PolII) ival(i) = PolI
+	      if(ival(i).eq.PolQQ) ival(i) = PolQ
+	      if(ival(i).eq.PolUU) ival(i) = PolU
 	    enddo
 	  endif
 c
