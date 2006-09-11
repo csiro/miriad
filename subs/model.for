@@ -36,6 +36,9 @@ c    rjs  29jan91 Fixed sign error in the direction of the shift, in
 c		  ModShift.
 c    rjs  30mar92 Pointing selection always performed in ModelIni, if
 c		  'p' flag given. Better error messages(?).
+c    rjs  26apr92 Added check for clip level processing.
+c    rjs  10may92 Reworked the way clipping is done.
+c    rjs  17may92 Clipping message, to appease NEBK.
 c************************************************************************
 c*ModelIni -- Ready the uv data file for processing by the Model routine.
 c&mchw
@@ -122,7 +125,8 @@ c  and the visibility data.
 c
 	if(index(flags,'s').ne.0)then
 	  doPol = index(flags,'t').ne.0
-	  call ModelPol(tmod,polm,tvis,polv)
+	  call ModPolM(tmod,polm)
+	  call ModPolV(tvis,polv)
 c
 c  Handle a polarisaed source. Model and visibility have to agree.
 c
@@ -160,28 +164,23 @@ c
 c
 	end
 c************************************************************************
-	subroutine ModelPol(tmod,polm,tvis,polv)
+	subroutine ModPolM(tmod,polm)
 c
 	implicit none
-	integer tmod,polm,tvis,polv
+	integer tmod,polm
 c
-c  Determine the polarisation type of the model and the visibility data.
+c  Determine the polarisation type of the model.
 c
 c  Input:
 c    tmod	The handle of the input model.
-c    tvis	The handle of the input visibility.
 c  Output:
 c    polm	The polarisation type of the map. If this info is missing
 c		then Stokes-I is assumed.
-c    polv	The polarisation type of the visibility data. If this info
-c		is missing, then Stokes-I is assumed. If the information
-c		is indeterminant, then 0 is returned.
 c------------------------------------------------------------------------
 	integer StokesI
 	parameter(StokesI=1)
-	integer naxis,i,n,length
-	character ctype*16,num*2,tpol*1
-	logical update
+	integer naxis,i,n
+	character ctype*16,num*2
 	real crval,crpix,cdelt
 c
 c  Externals.
@@ -205,6 +204,28 @@ c
 	    polm = nint( crval + (1-crpix)*cdelt )
 	  endif
 	enddo
+c
+	end
+c************************************************************************
+	subroutine ModPolV(tvis,polv)
+c
+	implicit none
+	integer tvis,polv
+c
+c  Determine the polarisation type of the visibility data.
+c
+c  Input:
+c    tvis	The handle of the input visibility.
+c  Output:
+c    polv	The polarisation type of the visibility data. If this info
+c		is missing, then Stokes-I is assumed. If the information
+c		is indeterminant, then 0 is returned.
+c------------------------------------------------------------------------
+	integer StokesI
+	parameter(StokesI=1)
+	integer length
+	character tpol*1
+	logical update
 c
 c  Determine the polarisation type of the visibility data.
 c
@@ -249,10 +270,19 @@ c		      so that it has the same power as the visibilities.
 c		 'h'  Use image header for phase center.
 c		 'm'  Multi-freq data. The model is either one or two
 c		      planes, which were formed using INVERT's mfs option.
+c		 'l'  Apply clipping.
 c    offset	The offset, in arcsec, in RA and DEC, of the point
 c		source model. This is only used if tmod.eq.0.
 c    level	Either a clip level to apply to the data (tmod.ne.0), or
-c		the amplitude of the point source (tmod.eq.0).
+c		the amplitude of the point source (tmod.eq.0). If it is
+c		a clip level, it is applied only if the 'l' flag (see
+c		above) is given. Additionally, depending on the type of the
+c		model, then the clip level can be used in one of two ways.
+c		If the model is Stokes-Q,U or V, or a raw cross-hands
+c		polarisation type (strange!!), or I-alpha map from multi-freq
+c		synthesis, then pixels in the range -Level to Level are clipped.
+c		If the model is none of the above, then pixels below
+c		Level are clipped.
 c    nhead	Number of "header" values to write out to the scratch file.
 c		These are filled in by the "header" routine. If "nhead" is
 c		zero, header is not called.
@@ -299,7 +329,7 @@ c------------------------------------------------------------------------
 c
 	real Out(maxlen),a,VisPow,ModPow
 	integer i,j,length
-	logical calscale,imhead,mfs
+	logical calscale,imhead,mfs,doclip
 c
 	call ModInit
 	call ScrOpen(tscr)
@@ -307,9 +337,10 @@ c
 	calscale = index(flags,'c').ne.0
 	imhead = index(flags,'h').ne.0
 	mfs = index(flags,'m').ne.0
+	doclip = index(flags,'l').ne.0
 c
 	if(tmod.ne.0)then
-	  call ModMap(calscale,tvis,tmod,level,tscr,nhead,header,
+	  call ModMap(calscale,tvis,tmod,level,doclip,tscr,nhead,header,
      *	    calget,imhead,mfs,nchan,nvis,VisPow,ModPow)
 	else
 	  call ModPnt(calscale,tvis,offset,level,tscr,nhead,header,
@@ -339,11 +370,11 @@ c
 c
 	end
 c************************************************************************
-	subroutine ModMap(calscale,tvis,tmod,level,tscr,nhead,header,
-     *	    calget,imhead,mfs,nchan,nvis,VisPow,ModPow)
+	subroutine ModMap(calscale,tvis,tmod,level,doclip,tscr,nhead,
+     *	    header,calget,imhead,mfs,nchan,nvis,VisPow,ModPow)
 c
 	implicit none
-	logical calscale,imhead,mfs
+	logical calscale,imhead,mfs,doclip
 	integer tvis,tscr,nhead,nchan,nvis,tmod
 	real level,ModPow,VisPow
 	external header,calget
@@ -370,6 +401,7 @@ c------------------------------------------------------------------------
 	parameter(maxlen=5*maxchan+10)
 c
 	integer length,nx,ny,nz,nxd,nyd,nu,nv,ngcf,u0,v0,nread,i,j,pnt
+	integer polm
 	double precision preamble(4)
 	real du,dv,umax,vmax,xref1,yref1,xref2,yref2,gcf(maxgcf)
 	real Out(maxlen),uu,vv,u,v
@@ -426,10 +458,16 @@ c
 	if(nchan.ne.nz.and..not.mfs)
      *	  call bug('f','The number of model and data channels differ')
 c
+c  If we are applying clipping, we need to know the polarisation type
+c  of the model.
+c
+	polm = 0
+	if(doclip)call ModPolM(tmod,polm)
+c
 c  Now that we have the info, we can find the FFT of the model.
 c
-	call ModFFT(tvis,tmod,nx,ny,nz,nxd,nyd,level,imhead,
-     *		Buffer(pnt/2+1),nv,nu,mfs,xref1,yref1,xref2,yref2)
+	call ModFFT(tvis,tmod,nx,ny,nz,nxd,nyd,level,polm,doclip,
+     *	  imhead,Buffer(pnt/2+1),nv,nu,mfs,xref1,yref1,xref2,yref2)
 	ngcf = width*((maxgcf-1)/width) + 1
 	doshift = abs(xref1)+abs(yref1)+abs(xref2)+abs(yref2).gt.0
 	call gcffun('spheroidal',gcf,ngcf,width,1.)
@@ -556,14 +594,14 @@ c
      *	  'Unable to determine MFS reference frequency')
 	end
 c************************************************************************
-	subroutine ModFFT(tvis,tmod,nx,ny,nchan,nxd,nyd,level,imhead,
-     *	  Buffer,nv,nu,mfs,xref1,yref1,xref2,yref2)
+	subroutine ModFFT(tvis,tmod,nx,ny,nchan,nxd,nyd,level,polm,
+     *	  doclip,imhead,Buffer,nv,nu,mfs,xref1,yref1,xref2,yref2)
 c
 	implicit none
-	integer tvis,tmod,nx,ny,nchan,nxd,nyd,nv,nu
+	integer tvis,tmod,nx,ny,nchan,nxd,nyd,nv,nu,polm
 	complex Buffer(nv,nu,nchan)
 	real xref1,yref1,xref2,yref2,level
-	logical imhead,mfs
+	logical imhead,mfs,doclip
 c
 c  Input:
 c    tvis
@@ -589,9 +627,14 @@ c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer width
 	parameter(width=6)
-	integer k,iref,jref
+	integer k,iref,jref,nclip
 	real vra,vdec,dra,ddec,mra,mdec,xref,yref
 	real xcorr(maxdim),ycorr(maxdim)
+	character val*9
+c
+c  Externals.
+c
+	logical PolsPara
 c
 c  Determine the location of the visibility phase center in the image.
 c
@@ -639,10 +682,31 @@ c  Set up the gridding correction function.
 c
 	call ModCorr(xcorr,ycorr,nxd,nyd)
 c
+c  Determine the clipping mode. If no clipping is to be done, then
+c  nclip = 0. If the model is an intensity-type polarisation (nclip=1)
+c  then any value below "Level" is clipped. Otherwise (nclip=2) any data
+c  in the range -Level to Level is clipped.
+c
+c
+	nclip = 0
+	if(doclip)then
+	  nclip = 1
+	  if(.not.PolsPara(polm))nclip = 2
+	endif
+	write(val,'(1pg9.2)')Level
+	if(nclip*Level.ne.0.and.nclip.ne.1)then
+	  call output('No clipping being Performed on the model')
+	else if(nclip.eq.1)then
+	  call output('Clipping model when: pixval < '//val)
+	else if(nclip.eq.2)then
+	  call output('Clipping model when: abs(pixval) < '//val)
+	endif
+c
 	do k=1,nchan
 	  call xysetpl(tmod,1,k)
-	  call ModPlane(tmod,nx,ny,nxd,nyd,xcorr,ycorr,Level,
+	  call ModPlane(tmod,nx,ny,nxd,nyd,xcorr,ycorr,Level,nclip,
      *				iref,jref,Buffer(1,1,k),nu,nv)
+	  if(mfs.and.doclip) nclip = 2
 	enddo
 	end
 c************************************************************************
@@ -827,11 +891,11 @@ c
 	enddo
 	end
 c************************************************************************
-	subroutine ModPlane(tmod,nx,ny,nxd,nyd,xcorr,ycorr,Level,
+	subroutine ModPlane(tmod,nx,ny,nxd,nyd,xcorr,ycorr,Level,nclip,
      *						iref,jref,Buffer,nu,nv)
 c
 	implicit none
-	integer tmod,nx,ny,nxd,nyd,iref,jref,nu,nv
+	integer tmod,nx,ny,nxd,nyd,iref,jref,nu,nv,nclip
 	real xcorr(nxd),ycorr(nyd),Level
 	complex Buffer(nv,nu)
 c
@@ -839,6 +903,9 @@ c  Generate FFTs of a plane.
 c
 c  Input:
 c    nv,nu	Dimensions of the FFT.
+c    nclip	Clipping mode. nclip = 0: No clipping.
+c				     = 1: Clip below level.
+c				     = 2: Clip in the range -Level to Level.
 c  Output:
 c    Buffer	FFTs of the planes.
 c------------------------------------------------------------------------
@@ -868,21 +935,35 @@ c
 	  if(j0.gt.nyd) j0 = j0 - nyd
 	  if(j0.le.ny)then
 	    call xyread(tmod,j0,Data)
+c
+c  Get the flags and do the clipping.
+c
 	    call xyflgrd(tmod,j0,flags)
+	    if(nclip.eq.1)then
+	      do i=1,nx
+		flags(i) = flags(i).and.Data(i).gt.Level
+	      enddo
+	    else if(nclip.eq.2)then
+	      if(Level.lt.0)call bug('f','Invalid clip level')
+	      do i=1,nx
+		flags(i) = flags(i).and.
+     *		  (Data(i).gt.Level.or.Data(i).lt.-Level)
+	      enddo
+	    endif
 	    offset = iref - 1
 	    do i=1,nx-iref+1
-	      if(.not.flags(i+offset).or.Data(i+offset).lt.Level)then
-		Shifted(i) = 0
-	      else
+	      if(flags(i+offset))then
 		Shifted(i) = Data(i+offset)/(xcorr(i)*ycorr(j))
+	      else
+		Shifted(i) = 0
 	      endif
 	    enddo
 	    offset = -(nxd-iref+1)
 	    do i=nxd-iref+2,nxd
-	      if(.not.flags(i+offset).or.Data(i+offset).lt.Level)then
-		Shifted(i) = 0
-	      else
+	      if(flags(i+offset))then
 		Shifted(i) = Data(i+offset)/(xcorr(i)*ycorr(j))
+	      else
+		Shifted(i) = 0
 	      endif
 	    enddo
 	    call fftrc(shifted,Cdat,1,nxd)
