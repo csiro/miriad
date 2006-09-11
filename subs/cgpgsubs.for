@@ -16,7 +16,6 @@ c  confmtcg :  Format contour levels
 c  conturcg :  Draw contour plot
 c  erswincg :  Erase window
 c  lab3cg   :  Label sub-plot with value and/or pixel of third axis
-c  setgrcg  :  Set up a black and white lookup table and apply it
 c  setlabcg :  Set axis label displacements 
 c  strerscg :  Erase rectangle on plot and write string into it
 c  strfmtcg :  Format a number into a string with PGNUMB
@@ -102,7 +101,8 @@ c                        routines to label with true world value of third
 c                        third axis
 c     nebk   23dec94     Strings (str1:4) not long enough in ANNWINCG
 c                        Increase length of STR1 in CONFMTCG
-c     nebk   05jan95     Replace PGGRAY by new PGIMAG. Add SETGRCG
+c     nebk   05jan95     Replace PGGRAY by new PGIMAG. 
+c     nebk   14feb95     Add "reverse" argument to wedge routines
 c**********************************************************************
 c
 c* annboxCG -- Annotate plot with information from a box image 
@@ -1221,30 +1221,6 @@ c
       end
 c
 c
-c* setgrCG -- Set a grey scale lookup table and apply it
-c& nebk
-c: plotting
-c+
-      subroutine setgrcg 
-c
-      implicit none
-c
-c  Set up a greyscale lookup table and apply it to the current device
-c--
-c------------------------------------------------------------------------
-      real gl(2), gr(2), gg(2), gb(2)
-c
-      save gl, gr, gg, gb
-      data gl /0.0, 1.0/
-      data gr /0.0, 1.0/
-      data gg /0.0, 1.0/
-      data gb /0.0, 1.0/
-c------------------------------------------------------------------------
-      call pgctab (gl, gr, gg, gb, 2, 1.0, 0.5)
-c
-      end
-c
-c
 c* setlabCG -- Set label options strings and axis displacements
 c& nebk
 c: plotting
@@ -1856,18 +1832,19 @@ c* wedgCG -- Draw grey scale wedge in specified viewport
 c& nebk
 c: plotting
 c+
-      subroutine wedgcg (label, trfun, groff, nbins, cumhis, wdgvp, 
-     +                   fg, bg)
+      subroutine wedgcg (reverse, label, trfun, groff, nbins, cumhis, 
+     +                   wdgvp, a1, a2)
 c
       implicit none
       integer nbins
-      real wdgvp(4), fg, bg, groff, cumhis(nbins)
+      real wdgvp(4), a1, a2, groff, cumhis(nbins)
       character trfun*3
-      logical label
+      logical label, reverse
 c
 c Draw a vertical grey-scale wedge in the specified viewport
 c
 c Input
+c  reverseIf true reverse order of min and max given to PGIMAG
 c  label  True means label wedge to right else none
 c  trfun  Transfer function type applied to image.  One of 'lin',
 c         'log', 'heq' or 'sqr'
@@ -1878,9 +1855,9 @@ c         Values for each bin are the intensities assigned to
 c         the image.  Thus if an image pixel ended up in
 c         cumhis bin idx, then its new value is cumhis(idx)
 c  wdgvp  Viewport to draw wedge in
-c  fg     The value which is to appear with shade 1 ("foreground"). 
-c         Use the values of FG and BG that were sent to PGGRAY.
-c  bg     The value which is to appear with shade 0 ("background").
+c  a1     The value which is to appear with shade C1
+c  a2     The value which is to appear with shade C2
+c         Use the values of A1 and A2 that were sent to PGIMAG.
 c         These values should be those appropriate to before any
 c         application of transfer functions (log etc) and adding of
 c         offsets (GROFF)
@@ -1891,7 +1868,7 @@ c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mem.h'
       real wx1, wx2, wy1, wy2, vx1s, vx2s, vy1s, vy2s, wdginc, tr(6), 
-     +  fg2, bg2
+     +  b1, b2
       integer i, ipw, nbins2
 c
       save tr
@@ -1912,17 +1889,17 @@ c
 c Create a dummy wedge array to be plotted.
 c
       if (trfun.eq.'log') then
-        fg2 = log10(fg+groff)
-        bg2 = log10(bg+groff)
+        b1 = log10(a1+groff)
+        b2 = log10(a2+groff)
       else if (trfun.eq.'sqr') then
-        fg2 = sqrt(fg+groff)
-        bg2 = sqrt(bg+groff)
+        b1 = sqrt(a1+groff)
+        b2 = sqrt(a2+groff)
       else if (trfun.eq.'heq') then
-        fg2 = cumhis(nbins2)
-        bg2 = cumhis(1)
+        b1 = cumhis(1)
+        b2 = cumhis(nbins2)
       else
-        fg2 = fg
-        bg2 = bg
+        b1 = a1
+        b2 = a2
       end if
 c
 c Generate wedge with correct transfer function applied
@@ -1938,9 +1915,9 @@ c
 c
 c Generate linear wedge
 c
-        wdginc = (fg-bg) / (nbins2-1)
+        wdginc = (a2-a1) / (nbins2-1)
         do i = 1, nbins2
-          memr(ipw+i-1) = bg + (i-1) * wdginc
+          memr(ipw+i-1) = a1 + (i-1) * wdginc
 c
 c Apply transfer function
 c
@@ -1956,9 +1933,14 @@ c Draw the wedge and label
 c
       call pgsvp (wdgvp(1), wdgvp(3), wdgvp(2), wdgvp(4))
       call pgswin (0.9, 1.1, 1.0, real(nbins2))
-      call pgimag (memr(ipw), 1, nbins2, 1, 1, 1, nbins2, 
-     +             bg2, fg2, tr)
-      call pgswin (0.0, 1.0, bg, fg)
+      if (reverse) then
+        call pgimag (memr(ipw), 1, nbins2, 1, 1, 1, nbins2, 
+     +               b2, b1, tr)
+      else
+        call pgimag (memr(ipw), 1, nbins2, 1, 1, 1, nbins2, 
+     +               b1, b2, tr)
+      end if
+      call pgswin (0.0, 1.0, a1, a2)
       if (label) then
 c
 c Label box to right
@@ -1987,18 +1969,20 @@ c* wedgeCG -- Decide if it is time to draw a wedge and do so if so
 c& nebk
 c: plotting
 c+
-      subroutine wedgecg (wedcod, wedwid, jj, trfun, groff, nbins, 
-     +                    cumhis, wdgvp, fg, bg)
+      subroutine wedgecg (reverse, wedcod, wedwid, jj, trfun, groff, 
+     +                    nbins, cumhis, wdgvp, a1, a2)
 c
       implicit none
-      real groff, cumhis(*), wdgvp(4), fg, bg, wedwid
+      real groff, cumhis(*), wdgvp(4), a1, a2, wedwid
       integer wedcod, jj, nbins
       character trfun*3
+      logical reverse
 c
 c Work out whether the grey scale wedges are to be drawn inside
 c or outside the subplots, and whether there will be one or many
 c  
 c Input
+c  reverseIf true reverse order of data min and max given to PGIMAG
 c  wedcod 1 -> one wedge to right of all subplots
 c         2 -> one wedge to right per subplot
 c         3 -> one wedge per subplot inside subplot
@@ -2010,8 +1994,8 @@ c  nbins  Number of bins used in histogram equalization of image
 c  cumhis Cumulative histogram for histogram equalization returned
 c         by HEQCG
 c  wdgvp  Viewport to draw wedge in (wedcod=1)
-c  fg,bg  Grey scale max and min
-c         Use the values of FG and BG that were sent to PGGRAY.
+c  a1,a2  Grey scale max and min
+c         Use the values of A1 and A2 that were sent to PGGRAY.
 c         These values should be those appropriate to before 
 c         any application of transfer functions (log etc) and 
 c         adding of offsets
@@ -2028,23 +2012,23 @@ c-----------------------------------------------------------------------
 c
       if (wedcod.eq.1) then
         if (jj.eq.1) then
-          call wedgcg (.true., trfun, groff, nbins, cumhis, wdgvp, 
-     +                 fg, bg)
+          call wedgcg (reverse, .true., trfun, groff, nbins, cumhis, 
+     +                 wdgvp, a1, a2)
         end if
       else if (wedcod.eq.2) then
         wv(1) = vx2 + 1.0*xht
         wv(2) = vy1
         wv(3) = wv(1) + wedfrc
         wv(4) = vy2
-        call wedgcg (.true., trfun, groff, nbins, cumhis, wv,
-     +               fg, bg)
+        call wedgcg (reverse, .true., trfun, groff, nbins, cumhis, 
+     +               wv, a1, a2)
       else
         wv(1) = vx2 - wedfrc
         wv(2) = vy1
         wv(3) = vx2
         wv(4) = vy2
-        call wedgcg (.false., trfun, groff, nbins, cumhis, wv,
-     +               fg, bg)
+        call wedgcg (reverse, .false., trfun, groff, nbins, cumhis, 
+     +               wv, a1, a2)
       end if
 c
       end
