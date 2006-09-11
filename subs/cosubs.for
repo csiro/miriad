@@ -42,6 +42,7 @@ c                      Consolidate CTYPE searching into AXFNDCO and AXTYPCO
 c    nebk   03dec95    Declaration of TYPE in AXTYPCO was (n) not (*), and
 c	               removed useless access to multiple axes in CHKAXCO
 c    nebk   18dec95    Recognize new CTYPE "angle"
+c    rjs    06feb96    Increase ctype string in chkaxco.
 c***********************************************************************
 c
 c* axfndCO -- Find a specified generic axis in an image
@@ -290,7 +291,7 @@ c           compatible with any spectral TYPE
 c--
 c-----------------------------------------------------------------------
       integer il, jax
-      character ctype*9, str*132, gtype*4
+      character ctype*32, str*132, gtype*4
       logical bad, bads
 c-----------------------------------------------------------------
       if (stype.ne.' ' .and. stype.ne.'frequency' .and.
@@ -374,7 +375,6 @@ c-----------------------------------------------------------------------
       str = 'ctype'//itoaf(iax)
       call rdhda (lun, str, ctype, ' ')
       if (ctype.eq.' ') call bug ('f', 'CTYPECO: '//str//' is blank')
-      call ucase (ctype)
 c
       il2 = len1(ctype)
       il = 1
