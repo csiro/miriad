@@ -2,7 +2,7 @@
       implicit none
 c
 c= clstats - Calculates dispersions, masses, etc for each clump from clfind file
-c& jpw
+c& pjt
 c
 c
 c  The mass is calculated in the following way;
@@ -75,15 +75,16 @@ c  01jun94  jpw  parameter ncl is now the number of real clumps, and not
 c                (necessarily) the last clump number.
 c  20jul94  jpw  converted to use dynamic memory
 c  19feb97  mwp  bug fixes , dv versus sv in dostats.for
+c  18may98  rjs  catenated all files into one, and perhaps some more???
+c  19may98  pjt  minor flint cleanups before putting this is MIRIAD
 c-------------------------------------------------------------------------
       character version*(*)
-      parameter(version='version 1.4 19-feb-97' )
-c      include 'header.h'
+      parameter(version='version 1.5 19-may-98' )
       include 'clstats.h'
 
       integer lenline,imax,ncmax
       logical pos
-      character line*80,positions*3
+      character line*80,positns*3
       character*80 head1,head2
 
 c.....dynamic memory setup
@@ -115,7 +116,7 @@ c.....Get the parameters from the user.
       call keyr('meanmol',meanmol,1.38)
       call keyr('jyperk',kpjy,1.0)
 	kpjy=1./kpjy
-      call keya('xy',positions,'rel')
+      call keya('xy',positns,'rel')
       call keyr('rms',rms,0.0)
       call keyi('nmin',nmin,4)
       call keyfin
@@ -123,7 +124,7 @@ c.....Get the parameters from the user.
       if(file.eq.' ')call bug('f','Input file name missing')
       if(dist.eq.0.0)call bug('f','Source distance must be given')
 
-      if(positions.eq.'abs') pos=.true.
+      if(positns.eq.'abs') pos=.true.
 
 c.....Open data cube
       call output('Data cube: '//file)
@@ -141,7 +142,7 @@ c.....Open data cube
       call memalloc(Ic,nx*ny*nv,'i')
       call memalloc(Im,nx*ny*nv,'l')
 
-      call printhead(pos)
+      call prthead(pos)
 
       line='-------------------------------------------------'
       call output(line(1:lenline(line))//line(1:lenline(line)))
@@ -168,7 +169,6 @@ c------------------------------------------------------------------
 c---------------------------------------------------------------------
 c  calculate the statistics for each clump, in turn
 c---------------------------------------------------------------------
-c      include 'header.h'
       include 'clstats.h'
 
       integer i,j,k,nc,imax,ncmax
@@ -344,21 +344,18 @@ c.......if beam size is smaller than 30" write output in arcseconds
 c.......else write output in arcminutes or degrees depending on
 c.......whether relative or absolute positions are requested
         if(sqrt(abs(beamx*beamy)).lt.30.0) then
-           print 201,
-     *           nclump,xp,yp,vp,tave,
+           print 201, nclump,xp,yp,vp,tave,
      *           tp,sx,sy,radius,dv,
      *           mlte,masserr,mgrav,npixels,flag
         else
           if(pos) then
             xp=(x0+xp)/3600.0
             if(xp.lt.0.0) xp=xp+360.0
-            print 201,
-     *           nclump,xp,(y0+yp)/3600.,vp,tave,
+            print 201, nclump,xp,(y0+yp)/3600.,vp,tave,
      *           tp,sx,sy,radius,dv,
      *           mlte,masserr,mgrav,npixels,flag
           else
-            print 201,
-     *           nclump,xp/60.,yp/60.,vp,tave,
+            print 201, nclump,xp/60.,yp/60.,vp,tave,
      *           tp,sx,sy,radius,dv,
      *           mlte,masserr,mgrav,npixels,flag
           endif
@@ -405,18 +402,17 @@ c
 	lenline = l
 	end
 c------------------------------------------------------------------------
-      subroutine printhead(pos)
+      subroutine prthead(pos)
       implicit none
 c-----------------------------------------------------------------------
 c  print out the header; distance, beam size, etc
 c-----------------------------------------------------------------------
-c      include 'header.h'
       include 'clstats.h'
 
       integer lenline,nwords
       real rad2asec
-      real refx,fluxmin,mass_sens
-      character extension*3,words(10)*80
+      real refx,fluxmin,msens
+      character xtension*3,words(10)*80
       character*80 filecf,line
       logical eof,pos
 
@@ -446,8 +442,8 @@ c.....first, convert to arcseconds
       endif
 
 c.....Open the clump assignment file
-      extension=".cf"
-      filecf=file(1:lenline(file))//extension
+      xtension='.cf'
+      filecf=file(1:lenline(file))//xtension
       call xyopen(lin2,filecf,'old',3,nsize)
       call hisopen(lin2,'read')
       do while (.not.eof)
@@ -526,9 +522,9 @@ c.....print out some header information for the stats file
 c.....smallest clump has one pixel in the second
 c.....contour level and (nmin-1) at the first
       fluxmin = ((nmin-1)*start+(start+1))*dt*kpjy
-      mass_sens=1.60*meanmol*xfact*(dist**2)*fluxmin*delv*
+      msens=1.60*meanmol*xfact*(dist**2)*fluxmin*delv*
      *          abs(delx)*dely/(rad2asec*rad2asec)
-      print 152,mass_sens
+      print 152,msens
 
 
 
@@ -555,7 +551,6 @@ c.....contour level and (nmin-1) at the first
 c-----------------------------------------------------------------------
        subroutine rdhd(in)
 
-c       include 'header.h'
        include 'clstats.h'
 
        integer in
@@ -597,7 +592,6 @@ c-----------------------------------------------------------------------
 c  read in the data and prepare arrays for calculating statistics
 c-----------------------------------------------------------------------
       include 'clstats.h'
-c      include 'header.h'
 
       integer nc,imax,nclump,ncmax
       integer i,j,k,i1,lenline

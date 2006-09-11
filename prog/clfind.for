@@ -64,11 +64,11 @@ c      include 'header.h'
 
       character*40 filein,filecf
       character*80 line1,line2
-      character extension*3
+      character xtension*3
       integer lenline
       integer nclump,ncl,nstop
       integer ngy,nmin
-      integer nlevs,npx_1,npx_2
+      integer nlevs,npx1,npx2
       integer nsize(3)
       real beamx,beamy
 
@@ -146,8 +146,8 @@ c.....Hardwire in velocity resolution = 1 pixel
       dv=1.0
 
 c.....Open the output, and add a header to it.
-      extension=".cf"
-      filecf=filein(1:lenline(filein))//extension
+      xtension='.cf'
+      filecf=filein(1:lenline(filein))//xtension
       call output('Output clump assignment file: '//filecf)
       call xyopen(lout,filecf,'new',3,nsize)
       call wrhd(version)
@@ -173,20 +173,20 @@ c.....Start reading the input file
  
       print 1013, data(1)
  1013 format(' t(1) = ',f)
-      call count_levs(data(It),nlevs,npx_1,npx_2)
+      call CntLevs(data(It),nlevs,npx1,npx2)
       nlevels=nlevs
 
 c.....space allocation for coded position arrays
-      call memalloc(Ipos1,npx_1,'i')
-      call memalloc(Ipos,nlevs*npx_2,'i')
-      call memalloc(Ireg,nlevs*npx_2,'i')
+      call memalloc(Ipos1,npx1,'i')
+      call memalloc(Ipos,nlevs*npx2,'i')
+      call memalloc(Ireg,nlevs*npx2,'i')
 
-      call fill_levs(data(It),nlevs,npx_1,npx_2,
+      call FillLevs(data(It),nlevs,npx1,npx2,
      *               pos1(Ipos1),pos(Ipos),reg(Ireg))
 
 c.....Connect to find connected regions at each gray level
       call output(' ')
-      call findreg(nlevs,npx_2,pos(Ipos),reg(Ireg))
+      call findreg(nlevs,npx2,pos(Ipos),reg(Ireg))
 
 c.....Work thru data cube, from highest level to lowest
 c.....connecting regions across levels
@@ -200,17 +200,17 @@ c.....Total number of clumps
 c........Number of clumps at level ngy
          ncl=0
          call findclp(ngy,ncl,nclump,data(It),assign(Ia),
-     *                nlevs,npx_2,pos(Ipos),reg(Ireg))
+     *                nlevs,npx2,pos(Ipos),reg(Ireg))
          print 1040, ngy+p1-1,ncl
          if (ngy.gt.2)
-     *   call extendclp(ngy,nclump,data(It),assign(Ia),
-     *                  nlevs,npx_2,pos(Ipos),reg(Ireg))
+     *   call xtendclp(ngy,nclump,data(It),assign(Ia),
+     *                  nlevs,npx2,pos(Ipos),reg(Ireg))
       enddo
  1040 format(' Level ',i2,':',i5,' new clumps')
 
       call output(' ')
       call output('Extending to level 1')
-      call extendlow(nclump,assign(Ia),npx_1,pos1(Ipos1))
+      call xtendlow(nclump,assign(Ia),npx1,pos1(Ipos1))
 
       call output('Testing clumps for badness')
       nstop=0 
@@ -234,13 +234,13 @@ c.....clumps must have greater than nmin pixels
 
       call memfree(Ia,nx*ny*nz,'i')
       call memfree(It,nx*ny*nz,'r')
-      call memfree(Ipos1,npx_1,'i')
-      call memfree(Ipos,nlevs*npx_2,'i')
-      call memfree(Ireg,nlevs*npx_2,'i')
+      call memfree(Ipos1,npx1,'i')
+      call memfree(Ipos,nlevs*npx2,'i')
+      call memfree(Ireg,nlevs*npx2,'i')
 
       end
 c ---------------------------------------------------------
-      subroutine count_levs(t,nlevs,npx1,npx2)
+      subroutine CntLevs(t,nlevs,npx1,npx2)
       implicit none
 c-----------------------------------------------------------------
 c counts the number of levels and pixels/level
@@ -297,7 +297,7 @@ c 1011   format(' Number of pixels in level 1:                   ',i4)
       return
       end
 c-----------------------------------------------------------------
-      subroutine extendclp(ngy,nclump,t,a,n1,n2,npos,nreg)
+      subroutine xtendclp(ngy,nclump,t,a,n1,n2,npos,nreg)
       implicit none
 c--------------------------------------------------------------
 c     subroutine of clfind
@@ -315,7 +315,7 @@ c      include 'header.h'
       integer ngy,nclump
       integer indx,maxindx,nclmerge
       integer iter,ngyhigh
-      integer nmax,n_axis
+      integer nmax,naxis
       integer ix,iy,iv
       integer n1,n2
       integer a(*),npos(n1,n2),nreg(n1,n2)
@@ -352,14 +352,14 @@ c........Examine neighbourhood of each pixel
           sy=real(abs(j1-j2))/dy
           sx=real(abs(i1-i2))/dx
           if(sv.lt.1.05.and.sy.lt.1.05.and.sx.lt.1.05) then
-           n_axis=0
-           if(sv.gt.0.05) n_axis=n_axis+1
-           if(sy.gt.0.05) n_axis=n_axis+1
-           if(sx.gt.0.05) n_axis=n_axis+1
+           naxis=0
+           if(sv.gt.0.05) naxis=naxis+1
+           if(sy.gt.0.05) naxis=naxis+1
+           if(sx.gt.0.05) naxis=naxis+1
 
 c..........Check each "connected" pixel to
 c..........see if at next lower gray level
-           if(n_axis.le.p3) then
+           if(naxis.le.p3) then
             call gtindx(i2,j2,k2,nps2)
             ngy0=int(t(nps2)/p2)-p1+1
             if(ngy0.eq.ngy-1) then
@@ -458,12 +458,12 @@ c..........have been (sucessively) assigned to a clump
             sy=real(abs(j1-j2))/dy
             sx=real(abs(i1-i2))/dx
             if(sx.lt.1.05.and.sy.lt.1.05.and.sv.lt.1.05) then
-             n_axis=0
-             if(sv.gt.0.05) n_axis=n_axis+1
-             if(sy.gt.0.05) n_axis=n_axis+1
-             if(sx.gt.0.05) n_axis=n_axis+1
+             naxis=0
+             if(sv.gt.0.05) naxis=naxis+1
+             if(sy.gt.0.05) naxis=naxis+1
+             if(sx.gt.0.05) naxis=naxis+1
 
-             if(n_axis.le.p3) then
+             if(naxis.le.p3) then
 c.............Require that pixel is a neighbour and lies
 c.............between gray levels ngy-1 and ngyhigh (defined
 c.............above). In case more than one clump fits
@@ -474,17 +474,17 @@ c.............with highest peak temperature.
               ngy0=int(t(nps2)/p2)-p1+1
               if(ngy0.ge.ngy-1 .and. ngy0.le.ngyhigh) then
                ncl=a(nps2)
-               if(ncl.gt.0.and.ncl.le.nclump.and.n_axis.le.nmax) then
-                if(n_axis.lt.nmax) then
-                 nmax=n_axis
+               if(ncl.gt.0.and.ncl.le.nclump.and.naxis.le.nmax) then
+                if(naxis.lt.nmax) then
+                 nmax=naxis
                  dmax=9999.9
                 endif
                 i0=clump(ncl,1)
                 j0=clump(ncl,2)
                 k0=clump(ncl,3)
                 d=(real(i0-i1)/dx)**2+
-      *           (real(j0-j1)/dy)**2+
-      *           (real(k0-k1)/dv)**2
+     *            (real(j0-j1)/dy)**2+
+     *            (real(k0-k1)/dv)**2
                 if(d.lt.dmax) then
                  dmax=d
                  tmpcl(indx)=ncl
@@ -520,7 +520,7 @@ c.............with highest peak temperature.
       return
       end
 c ---------------------------------------------------------
-      subroutine extendlow(nclump,a,n,npos1)
+      subroutine xtendlow(nclump,a,n,npos1)
       implicit none
 c-------------------------------------------------------
 c     subroutine of clfind
@@ -531,7 +531,7 @@ c-------------------------------------------------------
       include 'clfind.h'
 c      include 'header.h'
       integer ncl1,ncl2
-      integer n_axis,nclump
+      integer naxis,nclump
       integer nps1,nps2,npx1
       integer i1,j1,k1,i2,j2,k2
       integer ix,iy,iv
@@ -576,12 +576,12 @@ c...........Go ahead only if neighbourhood pixel is in a clump
             if(sv.gt.1.05) goto 20
             if(sy.gt.1.05) goto 20
             if(sx.gt.1.05) goto 20
-            n_axis=0
-            if(sv.gt.0.05) n_axis=n_axis+1
-            if(sy.gt.0.05) n_axis=n_axis+1
-            if(sx.gt.0.05) n_axis=n_axis+1
+            naxis=0
+            if(sv.gt.0.05) naxis=naxis+1
+            if(sy.gt.0.05) naxis=naxis+1
+            if(sx.gt.0.05) naxis=naxis+1
 c...........Goto next pixel if this one not in neighbourhood
-            if(n_axis.gt.p3) goto 20
+            if(naxis.gt.p3) goto 20
 
             if (ncl1.eq.0) then
 c..............If lowest level pixel is unassigned then assign it
@@ -618,7 +618,7 @@ c.....Repeat process until there are no new assigned pixels
       return
       end
 c ---------------------------------------------------------
-      subroutine fill_levs(t,nlevs,npx1,npx2,npos1,npos,nreg)
+      subroutine FillLevs(t,nlevs,npx1,npx2,npos1,npos,nreg)
       implicit none
 c-----------------------------------------------------------------
 c fills in the arrays nreg, npos, and npos1 with the
@@ -633,7 +633,7 @@ c      include 'header.h'
       integer npos1(npx1),npos(nlevs,npx2),nreg(nlevs,npx2)
       real t(*)
 
-c.....Initialize npix() which was counted in count_levs
+c.....Initialize npix() which was counted in CountLevs
 c.....but we don't want it to be recounted here
       do ngy=1,nlevs
        npix(ngy)=0
@@ -688,21 +688,26 @@ c      include 'header.h'
       real t(*)
 
       do nrgn=1,nregions(ngy)
-         if (.not.merge(nrgn)) then              ! unmerged rgn=>new cl
+c						 unmerged rgn=>new cl
+         if (.not.merge(nrgn)) then              
             ncl=ncl+1
             nclump=nclump+1
             tpeak=-999.
             npx=0
             do npx1=1,npix(ngy)
-               if (nreg(ngy,npx1).eq.nrgn) then  ! assign entire rgn
+c						 assign entire rgn
+               if (nreg(ngy,npx1).eq.nrgn) then  
                   nps1=npos(ngy,npx1)
                   a(nps1)=nclump
-                  npx=npx+1                      ! find #pix and..
+c						find #pix and..
+                  npx=npx+1                      
                   t1=t(nps1)
                   if (t1.gt.tpeak) then
                      call invindx(i1,j1,k1,nps1)
-                     tpeak=t1                    ! ..peak posn of..
-                     ipeak=i1                    ! ..new clump
+c						..peak posn of..
+                     tpeak=t1                   
+c						..new clump
+                     ipeak=i1                   
                      jpeak=j1
                      kpeak=k1
                   endif
@@ -727,7 +732,7 @@ c-------------------------------------------------------
       include 'clfind.h'
 c      include 'header.h'
 
-      integer n_axis,ngy,nrgn
+      integer naxis,ngy,nrgn
       integer npx1,npx2,nps2,npx3,nps3
       integer i2,j2,k2,i3,j3,k3
       integer n1,n2
@@ -767,11 +772,11 @@ c..........all pixels in this region
                if(sx.lt.1.05 .and.
      *            sy.lt.1.05 .and.
      *            sv.lt.1.05) then
-                    n_axis=0
-                    if(sx.gt.0.05) n_axis=n_axis+1
-                    if(sy.gt.0.05) n_axis=n_axis+1
-                    if(sv.gt.0.05) n_axis=n_axis+1
-                    if(n_axis.le.p3) then
+                    naxis=0
+                    if(sx.gt.0.05) naxis=naxis+1
+                    if(sy.gt.0.05) naxis=naxis+1
+                    if(sv.gt.0.05) naxis=naxis+1
+                    if(naxis.le.p3) then
                       newpix=.true.
                       nreg(ngy,npx3)=nrgn
                     endif
@@ -1072,14 +1077,17 @@ c---------------------------------------------------------------
 c     subroutine of clfind
 c     writes header for image cube
 c---------------------------------------------------------------
-c      include 'header.h'
+      integer nkeys
+      parameter(nkeys=12)
       include 'clfind.h'
 
-      character*(*) version
+      character version*(*), keyw(nkeys)*8
       integer i
-      logical eof
 
-      data eof/.false./
+      data keyw/   'cdelt1  ','cdelt2  ','cdelt3  ',
+     *    'crpix1  ','crpix2  ','crpix3  ',
+     *    'crval1  ','crval2  ','crval3  ',
+     *    'ctype1  ','ctype2  ','ctype3  '/
 
 c.....Copy the old header partially, and write some new parameters
       do i=1,nkeys
