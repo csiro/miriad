@@ -163,15 +163,15 @@ c        E.g., the cube is in vxy order and LABTYP=ABSKMS,ARCSEC the units
 c        for the "3VALUE" label will be arcsec.  If LABTYP=ABSKMS,HMS the 
 c        "3VALUE" label will be DMS (if the third [y] axis is declination).
 c
-c      "grid" means draw a coordinate grid on the plot rather than just ticks
+c       "grid" means draw a coordinate grid on the plot rather than just ticks
 c
-c      "noerase"  Don't erase a snugly fitting rectangle into which the 
+c       "noerase"  Don't erase a snugly fitting rectangle into which the 
 c        "3-axis" value string is written.
 c      
-c      "unequal" means draw plots with unequal scales in x and y. The
+c       "unequal" means draw plots with unequal scales in x and y. The
 c        default is that the scales are equal.
 c
-c      "mark" When source has been found, and user has agreed that it is
+c       "mark" When source has been found, and user has agreed that it is
 c         real, mark it with a cross.
 c
 c       "nofit" Prevents the program from fitting elliptical gaussians to each
@@ -190,11 +190,21 @@ c         been used in the gaussian fitting procedure. The brightest pixel
 c         in the source is symbolised by a "O", the rest by asterisks.
 c         This option is ignored if "nofit" is being used.
 c
+c       "auto" The interactive section of the program is bypassed, and
+c         all detected sources are flagged as real. The image is not
+c         displayed.
+c
+c       "negative" The map is inverted before source detection and fitting,
+c         ie, positive pixels become negative and vice versa. This is
+c         to enable detection of negative sources without recourse to MATHS.
+c         This feature may be used for detecting sources in polarisation
+c         maps.
+c
 c@ csize
-c      Two values.  Character sizes in units of the PGPLOT default
-c      (which is ~ 1/40 of the view surface height) for the plot axis
-c      labels and the velocity/channel labels.
-c      Defaults choose something sensible.
+c       Two values.  Character sizes in units of the PGPLOT default
+c       (which is ~ 1/40 of the view surface height) for the plot axis
+c       labels and the velocity/channel labels.
+c       Defaults choose something sensible.
 c
 c  Known Bugs:
 c       The output is designed to print source fluxes in FORTRAN format
@@ -263,7 +273,10 @@ c                  with blanks in SEARCH and LOADDAT (blanks now correctly
 c                  dealt with throughout). Tidied up subroutine descriptions,
 c                  etc.
 c    rjs  18mar96  Some FORTRAN standardisation.
-c    rjs  15may96  Some more FORTRAN standardisation.
+c    amh  21apr97  added "auto" option, to give user choice of interactive
+c                  flagging of sources or not.
+c    amh  28apr97  added "negative" option, to give user ability to detect
+c                  negative sources without having to seperately use MATHS.
 c
 c To do:
 c
@@ -310,21 +323,33 @@ c
      +  donylab(2), dopixel, gaps, doabut, 
      +  doaxlab, doaylab,
      +  mark, doerase, dowedge, dofid,
-     +  grid, nofit, asciiart
+     +  grid, nofit, asciiart, auto, negative
 c
       data ipage, scale /0, 0.0, 0.0/
       data dmm /1.0e30, -1.0e30/
       data gaps, doabut, dotr /.false., .false., .false./
 c-----------------------------------------------------------------------
-      call output ('Sfind: version 24-Jan-96')
+      call output (' ')
+      call output ('Sfind: version 1.21, 28-Apr-97')
       call output (' ')
 c
 c Get user inputs
 c
       call inputs (maxlev, in, ibin, jbin, kbin, levtyp, slev, levs, 
      +   nlevs, pixr, trfun, pdev, labtyp, do3val, do3pix, eqscale, 
-     +   nx, ny, cs, dopixel, mark, doerase, dowedge, 
-     +   dofid, grid, cut, rmsbox, xrms, nofit, asciiart)
+     +   nx, ny, cs, dopixel, mark, doerase, dowedge, dofid, grid,
+     +   cut, rmsbox, xrms, nofit, asciiart, auto, negative)
+c
+c Open log files
+c
+      call txtopen (llog, 'sfind.log', 'append', iostat)
+      if (iostat.ne.0) 
+     +  call bug ('f', 'Error opening text file "sfind.log"')
+      call output (' ')
+      call output ('*** Source list output to sfind.log')
+      call output (' ')
+      call output ('Now opening image...')
+      call output (' ')
 c
 c Open image
 c
@@ -339,15 +364,6 @@ c Try to allocate memory for images.
 c
       call memalloc (ipim,  win(1)*win(2), 'r')
       call memalloc (ipnim, win(1)*win(2), 'i')
-c
-c Open log files
-c
-      call txtopen (llog, 'sfind.log', 'append', iostat)
-      if (iostat.ne.0) 
-     +  call bug ('f', 'Error opening text file "sfind.log"')
-      call output (' ')
-      call output ('*** Source list output to sfind.log')
-      call output (' ')
 c
 c Compute contour levels or check pixel map for log offset
 c
@@ -364,50 +380,55 @@ c Work out coordinate transformation matrix
 c
       call limitscg (blc, ibin, jbin, tr)
 c
+c If the source detection procedure is not to be automated, then perform all
+c the image opening, initialization, etc. Otherwise skip all this.
+c
+      if (.not.auto) then
+c
 c Work out number of plots per page and number of plots
 c
-      call nxnycg (nxdef, nydef, ngrps, nx, ny, nlast)
+       call nxnycg (nxdef, nydef, ngrps, nx, ny, nlast)
 c
 c Work out if wedge outside or inside subplots. Also work out
 c if plotting one wedge per subplot or one wedge for all  
 c       
-      call wedgincg ('NO', dofid, dowedge, nx, ny, 1, trfun, wedcod)
+       call wedgincg ('NO', dofid, dowedge, nx, ny, 1, trfun, wedcod)
 c
 c Work out default character sizes for axis and channel labels
 c
-      call defchrcg (nx, ny, cs)
+       call defchrcg (nx, ny, cs)
 c
 c Open plot device
 c
-      ierr = pgbeg (0, pdev, 1, 1)
-      if (ierr.ne.1)then
+       ierr = pgbeg (0, pdev, 1, 1)
+       if (ierr.ne.1)then
         call pgldev
         call bug ('f', 'Error opening plot device')
-      endif
+       endif
 c
-      call pgpage
-      call pgscf(2)
+       call pgpage
+       call pgscf(2)
 c
 c Set line graphics colour indices
 c
-      call setlgc (labcol, poscol, statcol, regcol)
+       call setlgc (labcol, poscol, statcol, regcol)
 c       
 c Init OFM routines
 c       
-      if (dopixel) call ofmini
+       if (dopixel) call ofmini
 c
 c Set axis labels
 c
-      call setlabcg (lin, labtyp, .false., xlabel, ylabel)
+       call setlabcg (lin, labtyp, .false., xlabel, ylabel)
 c 
 c Set label displacements from axes
 c
-      call setdspcg (lin, labtyp, blc, trc, xdispl, ydispb)
+       call setdspcg (lin, labtyp, blc, trc, xdispl, ydispb)
 c
 c Work out view port encompassing all sub-plots. Also return 
 c the viewport size of sub-plots.
 c
-      call vpsizcg (.false., dofid, 0, ' ', ' ', 0, ' ', maxlev,
+       call vpsizcg (.false., dofid, 0, ' ', ' ', 0, ' ', maxlev,
      +   nlevs, srtlev, levs, slev, nx, ny, cs, xdispl, ydispb, 
      +   gaps, doabut, dotr, wedcod, wedwid, tfdisp, labtyp, vxmin,
      +   vymin, vymax, vxgap, vygap, vxsize, vysize, tfvp, wdgvp)
@@ -415,17 +436,17 @@ c
 c Adjust viewport increments and start locations if equal scales
 c requested or if scales provided by user
 c
-      call vpadjcg (lin, 'NO', eqscale, scale, vxmin, vymin, vymax,
+       call vpadjcg (lin, 'NO', eqscale, scale, vxmin, vymin, vymax,
      +   nx, ny, blc, trc, tfvp, wdgvp, vxsize, vysize)
 c
 c Set viewport location of first sub-plot
 c
-      vx = vxmin
-      vy = vymax - vysize
+       vx = vxmin
+       vy = vymax - vysize
 c
 c Loop over number of subplots
 c
-      do k = 1, ngrps
+       do k = 1, ngrps
          if (mod(k,nx*ny).eq.1 .or. nx*ny.eq.1) ipage = ipage + 1
          jj = k - (ipage-1)*nx*ny
          krng(1) = grpbeg(k)
@@ -494,8 +515,8 @@ c
 c Draw wedge inside subplots and overwrite label ticks
 c
          if (wedcod.eq.3) then
-          call pgsch (cs(1))
-          call wedgecg (wedcod, wedwid, jj, trfun, groff, nbins,
+           call pgsch (cs(1))
+           call wedgecg (wedcod, wedwid, jj, trfun, groff, nbins,
      +                  cumhis, wdgvp, pixr(1), pixr(2))
          end if
 c
@@ -517,7 +538,7 @@ c Interactive graphical source finding routine
 c
          call search (lin, win(1), win(2), memr(ipim), memi(ipnim),
      +     blc, ibin, jbin, krng, llog, mark, cut, rmsbox, xrms, 
-     +     nofit, asciiart)
+     +     nofit, asciiart, auto, negative)
 c
 c Increment sub-plot viewport locations and row counter
 c
@@ -527,16 +548,48 @@ c
 c Page plot device
 c
          if (jj.eq.nx*ny .and. k.lt.ngrps) call pgpage
-      end do
+       end do
 c
 c Close up
 c
-      call memfree (ipim,  win(1)*win(2), 'r')
-      call memfree (ipnim, win(1)*win(2), 'i')
+       call memfree (ipim,  win(1)*win(2), 'r')
+       call memfree (ipnim, win(1)*win(2), 'i')
 c
-      call xyclose(lin)
-      call txtclose(llog)
-      call pgend
+       call xyclose(lin)
+       call txtclose(llog)
+       call pgend
+c
+c Now the image display section of code is passed, perform search automatically
+c (non-interactively) if required.
+c
+      else
+c
+c Loop over groups of channels selected in "region"
+c
+       do k = 1, ngrps
+        krng(1) = grpbeg(k)
+        krng(2) = ngrp(k)
+c
+c Read in image
+c
+        call readimcg (.true., blank, lin, ibin, jbin, krng, blc,
+     +     trc, .true., memi(ipnim), memr(ipim), doblnk, dmm)
+c
+c The source-detection subroutine.
+c
+        call search(lin, win(1), win(2), memr(ipim),
+     +     memi(ipnim), blc, ibin, jbin, krng, llog, mark, cut,
+     +     rmsbox, xrms, nofit, asciiart, auto, negative)
+       end do
+c
+c Close up
+c
+       call memfree (ipim,  win(1)*win(2), 'r')
+       call memfree (ipnim, win(1)*win(2), 'i')
+c
+       call xyclose(lin)
+       call txtclose(llog)
+      end if
 c
       end
 c
@@ -554,7 +607,8 @@ c
 c
 c
       subroutine search (lin, nx, ny, image, nimage, blc, ibin, jbin,
-     +   krng, llog, mark, cut, rmsbox, xrms, nofit, asciiart)
+     +   krng, llog, mark, cut, rmsbox, xrms, nofit, asciiart, auto,
+     +   negative)
 c-----------------------------------------------------------------------
 c  This is the master subroutine for the detecting of sources and the
 c interactive decision bit. It detects bright pixels, determines whether they
@@ -568,24 +622,26 @@ c After user input, the source parameters are written, along with a flag (Y
 c or N), to the log file, sfind.log
 c
 c  Input:
-c     lin      Image handle
-c     nx,ny    Size of image
-c     image    Image
-c     nimage   Normalization image (0 for blanked pixels)
-c     blc      blc of window being displayed
-c     i,jbin   Spatial pixel increment 
-c     krng     Start plane and number of planes averaged together
-c             to make the current displayed plane
-c     llog     Handle of log file
-c     mark     True to mark cursor locations
-c     cut      flux limit below which sources are ignored
-c     rmsbox   size of box (in pixels) within which background rms is
-c              first calculated
-c     xrms     multiple of background rms above which source must be before
-c              user is given option of saying yay or nay
-c     nofit    True means don't do gaussian fitting for each source
-c     asciiart display ascii representations of each source during
-c              interactive source selection
+c     lin       Image handle
+c     nx,ny     Size of image
+c     image     Image
+c     nimage    Normalization image (0 for blanked pixels)
+c     blc       blc of window being displayed
+c     i,jbin    Spatial pixel increment 
+c     krng      Start plane and number of planes averaged together
+c               to make the current displayed plane
+c     llog      Handle of log file
+c     mark      True to mark cursor locations
+c     cut       flux limit below which sources are ignored
+c     rmsbox    size of box (in pixels) within which background rms is
+c               first calculated
+c     xrms      multiple of background rms above which source must be before
+c               user is given option of saying yay or nay
+c     nofit     True means don't do gaussian fitting for each source
+c     asciiart  display ascii representations of each source during
+c               interactive source selection
+c     auto      skip all the interactive bits of source flagging.
+c     negative  inverts image: positive pixels become negative and vice versa
 c
 c-----------------------------------------------------------------------
       implicit none
@@ -593,7 +649,7 @@ c
       integer nx, ny, blc(2), llog, ibin, jbin, lin, nimage(nx,ny),
      +  krng(2)
       real image(nx,ny)
-      logical mark, nofit, asciiart
+      logical mark, nofit, asciiart, auto, negative
 cc
       double precision wa(2), posns(2)
       real ww(2), wsave(2), cut, xrms, peak, base0
@@ -608,19 +664,27 @@ cc
       logical ok, nobeam, fitok
 c-----------------------------------------------------------------------
       call output (' ')  
-      call output ('************************************')
-      call output ('Beginning Interactive Source Finding')
-      call output ('************************************')
-      call output (' ')
-      call output ('Click left button   (enter A) to flag source as Y')
-      call output
-     + ('Click middle button (enter D) to flag source as N')
-      call output ('Click right button  (enter X) to quit')
-      call output (' ')
-      call initco (lin)
+      if (.not.auto) then
+       call output ('************************************')
+       call output ('Beginning Interactive Source Finding')
+       call output ('************************************')
+       call output (' ')
+       call output ('Click left button   (enter A) to flag source as Y')
+       call output
+     +  ('Click middle button (enter D) to flag source as N')
+       call output ('Click right button  (enter X) to quit')
+       call output (' ')
+      else
+       call output ('****************************************')
+       call output ('Beginning Non-Interactive Source Finding')
+       call output ('****************************************')
+       call output (' ')
+       call output ('Please be patient...')
+      end if
 c
 c Initialize
 c
+      call initco (lin)
       bin(1) = ibin
       bin(2) = jbin
       cch = ' '
@@ -628,34 +692,44 @@ c
       sources = 0
       ysources = 0
 c
-c Write header for output to screen
+c Invert image if options=negative selected
+c
+      if (negative) then
+       do l = 1,nx
+        do m = 1,ny
+         image(l,m) = -image(l,m)
+        end do
+       end do
+      end if
+c
+c Write header for output to screen, unless "auto" option selected.
 c
       if (nofit) then
         write(line2,20) 'RA','DEC','flux','x','y','rms',
      +                  'flux/rms'
 20      format(5x,a,11x,a,4x,a,7x,a,8x,a,7x,a,2x,a)
-        call output(line2)
+        if (.not.auto) call output(line2)
         line3 = '                         mJy      pixels   '//
      +          'pixels    mJy'
-        call output (line3)
+        if (.not.auto) call output (line3)
         line4 = '------------------------------------------'//
      +          '-------------------------------------'
-        call output (line4)
-      else
+        if (.not.auto) call output (line4)
+       else
         write(line2,30) 'RA','DEC','err(RA)','err(DEC)','pk-flux',
      +                  'err','flux','bmaj','bmin','pa',
      +                  'rms(bg)','rms(fit)'
 30      format(5x,a,9x,a,5x,a,1x,a,1x,a,3x,a,6x,
      +         a,3x,a,3x,a,3x,a,1x,a,1x,a)
-        call output(line2)       
+        if (.not.auto) call output(line2)       
         line3 = '                        arcsec   arcsec   '//
      +          'mJy      mJy       mJy  arcsec arcsec '//
      +          'deg  mJy     mJy'
-        call output (line3)
+        if (.not.auto) call output (line3)
         line4 = '------------------------------------------'//
      +          '-------------------------------------'//
      +          '----------------'
-        call output (line4)
+        if (.not.auto) call output (line4)
       end if
 c
 c Write output header for log file
@@ -742,33 +816,45 @@ c
         call w2wfco (lin, 2, typei, ' ', posns,  typeo, ' ',
      +               .true., radec, radeclen)
 c
-c Write output line to screen
+c Write output line to screen, but only if "auto" option not selected
 c
         if (nofit) then
-          write(line,40) peak*1000., xpos, ypos,
+          if (negative) then
+           write(line,40) -peak*1000., xpos, ypos,
+     +                   -sigma*1000., mult
+          else
+           write(line,40) peak*1000., xpos, ypos,
      +                   sigma*1000., mult
+          end if
 40        format(f8.3,2x,f7.2,2x,f7.2,2x,f7.3,2x,f5.1)
         else
-          write(line,50) xposerr,yposerr,pkfl,pkflerr,intfl,
+          if (negative) then
+           write(line,50) xposerr,yposerr,-pkfl,pkflerr,-intfl,
+     +        amaj,amin,posa,-sigma*1000.,-rms*1000.
+          else
+           write(line,50) xposerr,yposerr,pkfl,pkflerr,intfl,
      +        amaj,amin,posa,sigma*1000.,rms*1000.
-50        format(1x,f6.3,3x,f5.2,2x,f8.3,1x,f6.3,1x,f9.3,1x,
+          end if
+50        format(1x,f6.3,3x,f5.2,2x,f8.3,x,f6.3,1x,f9.3,1x,
      +           3(f5.1,1x),f6.3,2x,f6.3)
         end if
         line = radec(1)(1:radeclen(1))//' '//
      +         radec(2)(1:radeclen(2))//' '//line
-        call output(line)
+        if (.not.auto) call output(line)
 c
 c increment number of sources detected
 c
         sources = sources + 1
 c
 c Interactive bit: move cursor to position and wait for button,
-c read cursor to get yay or nay or exit from user.
+c read cursor to get yay or nay or exit from user. This bit is skipped
+c entirely if "auto" is selected.
 c
-        wsave(1) = wa(1)
-        wsave(2) = wa(2)
-        cch = ' '
-        do while (cch.ne.'A' .and. cch.ne.'D')
+        if (.not.auto) then
+         wsave(1) = wa(1)
+         wsave(2) = wa(2)
+         cch = ' '
+         do while (cch.ne.'A' .and. cch.ne.'D')
           ww(1) = wsave(1)
           ww(2) = wsave(2)
           call cgcur (ww(1), ww(2), cch)
@@ -809,23 +895,33 @@ c as the intended command.
 c
           else if (cch.eq.'X') then
             call output('Are you sure you want to quit here? '//
-     +                  ' press again to confirm)')
+     +                  ' (press again to confirm)')
             call cgcur (ww(1), ww(2), cch)
             if (cch.eq.'X') goto 70
           else
             call output ('  Commands are: A (yes), D (no), X (exit).')
           end if
-        end do
+         end do
+        else
+c
+c The "auto" procedure treats every source as if the user flagged it good
+c (pressed button "A").
+c
+         iloc = iloc + 1
+         ysources = ysources + 1
+         line(len1(line)+1:len1(line)+6) = '     Y'
+         call txtwrite (llog, line, len1(line), iostat)
+        end if
 60      continue
-        end do
+       end do
       end do
 c
 70    call output (' ')
       write (line,80) sources
-80    format('Total number of sources detected:',5i6)
+80    format('Total number of sources detected:',5i)
       call output(line)
       write (line,90) ysources
-90    format('Number of sources confirmed:',5i6)
+90    format('Number of sources confirmed:',5i)
       call output(line)
       call output(' ')
 c
@@ -866,14 +962,14 @@ c-----------------------------------------------------------------------
 c
       b = image(l+1,m) - image(l-1,m)
       a = image(l+1,m) - 2*t + image(l-1,m)
-      if ((abs(b).gt.abs(a)).or.(a.gt.0.)) goto 2010
+      if ((abs(b).gt.abs(a)).or.(a.ge.0.)) goto 2010
       x = x - 0.5*b/a
       z = b*b/a
 2010  continue
 c
       b = image(l,m+1) - image(l,m-1)
       a = image(l,m+1) - 2*t + image(l,m-1)
-      if ((abs(b).gt.abs(a)).or.(a.gt.0.)) goto 2015
+      if ((abs(b).gt.abs(a)).or.(a.ge.0.)) goto 2015
 c
       y = y - 0.5*b/a
       z = z + b*b/a
@@ -984,7 +1080,8 @@ c
 c
 c
       subroutine decopt  (do3val, do3pix, eqscale, mark, doerase, 
-     +                    dowedge, dofid, grid, nofit, asciiart)
+     +                    dowedge, dofid, grid, nofit, asciiart, auto,
+     +                    negative)
 c----------------------------------------------------------------------
 c     Decode options array into named variables.
 c
@@ -1000,20 +1097,24 @@ c     grid      Draw coordinate grid
 c     nofit     True means don't do gaussian fitting for each source
 c     asciiart  display ascii representations of each source during
 c               interactive source selection
+c     auto      True means skip all interactive bits, including displaying
+c               image
+c     negative  inverts image: positive pixels become negative and vice versa
 c-----------------------------------------------------------------------
       implicit none
 c
       logical do3val, do3pix, eqscale, mark, doerase,
-     + dofid, dowedge, grid, nofit, asciiart
+     + dofid, dowedge, grid, nofit, asciiart, auto, negative
 cc
       integer maxopt
-      parameter (maxopt = 10)
+      parameter (maxopt = 12)
 c
       character opshuns(maxopt)*8
       logical present(maxopt)
       data opshuns /'3value  ', '3pixel  ', 'unequal ',
      +              'mark    ', 'noerase ', 'wedge   ',
-     +              'fiddle  ', 'grid    ', 'nofit   ', 'asciiart'/
+     +              'fiddle  ', 'grid    ', 'nofit   ',
+     +              'asciiart', 'auto    ', 'negative'/
 c-----------------------------------------------------------------------
       call optcg ('options', opshuns, present, maxopt)
 c
@@ -1027,14 +1128,24 @@ c
       grid     =      present(8)
       nofit    =      present(9)
       asciiart =      present(10)
+      auto     =      present(11)
+      negative =      present(12)
+c
+c circumvent possible irritating bug of ascii pictures being printed out
+c in auto mode by overriding asciiart parameter.
+c
+      if (auto.and.asciiart) then
+       asciiart = .FALSE.
+       call output('Auto mode: Asciiart option being overridden.')
+      end if
 c
       end
 c
 c
       subroutine inputs (maxlev, in, ibin, jbin, kbin, levtyp, slev,
      +   levs, nlevs, pixr, trfun, pdev, labtyp, do3val, do3pix, 
-     +   eqscale, nx, ny, cs, dopixel, mark, doerase, 
-     +   dowedge, dofid, grid, cut, rmsbox, xrms, nofit, asciiart)
+     +   eqscale, nx, ny, cs, dopixel, mark, doerase, dowedge, dofid,
+     +   grid, cut, rmsbox, xrms, nofit, asciiart, auto, negative)
 c-----------------------------------------------------------------------
 c     Get the unfortunate user's long list of inputs
 c
@@ -1073,6 +1184,9 @@ c              user is given option of saying yay or nay
 c   nofit      True means don't do gaussian fitting for each source
 c   asciiart   display ascii representations of each source during
 c              interactive source selection
+c   auto       true means skip all interactive sections of program, including
+c              image display
+c   negative   inverts image: positive pixels become negative and vice versa
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -1080,7 +1194,7 @@ c
       real levs(maxlev), pixr(2), cs(2), slev, cut, xrms
       character*(*) labtyp(2), in, pdev, trfun, levtyp
       logical do3val, do3pix, eqscale, dopixel, mark,
-     + doerase, dowedge, dofid, grid, nofit, asciiart
+     + doerase, dowedge, dofid, grid, nofit, asciiart, auto, negative
 cc
       integer ntype, nlab, ntype2, nimtype
       parameter (ntype = 14, ntype2 = 3)
@@ -1146,7 +1260,7 @@ c
 c
       call decopt (do3val, do3pix, eqscale,
      +             mark, doerase, dowedge, dofid, grid,
-     +             nofit, asciiart)
+     +             nofit, asciiart, auto, negative)
       if (.not.dopixel) then
         dofid = .false.
         dowedge = .false.
@@ -1769,6 +1883,18 @@ c-----------------------------------------------------------------------------
        furthery = yy
        stepm = 0
       end if
+c
+c Checking to see if the closer/further pixels lie outside the bounds of the
+c image, and fixing them if so.
+c
+      if (closerx.gt.nx)  closerx = nx
+      if (closery.gt.ny)  closery = ny
+      if (closerx.lt.1)   closerx = 1
+      if (closery.lt.1)   closery = 1
+      if (furtherx.gt.nx) furtherx = nx
+      if (furthery.gt.ny) furthery = ny
+      if (furtherx.lt.1)  furtherx = 1
+      if (furthery.lt.1)  furthery = 1
       slpdwn = (image(xx,yy).le.image(closerx,closery)).and.
      +          (image(xx,yy).ge.image(furtherx,furthery))
       if ((yy.ne.yc).and.(xx.ne.xc).and.slpdwn) then
