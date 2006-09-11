@@ -43,13 +43,14 @@ c    rjs  23jul97 Print galactic and ecliptic coordinates in decimal format.
 c		  Support pbtype.
 c    rjs  31jul97 Use MAXWIN for number of spectra.
 c    rjs  01aug97 Better format for beam size.
+c    rjs  24feb98 Use MAXWIDE rather than MAXWIN for number of wide channels.
 c
 c  Bugs and Shortcomings:
 c    * Descriptions in brief mode could be a bit more verbose!
 c------------------------------------------------------------------------
 	character version*(*)
 	integer MAXIN
-	parameter(version='Prthd: version 1-Aug-97')
+	parameter(version='Prthd: version 24-Feb-98')
 	parameter(MAXIN=256)
 	integer tno,i,iostat,nin
 	character in(MAXIN)*64,logf*64,line*80
@@ -447,7 +448,7 @@ c------------------------------------------------------------------------
       double precision sdf(MAXWIN),sfreq(MAXWIN),restfreq(MAXWIN)
       double precision time
       double precision obsra,obsdec,ra,dec,delra,deldec,pntra,pntdec
-      real wwidth(MAXWIN),wfreq(MAXWIN)
+      real wwidth(MAXWIDE),wfreq(MAXWIDE)
       logical updated,present,more
 c
 c  Externals.
@@ -571,7 +572,7 @@ c
 	if(present)call logwrite(' ',more)
 	call logwrite('Continuum (wide) correlations: ',more)
 	call uvrdvri(tno,'nwide',nchan,1)
-	if(nchan.le.MAXWIN)then
+	if(nchan.le.MAXWIDE)then
 	  call uvgetvrr(tno,'wfreq',wfreq,nchan)
 	  call uvgetvrr(tno,'wwidth',wwidth,nchan)
 	  call logwrite(
