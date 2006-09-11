@@ -56,7 +56,7 @@ c
 	logical hdprsnt
 c
 	k = CoLoc(lu,.true.)
-	lus(k) = lu
+	if(nalloc(k).gt.1)return
 c
 c  Is this an image of a visibility data set? Assume its visibility is
 c  the "visdata" item is present.
@@ -142,7 +142,8 @@ c
 	integer coLoc
 c
 	k = coLoc(lu,.false.)
-	Lus(k) = 0
+	nalloc(k) = nalloc(k) - 1
+	if(nalloc(k).eq.0)Lus(k) = 0
 	end
 c************************************************************************
 c* coCvt -- Convert coordinates.
@@ -1288,7 +1289,7 @@ c
 	logical alloc
 c------------------------------------------------------------------------
 	include 'co.h'
-	integer i
+	integer i,free
 c
 	logical first
 	save first
@@ -1297,18 +1298,32 @@ c
 	if(first)then
 	  do i=1,MAXOPEN
 	    Lus(i) = 0
+	    nalloc(i) = 0
 	  enddo
 	  first = .false.
 	endif
 c
-c  Locate the slot for this L.U.
+c  Locate the slot for this lu.
 c
+	free = 0
 	do i=1,MAXOPEN
-	  if(lus(i).eq.lu.or.(alloc.and.lus(i).eq.0))then
+	  if(lus(i).eq.lu.and.nalloc(i).gt.0)then
+	    if(alloc)nalloc(i) = nalloc(i) + 1
 	    CoLoc = i
 	    return
+	  else if(nalloc(i).eq.0)then
+	    free = i
 	  endif
 	enddo
+c
+c  We did not find it. If we are allowed to allocate one, do so.
+c
+	if(alloc.and.free.ne.0)then
+	  lus(free) = lu
+	  nalloc(free) = 1
+	  CoLoc = free
+	  return
+	endif
 c
 	call bug('f','Unable to find coordinate object in CoInit')
 c
