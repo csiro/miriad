@@ -19,6 +19,7 @@ c    16nov95 rjs  Linearly interpolate when the bandpass gains are sampled
 c		  more coarsely than the data.
 c    29mar96 rjs  Some tidying of the cgains routines!!
 c     7may96 rjs  Improved goodness measure in uvgnpsma.
+c    23sep96 rjs  Mark memory as deallocated after deallocating!
 c************************************************************************
 	subroutine uvGnIni(tno1,dogains1,dopass1)
 	implicit none
@@ -178,17 +179,28 @@ c
 c  Free up all the memory that may have been allocated for the antenna
 c  based bandpass calibration.
 c
-	if(nTab.ne.0) call MemFree(pTab, nTab, 'c')
+	if(nTab.ne.0)then
+	  call MemFree(pTab, nTab, 'c')
+	  nTab = 0
+	endif
 	if(nDat(1).ne.0)then
 	  call MemFree(pDat(1),nDat(1),'c')
 	  call MemFree(pFlags(1),nDat(1),'l')
+	  nDat(1) = 0
 	endif
 	if(nDat(2).ne.0)then
 	  call MemFree(pDat(2),nDat(2),'c')
 	  call MemFree(pFlags(2),nDat(2),'l')
+	  nDat(2) = 0
 	endif
-	if(nFreq(1).ne.0)call MemFree(pFreq(1),nFreq(1),'d')
-	if(nFreq(2).ne.0)call MemFree(pFreq(2),nFreq(2),'d')
+	if(nFreq(1).ne.0)then
+	  call MemFree(pFreq(1),nFreq(1),'d')
+	  nFreq(1) = 0
+	endif
+	if(nFreq(2).ne.0)then
+	  call MemFree(pFreq(2),nFreq(2),'d')
+	  nFreq(2) = 0
+	endif
 c
 c  Free up all the memory that may have been allocated for the baseline
 c  based bandpass calibration.
