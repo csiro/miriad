@@ -30,6 +30,7 @@ c    rjs  13jan95 Added "bin" to uv-variables.
 c    mchw 15mar96 Added delay to uvvariables.
 c    rjs  29may96 Added "nbin" to uvvariables.
 c    mchw 06aug96 Dimension wideband variables MAXWIDE.
+c    rjs  11oct96 Added delra,deldec,pntra,pntdec.
 c************************************************************************
 c*VarInit -- Initialise the copy routines.
 c:uv-data
@@ -85,7 +86,7 @@ c
 	integer i
 c
 	integer nvar,nline,nwide,nvelo
-	parameter(nvar=67,nline=8,nwide=3,nvelo=4)
+	parameter(nvar=71,nline=8,nwide=3,nvelo=4)
         character var(nvar)*8,line(nline)*8,wide(nwide)*8,velo(nvelo)*8
 c
 c  Variables to check for a change, for line=channel.
@@ -107,15 +108,15 @@ c
      *	   'antpos  ','atten   ','axisrms ','bin     ',
      *	   'chi     ','corbit  ','corbw   ','corfin  ',
      *	   'cormode ','coropt  ','cortaper','ddec    ','dec     ',
+     *	   'deldec  ','delra   ',
      *	   'dewpoint','dra     ','epoch   ','evector ','focus   ',
      *	   'freq    ','freqif  ','inttime ','ivalued ','jyperk  ',
      *	   'latitud ','longitu ','lo1     ','lo2     ','lst     ',
      *	   'mount   ','nants   ','nbin    ','ntemp   ','ntpower ',
-     *	   'obsdec  ',
-     *	   'observer','obsra   ','on      ','operator','pbfwhm  ',
-     *	   'phaselo1','phaselo2','phasem1 ','plangle ','plmaj   ',
-     *	   'plmin   ','pltb    ','precipmm','pressmb ',
-     *	   'ra      ','relhumid',
+     *	   'obsdec  ','observer','obsra   ','on      ','operator',
+     *	   'pbfwhm  ','phaselo1','phaselo2','pntdec  ','pntra   ',
+     *	   'phasem1 ','plangle ','plmaj   ','plmin   ','pltb    ',
+     *	   'precipmm','pressmb ','ra      ','relhumid',
      *	   'source  ','telescop','temp    ','tpower  ','ut      ',
      *	   'veldop  ','veltype ','version ','vsource ','winddir ',
      *	   'windmph ','delay   ','delay0  '/
