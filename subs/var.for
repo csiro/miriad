@@ -29,6 +29,7 @@ c    mchw  5jan95 Added pressmb to uv-variables.
 c    rjs  13jan95 Added "bin" to uv-variables.
 c    mchw 15mar96 Added delay to uvvariables.
 c    rjs  29may96 Added "nbin" to uvvariables.
+c    mchw 06aug96 Dimension wideband variables MAXWIDE.
 c************************************************************************
 c*VarInit -- Initialise the copy routines.
 c:uv-data
@@ -40,8 +41,8 @@ c
 	character linetype*(*)
 	integer tIn
 c
-c  The VarIni routine marks a number of variables to be
-c  copied across by the VarCopy routine.
+c  The VarCpIni routine marks (using uvtrack) a number of variables to be
+c  copied across by the uvcopyvr routine.
 c  It also marks frequency setup and system temp variables, to note
 c  updates to these, so that VarCopy can be used later to update them.
 c
@@ -300,9 +301,9 @@ c
 	logical uwfreq,uwwidth,uwtsys
 	integer nwide,nants,length,i,j,i0,j0,k
 	character type*1
-	real wfreq(MAXWIN),owfreq(MAXWIN),wwidth(MAXWIN)
-	real owwidth(MAXWIN)
-	real wtsys(MAXWIN*MAXANT),owtsys(MAXWIN*MAXANT)
+	real wfreq(MAXWIDE),owfreq(MAXWIDE),wwidth(MAXWIDE)
+	real owwidth(MAXWIDE)
+	real wtsys(MAXWIDE*MAXANT),owtsys(MAXWIDE*MAXANT)
 c
 	call uvprobvr(tvis,'wfreq',type,nwide,uwfreq)
 	if(type.ne.'r') return
@@ -311,7 +312,7 @@ c
 c
 c  Update them if necessary.
 c
-	if(nwide.le.MAXWIN)then
+	if(nwide.le.MAXWIDE)then
 	  call uvgetvrr(tvis,'wfreq',wfreq,nwide)
 	  call uvgetvrr(tvis,'wwidth',wwidth,nwide)
 	  do j=1,nchan
@@ -342,7 +343,7 @@ c
 c  Update the system temperature, if needed.
 c
 	call uvprobvr(tvis,'wsystemp',type,length,uwtsys)
-	if(length.gt.MAXWIN*MAXANT)call bug('f',
+	if(length.gt.MAXWIDE*MAXANT)call bug('f',
      *	  'Too many wideband channels or antennae, in VarWide')
 	nants = length / nwide
 	if(type.ne.'r'.or.nants.le.0) return
