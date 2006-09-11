@@ -42,6 +42,8 @@ c    nebk 22mar94  Twiddle about with output format
 c    nebk 18aug94  Revise to use COCVT coord. transformation routines
 c    nebk 16nov95  New calls to some "co" routines
 c    nebk 29nov95  New call for CTYPECO
+c    rjs  03jul96  In "abs" mode, print out the value of the pixel (not
+c		   absolute value).
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -154,6 +156,7 @@ c
           fit(k) = data(i)
         end do
       end do
+      dmax = fit(5)
 c
 c  Do the fit
 c
