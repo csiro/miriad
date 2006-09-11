@@ -174,6 +174,7 @@ c		     things if there aren't any.
 c    rjs     25mar94 Minor correction to the above change.
 c    rjs      3aug94 options=oldflux.
 c    rjs     26sep95 Check for ill-determined solution.
+c    mchw    08aug96 fix minibug for more antennas.
 c  Bugs:
 c    * Polarisation solutions when using noamp are wrong! The equations it
 c      solves for have a fudge to account for a bias introduced by the
@@ -184,7 +185,7 @@ c------------------------------------------------------------------------
 	integer MAXITER
 	character version*(*)
 	parameter(MAXITER=30)
-	parameter(version='Gpcal: version 1.0 26-Sep-95')
+	parameter(version='Gpcal: version 1.0 08-AUG-96')
 c
 	integer tIn
 	double precision interval(2), freq
@@ -418,7 +419,7 @@ c
 	if((xysol.or.xyref.or.nxyphase.gt.0).and..not.xyvary)then
 	  call writeo(tIn,'XY phases (degrees)')
 	  do j=1,nants,7
-	    jmax = min(j+7,nants)
+	    jmax = min(j+6,nants)
 	    do i=j,jmax
 	      xyphase(i) = atan2(aimag(xyp(i)),real(xyp(i)))
 	    enddo
