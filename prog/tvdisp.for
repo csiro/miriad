@@ -95,6 +95,7 @@ c                  changes to the main routine to open and close the
 c                  panel as needed.  Also corrected the documentation to
 c                  clarify that only a simple bounding box is acceptable
 c                  as an input region.
+c   rjs  20dec95 - Tidy up movie subroutine.
 c------------------------------------------------------------------------
       include 'maxdim.h'
       integer MAXPL, MAXBOXES
@@ -113,7 +114,7 @@ c
       integer boxes(MAXBOXES)
       real minpix, maxpix, bscale, bzero
       real rdat(MAXDIM)
-      logical default,dolocal,domovie,dozoom,ctrl
+      logical default,dolocal,domovie,dozoom
       logical flags(MAXDIM)
 c
 c  Externals.
@@ -169,7 +170,6 @@ c  Open the connection to the display server, get device
 c  characteristics, and determine the active channel.
 c
       call tvopen(server)
-      call CtrlOpen(server, ctrl)
       call tvchar(xpix, ypix, mxchan,levels)
       achan = min(max(channel,1), mxchan)
 c
@@ -295,7 +295,7 @@ c  Perform requested options, if any.
 c
       if(dolocal) call tvlocal
       if(nz.gt.1.and.domovie) then
-        call movie(xcoord,ycoord,chans,nx,ny,nz,xpix,ypix,ctrl)
+        call movie(xcoord,ycoord,chans,nx,ny,nz,xpix,ypix,server)
       else if(domovie) then
         call bug('w','Movie option ignored for one image.')
       endif
@@ -307,10 +307,6 @@ c
 c  Close down now.
 c
       call tvclose
-      if (ctrl) then
-        call CtrlClr
-        call CtrlFin
-      endif
       call xyclose(lIn)
       end
 c************************************************************************
@@ -501,12 +497,12 @@ c
       return
       end
 c************************************************************************
-      subroutine movie(xcoord,ycoord,chans,nx,ny,n,xmax,ymax,ctrl)
+      subroutine movie(xcoord,ycoord,chans,nx,ny,n,xmax,ymax,server)
 c
       implicit none
       integer n,nx,ny,xmax,ymax
       integer xcoord(n),ycoord(n),chans(n)
-      logical ctrl
+      character server*(*)
 c
 c  A mosaic of images have been loaded onto the TV screen.
 c  This routine will run the sequence as a movie.
@@ -517,69 +513,59 @@ c    nx,ny      Size of each image.
 c    xcoord,ycoord Bottom left coordinate of each image.
 c    chans      TV channel for each image
 c    xmax       Screen width.
-c    ctrl      True if panel exists.
 c
 c------------------------------------------------------------------------
-      character message*40
       integer change, val1, val2
       integer blcx, blcy, trcx, trcy, nxsize, nysize
-      integer k, x, y, button, achan
-      real scale
-      logical more, runit, step, right, reverse, pause
+      integer k, x, y, button, achan, z
+      real scale, t1, t2
+      logical more, runit, step, right, loop, ctrl, restart
 c
-      call Output('Movie:  Control the rate of speed of the movie')
-      call Output('Movie:  by moving the X position of the cursor.')
-      call Output('Movie:  The left edge of the display will run')
-      call Output('Movie:  the movie faster; the right edge, slower.')
-      call Output('Movie:  NOTE: some displays will require a mouse')
-      call Output('Movie:  button press to register the X position.')
+c  Externals.
+c
+      character itoaf*3
+c
+      call CtrlOpen(server, ctrl)
+c
+      call Output('Control the rate of speed of the movie')
+      call Output('by moving the X position of the cursor.')
+      call Output('The left edge of the display will run')
+      call Output('the movie faster; the right edge, slower.')
+c
+      if(ctrl) then
+        call CtrlDef('RunLeft',   'button',   '<< Run',  1)
+        call CtrlDef('RunRight',  'button',   'Run >>',  1)
+        call CtrlDef('StepLeft',  'button',   '<- Step', 1)
+        call CtrlDef('StepRite',  'button',   'Step ->', 1)
+        call CtrlDef('Reverse',   'button',   'Loop/Osc',1)
+        call CtrlDef('Stop',      'button',   'Stop',    1)
+	call CtrlDef('Restart',   'button',   'ReZoom',  1)
+        call CtrlDef('Exit',      'button',   'Exit',    1)
+        call CtrlDef('Plane',     'status', 'Plane:  1', 1)
+        call CtrlView
+        call CtrlClr
+      else
+        call Output('Button A runs the movie to the left;')
+        call Output('Button B stops the movie;')
+        call Output('Button C runs the movie to the right;')
+        call Output('Button D exits.')
+        call Output('Buttons A - D may also be keys F3 - F6.')
+      endif
+c
+      restart = .TRUE.
+      more  = .TRUE.
+      right = .TRUE.
+      loop  = .TRUE.
+      runit = .TRUE.
+      step  = .FALSE.
 c
 c  Get the current window size.  If one image is smaller or larger
 c  than the current window, then zoom the image up to the appropriate
 c  window size.
 c
-      blcx = 0
-      blcy = 0
-      trcx = 0
-      trcy = 0
-      call TvWind(blcx, blcy, trcx, trcy)
-      nxsize = trcx - blcx
-      nysize = trcy - blcy
-      nxsize = min(nxsize/nx, nysize/ny)
-      nysize = min(xmax/nx, ymax/ny)
-      nxsize = max(1,min(nxsize, nysize))
-      call TvZoom(nxsize, xmax/2, ymax/2)
-c
-      if(ctrl) then
-        call CtrlDef('RunLeft',   'button',    '<< Run', 1)
-        call CtrlDef('RunRight',  'button',    'Run >>', 1)
-        call CtrlDef('StepLeft',  'button',   '<- Step', 1)
-        call CtrlDef('StepRite',  'button',   'Step ->', 1)
-        call CtrlDef('Repeat',    'button',    'Repeat', 1)
-        call CtrlDef('Reverse',   'button',   'Reverse', 1)
-        call CtrlDef('Pause',     'button',     'Pause', 1)
-        call CtrlDef('Exit',      'button',      'Exit', 1)
-        call CtrlDef('Plane',     'status', 'Plane:  1', 1)
-        call CtrlView
-        call CtrlClr
-      else
-        call Output('Movie:')
-        call Output('Movie:  Button A runs the movie to the left;')
-        call Output('Movie:  Button B temporarily pauses the movie;')
-        call Output('Movie:  Button C runs the movie to the right;')
-        call Output('Movie:  Button D terminates the movie.')
-        call Output('Movie:  Buttons A - D may also be keys F3 - F6.')
-      endif
-c
-      more = .TRUE.
-      right = .TRUE.
-      reverse = .FALSE.
-      runit = .TRUE.
-      pause = .FALSE.
 c
       nxsize = (xmax / 2) - 1 - (nx / 2)
       nysize = (ymax / 2) - 1 + (ny / 2)
-      scale = 5.0 / (trcx - blcx)
       k = 0
       x = 0
       y = 0
@@ -588,19 +574,42 @@ c
       call tvcursor(x,y,button)
       button = 3
 c
+      call output('Looping around the displayed channels')
       dowhile(more)
+	if(restart)then
+	  blcx = 0
+	  blcy = 0
+	  trcx = 0
+	  trcy = 0
+	  call TvWind(blcx, blcy, trcx, trcy)
+	  t1 = min( (trcx - blcx)/real(nx), (trcy - blcy)/real(ny) )
+	  t2 = min(xmax/real(nx), ymax/real(ny))
+	  z = max(1,nint(min(t1,t2)))
+	  call TvZoom(z, xmax/2, ymax/2)
+	  scale = 5.0 / (trcx - blcx)
+	  restart = .false.
+	endif
         step = .FALSE.
         if (ctrl) then
+          call CtrlChck('Restart', change, val1, val2)
+	  restart = change.gt.0
+          call CtrlChck('Reverse', change, val1, val2)
+          if (change.gt.0) then
+	    loop = .not.loop
+            if(loop)then
+	      call output('Looping around the displayed channels')
+	    else
+	      call output('Oscillating between start and end')
+	    endif
+	  endif
           call CtrlChck('RunLeft', change, val1, val2)
           if (change.gt.0) then
             runit = .TRUE.
-            step = .FALSE.
             right = .FALSE.
           endif
           call CtrlChck('RunRight', change, val1, val2)
           if (change.gt.0) then
             runit = .TRUE.
-            step = .FALSE.
             right = .TRUE.
           endif
           call CtrlChck('StepLeft', change, val1, val2)
@@ -608,26 +617,17 @@ c
             runit = .FALSE.
             step = .TRUE.
             right = .FALSE.
-            endif
+          endif
           call CtrlChck('StepRite', change, val1, val2)
           if (change.gt.0) then
             runit = .FALSE.
             step = .TRUE.
             right = .TRUE.
-            endif
-          call CtrlChck('Repeat', change, val1, val2)
-          if (change.gt.0) then
-            reverse = .FALSE.
-            endif
-          call CtrlChck('Reverse', change, val1, val2)
-          if (change.gt.0) then
-            reverse = .TRUE.
-            endif
-          call CtrlChck('Pause', change, val1, val2)
+          endif
+          call CtrlChck('Stop', change, val1, val2)
           if (change.gt.0) then
             runit = .FALSE.
-            step = .FALSE.
-            endif
+          endif
           call CtrlChck('Exit', change, val1, val2)
           if (change.gt.0) then
             runit = .FALSE.
@@ -656,7 +656,7 @@ c
         if (step.or.runit) then
           if (right) then
             k = k + 1
-            if ((k .gt. n) .and. (reverse)) then
+            if (k.gt.n.and..not.loop) then
               right = .FALSE.
               k = n - 1
             else if (k .gt. n) then
@@ -664,7 +664,7 @@ c
             endif
           else
             k = k - 1
-            if ((k .lt. 1) .and. (reverse)) then
+            if (k.lt.1.and..not.loop)then
               right = .TRUE.
               k = 2
             else if (k .lt. 1) then
@@ -677,35 +677,23 @@ c
             call tvchan(achan)
           endif
 c
-          pause = .FALSE.
-          if (ctrl) then
-            if (reverse) then
-              write(message, '(A,I4,A)') 'Plane: ', k, ' (Reverse)'
-            else
-              write(message, '(A,I4,A)') 'Plane: ', k, ' (Repeat)'
-            endif
-            call CtrlSeta('Plane', message)
-          endif
+          if (ctrl)call CtrlSeta('Plane', 'Plane: '//itoaf(k))
 c
           trcx = nxsize - xcoord(k)
           trcy = nysize + ycoord(k)
           call TvScrl(trcx, trcy)
-        else
-c
-c  This case only happens when in pause mode.
-c
-          if (ctrl .and. (.not. pause)) then
-            pause = .TRUE.
-            write(message, '(A,I4,A)') 'Plane: ', k, ' (Pause)'
-            call CtrlSeta('Plane', message)
-          endif
         endif
 c
         call tvcursor(x, y, button)
         x = x - blcx + 1
         if (x .lt. 1) x = 1
-        if (step .or. runit) call delayf(scale*x)
+        if((step.or.runit.or.(.not.step.and..not.runit))
+     *	    .and..not.restart)call delayf(scale*x)
       enddo
 c
-      return
+      if (ctrl) then
+        call CtrlClr
+        call CtrlFin
+      endif
+c
       end
