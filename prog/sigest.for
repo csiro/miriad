@@ -1,5 +1,5 @@
 c************************************************************************
-	program histo
+	program sigest
 	implicit none
 c
 c= sigest - Estimate the rms level in an image.
@@ -53,7 +53,7 @@ c
 c
 c  Open the input file, and make sure that I can handle it.
 c
-	call output( 'Histo: '//version )
+	call output( 'Sigest: '//version )
 	call keyini
 	call keya('in',file,' ')
 	if(file.eq.' ')call bug('f','Input file must be given')
