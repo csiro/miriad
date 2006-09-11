@@ -197,8 +197,8 @@ c                   some output points were blanked.  Also in hedinfo
 c                   rdhdd was being called with default real arg.
 c    rjs  02jul97   cellscal change.
 c    rjs  23jul97   added pbtype.
-c    nebk 23aug00   bump to 20 image.  subroutine chkdes should not
-c                   be checking crpix on frequency axis
+c    nebk 25aug00   bump to 20 image.  subroutine chkdes should not
+c                   be checking cdelt/crpix on frequency axis
 c------------------------------------------------------------------------
       implicit none
 c
@@ -210,7 +210,7 @@ c
       double precision r2d
       integer maxim
       character version*40
-      parameter (version = 'ImRM: version 21-Jun-97' )
+      parameter (version = 'ImRM: version 25-Aug-2000' )
       parameter (maxim = 20, r2d = 180.0d0/dpi)
 cc
       real lsq(maxim), pa(maxim), pa2(maxim), wt(maxim)
@@ -765,13 +765,13 @@ c
           call bug (bflag, line)
         end if
 c
-        call chkds2 (bflag, 'cdelt', k, im1(1:l1), im2(1:l2), 
-     +               real(cdelt1(k)), real(cdelt2(k)))
         if (k.ne.fqax1) then
            call chkds2 (bflag, 'crval', k, im1(1:l1), 
      +                  im2(1:l2), real(crval1(k)), real(crval2(k)))
            call chkds2 (bflag, 'crpix', k, im1(1:l1), im2(1:l2), 
      +                  crpix1(k), crpix2(k))
+           call chkds2 (bflag, 'cdelt', k, im1(1:l1), im2(1:l2), 
+     +                  real(cdelt1(k)), real(cdelt2(k)))
         end if
       end do
 c
