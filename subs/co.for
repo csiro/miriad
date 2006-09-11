@@ -11,6 +11,8 @@ c    subroutine coReinit(lu)
 c    subroutine coAxSet(lu,iax,ctype,crpix,crval,cdelt)
 c    subroutine coCvt(lu,in,x1,out,x2)
 c    subroutine coCvt1(lu,iax,in,x1,out,x2)
+c    subroutine coLMN(lu,in,x1,lmn)
+c    subroutine coFreq(lu,in,x1,freq)
 c    subroutine coVelSet(lu,axis)
 c    subroutine coPrjSet(lu)
 c    subroutine coFindAx(lu,axis,iax)
@@ -459,13 +461,24 @@ c
 	k = coLoc(lu,.false.)
 	call coCrack(in,x1pix,x1off,naxis(k),MAXNAX,n)
 	call coCrack(out,x2pix,x2off,n,MAXNAX,nt)
-	if(n.ne.nt)call bug('f','Bad conversion specifiers')
 c
 c  Convert each of the axes.
 c
-	do i=1,n
+	do i=1,nt
 	  if(i.gt.naxis(k))then
-	    x2(i) = x1(i)
+	    if(i.le.n)then
+	      x2(i) = x1(i)
+	    else
+	      x2(i) = 0
+	    endif
+	  else if(i.gt.n)then
+	    if(x2off(i))then
+	      x2(i) = 0
+	    else if(x2pix(i))then
+	      x2(i) = crpix(i,k)
+	    else
+	      x2(i) = crval(i,k)
+	    endif
 	  else if(cotype(i,k).eq.LINEAR.or.cotype(i,k).eq.VELO.or.
      *	     cotype(i,k).eq.FREQ)then
 	    call CoLinear(crval(i,k),crpix(i,k),cdelt(i,k),
@@ -522,6 +535,71 @@ c
 c
 	end
 c************************************************************************
+c* coFreq -- Convert spectral coordinates to frequency.
+c& rjs
+c: coordinates
+c+
+	subroutine coFreq(lu,in,x1,freq1)
+c
+	implicit none
+	integer lu
+	character in*(*)
+	double precision x1(*),freq1
+c
+c  Get the frequency corresponding to a particular coordinate.
+c
+c  Input:
+c    lu		Handle of the coordinate object.
+c    in		As with coCvt
+c    x1		As with coCvt
+c  Output:
+c    freq1	The frequency.
+c--
+c------------------------------------------------------------------------
+	include 'co.h'
+	include 'mirconst.h'
+	double precision ckms
+	parameter(ckms=0.001*DCMKS)
+c
+	double precision x2(MAXNAX)
+	integer k,itype
+	logical ok
+c
+c  Externals.
+c
+	integer coLoc
+c
+c  Check validity.
+c
+	k = coLoc(lu,.false.)
+	ok = ifreq(k).gt.0
+	if(ok) ok = restfreq(k).gt.0.or.cotype(ifreq(k),k).eq.FREQ
+	if(.not.ok)
+     *	  call bug('f','Non-spectral coordinate system, in coFreq')
+c
+c  Convert the users coordinate to absolute world coordinates.
+c  Fill in the reference location in the output, just in case the
+c  user was silly enough not to give enough inputs.
+c
+	x2(ifreq(k)) = crval(ifreq(k),k)
+	call coCvt(lu,in,x1,'aw/...',x2)
+	freq1 = x2(ifreq(k))
+c
+c  Convert from velocityes
+c
+	itype = cotype(ifreq(k),k)
+	if(itype.eq.FREQ)then
+	  continue
+	else if(itype.eq.FELO)then
+	  freq1 = restfreq(k) / (1+(freq1+vobs(k))/ckms)
+	else if(itype.eq.VELO)then
+	  freq1 = restfreq(k) * (1-(freq1+vobs(k))/ckms)
+	else
+	  call bug('f','Something is screwy, in coFreq')
+	endif
+c
+	end
+c************************************************************************
 c* coLMN -- Convert celestial coordinates to direction cosines.
 c& rjs
 c: coordinates
@@ -533,7 +611,7 @@ c
 	character in*(*)
 	double precision x1(*),lmn(3)
 c
-c  Convert coordinates to direction cosines.
+c  Get the direction cosines corresponding to a particular coordinate.
 c
 c  Input:
 c    lu		Handle of the coordinate object.
@@ -934,6 +1012,8 @@ c		whereas     axis = 'ra---sin' will match only 'ra---sin'.
 c
 c		It can also be one of:
 c		  'spectral'   for FREQ, VELO and FELO axes
+c		  'frequency'  as above, but only if there is enough
+c			       information to convert to frequency.
 c		  'latitude'   for DEC, GLAT and ELAT axes
 c		  'longitude'  for RA, GLON and ELON axes.
 c
@@ -961,6 +1041,10 @@ c
 	iax = 0
 	if(type.eq.'SPECTRAL')then
 	  iax = ifreq(k)
+	else if(type.eq.'FREQUENCY')then
+	  iax = ifreq(k)
+	  if(iax.gt.0.and.restfreq(k).le.0.and.
+     *		cotype(iax,k).ne.FREQ) iax = 0
 	else if(type.eq.'LONGITUDE')then
 	  iax = ilong(k)
 	else if(type.eq.'LATITUDE')then
