@@ -197,6 +197,7 @@ c    rjs     15aug97 Change to normalisation, options=vsolve and fiddles
 c		     to the doc comments.
 c    rjs     22may98 Turn off xyref on early iterations of weakly polarised
 c		     source.
+c    rjs     19aug98 Changes in ampsolxy and ampsol to avoid an SGI compiler bug.
 c  Bugs:
 c    * Polarisation solutions when using noamp are wrong! The equations it
 c      solves for have a fudge to account for a bias introduced by the
@@ -2841,7 +2842,7 @@ c------------------------------------------------------------------------
 c
 	integer i,niter
 	logical convrg
-	real t,Factor,ChangeX,ChangeY,SumWtX,SumWtY
+	real t,Factor,ChangeX,ChangeY,SumWtX,SumWtY,t1,t2,t3,t4
 	real Sum2(2,MAXANT)
 	complex Sum(2,MAXANT),Temp
 c
@@ -2881,12 +2882,18 @@ c
      *				+ Gx(b1(i)) * conjg(SumVM(XX,i))
      *				+ Gy(b1(i)) * conjg(SumVM(YX,i))
 c
-	    Sum2(X,b1(i)) = Sum2(X,b1(i))
-     *	      + (real(Gx(b2(i)))**2 + aimag(Gx(b2(i)))**2)*SumMM(XX,i)
-     *	      + (real(Gy(b2(i)))**2 + aimag(Gy(b2(i)))**2)*SumMM(XY,i)
-	    Sum2(X,b2(i)) = Sum2(X,b2(i)) +
-     *	      + (real(Gx(b1(i)))**2 + aimag(Gx(b1(i)))**2)*SumMM(XX,i)
-     *	      + (real(Gy(b1(i)))**2 + aimag(Gy(b1(i)))**2)*SumMM(YX,i)
+	    t1 = real(Gx(b2(i)))
+	    t2 = aimag(Gx(b2(i)))
+	    t3 = real(Gy(b2(i)))
+	    t4 = aimag(Gy(b2(i)))
+	    Sum2(X,b1(i)) = Sum2(X,b1(i)) + (t1*t1+t2*t2)*SumMM(XX,i) +
+     *					    (t3*t3+t4*t4)*SumMM(XY,i)
+	    t1 = real(Gx(b1(i)))
+	    t2 = aimag(Gx(b1(i)))
+	    t3 = real(Gy(b1(i)))
+	    t4 = aimag(Gy(b1(i)))
+	    Sum2(X,b2(i)) = Sum2(X,b2(i)) + (t1*t1+t2*t2)*SumMM(XX,i) +
+     *					    (t3*t3+t4*t4)*SumMM(YX,i)
 c
 	    Sum(Y,b1(i))  = Sum(Y,b1(i))
      *				+ Gy(b2(i)) *       SumVM(YY,i)
@@ -2895,12 +2902,18 @@ c
      *				+ Gy(b1(i)) * conjg(SumVM(YY,i))
      *				+ Gx(b1(i)) * conjg(SumVM(XY,i))
 c
-	    Sum2(Y,b1(i)) = Sum2(Y,b1(i))
-     *	      + (real(Gy(b2(i)))**2 + aimag(Gy(b2(i)))**2)*SumMM(YY,i)
-     *	      + (real(Gx(b2(i)))**2 + aimag(Gx(b2(i)))**2)*SumMM(YX,i)
-	    Sum2(Y,b2(i)) = Sum2(Y,b2(i)) +
-     *	      + (real(Gy(b1(i)))**2 + aimag(Gy(b1(i)))**2)*SumMM(YY,i)
-     *	      + (real(Gx(b1(i)))**2 + aimag(Gx(b1(i)))**2)*SumMM(XY,i)
+	    t1 = real(Gy(b2(i)))
+	    t2 = aimag(Gy(b2(i)))
+	    t3 = real(Gx(b2(i)))
+	    t4 = aimag(Gx(b2(i)))
+	    Sum2(Y,b1(i)) = Sum2(Y,b1(i)) + (t1*t1+t2*t2)*SumMM(YY,i)
+     *					  + (t3*t3+t4*t4)*SumMM(YX,i)
+	    t1 = real(Gy(b1(i)))
+	    t2 = aimag(Gy(b1(i)))
+	    t3 = real(Gx(b1(i)))
+	    t4 = aimag(Gx(b1(i)))
+	    Sum2(Y,b2(i)) = Sum2(Y,b2(i)) + (t1*t1+t2*t2)*SumMM(YY,i)
+     *					  + (t3*t3+t4*t4)*SumMM(XY,i)
 	  enddo
 c
 c  Update the gains.
@@ -2968,6 +2981,7 @@ c
 	integer i,niter
 	logical convrg
 	real t,Factor,ChangeX,ChangeY,SumWtX,SumWtY
+	real t1,t2
 	real Sum2(2,MAXANT)
 	complex Sum(2,MAXANT),Temp
 c
@@ -3005,20 +3019,24 @@ c
 	    Sum(X,b2(i))  = Sum(X,b2(i)) +
      *			   G(b1(i)) * conjg(SumVM(XX,i))
 c
-	    Sum2(X,b1(i)) = Sum2(X,b1(i)) +
-     *	      (real(G(b2(i)))**2 + aimag(G(b2(i)))**2)*SumMM(XX,i)
-	    Sum2(X,b2(i)) = Sum2(X,b2(i)) +
-     *	      (real(G(b1(i)))**2 + aimag(G(b1(i)))**2)*SumMM(XX,i)
+	    t1 = real(G(b2(i)))
+	    t2 = aimag(G(b2(i)))
+	    Sum2(X,b1(i)) = Sum2(X,b1(i)) + (t1*t1 + t2*t2)*SumMM(XX,i)
+	    t1 = real(G(b1(i)))
+	    t2 = aimag(G(b1(i)))
+	    Sum2(X,b2(i)) = Sum2(X,b2(i)) + (t1*t1 + t2*t2)*SumMM(XX,i)
 c
 	    Sum(Y,b1(i))  = Sum(Y,b1(i)) +
      *	      Axy(b2(i)) * G(b2(i)) *       SumVM(YY,i)
 	    Sum(Y,b2(i))  = Sum(Y,b2(i)) +
      *	      Axy(b1(i)) * G(b1(i)) * conjg(SumVM(YY,i))
 c
-	    Sum2(Y,b1(i)) = Sum2(Y,b1(i)) + Axy(b2(i))**2 *
-     *	      (real(G(b2(i)))**2 + aimag(G(b2(i)))**2)*SumMM(YY,i)
-	    Sum2(Y,b2(i)) = Sum2(Y,b2(i)) + Axy(b1(i))**2 *
-     *	      (real(G(b1(i)))**2 + aimag(G(b1(i)))**2)*SumMM(YY,i)
+	    t1 = Axy(b2(i))*real(G(b2(i)))
+	    t2 = Axy(b2(i))*aimag(G(b2(i)))
+	    Sum2(Y,b1(i)) = Sum2(Y,b1(i)) + (t1*t1 + t2*t2)*SumMM(YY,i)
+	    t1 = Axy(b1(i))*real(G(b1(i)))
+	    t2 = Axy(b1(i))*aimag(G(b1(i)))
+	    Sum2(Y,b2(i)) = Sum2(Y,b2(i)) + (t1*t1 + t2*t2)*SumMM(YY,i)
 	  enddo
 c
 c  Update the gains.
