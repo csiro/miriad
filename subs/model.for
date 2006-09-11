@@ -57,6 +57,7 @@ c    rjs  26sep97 Re-add mhw's "zero" option.
 c    rjs  09jan97 Break a statement into two to avoid a compiler bug.
 c    rjs  27may99 Better check for no visibility data.
 c    rjs  12oct99 Change in subroutine name only.
+c    rjs  14dec99 Support for visibility datasets as models.
 c************************************************************************
 c*ModelIni -- Ready the uv data file for processing by the Model routine.
 c&rjs
@@ -211,36 +212,51 @@ c  Bugs and Shortcomings:
 c    * The FFT of the entire cube must fit into memory.
 c--
 c------------------------------------------------------------------------
-	logical mfs,doclip,zero
+	logical mfs,doclip,zero,doim,dopnt,douv
+c
+c  Externals.
+c
+	logical hdprsnt
 c
 c  Initialise the coordinate handles.
 c
-	if(tmod.ne.0)call coInit(tmod)
+	dopnt = tmod.eq.0
+	doim = .false.
+	if(.not.dopnt)doim = hdprsnt(tmod,'image')
+	douv = .not.dopnt.and..not.doim
+c
+	if(doim)call coInit(tmod)
 c
 	call ScrOpen(tscr)
 	call uvset(tvis,'coord','wavelength',0,0.,0.,0.)
-	call uvset(tvis,'preamble','uvw/time/baseline',0,0.,0.,0.)
+	call uvset(tvis,'preamble','uvw/time/baseline/pol',0,0.,0.,0.)
+	if(douv)then
+	  call uvset(tmod,'coord','wavelength',0,0.,0.,0.)
+	  call uvset(tmod,'preamble','uvw/time/baseline/pol',0,0.,0.,0.)
+	endif
+c
 	mfs = index(flags,'m').ne.0
 	doclip = index(flags,'l').ne.0
 	zero = index(flags,'z').ne.0
 c
-	if(tmod.ne.0)then
-	  call ModMap(tvis,tmod,level,doclip,zero,tscr,nhead,
-     *      header,mfs,nchan,nvis)
+	if(doim)then
+	  call ModMap(tvis,tmod,level,doclip,zero,mfs,
+     *					tscr,nhead,header,nchan,nvis)
+	else if(douv)then
+	  call ModUV(tvis,tmod,         tscr,nhead,header,nchan,nvis)
 	else
-	  call ModPnt(tvis,offset,level,tscr,nhead,header,
-     *	    nchan,nvis)
+	  call ModPnt(tvis,offset,level,tscr,nhead,header,nchan,nvis)
 	endif
 c
 c  Release the coordinate system handles.
 c
 	call coFin(tvis)
-	if(tmod.ne.0)call coFin(tmod)
+	if(doim)call coFin(tmod)
 c
 	end
 c************************************************************************
-	subroutine ModMap(tvis,tmod,level,doclip,zero,tscr,
-     *      nhead,header,mfs,nchan,nvis)
+	subroutine ModMap(tvis,tmod,level,doclip,zero,mfs,
+     *      				tscr,nhead,header,nchan,nvis)
 c
 	implicit none
 	logical mfs,doclip,zero
@@ -267,7 +283,7 @@ c------------------------------------------------------------------------
 c
 	integer length,nx,ny,nz,nxd,nyd,nu,nv,ngcf,u0,v0,nread,j,pnt
 	integer polm
-	double precision preamble(5),ucoeff(3),vcoeff(3),wcoeff(3)
+	double precision preamble(6),ucoeff(3),vcoeff(3),wcoeff(3)
 	double precision x1(2),x2(2)
 	real du,dv,umax,vmax,gcf(maxgcf)
 	double precision xref1,yref1,xref2,yref2,ud,vd
@@ -890,6 +906,85 @@ c#ivdep
 c
 	end
 c************************************************************************
+	subroutine ModUV(tin,tmod,tscr,nhead,header,nchan,nvis)
+c
+	implicit none
+	integer tin,tmod,tscr,nhead,nchan,nvis
+	external header
+c------------------------------------------------------------------------
+	include 'maxdim.h'
+	integer maxlen
+	parameter(maxlen=5*maxchan+10)
+c
+	integer nread,length
+	double precision pin(6),pmod(6)
+	complex din(MAXCHAN),dmod(MAXCHAN)
+	logical flin(MAXCHAN),flmod(MAXCHAN),accept,more
+	real out(maxlen)
+
+	nvis = 0
+	call uvread(tin,pin,din,flin,MAXCHAN,nchan)
+	if(nchan.eq.0)
+     *	  call bug('f','No visibility data selected, in Model(vis)')
+	call coInit(tin)
+c
+	nread = nchan
+	length = nhead + 5*nchan
+	if(length.gt.maxlen)call bug('f','Too many bits and pieces')
+c
+	dowhile(nread.eq.nchan)
+	  call header(tin,pin,din,flin,nchan,accept,Out,nhead)
+	  if(accept)then
+	    more = .true.
+c
+c  Find a matching record in the model visibility dataset.
+c
+	    dowhile(more)
+	      call uvread(tmod,pmod,dmod,flmod,MAXCHAN,nread)
+	      if(nread.ne.nchan)call bug('f',
+     *		'Incompatible number of channels in Model(vis)')
+	      more = nint(pin(6)-pmod(6)).ne.0.or.
+     *		     abs(pin(4)-pmod(4)).gt.1/86400.0.or.
+     *		     nint(pin(5)-pmod(5)).ne.0
+	    enddo
+c
+c  Weave the data and model visibility records into one.
+c
+	    call modwve(nchan,out(nhead+1),din,flin,dmod,flmod)
+	    call scrwrite(tscr,Out,nvis*length,length)
+	    nvis = nvis + 1
+	  endif
+	  call uvread(tin,pin,din,flin,MAXCHAN,nread)
+	enddo
+c
+c
+	if(nread.ne.0)call bug('w',
+     *	  'Stopped reading vis data when number of channels changed')
+	end
+c************************************************************************
+	subroutine modwve(nchan,out,din,flin,dmod,flmod)
+c
+	implicit none
+	integer nchan
+	real out(5*nchan)
+	logical flin(nchan),flmod(nchan)
+	complex din(nchan),dmod(nchan)
+c------------------------------------------------------------------------
+	integer i,j
+c
+	j = 0
+	do i=1,nchan
+	  Out(j+1) = real(din(i))
+	  Out(j+2) = aimag(din(i))
+	  Out(j+3) = real(dmod(i))
+	  Out(j+4) = aimag(dmod(i))
+	  Out(j+5) = 1
+	  if(.not.flin(i).or..not.flmod(i))Out(j+5) = -1
+	  j = j + 5
+	enddo
+c
+	end
+c************************************************************************
 	subroutine ModPnt(tvis,offset,level,tscr,nhead,header,
      *	    nchan,nvis)
 c
@@ -905,7 +1000,7 @@ c------------------------------------------------------------------------
 c
 	integer nread,length,j,polm
 	real theta,temp,Out(maxlen),flux
-	double precision preamble(5),lmn(3),off(2)
+	double precision preamble(6),lmn(3),off(2)
 	logical accept,flags(MAXCHAN)
 	complex In(MAXCHAN),Intp(MAXCHAN)
 	double precision skyfreq(MAXCHAN)
