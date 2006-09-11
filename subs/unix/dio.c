@@ -25,6 +25,7 @@
 /*      26-aug-93  rjs Added hrmdir.					*/
 /*	 5-nov-94  rjs Improve POSIX compliance.			*/
 /*	26-Oct-95  rjs Honour TMPDIR environment variable, if set.	*/
+/*	10-Jan-96  rjs Make sure scratch file names are unique.		*/
 /************************************************************************/
 
 #include <sys/types.h>
@@ -154,7 +155,7 @@ char *name,*status;
 
 ------------------------------------------------------------------------*/
 {
-  int flags,is_scratch;
+  int flags,is_scratch,pid;
   char *s,sname[MAXPATH];
 
   is_scratch = *iostat = 0;
@@ -167,10 +168,10 @@ char *name,*status;
     flags = O_CREAT|O_TRUNC|O_RDWR;
     is_scratch = 1;
     s = getenv("TMPDIR");
-    if(s != NULL){
-      sprintf(sname,"%s/%s",s,name);
-      s = sname;
-    } else s = name;
+    pid = getpid();
+    if(s != NULL)sprintf(sname,"%s/%s.%d",s,name,pid);
+    else         sprintf(sname,"%s.%d",name,pid);
+    s = sname;
   } else bug_c('f',"dopen_c: Unrecognised status");
 
   if((*fd = open(s,flags,0644)) < 0){*iostat = errno; return;}
