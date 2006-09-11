@@ -18,6 +18,9 @@ c	contain multiple channels and spectral windows. The frequency
 c	set-up can vary with time.
 c@ line
 c	Standard line parameter, with standard defaults.
+c@ stokes
+c	Stokes parameters to process. The default is to process the parallel
+c	hand polarisations.
 c@ edge
 c	The number of channels, at the edges of each spectral window, that
 c	are to be dropped. Either one or two numbers can be given, being the
@@ -97,17 +100,22 @@ c		  correctly computed when line width was not equal to
 c		  line step.
 c    jwr  03may04 Increased MAXHASH by a factor 8.
 c    rjs   7oct04 Set senmodel parameter.
+c    rjs   2jan06 Stokes selection. Weight by variance, push XY phase
+c		  into bandpass, duplicate gains when bandpass dual polarisation
+c		  and gains is single polarisation.
 c
 c  Problems:
 c    * Should do simple spectral index fit.
 c------------------------------------------------------------------------
+	integer PolXX,PolYY,PolRR,PolLL,PolI
+	parameter(PolXX=-5,PolYY=-6,PolRR=-1,PolLL=-2,PolI=1)
 	include 'maxdim.h'
 	integer MAXSPECT,MAXVIS,MAXSOLN,MAXITER,MAXPOL
 	parameter(MAXSPECT=33,MAXVIS=700000,MAXITER=30,MAXSOLN=1024)
 	parameter(MAXPOL=2)
 c
 	character version*(*)
-	parameter(version='MfCal: version 1.0 7-Oct-04')
+	parameter(version='MfCal: version 1.0 02-Jan-06')
 c
 	integer tno
 	integer pWGains,pFreq,pSource,pPass,pGains,pTau
@@ -142,8 +150,8 @@ c
 	call output(version)
 	call keyini
 	call GetOpt(dodelay,dopass,interp,oldflux)
-	uvflags = 'dlbx'
-	if(.not.dopass)uvflags(5:5) = 'f'
+	uvflags = 'dlbxs'
+	if(.not.dopass)uvflags(6:6) = 'f'
 	call uvDatInp('vis',uvflags)
 	call keyi('refant',refant,3)
 	call keyi('minants',minant,2)
@@ -178,7 +186,17 @@ c
 c
 c  Open the input file.
 c
+	call uvdatGti('npol',npol)
 	if(.not.uvDatOpn(tno))call bug('f','Error opening input file')
+	if(npol.eq.0)then
+	  call output('Selecting parallel-hand polarisations')
+	  call uvselect(tno,'and',0.d0,0.d0,.true.)
+	  call uvselect(tno,'polarization',dble(PolXX),0.d0,.true.)
+	  call uvselect(tno,'polarization',dble(PolYY),0.d0,.true.)
+	  call uvselect(tno,'polarization',dble(PolRR),0.d0,.true.)
+	  call uvselect(tno,'polarization',dble(PolLL),0.d0,.true.)
+	  call uvselect(tno,'polarization',dble(PolI),0.d0,.true.)
+	endif
 	call HisOpen(tno,'append')
 	call HisWrite(tno,'MFCAL: '//version)
 	call HisInput(tno,'MFCAL')
@@ -300,10 +318,15 @@ c
 c
 	if(epsi.gt.tol)call bug('w','Failed to converge')
 	call output('Saving solution ...')
-	call GainTab(tno,time,cref(pGains),ref(pTau),npol,nants,nsoln,
-     *	  freq0,dodelay,pee)
+c
 	if (dopass.and.interp) call intext(npol,nants,nchan,nspect,
      *    nschan,cref(pPass))
+	if(dopass.and.npol.eq.2)
+     *	  call pushxy(npol,nants,nsoln,cref(pGains),nchan,cref(pPass))
+c
+	call GainTab(tno,time,cref(pGains),ref(pTau),npol,nants,nsoln,
+     *	  freq0,dodelay,pee,dopass)
+c
 	if(dopass)call PassTab(tno,npol,nants,nchan,
      *	  nspect,sfreq,sdf,nschan,cref(pPass),pee)
 c
@@ -319,6 +342,81 @@ c
 	call MemFree(pFreq,nchan,'d')
 	call hisclose(tno)
 	call uvDatCls
+c
+	end
+c************************************************************************
+	subroutine pushxy(npol,nants,nsoln,Gains,nchan,Pass)
+c
+	implicit none
+	integer npol,nants,nsoln,nchan
+	complex Gains(nants,npol,nsoln),Pass(nants,nchan,npol)
+c
+c  Input:
+c    npol	Number of polarisations. Must be 2.
+c    nants	Number of antennas.
+c    nsoln	Number of antenna solutions.
+c    nchan	Total number of channels.
+c  Input/Output:
+c    Gains	Antenna gains.
+c    Pass	Bandpass solution.
+c------------------------------------------------------------------------
+	include 'mirconst.h'
+	include 'maxdim.h'
+	complex g(MAXANT),gx,gy
+	real xyphase(MAXANT),theta
+	integer count(MAXANT),i,j
+c
+	if(npol.ne.2)call bug('f','Poln inconsistency in pushxy')
+c
+c  Work out the mean XY phase for each of the antennas.
+c
+	do i=1,nants
+	  count(i) = 0
+	  xyphase(i) = 0
+	enddo
+c
+	do j=1,nsoln
+	  do i=1,nants
+	    gx = gains(i,1,j)
+	    gy = gains(i,2,j)
+	    if(abs(real(gx))+abs(aimag(gx)).gt.0.and.
+     *	       abs(real(gy))+abs(aimag(gy)).gt.0)then
+	      gx = gx/gy
+	      theta = atan2(aimag(gx),real(gx))
+	      if(count(i).gt.0)theta = theta +
+     *		2*PI*nint((xyphase(i)/count(i)-theta)/(2*PI))
+	      count(i) = count(i) + 1
+	      xyphase(i) = xyphase(i) + theta
+	    endif
+	  enddo
+	enddo
+c
+	do i=1,nants
+	  if(count(i).gt.0)then
+	    theta = xyphase(i)/count(i)
+	    g(i) = cmplx(cos(theta),sin(theta))
+	  else
+	    g(i) = 1
+	  endif
+	enddo
+c
+c  Now apply these to the gains and bandpass
+c
+	do j=1,nsoln
+	  do i=1,nants
+	    Gains(i,2,j) = Gains(i,2,j)*g(i)
+	  enddo
+	enddo
+c
+	do i=1,nants
+	  g(i) = conjg(g(i))
+	enddo
+c
+	do j=1,nchan
+	  do i=1,nants
+	    Pass(i,j,2) = Pass(i,j,2)*g(i)
+	  enddo
+	enddo
 c
 	end
 c************************************************************************
@@ -416,14 +514,14 @@ c
 	end
 c************************************************************************
 	subroutine GainTab(tno,time,Gains,Tau,npol,nants,nsoln,
-     *						freq0,dodelay,pee)
+     *					freq0,dodelay,pee,dopass)
 c
 	implicit none
 	integer tno,nants,nsoln,npol,pee(npol)
 	double precision time(nsoln),freq0
 	real Tau(nants,nsoln)
 	complex Gains(nants,npol,nsoln)
-	logical dodelay
+	logical dodelay,dopass
 c
 c  Write out the antenna gains and the delays.
 c
@@ -441,8 +539,25 @@ c		that we write the gains out in.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
-	integer iostat,off,item,i,j,p,pd,j1,ngains
-	complex G(3*MAXANT)
+	integer iostat,off,item,i,j,p,pd,j1,ngains,npold,ntau
+	complex G(3*MAXANT),g0
+c
+c  Externals.
+c
+	logical hdprsnt
+c
+c  Check whether we need to duplicate the gains to be consistent with
+c  and existing bandpass table.
+c
+	if(.not.dopass.and.hdprsnt(tno,'bandpass'))then
+	  call rdhdi(tno,'nfeeds',npold,0)
+	else
+	  npold = npol
+	endif
+	if(npold.ne.npol.and.npol.ne.1)call bug('f',
+     *   'Polarisation inconsistency between gains and bandpass tables')
+c
+c  Write the gains table.
 c
 	call haccess(tno,item,'gains','write',iostat)
 	if(iostat.ne.0)then
@@ -457,8 +572,9 @@ c
 c
 c  Write out all the gains.
 c
-	ngains = npol*nants
-	if(dodelay) ngains = (npol+1)*nants 
+	ntau = 0
+	if(dodelay)ntau = 1
+	ngains = (npold+ntau)*nants 
 c
 	off = 8
 	do i=1,nsoln
@@ -474,10 +590,15 @@ c
 	      pd = pee(p)
 	      if(abs(real( Gains(j,pd,i)))+
      *		 abs(aimag(Gains(j,pd,i))).ne.0)then
-	        G(j1) = 1/Gains(j,pd,i)
+	        g0 = 1/Gains(j,pd,i)
 	      else
-	        G(j1) = (0.,0.)
+	        g0 = (0.,0.)
 	      endif
+	      G(j1) = g0
+	      j1 = j1 + 1
+	    enddo
+	    do p=npol+1,npold
+	      G(j1) = g0
 	      j1 = j1 + 1
 	    enddo
 	    if(dodelay)then
@@ -500,16 +621,12 @@ c
 c
 c  Now write out the other parameters that need to go along with this.
 c
-	call wrhdi(tno,'nfeeds',npol)
+	call wrhdi(tno,'nfeeds',npold)
 	call wrhdi(tno,'ngains',ngains)
 	call wrhdi(tno,'nsols',nsoln)
 	call wrhdd(tno,'interval',0.5d0)
-	if(dodelay)then
-	  call wrhdi(tno,'ntau',1)
-	  call wrhdd(tno,'freq0',freq0)
-	else
-	  call wrhdi(tno,'ntau',0)
-	endif
+	call wrhdi(tno,'ntau',ntau)
+	if(dodelay)call wrhdd(tno,'freq0',freq0)
 c
 	end
 c************************************************************************
@@ -1126,8 +1243,6 @@ c    Wt
 c    Vis
 c    Count
 c------------------------------------------------------------------------
-	integer PolXX,PolYY,PolRR,PolLL,PolI
-	parameter(PolXX=-5,PolYY=-6,PolRR=-1,PolLL=-2,PolI=1)
 	integer PolMin,PolMax
 	parameter(PolMin=-6,PolMax=1)
 	include 'maxdim.h'
@@ -1141,6 +1256,7 @@ c
 	integer chan(MAXCHAN),spect(MAXCHAN),state(MAXCHAN)
 	integer Hash(2,MAXHASH),vupd
 	integer pols(PolMin:PolMax)
+	real w,rms2
 c
 c  Externals.
 c
@@ -1161,12 +1277,6 @@ c
 	call uvVarSet(vupd,'nschan')
 	call uvVarSet(vupd,'wfreq')
 	call uvVarSet(vupd,'wwidth')
-	call uvselect(tno,'and',0.d0,0.d0,.true.)
-	call uvselect(tno,'polarization',dble(PolXX),0.d0,.true.)
-	call uvselect(tno,'polarization',dble(PolYY),0.d0,.true.)
-	call uvselect(tno,'polarization',dble(PolRR),0.d0,.true.)
-	call uvselect(tno,'polarization',dble(PolLL),0.d0,.true.)
-	call uvselect(tno,'polarization',dble(PolI),0.d0,.true.)
 c
 	do p=PolMin,PolMax
 	  pols(p) = 0
@@ -1255,13 +1365,22 @@ c
 	    call despect(updated,tno,nchan,edge,chan,spect,
      *		maxspect,nspect,sfreq,sdf,nschan,state)
 c
+c  Get the weighting.
+c
+            call uvDatGtr('variance',rms2)	
+            if(rms2.gt.0)then
+              W = 1/rms2
+            else
+              W = 1
+            endif
+c
 	    do i=1,nchan
 	      if(flags(i).and.chan(i).gt.0)then
 	        present(i1,p) = .true.
 	        present(i2,p) = .true.
 	        call pack(i1,i2,p,spect(i),chan(i),VisId)
 		ninter = ninter + 1
-		call Accum(Hash,Data(i),VisId,
+		call Accum(Hash,Data(i),w,VisId,
      *			nsoln,nvis,Vis,Wt,VID,Count)
 	      else
 	        nbad = nbad + 1
@@ -1396,12 +1515,12 @@ c
 	Hash(1,1) = prime(maxHash-2)
 	end
 c************************************************************************
-	subroutine Accum(Hash,Data,VisId,nsoln,nvis,Vis,Wt,
+	subroutine Accum(Hash,Data,w,VisId,nsoln,nvis,Vis,Wt,
      *						VID,Count)
 c
 	implicit none
 	integer VisId,nsoln,nvis,VID(*),Count(*)
-	real Wt(*)
+	real Wt(*),w
 	integer Hash(2,*)
 	complex Data,Vis(*)
 c
@@ -1434,14 +1553,14 @@ c
 	  Hash(1,indx) = iHash
 	  Hash(2,indx) = nvis
 	  i = nvis
-	  Vis(i) = Data
-	  Wt(i) = 1
+	  Vis(i) = w*Data
+	  Wt(i) = w
 	  VID(i) = VisId
 	  Count(nsoln) = Count(nsoln) + 1
 	else
 	  i = Hash(2,indx)
-	  Vis(i) = Vis(i) + Data
-	  Wt(i) = Wt(i) + 1
+	  Vis(i) = Vis(i) + w*Data
+	  Wt(i) = Wt(i) + w
 	endif
 c
 	end
