@@ -92,6 +92,7 @@ c    rjs  22sep93 Rms averaging option.
 c    rjs  23dec93 Added 'felocity' axis (velocity using optical definition).
 c    rjs   8mar94 Handle data which are not in time order.
 c    nebk 22mar94 Add options=flagged
+c    rjs  17aug94 Better offset handling.
 c  Bugs:
 c------------------------------------------------------------------------
 	include 'mirconst.h'
@@ -105,10 +106,10 @@ c
 	character xtitle*64,ytitle*64
 	logical ampsc,rms,nobase,avall,first,buffered,doflush,dodots
 	logical doshift,doflag
-	double precision interval,T0,T1,preamble(4)
+	double precision interval,T0,T1,preamble(4),shift(2),shft(2)
 	integer tIn,vupd
 	integer nxy(2),nchan,nread
-	real yrange(2),inttime,shift(2)
+	real yrange(2),inttime
 	double precision x(MAXCHAN)
 	complex data(MAXCHAN)
 	logical flags(MAXCHAN)
@@ -132,8 +133,8 @@ c
 	call keya('device',device,' ')
 	call keyi('nxy',nxy(1),0)
 	call keyi('nxy',nxy(2),0)
-	call keyr('offset',shift(1),0.)
-	call keyr('offset',shift(2),shift(1))
+	call keyd('offset',shift(1),0.d0)
+	call keyd('offset',shift(2),0.d0)
 	call keyr('yrange',yrange(1),0.)
 	call keyr('yrange',yrange(2),yrange(1)-1)
         call keya('log',logf,' ')
@@ -182,6 +183,11 @@ c
 c  Loop over the data.
 c
 	  call uvDatRd(preamble,data,flags,maxchan,nread)
+	  if(doshift)then
+	    call coInit(tIn)
+	    call coCvt(tIn,'ow/ow',shift,'op/op',shft)
+	    call coFin(tIn)
+	  endif
 	  nchan = nread
 	  T1 = preamble(3)
 	  T0 = T1
@@ -189,7 +195,7 @@ c
 c
 c  Shift the data if needed.
 c
-	    if(doshift)call ShiftIt(tIn,preamble,data,nchan,shift)
+	    if(doshift)call ShiftIt(tIn,preamble,data,nchan,shft)
 c
 c  Determine if we need to flush out the averaged data.
 c
@@ -246,7 +252,7 @@ c
 	implicit none
 	integer tIn,nchan
 	double precision uv(2)
-	real shift(2)
+	double precision shift(2)
 	complex data(nchan)
 c
 c  Shift the data.
