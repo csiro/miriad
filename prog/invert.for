@@ -24,14 +24,15 @@ c@ beam
 c	Output beam (point-spread function) file name. The default is not
 c	to make a beam.
 c@ imsize
-c	The size of the output dataset. If options=mosaic, an image of
+c	The size of the output dataset. The default is to image out to
+c	primary beam half power points. For options=mosaic, an image of
 c	this size is made for each pointing before a linear mosaic
-c	operation is performed.
+c	operation is performed. 
 c@ cell
 c	Image cell size, in arcsec. If two values are given, they give
 c	the RA and DEC cell sizes. If only one value is given, the cells
-c	are made square. INVERT determines an appropriate default if
-c	no values are given.
+c	are made square. The default is about one third of the resolution
+c	of the resultant images.
 c@ offset
 c	When not mosaicing, this gives the sky position to shift to the
 c	center of the output images. The position is specified as an
@@ -290,16 +291,18 @@ c		    Interpolate mode with the slop factor.
 c		    Robust parameter.
 c    nebk  29sep95  Fix typo for irked user; "unform -> uniform"
 c    rjs   30oct95  slop=xxx,interp was not workin g as advertised.
+c    rjs    1nov95  Default value for imsize. Better default cell and sup.
+c		    Sub-uniform weighting.
 c
 c  Bugs:
-c    - It would be nice to have a primary-beam dependent default image size.
+c
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'maxdim.h'
 	include 'mem.h'
 c
 	character version*(*)
-	parameter(version='Invert: version 1.0 30-Oct-95')
+	parameter(version='Invert: version 1.0 1-Nov-95')
 	integer MAXPOL,MAXRUNS
 	parameter(MAXPOL=4,MAXRUNS=4*MAXDIM)
 c
@@ -367,12 +370,13 @@ c
 	fwhmx = fwhmx * pi/180/3600
 	fwhmy = fwhmy * pi/180/3600
 c
-	call keyi('imsize',nx,128)
+	call keyi('imsize',nx,0)
 	call keyi('imsize',ny,nx)
+	if(max(nx,ny).gt.MAXDIM)call bug('f','Output image too big')
 c
 	defWt = .not.keyprsnt('sup')
 	call keyr('sup',supx,0.)
-	call keyr('sup',supy,0.)
+	call keyr('sup',supy,supx)
 	supx = supx * pi/180/3600
 	supy = supy * pi/180/3600
 	if(min(supx,supy).lt.0)call bug('f','Invalid sup parameter')
@@ -387,21 +391,6 @@ c
 	call keymatch('slop',nslop,slops,1,slopmode,nout)
 	if(nout.eq.0)slopmode = slops(1)
 	call keyfin
-c
-c  Determine the size of the output beam.
-c
-	if(double)then
-	  bnx = 2*nx - 1
-	  bny = 2*ny - 1
-	else
-	  bnx = nx
-	  bny = ny
-	endif
-	if(max(nx,ny).gt.MAXDIM)call bug('f','Output image too big')
-	nx = max(nx,16)
-	ny = max(ny,16)
-	bnx = max(bnx,16)
-	bny = max(bny,16)
 c
 c  Check the number of polarisations, and check that there is a consistent
 c  number of output files. Also check that none of the output files
@@ -446,8 +435,8 @@ c  Set appropriate values for cellx and celly if needed. Try to make
 c  the pixels square if the X and Y resolutions are approx the same.
 c
 	if(cellx*celly.le.0)then
-	  cellx = 0.25 / umax
-	  celly = 0.25 / vmax
+	  cellx = max( 0.25 / umax, 0.3*fwhmx)
+	  celly = max( 0.25 / vmax, 0.3*fwhmy)
 	  if(max(cellx,celly).lt.2*min(cellx,celly))then
 	    cellx = min(cellx,celly)
 	    celly = cellx
@@ -473,6 +462,26 @@ c
      *	  call bug('f','Only mode=fft is supported with options=mosaic')
 	call HdSet(cellx,celly,ra0,dec0,proj,freq0)
 	call HdCoObj(coObj)
+c
+c  Determine the default image size, if needed.
+c
+	if(nx*ny.eq.0)call HdDefSiz(nx,ny)
+c
+c  Fiddle the sizes and determine the size of the output beam.
+c
+	nx = min(nx,MAXDIM)
+	ny = min(ny,MAXDIM)
+	if(double)then
+	  bnx = min(2*nx - 1,MAXDIM)
+	  bny = min(2*ny - 1,MAXDIM)
+	else
+	  bnx = nx
+	  bny = ny
+	endif
+	nx = max(nx,16)
+	ny = max(ny,16)
+	bnx = max(bnx,16)
+	bny = max(bny,16)
 c
 c  Tell about the mean frequency, if necessary.
 c
@@ -976,7 +985,7 @@ c
 	gd = 1/abs(Cell * gn)
 c
 	if(Sup.gt.0)then
-	  wd = max(gd,1/sup)
+	  wd = 1/sup
 	  wn = 2*nint( uvmax / wd ) + 1
 	else if(defWt)then
 	  wd = gd
