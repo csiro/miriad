@@ -130,6 +130,7 @@ c     nebk   26apr96     Km -> km is setlabcg.  rats.
 c     nebk   02may96     COmments in ANGCONCG were no longer the truth
 c     nebk   16oct96     Make sure all LONG axes are trapped for zero 
 c                        crossing too in RAZEROCG
+c     nebk   16jul98     CHNSELCG was messing up regions like image(3),image(7)
 c***********************************************************************
 c
 c* angconCG -- Convert radians to and from seconds of time/arc
@@ -358,21 +359,24 @@ c
         do j = start(1)+1, trc(3)
           call boxruns (1, j, ' ', boxes, runs, maxruns,
      +                  nruns, xmin, xmax, ymin, ymax)
+
           if (nruns.eq.0) then
 c
 c The current channel is not wanted. Assign the last good
 c channel as the end of the current group, and indicate
 c we need to start a new group.
 c
-            end(k) = last
-            k = k + 1
+            if (last.ne.0) end(k) = last
             last = 0
           else
 c
 c This is a good channel, start a new group if needed
 c and note this is currently the last good channel
 c
-            if (last.eq.0) start(k) = j
+            if (last.eq.0) then
+               k = k + 1
+               start(k) = j
+            end if
             last = j
           end if
         end do  
