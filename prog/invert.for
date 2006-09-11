@@ -78,6 +78,18 @@ c	ratio, at the expense of no sidelobe suppression. Natural weighting
 c	corresponds to SUP=0. Values between these extremes give a tradeoff
 c	between signal to noise and sidelobe suppression, and roughly
 c	correspond to AIPS ``super-uniform'' weighting.
+c@ robust
+c	Brigg's visibility weighting robustness parameter. This parameter
+c	can be used to down-weight excessive weight being given to
+c	visibilities in relatively sparsely filled regions of the $u-v$ plane.
+c	Most useful settings are in the range [-2,2], with values less than
+c	-2 corresponding to very little down-weighting, and values greater than
+c	+2 reducing the weighting to natural weighting. 
+c
+c	Sidelobe levels and beam-shape degrade with increasing values of
+c	robustness, but the theoretical noise level will also decrease.
+c
+c	The default is no down-weighting (robust=-infinity).
 c@ line
 c	Standard "line" parameter, with the normal defaults. See the
 c	help on "line" for more information.
@@ -152,30 +164,26 @@ c	         bad data and sidelobes, has a even larger time penalty
 c	         and produces images that cannot be deconvolved.
 c	NOTE: Dft and median modes are not supported with options=mosaic.
 c@ slop
-c	`Slop factor'. When forming spectral cubes, INVERT normally insists
-c	that all channels in a given visibility spectrum must be good before
-c	accepting the spectrum for imaging. The slop factor gives a tolerance
-c	which allows a spectrum to be accepted even if some of its channels are
-c	flagged bad. The slop factor, which can be between 0 and 1, gives the
-c	fraction of channels that INVERT will tolerate as being bad. The
-c	default is 0, indicating that INVERT will not tolerate any bad
-c	channels. A value of 1 indicates that INVERT will accept a spectrum as
-c	long as there is at least one good channel.
+c	NOTE: This parameter should be used with caution! See the Users
+c	Guide for more information on its applicability.
 c
-c	You should be aware that, when if comes to forming a beam, INVERT
-c	assumes that all the channels used in mapping were good. This will
-c	probably not be true if a slop factor other than 0 is used. In this
-c	case, the true beam (point-spread function) will vary from plane
-c	to plane, and will differ from the computed beam. You cannot do
-c	a proper deconvolution in this case. For slop factors other than
-c	0, INVERT attempts to scale each plane so that the true beam has
-c	a peak value of 1. However, this scaling is exact only for natural
-c	weighting when no tapering is used (i.e. sup=0 and fwhm unset). For
-c	other weightings and taperings, the peak value of the true beam will
-c	not be exactly 1 -- the flux density unit will no longer be what is
-c	conventionally 	understood by Jy/dirty beam. Additionally the beam
-c	peak value will vary from plane to plane, and so the flux density
-c	scale may not be comparable from plane to plane.
+c	When forming spectral cubes, INVERT normally insists
+c	that all channels in a given visibility spectrum must be good before
+c	accepting the spectrum for imaging. This keyword allows this rule to
+c	be relaxed. It consists of two parts: a tolerance and a method for
+c	replacing the bad channels.
+c	
+c	The tolerance is a value between 0 and 1, giving the fraction of
+c	channels that INVERT will tolerate as being bad before the spectrum
+c	is totally discarded. The default is 0, indicating that INVERT will
+c	not tolerate any bad channels. A value of 1 indicates that INVERT
+c	will accept a spectrum as long as there is at least one good channel.
+c
+c	The replacement method is either the value `zero' or `interpolate',
+c	indicating that the bad channels are either to be replaced with
+c	0, or to be estimated by linear interpolation of two adjacent good
+c	channels. See the Users Guide for the merits and evils of the two
+c	approaches. The default is `zero'.
 c--
 c  History
 c    rjs        89  Initial version
@@ -276,6 +284,10 @@ c    rjs    3dec94  Some changes to make it work nicerer with single pointing
 c		    mosaics.
 c    rjs   19dec94  Restore amplitude and phase options.
 c    rjs    4feb95  Changed subroutine name only.
+c    rjs   18aug95  Check a beam is being made with options=sdb.
+c		    Beam axis order for options=sdb,mfs,mosaic for npnt=1.
+c		    Interpolate mode with the slop factor.
+c		    Robust parameter.
 c  Bugs:
 c    - It would be nice to have a primary-beam dependent default image size.
 c------------------------------------------------------------------------
@@ -284,19 +296,19 @@ c------------------------------------------------------------------------
 	include 'mem.h'
 c
 	character version*(*)
-	parameter(version='Invert: version 1.0 19-Dec-94')
+	parameter(version='Invert: version 1.0 18-Aug-95')
 	integer MAXPOL,MAXRUNS
 	parameter(MAXPOL=4,MAXRUNS=4*MAXDIM)
 c
 	real cellx,celly,fwhmx,fwhmy,freq0,slop,supx,supy
-	real umax,vmax,wdu,wdv,tu,tv,rms
+	real umax,vmax,wdu,wdv,tu,tv,rms,robust
 	real ChanWt(MAXPOL*MAXCHAN)
 	character maps(MAXPOL)*64,beam*64,uvflags*16,mode*16,vis*64
 	character proj*3,line*64
 	double precision ra0,dec0,offset(2),lmn(3),x(2)
 	integer i,j,k,nmap,tscr,nvis,nchan,npol,npnt,coObj,pols(MAXPOL)
 	integer nx,ny,bnx,bny,mnx,mny,wnu,wnv
-	integer nbeam,nsave,ndiscard,offcorr
+	integer nbeam,nsave,ndiscard,offcorr,nout
 	logical defWt,Natural,doset,systemp,mfs,doimag,mosaic,sdb,idb
 	logical double,doamp,dophase
 c
@@ -306,10 +318,16 @@ c
 c
 	integer nRuns,Runs(3,MAXRUNS)
 c
+	integer NSLOP
+	parameter(NSLOP=2)
+	character slops(NSLOP)*12,slopmode*12
+c
 c  Externals.
 c
 	character polsc2p*3,itoaf*8
 	logical keyprsnt
+c
+	data slops/'zero        ','interpolate '/
 c
 c  Get the input parameters. Convert all angular things into
 c  radians as soon as possible!!
@@ -323,6 +341,7 @@ c
 	call GetOpt(uvflags,systemp,mfs,sdb,doimag,mosaic,double,
      *		doamp,dophase,mode)
 	idb = beam.ne.' '.and.doimag
+	sdb = beam.ne.' '.and.sdb
 	call uvDatInp('vis',uvflags)
 c
 	doset = keyprsnt('offset')
@@ -354,8 +373,16 @@ c
 	supx = supx * pi/180/3600
 	supy = supy * pi/180/3600
 	if(min(supx,supy).lt.0)call bug('f','Invalid sup parameter')
+	call keyr('robust',robust,-10.0)
+	if(robust.gt.4.and.max(supx,supy).gt.0)then
+	  call bug('i','Robust value resulting in natural weights')
+	  supx = 0
+	  supy = 0
+	endif
 	call keyr('slop',slop,0.)
 	if(slop.lt.0.or.slop.gt.1)call bug('f','Invalid slop value')
+	call keymatch('slop',nslop,slops,1,slopmode,nout)
+	if(nout.eq.0)slopmode = slops(1)
 	call keyfin
 c
 c  Determine the size of the output beam.
@@ -409,7 +436,7 @@ c
 	if(mosaic)call MosCIni
 	call HdInit(mfs,mosaic)
 	call scropen(tscr)
-	call GetVis(doimag,systemp,mosaic,mfs,npol,tscr,slop,
+	call GetVis(doimag,systemp,mosaic,mfs,npol,tscr,slop,slopmode,
      *		vis,nvis,nchan,umax,vmax,ChanWt,MAXCHAN,freq0)
 c
 c  Set appropriate values for cellx and celly if needed. Try to make
@@ -487,6 +514,11 @@ c
 	else
 	   UWts = 1
 	   nUWts = 0
+	endif
+c
+	if(.not.Natural.and.robust.gt.-4)then
+	  call output('Making weights robust ...')
+	  call WtRobust(robust,memr(UWts),wnu,wnv,npnt)
 	endif
 c
 c  Apply the weights, shifts and geometric corrections, and then free
@@ -625,17 +657,19 @@ c
 c  Write out a beam dataset.
 c------------------------------------------------------------------------
 	integer ndims,n(2),k
+	logical mosaic1
 c
+	mosaic1 = mosaic.and.npnt.gt.1
 	ndims = 0
-	if(mosaic.and.i.gt.1)then
+	if(mosaic1.and.i.gt.1)then
 	  ndims = 2
-	else if(mosaic.or.i.gt.1)then
+	else if(mosaic1.or.i.gt.1)then
 	  ndims = 1
 	endif
 	if(ndims.gt.0) n(ndims) = i
 c
 	do k=1,npnt
-	  if(mosaic)n(1) = k
+	  if(mosaic1)n(1) = k
 	  if(ndims.gt.0)call xysetpl(tno,ndims,n)
 	  call DatWrite(tno,Dat(1,1,k),nx,ny)
 	enddo
@@ -679,15 +713,24 @@ c
 	call coSetd(coOut,'crpix1',dble(bnx/2+1))
 	call coSetd(coOut,'crpix2',dble(bny/2+1))
 	call coAxDesc(coOut,3,ctype,crpix,crval,cdelt)
-	if(mosaic)then
+	if(mosaic.and.sdb.and.npnt.eq.1)then
+	  naxis = naxis + 1
+	  imsize(naxis) = 2
+	  call coAxSet(coOut,naxis,'SDBEAM',1.d0,0.d0,1.d0)
 	  naxis = naxis + 1
 	  imsize(naxis) = npnt
 	  call coAxSet(coOut,naxis,'POINTING',1.d0,1.d0,1.d0)
-	endif
-	if(sdb)then
-	  naxis = naxis + 1
-	  imsize(naxis) = 2
-	  call coAxSet(coOut,naxis,'SDBEAM',1.d0,1.d0,1.d0)
+	else
+	  if(mosaic)then
+	    naxis = naxis + 1
+	    imsize(naxis) = npnt
+	    call coAxSet(coOut,naxis,'POINTING',1.d0,1.d0,1.d0)
+	  endif
+	  if(sdb)then
+	    naxis = naxis + 1
+	    imsize(naxis) = 2
+	    call coAxSet(coOut,naxis,'SDBEAM',1.d0,0.d0,1.d0)
+	  endif
 	endif
 	naxis = naxis + 1
 	imsize(naxis) = 1
@@ -942,6 +985,45 @@ c
 c
 	if(gn.gt.maxdim)call bug('f',
      *	  'Maximum permitted image size is '//itoaf(maxdim))
+c
+	end
+c************************************************************************
+	subroutine WtRobust(robust,UWts,wnu,wnv,npnt)
+c
+	implicit none
+	integer wnv,wnu,npnt
+	real robust,UWts(wnv,wnu/2+1,npnt)
+c
+c  Use Brigg's scheme to make the weights robust.
+c------------------------------------------------------------------------
+	integer i,j,k
+	real SumW,SumW2,t,Wav,S2
+c
+c  Determine the mean weight.
+c
+	SumW = 0
+	SumW2 = 0
+	do k=1,npnt
+	  do j=1,wnu/2+1
+	    do i=1,wnv
+	      t = UWts(i,j,k)
+	      SumW = SumW + t
+	      SumW2 = SumW2 + t*t
+	    enddo
+	  enddo
+	enddo
+	if(SumW.eq.0)call bug('f','Something is screwy in WtRobust')
+c
+	Wav = SumW2 / SumW
+	S2 = 12.5 * 10.0**(-2*robust)/Wav
+c
+	do k=1,npnt
+	  do j=1,wnu/2+1
+	    do i=1,wnv
+	      UWts(i,j,k) = 1 + UWts(i,j,k)*S2
+	    enddo
+	  enddo
+	enddo
 c
 	end
 c************************************************************************
@@ -1264,13 +1346,13 @@ c
 	end
 c************************************************************************
 	subroutine GetVis(doimag,systemp,mosaic,mfs,npol,tscr,slop,
-     *		vis,nvis,nchan,umax,vmax,ChanWt,mchan,freq0)
+     *		slopmode,vis,nvis,nchan,umax,vmax,ChanWt,mchan,freq0)
 c
 	implicit none
 	logical doimag,systemp,mosaic,mfs
 	integer npol,tscr,nvis,nchan,mchan
 	real umax,vmax,freq0,slop,ChanWt(npol*mchan)
-	character vis*(*)
+	character vis*(*),slopmode*(*)
 c
 c  Get the data to be processed imaged. This writes out a scratch file
 c  with records.
@@ -1283,6 +1365,7 @@ c    systemp	Use weights proportional to 1/rms**2
 c    mosaic	Accept multiple pointings.
 c    mfs	Multi-frequency synthesis option.
 c    slop	Slop factor.
+c    slopmode	Slop mode.
 c    npol	Number of polarisations.
 c    mchan	Max number of channels to handle.
 c    tscr	Handle of the scratch file.
@@ -1297,7 +1380,7 @@ c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer MAXPOL,MAXLEN
 	parameter(MAXPOL=4,MAXLEN=4+MAXPOL*MAXCHAN)
-	integer tno,pnt,nzero,nread,i,j,offset,nbad,nlen
+	integer tno,pnt,nzero,nread,i,j,offset,nbad,nrec,ncorr,nlen
 	complex data(MAXCHAN,MAXPOL),out(MAXLEN),ctemp
 	logical flags(MAXCHAN,MAXPOL),more
 	real uumax,vvmax,rms2,Wt,SumWt
@@ -1340,12 +1423,6 @@ c  Determine whether to accept this record, and copy it to the output
 c  buffer. Then write it out if needed.
 c
 	dowhile(more)
-	  call HdChk(tno)
-	  if(mosaic)then
-	    call MosChk(tno,pnt)
-	  else
-	    pnt = 1
-	  endif
 c
 	  call uvDatGtr('variance',rms2)
 	  if(systemp)then
@@ -1369,18 +1446,39 @@ c
 	    enddo
 	  endif
 c
+c  Process it all.
+c
 	  if(mfs)then
-	    call ProcMFS (tno,uvw,Wt,rms2,pnt,data,flags,
-     *		npol,MAXCHAN,nread,nvis,nbad,out,MAXLEN,nlen,
+	    call ProcMFS (tno,uvw,Wt,rms2,data,flags,
+     *		npol,MAXCHAN,nread,nvis,nbad,out,MAXLEN,nrec,ncorr,
      *		uumax,vvmax,umax,vmax,dSumWt,dfreq0)
 	  else
-	    call ProcSpec(tno,uvw,Wt,rms2,pnt,data,flags,
-     *		npol,MAXCHAN,nread,nvis,nbad,out,MAXLEN,nlen,
-     *		uumax,vvmax,umax,vmax,SumWt,ChanWt,slop)
+	    call ProcSpec(tno,uvw,Wt,rms2,data,flags,
+     *		npol,MAXCHAN,nread,nvis,nbad,out,MAXLEN,nrec,ncorr,
+     *		uumax,vvmax,umax,vmax,SumWt,ChanWt,slop,slopmode)
 	  endif
 c
-	  if(nlen.gt.0)then
-	    nlen = nlen + nlen
+c  Process an accepted record.
+c
+	  if(nrec.gt.0)then
+	    call HdChk(tno)
+	    if(mosaic)then
+	      call MosChk(tno,pnt)
+	    else
+	      pnt = 1
+	    endif
+c
+c  Correct the pointing centre if needed.
+c
+	    if(pnt.ne.1)then
+	      j = 2
+	      do i=1,nrec
+		Out(j) = cmplx(real(Out(j)),real(pnt))
+		j = j + ncorr + 4
+	      enddo
+	    endif
+c
+	    nlen = 2*nrec * ( ncorr + 4)
 	    call scrwrite(tscr,Out,offset,nlen)
 	    offset = offset + nlen
 	  endif
@@ -1418,12 +1516,12 @@ c
 c
 	end
 c************************************************************************
-	subroutine ProcMFS(tno,uvw,Wt,rms2,pnt,data,flags,
-     *		npol,mchan,nchan,nvis,nbad,out,MAXLEN,nlen,
+	subroutine ProcMFS(tno,uvw,Wt,rms2,data,flags,
+     *		npol,mchan,nchan,nvis,nbad,out,MAXLEN,nrec,ncorr,
      *		uumax,vvmax,umax,vmax,SumWt,freq0)
 c
 	implicit none
-	integer tno,pnt,nchan,npol,mchan,nvis,nbad,MAXLEN,nlen
+	integer tno,nchan,npol,mchan,nvis,nbad,MAXLEN,nrec,ncorr
 	double precision uvw(3)
 	real rms2,uumax,vvmax,umax,vmax,Wt
 	double precision freq0,SumWt
@@ -1439,10 +1537,8 @@ c    npol	Number of polarisations.
 c    mchan	First dim of data and flags.
 c    Data	Visibility data.
 c    flags	Flags associated with the visibility data.
-c    slop	Slop tolerance.
 c    Wt		Basic weight.
 c    rms2	Noise variance.
-c    pnt	Pointing number.
 c    uumax,vvmax u,v limits.
 c  Input/Output:
 c    SumWt	Sum of all the weights.
@@ -1452,10 +1548,11 @@ c    nbad	Number of bad visibilities.
 c  Output:
 c    out	A record consisting of
 c		u,v,w,pointing,rms**2,log(freq),wt,0,r1,i1,r2,i2,...
-c    nlen	Number of elements in "out".
+c    nrec	Number of records.
+c    ncorr	Number of correlations in each record.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
-	integer i,j
+	integer i,j,nlen
 	logical ok
 	real u,v,uu,vv,ww,f,t
 	double precision sfreq(MAXCHAN)
@@ -1492,7 +1589,7 @@ c
      *			'Buffer overflow, in ProcMFS')
 	      t = log(f)
 	      out(nlen+1) = cmplx(uu*f,vv*f)
-	      out(nlen+2) = cmplx(ww*f,real(pnt))
+	      out(nlen+2) = cmplx(ww*f,1.0)
 	      out(nlen+3) = cmplx(rms2,t)
 	      out(nlen+4) = Wt
 	      freq0 = freq0 + Wt * t
@@ -1514,18 +1611,22 @@ c
 	  nbad = nbad + nchan
 	endif
 c
+	ncorr = npol
+	nrec = nlen / (4 + ncorr)
+c
 	end
 c************************************************************************
-	subroutine ProcSpec(tno,uvw,Wt,rms2,pnt,data,flags,
-     *		npol,MAXCHAN,nchan,nvis,nbad,out,MAXLEN,nlen,
-     *		uumax,vvmax,umax,vmax,SumWt,ChanWt,slop)
+	subroutine ProcSpec(tno,uvw,Wt,rms2,data,flags,
+     *		npol,MAXCHAN,nchan,nvis,nbad,out,MAXLEN,nrec,ncorr,
+     *		uumax,vvmax,umax,vmax,SumWt,ChanWt,slop,slopmode)
 c
 	implicit none
-	integer tno,pnt,nchan,npol,MAXCHAN,nvis,nbad,MAXLEN,nlen
+	integer tno,nchan,npol,MAXCHAN,nvis,nbad,MAXLEN,nrec,ncorr
 	double precision uvw(3)
 	real rms2,umax,vmax,uumax,vvmax,ChanWt(nchan),slop,Wt,SumWt
 	complex data(MAXCHAN,npol),out(MAXLEN)
 	logical flags(MAXCHAN,npol)
+	character slopmode*(*)
 c
 c  Process a visibility spectrum.
 c
@@ -1536,9 +1637,9 @@ c    npol	Number of polarisations.
 c    Data	Visibility data.
 c    flags	Flags associated with the visibility data.
 c    slop	Slop tolerance.
+c    slopmode	Slop mode.
 c    Wt		Basic weight.
 c    rms2	Noise variance.
-c    pnt	Pointing number.
 c    uumax,vvmax Max u,v value to map.
 c  Input/Output:
 c    ChanWt	Channel "slop" normalisation.
@@ -1549,11 +1650,10 @@ c    nbad	Number of bad visibilities.
 c  Output:
 c    out	A record consisting of
 c		u,v,w,pointing,rms**2,0,wt,0,r1,i1,r2,i2,...
-c    nlen	Number of elements in "out".
 c------------------------------------------------------------------------
-	integer i,j,badcorr
+	integer i,j,badcorr,nlen,pnt
 	real u,v
-	logical ok
+	logical ok,somebad
 c
 c  Is the weight positive?
 c
@@ -1562,15 +1662,21 @@ c
 c  Count the number of bad correlations.
 c
 	if(ok)then
-	  badcorr = 0
+	  somebad = .false.
 	  do j=1,npol
+	    badcorr = 0
 	    do i=1,nchan
 	      if(.not.flags(i,j))badcorr = badcorr + 1
 	    enddo
+	    somebad = somebad.or.badcorr.gt.0
+	    ok = ok.and.badcorr.le.slop*nchan.and.badcorr.lt.nchan
 	  enddo
-c
-	  ok = badcorr.le.slop*npol*nchan.and.badcorr.lt.npol*nchan
 	endif
+c
+c  Interpolate the bad correlations, if that is required.
+c
+	if(ok.and.somebad.and.slopmode.eq.'interpolate')
+     *	  call SlopIntp(Data,flags,nchan,npol)
 c
 c  If we are to accept it, then zero out any bad correlations.
 c
@@ -1581,7 +1687,7 @@ c
 	  if(nlen.gt.MAXLEN)call bug('f',
      *					'Buffer overflow, in ProcSpec')
 	  out(1) = cmplx(real(uvw(1)),real(uvw(2)))
-	  out(2) = cmplx(real(uvw(3)),real(pnt))
+	  out(2) = cmplx(real(uvw(3)),1.0)
 	  out(3) = rms2
 	  out(4) = wt
 	  umax = max(u,umax)
@@ -1604,6 +1710,68 @@ c
 	  nlen = 0
 	  nbad = nbad + 1
 	endif
+c
+	ncorr = npol*nchan
+	nrec = nlen / (4 + ncorr)
+c
+	end
+c************************************************************************
+	subroutine SlopIntp(Data,flags,nchan,npol)
+c
+	implicit none
+	integer nchan,npol
+	complex Data(nchan,npol)
+	logical flags(nchan,npol)
+c
+c  Linearly interpolate bad channels.
+c
+c  Input:
+c    nchan
+c    npol
+c  Input/Output:
+c    data
+c    flags
+c------------------------------------------------------------------------
+	integer i,j,i0,id
+	real fac
+	logical badpatch
+c
+	do j=1,npol
+	  i0 = 0
+	  badpatch = .false.
+c
+	  do i=1,nchan
+c
+c  If its the end of a bad patch, then interpolate the solution.
+c
+	    if(badpatch.and.flags(i,j))then
+	      if(i0.eq.0)then
+	        do id=1,i-1
+	          data(id,j) = data(i,j)
+	        enddo
+	      else
+	        fac = 1./real(i-i0)
+		do id=i0+1,i-1
+		  data(id,j) =
+     *			fac * ( (id-i0)*data(i0,j) + (i-id)*data(i,j) )
+		enddo
+	      endif
+	    endif
+c
+	    badpatch = flags(i,j)
+	    if(.not.badpatch) i0 = i
+	    flags(i,j) = .true.
+	  enddo
+c
+c  Replicate visibilities for a bad patch at the end of the spectrum.
+c
+	  if(badpatch)then
+	    if(i0.eq.0)call bug('f','Inconsistency in SlopIntp')
+	    do id=i0+1,nchan
+	      data(id,j) = data(i0,j)
+	    enddo
+	  endif
+	enddo
 c
 	end
 c************************************************************************
