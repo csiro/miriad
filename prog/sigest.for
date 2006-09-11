@@ -19,8 +19,8 @@ c@ clip
 c	The clip level to use. Pixels are excluded from the calculation
 c	if their absolute value is greater than the clip value. Ideally
 c	the clip should be about 2 to 3 times the rms noise level.
-c	The default is to determine the clip level itself, which this
-c	is usually adequate.
+c	The default uses an initial estimate of the rms to set the clip
+c	at 2.5 times the rms.
 c@ region
 c	The standard image region of interest of the input. See the help
 c	on "region" for more information. The default is the entire image.
@@ -95,14 +95,14 @@ c
 		call xyread(tno,j,data)
 	      endif
 	      do i=Runs(2,k),Runs(3,k)
-		rms = rms + data(i)*data(i)
+		rms = rms + abs(data(i))
 		n = n + 1
 	      enddo
 	    enddo
 	    call planeinc(MAXNAX-2,blc(3),trc(3),plane(3),done)
 	  enddo
 	  if(n.le.0)call bug('f','No valid data found')
-	  clip = 2*sqrt(rms/n)
+	  clip = 2.5*sqrt(0.5*PI)*(rms/n)
 	  write(line,'(a,1pg10.3)')'Using a clip level of',clip
 	  call output(line)
 	endif
@@ -158,6 +158,14 @@ c
      *	  call bug('w','Correction algorithm failed to converge')
 	write(line,'(a,1pe10.3)')'Estimated rms is',fac*rms
 	call output(line)
+c
+	call rdhdr(tno,'rms',clip,-1.0)
+	if(clip.gt.0)then
+	  fac = fac*rms/clip
+	  write(line,'(a,1pe10.3)')
+     *	    'This is the theoretical rms times a factor of',fac
+	  call output(line)
+	endif
 c
 	call xyclose(tno)
 	end
