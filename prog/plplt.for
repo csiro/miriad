@@ -10,7 +10,7 @@ c	PLPLOT plots the visibility function of a planet at a particular
 c	epoch. This models the planet as a spherical black body with
 c	some brightness temperature.
 c@ source
-c	This gives the name of a planet. No 
+c	This gives the name of a planet. No default.
 c@ epoch
 c	This gives the time of the observation, in Miriad's standard
 c	date format. No default.
