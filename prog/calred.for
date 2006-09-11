@@ -27,13 +27,14 @@ c  History:
 c    rjs  23feb00 Original version.
 c    rjs  04feb01 Some small tidying.
 c    rjs  02apr02 Get it to work for Stokes parameters.
+c    rjs  04apr02 Realy fix it this time.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
 	integer MAXDAT,MAXSRC,MAXPOL
 	integer PolMin,PolMax
 	character version*(*)
-	parameter(version='version 02-Apr-02')
+	parameter(version='version 04-Apr-02')
 	parameter(MAXDAT=15,MAXPOL=2,MAXSRC=1024)
 	parameter(PolMin=-8,PolMax=4)
 c
@@ -304,7 +305,7 @@ c
 	call uvDatGti('pol',pol)
 	if(pol.lt.PolMin.or.pol.gt.PolMax)return
 	if(polcvt(pol).eq.0)then
-	  if(dopara.eqv.PolsPara(pol))then
+	  if((dopara.and.PolsPara(pol)).or..not.dopara)then
 	    npol = npol + 1
 	    if(npol.gt.MAXPOL)call bug('f','Too many polarisations')
 	    polcvt(pol) = npol
