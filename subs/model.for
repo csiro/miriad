@@ -46,6 +46,7 @@ c    rjs   6jul93 Do not exceed MAXDIM in model calculation. Fix
 c		  clippind message for cross hand polarisations.
 c    rjs   3aug93 Make sure the FFT is at least 16 in size.
 c    rjs  16sep93 Rename bsrch to binsrch.
+c    rjs  11nov93 Correct definition of alpha for mfs work.
 c************************************************************************
 c*ModelIni -- Ready the uv data file for processing by the Model routine.
 c&mchw
@@ -415,7 +416,7 @@ c
 	logical accept,flags(maxchan),doshift,GotFreq
 	complex Buffer((maxbuf+1)/2)
 	complex In(maxchan),Intp(maxchan+1)
-	double precision sfreq(maxchan),freq(maxchan),freq0
+	double precision sfreq(maxchan),freq0
 	common Buffer
 c
 c  Externals.
@@ -440,7 +441,7 @@ c
 	if(du*dv.eq.0) call bug('f',
      *    'MODEL: cdelt1 or cdelt2 is missing from the model')
 c
-c  If its a MFCLEAN model, then get then reference frequency.c
+c  If its a MFCLEAN model, then get then reference frequency.
 c
 	if(mfs.and.nz.eq.2)call ModRef(tmod,freq0)
 c
@@ -487,7 +488,7 @@ c
 	dowhile(nread.eq.nchan)
 	  call header(tvis,preamble,In,flags,nread,accept,Out,nhead)
 	  if(accept)then
-	    GotFreq = .true.
+	    GotFreq = .false.
 	    sfreq(1) = 1
 	    u = preamble(1) / du
 	    v = preamble(2) / dv
@@ -496,8 +497,10 @@ c  Handle the case of a single image being replicated along the frequency
 c  axis.
 c
 	    if(mfs)then
-	      if(nread.gt.1)call uvinfo(tvis,'sfreq',sfreq)
-	      if(nz.eq.2)   call uvinfo(tvis,'frequency',freq)
+	      if((nread.gt.1.or.nz.eq.2).and..not.GotFreq)then
+		call uvinfo(tvis,'sfreq',sfreq)
+		GotFreq = .true.
+	      endif
 	      u = u / sfreq(1)
 	      v = v / sfreq(1)
 	      do j=1,nread
@@ -510,7 +513,7 @@ c
 		  call ModGrid(uu,vv,Buffer(pnt/2+1),nu,nv,nz,u0,v0,
      *		    gcf,ngcf,Intp(j))
 		  if(nz.eq.2) Intp(j) = Intp(j) +
-     *			log(real(freq0/freq(j)))*Intp(j+1)
+     *			log(real(sfreq(j)/freq0))*Intp(j+1)
 		endif
 	      enddo
 c
@@ -523,17 +526,18 @@ c
 		  flags(j) = .false.
 		  sfreq(j) = 1
 		enddo
+		GotFreq = .true.
 	      else
 	        call ModGrid(u,v,Buffer(pnt/2+1),nu,nv,nread,u0,v0,
      *		  gcf,ngcf,Intp)
-		GotFreq = nread.eq.1
 	      endif
 	    endif
 c
 c  Perform a shift, if necessary.
 c
 	    if(doshift)then
-	      if(.not.GotFreq)call uvinfo(tvis,'sfreq',sfreq)
+	      if(.not.GotFreq.and.nread.gt.1)
+     *		call uvinfo(tvis,'sfreq',sfreq)
 	      call ModShift(preamble,xref1,yref1,xref2,yref2,sfreq,
      *							Intp,nread)
 	    endif
