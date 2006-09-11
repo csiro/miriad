@@ -50,6 +50,9 @@ c    rjs  21jul97 More robust to bad freq values. Added coSeta.
 c    rjs  16oct97 Minor correction to the felo axis definition.
 c    rjs  10nov97 Make a linear axis if there are no header values.
 c    rjs  20nov98 Partial handling of sky rotation.
+c    rjs  15dec98 More complete handling of sky rotation.
+c    rjs   8jan98 Fix errors in cogaucvt when angle is non-zero and pixel
+c		  increments differ.
 c************************************************************************
 c* coInit -- Initialise coordinate conversion routines.
 c& rjs
@@ -1010,7 +1013,7 @@ c
      *	    llcos(k),llsin(k),
      *	    crval(ira,k),crpix(ira,k),cdelt(ira,k),
      *	    crval(idec,k),crpix(idec,k),cdelt(idec,k),
-     *	    x1pix,.true.,x2pix,.true.,x1off,.true.,x2off,.true.)
+     *	    x1pix,x1pix,x2pix,x2pix,x1off,.true.,x2off,.true.)
 c
 c  Convert a DEC axis.
 c
@@ -1021,7 +1024,7 @@ c
      *	    llcos(k),llsin(k),
      *	    crval(ira,k),crpix(ira,k),cdelt(ira,k),
      *	    crval(idec,k),crpix(idec,k),cdelt(idec,k),
-     *	    .true.,x1pix,.true.,x2pix,.true.,x1off,.true.,x2off)
+     *	    x1pix,x1pix,x2pix,x2pix,.true.,x1off,.true.,x2off)
 c
 c  Convert a FELO axis.
 c
@@ -1076,8 +1079,9 @@ c------------------------------------------------------------------------
 c
 	logical x1pix(MAXNAX),x1off(MAXNAX)
 	integer k,ivel,n
-	real dx,dy,sinpa,cospa
+	real dx,dy,sinpa,cospa,llangle,ll1,ll2
 	double precision scale
+	double precision alpha,beta,gamma,s,t
 c
 c  Externals.
 c
@@ -1087,8 +1091,6 @@ c  Determine the operation to be performed.
 c
 	k = coLoc(lu,.false.)
 c
-	if(llsin(k).ne.0)
-     *	  call bug('f','Cannot handle sky rotation')
 	call coCrack(in,x1pix,x1off,naxis(k),MAXNAX,n)
 c
 c  Get the scale factors to scale cdelt1 and cdelt2 by for this coordinate.
@@ -1107,40 +1109,52 @@ c
 	  endif
 	endif
 c
+c  Get coordinate grid rotation angle.
+c
+	if(abs(llsin(k)).ne.0)then
+	  llangle = atan2(llsin(k),llcos(k))
+	else
+	  llangle = 0
+	endif
+	ll1 = 0
+	ll2 = 0
+	if(ing.eq.'w')ll1 = llangle
+	if(outg.eq.'w')ll2 = llangle
+c
 c  Get the increments in a standard form.
 c
+	cospa = cos(bpa1+ll1)
+	sinpa = sin(bpa1+ll1)
+c
+	alpha = (cospa/bmin1)**2 + (sinpa/bmaj1)**2
+	beta =  (sinpa/bmin1)**2 + (cospa/bmaj1)**2
+	gamma = (2/(bmin1**2) - 2/(bmaj1**2))*cospa*sinpa
 	if(ing.eq.outg)then
-	  dx = 1
-	  dy = 1
-	else if(ing.eq.'w')then
 	  continue
-	else if(ing.eq.'p')then
-	  dx = 1/dx
-	  dy = 1/dy
+	else if(ing.eq.'w'.and.outg.eq.'p')then
+	  alpha = alpha*(dx*dx)
+	  beta  = beta *(dy*dy)
+	  gamma = gamma*(dx*dy)
+	else if(ing.eq.'p'.and.outg.eq.'w')then
+	  alpha = alpha/(dx*dx)
+	  beta  = beta /(dy*dy)
+	  gamma = gamma/(dx*dy)
 	else
 	  call bug('f','Unrecognised operation in coGauCvt')
 	endif
 c
 c  Do the conversion.
 c
-	sinpa = sin(bpa1)
-	cospa = cos(bpa1)
-c
-	bmaj2 = bmaj1 * sqrt( (cospa/dy)**2 + (sinpa/dx)**2 )
-	bmin2 = bmin1 * sqrt( (cospa/dx)**2 + (sinpa/dy)**2 )
-c
-c  Now the position angle. Fiddle the angle to be in the range
-c  [-0.5*pi,0.5*pi]. Also handle the case where the pa is about 0.5*pi
-c
-	bpa2 = mod(bpa1,pi)
-	if(bpa2.gt. 0.5*pi) bpa2 = bpa2 - pi
-	if(bpa2.lt.-0.5*pi) bpa2 = bpa2 + pi
-	if(abs(bpa2).lt.0.25*pi)then
-	  bpa2 = atan(dy/dx * tan(bpa2) )
+	s = alpha + beta
+	t = sqrt((alpha-beta)**2+gamma**2)
+	bmin2 = sqrt(2/(s+t))
+	bmaj2 = sqrt(2/(s-t))
+	if(abs(gamma)+abs(alpha-beta).eq.0)then
+	  bpa2 = 0
 	else
-	  bpa2 = 0.5*pi - atan(dx/dy * tan(0.5*pi - bpa2) )
-	  if(bpa2.gt.0.5*pi) bpa2 = bpa2 - pi
+	  bpa2 = 0.5*atan2(gamma,alpha-beta)
 	endif
+	bpa2 = bpa2 - ll2
 c
 	end
 c************************************************************************
@@ -1603,7 +1617,7 @@ c
 c
 	k = coLoc(lu,.false.)
 	if(llsin(k).ne.0)
-     *	  call bug('f','Cannot handle sky rotation')
+     *	  call bug('w','Cannot handle sky rotation')
 c
 c
 c  Convert to absolute pixels.
@@ -2361,16 +2375,10 @@ c    x2,y2
 c
 c------------------------------------------------------------------------
 	include 'mirconst.h'
-	double precision r,s,t,u,L,M,cosyval,sinyval,sinDalp,Dalp,eps
-	double precision x1,y1,dtemp
-	logical more
-	integer niters
-	integer MAXITER
-	double precision TOL
-	parameter(MAXITER=50,TOL=1d-12)
+	double precision cosyval
+	double precision x1,y1
 c
 	cosyval = cos(yval)
-	sinyval = sin(yval)
 c
 c  Convert from offset to absolute, if needed.
 c
@@ -2396,234 +2404,23 @@ c
 	if((x1pix.eqv.x2pix).and.(y1pix.eqv.y2pix))then
 	  continue
 	else if(x1pix.and.y1pix)then
-	  L = (x1 - xpix) * dx
-	  M = (y1 - ypix) * dy
-	  dtemp = L*llcos - M*llsin
-	  M = M*llcos + L*llsin
-	  L = dtemp
+	  call coxy2ll(x1,y1,x2,y2,xpix,dx,xval,ypix,dy,yval,
+     *						llcos,llsin,proj)
 c
-	  if(proj.eq.'ncp')then
-	    t = cosyval - M*sinyval
-	    Dalp = atan2(L,t)
-	    y2 = sign(acos(t/cos(Dalp)),yval)
-c
-	  else if(proj.eq.'sin')then
-	    t = sqrt(1-L*L-M*M)
-	    y2 = asin(M*cosyval+sinyval*t)
-	    Dalp = atan2(L,(cosyval*t - M*sinyval))
-c
-	  else if(proj.eq.'car')then
-	    y2 = yval + M
-	    Dalp = L / cosyval
-c
-	  else if(proj.eq.'gls')then
-	    y2 = yval + M
-	    Dalp = L / cos(y2)
-c
-	  else if(proj.eq.'tan')then
-	    t = cosyval - M*sinyval
-	    Dalp = atan2(L,t)
-	    y2 = atan(cos(Dalp)/t * (M*cosyval + sinyval))
-c
-	  else if(proj.eq.'arc')then
-	    t = sqrt(L*L + M*M)
-	    s = cos(t)
-	    if(t.gt.0)then
-	      t = sin(t) / t
-	    else
-	      t = 1
-	    endif
-	    r  = M*cosyval * t + sinyval*s
-	    y2 = asin(r)
-	    Dalp = atan2(L*t*cosyval,s-r*sinyval)
-	  endif
-c
-	  x2 = Dalp + xval
-c
-c  Convert from RA,y to x,DEC.
-c
-	else if(y1pix)then
-	  if(llsin.ne.0)call bug('f','Cannot handle sky rotation')
-	  Dalp = x1 - xval
-	  if(Dalp.lt.-DPI)then
-	    Dalp = Dalp + 2*DPI
-	  else if(Dalp.gt.DPI)then
-	    Dalp = Dalp - 2*DPI
-	  endif
-	  M = (y1 - ypix) * dy
-c
-	  if(proj.eq.'ncp')then
-	    t = cosyval - M*sinyval
-	    y2 = sign(acos(t/cos(Dalp)),yval)
-	    L = tan(Dalp)*t
-c
-	  else if(proj.eq.'sin')then
-	    r = sinyval*cos(Dalp)
-	    s = cosyval
-	    y2 = atan2(r,s) + asin(M/sqrt(r*r+s*s))
-	    L = sin(Dalp) * cos(y2)
-c
-	  else if(proj.eq.'car')then
-	    L = Dalp * cos(yval)
-	    y2 = yval + M
-c
-	  else if(proj.eq.'gls')then
-	    y2 = yval + M
-	    L = Dalp*cos(y2)
-c	  
-	  else if(proj.eq.'tan')then
-	    y2 = atan(cos(Dalp)*(sinyval + M*cosyval)/
-     *			(cosyval-M*sinyval))
-	    L = sin(Dalp)/(tan(y2)*sinyval+cos(Dalp)*cosyval)
-c
-	  else if(proj.eq.'arc')then
-	    sinDalp = sin(Dalp)
-	    r = atan2(sinyval,cosyval*cos(Dalp))
-	    y2 = r
-	    s = sqrt(1-cosyval*cosyval*sin(Dalp)**2)
-	    L = cosyval*sinDalp
-	    niters = 0
-	    more = .true.
-	    dowhile(more)
-	      t = sqrt(L*L + M*M)
-	      u = cos(t) / s
-	      if(abs(u).lt.1)then
-		y2 = r + sign(acos(u),M)
-	      else
-		y2 = r
-	      endif
-	      if(t.ne.0)then
-	        eps = cos(y2) * sinDalp * t/sin(t) - L
-	      else
-	        eps = cos(y2) * sinDalp - L
-	      endif
-	      if(niters.gt.10)then
-		L = L + 0.5 * eps
-	      else
-	        L = L + eps
-	      endif
-	      niters = niters + 1
-	      more = abs(eps).gt.TOL.and.niters.lt.MAXITER
-	    enddo
-	  endif
-c
-	  x2 = L/dx + xpix
-c
-c  Convert from x,DEC to RA,y.
+c  Handle a mixed conversion.
 c
 	else if(x1pix)then
-	  if(llsin.ne.0)call bug('f','Cannot handle sky rotation')
-	  L = (x1 - xpix) * dx
-c
-	  if(proj.eq.'ncp')then
-	    Dalp = asin(L/cos(y1))
-	    M = (cosyval - cos(y1)*cos(Dalp))/sinyval
-c
-	  else if(proj.eq.'sin')then
-	    Dalp = asin(L/cos(y1))
-	    M = sin(y1)*cosyval - cos(y1)*sinyval*cos(Dalp)
-c
-	  else if(proj.eq.'car')then
-	    M = (y1 - yval)
-	    Dalp = L / cosyval
-c
-	  else if(proj.eq.'gls')then
-	    M = (y1 - yval)
-	    Dalp = L / cos(y1)
-c
-	  else if(proj.eq.'tan')then
-	    Dalp = atan(L*cosyval) + asin(tan(y1)*L*sinyval /
-     *			sqrt(1+L*L*cosyval*cosyval) )
-	    M = ( sin(y1)*cosyval - cos(y1)*sinyval*cos(Dalp) ) /
-     *			(sin(y1)*sinyval + cos(y1)*cosyval*cos(Dalp))
-c
-	  else if(proj.eq.'arc')then
-	    if(abs(cosyval).le.1e-5)then
-	      M = acos(sin(y1)/sinyval)
-	      M = -sqrt(M*M - L*L)
-	      t = sqrt(L*L + M*M)
-	      if(t.eq.0)then
-		t = 1
-	      else
-		t = t / sin(t)
-	      endif
-	    else
-	      r = sin(y1)
-	      niters = 0
-	      more = .true.
-	      M = 0
-	      dowhile(more)
-	        t = sqrt(L*L + M*M)
-	        if(t.eq.0)then
-		  s = 1
-		  t = 1
-	        else
-		  s = cos(t)
-		  t = t/sin(t)
-	        endif
-	        eps = t*(r - s*sinyval)/cosyval - M
-		if(niters.gt.10)then
-		  M = M + 0.5*eps
-		else
-		  M = M + eps
-		endif
-		niters = niters + 1
-	        more = abs(eps).gt.TOL.and.niters.lt.MAXITER
-	      enddo
-	    endif
-	    Dalp = asin(L/(t*cos(y1)))
-	  endif
-c
-	  x2 = Dalp + xval
-	  y2 = M / dy + ypix
+	  call comixed(x1,y1,x2,y2,xpix,dx,xval,ypix,dy,yval,
+     *					llcos,llsin,proj,.true.)
+	else if(y1pix)then
+	  call comixed(x1,y1,x2,y2,xpix,dx,xval,ypix,dy,yval,
+     *					llcos,llsin,proj,.false.)
 c
 c  Convert from RA,DEC to x,y.
 c
 	else
-	  Dalp = x1 - xval
-	  if(Dalp.lt.-DPI)then
-	    Dalp = Dalp + 2*DPI
-	  else if(Dalp.gt.DPI)then
-	    Dalp = Dalp - 2*DPI
-	  endif
-c
-	  if(proj.eq.'ncp')then
-	    L = sin(Dalp) * cos(y1)
-	    M = (cosyval - cos(y1)*cos(Dalp))/sinyval
-c
-	  else if(proj.eq.'sin')then
-	    L = sin(Dalp) * cos(y1)
-	    M = (sin(y1)*cosyval - cos(y1)*sinyval*cos(Dalp))
-c
-	  else if(proj.eq.'tan')then
-	    t = 1/(sin(y1)*sinyval+cos(y1)*cosyval*cos(Dalp))
-	    L = sin(Dalp) * cos(y1) * t
-	    M = (sin(y1)*cosyval - cos(y1)*sinyval*cos(Dalp)) * t
-c
-	  else if(proj.eq.'arc')then
-	    t = acos(sin(y1)*sinyval+cos(y1)*cosyval*cos(Dalp))
-	    if(t.eq.0)then
-	      t = 1
-	    else
-	      t = t / sin(t)
-	    endif
-	    L = sin(Dalp) * cos(y1) * t
-	    M = (sin(y1)*cosyval - cos(y1)*sinyval*cos(Dalp)) * t
-c
-	  else if(proj.eq.'car')then
-	    L = Dalp * cosyval
-	    M = (y1 - yval)
-c
-	  else if(proj.eq.'gls')then
-	    L = Dalp * cos(y1)
-	    M = (y1 - yval)
-	  endif
-c
-	  dtemp = L*llcos + M*llsin
-	  M     = M*llcos - L*llsin
-	  L     = dtemp
-	  x2 = L / dx + xpix
-	  y2 = M / dy + ypix
+	  call coll2xy(x1,y1,x2,y2,xpix,dx,xval,ypix,dy,yval,
+     *						llcos,llsin,proj)
 	endif
 c
 c  We now have the full set of possibilities. Return the variety the
@@ -2721,4 +2518,215 @@ c
 	endif
 c
 
+	end
+c************************************************************************
+	subroutine coll2xy(x1,y1,x2,y2,
+     *	  xpix,dx,xval,ypix,dy,yval,llcos,llsin,proj)
+c
+	implicit none
+	double precision x1,y1,x2,y2
+	double precision xpix,dx,xval,ypix,dy,yval,llcos,llsin
+	character proj*(*)
+c
+c------------------------------------------------------------------------
+	include 'mirconst.h'
+	double precision Dalp,L,M,dtemp,t,sinyval,cosyval
+c
+	sinyval = sin(yval)
+	cosyval = cos(yval)
+	Dalp = x1 - xval
+	if(Dalp.lt.-DPI)then
+	  Dalp = Dalp + 2*DPI
+	else if(Dalp.gt.DPI)then
+	  Dalp = Dalp - 2*DPI
+	endif
+c
+	if(proj.eq.'ncp')then
+	  L = sin(Dalp) * cos(y1)
+	  M = (cosyval - cos(y1)*cos(Dalp))/sinyval
+c
+	else if(proj.eq.'sin')then
+	  L = sin(Dalp) * cos(y1)
+	  M = (sin(y1)*cosyval - cos(y1)*sinyval*cos(Dalp))
+c
+	else if(proj.eq.'tan')then
+	  t = 1/(sin(y1)*sinyval+cos(y1)*cosyval*cos(Dalp))
+	  L = sin(Dalp) * cos(y1) * t
+	  M = (sin(y1)*cosyval - cos(y1)*sinyval*cos(Dalp)) * t
+c
+	else if(proj.eq.'arc')then
+	  t = acos(sin(y1)*sinyval+cos(y1)*cosyval*cos(Dalp))
+	  if(t.eq.0)then
+	    t = 1
+	  else
+	    t = t / sin(t)
+	  endif
+	  L = sin(Dalp) * cos(y1) * t
+	  M = (sin(y1)*cosyval - cos(y1)*sinyval*cos(Dalp)) * t
+c
+	else if(proj.eq.'car')then
+	  L = Dalp * cosyval
+	  M = (y1 - yval)
+c
+	else if(proj.eq.'gls')then
+	  L = Dalp * cos(y1)
+	  M = (y1 - yval)
+	endif
+c
+	dtemp = L*llcos + M*llsin
+	M     = M*llcos - L*llsin
+	L     = dtemp
+	x2 = L / dx + xpix
+	y2 = M / dy + ypix
+c
+	end
+c************************************************************************
+	subroutine coxy2ll(x1,y1,x2,y2,
+     *	  xpix,dx,xval,ypix,dy,yval,llcos,llsin,proj)
+c
+	implicit none
+	double precision x1,y1,x2,y2
+	double precision xpix,dx,xval,ypix,dy,yval,llcos,llsin
+	character proj*(*)
+c
+c------------------------------------------------------------------------
+	double precision L,M,Dalp,t,dtemp,cosyval,sinyval,s,r
+c
+	sinyval = sin(yval)
+	cosyval = cos(yval)
+c
+	L = (x1 - xpix) * dx
+	M = (y1 - ypix) * dy
+	dtemp = L*llcos - M*llsin
+	M = M*llcos + L*llsin
+	L = dtemp
+c
+	if(proj.eq.'ncp')then
+	  t = cosyval - M*sinyval
+	  Dalp = atan2(L,t)
+	  y2 = sign(acos(t/cos(Dalp)),yval)
+c
+	else if(proj.eq.'sin')then
+	  t = sqrt(1-L*L-M*M)
+	  y2 = asin(M*cosyval+sinyval*t)
+	  Dalp = atan2(L,(cosyval*t - M*sinyval))
+c
+	else if(proj.eq.'car')then
+	  y2 = yval + M
+	  Dalp = L / cosyval
+c
+	else if(proj.eq.'gls')then
+	  y2 = yval + M
+	  Dalp = L / cos(y2)
+c
+	else if(proj.eq.'tan')then
+	  t = cosyval - M*sinyval
+	  Dalp = atan2(L,t)
+	  y2 = atan(cos(Dalp)/t * (M*cosyval + sinyval))
+c
+	else if(proj.eq.'arc')then
+	  t = sqrt(L*L + M*M)
+	  s = cos(t)
+	  if(t.gt.0)then
+	    t = sin(t) / t
+	  else
+	    t = 1
+	  endif
+	  r  = M*cosyval * t + sinyval*s
+	  y2 = asin(r)
+	  Dalp = atan2(L*t*cosyval,s-r*sinyval)
+	endif
+c
+	x2 = Dalp + xval
+c
+	end
+c************************************************************************
+	subroutine comixed(x1,y1,x2,y2,xpix,dx,xval,ypix,dy,yval,
+     *						llcos,llsin,proj,pw2wp)
+c
+	implicit none
+	double precision x1,y1,x2,y2
+	double precision xpix,dx,xval,ypix,dy,yval,llcos,llsin
+	character proj*(*)
+	logical pw2wp
+c------------------------------------------------------------------------
+	include 'mirconst.h'
+	real TOL
+	integer MAXITER
+	parameter(TOL=1e-5,MAXITER=100)
+c
+	double precision x(2),y(2),xd(2),yd(2),xdd(2),ydd(2),d2,gamma
+	double precision xr(2),yr(2),xdr(2),ydr(2)
+	real delta
+	integer i,i1,i2,niter
+c
+	if(pw2wp)then
+	  x(1) = x1
+	  x(2) = ypix
+	  y(2) = y1
+	  i1 = 1
+	  i2 = 2
+	else
+	  x(1) = xpix
+	  x(2) = y1
+	  y(1) = x1
+	  i1 = 2
+	  i2 = 1
+	endif
+c
+	delta = 1
+	niter = 0
+	dowhile(delta.gt.TOL.and.niter.lt.MAXITER)
+	  niter = niter + 1
+c
+c  Do the conversion at three points.
+c
+	  call coxy2ll(x(1),x(2),yd(1),yd(2),
+     *		    xpix,dx,xval,ypix,dy,yval,llcos,llsin,proj)
+	  y(i1) = yd(i1)
+	  call coll2xy(y(1),y(2),xd(1),xd(2),
+     *		    xpix,dx,xval,ypix,dy,yval,llcos,llsin,proj)
+	  xdd(1) = 0.5*(x(1)+xd(1) + abs(x(2)-xd(2)))
+	  xdd(2) = 0.5*(x(2)+xd(2) + abs(x(1)-xd(1)))
+	  call coxy2ll(xdd(1),xdd(2),ydd(1),ydd(2),
+     *		    xpix,dx,xval,ypix,dy,yval,llcos,llsin,proj)
+c
+c  Generate relative coordinates.
+c
+	  do i=1,2
+	    xr(i)  = x(i)  - xdd(i)
+	    xdr(i) = xd(i) - xdd(i)
+	    yr(i)  = y(i)  - ydd(i)
+	    if(yr(i).gt.PI) yr(i) = yr(i) - 2*PI
+	    if(yr(i).lt.-PI)yr(i) = yr(i) + 2*PI
+	    ydr(i) = yd(i) - ydd(i)
+	    if(ydr(i).gt.PI) ydr(i) = ydr(i) - 2*PI
+	    if(ydr(i).lt.-PI)ydr(i) = ydr(i) + 2*PI
+	  enddo
+c
+c  Update the current estimate.
+c
+	  gamma = xr(i1)*yr(i2) - xdr(i1)*ydr(i2)
+	  if(abs(gamma).le.0)then
+	    d2 = xr(i2)
+	  else
+            d2 = ( xr(i1)*(xr(i2)*yr(i2) - xdr(i2)*ydr(i2)) +
+     *             yr(i2)*(xr(i1)*xdr(i2) - xr(i2)*xdr(i1)) )/gamma
+	  endif
+	  delta = abs(d2-xr(i2))
+	  x(i2) = d2 + xdd(i2)
+	enddo
+c
+	if(delta.gt.tol)call bug('f','Failed to converge, in coMixed')
+	call coxy2ll(x(1),x(2),y(1),y(2),
+     *		    xpix,dx,xval,ypix,dy,yval,llcos,llsin,proj)
+c
+	if(pw2wp)then
+	  x2 = y(1)
+	  y2 = x(2)
+	else
+	  x2 = x(1)
+	  y2 = y(2)
+	endif
+c
 	end
