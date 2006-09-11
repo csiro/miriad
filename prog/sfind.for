@@ -263,6 +263,7 @@ c                  with blanks in SEARCH and LOADDAT (blanks now correctly
 c                  dealt with throughout). Tidied up subroutine descriptions,
 c                  etc.
 c    rjs  18mar96  Some FORTRAN standardisation.
+c    rjs  15may96  Some more FORTRAN standardisation.
 c
 c To do:
 c
@@ -750,7 +751,7 @@ c
         else
           write(line,50) xposerr,yposerr,pkfl,pkflerr,intfl,
      +        amaj,amin,posa,sigma*1000.,rms*1000.
-50        format(1x,f6.3,3x,f5.2,2x,f8.3,x,f6.3,1x,f9.3,1x,
+50        format(1x,f6.3,3x,f5.2,2x,f8.3,1x,f6.3,1x,f9.3,1x,
      +           3(f5.1,1x),f6.3,2x,f6.3)
         end if
         line = radec(1)(1:radeclen(1))//' '//
@@ -821,10 +822,10 @@ c
 c
 70    call output (' ')
       write (line,80) sources
-80    format('Total number of sources detected:',5i)
+80    format('Total number of sources detected:',5i6)
       call output(line)
       write (line,90) ysources
-90    format('Number of sources confirmed:',5i)
+90    format('Number of sources confirmed:',5i6)
       call output(line)
       call output(' ')
 c
