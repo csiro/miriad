@@ -13,6 +13,7 @@ c		  introduced to be closing ones.
 c     5aug93 rjs  Changed definition of "attenuation" parameter.
 c    19jul94 rjs  Set bad gains to 0 in uvgnpsma (previously the gain
 c		  flag was marked as bad, but the gain was not initialised.
+c    31oct95 rjs  Fix horror of a bug when averaging channel gains together.
 c
 c************************************************************************
 	subroutine uvGnIni(tno1,dogains1,dopass1)
@@ -1136,6 +1137,7 @@ c
 		  enddo
 		  flags(off,k) = n.gt.0
 		  if(n.gt.1) dat(off,k) = dat(off,k) / n
+	          off = off + 1
 	          chan = chan + inc
 	        enddo
 	      endif
