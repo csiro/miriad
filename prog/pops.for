@@ -31,6 +31,7 @@ c   rjs  19nov93  Velocity calculation was incorrectly getting
 c		  geocentric velocities. Better formatting.
 c   rjs   9feb93  Give source elevation and azimuth as well.
 c   rjs  12dec95  Extract lstjul to ephem.for
+c   rjs  13apr97  Print out modified julian date.
 c Bugs:
 c   * The precession, nutation and aberration are pretty simple. No
 c     correction for the FK4 zero-point or elliptic terms of aberrations.
@@ -41,6 +42,7 @@ c
 	character string*64,observ*32
 	double precision r0,d0,rm,dm,rt,dt,ra,da,jday1,jday2
 	double precision lat,long
+	character jds*11,mjds*9
 	logical ok
 	integer lobs
 	real vhel,vlsr
@@ -98,7 +100,10 @@ c
 	call output(string)
 	call output(' ')
 	call julday(jday2,'H',string)
+	write(jds,'(f11.3)')jday2
+	write(mjds,'(f9.3)')jday2-2 400 000.5d0
 	call output('Output Coordinates for time '//string)
+	call output('(JD='//jds//', MJD='//mjds//')')
 	string = '  Mean:     '//hangle(rm)//' '//rangle(dm)
 	call output(string)
 	string = '  True:     '//hangle(rt)//' '//rangle(dt)
