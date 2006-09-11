@@ -25,7 +25,7 @@ c
 	real evec,systemp,jyperk,velref
 	logical llok,emok,systok,jok,mosaic,velcomp,inited
 c
-	real sdf(MAXIF*MAXFREQ)
+	real sdf(MAXIF*MAXFREQ),dnu
 	integer nsrc,nif,nchan,nfreq,nconfig
 	integer srcids(MAXSRC),freqids(MAXFREQ),srcid,srcidx
 	integer freqid,freqidx
@@ -37,7 +37,7 @@ c
 	common/Tables/raepo,decepo,raapp,decapp,dra,ddec,sfreq,freqoff,
      *	    restfreq,veldop,antpos,timeoff,freqref,epoch,lat,long,Tprev,
      *	    timeref,eq,
-     *	  sdf,evec,systemp,jyperk,velref,
+     *	  sdf,dnu,evec,systemp,jyperk,velref,
      *	  nsrc,nif,nchan,nfreq,nconfig,nants,srcids,freqids,
      *	    srcid,freqid,srcidx,freqidx,sindx,findx,mount,velsys,config,
      *	  mosaic,velcomp,llok,emok,systok,jok,inited
