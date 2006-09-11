@@ -71,6 +71,7 @@ c    rjs  28may96 Initialise "line" variable to a blank!
 c    rjs  31jul96 Support QQ and UU.
 c    rjs  16aug96 Change phasing convention for circularly polarised feeds,
 c		  and add QQ and UU support for circulars.
+c    rjs  06jan97 Change uvgetvrr to uvrdvrr when getting chi.
 c
 c  User-Callable Routines:
 c    uvDatInp(key,flags)
@@ -299,7 +300,7 @@ c------------------------------------------------------------------------
 	include 'uvdat.h'
 	integer length
 	logical update,present,shortcut,willpass
-	character obstype*16,type*1,umsg*64
+	character obstype*16,type*1,umsg*80
 c
 c  Externals.
 c
@@ -506,7 +507,7 @@ c--
 c------------------------------------------------------------------------
 	include 'uvdat.h'
 	double precision linepar(6)
-	character umsg*64
+	character umsg*80
 c
 c  Get the data.
 c
@@ -1014,7 +1015,7 @@ c------------------------------------------------------------------------
 	real Chi,pa
 c
 	NoChi = .false.
-	call uvgetvrr(tno,'chi',chi,1)
+	call uvrdvrr(tno,'chi',chi,0.0)
 	if(plinit)then
 	  call uvrdvrr(tno,'plangle',pa,plangle)
 	  chi = chi - pi/180.*(pa - plangle)
