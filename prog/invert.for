@@ -297,6 +297,7 @@ c    rjs   29feb96  Call xyflush after each plane.
 c    rjs   12jul96  Be fore forgiving if beam too big -- just make it smaller.
 c    rjs   20jun97  Correct handling of multiple stokes in slopintp.
 c    rjs   07jul97  Change coaxdesc to coaxget.
+c    rjs   01jul99  CHanges in call sequence to hdfiddle.
 c  Bugs:
 c
 c------------------------------------------------------------------------
@@ -305,7 +306,7 @@ c------------------------------------------------------------------------
 	include 'mem.h'
 c
 	character version*(*)
-	parameter(version='Invert: version 1.0 20-Jun-97')
+	parameter(version='Invert: version 1.0 1-Jul-99')
 	integer MAXPOL,MAXRUNS
 	parameter(MAXPOL=4,MAXRUNS=4*MAXDIM)
 c
@@ -342,8 +343,6 @@ c  Get the input parameters. Convert all angular things into
 c  radians as soon as possible!!
 c
 	call output(version)
-	call bug('i',
-     *	  'The default for the "line" parameter is now all channels')
 	call keyini
 	call keya('beam',beam,' ')
 	call mkeya('map',maps,MAXPOL,nmap)
@@ -752,7 +751,7 @@ c
 	call coReinit(coOut)
 c
 	call xyopen(tno,beam,'new',naxis,imsize)
-	call HdFiddle(tvis,tno,version,mosaic,coOut,'beam',0.0)
+	call HdFiddle(tvis,tno,version,mosaic,coOut,'beam',0.0,bnx,bny)
 	call coFin(coOut)
 	end
 c************************************************************************
@@ -776,13 +775,15 @@ c
 	naxis = 4
 c
 	call xyopen(tno,map,'new',naxis,imsize)
-	call HdFiddle(tvis,tno,version,mosaic,coIn,'intensity',rms)
+	call HdFiddle(tvis,tno,version,mosaic,coIn,'intensity',
+     *							rms,nx,ny)
 	end
 c************************************************************************
-	subroutine HdFiddle(tvis,tno,version,mosaic,coIn,btype,rms)
+	subroutine HdFiddle(tvis,tno,version,mosaic,coIn,btype,
+     *							rms,nx,ny)
 c
 	implicit none
-	integer tvis,tno,coIn
+	integer tvis,tno,coIn,nx,ny
 	logical mosaic
 	character version*(*),btype*(*)
 	real rms
@@ -793,11 +794,10 @@ c------------------------------------------------------------------------
 c
 c  Call the various routines which handle these sorts of things.
 c
-	call hdWrite(tno)
+	call hdWrite(tno,rms,nx,ny)
 	call coWrite(coIn,tno)
 	call wrbtype(tno,btype)
 	call wrhda(tno,'bunit','JY/BEAM')
-	if(rms.gt.0)call wrhdr(tno,'rms',rms)
 c
 c  Write the mosaic table, if needed.
 c
