@@ -113,13 +113,15 @@ c    rjs  12dec96 Correct bug in the above.
 c    nebk 28feb97 Add object to output
 c    rjs  02jul97 cellscal change.
 c    smw  15feb98 added one extra digit in printout: rangle->rangleh, etc
+c    mchw 21apr98 more precise Offset position.
+c    rjs  27apr98 Merge above two sets of changes.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'maxnax.h'
 	include 'mem.h'
 c
 	character version*(*)
-	parameter(version='version 1.0 12-Dec-96')
+	parameter(version='version 1.0 27-Apr-98')
 	integer MAXBOX,MAXVAR
 	parameter(MAXBOX=1024,MAXVAR=30)
 c
@@ -1005,12 +1007,12 @@ c
 	        call output(line)
 	      endif
 	      write(line,40)3600*180/pi*l0(i),3600*180/pi*m0(i)
-  40	      format('  Offset Position (arcsec):  ',2f9.3)
+  40	      format('  Offset Position (arcsec):  ',2f10.3)
 	      call output(line)
 	      if(sl0(i)+sm0(i).gt.0)then
 	        write(line,45)3600*180/pi*sfac*sl0(i),
      *			    3600*180/pi*sfac*sm0(i)
-  45	        format('  Positional errors (arcsec):',2f9.3)
+  45	        format('  Positional errors (arcsec):',2f10.3)
 	        call output(line)
 	      endif
 	      line = '  Right Ascension:                '//
