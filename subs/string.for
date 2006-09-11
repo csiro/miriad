@@ -23,6 +23,7 @@ c   mchw    30nov92 added hex and octal conversions to atoif.
 c   bpw     16aug93 changed an accidental len to len1 in atodf
 c   rjs      3nov94 Treat [] and {} as brackets in GetField.
 c   rjs     06feb95 Fixed handling of quotes in getfield. What did bpw do?
+c   rjs     25jul97 Treat " and ' as quote characters.
 c-----------------------------------------------------------------------
 c 
 c* atoif -- Convert a string into an integer.
@@ -548,7 +549,7 @@ c--
 c------------------------------------------------------------------------
 	integer k,l,depth,k1old
 	logical more,quoted
-	character c*1, line*80
+	character c*1,line*80,quotec*1
 c
 c  Skip leading white.
 c
@@ -570,15 +571,17 @@ c
 	depth = 0
 	do while(k1.le.k2.and.more)
 	  c = string(k1:k1)
-	  if(c.eq.'"')then
-	    quoted = .not.quoted
-	  else if(.not.quoted)then
+	  if(quoted)then
+	    quoted = c.eq.quotec
+	  else if(c.eq.'"'.or.c.eq.'''')then
+	    quoted = .true.
+	    quotec = c
+	  else
 	    if(c.eq.'('.or.c.eq.'['.or.c.eq.'{')then
 	      depth = depth + 1
 	    else if(c.eq.')'.or.c.eq.']'.or.c.eq.'}')then
 	      depth = depth - 1
-c01-90  else if(c.eq.' '.or.c.eq.',')then
-        else if(c.le.' '.or.c.eq.',')then
+	    else if(c.le.' '.or.c.eq.',')then
 	      more = depth.gt.0
 	    endif
 	  endif
@@ -588,7 +591,8 @@ c
 c  Remove leading and trailing quotes.
 c
 	l = k1 - 1
-	if( string(k:k).eq.'"' .and. string(l:l).eq.'"' ) then
+	if( (string(k:k).eq.'"' .and. string(l:l).eq.'"' ) .or.
+     *	    (string(k:k).eq.''''.and. string(l:l).eq.'''')) then
            k = k + 1
 	   l = l - 1
 	endif
