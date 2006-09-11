@@ -50,7 +50,9 @@ c		         the rms amplitude. by default it does vector averaging.
 c	   'nobase'      Plot all the baselines on one plot.
 c	   'avall'       Average all the baselines together before plotting.
 c	   'dots'        Plot phases with dots instead of filled circles.
-c	   'flagged'     Plot flagged data instead of unflagged data.
+c	   'flagged'     Plot flagged data instead of unflagged data. The
+c	                 default is to plot only unflagged data.
+c	   'all'         Plot both flagged and unflagged data.
 c@ axis
 c	This gives two strings, which determine the X and Y axes of each plot.
 c	The values can be abbreviated to uniqueness.
@@ -97,6 +99,7 @@ c    rjs  26sep95 Discard bad spectra as soon as possible.
 c    rjs  28sep95 Fix bug I introduced two days ago.
 c    rjs  17oct95 Correct initialisation bug when first integration is all
 c		  bad.
+c    rjs  19oct95 options=all
 c  Bugs:
 c------------------------------------------------------------------------
 	include 'mirconst.h'
@@ -105,11 +108,11 @@ c------------------------------------------------------------------------
         parameter (maxco=15)
 c
 	character version*(*)
-	parameter(version='UvSpec: version 1.0 17-Oct-95')
+	parameter(version='UvSpec: version 1.0 19-Oct-95')
 	character uvflags*8,device*64,xaxis*12,yaxis*12,logf*64
 	character xtitle*64,ytitle*64
 	logical ampsc,rms,nobase,avall,first,buffered,doflush,dodots
-	logical doshift,doflag
+	logical doshift,doflag,doall
 	double precision interval,T0,T1,preamble(4),shift(2),shft(2)
 	integer tIn,vupd
 	integer nxy(2),nchan,nread
@@ -127,9 +130,9 @@ c
 c  Get the input parameters.
 c
 	call output(version)
-        call bug ('i', 'New options=flagged available')
+        call bug ('i', 'New options=all available')
 	call keyini
-	call GetOpt(uvflags,ampsc,rms,nobase,avall,dodots,doflag)
+	call GetOpt(uvflags,ampsc,rms,nobase,avall,dodots,doflag,doall)
 	call GetAxis(xaxis,yaxis)
 	call uvDatInp('vis',uvflags)
 	call keyd('interval',interval,0.d0)
@@ -225,7 +228,7 @@ c
 	    if(.not.buffered)call GetXAxis(tIn,xaxis,xtitle,x,nread)
 	    if(avall)preamble(4) = 257
 	    call uvrdvrr(tIn,'inttime',inttime,0.)
-	    call BufAcc(doflag,preamble,inttime,data,flags,nread)
+	    call BufAcc(doflag,doall,preamble,inttime,data,flags,nread)
 	    buffered = .true.
 	    nchan = nread
 c
@@ -385,10 +388,11 @@ c
 	if(n.eq.0)yaxis = yaxes(1)
 	end
 c************************************************************************
-	subroutine GetOpt(uvflags,ampsc,rms,nobase,avall,dodots,doflag)
+	subroutine GetOpt(uvflags,ampsc,rms,nobase,avall,dodots,
+     *		doflag,doall)
 c
 	implicit none
-        logical ampsc,rms,nobase,avall,dodots,doflag
+        logical ampsc,rms,nobase,avall,dodots,doflag,doall
 	character uvflags*(*)
 c
 c  Determine the flags to pass to the uvdat routines.
@@ -401,14 +405,15 @@ c    nobase
 c    avall
 c    dodots
 c    doflag
+c    doall
 c------------------------------------------------------------------------
 	integer nopts
-	parameter(nopts=9)
+	parameter(nopts=10)
 	character opts(nopts)*9
 	logical present(nopts),docal,dopol,dopass
 	data opts/'nocal    ','nopol    ','ampscalar','nopass   ',
      *		  'nobase   ','avall    ','dots     ','rms      ',
-     *            'flagged  '/
+     *            'flagged  ','all      '/
 c
 	call options('options',opts,present,nopts)
 	docal = .not.present(1)
@@ -422,6 +427,9 @@ c
 	avall  =   present(6)
         dodots =   present(7)
         doflag =   present(9)
+	doall  =   present(10)
+	if(doflag.and.doall)call bug('f',
+     *	  'The "flagged" and "all" options are mutually exclusive')
 c
 	uvflags = 'dsl'
 	if(docal) uvflags(4:4) = 'c'
@@ -604,14 +612,14 @@ c
 c
 	end
 c************************************************************************
-	subroutine BufAcc(doflag,preambl,inttime,data,flags,nread)
+	subroutine BufAcc(doflag,doall,preambl,inttime,data,flags,nread)
 c
 	implicit none
 	integer nread
 	double precision preambl(4)
 	real inttime
 	complex data(nread)
-	logical flags(nread),doflag
+	logical flags(nread),doflag,doall
 c
 c  This accumulates the visibility data. The accumulated data is left
 c  in common.
@@ -631,10 +639,12 @@ c------------------------------------------------------------------------
 c
 c  Does this spectrum contain some good data.
 c
-	ok = .false.
-	do i=1,nread
-	  ok = ok.or.(flags(i).neqv.doflag)
-	enddo
+	ok = doall
+	if(.not.ok)then
+	  do i=1,nread
+	    ok = ok.or.(flags(i).neqv.doflag)
+	  enddo
+	endif
 	if(.not.ok)return
 c
 c  Determine the baseline number.
@@ -695,8 +705,7 @@ c  Copy across the new data.
 c
 	  p = pnt(p,bl) - 1
 	  do i=1,nread
-	    if( (doflag.and..not.flags(i)) .or. 
-     *          (.not.doflag.and.flags(i)) )then
+	    if(doall.or.(doflag.neqv.flags(i)))then
 	      buf(i+p) = data(i)
 	      t = abs(data(i))
               bufr(i+p) = t
@@ -718,8 +727,7 @@ c
 	  nchan(p,bl) = nread
 	  p = pnt(p,bl) - 1
 	  do i=1,nread
-	    if( (doflag.and..not.flags(i)) .or. 
-     *          (.not.doflag.and.flags(i)) )then
+	    if(doall.or.(doflag.neqv.flags(i)))then
 	      t = abs(data(i))
 	      buf(i+p) = buf(i+p) + data(i)
               bufr(i+p) = bufr(i+p) + t
