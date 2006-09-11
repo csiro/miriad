@@ -1,4 +1,4 @@
-c***********************************************************************
+***********************************************************************
 	program pops
 	implicit none
 c
@@ -33,12 +33,13 @@ c   rjs   9feb93  Give source elevation and azimuth as well.
 c   rjs  12dec95  Extract lstjul to ephem.for
 c   rjs  13apr97  Print out modified julian date.
 c   rjs  10jun97  Change observ to telescop.
+c   rjs  08sep97  Rename routine "azel" to "doazel", and call ehem's azel.
 c Bugs:
 c   * The precession, nutation and aberration are pretty simple. No
 c     correction for the FK4 zero-point or elliptic terms of aberrations.
 c-----------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Pops: version 1.0 10-Jun-97')
+	parameter(version='Pops: version 1.0 08-Sep-97')
 c
 	character string*64,observ*32
 	double precision r0,d0,rm,dm,rt,dt,ra,da,jday1,jday2
@@ -126,13 +127,13 @@ c
 c  Determine source rise and set times.
 c
 	if(observ.ne.'geocenter')then
-	  call azel(jday2,lat,long,ra,da)
+	  call doazel(jday2,lat,long,ra,da)
 	  call riseset(jday2,lat,long,ra,da)
 	endif
 c 
 	end
 c************************************************************************
-	subroutine azel(jday,lat,long,ra,da)
+	subroutine doazel(jday,lat,long,ra,da)
 c
 	implicit none
 	double precision jday,lat,long,ra,da
@@ -145,7 +146,7 @@ c    lat,long	Observatory geodetic latitude and longitude (radians).
 c    ra,da	Apparent RA and DEC (radians).
 c------------------------------------------------------------------------
 	include 'mirconst.h'
-	double precision lst,ha,az,el
+	double precision lst,az,el
 	character line*80
 c
 c  Externals.
@@ -153,10 +154,7 @@ c
 	character hangle*16
 c
 	call jullst(jday,long,lst)
-	ha = lst - ra
-	el = asin( sin(lat)*sin(da) + cos(lat)*cos(da)*cos(ha))
-	az = atan2(-cos(da)*sin(ha),
-     *		   cos(lat)*sin(da) - sin(lat)*cos(da)*cos(ha))
+	call azel(ra,da,lst,lat,az,el)
 c
 	call output(' ')
 	line = 'Local Sidereal Time: '//hangle(lst)
