@@ -86,6 +86,7 @@ c    rjs      11jan93 Honour explicit scale factors.
 c    mchw  06sep94 Set default bmin to be bmaj, and fix log line in doc.
 c    rjs   15mar95 Add options=final.
 c    rjs   06jan97 Improve output headers.
+c    rjs   02jul97 cellscal change.
 c  Bugs:
 c------------------------------------------------------------------------
 	include 'maxdim.h'
@@ -426,7 +427,7 @@ c------------------------------------------------------------------------
 	character line*72,num*1
 	real crpix
 	integer nkeys
-	parameter(nkeys=35)
+	parameter(nkeys=36)
 	character keyw(nkeys)*8
 c
 c  Externals.
@@ -438,7 +439,7 @@ c
      *	  'crval1  ','crval2  ','crval3  ','crval4  ','crval5  ',
      *	  'ctype1  ','ctype2  ','ctype3  ','ctype4  ','ctype5  ',
      *				           'crpix4  ','crpix5  ',
-     *	  'epoch   ','niters  ','object  ','obstime ',
+     *	  'epoch   ','niters  ','object  ','obstime ','cellscal',
      *	  'telescop','history ','restfreq','mostable',
      *	  'vobs    ','observer','obsra   ','obsdec  ','pbfwhm  ',
      *    'btype   ','ltype   ','lstart  ','lstep   ','lwidth  '/
