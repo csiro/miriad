@@ -35,13 +35,14 @@ c   rjs  13apr97  Print out modified julian date.
 c   rjs  10jun97  Change observ to telescop.
 c   rjs  08sep97  Rename routine "azel" to "doazel", and call ehem's azel.
 c   rjs  24sep98  Check for known elevation limit.
+c   rjs  04apr04  Add LST of rise and set times.
 c Bugs:
 c   * The precession, nutation and aberration are pretty simple. No
 c     correction for the FK4 zero-point or elliptic terms of aberrations.
 c-----------------------------------------------------------------------
 	include 'mirconst.h'
 	character version*(*)
-	parameter(version='Pops: version 1.0 24-Sep-98')
+	parameter(version='Pops: version 1.0 04-Apr-04')
 c
 	character string*64,observ*32
 	double precision r0,d0,rm,dm,rt,dt,ra,da,jday1,jday2
@@ -188,10 +189,10 @@ c------------------------------------------------------------------------
 	include 'mirconst.h'
 	real sinel,sinl,cosl,sind,cosd,ha
 	double precision rise,set,temp
-	character string*32
+	character string*32,lstring*20,line*80
 c
 	double precision LstJul
-	character itoaf*2
+	character itoaf*2,stcat*80
 c
 	sinl = sin(lat)
 	cosl = cos(lat)
@@ -221,17 +222,46 @@ c  Convert from LST to UT.
 c
 	  call output('For a minimum elevation of '//
      *				itoaf(nint(ellimit))//' degrees ...')
+	  call timer(rise,lstring)
 	  rise = LstJul(rise,jday,long)
 	  call julday(rise,'H',string)
-	  call output('Source rises at UT '//string)
+	  line = stcat('Source rises at UT '//string,lstring)
+	  call output(line)
 	  rise = rise + ha/pi
 c
+	  call timer(set,lstring)
 	  set  = LstJul(set,rise,long)
 	  call julday(set,'H',string)
-	  call output('Source sets  at UT '//string)
+	  line = stcat('Source sets  at UT '//string,lstring)
+	  call output(line)
 	endif
 c
 	end
+c************************************************************************
+	subroutine timer(rise,lstring)
+c
+	implicit none
+	double precision rise
+	character lstring*(*)
+c------------------------------------------------------------------------
+	include 'mirconst.h'
+	character hangle*20
+	integer i,j
+	double precision t
+c
+	
+c
+	t = rise
+	if(t.gt.2*DPI)t = t - 2*DPI
+	lstring = ' (LST '//hangle(t)
+	i = 0
+	j = 0
+	dowhile(j.ne.2)
+	  i = i + 1
+	  if(lstring(i:i).eq.':')j = j + 1
+	enddo
+	lstring(i:) = ')'
+	end	  
 c************************************************************************
 	subroutine VelRad(jday,ra,da,rm,dm,vhel,vlsr,lat,long,doobs)
 c
