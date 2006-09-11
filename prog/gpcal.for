@@ -87,11 +87,16 @@ c	These options determine what GPCAL solves for. There are many
 c	permutations, the more obscure or useless of which are not
 c	supported. The option values are used to turn on or off some
 c	of the solvers. Several options	can be given, separated by
-c	commas. Minimum match is used.
-c	  nopass     Do not apply bandpass correction. The default is
-c	             to apply bandpass correction if possible.
-c	  noamphase  Do not solve for the amplitude and phase. The 
-c	             default is to solve for amplitude and phase.
+c	commas. Minimum match is used. Some combinations of these options
+c	are not supported.
+c	  xyvary     The XY phase varies with time. By default the XY phase
+c	             is assumed to remain constant.
+c	  qusolve    Solve for Q and U fluxes. Good parallactic
+c	             angle coverage is required for this.
+c	  oldflux    This causes GPCAL to use a pre-August 1994 ATCA flux
+c	             density scale. See the help on "oldflux" for more
+c	             information.
+c	  circular   Expect/handle circularly polarised data.
 c	  nopol      Do not solve for the instrumental polarisation
 c	             leakage characteristics. The default is to solve
 c	             for the polarisation leakages on all feeds except
@@ -99,26 +104,29 @@ c	             the X feed of the reference antenna.
 c	  noxy       Do not solve for any XY phase offset. The default is to
 c	             solve for the XY phase offset on all antennas
 c	             except for the reference antenna.
-c	  xyvary     The XY phase varies with time. By default the XY phase
-c	             is assumed to remain constant.
-c	  qusolve    Solve for Q and U fluxes. Good parallactic
-c	             angle coverage is required for this.
+c	  nopass     Do not apply bandpass correction. The default is
+c	             to apply bandpass correction if possible. This is
+c	             rarely useful.
+c	  noamphase  Do not solve for the amplitude and phase. The 
+c	             default is to solve for amplitude and phase. This is
+c	             rarely useful.
+c
+c	The following are options for advanced users, and should be used
+c	with caution. Contact Bob Sault for guidance on their applicability.
 c	  xyref      Solve for the XY phase of the reference antenna. To
-c	             do this, the source must be strongly polarized. This
+c	             do this, the source must be linearly polarized and you
+c	             must have reasonable parallactic angle coverage. This
 c	             option can be used with ``noxy'', in which case GPCAL
-c	             solves for the offset of the reference antenna. To
-c	             use this option, the source should be at least 5%
-c	             polarised.
+c	             solves for the offset of the reference antenna.
 c	  polref     Solve for the instrumental polarization leakage
-c	             of the X feed on the reference antenna. The source
-c	             must be at least 5% polarised. This can
+c	             of the X feed on the reference antenna. This can
 c	             be combined with ``nopol'', in which case GPCAL
 c	             solves for X feed of the reference antenna only.
-c	  oldflux    This causes GPCAL to use a pre-August 1994 ATCA flux
-c	             density scale. See the help on "oldflux" for more
-c	             information.
-c	  circular   Expect/handle circularly polarised data.
-c	Some combinations of these options are not supported.
+c	  vsolve     Solve for the Stokes-V of the source. This is only
+c	             possible for linear feeds and a preliminary leakage
+c	             solution for the observation already exists. This
+c	             preliminary solution must be formed from a
+c	             calibrator with known Stokes-V.
 c--
 c  History:
 c    rjs,nebk 1may91 Original version.
@@ -185,6 +193,8 @@ c    mchw    08aug96 fix minibug for more antennas.
 c    rjs     12may97 Added options=circular.
 c    rjs     23jun97 Get gpcal options=nopol,qusolve to work when a pol'n
 c		     solution is already present.
+c    rjs     15aug97 Change to normalisation, options=vsolve and fiddles
+c		     to the doc comments.
 c
 c  Bugs:
 c    * Polarisation solutions when using noamp are wrong! The equations it
@@ -196,7 +206,7 @@ c------------------------------------------------------------------------
 	integer MAXITER
 	character version*(*)
 	parameter(MAXITER=30)
-	parameter(version='Gpcal: version 1.0 23-Jun-97')
+	parameter(version='Gpcal: version 1.0 15-Aug-97')
 c
 	integer tIn
 	double precision interval(2), freq
@@ -204,8 +214,9 @@ c
 	real pcent,epsi,epsi1,tol,ttol
 	integer refant,minant,nants,nbl,nxyphase,nsoln,niter,i,j,jmax
 	integer maxsoln,off
-	logical amphsol,polsol,xysol,xyvary,xyref,polref,qusolve,defflux
-	logical usepol,useref,dopass,polcal,notrip,oldflx,circular
+	logical amphsol,polsol,xysol,xyvary,xyref,polref,qusolve,vsolve
+	logical defflux,usepol,useref,dopass,polcal,notrip,oldflx
+	logical circular
 	character line*80,source*32,uvflags*8
 c
 	complex D(2,MAXANT),xyp(MAXANT),Gains(2,MAXDANTS)
@@ -227,8 +238,8 @@ c  Get inputs.
 c
 	call output(version)
 	call keyini
-	call GetOpt(dopass,amphsol,
-     *	  polsol,xysol,xyref,xyvary,polref,qusolve,oldflx,circular)
+	call GetOpt(dopass,amphsol,polsol,xysol,xyref,xyvary,polref,
+     *	  qusolve,vsolve,oldflx,circular)
 	uvflags = 'dlb'
 	if(dopass) uvflags = 'dlbf'
 	call uvDatInp('vis',uvflags)
@@ -262,10 +273,14 @@ c
 c  Determine the polarisation solver to use.
 c
 	polcal = abs(flux(2))+abs(flux(3))+abs(flux(4)).gt.0
-	usepol = (xysol.and..not.xyvary).or.polsol.or.qusolve
+	usepol = (xysol.and..not.xyvary).or.polsol.or.qusolve.or.vsolve
 	useref = polref.and..not.polsol
 	if((usepol.and.useref).or.(circular.and.useref))
      *	  call bug('f','Unsupported combination of options')
+	if(circular.and.vsolve)
+     *	  call bug('f','Cann use options=vsolve and circular together')
+	if(vsolve.and..not.polsol)call bug('f',
+     *	  'options=vsolve and nopol cannot be used together')
 c
 c  Indicate that we only want to get back raw linear polarisations.
 c
@@ -306,7 +321,7 @@ c
 	if(nxyphase.gt.nants)call bug('w',
      *	  'More XY phases were given than there are antennae')
 	nxyphase = min(nxyphase,nants)
-	call PolIni(tIn,xyphase,nxyphase,D,xyp,nants)
+	call PolIni(tIn,xyphase,nxyphase,D,xyp,nants,vsolve)
 c
 c  Read the data, forming the sums that we need.
 c
@@ -334,9 +349,6 @@ c  Initialise the gains.
 c
 	call GainIni(nants,nsoln,Gains,xyp)
 c
-c  Determine which polarisation solver to use.
-c
-c
 c  Iterate until we have converged.
 c
 	niter = 0
@@ -359,14 +371,14 @@ c
 	    if(niter.eq.1.and.xysol.and..not.xyvary)then
 	      call output('Estimating the XY phases ...')
 	      call AmpSolve(nsoln,nants,nbl,flux,refant,
-     *	        xyref,.true.,
+     *	        xyref.and..not.qusolve,.true.,
      *	        D,xyp,Gains,niter.le.1,ttol,epsi1,
      *	        Vis,VisCos,VisSin,SumS,SumC,SumS2,SumCS,Count,
      *		circular)
 	      call XYFudge(nsoln,nants,xyp,Gains)
 	    else
 	      call AmpSolve(nsoln,nants,nbl,flux,refant,
-     *		xyref.and.xyvary,xyvary,
+     *		xyref.and.xyvary.and..not.qusolve,xyvary,
      *		D,xyp,Gains,niter.le.1,ttol,epsi1,
      *		Vis,VisCos,VisSin,SumS,SumC,SumS2,SumCS,Count,
      *		circular)
@@ -381,7 +393,7 @@ c  Solve for all the polarisation characteristics.
 c
 	  if(usepol)then
 	    call PolSolve(nsoln,nants,nbl,flux,refant,polsol,polref,
-     *	      qusolve,xysol.and..not.xyvary,xyref.and..not.xyvary,
+     *	      qusolve,vsolve,xysol,xyref,
      *	      notrip,D,Gains,xyp,epsi1,present,Vis,VisCos,VisSin,
      *	      SumS,SumC,SumS2,SumCS,Count,circular)
 	    write(line,'(a,i2,a,f7.3)')'Iter=',niter,
@@ -389,7 +401,7 @@ c
 	    call output(line)
 	    epsi = max(epsi,epsi1)
 	  else if(useref)then
-	    call RefSolve(nsoln,nants,nbl,flux,xyref.and..not.xyvary,D,
+	    call RefSolve(nsoln,nants,nbl,flux,xyref,D,
      *	      Gains,xyp,epsi1,Vis,VisCos,VisSin,
      *	      SumS,SumC,SumS2,SumCS,Count,circular)
 	    write(line,'(a,i2,a,f7.3)')'Iter=',niter,
@@ -418,14 +430,16 @@ c
 c
 c  Tell about the source polarisation.
 c
-	if(qusolve.or.defflux)then
-          write(line,'(a,f8.3)')'I flux density: ', flux(1)
-          call writeo(tIn,line)
-c
+        write(line,'(a,f8.3)')'I flux density: ', flux(1)
+        call writeo(tIn,line)
+	if(qusolve)then
 	  write(line,'(a,f8.3)')'Percent Q: ',100*flux(2)/flux(1)
 	  call writeo(tIn,line)
-c
 	  write(line,'(a,f8.3)')'Percent U: ',100*flux(3)/flux(1)
+	  call writeo(tIn,line)
+	endif
+	if(vsolve)then
+	  write(line,'(a,f8.3)')'Percent V: ',100*flux(4)/flux(1)
 	  call writeo(tIn,line)
 	endif
 c
@@ -1212,7 +1226,7 @@ c
 	    c(XY,k) = cxy + D(X,i)*cyy + conjg(D(Y,j))*cxx
      *			  + D(X,i)*	 conjg(D(Y,j))*cyx
 c
-	    a(YX,k) = axy + D(Y,i)*axx + conjg(D(X,j))*ayy
+	    a(YX,k) = ayx + D(Y,i)*axx + conjg(D(X,j))*ayy
      *			  + D(Y,i)*	 conjg(D(X,j))*axy
 	    b(YX,k) = byx + D(Y,i)*bxx + conjg(D(X,j))*byy
      *			  + D(Y,i)*	 conjg(D(X,j))*bxy
@@ -1224,13 +1238,13 @@ c
 	end
 c************************************************************************
 	subroutine PolSolve(nsoln,nants,nbl,flux,refant,polsol,polref,
-     *	    qusolve,xysol,xyref,notrip,D,Gains,xyp,epsi,
+     *	    qusolve,vsolve,xysol,xyref,notrip,D,Gains,xyp,epsi,
      *	    present,Vis,VisCos,VisSin,SumS,SumC,SumS2,SumCS,Count,
      *	    circular)
 c
 	implicit none
 	integer nsoln,nants,nbl,refant
-	logical xysol,qusolve,xyref,polsol,polref,notrip,circular
+	logical xysol,qusolve,vsolve,xyref,polsol,polref,notrip,circular
 	real flux(4),epsi
 	complex D(2,nants),Gains(2,nants,nsoln),xyp(nants)
 c
@@ -1253,6 +1267,7 @@ c  If the "qusolve" option is not used:
 c    * flux(2:3) are not varied.
 c  If the "xyref" option is not used, then
 c    * xyp(refant) is not varied.
+c
 c  If the "polref" option is not used, then
 c    * D(X,refant) is not varied.
 c  If the "qusolve" and "polref" options are used together
@@ -1282,9 +1297,10 @@ c------------------------------------------------------------------------
 	include 'gpcal.h'	
 	integer Dvar(2,2,MAXANT),QUvar,Tvar(2,MAXANT),nvar,ifail
 	integer Vars(8,4,MAXBASE),pivot(6*MAXANT+1)
-	integer i,j
-	complex expix(MAXANT),expiy(MAXANT)
-	real b(6*MAXANT+1),A((6*MAXANT+1)*(6*MAXANT+1)),temp
+	integer i,j,ngood
+	complex expix(MAXANT),expiy(MAXANT),dD(2,MAXANT),Sum1,Sum2
+	complex dDx,dDy
+	real b(6*MAXANT+1),A((6*MAXANT+1)*(6*MAXANT+1)),temp,dv
 	logical polref1
 c
 c  Determine if we are really going to do polref.
@@ -1349,11 +1365,43 @@ c
 	  enddo
 	endif
 c
-c  The leakage terms.
+c  The leakage terms. Accumulate some weird things so we can normalise them.
 c
+	Sum1 = (0.,0.)
+	Sum2 = (0.,0.)
+	ngood = 0
 	do i=1,nants
-	  call UnpackD(Dvar(1,X,i),Dvar(2,X,i),b,nvar,D(X,i),epsi)
-	  call UnpackD(Dvar(1,Y,i),Dvar(2,Y,i),b,nvar,D(Y,i),epsi)
+	  call UnpackD(Dvar(1,X,i),Dvar(2,X,i),b,nvar,dD(X,i),epsi)
+	  call UnpackD(Dvar(1,Y,i),Dvar(2,Y,i),b,nvar,dD(Y,i),epsi)
+	  if(present(i))then
+	    ngood = ngood + 2
+	    Sum1 = Sum1 + dD(X,i) - conjg(dD(Y,i))
+	    Sum2 = Sum2 + dD(X,i) + conjg(dD(Y,i))
+	  endif
+	enddo
+c
+c  Combine the leakages with the leakage increments, adding in the
+c  appropriate adjustments.
+c
+	Sum1 = Sum1/ngood
+	dDx = Sum1
+	if(polref1.and..not.qusolve)dDx = cmplx(0.,aimag(dDx))
+	if(polref1)		    dDx = cmplx(real(dDx),0.)
+	dDy = -conjg(dDx)
+c
+	if(vsolve)then
+	  dv = -2.0*aimag(Sum2)/ngood
+	  flux(4) = flux(4) + dv*flux(1)
+	  dDx = dDx - cmplx(0.,0.5*dv)
+	  dDy = dDy + cmplx(0.,0.5*dv)
+	  epsi = max(epsi,dv*dv)
+	endif
+	
+	do i=1,nants
+	  if(present(i))then
+	    D(X,i) = D(X,i) + dD(X,i) - dDx
+	    D(Y,i) = D(Y,i) + dD(Y,i) - dDy
+	  endif
 	enddo
 c
 c  Return with the bacon.
@@ -1825,8 +1873,9 @@ c    Indx1,Indx2 The indices of the real and imaginary parts.
 c    nvar	 The number of variables.
 c    x		 The variables.
 c  Input/Output:
-c    D		The leakage parameter.
 c    epsi	Error measure.
+c  Output:
+c    D		The leakage increment.
 c------------------------------------------------------------------------
 	real t1,t2
 c
@@ -1842,7 +1891,7 @@ c
 	endif
 c
 	epsi = max(epsi,t1**2+t2**2)
-	D = D + cmplx(t1,t2)
+	D = cmplx(t1,t2)
 	end
 c************************************************************************
 	subroutine UnpackT(Indx,x,nvar,Gain,epsi)
@@ -2230,11 +2279,12 @@ c
 	endif
 	end
 c************************************************************************
-	subroutine PolIni(tIn,xyphase,nxyphase,D,xyp,nants)
+	subroutine PolIni(tIn,xyphase,nxyphase,D,xyp,nants,vsolve)
 c
 	implicit none
 	integer tIn,nants,nxyphase
 	real xyphase(nants)
+	logical vsolve
 	complex D(2,nants),xyp(nants)
 c
 c  Set the initial estimates of the gains and leakage terms.
@@ -2244,6 +2294,7 @@ c    tIn	Handle of the input file.
 c    xyphase	User-specified values of the xyphase.
 c    nxyphase	Number of user-specified xyphases.
 c    nants	Number of antennae.
+c    vsolve	True if we are solving for Stokes-V
 c  Output:
 c    D		The initial leakage terms.
 c    xyp	The initial xyphases.
@@ -2303,6 +2354,8 @@ c
 	  endif
 	  call hdaccess(item,iostat)
 	else
+	  if(vsolve)call bug('f',
+     *	    'A leakage table must exist to use options=vsolve')
 	  n = 0
 	endif
 	do i=n+1,nants
@@ -2509,11 +2562,11 @@ c
 	end
 c************************************************************************
 	subroutine GetOpt(dopass,amphsol,polsol,xysol,xyref,
-     *			xyvary,polref,qusolve,oldflux,circular)
+     *			xyvary,polref,qusolve,vsolve,oldflux,circular)
 c
 	implicit none
-	logical dopass,amphsol,polsol,xysol,xyvary,xyref,polref,qusolve
-	logical oldflux,circular
+	logical dopass,amphsol,polsol,xysol,xyvary,xyref,polref
+	logical qusolve,vsolve,oldflux,circular
 c
 c  Get processing options.
 c
@@ -2527,16 +2580,17 @@ c    xyref	Solve for the xy phase of the reference.
 c    polref	Solve for reference antenna misalignment and differential
 c               ellipticity.
 c    qusolve	Solve for Q and U as well as everything else.
+c    vsolve	Solve for V as well as everything else.
 c    oldflux	Use pre-Aug 1994 ATCA flux scale.
 c    circular   Expect/handle circularly polarised feeds.
 c------------------------------------------------------------------------
 	integer nopt
-	parameter(nopt=10)
+	parameter(nopt=11)
 	logical present(nopt)
 	character opts(nopt)*10
 	data opts/'noamphase ','nopol     ','polref    ','noxy      ',
      *    	  'xyref     ','qusolve   ','xyvary    ','nopass    ',
-     *		  'oldflux   ','circular  '/
+     *		  'oldflux   ','circular  ','vsolve    '/
 c
 	call options('options',opts,present,nopt)
 	amphsol = .not.present(1)
@@ -2549,6 +2603,7 @@ c
 	dopass  = .not.present(8)
 	oldflux = present(9)
 	circular= present(10)
+	vsolve  = present(11)
 c
 	if(.not.polsol.and.polref.and.
      *	  ((xysol.and..not.xyvary).or.qusolve))then
