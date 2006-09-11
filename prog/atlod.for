@@ -163,6 +163,12 @@ c		  option.
 c    rjs  17jul96 Flag if there are glitches in the XY amplitude.
 c    rjs  22nov96 Reset median-based flaggers after a scan change.
 c    rjs  05dec96 Write pointing centre RA and DEC if needed.
+c    rjs  03feb97 Better error messages, and make it more robust to multibeam
+c		  datasets. NOTE: To change it so that multibeam datasets
+c		  can be read:
+c		  * Set ATANT to 15 in atlod.h
+c		  * Comment out checks for invalid antennas in antchk
+c		  * Get rid of skip when jstat.eq.5 in RPDISP.
 c
 c  Program Structure:
 c    Miriad atlod can be divided into three rough levels. The high level
@@ -200,7 +206,7 @@ c
 c
 c  Externals.
 c
-	character itoaf*8
+	character rperr*32,itoaf*8
 c
 c  Get the input parameters.
 c
@@ -277,7 +283,7 @@ c
 c  Close up shop.
 c
 	if(iostat.ne.0)then
-	  line = 'RPFITS i/o error: jstat='//itoaf(iostat)
+	  line = 'RPFITS i/o error: '//rperr(iostat)
 	  call bug('w',line)
 	  call bug('w','Prematurely finishing because of errors')
 	  call hiswrite(tno,'ATLOD: '//line)
@@ -753,10 +759,16 @@ c
 	  if(more)i = i + 1
 	  more = more.and.i.le.nants
 	enddo
-	if(i.gt.nants)call bug('f','Bad antenna table')
-	cost = x(i) / r
-	sint = y(i) / r
-	z0 = z(i)
+	if(i.gt.nants)then
+	  call bug('w','Antenna table is identically 0!!')
+	  cost = 1
+	  sint = 0
+	  z0 = 0
+	else
+	  cost = x(i) / r
+	  sint = y(i) / r
+	  z0 = z(i)
+	endif
 c
 	do i=1,nants
 	  temp = x(i)*cost + y(i)*sint - r
@@ -1853,14 +1865,43 @@ c------------------------------------------------------------------------
 	real ut,u,v,w,weight
 	complex vis
 c
-	character itoaf*8
+	character rperr*32
 c
 	jstat = 2
 	call rpfitsin(jstat,vis,weight,baseln,ut,u,v,w,flag,
      *						bin,ifno,srcno)
 	if(jstat.eq.3)jstat = 0
 	if(jstat.ne.0)call bug('w',
-     *		'Error while skipping: jstat='//itoaf(jstat))
+     *		'Error while skipping: '//rperr(jstat))
+	end
+c************************************************************************
+	character*(*) function RPErr(jstat)
+c
+	implicit none
+	integer jstat
+c
+c  Translate an RPFITSIN jstat value into something a bit more
+c  meaningful.
+c------------------------------------------------------------------------
+	character itoaf*8
+c
+	integer NMESS
+	parameter(NMESS=7)
+	character mess(NMESS)*32
+	data mess/'Operation unsuccessful          ',
+     *		  'Operation successful            ',
+     *            'Encountered header while reading',
+     *		  'Probably OK ... End of scan     ',
+     *		  'Encountered end-of-file	   ',
+     *		  'Encountered FG table            ',
+     *		  'Illegal parameter encountered   '/
+c
+	if(jstat.ge.-1.and.jstat.le.5)then
+	  rperr = mess(jstat+2)
+	else
+	  rperr = 'RPFITS error: jstat='//itoaf(jstat)
+	endif
+c
 	end
 c************************************************************************
 	subroutine RPClose(jstat)
@@ -1872,13 +1913,13 @@ c------------------------------------------------------------------------
 	real ut,u,v,w,weight
 	complex vis
 c
-	character itoaf*8
+	character rperr*32
 c
 	jstat = 1
 	call rpfitsin(jstat,vis,weight,baseln,ut,u,v,w,flag,
      *						bin,ifno,srcno)
 	if(jstat.ne.0)call bug('w',
-     *		'Error closing file: jstat='//itoaf(jstat))
+     *		'Error closing file: '//rperr(jstat))
 	end
 c************************************************************************
 	subroutine RPOpen(in,jstat)
@@ -1897,7 +1938,7 @@ c
 c
 c  External.
 c
-	character itoaf*8
+	character rperr*32
 c
 	file = in
 c
@@ -1906,7 +1947,7 @@ c
 	call rpfitsin(jstat,vis,weight,baseln,ut,u,v,w,flag,
      *						bin,ifno,srcno)
 	if(jstat.ne.0) call bug('w',
-     *	    'Error opening RPFITS file: jstat='//itoaf(jstat))
+     *	    'Error opening RPFITS file: '//rperr(jstat))
 	if(jstat.ne.0)return
 c
 c  Read the header.
