@@ -58,6 +58,8 @@ c    rjs  21mar97    Support writing of binary tables.
 c    rjs  20sep97    Replace julfdate,fdatejul with julday,dayjul.
 c    rjs  11may98    Better handling of IEEE NaNs and Inf, and blanking of
 c		     floating point FITS files.
+c    rjs  25jan99    Write uv FITS date in new FITS format.
+c
 c  Bugs and Shortcomings:
 c    * IF frequency axis is not handled on output of uv data.
 c
@@ -1076,7 +1078,7 @@ c------------------------------------------------------------------------
 	character string*24
 c
 	jday0 = int(T0 - 0.5d0) + 0.5d0
-	call Julday(jday0,'F',string)
+	call Julday(jday0,'T',string)
 	call fitwrhda(lu,'DATE-OBS',string)
 	TimOff(lu) = T0
 	end
