@@ -66,6 +66,7 @@ c    rjs  31jul95 Handle plangle in the polarization conversion software.
 c    rjs  10nov95 uvDatSet can disable calibration/Stokes conversion.
 c		  Initialise nPol.
 c    rjs  06dec95 line=chan,0 defaults to selecting all channels.
+c    nebk 10dec95 Be a bit cleverer (?) with reissuing calibration messages
 c
 c  User-Callable Routines:
 c    uvDatInp(key,flags)
@@ -172,6 +173,9 @@ c
 	tno = 0
 	nPolF = 0
 	nPol = 0
+        do i = 1, maxIn
+          calmsg(i) = .false.
+        end do
 c
 c  Get the input file names.
 c
@@ -285,19 +289,15 @@ c--
 c------------------------------------------------------------------------
 	include 'uvdat.h'
 	integer length
-	logical update,present,shortcut,willpass,first
+	logical update,present,shortcut,willpass
 	character obstype*16,type*1,umsg*64
 c
 c  Externals.
 c
 	logical hdprsnt
-        save first
-        data first /.true./
 c
 	if(tno.ne.0)
      *	  call bug('f','UV data file already open, in UVDatOpn')
-        if(first) dunrew=.false.
-        first = .false.
 	pnt = pnt + 1
 	if(pnt.le.nIn)then
 	  call uvopen(tno,InBuf(k1(pnt):k2(pnt)),'old')
@@ -442,22 +442,23 @@ c
 c
 c  Give output messages.
 c
-	  if(willpass.and..not.dunrew)then
+	  if(willpass.and..not.calmsg(pnt))then
 	    umsg = 'Applying bandpass corrections to '//
      *	      InBuf(k1(pnt):k2(pnt))
 	    call output(umsg)
 	  endif
-	  if(WillCal.and..not.dunrew) then
+	  if(WillCal.and..not.calmsg(pnt)) then
 	    umsg = 'Applying gain corrections to '//
      *	      InBuf(k1(pnt):k2(pnt))
 	    call output(umsg)
 	  endif
-	  if(WillLeak.and..not.dunrew)then
+	  if(WillLeak.and..not.calmsg(pnt))then
 	    umsg = 'Applying polarization leakage corrections to '//
      *	      InBuf(k1(pnt):k2(pnt))
 	    call output(umsg)
 	  endif
 	  WillCal = WillCal.or.willpass
+          if(willpass.or.willcal.or.willleak) calmsg(pnt) = .true.
 c
 c  All done. Return with the bacon.
 c
@@ -553,7 +554,6 @@ c------------------------------------------------------------------------
 	if(tno.ne.0)call bug('f',
      *		'Uv files still open, when uvDatRew called')
 	pnt = 0
-        dunrew = .true.
 	end
 c************************************************************************
 c* uvDatCls -- Close a uv data file from a multi-file set.
