@@ -54,6 +54,7 @@ c    rjs  14mar97    Handle FITS tables with FORM strings of type 'C'.
 c		     Handle (simplistically) variable length array facility.
 c    rjs  18mar97    Remove checks for alignment violation, as this requirement
 c		     in hio has been eliminated.
+c    rjs  21mar97    Support writing of binary tables.
 c
 c  Bugs and Shortcomings:
 c    * IF frequency axis is not handled on output of uv data.
@@ -3130,13 +3131,13 @@ c--
 c------------------------------------------------------------------------
 	integer i
 c
-	character string*7
+	character string*10
 	include 'fitsio.h'
 c
 c  Externals.
 c
 	integer ftabSize,ftabColn
-	data string/'IIARDXL'/
+	data string/'IIARDXLCMP'/
 c
 c  Did we fail to find match? Is so, return indicating that it was not found.
 c
@@ -3612,4 +3613,392 @@ c
 	data FormSize(FormP)/ 64/
 c
 	ftabSize = FormSize(Form)
+	end
+c************************************************************************
+c* ftabdini -- Start definition of new output table.
+c& rjs
+c: fits
+c+
+	subroutine ftabdini(lu,ename)
+c
+	implicit none
+	integer lu
+	character ename*(*)
+c
+c  Start the definition of an output FITS table.
+c
+c  Input:
+c    lu		Handle of the FITS file.
+c    ename	Name of the extension table.
+c    nrows	Total number of rows in the table.
+c--
+c------------------------------------------------------------------------
+	include 'fitsio.h'
+	integer indx
+c
+c  Externals.
+c
+	logical fithdini
+c
+	if(.not.new(lu))
+     *	  call bug('f','Cannot add a table to an old file')
+	if(.not.fithdini(lu,-1))
+     *	  call bug('f','Something is very screwy in ftabdini')
+	nExtOff(lu) = 1
+	ExtNo(lu) = 1
+	indx = ExtNo(lu)
+c
+	ExtOff(indx,lu) = HdOff(lu)
+	ExtName(indx,lu) = ename
+	rows(lu) = 0
+	width(lu) = 0
+	cols(lu) = 0
+c	
+	end
+c************************************************************************
+c* ftabdfin -- Finish definition of a new output table.
+c& rjs
+c: fits
+c+
+	subroutine ftabdfin(lu)
+c
+	implicit none
+	integer lu
+c
+c  Finish the definition of a new output FITS table.
+c
+c  Input:
+c    lu		Handle of the FITS file.
+c--
+c------------------------------------------------------------------------
+	include 'fitsio.h'
+	integer j,l,indx,size
+	character string*8,num*8,types*10
+c
+c  Externals.
+c
+	integer len1,ftabsize
+	character itoaf*8
+c
+	data types/'IJAEDXLCMP'/
+c
+	if(.not.new(lu))
+     *	  call bug('f','Cannot add a table to an old file')
+	if(cols(lu).le.0)
+     *	  call bug('f','Invalid number of columns, in ftabdfin')
+	indx = ExtNo(lu)
+	call fitsize(lu,width(lu)*rows(lu))
+	call fitwrhda(lu,'XTENSION','BINTABLE')
+	call fitwrhdi(lu,'BITPIX',8)
+	call fitwrhdi(lu,'NAXIS',2)
+	call fitwrhdi(lu,'NAXIS1',width(lu))
+	call fitwrhdi(lu,'NAXIS2',rows(lu))
+	call fitwrhdi(lu,'PCOUNT',0)
+	call fitwrhdi(lu,'GCOUNT',1)
+	call fitwrhdi(lu,'TFIELDS',cols(lu))
+c
+	do j=1,cols(lu)
+	  num = itoaf(j)
+	  call fitwrhda(lu,'TTYPE'//num,ColType(j,lu))
+	  size = ftabSize(ColForm(j,lu))
+	  string = itoaf(ColCnt(j,lu)/size)
+	  l = len1(string)
+	  string(l+1:) = types(ColForm(j,lu):ColForm(j,lu))
+	  call fitwrhda(lu,'TFORM'//num,string)
+	  call fitwrhda(lu,'TUNIT'//num,ColUnits(j,lu))
+	enddo
+	call fitwrhda(lu,'EXTNAME',ExtName(indx,lu))
+c
+	end
+c************************************************************************
+c* ftabdef -- Define a column in the new output table.
+c& rjs
+c: fits
+c+
+	subroutine ftabdef(lu,name,type,units,nrow,nval)
+c
+	implicit none
+	integer lu
+	character name*(*),type*1,units*(*)
+	integer nrow,nval
+c
+c  Define a column in a new output FITS table.
+c
+c  Input:
+c    lu		Handle of the FITS file.
+c    name	Name of the column.
+c    type	Datatype of the column.
+c    units	Units of the column.
+c    nrow	Number of rows.
+c    nval	Number of values.
+c--
+c------------------------------------------------------------------------
+	include 'fitsio.h'
+	integer size
+c
+c  Externals.
+c
+	integer ftabsize
+c
+	if(.not.new(lu))
+     *	  call bug('f','Cannot add a table to an old file')
+c
+	if(rows(lu).eq.0)then
+	  rows(lu) = nrow
+	  if(nrow.le.0)
+     *	    call bug('f','Invalid number of rows in output table')
+	else if(rows(lu).ne.nrow)then
+	  call bug('f','The number of rows in a table must be constant')
+	endif
+	cols(lu) = cols(lu) + 1
+	if(cols(lu).gt.MAXCOL)
+     *	  call bug('f','Too many columns in output table')
+	ColType(cols(lu),lu) = name
+	ColUnits(cols(lu),lu) = units
+	ColForm(cols(lu),lu) = index('JIARDXLCMP',type)
+	if(ColForm(cols(lu),lu).eq.0)
+     *	  call bug('f','Invalid data type in output table')
+	size = ftabSize(ColForm(cols(lu),lu))
+	ColOff(Cols(lu),lu) = width(lu)
+	ColCnt(Cols(lu),lu) = nval*size
+	if(nval.lt.0)
+     *	  call bug('f','Invalid number of elements in output table')
+	width(lu) = width(lu) + (size*nval+7)/8
+	end
+c************************************************************************
+c* ftabputr -- Put real data into the current FITS table.
+c& rjs
+c: fits
+c+
+	subroutine ftabputr(lu,name,irow,data)
+c
+	implicit none
+	integer lu, irow
+	real data(*)
+	character name*(*)
+c
+c  Get ascii data from the current FITS table.
+c
+c  Input:
+c    lu		Handle of the FITS file.
+c    name	Name of the parameter to return.
+c    irow       Row number to return (0=all)
+c    data	The data values.
+c--
+c------------------------------------------------------------------------
+	include 'fitsio.h'
+	integer type,ifirst,ilast,offset,length,wide,inc,idx,iostat,i
+c
+	call ftabput(lu,name,irow,type,ifirst,ilast,inc,offset,length,
+     *								  wide)
+c
+	if(type.ne.FormE)
+     *	  call bug('f','Incompatible data type in ftabputr')
+c
+	idx = 1
+	do i=ifirst,ilast
+	  call hwriter(item(lu),data(idx),offset,length,iostat)
+	  if(iostat.ne.0)then
+	    call bug('w','I/O error while reading FITS table')
+	    call bugno('f',iostat)
+	  endif
+	  idx = idx + inc
+	  offset = offset + wide
+	enddo
+c
+	end
+c************************************************************************
+c* ftabputd -- Put double precision data into the current FITS table.
+c& rjs
+c: fits
+c+
+	subroutine ftabputd(lu,name,irow,data)
+c
+	implicit none
+	integer lu, irow
+	double precision data(*)
+	character name*(*)
+c
+c  Get ascii data from the current FITS table.
+c
+c  Input:
+c    lu		Handle of the FITS file.
+c    name	Name of the parameter to return.
+c    irow       Row number to return (0=all)
+c    data	The data values.
+c--
+c------------------------------------------------------------------------
+	include 'fitsio.h'
+	integer type,ifirst,ilast,offset,length,wide,inc,idx,iostat,i
+c
+	call ftabput(lu,name,irow,type,ifirst,ilast,inc,offset,length,
+     *								  wide)
+c
+	if(type.ne.FormD)
+     *	  call bug('f','Incompatible data type in ftabputd')
+c
+	idx = 1
+	do i=ifirst,ilast
+	  call hwrited(item(lu),data(idx),offset,length,iostat)
+	  if(iostat.ne.0)then
+	    call bug('w','I/O error while reading FITS table')
+	    call bugno('f',iostat)
+	  endif
+	  idx = idx + inc
+	  offset = offset + wide
+	enddo
+c
+	end
+c************************************************************************
+c* ftabputi -- Put integer data into the current FITS table.
+c& rjs
+c: fits
+c+
+	subroutine ftabputi(lu,name,irow,data)
+c
+	implicit none
+	integer lu, irow
+	integer data(*)
+	character name*(*)
+c
+c  Get ascii data from the current FITS table.
+c
+c  Input:
+c    lu		Handle of the FITS file.
+c    name	Name of the parameter to return.
+c    irow       Row number to return (0=all)
+c    data	The data values.
+c--
+c------------------------------------------------------------------------
+	include 'fitsio.h'
+	integer type,ifirst,ilast,offset,length,wide,inc,idx,iostat,i
+c
+	call ftabput(lu,name,irow,type,ifirst,ilast,inc,offset,length,
+     *								  wide)
+c
+	if(type.ne.FormJ.and.type.ne.FormI)
+     *	  call bug('f','Incompatible data type in ftabputi')
+c
+	idx = 1
+	do i=ifirst,ilast
+	  if(type.eq.FormJ)then
+	    call hwritej(item(lu),data(idx),offset,length,iostat)
+	  else
+	    call hwritei(item(lu),data(idx),offset,length,iostat)
+	  endif	    
+	  if(iostat.ne.0)then
+	    call bug('w','I/O error while reading FITS table')
+	    call bugno('f',iostat)
+	  endif
+	  idx = idx + inc
+	  offset = offset + wide
+	enddo
+c
+	end
+c************************************************************************
+c* ftabputa -- Put ascii data into the current FITS table.
+c& rjs
+c: fits
+c+
+	subroutine ftabputa(lu,name,irow,data)
+c
+	implicit none
+	integer lu, irow
+	character data(*)*(*)
+	character name*(*)
+c
+c  Get ascii data from the current FITS table.
+c
+c  Input:
+c    lu		Handle of the FITS file.
+c    name	Name of the parameter to return.
+c    irow       Row number to return (0=all)
+c    data	The data values.
+c--
+c------------------------------------------------------------------------
+	include 'fitsio.h'
+	integer type,ifirst,ilast,offset,length,wide,inc,idx,iostat,i
+c
+	call ftabput(lu,name,irow,type,ifirst,ilast,inc,offset,length,
+     *								  wide)
+c
+	if(type.ne.FormA)
+     *	  call bug('f','Incompatible data type in ftabputa')
+	if(len(data(1)).ne.inc)
+     *	  call bug('f','Incompatible data length in ftabputa')
+c
+	idx = 1
+	do i=ifirst,ilast
+	  call hwriteb(item(lu),data(idx),offset,length,iostat)
+	  if(iostat.ne.0)then
+	    call bug('w','I/O error while reading FITS table')
+	    call bugno('f',iostat)
+	  endif
+	  idx = idx + 1
+	  offset = offset + wide
+	enddo
+c
+	end
+c************************************************************************
+	subroutine ftabput(lu,name,irow,type,ifirst,ilast,inc,
+     *						offset,length,wide)
+c
+	implicit none
+	integer lu,irow,type,ifirst,ilast,inc,offset,length,wide
+	character name*(*)
+c
+c  Stuff common to the ftabput routines.
+c------------------------------------------------------------------------
+	include 'fitsio.h'
+	integer i,size
+	character umsg*64
+c
+c  Externals.
+c
+	integer ftabsize,ftabcoln
+	
+c
+c  Check that it is the right sort of operation for this file.
+c
+	if(.not.new(lu))call bug('f','Cannot write old FITS file')
+c
+c  If its a new file, and this is the first call to perform data i/o on it
+c  (not header i/o), handle the header properly.
+c
+	if(DatOff(lu).eq.0)call fithdfin(lu)
+c
+c  Find this parameter in the table.
+c
+	i = ftabColn(lu,name)
+	if(i.le.0)then
+	  umsg = 'FITS table does not have the parameter: '//name
+	  call bug('f',umsg)
+	endif
+c
+	type = ColForm(i,lu)
+c
+c  Does row exist?
+c
+	if(irow.gt.rows(lu))then
+	  umsg = 'Requested row does not exist'
+	  call bug('f',umsg)
+	endif
+c
+	size = ftabSize(ColForm(i,lu))
+c
+c  All it OK. So just read the data.
+c
+	offset = DatOff(lu) + ColOff(i,lu)
+        if (irow .lt .1) then
+           ifirst = 1
+           ilast = rows(lu)
+        else
+           ifirst = irow
+           ilast = irow
+           offset = offset + (irow-1)*width(lu)
+        end if
+	inc = ColCnt(i,lu)/size
+	length = ColCnt(i,lu)/8
+	wide = width(lu)
+c
 	end
