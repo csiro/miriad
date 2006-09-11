@@ -100,6 +100,7 @@ c    rjs  28sep95 Fix bug I introduced two days ago.
 c    rjs  17oct95 Correct initialisation bug when first integration is all
 c		  bad.
 c    rjs  19oct95 options=all
+c    rjs  16nov95 Use different colours and PGRNGE.
 c  Bugs:
 c------------------------------------------------------------------------
 	include 'mirconst.h'
@@ -790,7 +791,7 @@ c    npnts
 c  Output:
 c    range
 c------------------------------------------------------------------------
-	double precision dmax,dmin,delta,maxv
+	double precision dmax,dmin
 	integer i
 c
 	dmax = data(1)
@@ -800,12 +801,8 @@ c
 	  dmin = min(data(i),dmin)
 	enddo
 c
-	delta = 0.05*(dmax - dmin)
-	maxv = max(abs(dmax),abs(dmin))
-	if(delta.le.1e-4*maxv) delta = 0.01*maxv
-	if(delta.eq.0) delta = 1
-	range(1) = dmin - delta
-	range(2) = dmax + delta
+	call pgrnge(real(dmin),real(dmax),range(1),range(2))
+c
 	end
 c************************************************************************
 	subroutine SetAxisR(data,npnts,range)
@@ -854,23 +851,19 @@ c
 c
 c  Draw a plot
 c------------------------------------------------------------------------
+	integer NCOL
+	parameter(NCOL=12)
 	integer hr,mins,sec,b1,b2,l,i,j,xl,yl,symbol,lp,lt
 	character title*64,baseline*12,tau*16,line*80
 	character pollab*32
 	double precision T0
 	real yranged(2)
 c
-	integer NCOL
-	parameter(NCOL=12)
-	integer cols(NCOL)
-	save cols
-c
 c  Externals.
 c
 	integer len1
 	character itoaf*4,PolsC2P*2
 c
-	data cols/1,7,2,5,3,4,6,8,9,10,11,12/
 c
         symbol = 17
         if (dodots) symbol = 1
@@ -886,7 +879,7 @@ c
 c
 	call pgbox('BCNST',0.,0.,'BCNST',0.,0.)
 	do i=1,nplts
-	  call pgsci(cols(mod(i-1,NCOL)+1))
+	  call pgsci(mod(i-1,NCOL)+1)
 	  if(dopoint)then
 	    call pgpt(plot(i+1)-plot(i),xp(plot(i)),yp(plot(i)),symbol)
 	  else
