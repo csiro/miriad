@@ -80,7 +80,8 @@ c       flag0     Filter on channel 0 for wbcorr data
 c       avall     Average all frequency channels
 c--
 c  History:
-c    lss 14sep02 Original version copied from calred.
+c    lss  14sep02 Original version copied from calred.
+c    nebk 09sep04 Add format fix from Chris Phillips
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
@@ -88,7 +89,7 @@ c------------------------------------------------------------------------
 	integer PolMin,PolMax
 	character version*(*)
 	integer MAXPL
-	parameter(version='version 08-oct-02')
+	parameter(version='version 09-sep-04')
 	parameter(MAXDAT=15,MAXPOL=2,MAXSRC=1024,MAXPT=5000000)
 	parameter(MAXPL=32)
 	parameter(PolMin=-8,PolMax=4)
@@ -237,8 +238,8 @@ c
 	  line='# Output from wbplt'
 	  call txtwrite(lOut,line,len1(line),iostat)
 	  if(iostat.ne.0) call bug ('f', 'Error writing output file')
-	  line='# MJD, RA, DEC (J2000,rad), BASELINE, AMP, PHASE'//
-     1        ' (deg) for each channel'
+          line='# MJD, LST, RA, DEC (J2000,rad), BASELINE, AMP,'//
+       1        ' PHASE (deg) for each channel'
 	  call txtwrite(lOut,line,len1(line),iostat)
 	  if(iostat.ne.0) call bug ('f', 'Error writing output file')
 	endif
