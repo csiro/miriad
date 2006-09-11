@@ -31,6 +31,7 @@ c    mchw 15mar96 Added delay to uvvariables.
 c    rjs  29may96 Added "nbin" to uvvariables.
 c    mchw 06aug96 Dimension wideband variables MAXWIDE.
 c    rjs  11oct96 Added delra,deldec,pntra,pntdec.
+c    rjs  23jul97 Added pbtype,xtsys,ytsys,xsampler,ysampler,xyamp
 c************************************************************************
 c*VarInit -- Initialise the copy routines.
 c:uv-data
@@ -86,7 +87,7 @@ c
 	integer i
 c
 	integer nvar,nline,nwide,nvelo
-	parameter(nvar=71,nline=8,nwide=3,nvelo=4)
+	parameter(nvar=77,nline=8,nwide=3,nvelo=4)
         character var(nvar)*8,line(nline)*8,wide(nwide)*8,velo(nvelo)*8
 c
 c  Variables to check for a change, for line=channel.
@@ -119,7 +120,8 @@ c
      *	   'precipmm','pressmb ','ra      ','relhumid',
      *	   'source  ','telescop','temp    ','tpower  ','ut      ',
      *	   'veldop  ','veltype ','version ','vsource ','winddir ',
-     *	   'windmph ','delay   ','delay0  '/
+     *	   'windmph ','delay   ','delay0  ','xtsys   ','ytsys   ',
+     *	   'xsampler','ysampler','xyamp   ','pbtype  '/
 c------------------------------------------------------------------------
 	avall = .false.
 c
