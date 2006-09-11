@@ -19,8 +19,11 @@ c    mchw 17jul90 increased frequency search range in CalGet since flux
 c			table does not have entries for many freqencies.
 c    rjs   2nov90 Fixed bug affecting points where u=0, in ModPlane.
 c    mchw 19nov90 Added flag "h" to use image header for phase center.
+c    rjs  16jan91 Check for a zero model.
+c    rjs  23jan91 Fixed bug in ModFFT which crept in on 19nov90.
 c************************************************************************
 c*ModelIni -- Ready the uv data file for processing by the Model routine.
+c&mchw
 c:model
 c+
 	subroutine ModelIni(tmod,tvis,sels,flags)
@@ -93,6 +96,7 @@ c
 	end
 c************************************************************************
 c*Model -- Calculate model visibilities, given a model image.
+c& mchw
 c:model
 c+
 	subroutine Model(flags,tvis,tmod,offset,level,tscr,
@@ -189,6 +193,8 @@ c
 	  call ModPnt(calscale,tvis,offset,level,tscr,nhead,header,
      *	    nchan,nvis,VisPow,ModPow)
 	endif
+	if(ModPow.le.0) call bug('w','Model visibilities are all zero')
+	if(VisPow.le.0) call bug('w','All visibilities are zero')
 c
 c  If we are to autoscale, then run through the output, rescaling all the
 c  data so that power is conserved.
@@ -196,6 +202,8 @@ c
 	if(index(flags,'a').ne.0)then
 	  length = nhead + 5*nchan
 	  if(length.gt.maxlen) call bug('f','MODEL: Buffer overflow')
+	  if(ModPow.le.0)
+     *	    call bug('f','Cannot autoscale to a zero model')
 	  a = sqrt(VisPow/ModPow)
 	  do j=1,nvis
 	    call scrread(tscr,Out,(j-1)*length,length)
@@ -371,12 +379,6 @@ c  Determine the location of the visibility phase center in the image.
 c
 	call rdhdr(tmod,'crval1',mra,0.)
 	call rdhdr(tmod,'crval2',mdec,0.)
-	call rdhdr(tmod,'cdelt1',dra,0.)
-	call rdhdr(tmod,'cdelt2',ddec,0.)
-	call rdhdr(tmod,'crpix1',xref,real(nx/2+1))
-	call rdhdr(tmod,'crpix2',yref,real(ny/2+1))
-	if(ddec*dra.eq.0)
-     *	  call bug('f','Pixel increment missing in model header')
 c
 	if(imhead)then
 	  vra = mra
@@ -389,6 +391,13 @@ c
 	  vdec = vdec + ddec
 	  vra = vra + dra/cos(vdec)
 	endif
+c
+	call rdhdr(tmod,'cdelt1',dra,0.)
+	call rdhdr(tmod,'cdelt2',ddec,0.)
+	call rdhdr(tmod,'crpix1',xref,real(nx/2+1))
+	call rdhdr(tmod,'crpix2',yref,real(ny/2+1))
+	if(ddec*dra.eq.0)
+     *	  call bug('f','Pixel increment missing in model header')
 c
 	xref = cos(vdec) * (vra  - mra ) / dra  + xref
 	yref =             (vdec - mdec) / ddec + yref
@@ -843,7 +852,7 @@ c
 	  endif
 	  if(.not.isplanet)then
 	    flux = 0
-	    call CalGet(' ',source1,freq,100.,day,300.,flux,iostat)
+	    call CalGet(' ',source1,freq,100.,day,1000.,flux,iostat)
             umsg = 'Error determining flux of '//source
 	    if(iostat.ne.0) call bug('f', umsg )
 	  endif
