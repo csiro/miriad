@@ -24,6 +24,7 @@ c   bpw     16aug93 changed an accidental len to len1 in atodf
 c   rjs      3nov94 Treat [] and {} as brackets in GetField.
 c   rjs     06feb95 Fixed handling of quotes in getfield. What did bpw do?
 c   rjs     25jul97 Treat " and ' as quote characters.
+c   rjs     03aug98 Included updated version of matodf and matorf.
 c-----------------------------------------------------------------------
 c 
 c* atoif -- Convert a string into an integer.
@@ -140,42 +141,6 @@ c------------------------------------------------------------------------
        result= dresult
 c
        end
-***********************************************************************
-c* matorf - convert a string to many real numbers
-c& bpw
-c: strings
-c+
-      subroutine matorf( string, array, n, ok )
-
-      character*(*)    string
-      real             array(*)
-      integer          n
-      logical          ok
-
-c Convert a string to many real numbers. The numbers must be separated
-c by commas (as produced by keyword input).
-c
-c Input:
-c   string      The ascii string containing the numbers
-c   n           The number of reals wanted
-c Output:
-c   array       The real numbers in the string
-c   ok          True if the decoding succeeded
-c--
-c-----------------------------------------------------------------------
-      character*30     number, substr
-      double precision d
-      integer          i, len1
-      ok = .true.
-      do i = 1, n
-         if ( ok ) then
-            number = substr( string, i )
-            ok = number .ne. ' '
-            if( ok ) call atodf( number(:len1(number)), d, ok )
-            if( ok ) array(i) = d
-         endif
-      enddo
-      end
 C************************************************************************
 c* atodf -- Convert a string into a double precision.
 c& bpw
@@ -278,42 +243,94 @@ c
 	ok = state.ne.bad.and.digits.gt.0
 	if ( ok ) d = dtemp
 	end
-**********************************************************************
+c************************************************************************
 c* matodf - convert a string to many double precision numbers
 c& bpw
 c: strings
 c+
       subroutine matodf( string, array, n, ok )
-
+ 
       character*(*)    string
-      double precision array(*)
-      integer          n
+      double precision array(n)
+      integer          n 
       logical          ok
-
-c Convert a string to many double precision numbers. The numbers must be
-c separated by commas (as produced by keyword input).
+c 
+c Convert a string to many double precision numbers.
 c
-c Input:
+c Input: 
 c   string      The ascii string containing the numbers
-c   n           The number of reals wanted
+c   n           The number of values wanted
 c Output:
 c   array       The double precision numbers in the string
 c   ok          True if the decoding succeeded
 c--
 c-----------------------------------------------------------------------
-      character*30     number, substr
-      double precision d
-      integer          i, len1
-      ok = .true.
-      do i = 1, n
-         if ( ok ) then
-            number = substr( string, i )
-            ok = number .ne. ' '
-            if( ok ) call atodf( number(:len1(number)), d, ok )
-            if( ok ) array(i) = d
-         endif
-      enddo
-      end
+      character*30     substr
+      double precision dval
+      integer          tlen,k,k1,k2
+c
+c  External
+c
+	integer len1
+c
+        k1 = 1
+        k2 = len1(string)
+        k  = 0
+        do while (k1.le.k2.and.k.lt.n)
+          call getfield(string, k1, k2, substr, tlen)
+          call atodf(substr,dval,ok)
+          if(ok) then
+            k = k+1
+            array(k) = dval
+          else
+            return
+          endif
+        enddo
+	end
+c************************************************************************
+c* matorf - convert a string to many real numbers
+c& bpw
+c: strings
+c+
+      subroutine matorf( string, array, n, ok )
+ 
+      character*(*)    string
+      real             array(n)
+      integer          n 
+      logical          ok
+c 
+c Convert a string to many real numbers.
+c
+c Input: 
+c   string      The ascii string containing the numbers
+c   n           The number of values wanted
+c Output:
+c   array       The real numbers in the string
+c   ok          True if the decoding succeeded
+c--
+c-----------------------------------------------------------------------
+      character*30     substr
+      double precision dval
+      integer          tlen,k,k1,k2
+c
+c  External
+c
+	integer len1
+c
+        k1 = 1
+        k2 = len1(string)
+        k  = 0
+        do while (k1.le.k2.and.k.lt.n)
+          call getfield(string, k1, k2, substr, tlen)
+          call atodf(substr,dval,ok)
+          if(ok) then
+            k = k+1
+            array(k) = dval
+          else
+            return
+          endif
+        enddo
+	end
 c************************************************************************
 c* Itoaf -- Convert an integer into a string.
 c& bpw
