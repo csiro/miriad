@@ -93,6 +93,8 @@ c		    usage of dra, to bring it into line with whats written
 c		    in the uv var "bible".
 c    rjs   11aug94  Better scaling for sloppy and vsloppy options. Also
 c		    describe this in the help.
+c    rjs   17aug94  Slightly better determination of the offset.
+c    rjs   16sep94  Doc only.
 c
 c  Bugs:
 c    ?? Perfect??
@@ -137,14 +139,18 @@ c	Image cell size, in arcsec. If two values are given, they give
 c	the RA and DEC cell sizes. If only one value is given, the cells
 c	are made square. No default.
 c@ fwhm
-c	Full width at half maximum, in arcsec, of a gaussian which
-c	represents the typical resolution of interest in the source. If
-c	two values are given, they are used as the fwhm in RA and DEC
-c	respectively. If one value is given, it is used for both RA and
-c	DEC. This parameter is used to determine the uv-taper to apply to
-c	the data to optimize the signal to noise for sources of that
-c	particular angular size. Set FWHM to zero if you want the full
-c	resolution of the data. Default is 0.
+c	This determines a gaussian taper to apply to the visibility data.
+c	It specifies the FWHM of an image-domain gaussian -- tapering the
+c	visibility data is equivalent to convolving with this image-domain
+c	gaussian.
+c
+c	Either one or two values can be given, in arcsec, being the FWHM in
+c	the RA and DEC directions. If only one value is given, the taper is
+c	assumed to be symmetric. The default is no taper.
+c
+c	The signal-to-noise ratio will be optimised in the output image if
+c	this parameter is set to the FWHM of typical image features of
+c	interest.
 c
 c	If you are more accustomed to giving this parameter in the uv plane
 c	(as AIPS requires), then:
@@ -228,12 +234,9 @@ c	  mfs      Perform multi-frequency synthesis. The causes all the
 c	           channel data to be used in forming a single map. The
 c	           frequency dependence of the uv coordinate is thus used to
 c	           give better uv coverage and/or avoid frequency
-c	           smearing. For this option to produce useful maps, the
-c	           intensity change over the frequency band must be low
-c	           and/or the deconvolution step has compensate for the
-c	           spectral variation. See the ``sbeams'' parameter, and
-c	           task MFCLEAN.   You should set the ``line'' parameter
+c	           smearing. You should set the ``line'' parameter
 c	           to select the channels that you wish to grid.
+c	           Also see the ``sbeams'' keyword.
 c	  double   Make the beam twice as big as the size given.
 c	  amplitude Produce a map, using the data amplitude only. The phase
 c	           is set to zero.
@@ -275,16 +278,17 @@ c	           understood by Jy/dirty beam. Additionally the beam peak value
 c	           will vary from plane to plane, and so the flux density scale
 c	           may not be comparable from plane to plane.
 c@ sbeams
-c	This parameter only has meaning when using ``options=mfs''. Two
-c	values can be given. The first value determines the highest order
-c	``spectral dirty beam'' that will be formed. The second gives
+c	This parameter only has meaning when using ``options=mfs'', and is
+c	used only if you intend to use (or may use) the MFCLEAN deconvolution
+c	task. Two values can be given. The first value determines the highest
+c	order ``spectral dirty beam'' that will be formed. The second gives
 c	the reference frequency of the spectral dirty beams. The default order
 c	is 0 (i.e. form the normal beam only), and the default reference
 c	frequency is the geometric mean of the data frequencies.
 c--
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Invert: version 1.0 15-Nov-93')
+	parameter(version='Invert: version 1.0 17-Aug-94')
 	integer MAXPOL
 	parameter(MAXPOL=4)
 	include 'maxdim.h'
@@ -303,7 +307,7 @@ c  A buffer used for the gridding and FFT process.
 c
 	integer maxout
 	parameter(maxout=5)
-	real fwhmx,fwhmy,Supx,Supy,cellx,celly,shftx,shfty
+	real fwhmx,fwhmy,Supx,Supy,cellx,celly,shftx,shfty,shiftx,shifty
 	real Tu,Tv,gdu,gdv,wdu,wdv,umax,vmax
 	real Rms,Tsys,JyperK,totint,freq0,freq1
 	character vis*64,outs(maxout)*64,line*64,flags*16,slop*4
@@ -378,7 +382,7 @@ c
      *	  call bug('f','A beam name must given, if sbeams is non-zero')
 	call keyr('sbeams',freq0,0.)
         call keyr('offset',shftx,0.0)
-        call keyr('offset',shfty,shftx)
+        call keyr('offset',shfty,0.0)
 	call keyr('fwhm',fwhmx,0.)
 	call keyr('fwhm',fwhmy,fwhmx)
 	call keyr('cell',cellx,0.)
@@ -442,6 +446,8 @@ c
 	celly = pi/(180*3600)*celly
 	shftx = pi/(180*3600)*shftx
 	shfty = pi/(180*3600)*shfty
+	shiftx = shftx
+	shifty = shfty
 c
 c  Put cdelt1, cdelt2 into common for use in HdCheck
 c  -further rationalization would also use these in makemap
@@ -462,12 +468,12 @@ c
 	call scropen(tscr)
 	if(mfs)then
 	  call GetVsMFS(systemp,npol,nbeams,tscr,
-     *		vis,nvis,totint,umax,vmax,freq1,doimag)
+     *		vis,nvis,totint,umax,vmax,freq1,doimag,shftx,shfty)
 	  if(freq0.le.0)freq0 = freq1
 	  nz = 1
 	else
 	  call GetVis(slop,slopfac,systemp,npol,tscr,
-     *		vis,nz,nvis,totint,umax,vmax,doimag)
+     *		vis,nz,nvis,totint,umax,vmax,doimag,shftx,shfty)
 	  nbeams = 0
 	endif
 	call HdFin(freq0)
@@ -569,10 +575,11 @@ c	    if(slop.ne.'none'.and.iout.ne.1)npl = 1
 		endif
 		if(iout.eq.1)then
 		  call makemap(tno,outs(iout),nx1,ny1,nschan(iout),
-     *			0.,0.,-cellx,celly,0.,iout-1,.true.)
+     *			0.,0.,0.,0.,-cellx,celly,0.,iout-1,.true.)
 		else
 		  call makemap(tno,outs(iout),nx1,ny1,nschan(iout),
-     *			shftx,shfty,-cellx,celly,rms,iout-1,.false.)
+     *			shftx,shfty,shiftx,shifty,
+     *			-cellx,celly,rms,iout-1,.false.)
 		endif
 	        call history(tvis,tno,nvis,width,func,alpha,
      *			rms,Tsys,JyperK,TotInt,version)
@@ -668,12 +675,13 @@ c
 	end
 c************************************************************************
 	subroutine GetVsMFS(systemp,npol,nbeams,tscr,
-     *		vis,nvis,totint,umax,vmax,freq0,doimag)
+     *		vis,nvis,totint,umax,vmax,freq0,doimag,shftx,shfty)
 c
 	implicit none
 	logical systemp,doimag
 	integer tscr,nvis,npol,nbeams
 	real umax,vmax,totint,freq0
+	real shftx,shfty
 	character vis*(*)
 c
 c  Read a visibility file, selects the appropriate data, then writes
@@ -691,6 +699,9 @@ c    npol	Number of polarisations to map.
 c    nbeams	Number of spectral dirty beams to reserve space for.
 c    tscr	Handle of the output visibility scratch file.
 c  Input/Output:
+c    shftx,shfty The shift to apply to the data. The input is the
+c		true offsets, whereas the output are these values
+c		adjusted to counter the small angle approximation.
 c    umax,vmax	The abs maximum u and v coordinates (lambda).
 c  Outputs:
 c    vis	The name of the first uv file.
@@ -744,6 +755,7 @@ c
 	if(nchan.eq.0) call bug('f','No visibilities to map')
 	call uvDatGta('name',vis)
 	call HdIni(tvis,nchan,npol,.true.,bw)
+	call GetShft(tvis,shftx,shfty)
 	size = InData + 2*(npol+nbeams)
 c------------------------------------------------------------------------
 c  The start of the main loop.
@@ -896,7 +908,7 @@ c
 	end
 c************************************************************************
 	subroutine GetVis(slop,slopfac,systemp,npol,tscr,
-     *		vis,nchan,nvis,totint,umax,vmax,doimag)
+     *		vis,nchan,nvis,totint,umax,vmax,doimag,shftx,shfty)
 c
 	implicit none
 	logical systemp,doimag
@@ -904,6 +916,7 @@ c
 	real umax,vmax,totint
 	character vis*(*),slop*(*)
 	real slopfac(*)
+	real shftx,shfty
 c
 c  Read a visibility file, selects the appropriate data, then writes
 c  it out to a scratch file. The scratch file consists of "nvis"
@@ -929,6 +942,7 @@ c    nvis	Number of visibilities written to the scratch file.
 c    totint	The total integration time (in hours!).
 c    slopfac	Slop factor, for options=sloppy or vsloppy.
 c  Input/Output:
+c    shftx,shfty Amount to shift the data by.
 c    umax,vmax	The abs maximum u and v coordinates (lambda).
 c
 c------------------------------------------------------------------------
@@ -971,6 +985,7 @@ c
 	if(nchan.eq.0) call bug('f','No visibilities to map')
 	call uvDatGta('name',vis)
 	call HdIni(tvis,nchan,npol,.false.,bw)
+	call GetShft(tvis,shftx,shfty)
 c
 	nread = nchan
 	nproc = npol * nchan
@@ -1233,12 +1248,39 @@ c
 	      if(rtemp.le.0)call bug('w',
      *	        '... Uv variable systemp is missing or non-positive')
 	      call uvrdvrd(tvis,'sdf',dtemp,0.d0)
-	      if(dtemp.le.0)call bug('w',
-     *	        '... Uv variable sdf is missing or non-positive')
+	      if(dtemp.eq.0)call bug('w',
+     *	        '... Uv variable sdf is missing or is zero')
 	    endif
 	    call bug('w','Set the variable(s) using puthd')
 	  endif	    
 	endif
+	end
+c************************************************************************
+	subroutine GetShft(tvis,shftx,shfty)
+c
+	implicit none
+	integer tvis
+	real shftx,shfty
+c
+c  Adjust the shifts to account for the small angle approximation.
+c
+c  Input/Output:
+c    shftx,shfty  The shifts. On input, the true offsets. On output
+c		the shifts adjusted to counter the small angle
+c		approximation.
+c------------------------------------------------------------------------
+	double precision x1(2),x2(2)
+c
+	if(abs(shftx)+abs(shfty).gt.0)then
+	  x1(1) = shftx
+	  x1(2) = shfty
+	  call coInit(tvis)
+	  call coCvt(tvis,'ow/ow',x1,'op/op',x2)
+	  call coFin(tvis)
+	  shftx = x2(1)
+	  shfty = x2(2)
+	endif
+c
 	end
 c************************************************************************
 	subroutine HdIni(tvis,nchan,npol,mfs,bw)
@@ -1466,9 +1508,11 @@ c
 	endif
 c
 	if(.not.RAchang)then
-	  call uvrdvrd(tvis,'ra',t1,0.d0)
+	  call uvrdvrd(tvis,'dec',t1,0.d0)
 	  call uvrdvrr(tvis,'dra',t2,0.)
-	  t1 = t1 + t2/cos(crval2)
+	  t2 = t2/cos(t1)
+	  call uvrdvrd(tvis,'ra',t1,0.d0)
+	  t1 = t1 + t2
 	  RAchang = abs(crval1-t1).gt.0.01*abs(cdelt1)
 	endif
 	if(.not.DECchang)then
@@ -2309,13 +2353,13 @@ c
 	enddo
 	end
 c************************************************************************
-	subroutine makemap(tmap,name,nx,ny,nz,shftx,shfty,dra,ddec,rms,
-     *	  ipol,dobeam)
+	subroutine makemap(tmap,name,nx,ny,nz,shftx,shfty,sx,sy,
+     *	  dra,ddec,rms,ipol,dobeam)
 c
 	implicit none
 	integer tmap,nx,ny,nz,ipol
 	character name*(*)
-	real dra,ddec,shftx,shfty,rms
+	real dra,ddec,shftx,shfty,sx,sy,rms
 	logical dobeam
 c
 c  Create a map and its basic header.
@@ -2323,7 +2367,7 @@ c
 c  Input:
 c    name	Name of output map.
 c    nx,ny,nz	Dimensions of the map along ra, dec and velocity respectively.
-c    shftx,y    Shift of map centre (radians).
+c    shftx,y    Shift of map centre (direction cosines).
 c    dra,ddec	Map grid increments (radians).
 c    rms	Rms map noise (Jy/beam).
 c    doBeam	True if the data is a beam.
@@ -2363,13 +2407,13 @@ c
 	call wrhdr(tmap,'cdelt1',dra)
 	call wrhdr(tmap,'crpix1',real(nx/2+1)-shftx/dra)
 	call wrhda(tmap,'ctype1',ctype1)
-        if(shftx.ne.0.0) call wrhdr(tmap,'xshift',shftx)
+        if(shftx.ne.0.0) call wrhdr(tmap,'xshift',sx)
 c
 	call wrhdd(tmap,'crval2',crval2)
 	call wrhdr(tmap,'cdelt2',ddec)
 	call wrhdr(tmap,'crpix2',real(ny/2+1)-shfty/ddec)
 	call wrhda(tmap,'ctype2',ctype2)
-        if(shfty.ne.0.0) call wrhdr(tmap,'yshift',shfty)
+        if(shfty.ne.0.0) call wrhdr(tmap,'yshift',sy)
 c
 	if(cdelt3.ne.0)then
 	  call wrhdr(tmap,'crval3',real(crval3))
