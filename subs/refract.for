@@ -26,8 +26,8 @@ c    t0,p0,h0	Met data - Observatory temperature, pressure and humidity
 c		(Kelvins, Pascals and fraction).
 c
 c  Output:
-c    fac	Transmissivity.
-c    Tb		Sky brightness temperature.
+c    fac	Transmissivity (fraction between 0 and 1).
+c    Tb		Sky brightness temperature (Kelvin).
 c------------------------------------------------------------------------
 	integer N
 	parameter(N=50)
