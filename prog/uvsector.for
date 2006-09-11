@@ -43,6 +43,7 @@ c	range (0,180). The default is 5 degrees.
 c--
 c  History
 c    rjs  26mar93 Original version.
+c    rjs   1dec94 Tell about the offending LST.
 c---------------------------------------------------------------------------
 	include 'mirconst.h'
 	character version*(*)
@@ -204,7 +205,7 @@ c------------------------------------------------------------------------
 	integer i,j,n,x,y,xmin,xmax,ymin,ymax
 	integer ira,idec
 	real SumX,SumY,SumXX,SumYY,SumXY,pnts
-	double precision cdelt1,cdelt2
+	double precision cdelt1,cdelt2,crval1
 	character line*80,axisname*16
 	real r,rx,ry,rxy,theta
 c
@@ -228,6 +229,7 @@ c
      *	  call bug('f','RA or DEC axis is missing')
 	if(max(ira,idec).gt.2)
      *	  call bug('f','Input needs to be in XY order')
+	call rdhdd(tIn,'crval1',crval1,0.d0)
 	call rdhdd(tIn,'cdelt1',cdelt1,1.d0)
 	call rdhdd(tIn,'cdelt2',cdelt2,1.d0)
 c
@@ -306,6 +308,12 @@ c
 	call output(line)
 	theta = -uvpa
 	line = 'For an east-west array, this is an hour angle of '//
+     *		hangle(dble(theta))
+	call output(line)
+	theta = theta - crval1
+	theta = mod(theta,2*pi)
+	if(theta.lt.0)theta = theta + 2*pi
+	line = '                                      and LST of '//
      *		hangle(dble(theta))
 	call output(line)
 c
