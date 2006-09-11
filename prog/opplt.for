@@ -31,6 +31,11 @@ c       and the values are the limits for the plot.
 c	The default is 90 degrees (i.e. zenith).
 c@ device
 c	Plot device. Default is not to plot anything.
+c@ options
+c	Extra processing options. Currently there is only a single option.
+c	  airmass  When plotting as a function of elevation, express the
+c	           x-axis as cosec(elevation), which is also known as the
+c	           airmass.
 c@ t
 c	Temperature, in Kelvin. Default is 300.
 c@ z
@@ -45,8 +50,9 @@ c
 c--
 c
 c  History:
-c    rjs  04Feb01  Original version
-c    dpr  05Feb01  Update doc and err messages
+c    rjs  04Feb01  Original version.
+c    dpr  05Feb01  Update doc and err messages.
+c    rjs  06feb01  Added options=airmass.
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	integer n,nmax
@@ -55,7 +61,7 @@ c
 	real t0,h
 	real nu,Tb,tau,Ldry,Lvap,T(n),Pdry(n),Pvap(n),P,zd,z(n)
 	real f1,f2,finc,el1,el2,elinc,P0,z0,el
-	logical dofr,doel
+	logical dofr,doel,airmass
 	real x(NMAX),y1(NMAX),y2(NMAX),ymin,y1max,y2max,ylo,yhi
 	integer i,npnt
 	character device*64
@@ -113,6 +119,7 @@ c
         P0 = P*1e2*exp(-M*g/(R*T0)*(z0-0.5*d*z0*z0/T0))
 	call keyr('h',h,20.0)
 	h = 0.01*h
+	call getopt(airmass)
 	call keyfin
 c
 	el1 = el1 * PI/180.0
@@ -151,7 +158,11 @@ c
 	    x(i) = nu
 	  else
 	    el = el1 + (el2-el1)*real(i-1)/(NPNT-1)
-	    x(i) = 180.0/PI * el
+	    if(airmass)then
+	      x(i) = 1/sin(el)
+	    else
+	      x(i) = 180.0/PI * el
+	    endif
 	  endif
 	  call refract(T,Pdry,Pvap,z,n,nu*1e9,2.7,el,Tb,tau,Ldry,Lvap)
 	  y1(i) = Tb
@@ -170,8 +181,12 @@ c
 	    call pgenv(f1,f2,ylo,yhi,0,0)
 	    call pglab('Frequency (GHz)',
      *				'Brightness Temperature (K)',' ')
+	  else if(airmass)then
+	    call pgenv(x(npnt),x(1),ylo,yhi,0,0)
+	    call pglab('Airmass [cosec(\fiel\fr)]',
+     *				'Brightness Temperature (K)',' ')
 	  else
-	    call pgenv(180.0/PI*el1,180.0/PI*el2,ylo,yhi,0,0)
+	    call pgenv(x(1),x(npnt),ylo,yhi,0,0)
 	    call pglab('Elevation (degrees)',
      *				'Brightness Temperature (K)',' ')
 	  endif
@@ -180,11 +195,30 @@ c
 	  if(dofr)then
 	    call pgenv(f1,f2,ylo,yhi,0,0)
 	    call pglab('Frequency (GHz)','Opacity (nepers)',' ')
+	  else if(airmass)then
+	    call pgenv(x(npnt),x(1),ylo,yhi,0,0)
+	    call pglab('Airmass [cosec(\fiel\fr)]',
+     *					'Opacity (nepers)',' ')
 	  else
-	    call pgenv(180.0/PI*el1,180.0/PI*el2,ylo,yhi,0,0)
+	    call pgenv(x(1),x(npnt),ylo,yhi,0,0)
 	    call pglab('Elevation (degrees)','Opacity (nepers)',' ')
 	  endif
 	  call pgline(NPNT,x,y2)
 	  call pgend
 	endif
+	end
+c************************************************************************
+	subroutine getopt(airmass)
+c
+	implicit none
+	logical airmass
+c------------------------------------------------------------------------
+	integer NOPTS
+	parameter(NOPTS=1)
+	logical present(NOPTS)
+	character opts(NOPTS)*8
+	data opts/'airmass '/
+c
+	call options('options',opts,present,NOPTS)
+	airmass = present(1)
 	end
