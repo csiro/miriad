@@ -1288,8 +1288,7 @@ c
 c
 c  Get the phase of a complex value.
 c------------------------------------------------------------------------
-	real pi
-	parameter(pi=3.141592653589793)
+	include 'mirconst.h'
 	integer i
 	real theta0,theta
 	complex ctemp
