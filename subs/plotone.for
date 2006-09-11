@@ -28,6 +28,7 @@ C 14dec89 pjt added a global label, hence variable top not needed
 C 13mar93 mjs pgplot subr names have less than 7 chars.
 c  9sep93 rjs Attempt to use colour, if the device supports it. Correct
 c	      call to pgbeg.
+c 24feb98 rjs Some FORTRAN standardisation.
 C------------------------------------------------------------
 	integer MAXVALS
 	parameter(MAXVALS=10000)
@@ -36,7 +37,7 @@ C------------------------------------------------------------
 	character*(*) xlab,ylab,glab,device
 	real xmin,xmax,ymin,ymax,y(MAXVALS)
 	integer ip,iv,just,axis,iline,icolor
-	integer ixmin, ixmax, iymin, iymax, amin1, amax1
+	integer ixmin, ixmax, iymin, iymax
 c
 c  Externals.
 c
@@ -57,8 +58,8 @@ c
   110      continue
            iymin = ismin(nvals,y,1)
            iymax = ismax(nvals,y,1)
-           ymin = amin1(ymin,y(iymin))
-           ymax = amax1(ymax,y(iymax))
+           ymin = min(ymin,y(iymin))
+           ymax = max(ymax,y(iymax))
   120   continue
         ixmin = ismin(nvals,x,1)
         ixmax = ismax(nvals,x,1)
