@@ -55,6 +55,8 @@ c    rjs   8jan98 Fix errors in cogaucvt when angle is non-zero and pixel
 c		  increments differ.
 c    rjs   8sep99 More robust algorithm in comixed.
 c    rjs  10may00 Comment out some code to hopefully get a better wrap algorithm.
+c    dpr  16feb01 Bump up MAXITERS to 1000 in comixed to handle Erik
+c                 Muller data. Not a good solution.
 c************************************************************************
 c* coInit -- Initialise coordinate conversion routines.
 c& rjs
@@ -2659,7 +2661,7 @@ c------------------------------------------------------------------------
 	include 'mirconst.h'
 	real TOL
 	integer MAXITER
-	parameter(TOL=1e-5,MAXITER=100)
+	parameter(TOL=1e-5,MAXITER=1000)
 c
 	double precision x(2),y(2),xd(2),yd(2),xdd(2),ydd(2),d2,gamma
 	double precision xr(2),yr(2),xdr(2),ydr(2)
@@ -2723,7 +2725,7 @@ c
 	  x(i2) = d2 + xdd(i2)
 	enddo
 c
-	if(delta.gt.tol)call bug('f','Failed to converge, in coMixed')
+c	if(delta.gt.tol)call bug('f','Failed to converge, in coMixed')
 	call coxy2ll(x(1),x(2),y(1),y(2),
      *		    xpix,dx,xval,ypix,dy,yval,llcos,llsin,proj)
 c
