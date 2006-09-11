@@ -161,6 +161,7 @@ c    rjs  02jul96 Changes to honour the proper motion parameters.
 c    rjs  16jul96 Flagged all polarisation if any bad, and added nopflag
 c		  option.
 c    rjs  17jul96 Flag if there are glitches in the XY amplitude.
+c    rjs  22nov96 Reset median-based flaggers after a scan change.
 c
 c  Program Structure:
 c    Miriad atlod can be divided into three rough levels. The high level
@@ -186,7 +187,7 @@ c------------------------------------------------------------------------
 	integer MAXFILES
 	parameter(MAXFILES=128)
 	character version*(*)
-	parameter(version='AtLod: version 17-Jul-96')
+	parameter(version='AtLod: version 22-Nov-96')
 c
 	character in(MAXFILES)*64,out*64,line*64
 	integer tno
@@ -1619,6 +1620,14 @@ c
 	    NewScan = .true.
 	    scanno = scanno + 1
 c
+c  Flush the number of buffered samples.
+c
+	    do j=1,ANT_MAX
+	      do i=1,MAX_IF
+	        nxyp(i,j) = 0
+	      enddo
+	    enddo
+c
 c  Handle end-of-scan 
 c
 	  else if(jstat.eq.2)then
@@ -2010,9 +2019,11 @@ c    yflag	Flag for the y channel.
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	real mxyp,mxya
+	integer ntemp
 c
+	ntemp = nxyp
 	call MedMerge(nxyp,maxxyp,xyphase,xyp,ptag,mxyp)
-	call MedMerge(nxyp,maxxyp,xyamp,xya,atag,mxya)
+	call MedMerge(ntemp,maxxyp,xyamp,xya,atag,mxya)
 c
 c  Flag both x and y as bad if there is a glitch in the xy phase.
 c  Otherwise flag according to the goodness of the sampler stats.
