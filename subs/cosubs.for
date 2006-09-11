@@ -1,9 +1,9 @@
 c***********************************************************************
 c  These subroutines provide an interface between NEBK style coordinate
-c  handling (the 'hms', 'dms', 'arcsec', 'reldeg', 'abspix', 'relpix',
-c  'absghz', 'relghz', 'abskms', 'relkms', 'abslin', 'rellin', 'none')
-c  and RJS' new coordinate routines (co.for).  There are many 
-c  similarities with cgsubs.for, but as PGPLOT only handles linear 
+c  handling (the 'hms', 'dms', 'arcsec', 'arcmin', 'reldeg', 'abspix', 
+c  'relpix', 'absghz', 'relghz', 'abskms', 'relkms', 'abslin', 
+c  'rellin', 'none') and RJS' new coordinate routines (co.for).  There 
+c  are many similarities with cgsubs.for, but as PGPLOT only handles linear 
 c  axes, these must remain until I do something clever.
 c
 c
@@ -28,7 +28,7 @@ c
 c  History:
 c    nebk   18aug94    Initial version
 c    nebk   29dec94    Remove concatenated char*(*) in subroutine calls
-c
+c    nebk   11aug95    Add arcmin labels
 c***********************************************************************
 c
       subroutine chkaxco (type, ctype, stype)
@@ -39,9 +39,9 @@ c  inconsistent with a "*lin" TYPE (e.g. ra and abslin)
 c
 c  Input
 c    type   Coordinate type user has asked for; one of
-c	        'hms',    'dms',    'arcsec', 'absdeg', 'reldeg',
-c               'abspix', 'relpix', 'absghz', 'relghz', 'abskms', 
-c               'relkms', 'abslin', 'rellin', 'none'
+c	        'hms',    'dms',    'arcsec', 'arcmin', 'absdeg',
+c               'reldeg', 'abspix', 'relpix', 'absghz', 'relghz', 
+c               'abskms', 'relkms', 'abslin', 'rellin', 'none'
 c    ctype  Axis ctype header descriptor
 c    stype  Spectral axis descriptor.  If this is ' ', then
 c           the CTYPE must match the TYPE (i.e. VELO/abskms is
@@ -72,7 +72,7 @@ c
       else if (type.eq.'dms') then
         if (index(lctype,'DEC').eq.0 .and.
      +      index(lctype,'MM') .eq.0) bad = .true.
-      else if (type.eq.'arcsec') then
+      else if (type.eq.'arcsec' .or. type.eq.'arcmin') then
         if (index(lctype,'RA') .eq.0 .and.
      +      index(lctype,'LL') .eq.0 .and.
      +      index(lctype,'DEC').eq.0 .and.
@@ -309,12 +309,12 @@ c     where needed ready for cocvt
 c
 c  Input
 c    type   NEBK style type of world coordinate; one of
-c	        'hms',    'dms',    'arcsec', 'absdeg', 'reldeg',
-c               'abspix', 'relpix', 'absghz', 'relghz', 'abskms', 
-c               'relkms', 'abslin', 'rellin', 'none'
+c	        'hms',    'dms',    'arcsec', 'arcmin', 'absdeg',
+c               'reldeg', 'abspix', 'relpix', 'absghz', 'relghz', 
+c               'abskms', 'relkms', 'abslin', 'rellin', 'none'
 c  Input/output
 c    win    Coordinate value.  Any coordinate of an angular type
-c           (hms, dms, *deg, arcsec) will be in radians on output
+c           (hms, dms, *deg, arcsec, arcmin) will be in radians on output
 c  Output
 c    cti    RJS style coordinate type ('ap', 'op', 'aw', 'ow')
 c-----------------------------------------------------------------------
@@ -342,6 +342,9 @@ c
       else if (type.eq.'arcsec') then
         cti = 'ow'
         win = win * a2r
+      else if (type.eq.'arcmin') then
+        cti = 'ow'
+        win = win * a2r * 60.0d0
       else if (type.eq.'absghz' .or. type.eq.'abskms' .or.
      +         type.eq.'abslin') then
         cti = 'aw'
@@ -370,12 +373,13 @@ c
 c  Input 
 c    type   NEBK style type of world coordinate that we want
 c           to convert to;
-c	        'hms',    'dms',    'arcsec', 'absdeg', 'reldeg',
-c               'abspix', 'relpix', 'absghz', 'relghz', 'abskms', 
-c               'relkms', 'abslin', 'rellin', 'none'
+c	        'hms',    'dms',    'arcsec', 'arcmin', 'absdeg', 
+c               'reldeg', 'abspix', 'relpix', 'absghz', 'relghz', 
+c               'abskms', 'relkms', 'abslin', 'rellin', 'none'
 c  Input/output
 c    wout   Coordinate value.  On input, all angular coordiantes are
 c           in radians, on exit, 'arcsec' in arcsec, '*deg" in degrees
+c	    'arcmin' in arcmin
 c
 c-----------------------------------------------------------------------
       implicit none
@@ -388,6 +392,8 @@ cc
 c-----------------------------------------------------------------------
       if (type.eq.'arcsec') then
         wout = wout * r2a
+      else if (type.eq.'arcmin') then
+        wout = wout * r2a / 60.0d0
       else if (type.eq.'absdeg' .or. type.eq.'reldeg') then
         wout = wout * r2d
       end if
@@ -414,9 +420,9 @@ c    absoff   'abs' or 'off' for absolute of offset world coordinate
 c    n        Number of axes
 c  Output
 c    types    Desired NEBK style coordinate types.  One of
-c	        'hms',    'dms',    'arcsec', 'absdeg', 'reldeg',
-c               'absghz', 'relghz', 'abskms', 'relkms', 'abslin',
-c               'rellin', 'none'
+c	        'hms',    'dms',    'arcsec', 'arcmin', 'absdeg', 
+c               'reldeg', 'absghz', 'relghz', 'abskms', 'relkms', 
+c               'abslin', 'rellin', 'none'
 c--
 c-----------------------------------------------------------------------
       include 'maxnax.h'
@@ -541,6 +547,8 @@ c-----------------------------------------------------------------------
         units = ' '
       else if (type.eq.'arcsec') then
         units = 'arcsec'
+      else if (type.eq.'arcmin') then
+        units = 'arcmin'
       else if (type.eq.'absdeg') then
         units = 'degrees'
       else if (type.eq.'reldeg') then
@@ -604,9 +612,9 @@ c  Input
 c    lun     Handle of open file
 c    n       Number of axes to convert
 c    typei   Array of input coordinate types, Should be from list
-c	        'hms',    'dms',    'arcsec', 'absdeg', 'reldeg',
-c               'abspix', 'relpix', 'absghz', 'relghz', 'abskms', 
-c               'relkms', 'abslin', 'rellin', 'none'
+c	        'hms',    'dms',    'arcsec', 'arcmin', 'absdeg',
+c               'reldeg', 'abspix', 'relpix', 'absghz', 'relghz', 
+c               'abskms', 'relkms', 'abslin', 'rellin', 'none'
 c    stypei  'radio', 'optical', 'frequency'.  If a spectral coordinate
 c            is given, this indicates what convention it is in,
 c            regardless of what the header initially defines. If ' ',
@@ -617,6 +625,7 @@ c    win     Array of coordinates to be converted
 c               'hms', 'dms' in radians
 c               '*  deg'     in degrees
 c               'arcsec'     in arcsec
+c	        'arcmin'     in arcmin
 c               '*  pix'     in pixels
 c               '*  ghz'     in GHz
 c               '*  kms'     in Km/s
@@ -791,9 +800,9 @@ c  Input
 c    lun     Handle of open file
 c    n       Number of axes
 c    typei   Array of input coordinate types, Should be from list
-c	        'hms',    'dms',    'arcsec', 'absdeg', 'reldeg',
-c               'abspix', 'relpix', 'absghz', 'relghz', 'abskms', 
-c               'relkms', 'abslin', 'rellin', 'none'
+c	        'hms',    'dms',    'arcsec', 'arcmin', 'absdeg', 
+c               'reldeg', 'abspix', 'relpix', 'absghz', 'relghz', 
+c               'abskms', 'relkms', 'abslin', 'rellin', 'none'
 c    stypei  'radio', 'optical', 'frequency'.  If a spectral coordinate
 c            is given, this indicates what convention it is in,
 c            regardless of what the header initially defines. If ' ',
@@ -804,6 +813,7 @@ c    win     Array of coordinates to be converted
 c               'hms', 'dms' in radians
 c               '*  deg'     in degrees
 c               'arcsec'     in arcsec
+c		'arcmin'     in arcmin
 c               '*  pix'     in pixels
 c               '*  ghz'     in GHz
 c               '*  kms'     in Km/s
@@ -847,7 +857,7 @@ c
           call strfd (wout(i), '(1pe15.8)', strout(i), strlen(i))
         else if (typeo(i).eq.'absdeg' .or. typeo(i).eq.'reldeg') then
           call strfd (wout(i), '(f8.3)', strout(i), strlen(i))  
-        else if (typeo(i).eq.'arcsec') then
+        else if (typeo(i).eq.'arcsec' .or. typeo(i).eq.'arcmin') then
           call strfd (wout(i), '(1pe15.8)', strout(i), strlen(i))
         else if (typeo(i).eq.'abslin' .or. typeo(i).eq.'rellin') then
           call strfd (wout(i), '(1pe15.8)', strout(i), strlen(i))
@@ -898,9 +908,9 @@ c  Input
 c    lun     Handle of open file
 c    iax     Axis
 c    typei   Input coordinate type, Should be from list
-c	        'hms',    'dms',    'arcsec', 'absdeg', 'reldeg',
-c               'abspix', 'relpix', 'absghz', 'relghz', 'abskms', 
-c               'relkms', 'abslin', 'rellin', 'none'
+c	        'hms',    'dms',    'arcsec', 'arcmin', 'absdeg',
+c               'reldeg', 'abspix', 'relpix', 'absghz', 'relghz', 
+c               'abskms', 'relkms', 'abslin', 'rellin', 'none'
 c    stypei  'radio', 'optical', 'frequency'.  If a spectral coordinate
 c            is given, this indicates what convention it is in,
 c            regardless of what the header initially defines. If ' ',
@@ -911,6 +921,7 @@ c    win     Coordinate to be converted
 c               'hms', 'dms' in radians
 c               '*  deg'     in degrees
 c               'arcsec'     in arcsec
+c		'arcmin'     in arcmin
 c               '*  pix'     in pixels
 c               '*  ghz'     in GHz
 c               '*  kms'     in Km/s
@@ -980,9 +991,9 @@ c  Input
 c    lun     Handle of open file
 c    iax     Axis of interest
 c    typei   Coordinate type, should be from list
-c	        'hms',    'dms',    'arcsec', 'absdeg', 'reldeg',
-c               'abspix', 'relpix', 'absghz', 'relghz', 'abskms', 
-c               'relkms', 'abslin', 'rellin', 'none'
+c	        'hms',    'dms',    'arcsec', 'arcmin', 'absdeg', 
+c               'reldeg', 'abspix', 'relpix', 'absghz', 'relghz', 
+c               'abskms', 'relkms', 'abslin', 'rellin', 'none'
 c    stypei  'radio', 'optical', 'frequency'.  If a spectral coordinate
 c            is given, this indicates what convention it is in,
 c            regardless of what the header initially defines. If ' ',
@@ -991,6 +1002,7 @@ c    win     Coordinate to be converted
 c               'hms', 'dms' in radians
 c               '*  deg'     in degrees
 c               'arcsec'     in arcsec
+c		'arcmin'     in arcmin
 c               '*  pix'     in pixels
 c               '*  ghz'     in GHz
 c               '*  kms'     in Km/s
