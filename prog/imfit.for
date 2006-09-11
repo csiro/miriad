@@ -115,13 +115,14 @@ c    rjs  02jul97 cellscal change.
 c    smw  15feb98 added one extra digit in printout: rangle->rangleh, etc
 c    mchw 21apr98 more precise Offset position.
 c    rjs  27apr98 Merge above two sets of changes.
+c    rjs  27oct98 Improved format statements.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'maxnax.h'
 	include 'mem.h'
 c
 	character version*(*)
-	parameter(version='version 1.0 27-Apr-98')
+	parameter(version='version 1.0 27-Oct-98')
 	integer MAXBOX,MAXVAR
 	parameter(MAXBOX=1024,MAXVAR=30)
 c
@@ -996,14 +997,14 @@ c
 	      else
 	        write(line,30)flux(i)
 	      endif
-  30	      format('  Peak value:',f27.4,:,' +/-',f8.4)
+  30	      format('  Peak value:',1pg27.4,:,' +/-',0pf8.4)
 	      call output(line)
 	      if(bvol.gt.0.and.srctype(i).ne.POINT)then
 	        tflux = flux(i) * pi/4 * fwhm1(i) * fwhm2(i)
 	        if(srctype(i).eq.GAUSSIAN) tflux = tflux / log(2.0)
 	        tflux = tflux / bvol
 	        write(line,35)tflux
-  35	        format('  Total integrated flux:',f16.4)
+  35	        format('  Total integrated flux:',1pg16.4)
 	        call output(line)
 	      endif
 	      write(line,40)3600*180/pi*l0(i),3600*180/pi*m0(i)
