@@ -127,6 +127,10 @@ c		  antennas.
 c    rjs   3nov94 Eliminate spurious error message.
 c    rjs  28nov94 Be more strict about what sampler stats are OK.
 c    rjs  13jan95 Friday 13th! Add pulsar bin no as uv variable.
+c    rjs  25jan95 Write the fudged source name (rather than just
+c		  discarding it!!).
+c    nebk 18feb95 Write out a correct fudged source name rather than
+c		  a totally scrambled one.  Mr. S must be on drugs again.
 c
 c  Program Structure:
 c    Miriad atlod can be divided into three rough levels. The high level
@@ -152,7 +156,7 @@ c------------------------------------------------------------------------
 	integer MAXFILES
 	parameter(MAXFILES=128)
 	character version*(*)
-	parameter(version='AtLod: version 13-Jan-95')
+	parameter(version='AtLod: version 18-Feb-95')
 c
 	character in(MAXFILES)*64,out*64
 	integer tno
@@ -547,7 +551,7 @@ c  any special characters or spaces.
 c
 	line = srcnam
 	length = min(len1(srcnam),len(line))
-	call lcase(srcnam(1:length))
+	call lcase(line(1:length))
 	do l=1,length
 	  if((line(l:l).ge.'a'.and.line(l:l).le.'z').or.
      *	     (line(l:l).ge.'0'.and.line(l:l).le.'9').or.
@@ -558,7 +562,8 @@ c
 	    line(l:l) = '_'
 	  endif
 	enddo
-	call uvputvra(tno,'source',srcnam)
+c
+	call uvputvra(tno,'source',line(1:length))
 	call uvputvrd(tno,'ra',ra,1)
 	call uvputvrd(tno,'dec',dec,1)
 	call uvputvrd(tno,'obsra',obsra,1)
