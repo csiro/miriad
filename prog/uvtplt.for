@@ -29,6 +29,7 @@ c	first  Drop the first cycle of each new mosaic field
 c--
 c
 c     nebk 20mar95 Original version
+c     nebk 11apr95 Add check for Tsys variables
 c
 c  Bugs
 c    Assumes linear polarizations
@@ -37,8 +38,8 @@ c---------------------------------------------------------------------------
       include 'maxdim.h'
       integer frqmax, fldmax, polmax, antmax, timemax, allmax
       character version*(*)
-      parameter(version='version 20-Mar-95', frqmax=2,
-     +          polmax = 2, fldmax = 200, antmax=6, timemax=300,
+      parameter(version='version 11-Apr-95', frqmax=4, 
+     +          polmax = 2, fldmax = 20, antmax=6, timemax=300,
      +          allmax=fldmax*antmax*polmax*frqmax)
 c
       character vis*64, roots*20, source*20, device*60, type*1
@@ -54,8 +55,6 @@ c
      + jd, jdold
       complex data(maxchan)
       logical flags(maxchan), keep, dom, updated, first
-c
-      character itoaf*4
       integer len1, pgbeg
       data ntsys /allmax*0.0/
 c------------------------------------------------------------------------
@@ -75,8 +74,6 @@ c
       call keyi ('fields', ifield2, ifield1)
       if (ifield1.le.0 .or. ifield2.le.0) 
      +  call bug ('f', 'Invalid field range')
-      if (ifield2-ifield1+1.gt.fldmax) call bug ('f',
-     +  'Too many fields, max='//itoaf(fldmax))
       call keya ('device', device, ' ')
       if (device.eq.' ') call bug ('f', 'No plotting device given')
       call keyi ('nxy', nx, 3)
@@ -95,6 +92,12 @@ c Read data
 c
       jdold = 0.0d0
       call uvread (tvis, preamble, data, flags, maxchan, nread)
+      call uvprobvr (tvis,'xtsys', type, length, updated)
+      if (.not.dom .and. type.ne.'r') call bug ('f',
+     +   'xtsys variable not in data')
+      call uvprobvr (tvis,'ytsys', type, length, updated)
+      if (.not.dom .and. type.ne.'r') call bug ('f',
+     +   'ytsys variable not in data')
       call uvprobvr (tvis,'xtsysm', type, length, updated)
       if (dom .and. type.ne.'r') call bug ('f',
      +  'Median smoothed variables do not exists in this dataset')
@@ -139,8 +142,7 @@ c
                   it = (j-1)*nants*nspect + (k-1)*nants + i
                   ii = ntsys(ifield,i,j,ifreq)
                   if (ii.eq.timemax) call bug ('f', 
-     +               'Too many integrations for internal buffers'
-     +             //', max='//itoaf(timemax))
+     +               'Too many integrations for internal buffers')
 c
                   ii = ii + 1
                   ntsys(ifield,i,j,ifreq) =ii
