@@ -175,6 +175,7 @@ c    rjs  06apr98 Increase the max size of an integration.
 c    rjs  07may98 Change in handling of jstat.eq.5 return value.
 c    rjs  14may98 Handle higher time resolution.
 c    rjs  04oct98 Extra check for validity of a record.
+c    rjs  12nov98 options=hires now supports high time resolution bin mode.
 c
 c  Program Structure:
 c    Miriad atlod can be divided into three rough levels. The high level
@@ -200,14 +201,14 @@ c------------------------------------------------------------------------
 	integer MAXFILES
 	parameter(MAXFILES=128)
 	character version*(*)
-	parameter(version='AtLod: version 14-May-98')
+	parameter(version='AtLod: version 1.0 12-Nov-98')
 c
 	character in(MAXFILES)*64,out*64,line*64
 	integer tno
 	integer ifile,ifsel,nfreq,iostat,nfiles,i
 	double precision rfreq(2)
 	logical doauto,docross,docomp,dosam,relax,unflag,dohann,dobary
-	logical doif,birdie,dowt,doxyp,polflag
+	logical doif,birdie,dowt,doxyp,polflag,hires
 	integer fileskip,fileproc,scanskip,scanproc
 c
 c  Externals.
@@ -227,7 +228,7 @@ c
         call keyi('ifsel',ifsel,0)
         call mkeyd('restfreq',rfreq,2,nfreq)
 	call getopt(doauto,docross,docomp,dosam,doxyp,relax,unflag,
-     *				dohann,birdie,dobary,doif,dowt,polflag)
+     *			dohann,birdie,dobary,doif,dowt,polflag,hires)
 	call keyi('nfiles',fileskip,0)
 	call keyi('nfiles',fileproc,nfiles-fileskip)
 	if(nfiles.gt.1.and.fileproc+fileskip.gt.nfiles)
@@ -270,7 +271,8 @@ c
 	    endif
 	    if(iostat.ne.0)call bug('f','Error skipping RPFITS file')
 	  else
-	    call PokeIni(tno,dosam,doxyp,dohann,birdie,dowt,dobary,doif)
+	    call PokeIni(tno,dosam,doxyp,dohann,birdie,dowt,dobary,doif,
+     *		hires)
 	    if(nfiles.eq.1)then
 	      i = 1
 	    else
@@ -301,12 +303,12 @@ c
 c
 	end
 c************************************************************************
-	subroutine GetOpt(doauto,docross,docomp,dosam,doxyp,
-     *		relax,unflag,dohann,birdie,dobary,doif,dowt,polflag)
+	subroutine GetOpt(doauto,docross,docomp,dosam,doxyp,relax,
+     *	  unflag,dohann,birdie,dobary,doif,dowt,polflag,hires)
 c
 	implicit none
 	logical doauto,docross,dosam,relax,unflag,dohann,dobary
-	logical docomp,doif,birdie,dowt,doxyp,polflag
+	logical docomp,doif,birdie,dowt,doxyp,polflag,hires
 c
 c  Get the user options.
 c
@@ -325,15 +327,16 @@ c    dobary	Compute barycentric radial velocities.
 c    birdie
 c    dowt	Reweight the lag spectrum.
 c    polflag	Flag all polarisations if any are bad.
+c    hires      Convert bin-mode to high time resolution data.
 c------------------------------------------------------------------------
 	integer nopt
-	parameter(nopt=13)
+	parameter(nopt=14)
 	character opts(nopt)*8
 	logical present(nopt)
 	data opts/'noauto  ','nocross ','compress','relax   ',
      *		  'unflag  ','samcorr ','hanning ','bary    ',
      *		  'noif    ','birdie  ','reweight','xycorr  ',
-     *		  'nopflag '/
+     *		  'nopflag ','hires   '/
 	call options('options',opts,present,nopt)
 	doauto = .not.present(1)
 	docross = .not.present(2)
@@ -348,6 +351,7 @@ c------------------------------------------------------------------------
 	dowt    = present(11)
 	doxyp   = present(12)
 	polflag = .not.present(13)
+	hires   = present(14)
 c
 	if((dosam.or.doxyp).and.relax)call bug('f',
      *	  'You cannot use options samcorr or xycorr with relax')
@@ -397,11 +401,12 @@ c
 c************************************************************************
 c************************************************************************
 	subroutine PokeIni(tno1,dosam1,doxyp1,dohann1,birdie1,dowt1,
-     *						dobary1,doif1)
+     *						dobary1,doif1,hires1)
 c
 	implicit none
 	integer tno1
 	logical dosam1,doxyp1,dohann1,doif1,dobary1,birdie1,dowt1
+	logical hires1
 c
 c  Initialise the Poke routines.
 c------------------------------------------------------------------------
@@ -418,6 +423,7 @@ c
 	dobary = dobary1
 	birdie = birdie1
 	dowt   = dowt1
+	hires  = hires1
 c
 	if(dowt)call LagWt(wts,2*ATCONT-2,0.04)
 c
@@ -436,6 +442,7 @@ c
 	do if=1,ATIF
 	  nbin(if) = 0
 	enddo
+	inttim = 0
 	do bin=1,ATBIN
 	  do bl=1,ATBASE
 	    do p=1,ATPOL
@@ -836,8 +843,9 @@ c
 	if(inttime1.gt.0)then
 	  inttime(bl) = inttime1
 	else
-	  inttime(bl) = 15
+	  inttime(bl) = 10
 	endif
+	inttim = max(inttim,inttime(bl))
 c
 c  Reweight the data, if needed.
 c
@@ -976,10 +984,11 @@ c
 c  Flush out a saved integration.
 c------------------------------------------------------------------------
 	include 'atlod.h'
-	integer i1,i2,if,p,bl,bin,nchan,npol,ipnt,ischan(ATIF)
+	integer i1,i2,if,p,bl,nchan,npol,ipnt,ischan(ATIF)
+	integer tbinhi,tbin,binhi,binlo,bin
 	complex vis(MAXCHAN)
 	logical flags(MAXCHAN)
-	double precision preamble(5),vel,lst
+	double precision preamble(5),vel,lst,tdash
 	real buf(3*ATANT*ATIF)
 c
 c  Externals.
@@ -988,34 +997,51 @@ c
 c
 	if(nused.eq.0)return
 c
+c  Check that we can do what is asked.
+c
+	if(newfreq)then
+	  if(doif)then
+	    do if=2,nifs
+	      if(nbin(if).ne.nbin(1))    call bug('f',
+     *		'Number of bins differ between IFs. '//
+     *		'Use options=noif.')
+	      if(nstoke(if).ne.nstoke(1))call bug('f',
+     *		'Number of polarisations differ between IFs. '//
+     *		'Use options=noif.')
+	      do p=1,nstoke(if)
+	        if(polcode(if,p).ne.polcode(1,p))call bug('f',
+     *		'Polarisation types differ between IFs. '//
+     *		'Use options=noif.')
+	      enddo
+	    enddo
+	  else if(hires)then
+	    do if=2,nifs
+	      if(nbin(if).ne.nbin(1))    call bug('f',
+     *		'Number of bins in different IFs must '//
+     *				   'agree for options=hires')
+	    enddo
+	  endif
+	endif
+c
 c  Compute apparent LST.
 c
-	call jullst(time,long,lst)
-	lst = lst + eqeq(time)
-	call uvputvrd(tno,'lst',lst,1)
+	if(hires)then
+	  tdash  = time - 0.5*inttim*(nbin(1)-1)/86400.0d0
+	  tbinhi = nbin(1)
+	else
+	  tdash  = time
+	  tbinhi = 1
+	endif
+c
+	do tbin=1,tbinhi
+	  call jullst(tdash,long,lst)
+	  lst = lst + eqeq(tdash)
+	  call uvputvrd(tno,'lst',lst,1)
 c
 c  Compute radial velocity of the observatory.
 c
-	call VelRad(.not.dobary,time,obsra,obsdec,ra,dec,lst,lat,vel)
-	call uvputvrr(tno,'veldop',real(vel),1)
-c
-c  Check that we can do what is asked.
-c
-	if(newfreq.and.doif)then
-	  do if=2,nifs
-	    if(nbin(if).ne.nbin(1))    call bug('f',
-     *		'Number of bins differ between IFs. '//
-     *		'Use options=noif.')
-	    if(nstoke(if).ne.nstoke(1))call bug('f',
-     *		'Number of polarisations differ between IFs. '//
-     *		'Use options=noif.')
-	    do p=1,nstoke(if)
-	      if(polcode(if,p).ne.polcode(1,p))call bug('f',
-     *		'Polarisation types differ between IFs. '//
-     *		'Use options=noif.')
-	    enddo
-	  enddo
-	endif
+	  call VelRad(.not.dobary,tdash,obsra,obsdec,ra,dec,lst,lat,vel)
+	  call uvputvrr(tno,'veldop',real(vel),1)
 c
 c  Handle the case that we are writing the multiple IFs out as multiple
 c  records.
@@ -1031,8 +1057,15 @@ c
 	    call uvputvrd(tno,'restfreq',restfreq(if),1)
 	    if(newsc)call ScOut(tno,chi,xtsys,ytsys,xyphase,xyamp,
      *		xsampler,ysampler,ATIF,ATANT,nants,if,if,buf)
-	    do bin=1,nbin(if)
-	      call uvputvri(tno,'nbin',nbin(if),1)
+	    if(hires)then
+	      binlo = tbin
+	      binhi = tbin
+	    else
+	      binlo = 1
+	      binhi = nbin(if)
+	    endif
+	    do bin=binlo,binhi
+	      if(.not.hires)call uvputvri(tno,'nbin',nbin(if),1)
 	      bl = 0
 	      do i2=1,nants
 	        do i1=1,i2
@@ -1040,7 +1073,7 @@ c
 	          preamble(1) = u(bl)
 	          preamble(2) = v(bl)
 		  preamble(3) = w(bl)
-	          preamble(4) = time
+	          preamble(4) = tdash
 	          preamble(5) = 256*i1 + i2
 	          do p=1,nstoke(if)
 		    ipnt = pnt(if,p,bl,bin)
@@ -1048,7 +1081,7 @@ c
 		      call PolPut(tno,polcode(if,p),dosw(bl))
 		      call GetFlag(flag(if,p,bl,bin),nfreq(if),
      *						  bchan(if),flags)
-		      call uvputvri(tno,'bin',bin,1)
+		      if(.not.hires)call uvputvri(tno,'bin',bin,1)
 		      call uvputvrr(tno,'inttime',inttime(bl),1)
 		      call uvwrite(tno,preamble,data(ipnt),flags,
      *							nfreq(if))
@@ -1063,7 +1096,7 @@ c
 c  Handle the case were we are writing the multiple IFs out as a single record.
 c
 	else
-	  if(newfreq)then
+	  if(newfreq.and.tbin.eq.1)then
 	    ischan(1) = 1
 	    do if=2,nifs
 	      ischan(if) = ischan(if-1) + nfreq(if)
@@ -1074,11 +1107,19 @@ c
 	    call uvputvrd(tno,'sfreq', sfreq,nifs)
 	    call uvputvrd(tno,'sdf',   sdf,nifs)
 	    call uvputvrd(tno,'restfreq',restfreq,nifs)
-	    call uvputvri(tno,'nbin',    nbin(1),1)
+	    if(.not.hires)call uvputvri(tno,'nbin',nbin(1),1)
 	  endif
-	  if(newsc)call ScOut(tno,chi,xtsys,ytsys,xyphase,xyamp,
+	  if(newsc.and.tbin.eq.1)call ScOut(tno,chi,xtsys,ytsys,
+     *		xyphase,xyamp,
      *		xsampler,ysampler,ATIF,ATANT,nants,1,nifs,buf)
-	  do bin=1,nbin(1)
+	  if(hires)then
+	    binlo = tbin
+	    binhi = tbin
+	  else
+	    binlo = 1
+	    binhi = nbin(1)
+	  endif
+	  do bin=binlo,binhi
 	    bl = 0
 	    do i2=1,nants
 	      do i1=1,i2
@@ -1086,7 +1127,7 @@ c
 	        preamble(1) = u(bl)
 	        preamble(2) = v(bl)
 	        preamble(3) = w(bl)
-	        preamble(4) = time
+	        preamble(4) = tdash
 	        preamble(5) = 256*i1 + i2
 	        call CntStok(npol,pnt(1,1,bl,bin),nifs,nstoke(1),ATIF)
 	        if(npol.gt.0)then
@@ -1096,7 +1137,7 @@ c
      *			flag(1,p,bl,bin),nfreq,bchan,nifs,
      *			vis,flags,nchan)
 		    if(nchan.gt.0)then
-		      call uvputvri(tno,'bin',bin,1)
+		      if(.not.hires)call uvputvri(tno,'bin',bin,1)
 		      call uvputvri(tno,'pol',polcode(1,p),1)
 		      call uvputvrr(tno,'inttime',inttime(bl),1)
 		      call uvwrite(tno,preamble,vis,flags,nchan)
@@ -1108,8 +1149,12 @@ c
 	  enddo
 	endif
 c
+	tdash = tdash + inttim/86400.0d0
+	enddo
+c
 c  Reset the counters, etc.
 c
+	inttim = 0
 	do bl=1,ATBASE
 	  do p=1,ATPOL
 	    do if=1,nifs
@@ -1860,6 +1905,7 @@ c
 c
 c  Give summary about flagging.
 c
+	call liner('RPFITS file version is'//version)
 	call PokeStat(nrec,fgbad,fgoffsrc,fginvant,fgsysc,fgsam)
 c
 c  We are done. Close up, and return the error code.
