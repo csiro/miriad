@@ -4,25 +4,30 @@ c  handling (the 'hms', 'dms', 'arcsec', 'arcmin', 'reldeg', 'abspix',
 c  'relpix', 'absghz', 'relghz', 'abskms', 'relkms', 'absnat', 
 c  'relnat', 'none') and RJS' new coordinate routines (co.for). 
 c
+c  Code that is known to use these routines is: cgdisp.for,
+c  cgcurs.for, cgslice.for, cgspec.for, maxfit.for, impos.for,
+c  regrid.for, cgsubs.for, cgpgsubs.for
+c
 c
 c  User callable routines are:
 c
-c   initco  (lun)                         
-c   finco   (lun)
+c   initco  : Initialize coordinate object
+c   finco   : Free coordinate object
 c
-c   axfndco (lun, gentyp, n, iax, jax)    
-c   axtypco (lun, n, iax, type)
-c   chkaxco (lun, ltype, n, iax, stype)
-c   ctypeco (lun, iax, ctype)
-c   setoaco (lun, absoff, n, iax, types)
-c   specco  (lun, iax, stype)
+c   axfndco : Find axis of specified generic type
+c   axtypco : Return generic axis type
+c   chkaxco : Check axis CTYPE and axis label type for consistency
+c   ctypeco : Get axis CTYPE
+c   setoaco : Set default absolute or offset coordinate conversion 
+c               string depending upon the axis CTYPE
+c   specco  : See if an axis is spectral and what type it is if so
 c
-c   w2wco   (lun, n, typei, stypei, win, typeo, stypeo, wout)
-c   w2wfco  (lun, n, typei, stypei, win, typeo, stypeo,
-c            nounit, strout, strlen)
-c   w2wsco  (lun, iax, typei, stypei, win, typeo, stypeo, wout)
-c   w2wsfco (lun, iax, typei, stypei, win, typeo, stypeo,
-c            nounit, strout, strlen)
+c   w2wco   : Convert coordinates between different world types
+c   w2wfco  : As for w2wco but results formatted in a string
+c   w2wsco  : As for w2wco but just one axis, with the rest assumed
+c               to be at the reference pixel
+c   w2wsfco : As for w2wsco but results formatted in a string
+c
 c
 c  History:
 c    nebk   18aug94    Initial version
@@ -31,6 +36,9 @@ c    nebk   11aug95    Add arcmin labels
 c    nebk   14nov95    Remove LINCO; its use has been eradicated, add
 c                      some new ones which have migrated from CGSUB.FOR
 c                      These are AXFNDCO, AXTYPCO, SUNITCO
+c    nebk   29nov95    Eliminate indexed searching of axis types so that
+c                      e.g. if CTYPE=RADIUS it is not treated as RA.  
+c                      Consolidate CTYPE searching into AXFNDCO and AXTYPCO
 c***********************************************************************
 c
 c* axfndCO -- Find a specified generic axis in an image
@@ -68,8 +76,8 @@ c  Output
 c    jax    Axis number that matches "type".  0 if not present
 c--
 c-----------------------------------------------------------------
-      integer i, i1, i2
-      character ltype*8, lctype*8
+      integer i, i1, i2, il
+      character ltype*9, lctype*9
 c-----------------------------------------------------------------
       if (n.eq.0) then
         i1 = iax
@@ -83,65 +91,68 @@ c-----------------------------------------------------------------
       jax = 0
 c
       do i = i1, i2
-        call ctypeco (lun, i, lctype)
+c
+c Get CTYPE and find length prior to projection piece of string
+c
+        call ctypeco (lun, i, lctype, il)
 c
         if (ltype.eq.'RA') then
-          if (index(lctype,'RA').ne.0 .or.   
-     +        index(lctype,'LL').ne.0) then
+          if (lctype(1:il).eq.'RA' .or.   
+     +        lctype(1:il).eq.'LL') then
             jax = 1
             if (n.ne.0) jax = i
             return
           end if
         else if (ltype.eq.'DEC') then
-          if (index(lctype,'DEC').ne.0 .or.
-     +        index(lctype,'MM').ne.0) then
+          if (lctype(1:il).eq.'DEC' .or.
+     +        lctype(1:il).eq.'MM') then
             jax = 1
             if (n.ne.0) jax = i
             return
           end if
         else if (ltype.eq.'LONG') then
-          if (index(lctype,'ELON').ne.0 .or.
-     +        index(lctype,'GLON').ne.0) then
+          if (lctype(1:il).eq.'ELON' .or. 
+     +        lctype(1:il).eq.'GLON') then
             jax = 1
             if (n.ne.0) jax = i
             return
           end if
         else if (ltype.eq.'LATI') then
-          if (index(lctype,'ELAT').ne.0 .or.
-     +        index(lctype,'GLAT').ne.0) then
+          if (lctype(1:il).eq.'ELAT' .or.
+     +        lctype(1:il).eq.'GLAT') then
             jax = 1
             if (n.ne.0) jax = i
             return
           end if
         else if (ltype.eq.'VELO') then
-          if (index(lctype,'VELO').ne.0 .or. 
-     +        index(lctype,'FELO').ne.0) then
+          if (lctype(1:il).eq.'VELO' .or. 
+     +        lctype(1:il).eq.'FELO') then
             jax = 1
             if (n.ne.0) jax = i
             return 
           end if
         else if (ltype.eq.'FREQ') then
-          if (index(lctype,'FREQ').ne.0) then
+          if (lctype(1:il).eq.'FREQ') then
             jax = 1
             if (n.ne.0) jax = i
             return
           end if  
         else if (ltype.eq.'RAD') then
-          if (index(lctype,'RA').ne.0 .or.
-     +        index(lctype,'LL').ne.0 .or.
-     +        index(lctype,'DEC').ne.0 .or.
-     +        index(lctype,'MM').ne.0 .or.
-     +        index(lctype,'ELON').ne.0 .or.
-     +        index(lctype,'GLON').ne.0 .or.
-     +        index(lctype,'ELAT').ne.0 .or.
-     +        index(lctype,'GLAT').ne.0) then
+          if (lctype(1:il).eq.'RA'  .or.
+     +        lctype(1:il).eq.'LL'  .or.
+     +        lctype(1:il).eq.'DEC' .or.
+     +        lctype(1:il).eq.'MM'  .or.
+     +        lctype(1:il).eq.'ELON'.or.
+     +        lctype(1:il).eq.'GLON'.or.
+     +        lctype(1:il).eq.'ELAT'.or.
+     +        lctype(1:il).eq.'GLAT') then
             jax = 1
             if (n.ne.0) jax = i
             return 
           end if  
         else if (ltype.eq.'UV') then
-          if (index(lctype,'UU').ne.0 .or.
-     +        index(lctype,'VV').ne.0) then
+          if (lctype(1:il).eq.'UU' .or.
+     +        lctype(1:il).eq.'VV') then
             jax = 1
             if (n.ne.0) jax = i
             return 
@@ -191,8 +202,8 @@ c             NONE means CTYPE was not recognized
 c
 c--
 c-----------------------------------------------------------------
-      integer i, i1, i2, j
-      character lctype*8
+      integer i, i1, i2, j, il
+      character lctype*9
 c-----------------------------------------------------------------
       if (n.eq.0) then
         i1 = iax
@@ -203,34 +214,34 @@ c-----------------------------------------------------------------
       end if
 c
       do i = i1, i2
-        call ctypeco (lun, i, lctype)
+        call ctypeco (lun, i, lctype, il)
 c
         j = 1
         if (n.ne.0) j = i
-        if (index(lctype,'RA').ne.0 .or.
-     +      index(lctype,'LL').ne.0) then
+        if (lctype(1:il).eq.'RA' .or.
+     +      lctype(1:il).eq.'LL') then
           type(j) = 'RA'
         else if
-     +     (index(lctype,'DEC').ne.0 .or.
-     +      index(lctype,'MM').ne.0) then
+     +     (lctype(1:il).eq.'DEC' .or.
+     +      lctype(1:il).eq.'MM') then
           type(j) = 'DEC'
         else if
-     +     (index(lctype,'ELON').ne.0 .or.
-     +      index(lctype,'GLON').ne.0) then
+     +     (lctype(1:il).eq.'ELON' .or.
+     +      lctype(1:il).eq.'GLON') then
           type(j) = 'LONG'
         else if
-     +     (index(lctype,'ELAT').ne.0 .or.
-     +      index(lctype,'GLAT').ne.0) then
+     +     (lctype(1:il).eq.'ELAT' .or.
+     +      lctype(1:il).eq.'GLAT') then
           type(j) = 'LATI'
         else if
-     +     (index(lctype,'VELO').ne.0 .or.
-     +      index(lctype,'FELO').ne.0) then
+     +     (lctype(1:il).eq.'VELO' .or.
+     +      lctype(1:il).eq.'FELO') then
           type(j) = 'VELO'
-        else if (index(lctype,'FREQ').ne.0) then
+        else if (lctype(1:il).eq.'FREQ') then
           type(j) = 'FREQ'
         else if
-     +     (index(lctype,'UU').ne.0 .or.
-     +      index(lctype,'VV').ne.0) then
+     +     (lctype(1:il).eq.'UU' .or.
+     +      lctype(1:il).eq.'VV') then
           type(j) = 'UV'
         else
           type(j) = 'NONE'
@@ -267,8 +278,8 @@ c           the desired STYPE so that any spectral CTYPE is
 c           compatible with any spectral TYPE
 c--
 c-----------------------------------------------------------------------
-      integer i1, i2, i
-      character ctype*8, str*132
+      integer i1, i2, i, il, jax
+      character ctype*9, str*132, gtype*4
       logical bad, bads
 c-----------------------------------------------------------------
       if (stype.ne.' ' .and. stype.ne.'frequency' .and.
@@ -286,44 +297,28 @@ c
       end if
 c
       do i = i1, i2
-        call ctypeco (lun, i, ctype)
+c
+c Get generic axis type
+c
+        call axtypco (lun, 0, i, gtype)
 c
         bad = .false.
         bads = .false.
 c
         if (ltype.eq.'hms') then
-          if (index(ctype,'RA').eq.0 .and.
-     +        index(ctype,'LL').eq.0) bad = .true.
+          if (gtype.ne.'RA' .and. gtype.ne.'LL') bad = .true.
         else if (ltype.eq.'dms') then
-          if (index(ctype,'DEC').eq.0 .and.
-     +        index(ctype,'MM') .eq.0) bad = .true.
-        else if (ltype.eq.'arcsec' .or. ltype.eq.'arcmin') then
-          if (index(ctype,'RA') .eq.0 .and.
-     +        index(ctype,'LL') .eq.0 .and.
-     +        index(ctype,'DEC').eq.0 .and.
-     +        index(ltype,'MM') .eq.0) bad = .true.
-        else if (ltype.eq.'absdeg' .or. ltype.eq.'reldeg') then
-          if (index(ctype,'RA') .eq.0 .and.
-     +        index(ctype,'LL') .eq.0 .and.
-     +        index(ctype,'DEC').eq.0 .and.
-     +        index(ctype,'MM') .eq.0 .and.
-     +        index(ctype,'ELON').eq.0 .and.
-     +        index(ctype,'GLON').eq.0 .and.
-     +        index(ctype,'ELAT').eq.0 .and.
-     +        index(ctype,'GLAT').eq.0) bad = .true.
+          if (gtype.ne.'DEC' .and. gtype.ne.'MM') bad = .true.
+        else if (ltype.eq.'arcsec' .or. ltype.eq.'arcmin' .or.
+     +           ltype.eq.'absdeg' .or. ltype.eq.'reldeg') then          
+          call axfndco (lun, 'RAD', 0, i, jax)
+          if (jax.eq.0) bad = .true.
         else if (ltype.eq.'abskms' .or. ltype.eq.'relkms') then     
-          if (index(ctype,'VELO').eq.0 .and.
-     +        index(ctype,'FELO').eq.0 .and.
-     +        index(ctype,'FREQ').eq.0) bad = .true.
-              if (index(ctype,'FREQ').ne.0 .and. 
-     +           stype.eq.' ') bads = .true.
+          if (gtype.ne.'VELO' .and. gtype.ne.'FREQ') bad = .true.
+          if (gtype.eq.'FREQ' .and. stype.eq.' ') bads = .true.
         else if (ltype.eq.'absghz' .or. ltype.eq.'relghz') then     
-          if (index(ctype,'FREQ').eq.0 .and.
-     +        index(ctype,'VELO').eq.0 .and.
-     +        index(ctype,'FELO').eq.0) bad = .true.
-              if ((index(ctype,'VELO').ne.0 .or. 
-     +             index(ctype,'FELO').ne.0) .and.
-     +           stype.eq.' ') bads = .true.
+          if (gtype.ne.'VELO' .and. gtype.ne.'FREQ') bad = .true.
+          if (gtype.eq.'VELO' .and. stype.eq.' ') bads = .true.
         else if (ltype.eq.'absnat' .or. ltype.eq.'relnat') then
           continue
         end if
@@ -331,6 +326,7 @@ c
 c Bug out if no good
 c
         if (bad .or. bads) then
+          call ctypeco (lun, i, ctype, il)
           call output ('Axis ctype = '//ctype)
           str = 'Coordinate type = '//ltype
           call output (str)
@@ -349,34 +345,43 @@ c
       end
 c
 c 
-c* ctypeCO -- Return axis CTYPEs
+c* ctypeCO -- Return CTYPE for one axis
 c& nebk
 c: coordinates
 c+
 c
-      subroutine ctypeco (lun, iax, ctype)
+      subroutine ctypeco (lun, iax, ctype, il)
       implicit none
 c
-      integer iax, lun
-      character*(*) ctype(*)  
+      integer iax, lun, il
+      character*(*) ctype
 c
-c     Return ctypes for several or one axis
+c     Return CTYPE for one axis
 c
 c  Input
 c    lun    Handle
 c    iax    Axis to get CTYPE for
 c  Output
 c    ctype  CTYPE (upper case)
+c    il     Length of string prior to project "--*" string
 c--
 c-----------------------------------------------------------------------
       character itoaf*1
+      integer len1, il2
 c-----------------------------------------------------------------------
       call rdhda (lun, 'ctype'//itoaf(iax), ctype, ' ')
       call ucase (ctype)
 c
+      il2 = len1(ctype)
+      il = 1
+      do while (ctype(il:il).ne.'-' .and. il.le.il2)
+        il = il + 1
+      end do
+      il = il - 1
+c
       end
 c
-c* finco -- Finish up after coordinate conversion routines
+c* finCO -- Finish up after coordinate conversion routines
 c& nebk
 c: coordinates
 c+
@@ -394,8 +399,8 @@ c-----------------------------------------------------------------------
       call cofin (lun)
 c
       end
-c
-c* initco -- Initialize coordinate conversion routines
+c  
+c* initCO -- Initialize coordinate conversion routines
 c& nebk
 c: coordinates
 c+
@@ -516,7 +521,7 @@ c
       end
 c
 c
-c* setoaco -- Set default (abs or rel) coordinate type depending on CTYPE
+c* setoaCO -- Set default (abs or rel) coordinate type depending on CTYPE
 c& nebk
 c: coordinates
 c+
@@ -544,7 +549,7 @@ c--
 c-----------------------------------------------------------------------
       include 'maxnax.h'
       integer i, i1, i2, j
-      character*9 lctype
+      character*4 gtype
 c-----------------------------------------------------------------------
       if (n.eq.0) then
         i1 = iax
@@ -556,50 +561,37 @@ c-----------------------------------------------------------------------
 c      
       do i = i1, i2
 c
-c Get CTYPE for this axis
+c Get generic axis type and set default
 c
-        call ctypeco (lun, i, lctype)
-c
-c Set default
+        call axtypco (lun, 0, i, gtype)
 c
         j = 1
         if (n.ne.0) j = i
-        if (index(lctype,'RA') .ne.0 .or.
-     +      index(lctype,'LL') .ne.0 ) then
+        if (gtype.eq.'RA') then
           if (absoff.eq.'off') then
             types(j) = 'arcsec'
           else
             types(j) = 'hms'
           end if
-        else if (index(lctype,'DEC').ne.0 .or.
-     +           index(lctype,'MM') .ne.0) then
+        else if (gtype.eq.'DEC') then
           if (absoff.eq.'off') then
             types(j) = 'arcsec'
           else
             types(j) = 'dms'
           end if
-        else if (index(lctype,'ELON').ne.0 .or.
-     +           index(lctype,'GLON').ne.0 .or.
-     +           index(lctype,'ELAT').ne.0 .or.
-     +           index(lctype,'GLAT').ne.0) then
+        else if (gtype.eq.'LONG' .or. gtype.eq.'LATI') then
           if (absoff.eq.'off') then
             types(j) = 'reldeg'
           else
             types(j) = 'absdeg'
           end if
-        else if (index(lctype,'VELO').ne.0) then
+        else if (gtype.eq.'VELO') then
           if (absoff.eq.'off') then
             types(j) = 'relkms'
           else
             types(j) = 'abskms'
           end if
-        else if (index(lctype,'FELO').ne.0) then
-          if (absoff.eq.'off') then
-            types(j) = 'relkms'
-          else
-            types(j) = 'abskms'
-          end if
-        else if (index(lctype,'FREQ').ne.0) then
+        else if (gtype.eq.'FREQ') then
           if (absoff.eq.'off') then
             types(j) = 'relghz'
           else
@@ -617,7 +609,7 @@ c
       end
 c
 c
-c* specco -- See if this axis is spectral and what type it is
+c* specCO -- See if this axis is spectral and what type it is
 c& nebk
 c: coordinates
 c+
@@ -637,13 +629,15 @@ c    stype  ' ' if not spectral, else 'radio', 'optical', 'frequency'
 c--
 c-----------------------------------------------------------------------
       character*9 ctype
+      integer il
 c-----------------------------------------------------------------------
-      call ctypeco (lun, iax, ctype)
-      if (index(ctype,'VELO').ne.0) then
+      call ctypeco (lun, iax, ctype, il)
+c
+      if (ctype(1:il).eq.'VELO') then
         stype = 'radio'
-      else if(index(ctype,'FELO').ne.0) then
+      else if(ctype(1:il).eq.'FELO') then
         stype = 'optical'
-      else if(index(ctype,'FREQ').ne.0) then
+      else if(ctype(1:il).eq.'FREQ') then
         stype = 'frequency'
       else
         stype = ' '
@@ -652,23 +646,26 @@ c
       end
 c
 c
-      subroutine sunitco (ctype, type, units)
+      subroutine sunitco (lun, iax, type, units)
 c----------------------------------------------------------------------
 c  Set the units of a pixel based upon the requested type and the 
 c  axis type.  Used for ascii not graphical output so no PGPLOT escape 
 c  sequences.
 c
 c  Inputs:
-c    ctype  Axis header CTYPE value
+c    lun    Image handle
+c    iax    Axis of interest
 c    type   User requested coordinate type
 c  Output:
 c    units  Axis units
 c--
 c-----------------------------------------------------------------------
       implicit none
-      character*(*) type, units, ctype
+      integer lun, iax
+      character*(*) type, units
 cc
-      character units2*10, str*132
+      integer jax
+      character units2*10, str*132, gtype*4
 c-----------------------------------------------------------------------
       if (type.eq.'hms' .or. type.eq.'dms' .or. type.eq.'none') then
         units = ' '
@@ -693,25 +690,20 @@ c-----------------------------------------------------------------------
       else if (type.eq.'relkms') then
         units = 'offset Km/s'
       else if (type.eq.'absnat' .or. type.eq.'relnat') then
-        if (index(ctype,'VELO').ne.0 .or.
-     +      index(ctype,'FELO').ne.0) then
+        call axtypco (lun, 0, iax, gtype)
+        if (gtype.eq.'VELO') then
           units2 = 'Km/s'
-        else if (index(ctype,'FREQ').ne.0) then
+        else if (gtype.eq.'FREQ') then
           units2 = 'GHz'
-        else if (index(ctype,'UU').ne.0 .or.
-     +           index(ctype,'VV').ne.0) then
+        else if (gtype.eq.'UV') then
           units = 'wavelengths'
-        else if (index(ctype,'RA').ne.0 .or.
-     +           index(ctype,'DEC').ne.0 .or.
-     +           index(ctype,'LL').ne.0 .or.
-     +           index(ctype,'MM').ne.0 .or.
-     +           index(ctype,'ELON').ne.0 .or.
-     +           index(ctype,'ELAT').ne.0 .or.
-     +           index(ctype,'GLON').ne.0 .or.
-     +           index(ctype,'GLAT').ne.0) then
-          units2 = 'radians'
         else 
-          units2 = ' '
+          call axfndco (lun, 'RAD', 0, iax, jax)
+          if (jax.ne.0) then
+            units2 = 'radians'
+          else 
+            units2 = ' '
+          end if
         end if
 c
         if (type.eq.'absnat') then
@@ -720,14 +712,14 @@ c
           units = 'offset '//units2
         end if
       else
-        str = 'SUNITCO: Unrecognized coordinate type ('//type//')'
+        str = 'SUNITCO: Unrecognized label type ('//type//')'
         call bug ('f', str)
       end if
 c
       end
 c
 c
-c* w2wco -- Convert an array of coordinates
+c* w2wCO -- Convert an array of coordinates
 c& nebk
 c: coordinates
 c+
@@ -910,7 +902,7 @@ c
       end
 c
 c
-c* w2wfco -- Convert an array of coordinates and format 
+c* w2wfCO -- Convert an array of coordinates and format 
 c& nebk
 c: coordinates
 c+
@@ -966,7 +958,7 @@ c-----------------------------------------------------------------------
       include 'maxnax.h'
       double precision wout(maxnax)
       character*30 rangle, hangleh, units
-      character ctype*9, str*132
+      character str*132
       integer i, len1
 c-----------------------------------------------------------------------
 c
@@ -1005,8 +997,7 @@ c
 c Work out units
 c
         if (.not.nounit) then
-          call ctypeco (lun, i, ctype)
-          call sunitco (ctype, typeo(i), units)
+          call sunitco (lun, i, typeo(i), units)
 c
 c Add units to formatted number
 c
@@ -1018,7 +1009,7 @@ c
       end
 c
 c
-c* w2wsco -- Convert NEBK style coordinate for a single axis
+c* w2wsCO -- Convert NEBK style coordinate for a single axis
 c& nebk
 c: coordinates
 c+
@@ -1072,11 +1063,16 @@ c-----------------------------------------------------------------------
       character*6 ltypei(maxnax), ltypeo(maxnax)
       double precision lwin(maxnax), lwout(maxnax)
       integer i
+cc
+      integer naxis
 c-----------------------------------------------------------------------
 c
 c Load reference pixel for dummy locations
 c
-      do i = 1, maxnax
+      call rdhdi (lun, 'naxis', naxis, 0)
+      if (iax.le.0 .or. iax.gt.naxis)  
+     +  call bug ('f', 'W2WSCO: invalid axis number')
+      do i = 1, naxis
         ltypei(i) = 'relpix'
         lwin(i) = 0.0d0
         ltypeo(i) = 'relpix'
@@ -1090,7 +1086,7 @@ c
 c
 c Convert
 c
-      call w2wco (lun, maxnax, ltypei, stypei, lwin, ltypeo, 
+      call w2wco (lun, naxis, ltypei, stypei, lwin, ltypeo, 
      +            stypeo, lwout)
 c
 c Fish out axis
@@ -1100,7 +1096,7 @@ c
       end
 c
 c
-c* w2wfsco -- Convert a coordinate for a single axis and format 
+c* w2wfsCO -- Convert a coordinate for a single axis and format 
 c& nebk
 c: coordinates
 c+
@@ -1153,12 +1149,16 @@ c-----------------------------------------------------------------------
       character*6 ltypei(maxnax), ltypeo(maxnax)
       character*50 lstrout(maxnax)
       integer i, lstrlen(maxnax)
+cc
+      integer naxis
 c-----------------------------------------------------------------------
 c
 c Load dummy array values and actual value into conversion arrays
 c
-      if (iax.le.0)  call bug ('f', 'W2WSFCO: invalid axis number')
-      do i = 1, maxnax
+      call rdhdi (lun, 'naxis', naxis, 0)
+      if (iax.le.0 .or. iax.gt.naxis)  
+     +  call bug ('f', 'W2WSFCO: invalid axis number')
+      do i = 1, naxis
         lwin(i) = 0.0
         ltypei(i) = 'relpix'
         ltypeo(i) = 'relpix'
