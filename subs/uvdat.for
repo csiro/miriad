@@ -62,6 +62,7 @@ c    rjs  26jul94 More accurate equation used in polarisation leakage
 c		  correction.
 c    rjs   9sep94 Support felocity and default values for this and velo.
 c    rjs  23sep94 W coordinate support.
+c    rjs  31jul95 Handle plangle in the polarization conversion software.
 c
 c  User-Callable Routines:
 c    uvDatInp(key,flags)
@@ -846,7 +847,7 @@ c
 	      type(1) = PolRL
 	      type(2) = PolLR
 	    else if(lin2.and.linx)then
-	      if(NoChi)call uvPolChi(tno,NoChi,Cos2Chi,Sin2Chi)
+	      if(NoChi)call uvPolChi(NoChi,Cos2Chi,Sin2Chi)
 	      ncoeff(i) = 4
 	      coeffs(1,i) = cmplx( 0.5*Cos2Chi,0.0)
 	      coeffs(2,i) = cmplx(-0.5*Cos2Chi,0.0)
@@ -868,7 +869,7 @@ c
 	      type(1) = PolLR
 	      type(2) = PolRL
 	    else if(lin2.and.linx)then
-	      if(NoChi)call uvPolChi(tno,NoChi,Cos2Chi,Sin2Chi)
+	      if(NoChi)call uvPolChi(NoChi,Cos2Chi,Sin2Chi)
 	      ncoeff(i) = 4
 	      coeffs(1,i) = cmplx( 0.5*Sin2Chi,0.0)
 	      coeffs(2,i) = cmplx(-0.5*Sin2Chi,0.0)
@@ -952,26 +953,29 @@ c
 c
 	end
 c************************************************************************
-	subroutine uvPolChi(tno,NoChi,Cos2Chi,Sin2Chi)
+	subroutine uvPolChi(NoChi,Cos2Chi,Sin2Chi)
 c
 	implicit none
-	integer tno
 	logical NoChi
 	real Cos2Chi,Sin2Chi
 c
 c  This determines the Cosine and Sine of the parallactic angle. It is
 c  used to rotate polarisation data.
 c
-c  Input:
-c    tno	The handle of the uv file.
 c  Output:
 c    NoChi	Set to false.
 c    Cos2Chi,Sin2Chi Set to cos(2*Chi) and sin(2*Chi), respectively.
 c------------------------------------------------------------------------
-	real Chi
+	include 'mirconst.h'
+	include 'uvdat.h'
+	real Chi,pa
 c
 	NoChi = .false.
 	call uvgetvrr(tno,'chi',chi,1)
+	if(plinit)then
+	  call uvrdvrr(tno,'plangle',pa,plangle)
+	  chi = chi - pi/180.*(pa - plangle)
+	endif
 	Cos2Chi = cos(2*Chi)
 	Sin2Chi = sin(2*Chi)
 	end
