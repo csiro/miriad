@@ -1,4 +1,82 @@
 c************************************************************************
+c* opacget -- Compute sky brightness and opacity of a model atmosphere.
+c& rjs
+c: utilities
+c+
+	subroutine opacGet(nfreq,freq,el,t0,p0,h0,fac,Tb)
+c
+	implicit none
+	integer nfreq
+	real freq(nfreq),el,t0,p0,h0,fac(nfreq),Tb(nfreq)
+c
+c  Returns the transmissivity of the atmosphere given frequency, elevation
+c  angle and meteorological data. This uses a simple model of the
+c  atmosphere and Liebe's model (1985) of the complex refractive index of
+c  air.
+c
+c  The model of the atmosphere is one with an exponential fall-off in
+c  the water vapour content (scale height of 1540 m) and a temperature lapse
+c  rate of 6.5 mK/m. Otherwise the atmosphere obeys the ideal gas equation
+c  and hydrostatic equilibrium.
+c
+c  Input:
+c    freq	Frequency (Hz).
+c    el		Elevation angle (radians).
+c    t0,p0,h0	Met data - Observatory temperature, pressure and humidity
+c		(Kelvins, Pascals and fraction).
+c
+c  Output:
+c    fac	Transmissivity.
+c    Tb		Sky brightness temperature.
+c------------------------------------------------------------------------
+	integer N
+	parameter(N=50)
+	real tau,Ldry,Lvap,T(N),Pdry(N),Pvap(N),z(N),P,zd
+	integer i
+c
+c  Atmospheric parameters.
+c
+        real M,R,Mv,g,rho0
+        parameter(M=28.96e-3,R=8.314,Mv=18e-3,rho0=1e3,g=9.81)
+c
+c  d - Temperature lapse rate                0.0065 K/m.
+c  z0 - Water vapour scale height,           1540 m.
+c  zmax - Max altitude of model atmosphere,  10000 m.
+c
+	real d,z0,zmax
+	parameter(d=0.0065,z0=1540.0,zmax=10000.0)
+c
+c  Externals.
+c
+	real pvapsat
+c
+c  Generate a model of the atmosphere -- T is temperature,
+c  Pdry is partial pressure of "dry" consistuents, Pvap is the
+c  partial pressure of the water vapour.
+c
+	do i=1,N
+	  zd = (i-1)*zmax/real(N)
+	  z(i) = zd
+	  T(i) = T0/(1+d/T0*zd)
+	  P = P0*exp(-M*g/(R*T0)*(zd+0.5*d*zd*zd/T0))
+	  Pvap(i) = min(h0*exp(-zd/z0)*pvapsat(T(1)),pvapsat(T(i)))
+	  Pdry(i) = P - Pvap(i)
+	enddo
+c
+c  Determine the transmissivity and sky brightness.
+c
+	do i=1,nfreq
+	  call refract(T,Pdry,Pvap,z,N,freq(i),2.7,el,Tb(i),tau,
+     *							    Ldry,Lvap)
+	  fac(i) = exp(-tau)
+	enddo
+c
+	end
+c************************************************************************
+c* refract -- Compute refractive index for an atmosphere.
+c& rjs
+c: utilities
+c+
 	subroutine refract(t,pdry,pvap,z,n,nu,T0,el,Tb,tau,Ldry,Lvap)
 c
 	implicit none
@@ -7,7 +85,8 @@ c
 	real Tb,Ldry,Lvap,tau
 c
 c  Determine the sky brightness and excess path lengths for a
-c  parallel slab atmosphere.
+c  parallel slab atmosphere. Liebe's model (1985) is used to determine
+c  the complex refractive index of air.
 c
 c  Input:
 c    n		Number of atmospheric layers.
@@ -25,6 +104,10 @@ c    Tb		Brightness temperature (Kelvin).
 c    tau	Opacity (nepers).
 c    Ldry	Excess path -- dry component (meters).
 c    Lvap	Excess path -- water vapour component (meters).
+c
+c  Reference:
+c    Liebe, An updated model for millimeter wave propogation in moist air,
+c    Radio Science, 20, 1069-1089 (1985).
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 c
@@ -64,6 +147,10 @@ c
 c
 	end
 c************************************************************************
+c* pvapsat -- Compute sky brightness and opacity of a model atmosphere.
+c& rjs
+c: utilities
+c+
 	real function pvapsat(T)
 c
 	implicit none
