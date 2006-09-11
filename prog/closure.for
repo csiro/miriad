@@ -6,24 +6,36 @@ c= closure
 c& rjs
 c: uv analysis, plotting
 c+
-c	CLOSURE is a Miriad task which plots closure phase and triple
-c	product amplitude. The task works by averaging triple products
-c	(the product of three correlations around a closure triangle).
+c	CLOSURE is a Miriad task which plots some closure quantities.
+c	The these include the closure phase (the "triple phase"), the
+c	closure amplitude (the "quad amplitude"), and two less well known
+c	quantities -- the triple amplitude and quad phase.
+c
+c	These are gefined as
+c
+c	  Closure phase     (triple phase):   arg( V12*V23*conjg(V13) )
+c	  Closure amplitude (quad amplitude): abs( (V12*V34)/(V14*conjg(V34)) )
+c	  Triple amplitude:                   abs( V12*V23*conjg(V13) )**0.3333
+c	  Quad phase:                         arg( (V12*V34)/(V14*conjg(V34)) )
+c
+c	The closure phase, quad phase and closure amplitude should be
+c	independent of antenna-based errors, and for a point source should
+c	have values of 	zero phase or unit amplitude. The triple amplitude is
+c	independent of antenna-based phase errors (but not amplitude errors),
+c	and for a point source is a measure of the flux density.
+c	
+c	The task works by averaging the quantites that are the argument
+c	of the abs or arg function.
 c	These are always averaged over the selected frequency channels and
-c	over the parallel-hand polarizations. Optionally the triple
-c	correlation can also be averaged over time and over the different
-c	closure triangles.
+c	over the parallel-hand polarizations. Optionally the averaging
+c	can also be done over time and over the different closure paths.
 c
 c	CLOSURE also prints (and optionally plots) the theoretical error
-c	(as a result of thermal noise) of the closure phase and triple
-c	amplitudes. Note this assumes a point source model, and that the
+c	(as a result of thermal noise) of the quantities.
+c	Note this assumes a point source model, and that the
 c	signal-to-noise ratio is appreciable (at least 10) in each averaged
-c	triple product.
+c	product.
 c
-c	Note: triple amplitude is the cubic root of the
-c	product of three correlations around a closure triangle. It is
-c	an estimate of the flux of a point source which is indepedent of
-c	closing errors.
 c@ vis
 c	The input visibility datasets. Several datasets can be given.
 c@ select
@@ -32,7 +44,8 @@ c	information.
 c@ line
 c	Standard visibility linetype. See the help "line" for more information.
 c@ stokes
-c	Normal Stokes/polaization selection. Correlations other than
+c	Normal Stokes/polaization selection. The default is to process all
+c	parallel-hand polarisation. Note, correlations other than
 c	parallel-hand ones are ignored.
 c@ device
 c	PGPLOT plotting device. The default is no plotting device (the
@@ -48,12 +61,13 @@ c	triple correlations.
 c@ options
 c	Task enrichment parameters. Several parameters can be given, separated
 c	by commas. Minimum match is supported. Possible options are:
-c	  avall     Average all triple correlations from different triangles
+c	  amplitude Plot the amplitude quantity (the default is to plot phase).
+c	  quad      Plot the quad quantity (the default is to plot the
+c	            triple quantity).
+c	  avall     Average all quantities from different triangles
 c	            together. Note the theoretical error estimates are
 c	            incorrect when using options=avall.
-c	  notriple  Plot data from all closure triangles on a single plot.
-c	  amplitude Plot triple amplitude (the default is to plot closure
-c	            phase).
+c	  notriple  Plot data from all quantities on a single plot.
 c	  rms       Plot theoretical error bars on the points. The error
 c	            bars are +/- sigma.
 c	The following give control over calibration to be applied to the
@@ -69,18 +83,19 @@ c    rjs  14sep95 Bring it up to scratch.
 c    rjs  19sep95 Reset the valid flag on a baseline after an integration.
 c    rjs   9nov95 Time axis was mislabelled by 1 integration.
 c    pjt  20jun96 Larger MAXPLOTS for BIMA (20 -> 90)
+c    rjs  29jul97 Added quad quantities.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
 	integer MAXPNTS,MAXPLOTS,MAXTRIP
 	integer PolMin,PolMax,MAXPOL
 	character version*(*)
-	parameter(version='version 20-Jun-96')
+	parameter(version='version 29-Jul-97')
 	parameter(MAXPNTS=5000,MAXPLOTS=90)
 	parameter(MAXTRIP=(MAXANT*(MAXANT-1)*(MAXANT-2))/6)
 	parameter(PolMin=-8,PolMax=4,MAXPOL=2)
 c
-	logical avall,notrip,doamp,doerr
+	logical avall,notrip,doamp,doerr,quad
 	character uvflags*16,device*64
 	real interval,yrange(2)
 	integer nx,ny,nread,i,j,mpnts,mplots,tno,pnt1,pnt2
@@ -119,7 +134,7 @@ c Lets go! Get user inputs.
 c
 	call output('Closure: '//version)
 	call keyini
-	call GetOpt(avall,notrip,doamp,doerr,uvflags)
+	call GetOpt(avall,notrip,doamp,doerr,quad,uvflags)
 	notrip = notrip.or.avall
 c
 	call uvDatInp('vis',uvflags)
@@ -205,7 +220,8 @@ c
 c  Flush the integration buffers if needed.
 c
 	      if(abs(t-tprev).gt.1./(3600.*24.))then
-		call IntFlush(nants,npol,tprev,avall,init,memc,corrpnt,
+		call IntFlush(nants,npol,tprev,quad,avall,init,
+     *		  memc,corrpnt,
      *		  meml,flagpnt,nchan,sigma2,MAXBASE,MAXPOL,
      *		  ntrip,trip,triptime,tripsig2,MAXTRIP)
 		tprev = t
@@ -214,7 +230,7 @@ c
 c  Flush the accumulation buffers if needed.
 c
 	      if(t-tmin.gt.interval.or.tmax-t.gt.interval)then
-		call AccFlush(nants,notrip,avall,doamp,
+		call AccFlush(nants,notrip,quad,avall,doamp,
      *		  ntrip,trip,triptime,tripsig2,tripplot,maxtrip,
      *		  x,y,yerr,npnts,nplots,title,mpnts,mplots)
 		tmin = t
@@ -254,10 +270,11 @@ c
 c  Flush the integration and accumulation buffers.
 c
 	if(nants.gt.0)then
-	  call IntFlush(nants,npol,t,avall,init,memc,corrpnt,
+	  call IntFlush(nants,npol,t,quad,avall,init,
+     *	    memc,corrpnt,
      *	    meml,flagpnt,nchan,sigma2,MAXBASE,MAXPOL,
      *	    ntrip,trip,triptime,tripsig2,MAXTRIP)
-	  call AccFlush(nants,notrip,avall,doamp,
+	  call AccFlush(nants,notrip,quad,avall,doamp,
      *	    ntrip,trip,triptime,tripsig2,tripplot,maxtrip,
      *	    x,y,yerr,npnts,nplots,title,mpnts,mplots)
 	endif
@@ -276,13 +293,13 @@ c
 c
 	end
 c************************************************************************
-	subroutine AccFlush(nants,notrip,avall,doamp,
+	subroutine AccFlush(nants,notrip,quad,avall,doamp,
      *	  ntrip,trip,triptime,tripsig2,tripplot,maxtrip,
      *	  x,y,yerr,npnts,nplots,title,maxpnts,maxplots)
 c
 	implicit none
 	integer nants,maxpnts,maxplots,maxtrip
-	logical notrip,avall,doamp
+	logical notrip,avall,doamp,quad
 	integer ntrip(maxtrip),tripplot(maxtrip)
 	complex trip(maxtrip)
 	double precision triptime(maxtrip)
@@ -294,12 +311,22 @@ c
 c
 c  Flush the accumulated triple products to the plot buffers.
 c------------------------------------------------------------------------
-	integer i1,i2,i3,nantsd,p,k
+	integer i1,i2,i3,i4,i4lo,i4hi,nantsd,p,k
 c
 	nantsd = nants
-	if(avall)nantsd = 3
+	if(avall)         nantsd = 3
+	if(avall.and.quad)nantsd = 4
+	if(quad)then
+	  i4lo = 4
+	  i4hi = nantsd
+	else
+	  i4lo = nantsd+1
+	  i4hi = nantsd+1
+	endif
+c
 	k = 0
-	do i3=3,nantsd
+	do i4=i4lo,i4hi
+	do i3=3,i4-1
 	  do i2=2,i3-1
 	    do i1=1,i2-1
 	      k = k + 1
@@ -311,7 +338,7 @@ c
 		  if(.not.notrip.or.nplots.eq.0)then
 		    nplots = nplots + 1
 		    if(nplots.gt.maxplots)call bug('f','Too many plots')
-		    call triplab(notrip,i1,i2,i3,title(nplots))
+		    call triplab(notrip,quad,i1,i2,i3,i4,title(nplots))
 		  endif
 		  tripplot(k) = nplots
 		endif
@@ -321,7 +348,7 @@ c
 		p = tripplot(k)
 		npnts(p) = npnts(p) + 1
 		if(npnts(p).gt.maxpnts)call bug('f','Too many points')
-		call Tripcalc(doamp,
+		call Tripcalc(doamp,quad,
      *			 ntrip(k),triptime(k),trip(k),tripsig2(k),
      *			 x(npnts(p),p),y(npnts(p),p),yerr(npnts(p),p))
 	        ntrip(k) = 0
@@ -329,18 +356,19 @@ c
 	    enddo
 	  enddo
 	enddo
+	enddo
 c
 	end
 c************************************************************************
-	subroutine triplab(notrip,i1,i2,i3,title)
+	subroutine triplab(notrip,quad,i1,i2,i3,i4,title)
 c
 	implicit none
-	logical notrip
-	integer i1,i2,i3
+	logical notrip,quad
+	integer i1,i2,i3,i4
 	character title*(*)
 c------------------------------------------------------------------------
-	integer l1,l2,l3
-	character n1*8,n2*8,n3*8
+	integer l1,l2,l3,l4
+	character n1*8,n2*8,n3*8,n4*8
 c
 	character itoaf*8
 	integer len1
@@ -353,14 +381,21 @@ c
 	  l2 = len1(n2)
 	  n3 = itoaf(i3)
 	  l3 = len1(n3)
-	  title = 'Antennas '//n1(1:l1)//'-'//n2(1:l2)//'-'//n3(1:l3)
+	  n4 = itoaf(i4)
+	  l4 = len1(n4)
+	  if(quad)then
+	    title = 'Antennas '//n1(1:l1)//'-'//n2(1:l2)//
+     *			    '-'//n3(1:l3)//'-'//n4(1:l4)
+	  else
+	    title = 'Antennas '//n1(1:l1)//'-'//n2(1:l2)//'-'//n3(1:l3)
+	  endif
 	endif
 	end
 c************************************************************************
-	subroutine Tripcalc(doamp,n,time,trip,sigma2,x,y,yerr)
+	subroutine Tripcalc(doamp,quad,n,time,trip,sigma2,x,y,yerr)
 c
 	implicit none
-	logical doamp
+	logical doamp,quad
 	integer n
 	double precision time
 	complex trip
@@ -371,21 +406,35 @@ c------------------------------------------------------------------------
 c
 	x = 24*3600*time/n
 c
-	amp = abs(trip/n) ** 0.333333
-	if(doamp)then
-	  y = amp
-	  yerr = sqrt(sigma2)/(3*n)
-	else if(amp.eq.0)then
-	  y = 0
-	  yerr = 0
+	amp = abs(trip/n)
+	if(quad)then
+	  if(doamp)then
+	    y = amp
+	    yerr = sqrt(sigma2)/n
+	  else if(amp.eq.0)then
+	    y = 0
+	    yerr = 0
+	  else
+	    y = 180/pi * atan2(aimag(trip),real(trip))
+	    yerr = 180/pi * sqrt(sigma2)/n
+	  endif
 	else
-	  y = 180/pi * atan2(aimag(trip),real(trip))
-	  yerr = 180/pi * sqrt(sigma2)/n/amp
+	  amp = abs(trip/n)
+	  if(doamp)then
+	    y = amp ** 0.333333
+	    yerr = sqrt(sigma2)/(3*n)
+	  else if(amp.eq.0)then
+	    y = 0
+	    yerr = 0
+	  else
+	    y = 180/pi * atan2(aimag(trip),real(trip))
+	    yerr = 180/pi * sqrt(sigma2)/n/(amp ** 0.333333)
+	  endif
 	endif
 c
 	end
 c************************************************************************
-	subroutine IntFlush(nants,npol,time,avall,
+	subroutine IntFlush(nants,npol,time,quad,avall,
      *	  init,Corrs,CorrPnt,Flags,FlagPnt,nchan,sigma2,maxbase,maxpol,
      *	  ntrip,trip,triptime,tripsig2,maxtrip)
 c
@@ -394,12 +443,14 @@ c
 	double precision time,triptime(maxtrip)
 	integer CorrPnt(maxbase,maxpol),FlagPnt(maxbase,maxpol)
 	integer ntrip(maxtrip),nchan(maxbase,maxpol)
-	logical avall,init(maxbase,maxpol),Flags(*)
+	logical quad,avall,init(maxbase,maxpol),Flags(*)
 	real sigma2(maxbase,maxpol),tripsig2(maxtrip)
 	complex Corrs(*),trip(maxtrip)
 c------------------------------------------------------------------------
-	integer p,i3,i2,i1,bl12,bl13,bl23,k,i,nread
+	real flux
+	integer p,i4,i3,i2,i1,bl12,bl13,bl23,bl14,bl34,k,i,nread
 	integer pflag12,pflag13,pflag23,pdata12,pdata23,pdata13
+	integer pflag14,pflag34,        pdata14,pdata34
 c
 	do p=1,npol
 	  if(avall)then
@@ -407,43 +458,101 @@ c
 	  else
 	    k = 0
 	  endif
-	  do i3=3,nants
-	    do i2=2,i3-1
-	      do i1=1,i2-1
-		if(.not.avall)k = k + 1
-	        bl12 = ((i2-1)*(i2-2))/2 + i1
-	        bl13 = ((i3-1)*(i3-2))/2 + i1
-	        bl23 = ((i3-1)*(i3-2))/2 + i2
-		if(init(bl12,p).and.init(bl13,p).and.init(bl23,p))then
-		  if(ntrip(k).eq.0)then
-		    triptime(k) = 0
-		    tripsig2(k) = 0
-		    trip(k) = 0
-		  endif
-		  nread = min(nchan(bl12,p),nchan(bl13,p),nchan(bl23,p))
-		  pdata12 = corrpnt(bl12,p) - 1
-		  pdata13 = corrpnt(bl13,p) - 1
-		  pdata23 = corrpnt(bl23,p) - 1
-		  pflag12 = flagpnt(bl12,p) - 1
-		  pflag13 = flagpnt(bl13,p) - 1
-		  pflag23 = flagpnt(bl23,p) - 1
-		  do i=1,nread
-		    if(Flags(pflag12+i).and.Flags(pflag13+i).and.
-     *		       Flags(pflag23+i))then
-		      trip(k) = trip(k) + Corrs(pdata12+i)
-     *					* Corrs(pdata23+i)
-     *				  * conjg(Corrs(pdata13+i))
-		      tripsig2(k) = tripsig2(k) + sigma2(bl12,p)
-     *						+ sigma2(bl23,p)
-     *						+ sigma2(bl13,p)
-		      triptime(k) = triptime(k) + time
-		      ntrip(k) = ntrip(k) + 1
+c
+c  Quad quantity.
+c
+	  if(quad)then
+	    do i4=4,nants
+	    do i3=3,i4-1
+	      do i2=2,i3-1
+	        do i1=1,i2-1
+	 	  if(.not.avall)k = k + 1
+	          bl12 = ((i2-1)*(i2-2))/2 + i1
+	          bl34 = ((i4-1)*(i4-2))/2 + i3
+	          bl14 = ((i4-1)*(i4-2))/2 + i1
+	          bl23 = ((i3-1)*(i3-2))/2 + i2
+		  if(init(bl12,p).and.init(bl34,p).and.init(bl14,p).and.
+     *		     init(bl23,p))then
+		    if(ntrip(k).eq.0)then
+		      triptime(k) = 0
+		      tripsig2(k) = 0
+	 	      trip(k) = 0
 		    endif
-		  enddo
-		endif
+		    nread = min(nchan(bl12,p),nchan(bl34,p),
+     *				nchan(bl14,p),nchan(bl23,p))
+		    pdata12 = corrpnt(bl12,p) - 1
+		    pdata34 = corrpnt(bl34,p) - 1
+		    pdata14 = corrpnt(bl14,p) - 1
+		    pdata23 = corrpnt(bl23,p) - 1
+		    pflag12 = flagpnt(bl12,p) - 1
+		    pflag34 = flagpnt(bl34,p) - 1
+		    pflag14 = flagpnt(bl14,p) - 1
+		    pflag23 = flagpnt(bl23,p) - 1
+		    do i=1,nread
+		      if(Flags(pflag12+i).and.Flags(pflag34+i).and.
+     *		         Flags(pflag14+i).and.Flags(pflag23+i))then
+		        trip(k) = trip(k) +
+     *			  (Corrs(pdata12+i) *       Corrs(pdata34+i))/
+     *			  (Corrs(pdata14+i) * conjg(Corrs(pdata23+i)))
+			flux = 0.25*(abs(Corrs(pdata12+i)) + 
+     *				     abs(Corrs(pdata34+i)) +
+     *				     abs(Corrs(pdata14+i)) +
+     *				     abs(Corrs(pdata23+i)))
+		        tripsig2(k) = tripsig2(k) + 
+     *			  (sigma2(bl12,p) + sigma2(bl34,p) +
+     *			   sigma2(bl14,p) + sigma2(bl23,p))/(flux*flux)
+		        triptime(k) = triptime(k) + time
+		        ntrip(k) = ntrip(k) + 1
+		      endif
+		    enddo
+		  endif
+	        enddo
+	      enddo
 	      enddo
 	    enddo
-	  enddo
+c
+c  Triple quantity.
+c
+	  else
+	    do i3=3,nants
+	      do i2=2,i3-1
+	        do i1=1,i2-1
+	 	  if(.not.avall)k = k + 1
+	          bl12 = ((i2-1)*(i2-2))/2 + i1
+	          bl13 = ((i3-1)*(i3-2))/2 + i1
+	          bl23 = ((i3-1)*(i3-2))/2 + i2
+		  if(init(bl12,p).and.init(bl13,p).and.init(bl23,p))then
+		    if(ntrip(k).eq.0)then
+		      triptime(k) = 0
+		      tripsig2(k) = 0
+	 	      trip(k) = 0
+		    endif
+		    nread = min(nchan(bl12,p),nchan(bl13,p),
+     *				nchan(bl23,p))
+		    pdata12 = corrpnt(bl12,p) - 1
+		    pdata13 = corrpnt(bl13,p) - 1
+		    pdata23 = corrpnt(bl23,p) - 1
+		    pflag12 = flagpnt(bl12,p) - 1
+		    pflag13 = flagpnt(bl13,p) - 1
+		    pflag23 = flagpnt(bl23,p) - 1
+		    do i=1,nread
+		      if(Flags(pflag12+i).and.Flags(pflag13+i).and.
+     *		         Flags(pflag23+i))then
+		        trip(k) = trip(k) + Corrs(pdata12+i)
+     *					* Corrs(pdata23+i)
+     *				  * conjg(Corrs(pdata13+i))
+		        tripsig2(k) = tripsig2(k) + sigma2(bl12,p)
+     *						+ sigma2(bl23,p)
+     *						+ sigma2(bl13,p)
+		        triptime(k) = triptime(k) + time
+		        ntrip(k) = ntrip(k) + 1
+		      endif
+		    enddo
+		  endif
+	        enddo
+	      enddo
+	    enddo
+	  endif
 c
 c  Reset the baseline.
 c
@@ -453,24 +562,25 @@ c
 	enddo
 	end
 c************************************************************************
-	subroutine GetOpt(avall,notrip,doamp,doerr,uvflags)
+	subroutine GetOpt(avall,notrip,doamp,doerr,quad,uvflags)
 c
 	implicit none
-	logical avall,notrip,doamp,doerr
+	logical avall,notrip,doamp,doerr,quad
 	character uvflags*(*)
 c------------------------------------------------------------------------
 	integer NOPTS
-	parameter(NOPTS=7)
+	parameter(NOPTS=8)
 	character opts(NOPTS)*9
 	logical present(NOPTS)
 	data opts/'avall    ','notriple ','amplitude','rms      ',
-     *		  'nocal    ','nopol    ','nopass   '/
+     *		  'nocal    ','nopol    ','nopass   ','quad     '/
 c
 	call options('options',opts,present,NOPTS)
 	avall = present(1)
 	notrip = present(2)
 	doamp  = present(3)
 	doerr  = present(4)
+	quad   = present(8)
 c
 c c -- docal
 c f -- dopass
@@ -558,15 +668,15 @@ c
 	yerrav = yerrav/n
 c
 	if(doamp)then
-	  write(line,'(a,f8.3)')
-     *	    'Mean triple amplitude:',yav
+	  write(line,'(a,f9.4)')
+     *	    'Mean amplitude:',yav
 	  call output(line)
 	  yrms = sqrt(yrms**2 - yav**2)
 	  write(line,'(a,f8.4)')
-     *	    'Actual triple amplitude rms scatter:     ',yrms
+     *	    'Actual amplitude rms scatter:     ',yrms
 	  call output(line)
 	  write(line,'(a,f8.4)')
-     *	    'Theoretical triple amplitude rms scatter:',yerrav
+     *	    'Theoretical amplitude rms scatter:',yerrav
 	  call output(line)
 	else
 	  write(line,'(a,f8.3)')
@@ -617,7 +727,7 @@ c
 	  call pgswin(xmin,xmax,ymin,ymax)
 	  call pgtbox('BCNSTHZO',0.,0.,'BCNST',0.,0.)
 	  if(doamp)then
-	    call pglab('Time','Triple Amplitude',title(jd))
+	    call pglab('Time','Amplitude',title(jd))
 	  else
 	    call pglab('Time','Closure Phase (degrees)',title(jd))
 	  endif
