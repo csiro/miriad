@@ -105,13 +105,15 @@ c    rjs  12sep94 Added error estimates, deconvolution by beam and
 c		  total flux estimates.
 c    rjs  15sep94 Support object=point and object=beam.
 c    rjs  26jan95 Eliminate non-standard string concatenation.
+c    rjs  06apr95 Get solver to work with relative coordinates, to
+c		  eliminate divergence problem.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'maxnax.h'
 	include 'mem.h'
 c
 	character version*(*)
-	parameter(version='version 1.0 15-Sep-94')
+	parameter(version='version 1.0 06-Apr-95')
 	integer MAXBOX,MAXVAR
 	parameter(MAXBOX=1024,MAXVAR=20)
 c
@@ -565,7 +567,7 @@ c------------------------------------------------------------------------
 	parameter(MAXRUNS=3*MAXDIM)
 	include 'imfit.h'
 	integer Runs(3,MAXRUNS),nRuns,xmin,xmax,ymin,ymax
-	integer iRun,n,n0,ipt,i
+	integer iRun,n,n0,ipt,i,xt,yt
 c
 	call BoxRuns(1,k,' ',boxes,Runs,MAXRUNS,nRuns,
      *					xmin,xmax,ymin,ymax)
@@ -578,6 +580,8 @@ c
 	n0 = 0
 	n = 0
 	ipt = 0
+	xt = 0
+	yt = 0
 	do i=1,m
 	  if(n.eq.n0)then
 	    iRun = iRun + 1
@@ -590,6 +594,8 @@ c
 	    Data(ipt) = Data(i)
 	    x(ipt) = Runs(2,iRun) + n
 	    y(ipt) = Runs(1,iRun)
+	    xt = xt + x(ipt)
+	    yt = yt + y(ipt)
 	  endif
 c
 	  n = n + 1
@@ -597,6 +603,8 @@ c
 c
 	m = ipt
 	ndata = ipt
+	xoff = xt / real(ndata)
+	yoff = yt / real(ndata)
 c
 	end
 c************************************************************************
@@ -622,11 +630,11 @@ c
 	  endif
 	  if(vl0(i))then
 	    ncurr = ncurr + 1
-	    tmp(ncurr) = l0(i)
+	    tmp(ncurr) = l0(i) - xoff
 	  endif
 	  if(vm0(i))then
 	    ncurr = ncurr + 1
-	    tmp(ncurr) = m0(i)
+	    tmp(ncurr) = m0(i) - yoff
 	  endif
 	  if(vfwhm1(i))then
 	    ncurr = ncurr + 1
@@ -721,11 +729,11 @@ c
 	  endif
 	  if(vl0(i))then
 	    n = n + 1
-	    l0(i) = var(n)
+	    l0(i) = var(n) + xoff
 	  endif
 	  if(vm0(i))then
 	    n = n + 1
-	    m0(i) = var(n)
+	    m0(i) = var(n) + yoff
 	  endif
 	  if(vfwhm1(i))then
 	    n = n + 1
