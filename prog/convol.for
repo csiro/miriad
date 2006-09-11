@@ -85,18 +85,19 @@ c    rjs      22nov93 Handle gaussian beam. Get rid of "scale" option.
 c    rjs      11jan93 Honour explicit scale factors.
 c    mchw  06sep94 Set default bmin to be bmaj, and fix log line in doc.
 c    rjs   15mar95 Add options=final.
-c
+c    rjs   06jan97 Improve output headers.
 c  Bugs:
 c------------------------------------------------------------------------
 	include 'maxdim.h'
+	include 'maxnax.h'
 	include 'mirconst.h'
 	integer maxbox,maxruns
 	character version*(*)
-	parameter(version='Convol: version 1.0 15-Mar-95' )
+	parameter(version='Convol: version 1.0 06-Jan-97' )
 	parameter(maxruns=3*maxdim)
 	parameter(maxbox=1024)
 	character map*32,beam*32,out*32
-	integer nsize(3),naxis,ifail
+	integer nsize(MAXNAX),naxis,ifail
 	integer lMap,lBeam,lOut,iref,jref,blc(3),trc(3)
 	integer xmin,xmax,ymin,ymax,nx,ny,n1,n2,xoff,yoff
 	integer nPoint,nRuns,k,l,Box(maxbox),Runs(3,maxRuns)
@@ -157,10 +158,10 @@ c
 	call xyopen(lMap,map,'old',3,nsize)
 	nx = nsize(1)
 	ny = nsize(2)
-	call rdhdi(lMap,'naxis',naxis,3)
+	call rdhdi(lMap,'naxis',naxis,MAXNAX)
 	call rdhdd(lMap,'cdelt1',cdelt1,1.d0)
 	call rdhdd(lMap,'cdelt2',cdelt2,1.d0)
-	naxis = min(naxis,3)
+	naxis = min(naxis,MAXNAX)
 c
 	call BoxMask(lMap,box,maxbox)
 	call BoxSet(box,3,nsize,' ')
@@ -263,8 +264,11 @@ c
 	nsize(1) = trc(1) - blc(1) + 1
 	nsize(2) = trc(2) - blc(2) + 1
 	nsize(3) = trc(3) - blc(3) + 1
+	do k=4,naxis
+	  nsize(k) = 1
+	enddo
 	call xyopen(lOut,Out,'new',naxis,nsize)
-	call header(lMap,lOut,naxis,blc,
+	call header(lMap,lOut,min(naxis,3),blc,
      *	  bunit,bmaj,bmin,bpa,version)
 	call MemAlloc(pDat,nsize(1)*nsize(2),'r')
 c
@@ -422,19 +426,22 @@ c------------------------------------------------------------------------
 	character line*72,num*1
 	real crpix
 	integer nkeys
-	parameter(nkeys=25)
+	parameter(nkeys=35)
 	character keyw(nkeys)*8
 c
 c  Externals.
 c
 	character itoaf*2
 c
-	data keyw/   'cdelt1  ','cdelt2  ','cdelt3  ','crval1  ',
-     *	  'crval2  ','crval3  ','ctype1  ','ctype2  ','ctype3  ',
-     *	  'date-obs','epoch   ','instrume','niters  ','object  ',
-     *	  'telescop','xshift  ','yshift  ','history ','restfreq',
+	data keyw/
+     *	  'cdelt1  ','cdelt2  ','cdelt3  ','cdelt4  ','cdelt5  ',
+     *	  'crval1  ','crval2  ','crval3  ','crval4  ','crval5  ',
+     *	  'ctype1  ','ctype2  ','ctype3  ','ctype4  ','ctype5  ',
+     *				           'crpix4  ','crpix5  ',
+     *	  'epoch   ','niters  ','object  ','obstime ',
+     *	  'telescop','history ','restfreq','mostable',
      *	  'vobs    ','observer','obsra   ','obsdec  ','pbfwhm  ',
-     *    'btype   '/
+     *    'btype   ','ltype   ','lstart  ','lstep   ','lwidth  '/
 c
 c  Copy keywords across, which have not changed.
 c
