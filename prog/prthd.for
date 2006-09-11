@@ -41,6 +41,7 @@ c    rjs  11oct96 Print delay tracking and pointing RA and DEC.
 c    rjs  14mar97 Recognise "time" axes.
 c    rjs  23jul97 Print galactic and ecliptic coordinates in decimal format.
 c		  Support pbtype.
+c    rjs  31jul97 Use MAXWIN for number of spectra.
 c
 c  Bugs and Shortcomings:
 c    * Descriptions in brief mode could be a bit more verbose!
@@ -431,16 +432,15 @@ c
 c
 c  Give a summary about a uv data-set.
 c------------------------------------------------------------------------
-      integer MAXSPECT
-      parameter(MAXSPECT=16)
+      include 'maxdim.h'
       character line*80,aval1*64,aval2*64,type*1,obstype*32
-      integer il1,il2,length,nschan(MAXSPECT),nchan,nspect,npol,pol,i
+      integer il1,il2,length,nschan(MAXWIN),nchan,nspect,npol,pol,i
       integer nants,ival,ncorr,tno,n
       real epoch
-      double precision sdf(MAXSPECT),sfreq(MAXSPECT),restfreq(MAXSPECT)
+      double precision sdf(MAXWIN),sfreq(MAXWIN),restfreq(MAXWIN)
       double precision time
       double precision obsra,obsdec,ra,dec,delra,deldec,pntra,pntdec
-      real wwidth(MAXSPECT),wfreq(MAXSPECT)
+      real wwidth(MAXWIN),wfreq(MAXWIN)
       logical updated,present,more
 c
 c  Externals.
@@ -529,7 +529,7 @@ c
 	call uvrdvri(tno,'nchan',nchan,1)
 	call uvrdvri(tno,'nspect',nspect,1)
 	call logwrite('Spectral Correlations:',more)
-	if(nspect.le.MAXSPECT)then
+	if(nspect.le.MAXWIN)then
 	  call uvgetvri(tno,'nschan',nschan,nspect)
 	  call uvgetvrd(tno,'sfreq',sfreq,nspect)
 	  call uvgetvrd(tno,'sdf',sdf,nspect)
@@ -564,7 +564,7 @@ c
 	if(present)call logwrite(' ',more)
 	call logwrite('Continuum (wide) correlations: ',more)
 	call uvrdvri(tno,'nwide',nchan,1)
-	if(nchan.le.MAXSPECT)then
+	if(nchan.le.MAXWIN)then
 	  call uvgetvrr(tno,'wfreq',wfreq,nchan)
 	  call uvgetvrr(tno,'wwidth',wwidth,nchan)
 	  call logwrite(
