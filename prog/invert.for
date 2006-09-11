@@ -275,10 +275,9 @@ c    rjs   28nov94  Determine the weights in a pointing-dependent manner.
 c    rjs    3dec94  Some changes to make it work nicerer with single pointing
 c		    mosaics.
 c    rjs   19dec94  Restore amplitude and phase options.
+c    rjs    4feb95  Changed subroutine name only.
 c  Bugs:
 c    - It would be nice to have a primary-beam dependent default image size.
-c    - The uniform weighting scheme for mosaiced observations is not
-c      perfect.
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'maxdim.h'
@@ -430,7 +429,7 @@ c  Give the "Hd" routines the header information, and create a initial
 c  coordinate object for the output.
 c
 	if(mosaic)then
-	  call MosGet(ra0,dec0,npnt,proj)
+	  call MosChar(ra0,dec0,npnt,proj)
 	  if(doset)then
 	    ra0 = offset(1)
 	    dec0 = offset(2)
