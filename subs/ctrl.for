@@ -460,6 +460,10 @@ c
 c------------------------------------------------------------------------
 	include 'ctrl.h'
 c
+	call CtrlFlsh(2)
+	Buffer(BufLen+1) = DONE
+	Buffer(BufLen+2) = 0
+	BufLen = BufLen + 2
 	call CtrlFlsh(BufSize)
 	call TcpClose(handle)
 	end
