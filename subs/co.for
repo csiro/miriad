@@ -2542,12 +2542,16 @@ c
 c
 c  Commented out these code to hopefully deal better with Anne Green's data.
 c  This should only affect CAR and GLS projections.
+c  Now uncomment it to deal better with Douglas Bock's data.
 c
-c	if(Dalp.lt.-DPI)then
-c	  Dalp = Dalp + 2*DPI
-c	else if(Dalp.gt.DPI)then
-c	  Dalp = Dalp - 2*DPI
-c	endif
+	Dalp = mod(Dalp,2*DPI)
+	if(Dalp.lt.-DPI)then
+	  Dalp = Dalp + 2*DPI
+	else if(Dalp.gt.DPI)then
+	  Dalp = Dalp - 2*DPI
+	endif
+c
+c
 c
 	if(proj.eq.'ncp')then
 	  L = sin(Dalp) * cos(y1)
