@@ -245,6 +245,7 @@ c     rjs 23jan00 Change some subroutine args to real-valued to avoid
 c	          compiler complaints.
 c     rjs 28jan00 Some FORTRAN standardization to get it through a
 c		  compiler.
+c     rjs 08may00 Change incorrect call to keyf to keya.
 c************************************************************************
 
 c The main program first gets all inputs and then calls the workhorse.
@@ -342,10 +343,10 @@ c Initialize keyword routines
 
 c Read names of datasets
       call keya( 'in',       inp, ' ' )
-      call keyf( 'model',    mdl, ' ' )
-      call keyf( 'residual', res, ' ' )
+      call keya( 'model',    mdl, ' ' )
+      call keya( 'residual', res, ' ' )
       call keyf( 'parinp',   pin, ' ' )
-      call keyf( 'params',   par, ' ' )
+      call keya( 'params',   par, ' ' )
       call assertl( inp.ne.' ' .or. pin.ne.' ',
      *              'You must specify an input file' )
 
