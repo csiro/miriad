@@ -32,18 +32,19 @@ c    rjs  20nov90 Original version.
 c    pjt   1mar91 added one '+' sign to make doc work
 c    rjs  19jul91 Changed name.
 c    pjt  18may93 added gnoise parameter, use mirconst.h for PI
+c    rjs  05feb01 Use basant routine.
 c
 c  Bugs/Shortcomings:
 c    * Needs a gnoise and leakage parameters as well.
 c    * Write gain table for two feeds.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='GpError: version 1.0 18-May-93')
+	parameter(version='GpError: version 1.0 05-Feb-01')
 	include 'maxdim.h'
 	include 'mirconst.h'
 c
 	character vis*64
-	integer lu,item,offset,nants,iostat,i,n,header(2)
+	integer lu,item,offset,nants,iostat,i,n,header(2),i1,i2
 	real interval,prms,arms,baseline
 	double precision time,tmin,tmax
 	real theta(maxant)
@@ -88,15 +89,15 @@ c
 	if(uvscan(lu,'baseline').ne.0)
      *	  call bug('f','Failed to find the baseline uv variable')
 	call uvrdvrr(lu,'baseline',baseline,0.)
-	i = nint(baseline)
-	nants = max(i/256,mod(i,256))
+	call basant(dble(baseline),i1,i2)
+	nants = max(i1,i2)
 	call uvrdvrd(lu,'time',tmin,0.d0)
 	tmax = tmin
 c
 	dowhile(uvscan(lu,'baseline').eq.0)
 	  call uvrdvrr(lu,'baseline',baseline,0.)
-	  i = nint(baseline)
-	  nants = max(nants,i/256,mod(i,256))
+	  call basant(dble(baseline),i1,i2)
+	  nants = max(nants,i1,i2)
 	  call uvrdvrd(lu,'time',time,0.d0)
 	  tmax = max(tmax,time)
 	  tmin = min(tmin,time)
