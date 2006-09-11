@@ -45,6 +45,7 @@ c    rjs   2aug94    Recognised XTENSION='BINTABLE'
 c    rjs   6feb95    Change name of COMMON block for LINUX.
 c    rjs  28apr95    fuvopen(status=old) was failing if there were
 c		     no history comments in the input FITS files.
+c    rjs  27sep95    Default naxisx value of 1.
 c
 c  Bugs and Shortcomings:
 c    * IF frequency axis is not handled on output or uv data.
@@ -234,7 +235,7 @@ c
 c
 	  do i=1,max(naxis,ndim)
 	    if(i.le.ndim)then
-	      call fitrdhdi(lu,'NAXIS'//itoaf(i),temp,0)
+	      call fitrdhdi(lu,'NAXIS'//itoaf(i),temp,1)
 	      if(temp.le.0)call bug('f','File is not an image')
 	    else
 	      temp = 1
