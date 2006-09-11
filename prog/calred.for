@@ -17,6 +17,10 @@ c	Standard visibility linetype. See the help "line" for more information.
 c@ stokes
 c	Normal Stokes/polaization selection. The default is to process all
 c	parallel-hand polarisation.
+c@ interval
+c	Seperate estimates of the various parameters are determined for
+c	data over an interval. This parameter gives the interval, in
+c	minutes. The default is 5 minutes.
 c@ options
 c	  triple    Do triple processing.
 c	  nocal     Do not perform gain calibration.
@@ -31,20 +35,23 @@ c    rjs  04apr02 Realy fix it this time.
 c    rjs  08apr02 Allow negative values when taking cube roots,
 c		  and print out number of triples.
 c    rjs  04may04 Handle more antennas.
+c    rjs  08aug04 The algorithm to determine the confusion was hopelessly
+c		  flawed. Correct this.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
 	integer MAXDAT,MAXSRC,MAXPOL
 	integer PolMin,PolMax
 	character version*(*)
-	parameter(version='version 04-May-04')
-	parameter(MAXDAT=30,MAXPOL=2,MAXSRC=1024)
+	parameter(version='version 08-Aug-04')
+	parameter(MAXDAT=(MAXANT*(MAXANT-1)*(MAXANT-2))/6)
+	parameter(MAXPOL=2,MAXSRC=1024)
 	parameter(PolMin=-8,PolMax=4)
 c
 	logical dotrip,polp,dopara
 	character uvflags*16,line*80,con*6
 	character sources(MAXSRC)*16
-	real scat2,SSms,flux,flux2,SSmm,rp,ip
+	real scat2,SSms,flux,flux2,SSmm,rp,ip,SconN,SConD
 	integer ncorr
 	complex SSdm
 	integer isrc,nsrc,iplanet,tno,vsource,pnt1,pnt2,pnt3
@@ -52,7 +59,7 @@ c
 	real Smm(MAXDAT,MAXSRC),Sms(MAXDAT,MAXSRC),Sdd(MAXDAT,MAXSRC)
 	complex Sdm(MAXDAT,MAXSRC)
 	integer npnt(MAXDAT,MAXSRC)
-	integer indx(MAXBASE,MAXPOL)
+	integer indx(MAXDAT,MAXPOL)
 c
 	integer nread,i,j
 	integer npol,polcvt(PolMin:PolMax),p,ant1,ant2,nants,bl,ndat
@@ -92,6 +99,10 @@ c
 	  do i=1,MAXBASE
 	    nchan(i,j) = 0
 	    init(i,j) = .false.
+	  enddo
+	enddo
+	do j=1,MAXPOL
+	  do i=1,MAXDAT
 	    indx(i,j) = 0
 	  enddo
 	enddo
@@ -220,6 +231,8 @@ c
 	  SSmm = 0
 	  SSms = 0
 	  flux2 = 0
+	  SconN = 0
+	  SconD = 0
 	  do i=1,ndat
 	    if(npnt(i,j).gt.0)then
 	      rp = real(Sdm(i,j))
@@ -231,6 +244,8 @@ c
 	      SSmm = SSmm + Smm(i,j)
 	      if(dotrip)then
 	        SSdm = SSdm + Sdm(i,j)
+		SConN = SConN + aimag(Sdm(i,j))**2
+		SConD = SConD + real(Sdm(i,j))**2
 	      else
 		SSdm = SSdm + sqrt(rp*rp+ip*ip)
 	      endif
@@ -252,7 +267,7 @@ c
 		scat2 = scat2**0.3333
 	      endif
 	      write(con,'(i6)')
-     *		nint(100*min(abs(aimag(SSdm)/real(SSdm)),1.))
+     *		nint(100*min(0.82*sqrt(SconN/SConD),1.))
 	    else
 	      flux = SSdm
 	      con = '     -'
@@ -429,15 +444,21 @@ c
 c  Triple quantity.
 c
 	  if(dotrip)then
-	    k = 1
-	    ndat = 1
+	    id = 0
 	    do i3=3,nants
 	      do i2=2,i3-1
 	        do i1=1,i2-1
+		  id = id + 1
 	          bl12 = ((i2-1)*(i2-2))/2 + i1
 	          bl13 = ((i3-1)*(i3-2))/2 + i1
 	          bl23 = ((i3-1)*(i3-2))/2 + i2
 		  if(init(bl12,p).and.init(bl13,p).and.init(bl23,p))then
+		    if(indx(id,p).eq.0)then
+		      ndat = ndat + 1
+		      if(ndat.gt.MAXDAT)call bug('f','Too many thinos')
+		      indx(id,p) = ndat
+		    endif
+		    k = indx(id,p)
 		    n = min(nchan(bl12,p),nchan(bl13,p),nchan(bl23,p))
 		    pdata12 = corrpnt(bl12,p) - 1
 		    pdata13 = corrpnt(bl13,p) - 1
