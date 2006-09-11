@@ -85,14 +85,15 @@ c    rjs   9nov95 Time axis was mislabelled by 1 integration.
 c    pjt  20jun96 Larger MAXPLOTS for BIMA (20 -> 90)
 c    rjs  29jul97 Added quad quantities.
 c    rjs  11aug97 Minor fiddles to make it more robust.
+c    mchw 20may98 Larger MAXPLOTS for 10-antennas (90 -> 120)
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
 	integer MAXPNTS,MAXPLOTS,MAXTRIP
 	integer PolMin,PolMax,MAXPOL
 	character version*(*)
-	parameter(version='version 29-Jul-97')
-	parameter(MAXPNTS=5000,MAXPLOTS=90)
+	parameter(version='version 20-May-98')
+	parameter(MAXPNTS=5000,MAXPLOTS=120)
 	parameter(MAXTRIP=(MAXANT*(MAXANT-1)*(MAXANT-2))/6)
 	parameter(PolMin=-8,PolMax=4,MAXPOL=2)
 c
