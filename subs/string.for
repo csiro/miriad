@@ -22,6 +22,7 @@ c		    implementations).
 c   mchw    30nov92 added hex and octal conversions to atoif.
 c   bpw     16aug93 changed an accidental len to len1 in atodf
 c   rjs      3nov94 Treat [] and {} as brackets in GetField.
+c   rjs     06feb95 Fixed handling of quotes in getfield. What did bpw do?
 c-----------------------------------------------------------------------
 c 
 c* atoif -- Convert a string into an integer.
@@ -569,7 +570,7 @@ c
 	depth = 0
 	do while(k1.le.k2.and.more)
 	  c = string(k1:k1)
-	  if(c.eq.'''')then
+	  if(c.eq.'"')then
 	    quoted = .not.quoted
 	  else if(.not.quoted)then
 	    if(c.eq.'('.or.c.eq.'['.or.c.eq.'{')then
