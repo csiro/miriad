@@ -114,9 +114,9 @@ c------------------------------------------------------------------------
 	include 'mem.h'
 c
 	character version*(*)
-	parameter(version='version 1.0 01-Nov-95')
+	parameter(version='version 1.0 18-Jan-96')
 	integer MAXBOX,MAXVAR
-	parameter(MAXBOX=1024,MAXVAR=20)
+	parameter(MAXBOX=1024,MAXVAR=30)
 c
 	character in*64,out*64
 	real clip,x(MAXVAR),covar(MAXVAR*MAXVAR),rms,trms
