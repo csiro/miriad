@@ -105,6 +105,7 @@ c    rjs  16nov95 Use different colours and PGRNGE.
 c    rjs  14dec95 Increase buffer in averaging (MAXAVER).
 c    rjs  19aug97 Added axis=lag
 c    rjs  31oct97 Use colours in the label.
+c    rjs   3dec97 Replace part of label that dropped off in above change.
 c  Bugs:
 c------------------------------------------------------------------------
 	include 'mirconst.h'
@@ -113,7 +114,7 @@ c------------------------------------------------------------------------
         parameter (maxco=15)
 c
 	character version*(*)
-	parameter(version='UvSpec: version 1.0 31-Oct-97')
+	parameter(version='UvSpec: version 1.0 3-Dec-97')
 	character uvflags*8,device*64,xaxis*12,yaxis*12,logf*64
 	character xtitle*64,ytitle*64
 	logical ampsc,rms,nobase,avall,first,buffered,doflush,dodots
@@ -1043,6 +1044,7 @@ c
 	if(npol.eq.1)then
 	  call pglab(xtitle(1:xl),ytitle(1:yl),title(1:l))
 	else
+	  call pglab(xtitle(1:xl),ytitle(1:yl),' ')
 	  call pglen(5,title(1:l),xlen,ylen)
 	  xloc = 0.5 - 0.5*xlen
 c
