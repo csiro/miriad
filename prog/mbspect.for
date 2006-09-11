@@ -113,12 +113,13 @@ c    lss  26jul99  Copied "imspect" to "mbspect" for HIPASS-specific chores
 c    rjs  29aug99  Some FORTRAN standardization.
 c    rjs   3sep99  Change pgpt1 to pgpt calls.
 c    lss   3sep99  pgpt bug when order negative; added rms output line
+c    pjt  20sep99  fixed obvious syntax error - does anybody use flint anymore
 c----------------------------------------------------------------------c
 	include 'maxdim.h'
 	integer maxco,maxnax,naxis,maxch
  	character version*(*)
 
-	parameter(version='version 1.0 3-Sep-99')
+	parameter(version='version 1.0 20-Sep-99')
 
 	parameter(maxco=15,maxnax=3)
 	parameter(maxch=32)
@@ -317,10 +318,10 @@ c
 c  Check if coordinate inside cubes
 c
 	if(nint(dtrc(raxis)).lt.1.or.
-      *    nint(dtrc(raxis)).gt.nsize(raxis).or.
-      *    nint(dtrc(daxis)).lt.1.or.
-      *    nint(dtrc(daxis)).gt.nsize(daxis))
-      *    call bug('f','Requested region not inside cube')
+     *    nint(dtrc(raxis)).gt.nsize(raxis).or.
+     *    nint(dtrc(daxis)).lt.1.or.
+     *    nint(dtrc(daxis)).gt.nsize(daxis))
+     *    call bug('f','Requested region not inside cube')
 c
 c  Reset spatial boundaries if necessary
 c
