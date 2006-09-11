@@ -151,7 +151,7 @@ c
 c
 c  Open the output text file.
 c
- 	call LogOpen(out,' ')
+ 	call LogOpen(out,'q')
 c
 c  Open the data file, apply selection, do linetype initialisation and
 c  determine the variables of interest.
