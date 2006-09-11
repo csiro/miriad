@@ -42,6 +42,7 @@ c    rjs  02jul97 Support "cellscal" keyword.
 c    rjs  07jul97 Treat "epoch" and "obstime" as part of the coordinate
 c		  specification. Add coGetd. Improve coVelSet. Support
 c		  gls projection.
+c    rjs  14jul97 Fix bug in covelset introduced on above date.
 c************************************************************************
 c* coInit -- Initialise coordinate conversion routines.
 c& rjs
@@ -1088,7 +1089,7 @@ c
       else
         iframe = ' '
       end if
-      oframe = type(5:)
+      oframe = ttype(5:)
       if(oframe.eq.' ')oframe = iframe
       if(iframe.eq.' ')iframe = oframe
 c
