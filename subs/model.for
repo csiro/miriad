@@ -45,6 +45,7 @@ c    mchw 02jul93 Change flux limit to zero (all entries in flux table)
 c    rjs   6jul93 Do not exceed MAXDIM in model calculation. Fix
 c		  clippind message for cross hand polarisations.
 c    rjs   3aug93 Make sure the FFT is at least 16 in size.
+c    rjs  16sep93 Rename bsrch to binsrch.
 c************************************************************************
 c*ModelIni -- Ready the uv data file for processing by the Model routine.
 c&mchw
@@ -1167,7 +1168,7 @@ c------------------------------------------------------------------------
 c
 c  Externals.
 c
-	integer bsrcha
+	integer binsrcha
 	real ModPlant
 c
 c  Get the current source name, and check if we already have information
@@ -1178,7 +1179,7 @@ c
 	  if(cals(calcur).ne.source) calcur = 0
 	endif
 	if(calcur.eq.0.and.ncals.gt.0)
-     *	  calcur = bsrcha(source,cals,ncals)
+     *	  calcur = binsrcha(source,cals,ncals)
 c
 c  We do not have information about this calibrator. We will have to
 c  get if from the calibrator text file. Determine a number of things
