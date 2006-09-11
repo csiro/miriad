@@ -10,16 +10,16 @@ c  anninicg :  Initialize plot annotation and write reference value
 c  annspccg :  Annotate information from all spectrum images
 c  annveccg :  Annotate information from one pair of vector images
 c  annwincg :  Annotate plot with window and channel info 
-c  axlabcg  :  Label axes
+c  aaxlabcg :  Write ascii axis labels
 c  bgcolcg  :  See if background colour of PGPLOT device is black or white
 c  confmtcg :  Format contour levels
 c  conturcg :  Draw contour plot
 c  drwlincg :  Draw vertical/horizontal line at constant x/y world coordinate
 c  drwtikcg :  Draw (nonlinear) ticks/grid
 c  erswincg :  Erase window
-c  labaxcg  :  Draw frame, write numeric labels, ticks and grid
 c  lab3cg   :  Label sub-plot with value and/or pixel of third axis
-c  setlabcg :  Set axis label displacements 
+c  naxlabcg :  Draw frame, write numeric labels, ticks and grid
+c  setdspcg :  Set axis label displacements 
 c  strerscg :  Erase rectangle on plot and write string into it
 c  strfmtcg :  Format a number into a string with PGNUMB
 c  vpadjcg  :  Adjust viewport if equal scales requested
@@ -413,14 +413,13 @@ c* anniniCG -- Init. plot annotation and write reference values to plot
 c& nebk
 c: plotting
 c+
-      subroutine anninicg (no3, naxis, crpix, crval, cdelt, ctype, 
-     +                     vymin, pcs, ydispb, labtyp, xpos, ypos, yinc)
+      subroutine anninicg (lh, no3, vymin, pcs, ydispb, labtyp, 
+     +                     xpos, ypos, yinc)
 c
       implicit none
-      integer naxis
+      integer lh
       real xpos, ypos, yinc, pcs, ydispb, vymin
-      double precision crval(naxis), cdelt(naxis), crpix(naxis)
-      character*(*) ctype(naxis), labtyp(2)
+      character*(*) labtyp(2)
       logical no3
 c
 c  Do some set up chores for the full plot annotation and
@@ -430,9 +429,8 @@ c  view-surface in normalized device coords (0 -> 1) to make
 c  life easier.
 c    
 c  Input
+c   lh       Image handle
 c   no3      DOn't write ref pix for third axis
-c   naxis    NUmber of axes
-c   c*       Axis descriptors
 c   vymin    y viewsurface normalized device coordinate
 c            at which the lowest sub-plot x-axis is drawn
 c   pcs      PGPLOT character size parameters for plot labelling 
@@ -449,10 +447,12 @@ c-----------------------------------------------------------------------
       double precision rd
       parameter (rd = 180.0/dpi)
 c
+      double precision win(maxnax)
       real xht, yht, xhta, yhta, acs, ychinc, yoff, ygap
-      character str1*132, str2*132, abstyp*6, gentyp(maxnax)*4, 
-     +  refstr*60
-      integer len1, maxis, ip, il1, i
+      character str1*132, str2*132, gentyp*4, typeo(maxnax)*6, 
+     +  typei(maxnax)*6, refstr(maxnax)*20, ctype*9, 
+     +  itoaf*1
+      integer len1, naxis, maxis, ip, il1, i, ir(maxnax)
 c-----------------------------------------------------------------------
 c
 c Define viewport to space left at bottom of viewsurface and define
@@ -490,45 +490,50 @@ c
 c Format reference pixels of each axis.
 c
       str1 = ' '
+      call rdhdi (lh, 'naxis', naxis, 0)
       maxis = min(3,naxis)
       if (no3) maxis = min(2,naxis)
       ip = 2
       do i = 1, maxis
-        call axtypcg (1, ctype(i), gentyp(i))
-        il1 = len1(gentyp(i))
+        typei(i) = 'abspix'
+        call rdhdd (lh, 'crpix'//itoaf(i), win(i), 0.0d0)
+c
+        call axtypco (lh, 0, i, gentyp)
+        il1 = len1(gentyp)
 c
 c Bit of a mess for UU or VV as their generic descriptor is UV
 c
-        if (gentyp(i)(1:il1).eq.'UV') then
-          if (index(ctype(i),'UU').ne.0 .or. 
-     +        index(ctype(i),'uu').ne.0) then
+        if (gentyp(1:il1).eq.'UV') then
+          call ctypeco (lh, i, ctype)
+          if (index(ctype,'UU').ne.0 .or. 
+     +        index(ctype,'uu').ne.0) then
             str1(ip:) = 'UU,'
           else 
             str1(ip:) = 'VV,'
           end if
         else
-          write (str1(ip:),'(a)') gentyp(i)(1:il1)//','
+          write (str1(ip:),'(a)') gentyp(1:il1)//','
         end if
         ip = len1(str1) + 2
       end do
-c
       ip = len1(str1)
       str1(ip:) = ' = '
-      ip = ip + 3
-      do i = 1, maxis
-        call axabscg (1, gentyp(i), abstyp)
-        call pix2wfcg (abstyp, i, crpix(i), naxis, crval, crpix,
-     +                 cdelt, ctype, .false., refstr, il1)
 c
-        write (str1(ip:),'(a)') refstr(1:il1)//','
+      call initco (lh)
+      call setoaco (lh, 'abs', maxis, 0, typeo)
+      call w2wfco (lh, maxis, typei, ' ', win, typeo, ' ', .false.,
+     +            refstr, ir)
+      call finco (lh)
+      do i = 1, maxis
         ip = len1(str1) + 2
-      end do     
+        write (str1(ip:),'(a)') refstr(i)(1:ir(i))//','
+      end do      
 c
       ip = len1(str1)
       write (str1(ip:), '(a)') ' at pixel ('
       ip = len1(str1) + 1
       do i = 1, maxis
-        call strfd (crpix(i), '(f7.2)', str2, il1)
+        call strfd (win(i), '(f7.2)', str2, il1)
         str1(ip:) = str2(1:il1)//','
         ip = ip + il1 + 2
       end do
@@ -685,27 +690,21 @@ c* annwinCG -- Annotate plot with spatial window
 c& nebk
 c: plotting
 c+
-      subroutine annwincg (blc, trc, ibin, jbin, kbin, naxis, size,
-     +                     cdelt, ctype, yinc, xpos, ypos)
+      subroutine annwincg (lh, blc, trc, ibin, jbin, kbin, yinc, 
+     +                     xpos, ypos)
 c
       implicit none
-      integer blc(*), trc(*), ibin(2), jbin(2), kbin(2), naxis, 
-     +  size(naxis)
+      integer blc(*), trc(*), ibin(2), jbin(2), kbin(2), lh
       real xpos, ypos, yinc
-      double precision cdelt(naxis)
-      character*(*) ctype(naxis)
 c
 c  Annotate plot with spatial window and channel increments
 c
 c  Input:
+c    lh        Image handle
 c    blc,trc   Window in pixels
 c    i,jbin    Spatial inc and bin.
 c    kbin      Channel increment and averaging size. If both 0,
 c              don't write them out
-c    naxis     Number of axes
-c    size      Size of axes
-c    cdelt     Pixel increments
-c    ctype     Axis types
 c    xpos      X location for text
 c    yinc      Y increment between bases of successive lines of text
 c              in normalized device coordinates
@@ -714,10 +713,11 @@ c    ypos      Y location for text.  On output, is the location for
 c              the next line.
 c--
 c-----------------------------------------------------------------------
+      double precision cdelt3
       character*8 str1, str2, str3, str4
       character*132 stra, strb, strc, strd, stre, line*200
       character gentyp*4, units*10
-      integer i1, i2, i3, i4, ia, ib, ic, id, ie, il, iu
+      integer i1, i2, i3, i4, ia, ib, ic, id, ie, il, iu, naxis3
 c
       integer len1
 c-----------------------------------------------------------------------
@@ -750,16 +750,18 @@ c
 c
 c Format spectral binning
 c
-      if (size(3).gt.1 .and. (kbin(1).gt.0 .and. kbin(2).gt.0)) then      
+      call rdhdi (lh, 'naxis3', naxis3, 0)
+      if (naxis3.gt.1 .and. (kbin(1).gt.0 .and. kbin(2).gt.0)) then      
         call pgnumb (kbin(1), 0, 0, str1, i1)
         call pgnumb (kbin(2), 0, 0, str2, i2)
         strc = ' Spectral inc/bin : '//str1(1:i1)//'/'//str2(1:i2)
         ic = len1(strc)
 c
-        call strfmtcg (real(abs(kbin(1)*cdelt(3))), 4, str1, i1)
-        call strfmtcg (real(abs(kbin(2)*cdelt(3))), 4, str2, i2)
+        call rdhdd (lh, 'cdelt3', cdelt3, 0.0d0)
+        call strfmtcg (real(abs(kbin(1)*cdelt3)), 4, str1, i1)
+        call strfmtcg (real(abs(kbin(2)*cdelt3)), 4, str2, i2)
 c
-        call axtypcg (1, ctype(3), gentyp)
+        call axtypco (lh, 0, 3, gentyp)
         if (gentyp.eq.'FREQ') then
           units = 'GHz'
         else if (gentyp.eq.'VELO') then
@@ -791,118 +793,29 @@ c
 c
       end
 c
-c* axlabCG -- Label axes
+c* aaxlabCG -- Write ascii axis labels
 c& nebk
 c: plotting
 c+
-      subroutine axlabcg (nofirst, gaps, dotr, nx, ny, nz, nlast, 
-     +   iplot, xopts, yopts, xdispl, ydispb, labtyp, xlabel, ylabel,
-     +   xxopts, yyopts)
+      subroutine aaxlabcg (dox, doy, xdispl, ydispb, xlabel, ylabel)
 c
       implicit none
       real xdispl, ydispb
-      integer nx, ny, nz, nlast, iplot
-      logical gaps, nofirst, dotr
-      character xopts*(*), yopts*(*), xxopts*(*), yyopts*(*),
-     +  xlabel*(*), ylabel*(*), labtyp(2)*(*)
+      logical dox, doy
+      character xlabel*(*), ylabel*(*)
 c
-c  Label axes and prepare options strings for PGTBOX according to whether 
-c  the sub-plots abut each other or not.
+c  Write ascii axis labels
 c
 c  Input
-c    nofirst No first x-axis label for any subplot but left most
-c    gaps    False means sub-plots abut, else they don't
-c    dotr    Label top and right axes too.
-c    nx,ny   Number of sub-plots in x and y directions on page
-c    nz      Total number of sub-plots that will be drawn
-c    nlast   Number of sub-plots on the last row of the last page
-c    iplot   Number of current sub-plot
-c    x,yopts Root option strings for PGTBOX
+c    dox,y   True to write x or y labels
 c    xdispl  Displacement in character heights of y-axis label
 c    ydispb  Displacement in character heights of x-axis label
-c    labtyp  Axis label types
 c    xlabel  X-axis label
 c    ylabel  Y-axis label
-c  Output
-c    xxopts  x-axis options string for PGTBOX
-c    yyopts  y-axis options string for PGTBOX
 c--
 c-----------------------------------------------------------------------
-      integer jplot, ix, iy
-      integer len1
-c-----------------------------------------------------------------------
-      jplot = mod(iplot,nx*ny)
-      if (jplot.eq.0) jplot = nx*ny
-      ix = len1(xopts) + 1
-      iy = len1(yopts) + 1
-      xxopts = xopts(1:ix-1)
-      yyopts = yopts(1:iy-1)
-c
-      if (.not.gaps) then
-c
-c When sub-plots abut each other, only label left/bottom along the 
-c left most and bottom axes
-c
-        if (labtyp(1).ne.'none' .and. 
-     +     (jplot.ge.nx*ny-nx+1 .or. iplot.ge.nz-nlast+1 .or.
-     +      iplot+nx.gt.nz)) then
-c
-c Write x-axis label and prepare options string for
-c bottom  numeric labelling
-c
-          if (nofirst .and. mod(jplot,nx).ne.1) then
-            xxopts(ix:) = 'NF'
-            ix = ix + 2
-          else
-            xxopts(ix:) = 'N'
-            ix = ix + 1
-          end if
-c
-c Write x-axis character label
-c
-          call pgmtxt ('B', ydispb, 0.5, 0.5, xlabel)
-        end if
-c
-c Only put top numeric labels on top row of subplots
-c
-        if (labtyp(1).ne.'none' .and. dotr .and. 
-     +      jplot.le.nx) xxopts(ix:ix) = 'M'
-c
-c Now y axis
-c
-        if (labtyp(2).ne.'none' .and. 
-     +      mod(jplot,nx).eq.1 .or. nx.eq.1) then
-c 
-c Write y-axis label and prepare options string for numeric labelling
-c
-          yyopts(iy:iy) = 'N'
-          iy = iy + 1
-c
-c Write y-axis character label
-c
-          call pgmtxt ('L', xdispl, 0.5, 0.5, ylabel)
-        end if
-c
-c Only write right axis label if rightmost subplot
-c
-        if (labtyp(2).ne.'none' .and. dotr .and. 
-     +      (jplot.eq.nx .or. jplot.eq.nz .or. jplot.eq.nx*ny))
-     +       yyopts(iy:iy) = 'M'
-      else       
-c
-c Write x and y-axis labels and prepare option strings for numeric labelling
-c
-        if (labtyp(1).ne.'none') then
-          xxopts(ix:ix) = 'N' 
-          if (dotr) xxopts(ix:) = 'NM'
-        end if
-        if (labtyp(2).ne.'none') then
-          yyopts(iy:) = 'N'
-          if (dotr) yyopts(iy:) = 'NM'
-        end if
-        call pgmtxt ('B', ydispb, 0.5, 0.5, xlabel)
-        call pgmtxt ('L', xdispl, 0.5, 0.5, ylabel)
-      end if
+      if (dox) call pgmtxt ('B', ydispb, 0.5, 0.5, xlabel)
+      if (doy) call pgmtxt ('L', xdispl, 0.5, 0.5, ylabel)
 c
       end
 c
@@ -1197,6 +1110,9 @@ cc
       double precision ax1, axx, axxx, tinc
       logical firstt
 c-----------------------------------------------------------------------
+      if (axis.eq.'x') then
+c         write (*,*) 'x1,x2=',axmin,axmax
+      end if
       call pgbbuf
 c
 c Save PGPLOT line width
@@ -1227,6 +1143,9 @@ c
 c
 c Draw major ticks (top/bottom for x, right/left for y)
 c
+          if (axis.eq.'x') then
+c            write(*,*) 'x=',axx
+          endif
           call drwlincg (lun, axis, costr, 2, axx, zp, blcd,
      +                   blcd+ticklp, xline, yline)
           call drwlincg (lun, axis, costr, 2, axx, zp, trcd-ticklp,
@@ -1306,190 +1225,6 @@ c
       end
 c
 c
-c* labaxCG -- Draw frame, write numeric labels, ticks and grid
-c& nebk
-c: plotting
-c+
-      subroutine labaxcg (lun, donum, blc, trc, krng, labtyp, 
-     +                    xopts, yopts)
-      implicit none
-c
-      character*(*) labtyp(2), xopts, yopts
-      integer lun, blc(3), trc(3)
-      logical donum
-c
-c  Draw plot frame, labels and ticks/grid.  Draws correct non-linear
-c  ticks/grid for appropriate axes
-c
-c  Input
-c     lun       handle for coordinate conversions
-c     donum     If true, this is the first time we have displayed this
-c               image so we label with numbers frame and box.  Otherwise
-c               we have erased the display and all we want to do is redraw
-c               the frame and ticks.  The numbers will not have gone.
-c     blc,trc   absolute pixels of blc and trc of selected hypercube
-c     krng      first plane and number of planes averaged in this image
-c     labtyp    axis label types
-c     x,yopts   PGTBOX options strings
-c--
-c-----------------------------------------------------------------------
-      include 'mirconst.h'
-c
-      double precision wwi(3), wblc(3), wtrc(3), wbrc(3), wtlc(3),
-     + w2blc(3), w2brc(3), w2tlc(3), w2trc(3), dum, tickd(2), xmin, 
-     + xmax, ymin, ymax, zp, ticklp(2), dp, dw, blcd(2), trcd(2)
-      real tick(2),  tickl(2), wlin(4)
-      integer nxsub, nysub, j, krng(2)
-      character costr*8, xxopts*20, yyopts*20, strstr*5
-c-----------------------------------------------------------------------
-c
-c Save linearized cordinate window
-c
-      call pgqwin (wlin(1), wlin(2), wlin(3), wlin(4))
-      xxopts = xopts
-      yyopts = yopts
-c
-c Absolute pixel of third axis appropriate for this image, and
-c work out pixel blc and trc of corners of displayed image.
-c
-      zp = dble(krng(1)) + dble(krng(2)-1)/2.0d0
-      blcd(1) = blc(1) - 0.5d0
-      blcd(2) = blc(2) - 0.5d0
-      trcd(1) = trc(1) + 0.5d0
-      trcd(2) = trc(2) + 0.5d0
-c
-c Convert spatial coordinates of all 4 corners of the current plane
-c from absolute pixels to world coordinates given by label type
-c
-      call coinit (lun)
-      call setccscg (labtyp, costr)
-c
-      wwi(1) = blcd(1)
-      wwi(2) = blcd(2)
-      wwi(3) = zp
-      call cocvt (lun, 'ap/ap/ap', wwi, costr, wblc)
-      wwi(1) = trcd(1)
-      wwi(2) = trcd(2)
-      call cocvt (lun, 'ap/ap/ap', wwi, costr, wtrc)
-c
-      wwi(1) = trcd(1)
-      wwi(2) = blcd(2)
-      call cocvt (lun, 'ap/ap/ap', wwi, costr, wbrc)
-      wwi(1) = blcd(1)
-      wwi(2) = trcd(2)
-      call cocvt (lun, 'ap/ap/ap', wwi, costr, wtlc)
-c
-c Now convert the angular world coordinates (currently in radians)
-c to the appropriate angular measure.  E.g. arcmin, seconds of time.
-c
-      do j = 1, 2
-        call angconcg (1, labtyp(j), wblc(j), w2blc(j))
-        call angconcg (1, labtyp(j), wbrc(j), w2brc(j))
-        call angconcg (1, labtyp(j), wtlc(j), w2tlc(j))
-        call angconcg (1, labtyp(j), wtrc(j), w2trc(j))
-      end do
-c
-c Set new PGPLOT window.  We only use this to work out the ticks so it 
-c doesn't matter much that it is still a linear axis. But it must be the
-c correct part of the frame to match where the labels will be written
-c
-      call pgswin (real(w2blc(1)), real(w2brc(1)), 
-     +             real(w2blc(2)), real(w2tlc(2)))
-c
-c Strip major tick, minor tick, grid and top/right labelling  options as
-c we will do the ticking ourselves and label top/right in a second pass
-c
-      strstr = 'TSGM'
-      if (.not.donum) strstr = 'TSGMN'
-      call stroptcg (strstr, xxopts)
-      call stroptcg (strstr, yyopts)
-c
-c Now draw frame and write only bottom/left numeric labels.  
-c
-      call pgtbox (xxopts, 0.0, 0, yyopts, 0.0, 0)
-      xxopts = xopts
-      yyopts = yopts
-c
-c Fish out the tick intervals and number of subintervals
-c that PGTBOX or PGBOX would be using if they were drawing
-c the ticks.  
-c
-c      call pgqtik (xxopts, yyopts, tick(1), tick(2), nxsub, nysub,
-c     +             tickl(1), tickl(2))
-      nxsub = 0
-      nysub = 0
-      tick(1) = 0.0
-      tick(2) = 0.0
-      call qtikcg (xxopts, yyopts, tick(1), tick(2), nxsub, nysub, 
-     +             tickl(1), tickl(2))
-      tickd(1) = abs(tick(1))
-      tickd(2) = abs(tick(2))
-c
-c Convert tick length to pixels (lengths are in linearized
-c coordinate system so this is ok).
-c
-      dp = trc(2) + 0.5 - (blc(2) - 0.5)
-      dw = w2blc(2) - w2tlc(2)
-      ticklp(1) = abs(tickl(1) * dp / dw)
-      dp = trc(1) + 0.5 - (blc(1) - 0.5)
-      dw = w2brc(1) - w2blc(1)
-      ticklp(2) = abs(tickl(2) * dp / dw)
-c
-c Convert angular ticks to radians
-c
-      do j = 1, 2
-        call angconcg (2, labtyp(j), tickd(j), dum)
-        tickd(j) = dum
-      end do
-c
-c The experienced and bold user may also wish to label the top and
-c right axes as well.  So reset the world coordinate window to reflect
-c these axes (because the coordinate system may be nonlinear, these can 
-c differ) and label away.  Must use the ticking values already found.
-c
-      if (index(xxopts,'M').ne.0 .or. index(yyopts,'M').ne.0) then
-        if (donum) then
-          call stroptcg ('BCTSGN', xxopts)
-          call stroptcg ('BCTSGN', yyopts)
-          call pgswin (real(w2tlc(1)), real(w2trc(1)), 
-     +                 real(w2brc(2)), real(w2trc(2)))
-          call pgtbox (xxopts, tick(1), nxsub, yyopts, tick(2), nysub)
-        end if
-      end if
-c
-c Find minimum and maximum x and y coordinates from positions of corners
-c Note that we are now using radians for the angular unit
-c
-      xmin = min(wblc(1),wbrc(1),wtlc(1),wtrc(1))
-      xmax = max(wblc(1),wbrc(1),wtlc(1),wtrc(1))
-      ymin = min(wblc(2),wbrc(2),wtlc(2),wtrc(2))
-      ymax = max(wblc(2),wbrc(2),wtlc(2),wtrc(2))
-c
-c Set window in absolute pixel space, ready for ticking
-c
-      call pgswin(real(blcd(1)), real(trcd(1)),
-     +            real(blcd(2)), real(trcd(2)))
-c
-c Draw x ticks/grid
-c
-      call drwtikcg ('x', xopts, tickd(1), nxsub, ticklp(1), costr,
-     +               lun, xmin, xmax, blcd(2), trcd(2), zp)
-c
-c Draw y ticks/grid
-c
-      call drwtikcg ('y', yopts, tickd(2), nysub, ticklp(2), costr,
-     +               lun, ymin, ymax, blcd(1), trcd(1), zp)
-c
-c Free coordinate object
-c
-      call cofin (lun)
-c
-c  Restore linearized window
-c
-      call pgswin (wlin(1), wlin(2), wlin(3), wlin(4))
-c
-      end
-c
 c* lab3CG -- Label sub-plot with value and/or pixel of 3rd axis
 c& nebk
 c: plotting
@@ -1521,7 +1256,6 @@ c
       include 'maxnax.h'
       integer len1, naxis
       character*30 hangleh, rangle
-      character*9 ctypes(maxnax)
 c------------------------------------------------------------------------
       call rdhdi (lun, 'naxis', naxis, 0)
       if (naxis.lt.3) return
@@ -1541,14 +1275,13 @@ c third axis is, and what the units of the complementary axis is
 c
       call initco (lun)
       if (doval) then
-        call ctypeco (lun, 3, 0, ctypes)
-        call axtypcg (3, ctypes, types)
+        call axtypco (lun, 3, 0, types)
         if (types(3).eq.'VELO') then
           ltype = 'abskms'
         else if (types(3).eq.'FREQ') then
           ltype = 'absghz'
         else if (types(3).eq.'UV' .or. types(3).eq.'NONE') then
-          ltype = 'abslin'
+          ltype = 'absnat'
         else if (types(3).eq.'RA' .or. types(3).eq.'LONG') then
 c  
 c Look for DEC axis amongst first two and find label type to
@@ -1606,10 +1339,6 @@ c
           is2 = is2 + 1
         end do
       end if
-
-
-
-
 c
 c Concatenate strings
 c
@@ -1639,36 +1368,353 @@ c
 c
       end
 c
-c
-c* setlabCG -- Set label options strings and axis displacements
+c* naxlabCG -- Draw frame, write numeric labels, ticks and grid
 c& nebk
 c: plotting
 c+
-      subroutine setlabcg (grid, labtyp, ymin, ymax, xdispl, 
-     +                     ydispb, xopts, yopts)
-c
+      subroutine naxlabcg (lun, donum, blc, trc, krng, labtyp, 
+     +                     donx, dony, nofirst, grid)
       implicit none
-      logical grid
-      character labtyp(*)*(*), xopts*(*), yopts*(*)
-      real xdispl, ydispb, ymin, ymax
 c
-c  Set the labelling displacements from the relevant axes, and set 
-c  PGTBOX labelling options strings.
+      character*(*) labtyp(2)
+      integer lun, blc(3), trc(3)
+      logical donum, nofirst, grid, donx(2), dony(2)
+c
+c  Draw plot frame, labels and ticks/grid.  Draws correct non-linear
+c  ticks/grid for appropriate axes
 c
 c  Input
-c    grid     overlay coordinate grid
+c     lun       handle for coordinate conversions
+c     donum     If true, this is the first time we have displayed this
+c               image so we label with numbers frame and box.  Otherwise
+c               we have erased the display and all we want to do is redraw
+c               the frame and ticks.  The numbers will not have gone.
+c     blc,trc   absolute pixels of blc and trc of selected hypercube
+c     krng      first plane and number of planes averaged in this image
+c     labtyp    axis label types
+c     donx      If donax(1) is true write bottom x-axis label
+c               If donax(2) is true write top    x-axis label
+c     dony      If donay(1) is true write left  y-axis label
+c               If donay(2) is true write right y-axis label
+c     nofirst   True if first x axis tick should not be labelled
+c     grid      Draw on grid instead of just ticks
+c--
+c-----------------------------------------------------------------------
+      include 'mirconst.h'
+c
+      double precision wwi(3), wblc(3), wtrc(3), wbrc(3), wtlc(3),
+     + w2blc(3), w2brc(3), w2tlc(3), w2trc(3), dum, tickd(2), xmin, 
+     + xmax, ymin, ymax, zp, ticklp(2), dp, dw, blcd(2), trcd(2),
+     + crval, cdelt, crpix, x1, x2
+      real tick(2),  tickl(2), wpix(4)
+      integer nxsub, nysub, i, j, krng(2), ip
+      character costr*8, xopt*20, yopt*20, itoaf*1, gentyp*4
+      logical zero(2)
+c-----------------------------------------------------------------------
+c
+c Save pixel window
+c
+      call pgqwin (wpix(1), wpix(2), wpix(3), wpix(4))
+c
+c Work out if we have a RA=0 crossing axis
+c
+      do i = 1, 2
+        zero(i) = .false.
+        call rdhdd (lun, 'crval'//itoaf(i), crval, 0.0d0)
+        call rdhdd (lun, 'crpix'//itoaf(i), crpix, 0.0d0)
+        call rdhdd (lun, 'cdelt'//itoaf(i), cdelt, 0.0d0)
+        call axtypco (lun, 0, i, gentyp)
+        if (gentyp.eq.'RA') then
+          x1 = (blc(i)-crpix)*cdelt + crval
+          x2 = (trc(i)-crpix)*cdelt + crval
+          if (x1*x2.lt.0) zero(i) = .true.
+        end if
+      end do
+c
+c Absolute pixel of third axis appropriate for this image, and
+c work out pixel blc and trc of corners of displayed image.
+c
+      zp = dble(krng(1)) + dble(krng(2)-1)/2.0d0
+      blcd(1) = blc(1) - 0.5d0
+      blcd(2) = blc(2) - 0.5d0
+      trcd(1) = trc(1) + 0.5d0
+      trcd(2) = trc(2) + 0.5d0
+c
+c Convert spatial coordinates of all 4 corners of the current plane
+c from absolute pixels to world coordinates given by label type
+c
+      call coinit (lun)
+      call setccscg (labtyp, costr)
+c
+      wwi(1) = blcd(1)
+      wwi(2) = blcd(2)
+      wwi(3) = zp
+      call cocvt (lun, 'ap/ap/ap', wwi, costr, wblc)
+      wwi(1) = trcd(1)
+      wwi(2) = trcd(2)
+      call cocvt (lun, 'ap/ap/ap', wwi, costr, wtrc)
+c
+      wwi(1) = trcd(1)
+      wwi(2) = blcd(2)
+      call cocvt (lun, 'ap/ap/ap', wwi, costr, wbrc)
+      wwi(1) = blcd(1)
+      wwi(2) = trcd(2)
+      call cocvt (lun, 'ap/ap/ap', wwi, costr, wtlc)
+c
+c Add 2pi to one end if we corss RA=0
+c
+      if (zero(1)) then
+        if (wblc(1).lt.wbrc(1)) then
+          wblc(1) = wblc(1) + dpi*2
+        else 
+          wbrc(1) = wbrc(1) + dpi*2
+        end if
+        if (wtlc(1).lt.wtrc(1)) then
+          wtlc(1) = wtlc(1) + dpi*2
+        else 
+          wtrc(1) = wtrc(1) + dpi*2
+        end if
+      end if
+      if (zero(2)) then
+        if (wblc(2).lt.wtlc(2)) then
+          wblc(2) = wblc(2) + dpi*2
+        else 
+          wtlc(1) = wtlc(1) + dpi*2
+        end if
+        if (wbrc(2).lt.wtrc(2)) then
+          wbrc(2) = wbrc(2) + dpi*2
+        else 
+          wtrc(1) = wtrc(1) + dpi*2
+        end if
+      end if
+c
+c Now convert the angular world coordinates (currently in radians)
+c to the appropriate angular measure.  E.g. arcmin, seconds of time.
+c
+      do j = 1, 2
+        call angconcg (1, labtyp(j), wblc(j), w2blc(j))
+        call angconcg (1, labtyp(j), wbrc(j), w2brc(j))
+        call angconcg (1, labtyp(j), wtlc(j), w2tlc(j))
+        call angconcg (1, labtyp(j), wtrc(j), w2trc(j))
+      end do
+c
+c Set new PGPLOT window.  We only use this to work out the ticks so it 
+c doesn't matter much that it is still a linear axis. But it must be the
+c correct part of the frame to match where the labels will be written
+c
+      call pgswin (real(w2blc(1)), real(w2brc(1)), 
+     +             real(w2blc(2)), real(w2tlc(2)))
+c
+c Set PGPLOT PGTBOX options strings; we only do bottom/left
+c numeric labelling here
+c
+      xopt = 'BC'
+      ip = 3
+      if (donum .and. donx(1)) then
+        xopt(ip:ip) = 'N'
+        ip = ip + 1
+c
+        if (nofirst) then
+          xopt(ip:ip) = 'F'
+          ip = ip + 1
+        end if
+c
+        if (zero(1)) then
+          xopt(ip:ip) = 'X'
+          ip = ip + 1
+        end if
+c
+        if (labtyp(1).eq.'hms') then
+          xopt(ip:) = 'ZYHO'
+        else if (labtyp(1).eq.'dms') then
+          xopt(ip:) = 'ZYDO'
+         end if 
+      end if
+c
+      yopt = 'BC'
+      ip = 3
+      if (donum .and. dony(1)) then
+        yopt(ip:ip) = 'N'
+        ip = ip + 1
+c
+        if (zero(2)) then
+          yopt(ip:ip) = 'X'
+          ip = ip + 1
+        end if
+c
+        if (labtyp(2).eq.'hms') then
+          yopt(ip:) = 'ZYHV'
+        else if (labtyp(2).eq.'dms') then
+          yopt(ip:) = 'ZYDV'
+         end if 
+      end if
+c
+c Now draw frame and write only bottom/left numeric labels.  
+c
+      call pgtbox (xopt, 0.0, 0, yopt, 0.0, 0)
+c
+c Fish out the tick intervals and number of subintervals
+c that PGTBOX or PGBOX would be using if they were drawing
+c the ticks.  
+c
+      nxsub = 0
+      nysub = 0
+      tick(1) = 0.0
+      tick(2) = 0.0
+      call qtikcg (xopt, yopt, tick(1), tick(2), nxsub, nysub, 
+     +             tickl(1), tickl(2))
+      tickd(1) = abs(tick(1))
+      tickd(2) = abs(tick(2))
+c
+c Convert tick length to pixels (lengths are in linearized
+c coordinate system so this is ok).
+c
+      dp = trc(2) + 0.5 - (blc(2) - 0.5)
+      dw = w2blc(2) - w2tlc(2)
+      ticklp(1) = abs(tickl(1) * dp / dw)
+      dp = trc(1) + 0.5 - (blc(1) - 0.5)
+      dw = w2brc(1) - w2blc(1)
+      ticklp(2) = abs(tickl(2) * dp / dw)
+c
+c Convert angular ticks to radians
+c
+      do j = 1, 2
+        call angconcg (2, labtyp(j), tickd(j), dum)
+        tickd(j) = dum
+      end do
+c
+c The experienced and bold user may also wish to label the top and
+c right axes as well.  So reset the world coordinate window to reflect
+c these axes (because the coordinate system may be nonlinear, these can 
+c differ) and label away.  Must use the ticking values already found.
+c
+      xopt = ' '
+      yopt = ' '
+      ip = 1
+      if (donum .and. donx(2)) then
+        xopt(ip:ip) = 'M'
+        ip = ip + 1
+c
+        if (nofirst) then
+          xopt(ip:ip) = 'F'
+          ip = ip + 1
+        end if
+c
+        if (zero(1)) then
+          xopt(ip:ip) = 'X'
+          ip = ip + 1
+        end if
+c
+        if (labtyp(1).eq.'hms') then
+          xopt(ip:) = 'ZYHO'
+        else if (labtyp(1).eq.'dms') then
+          xopt(ip:) = 'ZYDO'
+         end if 
+      end if
+c
+      ip = 1
+      if (donum .and. dony(2)) then
+        yopt(ip:ip) = 'M'
+        ip = ip + 1
+c
+        if (zero(2)) then
+          yopt(ip:ip) = 'X'
+          ip = ip +1
+        end if
+c
+        if (labtyp(2).eq.'hms') then
+          yopt(ip:) = 'ZYHV'
+        else if (labtyp(2).eq.'dms') then
+          yopt(ip:) = 'ZYDV'
+         end if 
+      end if
+c
+      if (index(xopt,'M').ne.0 .or. index(yopt,'M').ne.0) then
+        call pgswin (real(w2tlc(1)), real(w2trc(1)), 
+     +               real(w2brc(2)), real(w2trc(2)))
+        call pgtbox (xopt, tick(1), nxsub, yopt, tick(2), nysub)
+      end if
+c
+c Find minimum and maximum x and y coordinates from positions of corners
+c Note that we are now using radians for the angular unit
+c
+      xmin = min(wblc(1),wbrc(1),wtlc(1),wtrc(1))
+      xmax = max(wblc(1),wbrc(1),wtlc(1),wtrc(1))
+      ymin = min(wblc(2),wbrc(2),wtlc(2),wtrc(2))
+      ymax = max(wblc(2),wbrc(2),wtlc(2),wtrc(2))
+c
+c Set window in absolute pixel space, ready for ticking
+c
+      call pgswin(real(blcd(1)), real(trcd(1)),
+     +            real(blcd(2)), real(trcd(2)))
+c
+c Draw x ticks/grid
+c
+      xopt = ' '
+      if (labtyp(1).ne.'none') then
+        xopt = 'TS'
+        ip = 3
+        if (grid) then
+          xopt(ip:ip) = 'G'
+          ip = ip + 1
+        end if
+      end if
+      call drwtikcg ('x', xopt, tickd(1), nxsub, ticklp(1), costr,
+     +               lun, xmin, xmax, blcd(2), trcd(2), zp)
+c
+c Draw y ticks/grid
+c
+      yopt = ' '
+      if (labtyp(2).ne.'none') then
+        yopt = 'TS'
+        ip = 3
+        if (grid) then
+          yopt(ip:ip) = 'G'
+          ip = ip + 1
+        end if
+      end if
+      call drwtikcg ('y', yopt, tickd(2), nysub, ticklp(2), costr,
+     +               lun, ymin, ymax, blcd(1), trcd(1), zp)
+c
+c Free coordinate object
+c
+      call cofin (lun)
+c
+c Restore original pixel window
+c
+      call pgswin (wpix(1), wpix(2), wpix(3), wpix(4))
+c
+      end
+c
+c* setdspCG -- Set label axis displacements
+c& nebk
+c: plotting
+c+
+      subroutine setdspcg (lh, labtyp, blc, trc, xdispl, ydispb)
+c
+      implicit none
+      integer lh, blc(2), trc(2)
+      character labtyp(*)*(*)
+      real xdispl, ydispb
+c
+c  Set the labelling displacements from the relevant axes
+c
+c  Input
+c    lh       Handle of image
 c    labtyp   Label type requested by user
-c    ymin,max y axis min and max
+c    blc      blc in pixels
+c    trc      trc in pixels
 c  Output
 c    xdispl   Displacement in character heights from left y-axis 
 c             for Y label
 c    ydispb   Displacement in character heights from bottom x-axis 
 c             for X label
-c    x,yopts  PGTBOX options string, include 'Z' for time labelling
 c--
 c-------------------------------------------------------------------------------
+      include 'mirconst.h'
+      double precision ymin, ymax, win(2), wout1(2), wout2(2)
       real dely, xch, ych, xl, yl, xd
-      character str*60
+      character str*60, stypeo*8, typei(2)*6
       integer len1, il
 c-----------------------------------------------------------------------
 c
@@ -1676,74 +1722,85 @@ c X axis
 c
       if (labtyp(1).eq.'hms') then
         ydispb = 3.6
-        xopts = 'BCSTHYZO'
-        il = 9
       else if (labtyp(1).eq.'dms') then
         ydispb = 3.6
-        xopts = 'BCSTDYZO'
-        il = 9
       else if (labtyp(1).eq.'none') then
         ydispb = 3.6
-        xopts = 'BC'
       else
         ydispb = 3.1
-        xopts = 'BCST'
-        il = 5
       end if
-      if (labtyp(1).ne.'none' .and. grid) xopts(il:il) = 'G' 
 c
 c Y axis.  Have a stab at a correct axis label displacement when using
 c HMS or DMS; it depends upon the number of decimal places in the 
 c labels and knowing about the PGTBOX algorithm.  Very modular.
 c Allow for space between numeric label and axis, and between
 c numeric label and axis label.
-
-      dely = abs(ymax - ymin)
-      if (dely.le.5*60) then
-        if (dely/6.0.lt.0.01) then
-          str = '1O05\uh\d05\um\d05\us\d.555O'
-        else if (dely/6.0.lt.0.1) then
-          str = '1O05\uh\d05\um\d05\us\d.55O'
-        else if (dely/6.0.lt.1.0) then
-          str = '1O05\uh\d05\um\d05\us\d.5O'
-        else
-          str = '1O05\uh\d05\um\d05\us\dO'
+c
+      if (labtyp(2).eq.'hms' .or. labtyp(2).eq.'dms') then
+c
+c Work out y min and max in seconds of time
+c
+        stypeo = ' '
+        typei(1) = 'abspix'
+        typei(2) = 'abspix'
+c        
+        call initco (lh)
+        win(1) = blc(1) - 0.5
+        win(2) = blc(2) - 0.5
+        call w2wco (lh, 2, typei, ' ', win, labtyp, stypeo, wout1)
+        win(2) = trc(2) + 0.5
+        call w2wco (lh, 2, typei, ' ', win, labtyp, stypeo, wout2)
+        call finco (lh)
+c
+        if (labtyp(2).eq.'hms') then
+          ymin = wout1(2) * 12.0d0 * 3600.0d0 / dpi
+          ymax = wout2(2) * 12.0d0 * 3600.0d0 / dpi
+        else if (labtyp(2).eq.'dms') then
+          ymin = wout1(2) * 180.0d0 * 3600.0d0 / dpi
+          ymax = wout2(2) * 180.0d0 * 3600.0d0 / dpi
+        end  if
+c
+        dely = abs(ymax - ymin)
+        if (dely.le.5*60) then
+          if (dely/6.0.lt.0.01) then
+            str = '1O05\uh\d05\um\d05\us\d.555O'
+          else if (dely/6.0.lt.0.1) then
+            str = '1O05\uh\d05\um\d05\us\d.55O'
+          else if (dely/6.0.lt.1.0) then
+            str = '1O05\uh\d05\um\d05\us\d.5O'
+          else
+            str = '1O05\uh\d05\um\d05\us\dO'
+          end if
+        else if (dely.le.5*3600) then
+          str = '1O05\uh\d05\um\dO'
+        else 
+          str = '1O05\uh\dO'
         end if
-      else if (dely.le.5*3600) then
-        str = '1O05\uh\d05\um\dO'
-      else 
-        str = '1O05\uh\dO'
-      end if
-      il = len1(str)
-      if (ymin.lt.0.0 .or. ymax.lt.0.0) then
-        str(il+1:il+1) = '-'
         il = len1(str)
-      end if
+        if (ymin.lt.0.0 .or. ymax.lt.0.0) then
+          str(il+1:il+1) = '-'
+          il = len1(str)
+        end if
 c
 c Find the length of this string in mm and convert to
 c displacement to left of axis for vertical axis label
 c
-      call pglen (2, str(1:il), xl, yl)
-      call pgqcs (2, xch, ych) 
-      xd = xl / xch
+        call pglen (2, str(1:il), xl, yl)
+        call pgqcs (2, xch, ych) 
+        xd = xl / xch
 c
-      if (labtyp(2).eq.'hms') then
-        xdispl = xd
-        yopts = 'BCSTHYZV'
-        il = 9
-      else if (labtyp(2).eq.'dms') then
-        xdispl = xd
-        yopts = 'BCSTDYZV'
-        il = 9
-      else if (labtyp(2).eq.'none') then
-        xdispl = 1.0
-        yopts = 'BC'
+        if (labtyp(2).eq.'hms') then
+          xdispl = xd
+        else if (labtyp(2).eq.'dms') then
+          xdispl = xd
+        end if
       else
-        xdispl = 2.5
-        yopts = 'BCST' 
-        il = 5
+        if (labtyp(2).eq.'none') then
+          xdispl = 1.0
+        else
+          xdispl = 2.5
+        end if
       end if
-      if (labtyp(2).ne.'none' .and. grid) yopts(il:il) = 'G' 
 c
       end
 c
@@ -1822,28 +1879,26 @@ c* vpadjCG -- Adjust viewport if equal scales requested
 c& nebk
 c: plotting
 c+
-      subroutine vpadjcg (hard, eqscale, scale, vxmin, vymin, vymax,
-     +   nx, ny, blc, trc, naxis, crval, crpix, cdelt, ctype, tfvp,
-     +   wdgvp, vxsize, vysize)
+      subroutine vpadjcg (lh, hard, eqscale, scale, vxmin, vymin, vymax,
+     +   nx, ny, blc, trc, tfvp, wdgvp, vxsize, vysize)
 c
       implicit none
-      integer nx, ny, blc(*), trc(*), naxis
-      double precision cdelt(naxis), crval(naxis), crpix(naxis)
+      integer lh, nx, ny, blc(*), trc(*)
       real vxsize, vysize, vxmin, vymin, vymax, scale(2), tfvp(4),
      +  wdgvp(4)
       logical eqscale
-      character hard*(*), ctype(naxis)*(*)
+      character hard*(*)
 c
 c  So far everything has been worked out for unequal scales in
 c  x and y.  If the user requests equal scales, or gives the scales,
 c  we need to make some adjustments to the viewport
 c
 c  Inputs
+c    lh           Handle of image
 c    hard         YES for hardcopy device
 c    eqscale      True means equals scale requested, else different 
 c    nx,ny        Number of sub-plots in x and y
 c    blc,trc      Window in pixels
-c    cdelt        Array of pixel increments
 c  Input/Output
 c    scale        scales in x and y in linear axis units/mm
 c                 RA axes are radians on the sky per mm
@@ -1856,44 +1911,24 @@ c    vxsize       Size of viewport for sub-plots in normalized device
 c    vysize       coordinates
 c--
 c-----------------------------------------------------------------------
-      double precision x1, x2, y1, y2, delx, dely, cosdec, xfac, yfac,
-     +  xscale, yscale, xscale0, yscale0
+      double precision delx, dely, xfac, yfac, xscale, yscale, 
+     +  xscale0, yscale0, cdelt1, cdelt2
       real vx1, vx2, vy1, vy2, vxmore, vymore, vxsize2, vysize2
-      character aline*72, type*6
-      logical ok, cdok(2), dofid, dowedge
+      character aline*72
+      logical dofid, dowedge
       integer i
 c-----------------------------------------------------------------------
 c
-c Since each axis type may be different convert window to "abslin"
-c coordinates to work out equal scales
+c Get image pixel increments
 c
-      type = 'abslin'
-      call pix2wcg (.false., dble(blc(1)-0.5), 1, type, naxis, crval, 
-     +              crpix, cdelt, ctype, x1, ok)
-      call pix2wcg (.false., dble(trc(1)+0.5), 1, type, naxis, crval, 
-     +              crpix, cdelt, ctype, x2, ok)
-      call pix2wcg (.false., dble(blc(2)-0.5), 2, type, naxis, crval, 
-     +              crpix, cdelt, ctype, y1, ok)
-      call pix2wcg (.false., dble(trc(2)+0.5), 2, type, naxis, crval,
-     +              crpix, cdelt, ctype, y2, ok)
+      call rdhdd (lh, 'cdelt1', cdelt1, 0.0d0)
+      call rdhdd (lh, 'cdelt2', cdelt2, 0.0d0)
 c
-c For RA/DEC axes, we want the scale equal on the sky, so we
-c must take a cos(DEC) term into account
+c Find size of window in linear coordinates (allow for 1/2
+c of a pixel at either end).
 c
-      call cosdeccg (1, naxis, ctype, crval, cosdec, cdok(1))
-      delx = abs(x2 - x1)
-      if (cdok(1)) delx = delx * cosdec
-c
-      call cosdeccg (2, naxis, ctype, crval, cosdec, cdok(2))
-      dely = abs(y2 - y1)
-      if (cdok(2)) dely = dely * cosdec
-c
-      if (.not.cdok(1) .or. .not.cdok(2)) then
-        call bug ('w', 
-     +    'VPADJCG: Cannot correctly work out scale for RA axis')
-        call bug ('w', 
-     +    'VPADJCG: because DEC axis missing; image may be squashed')
-      end if
+      delx = dble(trc(1) - blc(1) + 1) * abs(cdelt1)
+      dely = dble(trc(2) - blc(2) + 1) * abs(cdelt2)
 c
 c Find width of viewport for each subplot in mm and compute scales
 c in world coordinates per mm for image optimally filling the viewport.
@@ -1939,7 +1974,7 @@ c
         end if
       else
 c
-c Using defualt scales; adjust for equal scales if required
+c Using default scales; adjust for equal scales if required
 c
         if (eqscale) then
           xscale = max(xscale0,yscale0)
@@ -1951,7 +1986,7 @@ c
       end if
 c
 c Set factor by which we multiply subplot viewport size to
-c allow for scake changes
+c allow for scale changes
 c
       xfac = xscale0 / xscale
       yfac = yscale0 / yscale
@@ -2040,8 +2075,8 @@ c
       character*(*) gin, vin, bin, labtyp(2)*(*)
 c
 c   Work out view port that encompasses all sub-plots and allows
-c   for all labelling.   Assume unequal scales in x and y 
-c   here.  If user wants equal scales, adjust later.
+c   for all labelling outside of it.   Assume unequal scales in x 
+c   and y here.  If user wants equal scales, adjust later in VPADJCG
 c
 c   Input
 c     dofull      True for full plot annotation (contour levels etc)
@@ -2120,7 +2155,11 @@ c Width of wedge label area and displacement from right hand
 c edge of subplot in ndc
 c
         dvwl = 2.0 * xht
-        dvwd  = wedisp * xht
+        if (dotr) then
+          dvwd = (wedisp + xdispl - 1) * xht
+        else
+          dvwd  = wedisp * xht
+        end if
 c
 c Total width taken up by wedge in ndc
 c
@@ -2237,13 +2276,12 @@ c
 c Work out size of sub-plots and gaps between in n.d.c. For gap allow
 c for label displacement plus 2 extra characters worth of space
 c If labelling top and right as well allow for that
-
+c
       if (nx.gt.1) then
         if (gaps) then
           vxgap = (1.0 + xdispl + 2.0) * xht
           if (dotr) vxgap = vxgap + xdispl*xht
         else
-c          vxgap = 0.0
           vxgap = xht/3
         end if
         vxsize = ((vxmax - vxmin) - ((nx - 1) * vxgap)) / nx
@@ -2257,7 +2295,6 @@ c
           vygap = (ydispb + 2.0) * yht
           if (dotr) vygap = vygap + yht
         else
-c          vygap = 0.0
           vygap = yht/3
         end if
         vysize = ((vymax - vymin) - ((ny - 1) * vygap)) / ny
@@ -2297,9 +2334,9 @@ c         cumhis bin idx, then its new value is cumhis(idx)
 c  wdgvp  Viewport to draw wedge in
 c  a1     The value which is to appear with shade C1
 c  a2     The value which is to appear with shade C2
-c         Use the values of A1 and A2 that were sent to PGIMAG.
-c         These values should be those appropriate to before any
-c         application of transfer functions (log etc) and adding of
+c         Use the values of A1 and A2 that were sent to PGIMAG except
+c         that these values should be those appropriate to before any
+c         application of transfer functions (sqr, log, heq) and adding of
 c         offsets (GROFF)
 c
 c
