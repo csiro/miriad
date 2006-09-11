@@ -8,7 +8,7 @@ c                 restrict number of possible KEYA calls to MAXOUT
 c                 so successive KEYMATCH calls with the same KEYWORD 
 c                 can be used
 c    rjs  02jul92 Insensitive to case. Input must be in lower case.
-c
+c    nebk 21feb95 Small format changes to KEYMATCH
 c************************************************************************
 c*Options -- Get command line options.
 c:user-input
@@ -129,8 +129,9 @@ c
         do i = 1, ntype
           if(string(1:l).eq.types(i)(1:l))then
             if(iopt.ne.0) then
-              umsg = string(1:len1(string))//' is ambiguous for '//
-     +               'keyword '//key//'.  Choose from'
+              umsg = '"'//string(1:len1(string))//
+     +               '" is ambiguous for '//
+     +               'keyword "'//key//'".  Choose from'
               call output (umsg)
               do j = 1, ntype
                 umsg = '   '//types(j)
@@ -141,8 +142,8 @@ c
             iopt = i
           endif
         enddo
-        umsg = string(1:l)//' is unrecognised for keyword '//
-     +         key//'. Choose from'
+        umsg = '"'//string(1:l)//'" is unrecognised for keyword "'//
+     +         key//'". Choose from'
         if(iopt.eq.0) then
           call output (umsg)
           do j = 1, ntype
