@@ -23,9 +23,15 @@ c	  copy     Copy the calibration tables to the output, overwriting
 c	           and previously existing calibration tables. This is the
 c	           default.
 c	  apply    Apply the input calibration tables to the output calibration
-c	           tables (implemented for bandpass tables only)
-c	  merge    Merge the two calibration tables together. The calibration
-c	           tables will usually not overlap in time or frequency
+c	           tables. This is the sort of operation that you might do
+c	           if you have two sets of calibration tables that you wish
+c	           to "multiply" together (implemented for gains and bandpass
+c	           only).
+c	  merge    Merge the two calibration tables together. This is the
+c	           sort of operation that you will want to perform if you
+c	           have two sets of calibration tables which are disjoint in
+c	           time (e.g. you used two secondary calibrators). The
+c	           merge opertation will weave the two sets of tables together.
 c	           (implemented for gain tables only).
 c@ options
 c	This gives extra processing options, which are used to suppress
