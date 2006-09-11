@@ -1,4 +1,4 @@
-c************************************************************************
+************************************************************************
 	program uvlist
 	implicit none
 c
@@ -20,6 +20,7 @@ c	            of 6 channels is printed.
 c	  variables List uv variables.
 c	  sigma     List the value and rms of the first data channel.
 c	  spectral  List spectral and velocity information.
+c	  array     List antenna and array information.
 c	If no listing options are given, uvlist uses options=brief,data.
 c	The following options determine the application of calibration
 c	corrections to the data, for the data list options. The default
@@ -104,6 +105,7 @@ c   23dec93 rjs  - Include optical velocities in options=spec.
 c   21jan93 rjs  - Formatting error for options=spec
 c   23aug94 rjs  - More decimal points in options=spec
 c    1aug95 rjs  - Fix minor bug which only shows up on sgi machine.
+c   28sep95 rjs  - Added options=array
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
@@ -113,7 +115,7 @@ c
 	complex data(MAXCHAN)
 	logical flags(MAXCHAN)
 	logical dovar,dodata,dospect,dobrief,docal,dopol,dopass,dosigma
-	logical more
+	logical doarray,more
 	double precision lst,pmbl(4)
 	real rms2
 	integer lIn,vars
@@ -127,9 +129,9 @@ c  Read the inputs.
 c
 	call output(version)
  	call keyini
-	call GetOpt(dovar,dodata,dospect,dosigma,
+	call GetOpt(dovar,dodata,dospect,dosigma,doarray,
      *			dobrief,docal,dopol,dopass)
-	if(dospect.or.dovar.or..not.dobrief)then
+	if(dospect.or.doarray.or.dovar.or..not.dobrief)then
 	  call keyi('recnum',numrec,1)
 	else
 	  call keyi('recnum',numrec,20)
@@ -158,7 +160,7 @@ c
 	num=0
 	call uvDatRd(pmbl,data,flags,MAXCHAN,nchan)
 	time0 = pmbl(3) + 100
-	call writein(lIn,dovar,dodata,dospect,dosigma,dobrief,
+	call writein(lIn,dovar,dodata,dospect,dosigma,doarray,dobrief,
      *					docal,dopol,dopass)
 	last = ' '
 	dowhile ( nchan.gt.0 .and. num.lt.numrec)
@@ -207,6 +209,13 @@ c
 	    call ListSig(last.ne.'r',pmbl(3),pmbl(4),VisNo,data,flags,
      *		rms2,p)
 	    last = 'r'
+	  endif
+c
+c  List the array info, if required.
+c
+	  if(doarray)then
+	    call listarr(lIn)
+	    last = 'a'
 	  endif
 c
 c  List the spectra info, if required.
@@ -428,28 +437,29 @@ c
 	call LogWrite(' ',more)
 	end
 c************************************************************************
-	subroutine GetOpt(dovar,dodata,dospect,dosigma,dobrief,
+	subroutine GetOpt(dovar,dodata,dospect,dosigma,doarray,dobrief,
      *						docal,dopol,dopass)
 c
 	implicit none
 	logical dovar,dodata,dospect,dobrief,docal,dopol,dopass,dosigma
+	logical doarray
 c
 c  Determine which of the options is to be done. Default is
 c  "brief" "data".
 c
 c  Outputs:
-c    dovar,dodata,dospect,dosigma Things to list.
+c    dovar,dodata,dospect,dosigma,doarray Things to list.
 c    dobrief		   Do it in brief or verbose mode.
 c    docal,dopol,dopass	   Calibration switches.
 c------------------------------------------------------------------------
 	integer nopts
-	parameter(nopts=9)
+	parameter(nopts=10)
 	character opts(nopts)*9
 	logical present(nopts)
 c
 	data opts/'brief    ','full     ','data     ','variables',
      *		  'spectral ','sigma    ','nocal    ','nopol    ',
-     *		  'nopass   '/
+     *		  'nopass   ','array    '/
 c
 	call options('options',opts,present,nopts)
 c
@@ -463,23 +473,25 @@ c
 	docal = .not.present(7)
 	dopol = .not.present(8)
 	dopass= .not.present(9)
-	if(.not.(dovar.or.dospect.or.dosigma))dodata = .true.
+	doarray = present(10)
+	if(.not.(dovar.or.dospect.or.dosigma.or.doarray))dodata = .true.
 c
 	end
 C************************************************************************
-	subroutine writein(lIn,dovar,dodata,dospect,dosigma,dobrief,
-     *	  docal,dopol,dopass)
+	subroutine writein(lIn,dovar,dodata,dospect,dosigma,doarray,
+     *	  dobrief,docal,dopol,dopass)
 c
 	implicit none
 	integer lIn
 	logical dovar,dodata,dospect,dosigma,dobrief,docal,dopol,dopass
+	logical doarray
 c
 c  Write out the input parameters to the output log file / terminal.
 c
 c  Input:
 c    lIn			  Handle of the input.
 c    vis			  Name of the input file.
-c    dovar,dodata,dospect,dobrief
+c    dovar,dodata,dospect,dobrief,doarray
 c    docal,dopol,dopass		  Calibration switches.
 c------------------------------------------------------------------------
 	integer CHANNEL,WIDE,VELOCITY
@@ -524,6 +536,7 @@ c
 	if(dodata)  call cat(line,length,',data')
 	if(dospect) call cat(line,length,',spectral')
 	if(dosigma) call cat(line,length,',sigma')
+	if(doarray) call cat(line,length,',array')
 	call LogWrite(line(1:length),more)
 c
 	if(dodata)then
@@ -851,22 +864,20 @@ c   7may90  mchw changed to handle nspect.gt.6
 c------------------------------------------------------------------------
         include 'maxdim.h'
 	include 'mirconst.h'
-	integer MAXSPECT
-	parameter(MAXSPECT=8)
 c
 	character line*80,veltype*16,frame*24
 	logical more
-	integer nspect,nschan(MAXSPECT),ischan(MAXSPECT),i,j,k
+	integer nspect,nschan(MAXWIN),ischan(MAXWIN),i,j,k
 	real veldop,vsource
-	double precision restfreq(MAXSPECT),sfreq(MAXSPECT)
-	double precision sdf(MAXSPECT),vinc(MAXSPECT)
-	double precision vstart(MAXSPECT),vend(MAXSPECT)
-	double precision oinc(MAXSPECT)
-	double precision ostart(MAXSPECT),oend(MAXSPECT)
+	double precision restfreq(MAXWIN),sfreq(MAXWIN)
+	double precision sdf(MAXWIN),vinc(MAXWIN)
+	double precision vstart(MAXWIN),vend(MAXWIN)
+	double precision oinc(MAXWIN)
+	double precision ostart(MAXWIN),oend(MAXWIN)
 c
 	call LogWrite(' ',more)
 	call uvrdvri(lIn,'nspect',nspect,0)
-	if(nspect.gt.maxspect)call bug('f','Too many windows')
+	if(nspect.gt.MAXWIN)call bug('f','Too many windows')
 	if(nspect.gt.0) then
 	  call uvgetvrd(lIn,'restfreq',restfreq,nspect)
 	  call uvgetvri(lIn,'nschan',nschan,nspect)
@@ -966,3 +977,78 @@ c
 	  call LogWrite('These uvdata have no spectra',more)
 	endif
 	end
+c************************************************************************
+	subroutine listarr(lIn)
+	implicit none
+	integer lIn
+c
+c  List array information.
+c
+c  Inputs:
+c    lIn	Handle of uvdata file
+c
+c------------------------------------------------------------------------
+        include 'maxdim.h'
+	include 'mirconst.h'
+	double precision FAC
+	parameter(FAC=DCMKS*1D-9)
+c
+	integer nants,i,n
+	character type*1,line*64,telescop*16
+	logical update,ok
+	double precision xyz(3*MAXANT),lat,long,mount
+c
+	character rangle*16
+c
+	call uvrdvra(lIn,'telescop',telescop,' ')
+	if(telescop.ne.' ')
+     *	  call output('Telescope: '//telescop)
+c
+	call uvprobvr(lIn,'latitud',type,n,update)
+	ok = type.eq.'d'.and.n.eq.1
+	if(.not.ok.and.telescop.ne.' ')then
+	  call obspar(telescop,'latitude',lat,ok)
+	else if(ok)then
+	  call uvrdvrd(lIn,'latitud',lat,0.d0)
+	endif
+	if(ok)call output('Latitude:   '//rangle(lat))
+c
+	call uvprobvr(lIn,'longitu',type,n,update)
+	ok = type.eq.'d'.and.n.eq.1
+	if(.not.ok.and.telescop.ne.' ')then
+	  call obspar(telescop,'longitude',long,ok)
+	else if(ok)then
+	  call uvrdvrd(lIn,'longitu',lat,0.d0)
+	endif
+	if(ok)call output('Longitude: '//rangle(lat))
+c
+	call uvrdvrd(lIn,'mount',mount,-1.d0)
+	ok = mount.ge.0
+	if(.not.ok.and.telescop.ne.' ')
+     *	  call obspar(telescop,'mount',mount,ok)
+	if(ok)then
+	  if(nint(mount).eq.0)call output('Mounts: Alt-az')
+	  if(nint(mount).eq.1)call output('Mounts: Equatorial')
+	endif
+	call output(' ')
+c
+	call uvprobvr(lIn,'antpos',type,nants,update)
+	if(type.ne.'d')nants = 0
+	if(nants.le.0)call bug('w','Array information not available')
+	if(nants.le.0)return
+	if(mod(nants,3).ne.0)call bug('f','Invalid antenna table size')
+	nants = nants/3
+	if(nants.gt.MAXANT)call bug('f','Too many antennas for me')
+	call uvgetvrd(lIn,'antpos',xyz,3*nants)
+c
+	call output('Antenna positions in local equatorial coordinates')
+	call output(' ')
+	call output('    X (meters)   Y (meters)   Z (meters)')
+	call output('    ----------   ----------   ----------')
+	do i=1,nants
+	  write(line,'(2x,1p3g13.4)')
+     *		FAC*xyz(i),FAC*xyz(i+nants),FAC*xyz(i+2*nants)
+	  call output(line)
+	enddo
+	end
+
