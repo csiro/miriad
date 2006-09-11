@@ -112,10 +112,11 @@ c   18may96 rjs  - Correct formating bug in ListSepc
 c   28aug96 rjs  - List source information.
 c   18mar97 rjs  - Consistently write to log file.
 c   11may97 rjs  - Better listing format for options=array
+c   19aug98 rjs  - Correct printing of longitude in options=array
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
-	parameter(version='Uvlist: version 1.0 11-May-97')
+	parameter(version='Uvlist: version 1.0 19-Aug-98')
 c
 	character out*50,last*1,date*18,uvflags*8
 	complex data(MAXCHAN)
@@ -1094,9 +1095,9 @@ c
 	if(.not.ok.and.telescop.ne.' ')then
 	  call obspar(telescop,'longitude',long,ok)
 	else if(ok)then
-	  call uvrdvrd(lIn,'longitu',lat,0.d0)
+	  call uvrdvrd(lIn,'longitu',long,0.d0)
 	endif
-	if(ok)call logwrite('Longitude: '//rangle(lat),more)
+	if(ok)call logwrite('Longitude: '//rangle(long),more)
 c
 	call uvrdvrd(lIn,'mount',mount,-1.d0)
 	ok = mount.ge.0
