@@ -71,6 +71,10 @@ c------------------------------------------------------------------------
 c  Mars
 c     Ref: Ulich, AJ, 86, 1619 (1981).
 c
+c  The value of Muhleman & Berge(1991) at 2.66 mm is 197+/-6K. 
+c    They argue that the spectrum is very flat longwards of a few mm.
+c  The value of Janssen & Welch (1973) at 1.35cm is 181+/-11K.
+c
 c                     Freq(GHz)         Temp (Kelvin)
 c                      -----             -----
 	data mar(1,1) / 31.4/, mar(2,1) /194.3/
@@ -126,6 +130,11 @@ c------------------------------------------------------------------------
 c  Saturn
 c     Ref: 31.4,90,150 GHz -- Ulich, AJ, 86, 1619 (1981).
 c          1.4 GHz         -- ATCA measurement by Sault (1999?)
+c
+c    A preferred spectrum is available from de Pater & Massie,
+c      Icarus, 62, 143 (1985). Muhleman & Berge (1991) discuss the
+c      contribution of the ring, which is less than 10K at wavelengths
+c      longwards of a few cm.
 c
 c                      Freq(GHz)         Temp (Kelvin)
 c                      -----             -----
