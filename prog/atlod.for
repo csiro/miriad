@@ -173,6 +173,7 @@ c    rjs  22sep97 Replace call to fdatejul with dayjul.
 c    rjs  07jan98 Better printing of source names.
 c    rjs  06apr98 Increase the max size of an integration.
 c    rjs  07may98 Change in handling of jstat.eq.5 return value.
+c    rjs  14may98 Handle higher time resolution.
 c
 c  Program Structure:
 c    Miriad atlod can be divided into three rough levels. The high level
@@ -198,7 +199,7 @@ c------------------------------------------------------------------------
 	integer MAXFILES
 	parameter(MAXFILES=128)
 	character version*(*)
-	parameter(version='AtLod: version 08-Apr-98')
+	parameter(version='AtLod: version 14-May-98')
 c
 	character in(MAXFILES)*64,out*64,line*64
 	integer tno
@@ -1696,7 +1697,7 @@ c  send it through to the Poke routines right away. Otherwise, end the
 c  integration and buffer up the SYSCAL record for later delivery.
 c
 	  else if(baseln.eq.-1)then
-	    NewTime = abs(sc_ut-utprevsc).gt.4
+	    NewTime = abs(sc_ut-utprevsc).gt.0.04
 	    if(NewScan.or.an_found.or.NewTime)then
 	      call AtFlush(scinit,scbuf,xflag,yflag,MAX_IF,ANT_MAX)
 	      Accum = .false.
@@ -1724,7 +1725,7 @@ c  Determine whether to flush the buffers.
 c
 	    simno = If2Sim(ifno)
 	    NewFreq = simno.ne.Ssimno
-	    NewTime = abs(ut-utprev).gt.4
+	    NewTime = abs(ut-utprev).gt.0.04
 	    NewSrc = srcno.ne.Ssrcno
 	    if(Accum.and.(NewScan.or.an_found.or.NewSrc.or.NewFreq.or.
      *							NewTime))then
