@@ -127,6 +127,7 @@ c                        averaging and incrementing which previously
 c			 groups of channels could not overlap
 c     rjs     8mar96     Change ctype*9 to ctype*32
 c     nebk   26apr96     Km -> km is setlabcg.  rats.
+c     nebk   02may96     COmments in ANGCONCG were no longer the truth
 c***********************************************************************
 c
 c* angconCG -- Convert radians to and from seconds of time/arc
@@ -139,21 +140,18 @@ c+
       double precision w
       integer id
 c
-c  Convert angular (as indictaed by axis label type) world coordinate 
-c  to radians from a variety of units.  For non-angular label types 
-c  no conversion is done
+c  Convert RA/DEC axis world coordinates between seconds (arc/time) 
+c  and radians.
 c
 c  Input
 c    id       1 -> convert from radians
 c	      2 -> convert to   radians
-c    labtyp   axis label type which gives the non radian unit
+c    labtyp   axis label type 
 c	         hms    seconds of time
 c		 dms    arc seconds
-c               *sec    arc seconds
-c	        *min    arc minutes
-c	        *deg    degrees
 c  Input/Ouput
-c    w        world coordinate 
+c    w        world coordinate. SHould be radians (id=1), or 
+c             (id=1) seconds of arc ('dms') or time ('hms')
 c--
 c-----------------------------------------------------------------------
       include 'mirconst.h'
@@ -162,7 +160,7 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
       if (id.eq.1) then
 c
-c From radians to seconds
+c From radians 
 c
         if (labtyp.eq.'hms') then
           w = w / st2r
@@ -171,7 +169,7 @@ c
         end if
       else if (id.eq.2) then
 c
-c From seconds to radians
+c To radians
 c
         if (labtyp.eq.'hms') then
           w = w * st2r
