@@ -281,6 +281,7 @@ c    amh  14may97  fixed bug concerning accidental "exit" button press. If this
 c                  was accidental, user previously had no way (other than
 c                  rerunning program) of accepting source detected when button
 c                  was accidentally pressed.
+c    rjs  21aug97  Move calls to initco and finco.
 c
 c To do:
 c
@@ -334,7 +335,7 @@ c
       data gaps, doabut, dotr /.false., .false., .false./
 c-----------------------------------------------------------------------
       call output (' ')
-      call output ('Sfind: version 1.22, 14-May-97')
+      call output ('Sfind: version 1.22, 21-Aug-97')
       call output (' ')
 c
 c Get user inputs
@@ -358,6 +359,7 @@ c
 c Open image
 c
       call opimcg (maxnax, in, lin, size, naxis)
+      call initco (lin)
 c
 c Finish key inputs for region of interest now
 c
@@ -559,6 +561,7 @@ c
        call memfree (ipim,  win(1)*win(2), 'r')
        call memfree (ipnim, win(1)*win(2), 'i')
 c
+       call finco (lin)
        call xyclose(lin)
        call txtclose(llog)
        call pgend
@@ -688,7 +691,6 @@ c-----------------------------------------------------------------------
 c
 c Initialize
 c
-      call initco (lin)
       bin(1) = ibin
       bin(2) = jbin
       cch = ' '
@@ -934,7 +936,6 @@ c
       call output(line)
       call output(' ')
 c
-      call finco (lin)
 c
       end
 c
