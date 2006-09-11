@@ -93,12 +93,13 @@ c    rjs/nebk 29mar94 Fix bugs in listing of bandpass table and improve
 c		  formatting.
 c    rjs  25apr95 Significant rework. Unwrap phases consistently.
 c    rjs  17aug95 Failed to take reciprocal of bandpass.
+c    rjs  19sep95 Fix write statement in printing polarisation sol'ns.
 c  Bugs:
 c------------------------------------------------------------------------
 	integer MAXSELS
 	character version*(*)
 	parameter(MAXSELS=256)
-	parameter(version='GpPlt: version 25-Apr-95')
+	parameter(version='GpPlt: version 19-Sep-95')
 	include 'gpplt.h'
 	integer iostat,tIn,nx,ny,nfeeds,nants,nsols,ierr,symbol,nchan
 	integer ntau
@@ -926,8 +927,8 @@ c
 	  line = '# Number of antennas: '//itoaf(nants)
 	  call LogWrite(line,more)
 	  do j1=1,nfeeds*nants,6
-	    j2 = min(j+5,nfeeds*nants)
-	    write(line,'(7g11.3)')(y(j),j=j1,j2)
+	    j2 = min(j1+5,nfeeds*nants)
+	    write(line,'(7f11.3)')(y(j),j=j1,j2)
 	    call LogWrite(line,more)
 	  enddo
 	endif
