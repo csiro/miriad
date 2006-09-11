@@ -122,6 +122,9 @@ c                        SAVDESCG, SETDESCG, SUNITCG, W2PIXCG, W2WCG, W2WFCG
 c     nebk   29nov95     New call for CTYPECO, new ANGCONCG internals,
 c			 new routine RAZEROCG
 c     nebk   04dec95     DOLABCG was forgetting some right hand labels
+c     nebk   30jan96     In CHNSELCG remove the restictions on channel 
+c                        averaging and incrementing which previously
+c			 groups of channels could not overlap
 c***********************************************************************
 c
 c* angconCG -- Convert radians to and from seconds of time/arc
@@ -281,99 +284,137 @@ c* chnselCG -- Make list of CHAN and REGION selected channel groups
 c& nebk
 c: plotting
 c+
-      subroutine chnselcg (blc, trc, kbin, maxbox, boxes, maxgrp,
-     +                     grpbeg, ngrp, ngrps)
+      subroutine chnselcg (blc, trc, kbin, maxbox, boxes, ngrps, 
+     +                     grpbeg, ngrp)
 c
       implicit none
-      integer maxbox, boxes(maxbox), maxgrp, grpbeg(maxgrp), 
-     +ngrp(maxgrp), ngrps, kbin(2), blc(3), trc(3)
+      integer maxbox, boxes(maxbox), grpbeg(*), ngrp(*), ngrps, kbin(2),
+     +  blc(3), trc(3)
 c
 c  Find the channels designated by the CHAN and REGION specifiations
-c  via the RUNS arrays.  
+c  via the RUNS arrays.    Note that currently, none of the 
+c  CG programs call BOXMASK so that all planes offered by the
+c  REGION keyword are selected by CHANSELCG as being good.  
+c  Blanked pixels are dealt with by READIMCG
 c
 c  Input
 c    blc,trc    Cube surrounding region of interest
-c    kbin       Channel increment and average to step through image
+c    kbin       Channel increment and average to step through image.
+c		If kbin(1) and kbin(2) = 0 then output groups begin
+c		every time the selected channels are non-contiguous
+c		and the end channel of each group is made equal to 
+c		the number of contiguous channels in that group
 c    maxbox     Maximum number of boxes
 c    boxes      Boxes following BOXINPUT,BOXSET,BOXINFO (optional) and
 c               BOXMASK
-c    maxgrp     Maximum number of allowed groups
 c  Output
+c    ngrps      Number of groups of channels
 c    grpbeg     Array of start channels for each group of selected
 c               channels.  Each group will be averaged together to
-c               make on sub-plot
+c               make one sub-plot
 c    ngrp       Number of channels in each group
-c    ngrps      Number of groups
+c
 c--
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       integer maxruns
       parameter (maxruns = 10*maxdim)
 c
-      integer runs(3,maxruns), nruns, k, j, ipl, xmin, xmax, ymin,
-     +ymax, inc, iav
+      integer runs(3,maxruns), nruns, i, j, k, xmin, xmax, ymin,
+     +ymax, inc, ave, last, jend, start(maxchan), end(maxchan)
 c-----------------------------------------------------------------------
       inc = kbin(1)
-      iav = kbin(2)
-      if (inc.eq.1) iav = 1
-      if (iav.gt.inc) iav = inc
+      ave = kbin(2)
+      if ((inc.eq.0 .and. ave.ne.0) .or. (inc.ne.0 .and.ave.eq.0))
+     +  call bug ('f', 'CHNSELCG: invalid channel inc/ave values')
 c
-      j = 0
-      k = 0
-      ipl = blc(3)
+c Find first good plane
 c
-      do while (ipl+j.le.trc(3))
-c
-c Use runs to see if plane has some unblanked pixels
-c
-        call boxruns (1, ipl+j, ' ', boxes, runs, maxruns,
+      start(1) = 0
+      j = blc(3)
+      do while (start(1).eq.0 .and. j.le.trc(3))
+        call boxruns (1, j, ' ', boxes, runs, maxruns,
      +                nruns, xmin, xmax, ymin, ymax)
 c
-        if (nruns.gt.0) then
-c
-c This plane in region
-c
-          j = j + 1
-          if (j.eq.1) then
-c
-c Assign group start plane
-c
-            k = k + 1
-            if (k.gt.maxgrp) call bug ('f',
-     +        'CHNSELCG: You have selected too many groups of channels')
-            grpbeg(k) = ipl
-c
-            if (kbin(2).eq.1) then
-              ngrp(k) = 1
-              j = 0
-              ipl = ipl + kbin(1)
-            end if
-          else if (j.eq.kbin(2)) then
-c
-c Reached limit of number of planes to average together.
-c
-            ngrp(k) = j
-            j = 0
-            ipl = ipl + kbin(1)
-          end if
-        else
-c
-c Don't want this plane, so start a new group and assign
-c number of planes in old group.
-c
-          if (k.ne.0 .and. ngrp(k).eq.0) ngrp(k) = j
-          ipl = ipl + j + 1
-          j = 0
-        end if
+        if (nruns.gt.0) start(1) = j
       end do
-c
-      if (k.eq.0) call bug ('f', 
+      if (start(1).eq.0) call bug ('f', 
      +  'CHNSELCG: There were no valid pixels in the region')
 c
-c Finish off last group
+c Loop over remaining planes, and accumulate start and end channels
+c for each run of contiguous channels
 c
-      if (ngrp(k).eq.0) ngrp(k) = j
-      ngrps = k
+      if (start(1).eq.trc(3)) then
+c
+c Special case if first good channel is last available channel
+c
+        end(1) = trc(3)
+        ngrps = 1
+      else
+        k = 1
+        last = start(1)
+        do j = start(1)+1, trc(3)
+          call boxruns (1, j, ' ', boxes, runs, maxruns,
+     +                  nruns, xmin, xmax, ymin, ymax)
+          if (nruns.eq.0) then
+c
+c The current channel is not wanted. Assign the last good
+c channel as the end of the current group, and indicate
+c we need to start a new group.
+c
+            end(k) = last
+            k = k + 1
+            last = 0
+          else
+c
+c This is a good channel, start a new group if needed
+c and note this is currently the last good channel
+c
+            if (last.eq.0) start(k) = j
+            last = j
+          end if
+        end do  
+c
+c Assign the end channel to the last group if need be
+c
+        if (last.ne.0) end(k) = last
+        ngrps = k
+      end if
+c
+c Special case now if kbin(1) = kbin(2) = 0  Just return
+c the contiguous groups
+c
+      if (kbin(1).eq.0 .and. kbin(2).eq.0) then
+        do k = 1, ngrps
+          grpbeg(k) = start(k)
+          ngrp(k) = end(k) - start(k) + 1
+        end do
+      else
+c         
+c Now loop over the number of groups of contiguous channels
+c and divide up into smaller collections of channels reflecting
+c the users averaging and incrementing requests
+c
+        i = 0
+        do k = 1, ngrps
+c
+c Loop over the channels in this group
+c
+          do j = start(k), end(k), inc
+            i = i + 1
+            if (i.gt.maxchan) call bug ('f',
+     +        'CHNSELCG: You have selected too many groups of channels')
+            jend = min(j+ave-1,end(k))
+c
+c Assign start and end channels for this group. These channels
+c will be averaged together to make one subplot
+c
+            grpbeg(i) = j
+            ngrp(i) = jend - j + 1
+          end do
+        end do
+        ngrps = i
+      end if
 c
       end
 c
@@ -1472,8 +1513,8 @@ c* readimCG -- Read in image dealing with averaging and blanking
 c& nebk
 c: plotting
 c+
-      subroutine readimcg (init, blank, lun, ibin, jbin, krng, 
-     +                     blc, trc, norm, nimage, image, blanks, dmm)
+      subroutine readimcg (init, blank, lun, ibin, jbin, krng, blc,
+     +                     trc, norm, nimage, image, blanks, dmm)
 c
       implicit none
       real blank, image(*), dmm(2)
