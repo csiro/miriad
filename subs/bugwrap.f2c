@@ -1,0 +1,15 @@
+/************************************************************************/
+fortran subroutine bugno(character severity,integer n)
+{
+  bugno_c(severity.val,n.val);
+}
+/************************************************************************/
+fortran subroutine bug(character severity,character message)
+{
+  bug_c(severity.val,message.zterm);
+}
+/************************************************************************/
+fortran subroutine buglabel(character name)
+{
+  buglabel_c(name.zterm);
+}
