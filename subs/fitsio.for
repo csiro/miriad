@@ -61,6 +61,8 @@ c		     floating point FITS files.
 c    rjs  25jan99    Write uv FITS date in new FITS format.
 c    rjs  26feb99    Included "fitdate" to help with problems with AIPS dates.
 c    rjs  19jul99    Write EXTVER card into extension tables.
+c    rjs  28sep99    Change in number of digits printed in fitwrhd to
+c		     work around GILDAS flaw.
 c
 c  Bugs and Shortcomings:
 c    * IF frequency axis is not handled on output of uv data.
@@ -2439,7 +2441,7 @@ c------------------------------------------------------------------------
 	character card*80,keyword*8
 	keyword = key
 	write(card,1000)keyword,value
- 1000	format(a,'=   ',1pe23.16,'  /')
+ 1000	format(a,'=   ',1pe18.11,'  /')
 	call fitcdio(lu,card)
 	end
 c************************************************************************
