@@ -121,6 +121,7 @@ c     nebk   27aug94     Convert OL2PIXCG to use correct coordinate
 c                        conversion routines via COSUBS.FOR
 c     nebk   15jan95     Add SAVDESCG
 c     nebk   14apr95     Add HARD and DOFID arguments to WEDGINCCG
+c     nebk   11aug95     Add arcmin labels
 c***********************************************************************
 c
 c* apptrfCG -- Apply transfer function to image
@@ -1201,6 +1202,9 @@ c
       else if (labtyp.eq.'arcsec') then
         label = str(1:l2)//' offset (arcsec; '//estr//')'
         if (estr.eq.' ') label = str(1:l2)//' offset (arcsec)'
+      else if (labtyp.eq.'arcmin') then
+        label = str(1:l2)//' offset (arcmin; '//estr//')'
+        if (estr.eq.' ') label = str(1:l2)//' offset (arcmin)'
       else if (labtyp.eq.'absdeg') then
         label = str(1:l2)//' (degrees; '//estr//')'
         if (estr.eq.' ') label = str(1:l2)//' (degrees)'
@@ -1706,9 +1710,9 @@ c    pixel   Image pixel value
 c    iax     This is the axis number in which we are interested. Should
 c            be 1, 2 or 3.
 c    labtyp  Requested type of world coordinate.   Should be one
-c            of   abspix, relpix, arcsec, hms, dms, absghz, relghz,
-c                 abskms, relkms, abslin, rellin, none. Note that a 
-c	     request for a linear (abs or rel) axis conversion for an
+c            of   abspix, relpix, arcsec, arcmin, hms, dms, absghz, 
+c                 relghz, abskms, relkms, abslin, rellin, none. Note that
+c	     a request for a linear (abs or rel) axis conversion for an
 c	     RA axis will return the RA in radians of polar rotation. 
 c	     That is, the increment will be divided by cos(DEC)
 c	     For labtyp=hms and labtyp=dms the world coordinate is in 
@@ -1780,6 +1784,21 @@ c
         end if
 c
         world = (pixel - crpix(iax)) * cdelt(iax) * r2a
+      else if (labtyp.eq.'arcmin') then
+c
+c Relative arcminutes
+c
+        if (irad.eq.0) then
+          write (msg, 100) iax
+          if (domsg) call bug ('w', msg)
+          if (domsg) call bug ('w', 
+     +      'PIX2WCG: conversion to "arcmin" requested. Continue '//
+     +      'assuming axis in radians')
+          warn(1,iax) = .false.
+          ok = .false.
+        end if
+c
+        world = (pixel - crpix(iax)) * cdelt(iax) * r2a / 60.0d0
       else if (labtyp.eq.'hms') then
 c
 c HH MM SS.S
@@ -1935,7 +1954,7 @@ c
      +            'increments in radians but')
           if (domsg) call bug ('w', msg)
           if (domsg) call bug ('w', 
-     +       'PIX2WCG: conversion to "arcsec" requested. Continue '//
+     +       'PIX2WCG: conversion to "reldeg" requested. Continue '//
      +       'assuming axis in radians')
           warn(10,iax) = .false.
           ok = .false.
@@ -1952,7 +1971,7 @@ c
      +            'increments in radians but')
           if (domsg) call bug ('w', msg)
           if (domsg) call bug ('w', 
-     +       'PIX2WCG: conversion to "arcsec" requested. Continue '//
+     +       'PIX2WCG: conversion to "absdeg" requested. Continue '//
      +       'assuming axis in radians')
           warn(11,iax) = .false.
           ok = .false.
@@ -2040,7 +2059,7 @@ c
         call strfd (world, '(1pe11.5)', str1, il)
       else if (labtyp2.eq.'absdeg' .or. labtyp2.eq.'reldeg') then
         call strfd (world, '(f8.3)', str1, il)
-      else if (labtyp2.eq.'arcsec' .or. 
+      else if (labtyp2.eq.'arcsec' .or. labtyp2.eq.'arcmin' .or.
      +         labtyp2.eq.'abslin' .or. labtyp2.eq.'rellin') then
         call strfd (world, '(1pe15.8)', str1, il)
       else if (labtyp2.eq.'hms') then
@@ -2101,10 +2120,10 @@ c            not match the axis type in ctype.
 c    iax     This is the axis number in which we are interested. Should
 c            be 1, 2 or 3.
 c    labtyp  Requested type of world coordinate.   Should be one
-c            of   abspix, relpix, arcsec, hms, dms, absghz, relghz,
-c                 abskms, relkms, abslin, rellin, none.   Note that a 
-c	     request for a linear (abs or rel) axis conversion for an 
-c	     RA axis will return the RA in radians of polar rotation. 
+c            of   abspix, relpix, arcsec, arcmin, hms, dms, absghz, 
+c                 relghz, abskms, relkms, abslin, rellin, none.   Note 
+c	     that a request for a linear (abs or rel) axis conversion 
+c	     for an RA axis will return the RA in radians of polar rotation. 
 c	     That is, the increment will be divided by cos(DEC)
 c    naxis   Number of axes in image
 c    crval   Array of image reference values
@@ -2703,6 +2722,8 @@ c-----------------------------------------------------------------------
         units = ' '
       else if (labtyp.eq.'arcsec') then
         units = 'arcsec'
+      else if (labtyp.eq.'arcmin') then
+        units = 'arcmin'
       else if (labtyp.eq.'absdeg') then
         units = 'degrees'
       else if (labtyp.eq.'reldeg') then
@@ -2955,9 +2976,9 @@ c    world   World coordinate.
 c    iax     This is the axis number in which we are interested. Should
 c            be 1, 2 or 3.
 c    labtyp  Given type of world coordinate.   Should be one
-c            of   abspix, relpix, arcsec, hms, dms, absghz, relghz,
-c                 abskms, relkms, abslin, rellin, none.  For RA axes
-c            linear coordinates are assumed to be in radians of
+c            of   abspix, relpix, arcsec, arcmin, hms, dms, absghz, 
+c                 relghz, abskms, relkms, abslin, rellin, none.  For 
+c            RA axes linear coordinates are assumed to be in radians of
 c            polar rotation.  For labtyp=hms and labtyp=dms the 
 c            world coordinate is in seconds of time and seconds of arc
 c    naxis   Number of axes in image
@@ -3026,6 +3047,22 @@ c
         end if
 c
         pixel = world * a2r / cdelt(iax) + crpix(iax)
+      else if (labtyp.eq.'arcmin') then
+c
+c Relative arcminutes
+c
+        if (irad.eq.0) then
+          write (msg, 150) iax
+150       format ('W2PIXCG: Axis ', i1, ' is not RA,DEC,LAT,LON but ',
+     +            'conversion from "arcmin"')
+          call bug ('w', msg)
+          call bug ('w', 
+     +      'W2PIXCG: requested.  Continue assuming axis in radians')
+          warn(1,iax) = .false.
+          ok = .false.
+        end if
+c
+        pixel = world * 60.0d0 * a2r / cdelt(iax) + crpix(iax)
       else if (labtyp.eq.'hms') then
 c
 c HH MM SS.S
@@ -3238,7 +3275,7 @@ c            world coordinate is in seconds of time and seconds of arc. For
 c	     RA axes linear coordinates are assumed to be in radians of polar
 c            rotation.That is, the increment will be divided by cos(DEC)
 c    typein  Input world coordinate type.   Should be one
-c            of   abspix, relpix, arcsec, hms, dms, absghz, relghz,
+c            of   abspix, relpix, arcsec, arcmin, hms, dms, absghz, relghz,
 c                 abskms, relkms, abslin, rellin, none. 
 c    typeout Output world coordinate type
 c    iax     This is the axis number in which we are interested. Should
@@ -3295,8 +3332,8 @@ c            world coordinate is in seconds of time and seconds of arc. For
 c	     RA axes linear coordinates are assumed to be in radians of polar
 c            rotation.That is, the increment will be divided by cos(DEC)
 c    typein  Input world coordinate type.   Should be one
-c            of   abspix, relpix, arcsec, hms, dms, absghz, relghz,
-c                 abskms, relkms, abslin, rellin, none. 
+c            of   abspix, relpix, arcsec, arcmin, hms, dms, absghz, 
+c                 relghz, abskms, relkms, abslin, rellin, none. 
 c    typeout Output world coordinate type
 c    iax     This is the axis number in which we are interested. Should
 c            be 1, 2 or 3.
