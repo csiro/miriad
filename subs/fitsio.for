@@ -48,7 +48,8 @@ c		     no history comments in the input FITS files.
 c    rjs  27sep95    Default naxisx value of 1.
 c    rjs  16dec96    Improve FITS compliance when loading binary tables.
 c		     Increase number of columns in binary tables.
-c
+c    lss  17dec96    Change ftabget routines to handle reading single
+c		     rows of a column.
 c  Bugs and Shortcomings:
 c    * IF frequency axis is not handled on output or uv data.
 c    * YYYUUUCCCKKK. See ftabGetD: Miriad's alignment requirements are
@@ -3157,10 +3158,10 @@ c* ftabGetI -- Return integer valued data from a FITS table.
 c& rjs
 c: fits
 c+
-	subroutine ftabGetI(lu,name,data)
+	subroutine ftabGetI(lu,name,irow,data)
 c
 	implicit none
-	integer lu,data(*)
+	integer lu,data(*),irow
 	character name*(*)
 c
 c  Get integer data from the current FITS table.
@@ -3168,11 +3169,12 @@ c
 c  Input:
 c    lu		Handle of the FITS file.
 c    name	Name of the parameter to return.
+c    irow       Row number to return (0=all)
 c  Output:
 c    data	The data values.
 c--
 c------------------------------------------------------------------------
-	integer i,j,iostat,size,idx,offset
+	integer i,j,iostat,size,idx,offset,ifirst,ilast
 	character umsg*64
 	include 'fitsio.h'
 c
@@ -3196,6 +3198,13 @@ c
 	  call bug('f',umsg)
 	endif
 c
+c  Does row exist?
+c
+	if(irow.gt.rows(lu))then
+	  umsg = 'Requested row does not exist'
+	  call bug('f',umsg)
+	endif
+c
 c  Check that the i/o routines alignment requirement is met.
 c
 	size = ftabSize(ColForm(i,lu))
@@ -3207,9 +3216,17 @@ c
 c
 c  All it OK. So just read the data.
 c
-	idx = 1
+  	idx = 1
 	offset = DatOff(lu) + ColOff(i,lu)
-	do j=1,rows(lu)
+        if (irow .lt .1) then
+           ifirst = 1
+           ilast = rows(lu)
+        else
+           ifirst = irow
+           ilast = irow
+           offset = offset + (irow-1)*width(lu)
+        end if
+	do j=ifirst,ilast
 	  if(ColForm(i,lu).eq.FormJ)then
 	    call hreadj(item(lu),data(idx),offset,ColCnt(i,lu)/8,iostat)
 	  else if(ColForm(i,lu).eq.FormI)then
@@ -3228,10 +3245,10 @@ c* ftabGetR -- Get real data from the current FITS table.
 c& rjs
 c: fits
 c+
-	subroutine ftabGetR(lu,name,data)
+	subroutine ftabGetR(lu,name,irow,data)
 c
 	implicit none
-	integer lu
+	integer lu, irow
 	real data(*)
 	character name*(*)
 c
@@ -3239,12 +3256,13 @@ c  Get real data from the current FITS table.
 c
 c  Input:
 c    lu		Handle of the FITS file.
-c    name	Name of the parameter to return.
+c    name	Name of the parameter to return
+c    irow       Row number to return (0=all)
 c  Output:
 c    data	The data values.
 c--
 c------------------------------------------------------------------------
-	integer i,j,iostat,size,idx,offset
+	integer i,j,iostat,size,idx,offset,ifirst,ilast
 	character umsg*64
 	include 'fitsio.h'
 c
@@ -3268,6 +3286,13 @@ c
 	  call bug('f',umsg)
 	endif
 c
+c  Does row exist?
+c
+	if(irow.gt.rows(lu))then
+	  umsg = 'Requested row does not exist'
+	  call bug('f',umsg)
+	endif
+c
 c  Check that the i/o routines alignment requirement is met.
 c
 	size = ftabSize(ColForm(i,lu))
@@ -3281,7 +3306,15 @@ c  All it OK. So just read the data.
 c
 	idx = 1
 	offset = DatOff(lu) + ColOff(i,lu)
-	do j=1,rows(lu)
+        if (irow .lt .1) then
+           ifirst = 1
+           ilast = rows(lu)
+        else
+           ifirst = irow
+           ilast = irow
+           offset = offset + (irow-1)*width(lu)
+        end if
+	do j=ifirst, ilast
 	  call hreadr(item(lu),data(idx),offset,ColCnt(i,lu)/8,iostat)
 	  if(iostat.ne.0)then
 	    call bug('w','I/O error while reading FITS table')
@@ -3296,10 +3329,10 @@ c* ftabGetD -- Get double precision data from the current FITS table.
 c& rjs
 c: fits
 c+
-	subroutine ftabGetD(lu,name,data)
+	subroutine ftabGetD(lu,name,irow,data)
 c
 	implicit none
-	integer lu
+	integer lu, irow
 	double precision data(*)
 	character name*(*)
 c
@@ -3308,11 +3341,12 @@ c
 c  Input:
 c    lu		Handle of the FITS file.
 c    name	Name of the parameter to return.
+c    irow       Row number to return (0=all)
 c  Output:
 c    data	The data values.
 c--
 c------------------------------------------------------------------------
-	integer i,j,iostat,size,idx,offset
+	integer i,j,iostat,size,idx,offset,ifirst,ilast
 	character umsg*64
 	include 'fitsio.h'
 c
@@ -3336,6 +3370,13 @@ c
 	  call bug('f',umsg)
 	endif
 c
+c  Does row exist?
+c
+	if(irow.gt.rows(lu))then
+	  umsg = 'Requested row does not exist'
+	  call bug('f',umsg)
+	endif
+c
 c  Check that the i/o routines alignment requirement is met.
 c  YYYUUUCCCKKK. Miriad's alignment requirements are really more
 c  relaxed if we are not on a Cray. FITS files do not obey the Miriad
@@ -3355,7 +3396,15 @@ c  All it OK. So just read the data.
 c
 	idx = 1
 	offset = DatOff(lu) + ColOff(i,lu)
-	do j=1,rows(lu)
+        if (irow .lt .1) then
+           ifirst = 1
+           ilast = rows(lu)
+        else
+           ifirst = irow
+           ilast = irow
+           offset = offset + (irow-1)*width(lu)
+        end if
+	do j=ifirst,ilast
 	  call hreadd(item(lu),data(idx),offset,ColCnt(i,lu)/8,iostat)
 	  if(iostat.ne.0)then
 	    call bug('w','I/O error while reading FITS table')
@@ -3370,10 +3419,10 @@ c* ftabGeta -- Get ascii data from the current FITS table.
 c& rjs
 c: fits
 c+
-	subroutine ftabGeta(lu,name,data)
+	subroutine ftabGeta(lu,name,irow,data)
 c
 	implicit none
-	integer lu
+	integer lu, irow
 	character data(*)*(*)
 	character name*(*)
 c
@@ -3382,11 +3431,12 @@ c
 c  Input:
 c    lu		Handle of the FITS file.
 c    name	Name of the parameter to return.
+c    irow       Row number to return (0=all)
 c  Output:
 c    data	The data values.
 c--
 c------------------------------------------------------------------------
-	integer i,j,iostat,offset,length
+	integer i,j,iostat,offset,length,ifirst,ilast
 	character umsg*64
 	include 'fitsio.h'
 c
@@ -3414,12 +3464,27 @@ c  Determine the length to read each time.
 c
 	length = min(len(data(1)),ColCnt(i,lu)/8)
 c
+c  Does row exist?
+c
+	if(irow.gt.rows(lu))then
+	  umsg = 'Requested row does not exist'
+	  call bug('f',umsg)
+	endif
+c
 c  All it OK. So just read the data.
 c
 	offset = DatOff(lu) + ColOff(i,lu)
-	do j=1,rows(lu)
-	  if(length.lt.len(data(j))) data(j) = ' '
-	  call hreadb(item(lu),data(j),offset,length,iostat)
+        if (irow .lt .1) then
+           ifirst = 1
+           ilast = rows(lu)
+        else
+           ifirst = irow
+           ilast = irow
+           offset = offset + (irow-1)*width(lu)
+        end if
+	do j=ifirst,ilast
+	  if(length.lt.len(data(j))) data(j-ifirst+1) = ' '
+	  call hreadb(item(lu),data(j-ifirst+1),offset,length,iostat)
 	  if(iostat.ne.0)then
 	    call bug('w','I/O error while reading FITS table')
 	    call bugno('f',iostat)
@@ -3428,19 +3493,24 @@ c
 	enddo
 	end
 c************************************************************************
+c* ftabColn -- Determine the column number of a particular table entry.
+c& rjs
+c: fits
+c+
 	integer function ftabColn(lu,name)
 c
 	implicit none
 	integer lu
 	character name*(*)
 c
-c  Determine the column that a particular parameter exists in.
+c  Determine the column number of a particular table entry.
 c
 c  Input:
 c    lu		FITS file handle.
 c    name	Name of the parameter.
 c  Output:
 c    ftabColn	Column number.
+c--
 c------------------------------------------------------------------------
 	integer i,l
 	logical more
