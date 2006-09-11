@@ -4,22 +4,29 @@ c  A set of routines to convert between differing coordinate systems.
 c  User callable routines are:
 c
 c    subroutine coInit(lu)
-c    subroutine coFin(lu)
+c    subroutine coCreate(lu)
+c    subroutine coDup(lin,lout)
+c    subroutine coRaDec(lu,proj,ra0,dec0)
+c    subroutine coReinit(lu)
+c    subroutine coAxSet(lu,iax,ctype,crpix,crval,cdelt)
 c    subroutine coCvt(lu,in,x1,out,x2)
 c    subroutine coCvt1(lu,iax,in,x1,out,x2)
 c    subroutine coVelSet(lu,axis)
 c    subroutine coPrjSet(lu)
 c    subroutine coFindAx(lu,axis,iax)
+c    subroutine coSetd(lu,object,value)
 c    subroutine coAxDesc(lu,iax,ctype,crpix,crval,cdelt)
 c    subroutine coGauCvt(lu,in,x1,io,bmaj1,bmin1,bpa1,bmaj2,bmin2,bpa2)
 c    logical function coCompar(lu1,lu2,match)
 c    subroutine coLin(lu1,in,x1,n,ctype,crpix,crval,cdelt)
 c    subroutine coPrint(lu)
-c    subroutine coWrite(lu)
+c    subroutine coWrite(lu,tno)
+c    subroutine coFin(lu)
 c
 c  History:
 c    rjs   9aug94 Original version.
 c    rjs  13sep94 Support 'VELOCITY' and 'FELOCITY' axes.
+c    rjs  12oct94 Added a good many things ... for mosaicing.
 c************************************************************************
 c* coInit -- Initialise coordinate conversion routines.
 c& rjs
@@ -47,8 +54,7 @@ c		axes, centered on the observing centre.
 c--
 c------------------------------------------------------------------------
 	include 'co.h'
-	integer k,i
-	logical ok
+	integer k
 c
 c  Externals.
 c
@@ -68,6 +74,237 @@ c
 	else
 	  call bug('f','Unrecognised dataset type, in CoInit')
 	endif
+c
+c  Finish up initialising this coordinate object.
+c
+	call coReinit(lu)
+	end
+c************************************************************************
+c* coDup -- Duplicate a coodinate object.
+c& rjs
+c: coordinates
+c+
+	subroutine coDup(lin,lout)
+c
+	implicit none
+	integer lin,lout
+c
+c  Duplicate a coordinate object.
+c
+c  Input:
+c    lin	Handle of the input coordinate object to be
+c		duplicated.
+c  Output:
+c    lout	Duplicated coordinate object.
+c--
+c------------------------------------------------------------------------
+	include 'co.h'
+	integer i,k1,k2
+c
+c  Externals.
+c
+	integer coLoc
+c
+	call coCreate(lout)
+	k1 = coLoc(lin,.false.)
+	k2 = coLoc(lout,.false.)
+c
+	naxis(k2) = naxis(k1)
+	do i=1,naxis(k2)
+	  ctype(i,k2) = ctype(i,k1)
+	  crpix(i,k2) = crpix(i,k1)
+	  crval(i,k2) = crval(i,k1)
+	  cdelt(i,k2) = cdelt(i,k1)
+	enddo
+c
+	restfreq(k2) = restfreq(k1)
+	vobs(k2) = vobs(k1)
+c
+	call coReinit(lout)
+c
+	end
+c************************************************************************
+c* coRaDec -- Create a simple RA/DEC coordinate system.
+c& rjs
+c: coordinates
+c+
+	subroutine coRaDec(lu,proj,ra0,dec0)
+c
+	implicit none
+	integer lu
+	character proj*(*)
+	double precision ra0,dec0
+c
+c  Create a simple RA/DEC coordinate system.
+c
+c  Input:
+c    proj	Projection geomery (e.g. 'SIN', 'NCP', etc)
+c    ra0,dec0	RA,DEC of the reference point.
+c  Output:
+c    lu		Handle of the output coordinate object.
+c--
+c------------------------------------------------------------------------
+	character ctype*16
+c
+	call coCreate(lu)
+	ctype = 'RA---'//proj
+	call coAxSet(lu,1,ctype,0.d0,ra0,1.d0)
+	ctype = 'DEC--'//proj
+	call coAxSet(lu,2,ctype,0.d0,dec0,1.d0)
+	call coReinit(lu)
+c
+	end
+c************************************************************************
+c* coCreate -- Begin intialisation of a coordinate object.
+c& rjs
+c: coordinates
+c+
+	subroutine CoCreate(lu)
+c
+	implicit none
+	integer lu
+c
+c  Begin building up a coordinate object from scratch.
+c
+c  Output:
+c    lu		Handle of the coordinate object.
+c--
+c------------------------------------------------------------------------
+	include 'co.h'
+	integer k
+c
+c  Externals.
+c
+	integer coLoc
+c
+	k = coLoc(0,.true.)
+	lu = -k
+	restfreq(k) = 0
+	vobs(k) = 0
+	naxis(k) = 0
+	end
+c************************************************************************
+c* coAxSet -- Set the characteristics of a particular axis.
+c& rjs
+c: coordinates
+c+
+	subroutine coAxSet(lu,iax,ctypei,crpixi,crvali,cdelti)
+c
+	implicit none
+	integer lu,iax
+	character ctypei*(*)
+	double precision crpixi,crvali,cdelti
+c
+c  Set the coordinates of an axis to something.
+c
+c  Input:
+c    lu		Handle of the coordinate object.
+c    iax	Axis number.
+c    ctypei,...	FITS-style ctype,crpix,crval,cdelt
+c--
+c------------------------------------------------------------------------
+	include 'co.h'
+	integer i,k
+c
+c  Externals.
+c
+	integer coLoc
+c
+	k = coLoc(lu,.false.)
+	if(iax.gt.MAXNAX.or.iax.lt.1)
+     *	  call bug('f','Illegal axis number')
+c
+	do i=naxis(k)+1,iax-1
+	  ctype(i,k) = ' '
+	  crpix(i,k) = 1
+	  crval(i,k) = 0
+	  cdelt(i,k) = 1
+	enddo
+c	  	
+	naxis(k) = max(naxis(k),iax)
+	ctype(iax,k) = ctypei
+	crpix(iax,k) = crpixi
+	crval(iax,k) = crvali
+	cdelt(iax,k) = cdelti
+c
+	end
+c************************************************************************
+c* coSetd -- Set the value in the guts of the coordinate routines.
+c& rjs
+c: coordinates
+c+
+	subroutine coSetd(lu,object,value)
+c
+	implicit none
+	integer lu
+	character object*(*)
+	double precision value
+c
+c  Set a value in the guts of the coordinate routines!
+c
+c  Input:
+c    lu		Handle of the coordinate object.
+c    object	Name of the thing to set.
+c    value	Value to use.
+c--
+c------------------------------------------------------------------------
+	include 'co.h'
+	integer k,l
+	logical ok
+	character obj*8
+c
+c  Externals.
+c
+	integer coLoc
+c
+	k = coLoc(lu,.false.)
+c
+	obj = object
+	l = ichar(obj(6:6)) - ichar('0')
+	ok = l.ge.1.and.l.le.MAXNAX
+c
+	if(obj.eq.'restfreq')then
+	  restfreq(k) = value
+	else if(obj.eq.'vobs')then
+	  vobs(k) = value
+	else if(obj(1:5).eq.'crval'.and.ok)then
+	  crval(l,k) = value
+	else if(obj(1:5).eq.'crpix'.and.ok)then
+	  crpix(l,k) = value
+	else if(obj(1:5).eq.'cdelt'.and.ok)then
+	  cdelt(l,k) = value
+	else
+	  call bug('f','Unrecognised object in coSetd')
+	endif
+c
+	end
+c************************************************************************
+c* coReinit -- Finish initialisation of a coordinate object.
+c& rjs
+c: coordinates
+c+
+	subroutine CoReinit(lu)
+c
+	implicit none
+	integer lu
+c
+c  Finish up initialising a coordinate object.
+c
+c  Input:
+c    lu		Handle of the coordinate object.
+c--
+c------------------------------------------------------------------------
+	include 'co.h'
+	integer k,i
+	logical ok
+c
+c  Externals.
+c
+	integer coLoc
+c
+c  Find the index of this object.
+c
+	k = coLoc(lu,.false.)
 c
 c  Convert the coordinate type to an enumerated type, and check for
 c  consistency of celestial coordinates.
@@ -283,6 +520,63 @@ c
 	  endif
 	endif
 c
+	end
+c************************************************************************
+c* coLMN -- Convert celestial coordinates to direction cosines.
+c& rjs
+c: coordinates
+c+
+	subroutine coLMN(lu,in,x1,lmn)
+c
+	implicit none
+	integer lu
+	character in*(*)
+	double precision x1(*),lmn(3)
+c
+c  Convert coordinates to direction cosines.
+c
+c  Input:
+c    lu		Handle of the coordinate object.
+c    in		As with coCvt
+c    x1		As with coCvt
+c  Output:
+c    lmn	The direction cosines (with respect to the reference
+c		position) of the celestial coordinate given by x1.
+c--
+c------------------------------------------------------------------------
+	include 'co.h'
+	double precision x2(MAXNAX),ra,dec,ra0,dec0
+	integer k
+c
+c  Externals.
+c
+	integer coLoc
+c
+c  Check validity.
+c
+	k = coLoc(lu,.false.)
+	if(ilong(k).eq.0.or.ilat(k).eq.0)
+     *	  call bug('f','Non-celestial coordinate system, in coLMN')
+c
+c  Convert the users coordinate to absolute world coordinates.
+c  Fill in the reference location in the output, just in case the
+c  user was silly enough not to give enough inputs.
+c
+	ra0 = crval(ilong(k),k)
+	dec0 = crval(ilat(k),k)
+	x2(ilong(k)) = ra0
+	x2(ilat(k))  = dec0
+c
+	call coCvt(lu,in,x1,'aw/...',x2)
+c
+	ra = x2(ilong(k))
+	dec = x2(ilat(k))
+c
+c  Convert to direction cosines.
+c
+	lmn(1) = sin(ra-ra0) * cos(dec)
+	lmn(2) = sin(dec)*cos(dec0) - cos(ra-ra0)*cos(dec)*sin(dec0)
+	lmn(3) = sin(dec)*sin(dec0) + cos(ra-ra0)*cos(dec0)*cos(dec) 
 	end
 c************************************************************************
 c* coCvt1 -- Do coordinate conversion on one axis only.
@@ -1028,16 +1322,17 @@ c* coWrite -- Write out the coordinate description to an image dataset.
 c& rjs
 c: coordinates
 c+
-	subroutine coWrite(lu)
+	subroutine coWrite(lu,tno)
 c
 	implicit none
-	integer lu
+	integer lu,tno
 c
 c  This writes out the coordinate system description to an image
 c  dataset.
 c
 c  Input:
-c    lu		Handle of the coordinate system.
+c    lu		Handle of the coordinate object.
+c    tno	Handle of the output dataset.
 c--
 c------------------------------------------------------------------------
 	include 'co.h'
@@ -1053,14 +1348,14 @@ c
 c
 	do i=1,naxis(k)
 	  num = itoaf(i)
-	  call wrhdd(lu,'crval'//num,crval(i,k))
-	  call wrhdd(lu,'crpix'//num,crpix(i,k))
-	  call wrhdd(lu,'cdelt'//num,cdelt(i,k))
-	  call wrhda(lu,'ctype'//num,ctype(i,k))
+	  call wrhdd(tno,'crval'//num,crval(i,k))
+	  call wrhdd(tno,'crpix'//num,crpix(i,k))
+	  call wrhdd(tno,'cdelt'//num,cdelt(i,k))
+	  call wrhda(tno,'ctype'//num,ctype(i,k))
 	enddo
 c
-	if(restfreq(k).ne.0)call wrhdd(lu,'restfreq',restfreq(k))
-	call wrhdd(lu,'vobs',vobs(k))
+	if(restfreq(k).ne.0)call wrhdd(tno,'restfreq',restfreq(k))
+	call wrhdd(tno,'vobs',vobs(k))
 	end
 c************************************************************************
 	subroutine CoCompat(ctype1,ctype2,ok)
@@ -1166,7 +1461,7 @@ c------------------------------------------------------------------------
 	include 'co.h'
 c
 	integer NTYPES
-	parameter(NTYPES=14)
+	parameter(NTYPES=16)
 	character types(NTYPES)*8
 	integer itypes(NTYPES)
 c
@@ -1190,7 +1485,9 @@ c
      *	  'FREQ    ',	FREQ,
      *	  'GLAT    ',	LAT,
      *	  'GLON    ',	LON,
+     *	  'POINTING',   LINEAR,
      *	  'RA      ',	LON,
+     *	  'SDBEAM  ',	LINEAR,
      *	  'STOKES  ',	LINEAR,
      *	  'UU      ',	LINEAR,
      *	  'VELO    ',	VELO,
@@ -1319,7 +1616,11 @@ c
 c  We did not find it. If we are allowed to allocate one, do so.
 c
 	if(alloc.and.free.ne.0)then
-	  lus(free) = lu
+	  if(lu.eq.0)then
+	    lus(free) = -free
+	  else
+	    lus(free) = lu
+	  endif
 	  nalloc(free) = 1
 	  CoLoc = free
 	  return
