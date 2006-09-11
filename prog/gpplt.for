@@ -97,15 +97,16 @@ c    rjs  19sep95 Fix write statement in printing polarisation sol'ns.
 c    rjs  12dec96 Fix bug in GainPlt2 related to getting times stamps and
 c		  flagging wrong.
 c    rjs  10jun97 Correct amptiude to amplitude.
+c    rjs  09mar98 Trim the device name before passing it through to PGPLOT.
 c  Bugs:
 c------------------------------------------------------------------------
 	integer MAXSELS
 	character version*(*)
 	parameter(MAXSELS=256)
-	parameter(version='GpPlt: version 10-Jun-97')
+	parameter(version='GpPlt: version 09-Mar-98')
 	include 'gpplt.h'
 	integer iostat,tIn,nx,ny,nfeeds,nants,nsols,ierr,symbol,nchan
-	integer ntau
+	integer ntau,length
 	character vis*64,device*64,logfile*64,BaseTime*20
 	double precision T0
 	logical doamp,dophase,doreal,doimag,dogains,dopol,dodtime,doxy
@@ -120,7 +121,7 @@ c
 c  Externals.
 c
 	logical hdprsnt
-	integer pgbeg
+	integer pgbeg,len1
 c
 	data Feeds/'I','X','Y'/
 c
@@ -220,7 +221,8 @@ c
 c  Open up the other devices now that we think everything looks OK.
 c
 	if(doplot)then
-          ierr = pgbeg(0,device,nx,ny)
+	  length = len1(device)
+          ierr = pgbeg(0,device(1:length),nx,ny)
           if (ierr.ne.1)then
 	    call pgldev
 	    call bug ('f', 'Error in PGPLOT device')
