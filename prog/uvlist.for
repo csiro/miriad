@@ -111,10 +111,11 @@ c   29nov95 rjs  - Cope with value being unset.
 c   18may96 rjs  - Correct formating bug in ListSepc
 c   28aug96 rjs  - List source information.
 c   18mar97 rjs  - Consistently write to log file.
+c   11may97 rjs  - Better listing format for options=array
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
-	parameter(version='Uvlist: version 1.0 28-Aug-96')
+	parameter(version='Uvlist: version 1.0 11-May-97')
 c
 	character out*50,last*1,date*18,uvflags*8
 	complex data(MAXCHAN)
@@ -1119,10 +1120,12 @@ c
 	call logwrite(
      *	  'Antenna positions in local equatorial coordinates',more)
 	call logwrite(' ',more)
-	call logwrite('    X (meters)   Y (meters)   Z (meters)',more)
-	call logwrite('    ----------   ----------   ----------',more)
+	call logwrite('       X (meters)     Y (meters)     Z (meters)',
+     *		more)
+	call logwrite('       ----------     ----------     ----------',
+     *		more)
 	do i=1,nants
-	  write(line,'(2x,1p3g13.4)')
+	  write(line,'(2x,3f15.4)')
      *		FAC*xyz(i),FAC*xyz(i+nants),FAC*xyz(i+2*nants)
 	  call logwrite(line,more)
 	enddo
