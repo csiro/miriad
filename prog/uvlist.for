@@ -113,6 +113,7 @@ c   28aug96 rjs  - List source information.
 c   18mar97 rjs  - Consistently write to log file.
 c   11may97 rjs  - Better listing format for options=array
 c   19aug98 rjs  - Correct printing of longitude in options=array
+c   22may01 dpr  - XY-EW support
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
@@ -1106,6 +1107,7 @@ c
 	if(ok)then
 	  if(nint(mount).eq.0)call logwrite('Mounts: Alt-az',more)
 	  if(nint(mount).eq.1)call logwrite('Mounts: Equatorial',more)
+	  if(nint(mount).eq.3)call logwrite('Mounts: XY-EW',more)
 	endif
 	call logwrite(' ',more)
 c

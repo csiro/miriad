@@ -68,6 +68,7 @@ c    rjs  28nov93 Parallactic recomputation.
 c    rjs  15jul95 Why doesn't options=jupaxis get mentioned in this
 c		  history. I have improved it a bit.
 c    rjs  19jun97 Eliminate jupaxis business (now in uvjup).
+c    dpr  22may01 Marginal XY-EW support
 c
 c  Bugs:
 c    * Much more needs to be added.
@@ -342,8 +343,8 @@ c------------------------------------------------------------------------
 	logical ok
 	character telescop*32
 c
-	integer EQUATOR,ALTAZ
-	parameter(EQUATOR=1,ALTAZ=0)
+	integer EQUATOR,ALTAZ,XYEW
+	parameter(EQUATOR=1,ALTAZ=0,XYEW=3)
 c
 c  Externals.
 c
