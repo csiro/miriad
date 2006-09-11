@@ -1,6 +1,6 @@
 c**********************************************************************
 c     A collection of subroutines shared by the programs CGDISP,
-c     CGSPEC, CGCURS, CGSLICE, REGRID and UVSUB. 
+c     CGSPEC, CGCURS, CGSLICE, REGRID, IMBIN and UVSUB. 
 c
 c
 c  apptrfcg :  Apply transfer function to image
@@ -33,6 +33,7 @@ c  ppconcg  :  Convert between unbinned full image pixels and binned
 c              subimage pixels
 c  readbcg  :  Read blanking mask form mask image
 c  readimcg :  Read in image dealing with averaging and blanking
+c  savdescg :  Make a copy of the axis descriptors
 c  setcolcg :  Set a PGPLOT colour for multiple line graphics on 1 plot
 c  setdescg :  Set axis descriptors for an image by copying from another
 c  strprpcg :  Prepare string by stripping extra white space and
@@ -118,6 +119,7 @@ c     nebk   12jul94     Fix dimensioning bug in SETDESCG
 c     nebk   19jul94     Allow roundoff tolerance in CHKDESCG
 c     nebk   27aug94     Convert OL2PIXCG to use correct coordinate 
 c                        conversion routines via COSUBS.FOR
+c     nebk   15jan95     Add SAVDESCG
 c***********************************************************************
 c
 c* apptrfCG -- Apply transfer function to image
@@ -2452,6 +2454,39 @@ c
 c
       end
 c
+c* savdesCG --  Save a copy of the axis descriptors
+c& nebk
+c: plotting
+c+
+      subroutine savdescg (naxis, ctype, crval, crpix, cdelt, sctype,
+     +                   scrval, scrpix, scdelt)
+c
+      implicit none
+      integer naxis
+      double precision crval(naxis), cdelt(naxis), crpix(naxis),
+     +  scrval(naxis), scdelt(naxis), scrpix(naxis)
+      character*(*) ctype(naxis), sctype(naxis)
+c
+c  Make a copy of the axis descriptors 
+c
+c  Input
+c    naxis     Number of axes
+c    c*        Axis descriptors
+c  Output
+c    cs*       Copy of axis descriptors
+c--
+c-----------------------------------------------------------------------
+      integer i
+c-----------------------------------------------------------------------
+      do i = 1, naxis
+        sctype(i) = ctype(i)
+        scrval(i) = crval(i)
+        scdelt(i) = cdelt(i)
+        scrpix(i) = crpix(i)
+      end do
+c
+      end
+c
 c* setcolCG --  Set multiple line graphics PGPLOT colours
 c& nebk
 c: plotting
@@ -2858,8 +2893,10 @@ c
 c Tell user what happened
 c
       if (fail) then
-        call bug ('f', 'Can''t adjust spatial window to contain'//
-     +            ' an integral number of bins')
+        write (aline, 50) axis
+50      format ('Can''t adjust window to contain',
+     +          ' integral no. of bins on axis ', i1)
+        call bug ('f', aline)
       else if (new) then
         write (aline, 100) axis, lo, hi, blc, trc, bin(2)
 100     format ('Adjusted axis ', i1, ' window from ', i4, ',', i4,
