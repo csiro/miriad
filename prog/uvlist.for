@@ -106,10 +106,11 @@ c   21jan93 rjs  - Formatting error for options=spec
 c   23aug94 rjs  - More decimal points in options=spec
 c    1aug95 rjs  - Fix minor bug which only shows up on sgi machine.
 c   28sep95 rjs  - Added options=array
+c   29nov95 rjs  - Cope with value being unset.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
-	parameter(version='Uvlist: version 1.0 23-Dec-93')
+	parameter(version='Uvlist: version 1.0 29-Nov-95')
 c
 	character out*50,last*1,date*18,uvflags*8
 	complex data(MAXCHAN)
@@ -712,9 +713,12 @@ c
 	do k=1,vnum
 	    call uvprobvr(lIn,varname(k),vflag,vsubs,vupd)
 c
-c  A large variable.
+c  A unset or large variable.
 c
-	    if(vsubs.gt.maxdata) then
+	    if(vsubs.eq.0)then
+	      line = varname(k)//': (no value set)'
+	      call writeit(line,24)
+	    else if(vsubs.gt.maxdata) then
 	      write(line,'(a,'': ('',i5,'' elements)'')')varname(k),
      *							   vsubs
 	      call writeit(line,26)
