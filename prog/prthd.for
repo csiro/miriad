@@ -44,13 +44,14 @@ c		  Support pbtype.
 c    rjs  31jul97 Use MAXWIN for number of spectra.
 c    rjs  01aug97 Better format for beam size.
 c    rjs  24feb98 Use MAXWIDE rather than MAXWIN for number of wide channels.
+c    rjs  25nov98 Print out sky rotation.
 c
 c  Bugs and Shortcomings:
 c    * Descriptions in brief mode could be a bit more verbose!
 c------------------------------------------------------------------------
 	character version*(*)
 	integer MAXIN
-	parameter(version='Prthd: version 24-Feb-98')
+	parameter(version='Prthd: version 25-Nov-98')
 	parameter(MAXIN=256)
 	integer tno,i,iostat,nin
 	character in(MAXIN)*64,logf*64,line*80
@@ -248,6 +249,13 @@ c
 c
 c  Parameters related to coordinates.
 c
+      call rdhdd (tno, 'llrot', dval, 0.d0)
+      if(dval.ne.0)then
+	write(line,'(a,f6.1,a)')'Image/Sky Rotation Angle:',180/pi*dval,
+     *				' degrees'
+	call logwrite(line,more)
+	call logwrite(' ',more)
+      endif
       call rdhdd (tno, 'obstime', dval, 0.d0)
       if(dval.gt.0)then
 	call julday(dval,'H',aval1)
