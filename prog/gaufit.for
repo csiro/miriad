@@ -132,6 +132,7 @@ c                 Add writing of profile
 c     bpw 15dec92 Adapt for changed fndaxnumc
 c     bpw  2mar93 Adapt for masking in xyzio
 c     bpw 14dec93 Add call logclose
+c     bpw 14nov94 Fix erroneous 'Center outside range' for cdelt3<0
 
 c************************************************************************
 
@@ -169,7 +170,7 @@ c limlist:     ranges for amp/int,ctr,fwhm/disp
       program gaufit
 
       character*50 version
-      parameter    ( version = 'gaufit: version 1.0 2-mar-93' )
+      parameter    ( version = 'gaufit: version 1.0 14-nov-94' )
 
       include      'maxdim.h'
 
@@ -364,6 +365,7 @@ c parameters for the user.
       integer      i, j
       character*6  key
       logical      keyprsnt
+      real         tmp
       character*10 opts(NOPTS)
       logical      optprsnt(NOPTS)
       data         opts / 'noprint', 'supbad', 'LLOOGGFF', 'wrprof',
@@ -444,6 +446,15 @@ c limlist(7:9)=flag if limit used
       enddo
 c Convert allowed ranges to pixels
       call parconv( limlist, 2, .true., optlist )
+
+c limlist(2,5) corresponds to velocity; sometimes cdelt3<0, and the
+c pixel order of lower and upper limit is reversed
+      if( limlist(2) .gt. limlist(5) ) then
+         tmp        = limlist(2)
+         limlist(2) = limlist(5)
+         limlist(5) = tmp
+      endif
+c limlist(3,6) corresponds to width, fit 1/width
       do i = 1, 2
          limlist(3*i) = 1. / limlist(3*i)
       enddo
@@ -526,6 +537,11 @@ c gaussfitting algorithm, and writes the results.
       include   'maxdim.h'
       integer   MAXCMP, MAXPAR
       parameter ( MAXCMP=10, MAXPAR=MAXCMP*3 )
+      integer   NOPRT, SUPBAD, LOGF, WRPROF, INTG, DISP, PIXL
+      integer   AVER, SUMMED, FIXVELO, FIXWIDTH
+      parameter ( NOPRT=1, SUPBAD=2, LOGF=3, WRPROF=4 )
+      parameter ( INTG=5, DISP=6, PIXL=7 )
+      parameter  ( AVER=8, SUMMED=9, FIXVELO=10, FIXWIDTH=11 )
 
       integer   nchan
       integer   profnr
@@ -545,9 +561,15 @@ c gaussfitting algorithm, and writes the results.
            ier= gssfit( data, mask,
      *                  prfinf, ngauss, fitlist, optlist, limlist,
      *                  gausspar, model, residual )
-           call gssout( data, model,
-     *                  units(1), profnr, prfinf, ngauss, optlist,
-     *                  gausspar, pmsk, ier )
+           if( .not.optlist(NOPRT) ) then
+              if( optlist(SUPBAD) .and. ier.ne.0 ) then
+              call zeroes( gausspar,pmsk,model,residual,ngauss,nchan )
+              else
+              call gssout( data, model,
+     *                     units(1), profnr, prfinf, ngauss, optlist,
+     *                     gausspar, pmsk, ier )
+              endif
+           endif
          else
            call zeroes( gausspar, pmsk, model, residual, ngauss, nchan )
          endif
@@ -1035,9 +1057,6 @@ c***********************************************************************
       integer      crpix1, crpix2
       save         first, crpix1, crpix2
       data         first / .true. /
-
-      if( optlist(NOPRT)                 ) return
-      if( optlist(SUPBAD) .and. ier.ne.0 ) return
 
       if( first ) call header( unit,prfinf(3),optlist,crpix1,crpix2 )
       first = .false.
