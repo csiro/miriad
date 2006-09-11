@@ -38,6 +38,7 @@ c     jm    14mar94  Added check for blank input strings; removed tabs.
 c    rjs    10oct94  Round date in julfdate.
 c     jm    07jun96  To avoid integer overflow in dayjul, I added code
 c                    to strip off trailing 0s beyond the decimal point.
+c    rjs    10sep97  Added "djulian" function.
 c***********************************************************************
 c* JulDay -- Format a Julian day into a conventional calendar day.
 c& jm
@@ -201,13 +202,9 @@ c--
 c-----------------------------------------------------------------------
       character PROG*8
       parameter(PROG='DayJul: ')
-c     Gregorian Calendar adopted on Oct. 15, 1582.
-      integer GREG
-c     parameter(GREG=15+31*(10+12*1582))
-      parameter(GREG=588829)
 c
       double precision f
-      integer j, a, b, z
+      integer j,a,b,z
       integer ncolon, nchar, value, zero
       integer month, year, day, hr, minute, sec, dsec, decday
       integer mmonth(12),days(12)
@@ -217,6 +214,7 @@ c
 c
       integer Len1,binsrcha
       logical Isalphaf
+      double precision djulian
 c
       data months/'APR','AUG','DEC','FEB','JAN','JUL',
      *            'JUN','MAR','MAY','NOV','OCT','SEP'/
@@ -438,21 +436,47 @@ c  then add the year and month information.  If there was no month
 c  present (alpha = FALSE), then the time is a fraction of a day.
 c
       if (alpha) then
-        z = f + (31 * (month + (12 * year)))
-        if (month .gt. 2) then
-          month = month + 1
-        else
-          year = year - 1
-          month = month + 13
-        endif
-        f = 1720994.5 + int(365.25 * year) + int(30.6001 * month) + f
-        if (z .ge. GREG) then
-          a = int(0.01 * year)
-          f = f + 2 - a + int(0.25 * a)
-        endif
+	julian = djulian(year,month,f)
+      else
+        julian = f
       endif
-      julian = f
+c
       end
+c************************************************************************
+	double precision function djulian(yy,mm,dd)
+c
+	implicit none
+	integer yy,mm
+	double precision dd
+c
+c  Compute Julian day.
+c
+c  Inputs:
+c    yy		Year (e.g. 1990)
+c    mm		Month (1-12).
+c    dd		Day of the month, and fraction of a day (1-31.99999...).
+c------------------------------------------------------------------------
+	integer GREG
+c	parameter(GREG=15+31*(10+12*1582))
+	parameter(GREG=588829)
+c
+	integer a,z,yy1,mm1
+c
+	z = dd + 31*(mm + 12*yy)
+	if(mm.gt.2)then
+	  mm1 = mm + 1
+	  yy1 = yy
+	else
+	  yy1 = yy - 1
+	  mm1 = mm + 13
+	endif
+	djulian = 1720994.5d0 + int(365.25*yy1) + int(30.6001*mm1) + dd
+	if(z.ge.GREG)then
+	  a = int(0.01*yy1)
+	  djulian = djulian + 2 - a + int(0.25*a)
+	endif
+c
+	end
 c************************************************************************
 c* FDateJul -- Convert from 'dd/mm/yy' format into a Julian day.
 c& jm
@@ -474,10 +498,8 @@ c    julian     Julian date.
 c--
 c-----------------------------------------------------------------------
       integer array(3),i,k
-      character string*16
-      character months(12)*3
-      data months/'JAN','FEB','MAR','APR','MAY','JUN',
-     *            'JUL','AUG','SEP','OCT','NOV','DEC'/
+c
+      double precision djulian
 c
 c  Decode the string.
 c
@@ -500,9 +522,8 @@ c
      *   array(3).lt.0.or.array(3).gt.99)
      *  call bug('f','Illegal dd/mm/yy string')
 c
-      write(string,'(i2.2,a,i3.3)')array(3),months(array(2)),array(1)
-      call DayJul(string,julian)
-      return
+      julian = djulian(19+array(3),array(2),dble(array(1)))
+c
       end
 c************************************************************************
 c* JulFDate -- Convert from Julian day into 'dd/mm/yy' format.
@@ -571,26 +592,23 @@ c    julian      Julian date.
 c--
 c-----------------------------------------------------------------------
       integer iarray(3), jarray(3)
-      integer day, year, hr, minute, sec
-      character string*16
-      character months(12)*3, month*3
-      data months/'JAN','FEB','MAR','APR','MAY','JUN',
-     *            'JUL','AUG','SEP','OCT','NOV','DEC'/
+      integer year, hr, minute, sec, month
+      double precision day
+c
+      double precision djulian	
 c
 c  Get the current date.
 c
-      julian = 0
       call mitime(jarray)
       call midate(iarray)
 c
-      day = iarray(1)
-      month = months(iarray(2))
-      year = mod(iarray(3), 100)
-      hr = jarray(1)
+      day =   iarray(1)
+      month = iarray(2)
+      year =  iarray(3)
+      hr =     jarray(1)
       minute = jarray(2)
-      sec = jarray(3)
-      write (string, 10) year, month, day, hr, minute, sec
-   10 format (i2.2, a, i2.2, ':', i2.2, ':', i2.2, ':', i2.2)
-      call dayjul(string, julian)
-      return
+      sec =    jarray(3)
+      day = day + (hr + (minute + sec/60.d0)/60.d0)/24.d0
+      julian = djulian(year,month,day)
+c
       end
