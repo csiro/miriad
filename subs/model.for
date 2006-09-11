@@ -53,6 +53,7 @@ c    rjs   9mar95 Turn off geometry correction for "imhead" option.
 c    mhw  05jan96 Add zero option for Model and ModMap
 c    rjs  30sep96 Major clean up and improved polarisation handling.
 c    rjs  11may97 Correct sign of Stokes-V (not again!!).
+c    rjs  26sep97 Re-add mhw's "zero" option.
 c************************************************************************
 c*ModelIni -- Ready the uv data file for processing by the Model routine.
 c&rjs
@@ -155,6 +156,7 @@ c		string, each character of which has the following meaning:
 c		 'm'  Multi-freq data. The model is either one or two
 c		      planes, which were formed using INVERT's mfs option.
 c		 'l'  Apply clipping.
+c		 'z'  Use zero if model cannot be calculated (do not flag).
 c    offset	The offset, in arcsec, in RA and DEC, of the point
 c		source model. This is only used if tmod.eq.0.
 c    level	Either a clip level to apply to the data (tmod.ne.0), or
@@ -205,7 +207,7 @@ c  Bugs and Shortcomings:
 c    * The FFT of the entire cube must fit into memory.
 c--
 c------------------------------------------------------------------------
-	logical mfs,doclip
+	logical mfs,doclip,zero
 c
 c  Initialise the coordinate handles.
 c
@@ -216,9 +218,10 @@ c
 	call uvset(tvis,'preamble','uvw/time/baseline',0,0.,0.,0.)
 	mfs = index(flags,'m').ne.0
 	doclip = index(flags,'l').ne.0
+	zero = index(flags,'z').ne.0
 c
 	if(tmod.ne.0)then
-	  call ModMap(tvis,tmod,level,doclip,tscr,nhead,
+	  call ModMap(tvis,tmod,level,doclip,zero,tscr,nhead,
      *      header,mfs,nchan,nvis)
 	else
 	  call ModPnt(tvis,offset,level,tscr,nhead,header,
@@ -232,11 +235,11 @@ c
 c
 	end
 c************************************************************************
-	subroutine ModMap(tvis,tmod,level,doclip,tscr,
+	subroutine ModMap(tvis,tmod,level,doclip,zero,tscr,
      *      nhead,header,mfs,nchan,nvis)
 c
 	implicit none
-	logical mfs,doclip
+	logical mfs,doclip,zero
 	integer tvis,tscr,nhead,nchan,nvis,tmod
 	real level
 	external header
@@ -381,7 +384,7 @@ c
 		vv = v * sfreq(j)
 		if(abs(uu).gt.umax.or.abs(vv).gt.vmax)then
 		  Intp(j) = 0
-		  flags(j) = .false.
+		  flags(j) = zero.and.flags(j)
 		else
 		  call ModGrid(uu,vv,Buffer(pnt/2+1),nu,nv,nz,u0,v0,
      *		    gcf,ngcf,Intp(j))
@@ -396,7 +399,7 @@ c
 	      if(abs(u).gt.umax.or.abs(v).gt.vmax)then
 		do j=1,nread
 		  Intp(j) = 0.
-		  flags(j) = .false.
+		  flags(j) = zero.and.flags(j)
 		  sfreq(j) = 1
 		enddo
 		GotFreq = .true.
