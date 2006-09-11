@@ -8,6 +8,7 @@ c    rjs  18dec95 Make sub-Earth point a right handed coordinate system.
 c    rjs  17jun96 Added some parameters about the Earth.
 c    rjs  04feb01 Added subroutine pltbs.
 c    rjs  03mar01 Improved brightness temps for the planets from Ulrich etc.
+c    rjs  31jul01 Empirical fix to Mercury's temperature.
 c
 c  Bugs:
 c    Need to understand the brightness temperature fluctuations of the
@@ -55,9 +56,10 @@ c
 c------------------------------------------------------------------------
 c  Misc planets
 c     Ref: Ulich, AJ, 86, 1619 (1981).
+c     Mercury deduced from own observations.
 c
 c	          Mer   Ven   Ear   Mar   Jup   Sat   Ura   Nep   Plu
-	data pltb/440.0,  0.0,288.0,  0.0,  0.0,  0.0,134.1,126.9,68.0/
+	data pltb/660.0,  0.0,288.0,  0.0,  0.0,  0.0,134.1,126.9,68.0/
 c------------------------------------------------------------------------
 c  Venus
 c     Ref: Ulich, AJ, 86, 1619 (1981).
