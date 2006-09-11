@@ -87,13 +87,14 @@ c    rjs  11aug97 Minor fiddles to make it more robust.
 c    mchw 20may98 Larger MAXPLOTS for 10-antennas (90 -> 120)
 c    rjs  20oct00 Print out number of points when giving stats.
 c    rjs  31jan01 Support other stokes types.
+c    rjs  08apr02 Allow negative values when taking cube roots.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
 	integer MAXPNTS,MAXPLOTS,MAXTRIP
 	integer PolMin,PolMax,MAXPOL
 	character version*(*)
-	parameter(version='version 31-Jan-01')
+	parameter(version='version 08-Apr-02')
 	parameter(MAXPNTS=5000,MAXPLOTS=120)
 	parameter(MAXTRIP=(MAXANT*(MAXANT-1)*(MAXANT-2))/6)
 	parameter(PolMin=-8,PolMax=4,MAXPOL=2)
@@ -426,7 +427,9 @@ c
 	else
 	  amp = abs(trip/n)
 	  if(doamp)then
-	    y = amp ** 0.333333
+	    y = real(trip/n)
+	    y = sign(abs(y)**0.333333,y)
+c	    y = amp ** 0.333333
 	    yerr = sqrt(sigma2)/(3*n)
 	  else if(amp.eq.0)then
 	    y = 0
