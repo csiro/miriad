@@ -1,4 +1,10 @@
 c************************************************************************
+c  History:
+c    rjs   ???89 
+c    nebk  10sep89  Install missing ENDIF. 
+c    rjs   24aug01  Added jinc and chat functions.
+c    dpr   27aug01  Declare your variables rjs!
+c************************************************************************
 c*J1xByx -- Calculate j1(x)/x
 c:special-functions,bessel-functions
 c*
@@ -16,8 +22,6 @@ c    arg	The value of x.
 c  Output:
 c    j1xbyx	The calculated value of j1(x)/x
 c--
-c  rjs   ???89 
-c  nebk  10sep89  Install missing ENDIF. 
 c------------------------------------------------------------------c
       real f,x,t
 c
@@ -53,3 +57,40 @@ c
       end if
 c
       END
+c************************************************************************
+	real function jinc(x)
+c
+	implicit none
+	real x
+c
+c  Bracewell's jinc function = J1(pi*x)/(2*x)
+c
+c------------------------------------------------------------------------
+	include 'mirconst.h'
+	real j1xbyx
+c
+	jinc = 0.5*PI*j1xbyx(PI*x)
+	end
+c************************************************************************
+	real function chat(x)
+c
+	implicit none
+	real x,t
+c
+c  Polynomial approximation to Bracewell's Chinese hat - chat - function.
+c
+c  chat(x) = 0.5*(acos(x)-abs(x)*sqrt(1-x*x))
+c
+c  This is the autocorrelation of uniform disks
+c
+c------------------------------------------------------------------------
+	t = abs(x)
+	if(t.gt.1)then
+	  chat = 0
+	else
+	  chat = 0.78639 + t * (-1.02669 
+     *			 + t * ( 0.15909
+     *			 + t * (-0.16691 
+     *			 + t *   0.24491 )))
+	endif
+	end
