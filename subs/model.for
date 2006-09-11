@@ -32,6 +32,8 @@ c    rjs  30aug91 Correct determination of u-v when computing model off
 c		  the phase center.
 c    rjs   1nov91 Slightly better (though still crude) polarisation
 c		  handling. Handling of mfs data and shifts of models.
+c    rjs  29jan91 Fixed sign error in the direction of the shift, in
+c		  ModShift.
 c************************************************************************
 c*ModelIni -- Ready the uv data file for processing by the Model routine.
 c&mchw
@@ -223,13 +225,13 @@ c& mchw
 c:model
 c+
 	subroutine Model(flags,tvis,tmod,offset,level,tscr,
-     *					nhead,header,nchan,nvis)
+     *				nhead,header,calget,nchan,nvis)
 c
 	implicit none
 	character flags*(*)
 	integer tmod,tvis,tscr,nchan,nhead,nvis
 	real offset(2),level
-	external header
+	external header,calget
 c
 c  Calculate the model data corresponding to a visibility data file.
 c  The model can either be a point source, or a full map. If the model
@@ -275,6 +277,7 @@ c		  Output:
 c		    out		The nhead values to save with the data.
 c		    accept	This determines whether the data is
 c				accepted or discarded.
+c    calget	Returns the flux for a point source.
 c  Output:
 c    tscr	Output scratch file containing the data.
 c    nchan	The number of channels in the scratch file.
@@ -310,10 +313,10 @@ c
 c
 	if(tmod.ne.0)then
 	  call ModMap(calscale,tvis,tmod,level,tscr,nhead,header,
-     *	    imhead,mfs,nchan,nvis,VisPow,ModPow)
+     *	    calget,imhead,mfs,nchan,nvis,VisPow,ModPow)
 	else
 	  call ModPnt(calscale,tvis,offset,level,tscr,nhead,header,
-     *	    nchan,nvis,VisPow,ModPow)
+     *	    calget,nchan,nvis,VisPow,ModPow)
 	endif
 	if(ModPow.le.0) call bug('w','Model visibilities are all zero')
 	if(VisPow.le.0) call bug('w','All visibilities are zero')
@@ -340,13 +343,13 @@ c
 	end
 c************************************************************************
 	subroutine ModMap(calscale,tvis,tmod,level,tscr,nhead,header,
-     *	    imhead,mfs,nchan,nvis,VisPow,ModPow)
+     *	    calget,imhead,mfs,nchan,nvis,VisPow,ModPow)
 c
 	implicit none
 	logical calscale,imhead,mfs
 	integer tvis,tscr,nhead,nchan,nvis,tmod
 	real level,ModPow,VisPow
-	external header
+	external header,calget
 c
 c  Input:
 c    calscale
@@ -356,6 +359,7 @@ c    level
 c    tscr
 c    nhead
 c    header
+c    calget	Service routine to return flux of calibrator.
 c    imhead	Use image header for phase center.
 c  Output:
 c    nchan
@@ -501,8 +505,8 @@ c
 	      if(.not.flags(j)) Out(i+4) = -1
 	      j = j + 1
 	    enddo
-	    call ModStat(calscale,tvis,Out(nhead+1),
-     *					nread,VisPow,ModPow)
+	    call ModStat(calscale,tvis,Out(nhead+1),nread,
+     *		calget,VisPow,ModPow)
 	    call scrwrite(tscr,Out,nvis*length,length)
 	    nvis = nvis + 1
 	  endif
@@ -769,8 +773,8 @@ c------------------------------------------------------------------------
 	integer i
 	complex W
 c
-	t1 = 2*pi*( preamble(1)*xref1 + preamble(2)*yref1 )
-	t2 = 2*pi*( preamble(1)*xref2 + preamble(2)*yref2 ) / freq(1)
+	t1 = -2*pi*( preamble(1)*xref1 + preamble(2)*yref1 )
+	t2 = -2*pi*( preamble(1)*xref2 + preamble(2)*yref2 ) / freq(1)
 c
 	do i=1,nchan
 	  theta = t1 + t2 * freq(i)
@@ -919,13 +923,13 @@ c
 	end
 c************************************************************************
 	subroutine ModPnt(calscale,tvis,offset,level,tscr,nhead,header,
-     *	    nchan,nvis,VisPow,ModPow)
+     *	    calget,nchan,nvis,VisPow,ModPow)
 c
 	implicit none
 	logical calscale
 	integer tvis,tscr,nhead,nchan,nvis
 	real offset(2),level,ModPow,VisPow
-	external header
+	external header,calget
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	real pi
@@ -987,7 +991,8 @@ c
 	      enddo
 	    endif
 c
-	    call ModStat(calscale,tvis,Out(nhead+1),nchan,VisPow,ModPow)
+	    call ModStat(calscale,tvis,Out(nhead+1),nchan,calget,
+     *		VisPow,ModPow)
 	    call scrwrite(tscr,Out,nvis*length,length)
 	    nvis = nvis + 1
 	  endif
@@ -998,12 +1003,13 @@ c
      *	  'Stopped reading vis data when number of channels changed')
 	end
 c************************************************************************
-	subroutine ModStat(calscale,tvis,Out,nchan,VisPow,ModPow)
+	subroutine ModStat(calscale,tvis,Out,nchan,calget,VisPow,ModPow)
 c
 	implicit none
 	logical calscale
 	integer tvis,nchan
 	real Out(5*nchan),VisPow,ModPow
+	external calget
 c
 c  This routine does a few steps common to both point-source and model
 c  calculations. It applies the
@@ -1016,6 +1022,7 @@ c		scale factor.
 c    tvis	Handle of the input visibility file.
 c    nchan
 c    Out	These are the actual and model correlations.
+c    calget	Service routine to return the flux of the calibrator.
 c  Input/Output:
 c    VisPow	Updated to reflect the added power.
 c    ModPow	Updated to reflect the added power.
@@ -1024,7 +1031,7 @@ c------------------------------------------------------------------------
 	real a
 c
 	if(calscale)then
-	  call ModGet(tvis,nchan,a)
+	  call ModGet(calget,tvis,nchan,a)
 	  do i=1,5*nchan,5
 	    Out(i+2) = a * Out(i+2)
 	    Out(i+3) = a * Out(i+3)
@@ -1043,18 +1050,20 @@ c
 	endif
 	end
 c************************************************************************
-	subroutine ModGet(tvis,nchan,a)
+	subroutine ModGet(calget,tvis,nchan,a)
 c
 	implicit none
 	integer tvis
 	real a
 	integer nchan
+	external calget
 c
 c  Determine the calibrator flux.
 c
 c  Input:
 c    tvis	Handle of the visibility data file.
 c    nchan	Number of channels.
+c    calget	Service routine to return the flux of the calibrator.
 c  Output:
 c    a		Flux of the calibrator.
 c------------------------------------------------------------------------
@@ -1064,7 +1073,6 @@ c------------------------------------------------------------------------
 	real flux,freq
 	double precision day,dfreq,delta
 	integer n,iostat,length
-        character*80 umsg
 c
 c  Externals.
 c
@@ -1106,8 +1114,8 @@ c
 	  if(.not.isplanet)then
 	    flux = 0
 	    call CalGet(' ',source1,freq,100.,day,1000.,flux,iostat)
-            umsg = 'Error determining flux of '//source
-	    if(iostat.ne.0) call bug('f', umsg )
+	    if(iostat.ne.0) call bug('f',
+     *		'Error determining flux of '//source)
 	  endif
 c
 c  Add this to our list of calibrators, in alphabetic order.
