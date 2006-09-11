@@ -92,6 +92,9 @@ c    rjs  13jan96 Increase MAXHASH.
 c    rjs  27jul96 Re-wrote interp option to make it more robust.
 c    rjs  28jul97 Make options=delay more robust.
 c    rjs  31jul97 Make it work for wide-only files.
+c    rjs  20jan99 The frequency assigned to a channel was not being
+c		  correctly computed when line width was not equal to
+c		  line step.
 c
 c  Problems:
 c    * Should do simple spectral index fit.
@@ -102,7 +105,7 @@ c------------------------------------------------------------------------
 	parameter(MAXPOL=2)
 c
 	character version*(*)
-	parameter(version='MfCal: version 1.0 31-jul-97')
+	parameter(version='MfCal: version 1.0 20-Jan-99')
 c
 	integer tno
 	integer pWGains,pFreq,pSource,pPass,pGains,pTau
@@ -1523,7 +1526,7 @@ c
 	  if(nint(line(2)).ne.nchan)
      *	    call bug('f','Number of channels disagree')
 	  nstep  = nint(line(5))
-	  nwidth = nint(line(5))
+	  nwidth = nint(line(4))
 	  ltype = nint(line(1))
 	  start = nint(line(3))
 	  state(1,1) = 0
