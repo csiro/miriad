@@ -135,6 +135,7 @@ c     nebk   09sep98     RAZEROCG only got it right if the ref value was
 c                        close to zero.  Failed if close to 2pi
 c    nebk    30nov98     Finally make a decent algorithm for RAZEROCG
 c     rjs    15dec98     Some tidying.
+c     rjs    06jan99     Yet another go at a decent algorithm for RAZEROCG
 c***********************************************************************
 c
 c* angconCG -- Convert radians to and from seconds of time/arc
@@ -1379,23 +1380,26 @@ c     Output
 c       zero   True if that axis is a) RA and b) crosses 0
 c--
 c-----------------------------------------------------------------------
-      include 'mirconst.h'
-      integer i
-      double precision zp
-      character gentyp*4
-c-----------------------------------------------------------------------
-      call coinit(lun)
-      do i = 1, 2
-        call axtypco (lun, 0, i, gentyp)
-        if (gentyp.eq.'RA' .or. gentyp.eq.'LONG') then
-          call cocvt1(lun, i, 'aw', 0.d0, 'ap', zp)
-          zero(i) = blc(i).lt.zp .and. trc(i).gt.zp
-        else
-          zero(i) = .false.
-        end if
-      end do
+      integer i1,i2
+      double precision x(2),ya(2),yb(2),yc(2)
 c
-      call cofin(lun)
+      zero(1) = .false.
+      zero(2) = .false.
+      call coInit(lun)
+      call coFindAx(lun,'longitude',i1)
+      if(i1.eq.1.or.i1.eq.2)then
+	i2 = 3 - i1
+	x(i1) = blc(i1)
+	x(i2) = blc(i2)
+	call coCvt(lun,'ap/ap',x,'aw/aw',ya)
+	x(i1) = 0.5*(blc(i1)+trc(i1))
+	call coCvt(lun,'ap/ap',x,'aw/aw',yb)
+	x(i1) = trc(i1)
+	call coCvt(lun,'ap/ap',x,'aw/aw',yc)
+	zero(i1) = (yc(i1)-yb(i1))*(yb(i1)-ya(i1)).lt.0
+      endif
+c
+      call coFin(lun)
       end
 c
 c* readbCG -- Read in mask image mask
