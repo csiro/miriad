@@ -2,9 +2,7 @@ c**********************************************************************c
 	program clplot
 	implicit none
 c
-c= CLPLOT - Interactive task to selectively plot integrated
-c           maps, spectra, and pos-vel slices of a MIRIAD
-c           data cube and clump assignment cube from clfind
+c= CLPLOT - Task to plot integrated maps, etc and clump assigment from clfind
 c& jpw
 c: image analysis
 c+
