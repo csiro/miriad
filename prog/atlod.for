@@ -191,6 +191,8 @@ c		  etc in RPFITS file. Increase buffer space.
 c    dpr  10apr01 Add cluge for correlator UT day rollover bug.
 c    dpr  11apr01 ATANT=8 in atlog.h
 c    rjs  22may02 Added options=mmrelax
+c    rjs  25may02 Generate "tcorr" variable to keep track of whether
+c		  Tsys scaling has been performed or not.
 c
 c  Program Structure:
 c    Miriad atlod can be divided into three rough levels. The high level
@@ -216,7 +218,7 @@ c------------------------------------------------------------------------
 	integer MAXFILES
 	parameter(MAXFILES=128)
 	character version*(*)
-	parameter(version='AtLod: version 1.0 22-May-02')
+	parameter(version='AtLod: version 1.0 25-May-02')
 c
 	character in(MAXFILES)*64,out*64,line*64
 	integer tno
@@ -663,11 +665,11 @@ c
 	if(chan.le.0) chan = chan + nint(0.128d0/abs(sdf))
 	end
 c************************************************************************
-	subroutine PokeSC(ant,if,chi1,xtsys1,ytsys1,xyphase1,xyamp1,
-     *						xsamp,ysamp)
+	subroutine PokeSC(ant,if,chi1,tcorr1,
+     *		xtsys1,ytsys1,xyphase1,xyamp1,xsamp,ysamp)
 c
 	implicit none
-	integer ant,if
+	integer ant,if,tcorr1
 	real chi1,xtsys1,ytsys1,xyphase1,xyamp1
 	real xsamp(3),ysamp(3)
 c
@@ -677,6 +679,7 @@ c------------------------------------------------------------------------
 	if(ant.gt.nants.or.if.gt.nifs)call bug('f',
      *				'Invalid Ant or IF in PokeSC')
 c
+	tcorr = tcorr1
 	chi = chi1
 	xtsys(if,ant) = xtsys1
 	ytsys(if,ant) = ytsys1
@@ -1127,7 +1130,8 @@ c
 	    call uvputvrd(tno,'sfreq', sfreq(if),1)
 	    call uvputvrd(tno,'sdf',   sdf(if),  1)
 	    call uvputvrd(tno,'restfreq',restfreq(if),1)
-	    if(newsc)call ScOut(tno,chi,xtsys,ytsys,xyphase,xyamp,
+	    if(newsc)call ScOut(tno,chi,tcorr,
+     *		xtsys,ytsys,xyphase,xyamp,
      *		xsampler,ysampler,ATIF,ATANT,nants,if,if,buf)
 	    if(hires)then
 	      binlo = tbin
@@ -1181,8 +1185,8 @@ c
 	    call uvputvrd(tno,'restfreq',restfreq,nifs)
 	    if(.not.hires)call uvputvri(tno,'nbin',nbin(1),1)
 	  endif
-	  if(newsc.and.tbin.eq.1)call ScOut(tno,chi,xtsys,ytsys,
-     *		xyphase,xyamp,
+	  if(newsc.and.tbin.eq.1)call ScOut(tno,chi,tcorr,
+     *		xtsys,ytsys,xyphase,xyamp,
      *		xsampler,ysampler,ATIF,ATANT,nants,1,nifs,buf)
 	  if(hires)then
 	    binlo = tbin
@@ -1399,11 +1403,11 @@ c
 c
 	end
 c************************************************************************
-	subroutine ScOut(tno,chi,xtsys,ytsys,xyphase,xyamp,
+	subroutine ScOut(tno,chi,tcorr,xtsys,ytsys,xyphase,xyamp,
      *		xsampler,ysampler,ATIF,ATANT,nants,if1,if2,buf)
 c
 	implicit none
-	integer tno,ATIF,ATANT,nants,if1,if2
+	integer tno,ATIF,ATANT,nants,if1,if2,tcorr
 	real chi,xtsys(ATIF,ATANT),ytsys(ATIF,ATANT)
 	real xyphase(ATIF,ATANT),xyamp(ATIF,ATANT)
 	real xsampler(3,ATIF,ATANT),ysampler(3,ATIF,ATANT)
@@ -1418,6 +1422,7 @@ c  Scratch:
 c    buf	Used to buffer the data before writing.
 c------------------------------------------------------------------------
 	call uvputvrr(tno,'chi',chi,1)
+	call uvputvri(tno,'tcorr',tcorr,1)
 	call Sco(tno,'xtsys',   xtsys,   1,ATIF,ATANT,if1,if2,nants,buf)
 	call Sco(tno,'ytsys',   ytsys,   1,ATIF,ATANT,if1,if2,nants,buf)
 	call Sct(tno,'systemp',xtsys,ytsys,ATIF,ATANT,if1,if2,nants,buf)
@@ -1701,7 +1706,7 @@ c
 	logical xflag(MAX_IF,ANT_MAX),yflag(MAX_IF,ANT_MAX)
 	integer ptag(MAXXYP,MAX_IF,ANT_MAX)
 	integer atag(MAXXYP,MAX_IF,ANT_MAX)
-	integer nxyp(MAX_IF,ANT_MAX)
+	integer nxyp(MAX_IF,ANT_MAX),tcorr
 	real xyp(MAXXYP,MAX_IF,ANT_MAX),xya(MAXXYP,MAX_IF,ANT_MAX)
 	real xyphase(MAX_IF,ANT_MAX),xyamp(MAX_IF,ANT_MAX)
 	real xsamp(3,MAX_IF,ANT_MAX),ysamp(3,MAX_IF,ANT_MAX)
@@ -1718,7 +1723,7 @@ c
 c
 c  Initialise.
 c
-	call AtFlush(scinit,scbuf,xflag,yflag,MAX_IF,ANT_MAX)
+	call AtFlush(scinit,tcorr,scbuf,xflag,yflag,MAX_IF,ANT_MAX)
 c
 	do j=1,ANT_MAX
 	  do i=1,MAX_IF
@@ -1819,14 +1824,16 @@ c
 	  else if(baseln.eq.-1)then
 	    NewTime = abs(sc_ut-utprevsc).gt.0.04
 	    if(NewScan.or.an_found.or.NewTime)then
-	      call AtFlush(scinit,scbuf,xflag,yflag,MAX_IF,ANT_MAX)
+	      call AtFlush(scinit,tcorr,
+     *			scbuf,xflag,yflag,MAX_IF,ANT_MAX)
 	      Accum = .false.
 	      utprevsc = sc_ut
 	    endif
 	    call SetSC(scinit,scbuf,MAX_IF,ANT_MAX,sc_q,sc_if,sc_ant,
      *		sc_cal,if_invert,polflag,
      *		xyphase,xyamp,xtsys,ytsys,xsamp,ysamp,
-     *		chi,nxyp,xyp,ptag,xya,atag,MAXXYP,xflag,yflag,mmrelax)
+     *		chi,tcorr,
+     *		nxyp,xyp,ptag,xya,atag,MAXXYP,xflag,yflag,mmrelax)
 c
 c  Data record. Check whether we want to accept it.
 c  If OK, and we have a new scan, calculate the new scan info.
@@ -1869,7 +1876,8 @@ c
 	    NewSrc = srcno.ne.Ssrcno
 	    if(Accum.and.(NewScan.or.an_found.or.NewSrc.or.NewFreq.or.
      *							NewTime))then
-	      call AtFlush(scinit,scbuf,xflag,yflag,MAX_IF,ANT_MAX)
+	      call AtFlush(scinit,tcorr,
+     *		scbuf,xflag,yflag,MAX_IF,ANT_MAX)
 	      Accum = .false.
 	    endif
 c
@@ -1945,11 +1953,11 @@ c		if(NewScan.or.NewSrc)then
 c
 c  Flush out any buffered SYSCAL records.
 c
-	      if(scbuf(ifno,i1))call PokeSC(i1,Sif(ifno),chi,
+	      if(scbuf(ifno,i1))call PokeSC(i1,Sif(ifno),chi,tcorr,
      *		xtsys(ifno,i1),ytsys(ifno,i1),
      *		xyphase(ifno,i1),xyamp(ifno,i1),
      *		xsamp(1,ifno,i1),ysamp(1,ifno,i1))
-	      if(scbuf(ifno,i2))call PokeSC(i2,Sif(ifno),chi,
+	      if(scbuf(ifno,i2))call PokeSC(i2,Sif(ifno),chi,tcorr,
      *		xtsys(ifno,i2),ytsys(ifno,i2),
      *		xyphase(ifno,i2),xyamp(ifno,i2),
      *		xsamp(1,ifno,i2),ysamp(1,ifno,i2))
@@ -2327,11 +2335,12 @@ c************************************************************************
 	subroutine SetSC(scinit,scbuf,MAXIF,MAXANT,nq,nif,nant,
      *		syscal,invert,polflag,
      *		xyphase,xyamp,xtsys,ytsys,xsamp,ysamp,
-     *		chi,nxyp,xyp,ptag,xya,atag,MAXXYP,xflag,yflag,
+     *		chi,tcorr,nxyp,xyp,ptag,xya,atag,MAXXYP,xflag,yflag,
      *		mmrelax)
 c
 	implicit none
 	integer MAXIF,MAXANT,MAXXYP,nq,nif,nant,invert(MAXIF)
+	integer tcorr
 	real syscal(nq,nif,nant)
 	logical polflag
 	logical scinit(MAXIF,MAXANT),scbuf(MAXIF,MAXANT)
@@ -2364,6 +2373,8 @@ c
 	      xyphase(ij,ik) = invert(ij)*syscal(3,j,k)
 	      xyamp(ij,ik) = 0
 	      if(nq.ge.14)xyamp(ij,ik) = syscal(14,j,k)
+	      if(syscal(4,j,k).gt.0)tcorr = tcorr + 1
+	      if(syscal(5,j,k).gt.0)tcorr = tcorr + 1
 	      xtsys(ij,ik) = 0.1* syscal(4,j,k) * syscal(4,j,k)
 	      ytsys(ij,ik) = 0.1* syscal(5,j,k) * syscal(5,j,k)
 	      xsamp(1,ij,ik) = syscal(6,j,k)
@@ -2386,10 +2397,11 @@ c
 c
 	end
 c************************************************************************
-	subroutine AtFlush(scinit,scbuf,xflag,yflag,MAXIF,MAXANT)
+	subroutine AtFlush(scinit,tcorr,scbuf,xflag,yflag,MAXIF,MAXANT)
 c
 	implicit none
 	integer MAXIF,MAXANT
+	integer tcorr
 	logical scinit(MAXIF,MAXANT),scbuf(MAXIF,MAXANT)
 	logical xflag(MAXIF,MAXANT),yflag(MAXIF,MAXANT)
 c
@@ -2404,6 +2416,7 @@ c
 	    yflag(i,j)  = .false.
 	  enddo
 	enddo
+	tcorr = 0
 c
 	call PokeFlsh
 c
