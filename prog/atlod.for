@@ -115,6 +115,8 @@ c    rjs   8apr94 Readd disabling of sampler correction after 11Dec93. Where did
 c		  this mod disappear to?
 c    rjs  29aug94 w axis changes.
 c    rjs   2sep94 Read multiple files.
+c    rjs  21sep94 Change sign convention for XY and YX. Discard dettached
+c		  antennas.
 c
 c  Program Structure:
 c    Miriad atlod can be divided into three rough levels. The high level
@@ -185,7 +187,7 @@ c  Open the output and initialise it.
 c
 	call uvopen(tno,out,'new')
 	if(.not.docomp)call uvset(tno,'corr','r',0,0.,0.,0.)
-c	call uvset(tno,'preamble','uvw/time/baseline',0,0.,0.,0.)
+	call uvset(tno,'preamble','uvw/time/baseline',0,0.,0.,0.)
 	call Fixed(tno,dobary)
 c
 c  Process a number of files.
@@ -366,18 +368,26 @@ c
 c
 	end
 c************************************************************************
-	subroutine PokeInfo(time)
+	subroutine PokeInfo(scanno,time)
 c
 	implicit none
 	double precision time
+	integer scanno
 c
 c  Give some information about the current scan that has just
 c  started.
 c------------------------------------------------------------------------
-	character line*64
+	character date*32,line*64
+	integer length
 c
-	call julday(time,'H',line)
-	call output('New scan started at '//line)
+	character itoaf*4
+	integer len1
+c
+	call julday(time,'H',date)
+	line = 'Scan '//itoaf(scanno)
+	length = len1(line)
+	line(length+1:) = ' started at '//date
+	call output(line)
 	end
 c************************************************************************
 	subroutine Poke1st(time1,nifs1,nants1)
@@ -585,10 +595,13 @@ c
 c  Buffer up the data. Perform sampler correction and hanning smoothing
 c  if needed.
 c------------------------------------------------------------------------
+	integer PolXX,PolYY,PolXY,PolYX
+	parameter(PolXX=-5,PolYY=-6,PolXY=-7,PolYX=-8)
+c
 	include 'atlod.h'
 	include 'mirconst.h'
 	integer ipnt,i1,i2,bl,p
-	logical doconj
+	logical doconj,doneg
 c
 	if(if.gt.nifs)call bug('f',
      *		'Incorrect IF number')
@@ -629,8 +642,9 @@ c
 	  flag(if,p,bl) = flag1(p)
 	  nused = nused + nfreq(if)
 	  if(nused.gt.ATDATA)call bug('f','Buffer overflow in PokeData')
+	  doneg = polcode(if,p).eq.PolXY.or.polcode(if,p).eq.PolYX
 	  call DatCpy(nstoke(if),nfreq(if),nfreq1,
-     *		dohann.and.nfreq1.gt.33,doconj,vis(p),data(ipnt))
+     *		dohann.and.nfreq1.gt.33,doconj,doneg,vis(p),data(ipnt))
 	  if(dosam)call SamCorr(nfreq(if),data(ipnt),polcode(if,p),
      *		i2,i1,if,time,xsampler,ysampler,ATIF,ATANT)
 	enddo
@@ -727,11 +741,9 @@ c
 	        bl = bl + 1
 	        preamble(1) = u(bl)
 	        preamble(2) = v(bl)
-c		preamble(3) = w(bl)
-c	        preamble(4) = time
-c	        preamble(5) = 256*i1 + i2
-	        preamble(3) = time
-	        preamble(4) = 256*i1 + i2
+		preamble(3) = w(bl)
+	        preamble(4) = time
+	        preamble(5) = 256*i1 + i2
 	        do p=1,nstoke(if)
 		  ipnt = pnt(if,p,bl)
 		  if(ipnt.gt.0)then
@@ -770,11 +782,9 @@ c
 	      bl = bl + 1
 	      preamble(1) = u(bl)
 	      preamble(2) = v(bl)
-c	      preamble(3) = w(bl)
-c	      preamble(4) = time
-c	      preamble(5) = 256*i1 + i2
-	      preamble(3) = time
-	      preamble(4) = 256*i1 + i2
+	      preamble(3) = w(bl)
+	      preamble(4) = time
+	      preamble(5) = 256*i1 + i2
 	      call CntStok(npol,pnt(1,1,bl),nifs,nstoke(1),ATIF)
 	      if(npol.gt.0)then
 		call uvputvri(tno,'npol',npol,1)
@@ -885,10 +895,11 @@ c
 c
 	end
 c************************************************************************
-	subroutine DatCpy(nstoke,nfreq,nfreq1,dohann,doconj,in,out)
+	subroutine DatCpy(nstoke,nfreq,nfreq1,dohann,doconj,doneg,
+     *							     in,out)
 c
 	integer nstoke,nfreq,nfreq1
-	logical dohann,doconj
+	logical dohann,doconj,doneg
 	complex in(nstoke,nfreq1),out(nfreq)
 c
 c  Copy the data to an output buffer, conjugating and going
@@ -900,17 +911,30 @@ c
 	  if(nfreq.ne.(nfreq1-1)/2)
      *		call bug('f','Incorrect dim info, in DatCpy')
 	  id = 2
-	  do i=1,nfreq
-	    out(i) = 0.25*(in(1,id-1)+in(1,id+1)) + 0.5*in(1,id)
-	    id = id + 2
-	  enddo
+	  if(doneg)then
+	    do i=1,nfreq
+	      out(i) = -0.25*(in(1,id-1)+in(1,id+1)) + 0.5*in(1,id)
+	      id = id + 2
+	    enddo
+	  else
+	    do i=1,nfreq
+	      out(i) = 0.25*(in(1,id-1)+in(1,id+1)) + 0.5*in(1,id)
+	      id = id + 2
+	    enddo
+	  endif
 c
 	else
 	  if(nfreq.ne.nfreq1)
      *		call bug('f','Incorrect dim info, in DatCpy')
-	  do i=1,nfreq
-	    out(i) = in(1,i)
-	  enddo
+	  if(doneg)then
+	    do i=1,nfreq
+	      out(i) = -in(1,i)
+	    enddo
+	  else
+	    do i=1,nfreq
+	      out(i) = in(1,i)
+	    enddo
+	  endif
 	endif
 c
 c  Do we need to conjugate?
@@ -1224,6 +1248,7 @@ c------------------------------------------------------------------------
 	real ut,utprev,utprevsc,u,v,w,weight(MAXCHAN*MAXPOL)
 	complex vis(MAXCHAN*MAXPOL)
 	logical scinit(MAX_IF,ANT_MAX),scbuf(MAX_IF,ANT_MAX)
+	logical antvalid(ANT_MAX)
 	real xyphase(MAX_IF,ANT_MAX),xyamp(MAX_IF,ANT_MAX)
 	real xsamp(3,MAX_IF,ANT_MAX),ysamp(3,MAX_IF,ANT_MAX)
 	real xtsys(MAX_IF,ANT_MAX),ytsys(MAX_IF,ANT_MAX)
@@ -1321,6 +1346,7 @@ c
 	      time = ut / (3600.d0*24.d0) + jday0
 	      call SimMap(if_num,n_if,if_simul,if_chain,ifsel,
      *		  If2Sim,nifs,Sim2If,Sif,MAXSIM)
+	      call ChkAnt(x,y,z,antvalid,nant)
 	    endif
 c
 c  Determine whether to flush the buffers.
@@ -1335,12 +1361,15 @@ c
 	      Accum = .false.
 	    endif
 c
-	    if(ok) ok = flag.eq.0.or.unflag
 	    i1 = baseln/256
 	    i2 = mod(baseln,256)
             if(ok) ok = ifno.ge.1.and.ifno.le.n_if
             if(ok) ok = If2Sim(ifno).gt.0
-	    if(ok) ok = min(i1,i2).ge.1.and.max(i1,i2).le.ant_max
+	    if(ok) ok = min(i1,i2).ge.1.and.max(i1,i2).le.nant
+	    if(ok) then
+	      if(.not.(antvalid(i1).and.antvalid(i2)))flag = 1
+	    endif
+	    if(ok) ok = flag.eq.0.or.unflag
 	    if(ok) ok = (i1.eq.i2.and.doauto).or.(i1.ne.i2.and.docross)
 	    if(ok) ok = (scinit(ifno,i1).and.scinit(ifno,i2)).or.relax
 c
@@ -1366,7 +1395,7 @@ c
      *			if_nstok(id),if_cstok(1,id))
 		  enddo
 		endif
-		if(NewScan)call PokeInfo(time)
+		if(NewScan)call PokeInfo(scanno,time)
 		if(NewScan.or.NewSrc)call PokeSrc(su_name(srcno),
      *		  su_ra(srcno),su_dec(srcno),
      *		  su_rad(srcno),su_decd(srcno))
@@ -1500,6 +1529,23 @@ c
 	end
 c************************************************************************
 c************************************************************************
+	subroutine ChkAnt(x,y,z,antvalid,nant)
+c
+	implicit none
+	integer nant
+	double precision x(nant),y(nant),z(nant)
+	logical antvalid(nant)
+c
+c  Check for a valid antenna position.
+c------------------------------------------------------------------------
+	integer i
+c
+	do i=1,nant
+	  antvalid(i) = abs(x(i)) + abs(y(i)) + abs(z(i)).gt.0
+	enddo
+c
+	end
+c************************************************************************
 	subroutine GetFg(nstok,cstok,flag,
      *		scinit,xsamp,ysamp,MAXIF,MAXANT,ifno,i1,i2,
      *		flags)
@@ -1588,7 +1634,7 @@ c
 	    if(ok)then
 	      scinit(ij,ik) = .true.
 	      scbuf(ij,ik)  = .true.
-	      xyphase(ij,ik) = invert(ij)*syscal(3,j,k) + pi
+	      xyphase(ij,ik) = invert(ij)*syscal(3,j,k)
 	      xyamp(ij,ik) = 0
 	      if(nq.ge.14)xyamp(ij,ik) = syscal(14,j,k)
 	      xtsys(ij,ik) = 0.1* syscal(4,j,k) * syscal(4,j,k)
