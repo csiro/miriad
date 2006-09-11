@@ -205,6 +205,7 @@ c    rjs  19jul03 Removed option=mmrelax, and made this automatic!
 c    rjs  06dec03 Write out met data, axisrms, axismax data. options=opcorr
 c    rjs  30dec03 Doc change only.
 c    rjs  15feb04 Save input RPFITS name and calcode.
+c    rjs  10jun04 Handle change in xy correlation at 12mm.
 c
 c  Program Structure:
 c    Miriad atlod can be divided into three rough levels. The high level
@@ -230,7 +231,7 @@ c------------------------------------------------------------------------
 	integer MAXFILES
 	parameter(MAXFILES=128)
 	character version*(*)
-	parameter(version='AtLod: version 1.0 15-Feb-04')
+	parameter(version='AtLod: version 1.0 10-Jun-04')
 c
 	character in(MAXFILES)*64,out*64,line*64
 	integer tno
@@ -1843,10 +1844,12 @@ c------------------------------------------------------------------------
 	include 'mirconst.h'
 	integer MAXPOL,MAXSIM,MAXXYP
 	parameter(MAXPOL=4,MAXSIM=4,MAXXYP=5)
+	double precision J01Jul04
+	parameter(J01Jul04=2453187.5d0)
 	include 'rpfits.inc'
 	integer scanno,i1,i2,baseln,i,id,j
 	logical NewScan,NewSrc,NewFreq,NewTime,Accum,ok,badbit
-	logical flags(MAXPOL),corrfud,kband,wband
+	logical flags(MAXPOL),corrfud,kband,wband,flipper
 	integer jstat,flag,bin,ifno,srcno,simno,Ssrcno,Ssimno
 	integer If2Sim(MAX_IF),nifs(MAX_IF),Sim2If(MAXSIM,MAX_IF)
 	integer Sif(MAX_IF)
@@ -2161,9 +2164,10 @@ c	      tint = 0
 	      tint = intbase
 	      if(tint.eq.0)tint = intime
 	      if(tint.eq.0)tint = 15.0
+	      flipper = .not.kband.or.time.gt.J01Jul04
 	      call PokeData(u,v,w,baseln,Sif(ifno),bin,
      *		vis,if_nfreq(ifno),if_nstok(ifno),flags,
-     *		tint,if_invert(ifno).lt.0,.not.kband)
+     *		tint,if_invert(ifno).lt.0,flipper)
 c
 c  Reinitialise things.
 c
