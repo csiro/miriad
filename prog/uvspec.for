@@ -95,6 +95,8 @@ c    nebk 22mar94 Add options=flagged
 c    rjs  17aug94 Better offset handling.
 c    rjs  26sep95 Discard bad spectra as soon as possible.
 c    rjs  28sep95 Fix bug I introduced two days ago.
+c    rjs  17oct95 Correct initialisation bug when first integration is all
+c		  bad.
 c  Bugs:
 c------------------------------------------------------------------------
 	include 'mirconst.h'
@@ -103,7 +105,7 @@ c------------------------------------------------------------------------
         parameter (maxco=15)
 c
 	character version*(*)
-	parameter(version='UvSpec: version 1.0 22-Mar-94')
+	parameter(version='UvSpec: version 1.0 17-Oct-95')
 	character uvflags*8,device*64,xaxis*12,yaxis*12,logf*64
 	character xtitle*64,ytitle*64
 	logical ampsc,rms,nobase,avall,first,buffered,doflush,dodots
@@ -216,7 +218,6 @@ c
 	      T0 = preamble(3)
 	      T1 = T0
 	      buffered = .false.
-	      first = .false.
 	    endif
 c
 c  Accumulate more data, if we are time averaging.
@@ -239,12 +240,11 @@ c
 	    call BufFlush(ampsc,rms,nobase,dodots,hann,hc,hw,first,
      *	      device,x,nchan,xtitle,ytitle,nxy,yrange,logf)
 	    buffered = .false.
-	    first = .false.
 	  endif
 	  call uvDatCls
 	enddo
 c
-	if(first)call bug('f','Error opening input')
+	if(first)call bug('f','Nothing to plot')
 	if(logf.ne.' ') call LogClose
 	call pgend
 	end
@@ -497,6 +497,7 @@ c
 	ng = ngood
 	if(nobase) ng = 1
 	if(first)call PltIni(device,ng,nxy)
+	first = .false.
 c
 c  Autoscale the X axis.
 c
