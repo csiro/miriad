@@ -28,14 +28,15 @@ c    rjs  19mar93 Derived from PARAPLOT.
 c    nebk 01mar95 Allow smaller ranges
 c    nebk 24may95 Add options=cursor
 c    rjs  23aug96 Support plotting multiple sources.
+c    rjs  28sep98 Print out flux at mid frequency.
 c
 c  Bugs:
 c   * Perfect?
 c------------------------------------------------------------------------
 	character version*(*)
 	integer NPTS,MAXPOL,NCOL,MAXSRC
-	parameter(version='CalPlot: version 24-May-95')
-	parameter(NPTS=256,MAXPOL=4,NCOL=12,MAXSRC=32)
+	parameter(version='CalPlot: version 28-Sep-98')
+	parameter(NPTS=257,MAXPOL=4,NCOL=12,MAXSRC=32)
 c
 	character source(MAXSRC)*32,device*32,line*80,stokes*4
 	integer npol,pol(MAXPOL),length,ierr,cols(NCOL),i,j,k,nsrc
@@ -53,15 +54,18 @@ c
 	data cols/1,7,2,5,3,4,6,8,9,10,11,12/
 c
 	call output(version)
-        call output ('New options=cursor now available')
 	call keyini
 	call mkeya('source',source,MAXSRC,nsrc)
 	if(nsrc.eq.0)call bug('f','A source must be given')
 	call keya('stokes',stokes,'i')
 	call keyr('xrange',xrange(1),4.7)
-	call keyr('xrange',xrange(2),4.9)
-	if(xrange(2).le.xrange(1).or.xrange(1).le.0)
+	call keyr('xrange',xrange(2),xrange(1))
+	if(xrange(2).lt.xrange(1).or.xrange(1).le.0)
      *	  call bug('f','Bad frequency range')
+	if(xrange(2).eq.xrange(1))then
+	  xrange(1) = 0.95*xrange(1)
+	  xrange(2) = 1.05*xrange(2)
+	endif
 c
 	npol = 0
 	dowhile(stokes.ne.' '.and.npol.lt.MAXPOL)
@@ -83,11 +87,18 @@ c
 	  x(i) = freq(i)
 	enddo
 c
+	call output('------------+-------+--------+--------+')
+	call output('Source       Stokes   Freq     Flux')
+	call output('                      (GHz)    (Jy)')      
+	call output('------------+-------+--------+--------+')
 	do j=1,nsrc
 	  do i=1,npol
 	    stokes = PolsC2P(pol(i))
 	    call lcase(stokes)
 	    call CalStoke(source(j),stokes,freq,y(1,i,j),NPTS,ierr)
+	    write(line,'(a16,a1,f10.3,f10.3)')source(j),stokes,
+     *				freq(NPTS/2+1),y(NPTS/2+1,i,j)
+	    call output(line)
 	    if(ierr.eq.2)call bug('f','Unknown source')
 	    if(ierr.eq.1)call bug('w','Extrapolation being used')
 	  enddo
