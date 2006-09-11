@@ -25,7 +25,7 @@ $AUKM   = 149.597870e6; 		# AU in km.
 #************************************************************************
 sub keyini{
   foreach $arg (@ARGV){
-    print "$arg\n";
+    my($arg,$value);
     ($var,$value) = ($arg =~ m{(\w+)=(.+)$});
     eval '$'.$var.'="'.$value.'"';
   }
@@ -33,12 +33,21 @@ sub keyini{
 
 #************************************************************************
 sub gethd{
-  $line = `gethd in=$_[0]`;
+  my($var,$fmt,$line);
+  ($var,$fmt) = @_;
+  $line = "gethd in=$var";
+  if("$fmt" ne ""){ $line .= " format=$fmt";}
+  $line = `$line`;
   chop $line;
   return $line;
 }
 
 #************************************************************************
 sub puthd{
-  `puthd in=$_[0] value=$_[1]`;
+  my($var,$value,$fmt,$line);
+  ($var,$value,$fmt) = @_;
+  $line = "puthd in=$var 'value=\"$value\"";
+  if("$fmt" ne ""){$line .= ",$fmt";}
+  $line .= "'";
+  `$line`;
 }
