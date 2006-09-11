@@ -3609,11 +3609,11 @@ c-----------------------------------------------------------------------
 c
       integer lOut,lOut2,lOut3,lo,axes(2),nfdrpix,nblanks
       integer iii,jjj,ipim,ip2im
-      real row(maxx),image2(nx,ny),meanimg(nx,ny),sgimg(nx,ny)
+      real rrow(maxdim),image2(nx,ny),meanimg(nx,ny),sgimg(nx,ny)
       double precision wa(2)
       real fluxctoff,sigctoff
 c
-      logical ok,gotit,mskexst,hdprsnt,mask(nx)
+      logical ok,gotit,mskexst,hdprsnt,msk(maxdim)
       logical fdrimg, sigmaimg, normimg, auto
       character line*160
 c-----------------------------------------------------------------------
@@ -3664,16 +3664,16 @@ c copy headers to output datasets if necessary
         call hdcopy (lIn,lo,'history')
         if (mskexst) then
          do jj = 1,axes(2)
-          call xyflgrd(lin,jj,mask)
-          call xyflgwr(lo,jj,mask)
+          call xyflgrd(lin,jj,msk)
+          call xyflgwr(lo,jj,msk)
          end do
         end if
 c fill in new images with zero data to start
         do jjj = 1,maxy
          do iii = 1,maxx
-          row(iii) = 0.
+          rrow(iii) = 0.
          end do
-         call xywrite(lo,jjj,row)
+         call xywrite(lo,jjj,rrow)
         end do
        end if
       end do
@@ -3727,12 +3727,12 @@ c
 c cvt iii from binned subimage pixels to full image pixels
          wa(1) = dble(iii)
          call ppconcg(2, blc(1), bin(1), wa(1))
-         row(nint(wa(1))) = image2(iii,jjj)
+         rrow(nint(wa(1))) = image2(iii,jjj)
         end do
 c cvt jjj from binned subimage pixels to full image pixels
         wa(2) = dble(jjj)
         call ppconcg(2, blc(2), bin(2), wa(2))
-        call xywrite(lOut3,nint(wa(2)),row)
+        call xywrite(lOut3,nint(wa(2)),rrow)
        end do
        call xyclose (lOut3)
       end if
@@ -3750,13 +3750,13 @@ c cvt l from binned subimage pixels to full image pixels
          call ppconcg(2, blc(1), bin(1), wa(1))
          if (nimage(l,m).gt.0) then
           if (image2(l,m).lt.xrms) then
-           row(nint(wa(1))) = 0.
+           rrow(nint(wa(1))) = 0.
           else
            nfdrpix = nfdrpix + 1
-           row(nint(wa(1))) = 100.
+           rrow(nint(wa(1))) = 100.
           end if
          else
-          row(nint(wa(1))) = 0.
+          rrow(nint(wa(1))) = 0.
           nblanks = nblanks + 1
          end if
         end do
@@ -3764,7 +3764,7 @@ c ok, have written the m'th row, now put it in the segmentation image
 c cvt m from binned subimage pixels to full image pixels
         wa(2) = dble(m)
         call ppconcg(2, blc(2), bin(2), wa(2))
-        call xywrite(lOut2,nint(wa(2)),row)
+        call xywrite(lOut2,nint(wa(2)),rrow)
        end do
 c done writing to lOut2 - so close it.
        call xyclose (lOut2)
@@ -3885,15 +3885,15 @@ c cvt l from binned subimage pixels to full image pixels
         call ppconcg(2, blc(1), bin(1), wa(1))
         if (nimage(l,m).gt.0) then
          if (image2(l,m).gt.pcut) then
-          row(nint(wa(1))) = 0.
+          rrow(nint(wa(1))) = 0.
          else
           fluxctoff=min(fluxctoff,image(l,m))
           sigctoff=min(sigctoff,(image(l,m)-meanimg(l,m))/sgimg(l,m))
           nfdrpix = nfdrpix + 1
-          row(nint(wa(1))) = 100.
+          rrow(nint(wa(1))) = 100.
          end if
         else
-         row(nint(wa(1))) = 0.
+         rrow(nint(wa(1))) = 0.
         end if
        end do
 c ok, have written the m'th row, now put it in the segmentation image
@@ -3901,7 +3901,7 @@ c ok, have written the m'th row, now put it in the segmentation image
 c cvt m from binned subimage pixels to full image pixels
         wa(2) = dble(m)
         call ppconcg(2, blc(2), bin(2), wa(2))
-        call xywrite(lOut,nint(wa(2)),row)
+        call xywrite(lOut,nint(wa(2)),rrow)
        end if
       end do
 c done writing to lOut - so close it, if it was open.
@@ -3912,19 +3912,20 @@ c
      +        nx*ny - nblanks
       end if
       call output(' ')
-      write(line,'("FDR selected a p-value threshold of ",
-     +        f16.10,".")') pcut
+      write(line,'(a,f16.10,a)')
+     +  'FDR selected a p-value threshold of ',pcut,'.'
       call output(line)
-      write(line,'("This corresponds to a threshold of ",
-     +        f7.2," sigma,")') sigctoff
+      write(line,'(a,f7.2,a)')
+     +  'This corresponds to a threshold of ', sigctoff, ' sigma,'
       call output(line)
-      write(line,'("which means a minimum flux threshold of ",
-     +        f16.10," Jy.")') fluxctoff
+      write(line,'(a,f16.10,a)') 
+     +  'which means a minimum flux threshold of ',fluxctoff,' Jy.'
       call output(line)
-      write(line,'("(If the noise is constant over the original ",
-     +       "image,")')
+      write(line,'(a)')
+     +  '(If the noise is constant over the original image,'
       call output(line)
-      write(line,'("this is the threshold over the whole image.)")')
+      write(line,'(a)')
+     +  'this is the threshold over the whole image.)'
       call output(line)
       write(line,'("FDR detected ",i7," pixels.")') nfdrpix
       call output(line)
@@ -4137,8 +4138,8 @@ c
       end do
       if (kvannot) call txtclose(lann)
       call output(' ')
-      write(line,'("Of the FDR pixels detected, a total of ",i6,
-     +     " were used in fitting sources.")') usedpixels
+      write(line,'(a,i6,a)') 'Of the FDR pixels detected, a total of ',
+     +     usedpixels,' were used in fitting sources.'
       call output(line)
       call output(' ')
       write(line,'("A total of ",i6," sources were detected.")') sources
