@@ -39,6 +39,10 @@ c                      These are AXFNDCO, AXTYPCO, SUNITCO
 c    nebk   29nov95    Eliminate indexed searching of axis types so that
 c                      e.g. if CTYPE=RADIUS it is not treated as RA.  
 c                      Consolidate CTYPE searching into AXFNDCO and AXTYPCO
+c    nebk   03dec95    Declaration of TYPE in AXTYPCO was (n) not (*), and
+c	               removed useless access to multiple axes in CHKAXCO
+c                      Work around SOL2 compiler bug in CTYPECO by not 
+c                      passing ITOAF to RDHDA
 c***********************************************************************
 c
 c* axfndCO -- Find a specified generic axis in an image
@@ -177,7 +181,7 @@ c+
 c
       implicit none
       integer n, iax, lun
-      character*4 type(n)
+      character*4 type(*)
 c
 c  Return a generic axis type for each axis type.
 c
@@ -255,9 +259,9 @@ c* chkaxCO -- Check axis type and coordinate type for compatibility
 c& nebk
 c: coordinates
 c+
-      subroutine chkaxco (lun, ltype, n, iax, stype)
+      subroutine chkaxco (lun, ltype, iax, stype)
       implicit none
-      integer n, iax, lun
+      integer iax, lun
       character*(*) ltype, stype
 c
 c  Check axis type and desired coordinate type are compatible.  
@@ -268,8 +272,7 @@ c    ltype  Coordinate type user has asked for; one of
 c	        'hms',    'dms',    'arcsec', 'arcmin', 'absdeg',
 c               'reldeg', 'abspix', 'relpix', 'absghz', 'relghz', 
 c               'abskms', 'relkms', 'absnat', 'relnat', none'
-c    n      NUmber of axes to check starting from 1
-c    iax    Specific axis if n=0
+c    iax    Axis of interest 
 c    stype  Spectral axis descriptor.  If this is ' ', then
 c           the CTYPE must match the TYPE (i.e. VELO/abskms is
 c           good, FELO/absghz is bad).  Otherwise, it is assumed
@@ -278,7 +281,7 @@ c           the desired STYPE so that any spectral CTYPE is
 c           compatible with any spectral TYPE
 c--
 c-----------------------------------------------------------------------
-      integer i1, i2, i, il, jax
+      integer il, jax
       character ctype*9, str*132, gtype*4
       logical bad, bads
 c-----------------------------------------------------------------
@@ -288,59 +291,50 @@ c-----------------------------------------------------------------
         call bug ('f', str)
       end if
 c
-      if (n.eq.0) then
-        i1 = iax
-        i2 = iax
-      else
-        i1 = 1
-        i2 = n
-      end if
-c
-      do i = i1, i2
-c
 c Get generic axis type
 c
-        call axtypco (lun, 0, i, gtype)
+      call axtypco (lun, 0, iax, gtype)
 c
-        bad = .false.
-        bads = .false.
+      bad = .false.
+      bads = .false.
 c
-        if (ltype.eq.'hms') then
-          if (gtype.ne.'RA' .and. gtype.ne.'LL') bad = .true.
-        else if (ltype.eq.'dms') then
-          if (gtype.ne.'DEC' .and. gtype.ne.'MM') bad = .true.
-        else if (ltype.eq.'arcsec' .or. ltype.eq.'arcmin' .or.
-     +           ltype.eq.'absdeg' .or. ltype.eq.'reldeg') then          
-          call axfndco (lun, 'RAD', 0, i, jax)
-          if (jax.eq.0) bad = .true.
-        else if (ltype.eq.'abskms' .or. ltype.eq.'relkms') then     
-          if (gtype.ne.'VELO' .and. gtype.ne.'FREQ') bad = .true.
-          if (gtype.eq.'FREQ' .and. stype.eq.' ') bads = .true.
-        else if (ltype.eq.'absghz' .or. ltype.eq.'relghz') then     
-          if (gtype.ne.'VELO' .and. gtype.ne.'FREQ') bad = .true.
-          if (gtype.eq.'VELO' .and. stype.eq.' ') bads = .true.
-        else if (ltype.eq.'absnat' .or. ltype.eq.'relnat') then
-          continue
-        end if
+c Compare generic axis type with label type
+c
+      if (ltype.eq.'hms') then
+        if (gtype.ne.'RA' .and. gtype.ne.'LL') bad = .true.
+      else if (ltype.eq.'dms') then
+        if (gtype.ne.'DEC' .and. gtype.ne.'MM') bad = .true.
+      else if (ltype.eq.'arcsec' .or. ltype.eq.'arcmin' .or.
+     +         ltype.eq.'absdeg' .or. ltype.eq.'reldeg') then          
+        call axfndco (lun, 'RAD', 0, iax, jax)
+        if (jax.eq.0) bad = .true.
+      else if (ltype.eq.'abskms' .or. ltype.eq.'relkms') then     
+        if (gtype.ne.'VELO' .and. gtype.ne.'FREQ') bad = .true.
+        if (gtype.eq.'FREQ' .and. stype.eq.' ') bads = .true.
+      else if (ltype.eq.'absghz' .or. ltype.eq.'relghz') then     
+        if (gtype.ne.'VELO' .and. gtype.ne.'FREQ') bad = .true.
+        if (gtype.eq.'VELO' .and. stype.eq.' ') bads = .true.
+      else if (ltype.eq.'absnat' .or. ltype.eq.'relnat') then
+        continue
+      end if
 c
 c Bug out if no good
 c
-        if (bad .or. bads) then
-          call ctypeco (lun, i, ctype, il)
-          call output ('Axis ctype = '//ctype)
-          str = 'Coordinate type = '//ltype
-          call output (str)
-          if (bads) then
-            if (stype.eq.' ') then
-              call output ('Spectral axis convention unspecified')
-            else
-              str = 'Spectral axis convention = '//stype
-              call output (str)
-            end if
+      if (bad .or. bads) then
+        call ctypeco (lun, iax, ctype, il)
+        call output ('Axis ctype = '//ctype)
+        str = 'Coordinate type = '//ltype
+        call output (str)
+        if (bads) then
+          if (stype.eq.' ') then
+            call output ('Spectral axis convention unspecified')
+          else
+            str = 'Spectral axis convention = '//stype
+            call output (str)
           end if
-          call bug ('f', 'CHKAXCO: These are inconsistent')
         end if
-      end do
+        call bug ('f', 'CHKAXCO: These are inconsistent')
+      end if
 c
       end
 c
@@ -366,10 +360,14 @@ c    ctype  CTYPE (upper case)
 c    il     Length of string prior to project "--*" string
 c--
 c-----------------------------------------------------------------------
-      character itoaf*1
+      character itoaf*1, str*10
       integer len1, il2
-c-----------------------------------------------------------------------
-      call rdhda (lun, 'ctype'//itoaf(iax), ctype, ' ')
+c----------------------------------------------------------------------- 
+      str = 'ctype'//itoaf(iax)
+      call rdhda (lun, str, ctype, ' ')
+c      call rdhda (lun, 'ctype'//itoaf(iax), ctype, ' ')
+c      if (ctype.eq.' ') write (*,*) 
+c     +  'CTYPECO: ctype is blank, iax, lun, len=', iax, lun, len(ctype)
       call ucase (ctype)
 c
       il2 = len1(ctype)
@@ -820,7 +818,7 @@ c
 c
 c Check input coordinate type consistent with actual axis type
 c
-        call chkaxco (lun, typei(i), 0, i, stypei)
+        call chkaxco (lun, typei(i), i, stypei)
 c
 c Set coordinate transformation strings and convert angular
 c units if required to radians
@@ -865,7 +863,7 @@ c
 c
 c Check output coordinate type consistent with actual axis type
 c
-          call chkaxco (lun, typeo(i), 0, i, stypeo)
+          call chkaxco (lun, typeo(i), i, stypeo)
 c
 c Set coordinate transformation strings
 c
