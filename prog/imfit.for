@@ -110,6 +110,7 @@ c		  eliminate divergence problem.
 c    rjs  01nov95 Better fiddles in gaufid.
 c    rjs  02dec96 Print out RA and DEC as well.
 c    rjs  12dec96 Correct bug in the above.
+c    nebk 28feb97 Add object to output
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'maxnax.h'
@@ -120,7 +121,7 @@ c
 	integer MAXBOX,MAXVAR
 	parameter(MAXBOX=1024,MAXVAR=30)
 c
-	character in*64,out*64
+	character in*64,out*64,object*32
 	real clip,x(MAXVAR),covar(MAXVAR*MAXVAR),rms,trms
 	real bmaj,bmin,bpa,bvol,bvolp
 	logical dores,inten,defsrc,doOut,dofit
@@ -154,6 +155,7 @@ c
 	if(nin(1).gt.maxdim)
      *	  call bug('f','Image too big for me to handle')
 	call rdhdi(lIn,'naxis',naxis,0)
+        call rdhda(lIn,'object',object, ' ')
 	naxis = min(naxis,MAXNAX)
 	call BoxSet(boxes,3,nin,' ')
 	call BoxMask(lIn,boxes,MAXBOX)
@@ -241,7 +243,7 @@ c  Convert to astronomical units, and report.
 c
 	  call CoordFid(lIn,k,.false.)
 	  if(dofit)then
-	    call Report(rms,trms,bvol,bvolp,bmaj,bmin,bpa)
+	    call Report(object,rms,trms,bvol,bvolp,bmaj,bmin,bpa)
 	  endif
 	enddo
 c
@@ -881,14 +883,16 @@ c
 c
 	end
 c************************************************************************
-	subroutine Report(rms,trms,bvol,bvolp,bmaj,bmin,bpa)
+	subroutine Report(object,rms,trms,bvol,bvolp,bmaj,bmin,bpa)
 c
 	implicit none
 	real rms,trms,bvol,bvolp,bmaj,bmin,bpa
+        character*(*) object
 c
 c  Report on the source component solution.
 c
 c  Input:
+c    object     Source name
 c    rms	RMS residual error after the fit.
 c    trms	Theoretical rms noise in the image.
 c    bvol	Beam volume, in radians**2.
@@ -919,6 +923,10 @@ c
 	data objects(BEAM)    /'beam    '/
 c
 	call output('-------------------------------------------------')
+        if (object.ne.' ') then
+          line = 'Object '//object
+          call output (line)
+        end if
 c
 	if(trms.gt.0)then
 	  write(line,5)rms,trms
