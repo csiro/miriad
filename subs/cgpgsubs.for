@@ -129,6 +129,8 @@ c                        rather than directly using co.for routines
 c     nebk   18dec95     Add argument DOABUT to VPSIZCG. Fix truncated
 c                        strings in ANNINICG and ANNWINCG
 c     nebk   31jan96     More sig figs for pixel label in LAB3CG
+c     nebk   02may96     NAXLABCG was in a tangle for RA=0 crossing axes
+c                        when *not* labelled as 'hms'
 c**********************************************************************
 c
 c* annboxCG -- Annotate plot with information from a box image 
@@ -1447,7 +1449,7 @@ c
 c
       double precision wwi(3), wblc(3), wtrc(3), wbrc(3), wtlc(3),
      + tickd(2), xmin, xmax, ymin, ymax, zp, ticklp(2), dp, dw, 
-     + blcd(2), trcd(2)
+     + blcd(2), trcd(2), wrap
       real tick(2),  tickl(2), wpix(4)
       integer nxsub, nysub, i, j, krng(2), ip, naxis
       character xopt*20, yopt*20, typei(3)*6, typeo(3)*6
@@ -1458,9 +1460,18 @@ c Save pixel window
 c
       call pgqwin (wpix(1), wpix(2), wpix(3), wpix(4))
 c
-c Work out if we have a RA=0 crossing axis
+c Work out if we have a RA=0 crossing axis 
 c
       call razerocg (lun, blc, trc, zero)
+c
+c We are only concerned about this if we are plotting this RA (radian)
+c axis with hms or absdeg or absnat labels. All others will not cause
+c us to have to worry about a modulo something labelling need at RA=0
+c
+      do i = 1, 2
+        if (labtyp(i).ne.'hms' .and. labtyp(i).ne.'absdeg' 
+     +     .and. labtyp(i).ne.'absnat') zero(i) = .false.
+      end do
 c
 c Absolute pixel of third axis appropriate for this image, and
 c work out pixel blc and trc of corners of displayed image.
@@ -1498,30 +1509,43 @@ c
       wwi(2) = trcd(2)
       call w2wco (lun, naxis, typei, ' ', wwi, typeo, ' ', wtlc)
 c
-c Add 2pi to one end if we cross RA=0.  RAD axis units are radians.
+c Add 2pi to one end if we cross RA=0.  RA axis units are intrinsically radians
+c but we are concerned here if we are labelling them as hms or absdeg or absnat
 c
       if (zero(1)) then
+        if (labtyp(1).eq.'hms' .or. labtyp(1).eq.'absnat') then
+          wrap = 2.0*dpi
+        else
+          wrap = 360.0
+        end if
+c
         if (wblc(1).lt.wbrc(1)) then
-          wblc(1) = wblc(1) + dpi*2
+          wblc(1) = wblc(1) + wrap
         else 
-          wbrc(1) = wbrc(1) + dpi*2
+          wbrc(1) = wbrc(1) + wrap
         end if
         if (wtlc(1).lt.wtrc(1)) then
-          wtlc(1) = wtlc(1) + dpi*2
+          wtlc(1) = wtlc(1) + wrap
         else 
-          wtrc(1) = wtrc(1) + dpi*2
+          wtrc(1) = wtrc(1) + wrap
         end if
       end if
       if (zero(2)) then
+        if (labtyp(2).eq.'hms' .or. labtyp(2).eq.'absnat') then
+          wrap = 2.0*dpi
+        else
+          wrap = 360.0
+        end if
+c
         if (wblc(2).lt.wtlc(2)) then
-          wblc(2) = wblc(2) + dpi*2
+          wblc(2) = wblc(2) + wrap
         else 
-          wtlc(2) = wtlc(2) + dpi*2
+          wtlc(2) = wtlc(2) + wrap
         end if
         if (wbrc(2).lt.wtrc(2)) then
-          wbrc(2) = wbrc(2) + dpi*2
+          wbrc(2) = wbrc(2) + wrap
         else 
-          wtrc(2) = wtrc(2) + dpi*2
+          wtrc(2) = wtrc(2) + wrap
         end if
       end if
 c
