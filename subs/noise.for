@@ -31,17 +31,12 @@ c
 #  define inc_ran
 #  define defined
 #endif
-#ifdef f2c
+#ifdef linux
 #  define vms_style
 #  define inc_ran
 #  define defined
 #endif
-#ifdef mips
-#  define vms_style
-#  define inc_ran
-#  define defined
-#endif
-#ifdef cft
+#ifdef unicos
 #  define cft_style
 #  define defined
 #endif
