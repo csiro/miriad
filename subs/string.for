@@ -25,10 +25,53 @@ c   rjs      3nov94 Treat [] and {} as brackets in GetField.
 c   rjs     06feb95 Fixed handling of quotes in getfield. What did bpw do?
 c   rjs     25jul97 Treat " and ' as quote characters.
 c   rjs     03aug98 Included updated version of matodf and matorf.
-c-----------------------------------------------------------------------
-c 
+c   rjs     05feb01 Added st routines.
+c************************************************************************
+c* stcat - Concatenate two strings together (avoiding blank pads).
+c& rjs
+c: string
+c+
+	character*(*) function stcat(a,b)
+c
+	implicit none
+	character a*(*),b*(*)
+c
+c  Concatenate two strings together, ignoring blank padding.
+c
+c  Inputs:
+c    a,b  The strings to be concatenated.
+c  Output:
+c    stcat The concatenated strings a//b.
+c------------------------------------------------------------------------
+	integer length
+c
+c  Externals.
+c
+	integer len1
+c
+	length = len1(a)
+	stcat = a(1:length)//b
+	end
+c************************************************************************
+	character*(*) function streal(a,b)
+c
+	implicit none
+	real a
+	character b*(*)
+c------------------------------------------------------------------------
+	integer i
+	character line*32
+c
+	write(line,b)a
+	i = 1
+	dowhile(line(i:i).eq.' ')
+	  i = i + 1
+	enddo
+	streal = line(i:)
+	end
+c************************************************************************
 c* atoif -- Convert a string into an integer.
-c& bpw
+c& rjs
 c: strings
 c+
 	subroutine atoif(string,result,ok)
@@ -50,7 +93,7 @@ c    result	The integer value.
 c    ok		This will be true if the decoding succeeded.
 c--
 c------------------------------------------------------------------------
-	integer k,i,i0,sign,nbase
+	integer k,i,i0,sign1,nbase
 c
 c  External
 c
@@ -65,7 +108,7 @@ c
 c
 c  Find number base.
 c
-	sign = 1
+	sign1 = 1
 	call lcase(string)
 	if(string(i:i+1).eq.'0x'.or.string(1:2).eq.'%x')then
 	  i0 = i+2
@@ -80,7 +123,7 @@ c
 	  i0 = i+1
 	  nbase = 8
 	else if(string(i:i).eq.'-')then
-	  sign = -1
+	  sign1 = -1
 	  i0 = i + 1
 	  nbase = 10
 	else if(string(1:1).eq.'+')then
@@ -113,11 +156,11 @@ c
 	  endif
 	enddo
 c
-	result = sign * result
+	result = sign1 * result
 	end
 c************************************************************************
 c* atorf -- Convert a string into a real
-c& bpw
+c& rjs
 c: strings
 c+
 	subroutine atorf(string,result,ok)
@@ -143,7 +186,7 @@ c
        end
 C************************************************************************
 c* atodf -- Convert a string into a double precision.
-c& bpw
+c& rjs
 c: strings
 c+
 	subroutine atodf(string,d,ok)
@@ -162,8 +205,8 @@ c    result	The double precision value.
 c    ok		This will be true if the decoding succeeded.
 c--
 c------------------------------------------------------------------------
-	integer whole,frac,bad,exp
-	parameter(whole=1,frac=2,bad=3,exp=4)
+	integer whole,frac,bad,expon
+	parameter(whole=1,frac=2,bad=3,expon=4)
 	integer length,l,expo,digits,state,iw0,temp,len1
 	double precision wd,w0,ww0,dtemp
 c
@@ -205,7 +248,7 @@ c
 	    endif
 	  else if(string(l:l).eq.'e'.or.string(l:l).eq.'E'.or.
      *		  string(l:l).eq.'d'.or.string(l:l).eq.'D')then
-	    state = exp
+	    state = expon
 	  else
 	    state = bad
 	  endif
@@ -213,7 +256,7 @@ c
 c
 c  Handle the exponent if there is one.
 c
-	if(state.eq.exp.and.digits.gt.0)then
+	if(state.eq.expon.and.digits.gt.0)then
 	  digits = 0
 	  expo = 0
 	  iw0 = 1
@@ -245,14 +288,15 @@ c
 	end
 c************************************************************************
 c* matodf - convert a string to many double precision numbers
-c& bpw
+c& rjs
 c: strings
 c+
       subroutine matodf( string, array, n, ok )
- 
+c
+      implicit none 
+      integer          n 
       character*(*)    string
       double precision array(n)
-      integer          n 
       logical          ok
 c 
 c Convert a string to many double precision numbers.
@@ -289,7 +333,7 @@ c
 	end
 c************************************************************************
 c* matorf - convert a string to many real numbers
-c& bpw
+c& rjs
 c: strings
 c+
       subroutine matorf( string, array, n, ok )
@@ -333,7 +377,7 @@ c
 	end
 c************************************************************************
 c* Itoaf -- Convert an integer into a string.
-c& bpw
+c& rjs
 c: strings
 c+
 	character*(*) function itoaf(n)
@@ -373,7 +417,7 @@ c
 	end
 c************************************************************************
 c* mitoaf -- Convert many integers into a string.
-c& bpw
+c& rjs
 c: strings
 c+
 	subroutine mitoaf(array,n,line,length)
@@ -417,7 +461,7 @@ c
 	end
 c***********************************************************************
 c* dtoaf -- Convert a double precision value into a string.
-c& bpw
+c& rjs
 c: strings
 c+
       character*(*) function dtoaf(value, form, nsf)
@@ -455,7 +499,7 @@ c
       end
 c***********************************************************************
 c* rtoaf -- Convert a real value into a string.
-c& bpw
+c& rjs
 c: strings
 c+
       character*(*) function rtoaf(value, form, nsf)
@@ -484,7 +528,7 @@ c
       end
 c************************************************************************
 c* GetTok -- Extract a token from a string.
-c& bpw
+c& rjs
 c: strings
 c+
 	subroutine gettok(string,k1,k2,token,length)
@@ -540,7 +584,7 @@ c
 	end
 c************************************************************************
 c* GetField -- Extract a field from a string.
-c& bpw
+c& rjs
 c: strings
 c+
 	subroutine getfield(string,k1,k2,token,length)
@@ -627,7 +671,7 @@ c
 	end
 c************************************************************************
 c* Spanchar -- Skip over a particular character.
-c& bpw
+c& rjs
 c: strings
 c+
 	subroutine spanchar(string,k1,k2,c)
@@ -659,7 +703,7 @@ c
 	end
 c************************************************************************
 c* ScanChar -- Scan a string for a character.
-c& bpw
+c& rjs
 c: strings
 c+
 	subroutine scanchar(string,k1,k2,c)
@@ -691,7 +735,7 @@ c
 	end
 c************************************************************************
 c* Len1 -- Determine the unpadded length of a character string.
-c& bpw
+c& rjs
 c: strings
 c+
 	integer function len1(string)
@@ -724,7 +768,7 @@ c
 	end
 c************************************************************************
 c* Lcase -- Convert a string to lower case.
-c& bpw
+c& rjs
 c: strings
 c+
 	subroutine lcase(string)
@@ -749,7 +793,7 @@ c
 	end
 c************************************************************************
 c* Ucase -- Convert string to upper case.
-c& bpw
+c& rjs
 c: strings
 c+
 	subroutine ucase(string)
@@ -774,7 +818,7 @@ c
 	end
 c***********************************************************************
 c* PadLeft -- Right justify a string to length characters.
-c& bpw
+c& rjs
 c: strings
 c+
       subroutine padleft(string, length)
@@ -814,10 +858,12 @@ c  The string(1:length) now has the blanks and the value.
       end
 ************************************************************************
 c* indek - get position of substring in a string, returning length if not found
-c& bpw
+c& rjs
 c: strings
 c+
       integer function indek ( string, substrng )
+c
+      implicit none
       character*(*) string, substrng
 
 c Indek works basically the same as the intrinsic function index, but if the
