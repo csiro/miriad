@@ -32,12 +32,13 @@ c    rjs  19aug93 Handle galactic and ecliptic coordinates.
 c    rjs  24nov93 Correct units of xshift and yshift.
 c    rjs  24jul94 Message about aipsfg tables.
 c    rjs  15aug94 More decimal places for restfreq.
+c    rjs  24oct94 More information for images.
 c  Bugs and Shortcomings:
 c    * Descriptions in brief mode could be a bit more verbose!
 c------------------------------------------------------------------------
 	character version*(*)
 	integer MAXIN
-	parameter(version='Prthd: version 1.0 19-Aug-93')
+	parameter(version='Prthd: version 1.0 24-Oct-94')
 	parameter(MAXIN=256)
 	integer tno,i,iostat,nin
 	character in(MAXIN)*64,logf*64,line*80
@@ -245,6 +246,12 @@ c
 c
 c  Parameters related to coordinates.
 c
+      call rdhdd (tno, 'obstime', dval, 0.d0)
+      if(dval.gt.0)then
+	call julday(dval,'H',aval1)
+	line = 'Average Time of observation: '//aval1
+	call logwrite(line,more)
+      endif
       call rdhdr (tno, 'epoch', rval1, 0.0)
       if(rval1.gt.0)then
 	write (line, '(a,f8.2,a)') 'Epoch:',rval1,' years'
@@ -255,17 +262,13 @@ c
 	write(line,'(a,f13.6,a)')'Rest frequency:',dval,' GHz'
 	call logwrite(line,more)
       endif
-c
-c  Offset shift info.
-c
-      call rdhdr (tno,'xshift',rval1,0.0)
-      call rdhdr (tno,'yshift',rval2,0.0)
-      if (rval1.ne.0.0 .or. rval2.ne.0.0) then
-         write (line, 60) rval1*3600.0*180/pi, rval2*3600.0*180/pi
-60       format ('Phase shifted in x & y by ', 1pe12.5, ',', 
-     *            1pe12.5, ' arcseconds')
-         call logwrite(line,more)
-      end if
+      if(hdprsnt(tno,'vobs'))then
+	call rdhdr(tno,'vobs',rval1,0.0)
+	write(line,'(a,f8.2,a)') 'Observatory radial velocity:',
+     *				rval1,' km/s'
+	call logwrite(line,more)
+      endif
+      
 c
 c  Number of clean components.
 c
@@ -279,6 +282,8 @@ c
      *	'Mask item is present ... some data are blanked',more)
       if(hdprsnt(tno,'history'))call logwrite(
      *	'History item is present',more)
+      if(hdprsnt(tno,'mostable'))call logwrite(
+     *	'Mosaicing information table is present',more)
 c
       end
 c************************************************************************
