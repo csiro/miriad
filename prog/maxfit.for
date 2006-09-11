@@ -41,6 +41,7 @@ c    rjs  24jan94  Small typo in doc (appease pjt and bpw's "doc").
 c    nebk 22mar94  Twiddle about with output format
 c    nebk 18aug94  Revise to use COCVT coord. transformation routines
 c    nebk 16nov95  New calls to some "co" routines
+c    nebk 29nov95  New call for CTYPECO
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -54,12 +55,12 @@ c
       real data(maxdim), dmax, fit(9), coeffs(6), fmax, dd
       integer nsize(maxnax), blc(maxnax), trc(maxnax), boxes(maxboxes),
      +  runs(3,maxruns), ploc(maxnax), strlen(maxnax), nruns, lun, 
-     +  naxis, i, j, k, l, ip, il, len1, nax
+     +  naxis, i, j, k, l, ip, il, len1
       character ctype*9, typesi(maxnax)*9, typeso(maxnax)*9, 
      +  strout(maxnax)*50, file*40, text*132, logf*132
       logical doabs
 c-----------------------------------------------------------------------
-      call output ('MAXFIT: version 16-Nov-95')
+      call output ('MAXFIT: version 29-Nov-95')
 c
 c  Get inputs
 c
@@ -76,7 +77,7 @@ c
       call xyopen (lun, file, 'old', maxnax, nsize)
       call rdhdi (lun, 'naxis', naxis, 0)
       if (naxis.eq.0) call bug ('f', 'Zero dimensions in image')
-      naxis = min(naxis, maxnax)
+      naxis = min(3,naxis)
       if (nsize(1).gt.maxdim) call bug ('f','Input file too big for me')
 c
 c  Set up the region of interest.
@@ -173,7 +174,7 @@ c Peak pixel location and value
 c
       text = 'Peak pixel   : ('
       ip = len1(text) + 1
-      do i = 1, min(3,naxis)
+      do i = 1, naxis
         call strfi (ploc(i), '(i4)', text(ip:), il)
         ip = ip + il
         text(ip:ip) = ','
@@ -192,7 +193,7 @@ c
       if (logf.ne.' ') call logwrit (' ')
       text = 'Fitted pixel : ('
       ip = len1(text) + 1
-      do i = 1, min(3,naxis)
+      do i = 1, naxis
         if (i.le.2) then
           call strfd (pixmax(i), '(f7.2)', text(ip:), il)
         else
@@ -211,8 +212,7 @@ c
 c
 c Find offsets of fitted pixel from reference pixel
 c
-      nax = min(3,naxis)
-      call coinit (lun)
+      call initco (lun)
 c
       call output (' ')
       if (logf.ne.' ') call logwrit (' ')
@@ -221,16 +221,16 @@ c
 c
 c Convert coordinates
 c
-      do i = 1, nax
+      do i = 1, naxis
         typesi(i) = 'abspix'
       end do
-      call setoaco (lun, 'off', nax, 0, typeso)
-      call w2wfco (lun, nax, typesi, ' ', pixmax, typeso, ' ', 
+      call setoaco (lun, 'off', naxis, 0, typeso)
+      call w2wfco (lun, naxis, typesi, ' ', pixmax, typeso, ' ', 
      +             .false., strout, strlen)
 c
 c Tell user
 c
-       do i = 1, nax
+       do i = 1, naxis
         if (i.lt.3) then
           write (text,70) i, strout(i)(1:strlen(i))
 70        format ('  Axis ', i1, ': Fitted pixel offset = ', a)
@@ -251,16 +251,16 @@ c
 c
 c Convert coordinates
 c
-      call setoaco (lun, 'abs', nax, 0, typeso)
-      call w2wfco (lun, nax, typesi, ' ', pixmax, typeso, ' ', 
+      call setoaco (lun, 'abs', naxis, 0, typeso)
+      call w2wfco (lun, naxis, typesi, ' ', pixmax, typeso, ' ', 
      +             .false., strout, strlen)
 c
 c Tell user
 c
-      do i = 1, nax
+      do i = 1, naxis
         call pader (typeso(i), strout(i), strlen(i))
 c
-        call ctypeco (lun, i, ctype)
+        call ctypeco (lun, i, ctype, il)
         if (i.lt.3) then
           write (text,80) i, ctype, strout(i)(1:strlen(i))
 80        format ('  Axis ', i1, ': Fitted ', a, ' = ', a)
@@ -274,7 +274,7 @@ c
 c
       call xyclose (lun)
       if (logf.ne.' ') call logclose
-      call cofin (lun)
+      call finco (lun)
 c
       end
 c
