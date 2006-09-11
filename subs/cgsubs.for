@@ -3,7 +3,7 @@ c     A collection of subroutines shared by the programs CGDISP,
 c     CGSPEC, CGCURS, CGSLICE, and IMBIN.
 c
 c
-c  angconcg :  Convert between radians and labtyp angular units
+c  angconcg :  Convert between radians and seconds of arc/time
 c  apptrfcg :  Apply transfer function to image
 c  chkdescg :  Compare a real axis descriptor from two images
 c  chnselcg :  Make list of CHAN and REGION selected channel groups
@@ -22,6 +22,7 @@ c  optcg    :  Version of BobS options, but without the fatalities
 c  ol2pixcg :  Convert overlay location in specified coords to pixels
 c  ppconcg  :  Convert between unbinned full image pixels and binned
 c              subimage pixels
+c  razerocg :  See if an RA axis crosses RA = 0
 c  readbcg  :  Read blanking mask form mask image
 c  readimcg :  Read in image dealing with averaging and blanking
 c  setccscg :  Set rjs coordinate conversion strings for tick labelling
@@ -118,16 +119,18 @@ c			 no longer required becuase of internal changes
 c                        to the cg* programs and use of cosubs.for; AXABSCG,
 c                        AXFNDCG, AXTYPCG, COSDECCG, PIX2WCG, PIX2WFCG, 
 c                        SAVDESCG, SETDESCG, SUNITCG, W2PIXCG, W2WCG, W2WFCG
+c     nebk   29nov95     New call for CTYPECO, new ANGCONCG internals,
+c			 new routine RAZEROCG
 c***********************************************************************
 c
-c* angconCG -- Convert angular coordinates to and from radians
+c* angconCG -- Convert radians to and from seconds of time/arc
 c& nebk
 c: plotting
 c+
-      subroutine angconcg (id, labtyp, wi, wo)
+      subroutine angconcg (id, labtyp, w)
       implicit none
       character*(*) labtyp
-      double precision wi, wo
+      double precision w
       integer id
 c
 c  Convert angular (as indictaed by axis label type) world coordinate 
@@ -143,44 +146,31 @@ c		 dms    arc seconds
 c               *sec    arc seconds
 c	        *min    arc minutes
 c	        *deg    degrees
-c  Input
-c    wi       world coordinate 
-c  Output
-c    wo       converted world coordinate 
+c  Input/Ouput
+c    w        world coordinate 
 c--
 c-----------------------------------------------------------------------
       include 'mirconst.h'
-      double precision as2r, st2r, d2r
+      double precision as2r, st2r
       parameter (as2r=dpi/3600.d0/180.d0, st2r=dpi/3600.d0/12.0d0)
-      parameter (d2r = dpi/180.0d0)
 c-----------------------------------------------------------------------
       if (id.eq.1) then
+c
+c From radians to seconds
+c
         if (labtyp.eq.'hms') then
-          wo = wi / st2r
+          w = w / st2r
         else if (labtyp.eq.'dms') then
-          wo = wi / as2r
-        else if (labtyp(4:6).eq.'sec') then
-          wo = wi / as2r
-        else if (labtyp(4:6).eq.'min') then
-          wo = wi / as2r / 60.0d0
-        else if (labtyp(4:6).eq.'deg') then
-          wo = wi / d2r
-        else
-          wo = wi
+          w = w / as2r
         end if
       else if (id.eq.2) then
+c
+c From seconds to radians
+c
         if (labtyp.eq.'hms') then
-          wo = wi * st2r
+          w = w * st2r
         else if (labtyp.eq.'dms') then
-          wo = wi * as2r
-        else if (labtyp(4:6).eq.'sec') then
-          wo = wi * as2r
-        else if (labtyp(4:6).eq.'min') then
-          wo = wi * as2r * 60.0d0
-        else if (labtyp(4:6).eq.'deg') then
-          wo = wi * d2r
-        else
-          wo = wi
+          w = w * as2r
         end if
       else
         call bug ('f', 'ANGCONCG: unrecognized conversion code')
@@ -1223,7 +1213,7 @@ c-----------------------------------------------------------------------
       include 'mirconst.h'
       double precision win(3), wout(3)
       character*6 typei(3), typeo(3)
-      integer ip, i
+      integer ip, i, naxis
 c-----------------------------------------------------------------------
 c
 c Prepare coordinates for conversion
@@ -1253,7 +1243,9 @@ c
 c
 c Convert location to absolute pixels
 c
-      call w2wco (lun, 3, typei, ' ', win, typeo, ' ', wout)
+      call rdhdi (lun, 'naxis', naxis, 0)
+      naxis = min(3,naxis)
+      call w2wco (lun, naxis, typei, ' ', win, typeo, ' ', wout)
       opos(1) = wout(1)
       opos(2) = wout(2)
 c
@@ -1305,6 +1297,45 @@ c Convert to full image unbinned pixel
 c
         p = p + blc - 1
       end if
+c
+      end
+c
+c* razerocg - see if RA axis crosses RA=0
+c& nebk
+c: plotting
+c+
+      subroutine razerocg (lun, blc, trc, zero)
+      implicit none
+      integer lun, blc(2), trc(2)
+      logical zero(2)
+c
+c     See if an RA axis crosses RA=0. Only looks at
+c     first two axes
+c
+c     Input:
+c       lun     Handle of image
+c       blc,trc Window being displayed in absolute 
+c               unbinned full image pixels
+c     Output
+c       zero   True if that axis is a) RA and b) crosses 0
+c--
+c-----------------------------------------------------------------------
+      integer i
+      double precision crval, crpix, cdelt, x1, x2
+      character gentyp*4, itoaf*1
+c-----------------------------------------------------------------------
+      do i = 1, 2
+        zero(i) = .false.
+        call rdhdd (lun, 'crval'//itoaf(i), crval, 0.0d0)
+        call rdhdd (lun, 'crpix'//itoaf(i), crpix, 0.0d0)
+        call rdhdd (lun, 'cdelt'//itoaf(i), cdelt, 0.0d0)
+        call axtypco (lun, 0, i, gentyp)
+        if (gentyp.eq.'RA') then
+          x1 = (blc(i)-crpix)*cdelt + crval
+          x2 = (trc(i)-crpix)*cdelt + crval
+          if (x1*x2.lt.0) zero(i) = .true.
+        end if
+      end do
 c
       end
 c
@@ -1714,18 +1745,8 @@ c
 c Loop over axes
 c
       do iax = 1, 2
-        call ctypeco (lh, iax, ctype)
-        ipos = index(ctype, '---')
-        if (ipos.ne.0) then
-          str = ctype(1:ipos-1)
-        else
-          ipos = index(ctype, '--')        
-          if (ipos.ne.0) then
-            str = ctype(1:ipos-1)
-          else
-            str = ctype(1:len1(ctype))
-          end if
-        end if
+        call ctypeco (lh, iax, ctype, ipos)
+        str = ctype(1:ipos)
         l2 = len1(str)
 c
 c Set the axis label depending on label type
