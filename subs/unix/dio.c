@@ -26,6 +26,7 @@
 /*	 5-nov-94  rjs Improve POSIX compliance.			*/
 /*	26-Oct-95  rjs Honour TMPDIR environment variable, if set.	*/
 /*	10-Jan-96  rjs Make sure scratch file names are unique.		*/
+/*      06-Dec-03  rjs Caste args in read and write calls appropriately.*/
 /************************************************************************/
 
 #include <sys/types.h>
@@ -51,6 +52,8 @@
 #define Strcat (void)strcat
 #define Strcpy (void)strcpy
 #define Lseek(a,b,c) (int)lseek(a,(off_t)(b),c)
+#define Read(a,b,c) (int)read(a,b,(size_t)c)
+#define Write(a,b,c) (int)write(a,b,(size_t)c)
 
 struct dent { char path[MAXPATH];
 		DIR *dir;};
@@ -202,7 +205,7 @@ char *buffer;
   int nread;
 
   if(Lseek(fd,offset,SEEK_SET) < 0) { *iostat = errno; return; }
-  nread = read(fd,buffer,length);
+  nread = Read(fd,buffer,length);
   if(nread < 0) *iostat = errno; 
   else if(nread != length) *iostat = EIO;
 }
@@ -217,7 +220,7 @@ char *buffer;
   int nwrite;
 
   if(Lseek(fd,offset,SEEK_SET) < 0) { *iostat = errno; return; }
-  nwrite = write(fd,buffer,length);
+  nwrite = Write(fd,buffer,length);
   if(nwrite < 0) *iostat = errno; 
   else if(nwrite != length) *iostat = EIO;
 }
