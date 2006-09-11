@@ -51,9 +51,10 @@ c    rjs  17aug93 Handle offsets somewhat better, using co routines.
 c		  W-axis change.
 c    rjs  31jan95 Correct u-v-w coordinate geometry. Use 3D equation
 c		  for phases of a point source.
+c    rjs   9mar95 Turn off geometry correction for "imhead" option.
 c************************************************************************
 c*ModelIni -- Ready the uv data file for processing by the Model routine.
-c&mchw
+c&rjs
 c:model
 c+
 	subroutine ModelIni(tmod,tvis,sels,flags)
@@ -414,10 +415,19 @@ c
 c
 c  Determine the uvw conversion matrix to account for geometry differences.
 c
-	x1(1) = 0
-	x1(2) = 0
-	call coCvt(tvis,'op/op',x1,'aw/aw',x2)
-	call coGeom(tmod,'aw/aw',x2,ucoeff,vcoeff)
+	if(imhead)then
+	  ucoeff(1) = 1
+	  ucoeff(2) = 0
+	  ucoeff(3) = 0
+	  vcoeff(1) = 0
+	  vcoeff(2) = 1
+	  vcoeff(3) = 0
+	else
+	  x1(1) = 0
+	  x1(2) = 0
+	  call coCvt(tvis,'op/op',x1,'aw/aw',x2)
+	  call coGeom(tmod,'aw/aw',x2,ucoeff,vcoeff)
+	endif
 c
 c  If we are applying clipping, we need to know the polarisation type
 c  of the model.
@@ -1344,3 +1354,4 @@ c------------------------------------------------------------------------
 	calcur = 0
 	ncals = 0
 	end
+
