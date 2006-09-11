@@ -257,8 +257,11 @@ c
 	else
 	  call bug('f','Unrecognised format in tinGett')
 	endif
-	if(.not.ok)
-     *	  call bug('f','Error decoding text file angle or time')
+	if(.not.ok)then
+	  if(length.gt.0)
+     *	    call bug('w','Error decoding '//string(1:length))
+	  call bug('f','Error decoding text file angle or time')
+	endif
 c
 	end
 
