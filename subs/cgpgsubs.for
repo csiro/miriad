@@ -103,6 +103,7 @@ c     nebk   23dec94     Strings (str1:4) not long enough in ANNWINCG
 c                        Increase length of STR1 in CONFMTCG
 c     nebk   05jan95     Replace PGGRAY by new PGIMAG. 
 c     nebk   14apr95     Label grey scales as "pixel maps" in ANNGRSCG
+c     nebk   11aug95     Add arcmin labels and argument nofirst to AXLABCG
 c**********************************************************************
 c
 c* annboxCG -- Annotate plot with information from a box image 
@@ -778,13 +779,14 @@ c* axlabCG -- Label axes
 c& nebk
 c: plotting
 c+
-      subroutine axlabcg (gaps, nx, ny, nz, nlast, iplot, xopts, yopts,
-     +   xdispl, ydispb, labtyp, xlabel, ylabel, xxopts, yyopts)
+      subroutine axlabcg (nofirst, gaps, nx, ny, nz, nlast, iplot, 
+     +   xopts, yopts, xdispl, ydispb, labtyp, xlabel, ylabel, 
+     +   xxopts, yyopts)
 c
       implicit none
       real xdispl, ydispb
       integer nx, ny, nz, nlast, iplot
-      logical gaps
+      logical gaps, nofirst
       character xopts*(*), yopts*(*), xxopts*(*), yyopts*(*),
      +  xlabel*(*), ylabel*(*), labtyp(2)*(*)
 c
@@ -792,6 +794,7 @@ c  Label axes and prepare options strings for PGTBOX according to whether
 c  the sub-plots abut each other or not
 c
 c  Input
+c    nofirst No first x-axis label for any subplto but left most
 c    gaps    False means sub-plots abut, else they don't
 c    nx,ny   Number of sub-plots in x and y directions on page
 c    nz      Total number of sub-plots that will be drawn
@@ -829,11 +832,12 @@ c
 c
 c Write x-axis label and prepare options string for numeric labelling
 c
-          if (mod(jplot,nx).eq.1) then
-            xxopts = xopts(1:ix)//'N'
-          else
+          if (nofirst .and. mod(jplot,nx).ne.1) then
             xxopts = xopts(1:ix)//'NF'
+          else
+            xxopts = xopts(1:ix)//'N'
           end if
+c
           call pgmtxt ('B', ydispb, 0.5, 0.5, xlabel)
         end if
 c
@@ -1147,12 +1151,12 @@ c set label type for 3rd axis value
 c
           if (types(1).eq.'DEC' .or. types(1).eq.'LATI') then
             ltype = 'hms'
-            if (labtyp(1).eq.'arcsec' .or. labtyp(1)(4:6).eq.'deg')
-     +         ltype = labtyp(1)
+            if (labtyp(1).eq.'arcsec' .or. labtyp(1).eq.'arcmin' .or.
+     +          labtyp(1)(4:6).eq.'deg') ltype = labtyp(1)
           else if (types(2).eq.'DEC' .or. types(2).eq.'LATI') then
             ltype = 'hms'
-            if (labtyp(2).eq.'arcsec' .or. labtyp(2)(4:6).eq.'deg')
-     +         ltype = labtyp(2)
+            if (labtyp(2).eq.'arcsec' .or. labtyp(2).eq.'arcmin' .or.
+     +          labtyp(2)(4:6).eq.'deg') ltype = labtyp(2)
           end if
         else if (types(3).eq.'DEC' .or. types(3).eq.'LATI') then
 c  
@@ -1161,12 +1165,12 @@ c set label type for 3rd axis value
 c
           if (types(1).eq.'RA' .or. types(1).eq.'LONG') then
             ltype = 'dms'
-            if (labtyp(1).eq.'arcsec' .or. labtyp(1)(4:6).eq.'deg')
-     +         ltype = labtyp(1)
+            if (labtyp(1).eq.'arcsec' .or. labtyp(1).eq.'arcmin' .or.
+     +          labtyp(1)(4:6).eq.'deg') ltype = labtyp(1)
           else if (types(2).eq.'RA' .or. types(2).eq.'LONG') then
             ltype = 'dms'
-            if (labtyp(2).eq.'arcsec' .or. labtyp(2)(4:6).eq.'deg')
-     +         ltype = labtyp(2)
+            if (labtyp(2).eq.'arcsec' .or. labtyp(2).eq.'arcmin' .or.
+     +          labtyp(2)(4:6).eq.'deg') ltype = labtyp(2)
           end if
         end if
 c
