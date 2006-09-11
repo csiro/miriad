@@ -298,6 +298,7 @@ c    rjs   13dec95  Eliminate min image size.
 c    rjs   29feb96  Call xyflush after each plane.
 c    rjs   12jul96  Be fore forgiving if beam too big -- just make it smaller.
 c    rjs   20jun97  Correct handling of multiple stokes in slopintp.
+c    rjs   07jul97  Change coaxdesc to coaxget.
 c  Bugs:
 c
 c------------------------------------------------------------------------
@@ -725,7 +726,7 @@ c
 	naxis = 2
 	call coSetd(coOut,'crpix1',dble(bnx/2+1))
 	call coSetd(coOut,'crpix2',dble(bny/2+1))
-	call coAxDesc(coOut,3,ctype,crpix,crval,cdelt)
+	call coAxGet(coOut,3,ctype,crpix,crval,cdelt)
 	if(mosaic.and.sdb.and.npnt.eq.1)then
 	  naxis = naxis + 1
 	  imsize(naxis) = 2
