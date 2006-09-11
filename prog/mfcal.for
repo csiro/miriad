@@ -88,6 +88,7 @@ c    rjs   3aug94 Add options=oldflux.
 c    rjs  23aug94 Improve hashing algorithm.
 c    rjs   6sep94 Improve error message.
 c    rjs   5oct94 Support linetype averaging.
+c    rjs  13jan96 Increase MAXHASH.
 c
 c  Problems:
 c    * Should do simple spectral index fit.
@@ -1124,7 +1125,7 @@ c------------------------------------------------------------------------
 	parameter(PolMin=-6,PolMax=1)
 	include 'maxdim.h'
 	integer MAXHASH,MAXPOL
-	parameter(MAXHASH=MAXANT*MAXCHAN,MAXPOL=2)
+	parameter(MAXHASH=2*MAXANT*MAXCHAN,MAXPOL=2)
 c
 	integer nchan,nbad,nauto,nreg,ngood,ninter,i1,i2,p,i,VisId
 	double precision preamble(4),tfirst,tlast
