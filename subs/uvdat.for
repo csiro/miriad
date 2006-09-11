@@ -74,6 +74,7 @@ c		  and add QQ and UU support for circulars.
 c    rjs  06jan98 Change uvgetvrr to uvrdvrr when getting chi.
 c    rjs  06jan98 Change in uvlkcorr to sidestep a compiler bug on IRIX machines.
 c    rjs  26mar98 Comment change only.
+c    rjs   6sep99 Added "lflag" parameter to "line" keyword.
 c
 c  User-Callable Routines:
 c    uvDatInp(key,flags)
@@ -206,7 +207,7 @@ c  Determine the input linetype.
 c
 	line = ' '
 	if(dodata)then
-	  call keyline(line,nchan,lstart,lwidth,lstep)
+	  call keygline(line,nchan,lstart,lwidth,lstep,lflag)
 	  if(line.eq.' '.and.index(flags,'1').gt.0)nchan = 1
 	endif
 c
@@ -325,8 +326,10 @@ c
 	    endif
 	  endif
 c
-	  if(dodata)
-     * 	    call uvset(tno,'data',line,nchan,lstart,lwidth,lstep)
+	  if(dodata)then
+ 	    call uvset(tno,'data',line,nchan,lstart,lwidth,lstep)
+	    call uvset(tno,'gflag',' ',nint(lflag),0.0,0.0,0.0)
+	  endif
 	  if(doref)
      *	    call uvset(tno,'reference',ref,1,rstart,rwidth,rwidth)
 	  if(dowave)
