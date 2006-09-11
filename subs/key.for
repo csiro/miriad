@@ -31,6 +31,7 @@ c    nebk  23nov92    Add mkeyd.  rjs spits dummy.
 c    rjs   04dec92    Rewrite keyi, so that mchw's new hex/octal conversion
 c		      routine is used.
 c    rjs   19sep95    Extra checks.
+c    rjs   19feb97    More robust to spaces in .def files.
 c************************************************************************
 c* KeyIni -- Initialise the `key' routines.
 c& pjt
@@ -94,12 +95,12 @@ c
      *	        'Failed to open parameter file ' // arg(1:len1(arg)))
     	    call txtread(lun,arg,arglen,status)
 	    do while(status.eq.0)
-	      if(arglen.eq.len(arg)) then
-                  call output('Read: '//arg)
-                  call bug('f',
-     *		  'KeyIni: Input parameter too long for buffer')
+	      if(arglen.ge.len(arg)) then
+                call output('Reading '//arg)
+                call bug('f','Input parameter too long for buffer')
               endif
-	      call keyput(arglen,arg)
+	      if(arglen.ne.0)arglen = len1(arg(1:arglen))
+	      if(arglen.ne.0)call keyput(arglen,arg)
 	      call txtread(lun,arg,arglen,status)
 	    enddo
 	    call txtclose(lun)
