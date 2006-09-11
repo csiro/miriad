@@ -1,7 +1,7 @@
 c************************************************************************
-c*PgHline -- Histogram line plot for pgplot.
-c:plotting,uv-data
+c* PgHline -- Histogram line plot for pgplot.
 c& mchw
+c: plotting,uv-data
 c+
 	subroutine PgHline(npts,x,y,gapfac)
 c
@@ -22,6 +22,7 @@ c--
 c History
 c    02nov89	mchw	original version
 c    02apr94    nebk    add pgbbuf/pgebuf calls
+c    24may94    mjs     reinserted Mel's docs
 c-------------------------------------------------------------------------
 	integer start,end,i
 	logical gap,reverse
