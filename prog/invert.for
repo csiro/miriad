@@ -293,7 +293,7 @@ c    nebk  29sep95  Fix typo for irked user; "unform -> uniform"
 c    rjs   30oct95  slop=xxx,interp was not workin g as advertised.
 c    rjs    1nov95  Default value for imsize. Better default cell and sup.
 c		    Sub-uniform weighting.
-c
+c    rjs   12nov95  Check imsize somewhat better.
 c  Bugs:
 c
 c------------------------------------------------------------------------
@@ -373,6 +373,8 @@ c
 	call keyi('imsize',nx,0)
 	call keyi('imsize',ny,nx)
 	if(max(nx,ny).gt.MAXDIM)call bug('f','Output image too big')
+	if(double.and.2*max(nx,ny).gt.MAXDIM)
+     *				call bug('f','Output beam too big')
 c
 	defWt = .not.keyprsnt('sup')
 	call keyr('sup',supx,0.)
@@ -478,10 +480,12 @@ c
 	  bnx = nx
 	  bny = ny
 	endif
-	nx = max(nx,16)
-	ny = max(ny,16)
-	bnx = max(bnx,16)
-	bny = max(bny,16)
+	if(mode.eq.'fft')then
+	  nx = max(nx,16)
+	  ny = max(ny,16)
+	  bnx = max(bnx,16)
+	  bny = max(bny,16)
+	endif
 c
 c  Tell about the mean frequency, if necessary.
 c
