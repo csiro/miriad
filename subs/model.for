@@ -44,6 +44,7 @@ c    mchw 02may93 Added default flux to apriori option.
 c    mchw 02jul93 Change flux limit to zero (all entries in flux table)
 c    rjs   6jul93 Do not exceed MAXDIM in model calculation. Fix
 c		  clippind message for cross hand polarisations.
+c    rjs   3aug93 Make sure the FFT is at least 16 in size.
 c************************************************************************
 c*ModelIni -- Ready the uv data file for processing by the Model routine.
 c&mchw
@@ -430,8 +431,8 @@ c
 	if(nz.le.0) call bug('f','Bad value for NAXIS3')
 	if(mfs.and.nz.gt.2)
      *	  call bug('f','Invalid value for NAXIS3 for MFS data')
-	nxd = min(MAXDIM,nextpow2(nx+1))
-	nyd = min(MAXDIM,nextpow2(ny+1))
+	nxd = max(min(MAXDIM,nextpow2(nx+1)),16)
+	nyd = max(min(MAXDIM,nextpow2(ny+1)),16)
 	if(nxd.lt.nx.or.nyd.lt.ny)call bug('f','Model too big')
 	call rdhdr(tmod,'cdelt1',du,0.)
 	call rdhdr(tmod,'cdelt2',dv,0.)
