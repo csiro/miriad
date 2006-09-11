@@ -134,6 +134,8 @@ c                        when *not* labelled as 'hms'
 c     nebk   31oct96     Make sure zp is correct if just one plane
 c                        in NAXLABCG
 c     nebk   14fen97     Add argumebnt val3form to LAB3CG
+c     rjs    15apr97     Mr K was not checking for ANGL axis type in
+c			 LAB3CG -- and causing things to vomit.
 c**********************************************************************
 c
 c* annboxCG -- Annotate plot with information from a box image 
@@ -1328,7 +1330,8 @@ c
           ltype = 'abskms'
         else if (types(3).eq.'FREQ') then
           ltype = 'absghz'
-        else if (types(3).eq.'UV' .or. types(3).eq.'NONE') then
+        else if (types(3).eq.'UV' .or. types(3).eq.'NONE' .or.
+     *           types(3).eq.'ANGL' ) then
           ltype = 'absnat'
         else if (types(3).eq.'RA' .or. types(3).eq.'LONG') then
 c  
