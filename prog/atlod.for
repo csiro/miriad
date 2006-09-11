@@ -204,6 +204,7 @@ c                 package.
 c    rjs  19jul03 Removed option=mmrelax, and made this automatic!
 c    rjs  06dec03 Write out met data, axisrms, axismax data. options=opcorr
 c    rjs  30dec03 Doc change only.
+c    rjs  15feb04 Save input RPFITS name and calcode.
 c
 c  Program Structure:
 c    Miriad atlod can be divided into three rough levels. The high level
@@ -229,7 +230,7 @@ c------------------------------------------------------------------------
 	integer MAXFILES
 	parameter(MAXFILES=128)
 	character version*(*)
-	parameter(version='AtLod: version 1.0 06-Dec-03')
+	parameter(version='AtLod: version 1.0 15-Feb-04')
 c
 	character in(MAXFILES)*64,out*64,line*64
 	integer tno
@@ -575,6 +576,27 @@ c
 	call hiswrite(tno,line)
 	end
 c************************************************************************
+	subroutine PokeName(in)
+c
+	character in*(*)
+c
+c------------------------------------------------------------------------
+	include 'atlod.h'
+	character c*1
+	integer i1,i2,i
+c
+	integer len1
+c
+	i1 = 1
+	i2 = len1(in)	
+	do i=1,i2
+	  c = in(i:i)
+	  if(index('/[]:',c).ne.0)i1 = i + 1
+	enddo
+	if(i1.gt.i2)i1 = 1
+	call uvputvra(tno,'name',in(i1:i2))
+	end
+c************************************************************************
 	subroutine Poke1st(time1,nifs1,nants1)
 c
 	implicit none
@@ -734,17 +756,18 @@ c
 	end
 c************************************************************************
 	subroutine PokeSrc(srcnam,ra1,dec1,obsra1,obsdec1,
-     *						pntra1,pntdec1)
+     *					pntra1,pntdec1,calcode1)
 c
 	implicit none
 	character srcnam*(*)
 	double precision ra1,dec1,obsra1,obsdec1,pntra1,pntdec1
+	character calcode1*(*)
 c
 c  Flush out source information.
 c------------------------------------------------------------------------
 	include 'atlod.h'
 	double precision r1,d1,pntra,pntdec
-	character line*80,sdash*80
+	character line*80,sdash*80,calcode*16
 	integer length,l
 c
 c  Externals.
@@ -804,6 +827,14 @@ c
 	if(pntdec.ne.dec)call uvputvrd(tno,'pntdec',pntdec,1)
 	call uvputvrd(tno,'obsra',obsra,1)
 	call uvputvrd(tno,'obsdec',obsdec,1)
+c
+	calcode = calcode1
+	length = len1(calcode)
+	if(length.eq.0)then
+	  calcode = 'none'
+	  length = len1(calcode)
+	endif
+	call uvputvra(tno,'calcode',calcode(1:length))
 c
 	newpnt = .true.
 	end
@@ -1822,6 +1853,7 @@ c------------------------------------------------------------------------
 	real ut,utprev,utprevsc,u,v,w,weight(MAXCHAN*MAXPOL)
 	complex vis(MAXCHAN*MAXPOL)
 	double precision reftime,ra0,dec0,pntra,pntdec
+	character calcode*16
 c
 c  Information on flagging.
 c
@@ -1851,6 +1883,7 @@ c
 c
 c  Initialise.
 c
+	call PokeName(in)
 	call AtFlush(mflag,scinit,tcorr,scbuf,xflag,yflag,
      *						MAX_IF,ANT_MAX)
 c
@@ -2067,6 +2100,7 @@ c
 		  enddo
 		endif
 		if(NewScan)call PokeInfo(scanno,time)
+		calcode = su_cal(srcno)
 	 	pntra = su_pra(srcno)
 		pntdec = su_pdec(srcno)
 		if(pntra.eq.0.or.pntdec.eq.0)then
@@ -2080,12 +2114,12 @@ c
 		  dec0 = 2*DPI/(360.d0*3600d0*365.25d0) * pm_dec
 		  dec0 = su_dec(srcno) + dec0*(time-reftime)
 		  call PokeSrc(su_name(srcno),ra0,dec0,0.d0,0.d0,
-     *			pntra,pntdec)
+     *			pntra,pntdec,calcode)
 		else if(NewScan.or.NewSrc)then
 c		if(NewScan.or.NewSrc)then
 		  call PokeSrc(su_name(srcno),
      *		  su_ra(srcno),su_dec(srcno),
-     *		  su_rad(srcno),su_decd(srcno),pntra,pntdec)
+     *		  su_rad(srcno),su_decd(srcno),pntra,pntdec,calcode)
 		endif
 	      endif
 c
