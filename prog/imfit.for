@@ -104,6 +104,7 @@ c    rjs  24aug94 Rewrite.
 c    rjs  12sep94 Added error estimates, deconvolution by beam and
 c		  total flux estimates.
 c    rjs  15sep94 Support object=point and object=beam.
+c    rjs  26jan95 Eliminate non-standard string concatenation.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'maxnax.h'
@@ -507,6 +508,7 @@ c  Make the header of the output image.
 c------------------------------------------------------------------------
 	integer i
 	double precision crpix3
+	character umsg*64
 	integer nkeys
 	parameter(nkeys=43)
 	character keyw(nkeys)*8
@@ -535,7 +537,8 @@ c
 	  call wrhdd(lOut,'crpix3',crpix3)
 	endif
 	call hisopen(lOut,'append')
-        call hiswrite (lOut, 'IMFIT: Miriad '//version)
+	umsg = 'IMFIT: Miriad '//version
+        call hiswrite (lOut, umsg)
 	call hisinput(lOut,'IMFIT')
 	call hisclose(lOut)
 	end
