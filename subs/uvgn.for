@@ -23,6 +23,7 @@ c    23sep96 rjs  Mark memory as deallocated after deallocating!
 c    26jun97 rjs  Correct channel numbering when there are multiple
 c		  windows and bandpass averaging taking place.
 c    10dec97 rjs  Check gain table size is correct.
+c    24feb97 rjs  Make "bandpass calibration" work for wide-only files.
 c************************************************************************
 	subroutine uvGnIni(tno1,dogains1,dopass1)
 	implicit none
@@ -150,20 +151,8 @@ c
 c
 	aver = .false.
 c
-c  Make sure we keep track of variables that affect the frequency of the
-c  channels.
-c
-	call uvvarini(tno,vwide)
-	call uvvarset(vwide,'wfreq')
-	call uvvarset(vwide,'wwidth')
-c
-	call uvvarini(tno,vline)
-	call uvvarset(vline,'sfreq')
-	call uvvarset(vline,'sdf')
-	call uvvarset(vline,'nschan')
-c
 c  If the are to do bandpass correction, read the bandpass tables.
-c
+c	
 	if(dopass)call uvGnPsLd(tno,MAXSPECT,nfeeds*nants,nchan,
      *	  nspect,sfreq,sdf,nschan,pTab,nTab)
 c
@@ -171,6 +160,7 @@ c  Get the reference frequency, in case we are doing the delay correction.
 c
 	call rdhdd(tno,'freq0',freq0,0.d0)
 c
+	first = .true.
 	end
 c************************************************************************
 	subroutine uvGnFin()
@@ -513,7 +503,7 @@ c------------------------------------------------------------------------
 	parameter(LINE=1,WIDE=2,VELO=3)
 	integer TYPE,COUNT,START,WIDTH,STEP
 	parameter(TYPE=1,COUNT=2,START=3,WIDTH=4,STEP=5)
-	integer ltype,i,j,bl,i0
+	integer linetype,i,j,bl,i0
 	logical willcg,ok
 	double precision dat(6)
 c
@@ -529,9 +519,9 @@ c
 	  i0 = 1
 	else
 	  call uvinfo(tno,'line',dat)
-	  ltype  = nint(dat(TYPE))
-	  willcg = ltype.eq.LINE
-	  if(ltype.eq.VELO)call bug('f',
+	  linetype  = nint(dat(TYPE))
+	  willcg = linetype.eq.LINE
+	  if(linetype.eq.VELO)call bug('f',
      *	    'Cannot apply bandpass correction with velocity linetype')
 	  if(nint(dat(STEP)).ne.1.and.nint(dat(WIDTH)).ne.1)
      *	    call bug('f','Linetype width and step must be 1')
@@ -664,6 +654,8 @@ c
 c  Determine which table we are to use, and whether the data has
 c  been updated recently.
 c
+	if(first)call uvGnPs1t(tno,vwide,vline)
+	first = .false.
 	if(dowide)then
 	  table = 2
 	  upd = uvvarupd(vwide)
@@ -682,6 +674,34 @@ c
      *	  cref(pDat(table)),lref(pFlags(table)),data,flags,nread)
 c
 	if(dotau)call uvGnPsDl(tau,data,dref(pFreq(table)),freq0,nread)
+	end
+c************************************************************************
+	subroutine uvGnPs1t(tno,vwide,vline)
+c
+	implicit none
+	integer tno,vwide,vline
+c------------------------------------------------------------------------
+	integer WIDE,TYPE
+	parameter(WIDE=2,TYPE=1)
+	double precision data(6)
+c
+c  Initialise the handle to check for a change in the wide channels.
+c
+        call uvvarini(tno,vwide)
+        call uvvarset(vwide,'wfreq')
+        call uvvarset(vwide,'wwidth')
+c
+        call uvvarini(tno,vline)
+	call uvinfo(tno,'line',data)
+	if(nint(data(TYPE)).eq.WIDE)then
+          call uvvarset(vline,'wfreq')
+          call uvvarset(vline,'wwidth')
+	else
+          call uvvarset(vline,'sfreq')
+          call uvvarset(vline,'sdf')
+          call uvvarset(vline,'nschan')
+	endif
+c
 	end
 c************************************************************************
 	subroutine uvGnPsPB(ant1,ant2,p,nfeeds,nants,
