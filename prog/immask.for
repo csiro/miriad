@@ -10,6 +10,7 @@ c        21jun93    formal options= installed
 c    rjs 16sep93    Deleted the undocumented and unused log file option.
 c    pjt 13may94    handle larger cubes in output format 
 c    pjt  8jun94    region= clarification
+c    pjt  4apr96    complain if logic= is not valid, and work in lower case
 c***********************************************************************
 c= immask - mask an image dataset
 c& pjt
@@ -52,6 +53,7 @@ c   No default.
 c@ flag
 c   The value of the mask inside the selected regions. Can be ``true''
 c   or ``false''. Outside selected region it will be its opposite.
+c   A ``true'' value is considerd a good pixel.
 c   Default: true.
 c@ history
 c   Logical, denoting if the history should be updated. This should
@@ -72,7 +74,7 @@ c  Internal parameters.
       CHARACTER  PVERSION*(*)
       INTEGER MAXBOXES, MAXRUNS, MAXNAX
 
-      PARAMETER (PVERSION = 'Version 1.0 13-may-94')
+      PARAMETER (PVERSION = 'Version 1.0 4-apr-96')
       PARAMETER (MAXBOXES=4096, MAXRUNS=3*MAXDIM, MAXNAX=3)
 c
 c  Internal variables.
@@ -118,14 +120,17 @@ c
         ENDIF
       ENDIF
       CALL keyfin
-
 c
+      CALL lcase(logic)
       IF (logic(1:1).EQ.'a') THEN
          lmode=1
+         CALL bug('i','logic:  region .AND. mask')
       ELSEIF (logic(1:1).EQ.'o') THEN
          lmode=2
+         CALL bug('i','logic:  region .OR. mask')
       ELSEIF (logic(1:1).EQ.'n') THEN
          lmode=3
+         CALL bug('i','logic: if (region) .NOT.mask')
       ELSE
 	 lmode = 0
          dohist = .FALSE.
