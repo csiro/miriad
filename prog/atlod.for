@@ -118,6 +118,7 @@ c    rjs   2sep94 Read multiple files.
 c    rjs  21sep94 Change sign convention for XY and YX. Discard dettached
 c		  antennas.
 c    rjs   3nov94 Eliminate spurious error message.
+c    rjs  28nov94 Be more strict about what sampler stats are OK.
 c
 c  Program Structure:
 c    Miriad atlod can be divided into three rough levels. The high level
@@ -143,7 +144,7 @@ c------------------------------------------------------------------------
 	integer MAXFILES
 	parameter(MAXFILES=128)
 	character version*(*)
-	parameter(version='AtLod: version 2-Sep-94')
+	parameter(version='AtLod: version 28-Nov-94')
 c
 	character in(MAXFILES)*64,out*64
 	integer tno
@@ -1583,6 +1584,10 @@ c  samplers are more than 10% away from their nominal values.
 c------------------------------------------------------------------------
 	integer p
 c
+c  Externals.
+c
+	logical SampFlag
+c
 	if(.not.scinit(ifno,i1).or..not.scinit(ifno,i2)
      *			       .or.flag.ne.0)then
 	  do p=1,nstok
@@ -1591,39 +1596,37 @@ c
 	else
 	  do p=1,nstok
 	    if(cstok(p).eq.'XX')then
-	      flags(p) = max(abs(xsamp(1,ifno,i1)-17.3),
-     *			    abs(xsamp(2,ifno,i1)-50.0),
-     *			    abs(xsamp(3,ifno,i1)-17.3),
-     *			    abs(xsamp(1,ifno,i2)-17.3),
-     *			    abs(xsamp(2,ifno,i2)-50.0),
-     *			    abs(xsamp(3,ifno,i2)-17.3)).lt.10
+	      flags(p) = SampFlag(xsamp(1,ifno,i1),xsamp(1,ifno,i2))
 	    else if(cstok(p).eq.'YY')then
-	      flags(p) = max(abs(ysamp(1,ifno,i1)-17.3),
-     *			    abs(ysamp(2,ifno,i1)-50.0),
-     *			    abs(ysamp(3,ifno,i1)-17.3),
-     *			    abs(ysamp(1,ifno,i2)-17.3),
-     *			    abs(ysamp(2,ifno,i2)-50.0),
-     *			    abs(ysamp(3,ifno,i2)-17.3)).lt.10
+	      flags(p) = SampFlag(ysamp(1,ifno,i1),ysamp(1,ifno,i2))
 	    else if(cstok(p).eq.'XY')then
-	      flags(p) = max(abs(xsamp(1,ifno,i1)-17.3),
-     *			    abs(xsamp(2,ifno,i1)-50.0),
-     *			    abs(xsamp(3,ifno,i1)-17.3),
-     *			    abs(ysamp(1,ifno,i2)-17.3),
-     *			    abs(ysamp(2,ifno,i2)-50.0),
-     *			    abs(ysamp(3,ifno,i2)-17.3)).lt.10
+	      flags(p) = SampFlag(xsamp(1,ifno,i1),ysamp(1,ifno,i2))
 	    else if(cstok(p).eq.'YX')then
-	      flags(p) = max(abs(ysamp(1,ifno,i1)-17.3),
-     *			    abs(ysamp(2,ifno,i1)-50.0),
-     *			    abs(ysamp(3,ifno,i1)-17.3),
-     *			    abs(xsamp(1,ifno,i2)-17.3),
-     *			    abs(xsamp(2,ifno,i2)-50.0),
-     *			    abs(xsamp(3,ifno,i2)-17.3)).lt.10
+	      flags(p) = SampFlag(ysamp(1,ifno,i1),xsamp(1,ifno,i2))
 	    else
 	      call bug('f','Unrecognised polarisation type, in GetFg')
 	    endif
 	  enddo
 	endif
 c
+	end
+c************************************************************************
+	logical function SampFlag(samp1,samp2)
+c
+	implicit none
+	real samp1(3),samp2(3)
+c
+c  Flag data if the sampler statistics are bad. Samplers are deemed to
+c  be bad if they deviate by 3% from 17.3 or 0.5% from 50.0
+c
+c  Input:
+c    samp1,samp2  Sampler statistics for the two antennas.
+c  Output:
+c    SampFlag	  True if all the sampler stats are OK. False otherwise.
+c------------------------------------------------------------------------
+	SampFlag =max(abs(samp1(2)-50.0),abs(samp2(2)-50.0)).lt.0.5.and.
+     *		  max(abs(samp1(1)-17.3),abs(samp2(1)-17.3),
+     *		      abs(samp1(3)-17.3),abs(samp2(3)-17.3)).lt.3.0
 	end
 c************************************************************************
 	subroutine SetSC(scinit,scbuf,MAXIF,MAXANT,nq,nif,nant,
