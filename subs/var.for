@@ -32,6 +32,9 @@ c    rjs  29may96 Added "nbin" to uvvariables.
 c    mchw 06aug96 Dimension wideband variables MAXWIDE.
 c    rjs  11oct96 Added delra,deldec,pntra,pntdec.
 c    rjs  23jul97 Added pbtype,xtsys,ytsys,xsampler,ysampler,xyamp
+c    pjt  12oct98 Added cable,jyperka,obsline,project,themt,tsis,tif2
+c                 (they are currently all BIMA specific)
+
 c************************************************************************
 c*VarInit -- Initialise the copy routines.
 c:uv-data
@@ -87,7 +90,7 @@ c
 	integer i
 c
 	integer nvar,nline,nwide,nvelo
-	parameter(nvar=77,nline=8,nwide=3,nvelo=4)
+	parameter(nvar=84,nline=8,nwide=3,nvelo=4)
         character var(nvar)*8,line(nline)*8,wide(nwide)*8,velo(nvelo)*8
 c
 c  Variables to check for a change, for line=channel.
@@ -106,19 +109,23 @@ c
 c  Variables to copy whenever they change.
 c
 	data var/     'airtemp ','antaz   ','antdiam ','antel   ',
-     *	   'antpos  ','atten   ','axisrms ','bin     ',
+     *	   'antpos  ','atten   ','axisrms ','bin     ','cable   ',
      *	   'chi     ','corbit  ','corbw   ','corfin  ',
      *	   'cormode ','coropt  ','cortaper','ddec    ','dec     ',
      *	   'deldec  ','delra   ',
      *	   'dewpoint','dra     ','epoch   ','evector ','focus   ',
      *	   'freq    ','freqif  ','inttime ','ivalued ','jyperk  ',
+     *     'jyperka ',
      *	   'latitud ','longitu ','lo1     ','lo2     ','lst     ',
      *	   'mount   ','nants   ','nbin    ','ntemp   ','ntpower ',
-     *	   'obsdec  ','observer','obsra   ','on      ','operator',
+     *	   'obsdec  ','observer','obsline ',
+     *     'obsra   ','on      ','operator',
      *	   'pbfwhm  ','phaselo1','phaselo2','pntdec  ','pntra   ',
      *	   'phasem1 ','plangle ','plmaj   ','plmin   ','pltb    ',
-     *	   'precipmm','pressmb ','ra      ','relhumid',
-     *	   'source  ','telescop','temp    ','tpower  ','ut      ',
+     *	   'precipmm','pressmb ','project ',
+     *     'ra      ','relhumid',
+     *	   'source  ','telescop','temp    ','themt   ','tif2    ',
+     *     'tpower  ','tsis    ','ut      ',
      *	   'veldop  ','veltype ','version ','vsource ','winddir ',
      *	   'windmph ','delay   ','delay0  ','xtsys   ','ytsys   ',
      *	   'xsampler','ysampler','xyamp   ','pbtype  '/
