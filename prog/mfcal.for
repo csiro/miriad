@@ -87,6 +87,7 @@ c    nebk 30mar94 Add options=interpolate
 c    rjs   3aug94 Add options=oldflux.
 c    rjs  23aug94 Improve hashing algorithm.
 c    rjs   6sep94 Improve error message.
+c    rjs   5oct94 Support linetype averaging.
 c
 c  Problems:
 c    * Should do simple spectral index fit.
@@ -1506,7 +1507,7 @@ c------------------------------------------------------------------------
 	integer CHANNEL,WIDE,MSPECT
 	parameter(CHANNEL=1,WIDE=2,MSPECT=32)
 	integer i,j,n,ispect,ltype,start,nschan0(MSPECT),nspect0,nwide
-	integer chans,ibeg,iend,bdrop,edrop
+	integer chans,ibeg,iend,bdrop,edrop,nwidth,nstep
 	double precision line(6),sfreq0(MSPECT),sdf0(MSPECT),f
 	real wfreq(MSPECT),wwidth(MSPECT)
 c
@@ -1516,8 +1517,8 @@ c
 	  call uvinfo(tno,'line',line)
 	  if(nint(line(2)).ne.nchan)
      *	    call bug('f','Number of channels disagree')
-	  if(nint(line(4)).ne.1.or.nint(line(5)).ne.1)
-     *	    call bug('f','Linetype width or step parameter is not 1')
+	  nstep  = nint(line(5))
+	  nwidth = nint(line(5))
 	  ltype = nint(line(1))
 	  start = nint(line(3))
 	  state(1,1) = 0
@@ -1540,21 +1541,27 @@ c
 	        start = start - nschan0(ispect)
 	        ispect = ispect + 1
 	      enddo
-	      chans = min( nschan0(ispect) - start + 1, n )
-	      bdrop = max(0,edge(1)-start+1)
-	      edrop = max(0,chans+start-1+edge(2)-nschan0(ispect))
+	      chans = min(n,
+     *		(nschan0(ispect) - start + 1 + nstep - 1)/nstep)
+	      bdrop = max(0,edge(1)-start+1 + nstep - 1)/nstep
+	      edrop = max(0,
+     *		nstep*chans+start-1+edge(2)-nschan0(ispect)+nstep-1 )
+     *		/ nstep
 	      if(bdrop+edrop.ge.chans)
      *		call bug('f','Illegal edge parameter')
-	      f = sfreq0(ispect) + sdf0(ispect) * (start-1)
-	      call SetState(state,f,sdf0(ispect),chans,
+	      f = sfreq0(ispect) +
+     *		  sdf0(ispect) * (start - 1 + 0.5*(nwidth-1))
+	      call SetState(state,f,nstep*sdf0(ispect),chans,
      *		maxspect,nspect,sfreq,sdf,nschan,bdrop,edrop)
 	      n = n - chans
-	      start = start + chans
+	      start = start + nstep * chans
 	    enddo
 c
 c  Handle "wide" linetype.
 c
 	  else if(ltype.eq.WIDE)then
+	    if(nstep.ne.1.or.nwidth.ne.1)call bug('f',
+     *	      'Line width and step parameters must be 1 for line=wide')
 	    call uvrdvri(tno,'nwide',nwide,0)
 	    if(nwide.le.0.or.nwide.gt.MSPECT)
      *		call bug('f','Bad value for nwide in DESPECT')
