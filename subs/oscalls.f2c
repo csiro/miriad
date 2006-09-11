@@ -105,7 +105,7 @@ fortran subroutine rmdata(character string)
 {
   char out[MAXLEN];
 
-#ifdef vaxc
+#ifdef vms
   strcpy(out,"rmdir ");
 #else
   strcpy(out,"rm -r ");
@@ -135,7 +135,7 @@ fortran subroutine filedel(character string,integer iostat)
 /*--									*/
 /*----------------------------------------------------------------------*/
 {
-#ifdef vaxc
+#ifdef vms
   *(iostat.addr) = delete(string.zterm);
   if(iostat.val) *(iostat.addr) = vaxc$errno;
 #else
@@ -192,7 +192,7 @@ fortran subroutine mgetenv(character out,character in)
 /*----------------------------------------------------------------------*/
 {
   char *s;
-#ifdef vaxc
+#ifdef vms
   s = in.zterm;
 #else
   s = getenv(in.zterm);
@@ -222,7 +222,7 @@ fortran subroutine delayf(real seconds)
     rjs  23dec92   Included into oscalls.f2c.
 ------------------------------------------------------------------------*/
 {
-#ifdef vaxc
+#ifdef vms
   lib$wait(seconds.addr);
 #else
 #ifdef unicos

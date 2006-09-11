@@ -224,7 +224,7 @@ c
 c  Ultra frame buffer.
 c  ===================
 c
-#ifdef cft
+#ifdef unicos
 #ifdef ULTRA
 	else if(type.eq.'ultra')then
 	  protocol = Ultra
@@ -236,7 +236,7 @@ c
 c  Dump to file.
 c  =============
 c
-#ifdef cft
+#ifdef unicos
 	else if(type.eq.'file'.or.type.eq.'vfile')then
 	  protocol = File
 	  call TVFinit(name(1:length),type.eq.'file')
@@ -246,7 +246,7 @@ c
 c  RasterTech frame buffer.
 c  ========================
 c
-#ifdef FX
+#ifdef alliant
 #ifdef RASTER
 	else if(type.eq.'raster')then
 	  protocol = Raster
@@ -291,7 +291,7 @@ c------------------------------------------------------------------------
 	else if(protocol.eq.Ivas)then
 	  call IvFiddle
 #endif
-#ifdef cft
+#ifdef unicos
 #ifdef ULTRA
 	else if(protocol.eq.Ultra)then
 	  call Ulocal
@@ -534,7 +534,7 @@ c
           call TVwrtofm(1,ofm(1,red))
           call TVwrtofm(2,ofm(1,blue))
           call TVwrtofm(3,ofm(1,green))
-#ifdef cft
+#ifdef unicos
 #ifdef ULTRA
 	else if(protocol.eq.Ultra)then
 	  call uofm(ofm(1,red),ofm(1,blue),ofm(1,green))
@@ -602,7 +602,7 @@ c------------------------------------------------------------------------
 	  call TVcheck(BufSize)
 	else if(protocol.eq.Xas)then
 	  call TVcheck(BufSize)
-#ifdef cft
+#ifdef unicos
 	else if(protocol.eq.File)then
 	  call TVFflush
 #ifdef ULTRA
@@ -674,13 +674,13 @@ c
 	  ymax = symax
 	  channels = schan
 	  levels = slevl
-#ifdef FX
+#ifdef alliant
 #ifdef RASTER
 	else if(protocol.eq.Raster)then
 	  call RSchar(xmax,ymax,channels,levels)
 #endif
 #endif
-#ifdef cft
+#ifdef unicos
 	else if(protocol.eq.File)then
 	  xmax = 1024
 	  ymax = 1024
@@ -740,7 +740,7 @@ c
 	else if(protocol.eq.Ivas)then
 	  call fivasclose(handle)
 #endif
-#ifdef cft
+#ifdef unicos
 	else if(protocol.eq.File)then
 	  call TVFclose
 #ifdef ULTRA
@@ -748,7 +748,7 @@ c
 	  call Ufin
 #endif
 #endif
-#ifdef FX
+#ifdef alliant
 #ifdef RASTER
 	else if(protocol.eq.Raster)then
 	  call RSclose
@@ -948,13 +948,13 @@ c
 	  call fivasMOUSEstatus(button,x,y,7,0)
 	  y = 1023 - y
 #endif
-#ifdef cft
+#ifdef unicos
 #ifdef ULTRA
 	else if(protocol.eq.Ultra)then
 	  call Ucursor(x,y,button)
 #endif
 #endif
-#ifdef FX
+#ifdef alliant
 #ifdef RASTER
 	else if(protocol.eq.Raster)then
 	  call rscursor(x,y,button)
@@ -1029,7 +1029,7 @@ c
 	  LastX = xmin
 	  LastY = 1023-(ymin+ny-1)
 #endif
-#ifdef cft
+#ifdef unicos
 #ifdef ULTRA
 	else if(protocol.eq.Ultra)then
 	  call Uchar(xpix,ypix,channels,levels)
@@ -1346,7 +1346,7 @@ c
 	  call fivasINITall(0)
 	  call fivasGPHset(0,0,1024,1024,0)
 #endif
-#ifdef cft
+#ifdef unicos
 	else if(protocol.eq.File)then
 	  call TVFreset
 #ifdef ULTRA
@@ -1355,7 +1355,7 @@ c
 #endif
 #endif
 
-#ifdef FX
+#ifdef alliant
 #ifdef RASTER
 	else if(protocol.eq.Raster)then
 	  call RSreset
@@ -1677,7 +1677,7 @@ c
      *						  channel-1,-1,0)
 #endif
 c
-#ifdef cft
+#ifdef unicos
 	else if(protocol.eq.File)then
 	  call TVFline(x,y,array,n)
 #ifdef ULTRA
@@ -1686,7 +1686,7 @@ c
 #endif
 #endif
 c
-#ifdef FX
+#ifdef alliant
 #ifdef RASTER
 	else if(protocol.eq.Raster)then
 	  call RSline(x,y,array,n)
@@ -1866,7 +1866,7 @@ c
         continue
 #endif
 c
-#ifdef cft
+#ifdef unicos
       else if(protocol.eq.File)then
         continue
 #ifdef ULTRA
@@ -1875,7 +1875,7 @@ c
 #endif
 #endif
 c
-#ifdef FX
+#ifdef alliant
 #ifdef RASTER
       else if(protocol.eq.Raster)then
         continue
