@@ -519,7 +519,7 @@ c------------------------------------------------------------------------
 	double precision crpix3
 	character umsg*64
 	integer nkeys
-	parameter(nkeys=42)
+	parameter(nkeys=43)
 	character keyw(nkeys)*8
 c
 c  Externals.
@@ -533,7 +533,7 @@ c
      *	  'crpix1  ','crpix2  ',           'crpix4  ','crpix5  ',
      *	  'obstime ','epoch   ','history ','instrume','niters  ',
      *	  'object  ','observer','obsra   ','obsdec  ','pbfwhm  ',
-     *	  'restfreq','telescop','vobs    ','cellscal',
+     *	  'restfreq','telescop','vobs    ','cellscal','pbtype  ',
      *	  'ltype   ','lstart  ','lwidth  ','lstep   ','btype   '/
 c
 	do i=1,nkeys
