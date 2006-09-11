@@ -65,6 +65,7 @@ c    rjs  23sep94 W coordinate support.
 c    rjs  31jul95 Handle plangle in the polarization conversion software.
 c    rjs  10nov95 uvDatSet can disable calibration/Stokes conversion.
 c		  Initialise nPol.
+c    rjs  06dec95 line=chan,0 defaults to selecting all channels.
 c
 c  User-Callable Routines:
 c    uvDatInp(key,flags)
@@ -197,7 +198,7 @@ c  Determine the input linetype.
 c
 	if(dodata)then
 	  call keyline(line,nchan,lstart,lwidth,lstep)
-	  if(nchan.eq.0.and.index(flags,'1').gt.0)nchan = 1
+	  if(line.eq.' '.and.index(flags,'1').gt.0)nchan = 1
 	endif
 c
 c  Determine the reference line, if required.
