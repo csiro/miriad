@@ -110,6 +110,7 @@ c   28sep95 rjs  - Added options=array
 c   29nov95 rjs  - Cope with value being unset.
 c   18may96 rjs  - Correct formating bug in ListSepc
 c   28aug96 rjs  - List source information.
+c   18mar97 rjs  - Consistently write to log file.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
@@ -1004,6 +1005,7 @@ c------------------------------------------------------------------------
 	include 'mirconst.h'
 	character source*32,line*48
 	double precision ra,dec
+	logical more
 	real pltb,plangle,plmaj,plmin,dra,ddec
 c
 c  Externals.
@@ -1012,15 +1014,15 @@ c
 c
 c
 	call uvrdvra(lIn,'source',source,' ')
-	if(source.ne.' ')call output('Source: '//source)
+	if(source.ne.' ')call logwrite('Source: '//source,more)
 c
 	call uvrdvrd(lIn,'ra',ra,0.d0)
 	line = 'RA:  '//hangle(ra)
-	call output(line)
+	call logwrite(line,more)
 c
 	call uvrdvrd(lIn,'dec',dec,0.d0)
 	line = 'DEC: '//rangle(dec)
-	call output(line)
+	call logwrite(line,more)
 c
 	call uvrdvrr(lIn,'dra',dra,0.)
 	call uvrdvrr(lIn,'ddec',ddec,0.)
@@ -1028,13 +1030,13 @@ c
 	  write(line,'(a,f7.1,a,f7.1,a)') 
      *	  	   'Offset RA:',180/PI*3600*dra,
      *		', Offset DEC:',180/PI*3600*ddec,' arcsec'
-	  call output(line)
+	  call logwrite(line,more)
 	endif
 c
 	call uvrdvrr(lIn,'pltb',pltb,0.)
 	if(pltb.gt.0)then
 	  write(line,'(a,f6.1,a)')'Planet temperature:',pltb,' K'
-	  call output(line)
+	  call logwrite(line,more)
 	endif
 c
 	call uvrdvrr(lIn,'plmaj',plmaj,0.)
@@ -1043,10 +1045,10 @@ c
 	if(abs(plmaj*plmin).gt.0)then
 	  write(line,'(a,f7.1,a,f7.1,a)')
      *		'Planet axes:',plmaj,' by',plmin,' arcsec'
-	  call output(line)
+	  call logwrite(line,more)
 	  write(line,'(a,f7.1,a)')
      *		'Planet position angle:',plangle,' degrees'
-	  call output(line)
+	  call logwrite(line,more)
 	endif
 c
 	end
@@ -1068,14 +1070,14 @@ c------------------------------------------------------------------------
 c
 	integer nants,i,n
 	character type*1,line*64,telescop*16
-	logical update,ok
+	logical update,ok,more
 	double precision xyz(3*MAXANT),lat,long,mount
 c
 	character rangle*16
 c
 	call uvrdvra(lIn,'telescop',telescop,' ')
 	if(telescop.ne.' ')
-     *	  call output('Telescope: '//telescop)
+     *	  call logwrite('Telescope: '//telescop,more)
 c
 	call uvprobvr(lIn,'latitud',type,n,update)
 	ok = type.eq.'d'.and.n.eq.1
@@ -1084,7 +1086,7 @@ c
 	else if(ok)then
 	  call uvrdvrd(lIn,'latitud',lat,0.d0)
 	endif
-	if(ok)call output('Latitude:   '//rangle(lat))
+	if(ok)call logwrite('Latitude:   '//rangle(lat),more)
 c
 	call uvprobvr(lIn,'longitu',type,n,update)
 	ok = type.eq.'d'.and.n.eq.1
@@ -1093,17 +1095,17 @@ c
 	else if(ok)then
 	  call uvrdvrd(lIn,'longitu',lat,0.d0)
 	endif
-	if(ok)call output('Longitude: '//rangle(lat))
+	if(ok)call logwrite('Longitude: '//rangle(lat),more)
 c
 	call uvrdvrd(lIn,'mount',mount,-1.d0)
 	ok = mount.ge.0
 	if(.not.ok.and.telescop.ne.' ')
      *	  call obspar(telescop,'mount',mount,ok)
 	if(ok)then
-	  if(nint(mount).eq.0)call output('Mounts: Alt-az')
-	  if(nint(mount).eq.1)call output('Mounts: Equatorial')
+	  if(nint(mount).eq.0)call logwrite('Mounts: Alt-az',more)
+	  if(nint(mount).eq.1)call logwrite('Mounts: Equatorial',more)
 	endif
-	call output(' ')
+	call logwrite(' ',more)
 c
 	call uvprobvr(lIn,'antpos',type,nants,update)
 	if(type.ne.'d')nants = 0
@@ -1114,14 +1116,15 @@ c
 	if(nants.gt.MAXANT)call bug('f','Too many antennas for me')
 	call uvgetvrd(lIn,'antpos',xyz,3*nants)
 c
-	call output('Antenna positions in local equatorial coordinates')
-	call output(' ')
-	call output('    X (meters)   Y (meters)   Z (meters)')
-	call output('    ----------   ----------   ----------')
+	call logwrite(
+     *	  'Antenna positions in local equatorial coordinates',more)
+	call logwrite(' ',more)
+	call logwrite('    X (meters)   Y (meters)   Z (meters)',more)
+	call logwrite('    ----------   ----------   ----------',more)
 	do i=1,nants
 	  write(line,'(2x,1p3g13.4)')
      *		FAC*xyz(i),FAC*xyz(i+nants),FAC*xyz(i+2*nants)
-	  call output(line)
+	  call logwrite(line,more)
 	enddo
 	end
 
