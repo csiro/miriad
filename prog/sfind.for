@@ -277,6 +277,10 @@ c    amh  21apr97  added "auto" option, to give user choice of interactive
 c                  flagging of sources or not.
 c    amh  28apr97  added "negative" option, to give user ability to detect
 c                  negative sources without having to seperately use MATHS.
+c    amh  14may97  fixed bug concerning accidental "exit" button press. If this
+c                  was accidental, user previously had no way (other than
+c                  rerunning program) of accepting source detected when button
+c                  was accidentally pressed.
 c
 c To do:
 c
@@ -330,7 +334,7 @@ c
       data gaps, doabut, dotr /.false., .false., .false./
 c-----------------------------------------------------------------------
       call output (' ')
-      call output ('Sfind: version 1.21, 28-Apr-97')
+      call output ('Sfind: version 1.22, 14-May-97')
       call output (' ')
 c
 c Get user inputs
@@ -835,7 +839,7 @@ c
            write(line,50) xposerr,yposerr,pkfl,pkflerr,intfl,
      +        amaj,amin,posa,sigma*1000.,rms*1000.
           end if
-50        format(1x,f6.3,3x,f5.2,2x,f8.3,x,f6.3,1x,f9.3,1x,
+50        format(1x,f6.3,3x,f5.2,2x,f8.3,1x,f6.3,1x,f9.3,1x,
      +           3(f5.1,1x),f6.3,2x,f6.3)
         end if
         line = radec(1)(1:radeclen(1))//' '//
@@ -861,7 +865,7 @@ c
 c
 c Action depending upon user's button press
 c
-          if (cch.eq.'A') then
+55        if (cch.eq.'A') then
             iloc = iloc + 1
             ysources = ysources + 1
 c
@@ -894,10 +898,15 @@ c they wanted to do, and if so do it. If not, accept the different button
 c as the intended command.
 c
           else if (cch.eq.'X') then
-            call output('Are you sure you want to quit here? '//
-     +                  ' (press again to confirm)')
+            call output('Are you sure you want to quit here?')
+            call output('(press again to confirm, or other key '//
+     +                    'for corresponding action)')
             call cgcur (ww(1), ww(2), cch)
-            if (cch.eq.'X') goto 70
+            if (cch.eq.'X') then
+             goto 70
+            else
+             goto 55
+            end if
           else
             call output ('  Commands are: A (yes), D (no), X (exit).')
           end if
@@ -918,10 +927,10 @@ c
 c
 70    call output (' ')
       write (line,80) sources
-80    format('Total number of sources detected:',5i)
+80    format('Total number of sources detected:',i5)
       call output(line)
       write (line,90) ysources
-90    format('Number of sources confirmed:',5i)
+90    format('Number of sources confirmed:',i5)
       call output(line)
       call output(' ')
 c
