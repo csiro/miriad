@@ -62,6 +62,8 @@ c     jm 31oct92   Added port number option to device open name.  Also
 c                  removed references to obsolete mxas server and added
 c                  a message to user.  Also added warning to tvlocal for
 c                  devices which do not support this option.
+c     jm 16may97   Changed to permit a different host name and port for
+c                  the panel server.
 c************************************************************************
 c* TvOpen -- Open an image display device.
 c& jm
@@ -77,14 +79,18 @@ c  Tv model.
 c
 c  Input:
 c    device	Name of device. This is of the form:
-c		  type@name
+c		  type@name[/pname[:pport]]
 c		or
-c		  type:port@name
+c		  type:port@name[/pname[:pport]]
 c		Here "name" is the physical device name, or the
 c		name of the server (for network display servers). If
 c               the server type permits alternate port numbers, they
-c               may be specified using the second input form.  "Type"
-c		is the device or server type. Legitimate values are:
+c               may be specified using the second input form.  The
+c               terms in brackets are optional designations for panel
+c               servers and, while they may be included (see the
+c               example below) in the device specification, they are
+c               ignored by this routine.  "Type" is the device or
+c               server type.  Legitimate values are:
 c		  'ivas'	IVAS server (on VMS only)
 c		  'sss'		Sun screen server.
 c		  'xmtv'	X-window screen server with buttons.
@@ -99,6 +105,11 @@ c		  ivserve@castor  An IVAS server on machine castor.
 c		  xmtv@colo       A XMTV server on machine colo.
 c		  xmtv:5001@astro A XMTV server on machine astro
 c                                 communicating via port number 5001.
+c		  xmtv:5001@astro/earth:5010
+c                                 A XMTV server on machine astro
+c                                 communicating via port number 5001
+c                                 with a panel server on machine earth
+c                                 communicating via port number 5010.
 c
 c--
 c------------------------------------------------------------------------
@@ -118,7 +129,9 @@ c
 c  Determine the name and type of the display device.
 c
 	length = len1(device)
-	i = index(device,'@')
+	i = index(device,'/')
+	if (i .ne. 0) length = i - 1
+	i = index(device(1:length),'@')
 	if(i.le.1.or.i.ge.length)
      *	  call bug('f','TV device names must be of the form type@name')
 	name = device(i+1:length)
