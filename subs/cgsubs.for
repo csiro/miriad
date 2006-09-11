@@ -1,53 +1,37 @@
 c**********************************************************************
 c     A collection of subroutines shared by the programs CGDISP,
-c     CGSPEC, CGCURS, CGSLICE, REGRID, IMBIN and UVSUB. 
+c     CGSPEC, CGCURS, CGSLICE, and IMBIN.
 c
 c
 c  angconcg :  Convert between radians and labtyp angular units
 c  apptrfcg :  Apply transfer function to image
-c  axabscg  :  Return an "abs" axis label type for given generic axis type
-c  axfndcg  :  Find a generic axis type
-c  axtypcg  :  Returns generic axis label type of given axis
 c  chkdescg :  Compare a real axis descriptor from two images
-c  chkdimcg :  Check image dimensions acceptable
 c  chnselcg :  Make list of CHAN and REGION selected channel groups
 c  conlevcg :  Compute contour levels
 c  copyimcg :  Copy image
-c  cosdeccg :  Find cos(DEC) for  RA axis
 c  defchrcg :  Give a default char. height for axis & velocity labels
+c  dolabcg  :  See if x or y axes need labelling (numeric and/or ascii)
 c  grfixcg  :  Fix up a grey scale range (includes log taking)
-c  hedinfcg :  Get some header information from image
 c  heqcg    :  Histogram equalize an image
 c  limitscg :  Work out limits and transformation matrix for both axes
-c  limtrcg  :  Work out limits and transformation matrix for one axis
 c  maskorcg :  OR mask of mask image with mask of data image
 c  matchcg  :  Match string with allowed types
 c  nxnycg   :  Work out number of sub-plots per page
 c  opimcg   :  Open an image and return axis descriptors
 c  optcg    :  Version of BobS options, but without the fatalities
 c  ol2pixcg :  Convert overlay location in specified coords to pixels
-c  pix2wcg  :  Convert from image pixels to world coord of requested type
-c  pix2wfcg :  Convert from image pixels to world coord of requested type
-c              and format in string
-c  pixi2wcg :  Find pixel increment in world coordinates
 c  ppconcg  :  Convert between unbinned full image pixels and binned
 c              subimage pixels
 c  readbcg  :  Read blanking mask form mask image
 c  readimcg :  Read in image dealing with averaging and blanking
-c  savdescg :  Make a copy of the axis descriptors
 c  setccscg :  Set rjs coordinate conversion strings for tick labelling
 c  setcolcg :  Set a PGPLOT colour for multiple line graphics on 1 plot
-c  setdescg :  Set axis descriptors for an image by copying from another
+c  setlabcg :  Set axis labels
 c  strprpcg :  Prepare string by stripping extra white space and
 c              delimitering fields by commas
-c  stroptcg :  Strip characters from options string
 c  subinccg :  Step to next sub-plot
-c  sunitcg  :  Set pixel units base upon requested label type
 c  wedgincg :  Work out if greys cale wedges inside ro outside subplots
 c  windfidcg:  Adjust window size to fit an integral number of bins
-c  w2pixcg  :  Convert from world coord of given type to image pixels
-c  w2wcg    :  Convert between world coord types
-c  w2wfcg   :  Convert between world coord types and format
 c
 c  History:
 c     nebk   20sep91     Created from PGDISP/PGCURS
@@ -129,6 +113,11 @@ c     nebk   03sep95     Add STROPTCG, ANGCONCG, SETCCSCG
 c     rjs    26sep95     Always label epoch with 'B' or 'J'.
 c     nebk   19oct95     Bias images by pixr(1) rather than image min
 c			 when log or square root transfer function
+c     nebk   14nov95     Remove a number of subroutines whose use is
+c			 no longer required becuase of internal changes
+c                        to the cg* programs and use of cosubs.for; AXABSCG,
+c                        AXFNDCG, AXTYPCG, COSDECCG, PIX2WCG, PIX2WFCG, 
+c                        SAVDESCG, SETDESCG, SUNITCG, W2PIXCG, W2WCG, W2WFCG
 c***********************************************************************
 c
 c* angconCG -- Convert angular coordinates to and from radians
@@ -254,238 +243,6 @@ c
       end
 c
 c
-c* axabsCG -- Give generic "abs" axis label type for generic axis type
-c& nebk
-c: plotting
-c+
-      subroutine axabscg (naxis, gentyp, abstyp)
-c
-      implicit none
-      integer naxis
-      character*(*) gentyp(naxis), abstyp(naxis)
-c
-c  For a given generic axis type, return a sensible absolute axis label type
-c
-c  Input
-c    naxis   Number of axes
-c    gentyp  Array of generic axis type as given by AXTYPCG
-c  Output
-c    abstyp  Array of absolute axis label types
-c           
-c             RA           -> hms
-c             DEC          -> dms
-c             LATI, LONG   -> absdeg
-c             VELO         -> abskms
-c             FREQ         -> absghz
-c             UV           -> abslin
-c             otherwise    -> abslin
-c--
-c-----------------------------------------------------------------
-      integer i
-      character lgtype*8
-c-----------------------------------------------------------------
-      do i = 1, naxis
-        lgtype = gentyp(i)
-        call ucase(lgtype)
-c
-        if (lgtype.eq.'RA') then
-          abstyp(i) = 'hms'
-        else if (lgtype.eq.'DEC') then
-          abstyp(i) = 'dms'
-        else if (lgtype.eq.'LONG' .or. lgtype.eq.'LATI') then
-          abstyp(i) = 'absdeg'
-        else if (lgtype.eq.'VELO') then
-          abstyp(i) = 'abskms'
-        else if (lgtype.eq.'FREQ') then
-          abstyp(i) = 'absghz'
-        else if (lgtype.eq.'UV') then
-          abstyp(i) = 'abslin'
-        else
-          abstyp(i) = 'abslin'
-        end if
-      end do
-c
-      end
-c
-c* axfndCG -- Find a specified generic axis in an image
-c& nebk
-c: plotting
-c+
-      subroutine axfndcg (type, naxis, ctype, iax)
-c
-      implicit none
-      integer naxis, iax
-      character*(*) type, ctype(naxis)
-c
-c  Find generic axis type in image.
-c
-c  Input
-c    type   Generic axis type to find in axis string.  The first axis
-c	    encountered that has this type is returned.  The type
-c           should be one of:
-c           
-c             RA   ->  RA, LL, ELON, GLON
-c             DEC  ->  DEC, MM, ELAT, GLAT
-c             LONG ->  ELON, GLON
-c             LATI ->  ELAT, GLAT
-c             VELO ->  VELO, FELO
-c             FREQ ->  FREQ
-c             UV   ->  UU, VV
-c             RAD  ->  An axis whose increment should be in
-c		       radians.  These are RA, DEC, LAT, LONG axes
-c                      as described by the LHS above.  
-c           Other types are searched for exactly as specified
-c    naxis  Number of axes to search
-c    ctype  Axis types
-c  Output
-c    iax    Axis number that matches "type".  0 if not present
-c--
-c-----------------------------------------------------------------
-      integer i
-      character ltype*8, lctype*8
-c-----------------------------------------------------------------
-      ltype = type
-      call ucase (ltype)	
-      iax = 0
-c
-      do i = 1, naxis
-        lctype = ctype(i)
-        call ucase (lctype)
-c
-        if (ltype.eq.'RA') then
-          if (index(lctype,'RA').ne.0 .or.
-     +        index(lctype,'LL').ne.0) then
-            iax = i
-            return
-          end if
-        else if (ltype.eq.'DEC') then
-          if (index(lctype,'DEC').ne.0 .or.
-     +        index(lctype,'MM').ne.0) then
-            iax = i
-            return
-          end if
-        else if (ltype.eq.'LONG') then
-          if (index(lctype,'ELON').ne.0 .or.
-     +        index(lctype,'GLON').ne.0) then
-            iax = i 
-            return
-          end if
-        else if (ltype.eq.'LATI') then
-          if (index(lctype,'ELAT').ne.0 .or.
-     +        index(lctype,'GLAT').ne.0) then
-            iax = i
-            return
-          end if
-        else if (ltype.eq.'VELO') then
-          if (index(lctype,'VELO').ne.0 .or.
-     +        index(lctype,'FELO').ne.0) then
-            iax = i 
-            return
-          end if
-        else if (ltype.eq.'FREQ') then
-          if (index(lctype,'FREQ').ne.0) then
-            iax = i
-            return
-          end if
-        else if (ltype.eq.'RAD') then
-          if (index(lctype,'RA').ne.0 .or.
-     +        index(lctype,'LL').ne.0 .or.
-     +        index(lctype,'DEC').ne.0 .or.
-     +        index(lctype,'MM').ne.0 .or.
-     +        index(lctype,'ELON').ne.0 .or.
-     +        index(lctype,'GLON').ne.0 .or.
-     +        index(lctype,'ELAT').ne.0 .or.
-     +        index(lctype,'GLAT').ne.0) then
-            iax = i
-            return
-          end if
-        else if (ltype.eq.'UV') then
-          if (index(lctype,'UU').ne.0 .or.
-     +        index(lctype,'VV').ne.0) then
-            iax = i
-            return
-          end if
-        else
-          if (index(ctype(i),type).ne.0) then
-            iax = i
-            return
-          end if
-        end if
-      end do
-c
-      end
-c
-c* axtypCG -- Return generic axis type for specified axes
-c& nebk
-c: plotting
-c+
-      subroutine axtypcg (naxis, ctype, type)
-c
-      implicit none
-      integer naxis
-      character*(*) ctype(naxis)
-      character*4 type(naxis)
-c
-c  Return a generic axis type for each axis type.   
-c
-c  Input
-c    naxis    Number of axes to consider
-c    ctype    Array of axis type descriptors
-c  Output
-c    type     Array of generic axis types describing each axis
-c             The generic names returned are one of 
-c                 RA, DEC, LATI, LONG, VELO, FREQ, UV, NONE  where
-c
-c             RA   means CTYPE was one of   RA, LL
-c             DEC  means CTYPE was one of   DEC, MM
-c             LONG means CTYPE was one of   ELON, GLON
-c             LATI means CTYPE was one of   ELAT, GLAT
-c             VELO means CTYPE was one of   VELO, FELO
-c             FREQ means CTYPE was one of   FREQ
-c             UV   means CTYPE was one of   UU, VV
-c             NONE means CTYPE was not recognized
-c             
-c--
-c-----------------------------------------------------------------
-      integer i
-      character lctype*8
-c-----------------------------------------------------------------
-      do i = 1, naxis
-        lctype = ctype(i)
-        call ucase (lctype)
-c
-        if (index(lctype,'RA').ne.0 .or.
-     +      index(lctype,'LL').ne.0) then
-          type(i) = 'RA'
-        else if
-     +     (index(lctype,'DEC').ne.0 .or.
-     +      index(lctype,'MM').ne.0) then
-          type(i) = 'DEC'
-        else if 
-     +     (index(lctype,'ELON').ne.0 .or.
-     +      index(lctype,'GLON').ne.0) then
-          type(i) = 'LONG'
-        else if
-     +     (index(lctype,'ELAT').ne.0 .or.
-     +      index(lctype,'GLAT').ne.0) then
-          type(i) = 'LATI'
-        else if
-     +     (index(lctype,'VELO').ne.0 .or.
-     +      index(lctype,'FELO').ne.0) then
-          type(i) = 'VELO'
-        else if (index(lctype,'FREQ').ne.0) then
-          type(i) = 'FREQ'
-        else if
-     +     (index(lctype,'UU').ne.0 .or.
-     +      index(lctype,'VV').ne.0) then
-          type(i) = 'UV'
-        else
-          type(i) = 'NONE'
-        end if
-      end do
-c
-      end
-c
 c* chkdesCG -- Compare a double precision axis descriptor from two images
 c& nebk
 c: plotting
@@ -528,42 +285,6 @@ c-----------------------------------------------------------------------
 c
       end
 c
-c* chkdimCG -- Check an image's dimensions are OK
-c& nebk
-c: plotting
-c+
-      subroutine chkdimcg (maxnax, maxdim, naxis, size, image)
-c
-      implicit none
-      integer maxnax, maxdim, naxis, size
-      character image*(*)
-c
-c  Check that an image's dimensions are acceptable.
-c
-c  Input:
-c    maxnax      Maximum number of dimensions allowed in image
-c    maxdim      Maximum size of first dimension allowed
-c    naxis       Number of dimensions in contour image
-c    size        SIze of first dimension
-c    image       Image name
-c--
-c-----------------------------------------------------------------------
-      character msg*80
-      integer len1
-c-----------------------------------------------------------------------
-      if (naxis.gt.maxnax) then
-        msg = 'CHKDIMCG: '//image(1:len1(image))//
-     +        ' has too many dimensions'
-        call bug ('f', msg)
-      end if
-c
-      if (size.gt.maxdim) then
-        msg = 'CHKDIMCG: '//image(1:len1(image))//
-     +        ' first dimension too large'
-        call bug ('f', msg)
-      end if
-c
-      end
 c
 c* chnselCG -- Make list of CHAN and REGION selected channel groups
 c& nebk
@@ -669,11 +390,11 @@ c* conlevCG -- Compute contour levels
 c& nebk
 c: plotting
 c+
-      subroutine conlevcg (mirror, maxlev, lcin, cnaxis, csize,
-     +                     levtyp, slev, nlevs, levs, srtlev)
+      subroutine conlevcg (mirror, maxlev, lcin, levtyp, slev, nlevs, 
+     +                     levs, srtlev)
 c
       implicit none
-      integer lcin, cnaxis, csize(cnaxis), nlevs, maxlev, srtlev(maxlev)
+      integer lcin, nlevs, maxlev, srtlev(maxlev)
       real slev, levs(maxlev)
       character*1 levtyp
       logical mirror
@@ -684,8 +405,6 @@ c  Input:
 c    mirror   MUltiply specified contour levsls by -1 and add to list
 c    maxlev   Maximum number of levels allowed
 c    lcin     Handle of contour image
-c    cnaxis   Number of dimensions in contour image
-c    csize    Dimensions of contour image
 c  Input/output:
 c    levtyp   Type of scale factor (percentage or absolute)
 c    slev     Contour scale factor
@@ -695,9 +414,16 @@ c    levs     Contour levels
 c    srtlev   Indexes of array giving levels in increasing order
 c--
 c-----------------------------------------------------------------------
-      integer i, ilev, mlevs
+      include 'maxnax.h'
+      integer i, ilev, mlevs, cnaxis, csize(maxnax)
       real cdmin, cdmax, off, inc
+      character*1 itoaf
 c-----------------------------------------------------------------------
+      call rdhdi (lcin, 'naxis', cnaxis, 0)
+      do i = 1, cnaxis
+        call rdhdi (lcin, 'naxis'//itoaf(i), csize(i), 0)
+      end do
+c
       mlevs = nlevs
       if (nlevs.eq.0) then
 c
@@ -806,62 +532,7 @@ c-----------------------------------------------------------------------
       end do
 c
       end
-c
-c* cosdecCG -- Find cos(DEC) for an RA axis
-c& nebk
-c: plotting
-c+
-      subroutine cosdeccg (iax, naxis, ctype, crval, cosdec, ok)
-c
-      implicit none
-      integer iax, naxis
-      double precision crval(naxis), cosdec
-      character ctype(naxis)*(*)
-      logical ok
-c
-c  If the axis of interest is an RA axis, find cos(DEC) if
-c  the declination axis exists.
-c
-c Input:
-c   iax      Axis of interest in the image
-c   naxis    Number of axes in the image
-c   ctype    Axis names
-c   crval    Axis reference values
-c Output:
-c   cosdec   cos(DEC).  WIll be 1.0 if axis of interest is not
-c            RA, or if DEC axis can't be found 
-c   ok       True if RA asked for and DEC found
-c            True if RA not asked for
-c            False if RA asked for and DEC absent
-c--
-c-----------------------------------------------------------------------
-      integer ira, idec
-c------------------------------------------------------------------------
-c
-c Find RA axis
-c
-      call axfndcg ('RA', naxis, ctype, ira)
-c
-c Is it the one we are interested in
-c
-      if (iax.eq.ira) then
-c
-c Find the DEC axis
-c
-        call axfndcg ('DEC', naxis, ctype, idec)
-        if (idec.gt.0) then
-          ok = .true.
-          cosdec = cos(crval(idec))
-        else
-          ok = .false.
-          cosdec = 1.0
-        end if
-      else
-        ok = .true.
-        cosdec = 1.0
-      end if
-c
-      end
+c  
 c
 c* defchrCG -- Give a default char. height for axis & velocity labels
 c& nebk
@@ -900,6 +571,95 @@ c
 c
       end
 c
+c* dolabCG -- See if axis needs a character and/or numeric label
+c& nebk
+c: plotting
+c+
+      subroutine dolabcg (gaps, dotr, nx, ny, nz, nlast, iplot, labtyp,
+     +                    doaxlab, doaylab, donxlab, donylab)
+c
+      implicit none
+      integer nx, ny, nz, nlast, iplot
+      logical gaps, dotr, doaxlab, doaylab, donxlab(2), donylab(2)
+      character labtyp(2)*(*)
+c
+c  Label axes and prepare options strings for PGTBOX according to whether 
+c  the sub-plots abut each other or not.
+c
+c  Input
+c    gaps    False means sub-plots abut, else they don't
+c    dotr    Label top and right axes too.
+c    nx,ny   Number of sub-plots in x and y directions on page
+c    nz      Total number of sub-plots that will be drawn
+c    nlast   Number of sub-plots on the last row of the last page
+c    iplot   Number of current sub-plot
+c    labtyp  Axis label types
+c  Output
+c    doaxlab True to draw character label for x axis
+c    doaylab True to draw character label for y axis
+c    donxlab True to draw x numeric label; (1) for bottom, (2) for top
+c    donylab True to draw y numeric label; (1) for left, (2) for right
+c--
+c-----------------------------------------------------------------------
+      integer jplot
+c-----------------------------------------------------------------------
+      jplot = mod(iplot,nx*ny)
+      if (jplot.eq.0) jplot = nx*ny
+      doaxlab = .false.
+      doaylab = .false.
+      donxlab(1) = .false.
+      donxlab(2) = .false.
+      donylab(1) = .false.
+      donylab(2) = .false.
+c
+      if (.not.gaps) then
+c
+c When sub-plots abut each other, only label left/bottom along the 
+c left most and bottom axes
+c
+        if (labtyp(1).ne.'none' .and. 
+     +     (jplot.ge.nx*ny-nx+1 .or. iplot.ge.nz-nlast+1 .or.
+     +      iplot+nx.gt.nz)) then
+          doaxlab = .true.
+          donxlab(1) = .true.
+        end if
+c
+c Only put top numeric labels on top row of subplots
+c
+        if (labtyp(1).ne.'none' .and. dotr .and. 
+     +      jplot.le.nx) donxlab(2) = .true.
+c
+c Now y axis
+c
+        if (labtyp(2).ne.'none' .and. 
+     +      (mod(jplot,nx).eq.1 .or. nx.eq.1)) then
+          doaylab = .true.
+          donylab(1) = .true.
+        end if
+c
+c Only write right axis label if rightmost subplot
+c
+        if (labtyp(2).ne.'none' .and. dotr .and. 
+     +      (jplot.eq.nx .or. jplot.eq.nz .or. jplot.eq.nx*ny))
+     +    donylab(2) = .true.
+      else       
+c
+c Each subplot separated by gaps, always write labels
+c
+        if (labtyp(1).ne.'none') then
+          doaxlab = .true.
+          donxlab(1) = .true.
+          if (dotr) donxlab(2) = .true.
+        end if
+        if (labtyp(2).ne.'none') then
+          doaylab = .true.
+          donylab(1) = .true.
+          if (dotr) donylab(2) = .true.
+        end if
+      end if
+c
+      end
+c
 c* grfixCG -- Fix up a grey scale range with optional bias for log taking
 c& nebk
 c: plotting
@@ -931,6 +691,7 @@ c    blankg   Value to use for blanked pixels
 c--
 c-----------------------------------------------------------------------
       real fac
+c-----------------------------------------------------------------------
 c
 c Set default range to data min to max
 c
@@ -967,52 +728,6 @@ c
       blankg = pixr2(1) - (0.0001*(pixr2(2)-pixr2(1)))
 c
       end
-c
-c* hedinfCG -- Get some header information from image
-c& nebk
-c: plotting
-c+
-      subroutine hedinfcg (lun, naxis, size, epoch, crpix, cdelt,
-     +                     crval, ctype, mask)
-c
-      implicit none
-      integer lun, naxis, size(naxis)
-      real epoch
-      double precision cdelt(naxis), crval(naxis), crpix(naxis)
-      character*(*) ctype(naxis)
-      logical mask
-c
-c  Get some header keywords from the image associated with LUN
-c 
-c  Input
-c    lun      Handle of image
-c    naxis    Number of dimensions in image
-c    size     Size of each axis
-c  Output
-c    epoch    Epoch of image
-c    crpix    Array of image reference pixels
-c    cdelt    Array of image increments (natural inits; rad)
-c    crval    Array of image reference values (natural units)
-c    ctype    Array of image axis types
-c    mask     True if there is blanking mask
-c--
-c------------------------------------------------------------------------
-      integer i
-      character str*1, itoaf*1
-      logical hdprsnt
-c---------------------------------------------------------------------
-      do i = 1, naxis
-        str = itoaf(i)
-c
-        call rdhdd (lun, 'crpix'//str, crpix(i), dble(size(i))/2.0)
-        call rdhdd (lun, 'cdelt'//str, cdelt(i), 1.0d0)
-        call rdhda (lun, 'ctype'//str, ctype(i), ' ')
-        call rdhdd (lun, 'crval'//str, crval(i), 0.0d0)
-      end do
-      call rdhdr (lun, 'epoch', epoch, 0.0)
-      mask = hdprsnt (lun, 'mask')
-c
-      end 
 c
 c* heqCG -- Histogram equalize an image
 c& nebk
@@ -1107,36 +822,19 @@ c* limitsCG -- Work out limits and transformation matrix for both axes
 c& nebk
 c: plotting
 c+
-      subroutine limitscg (labtyp, blc, trc, naxis, epoch, crpix, cdelt,
-     +   crval, ctype, doepoch, xmin, xmax, ymin, ymax, ibin, jbin, 
-     +   tr, xlabel, ylabel)
+      subroutine limitscg (blc, ibin, jbin, tr)
 c
       implicit none
-      integer blc(*), trc(*), naxis, ibin, jbin
-      double precision cdelt(naxis), crval(naxis), crpix(naxis)
-      real xmin, xmax, ymin, ymax, tr(6), epoch
-      character*(*) labtyp(2), ctype(naxis), xlabel, ylabel
-      logical doepoch
+      integer blc(*), ibin, jbin
+      real tr(6)
 c
-c   Work out window world coordinate limits and transformation array 
-c   depending upon label type.  Return header items to be used
-c   for all following positional computations.
+c   Work out window world coordinate limits and PGPLOT 
+c   transformation matrix
 c
 c     Input
-c       labtyp       Label type (p, po, ao, rd, l, lo) for x and y axes
-c       blc,trc      Spatial window in unbinned pixels
-c       naxis        Number of axes
-c       crpix        Array of image reference pixels
-c       cdelt        Array of image increments 
-c       crval        Array of image reference values 
-c       ctype        Array of image axis types
-c       epoch        EPoch
-c       doepoch      Write epoch into axis labels
+c       blc          Spatial window BLC in unbinned pixels
 c       i,jbin       x and y increments to step through image in
 c     Output
-c       c,ylabel     Labels for axes
-c       xmin,xmax    Spatial window in world coordinates, depends on labtyp
-c       ymin,ymax
 c       tr           Matrix transforming from array indices to world
 c                    coordinates.  Note this accounts for the fact that
 c                    only the desired window is read into the data arrays,
@@ -1145,195 +843,19 @@ c		     accounts for any spatial binning.
 c
 c-----------------------------------------------------------------------
 c
-c Set transformation matrix; converts from pixels to world coordinates.
 c No cross terms in transformation
 c
       tr(3) = 0.0
       tr(5) = 0.0
 c
-c Fill limits and transformation depending on label type
+c x axis
+      tr(1) = blc(1) - 1.0 - (ibin-1)*0.5
+      tr(2) = ibin
 c
-      call limtrcg (doepoch, labtyp(1), naxis, 1, crval, crpix, cdelt, 
-     +   ctype, blc(1), trc(1), epoch, ibin, xmin, xmax, 
-     +   tr(1), tr(2), xlabel)
-      call limtrcg (doepoch, labtyp(2), naxis, 2, crval, crpix, cdelt, 
-     +   ctype, blc(2), trc(2), epoch, jbin, ymin, ymax, 
-     +   tr(4), tr(6), ylabel)
+c y axis
 c
-      end
-c
-c* limtrCG -- Work out limits and transformation matrix for one axis
-c& nebk
-c: plotting
-c+
-      subroutine limtrcg (doepoch, labtyp, naxis, iax, crval, crpix, 
-     +                    cdelt, ctype, blc, trc, epoch, bin, axmin, 
-     +                    axmax, tr1, tr2, label)
-c
-      implicit none
-      integer blc, trc, iax, naxis, bin
-      double precision cdelt(naxis), crval(naxis), crpix(naxis)
-      real axmin, axmax, tr1, tr2, epoch
-      character labtyp*(*), label*(*), ctype(naxis)*(*)
-      logical doepoch
-c
-c  Work out limits and transformation for current axis
-c
-c  Input
-c    doepoch      Write epoch into axis labels
-c    labtyp       Label type for axis
-c    naxis        Number of axes
-c    iax          Number of axis we want to label. Generally 1 or 2
-c    crpix        Array of image reference pixels
-c    cdelt        Array of image increments 
-c    crval        Array of image reference values 
-c    ctype        Array of image axis types
-c    blc,trc      Spatial window in unbinned pixels
-c    epoch        Epoch
-c    bin          Pixel increment that we are stepping through image with
-c  Output
-c    axmin,axmax  Spatial window in world coordinates, depends on labtyp
-c    tr1,2        Matrix elements for current axis for array transforming 
-c                 from array indices to world coordinates.  Note this 
-c                 accounts for the fact that only the desired window is 
-c                 read into the data arrays,  so there is blc offset 
-c                 included in tr.  Thus x = tr1 + tr2*i where
-c                 i is 1 at blc. 
-c    label        Axis label
-c--
-c-----------------------------------------------------------------------
-      include 'mirconst.h'
-      double precision r2a, w1
-      parameter (r2a = 180.0*3600.0/dpi)
-c
-      double precision winc, pix
-      integer l2, ipos, len1, irad, ifrq, ivel, iuv
-      character str*20, estr*5
-      logical ok
-c----------------------------------------------------------------------------
-c
-c Set limits depending on label type and check validity
-c
-      call pix2wcg (.true., dble(blc-0.5), iax, labtyp, naxis, 
-     +              crval, crpix, cdelt, ctype, w1, ok)
-      axmin = w1
-      call pix2wcg (.true., dble(trc+0.5), iax, labtyp, naxis, 
-     +              crval, crpix, cdelt, ctype, w1, ok)
-      axmax = w1
-c
-      if (axmin.eq.axmax) then
-        if (iax.eq.1) call bug ('f', 
-     +    'LIMTRCG: Display limits; XMIN = XMAX -- check REGION')
-        if (iax.eq.2) call bug ('f', 
-     +    'LIMTRCG: Display limits; YMIN = YMAX -- check REGION')
-      end if
-c
-c Set transformation matrix elements depending on label type
-c
-      pix = dble(blc) - 1.0d0 - (bin-1)*0.5d0
-      call pix2wcg (.true., pix, iax, labtyp, naxis, crval, 
-     +              crpix, cdelt, ctype, w1, ok)
-      tr1 = w1
-c
-      call pixi2wcg (.true., iax, labtyp, naxis, crval, crpix, 
-     +               cdelt, ctype, winc, ok)
-      tr2 = winc*bin
-c
-c Write epoch string for label
-c
-      if (doepoch .and. epoch.gt.0.0) then
-        write (estr(2:), 100) nint(epoch)
-100     format (i4)
-        if (epoch.gt.1984) then
-          estr(1:1) = 'J'
-        else
-          estr(1:1) = 'B'
-        end if
-      else
-        estr = ' '
-      end if
-c
-c Remove -** and --* from axis type
-c
-      ipos = index(ctype(iax),'---')
-      if (ipos.ne.0) then
-        str = ctype(iax)(1:ipos-1)
-      else
-        ipos = index(ctype(iax),'--')
-        if (ipos.ne.0) then
-          str = ctype(iax)(1:ipos-1)
-        else
-          str = ctype(iax)(1:len1(ctype(iax)))
-        end if
-      end if
-      l2 = len1(str)
-c
-c Set the axis label depending on label type
-c
-      call axfndcg ('RAD',  1, ctype(iax), irad)
-      call axfndcg ('FREQ', 1, ctype(iax), ifrq)
-      call axfndcg ('VELO', 1, ctype(iax), ivel)
-      call axfndcg ('UV',   1, ctype(iax), iuv)
-c
-      if (labtyp.eq.'abspix') then
-        label = str(1:l2)//' (pixels; '//estr//')'
-        if (estr.eq.' ') label = str(1:l2)//' (pixels)'
-      else if (labtyp.eq.'relpix') then
-        label = str(1:l2)//' offset (pixels; '//estr//')'
-        if (estr.eq.' ') label = str(1:l2)//' offset (pixels)'
-      else if (labtyp.eq.'arcsec') then
-        label = str(1:l2)//' offset (arcsec; '//estr//')'
-        if (estr.eq.' ') label = str(1:l2)//' offset (arcsec)'
-      else if (labtyp.eq.'arcmin') then
-        label = str(1:l2)//' offset (arcmin; '//estr//')'
-        if (estr.eq.' ') label = str(1:l2)//' offset (arcmin)'
-      else if (labtyp.eq.'absdeg') then
-        label = str(1:l2)//' (degrees; '//estr//')'
-        if (estr.eq.' ') label = str(1:l2)//' (degrees)'
-      else if (labtyp.eq.'reldeg') then
-        label = str(1:l2)//' offset (degrees; '//estr//')'
-        if (estr.eq.' ') label = str(1:l2)//' offset (degrees)'
-      else if (labtyp.eq.'hms') then
-        label = str(1:l2)//' ('//estr//')'
-        if (estr.eq.' ') label = str(1:l2)
-      else if (labtyp.eq.'dms') then
-        label = str(1:l2)//' ('//estr//')'
-        if (estr.eq.' ') label = str(1:l2)
-      else if (labtyp.eq.'absghz') then
-        label = str(1:l2)//' (GHz)'
-      else if (labtyp.eq.'relghz') then
-        label = str(1:l2)//' offset (GHz)'
-      else if (labtyp.eq.'abskms') then
-        label = str(1:l2)//' (Km s\u-1\d)'
-      else if (labtyp.eq.'relkms') then
-        label = str(1:l2)//' offset (Km s\u-1\d)'
-      else if (labtyp.eq.'rellin') then
-        if (irad.eq.1) then
-          label = str(1:l2)//' offset (radians)'
-        else if (ifrq.eq.1) then
-          label = str(1:l2)//' offset (GHz)'
-        else if (ivel.eq.1) then
-          label = str(1:l2)//' offset (Km s\u-1\d)'
-        else if (iuv.eq.1) then
-          label = str(1:l2)//' offset (\gl)'
-        else
-          label = str(1:l2)//' offset '
-        end if
-      else if (labtyp.eq.'abslin') then
-        if (irad.eq.1) then
-          label = str(1:l2)//' (radians)'
-        else if (ifrq.eq.1) then
-          label = str(1:l2)//' (GHz)'
-        else if (ivel.eq.1) then
-          label = str(1:l2)//' (Km s\u-1\d)'
-        else if (iuv.eq.1) then
-          label = str(1:l2)//' (\gl)'
-        else
-          label = str(1:l2)
-        end if
-      else if (labtyp.eq.'none') then
-        label = ' '
-      end if
+      tr(4) = blc(2) - 1.0 - (jbin-1)*0.5
+      tr(6) = jbin
 c
       end
 c
@@ -1552,35 +1074,25 @@ c
 c*OpImCG -- Open an image and return axis descriptors
 c:plotting
 c+
-      subroutine opimcg (maxdim, maxnax, in, lin, naxis, size, epoch,
-     +                   mask, crpix, cdelt, crval, ctype)
+      subroutine opimcg (maxnax, in, lin, size, naxis)
 c
       implicit none
 c
-      integer maxdim, maxnax, lin, size(maxnax), naxis
-      double precision crval(maxnax), cdelt(maxnax),
-     +  crpix(maxnax)
-      real epoch(*)
-      character*(*) in, ctype(maxnax)
-      logical mask
+      integer maxnax, lin, size(maxnax), naxis
+      character*(*) in
 c
 c     Open an image and return some header descriptors 
 c
 c   Input:
-c     maxdim     Maximum allowed size of first dimension of image
-c     maxnax     Maximum number of allowed dimenions for image
+c     maxnax     Maximum number of allowed axes
+c     in         Image name
 c   Output:
 c     lin        Handle for image
-c     size       Size of each dimension of image 
-c     naxis      Number of dimensions of image
-c     epoch      Epoch of image
-c     mask       True if blanking mask present for image
-c     crpix      Reference pixels
-c     cdelt      Increments
-c     crval      Reference values
-c     ctype      Axis types
+c     size       SIze of each dimension of image
+c     naxis      Number of dimensions
 c--
 c-----------------------------------------------------------------------
+      include 'maxdim.h'
       integer len1
       character msg*132
 c-----------------------------------------------------------------------
@@ -1591,9 +1103,17 @@ c-----------------------------------------------------------------------
         call bug ('f', msg)
       end if
 c
-      call hedinfcg (lin, naxis, size, epoch, crpix, cdelt,
-     +               crval, ctype, mask)
-      call chkdimcg (maxnax, maxdim, naxis, size, in)
+      if (naxis.gt.maxnax) then
+        msg = 'OPIMCG: '//in(1:len1(in))//
+     +        ' has too many dimensions'
+        call bug ('f', msg)
+      end if
+c
+      if (size(1).gt.maxdim) then
+        msg = 'OPIMCG: '//in(1:len1(in))//
+     +        ' first dimension too large'
+        call bug ('f', msg)
+      end if
 c
       end
 c
@@ -1671,22 +1191,20 @@ c* ol2pixCG -- Convert overlay location in given coordinates to pixels
 c& nebk
 c: plotting
 c+
-      subroutine ol2pixcg (lun, pix3, ofig, otype, off, dsign, nums, 
-     +                     opos, np)
+      subroutine ol2pixcg (lun, pix3, otype, off, dsign, nums, opos, np)
       implicit none
 c
       double precision off(*), nums(*), opos(*), pix3
       integer lun, dsign(2), np
-      character*(*) otype(2), ofig
+      character*(*) otype(2)
 c
 c Convert overlay location from OTYPE units to pixels.  This is 
 c a conversion from true world coordinates to image pixels
 c
 c Input
 c   lun       Handle of image
-c   pix3       Third axis pixel (channel) that we are displaying 
+c   pix3      Third axis pixel (channel) that we are displaying 
 c             this overlay on
-c   ofig      Overlay figure type
 c   otype     Overlay units  for each axis ('arcsec' etc)
 c   dsign     SIgn for dms axes. +/-1  
 c   nums      The array of numbers read from the overlay file
@@ -1739,495 +1257,7 @@ c
       opos(1) = wout(1)
       opos(2) = wout(2)
 c
-c If this overlay is a 'line' type, there is another location to do
-c 
-      if (ofig.eq.'line') then
-        do i = 1, 2
-          if (typei(i).eq.'hms') then
-            win(i) = nums(ip) + nums(ip+1)/60.0d0 + nums(ip+2)/3600.0d0
-            win(i) = win(i) * dpi / 12.0d0
-            ip = ip + 3
-          else if (typei(i).eq.'dms') then
-            win(i) = abs(nums(ip)) + nums(ip+1)/60.d0 + 
-     +               nums(ip+2)/3600.0d0
-            win(i) = dsign(i) * abs(win(i)) * dpi / 180.0d0
-            ip = ip + 3
-          else
-            win(i) = nums(ip) + off(i)
-            ip = ip + 1
-          end if
-        end do
-c
-c Convert location to absolute pixels
-c
-        call w2wco (lun, 3, typei, ' ', win, typeo, ' ', wout)
-        opos(3) = wout(1)
-        opos(4) = wout(2)
-      end if
       np = ip - 1
-c
-      end
-c
-c* pix2wcg -- Convert from image pixel to world coordinate of given type
-c& nebk
-c: plotting
-c+
-      subroutine pix2wcg (domsg, pixel, iax, labtyp, naxis, crval, 
-     +                    crpix, cdelt, ctype, world, ok)
-c
-      implicit none
-      integer naxis, iax
-      double precision cdelt(naxis), crval(naxis), crpix(naxis),
-     +  world, pixel
-      character labtyp*(*), ctype(naxis)*(*)
-      logical ok, domsg
-c
-c  Convert from image pixels to world coordinates, depending on
-c  requested labtyp.
-c
-c  Input:
-c    domsg   If true, give a message warning when requested labtyp does 
-c            not match the axis type in ctype.
-c    pixel   Image pixel value
-c    iax     This is the axis number in which we are interested. Should
-c            be 1, 2 or 3.
-c    labtyp  Requested type of world coordinate.   Should be one
-c            of   abspix, relpix, arcsec, arcmin, hms, dms, absghz, 
-c                 relghz, abskms, relkms, abslin, rellin, none. Note that
-c	     a request for a linear (abs or rel) axis conversion for an
-c	     RA axis will return the RA in radians of polar rotation. 
-c	     That is, the increment will be divided by cos(DEC)
-c	     For labtyp=hms and labtyp=dms the world coordinate is in 
-c	     seconds of time and seconds of arc.
-c    naxis   Number of axes in image
-c    crval   Array of image reference values
-c    crpix   Array of image reference pixels
-c    cdelt   Array of image pixel increments
-c    ctype   Array of image axis types
-c  Output:
-c    world   Output world coordinate.  
-c    ok      If false, then the requested labtyp is inconsistent with
-c            the axis type.  WOrld will have been computed as if
-c            the axis type was as expected.
-c--
-c-----------------------------------------------------------------------
-      include 'mirconst.h'
-      include 'maxdim.h'
-      double precision r2a, r2d
-      integer max2
-c
-      parameter (r2a = 180.0d0*3600.0d0/dpi, max2 = 11 * maxdim,
-     +           r2d = 180.0d0/dpi)
-c
-      double precision rainc, cosdec
-      integer idec, ira, ifrq, ivel, len1, irad
-      character msg*80
-      logical warn(11,maxdim), cdok
-      save warn
-      data warn /max2*.true./
-c----------------------------------------------------------------------------
-      if (iax.lt.1 .or. iax.gt.naxis) 
-     +  call bug ('f', 'PIX2WCG: Invalid axis number')
-c
-      call axfndcg ('RA',   naxis, ctype, ira)
-      call axfndcg ('DEC',  naxis, ctype, idec)
-      call axfndcg ('FREQ', naxis, ctype, ifrq)
-      call axfndcg ('VELO', naxis, ctype, ivel)
-      call axfndcg ('RAD', 1, ctype(iax), irad)
-      call cosdeccg (iax, naxis, ctype, crval, cosdec, cdok)
-c
-c Set world coordinate depending on type
-c
-      ok = .true.
-      if (labtyp.eq.'abspix' .or. labtyp.eq.'none') then
-c
-c Absolute pixels ('none' masquerades as 'abspix')
-c
-        world = pixel
-      else if (labtyp.eq.'relpix') then
-c 
-c Relative pixels
-c
-        world = pixel - crpix(iax)
-      else if (labtyp.eq.'arcsec') then
-c
-c Relative arcseconds
-c
-        if (irad.eq.0) then
-          write (msg, 100) iax
-100       format ('PIX2WCG: Axis ',i1,' does not appear to have pixel ',
-     +            'increments in radians but')
-          if (domsg) call bug ('w', msg)
-          if (domsg) call bug ('w', 
-     +      'PIX2WCG: conversion to "arcsec" requested. Continue '//
-     +      'assuming axis in radians')
-          warn(1,iax) = .false.
-          ok = .false.
-        end if
-c
-        world = (pixel - crpix(iax)) * cdelt(iax) * r2a
-      else if (labtyp.eq.'arcmin') then
-c
-c Relative arcminutes
-c
-        if (irad.eq.0) then
-          write (msg, 100) iax
-          if (domsg) call bug ('w', msg)
-          if (domsg) call bug ('w', 
-     +      'PIX2WCG: conversion to "arcmin" requested. Continue '//
-     +      'assuming axis in radians')
-          warn(1,iax) = .false.
-          ok = .false.
-        end if
-c
-        world = (pixel - crpix(iax)) * cdelt(iax) * r2a / 60.0d0
-      else if (labtyp.eq.'hms') then
-c
-c HH MM SS.S
-c
-        if (iax.ne.ira .and. warn(2,iax)) then
-          write (msg, 200) iax
-200       format ('PIX2WCG: Axis ', i1, ' is not RA but conversion ',
-     +            'to "hms"')
-          if (domsg) call bug ('w', msg)
-          if (domsg) call bug ('w', 
-     +      'PIX2WCG: requested.  Continue assuming axis in radians')
-          warn(2,iax) = .false.
-          ok = .false.
-        end if
-c
-        if (idec.eq.0) call bug ('f', 
-     +    'PIX2WCG: No DEC axis found; cannot convert RA to "hms"')
-c
-c Work out in radians
-c
-        world = ((pixel-crpix(iax))*cdelt(iax)/cosdec)+crval(iax)
-c
-c Convert to seconds of time
-c
-        world = world * r2a / 15.0
-      else if (labtyp.eq.'dms') then
-c
-c DD MM SS.S
-c
-        if (iax.ne.idec .and. warn(3,iax)) then
-          write (msg, 300) iax
-300       format ('PIX2WCG: Axis ', i1, ' is not DEC but conversion ',
-     +            'to "dms"')
-          if (domsg) call bug ('w', msg)
-          if (domsg) call bug ('w', 
-     +      'PIX2WCG: requested.  Continue assuming axis in radians')
-          warn(3,iax) = .false.
-          ok = .false.
-        end if
-c
-c Work out in radians
-c
-        world = ((pixel-crpix(iax))*cdelt(iax)) + crval(iax)
-c
-c Convert to seconds
-c
-        world = world * r2a 
-      else if (labtyp.eq.'absghz') then
-c
-c Absolute frequency
-c
-        if (iax.ne.ifrq .and. warn(4,iax)) then
-          write (msg, 400) iax
-400       format ('PIX2WCG: Axis ', i1, 
-     +            ' is not FREQ but conversion to "absghz"')
-          if (domsg) call bug ('w', msg)
-          if (domsg) call bug ('w', 
-     +    'PIX2WCG: requested. Continue assuming axis in GHz')
-          warn(4,iax) = .false.
-          ok = .false.
-        end if
-c
-        world = (pixel - crpix(iax)) * cdelt(iax) + crval(iax)
-      else if (labtyp.eq.'relghz') then
-c
-c Relative frequency
-c
-        if (iax.ne.ifrq .and. warn(5,iax)) then
-          write (msg, 500) iax
-500       format ('PIX2WCG: Axis ', i1, 
-     +            ' is not FREQ but conversion to "relghz"')
-          if (domsg) call bug ('w', msg)
-          if (domsg) call bug ('w', 
-     +    'PIX2WCG: requested. Continue assuming axis in GHz')
-          warn(5,iax) = .false.
-          ok = .false.
-        end if
-c
-        world = (pixel - crpix(iax)) * cdelt(iax) 
-      else if (labtyp.eq.'abskms') then
-c
-c Absolute velocity
-c
-        if (iax.ne.ivel .and. warn(6,iax)) then
-          write (msg, 600) iax
-600       format ('PIX2WCG: Axis ', i1, 
-     +            ' is not VELO but conversion to "abskms"')
-          if (domsg) call bug ('w', msg)
-          if (domsg) call bug ('w', 
-     +     'PIX2WCG: requested. Continue assuming axis in Km/s')
-          warn(6,iax) = .false.
-          ok = .false.
-        end if
-c
-        world = (pixel - crpix(iax)) * cdelt(iax) + crval(iax)
-      else if (labtyp.eq.'relkms') then
-c
-c Relative velocity
-c 
-        if (iax.ne.ivel .and. warn(7,iax)) then
-          write (msg, 700) iax
-700       format ('PIX2WCG: Axis ', i1, 
-     +            ' is not VELO but conversion to "relkms"')
-          if (domsg) call bug ('w', msg)
-          if (domsg) call bug ('w', 
-     +     'PIX2WCG: requested. Continue assuming axis in Km/s')
-          warn(7,iax) = .false.
-          ok = .false.
-        end if
-        world = (pixel - crpix(iax)) * cdelt(iax) 
-      else if (labtyp.eq.'abslin') then
-c
-c Absolute linear coordinate.  For RA convert to radians of
-c polar rotation.
-c
-        if (iax.eq.ira .and. idec.eq.0) then
-          if (warn(8,iax)) then
-            write (msg, 800) iax
-800         format ('PIX2WCG: "abslin" requested for RA axis ', i1, 
-     +              ' but no DEC axis')
-            call output (msg)
-            msg = 'PIX2WCG: in image so coordinate is radians on sky'
-            call output (msg)
-            warn(8,iax) = .false.
-          end if
-        end if
-c
-        rainc = cdelt(iax) / cosdec
-        world = (pixel - crpix(iax)) * rainc + crval(iax)
-      else if (labtyp.eq.'rellin') then
-c
-c Relative linear coordinate.  For RA convert to radians of
-c polar rotation.
-c
-        if (iax.eq.ira .and. idec.eq.0 .and. warn(9,iax)) then
-          write (msg, 900) iax
-900       format ('PIX2WCG: "rellin" requested for RA axis ', i1, 
-     +            ' but no DEC axis')
-          call output (msg)
-          msg = 'PIX2WCG: in image so coordinate is radians on sky'
-          call output (msg)
-          warn(9,iax) = .false.
-        end if
-        rainc = cdelt(iax) / cosdec
-        world = (pixel - crpix(iax)) * rainc 
-      else if (labtyp.eq.'reldeg') then
-c
-c Relative degrees
-c
-        if (irad.eq.0) then
-          write (msg, 910) iax
-910       format ('PIX2WCG: Axis ',i1,' does not appear to have pixel ',
-     +            'increments in radians but')
-          if (domsg) call bug ('w', msg)
-          if (domsg) call bug ('w', 
-     +       'PIX2WCG: conversion to "reldeg" requested. Continue '//
-     +       'assuming axis in radians')
-          warn(10,iax) = .false.
-          ok = .false.
-        end if
-c
-        world = (pixel - crpix(iax)) * cdelt(iax) * r2d
-      else if (labtyp.eq.'absdeg') then
-c
-c Absolute degrees
-c
-        if (irad.eq.0) then
-          write (msg, 920) iax
-920       format ('PIX2WCG: Axis ',i1,' does not appear to have pixel ',
-     +            'increments in radians but')
-          if (domsg) call bug ('w', msg)
-          if (domsg) call bug ('w', 
-     +       'PIX2WCG: conversion to "absdeg" requested. Continue '//
-     +       'assuming axis in radians')
-          warn(11,iax) = .false.
-          ok = .false.
-        end if
-c
-        world = (pixel - crpix(iax)) * cdelt(iax)  + crval(iax)
-        world = world * r2d
-      else
-        msg = 'PIX2WCG: '//labtyp(1:len1(labtyp))//
-     +        ' is an unrecognized world coordinate type'
-        call bug ('f', msg)
-      end if
-c
-      end
-c
-c* pix2wfcg -- Convert from image pixel to world coordinate and format
-c& nebk
-c: plotting
-c+
-      subroutine pix2wfcg (labtyp, iax, pixel, naxis, crval, crpix, 
-     +                     cdelt, ctype, nounit, str, ilen)
-c
-      implicit none
-      integer iax, naxis, ilen
-      double precision crval(naxis), cdelt(naxis), crpix(naxis), pixel
-      character str*(*), labtyp*(*), ctype(*)*(*)
-      logical nounit
-c
-c  Format the specified pixel value in a string according to the
-c  specified label type.   If the label type is inconsistent with
-c  the axis (e.g. asking for "hms" for a non-RA-like axis),
-c  an "abslin" axis type format will result.
-c
-c Input/output:
-c   labtyp Axis label type. May be changed on output to "abslin"
-c          if labtyp is incosnistent with ctype
-c   iax    Axis of pixel
-c   pixel  Absolute pixel value
-c   naxis  Number of axes
-c   crval  Array of reference values
-c   crpix  Array of reference pixels
-c   cdelt  Array of pixel increments
-c   ctype  Array of axis types
-c   nounit If true don't append units to string
-c Output:
-c   str    Formatted string
-c   ilen   Length of str
-c--
-c-----------------------------------------------------------------------
-      double precision world
-      character msg*80, labtyp2*6, unit*20, str1*30
-      logical ok
-      integer len1, il
-c
-      character*30 dangle, dangleh
-c-----------------------------------------------------------------------
-c
-c Convert absolute pixel to label type coordinate
-c
-      labtyp2 = labtyp
-      call pix2wcg (.false., pixel, iax, labtyp2, naxis, crval, crpix,
-     +              cdelt, ctype, world, ok)
-c
-c Axis type did not match request, give linear instead
-c
-      if (.not.ok) then
-        write (msg, 100) iax
-100     format ('PIX2WFCG: type of axis ', i1, ' and requested label')
-        call bug ('w', msg)
-        call bug ('w', 'PIX2WFCG: do not match.  Use "abslin" instead')
-c
-        labtyp2 = 'abslin'
-        call pix2wcg (.false., pixel, iax, labtyp2, naxis, crval, crpix,
-     +                cdelt, ctype, world, ok)
-      end if
-c
-c Format value
-c
-      if (labtyp2.eq.'abspix' .or. labtyp2.eq.'relpix' .or.
-     +    labtyp2.eq.'none') then
-        call strfd (world, '(f8.2)', str1, il)
-      else if (labtyp2.eq.'abskms' .or. labtyp2.eq.'relkms') then
-        call strfd (world, '(1pe12.5)', str1, il)
-      else if (labtyp2.eq.'absghz' .or. labtyp2.eq.'relghz') then
-        call strfd (world, '(1pe11.5)', str1, il)
-      else if (labtyp2.eq.'absdeg' .or. labtyp2.eq.'reldeg') then
-        call strfd (world, '(f8.3)', str1, il)
-      else if (labtyp2.eq.'arcsec' .or. labtyp2.eq.'arcmin' .or.
-     +         labtyp2.eq.'abslin' .or. labtyp2.eq.'rellin') then
-        call strfd (world, '(1pe15.8)', str1, il)
-      else if (labtyp2.eq.'hms') then
-c
-c  Pix2wcg returns RA in seconds of time; dangleh wants hours
-c
-        world = world / 3600.0d0
-c
-c Unwrap if necessary
-c
-        if (world.lt.0.0d0) world = 24.0d0 + world
-        str1 = dangleh(world)
-        il = len1(str1)
-      else if (labtyp2.eq.'dms') then
-c
-c  Pix2wcg returns DEC in seconds of arc; dangle wants degrees
-c
-        world = world / 3600.0d0
-        str1 = dangle(world)
-        il = len1(str1)
-      else
-        msg = 'PIX2WFCG: '//labtyp2(1:len1(labtyp2))//
-     +        ' is an unrecognized world coordinate type'
-        call bug ('f', msg)
-      end if
-c
-c Set coordinate units
-c
-      if (nounit) then
-        str = str1(1:il)
-      else
-        call sunitcg (ctype(iax), labtyp2, unit)
-        str = str1(1:il)//' '//unit
-      end if
-      ilen = len1(str)
-c
-      end
-c
-c* pixi2wcg -- Convert pixel increment to the requested world coordinate
-c& nebk
-c: plotting
-c+
-      subroutine pixi2wcg (domsg, iax, labtyp, naxis, crval, crpix,
-     +                     cdelt, ctype, winc, ok)
-c
-      implicit none
-      integer naxis, iax
-      double precision cdelt(naxis), crval(naxis), crpix(naxis), winc
-      character labtyp*(*), ctype(naxis)*(*)
-      logical ok, domsg
-c
-c  Convert from image pixel increment to a world coordinate increment,
-c  depending on requested type.
-c
-c  Input:
-c    domsg   If true, give a message warning when requested labtyp does 
-c            not match the axis type in ctype.
-c    iax     This is the axis number in which we are interested. Should
-c            be 1, 2 or 3.
-c    labtyp  Requested type of world coordinate.   Should be one
-c            of   abspix, relpix, arcsec, arcmin, hms, dms, absghz, 
-c                 relghz, abskms, relkms, abslin, rellin, none.   Note 
-c	     that a request for a linear (abs or rel) axis conversion 
-c	     for an RA axis will return the RA in radians of polar rotation. 
-c	     That is, the increment will be divided by cos(DEC)
-c    naxis   Number of axes in image
-c    crval   Array of image reference values
-c    crpix   Array of image reference pixels
-c    cdelt   Array of image pixel increments
-c    ctype   Array of image axis types
-c  Output:
-c    winc    The pixel increment in the requested world coordinate type
-c            For labtyp=hms and labtyp=dms the world coordinate is in 
-c            seconds of time and seconds of arc
-c    ok      If false, then the requested type is inconsistent with
-c            the axis type.  WOrld will have been computed as if
-c            the axis type was as expected.
-c--
-c-----------------------------------------------------------------------
-      double precision w1, w2
-c----------------------------------------------------------------------------
-      call pix2wcg (domsg, 1.0d0, iax, labtyp, naxis, crval,
-     +              crpix, cdelt, ctype, w1, ok)
-      call pix2wcg (domsg, 2.0d0, iax, labtyp, naxis, crval,
-     +              crpix, cdelt, ctype, w2, ok)
-      winc = w2 - w1 
 c
       end
 c
@@ -2403,14 +1433,14 @@ c* readimCG -- Read in image dealing with averaging and blanking
 c& nebk
 c: plotting
 c+
-      subroutine readimcg (init, mask, blank, lun, ibin, jbin, krng, 
+      subroutine readimcg (init, blank, lun, ibin, jbin, krng, 
      +                     blc, trc, norm, nimage, image, blanks, dmm)
 c
       implicit none
       real blank, image(*), dmm(2)
       integer nimage(*), lun, ibin(2), jbin(2), krng(2), blc(3),
      +  trc(3)
-      logical blanks, mask, init, norm
+      logical blanks, init, norm
 c
 c  Read in the specified window from the image and apply spatial
 c  and spectral binning as desired
@@ -2418,7 +1448,6 @@ c
 c  Input:
 c    init        True to initialize output array and normalization
 c                image first
-c    mask        True if blanking mask present
 c    blank       Value to use for magic blanking
 c    lun         Handle of image
 c    ibin        Increment and binning for i direction
@@ -2442,10 +1471,14 @@ c--
 c------------------------------------------------------------------------
       include 'maxdim.h'
       real row(maxdim)
-      logical good(maxdim)
+      logical good(maxdim), mask, hdprsnt
       integer i, j, k, ii, jj, pi, po, kst, kav, kend, io, jo,
      +  nii, nji, nio, njo, no
 c------------------------------------------------------------------------
+c
+c Does image have a mask
+c
+      mask = hdprsnt (lun, 'mask')
 c
 c Find size of unbinned and binned images
 c
@@ -2556,39 +1589,6 @@ c
 c
       end
 c
-c* savdesCG --  Save a copy of the axis descriptors
-c& nebk
-c: plotting
-c+
-      subroutine savdescg (naxis, ctype, crval, crpix, cdelt, sctype,
-     +                   scrval, scrpix, scdelt)
-c
-      implicit none
-      integer naxis
-      double precision crval(naxis), cdelt(naxis), crpix(naxis),
-     +  scrval(naxis), scdelt(naxis), scrpix(naxis)
-      character*(*) ctype(naxis), sctype(naxis)
-c
-c  Make a copy of the axis descriptors 
-c
-c  Input
-c    naxis     Number of axes
-c    c*        Axis descriptors
-c  Output
-c    cs*       Copy of axis descriptors
-c--
-c-----------------------------------------------------------------------
-      integer i
-c-----------------------------------------------------------------------
-      do i = 1, naxis
-        sctype(i) = ctype(i)
-        scrval(i) = crval(i)
-        scdelt(i) = cdelt(i)
-        scrpix(i) = crpix(i)
-      end do
-c
-      end
-c
 c* setccsCG -- Set rjs coordinate conversion strings for ticking
 c& nebk
 c: plotting
@@ -2618,11 +1618,11 @@ c
       do i =1, 2
         if (labtyp(i).eq.'hms' .or. labtyp(i).eq.'dms' .or.
      +      labtyp(i).eq.'absdeg' .or. labtyp(i).eq.'abskms' .or.
-     +      labtyp(i).eq.'absghz' .or. labtyp(i).eq.'abslin') then
+     +      labtyp(i).eq.'absghz' .or. labtyp(i).eq.'absnat') then
           ccstr(ip:ip+2) = 'aw/'
         else if (labtyp(i).eq.'arcsec' .or. labtyp(i).eq.'arcmin' .or.
      +           labtyp(i).eq.'reldeg' .or. labtyp(i).eq.'relkms' .or.
-     +           labtyp(i).eq.'relghz' .or. labtyp(i).eq.'rellin') then
+     +           labtyp(i).eq.'relghz' .or. labtyp(i).eq.'relnat') then
           ccstr(ip:ip+2) = 'ow/'
         else if (labtyp(i).eq.'abspix' .or. labtyp(i).eq.'none') then
           ccstr(ip:ip+2) = 'ap/'
@@ -2670,37 +1670,137 @@ c------------------------------------------------------------------------
 c
       end
 c
-c* setdesCG --  Set axis descriptors fro an image by copying from another
+c* setlabCG -- Set axis labels 
 c& nebk
 c: plotting
 c+
-      subroutine setdescg (naxis1, size1, crval1, cdelt1, crpix1, 
-     +   ctype1, epoch1, naxis2, size2, crval2, cdelt2, crpix2, 
-     +   ctype2, epoch2)
+      subroutine setlabCG (lh, labtyp, doepoch, xlabel, ylabel)
 c
       implicit none
-      integer naxis1, size1(naxis1), naxis2, size2(naxis1)
-      double precision crval1(naxis1), crval2(naxis1),
-     +  cdelt1(naxis1), cdelt2(naxis1), crpix1(naxis1), 
-     +  crpix2(naxis1)
-      real epoch1, epoch2
-      character*(*) ctype1(naxis1), ctype2(naxis1)
+      integer lh
+      character*(*) labtyp(2), xlabel, ylabel
+      logical doepoch
 c
-c  Copy axis descriptors from one set to another
+c  Set the axis labels
 c
+c  Input:
+c    lh       Handle of image
+c    labtyp   Axis label types
+c    doepoch  DO we want epoch in string ?
+c  Output
+c    x,ylabel Labels
 c--
 c-----------------------------------------------------------------------
-      integer i
-c------------------------------------------------------------------------
-      naxis2 = naxis1
-      do i = 1, naxis1
-        size2(i) = size1(i)
-        crval2(i) = crval1(i)
-        cdelt2(i) = cdelt1(i)
-        crpix2(i) = crpix1(i)
-        ctype2(i) = ctype1(i)
+      real epoch
+      character estr*5, ctype*9, str*20, label*100
+      integer ipos, iax, l2, len1, irad, ifrq, iuv, ivel
+c-----------------------------------------------------------------------
+c
+c Write epoch string for label
+c
+      call rdhdr (lh, 'epoch', epoch, 0.0)
+      if (doepoch .and. epoch.gt.0.0) then
+        write (estr(2:), 100) nint(epoch)
+100     format (i4)
+        if (epoch.gt.1984) then
+          estr(1:1) = 'J'
+        else
+          estr(1:1) = 'B'
+        end if
+      else
+        estr = ' '
+      end if
+c
+c Loop over axes
+c
+      do iax = 1, 2
+        call ctypeco (lh, iax, ctype)
+        ipos = index(ctype, '---')
+        if (ipos.ne.0) then
+          str = ctype(1:ipos-1)
+        else
+          ipos = index(ctype, '--')        
+          if (ipos.ne.0) then
+            str = ctype(1:ipos-1)
+          else
+            str = ctype(1:len1(ctype))
+          end if
+        end if
+        l2 = len1(str)
+c
+c Set the axis label depending on label type
+c
+        call axfndco (lh, 'RAD',  0, iax, irad)
+        call axfndco (lh, 'FREQ', 0, iax, ifrq)
+        call axfndco (lh, 'VELO', 0, iax, ivel)
+        call axfndco (lh, 'UV',   0, iax, iuv)
+c
+        if (labtyp(iax).eq.'abspix') then
+          label = str(1:l2)//' (pixels; '//estr//')'
+          if (estr.eq.' ') label = str(1:l2)//' (pixels)'
+        else if (labtyp(iax).eq.'relpix') then
+          label = str(1:l2)//' offset (pixels; '//estr//')'
+          if (estr.eq.' ') label = str(1:l2)//' offset (pixels)'
+        else if (labtyp(iax).eq.'arcsec') then
+          label = str(1:l2)//' offset (arcsec; '//estr//')'
+          if (estr.eq.' ') label = str(1:l2)//' offset (arcsec)'
+        else if (labtyp(iax).eq.'arcmin') then
+          label = str(1:l2)//' offset (arcmin; '//estr//')'
+          if (estr.eq.' ') label = str(1:l2)//' offset (arcmin)'
+        else if (labtyp(iax).eq.'absdeg') then
+          label = str(1:l2)//' (degrees; '//estr//')'
+          if (estr.eq.' ') label = str(1:l2)//' (degrees)'
+        else if (labtyp(iax).eq.'reldeg') then
+          label = str(1:l2)//' offset (degrees; '//estr//')'
+          if (estr.eq.' ') label = str(1:l2)//' offset (degrees)'
+        else if (labtyp(iax).eq.'hms') then
+          label = str(1:l2)//' ('//estr//')'
+          if (estr.eq.' ') label = str(1:l2)
+        else if (labtyp(iax).eq.'dms') then
+          label = str(1:l2)//' ('//estr//')'
+          if (estr.eq.' ') label = str(1:l2)
+        else if (labtyp(iax).eq.'absghz') then
+          label = str(1:l2)//' (GHz)'
+        else if (labtyp(iax).eq.'relghz') then
+          label = str(1:l2)//' offset (GHz)'
+        else if (labtyp(iax).eq.'abskms') then
+          label = str(1:l2)//' (Km s\u-1\d)'
+        else if (labtyp(iax).eq.'relkms') then
+          label = str(1:l2)//' offset (Km s\u-1\d)'
+        else if (labtyp(iax).eq.'relnat') then
+          if (irad.eq.1) then
+            label = str(1:l2)//' offset (radians)'
+          else if (ifrq.eq.1) then
+            label = str(1:l2)//' offset (GHz)'
+          else if (ivel.eq.1) then
+            label = str(1:l2)//' offset (Km s\u-1\d)'
+          else if (iuv.eq.1) then
+            label = str(1:l2)//' offset (\gl)'
+          else
+            label = str(1:l2)//' offset '
+          end if
+        else if (labtyp(iax).eq.'absnat') then
+          if (irad.eq.1) then
+            label = str(1:l2)//' (radians)'
+          else if (ifrq.eq.1) then
+            label = str(1:l2)//' (GHz)'
+          else if (ivel.eq.1) then
+            label = str(1:l2)//' (Km s\u-1\d)'
+          else if (iuv.eq.1) then
+            label = str(1:l2)//' (\gl)'
+          else
+            label = str(1:l2)
+          end if
+        else if (labtyp(iax).eq.'none') then
+          label = ' '
+        end if
+c
+        if (iax.eq.1) then
+          xlabel = label
+        else if (iax.eq.2) then
+          ylabel = label
+        end if
       end do
-      epoch2 = epoch1
 c
       end
 c
@@ -2788,33 +1888,6 @@ c
 c
       end 
 c
-c* stroptCG -- Strip PGTBOX options string of tick and grid characters
-c& nebk
-c: plotting
-c+
-      subroutine stroptcg (str, opt)
-      implicit none
-c
-      character*(*) opt, str
-c
-c  Strip out the specified characters from the options string
-c
-c  Input
-c    str    Strip these characters out
-c  Inout/output
-c    opt    PGTBOX options string
-c--
-c-----------------------------------------------------------------------
-      integer len1, il, ip, i
-c-----------------------------------------------------------------------
-      il = len1(str)
-      do i = 1, il
-        ip = index(opt,str(i:i))
-        if (ip.ne.0) opt(ip:ip) = ' '
-      end do
-c
-      end
-c
 c* subincCG -- Step to next sub-plot
 c& nebk
 c: plotting
@@ -2847,86 +1920,6 @@ c-----------------------------------------------------------------------
         vy = vy - vygap - vysize
       else
         vx = vx + vxgap + vxsize
-      end if
-c
-      end
-c
-c
-c* sunitCG -- Set axis units given axis type
-c& nebk
-c: plotting
-c+
-      subroutine sunitcg (ctype, labtyp, units)
-c
-      implicit none
-      character*(*) labtyp, units, ctype
-c
-c  Set the units of a pixel based upon the requested labelling
-c  type and the axis type.  Used for ascii not graphical output
-c  so no PGPLOT escape sequences.
-c
-c  Inputs:
-c    ctype  Axis header CTYPE value
-c    labtyp Axis type
-c  Output:
-c    units  Axis units
-c--
-c-----------------------------------------------------------------------
-      integer ifrq, ivel, irad, iuv
-c-----------------------------------------------------------------------
-      if (labtyp.eq.'hms' .or. labtyp.eq.'dms') then
-        units = ' '
-      else if (labtyp.eq.'arcsec') then
-        units = 'arcsec'
-      else if (labtyp.eq.'arcmin') then
-        units = 'arcmin'
-      else if (labtyp.eq.'absdeg') then
-        units = 'degrees'
-      else if (labtyp.eq.'reldeg') then
-        units = 'offset degrees'
-      else if (labtyp.eq.'abspix' .or. labtyp.eq.'none') then
-        units = 'pixels'
-      else if (labtyp.eq.'relpix') then
-        units = 'offset pixels'
-      else if (labtyp.eq.'absghz') then
-        units = 'GHz'
-      else if (labtyp.eq.'relghz') then
-        units = 'offset GHz'
-      else if (labtyp.eq.'abskms') then
-        units = 'Km/s'
-      else if (labtyp.eq.'relkms') then
-        units = 'offset Km/s'
-      else 
-        call axfndcg ('RAD',  1, ctype, irad)
-        call axfndcg ('FREQ', 1, ctype, ifrq)
-        call axfndcg ('VELO', 1, ctype, ivel)
-        call axfndcg ('UV',   1, ctype, iuv)
-c
-        if (labtyp.eq.'abslin') then
-          if (irad.eq.1) then
-            units = 'radians'
-          else if (ifrq.eq.1) then
-            units = 'GHz'
-          else if (ivel.eq.1) then
-            units = 'Km/s'
-          else if (iuv.eq.1) then
-            units = 'wavelengths'
-          else
-            units = ' '
-          end if
-        else if (labtyp.eq.'rellin') then
-          if (irad.eq.1) then
-            units = 'offset radians'
-          else if (ifrq.eq.1) then
-            units = 'offset GHz'
-          else if (ivel.eq.1) then
-            units = 'offset Km/s'
-          else if (iuv.eq.1) then
-            units = 'offset wavelengths'
-          else
-            units = 'offset'
-          end if
-        end if
       end if
 c
       end
@@ -3108,408 +2101,5 @@ c
 c Size of binned window
 c
       win = size2 / bin2
-c
-      end
-c
-c* w2pixCG -- Convert world coordinate of given type to image pixels
-c& nebk
-c: plotting
-c+
-      subroutine w2pixcg (world, iax, labtyp, naxis, crval, crpix, 
-     +                    cdelt, ctype, pixel, ok)
-c
-      implicit none
-      integer naxis, iax
-      double precision cdelt(naxis), crval(naxis), crpix(naxis),
-     +  world, pixel
-      character ctype(naxis)*(*), labtyp*(*)
-      logical ok
-c
-c  Convert world coordinate of given type to image pixels
-c
-c  Input:
-c    world   World coordinate.  
-c    iax     This is the axis number in which we are interested. Should
-c            be 1, 2 or 3.
-c    labtyp  Given type of world coordinate.   Should be one
-c            of   abspix, relpix, arcsec, arcmin, hms, dms, absghz, 
-c                 relghz, abskms, relkms, abslin, rellin, none.  For 
-c            RA axes linear coordinates are assumed to be in radians of
-c            polar rotation.  For labtyp=hms and labtyp=dms the 
-c            world coordinate is in seconds of time and seconds of arc
-c    naxis   Number of axes in image
-c    crval   Array of image reference values
-c    crpix   Array of image reference pixels
-c    cdelt   Array of image pixel increments
-c    ctype   Array of image axis types
-c  Output:
-c    pixel   Image pixel
-c    ok      If false, the requested type conflicted with the actual
-c            axis type.  The pixel was calculated as if there was 
-c            no conflict.
-c--
-c-----------------------------------------------------------------------
-      include 'mirconst.h'
-      include 'maxnax.h'
-      double precision a2r, d2r
-      integer max2
-c
-      parameter (a2r = dpi / (180.0d0 * 3600.0d0), max2 = 9 * maxnax,
-     +           d2r = dpi / 180.0d0)
-c
-      double precision rad, delra, rainc, cosdec
-      integer ira, idec, ifrq, ivel, len1, irad
-      logical warn(9,maxnax), cdok
-      character msg*80
-      save warn
-      data warn /max2*.true./
-c-----------------------------------------------------------------------
-      if (iax.lt.1 .or. iax.gt.naxis) 
-     +  call bug ('f', 'W2PIXCG: Invalid axis number')
-c
-      call axfndcg ('RA',   naxis, ctype, ira)
-      call axfndcg ('DEC',  naxis, ctype, idec)
-      call axfndcg ('FREQ', naxis, ctype, ifrq)
-      call axfndcg ('VELO', naxis, ctype, ivel)
-      call axfndcg ('RAD', 1, ctype(iax), irad)
-      call cosdeccg (iax, naxis, ctype, crval, cosdec, cdok)
-c
-c Convert to pixels from world coordinate depending upon type
-c 
-      ok = .true.
-      if (labtyp.eq.'abspix' .or. labtyp.eq.'none') then
-c
-c Absolute pixels ('none' masquerading as 'abspix')
-c
-        pixel = world
-      else if (labtyp.eq.'relpix') then
-c
-c Relative pixels
-c
-        pixel = crpix(iax) + world
-      else if (labtyp.eq.'arcsec') then
-c
-c Relative arcseconds
-c
-        if (irad.eq.0) then
-          write (msg, 100) iax
-100       format ('W2PIXCG: Axis ', i1, ' is not RA,DEC,LAT,LON but ',
-     +            'conversion from "arcsec"')
-          call bug ('w', msg)
-          call bug ('w', 
-     +      'W2PIXCG: requested.  Continue assuming axis in radians')
-          warn(1,iax) = .false.
-          ok = .false.
-        end if
-c
-        pixel = world * a2r / cdelt(iax) + crpix(iax)
-      else if (labtyp.eq.'arcmin') then
-c
-c Relative arcminutes
-c
-        if (irad.eq.0) then
-          write (msg, 150) iax
-150       format ('W2PIXCG: Axis ', i1, ' is not RA,DEC,LAT,LON but ',
-     +            'conversion from "arcmin"')
-          call bug ('w', msg)
-          call bug ('w', 
-     +      'W2PIXCG: requested.  Continue assuming axis in radians')
-          warn(1,iax) = .false.
-          ok = .false.
-        end if
-c
-        pixel = world * 60.0d0 * a2r / cdelt(iax) + crpix(iax)
-      else if (labtyp.eq.'hms') then
-c
-c HH MM SS.S
-c
-        if (iax.ne.ira .and. warn(2,iax)) then
-          write (msg, 200) iax
-200       format ('W2PIXCG: Axis ', i1, ' is not RA but conversion ',
-     +            'from "hms"')
-          call bug ('w', msg)
-          call bug ('w', 
-     +      'W2PIXCG: requested.  Continue assuming axis in radians')
-          warn(2,iax) = .false.
-          ok = .false.
-        end if
-c
-        if (idec.eq.0) call bug ('f', 
-     +    'W2PIXCG: No DEC axis found; cannot convert from "hms"')
-c
-c Convert world coordinate in seconds of time to radians
-c
-        rad = 15.d0 * world * a2r
-c
-c Take smallest distance between reference value and location
-c
-        delra = rad - crval(iax)
-        if (abs(delra).gt.dpi) then
-          if (delra.gt.0.0) then
-            delra = delra - 2.0*dpi
-          else
-            delra = delra + 2.0*dpi
-          end if
-        end if
-c
-c Finally convert to pixels
-c
-        pixel = delra*cosdec/cdelt(iax) + crpix(iax)
-      else if (labtyp.eq.'dms') then
-c
-c DD MM SS.S
-c
-        if (iax.ne.idec .and. warn(3,iax)) then
-          write (msg, 300) iax
-300       format ('W2PIXCG: Axis ', i1, ' is not DEC but conversion ',
-     +            'from "dms"')
-          call bug ('w', msg)
-          call bug ('w', 
-     +      'W2PIXCG: requested.  Continue assuming axis in radians')
-          warn(3,iax) = .false.
-          ok = .false.
-        end if
-c
-        rad = world * a2r
-        pixel = (rad-crval(iax))/cdelt(iax) + crpix(iax)
-      else if (labtyp.eq.'absghz') then
-c
-c Absolute frequency
-c
-        if (iax.ne.ifrq .and. warn(4,iax)) then
-          write (msg, 400) iax
-400       format ('W2PIXCG: Axis ', i1, 
-     +            ' is not FREQ but conversion from "absghz"')
-          call bug ('w', msg)
-          call bug ('w', 
-     +    'W2PIXCG: requested. Continue assuming axis in GHz')
-          warn(4,iax) = .false.
-          ok = .false.
-        end if
-        pixel = (world - crval(iax)) / cdelt(iax) + crpix(iax)
-      else if (labtyp.eq.'relghz') then
-c
-c Relative frequency
-c
-        if (iax.ne.ifrq .and. warn(5,iax)) then
-          write (msg, 500) iax
-500       format ('W2PIXCG: Axis ', i1, 
-     +            ' is not FREQ but conversion from "relghz"')
-          call bug ('w', msg)
-          call bug ('w', 
-     +    'W2PIXCG: requested. Continue assuming axis in GHz')
-          warn(5,iax) = .false.
-          ok = .false.
-        end if
-        pixel = world / cdelt(iax) + crpix(iax)
-      else if (labtyp.eq.'abskms') then
-c
-c Absolute velocity
-c
-        if (iax.ne.ivel .and. warn(6,iax)) then
-          write (msg, 600) iax
-600       format ('W2PIXCG: Axis ', i1, 
-     +            ' is not VELO but conversion from "abskms"')
-          call bug ('w', msg)
-          call bug ('w', 
-     +      'W2PIXCG: requested. Continue assuming axis in Km/s')
-          warn(6,iax) = .false.
-          ok = .false.
-        end if
-        pixel = (world - crval(iax)) / cdelt(iax) + crpix(iax)
-      else if (labtyp.eq.'relkms') then
-c
-c Relative velocity
-c
-        if (iax.ne.ivel .and. warn(7,iax)) then
-          write (msg, 700) iax
-700       format ('W2PIXCG: Axis ', i1, 
-     +            ' is not VELO but conversion from "relkms"')
-          call bug ('w', msg)
-          call bug ('w', 'W2PIXCG: "relkms" requested. '//
-     +                   'Continue assuming axis in Km/s')
-          warn(7,iax) = .false.
-          ok = .false.
-        end if
-        pixel = world / cdelt(iax) + crpix(iax)
-      else if (labtyp.eq.'abslin') then
-c
-c Absolute linear coordinate.  For RA convert from radians of
-c polar rotation.
-c
-        if (iax.eq.ira .and. idec.eq.0) then
-          write (msg, 800) iax
-800       format ('PIX2WCG: conversion for RA axis ', i1, 
-     +            ' from "abslin" to pixels requested')
-          call output (msg)
-          msg = 'PIX2WCG: but no DEC axis in image.  Cannot convert'
-          call output (msg)
-          call bug ('f', ' ')
-        end if
-c
-        rainc = cdelt(iax) / cosdec
-        pixel = (world - crval(iax)) / rainc + crpix(iax)
-      else if (labtyp.eq.'rellin') then
-c
-c Relative linear coordinate.  For RA convert from radians of
-c polar rotation.
-c
-        if (iax.eq.ira .and. idec.eq.0) then
-          write (msg, 900) iax
-900       format ('PIX2WCG: conversion for RA axis ', i1, 
-     +            ' from "rellin" to pixels requested')
-          call output (msg)
-          msg = 'PIX2WCG: but no DEC axis in image.  Cannot convert'
-          call output (msg)
-          call bug ('f', ' ')
-        end if
-c
-        rainc = cdelt(iax) / cosdec
-        pixel = world / rainc + crpix(iax)
-      else if (labtyp.eq.'reldeg') then
-c
-c Relative degrees
-c
-        if (irad.eq.0) then
-          write (msg, 910) iax
-910       format ('W2PIXCG: Axis ', i1, ' is not RA,DEC,LON,LAT but ',
-     +            'conversion from "reldeg"')
-          call bug ('w', msg)
-          call bug ('w', 
-     +      'W2PIXCG: requested.  Continue assuming axis in radians')
-          warn(8,iax) = .false.
-          ok = .false.
-        end if
-c
-        pixel = world * d2r / cdelt(iax) + crpix(iax)
-      else if (labtyp.eq.'absdeg') then
-c
-c Absolute degrees 
-c
-        if (irad.eq.0) then
-          write (msg, 920) iax
-920       format ('W2PIXCG: Axis ', i1, ' is not RA,DEC,LON,LAT but ',
-     +            'conversion from "absdeg"')
-          call bug ('w', msg)
-          call bug ('w', 
-     +      'W2PIXCG: requested.  Continue assuming axis in radians')
-          warn(9,iax) = .false.
-          ok = .false.
-        end if
-c
-        pixel = (world*d2r - crval(iax)) / cdelt(iax) + crpix(iax)
-      else
-        msg = 'W2PIXCG: '//labtyp(1:len1(labtyp))//
-     +        ' is an unrecognized world coordinate type'
-        call bug ('f', msg)
-      end if
-c
-      end
-c
-c
-c* w2wcg -- Convert from world coordinate to world coordinate 
-c& nebk
-c: plotting
-c+
-      subroutine w2wcg (domsg, win, iax, typein, typeout, naxis, crval,
-     +                  crpix, cdelt, ctype, wout, ok)
-c
-      implicit none
-      integer naxis, iax
-      double precision cdelt(naxis), crval(naxis), crpix(naxis),
-     +  win, wout
-      character typein*(*), typeout*(*), ctype(naxis)*(*)
-      logical ok, domsg
-c
-c  Convert from image world coordinate in one type to another.
-c
-c  Input:
-c    domsg   If true, give a message warning when requested labtyp does 
-c            not match the axis type in ctype.
-c    win     Input world coordinate.  For typein=hms and typein=dms the 
-c            world coordinate is in seconds of time and seconds of arc. For
-c	     RA axes linear coordinates are assumed to be in radians of polar
-c            rotation.That is, the increment will be divided by cos(DEC)
-c    typein  Input world coordinate type.   Should be one
-c            of   abspix, relpix, arcsec, arcmin, hms, dms, absghz, relghz,
-c                 abskms, relkms, abslin, rellin, none. 
-c    typeout Output world coordinate type
-c    iax     This is the axis number in which we are interested. Should
-c            be 1, 2 or 3.
-c    naxis   Number of axes in image
-c    crval   Array of image reference values
-c    crpix   Array of image reference pixels
-c    cdelt   Array of image pixel increments
-c    ctype   Array of image axis types
-c  Output:
-c    wout    Output world coordinate.  For labtyp=hms and labtyp=dms the 
-c            world coordinate is in seconds of time and seconds of arc
-c            ready for PGTBOX. A request for a linear (abs or rel) axis 
-c	     conversion for an RA axis will return the RA in radians of
-c	     polar rotation.  
-c    ok      If false, then the requested labtyp is inconsistent with
-c            the axis type.  WOrld will have been computed as if
-c            the axis type was as expected.
-c--
-c-----------------------------------------------------------------------
-      double precision pixel
-c-----------------------------------------------------------------------
-      if (typein.eq.'abspix') then
-        call pix2wcg (domsg, win, iax, typein, naxis, crval, 
-     +                crpix, cdelt, ctype, wout, ok)
-      else 
-        call w2pixcg (win, iax, typein, naxis, crval, crpix, 
-     +                cdelt, ctype, pixel, ok)
-        call pix2wcg (domsg, pixel, iax, typeout, naxis, crval, 
-     +                crpix, cdelt, ctype, wout, ok)
-      end if
-c
-      end
-c
-c
-c* w2wfcg -- Convert from world coordinate to world coordinate and format
-c& nebk
-c: plotting
-c+
-      subroutine w2wfcg (win, iax, typein, typeout, naxis, crval, 
-     +                   crpix, cdelt, ctype, nounit, str, ilen)
-c
-      implicit none
-      integer naxis, iax, ilen
-      double precision cdelt(naxis), crval(naxis), crpix(naxis), win
-      character typein*(*), typeout*(*), ctype(naxis)*(*), str*(*)
-      logical nounit
-c
-c  Convert from image world coordinate in one type to another.
-c
-c  Input:
-c    win     Input world coordinate.  For typein=hms and typein=dms the 
-c            world coordinate is in seconds of time and seconds of arc. For
-c	     RA axes linear coordinates are assumed to be in radians of polar
-c            rotation.That is, the increment will be divided by cos(DEC)
-c    typein  Input world coordinate type.   Should be one
-c            of   abspix, relpix, arcsec, arcmin, hms, dms, absghz, 
-c                 relghz, abskms, relkms, abslin, rellin, none. 
-c    typeout Output world coordinate type
-c    iax     This is the axis number in which we are interested. Should
-c            be 1, 2 or 3.
-c    naxis   Number of axes in image
-c    crval   Array of image reference values
-c    crpix   Array of image reference pixels
-c    cdelt   Array of image pixel increments
-c    ctype   Array of image axis types
-c    nounit  If true don't append units to string
-c  Output:
-c    str     Output world coordinate in formatted string.
-c    ilen    Length of string
-c--
-c-----------------------------------------------------------------------
-      double precision pixel
-      logical ok
-c-----------------------------------------------------------------------
-      call w2pixcg (win, iax, typein, naxis, crval, crpix, 
-     +              cdelt, ctype, pixel, ok)
-      call pix2wfcg (typeout, iax, pixel, naxis, crval, crpix, 
-     +               cdelt, ctype, nounit, str, ilen)
 c
       end
