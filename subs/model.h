@@ -1,3 +1,6 @@
+c************************************************
+c	model.h - include file for model.for
+c------------------------------------------------
 	integer maxcals
 	parameter(maxcals=32)
 	integer ncals,calcur
