@@ -15,6 +15,7 @@ c		   happened to the code.
 c    rjs  24oct99  Added "save" statement in "ran" function.
 c    rjs  04jul00  Use double precision arithmetic in "ran" to avoid some
 c		   machine rounding biases.
+c    rjs  18oct00  Setting the seedon "vms-style" machines was not working.
 c************************************************************************
 c
 c  Choose which random number style we are to use. We have three choices:
@@ -71,9 +72,7 @@ c------------------------------------------------------------------------`
 	call ranset(seed)
 #endif
 #ifdef vms_style
-	integer iseed
-	common/noisecom/iseed
-	iseed = seed
+	call setseed(seed)
 #endif
 #ifdef unix_style
 	real dummy
@@ -128,10 +127,10 @@ c------------------------------------------------------------------------
 	common/noisecom/iseed
 	data first/.true./
 	if(first)then
-	  iseed = 12345
+	  call setseed(0)
 	  first = .false.
 	endif
-	
+c	
 	do i=1,n
 	  data(i) = ran(iseed)
 	enddo
@@ -143,6 +142,31 @@ c------------------------------------------------------------------------
 	enddo
 #endif
 	end
+#ifdef vms_style
+c************************************************************************
+	subroutine setseed(seed)
+c
+	implicit none
+	integer seed
+c
+c  Set the seed for the VMS-style random number generator.
+c
+c------------------------------------------------------------------------
+	integer iseed
+	logical first
+	save first
+	common/noisecom/iseed
+	data first/.true./
+c
+	if(seed.ne.0)then
+	  iseed = seed
+	else if(first)then
+	  iseed = 12345
+	endif
+	first = .false.
+c
+	end
+#endif
 c************************************************************************
 c*Gaus -- Generate gaussianly distributed random variables.
 c&rjs
