@@ -162,6 +162,7 @@ c    rjs  16jul96 Flagged all polarisation if any bad, and added nopflag
 c		  option.
 c    rjs  17jul96 Flag if there are glitches in the XY amplitude.
 c    rjs  22nov96 Reset median-based flaggers after a scan change.
+c    rjs  05dec96 Write pointing centre RA and DEC if needed.
 c
 c  Program Structure:
 c    Miriad atlod can be divided into three rough levels. The high level
@@ -187,7 +188,7 @@ c------------------------------------------------------------------------
 	integer MAXFILES
 	parameter(MAXFILES=128)
 	character version*(*)
-	parameter(version='AtLod: version 22-Nov-96')
+	parameter(version='AtLod: version 05-Dec-96')
 c
 	character in(MAXFILES)*64,out*64,line*64
 	integer tno
@@ -646,16 +647,17 @@ c
 c
 	end
 c************************************************************************
-	subroutine PokeSrc(srcnam,ra1,dec1,obsra1,obsdec1)
+	subroutine PokeSrc(srcnam,ra1,dec1,obsra1,obsdec1,
+     *						pntra1,pntdec1)
 c
 	implicit none
 	character srcnam*(*)
-	double precision ra1,dec1,obsra1,obsdec1
+	double precision ra1,dec1,obsra1,obsdec1,pntra1,pntdec1
 c
 c  Flush out source information.
 c------------------------------------------------------------------------
 	include 'atlod.h'
-	double precision r1,d1
+	double precision r1,d1,pntra,pntdec
 	character line*80
 	integer length,l
 c
@@ -676,6 +678,8 @@ c  Save ra and dec.
 c
 	ra = ra1
 	dec = dec1
+	pntra = pntra1
+	pntdec = pntdec1
 c
 c  Some (all?) RPFITS files fail to give the apparent RA and DEC of
 c  the source. Compute this if necessarry.
@@ -710,6 +714,8 @@ c
 	if(length.gt.0)call uvputvra(tno,'source',line(1:length))
 	call uvputvrd(tno,'ra',ra,1)
 	call uvputvrd(tno,'dec',dec,1)
+	if(pntra.ne.ra)call uvputvrd(tno,'pntra',pntra,1)
+	if(pntdec.ne.dec)call uvputvrd(tno,'pntdec',pntdec,1)
 	call uvputvrd(tno,'obsra',obsra,1)
 	call uvputvrd(tno,'obsdec',obsdec,1)
 c
@@ -1547,7 +1553,7 @@ c------------------------------------------------------------------------
 	integer Sif(MAX_IF)
 	real ut,utprev,utprevsc,u,v,w,weight(MAXCHAN*MAXPOL)
 	complex vis(MAXCHAN*MAXPOL)
-	double precision reftime,ra0,dec0
+	double precision reftime,ra0,dec0,pntra,pntdec
 c
 c  Information on flagging.
 c
@@ -1750,18 +1756,25 @@ c
 		  enddo
 		endif
 		if(NewScan)call PokeInfo(scanno,time)
+	 	pntra = su_pra(srcno)
+		pntdec = su_pdec(srcno)
+		if(pntra.eq.0.or.pntdec.eq.0)then
+		  pntra = su_ra(srcno)
+		  pntdec = su_dec(srcno)
+		endif
 		if(abs(pm_ra)+abs(pm_dec).gt.0)then
 		  reftime = pm_epoch + 2 400 000.5d0
 		  ra0  = 2*DPI/(24d0*3600d0*365.25d0) * pm_ra
 		  ra0  = su_ra(srcno)  + ra0* (time-reftime)
 		  dec0 = 2*DPI/(360.d0*3600d0*365.25d0) * pm_dec
 		  dec0 = su_dec(srcno) + dec0*(time-reftime)
-		  call PokeSrc(su_name(srcno),ra0,dec0,0.d0,0.d0)
+		  call PokeSrc(su_name(srcno),ra0,dec0,0.d0,0.d0,
+     *			pntra,pntdec)
 		else if(NewScan.or.NewSrc)then
 c		if(NewScan.or.NewSrc)then
 		  call PokeSrc(su_name(srcno),
      *		  su_ra(srcno),su_dec(srcno),
-     *		  su_rad(srcno),su_decd(srcno))
+     *		  su_rad(srcno),su_decd(srcno),pntra,pntdec)
 		endif
 	      endif
 c
