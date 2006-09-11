@@ -16,7 +16,7 @@
 #define H_TXT_SIZE	1
 #define H_CMPLX_SIZE	8
 
-#define MAXPATH		128
+#define MAXPATH		256
 #define MAXOPEN		20
 
 /*
