@@ -26,6 +26,7 @@ c    mchw 10mar94 Added antaz,antel to uvvariables.
 c    rjs   6sep94 XYphase fiddles. Use MAXWIN.
 c    rjs   9sep94 Support felocity linetype.
 c    mchw  5jan95 Added pressmb to uv-variables.
+c    rjs  13jan95 Added "bin" to uv-variables.
 c************************************************************************
 c*VarInit -- Initialise the copy routines.
 c:uv-data
@@ -81,7 +82,7 @@ c
 	integer i
 c
 	integer nvar,nline,nwide,nvelo
-	parameter(nvar=64,nline=8,nwide=3,nvelo=4)
+	parameter(nvar=65,nline=8,nwide=3,nvelo=4)
         character var(nvar)*8,line(nline)*8,wide(nwide)*8,velo(nvelo)*8
 c
 c  Variables to check for a change, for line=channel.
@@ -100,8 +101,8 @@ c
 c  Variables to copy whenever they change.
 c
 	data var/     'airtemp ','antaz   ','antdiam ','antel   ',
-     *	   'antpos  ','atten   ',
-     *	   'axisrms ','chi     ','corbit  ','corbw   ','corfin  ',
+     *	   'antpos  ','atten   ','axisrms ','bin     ',
+     *	   'chi     ','corbit  ','corbw   ','corfin  ',
      *	   'cormode ','coropt  ','cortaper','ddec    ','dec     ',
      *	   'dewpoint','dra     ','epoch   ','evector ','focus   ',
      *	   'freq    ','freqif  ','inttime ','ivalued ','jyperk  ',
