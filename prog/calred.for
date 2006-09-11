@@ -6,6 +6,7 @@ c= calred
 c& rjs
 c: uv analysis, plotting
 c+
+c	CALRED is a program used to analyse flux densities of sources.
 c@ vis
 c	The input visibility datasets. Several datasets can be given.
 c@ select
@@ -23,13 +24,15 @@ c	  nopol     Do not perform polarisation calibration on the data.
 c	  nopass    Do not perform bandpass calibration on the data.
 c--
 c  History:
+c    rjs  23feb00 Original version.
+c    rjs  04feb01 Some small tidying.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
 	integer MAXDAT,MAXSRC,MAXPOL
 	integer PolMin,PolMax
 	character version*(*)
-	parameter(version='version 23-Feb-00')
+	parameter(version='version 04-Feb-01')
 	parameter(MAXDAT=15,MAXPOL=2,MAXSRC=1024)
 	parameter(PolMin=-8,PolMax=4)
 c
@@ -340,22 +343,6 @@ c
           model(i) = a*freq(i)*freq(i)*j1xbyx(real(b*freq(i)))
 	enddo
 c
-	end
-c************************************************************************
-	real function pltbs(iplanet,freq)
-c
-	implicit none
-	integer iplanet
-	real freq
-c
-c  Data are taken from Ulich (AJ, 86, 1619 (1981)).
-c------------------------------------------------------------------------
-	integer NPLANET
-	parameter(NPLANET=9)
-	real pltb(NPLANET)
-	save pltb
-	data pltb/300.0,438.0,300.0,194.0,138.0,133.0,134.0,127.0,99.0/
-	pltbs = pltb(iplanet)
 	end
 c************************************************************************
 	subroutine GetSrc(tno,sources,maxsrc,nsrc,isrc,iplanet)
