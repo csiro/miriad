@@ -41,7 +41,7 @@ c	Temperature, in Kelvin. Default is 300.
 c@ z
 c	Observatory altitude, in m. Default is 200 (i.e. the
 c	altitude of Narrabri).
-c@ P
+c@ p
 c	Sea-level atmospheric pressure, in hPa (i.e. millibars). The default
 c	is 1013 hPa.
 c@ h
