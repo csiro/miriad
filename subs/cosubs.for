@@ -41,6 +41,7 @@ c                      e.g. if CTYPE=RADIUS it is not treated as RA.
 c                      Consolidate CTYPE searching into AXFNDCO and AXTYPCO
 c    nebk   03dec95    Declaration of TYPE in AXTYPCO was (n) not (*), and
 c	               removed useless access to multiple axes in CHKAXCO
+c    nebk   18dec95    Recognize new CTYPE "angle"
 c***********************************************************************
 c
 c* axfndCO -- Find a specified generic axis in an image
@@ -57,9 +58,8 @@ c  Find generic axis type in image.
 c
 c  Input
 c    lun    Image handle
-c    type   Generic axis type to find in axis string.  The first axis
-c           encountered that has this type is returned.  The type
-c           should be one of:
+c    type   Generic axis type to find.  The first axis encountered
+c           that has this type is returned.  The type should be one of:
 c
 c             RA   ->  RA, LL, ELON, GLON
 c             DEC  ->  DEC, MM, ELAT, GLAT
@@ -68,9 +68,10 @@ c             LATI ->  ELAT, GLAT
 c             VELO ->  VELO, FELO
 c             FREQ ->  FREQ
 c             UV   ->  UU, VV
+c	      ANGL ->  ANGLE
 c             RAD  ->  An axis whose increment should be in
-c                      radians.  These are RA, DEC, LAT, LONG axes
-c                      as described by the LHS above.
+c                      radians.  These are RA, DEC, LAT, LONG, 
+c		       ANGL axes as described by the LHS above.
 c           Other types are searched for exactly as specified
 c    n      Number of axes to search starting from 1
 c    iax    SPecific axis to match if N=0
@@ -139,6 +140,19 @@ c
             if (n.ne.0) jax = i
             return
           end if  
+        else if (ltype.eq.'ANGL') then
+          if (lctype(1:il).eq.'ANGLE') then
+            jax = 1
+            if (n.ne.0) jax = i
+            return
+          end if  
+        else if (ltype.eq.'UV') then
+          if (lctype(1:il).eq.'UU' .or.
+     +        lctype(1:il).eq.'VV') then
+            jax = 1
+            if (n.ne.0) jax = i
+            return 
+          end if  
         else if (ltype.eq.'RAD') then
           if (lctype(1:il).eq.'RA'  .or.
      +        lctype(1:il).eq.'LL'  .or.
@@ -147,14 +161,8 @@ c
      +        lctype(1:il).eq.'ELON'.or.
      +        lctype(1:il).eq.'GLON'.or.
      +        lctype(1:il).eq.'ELAT'.or.
-     +        lctype(1:il).eq.'GLAT') then
-            jax = 1
-            if (n.ne.0) jax = i
-            return 
-          end if  
-        else if (ltype.eq.'UV') then
-          if (lctype(1:il).eq.'UU' .or.
-     +        lctype(1:il).eq.'VV') then
+     +        lctype(1:il).eq.'GLAT'.or.
+     +        lctype(1:il).eq.'ANGLE') then
             jax = 1
             if (n.ne.0) jax = i
             return 
@@ -191,7 +199,7 @@ c    ctype    Array of axis type descriptors
 c  Output
 c    type     Array of generic axis types describing each axis
 c             The generic names returned are one of
-c                 RA, DEC, LATI, LONG, VELO, FREQ, UV, NONE  where
+c              RA, DEC, LATI, LONG, VELO, FREQ, UV, ANGL, NONE  where
 c
 c             RA   means CTYPE was one of   RA, LL
 c             DEC  means CTYPE was one of   DEC, MM
@@ -200,6 +208,7 @@ c             LATI means CTYPE was one of   ELAT, GLAT
 c             VELO means CTYPE was one of   VELO, FELO
 c             FREQ means CTYPE was one of   FREQ
 c             UV   means CTYPE was one of   UU, VV
+c	      ANGL means CTYPE was          ANGLE
 c             NONE means CTYPE was not recognized
 c
 c--
@@ -241,9 +250,10 @@ c
           type(j) = 'VELO'
         else if (lctype(1:il).eq.'FREQ') then
           type(j) = 'FREQ'
-        else if
-     +     (lctype(1:il).eq.'UU' .or.
-     +      lctype(1:il).eq.'VV') then
+        else if (lctype(1:il).eq.'ANGLE') then
+          type(j) = 'ANGL'
+        else if (lctype(1:il).eq.'UU' .or.
+     +           lctype(1:il).eq.'VV') then
           type(j) = 'UV'
         else
           type(j) = 'NONE'
@@ -590,6 +600,12 @@ c
             types(j) = 'relghz'
           else
             types(j) = 'absghz'
+          end if
+        else if (gtype.eq.'ANGL') then
+          if (absoff.eq.'off') then
+            types(j) = 'arcsec'
+          else
+            types(j) = 'absnat'
           end if
         else
           if (absoff.eq.'off') then
