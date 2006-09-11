@@ -52,6 +52,7 @@ c		  W-axis change.
 c    rjs  31jan95 Correct u-v-w coordinate geometry. Use 3D equation
 c		  for phases of a point source.
 c    rjs   9mar95 Turn off geometry correction for "imhead" option.
+c    mhw  05jan96 Add zero option for Model and ModMap
 c************************************************************************
 c*ModelIni -- Ready the uv data file for processing by the Model routine.
 c&rjs
@@ -213,6 +214,7 @@ c		 'h'  Use image header for phase center.
 c		 'm'  Multi-freq data. The model is either one or two
 c		      planes, which were formed using INVERT's mfs option.
 c		 'l'  Apply clipping.
+c                'z'  Use zero if model cannot be calculated (don't flag)
 c    offset	The offset, in arcsec, in RA and DEC, of the point
 c		source model. This is only used if tmod.eq.0.
 c    level	Either a clip level to apply to the data (tmod.ne.0), or
@@ -271,7 +273,7 @@ c------------------------------------------------------------------------
 c
 	real Out(maxlen),a,VisPow,ModPow
 	integer i,j,length
-	logical calscale,imhead,mfs,doclip
+	logical calscale,imhead,mfs,doclip,zero
 c
 c  Initialise the coordinate handles.
 c
@@ -285,10 +287,11 @@ c
 	imhead = index(flags,'h').ne.0
 	mfs = index(flags,'m').ne.0
 	doclip = index(flags,'l').ne.0
+	zero = index(flags,'z').ne.0
 c
 	if(tmod.ne.0)then
-	  call ModMap(calscale,tvis,tmod,level,doclip,tscr,nhead,header,
-     *	    calget,imhead,mfs,nchan,nvis,VisPow,ModPow)
+	  call ModMap(calscale,tvis,tmod,level,doclip,zero,tscr,nhead,
+     *      header,calget,imhead,mfs,nchan,nvis,VisPow,ModPow)
 	else
 	  call ModPnt(calscale,tvis,offset,level,tscr,nhead,header,
      *	    calget,nchan,nvis,VisPow,ModPow)
@@ -322,11 +325,11 @@ c
 c
 	end
 c************************************************************************
-	subroutine ModMap(calscale,tvis,tmod,level,doclip,tscr,nhead,
-     *	    header,calget,imhead,mfs,nchan,nvis,VisPow,ModPow)
+	subroutine ModMap(calscale,tvis,tmod,level,doclip,zero,tscr,
+     *      nhead,header,calget,imhead,mfs,nchan,nvis,VisPow,ModPow)
 c
 	implicit none
-	logical calscale,imhead,mfs,doclip
+	logical calscale,imhead,mfs,doclip,zero
 	integer tvis,tscr,nhead,nchan,nvis,tmod
 	real level,ModPow,VisPow
 	external header,calget
@@ -336,6 +339,8 @@ c    calscale
 c    tvis
 c    tmod
 c    level
+c    doclip
+c    zero
 c    tscr
 c    nhead
 c    header
@@ -477,7 +482,8 @@ c
 		vv = v * sfreq(j)
 		if(abs(uu).gt.umax.or.abs(vv).gt.vmax)then
 		  Intp(j) = 0
-		  flags(j) = .false.
+c                 Flag data if zero option not used
+		  if(.not.zero) flags(j) = .false.
 		else
 		  call ModGrid(uu,vv,Buffer(pnt/2+1),nu,nv,nz,u0,v0,
      *		    gcf,ngcf,Intp(j))
@@ -492,7 +498,7 @@ c
 	      if(abs(u).gt.umax.or.abs(v).gt.vmax)then
 		do j=1,nread
 		  Intp(j) = 0.
-		  flags(j) = .false.
+		  if(.not.zero) flags(j) = .false.
 		  sfreq(j) = 1
 		enddo
 		GotFreq = .true.
