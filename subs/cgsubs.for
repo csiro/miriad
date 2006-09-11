@@ -126,6 +126,7 @@ c     nebk   15jan95     Add SAVDESCG
 c     nebk   14apr95     Add HARD and DOFID arguments to WEDGINCCG
 c     nebk   11aug95     Add arcmin labels
 c     nebk   03sep95     Add STROPTCG, ANGCONCG, SETCCSCG
+c     rjs    26sep95     Always label epoch with 'B' or 'J'.
 c***********************************************************************
 c
 c* angconCG -- Convert angular coordinates to and from radians
@@ -1234,16 +1235,16 @@ c
       if (doepoch .and. epoch.gt.0.0) then
         write (estr(2:), 100) nint(epoch)
 100     format (i4)
-        if (estr(2:).eq.'2000') then
+        if (epoch.gt.1984) then
           estr(1:1) = 'J'
-        else if (estr(2:).eq.'1950') then
+        else
           estr(1:1) = 'B'
         end if
       else
         estr = ' '
       end if
 c
-c Remove ---* and --* from axis type
+c Remove -** and --* from axis type
 c
       ipos = index(ctype(iax),'---')
       if (ipos.ne.0) then
