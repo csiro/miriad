@@ -51,28 +51,6 @@ c
 c	If in doubt, see the on-line history of configurations:
 c	  http://www.narrabri.atnf.csiro.au/operations/array_configurations/config_hist.html
 c
-c@ mdata
-c	Setting this parameter invokes an amplitude correction to the data
-c	to account for the opacity of the atmosphere.
-c
-c	The input parameter is a data file giving the meteorological conditions
-c	at the ATCA during the course of the observation. Given a model of
-c	the atmosphere (determined from the meteorological data), and knowing
-c	the elevation of the observation, a model correction for the atmosphere
-c	can be deduced and applied. Note that this is just that - a model
-c	correction - which will have limitations.
-c
-c	NOTE: This correction should NOT be used with 3-mm data when the 3mm
-c	system temperature corrections are used. The 3-mm system temperatures
-c	are, by their nature, so-called "above atmosphere" system temperature
-c	value, which corrects for atmospheric opacity.
-c
-c	This parameter can be used with the 12-mm system, where the system
-c	temperatures are those measured at the ground.
-c
-c	For more help on getting the meteorological data appropriate to your
-c	observation, see the help on "weatherdata".
-c
 c@ dantpos
 c	For poorly understood reasons, the effective locations of the antennas
 c	appear to be a function of frequency. Currently the on-line system uses
@@ -105,6 +83,11 @@ c@ options
 c	Extra processing options. Several options can be given,
 c	separated by commas. Minimum match is supported. Possible values
 c	are:
+c	  opcorr    Apply a correction to account for the opacity of the
+c	            atmosphere. This option should generally be used
+c	            at 12mm only. For observations taken before October 2003,
+c	            you will need to set the ``mdata'' parameter (see below)
+c	            when using this option.
 c	  tsys      Ensure the system temperature correction is applied to
 c	            the data. It is not uncommon when observing at 3mm to
 c	            not apply the system temperature correction to the data
@@ -112,6 +95,31 @@ c	            on-line.
 c	  gainel    This applies a instrumental gain/elevation correction
 c	            to the data. Currently the gains of the antennas are
 c	            a function of elevation.
+c@ mdata
+c	To apply an opacity correction, this task needs to estimate the
+c	atmospheric opacity based on meteorological conditions. Prior to
+c	October 2003, meteorological data were not saved in the datasets, and
+c	so the meterological data needs to be provided separately.
+c
+c	This input parameter gives a data file containing the meteorological
+c	conditions at the observatory. It is only required if the dataset
+c	does not already contain this information. 
+c
+c	Given a model of the atmosphere, and knowing
+c	the elevation of the observation, a model correction for the atmosphere
+c	can be deduced and applied. Note that this is just that - a model
+c	correction - which will have limitations.
+c
+c	NOTE: This correction should NOT be used with 3-mm data when the 3mm
+c	system temperature corrections are used. The 3-mm system temperatures
+c	are, by their nature, so-called "above atmosphere" system temperature
+c	value, which corrects for atmospheric opacity.
+c
+c	This parameter can be used with the 12-mm system, where the system
+c	temperatures are those measured at the ground.
+c
+c	For more help on getting the meteorological data appropriate to your
+c	observation, see the help on "weatherdata".
 c--
 c  History:
 c    04may03 rjs  Original version.
@@ -120,19 +128,20 @@ c    14aug03 rjs  Fix bug causing seg violation.
 c    17sep03 rjs  New gain/elevation curve at 3mm.
 c    19oct03 rjs  Update array tables.
 c    14nov03 rjs  Fix bug in getjpk
+c    06dec03 rjs  Fish out met parameters from the dataset directly.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
 	character version*(*)
 	integer MAXSELS,ATANT
-	parameter(version='AtFix: version 1.0 14-Nov-03')
+	parameter(version='AtFix: version 1.0 06-Dec-03')
 	parameter(MAXSELS=256,ATANT=6)
 c
 	real sels(MAXSELS),xyz(3*MAXANT)
 	character array(MAXANT)*8,aname*8,mdata*80
-	integer lVis,lOut,vtsys,vant,vgmet,vnif
+	integer lVis,lOut,vtsys,vant,vgmet,vnif,vmdata
 	integer pol,npol,i1,i2,nant,i,j,k
-	logical updated,dogel,dotsys,domet,newel,dobl
+	logical updated,dogel,dotsys,domet,newel,dobl,doopcorr
 	character vis*64,out*64,type*1
 	integer nschan(MAXWIN),nif,nchan,nants,length,tcorr,na
 	real xtsys(MAXANT*MAXWIN),ytsys(MAXANT*MAXWIN)
@@ -177,7 +186,7 @@ c
      *					  abs(delta(3,i)).gt.0)
 	enddo
 c
-	call GetOpt(dogel,dotsys)
+	call GetOpt(dogel,dotsys,doopcorr)
 	call keyfin
 c
 c  Check the inputs.
@@ -248,8 +257,15 @@ c
 	call uvvarSet(vgmet,'telescop')
 	call uvvarSet(vgmet,'latitud')
 	newel = .true.
-	if(domet)then
-	  call metInit(mdata)
+	if(doopcorr)then
+	  if(domet)then
+	    call metInit(mdata)
+	  else
+	    call uvvarIni(lVis,vmdata)
+	    call uvvarSet(vmdata,'airtemp')
+	    call uvvarSet(vmdata,'pressmb')
+	    call uvvarSet(vmdata,'relhumid')
+	  endif
 	endif
 c
 c  Get ready to handle Tsys correction.
@@ -286,6 +302,15 @@ c
 	  if(length.ne.1)call bug('f',
      *		'Required info for options=auto is missing')
 	endif
+c
+c  If opacity correction is requested and the met file was not
+c  given, check that the dataset has the met data.
+c
+	if(doopcorr.and..not.domet)then
+	  call uvprobvr(lVis,'airtemp',type,length,updated)
+	  if(type.ne.'r'.and.length.ne.1)call bug('f',
+     *		'Met data missing from input')
+	endif
 	call uvrdvri(lVis,'nants',na,0)
 	ptime = preamble(4) - 1
 c
@@ -318,7 +343,7 @@ c
 c  For elevation-related changes, check if the time has changed, and so 
 c  we need to update all the associated information.
 c
-	  if((domet.or.dogel.or.dobl))then
+	  if((doopcorr.or.dogel.or.dobl))then
 	    if(abs(ptime-preamble(4)).gt.5.d0/86400.d0)then
 	      ptime = preamble(4)
 	      call getlst(lVis,lst)
@@ -345,8 +370,17 @@ c
 c  Apply atmospheric opacity correction, if needed. Apply this both
 c  to the data, and to the jyperk system efficiency factor.
 c
-	  if(domet.and.newel)then
-	    call metGet(ptime,t0,p0,h0)
+	  if(doopcorr.and.newel)then
+	    if(domet)then
+	      call metGet(ptime,t0,p0,h0)
+	    else if(uvvarUpd(vmdata))then
+	      call uvgetvrr(lVis,'airtemp',t0,1)
+	      call uvgetvrr(lVis,'pressmb',p0,1)
+	      call uvgetvrr(lVis,'relhumid',h0,1)
+	      t0 = t0 + 273.15
+	      h0 = 0.01*h0
+	      p0 = 100*p0
+	    endif
 	    call opacGet(nif,freq0,real(el),t0,p0,h0,fac,Tb)
 	    scale = 1
 	    do i=1,nif
@@ -355,14 +389,11 @@ c
 	    scale = scale**(-1.0/real(nif))
 	    call uvputvrr(lOut,'tsky',Tb,nif)
 	    call uvputvrr(lOut,'trans',fac,nif)
-	    call uvputvrr(lOut,'airtemp',t0-273.15,1)
-	    call uvputvrr(lOut,'pressmb',p0/100.0,1)
-	    call uvputvrr(lOut,'relhumid',100.0*h0,1)
 	    call uvputvrd(lOut,'antel',180.0d0/DPI*el,1)
 	    call uvputvrr(lOut,'airmass',1./sin(real(el)),1)
 	  endif
 c
-	  if(domet)then
+	  if(doopcorr)then
 	    k = 0
 	    do i=1,nif
 	      do j=1,nschan(i)
@@ -457,21 +488,22 @@ c
 c
 	end
 c************************************************************************
-	subroutine getopt(dogel,dotsys)
+	subroutine getopt(dogel,dotsys,doopcorr)
 c
 	implicit none
-	logical dogel,dotsys
+	logical dogel,dotsys,doopcorr
 c------------------------------------------------------------------------
 	integer NOPTS
-	parameter(NOPTS=2)
+	parameter(NOPTS=3)
 	character opts(NOPTS)*8
 	logical present(NOPTS)
 c
-	data opts/'gainel  ','tsys     '/
+	data opts/'gainel  ','tsys     ','opcorr  '/
 c
 	call options('options',opts,present,NOPTS)
-	dogel  = present(1)
-	dotsys = present(2)
+	dogel    = present(1)
+	dotsys   = present(2)
+	doopcorr = present(3)
 c
 	end
 c************************************************************************
