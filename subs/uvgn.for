@@ -14,7 +14,9 @@ c     5aug93 rjs  Changed definition of "attenuation" parameter.
 c    19jul94 rjs  Set bad gains to 0 in uvgnpsma (previously the gain
 c		  flag was marked as bad, but the gain was not initialised.
 c    31oct95 rjs  Fix horror of a bug when averaging channel gains together.
-c
+c    13nov95 rjs  Fix possible non-closing gains in uvgnFac.
+c    16nov95 rjs  Linearly interpolate when the bandpass gains are sampled
+c		  more coarsely than the data.
 c************************************************************************
 	subroutine uvGnIni(tno1,dogains1,dopass1)
 	implicit none
@@ -232,7 +234,8 @@ c------------------------------------------------------------------------
 	integer i,i1,i2,ant1,ant2,s,itemp,n,offset,iostat,p,gpant
 	double precision dtemp
 	real mag,epsi
-	complex gain,tau1,tau2,tau,g1,g2,g
+	complex tau1,tau2,taua1,taub1,taua2,taub2,tau
+	complex ga1,gb1,ga2,gb2,g,gain
 	integer f1(4),f2(4)
 	save f1,f2
 	data f1/0,1,0,1/
@@ -354,49 +357,87 @@ c
 	  i1 = gpant*(ant1-1) + 1
 	  i2 = gpant*(ant2-1) + 1
 c
-c  Determine which of the gains are good.
-c
-	  t1good = abs(time-timetab(t1)).lt.dtime.and.
-     *	    gflag(i1+f1(p),t1).and.gflag(i2+f2(p),t1)
-	  t2good = abs(time-timetab(t2)).lt.dtime.and.
-     *	    gflag(i1+f1(p),t2).and.gflag(i2+f2(p),t2)
-c
-c  Now determine the baseline gain. If both t1 and t2 are good, do logarithmic
-c  interpolation. Otherwise use the good gain, if any.
-c  Failing this, give up!
+c  Determine the gains for each antenna.
 c
 	  flag = .true.
-	  if(t1good.and.t2good)then
-	    epsi = (timetab(t2)-time)/(timetab(t2)-timetab(t1))
+	  t1good = abs(time-timetab(t1)).lt.dtime
+	  t2good = abs(time-timetab(t2)).lt.dtime
 c
-	    g1 = gains(i1+f1(p),t1)
-	    g2 = gains(i1+f1(p),t2)
-	    g = g1/g2
-	    mag = abs(g)
-	    gain = g2 * (1 + (mag-1)*epsi) * (g/mag) ** epsi
-c
-	    g1 = gains(i2+f2(p),t1)
-	    g2 = gains(i2+f2(p),t2)
-	    g = g1/g2
-	    mag = abs(g)
-	    gain = gain * 
-     *		   conjg(g2 * (1 + (mag-1)*epsi) * (g/mag) ** epsi)
-c
-	    if(ntau.eq.1)then
-	      tau1 = gains(i1+nfeeds,t1) + conjg(gains(i2+nfeeds,t1))
-	      tau2 = gains(i1+nfeeds,t2) + conjg(gains(i2+nfeeds,t2))
-	      tau = tau2 - epsi * (tau2 - tau1)
-	    endif
-	  else if(t1good)then
-	    gain = gains(i1+f1(p),t1)*conjg(gains(i2+f2(p),t1))
-	    if(ntau.eq.1)
-     *		tau = gains(i1+nfeeds,t1) + conjg(gains(i2+nfeeds,t1))
-	  else if(t2good)then
-	    gain = gains(i1+f1(p),t2)*conjg(gains(i2+f2(p),t2))
-	    if(ntau.eq.1)
-     *		tau = gains(i1+nfeeds,t2) + conjg(gains(i2+nfeeds,t2))
+	  if(     t1good.and.gflag(i1+f1(p),t1))then
+	    ga1 = gains(i1+f1(p),t1)
+	  else if(t2good.and.gflag(i1+f1(p),t2))then
+	    ga1 = gains(i1+f1(p),t2)
 	  else
 	    flag = .false.
+	  endif
+c
+	  if(     t2good.and.gflag(i1+f1(p),t2))then
+	    ga2 = gains(i1+f1(p),t2)
+	  else if(t1good.and.gflag(i1+f1(p),t1))then
+	    ga2 = gains(i1+f1(p),t1)
+	  else
+	    flag = .false.
+	  endif
+c
+	  if(     t1good.and.gflag(i2+f2(p),t1))then
+	    gb1 = gains(i2+f2(p),t1)
+	  else if(t2good.and.gflag(i2+f2(p),t2))then
+	    gb1 = gains(i2+f2(p),t2)
+	  else
+	    flag = .false.
+	  endif
+	  if(     t2good.and.gflag(i2+f2(p),t2))then
+	    gb2 = gains(i2+f2(p),t2)
+	  else if(t1good.and.gflag(i2+f2(p),t1))then
+	    gb2 = gains(i2+f2(p),t1)
+	  else
+	    flag = .false.
+	  endif
+c
+	  if(ntau.eq.1.and.flag)then
+	    if(     t1good.and.gflag(i1+f1(p),t1))then
+	      taua1 = gains(i1+nfeeds,t1)
+	    else if(t2good.and.gflag(i1+f1(p),t2))then
+	      taua1 = gains(i1+nfeeds,t2)
+	    endif
+c
+	    if(     t2good.and.gflag(i1+f1(p),t2))then
+	      taua2 = gains(i1+nfeeds,t2)
+	    else if(t1good.and.gflag(i1+f1(p),t1))then
+	      taua2 = gains(i1+nfeeds,t1)
+	    endif
+c
+	    if(     t1good.and.gflag(i2+f2(p),t1))then
+	      taub1 = gains(i2+nfeeds,t1)
+	    else if(t2good.and.gflag(i2+f2(p),t2))then
+	      taub1 = gains(i2+nfeeds,t2)
+	    endif
+	    if(     t2good.and.gflag(i2+f2(p),t2))then
+	      taub2 = gains(i2+nfeeds,t2)
+	    else if(t1good.and.gflag(i2+f2(p),t1))then
+	      taub2 = gains(i2+nfeeds,t1)
+	    endif
+	  endif
+c
+c  If all is good, interpolate the gains to the current time interval.
+c
+	  if(flag)then
+	    epsi = (timetab(t2)-time)/(timetab(t2)-timetab(t1))
+c
+	    g = ga1/ga2
+	    mag = abs(g)
+	    gain = ga2 * (1 + (mag-1)*epsi) * (g/mag) ** epsi
+c
+	    g = gb1/gb2
+	    mag = abs(g)
+	    gain = gain * 
+     *		   conjg(gb2 * (1 + (mag-1)*epsi) * (g/mag) ** epsi)
+c
+	    if(ntau.eq.1)then
+	      tau1 = taua1 + conjg(taub1)
+	      tau2 = taua2 + conjg(taub2)
+	      tau = tau2 - epsi * (tau2 - tau1)
+	    endif
 	  endif
 	else
 	  flag = .true.
@@ -1036,7 +1077,8 @@ c------------------------------------------------------------------------
 	integer i,j,k,l,ibeg,iend,n,win(MAXSPECT),ischan(MAXSPECT),off
 	integer i0
 	double precision startt,endt,startd,endd,width
-	real chan,inc,hwidth,goodness,good(MAXSPECT)
+	real chan,inc,hwidth,goodness,good(MAXSPECT),epsi
+	logical nearest
 c
 	ischan(1) = 1
 	do j=2,nspect
@@ -1106,15 +1148,27 @@ c
 	      hwidth = 0.5*abs(swidth0(j) / sdf(i0))
 	      if(hwidth.lt.0.8)then
 	        do i=1,nschan0(j)
-	          l = nint(chan)
-		  flags(off,k) = l.ge.0.and.l.lt.nschan(i0)
+	          l = nint(chan-0.5)
+		  nearest = l.lt.0.or.l.ge.nschan(i0)-1
 		  l = l + ischan(i0)
-		  if(flags(off,k)) flags(off,k) =
-     *		    real(tab(l,k)).ne.0.or.aimag(tab(l,k)).ne.0
-		  if(flags(off,k)) then
-		    dat(off,k) = tab(l,k)
+		  if(.not.nearest)nearest =
+     *		      abs(real(tab(l,k)))+abs(aimag(tab(l,k))).eq.0.or.
+     *		      abs(real(tab(l+1,k)))+abs(aimag(tab(l+1,k))).eq.0
+		  if(nearest)then
+		    l = nint(chan)
+		    flags(off,k) = l.ge.0.and.l.lt.nschan(i0)
+		    l = l + ischan(i0)
+		    if(flags(off,k)) flags(off,k) =
+     *		      real(tab(l,k)).ne.0.or.aimag(tab(l,k)).ne.0
+		    if(flags(off,k)) then
+		      dat(off,k) = tab(l,k)
+		    else
+		      dat(off,k) = 0
+		    endif
 		  else
-		    dat(off,k) = 0
+		    epsi = chan + ischan(i0) - l
+		    dat(off,k) = (1-epsi)*tab(l,k) + epsi*tab(l+1,k)
+		    flags(off,k) = .true.
 		  endif
 	          off = off + 1
 	          chan = chan + inc
