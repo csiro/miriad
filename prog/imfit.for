@@ -112,6 +112,7 @@ c    rjs  02dec96 Print out RA and DEC as well.
 c    rjs  12dec96 Correct bug in the above.
 c    nebk 28feb97 Add object to output
 c    rjs  02jul97 cellscal change.
+c    smw  15feb98 added one extra digit in printout: rangle->rangleh, etc
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'maxnax.h'
@@ -915,7 +916,7 @@ c
 c
 c  Externals.
 c
-	character hangle*24,rangle*24
+	character hangleh*24,rangleh*24
 c
 	data objects(DISK)    /'disk    '/
 	data objects(GAUSSIAN)/'gaussian'/
@@ -1004,19 +1005,19 @@ c
 	        call output(line)
 	      endif
 	      write(line,40)3600*180/pi*l0(i),3600*180/pi*m0(i)
-  40	      format('  Offset Position (arcsec):  ',2f9.2)
+  40	      format('  Offset Position (arcsec):  ',2f9.3)
 	      call output(line)
 	      if(sl0(i)+sm0(i).gt.0)then
 	        write(line,45)3600*180/pi*sfac*sl0(i),
      *			    3600*180/pi*sfac*sm0(i)
-  45	        format('  Positional errors (arcsec):',2f9.2)
+  45	        format('  Positional errors (arcsec):',2f9.3)
 	        call output(line)
 	      endif
 	      line = '  Right Ascension:                '//
-     *			hangle(radec(1,i))
+     *			hangleh(radec(1,i))
 	      call output(line)
 	      line = '  Declination:                    '//
-     *			rangle(radec(2,i))
+     *			rangleh(radec(2,i))
 	      call output(line)
 	    endif
 	    if(srctype(i).ne.POINT)then
@@ -1034,7 +1035,7 @@ c
 	        write(line,50)'Minor',f2
 	      endif
 	      call output(line)
-  50	      format('  ',a,' axis (arcsec):',f16.2,:,' +/-',f7.2)
+  50	      format('  ',a,' axis (arcsec):',f16.3,:,' +/-',f7.3)
 	      if(sp.gt.0)then
 	        write(line,60)p,sp
 	      else
@@ -1053,7 +1054,7 @@ c
 		  call GauFid(f1,f2,0.,0.,p,0.,f1,f2,sf1,sf2,p,sp)
 	          write(line,70)f1,f2
   70	          format('  Deconvolved Major, minor axes (arcsec):',
-     *								 2f9.2)
+     *								 2f9.3)
 	          call output(line)
 	          write(line,80)p
   80	          format('  Deconvolved Position angle (degrees):',
