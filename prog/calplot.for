@@ -16,19 +16,24 @@ c	The default is 4.7,4.9.
 c@ stokes
 c	The Stokes parameters to be plotted. The default is to plot
 c	only I.
+c@ options
+c	"cursor"   This activates the cursor, and returns the flux density 
+c	  for each Stokes at the frequency specified by the x-location 
+c	  of the cursor. Use right button (or 'X') to exit.
 c@ device
 c	PGPLOT device. No default.
 c--
 c  History:
 c    rjs  19mar93 Derived from PARAPLOT.
 c    nebk 01mar95 Allow smaller ranges
+c    nebk 24may95 Add options=cursor
 c
 c  Bugs:
 c   * Perfect?
 c------------------------------------------------------------------------
 	character version*(*)
 	integer NPTS,MAXPOL,NCOL
-	parameter(version='CalPlot: version 1.0 01-Mar-95')
+	parameter(version='CalPlot: version 24-May-95')
 	parameter(NPTS=256,MAXPOL=4,NCOL=12)
 c
 	character source*32,device*32,line*80,stokes*4
@@ -36,6 +41,7 @@ c
 	real x(NPTS),y(NPTS,MAXPOL),xrange(2)
 	real xlo,xhi,ylo,yhi,delta,maxv,sdf
 	double precision freq(NPTS)
+        logical cursor
 c
 c  Externals.
 c
@@ -46,6 +52,7 @@ c
 	data cols/1,7,2,5,3,4,6,8,9,10,11,12/
 c
 	call output(version)
+        call output ('New options=cursor now available')
 	call keyini
 	call keya('source',source,' ')
 	if(source.eq.' ')call bug('f','A source must be given')
@@ -64,6 +71,7 @@ c
 	if(keyprsnt('stokes'))
      *	  call bug('f','Too many Stokes parameters given')
 	call keya('device',device,' ')
+        call options(cursor)
 	call keyfin
 c
 c  Get information about the source.
@@ -128,6 +136,80 @@ c
 	  enddo
 	  call pgsci(1)
 	  call pglab('Frequency (GHz)','Flux (Jy)',line(1:length))
+          if (cursor) call curstk(npol, pol, source)
 	  call pgend
 	endif
 	end
+c
+c
+      subroutine options (cursor)
+      implicit none
+c
+      logical cursor
+cc
+      integer maxopt
+      parameter (maxopt = 1)
+c
+      character opshuns(maxopt)*8
+      logical present(maxopt)
+      data opshuns /'cursor'/
+c-----------------------------------------------------------------------
+      call optcg ('options', opshuns, present, maxopt)
+c
+      cursor = present(1)
+c
+      end
+c
+c
+      subroutine curstk (npol, pol, source)
+c-----------------------------------------------------------------------
+c Read cursor location and get Flux Density for each Stokes
+c
+c-----------------------------------------------------------------------
+      implicit none
+      integer npol, pol(npol)
+      character source*(*)
+cc
+      character line*80, cch*1, stokes*1
+      integer length, rlen, i, ierr
+      real xx, yy, yyy
+c
+      integer len1
+      character PolsC2P*2
+c-----------------------------------------------------------------------
+      line = 'Freq, Flux Density ('
+      rlen = len1(line) + 1             
+      do i = 1, npol
+        line(rlen:rlen) = PolsC2P(pol(i))
+        rlen = rlen + 1
+      end do
+      line(rlen:) = ') = '
+      rlen = rlen + 4
+c            
+      cch=' '
+      do while (cch.ne.'X' .and. cch.ne.'x')
+        call pgcurse (xx,yy,cch)
+        if (cch.ne.'X' .and. cch.ne.'x') then
+          length = rlen
+          write (line(length:), 40) xx
+40        format (f8.4, ',  ')
+          length = len1(line) + 3
+c
+          do i=1,npol
+            stokes = PolsC2P(pol(i))
+            call lcase(stokes)
+            call calstoke(source,stokes,dble(xx),yyy,1,ierr)
+            write (line(length:),50) yyy
+50          format (f6.3, ', ')
+            length = length + 8
+c
+            call pgpt (1, xx, yyy, 2)
+          enddo
+          length = len1(line) - 1
+          call output (line(1:length))
+        end if
+      end do
+c
+      end
+
+
