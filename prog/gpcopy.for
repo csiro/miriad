@@ -23,10 +23,10 @@ c	  copy     Copy the calibration tables to the output, overwriting
 c	           and previously existing calibration tables. This is the
 c	           default.
 c	  apply    Apply the input calibration tables to the output calibration
-c	           tables (not yet implemented).
+c	           tables (implemented for bandpass tables only)
 c	  merge    Merge the two calibration tables together. The calibration
-c	           tables will usually not overlap in time or frequency (not
-c		   yet implemented)
+c	           tables will usually not overlap in time or frequency
+c	           (implemented for gain tables only).
 c@ options
 c	This gives extra processing options, which are used to suppress
 c	the copying of certain items. Several options can be given,
@@ -51,12 +51,13 @@ c    rjs  22mar93 Added the merging capability.
 c    rjs  30mar93 Generalise the "merge" capability... at least start to.
 c    rjs  24nov93 mode=create also copies the history file.
 c    rjs  17jan93 Copy cgains and wgains.
+c    rjs  24nov94 Implement merging of gain tables.
 c
 c  Bugs:
 c    None?
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='GpCopy: version 17-Jan-94')
+	parameter(version='GpCopy: version 24-Nov-94')
 	logical dopol,docal,dopass,docopy
 	integer iostat,tIn,tOut
 	character vis*64,out*64,mode*8
@@ -113,7 +114,7 @@ c
 	if(docal)then
 	  docal = .not.docopy.and.hdprsnt(tOut,'gains')
 	  if(mode.eq.'merge'.and.docal)then
-	    call bug('f','Merging of gain tables is not implemented')
+	    call GnMerge(tIn,tOut)
 	  else if(mode.eq.'apply'.and.docal)then
 	    call bug('f','Applying of gain tables is not implemented')
 	  else
@@ -246,8 +247,8 @@ c  the output frequency table will not change -- just the associated
 c  gains will be updated.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
-	integer MAXSPECT,MAXPASS
-	parameter(MAXSPECT=16,MAXPASS=MAXSPECT*MAXCHAN)
+	integer MAXPASS
+	parameter(MAXPASS=MAXWIN*MAXCHAN)
 c
 	complex Gains1(MAXPASS),Gains2(MAXPASS)
 	double precision freq1(2),freq2(2)
@@ -275,7 +276,7 @@ c
 	call rdhdi(tOut,'nspect0',nspect2,0)
 	if(nspect.ne.nspect2)
      *	  call bug('f','Incompatible number of spectral windows')
-	if(nspect.gt.maxspect)call bug('f','Too many spectral windows')
+	if(nspect.gt.MAXWIN)call bug('f','Too many spectral windows')
 c
 	call haccess(tIn,item1,'freqs','read',iostat)
 	if(iostat.eq.0)call haccess(tOut,item2,'freqs','read',iostat)
@@ -343,3 +344,180 @@ c
 	if(iostat.eq.0)call hdaccess(item2,iostat)
 	if(iostat.ne.0)call bugno('f',iostat)
 	end
+c************************************************************************
+	subroutine GnMerge(tIn,tOut)
+c
+	implicit none
+	integer tIn,tOut
+c
+c  Merge two gain tables together. The tables must be the same
+c  in terms of antennas, feeds and ntau. They must also not
+c  overlap in time.
+c
+c------------------------------------------------------------------------
+	include 'maxdim.h'
+	include 'mem.h'
+c
+	integer nants1,ntau1,nfeeds1,nants2,ntau2,nfeeds2,nsols1,nsols2
+	integer gin,gout,ngains,iostat
+	double precision int1,int2
+	integer pGain1,pGain2,pTim1,pTim2
+c
+c  Determine the number of solution intervals.
+c
+	call rdhdi(tIn,'nsols',nsols1,0)
+	call rdhdi(tOut,'nsols',nsols2,0)
+	if(nsols1.le.0.or.nsols2.le.0)
+     *    call bug('f','Could not determine number of gain intervals')
+c
+c  Get the number of antennas and feeds and determine if tau is present.
+c  Check that they are consistent.
+c
+	call rdhdi(tIn,'ngains',ngains,0)
+	call rdhdi(tIn,'nfeeds',nfeeds1,1)
+	call rdhdi(tIn,'ntau',  ntau1,  0)
+	nants1 = ngains / (ntau1 + nfeeds1)
+c
+	call rdhdi(tOut,'ngains',ngains,0)
+	call rdhdi(tOut,'nfeeds',nfeeds2,1)
+	call rdhdi(tOut,'ntau',  ntau2,  0)
+	nants2 = ngains / (ntau2 + nfeeds2)
+c
+	if(nants1.ne.nants2)
+     *	  call bug('f','The no. antennas in the two gain tables differ')
+	if(nfeeds1.ne.nfeeds2)
+     *	  call bug('f','The no. feeds in the two gain tables differ')
+	if(ntau1.ne.ntau2)
+     *	  call bug('f','The gain tables do not both have delay values')
+c
+c  Open and allocate space for the two gain tables.
+c
+	call haccess(tIn,gin,'gains','read',iostat)
+	if(iostat.eq.0)call haccess(tOut,gout,'gains','append',iostat)
+	if(iostat.ne.0)then
+	  call bug('w','Error opening a gain table')
+	  call bugno('f',iostat)
+	endif
+c
+	call memAlloc(pGain1,nsols1*ngains,'c')
+	call memAlloc(pTim1,nsols1,'d')
+	call memAlloc(pGain2,nsols2*ngains,'c')
+	call memAlloc(pTim2,nsols2,'d')
+c
+c  Load the two tables.
+c
+	call GnLoad(gin,nsols1,ngains,memc(pGain1),memd(pTim1))
+	call GnLoad(gout,nsols2,ngains,memc(pGain2),memd(pTim2))
+c
+c  Now merge them.
+c
+	call GnWrite(gout,ngains,memc(pGain1),memd(pTim1),nsols1,
+     *			         memc(pGain2),memd(pTim2),nsols2)
+c
+c  Close up shop.
+c
+	call hdaccess(gout,iostat)
+	if(iostat.ne.0)call bugno('f',iostat)
+	call hdaccess(gin,iostat)
+	if(iostat.ne.0)call bugno('f',iostat)
+	call memFree(pGain1,nsols1*ngains,'c')
+	call memFree(pTim1,nsols1,'d')
+	call memFree(pGain2,nsols2*ngains,'c')
+	call memFree(pTim2,nsols2,'d')
+c
+c  Make the interval the larger of the individual intervals.
+c
+	call rdhdd(tIn,'interval',int1,0.d0)
+	call rdhdd(tOut,'interval',int2,0.d0)
+	if(int1.gt.int2)call wrhdd(tOut,'interval',int2)
+c
+c  Assume that freq0 (if present) is the same for both,
+c
+	continue
+c
+c  Set the new number of solution intervals.
+c
+	call wrhdi(tOut,'nsols',nsols1+nsols2)
+c
+	end
+c************************************************************************
+	subroutine GnLoad(git,nsols,ngains,Gains,Times)
+c
+	implicit none
+	integer git,nsols,ngains
+	complex Gains(ngains,nsols)
+	double precision Times(nsols)
+c
+c  Load a gain table into memory.
+c------------------------------------------------------------------------
+	integer offset,iostat,i
+c
+	offset = 8
+c
+	do i=1,nsols
+	  call hreadd(git,Times(i),offset,8,iostat)
+	  offset = offset + 8
+	  if(iostat.eq.0)
+     *	    call hreadr(git,Gains(1,i),offset,8*ngains,iostat)
+	  offset = offset + 8*ngains
+	  if(iostat.ne.0)then
+	    call bug('w','Error reading gain table')
+	    call bugno('f',iostat)
+	  endif
+	enddo
+c
+	end
+c************************************************************************
+	subroutine GnWrite(gout,ngains,Gains1,Times1,nsols1,
+     *				       Gains2,Times2,nsols2)
+c
+	implicit none
+	integer gout,ngains,nsols1,nsols2
+	double precision Times1(nsols1),Times2(nsols2)
+	complex Gains1(ngains,nsols1),Gains2(ngains,nsols2)
+c
+c  Merge and write two gain tables.
+c------------------------------------------------------------------------
+	integer offset,iostat,i1,i2
+	logical do1,do2
+c
+	offset = 8
+	i1 = 0
+	i2 = 0
+	dowhile(i1.lt.nsols1.or.i2.lt.nsols2)
+c
+c  Determine whether we want to write from table 1 or 2.
+c
+	  do1 = i1.lt.nsols1
+	  do2 = i2.lt.nsols2
+	  if(do1.and.do2)then
+	    do1 = Times1(i1+1).lt.Times2(i2+1)
+	    do2 = .not.do1
+	  endif
+c
+c  Write the appropriate record.
+c
+	  if(do1)then
+	    i1 = i1 + 1
+	    call hwrited(gout,Times1(i1),offset,8,iostat)
+	    if(iostat.eq.0)
+     *	      call hwriter(gout,Gains1(1,i1),offset+8,8*ngains,iostat)
+	  endif
+	  if(do2)then
+	    i2 = i2 + 1
+	    call hwrited(gout,Times2(i2),offset,8,iostat)
+	    if(iostat.eq.0)
+     *	      call hwriter(gout,Gains2(1,i2),offset+8,8*ngains,iostat)
+	  endif
+c
+c  Common checking, etc.
+c
+	  if(iostat.ne.0)then
+	    call bug('w','Error writing gain table')
+	    call bugno('f',iostat)
+	  endif
+	  offset = offset + 8 + 8*ngains
+	enddo
+c
+	end
+
