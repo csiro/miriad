@@ -56,7 +56,8 @@ c    rjs  18mar97    Remove checks for alignment violation, as this requirement
 c		     in hio has been eliminated.
 c    rjs  21mar97    Support writing of binary tables.
 c    rjs  20sep97    Replace julfdate,fdatejul with julday,dayjul.
-c
+c    rjs  11may98    Better handling of IEEE NaNs and Inf, and blanking of
+c		     floating point FITS files.
 c  Bugs and Shortcomings:
 c    * IF frequency axis is not handled on output of uv data.
 c
@@ -385,7 +386,7 @@ c    data	Array containing the pixel info.
 c--
 c------------------------------------------------------------------------
 	integer i,offset,length,iostat,blank
-	real bs,bz,temp
+	real bs,bz
 	include 'fitsio.h'
 c
 c  Check that it is the right sort of operation for this file.
@@ -409,20 +410,23 @@ c
 	  call hreadr(item(lu),data,offset,BypPix(lu)*length,iostat)
 	  if(iostat.ne.0)call bugno('f',iostat)
 c
-	  if(blank.ne.0)then
-	    call hreadi(item(lu),array,offset,BypPix(lu)*length,iostat)
-	    if(iostat.ne.0)call bugno('f',iostat)
-	    temp = -bz/bs
-	    do i=1,length
-	      if(array(i).eq.blank) data(i) = temp
-	    enddo
-	  endif
-c
 	  if(bs.ne.1.or.bz.ne.0)then
 	    do i=1,length
 	      data(i) = bs * data(i) + bz
 	    enddo
 	  endif
+c
+c  Handle FITS-style blanking.
+c
+	  call hreadi(item(lu),array,offset,BypPix(lu)*length,iostat)
+	  if(iostat.ne.0)call bugno('f',iostat)
+	  do i=1,length
+	    if((2139095040.le.array(i).and.
+     *	        array(i).le.2147483647).or.
+     *	       (-8388608.le.array(i).and.
+     *	        array(i).le.-1))data(i) = 0
+	  enddo
+c
 c
 c  Do the scaled integer case. Blank if needed.
 c
@@ -502,9 +506,18 @@ c
 	    call hreadi(item(lu),array,offset,BypPix(lu)*length,iostat)
 	  endif
 	  if(iostat.ne.0)call bugno('f',iostat)
-	  do i=1,length
-	    flags(i) = array(i).ne.blank
-	  enddo
+	  if(float(lu))then
+	    do i=1,length
+	      flags(i) = (2139095040.gt.array(i).or.
+     *		  	  array(i).gt.2147483647).and.
+     *			 (-8388608.gt.array(i).or.
+     *			  array(i).gt.-1)
+	    enddo
+	  else
+	    do i=1,length
+	      flags(i) = array(i).ne.blank
+	    enddo
+	  endif
 	endif
 c
 	end
@@ -2444,7 +2457,7 @@ c    lu		File handle.
 c
 c------------------------------------------------------------------------
 	include 'fitsio.h'
-	integer iostat,i
+	integer iostat,i,bitpix
 	logical ok
 	logical first
 c
@@ -2497,7 +2510,12 @@ c
 	  call fitwrhdl(lu,'SIMPLE',.true.)
 	  BlankVal(lu) = 0
 	else
-	  call fitrdhdi(lu,'BLANK',BlankVal(lu),0)
+	  call fitrdhdi(lu,'BITPIX',bitpix,0)
+	  if(bitpix.gt.0)then
+	    call fitrdhdi(lu,'BLANK',BlankVal(lu),0)
+	  else
+	    BlankVal(lu) = -1
+	  endif
 	endif
 c
 	end
