@@ -13,17 +13,23 @@ c	assumed to be symmetrical about its reference pixel, but see the
 c	"asymmetric" option if this is not so. If this is not given, then
 c	a gaussian beam must be specified by the fwhm and pa parameters.
 c@ fwhm
-c	The size, in arcsec, of the gaussian beam to be used in place
-c	of the beam parameter. Either beam or fwhm MUST be set.
-c	This parameter will normally be two numbers, giving the
+c	This is used to specify the gaussian beam used when convolving.
+c	Normally it gives the size of the beam to convolve with, but
+c	using options=final causes CONVOL to interpret the parameters
+c	as the required resolution of the output image.
+c	The size, in arcsec, will normally be two numbers, giving the
 c	full-width at half-maximum of the major and minor axes of the
 c	gaussian. If only one number is given, the gaussian will have
 c	equal major and minor axes.
+c	This parameter is ignored if the "beam" keyword is given.
 c@ pa
-c	The position angle, in degrees, of the gaussian beam,
-c	measured east from north. The default is determined from the dirty
-c	beam fit (The value for PA is ignored, if no value is given for
-c	FWHM).
+c	The position angle, in degrees, of the gaussian beam.
+c	Normally this is the position angle of the beam that is used
+c	when convolving. However options=final causes this parameter to
+c	be interpreted as the required position angle in the effective
+c	beam of the output image.
+c	It is measured north through towards east, in degrees.
+c	This parameter is ignored if the "beam" keyword is given.
 c@ region
 c	The region of the input map to convolve. See the Users Manual for
 c	instructions on how to specify this. The default is the entire
@@ -33,6 +39,9 @@ c	The output image. No default.
 c@ options
 c	Some extra processing options. Several can be given, separated
 c	by commas. Minimum match is used.
+c	  "final"    When parameters are given by the FWHM and PA keywords,
+c	             the "final" option causes CONVOL to interpret these
+c	             as the resoultion required for the final output image.
 c	  "divide"   Divide, rather than mulitple, the transform of the map
 c	             by the transform of the beam. That is, perform
 c	             deconvolution, rather than convolution.
@@ -75,6 +84,7 @@ c    nebk     25nov92 Copy btype to output
 c    rjs      22nov93 Handle gaussian beam. Get rid of "scale" option.
 c    rjs      11jan93 Honour explicit scale factors.
 c    mchw  06sep94 Set default bmin to be bmaj, and fix log line in doc.
+c    rjs   15mar95 Add options=final.
 c
 c  Bugs:
 c------------------------------------------------------------------------
@@ -82,18 +92,19 @@ c------------------------------------------------------------------------
 	include 'mirconst.h'
 	integer maxbox,maxruns
 	character version*(*)
-	parameter(version='Convol: version 1.0 06-Sep-94' )
+	parameter(version='Convol: version 1.0 15-Mar-95' )
 	parameter(maxruns=3*maxdim)
 	parameter(maxbox=1024)
 	character map*32,beam*32,out*32
-	integer nsize(3),naxis
+	integer nsize(3),naxis,ifail
 	integer lMap,lBeam,lOut,iref,jref,blc(3),trc(3)
 	integer xmin,xmax,ymin,ymax,nx,ny,n1,n2,xoff,yoff
 	integer nPoint,nRuns,k,l,Box(maxbox),Runs(3,maxRuns)
 	double precision cdelt1,cdelt2
 	real crpix1,crpix2,bmaj,bmin,bpa,bmaj1,bmin1,bpa1,factor,sigma
+	real temp
 	character bunit*32,flags*4
-	logical divide,selfscal,rect,asym,corr,doscale,dogaus
+	logical divide,selfscal,rect,asym,corr,doscale,dogaus,final
 c
 	integer handle,pDat
 	include 'mem.h'
@@ -117,7 +128,7 @@ c
 	endif
 	call keya('out',Out,' ')
 	call BoxInput('region',map,box,maxbox)
-	call GetOpt(divide,asym,corr)
+	call GetOpt(final,divide,asym,corr)
 	selfscal = .not.(divide.or.keyprsnt('scale'))
 	call keyr('scale',factor,1.)
 	call keyr('sigma',sigma,0.)
@@ -130,7 +141,17 @@ c
 	if(.not.divide) sigma = 0
 	if(divide.and.sigma.eq.0)
      *	  call bug('f','Sigma must be set, when using options=divide')
-
+	if(final.and..not.doGaus)call bug('f',
+     *	  'You cannot set options=final and a beam parameter')
+	if(asym.and.doGaus)then
+	  call bug('w','Gaussians are always symmetric')
+	  asym = .false.
+	endif
+	if(.not.asym.and.corr) call bug('w',
+     *  'Correlation and convolution do not differ for symmetric beams')
+	if(final.and.divide) call bug('f',
+     *	'Cannot use options=final and divide together')
+c
 c  Open the map and handle the boxes to be processed.
 c
 	call xyopen(lMap,map,'old',3,nsize)
@@ -175,6 +196,21 @@ c  Check that the map and beam sizes and deltas are the same.
 c
 	if(nx.gt.n1.or.ny.gt.n2)
      *	  call bug('f','Map must be smaller than the beam')
+c
+c  If we are operating in "final" mode, determine the convolving
+c  beam.
+c
+	if(final)then
+	  call GauDPar1(lMap,bmaj1,bmin1,bpa1,
+     *    				   bmaj,bmin,bpa,temp,ifail)
+	  if(ifail.eq.1)call bug('f',
+     *	    'The input has the required final resolution')
+	  if(ifail.ne.0)call bug('f',
+     *	    'The convolving beam is undefined for the final resolution')
+	  bmaj1 = bmaj
+	  bmin1 = bmin
+	  bpa1 = bpa
+	endif
 c
 c  Determine the units,etc, of the output, along with any scale
 c  factors.
@@ -316,29 +352,30 @@ c
 c
 	end
 c************************************************************************
-	subroutine GetOpt(divide,asym,corr)
+	subroutine GetOpt(final,divide,asym,corr)
 c
 	implicit none
-	logical divide,asym,corr
+	logical divide,asym,corr,final
 c
 c  Get extra processing options.
 c
 c  Output:
+c    final	Set the final output beam according to the fwhm/pa
+c		parameters.
 c    divide	True if we are really deconvolving.
 c    asym	Is the beam asymmetric?
 c------------------------------------------------------------------------
 	integer nopts
-	parameter(nopts=3)
+	parameter(nopts=4)
 	logical present(nopts)
 	character opts(nopts)*10
-	data opts/'divide    ','asymmetric','correlate '/
+	data opts/'divide    ','asymmetric','correlate ','final     '/
 c
 	call options('options',opts,present,nopts)
 	divide = present(1)
 	asym    = present(2)
 	corr = present(3)
-	if(.not.asym.and.corr) call bug('w',
-     *  'Correlation and convolution do not differ for symmetric beams')
+	final = present(4)
 	end
 c************************************************************************
 	subroutine Scale(Data,n,factor)
