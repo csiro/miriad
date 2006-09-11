@@ -53,6 +53,7 @@ c    rjs  20nov98 Partial handling of sky rotation.
 c    rjs  15dec98 More complete handling of sky rotation.
 c    rjs   8jan98 Fix errors in cogaucvt when angle is non-zero and pixel
 c		  increments differ.
+c    rjs   8sep99 More robust algorithm in comixed.
 c************************************************************************
 c* coInit -- Initialise coordinate conversion routines.
 c& rjs
@@ -2686,8 +2687,8 @@ c
 	  y(i1) = yd(i1)
 	  call coll2xy(y(1),y(2),xd(1),xd(2),
      *		    xpix,dx,xval,ypix,dy,yval,llcos,llsin,proj)
-	  xdd(1) = 0.5*(x(1)+xd(1) + abs(x(2)-xd(2)))
-	  xdd(2) = 0.5*(x(2)+xd(2) + abs(x(1)-xd(1)))
+	  xdd(1) = 0.5*(x(1)+xd(1) + abs(dy/dx)*abs(x(2)-xd(2)))
+	  xdd(2) = 0.5*(x(2)+xd(2) + abs(dx/dy)*abs(x(1)-xd(1)))
 	  call coxy2ll(xdd(1),xdd(2),ydd(1),ydd(2),
      *		    xpix,dx,xval,ypix,dy,yval,llcos,llsin,proj)
 c
