@@ -17,7 +17,7 @@
 #define H_CMPLX_SIZE	8
 
 #define MAXPATH		256
-#define MAXOPEN		20
+#define MAXOPEN		26
 
 /*
   The following macros define routines which read or write data of a
