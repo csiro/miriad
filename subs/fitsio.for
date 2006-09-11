@@ -42,6 +42,7 @@ c    rjs  19jul94    Support uu-ncp,vv-ncp, etc.
 c    rjs  25jul94    Better (?) support for uu-?, vv-?.
 c    rjs  29jul94    Handle uu-l,vv-l,ww-l, and times with bzero==0.
 c    rjs   2aug94    Recognised XTENSION='BINTABLE'
+c    rjs   6feb95    Change name of COMMON block for LINUX.
 c
 c  Bugs and Shortcomings:
 c    * IF frequency axis is not handled on output or uv data.
