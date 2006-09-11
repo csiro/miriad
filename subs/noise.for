@@ -8,7 +8,7 @@ c    rjs  xxjan93  Original version.
 c    mjs  24feb93  Added some doc lines; no code mods.
 c    rjs   7jul93  Include "ran" function here.
 c    mjs  09mar94  Mods for sgi-only (mips).
-c
+c    rjs  25jan95  Mods for linux.
 c************************************************************************
 c
 c  Choose which random number style we are to use. We have three choices:
@@ -20,6 +20,11 @@ c
 #  define defined
 #endif
 #ifdef hpux
+#  define vms_style
+#  define inc_ran
+#  define defined
+#endif
+#ifdef f2c
 #  define vms_style
 #  define inc_ran
 #  define defined
