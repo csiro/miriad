@@ -172,7 +172,7 @@ c-----------------------------------------------------------------------
             number = substr( string, i )
             ok = number .ne. ' '
             if( ok ) call atodf( number(:len1(number)), d, ok )
-            if( ok ) array(i) = sngl( d )
+            if( ok ) array(i) = d
          endif
       enddo
       end
@@ -572,7 +572,7 @@ c
 	do while(k1.le.k2.and.more)
 	  c = string(k1:k1)
 	  if(quoted)then
-	    quoted = c.eq.quotec
+	    quoted = c.ne.quotec
 	  else if(c.eq.'"'.or.c.eq.'''')then
 	    quoted = .true.
 	    quotec = c
@@ -800,8 +800,8 @@ c* indek - get position of substring in a string, returning length if not found
 c& bpw
 c: strings
 c+
-      integer function indek ( string, substring )
-      character*(*) string, substring
+      integer function indek ( string, substrng )
+      character*(*) string, substrng
 
 c Indek works basically the same as the intrinsic function index, but if the
 c substring is not found, it does not return 0, but the length of the string
@@ -813,10 +813,10 @@ c if ok; the above)
 c
 c Input:
 c   string:      the string to search in
-c   substring:   the substring to search for
+c   substrng:   the substring to search for
 c--
       integer       idx, len1
-      idx                  = index ( string, substring )
+      idx                  = index ( string, substrng )
       if( idx .eq. 0 ) idx = len1( string ) + 1
       indek = idx
 c
