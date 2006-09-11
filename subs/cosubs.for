@@ -41,8 +41,6 @@ c                      e.g. if CTYPE=RADIUS it is not treated as RA.
 c                      Consolidate CTYPE searching into AXFNDCO and AXTYPCO
 c    nebk   03dec95    Declaration of TYPE in AXTYPCO was (n) not (*), and
 c	               removed useless access to multiple axes in CHKAXCO
-c                      Work around SOL2 compiler bug in CTYPECO by not 
-c                      passing ITOAF to RDHDA
 c***********************************************************************
 c
 c* axfndCO -- Find a specified generic axis in an image
@@ -360,14 +358,12 @@ c    ctype  CTYPE (upper case)
 c    il     Length of string prior to project "--*" string
 c--
 c-----------------------------------------------------------------------
-      character itoaf*1, str*10
+      character itoaf*1, str*6
       integer len1, il2
 c----------------------------------------------------------------------- 
       str = 'ctype'//itoaf(iax)
       call rdhda (lun, str, ctype, ' ')
-c      call rdhda (lun, 'ctype'//itoaf(iax), ctype, ' ')
-c      if (ctype.eq.' ') write (*,*) 
-c     +  'CTYPECO: ctype is blank, iax, lun, len=', iax, lun, len(ctype)
+      if (ctype.eq.' ') call bug ('f', 'CTYPECO: '//str//' is blank')
       call ucase (ctype)
 c
       il2 = len1(ctype)
