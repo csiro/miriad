@@ -84,6 +84,7 @@ c    rjs  19sep95 Reset the valid flag on a baseline after an integration.
 c    rjs   9nov95 Time axis was mislabelled by 1 integration.
 c    pjt  20jun96 Larger MAXPLOTS for BIMA (20 -> 90)
 c    rjs  29jul97 Added quad quantities.
+c    rjs  11aug97 Minor fiddles to make it more robust.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
@@ -671,7 +672,7 @@ c
 	  write(line,'(a,f9.4)')
      *	    'Mean amplitude:',yav
 	  call output(line)
-	  yrms = sqrt(yrms**2 - yav**2)
+	  yrms = sqrt(abs(yrms**2 - yav**2))
 	  write(line,'(a,f8.4)')
      *	    'Actual amplitude rms scatter:     ',yrms
 	  call output(line)
