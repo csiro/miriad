@@ -1092,10 +1092,10 @@ c
 		line(1:10) = ' '
 	      endif
 	      if(nfeeds.eq.1)then
-	        write(line(11:80),'(6f10.5))')(1.0/y(i),i=j,j1)
+	        write(line(11:80),'(6f10.5))')(y(i),i=j,j1)
 	      else
 		write(line(11:80),'(6f10.5)')
-     *			(1.0/y(i),1.0/y1(i),i=(j-1)/2+1,(j1-1)/2+1)
+     *			(y(i),y1(i),i=(j-1)/2+1,(j1-1)/2+1)
 	      endif
 	      call LogWrite(line,more)
 	    enddo
@@ -1162,7 +1162,8 @@ c------------------------------------------------------------------------
 	integer i
 c
 	do i=1,n
-	  Gains(i) = 1/Gains(i)
+	  if(abs(real(Gains(i)))+abs(aimag(Gains(i))).gt.0)
+     *					 Gains(i) = 1/Gains(i)
 	enddo
 c
 	end
