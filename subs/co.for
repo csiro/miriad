@@ -12,6 +12,7 @@ c    subroutine coAxSet(lu,iax,ctype,crpix,crval,cdelt)
 c    subroutine coCvt(lu,in,x1,out,x2)
 c    subroutine coCvt1(lu,iax,in,x1,out,x2)
 c    subroutine coLMN(lu,in,x1,lmn)
+c    subroutine coGeom(lu,in,x1,ucoeff,vcoeff)
 c    subroutine coFreq(lu,in,x1,freq)
 c    subroutine coVelSet(lu,axis)
 c    subroutine coPrjSet(lu)
@@ -30,6 +31,7 @@ c    rjs   9aug94 Original version.
 c    rjs  13sep94 Support 'VELOCITY' and 'FELOCITY' axes.
 c    rjs  12oct94 Added a good many things ... for mosaicing.
 c    rjs  23nov94 A dummy statement to stop the alpha compiler complaining.
+c    rjs  30jan95 Added cogeom.
 c************************************************************************
 c* coInit -- Initialise coordinate conversion routines.
 c& rjs
@@ -656,6 +658,88 @@ c
 	lmn(1) = sin(ra-ra0) * cos(dec)
 	lmn(2) = sin(dec)*cos(dec0) - cos(ra-ra0)*cos(dec)*sin(dec0)
 	lmn(3) = sin(dec)*sin(dec0) + cos(ra-ra0)*cos(dec0)*cos(dec) 
+	end
+c************************************************************************
+c* coGeom -- Compute linear coefficients to convert geometries.
+c& rjs
+c: coordinates
+c+
+	subroutine coGeom(lu,in,x1,ucoeff,vcoeff)
+c
+	implicit none
+	integer lu
+	character in*(*)
+	double precision x1(*),ucoeff(3),vcoeff(3)
+c
+c  Input:
+c    lu		Handle of the coordinate object.
+c    in		As with coCvt
+c    x1		As with coCvt
+c  Output:
+c    ucoeff,vcoeff Coefficients used to convert (u,v) from one geometry
+c		to another. In particular:
+c	u(corrected) = ucoeff(1)*u(raw) + ucoeff(2)*v(raw) + ucoeff(3)*w(raw)
+c	v(corrected) = vcoeff(1)*u(raw) + vcoeff(2)*v(raw) + vcoeff(3)*w(raw)
+c--
+c------------------------------------------------------------------------
+	include 'co.h'
+	double precision x2(MAXNAX),ra,dec,ra0,dec0,fac
+	double precision cosa,sina,cosd,sind,cosd0,sind0
+	integer k
+c
+c  Externals.
+c
+	integer coLoc
+c
+c  Check validity.
+c
+	k = coLoc(lu,.false.)
+	if(ilong(k).eq.0.or.ilat(k).eq.0)
+     *	  call bug('f','Non-celestial coordinate system, in coLMN')
+c
+c  Convert the users coordinate to absolute world coordinates.
+c  Fill in the reference location in the output, just in case the
+c  user was silly enough not to give enough inputs.
+c
+	ra0 = crval(ilong(k),k)
+	dec0 = crval(ilat(k),k)
+	x2(ilong(k)) = ra0
+	x2(ilat(k))  = dec0
+c
+	call coCvt(lu,in,x1,'aw/...',x2)
+c
+	ra = x2(ilong(k))
+	dec = x2(ilat(k))
+c
+c  Determine the conversion coefficients.
+c
+	cosd0 = cos(dec0)
+	sind0 = sin(dec0)
+	cosa = cos(ra-ra0)
+	sina = sin(ra-ra0)
+	sind = sin(dec)
+	cosd = cos(dec)
+c
+	if(coProj(k).eq.'ncp')then
+	  ucoeff(1) = cosa
+	  ucoeff(2) = -sina*sind
+	  ucoeff(3) = sina*cosd
+	  vcoeff(1) = sina*sind0
+	  vcoeff(2) = cosd0*cosd + cosa*sind0*sind
+	  vcoeff(3) = cosd0*sind - cosa*sind0*cosd
+	else if(coProj(k).eq.'sin')then
+	  fac = 1/(sind0*sind + cosa*cosd*cosd0)
+	  ucoeff(1) =   fac * (cosd0*cosd + cosa*sind0*sind)
+	  ucoeff(2) = - fac * sina*sind0
+          ucoeff(3) =   0
+          vcoeff(1) =   fac * sina*sind
+          vcoeff(2) =   fac * cosa
+          vcoeff(3) =   0
+	else
+	  call bug('f',
+     *	   'Geometry conversion possible for NCP or SIN proj. only')
+	endif
+c
 	end
 c************************************************************************
 c* coCvt1 -- Do coordinate conversion on one axis only.
