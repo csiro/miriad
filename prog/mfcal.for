@@ -91,6 +91,7 @@ c    rjs   5oct94 Support linetype averaging.
 c    rjs  13jan96 Increase MAXHASH.
 c    rjs  27jul96 Re-wrote interp option to make it more robust.
 c    rjs  28jul97 Make options=delay more robust.
+c    rjs  31jul97 Make it work for wide-only files.
 c
 c  Problems:
 c    * Should do simple spectral index fit.
@@ -101,7 +102,7 @@ c------------------------------------------------------------------------
 	parameter(MAXPOL=2)
 c
 	character version*(*)
-	parameter(version='MfCal: version 1.0 3-Aug-94')
+	parameter(version='MfCal: version 1.0 31-jul-97')
 c
 	integer tno
 	integer pWGains,pFreq,pSource,pPass,pGains,pTau
@@ -544,8 +545,6 @@ c    sdf	Frequency increment for each observing band.
 c    sfreq	Start frequency for each observing band.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
-	integer MAXSPECT
-	parameter(MAXSPECT=16)
 	integer iostat,off,item,i,j,k,n,p,pd
 	complex G(MAXCHAN),temp
 	double precision freqs(2)
@@ -1031,13 +1030,13 @@ c    ischan
 c  Output:
 c    WGains
 c------------------------------------------------------------------------
-	integer MAXSPECT,MAXPOL
-	parameter(MAXSPECT=16,MAXPOL=2)
+	integer MAXPOL
+	parameter(MAXPOL=2)
 	include 'maxdim.h'
 c
 	integer i,j,k,i1,i2,bl,spect,chan,off,nbl,p
-	complex SumVM(MAXBASE,MAXSPECT,MAXPOL)
-	real SumMM(MAXBASE,MAXSPECT,MAXPOL),epsi
+	complex SumVM(MAXBASE,MAXWIN,MAXPOL)
+	real SumMM(MAXBASE,MAXWIN,MAXPOL),epsi
 c
 	nbl = nants*(nants-1)/2
 c
@@ -1155,6 +1154,8 @@ c
 	call uvVarSet(vupd,'sfreq')
 	call uvVarSet(vupd,'sdf')
 	call uvVarSet(vupd,'nschan')
+	call uvVarSet(vupd,'wfreq')
+	call uvVarSet(vupd,'wwidth')
 	call uvselect(tno,'and',0.d0,0.d0,.true.)
 	call uvselect(tno,'polarization',dble(PolXX),0.d0,.true.)
 	call uvselect(tno,'polarization',dble(PolYY),0.d0,.true.)
@@ -1320,13 +1321,13 @@ c  Output:
 c    VID
 c------------------------------------------------------------------------
 	include 'maxdim.h'
-	integer MAXSPECT,MAXPOL
-	parameter(MAXSPECT=16,MAXPOL=2)
+	integer MAXPOL
+	parameter(MAXPOL=2)
 	VID = chan - 1
 	VID = MAXANT * VID + i1 - 1
 	VID = MAXANT  *VID + i2 - 1
 	VID = MAXPOL  *VID + p  - 1
-	VID = MAXSPECT*VID + spect - 1
+	VID = MAXWIN  *VID + spect - 1
 	end
 c************************************************************************
 	subroutine unpack(i1,i2,p,spect,chan,VID)
@@ -1346,13 +1347,13 @@ c    spect
 c    chan
 c------------------------------------------------------------------------
 	include 'maxdim.h'
-	integer MAXSPECT,MAXPOL
-	parameter(MAXSPECT=16,MAXPOL=2)
+	integer MAXPOL
+	parameter(MAXPOL=2)
 	integer VisId
 c
 	VisId = VID
-	spect = mod(VisId,MAXSPECT)
-	VisId = VisId/MAXSPECT
+	spect = mod(VisId,MAXWIN)
+	VisId = VisId/MAXWIN
 	p     = mod(VisId,MAXPOL)
 	VisId = VisId/MAXPOL
 	i2    = mod(VisId,MAXANT)
@@ -1726,11 +1727,11 @@ c    Gains	Estimate of the antenna gains.
 c    Tau	Estimate of the atmospheric delay.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
-	integer MAXSPECT,MAXPOL
-	parameter(MAXSPECT=16,MAXPOL=2)
+	integer MAXPOL
+	parameter(MAXPOL=2)
 c
 	integer i,j,k,p
-	complex g,WPass(MAXANT*MAXSPECT*MAXPOL)
+	complex g,WPass(MAXANT*MAXWIN*MAXPOL)
 	logical more
 	real epsi
 c
@@ -1963,11 +1964,11 @@ c    WPass	Estimate of the band gains.
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'maxdim.h'
-	integer MAXSPECT,MAXPOL
-	parameter(MAXSPECT=16,MAXPOL=2)
+	integer MAXPOL
+	parameter(MAXPOL=2)
 	integer i,j,k,p
-	real SumMM(MAXANT,MAXSPECT,MAXPOL),theta
-	complex SumVM(MAXANT,MAXSPECT,MAXPOL),g,V
+	real SumMM(MAXANT,MAXWIN,MAXPOL),theta
+	complex SumVM(MAXANT,MAXWIN,MAXPOL),g,V
 c
 c  Initialise the accumulators.
 c
