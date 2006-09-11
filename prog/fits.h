@@ -1,24 +1,44 @@
-c--------------------------------------------------
-c	fits.h - include file for fits
-c--------------------------------------------------
 	include 'maxdim.h'
+c
+	integer EQUATOR,ALTAZ
+	parameter(EQUATOR=1,ALTAZ=0)
+c
 	integer uvCrval,uvCdelt,uvCrpix
 	integer uvStokes,uvFreq,uvRa,uvDec
-	integer uvU,uvV,uvW,uvBl,uvT,uvSrcId,uvFreqId
-	integer uvRandom,uvData
-c
 	parameter(uvCrval=1,uvCdelt=2,uvCrpix=3)
 	parameter(uvStokes=1,uvFreq=2,uvRa=3,uvDec=4)
-	parameter(uvU=1,uvV=2,uvW=3,uvBl=4,uvT=5,uvRandom=5)
-	parameter(uvSrcId=6,uvFreqId=7)
-	parameter(uvData=uvRandom+1)
 c
-	integer PolII,PolI,PolQ,PolU,PolV,PolRR,PolLL,PolRL,PolLR
-	integer PolXX,PolYY,PolXY,PolYX,PolMin,PolMax
+	integer MAXSRC,MAXIF,MAXFREQ,MAXCONFG
+	parameter(MAXSRC=1000,MAXFREQ=16,MAXIF=MAXFREQ,MAXCONFG=10)
+
+	double precision raepo(MAXSRC),decepo(MAXSRC)
+	double precision raapp(MAXSRC),decapp(MAXSRC)
+	double precision dra(MAXSRC),ddec(MAXSRC)
+	double precision sfreq(MAXIF*MAXFREQ)
+	double precision freqoff(MAXSRC*MAXIF),epoch(MAXSRC)
+	double precision freqref(MAXCONFG)
+	double precision restfreq(MAXSRC*MAXIF),veldop(MAXSRC)
+	double precision antpos(3*MAXANT,MAXCONFG)
+	double precision timeref,eq,timeoff(MAXCONFG)
+	double precision lat(MAXCONFG),long(MAXCONFG),Tprev
+	integer mount(MAXCONFG),nants(MAXCONFG),velsys,config
+	real evec,systemp,jyperk,velref
+	logical llok,emok,systok,jok,mosaic,velcomp,inited
 c
-	parameter(PolII=0,PolI=1,PolQ=2,PolU=3,PolV=4,PolRR=-1)
-	parameter(PolLL=-2,PolRL=-3,PolLR=-4,PolXX=-5,PolYY=-6)
-	parameter(PolXY=-7,PolYX=-8,PolMin=PolYX,PolMax=PolV)
+	real sdf(MAXIF*MAXFREQ)
+	integer nsrc,nif,nchan,nfreq,nconfig
+	integer srcids(MAXSRC),freqids(MAXFREQ),srcid,srcidx
+	integer freqid,freqidx
+	integer sindx(MAXSRC),findx(MAXFREQ)
+	character source(MAXSRC)*20
 c
-	integer MAXPOL,MAXSRC,MAXIF,MAXFREQ,MAXCONFG
-	parameter(MAXPOL=4,MAXSRC=128,MAXIF=16,MAXFREQ=16,MAXCONFG=10)
+	character observer*16,telescop*12
+c
+	common/Tables/raepo,decepo,raapp,decapp,dra,ddec,sfreq,freqoff,
+     *	    restfreq,veldop,antpos,timeoff,freqref,epoch,lat,long,Tprev,
+     *	    timeref,eq,
+     *	  sdf,evec,systemp,jyperk,velref,
+     *	  nsrc,nif,nchan,nfreq,nconfig,nants,srcids,freqids,
+     *	    srcid,freqid,srcidx,freqidx,sindx,findx,mount,velsys,config,
+     *	  mosaic,velcomp,llok,emok,systok,jok,inited
+	common/TablesC/source,observer,telescop
