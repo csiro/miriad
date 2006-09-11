@@ -18,10 +18,10 @@ c    pjt   3may90 verbosity to bug calls
 c    mchw 17jul90 increased frequency search range in CalGet since flux
 c			table does not have entries for many freqencies.
 c    rjs   2nov90 Fixed bug affecting points where u=0, in ModPlane.
+c    mchw 19nov90 Added flag "h" to use image header for phase center.
 c************************************************************************
-c* ModelIni -- Ready the uv data file for processing by the Model routine.
-c& mchw
-c: model
+c*ModelIni -- Ready the uv data file for processing by the Model routine.
+c:model
 c+
 	subroutine ModelIni(tmod,tvis,sels,flags)
 c
@@ -92,9 +92,8 @@ c
 	endif
 	end
 c************************************************************************
-c* Model -- Calculate model visibilities, given a model image.
-c& mchw
-c: model
+c*Model -- Calculate model visibilities, given a model image.
+c:model
 c+
 	subroutine Model(flags,tvis,tmod,offset,level,tscr,
      *					nhead,header,nchan,nvis)
@@ -121,6 +120,7 @@ c		 'c'  Calibration scaling. Look up the source in the
 c		      calibrators file, to determine the flux of the source.
 c		 'a'  Autoscale. After model calculation, the model is scaled
 c		      so that it has the same power as the visibilities.
+c		 'h'	Use image header for phase center.
 c    offset	The offset, in arcsec, in RA and DEC, of the point
 c		source model. This is only used if tmod.eq.0.
 c    level	Either a clip level to apply to the data (tmod.ne.0), or
@@ -174,16 +174,17 @@ c------------------------------------------------------------------------
 c
 	real Out(maxlen),a,VisPow,ModPow
 	integer i,j,length
-	logical calscale
+	logical calscale,imhead
 c
 	call ModInit
 	call ScrOpen(tscr)
 	call uvset(tvis,'coord','wavelength',0,0.,0.,0.)
 	calscale = index(flags,'c').ne.0
+	imhead = index(flags,'h').ne.0
 c
 	if(tmod.ne.0)then
 	  call ModMap(calscale,tvis,tmod,level,tscr,nhead,header,
-     *	    nchan,nvis,VisPow,ModPow)
+     *	    imhead,nchan,nvis,VisPow,ModPow)
 	else
 	  call ModPnt(calscale,tvis,offset,level,tscr,nhead,header,
      *	    nchan,nvis,VisPow,ModPow)
@@ -209,10 +210,10 @@ c
 	end
 c************************************************************************
 	subroutine ModMap(calscale,tvis,tmod,level,tscr,nhead,header,
-     *	    nchan,nvis,VisPow,ModPow)
+     *	    imhead,nchan,nvis,VisPow,ModPow)
 c
 	implicit none
-	logical calscale
+	logical calscale,imhead
 	integer tvis,tscr,nhead,nchan,nvis,tmod
 	real level,ModPow,VisPow
 	external header
@@ -225,6 +226,7 @@ c    level
 c    tscr
 c    nhead
 c    header
+c    imhead	Use image header for phase center.
 c  Output:
 c    nchan
 c    nvis
@@ -258,9 +260,8 @@ c
 	nyd = nextpow2(ny+1)
 	call rdhdr(tmod,'cdelt1',du,0.)
 	call rdhdr(tmod,'cdelt2',dv,0.)
-	if(du*dv.eq.0)
-     *	  call bug('f',
-     *    'MODEL: Cdelt1 or cdelt2 is missing from the model')
+	if(du*dv.eq.0) call bug('f',
+     *    'MODEL: cdelt1 or cdelt2 is missing from the model')
 c
 c  Calculate various thingos.
 c
@@ -286,8 +287,8 @@ c
 c
 c  Now that we have the info, we can find the FFT of the model.
 c
-	call ModFFT(tvis,tmod,nx,ny,nchan,nxd,nyd,level,Buffer,nv,nu,
-     *		xref,yref)
+	call ModFFT(tvis,tmod,nx,ny,nchan,nxd,nyd,level,imhead,
+     *		Buffer,nv,nu,xref,yref)
 	ngcf = width*((maxgcf-1)/width) + 1
 	doshift = abs(xref)+abs(yref).gt.0
 	call gcffun('spheroidal',gcf,ngcf,width,1.)
@@ -336,13 +337,14 @@ c
      *	  'Stopped reading vis data when number of channels changed')
 	end
 c************************************************************************
-	subroutine ModFFT(tvis,tmod,nx,ny,nchan,nxd,nyd,level,
+	subroutine ModFFT(tvis,tmod,nx,ny,nchan,nxd,nyd,level,imhead,
      *	  Buffer,nv,nu,xref,yref)
 c
 	implicit none
 	integer tvis,tmod,nx,ny,nchan,nxd,nyd,nv,nu
 	complex Buffer(nv,nu,nchan)
 	real xref,yref,level
+	logical imhead
 c
 c  Input:
 c    tvis
@@ -352,6 +354,7 @@ c    nchan
 c    nxd,nyd
 c    nv,nu
 c    level
+c    imhead	Use image header for phase center.
 c  Output:
 c    xref,yref	Offset, in radians, between the model and the visibility
 c		phase center.
@@ -366,12 +369,6 @@ c------------------------------------------------------------------------
 c
 c  Determine the location of the visibility phase center in the image.
 c
-	call uvrdvrr(tvis,'ra',vra,0.)
-	call uvrdvrr(tvis,'dra',dra,0.)
-	call uvrdvrr(tvis,'dec',vdec,0.)
-	call uvrdvrr(tvis,'ddec',ddec,0.)
-	vdec = vdec + ddec
-	vra = vra + dra/cos(vdec)
 	call rdhdr(tmod,'crval1',mra,0.)
 	call rdhdr(tmod,'crval2',mdec,0.)
 	call rdhdr(tmod,'cdelt1',dra,0.)
@@ -380,6 +377,19 @@ c
 	call rdhdr(tmod,'crpix2',yref,real(ny/2+1))
 	if(ddec*dra.eq.0)
      *	  call bug('f','Pixel increment missing in model header')
+c
+	if(imhead)then
+	  vra = mra
+	  vdec = mdec
+	else
+	  call uvrdvrr(tvis,'ra',vra,0.)
+	  call uvrdvrr(tvis,'dra',dra,0.)
+	  call uvrdvrr(tvis,'dec',vdec,0.)
+	  call uvrdvrr(tvis,'ddec',ddec,0.)
+	  vdec = vdec + ddec
+	  vra = vra + dra/cos(vdec)
+	endif
+c
 	xref = cos(vdec) * (vra  - mra ) / dra  + xref
 	yref =             (vdec - mdec) / ddec + yref
 	iref = nint(xref)
