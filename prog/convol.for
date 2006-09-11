@@ -427,7 +427,7 @@ c------------------------------------------------------------------------
 	character line*72,num*1
 	real crpix
 	integer nkeys
-	parameter(nkeys=36)
+	parameter(nkeys=37)
 	character keyw(nkeys)*8
 c
 c  Externals.
@@ -440,7 +440,7 @@ c
      *	  'ctype1  ','ctype2  ','ctype3  ','ctype4  ','ctype5  ',
      *				           'crpix4  ','crpix5  ',
      *	  'epoch   ','niters  ','object  ','obstime ','cellscal',
-     *	  'telescop','history ','restfreq','mostable',
+     *	  'telescop','history ','restfreq','mostable','pbtype  ',
      *	  'vobs    ','observer','obsra   ','obsdec  ','pbfwhm  ',
      *    'btype   ','ltype   ','lstart  ','lstep   ','lwidth  '/
 c
