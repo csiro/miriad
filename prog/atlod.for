@@ -67,7 +67,7 @@ c	            discarded and the channel nearest a multple of the LO
 c	            frequency is flagged. This option does not have a
 c	            sensitivity penalty, because the effective channel
 c	            bandwidth in continuum mode is twice the channel separation.
-c	  'reweight' Re-weight the lag spectrum to eliminate the "Gibss" phenomena.
+c	  'reweight' Re-weight the lag spectrum to eliminate the "Gibbs" phenomena.
 c@ nfiles
 c	This gives one or two numbers, being the number of files to skip,
 c	followed by the number of files to process. This is only
@@ -727,8 +727,8 @@ c
 c
 c  Reweight the data, if needed.
 c
-	if(dowt.and.nfreq(if).eq.ATCONT)
-     *	  call Reweight(vis,cscr,rscr,nstoke(if),nfreq(if),wts)
+	if(dowt.and.nfreq1.eq.ATCONT)
+     *	  call Reweight(vis,cscr,rscr,nstoke(if),nfreq1,wts)
 c
 c  Allocate buffer slots for each polarisation. Save the flags, Copy the
 c  data to the output. Do sampler corrections.
