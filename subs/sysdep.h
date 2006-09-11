@@ -123,6 +123,13 @@ typedef int int2;
 
 #define BUFSIZE 16384
 
+/* Some machines have the "strerror" routine. Linux whinges significantly
+   if you use the "old" way of doing effectively what strerror does. */
+
+#if defined(linux)
+#  define HAS_STRERROR
+#endif
+
 /* The Multiflow machine does not have the memcpy routine. Use bcopy
    instead.								*/
 
