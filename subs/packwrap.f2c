@@ -1,3 +1,8 @@
+#include <stddef.h>
+#include <stdlib.h>
+#include "miriad.h"
+#include "sysdep.h"
+
 fortran subroutine packi2(integer in,integer out,integer n)
 {
   pack16_c(in.addr,(char *)(out.addr),n.val);
