@@ -45,7 +45,8 @@ c@ spar
 c	This gives initial estimates of source parameters.  For
 c	each object given by the `object' keyword, either 1 (for
 c	the level) or 6 (for disks and gaussians) values should be
-c	given. The values are as follows:
+c	given. The initial estimates for each object a simply separated 
+c       by a comma. The values are as follows:
 c	  Object Type             SPAR values
 c	  -----------             -----------
 c	   level                   offset
