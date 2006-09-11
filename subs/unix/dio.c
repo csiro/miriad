@@ -28,6 +28,7 @@
 /*	10-Jan-96  rjs Make sure scratch file names are unique.		*/
 /*      17-jun-02  pjt MIR4 changes, and proper prototypes              */
 /*	 5-nov-04  jwr Changed a few size_t to ssize_t or off_t		*/
+/*      16-jun-06  rjs Add O_BINARY to make sure its OK on cygwin.      */
 /************************************************************************/
 
 #include <stddef.h>
@@ -170,6 +171,9 @@ void dopen_c(int *fd,char *name,char *status,off_t *size,int *iostat)
   } else bug_c('f',"dopen_c: Unrecognised status");
 #ifdef O_LARGEFILE
   flags |= O_LARGEFILE;
+#endif
+#ifdef O_BINARY
+  flags |= O_BINARY;
 #endif
   if((*fd = open(s,flags,0644)) < 0){*iostat = errno; return;}
   *size = Lseek(*fd,0,SEEK_END);
