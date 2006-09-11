@@ -8,7 +8,9 @@ c       SFIND has been updated to incorporate a new statistically
 c       robust method for detecting source pixels, called FDR (which
 c       stands for "False Discovery Rate"), as an alternative to
 c       simple sigma-clipping, which formed the basis of the original
-c       implementation. The original implementation of sfind has been
+c       implementation. Details of the FDR method can be found in
+c       Hopkins et al 2001, (astro-ph/0110570) and references
+c       therein. The original implementation of sfind has been
 c       preserved, and can be applied by specifying the option "oldsfind".
 c       In addition, when using SFIND in the new 'FDR' mode,
 c       several new features are available. SFIND now provides the
@@ -359,7 +361,7 @@ c       In FDR mode the code has problems with very large images. I
 c       think this is dependent on the available memory of the machine
 c       running Sfind, but need to do more testing to be certain. I
 c       have confirmed that on a machine with 256MB of memory and 256MB
-c       swap space, an image of 3200x3200 pixels will be analysed correctly.
+c       swap space, an image of 3600x3600 pixels will be analysed correctly.
 c       For larger images, the code will halt unceremoniously at the
 c       first call to memfree in subroutine fdr. I don't understand
 c       why this happens, although I am guessing it may have to do
@@ -487,6 +489,10 @@ c    amh  26aug01  Added 'fdrpeak' option to give user ability to choose
 c                  whether to fit sources using all contiguous, monotonically
 c                  decreasing pixels, rather than just those above the
 c                  FDR threshold.
+c    amh  26oct01  Minor fixes to correct untyped variables and remove
+c                  unused ones.
+c    amh  28oct01  Added printout of sigma corresponding to the p-value
+c                  selected by FDR.
 c
 c To do:
 c
@@ -3605,7 +3611,7 @@ c
       integer iii,jjj,ipim,ip2im
       real row(maxx),image2(nx,ny),meanimg(nx,ny),sgimg(nx,ny)
       double precision wa(2)
-      real fluxctoff
+      real fluxctoff,sigctoff
 c
       logical ok,gotit,mskexst,hdprsnt,mask(nx)
       logical fdrimg, sigmaimg, normimg, auto
@@ -3871,6 +3877,7 @@ c and if not, store it in the 'segmentation image' if required
 c
       nfdrpix = 0
       fluxctoff = 1.e9
+      sigctoff = 1.e9
       do m = 1,ny
        do l = 1,nx
 c cvt l from binned subimage pixels to full image pixels
@@ -3881,6 +3888,7 @@ c cvt l from binned subimage pixels to full image pixels
           row(nint(wa(1))) = 0.
          else
           fluxctoff=min(fluxctoff,image(l,m))
+          sigctoff=min(sigctoff,(image(l,m)-meanimg(l,m))/sgimg(l,m))
           nfdrpix = nfdrpix + 1
           row(nint(wa(1))) = 100.
          end if
@@ -3907,7 +3915,10 @@ c
       write(line,'("FDR selected a p-value threshold of ",
      +        f16.10,".")') pcut
       call output(line)
-      write(line,'("This means a minimum flux threshold of ",
+      write(line,'("This corresponds to a threshold of ",
+     +        f7.2," sigma,")') sigctoff
+      call output(line)
+      write(line,'("which means a minimum flux threshold of ",
      +        f16.10," Jy.")') fluxctoff
       call output(line)
       write(line,'("(If the noise is constant over the original ",
@@ -4026,21 +4037,21 @@ c be sent to fitting routine
           off = 1
 233       blnkannulus = .true.
           do iii = ii-off,ii+off
-           if ((jj-off).ge.1) then
+           if (((jj-off).ge.1).and.(iii.ge.1).and.(iii.le.nx)) then
             if (nimage(iii,jj-off).gt.0)
      +      blnkannulus = blnkannulus.and.(image2(iii,jj-off).gt.pcut)
            end if
-           if ((jj+off).le.ny) then
+           if (((jj+off).le.ny).and.(iii.ge.1).and.(iii.le.nx)) then
             if (nimage(iii,jj+off).gt.0)
      +      blnkannulus = blnkannulus.and.(image2(iii,jj+off).gt.pcut)
            end if
           end do
           do jjj = jj-off,jj+off
-           if ((ii-off).ge.1) then
+           if (((ii-off).ge.1).and.(jjj.ge.1).and.(jjj.le.ny)) then
             if (nimage(ii-off,jjj).gt.0)
      +      blnkannulus = blnkannulus.and.(image2(ii-off,jjj).gt.pcut)
            end if
-           if ((ii+off).le.nx) then
+           if (((ii+off).le.nx).and.(jjj.ge.1).and.(jjj.le.ny)) then
             if (nimage(ii+off,jjj).gt.0)
      +      blnkannulus = blnkannulus.and.(image2(ii+off,jjj).gt.pcut)
            end if
