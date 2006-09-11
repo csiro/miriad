@@ -7,6 +7,7 @@
 /*    rjs     26aug93 Call habort_c.					*/
 /*    rjs     14jul98 Add a caste operation in errmsg_c, to attempt	*/
 /*		      to appease some compilers.			*/
+/*    rjs      9aug02 Support for "darwin" OS.				*/
 /************************************************************************/
 
 #include <stdio.h>
@@ -129,7 +130,7 @@ int n;
   string[len0] = 0;
   return(string);
 #else
-# if !defined(linux)
+# if !defined(linux) && !defined(darwin)
   extern int sys_nerr;
   extern char *sys_errlist[];
 # endif
