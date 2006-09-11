@@ -3,14 +3,14 @@
 c --------------------------------------------------------------------
 c
 c= clfind - Find clumps by tracing contours (in 3D)
-c& jpw
+c& pjt
 c: utility
 c
 c+
 c  CLFIND is a MIRIAD task which finds the clumps in a 3-d cube,
 c  by tracing contours, proceeding to lower levels and following
 c  merging of said clumps. For full description/testing/application in
-c    Williams, de Geus, & Blitz, ApJ, 428, 693.
+c    Williams, J.P, de Geus, E.J. & Blitz, L., ApJ, 428, 693. (1994)
 c  Also see
 c    http://cfa-www.harvard.edu/~jpw/clfind.html
 c  for a general description and access to a postscript memo.
@@ -50,6 +50,15 @@ c   02/24/93 jpw Created parameter naxis to replace
 c                previous "Euclidian" distance parameter d1
 c   07/19/94 jpw dynamic memory (memalloc, etc)
 c   09/20/96 jpw/pjt   Formal miriad version (finally)
+c   18-may-98 rjs/pjt  Moved over to a single-source file
+c   13-jul-98 pjt linux/g77 cleanup, and fixed CntLevs counting bug
+c
+c  Note:
+c   This program comes with a testsuite dataset, which you should run
+c   clfind on after you've made any importants changes, and compare the 
+c   output with. We expect this dataset and the regression output to 
+c   become available in $MIR/test, whenever this feature has been merged 
+c   into the public release of MIRIAD.
 c
 c  ToDo:
 c      -  this code uses some equivalences and other old fortran habits
@@ -58,14 +67,13 @@ c         code won't pass FLINT.
 c
 c --------------------------------------------------------------------
       character version*(*)
-      parameter(version='version 1.0 20-aug-96' )
+      parameter(version='version 1.0 13-jul-98' )
       include 'clfind.h'
-c      include 'header.h'
 
       character*40 filein,filecf
       character*80 line1,line2
       character xtension*3
-      integer lenline
+      integer len1
       integer nclump,ncl,nstop
       integer ngy,nmin
       integer nlevs,npx1,npx2
@@ -140,14 +148,14 @@ c.......But we use beam radius to connect up pixels
       endif
       print 1001, dx,dy
  1001 format
-     * ('Dist to neighbours is dx=',f3.1,', dy=',f3.1' pix')
+     * ('Dist to neighbours is dx=',f3.1,', dy=',f3.1,' pix')
 
 c.....Hardwire in velocity resolution = 1 pixel
       dv=1.0
 
 c.....Open the output, and add a header to it.
       xtension='.cf'
-      filecf=filein(1:lenline(filein))//xtension
+      filecf=filein(1:len1(filein))//xtension
       call output('Output clump assignment file: '//filecf)
       call xyopen(lout,filecf,'new',3,nsize)
       call wrhd(version)
@@ -171,8 +179,8 @@ c.....Start reading the input file
  1012 format(' Neighbourhood definition:         ',i1,' axes')
       call output(line1)
  
-      print 1013, data(1)
- 1013 format(' t(1) = ',f)
+c      print 1013, data(1)
+c 1013 format(' t(1) = ',f)
       call CntLevs(data(It),nlevs,npx1,npx2)
       nlevels=nlevs
 
@@ -248,7 +256,6 @@ c (these numbers are used to assign appropriate
 c  space in dynamic memory for arrays npos1,npos2,nreg)
 c-----------------------------------------------------------------
       include 'clfind.h'
-c      include 'header.h'
 
       integer nlevs,npx1,npx2
       integer nps,npx,ngy,ngx
@@ -257,33 +264,39 @@ c      include 'header.h'
       nlevs=-999
       do nps=1,nx*ny*nz
 c......Determine contour level
-cpjt ???
+
 c 1007   format(' p1 = ',i)
 c 1008   format(' p2 = ',f)
 c 1009   format(' t(',i,') = ',f)
 c         print 1007,  p1
 c         print 1008,  p2
 c         print 1009, nps, t(nps)
-       ngy=int(t(nps)/p2)-p1+1
+
+         ngy=int(t(nps)/p2)-p1+1
 
 c         print 1010, ngy
 c 1010   format(' Number of contours:                   ',i)
-       if(ngy.gt.maxlvl) then 
-	call bug('f','Too many contour levels')
-       endif
-	
 
-       npix(ngy)=npix(ngy)+1
-       npx=npix(ngy)
-       if(ngy.gt.1 .and. npx.gt.maxpix)
-     *    call bug('f','Too many pixels per level')
+      if(ngy.gt.maxlvl) then 
+        call bug('f','Too many contour levels')
+      endif
+c     only count when in range, above the minimum (p1)
+      if(ngy.gt.0) then
+
+         npix(ngy)=npix(ngy)+1
+         npx=npix(ngy)
+         if(ngy.gt.1 .and. npx.gt.maxpix)
+     *       call bug('f','Too many pixels per level')
 
 c         print 1011, ngx
 c 1011   format(' Number of pixels in level 1:                   ',i4)
-       if(ngy.eq.1 .and. npx.gt.maxpix1)
-     *    call bug('f','Too many pixels in level 1')
 
-       if (ngy.gt.nlevs) nlevs=ngy
+         if(ngy.eq.1 .and. npx.gt.maxpix1)
+     *        call bug('f','Too many pixels in level 1')
+
+         if (ngy.gt.nlevs) nlevs=ngy
+      endif
+
       enddo
 
       do ngy=nlevs,1,-1
@@ -305,7 +318,6 @@ c     extends previously defined clumps
 c     at gray levels >= ngy to ngy-1
 c--------------------------------------------------------------
       include 'clfind.h'
-c      include 'header.h'
 
       integer i0,j0,k0
       integer i1,j1,k1
@@ -529,7 +541,6 @@ c     lowest level, extend pixel by pixel to
 c     the lowest level (p1, generally set to 1)
 c-------------------------------------------------------
       include 'clfind.h'
-c      include 'header.h'
       integer ncl1,ncl2
       integer naxis,nclump
       integer nps1,nps2,npx1
@@ -625,7 +636,6 @@ c fills in the arrays nreg, npos, and npos1 with the
 c 1D pixel number of each contour level
 c-----------------------------------------------------------------
       include 'clfind.h'
-c      include 'header.h'
 
       integer i,j,k
       integer nlevs,npx1,npx2
@@ -677,7 +687,6 @@ c     subroutine of clfind
 c     finds and assigns new clumps at gray level ngy
 c-----------------------------------------------------------
       include 'clfind.h'
-c      include 'header.h'
 
       integer ngy,ncl,nclump
       integer nrgn,npx,npx1,nps1
@@ -730,7 +739,6 @@ c     subroutine of clfind
 c     finds connected regions at each gray level
 c-------------------------------------------------------
       include 'clfind.h'
-c      include 'header.h'
 
       integer naxis,ngy,nrgn
       integer npx1,npx2,nps2,npx3,nps3
@@ -807,7 +815,6 @@ c     subroutine of clfind
 c     converts 3d position vector to 1d index
 c-------------------------------------------------------
       include 'clfind.h'
-c      include 'header.h'
       integer i,j,k,nps
 
       nps=nz*(ny*(i-1)+(j-1))+k
@@ -822,7 +829,6 @@ c     subroutine of clfind
 c     converts 1d index back to 3d positional vector
 c-------------------------------------------------------
       include 'clfind.h'
-c      include 'header.h'
       integer i,j,k,nps
 
       i = 1+int(real(nps-1)/real(nz*ny))
@@ -831,35 +837,6 @@ c      include 'header.h'
 
       return
       end
-c ---------------------------------------------------------
-	integer function lenline(string)
-c
-	implicit none
-	character string*(*)
-c
-c  This determines the unblanked length of a character string.
-c
-c  Input:
-c    string		The character string that we are interested in.
-c  Output:
-c    lenline	The unpadded length of the character string.
-c--
-c------------------------------------------------------------------------
-	integer l
-	logical more
-c
-	l = len(string)
-	more = .true.
-	do while(l.gt.0.and.more)
-	  if(string(l:l).le.' '.or.string(l:l).gt.'~')then
-	    l = l - 1
-	  else
-	    more = .false.
-	  endif
-	enddo
-c
-	lenline = l
-	end
 c------------------------------------------------------------------------
       subroutine rdgrdclf(t,a)
       implicit none
@@ -868,7 +845,6 @@ c     subroutine of clfind
 c     read in data array and mask
 c---------------------------------------------------
       include 'clfind.h'
-c      include 'header.h'
 
       integer i,j,k,nps
       integer a(*)
@@ -903,7 +879,6 @@ c     subroutine of clfind
 c     reads the header of file with handle = in
 c-----------------------------------------------------------
 
-c      include 'header.h'
       include 'clfind.h'
 
       integer in
@@ -948,7 +923,6 @@ c.....tree structure (which clumps appear at which level
 c.....and how they merge together at lower levels)
 
       include 'clfind.h'
-c      include 'header.h'
 
       integer nclump,nmax
       integer i,j,k,n2,n3
@@ -1009,8 +983,11 @@ c      include 'header.h'
             if (nmerge.gt.4*maxmge) then
                print 1120, (list(i),i=4*maxmge+1,5*maxmge)
             endif
- 1110    format(' Merged clumps:',7(i3,x))
- 1120    format('               ',7(i3,x))
+            if (nmerge.gt.5*maxmge) then
+               call bug('w',' output buffer Merged Clumps exhausted')
+            endif
+ 1110    format(' Merged clumps:',7(i3,1x))
+ 1120    format('               ',7(i3,1x))
          enddo
 
       enddo
@@ -1026,7 +1003,6 @@ c
 c     clumps must have at least nmin pixels
 c-------------------------------------------------------
       include 'clfind.h'
-c      include 'header.h'
       integer nmin,nstop,nclump
       integer ncl,nps
       integer a(*)
@@ -1051,7 +1027,6 @@ c     subroutine of clfind
 c     write out clump assignment array
 c---------------------------------------------------------
       include 'clfind.h'
-c      include 'header.h'
 
       integer i,j,k,nps
       integer a(*)
@@ -1081,7 +1056,7 @@ c---------------------------------------------------------------
       parameter(nkeys=12)
       include 'clfind.h'
 
-      character version*(*), keyw(nkeys)*8
+      character version*(*), keyw(nkeys)*8, lversion*32
       integer i
 
       data keyw/   'cdelt1  ','cdelt2  ','cdelt3  ',
@@ -1097,7 +1072,8 @@ c.....Copy the old header partially, and write some new parameters
 c.....Update the history.
       call hdcopy(lin,lout,'history')
       call hisopen(lout,'append')
-      call hiswrite(lout,'CLFIND: Miriad '//version)
+      lversion=version
+      call hiswrite(lout,'CLFIND: Miriad '//lversion)
       call hisinput(lout,'CLFIND')
       call hisclose(lout)
 

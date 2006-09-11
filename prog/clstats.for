@@ -77,9 +77,10 @@ c  20jul94  jpw  converted to use dynamic memory
 c  19feb97  mwp  bug fixes , dv versus sv in dostats.for
 c  18may98  rjs  catenated all files into one, and perhaps some more???
 c  19may98  pjt  minor flint cleanups before putting this is MIRIAD
+c  13jul98  pjt  linux g77 cleanup
 c-------------------------------------------------------------------------
       character version*(*)
-      parameter(version='version 1.5 19-may-98' )
+      parameter(version='version 1.5 13-jul-98' )
       include 'clstats.h'
 
       integer lenline,imax,ncmax
@@ -363,12 +364,12 @@ c.......whether relative or absolute positions are requested
  20     continue
       enddo
 
- 200    format(i3,2x,f6.1,3x,f5.1,2x,f7.2,x,f6.2,x,f6.2,
-     *         x,f5.2,x,f5.2,x,f5.2,x,f5.2,x,
-     *         f7.2,2x,f4.2,2x,f8.2,x,i4,x,a4)
- 201    format(i3,x,f10.3,x,f10.3,x,f7.2,x,f6.2,x,f6.2,
-     *         x,f7.2,x,f7.2,x,f5.2,x,f5.2,x,
-     *         f10.2,2x,f5.3,2x,f10.2,x,i4,x,a4)
+ 200    format(i3,2x,f6.1,3x,f5.1,2x,f7.2,1x,f6.2,1x,f6.2,
+     *         1x,f5.2,1x,f5.2,1x,f5.2,1x,f5.2,1x,
+     *         f7.2,2x,f4.2,2x,f8.2,1x,i4,1x,a4)
+ 201    format(i3,1x,f10.3,1x,f10.3,1x,f7.2,1x,f6.2,1x,f6.2,
+     *         1x,f7.2,1x,f7.2,1x,f5.2,1x,f5.2,1x,
+     *         f10.2,2x,f5.3,2x,f10.2,1x,i4,1x,a4)
 
       return
       end
@@ -487,7 +488,7 @@ c.....print out some header information for the stats file
           print 104,bmaj/60.0,bmin/60.0
         endif
 
-        if(pos.eq..true.) then
+        if(pos) then
           call output(
      *         'Positions are ABSOLUTE and are in degrees')
           call output(' ')
