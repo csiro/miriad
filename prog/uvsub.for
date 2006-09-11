@@ -14,14 +14,16 @@ c
 c@ vis
 c	The name of the input uv data sets. No default.
 c@ line
-c	Line type.  Must be "velocity,nchan,vstart,vwidth,vstep"
+c	Standard Linetype. This assumes only a single spectral
+c	window is processed.
 c@ model
 c	A text file containing the models. Each row should contain
 c	four columns giving
 c
 c	  VELOCITY    FLUX DENSITY    X OFFSET      Y OFFSET
 c
-c	The velocity must be in Km/s, the flux density in Jy and the
+c	The velocity must be in Km/s (radio definition), with the same
+c	rest standard as the data-set. The flux density is in Jy and the
 c	offsets in radians are from the phase centre in the convention 
 c
 c             offset = point source location - phase centre
@@ -33,6 +35,8 @@ c--
 c  History:
 c    05jan94 nebk  Original version.
 c    12jan94 nebk  Convert to use velocity line type
+c    17aug94 rjs   Fiddle offsets to give better results. Also fix
+c		   lousy documentation.
 c
 c Bugs:
 c   Too little code to have bugs
@@ -40,7 +44,7 @@ c------------------------------------------------------------------------
       include 'maxdim.h'
       integer MAXMOD
       character version*(*)
-      parameter (version = 'UVSUB: version 12-Jan-94')
+      parameter (version = 'UVSUB: version 17-Aug-94')
       parameter (MAXMOD = 500)
 c
       complex data(MAXCHAN)
@@ -48,8 +52,11 @@ c
      +  model(4,MAXMOD)
       real vel1, velw, vels
       integer lvis, lout, lmod, iostat, nchan, nmod, nschan, npol, pol
+      integer ntemp
       character vis*80, out*80, modl*80, ltype*8
       logical flags(MAXCHAN)
+      character ltypes(2)*8
+      data ltypes/'channel ','velocity'/
 c-----------------------------------------------------------------------
 c
 c Get the inputs
@@ -57,10 +64,11 @@ c
       call output (version)
       call keyini
       call keya ('vis', vis, ' ')
-      call keya ('line', ltype, ' ')
+      call keymatch ('line', 2, ltypes, 1, ltype, ntemp)
+      if (ntemp.eq.0) ltype = ltypes(1)
       call keyi ('line', nschan, 0)
-      call keyr ('line', vel1, 0.0)
-      call keyr ('line', velw, 0.0)
+      call keyr ('line', vel1, 1.0)
+      call keyr ('line', velw, 1.0)
       call keyr ('line', vels, velw)
       call keya ('model', modl, ' ')
       call keya ('out', out, ' ')
@@ -69,12 +77,6 @@ c
       if (vis.eq.' ')  call bug ('f', 'An input must be given')
       if (modl.eq.' ') call bug ('f', 'A model must be given')
       if (out.eq.' ')  call bug ('f', 'An output must be given')
-c
-      if (ltype.ne.'velocity') call bug ('f',
-     +  'Line type must be velocity')
-      if (nschan.le.0) call bug ('f', 'You must give some channels')
-      if (velw.le.0.0) call bug ('f', 'You must give a channel width')
-      if (vels.le.0.0) call bug ('f', 'You must give a channel step')
 c
 c Open the model file and read it
 c
@@ -103,12 +105,16 @@ c
 c Get the first visibility
 c
       call uvread (lvis, preamble, data, flags, MAXCHAN, nchan)
-      call uvinfo (lvis, 'sfreq', sfreq)
-      call uvinfo (lvis, 'velocity', vel)
-      call uvgetvri (lvis, 'npol', npol, 1)
-      call uvgetvri (lvis, 'pol', pol, 1)
+c
+c  Fudge the offsets.
+c
+      call modfudg (lvis, nmod, model)
 c
       do while (nchan.gt.0)
+        call uvinfo (lvis, 'sfreq', sfreq)
+        call uvinfo (lvis, 'velocity', vel)
+        call uvgetvri (lvis, 'npol', npol, 1)
+        call uvgetvri (lvis, 'pol', pol, 1)
 c
 c Subtract the model
 c
@@ -124,10 +130,6 @@ c
 c Get the next visibility
 c
         call uvread (lvis, preamble, data, flags, MAXCHAN, nchan)
-        call uvinfo (lvis, 'sfreq', sfreq)
-        call uvinfo (lvis, 'velocity', vel)
-        call uvgetvri (lvis, 'npol', npol, 1)
-        call uvgetvri (lvis, 'pol', pol, 1)
       end do
 c
 c
@@ -135,6 +137,40 @@ c  Close up shop
 c
       call uvclose (lvis)
       call uvclose (lout)
+c
+      end
+c
+c
+      subroutine modfudg (lvis, nmod, model)
+c-----------------------------------------------------------------------
+c    Convert model offsets from true offsets to pseudo-offsets to
+c    correct for geometry.
+c
+c  Input:
+c    lvis    Handle of the input visibility dataset
+c    nmod    Number of models
+c    model   VELOCITY, FLUX DENSITY, X OFFSET, YOFFSET
+c
+c-----------------------------------------------------------------------
+      implicit none
+      integer lvis, nmod
+      double precision model(4,nmod)
+cc
+      integer i
+      double precision x(2)
+c-----------------------------------------------------------------------
+c
+c  Initialise the coordinate routines.
+c
+      call coinit(lvis)
+c
+      do i=1,nmod
+        x(1) = model(3,i)
+        x(2) = model(4,i)
+        call cocvt(lvis,'ow/ow',x,'op/op',model(3,i))
+      enddo
+c
+      call cofin(lvis)
 c
       end
 c
@@ -284,7 +320,7 @@ c
       data first /.true./
 c-----------------------------------------------------------------------
       delv = vel(2) - vel(1)
-      v1 = vel(1) - delv/2.0
+      v1 = vel(1)
 c
 c Loop over models
 c
@@ -292,7 +328,7 @@ c
 c
 c Compute model
 c
-        ic = (model(1,j)-v1)/delv + 1
+        ic = nint((model(1,j)-v1)/delv) + 1
         if (ic.lt.1 .or. ic.gt.nchan) call bug ('f',
      +    'Indexing error in MODSUB')
         if (first) write (*,*) 
