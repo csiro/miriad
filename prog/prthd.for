@@ -34,6 +34,7 @@ c    rjs  24jul94 Message about aipsfg tables.
 c    rjs  15aug94 More decimal places for restfreq.
 c    rjs  24oct94 More information for images.
 c    rjs  26sep95 Somewhat more tolerant of screwy headers.
+c    rjs  14dec95 Support "ANGLE" ctype value.
 c  Bugs and Shortcomings:
 c    * Descriptions in brief mode could be a bit more verbose!
 c------------------------------------------------------------------------
@@ -349,8 +350,13 @@ c  DEC, Galactic and Ecliptic coordinates.
      *                          crpix,180*3600/pi*cdelt,'  arcsec'
 30        format (a8, i7, 2x, a12, f10.2, 3x, 1pe13.6,a)
 c
+c  Angles on the sky.
+	else if (aval.eq.'ANGLE')then
+          write(line, 40)aval(1:8),n,180*pi*crval,crpix,
+     *				3600*180/pi*cdelt,'arcsec'
+c
 c  STOKES.
-	else if(aval(1:6).eq.'STOKES')then
+	else if(aval.eq.'STOKES')then
 	  length = 0
 	  do j=1,n
 	    if(length+5.lt.len(pols))then
