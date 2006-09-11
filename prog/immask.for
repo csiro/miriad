@@ -11,6 +11,7 @@ c    rjs 16sep93    Deleted the undocumented and unused log file option.
 c    pjt 13may94    handle larger cubes in output format 
 c    pjt  8jun94    region= clarification
 c    pjt  4apr96    complain if logic= is not valid, and work in lower case
+c    vjm  5sep96    attempt to unmangle documentation
 c***********************************************************************
 c= immask - mask an image dataset
 c& pjt
@@ -19,27 +20,37 @@ c+
       PROGRAM immask
 c
 c   IMMASK is a MIRIAD task which allows you to mask an image
-c   dataset.  
+c   dataset, or find out the number of masked pixels in an image.
 c
-c   Masking is directly done to the ``mask'' item of an image dataset, 
-c   the program does not have to copy data, but modifies it ``in situ''. 
-c   The actual image data themselves (the ``image'' item) are not 
-c   modified, only the mask; so a final word of relief: to reset all
-c   pixels to their original value:
-c       delhd in=IMAGE/mask
-c   for any ``IMAGE'' dataset.
-c   To set all pixels in the dataset to FALSE:
-c       immask in=IMAGE flag=false logic=and
+c   Masking is directly done to the ``mask'' item of an image dataset, i.e.
+c   the actual image data are not modified, only the mask.
+c   A pixel with a TRUE mask value is considered a good pixel.
+c
+c   To set all pixels in an image to FALSE:
+c       immask in=ngc_289_6cm flag=false logic=and
+c
+c   To mask out the pixels in a region:
+c       immask in=ngc_289_20cm region=@cgcurs.region flag=false logic=and
+c
+c   To undo all masking, delete the mask item from the header:
+c       delhd in=ngc_289_6cm/mask
 c   
+c   To change the masking, you must specify a value for the LOGIC keyword.
+c   Otherwise IMMASK merely reports the current numbers of masked and
+c   unmasked pixels.
+c
 c   See also MATHS for other ways to set the image mask.
+c
 c@ in
 c   The name of the input image dataset. No default.
+c
 c@ region
 c   Regions which will be masked with the ``flag'' value (see below).
 c   Full region descriptions are supported.
-c   Note that missing image planes will then be automatically masked 
+c   Note that missing image planes will be automatically masked 
 c   to the opposite value set by the ``flag'' keyword below. 
 c   Default: whole image.
+c
 c@ logic
 c   The logic of the masking operation. It can have a value of ``AND'',
 c   `OR'' or ``NOT'' which determines how the selected region(s) from the 
@@ -48,24 +59,29 @@ c       OR:     region .OR. mask
 c       AND:    region .AND. mask
 c       NOT:    if (region) .NOT.mask
 c   If no value provided, the program will simply report on the 
-c   total number of pixels flagged good and bad.
+c   total number of pixels already flagged good and bad.
 c   No default.
+c
 c@ flag
 c   The value of the mask inside the selected regions. Can be ``true''
 c   or ``false''. Outside selected region it will be its opposite.
 c   A ``true'' value is considerd a good pixel.
 c   Default: true.
+c
 c@ history
-c   Logical, denoting if the history should be updated. This should
+c   Specifies whether the history should be updated. This should
 c   normally never be set to false, though some scripts prefer
 c   to do this manually via ADDHIS, and set this parameter to FALSE.
 c   In reporting mode (no ``logic'' operation supplied) the history
 c   is not updated.
 c   Default: TRUE
+c
 c@ options
 c   Valid options: 
-c      datamin      flag all values with `flag' when data is datamin
+c      datamin      flag all values with `flag' when they equal the
+c                   value of the 'datamin' keyword in the image header.
 c   Default: none.
+c
 c--
 c-----------------------------------------------------------------------
 c  Internal parameters.
