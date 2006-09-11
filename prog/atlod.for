@@ -172,6 +172,7 @@ c		  * Get rid of skip when jstat.eq.5 in RPDISP.
 c    rjs  22sep97 Replace call to fdatejul with dayjul.
 c    rjs  07jan98 Better printing of source names.
 c    rjs  06apr98 Increase the max size of an integration.
+c    rjs  07may98 Change in handling of jstat.eq.5 return value.
 c
 c  Program Structure:
 c    Miriad atlod can be divided into three rough levels. The high level
@@ -1561,7 +1562,7 @@ c------------------------------------------------------------------------
 	parameter(MAXPOL=4,MAXSIM=4,MAXXYP=5)
 	include 'rpfits.inc'
 	integer scanno,i1,i2,baseln,i,id,j
-	logical NewScan,NewSrc,NewFreq,NewTime,Accum,ok
+	logical NewScan,NewSrc,NewFreq,NewTime,Accum,ok,badbit
 	logical flags(MAXPOL)
 	integer jstat,flag,bin,ifno,srcno,simno,Ssrcno,Ssimno
 	integer If2Sim(MAX_IF),nifs(MAX_IF),Sim2If(MAXSIM,MAX_IF)
@@ -1626,9 +1627,11 @@ c
 c  Loop the loop getting data.
 c
 	jstat = 0
+	badbit = .false.
 	dowhile(jstat.eq.0)
 	  call rpfitsin(jstat,vis,weight,baseln,ut,u,v,w,flag,
      *						bin,ifno,srcno)
+	  if(jstat.ne.5)badbit = .false.
 c
 c  Handle header encountered.  Note that the next header
 c  read will be the same one we just encountered, not the
@@ -1659,16 +1662,22 @@ c
           else if(jstat.eq.4)then
             jstat = 0
 c
-c  Handle some i/o error -- look for next header
+c  Handle some i/o error. First time tolerate it, but if it happens
+c  immediately again, skip to the next header.
 c
 	  else if(jstat.eq.5)then
-            call bug('w', 
-     *        'I/O error occurred with jstat=5. Look for next header')
-	    jstat = -1
-	    call rpfitsin(jstat,vis,weight,baseln,ut,u,v,w,flag,
+	    if(badbit)then
+	      call bug('w', 
+     *          'I/O error occurred with jstat=5. Look for next header')
+	      jstat = -1
+	      call rpfitsin(jstat,vis,weight,baseln,ut,u,v,w,flag,
      *						bin,ifno,srcno)
-	    NewScan = .true.
-	    scanno = scanno + 1
+	      NewScan = .true.
+	      scanno = scanno + 1
+	    else
+	      badbit = .true.
+	      jstat = 0
+	    endif
 c
 c  Other errors, including EOF.
 c
