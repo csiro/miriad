@@ -5,6 +5,8 @@ c= convol - Convolve a cube with a "beam function"
 c& rjs mchw
 c: map manipulation, map analysis
 c	CONVOL is a MIRIAD task which convolves a map or model with a "beam".
+c       WARNING: Convol does not do a very good job with masked images. 
+c       
 c@ map
 c	The input image. This can be two or three dimensional. No default.
 c@ beam
@@ -89,6 +91,7 @@ c    rjs   06jan97 Improve output headers.
 c    rjs   02jul97 cellscal change.
 c    rjs   05dec97 Change order of boxmask and boxinfo calls.
 c    bpw   12mar99 Increase size of map/beam/out to 512 to allow directories
+c    dpr   21jun01 Doc change only
 c  Bugs:
 c------------------------------------------------------------------------
 	include 'maxdim.h'
