@@ -1741,15 +1741,15 @@ c
 		  enddo
 		endif
 		if(NewScan)call PokeInfo(scanno,time)
-c		if(abs(pm_ra)+abs(pm_dec).gt.0)then
-c		  reftime = pm_epoch + 2 400 000.5d0
-c		  ra0  = 2*DPI/(24d0*3600d0*365.25d0) * pm_ra
-c		  ra0  = su_ra(srcno)  + ra0* (time-reftime)
-c		  dec0 = 2*DPI/(360.d0*3600d0*365.25d0) * pm_dec
-c		  dec0 = su_dec(srcno) + dec0*(time-reftime)
-c		  call PokeSrc(su_name(srcno),ra0,dec0,0.d0,0.d0)
-c		else if(NewScan.or.NewSrc)then
-		if(NewScan.or.NewSrc)then
+		if(abs(pm_ra)+abs(pm_dec).gt.0)then
+		  reftime = pm_epoch + 2 400 000.5d0
+		  ra0  = 2*DPI/(24d0*3600d0*365.25d0) * pm_ra
+		  ra0  = su_ra(srcno)  + ra0* (time-reftime)
+		  dec0 = 2*DPI/(360.d0*3600d0*365.25d0) * pm_dec
+		  dec0 = su_dec(srcno) + dec0*(time-reftime)
+		  call PokeSrc(su_name(srcno),ra0,dec0,0.d0,0.d0)
+		else if(NewScan.or.NewSrc)then
+c		if(NewScan.or.NewSrc)then
 		  call PokeSrc(su_name(srcno),
      *		  su_ra(srcno),su_dec(srcno),
      *		  su_rad(srcno),su_decd(srcno))
@@ -1831,9 +1831,14 @@ c------------------------------------------------------------------------
 	real ut,u,v,w,weight
 	complex vis
 c
+	character itoaf*8
+c
 	jstat = 2
 	call rpfitsin(jstat,vis,weight,baseln,ut,u,v,w,flag,
      *						bin,ifno,srcno)
+	if(jstat.eq.3)jstat = 0
+	if(jstat.ne.0)call bug('w',
+     *		'Error while skipping: jstat='//itoaf(jstat))
 	end
 c************************************************************************
 	subroutine RPClose(jstat)
@@ -1845,9 +1850,13 @@ c------------------------------------------------------------------------
 	real ut,u,v,w,weight
 	complex vis
 c
+	character itoaf*8
+c
 	jstat = 1
 	call rpfitsin(jstat,vis,weight,baseln,ut,u,v,w,flag,
      *						bin,ifno,srcno)
+	if(jstat.ne.0)call bug('w',
+     *		'Error closing file: jstat='//itoaf(jstat))
 	end
 c************************************************************************
 	subroutine RPOpen(in,jstat)
