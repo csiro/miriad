@@ -115,12 +115,13 @@ c	            a function of elevation.
 c--
 c  History:
 c    04may03 rjs  Original version.
+c    15may03 rjs  Better jyperk.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
 	character version*(*)
 	integer MAXSELS,ATANT
-	parameter(version='AtFix: version 1.0 04-May-03')
+	parameter(version='AtFix: version 1.0 15-May-03')
 	parameter(MAXSELS=256,ATANT=6)
 c
 	real sels(MAXSELS),xyz(3*MAXANT)
@@ -131,6 +132,8 @@ c
 	character vis*64,out*64,type*1
 	integer nschan(MAXWIN),nif,nchan,nants,length,tcorr,na
 	real xtsys(MAXANT*MAXWIN),ytsys(MAXANT*MAXWIN)
+	real gel
+	logical dojpk
 c
 	real delta(3,MAXANT)
 	real freq0(MAXWIN),scale,fac(MAXWIN),Tb(MAXWIN),t0,p0,h0,jyperk
@@ -143,7 +146,7 @@ c
 c  Externals.
 c
 	logical uvvarUpd,selProbe,hdPrsnt,keyprsnt
-	real elescale
+	real elescale,getjpk
 c
 	call output(version)
 	call keyini
@@ -285,6 +288,7 @@ c
 	ptime = preamble(4) - 1
 c
 	dowhile(nchan.gt.0)
+c	  call uvrdvrr(lVis,'jyperk',jyperk,0.0)
 	  call varCopy(lVis,lOut)
 	  call uvrdvri(lVis,'pol',pol,0)
 	  call uvrdvri(lVis,'npol',npol,0)
@@ -298,6 +302,10 @@ c
      *	        call bug('f','Invalid nschan parameter')
 	    call uvgetvri(lVis,'nschan',nschan,nif)
 	  endif
+	  call felget(lVis,vgmet,nif,nschan,freq0,freq,nchan,
+     *                                                  ra,dec,lat)
+	  jyperk = getjpk(freq0(1))
+	  dojpk = .false.
 c
 c  Do antenna table correction, if needed.
 c
@@ -309,8 +317,6 @@ c  For elevation-related changes, check if the time has changed, and so
 c  we need to update all the associated information.
 c
 	  if((domet.or.dogel.or.dobl))then
-	    call felget(lVis,vgmet,nif,nschan,freq0,freq,nchan,
-     *                                                  ra,dec,lat)
 	    if(abs(ptime-preamble(4)).gt.5.d0/86400.d0)then
 	      ptime = preamble(4)
 	      call getlst(lVis,lst)
@@ -324,9 +330,12 @@ c
 	  if(dogel)then
 	    k = 0
 	    do i=1,nif
+              gel = EleScale(el,freq0(i),preamble(5))
+	      if(i.eq.1)jyperk = jyperk / gel
+	      dojpk = .true.
 	      do j=1,nschan(i)
 	        k = k + 1
-	        data(k) = data(k) / EleScale(el,freq0(i),preamble(5))
+	        data(k) = data(k) / gel
 	      enddo
 	    enddo
 	  endif
@@ -359,8 +368,8 @@ c
 	        data(k) = data(k) / fac(i)
 	      enddo
 	    enddo
-	    call uvrdvrr(lVis,'jyperk',jyperk,0.0)
-	    if(jyperk.gt.0)call uvputvrr(lOut,'jyperk',scale*jyperk,1)
+            jyperk = scale * jyperk
+	    dojpk = .true.
 	  endif
 c
 c  Apply baseline correction, if needed.
@@ -396,6 +405,8 @@ c
 	    call uvputvri(lOut,'npol',npol,1)
 	    call uvputvri(lOut,'pol',pol,1)
 	  endif
+	  if(dojpk.and.jyperk.gt.0)
+     *	    call uvputvrr(lOut,'jyperk',jyperk,1)
 c
 	  call uvwrite(lOut,preamble,data,flags,nchan)
 	  call uvread(lVis,preamble,data,flags,MAXCHAN,nchan)
@@ -1065,6 +1076,21 @@ c
 	    w = cmplx(cos(theta),sin(theta))
 	    data(i) = w*data(i)
 	  enddo
+	endif
+c
+	end
+c************************************************************************
+	real function getjpk(freq)
+c
+	implicit none
+	real freq
+c------------------------------------------------------------------------
+	if(freq.lt.15)then
+	  getjpk = 13
+	else if(freq.lt.30)then
+	  getjpk = 15
+	else
+	  getjpk = 25
 	endif
 c
 	end
