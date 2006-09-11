@@ -21,6 +21,7 @@ c
 c History:
 c   nebk 10apr98   Finally got fed up and did this
 c   rjs  18may98   Correct fortran to make it compile on Alphas.
+c   nebk 11jun99   Handle plane in region
 c------------------------------------------------------------------------
       implicit none
       character version*(*)
@@ -64,7 +65,6 @@ c
              call bug ('f', 'Error reading region file')
           end if 
         end if
-
       end do
 c
 c Close up
@@ -83,9 +83,10 @@ cc
       character lineout*132, prefix*30, text*80
       character*18 preamble(3)
       character*20 first, second, third, fourth, sfirst, ssecond
+      character plane*4
       logical more, error
       integer len1, i1, i2, i3, i4, ppt, lenp, iostat
-
+      integer b1, e1
       data preamble /'line arcsec arcsec', 'line abspix abspix',
      +               'line relpix relpix'/
 c------------------------------------------------------------------------
@@ -147,6 +148,20 @@ c
       end if
       line = line(i2+1:)
 c
+c Find trailing plane if any
+c
+      plane = ' '
+      b1 = index(line,'(')
+      if (b1.ne.0) then
+        e1 = index(line(b1:), ')')
+        if (e1.ne.0) then
+           e1 = e1 + b1 - 1
+           if (e1.gt.b1) then
+              plane = line(b1+1:e1-1)            
+           end if
+        end if
+      end if
+c
 c Loop over line, extracting new pairs of values
 c
       more = .true.
@@ -158,7 +173,6 @@ c
          i3 = index(line(1:), ',')
          if (i3.ne.0) then
            third = line(1:i3-1)
-          
            i4 = index(line(i3+1:), ',')
            if (i4.ne.0) then
              i4 = i4 + i3
@@ -185,6 +199,7 @@ c
      +                            //' '//second(1:len1(second))
      +                            //' '//third(1:len1(third))
      +                            //' '//fourth(1:len1(fourth))
+     +                            //' '//plane(1:len1(plane))
           call txtwrite(lunout, lineout, len1(lineout), iostat)
           if (iostat.ne.0) call bug ('f', 'Error writing overlay file')
 c
@@ -198,6 +213,7 @@ c
      +                        //' '//ssecond(1:len1(second))
      +                        //' '//third(1:len1(third))
      +                        //' '//fourth(1:len1(fourth))
+     +                            //' '//plane(1:len1(plane))
       call txtwrite(lunout, lineout, len1(lineout), iostat)
       if (iostat.ne.0) call bug ('f', 'Error writing overlay file')
 c      
