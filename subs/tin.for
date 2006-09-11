@@ -4,6 +4,7 @@ c    25aug97 rjs	Original version.
 c     8sep97 rjs	Better error message.
 c    29oct97 rjs        tinLen was terribly flawed ... fix it.
 c    02nov97 rjs	Better error messages. Flag parameter in tinopen.
+c    04dec98 rjs	Better error messages again.
 c************************************************************************
 	subroutine tinOpen(name,flags)
 c
@@ -25,10 +26,11 @@ c
 	stream = index(flags,'s').ne.0
 	nodef  = index(flags,'n').ne.0
 c
+	fname = name
+	recno = 0
 	call txtopen(lIn,name,'old',iostat)
 	if(iostat.ne.0)then
-	  line(1:64) = 'Error opening text file '//name
-	  call bug('w',line(1:64))
+	  call tinBug('w','Error opening file')
 	  call bugno('f',iostat)
 	endif
 c
@@ -59,7 +61,7 @@ c
 c
 	length = tinNext()
 	if(length.gt.len(line1))
-     *	  call tinBug('Input string too short in tinLine')
+     *	  call tinBug('f','Input string too short in tinLine')
 	if(length.gt.0)line1 = line(1:length)
 	end
 c************************************************************************
@@ -81,8 +83,9 @@ c
 	dowhile(k2.eq.0.and.iostat.eq.0)
 	  call txtread(lIn,line,k2,iostat)
 	  if(k2.gt.len(line))
-     *	    call tinBug('Text file line too long for me!')
+     *	    call tinBug('f','Text file line too long for me!')
           if(iostat.eq.0)then
+	    recno = recno + 1
             i = 0  
             l = 0
             more = .true.
@@ -105,7 +108,7 @@ c
               endif
             enddo
             k2 = l
-            if(within)call tinBug('Unbalanced quotes on line')
+            if(within)call tinBug('f','Unbalanced quotes on line')
           else if(iostat.eq.-1)then
             k2 = 0
           else
@@ -168,7 +171,7 @@ c
 	  if(ok)then
 	    value = dval
 	  else
-	    call tinbug('Error reading numeric value from text file')
+	    call tinbug('f','Error reading numeric value')
 	  endif
 	endif
 c
@@ -193,7 +196,7 @@ c
 	  if(ok)then
 	    value = ival
 	  else
-	    call tinbug('Error reading numeric value from text file')
+	    call tinbug('f','Error reading numeric value')
 	  endif
 	endif
 c
@@ -271,10 +274,10 @@ c
 	else if(fmt.eq.'time'.or.fmt.eq.'atime')then
 	  call dectime(string,value,fmt,ok)
 	else
-	  call tinbug('Unrecognised format in tinGett')
+	  call tinbug('f','Unrecognised format in tinGett')
 	endif
 	if(.not.ok)
-     *	  call tinbug('Error decoding text file angle or time')
+     *	  call tinbug('f','Error decoding angle or time')
 c
 	end
 c************************************************************************
@@ -297,22 +300,35 @@ c
 	  call getfield(line,k1,k2,string,length)
 	endif
 	if(nodef.and.length.eq.0)
-     *		call tinBug('Values missing in this line')
+     *		call tinBug('f','Values missing in this line')
 	end
 c************************************************************************
-	subroutine tinBug(string)
+	subroutine tinBug(sev,string)
 c
 	implicit none
-	character string*(*)
+	character sev*(*),string*(*)
 c------------------------------------------------------------------------
 	include 'tin.h'
-	integer l
+	integer l,lname,lnum	
+	character num*9
 c
 	integer len1
+	character itoaf*9
 c
+	lname = len1(fname)
+	num = itoaf(recno)
+	lnum = len1(num)
 	l = min(k2,len(line))
 	if(l.gt.0)l = len1(line(1:l))
-	if(l.gt.0)call bug('w','Error processing text file string '//
-     *	  line(1:l))
-	call bug('f',string)
+	if(l.gt.0)then
+	  call bug('w','Error processing text file string '//
+     *	    line(1:l)//' (file '//
+     *	    fname(1:lname)//', record '//num(1:lnum)//')')
+	else if(recno.gt.0)then
+	  call bug('w','Error processing text file '//fname(1:lname)//
+     *	    ', record '//num)
+	else if(lname.gt.0)then
+	  call bug('w','Error processing text file '//fname(1:lname))
+	endif
+	call bug(sev,string)
 	end
