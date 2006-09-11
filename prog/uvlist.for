@@ -103,6 +103,7 @@ c   16sep93 rjs	 - Rename bsrch to binsrch.
 c   23dec93 rjs  - Include optical velocities in options=spec.
 c   21jan93 rjs  - Formatting error for options=spec
 c   23aug94 rjs  - More decimal points in options=spec
+c    1aug95 rjs  - Fix minor bug which only shows up on sgi machine.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
@@ -165,9 +166,11 @@ c
 c
 c  List the header, if required.
 c
-	  if(dovar.and.uvvarupd(vars))then
-	    call printhd(lIn,pmbl(3))
-	    last = 'v'
+	  if(dovar)then
+	    if(uvvarupd(vars))then
+	      call printhd(lIn,pmbl(3))
+	      last = 'v'
+	    endif
 	  endif
 c
 	  if(dodata.or.dosigma)then
