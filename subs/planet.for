@@ -5,6 +5,7 @@ c
 c  History:
 c    rjs  xxdec95 Original version.
 c    rjs  18dec95 Make sub-Earth point a right handed coordinate system.
+c    rjs  17jun96 Added some parameters about the Earth.
 c************************************************************************
 	subroutine plradec(jday,np,ra,dec)
 c
@@ -180,9 +181,10 @@ c
 c
 	integer NOBJ
 	integer MERCURY,VENUS,MARS,JUPITER,SATURN,URANUS,NEPTUNE,PLUTO
+	integer EARTH
 	parameter(NOBJ=9)
-	parameter(MERCURY=1,VENUS=2,MARS=4,JUPITER=5,SATURN=6,URANUS=7,
-     *		  NEPTUNE=8,PLUTO=9)
+	parameter(MERCURY=1,VENUS=2,EARTH=3,MARS=4,JUPITER=5,SATURN=6,
+     *		  URANUS=7,NEPTUNE=8,PLUTO=9)
 	double precision alpha0(NOBJ),dalpha(NOBJ)
 	double precision delta0(NOBJ),ddelta(NOBJ)
 	double precision W0(NOBJ),dW(NOBJ)
@@ -199,6 +201,12 @@ c
      *	     W0(VENUS),  dW(VENUS),  radius(VENUS),  flat(VENUS)  /
      *       272.72d0,  -0d0,          67.15,     0.d0,
      *	     160.26d0,   -1.4813596d0, 6501.9d0,  0.d0/
+c
+	data alpha0(EARTH),  dalpha(EARTH)  ,
+     *       delta0(EARTH),  ddelta(EARTH)  ,
+     *	     W0(EARTH),  dW(EARTH),  radius(EARTH),  flat(EARTH)  /
+     *       0d0,	0d0,	0d0,	0d0,
+     *	     0d0,   	0d0, 	6378.140d0,  	3.3528134d-3/
 c
 	data alpha0(MARS)   ,dalpha(MARS)   ,
      *       delta0(MARS)   ,ddelta(MARS)   ,
@@ -236,7 +244,7 @@ c
      *       313.02d0,   0.d0,          9.09d0,   0.d0,
      *	     236.77d0, -56.3623195d0,  1151.0d0,  0.d0/
 c
-	if(np.lt.1.or.np.gt.NOBJ.or.np.eq.3)call bug('f',
+	if(np.lt.1.or.np.gt.NOBJ)call bug('f',
      *	  'Invalid planet number in PLPHYEPH')
 c
 	t  = jday - J2000
