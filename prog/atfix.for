@@ -117,12 +117,13 @@ c  History:
 c    04may03 rjs  Original version.
 c    15may03 rjs  Better jyperk.
 c    14aug03 rjs  Fix bug causing seg violation.
+c    17sep03 rjs  New gain/elevation curve at 3mm.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
 	character version*(*)
 	integer MAXSELS,ATANT
-	parameter(version='AtFix: version 1.0 14-Aug-03')
+	parameter(version='AtFix: version 1.0 17-Sep-03')
 	parameter(MAXSELS=256,ATANT=6)
 c
 	real sels(MAXSELS),xyz(3*MAXANT)
@@ -1005,10 +1006,19 @@ c	data (wpc(6,j),j=1,3)/1.0000, 0.0000,     0.0000/
 c
 c  Gain curve deduced by Tony Wong on 04-Jun-02.
 c
+c	data (wpc(1,j),j=1,3)/1.0000, 0.0000,     0.0000/
+c	data (wpc(2,j),j=1,3)/0.4927, 1.6729e-2, -1.3791e-4/
+c	data (wpc(3,j),j=1,3)/0.2367, 2.0487e-2, -1.3748e-4/
+c	data (wpc(4,j),j=1,3)/0.5405, 1.7040e-2, -1.5798e-4/
+c	data (wpc(5,j),j=1,3)/1.0000, 0.0000,     0.0000/
+c	data (wpc(6,j),j=1,3)/1.0000, 0.0000,     0.0000/
+c
+c  Gain curve deduced from Ravi's data of 04-Sep-03.
+c
 	data (wpc(1,j),j=1,3)/1.0000, 0.0000,     0.0000/
-	data (wpc(2,j),j=1,3)/0.4927, 1.6729e-2, -1.3791e-4/
-	data (wpc(3,j),j=1,3)/0.2367, 2.0487e-2, -1.3748e-4/
-	data (wpc(4,j),j=1,3)/0.5405, 1.7040e-2, -1.5798e-4/
+	data (wpc(2,j),j=1,3)/0.4877, 1.7936e-2, -1.5699e-4/
+	data (wpc(3,j),j=1,3)/0.7881, 0.8458e-2, -0.8442e-4/
+	data (wpc(4,j),j=1,3)/0.7549, 1.2585e-2, -1.6153e-4/
 	data (wpc(5,j),j=1,3)/1.0000, 0.0000,     0.0000/
 	data (wpc(6,j),j=1,3)/1.0000, 0.0000,     0.0000/
 c
