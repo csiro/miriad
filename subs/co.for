@@ -49,6 +49,7 @@ c    rjs  14jul97 Fix bug in covelset introduced on above date.
 c    rjs  21jul97 More robust to bad freq values. Added coSeta.
 c    rjs  16oct97 Minor correction to the felo axis definition.
 c    rjs  10nov97 Make a linear axis if there are no header values.
+c    rjs  20nov98 Partial handling of sky rotation.
 c************************************************************************
 c* coInit -- Initialise coordinate conversion routines.
 c& rjs
@@ -144,6 +145,8 @@ c
 	cellscal(k2) = cellscal(k1)
 	epoch(k2) = epoch(k1)
 	obstime(k2) = obstime(k1)
+	llcos(k2) = llcos(k1)
+	llsin(k2) = llsin(k1)
 c
 	call coReinit(lout)
 c
@@ -209,6 +212,8 @@ c
 	cellscal(k) = .true.
 	epoch(k) = 0
 	obstime(k) = 0
+	llcos(k) = 1
+	llsin(k) = 0
 	naxis(k) = 0
 	end
 c************************************************************************
@@ -299,6 +304,9 @@ c
 	  epoch(k) = value
 	else if(obj.eq.'obstime')then
 	  obstime(k) = value
+	else if(obj.eq.'llrot')then
+	  llcos(k) = cos(value)
+	  llsin(k) = sin(value)
 	else if(obj(1:5).eq.'crval'.and.ok)then
 	  crval(l,k) = value
 	else if(obj(1:5).eq.'crpix'.and.ok)then
@@ -405,6 +413,12 @@ c
 	  value = epoch(k)
 	else if(obj.eq.'obstime')then
 	  value = obstime(k)
+	else if(obj.eq.'llrot')then
+	  if(llsin(k).eq.0)then
+	    value = 0
+	  else
+	    value = atan2(llsin(k),llcos(k))
+	  endif
 	else if(obj(1:5).eq.'crval'.and.ok)then
 	  value = crval(l,k)
 	else if(obj(1:5).eq.'crpix'.and.ok)then
@@ -699,18 +713,21 @@ c  use the reference pixel as the corresponding value.
 c
 	  if(ira.le.n.and.idec.le.n)then
 	    call coCelest(x1(ira),x1(idec),x2(ira),x2(idec),coproj(k),
+     *	      llcos(k),llsin(k),
      *	      crval(ira,k),crpix(ira,k),scal*cdelt(ira,k),
      *	      crval(idec,k),crpix(idec,k),scal*cdelt(idec,k),
      *	      x1pix(ira),x1pix(idec),x2pix(ira),x2pix(idec),
      *	      x1off(ira),x1off(idec),x2off(ira),x2off(idec))
 	  else if(idec.le.n)then
 	    call coCelest(0.d0,x1(idec),temp,x2(idec),coproj(k),
+     *	      llcos(k),llsin(k),
      *	      crval(ira,k),crpix(ira,k),scal*cdelt(ira,k),
      *	      crval(idec,k),crpix(idec,k),scal*cdelt(idec,k),
      *	      .true.,x1pix(idec),.true.,x2pix(idec),
      *	      .true.,x1off(idec),.true.,x2off(idec))
 	  else
 	    call coCelest(x1(ira),0.d0,x2(ira),temp,coproj(k),
+     *	      llcos(k),llsin(k),
      *	      crval(ira,k),crpix(ira,k),scal*cdelt(ira,k),
      *	      crval(idec,k),crpix(idec,k),scal*cdelt(idec,k),
      *	      x1pix(ira),.true.,x2pix(ira),.true.,
@@ -990,6 +1007,7 @@ c
 	  ira  = ilong(k)
 	  idec = ilat(k)
 	  call coCelest(x1,0.d0,x2,dtemp,coproj(k),
+     *	    llcos(k),llsin(k),
      *	    crval(ira,k),crpix(ira,k),cdelt(ira,k),
      *	    crval(idec,k),crpix(idec,k),cdelt(idec,k),
      *	    x1pix,.true.,x2pix,.true.,x1off,.true.,x2off,.true.)
@@ -1000,6 +1018,7 @@ c
 	  ira  = ilong(k)
 	  idec = ilat(k)
 	  call coCelest(0.d0,x1,dtemp,x2,coproj(k),
+     *	    llcos(k),llsin(k),
      *	    crval(ira,k),crpix(ira,k),cdelt(ira,k),
      *	    crval(idec,k),crpix(idec,k),cdelt(idec,k),
      *	    .true.,x1pix,.true.,x2pix,.true.,x1off,.true.,x2off)
@@ -1067,6 +1086,9 @@ c
 c  Determine the operation to be performed.
 c
 	k = coLoc(lu,.false.)
+c
+	if(llsin(k).ne.0)
+     *	  call bug('f','Cannot handle sky rotation')
 	call coCrack(in,x1pix,x1off,naxis(k),MAXNAX,n)
 c
 c  Get the scale factors to scale cdelt1 and cdelt2 by for this coordinate.
@@ -1580,6 +1602,9 @@ c
 	integer coLoc
 c
 	k = coLoc(lu,.false.)
+	if(llsin(k).ne.0)
+     *	  call bug('f','Cannot handle sky rotation')
+c
 c
 c  Convert to absolute pixels.
 c
@@ -1774,6 +1799,7 @@ c------------------------------------------------------------------------
 	include 'co.h'
 	integer i,k
 	character num*2
+	double precision dtemp
 c
 c  Externals.
 c
@@ -1794,6 +1820,10 @@ c
 	call wrhdd(tno,'vobs',vobs(k))
 	if(epoch(k).gt.1800)call wrhdr(tno,'epoch',real(epoch(k)))
 	if(obstime(k).gt.0)call wrhdd(tno,'obstime',obstime(k))
+	if(llsin(k).ne.0)then
+	  dtemp = atan2(llsin(k),llcos(k))
+	  call wrhdd(tno,'llrot',dtemp)
+	endif
 	if(cellscal(k))then
 	  call wrhda(tno,'cellscal','1/F')
 	else
@@ -1882,8 +1912,8 @@ c------------------------------------------------------------------------
 c
 	integer i,n
 	character num*2,cscal*16
+	double precision dtemp
 c	character telescop*16
-c	double precision dtemp
 c	logical ewdone,ew
 c
 c  Externals.
@@ -1905,6 +1935,10 @@ c    *	  call bug('w','VOBS item missing -- assuming it is 0')
 	cellscal(k) = cscal.eq.'1/F'
 	if(.not.cellscal(k).and.cscal.ne.'CONSTANT')call bug('w',
      *	  'Unrecognised cellscal value: '//cscal)
+c
+	call rdhdd(lus(k),'llrot',dtemp,0.d0)
+	llcos(k) = cos(dtemp)
+	llsin(k) = sin(dtemp)
 c
 c	ewdone = .false.
 	do i=1,naxis(k)
@@ -2070,6 +2104,8 @@ c
 	call uvrdvrd(lus(k),'epoch',epoch(k),0.d0)
 	call uvrdvrd(lus(k),'time',obstime(k),0.d0)
 	cellscal(k) = .false.
+	llcos(k) = 1
+	llsin(k) = 0
 c
 	end
 c************************************************************************
@@ -2296,12 +2332,12 @@ c
 c
 	end
 c************************************************************************
-	subroutine coCelest(x10,y10,x2,y2,proj,
+	subroutine coCelest(x10,y10,x2,y2,proj,llcos,llsin,
      *	  xval,xpix,dx,yval,ypix,dy,
      *	  x1pix,y1pix,x2pix,y2pix,x1off,y1off,x2off,y2off)
 c
 	implicit none
-	double precision x10,y10,x2,y2
+	double precision x10,y10,x2,y2,llcos,llsin
 	character proj*(*)
 	double precision xval,yval,xpix,ypix,dx,dy
 	logical x1pix,y1pix,x2pix,y2pix
@@ -2326,7 +2362,7 @@ c
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	double precision r,s,t,u,L,M,cosyval,sinyval,sinDalp,Dalp,eps
-	double precision x1,y1
+	double precision x1,y1,dtemp
 	logical more
 	integer niters
 	integer MAXITER
@@ -2362,6 +2398,9 @@ c
 	else if(x1pix.and.y1pix)then
 	  L = (x1 - xpix) * dx
 	  M = (y1 - ypix) * dy
+	  dtemp = L*llcos - M*llsin
+	  M = M*llcos + L*llsin
+	  L = dtemp
 c
 	  if(proj.eq.'ncp')then
 	    t = cosyval - M*sinyval
@@ -2404,6 +2443,7 @@ c
 c  Convert from RA,y to x,DEC.
 c
 	else if(y1pix)then
+	  if(llsin.ne.0)call bug('f','Cannot handle sky rotation')
 	  Dalp = x1 - xval
 	  if(Dalp.lt.-DPI)then
 	    Dalp = Dalp + 2*DPI
@@ -2472,6 +2512,7 @@ c
 c  Convert from x,DEC to RA,y.
 c
 	else if(x1pix)then
+	  if(llsin.ne.0)call bug('f','Cannot handle sky rotation')
 	  L = (x1 - xpix) * dx
 c
 	  if(proj.eq.'ncp')then
@@ -2578,6 +2619,9 @@ c
 	    M = (y1 - yval)
 	  endif
 c
+	  dtemp = L*llcos + M*llsin
+	  M     = M*llcos - L*llsin
+	  L     = dtemp
 	  x2 = L / dx + xpix
 	  y2 = M / dy + ypix
 	endif
