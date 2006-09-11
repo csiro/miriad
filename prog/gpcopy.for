@@ -61,11 +61,14 @@ c    rjs  24nov94 Implement merging of gain tables.
 c    rjs   3dec94 Implement applying of gain tables.
 c    mchw 04jan95 Doc change only.
 c    rjs  17aug95 More messages.
+c    rjs  10dec97 Change some fatal messages to warnings only, to
+c		  prevent tables getting corrupted. Add check for
+c		  apparently corrupt gain table.
 c  Bugs:
 c    None?
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='GpCopy: version 3-Dec-94')
+	parameter(version='GpCopy: version 10-Dec-97')
 	logical dopol,docal,dopass,docopy
 	integer iostat,tIn,tOut
 	character vis*64,out*64,mode*8,line*64
@@ -112,7 +115,7 @@ c
 	  if(mode.eq.'merge'.and.dopass)then
 	    call bug('w','Merging of polarization table unimplemented')
 	  else if(mode.eq.'apply'.and.dopass)then
-	    call bug('f','Applying of polarization table unimplemented')
+	    call bug('w','Applying of polarization table unimplemented')
 	  else
 	    call output('Copying leakage table')
 	    call hdcopy(tIn,tOut,'leakage')
@@ -151,7 +154,7 @@ c
 	  if(hdprsnt(tIn,'bandpass'))then
 	    dopass = .not.docopy.and.hdprsnt(tOut,'bandpass')
 	    if(mode.eq.'merge'.and.dopass)then
-	      call bug('f','Merging bandpasses is not implemented')
+	      call bug('w','Merging bandpasses is not implemented')
 	    else if(mode.eq.'apply'.and.dopass)then
 	      call output('Applying input bandpass table to output')
 	      call BpApply(tIn,tOut)
@@ -169,9 +172,9 @@ c
 	    if(hdprsnt(tIn,'cgains'))then
 	      dopass = .not.docopy.and.hdprsnt(tOut,'cgains')
 	      if(mode.eq.'merge'.and.dopass)then
-		call bug('f','Merging cgains is not implemented')
+		call bug('w','Merging cgains is not implemented')
 	      else if(mode.eq.'apply'.and.dopass)then
-		call bug('f','Applying cgains is not implemented')
+		call bug('w','Applying cgains is not implemented')
 	      else
 		call output('Copying cgains table')
 		call hdcopy(tIn,tOut,'cgains')
@@ -182,9 +185,9 @@ c
 	    if(hdprsnt(tIn,'wgains'))then
 	      dopass = .not.docopy.and.hdprsnt(tOut,'wgains')
 	      if(mode.eq.'merge'.and.dopass)then
-		call bug('f','Merging wgains is not implemented')
+		call bug('w','Merging wgains is not implemented')
 	      else if(mode.eq.'apply'.and.dopass)then
-		call bug('f','Applying wgains is not implemented')
+		call bug('w','Applying wgains is not implemented')
 	      else
 		call output('Copying wgains table')
 		call hdcopy(tIn,tOut,'wgains')
@@ -536,11 +539,20 @@ c  Load a gain table into memory.
 c------------------------------------------------------------------------
 	integer offset,iostat,i,git
 c
+c  Externals.
+c
+	integer hsize
+c
 	call haccess(tno,git,'gains','read',iostat)
 	if(iostat.ne.0)then
 	  call bug('w','Error opening gains table')
 	  call bugno('f',iostat)
 	endif
+c
+c  Check that its the right size.
+c
+	if(hsize(git).ne.8+8*(ngains+1)*nsols)call bug('f',
+     *	  'Gain table looks to be the wrong size.')
 c
 	offset = 8
 c
