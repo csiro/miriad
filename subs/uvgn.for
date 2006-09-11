@@ -20,6 +20,8 @@ c		  more coarsely than the data.
 c    29mar96 rjs  Some tidying of the cgains routines!!
 c     7may96 rjs  Improved goodness measure in uvgnpsma.
 c    23sep96 rjs  Mark memory as deallocated after deallocating!
+c    26jun97 rjs  Correct channel numbering when there are multiple
+c		  windows and bandpass averaging taking place.
 c************************************************************************
 	subroutine uvGnIni(tno1,dogains1,dopass1)
 	implicit none
@@ -1187,7 +1189,8 @@ c
 	      else
 	        do i=1,nschan0(j)
 	          ibeg = max(1,nint(chan-hwidth)+ischan(i0))
-	          iend = min(nint(chan+hwidth)+ischan(i0),nschan(i0))
+	          iend = min(nint(chan+hwidth)+ischan(i0),
+     *					ischan(i0)+nschan(i0)-1)
 	          n = 0
 	          dat(off,k) = 0
 		  do l=ibeg,iend
