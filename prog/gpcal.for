@@ -198,6 +198,8 @@ c		     to the doc comments.
 c    rjs     22may98 Turn off xyref on early iterations of weakly polarised
 c		     source.
 c    rjs     19aug98 Changes in ampsolxy and ampsol to avoid an SGI compiler bug.
+c    rjs     12oct99 Attempts to perform absolute flux calibration.
+c
 c  Bugs:
 c    * Polarisation solutions when using noamp are wrong! The equations it
 c      solves for have a fudge to account for a bias introduced by the
@@ -208,11 +210,11 @@ c------------------------------------------------------------------------
 	integer MAXITER
 	character version*(*)
 	parameter(MAXITER=30)
-	parameter(version='Gpcal: version 1.0 15-Aug-97')
+	parameter(version='Gpcal: version 1.0 12-Oct-99')
 c
 	integer tIn
 	double precision interval(2), freq
-	real flux(4),OldFlux(4),xyphase(MAXANT)
+	real fac,flux(4),OldFlux(4),xyphase(MAXANT)
 	real pcent,epsi,epsi1,tol,ttol
 	integer refant,minant,nants,nbl,nxyphase,nsoln,niter,i,j,jmax
 	integer maxsoln,off
@@ -323,7 +325,7 @@ c
 	if(nxyphase.gt.nants)call bug('w',
      *	  'More XY phases were given than there are antennae')
 	nxyphase = min(nxyphase,nants)
-	call PolIni(tIn,xyphase,nxyphase,D,xyp,nants,vsolve)
+	call PolIni(tIn,xyphase,nxyphase,D,xyp,nants,vsolve,fac)
 c
 c  Read the data, forming the sums that we need.
 c
@@ -336,15 +338,19 @@ c
 c
 c  Initialize the flux array
 c
-      if(defflux)call getiquv(source,freq,oldflx,flux,defflux)
+	if(defflux)then
+	  call getiquv(source,freq,oldflx,flux,defflux)
+	  if(.not.defflux)
+     *		call bug('i','Source is a recognised flux calibrator')
+	endif
 c
-      if(defflux.and..not.qusolve)call bug('w',
+	if(defflux.and..not.qusolve)call bug('w',
      *	  'It is unwise to omit OPTION=QUSOLVE when flux is unknown')
-      if(flux(1).le.0)call bug('f','Invalid total flux value')
-      pcent = sqrt( flux(2)**2 + flux(3)**2 + flux(4)**2)/flux(1)
-      if(polref.and.pcent.eq.0.and..not.qusolve) call bug('f',
+	if(flux(1).le.0)call bug('f','Invalid total flux value')
+	pcent = sqrt( flux(2)**2 + flux(3)**2 + flux(4)**2)/flux(1)
+	if(polref.and.pcent.eq.0.and..not.qusolve) call bug('f',
      *	  'You must give values for Q,U,V to use option POLREF')
-      if(polref.and.pcent.lt.0.05) call bug('w',
+	if(polref.and.pcent.lt.0.05) call bug('w',
      *	  'Source appears only weakly polarised')
 c
 c  Initialise the gains.
@@ -428,7 +434,7 @@ c
 c  If no flux was given, scale the gains so that they have an rms of
 c  1. Determine what flux this implies.
 c
-	if(defflux)call GainScal(flux,Gains,2*nants*nsoln)
+	if(defflux)call GainScal(flux,Gains,2*nants*nsoln,fac)
 c
 c  Tell about the source polarisation.
 c
@@ -2281,11 +2287,11 @@ c
 	endif
 	end
 c************************************************************************
-	subroutine PolIni(tIn,xyphase,nxyphase,D,xyp,nants,vsolve)
+	subroutine PolIni(tIn,xyphase,nxyphase,D,xyp,nants,vsolve,fac)
 c
 	implicit none
 	integer tIn,nants,nxyphase
-	real xyphase(nants)
+	real xyphase(nants),fac
 	logical vsolve
 	complex D(2,nants),xyp(nants)
 c
@@ -2302,8 +2308,8 @@ c    D		The initial leakage terms.
 c    xyp	The initial xyphases.
 c------------------------------------------------------------------------
 	include 'gpcal.h'
-	integer i,n,n0,item,iostat
-	real theta,phase(MAXANT),sd(MAXANT)
+	integer i,n,item,iostat
+	real theta,phase(MAXANT)
 	integer count(MAXANT)
 c
 c  Externals.
@@ -2312,32 +2318,21 @@ c
 c
 c  Get the user-specified XY phases.
 c
-	do i=1,nxyphase
-	  theta = pi/180 * xyphase(i)
-	  xyp(i) = cmplx(cos(theta),sin(theta))
-	enddo
-c
-c  Determine the XY phase from an old gain table, if there is one.
-c
-	n = nxyphase
-	if(nxyphase.lt.nants)then
-	  call GetXY(tIn,phase,sd,count,MAXANT,n0)
-	  n0 = min(n0,nants)
-	  do i=n+1,n0
-	    if(count(i).gt.0)then
-	      theta = phase(i)
-	      xyp(i) = cmplx(cos(theta),sin(theta))
-	    else
-	      xyp(i) = (1.,0.)
-	    endif
-	  enddo
-	  n = max(n0,n)
-	endif
-c
-c  Fill in any as yet uninitialised xyphase values.
-c
+	fac = 1
+	call GetXY(tIn,fac,phase,count,MAXANT,n)
 	do i=n+1,nants
-	  xyp(i) = (1.,0.)
+	  count(i) = 0
+	enddo
+	do i=1,nants
+	  if(i.lt.nxyphase)then
+	    theta = pi/180 * xyphase(i)
+	    xyp(i) = cmplx(cos(theta),sin(theta))
+	  else if(count(i).gt.0)then
+            theta = phase(i)
+            xyp(i) = cmplx(cos(theta),sin(theta))
+	  else
+	    xyp(i) = (1.,0.)
+	  endif
 	enddo
 c
 c  Initialise the leakage terms. See if there is already a leakage
@@ -2462,17 +2457,18 @@ c
 	  
 	end
 c************************************************************************
-	subroutine GainScal(flux,Gains,ngains)
+	subroutine GainScal(flux,Gains,ngains,fac)
 c
 	implicit none
 	integer ngains
 	complex Gains(ngains)
-	real flux(4)
+	real flux(4),fac
 c
 c  Scale the gains and the flux so that the rms gain is 1.
 c
 c  Input:
 c    ngains	Number of gains.
+c    fac	RMS of the original gains.
 c  Input/Output:
 c    Gains	The gains.
 c    flux	Nominal source flux.
@@ -2496,14 +2492,14 @@ c
 c
 c  Scale the gains.
 c
-	t = sqrt(n/Sum2)
+	t = fac*sqrt(n/Sum2)
 	do i=1,ngains
 	  Gains(i) = t*Gains(i)
 	enddo
 c
 c  Scale the fluxes.
 c
-	t = Sum2/n
+	t = fac*fac*Sum2/n
 	do i=1,4
 	  flux(i) = t*flux(i)
 	enddo
