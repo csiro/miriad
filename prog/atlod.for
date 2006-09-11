@@ -143,6 +143,7 @@ c		  a totally scrambled one.  Mr. S must be on drugs again.
 c    nebk 03mar95 Add options=birdie and record file names in history.
 c    rjs  14mar95 Discard channels for options=birdie.
 c    rjs  27mar95 Options=reweight.
+c    rjs  26apr95 Make options=unflag always behave as advertised.
 c
 c  Program Structure:
 c    Miriad atlod can be divided into three rough levels. The high level
@@ -168,7 +169,7 @@ c------------------------------------------------------------------------
 	integer MAXFILES
 	parameter(MAXFILES=128)
 	character version*(*)
-	parameter(version='AtLod: version 27-Mar-95')
+	parameter(version='AtLod: version 26-Apr-95')
 c
 	character in(MAXFILES)*64,out*64,line*64
 	integer tno
@@ -617,7 +618,7 @@ c
 	  endif
 	enddo
 c
-	call uvputvra(tno,'source',line(1:length))
+	if(length.gt.0)call uvputvra(tno,'source',line(1:length))
 	call uvputvrd(tno,'ra',ra,1)
 	call uvputvrd(tno,'dec',dec,1)
 	call uvputvrd(tno,'obsra',obsra,1)
@@ -1532,10 +1533,11 @@ c
 	    if(ok) ok = min(i1,i2).ge.1.and.max(i1,i2).le.nant
 	    if(ok) then
 	      if(.not.(antvalid(i1).and.antvalid(i2)))flag = 1
+	      if(.not.((scinit(ifno,i1).and.scinit(ifno,i2)).or.relax))
+     *								flag = 1
 	    endif
 	    if(ok) ok = flag.eq.0.or.unflag
 	    if(ok) ok = (i1.eq.i2.and.doauto).or.(i1.ne.i2.and.docross)
-	    if(ok) ok = (scinit(ifno,i1).and.scinit(ifno,i2)).or.relax
 c
 c  If we are going to accept it, see if we need to flush the buffers.
 c
