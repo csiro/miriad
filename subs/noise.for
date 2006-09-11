@@ -13,6 +13,8 @@ c    rjs  18aug95  Get it to work on SGI.
 c    rjs  18sep95  Did I screw up in the above??I don't understand whats
 c		   happened to the code.
 c    rjs  24oct99  Added "save" statement in "ran" function.
+c    rjs  04jul00  Use double precision arithmetic in "ran" to avoid some
+c		   machine rounding biases.
 c************************************************************************
 c
 c  Choose which random number style we are to use. We have three choices:
@@ -214,12 +216,10 @@ c------------------------------------------------------------------------
       integer ix1,ix2,ix3,j
 c
       integer m1,m2,m3,ia1,ia2,ia3,ic1,ic2,ic3
-      real rm1,rm2
-      parameter (m1=259200,ia1=7141,ic1=54773,rm1=3.8580247e-6)
-      parameter (m2=134456,ia2=8121,ic2=28411,rm2=7.4373773e-6)
-      parameter (m3=243000,ia3=4561,ic3=51349)
+      parameter(m1=134456,ia1=8121,ic1=28411)
+      parameter(m2=243000,ia2=4561,ic2=51349)
+      parameter(m3=259200,ia3=7141,ic3=54773)
 c
-      integer seed
       logical first
       save first,r,ix1,ix2,ix3
       data first/.true./
@@ -233,7 +233,7 @@ c
 	do j=1,97
 	  ix1=mod(ia1*ix1+ic1,m1)
 	  ix2=mod(ia2*ix2+ic2,m2)
-	  r(j)=(real(ix1) + real(ix2)*rm2)*rm1
+	  r(j)=(dble(ix1) + dble(ix2)/dble(m2))/dble(m1)
 	enddo
 	iseed = 0
 	first = .false.
@@ -244,7 +244,7 @@ c
       j=1+(97*ix3)/m3
       if(j.gt.97.or.j.lt.1)call bug('f','Something screwy in RAN')
       ran=r(j)
-      r(j)=(real(ix1) + real(ix2)*rm2)*rm1
+      r(j)=(dble(ix1) + dble(ix2)/dble(m2))/dble(m1)
 c
       end
 #endif
