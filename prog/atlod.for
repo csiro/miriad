@@ -62,6 +62,10 @@ c         'mmrelax' This option is ignored, and is present for historical
 c	            reasons.
 c	  'unflag'  Save any data that is flagged. By default ATLOD
 c	            discards most data that is flagged.
+c	  'opcorr'  Correct for atmospheric opacity. This option is possible
+c	            for data measured after October 2003. It should not be
+c	            used for 3mm data. Generally it is only relevant for
+c	            12mm observations.
 c	  'samcorr' Correct the pre-Dec93 data for incorrect sampler
 c	            statistics. Since December 1993, sampler corrections
 c	            are performed online -- Miriad ignores the samcorr
@@ -199,6 +203,7 @@ c    rjs  16jul03 Do not flip sign of XY and YX correlations for 12mm
 c                 package.
 c    rjs  19jul03 Removed option=mmrelax, and made this automatic!
 c    rjs  06dec03 Write out met data, axisrms, axismax data. options=opcorr
+c    rjs  30dec03 Doc change only.
 c
 c  Program Structure:
 c    Miriad atlod can be divided into three rough levels. The high level
