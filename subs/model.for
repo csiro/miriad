@@ -39,6 +39,7 @@ c		  'p' flag given. Better error messages(?).
 c    rjs  26apr92 Added check for clip level processing.
 c    rjs  10may92 Reworked the way clipping is done.
 c    rjs  17may92 Clipping message, to appease NEBK.
+c    rjs  15feb93 Changes to make ra/dec variables double.
 c************************************************************************
 c*ModelIni -- Ready the uv data file for processing by the Model routine.
 c&mchw
@@ -628,7 +629,8 @@ c------------------------------------------------------------------------
 	integer width
 	parameter(width=6)
 	integer k,iref,jref,nclip
-	real vra,vdec,dra,ddec,mra,mdec,xref,yref
+	real xref,yref
+	double precision vra,vdec,mra,mdec,dra,ddec
 	real xcorr(maxdim),ycorr(maxdim)
 	character val*9
 c
@@ -638,23 +640,23 @@ c
 c
 c  Determine the location of the visibility phase center in the image.
 c
-	call rdhdr(tmod,'crval1',mra,0.)
-	call rdhdr(tmod,'crval2',mdec,0.)
+	call rdhdd(tmod,'crval1',mra,0.d0)
+	call rdhdd(tmod,'crval2',mdec,0.d0)
 c
 	if(imhead)then
 	  vra = mra
 	  vdec = mdec
 	else
-	  call uvrdvrr(tvis,'ra',vra,0.)
-	  call uvrdvrr(tvis,'dra',dra,0.)
-	  call uvrdvrr(tvis,'dec',vdec,0.)
-	  call uvrdvrr(tvis,'ddec',ddec,0.)
+	  call uvrdvrd(tvis,'ra',vra,0.d0)
+	  call uvrdvrd(tvis,'dra',dra,0.d0)
+	  call uvrdvrd(tvis,'dec',vdec,0.d0)
+	  call uvrdvrd(tvis,'ddec',ddec,0.d0)
 	  vdec = vdec + ddec
 	  vra = vra + dra/cos(vdec)
 	endif
 c
-	call rdhdr(tmod,'cdelt1',dra,0.)
-	call rdhdr(tmod,'cdelt2',ddec,0.)
+	call rdhdd(tmod,'cdelt1',dra,0.d0)
+	call rdhdd(tmod,'cdelt2',ddec,0.d0)
 	call rdhdr(tmod,'crpix1',xref,real(nx/2+1))
 	call rdhdr(tmod,'crpix2',yref,real(ny/2+1))
 	if(ddec*dra.eq.0)
