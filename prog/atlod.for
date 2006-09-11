@@ -195,6 +195,8 @@ c    dpr  11apr01 ATANT=8 in atlog.h
 c    rjs  22may02 Added options=mmrelax
 c    rjs  25may02 Generate "tcorr" variable to keep track of whether
 c		  Tsys scaling has been performed or not.
+c    rjs  16jul03 Do not flip sign of XY and YX correlations for 12mm
+c                 package.
 c
 c  Program Structure:
 c    Miriad atlod can be divided into three rough levels. The high level
@@ -220,7 +222,7 @@ c------------------------------------------------------------------------
 	integer MAXFILES
 	parameter(MAXFILES=128)
 	character version*(*)
-	parameter(version='AtLod: version 1.0 25-May-02')
+	parameter(version='AtLod: version 1.0 16-Jul-03')
 c
 	character in(MAXFILES)*64,out*64,line*64
 	integer tno
@@ -836,12 +838,12 @@ c
 	end
 c************************************************************************
 	subroutine PokeData(u1,v1,w1,baseln,if,bin,vis,nfreq1,nstoke1,
-     *		flag1,inttime1,docon)
+     *		flag1,inttime1,docon,doxyflip)
 c
 	implicit none
 	integer nfreq1,nstoke1,if,baseln,bin
 	real u1,v1,w1,inttime1
-	logical flag1(nstoke1),docon
+	logical flag1(nstoke1),docon,doxyflip
 	complex vis(nfreq1*nstoke1)
 c
 c  Buffer up the data. Perform sampler correction and hanning smoothing
@@ -909,7 +911,8 @@ c
 	  nbin(if) = max(nbin(if),bin)
 	  nused = nused + nfreq(if)
 	  if(nused.gt.ATDATA)call bug('f','Buffer overflow in PokeData')
-	  doneg = polcode(if,p).eq.PolXY.or.polcode(if,p).eq.PolYX
+	  doneg = (polcode(if,p).eq.PolXY.or.
+     *		   polcode(if,p).eq.PolYX).and.doxyflip
 	  call DatCpy(nstoke(if),nfreq(if),nfreq1,
      *		dohann.and.nfreq1.gt.33,birdie.and.nfreq1.eq.33,
      *		edge(if),doconj,doneg,vis(p),data(ipnt))
@@ -1698,7 +1701,7 @@ c------------------------------------------------------------------------
 	include 'rpfits.inc'
 	integer scanno,i1,i2,baseln,i,id,j
 	logical NewScan,NewSrc,NewFreq,NewTime,Accum,ok,badbit
-	logical flags(MAXPOL),corr_fudge
+	logical flags(MAXPOL),corrfud,kband
 	integer jstat,flag,bin,ifno,srcno,simno,Ssrcno,Ssimno
 	integer If2Sim(MAX_IF),nifs(MAX_IF),Sim2If(MAXSIM,MAX_IF)
 	integer Sif(MAX_IF)
@@ -1754,7 +1757,7 @@ c
 	utprevsc = -1
 	Accum = .false.
 	NewScan = .true.
-	corr_fudge=.false.
+	corrfud=.false.
 	Ssrcno = 0
 	Ssimno = 0
 	scanno = 1
@@ -1867,7 +1870,7 @@ c
 	      if ((ut .lt. 30) .and. (86400*(time-tprev).lt.-1)) then
 		jday0=jday0+1
 		time = ut / (3600.d0*24.d0) + jday0
-		corr_fudge=.true.
+		corrfud=.true.
 		call bug('w',
      *          'Assuming first scan of integration')
 		call bug('w',
@@ -1930,9 +1933,12 @@ c
      *							version)
 	        if(an_found)call PokeAnt(nant,x,y,z,sing)
 	        if(NewScan.or.NewFreq)then
+		  kband = .false.
 		  do i=1,nifs(simno)
 		    id = Sim2If(i,simno)
 		    if(nuser.ge.i)rfreq = 1e9*userfreq(i)
+		    kband = kband.or.
+     *			   (if_freq(id).gt.13e9.and.if_freq(id).lt.28e9)
 		    call PokeIF(i,if_nfreq(id),if_invert(id)*if_bw(id),
      *			if_freq(id),if_ref(id),rfreq,
      *			if_nstok(id),if_cstok(1,id))
@@ -1992,16 +1998,16 @@ c	      tint = 0
 	      if(tint.eq.0)tint = 15.0
 	      call PokeData(u,v,w,baseln,Sif(ifno),bin,
      *		vis,if_nfreq(ifno),if_nstok(ifno),flags,
-     *		tint,if_invert(ifno).lt.0)
+     *		tint,if_invert(ifno).lt.0,.not.kband)
 c
 c  Reinitialise things.
 c
 	      if (86400*(time-tprev).lt.-1) then
-		if (.not. corr_fudge) then
+		if (.not. corrfud) then
                   call bug('w',
      *		   'Data are out of time order')
 		else
-		  corr_fudge=.false.
+		  corrfud = .false.
 		endif
 	      endif
 	      tprev = time
