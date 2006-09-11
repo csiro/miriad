@@ -50,11 +50,13 @@ c  History
 c    rjs  26mar93 Original version.
 c    rjs   1dec94 Tell about the offending LST.
 c    rjs   4dec94 Correctly compute HA, LST, and noapply mode.
+c    nebk 02feb96 Make clearer to user that data are not flagged 
+c                 when options=noapply
 c---------------------------------------------------------------------------
 	include 'mirconst.h'
 	character version*(*)
 	integer MAXSELS,MAXBOX,MAXIN
-	parameter(version='UvSector: version 1.0 4-Dec-94')
+	parameter(version='UvSector: version 02-Feb-96')
 	parameter(MAXSELS=1024,MAXBOX=1024,MAXIN=32)
 c
 	real sels(MAXSELS)
@@ -124,10 +126,12 @@ c
 	  call output('Processing '//vis(i))
 	  call uvopen(tIn,vis(i),'old')
 c
-	  call hisopen(tIn,'append')
-	  call hiswrite(tIn,'UVSECTOR: Miriad '//version)
-	  call hisinput(tIn,'UVSECTOR')
-	  call hisclose(tIn)
+          if(.not.noapply)then
+  	    call hisopen(tIn,'append')
+	    call hiswrite(tIn,'UVSECTOR: Miriad '//version)
+	    call hisinput(tIn,'UVSECTOR')
+	    call hisclose(tIn)
+          endif
 c
 	  call SelApply(tIn,sels,.true.)
 	  call Process(tIn,uvpa,width,noapply)
@@ -220,7 +224,12 @@ c
 	  call uvread(tIn,preamble,data,flags,MAXCHAN,nchan)
 	enddo
 c
-	call output('Correlations flagged: '//itoaf(flagged))
+        if (noapply)then
+          call output('Correlations that would be flagged: '//
+     +                itoaf(flagged))
+        else
+  	  call output('Correlations flagged: '//itoaf(flagged))
+        endif
 	if(n1.gt.0)then
 	  theta = atan2(YSum1,XSum1)
 	  if(theta.lt.0)theta = theta + 2*pi
