@@ -32,6 +32,7 @@ c    rjs  23sep93 improve misleading error messages.
 c    rjs  22jul94 Added ra and dec selection.
 c    rjs   4sep94 Remove char*(*) from subroutine call.
 c    rjs  13jan95 Added pulsar bin selection.
+c    rjs  22oct97 Change format of "on" selection.
 c
 c  Routines are:
 c    subroutine SelInput(key,sels,maxsels)
@@ -65,7 +66,7 @@ c			limits. Both limits must be given.
 c    ddec(p1,p2)	Data with "ddec" parameter (in arcsec) between two
 c			limits. Both limits must be given.
 c    increment(n)	Every nth visibility is selected.
-c    on			Those records when the variable "on" == 1.
+c    on(n)		Those records when the appropriate value of "on"
 c    polarization(x)	Select records of a particular polarisation,
 c			where "x" is one of:
 c			 i,q,u,v,rr,ll,rl,lr,xx,yy,xy,yx
@@ -241,9 +242,9 @@ c
 	    if(t1.eq.DAYTIME)then
 	      match = sels(offset+LOVAL).le.val2.and.
      *		      val2.le.sels(offset+HIVAL)
-	    else if(t1.eq.AUTO.or.t1.eq.ON)then
+	    else if(t1.eq.AUTO)then
 	      match = .true.
-	    else if(t1.eq.WINDOW.or.t1.eq.POL)then
+	    else if(t1.eq.WINDOW.or.t1.eq.POL.or.t1.eq.ON)then
 	      match = .false.
 	      n = nint(sels(offset+NSIZE)) - 2
 	      do j=1,n
@@ -446,10 +447,10 @@ c
 	      endif
 	    enddo
 c
-c  Handle "OR", "ON", or "AUTO" selection. No parameters associated with
+c  Handle "OR" or "AUTO" selection. No parameters associated with
 c  these.
 c
-	  else if(seltype.eq.ON.or.seltype.eq.AUTO.or.seltype.eq.OR)then
+	  else if(seltype.eq.AUTO.or.seltype.eq.OR)then
 	    sels(offset+ITYPE) = sgn*seltype
 	    sels(offset+NSIZE) = 2
 	    offset = offset + 2
@@ -525,9 +526,10 @@ c
 c
 c  Handle windows and polarisation.
 c
-	  else if(seltype.eq.WINDOW.or.seltype.eq.POL)then
-	    if(seltype.eq.WINDOW)
-     *    		call SelDcde(spec,k1,k2,vals,n,MAXVALS,'real')
+	  else if(seltype.eq.WINDOW.or.seltype.eq.POL.or.
+     *	      seltype.eq.ON)then
+	    if(seltype.eq.WINDOW.or.seltype.eq.ON)
+     *          call SelDcde(spec,k1,k2,vals,n,MAXVALS,'real')
 	    if(seltype.eq.POL)
      *		call SelDcde(spec,k1,k2,vals,n,MAXVALS,'pol')
 	    if(offset+n+1.gt.maxsels)
@@ -730,7 +732,7 @@ c
 c
 c  Windows and polarisation.
 c
-	  else if(type.eq.POL.or.type.eq.WINDOW)then
+	  else if(type.eq.POL.or.type.eq.WINDOW.or.type.eq.ON)then
 	    do j=1,n
 	      call uvselect(tno,types(type),dble(sels(offset+j+1)),
      *		0.0d0,flag)
