@@ -28,6 +28,7 @@ c    rjs   9sep94 Support felocity linetype.
 c    mchw  5jan95 Added pressmb to uv-variables.
 c    rjs  13jan95 Added "bin" to uv-variables.
 c    mchw 15mar96 Added delay to uvvariables.
+c    rjs  29may96 Added "nbin" to uvvariables.
 c************************************************************************
 c*VarInit -- Initialise the copy routines.
 c:uv-data
@@ -39,8 +40,8 @@ c
 	character linetype*(*)
 	integer tIn
 c
-c  The VarCpIni routine marks (using uvtrack) a number of variables to be
-c  copied across by the uvcopyvr routine.
+c  The VarIni routine marks a number of variables to be
+c  copied across by the VarCopy routine.
 c  It also marks frequency setup and system temp variables, to note
 c  updates to these, so that VarCopy can be used later to update them.
 c
@@ -83,7 +84,7 @@ c
 	integer i
 c
 	integer nvar,nline,nwide,nvelo
-	parameter(nvar=66,nline=8,nwide=3,nvelo=4)
+	parameter(nvar=67,nline=8,nwide=3,nvelo=4)
         character var(nvar)*8,line(nline)*8,wide(nwide)*8,velo(nvelo)*8
 c
 c  Variables to check for a change, for line=channel.
@@ -108,7 +109,8 @@ c
      *	   'dewpoint','dra     ','epoch   ','evector ','focus   ',
      *	   'freq    ','freqif  ','inttime ','ivalued ','jyperk  ',
      *	   'latitud ','longitu ','lo1     ','lo2     ','lst     ',
-     *	   'mount   ','nants   ','ntemp   ','ntpower ','obsdec  ',
+     *	   'mount   ','nants   ','nbin    ','ntemp   ','ntpower ',
+     *	   'obsdec  ',
      *	   'observer','obsra   ','on      ','operator','pbfwhm  ',
      *	   'phaselo1','phaselo2','phasem1 ','plangle ','plmaj   ',
      *	   'plmin   ','pltb    ','precipmm','pressmb ',
