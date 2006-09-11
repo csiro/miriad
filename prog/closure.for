@@ -66,13 +66,14 @@ c--
 c  History:
 c    rjs   7sep94 Original version.
 c    rjs  14sep95 Bring it up to scratch.
+c    rjs  19sep95 Reset the valid flag on a baseline after an integration.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
 	integer MAXPNTS,MAXPLOTS,MAXTRIP
 	integer PolMin,PolMax,MAXPOL
 	character version*(*)
-	parameter(version='version 14-Sep-95')
+	parameter(version='version 19-Sep-95')
 	parameter(MAXPNTS=5000,MAXPLOTS=20)
 	parameter(MAXTRIP=(MAXANT*(MAXANT-1)*(MAXANT-2))/6)
 	parameter(PolMin=-8,PolMax=4,MAXPOL=2)
@@ -216,12 +217,15 @@ c
      *		  x,y,yerr,npnts,nplots,title,mpnts,mplots)
 		tmin = t
 		tmax = tmin
+		nants = 0
 	      endif
 c
 c  Save this baseline.
 c
 	      tmin = min(tmin,t)
 	      tmax = max(tmax,t)
+	      nants = max(nants,ant1,ant2)
+c
 	      if(nchan(bl,p).ne.nread)then
 		if(nchan(bl,p).gt.0)then
 		  call MemFree(corrpnt(bl,p),nchan(bl,p),'c')
@@ -231,6 +235,7 @@ c
 		call MemAlloc(corrpnt(bl,p),nchan(bl,p),'c')
 		call MemAlloc(flagpnt(bl,p),nchan(bl,p),'l')
 	      endif
+c
 	      pnt1 = corrpnt(bl,p) - 1
 	      pnt2 = flagpnt(bl,p) - 1
 	      do i=1,nchan(bl,p)
@@ -239,7 +244,7 @@ c
 	      enddo
 	      call uvDatGtr('variance',sigma2(bl,p))
 	      init(bl,p) = .true.
-	      nants = max(nants,ant1,ant2)
+c
 	    endif
 	  endif
 	enddo
@@ -436,6 +441,12 @@ c
 		endif
 	      enddo
 	    enddo
+	  enddo
+c
+c  Reset the baseline.
+c
+	  do i=1,(nants*(nants-1))/2
+	    init(i,p) = .false.
 	  enddo
 	enddo
 	end
