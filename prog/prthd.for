@@ -37,12 +37,13 @@ c    rjs  26sep95 Somewhat more tolerant of screwy headers.
 c    rjs  14dec95 Support "ANGLE" ctype value.
 c    mchw 14jun96 Replace rangle and hangle, with rangleh and hangleh.
 c    rjs  07aug96 Fix crval conversion for ctype=ANGLE (care Vince McIntyre).
+c    rjs  11oct96 Print delay tracking and pointing RA and DEC.
 c  Bugs and Shortcomings:
 c    * Descriptions in brief mode could be a bit more verbose!
 c------------------------------------------------------------------------
 	character version*(*)
 	integer MAXIN
-	parameter(version='Prthd: version 07-Aug-96')
+	parameter(version='Prthd: version 11-Oct-96')
 	parameter(MAXIN=256)
 	integer tno,i,iostat,nin
 	character in(MAXIN)*64,logf*64,line*80
@@ -422,7 +423,8 @@ c------------------------------------------------------------------------
       integer nants,ival,ncorr,tno,n
       real epoch
       double precision sdf(MAXSPECT),sfreq(MAXSPECT),restfreq(MAXSPECT)
-      double precision time,obsra,obsdec,ra,dec
+      double precision time
+      double precision obsra,obsdec,ra,dec,delra,deldec,pntra,pntdec
       real wwidth(MAXSPECT),wfreq(MAXSPECT)
       logical updated,present,more
 c
@@ -584,11 +586,37 @@ c
       line = aval1(1:9)//'Source RA: '//hangleh(ra)//
      *			     '  Dec: '//rangleh(dec)
       call logwrite(line,more)
-      call uvrdvrd(tno,'obsra',obsra,0.d0)
-      call uvrdvrd(tno,'obsdec',obsdec,0.d0)
+c
+      call uvprobvr(tno,'delra', type,length,updated)
+      present = type.ne.' '
+      call uvprobvr(tno,'deldec',type,length,updated)
+      present = present.or.type.ne.' '
+      if(present)then
+	call uvrdvrd(tno,'delra', delra,ra)
+	call uvrdvrd(tno,'deldec',deldec,dec)
+        line = 'Delay Tracking  RA: '//hangleh(delra)//
+     *	         '  Dec: '//rangleh(deldec)
+        call logwrite(line,more)
+      endif
+c
+      call uvprobvr(tno,'pntra', type,length,updated)
+      present = type.ne.' '
+      call uvprobvr(tno,'pntdec',type,length,updated)
+      present = present.or.type.ne.' '
+      if(present)then
+	call uvrdvrd(tno,'pntra', pntra,ra)
+	call uvrdvrd(tno,'pntdec',pntdec,dec)
+        line = 'Pointing Centre RA: '//hangleh(pntra)//
+     *	         '  Dec: '//rangleh(pntdec)
+        call logwrite(line,more)
+      endif
+c
+      call uvrdvrd(tno,'obsra',obsra,ra)
+      call uvrdvrd(tno,'obsdec',obsdec,dec)
       line = 'Apparent Source RA: '//hangleh(obsra)//
      *	         '  Dec: '//rangleh(obsdec)
       call logwrite(line,more)
+c
       call uvprobvr(tno,'dra',type,length,updated)
       present = type.ne.' '
       call uvprobvr(tno,'ddec',type,length,updated)
