@@ -171,7 +171,7 @@ c    rjs     23mar94 Check for existence of closures, and do the appropriate
 c		     things if there aren't any.
 c    rjs     25mar94 Minor correction to the above change.
 c    rjs      3aug94 options=oldflux.
-c
+c    rjs     26sep95 Check for ill-determined solution.
 c  Bugs:
 c    * Polarisation solutions when using noamp are wrong! The equations it
 c      solves for have a fudge to account for a bias introduced by the
@@ -182,7 +182,7 @@ c------------------------------------------------------------------------
 	integer MAXITER
 	character version*(*)
 	parameter(MAXITER=30)
-	parameter(version='Gpcal: version 1.0 3-Aug-94')
+	parameter(version='Gpcal: version 1.0 26-Sep-95')
 c
 	integer tIn
 	double precision interval(2), freq
@@ -1858,7 +1858,7 @@ c------------------------------------------------------------------------
 	integer ncorr,nr,b1,b2,b3
 	double precision preamble(4),tfirst,tlast,epsi
 	real Cos2Chi,Sin2Chi,chi
-	logical accept,flag(MAXCHAN,4),okscan,trip
+	logical accept,flag(MAXCHAN,4),okscan,trip,tied(MAXANT),ok
 	complex data(MAXCHAN,4),d(4)
 c
 c  Externals.
@@ -2051,23 +2051,6 @@ c
 	  enddo
 	enddo
 c
-c  Initialise the array used to check if an antenna is present.
-c
-	do i=1,nants
-	  present(i) = .false.
-	enddo
-c
-c  Determine which antennas are present.
-c
-	k = 0
-	do j=2,nants
-	  do i=1,j-1
-	    k = k + 1
-	    present(i) = present(i).or.Count(k,0).gt.0
-	    present(j) = present(j).or.Count(k,0).gt.0
-	  enddo
-	enddo
-c
 c  Determine whether there are any closures present.
 c
 	trip = .false.
@@ -2085,13 +2068,41 @@ c
 	enddo
 	notrip = .not.trip
 c
+c  Determine whether the solution process is well-determined.
+c
+	do i=1,nants
+	  tied(i) = .false.
+	  present(i) = .false.
+	enddo
+	tied(refant) = .true.
+c
+	do k=1,nants-1
+	  do j=2,nants
+	    do i=1,j-1
+	      b1 = (j-1)*(j-2)/2 + i
+	      if(Count(b1,0).gt.0)then
+	        present(i) = .true.
+	        present(j) = .true.
+	        tied(i) = tied(i).or.tied(j)
+	        tied(j) = tied(i)
+	      endif
+	    enddo
+	  enddo
+	enddo
+c
 c  Give warning messages.
 c
-	k = 0
+	ok = .true.
 	do i=1,nants
 	  if(.not.present(i)) call bug('w',
      *	    'No data present for antenna '//itoaf(i))
+	  if(present(i).and..not.tied(i))then
+	    ok = .false.
+	    call bug('w',
+     *	      'Antenna not tied to reference antenna: '//itoaf(i))
+	  endif
 	enddo
+	if(.not.ok)call bug('f','Solution is ill-conditioned')
 	if(notrip)then
 	  call bug('w','No closures were present')
 	  call bug('w','Quality of solution will suffer')
