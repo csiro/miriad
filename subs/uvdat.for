@@ -58,6 +58,8 @@ c    rjs  23aug93 New routine uvDatRew to appease nebk.
 c    rjs  13dec93 Sign of V(linear) and sign of U(circular) fudge.
 c    nebk 29mar94 Don't reissue calibration messages after uvdatrew
 c    rjs  21jul94 Give message about planet rotation position angle.
+c    rjs  26jul94 More accurate equation used in polarisation leakage
+c		  correction.
 c
 c  User-Callable Routines:
 c    uvDatInp(key,flags)
@@ -1335,7 +1337,7 @@ c    type	The polarisation type corresponding to each coefficient.
 c    coeffs	The value of the coefficient.
 c------------------------------------------------------------------------
 	integer i1,i2,n,i,j
-	complex G(4)
+	complex G(4),t
 	integer indx(4,4),cf1(4),cf2(4),off
 	data indx/1,4,3,2, 2,3,4,1, 3,2,1,4, 4,1,2,3/
 	data cf1 /1,2,1,2/
@@ -1343,9 +1345,8 @@ c------------------------------------------------------------------------
 c
 	n = ncoeff
 	ncoeff = 0
-	i2 = nint(baseline)
-	i1 = i2 / 256
-	i2 = i2 - 256 * i1
+c
+	call basant(baseline,i1,i2)
 	if(i1.lt.1.or.i1.gt.nLeaks.or.i2.lt.1.or.i2.gt.nLeaks)return
 c
 	off = 0
@@ -1355,7 +1356,8 @@ c
 	G(indx(1,j)) =  coeffs(1)
 	G(indx(2,j)) = -coeffs(1) *       Leaks(cf1(j),i1)
 	G(indx(3,j)) = -coeffs(1) * conjg(Leaks(cf2(j),i2))
-	G(indx(4,j)) = (0.,0.)
+	G(indx(4,j)) =  coeffs(1) * Leaks(cf1(j),i1) * 
+     *			      conjg(Leaks(cf2(j),i2))
 c
 	do i=2,n
 	  j = off - type(i)
@@ -1365,11 +1367,15 @@ c
      *	     - coeffs(i) *	 Leaks(cf1(j),i1)
 	  G(indx(3,j)) = G(indx(3,j))
      *	     - coeffs(i) * conjg(Leaks(cf2(j),i2))
+	  G(indx(4,j)) = G(indx(4,j))
+     *	     + coeffs(i) * Leaks(cf1(j),i1) * conjg(Leaks(cf2(j),i2))
 	enddo
 c
+	t =  1. / ((1 - Leaks(1,i1)*Leaks(2,i1)) *
+     *	      conjg(1 - Leaks(1,i2)*Leaks(2,i2)) )
 	ncoeff = 4
 	do i=1,4
-	  coeffs(i) = G(i)
+	  coeffs(i) = t*G(i)
 	  type(i) = off - i
 	enddo
 c	
