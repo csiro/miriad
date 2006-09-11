@@ -43,6 +43,8 @@ c     jm    10sep97  Added functionality for IAU 'T' format.
 c     jm    11sep97  Moved fdate functionality into julday routines.
 c                    Also added VMS date style dd-mmm-ccyy.
 c                    Major modification of dayjul to handle new formats.
+c                    Removed julfdate() and datefjul() routines (these
+c                    are now handled by dayjul().
 c***********************************************************************
 c* JulDay -- Format a Julian day into a conventional calendar day.
 c& jm
@@ -223,7 +225,9 @@ c             the presence (or lack of) the `yymmmdd' string determines
 c             the range of the output value.  Without the `yymmmdd'
 c             string, the output julian date will be in the range [0, 1].
 c             If the `yymmmdd' portion of the string is present, then
-c             the full julian date is computed.
+c             the full julian date is computed.  If the (H) format is
+c             entered but no time string is included, then the trailing
+c             colon may be omitted (eg. `98feb01').
 c
 c             When the input string is of the (H) type, it may
 c             be abbreviated with the missing entries internally
@@ -394,6 +398,15 @@ c
             fset = .TRUE.
           endif
         endif
+      else if (((b - a) .eq. 7) .and. Isalphaf(calday(a+2:a+2))) then
+c       Format H (with no time string)
+        alpha = .TRUE.
+        call datepars(calday, a, b, .TRUE., ' ', iarray, ok)
+        day = iarray(3)
+        month = iarray(2)
+        year = iarray(1) + 1900
+        if (year .lt. 1950) year = year + 100
+        a = a + 1
       else
         errmsg = PROG // 'Unrecognized Date format: ' // calday(1:z)
         nchar = Len1(errmsg)
@@ -654,56 +667,6 @@ c
       endif
 c
       end
-c************************************************************************
-c* FDateJul -- Convert from 'dd/mm/yy' format into a Julian day.
-c& jm
-c: Julian-day, date, utilities
-c+
-      subroutine FDateJul(date, julian)
-c
-      implicit none
-      double precision julian
-      character date*(*)
-c
-c  Convert a date given as a 'dd/mm/yy' or 'ccyy-mm-dd' string into
-c  a Julian day.
-c
-c  Input:
-c    date       The date, in either 'dd/mm/yy' or 'ccyy-mm-dd' form.
-c
-c  Output:
-c    julian     Julian date.
-c--
-c-----------------------------------------------------------------------
-      call dayjul(date, julian)
-      return
-      end
-c************************************************************************
-c* JulFDate -- Convert from Julian day into 'dd/mm/yy' format.
-c& jm
-c: Julian-day, date, utilities
-c+
-      subroutine JulFDate(jday, date)
-c
-      double precision jday
-      character date*(*)
-c
-c  Convert a Julian day into the form 'dd/mm/yy'.
-c
-c  Input:
-c    jday      Julian day.
-c  Output:
-c    date      Date in 'dd/mm/yy'.
-c------------------------------------------------------------------------
-      character string*20
-      double precision jday1
-c
-      jday1 = nint(jday-0.5d0) + 0.5d0
-      call JulDay(jday1, 'F', string)
-      date = string
-c
-      return
-      end
 c***********************************************************************
 c* TodayJul -- Format the current day into a Julian day.
 c& jm
@@ -770,6 +733,12 @@ c
         write (*,*) ' '
       enddo
 c
+      string = '98feb01'
+      write (*,*) 'string => ', string
+      call dayjul(string, jul2)
+      write (*,*) 'DayJul => ', jul2
+      write (*,*) ' '
+c
       write (*,*) '== Now test for mistakes (last one should bomb) =='
       write (*,*) ' '
       write (*,*) 'Format => X [Should not exist]'
@@ -781,4 +750,3 @@ c
       call dayjul(string, jul2)
       end
 #endif
-
