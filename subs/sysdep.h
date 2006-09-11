@@ -50,16 +50,16 @@
 typedef void Void;
 #define Const const
 #define PROTOTYPE 1
-#define ARGS(alist) alist
+#define ARGS(s) s
 #else
 typedef char Void;
 #define Const /* NULL */
-#define ARGS(alist) ()
+#define ARGS(s) ()
 #endif /* (__STDC__ == 1) */
 #else
 typedef char Void;
 #define Const /* NULL */
-#define ARGS(alist) ()
+#define ARGS(s) ()
 #endif /* __STDC__ */
 #endif
 
@@ -71,7 +71,7 @@ typedef int int2;
 /*									*/
 /************************************************************************/
 
-#ifdef vaxc
+#ifdef vms
 #define FORT_TRUE -1
 #define FORT_FALSE 0
 #define FORT_LOGICAL(a) (0x01 & (a))
@@ -134,7 +134,7 @@ typedef int int2;
 /*  Short cut routines when no conversion is necessary. These are
     used for any IEEE floating point machine with FITS ordered bytes.	*/
 
-#if defined(sun) || defined(alliant) || defined(trace) || defined(convex) || defined(hpux) || defined(mips)
+#if defined(sun) || defined(alliant) || defined(trace) || defined(convex) || defined(hpux) || defined(sgi)
 #  define packr_c(a,b,c)    memcpy((b),(char *)(a),sizeof(float)*(c))
 #  define unpackr_c(a,b,c)  memcpy((char *)(b),(a),sizeof(float)*(c))
 #  define packd_c(a,b,c)    memcpy((b),(char *)(a),sizeof(double)*(c))
