@@ -36,6 +36,7 @@ c    rjs  26sep95 More tolerant of screwy headers.
 c    rjs  22oct95 Comment out warning about assuming its a linear
 c		  coordinate system.
 c    nebk 20nov95 Terrible error. Initialize docelest to false in cocvt.f
+c    rjs  15oct96 Change call sequence to cogeom.
 c    rjs  16oct96 Correct cartesian conversions near RA=0.
 c************************************************************************
 c* coInit -- Initialise coordinate conversion routines.
@@ -670,12 +671,12 @@ c* coGeom -- Compute linear coefficients to convert geometries.
 c& rjs
 c: coordinates
 c+
-	subroutine coGeom(lu,in,x1,ucoeff,vcoeff)
+	subroutine coGeom(lu,in,x1,ucoeff,vcoeff,wcoeff)
 c
 	implicit none
 	integer lu
 	character in*(*)
-	double precision x1(*),ucoeff(3),vcoeff(3)
+	double precision x1(*),ucoeff(3),vcoeff(3),wcoeff(3)
 c
 c  Input:
 c    lu		Handle of the coordinate object.
@@ -686,6 +687,7 @@ c    ucoeff,vcoeff Coefficients used to convert (u,v) from one geometry
 c		to another. In particular:
 c	u(corrected) = ucoeff(1)*u(raw) + ucoeff(2)*v(raw) + ucoeff(3)*w(raw)
 c	v(corrected) = vcoeff(1)*u(raw) + vcoeff(2)*v(raw) + vcoeff(3)*w(raw)
+c       w(corrected) = wcoeff(1)*u(raw) + wcoeff(2)*v(raw) + wcoeff(3)*w(raw)
 c--
 c------------------------------------------------------------------------
 	include 'co.h'
@@ -733,6 +735,9 @@ c
 	  vcoeff(1) = sina*sind0
 	  vcoeff(2) = cosd0*cosd + cosa*sind0*sind
 	  vcoeff(3) = cosd0*sind - cosa*sind0*cosd
+	  wcoeff(1) = -sina*cosd0
+	  wcoeff(2) = -cosa*sind*cosd0 + cosd*sind0
+	  wcoeff(3) =  sind*sind0 + cosa*cosd*cosd0
 	else if(coProj(k).eq.'sin')then
 	  fac = 1/(sind0*sind + cosa*cosd*cosd0)
 	  ucoeff(1) =   fac * (cosd0*cosd + cosa*sind0*sind)
@@ -741,6 +746,9 @@ c
           vcoeff(1) =   fac * sina*sind
           vcoeff(2) =   fac * cosa
           vcoeff(3) =   0
+	  wcoeff(1) =   0
+	  wcoeff(2) =   0
+	  wcoeff(3) =   0
 	else
 	  call bug('f',
      *	   'Geometry conversion possible for NCP or SIN proj. only')
@@ -2109,11 +2117,11 @@ c  Convert from RA,y to x,DEC.
 c
 	else if(y1pix)then
 	  Dalp = x1 - xval
-          if(Dalp.lt.-DPI)then
-            Dalp = Dalp + 2*DPI
-          else if(Dalp.gt.DPI)then
-            Dalp = Dalp - 2*DPI
-          endif
+	  if(Dalp.lt.-DPI)then
+	    Dalp = Dalp + 2*DPI
+	  else if(Dalp.gt.DPI)then
+	    Dalp = Dalp - 2*DPI
+	  endif
 	  M = (y1 - ypix) * dy
 c
 	  if(proj.eq.'ncp')then
@@ -2236,11 +2244,11 @@ c  Convert from RA,DEC to x,y.
 c
 	else
 	  Dalp = x1 - xval
-          if(Dalp.lt.-DPI)then   
-            Dalp = Dalp + 2*DPI
-          else if(Dalp.gt.DPI)then
-            Dalp = Dalp - 2*DPI
-          endif   
+	  if(Dalp.lt.-DPI)then
+	    Dalp = Dalp + 2*DPI
+	  else if(Dalp.gt.DPI)then
+	    Dalp = Dalp - 2*DPI
+	  endif
 c
 	  if(proj.eq.'ncp')then
 	    L = sin(Dalp) * cos(y1)
