@@ -39,13 +39,15 @@ c    mchw 14jun96 Replace rangle and hangle, with rangleh and hangleh.
 c    rjs  07aug96 Fix crval conversion for ctype=ANGLE (care Vince McIntyre).
 c    rjs  11oct96 Print delay tracking and pointing RA and DEC.
 c    rjs  14mar97 Recognise "time" axes.
+c    rjs  23jul97 Print galactic and ecliptic coordinates in decimal format.
+c		  Support pbtype.
 c
 c  Bugs and Shortcomings:
 c    * Descriptions in brief mode could be a bit more verbose!
 c------------------------------------------------------------------------
 	character version*(*)
 	integer MAXIN
-	parameter(version='Prthd: version 11-Oct-96')
+	parameter(version='Prthd: version 23-Jul-97')
 	parameter(MAXIN=256)
 	integer tno,i,iostat,nin
 	character in(MAXIN)*64,logf*64,line*80
@@ -281,11 +283,16 @@ c
 c
 c  Primary beam parameters.
 c
-      call rdhdr (tno, 'pbfwhm', rval1, -1.0)
-      if(rval1.gt.0)then
-        write (line,'(a,1pg10.3)')
-     *	  'Primary beam size (arcsec): ',rval1
-        call logwrite(line,more)
+      call rdhda (tno, 'pbtype', aval1, ' ')
+      if(aval1.ne.' ')then
+	call logwrite('Primary beam type: '//aval1,more)
+      else
+	call rdhdr (tno, 'pbfwhm', rval1, -1.0)
+	if(rval1.gt.0)then
+          write (line,'(a,1pg10.3)')
+     *	    'Primary beam size (arcsec): ',rval1
+          call logwrite(line,more)
+	endif
       endif
 c
 c  Number of clean components.
@@ -344,16 +351,20 @@ c  RA.
 	  radec = hangleh(crval)
           write (line, 20) aval(1:8), n, radec,
      *                          crpix,180*3600/pi*cdelt,'  arcsec'
-20        format (a8, i7, 3x, a11, f10.2, 3x, 1pe13.6,a)
+20        format (a8, i7, 3x, a11, f10.2, 1pe16.6,a)
 c
-c  DEC, Galactic and Ecliptic coordinates.
-        else if (aval(1:4).eq.'DEC-'.or.aval.eq.'DEC'.or.
-     *		 aval(1:4).eq.'GLON'.or.aval(1:4).eq.'GLAT'.or.
-     *		 aval(1:4).eq.'ELON'.or.aval(1:4).eq.'ELAT') then
+c  DEC
+        else if (aval(1:4).eq.'DEC-'.or.aval.eq.'DEC')then
 	  radec = rangleh(crval)
           write (line, 30) aval(1:8), n, radec,
      *                          crpix,180*3600/pi*cdelt,'  arcsec'
-30        format (a8, i7, 2x, a12, f10.2, 3x, 1pe13.6,a)
+30        format (a8, i7, 2x, a12, f10.2, 1pe16.6,a)
+C  Galactic and Ecliptic coordinates.
+	else if (aval(1:4).eq.'GLON'.or.aval(1:4).eq.'GLAT'.or.
+     *		 aval(1:4).eq.'ELON'.or.aval(1:4).eq.'ELAT') then
+	  write(line,35) aval(1:8),n,180/DPI*crval,crpix,
+     *				180/pi*cdelt,'  deg'
+35	  format (a8,i7,f14.6,f10.2,1pe16.6,a)
 c
 c  Angles on the sky.
 	else if (aval.eq.'ANGLE')then
@@ -375,8 +386,8 @@ c  STOKES.
 	      endif
 	    endif
 	  enddo
-          write (line, 35) aval(1:8), n, pols(2:length)
-35        format (a8, i7, 8x, a)
+          write (line, 38) aval(1:8), n, pols(2:length)
+38        format (a8, i7, 8x, a)
 c
 c  Others.
         else
