@@ -107,10 +107,11 @@ c   23aug94 rjs  - More decimal points in options=spec
 c    1aug95 rjs  - Fix minor bug which only shows up on sgi machine.
 c   28sep95 rjs  - Added options=array
 c   29nov95 rjs  - Cope with value being unset.
+c   18may96 rjs  - Correct formating bug in ListSepc
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
-	parameter(version='Uvlist: version 1.0 29-Nov-95')
+	parameter(version='Uvlist: version 1.0 18-May-96')
 c
 	character out*50,last*1,date*18,uvflags*8
 	complex data(MAXCHAN)
@@ -928,8 +929,8 @@ c
 c
 c  List the stuff.
 c
-	  do j=1,nspect,5
-	    k=min(j+4,nspect)
+	  do j=1,nspect,4
+	    k=min(j+3,nspect)
 c
 	    write(line,'(''Velocity rest frame       : '',a)')
      *		frame
