@@ -10,13 +10,24 @@ c+
 c	Opplt plots model opacity and atmospheric brightness temperatures 
 c	given site information. These quantities can be plotted as a function
 c	of frequency or elevation.
+c
+c       To plot as a function of frequency, give two values for the 
+c       freq key and one for the el key.
+c
+c       To plot as a function of elevation, give two values for the 
+c       el key and one for the freq key.
+c
+c       You must give two values for either freq or el.
+c
 c@ freq
 c	Frequency range of interest, in GHz. One or two values can be given.
-c	If two values are given, then the plot is as a function of frequency.
+c	If two values are given, then the plot is as a function of frequency,
+c       and the values are the limits for the plot.
 c	The default is 22 GHz.
 c@ el
 c	Elevation angle, in degrees. One or two values can be given.
-c	If two values are given, then the plot is as a function of elevation.
+c	If two values are given, then the plot is as a function of elevation,
+c       and the values are the limits for the plot.
 c	The default is 90 degrees (i.e. zenith).
 c@ device
 c	Plot device. Default is not to plot anything.
@@ -30,6 +41,12 @@ c	Sea-level atmospheric pressure, in hPa (i.e. millibars). The default
 c	is 1013 hPa.
 c@ h
 c	Relative humidity, as a percentage. The default is 20%.
+c
+c--
+c
+c  History:
+c    rjs  04Feb01  Original version
+c    dpr  05Feb01  Update doc and err messages
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	integer n,nmax
@@ -61,7 +78,7 @@ c
 	integer pgbeg
 c
 	call keyini
-	call output('opplt: version 1.0 04-Feb-01')
+	call output('opplt: version 1.0 05-Feb-01')
 	call keya('device',device,' ')
 c
 c  Get frequency range of interest, in GHz.
@@ -73,14 +90,19 @@ c
 	call keyr('el',el2,el1)
 	call keyr('el',elinc,0.)
 c
-	if(min(f1,f2).le.0.or.max(f1,f2).gt.1000)
-     *		call bug('f','Invalid frequency range')
-	if(min(el1,el2).le.5.or.max(el1,el2).gt.90)
-     *		call bug('f','Invalid elevation range')
+	if((min(f1,f2).le.0) .or.(max(f1,f2).gt.1000))
+     *		call bug('f',
+     * 'Frequency range invalid: use 0 < freq < 1000 GHz')
+	if((min(el1,el2).le.5).or.(max(el1,el2).gt.90))
+     *		call bug('f',
+     * 'Elevation range invalid: use 5 < el <= 90 deg')
 	dofr = f2.gt.f1
 	doel = el2.gt.el1
 	if(dofr.and.doel)call bug('f',
      *	  'Cannot plot both as a function of frequency and elevation')
+	if((.not. dofr) .and. (.not. doel)) call bug('f',
+     *	  'You must specify a range for either freq and el')
+	
 c
 c  Get temperature at observatory in Kelvin.
 c  Get percent relative humidity at observatory.
