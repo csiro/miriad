@@ -130,12 +130,13 @@ c    19oct03 rjs  Update array tables.
 c    14nov03 rjs  Fix bug in getjpk
 c    06dec03 rjs  Fish out met parameters from the dataset directly.
 c    19sep04 rjs  Changes to the way Tsys scaling is handled.
+c    11oct04 rjs  Use jyperk=10 rather than 13 in Tsys correction.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
 	character version*(*)
 	integer MAXSELS,ATANT
-	parameter(version='AtFix: version 1.0 19-Sep-03')
+	parameter(version='AtFix: version 1.0 11-Oct-04')
 	parameter(MAXSELS=256,ATANT=6)
 c
 	real sels(MAXSELS),xyz(3*MAXANT)
@@ -482,7 +483,7 @@ c
 	  else
 	    call bug('f','Invalid polarization code')
 	  endif
-	  T1T2 = sqrt(T1T2)*jyperk/(13.0*50.0)
+	  T1T2 = sqrt(T1T2)*jyperk/500.0
 c
 	  do j=1,nschan(k)
 	    i = i + 1
