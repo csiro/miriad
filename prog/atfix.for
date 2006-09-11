@@ -6,15 +6,11 @@ c= atfix - Apply various miscellaneous corrections to ATCA visibility data
 c& rjs
 c: uv analysis
 c+
-c	ATFIX performs various miscellaneous corrections appropriate for
-c	ATCA data. These corrections are typically more important for
-c	data produced by the 12- and 3-mm systems. These systems still contain
-c	imperfections that need to be fixed off-line. Steps that can be
-c	performed are
-c	  Correct for atmospheric opacity
+c	ATFIX performs various miscellaneous offline corrections appropriate
+c	for ATCA 3mm data. Steps that can be performed are
 c	  Apply gain/elevation effect
 c	  Apply system temperature measurements
-c	  Correct for incorrect baseline length
+c	  Correct for incorrect baseline length and instrumental phase.
 c	  Correct antenna table (when some antennas were off-line)
 c
 c	NOTE: This task will usually be used very early in the data reduction
@@ -26,12 +22,74 @@ c	Standard visibility data selection. See the help on "select" for
 c	more information. The default is to select all data.
 c@ out
 c	The name of the output uv data set. No default.
+c@ dantpos
+c	Currently the on-line system uses the antenna locations derived from 
+c	preliminary observations.
+c	If a higher precision solution for the baseline lengths is available,
+c	you will want to correct your data to account for this.
+c
+c	This also invokes corrections of known instrumental phase errors.
+c
+c	The inputs are the equatorial coordinate offsets entered in the
+c	following order (NO checking is done for consistency):
+c	    dantpos = A1,X1,Y1,Z1,A2,X2,Y2,Z2,A3,X3,Y3,Z3,....
+c	The input values are the antenna number and the three equatorial
+c	coordinate offsets (entered in units of nanoseconds).  These input
+c	values are added to the absolute coordinates read from the data.
+c	Antenna present in the data but not included in the input value
+c	list are treated as having a zero coordinate offset.
+c
+c	The arcane unit of nanoseconds is used for historical compatibililty.
+c	Note 1 nanosec = 0.2997 meters.
+c
+c	A collection of parameter files giving the corrections to apply are
+c	stored in $MIRCAT. These have names of the form "dantpos.yymmdd"
+c	where "yymmdd" is the date of the start of a new array configuration.
+c	Baseline corrections are believed to be constant between array
+c	configurations. 
+c
+c	If a data file is present, you can instruct atfix to read this
+c	directly using the indirect parameter input. For example, to read
+c	parameters appropriate for a hypothetical array configuration
+c	starting on 16 October 2002, use
+c	    dantpos=@$MIRCAT/dantpos.021016
+c@ tsyscal
+c	The determines the way that system temperature measurements are
+c	applied to the visibility data. Usually this will be used
+c	to make changes to the way system temperature measurements have
+c	been applied to the data by the on-line system. The default
+c	is to interpolate values between successive system temperature
+c	measurements. Possible values
+c	for this parameter are:
+c	  none        Do not apply any system temperature measurements. If the
+c	              the measurements were applied on-line, they are undone.
+c	  any         Do nothing. Leave the Tsys calibration as is.
+c         constant    Apply a constant Tsys between successive Tsys measurements.
+c	              This is the approach used by the on-line system at 3mm
+c	              wavelength.
+c	  extrapolate Apply a Tsys value between measurements which accounts
+c	              for predicted changes in Tsys with elevation and measured
+c	              weather. 
+c         interpolate Interpolate a Tsys value between measurements which
+c	              accounts for predicted changes in Tsys with elevation
+c	              and measured weather. This is the default.
+c@ options
+c	Extra processing options. Several options can be given,
+c	separated by commas. Minimum match is supported. There is only
+c	one possible option at the moment:
+c	  nogainel  This disables applying a instrumental gain/elevation
+c	            correction to the data. Currently the gains of the
+c	            antennas are a function of elevation. By default,
+c	            a correction is made for gain/elevation effects.
+c	  noinst    Do not correct for instrumental baseline effects. By
+c	            default a phase correction is made for instrumental
+c	            baseline effects.
 c@ array
 c	One of the flaws in the current ATCA datafiles is that antenna locations
 c	are not recorded for antennas that are off-line (and hence not producing
 c	data). While this might not seem a serious flaw, the off-line antennas
-c	can still cause shadowing. This will be an issue when using the
-c	3-antenna system in compact arrays.
+c	can still cause shadowing. In particular, this was an issue when
+c	using the 3-antenna system in compact arrays.
 c
 c	By giving a value to this parameter, atfix will fill in any
 c	antenna locations that are missing from the input visibility file.
@@ -51,76 +109,6 @@ c
 c	If in doubt, see the on-line history of configurations:
 c	  http://www.narrabri.atnf.csiro.au/operations/array_configurations/config_hist.html
 c
-c@ dantpos
-c	Currently the on-line system uses the antenna locations derived from 
-c	preliminary centimetre wavelength observations.
-c	If a higher precision millimetre wavelength solution for the baseline 
-c	lengths is available, you will want to correct your data to account for this.
-c
-c	This also invokes corrections of known instrumental phase errors.
-c
-c	The inputs are the equatorial coordinate offsets entered in the
-c	following order (NO checking is done for consistency):
-c	    dantpos = A1,X1,Y1,Z1,A2,X2,Y2,Z2,A3,X3,Y3,Z3,....
-c	The input values are the antenna number and the three equatorial
-c	coordinate offsets (entered in units of nanoseconds).  These input
-c	values are added to the absolute coordinates read from the data.
-c	Antenna present in the data but not included in the input value
-c	list are treated as having a zero coordinate offset.
-c
-c	The arcane unit of nanoseconds is used for historical compatibililty.
-c	Note 1 nanosec = 0.2997 meters.
-c
-c	A collection of parameter files giving the corrections to apply are
-c	stored in $MIRCAT. These have names of the form "dantpos.yymmdd"
-c	where "yymmdd" is the date of the start of a new array configuration.
-c	If a data file is present, you can instruct atfix to read this
-c	directly using the indirect parameter input. For example, to read
-c	parameters appropriate for a hypothetical array configuration
-c	starting on 16 October 2002, use
-c	    dantpos=@$MIRCAT/dantpos.021016
-c
-c@ options
-c	Extra processing options. Several options can be given,
-c	separated by commas. Minimum match is supported. Possible values
-c	are:
-c	  opcorr    Apply a correction to account for the opacity of the
-c	            atmosphere. This option should generally be used
-c	            at 12mm only. For observations taken before October 2003,
-c	            you will need to set the ``mdata'' parameter (see below)
-c	            when using this option.
-c	  tsys      Ensure the system temperature correction is applied to
-c	            the data. It is not uncommon when observing at 3mm to
-c	            not apply the system temperature correction to the data
-c	            on-line.
-c	  gainel    This applies a instrumental gain/elevation correction
-c	            to the data. Currently the gains of the antennas are
-c	            a function of elevation.
-c@ mdata
-c	To apply an opacity correction, this task needs to estimate the
-c	atmospheric opacity based on meteorological conditions. Prior to
-c	October 2003, meteorological data were not saved in the datasets, and
-c	so the meterological data needs to be provided separately.
-c
-c	This input parameter gives a data file containing the meteorological
-c	conditions at the observatory. It is only required if the dataset
-c	does not already contain this information. 
-c
-c	Given a model of the atmosphere, and knowing
-c	the elevation of the observation, a model correction for the atmosphere
-c	can be deduced and applied. Note that this is just that - a model
-c	correction - which will have limitations.
-c
-c	NOTE: This correction should NOT be used with 3-mm data when the 3mm
-c	system temperature corrections are used. The 3-mm system temperatures
-c	are, by their nature, so-called "above atmosphere" system temperature
-c	value, which corrects for atmospheric opacity.
-c
-c	This parameter can be used with the 12-mm system, where the system
-c	temperatures are those measured at the ground.
-c
-c	For more help on getting the meteorological data appropriate to your
-c	observation, see the help on "weatherdata".
 c--
 c  History:
 c    04may03 rjs  Original version.
@@ -138,36 +126,38 @@ c	          Subsequent shadowing calculation would not work!
 c    19aug05 rjs  Include correction for instrumental phase of CA01.
 c    28aug05 rjs  Include correction for instrumental phase of CA05.
 c    12dec05 rjs  It failed to use the select keyword.
+c    29jan06 rjs  Major revisions.
+c    18feb06 rjs  Various tidy up and change in defaults.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
 	character version*(*)
 	integer MAXSELS,ATANT
-	parameter(version='AtFix: version 1.0 12-Dec-05')
+	parameter(version='AtFix: version 1.0 18-Feb-06')
 	parameter(MAXSELS=256,ATANT=6)
 c
 	real sels(MAXSELS),xyz(3*MAXANT)
-	character array(MAXANT)*8,aname*8,mdata*80
-	integer lVis,lOut,vtsys,vant,vgmet,vnif,vmdata
-	integer pol,npol,i1,i2,nant,i,j,k
-	logical updated,dogel,dotsys,domet,newel,dobl,doopcorr
+	character array(MAXANT)*8,aname*8,tsyscal*12
+	integer lVis,lOut,vant,vgmet,vnif
+	integer pol,npol,i,j,k
+	logical updated,dogel,doinst,dobl
 	character vis*64,out*64,type*1
-	integer nschan(MAXWIN),nif,nchan,nants,length,tcorr,na
-	real xtsys(MAXANT*MAXWIN),ytsys(MAXANT*MAXWIN)
+	integer nschan(MAXWIN),nif,nchan,nant,length,na,ifreq
 	real gel
 	logical dojpk
 c
 	real delta(3,MAXANT)
-	real freq0(MAXWIN),scale,fac(MAXWIN),Tb(MAXWIN),t0,p0,h0,jyperk
+	real freq0(MAXWIN),jyperk
 	double precision ra,dec,lat,lst,az,el
 c
 	complex data(MAXCHAN)
 	logical flags(MAXCHAN)
-	double precision preamble(5),ptime,freq(MAXCHAN)
+	double precision preamble(6),ptime,freq(MAXCHAN)
 c
 c  Externals.
 c
 	logical uvvarUpd,selProbe,hdPrsnt,keyprsnt
+	integer uvscan
 	real elescale
 c
 	call output(version)
@@ -175,7 +165,6 @@ c
 	call keya('vis',vis,' ')
 	call selInput('select',sels,MAXSELS)
 	call keya('out',out,' ')
-	call keya('mdata',mdata,' ')
 	call mkeya('array',array,MAXANT,nant)
 	do i=1,nant
 	  call ucase(array(i))
@@ -198,14 +187,14 @@ c
      *					  abs(delta(3,i)).gt.0)
 	enddo
 c
-	call GetOpt(dogel,dotsys,doopcorr)
+	call GetOpt(dogel,doinst,tsyscal)
+	dobl = dobl.or.doinst
 	call keyfin
 c
 c  Check the inputs.
 c
 	if(vis.eq.' ')call bug('f','An input must be given')
 	if(out.eq.' ')call bug('f','An output must be given')
-	domet = mdata.ne.' '
 c    
 c  This program cannot tolerate polarisation, visibility, increment
 c  or window selection (for obscure reasons).
@@ -237,7 +226,7 @@ c  Get ready to copy the data.
 c
 	call uvopen(lVis,vis,'old')
 	call SelApply(lVis,sels,.true.)
-	call uvset(lVis,'preamble','uvw/time/baseline',0,0.,0.,0.)
+	call uvset(lVis,'preamble','uvw/time/baseline/pol',0,0.,0.,0.)
 	call varInit(lVis,'channel')
 c
 	call uvvarIni(lVis,vnif)
@@ -256,8 +245,7 @@ c
 	  call uvvarSet(vant,'antpos')
 	endif
 c
-c  Get ready to handle atmospheric opacity correction and gain/elevation
-c  correction.
+c  Get ready to handle gain/elevation correction.
 c
 	call uvvarIni(lVis,vgmet)
 	call uvvarSet(vgmet,'nschan')
@@ -269,26 +257,6 @@ c
 	call uvvarSet(vgmet,'obsdec')
 	call uvvarSet(vgmet,'telescop')
 	call uvvarSet(vgmet,'latitud')
-	newel = .true.
-	if(doopcorr)then
-	  if(domet)then
-	    call metInit(mdata)
-	  else
-	    call uvvarIni(lVis,vmdata)
-	    call uvvarSet(vmdata,'airtemp')
-	    call uvvarSet(vmdata,'pressmb')
-	    call uvvarSet(vmdata,'relhumid')
-	  endif
-	endif
-c
-c  Get ready to handle Tsys correction.
-c
-	if(dotsys)then
-	  call uvvarIni(lVis,vtsys)
-	  call uvvarSet(vtsys,'nschan')
-	  call uvvarSet(vtsys,'xtsys')
-	  call uvvarSet(vtsys,'ytsys')
-	endif
 c
 c  Open the output, and make its history.
 c
@@ -302,27 +270,33 @@ c
 	call hisinput(lOut,'ATFIX')
 	call hisclose(lOut)
 c
-c  Get first record.
+c  Initialise things.
+c
+c
+c  Do we need to fill the tables needed for system temperature calibration?
+c
+	if(tsyscal.ne.'any')then
+	  call tcalIni(lVis,tsyscal)
+	  call freqIni(lVis)
+	  do while(uvscan(lVis,' ').eq.0)
+            call freqGet(lVis,ifreq)
+            call tcalUpd(lVis,ifreq)
+          enddo
+          call output('Finished scanning input, now writing output')
+          call uvrewind(lVis)
+	endif
+c
+c  Get first record of the final pass.
 c
 	call uvread(lVis,preamble,data,flags,MAXCHAN,nchan)
 	if(nchan.eq.0)call bug('f','No data found')
 c
-c  If dotsys mode has been requested, check that the "tcorr" variable
-c  is present.
+c  For anything by tsyscal=any, check that the "tcorr" variable is present.
 c
-	if(dotsys)then
+	if(tsyscal.ne.'any')then
 	  call uvprobvr(lVis,'tcorr',type,length,updated)
 	  if(length.ne.1)call bug('f',
-     *		'Required info for options=auto is missing')
-	endif
-c
-c  If opacity correction is requested and the met file was not
-c  given, check that the dataset has the met data.
-c
-	if(doopcorr.and..not.domet)then
-	  call uvprobvr(lVis,'airtemp',type,length,updated)
-	  if(type.ne.'r'.and.length.ne.1)call bug('f',
-     *		'Met data missing from input')
+     *		'Required info for tsys calibration is missing')
 	endif
 	call uvrdvri(lVis,'nants',na,0)
 	ptime = preamble(4) - 1
@@ -348,27 +322,8 @@ c
 c
 c  Apply the Tsys correction, if needed.
 c
-	  tcorr = 1
-	  if(dotsys)call uvrdvri(lVis,'tcorr',tcorr,0)
-	  if(tcorr.eq.0)then
-	    if(uvvarUpd(vtsys))then
-	      call uvprobvr(lVis,'xtsys',type,length,updated)
-	      nants = length/nif
-	      if(nants*nif.ne.length.or.nants.le.0.or.nants.gt.MAXANT
-     *	        .or.type.ne.'r')call bug('f','Invalid tsys parameter')
-	      if(na.ne.nants)
-     *		call bug('f','Inconsistency in number of IFs')
-	      call uvgetvrr(lVis,'xtsys',xtsys,nants*nif)
-	      call uvprobvr(lVis,'ytsys',type,length,updated)
-	      if(nants*nif.ne.length.or.type.ne.'r')
-     *			      call bug('f','Invalid ytsys parameter')
-	      call uvgetvrr(lVis,'ytsys',ytsys,nants*nif)
-	    endif
-c
-	    call basant(preamble(5),i1,i2)
-	    call tsysap(data,nchan,nschan,xtsys,ytsys,
-     *	      nants,nif,i1,i2,pol,jyperk)
-	  endif
+	  if(tsyscal.ne.'any')call tcalApp(lVis,lOut,
+     *					preamble(4),data,nchan)
 c
 c  Do antenna table correction, if needed.
 c
@@ -379,12 +334,11 @@ c
 c  For elevation-related changes, check if the time has changed, and so 
 c  we need to update all the associated information.
 c
-	  if((doopcorr.or.dogel.or.dobl))then
+	  if(dogel.or.dobl)then
 	    if(abs(ptime-preamble(4)).gt.5.d0/86400.d0)then
 	      ptime = preamble(4)
 	      call getlst(lVis,lst)
 	      call azel(ra,dec,lst,lat,az,el)
-	      newel = .true.
 	    endif
 	  endif
 c
@@ -403,48 +357,10 @@ c
 	    enddo
 	  endif
 c
-c  Apply atmospheric opacity correction, if needed. Apply this both
-c  to the data, and to the jyperk system efficiency factor.
-c
-	  if(doopcorr.and.newel)then
-	    if(domet)then
-	      call metGet(ptime,t0,p0,h0)
-	    else if(uvvarUpd(vmdata))then
-	      call uvgetvrr(lVis,'airtemp',t0,1)
-	      call uvgetvrr(lVis,'pressmb',p0,1)
-	      call uvgetvrr(lVis,'relhumid',h0,1)
-	      t0 = t0 + 273.15
-	      h0 = 0.01*h0
-	      p0 = 100*p0
-	    endif
-	    call opacGet(nif,freq0,real(el),t0,p0,h0,fac,Tb)
-	    scale = 1
-	    do i=1,nif
-	      scale = scale*fac(i)
-	    enddo
-	    scale = scale**(-1.0/real(nif))
-	    call uvputvrr(lOut,'tsky',Tb,nif)
-	    call uvputvrr(lOut,'trans',fac,nif)
-	    call uvputvrd(lOut,'antel',180.0d0/DPI*el,1)
-	    call uvputvrr(lOut,'airmass',1./sin(real(el)),1)
-	  endif
-c
-	  if(doopcorr)then
-	    k = 0
-	    do i=1,nif
-	      do j=1,nschan(i)
-	        k = k + 1
-	        data(k) = data(k) / fac(i)
-	      enddo
-	    enddo
-            jyperk = scale * jyperk
-	    dojpk = .true.
-	  endif
-c
 c  Apply baseline correction, if needed.
 c
 	  if(dobl)call blcorr(data,freq,nchan,ra,dec,lst,el,
-     *				preamble(5),delta,ATANT)
+     *				preamble(5),delta,ATANT,doinst)
 c
 	  if(npol.gt.0)then
 	    call uvputvri(lOut,'npol',npol,1)
@@ -455,68 +371,39 @@ c
 c
 	  call uvwrite(lOut,preamble,data,flags,nchan)
 	  call uvread(lVis,preamble,data,flags,MAXCHAN,nchan)
-	  newel = .false.
 	enddo
 c
-	if(domet)call metFin
 	call uvclose(lVis)
 	call uvclose(lOut)
 	end
 c************************************************************************
-	subroutine tsysap(data,nchan,nschan,xtsys,ytsys,nants,nif,
-     *						    i1,i2,pol,jyperk)
+	subroutine getopt(dogel,doinst,tsyscal)
 c
 	implicit none
-	integer nchan,nants,nif,nschan(nif),i1,i2,pol
-	real xtsys(nants,nif),ytsys(nants,nif),jyperk
-	complex data(nchan)
-c
+	logical dogel,doinst
+	character tsyscal*(*)
 c------------------------------------------------------------------------
-	integer XX,YY,XY,YX
-	parameter(XX=-5,YY=-6,XY=-7,YX=-8)
-	integer i,j,k
-	real T1T2
-c
-	i = 0
-	do k=1,nif
-	  if(i+nschan(k).gt.nchan)call bug('f','Invalid description')
-	  if(pol.eq.XX)then
-	    T1T2 = xtsys(i1,k)*xtsys(i2,k)
-	  else if(pol.eq.YY)then
-	    T1T2 = ytsys(i1,k)*ytsys(i2,k)
-	  else if(pol.eq.XY)then
-	    T1T2 = xtsys(i1,k)*ytsys(i2,k)
-	  else if(pol.eq.YX)then
-	    T1T2 = ytsys(i1,k)*xtsys(i2,k)
-	  else
-	    call bug('f','Invalid polarization code')
-	  endif
-	  T1T2 = sqrt(T1T2)*jyperk/500.0
-c
-	  do j=1,nschan(k)
-	    i = i + 1
-	    data(i) = data(i)*T1T2
-	  enddo
-	enddo
-c
-	end
-c************************************************************************
-	subroutine getopt(dogel,dotsys,doopcorr)
-c
-	implicit none
-	logical dogel,dotsys,doopcorr
-c------------------------------------------------------------------------
+	integer nout
 	integer NOPTS
-	parameter(NOPTS=3)
+	parameter(NOPTS=2)
 	character opts(NOPTS)*8
 	logical present(NOPTS)
 c
-	data opts/'gainel  ','tsys     ','opcorr  '/
+	integer NTYPES
+	parameter(NTYPES=5)
+	character types(NTYPES)*12
+c
+	data types/'interpolate ','any         ','none        ',
+     *		   'constant    ','extrapolate '/
+c
+	data opts/'nogainel','noinst  '/
 c
 	call options('options',opts,present,NOPTS)
-	dogel    = present(1)
-	dotsys   = present(2)
-	doopcorr = present(3)
+	dogel    = .not.present(1)
+	doinst   = .not.present(2)
+c
+	call keymatch('tsyscal',NTYPES,types,1,tsyscal,nout)
+	if(nout.eq.0)tsyscal=types(1)
 c
 	end
 c************************************************************************
@@ -564,7 +451,7 @@ c
 	if(j.eq.0)call bug('f','Could not find a reference antenna')
 c
 c  If an antenna location is a dud, add in the true location.
-
+c
 	docorr = .false.
 	do i=1,n
 	  x = xyzf(i)**2 + xyzf(i+nantf)**2 + xyzf(i+2*nantf)**2
@@ -734,113 +621,6 @@ c
 	  xyz(i+2*nant) = FAC*x*cos(-lat)
 	enddo
 c
-	end
-c************************************************************************
-	subroutine metInit(mdata)
-c
-	implicit none
-	character mdata*(*)
-c------------------------------------------------------------------------
-	real t(2),p(2),h(2)
-	double precision time(2)
-	common/metcom/time,t,p,h
-c
-	call tinOpen(mdata,'n')
-	call metRec(time(1),t(1),p(1),h(1))
-	call metRec(time(2),t(2),p(2),h(2))
-	end
-c************************************************************************
-	subroutine metRec(time,t0,p0,h0)
-c
-	implicit none
-	real t0,p0,h0
-	double precision time
-c------------------------------------------------------------------------
-	double precision dtime
-	character type*12
-	logical   ok
-c
-c  Externals.
-c
-	integer tinNext
-c
-	if(tinNext().le.0)call bug('f','Error getting met data')
-	call tinGeta(type,' ')
-	if(type.eq.'dsd34')then
-	  call tinGett(time,0.d0,'atime')
-	  call tinSkip(21)
-	  call tinGetr(t0,0.0)
-	  call tinGetr(p0,0.0)
-	  call tinGetr(h0,0.0)
-	else if(type.eq.'met')then
-	  call tinGett(time,0.d0,'atime')
-          call tinGett(dtime,0.0d0,'dtime')
-	  time = time + dtime - 10.0d0/24.0d0
-	  call tinSkip(1)
-	  call tinGetr(t0,0.0)
-	  call tinSkip(2)
-	  call tinGetr(p0,0.0)
-	  call tinSkip(1)
-	  call tinGetr(h0,0.0)
-	else
-          call dectime(type,time,'atime',ok)
-	  if(.not.ok)
-     *    call tinbug('f','Error decoding time in met data')
-c	  call tinGett(time,0.d0,'atime')
-	  call tinGett(dtime,0.0d0,'dtime')
-	  time = time + dtime - 10.0d0/24.0d0
-	  call tinSkip(1)
-	  call tinGetr(t0,0.0)
-	  call tinSkip(2)
-	  call tinGetr(p0,0.0)
-	  call tinSkip(1)
-	  call tinGetr(h0,0.0)
-	endif
-c
-c  Convert time to UT, temperature to kelvin, pressue to Pascals at Narrabri
-c  and humidity to a fraciton.
-c
-	t0 = t0 + 273.15
-	p0 = 0.975*100.0*p0
-	h0 = 0.01*h0
-c
-	end
-c************************************************************************
-	subroutine metGet(time0,t0,p0,h0)
-c
-	double precision time0
-	real t0,p0,h0
-c------------------------------------------------------------------------
-	integer i
-c
-	real t(2),p(2),h(2)
-	double precision time(2)
-	common/metcom/time,t,p,h
-c
-c  Point to the earlier time.
-c
-	i = 1
-	if(time(1).gt.time(2))i = 2
-c
-c  Step through until we straddle two sets of measurements.
-c
-	dowhile(time0.gt.time(3-i))
-	  call metRec(time(i),t(i),p(i),h(i))
-	  i = 3 - i
-	enddo
-c
-c  Return the measurements closest to the requested time.
-c
-	i = 1
-	if(abs(time0-time(1)).gt.abs(time0-time(2)))i = 2
-	t0 = t(i)
-	p0 = p(i)
-	h0 = h(i)
-c
-	end
-c************************************************************************
-	subroutine metFin
-	call tinClose
 	end
 c************************************************************************
       subroutine getlst (lin, lst)
@@ -1112,13 +892,15 @@ c
 c
 	end
 c************************************************************************
-	subroutine blcorr(data,freq,nchan,ra,dec,lst,el,bl,xyz,nant)
+	subroutine blcorr(data,freq,nchan,ra,dec,lst,el,bl,xyz,nant,
+     *								doinst)
 c
 	implicit none
 	integer nchan,nant
 	complex data(nchan)
 	double precision ra,dec,lst,el,bl,freq(nchan)
 	real xyz(3,nant)
+	logical doinst
 c
 c------------------------------------------------------------------------
 	include 'mirconst.h'
@@ -1142,9 +924,13 @@ c
 c  The following is the model of the elevation dependence
 c  of the phase of CA01.
 c
-	offset = 7.4563 - (15.2243 - 7.2267*el)*el
-	offset = offset * 1e-3 / CMKS * 1e9 * 
-     *		(factor(ant1)-factor(ant2))
+	if(doinst)then
+	  offset = 7.4563 - (15.2243 - 7.2267*el)*el
+	  offset = offset * 1e-3 / CMKS * 1e9 * 
+     *		  (factor(ant1)-factor(ant2))
+	else
+	  offset = 0
+	endif
 c
 	if(abs(delX)+abs(delY)+abs(delZ).ne.0)then
           HA = lst - ra
@@ -1172,9 +958,552 @@ c------------------------------------------------------------------------
 	if(freq.lt.15)then
 	  getjpk = 13
 	else if(freq.lt.30)then
-	  getjpk = 15
+	  getjpk = 13
 	else
 	  getjpk = 25
 	endif
+c
+	end
+c************************************************************************
+c************************************************************************
+	subroutine tcalIni(lVis,tsyscal)
+c
+	implicit none
+	integer lVis
+	character tsyscal*(*)
+c------------------------------------------------------------------------
+	include 'atfix.h'
+c
+c  Set up a variable handle to track changes in the correlator/freq setup.
+c
+	call uvvarIni(lVis,vtcal1)
+	call uvvarSet(vtcal1,'xtsys')
+	call uvvarSet(vtcal1,'ytsys')
+c
+	call uvvarIni(lVis,vtcal2)
+	call uvvarSet(vtcal2,'airtemp')
+	call uvvarSet(vtcal2,'pressmb')
+	call uvvarSet(vtcal2,'relhumid')
+	call uvvarSet(vtcal2,'antel')
+c
+c  Initialise the counters.
+c
+	t1 = 1
+	t2 = 0
+	ntcal = 0
+	if(tsyscal.eq.'none')then
+	  tmode = TMNONE
+	else if(tsyscal.eq.'constant')then
+	  tmode = TMCONST
+	else if(tsyscal.eq.'extrapolate')then
+	  tmode = TMEXTRAP
+	else if(tsyscal.eq.'interpolate')then
+	  tmode = TMINTERP
+	else
+	write(*,*)'|',tsyscal,'|'
+	  call bug('f','Invalid tsyscal mode')
+	endif
+c
+	end
+c************************************************************************
+	subroutine tcalUpd(lVis,ifreq1)
+c
+	implicit none
+	integer lVis,ifreq1
+c------------------------------------------------------------------------
+	include 'atfix.h'
+c
+	logical neednew,needupd
+	character type*1
+	logical updated,doatm
+	integer length
+c
+c  Externals.
+c
+        logical uvvarUpd
+C
+        if(ntcal.eq.0)then
+          doatm = tmode.eq.TMEXTRAP.or.tmode.eq.TMINTERP
+          call uvrdvri(lVis,'nants',nants,0)
+          if(nants.lt.2.or.nants.gt.MAXANT)call bug('f',
+     *                          'Invalid number of antennas')
+          neednew = .true.    
+c
+c  Check the right variables are present.
+c
+	  if(doatm)then
+	    call uvprobvr(lVis,'airtemp',type,length,updated)
+	    if(type.ne.'r'.or.length.ne.1)call bug('f',
+     *          'Met data missing from input')
+ 	    call uvprobvr(lVis,'antel',type,length,updated)
+	    if(type.ne.'d'.or.length.ne.1)call bug('f',
+     *          'Antenna elevation information missing')
+	  endif
+	  call uvprobvr(lVis,'xtsys',type,length,updated)
+	  if(type.ne.'r'.or.length.lt.6)call bug('f',
+     *          'Raw Tsys measurements seem to be missing')
+	else
+	  neednew = .false.
+	endif
+	if(.not.neednew)neednew = tfreq(ntcal).ne.ifreq1
+c
+	needupd = uvvarUpd(vtcal1)
+	if(neednew.or.needupd)then
+	  ntcal = ntcal + 1
+	  if(ntcal.gt.MAXTCAL)call bug('f','Too many Tsys scans')
+	  call uvrdvrd(lVis,'time',ttime(ntcal),0.d0)
+	  tfreq(ntcal) = ifreq1
+	endif
+	if(needupd)then
+	  call tcalLoad(lVis,doatm,ifreq1,nants,MAXANT,MAXWIN,
+     *	    xtsys(1,1,ntcal),ytsys(1,1,ntcal),
+     *	    xtrec(1,1,ntcal),ytrec(1,1,ntcal))
+	  tvalid(ntcal) = .true.
+	else if(neednew)then
+	  call bug('w',
+     *	  'New frequency without new system temperature measurement')
+	  tvalid(ntcal) = .false.
+	endif
+c
+	end
+c************************************************************************
+	subroutine tcalLoad(lVis,doatm,ifreq,nants,mants,mwin,
+     *				xtsys,ytsys,xtrec,ytrec)
+c
+	implicit none
+	integer lVis,nants,mants,mwin,ifreq
+	logical doatm
+	real xtrec(mants,mwin),ytrec(mants,mwin)
+	real xtsys(mants,mwin),ytsys(mants,mwin)
+c
+c  Load up the system temperature measurement information.
+c
+c------------------------------------------------------------------------
+	include 'maxdim.h'
+	integer i,j,k,nwin
+	real fac(MAXWIN),Tb(MAXWIN)
+	real buffx(MAXANT*MAXWIN),buffy(MAXANT*MAXWIN)
+c
+	if(doatm)then
+	  call tcalFTB(lVis,ifreq,fac,Tb,MAXWIN,nwin)
+	else
+	  do j=1,nwin
+	    fac(j) = 1
+	    Tb(j) = 0
+	  enddo
+	endif
+c
+	if(nants*nwin.gt.MAXANT*MAXWIN)
+     *	  call bug('f','Buffers to small')
+c
+	call uvgetvrr(lVis,'xtsys',buffx,nants*nwin)
+	call uvgetvrr(lVis,'ytsys',buffy,nants*nwin)
+c
+c
+	k = 1
+	do j=1,nwin
+	  do i=1,nants
+	    xtsys(i,j) = buffx(k)
+	    ytsys(i,j) = buffy(k)
+	    xtrec(i,j) = fac(j)*buffx(k) - Tb(j)
+	    ytrec(i,j) = fac(j)*buffy(k) - Tb(j)
+	    k = k + 1
+	  enddo
+	enddo
+c
+	end
+c**************************************************************
+	subroutine tcalFTB(lVis,ifreq,fac,Tb,mwin,nwin)
+c
+	implicit none
+	integer lVis,mwin,nwin,ifreq
+	real fac(mwin),Tb(mwin)
+c------------------------------------------------------------------------
+	include 'maxdim.h'
+	include 'mirconst.h'
+	real t0,h0,p0,elev,freq(MAXWIN)
+	integer i
+c
+	call freqMFrq(ifreq,MAXWIN,nwin,freq)
+	do i=1,nwin
+	  freq(i) = 1e9*freq(i)
+	enddo
+	if(nwin.gt.mwin)call bug('f','Buffer overflow1')
+        call uvgetvrr(lVis,'airtemp',t0,1)
+        call uvgetvrr(lVis,'pressmb',p0,1)
+        call uvgetvrr(lVis,'relhumid',h0,1)
+	call uvrdvrr(lVis,'antel',elev,0.0)
+c
+        t0 = t0 + 273.15
+        h0 = 0.01*h0
+        p0 = 100*p0
+	elev = PI/180.0*elev
+	call opacget(nwin,freq,elev,t0,p0,h0,fac,Tb)
+	end
+c************************************************************************
+	subroutine tcalApp(lVis,lOut,tbp,data,nread)
+c
+	implicit none
+	integer lVis,lOut,nread
+	double precision tbp(3)
+	complex data(nread)
+c------------------------------------------------------------------------
+        integer XX,YY,XY,YX
+        parameter(XX=-5,YY=-6,XY=-7,YX=-8)
+c
+	include 'atfix.h'
+	integer i,j,k,i1,i2,pol,nwin,nsc(MAXWIN),tcorr
+	real fac,num,denom
+	logical notsys
+c
+c  External.
+c
+	logical uvvarUpd
+        INTEGER COUNT
+        DATA COUNT/0/
+        COUNT = COUNT + 1
+        IF(COUNT.eq.41)then
+          write(*,*)'HELLO'
+        ENDIF
+c
+c
+	if(uvvarUpd(vtcal2))call tcalNew(lVis,lOut,tbp(1))
+c
+	pol = nint(tbp(3))
+	call basant(tbp(2),i1,i2)
+c
+c  Check for the do nothing option.
+c
+	call uvrdvri(lVis,'tcorr',tcorr,1)
+	notsys = tcorr.eq.0	
+	if(.not.tvalid(t1).or.
+     *	   (notsys.and.tmode.eq.TMNONE).or.
+     *	   (.not.notsys.and.tmode.eq.TMCONST))then
+	  continue
+c
+c  Otherwise work out what to apply and apply it.
+c
+	else
+	  call freqDesc(ifreq,MAXWIN,nwin,nsc)
+	  k = 0
+	  do j=1,nwin
+	    if(pol.eq.XX)then
+              num   = xtcur(i1,j)*xtcur(i2,j)
+	      denom = xtsys(i1,j,t1)*xtsys(i2,j,t1)
+            else if(pol.eq.YY)then
+              num   = ytcur(i1,j)*ytcur(i2,j)
+	      denom = ytsys(i1,j,t1)*ytsys(i2,j,t1)
+            else if(pol.eq.XY)then
+              num   = xtcur(i1,j)*ytcur(i2,j)
+	      denom = xtsys(i1,j,t1)*ytsys(i2,j,t1)
+            else if(pol.eq.YX)then
+	      num   = ytcur(i1,j)*xtcur(i2,j)
+	      denom = ytsys(i1,j,t1)*xtsys(i2,j,t1)
+            else
+	      call bug('f','Invalid polarisation code')
+	    endif
+c
+	    if(notsys)then
+	      fac = sqrt(num)/50
+	    else if(tmode.eq.TMNONE)then
+	      fac = 50/sqrt(denom)
+	    else
+	      fac = sqrt(num/denom)
+	    endif
+c
+	    do i=1,nsc(j)
+	      k = k + 1
+	      data(k) = fac * data(k)
+	    enddo
+	  enddo
+	endif
+c
+	if(k.ne.nread)call bug('f','Channel number inconsistency')
+c
+	end
+c************************************************************************
+	subroutine tcalNew(lVis,lOut,time)
+c
+	implicit none
+	integer lVis,lOut
+	double precision time
+c
+c------------------------------------------------------------------------
+	include 'atfix.h'
+	integer i,j
+	real fac(MAXWIN),Tb(MAXWIN),freq(MAXWIN),a1,a2,t
+	integer nwin
+	logical more
+c
+	more = .true.
+	dowhile(more)
+	  if(t1.eq.ntcal)then
+	    more = .false.
+	  elseif(time.lt.ttime(t1+1))then
+	    more = .false.
+	  else
+	    t1 = t1 + 1
+	  endif
+	enddo
+c
+	t2 = t1
+	more = tmode.eq.TMINTERP
+	dowhile(more)
+	  if(t2.eq.ntcal)then
+	    more = .false.
+	  else
+	    t2 = t2 + 1
+	    more = tfreq(t1).ne.tfreq(t2)
+	  endif
+	enddo
+	if(.not.tvalid(t2))t2 = t1
+c
+	if(tvalid(t1))then
+	  if(tmode.eq.TMNONE.or.tmode.eq.TMCONST)then
+	    call freqMFrq(ifreq,MAXWIN,nwin,freq)
+	    do j=1,nwin
+	      do i=1,nants
+		xtcur(i,j) = xtsys(i,j,t1)
+		ytcur(i,j) = ytsys(i,j,t1)
+	      enddo
+	    enddo
+	  else
+	    call tcalFTB(lVis,tfreq(t1),fac,Tb,MAXWIN,nwin)
+	    if(t1.ne.t2)then
+	      a1 = (ttime(t2)-time)/(ttime(t2)-ttime(t1))
+	      a2 = (time-ttime(t1))/(ttime(t2)-ttime(t1))
+	      do j=1,nwin
+	        do i=1,nants
+	          t = a1*xtrec(i,j,t1) + a2*xtrec(i,j,t2)
+	          xtcur(i,j) = (t+Tb(j))/fac(j)
+	          t = a1*ytrec(i,j,t1) + a2*ytrec(i,j,t2)
+	          ytcur(i,j) = (t+Tb(j))/fac(j)
+	        enddo
+	      enddo
+	    else
+	      do j=1,nwin
+	        do i=1,nants
+	          xtcur(i,j) = (xtrec(i,j,t1)+Tb(j))/fac(j)
+	          ytcur(i,j) = (ytrec(i,j,t1)+Tb(j))/fac(j)
+	        enddo
+	      enddo
+	    endif
+	  endif
+c
+	  call tcalPut(lOut,nants,MAXANT,nwin,xtcur,ytcur)
+	endif
+c
+	end
+c************************************************************************
+	subroutine tcalPut(lOut,nants,mants,nwin,xtcur,ytcur)
+c
+	implicit none
+	integer lOut,nants,mants,nwin
+	real xtcur(mants,nwin),ytcur(mants,nwin)
+c------------------------------------------------------------------------
+	include 'maxdim.h'
+	integer i,j,k
+	real buffx(MAXANT*MAXWIN),buffy(MAXANT*MAXWIN)
+	real buffz(MAXANT*MAXWIN)
+c
+	if(nants*nwin.gt.MAXANT*MAXWIN)call bug('f','Buffer overflow2')
+	k=1
+	do j=1,nwin
+	  do i=1,nants
+	    buffx(k) = xtcur(i,j)
+	    buffy(k) = ytcur(i,j)
+	    buffz(k) = sqrt(abs(xtcur(i,j)*ytcur(i,j)))
+	    k = k + 1
+	  enddo
+	enddo
+c
+	
+	call uvputvrr(lOut,'xtsys',buffx,nants*nwin)
+	call uvputvrr(lOut,'ytsys',buffy,nants*nwin)
+	call uvputvrr(lOut,'systemp',buffz,nants*nwin)
+c
+	end
+c************************************************************************
+c************************************************************************
+	subroutine freqini(lVis)
+c
+	implicit none
+	integer lVis
+c
+c------------------------------------------------------------------------
+	include 'atfix.h'
+	call uvvarIni(lVis,vfreq)
+	call uvvarSet(vfreq,'nchan')
+	call uvvarSet(vfreq,'nspect')
+	call uvvarSet(vfreq,'nschan')
+	call uvvarSet(vfreq,'sfreq')
+	call uvvarSet(vfreq,'sdf')
+	ifreq = 0
+	nfreq = 0
+	end
+c************************************************************************
+	subroutine freqGet(lVis,ifreq1)
+c
+	implicit none
+	integer lVis,ifreq1
+c------------------------------------------------------------------------
+	include 'atfix.h'
+	logical uvvarUpd
+	if(uvvarupd(vfreq))  call freqGet1(lVis,ifreq,nfreq,
+     *		nchan,nspect,nschan,sfreqs,MAXFREQ,MAXWIN)
+	ifreq1 = ifreq
+	end
+c************************************************************************
+	subroutine freqGet1(lVis,ifreq,nfreq,
+     *		nchan,nspect,nschan,sfreqs,
+     *		MAXFREQ,MAXWIN)
+c
+	implicit none
+	integer MAXFREQ,MAXWIN
+	integer lVis,ifreq,nfreq,nchan(MAXFREQ),nspect(MAXFREQ)
+	integer nschan(MAXWIN,MAXFREQ)
+	double precision sfreqs(MAXWIN,3,MAXFREQ)
+c
+c  Keep track of frequency/correlator setups. Determine whether we
+c  have a new correlator or freq setup.
+c
+c  The frequency setup arrays, sfreqs (spectral
+c  frequencies respectively) contain three values,
+c	freqs(?,1,?) is the start frequency in the first record.
+c	freqs(?,2,?) is the bandwidth or channel increment.
+c       freqs(?,3,?) is the start frequency in the last record.
+c  The start frequency in the first and last record can differ, owing to
+c  slow changes in the frequency caused by Doppler tracking and the like.
+c------------------------------------------------------------------------
+	integer itmp,i
+	logical more,newfreq
+c
+c  Externals.
+c
+	logical freqEq
+c
+	itmp = nfreq + 1
+	if(itmp.gt.MAXFREQ)call bug('f','Frequency table overflow')
+c
+c  Load the current freq/correlator description.
+c
+	call uvrdvri(lVis,'nchan',nchan(itmp),0)
+	call uvrdvri(lVis,'nspect',nspect(itmp),0)
+	if(nspect(itmp).gt.MAXWIN)call bug('f','Too many windows')
+	if(nchan(itmp).gt.0)then
+	  call uvgetvrd(lVis,'sfreq', sfreqs(1,1,itmp),nspect(itmp))
+	  call uvgetvrd(lVis,'sdf',   sfreqs(1,2,itmp),nspect(itmp))
+	  call uvgetvri(lVis,'nschan',nschan(1,itmp),nspect(itmp))
+	endif
+c
+c  Is it a new frequency/correlator setup?
+c
+	if(nfreq.eq.0)then
+	  newfreq = .true.
+	else
+	  newfreq = .not.FreqEq(ifreq,itmp,nchan,nspect,nschan,sfreqs,
+     *			MAXWIN,MAXFREQ)
+	endif
+c
+c  Process a new frequency.
+c
+	if(newfreq)then
+	  ifreq = 1
+	  more = .true.
+	  dowhile(ifreq.le.nfreq.and.more)
+	    more = .not.FreqEq(ifreq,itmp,nchan,nspect,nschan,sfreqs,
+     *			MAXWIN,MAXFREQ)
+	    if(more)ifreq = ifreq + 1
+	  enddo
+c
+c  If its a totally new frequency, complete the description of it.
+c  Most of the description is already in the right place.
+c
+	  if(more)nfreq = nfreq + 1
+	endif
+c
+c  Update the start frequency column of the last record.
+c
+	do i=1,nspect(ifreq)
+	  sfreqs(i,3,ifreq) = sfreqs(i,1,itmp)
+	enddo
+c
+	end
+c************************************************************************
+	logical function freqEq(i1,i2,nchan,nspect,nschan,sfreqs,
+     *		MAXWIN,MAXFREQ)
+c
+	implicit none
+	integer MAXWIN,MAXFREQ
+	integer i1,i2,nchan(MAXFREQ),nspect(MAXFREQ)
+	integer nschan(MAXWIN,MAXFREQ)
+	double precision sfreqs(MAXWIN,3,MAXFREQ)
+c
+c  Determine whether two correlator/frequency setups are the same.
+c  For them to be the same, nchan, nspec, nschan have to
+c  match exactly. wwidth and sdf has to match to 1%, and sfreq have to 
+c  match to within half a channel.
+c
+c------------------------------------------------------------------------
+	integer i
+	real w
+c
+	FreqEq = .false.
+	if(nchan(i1).ne.nchan(i2).or.
+     *	   nspect(i1).ne.nspect(i2))return
+c
+	do i=1,nspect(i1)
+	  if(nschan(i,i1).ne.nschan(i,i2))return
+	  w = abs(sfreqs(i,2,i1))
+	  if(abs(sfreqs(i,2,i1)-sfreqs(i,2,i2)).gt.0.01*w)return
+	  if(abs(sfreqs(i,3,i1)-sfreqs(i,1,i2)).gt.0.5*w)return
+	enddo
+c
+	FreqEq = .true.
+	end
+c************************************************************************
+	subroutine freqDesc(ifreq1,mwin,nwin,nsc)
+c
+	implicit none
+	integer ifreq1,mwin,nwin,nsc(mwin)
+c------------------------------------------------------------------------
+	integer i
+	include 'atfix.h'
+c
+	if(ifreq1.lt.1.or.ifreq1.gt.nfreq)
+     *	  call bug('f','Invalid frequency index')
+	if(nspect(ifreq1).gt.mwin)call bug('f','Buffer overflow3')
+	nwin = nspect(ifreq)
+	do i=1,nwin
+	  nsc(i) = nschan(i,ifreq1)
+	enddo
+c
+	end
+c************************************************************************
+	subroutine freqMFrq(ifreq1,mwin,nwin,freq)
+c
+	implicit none
+	integer ifreq1,mwin,nwin
+	real freq(mwin)
+c
+c  Input:
+c    ifreq1
+c    mwin
+c  Output:
+c    nwin
+c    freq
+c------------------------------------------------------------------------
+	integer i
+	include 'atfix.h'
+c
+	if(ifreq1.lt.1.or.ifreq1.gt.nfreq)
+     *	  call bug('f','Invalid frequency index')
+	if(nspect(ifreq1).gt.mwin)call bug('f','Buffer overflow4')
+	nwin = nspect(ifreq1)
+c
+	do i=1,nwin
+	  freq(i) = 0.5*(sfreqs(i,2,ifreq1)*(nschan(i,ifreq1)-1) +
+     *			 sfreqs(i,1,ifreq1) + sfreqs(i,3,ifreq1) )
+	enddo
 c
 	end
