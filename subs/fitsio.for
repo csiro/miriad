@@ -4106,7 +4106,14 @@ c
 		      nloop = 0
 		    else
 		      nloop = nloop - 1
-		      ok = string(k1:k1).eq.':'.and.nloop.gt.0
+		      if(nloop.eq.0.and.k1.le.k2)then
+			ok = string(k1:k1).eq.'.'
+		        k1 = k1 + 1
+		        call fitsnum(string,k1,k2,ndigit)
+			ok = k1.gt.k2
+		      else
+		        ok = string(k1:k1).eq.':'.and.nloop.gt.0
+		      endif
 		    endif
 		  endif
 		enddo
