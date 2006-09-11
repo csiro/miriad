@@ -17,6 +17,7 @@ c    31oct95 rjs  Fix horror of a bug when averaging channel gains together.
 c    13nov95 rjs  Fix possible non-closing gains in uvgnFac.
 c    16nov95 rjs  Linearly interpolate when the bandpass gains are sampled
 c		  more coarsely than the data.
+c    29mar96 rjs  Some tidying of the cgains routines!!
 c************************************************************************
 	subroutine uvGnIni(tno1,dogains1,dopass1)
 	implicit none
@@ -486,7 +487,7 @@ c------------------------------------------------------------------------
 	parameter(LINE=1,WIDE=2,VELO=3)
 	integer TYPE,COUNT,START,WIDTH,STEP
 	parameter(TYPE=1,COUNT=2,START=3,WIDTH=4,STEP=5)
-	integer ltype,i,j,bl
+	integer ltype,i,j,bl,i0
 	logical willcg,ok
 	double precision dat(6)
 c
@@ -499,31 +500,30 @@ c  Determine whether its cgains or wgains that we are to apply.
 c
 	if(dowide)then
 	  willcg = .false.
+	  i0 = 1
 	else
 	  call uvinfo(tno,'line',dat)
 	  ltype  = nint(dat(TYPE))
 	  willcg = ltype.eq.LINE
 	  if(ltype.eq.VELO)call bug('f',
      *	    'Cannot apply bandpass correction with velocity linetype')
+	  if(nint(dat(STEP)).ne.1.and.nint(dat(WIDTH)).ne.1)
+     *	    call bug('f','Linetype width and step must be 1')
+	  i0 = nint(dat(START))
 	endif
 c
 c  Determine the baseline number.
 c
-	ok = ant1.ne.ant2
-	if(ant1.lt.ant2)then
-	  bl = ((ant2-2)*(ant2-1))/2 + ant1
-	else
-	  bl = ((ant1-2)*(ant1-1))/2 + ant2
-	endif
+	bl = ((ant2-1)*ant2)/2 + ant1
 c
 c  Get the appropriate table.
 c
 	if(willcg.and.docgains)then
-	  j = pCgains + ncgains*(bl-1)
-	  ok = ok.and.bl.le.ncbase.and.ncgains.eq.nread
+	  j = pCgains + ncgains*(bl-1) + (i0-1)
+	  ok = bl.le.ncbase.and.ncgains.ge.nread+i0-1
 	else if(.not.willcg.and.dowgains)then
-	  j = pWgains + nwgains*(bl-1)
-	  ok = ok.and.bl.le.nwbase.and.nwgains.eq.nread
+	  j = pWgains + nwgains*(bl-1) + (i0-1)
+	  ok = bl.le.nwbase.and.nwgains.ge.nread+i0-1
 	else
 	  ok = .false.
 	endif
@@ -531,18 +531,12 @@ c
 c Check it all makes sense.
 c
 	if(.not.ok)then
-	  call output('Error applying baseline gains')
 	  do i=1,nread
 	    flags(i) = .false.
 	  enddo
-	else if(ant1.le.ant2)then
-	  do i=1,nread
-	    data(i) = data(i) * cref(j)
-	    j = j + 1
-	  enddo
 	else
 	  do i=1,nread
-	    data(i) = data(i) * conjg(cref(j))
+	    data(i) = data(i) * cref(j)
 	    j = j + 1
 	  enddo
 	endif
