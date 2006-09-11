@@ -98,12 +98,13 @@ c    rjs  12dec96 Fix bug in GainPlt2 related to getting times stamps and
 c		  flagging wrong.
 c    rjs  10jun97 Correct amptiude to amplitude.
 c    rjs  09mar98 Trim the device name before passing it through to PGPLOT.
+c    rjs  13mar98 Change format statement.
 c  Bugs:
 c------------------------------------------------------------------------
 	integer MAXSELS
 	character version*(*)
 	parameter(MAXSELS=256)
-	parameter(version='GpPlt: version 09-Mar-98')
+	parameter(version='GpPlt: version 13-Mar-98')
 	include 'gpplt.h'
 	integer iostat,tIn,nx,ny,nfeeds,nants,nsols,ierr,symbol,nchan
 	integer ntau,length
@@ -1037,7 +1038,7 @@ c
 	      else
 		line(1:12) = ' '
 	      endif
-	      write(line(13:80),'(6g11.3)')(y(j),j=j1,j2)
+	      write(line(13:80),'(6f11.3)')(y(j),j=j1,j2)
 	      call LogWrite(line,more)
 	    enddo
 	  enddo
