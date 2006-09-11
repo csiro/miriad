@@ -41,6 +41,7 @@ c    rjs  10may92 Reworked the way clipping is done.
 c    rjs  17may92 Clipping message, to appease NEBK.
 c    rjs  15feb93 Changes to make ra/dec variables double.
 c    mchw 02may93 Added default flux to apriori option.
+c    mchw 02jul93 Change flux limit to zero (all entries in flux table)
 c************************************************************************
 c*ModelIni -- Ready the uv data file for processing by the Model routine.
 c&mchw
@@ -1154,7 +1155,7 @@ c  Output:
 c    a		Flux of the calibrator.
 c------------------------------------------------------------------------
 	include 'model.h'
-	character source*16,source1*16,type*1
+	character source*16,source1*16,type*1,line*80
 	logical more,update,isplanet
 	real flux,freq,level
 	double precision day,dfreq,delta
@@ -1198,10 +1199,14 @@ c
 	    isplanet = flux.gt.0
 	  endif
 	  if(.not.isplanet)then
-	    flux = level
+	    flux = 0.
 	    call CalGet(' ',source1,freq,100.,day,1000.,flux,iostat)
-	    if(iostat.ne.0) call bug('w',
-     *		'Error determining flux of '//source)
+	    if(iostat.ne.0)then
+	      call bug('w','Error determining flux of '//source)
+	      write(line,'(a,f8.3,a)') 'Setting flux to ',level,' Jy'
+	      call output(line)
+	      flux = level
+	    endif
 	  endif
 c
 c  Add this to our list of calibrators, in alphabetic order.
