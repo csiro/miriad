@@ -8,17 +8,20 @@ c    subroutine coCreate(lu)
 c    subroutine coDup(lin,lout)
 c    subroutine coRaDec(lu,proj,ra0,dec0)
 c    subroutine coReinit(lu)
-c    subroutine coAxSet(lu,iax,ctype,crpix,crval,cdelt)
 c    subroutine coCvt(lu,in,x1,out,x2)
 c    subroutine coCvt1(lu,iax,in,x1,out,x2)
 c    subroutine coLMN(lu,in,x1,lmn)
 c    subroutine coGeom(lu,in,x1,ucoeff,vcoeff)
+c    subroutine coFindAx(lu,axis,iax)
 c    subroutine coFreq(lu,in,x1,freq)
 c    subroutine coVelSet(lu,axis)
 c    subroutine coPrjSet(lu)
-c    subroutine coFindAx(lu,axis,iax)
-c    subroutine coSetd(lu,object,value)
 c    subroutine coAxGet(lu,iax,ctype,crpix,crval,cdelt)
+c    subroutine coAxSet(lu,iax,ctype,crpix,crval,cdelt)
+c    subroutine coGetd(lu,object,value)
+c    subroutine coGeta(lu,object,value)
+c    subroutine coSetd(lu,object,value)
+c    subroutine coSeta(lu,object,value)
 c    subroutine coGauCvt(lu,in,x1,io,bmaj1,bmin1,bpa1,bmaj2,bmin2,bpa2)
 c    logical function coCompar(lu1,lu2,match)
 c    subroutine coLin(lu1,in,x1,n,ctype,crpix,crval,cdelt)
@@ -43,6 +46,7 @@ c    rjs  07jul97 Treat "epoch" and "obstime" as part of the coordinate
 c		  specification. Add coGetd. Improve coVelSet. Support
 c		  gls projection.
 c    rjs  14jul97 Fix bug in covelset introduced on above date.
+c    rjs  21jul97 More robust to bad freq values. Added coSeta.
 c************************************************************************
 c* coInit -- Initialise coordinate conversion routines.
 c& rjs
@@ -305,6 +309,55 @@ c
 c
 	end
 c************************************************************************
+c* coSeta -- Set the value in the guts of the coordinate routines.
+c& rjs
+c: coordinates
+c+
+	subroutine coSeta(lu,object,value)
+c
+	implicit none
+	integer lu
+	character object*(*),value*(*)
+c
+c  Set a value in the guts of the coordinate routines!
+c
+c  Input:
+c    lu		Handle of the coordinate object.
+c    object	Name of the thing to set.
+c    value	Value to use.
+c--
+c------------------------------------------------------------------------
+	include 'co.h'
+	integer k,l
+	logical ok
+	character obj*8
+c
+c  Externals.
+c
+	integer coLoc
+c
+	k = coLoc(lu,.false.)
+c
+	obj = object
+	l = ichar(obj(6:6)) - ichar('0')
+	ok = l.ge.1.and.l.le.MAXNAX
+c
+	if(obj.eq.'cellscal')then
+	  if(value.eq.'CONSTANT')then
+	    cellscal(k) = .false.
+	  else if(value.eq.'1/F')then
+	    cellscal(k) = .true.
+	  else
+	    call bug('f','Unrecognised value for cellscal in coseta')
+	  endif
+	else if(obj(1:5).eq.'ctype'.and.ok)then
+	  ctype(l,k) = value
+	else
+	  call bug('f','Unrecognised object in coSeta')
+	endif
+c
+	end
+c************************************************************************
 c* coGetd -- Get the value from the guts of the coordinate routines.
 c& rjs
 c: coordinates
@@ -358,6 +411,54 @@ c
 	  value = cdelt(l,k)
 	else
 	  call bug('f','Unrecognised object in coGetd')
+	endif
+c
+	end
+c************************************************************************
+c* coGeta -- Get the value from the guts of the coordinate routines.
+c& rjs
+c: coordinates
+c+
+	subroutine coGeta(lu,object,value)
+c
+	implicit none
+	integer lu
+	character object*(*),value*(*)
+c
+c  Get a value from the guts of the coordinate routines!
+c
+c  Input:
+c    lu		Handle of the coordinate object.
+c    object	Name of the thing to set.
+c  Output:
+c    value	Value to use.
+c--
+c------------------------------------------------------------------------
+	include 'co.h'
+	integer k,l
+	logical ok
+	character obj*8
+c
+c  Externals.
+c
+	integer coLoc
+c
+	k = coLoc(lu,.false.)
+c
+	obj = object
+	l = ichar(obj(6:6)) - ichar('0')
+	ok = l.ge.1.and.l.le.MAXNAX
+c
+	if(obj(1:5).eq.'ctype'.and.ok)then
+	  value = ctype(l,k)
+	else if(obj.eq.'cellscal')then
+	  if(cellscal(k))then
+	    value = '1/F'
+	  else
+	    value = 'CONSTANT'
+	  endif
+	else
+	  call bug('f','Unrecognised object in coGeta')
 	endif
 c
 	end
@@ -2106,7 +2207,9 @@ c
 	endif
 	if(x1pix) x = x * dx
 c
-	if(type.eq.'FREQ')then
+	if(x.eq.0)then
+	  scal = 1
+	else if(type.eq.'FREQ')then
 	  scal = xval / ( xval + x )
 	else if(type.eq.'VELO')then
 	  scal = ( ckms - (xval + vobs) )/( ckms - (xval + x + vobs) )
