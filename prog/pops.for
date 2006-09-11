@@ -20,7 +20,7 @@ c	The input and output epochs. The epochs can be given as either
 c	Bxxxx or Jxxxx (where xxxx is a year, e.g. B1950 or J2000), or as
 c	yymmmdd:hh:mm:ss, a time in normal Miriad format 
 c	(e.g. 93JAN05:10:25:00).
-c@ observ
+c@ telescop
 c	Observatory name. Default is the geocenter.
 c--
 c History:
@@ -32,12 +32,13 @@ c		  geocentric velocities. Better formatting.
 c   rjs   9feb93  Give source elevation and azimuth as well.
 c   rjs  12dec95  Extract lstjul to ephem.for
 c   rjs  13apr97  Print out modified julian date.
+c   rjs  10jun97  Change observ to telescop.
 c Bugs:
 c   * The precession, nutation and aberration are pretty simple. No
 c     correction for the FK4 zero-point or elliptic terms of aberrations.
 c-----------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Pops: version 1.0 9-Feb-94')
+	parameter(version='Pops: version 1.0 10-Jun-97')
 c
 	character string*64,observ*32
 	double precision r0,d0,rm,dm,rt,dt,ra,da,jday1,jday2
@@ -58,7 +59,7 @@ c
 	call Keyt('radec',d0,'dms',0.d0)
 	call Keyt('epochs',jday1,'atime',0.d0)
 	call Keyt('epochs',jday2,'atime',0.d0)
-	call keya('observ',observ,'geocenter')
+	call keya('telescop',observ,'geocenter')
 	call keyfin
 c
 c  Check the times.
