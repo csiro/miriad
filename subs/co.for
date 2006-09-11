@@ -29,6 +29,7 @@ c  History:
 c    rjs   9aug94 Original version.
 c    rjs  13sep94 Support 'VELOCITY' and 'FELOCITY' axes.
 c    rjs  12oct94 Added a good many things ... for mosaicing.
+c    rjs  23nov94 A dummy statement to stop the alpha compiler complaining.
 c************************************************************************
 c* coInit -- Initialise coordinate conversion routines.
 c& rjs
@@ -1711,6 +1712,7 @@ c
 	endif
 c
 	call bug('f','Unable to find coordinate object in CoInit')
+	coLoc = 0
 c
 	end
 c************************************************************************
