@@ -53,38 +53,34 @@ c  History:
 c    rjs  04Feb01  Original version.
 c    dpr  05Feb01  Update doc and err messages.
 c    rjs  06feb01  Added options=airmass.
+c    rjs  24apr01  Split out the code to determine brightness etc.
 c------------------------------------------------------------------------
 	include 'mirconst.h'
-	integer n,nmax
-	parameter(n=50,nmax=250)
+	integer nmax
+	parameter(nmax=250)
 c
-	real t0,h
-	real nu,Tb,tau,Ldry,Lvap,T(n),Pdry(n),Pvap(n),P,zd,z(n)
-	real f1,f2,finc,el1,el2,elinc,P0,z0,el
+	real f1,f2,finc,el1,el2,elinc,P0,z0,el,t0,h0,fac,Tb,nu
 	logical dofr,doel,airmass
 	real x(NMAX),y1(NMAX),y2(NMAX),ymin,y1max,y2max,ylo,yhi
 	integer i,npnt
 	character device*64
-c
-c  Atmospheric parameters.
-c
+c                  
+c  Atmospheric parameters. 
+c   
         real M,R,Mv,g,rho0
         parameter(M=28.96e-3,R=8.314,Mv=18e-3,rho0=1e3,g=9.81)
-c
+c       
 c  d - Temperature lapse rate                0.0065 K/m.
-c  h0 - Water vapour scale height,           2000 m.
-c  zmax - Max altitude of model atmosphere,  10000 m.
-c
-	real d,h0,zmax
-	parameter(d=0.0065,h0=2000.0,zmax=10000.0)
+c       
+        real d
+        parameter(d=0.0065)
 c
 c  Externals.
 c
-	real pvapsat
 	integer pgbeg
 c
 	call keyini
-	call output('opplt: version 1.0 05-Feb-01')
+	call output('opplt: version 1.0 24-Apr-01')
 	call keya('device',device,' ')
 c
 c  Get frequency range of interest, in GHz.
@@ -113,12 +109,12 @@ c
 c  Get temperature at observatory in Kelvin.
 c  Get percent relative humidity at observatory.
 c
-	call keyr('p',p,1013.0)
+	call keyr('p',p0,1013.0)
 	call keyr('t',t0,300.0)
 	call keyr('z',z0,200.0)
-        P0 = P*1e2*exp(-M*g/(R*T0)*(z0-0.5*d*z0*z0/T0))
-	call keyr('h',h,20.0)
-	h = 0.01*h
+        P0 = p0*1e2*exp(-M*g/(R*T0)*(z0-0.5*d*z0*z0/T0))
+	call keyr('h',h0,20.0)
+	h0 = 0.01*h0
 	call getopt(airmass)
 	call keyfin
 c
@@ -126,24 +122,6 @@ c
 	el2 = el2 * PI/180.0
 	elinc = elinc * PI/180.0
 	npnt = NMAX
-c
-c  Initialise the layers of the atmosphere.
-c
-	do i=1,n
-	  z(i) = (i-1)*zmax/real(n) + z0
-	enddo
-c
-c  Generate a model of the atmosphere -- T is temperature,
-c  Pdry is partial pressure of "dry" consistuents, Pvap is the
-c  partial pressure of the water vapour.
-c
-	do i=1,n
-	  zd = z(i) - z0
-	  T(i) = T0/(1+d/T0*zd)
-	  P = P0*exp(-M*g/(R*T0)*(zd+0.5*d*zd*zd/T0))
-	  Pvap(i) = min(h*exp(-zd/h0)*pvapsat(T(1)),pvapsat(T(i)))
-	  Pdry(i) = P - Pvap(i)
-	enddo
 c
 c  Determine characteristics.
 c
@@ -164,9 +142,9 @@ c
 	      x(i) = 180.0/PI * el
 	    endif
 	  endif
-	  call refract(T,Pdry,Pvap,z,n,nu*1e9,2.7,el,Tb,tau,Ldry,Lvap)
+	  call opacget(1,nu*1e9,el,t0,p0,h0,fac,Tb)
 	  y1(i) = Tb
-	  y2(i) = tau
+	  y2(i) = -log(fac)
 	  y1max = max(y1max,y1(i))
 	  y2max = max(y2max,y2(i))
 	enddo
