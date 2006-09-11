@@ -111,6 +111,7 @@ c    rjs  01nov95 Better fiddles in gaufid.
 c    rjs  02dec96 Print out RA and DEC as well.
 c    rjs  12dec96 Correct bug in the above.
 c    nebk 28feb97 Add object to output
+c    rjs  02jul97 cellscal change.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'maxnax.h'
@@ -518,7 +519,7 @@ c------------------------------------------------------------------------
 	double precision crpix3
 	character umsg*64
 	integer nkeys
-	parameter(nkeys=43)
+	parameter(nkeys=42)
 	character keyw(nkeys)*8
 c
 c  Externals.
@@ -530,9 +531,9 @@ c
      *	  'cdelt1  ','cdelt2  ','cdelt3  ','cdelt4  ','cdelt5  ',
      *	  'ctype1  ','ctype2  ','ctype3  ','ctype4  ','ctype5  ',
      *	  'crpix1  ','crpix2  ',           'crpix4  ','crpix5  ',
-     *	  'date-obs','epoch   ','history ','instrume','niters  ',
+     *	  'obstime ','epoch   ','history ','instrume','niters  ',
      *	  'object  ','observer','obsra   ','obsdec  ','pbfwhm  ',
-     *	  'restfreq','telescop','vobs    ','xshift  ','yshift  ',
+     *	  'restfreq','telescop','vobs    ','cellscal',
      *	  'ltype   ','lstart  ','lwidth  ','lstep   ','btype   '/
 c
 	do i=1,nkeys
