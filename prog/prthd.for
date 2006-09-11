@@ -42,13 +42,14 @@ c    rjs  14mar97 Recognise "time" axes.
 c    rjs  23jul97 Print galactic and ecliptic coordinates in decimal format.
 c		  Support pbtype.
 c    rjs  31jul97 Use MAXWIN for number of spectra.
+c    rjs  01aug97 Better format for beam size.
 c
 c  Bugs and Shortcomings:
 c    * Descriptions in brief mode could be a bit more verbose!
 c------------------------------------------------------------------------
 	character version*(*)
 	integer MAXIN
-	parameter(version='Prthd: version 23-Jul-97')
+	parameter(version='Prthd: version 1-Aug-97')
 	parameter(MAXIN=256)
 	integer tno,i,iostat,nin
 	character in(MAXIN)*64,logf*64,line*80
@@ -223,9 +224,15 @@ c
       call rdhdr(tno,'bmin',rval2,0.)
       call rdhdr(tno,'bpa',rval3,0.)
       if(rval1.gt.0.and.rval2.gt.0)then
-	write(line,'(a,f6.2,a,f6.2,a)')'Beam Size:',3600*180/pi*rval1,
-     *				       ' by',	    3600*180/pi*rval2,
-     *				       ' arcsec.'
+	if(max(rval1,rval2)*3600*180/pi.lt.1000)then
+	  write(line,'(a,f7.2,a,f7.2,a)')'Beam Size:',3600*180/pi*rval1,
+     *				         ' by',	      3600*180/pi*rval2,
+     *				         ' arcsec.'
+	else
+	  write(line,'(a,f7.2,a,f7.2,a)')'Beam Size:',60*180/pi*rval1,
+     *				         ' by',	      60*180/pi*rval2,
+     *				         ' arcmin.'
+	endif
 	call logwrite(line,more)
 	write(line,'(a,f7.1,a)')'Position angle:',rval3,' degrees.'
 	call logwrite(line,more)
