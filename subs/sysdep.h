@@ -30,7 +30,7 @@
 
 /*
  *  Void is typedef'd to the proper word depending on the level of
- *  ANSI conformance.  Also, if ANSI conforming, Const is typedef'd
+ *  ANSI conformance.  Also, if ANSI conforming, Const is defined
  *  to const; otherwise, Const is defined as a NULL statement.
  *
  *  PROTOTYPE is defined only if function prototypes are correctly
@@ -44,7 +44,7 @@
 #ifdef __STDC__
 #if (__STDC__ == 1)
 typedef void Void;
-typedef const Const;
+#define Const const
 #define PROTOTYPE 1
 #define ARGS(alist) alist
 #else
