@@ -52,6 +52,7 @@ c		  for phases of a point source.
 c    rjs   9mar95 Turn off geometry correction for "imhead" option.
 c    mhw  05jan96 Add zero option for Model and ModMap
 c    rjs  30sep96 Major clean up and improved polarisation handling.
+c    rjs  11may97 Correct sign of Stokes-V (not again!!).
 c************************************************************************
 c*ModelIni -- Ready the uv data file for processing by the Model routine.
 c&rjs
@@ -1019,9 +1020,9 @@ c
 	  else if(vpol.eq.PolLL)then
 	    fac = -1.
 	  else if(vpol.eq.PolXY)then
-	    fac = (0., 1.)
-	  else if(vpol.eq.PolYX)then
 	    fac = (0.,-1.)
+	  else if(vpol.eq.PolYX)then
+	    fac = (0., 1.)
 	  else
 	    fac = 0.
 	  endif
