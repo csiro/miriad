@@ -59,6 +59,7 @@ c    rjs  20sep97    Replace julfdate,fdatejul with julday,dayjul.
 c    rjs  11may98    Better handling of IEEE NaNs and Inf, and blanking of
 c		     floating point FITS files.
 c    rjs  25jan99    Write uv FITS date in new FITS format.
+c    rjs  26feb99    Included "fitdate" to help with problems with AIPS dates.
 c
 c  Bugs and Shortcomings:
 c    * IF frequency axis is not handled on output of uv data.
@@ -909,7 +910,7 @@ c    zero	Total offset.
 c    TimOff	Offset time to add.
 c
 c------------------------------------------------------------------------
-	character ptype*8,dateobs*24,umsg*64
+	character ptype*8,umsg*64
 	integer i,j,Tindx
 	logical found,getjday
 	real bs,bz
@@ -997,13 +998,12 @@ c
 c  Add to the date if we need to.
 c
 	if(getjday)then
-	  call fitrdhda(lu,'DATE-OBS',dateobs,' ')
-	  if(dateobs.eq.' ')then
+	  call fitdate(lu,'DATE-OBS',jday)
+	  if(jday.eq.0)then
 	    call bug('w','Not observation date info present')
 	    call bug('w','Assuming observation date is 01/01/90')
-	    dateobs = '01/01/90'
+	    call dayjul('01/01/90',jday)
 	  endif
-	  call dayJul(dateobs,jday)
 	  TimOff = TimOff + jday
 	endif
 c
@@ -4023,3 +4023,122 @@ c
 	wide = width(lu)
 c
 	end
+c************************************************************************
+	subroutine fitdate(lu,keyw,jday)
+c
+	implicit none
+	character keyw*(*)
+	integer lu
+	double precision jday
+c
+c  Decode a FITS date keyword. Before doing so, check that the date is
+c  valid.
+c------------------------------------------------------------------------
+	character string*64
+c
+c  Externals.
+c
+	logical fitcdate
+c
+	call fitrdhda(lu,keyw,string,' ')
+	if(fitcdate(string))then
+	  call dayjul(string,jday)
+	else
+	  if(string.ne.' ')
+     *	    call bug('w','Failed to decode date string: '//string)
+	  jday = 0
+	endif
+c
+	end
+c************************************************************************
+	logical function fitcdate(string)
+c
+	implicit none
+	character string*(*)
+c
+c------------------------------------------------------------------------
+	integer k1,k2,ndigit,nloop
+	logical ok
+c
+c  Externals.
+c
+	integer len1
+c
+	k1 = 1
+	k2 = len1(string)
+	call spanchar(string,k1,k2,' ')
+c
+	call fitsnum(string,k1,k2,ndigit)
+	if((ndigit.eq.1.or.ndigit.eq.2).and.k1.lt.k2)then
+	  ok = string(k1:k1).eq.'/'
+	  if(ok)then
+	    k1 = k1 + 1
+	    call fitsnum(string,k1,k2,ndigit)
+	    ok = k1.lt.k2.and.(ndigit.eq.1.or.ndigit.eq.2)
+	    if(ok)ok = string(k1:k1).eq.'/'
+	    if(ok)then
+	      k1 = k1 + 1
+	      call fitsnum(string,k1,k2,ndigit)
+	      ok = k1.gt.k2.and.ndigit.eq.2
+	    endif
+	  endif
+	else if(ndigit.eq.4.and.k1.lt.k2)then
+	  ok = string(k1:k1).eq.'-'
+	  if(ok)then
+	    k1 = k1 + 1
+	    call fitsnum(string,k1,k2,ndigit)
+	    ok = k1.lt.k2.and.(ndigit.eq.1.or.ndigit.eq.2)
+	    if(ok)ok = string(k1:k1).eq.'-'
+	    if(ok)then
+	      k1 = k1 + 1
+	      call fitsnum(string,k1,k2,ndigit)
+	      ok = ndigit.eq.1.or.ndigit.eq.2
+	      if(ok.and.k1.lt.k2)then
+		ok = string(k1:k1).eq.'t'.or.string(k1:k1).eq.'T'
+		nloop = 3
+		dowhile(ok.and.nloop.gt.0)
+		  k1 = k1 + 1
+		  ok = k1.le.k2
+		  if(ok)then
+		    call fitsnum(string,k1,k2,ndigit)
+		    ok = ndigit.eq.1.or.ndigit.eq.2
+		    if(k1.gt.k2)then
+		      nloop = 0
+		    else
+		      nloop = nloop - 1
+		      ok = string(k1:k1).eq.':'.and.nloop.gt.0
+		    endif
+		  endif
+		enddo
+	      else if(k1.eq.k2)then
+		ok = .false.
+	      endif
+	    endif
+	  endif
+	else
+	  ok = .false.
+	endif
+c
+	fitcdate = ok
+	end
+c************************************************************************
+	subroutine fitsnum(string,k1,k2,ndigit)
+c
+	implicit none
+	character string*(*)
+	integer k1,k2,ndigit
+c
+c------------------------------------------------------------------------
+        logical more
+c
+        more = .true.
+	ndigit = 0
+        do while(k1.le.k2.and.more)
+          if(string(k1:k1).ge.'0'.and.string(k1:k1).le.'9')then
+	    ndigit = ndigit + 1
+	    k1 = k1 + 1
+          else   
+            more = .false.
+          endif
+        enddo
+        end
