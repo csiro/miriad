@@ -65,13 +65,15 @@ c    rjs  13oct95 xrange and yrange handle times in normal Miriad format.
 c    rjs  02feb01 Added options=equal.
 c    rjs  16nov03 Added extra variables. pressmb, wind,winddir,axismax
 c    rjs  10may05 Increase buffer size.
+c    rjs  26may05 Add pntra,pntdec to list of know variables.
+c
 c  Bugs:
 c    ?? Perfect?
 c------------------------------------------------------------------------
 	character version*(*)
 	integer MAXPNTS
 	parameter(MAXPNTS=1000000)
-	parameter(version='VarPlt: version 1.1 10-May-05')
+	parameter(version='VarPlt: version 1.1 26-May-05')
 	logical doplot,dolog,dotime,dounwrap
 	character vis*64,device*64,logfile*64,xaxis*16,yaxis*16
 	character xtype*1,ytype*1,xunit*16,yunit*16,calday*24
@@ -877,7 +879,7 @@ c  in the table.
 c
 	integer nvars
 	double precision rad2deg,rad2arc,rad2hr
-	parameter(nvars=62)
+	parameter(nvars=64)
 	parameter(rad2deg=180.d0/pi,rad2arc=3600.d0*rad2deg)
 	parameter(rad2hr=12.d0/pi)
 c
@@ -933,9 +935,11 @@ c
      *	  'phasem1 ','degrees ',	1, rad2deg,
      *	  'plangle ','degrees ',	1, 1.d0,
      *	  'plmaj   ','arcsec  ',	1, 1.d0/
-	data (names(i),units(i),dim2s(i),scales(i),i=35,50)/
+	data (names(i),units(i),dim2s(i),scales(i),i=35,52)/
      *	  'plmin   ','arcsec  ',	1, 1.d0,
      *	  'pltb    ','Kelvin  ',	1, 1.d0,
+     *	  'pntdec  ','degrees ',	1, rad2deg,
+     *	  'pntra   ','hours   ',	1, rad2hr,
      *	  'precipmm','mm      ',	1, 1.d0,
      *	  'pressmb ','mB      ',        1, 1.d0,
      *	  'ra      ','hours   ',	1, rad2hr,
@@ -950,7 +954,7 @@ c
      *	  'ut      ','hours   ',	1, rad2hr,
      *	  'veldop  ','km/sec  ',	1, 1.d0,
      *	  'vsource ','km/sec  ',	1, 1.d0/
-	data (names(i),units(i),dim2s(i),scales(i),i=51,nvars)/
+	data (names(i),units(i),dim2s(i),scales(i),i=53,nvars)/
      *	  'wfreq   ','GHz     ',	1, 1.d0,
      *	  'wind    ','km/h    ',        1, 1.d0,
      *    'winddir ','degrees ',        1, 1.d0,
