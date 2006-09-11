@@ -24,8 +24,8 @@ $AUKM   = 149.597870e6; 		# AU in km.
 
 #************************************************************************
 sub keyini{
+  my($arg,$var,$value);
   foreach $arg (@ARGV){
-    my($arg,$value);
     ($var,$value) = ($arg =~ m{(\w+)=(.+)$});
     eval '$'.$var.'="'.$value.'"';
   }
@@ -50,4 +50,9 @@ sub puthd{
   if("$fmt" ne ""){$line .= ",$fmt";}
   $line .= "'";
   `$line`;
+}
+#************************************************************************
+sub bug{
+  print "### Fatal: @_\n";
+  exit 1;
 }
