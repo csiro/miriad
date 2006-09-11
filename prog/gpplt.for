@@ -92,6 +92,7 @@ c    nebk 24oct93 CHange nxy defaults to 3,2 with complicated algorithm
 c    rjs/nebk 29mar94 Fix bugs in listing of bandpass table and improve
 c		  formatting.
 c    rjs  25apr95 Significant rework. Unwrap phases consistently.
+c    rjs  17aug95 Failed to take reciprocal of bandpass.
 c  Bugs:
 c------------------------------------------------------------------------
 	integer MAXSELS
@@ -527,6 +528,19 @@ c
 	call hdaccess(item,iostat)
 	if(iostat.ne.0)call bugno('f',iostat)
 c
+c  Take the reciprocal of the gains.
+c
+	offi = 0
+	do k=1,nants
+	  do j=1,nfeeds
+	    do i=1,nchan
+	      offi = offi + 1
+	      if(abs(real(Gains(offi)))+abs(aimag(Gains(offi))).gt.0)
+     *		Gains(offi) = 1/Gains(offi)
+	    enddo
+	  enddo
+	enddo
+c
 c  Perform frequency selection, if needed.
 c
 	if(doselect)then
@@ -538,12 +552,7 @@ c
 		offi = offi + 1
 	        if(select(i))then
 		  offo = offo + 1
-		  if(abs(real( Gains(offi)))+
-     * 		     abs(aimag(Gains(offi))).gt.0)then
-		    Gains(offo) = 1/Gains(offi)
-		  else
-		    Gains(offo) = 0
-		  endif
+		  Gains(offo) = Gains(offi)
 	        endif
 	      enddo
 	    enddo
