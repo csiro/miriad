@@ -8,8 +8,11 @@
 /*    rjs     14jul98 Add a caste operation in errmsg_c, to attempt	*/
 /*		      to appease some compilers.			*/
 /*    rjs      9aug02 Support for "darwin" OS.				*/
+/*    rjs      3jul04 Use strerror routine.				*/
 /************************************************************************/
 
+#include "sysdep.h"
+#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -130,16 +133,18 @@ int n;
   string[len0] = 0;
   return(string);
 #else
-# if !defined(linux) && !defined(darwin)
+# ifdef HAS_STRERROR
+  return(strerror(n));
+# else
+#  if !defined(linux) && !defined(darwin)
   extern int sys_nerr;
   extern char *sys_errlist[];
-# endif
-
-
+#  endif
   if(n > 0 && n <= sys_nerr)return((char *)sys_errlist[n]);
   else{
     sprintf(string,"Unknown error with number %d detected.",n);
     return(string);
   }
+# endif
 #endif
 }

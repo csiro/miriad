@@ -5,6 +5,8 @@
 /*  History:								*/
 /*    rjs  ??????? Original version.					*/
 /*    rjs  23dec92 Broke out into separate file.			*/
+/*    rjs  05dec95 Comment out a dirty trick in zterm that was screwing */
+/*		   up with some compilers!! 				*/
 /************************************************************************/
 void pad(string,length)
 char *string;
@@ -59,7 +61,7 @@ int length;
 
   s = string + length;
   while(*--s == ' ' && length)length--;
-  if(*(string+length) == 0)return(string);
+/*  if(*(string+length) == 0)return(string); */
 
 /* We have to put it in our circular buffer. Determine where to put it. */
 
