@@ -112,6 +112,7 @@ c   rjs   14mar94 Sun and twofit options.
 c   rjs   16aug94 Zeroth order fits were failing again!
 c   rjs   17aug94 Slightly better handling of offset value.
 c   rjs    9sep94 Handle felocity linetype.
+c   rjs   19sep04 Handle varying jyperk.
 c  Bugs:
 c------------------------------------------------------------------------
 	include 'maxdim.h'
@@ -119,7 +120,7 @@ c------------------------------------------------------------------------
 	integer MAXCH,MAXORDER
 	character version*(*)
 	parameter(MAXCH=32,MAXORDER=11)
-	parameter(version='UvLin: version 1.0 9-Sep-94')
+	parameter(version='UvLin: version 1.0 19-Sep-04')
 c
 	logical sun,twofit,relax,lpropc,cflags(MAXCHAN)
 	character uvflags*16,out*64,ltype*32,mode*12
@@ -380,8 +381,8 @@ c
 	  j = 0
 	  if(pol.ge.PolMin.and.pol.le.PolMax) j = pindx(pol)
 	  if(j.gt.0)then
-	    call PolCpy(lOut)
 	    call VarCopy(lIn,lOut)
+	    call PolCpy(lOut)
 	    call ProcAll(lIn,preamble,data,dflags,line(1,j),lflags(1,j),
      *		nchan,nspect,nschan,order,relax,sun,shft,.false.,
      *		mode,nout)
@@ -758,9 +759,9 @@ c
 c
 	dowhile(nchan.gt.0)
 	  if(nchan.gt.mchan)call bug('f','Too many channels')
-	  call PolCpy(lOut)
 	  call dspect(lIn,vupd,nchan,MAXSPECT,nspect,nschan)
 	  call VarCopy(lIn,lOut)
+	  call PolCpy(lOut)
 	  call ProcAll(lIn,preamble,data,dflags,line,cflags,
      *	    nchan,nspect,nschan,order,relax,sun,shft,twofit,mode,nout)
 	  call uvwrite(lOut,preamble,data,dflags,nout)
@@ -966,13 +967,16 @@ c
 	integer lOut
 c------------------------------------------------------------------------
 	integer npol,pol
+	real jyperk
 c
 	call uvDatGti('npol',npol)
 	if(npol.eq.0)
      *	    call bug('f','Could not determine number of polarisations')
 	call uvDatGti('pol',pol)
+	call uvDatGtr('jyperk',jyperk)
 	call uvputvri(lOut,'npol',npol,1)
 	call uvputvri(lOut,'pol',pol,1)
+	call uvputvrr(lOut,'jyperk',jyperk,1)
 	end
 c************************************************************************
 	subroutine dspecini(lIn,vupd)
