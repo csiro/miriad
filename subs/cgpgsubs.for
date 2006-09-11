@@ -118,7 +118,8 @@ c     nebk   02sep95     Add BGCOLCG, LABAXCG, DRHORICG, DRVERTCG.
 c			 Remove BOXCG.  Add dotr argument to VPSIZCG and
 c		         AXLABCG.  Add temporary tick enquiry fuges through 
 c		         QTIKCG, PGTBX1-3CG
-c			 
+c     nebk   19oct95     Bias wedges by pixr(1) rather than image min
+c                        when log or square root transfer function
 c**********************************************************************
 c
 c* annboxCG -- Annotate plot with information from a box image 
@@ -2328,11 +2329,11 @@ c
 c Create a dummy wedge array to be plotted.
 c
       if (trfun.eq.'log') then
-        b1 = log10(a1+groff)
-        b2 = log10(a2+groff)
+        b1 = log10(a1-groff)
+        b2 = log10(a2-groff)
       else if (trfun.eq.'sqr') then
-        b1 = sqrt(a1+groff)
-        b2 = sqrt(a2+groff)
+        b1 = sqrt(a1-groff)
+        b2 = sqrt(a2-groff)
       else if (trfun.eq.'heq') then
         b1 = cumhis(1)
         b2 = cumhis(nbins2)
@@ -2361,9 +2362,9 @@ c
 c Apply transfer function
 c
           if (trfun.eq.'log') then
-            memr(ipw+i-1) = log10(memr(ipw+i-1)+groff)
+            memr(ipw+i-1) = log10(memr(ipw+i-1)-groff)
           else if (trfun.eq.'sqr') then
-            memr(ipw+i-1) = sqrt(memr(ipw+i-1)+groff)
+            memr(ipw+i-1) = sqrt(memr(ipw+i-1)-groff)
           end if
         end do
       end if
