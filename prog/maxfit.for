@@ -40,6 +40,7 @@ c    nebk 09jan94  Convert CRPIX to double precision
 c    rjs  24jan94  Small typo in doc (appease pjt and bpw's "doc").
 c    nebk 22mar94  Twiddle about with output format
 c    nebk 18aug94  Revise to use COCVT coord. transformation routines
+c    nebk 16nov95  New calls to some "co" routines
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -58,7 +59,7 @@ c
      +  strout(maxnax)*50, file*40, text*132, logf*132
       logical doabs
 c-----------------------------------------------------------------------
-      call output ('MAXFIT: version 18-Aug-94')
+      call output ('MAXFIT: version 16-Nov-95')
 c
 c  Get inputs
 c
@@ -223,7 +224,7 @@ c
       do i = 1, nax
         typesi(i) = 'abspix'
       end do
-      call setoaco (lun, 'off', nax, typeso)
+      call setoaco (lun, 'off', nax, 0, typeso)
       call w2wfco (lun, nax, typesi, ' ', pixmax, typeso, ' ', 
      +             .false., strout, strlen)
 c
@@ -250,7 +251,7 @@ c
 c
 c Convert coordinates
 c
-      call setoaco (lun, 'abs', nax, typeso)
+      call setoaco (lun, 'abs', nax, 0, typeso)
       call w2wfco (lun, nax, typesi, ' ', pixmax, typeso, ' ', 
      +             .false., strout, strlen)
 c
@@ -259,7 +260,7 @@ c
       do i = 1, nax
         call pader (typeso(i), strout(i), strlen(i))
 c
-        call ctypeco (lun, 0, i, ctype)
+        call ctypeco (lun, i, ctype)
         if (i.lt.3) then
           write (text,80) i, ctype, strout(i)(1:strlen(i))
 80        format ('  Axis ', i1, ': Fitted ', a, ' = ', a)
