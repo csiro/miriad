@@ -63,6 +63,8 @@ c    rjs  26feb99    Included "fitdate" to help with problems with AIPS dates.
 c    rjs  19jul99    Write EXTVER card into extension tables.
 c    rjs  28sep99    Change in number of digits printed in fitwrhd to
 c		     work around GILDAS flaw.
+c    rjs  21mar00    Transpose axes of visibility arrays on uvin where
+c		     necessary.
 c
 c  Bugs and Shortcomings:
 c    * IF frequency axis is not handled on output of uv data.
@@ -685,7 +687,7 @@ c    lu		File descriptor.
 c--
 c------------------------------------------------------------------------
 	integer bitpix,naxis,n1,Bytes,nProgRan,nFileRan
-	integer ipol,ifreq,icmplx,iif,ncmplx,nif
+	integer ipol,ifreq,icmplx,iif,ncmplx,nif,nt1,nt2,nt3
 	logical groups,dofloat
 	include 'fitsio.h'
 c
@@ -710,6 +712,8 @@ c
 c
 c  Get the size and indices of the complex, polarization and frequency axes.
 c
+	  nt2 = 1
+	  nt3 = 1
 	  call fuvget(lu,naxis,ncmplx,icmplx,npol,ipol,
      *	    nfreq,ifreq,nif,iif)
 	  if(ncmplx.ne.2.and.ncmplx.ne.3)
@@ -718,11 +722,31 @@ c
      *	     (icmplx.gt.ifreq.and.ifreq.gt.0).or.
      *	     (icmplx.gt.iif.and.iif.gt.0))
      *	    call bug('f','Cannot handle this ordering or COMPLEX axis')
-	  if((ipol.gt.ifreq.and.ipol*ifreq.gt.0).or.
-     *	     (ipol.gt.iif.and.ipol*iif.gt.0))
-     *	    call bug('f','Cannot handle this ordering of pol and freq')
-	  if(ifreq.gt.iif.and.ifreq*iif.gt.0)
-     *	    call bug('f','Cannot handle this ordering of freq and if')
+	  if(    (ipol.lt.ifreq.or.ipol*ifreq.eq.0).and.
+     *           (ipol.lt.iif.or.ipol*iif.eq.0))then
+	    if(ifreq.lt.iif.or.ifreq*iif.eq.0)then
+	      nt1 = 1
+	      nt2 = 1
+	      nt3 = 1
+	    else
+	      nt1 = ncmplx*npol
+	      nt2 = nif
+	      nt3 = nfreq
+	    endif
+	  else if((ifreq.lt.ipol.or.ifreq*ipol.eq.0).and.
+     *	         (ifreq.lt.iif.or.ifreq*iif.eq.0))then
+	    if(ipol.lt.iif.or.ipol*iif.eq.0)then
+	      nt1 = ncmplx
+	      nt2 = nfreq
+	      nt3 = npol
+	    else
+	      nt1 = ncmplx
+	      nt2 = nfreq*nif
+	      nt3 = npol
+	    endif
+	  else
+	    call bug('f','Cannot handle this ordering of axes')
+	  endif
 	  nfreq = nfreq * nif
 c
 c  Get all the scale factors associated with the random parameters,
@@ -747,6 +771,9 @@ c
 c  Handle a new file.
 c
 	else
+	  nt1 = 1
+	  nt2 = 1
+	  nt3 = 1
 	  nProgRan = 0
 	  nFileRan = 0
 	  ncmplx = 3
@@ -781,6 +808,9 @@ c
 	ncomplex(lu) = ncmplx
 	pols(lu)   = npol
 	freqs(lu)  = nfreq
+	nts1(lu) = nt1
+	nts2(lu) = nt2
+	nts3(lu) = nt3
 c
 	end
 c************************************************************************
@@ -1229,11 +1259,15 @@ c    PpVisp	Pixels per Visibility in the Program.
 c
 c------------------------------------------------------------------------
 	integer k,ktot,PpVisf,PpVisp,VispBuf,n,ltot
-	integer offset,iostat
+	integer offset,iostat,nts4
+	logical dotran
 	include 'fitsio.h'
 c
 	if(new(lu))call bug('f','Cannot read from new FITS file')
 	if(nRanProg(lu).eq.0)call fuvSetPa(lu,0,' ')
+	nts4 = nts1(lu)*nts2(lu)*nts3(lu)
+	dotran = nts4.gt.1
+	nts4 = ncomplex(lu)*pols(lu)*freqs(lu)/nts4
 c
 c  Initialise.
 c
@@ -1254,15 +1288,23 @@ c
 	  ltot = n * PpVisf
 	  if(float(lu))then
 	    call hreadr(item(lu),rarray,offset,4*ltot,iostat)
-	    if(BlankVal(lu).ne.0)
-     *	      call hreadi(item(lu),array,offset,4*ltot,iostat)
+	    if(dotran)call fuvtranr(rarray,rarrayd,
+     *		nts1(lu),nts2(lu),nts3(lu),nts4,ppvisf,n)
+	    if(BlankVal(lu).ne.0)then
+	      call hreadi(item(lu),array,offset,4*ltot,iostat)
+	      if(dotran)call fuvtrani(array,arrayd,
+     *		nts1(lu),nts2(lu),nts3(lu),nts4,ppvisf,n)
+	    endif
 	    call fuvrtrn2(lu,n,rarray,array,
-     *		PpVisf,visdat(k*PpVisp+1),PpVisp)
-	  else if(BypPix(lu).eq.2)then
-	    call hreadj(item(lu),array,offset,2*ltot,iostat)
-	    call fuvrtrn1(lu,n,array,PpVisf,visdat(k*PpVisp+1),PpVisp)
+     *			PpVisf,visdat(k*PpVisp+1),PpVisp)
 	  else
-	    call hreadi(item(lu),array,offset,4*ltot,iostat)
+	    if(BypPix(lu).eq.2)then
+	      call hreadj(item(lu),array,offset,2*ltot,iostat)
+	    else
+	      call hreadi(item(lu),array,offset,4*ltot,iostat)
+	    endif
+	    if(dotran)call fuvtrani(array,arrayd,
+     *		nts1(lu),nts2(lu),nts3(lu),nts4,ppvisf,n)
 	    call fuvrtrn1(lu,n,array,PpVisf,visdat(k*PpVisp+1),PpVisp)
 	  endif
 c
@@ -2081,6 +2123,86 @@ c
 	enddo
 c
 	if(icmplx.eq.0) call bug('f','COMPLEX axis missing')
+	end
+c************************************************************************
+	subroutine fuvtranr(Data,Tmp,n1,n2,n3,n4,ppvis,nvis)
+c
+	implicit none
+	integer n1,n2,n3,n4,ppvis,nvis
+	real data(ppvis*nvis),tmp(ppvis*nvis)
+c
+c------------------------------------------------------------------------
+	integer ii,io,i,j,k,l,m
+c
+	if(n1*n2*n3*n4.gt.ppvis)
+     *	  call bug('f','Something is screwy in fuvtranr')
+c
+	ii = 1 - n1*n2*n3*n4 + ppvis
+	do m=1,nvis
+	  io = 1
+	  do l=1,n4
+	    do k=1,n2
+	      do j=1,n3
+	        do i=1,n1
+		  Tmp(io) = Data(ii)
+		  io = io + 1
+		  ii = ii + 1
+		enddo
+		ii = ii - n1 + n1*n2
+	      enddo
+	      ii = ii - n1*n2*n3 + n1
+	    enddo
+	    ii = ii - n1*n2 + n1*n2*n3
+	  enddo
+	  ii = ii - n1*n2*n3*n4
+c
+	  do i=1,n1*n2*n3*n4
+	    data(ii) = tmp(i)
+	    ii = ii + 1
+	  enddo
+	  ii = ii - n1*n2*n3*n4 + ppvis
+	enddo
+c
+	end
+c************************************************************************
+	subroutine fuvtrani(Data,Tmp,n1,n2,n3,n4,ppvis,nvis)
+c
+	implicit none
+	integer n1,n2,n3,n4,ppvis,nvis
+	integer data(ppvis*nvis),tmp(ppvis*nvis)
+c
+c------------------------------------------------------------------------
+	integer ii,io,i,j,k,l,m
+c
+	if(n1*n2*n3*n4.gt.ppvis)
+     *	  call bug('f','Something is screwy in fuvtrani')
+c
+	ii = 1 - n1*n2*n3*n4 + ppvis
+	do m=1,nvis
+	  io = 1
+	  do l=1,n4
+	    do k=1,n2
+	      do j=1,n3
+	        do i=1,n1
+		  Tmp(io) = Data(ii)
+		  io = io + 1
+		  ii = ii + 1
+		enddo
+		ii = ii - n1 + n1*n2
+	      enddo
+	      ii = ii - n1*n2*n3 + n1
+	    enddo
+	    ii = ii - n1*n2 + n1*n2*n3
+	  enddo
+	  ii = ii - n1*n2*n3*n4
+c
+	  do i=1,n1*n2*n3*n4
+	    data(ii) = tmp(i)
+	    ii = ii + 1
+	  enddo
+	  ii = ii - n1*n2*n3*n4 + ppvis
+	enddo
+c
 	end
 c************************************************************************
 c* FitRdhdi -- Read an integer value from a FITS file header.
