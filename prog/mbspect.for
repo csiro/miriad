@@ -65,11 +65,18 @@ c	1deriv  Take 1-sided derivative of spectrum before plotting
 c	        and after Hanning smoothing. Useful for Zeeman enthusiasts.
 c	2deriv  Take 2-sided derivative of spectrum before plotting.
 c	histo   Plot the spectrum as a histogram instead of joining points.
-c	pstyle  Alternative plot style, where the object and position
-c               information is omitted and the comment field is centred
+c	pstyle1 Alternative plot style, where the object and position
+c               information is omitted and the comment field is centered
 c               at the top of the plot. Typically, this is used for
 c               publication-quality plots (the source name, if required.
 c               should be inserted into the comment field).
+c	pstyle2 Alternative plot style, where the object and position
+c               information is omitted, the comment field is centered
+c               at the top of the plot (as with options=pstyle1), and
+c               the x and y axis labels are omitted. Typically, this is 
+c               used to generate publication-quality n x m matrix plots
+c               (the source name, if required should be inserted into 
+c               the comment field).
 c       measure Measure various spectral parameters on plotted spectrum.
 c               If a profile window is set, the line is only measured 
 c               within this window. If the order keyword is used, the fit
@@ -127,12 +134,14 @@ c    rjs   3sep99  Change pgpt1 to pgpt calls.
 c    lss   3sep99  pgpt bug when order negative; added rms output line
 c    pjt  20sep99  fixed obvious syntax error - does anybody use flint anymore
 c    lss  18apr02  Added axis label scaling (csize)
+c    lss   8may02  Added alternative axis labelling, lengthened in,out,
+c                  log strings
 c----------------------------------------------------------------------c
 	include 'maxdim.h'
 	integer maxco,maxnax,naxis,maxch
  	character version*(*)
 
-	parameter(version='version 1.0 20-Sep-99')
+	parameter(version='version 08-May-2002')
 
 	parameter(maxco=15,maxnax=3)
 	parameter(maxch=32)
@@ -150,8 +159,10 @@ c
 	real bmaj,bmin,bpa,cdelt1,cdelt2,cdelt3,cdeltr,cdeltd
 	integer lIn,lOut,raxis,daxis,vaxis,i,nsmth,nchan,iostat
 	integer width(2),poly,nmask
-        logical none, deriv1, deriv2, histo, measure, pstyle, subpoly
-	character*64 in,out,logf,xlabel,ylabel,device,xaxis,yaxis, cpoly
+        logical none, deriv1, deriv2, histo, measure
+	logical pstyle1, pstyle2, subpoly
+	character*132 in,out,logf
+        character*64 xlabel,ylabel,device,xaxis,yaxis, cpoly
 	character title*130, line*72,comment*80, str*3, word*80
 	character*9 object,date,rctype*9,dctype*9,vctype*9
 	character*16 unit0
@@ -223,7 +234,7 @@ c
  120	   poly=abs(poly)
 	   if(poly.gt.10) goto 100
         endif
-        call getopt (deriv1, deriv2, histo, measure, pstyle)
+        call getopt (deriv1, deriv2, histo, measure, pstyle1, pstyle2)
 	call keya('device',device,' ')
         call keyr('csize',csize(1),0.0)
         call keyr('csize',csize(2),csize(1))
@@ -489,12 +500,20 @@ c  Make plots if requested.
 c       
 	  call pgscf(2)
 	  lab1=1.1
-	  lab2=0.8
+	  lab2=1.1
 	  if(csize(1).ne.0.0) lab1=lab1*csize(1)
 	  if(csize(2).ne.0.0) lab2=lab2*csize(2)
 	  call pgsch (lab1)
 	  call pgsls (1)
-	  call pgenv (xdmin, xdmax, ydmin, ydmax, 0, 0)
+
+	  if(pstyle2) then
+	    call pgsvp(0.01+lab1/30.0,0.99,0.01+lab1/30.0,0.99-
+     1                 lab2/30.0)
+	  end if
+
+	  call pgswin (xdmin, xdmax, ydmin, ydmax)
+	  call pgbox('BCNTS1',0.0,0.0,'BCNTS',0.0,0.0)
+c	  call pgenv (xdmin, xdmax, ydmin, ydmax, 0, 0)
           if (histo) then
   	    call pgHline (nchan,value,spec,2.)
           else
@@ -544,10 +563,10 @@ c
 	     call pgsls(1)
 	     call pgsci(1)
 	  end if
-	  if(pstyle) then
+	  if(pstyle1) then
 	    call pglab (xlabel,ylabel,comment)
 	  else
-	    call pglab (xlabel,ylabel,' ')
+	    if (.not.pstyle2) call pglab (xlabel,ylabel,' ')
 c
 c  Extra information
 c
@@ -557,28 +576,32 @@ c
 	    call pgsvp(xv(1),xv(2),yv(2),1.0)
 	    call pgswin(0.0,1.0,0.0,1.0)
 	    call pgsch(lab2)
-	    call pgscf(1)
-	    call pgtext(0.0,0.8,'Object: '//object)
-	    call pgtext(0.0,0.6,'Requested: '//ra1//dec1)
-	    call pgtext(0.0,0.4,'Actual    : '//ra2//dec2)
-	    title='Equinox  :'
-	    if(epoch.ne.0.0) then
-	       if(epoch.eq.1950.0) then
-	         title='Equinox  : B1950'
-	       else if(epoch.eq.2000.0) then
-	         title='Equinox  : J2000'
-	       else
-	         write(title(13:16), '(i4)') int(epoch)
+	    if(pstyle2) then
+	       call pgptxt(0.5, 0.5, 0.0, 0.5,comment)
+	    else
+	       call pgscf(1)
+	       call pgtext(0.0,0.8,'Object: '//object)
+	       call pgtext(0.0,0.6,'Requested: '//ra1//dec1)
+	       call pgtext(0.0,0.4,'Actual    : '//ra2//dec2)
+	       title='Equinox  :'
+	       if(epoch.ne.0.0) then
+	          if(epoch.eq.1950.0) then
+	            title='Equinox  : B1950'
+	          else if(epoch.eq.2000.0) then
+	            title='Equinox  : J2000'
+	          else
+	            write(title(13:16), '(i4)') int(epoch)
+	          end if
 	       end if
-	    end if
-	    call pgtext(0.0,0.2,title)
-	    call pgptext(1.0,0.8,0.0,1.0,comment)
-	    call pgsvp(xv(1),xv(2),yv(1),yv(2))
-	    call pgswin(xw(1),xw(2),yw(1),yw(2))
-	    call pgsch(1.0)
-	    call pgscf(2)
-          endif
-	endif
+	       call pgtext(0.0,0.2,title)
+	       call pgptext(1.0,0.8,0.0,1.0,comment)
+	       call pgsvp(xv(1),xv(2),yv(1),yv(2))
+	       call pgswin(xw(1),xw(2),yw(1),yw(2))
+	       call pgsch(1.0)
+	       call pgscf(2)
+             endif
+	   endif
+	end if
 
 c
 c  Subtract fit now if required
@@ -1033,7 +1056,8 @@ c----------------------------------------------------------------------c
 	end
 c
 c
-      subroutine getopt (deriv1, deriv2, histo, measure, pstyle)
+      subroutine getopt (deriv1, deriv2, histo, measure, pstyle1,
+     1                   pstyle2)
 c----------------------------------------------------------------------
 c     Decode options array into named variables.
 c
@@ -1042,19 +1066,21 @@ c     deriv1     True means take 1-sided derivative of spectrum
 c     deriv2     True means take 2-sided derivative of spectrum
 c     histo      True means plot a histogram rather than a curve
 c     measure    True means measure spectral parameters
-c     pstyle     True means use alternative plot style
+c     pstyle1    True means use alternative plot style
+c     pstyle2    True means use alternative plot style 2
 c
 c-----------------------------------------------------------------------
       implicit none
 c
-      logical deriv1, deriv2, histo, measure, pstyle
+      logical deriv1, deriv2, histo, measure, pstyle1, pstyle2
 cc
       integer maxopt
-      parameter (maxopt = 5)
+      parameter (maxopt = 6)
 c
       character opshuns(maxopt)*7
       logical present(maxopt)
-      data opshuns /'1deriv', '2deriv', 'histo', 'measure','pstyle'/
+      data opshuns /'1deriv', '2deriv', 'histo', 'measure','pstyle1',
+     1              'pstyle2'/
 c-----------------------------------------------------------------------
       call options ('options', opshuns, present, maxopt)
 c
@@ -1063,7 +1089,8 @@ c
       if (deriv1 .and. deriv2) deriv2 = .false.
       histo = present(3)
       measure = present(4)
-      pstyle= present(5)
+      pstyle1= present(5)
+      pstyle2= present(6)
 c
       end
 c
