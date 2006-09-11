@@ -28,6 +28,8 @@ c		  and map center. Simple polarisation processing. Use
 c		  MemAlloc routine.
 c    rjs   2aug91 Changed "pol" to "polarization" in simple polarization
 c	          handling.
+c    rjs  30aug91 Correct determination of u-v when computing model off
+c		  the phase center.
 c************************************************************************
 c*ModelIni -- Ready the uv data file for processing by the Model routine.
 c&mchw
@@ -777,10 +779,11 @@ c------------------------------------------------------------------------
 	parameter(pi=3.141592653589793,maxlen=5*maxchan+10)
 c
 	integer nread,length,j,i
-	real xref,yref,Rp,Ip,theta,Out(maxlen)
+	real xref,yref,theta,temp,Out(maxlen)
 	double precision preamble(4)
 	logical accept,flags(maxchan)
 	complex In(maxchan)
+	double precision skyfreq(maxchan)
 c
 	xref = (offset(1)/3600.) * (pi/180)
 	yref = (offset(2)/3600.) * (pi/180)
@@ -798,19 +801,37 @@ c
 	dowhile(nread.eq.nchan)
 	  call header(tvis,preamble,In,flags,nchan,accept,Out,nhead)
 	  if(accept)then
-	    theta = 2*pi*(xref*preamble(1) + yref*preamble(2))
-	    Rp = level * cos(theta)
-	    Ip = level * sin(theta)
-	    j = 1
-	    do i=nhead+1,nhead+5*nchan,5
-	      Out(i  ) = real(In(j))
-	      Out(i+1) = aimag(In(j))
-	      Out(i+2) = Rp
-	      Out(i+3) = Ip
-	      Out(i+4) = 1
-	      if(.not.flags(j)) Out(i+4) = -1
-	      j = j + 1
-	    enddo
+	    if(abs(xref)+abs(yref).eq.0)then
+	      j = 1
+	      do i=nhead+1,nhead+5*nchan,5
+	        Out(i  ) = real(In(j))
+	        Out(i+1) = aimag(In(j))
+	        Out(i+2) = level
+	        Out(i+3) = 0
+	        Out(i+4) = 1
+	        if(.not.flags(j)) Out(i+4) = -1
+	        j = j + 1
+	      enddo
+	    else
+	      theta = 2*pi*(xref*preamble(1) + yref*preamble(2))
+	      if(nchan.eq.1)then
+		skyfreq(1) = 1
+	      else
+		call uvinfo(tvis,'sfreq',skyfreq)
+	        theta = theta / skyfreq(1)
+	      endif
+	      j = 1
+	      do i=nhead+1,nhead+5*nchan,5
+	        Out(i  ) = real(In(j))
+	        Out(i+1) = aimag(In(j))
+		temp = theta * skyfreq(j)
+		Out(i+2) = level * cos(temp)
+		Out(i+3) = level * sin(temp)
+	        Out(i+4) = 1
+	        if(.not.flags(j)) Out(i+4) = -1
+	        j = j + 1
+	      enddo
+	    endif
 c
 	    call ModStat(calscale,tvis,Out(nhead+1),nchan,VisPow,ModPow)
 	    call scrwrite(tscr,Out,nvis*length,length)
