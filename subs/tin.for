@@ -2,6 +2,7 @@ c************************************************************************
 c  History:
 c    25aug97 rjs	Original version.
 c     8sep97 rjs	Better error message.
+c    29oct97 rjs        tinLen was terribly flawed ... fix it.
 c************************************************************************
 	subroutine tinOpen(name)
 c
@@ -112,11 +113,14 @@ c  Return the number of non=blank characters in the current line.
 c
 c------------------------------------------------------------------------
 	include 'tin.h'
+	logical more
 c
 c  Skip white at the start of the line.
 c
-	dowhile(k1.le.k2)
-	  if(line(k1:k1).le.' ')k1 = k1 + 1
+	more = .true.
+	dowhile(more.and.k1.le.k2)
+	  more = line(k1:k1).le.' '
+	  if(more)k1 = k1 + 1
 	enddo
 c
 	tinLen = k2 - k1 + 1
