@@ -30,14 +30,15 @@ c    rjs  02apr02 Get it to work for Stokes parameters.
 c    rjs  04apr02 Realy fix it this time.
 c    rjs  08apr02 Allow negative values when taking cube roots,
 c		  and print out number of triples.
+c    rjs  04may04 Handle more antennas.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
 	integer MAXDAT,MAXSRC,MAXPOL
 	integer PolMin,PolMax
 	character version*(*)
-	parameter(version='version 08-Apr-02')
-	parameter(MAXDAT=15,MAXPOL=2,MAXSRC=1024)
+	parameter(version='version 04-May-04')
+	parameter(MAXDAT=30,MAXPOL=2,MAXSRC=1024)
 	parameter(PolMin=-8,PolMax=4)
 c
 	logical dotrip,polp,dopara
