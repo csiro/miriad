@@ -85,6 +85,8 @@ c	            mode. The output dataset contains no bins, but instead
 c	            appears as data measured with small cycle times.
 c	  'pmps'    Undo `poor man's phase switching'. This is an obscure option
 c	            that you should not generally use.
+c	  'single'  Assume input is a single dish RPFITS file (from Mopra or
+c	            Parkes). This is usually used together with option 'relax'.
 c@ nfiles
 c	This gives one or two numbers, being the number of files to skip,
 c	followed by the number of files to process. This is only
@@ -225,7 +227,7 @@ c
 	integer ifile,ifsel,nfreq,iostat,nfiles,i
 	double precision rfreq(2)
 	logical doauto,docross,docomp,dosam,relax,mmrelax,unflag,dohann
-	logical dobary,doif,birdie,dowt,dopmps,doxyp,polflag,hires
+	logical dobary,doif,birdie,dowt,dopmps,doxyp,polflag,hires,sing
 	integer fileskip,fileproc,scanskip,scanproc
 c
 c  Externals.
@@ -245,7 +247,8 @@ c
         call keyi('ifsel',ifsel,0)
         call mkeyd('restfreq',rfreq,2,nfreq)
 	call getopt(doauto,docross,docomp,dosam,doxyp,relax,mmrelax,
-     *	  unflag,dohann,birdie,dobary,doif,dowt,dopmps,polflag,hires)
+     *	  sing,unflag,dohann,birdie,dobary,doif,dowt,dopmps,polflag,
+     *	  hires)
 	call keyi('nfiles',fileskip,0)
 	call keyi('nfiles',fileproc,nfiles-fileskip)
 	if(nfiles.gt.1.and.fileproc+fileskip.gt.nfiles)
@@ -301,7 +304,8 @@ c
 	      call liner('Processing file '//in(ifile))
 	    endif
 	    call RPDisp(in(i),scanskip,scanproc,doauto,docross,
-     *		relax,mmrelax,unflag,polflag,ifsel,rfreq,nfreq,iostat)
+     *		relax,mmrelax,sing,unflag,polflag,ifsel,rfreq,nfreq,
+     *		iostat)
 	  endif
 	enddo
 c
@@ -321,12 +325,12 @@ c
 	end
 c************************************************************************
 	subroutine GetOpt(doauto,docross,docomp,dosam,doxyp,relax,
-     *	  mmrelax,
+     *	  mmrelax,sing,
      *	  unflag,dohann,birdie,dobary,doif,dowt,dopmps,polflag,hires)
 c
 	implicit none
 	logical doauto,docross,dosam,relax,mmrelax,unflag,dohann,dobary
-	logical docomp,doif,birdie,dowt,dopmps,doxyp,polflag,hires
+	logical docomp,doif,birdie,dowt,dopmps,doxyp,polflag,hires,sing
 c
 c  Get the user options.
 c
@@ -348,15 +352,17 @@ c    dopmps	Undo "poor man's phase switching"
 c    polflag	Flag all polarisations if any are bad.
 c    hires      Convert bin-mode to high time resolution data.
 c    mmrelax    
+c    sing	Single dish mode.
 c------------------------------------------------------------------------
 	integer nopt
-	parameter(nopt=16)
+	parameter(nopt=17)
 	character opts(nopt)*8
 	logical present(nopt)
 	data opts/'noauto  ','nocross ','compress','relax   ',
      *		  'unflag  ','samcorr ','hanning ','bary    ',
      *		  'noif    ','birdie  ','reweight','xycorr  ',
-     *		  'nopflag ','hires   ','pmps    ','mmrelax '/
+     *		  'nopflag ','hires   ','pmps    ','mmrelax ',
+     *		  'single  '/
 	call options('options',opts,present,nopt)
 	doauto = .not.present(1)
 	docross = .not.present(2)
@@ -374,6 +380,7 @@ c------------------------------------------------------------------------
 	hires   = present(14)
 	dopmps  = present(15)
 	mmrelax = present(16)
+	sing    = present(17)
 c
 	if((dosam.or.doxyp).and.relax)call bug('f',
      *	  'You cannot use options samcorr or xycorr with relax')
@@ -773,11 +780,12 @@ c
 	newpnt = .true.
 	end
 c************************************************************************
-	subroutine PokeAnt(n,x,y,z)
+	subroutine PokeAnt(n,x,y,z,sing)
 c
 	implicit none
 	integer n
 	double precision x(n),y(n),z(n)
+	logical sing
 c
 c  Set antenna coordinates.
 c
@@ -805,7 +813,8 @@ c
 	  more = more.and.i.le.nants
 	enddo
 	if(i.gt.nants)then
-	  call bug('w','Antenna table is identically 0!!')
+	  if(.not.sing)
+     *	    call bug('w','Antenna table is identically 0!!')
 	  cost = 1
 	  sint = 0
 	  z0 = 0
@@ -1656,13 +1665,13 @@ c------------------------------------------------------------------------
 	end
 c************************************************************************
 	subroutine RPDisp(in,scanskip,scanproc,doauto,docross,relax,
-     *	  mmrelax,unflag,polflag,ifsel,userfreq,nuser,iostat)
+     *	  mmrelax,sing,unflag,polflag,ifsel,userfreq,nuser,iostat)
 c
 	implicit none
 	character in*(*)
 	integer scanskip,scanproc,ifsel,nuser,iostat
 	double precision userfreq(*)
-	logical doauto,docross,relax,mmrelax,unflag,polflag
+	logical doauto,docross,relax,mmrelax,unflag,polflag,sing
 c
 c  Process an RPFITS file. Dispatch information to the
 c  relevant Poke routine. Then eventually flush it out with PokeFlsh.
@@ -1674,6 +1683,7 @@ c    doauto	Save autocorrelation data.
 c    docross	Save crosscorrelation data.
 c    relax	Save data even if the SYSCAL record is bad.
 c    mmrelax	Save data even if the XY phase/XY amp are bad.
+c    sing
 c    polflag	Flag all polarisations if any are bad.
 c    unflag	Save data even though it may appear flagged.
 c    ifsel	IF to select. 0 means select all IFs.
@@ -1865,7 +1875,7 @@ c
 	      endif
 	      call SimMap(if_num,n_if,if_simul,if_chain,ifsel,
      *		  If2Sim,nifs,Sim2If,Sif,MAXSIM)
-	      call ChkAnt(x,y,z,antvalid,nant)
+	      call ChkAnt(x,y,z,antvalid,nant,sing)
 	    endif
 c
 c  Determine whether to flush the buffers.
@@ -1918,7 +1928,7 @@ c
 		call Poke1st(time,nifs(simno),nant)
 		if(NewScan)call PokeMisc(instrument,rp_observer,
      *							version)
-	        if(an_found)call PokeAnt(nant,x,y,z)
+	        if(an_found)call PokeAnt(nant,x,y,z,sing)
 	        if(NewScan.or.NewFreq)then
 		  do i=1,nifs(simno)
 		    id = Sim2If(i,simno)
@@ -2149,19 +2159,20 @@ c------------------------------------------------------------------------
 	pcent = val//'%'
 	end
 c************************************************************************
-	subroutine ChkAnt(x,y,z,antvalid,nant)
+	subroutine ChkAnt(x,y,z,antvalid,nant,sing)
 c
 	implicit none
 	integer nant
 	double precision x(nant),y(nant),z(nant)
-	logical antvalid(nant)
+	logical antvalid(nant),sing
 c
 c  Check for a valid antenna position.
 c------------------------------------------------------------------------
 	integer i
 c
 	do i=1,nant
-	  antvalid(i) = abs(x(i)) + abs(y(i)) + abs(z(i)).gt.0
+	  antvalid(i) = (abs(x(i)) + abs(y(i)) + abs(z(i)).gt.0).or.
+     *			sing
 	enddo
 c
 	end
