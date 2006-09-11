@@ -89,6 +89,7 @@ c    rjs  23aug94 Improve hashing algorithm.
 c    rjs   6sep94 Improve error message.
 c    rjs   5oct94 Support linetype averaging.
 c    rjs  13jan96 Increase MAXHASH.
+c    rjs  27jul96 Re-wrote interp option to make it more robust.
 c
 c  Problems:
 c    * Should do simple spectral index fit.
@@ -2793,9 +2794,8 @@ c
 	enddo
 	
 	end
-
 c************************************************************************
-	subroutine intext(npol, nants, nchan, nspect, nschan, pass)
+	subroutine intext(npol,nants,nchan,nspect,nschan, pass)
 c
 	implicit none
 	integer npol, nants, nchan, nspect, nschan(nspect)
@@ -2822,54 +2822,94 @@ c		nchan * npol * nants, so we have to do some reorganising
 c		before we write out.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
-	integer i, j, k, l, p1, p2, p3, p4, xint(MAXCHAN), spoff
-        complex temp
-	double precision xfit(MAXCHAN), yrfit(MAXCHAN), yifit(MAXCHAN),
-     *    a(MAXCHAN,2), b(MAXCHAN,2), c(MAXCHAN,2), seval
-        real fr, fi
+	integer i,j,k,l,ngaps,ischan,ig,chanlo,chanhi,nwidth,npnt,order
+	integer ifail
+	real rcoeff(3),icoeff(3),x
+	real wp(MAXCHAN),xp(MAXCHAN),rp(MAXCHAN),ip(MAXCHAN)
+	logical ok(MAXCHAN)
+	integer chan1(MAXCHAN/2),chan2(MAXCHAN/2)
+	real wrk1(6),wrk2(3*MAXCHAN),a,b,rnorm
+	logical within
+	complex temp
 c
-        do l = 1, nants
-          do k = 1, npol    
-            p3 = 1  
-            spoff = 0
-            do j = 1, nspect
-              p1 = 0
-              p2 = 0
-              do i = 1, nschan(j)
+	do l=1,npol
+	  do k=1,nants
+	    ischan = 0
+	    do j=1,nspect
+	      if(nschan(j).gt.MAXCHAN)
+     *		call bug('f','Too many channels')
 c
-c Extract channels with and without solutions
+c  Find the gaps in this spectrum.
 c
-                temp = pass(l,p3,k)
-	        if(abs(real(temp))+abs(aimag(temp)).ne.0.0) then
-                  p1 = p1 + 1
-                  xfit(p1) = i
-                  yrfit(p1) = real(temp)
-                  yifit(p1) = aimag(temp)
-                else
-                  p2 = p2 + 1
-                  xint(p2) = i
-                end if
-                p3 = p3 + 1
-              end do
+	      ngaps = 0
+	      within = .false.
+
+	      do i=1,nschan(j)
+		temp = Pass(k,i+ischan,l)
+		ok(i) = abs(real(temp))+abs(aimag(temp)).gt.0
+		if(ok(i))then
+		  if(within.and.ngaps.gt.0)then
+		    chan2(ngaps) = i-1
+		  endif
+		  within = .false.
+		else
+		  if(.not.within.and.i.gt.1)then
+		    ngaps = ngaps + 1
+		    chan1(ngaps) = i
+		  endif
+		  within = .true.
+		endif
+	      enddo
 c
-c Spline fit and resample real and imaginary.  Must have 50%
-c of channels unflagged to do fit.
+	      if(within)ngaps = max(ngaps - 1,0)
 c
-              if (p2.gt.0 .and. real(p1)/real(nschan(j)).gt.0.5) then
-                call spline (p1, xfit, yrfit, a(1,1), b(1,1), c(1,1))
-                call spline (p1, xfit, yifit, a(1,2), b(1,2), c(1,2))
-                do i = 1, p2
-                  fr = seval(p1, dble(xint(i)), xfit, yrfit, a(1,1), 
-     *                       b(1,1), c(1,1))
-                  fi = seval(p1, dble(xint(i)), xfit, yifit, a(1,2),
-     *                       b(1,2), c(1,2))
-                  p4 = xint(i) + spoff
-                  pass(l,p4,k) = cmplx(fr,fi)
-                end do
-              end if
-              spoff = spoff + nschan(j)
-            end do
-          end do
-        end do
+c  We have a list of the gaps in the spectrum. For a gap width of "nwidth",
+c  fit a quadratic to the good channels on within "nwidth" channels of
+c  the band edge.
 c
-        end
+	      a = 2.0/real(nschan(j)-1)
+	      b = 0.5*(nschan(j)+1)
+	      do ig=1,ngaps
+		nwidth = chan2(ig) - chan1(ig) + 1
+		chanlo = max(chan1(ig) - nwidth,1)
+		chanhi = min(chan2(ig) + nwidth,nschan(j))
+		npnt = 0
+		do i=chanlo,chanhi
+		  temp = Pass(k,i+ischan,l)
+		  if(ok(i))then
+		    npnt = npnt + 1
+		    xp(npnt) = a*(i-b)
+		    rp(npnt) = real(temp)
+		    ip(npnt) = aimag(temp)
+		    wp(npnt) = 1
+		  endif
+		enddo
+		order = 2
+		if(npnt.lt.5)then
+		  order = 1
+		  rcoeff(3) = 0
+		  icoeff(3) = 0
+		endif
+		call wpfit(order,npnt,xp,rp,wp,rcoeff,
+     *					rnorm,wrk1,wrk2,ifail)
+		if(ifail.eq.0)
+     *		    call wpfit(order,npnt,xp,ip,wp,icoeff,
+     *					rnorm,wrk1,wrk2,ifail)
+		if(ifail.ne.0)call bug('f','Poly fit failed')
+c
+c  Interpolate the missing channels.
+c
+		do i=chan1(ig),chan2(ig)
+		  x = a*(i-b)
+		  Pass(k,i+ischan,l) = cmplx(
+     *		    rcoeff(1) + (rcoeff(2) + rcoeff(3)*x)*x ,
+     *		    icoeff(1) + (icoeff(2) + icoeff(3)*x)*x )
+		enddo 
+	      enddo
+c
+	      ischan = ischan + nschan(j)
+	    enddo
+	  enddo
+	enddo
+c
+	end
