@@ -122,6 +122,10 @@ c     nebk   19oct95     Bias wedges by pixr(1) rather than image min
 c                        when log or square root transfer function
 c     nebk   22nov95     Fix problem with top/right labelling of multi-panel
 c 	                 plots. Remove WEDISP from call sequence of VPSIZCG
+c     nebk   23nov95     Add argument CONLAB to CONTURCG to label contours
+c                        and new call for CTYPECO
+c     nebk   29nov95     Use only W2WCO routines in NAXLABCG and friends,
+c                        rather than directly using co.for routines
 c**********************************************************************
 c
 c* annboxCG -- Annotate plot with information from a box image 
@@ -454,7 +458,7 @@ c
       character str1*132, str2*132, gentyp*4, typeo(maxnax)*6, 
      +  typei(maxnax)*6, refstr(maxnax)*20, ctype*9, 
      +  itoaf*1
-      integer len1, naxis, maxis, ip, il1, i, ir(maxnax)
+      integer len1, naxis, maxis, ip, il1, i, ir(maxnax), il
 c-----------------------------------------------------------------------
 c
 c Define viewport to space left at bottom of viewsurface and define
@@ -506,9 +510,8 @@ c
 c Bit of a mess for UU or VV as their generic descriptor is UV
 c
         if (gentyp(1:il1).eq.'UV') then
-          call ctypeco (lh, i, ctype)
-          if (index(ctype,'UU').ne.0 .or. 
-     +        index(ctype,'uu').ne.0) then
+          call ctypeco (lh, i, ctype, il)
+          if (ctype(1:il).eq.'UU') then
             str1(ip:) = 'UU,'
           else 
             str1(ip:) = 'VV,'
@@ -954,17 +957,18 @@ c* conturCG -- Draw contour plot
 c& nebk
 c: plotting
 c+
-      subroutine conturcg (blank, solneg, win1, win2, dobl, 
+      subroutine conturcg (conlab, blank, solneg, win1, win2, dobl, 
      +                     data, nlevs, levs, tr, sdbreak)
 c
       implicit none
       integer win1, win2, nlevs
       real data(win1,win2), levs(*), tr(6), sdbreak, blank
-      logical solneg, dobl
+      logical solneg, dobl, conlab
 c
 c  Draw contours
 c
 c  Input:
+c    conlab   Label contours ?
 c    blank    Vaue used for magic blanks
 c    solneg   False => Positive contours solid, negative dashed.
 c             True  => Positive contours dashed, negative solid.
@@ -979,8 +983,28 @@ c             world coords
 c    sdbreak  Value for distinction between solid and dashed contours
 c--
 c-----------------------------------------------------------------------
-      integer stylehi, stylelo, i
+      integer stylehi, stylelo, i, intval, minint, il, ns
+      character label*20
 c-----------------------------------------------------------------------
+c
+c Set how often we label contours.  The PGPLOT routine is prett dumb.
+c Because contouring is done in quadrants, each quadrant is labelled
+c individually.  The size of the quadrants is 256 pixels (see
+c pgconx, pgcnxb).  MININT says draw first label after contours
+c cross this many cells, and every INTVAL thereafter. 
+c
+      minint = 20
+      intval = 40
+      if (conlab) then
+c        write (*,*) 'default minint, intval=', minint,intval
+c        write (*,*) 'enter minint, intval'
+c        read (*,*) minint,intval
+        if (dobl) then
+          call output ('Contour labelling is not yet implemented')
+          call output ('for images containing blanked pixels')
+        end if
+      end if
+c
       if (.not.solneg) then
         stylehi = 1
         stylelo = 2
@@ -1000,22 +1024,38 @@ c
 c This PG contouring routine does not do a very good job on dashed
 c contours and is slower than PGCONT
 c
-           call pgconb (data, win1, win2, 1, win1, 1, win2, 
-     +                  levs(i), -1, tr, blank)
+          call pgconb (data, win1, win2, 1, win1, 1, win2, 
+     +                 levs(i), -1, tr, blank)
         else
 c
 c Run faster contouring routine if no blanks
 c
-           call pgcont (data, win1, win2, 1, win1, 1, win2, 
-     +                  levs(i), -1, tr)
+          call pgcont (data, win1, win2, 1, win1, 1, win2, 
+     +                 levs(i), -1, tr)
+        end if
+c
+c Label contour value
+c
+        if (conlab) then
+          ns = int(abs(log10(abs(levs(i))))) + 3
+          call strfmtcg (real(levs(i)), ns, label, il)
+          if (dobl) then
+c            call pgcnlb (data, win1, win2, 1, win1, 1, win2,
+c     +                 levs(i), tr, blank, label(1:il), 
+c     +                 intval, minint)
+          else
+            call pgconl (data, win1, win2, 1, win1, 1, win2,
+     +                 levs(i), tr, label(1:il), intval, minint)
           end if
+        end if
       end do
+      call pgupdt
       call pgsls (1)
 c
       end
 c
 c
-      subroutine drwlincg (lun, axis, costr, n, wc, zp, p1, p2,
+      subroutine drwlincg (lun, axis, type, n, wc, zp, p1, p2,
      +                     xline, yline)
 c-----------------------------------------------------------------------
 c  Draw a vertical or horizontal line at constant x or y  coordinate
@@ -1023,7 +1063,7 @@ c
 c  Input
 c    lun   handle for coordinate conversions
 c    axis  'x' or 'y' for vertical or horizontal lines
-c    costr coordinate conversion string
+c    type  Coordinate conversion types matching LABTYP
 c    n     number of points
 c    w     constant world coordinate (x or y depending on axis)
 c    zp    z absolute pixel for this plane
@@ -1036,15 +1076,19 @@ c-----------------------------------------------------------------------
       integer n, lun
       double precision wc, p1, p2, zp
       real xline(n), yline(n)
-      character*(*) costr, axis
+      character*(*) type(3), axis
 cc
       double precision inc, wi(3), po(3)
-      integer i
-      character costr2*8
+      integer i, naxis
+      character typei(3)*6, typeo(3)*6
 c-----------------------------------------------------------------------
       inc = (p2-p1)/real(n-1)
-      costr2 = costr
-      costr2(7:8) = 'ap'
+      do i = 1, 3
+        typei(i) = type(i)
+        typeo(i) = 'abspix'
+      end do
+      call rdhdi (lun, 'naxis', naxis, 0)
+      naxis = min(3,naxis)
 c
       if (axis.eq.'x') then
 c
@@ -1052,21 +1096,22 @@ c Draw vertical line at constant x
 c
         wi(1) = wc
         wi(2) = p1
-        costr2(4:6) = 'ap/'
+        typei(2) = 'abspix'
       else if (axis.eq.'y') then
 c
 c Draw horizontal line at constant y
 c
         wi(1) = p1
         wi(2) = wc
-        costr2(1:3) = 'ap/'
+        typei(1) = 'abspix'
       else
         call bug ('f', 'DRWLINCG: unrecognized axis')
       end if
       wi(3) = zp
 c
       do i = 1, n
-        call cocvt (lun, costr2, wi, 'ap/ap/ap', po)
+        call w2wco (lun, naxis, typei, ' ', wi, typeo, ' ', po)
+c
         xline(i) = po(1)
         yline(i) = po(2)
 c
@@ -1081,8 +1126,8 @@ c
       end
 c
 c
-      subroutine drwtikcg (axis, opts, tickd, nsub, ticklp, 
-     +                     costr, lun, axmin, axmax, blcd, trcd, zp)
+      subroutine drwtikcg (axis, opts, tickd, nsub, ticklp, typeo,
+     +                     lun, axmin, axmax, blcd, trcd, zp)
 c-----------------------------------------------------------------------
 c     Write on the plot ticks or grid.  If a grid is requested,
 c     no minor ticks are drawn.  These ticks/grid are correct
@@ -1091,18 +1136,18 @@ c
 c  Input 
 c    axis      Indicate which axis we are ticking; 'x' or 'y'
 c    opts      Options string
-c    tickd     Major tick interval (radians or linear coordinate value)
+c    tickd     Major tick interval 
 c    nsub      Number of subintervals between major ticks
 c    ticklp    Length of tick in pixels
-c    costr     Coordinate conversion string
+c    typeo     Coordinate conversion types matching LABTYP
 c    lun       Handle for coordinate conversions
-c    axmin,max Axis min and max in radians or linear coordinate
+c    axmin,max Axis min and max in world according to LABTYP
 c    blc,trcd  Orthogonal axis min and max in absolute pixels
 c    zp        Absolute pixel of third axis appropriate to this image
 c-----------------------------------------------------------------------
       implicit none
       integer lun, nsub
-      character axis*1, costr*(*), opts*(*)
+      character axis*1, opts*(*), typeo(3)*6
       double precision tickd, ticklp, axmin, axmax, blcd, trcd, zp
 cc
       integer maxpts
@@ -1112,9 +1157,6 @@ cc
       double precision ax1, axx, axxx, tinc
       logical firstt
 c-----------------------------------------------------------------------
-      if (axis.eq.'x') then
-c         write (*,*) 'x1,x2=',axmin,axmax
-      end if
       call pgbbuf
 c
 c Save PGPLOT line width
@@ -1137,7 +1179,7 @@ c
 c Draw line of constant x or y coordinate (thin lines)
 c
           call pgslw (1)
-          call drwlincg (lun, axis, costr, maxpts, axx, zp, blcd,
+          call drwlincg (lun, axis, typeo, maxpts, axx, zp, blcd,
      +                   trcd, xline, yline)
           call pgupdt
           call pgslw (lw)
@@ -1145,12 +1187,12 @@ c
 c
 c Draw major ticks (top/bottom for x, right/left for y)
 c
-          if (axis.eq.'x') then
-c            write(*,*) 'x=',axx
-          endif
-          call drwlincg (lun, axis, costr, 2, axx, zp, blcd,
+c          if (axis.eq.'x') then
+c            write(*,*) 'axis=',axx
+c          endif
+          call drwlincg (lun, axis, typeo, 2, axx, zp, blcd,
      +                   blcd+ticklp, xline, yline)
-          call drwlincg (lun, axis, costr, 2, axx, zp, trcd-ticklp,
+          call drwlincg (lun, axis, typeo, 2, axx, zp, trcd-ticklp,
      +                   trcd, xline, yline)
           call pgupdt
         end if
@@ -1166,9 +1208,9 @@ c
               axxx = axx - tickd
               do i = 1, nsub-1
                 axxx = axxx + tinc
-                call drwlincg (lun, axis, costr, 2, axxx, zp, blcd,
+                call drwlincg (lun, axis, typeo, 2, axxx, zp, blcd,
      +                         blcd+ticklp/2, xline, yline)
-                call drwlincg (lun, axis, costr, 2, axxx, zp, 
+                call drwlincg (lun, axis, typeo, 2, axxx, zp, 
      +                         trcd-ticklp/2, trcd, xline, yline)
                 call pgupdt
               end do
@@ -1177,9 +1219,9 @@ c
             axxx = axx
             do i = 1, nsub-1
               axxx = axxx + tinc
-              call drwlincg (lun, axis, costr, 2, axxx, zp, blcd,
+              call drwlincg (lun, axis, typeo, 2, axxx, zp, blcd,
      +                       blcd+ticklp/2, xline, yline)
-              call drwlincg (lun, axis, costr, 2, axxx, zp, 
+              call drwlincg (lun, axis, typeo, 2, axxx, zp, 
      +                       trcd-ticklp/2, trcd, xline, yline)
               call pgupdt
             end do
@@ -1404,13 +1446,15 @@ c--
 c-----------------------------------------------------------------------
       include 'mirconst.h'
 c
+      double precision as2r, st2r
+      parameter (as2r=dpi/3600.d0/180.d0, st2r=dpi/3600.d0/12.0d0)
+c
       double precision wwi(3), wblc(3), wtrc(3), wbrc(3), wtlc(3),
-     + w2blc(3), w2brc(3), w2tlc(3), w2trc(3), dum, tickd(2), xmin, 
-     + xmax, ymin, ymax, zp, ticklp(2), dp, dw, blcd(2), trcd(2),
-     + crval, cdelt, crpix, x1, x2
+     + tickd(2), xmin, xmax, ymin, ymax, zp, ticklp(2), dp, dw, 
+     + blcd(2), trcd(2)
       real tick(2),  tickl(2), wpix(4)
-      integer nxsub, nysub, i, j, krng(2), ip
-      character costr*8, xopt*20, yopt*20, itoaf*1, gentyp*4
+      integer nxsub, nysub, i, j, krng(2), ip, naxis
+      character xopt*20, yopt*20, typei(3)*6, typeo(3)*6
       logical zero(2), dotime(2)
 c-----------------------------------------------------------------------
 c
@@ -1420,18 +1464,7 @@ c
 c
 c Work out if we have a RA=0 crossing axis
 c
-      do i = 1, 2
-        zero(i) = .false.
-        call rdhdd (lun, 'crval'//itoaf(i), crval, 0.0d0)
-        call rdhdd (lun, 'crpix'//itoaf(i), crpix, 0.0d0)
-        call rdhdd (lun, 'cdelt'//itoaf(i), cdelt, 0.0d0)
-        call axtypco (lun, 0, i, gentyp)
-        if (gentyp.eq.'RA') then
-          x1 = (blc(i)-crpix)*cdelt + crval
-          x2 = (trc(i)-crpix)*cdelt + crval
-          if (x1*x2.lt.0) zero(i) = .true.
-        end if
-      end do
+      call razerocg (lun, blc, trc, zero)
 c
 c Absolute pixel of third axis appropriate for this image, and
 c work out pixel blc and trc of corners of displayed image.
@@ -1445,25 +1478,31 @@ c
 c Convert spatial coordinates of all 4 corners of the current plane
 c from absolute pixels to world coordinates given by label type
 c
-      call coinit (lun)
-      call setccscg (labtyp, costr)
+      call initco (lun)
+      call rdhdi (lun, 'naxis', naxis, 0)
+      naxis = min(3,naxis)
+      do i = 1, naxis
+        typei(i) = 'abspix'
+        if (i.le.2) typeo(i) = labtyp(i)
+      end do
+      typeo(3) = 'abspix'
 c
       wwi(1) = blcd(1)
       wwi(2) = blcd(2)
       wwi(3) = zp
-      call cocvt (lun, 'ap/ap/ap', wwi, costr, wblc)
+      call w2wco (lun, naxis, typei, ' ', wwi, typeo, ' ', wblc)
       wwi(1) = trcd(1)
       wwi(2) = trcd(2)
-      call cocvt (lun, 'ap/ap/ap', wwi, costr, wtrc)
+      call w2wco (lun, naxis, typei, ' ', wwi, typeo, ' ', wtrc)
 c
       wwi(1) = trcd(1)
       wwi(2) = blcd(2)
-      call cocvt (lun, 'ap/ap/ap', wwi, costr, wbrc)
+      call w2wco (lun, naxis, typei, ' ', wwi, typeo, ' ', wbrc)
       wwi(1) = blcd(1)
       wwi(2) = trcd(2)
-      call cocvt (lun, 'ap/ap/ap', wwi, costr, wtlc)
+      call w2wco (lun, naxis, typei, ' ', wwi, typeo, ' ', wtlc)
 c
-c Add 2pi to one end if we corss RA=0
+c Add 2pi to one end if we cross RA=0.  RAD axis units are radians.
 c
       if (zero(1)) then
         if (wblc(1).lt.wbrc(1)) then
@@ -1481,31 +1520,33 @@ c
         if (wblc(2).lt.wtlc(2)) then
           wblc(2) = wblc(2) + dpi*2
         else 
-          wtlc(1) = wtlc(1) + dpi*2
+          wtlc(2) = wtlc(2) + dpi*2
         end if
         if (wbrc(2).lt.wtrc(2)) then
           wbrc(2) = wbrc(2) + dpi*2
         else 
-          wtrc(1) = wtrc(1) + dpi*2
+          wtrc(2) = wtrc(2) + dpi*2
         end if
       end if
 c
-c Now convert the angular world coordinates (currently in radians)
-c to the appropriate angular measure.  E.g. arcmin, seconds of time.
+c Now convert any RA/DEC angular world coordinates (currently in radians)
+c to seconds of time or arc if desired for PGTBOX.  W2WCO will already 
+c have checked that the LABTYP is compatible with the CTYPE so no 
+c need to do it again
 c
       do j = 1, 2
-        call angconcg (1, labtyp(j), wblc(j), w2blc(j))
-        call angconcg (1, labtyp(j), wbrc(j), w2brc(j))
-        call angconcg (1, labtyp(j), wtlc(j), w2tlc(j))
-        call angconcg (1, labtyp(j), wtrc(j), w2trc(j))
+        call angconcg (1, labtyp(j), wblc(j))
+        call angconcg (1, labtyp(j), wbrc(j))
+        call angconcg (1, labtyp(j), wtlc(j))
+        call angconcg (1, labtyp(j), wtrc(j))
       end do
 c
 c Set new PGPLOT window.  We only use this to work out the ticks so it 
 c doesn't matter much that it is still a linear axis. But it must be the
 c correct part of the frame to match where the labels will be written
 c
-      call pgswin (real(w2blc(1)), real(w2brc(1)), 
-     +             real(w2blc(2)), real(w2tlc(2)))
+      call pgswin (real(wblc(1)), real(wbrc(1)), 
+     +             real(wblc(2)), real(wtlc(2)))
 c
 c Set PGPLOT PGTBOX options strings; we only do bottom/left
 c numeric labelling here
@@ -1577,18 +1618,11 @@ c Convert tick length to pixels (lengths are in linearized
 c coordinate system so this is ok).
 c
       dp = trc(2) + 0.5 - (blc(2) - 0.5)
-      dw = w2blc(2) - w2tlc(2)
+      dw = wblc(2) - wtlc(2)
       ticklp(1) = abs(tickl(1) * dp / dw)
       dp = trc(1) + 0.5 - (blc(1) - 0.5)
-      dw = w2brc(1) - w2blc(1)
+      dw = wbrc(1) - wblc(1)
       ticklp(2) = abs(tickl(2) * dp / dw)
-c
-c Convert angular ticks to radians
-c
-      do j = 1, 2
-        call angconcg (2, labtyp(j), tickd(j), dum)
-        tickd(j) = dum
-      end do
 c
 c The experienced and bold user may also wish to label the top and
 c right axes as well.  So reset the world coordinate window to reflect
@@ -1637,13 +1671,12 @@ c
       end if
 c
       if (index(xopt,'M').ne.0 .or. index(yopt,'M').ne.0) then
-        call pgswin (real(w2tlc(1)), real(w2trc(1)), 
-     +               real(w2brc(2)), real(w2trc(2)))
+        call pgswin (real(wtlc(1)), real(wtrc(1)), 
+     +               real(wbrc(2)), real(wtrc(2)))
         call pgtbox (xopt, tick(1), nxsub, yopt, tick(2), nysub)
       end if
 c
 c Find minimum and maximum x and y coordinates from positions of corners
-c Note that we are now using radians for the angular unit
 c
       xmin = min(wblc(1),wbrc(1),wtlc(1),wtrc(1))
       xmax = max(wblc(1),wbrc(1),wtlc(1),wtrc(1))
@@ -1655,7 +1688,8 @@ c
       call pgswin(real(blcd(1)), real(trcd(1)),
      +            real(blcd(2)), real(trcd(2)))
 c
-c Draw x ticks/grid
+c Draw x ticks/grid.  We have to convert RA/DEC values back to radians
+c for the conversion routines.
 c
       xopt = ' '
       if (labtyp(1).ne.'none') then
@@ -1666,10 +1700,14 @@ c
           ip = ip + 1
         end if
       end if
-      call drwtikcg ('x', xopt, tickd(1), nxsub, ticklp(1), costr,
+      call angconcg (2, typeo(1), xmin)
+      call angconcg (2, typeo(1), xmax)
+      call angconcg (2, typeo(1), tickd(1))
+      call drwtikcg ('x', xopt, tickd(1), nxsub, ticklp(1), typeo,
      +               lun, xmin, xmax, blcd(2), trcd(2), zp)
 c
-c Draw y ticks/grid
+c Draw y ticks/grid. We have to convert RA/DEC values back to radians
+c for the conversion routines.
 c
       yopt = ' '
       if (labtyp(2).ne.'none') then
@@ -1680,12 +1718,15 @@ c
           ip = ip + 1
         end if
       end if
-      call drwtikcg ('y', yopt, tickd(2), nysub, ticklp(2), costr,
+      call angconcg (2, typeo(2), ymin)
+      call angconcg (2, typeo(2), ymax)
+      call angconcg (2, typeo(2), tickd(2))
+      call drwtikcg ('y', yopt, tickd(2), nysub, ticklp(2), typeo,
      +               lun, ymin, ymax, blcd(1), trcd(1), zp)
 c
 c Free coordinate object
 c
-      call cofin (lun)
+      call finco (lun)
 c
 c Restore original pixel window
 c
@@ -1720,9 +1761,10 @@ c--
 c-------------------------------------------------------------------------------
       include 'mirconst.h'
       double precision ymin, ymax, win(2), wout1(2), wout2(2)
-      real dely, xch, ych, xl, yl, xd
+      real dely, xch, ych, xl, yl
       character str*60, stypeo*8, typei(2)*6
       integer len1, il
+      logical zero(2)
 c-----------------------------------------------------------------------
 c
 c X axis
@@ -1745,7 +1787,7 @@ c numeric label and axis label.
 c
       if (labtyp(2).eq.'hms' .or. labtyp(2).eq.'dms') then
 c
-c Work out y min and max in seconds of time
+c Work out y min and max in radians
 c
         stypeo = ' '
         typei(1) = 'abspix'
@@ -1759,13 +1801,23 @@ c
         call w2wco (lh, 2, typei, ' ', win, labtyp, stypeo, wout2)
         call finco (lh)
 c
-        if (labtyp(2).eq.'hms') then
-          ymin = wout1(2) * 12.0d0 * 3600.0d0 / dpi
-          ymax = wout2(2) * 12.0d0 * 3600.0d0 / dpi
-        else if (labtyp(2).eq.'dms') then
-          ymin = wout1(2) * 180.0d0 * 3600.0d0 / dpi
-          ymax = wout2(2) * 180.0d0 * 3600.0d0 / dpi
-        end  if
+c Allow for RA axis zero crossing
+c
+        call razerocg (lh, blc, trc, zero)
+        if (zero(2)) then
+          if (wout1(2).lt.wout2(2)) then
+            wout1(2) = wout1(2) + 2*dpi
+          else
+            wout2(2) = wout2(2) + 2*dpi
+          end if
+        end if
+c
+c Convert to seconds of time/arc
+c
+        ymin = wout1(2)
+        ymax = wout2(2)
+        call angconcg (1, labtyp(2), ymin)
+        call angconcg (1, labtyp(2), ymax)
 c
         dely = abs(ymax - ymin)
         if (dely.le.5*60) then
@@ -1794,13 +1846,7 @@ c displacement to left of axis for vertical axis label
 c
         call pglen (2, str(1:il), xl, yl)
         call pgqcs (2, xch, ych) 
-        xd = xl / xch
-c
-        if (labtyp(2).eq.'hms') then
-          xdispl = xd
-        else if (labtyp(2).eq.'dms') then
-          xdispl = xd
-        end if
+        xdispl = xl / xch
       else
         if (labtyp(2).eq.'none') then
           xdispl = 1.0
@@ -1855,9 +1901,9 @@ c
       integer ns, is
       character*(*) str
 c
-c  Format a number with a specified number of significant figures with
-c  the pgplot routine pgnumb. It chooses automatically decimal or
-c  exponential notation.  Pgplot superscripting escape sequences
+c  Format a number with a specified number of significant figures 
+c  with the pgplot routine pgnumb. It chooses automatically decimal
+c  or exponential notation.  Pgplot superscripting escape sequences
 c  may be embedded in the string in the latter case.
 c
 c  Input:
@@ -1871,8 +1917,8 @@ c-----------------------------------------------------------------------
       integer mm, pp
 c-----------------------------------------------------------------------
       if (xnum.ne.0.0) then
-        pp = int(log10(abs(xnum))) - ns
-        mm = nint(xnum/10.0**pp)
+        pp = log10(abs(xnum)) - ns
+        mm = nint(xnum * (10.0 ** (-pp)))
       else
         mm = 0
         pp = 1
