@@ -135,7 +135,7 @@ int n;
 # endif
 
 
-  if(n > 0 && n <= sys_nerr)return((static char*)sys_errlist[n]);
+  if(n > 0 && n <= sys_nerr)return((char *)sys_errlist[n]);
   else{
     sprintf(string,"Unknown error with number %d detected.",n);
     return(string);
