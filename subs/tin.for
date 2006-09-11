@@ -1,4 +1,8 @@
 c************************************************************************
+c  History:
+c    25aug97 rjs	Original version.
+c     8sep97 rjs	Better error message.
+c************************************************************************
 	subroutine tinOpen(name)
 c
 	implicit none
