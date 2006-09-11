@@ -126,6 +126,7 @@ c    rjs  21sep94 Change sign convention for XY and YX. Discard dettached
 c		  antennas.
 c    rjs   3nov94 Eliminate spurious error message.
 c    rjs  28nov94 Be more strict about what sampler stats are OK.
+c    rjs  13jan95 Friday 13th! Add pulsar bin no as uv variable.
 c
 c  Program Structure:
 c    Miriad atlod can be divided into three rough levels. The high level
@@ -151,7 +152,7 @@ c------------------------------------------------------------------------
 	integer MAXFILES
 	parameter(MAXFILES=128)
 	character version*(*)
-	parameter(version='AtLod: version 28-Nov-94')
+	parameter(version='AtLod: version 13-Jan-95')
 c
 	character in(MAXFILES)*64,out*64
 	integer tno
@@ -339,7 +340,7 @@ c
 c  Initialise the Poke routines.
 c------------------------------------------------------------------------
 	include 'atlod.h'
-	integer bl,p,if
+	integer bl,p,if,bin
 	logical ok
 c
 	tno    = tno1
@@ -354,16 +355,19 @@ c
 	nifs = 0
 	nused = 0
 	do if=1,ATIF
-	 nstoke(if) = 0
-	 nfreq(if) = 0
+	  nstoke(if) = 0
+	  nfreq(if) = 0
 	enddo
 c
 c  Reset the counters, etc.
 c
-	do bl=1,ATBASE
-	  do p=1,ATPOL
-	    do if=1,ATIF
-	      pnt(if,p,bl) = 0
+	maxbin = 0
+	do bin=1,ATBIN
+	  do bl=1,ATBASE
+	    do p=1,ATPOL
+	      do if=1,ATIF
+	        pnt(if,p,bl,bin) = 0
+	      enddo
 	    enddo
 	  enddo
 	enddo
@@ -610,11 +614,11 @@ c
 c
 	end
 c************************************************************************
-	subroutine PokeData(u1,v1,w1,baseln,if,vis,nfreq1,nstoke1,flag1,
-     *		inttime1,docon)
+	subroutine PokeData(u1,v1,w1,baseln,if,bin,vis,nfreq1,nstoke1,
+     *		flag1,inttime1,docon)
 c
 	implicit none
-	integer nfreq1,nstoke1,if,baseln
+	integer nfreq1,nstoke1,if,baseln,bin
 	real u1,v1,w1,inttime1
 	logical flag1(nstoke1),docon
 	complex vis(nfreq1*nstoke1)
@@ -663,10 +667,12 @@ c
 c  Allocate buffer slots for each polarisation. Save the flags, Copy the
 c  data to the output. Do sampler corrections.
 c
+	if(bin.gt.ATBIN)call bug('f','Invalid pulsar bin number')
 	do p=1,nstoke(if)
 	  ipnt = nused + 1
-	  pnt(if,p,bl) = ipnt
-	  flag(if,p,bl) = flag1(p)
+	  pnt(if,p,bl,bin) = ipnt
+	  flag(if,p,bl,bin) = flag1(p)
+	  maxbin = max(maxbin,bin)
 	  nused = nused + nfreq(if)
 	  if(nused.gt.ATDATA)call bug('f','Buffer overflow in PokeData')
 	  doneg = polcode(if,p).eq.PolXY.or.polcode(if,p).eq.PolYX
@@ -710,7 +716,7 @@ c
 c  Flush out a saved integration.
 c------------------------------------------------------------------------
 	include 'atlod.h'
-	integer i1,i2,if,p,bl,nchan,npol,ipnt,ischan(ATIF)
+	integer i1,i2,if,p,bl,bin,nchan,npol,ipnt,ischan(ATIF)
 	complex vis(MAXCHAN)
 	logical flags(MAXCHAN)
 	double precision preamble(5),vel,lst
@@ -762,25 +768,28 @@ c
 	    call uvputvrd(tno,'restfreq',restfreq(if),1)
 	    if(newsc)call ScOut(tno,chi,xtsys,ytsys,xyphase,xyamp,
      *		xsampler,ysampler,ATIF,ATANT,nants,if,if,buf)
-	    bl = 0
-	    do i2=1,nants
-	      do i1=1,i2
-	        bl = bl + 1
-	        preamble(1) = u(bl)
-	        preamble(2) = v(bl)
-		preamble(3) = w(bl)
-	        preamble(4) = time
-	        preamble(5) = 256*i1 + i2
-	        do p=1,nstoke(if)
-		  ipnt = pnt(if,p,bl)
-		  if(ipnt.gt.0)then
-		    call PolPut(tno,polcode(if,p),dosw(bl))
-		    call GetFlag(flag(if,p,bl),nfreq(if),flags)
-		    call uvputvrr(tno,'inttime',inttime(bl),1)
-		    call uvwrite(tno,preamble,data(ipnt),flags,
+	    do bin=1,maxbin
+	      bl = 0
+	      do i2=1,nants
+	        do i1=1,i2
+	          bl = bl + 1
+	          preamble(1) = u(bl)
+	          preamble(2) = v(bl)
+		  preamble(3) = w(bl)
+	          preamble(4) = time
+	          preamble(5) = 256*i1 + i2
+	          do p=1,nstoke(if)
+		    ipnt = pnt(if,p,bl,bin)
+		    if(ipnt.gt.0)then
+		      call PolPut(tno,polcode(if,p),dosw(bl))
+		      call GetFlag(flag(if,p,bl,bin),nfreq(if),flags)
+		      call uvputvri(tno,'bin',bin,1)
+		      call uvputvrr(tno,'inttime',inttime(bl),1)
+		      call uvwrite(tno,preamble,data(ipnt),flags,
      *							nfreq(if))
 
-		  endif
+		    endif
+		  enddo
 	        enddo
 	      enddo
 	    enddo
@@ -803,43 +812,49 @@ c
 	  endif
 	  if(newsc)call ScOut(tno,chi,xtsys,ytsys,xyphase,xyamp,
      *		xsampler,ysampler,ATIF,ATANT,nants,1,nifs,buf)
-	  bl = 0
-	  do i2=1,nants
-	    do i1=1,i2
-	      bl = bl + 1
-	      preamble(1) = u(bl)
-	      preamble(2) = v(bl)
-	      preamble(3) = w(bl)
-	      preamble(4) = time
-	      preamble(5) = 256*i1 + i2
-	      call CntStok(npol,pnt(1,1,bl),nifs,nstoke(1),ATIF)
-	      if(npol.gt.0)then
-		call uvputvri(tno,'npol',npol,1)
-	        do p=1,nstoke(1)
-		  call GetDat(data,nused,pnt(1,p,bl),flag(1,p,bl),
-     *			nfreq,nifs,vis,flags,nchan)
-		  if(nchan.gt.0)then
-		    call uvputvri(tno,'pol',polcode(1,p),1)
-		    call uvputvrr(tno,'inttime',inttime(bl),1)
-		    call uvwrite(tno,preamble,vis,flags,nchan)
-		  endif
-	        enddo
-	      endif
+	  do bin=1,maxbin
+	    bl = 0
+	    do i2=1,nants
+	      do i1=1,i2
+	        bl = bl + 1
+	        preamble(1) = u(bl)
+	        preamble(2) = v(bl)
+	        preamble(3) = w(bl)
+	        preamble(4) = time
+	        preamble(5) = 256*i1 + i2
+	        call CntStok(npol,pnt(1,1,bl,bin),nifs,nstoke(1),ATIF)
+	        if(npol.gt.0)then
+		  call uvputvri(tno,'npol',npol,1)
+	          do p=1,nstoke(1)
+		    call GetDat(data,nused,pnt(1,p,bl,bin),
+     *			flag(1,p,bl,bin),nfreq,nifs,vis,flags,nchan)
+		    if(nchan.gt.0)then
+		      call uvputvri(tno,'bin',bin,1)
+		      call uvputvri(tno,'pol',polcode(1,p),1)
+		      call uvputvrr(tno,'inttime',inttime(bl),1)
+		      call uvwrite(tno,preamble,vis,flags,nchan)
+		    endif
+	          enddo
+	        endif
+	      enddo
 	    enddo
 	  enddo
 	endif
 c
 c  Reset the counters, etc.
 c
-	do bl=1,ATBASE
-	  do p=1,ATPOL
-	    do if=1,ATIF
-	      pnt(if,p,bl) = 0
+	do bin=1,maxbin
+	  do bl=1,ATBASE
+	    do p=1,ATPOL
+	      do if=1,ATIF
+	        pnt(if,p,bl,bin) = 0
+	      enddo
 	    enddo
 	  enddo
 	enddo
 c
 	nused = 0
+	maxbin = 0
 	newsc   = .false.
 	newfreq = .false.
 	newpnt  = .false.
@@ -1467,12 +1482,15 @@ c
 c
 c  Send the data record to the Poke routines.
 c
+	      if(bin.eq.0) bin = 1
+	      if(bin.lt.1)call bug('f','Invalid pulsar bin number')
 c	      tint = 0
 	      tint = intbase
 	      if(tint.eq.0)tint = intime
 	      if(tint.eq.0)tint = 15.0
-	      call PokeData(u,v,w,baseln,Sif(ifno),vis,if_nfreq(ifno),
-     *		  if_nstok(ifno),flags,tint,if_invert(ifno).lt.0)
+	      call PokeData(u,v,w,baseln,Sif(ifno),bin,
+     *		vis,if_nfreq(ifno),if_nstok(ifno),flags,
+     *		tint,if_invert(ifno).lt.0)
 c
 c  Reinitialise things.
 c
