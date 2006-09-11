@@ -25,6 +25,8 @@ c	and minimum match is supported. Possible objects are
 c	  point       A point source
 c	  disk        An elliptical or circular disk.
 c	  gaussian    An elliptical or circular gaussian.
+c	  shell       The 2D projection of a thin, spherical shell.
+c	  ring        A face-on, thin, elliptical or circular ring
 c	For example, to fit for a point source and gaussian, use:
 c	`object=point,gaussian'.
 c@ spar
@@ -37,6 +39,8 @@ c	  -----------             -----------
 c	   point                   flux,x,y
 c	   gaussian                flux,x,y,bmaj,bmin,pa
 c	   disk                    flux,x,y,bmaj,bmin,pa
+c	   shell                   flux,x,y,bmaj
+c	   ring                    flux,x,y,bmaj,bmin,pa
 c
 c	Here "flux" is the total flux density of the component,
 c	"x" and "y" are the offset positions (in arcsec) of the object
@@ -44,7 +48,7 @@ c	relative to the observing center, "bmaj" and "bmin" are the major
 c	and minor axes FWHM (in arcsec), and "pa" is the position angle
 c	of an elliptical component (in degrees). The position angle is
 c	measured from north through east.
-c	You must give initial estimaes for all parameters for each object
+c	You must give initial estimates for all parameters for each object
 c	(this includes parameters that are redundant or meaningless,
 c	such as "bmin" and "pa" for components that are constrained to be
 c	circular).
@@ -67,13 +71,13 @@ c	  y   The offset in DEC is fixed.
 c	  a   The major axis parameter is fixed.
 c	  b   The minor axis parameter is fixed.
 c	  p   The position angle parameter is fixed.
-c	  c   The gaussian or disk is circular (not elliptical).
+c	  c   The gaussian, disk or ring is circular (not elliptical).
 c	For a source where all source parameters vary, a dash (-)
 c	can be used for this parameter.
 c
 c	For example "fix=fx,fc" indicates that the flux and RA offset
 c	is to be fixed for the first source, whereas the second source,
-c	(which is presumably a gaussian or disk) has a fixed flux, and
+c	(which is presumably a gaussian, disk or ring) has a fixed flux, and
 c	is circular.
 c@ out
 c	The optional output data-set. The default is not to create an
@@ -100,6 +104,9 @@ c    rjs  24jan94  Change ownership
 c    rjs  23jul94  Major rewrite. No error estimates for the time
 c		   being.
 c    rjs   1sep94  Error estimates!
+c    bmg  08may96  Added fitting for a thin, spherical shell
+c    bmg  29may96  Added fitting for a thin face-on ring. I have coded
+c                  spheres and thick shells, but they don't work yet!
 c------------------------------------------------------------------------
 	integer MAXVAR
 	parameter(MAXVAR=20)
@@ -271,9 +278,10 @@ c
 	    tmp(ncurr) = 180*3600/pi * m0(i)
 	  endif
 c
-c  Gaussian and disk sources.
+c  Gaussian, disk, shell and ring sources.
 c
-	  if(srctype(i).eq.DISK.or.srctype(i).eq.GAUSSIAN)then
+	  if(srctype(i).eq.DISK.or.srctype(i).eq.GAUSSIAN.or.
+     *        srctype(i).eq.SHELL.or.srctype(i).eq.RING)then
 	    if(vfwhm1(i))then
 	      ncurr = ncurr + 1
 	      tmp(ncurr) = 180*3600/pi * fwhm1(i)
@@ -327,9 +335,10 @@ c
 	    m0(i) = pi/180/3600 * x(n)
 	  endif
 c
-c  Gaussian and disk sources.
+c  Gaussian, disk, shell and ring sources.
 c
-	  if(srctype(i).eq.DISK.or.srctype(i).eq.GAUSSIAN)then
+	  if(srctype(i).eq.DISK.or.srctype(i).eq.GAUSSIAN.or.
+     *        srctype(i).eq.SHELL.or.srctype(i).eq.RING)then
 	    if(vfwhm1(i))then
 	      n = n + 1
 	      fwhm1(i) = pi/180/3600 * abs(x(n))
@@ -378,9 +387,10 @@ c
 	    sm0(i) = pi/180/3600 * sqrt(abs(covar(n,n)))
 	  endif
 c
-c  Gaussian and disk sources.
+c  Gaussian, disk, shell and ring sources.
 c
-	  if(srctype(i).eq.DISK.or.srctype(i).eq.GAUSSIAN)then
+	  if(srctype(i).eq.DISK.or.srctype(i).eq.GAUSSIAN.or.
+     *        srctype(i).eq.SHELL.or.srctype(i).eq.RING)then
 	    if(vfwhm1(i))then
 	      n = n + 1
 	      sfwhm1(i) = pi/180/3600 * sqrt(abs(covar(n,n)))
@@ -444,10 +454,12 @@ c------------------------------------------------------------------------
 	integer i,j
 	real amp,theta,beta,cosi,sini,fac
 	complex w
+
 c
 c  Externals.
 c
 	real j1xbyx
+	double precision bessj0
 c
 c  Initialise the model to 0.
 c
@@ -499,6 +511,35 @@ c
 	      amp = 2*j1xbyx(pi*sqrt(beta))
 	      model(i) = model(i) + amp*w
 	    enddo
+
+c
+c  Thin shell component.
+c
+          else if(srctype(j).eq.SHELL)then
+	    cosi = cos(pa(j))
+	    sini = sin(pa(j))
+	    do i=1,n
+	      theta = 2*pi*(uu(i)*l0(j)+vv(i)*m0(j))
+	      w = flux(j)*cmplx(cos(theta),sin(theta))
+	      beta = (fwhm2(j)*(uu(i)*cosi-vv(i)*sini))**2 +
+     +		     (fwhm1(j)*(uu(i)*sini+vv(i)*cosi))**2
+	      amp = sin(pi*sqrt(beta))/pi/sqrt(beta)
+	      model(i) = model(i) + amp*w
+	    enddo
+c
+c  Thin ring component.
+c
+          else if(srctype(j).eq.RING)then
+	    cosi = cos(pa(j))
+	    sini = sin(pa(j))
+	    do i=1,n
+	      theta = 2*pi*(uu(i)*l0(j)+vv(i)*m0(j))
+	      w = flux(j)*cmplx(cos(theta),sin(theta))
+	      beta = (fwhm2(j)*(uu(i)*cosi-vv(i)*sini))**2 +
+     +		     (fwhm1(j)*(uu(i)*sini+vv(i)*cosi))**2
+	      amp = bessj0(dble(pi*sqrt(beta)))
+	      model(i) = model(i) + amp*w
+	    enddo
 	  else
 	    call bug('f','Software bug: unrecognised srctype')
 	  endif
@@ -541,12 +582,15 @@ c------------------------------------------------------------------------
 	character line*80
 c
 	integer NOBJS
-	parameter(NOBJS=3)
+	parameter(NOBJS=5)
 	character objects(NOBJS)*8
 c
 	data objects(DISK)    /'disk    '/
 	data objects(GAUSSIAN)/'gaussian'/
 	data objects(POINT)   /'point   '/
+	data objects(RING)    /'ring    '/
+	data objects(SHELL)   /'shell   '/
+
 c
 	call output('------------------------------------------------')
 c
@@ -575,7 +619,11 @@ c
 	    call output(line)
 	  endif
 c
-	  if(srctype(i).eq.GAUSSIAN.or.srctype(i).eq.DISK)then
+c
+c  Gaussian, disk, shell and ring sources.
+c
+	  if(srctype(i).eq.DISK.or.srctype(i).eq.GAUSSIAN.or.
+     *        srctype(i).eq.SHELL.or.srctype(i).eq.RING)then
 	    f1 = 3600*180/pi * fwhm1(i)
 	    f2 = 3600*180/pi * fwhm2(i)
 	    sf1 = 3600*180/pi * sfwhm1(i)
@@ -595,8 +643,10 @@ c
 	    if(p.lt.-90)p = p + 180
 	    if(p.gt. 90)p = p - 180
 c
-	    write(line,30)f1,f2
-   30	    format('  Major,minor axes (arcsec):',2f9.2)
+            write(line,30)f1,f2
+
+   30       format('  Major,minor axes (arcsec):',2f11.4)
+   
 	    call output(line)
 	    if(sf1+sf2.gt.0)then
 	      write(line,31)sf1,sf2
@@ -628,7 +678,7 @@ c------------------------------------------------------------------------
 	character object*16,fix*16
 c
 	integer NOBJS
-	parameter(NOBJS=3)
+	parameter(NOBJS=5)
 	character objects(NOBJS)*8
 	integer objtype(NOBJS)
 c
@@ -636,9 +686,11 @@ c  Externals.
 c
 	logical keyprsnt
 	integer binsrcha
-c
-	data objects/'disk    ','gaussian','point   '/
-	data objtype/DISK,       GAUSSIAN,  POINT/
+ 
+ 	data objects/'disk    ','gaussian','point   ','ring   ',
+     *               'shell   '/
+	data objtype/ DISK,      GAUSSIAN,  POINT, RING,  SHELL/
+
 c
 	nsrc = 0
 	dowhile(keyprsnt('object'))
@@ -646,10 +698,11 @@ c
 c  Get the source type.
 c
 	  nsrc = nsrc + 1
-	  if(nsrc.gt.MAXSRC)call bug('f','Too many source')
-	  call keymatch('object',NOBJS,objects,1,object,nout)
-	  i = binsrcha(object,objects,NOBJS)
+	  if(nsrc.gt.MAXSRC)call bug('f','Too many sources')
+          call keymatch('object',NOBJS,objects,1,object,nout)
+          i = binsrcha(object,objects,NOBJS)
 	  srctype(nsrc) = objtype(i)
+
 c
 c  Set all the parameters to the default.
 c
@@ -668,15 +721,23 @@ c
 	  l0(nsrc) = pi/180/3600 * l0(nsrc)
 	  m0(nsrc) = pi/180/3600 * m0(nsrc)
 c
-	  if(srctype(nsrc).eq.DISK.or.srctype(nsrc).eq.GAUSSIAN)then
+          if(srctype(nsrc).eq.DISK.or.srctype(nsrc).eq.GAUSSIAN.or.
+     +        srctype(nsrc).eq.RING)then
 	    call keyr('spar',fwhm1(nsrc),1.)
 	    call keyr('spar',fwhm2(nsrc),1.)
 	    if(min(fwhm1(nsrc),fwhm2(nsrc)).le.0)
      *	      call bug('f','Invalid FWHM parameters given')
 	    call keyr('spar',pa(nsrc),0.)
+	    pa(nsrc) = pi/180 * pa(nsrc)
 	    fwhm1(nsrc) = pi/180/3600 * fwhm1(nsrc)
 	    fwhm2(nsrc) = pi/180/3600 * fwhm2(nsrc)
-	    pa(nsrc) = pi/180 * pa(nsrc)
+	  endif
+c
+          If(srctype(nsrc).eq.SHELL)then
+	    call keyr('spar',fwhm1(nsrc),1.)
+	    if(fwhm1(nsrc).le.0)
+     *	      call bug('f','Invalid FWHM parameters given')
+	    fwhm1(nsrc) = pi/180/3600 * fwhm1(nsrc)
 	  endif
 c
 c  Determine what is fixed, and what is variable.
@@ -687,9 +748,15 @@ c
 	  vl0(nsrc)   = index(fix,'x').eq.0
 	  vm0(nsrc)   = index(fix,'y').eq.0
 	  
-	  if(srctype(nsrc).eq.GAUSSIAN.or.srctype(nsrc).eq.DISK)then
-	    vfwhm1(nsrc)= index(fix,'a').eq.0
-	    circ(nsrc) = index(fix,'c').ne.0
+   
+         if(srctype(nsrc).eq.DISK.or.srctype(nsrc).eq.GAUSSIAN.or.
+     *        srctype(nsrc).eq.SHELL.or.srctype(nsrc).eq.RING)then
+            vfwhm1(nsrc)= index(fix,'a').eq.0
+            if(srctype(nsrc).eq.SHELL)then
+               circ(nsrc) = .true.
+ 	    else
+		circ(nsrc) = index(fix,'c').ne.0
+            endif
 	    if(circ(nsrc))then
 	      vfwhm2(nsrc) = .false.
 	      vpa(nsrc)    = .false.
