@@ -31,6 +31,8 @@ c       and the values are the limits for the plot.
 c	The default is 90 degrees (i.e. zenith).
 c@ device
 c	Plot device. Default is not to plot anything.
+c@ log
+c	Output log file. The default is not to create one.
 c@ options
 c	Extra processing options. Currently there is only a single option.
 c	  airmass  When plotting as a function of elevation, express the
@@ -54,16 +56,17 @@ c    rjs  04Feb01  Original version.
 c    dpr  05Feb01  Update doc and err messages.
 c    rjs  06feb01  Added options=airmass.
 c    rjs  24apr01  Split out the code to determine brightness etc.
+c    rjs  05sep01  Added log option.
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	integer nmax
 	parameter(nmax=250)
 c
 	real f1,f2,finc,el1,el2,elinc,P0,z0,el,t0,h0,fac,Tb,nu
-	logical dofr,doel,airmass
+	logical dofr,doel,airmass,more
 	real x(NMAX),y1(NMAX),y2(NMAX),ymin,y1max,y2max,ylo,yhi
 	integer i,npnt
-	character device*64
+	character device*64,logf*64,line*80
 c                  
 c  Atmospheric parameters. 
 c   
@@ -82,6 +85,7 @@ c
 	call keyini
 	call output('opplt: version 1.0 24-Apr-01')
 	call keya('device',device,' ')
+	call keya('log',logf,' ')
 c
 c  Get frequency range of interest, in GHz.
 c
@@ -104,7 +108,6 @@ c
      *	  'Cannot plot both as a function of frequency and elevation')
 	if((.not. dofr) .and. (.not. doel)) call bug('f',
      *	  'You must specify a range for either freq and el')
-	
 c
 c  Get temperature at observatory in Kelvin.
 c  Get percent relative humidity at observatory.
@@ -183,6 +186,15 @@ c
 	  endif
 	  call pgline(NPNT,x,y2)
 	  call pgend
+	endif
+c
+	if(logf.ne.' ')then
+	  call logopen(logf,' ')
+	  do i=1,NPNT
+	    write(line,'(3f7.3)')x(i),y1(i),y2(i)
+	    call logwrite(line,more)
+	  enddo
+	  call logclose
 	endif
 	end
 c************************************************************************
