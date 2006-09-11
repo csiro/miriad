@@ -125,6 +125,7 @@ c     nebk   04dec95     DOLABCG was forgetting some right hand labels
 c     nebk   30jan96     In CHNSELCG remove the restictions on channel 
 c                        averaging and incrementing which previously
 c			 groups of channels could not overlap
+c     rjs     8mar96     Change ctype*9 to ctype*32
 c***********************************************************************
 c
 c* angconCG -- Convert radians to and from seconds of time/arc
@@ -1772,7 +1773,7 @@ c    x,ylabel Labels
 c--
 c-----------------------------------------------------------------------
       real epoch
-      character estr*5, ctype*9, str*20, label*100
+      character estr*5, ctype*32, str*20, label*100
       integer ipos, iax, l2, len1, irad, ifrq, iuv, ivel
 c-----------------------------------------------------------------------
 c
@@ -1834,7 +1835,7 @@ c
         else if (labtyp(iax).eq.'relghz') then
           label = str(1:l2)//' offset (GHz)'
         else if (labtyp(iax).eq.'abskms') then
-          label = str(1:l2)//' (Km s\u-1\d)'
+          label = str(1:l2)//' (km s\u-1\d)'
         else if (labtyp(iax).eq.'relkms') then
           label = str(1:l2)//' offset (Km s\u-1\d)'
         else if (labtyp(iax).eq.'relnat') then
