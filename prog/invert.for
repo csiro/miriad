@@ -288,6 +288,7 @@ c    rjs   18aug95  Check a beam is being made with options=sdb.
 c		    Beam axis order for options=sdb,mfs,mosaic for npnt=1.
 c		    Interpolate mode with the slop factor.
 c		    Robust parameter.
+c    nebk  29sep95  Fix typo for irked user; "unform -> uniform"
 c  Bugs:
 c    - It would be nice to have a primary-beam dependent default image size.
 c------------------------------------------------------------------------
@@ -296,7 +297,7 @@ c------------------------------------------------------------------------
 	include 'mem.h'
 c
 	character version*(*)
-	parameter(version='Invert: version 1.0 18-Aug-95')
+	parameter(version='Invert: version 1.0 29-Sep-95')
 	integer MAXPOL,MAXRUNS
 	parameter(MAXPOL=4,MAXRUNS=4*MAXDIM)
 c
@@ -929,7 +930,7 @@ c
 	if(Natural)then
 	  call output(' ... this corresponds to natural weighting')
 	else if(Uni)then
-	  call output(' ... this corresponds to unform weighting')
+	  call output(' ... this corresponds to uniform weighting')
 	else
 	  call output(' ... this corresponds to a super-uniform '//
      *						'weighting')
