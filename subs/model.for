@@ -49,6 +49,8 @@ c    rjs  16sep93 Rename bsrch to binsrch.
 c    rjs  11nov93 Correct definition of alpha for mfs work.
 c    rjs  17aug93 Handle offsets somewhat better, using co routines.
 c		  W-axis change.
+c    rjs  31jan95 Correct u-v-w coordinate geometry. Use 3D equation
+c		  for phases of a point source.
 c************************************************************************
 c*ModelIni -- Ready the uv data file for processing by the Model routine.
 c&mchw
@@ -88,7 +90,7 @@ c------------------------------------------------------------------------
 c
 	double precision ra,dec,cosd,tol,tmp
 	logical doPol
-	integer nchan,polm,polv
+	integer nchan,polm,polv,npnt
 	real lstart,lwidth,lstep
 	character ltype*64
 c
@@ -118,8 +120,10 @@ c
 c  Determine if the visibility file contains offset pointing parameters.
 c
 	if(index(flags,'p').ne.0)then
-	  call rdhdd(tmod,'crval1',ra,0.d0)
-	  call rdhdd(tmod,'crval2',dec,0.d0)
+	  call mosLoad(tmod,npnt)
+	  if(npnt.ne.1)call bug('f',
+     *	    'Expecting only a single pointing, but got several')
+	  call mosRaDec(1,ra,dec)
 	  call rdhdd(tmod,'cdelt1',tol,0.d0)
 	  call rdhdd(tmod,'cdelt2',tmp,0.d0)
 	  tol = 3*max(abs(tol),abs(tmp))
@@ -275,6 +279,7 @@ c
 	call ModInit
 	call ScrOpen(tscr)
 	call uvset(tvis,'coord','wavelength',0,0.,0.,0.)
+	call uvset(tvis,'preamble','uvw/time/baseline',0,0.,0.,0.)
 	calscale = index(flags,'c').ne.0
 	imhead = index(flags,'h').ne.0
 	mfs = index(flags,'m').ne.0
@@ -348,8 +353,9 @@ c------------------------------------------------------------------------
 c
 	integer length,nx,ny,nz,nxd,nyd,nu,nv,ngcf,u0,v0,nread,i,j,pnt
 	integer polm
-	double precision preamble(4)
-	real du,dv,umax,vmax,xref1,yref1,xref2,yref2,gcf(maxgcf)
+	double precision preamble(5),ucoeff(3),vcoeff(3),x1(2),x2(2)
+	real du,dv,umax,vmax,gcf(maxgcf)
+	double precision xref1,yref1,xref2,yref2,ud,vd
 	real Out(maxlen),uu,vv,u,v
 	logical accept,flags(maxchan),doshift,GotFreq
 	complex Buffer((maxbuf+1)/2)
@@ -406,6 +412,13 @@ c
 	if(nchan.ne.nz.and..not.mfs)
      *	  call bug('f','The number of model and data channels differ')
 c
+c  Determine the uvw conversion matrix to account for geometry differences.
+c
+	x1(1) = 0
+	x1(2) = 0
+	call coCvt(tvis,'op/op',x1,'aw/aw',x2)
+	call coGeom(tmod,'aw/aw',x2,ucoeff,vcoeff)
+c
 c  If we are applying clipping, we need to know the polarisation type
 c  of the model.
 c
@@ -429,8 +442,15 @@ c
 	  if(accept)then
 	    GotFreq = .false.
 	    sfreq(1) = 1
-	    u = preamble(1) / du
-	    v = preamble(2) / dv
+c
+c  Correct u and v for geometry differences and convert them to grid units.
+c
+	    ud = ( ucoeff(1)*preamble(1) + ucoeff(2)*preamble(2) + 
+     *		  ucoeff(3)*preamble(3) )
+	    vd = ( vcoeff(1)*preamble(1) + vcoeff(2)*preamble(2) +
+     *		  vcoeff(3)*preamble(3) )
+	    u = ud / du
+	    v = vd / dv
 c
 c  Handle the case of a single image being replicated along the frequency
 c  axis.
@@ -477,7 +497,7 @@ c
 	    if(doshift)then
 	      if(.not.GotFreq.and.nread.gt.1)
      *		call uvinfo(tvis,'sfreq',sfreq)
-	      call ModShift(preamble,xref1,yref1,xref2,yref2,sfreq,
+	      call ModShift(ud,vd,xref1,yref1,xref2,yref2,sfreq,
      *							Intp,nread)
 	    endif
 c
@@ -591,7 +611,8 @@ c
 	implicit none
 	integer tvis,tmod,nx,ny,nchan,nxd,nyd,nv,nu,polm
 	complex Buffer(nv,nu,nchan)
-	real xref1,yref1,xref2,yref2,level
+	double precision xref1,yref1,xref2,yref2
+	real level
 	logical imhead,mfs,doclip
 c
 c  Input:
@@ -620,7 +641,6 @@ c------------------------------------------------------------------------
 	integer width
 	parameter(width=6)
 	integer k,iref,jref,nclip
-	real xref,yref
 	double precision dra,ddec
 	real xcorr(maxdim),ycorr(maxdim)
 	character val*9
@@ -628,26 +648,23 @@ c------------------------------------------------------------------------
 c
 c  Externals.
 c
-	logical PolsPara,coCompar
+	logical PolsPara
 c
 c  Determine the properties of the model coordinate system.
 c
 	call rdhdd(tmod,'cdelt1',dra,0.d0)
 	call rdhdd(tmod,'cdelt2',ddec,0.d0)
-	call rdhdr(tmod,'crpix1',xref,real(nx/2+1))
-	call rdhdr(tmod,'crpix2',yref,real(ny/2+1))
 	if(ddec*dra.eq.0)
      *	  call bug('f','Pixel increment missing in model header')
 c
-	iref = nint(xref)
-	jref = nint(yref)
-	if(abs(nx/2+1-iref).gt.nx/2.or.abs(ny/2+1-jref).gt.ny/2)then
-	  call bug('w','Visibility phase center is far from map center')
-	  iref = nx/2 + 1
-	  jref = ny/2 + 1
-	endif
-	xref1 = dra  * (xref - iref)
-	yref1 = ddec * (yref - jref)
+	iref = nx/2 + 1
+	jref = ny/2 + 1
+	x1(1) = 0
+	x1(2) = 0
+	call coCvt(tmod,'op/op',x1,'ap/ap',x2)
+c
+	xref1 = dra  * (x2(1) - iref)
+	yref1 = ddec * (x2(2) - jref)
 c
 c  Determine the shift required to phase the model to the visibility dataset.
 c
@@ -657,12 +674,10 @@ c
 	else
 	  x1(1) = 0
 	  x1(2) = 0
-	  call coCvt(tmod,'op/op',x1,'aw/aw',x2)
-	  call coCvt(tvis,'aw/aw',x2,'op/op',x1)
-	  xref2 = -x1(1)
-	  yref2 = -x1(2)
-c	  if(.not.coCompar(tvis,tmod,'projection'))call bug('w',
-c     *	    'Projection geometry of model and visibility differ')
+	  call coCvt(tvis,'op/op',x1,'aw/aw',x2)
+	  call coCvt(tmod,'aw/aw',x2,'op/op',x1)
+	  xref2 = dra  * x1(1)
+	  yref2 = ddec * x1(2)
 	endif
 c
 c  All shifts are the same for a model with a single plane.
@@ -800,13 +815,13 @@ c
 c
 	end
 c************************************************************************
-	subroutine ModShift(preamble,xref1,yref1,xref2,yref2,freq,
+	subroutine ModShift(uu,vv,xref1,yref1,xref2,yref2,freq,
      *							Intp,nchan)
 c
 	implicit none
 	integer nchan
-	real xref1,yref1,xref2,yref2
-	double precision freq(nchan),preamble(2)
+	double precision xref1,yref1,xref2,yref2,uu,vv
+	double precision freq(nchan)
 	complex Intp(nchan)
 c
 c  Apply a phase rotation, which corresponds to a given image domain shift.
@@ -826,12 +841,13 @@ c  Input/Output:
 c    Intp		The data to be phase rotated.
 c------------------------------------------------------------------------
 	include 'mirconst.h'
-	real theta,t1,t2
+	real theta
+	double precision t1,t2
 	integer i
 	complex W
 c
-	t1 = -2*pi*( preamble(1)*xref1 + preamble(2)*yref1 )
-	t2 = -2*pi*( preamble(1)*xref2 + preamble(2)*yref2 ) / freq(1)
+	t1 = -2*dpi*( uu*xref1 + vv*yref1 )
+	t2 = -2*dpi*( uu*xref2 + vv*yref2 ) / freq(1)
 c
 	do i=1,nchan
 	  theta = t1 + t2 * freq(i)
@@ -1011,12 +1027,11 @@ c------------------------------------------------------------------------
 	parameter(maxlen=5*maxchan+10)
 c
 	integer nread,length,j,i
-	real xref,yref,theta,temp,Out(maxlen)
-	double precision preamble(4)
+	real theta,temp,Out(maxlen)
+	double precision preamble(5),lmn(3),off(2)
 	logical accept,flags(maxchan)
 	complex In(maxchan)
 	double precision skyfreq(maxchan)
-	double precision off(2),lm(2)
 c
 	ModPow = 0
 	VisPow = 0
@@ -1033,12 +1048,11 @@ c
 	if(abs(offset(1))+abs(offset(2)).gt.0)then
 	  off(1) = (offset(1)/3600.) * (pi/180)
 	  off(2) = (offset(2)/3600.) * (pi/180)
-	  call coCvt(tvis,'ow/ow',off,'op/op',lm)
-	  xref = lm(1)
-	  yref = lm(2)
+	  call coLMN(tvis,'ow/ow',off,lmn)
 	else
-	  xref = 0
-	  yref = 0
+	  lmn(1) = 0
+	  lmn(2) = 0
+	  lmn(3) = 1
 	endif
 c
 	nread = nchan
@@ -1049,7 +1063,7 @@ c
 	dowhile(nread.eq.nchan)
 	  call header(tvis,preamble,In,flags,nchan,accept,Out,nhead)
 	  if(accept)then
-	    if(abs(xref)+abs(yref).eq.0)then
+	    if(abs(lmn(1))+abs(lmn(2)).eq.0)then
 	      j = 1
 	      do i=nhead+1,nhead+5*nchan,5
 	        Out(i  ) = real(In(j))
@@ -1061,7 +1075,8 @@ c
 	        j = j + 1
 	      enddo
 	    else
-	      theta = 2*pi*(xref*preamble(1) + yref*preamble(2))
+	      theta = 2*dpi*(lmn(1)*preamble(1) + lmn(2)*preamble(2) +
+     *			     (lmn(3)-1)*preamble(3) )
 	      if(nchan.eq.1)then
 		skyfreq(1) = 1
 	      else
