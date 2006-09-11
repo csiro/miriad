@@ -49,7 +49,7 @@ c	given, and it is a source known to GPCAL, GPCAL uses its known
 c	flux as the default. If GPCAL does not know the source, the
 c	lux is determined by assuming that the rms gain amplitude is 1.
 c	If the option `qusolve' is used, the given fluxes for Q and U are
-c	used as the initial estimates. Also see the `oldflux' option.
+c	used as the initial estimates. Also see the "oldflux" option.
 c@ refant
 c	The reference antenna. Default is 3. The reference antenna needs to be
 c	present throughout the observation. Any solution intervals where the
@@ -68,8 +68,10 @@ c	is 5 minutes, and the max gap size is the same as the max length.
 c	The polarisation characteristics are assumed to be
 c	constant over the observation.
 c@ tol
-c	Error tolerance. Default 0.001.
+c	Error tolerance. The default is 0.001, which should be adequate.
 c@ xyphase
+c	Generally the use of this parameter has been superceded.
+c
 c	Initial estimate of the XY phase of each antenna. The default is
 c	0 for all antennas. If the XY phase has not been applied to the
 c	data, then it is important that this parameter is set correctly,
@@ -80,35 +82,35 @@ c	permutations, the more obscure or useless of which are not
 c	supported. The option values are used to turn on or off some
 c	of the solvers. Several options	can be given, separated by
 c	commas. Minimum match is used.
-c	  "nopass"     Do not apply bandpass correction. The default is
-c	               to apply bandpass correction if possible.
-c	  "noamphase"  Do not solve for the amplitude and phase. The 
-c	               default is to solve for amplitude and phase.
-c	  "nopol"      Do not solve for the instrumental polarisation
-c	               leakage characteristics. The default is to solve
-c	               for the polarisation leakages on all feeds except
-c	               the X feed of the reference antenna.
-c	  "noxy"       Do not solve for any XY phase offset. The default is to
-c	               solve for the XY phase offset on all antennas
-c	               except for the reference antenna.
-c	  "xyvary"     The XY phase varies with time. By default the XY phase
-c	               is assumed to remain constant.
-c	  "qusolve"    Solve for q and u fluxes. You require good parallactic
-c	               angle coverage for this.
-c	  "xyref"      Solve for the XY phase of the reference antenna. To
-c	               do this, the source must be strongly polarized. This
-c	               option can be used with ``noxy'', in which case GPCAL
-c	               solves for the offset of the reference antenna. To
-c		       use this option, the source should be at least 5%
-c	               polarised.
-c	  "polref"     Solve for the instrumental polarization leakage
-c	               of the X feed on the reference antenna. The source
-c	               must be at least 5% polarised. This can
-c	               be combined with ``nopol'', in which case GPCAL
-c	               solves for X feed of the reference antenna only.
-c	   "oldflux"   This causes GPCAL to use a pre-August 1994 ATCA flux
-c	               density scale. See the help on `oldflux' for more
-c	               information.
+c	  nopass     Do not apply bandpass correction. The default is
+c	             to apply bandpass correction if possible.
+c	  noamphase  Do not solve for the amplitude and phase. The 
+c	             default is to solve for amplitude and phase.
+c	  nopol      Do not solve for the instrumental polarisation
+c	             leakage characteristics. The default is to solve
+c	             for the polarisation leakages on all feeds except
+c	             the X feed of the reference antenna.
+c	  noxy       Do not solve for any XY phase offset. The default is to
+c	             solve for the XY phase offset on all antennas
+c	             except for the reference antenna.
+c	  xyvary     The XY phase varies with time. By default the XY phase
+c	             is assumed to remain constant.
+c	  qusolve    Solve for q and u fluxes. You require good parallactic
+c	             angle coverage for this.
+c	  xyref      Solve for the XY phase of the reference antenna. To
+c	             do this, the source must be strongly polarized. This
+c	             option can be used with ``noxy'', in which case GPCAL
+c	             solves for the offset of the reference antenna. To
+c	             use this option, the source should be at least 5%
+c	             polarised.
+c	  polref     Solve for the instrumental polarization leakage
+c	             of the X feed on the reference antenna. The source
+c	             must be at least 5% polarised. This can
+c	             be combined with ``nopol'', in which case GPCAL
+c	             solves for X feed of the reference antenna only.
+c	  oldflux    This causes GPCAL to use a pre-August 1994 ATCA flux
+c	             density scale. See the help on "oldflux" for more
+c	             information.
 c	Some combinations of these options are not supported.
 c--
 c  History:
