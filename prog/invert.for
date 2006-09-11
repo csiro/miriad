@@ -267,6 +267,7 @@ c		    tidy it up.
 c    rjs   27oct94  First released version. with mosaicing.
 c    rjs   18nov94  Eliminate rounding error problem in calculating freq0.
 c	            Better messages for natural weighting. ref linetype.
+c    rjs   28nov94  Determine the weights in a pointing-dependent manner.
 c  Bugs:
 c    - It would be nice to have a primary-beam dependent default image size.
 c    - The uniform weighting scheme for mosaiced observations is not
@@ -277,7 +278,7 @@ c------------------------------------------------------------------------
 	include 'mem.h'
 c
 	character version*(*)
-	parameter(version='Invert: version 1.0 18-Nov-94')
+	parameter(version='Invert: version 1.0 28-Nov-94')
 	integer MAXPOL,MAXRUNS
 	parameter(MAXPOL=4,MAXRUNS=4*MAXDIM)
 c
@@ -465,9 +466,10 @@ c
 c
 	if(.not.Natural)then
 	  call output('Calculating the weights ...')
-	  nUWts = (wnu/2+1) * wnv
+	  nUWts = (wnu/2+1) * wnv * npnt
 	  call Memalloc(UWts,nUWts,'r')
-	  call WtCalc(tscr,memr(UWts),wdu,wdv,wnu,wnv,nvis,npol*nchan)
+	  call WtCalc(tscr,memr(UWts),wdu,wdv,wnu,wnv,npnt,
+     *						nvis,npol*nchan)
 	else
 	   UWts = 1
 	   nUWts = 0
@@ -481,7 +483,7 @@ c
 	else
 	  call output('Applying the weights ...')
 	endif
-	call Wter(tscr,Natural,memr(UWts),wdu,wdv,wnu,wnv,Tu,Tv,
+	call Wter(tscr,Natural,memr(UWts),wdu,wdv,wnu,wnv,npnt,Tu,Tv,
      *	  nvis,npol,nchan,mosaic,idb,sdb,freq0,Rms,
      *	  ChanWt,lmn,umax,vmax,cellx,celly)
 c
@@ -745,11 +747,11 @@ c
 c
 	end
 c************************************************************************
-	subroutine WtCalc(tvis,Wts,wdu,wdv,wnu,wnv,nvis,nchan)
+	subroutine WtCalc(tvis,Wts,wdu,wdv,wnu,wnv,npnt,nvis,nchan)
 c
 	implicit none
-	integer tvis,wnu,wnv,nvis,nchan
-	real Wts(wnv,wnu/2+1),wdu,wdv
+	integer tvis,wnu,wnv,nvis,nchan,npnt
+	real Wts(wnv,wnu/2+1,npnt),wdu,wdv
 c
 c  Calculate the weight to be applied to each visibility.
 c
@@ -759,6 +761,7 @@ c    wnu,wnv	Full size of the weights array.
 c    wdu,wdv	Cell increments (wavelengths).
 c    nvis	Number of visibilities.
 c    nchan	Number of channels.
+c    npnt	Number of pointings.
 c
 c  Output:
 c    Wts	Array containing the visibility weights.
@@ -769,7 +772,7 @@ c------------------------------------------------------------------------
 	parameter(InFreq=5,InData=8)
 	integer Maxrun
 	parameter(Maxrun=2048)
-	integer i,id,j,VispBuf, VisSize,u,v,k,ktot,l,ltot
+	integer i,id,j,VispBuf, VisSize,u,v,k,ktot,l,ltot,ipnt
 	real Visibs(Maxrun)
 c
 c  Determine the number of visibilities perr buffer.
@@ -779,9 +782,11 @@ c
 c
 c  Zero out the array.
 c
-	do j=1,wnu/2+1
-	  do i=1,wnv
-	    Wts(i,j) = 0.
+	do ipnt=1,npnt
+	  do j=1,wnu/2+1
+	    do i=1,wnv
+	      Wts(i,j,ipnt) = 0.
+	    enddo
 	  enddo
 	enddo
 c
@@ -800,18 +805,21 @@ c
 	      u = nint(Visibs(l+InU)/wdu) + 1
 	      v = nint(Visibs(l+InV)/wdv) + wnv/2 + 1
 	    endif
-	    Wts(v,u) = Wts(v,u) + Visibs(l+InWt)
+	    ipnt = nint(Visibs(l+InPnt))
+	    Wts(v,u,ipnt) = Wts(v,u,ipnt) + Visibs(l+InWt)
 	  enddo
 	  k = k + ltot
 	enddo
 c
 c  Correct the first row.
 c
-	id = wnv
-	do i=1,wnv/2+1
-	  Wts(i,1) = Wts(i,1) + Wts(id,1)
-	  Wts(id,1) = Wts(i,1)
-	  id = id - 1
+	do ipnt=1,npnt
+	  id = wnv
+	  do i=1,wnv/2+1
+	    Wts(i, 1,ipnt) = Wts(i,1,ipnt) + Wts(id,1,ipnt)
+	    Wts(id,1,ipnt) = Wts(i,1,ipnt)
+	    id = id - 1
+	  enddo
 	enddo
 c
 	end
@@ -927,14 +935,14 @@ c
 c
 	end
 c************************************************************************
-	subroutine Wter(tscr,Natural,UWts,wdu,wdv,wnu,wnv,Tu,Tv,
+	subroutine Wter(tscr,Natural,UWts,wdu,wdv,wnu,wnv,npnt,Tu,Tv,
      *	  nvis,npol,nchan,mosaic,idb,sdb,freq0,Rms2,
      *	  Slop,lmn,umax,vmax,cellx,celly)
 c
 	implicit none
-	integer tscr,wnu,wnv,nvis,npol,nchan
+	integer tscr,wnu,wnv,nvis,npol,nchan,npnt
 	logical Natural,sdb,idb,mosaic
-	real Tu,Tv,wdu,wdv,UWts(wnv,wnu/2+1),cellx,celly
+	real Tu,Tv,wdu,wdv,UWts(wnv,wnu/2+1,npnt),cellx,celly
 	real Rms2,freq0,umax,vmax,Slop(npol*nchan)
 	double precision lmn(3)
 c
@@ -947,6 +955,7 @@ c    Tu,Tv	Scale factors for determining taper.
 c    UWts	If its not natural weighting, this contains the
 c		uniform weight information.
 c    wnu,wnv	Weight array size.
+c    npnt	Number of pointings.
 c    wdu,wdv	Weight cell size.
 c    nvis	Number of visibilities.
 c    npol	Number of polarisations.
@@ -968,7 +977,7 @@ c------------------------------------------------------------------------
 	parameter(maxrun=8192)
 c
 	real Wts(maxrun/(InData+2)),Vis(maxrun),logFreq0,Wt,SumWt
-	integer i,j,k,l,size,step,n,u,v,offcorr,nbeam,ncorr
+	integer i,j,k,l,size,step,n,u,v,offcorr,nbeam,ncorr,ipnt
 	logical doshift
 c
 c  Miscellaneous initialisation.
@@ -1019,7 +1028,8 @@ c
 	        u = nint(-Vis(k+InU)/wdu)         + 1
 	        v = nint(-Vis(k+InV)/wdv) + wnv/2 + 1
 	      endif
-	      Wts(i) = Vis(k+InWt) / UWts(v,u)
+	      ipnt = nint(Vis(k+InPnt))
+	      Wts(i) = Vis(k+InWt) / UWts(v,u,ipnt)
 	      Vis(k+InWt) = 1
 	      k = k + size
 	    enddo
