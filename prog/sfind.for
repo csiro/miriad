@@ -525,6 +525,9 @@ c                  in subroutines fdr and basecal.
 c    amh  29aug02  Fixed minor bug which could cause 'psfsize' point source
 c                  fits to return peak and integrated fluxes too low for
 c                  bright sources.
+c    amh  10jun04  Fixed bug which caused erroneously low rms's in rmsboxes
+c                  with blanked pixels at the bottom left, leading to many
+c                  spurious sources at the edges of non-square images.
 c
 c
 c To do:
@@ -580,7 +583,7 @@ c
       data gaps, doabut, dotr /.false., .false., .false./
 c-----------------------------------------------------------------------
       call output (' ')
-      call output ('Sfind: Version 29-Aug-2002')
+      call output ('Sfind: Version 10-Jun-2004')
       call output (' ')
 c
 c Get user inputs
@@ -1925,8 +1928,8 @@ c for comparison with rms value calculated below.
       ptr = 0
       do jj = mmn, mmx
        do ii = lmn, lmx
+        ptr = ptr + 1
         if (nimage(ii,jj).gt.0) then
-         ptr = ptr + 1
          image2(ptr) = image(ii,jj)
          mask(ptr) = .true.
          rng(1) = min(rng(1),image(ii,jj))

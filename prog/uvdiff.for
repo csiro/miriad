@@ -73,6 +73,11 @@ c
 	character modes(NMODES)*12,mode*12,ctemp*12
 	logical negate
 	integer nout
+c
+c  Externals.
+c
+	logical hdprsnt
+c
 	data modes/'difference  ','one         ','two         ',
      *		   '-difference ','-one        ','-two        '/
 c
@@ -101,6 +106,18 @@ c
 c  Open the inputs and outputs.
 c
 	call uvopen(tIn,vis1,'old')
+        if(hdprsnt(tIn,'gains').or.hdprsnt(tIn,'leakage').or.
+     *	   hdprsnt(tIn,'bandpass'))then
+          call bug('w',
+     *      'Uvdiff does not apply pre-existing calibration tables')
+          if(hdprsnt(tIn,'gains'))
+     *      call bug('w','No antenna gain calibration applied')
+          if(hdprsnt(tIn,'leakage'))
+     *      call bug('w','No polarization calibration applied')
+          if(hdprsnt(tIn,'bandpass'))
+     *      call bug('w','No bandpass calibration applied')
+        endif
+c
 	call uvset(tIn,'preamble','uvw/time/baseline/pol/ra/lst',
      *							0,0.,0.,0.)
 	call SelApply(tIn,sels,.true.)
@@ -292,9 +309,25 @@ c------------------------------------------------------------------------
 	include 'uvdiff.h'
 	integer i,j,k
 c
+c  Externals.
+c
+	logical hdprsnt
+c
 c  Open the dataset to be used as the template.
 c
 	call uvopen(tno,vis,'old')
+        if(hdprsnt(tno,'gains').or.hdprsnt(tno,'leakage').or.
+     *	   hdprsnt(tno,'bandpass'))then
+          call bug('w',
+     *      'Uvdiff does not apply pre-existing calibration tables')
+          if(hdprsnt(tno,'gains'))
+     *      call bug('w','No antenna gain calibration applied')
+          if(hdprsnt(tno,'leakage'))
+     *      call bug('w','No polarization calibration applied')
+          if(hdprsnt(tno,'bandpass'))
+     *      call bug('w','No bandpass calibration applied')
+        endif
+c
 	call uvset(tno,'preamble','baseline/pol/ra/lst',0,0.,0.,0.)
 c
 c  Get ready to do things.
