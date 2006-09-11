@@ -46,6 +46,7 @@ c    rjs    06feb96    Increase ctype string in chkaxco.
 c    nebk   26apr96    Make AXTYPCO more flexible in recognizing velocity axes
 c    rjs    17jul97    Get rid of calls to rdhd, and just use coordinate
 c		       object as source of information.
+c    rjs    10nov97    Make ctypeco robust to a blank axis.
 c******************************************************************************
 c
 c* axfndCO -- Find a specified generic axis in an image
@@ -377,14 +378,11 @@ c    il     Length of string prior to project "--*" string
 c--
 c-----------------------------------------------------------------------
       integer len1, il2
-      character str*6, itoaf*2
+      character itoaf*2
       double precision crpix,crval,cdelt
 c----------------------------------------------------------------------- 
       call coAxGet(lun,iax,ctype,crpix,crval,cdelt)      
-      if (ctype.eq.' ')then
-	str = 'ctype'//itoaf(iax)
-	call bug ('f', 'CTYPECO: '//str//' is blank')
-      endif
+      if (ctype.eq.' ')ctype = 'Axis '//itoaf(iax)
 c
       il2 = len1(ctype)
       il = 1

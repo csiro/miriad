@@ -136,6 +136,7 @@ c                        in NAXLABCG
 c     nebk   14fen97     Add argumebnt val3form to LAB3CG
 c     rjs    15apr97     Mr K was not checking for ANGL axis type in
 c			 LAB3CG -- and causing things to vomit.
+c     rjs    10nov97     Make more robust to things missing from headers.
 c**********************************************************************
 c
 c* annboxCG -- Annotate plot with information from a box image 
@@ -2012,8 +2013,8 @@ c-----------------------------------------------------------------------
 c
 c Get image pixel increments
 c
-      call rdhdd (lh, 'cdelt1', cdelt1, 0.0d0)
-      call rdhdd (lh, 'cdelt2', cdelt2, 0.0d0)
+      call rdhdd (lh, 'cdelt1', cdelt1, 1.0d0)
+      call rdhdd (lh, 'cdelt2', cdelt2, 1.0d0)
 c
 c Find size of window in linear coordinates (allow for 1/2
 c of a pixel at either end).

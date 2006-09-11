@@ -48,6 +48,7 @@ c		  gls projection.
 c    rjs  14jul97 Fix bug in covelset introduced on above date.
 c    rjs  21jul97 More robust to bad freq values. Added coSeta.
 c    rjs  16oct97 Minor correction to the felo axis definition.
+c    rjs  10nov97 Make a linear axis if there are no header values.
 c************************************************************************
 c* coInit -- Initialise coordinate conversion routines.
 c& rjs
@@ -1879,7 +1880,7 @@ c  into NCP for E-W telescopes.
 c------------------------------------------------------------------------
 	include 'co.h'
 c
-	integer i
+	integer i,n
 	character num*2,cscal*16
 c	character telescop*16
 c	double precision dtemp
@@ -1908,9 +1909,10 @@ c
 c	ewdone = .false.
 	do i=1,naxis(k)
 	  num = itoaf(i)
-	  call rdhdd(lus(k),'crval'//num,crval(i,k),0.d0)
-	  call rdhdd(lus(k),'crpix'//num,crpix(i,k),0.d0)
-	  call rdhdd(lus(k),'cdelt'//num,cdelt(i,k),0.d0)
+	  call rdhdi(lus(k),'naxis'//num,n,1)
+	  call rdhdd(lus(k),'crval'//num,crval(i,k),dble(n/2+1))
+	  call rdhdd(lus(k),'crpix'//num,crpix(i,k),dble(n/2+1))
+	  call rdhdd(lus(k),'cdelt'//num,cdelt(i,k),1.d0)
 	  call rdhda(lus(k),'ctype'//num,ctype(i,k),' ')
 	  if(cdelt(i,k).eq.0)then
 	    if(ctype(i,k).ne.' ')then
