@@ -28,13 +28,15 @@ c    rjs  23feb00 Original version.
 c    rjs  04feb01 Some small tidying.
 c    rjs  02apr02 Get it to work for Stokes parameters.
 c    rjs  04apr02 Realy fix it this time.
+c    rjs  08apr02 Allow negative values when taking cube roots,
+c		  and print out number of triples.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
 	integer MAXDAT,MAXSRC,MAXPOL
 	integer PolMin,PolMax
 	character version*(*)
-	parameter(version='version 04-Apr-02')
+	parameter(version='version 08-Apr-02')
 	parameter(MAXDAT=15,MAXPOL=2,MAXSRC=1024)
 	parameter(PolMin=-8,PolMax=4)
 c
@@ -204,9 +206,11 @@ c
 c  We have grabbed and averaged all the relevant data.
 c
 	if(dotrip)then
-	  call output('Source        Sca(mJy)  Tri(mJy) Con  The  Act')
+	  call output('Source        Sca(mJy)  Tri(mJy) Con  '//
+     *						'The  Act   NCorr')
 	else
-	  call output('Source        Sca(mJy)  Vec(mJy) Con  The  Act')
+	  call output('Source        Sca(mJy)  Vec(mJy) Con  '//
+     *						'The  Act   NCorr')
 	endif
 	do j=1,nsrc
 	  scat2 = 0
@@ -238,7 +242,7 @@ c
 	    flux2 = sqrt(flux2/ncorr)
 	    if(dotrip)then
 	      flux = real(SSdm)
-	      if(flux.gt.0)flux = flux ** 0.333333
+	      flux = sign(abs(flux)** 0.333333,flux)
 	      flux2 = flux2 ** 0.333333
 	      SSms  = SSms/sqrt(3.0)
 	      if(flux.gt.3*SSms)then
@@ -254,8 +258,9 @@ c
 	    endif
 	    write(line,10)sources(j),nint(1000*flux2),
      *			nint(1000*flux),con,
-     *			nint(1000*SSms),nint(1000*scat2)
-  10	    format(a14,i7,i9,a6,i6,i6)
+     *			nint(1000*SSms),nint(1000*scat2),
+     *			ncorr
+  10	    format(a14,i7,i9,a6,i6,i6,i6)
 	    call output(line)
 	  endif
 	enddo
