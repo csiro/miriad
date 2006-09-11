@@ -35,6 +35,7 @@ c    rjs  30jan95 Added cogeom.
 c    rjs  26sep95 More tolerant of screwy headers.
 c    rjs  22oct95 Comment out warning about assuming its a linear
 c		  coordinate system.
+c    nebk 20nov95 Terrible error. Initialize docelest to false in cocvt.f
 c************************************************************************
 c* coInit -- Initialise coordinate conversion routines.
 c& rjs
@@ -467,6 +468,7 @@ c
 	k = coLoc(lu,.false.)
 	call coCrack(in,x1pix,x1off,naxis(k),MAXNAX,n)
 	call coCrack(out,x2pix,x2off,n,MAXNAX,nt)
+        docelest = .false.
 c
 c  Convert each of the axes.
 c
