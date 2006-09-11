@@ -116,12 +116,13 @@ c--
 c  History:
 c    04may03 rjs  Original version.
 c    15may03 rjs  Better jyperk.
+c    14aug03 rjs  Fix bug causing seg violation.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
 	character version*(*)
 	integer MAXSELS,ATANT
-	parameter(version='AtFix: version 1.0 15-May-03')
+	parameter(version='AtFix: version 1.0 14-Aug-03')
 	parameter(MAXSELS=256,ATANT=6)
 c
 	real sels(MAXSELS),xyz(3*MAXANT)
@@ -233,18 +234,16 @@ c
 c  Get ready to handle atmospheric opacity correction and gain/elevation
 c  correction.
 c
-	if(domet.or.dogel.or.dobl)then
-	  call uvvarIni(lVis,vgmet)
-	  call uvvarSet(vgmet,'nschan')
-	  call uvvarSet(vgmet,'sfreq')
-	  call uvvarSet(vgmet,'sdf')
-	  call uvvarSet(vgmet,'ra')
-	  call uvvarSet(vgmet,'obsra')
-	  call uvvarSet(vgmet,'dec')
-	  call uvvarSet(vgmet,'obsdec')
-	  call uvvarSet(vgmet,'telescop')
-	  call uvvarSet(vgmet,'latitud')
-	endif
+	call uvvarIni(lVis,vgmet)
+	call uvvarSet(vgmet,'nschan')
+	call uvvarSet(vgmet,'sfreq')
+	call uvvarSet(vgmet,'sdf')
+	call uvvarSet(vgmet,'ra')
+	call uvvarSet(vgmet,'obsra')
+	call uvvarSet(vgmet,'dec')
+	call uvvarSet(vgmet,'obsdec')
+	call uvvarSet(vgmet,'telescop')
+	call uvvarSet(vgmet,'latitud')
 	newel = .true.
 	if(domet)then
 	  call metInit(mdata)
