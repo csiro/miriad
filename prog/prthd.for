@@ -38,6 +38,8 @@ c    rjs  14dec95 Support "ANGLE" ctype value.
 c    mchw 14jun96 Replace rangle and hangle, with rangleh and hangleh.
 c    rjs  07aug96 Fix crval conversion for ctype=ANGLE (care Vince McIntyre).
 c    rjs  11oct96 Print delay tracking and pointing RA and DEC.
+c    rjs  14mar97 Recognise "time" axes.
+c
 c  Bugs and Shortcomings:
 c    * Descriptions in brief mode could be a bit more verbose!
 c------------------------------------------------------------------------
@@ -384,6 +386,8 @@ c  Others.
 	    units = 'GHz'
 	  else if(aval(1:3).eq.'UU-'.or.aval(1:3).eq.'VV-')then
 	    units = 'lambda'
+	  else if(aval.eq.'TIME')then
+	    units = 'seconds'
 	  endif
           write(line, 40)aval(1:8),n,crval,crpix,cdelt,units
 40        format (a8, i7, 2x, 1pe13.6, 0pf9.2, 3x, 1pe13.6,2x,a)
