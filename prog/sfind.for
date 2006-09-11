@@ -282,6 +282,9 @@ c                  was accidental, user previously had no way (other than
 c                  rerunning program) of accepting source detected when button
 c                  was accidentally pressed.
 c    rjs  21aug97  Move calls to initco and finco.
+c    amh  20apr98  Add line when writing to log to indicate which image is
+c                  being analysed. Also added hash marks before each line of
+c                  header output for ease of later file interpretation.
 c
 c To do:
 c
@@ -335,7 +338,7 @@ c
       data gaps, doabut, dotr /.false., .false., .false./
 c-----------------------------------------------------------------------
       call output (' ')
-      call output ('Sfind: version 1.22, 21-Aug-97')
+      call output ('Sfind: version 1.3, 20-Apr-98')
       call output (' ')
 c
 c Get user inputs
@@ -544,7 +547,7 @@ c Interactive graphical source finding routine
 c
          call search (lin, win(1), win(2), memr(ipim), memi(ipnim),
      +     blc, ibin, jbin, krng, llog, mark, cut, rmsbox, xrms, 
-     +     nofit, asciiart, auto, negative)
+     +     nofit, asciiart, auto, negative, in)
 c
 c Increment sub-plot viewport locations and row counter
 c
@@ -586,7 +589,7 @@ c The source-detection subroutine.
 c
         call search(lin, win(1), win(2), memr(ipim),
      +     memi(ipnim), blc, ibin, jbin, krng, llog, mark, cut,
-     +     rmsbox, xrms, nofit, asciiart, auto, negative)
+     +     rmsbox, xrms, nofit, asciiart, auto, negative, in)
        end do
 c
 c Close up
@@ -615,7 +618,7 @@ c
 c
       subroutine search (lin, nx, ny, image, nimage, blc, ibin, jbin,
      +   krng, llog, mark, cut, rmsbox, xrms, nofit, asciiart, auto,
-     +   negative)
+     +   negative, in)
 c-----------------------------------------------------------------------
 c  This is the master subroutine for the detecting of sources and the
 c interactive decision bit. It detects bright pixels, determines whether they
@@ -649,6 +652,7 @@ c     asciiart  display ascii representations of each source during
 c               interactive source selection
 c     auto      skip all the interactive bits of source flagging.
 c     negative  inverts image: positive pixels become negative and vice versa
+c     in        image name
 c
 c-----------------------------------------------------------------------
       implicit none
@@ -657,6 +661,7 @@ c
      +  krng(2)
       real image(nx,ny)
       logical mark, nofit, asciiart, auto, negative
+      character in*(*)
 cc
       double precision wa(2), posns(2)
       real ww(2), wsave(2), cut, xrms, peak, base0
@@ -667,7 +672,7 @@ cc
       integer iostat, len1, iloc, bin(2), l, m, radeclen(2), rmsbox
       integer sources, ysources, k, i, j
       character cch*1, line*160, typei(2)*6, radec(2)*80, typeo(2)*6
-      character line2*160, line3*160, line4*160
+      character line1*80, line2*160, line3*160, line4*160
       logical ok, nobeam, fitok
 c-----------------------------------------------------------------------
       call output (' ')  
@@ -710,29 +715,32 @@ c
 c
 c Write header for output to screen, unless "auto" option selected.
 c
+      write(line1,19) '# Sources from image ',in
+19    format(a21,a59)
+      if (.not.auto) call output (line1)
       if (nofit) then
-        write(line2,20) 'RA','DEC','flux','x','y','rms',
+        write(line2,20) '#','RA','DEC','flux','x','y','rms',
      +                  'flux/rms'
-20      format(5x,a,11x,a,4x,a,7x,a,8x,a,7x,a,2x,a)
+20      format(a,4x,a,11x,a,4x,a,7x,a,8x,a,7x,a,2x,a)
         if (.not.auto) call output(line2)
-        line3 = '                         mJy      pixels   '//
+        line3 = '#                        mJy      pixels   '//
      +          'pixels    mJy'
         if (.not.auto) call output (line3)
-        line4 = '------------------------------------------'//
+        line4 = '#-----------------------------------------'//
      +          '-------------------------------------'
         if (.not.auto) call output (line4)
        else
-        write(line2,30) 'RA','DEC','err(RA)','err(DEC)','pk-flux',
+        write(line2,30) '#','RA','DEC','err(RA)','err(DEC)','pk-flux',
      +                  'err','flux','bmaj','bmin','pa',
      +                  'rms(bg)','rms(fit)'
-30      format(5x,a,9x,a,5x,a,1x,a,1x,a,3x,a,6x,
+30      format(a,4x,a,9x,a,5x,a,1x,a,1x,a,3x,a,6x,
      +         a,3x,a,3x,a,3x,a,1x,a,1x,a)
         if (.not.auto) call output(line2)       
-        line3 = '                        arcsec   arcsec   '//
+        line3 = '#                       arcsec   arcsec   '//
      +          'mJy      mJy       mJy  arcsec arcsec '//
      +          'deg  mJy     mJy'
         if (.not.auto) call output (line3)
-        line4 = '------------------------------------------'//
+        line4 = '#-----------------------------------------'//
      +          '-------------------------------------'//
      +          '----------------'
         if (.not.auto) call output (line4)
@@ -740,6 +748,7 @@ c
 c
 c Write output header for log file
 c
+      call txtwrite (llog, line1, len1(line1), iostat)
       call txtwrite (llog, line2, len1(line2), iostat)
       call txtwrite (llog, line3, len1(line3), iostat)
       call txtwrite (llog, line4, len1(line4), iostat)
