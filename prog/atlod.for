@@ -174,6 +174,7 @@ c    rjs  07jan98 Better printing of source names.
 c    rjs  06apr98 Increase the max size of an integration.
 c    rjs  07may98 Change in handling of jstat.eq.5 return value.
 c    rjs  14may98 Handle higher time resolution.
+c    rjs  04oct98 Extra check for validity of a record.
 c
 c  Program Structure:
 c    Miriad atlod can be divided into three rough levels. The high level
@@ -1711,6 +1712,8 @@ c
 c  Data record. Check whether we want to accept it.
 c  If OK, and we have a new scan, calculate the new scan info.
 c
+	else if(ifno.lt.1.or.ifno.gt.n_if.or.srcno.lt.1)then
+	    fgbad = fgbad + 1
 	  else
 	    ok = scanno.gt.scanskip
 	    if(ok.and.NewScan)then
