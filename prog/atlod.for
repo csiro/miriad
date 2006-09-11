@@ -185,6 +185,7 @@ c    rjs  31aug99 Check for bad RPFITS value for sdf.
 c    rjs  11jun00 Include pmps switch. More robust to bad number of channels
 c		  etc in RPFITS file. Increase buffer space.
 c    dpr  10apr01 Add cluge for correlator UT day rollover bug.
+c    dpr  11apr01 ATANT=8 in atlog.h
 c
 c  Program Structure:
 c    Miriad atlod can be divided into three rough levels. The high level
