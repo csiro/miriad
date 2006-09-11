@@ -49,11 +49,11 @@ c
 	call hreadi(item,nschan,off,4,iostat)
 	off = off + 8
 	if(iostat.eq.0)call hreadd(item,freqs,off,2*8,iostat)
-	write(line,'(a,f10.5,a)')'Initial freqeuncy before shift: ',
+	write(line,'(a,f10.5,a)')'Initial frequency before shift: ',
      *	  freqs(1),' GHz'
 	call output(line)
 	freqs(1) = freqs(1) + offset
-	write(line,'(a,f10.5,a)')'Initial freqeuncy after  shift: ',
+	write(line,'(a,f10.5,a)')'Initial frequency after  shift: ',
      *	  freqs(1),' GHz'
 	call output(line)
 	if(iostat.eq.0)call hwrited(item,freqs,off,2*8,iostat)
