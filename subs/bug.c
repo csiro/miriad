@@ -5,6 +5,8 @@
 /*  History:								*/
 /*    rjs,mjs ????    Very mixed history. Created, destroyed, rewritten.*/
 /*    rjs     26aug93 Call habort_c.					*/
+/*    rjs     14jul98 Add a caste operation in errmsg_c, to attempt	*/
+/*		      to appease some compilers.			*/
 /************************************************************************/
 
 #include <stdio.h>
@@ -133,7 +135,7 @@ int n;
 # endif
 
 
-  if(n > 0 && n <= sys_nerr)return(sys_errlist[n]);
+  if(n > 0 && n <= sys_nerr)return((static char*)sys_errlist[n]);
   else{
     sprintf(string,"Unknown error with number %d detected.",n);
     return(string);
