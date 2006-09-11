@@ -57,6 +57,7 @@ c    dpr  05Feb01  Update doc and err messages.
 c    rjs  06feb01  Added options=airmass.
 c    rjs  24apr01  Split out the code to determine brightness etc.
 c    rjs  05sep01  Added log option.
+c    rjs  05jun18  More space between numbers in log file.
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	integer nmax
@@ -83,7 +84,7 @@ c
 	integer pgbeg
 c
 	call keyini
-	call output('opplt: version 1.0 24-Apr-01')
+	call output('opplt: version 1.0 18-Jun-05')
 	call keya('device',device,' ')
 	call keya('log',logf,' ')
 c
@@ -191,7 +192,7 @@ c
 	if(logf.ne.' ')then
 	  call logopen(logf,' ')
 	  do i=1,NPNT
-	    write(line,'(3f7.3)')x(i),y1(i),y2(i)
+	    write(line,'(3f8.3)')x(i),y1(i),y2(i)
 	    call logwrite(line,more)
 	  enddo
 	  call logclose

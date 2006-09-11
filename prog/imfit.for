@@ -118,6 +118,7 @@ c    mchw 21apr98 more precise Offset position.
 c    rjs  27apr98 Merge above two sets of changes.
 c    rjs  27oct98 Improved format statements.
 c    rjs  30jun99 Ditto.
+c    paj  28Mar03 Fix bug in uncertainty estimates
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'maxnax.h'
@@ -691,28 +692,28 @@ c
 	do i=1,nsrc
 	  if(vflux(i))then
 	    n = n + 1
-	    sflux(i) = covar(n,n)
+	    sflux(i) = sqrt(covar(n,n))
 	  endif
 	  if(vl0(i))then
 	    n = n + 1
-	    sl0(i) = covar(n,n)
+	    sl0(i) = sqrt(covar(n,n))
 	  endif
 	  if(vm0(i))then
 	    n = n + 1
-	    sm0(i) = covar(n,n)
+	    sm0(i) = sqrt(covar(n,n))
 	  endif
 	  if(vfwhm1(i))then
 	    n = n + 1
-	    sfwhm1(i) = covar(n,n)
+	    sfwhm1(i) = sqrt(covar(n,n))
 	    if(circ(i))sfwhm2(i) = sfwhm1(i)
 	  endif
 	  if(vfwhm2(i))then
 	    n = n + 1
-	    sfwhm2(i) = covar(n,n)
+	    sfwhm2(i) = sqrt(covar(n,n))
 	  endif
 	  if(vpa(i))then
 	    n = n + 1
-	    spa(i) = covar(n,n)
+	    spa(i) = sqrt(covar(n,n))
 	  endif
 	enddo
 c
@@ -995,11 +996,13 @@ c
 	  else
 	    if(srctype(i).ne.BEAM)then
 	      if(sflux(i).gt.0)then
-	        write(line,30)flux(i),sfac*sflux(i)
+	        write(line,25)flux(i),sfac*sflux(i)
+  25	        format('  Peak value:',1pg27.4,:,' +/-', 1pg12.4)
 	      else
 	        write(line,30)flux(i)
+  30	        format('  Peak value:',1pg27.4,:,' +/-',0pf8.4)
 	      endif
-  30	      format('  Peak value:',1pg27.4,:,' +/-',0pf8.4)
+
 	      call output(line)
 	      if(bvol.gt.0.and.srctype(i).ne.POINT)then
 	        tflux = flux(i) * pi/4 * fwhm1(i) * fwhm2(i)

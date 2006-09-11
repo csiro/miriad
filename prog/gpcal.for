@@ -199,6 +199,7 @@ c    rjs     22may98 Turn off xyref on early iterations of weakly polarised
 c		     source.
 c    rjs     19aug98 Changes in ampsolxy and ampsol to avoid an SGI compiler bug.
 c    rjs     12oct99 Attempts to perform absolute flux calibration.
+c    rjs      7oct04 Set senmodel parameter.
 c
 c  Bugs:
 c    * Polarisation solutions when using noamp are wrong! The equations it
@@ -210,7 +211,7 @@ c------------------------------------------------------------------------
 	integer MAXITER
 	character version*(*)
 	parameter(MAXITER=30)
-	parameter(version='Gpcal: version 1.0 12-Oct-99')
+	parameter(version='Gpcal: version 1.0 7-Oct-04')
 c
 	integer tIn
 	double precision interval(2), freq
@@ -1991,6 +1992,7 @@ c  Get the source and frequency of the first data.
 c
 	call uvrdvra(tIn,'source',source,' ')
 	call uvfit1(tIn,'frequency',nchan,freq,epsi)
+	call defsmodl(tIn)
 c
 c  Get the data. Read the remaining correlations for this record.
 c

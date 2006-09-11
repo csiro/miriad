@@ -50,6 +50,8 @@ c  History:
 c    04-jun-96 rjs  Preliminary version.
 c    20-jun-96 rjs  Bring it up to scratch.
 c    14-aug-96 rjs  Added ability to negate the output.
+c    09-jul-04 jwr  Renamed Unpack to Unpck to avoid compiler complaining
+c		    about unimplemented intrisics
 c  Bugs/Shortcomings:
 c    * Should handle the conjugate symmetry property, and match data over
 c      a wider range of HA.
@@ -204,7 +206,7 @@ c------------------------------------------------------------------------
 	real w1,w2
 	double precision mha
 c
-	call Unpack(vars,mha,bl,ipol)
+	call Unpck(vars,mha,bl,ipol)
 c
 c  Go through the dataset until we find the right integrations.
 c
@@ -260,13 +262,13 @@ c
 c
 	end
 c************************************************************************
-	subroutine unpack(vars,mha,bl,ipol)
+	subroutine unpck(vars,mha,bl,ipol)
 c
 	implicit none
 	double precision vars(4),mha
 	integer bl,ipol
 c
-c  Unpack variables, in the order baseline,pol,ra,lst
+c  Unpck variables, in the order baseline,pol,ra,lst
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'uvdiff.h'
@@ -391,7 +393,7 @@ c  Determine the polarisation and hour angle of the spare record.
 c
 	nchan(ipnt) = nspare
 	if(min(nchan(1),nchan(2)).le.0)return
-	call unpack(pspare,mha,bl,ipol)
+	call unpck(pspare,mha,bl,ipol)
 	ha(ipnt) = mha
 c
 	dowhile(abs(mha-ha(ipnt)).lt.1e-4.and.
@@ -416,7 +418,7 @@ c
 c  Get another record.
 c
 	  call uvread(tno,pspare,cspare,lspare,MAXCHAN,nspare)
-	  if(nspare.gt.0)call unpack(pspare,mha,bl,ipol)
+	  if(nspare.gt.0)call unpck(pspare,mha,bl,ipol)
 	enddo
 c
 	if(abs(mha-ha(ipnt)).lt.1e-4.and.nspare.ne.0)

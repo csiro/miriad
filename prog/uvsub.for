@@ -35,8 +35,8 @@ c--
 c  History:
 c    05jan94 nebk  Original version.
 c    12jan94 nebk  Convert to use velocity line type
-c    17aug94 rjs   Fiddle offsets to give better results. Also fix
-c		   lousy documentation.
+c    17aug94 rjs   Fiddle offsets to give better results. 
+c    14nov95 nebk  Remove dependence on cgsubs.for
 c
 c Bugs:
 c   Too little code to have bugs
@@ -44,7 +44,7 @@ c------------------------------------------------------------------------
       include 'maxdim.h'
       integer MAXMOD
       character version*(*)
-      parameter (version = 'UVSUB: version 17-Aug-94')
+      parameter (version = 'UVSUB: version 14-Nov-94')
       parameter (MAXMOD = 500)
 c
       complex data(MAXCHAN)
@@ -271,7 +271,7 @@ c Prepare string for matodf
 c
       str = itoaf(nmod)
       slen = len1(str)
-      call strprpcg (4, aline, icomm, ipres, lena)
+      call strprp (4, aline, icomm, ipres, lena)
       if (ipres.lt.4) then
         estr = 'There are insufficient fields for model # '//
      +          str(1:slen)
@@ -344,3 +344,85 @@ c
 c
       first = .false.
       end
+c
+c
+      subroutine strprp (maxloc, aline, comloc, nfield, lena)
+c
+      implicit none
+      character*(*) aline
+      integer nfield, maxloc, comloc(maxloc), lena
+c
+c     Take a string with a number of mixed ascii/numeric fields in it
+c     and prepare it for use by stripping out extra white space and
+c     replacing the space delimiters by commas (matod needs this).
+c
+c     Input:
+c       maxloc  Maximum number of fields allowed in string
+c     Input/output:
+c       aline   String
+c     Output
+c       comloc  Locations along string of comma delimiters for
+c               each field.  comloc(1) is the comma between the
+c               first and second fields etc
+c       nfield  Number of fields in string
+c       lena    Length of output string after massaging
+c--
+c---------------------------------------------------------------------
+      integer i, j, lenb, idx
+      character bline*132
+c
+      integer len1
+c--------------------------------------------------------------------
+c
+c Strip leading white space
+c
+      idx = 1
+      do while (aline(idx:idx).eq.' ')
+        idx = idx + 1
+      end do
+      bline = aline(idx:)
+      aline = ' '
+      aline = bline
+c
+c Strip additional white space out. Catch cases where commas 
+c already the separator too
+c
+      bline = ' '
+      lena = len1(aline)
+      bline(1:1) = aline(1:1)
+      j = 2
+      do i = 2, lena
+        if ((aline(i:i).eq.' ' .and. aline(i-1:i-1).eq.' ') .or.
+     +      (aline(i:i).eq.' ' .and. aline(i-1:i-1).eq.',')) then
+          continue
+        else
+          bline(j:j) = aline(i:i)
+          j = j + 1
+        end if
+      end do
+c
+c Replace spaces and colons (which may come from RA or DEC formatted
+c strings) by commas (for matodf) and count how many fields there are
+c
+      lenb = len1(bline)
+      nfield = 0
+      do i = 1, lenb
+        if (bline(i:i).eq.' ' .or. bline(i:i).eq.':' .or.
+     +      bline(i:i).eq.',') then
+          bline(i:i) = ','
+          nfield = nfield  + 1
+          if (nfield.gt.maxloc) call bug ('f',
+     +      'STRPRP: Too many fields for internal storage')
+          comloc(nfield) = i
+        end if
+      end do
+      nfield = nfield + 1
+      if (bline(lenb:lenb).eq.',') then
+        nfield = nfield - 1
+        lenb = lenb - 1
+      end if
+      aline = bline
+      lena = lenb
+c
+      end 
+

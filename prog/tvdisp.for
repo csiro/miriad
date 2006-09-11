@@ -96,6 +96,7 @@ c                  panel as needed.  Also corrected the documentation to
 c                  clarify that only a simple bounding box is acceptable
 c                  as an input region.
 c   rjs  20dec95 - Tidy up movie subroutine.
+c   rjs  05dec96 - Improve delay logical in movie sequence.
 c------------------------------------------------------------------------
       include 'maxdim.h'
       integer MAXPL, MAXBOXES
@@ -687,8 +688,11 @@ c
         call tvcursor(x, y, button)
         x = x - blcx + 1
         if (x .lt. 1) x = 1
-        if((step.or.runit.or.(.not.step.and..not.runit))
-     *	    .and..not.restart)call delayf(scale*x)
+	if(runit)then
+	  call delayf(scale*x)
+	else if(.not.restart)then
+	  call delayf(0.1)
+	endif
       enddo
 c
       if (ctrl) then

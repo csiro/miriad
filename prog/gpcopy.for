@@ -64,11 +64,12 @@ c    rjs  17aug95 More messages.
 c    rjs  10dec97 Change some fatal messages to warnings only, to
 c		  prevent tables getting corrupted. Add check for
 c		  apparently corrupt gain table.
+c    rjs  19sep04 Copy across sensitivity model.
 c  Bugs:
 c    None?
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='GpCopy: version 10-Dec-97')
+	parameter(version='GpCopy: version 19-Sep-04')
 	logical dopol,docal,dopass,docopy
 	integer iostat,tIn,tOut
 	character vis*64,out*64,mode*8,line*64
@@ -147,6 +148,7 @@ c
 	    call hdcopy(tIn,tOut,'ntau')
 	    call hdcopy(tIn,tOut,'gains')
 	    call hdcopy(tIn,tOut,'freq0')
+	    call hdcopy(tIn,tOut,'senmodel')
 	  endif
 	endif
 c

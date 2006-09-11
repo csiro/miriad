@@ -52,6 +52,7 @@ c    04jan96 nebk  Write header descriptors as double precision
 c    21may96 sek   Reborn as XPEAK.
 c    26nov96 rjs   Increase length of input and output filenames.
 c    02jul97 rjs   cellscal change.
+c    23jul97 rjs   added pbtype.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
  	character version*(*)
@@ -166,7 +167,7 @@ c    mom	The moment to be calculated.
 c    axis	The axis for which the moment is calculated.
 c------------------------------------------------------------------------
 	integer nkeys, nckeys,i,j,k
-	parameter (nkeys=22, nckeys=4)
+	parameter (nkeys=23, nckeys=4)
 	character keyw(nkeys)*9, ckeyw(nckeys)*5, itoaf*1, cin*1, cout*1
 	character atemp*9,ctype*10
 	double precision rtemp,cdelt,crval,crpix,idx
@@ -175,11 +176,11 @@ c
 c  Be careful that nkeys and nckeys match the number of keywords.
 c	bunit is a special case for this task.
 c
-	data keyw/   'bmaj    ','bmin    ','bpa     ',
-     *    'date-obs','epoch   ','history ','instrume',
+	data keyw/   'bmaj    ','bmin    ','bpa     ','rms     ',
+     *    'obstime ','epoch   ','history ','instrume',
      *	  'ltype   ','lstart  ','lwidth  ','lstep   ','niters  ',
      *	  'object  ','observer','obsra   ','obsdec  ','pbfwhm  ',
-     *    'restfreq','telescop','vobs    ','xshift  ','yshift  '/
+     *    'restfreq','telescop','vobs    ','pbtype  ','cellscal'/
 c
 c  Keyword values which must be changed as they are passed from in to out.
 c

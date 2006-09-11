@@ -17,9 +17,10 @@ c
 c      nebk 02Feb88   Old and dusty version
 c      nebk 02Sep91   Vastly improved by fixing spelling mistake in
 c                     help file.
+c      rjs  06jan97   Increase size of erver variable.
 c------------------------------------------------------------------------
-      character server*32
-      call output( 'Tvinit: version 02-sep-91' )
+      character server*64
+      call output( 'Tvinit: version 06-Jan-97' )
       call keyini
       call keya('server',server,' ')
       call keyfin

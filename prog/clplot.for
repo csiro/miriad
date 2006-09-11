@@ -57,16 +57,18 @@ c
 c  History:
 c    20jan94 jpw   Copied from MIRIAD program velplot
 c    13jul98 pjt   linux/g77 cleanup
+c    26aug98 pjt   fixed bug with long words in history file of .cf file
+c    02jan05 rjs   fix misdeclaration.
 c----------------------------------------------------------------------c
 	include 'clplot.h'
 	character*(*) version
-	parameter(version='(version 1.0 13-jul-98)')
+	parameter(version='(version 1.0 02-Jan-05)')
 c
 	integer maxnax,maxboxes
 	parameter(maxnax=3,maxboxes=maxdim)
 	integer boxes(maxboxes),nsize(maxnax),blc(maxnax),trc(maxnax)
 	character*80 ans,line,in,log
-	character words(10)*60
+	character words(80)*80
 	character*3 extension
 	integer lIn,lIn2,nx,ny,nc,idoc,iostat,length
 	integer nwords,len1
@@ -1479,7 +1481,8 @@ c
       dimension sig(256),a(nma),lista(nma),
      *          covar(nma,nma),alpha(nma,nma)
       real alamda,chisq,ochisq
-      integer value,length
+      integer length
+      real value
       real rms_est
       character*80 line,ans
       real p1,p2,p3,amp,mom1,mom2
@@ -2822,17 +2825,17 @@ C-----------------------------------------------------------------
 C     Interpretes a character string into a set of sub-strings.
 C     K. A. Marsh   1980.  Latest revision by LGM, 1985 March 5.
 C-----------------------------------------------------------------
-      CHARACTER*(*) STRING,CCELL(20)
+      CHARACTER*(*) STRING,CCELL(80)
       INTEGER NCELLS
 
       CHARACTER*28 UPPER,LOWER
-      INTEGER I1(20),I2(20),I,J,L,IMAX,JMAX
+      INTEGER I1(80),I2(80),I,J,L,IMAX,JMAX
       DATA UPPER/'ABCDEFGHIJKLMNOPQRSTUVWXYZ  '/
       DATA LOWER/'abcdefghijklmnopqrstuvwxyz=,'/
 C-------------------------------------------------
 C     Initialize CCELL to blanks.
       JMAX=LEN(CCELL(1))
-      DO 50 I=1,20
+      DO 50 I=1,80
       DO 50 J=1,JMAX
    50    CCELL(I)(J:J)=' '
 C----------------------------------------------------------------------
@@ -2859,7 +2862,12 @@ C Identify strings by the spaces ; ncells = the number of sub-strings
 C-------------------------------------------------------------------------
 C     Translate each sub-string into its own location in CHAR.
       DO 300 J=1,NCELLS
-         WRITE(CCELL(J),5001) STRING(I1(J):I2(J))
+	 IF (I2(J)-I1(J)+1 .GT. len(CCELL(j))) THEN
+		write(*,*) 'BAD SOPCHR: ',I1(j),i2(j),j
+		CALL bug('f','Line too long in history file')
+	 ELSE
+	         WRITE(CCELL(J),5001) STRING(I1(J):I2(J))
+	 ENDIF
   300    CONTINUE
 C-------------------------------------------------------------------------
       RETURN

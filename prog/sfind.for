@@ -525,6 +525,7 @@ c                  in subroutines fdr and basecal.
 c    amh  29aug02  Fixed minor bug which could cause 'psfsize' point source
 c                  fits to return peak and integrated fluxes too low for
 c                  bright sources.
+c    pjt  20feb03  defined alpha (implicit undefined)
 c    amh  10jun04  Fixed bug which caused erroneously low rms's in rmsboxes
 c                  with blanked pixels at the bottom left, leading to many
 c                  spurious sources at the edges of non-square images.
@@ -560,7 +561,7 @@ c
       real levs(maxlev), pixr(2), tr(6), cs(2), pixr2(2), scale(2), 
      +  tfvp(4), wdgvp(4), cumhis(nbins), dmm(3)
       real slev, vxmin, vymin, vymax, vx, vy, vxsize, vysize, vxgap, 
-     +  vygap, ydispb, xdispl, groff, blank, cut, xrms
+     +  vygap, ydispb, xdispl, groff, blank, cut, xrms, alpha
 c
       integer blc(3), trc(3), size(maxnax), win(maxnax),
      +  grpbeg(maxchan), ngrp(maxchan), srtlev(maxlev), his(nbins)

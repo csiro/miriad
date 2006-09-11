@@ -1,8 +1,10 @@
       program uvtplt
 c------------------------------------------------------------------------
-c     UVTPLT plots Tsys for each field of a mosaiced observation
+c     UVTPLT plots Tsys as a function of time for each field 
+c     of a mosaiced observation.  Optionally, a median smoothed
+c     curve of Tsys can be overlaid.
 c
-c= uvtplt - 
+c= uvtplt - Plot Tsys for each field of a mosaiced observation
 c	     
 c& nebk
 c: plotting
@@ -24,12 +26,19 @@ c@ nxy
 c	Number of plots in z and y directions per page
 c@ options
 c	tsysm  Get Tsys from median smoothed variables "xtsysm"
-c	  and "ytsysm" rather than usual "xtsys" and "ytsys"
+c	   and "ytsysm" rather than usual "xtsys" and "ytsys"
 c	first  Drop the first cycle of each new mosaic field
+c	median Draw the median Tsys curve on the plot as well.
+c	   Options=first is done before the median is worked out.
+c	   
+c@ size
+c	PGPLOT character size.  
+c	Default is 1.0
 c--
 c
 c     nebk 20mar95 Original version
 c     nebk 11apr95 Add check for Tsys variables
+c     nebk 19jun95 Add options=median and keyword size
 c
 c  Bugs
 c    Assumes linear polarizations
@@ -38,14 +47,14 @@ c---------------------------------------------------------------------------
       include 'maxdim.h'
       integer frqmax, fldmax, polmax, antmax, timemax, allmax
       character version*(*)
-      parameter(version='version 11-Apr-95', frqmax=4, 
+      parameter(version='version 19-Jun-95', frqmax=4, 
      +          polmax = 2, fldmax = 20, antmax=6, timemax=300,
      +          allmax=fldmax*antmax*polmax*frqmax)
 c
       character vis*64, roots*20, source*20, device*60, type*1
       real time(timemax,fldmax,antmax,polmax,frqmax), 
      +  tsys(timemax,fldmax,antmax,polmax,frqmax),
-     +  vtsys(maxant*maxwin*2)
+     +  vtsys(maxant*maxwin*2), csize
       integer ntsys(fldmax,antmax,polmax,frqmax)
 c
       integer nf, nread, tvis, freqs(frqmax), nx, ny,
@@ -54,7 +63,7 @@ c
       double precision sfreq(maxwin), sdf(maxwin), preamble(4),
      + jd, jdold
       complex data(maxchan)
-      logical flags(maxchan), keep, dom, updated, first
+      logical flags(maxchan), keep, dom, updated, first, median
       integer len1, pgbeg
       data ntsys /allmax*0.0/
 c------------------------------------------------------------------------
@@ -78,7 +87,8 @@ c
       if (device.eq.' ') call bug ('f', 'No plotting device given')
       call keyi ('nxy', nx, 3)
       call keyi ('nxy', ny, 2)
-      call getopt (dom, first)
+      call getopt (dom, first, median)
+      call keyr ('size', csize, 1.0)
       call keyfin
 c
 c Read through data and generate arrays of Tsys for each antenna,field,
@@ -170,8 +180,9 @@ c
         do k = 1, 2
           do j = ifield1, ifield2
             do i = 1, 6
-              call plot (first, ntsys(j,i,k,l), time(1,j,i,k,l),
-     +          tsys(1,j,i,k,l), roots(1:ir), j, i, k, freqs(l))
+              call plot (median, first, ntsys(j,i,k,l), 
+     +          time(1,j,i,k,l), tsys(1,j,i,k,l), 
+     +          roots(1:ir), j, i, k, freqs(l), csize)
             end do
           end do
         end do
@@ -247,16 +258,22 @@ c
       end
 c
 c
-      subroutine plot (first, n, x, y, roots, ifield, iant, ipol, freq)
+      subroutine plot (median, first, n, x, y, roots, ifield, iant, 
+     +                 ipol, freq, csize)
 c-----------------------------------------------------------------------
 c   Plot em up
 c-----------------------------------------------------------------------
       implicit none
       integer n, ifield, iant, i, j, ipol, freq
-      real x(n), y(n)
-      logical first
+      real x(n), y(n), csize
+      logical first, median
       character roots*(*)
 cc  
+      integer mdim
+      parameter (mdim = 1000)
+      real xm(mdim), ym(mdim)
+      integer nm
+c
       real ymin, ymax, xl, x2, y1, y2, xold
       character aline*80, cpol*1
 c-----------------------------------------------------------------------
@@ -277,8 +294,18 @@ c
         n = j
       end if
 c
+c Generate median arrays if desired
+c
+      if (median) then
+        if (n.gt.mdim) then
+          call bug ('f', 'Too many points for median arrays')
+        end if
+        call medarr (n, x, y, nm, xm, ym)
+      end if
+c
 c Find extrema
 c
+      call pgsch (csize)
       call pgvstd
       xl = x(1) - 0.05*(x(n)-x(1))      
       x2 = x(n) + 0.05*(x(n)-x(1))      
@@ -297,43 +324,82 @@ c
       call pgpage
       call pgtbox ('BCNSTZ', 0.0, 0, 'BCNST', 0.0, 0)
       call pgpt (n, x, y, 1)
+      if (median) call pgline (nm, xm, ym)
       cpol = 'X'
       if (ipol.eq.2) cpol = 'Y'
       if (ifield.le.9) then
         write (aline, 100) freq, cpol, roots, ifield, iant
-100     format (' Freq. ', i4, ' MHz', '  Pol ', a1,
-     +          '  Field ', a, i1, '  Antenna ', i2)
+100     format (i4, ' MHz', '  Pol ', a1,
+     +          '  Field ', a, i1, '  Ant ', i2)
       else 
         write (aline, 200) freq, cpol, roots, ifield, iant
-200     format (' Freq. ', i4, ' MHz', '  Pol ', a1,
-     +          '  Field ', a, i2, '  Antenna ', i2)
+200     format (i4, ' MHz', '  Pol ', a1,
+     +          '  Field ', a, i2, '  Ant ', i2)
       end if
       call pglabel ('UT', 'Tsys', aline)
       end
 c
 c
-      subroutine getopt (dom, first)
+      subroutine getopt (dom, first, median)
 c-----------------------------------------------------------------------
 c     Get user options
 c
 c   Output:
 c     dom     Means plot "x,ytsysm" variables instead of "x,ytsys"
 c     first   Drop first cycle of each field
+c     median  Draw median smoothed Tsys curve as well
 c-----------------------------------------------------------------------
       implicit none
 c
-      logical dom, first
+      logical dom, first, median
 cc
       integer nopt
-      parameter (nopt = 2)
+      parameter (nopt = 3)
 c
       character opts(nopt)*8
       logical present(nopt)
-      data opts /'tsysm', 'first'/
+      data opts /'tsysm', 'first', 'median'/
 c-----------------------------------------------------------------------
       call options ('options', opts, present, nopt)
       dom =   present(1)
       first = present(2)
+      median = present(3)
+c
+      end
+c
+c
+      subroutine medarr (n, x, y, nm, xm, ym)
+c-----------------------------------------------------------------------
+c    Generate median smoothed arrays
+c-----------------------------------------------------------------------
+      implicit none
+      integer n, nm
+      real x(*), y(*), xm(*), ym(*)
+cc
+      integer nsm
+      parameter (nsm = 11)
+      real yt(nsm+2)
+c
+      integer ioff, i, j, k, l, is, ie
+      real xsum
+c-----------------------------------------------------------------------
+      ioff = nsm/2
+      l = 1 
+      do i = 1, n
+        is = max(1,i-ioff)
+        ie = min(n,i+ioff)
+        k = 1
+        xsum = 0.0
+        do j = is, ie
+          yt(k) = y(j)
+          xsum = xsum + x(j)
+          k = k + 1
+        end do
+        call median (yt, ie-is+1, ym(l))
+        xm(l) = xsum/real(ie-is+1)
+        l = l + 1
+      end do
+      nm = l - 1
 c
       end
 

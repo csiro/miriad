@@ -146,6 +146,8 @@ c                  log strings
 c    lss   3jun02  coordinate now has a default, subroutines vaxis1 and vaxis3
 c                  replaced by vaxis13
 c    lss  14jun02  added a position-fitting option
+c    nebk 12nov03  in subroutine pfit, declare xmom and coord to be of 
+c                  size maxnax, not of passed in naxis (illegal fortran)
 c----------------------------------------------------------------------c
 	include 'maxdim.h'
 	integer maxco,maxnax,naxis,maxch
@@ -937,11 +939,12 @@ c    dec        Fitted DEC (formatted)
 c    none       True if no good pixels selected
 c----------------------------------------------------------------------c
 	include 'maxdim.h'
+	include 'maxnax.h'
         include 'mbspect.h'
 
 	real buf(maxdim),pmom(imax,jmax)
 	real pi, d2r, tmp, flux
-	double precision xmom(naxis), coord(naxis), dwtrc(3)
+	double precision xmom(maxnax), coord(maxnax), dwtrc(3)
 	character line*80
 	logical flags(maxdim), flagpos
 	integer i,j,k, indx, jndx, kndx, i1,i2

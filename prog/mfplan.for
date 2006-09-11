@@ -63,13 +63,14 @@ c    rjs   7oct93 Change default frequencies to silence akt (certainly no easy
 c		  feat).
 c    rjs  04jul97 "fixed" keyword.
 c    nebk 13oct97 Add 210m array.  Draw arrys in colours
+c    rjs   6apr04 Added ew214, ew352, ew367
 c  Bugs:
 c------------------------------------------------------------------------
 	character version*(*)
 	integer nants,nbl,MAXCONFG,NCONFGS,MAXBANDS
 	parameter(nants=6,nbl=(nants*(nants-1))/2,MAXBANDS=128)
-	parameter(MAXCONFG=32,NCONFGS=19)
-	parameter(version='MfPlan: version 1.0 13-Oct-97 ')
+	parameter(MAXCONFG=32,NCONFGS=22)
+	parameter(version='MfPlan: version 1.0 6-Apr-04 ')
 c
 	real bands(2,MAXBANDS),uni(MAXBANDS+1)
 	integer nbands
@@ -111,6 +112,9 @@ c
 	data name(17),(uu(i,17),i=1,6)/'6.0b ',  2, 64,147,182,196,392/
 	data name(18),(uu(i,18),i=1,6)/'6.0c ',  0, 10,113,140,182,392/
 	data name(19),(uu(i,19),i=1,6)/'6.0d ',  8, 32, 84,168,173,392/
+	data name(20),(uu(i,20),i=1,6)/'ew214', 98,102,104,109,112,392/
+	data name(21),(uu(i,21),i=1,6)/'ew352',102,104,109,112,125,392/
+	data name(22),(uu(i,22),i=1,6)/'ew367',104,110,113,124,128,392/
 
 c
 c Get the users input.
@@ -348,7 +352,7 @@ c
 	end
 c************************************************************************
 	subroutine Plotit(device,nconfg,nants,coord,freqs,bls,
-      *                   docol,label)
+     *                    docol,label)
 c
 	implicit none
 	integer nconfg,nants,coord(nants,nconfg)

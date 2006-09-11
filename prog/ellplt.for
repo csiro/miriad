@@ -43,6 +43,7 @@ c	            units rather than arcsec.
 c--
 c  History:
 c    rjs   06mar97	Adapted from ellint.
+c    rjs   18sep05      Corrected incorrect type.
 c----------------------------------------------------------------------c
 	include 'mirconst.h'
 	include 'maxdim.h'
@@ -76,8 +77,8 @@ c
         call keya('in',in,' ')
         if(in .eq. ' ') call bug('f','No input specified.')
         call boxinput('region',in,boxes,maxboxes)
-        call keyd('center',center(1),0.)
-        call keyd('center',center(2),0.)
+        call keyd('center',center(1),0.d0)
+        call keyd('center',center(2),0.d0)
         call keyr('pa',pa,0.)
         call keyr('incline',incline,0.)
         call keyr('radius',rmin,0.)

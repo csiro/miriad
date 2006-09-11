@@ -28,14 +28,14 @@ c       multiplicative error in the distance
 c       eg disterr=2 means dist is uncertain by a factor of 2
 c       (default=1)
 c
-c@ X
+c@ x
 c       the X-factor to convert between column density of the
 c       species observed to the column density of molecular hydrogen
 c       --- see above. (Note that this includes any corrections for
 c       abundance, excitation temperature, CMBR, antenna efficiency,etc.)
 c       (In units of 10^20, default=2.4)
 c
-c@ Xerr
+c@ xerr
 c       multiplicative error in X -- from uncertainties in
 c       abundances, excitation temperature, efficiency, etc.
 c       (default=1)
@@ -44,7 +44,7 @@ c@ meanmol
 c       the mean molecular weight of the gas
 c       (default=1.38, corresponding to n(He)/n(H)=0.1)
 c
-c@ Jyperk
+c@ jyperk
 c       the number of Jansky's per Kelvin for these observations
 c       (default=1)
 c
@@ -78,9 +78,13 @@ c  19feb97  mwp  bug fixes , dv versus sv in dostats.for
 c  18may98  rjs  catenated all files into one, and perhaps some more???
 c  19may98  pjt  minor flint cleanups before putting this is MIRIAD
 c  13jul98  pjt  linux g77 cleanup
+c  25aug98  pjt  change keywords in doc section to lower case
+c                and removed that awkward case checking code
+c  14mar00  ks/pjt format and output changes
+c  20nov01  pjt  minor output format change
 c-------------------------------------------------------------------------
       character version*(*)
-      parameter(version='version 1.5 13-jul-98' )
+      parameter(version='version 1.5 20-nov-01' )
       include 'clstats.h'
 
       integer lenline,imax,ncmax
@@ -95,7 +99,6 @@ c.....dynamic memory setup
       logical lData(maxbuf)
       common iData
       equivalence(iData,rData,lData)
-	logical keyprsnt
 
       call output('CLSTATS '//version)
 
@@ -104,19 +107,11 @@ c.....Get the parameters from the user.
       call keya('in',file,' ')
       call keyr('dist',dist,0.0)
       call keyr('disterr',disterr,1.0)
-	if(keyprsnt('x')) then
-      		call keyr('x',xfact,2.4)
-	else
-      		call keyr('X',xfact,2.4)
-	endif
-	if(keyprsnt('xerr')) then
-	      call keyr('xerr',xfacterr,1.0)
-	else
-	      call keyr('Xerr',xfacterr,1.0)
-	endif
+      call keyr('x',xfact,2.4)
+      call keyr('xerr',xfacterr,1.0)
       call keyr('meanmol',meanmol,1.38)
       call keyr('jyperk',kpjy,1.0)
-	kpjy=1./kpjy
+      kpjy=1./kpjy
       call keya('xy',positns,'rel')
       call keyr('rms',rms,0.0)
       call keyi('nmin',nmin,4)
@@ -125,7 +120,11 @@ c.....Get the parameters from the user.
       if(file.eq.' ')call bug('f','Input file name missing')
       if(dist.eq.0.0)call bug('f','Source distance must be given')
 
-      if(positns.eq.'abs') pos=.true.
+      if(positns.eq.'abs') then
+         pos=.true.
+      else
+         pos=.false.
+      endif
 
 c.....Open data cube
       call output('Data cube: '//file)
@@ -145,13 +144,13 @@ c.....Open data cube
 
       call prthead(pos)
 
-      line='-------------------------------------------------'
+      line='--------------------------------------------------------'
       call output(line(1:lenline(line))//line(1:lenline(line)))
 
       call readata(idata(Ic),rdata(It),ldata(Im),imax,ncmax)
 
-      head1='Cl#   Xpeak    Ypeak   Vpeak   <t>     t0   FWHMx'
-      head2=' FWHMy R(pc) FWHMv  Mlte   Err     Mgrav    N'
+      head1='Cl#  Xpeak   Ypeak   Vpeak    <t>     t0   FWHMx'
+      head2='  FWHMy   R(pc)  FWHMv   Mlte        Err    Mgrav      N '
       call output(head1(1:lenline(head1))//head2(1:lenline(head2)))
       call output(line(1:lenline(line))//line(1:lenline(line)))
 
@@ -364,12 +363,12 @@ c.......whether relative or absolute positions are requested
  20     continue
       enddo
 
- 200    format(i3,2x,f6.1,3x,f5.1,2x,f7.2,1x,f6.2,1x,f6.2,
-     *         1x,f5.2,1x,f5.2,1x,f5.2,1x,f5.2,1x,
-     *         f7.2,2x,f4.2,2x,f8.2,1x,i4,1x,a4)
- 201    format(i3,1x,f10.3,1x,f10.3,1x,f7.2,1x,f6.2,1x,f6.2,
-     *         1x,f7.2,1x,f7.2,1x,f5.2,1x,f5.2,1x,
-     *         f10.2,2x,f5.3,2x,f10.2,1x,i4,1x,a4)
+ 200  format(i3,1x,f7.2,1x,f7.2,1x,f7.2,1x,f6.2,1x,f6.2,
+     *         1x,f7.2,1x,f7.2,1x,f7.2,1x,f7.2,1x,
+     *         1pe9.2,1x,0pf7.1,1x,1pe9.2,2x,i4,1x,a4)
+ 201    format(i3,1x,f7.2,1x,f7.2,1x,f7.2,1x,f6.2,1x,f6.2,
+     *         1x,f7.2,1x,f7.2,1x,f7.2,1x,f7.2,1x,
+     *         1pe9.2,1x,0pf7.1,1x,1pe9.2,2x,i4,1x,a4)
 
       return
       end
@@ -526,7 +525,8 @@ c.....contour level and (nmin-1) at the first
       msens=1.60*meanmol*xfact*(dist**2)*fluxmin*delv*
      *          abs(delx)*dely/(rad2asec*rad2asec)
       print 152,msens
-
+      print 153,kpjy
+      print 154,delx,dely,delv,meanmol,nmin
 
 
  101  format('Beam size =',
@@ -535,8 +535,8 @@ c.....contour level and (nmin-1) at the first
  103  format('Beam size =',
      *        f5.2,' by ',f5.2,' (arcmin) with pa = ',f7.2)
  104  format('Beam size =',f5.2,' by ',f5.2,' (arcmin)')
- 110  format('Distance to source =',i6,' pc')
- 111  format('Distance to source =',i6,' pc (error = ',f4.2,')')
+ 110  format('Distance to source =',i10,' pc')
+ 111  format('Distance to source =',i10,' pc (error = ',f8.2,')')
  120  format('Reference position (degrees) = (',f7.3,',',f7.3,')')
  140  format('Starting contour level =',i2)
  141  format('Delta T = ',f5.3)
@@ -544,8 +544,10 @@ c.....contour level and (nmin-1) at the first
  143  format('Naxis =',i2)
  150  format('X =',f5.3,'E20')
  151  format('X =',f5.3,'E20  (error = ',f5.3,')')
- 152  format('Mass detectability = ',f8.3,' solar masses')
-
+ 152  format('Mass detectability = ',e9.3,' solar masses')
+ 153  format('kpjy used by program =',f10.5)
+ 154  format('delx,dely,delv,meanmol,nmin ',f8.3,'"',f8.3,'"'
+     *      ,f8.3,' km/s',f8.3,2x,i3)
 
       return
       end

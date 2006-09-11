@@ -31,6 +31,7 @@ c  History:
 c    rjs 22oct93 Original version.
 c    rjs 10mar94 Added xrange keyword.
 c    rjs 04dec95 Increase max order.
+c    rjs 18sep05 Change to eliminate inconsistent type flaw.
 c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='ContSen: version 1.0 10-Mar-94')
@@ -46,7 +47,7 @@ c
 	logical cont(MAXCHAN)
 	integer chans(2,MAXCH),mnchan,mxchan
 	integer i,j,order(2),ifail,nch,imin,imax,nx,ny,nplots
-	integer iorder,npts
+	integer iorder,npts,pivot(MAXORDER+1)
 c
 	character device*64
 	real xv(MAXCHAN),yv(MAXCHAN),xmin,xmax,ymin,ymax,delta,maxv
@@ -173,10 +174,10 @@ c
 	    b(j,j) = 1
 	  enddo
 c
-	  call dgefa(a,MAXORDER+1,iorder+1,sum,ifail)
+	  call dgefa(a,MAXORDER+1,iorder+1,pivot,ifail)
 	  if(ifail.ne.0)call bug('f','Inversion failed')
 	  do i=0,iorder
-	    call dgesl(a,MAXORDER+1,iorder+1,sum,b(0,i),1)
+	    call dgesl(a,MAXORDER+1,iorder+1,pivot,b(0,i),1)
 	  enddo
 c
 	  do i=mnchan,mxchan

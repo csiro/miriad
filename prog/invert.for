@@ -298,6 +298,7 @@ c    rjs   12jul96  Be fore forgiving if beam too big -- just make it smaller.
 c    rjs   20jun97  Correct handling of multiple stokes in slopintp.
 c    rjs   07jul97  Change coaxdesc to coaxget.
 c    rjs   01jul99  CHanges in call sequence to hdfiddle.
+c    rjs   29jun05  Handle changes in calling sequence to mostab/hdtab routines.
 c  Bugs:
 c
 c------------------------------------------------------------------------
@@ -306,7 +307,7 @@ c------------------------------------------------------------------------
 	include 'mem.h'
 c
 	character version*(*)
-	parameter(version='Invert: version 1.0 1-Jul-99')
+	parameter(version='Invert: version 1.0 29-Jun-05')
 	integer MAXPOL,MAXRUNS
 	parameter(MAXPOL=4,MAXRUNS=4*MAXDIM)
 c
@@ -314,7 +315,7 @@ c
 	real umax,vmax,wdu,wdv,tu,tv,rms,robust
 	real ChanWt(MAXPOL*MAXCHAN)
 	character maps(MAXPOL)*64,beam*64,uvflags*16,mode*16,vis*64
-	character proj*3,line*64
+	character line*64
 	double precision ra0,dec0,offset(2),lmn(3),x(2)
 	integer i,j,k,nmap,tscr,nvis,nchan,npol,npnt,coObj,pols(MAXPOL)
 	integer nx,ny,bnx,bny,mnx,mny,wnu,wnv
@@ -453,19 +454,18 @@ c  Give the "Hd" routines the header information, and create a initial
 c  coordinate object for the output.
 c
 	if(mosaic)then
-	  call MosChar(ra0,dec0,npnt,proj)
+	  call MosChar(ra0,dec0,npnt)
 	  if(doset)then
 	    ra0 = offset(1)
 	    dec0 = offset(2)
 	  endif
 	  call output('Number of pointings: '//itoaf(npnt))
-	  call output('Using '//proj//' projection geometry')
 	else
 	  npnt = 1
 	endif
 	if(npnt.ne.1.and.mode.ne.'fft')
      *	  call bug('f','Only mode=fft is supported with options=mosaic')
-	call HdSet(cellx,celly,ra0,dec0,proj,freq0)
+	call HdSet(cellx,celly,ra0,dec0,freq0)
 	call HdCoObj(coObj)
 c
 c  Determine the default image size, if needed.
@@ -1490,7 +1490,7 @@ c
 c  Process an accepted record.
 c
 	  if(nrec.gt.0)then
-	    call HdChk(tno)
+	    call HdChk(tno,uvw)
 	    if(mosaic)then
 	      call MosChk(tno,pnt)
 	    else

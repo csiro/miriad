@@ -113,6 +113,7 @@ c   rjs   16aug94 Zeroth order fits were failing again!
 c   rjs   17aug94 Slightly better handling of offset value.
 c   rjs    9sep94 Handle felocity linetype.
 c   rjs   19sep04 Handle varying jyperk.
+c   rjs   18sep05 More rigorously avoid mixed use of arrays.
 c  Bugs:
 c------------------------------------------------------------------------
 	include 'maxdim.h'
@@ -120,7 +121,7 @@ c------------------------------------------------------------------------
 	integer MAXCH,MAXORDER
 	character version*(*)
 	parameter(MAXCH=32,MAXORDER=11)
-	parameter(version='UvLin: version 1.0 19-Sep-04')
+	parameter(version='UvLin: version 1.0 28-Sep-05')
 c
 	logical sun,twofit,relax,lpropc,cflags(MAXCHAN)
 	character uvflags*16,out*64,ltype*32,mode*12
@@ -1292,6 +1293,7 @@ c------------------------------------------------------------------------
 	integer ifail,i,j,n,i0
 	real beta(MAXSIZE*MAXSIZE),a,b,p
 	real alpha(MAXSIZE),eqr(MAXSIZE),eqi(MAXSIZE)
+	integer pivot(MAXSIZE)
 c
 	a = 2.0/real(nchan-1)
 	b = 0.5*(nchan+1)
@@ -1325,7 +1327,7 @@ c
 c
 c  Solve.
 c
-	call LlsquSol(alpha,Beta,n,ifail,eqr)
+	call LlsquSol(alpha,Beta,n,ifail,pivot)
 	ok = ifail.eq.0
 c
 c  Return the solutions.

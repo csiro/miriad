@@ -43,14 +43,14 @@ c    12oct93 rjs  (*&^(**%( yet again (though I am rather slow to catch up).
 c		  A large number of changes to try to tidy it up.
 c    13oct93 nebk Correct calculation of center frequency
 c    13oct93 rjs  Change check for failure of search.
-c
+c    19sep04 rjs  Copy across sensitivity model parameter.
 c  Bugs:
 c    * This program is a real fudge.
 c------------------------------------------------------------------------
 	include 'mirconst.h'
         include 'maxdim.h'
 	character version*(*)
-	parameter(version='ATMerge: version 1.0 12-Oct-93')
+	parameter(version='ATMerge: version 1.0 19-Sep-04')
 c
 	integer tIn,tOut,lchi,lamp,ltsysx,ltsysy,lxyph
 	integer iostat,i,nchan,sideband,nschan,nspect,pol,npol
@@ -238,12 +238,12 @@ c    tOut	Handle of the output.
 c------------------------------------------------------------------------
 	integer i
 	integer nitems
-	parameter(nitems=13)
+	parameter(nitems=14)
 	character items(nitems)*8
-	data items/'history ','interval ','nsols   ','ngains  ',
-     *		   'nfeeds  ','gains    ','leakage ','ntau    ',
-     *		   'freq0   ','freqs    ','bandpass','nspect0 ',
-     *		   'nchan0  '/
+	data items/'history ','interva ','nsols   ','ngains  ',
+     *		   'nfeeds  ','gains   ','leakage ','ntau    ',
+     *		   'freq0   ','freqs   ','bandpass','nspect0 ',
+     *		   'nchan0  ','senmodel'/
 c
 	do i=1,nitems
 	  call hdcopy(tIn,tOut,items(i))

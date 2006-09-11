@@ -103,6 +103,7 @@ c    rjs   7oct04 Set senmodel parameter.
 c    rjs   2jan06 Stokes selection. Weight by variance, push XY phase
 c		  into bandpass, duplicate gains when bandpass dual polarisation
 c		  and gains is single polarisation.
+c    rjs  15jan06 Improve weighting.
 c
 c  Problems:
 c    * Should do simple spectral index fit.
@@ -115,7 +116,7 @@ c------------------------------------------------------------------------
 	parameter(MAXPOL=2)
 c
 	character version*(*)
-	parameter(version='MfCal: version 1.0 02-Jan-06')
+	parameter(version='MfCal: version 1.0 15-Jan-06')
 c
 	integer tno
 	integer pWGains,pFreq,pSource,pPass,pGains,pTau
@@ -1256,7 +1257,7 @@ c
 	integer chan(MAXCHAN),spect(MAXCHAN),state(MAXCHAN)
 	integer Hash(2,MAXHASH),vupd
 	integer pols(PolMin:PolMax)
-	real w,rms2
+	real w
 c
 c  Externals.
 c
@@ -1365,21 +1366,13 @@ c
 	    call despect(updated,tno,nchan,edge,chan,spect,
      *		maxspect,nspect,sfreq,sdf,nschan,state)
 c
-c  Get the weighting.
-c
-            call uvDatGtr('variance',rms2)	
-            if(rms2.gt.0)then
-              W = 1/rms2
-            else
-              W = 1
-            endif
-c
 	    do i=1,nchan
 	      if(flags(i).and.chan(i).gt.0)then
 	        present(i1,p) = .true.
 	        present(i2,p) = .true.
 	        call pack(i1,i2,p,spect(i),chan(i),VisId)
 		ninter = ninter + 1
+		w = abs(sdf(spect(i)))
 		call Accum(Hash,Data(i),w,VisId,
      *			nsoln,nvis,Vis,Wt,VID,Count)
 	      else

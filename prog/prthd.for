@@ -45,13 +45,14 @@ c    rjs  31jul97 Use MAXWIN for number of spectra.
 c    rjs  01aug97 Better format for beam size.
 c    rjs  24feb98 Use MAXWIDE rather than MAXWIN for number of wide channels.
 c    rjs  25nov98 Print out sky rotation.
+c    rjs  03jan05 Increase number of digits.
 c
 c  Bugs and Shortcomings:
 c    * Descriptions in brief mode could be a bit more verbose!
 c------------------------------------------------------------------------
 	character version*(*)
 	integer MAXIN
-	parameter(version='Prthd: version 25-Nov-98')
+	parameter(version='Prthd: version 03-Jan-05')
 	parameter(MAXIN=256)
 	integer tno,i,iostat,nin
 	character in(MAXIN)*64,logf*64,line*80
@@ -462,7 +463,7 @@ c
 c  Externals.
 c
       integer len1
-      character itoaf*8,PolsC2P*2,hangleh*12,rangleh*12
+      character itoaf*12,PolsC2P*2,hangleh*12,rangleh*12
       logical hdprsnt
 c
 c  Close and reopen the file as a visibility file.

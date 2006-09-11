@@ -129,12 +129,13 @@ c    12dec05 rjs  It failed to use the select keyword.
 c    29jan06 rjs  Major revisions.
 c    18feb06 rjs  Various tidy up and change in defaults.
 c    24feb06 rjs  Fix bug in tsyscal=none and some tidying.
+c    27feb06 rjs  Fix bug when there are multiple frequencies.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
 	character version*(*)
 	integer MAXSELS,ATANT
-	parameter(version='AtFix: version 1.0 24-Feb-06')
+	parameter(version='AtFix: version 1.0 27-Feb-06')
 	parameter(MAXSELS=256,ATANT=6)
 c
 	real sels(MAXSELS),xyz(3*MAXANT)
@@ -1184,6 +1185,7 @@ c
 c  Otherwise work out what to apply and apply it.
 c
 	else
+	  call freqGet(lVis,ifreq)
 	  call freqDesc(ifreq,MAXWIN,nwin,nsc)
 	  k = 0
 	  do j=1,nwin
@@ -1211,7 +1213,6 @@ c
 	      fac = sqrt(num/denom)
 	    endif
 c
-	if(i1.eq.1.and.i2.eq.1)write(*,*)fac
 	    do i=1,nsc(j)
 	      k = k + 1
 	      data(k) = fac * data(k)

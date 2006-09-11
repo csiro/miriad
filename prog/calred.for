@@ -6,7 +6,9 @@ c= calred
 c& rjs
 c: uv analysis, plotting
 c+
-c	CALRED is a program used to analyse flux densities of sources.
+c	CALRED is a program used to analyse flux densities of sources where
+c	phase stability is poor. It uses either the amplitude of the data
+c	or an averaged triple produce.
 c@ vis
 c	The input visibility datasets. Several datasets can be given.
 c@ select
@@ -26,6 +28,8 @@ c	  triple    Do triple processing.
 c	  nocal     Do not perform gain calibration.
 c	  nopol     Do not perform polarisation calibration on the data.
 c	  nopass    Do not perform bandpass calibration on the data.
+c         norm      Divide the noise estimates by the square root of the
+c	            number of points.
 c--
 c  History:
 c    rjs  23feb00 Original version.
@@ -37,21 +41,22 @@ c		  and print out number of triples.
 c    rjs  04may04 Handle more antennas.
 c    rjs  08aug04 The algorithm to determine the confusion was hopelessly
 c		  flawed. Correct this.
+c    rjs  02jul05 Improved error estimates.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
 	integer MAXDAT,MAXSRC,MAXPOL
 	integer PolMin,PolMax
 	character version*(*)
-	parameter(version='version 08-Aug-04')
+	parameter(version='version 02-Jul-05')
 	parameter(MAXDAT=(MAXANT*(MAXANT-1)*(MAXANT-2))/6)
 	parameter(MAXPOL=2,MAXSRC=1024)
 	parameter(PolMin=-8,PolMax=4)
 c
-	logical dotrip,polp,dopara
+	logical dotrip,polp,dopara,donorm
 	character uvflags*16,line*80,con*6
 	character sources(MAXSRC)*16
-	real scat2,SSms,flux,flux2,SSmm,rp,ip,SconN,SConD
+	real scat2,SSms,flux,flux2,SSmm,rp,ip,SconN,SConD,norm
 	integer ncorr
 	complex SSdm
 	integer isrc,nsrc,iplanet,tno,vsource,pnt1,pnt2,pnt3
@@ -84,7 +89,7 @@ c Lets go! Get user inputs.
 c
 	call output('Calred: '//version)
 	call keyini
-	call GetOpt(dotrip,uvflags)
+	call GetOpt(dotrip,donorm,uvflags)
 	call uvDatInp('vis',uvflags)
 	call keyd('interval',interval,5.d0)
 	interval = interval / (24.d0*60.d0)
@@ -252,17 +257,22 @@ c
 	    endif
 	  enddo
 	  if(SSmm.gt.0)then
+	    if(donorm)then
+	      norm = ncorr
+	    else
+	      norm = 1
+	    endif
 	    SSdm = SSdm / SSmm
-	    SSms = sqrt(SSms/SSmm)
+	    SSms = sqrt(SSms/(norm*SSmm))
 	    scat2 = sqrt(scat2/(2*ncorr))
 	    flux2 = sqrt(flux2/ncorr)
 	    if(dotrip)then
 	      flux = real(SSdm)
 	      flux = sign(abs(flux)** 0.333333,flux)
 	      flux2 = flux2 ** 0.333333
-	      SSms  = SSms/sqrt(3.0)
+	      SSms  = SSms/3.0
 	      if(flux.gt.3*SSms)then
-		scat2 = scat2/(sqrt(3.0)*flux*flux)
+		scat2 = scat2/(3.0*flux*flux)
 	      else
 		scat2 = scat2**0.3333
 	      endif
@@ -272,6 +282,7 @@ c
 	      flux = SSdm
 	      con = '     -'
 	    endif
+	    scat2 = scat2/sqrt(norm)
 	    write(line,10)sources(j),nint(1000*flux2),
      *			nint(1000*flux),con,
      *			nint(1000*SSms),nint(1000*scat2),
@@ -283,20 +294,22 @@ c
 c
 	end
 c************************************************************************
-	subroutine GetOpt(dotrip,uvflags)
+	subroutine GetOpt(dotrip,donorm,uvflags)
 c
 	implicit none
-	logical dotrip
+	logical dotrip,donorm
 	character uvflags*(*)
 c------------------------------------------------------------------------
 	integer NOPTS
-	parameter(NOPTS=4)
+	parameter(NOPTS=5)
 	character opts(NOPTS)*9
 	logical present(NOPTS)
-	data opts/'triple   ','nocal    ','nopol    ','nopass   '/
+	data opts/'triple   ','nocal    ','nopol    ','nopass   ',
+     *		  'normalize'/
 c
 	call options('options',opts,present,NOPTS)
 	dotrip = present(1)
+	donorm = present(5)
 c
 c c -- docal
 c f -- dopass
@@ -433,11 +446,34 @@ c
 	real Smm(maxdat),Sms(maxdat),Sdd(maxdat)
 	complex Sdm(maxdat)
 c------------------------------------------------------------------------
-	integer p,i3,i2,i1,bl12,bl13,bl23,k,id,n,i
+	integer p,i3,i2,i1,bl12,bl13,bl23,k,id,n,i,count
 	integer pflag12,pflag13,pflag23,pdata12,pdata23,pdata13
 	integer pmod12,pmod23,pmod13,pflag,pdata,pmod
 	complex data
-	real model
+	real model,fac
+c
+c  If triple processing, determine the sigma fudge factor
+c
+	if(dotrip)then
+	  count = 0
+	  do p=1,npol
+	    do i3=3,nants
+	      do i2=2,i3-1
+	        do i1=1,i2-1
+		  bl12 = ((i2-1)*(i2-2))/2 + i1
+		  bl13 = ((i3-1)*(i3-2))/2 + i1
+		  bl23 = ((i3-1)*(i3-2))/2 + i2
+		  if(init(bl12,p).and.init(bl13,p).and.init(bl23,p))
+     *						count = count + 1
+		enddo
+	      enddo
+	    enddo
+	  enddo
+	  count = nint((6.0*real(count)/real(npol))**0.3333) + 1
+	  fac = real(count)-2.0
+	else
+	  fac = 1
+	endif
 c
 	do p=1,npol
 c
@@ -486,10 +522,10 @@ c
 			Smm(k) = Smm(k) + model*model
 		        Sdm(k) = Sdm(k) + model*data
 			Sdd(k) = Sdd(k) + real(data)**2+aimag(data)**2
-			Sms(k) = Sms(k) + 
+			Sms(k) = Sms(k) + fac*(
      *		      (Modl(pmod12+i)*Modl(pmod13+i))**2*sigma2(bl23,p)+
      *		      (Modl(pmod23+i)*Modl(pmod12+i))**2*sigma2(bl13,p)+
-     *		      (Modl(pmod13+i)*Modl(pmod23+i))**2*sigma2(bl12,p)
+     *		      (Modl(pmod13+i)*Modl(pmod23+i))**2*sigma2(bl12,p))
 		      endif
 		    enddo
 		  endif

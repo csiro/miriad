@@ -108,6 +108,7 @@ c    rjs  19aug97 Added axis=lag
 c    rjs  31oct97 Use colours in the label.
 c    rjs   3dec97 Replace part of label that dropped off in above change.
 c    rjs  13sep99 Added Doppler corrected freq to possibilities to plot.
+c    rjs  29jun05 Use 3D shift algorithm.
 c  Bugs:
 c------------------------------------------------------------------------
 	include 'mirconst.h'
@@ -116,12 +117,12 @@ c------------------------------------------------------------------------
         parameter (maxco=15)
 c
 	character version*(*)
-	parameter(version='UvSpec: version 1.0 13-Sep-99')
+	parameter(version='UvSpec: version 1.0 29-Jun-05')
 	character uvflags*8,device*64,xaxis*12,yaxis*12,logf*64
 	character xtitle*64,ytitle*64
 	logical ampsc,rms,nobase,avall,first,buffered,doflush,dodots
 	logical doshift,doflag,doall,dolag
-	double precision interval,T0,T1,preamble(4),shift(2),shft(2)
+	double precision interval,T0,T1,preamble(5),shift(2),lmn(3)
 	integer tIn,vupd
 	integer nxy(2),nchan,nread,nplot
 	real yrange(2),inttime
@@ -172,6 +173,7 @@ c
 	shift(1) = pi/180/3600 * shift(1)
 	shift(2) = pi/180/3600 * shift(2)
 	doshift = abs(shift(1))+abs(shift(2)).gt.0
+
 c
 c  Various initialisation.
 c
@@ -203,24 +205,24 @@ c
 	  if(dolag)nplot = nextpow2(2*(nread-1))
 	  if(doshift)then
 	    call coInit(tIn)
-	    call coCvt(tIn,'ow/ow',shift,'op/op',shft)
+	    call coLMN(tIn,'ow/ow',shift,lmn)
 	    call coFin(tIn)
 	  endif
 	  nchan = nread
-	  T1 = preamble(3)
+	  T1 = preamble(4)
 	  T0 = T1
 	  dowhile(nread.gt.0)
 c
 c  Shift the data if needed.
 c
-	    if(doshift)call ShiftIt(tIn,preamble,data,nchan,shft)
+	    if(doshift)call ShiftIt(tIn,preamble,data,nchan,lmn)
 c
 c  Determine if we need to flush out the averaged data.
 c
 	    doflush = uvVarUpd(vupd)
 	    doflush = nread.ne.nchan
-	    T0 = min(preamble(3),T0)
-	    T1 = max(preamble(3),T1)
+	    T0 = min(preamble(4),T0)
+	    T1 = max(preamble(4),T1)
 	    doflush = (doflush.or.T1-T0.gt.interval).and.buffered
 c
 c  Pull the chain and flush out and plot the accumulated data
@@ -229,7 +231,7 @@ c
 	    if(doflush)then
 	      call BufFlush(ampsc,rms,nobase,dodots,hann,hc,hw,first,
      *	        device,x,nplot,xtitle,ytitle,nxy,yrange,logf)
-	      T0 = preamble(3)
+	      T0 = preamble(4)
 	      T1 = T0
 	      buffered = .false.
 	    endif
@@ -237,7 +239,7 @@ c
 c  Accumulate more data, if we are time averaging.
 c
 	    if(.not.buffered)call GetXAxis(tIn,xaxis,xtitle,x,nplot)
-	    if(avall)preamble(4) = 257
+	    if(avall)preamble(5) = 257
 	    call uvrdvrr(tIn,'inttime',inttime,0.)
 	    call BufAcc(doflag,doall,preamble,inttime,data,flags,nread)
 	    buffered = .true.
@@ -263,12 +265,12 @@ c
 	call pgend
 	end
 c************************************************************************
-	subroutine ShiftIt(tIn,uv,data,nchan,shift)
+	subroutine ShiftIt(tIn,uvw,data,nchan,lmn)
 c
 	implicit none
 	integer tIn,nchan
-	double precision uv(2)
-	double precision shift(2)
+	double precision uvw(3)
+	double precision lmn(3)
 	complex data(nchan)
 c
 c  Shift the data.
@@ -287,7 +289,8 @@ c
 c
 c  Shift the data.
 c
-	theta0 = -2*pi * (uv(1)*shift(1) + uv(2)*shift(2))
+	theta0 = -2*pi * (uvw(1)*lmn(1) + uvw(2)*lmn(2) + 
+     *			  uvw(3)*(lmn(3)-1))
 	do i=1,nchan
 	  theta = theta0 * sfreq(i)
 	  w = cmplx(cos(theta),sin(theta))
@@ -453,10 +456,10 @@ c
 	if(doflag.and.doall)call bug('f',
      *	  'The "flagged" and "all" options are mutually exclusive')
 c
-	uvflags = 'dsl'
-	if(docal) uvflags(4:4) = 'c'
+	uvflags = 'dsl3'
 	if(dopass)uvflags(5:5) = 'f'
 	if(dopol) uvflags(6:6) = 'e'
+	if(docal) uvflags(7:7) = 'c'
 	end
 c************************************************************************
 	subroutine BufIni
@@ -546,8 +549,8 @@ c
 c
 	do j=1,mbase
 	  if(cnt(j).gt.0)then
-	    inttime = inttime + preamble(5,j)
-	    time = time + preamble(3,j)
+	    inttime = inttime + preamble(6,j)
+	    time = time + preamble(4,j)
 	    ntime = ntime + cnt(j)
 c
 c  Average the data in each polarisation. If there is only one scan in the
@@ -707,7 +710,7 @@ c************************************************************************
 c
 	implicit none
 	integer nread
-	double precision preambl(4)
+	double precision preambl(5)
 	real inttime
 	complex data(nread)
 	logical flags(nread),doflag,doall
@@ -740,7 +743,7 @@ c
 c
 c  Determine the baseline number.
 c
-	call BasAnt(preambl(4),i1,i2)
+	call BasAnt(preambl(5),i1,i2)
 	bl = (i2*(i2-1))/2 + i1
 c
 c  Zero up to, and including, this baseline.
@@ -759,14 +762,16 @@ c
 	  preamble(2,bl) = preambl(2)
 	  preamble(3,bl) = preambl(3)
 	  preamble(4,bl) = preambl(4)
-	  preamble(5,bl) = inttime
+	  preamble(5,bl) = preambl(5)
+	  preamble(6,bl) = inttime
 	else
 	  cnt(bl) = cnt(bl) + 1
 	  preamble(1,bl) = preamble(1,bl) + preambl(1)
 	  preamble(2,bl) = preamble(2,bl) + preambl(2)
 	  preamble(3,bl) = preamble(3,bl) + preambl(3)
 	  preamble(4,bl) = preamble(4,bl) + preambl(4)
-	  preamble(5,bl) = preamble(5,bl) + inttime
+	  preamble(5,bl) = preamble(5,bl) + preambl(5)
+	  preamble(6,bl) = preamble(6,bl) + inttime
 	endif
 c
 c  Determine the polarisation.

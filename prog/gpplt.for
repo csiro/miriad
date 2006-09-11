@@ -99,12 +99,13 @@ c		  flagging wrong.
 c    rjs  10jun97 Correct amptiude to amplitude.
 c    rjs  09mar98 Trim the device name before passing it through to PGPLOT.
 c    rjs  13mar98 Change format statement.
+c    nebk 13jul04 More sig figs for leakages
 c  Bugs:
 c------------------------------------------------------------------------
 	integer MAXSELS
 	character version*(*)
 	parameter(MAXSELS=256)
-	parameter(version='GpPlt: version 13-Mar-98')
+	parameter(version='GpPlt: version 13-Jul-04')
 	include 'gpplt.h'
 	integer iostat,tIn,nx,ny,nfeeds,nants,nsols,ierr,symbol,nchan
 	integer ntau,length
@@ -901,7 +902,7 @@ c------------------------------------------------------------------------
 	real x(2*MAXANT),y(2*MAXANT),Value
 	integer ifeed,iant,j,j1,j2
 	logical more
-	character line*80,Label*16
+	character line*132,Label*16
 c
 c  Externals.
 c
@@ -934,7 +935,7 @@ c
 	  call LogWrite(line,more)
 	  do j1=1,nfeeds*nants,6
 	    j2 = min(j1+5,nfeeds*nants)
-	    write(line,'(7f11.3)')(y(j),j=j1,j2)
+	    write(line, '(7f14.6)')(y(j),j=j1,j2)
 	    call LogWrite(line,more)
 	  enddo
 	endif

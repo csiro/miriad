@@ -1,9 +1,9 @@
       program zeefake
 c-----------------------------------------------------------------------
-c     ZEEFAKE is a MIRIAD program to generate fake I and V cubes in order
-c     to test the ZEEMAP program.   Zero velocity is put at the 
-c     centre of the band and image. The cubes are output in VXY order
-c     ready for the ZEE* programs.
+c     ZEEFAKE is a MIRIAD program to generate fake I and V cubes
+c     with Zeeman splitting.   Zero velocity is put at the centre
+c     of the band and image. The cubes are output in VXY order
+c     ready for the ZEESTAT program.
 c
 c= zeefake - Generate fake Zeeman data.
 c& nebk
@@ -20,7 +20,9 @@ c	The output cube sizes, all three dimensions required (VXY)
 c@ vinc
 c	The velocity increment along the cubes in Km/s. No default.
 c@ delv
-c	The Zeeman splitting (separation of split lines) in Km/s. No default.
+c	The Zeeman splitting (separation of split lines) in Km/s. 
+c	B < 0 if DELV > 0.
+c	No default.
 c@ fwhm
 c	The FWHM of the Gaussian line profile in Km/s. No default.
 c@ grvc
@@ -73,6 +75,7 @@ c     nebk  Nov 1  1990   Add eta hat determination
 c     nebk  Dec 11 1990   Fix possible divide by zero.
 c     nebk  Aug 07 1992   Add Stokes axis to output images
 c     nebk  Nov 26 1992   Add btype to output
+c     nebk  Nov 7  1995   Allow signed splitting
 c----------------------------------------------------------------------------
       implicit none
 c
@@ -89,20 +92,10 @@ cc
 c
       real rtheta, vrefv, vrefp, gfac, cfacp, cfacm, sfac, v,
      *vfacp, vfacm, vfac, rr, ll, vel, fsplit, arg, velx, iscale,
-     *phix, gfac1, phisq, delvx, vsumsq, vrms, etahat, alpha
+     *phix, gfac1, delvx, vsumsq, vrms, etahat, alpha, scale
       integer luni, luniu, lunv, i, j, k
       character line*80
-c
-c     Define Zeeman splitting (i.e. separation between the split lines)
-c     for different lines in Hz/Gauss
-c
-      integer nfreq
-      parameter (nfreq = 4)
-c
-      integer ifreq(nfreq)
-      real zsplit(nfreq)
-      data ifreq  / 1420,      1665,    1667,      1720  /
-      data zsplit /0.3571E6, 3.2787E6, 1.9608E6, 0.6536E6/
+      logical noline
 c-------------------------------------------------------------------------
       call output ('Zeefake: Version 26-Nov-92')
 c
@@ -171,33 +164,26 @@ c
       cfacp  = (cos(rtheta) + 1.0)**2
       gfac1  = -(8.0 * log(2.0)) / 2.0 
       sfac   = 2.0 * sin(rtheta)**2
-      phisq = phi * phi
-      delv = abs(delv) / 2.0
+      delv = delv / 2.0
       if (type.eq.'e' .or. type.eq.'E') then
          tfac = 1.0
       else
          tfac = -1.0
       end if
 c
-c     Compute splitting in Hz and maybe B and tell user
+c     Compute B and tell user
 c
-      fsplit = 2.0 * delv * restfreq * 1.0e9 / 2.9979e5
-      write (line, 10) fsplit
-10    format ('The split lines are separated by ', 1pe12.5, ' Hz')
+      call ZedScale (lunI, restfreq, scale, noline)   
+      if (noline) call bug ('f', 'Did not recognize line')
+      fsplit = -2.0 * delv / abs(vinc) * abs(scale)
+c
+      write (line, 20) fsplit
+20    format ('The magnetic field = ', 1pe12.5, ' Gauss')
       call output (line)
-c
-      do j = 1, nfreq
-        if(nint(restfreq*1000).eq.ifreq(j)) then
-           write (line, 20) fsplit / zsplit(j)
-20         format ('The magnetic field = ', 1pe12.5, ' Gauss')
-           call output (line)
-           goto 30
-        end if
-      end do
 c
 c Work out eta_hat for gradientless noiseless line
 c
-30    vsumsq = 0.0
+      vsumsq = 0.0
       gfac = gfac1 / (phi * phi) 
       do i = 1, siz(1)
          vel = vrefv + (i-vrefp)*vinc
@@ -211,7 +197,7 @@ c
          v = (rr - ll) / 2.0
          vsumsq = vsumsq + v**2
       end do
-      alpha = abs(delv / vinc)
+      alpha = delv / vinc
       vrms = sqrt(vsumsq/siz(1))
       if (alpha*rms.ne.0.0) then
          etahat = sqrt(2.0) * vrms / (alpha * rms)

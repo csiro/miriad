@@ -88,13 +88,14 @@ c    mchw 20may98 Larger MAXPLOTS for 10-antennas (90 -> 120)
 c    rjs  20oct00 Print out number of points when giving stats.
 c    rjs  31jan01 Support other stokes types.
 c    rjs  08apr02 Allow negative values when taking cube roots.
+c    rjs  18jul04 Check for division by zero in quad quantities.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
 	integer MAXPNTS,MAXPLOTS,MAXTRIP
 	integer PolMin,PolMax,MAXPOL
 	character version*(*)
-	parameter(version='version 08-Apr-02')
+	parameter(version='version 18-Jul-04')
 	parameter(MAXPNTS=5000,MAXPLOTS=120)
 	parameter(MAXTRIP=(MAXANT*(MAXANT-1)*(MAXANT-2))/6)
 	parameter(PolMin=-8,PolMax=4,MAXPOL=2)
@@ -459,6 +460,7 @@ c------------------------------------------------------------------------
 	integer p,i4,i3,i2,i1,bl12,bl13,bl23,bl14,bl34,k,i,nread
 	integer pflag12,pflag13,pflag23,pdata12,pdata23,pdata13
 	integer pflag14,pflag34,        pdata14,pdata34
+	complex denom
 c
 	do p=1,npol
 	  if(avall)then
@@ -499,13 +501,17 @@ c
 		    do i=1,nread
 		      if(Flags(pflag12+i).and.Flags(pflag34+i).and.
      *		         Flags(pflag14+i).and.Flags(pflag23+i))then
-		        trip(k) = trip(k) +
-     *			  (Corrs(pdata12+i) *       Corrs(pdata34+i))/
-     *			  (Corrs(pdata14+i) * conjg(Corrs(pdata23+i)))
 			flux = 0.25*(abs(Corrs(pdata12+i)) + 
      *				     abs(Corrs(pdata34+i)) +
      *				     abs(Corrs(pdata14+i)) +
      *				     abs(Corrs(pdata23+i)))
+			denom = Corrs(pdata14+i)*conjg(Corrs(pdata23+i))
+			if(abs(real(denom))+abs(aimag(denom)).eq.0.or.
+     *			   abs(flux).eq.0)call bug('f',
+     *		  'Flux quantity identically zero when doing division')
+		        trip(k) = trip(k) +
+     *			  (Corrs(pdata12+i) *       Corrs(pdata34+i))/
+     *			  denom
 		        tripsig2(k) = tripsig2(k) + 
      *			  (sigma2(bl12,p) + sigma2(bl34,p) +
      *			   sigma2(bl14,p) + sigma2(bl23,p))/(flux*flux)

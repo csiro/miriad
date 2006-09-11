@@ -262,6 +262,7 @@ c     rjs 28jan00 Some FORTRAN standardization to get it through a
 c                 compiler.
 c     bpw 28feb01 Make it work under linux
 c     bpw 21may01 Add smooth keyword
+c     rjs 18sep05 Corrected type mismatch error.
 c
 c************************************************************************
 
@@ -717,7 +718,7 @@ c        Number of channels found from crval(naxis+1)
       endif
 
 c get smoothing factor
-      call keyd( 'smooth', limlist(14), 1. )
+      call keyr( 'smooth', limlist(14), 1.0 )
 
 c # initial estimates to make is ngauss from keyword
       ngauss(2) = ngauss(1)

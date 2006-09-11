@@ -49,6 +49,7 @@ c    13mar93 mjs   pgplot subr names have less than 7 chars.
 c     8jun94 pjt   region= clarification
 c    14may96 rjs   Fix bugs, implement region selection, better messages,
 c		   some tidying. Shoddy job pjt.
+c    18sep05 rjs   Correct the type of the "boxes" variable.
 c
 c  Various things to do or to think about:
 c   - fit portions of data with LSQFIT
@@ -76,7 +77,7 @@ c
       INTEGER lin1,lin2,size1(NAXIS),size2(NAXIS),blc(NAXIS),trc(NAXIS)
       REAL buf1(MAXDIM),buf2(MAXDIM), d1(MAXPTS), d2(MAXPTS),tol,cut
       REAL dmin, dmax,dminh,dmaxh,dminv,dmaxv,limx(2),limy(2),diff
-      REAL boxes(MAXBOXES)
+      INTEGER boxes(MAXBOXES)
       LOGICAL mask1(MAXDIM), mask2(MAXDIM), first, doplot
       LOGICAL dolog,dolimx,dolimy,docut
       CHARACTER device*40

@@ -82,6 +82,7 @@ c--
 c  History:
 c    lss  14sep02 Original version copied from calred.
 c    nebk 09sep04 Add format fix from Chris Phillips
+c    lss  17sep04 More formatting changes
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
@@ -89,13 +90,13 @@ c------------------------------------------------------------------------
 	integer PolMin,PolMax
 	character version*(*)
 	integer MAXPL
-	parameter(version='version 09-sep-04')
+	parameter(version='version 17-sep-04')
 	parameter(MAXDAT=15,MAXPOL=2,MAXSRC=1024,MAXPT=5000000)
 	parameter(MAXPL=32)
 	parameter(PolMin=-8,PolMax=4)
 c
 	character uvflags*16
-	character*64 device, line*200
+	character*64 device, line*250
 	character*132 logf, calfile, bpfile
 	character*10 xaxis, yaxis, zaxis, xform, yform, axis(2)
 	character type*1
@@ -120,7 +121,7 @@ c
 	real bamp(MAXANT,MAXANT,MAXPL),bph(MAXANT,MAXANT,MAXPL)
 	real kclose(MAXANT,MAXANT,MAXPL)
 	real ktrip (MAXANT,MAXANT,MAXPL)
-	real tsys(MAXANT),tsys2(MAXANT)
+	real tsys(MAXANT),tsys2(MAXANT), tsysif1,tsysif2
 	integer iclose(MAXPL)
         parameter (pi = 3.141592653589793, qmask=-999.9)
 
@@ -238,8 +239,8 @@ c
 	  line='# Output from wbplt'
 	  call txtwrite(lOut,line,len1(line),iostat)
 	  if(iostat.ne.0) call bug ('f', 'Error writing output file')
-          line='# MJD, LST, RA, DEC (J2000,rad), BASELINE, AMP,'//
-       1        ' PHASE (deg) for each channel'
+          line='# MJD, LST, RA, DEC (J2000,rad),Tsys(IF1),Tsys(IF2),'//
+       1        ' BASELINE, AMP, PHASE (deg) for each channel'
 	  call txtwrite(lOut,line,len1(line),iostat)
 	  if(iostat.ne.0) call bug ('f', 'Error writing output file')
 	endif
@@ -697,10 +698,12 @@ c  keep log file if desired
  	    if(logf.ne.' ') then
 	       line=' '
 	       if(nout.gt.9) nout=9
-	       write(line,60) mjd, lst, ra, dec, i1, i2, 
-     *                        (kamp(j), kph(j), j=chans(1),nout)
- 60	       format(f13.7,1x,f9.7,1x,f9.6,1x,f9.6,1x,i1,'-',i1,
-     *                9(1x,e10.3,1x,f6.1))
+	       tsysif1=sqrt(tsys(i1)*tsys(i2))
+	       tsysif2=sqrt(tsys2(i1)*tsys2(i2))
+	       write(line,60) mjd, lst, ra, dec, int(tsysif1),   
+     *          int(tsysif2),i1, i2,(kamp(j), kph(j), j=chans(1),nout)
+ 60	       format(f13.7,1x,f9.7,1x,f9.6,1x,f9.6,1x,i4,1x,i4,1x,
+     *                i1,'-',i1,9(1x,e10.3,1x,f6.1))
 	       call txtwrite(lOut,line,len1(line),iostat)
 	       if(iostat.ne.0) then
                  call bug ('f', 'Error writing output file')

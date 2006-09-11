@@ -221,6 +221,8 @@ c    rjs  15oct05 Check for buffer overflows. Increase buffer size. Better
 c	          flagging statistics.
 c    rjs  02jan06 Save reference pointing information. 8MHz debirdie algorithm.
 c		  Added nopol option.
+c    rjs  14jan06 Be relaxed about missing met data scans when applying
+c		  opacity correction.
 c
 c  Program Structure:
 c    Miriad atlod can be divided into three rough levels. The high level
@@ -578,6 +580,12 @@ c
 	    enddo
 	  enddo
 	enddo
+c
+c  Nominal met data values.
+c
+	stemp = 300
+	spress = 1013*97.5
+	shumid = 0.3
 c
 c  Determine some constants for later use.
 c
@@ -1504,14 +1512,18 @@ c
 	  jyperk = getjpk(real(sfreq(1)))
 
 	  if(opcorr)then
-	    if(mcount.lt.3)
-     *	      call bug('f','No met data to compute opacity correction')
 	    do if=1,nifs
 	      freq0(if) = (sfreq(if) + 0.5*(nfreq(if)-1)*sdf(if))*1e9
 	    enddo
-	    call opacGet(nifs,freq0,real(el),mdata(1)+273.15,
-     *					     97.5*mdata(2),
-     *					     0.01*mdata(3),fac,Tb)
+	    if(mcount.lt.3)then
+	      call bug('w','No met data to compute opacity correction')
+	    else
+	      stemp = mdata(1) + 273.15
+	      spress = 97.5*mdata(2)
+	      shumid = 0.01*data(3)
+	    endif
+	    call opacGet(nifs,freq0,real(el),stemp,spress,shumid,
+     *					     		   fac,Tb)
 	    tfac = 1
 	    do if=1,nifs
 	      fac(if) = 1/fac(if)

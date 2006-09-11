@@ -3,4 +3,5 @@
 	integer ncal,nscal(MAXCAL),calidx(MAXCAL)
 	integer scalidx(MAXSCAL,MAXCAL)
 	real uni(NRAN)
-	common/moscom/uni,ncal,nscal,calidx,scalidx
+	common/moscomA/uni
+	common/moscomB/ncal,nscal,calidx,scalidx

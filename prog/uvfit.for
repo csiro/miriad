@@ -108,6 +108,7 @@ c    bmg  08may96  Added fitting for a thin, spherical shell
 c    bmg  29may96  Added fitting for a thin face-on ring. I have coded
 c                  spheres and thick shells, but they don't work yet!
 c    rjs  18mar97  Handle multiple files, autocorr data, better message.
+c    bmg  14jan05  Added 2 more significant figures to offset position
 c------------------------------------------------------------------------
 	integer MAXVAR
 	parameter(MAXVAR=20)
@@ -612,7 +613,7 @@ c
    20	  format('  Flux: ',1pg34.4,:,' +/- ',1pe8.2)
 	  call output(line)
 	  write(line,25)3600*180/pi*l0(i),3600*180/pi*m0(i)
-   25	  format('  Offset Position (arcsec):  ',2f9.2)
+   25	  format('  Offset Position (arcsec):  ',2f11.4)
 	  call output(line)
 	  if(sl0(i)+sm0(i).gt.0)then
 	    write(line,26)3600*180/pi*sl0(i),3600*180/pi*sm0(i)

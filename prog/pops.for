@@ -36,13 +36,14 @@ c   rjs  10jun97  Change observ to telescop.
 c   rjs  08sep97  Rename routine "azel" to "doazel", and call ehem's azel.
 c   rjs  24sep98  Check for known elevation limit.
 c   rjs  04apr04  Add LST of rise and set times.
+c   rjs  20dec05  Make LST rise greater that 0.
 c Bugs:
 c   * The precession, nutation and aberration are pretty simple. No
 c     correction for the FK4 zero-point or elliptic terms of aberrations.
 c-----------------------------------------------------------------------
 	include 'mirconst.h'
 	character version*(*)
-	parameter(version='Pops: version 1.0 04-Apr-04')
+	parameter(version='Pops: version 1.0 20-Dec-05')
 c
 	character string*64,observ*32
 	double precision r0,d0,rm,dm,rt,dt,ra,da,jday1,jday2
@@ -216,6 +217,7 @@ c  are the LST times of rise and set.
 c
 	  ha = acos(temp)
 	  rise = ra - ha
+	  if(rise.lt.0)rise = rise + 2*PI
 	  set  = ra + ha
 c
 c  Convert from LST to UT.
