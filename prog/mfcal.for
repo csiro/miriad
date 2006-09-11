@@ -32,8 +32,9 @@ c	(in GHz) and the source spectral index. The flux and spectral index
 c	are at the reference frequency. If not values are given, then MFCAL
 c	checks whether the source is one of its known sources, and uses the
 c	appropriate flux variation with frequency. Otherwise the default flux
-c	is 1, and the default spectral index is 0. The default reference
-c	frequency is the mean of the frequencies in the input data.
+c	is determined so that the rms gain amplitude is 1, and the default
+c	spectral index is 0. The default reference frequency is the mean of
+c	the frequencies in the input data. Also see the `oldflux' option.
 c@ refant
 c	The reference antenna. Default is 3. The reference antenna needs
 c	to be present throughout the observation. Any solution intervals
@@ -52,11 +53,20 @@ c	5 minutes, and the max gap size is the same as the max length.
 c@ options
 c	Extra processing options. Several values can be given, separated by
 c	commas. Minimum match is used. Possible values are:
-c	  nodelay   Do not attempt to solve for the delay parameters. In
-c	            this case, the delay is constrained to be zero.
+c	  delay     Attempt to solve for the delay parameters. This can
+c	            be a large sink of CPU time.
 c	  nopassol  Do not solve for bandpass shape. In this case if a bandpass
 c	            table is present in the visibility data-set, then it will
 c	            be applied to the data.
+c	  interpolate Interpolate (and extrapolate) via a spline fit (to
+c	            the real and imaginary parts) bandpass values for
+c	            channels with no solution (because of flagging).  If 
+c	            less than 50% of the channels are unflagged, the 
+c	            interpolation (extrapolation) is not done and those
+c	            channels will not have a bandpass solution
+c	  oldflux   This causes MFCAL to use a pre-August 1994 ATCA flux
+c	            density scale. See the help on `oldflux' for more
+c	            information.
 c@ tol
 c	Solution convergence tolerance. Default is 0.001.
 c--
@@ -69,18 +79,25 @@ c    rjs  22nov92 Fixed dimensioning of b1,b2 in Solve.
 c    rjs  19jan93 Fix bug handling single IF.
 c    rjs   9feb93 Use memalloc more, to reduce size of executable.
 c    rjs  19mar93 Discard autocorrelation data.
-c    nebk 18jun93 Documntation clarification
+c    nebk 18jun93 Documentation clarification
+c    rjs  24jun93 Determine nants in a different way.
+c    rjs   9jul93 Increase MAXHASH, MAXVIS. Other fiddles to increase buffers.
+c    rjs  30mar94 Added some comments.
+c    nebk 30mar94 Add options=interpolate
+c    rjs   3aug94 Add options=oldflux.
+c    rjs  23aug94 Improve hashing algorithm.
+c    rjs   6sep94 Improve error message.
 c
 c  Problems:
 c    * Should do simple spectral index fit.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer MAXSPECT,MAXVIS,MAXSOLN,MAXITER,MAXPOL
-	parameter(MAXSPECT=16,MAXVIS=100000,MAXITER=30,MAXSOLN=1024)
+	parameter(MAXSPECT=33,MAXVIS=700000,MAXITER=30,MAXSOLN=1024)
 	parameter(MAXPOL=2)
 c
 	character version*(*)
-	parameter(version='MfCal: version 1.0 19-Mar-93')
+	parameter(version='MfCal: version 1.0 3-Aug-94')
 c
 	integer tno
 	integer pWGains,pFreq,pSource,pPass,pGains,pTau
@@ -96,7 +113,7 @@ c
 	complex Vis(MAXVIS)
 	real Wt(MAXVIS)
 	character line*64,uvflags*16,Source*64
-	logical dodelay,dopass,defflux
+	logical dodelay,dopass,defflux,interp,oldflux
 c
 c  Dynamic memory stuff.
 c
@@ -114,7 +131,7 @@ c  Get inputs and check them.
 c
 	call output(version)
 	call keyini
-	call GetOpt(dodelay,dopass)
+	call GetOpt(dodelay,dopass,interp,oldflux)
 	uvflags = 'dlbx'
 	if(.not.dopass)uvflags(5:5) = 'f'
 	call uvDatInp('vis',uvflags)
@@ -187,8 +204,8 @@ c
 c  Generate the source model.
 c
 	call MemAlloc(pSource,nchan,'r')
-	call SrcGen(Source,defflux,ref(pSource),nchan,dref(pFreq),
-     *	  freq0,flux(1),flux(3))
+	call SrcGen(Source,oldflux,defflux,
+     *	  ref(pSource),nchan,dref(pFreq),freq0,flux(1),flux(3))
 c
 c  Now make the frequency relative to the reference frequency.
 c
@@ -262,10 +279,20 @@ c
 	  call output(line)
 	enddo
 c
+c  Scale the gains if we have no idea what the source flux really was.
+c
+	if(defflux)then
+	  call GainScal(flux,cref(pGains),npol*nants*nsoln)
+	  write(line,'(a,f8.3)')'I flux density: ',flux(1)
+	  call output(line)
+	endif
+c
 	if(epsi.gt.tol)call bug('w','Failed to converge')
 	call output('Saving solution ...')
 	call GainTab(tno,time,cref(pGains),ref(pTau),npol,nants,nsoln,
      *	  freq0,dodelay,pee)
+	if (dopass.and.interp) call intext(npol,nants,nchan,nspect,
+     *    nschan,cref(pPass))
 	if(dopass)call PassTab(tno,npol,nants,nchan,
      *	  nspect,sfreq,sdf,nschan,cref(pPass),pee)
 c
@@ -281,6 +308,52 @@ c
 	call MemFree(pFreq,nchan,'d')
 	call hisclose(tno)
 	call uvDatCls
+c
+	end
+c************************************************************************
+	subroutine GainScal(flux,Gains,ngains)
+c
+	implicit none
+	integer ngains
+	complex Gains(ngains)
+	real flux
+c
+c  Scale the gains and the flux so that the rms gain is 1.
+c
+c  Input:
+c    ngains	Number of gains.
+c  Input/Output:
+c    Gains	The gains.
+c    flux	Nominal source flux.
+c------------------------------------------------------------------------
+	real Sum2,t
+	integer n,i
+c
+	n = 0
+	Sum2 = 0
+	do i=1,ngains
+	  t = real(Gains(i))**2 + aimag(Gains(i))**2
+	  if(t.gt.0)then
+	    Sum2 = Sum2 + t
+	    n = n + 1
+	  endif
+	enddo
+c
+c  Return if all the gains are flagged bad.
+c
+	if(Sum2.eq.0)return
+c
+c  Scale the gains.
+c
+	t = sqrt(n/Sum2)
+	do i=1,ngains
+	  Gains(i) = t*Gains(i)
+	enddo
+c
+c  Scale the flux.
+c
+	t = Sum2/n
+	flux = t*flux
 c
 	end
 c************************************************************************
@@ -309,23 +382,26 @@ c------------------------------------------------------------------------
 	endif
 	end
 c************************************************************************
-	subroutine GetOpt(dodelay,dopass)
+	subroutine GetOpt(dodelay,dopass,interp,oldflux)
 c
 	implicit none
-	logical dodelay,dopass
+	logical dodelay,dopass,interp,oldflux
 c
 c  Get extra processing options.
 c------------------------------------------------------------------------
 	integer nopt
-	parameter(nopt=2)
+	parameter(nopt=4)
 	logical present(nopt)
-	character opts(nopt)*8
-	data opts/ 'nodelay ','nopassol'/
+	character opts(nopt)*11
+	data opts/ 'delay      ','nopassol   ','interpolate',
+     *		   'oldflux    '/
 c
 	call options('options',opts,present,nopt)
 c
-	dodelay = .not.present(1)
+	dodelay =      present(1)
 	dopass  = .not.present(2)
+        interp  =      present(3)
+	oldflux =      present(4)
 	end
 c************************************************************************
 	subroutine GainTab(tno,time,Gains,Tau,npol,nants,nsoln,
@@ -434,12 +510,33 @@ c
 	complex Pass(nants,nchan,npol)
 	double precision sdf(nspect),sfreq(nspect)
 c
-c  Write out the bandpass shapes. This assumes that the parameters
+c  Write out the bandpass table and frequency description table (with a
+c  few other assorted parameters). This assumes that the parameters
 c    ngains, nfeeds
+c  have already been written out.
 c
 c  Input:
+c    tno	Handle of the output dataset.
+c    nants	Number of antennas.
+c    npol	Number of polarisations (either 1 or 2).
+c    nspect	The total number of frequency bands observed. This is the
+c		product of the number of simultaneous spectral windows and
+c		the number of different frequency settings.
+c    nschan	The number of channels in each observing band.
+c    nchan	Total number of channels.
+c		NOTE: Here (as elsewhere in this task) "nchan" is the total
+c		number of channels (the sum of all the channels from all the
+c		bands observed).
+c		i.e. nchan = Sum nschan(i)
+c    Pass	The bandpass function. This is of size nants * nchan * npol.
+c		The bandpass table that we have to write out is in the order
+c		nchan * npol * nants, so we have to do some reorganising
+c		before we write out.
 c    pee	Mapping from internal polarisation number to the order
-c		that we write the gains out in.
+c		that we write the gains out in. We always write X then Y
+c		(or R then L).
+c    sdf	Frequency increment for each observing band.
+c    sfreq	Start frequency for each observing band.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer MAXSPECT
@@ -457,7 +554,16 @@ c
 	  call bugno('f',iostat)
 	endif
 c
-c  Write out all the gains.
+c  Write out all the gains. Write one antenna and one polarisation at
+c  a time. Because the input ("Pass") is in antenna/channel/pol order,
+c  and the output table is in channel/pol/antenna order, we have to
+c  rearraneg before writing out. Also convert from a "error" to a "correction"
+c  by taking the inverse. 
+c  Because "nchan" is the sum of all the channels from the frequency
+c  bands observed, nchan may be larger than MAXCHAN. To cope with this,
+c  copy the output channels in a strip-mining approach.
+c
+c  Loop over antenna, polarisation, strip, and channel within a strip.
 c
 	off = 8
 	do i=1,nants
@@ -474,6 +580,9 @@ c
 		endif
 	      enddo
 	    enddo
+c
+c  Write a strip, and check for errors.
+c
 	    call hwriter(item,G,off,8*n,iostat)
 	    off = off + 8*n
 	    if(iostat.ne.0)then
@@ -737,14 +846,14 @@ c
 c
 	end
 c************************************************************************
-	subroutine SrcGen(Source,defflux,sflux,nchan,freq,
+	subroutine SrcGen(Source,oldflux,defflux,sflux,nchan,freq,
      *						freq0,flux,alpha)
 c
 	implicit none
 	integer nchan
 	real flux,alpha,sflux(nchan)
 	double precision freq(nchan),freq0
-	logical defflux
+	logical defflux,oldflux
 	character Source*(*)
 c
 c  Generate the source flux as a function of frequency.
@@ -756,15 +865,28 @@ c    freq	Offset frequency of each channel.
 c    freq0	Reference frequency.
 c    flux	Source flux at the reference frequency.
 c    alpha	Spectral index.
+c    oldflux	True if we are to use the old ATCA 1934 flux scales.
+c  Input/Output:
 c    defflux	Check for a known source, and use this if possible.
 c  Output:
 c    source	Flux of the source at each frequency.
 c------------------------------------------------------------------------
 	integer i,ierr
-	character umsg*64
+	character umsg*64,src*16
 c
 	ierr = 2
-	if(defflux)call CalStoke(source,'i',freq,sflux,nchan,ierr)
+	src = source
+	if(src.eq.'1934-638'.or.src.eq.'1934'.or.
+     *			src.eq.'1939-637')then
+	  if(oldflux)then
+	    src = 'old1934'
+	    call output('Using pre-Aug94 ATCA flux scale for 1934-638')
+	  else
+	    call bug('w',
+     *			'Using post-Aug94 ATCA flux scale for 1934-638')
+	  endif
+	endif
+	if(defflux)call CalStoke(src,'i',freq,sflux,nchan,ierr)
 	if(ierr.eq.2)then
 	  if(alpha.eq.0)then
 	    do i=1,nchan
@@ -776,9 +898,11 @@ c
 	    enddo
 	  endif
 	else if(ierr.eq.1)then
+	  defflux = .false.
 	  umsg = 'Extrapolating to get frequency variation of '//source
 	  call bug('w',umsg)
 	else
+	  defflux = .false.
 	  umsg = 'Using known frequency variation of '//source
 	  call output(umsg)
 	endif
@@ -999,7 +1123,7 @@ c------------------------------------------------------------------------
 	parameter(PolMin=-6,PolMax=1)
 	include 'maxdim.h'
 	integer MAXHASH,MAXPOL
-	parameter(MAXHASH=16000,MAXPOL=2)
+	parameter(MAXHASH=MAXANT*MAXCHAN,MAXPOL=2)
 c
 	integer nchan,nbad,nauto,nreg,ngood,ninter,i1,i2,p,i,VisId
 	double precision preamble(4),tfirst,tlast
@@ -1016,7 +1140,7 @@ c
 c
 c  Is the size of the "state" array OK?
 c
-	if(3*(maxspect+1).gt.MAXCHAN)
+	if(3*(maxspect+2).gt.MAXCHAN)
      *	  call bug('f','State array too small in DatRead')
 c
 c  Initialise thing.
@@ -1038,7 +1162,6 @@ c
 	enddo
 	npol = 0
 c
-	nants = 0
 	nsoln = 0
 	nspect = 0
 	nvis = 0
@@ -1061,6 +1184,9 @@ c  Loop over everything.
 c
 	call uvDatRd(preamble,Data,flags,MAXCHAN,nchan)
 	call uvrdvra(tno,'source',source,' ')
+	call uvrdvri(tno,'nants',nants,0)
+	if(nants.le.0.or.nants.gt.MAXANT)
+     *	  call bug('f','Bad value for nants, in DatRead')
 	dowhile(nchan.gt.0)
 	  updated = updated.or.uvVarUpd(vupd)
 	  call BasAnt(preamble(4),i1,i2)
@@ -1109,9 +1235,8 @@ c
 	    endif
 	    p = pols(p)
 c
-	    nants = max(nants,i1,i2)
 	    if(nchan+nvis.gt.maxvis)
-     *	      call bug('f','Buffer overflow, in DatRead')
+     *	      call bug('f','Buffer overflow: set interval larger')
 c
 	    tlast = max(tlast,preamble(3))
 c
@@ -1192,11 +1317,11 @@ c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer MAXSPECT,MAXPOL
 	parameter(MAXSPECT=16,MAXPOL=2)
-	VID = i1 - 1
+	VID = chan - 1
+	VID = MAXANT * VID + i1 - 1
 	VID = MAXANT  *VID + i2 - 1
 	VID = MAXPOL  *VID + p  - 1
 	VID = MAXSPECT*VID + spect - 1
-	VID = MAXCHAN *VID + chan  - 1
 	end
 c************************************************************************
 	subroutine unpack(i1,i2,p,spect,chan,VID)
@@ -1220,14 +1345,15 @@ c------------------------------------------------------------------------
 	parameter(MAXSPECT=16,MAXPOL=2)
 	integer VisId
 c
-	chan  = mod(VID,MAXCHAN)
-	VisId = VID/MAXCHAN
+	VisId = VID
 	spect = mod(VisId,MAXSPECT)
 	VisId = VisId/MAXSPECT
 	p     = mod(VisId,MAXPOL)
 	VisId = VisId/MAXPOL
 	i2    = mod(VisId,MAXANT)
-	i1    = VisId/MAXANT
+	VisId = VisId/MAXANT
+	i1    = mod(VisId,MAXANT)
+	chan  = VisId/MAXANT
 c
 	i1 = i1 + 1
 	i2 = i2 + 1
@@ -1239,7 +1365,7 @@ c
 c************************************************************************
 	subroutine AccumIni(Hash,maxhash)
 c
-	implicit none
+ 	implicit none
 	integer maxHash,Hash(2,MaxHash)
 c
 c  Initialise the hash table.
@@ -1286,7 +1412,7 @@ c
 	    indx = indx + 1
 	  enddo
 	  if(indx.ge.nHash+2)
-     *		call bug('f','Hash table ovewrflow, in Accum')
+     *		call bug('f','Hash table overflow, in Accum')
 	endif
 c
 c  Is it a new slot?
@@ -1353,7 +1479,7 @@ c************************************************************************
 c
 	implicit none
 	integer tno,nchan,chan(nchan),spect(nchan),edge(2)
-	integer nspect,maxspect,nschan(maxspect),state(3,maxspect+1)
+	integer nspect,maxspect,nschan(maxspect),state(3,maxspect+2)
 	double precision sfreq(maxspect),sdf(maxspect)
 	logical updated
 c
@@ -1473,7 +1599,7 @@ c************************************************************************
 c
 	implicit none
 	integer maxspect,nspect,nchan,bdrop,edrop
-	integer state(3,maxspect+1),nschan(maxspect)
+	integer state(3,maxspect+2),nschan(maxspect)
 	double precision f,df,sfreq(maxspect),sdf(maxspect)
 c
 c  Find the current frequency setup in the list of previous setups.
@@ -1501,7 +1627,7 @@ c
 	more = nspect.gt.0
 	ispect = 1
 	dowhile(more)
-	  if(abs(f0-sfreq(ispect)).lt.0.1*abs(sdf(ispect)).and.
+	  if(abs(f0-sfreq(ispect)).lt.0.5*abs(sdf(ispect)).and.
      *	     abs(df-sdf(ispect)).lt.0.01*abs(sdf(ispect)))then
 	    more = .false.
 	  else
@@ -1532,7 +1658,8 @@ c
 	    state(3,i) = state(3,i) + bdrop
 	  else
 	    i = i + 1
-	    if(i.gt.maxspect)call bug('f','Buffer overflow, in despect')
+	    if(i.gt.maxspect+2)
+     *	      call bug('f','Buffer overflow, in despect-1')
 	    state(1,i) = 0
 	    state(2,i) = 1
 	    state(3,i) = bdrop
@@ -1540,14 +1667,16 @@ c
 	endif
 c
 	i = i + 1
-	if(i.gt.maxspect)call bug('f','Buffer overflow, in despect')
+	if(i.gt.maxspect+2)
+     *	  call bug('f','Buffer overflow, in despect-2')
 	state(1,i) = ispect
 	state(2,i) = 1
 	state(3,i) = nchan - bdrop - edrop
 c
 	if(edrop.gt.0)then
 	  i = i + 1
-	  if(i.gt.maxspect)call bug('f','Buffer overflow, in despect')
+	  if(i.gt.maxspect+2)
+     *	    call bug('f','Buffer overflow, in despect-3')
 	  state(1,i) = 0
 	  state(2,i) = 1
 	  state(3,i) = edrop
@@ -2656,3 +2785,83 @@ c
 	enddo
 	
 	end
+
+c************************************************************************
+	subroutine intext(npol, nants, nchan, nspect, nschan, pass)
+c
+	implicit none
+	integer npol, nants, nchan, nspect, nschan(nspect)
+	complex Pass(nants,nchan,npol)
+c
+c  Spline fit the band pass table and evaluate the fit for channels
+c  that have no solutions.  Do this for real and imaginary separately.
+c
+c  Input:
+c    nants	Number of antennas.
+c    npol	Number of polarisations (either 1 or 2).
+c    nspect	The total number of frequency bands observed. This is the
+c		product of the number of simultaneous spectral windows and
+c		the number of different frequency settings.
+c    nschan	The number of channels in each observing band.
+c    nchan	Total number of channels.
+c		NOTE: Here (as elsewhere in this task) "nchan" is the total
+c		number of channels (the sum of all the channels from all the
+c		bands observed).
+c		i.e. nchan = Sum nschan(i)
+c    Pass	The bandpass function. This is of size nants * nchan * npol.
+c		The bandpass table that we have to write out is in the order
+c		nchan * npol * nants, so we have to do some reorganising
+c		before we write out.
+c------------------------------------------------------------------------
+	include 'maxdim.h'
+	integer i, j, k, l, p1, p2, p3, p4, xint(MAXCHAN), spoff
+        complex temp
+	double precision xfit(MAXCHAN), yrfit(MAXCHAN), yifit(MAXCHAN),
+     *    a(MAXCHAN,2), b(MAXCHAN,2), c(MAXCHAN,2), seval
+        real fr, fi
+c
+        do l = 1, nants
+          do k = 1, npol    
+            p3 = 1  
+            spoff = 0
+            do j = 1, nspect
+              p1 = 0
+              p2 = 0
+              do i = 1, nschan(j)
+c
+c Extract channels with and without solutions
+c
+                temp = pass(l,p3,k)
+	        if(abs(real(temp))+abs(aimag(temp)).ne.0.0) then
+                  p1 = p1 + 1
+                  xfit(p1) = i
+                  yrfit(p1) = real(temp)
+                  yifit(p1) = aimag(temp)
+                else
+                  p2 = p2 + 1
+                  xint(p2) = i
+                end if
+                p3 = p3 + 1
+              end do
+c
+c Spline fit and resample real and imaginary.  Must have 50%
+c of channels unflagged to do fit.
+c
+              if (p2.gt.0 .and. real(p1)/real(nschan(j)).gt.0.5) then
+                call spline (p1, xfit, yrfit, a(1,1), b(1,1), c(1,1))
+                call spline (p1, xfit, yifit, a(1,2), b(1,2), c(1,2))
+                do i = 1, p2
+                  fr = seval(p1, dble(xint(i)), xfit, yrfit, a(1,1), 
+     *                       b(1,1), c(1,1))
+                  fi = seval(p1, dble(xint(i)), xfit, yifit, a(1,2),
+     *                       b(1,2), c(1,2))
+                  p4 = xint(i) + spoff
+                  pass(l,p4,k) = cmplx(fr,fi)
+                end do
+              end if
+              spoff = spoff + nschan(j)
+            end do
+          end do
+        end do
+c
+        end
