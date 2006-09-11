@@ -118,13 +118,14 @@ c    04may03 rjs  Original version.
 c    15may03 rjs  Better jyperk.
 c    14aug03 rjs  Fix bug causing seg violation.
 c    17sep03 rjs  New gain/elevation curve at 3mm.
-c    19oct03 rjs  Undate array tables.
+c    19oct03 rjs  Update array tables.
+c    14nov03 rjs  Fix bug in getjpk
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
 	character version*(*)
 	integer MAXSELS,ATANT
-	parameter(version='AtFix: version 1.0 19-Oct-03')
+	parameter(version='AtFix: version 1.0 14-Nov-03')
 	parameter(MAXSELS=256,ATANT=6)
 c
 	real sels(MAXSELS),xyz(3*MAXANT)
@@ -305,7 +306,7 @@ c
 	  endif
 	  call felget(lVis,vgmet,nif,nschan,freq0,freq,nchan,
      *                                                  ra,dec,lat)
-	  jyperk = getjpk(freq0(1))
+	  jyperk = getjpk(freq0(1)*1e-9)
 	  dojpk = .false.
 c
 c  Do antenna table correction, if needed.
