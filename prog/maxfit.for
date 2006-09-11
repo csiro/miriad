@@ -5,13 +5,10 @@ c= MAXFIT - Fits a 2-D parabola to a 3x3 region of an image
 c& nebk
 c: image analysis
 c+
-c	MAXFIT finds the maximum value of a region of an image.
-c	This region may be three dimensional.  It then fits a 
-c	parabola to a 3x3 array extracted from the first two 
-c	dimensions of the image and centred on the maximum pixel 
-c	in the specified region.  MAXFIT then returns the location
-c	and value of the maximum pixel and the fitted pixel.
-c
+c	MAXFIT finds the maximum value of a region of an image
+c       by fitting a parabola to a 3x3 array centred on the
+c       maximum pixel in the specified region.  It returns
+c	the fitted value and location.
 c@ in
 c	The input image.
 c@ region
@@ -32,9 +29,6 @@ c    mjs  12mar93  Use maxnax.h file instead of setting own value.
 c    nebk 22jun93  Increase the size of STR 
 c    nebk 26aug93  Include new "absdeg" and "reldeg" axis types
 c    nebk 16sep93  Add keyword log
-c    nebk 09jan94  Convert CRPIX to double precision
-c    rjs  24jan94  Small typo in doc (appease pjt and bpw's "doc").
-c    nebk 22mar94  Twiddle about with output format
 c
 c-----------------------------------------------------------------------
       include 'maxdim.h'
@@ -46,17 +40,17 @@ c
 c
       parameter (rtod = 180.0d0/dpi, maxboxes = 2048, maxruns =3*maxdim)
 c
-      double precision cdelt(maxnax), crval(maxnax), crpix(maxnax),
-     +  pixmax(maxnax)
-      real data(maxdim), dmax, fit(9), coeffs(6), epoch, fmax
+      double precision cdelt(maxnax), crval(maxnax)
+      real data(maxdim), dmax, fit(9), coeffs(6), crpix(maxnax),
+     +  epoch, pixmax(maxnax), fmax
       integer nsize(maxnax), blc(maxnax), trc(maxnax), boxes(maxboxes),
      +  runs(3,maxruns), ploc(maxnax), nruns, lun, naxis, i, j, k, l,
-     +  ira, idec, ilat, ilon, ilen, ip, il, len1
+     +  ira, idec, ilat, ilon, ilen
       character file*40, text*132, ctype(maxnax)*9, str*60, type*9,
      +  logf*132
       logical mask
 c-----------------------------------------------------------------------
-      call output ('MAXFIT: version 22-Mar-94')
+      call output ('MAXFIT: version 26-Aug-93')
 c
 c  Get inputs
 c
@@ -160,49 +154,42 @@ c
       pixmax(2) = ploc(2) + pixmax(2)
       pixmax(3) = ploc(3)
 c
-c  Tell user of maxfit's endeavours
+c  Tell user of endeavours
 c
       call output (' ')
       if (logf.ne.' ') call logwrit (' ')
-c
-c Peak pixel location and value
-c
-      text = 'Peak pixel   : ('
-      ip = len1(text) + 1
+      call output ('Peak pixel location:')
+      if (logf.ne.' ') call logwrit ('Peak pixel location:')
       do i = 1, min(3,naxis)
-        call strfi (ploc(i), '(i4)', text(ip:), il)
-        ip = ip + il
-        text(ip:ip) = ','
-        ip = ip + 1
+        write(text, 20) i, ploc(i)
+20      format ('  Axis ', i1, ' pixel = ', i4)
+        call output (text)
+        if (logf.ne.' ') call logwrit (text)
       end do
-      text(ip-1:) = ') = '
-      ip = len1(text) + 2
 c
-      call strfr (dmax, '(1pe12.4)', text(ip:), il)
+      call output (' ')
+      if (logf.ne.' ') call logwrit (' ')
+      write(text,25) dmax
+25    format ('Peak pixel value = ', 1pe12.4)
       call  output(text)
       if (logf.ne.' ') call logwrit (text)
 c
-c Fitted location and fitted value
+      call output (' ')
+      if (logf.ne.' ') call logwrit (' ')
+      call output ('Fitted pixel location:')
+      if (logf.ne.' ') call logwrit ('Fitted pixel location:')
+      do i = 1, min(2,naxis)
+        write (text,30) i, pixmax(i)
+30      format ('  Axis ', i1, ': pixel = ', f7.2)
+        call output(text)
+        if (logf.ne.' ') call logwrit (text)
+      end do
 c
       call output (' ')
       if (logf.ne.' ') call logwrit (' ')
-      text = 'Fitted pixel : ('
-      ip = len1(text) + 1
-      do i = 1, min(3,naxis)
-        if (i.le.2) then
-          call strfd (pixmax(i), '(f7.2)', text(ip:), il)
-        else
-          call strfi (ploc(i), '(i4)', text(ip:), il)
-        end if
-        ip = ip + il
-        text(ip:ip) = ','
-        ip = ip + 1
-      end do
-      text(ip-1:) = ') = '
-      ip = len1(text) + 2
-c
-      call strfr (fmax, '(1pe12.4)', text(ip:), il)
-      call  output(text)
+      write(text,40) fmax
+40    format ('Fitted pixel value = ', 1pe12.4)
+      call output (text)
       if (logf.ne.' ') call logwrit (text)
 c
 c Find offsets from reference pixel
@@ -214,8 +201,9 @@ c
 c
       call output (' ')
       if (logf.ne.' ') call logwrit (' ')
-      call output ('Offsets from reference pixel :')
-      if (logf.ne.' ') call logwrit ('Offsets from reference pixel :')
+      call output ('Pixel offsets from reference pixel:')
+      if (logf.ne.' ') 
+     +  call logwrit ('Pixel offsets from reference pixel:')
       do i = 1, min(3,naxis)
         if (i.eq.ira .or. i.eq.idec) then
           type = 'arcsec'
@@ -243,8 +231,8 @@ c Compute world coordinate
 c
       call output (' ')
       if (logf.ne.' ') call logwrit (' ')
-      call output ('Coordinate:')
-      if (logf.ne.' ') call logwrit ('Coordinate:')
+      call output ('World coordinate:')
+      if (logf.ne.' ') call logwrit ('World coordinate:')
       do i = 1, min(3,naxis)
         if (i.eq.ira) then
           type = 'hms'
@@ -294,8 +282,7 @@ c-----------------------------------------------------------------------
       implicit none
 c
       integer width
-      real z(width,width), c(6), zmax
-      double precision pix(2)
+      real z(width,width), c(6), zmax, pix(2)
 cc
       integer maxwidth
       parameter(maxwidth = 5)
