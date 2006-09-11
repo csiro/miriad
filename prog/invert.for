@@ -334,7 +334,7 @@ c
 c
 c  Externals.
 c
-	character polsc2p*3,itoaf*8
+	character polsc2p*3,itoaf*10
 	logical keyprsnt
 c
 	data slops/'zero        ','interpolate '/
@@ -983,7 +983,7 @@ c------------------------------------------------------------------------
 c
 c  Externals.
 c
-	character itoaf*8
+	character itoaf*10
 c
 	T = - Fwhm**2 * (pi**2 / (4.*log(2.)))
 	gd = 1/abs(Cell * gn)
@@ -1405,7 +1405,7 @@ c------------------------------------------------------------------------
 c
 c  Externals.
 c
-	character itoaf*8
+	character itoaf*10
 	integer len1
 c
 c  Get the first record.
