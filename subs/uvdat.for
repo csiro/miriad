@@ -72,6 +72,7 @@ c    rjs  31jul96 Support QQ and UU.
 c    rjs  16aug96 Change phasing convention for circularly polarised feeds,
 c		  and add QQ and UU support for circulars.
 c    rjs  06jan97 Change uvgetvrr to uvrdvrr when getting chi.
+c    rjs  06jan98 Change in uvlkcorr to sidestep a compiler bug on IRIX machines.
 c
 c  User-Callable Routines:
 c    uvDatInp(key,flags)
@@ -1384,7 +1385,8 @@ c    type	The polarisation type corresponding to each coefficient.
 c    coeffs	The value of the coefficient.
 c------------------------------------------------------------------------
 	integer i1,i2,n,i,j
-	complex G(4),t
+	complex G(4),t,ta,tb
+	real tr
 	integer indx(4,4),cf1(4),cf2(4),off
 	data indx/1,4,3,2, 2,3,4,1, 3,2,1,4, 4,1,2,3/
 	data cf1 /1,2,1,2/
@@ -1418,8 +1420,12 @@ c
      *	     + coeffs(i) * Leaks(cf1(j),i1) * conjg(Leaks(cf2(j),i2))
 	enddo
 c
-	t =  1. / ((1 - Leaks(1,i1)*Leaks(2,i1)) *
-     *	      conjg(1 - Leaks(1,i2)*Leaks(2,i2)) )
+	ta = (1.,0.) - Leaks(1,i1)*Leaks(2,i1)
+	tb = (1.,0.) - Leaks(1,i2)*Leaks(2,i2)
+	t = ta * conjg(tb)
+	tr = real(t)*real(t) + aimag(t)*aimag(t)
+	t = conjg(t)/tr
+c
 	ncoeff = 4
 	do i=1,4
 	  coeffs(i) = t*G(i)
