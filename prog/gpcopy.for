@@ -1,8 +1,8 @@
-************************************************************************
+c************************************************************************
 	program gpcopy
 	implicit none
 c
-c= GpCopy -- Copy or merge gains, bandpass and polarization correctsion.
+c= GpCopy -- Copy or merge gains, bandpass and polarization correction.
 c& rjs
 c: calibration
 c+
@@ -13,7 +13,7 @@ c@ vis
 c	The name of the input data-set. This will normally be a visibility
 c	data-set. No default.
 c@ out
-c	The name of the output data-set. This is NOT created by GPCAL, but
+c	The name of the output data-set. This is NOT created by GPCOPY, but
 c	rather the relevant items are copied to this data-set.
 c@ mode
 c	This determines how the calibration tables, etc, are ``copied''
@@ -53,6 +53,7 @@ c    rjs  24nov93 mode=create also copies the history file.
 c    rjs  17jan93 Copy cgains and wgains.
 c    rjs  24nov94 Implement merging of gain tables.
 c    rjs   3dec94 Implement applying of gain tables.
+c    mchw 04jan95 Doc change only.
 c  Bugs:
 c    None?
 c------------------------------------------------------------------------
@@ -195,7 +196,7 @@ c
 	implicit none
 	character mode*(*)
 c
-c  Get the mode that this this is supposed to work in.
+c  Get the mode that this is supposed to work in.
 c
 c  Output:
 c    mode
