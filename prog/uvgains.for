@@ -63,11 +63,11 @@ c@ vis
 c	The name of the input uv-data file.
 c@ select
 c	The normal uv selection commands. The default is use everything.
-c	Enter "help select" for more details.
+c	See the help on "select" for more details.
 c@ line
 c	The normal uv linetype in the form:
 c	  line,nchan,start,width,step
-c	Enter "help line" for more details.
+c	See the help on "line" for more details.
 c	The default is all channels (or all wide channels if there are no
 c	spectral channels). The output will consist of only spectral or
 c	wideband data (but not both).
