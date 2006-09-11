@@ -12,9 +12,9 @@ c	two datasets sample the same source using the same array configuration
 c	and observing frequency setup (no checks are made to verify these).
 c	UVDIFF matches visibility records based on baseline number,
 c	polarisation type and hour angle. If the hour angles in the two
-c	datasets do not match to better than 1 second (which would be unlikely),
-c	UVDIFF linearly interpolates between two integrations of one
-c	dataset to the appropriate hour angle of the other.
+c	datasets do not match to better than 1 second, 	UVDIFF linearly
+c	interpolates between two integrations of one dataset to the
+c	appropriate hour angle of the other.
 c
 c	NOTE: UVDIFF does not apply calibration corrections to either
 c	of the input datasets. The datasets should be in time order.
@@ -30,7 +30,7 @@ c	first visibility dataset. The default is to select everything.
 c@ out
 c	The output dataset. No default.
 c@ mode
-c	This determines what data is written. Possibilities values are:
+c	This determines what data is written. Possible values are:
 c	  difference Write the difference of the two inputs (the first
 c	             minus the second). This is the default.
 c	  two        Write the data from the second input, interpolated
@@ -46,11 +46,10 @@ c	2 minutes.
 c--
 c  History:
 c    04-jun-96 rjs  Preliminary version.
-c
+c    20-jun-96 rjs  Bring it up to scratch.
 c  Bugs/Shortcomings:
 c    * Should handle the conjugate symmetry property, and match data over
 c      a wider range of HA.
-c    * Handle general number of channels, polarisations, baselines.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
@@ -165,7 +164,8 @@ c------------------------------------------------------------------------
 	real mtol
 	parameter(mtol=2.0*PI/86400.0)
 	include 'uvdiff.h'
-	integer bl,ipol,i
+	integer bl,ipol,i,cidx1,cidx2,fidx1,fidx2
+	logical ok1,ok2
 	real w1,w2
 	double precision mha
 c
@@ -181,26 +181,37 @@ c
 c
 c  Cases of straight copy.
 c
-	if(abs(mha-ha(1)).lt.mtol.and.nchan1.eq.nchan(1))then
+	cidx1 = cindices(ipol,bl,1)
+	cidx2 = cindices(ipol,bl,2)
+	fidx1 = findices(ipol,bl,1)
+	fidx2 = findices(ipol,bl,2)
+	ok1 = cidx1.ne.0.and.fidx1.ne.0.and.nchan1.eq.nchan(1)
+	ok2 = cidx2.ne.0.and.fidx2.ne.0.and.nchan1.eq.nchan(2)
+	cidx1 = cidx1 - 1
+	cidx2 = cidx2 - 1
+	fidx1 = fidx1 - 1
+	fidx2 = fidx2 - 1
+c
+	if(ok1.and.abs(mha-ha(1)).lt.mtol)then
 	  do i=1,nchan1
-	    rdata(i) = Data(i,ipol,bl,1)
-	    rflags(i) = Flags(i,ipol,bl,1)
+	    rdata(i) = Memc(cidx1+i)
+	    rflags(i) = Meml(fidx1+i)
 	  enddo
-	else if(abs(mha-ha(2)).lt.mtol.and.nchan1.eq.nchan(2))then
+	else if(ok2.and.abs(mha-ha(2)).lt.mtol)then
 	  do i=1,nchan1
-	    rdata(i) = Data(i,ipol,bl,2)
-	    rflags(i) = Flags(i,ipol,bl,2)
+	    rdata(i) = Memc(cidx2+i)
+	    rflags(i) = Meml(fidx2+i)
 	  enddo
 c
 c  Linearly interpolate between the two now.
 c
-	else if(nchan(1).eq.nchan1.and.nchan(2).eq.nchan1.and.
+	else if(ok1.and.ok2.and.
      *	   (mha-ha(1))*(ha(2)-mha).ge.0.and.abs(ha(2)-ha(1)).le.tol)then
 	  w1 = 1 - abs((mha-ha(1))/(ha(2)-ha(1)))
 	  w2 = 1 - abs((mha-ha(2))/(ha(2)-ha(1)))
 	  do i=1,nchan1
-	    rdata(i) = w1*Data(i,ipol,bl,1) + w2*Data(i,ipol,bl,2)
-	    rflags(i) = Flags(i,ipol,bl,1).and.Flags(i,ipol,bl,2)
+	    rdata(i) = w1*Memc(cidx1+i) + w2*Memc(cidx2+i)
+	    rflags(i) = Meml(fidx1+i).and.Meml(fidx2+i)
 	  enddo
 c
 c  Case of it all failing.
@@ -214,25 +225,35 @@ c
 c
 	end
 c************************************************************************
-	subroutine unpack(vars,ha,bl,ipol)
+	subroutine unpack(vars,mha,bl,ipol)
 c
 	implicit none
-	double precision vars(4),ha
+	double precision vars(4),mha
 	integer bl,ipol
 c
 c  Unpack variables, in the order baseline,pol,ra,lst
 c------------------------------------------------------------------------
 	include 'mirconst.h'
+	include 'uvdiff.h'
 	integer i1,i2
 c
 	ipol = - nint(vars(2)) - 4
+	if(ipol.lt.PolMin.or.ipol.gt.PolMax)
+     *	  call bug('f','Invalid polarisation type')
+	if(polindx(ipol).eq.0)then
+	  npols = npols + 1
+	  if(npols.gt.MAXPOL)call bug('f','Too many polarisations')
+	  polindx(ipol) = npols
+	endif
+	ipol = polindx(ipol)
+c
 	call Basant(vars(1),i1,i2)
-	bl = ((i2-1)*(i2-2))/2 + i1
-	ha = mod(vars(4) - vars(3),2.d0*DPI)
-	if(ha.gt.DPI)then
-	  ha = ha - 2.d0*DPI
-	else if(ha.lt.-DPI)then
-	  ha = ha + 2*DPI
+        bl = ((i2-1)*i2)/2 + i1
+	mha = mod(vars(4) - vars(3),2.d0*DPI)
+	if(mha.gt.DPI)then
+	  mha = mha - 2.d0*DPI
+	else if(mha.lt.-DPI)then
+	  mha = mha + 2*DPI
 	endif
 c
 	end
@@ -251,16 +272,30 @@ c
 	character vis*(*)
 c------------------------------------------------------------------------
 	include 'uvdiff.h'
-	integer nbin
+	integer i,j,k
 c
 c  Open the dataset to be used as the template.
 c
 	call uvopen(tno,vis,'old')
 	call uvset(tno,'preamble','baseline/pol/ra/lst',0,0.,0.,0.)
-	call uvrdvri(tno,'nbin',nbin,1)
-	if(nbin.ne.1)call bug('f','Cannot operate on bin-mode data')
 c
-c  Get ready to do.
+c  Get ready to do things.
+c
+	do k=1,2
+	  mbase(k) = 0
+	  mpol(k) = 0
+	  do j=1,MAXBASE
+	    do i=1,MAXPOL
+	      cindices(i,j,k) = 0
+	      findices(i,j,k) = 0
+	    enddo
+	  enddo
+	enddo
+c
+	npols = 0
+	do i=PolMin,PolMax
+	  polindx(i) = 0
+	enddo
 c
 	nchan(1) = 1
 	nchan(2) = 1
@@ -281,37 +316,51 @@ c
 c  Load the next integration.
 c------------------------------------------------------------------------
 	include 'uvdiff.h'
-	integer ipnt,ipol,bl,i,j,k
+	integer ipnt,ipol,bl,i,j,cidx,fidx
 	double precision mha
 c
-c  Determine the polarisation and hour angle of the spare record.
+c  Delete the old contents of this integration.
 c
 	ipnt = 1
 	if(ha(1).gt.ha(2))ipnt = 2
+	do j=1,mbase(ipnt)
+	  do i=1,mpol(ipnt)
+	    if(cindices(i,j,ipnt).gt.0)
+     *	      call memFree(cindices(i,j,ipnt),nchan(ipnt),'c')
+	    if(findices(i,j,ipnt).gt.0)
+     *	      call memFree(findices(i,j,ipnt),nchan(ipnt),'l')
+	    cindices(i,j,ipnt) = 0
+	    findices(i,j,ipnt) = 0
+	  enddo
+	enddo
+	mbase(ipnt) = 0
+	mpol(ipnt) = 0
+c
+c  Determine the polarisation and hour angle of the spare record.
+c
 	nchan(ipnt) = nspare
 	if(min(nchan(1),nchan(2)).le.0)return
 	call unpack(pspare,mha,bl,ipol)
 	ha(ipnt) = mha
-c
-c  Initialise the output array.
-c
-	do k=1,MAXBASE
-	  do j=1,MAXPOL
-	    do i=1,MAXCHAN
-	      flags(i,j,k,ipnt) = .false.
-	    enddo
-	  enddo
-	enddo
 c
 	dowhile(abs(mha-ha(ipnt)).lt.1e-4.and.
      *		nspare.eq.nchan(ipnt))
 c
 c  Which output slot does the current record fall into.
 c
+	  if(cindices(ipol,bl,ipnt).gt.0.or.
+     *	     findices(ipol,bl,ipnt).gt.0)call bug('f',
+     *	    'Multiple records for the same baseline within integration')
+	  call memAlloc(cindices(ipol,bl,ipnt),nchan(ipnt),'c')
+	  call memAlloc(findices(ipol,bl,ipnt),nchan(ipnt),'l')
+	  cidx = cindices(ipol,bl,ipnt) - 1
+	  fidx = findices(ipol,bl,ipnt) - 1
 	  do i=1,nspare
-	    data(i,ipol,bl,ipnt) = cspare(i)
-	    flags(i,ipol,bl,ipnt) = lspare(i)
+	    Memc(cidx+i) = cspare(i)
+	    Meml(fidx+i) = lspare(i)
 	  enddo
+	  mpol(ipnt) = max(mpol(ipnt),ipol)
+	  mbase(ipnt) = max(mbase(ipnt),bl)
 c
 c  Get another record.
 c
@@ -323,4 +372,3 @@ c
      *	call bug('f','Number of channels changed within an integration')
 c
 	end
-
