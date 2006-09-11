@@ -86,13 +86,14 @@ c    pjt  20jun96 Larger MAXPLOTS for BIMA (20 -> 90)
 c    rjs  29jul97 Added quad quantities.
 c    rjs  11aug97 Minor fiddles to make it more robust.
 c    mchw 20may98 Larger MAXPLOTS for 10-antennas (90 -> 120)
+c    rjs  20oct00 Print out number of points when giving stats.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
 	integer MAXPNTS,MAXPLOTS,MAXTRIP
 	integer PolMin,PolMax,MAXPOL
 	character version*(*)
-	parameter(version='version 20-May-98')
+	parameter(version='version 20-Oct-00')
 	parameter(MAXPNTS=5000,MAXPLOTS=120)
 	parameter(MAXTRIP=(MAXANT*(MAXANT-1)*(MAXANT-2))/6)
 	parameter(PolMin=-8,PolMax=4,MAXPOL=2)
@@ -641,6 +642,7 @@ c
 c  Externals.
 c
 	integer pgbeg
+	character itoaf*8
 c
 c  Determine some statistics.
 c
@@ -688,6 +690,8 @@ c
      *	    'Theoretical closure phase rms scatter (degrees):',yerrav
 	  call output(line)
 	endif
+	call output(
+     *	'Number of points:                                  '//itoaf(n))
 c
 	if(device.eq.' ')return
 c
