@@ -22,14 +22,15 @@ c History:
 c   nebk 10apr98   Finally got fed up and did this
 c   rjs  18may98   Correct fortran to make it compile on Alphas.
 c   nebk 11jun99   Handle plane in region
-c   rjs  14aug99    Correct some non-standard fortran.
+c   rjs  14aug99   Correct some non-standard fortran.
+c   rjs  08sep99   Initialise uninitialised variables. 
 c------------------------------------------------------------------------
       implicit none
       character version*(*)
-      parameter(version='CgRego: version 10-Apr-98')
+      parameter(version='CgRego: version 8-Sep-99')
 c
       character region*80, olay*80, olaydef*80, line*2048
-      integer lunin, lunout, iostat, ilen, len1, iline
+      integer lunin, lunout, iostat, ilen, len1, iline, l
 c------------------------------------------------------------------------
 c
 c Get inputs
@@ -59,7 +60,8 @@ c
 c
 c Parse and write out overlay file
 c
-          call parse(line(1:len1(line)), lunout, iline)
+	  l = len1(line)
+          call parse(line(1:l), lunout, iline)
           iline = iline + 1
         else 
           if (iostat.ne.-1) then
@@ -125,6 +127,7 @@ c
       i2 = len1(line)
       temp = line(i1:i2)
       line = temp
+      error = .false.
 c
 c Find first two numbers
 c
