@@ -192,6 +192,9 @@ c    nebk 11nov93   Add options=ambiguous and output blanking info
 c    nebk 30jan95   Work on ambiguity algorithm, add keywords "rmi",
 c		    "device", "nxy", "csize", "options=acc,gues,yind"
 c    nebk 28mar95   Trying to plot nowhere if device blank
+c    nebk 21jun97   Was plotting garbage on some platforms if 
+c                   some output points were blanked.  Also in hedinfo
+c                   rdhdd was being called with default real arg.
 c------------------------------------------------------------------------
       implicit none
 c
@@ -203,7 +206,7 @@ c
       double precision r2d
       integer maxim
       character version*40
-      parameter (version = 'ImRM: version 28-Mar-95' )
+      parameter (version = 'ImRM: version 21-Jun-97' )
       parameter (maxim = 10, r2d = 180.0d0/dpi)
 cc
       real lsq(maxim), pa(maxim), pa2(maxim), wt(maxim)
@@ -215,7 +218,7 @@ c
      +  ermline(maxdim), paline(maxdim), epaline(maxdim), 
      +  epoch(maxim), eepoch(maxim), crpix(maxnax,maxim),
      +  freq(maxim), ecrpix(maxnax,maxim), diff, d2, qcut, errcut,
-     +  rmcut, pacut, q, rmi, cs
+     +  rmcut, pacut, q, rmi, cs, padummy
 c
       integer lin(maxim), lein(maxim), lrm(2), lpa(2),
      +  size(maxnax,maxim), esize(maxnax,maxim), naxis(maxim), 
@@ -225,7 +228,7 @@ c
 c
       character aline*100, in(maxim)*64, ein(maxim)*64, rmout*64, 
      +  ermout*64, paout*64, epaout*64, ctype(maxnax,maxim)*9,
-     +  ectype(maxnax,maxim)*9, bflag, device*132
+     +  ectype(maxnax,maxim)*9, bflag, device*32
 c
       logical flags(maxdim,maxim), eflags(maxdim,maxim), oflags(maxdim),
      +  relax, blank, oblank, doerrbl, dormbl, dopabl, noerr, 
@@ -246,6 +249,7 @@ c
      +    'bmin    ','bpa     ','pbfwhm  ','lstart  ','lstep   ',
      +    'ltype   ','lwidth  ','vobs    '/
       data nbl /6*0/
+      data padummy /-100000.0/
 c-------------------------------------------------------------------------
       call output (version)
       call output (' ')
@@ -367,6 +371,7 @@ c
 c
 c  Open the input images 
 c
+
       do i = 1, nim
         call openin (maxdim, maxnax, bflag, in(i), lin(i), naxis(i), 
      +     size(1,i), epoch(i), crpix(1,i), cdelt(1,i), crval(1,i),
@@ -483,6 +488,7 @@ c
 c
 c Allocate space for plots
 c
+
       psize = nim*size(1,1)*size(2,1)
       call memalloc (ipyd, psize, 'r')  
       call memalloc (ipyf, psize, 'r')
@@ -585,6 +591,12 @@ c
           else
             call blnkall (oflags(i), rmline(i), paline(i),
      +                    ermline(i), epaline(i))
+            do l = 1, nim
+              memr(ippyf) = padummy
+              memr(ippyd) = padummy
+              ippyf = ippyf + 1
+              ippyd = ippyd + 1
+            end do
           end if
         end do
 c
@@ -665,7 +677,8 @@ c
 c Plots
 c
       if (device.ne.' ') call plotit (device, nx, ny, accum, yind,
-     +  size(1,1), size(2,1), nim, lsq, memr(ipyd), memr(ipyf), cs)
+     +  size(1,1), size(2,1), nim, lsq, memr(ipyd), memr(ipyf), cs,
+     +  padummy)
       call memfree (ipyd, psize, 'r')
       call memfree (ipyf, psize, 'r')
 
@@ -788,16 +801,18 @@ c
       end
 c
 c
-      subroutine extreme (n, d1, d2, dmin, dmax)
+      subroutine extreme (n, d1, d2, dmin, dmax, padummy)
       implicit none
       integer n, i
-      real d1(n), d2(n), dmin, dmax
+      real d1(n), d2(n), dmin, dmax, padummy
 c
       dmin = 1.0e32
       dmax = -1.0e32
       do i = 1, n
-        dmin = min(d1(i),d2(i),dmin)
-        dmax = max(d1(i),d2(i),dmax)
+        if (d1(i).ne.padummy .and. d2(i).ne.padummy) then
+          dmin = min(d1(i),d2(i),dmin)
+          dmax = max(d1(i),d2(i),dmax)
+        end if
       end do
       dmin = dmin - (0.05*(dmax-dmin))
       dmax = dmax + (0.05*(dmax-dmin))
@@ -879,9 +894,9 @@ c---------------------------------------------------------------------
         str = itoaf(i)
 c
         call rdhdr (lun, 'crpix'//str, crpix(i), real(size(i))/2.0)
-        call rdhdd (lun, 'cdelt'//str, cdelt(i), 1.0)
+        call rdhdd (lun, 'cdelt'//str, cdelt(i), 1.0d0)
         call rdhda (lun, 'ctype'//str, ctype(i), ' ')
-        call rdhdd (lun, 'crval'//str, crval(i), 0.0)
+        call rdhdd (lun, 'crval'//str, crval(i), 0.0d0)
       end do
       call rdhdr (lun, 'epoch', epoch, 0.0)
 c
@@ -1000,7 +1015,7 @@ c
 c
 c
       subroutine plotit (device, nx, ny, accum, yind, npx, npy, nf,
-     +                   x, yd, yf, cs)
+     +                   x, yd, yf, cs, padummy)
 c-----------------------------------------------------------------------
 c     Plot data and fits
 c
@@ -1016,7 +1031,7 @@ c    cs        Character height
 c-----------------------------------------------------------------------
       implicit none
       integer npx, npy, nx, ny, nf
-      real x(nf), yd(npx*npy*nf), yf(npx*npy*nf), cs
+      real x(nf), yd(npx*npy*nf), yf(npx*npy*nf), cs, padummy
       logical accum, yind
       character*(*) device
 cc
@@ -1037,9 +1052,9 @@ c
 c
 c Find extrema
 c
-      call extreme (nf, x, x, xmin, xmax)
+      call extreme (nf, x, x, xmin, xmax, padummy)
       npts = npx*npy*nf
-      call extreme (npts, yd, yf, ymin, ymax)
+      call extreme (npts, yd, yf, ymin, ymax, padummy)
 c
 c If accumulating all on one plot draw the box and label it now
 c
@@ -1058,32 +1073,34 @@ c
       ip = 1
       do j = 1, npy
         do i = 1, npx
-          if (.not.accum) call pgpage
+          if  (yd(ip).ne.padummy .and. yf(ip).ne.padummy) then
 c
-c If not accumulating, do some thikngs for each subplot
+c If not accumulating, do some things for each subplot
 c
-          if (.not.accum) then
-            if (yind) then
-              call extreme (nf, yd(ip), yf(ip), ymin, ymax)
-              call pgswin (xmin, xmax, ymin, ymax)
-            end if
+            if (.not.accum) then
+              call pgpage
+              if (yind) then
+                call extreme (nf, yd(ip), yf(ip), ymin, ymax, padummy)
+                call pgswin (xmin, xmax, ymin, ymax)
+              end if
 c
-            call pgbox ('BCNST', 0.0, 0, 'BCNST', 0.0, 0)
-            call pglabel ('\gl\u2\d (m\u2\d)', 
-     +                    'Position angle (degrees)', ' ')
+              call pgbox ('BCNST', 0.0, 0, 'BCNST', 0.0, 0)
+              call pglabel ('\gl\u2\d (m\u2\d)', 
+     +                      'Position angle (degrees)', ' ')
 c
 c Write i,j pixel on plot
 c
-            call strfi (i, '(i4)', str1, i1)
-            call strfi (j, '(i4)', str2, i2)
-            line = str1(1:i1)//','//str2(1:i2)
-            call pgmtxt ('T', -2.0, 0.1, 0.0, line(1:i1+i2+1))
-          end if
+              call strfi (i, '(i4)', str1, i1)
+              call strfi (j, '(i4)', str2, i2)
+              line = str1(1:i1)//','//str2(1:i2)
+              call pgmtxt ('T', -2.0, 0.1, 0.0, line(1:i1+i2+1))
+            end if
 c
 c Draw plot
-c
-          call pgpt (nf, x, yd(ip), 17)
-          call pgline (nf, x, yf(ip))
+c 
+            call pgpt (nf, x, yd(ip), 17)
+            call pgline (nf, x, yf(ip))
+          end if
           ip = ip + nf
         end do
       end do
