@@ -51,6 +51,7 @@ c		   indexor's (i0,j0) in moment3 wrong if blc,trc used
 c    04jan96 nebk  Write header descriptors as double precision
 c    21may96 sek   Reborn as XPEAK.
 c    26nov96 rjs   Increase length of input and output filenames.
+c    02jul97 rjs   cellscal change.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
  	character version*(*)
