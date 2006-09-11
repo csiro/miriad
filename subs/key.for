@@ -30,6 +30,7 @@ c		      Add -? flag.
 c    nebk  23nov92    Add mkeyd.  rjs spits dummy.
 c    rjs   04dec92    Rewrite keyi, so that mchw's new hex/octal conversion
 c		      routine is used.
+c    rjs   19sep95    Extra checks.
 c************************************************************************
 c* KeyIni -- Initialise the `key' routines.
 c& pjt
@@ -164,19 +165,27 @@ c  Get the keyword
 c
 	next = 1
 	call gettok(arg,next,arglen,key,lkey)
-	if(lkey.le.0.or.lkey.gt.len(key))
-     *	  call bug('i',	'KeyPut: Keyword zero length or too long')
+	if(lkey.le.0.or.lkey.gt.len(key))then
+	  call bug('w','Keyword name has zero length or too long')
+	  return
+	endif
 c
 c  See if we already have this keyword
 c
-	if( keyprsnt(key) ) return
+	if( keyprsnt(key) ) then
+	  call bug('w','Multiple occurences of keyword '''//
+     *		key(1:lkey)//''' ignored')
+	  return
+	endif
 c
 	call spanchar(arg,next,arglen,' ')
 	call spanchar(arg,next,arglen,'=')
 	call spanchar(arg,next,arglen,' ')
 	lvalue = arglen - next + 1
-	if(lvalue.le.0)
-     *	  call bug('i',	'KeyPut: Zero length value in argument')
+	if(lvalue.le.0)then
+	  call bug('w','Zero length value for keyword '//key)
+	  return
+	endif
 c
 c  Save this parameter value.
 c
