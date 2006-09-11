@@ -93,6 +93,7 @@ c    rjs  23dec93 Added 'felocity' axis (velocity using optical definition).
 c    rjs   8mar94 Handle data which are not in time order.
 c    nebk 22mar94 Add options=flagged
 c    rjs  17aug94 Better offset handling.
+c    rjs  26sep95 Discard bad spectra as soon as possible.
 c  Bugs:
 c------------------------------------------------------------------------
 	include 'mirconst.h'
@@ -624,6 +625,15 @@ c------------------------------------------------------------------------
 	include 'uvspec.h'
 	integer i,i1,i2,p,bl,pol
 	real t
+	logical ok
+c
+c  Does this spectrum contain some good data.
+c
+	ok = .false.
+	do i=1,nread
+	  ok = ok.or.(flags(nread).neqv.doflag)
+	enddo
+	if(.not.ok)return
 c
 c  Determine the baseline number.
 c
