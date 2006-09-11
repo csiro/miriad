@@ -33,6 +33,8 @@ c    rjs  12oct94 Added a good many things ... for mosaicing.
 c    rjs  23nov94 A dummy statement to stop the alpha compiler complaining.
 c    rjs  30jan95 Added cogeom.
 c    rjs  26sep95 More tolerant of screwy headers.
+c    rjs  22oct95 Comment out warning about assuming its a linear
+c		  coordinate system.
 c************************************************************************
 c* coInit -- Initialise coordinate conversion routines.
 c& rjs
@@ -1733,7 +1735,7 @@ c
 	  l = len1(type)
 	  umsg = 'Assuming axis '//type(1:l)//
      *		' is a linear coordinate system'
-	  call bug('w',umsg)
+c	  call bug('w',umsg)
 	  itype = LINEAR
 	endif
 c
