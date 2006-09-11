@@ -58,7 +58,8 @@ c	This gives two strings, which determine the X and Y axes of each plot.
 c	The values can be abbreviated to uniqueness.
 c	Possible values for the X axis are:
 c	   channel       X-axis is channel number.
-c	   frequency     X-axis is frequency, in GHz.
+c	   frequency     X-axis is the sky frequency, in GHz.
+c	   dfrequency    X-axis is the Doppler-corrected frequency, in GHz.
 c	   velocity      X-axis is velocity in radio convention, in km/sec.
 c	   felocity	 X-axis is velocity in optical convention, in km/sec.
 c	   lag           X-axis is lag number.
@@ -106,6 +107,7 @@ c    rjs  14dec95 Increase buffer in averaging (MAXAVER).
 c    rjs  19aug97 Added axis=lag
 c    rjs  31oct97 Use colours in the label.
 c    rjs   3dec97 Replace part of label that dropped off in above change.
+c    rjs  13sep99 Added Doppler corrected freq to possibilities to plot.
 c  Bugs:
 c------------------------------------------------------------------------
 	include 'mirconst.h'
@@ -114,7 +116,7 @@ c------------------------------------------------------------------------
         parameter (maxco=15)
 c
 	character version*(*)
-	parameter(version='UvSpec: version 1.0 3-Dec-97')
+	parameter(version='UvSpec: version 1.0 13-Sep-99')
 	character uvflags*8,device*64,xaxis*12,yaxis*12,logf*64
 	character xtitle*64,ytitle*64
 	logical ampsc,rms,nobase,avall,first,buffered,doflush,dodots
@@ -346,6 +348,9 @@ c
 	else if(xaxis.eq.'frequency')then
 	  xtitle = 'Frequency (GHz)'
 	  call uvinfo(tIn,'sfreq',x)
+	else if(xaxis.eq.'dfrequency')then
+	  xtitle = 'Doppler-Corrected Frequency (GHz)'
+	  call uvinfo(tIn,'frequency',x)
 	else if(xaxis.eq.'lag')then
 	  i0 = -nchan/2
 	  do i=1,nchan
@@ -391,12 +396,12 @@ c    xaxis
 c    yaxis
 c------------------------------------------------------------------------
 	integer NX,NY
-	parameter(NX=5,NY=4)
+	parameter(NX=6,NY=4)
 c
 	integer n
-	character xaxes(NX)*9,yaxes(NY)*9
-	data xaxes/'channel  ','frequency','velocity ','felocity ',
-     *		   'lag      '/
+	character xaxes(NX)*10,yaxes(NY)*9
+	data xaxes/'channel   ','frequency ','velocity  ','felocity  ',
+     *		   'lag       ','dfrequency'/
 	data yaxes/'amplitude','phase    ','real     ','imaginary'/
 c
 	call keymatch('axis',NX,xaxes,1,xaxis,n)
