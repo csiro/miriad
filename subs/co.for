@@ -38,6 +38,7 @@ c		  coordinate system.
 c    nebk 20nov95 Terrible error. Initialize docelest to false in cocvt.f
 c    rjs  15oct96 Change call sequence to cogeom.
 c    rjs  16oct96 Correct cartesian conversions near RA=0.
+c    rjs  02jul97 Support "cellscal" keyword.
 c************************************************************************
 c* coInit -- Initialise coordinate conversion routines.
 c& rjs
@@ -130,6 +131,7 @@ c
 c
 	restfreq(k2) = restfreq(k1)
 	vobs(k2) = vobs(k1)
+	cellscal(k2) = cellscal(k1)
 c
 	call coReinit(lout)
 c
@@ -192,6 +194,7 @@ c
 	lu = -k
 	restfreq(k) = 0
 	vobs(k) = 0
+	cellscal(k) = .true.
 	naxis(k) = 0
 	end
 c************************************************************************
@@ -511,7 +514,7 @@ c
 c
 c  Determine the frequency-dependent scale factor.
 c
-	  if(ivel.eq.0.or.ivel.gt.n)then
+	  if(ivel.le.0.or.ivel.gt.n.or..not.cellscal(k))then
 	    scal = 1
 	  else
 	    call coFqFac(x1(ivel),ctype(ivel,k),
@@ -899,7 +902,7 @@ c
 	if(cotype(1,k).eq.LAT.or.cotype(1,k).eq.LON.or.
      *	   cotype(2,k).eq.LAT.or.cotype(2,k).eq.LON)then
 	  ivel = ifreq(k)
-	  if(ivel.ne.0.and.ivel.le.n)then
+	  if(ivel.ne.0.and.ivel.le.n.and.cellscal(k))then
 	    call coFqFac(x1(ivel),ctype(ivel,k),
      *	      crval(ivel,k),crpix(ivel,k),cdelt(ivel,k),vobs(k),
      *	      x1off(ivel),x1pix(ivel),scale)
@@ -1538,6 +1541,11 @@ c
 c
 	if(restfreq(k).ne.0)call wrhdd(tno,'restfreq',restfreq(k))
 	call wrhdd(tno,'vobs',vobs(k))
+	if(cellscal(k))then
+	  call wrhda(tno,'cellscal','1/F')
+	else
+	  call wrhda(tno,'cellscal','CONSTANT')
+	endif
 	end
 c************************************************************************
 	subroutine CoCompat(ctype1,ctype2,ok)
@@ -1612,7 +1620,7 @@ c------------------------------------------------------------------------
 	include 'co.h'
 c
 	integer i
-	character num*2
+	character num*2,cscal*16
 c	character telescop*16
 c	double precision dtemp
 c	logical ewdone,ew
@@ -1630,6 +1638,11 @@ c
 c	if(.not.hdprsnt(lus(k),'vobs'))
 c    *	  call bug('w','VOBS item missing -- assuming it is 0')
 	call rdhdd(lus(k),'vobs',vobs(k),0.d0)
+c
+	call rdhda(lus(k),'cellscal',cscal,'1/F')
+	cellscal(k) = cscal.eq.'1/F'
+	if(.not.cellscal(k).and.cscal.ne.'CONSTANT')call bug('w',
+     *	  'Unrecognised cellscal value: '//cscal)
 c
 c	ewdone = .false.
 	do i=1,naxis(k)
@@ -1789,6 +1802,8 @@ c
 	crpix(2,k) = 0
 	cdelt(1,k) = 1
 	cdelt(2,k) = 1
+c
+	cellscal(k) = .false.
 c
 	end
 c************************************************************************
