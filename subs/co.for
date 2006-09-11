@@ -47,6 +47,7 @@ c		  specification. Add coGetd. Improve coVelSet. Support
 c		  gls projection.
 c    rjs  14jul97 Fix bug in covelset introduced on above date.
 c    rjs  21jul97 More robust to bad freq values. Added coSeta.
+c    rjs  16oct97 Minor correction to the felo axis definition.
 c************************************************************************
 c* coInit -- Initialise coordinate conversion routines.
 c& rjs
@@ -669,7 +670,7 @@ c
 	    x2(i) = bscal * x1(i) + bzero
 	  else if(cotype(i,k).eq.FELO)then
 	    call coFelo(x1(i),x2(i),crval(i,k),crpix(i,k),cdelt(i,k),
-     *	     vobs(k),x1pix(i),x1off(i),x2pix(i),x2off(i))
+     *	     x1pix(i),x1off(i),x2pix(i),x2off(i))
 	  else if(cotype(i,k).eq.LAT.or.cotype(i,k).eq.LON)then
 	    docelest = .true.
 	  else
@@ -774,9 +775,11 @@ c
 	if(itype.eq.FREQ)then
 	  continue
 	else if(itype.eq.FELO)then
-	  freq1 = restfreq(k) / (1+(freq1+vobs(k))/ckms)
+	  freq1 = restfreq(k) / (1+freq1/ckms)
+     *			- restfreq(k)*vobs(k)/ckms
 	else if(itype.eq.VELO)then
-	  freq1 = restfreq(k) * (1-(freq1+vobs(k))/ckms)
+	  freq1 = restfreq(k) * (1-freq1/ckms)
+     *			- restfreq(k)*vobs(k)/ckms
 	else
 	  call bug('f','Something is screwy, in coFreq')
 	endif
@@ -1004,7 +1007,7 @@ c  Convert a FELO axis.
 c
 	else if(cotype(iax,k).eq.FELO)then
 	  call coFelo(x1,x2,crval(iax,k),crpix(iax,k),cdelt(iax,k),
-     *	     vobs(k),x1pix,x1off,x2pix,x2off)
+     *	     x1pix,x1off,x2pix,x2off)
 	endif
 c
 	end
@@ -1201,10 +1204,12 @@ c
 c Determine the frequency of the reference pixel
 c
       if (itype.eq.FELO) then
-        f = restfreq(k) / (1+(crval(ivel,k)+vobs(k))/ckms)
+        f = restfreq(k) / (1+crval(ivel,k)/ckms)
         df = -(cdelt(ivel,k)/ckms) * f * (f/restfreq(k))
+	f = f		- restfreq(k)*vobs(k)/ckms
       else if (itype.eq.VELO) then
-        f = restfreq(k) * (1-(crval(ivel,k)+vobs(k))/ckms)
+        f = restfreq(k) * (1-crval(ivel,k)/ckms)
+     *			- restfreq(k)*vobs(k)/ckms
         df = -(cdelt(ivel,k)/ckms) * restfreq(k)
       else
         f = crval(ivel,k)
@@ -1240,11 +1245,13 @@ c
 c Perform the transformation
 c
       if (otype.eq.FELO) then
-        crval(ivel,k) =  ckms*(restfreq(k)/f-1) - vobs(k)
+	f = f + restfreq(k)*vobs(k)/ckms
+        crval(ivel,k) =  ckms*(restfreq(k)/f-1)
         cdelt(ivel,k) = -ckms*(df/f)*(restfreq(k)/f)
         ctype(ivel,k) = 'FELO'//oframe
       else if (otype.eq.VELO) then
-        crval(ivel,k) =  ckms*(1-f/restfreq(k)) - vobs(k)
+	f = f + restfreq(k)*vobs(k)/ckms
+        crval(ivel,k) =  ckms*(1-f/restfreq(k))
         cdelt(ivel,k) = -ckms*(df/restfreq(k))
         ctype(ivel,k) = 'VELO'//oframe
       else
@@ -2214,19 +2221,20 @@ c
 	else if(type.eq.'VELO')then
 	  scal = ( ckms - (xval + vobs) )/( ckms - (xval + x + vobs) )
 	else if(type.eq.'FELO')then
-	  if(x1pix)x = x  / ( 1 - x / (ckms + xval + vobs) )
-	  scal = ( ckms + (xval + x + vobs) )/( ckms + (xval + vobs) )
+	  if(x1pix)x = x  / ( 1 - x / (ckms + xval) )
+	  scal = vobs*(1+(xval+x)/ckms)*(1+xval/ckms)
+	  scal = ( ckms + xval + x - scal ) / ( ckms + xval - scal )
 	else
 	  call bug('f','Unrecognised axis type in coFqFac: '//type)
 	endif
 c
 	end
 c************************************************************************
-	subroutine coFelo(x10,x2,xval,xpix,dx,vobs,
+	subroutine coFelo(x10,x2,xval,xpix,dx,
      *					x1pix,x1off,x2pix,x2off)
 c
 	implicit none
-	double precision x10,x2,xval,xpix,dx,vobs
+	double precision x10,x2,xval,xpix,dx
 	logical x1pix,x1off,x2pix,x2off
 c
 c  Convert between pixels and velocities, to a axes in the optical
@@ -2235,7 +2243,7 @@ c  increments).
 c
 c  Input:
 c    x10
-c    xval,xpix,dx,vobs
+c    xval,xpix,dx
 c    x1pix,x1off,x2pix,x2off
 c  Output:
 c    x2
@@ -2259,19 +2267,19 @@ c
 c
 c  Do the conversion.
 c
-	t = 1 + (xval + vobs) / ckms
+	t = ckms + xval
 	if(x1pix.eqv.x2pix)then
 	  x2 = x1
 c
 c  Convert from pixels to optical velocity.
 c
 	else if(x1pix)then
-	  x2 = dx * x1 / (1 - dx*x1/(t*ckms))
+	  x2 = dx * x1 / (1 - dx*x1/t)
 c
 c  Convert from optical velocity to pixels.
 c
 	else
-	  x2 = x1 / dx * t / ( 1 + (x1+xval+vobs)/ckms )
+	  x2 = x1 / dx * t / ( ckms + x1 + xval )
 	endif
 c
 c  Convert from offset to absolute units, if required.
