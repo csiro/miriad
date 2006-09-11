@@ -11,10 +11,13 @@ c  annspccg :  Annotate information from all spectrum images
 c  annveccg :  Annotate information from one pair of vector images
 c  annwincg :  Annotate plot with window and channel info 
 c  axlabcg  :  Label axes
-c  boxcg    :  Draw axes with optional numeric labels
+c  bgcolcg  :  See if background colour of PGPLOT device is black or white
 c  confmtcg :  Format contour levels
 c  conturcg :  Draw contour plot
+c  drwlincg :  Draw vertical/horizontal line at constant x/y world coordinate
+c  drwtikcg :  Draw (nonlinear) ticks/grid
 c  erswincg :  Erase window
+c  labaxcg  :  Draw frame, write numeric labels, ticks and grid
 c  lab3cg   :  Label sub-plot with value and/or pixel of third axis
 c  setlabcg :  Set axis label displacements 
 c  strerscg :  Erase rectangle on plot and write string into it
@@ -24,6 +27,12 @@ c  vpsizcg  :  Set encompassing viewport and subplot increments
 c  wedgecg  :  High level routine to draw wedges (calls WEDGCG)
 c  wedgcg   :  Draw grey scale wedge in specified viewport
 c  yhtwcg   :  Find y-height of one character in world coordinates
+c
+c                 Temporary fudge until PGQTIK available
+c  qtikcg   :  Find out about ticks from PG(T)BOX
+c  pgtbx1cg
+c  pgtbx2cg
+c  pgtbx3cg
 c
 c  History:
 c     nebk   20sep91    Created from PGDISP/PGCURS
@@ -104,6 +113,12 @@ c                        Increase length of STR1 in CONFMTCG
 c     nebk   05jan95     Replace PGGRAY by new PGIMAG. 
 c     nebk   14apr95     Label grey scales as "pixel maps" in ANNGRSCG
 c     nebk   11aug95     Add arcmin labels and argument nofirst to AXLABCG
+c     nebk   24aug95     Add grid argument to SETLABCG
+c     nebk   02sep95     Add BGCOLCG, LABAXCG, DRHORICG, DRVERTCG.
+c			 Remove BOXCG.  Add dotr argument to VPSIZCG and
+c		         AXLABCG.  Add temporary tick enquiry fuges through 
+c		         QTIKCG, PGTBX1-3CG
+c			 
 c**********************************************************************
 c
 c* annboxCG -- Annotate plot with information from a box image 
@@ -779,23 +794,24 @@ c* axlabCG -- Label axes
 c& nebk
 c: plotting
 c+
-      subroutine axlabcg (nofirst, gaps, nx, ny, nz, nlast, iplot, 
-     +   xopts, yopts, xdispl, ydispb, labtyp, xlabel, ylabel, 
+      subroutine axlabcg (nofirst, gaps, dotr, nx, ny, nz, nlast, 
+     +   iplot, xopts, yopts, xdispl, ydispb, labtyp, xlabel, ylabel,
      +   xxopts, yyopts)
 c
       implicit none
       real xdispl, ydispb
       integer nx, ny, nz, nlast, iplot
-      logical gaps, nofirst
+      logical gaps, nofirst, dotr
       character xopts*(*), yopts*(*), xxopts*(*), yyopts*(*),
      +  xlabel*(*), ylabel*(*), labtyp(2)*(*)
 c
 c  Label axes and prepare options strings for PGTBOX according to whether 
-c  the sub-plots abut each other or not
+c  the sub-plots abut each other or not.
 c
 c  Input
-c    nofirst No first x-axis label for any subplto but left most
+c    nofirst No first x-axis label for any subplot but left most
 c    gaps    False means sub-plots abut, else they don't
+c    dotr    Label top and right axes too.
 c    nx,ny   Number of sub-plots in x and y directions on page
 c    nz      Total number of sub-plots that will be drawn
 c    nlast   Number of sub-plots on the last row of the last page
@@ -816,85 +832,112 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
       jplot = mod(iplot,nx*ny)
       if (jplot.eq.0) jplot = nx*ny
-      ix = len1(xopts)
-      iy = len1(yopts)
-      xxopts = xopts(1:ix)
-      yyopts = yopts(1:iy)
+      ix = len1(xopts) + 1
+      iy = len1(yopts) + 1
+      xxopts = xopts(1:ix-1)
+      yyopts = yopts(1:iy-1)
 c
       if (.not.gaps) then
 c
-c When sub-plots abut each other, only label along the left most
-c and bottom axes
+c When sub-plots abut each other, only label left/bottom along the 
+c left most and bottom axes
 c
         if (labtyp(1).ne.'none' .and. 
      +     (jplot.ge.nx*ny-nx+1 .or. iplot.ge.nz-nlast+1 .or.
      +      iplot+nx.gt.nz)) then
 c
-c Write x-axis label and prepare options string for numeric labelling
+c Write x-axis label and prepare options string for
+c bottom  numeric labelling
 c
           if (nofirst .and. mod(jplot,nx).ne.1) then
-            xxopts = xopts(1:ix)//'NF'
+            xxopts(ix:) = 'NF'
+            ix = ix + 2
           else
-            xxopts = xopts(1:ix)//'N'
+            xxopts(ix:) = 'N'
+            ix = ix + 1
           end if
+c
+c Write x-axis character label
 c
           call pgmtxt ('B', ydispb, 0.5, 0.5, xlabel)
         end if
+c
+c Only put top numeric labels on top row of subplots
+c
+        if (labtyp(1).ne.'none' .and. dotr .and. 
+     +      jplot.le.nx) xxopts(ix:ix) = 'M'
+c
+c Now y axis
 c
         if (labtyp(2).ne.'none' .and. 
      +      mod(jplot,nx).eq.1 .or. nx.eq.1) then
 c 
 c Write y-axis label and prepare options string for numeric labelling
 c
-          yyopts = yopts(1:iy)//'N'
+          yyopts(iy:iy) = 'N'
+          iy = iy + 1
+c
+c Write y-axis character label
+c
           call pgmtxt ('L', xdispl, 0.5, 0.5, ylabel)
         end if
+c
+c Only write right axis label if rightmost subplot
+c
+        if (labtyp(2).ne.'none' .and. dotr .and. 
+     +      (jplot.eq.nx .or. jplot.eq.nz .or. jplot.eq.nx*ny))
+     +       yyopts(iy:iy) = 'M'
       else       
 c
 c Write x and y-axis labels and prepare option strings for numeric labelling
 c
-        if (labtyp(1).ne.'none') xxopts = xopts(1:ix)//'N'
-        if (labtyp(2).ne.'none') yyopts = yopts(1:iy)//'N'
+        if (labtyp(1).ne.'none') then
+          xxopts(ix:ix) = 'N' 
+          if (dotr) xxopts(ix:) = 'NM'
+        end if
+        if (labtyp(2).ne.'none') then
+          yyopts(iy:) = 'N'
+          if (dotr) yyopts(iy:) = 'NM'
+        end if
         call pgmtxt ('B', ydispb, 0.5, 0.5, xlabel)
         call pgmtxt ('L', xdispl, 0.5, 0.5, ylabel)
       end if
 c
       end
 c
-c* boxCG -- Draw axes and optionally numerically label
+c* bgcolCG -- Find background colour of PGPLOT device
 c& nebk
 c: plotting
 c+
-      subroutine boxcg (donum, xopts, yopts)
+      subroutine bgcolcg (bgcol)
 c
       implicit none
-      logical donum
-      character*(*) xopts, yopts
+      integer bgcol
 c
-c  Draw axes and put ticks on.  Optionally write the numeric labels.
+c  Look at the RGB colours of colour index 0 to see whether the
+c  device background is black or white
 c
-c  Input
-c    donum     If true, this is the first time we have displayed this
-c              image so we label with numbers frame and box.  Otherwise
-c              we have erased the display and all we want to do is redraw
-c              the frame and ticks.  The numbers will not have gone.
-c    x,yopts   PGTBOX labelling options
+c  Output:
+c    bgcol      0 -> black
+c               1 -> white
+c	       -1 -> something else
 c--
 c-----------------------------------------------------------------------
-      character*22 xxopts, yyopts
-      integer idx
+      real r, g, b
 c-----------------------------------------------------------------------
-      xxopts = xopts
-      yyopts = yopts
-c
-      if (.not.donum) then
-        idx = index (xopts, 'N')
-        if (idx.ne.0) xxopts(idx:idx) = ' '
-        idx = index (yopts, 'N')
-        if (idx.ne.0) yyopts(idx:idx) = ' '
+      call pgqcr (0, r, g, b)
+      if  (abs(r).lt.0.0001 .and. abs(g).lt.0.0001 .and. 
+     +    abs(b).lt.0.0001) then
+        bgcol = 0
+c        write (*,*) 'background is black'
+      else if (1.0-abs(r).lt.0.0001 .and. 1.0-abs(g).lt.0.0001 .and. 
+     +         1.0-abs(b).lt.0.0001) then
+        bgcol = 1
+c        write (*,*) 'background is white'
+      else
+        bgcol = -1
+c        write (*,*) 'background is something funny'
       end if
-c
-      call pgtbox (xxopts, 0.0, 0, yyopts, 0.0, 0)
 c
       end
 c
@@ -1055,6 +1098,182 @@ c
 c
       end
 c
+c
+      subroutine drwlincg (lun, axis, costr, n, wc, zp, p1, p2,
+     +                     xline, yline)
+c-----------------------------------------------------------------------
+c  Draw a vertical or horizontal line at constant x or y  coordinate
+c
+c  Input
+c    lun   handle for coordinate conversions
+c    axis  'x' or 'y' for vertical or horizontal lines
+c    costr coordinate conversion string
+c    n     number of points
+c    w     constant world coordinate (x or y depending on axis)
+c    zp    z absolute pixel for this plane
+c    p1,2  range of orthogonal axis pixels to draw between
+c  Scratch
+c    x,yline
+c          plot buffers
+c-----------------------------------------------------------------------
+      implicit none
+      integer n, lun
+      double precision wc, p1, p2, zp
+      real xline(n), yline(n)
+      character*(*) costr, axis
+cc
+      double precision inc, wi(3), po(3)
+      integer i
+      character costr2*8
+c-----------------------------------------------------------------------
+      inc = (p2-p1)/real(n-1)
+      costr2 = costr
+      costr2(7:8) = 'ap'
+c
+      if (axis.eq.'x') then
+c
+c Draw vertical line at constant x
+c
+        wi(1) = wc
+        wi(2) = p1
+        costr2(4:6) = 'ap/'
+      else if (axis.eq.'y') then
+c
+c Draw horizontal line at constant y
+c
+        wi(1) = p1
+        wi(2) = wc
+        costr2(1:3) = 'ap/'
+      else
+        call bug ('f', 'DRWLINCG: unrecognized axis')
+      end if
+      wi(3) = zp
+c
+      do i = 1, n
+        call cocvt (lun, costr2, wi, 'ap/ap/ap', po)
+        xline(i) = po(1)
+        yline(i) = po(2)
+c
+        if (axis.eq.'x') then
+          wi(2) = wi(2) + inc 
+        else
+          wi(1) = wi(1) + inc
+        end if
+      end do
+      call pgline (n, xline, yline)
+c
+      end
+c
+c
+      subroutine drwtikcg (axis, opts, tickd, nsub, ticklp, 
+     +                     costr, lun, axmin, axmax, blcd, trcd, zp)
+c-----------------------------------------------------------------------
+c     Write on the plot ticks or grid.  If a grid is requested,
+c     no minor ticks are drawn.  These ticks/grid are correct
+c     for a non-linear coordinate system too.
+c
+c  Input 
+c    axis      Indicate which axis we are ticking; 'x' or 'y'
+c    opts      Options string
+c    tickd     Major tick interval (radians or linear coordinate value)
+c    nsub      Number of subintervals between major ticks
+c    ticklp    Length of tick in pixels
+c    costr     Coordinate conversion string
+c    lun       Handle for coordinate conversions
+c    axmin,max Axis min and max in radians or linear coordinate
+c    blc,trcd  Orthogonal axis min and max in absolute pixels
+c    zp        Absolute pixel of third axis appropriate to this image
+c-----------------------------------------------------------------------
+      implicit none
+      integer lun, nsub
+      character axis*1, costr*(*), opts*(*)
+      double precision tickd, ticklp, axmin, axmax, blcd, trcd, zp
+cc
+      integer maxpts
+      parameter (maxpts = 100)
+      real xline(maxpts), yline(maxpts)
+      integer ip, i, lw
+      double precision ax1, axx, axxx, tinc
+      logical firstt
+c-----------------------------------------------------------------------
+      call pgbbuf
+c
+c Save PGPLOT line width
+c
+      call pgqlw (lw)
+c
+c Find start tick
+c
+      ip = int(axmin/abs(tickd))
+      if (axmin.ge.0.0 .and. (axmin-ip*tickd).ne.0.0) ip = ip + 1
+      ax1 = ip * tickd
+c
+c Loop over all x ticks
+c
+      firstt = .true.
+      axx = ax1
+      do while (axx.le.axmax)
+        if (index(opts,'G').ne.0) then
+c
+c Draw line of constant x or y coordinate (thin lines)
+c
+          call pgslw (1)
+          call drwlincg (lun, axis, costr, maxpts, axx, zp, blcd,
+     +                   trcd, xline, yline)
+          call pgupdt
+          call pgslw (lw)
+        else if (index(opts,'T').ne.0) then
+c
+c Draw major ticks (top/bottom for x, right/left for y)
+c
+          call drwlincg (lun, axis, costr, 2, axx, zp, blcd,
+     +                   blcd+ticklp, xline, yline)
+          call drwlincg (lun, axis, costr, 2, axx, zp, trcd-ticklp,
+     +                   trcd, xline, yline)
+          call pgupdt
+        end if
+c
+c Draw minor ticks, but only if no grid. Remember the minor ticks
+c in the interval between the frame and the first major tick
+c
+        if (index(opts,'G').eq.0 .and. index(opts,'S').ne.0) then
+          if (nsub.gt.1) then
+            tinc = (tickd/dble(nsub))
+c
+            if (firstt) then
+              axxx = axx - tickd
+              do i = 1, nsub-1
+                axxx = axxx + tinc
+                call drwlincg (lun, axis, costr, 2, axxx, zp, blcd,
+     +                         blcd+ticklp/2, xline, yline)
+                call drwlincg (lun, axis, costr, 2, axxx, zp, 
+     +                         trcd-ticklp/2, trcd, xline, yline)
+                call pgupdt
+              end do
+            end if
+c
+            axxx = axx
+            do i = 1, nsub-1
+              axxx = axxx + tinc
+              call drwlincg (lun, axis, costr, 2, axxx, zp, blcd,
+     +                       blcd+ticklp/2, xline, yline)
+              call drwlincg (lun, axis, costr, 2, axxx, zp, 
+     +                       trcd-ticklp/2, trcd, xline, yline)
+              call pgupdt
+            end do
+          end if
+        end if
+c
+c Increment tick location
+c
+        axx = axx + tickd
+        firstt = .false.
+      end do
+      call pgebuf
+c
+      end
+c
+c
 c* erswinCG -- Erase window from PGPLOT device
 c& nebk
 c: plotting
@@ -1082,6 +1301,191 @@ c
 c
       call pgsci (ci)
       call pgsfs (fs)
+c
+      end
+c
+c
+c* labaxCG -- Draw frame, write numeric labels, ticks and grid
+c& nebk
+c: plotting
+c+
+      subroutine labaxcg (lun, donum, blc, trc, krng, labtyp, 
+     +                    xopts, yopts)
+      implicit none
+c
+      character*(*) labtyp(2), xopts, yopts
+      integer lun, blc(3), trc(3)
+      logical donum
+c
+c  Draw plot frame, labels and ticks/grid.  Draws correct non-linear
+c  ticks/grid for appropriate axes
+c
+c  Input
+c     lun       handle for coordinate conversions
+c     donum     If true, this is the first time we have displayed this
+c               image so we label with numbers frame and box.  Otherwise
+c               we have erased the display and all we want to do is redraw
+c               the frame and ticks.  The numbers will not have gone.
+c     blc,trc   absolute pixels of blc and trc of selected hypercube
+c     krng      first plane and number of planes averaged in this image
+c     labtyp    axis label types
+c     x,yopts   PGTBOX options strings
+c--
+c-----------------------------------------------------------------------
+      include 'mirconst.h'
+c
+      double precision wwi(3), wblc(3), wtrc(3), wbrc(3), wtlc(3),
+     + w2blc(3), w2brc(3), w2tlc(3), w2trc(3), dum, tickd(2), xmin, 
+     + xmax, ymin, ymax, zp, ticklp(2), dp, dw, blcd(2), trcd(2)
+      real tick(2),  tickl(2), wlin(4)
+      integer nxsub, nysub, j, krng(2)
+      character costr*8, xxopts*20, yyopts*20, strstr*5
+c-----------------------------------------------------------------------
+c
+c Save linearized cordinate window
+c
+      call pgqwin (wlin(1), wlin(2), wlin(3), wlin(4))
+      xxopts = xopts
+      yyopts = yopts
+c
+c Absolute pixel of third axis appropriate for this image, and
+c work out pixel blc and trc of corners of displayed image.
+c
+      zp = dble(krng(1)) + dble(krng(2)-1)/2.0d0
+      blcd(1) = blc(1) - 0.5d0
+      blcd(2) = blc(2) - 0.5d0
+      trcd(1) = trc(1) + 0.5d0
+      trcd(2) = trc(2) + 0.5d0
+c
+c Convert spatial coordinates of all 4 corners of the current plane
+c from absolute pixels to world coordinates given by label type
+c
+      call coinit (lun)
+      call setccscg (labtyp, costr)
+c
+      wwi(1) = blcd(1)
+      wwi(2) = blcd(2)
+      wwi(3) = zp
+      call cocvt (lun, 'ap/ap/ap', wwi, costr, wblc)
+      wwi(1) = trcd(1)
+      wwi(2) = trcd(2)
+      call cocvt (lun, 'ap/ap/ap', wwi, costr, wtrc)
+c
+      wwi(1) = trcd(1)
+      wwi(2) = blcd(2)
+      call cocvt (lun, 'ap/ap/ap', wwi, costr, wbrc)
+      wwi(1) = blcd(1)
+      wwi(2) = trcd(2)
+      call cocvt (lun, 'ap/ap/ap', wwi, costr, wtlc)
+c
+c Now convert the angular world coordinates (currently in radians)
+c to the appropriate angular measure.  E.g. arcmin, seconds of time.
+c
+      do j = 1, 2
+        call angconcg (1, labtyp(j), wblc(j), w2blc(j))
+        call angconcg (1, labtyp(j), wbrc(j), w2brc(j))
+        call angconcg (1, labtyp(j), wtlc(j), w2tlc(j))
+        call angconcg (1, labtyp(j), wtrc(j), w2trc(j))
+      end do
+c
+c Set new PGPLOT window.  We only use this to work out the ticks so it 
+c doesn't matter much that it is still a linear axis. But it must be the
+c correct part of the frame to match where the labels will be written
+c
+      call pgswin (real(w2blc(1)), real(w2brc(1)), 
+     +             real(w2blc(2)), real(w2tlc(2)))
+c
+c Strip major tick, minor tick, grid and top/right labelling  options as
+c we will do the ticking ourselves and label top/right in a second pass
+c
+      strstr = 'TSGM'
+      if (.not.donum) strstr = 'TSGMN'
+      call stroptcg (strstr, xxopts)
+      call stroptcg (strstr, yyopts)
+c
+c Now draw frame and write only bottom/left numeric labels.  
+c
+      call pgtbox (xxopts, 0.0, 0, yyopts, 0.0, 0)
+      xxopts = xopts
+      yyopts = yopts
+c
+c Fish out the tick intervals and number of subintervals
+c that PGTBOX or PGBOX would be using if they were drawing
+c the ticks.  
+c
+c      call pgqtik (xxopts, yyopts, tick(1), tick(2), nxsub, nysub,
+c     +             tickl(1), tickl(2))
+      nxsub = 0
+      nysub = 0
+      tick(1) = 0.0
+      tick(2) = 0.0
+      call qtikcg (xxopts, yyopts, tick(1), tick(2), nxsub, nysub, 
+     +             tickl(1), tickl(2))
+      tickd(1) = abs(tick(1))
+      tickd(2) = abs(tick(2))
+c
+c Convert tick length to pixels (lengths are in linearized
+c coordinate system so this is ok).
+c
+      dp = trc(2) + 0.5 - (blc(2) - 0.5)
+      dw = w2blc(2) - w2tlc(2)
+      ticklp(1) = abs(tickl(1) * dp / dw)
+      dp = trc(1) + 0.5 - (blc(1) - 0.5)
+      dw = w2brc(1) - w2blc(1)
+      ticklp(2) = abs(tickl(2) * dp / dw)
+c
+c Convert angular ticks to radians
+c
+      do j = 1, 2
+        call angconcg (2, labtyp(j), tickd(j), dum)
+        tickd(j) = dum
+      end do
+c
+c The experienced and bold user may also wish to label the top and
+c right axes as well.  So reset the world coordinate window to reflect
+c these axes (because the coordinate system may be nonlinear, these can 
+c differ) and label away.  Must use the ticking values already found.
+c
+      if (index(xxopts,'M').ne.0 .or. index(yyopts,'M').ne.0) then
+        if (donum) then
+          call stroptcg ('BCTSGN', xxopts)
+          call stroptcg ('BCTSGN', yyopts)
+          call pgswin (real(w2tlc(1)), real(w2trc(1)), 
+     +                 real(w2brc(2)), real(w2trc(2)))
+          call pgtbox (xxopts, tick(1), nxsub, yyopts, tick(2), nysub)
+        end if
+      end if
+c
+c Find minimum and maximum x and y coordinates from positions of corners
+c Note that we are now using radians for the angular unit
+c
+      xmin = min(wblc(1),wbrc(1),wtlc(1),wtrc(1))
+      xmax = max(wblc(1),wbrc(1),wtlc(1),wtrc(1))
+      ymin = min(wblc(2),wbrc(2),wtlc(2),wtrc(2))
+      ymax = max(wblc(2),wbrc(2),wtlc(2),wtrc(2))
+c
+c Set window in absolute pixel space, ready for ticking
+c
+      call pgswin(real(blcd(1)), real(trcd(1)),
+     +            real(blcd(2)), real(trcd(2)))
+c
+c Draw x ticks/grid
+c
+      call drwtikcg ('x', xopts, tickd(1), nxsub, ticklp(1), costr,
+     +               lun, xmin, xmax, blcd(2), trcd(2), zp)
+c
+c Draw y ticks/grid
+c
+      call drwtikcg ('y', yopts, tickd(2), nysub, ticklp(2), costr,
+     +               lun, ymin, ymax, blcd(1), trcd(1), zp)
+c
+c Free coordinate object
+c
+      call cofin (lun)
+c
+c  Restore linearized window
+c
+      call pgswin (wlin(1), wlin(2), wlin(3), wlin(4))
 c
       end
 c
@@ -1187,7 +1591,13 @@ c
         else if (ltype.eq.'dms') then
           str2 = rangle(val3)
         else 
-          call strfmtcg (real(val3), 6, str2, ie2)
+          if (val3.lt.100.0) then
+             call strfmtcg (real(val3), 2, str2, ie2)
+          else if (val3.lt.1000.0) then
+             call strfmtcg (real(val3), 3, str2, ie2)
+          else
+             call strfmtcg (real(val3), 6, str2, ie2)
+          end if
         end if  
         ie2 = len1(str2)
         is2 = 1
@@ -1195,6 +1605,10 @@ c
           is2 = is2 + 1
         end do
       end if
+
+
+
+
 c
 c Concatenate strings
 c
@@ -1229,10 +1643,11 @@ c* setlabCG -- Set label options strings and axis displacements
 c& nebk
 c: plotting
 c+
-      subroutine setlabcg (labtyp, ymin, ymax, xdispl, ydispb, 
-     +                     xopts, yopts)
+      subroutine setlabcg (grid, labtyp, ymin, ymax, xdispl, 
+     +                     ydispb, xopts, yopts)
 c
       implicit none
+      logical grid
       character labtyp(*)*(*), xopts*(*), yopts*(*)
       real xdispl, ydispb, ymin, ymax
 c
@@ -1240,6 +1655,7 @@ c  Set the labelling displacements from the relevant axes, and set
 c  PGTBOX labelling options strings.
 c
 c  Input
+c    grid     overlay coordinate grid
 c    labtyp   Label type requested by user
 c    ymin,max y axis min and max
 c  Output
@@ -1260,16 +1676,20 @@ c
       if (labtyp(1).eq.'hms') then
         ydispb = 3.6
         xopts = 'BCSTHYZO'
+        il = 9
       else if (labtyp(1).eq.'dms') then
         ydispb = 3.6
         xopts = 'BCSTDYZO'
+        il = 9
       else if (labtyp(1).eq.'none') then
         ydispb = 3.6
         xopts = 'BC'
       else
         ydispb = 3.1
         xopts = 'BCST'
+        il = 5
       end if
+      if (labtyp(1).ne.'none' .and. grid) xopts(il:il) = 'G' 
 c
 c Y axis.  Have a stab at a correct axis label displacement when using
 c HMS or DMS; it depends upon the number of decimal places in the 
@@ -1309,16 +1729,20 @@ c
       if (labtyp(2).eq.'hms') then
         xdispl = xd
         yopts = 'BCSTHYZV'
+        il = 9
       else if (labtyp(2).eq.'dms') then
         xdispl = xd
         yopts = 'BCSTDYZV'
+        il = 9
       else if (labtyp(2).eq.'none') then
         xdispl = 1.0
         yopts = 'BC'
       else
         xdispl = 2.5
         yopts = 'BCST' 
+        il = 5
       end if
+      if (labtyp(2).ne.'none' .and. grid) yopts(il:il) = 'G' 
 c
       end
 c
@@ -1600,10 +2024,10 @@ c* vpsizCG -- Set encompassing viewport and subplot increment sizes
 c& nebk
 c: plotting
 c+
-      subroutine vpsizcg (dofull, dofid, ncon, gin, vin, nspec, bin, 
+      subroutine vpsizcg (dofull, dofid, ncon, gin, vin, nspec, bin,
      +  maxlev, nlevs, srtlev, levs, slev, nx, ny, pcs, xdispl, 
-     +  ydispb, gaps, wedcod, wedwid, wedisp, tfdisp, labtyp, vxmin, 
-     +  vymin, vymax, vxgap, vygap, vxsize, vysize, tfvp, wdgvp)
+     +  ydispb, gaps, dotr, wedcod, wedwid, wedisp, tfdisp, labtyp, 
+     +  vxmin, vymin, vymax, vxgap, vygap, vxsize, vysize, tfvp, wdgvp)
 c
       implicit none
       integer maxlev, nlevs(*), srtlev(maxlev,*), nx, ny, ncon, 
@@ -1611,11 +2035,11 @@ c
       real vxmin, vymin, vymax, vxgap, vygap, vxsize, vysize, pcs,
      +  ydispb, xdispl,  wedwid, wedisp, tfvp(4), tfdisp, wdgvp(4),
      +  levs(maxlev,*), slev
-      logical dofid, dofull, gaps
+      logical dofid, dofull, gaps, dotr
       character*(*) gin, vin, bin, labtyp(2)*(*)
 c
 c   Work out view port that encompasses all sub-plots and allows
-c   for all labelling below it.   Assume unequal scales in x and y 
+c   for all labelling.   Assume unequal scales in x and y 
 c   here.  If user wants equal scales, adjust later.
 c
 c   Input
@@ -1632,10 +2056,12 @@ c     slev        Scale factor by which user given levels are scaled
 c                 resulting in the numbers stored in levs
 c     nx,ny       Number of sub-plots in x and y 
 c     pcs         PGPLOT character size for plot labels
-c     xdispl      Displacement of y-axis label from axis in char hghts
-c     ydispb      Displacement of x-axis label from axis in char hghts
+c     xdispl      Displacement of y-axis char. label from axis in char hghts
+c     ydispb      Displacement of x-axis char. label from axis in char hghts
 c     gaps        If true then don't leave gaps between sub-plots else
 c                 leave gaps between sub-plots & label each window
+c     dotr        Means as well as labelling plot on left and bottom axes,
+c		  also label it at the top and right.
 c     wedcod      1 -> one wedge to right of all subplots
 c                 2 -> one wedge to right per subplot
 c                 3 -> one wedge per subplot inside subplot
@@ -1675,6 +2101,10 @@ c Set viewport that encompasses all sub-plots in n.d.c.
 c
       vxmin = (xdispl + 1.2)*xht
       vymax = 1.0 - yht
+c
+c Allow for any labels on top frame
+c
+      if (dotr) vymax = 1.0 - 2.5*yht
 c
 c Work out wedge spaces
 c
@@ -1723,9 +2153,10 @@ c
         dvtx = dvtfx + dvtd
       end if
 c
-c Set x trc of image viewport
+c Set x trc of image viewport. Allow for any labels on right axis
 c
       vxmax = 1.0 - max(dvwx,dvtx) - xht
+      if (dotr) vxmax = 1.0 - max(dvwx,dvtx,xdispl*xht)
 c
 c When doing full annotation need to make space at bottom of plot. Allow 
 c for x axis label, gap between it and start of text, lines of text, and 
@@ -1804,12 +2235,15 @@ c
 c
 c Work out size of sub-plots and gaps between in n.d.c. For gap allow
 c for label displacement plus 2 extra characters worth of space
-c
+c If labelling top and right as well allow for that
+
       if (nx.gt.1) then
         if (gaps) then
           vxgap = (1.0 + xdispl + 2.0) * xht
+          if (dotr) vxgap = vxgap + xdispl*xht
         else
-          vxgap = 0.0
+c          vxgap = 0.0
+          vxgap = xht/3
         end if
         vxsize = ((vxmax - vxmin) - ((nx - 1) * vxgap)) / nx
       else
@@ -1820,8 +2254,10 @@ c
       if (ny.gt.1) then
         if (gaps) then
           vygap = (ydispb + 2.0) * yht
+          if (dotr) vygap = vygap + yht
         else
-          vygap = 0.0
+c          vygap = 0.0
+          vygap = yht/3
         end if
         vysize = ((vymax - vymin) - ((ny - 1) * vygap)) / ny
       else
@@ -2064,6 +2500,505 @@ c Convert height from ndc to world coordinates
 c
       yht = abs((wy2-wy1) * ych / (vpy2-vpy1))
 c
+      end
+c
+c
+      subroutine qtikcg (xopt, yopt, xtick, ytick, nxsub, nysub,
+     *                   xtickl, ytickl)
+c-----------------------------------------------------------------------
+c This subroutine works out some things about ticks.  It returns
+c the values that PGTBOX/PGBOX will use.    It is currently
+c a big fudge and replicates algorithms; in future it will
+c be replaced by a not-yet-standard pgplot routine called PGQTIK
+c
+c Inputs
+c  xopt   PG(T)BOX x-axis options string
+c  yopt   PG(T)BOX y-axis options string
+c Input/output
+c  xtick  The x-tick in seconds
+c  ytick  The y-tick in seconds
+c  nxsub  The number of minor x-tick intervals
+c  nysub  The number of minor y-tick intervals
+c	  These are unchanged if non-zero on input
+c Outputs
+c  xtickl The length of x-major ticks
+c  ytickl The length of y-major ticks
+c
+c-----------------------------------------------------------------------
+      implicit none
+      real xtick, ytick, xtickl, ytickl
+      integer nxsub, nysub
+      character*(*) xopt, yopt
+cc
+      integer tscalex, tscaley, nsub
+      real xmin, xmax, ymin, ymax, vx1, vx2, vy1, vy2, xsp, ysp, 
+     +  xlen, ylen
+      real pgrnd
+c-----------------------------------------------------------------------
+c
+c Find window in world coordinates
+c
+      call pgqwin (xmin, xmax, ymin, ymax)
+c
+c Find view port in absolute device coordinates
+c
+      call pgqvp (3, vx1, vx2, vy1, vy2)
+c
+c Find character spacing in x an dy directions.  Fudge factor
+c from empirical determination, as pgqcs returns xsp=ysp=ysp
+c
+      call pgqcs (3, xsp, ysp)
+      xsp = 10.0 * ysp / 13.0
+      xlen = vx2 - vx1
+      ylen = vy2 - vy1
+c
+c Now work out the tick stuff for the X axis
+c
+      if (index(xopt,'Z').ne.0) then
+c
+c For time labelling code stolen from PGTBX1-3
+c
+        call pgtbx1cg ('X', .false., .true., xmin, xmax, xtick,
+     +                 nxsub, tscalex)
+      else
+c
+c For non-time labelling, code stolen from PGBOX
+c
+        if (xtick.eq.0.0) then
+c
+c No tick given
+c
+          xtick = max(0.05, min(7.0*xsp/xlen, 0.20))*(xmax-xmin)
+          xtick = pgrnd(xtick,nsub)
+c
+c Number of subintervals may be given but tick not
+c
+          if (nxsub.eq.0) nxsub = nsub
+        else
+c
+c Cheap default for number of subintervals
+c
+          if (nxsub.eq.0) nxsub = 2
+        end if
+      end if
+      xtickl = xsp*0.6*(ymax-ymin)/ylen
+c
+c Now work out the tick stuff for the X axis
+c
+      if (index(yopt,'Z').ne.0) then
+        call pgtbx1cg ('Y', .false., .false., ymin, ymax, ytick,
+     +                 nysub, tscaley)
+      else 
+        if (ytick.eq.0.0) then
+          ytick = max(0.05, min(7.0*xsp/ylen, 0.20))*(ymax-ymin)
+          ytick = pgrnd(ytick,nsub)
+          if (nysub.eq.0) nysub = nsub
+        else
+          if (nysub.eq.0) nysub = 2
+        end if
+      end if
+      ytickl = xsp*0.6*(xmax-xmin)/xlen
+c
+      end
+c
+c
+      subroutine pgtbx1cg (axis, doday, dopara, tmin, tmax, tick, 
+     +                     nsub, tscale)
+c
+c
+c Work out what the finest units the time labels will be in and
+c return the tick increments if the user does not set them.
+c
+c This is a support routine for PGTBOX and should not 
+c be called by the user.
+c
+c Input:
+c  axis   :  'x' or 'y' for use in determining if labels overwrite
+c  tmin   :  Start time in seconds 
+c  tmax   :  End   time in seconds
+c  doday  :  If True write day field DD HH MMSS
+c  dopara :  True if labels parallel to axis
+c Input/output:
+c  tick   :  Major tick interval in seconds.  If 0.0 on input, will 
+c            be set here.
+c  nsub   :  Number of minor ticks between major ticks. If 0 on input
+c            will be set here.
+c Outputs:
+c  tscale :  Determines finest unit of labelling 
+c            (1 => ss, 60 => mm, 3600 => hh, 3600*24 => dd)
+c
+c-----------------------------------------------------------------------
+      implicit none
+      real tmin, tmax, tick
+      integer nsub, tscale
+      logical doday, dopara
+      character axis*1
+cc
+      integer nlist1, nlist2, nlist3, nlist4, nticmx
+      parameter (nlist1 = 19, nlist2 = 10, nlist3 = 6, nlist4 = 8,
+     *           nticmx = 8)
+c
+      real ticks1(nlist1), ticks2(nlist2), ticks3(nlist3), 
+     *ticks4(nlist4), tock, tock2, tint, tints, tmins, tmaxs
+      integer nsubs1(nlist1), nsubs2(nlist2), nsubs3(nlist3), 
+     *nsubs4(nlist4), npl, ntick, itick, strlen
+      character str*15
+c
+      save ticks1, ticks2, ticks3, ticks4
+      save nsubs1, nsubs2, nsubs3, nsubs4
+c
+      data ticks1 /0.001,  0.002,                 0.005,
+     *             0.01,   0.02,                  0.05,  
+     *             0.1,    0.2,                   0.5,  
+     *             1.0,    2.0,   3.0,    4.0,    5.0,
+     *             6.0,   10.0,  15.0,   20.0,   30.0/
+      data nsubs1 / 4,      4,                     2,    
+     *              4,      4,                     2,    
+     *              4,      4,                     2,    
+     *              4,      4,     3,      4,      5,
+     *              3,      2,     3,      2,      3/
+c
+      data ticks2 /1.0,    2.0,   3.0,    4.0,    5.0,
+     *             6.0,   10.0,  15.0,   20.0,   30.0/
+      data nsubs2 / 4,      4,     3,      4,      5,
+     *              3,      2,     3,      2,      3/
+c
+      data ticks3 /1.0,    2.0,   3.0,    4.0,    6.0,   12.0/
+      data nsubs3 / 4,      4,     3,      4,      3,      2/
+c
+      data ticks4 /1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 8.0, 9.0/
+      data nsubs4 / 4,   4,   3,   4,   5,   3,   4,   3 /
+c----------------------------------------------------------------------
+      tint = abs(tmax - tmin)
+      tick = abs(tick)
+c
+c If a tick size is provided, use it to determine TSCALE
+c
+      if (tick.ne.0.0) then
+        if (tick.ge.tint) then
+          call bug ('w', 'PGTBX1CG: user given tick bigger than time '
+     *                 //'interval; will auto-tick')
+          tick = 0.0
+        else if (tick.lt.0.001) then
+          call bug ('w', 'PGTBX1CG: user given tick too '
+     *                 //'small (< 1 ms); will auto-tick')
+          tick = 0.0
+        else
+          if (mod(tick, 60.0) .ne. 0.0) then
+            tscale = 1
+          else if (mod(tick, 3600.0).ne.0.0) then
+            tscale = 60  
+          else if (.not.doday) then
+            tscale = 3600   
+          else if (mod(tick,(24.0*3600.0)).ne.0.0) then
+            tscale = 3600
+          else
+            tscale = 24 * 3600
+          endif
+c 
+c Make a simple default for the number of minor ticks and bug out
+c 
+          if (nsub.eq.0) nsub = 2
+          return
+        end if
+      end if
+c
+c Work out label units depending on time interval if user 
+c wants auto-ticking
+c
+      if (tint.le.5*60) then
+        tscale = 1
+      else if (tint.le.5*3600) then
+        tscale = 60
+      else 
+        if (.not.doday) then
+          tscale = 3600
+        else
+          if (tint.le.5*24*3600) then
+            tscale = 3600
+          else
+            tscale = 3600*24
+          end if
+        end if
+      end if
+c
+ccccc
+c Divide interval into ntick major ticks and nsub minor intervals
+c the tick choosing algorithm is not very robust, so watch out
+c if you fiddle anything. 
+ccccc
+c
+      tints = tint / tscale
+      if (tscale.eq.1) then
+c
+c Time in seconds.  if the time interval is very small, may need to 
+c label with up to 3 decimal places.  have less ticks to help prevent
+c label overwrite. str is a dummy tick label to assess label 
+c overwrite potential
+c
+        if (dopara) then
+          if (tints.le.0.01) then
+            ntick = 4
+            str = '60.423'
+            strlen = 6
+          else if (tints.le.0.1) then
+            ntick = 5
+            str = '60.42'
+            strlen = 5
+          else if (tints.le.1.0) then
+            ntick = 6
+            str = '60.4'
+            strlen = 4
+          else
+            ntick = 6
+            str = '60s'
+            strlen = 3
+          end if
+        else
+          ntick = 6
+          str = ' '
+          strlen = 1
+        end if
+        tock = tints / ntick
+c
+c Select nearest tick to tock from list.
+c
+        call pgtbx2cg (tock, nlist1, ticks1, nsubs1, tick, nsub, itick)
+c
+c Check label overwrite and/or too many ticks.
+c
+        call pgtbx3cg (doday, 0, tscale, tints, nticmx, nlist1, ticks1,
+     *               nsubs1, itick, axis, dopara, str(1:strlen),
+     *               tick, nsub)
+      else if (tscale.eq.60) then
+c
+c Time in minutes 
+c
+        ntick = 6
+        tock = tints / ntick
+c
+c Select nearest tick from list
+c
+        call pgtbx2cg (tock, nlist2, ticks2, nsubs2, tick, nsub, itick)
+c
+c Check label overwrite and/or too many ticks.
+c
+        if (dopara) then
+          str = '42m'
+          strlen = 3
+        else
+          str = ' '
+          strlen = 1
+        end if
+        call pgtbx3cg (doday, 0, tscale, tints, nticmx, nlist2, ticks2,
+     *               nsubs2, itick, axis, dopara, str(1:strlen),
+     *               tick, nsub)
+      else 
+        if (tscale.eq.3600 .and. doday) then
+c
+c Time in hours with the day field 
+c
+          ntick = 6
+          tock = tints / ntick
+c
+c Select nearest tick from list
+c
+          call pgtbx2cg (tock, nlist3, ticks3, nsubs3, tick, 
+     +                   nsub, itick)
+c
+c Check label overwrite and/or too many ticks.
+c
+          if (dopara) then
+            str = '42h'
+            strlen = 3
+          else
+            str = ' '
+            strlen = 1
+          end if
+          call pgtbx3cg (doday, 0, tscale, tints, nticmx, nlist3, 
+     *                   ticks3, nsubs3, itick, axis, dopara, 
+     *                   str(1:strlen), tick, nsub)
+        else
+c
+c Time in hours with no day field or time in days. have less
+c ticks for big numbers or the parallel labels will overwrite.
+c
+          if (dopara) then
+            tmins = abs(tmin) / tscale
+            tmaxs = abs(tmax) / tscale            
+            call pgnpl (-1, nint(max(tints,tmins,tmaxs)), npl)
+            if (npl.le.3) then
+              ntick = 6
+            else if (npl.eq.4) then
+              ntick = 5
+            else
+              ntick = 4
+            end if
+            str = '345678912'
+            str(npl+1:) = 'd'
+            strlen = npl + 1
+          else
+            str = ' '
+            strlen = 1
+            ntick = 6
+          end if
+          tock = tints / ntick
+c
+c Select nearest tick from list; 1 choose nearest nice integer 
+c scaled by the appropriate power of 10
+c
+          call pgnpl (-1, nint(tock), npl)
+          tock2 = tock / 10**(npl-1)
+c
+          call pgtbx2cg (tock2, nlist4, ticks4, nsubs4, tick, 
+     +                   nsub, itick)
+          tick = tick * 10**(npl-1)
+c
+c  check label overwrite and/or too many ticks.
+c
+          call pgtbx3cg (doday, npl, tscale, tints, nticmx, nlist4, 
+     *                 ticks4, nsubs4, itick, axis, dopara,
+     *                 str(1:strlen), tick, nsub)
+        end if
+      end if
+c
+c  convert tick to seconds
+c
+      tick = tick * tscale
+c
+      return
+      end
+c
+c
+      subroutine pgtbx2cg (tock, nticks, ticks, nsubs, tick, 
+     *                     nsub, itick)
+c-----------------------------------------------------------------------
+c Find the nearest tick in a list to a given value.
+c
+c This is a support routine for PGTBOX and should not be called
+c by the user.
+c
+c Input:
+c  tock   :  Try to find the nearest tick in the list to TOCK
+c  nticks :  Number of ticks in list
+c  ticks  :  List of ticks
+c  nsubs  :  List of number of minor ticks between ticks to go with TICKS
+c Output:
+c  tick   :  The selected tick
+c  itick  :  The index of the selected tick from the list TICKS
+c Input/output
+c  nsub   :  Number of minor ticks between major ticks. If 0 on input
+c            will be set here.
+c
+c-----------------------------------------------------------------------
+      implicit none
+      integer nticks, nsubs(nticks), nsub, itick
+      real tock, ticks(nticks), tick
+cc
+      integer i, nsubd
+      real dmin, diff
+c----------------------------------------------------------------------
+      nsubd = nsub
+      dmin = 1.0e30
+      do 100 i = 1, nticks
+        diff = abs(tock - ticks(i))
+        if (diff.lt.dmin) then
+          tick = ticks(i)
+          if (nsubd.eq.0) nsub = nsubs(i)
+          itick = i
+c
+          dmin = diff
+        end if
+ 100  continue
+c
+      return
+      end
+c
+c
+      subroutine pgtbx3cg (doday, npl, tscale, tints, nticmx, nticks,
+     *                   ticks, nsubs, itick, axis, dopara, str,
+     *                   tick, nsub)
+c-----------------------------------------------------------------------
+c Try to see if label overwrite is going to occur with this tick 
+c selection, or if there are going to be more than a reasonable
+c number of ticks in the displayed time range.  If so, choose, 
+c if available, the next tick (bigger separation) up in the list.
+c If the overwrite requires that we would need to go up to the bext
+c TSCALE, give up.  They will need to choose a smaller character size
+c
+c This is a support routine for PGTBOX and should not 
+c be called by the user.
+c
+c Input:
+c  doday  :  True if day field being used
+c  npl    :  Number of characters needed to format TICK on input
+c  tscale :  Dictates what the finest units of the labelling are.
+c            1 = sec, 60 = min, 3600 = hr, 24*3600 = days
+c  tints  :  Absolute time interval in units of TSCALE
+c  nticmx :  Max. reasonable number of ticks to allow in the time range
+c  nticks :  Number of ticks in list of ticks to choose from
+c  ticks  :  List of ticks from which the current tick was chosen
+c  nsubs  :  List of number of minor ticks/major tick to choose NSUB from
+c  itick  :  Index of chosen tick in list TICKS
+c  axis   :  'x' or 'y' axis
+c  dopara :  Labels parallel or perpendicualr to axis
+c  str    :  A typical formatted string used for checking overwrite
+c Input/output:
+c  tick   :  Current major tick interval in units of TSCALE. May be 
+c            made larger if possible if overwrite likely.
+c  nsub   :  Number of minor ticks between major ticks. 
+c
+c-----------------------------------------------------------------------
+      implicit none
+      integer tscale, nticmx, nticks, itick, nsub, nsubs(nticks), npl
+      real tints, ticks(nticks), tick
+      character axis*1, str*(*)
+      logical doday, dopara
+cc
+      integer ntick
+      real lens, lenx, leny
+c----------------------------------------------------------------------
+      call pglen (4, str, lenx, leny)
+      lens = lenx
+      if ( (dopara .and. axis.eq.'Y') .or.
+     *     (.not.dopara .and. axis.eq.'X') ) lens = leny
+c
+      if (tscale.eq.1 .or. tscale.eq.60 .or.
+     *    (tscale.eq.3600 .and. doday)) then
+c
+c  time in seconds or minutes, or in hours with a day field
+c
+        ntick = int(tints / tick)
+        if ( (itick.lt.nticks)  .and. 
+     *       ((dopara .and. (lens/tscale).gt.0.9*tick) .or. 
+     *       (ntick.gt.nticmx)) ) then
+          if (ticks(itick+1).lt.tints) then
+            nsub = nsubs(itick+1)
+            tick = ticks(itick+1)
+          end if
+        end if
+      else
+c
+c Time in hours and no day field or time in days
+c
+        ntick = int(tints / tick)
+        if ( (dopara .and. (lens/tscale).gt.0.9*tick) .or. 
+     *       (ntick.gt.nticmx) ) then
+          if (itick.lt.nticks) then
+            if (ticks(itick+1)*10**(npl-1).lt.tints) then
+              nsub = nsubs(itick+1)
+              tick = ticks(itick+1) * 10**(npl-1)
+            end if
+          else
+            if (ticks(1)*10**npl.lt.tints) then
+              nsub = nsubs(1)
+              tick = ticks(1) * 10**npl
+            end if
+          end if
+        end if
+      end if
+c
+      return
       end
 
 
