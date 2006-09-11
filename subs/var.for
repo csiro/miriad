@@ -34,7 +34,9 @@ c    rjs  11oct96 Added delra,deldec,pntra,pntdec.
 c    rjs  23jul97 Added pbtype,xtsys,ytsys,xsampler,ysampler,xyamp
 c    pjt  12oct98 Added cable,jyperka,obsline,project,themt,tsis,tif2
 c                 (they are currently all BIMA specific)
-
+c    rjs  16oct98 Reduce the number of continuation lines in above
+c		  change to bring it in line with FORTRAN standard.
+c
 c************************************************************************
 c*VarInit -- Initialise the copy routines.
 c:uv-data
@@ -110,25 +112,21 @@ c  Variables to copy whenever they change.
 c
 	data var/     'airtemp ','antaz   ','antdiam ','antel   ',
      *	   'antpos  ','atten   ','axisrms ','bin     ','cable   ',
-     *	   'chi     ','corbit  ','corbw   ','corfin  ',
-     *	   'cormode ','coropt  ','cortaper','ddec    ','dec     ',
-     *	   'deldec  ','delra   ',
-     *	   'dewpoint','dra     ','epoch   ','evector ','focus   ',
-     *	   'freq    ','freqif  ','inttime ','ivalued ','jyperk  ',
-     *     'jyperka ',
-     *	   'latitud ','longitu ','lo1     ','lo2     ','lst     ',
-     *	   'mount   ','nants   ','nbin    ','ntemp   ','ntpower ',
-     *	   'obsdec  ','observer','obsline ',
-     *     'obsra   ','on      ','operator',
-     *	   'pbfwhm  ','phaselo1','phaselo2','pntdec  ','pntra   ',
-     *	   'phasem1 ','plangle ','plmaj   ','plmin   ','pltb    ',
-     *	   'precipmm','pressmb ','project ',
-     *     'ra      ','relhumid',
-     *	   'source  ','telescop','temp    ','themt   ','tif2    ',
-     *     'tpower  ','tsis    ','ut      ',
-     *	   'veldop  ','veltype ','version ','vsource ','winddir ',
-     *	   'windmph ','delay   ','delay0  ','xtsys   ','ytsys   ',
-     *	   'xsampler','ysampler','xyamp   ','pbtype  '/
+     *	   'chi     ','corbit  ','corbw   ','corfin  ','cormode ',
+     *	   'coropt  ','cortaper','ddec    ','dec     ','deldec  ',
+     *	   'delra   ','dewpoint','dra     ','epoch   ','evector ',
+     *	   'focus   ','freq    ','freqif  ','inttime ','ivalued ',
+     *     'jyperk  ','jyperka ','latitud ','longitu ','lo1     ',
+     *	   'lo2     ','lst     ','mount   ','nants   ','nbin    ',
+     *	   'ntemp   ','ntpower ','obsdec  ','observer','obsline ',
+     *     'obsra   ','on      ','operator','pbfwhm  ','phaselo1',
+     *	   'phaselo2','pntdec  ','pntra   ','phasem1 ','plangle ',
+     *	   'plmaj   ','plmin   ','pltb    ','precipmm','pressmb ',
+     *	   'project ','ra      ','relhumid','source  ','telescop',
+     *	   'temp    ','themt   ','tif2    ','tpower  ','tsis    ',
+     *	   'ut      ','veldop  ','veltype ','version ','vsource ',
+     *	   'winddir ','windmph ','delay   ','delay0  ','xtsys   ',
+     *	   'ytsys   ','xsampler','ysampler','xyamp   ','pbtype  '/
 c------------------------------------------------------------------------
 	avall = .false.
 c
