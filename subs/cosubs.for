@@ -1,4 +1,4 @@
-c***********************************************************************
+c***************************************************************************
 c  These subroutines provide an interface between NEBK style coordinate
 c  handling (the 'hms', 'dms', 'arcsec', 'arcmin', 'reldeg', 'abspix', 
 c  'relpix', 'absghz', 'relghz', 'abskms', 'relkms', 'absnat', 
@@ -43,7 +43,8 @@ c    nebk   03dec95    Declaration of TYPE in AXTYPCO was (n) not (*), and
 c	               removed useless access to multiple axes in CHKAXCO
 c    nebk   18dec95    Recognize new CTYPE "angle"
 c    rjs    06feb96    Increase ctype string in chkaxco.
-c***********************************************************************
+c    nebk   26apr96    Make AXTYPCO more flexible in recognizing velocity axes
+c******************************************************************************
 c
 c* axfndCO -- Find a specified generic axis in an image
 c& nebk
@@ -227,6 +228,7 @@ c-----------------------------------------------------------------
 c
       do i = i1, i2
         call ctypeco (lun, i, lctype, il)
+        call ucase (lctype)
 c
         j = 1
         if (n.ne.0) j = i
@@ -246,10 +248,13 @@ c
      +      lctype(1:il).eq.'GLAT') then
           type(j) = 'LATI'
         else if
-     +     (lctype(1:il).eq.'VELO' .or.
-     +      lctype(1:il).eq.'FELO') then
+     +     (lctype(1:4).eq.'VELO' .or.
+     +      lctype(1:4).eq.'FELO') then
           type(j) = 'VELO'
-        else if (lctype(1:il).eq.'FREQ') then
+        else if (lctype(1:4).eq.'FREQ') then
+c
+c Use "4" rather than "il" so "Velocity" is recognized
+c
           type(j) = 'FREQ'
         else if (lctype(1:il).eq.'ANGLE') then
           type(j) = 'ANGL'
