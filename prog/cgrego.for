@@ -20,10 +20,11 @@ c--
 c
 c History:
 c   nebk 10apr98   Finally got fed up and did this
+c   rjs  18may98   Correct fortran to make it compile on Alphas.
 c------------------------------------------------------------------------
       implicit none
       character version*(*)
-      parameter(version='Rego: version 10-Apr-98')
+      parameter(version='CgRego: version 10-Apr-98')
 c
       character region*80, olay*80, olaydef*80, line*2048
       integer lunin, lunout, iostat, ilen, len1, iline
@@ -34,7 +35,7 @@ c
       call output (version)
       call keyini
       call keya('region', region, ' ')
-      if (region.eq.'') 
+      if (region.eq.' ') 
      +   call bug ('f', 'You must specify the region file name')
       olaydef = region(1:len1(region))//'.olay'
       call keya('olay', olay, olaydef)
