@@ -6,6 +6,7 @@
 /*  History:								*/
 /*   rjs  Dark-ages Original version.					*/
 /*   rjs  20aug92   Correct "roundup" macro when rounding 0.		*/
+/*   rjs  15may96   Moved roundup macro elsewhere.			*/
 /************************************************************************/
 
 /* Binary items start with a sequence to allow routines to blindly determine
@@ -23,12 +24,3 @@ static char 	binary_item[ITEM_HDR_SIZE]	= {0,0,0,0},
 		char_item[ITEM_HDR_SIZE]	= {0,0,0,H_BYTE},
 		dble_item[ITEM_HDR_SIZE]	= {0,0,0,H_DBLE},
 		cmplx_item[ITEM_HDR_SIZE]	= {0,0,0,H_CMPLX};
-
-
-/* Other handy definitions. */
-
-#define TRUE 			1
-#define FALSE			0
-#define max(a,b) ((a)>(b)?(a):(b))
-#define min(a,b) ((a)<(b)?(a):(b))
-#define roundup(a,b) ((b)*(((a)+(b)-1)/(b)))
