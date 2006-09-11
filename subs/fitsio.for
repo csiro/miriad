@@ -43,6 +43,8 @@ c    rjs  25jul94    Better (?) support for uu-?, vv-?.
 c    rjs  29jul94    Handle uu-l,vv-l,ww-l, and times with bzero==0.
 c    rjs   2aug94    Recognised XTENSION='BINTABLE'
 c    rjs   6feb95    Change name of COMMON block for LINUX.
+c    rjs  28apr95    fuvopen(status=old) was failing if there were
+c		     no history comments in the input FITS files.
 c
 c  Bugs and Shortcomings:
 c    * IF frequency axis is not handled on output or uv data.
@@ -1958,6 +1960,7 @@ c------------------------------------------------------------------------
 c
 	dval = 1
 	call fitsrch(lu,'HISTORY',found)
+	if(.not.found)return
 	call fitcdio(lu,card)
 c
 c  Process all cards.
