@@ -27,18 +27,19 @@ c  History:
 c    rjs  19mar93 Derived from PARAPLOT.
 c    nebk 01mar95 Allow smaller ranges
 c    nebk 24may95 Add options=cursor
+c    rjs  23aug96 Support plotting multiple sources.
 c
 c  Bugs:
 c   * Perfect?
 c------------------------------------------------------------------------
 	character version*(*)
-	integer NPTS,MAXPOL,NCOL
+	integer NPTS,MAXPOL,NCOL,MAXSRC
 	parameter(version='CalPlot: version 24-May-95')
-	parameter(NPTS=256,MAXPOL=4,NCOL=12)
+	parameter(NPTS=256,MAXPOL=4,NCOL=12,MAXSRC=32)
 c
-	character source*32,device*32,line*80,stokes*4
-	integer npol,pol(MAXPOL),length,ierr,cols(NCOL),i,j
-	real x(NPTS),y(NPTS,MAXPOL),xrange(2)
+	character source(MAXSRC)*32,device*32,line*80,stokes*4
+	integer npol,pol(MAXPOL),length,ierr,cols(NCOL),i,j,k,nsrc
+	real x(NPTS),y(NPTS,MAXPOL,MAXSRC),xrange(2)
 	real xlo,xhi,ylo,yhi,delta,maxv,sdf
 	double precision freq(NPTS)
         logical cursor
@@ -54,8 +55,8 @@ c
 	call output(version)
         call output ('New options=cursor now available')
 	call keyini
-	call keya('source',source,' ')
-	if(source.eq.' ')call bug('f','A source must be given')
+	call mkeya('source',source,MAXSRC,nsrc)
+	if(nsrc.eq.0)call bug('f','A source must be given')
 	call keya('stokes',stokes,'i')
 	call keyr('xrange',xrange(1),4.7)
 	call keyr('xrange',xrange(2),4.9)
@@ -82,6 +83,18 @@ c
 	  x(i) = freq(i)
 	enddo
 c
+	do j=1,nsrc
+	  do i=1,npol
+	    stokes = PolsC2P(pol(i))
+	    call lcase(stokes)
+	    call CalStoke(source(j),stokes,freq,y(1,i,j),NPTS,ierr)
+	    if(ierr.eq.2)call bug('f','Unknown source')
+	    if(ierr.eq.1)call bug('w','Extrapolation being used')
+	  enddo
+	enddo
+c
+c  Form the plot label.
+c
 	line = 'Stokes='
 	length = len1(line)
 	do i=1,npol
@@ -89,13 +102,15 @@ c
 	  line(length+1:) = stokes
 	  length = len1(line) + 1
 	  line(length:length) = ','
-	  call lcase(stokes)
-	  call CalStoke(source,stokes,freq,y(1,i),NPTS,ierr)
-	  if(ierr.eq.2)call bug('f','Unknown source')
-	  if(ierr.eq.1)call bug('w','Extrapolation being used')
 	enddo
-	line(length+2:) = 'Source='//source
+	line(length:) = '; Source='
 	length = len1(line)
+	do i=1,nsrc
+	  line(length+1:) = source(i)
+	  length = len1(line) + 1
+	  line(length:length) = ','
+	enddo
+	length = length - 1
 c
 c  Determine the plot ranges.
 c
@@ -104,12 +119,14 @@ c
 	xlo = xrange(1) - delta
 	xhi = xrange(2) + delta
 c
-	ylo = y(1,1)
+	ylo = y(1,1,1)
 	yhi = ylo
-	do j=1,npol
-	  do i=1,NPTS
-	    ylo = min(ylo,y(i,j))
-	    yhi = max(yhi,y(i,j))
+	do k=1,nsrc
+	  do j=1,npol
+	    do i=1,NPTS
+	      ylo = min(ylo,y(i,j,k))
+	      yhi = max(yhi,y(i,j,k))
+	    enddo
 	  enddo
 	enddo
 	delta = 0.05*(yhi - ylo)
@@ -130,9 +147,11 @@ c
           call pgvstd
 	  call pgswin(xlo,xhi,ylo,yhi)
 	  call pgtbox('BCNST',0.,0,'BCNST',0.,0)
-	  do i=1,npol
-	    call pgsci(cols(mod(i-1,NCOL)+1))
-	    call pgline(npts,x,y(1,i))
+	  do j=1,nsrc
+	    do i=1,npol
+	      call pgsci(cols(mod(i-1,NCOL)+1))
+	      call pgline(npts,x,y(1,i,j))
+	    enddo
 	  enddo
 	  call pgsci(1)
 	  call pglab('Frequency (GHz)','Flux (Jy)',line(1:length))
