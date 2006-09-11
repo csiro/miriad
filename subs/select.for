@@ -35,6 +35,7 @@ c    rjs  13jan95 Added pulsar bin selection.
 c    rjs  22oct97 Change format of "on" selection.
 c    rjs  16jun00 Check for bad antenna numbers.
 c    rjs  28jul00 Correct bug introduced in the above.
+c    rjs  27oct00 Handle change in baseline numbering convention.
 c
 c  Routines are:
 c    subroutine SelInput(key,sels,maxsels)
@@ -118,7 +119,7 @@ c		by SelInput.
 c    object	The type of value to check. Possible values are:
 c		  Object:		Units of Value:
 c		  'time'		Julian day.
-c		  'antennae'		Baseline number = 256*ant1 + ant2.
+c		  'antennae'		Baseline number.
 c					One of ant1 or ant2 can be zero.
 c		  'uvrange'		Wavelengths.
 c		  'uvnrange'		Nanoseconds.
@@ -216,8 +217,14 @@ c  TIME	     Julian day	    Offset Julian day (val1) or day-fraction (val2).
 c
 	if(seltype1.eq.ANTS)then
 	  t1 = nint(value)
-	  t2 = t1/256
-	  t1 = t1 - 256*t2
+	  if(t1.gt.65536)then
+	    t1 = t1 - 65536
+	    t2 = t1 / 2048
+	    t1 = t1 - 2048*t2
+	  else
+	    t2 = t1/256
+	    t1 = t1 - 256*t2
+	  endif
 	  ant1 = min(t1,t2)
 	  ant2 = max(t1,t2)
 	else if(Seltype1.eq.TIME)then
