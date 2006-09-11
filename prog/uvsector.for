@@ -40,15 +40,21 @@ c	and generate a region along the ridge of a stripe.
 c@ width
 c	The full width of the sector, in degrees. This must be in the
 c	range (0,180). The default is 5 degrees.
+c@ options
+c	Extra processing options. Several can be given, separated by commas.
+c	Minimum match is used. There is currently only one option.
+c	  noapply    Report on what would be done, but do not apply the
+c	             flags.
 c--
 c  History
 c    rjs  26mar93 Original version.
 c    rjs   1dec94 Tell about the offending LST.
+c    rjs   4dec94 Correctly compute HA, LST, and noapply mode.
 c---------------------------------------------------------------------------
 	include 'mirconst.h'
 	character version*(*)
 	integer MAXSELS,MAXBOX,MAXIN
-	parameter(version='UvSector: version 1.0 26-Mar-93')
+	parameter(version='UvSector: version 1.0 4-Dec-94')
 	parameter(MAXSELS=1024,MAXBOX=1024,MAXIN=32)
 c
 	real sels(MAXSELS)
@@ -56,7 +62,7 @@ c
 	real uvpa,width
 	integer nin,nout,i,tIn
 	character vis(MAXIN)*64,in*64,mode*8
-	logical ImPrsnt,RegPrsnt,AnPrsnt
+	logical ImPrsnt,RegPrsnt,AnPrsnt,noapply
 c
 c  Externals.
 c
@@ -95,6 +101,7 @@ c
 	else
 	  call bug('f','Insufficient info to determine sector angle')
 	endif
+	call getopt(noapply)
 	call keyfin
 c
 c  Get an angle as an angle (measured counter-clockwise from u axis)
@@ -123,17 +130,18 @@ c
 	  call hisclose(tIn)
 c
 	  call SelApply(tIn,sels,.true.)
-	  call Process(tIn,uvpa,width)
+	  call Process(tIn,uvpa,width,noapply)
 	  call uvclose(tIn)
 	enddo
 c
 	end
 c************************************************************************
-	subroutine process(tIn,uvpa,width)
+	subroutine process(tIn,uvpa,width,noapply)
 c
 	implicit none
 	integer tIn
 	real uvpa,width
+	logical noapply
 c
 c  Do the actual flagging.
 c
@@ -141,17 +149,30 @@ c  Input:
 c    tIn
 c    uvpa
 c    width
+c    noapply
 c------------------------------------------------------------------------
 	include 'maxdim.h'
+	include 'mirconst.h'
+c
 	complex data(MAXCHAN)
 	logical flags(MAXCHAN)
-	double precision preamble(4)
-	real cs,sn,a,uu,vv
-	integer i,flagged,nchan
+	double precision preamble(4),theta
+	real cs,sn,a,uu,vv,XSum1,YSum1,XSum2,YSum2,x,y
+	integer i,flagged,nchan,n1,n2
+	character line*64
 c
 c  Externals.
 c
-	character itoaf*8
+	character itoaf*8,hangle*12
+c
+c  Initialise accumulators.
+c
+	XSum1 = 0
+	YSum1 = 0
+	n1 = 0
+	XSum2 = 0
+	YSum2 = 0
+	n2 = 0
 c
 c  Get cosines and sines and things.
 c
@@ -172,11 +193,46 @@ c
 	      if(flags(i)) flagged = flagged + 1
 	      flags(i) = .false.
 	    enddo
-	    call uvflgwr(tIn,flags)
+c
+c  Summ up the average time. Do it in such a way that we do not
+c  get screwed by observations over 12 hrs (but ignore ones longer
+c  than that!).
+c
+	    theta = 2*pi*mod(preamble(3)-0.5d0,1.d0)
+	    x = cos(theta)
+	    y = sin(theta)
+	    if(n1.eq.0)then
+	      XSum1 = x
+	      YSum1 = y
+	      n1 = 1
+	    else if(abs( x-XSum1/n1)+abs(y-YSum1/n1).lt.
+     *		    abs(-x-XSum1/n1)+abs(-y-YSum1/n1))then
+	      XSum1 = XSum1 + x
+	      YSum1 = YSum1 + y
+	      n1 = n1 + 1
+	    else
+	      XSum2 = XSum2 + x
+	      YSum2 = ySum2 + y
+	      n2 = n2 + 1
+	    endif
+	    if(.not.noapply)call uvflgwr(tIn,flags)
 	  endif
 	  call uvread(tIn,preamble,data,flags,MAXCHAN,nchan)
 	enddo
+c
 	call output('Correlations flagged: '//itoaf(flagged))
+	if(n1.gt.0)then
+	  theta = atan2(YSum1,XSum1)
+	  if(theta.lt.0)theta = theta + 2*pi
+	  line = 'Mean UTC time of the flagged data is '//hangle(theta)
+	  call output(line)
+	endif
+	if(n2.gt.0)then
+	  theta = atan2(YSum2,XSum2)
+	  if(theta.lt.0)theta = theta + 2*pi
+	  line = '                                 and '//hangle(theta)
+	  call output(line)
+	endif
 	end
 c************************************************************************
 	subroutine Getuvpa(in,boxes,maxbox,uvpa)
@@ -202,36 +258,33 @@ c------------------------------------------------------------------------
 	integer MAXRUN
 	parameter(MAXRUN=3*MAXDIM)
 	integer run(3,MAXRUN),nrun,nsize(MAXNAX),tIn
-	integer i,j,n,x,y,xmin,xmax,ymin,ymax
+	integer i,j,n,xmin,xmax,ymin,ymax,x,y
 	integer ira,idec
 	real SumX,SumY,SumXX,SumYY,SumXY,pnts
-	double precision cdelt1,cdelt2,crval1
-	character line*80,axisname*16
+	double precision cdelt1,cdelt2,crval1,crval2,t
+	character line*80
 	real r,rx,ry,rxy,theta
 c
 c  Externals
 c
-	character hangle*13
+	character hangle*11
 c
 c  Open the input file, and set up the boxes routine.
 c
 	call xyopen(tIn,in,'old',MAXNAX,nsize)
+	call coInit(tIn)
 c
 c  Determine the RA and DEC increments.
 c
-	ira = 0
-	axisname = 'ra'
-	call fndaxnum(tIn,'lon',axisname,ira)
-	idec = 0
-	axisname = 'dec'
-	call fndaxnum(tIn,'lat',axisname,idec)
-	if(ira.le.0.or.idec.le.0)
-     *	  call bug('f','RA or DEC axis is missing')
-	if(max(ira,idec).gt.2)
-     *	  call bug('f','Input needs to be in XY order')
+	call coFindAx(tIn,'ra',ira)
+	call coFindAx(tIn,'dec',idec)
+	if(min(ira,idec).ne.1.and.max(ira,idec).ne.2)
+     *	  call bug('f','RA and DEC axes must be the first two axes')
 	call rdhdd(tIn,'crval1',crval1,0.d0)
+	call rdhdd(tIn,'crval2',crval2,0.d0)
 	call rdhdd(tIn,'cdelt1',cdelt1,1.d0)
 	call rdhdd(tIn,'cdelt2',cdelt2,1.d0)
+	call coFin(tIn)
 c
 c  Get the box spec.
 c
@@ -284,7 +337,12 @@ c
 c
 c  If RA and DEC were reverse, fiddle the uvpa
 c
-	if(idec.eq.1)uvpa = pi/2 - uvpa
+	if(idec.eq.1)then
+	  uvpa = pi/2 - uvpa
+	  t = crval1
+	  crval1 = crval2
+	  crval2 = t
+	endif
 c
 c  Go to the Fourier plane, by rotating by 90 degrees.
 c
@@ -306,15 +364,38 @@ c
      *	  'Region inclination corresponds to a uvangle of',
      *	  180/pi*theta,' degrees'
 	call output(line)
-	theta = -uvpa
+c
+c  Calculate what this corresponds to for an E-W array.
+c
+	rx = cos(uvpa)
+	ry = sin(uvpa) / sin(crval2)
+	theta = atan2(ry,rx)
 	line = 'For an east-west array, this is an hour angle of '//
      *		hangle(dble(theta))
 	call output(line)
-	theta = theta - crval1
+	theta = theta + crval1
 	theta = mod(theta,2*pi)
 	if(theta.lt.0)theta = theta + 2*pi
-	line = '                                      and LST of '//
-     *		hangle(dble(theta))
+	if(theta.gt.pi)theta = theta - pi
+	line = ' ... and LST of '//hangle(dble(theta))//' or '//
+     *				   hangle(dble(theta+pi))
 	call output(line)
 c
+	end
+c************************************************************************
+	subroutine GetOpt(noapply)
+c
+	implicit none
+	logical noapply
+c
+c  Get processing options.
+c------------------------------------------------------------------------
+	integer NOPTS
+	parameter(NOPTS=1)
+	character opts(NOPTS)*8
+	logical present(NOPTS)
+	data opts/'noapply '/
+c
+	call options('options',opts,present,NOPTS)
+	noapply = present(1)
 	end
