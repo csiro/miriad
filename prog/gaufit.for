@@ -246,6 +246,7 @@ c	          compiler complaints.
 c     rjs 28jan00 Some FORTRAN standardization to get it through a
 c		  compiler.
 c     rjs 08may00 Change incorrect call to keyf to keya.
+c     dpr 15nov00 Change incorrect call to keyf to keya.
 c************************************************************************
 
 c The main program first gets all inputs and then calls the workhorse.
@@ -646,7 +647,9 @@ c        Ask for expected rms; check if filename given
          call assertl( keyprsnt('rmsest'),
      *                 'It is necessary to use the rmsest keyword' )
          rmsest = -1.
-         call keyf( 'rmsest', rms, ' ' )
+c  dpr 15-11-00 ->
+         call keya( 'rmsest', rms, ' ' )
+c  <-
          call hopen( i, rms, 'old', iostat )
          if( iostat.ne.0 ) then
             call atorf( rms, rmsest, ok )
