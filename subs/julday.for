@@ -35,6 +35,7 @@ c    rjs    23dec92  Eliminate conditional compilation, and use mitime,
 c                   midate.
 c    rjs    16sep93  Rename bsrch to binsrch.
 c     jm    14mar94  Added check for blank input strings; removed tabs.
+c    rjs    10oct94  Round date in julfdate.
 c***********************************************************************
 c* JulDay -- Format a Julian day into a conventional calendar day.
 c& jm
@@ -514,6 +515,7 @@ c    date      Date in 'dd/mm/yy'.
 c------------------------------------------------------------------------
       character string*24,mmm*3
       integer yy,dd,mm
+      double precision jday1
 c
       character months(12)*3
       integer monthno(12)
@@ -527,7 +529,8 @@ c
       data monthno/ 4,    8,   12,    2,    1,    7,    6,
      *              3,    5,   11,   10,    9 /
 c
-      call JulDay(jday,'H',string)
+      jday1 = nint(jday-0.5d0) + 0.5d0
+      call JulDay(jday1,'H',string)
       read(string,'(i2,a3,i2)')yy,mmm,dd
       mm = binsrcha(mmm,months,12)
       if(mm.eq.0) call bug('f','Could not determine date!')
