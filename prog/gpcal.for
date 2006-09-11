@@ -2,7 +2,7 @@ c************************************************************************
 	program gpcal
 	implicit none
 c
-c= Gpcal -- Gain/phase/polarization calibration of of linear feed data.
+c= Gpcal -- Gain/phase/polarization calibration of linear feed data.
 c& rjs nebk
 c: calibration
 c+
