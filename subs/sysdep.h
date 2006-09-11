@@ -11,8 +11,24 @@
  *		  needed, and bcopy is slower on the Suns anyway.
  *    rjs 24jun91 Added memcmp define for the convex.
  *    rjs 18dec92 Added hpux. Various tidying.
- c    mjs 19feb93 Added mips.
+ *    mjs 19feb93 Added mips.
+ *     jm 07nov94 Added definition of Null and typedef of Void.  The
+ *                Void typedef permits proper casting in both ANSI
+ *                and non-ANSI archs.  Also added definition to permit
+ *                the use of const in non-ANSI declarations.
+ *    rjs 20nov94 Added alphas.
  */
+
+#ifndef Null
+#define Null '\0'
+#endif
+
+#ifdef __STDC__
+typedef void Void;
+#else
+typedef char Void;
+#define const /* NULL */
+#endif /*__STDC__*/
 
 typedef int int2;
 
@@ -54,7 +70,7 @@ typedef int int2;
 /************************************************************************/
 
 #ifndef defined_params
-#ifdef convex
+#if defined(convex) || defined(alpha)
 #  define FORT_TRUE  -1
 #else
 #  define FORT_TRUE 1
