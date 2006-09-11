@@ -1,4 +1,11 @@
 c************************************************************************
+c
+c  Ephemerides of the planets.
+c
+c  History:
+c    rjs  xxdec95 Original version.
+c    rjs  18dec95 Make sub-Earth point a right handed coordinate system.
+c************************************************************************
 	subroutine plradec(jday,np,ra,dec)
 c
 	implicit none
@@ -108,12 +115,12 @@ c  X,Y,Z axes for W=0.
 c
 	call sph2lmn(alpha,delta,z)
 	call sph2lmn(alpha+0.5*dpi,0.d0,x)
-	call veccross(x,z,y)
+	call veccross(z,x,y)
 c
 c  Rotate the x and y axes by W.
 c
 	cosW = cos(W)
-	sinW = -sin(W)
+	sinW = sin(W)
 	do i=1,3
 	  xd(i) =  cosW*X(i) + sinW*Y(i)
 	  yd(i) = -sinW*X(i) + cosW*Y(i)
