@@ -34,6 +34,7 @@ c    rjs   4sep94 Remove char*(*) from subroutine call.
 c    rjs  13jan95 Added pulsar bin selection.
 c    rjs  22oct97 Change format of "on" selection.
 c    rjs  16jun00 Check for bad antenna numbers.
+c    rjs  28jul00 Correct bug introduced in the above.
 c
 c  Routines are:
 c    subroutine SelInput(key,sels,maxsels)
@@ -505,7 +506,7 @@ c  Handle antennae.
 c
 	  else if(seltype.eq.ANTS)then
 	    call SelDcde(spec,k1,k2,ant1,n1,MAXANT,'real')
-	    do i=1,n
+	    do i=1,n1
 	      if(ant1(i).lt.0.5)
      *		call bug('f','Bad antenna number in selection')
 	    enddo
@@ -514,7 +515,7 @@ c
 	      ant2(1) = 0
 	    else
 	      call SelDcde(spec,k1,k2,ant2,n2,MAXANT,'real')
-	      do i=1,n
+	      do i=1,n2
 		if(ant2(i).lt.0.5)
      *		  call bug('f','Bad antenna number in selection')
 	      enddo
