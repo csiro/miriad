@@ -26,17 +26,18 @@ c--
 c  History:
 c    rjs  23feb00 Original version.
 c    rjs  04feb01 Some small tidying.
+c    rjs  02apr02 Get it to work for Stokes parameters.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
 	integer MAXDAT,MAXSRC,MAXPOL
 	integer PolMin,PolMax
 	character version*(*)
-	parameter(version='version 04-Feb-01')
+	parameter(version='version 02-Apr-02')
 	parameter(MAXDAT=15,MAXPOL=2,MAXSRC=1024)
 	parameter(PolMin=-8,PolMax=4)
 c
-	logical dotrip,polp
+	logical dotrip,polp,dopara
 	character uvflags*16,line*80,con*6
 	character sources(MAXSRC)*16
 	real scat2,SSms,flux,flux2,SSmm,rp,ip
@@ -78,6 +79,9 @@ c
 	interval = interval / (24.d0*60.d0)
 	call keyfin
 c
+	call uvDatGti('npol',npol)
+	dopara = npol.eq.0
+c
 c  Initialise the integration buffers.
 c
 	do j=1,MAXPOL
@@ -118,7 +122,8 @@ c
 	    call basant(preamble(4),ant1,ant2)
 	    if(min(ant1,ant2).ge.1.and.max(ant1,ant2).le.MAXANT.and.
      *	        ant1.ne.ant2)
-     *		call PolIdx(p,npol,polcvt,PolMin,PolMax,MAXPOL,polp)
+     *		call PolIdx(p,npol,dopara,polcvt,PolMin,PolMax,MAXPOL,
+     *		polp)
 c
 c  Handle time information, and do fiddles for the first time through.
 c
@@ -281,12 +286,13 @@ c
 	if(.not.present(4))uvflags(7:7) = 'f'
 	end
 c************************************************************************
-	subroutine PolIdx(p,npol,polcvt,PolMin,PolMax,MAXPOL,polp)
+	subroutine PolIdx(p,npol,dopara,polcvt,PolMin,PolMax,MAXPOL,
+     *								polp)
 c
 	implicit none
 	integer p,PolMin,PolMax,npol,MAXPOL
 	integer polcvt(PolMin:PolMax)
-	logical polp
+	logical polp,dopara
 c------------------------------------------------------------------------
 	integer pol
 c
@@ -298,7 +304,7 @@ c
 	call uvDatGti('pol',pol)
 	if(pol.lt.PolMin.or.pol.gt.PolMax)return
 	if(polcvt(pol).eq.0)then
-	  if(PolsPara(pol))then
+	  if(dopara.eqv.PolsPara(pol))then
 	    npol = npol + 1
 	    if(npol.gt.MAXPOL)call bug('f','Too many polarisations')
 	    polcvt(pol) = npol
