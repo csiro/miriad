@@ -179,6 +179,7 @@ c    rjs  07may98 Change in handling of jstat.eq.5 return value.
 c    rjs  14may98 Handle higher time resolution.
 c    rjs  04oct98 Extra check for validity of a record.
 c    rjs  12nov98 options=hires now supports high time resolution bin mode.
+c    rjs  31aug99 Check for bad RPFITS value for sdf.
 c
 c  Program Structure:
 c    Miriad atlod can be divided into three rough levels. The high level
@@ -204,7 +205,7 @@ c------------------------------------------------------------------------
 	integer MAXFILES
 	parameter(MAXFILES=128)
 	character version*(*)
-	parameter(version='AtLod: version 1.0 12-Nov-98')
+	parameter(version='AtLod: version 1.0 31-Aug-99')
 c
 	character in(MAXFILES)*64,out*64,line*64
 	integer tno
@@ -581,6 +582,8 @@ c
 	else
 	  sdf(if) = 1e-9*abs(bw)
 	endif
+	if(abs(sdf(if)).eq.0)
+     *	  call bug('w','Channel width in RPFITS file is 0')
 	sfreq(if) = 1e-9*freq - (ref-1)*sdf(if)
 	edge(if) = 0
 	bchan(if) = 0
@@ -631,6 +634,8 @@ c
 c------------------------------------------------------------------------
 	double precision flo
 c
+	if(abs(sdf).eq.0)call bug('f',
+     *	  'Cannot use options=birdie when channel width is unknown')
 	flo = sfreq + 0.5*(nfreq-1)*sdf
 	flo = 0.128d0 * nint(flo/0.128d0)
 	chan = nint((flo - sfreq)/sdf) + 1
