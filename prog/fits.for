@@ -342,9 +342,11 @@ c    rjs  04-jul-05  More robust to some weirdo variants.
 c    rjs  19-sep-05  Better defaults for velocity info, and better
 c		     velocity formula. Handle AIPS OB tables.
 c    rjs  24-sep-05  Increase max number of sources in op=uvout
+c    rjs  03-aug-06  In reading in images, llrot was sometimes not
+c                    correct. Also handle some rare keywords a little better.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 24-Sep-05')
+	parameter(version='Fits: version 1.1 03-Aug-06')
 	integer maxboxes
 	parameter(maxboxes=2048)
 	character in*128,out*128,op*8,uvdatop*12
@@ -3663,6 +3665,7 @@ c
 c
 	ilong = 0
 	ilat = 0
+	llrot = 0
 c
 	do i=1,naxis
 	  num = itoaf(i)
@@ -4495,7 +4498,7 @@ c    version
 c
 c------------------------------------------------------------------------
 	integer nlong,nshort
-	parameter(nlong=47,nshort=9)
+	parameter(nlong=50,nshort=9)
 	character card*80
 	logical more,discard,found,unrec
 	integer i
@@ -4514,15 +4517,15 @@ c
      *	  '        ', .true.,  'ALTRPIX ', .false., 'ALTRVAL ', .false.,
      *    'BITPIX  ', .false., 'BLANK   ', .false., 'BLOCKED ', .false.,
      *	  'BMAJ    ', .false., 'BMIN    ', .false., 'BPA     ', .false.,
-     *	  'BSCALE  ', .false., 'BTYPE   ', .false.,
-     *	  'BUNIT   ', .false., 'BZERO   ', .false., 'CELLSCAL', .false.,
-     *	  'COMMAND ', .true.,  'COMMENT ', .true.,
+     *	  'BSCALE  ', .false., 'BTYPE   ', .false., 'BUNIT   ', .false.,
+     *    'BZERO   ', .false., 'CELLSCAL', .false., 'COMMAND ', .true.,
+     *    'COMMENT ', .true.,  'DATAMAX ', .false., 'DATAMIN ', .false., 
      *	  'DATE    ', .false., 'DATE-MAP', .false., 'DATE-OBS', .false.,
      *	  'END     ', .false., 'EPOCH   ', .false., 'EQUINOX ', .false.,
      *	  'EXTEND  ', .false., 'GCOUNT  ', .false., 'GROUPS  ', .false.,
      *	  'HISTORY ', .true.,  'INSTRUME', .false., 'LSTART  ', .false.,
-     *	  'LSTEP   ', .false., 'LTYPE   ', .false., 'LWISTH  ', .false.,
-     *	  'OBJECT  ', .false.,
+     *	  'LSTEP   ', .false., 'LTYPE   ', .false., 'LWIDTH  ', .false.,
+     *	  'NITERS  ', .false., 'OBJECT  ', .false.,
      *	  'OBSDEC  ', .false., 'OBSERVER', .false., 'OBSRA   ', .false.,
      *	  'ORIGIN  ', .false., 'PBFWHM  ', .false., 'PBTYPE  ', .false.,
      *	  'PCOUNT  ', .false., 'RESTFREQ', .false., 'RMS     ', .false.,
