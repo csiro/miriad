@@ -32,7 +32,10 @@ c@ range
 c	Min and max greyscale values for the greyscale plot. The default is
 c	the image minimum and maximum.
 c@ device
-c	Plotting device. No default.
+c	Plotting device. See the help on "device" for more information.
+c	The default is not to make a plot.
+c@ log
+c	Output log file. The default is not to make a log file.
 c@ options
 c	Task enrichment options.  Minimum match is active.
 c	  natural   Assume keywords "center" and "radius" are in natural
@@ -51,8 +54,8 @@ c
         parameter(maxboxes=2048)
 c
 	real pa,incline,rmin,rmax,cospa,sinpa,cosi,zmin,zmax
-        integer boxes(maxboxes),i,blc(3),trc(2),nsize(2),lIn,nx,ny
-	character in*64,cin*2,xlab*24,ylab*24,device*64
+        integer boxes(maxboxes),i,blc(3),trc(3),nsize(3),lIn,nx,ny,k
+	character in*64,cin*2,xlab*24,ylab*24,device*64,logf*64
 	logical natural
 	double precision center(2),cdelt(2),crpix(2),rts
 c
@@ -86,26 +89,27 @@ c
 	endif
 	call keyr('range',zmin,0.)
 	call keyr('range',zmax,zmin)
+	call keya('log',logf,' ')
 	call keya('device',device,' ')
-	if(device.eq.' ')call bug('f',
-     *	  'A plotting device must be given')
+	if(device.eq.' '.and.logf.eq.' ')call bug('f',
+     *	  'Either a plotting device or a log file must be given')
         call getopt(natural)
         call keyfin
 c
 c  Open the input.
 c
-        call xyopen(lIn,in,'old',2,nsize)
+        call xyopen(lIn,in,'old',3,nsize)
         if(nsize(1).gt.maxdim)call bug('f','Input file too big for me')
 c
 c  Set up the region of interest.
 c
         call boxmask(lIn,boxes,maxboxes)
-        call boxset(boxes,2,nsize,'s')
-        call boxinfo(boxes,2,blc,trc)
+        call boxset(boxes,3,nsize,'s')
+        call boxinfo(boxes,3,blc,trc)
 c
 c  Get the image min and max if needed.
 c
-	if(zmin.eq.zmax)call ImMinMax(lIn,2,nsize,zmin,zmax)
+	if(zmin.eq.zmax)call ImMinMax(lIn,3,nsize,zmin,zmax)
 	if(zmin.eq.zmax)call bug('f','All image pixels are identical')
 c
 c  Get center and pixel size from image.
@@ -148,28 +152,44 @@ c
 	call memAlloc(ptheta,mpnt,'r')
 	call memAlloc(pArray,nx*ny,'r')
 c
+c  Initialise PGPLOT.
+c
+	if(device.ne.' ')then
+	  if(pgbeg(0,device,1,1).ne.1)then
+	    call pgldev
+	    call bug('f','Error opening graphics device')
+	  endif
+	  call pgscf(2)
+	endif
+	if(logf.ne.' ')call logopen(logf,' ')
+c
 c  Load the points.
 c
-	call Load(lIn,memr(pArray),nx,ny,blc(1),blc(2),
-     *	  rts*cdelt(1),rts*cdelt(2),crpix(1),crpix(2),
-     *	  center(1),center(2),
-     *	  memr(pxval),memr(pyval),memr(ptheta),memr(pval),mpnt,npnt,
-     *	  cospa,sinpa,cosi,rmin,rmax)
+	do k=blc(3),trc(3)
+	  call xysetpl(lIn,1,k)
+	  call Load(lIn,memr(pArray),nx,ny,blc(1),blc(2),
+     *	    rts*cdelt(1),rts*cdelt(2),crpix(1),crpix(2),
+     *	    center(1),center(2),
+     *	    memr(pxval),memr(pyval),memr(ptheta),memr(pval),mpnt,npnt,
+     *	    cospa,sinpa,cosi,rmin,rmax)
 c
 c  Plot the data.
 c
-	if(pgbeg(0,device,1,1).ne.1)then
-	  call pgldev
-	  call bug('f','Error opening graphics device')
-	endif
-	call pgscf(2)
 c
-	call Plotit(memr(pArray),nx,ny,rts*cdelt(1),rts*cdelt(2),
-     *	  crpix(1)-blc(1)+1,crpix(2)-blc(2)+1,center(1),center(2),
-     *	  zmin,zmax,xlab,ylab,
-     *	  memr(pxval),memr(pyval),memr(ptheta),memr(pval),npnt)
+	  if(device.ne.' ')
+     *	    call Plotit(memr(pArray),nx,ny,rts*cdelt(1),rts*cdelt(2),
+     *	    crpix(1)-blc(1)+1,crpix(2)-blc(2)+1,center(1),center(2),
+     *	    zmin,zmax,xlab,ylab,
+     *	    memr(pxval),memr(pyval),memr(ptheta),memr(pval),npnt)
 c
-	call pgend
+c  List the data.
+c
+	  if(logf.ne.' ')
+     *	    call Logit(k,memr(ptheta),memr(pval),npnt)
+	enddo
+c
+	if(device.ne.' ')call pgend
+	if(logf.ne.' ')call logclose
         call xyclose(lin)
 c
 	end
@@ -199,6 +219,7 @@ c
 	ymin = (1-y0)*dy - yc
 	ymax = (ny-y0)*dy - yc
 c
+	call pgpage
 	call pgsvp(0.1,0.9,0.42,0.9)
 	call pgwnad(xmin,xmax,ymin,ymax)
 	tr(1) = xmin - dx
@@ -231,7 +252,7 @@ c
 	call pgpt(npnt,theta,val,symbol)
 	call pgsci(1)
 	call pgbox('BCNST',0.,0,'BCNST',0.,0)
-	call pglab('CML (degrees)','Intensity',' ')
+	call pglab('\gl\dIII\u (degrees)','Intensity',' ')
 	end
 c************************************************************************
 	subroutine Load(lIn,Data,nx,ny,i0,j0,dx,dy,x0,y0,xc,yc,
@@ -304,3 +325,32 @@ c
       natural = present(1)
 c
       end
+c************************************************************************
+	subroutine Logit(k,theta,val,npnt)
+c
+	implicit none
+	integer k,npnt
+	real theta(npnt),val(npnt)
+c
+c  Write out the values of the intensity as a function of angle.
+c------------------------------------------------------------------------
+	integer i
+	character line*64
+	logical more
+c
+c  Externals.
+c
+	character itoaf*8
+c
+	call logwrite('#',more)
+	call logwrite('# Angles (degrees) and intensity for plane '//
+     *							itoaf(k),more)
+	call logwrite('#',more)
+	i = 0
+	dowhile(i.lt.npnt.and.more)
+	  i = i + 1
+	  write(line,'(f7.2,1pe13.5)')theta(i),val(i)
+	  call logwrite(line,more)
+	enddo
+c
+	end
