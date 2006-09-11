@@ -363,6 +363,9 @@ c  Input:
 c    mode
 c--
 c  NOTE: This assumes that floating point pixels are being written!!!
+c
+C  TODO: consider taking this out or writing a comment, since the BLANK
+c        keyword is not defined for BITPIX < 0 files
 c------------------------------------------------------------------------
 	include 'fitsio.h'
 c
