@@ -18,6 +18,7 @@ c    13nov95 rjs  Fix possible non-closing gains in uvgnFac.
 c    16nov95 rjs  Linearly interpolate when the bandpass gains are sampled
 c		  more coarsely than the data.
 c    29mar96 rjs  Some tidying of the cgains routines!!
+c     7may96 rjs  Improved goodness measure in uvgnpsma.
 c************************************************************************
 	subroutine uvGnIni(tno1,dogains1,dopass1)
 	implicit none
@@ -1107,7 +1108,7 @@ c
 	    width = min(endt,endd) - max(startt,startd)
 	    if(width.gt.0)then
 	      hwidth = abs(swidth0(j) / sdf(i))
-	      goodness = width / (endd - startd)
+	      goodness = 2 * width / (endd - startd)
 	      if(hwidth.gt.0.8) goodness = goodness + 1
 	      if(hwidth.lt.1.2) goodness = goodness + 1
 	      if(goodness.gt.good(j))then
