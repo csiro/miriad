@@ -22,10 +22,12 @@ c@ nxy
 c	Number of plots in the x and y directions. The default varies.
 c@ xrange
 c	The min and max range along the x axis of the plots. The default
-c	is to autoscale. Note that time should be given in seconds.
+c	is to autoscale. Note that for "time" should be given in normal Miriad
+c	time format (either absolute time or time-of-day).
 c@ yrange
 c	The min and max range along the y axis of the plots. The default
-c	is to autoscale.
+c	is to autoscale. Note that for "time" should be given in normal Miriad
+c	time format (either absolute time or time-of-day).
 c@ options
 c	Extra processing options. Several can be given, separated by
 c	commas. Minimum match is used.
@@ -59,18 +61,20 @@ c    rjs  23sep94 Fixed bug determining default axis ranges when there were
 c		  multiple X axes.
 c    rjs  27apr95 Handle case where a variable does not appear in the first
 c		  records.
+c    rjs  13oct95 xrange and yrange handle times in normal Miriad format.
 c  Bugs:
 c    ?? Perfect?
 c------------------------------------------------------------------------
 	character version*(*)
 	integer MAXPNTS
 	parameter(MAXPNTS=100000)
-	parameter(version='VarPlt: version 1.1 27-Apr-95')
+	parameter(version='VarPlt: version 1.1 13-Oct-95')
 	logical doplot,dolog,dotime,dounwrap
 	character vis*64,device*64,logfile*64,xaxis*16,yaxis*16
 	character xtype*1,ytype*1,xunit*16,yunit*16,calday*24
 	real xrange(2),yrange(2),xvals(MAXPNTS),yvals(MAXPNTS)
 	double precision xscale,xoff,yscale,yoff
+	double precision xtime1,xtime2,ytime1,ytime2
 	integer nx,ny,tIn,xdim1,xdim2,ydim1,ydim2,n0,n1,maxpnt,npnts
 	logical xaver,yaver,compress,dtime,overlay,more
 c
@@ -98,11 +102,21 @@ c
 	call keya('yaxis',yaxis,' ')
 	if(yaxis.eq.' ')
      *	  call bug('f','Yaxis variable name must be given')
-	call keyr('xrange',xrange(1),0.)
-	call keyr('xrange',xrange(2),xrange(1)-1.)
-	call keyr('yrange',yrange(1),0.)
-	call keyr('yrange',yrange(2),yrange(1)-1.)
 	call GetOpt(compress,dtime,overlay,dounwrap)
+	if(xaxis.eq.'time')then
+	  call keyt('xrange',xtime1,'time',0.d0)
+	  call keyt('xrange',xtime2,'time',0.d0)
+	else
+	  call keyr('xrange',xrange(1),0.)
+	  call keyr('xrange',xrange(2),xrange(1)-1.)
+	endif
+	if(yaxis.eq.'time')then
+	  call keyt('yrange',ytime1,'time',0.d0)
+	  call keyt('yrange',ytime2,'time',0.d0)
+	else
+	  call keyr('yrange',yrange(1),0.)
+	  call keyr('yrange',yrange(2),yrange(1)-1.)
+	endif
 	call keyfin
 c
 c  Open up all the inputs.
@@ -114,17 +128,16 @@ c
 c
 c  Time along the x axis is treated as a special case.
 c
-	if(xaxis.eq.'time')then
-	  dotime = .not.dtime
-	  if(dotime)then
-	    xscale = 3600*xscale
-	    xunit = 'hh:mm:ss'
-	  else
-	    xscale = xscale/24
-	  endif
-	else
-	  dotime = .false.
+	dotime = xaxis.eq.'time'.and..not.dtime
+	if(dotime)then
+	  xunit = 'hh:mm:ss'
+	  xscale = 24*3600
 	endif
+	if(xaxis.eq.'time')
+     *	  call TimeFid(xtime1,xtime2,xscale,xoff,xrange)
+c
+	if(yaxis.eq.'time')
+     *	  call TimeFid(ytime1,ytime2,yscale,yoff,yrange)
 c
 c  Determine the max number of visibs that can be read.
 c
@@ -206,6 +219,32 @@ c
 	endif
 c
 c  Bye bye.
+c
+	end
+c************************************************************************
+	subroutine TimeFid(time1,time2,scale,off,range)
+c
+	implicit none
+	double precision time1,time2,scale,off
+	real range(2)
+c
+c  Fiddle for times.
+c------------------------------------------------------------------------
+	double precision t1,t2
+c
+	if(time1.ne.time2)then
+	  t1 = time1
+	  t2 = time2
+	  if(t1.lt.1.and.t2.lt.t1)t2 = t2 + 1
+	  if(t1.gt.1)t1 = t1 - off
+	  if(t2.gt.2)t2 = t2 - off
+	  if(t1.gt.t2)call bug('f','Invalid time range')
+	  range(1) = scale*t1
+	  range(2) = scale*t2
+	else
+	  range(1) = 0
+	  range(2) = 0
+	endif
 c
 	end
 c************************************************************************
