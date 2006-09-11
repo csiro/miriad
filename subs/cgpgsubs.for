@@ -133,6 +133,7 @@ c     nebk   02may96     NAXLABCG was in a tangle for RA=0 crossing axes
 c                        when *not* labelled as 'hms'
 c     nebk   31oct96     Make sure zp is correct if just one plane
 c                        in NAXLABCG
+c     nebk   14fen97     Add argumebnt val3form to LAB3CG
 c**********************************************************************
 c
 c* annboxCG -- Annotate plot with information from a box image 
@@ -1273,12 +1274,14 @@ c* lab3CG -- Label sub-plot with value and/or pixel of 3rd axis
 c& nebk
 c: plotting
 c+
-      subroutine lab3cg (lun, doerase, doval, dopix, labtyp, ipl, plav)
+      subroutine lab3cg (lun, doerase, doval, dopix, labtyp, ipl, 
+     +                   plav, val3form)
 c
       implicit none
       integer ipl, plav, lun
       logical doval, dopix, doerase
       character*6  labtyp(2)
+      character val3form*(*)
 c
 c  Label the plot with the third axis values or pixel or both
 c
@@ -1290,11 +1293,12 @@ c    dopix      .true. if writing pixel
 c    labtyp     Axis label types
 c    ipl        Start plane of image being plotted
 c    plav       Number of planes being averaged for current sub-plot
+c    val3form   Format for 3val label
 c--
 c----------------------------------------------------------------------
       double precision pix, val3
       real mx, my, x1, x2, y1, y2, xb(4), yb(4), dx, dy
-      character str1*30, str2*30, str3*60, types(3)*4, ltype*6
+      character str1*30, str2*30, str3*60, types(3)*4, ltype*6, form*30
       integer i1, i3, is2, ie2
 c
       include 'maxnax.h'
@@ -1369,13 +1373,18 @@ c
         else if (ltype.eq.'dms') then
           str2 = rangle(val3)
         else 
-          if (val3.lt.100.0) then
-             call strfmtcg (real(val3), 2, str2, ie2)
-          else if (val3.lt.1000.0) then
-             call strfmtcg (real(val3), 3, str2, ie2)
-          else
-             call strfmtcg (real(val3), 6, str2, ie2)
-          end if
+            if (val3form.eq.' ') then
+             if (val3.lt.100.0) then
+               call strfmtcg (real(val3), 2, str2, ie2)
+             else if (val3.lt.1000.0) then
+               call strfmtcg (real(val3), 3, str2, ie2)
+             else
+               call strfmtcg (real(val3), 6, str2, ie2)
+             end if
+           else
+              form = '(' // val3form(1:len1(val3form)) // ')'
+              call strfd (val3, form, str2, ie2)
+           end if
         end if  
         ie2 = len1(str2)
         is2 = 1
