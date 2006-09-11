@@ -147,6 +147,7 @@ c    rjs  27mar95 Options=reweight.
 c    rjs  26apr95 Make options=unflag always behave as advertised.
 c    rjs  20sep95 Option=birdie flags the birdie channel in spectral
 c		  line mode.
+c    rjs  27sep95 Flagging stats. Will Mr K still whinge? Probably!
 c
 c  Program Structure:
 c    Miriad atlod can be divided into three rough levels. The high level
@@ -189,9 +190,6 @@ c
 c  Get the input parameters.
 c
 	call output(version)
-	call output('Options=birdie,reweight are available to discard')
-	call output(' suspect channels and eliminate Gibbs phenomena')
-	call output(' in continuum mode')
 	call keyini
 	call mkeyf('in',in,MAXFILES,nfiles)
 	if(nfiles.eq.0)
@@ -1417,6 +1415,10 @@ c------------------------------------------------------------------------
 	real ut,utprev,utprevsc,u,v,w,weight(MAXCHAN*MAXPOL)
 	complex vis(MAXCHAN*MAXPOL)
 c
+c  Information on flagging.
+c
+	integer nrec,nspec,fgbad,fgoffsrc,fginvant,fgsysc,fgsam
+c
 c  Variables to track the sysc records.
 c
 	logical scinit(MAX_IF,ANT_MAX),scbuf(MAX_IF,ANT_MAX)
@@ -1430,6 +1432,10 @@ c
 c
 	logical antvalid(ANT_MAX)
 	double precision jday0,time,tprev
+c
+c  Externals.
+c
+	character itoaf*8,pcent*6
 c
 c  Open the RPFITS file.
 c
@@ -1445,6 +1451,15 @@ c
 	    nxyp(i,j) = 0
 	  enddo
 	enddo
+c
+c  Initialise flagging information.
+c
+	nrec  = 0
+	fgbad = 0
+	fgoffsrc = 0
+	fginvant = 0
+	fgsysc   = 0
+	fgsam    = 0
 c
 	utprev   = -1
 	utprevsc = -1
@@ -1548,16 +1563,29 @@ c
 c
 	    i1 = baseln/256
 	    i2 = mod(baseln,256)
-            if(ok) ok = ifno.ge.1.and.ifno.le.n_if
-            if(ok) ok = If2Sim(ifno).gt.0
-	    if(ok) ok = min(i1,i2).ge.1.and.max(i1,i2).le.nant
-	    if(ok) then
-	      if(.not.(antvalid(i1).and.antvalid(i2)))flag = 1
-	      if(.not.((scinit(ifno,i1).and.scinit(ifno,i2)).or.relax))
-     *								flag = 1
-	    endif
-	    if(ok) ok = flag.eq.0.or.unflag
 	    if(ok) ok = (i1.eq.i2.and.doauto).or.(i1.ne.i2.and.docross)
+            if(ok)then
+	      ok = ifno.ge.1.and.ifno.le.n_if.and.
+     *	    	   min(i1,i2).ge.1.and.max(i1,i2).le.nant.and.
+     *		   bin.ge.0
+	      if(.not.ok)fgbad = fgbad + 1
+	    endif
+            if(ok)ok = If2Sim(ifno).gt.0
+	    if(ok) then
+	      nspec = if_nstok(ifno)
+	      nrec = nrec + nspec
+	      if(flag.ne.0)then
+		fgoffsrc = fgoffsrc + nspec
+	      else if(.not.(antvalid(i1).and.antvalid(i2)))then
+		flag = 1
+		fginvant = fginvant + nspec
+	      else if(.not.((scinit(ifno,i1).and.scinit(ifno,i2)).or.
+     *		relax))then
+		flag = 1
+		fgsysc = fgsysc + nspec
+	      endif
+	      if(ok) ok = flag.eq.0.or.unflag
+	    endif
 c
 c  If we are going to accept it, see if we need to flush the buffers.
 c
@@ -1606,12 +1634,11 @@ c
 	      call GetFg(if_nstok(ifno),if_cstok(1,ifno),flag,
      *		xflag(ifno,i1).or.relax,yflag(ifno,i1).or.relax,
      *		xflag(ifno,i2).or.relax,yflag(ifno,i2).or.relax,
-     *		flags)
+     *		flags,fgsam)
 c
 c  Send the data record to the Poke routines.
 c
 	      if(bin.eq.0) bin = 1
-	      if(bin.lt.1)call bug('f','Invalid pulsar bin number')
 c	      tint = 0
 	      tint = intbase
 	      if(tint.eq.0)tint = intime
@@ -1639,11 +1666,49 @@ c  Flush out anything remaining.
 c
 	if(Accum.and.jstat.eq.3)call PokeFlsh
 c
+c  Give summary about flagging.
+c
+	if(fgbad.gt.0)
+     *	  call bug('w','Number of invalid data records: '//itoaf(fgbad))
+	if(fgoffsrc+fginvant+fgsysc+fgsam.gt.0)then
+	  call output('---------------------------------------')
+	  call output('Total number of spectra selected: '//itoaf(nrec))
+	  call output(' ')
+	  call output('Summary of spectra flagged')
+	  call output('Flagging Reason        Fraction')
+	  call output('---------------        --------')
+	  if(fgoffsrc.gt.0)
+     *	  call output('Antenna off-source      '//pcent(fgoffsrc,nrec))
+	  if(fginvant.gt.0)
+     *	  call output('Antenna disabled        '//pcent(fginvant,nrec))
+	  if(fgsysc.gt.0)
+     *	  call output('Missing SYSCAL record   '//pcent(fgsysc,nrec))
+	  if(fgsam.gt.0)
+     *	  call output('Bad SYSCAL values       '//pcent(fgsam,nrec))
+	  call output('---------------------------------------')
+	endif
+c
 c  We are done. Close up, and return the error code.
 c
 	call RPClose(iostat)
 	if(iostat.eq.0.and.jstat.ne.3)iostat = jstat
 c
+	end
+c************************************************************************
+	character*(*) function pcent(frac,total)
+c
+	implicit none
+	integer frac,total
+c------------------------------------------------------------------------
+	character val*5
+	real x
+	x = real(100*frac)/real(total)
+	if(x.gt.9.99)then
+	  write(val,'(f5.1)')x
+	else
+	  write(val,'(f5.2,a)')x
+	endif
+	pcent = val//'%'
 	end
 c************************************************************************
 	subroutine RPEOF(jstat)
@@ -1737,10 +1802,10 @@ c
 	end
 c************************************************************************
 	subroutine GetFg(nstok,cstok,flag,xflag1,yflag1,xflag2,yflag2,
-     *		flags)
+     *		flags,fgsam)
 c
 	implicit none
-	integer nstok,flag
+	integer nstok,flag,fgsam
 	character cstok(nstok)*(*)
 	logical flags(nstok),xflag1,yflag1,xflag2,yflag2
 c
@@ -1767,6 +1832,7 @@ c
 	    else
 	      call bug('f','Unrecognised polarisation type, in GetFg')
 	    endif
+	    if(.not.flags(p))fgsam = fgsam + 1
 	  enddo
 	endif
 c
