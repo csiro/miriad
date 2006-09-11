@@ -38,15 +38,12 @@ c	each separated by commas. They may be abbreviated to the minimum
 c	needed to avoid ambiguity. Possible options are:
 c	   'velocity'    Recompute velocity information.
 c	   'chi'         Recompute parallactic angle information.
-c	   'jupfix'      Fix phase error in Jupiter data.
 c	   'jupaxis'     Set planet parameters for Jupiter.
 c	The following options can be used to turn off calibration corrections.
 c	The default is to apply any calibration present.
 c	   'nocal'       Do not apply the gains table.
 c	   'nopass'      Do not apply bandpass corrections.
 c	   'nopol'       Do not apply polarizatiopn corrections.
-c@ pmotion
-c	Proper motion parameters, for options=jupfix.
 c@ velocity
 c	If options=velocity, this gives the rest frame of the output
 c	data-set. Possible values are 'observatory', 'lsr' and 'barycentric'.
@@ -83,11 +80,7 @@ c------------------------------------------------------------------------
 c
 	character out*64,ltype*16,uvflags*16
 	integer frame,lIn,lOut
-	logical dovel,dochi,dojup,dojaxis
-	integer nscan
-	double precision ra(MAXSCAN),dec(MAXSCAN)
-	double precision drdt(MAXSCAN),dddt(MAXSCAN)
-	double precision stime(MAXSCAN),mtime(MAXSCAN)
+	logical dovel,dochi,dojaxis
 c
 c  Externals.
 c
@@ -97,22 +90,18 @@ c  Get the input parameters.
 c
 	call output(version)
 	call keyini
-	call GetOpt(dovel,dochi,dojup,dojaxis,uvflags)
+	call GetOpt(dovel,dochi,dojaxis,uvflags)
 	frame = 0
 	if(dovel)call GetRest(frame)
 	call uvDatInp('vis',uvflags)
 	call keya('out',out,' ')
 c
-	nscan = 1
-	if(dojup)call jfixld(MAXSCAN,stime,mtime,
-     *				ra,dec,drdt,dddt,nscan)
-
 	call keyfin
 c
 c  Check the inputs.
 c
 	if(out.eq.' ')call bug('f','An output must be given')
-	if(.not.dovel.and..not.dochi.and..not.dojup.and..not.dojaxis)
+	if(.not.dovel.and..not.dochi.and..not.dojaxis)
      *	  call bug('f','Nothing to recompute!')
 c
 c  Open the inputs and the outputs.
@@ -132,8 +121,7 @@ c
 c
 c  Do the work.
 c
-	call Process(lIn,lOut,dovel,frame,dochi,dojup,dojaxis,
-     *		stime,mtime,ra,dec,drdt,dddt,nscan)
+	call Process(lIn,lOut,dovel,frame,dochi,dojaxis)
 c
 c  All said and done. Close up shop.
 c
@@ -164,10 +152,10 @@ c
 	if(nout.ne.0)frame = binsrcha(rframe,rframes,nframes)
 	end
 c************************************************************************
-	subroutine GetOpt(dovel,dochi,dojup,dojaxis,uvflags)
+	subroutine GetOpt(dovel,dochi,dojaxis,uvflags)
 c
 	implicit none
-	logical dovel,dochi,dojup,dojaxis
+	logical dovel,dochi,dojaxis
 	character uvflags*(*)
 c
 c  Determine extra processing options.
@@ -178,18 +166,17 @@ c    dochi
 c    uvflags
 c------------------------------------------------------------------------
 	integer NOPTS
-	parameter(NOPTS=7)
+	parameter(NOPTS=6)
 	logical present(NOPTS)
 	character opts(NOPTS)*8
 c
-	data opts/'velocity','chi     ','jupfix  ','jupaxis ',
+	data opts/'velocity','chi     ','jupaxis ',
      *		  'nocal   ','nopol   ','nopass  '/
 c
 	call options('options',opts,present,NOPTS)
 	dovel = present(1)
 	dochi = present(2)
-	dojup = present(3)
-	dojaxis = present(4)
+	dojaxis = present(3)
 c
 c  Determine the flags to pass to the uvDat routines.
 c    d - Data selection.
@@ -201,23 +188,19 @@ c    e - Apply leakage correction.
 c    f - Apply bandpass correction.
 c
 	uvflags = 'dlsb'
-	if(.not.present(5))uvflags(5:5) = 'c'
-	if(.not.present(6))uvflags(6:6) = 'e'
-	if(.not.present(7))uvflags(7:7) = 'f'
+	if(.not.present(4))uvflags(5:5) = 'c'
+	if(.not.present(5))uvflags(6:6) = 'e'
+	if(.not.present(6))uvflags(7:7) = 'f'
 c
 	end
 c************************************************************************
-	subroutine Process(lIn,lOut,dovel,frame,dochi,dojup,dojaxis,
-     *	  stime,mtime,pra,pdec,drdt,dddt,nscan)
+	subroutine Process(lIn,lOut,dovel,frame,dochi,dojaxis)
 c
 	implicit none
-	integer lIn,lOut,nscan
-	logical dovel,dochi,dojup,dojaxis
+	integer lIn,lOut
+	logical dovel,dochi,dojaxis
 	integer frame
-	double precision stime(nscan),mtime(nscan)
-	double precision drdt(nscan),dddt(nscan)
-	double precision pra(nscan),pdec(nscan)
-c
+
 c  Do all the real work.
 c
 c  Input:
@@ -226,13 +209,11 @@ c    lOut
 c    dovel
 c    frame	The rest frame for the velocity.
 c    dochi	Do parallactic angle recomputation.
-c    dojup	Fix phase error in Jupiter data.
 c
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer nchan,velupd,chiupd
 	double precision preamble(4),time,lst,epoch,ra,dec,rapp,dapp
-	double precision dra,ddec
 	logical flags(MAXCHAN)
 	complex data(MAXCHAN)
 	logical needlst,needepo,needrade,needapp
@@ -253,7 +234,6 @@ c  Initialise for the various recomputations.
 c
 	if(dochi)call ChiInit(lIn,chiupd)
 	if(dovel)call VelInit(lIn,velupd)
-c	if(dojup)call JupInit(lIn,jupupd)
 	if(dojaxis)then
 	  call uvputvrr(lOut,'plmaj',5.,1)
 	  call uvputvrr(lOut,'plmin',5.,1)
@@ -293,17 +273,6 @@ c  Write the planet information.
 c
 	  if(dojaxis)call uvputvrr(lOut,'plangle',
      *				jupangle(preamble(3)),1)
-c
-c  Fix the phase error in Jupiter observations.
-c
-	  if(dojup)then
-	    call Getdelta(preamble(3),stime,mtime,
-     *		pra,pdec,drdt,dddt,nscan,
-     *		ra,dec,dra,ddec)
-	    call Jupfix(lIn,preamble,data,nchan,dra,ddec)
-	    call uvputvrd(lOut,'ra',ra,1)
-	    call uvputvrd(lOut,'dec',dec,1)
-	  endif
 c
 c  Recompute parallactic angle.
 c
@@ -351,140 +320,6 @@ c
 c
 	psi = 2*pi*(time-t200)/period
 	jupangle = 20.6 - 10*sin(psi)
-	end
-c************************************************************************
-	subroutine jfixld(MAXSCAN,stime,mtime,ra,dec,drdt,dddt,nscan)
-c
-	implicit none
-	integer MAXSCAN,nscan
-	double precision stime(MAXSCAN),mtime(MAXSCAN)
-	double precision drdt(MAXSCAN),dddt(MAXSCAN)
-	double precision ra(MAXSCAN),dec(MAXSCAN)
-c
-c  Load the proper motoin parameters.
-c
-c  Input:
-c    MAXSCAN	Maximum number of scans.
-c  Output:
-c    nscan	Number of proper motion scans read.
-c    stime	Start time of a scan (Julian day).
-c    mtime	Reference time of a scan (Julian day).
-c    ra		Right ascension (radians).
-c    dec	Dec (radians).
-c    drdt	RA proper motion derivative (radians/day).
-c    dddt	Dec proper motion derivative (radians/day).
-c
-c------------------------------------------------------------------------
-	include 'mirconst.h'
-	double precision pra,pdec,dra,ddec,ut1,ut2
-	character line*80,calday*20
-c
-c  Externals.
-c
-	character itoaf*8,hangle*16,rangle*18
-	logical keyprsnt
-c
-	nscan = 0
-	dowhile(keyprsnt('pmotion'))
-	  nscan = nscan + 1
-	  if(nscan.eq.MAXSCAN)call bug('f',
-     *		'Proper motion buffer overflow')
-	  call keyd('pmotion',pra,0.d0)
-	  call keyd('pmotion',pdec,0.d0)
-	  call keyd('pmotion',dra,0.d0)
-	  call keyd('pmotion',ddec,0.d0)
-	  call keyd('pmotion',ut1,0.d0)
-	  call keyd('pmotion',ut2,0.d0)
-	  stime(nscan) = 2 400 000.5d0 + ut1
-	  mtime(nscan) = 2 400 000.5d0 + ut2
-	  dec(nscan) = 2*dpi*pdec
-	  ra(nscan)  = 2*dpi*pra
-	  drdt(nscan) = 2*dpi*dra*cos(dec(nscan))
-	  dddt(nscan) = 2*dpi*ddec
-c	  call julday(mtime(nscan),'H',calday)
-c	  line = calday // hangle(ra(nscan)) // rangle(dec(nscan))
-c	  call output(line)
-	enddo
-c
-	call output('Number of proper motion scans: '//itoaf(nscan))
-c
-	end
-c************************************************************************
-	subroutine GetDelta(time,stime,mtime,pra,pdec,drdt,dddt,nscan,
-     *	    ra,dec,dra,ddec)
-c
-	implicit none
-	integer nscan
-	double precision time,stime(nscan),mtime(nscan)
-	double precision pra(nscan),pdec(nscan)
-	double precision drdt(nscan),dddt(nscan),dra,ddec,ra,dec
-c------------------------------------------------------------------------
-	integer iscan
-	save iscan
-	data iscan/1/
-c
-	if(iscan.le.nscan-1.and.time.ge.stime(iscan).and.
-     *			      time.lt.stime(iscan+1))then
-	  continue
-	else if(iscan.le.nscan-2.and.time.ge.stime(iscan+1).and.
-     *			             time.lt.stime(iscan+2))then
-	  iscan = iscan + 1
-	else if(time.ge.stime(nscan))then
-	  iscan = nscan
-	else
-	  if(time.lt.stime(iscan))iscan = 1
-	  dowhile(time.gt.stime(iscan+1))
-	    iscan = iscan + 1
-	  enddo
-	endif
-c
-	dra = (time-mtime(iscan)) * drdt(iscan)
-	ddec = (time-mtime(iscan)) * dddt(iscan)
-	dec = pdec(iscan) + ddec
-	ra  = pra(iscan)  + dra / cos(dec)
-c
-	end
-c************************************************************************
-	subroutine Jupfix(lIn,preamble,data,nchan,dra,ddec)
-c
-	implicit none
-	integer lIn,nchan
-	double precision preamble(4),dra,ddec
-	complex data(nchan)
-c
-c  Correct for a error in the phasing of the data. Use the small
-c  angle approximation.
-c
-c  Input:
-c    lIn	Handle of the input data-set.
-c    nchan	Number of channels.
-c    preamble	Normal preamble.
-c    dra,ddec	Shift to apply in radians.
-c		True Position = Incorrect_Position + dra/ddec
-c  Input/Output:
-c    data	Visibility data.
-c------------------------------------------------------------------------
-	include 'maxdim.h'
-	include 'mirconst.h'
-c
-	integer i
-	real theta,theta0
-	double precision sfreq(MAXCHAN)
-	complex w
-c
-c  Get the sky frequency of the data.
-c
-	if(nchan.gt.MAXCHAN)call bug('f','Too many channels for me')
-	call uvinfo(lIn,'sfreq',sfreq)
-c
-	theta0 = -2*dpi*( preamble(1)*dra + preamble(2)*ddec )
-c
-	do i=1,nchan
-	  theta = theta0 * sfreq(i)
-	  w = cmplx(cos(theta),sin(theta))
-	  data(i) = w * data(i)
-	enddo
-c
 	end
 c************************************************************************
 	subroutine ChiInit(lIn,chiupd)
