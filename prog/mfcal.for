@@ -90,6 +90,7 @@ c    rjs   6sep94 Improve error message.
 c    rjs   5oct94 Support linetype averaging.
 c    rjs  13jan96 Increase MAXHASH.
 c    rjs  27jul96 Re-wrote interp option to make it more robust.
+c    rjs  28jul97 Make options=delay more robust.
 c
 c  Problems:
 c    * Should do simple spectral index fit.
@@ -256,7 +257,8 @@ c  Get the antenna gains and delay.
 c
 	  call SolveGT(refant,minant,nants,nspect,nchan,nsoln,
      *	    cref(pPass),ref(pSource),dref(pFreq),Vis,Wt,VID,ischan,
-     *	    Count,nvis,npol,cref(pGains),ref(pTau),dodelay,tol)
+     *	    Count,nvis,npol,cref(pGains),ref(pTau),
+     *	    dodelay.and.niter.ne.1,tol)
 c
 c  Get the passband.
 c
