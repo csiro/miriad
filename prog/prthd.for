@@ -36,12 +36,13 @@ c    rjs  24oct94 More information for images.
 c    rjs  26sep95 Somewhat more tolerant of screwy headers.
 c    rjs  14dec95 Support "ANGLE" ctype value.
 c    mchw 14jun96 Replace rangle and hangle, with rangleh and hangleh.
+c    rjs  07aug96 Fix crval conversion for ctype=ANGLE (care Vince McIntyre).
 c  Bugs and Shortcomings:
 c    * Descriptions in brief mode could be a bit more verbose!
 c------------------------------------------------------------------------
 	character version*(*)
 	integer MAXIN
-	parameter(version='Prthd: version 14-JUN-96')
+	parameter(version='Prthd: version 07-Aug-96')
 	parameter(MAXIN=256)
 	integer tno,i,iostat,nin
 	character in(MAXIN)*64,logf*64,line*80
@@ -353,7 +354,7 @@ c  DEC, Galactic and Ecliptic coordinates.
 c
 c  Angles on the sky.
 	else if (aval.eq.'ANGLE')then
-          write(line, 40)aval(1:8),n,180*pi*crval,crpix,
+          write(line, 40)aval(1:8),n,180/pi*crval,crpix,
      *				3600*180/pi*cdelt,'arcsec'
 c
 c  STOKES.
