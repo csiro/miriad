@@ -32,10 +32,12 @@ c     jm    03mar92  Corrected a leap year bug in JulDay.  This meant
 c                    promoting, to dble(), integers in real expressions.
 c                    In particular, this happened in setting item "c".
 c    rjs    23dec92  Eliminate conditional compilation, and use mitime,
-c                   midate.
+c                    midate.
 c    rjs    16sep93  Rename bsrch to binsrch.
 c     jm    14mar94  Added check for blank input strings; removed tabs.
 c    rjs    10oct94  Round date in julfdate.
+c     jm    07jun96  To avoid integer overflow in dayjul, I added code
+c                    to strip off trailing 0s beyond the decimal point.
 c***********************************************************************
 c* JulDay -- Format a Julian day into a conventional calendar day.
 c& jm
@@ -333,6 +335,9 @@ c
 c
 c  Get decimal day value.
 c
+          do while ((z .gt. b) .and. (ichar(calday(z:z)) .eq. zero))
+            z = z - 1
+          enddo
           j = b + 1
           nchar = 0
           do while ((ok) .and. (j .le. z))
@@ -389,6 +394,9 @@ c
 c  Are there any fractional seconds?  If so, get them too.
 c
         if ((ok) .and. (b .lt. z)) then
+          do while ((z .gt. b) .and. (ichar(calday(z:z)) .eq. zero))
+            z = z - 1
+          enddo
           j = b + 1
           nchar = 0
           do while ((ok) .and. (j .le. z))
