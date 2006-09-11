@@ -46,6 +46,8 @@ c    rjs   6feb95    Change name of COMMON block for LINUX.
 c    rjs  28apr95    fuvopen(status=old) was failing if there were
 c		     no history comments in the input FITS files.
 c    rjs  27sep95    Default naxisx value of 1.
+c    rjs  16dec96    Improve FITS compliance when loading binary tables.
+c		     Increase number of columns in binary tables.
 c
 c  Bugs and Shortcomings:
 c    * IF frequency axis is not handled on output or uv data.
@@ -2590,17 +2592,22 @@ c
 	  call fitrdhdi(lu,'GCOUNT',gcount,1)
 	  call fitrdhdi(lu,'PCOUNT',pcount,0)
 	  call fitrdhdi(lu,'NAXIS',naxis,0)
-	  if(gcount.le.0.or.pcount.lt.0.or.naxis.le.0.or.
+c
+	  if(gcount.le.0.or.pcount.lt.0.or.naxis.lt.0.or.
      *	    mod(bitpix,8).ne.0.or.bitpix.eq.0) call bug('f',
      *	    'Bad values in fundamental parameter in FITS file')
 c
-	  size = 1
-	  do i=1,naxis
-	    call fitrdhdi(lu,'NAXIS'//itoaf(i),axis,1)
-	    if(axis.lt.0)call bug('f',
-     *	      'Bad value in fundamental parameter in FITS file')
-	    size = size * max(axis,1)
-	  enddo
+	  if ( naxis .eq. 0 ) then
+             size = 0
+          else
+             size = 1
+	     do i=1,naxis
+	       call fitrdhdi(lu,'NAXIS'//itoaf(i),axis,1)
+	       if(axis.lt.0)call bug('f',
+     *	         'Bad value in fundamental parameter in FITS file')
+	       size = size * max(axis,1)
+	     enddo
+          end if
 c
 	  ncards(lu) = 0
 	  DatSize(lu) = abs(bitpix)/8 * gcount * (pcount + size)
@@ -3001,13 +3008,13 @@ c    lu		Handle of the input FITS file.
 c  Output:
 c    ok		True if all seems OK.
 c------------------------------------------------------------------------
-	character string*16,num*2
+	character string*16,num*3
 	integer offset,i,j,Form,Cnt,ncol
 	include 'fitsio.h'
 c
 c  Externals.
 c
-	character itoaf*2
+	character itoaf*3
 c
 c
 	ok = .false.
@@ -3080,11 +3087,13 @@ c
 	    more = .false.
 	  endif
 	enddo
+	if(i.eq.1)then
+	  ColCnt = 1
+	else if(i.gt.len(string).or.ColCnt.lt.0)then
+	  call bug('f','Bad FORM string in FITS table description')
+	endif
 c
-	if(i.gt.len(string).or.ColCnt.lt.0)call bug('f',
-     *	  'Bad FORM string in FITS table description')
-c
-	ColForm = index('IJAEDX',string(i:i))
+	ColForm = index('IJAEDXL',string(i:i))
 	if(ColForm.eq.0)call bug('f',
      *	  'Bad FORM string in FITS table description')
 c
@@ -3117,13 +3126,13 @@ c--
 c------------------------------------------------------------------------
 	integer i
 c
-	character string*6
+	character string*7
 	include 'fitsio.h'
 c
 c  Externals.
 c
 	integer ftabSize,ftabColn
-	data string/'IIARDX'/
+	data string/'IIARDXL'/
 c
 c  Did we fail to find match? Is so, return indicating that it was not found.
 c
@@ -3477,6 +3486,7 @@ c
 	data FormSize(FormE)/32/
 	data FormSize(FormD)/64/
 	data FormSize(FormX)/ 1/
+	data FormSize(FormL)/ 8/
 c
 	ftabSize = FormSize(Form)
 	end
