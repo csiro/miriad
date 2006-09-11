@@ -24,6 +24,7 @@
 /*	27-apr-90  rjs Added ddelete_c routine.				*/
 /*      26-aug-93  rjs Added hrmdir.					*/
 /*	 5-nov-94  rjs Improve POSIX compliance.			*/
+/*	26-Oct-95  rjs Honour TMPDIR environment variable, if set.	*/
 /************************************************************************/
 
 #include <sys/types.h>
@@ -153,23 +154,32 @@ char *name,*status;
 
 ------------------------------------------------------------------------*/
 {
-  int flags;
+  int flags,is_scratch;
+  char *s,sname[MAXPATH];
 
-  *iostat = 0;
+  is_scratch = *iostat = 0;
+  s = name;
 
   if     (!strcmp(status,"read"))    flags = O_RDONLY;
   else if(!strcmp(status,"write"))   flags = O_CREAT|O_TRUNC|O_RDWR;
   else if(!strcmp(status,"append"))  flags = O_CREAT|O_RDWR;
-  else if(!strcmp(status,"scratch")) flags = O_CREAT|O_TRUNC|O_RDWR;
-  else bug_c('f',"dopen_c: Unrecognised status");
+  else if(!strcmp(status,"scratch")){
+    flags = O_CREAT|O_TRUNC|O_RDWR;
+    is_scratch = 1;
+    s = getenv("TMPDIR");
+    if(s != NULL){
+      sprintf(sname,"%s/%s",s,name);
+      s = sname;
+    } else s = name;
+  } else bug_c('f',"dopen_c: Unrecognised status");
 
-  if((*fd = open(name,flags,0644)) < 0){*iostat = errno; return;}
+  if((*fd = open(s,flags,0644)) < 0){*iostat = errno; return;}
   *size = Lseek(*fd,0,SEEK_END);
 
 /* If its a scratch file, unlink it now, so that the file will disappear
    when it is closed (or this program crashes). */
 
-  if(!strcmp(status,"scratch"))(void)unlink(name);
+  if(is_scratch)(void)unlink(s);
 }
 /************************************************************************/
 void dclose_c(fd,iostat)
@@ -178,8 +188,7 @@ int fd,*iostat;
   This subroutine does unbelievably complex stuff.
 ------------------------------------------------------------------------*/
 {
-  *iostat = 0;
-  if(close(fd) < 0) *iostat = errno;
+  *iostat = ( close(fd) < 0 ? errno : 0 );
 }
 /************************************************************************/
 void dread_c(fd,buffer,offset,length,iostat)
