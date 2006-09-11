@@ -45,8 +45,7 @@ c@ line
 c	Standard visibility linetype. See the help "line" for more information.
 c@ stokes
 c	Normal Stokes/polaization selection. The default is to process all
-c	parallel-hand polarisation. Note, correlations other than
-c	parallel-hand ones are ignored.
+c	parallel-hand polarisations.
 c@ device
 c	PGPLOT plotting device. The default is no plotting device (the
 c	program merely prints out some statistics).
@@ -87,13 +86,14 @@ c    rjs  29jul97 Added quad quantities.
 c    rjs  11aug97 Minor fiddles to make it more robust.
 c    mchw 20may98 Larger MAXPLOTS for 10-antennas (90 -> 120)
 c    rjs  20oct00 Print out number of points when giving stats.
+c    rjs  31jan01 Support other stokes types.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
 	integer MAXPNTS,MAXPLOTS,MAXTRIP
 	integer PolMin,PolMax,MAXPOL
 	character version*(*)
-	parameter(version='version 20-Oct-00')
+	parameter(version='version 31-Jan-01')
 	parameter(MAXPNTS=5000,MAXPLOTS=120)
 	parameter(MAXTRIP=(MAXANT*(MAXANT-1)*(MAXANT-2))/6)
 	parameter(PolMin=-8,PolMax=4,MAXPOL=2)
@@ -104,7 +104,7 @@ c
 	integer nx,ny,nread,i,j,mpnts,mplots,tno,pnt1,pnt2
 	integer npol,polcvt(PolMin:PolMax),p,ant1,ant2,nants,bl
 	double precision preamble(4),time0,t,tmin,tmax,tprev
-	logical first,more
+	logical first,more,doii
 	complex data(MAXCHAN)
 	logical flag(MAXCHAN)
 c
@@ -141,6 +141,8 @@ c
 	notrip = notrip.or.avall
 c
 	call uvDatInp('vis',uvflags)
+	call uvDatGti('npol',npol)
+	doii = npol.eq.0
 	call keya('device',device,' ')
 	call keyi('nxy',nx,0)
 	call keyi('nxy',ny,nx)
@@ -206,7 +208,7 @@ c
 	    p = 0
 	    if(min(ant1,ant2).ge.1.and.max(ant1,ant2).le.MAXANT.and.
      *	        ant1.ne.ant2)
-     *		call PolIdx(p,npol,polcvt,PolMin,PolMax,MAXPOL)
+     *		call PolIdx(p,npol,polcvt,PolMin,PolMax,MAXPOL,doii)
 c
 c  Handle time information, and do fiddles for the first time through.
 c
@@ -595,11 +597,12 @@ c
 	if(.not.present(7))uvflags(7:7) = 'f'
 	end
 c************************************************************************
-	subroutine PolIdx(p,npol,polcvt,PolMin,PolMax,MAXPOL)
+	subroutine PolIdx(p,npol,polcvt,PolMin,PolMax,MAXPOL,doii)
 c
 	implicit none
 	integer p,PolMin,PolMax,npol,MAXPOL
 	integer polcvt(PolMin:PolMax)
+	logical doii
 c------------------------------------------------------------------------
 	integer pol
 c
@@ -611,7 +614,7 @@ c
 	call uvDatGti('pol',pol)
 	if(pol.lt.PolMin.or.pol.gt.PolMax)return
 	if(polcvt(pol).eq.0)then
-	  if(PolsPara(pol))then
+	  if(.not.doii.or.PolsPara(pol))then
 	    npol = npol + 1
 	    if(npol.gt.MAXPOL)call bug('f','Too many polarisations')
 	    polcvt(pol) = npol
