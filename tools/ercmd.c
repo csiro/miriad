@@ -11,22 +11,29 @@
 
    History:
     rjs  16feb95 Derived from "er" command.
+    rjs  23apr99 Bring it into line with modern UNIX.
 
 ------------------------------------------------------------------------*/
-#include <sgtty.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <termios.h>
 #include <signal.h>
-#include <sys/file.h>
-#include <sys/ioctl.h>
 
 # define LENGTH 256 	/* Maximum length of command */
 
-main(argc,argv)
+static int mychar();
+static void output(),insert(),wipe();
+
+/*------------------------------------------------------------------------*/
+int main(argc,argv)
 int argc;
 char *argv[];
 { 
   char ch,buffer[LENGTH],line[LENGTH+20];
   int j,ct,i,in_length,c_length;
-  struct sgttyb b,old_b;
+  struct termios b,old_b;
 
 /* If there is no argument, just exit. */
 
@@ -42,10 +49,14 @@ char *argv[];
 /* Set the required terminal characteristics.....*/
 
   ct = open("/dev/tty",O_RDWR);
-  ioctl(ct,TIOCGETP,&old_b);
-  ioctl(ct,TIOCGETP,&b);
-  b.sg_flags = CRMOD|CBREAK;
-  ioctl(ct,TIOCSETP,&b);
+  tcgetattr(ct,&old_b);
+  tcgetattr(ct,&b);
+  b.c_iflag &= ~(BRKINT|IGNBRK);
+  b.c_lflag &= ~(ECHO|ICANON);
+  b.c_cc[VERASE] = 0;
+  b.c_cc[VMIN] = 1;
+  b.c_cc[VTIME] = 0;
+  tcsetattr(ct,TCSANOW,&b);
 
 /* Open the terminal for standard i/o. */
   
@@ -60,6 +71,8 @@ char *argv[];
 
   while((ch = mychar(ct)) != '\n'){ 
     switch (ch){
+
+/* Arrow keys. */     
      case '': if ((ch = mychar(ct)) != '[') {}    /*The arrows....*/
 
                  else { switch ((ch = mychar(ct)))
@@ -71,6 +84,15 @@ char *argv[];
 				  {output(ct,"\33[D"); c_length--;};break;
                         default : break;};
                       }; break;
+
+/* Delete character. */
+     case '':	if(c_length == in_length)break;	/* Ctrl/D */
+	        wipe(buffer,c_length+1,1);
+		in_length--;
+		output(ct,"\33[C\10\33[1P"); break;
+
+/* Delete character backwards. */
+
      case '':					/* Backspace */
      case '': if (c_length == 0) break;	/* Delete */
 		wipe(buffer,c_length,1);
@@ -78,17 +100,27 @@ char *argv[];
 		c_length--;
                 output(ct,"\10\33[1P"); break;
 
-/*     case '': c_length = 0; output(ct,"\15"); break; */   /* Backspace */
+/* End of line. */
+
      case '': output(ct,"\15"); output(ct,buffer);
 		c_length = in_length; break; /* EOL */
+
+/* Exit. */
      case '':
-     case '': ioctl(ct,TIOCSETP,&old_b);
+     case 0:
+     case '': tcsetattr(ct,TCSANOW,&old_b);
 	        output(ct,"\n"); exit(0); break;   /* Quit, resetting terminal */
+
+/* Beginning of line. */
+
      case '': while(c_length > 0){
 		 c_length--;
 		 output(ct,"\33[D");
 		}
 		break;
+
+/* Skip forward word. */
+
      case '': for (j=1;
 		!(buffer[c_length+j] == ' ' && buffer[c_length+j+1] != ' ')
 	        && (c_length+j+1 <= in_length); j++) { output(ct,"\33[C");}; 
@@ -96,12 +128,16 @@ char *argv[];
 		{output(ct,"\33[C");
 		c_length += j; break;}; break; /* Skip forwards on words */
 
+/* Skip backwards word. */
+
      case '': for (j=1;
 		!(buffer[c_length-j] == ' ' && buffer[c_length-j-1] != ' ')
 	        && (c_length-j-1 >= 0); j++) { output(ct,"\33[D");}; 
 	        if(c_length-j >= 0)
 		{output(ct,"\33[D"); 
 		c_length -= j; break;}; break; /* Skip backwards on words */
+
+/* Insert character. */
 
       default : if (c_length == LENGTH-1) break ;
 		if(ch == '\t') ch = ' ';
@@ -113,13 +149,14 @@ char *argv[];
       }
     }
     output(ct,"\n");
-    ioctl(ct,TIOCSETP,&old_b);
+    tcsetattr(ct,TCSANOW,&old_b);
+    close(ct);
 
     printf("%s\n",buffer);
     return(0);
 }
 /************************************************************************/
-int mychar(fd)
+static int mychar(fd)
 int fd;
 {
   char ch;
@@ -127,7 +164,7 @@ int fd;
   else return(ch);
 }
 /************************************************************************/
-output(fd,line)
+static void output(fd,line)
 int fd;
 char *line;
 {
@@ -136,7 +173,7 @@ char *line;
   write(fd,line,length);
 }
 /************************************************************************/
-insert(line,coord,ch)
+static void insert(line,coord,ch)
 char *line;
 int coord;
 char ch;
@@ -153,7 +190,7 @@ char ch;
   strcpy(line,temp);
 }
 /************************************************************************/
-wipe(line,coord,size)
+static void wipe(line,coord,size)
 char *line;
 int coord,size;
 /* 
