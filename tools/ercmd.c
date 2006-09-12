@@ -119,6 +119,16 @@ char *argv[];
 		}
 		break;
 
+/* Back character. */
+
+     case '': if ( c_length > 0 )
+		{output(ct,"\33[D"); c_length--;}break;
+
+/* Forward character. */
+
+     case '': if ( c_length < in_length)
+		{output(ct,"\33[C"); c_length++;} break;
+
 /* Skip forward word. */
 
      case '': for (j=1;
@@ -137,14 +147,28 @@ char *argv[];
 		{output(ct,"\33[D"); 
 		c_length -= j; break;}; break; /* Skip backwards on words */
 
+/* Transpose characters. */
+
+     case '': if ( c_length == 0 || c_length == in_length)break;
+		ch = buffer[c_length-1];
+		wipe(buffer,c_length,1);
+		insert(buffer,c_length,ch);     /* Insert */
+
+	        output(ct,"\10\33[1P\33[C\0337\15");
+		output(ct,buffer);
+		output(ct,"\0338\33[C\33[D");
+		break;
+
 /* Insert character. */
 
       default : if (c_length == LENGTH-1) break ;
 		if(ch == '\t') ch = ' ';
-		insert(buffer,c_length,ch);     /* Insert */
-	        in_length++;
-	        c_length +=1;
-	        output(ct,"\0337\15");output(ct,buffer);output(ct,"\0338\33[C");
+		if(ch >= ' ' && ch < 127) {
+		  insert(buffer,c_length,ch);     /* Insert */
+	          in_length++;
+	          c_length +=1;
+	          output(ct,"\0337\15");output(ct,buffer);output(ct,"\0338\33[C");
+		}
 	        break;
       }
     }
