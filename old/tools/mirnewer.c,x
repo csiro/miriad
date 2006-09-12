@@ -8,7 +8,7 @@
 /*  considered.								*/
 /*									*/
 /*  Usage:								*/
-/*    newer -i [-e command] -x exclude timefile dirs ...		*/
+/*    newer [-i] [-e command] -x exclude timefile dirs ...		*/
 /*									*/
 /*  History:								*/
 /*    rjs  3mar90 Original version.					*/
@@ -148,7 +148,7 @@ char *argv[];
 
   if(ndir == 0 || timefile == NULL){
     fprintf(stderr,"Usage:\n");
-    fprintf(stderr,"  newer [-i] [-e command] [-x exclude] timefile dirs ...\n");
+    fprintf(stderr,"  mirnewer [-i] [-e command] [-x exclude] timefile dirs ...\n");
     exit(1);
   }
 
@@ -262,8 +262,8 @@ int level;
 /*    printf("%s\n",line); */
       status = system(line);
       if(status){
-	printf("'%s' returned with status=%d\n",line,status);
-        exit(status);
+	printf("### %s: returned with status=%d\n",line,status);
+        exit(1);
       }
     }
   }
