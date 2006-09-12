@@ -1,9 +1,9 @@
-c************************************************************************
 	program uvpit
 c
 c= uvpit - Fit polarisation of a time-varying point source.
 c& rjs
 c: uv analysis
+c+
 c	UVPIT is a Miriad task which fits visibility data with a time
 c	varying, polarised point source. Optionally the model or
 c	residual visibilities can be written out.

@@ -1,9 +1,9 @@
-c************************************************************************
 	program gethd
 	implicit none
 c= GetHd -- Print the value of a header item.
 c& rjs
 c: miscellaneous
+c+
 c	GetHd simply prints the value of a header item. Its main use will
 c	be in scripts, where it can be used to extract information from
 c	the image header.

@@ -1,10 +1,10 @@
-c************************************************************************
 	program imfit
 	implicit none
 c
 c= imfit -- Fit models to a given image dataset
 c& rjs
 c: image analysis
+c+
 c	IMFIT is a Miriad task which fits model components to a
 c	image data-set. If several image planes are given, each plane
 c	is fitted separately. Optionally the model or the residuals can be

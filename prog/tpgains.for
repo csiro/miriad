@@ -1,10 +1,10 @@
-c************************************************************************
 	program TPGAINS
 	implicit none
 c
 c= TPGAINS - Estimate antenna gains from total power measurements.
 c& mchw
 c: tpower, antenna gains
+c+
 c	TPGAINS is a Miriad task to estimate antenna gains due to
 c	atmospheric phase fluctuations correlated with total power 
 c	fluctuations. Antenna phase corrections are estimated from the

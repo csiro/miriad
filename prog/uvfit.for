@@ -1,9 +1,9 @@
-c************************************************************************
 	program uvfit
 c
 c= uvfit - Fit point sources to a given vis file.
 c& rjs
 c: uv analysis
+c+
 c	UVFIT is a Miriad task which fits model components to a visibility
 c	dataset. Optionally the model or residual visibilities can
 c	be written out.

@@ -1,10 +1,10 @@
       program clstats
       implicit none
 c
-c= clstats - Calculates dispersions, masses, etc for each clump from clfind file
+c= clstats - Calculate dispersions, masses, etc for each clump from clfind file
 c& pjt
-c
-c
+c: utility
+c+
 c  The mass is calculated in the following way;
 c  we define X such that,
 c
