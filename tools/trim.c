@@ -4,6 +4,7 @@
 /*									*/
 /*  History:								*/
 /*    rjs  18sep89  Original version.					*/
+/*    rjs  17feb04  Gosh is it really 15 years old! Return a status.    */
 /*									*/
 /* Operations performed include:					*/
 /*	Trim off trailing  blanks.					*/
@@ -24,7 +25,7 @@
 private void process();
 
 /************************************************************************/
-main(argc,argv)
+int main(argc,argv)
 int argc;
 char *argv[];
 {
@@ -73,6 +74,7 @@ char *argv[];
       }
     }
   }
+ return(0);
 }
 /************************************************************************/
 private void process(fout,fin,fort,blank)

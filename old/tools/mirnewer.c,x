@@ -34,6 +34,7 @@
 #define MAXDIRS 128
 #include <stdio.h>
 #include <ctype.h>
+#include <stdlib.h>
 
 /* Some definitions, etc, to help make BSD, VAX-C and System-V look alike. */
 
