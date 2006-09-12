@@ -109,7 +109,7 @@ char *extensions[] = {"for","f","c","s","f2c","mar","h","csh",
 		      "toc","aux","nul","awk","C","cc"};
 #define NEXT (sizeof(extensions)/sizeof(char *))
 /************************************************************************/
-main(argc,argv)
+int main(argc,argv)
 int argc;
 char *argv[];
 {
@@ -166,6 +166,7 @@ char *argv[];
   } else {
     for(i=0; i < ndir; i++) process(mtime,command,i,dirs[i]);
   }
+  return(0);
 }
 /************************************************************************/
 private void process(mtime,command,level,dir)
@@ -182,7 +183,7 @@ int level;
 {
   char full[MAXBUF],name[MAXBUF],ext[MAXBUF],root[MAXBUF],*t,*dotpnt;
   char line[MAXBUF],added[MAXBUF],c;
-  int found,i,length,ll;
+  int found,i,length,ll,status;
   DIR *dirp;
   struct dirent *dp;
   struct stat buf;
@@ -259,7 +260,11 @@ int level;
     else {
       sprintf(line,"%s %s",command,full);
 /*    printf("%s\n",line); */
-      system(line);
+      status = system(line);
+      if(status){
+	printf("'%s' returned with status=%d\n",line,status);
+        exit(status);
+      }
     }
   }
   closedir(dirp);
