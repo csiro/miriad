@@ -8,7 +8,7 @@
 /*  considered.								*/
 /*									*/
 /*  Usage:								*/
-/*    newer [-e command] -x exclude timefile dirs ...			*/
+/*    newer -i [-e command] -x exclude timefile dirs ...		*/
 /*									*/
 /*  History:								*/
 /*    rjs  3mar90 Original version.					*/
@@ -16,18 +16,16 @@
 /*    rjs 23mar90 Fixed bug in variable initialisation in hashcheck.	*/
 /*		  Added -x flag.					*/
 /*    rjs  4jan93 Support .f2c files.					*/
+/*    rjs  5oct95 -i flag.						*/
 /*									*/
 /*  Compiling:								*/
 /*    You must specify one (and only one) of the following "defines"	*/
 /*    when compiling -- to indicate the machine type.			*/
+/*    This dictates the way directories are search.			*/
 /*      posix		The new POSIX style of handling directories.	*/
 /*      sysv		Old System V (without opendir, etc).		*/
 /*      bsd		Old BSD -- not the posix directory setup.	*/
-/*									*/
-/*      vms		For vms machines.				*/
-/*	convex		Equivalent to posix.				*/
-/*	sun		Equivalent to posix.				*/
-/*	unicos		Equivalent to posix.				*/
+/*      vms		Vms-style routines.				*/
 /*----------------------------------------------------------------------*/
 
 #define TRUE 1
@@ -38,16 +36,6 @@
 #include <ctype.h>
 
 /* Some definitions, etc, to help make BSD, VAX-C and System-V look alike. */
-
-#ifdef convex
-#  define posix
-#endif
-#ifdef sun
-#  define posix
-#endif
-#ifdef unicos
-#  define posix
-#endif
 
 #ifdef vms
 #  include <descrip.h>
@@ -109,7 +97,7 @@
 
 #define private static
 
-private void process();
+private void process(),process2();
 private int hashcheck();
 
 #define HASHSIZE 251
@@ -125,7 +113,7 @@ main(argc,argv)
 int argc;
 char *argv[];
 {
-  int ndir,i;
+  int ndir,i,doind;
   char *dirs[MAXDIRS],*command,*timefile,*s;
   struct stat buf;
   time_t mtime;
@@ -136,6 +124,7 @@ char *argv[];
 
 /* Process the command line arguments. */
 
+  doind = FALSE;
   ndir = 0;
   timefile = command = NULL;
   for(i=1; i < argc; i++){
@@ -145,6 +134,8 @@ char *argv[];
 	case 'e': if(++i < argc) command = argv[i];
 		  break;
 	case 'x': if(++i < argc) (void)hashcheck(argv[i],-1);
+		  break;
+        case 'i': doind = TRUE;
 		  break;
 	default:  fprintf(stderr,"Unrecognised flag %c ignored\n",*s);
 		  break;
@@ -157,7 +148,7 @@ char *argv[];
 
   if(ndir == 0 || timefile == NULL){
     fprintf(stderr,"Usage:\n");
-    fprintf(stderr,"  newer [-e command] [-x exclude] timefile dirs ...\n");
+    fprintf(stderr,"  newer [-i] [-e command] [-x exclude] timefile dirs ...\n");
     exit(1);
   }
 
@@ -170,7 +161,11 @@ char *argv[];
 
 /* Process all the directories. */
 
-  for(i=0; i < ndir; i++) process(mtime,command,i,dirs[i]);
+  if(doind){
+    for(i=0; i < ndir; i++) process2(mtime,command,dirs[i]);
+  } else {
+    for(i=0; i < ndir; i++) process(mtime,command,i,dirs[i]);
+  }
 }
 /************************************************************************/
 private void process(mtime,command,level,dir)
@@ -268,6 +263,22 @@ int level;
     }
   }
   closedir(dirp);
+}
+/************************************************************************/
+private void process2(mtime,command,full)
+time_t mtime;
+char *full,*command;
+{
+  struct stat buf;
+  char line[MAXBUF];
+
+  if(stat(full,&buf)) return;
+  if(buf.st_mtime < mtime) return;
+  if( command == NULL ) printf("%s\n",full);
+  else {
+    sprintf(line,"%s %s",command,full);
+    system(line);
+  }
 }
 /************************************************************************/
 private int hashcheck(name,level)
