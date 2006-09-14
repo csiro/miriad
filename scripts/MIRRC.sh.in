@@ -1,0 +1,84 @@
+#!/bin/sh
+# Korn/sh shell version of MIRRC by George Martin
+# The following must be the 4th line
+MIR=/nfs/applic/miriad;export MIR
+
+OS=`uname -s`
+VERS=`uname -r`
+MACH=`uname -m`
+
+case $OS in			# Which executable directory?
+
+   ConvexOS) arch=convex
+             ;;
+      SunOS) arch=sun4
+             if [ "`echo $VERS | awk -F. '{print $1}'`" = "5" ]
+             then		# A gross test for Solaris (5.x.y)
+                arch=sun4sol
+             fi
+	     if [ "`echo $MACH | awk '/86/{print 1}'`" != "" ]
+	     then
+		arch=i86sol
+	     fi
+             ;;
+    CYGWIN*) arch=cygwin
+	     ;;
+      Linux) arch=linux
+             if [ "`echo $MACH`" = "x86_64" ]
+             then
+                arch=linux64
+             fi
+             ;;
+       OSF1) arch=alpha
+             ;;
+      HP-UX) arch=hpux
+             ;;
+          *) arch=`echo $OS|tr "[A-Z]" "[a-z]"`
+             ;;
+esac
+
+# The enviroment variables
+
+MIRINC=$MIR/inc;export MIRINC
+MIRPDOC=$MIR/doc;export MIRPDOC
+if [ -d $MIR/man ]
+then
+   MIRMAN=$MIR/man;export MIRMAN
+fi
+MIRCAT=$MIR/cat;export MIRCAT
+MIRCHNG=$MIR/new;export MIRCHNG
+MIRPROG=$MIR/prog;export MIRPROG
+MIRSUBS=$MIR/subs;export MIRSUBS
+
+if [ $arch ]			# Set variable for executables and libraries
+then
+   if [ -d $MIR/bin/$arch -a -d $MIR/lib/$arch ]
+   then
+      MIRBIN=$MIR/bin/$arch;export MIRBIN
+      MIRLIB=$MIR/lib/$arch;export MIRLIB
+   else
+      echo "### Either $MIR/bin/$arch and/or $MIR/lib/$arch does not exist"
+   fi
+else
+   echo "### Unknown host architecture -- no Miriad executables"
+fi
+
+# Directory for .def files if necessary
+
+if [ -z $MIRDEF ]
+then
+   export MIRDEF=.
+   if [ -d $HOME/mirdef ]
+   then
+      MIRDEF=$HOME/mirdef;export MIRDEF
+   fi
+fi
+
+#export PGPLOT_BUFFER=TRUE
+if [ -f $MIRLIB/grfont.dat ]
+then
+  PGPLOT_FONT=$MIRLIB/grfont.dat;export PGPLOT_FONT
+fi
+
+unset OS
+unset VERS

@@ -1,0 +1,53 @@
+#!/bin/csh -f
+
+# The following must be the 4th line
+setenv MIR /nfs/applic/miriad
+
+set temp = `uname -s`
+if ("$temp" == ConvexOS) then
+  set arch = convex
+else if ("$temp" == SunOS) then
+  set arch = sun4
+  if (`uname -r` =~ 5.*) set arch = sun4sol
+  if (`uname -m` =~ *86*)set arch = i86sol
+else if ("$temp" =~ "CYGWIN*" ) then
+  set arch = cygwin
+else if ("$temp" == OSF1) then
+  set arch = alpha
+else if ("$temp" == "HP-UX" ) then
+  set arch = hpux
+else if ("$temp" == "Linux" ) then
+  set arch = linux
+  if (`uname -m` == "x86_64" ) set arch = linux64
+else
+  set arch = `echo $temp|tr "[A-Z]" "[a-z]"`
+endif
+unset temp
+
+# Set the Miriad environment variables.
+
+setenv MIRINC $MIR/inc
+setenv MIRPDOC $MIR/doc
+if ( -e $MIR/man ) setenv MIRMAN $MIR/man
+setenv MIRCAT $MIR/cat
+setenv MIRCHNG $MIR/new
+setenv MIRPROG $MIR/prog
+setenv MIRSUBS $MIR/subs
+
+if ( $?arch ) then
+  setenv MIRBIN $MIR/bin/$arch
+  setenv MIRLIB $MIR/lib/$arch
+else
+  echo "### Unknown host architecture -- no Miriad executables."
+  setenv MIRBIN " "
+  setenv MIRLIB " "
+endif
+
+# Set up the directory to receive .def files.
+if ( ! $?MIRDEF ) then
+  setenv MIRDEF .
+  if ( -d ~/mirdef ) setenv MIRDEF ~/mirdef
+endif
+
+#setenv PGPLOT_BUFFER TRUE
+if ( -e $MIRLIB/grfont.dat ) setenv PGPLOT_FONT $MIRLIB/grfont.dat
