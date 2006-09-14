@@ -8,8 +8,8 @@ if ("$temp" == ConvexOS) then
   set arch = convex
 else if ("$temp" == SunOS) then
   set arch = sun4
-  if (`uname -r` =~ 5.*) set arch = sun4sol
-  if (`uname -m` =~ *86*)set arch = i86sol
+  if (`uname -r` =~ 5.*)  set arch = sun4sol
+  if (`uname -m` =~ *86*) set arch = i86sol
 else if ("$temp" =~ "CYGWIN*" ) then
   set arch = cygwin
 else if ("$temp" == OSF1) then
@@ -35,8 +35,9 @@ setenv MIRPROG $MIR/prog
 setenv MIRSUBS $MIR/subs
 
 if ( $?arch ) then
-  setenv MIRBIN $MIR/bin/$arch
-  setenv MIRLIB $MIR/lib/$arch
+  setenv MIRARCH $MIR/$arch
+  setenv MIRBIN  $MIRARCH/bin
+  setenv MIRLIB  $MIRARCH/lib
 else
   echo "### Unknown host architecture -- no Miriad executables."
   setenv MIRBIN " "

@@ -33,7 +33,7 @@ case $OS in			# Which executable directory?
              ;;
       HP-UX) arch=hpux
              ;;
-          *) arch=`echo $OS|tr "[A-Z]" "[a-z]"`
+          *) arch=`echo $OS | tr "[A-Z]" "[a-z]"`
              ;;
 esac
 
@@ -52,12 +52,13 @@ MIRSUBS=$MIR/subs;export MIRSUBS
 
 if [ $arch ]			# Set variable for executables and libraries
 then
-   if [ -d $MIR/bin/$arch -a -d $MIR/lib/$arch ]
+   if [ -d $MIR/$arch/bin -a -d $MIR/$arch/lib ]
    then
-      MIRBIN=$MIR/bin/$arch;export MIRBIN
-      MIRLIB=$MIR/lib/$arch;export MIRLIB
+      MIRARCH=$MIR/$arch;export MIRARCH
+      MIRBIN=$MIRARCH/bin;export MIRBIN
+      MIRLIB=$MIRARCH/lib;export MIRLIB
    else
-      echo "### Either $MIR/bin/$arch and/or $MIR/lib/$arch does not exist"
+      echo "### Either $MIR/$arch/bin or $MIR/$arch/lib does not exist"
    fi
 else
    echo "### Unknown host architecture -- no Miriad executables"
