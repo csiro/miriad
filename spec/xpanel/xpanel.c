@@ -74,6 +74,7 @@ Xpanel provides the following resources, along with their defaults:
                 instead of the pointer to the array itself).
     jm  15nov95 Corrected some routine declarations.  Also corrected
                 the initial iconic state setting.
+    jm  16may97 Fixed options table so it properly calls the resources.
 *************************************************************************/
 #include <stdlib.h>
 #include <stdio.h>
@@ -202,13 +203,12 @@ static XtActionsRec actionTable[] = {
 };
 
 static XrmOptionDescRec options[] = {
-/* The last argument is not used when XrmoptionSepArg is specified. */
-  {"-cursorforeground", "cursor_foreground", XrmoptionSepArg,  NULL },
-  {"-cfg",              "cursor_foreground", XrmoptionSepArg,  NULL },
-  {"-cursorbackground", "cursor_background", XrmoptionSepArg,  NULL },
-  {"-cbg",              "cursor_background", XrmoptionSepArg,  NULL },
-  {"-port",             "port_number",       XrmoptionSepArg,  NULL },
-  {"-noiconic",         "no_iconic",         XrmoptionNoArg,  "TRUE"},
+  {"-cursorforeground", "cursorForeground", XrmoptionSepArg, (XtPointer)NULL},
+  {"-cfg",              "cursorForeground", XrmoptionSepArg, (XtPointer)NULL},
+  {"-cursorbackground", "cursorBackground", XrmoptionSepArg, (XtPointer)NULL},
+  {"-cbg",              "cursorBackground", XrmoptionSepArg, (XtPointer)NULL},
+  {"-port",             "portNumber",       XrmoptionSepArg, (XtPointer)NULL},
+  {"-noiconic",         "noIconic",         XrmoptionNoArg,  "TRUE"},
 };
 
 static String fallback_resources[] = {
