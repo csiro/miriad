@@ -1,21 +1,19 @@
-#define VERSION_ID  "21-sep-91"
+#define VERSION_ID  "31-oct-94"
 /*= XPANEL - X-window control panel program
 /*& jm
 /*: tools
 /*+
 XPanel is a TCP/IP server based on X-windows, which listens for
-connections from the Miriad "ctrl" routines, constructs a
-control panel according to commands from the Ctrl routines,
-and allows the user and programmer to communicate through the
-control panel.
+connections from the Miriad "ctrl" routines, constructs a control
+panel according to commands from the Ctrl routines, and allows the
+user and programmer to communicate through the control panel.
 
-See the Miriad Programmers manual, for documentation of the Ctrl
+See the Miriad Programmers manual for documentation of the Ctrl
 routines.
 
 For X users familiar with application resources, the user may
 set up characteristics for individual panel items.  The Widget
 tree layout used by Xpanel is shown below:
-
 	Level 1:
 	Top level shell:	"Xpanel"
 
@@ -45,7 +43,7 @@ tree layout used by Xpanel is shown below:
 	Child of "ButtonList":	"MenuBox"    (boxWidget)
 
 	Level 7:
-	Child of "MenuBox":     list entry  (commandWidget)
+	Child of "MenuBox":	list entry  (commandWidget)
 
 In addition to the above widget items, there are application
 resources that the user may set in their application file or
@@ -54,21 +52,20 @@ Xpanel provides the following resources, along with their defaults:
 
    *cursorForeground:	"XtDefaultForeground" (Fore/Background color of)
    *cursorBackground:	"XtDefaultBackground" (... cursor in coreWidget)
-   *noIconic:		False            (Start application non-iconic)
-   *Font:		"9x15"                (Font used for strings)
+   *noIconic:		False             (Start application non-iconic)
+   *Font:		"9x15"                   (Font used for strings)
    *portNumber:		5001	   (Port number used for communications)
 /*--
 
   History:
-
-     jm  16sep91 Original based on SunView panel routine.
-     mjs 21sep93 #define bzero -> memset on sun; make in-code docs
-                 compatible with miriad docs; make icon "unsigned
-                 char".
+    jm  16sep91 Original based on SunView panel routine.
+    mjs 21sep93 #define bzero -> memset on sun; make in-code docs
+                compatible with miriad docs; make icon "unsigned char".
+    jm  31oct94 Fixed problem that would not let port number be
+                reassigned (also added a message).  Also, cleaned
+                socket code section and removed some global
+                variables they depended on.
 /************************************************************************/
-#ifdef sun
-#define bzero(a,b) memset((a),0,(b))
-#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/time.h>
@@ -87,52 +84,11 @@ Xpanel provides the following resources, along with their defaults:
 #include <X11/Xaw/Scrollbar.h>
 #include <netdb.h>
 #include <netinet/in.h>
-#define xpanel_width 64
-#define xpanel_height 64
-static unsigned char xpanel_bits[] = {
-   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-   0x18, 0x18, 0x8f, 0x3f, 0x3c, 0xfe, 0xf1, 0x07, 0x38, 0x1c, 0x8f, 0x7f,
-   0x3c, 0xfe, 0xf1, 0x0f, 0x38, 0x1c, 0x86, 0x61, 0x18, 0x86, 0x31, 0x0c,
-   0x78, 0x1e, 0x86, 0x61, 0x18, 0x86, 0x31, 0x0c, 0x78, 0x1e, 0x86, 0x61,
-   0x18, 0x86, 0x31, 0x0c, 0xd8, 0x1b, 0x86, 0x7f, 0x18, 0xfe, 0x31, 0x0c,
-   0x98, 0x19, 0x86, 0x3f, 0x18, 0xfe, 0x31, 0x0c, 0x98, 0x19, 0x86, 0x19,
-   0x18, 0x86, 0x31, 0x0c, 0x18, 0x18, 0x86, 0x39, 0x18, 0x86, 0x31, 0x0c,
-   0x18, 0x18, 0x86, 0x31, 0x18, 0x86, 0x31, 0x0c, 0x18, 0x18, 0x86, 0x31,
-   0x18, 0x86, 0x31, 0x0c, 0x18, 0x18, 0x8f, 0x61, 0x3c, 0x86, 0xf1, 0x0f,
-   0x18, 0x18, 0x8f, 0x61, 0x3c, 0x86, 0xf1, 0x07, 0x00, 0x00, 0x00, 0x00,
-   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xfe, 0x00, 0x00, 0x78, 0x00, 0x00,
-   0x00, 0x00, 0xfc, 0x01, 0x00, 0x3c, 0x00, 0x00, 0x00, 0x00, 0xf8, 0x03,
-   0x00, 0x1e, 0x00, 0x00, 0x00, 0x00, 0xf0, 0x07, 0x00, 0x0f, 0x00, 0x00,
-   0x00, 0x00, 0xe0, 0x0f, 0x80, 0x07, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x1f,
-   0xc0, 0x03, 0x00, 0x00, 0x00, 0x00, 0x80, 0x3f, 0xe0, 0x01, 0x00, 0x00,
-   0x00, 0x00, 0x00, 0x7f, 0xf0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xfe,
-   0x78, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xfc, 0x3c, 0x00, 0x00, 0x00,
-   0x00, 0x00, 0x00, 0x78, 0x1e, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x30,
-   0x0f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x07, 0x00, 0x00, 0x00,
-   0x00, 0x00, 0x00, 0x8c, 0x0f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x8e,
-   0x1f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x8f, 0x3f, 0x00, 0x00, 0x00,
-   0x00, 0x00, 0x80, 0x07, 0x7f, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x03,
-   0xfe, 0x00, 0x00, 0x00, 0x00, 0x00, 0xe0, 0x01, 0xfc, 0x01, 0x00, 0x00,
-   0x00, 0x00, 0xf0, 0x00, 0xf8, 0x03, 0x00, 0x00, 0x00, 0x00, 0x78, 0x00,
-   0xf0, 0x07, 0x00, 0x00, 0x00, 0x00, 0x3c, 0x00, 0xe0, 0x0f, 0x00, 0x00,
-   0x00, 0x00, 0x1e, 0x00, 0xc0, 0x1f, 0x00, 0x00, 0x00, 0x00, 0x0e, 0x00,
-   0x80, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x7f, 0x00, 0x00,
-   0x00, 0x00, 0x02, 0x00, 0x00, 0x7e, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf8, 0x83, 0x7f, 0x18,
-   0x18, 0xfe, 0x61, 0x00, 0xf8, 0x87, 0x7f, 0x38, 0x18, 0xfe, 0x61, 0x00,
-   0x18, 0x86, 0x61, 0x38, 0x18, 0x06, 0x60, 0x00, 0x18, 0x86, 0x61, 0x78,
-   0x18, 0x06, 0x60, 0x00, 0x18, 0x86, 0x61, 0xf8, 0x18, 0x06, 0x60, 0x00,
-   0x18, 0x86, 0x7f, 0xd8, 0x19, 0x7e, 0x60, 0x00, 0xf8, 0x83, 0x7f, 0x98,
-   0x19, 0x7e, 0x60, 0x00, 0xf8, 0x83, 0x61, 0x98, 0x1b, 0x06, 0x60, 0x00,
-   0x18, 0x80, 0x61, 0x18, 0x1b, 0x06, 0x60, 0x00, 0x18, 0x80, 0x61, 0x18,
-   0x1e, 0x06, 0x60, 0x00, 0x18, 0x80, 0x61, 0x18, 0x1c, 0x06, 0x60, 0x00,
-   0x18, 0x80, 0x61, 0x18, 0x1c, 0xfe, 0xe1, 0x1f, 0x18, 0x80, 0x61, 0x18,
-   0x18, 0xfe, 0xe1, 0x1f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+#include "xpanel.icon"
+
+#ifdef sun
+#define bzero(a,b) memset((a),0,(b))
+#endif
 
 /* These are now done by <X11/Intrinsic.h> */
 /* #define True  1 */
@@ -152,17 +108,15 @@ static unsigned char xpanel_bits[] = {
 #define CHECKTIME 100   /* Number of milli-s to wait before */
                         /* looking for new connections. */
 
-static int Port = PORT; /* Used to identify the communications socket number. */
+static int ioSocket;
+static int connected, visible, waiting, changes;
+static int cursorx, cursory, cursor_changes, ncursors;
 
-int listen_socket,io_socket;
-int connected,visible,waiting,changes,cursorx,cursory,cursor_changes,ncursors;
+static Widget top_level;
+static Widget subframe;
+static GC gc;
 
-Widget top_level;
-Widget subframe;
-GC gc;         /* Should this be global??? */
-
-XtAppContext context;
-XtIntervalId Timer;
+static XtAppContext context;
 
 typedef struct items {	char *values;
 			int type,nvalues,changes,itno;
@@ -171,7 +125,7 @@ typedef struct items {	char *values;
 			Widget main;
                         String *buttonlist; /* List of item values in a popup.*/
 			struct items *fwd; } ITEMS;
-ITEMS *items_head = NULL;
+static ITEMS *items_head = (ITEMS *)NULL;
 
 #define ITEM_BUTTONS 1
 #define ITEM_SLIDERS 2
@@ -179,42 +133,43 @@ ITEMS *items_head = NULL;
 #define ITEM_STATUSES 4
 
 static void bug();
-static void start_timer(), init_socket();
-XtTimerCallbackProc check_socket();
-XtInputCallbackProc read_socket();
+static void startTimer(), initializeSocket();
+static XtTimerCallbackProc checkSocket();
+static XtInputCallbackProc readSocket();
 static void clear_control_panel(), check_control_panel();
 static void wait_control_panel(), define_control_panel();
 static void set_control_panel(), destroy_control_panel();
 static void create_control_panel();
-XtActionProc CursorPaint(), CursorEvents();
+static XtActionProc CursorPaint(), CursorEvents();
 static void SetUpListMenu(), SetUpSlider();
 static void LabelScrollBarValue(), LabelScrollBarMinMax();
-XtCallbackProc PlaceMenu(), ListButtonPushed();
-XtCallbackProc button_next(), button_changed();
-XtCallbackProc SliderScrollProc(), SliderJumpProc();
-XtActionProc UpdateScroll(), QuitPanel();
+static XtCallbackProc PlaceMenu(), ListButtonPushed();
+static XtCallbackProc button_next(), button_changed();
+static XtCallbackProc SliderScrollProc(), SliderJumpProc();
+static XtActionProc UpdateScroll(), QuitPanel();
 
 typedef struct {
-  Pixel   cursor_foreground;
-  Pixel   cursor_background;
-  Boolean no_iconic;
-  int     port_number;
+  Pixel       cursor_foreground;
+  Pixel       cursor_background;
+  Boolean     no_iconic;
+  int         port_number;
   XFontStruct *font;
-} ApplicationData, *ApplicationDataPtr;
-ApplicationData App_Data;
+} ApplicationData;
 
-#define Offset(field) XtOffset(ApplicationDataPtr, field)
+static ApplicationData App_Data;
+
+#define Offset(field) XtOffsetOf(ApplicationData, field)
 static XtResource resources[] = {
   {"cursorForeground", "CursorForeground", XtRPixel,      sizeof(Pixel),
-      Offset(cursor_foreground), XtRString,    "XtDefaultForeground"},
+      Offset(cursor_foreground), XtRString,    (XtPointer)XtDefaultForeground},
   {"cursorBackground", "CursorBackground", XtRPixel,      sizeof(Pixel),
-      Offset(cursor_background), XtRString,    "XtDefaultBackground"},
+      Offset(cursor_background), XtRString,    (XtPointer)XtDefaultBackground},
   {"noIconic",         "NoIconic",         XtRBoolean,    sizeof(Boolean),
-      Offset(no_iconic),         XtRImmediate, (caddr_t) False      },
+      Offset(no_iconic),         XtRImmediate, (XtPointer)False},
   {"portNumber",       "PortNumber",       XtRInt,        sizeof(int),
-      Offset(port_number),       XtRImmediate, (caddr_t) PORT       },
+      Offset(port_number),       XtRImmediate, (XtPointer)PORT},
   {XtNfont,             XtCFont,           XtRFontStruct, sizeof(XFontStruct *),
-      Offset(font),              XtRString,    "9x15"               },
+      Offset(font),              XtRString,    (XtPointer)"9x15"},
 };
 #undef Offset
 
@@ -253,24 +208,19 @@ int argc;
 char *argv[];
 {
   int i;
+  unsigned int Port; /* Used to identify the communications socket number. */
   Arg args[10];
   Pixmap iconPixmap;
   XGCValues gcv;
   static String QuitTrans = "#override \n\
                         !<Key>Escape: quitpanel()";
 
-/*
- * Get the input socket. For some reason, X will allocate the socket
- * I want if I call init_socket() after calling XtAppInitialize().
- */
-  init_socket();
-
 /* Create the base level frame. */
 
   (void)fprintf(stderr,"PANEL: %s\n",VERSION_ID);
 
   top_level = XtAppInitialize( &context, "Xpanel", options, XtNumber(options),
-       (Cardinal *) &argc, argv, fallback_resources, NULL, (Cardinal) 0 );
+       &argc, argv, fallback_resources, NULL, (Cardinal) 0 );
 
   XtGetApplicationResources(top_level, (caddr_t) &App_Data,
        resources, XtNumber(resources), NULL, (Cardinal) 0 );
@@ -278,8 +228,7 @@ char *argv[];
   XtAppAddActions( context, actionTable, XtNumber(actionTable) );
 
   i = 0;
-  App_Data.no_iconic = 1;
-  if (!App_Data.no_iconic){ XtSetArg(args[i], XtNiconic, (XtArgVal) True); i++;}
+  if (!App_Data.no_iconic) XtSetArg(args[i], XtNiconic, (XtArgVal) True); i++;
   XtSetArg(args[i], XtNheight, (XtArgVal) 64); i++;
   XtSetArg(args[i], XtNwidth, (XtArgVal) 200); i++;
   XtSetArg(args[i], XtNtitle, (XtArgVal) "Miriad Control Panel"); i++;
@@ -290,7 +239,7 @@ char *argv[];
   XtRealizeWidget(top_level);
 
   iconPixmap = XCreateBitmapFromData(XtDisplay(top_level),
-       XtWindow(top_level), xpanel_bits, xpanel_width, xpanel_height);
+       XtWindow(top_level), (char *)xpanel_bits, xpanel_width, xpanel_height);
 
   i = 0;
   XtSetArg(args[i], XtNiconPixmap, iconPixmap); i++;
@@ -306,8 +255,12 @@ char *argv[];
   connected = False;
   visible = False;
 
-/* Set up the timer for accept connections */
-  start_timer();
+/* Get a socket for accepting connections and then start the timer. */
+  Port = App_Data.port_number;
+  if (Port != PORT)
+    (void)fprintf(stderr,
+      "PANEL: Re-assigning the I/O Port number from %d to %d\n", PORT, Port);
+  initializeSocket(Port);
 
 /* Wait for connections, and go into the main loop. */
 
@@ -315,60 +268,72 @@ char *argv[];
   exit(0);
 }
 /************************************************************************/
-static void start_timer()
+static void startTimer(socketID)
+int socketID;
 {
   unsigned long interval = CHECKTIME; /* in milli-seconds */
 
-  Timer = XtAppAddTimeOut(context, interval, check_socket, NULL);
+  (void)XtAppAddTimeOut(context, interval,
+    (XtTimerCallbackProc)checkSocket, (XtPointer)socketID);
 }
 /************************************************************************/
-static void init_socket()
+static void initializeSocket(portnumber)
+unsigned int portnumber;
 {
+  int listenSocket;
   struct sockaddr_in sin;
 
 /* Get a socket to the outside world, and bind to it. */
 
   bzero((char *)&sin, sizeof(sin));
   sin.sin_family = AF_INET;
-  sin.sin_port = htons((u_short)Port);
-  sin.sin_addr.s_addr = INADDR_ANY;
+  sin.sin_port = htons(portnumber);
+  sin.sin_addr.s_addr = htonl(INADDR_ANY);
 
-  if ((listen_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-    bug("open_socket:socket");
-  if (bind(listen_socket, (caddr_t)&sin, sizeof(sin)) < 0)
-    bug("open_socket:bind");
-  listen(listen_socket, 5);
+  if ((listenSocket = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+    bug("initializeSocket:socket");
+  if (bind(listenSocket, (struct sockaddr *)&sin, sizeof(sin)) < 0)
+    bug("initializeSocket:bind");
+  listen(listenSocket, 5);
+  startTimer(listenSocket);
 }
 /************************************************************************/
 /* ARGSUSED */
-XtTimerCallbackProc check_socket(dummy, ptrTimer)
-XtPointer dummy;  /* Unused */
+static XtTimerCallbackProc checkSocket(client_data, ptrTimer)
+XtPointer client_data;
 XtIntervalId *ptrTimer;
 {
-  int len,read_mask;
+  int len;
+  int listenSocket;
+  fd_set read_mask;
   struct timeval time_0;
   struct sockaddr_in addr;
-  XtInputId FdId;
+  XtInputMask condition = XtInputReadMask;
 
   time_0.tv_sec = 0;
   time_0.tv_usec = 0;
 
-  start_timer();
+  listenSocket = (int)client_data;
+  startTimer(listenSocket);
 
-  read_mask = 1 << listen_socket;
-  if ((connected == False) && (select(listen_socket+1, &read_mask, NULL,
-					NULL, &time_0) > 0)) {
-    len = sizeof(addr);
-    if ((io_socket = accept(listen_socket, &addr, &len)) < 0)
-      bug("get_client:accept");
-    FdId = XtAppAddInput(context, io_socket, XtInputReadMask, read_socket, NULL);
-    connected = True;
+  if (connected == False) {
+    FD_ZERO(&read_mask);
+    FD_SET(listenSocket, &read_mask);
+    if (select(listenSocket+1, &read_mask, (fd_set *)NULL,
+      (fd_set *)NULL, &time_0) > 0) {
+      len = sizeof(addr);
+      if ((ioSocket = accept(listenSocket, (struct sockaddr *)&addr, &len)) < 0)
+        bug("checkSocket:accept");
+      (void)XtAppAddInput(context, ioSocket, (XtPointer)condition,
+        (XtInputCallbackProc)readSocket, (XtPointer)NULL);
+      connected = True;
+    }
   }
-  return;
+  return NULL;
 }
 /************************************************************************/
 /* ARGSUSED */
-XtInputCallbackProc read_socket(dummy, iosocket, fdid)
+static XtInputCallbackProc readSocket(dummy, iosocket, fdid)
 XtPointer dummy;  /* Unused */
 int *iosocket;
 XtInputId *fdid;
@@ -402,7 +367,9 @@ XtInputId *fdid;
     nread = read(fd,(char *)&buffer[2],size);
     if(nread < size) bug("Unexpected End-of-Data");
     set_control_panel(buffer);
-  }else bug("read_socket:I should never get here");
+  }else bug("readSocket:I should never get here");
+
+  return NULL;
 }
 /************************************************************************/
 static void clear_control_panel()
@@ -445,7 +412,7 @@ int itno;
   buf[1] = ip->changes;
   changes -= ip->changes;
   ip->changes = 0;
-  write(io_socket,(char *)buf,8);
+  write(ioSocket,(char *)buf,8);
 }
 /************************************************************************/
 static void wait_control_panel()
@@ -553,7 +520,7 @@ short int message[];
   if((ip->type == ITEM_BUTTONS) && (ip->nvalues > 1)){
     if((val[0] >= 0) && (val[0] < ip->nvalues) && (val[0] != ip->sval)){
       ip->sval = val[0] - 1;
-      button_next(ip->main, (caddr_t)ip, (caddr_t)NULL); 
+      (void)button_next(ip->main, (caddr_t)ip, (caddr_t)NULL); 
     }
   }else if(ip->type == ITEM_BUTTONS){
     ; /* NULL command for one valued buttons */
@@ -584,7 +551,7 @@ short int message[];
     }else {
       bug("set_control_panel: Too many cursor values!");
     }
-    CursorPaint(ip->main, (XEvent *)NULL, (String *)NULL, (Cardinal *)NULL);
+    (void)CursorPaint(ip->main, (XEvent *)NULL, (String *)NULL, (Cardinal *)NULL);
   }else{
     bug("set_control_panel: I cannot get here!");
   }
@@ -669,7 +636,8 @@ static void create_control_panel()
   i = 0;
   subframe = XtCreatePopupShell("Miriad Control Panel", transientShellWidgetClass,
                 top_level, args, i);
-  XtAddCallback(subframe, XtNpopupCallback, PlaceMenu, (XtPointer)NULL);
+  XtAddCallback(subframe, XtNpopupCallback, (XtCallbackProc)PlaceMenu,
+    (XtPointer)NULL);
 
   i = 0;
   panel = XtCreateManagedWidget("panel", formWidgetClass, subframe, args, i);
@@ -691,7 +659,8 @@ static void create_control_panel()
         XtSetArg(args[i], XtNcursor,       (XtArgVal) cursor); i++;
         ip->main = XtCreateManagedWidget("button", commandWidgetClass,
                      panel, args, i);
-        XtAddCallback(ip->main, XtNcallback, button_changed, (XtPointer)ip);
+        XtAddCallback(ip->main, XtNcallback,
+          (XtCallbackProc)button_changed, (XtPointer)ip);
         if (Lasthoriz) {
           Lastvert = Lasthoriz;
           Lasthoriz = NULL;
@@ -712,7 +681,8 @@ static void create_control_panel()
         XtSetArg(args[i], XtNcursor,       (XtArgVal) cursor); i++;
         ip->main = XtCreateManagedWidget("list", commandWidgetClass,
                      panel, args, i);
-        XtAddCallback(ip->main, XtNcallback, button_next, (XtPointer)ip);
+        XtAddCallback(ip->main, XtNcallback,
+          (XtCallbackProc)button_next, (XtPointer)ip);
         XtOverrideTranslations(ip->main, XtParseTranslationTable(Trans));
         SetUpListMenu(ip, item_width);
         if (Lasthoriz) {
@@ -809,7 +779,7 @@ static void create_control_panel()
 }
 /************************************************************************/
 /* ARGSUSED */
-XtActionProc CursorPaint(w, event, params, nparams)
+static XtActionProc CursorPaint(w, event, params, nparams)
 Widget w;
 XEvent *event;     /* Unused */
 String *params;    /* Unused */
@@ -832,10 +802,11 @@ Cardinal *nparams; /* Unused */
     XDrawLine(XtDisplay(w), XtWindow(w), gc, left, top, right, bottom);
     XDrawLine(XtDisplay(w), XtWindow(w), gc, left, bottom, right, top);
   }
+  return NULL;
 }
 /************************************************************************/
 /* ARGSUSED */
-XtActionProc CursorEvents(w, event, params, nparams)
+static XtActionProc CursorEvents(w, event, params, nparams)
 Widget w;
 XEvent *event;
 String *params;    /* Unused */
@@ -861,11 +832,12 @@ Cardinal *nparams; /* Unused */
       changes++;
       cursorx = 100 * x / width;
       cursory = 100 * y / height;
-      CursorPaint(w, event, params, nparams);
+      (void)CursorPaint(w, event, params, nparams);
       if(waiting) wait_control_panel();
       waiting = False;
     }
   }
+  return NULL;
 }
 /************************************************************************/
 static void SetUpListMenu(item, width)
@@ -891,7 +863,8 @@ int width;
     i = 0;
     popupshell = XtCreatePopupShell("ButtonList", transientShellWidgetClass,
                                       ip->main, args, i);
-    XtAddCallback(popupshell, XtNpopupCallback, PlaceMenu, (XtPointer)NULL);
+    XtAddCallback(popupshell, XtNpopupCallback,
+      (XtCallbackProc)PlaceMenu, (XtPointer)NULL);
     XtOverrideTranslations(popupshell, XtParseTranslationTable(PopTrans));
 
     i = 0;
@@ -907,7 +880,8 @@ int width;
       ip->buttonlist[i] = (String) s;
       wlist = XtCreateManagedWidget(ip->buttonlist[i], commandWidgetClass,
                                      popbox, args, 1);
-      XtAddCallback(wlist, XtNcallback, ListButtonPushed, (XtPointer)ip);
+      XtAddCallback(wlist, XtNcallback,
+        (XtCallbackProc)ListButtonPushed, (XtPointer)ip);
       XtOverrideTranslations(wlist, XtParseTranslationTable(LisTrans));
       s += strlen(s) + 1;
     }
@@ -924,7 +898,7 @@ int labelwidth, width, height;
     float top, shown;
     ITEMS *ip;
     Arg args[20];
-    Widget wlab, wval, wmin, wmax;
+    Widget wlab, wval, wmin;
     Widget wscroll;
     char ScrollTrans[300];
     static String SprintfTrans = "#override \n\
@@ -977,8 +951,10 @@ int labelwidth, width, height;
     XtSetArg(args[i], XtNshown,         (XtArgVal) shown); i++;
     wscroll = XtCreateManagedWidget("Scroll", scrollbarWidgetClass,
                  ip->main, args, i);
-    XtAddCallback(wscroll, XtNscrollProc, SliderScrollProc, (XtPointer)ip);
-    XtAddCallback(wscroll, XtNjumpProc, SliderJumpProc, (XtPointer)ip);
+    XtAddCallback(wscroll, XtNscrollProc,
+      (XtCallbackProc)SliderScrollProc, (XtPointer)ip);
+    XtAddCallback(wscroll, XtNjumpProc,
+      (XtCallbackProc)SliderJumpProc, (XtPointer)ip);
     (void)sprintf(ScrollTrans, SprintfTrans, ip->itno);
     XtOverrideTranslations(wscroll, XtParseTranslationTable(ScrollTrans));
 
@@ -988,12 +964,14 @@ int labelwidth, width, height;
     XtSetArg(args[i], XtNfromHoriz, (XtArgVal) wscroll); i++;
     XtSetArg(args[i], XtNhorizDistance,   (XtArgVal) 0); i++;
     XtSetArg(args[i], XtNcursor,   (XtArgVal) nocursor); i++;
-    wmax = XtCreateManagedWidget("Smax", labelWidgetClass, ip->main, args, i);
+    (void)XtCreateManagedWidget("Smax", labelWidgetClass, ip->main, args, i);
 
     LabelScrollBarMinMax(ip->main, ip->smin, ip->smax);
     LabelScrollBarValue(ip->main, (int)50);
     XawScrollbarSetThumb(wscroll, (float)(0.5), (float)(-1.0));
         /* -1 for the last two arguments means unchanged. */
+
+    return;
 }
 /************************************************************************/
 static void LabelScrollBarValue(parent, value)
@@ -1006,7 +984,7 @@ int value;
     Widget widget;
 
     widget = XtNameToWidget(parent, "Sval");
-    sprintf(string, "[%d]", value);
+    (void)sprintf(string, "[%d]", value);
     XtSetArg(args[0], XtNwidth, &width);
     XtGetValues(widget, args, 1);
     XtSetArg(args[0], XtNwidth, width);
@@ -1023,18 +1001,19 @@ int min, max;
     Widget widget;
 
     widget = XtNameToWidget(parent, "Smin");
-    sprintf(string, "%d", min);
+    (void)sprintf(string, "%d", min);
     XtSetArg(args[0], XtNlabel, string);
     XtSetValues(widget, args, 1);
 
     widget = XtNameToWidget(parent, "Smax");
-    sprintf(string, "%d", max);
+    (void)sprintf(string, "%d", max);
     XtSetArg(args[0], XtNlabel, string);
     XtSetValues(widget, args, 1);
+    return;
 }
 /************************************************************************/
 /* ARGSUSED */
-XtCallbackProc PlaceMenu(w, client_data, call_data)
+static XtCallbackProc PlaceMenu(w, client_data, call_data)
 Widget w;
 XtPointer client_data; /* Unused */
 XtPointer call_data;   /* Unused */
@@ -1059,10 +1038,11 @@ XtPointer call_data;   /* Unused */
     XtSetArg(args[i], XtNx, x + height); i++;
     XtSetArg(args[i], XtNy, y + height/2); i++;
     XtSetValues(w, args, i);
+    return NULL;
 }
 /************************************************************************/
 /* ARGSUSED */
-XtCallbackProc ListButtonPushed(w, client_data, call_data)
+static XtCallbackProc ListButtonPushed(w, client_data, call_data)
 Widget w;
 XtPointer client_data;
 XtPointer call_data;   /* Unused */
@@ -1085,7 +1065,7 @@ XtPointer call_data;   /* Unused */
 
     button = XtParent(button);  /* list<-ButtonList<-MenuBox<-buttonlist[i] */
 
-    if((int)strlen(listitem) > 0) {
+    if(strlen(listitem) > (size_t)0) {
       for (listindex = 0; listindex < ip->nvalues; listindex++)
         if(strcmp(listitem, ip->buttonlist[listindex]) == 0) break;
 
@@ -1094,13 +1074,14 @@ XtPointer call_data;   /* Unused */
         XtSetValues(button, args, 1);
         ip->sval = listindex;
 
-        button_changed(w, (caddr_t) ip, (caddr_t) NULL);
+        (void)button_changed(w, (caddr_t) ip, (caddr_t) NULL);
       }
     }
+    return NULL;
 }
 /************************************************************************/
 /* ARGSUSED */
-XtCallbackProc button_next(w, client_data, call_data)
+static XtCallbackProc button_next(w, client_data, call_data)
 Widget w;
 XtPointer client_data;
 XtPointer call_data;   /* Unused */
@@ -1120,11 +1101,12 @@ XtPointer call_data;   /* Unused */
 
     ip->sval = listindex;
 
-    button_changed(w, (caddr_t) ip, (caddr_t) NULL);
+    (void)button_changed(w, (caddr_t) ip, (caddr_t) NULL);
+    return NULL;
 }
 /************************************************************************/
 /* ARGSUSED */
-XtCallbackProc button_changed(w, client_data, call_data)
+static XtCallbackProc button_changed(w, client_data, call_data)
 Widget w;
 XtPointer client_data;
 XtPointer call_data;   /* Unused */
@@ -1138,9 +1120,10 @@ XtPointer call_data;   /* Unused */
     changes++;
     if(waiting) check_control_panel(ip->itno);
     waiting = False;
+    return NULL;
 }
 /************************************************************************/
-XtCallbackProc SliderScrollProc(w, client_data, call_data)
+static XtCallbackProc SliderScrollProc(w, client_data, call_data)
 Widget w;
 XtPointer client_data;
 XtPointer call_data;
@@ -1160,11 +1143,12 @@ XtPointer call_data;
     value = ip->smin + (fraction * (ip->smax - ip->smin));
     XawScrollbarSetThumb(w, fraction, (float)(-1.0)); /* -1 means unchanged. */
     LabelScrollBarValue(ip->main, value);
-    button_changed(w, (XtPointer) ip, (XtPointer) NULL);
+    (void)button_changed(w, (XtPointer) ip, (XtPointer) NULL);
+    return NULL;
 }
 /************************************************************************/
 /* ARGSUSED */
-XtCallbackProc SliderJumpProc(w, client_data, call_data)
+static XtCallbackProc SliderJumpProc(w, client_data, call_data)
 Widget w;            /* Unused */
 XtPointer client_data;
 XtPointer call_data;
@@ -1182,11 +1166,12 @@ XtPointer call_data;
     value = ip->smin + (fraction * (ip->smax - ip->smin));
     LabelScrollBarValue(ip->main, value);
 /*  Only notify when the scrolling is finished....   */
-/*  button_changed(w, (XtPointer) ip, (XtPointer) NULL); */
+/*  (void)button_changed(w, (XtPointer) ip, (XtPointer) NULL); */
+    return NULL;
 }
 /************************************************************************/
 /* ARGSUSED */
-XtActionProc UpdateScroll(w, event, params, nparams)
+static XtActionProc UpdateScroll(w, event, params, nparams)
 Widget w;
 XEvent *event;     /* Unused */
 String *params;    /* ITEMS* ip->itno */
@@ -1195,17 +1180,18 @@ Cardinal *nparams; /* Only 1 */
     int itno;
     ITEMS *ip;
 
-    if (*nparams != 1) return;
+    if (*nparams != 1) return NULL;
     itno = atoi(*params);
 
     for(ip = items_head; ip != NULL && ip->itno != itno; ip = ip->fwd) ;
     if(ip == NULL) bug("UpdateScroll: Did not find the item");
 
-    button_changed(w, (XtPointer) ip, (XtPointer) NULL);
+    (void)button_changed(w, (XtPointer) ip, (XtPointer) NULL);
+    return NULL;
 }
 /************************************************************************/
 /* ARGSUSED */
-XtActionProc QuitPanel(w, event, params, nparams)
+static XtActionProc QuitPanel(w, event, params, nparams)
 Widget w;          /* Unused */
 XEvent *event;     /* Unused */
 String *params;    /* Unused */
