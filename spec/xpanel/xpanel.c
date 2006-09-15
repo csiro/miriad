@@ -54,7 +54,8 @@ Xpanel provides the following resources, along with their defaults:
    *cursorBackground:	"XtDefaultBackground" (... cursor in coreWidget)
    *noIconic:		False             (Start application non-iconic)
    *Font:		"9x15"                   (Font used for strings)
-   *portNumber:		5001	   (Port number used for communications) */
+   *portNumber:		5001	   (Port number used for communications)
+ */
 /*--
 
   History:
@@ -66,7 +67,11 @@ Xpanel provides the following resources, along with their defaults:
                 socket code section and removed some global
                 variables they depended on.
     rjs 15feb95 Added htons/ntohs to buffer exchange.
-    rjs 16aug95 Do not expect a full read to always work.
+    rjs 16aug95 Do not expect a full read to always work (added readit).
+    jm  01sep95 Finally found the bug causing this to bomb under Solaris
+                (I was releasing memory that was not allocated for the
+                buttonlist array and was also freeing the Nth member
+                instead of the pointer to the array itself).
 *************************************************************************/
 #include <stdlib.h>
 #include <stdio.h>
@@ -103,6 +108,7 @@ Xpanel provides the following resources, along with their defaults:
 #define CTRL_CHECK	4
 #define CTRL_WAIT	5
 #define CTRL_SET	6
+#define CTRL_DONE	7
 
 #define PORT 5001
 #define PANEL_WIDTH 13
@@ -135,7 +141,6 @@ static ITEMS *items_head = (ITEMS *)NULL;
 #define ITEM_STATUSES 4
 
 static void bug();
-static int readit();
 static void startTimer(), initializeSocket();
 static XtTimerCallbackProc checkSocket();
 static XtInputCallbackProc readSocket();
@@ -206,16 +211,16 @@ char *string;
     exit(-1);
 }
 /************************************************************************/
-static int readit(fd,buff,size)
-int fd,size;
+static int readit(fd, buff, size)
+int fd, size;
 char *buff;
 {
   int nread,n;
 
   nread = 0;
-  while(nread < size){
-    n = read(fd,buff+nread,size-nread);
-    if(n == 0)return(nread);
+  while (nread < size) {
+    n = read(fd, buff+nread, size-nread);
+    if (n == 0) return(nread);
     nread += n;
   }
   return(nread);
@@ -246,7 +251,9 @@ char *argv[];
   XtAppAddActions( context, actionTable, XtNumber(actionTable) );
 
   i = 0;
-  if (!App_Data.no_iconic) XtSetArg(args[i], XtNiconic, (XtArgVal) True); i++;
+  if (!App_Data.no_iconic) {
+    XtSetArg(args[i], XtNiconic, (XtArgVal) True); i++;
+  }
   XtSetArg(args[i], XtNheight, (XtArgVal) 64); i++;
   XtSetArg(args[i], XtNwidth, (XtArgVal) 200); i++;
   XtSetArg(args[i], XtNtitle, (XtArgVal) "Miriad Control Panel"); i++;
@@ -361,15 +368,13 @@ XtInputId *fdid;
 
   fd = *iosocket;
   size=2;
-  nread = read(fd,(char *)buffer,2*size);
+  nread = readit(fd,(char *)buffer,2*size);
   buffer[0] = ntohs(buffer[0]);
   buffer[1] = ntohs(buffer[1]);
   if(nread != 2*size){
-    destroy_control_panel();
-    XtRemoveInput(*fdid);
     close(fd);
-    connected = False;
-    visible = False;
+    XtRemoveInput(*fdid);
+    destroy_control_panel();
   }else if(buffer[0] == CTRL_DEFINE){
     size = buffer[1] + 2;
     nread = readit(fd,(char *)&buffer[2],2*size);
@@ -392,6 +397,10 @@ XtInputId *fdid;
     size+=2;
     for(i=2; i < size; i++)buffer[i] = ntohs(buffer[i]);
     set_control_panel(buffer);
+  }else if(buffer[0] == CTRL_DONE){
+    close(fd);
+    XtRemoveInput(*fdid);
+    destroy_control_panel();
   }else bug("readSocket:I should never get here");
 
   return NULL;
@@ -601,9 +610,9 @@ static void destroy_control_panel()
     next = ip->fwd;
 
     if (ip->buttonlist) {
-      for (i = 0; ip->buttonlist[i] != NULL; i++)
-        XtFree(ip->buttonlist[i]);
-      XtFree(ip->buttonlist[i]);
+/*      for (i = 0; ip->buttonlist[i] != NULL; i++)
+        XtFree(ip->buttonlist[i]); */
+      XtFree((char *)ip->buttonlist);
     }
 
     (void)free(ip->values);
@@ -664,7 +673,8 @@ static void create_control_panel()
 
   i = 0;
   subframe = XtCreatePopupShell("Miriad Control Panel",
-    transientShellWidgetClass, top_level, args, i);
+    applicationShellWidgetClass, top_level, args, i);
+/*    transientShellWidgetClass, top_level, args, i); */
   XtAddCallback(subframe, XtNpopupCallback, (XtCallbackProc)PlaceMenu,
     (XtPointer)NULL);
 
