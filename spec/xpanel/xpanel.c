@@ -54,7 +54,7 @@ Xpanel provides the following resources, along with their defaults:
    *cursorBackground:	"XtDefaultBackground" (... cursor in coreWidget)
    *noIconic:		False             (Start application non-iconic)
    *Font:		"9x15"                   (Font used for strings)
-   *portNumber:		5001	   (Port number used for communications)
+   *portNumber:		5001	   (Port number used for communications) */
 /*--
 
   History:
@@ -66,7 +66,8 @@ Xpanel provides the following resources, along with their defaults:
                 socket code section and removed some global
                 variables they depended on.
     rjs 15feb95 Added htons/ntohs to buffer exchange.
-/************************************************************************/
+    rjs 16aug95 Do not expect a full read to always work.
+*************************************************************************/
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/time.h>
@@ -134,6 +135,7 @@ static ITEMS *items_head = (ITEMS *)NULL;
 #define ITEM_STATUSES 4
 
 static void bug();
+static int readit();
 static void startTimer(), initializeSocket();
 static XtTimerCallbackProc checkSocket();
 static XtInputCallbackProc readSocket();
@@ -202,6 +204,21 @@ char *string;
 {
     perror(string);
     exit(-1);
+}
+/************************************************************************/
+static int readit(fd,buff,size)
+int fd,size;
+char *buff;
+{
+  int nread,n;
+
+  nread = 0;
+  while(nread < size){
+    n = read(fd,buff+nread,size-nread);
+    if(n == 0)return(nread);
+    nread += n;
+  }
+  return(nread);
 }
 /************************************************************************/
 main(argc,argv)
@@ -355,7 +372,7 @@ XtInputId *fdid;
     visible = False;
   }else if(buffer[0] == CTRL_DEFINE){
     size = buffer[1] + 2;
-    nread = read(fd,(char *)&buffer[2],2*size);
+    nread = readit(fd,(char *)&buffer[2],2*size);
     if(nread < 2*size) bug("Unexpected End-of-Data");
     size+=2;
     for(i=2; i < size; i++)buffer[i] = ntohs(buffer[i]);
@@ -370,7 +387,7 @@ XtInputId *fdid;
     wait_control_panel();
   }else if(buffer[0] == CTRL_SET){
     size = buffer[1] + 1;
-    nread = read(fd,(char *)&buffer[2],2*size);
+    nread = readit(fd,(char *)&buffer[2],2*size);
     if(nread < 2*size) bug("Unexpected End-of-Data");
     size+=2;
     for(i=2; i < size; i++)buffer[i] = ntohs(buffer[i]);
