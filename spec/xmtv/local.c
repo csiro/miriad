@@ -3,6 +3,7 @@
 	12may92  jm  Original code (converted from MSSS local routines).
 	13nov92  jm  Modified local fiddle code to permit full range
 		     of contrast and bias values.
+	14nov95  jm  Corrected callback declaration syntax.
 */
 
 #include "xmtv.h"
@@ -52,11 +53,13 @@ Widget w;
     if (AppDebug)
       (void)fprintf(stderr,
         "resize toggled: W H  X Y %d %d  %d %d\n", width, height, x, y);
+
+    return;
 }
 
 /************************************************************************/
 /* ARGSUSED */
-XtCallbackProc resizeCallback(w, client_data, call_data)
+void resizeCallback(w, client_data, call_data)
 Widget w;
 XtPointer client_data;
 XtPointer call_data;     /* Unused */
@@ -67,6 +70,8 @@ XtPointer call_data;     /* Unused */
     Widget top = (Widget)client_data;
 
     localResize(top);
+
+    return;
 }
 
 /************************************************************************/
@@ -112,11 +117,13 @@ int newmag;
 
     movePanner(upleft_mag, upleft_x[0], upleft_y[0]);
     imageRefresh();
+
+    return;
 }
 
 /************************************************************************/
 /* ARGSUSED */
-XtCallbackProc localZoomDown(w, client_data, call_data)
+void localZoomDown(w, client_data, call_data)
 Widget w;                /* Unused */
 XtPointer client_data;   /* Unused */
 XtPointer call_data;     /* Unused */
@@ -125,11 +132,13 @@ XtPointer call_data;     /* Unused */
 ------------------------------------------------------------------------*/
 {
     privateZoom(upleft_mag/2);
+
+    return;
 }
 
 /************************************************************************/
 /* ARGSUSED */
-XtCallbackProc localZoomUp(w, client_data, call_data)
+void localZoomUp(w, client_data, call_data)
 Widget w;                /* Unused */
 XtPointer client_data;   /* Unused */
 XtPointer call_data;     /* Unused */
@@ -138,11 +147,13 @@ XtPointer call_data;     /* Unused */
 ------------------------------------------------------------------------*/
 {
     privateZoom(upleft_mag*2);
+
+    return;
 }
 
 /************************************************************************/
 /* ARGSUSED */
-XtCallbackProc localReset(w, client_data, call_data)
+void localReset(w, client_data, call_data)
 Widget w;                /* Unused */
 XtPointer client_data;
 XtPointer call_data;     /* Unused */
@@ -172,6 +183,8 @@ XtPointer call_data;     /* Unused */
       resetMenus(1, 1); /* ("B&W", cur_chan) */
       imageRefresh();
     }
+
+    return;
 }
 
 /************************************************************************/
@@ -212,4 +225,6 @@ int x, y, width, height;
 
       (void)lutRamp(beg, fin);
     }
+
+    return;
 }
