@@ -3,12 +3,13 @@
 # dependency analysis for all source file types.
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.1 2006/08/28 01:54:59 cal103 Exp $
+# $Id: GNUmakefile,v 1.2 2006/09/15 07:47:51 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
 
-# Add architecture-specific source files.
+# Add architecture-specific source files.  We assume that there are no header
+# files in these directories.
 MIROS1D  := $(MIRSUBSD)/unix
 MIROSRCS := $(notdir $(wildcard $(MIROS1D)/*.*))
 
@@ -25,251 +26,6 @@ MIROBJS  += $(subst .f2c,.o,$(filter %.f2c,$(MIRSRCS) $(MIROSRCS)))
 MIROBJS  += $(subst   .c,.o,$(filter   %.c,$(MIRSRCS) $(MIROSRCS)))
 MIROBJS  := $(sort $(MIROBJS))
 
-
-# Dependency analysis.
-#---------------------
-# See below for an explanation of the dependency analysis scheme.
-DPNDLIST := $(MIRAUXD)/subs.list
-DPNDTIME := $(MIRAUXD)/subs.time
-DPNDLOCK := $(MIRAUXD)/subs.lock
-
-# Command sequence for applying ratty, extracting Fortran dependencies, and
-# compiling.  The wait-lock and update-time command sequences are defined in
-# GNUmakedefs.
-define depend-for
-     $(wait-lock)
-     $(RATTY) $(RATFLAGS) $(MIRINCS) $< $(MIRTMPD)/$*.f
-   @ sed -n -e 's#^c >>> $(MIRROOT)/##p' $(MIRTMPD)/$*.f | $(backsl)
-       sort -u | $(backsl)
-       sed -e 's#^inc#$$(DPNDTIME)($*) : $$(MIRINCD)#' $(backsl)
-           -e 's#^subs#$$(DPNDTIME)($*) : $$(MIRSUBSD)#' | $(backsl)
-       sort -m - $(DPNDLOCK) > $(DPNDLIST)
-     $(FC) $(FCOPT) -c -o $(MIRTMPD)/$*.o $(MIRTMPD)/$*.f
-  -@ if [ ! -f "$(MIRTMPD)/$*.o" ] ; then $(backsl)
-       $(RM) $(DPNDLOCK) ; $(backsl)
-     fi
-     $(update-time)
-endef
-
-# Command sequence for applying intf2c followed by cpp, extracting C
-# dependencies from cpp output, and compiling.
-define depend-f2c
-     $(wait-lock)
-     $(INTF2C) $(F2CFLAGS) $< $(MIRTMPD)/$*.c
-     $(CPP) $(CPPOPT) $(MIRINCS) -o $(MIRTMPD)/$*.i $(MIRTMPD)/$*.c
-     $(depend-i)
-endef
-
-# Command sequence for applying cpp, extracting C dependencies from cpp
-# output, and compiling.
-define depend-c
-     $(wait-lock)
-     $(CPP) $(CPPOPT) $(MIRINCS) -o $(MIRTMPD)/$*.i $<
-     $(depend-i)
-endef
-
-# Command sequence for extracting C dependencies from cpp output and
-# compiling.
-define depend-i
-   @ sed -n -e 's#.*$(MIRROOT)/\(.*\.h\)".*#\1#p' $(MIRTMPD)/$*.i | $(backsl)
-       sort -u | $(backsl)
-       sed -e 's#^inc#$$(DPNDTIME)($*) : $$(MIRINCD)#' $(backsl)
-           -e 's#^subs#$$(DPNDTIME)($*) : $$(MIRSUBSD)#' | $(backsl)
-       sort -m - $(DPNDLOCK) > $(DPNDLIST)
-     $(CC) $(COPT) -c -o $(MIRTMPD)/$*.o $(MIRTMPD)/$*.i
-  -@ if [ ! -f "$(MIRTMPD)/$*.o" ] ; then $(backsl)
-       $(RM) $(DPNDLOCK) ; $(backsl)
-     fi
-     $(update-time)
-endef
-
-
-# Programmer variables.
-#----------------------
-ifeq "$(MAKEMODE)" "programmer"
-  ifneq "$(MIROS2D)" ""
-    PGMROSD  := ./unix/$(SUBS$(ARCH))
-    VPATH    := $(PGMROSD):$(MIROS2D):
-  endif
-  PGMROSD  += ./unix
-  VPATH    := $(VPATH)./unix:$(MIROS1D):.:$(CODEDIR)
-
-  PGMROSRC := $(sort $(notdir \
-                $(foreach DIR,$(PGMROSD),$(wildcard $(DIR)/*.*))))
-
-  PGMRINCS := -I . -I $(PGMRINCD) $(MIRINCS)
-  PGMRLIBR := $(PGMRLIBD)/libmir.a
-  PGMROBJS := $(subst .for,.o,$(wildcard *.for) $(filter %.for,$(PGMROSRC)))
-  PGMROBJS += $(subst .f2c,.o,$(wildcard *.f2c) $(filter %.f2c,$(PGMROSRC)))
-  PGMROBJS += $(subst   .c,.o,$(wildcard *.c)   $(filter %.c,  $(PGMROSRC)))
-  PGMROBJS := $(sort $(PGMROBJS))
-endif
-
-
-# Pattern rules (rule-chaining, and dependency analysis).
-#--------------------------------------------------------
-# This sequence of pattern rules forms many chains.  Which chain is used to
-# resolve a particular target depends on the precedence of the rules in the
-# chain (established by their order of definition here) and the existence of
-# dependencies that can satisfy them.
-#
-# For example, in linux, 'gmake lib(uvdat)' would be resolved by the following
-# chain rooted at $MIR/subs/uvdat.for: 
-#
-#   lib(uvdat) <- $MIR/linux/lib/libmir.a(uvdat.o)
-#              <- $MIR/linux/tmp/uvdat.o
-#              <- $MIR/linux/aux/subs.time(uvdat)
-#              <- $MIR/subs/uvdat.for
-#
-# The chain is evaluated in reverse order, starting with $MIR/subs/uvdat.for,
-# as indicated by the arrows.
-#
-# The first step is pretty interesting; make generates uvdat's dependency
-# timestamp, which for tidiness is stored in an archive library as
-# $MIR/linux/aux/subs.time(uvdat), by running ratty to generate
-# $MIR/linux/tmp/uvdat.f.  It uses uvdat.f to determine uvdat's dependencies,
-# adds these to $MIR/linux/aux/subs.list, which is included at the end of this
-# makefile, and then touches uvdat's timstamp.  Finally it compiles uvdat.f to
-# produce $MIR/linux/tmp/uvdat.o.
-#
-# The rule to generate uvdat.o from uvdat's timestamp is therefore a no-op
-# because uvdat.o was a by-product of generating the timestamp.  This
-# mechanism is efficient because ratty always has to be run when compiling
-# Miriad Fortran so the only overhead is in scanning uvdat.f for included
-# files.  C sources are treated in precisely the same way with the C
-# preprocessor (cpp) taking ratty's place.  Likewise for .f2c sources, except
-# that intf2c is invoked on these before cpp.  
-#
-# uvdat's dependency list consists of the following entries in
-# $MIR/linux/aux/subs.list (where $(DPNDTIME) is the makefile variable used
-# for $MIR/linux/aux/subs.time):
-#
-#   $(DPNDTIME)(uvdat) : $(MIRINCD)/maxdim.h
-#   $(DPNDTIME)(uvdat) : $(MIRINCD)/mirconst.h
-#   $(DPNDTIME)(uvdat) : $(MIRSUBSD)/uvdat.h
-#
-# This means that if maxdim.h is touched then make will consider that uvdat's
-# timestamp is out-of-date and needs to be remade.  Similarly if uvdat.for was
-# touched.
-#
-# make automatically deletes the intermediate products of the rule-chain, i.e.
-# the .f and the .o, except for those marked as a dependency of the pseudo-
-# rule ".PRECIOUS", which is used to protect the dependency timestamps
-# themselves.
-
-# Firstly we have a convenience rule for building a specified library module
-# with, say, 'gmake lib(math)' - it is not used within the makefile itself.
-# After the $(MIRLIBR)(%.o) rule replaces the module in the object library
-# this rule ranlibs it.
-lib(%) lib(%.o) : $(MIRLIBR)(%.o)
-	$(RANLIB) $(MIRLIBR)
-
-# Insert an object module in libmir.a.
-$(MIRLIBR)(%.o) : $(MIRTMPD)/%.o
-	-@ $(AR) $(ARFLAGS) $@ $<
-
-# As explained above, the object module depends on the dependency timestamp
-# which is stored in an archive file for tidiness.  Rule-chaining will resolve
-# the timestamp to the appropriate source file, and the dependency list,
-# $MIR/linux/aux/subs.list, may add further dependencies.
-$(MIRTMPD)/%.o : $(DPNDTIME)(%) ;
-
-# GNU make considers the $(DPNDTIME)(%) pattern rules in sequence, looking for
-# the first it can use to make the target.  Since the rules for dependency
-# analysis are complicated and are used repeatedly they are implemented via
-# canned rule definitions, above.
-#
-# Precedence must be given to the lowest level of the subroutine hierarchy
-# which depends on the particular platform, e.g. for linux it's
-# $MIR/subs/unix/alpha_linux/...
-ifneq "$(SUBS$(ARCH))" ""
-  $(DPNDTIME)(%) : $(MIROS2D)/%.for
-	$(depend-for)
-
-  $(DPNDTIME)(%) : $(MIROS2D)/%.f2c
-	$(depend-f2c)
-
-  $(DPNDTIME)(%) : $(MIROS2D)/%.c
-	$(depend-c)
-endif
-
-# ...followed by the intermediate level, $(MIRSUBSD)/unix/...
-$(DPNDTIME)(%) : $(MIROS1D)/%.for
-	$(depend-for)
-
-$(DPNDTIME)(%) : $(MIROS1D)/%.f2c
-	$(depend-f2c)
-
-$(DPNDTIME)(%) : $(MIROS1D)/%.c
-	$(depend-c)
-
-# ...and the topmost level, $(MIRSUBSD), last.
-$(DPNDTIME)(%) : $(MIRSUBSD)/%.for
-	$(depend-for)
-
-$(DPNDTIME)(%) : $(MIRSUBSD)/%.f2c
-	$(depend-f2c)
-
-$(DPNDTIME)(%) : $(MIRSUBSD)/%.c
-	$(depend-c)
-
-
-
-ifeq "$(MAKEMODE)" "programmer"
-  % : $(PGMRLIBR)(%.o) ;
-	$(RANLIB) $(PGMRLIBR)
-
-  $(PGMRLIBR)(%.o) : $(PGMRLIBD)/%.o ;
-	$(AR) $(ARFLAGS) $@ $<
-
-  $(PGMRLIBD)/%.o : $(PGMRLIBD)/%.f
-	$(FC) $(FCDBG) -c -o $@ $<
-
-  $(PGMRLIBD)/%.f : %.for
-	$(RATTY) $(RATFLAGS) $(PGMRINCS) $< $@
-
-  $(PGMRLIBD)/%.c : %.f2c
-	$(INTF2C) $(F2CFLAGS) $< $@
-
-  $(PGMRLIBD)/%.o : $(PGMRLIBD)/%.c
-	$(CC) $(CPPDBG) $(FCDBG) $(PGMRINCS) -c -o $@ $<
-
-  $(PGMRLIBD)/%.o : %.c
-	$(CC) $(CPPDBG) $(FCDBG) $(PGMRINCS) -c -o $@ $<
-
-  # For convenience only.
-  %.f : $(PGMRLIBD)/%.f
-	-@ $(RM) $@
-	   ln -s $< $@
-endif
-
-# This little rule tells make not to fret if it can't find a header file.
-# It may be important if a header file is deleted but dependencies on it
-# remain in the dependency list.
-%.h : ;
-
-
-# Static and static pattern rules.
-#---------------------------------
-.PRECIOUS : $(DPNDTIME)(%)
-
-.PHONY : lib
-
-allsys :: lib
-
-lib : $(MIRLIBR)
-
-$(MIRLIBR) : $(MIROBJS:%=$(MIRLIBR)(%))
-	$(RANLIB) $(MIRLIBR)
-
-#$(DPNDLIST) : dependsys ;
-
-dependsys : $(MIROBJS:%.o=$(DPNDTIME)(%)) ;
-
-cleansys ::
-	$(RM) $(MIRAUXD)/subs.*
-	$(RM) $(MIRLIBR)
-
 show ::
 	-@ echo ""
 	-@ echo "Variables defined in the subs GNUmakefile"
@@ -282,31 +38,295 @@ show ::
 	-@ echo "MIRINCS  = $(MIRINCS)"
 	-@ echo "MIRLIBR  = $(MIRLIBR)"
 	-@ echo "MIROBJS  = $(MIROBJS)"
+
+
+# Dependency analysis.
+#---------------------
+# See below for a detailed explanation of the dependency analysis scheme.
+# System and programmer dependency analysis is essentially the same, only
+# using different directories and timestamps.  The variables used are
+#
+#   DPNDAUXD: Full pathname of the directory where dependency files reside.
+#   DPNDLIST: Full pathname of the dependency list.
+#   DPNDTIME: Full pathname of the dependency timestamp archive.
+#   DPNDLOCK: Full pathname of the dependency lock file.
+#   DPNDTMPD: Full pathname of the area where intermediate files are staged.
+#   DPNDINCS: Sequence of -I include path.
+#   DPNDOPT : Compile option, either "OPT" (optimized) or "DBG" (debug).  This
+#             is used as a computed variable, e.g. if DPNDOPT is "DBG" then
+#             $(FC$(DPNDOPT)) evaluates to $(FCDBG), the debug Fortran compile
+#             options set in GNUmakedefs.
+#
+# These variables differ for system and programmer compilations and are
+# defined separately below.
+
+DPNDLIST  = $(DPNDAUXD)/subs.list
+DPNDTIME  = $(DPNDAUXD)/subs.time
+DPNDLOCK  = $(DPNDAUXD)/subs.lock
+
+# The wait-lock and update-time command sequences are defined in GNUmakedefs.
+# f-filter and i-filter differ in small but important ways for system and
+# programmer compilation and are defined below.
+
+# Command sequence for applying ratty, extracting Fortran dependencies, and
+# compiling.
+define depend-for
+     $(wait-lock)
+     $(RATTY) $(RATFLAGS) $(DPNDINCS) $< $(DPNDTMPD)/$*.f
+     $(f-filter)
+     $(update-time)
+endef
+
+# Command sequence for applying intf2c followed by cpp, extracting C
+# dependencies from cpp output, and compiling.
+define depend-f2c
+     $(wait-lock)
+     $(INTF2C) $(F2CFLAGS) $< $(DPNDTMPD)/$*.c
+  -@ $(RM) $(DPNDTMPD)/$*.i
+     $(CPP) $(CPP$(DPNDOPT)) $(DPNDINCS) $(DPNDTMPD)/$*.c > $(DPNDTMPD)/$*.i
+     $(depend-i)
+endef
+
+# Command sequence for applying cpp, extracting C dependencies from cpp
+# output, and compiling.
+define depend-c
+     $(wait-lock)
+  -@ $(RM) $(DPNDTMPD)/$*.i
+     $(CPP) $(CPP$(DPNDOPT)) $(DPNDINCS) $< > $(DPNDTMPD)/$*.i
+     $(depend-i)
+endef
+
+# Command sequence for extracting C dependencies from cpp output and
+# compiling.
+define depend-i
+     $(i-filter)
+     $(update-time)
+endef
+
+
+ifeq "$(MAKEMODE)" "system"
+  # System-oriented rules.
+  #-----------------------
+  # Resolve paths for operating-system specific source code.
+  ifneq "$(MIROS2D)" ""
+    VPATH    := $(MIROS2D):
+  endif
+  VPATH    := $(VPATH)$(MIROS1D):$(CODEDIR):$(MIRINCD)
+
+  # Dependency files go into the system aux directory, while preprocessor
+  # output is staged in the tmp directory and deleted after use.
+  DPNDAUXD := $(MIRAUXD)
+  DPNDTMPD := $(MIRTMPD)
+
+  # System include directory search path and optimized compilation.
+  DPNDINCS := $(MIRINCS)
+  DPNDOPT  := OPT
+
+  show ::
 	-@ echo ""
+	-@ echo "VPATH    = $(VPATH)"
+	-@ echo ""
+	-@ echo "DPNDAUXD = $(DPNDAUXD)"
 	-@ echo "DPNDLIST = $(DPNDLIST)"
 	-@ echo "DPNDTIME = $(DPNDTIME)"
 	-@ echo "DPNDLOCK = $(DPNDLOCK)"
+	-@ echo "DPNDTMPD = $(DPNDTMPD)"
+	-@ echo ""
+	-@ echo "DPNDINCS = $(DPNDINCS)"
+	-@ echo "DPNDOPT  = $(DPNDOPT)"
 
-# Programmer rules.
-ifeq "$(MAKEMODE)" "programmer"
-  .PHONY : mylib
+  # This command sequence identifies include files in the ratty output and
+  # makes each of them a prerequisite of the object module's timestamp.  In
+  # turn, rule-chaining also makes them a prerequisite of the object module
+  # itself.  An example of the type of output it produces is shown below.
+  define f-filter
+     @ sed -n -e 's#^c >>> $(MIRROOT)/##p' $(DPNDTMPD)/$*.f | $(backsl)
+         sed -e 's#^inc#$$(DPNDTIME)($*) : $$(MIRINCD)#' $(backsl)
+             -e 's#^subs#$$(DPNDTIME)($*) : $$(MIRSUBSD)#' | $(backsl)
+         sort -u | sort -m - $(DPNDLOCK) > $(DPNDLIST)
+  endef
 
-  .PRECIOUS : $(PGMRLIBD)/(%.o) $(PGMRLIBD)/%.f $(PGMRLIBD)/%.c
+  # As above, this command sequence identifies include files in the cpp output
+  # and makes each of them a prerequisite of the object module's timestamp.
+  define i-filter
+     @ sed -n -e 's#.*$(MIRROOT)/\(.*\.h\)".*#\1#p' $(DPNDTMPD)/$*.i | $(backsl)
+         sed -e 's#^inc#$$(DPNDTIME)($*) : $$(MIRINCD)#' $(backsl)
+             -e 's#^subs#$$(DPNDTIME)($*) : $$(MIRSUBSD)#' | $(backsl)
+         sort -u | sort -m - $(DPNDLOCK) > $(DPNDLIST)
+  endef
 
-  all :: $(PGMROBJS:%=$(PGMRLIBR)(%))
 
-  mylib : $(MIROBJS:%=$(PGMRLIBR)(%))
-	$(RANLIB) $(PGMRLIBR)
+  # Pattern rules (rule-chaining, and dependency analysis).
+  #--------------------------------------------------------
+  # This sequence of pattern rules forms many chains.  The chain is used to
+  # resolve a particular target depends on the precedence of the rules in the
+  # chain (established by their order of definition here) and the existence of
+  # dependencies that can satisfy them.
+  #
+  # For example, in linux, 'gmake lib(uvdat)' would be resolved by the
+  # following chain rooted at $MIR/subs/uvdat.for: 
+  #
+  #   lib(uvdat) <- $MIR/linux/lib/libmir.a(uvdat.o)
+  #              <- $MIR/linux/tmp/uvdat.o
+  #              <- $MIR/linux/aux/subs.time(uvdat) and
+  #                 $MIR/linux/tmp/uvdat.f
+  #              <- $MIR/subs/uvdat.for
+  #
+  # The chain is evaluated in reverse order, starting with
+  # $MIR/subs/uvdat.for, as indicated by the arrows.
+  #
+  # The first step is pretty interesting; make generates uvdat's dependency
+  # timestamp, which for tidiness is stored in an archive library as
+  # $MIR/linux/aux/subs.time(uvdat), by running ratty to generate
+  # $MIR/linux/tmp/uvdat.f.  It uses uvdat.f to determine uvdat's
+  # dependencies, adds these to $MIR/linux/aux/subs.list, which is included at
+  # the end of this makefile, and then touches uvdat's timstamp.
+  #
+  # uvdat.f and uvdat's timestamp are therefore generated by the same rule.
+  # This # mechanism is efficient because ratty always has to be run when
+  # compiling Miriad Fortran so the only overhead is in scanning uvdat.f for
+  # included files (the filter-f command sequence).  C sources are treated in
+  # precisely the same way with the C preprocessor (cpp) taking ratty's place.
+  # Likewise for .f2c sources, except that intf2c is invoked on these before
+  # cpp.  
+  #
+  # The last two steps compile uvdat.f to produce $MIR/linux/tmp/uvdat.o and
+  # then insert that into the object library.
+  #
+  # uvdat's dependency list consists of the following entries in
+  # $MIR/linux/aux/subs.list (where $(DPNDTIME) is the makefile variable used
+  # for $MIR/linux/aux/subs.time):
+  #
+  #   $(DPNDTIME)(uvdat) : $(MIRINCD)/maxdim.h
+  #   $(DPNDTIME)(uvdat) : $(MIRINCD)/mirconst.h
+  #   $(DPNDTIME)(uvdat) : $(MIRSUBSD)/uvdat.h
+  #
+  # This means that if maxdim.h is touched then make will consider that
+  # uvdat's timestamp is out-of-date and needs to be remade.  Similarly if
+  # uvdat.for was touched.
+  #
+  # make automatically deletes the intermediate products of the rule-chain
+  # except for those marked as a dependency of the pseudo-rule ".PRECIOUS".
+  # This is used to protect the dependency timestamps.  Other intermediates
+  # are deleted explicitly to save having them hanging around.
 
-  clean ::
-	$(RM) *.o
+  .PRECIOUS : $(DPNDTIME)(%)
 
-  cleaner :: clean
-	$(RM) $(PGMRLIBD)/*.[fco]
-	find . -maxdepth 1 -name "*.f" -type l -exec $(RM) {} \;
+  # Firstly we have a convenience rule for building a specified library module
+  # with, say, 'gmake math' or 'gmake lib(math)' - it is not used within the
+  # makefile itself.  After the $(MIRLIBR)(%.o) rule replaces the module in
+  # the object library this rule ranlibs it.
+  % lib(%) lib(%.o) : $(MIRLIBR)(%.o) ranlib ;
 
-  cleanest :: cleaner
-	$(RM) $(PGMRLIBR)
+  # Insert an object module in libmir.a.
+  $(MIRLIBR)(%.o) : $(MIRTMPD)/%.o
+	-@ $(AR) $(ARFLAGS) $@ $<
+	-@ $(RM) $<
+
+  # Rules for compiling the preprocessor output generated as a by-product of
+  # the dependency analysis.
+  $(MIRTMPD)/%.o : $(DPNDTMPD)/%.f
+	   $(FC) $(FCOPT) -c -o $@ $<
+	-@ $(RM) $<
+  
+  $(MIRTMPD)/%.o : $(DPNDTMPD)/%.i
+	   $(CC) $(COPT) -c -o $@ $<
+	-@ $(RM) $<
+  
+  # As explained above, the preprocessor output depends on the dependency
+  # timestamp which is stored in an archive file for tidiness.  Rule-chaining
+  # will resolve the timestamp to the appropriate source file, and the
+  # dependency list, $MIR/linux/aux/subs.list, may add further dependencies.
+  #
+  # GNU make considers the $(DPNDTIME)(%) pattern rules in sequence, looking
+  # for the first it can use to make the target.  Since the rules for
+  # dependency analysis are complicated and are used repeatedly they are
+  # implemented via canned rule definitions, above.
+  #
+  # Precedence must be given to the lowest level of the subroutine hierarchy
+  # which depends on the particular platform, e.g. for linux it's
+  # $MIR/subs/unix/alpha_linux/...  This is taken care of by VPATH defined
+  # above.
+  $(DPNDTIME)(%) $(DPNDTMPD)/%.f : %.for
+	$(depend-for)
+
+  $(DPNDTIME)(%) $(DPNDTMPD)/%.i : %.f2c
+	$(depend-f2c)
+
+  $(DPNDTIME)(%) $(DPNDTMPD)/%.i : %.c
+	$(depend-c)
+
+  # This little rule tells make not to fret if it can't find a header file.
+  # It may be important if a header file is deleted but remains as a
+  # prerequisite for some of the object modules in the dependency list.
+  %.h : ;
+
+
+  # Static and static pattern rules.
+  #---------------------------------
+  .PHONY : depend lib ranlib
+
+  allsys :: $(MIRLIBR)
+
+  $(MIRLIBR) : $(MIROBJS:%=$(MIRLIBR)(%)) ;
+     ifneq "$(RANLIB)" ":"
+	    $(RANLIB) $@
+     endif
+
+  # Forcibly ranlib the library.
+  ranlib : FORCE
+	   ranlib $(MIRLIBR)
+
+  depend : $(MIROBJS:%.o=$(DPNDTIME)(%)) ;
+
+  cleansys ::
+	$(RM) $(MIRTMPD)/*.o
+	$(RM) $(DPNDTMPD)/*.[cfi]
+	$(RM) $(DPNDAUXD)/subs.*
+	$(RM) $(MIRLIBR)
+
+  help ::
+	-@ echo ""
+	-@ echo "Targets defined in the subs GNUmakefile"
+	-@ echo "---------------------------------------"
+	-@ echo "     allsys: update $(MIRLIBR)."
+	-@ echo "     ranlib: run ranlib on $(MIRLIBR) (forced)."
+	-@ echo "     depend: update system dependency lists."
+	-@ echo "   cleansys: delete $(MIRLIBR), dependency lists, etc."
+
+else
+  # Programmer-oriented rules.
+  #---------------------------
+  # Resolve paths for operating-system specific source code.  Look first in
+  # programmer directories then in the relevant Miriad directories.
+  ifneq "$(MIROS2D)" ""
+    PGMROSD  := ./unix/$(SUBS$(ARCH))
+    VPATH    := $(PGMROSD):$(MIROS2D):
+  endif
+  PGMROSD  += ./unix
+  VPATH    := $(VPATH)./unix:$(MIROS1D):.:$(CODEDIR):$(PGMRINCD):$(MIRINCD)
+
+  PGMROSRC := $(sort $(notdir \
+                $(foreach DIR,$(PGMROSD),$(wildcard $(DIR)/*.*))))
+
+  # Tell ratty and intf2c to look for include files in the programmer
+  # directories first, then in the relevant Miriad directories.
+  PGMRINCS := -I . -I $(PGMRINCD) $(MIRINCS)
+  PGMRLIBR := $(PGMRLIBD)/libmir.a
+  PGMROBJS := $(subst .for,.o,$(wildcard *.for) $(filter %.for,$(PGMROSRC)))
+  PGMROBJS += $(subst .f2c,.o,$(wildcard *.f2c) $(filter %.f2c,$(PGMROSRC)))
+  PGMROBJS += $(subst   .c,.o,$(wildcard *.c)   $(filter %.c,  $(PGMROSRC)))
+  PGMROBJS := $(sort $(PGMROBJS))
+
+  # Dependency files go into the programmer's aux directory, while ratty and
+  # intf2c output is preserved in the lib directory where the debugger can
+  # find it.
+  DPNDAUXD := $(PGMRAUXD)
+  DPNDTMPD := $(PGMRLIBD)
+
+  # Programmer include directory search path and debug compilation.
+  DPNDINCS := $(PGMRINCS)
+  DPNDOPT  := DBG
 
   show ::
 	-@ echo ""
@@ -318,6 +338,165 @@ ifeq "$(MAKEMODE)" "programmer"
 	-@ echo "PGMRINCS = $(PGMRINCS)"
 	-@ echo "PGMRLIBR = $(PGMRLIBR)"
 	-@ echo "PGMROBJS = $(PGMROBJS)"
+	-@ echo ""
+	-@ echo "DPNDAUXD = $(DPNDAUXD)"
+	-@ echo "DPNDLIST = $(DPNDLIST)"
+	-@ echo "DPNDTIME = $(DPNDTIME)"
+	-@ echo "DPNDLOCK = $(DPNDLOCK)"
+	-@ echo "DPNDTMPD = $(DPNDTMPD)"
+	-@ echo ""
+	-@ echo "DPNDINCS = $(DPNDINCS)"
+	-@ echo "DPNDOPT  = $(DPNDOPT)"
+
+  # This command sequence identifies include files in the ratty output and
+  # makes each of them a prerequisite of the object module's timestamp.  In
+  # turn, rule-chaining also makes them a prerequisite of the object module
+  # itself.
+  #
+  # It differs in several important ways from the system version.  Header
+  # files in the programmer directories listed as prerequisites are specified
+  # via a full pathname.  If one of these header files was subsequently
+  # deleted the prerequisite would not be satisfied and a recompile forced,
+  # whereupon the checked-in Miriad file would be found via VPATH.
+  #
+  # On the other hand, header files in the Miriad directories are given
+  # without pathname.  If one of these was subsequently checked out into a
+  # programmer directory it would be found first via VPATH and, being newer,
+  # would force a recompile.
+  #
+  # For similar reasons the source file itself (.for, .f2c, or .c) must also
+  # be mentioned as a prerequisite in the programmer dependency list but is
+  # not needed in the system list.
+  define f-filter
+     @ echo $< | $(backsl)
+         sed -e 's#^\([^/]\)#$(THISDIR)/\1#' | $(backsl)
+         cat - $(DPNDTMPD)/$*.f | $(backsl)
+         sed -n -e '{1p;s#^c >>> ##p;}' | $(backsl)
+         sed -e 's#^$(PGMRROOT)/#$$(DPNDTIME)($*) : $$(PGMRROOT)/#' $(backsl)
+             -e 's#^$(MIRROOT)/.*/#$$(DPNDTIME)($*) : #' | $(backsl)
+         sort -u | sort -m - $(DPNDLOCK) > $(DPNDLIST)
+  endef
+
+  # As above, this command sequence identifies include files in the cpp output
+  # and makes each of them a prerequisite of the object module's timestamp.
+  # The difference is in the second sed filter alone.
+  define i-filter
+     @ echo $< | $(backsl)
+         sed -e 's#^\([^/]\)#$(THISDIR)/\1#' | $(backsl)
+         cat - $(DPNDTMPD)/$*.i | $(backsl)
+         sed -n -e 1p $(backsl)
+                -e 's#.*\($(PGMRROOT)/.*\.h\)".*#\1#p' $(backsl)
+                -e 's#.*\($(MIRROOT)/.*\.h\)".*#\1#p' | $(backsl)
+         sed -e 's#^$(PGMRROOT)/#$$(DPNDTIME)($*) : $$(PGMRROOT)/#' $(backsl)
+             -e 's#^$(MIRROOT)/.*/#$$(DPNDTIME)($*) : #' | $(backsl)
+         sort -u | sort -m - $(DPNDLOCK) > $(DPNDLIST)
+  endef
+
+
+  # Pattern rules.
+  #---------------
+  # These are essentially the same as for system compilation.
+  .PRECIOUS : $(DPNDTIME)(%) $(PGMRLIBR)(%.o) $(DPNDTMPD)/%.f $(DPNDTMPD)/%.i
+
+  % lib(%) lib(%.o) : $(PGMRLIBR)(%.o) ranlib ;
+
+  $(PGMRLIBR)(%.o) : $(PGMRLIBD)/%.o
+	   $(AR) $(ARFLAGS) $@ $<
+	-@ $(RM) $<
+
+  # Making the timestamp a prerequisite of the Fortran object module prevents
+  # rule-chaining from stopping prematurely at this point.  This could happen
+  # if a .f file preserved from a previous compilation is newer than the
+  # target though constructed from header files that are now stale.  The stale
+  # header files will be listed as prerequisites of the timestamp in the
+  # dependency list included at the end of this makefile.
+  $(PGMRLIBD)/%.o : $(DPNDTMPD)/%.f $(DPNDTIME)(%)
+	   $(FC) $(FCDBG) -c -o $@ $<
+  
+  # Although .i files are not preserved they can be generated on demand and
+  # there is always the possibility of a stale one causing the same problem
+  # as as a stale .f.  Hence the timestamp must also be a prerequisite here.
+  $(PGMRLIBD)/%.o : $(DPNDTMPD)/%.i $(DPNDTIME)(%)
+	   $(CC) $(CDBG) -c -o $@ $<
+	-@ $(RM) $<
+
+  $(DPNDTIME)(%) $(DPNDTMPD)/%.f : %.for
+	$(depend-for)
+
+  $(DPNDTIME)(%) $(DPNDTMPD)/%.i : %.f2c
+	$(depend-f2c)
+
+  $(DPNDTIME)(%) $(DPNDTMPD)/%.i : %.c
+	$(depend-c)
+
+  # Don't worry if a source file in the dependency list can't be located.
+  $(THISDIR)/%.for : ;
+  $(THISDIR)/%.f2c : ;
+  $(THISDIR)/%.c : ;
+
+  # Don't worry if a header file in the dependency list can't be located.
+  %.h : ;
+
+  # Convenience rules for generating preprocessor output.
+  %.f : $(DPNDTMPD)/%.f ;
+
+  %.c : $(DPNDTMPD)/%.c ;
+
+  %.i : $(DPNDTMPD)/%.i ;
+
+  $(DPNDTMPD)/%.c : %.f2c
+	$(INTF2C) $(F2CFLAGS) $< $@
+
+
+  # Static and static pattern rules.
+  #---------------------------------
+  .PHONY : depend mylib lib ranlib
+
+  all :: mylib
+  
+  mylib : $(PGMROBJS:%=$(PGMRLIBR)(%)) ranlib ;
+
+  lib : $(MIROBJS:%=$(PGMRLIBR)(%)) ranlib ;
+
+  ranlib : $(PGMRLIBD)/.last_ranlib ;
+
+  $(PGMRLIBD)/.last_ranlib : $(PGMRLIBR)
+	-@ if [ -n "$?" ] ; then \
+	     echo "$(RANLIB) $<" ; \
+	     $(RANLIB) $< ; \
+	     touch $@ ; \
+	   fi
+
+  # Don't fret it the library doesn't exist.
+  $(PGMRLIBR) : ;
+
+  depend : $(PGMROBJS:%.o=$(DPNDTIME)(%)) ;
+
+  clean ::
+	$(RM) *.o
+	$(RM) $(DPNDTMPD)/*.[io]
+	$(RM) $(DPNDLOCK)
+
+  cleaner :: clean
+	$(RM) $(DPNDTMPD)/*.[cf]
+	$(RM) $(DPNDAUXD)/subs.*
+
+  cleanest :: cleaner
+	$(RM) $(PGMRLIBD)/.last_ranlib
+	$(RM) $(PGMRLIBR)
+
+  help ::
+	-@ echo ""
+	-@ echo "Targets defined in the subs GNUmakefile"
+	-@ echo "---------------------------------------"
+	-@ echo "        all: compile sources in this directory only."
+	-@ echo "      mylib: compile sources in this directory only."
+	-@ echo "        lib: build $(PGMRLIBR) in its entirety, for"
+	-@ echo "             debugging purposes."
+	-@ echo "     ranlib: run ranlib on the library if necessary."
+	-@ echo "     depend: update programmer dependency lists."
+	-@ echo "        %.f: generate ratty preprocessor output."
+	-@ echo "        %.c: generate intf2c preprocessor output."
 endif
 
 ifndef NODEP
