@@ -1,7 +1,7 @@
-#define VERSION_ID  "15-feb-95"
-/*= XPANEL - X-window control panel program
-/*& jm
-/*: tools
+#define VERSION_ID  "15-nov-95"
+/*= XPANEL - X-window control panel program */
+/*& jm */
+/*: tools */
 /*+
 XPanel is a TCP/IP server based on X-windows, which listens for
 connections from the Miriad "ctrl" routines, constructs a control
@@ -72,6 +72,8 @@ Xpanel provides the following resources, along with their defaults:
                 (I was releasing memory that was not allocated for the
                 buttonlist array and was also freeing the Nth member
                 instead of the pointer to the array itself).
+    jm  15nov95 Corrected some routine declarations.  Also corrected
+                the initial iconic state setting.
 *************************************************************************/
 #include <stdlib.h>
 #include <stdio.h>
@@ -96,11 +98,6 @@ Xpanel provides the following resources, along with their defaults:
 #ifdef sun
 #define bzero(a,b) memset((a),0,(b))
 #endif
-
-/* These are now done by <X11/Intrinsic.h> */
-/* #define True  1 */
-/* #define False 0 */
-/* #define NULL  0 */
 
 #define CTRL_DEFINE	1
 #define CTRL_DISPLAY	2
@@ -140,21 +137,36 @@ static ITEMS *items_head = (ITEMS *)NULL;
 #define ITEM_CURSORS 3
 #define ITEM_STATUSES 4
 
-static void bug();
-static void startTimer(), initializeSocket();
-static XtTimerCallbackProc checkSocket();
-static XtInputCallbackProc readSocket();
-static void clear_control_panel(), check_control_panel();
-static void wait_control_panel(), define_control_panel();
-static void set_control_panel(), destroy_control_panel();
-static void create_control_panel();
-static XtActionProc CursorPaint(), CursorEvents();
-static void SetUpListMenu(), SetUpSlider();
-static void LabelScrollBarValue(), LabelScrollBarMinMax();
-static XtCallbackProc PlaceMenu(), ListButtonPushed();
-static XtCallbackProc button_next(), button_changed();
-static XtCallbackProc SliderScrollProc(), SliderJumpProc();
-static XtActionProc UpdateScroll(), QuitPanel();
+#if NeedFunctionPrototypes
+#define ARGS(args)  args
+#else
+#define ARGS(args) ()
+#endif /* NeedFunctionPrototypes */
+
+static void initializeSocket ARGS(( unsigned int ));
+static void checkSocket ARGS(( XtPointer, XtIntervalId * ));
+static void readSocket ARGS(( XtPointer, int *, XtInputId * ));
+static void clear_control_panel ARGS(( void ));
+static void check_control_panel ARGS(( int ));
+static void wait_control_panel ARGS(( void ));
+static void define_control_panel ARGS(( short int message[] ));
+static void set_control_panel ARGS(( short int message[] ));
+static void destroy_control_panel ARGS(( void ));
+static void create_control_panel ARGS(( void ));
+static void CursorPaint ARGS(( Widget, XEvent *, String *, Cardinal * ));
+static void CursorEvents ARGS(( Widget, XEvent *, String *, Cardinal * ));
+static void SetUpListMenu ARGS(( ITEMS *, int ));
+static void SetUpSlider ARGS(( ITEMS *, Cursor, int, int, int ));
+static void LabelScrollBarValue ARGS(( Widget, int ));
+static void LabelScrollBarMinMax ARGS(( Widget, int, int ));
+static void PlaceMenu ARGS(( Widget, XtPointer, XtPointer ));
+static void ListButtonPushed ARGS(( Widget, XtPointer, XtPointer ));
+static void button_next ARGS(( Widget, XtPointer, XtPointer ));
+static void button_changed ARGS(( Widget, XtPointer, XtPointer ));
+static void SliderScrollProc ARGS(( Widget, XtPointer, XtPointer ));
+static void SliderJumpProc ARGS(( Widget, XtPointer, XtPointer ));
+static void UpdateScroll ARGS(( Widget, XEvent *, String *, Cardinal * ));
+static void QuitPanel ARGS(( Widget, XEvent *, String *, Cardinal * ));
 
 typedef struct {
   Pixel       cursor_foreground;
@@ -182,10 +194,10 @@ static XtResource resources[] = {
 #undef Offset
 
 static XtActionsRec actionTable[] = {
-  {"quitpanel",    (XtActionProc) QuitPanel},
-  {"cursorpaint",  (XtActionProc) CursorPaint},
-  {"cursorevents", (XtActionProc) CursorEvents},
-  {"updatescroll", (XtActionProc) UpdateScroll},
+  {"quitpanel",    QuitPanel},
+  {"cursorpaint",  CursorPaint},
+  {"cursorevents", CursorEvents},
+  {"updatescroll", UpdateScroll},
   {NULL, NULL}
 };
 
@@ -204,31 +216,48 @@ static String fallback_resources[] = {
 };
 
 /************************************************************************/
+#if NeedFunctionPrototypes
+static void bug(char *string)
+#else
 static void bug(string)
 char *string;
+#endif /* NeedFunctionPrototypes */
 {
     perror(string);
     exit(-1);
 }
+
 /************************************************************************/
+#if NeedFunctionPrototypes
+static int readit(int fd, char *buff, int size)
+#else
 static int readit(fd, buff, size)
 int fd, size;
 char *buff;
+#endif /* NeedFunctionPrototypes */
 {
-  int nread,n;
+  int nread, n;
+  unsigned int amount;
 
   nread = 0;
   while (nread < size) {
-    n = read(fd, buff+nread, size-nread);
+    amount = size - nread;
+    n = read(fd, buff+nread, amount);
     if (n == 0) return(nread);
     nread += n;
   }
+
   return(nread);
 }
+
 /************************************************************************/
-main(argc,argv)
+#if NeedFunctionPrototypes
+int main(int argc, char *argv[])
+#else
+int main(argc, argv)
 int argc;
 char *argv[];
+#endif /* NeedFunctionPrototypes */
 {
   int i;
   unsigned int Port; /* Used to identify the communications socket number. */
@@ -242,21 +271,21 @@ char *argv[];
 
   (void)fprintf(stderr,"PANEL: %s\n",VERSION_ID);
 
-  top_level = XtAppInitialize( &context, "Xpanel", options, XtNumber(options),
-       &argc, argv, fallback_resources, NULL, (Cardinal) 0 );
+  top_level = XtAppInitialize(&context, "Xpanel", options, XtNumber(options),
+       &argc, argv, fallback_resources, NULL, (Cardinal)0);
 
-  XtGetApplicationResources(top_level, (caddr_t) &App_Data,
-       resources, XtNumber(resources), NULL, (Cardinal) 0 );
+  XtGetApplicationResources(top_level, (XtPointer)&App_Data,
+       resources, XtNumber(resources), NULL, (Cardinal)0);
 
-  XtAppAddActions( context, actionTable, XtNumber(actionTable) );
+  XtAppAddActions(context, actionTable, XtNumber(actionTable));
 
   i = 0;
-  if (!App_Data.no_iconic) {
-    XtSetArg(args[i], XtNiconic, (XtArgVal) True); i++;
+  if (App_Data.no_iconic == False) {
+    XtSetArg(args[i], XtNinitialState,   (XtArgVal)IconicState); i++;
   }
-  XtSetArg(args[i], XtNheight, (XtArgVal) 64); i++;
-  XtSetArg(args[i], XtNwidth, (XtArgVal) 200); i++;
-  XtSetArg(args[i], XtNtitle, (XtArgVal) "Miriad Control Panel"); i++;
+  XtSetArg(args[i], XtNheight,                    (XtArgVal)64); i++;
+  XtSetArg(args[i], XtNwidth,                    (XtArgVal)200); i++;
+  XtSetArg(args[i], XtNtitle, (XtArgVal)"Miriad Control Panel"); i++;
   XtSetValues(top_level, args, i);
 
   XtOverrideTranslations(top_level, XtParseTranslationTable(QuitTrans));
@@ -273,7 +302,7 @@ char *argv[];
   gcv.foreground = App_Data.cursor_foreground;
   gcv.background = App_Data.cursor_background;
   gc = XCreateGC(XtDisplay(top_level), XtWindow(top_level),
-         (unsigned long) (GCForeground | GCBackground), &gcv);
+         (GCForeground | GCBackground), &gcv);
 
   waiting = False;
   changes = 0;
@@ -290,20 +319,31 @@ char *argv[];
 /* Wait for connections, and go into the main loop. */
 
   XtAppMainLoop(context);
-  exit(0);
+  return(0);
 }
+
 /************************************************************************/
+#if NeedFunctionPrototypes
+static void startTimer(int socketID)
+#else
 static void startTimer(socketID)
 int socketID;
+#endif /* NeedFunctionPrototypes */
 {
   unsigned long interval = CHECKTIME; /* in milli-seconds */
 
-  (void)XtAppAddTimeOut(context, interval,
-    (XtTimerCallbackProc)checkSocket, (XtPointer)socketID);
+  (void)XtAppAddTimeOut(context, interval, checkSocket, (XtPointer)socketID);
+
+  return;
 }
+
 /************************************************************************/
+#if NeedFunctionPrototypes
+static void initializeSocket(unsigned int portnumber)
+#else
 static void initializeSocket(portnumber)
 unsigned int portnumber;
+#endif /* NeedFunctionPrototypes */
 {
   int listenSocket;
   struct sockaddr_in sin;
@@ -321,12 +361,19 @@ unsigned int portnumber;
     bug("initializeSocket:bind");
   listen(listenSocket, 5);
   startTimer(listenSocket);
+
+  return;
 }
+
 /************************************************************************/
 /* ARGSUSED */
-static XtTimerCallbackProc checkSocket(client_data, ptrTimer)
-XtPointer client_data;
+#if NeedFunctionPrototypes
+static void checkSocket(XtPointer clientData, XtIntervalId *ptrTimer)
+#else
+static void checkSocket(clientData, ptrTimer)
+XtPointer clientData;
 XtIntervalId *ptrTimer;
+#endif /* NeedFunctionPrototypes */
 {
   int len;
   int listenSocket;
@@ -338,7 +385,7 @@ XtIntervalId *ptrTimer;
   time_0.tv_sec = 0;
   time_0.tv_usec = 0;
 
-  listenSocket = (int)client_data;
+  listenSocket = (int)clientData;
   startTimer(listenSocket);
 
   if (connected == False) {
@@ -350,18 +397,24 @@ XtIntervalId *ptrTimer;
       if ((ioSocket = accept(listenSocket, (struct sockaddr *)&addr, &len)) < 0)
         bug("checkSocket:accept");
       (void)XtAppAddInput(context, ioSocket, (XtPointer)condition,
-        (XtInputCallbackProc)readSocket, (XtPointer)NULL);
+        readSocket, (XtPointer)NULL);
       connected = True;
     }
   }
-  return NULL;
+
+  return;
 }
+
 /************************************************************************/
 /* ARGSUSED */
-static XtInputCallbackProc readSocket(dummy, iosocket, fdid)
+#if NeedFunctionPrototypes
+static void readSocket(XtPointer dummy, int *iosocket, XtInputId *fdid)
+#else
+static void readSocket(dummy, iosocket, fdid)
 XtPointer dummy;  /* Unused */
 int *iosocket;
 XtInputId *fdid;
+#endif /* NeedFunctionPrototypes */
 {
   int fd,nread,size,i;
   short int buffer[MAXBUF];
@@ -372,7 +425,7 @@ XtInputId *fdid;
   buffer[0] = ntohs(buffer[0]);
   buffer[1] = ntohs(buffer[1]);
   if(nread != 2*size){
-    close(fd);
+    (void)close(fd);
     XtRemoveInput(*fdid);
     destroy_control_panel();
   }else if(buffer[0] == CTRL_DEFINE){
@@ -398,15 +451,20 @@ XtInputId *fdid;
     for(i=2; i < size; i++)buffer[i] = ntohs(buffer[i]);
     set_control_panel(buffer);
   }else if(buffer[0] == CTRL_DONE){
-    close(fd);
+    (void)close(fd);
     XtRemoveInput(*fdid);
     destroy_control_panel();
   }else bug("readSocket:I should never get here");
 
-  return NULL;
+  return;
 }
+
 /************************************************************************/
+#if NeedFunctionPrototypes
+static void clear_control_panel(void)
+#else
 static void clear_control_panel()
+#endif /* NeedFunctionPrototypes */
 /*
   Clear all the flags that say something has changed.
 ------------------------------------------------------------------------*/
@@ -414,12 +472,19 @@ static void clear_control_panel()
   ITEMS *ip;
 
   changes = 0;
-  for(ip = items_head; ip != NULL; ip = ip->fwd) ip->changes = 0;
+  for(ip = items_head; ip != (ITEMS *)NULL; ip = ip->fwd) ip->changes = 0;
   cursor_changes = 0;
+
+  return;
 }
+
 /************************************************************************/
+#if NeedFunctionPrototypes
+static void check_control_panel(int itno)
+#else
 static void check_control_panel(itno)
 int itno;
+#endif /* NeedFunctionPrototypes */
 /*
   Check the current state of a particular item.
 ------------------------------------------------------------------------*/
@@ -427,8 +492,8 @@ int itno;
   ITEMS *ip;
   short int buf[4];
 
-  for(ip = items_head; ip != NULL && ip->itno != itno; ip = ip->fwd);
-  if(ip == NULL) bug("check_control_panel: Did not find the item");
+  for(ip = items_head; ip != (ITEMS *)NULL && ip->itno != itno; ip = ip->fwd);
+  if(ip == (ITEMS *)NULL) bug("check_control_panel: Did not find the item");
 
   buf[2] = 0;
   buf[3] = 0;
@@ -450,10 +515,17 @@ int itno;
   buf[1] = htons(buf[1]);
   buf[2] = htons(buf[2]);
   buf[3] = htons(buf[3]);
-  write(ioSocket,(char *)buf,8);
+  (void)write(ioSocket,(char *)buf,8);
+
+  return;
 }
+
 /************************************************************************/
+#if NeedFunctionPrototypes
+static void wait_control_panel(void)
+#else
 static void wait_control_panel()
+#endif /* NeedFunctionPrototypes */
 /*
   Wait for something to happen. When something has happened, send a message
   to the client to say so.
@@ -464,16 +536,24 @@ static void wait_control_panel()
   if(changes != 0){
     for(ip = items_head; 
         ip->changes == 0 && (ip->type != ITEM_CURSORS || cursor_changes == 0);
-        ip = ip->fwd);
+        ip = ip->fwd)
+      /* NULL */ ;
     check_control_panel(ip->itno);
     waiting = False;
   }else{
     waiting = True;
   }
+
+  return;
 }
+
 /************************************************************************/
+#if NeedFunctionPrototypes
+static void define_control_panel(short int message[])
+#else
 static void define_control_panel(message)
 short int message[];
+#endif /* NeedFunctionPrototypes */
 /*
   This client has requested that an additional item be added to our list
   of items. Add in the description.
@@ -489,18 +569,18 @@ short int message[];
   char *out;
 
   ip = items_head;
-  if(ip == NULL){
+  if(ip == (ITEMS *)NULL){
     items_head = (ITEMS *)malloc(sizeof(ITEMS));
     ip = items_head;
   }else{
-    while(ip->fwd != NULL) ip = ip->fwd;
+    while(ip->fwd != (ITEMS *)NULL) ip = ip->fwd;
     ip->fwd = (ITEMS *)malloc(sizeof(ITEMS));
     ip = ip->fwd;
   }
 
   ip->itno = message[2];
   ip->type = message[3];
-  ip->fwd = NULL;
+  ip->fwd = (ITEMS *)NULL;
   size = message[1];
   ip->values = malloc(size);
   ip->changes = 0;
@@ -513,10 +593,17 @@ short int message[];
     if(*in == 0) ip->nvalues++;
     *out++ = *in++;
   }
+
+  return;
 }
+
 /************************************************************************/
+#if NeedFunctionPrototypes
+static void set_control_panel(short int message[])
+#else
 static void set_control_panel(message)
 short int message[];
+#endif /* NeedFunctionPrototypes */
 /*
   This client has requested that a change be made to one of our items.
   Currently, only either one or two values are permitted.
@@ -540,8 +627,8 @@ short int message[];
 
   size = message[1];
   itno = message[2];
-  for(ip = items_head; ip != NULL && ip->itno != itno; ip = ip->fwd);
-  if(ip == NULL) bug("set_control_panel: Did not find the item.");
+  for(ip = items_head; ip != (ITEMS *)NULL && ip->itno != itno; ip = ip->fwd);
+  if(ip == (ITEMS *)NULL) bug("set_control_panel: Did not find the item.");
   cval = malloc(size);
   in = &message[3];
   out = cval;
@@ -558,7 +645,7 @@ short int message[];
   if((ip->type == ITEM_BUTTONS) && (ip->nvalues > 1)){
     if((val[0] >= 0) && (val[0] < ip->nvalues) && (val[0] != ip->sval)){
       ip->sval = val[0] - 1;
-      (void)button_next(ip->main, (caddr_t)ip, (caddr_t)NULL); 
+      button_next(ip->main, (XtPointer)ip, (XtPointer)NULL); 
     }
   }else if(ip->type == ITEM_BUTTONS){
     ; /* NULL command for one valued buttons */
@@ -589,43 +676,52 @@ short int message[];
     }else {
       bug("set_control_panel: Too many cursor values!");
     }
-    (void)CursorPaint(ip->main, (XEvent *)NULL, (String *)NULL, (Cardinal *)NULL);
+    CursorPaint(ip->main, (XEvent *)NULL, (String *)NULL, (Cardinal *)NULL);
   }else{
     bug("set_control_panel: I cannot get here!");
   }
   (void)free(cval);
+
+  return;
 }
+
 /************************************************************************/
+#if NeedFunctionPrototypes
+static void destroy_control_panel(void)
+#else
 static void destroy_control_panel()
+#endif /* NeedFunctionPrototypes */
 /*
   Delete the structures created to handle this control panel.
 ------------------------------------------------------------------------*/
 {
-  int i;
-  ITEMS *ip,*next;
+  ITEMS *ip, *next;
 
   next = items_head;
-  while(next != NULL){
+  while(next != (ITEMS *)NULL){
     ip = next;
     next = ip->fwd;
 
-    if (ip->buttonlist) {
-/*      for (i = 0; ip->buttonlist[i] != NULL; i++)
-        XtFree(ip->buttonlist[i]); */
-      XtFree((char *)ip->buttonlist);
-    }
+    if (ip->buttonlist) XtFree((char *)ip->buttonlist);
 
     (void)free(ip->values);
     (void)free((char *)ip);
 
   }
   if(visible) XtDestroyWidget(subframe);
-  items_head = NULL;
+  items_head = (ITEMS *)NULL;
   visible = False;
   connected = False;
+
+  return;
 }
+
 /************************************************************************/
+#if NeedFunctionPrototypes
+static void create_control_panel(void)
+#else
 static void create_control_panel()
+#endif /* NeedFunctionPrototypes */
 /*
   It is now time to create the control panel that the user wants.
 ------------------------------------------------------------------------*/
@@ -674,15 +770,13 @@ static void create_control_panel()
   i = 0;
   subframe = XtCreatePopupShell("Miriad Control Panel",
     applicationShellWidgetClass, top_level, args, i);
-/*    transientShellWidgetClass, top_level, args, i); */
-  XtAddCallback(subframe, XtNpopupCallback, (XtCallbackProc)PlaceMenu,
-    (XtPointer)NULL);
+  XtAddCallback(subframe, XtNpopupCallback, PlaceMenu, (XtPointer)NULL);
 
   i = 0;
   panel = XtCreateManagedWidget("panel", formWidgetClass, subframe, args, i);
 
   ncursors = 0;
-  for(ip = items_head; ip != NULL; ip = ip->fwd){
+  for(ip = items_head; ip != (ITEMS *)NULL; ip = ip->fwd){
     if(ip->type == ITEM_CURSORS){
       ncursors++;
     }else if(ip->type == ITEM_BUTTONS){
@@ -698,8 +792,7 @@ static void create_control_panel()
         XtSetArg(args[i], XtNcursor,       (XtArgVal) cursor); i++;
         ip->main = XtCreateManagedWidget("button", commandWidgetClass,
                      panel, args, i);
-        XtAddCallback(ip->main, XtNcallback,
-          (XtCallbackProc)button_changed, (XtPointer)ip);
+        XtAddCallback(ip->main, XtNcallback, button_changed, (XtPointer)ip);
         if (Lasthoriz) {
           Lastvert = Lasthoriz;
           Lasthoriz = NULL;
@@ -720,8 +813,7 @@ static void create_control_panel()
         XtSetArg(args[i], XtNcursor,       (XtArgVal) cursor); i++;
         ip->main = XtCreateManagedWidget("list", commandWidgetClass,
                      panel, args, i);
-        XtAddCallback(ip->main, XtNcallback,
-          (XtCallbackProc)button_next, (XtPointer)ip);
+        XtAddCallback(ip->main, XtNcallback, button_next, (XtPointer)ip);
         XtOverrideTranslations(ip->main, XtParseTranslationTable(Trans));
         SetUpListMenu(ip, item_width);
         if (Lasthoriz) {
@@ -798,7 +890,7 @@ static void create_control_panel()
     canvas = XtCreateManagedWidget("cursor", coreWidgetClass,
                    panel, args, i);
     XtOverrideTranslations(canvas, XtParseTranslationTable(CoreTrans));
-    for(ip = items_head; ip != NULL; ip = ip->fwd)
+    for(ip = items_head; ip != (ITEMS *)NULL; ip = ip->fwd)
       if(ip->type == ITEM_CURSORS)
         ip->main = canvas;
   }
@@ -815,14 +907,22 @@ static void create_control_panel()
     cursor = XCreateFontCursor(XtDisplay(top_level), Cursor_Shape);
     XDefineCursor(XtDisplay(canvas), XtWindow(canvas), cursor);
   }
+
+  return;
 }
+
 /************************************************************************/
 /* ARGSUSED */
-static XtActionProc CursorPaint(w, event, params, nparams)
+#if NeedFunctionPrototypes
+static void CursorPaint(Widget w, XEvent *event, String *params,
+   Cardinal *nparams)
+#else
+static void CursorPaint(w, event, params, nparams)
 Widget w;
 XEvent *event;     /* Unused */
 String *params;    /* Unused */
 Cardinal *nparams; /* Unused */
+#endif /* NeedFunctionPrototypes */
 /*
   Draw a cross at the cursor position.
 ------------------------------------------------------------------------*/
@@ -841,15 +941,21 @@ Cardinal *nparams; /* Unused */
     XDrawLine(XtDisplay(w), XtWindow(w), gc, left, top, right, bottom);
     XDrawLine(XtDisplay(w), XtWindow(w), gc, left, bottom, right, top);
   }
-  return NULL;
+
+  return;
 }
+
 /************************************************************************/
-/* ARGSUSED */
-static XtActionProc CursorEvents(w, event, params, nparams)
+#if NeedFunctionPrototypes
+static void CursorEvents(Widget w, XEvent *event, String *params,
+   Cardinal *nparams)
+#else
+static void CursorEvents(w, event, params, nparams)
 Widget w;
 XEvent *event;
-String *params;    /* Unused */
-Cardinal *nparams; /* Unused */
+String *params;
+Cardinal *nparams;
+#endif /* NeedFunctionPrototypes */
 /*
   This receives events when the cursor is moved or pushed.
 ------------------------------------------------------------------------*/
@@ -863,6 +969,7 @@ Cardinal *nparams; /* Unused */
     case MotionNotify: x = event->xmotion.x; y = event->xmotion.y; break;
     default: /* ?? */  x = event->xbutton.x; y = event->xbutton.y; break;
   }
+
   if(XGetWindowAttributes(XtDisplay(w), XtWindow(w), &wattr)){
     width = (int)wattr.width;
     height = (int)wattr.height;
@@ -872,16 +979,22 @@ Cardinal *nparams; /* Unused */
       cursorx = 100 * x / width;
       cursory = 100 * y / height;
       (void)CursorPaint(w, event, params, nparams);
-      if(waiting) wait_control_panel();
+      if (waiting) wait_control_panel();
       waiting = False;
     }
   }
-  return NULL;
+
+  return;
 }
+
 /************************************************************************/
+#if NeedFunctionPrototypes
+static void SetUpListMenu(ITEMS *item, int width)
+#else
 static void SetUpListMenu(item, width)
 ITEMS *item;
 int width;
+#endif /* NeedFunctionPrototypes */
 {
     char *s;
     int i;
@@ -896,14 +1009,13 @@ int width;
                               <Btn3Up>: set() notify() unset() ";
 
     ip = item;
-    if (ip == NULL) bug("SetUpListMenu: Did not find the item");
+    if (ip == (ITEMS *)NULL) bug("SetUpListMenu: Did not find the item");
     if (ip->type != ITEM_BUTTONS) bug("SetUpListMenu: item not a button");
 
     i = 0;
     popupshell = XtCreatePopupShell("ButtonList", transientShellWidgetClass,
                                       ip->main, args, i);
-    XtAddCallback(popupshell, XtNpopupCallback,
-      (XtCallbackProc)PlaceMenu, (XtPointer)NULL);
+    XtAddCallback(popupshell, XtNpopupCallback, PlaceMenu, (XtPointer)NULL);
     XtOverrideTranslations(popupshell, XtParseTranslationTable(PopTrans));
 
     i = 0;
@@ -919,19 +1031,26 @@ int width;
       ip->buttonlist[i] = (String) s;
       wlist = XtCreateManagedWidget(ip->buttonlist[i], commandWidgetClass,
                                      popbox, args, 1);
-      XtAddCallback(wlist, XtNcallback,
-        (XtCallbackProc)ListButtonPushed, (XtPointer)ip);
+      XtAddCallback(wlist, XtNcallback, ListButtonPushed, (XtPointer)ip);
       XtOverrideTranslations(wlist, XtParseTranslationTable(LisTrans));
       s += strlen(s) + 1;
     }
     ip->buttonlist[i] = NULL;
     ip->sval = 0; /* SVAL points to the current hightlighted entry. */
+
+    return;
 }
+
 /************************************************************************/
+#if NeedFunctionPrototypes
+static void SetUpSlider(ITEMS *item, Cursor nocursor, int labelwidth,
+   int width, int height)
+#else
 static void SetUpSlider(item, nocursor, labelwidth, width, height)
 ITEMS *item;
 Cursor nocursor;
 int labelwidth, width, height;
+#endif /* NeedFunctionPrototypes */
 {
     int i;
     float top, shown;
@@ -945,7 +1064,7 @@ int labelwidth, width, height;
       <BtnUp>:  NotifyScroll(Proportional) EndScroll() ";
 
     ip = item;
-    if (ip == NULL) bug("SetUpSlider: Did not find the item");
+    if (ip == (ITEMS *)NULL) bug("SetUpSlider: Did not find the item");
     if(ip->type != ITEM_SLIDERS) bug("SetUpSlider: item is not a Slider");
 
     ip->smin = 0;
@@ -990,10 +1109,8 @@ int labelwidth, width, height;
     XtSetArg(args[i], XtNshown,         (XtArgVal) shown); i++;
     wscroll = XtCreateManagedWidget("Scroll", scrollbarWidgetClass,
                  ip->main, args, i);
-    XtAddCallback(wscroll, XtNscrollProc,
-      (XtCallbackProc)SliderScrollProc, (XtPointer)ip);
-    XtAddCallback(wscroll, XtNjumpProc,
-      (XtCallbackProc)SliderJumpProc, (XtPointer)ip);
+    XtAddCallback(wscroll, XtNscrollProc, SliderScrollProc, (XtPointer)ip);
+    XtAddCallback(wscroll, XtNjumpProc, SliderJumpProc, (XtPointer)ip);
     (void)sprintf(ScrollTrans, SprintfTrans, ip->itno);
     XtOverrideTranslations(wscroll, XtParseTranslationTable(ScrollTrans));
 
@@ -1012,10 +1129,15 @@ int labelwidth, width, height;
 
     return;
 }
+
 /************************************************************************/
+#if NeedFunctionPrototypes
+static void LabelScrollBarValue(Widget parent, int value)
+#else
 static void LabelScrollBarValue(parent, value)
 Widget parent;
 int value;
+#endif /* NeedFunctionPrototypes */
 {
     Arg args[2];
     char string[20];
@@ -1029,11 +1151,18 @@ int value;
     XtSetArg(args[0], XtNwidth, width);
     XtSetArg(args[1], XtNlabel, string);
     XtSetValues(widget, args, 2);
+
+    return;
 }
+
 /************************************************************************/
+#if NeedFunctionPrototypes
+static void LabelScrollBarMinMax(Widget parent, int min, int max)
+#else
 static void LabelScrollBarMinMax(parent, min, max)
 Widget parent;
 int min, max;
+#endif /* NeedFunctionPrototypes */
 {
     char string[20];
     Arg args[1];
@@ -1048,52 +1177,67 @@ int min, max;
     (void)sprintf(string, "%d", max);
     XtSetArg(args[0], XtNlabel, string);
     XtSetValues(widget, args, 1);
+
     return;
 }
+
 /************************************************************************/
 /* ARGSUSED */
-static XtCallbackProc PlaceMenu(w, client_data, call_data)
+#if NeedFunctionPrototypes
+static void PlaceMenu(Widget w, XtPointer clientData, XtPointer callData)
+#else
+static void PlaceMenu(w, clientData, callData)
 Widget w;
-XtPointer client_data; /* Unused */
-XtPointer call_data;   /* Unused */
+XtPointer clientData; /* Unused */
+XtPointer callData;   /* Unused */
+#endif /* NeedFunctionPrototypes */
 {
-    int i;
-    Arg args[10];
-    Widget button;    /* Widget of parent of popup widget. */
-    Position x, y;    /* Coords of the parent widget on the root window. */
+    Arg args[2];
+    Cardinal i;
     Dimension height; /* Height of parent;  menu is placed below parent. */
+    Position x, y;    /* Coords of the parent widget on the root window. */
+    Widget button;    /* Widget of parent of popup widget. */
 /*
  *  Translate the position of the popup window to the coordinates of
  *  the button window origin.
  */
     button = XtParent(w);
-    XtTranslateCoords(button, (Position) 0, (Position) 0, &x, &y);
-    XtSetArg(args[0], XtNheight, &height);
-    XtGetValues(button, args, 1);
+    i = 0;
+    XtSetArg(args[i], XtNheight, &height); i++;
+    XtGetValues(button, args, i);
+    XtTranslateCoords(button, (Position)0, (Position)0, &x, &y);
+    x += height;
+    y += (height / 2);
 
 /*  Move the popup shell height pixels below and right of this position. */
 /*  (The popup widget is not visible yet.) */
     i = 0;
-    XtSetArg(args[i], XtNx, x + height); i++;
-    XtSetArg(args[i], XtNy, y + height/2); i++;
+    XtSetArg(args[i], XtNx, x); i++;
+    XtSetArg(args[i], XtNy, y); i++;
     XtSetValues(w, args, i);
-    return NULL;
+
+    return;
 }
+
 /************************************************************************/
 /* ARGSUSED */
-static XtCallbackProc ListButtonPushed(w, client_data, call_data)
+#if NeedFunctionPrototypes
+static void ListButtonPushed(Widget w, XtPointer clientData, XtPointer callData)
+#else
+static void ListButtonPushed(w, clientData, callData)
 Widget w;
-XtPointer client_data;
-XtPointer call_data;   /* Unused */
+XtPointer clientData;
+XtPointer callData;   /* Unused */
+#endif /* NeedFunctionPrototypes */
 {
     int listindex;
     Arg args[1];
-    ITEMS *ip;
-    Widget button;
     String listitem;
+    Widget button;
+    ITEMS *ip;
 
-    ip = (ITEMS *)client_data;
-    if(ip == NULL) bug("ListButtonPushed: Did not find the item");
+    ip = (ITEMS *)clientData;
+    if(ip == (ITEMS *)NULL) bug("ListButtonPushed: Did not find the item");
     if (ip->type != ITEM_BUTTONS) bug("ListButtonPushed: item not a button");
 
     XtSetArg(args[0], XtNlabel, &listitem);
@@ -1113,24 +1257,30 @@ XtPointer call_data;   /* Unused */
         XtSetValues(button, args, 1);
         ip->sval = listindex;
 
-        (void)button_changed(w, (caddr_t) ip, (caddr_t) NULL);
+        button_changed(w, (XtPointer)ip, (XtPointer)NULL);
       }
     }
-    return NULL;
+
+    return;
 }
+
 /************************************************************************/
 /* ARGSUSED */
-static XtCallbackProc button_next(w, client_data, call_data)
+#if NeedFunctionPrototypes
+static void button_next(Widget w, XtPointer clientData, XtPointer callData)
+#else
+static void button_next(w, clientData, callData)
 Widget w;
-XtPointer client_data;
-XtPointer call_data;   /* Unused */
+XtPointer clientData;
+XtPointer callData;   /* Unused */
+#endif /* NeedFunctionPrototypes */
 {
     int listindex;
     Arg args[1];
     ITEMS *ip;
 
-    ip = (ITEMS *)client_data;
-    if(ip == NULL) bug("button_next: Did not find the item");
+    ip = (ITEMS *)clientData;
+    if(ip == (ITEMS *)NULL) bug("button_next: Did not find the item");
     if (ip->type != ITEM_BUTTONS) bug("button_next: item not a button");
 
     listindex = (ip->sval + 1) % ip->nvalues;
@@ -1140,101 +1290,134 @@ XtPointer call_data;   /* Unused */
 
     ip->sval = listindex;
 
-    (void)button_changed(w, (caddr_t) ip, (caddr_t) NULL);
-    return NULL;
+    button_changed(w, (XtPointer)ip, (XtPointer)NULL);
+
+    return;
 }
+
 /************************************************************************/
 /* ARGSUSED */
-static XtCallbackProc button_changed(w, client_data, call_data)
+#if NeedFunctionPrototypes
+static void button_changed(Widget w, XtPointer clientData, XtPointer callData)
+#else
+static void button_changed(w, clientData, callData)
 Widget w;
-XtPointer client_data;
-XtPointer call_data;   /* Unused */
+XtPointer clientData;
+XtPointer callData;   /* Unused */
+#endif /* NeedFunctionPrototypes */
 {
     ITEMS *ip;
 
-    ip = (ITEMS *)client_data;
-    if(ip == NULL) bug("button_changed: Did not find the item");
+    ip = (ITEMS *)clientData;
+    if(ip == (ITEMS *)NULL) bug("button_changed: Did not find the item");
 
     ip->changes++;
     changes++;
-    if(waiting) check_control_panel(ip->itno);
+    if (waiting) check_control_panel(ip->itno);
     waiting = False;
-    return NULL;
+
+    return;
 }
+
 /************************************************************************/
-static XtCallbackProc SliderScrollProc(w, client_data, call_data)
+#if NeedFunctionPrototypes
+static void SliderScrollProc(Widget w, XtPointer clientData, XtPointer callData)
+#else
+static void SliderScrollProc(w, clientData, callData)
 Widget w;
-XtPointer client_data;
-XtPointer call_data;
+XtPointer clientData;
+XtPointer callData;
+#endif /* NeedFunctionPrototypes */
 {
     int value;
     float fraction;
     ITEMS *ip;
 
-    ip = (ITEMS *)client_data;
-    if(ip == NULL) bug("SliderScrollProc: Did not find the item");
+    ip = (ITEMS *)clientData;
+    if(ip == (ITEMS *)NULL) bug("SliderScrollProc: Did not find the item");
     if(ip->type != ITEM_SLIDERS) bug("SliderScrollProc: item is not a Slider");
 
-    ip->sval -= (int)call_data / 10;
+    ip->sval -= (int)callData / 10;
     if (ip->sval < 0) ip->sval = 0;
     if (ip->sval > ip->slen) ip->sval = ip->slen;
     fraction = (float)ip->sval / (float)ip->slen;
     value = ip->smin + (fraction * (ip->smax - ip->smin));
     XawScrollbarSetThumb(w, fraction, (float)(-1.0)); /* -1 means unchanged. */
     LabelScrollBarValue(ip->main, value);
-    (void)button_changed(w, (XtPointer) ip, (XtPointer) NULL);
-    return NULL;
+    button_changed(w, (XtPointer)ip, (XtPointer)NULL);
+
+    return;
 }
+
 /************************************************************************/
 /* ARGSUSED */
-static XtCallbackProc SliderJumpProc(w, client_data, call_data)
+#if NeedFunctionPrototypes
+static void SliderJumpProc(Widget w, XtPointer clientData, XtPointer callData)
+#else
+static void SliderJumpProc(w, clientData, callData)
 Widget w;            /* Unused */
-XtPointer client_data;
-XtPointer call_data;
+XtPointer clientData;
+XtPointer callData;
+#endif /* NeedFunctionPrototypes */
 {
     int value;
     float fraction;
     ITEMS *ip;
 
-    ip = (ITEMS *)client_data;
-    if(ip == NULL) bug("SliderJumpProc: Did not find the item");
+    ip = (ITEMS *)clientData;
+    if(ip == (ITEMS *)NULL) bug("SliderJumpProc: Did not find the item");
     if(ip->type != ITEM_SLIDERS) bug("SliderJumpProc: item is not a Slider");
 
-    fraction = *(float *)call_data;
+    fraction = *(float *)callData;
     ip->sval = fraction * ip->slen;
     value = ip->smin + (fraction * (ip->smax - ip->smin));
     LabelScrollBarValue(ip->main, value);
 /*  Only notify when the scrolling is finished....   */
-/*  (void)button_changed(w, (XtPointer) ip, (XtPointer) NULL); */
-    return NULL;
+/*  button_changed(w, (XtPointer)ip, (XtPointer)NULL); */
+
+    return;
 }
+
 /************************************************************************/
 /* ARGSUSED */
-static XtActionProc UpdateScroll(w, event, params, nparams)
+#if NeedFunctionPrototypes
+static void UpdateScroll(Widget w, XEvent *event, String *params,
+    Cardinal *nparams)
+#else
+static void UpdateScroll(w, event, params, nparams)
 Widget w;
 XEvent *event;     /* Unused */
 String *params;    /* ITEMS* ip->itno */
 Cardinal *nparams; /* Only 1 */
+#endif /* NeedFunctionPrototypes */
 {
     int itno;
     ITEMS *ip;
 
-    if (*nparams != 1) return NULL;
+    if (*nparams != 1) return;
     itno = atoi(*params);
 
-    for(ip = items_head; ip != NULL && ip->itno != itno; ip = ip->fwd) ;
-    if(ip == NULL) bug("UpdateScroll: Did not find the item");
+    for (ip = items_head; ip != (ITEMS *)NULL && ip->itno != itno; ip = ip->fwd)
+      /* NULL */ ;
+    if (ip == (ITEMS *)NULL) bug("UpdateScroll: Did not find the item");
 
-    (void)button_changed(w, (XtPointer) ip, (XtPointer) NULL);
-    return NULL;
+    button_changed(w, (XtPointer)ip, (XtPointer)NULL);
+
+    return;
 }
+
 /************************************************************************/
 /* ARGSUSED */
-static XtActionProc QuitPanel(w, event, params, nparams)
+#if NeedFunctionPrototypes
+static void QuitPanel(Widget w, XEvent *event, String *params,
+    Cardinal *nparams)
+#else
+static void QuitPanel(w, event, params, nparams)
 Widget w;          /* Unused */
 XEvent *event;     /* Unused */
 String *params;    /* Unused */
 Cardinal *nparams; /* Unused */
+#endif /* NeedFunctionPrototypes */
 {
     destroy_control_panel();
     XtCloseDisplay(XtDisplay(top_level));
