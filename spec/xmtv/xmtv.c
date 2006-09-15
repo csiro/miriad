@@ -437,6 +437,8 @@ Widget topwidget;
       (void)fprintf(stderr, "**  depth = %d > 8!", displayDepth);
       (void)fprintf(stderr, "  Sorry, it must be limited to 8\n");
       (void)fprintf(stderr, "** due to the 1-character I/O limit.\n");  
+      (void)fprintf(stderr,"\n");
+      (void)fprintf(stderr, "See `help xmtv` for ways around this\n");
       (void)fprintf(stderr, "*******************************************\n");
       displayDepth = 8;
     }
