@@ -346,6 +346,7 @@ RubberBand *r;
           XSetInputFocus(dpy, PointerRoot, RevertToPointerRoot, CurrentTime);
           if (XDebug) (void)fprintf(stderr, "\n");
           return(0); /* Force a return back to the start of this routine. */
+          break;
         default:                            /* Dispatch any other events. */
           XtDispatchEvent(&event);
           break;

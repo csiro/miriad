@@ -393,8 +393,7 @@ String newOFMName;
 {
     char *ptr;
     int value;
-    unsigned short int t;
-    register int i, j;
+    register int i, j, t;
     static int lastValue = -1;
     double xx, yy, zz;
 
@@ -422,9 +421,7 @@ String newOFMName;
 /* Old way...  rofm[i] = gofm[i] = bofm[i] = i; */
       }
     } else if ((value % NOFM) == COLOUR) {
-      j = sizeof(blue_ofm_def) / sizeof(blue_ofm_def[0]);
-      if (j > NINTENS) j = NINTENS;
-      for (i = 0; i < j; i++) {                   /* Defined in ofms.h. */
+      for (i = 0; i < NINTENS; i++) {             /* Defined in ofms.h. */
         rofm[i] = red_ofm_def[i];
         gofm[i] = green_ofm_def[i];
         bofm[i] = blue_ofm_def[i];

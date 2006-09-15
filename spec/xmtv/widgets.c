@@ -2,7 +2,6 @@
 	<widgets.c> - code for control panel widgets.
 
 	13may92 jm  Original code.
-	14nov95 jm  Corrected callback declaration syntax.
 */
 #include "xmtv.h"
 
@@ -27,7 +26,7 @@ static Widget zoomup = (Widget)NULL;
 
 /************************************************************************/
 /* ARGSUSED */
-static void portholeCallback(w, client_data, call_data)
+static XtCallbackProc portholeCallback(w, client_data, call_data)
 Widget w;
 XtPointer client_data;   /* Unused. */
 XtPointer call_data;
@@ -51,13 +50,11 @@ XtPointer call_data;
       if (AppDebug)
         (void)fprintf(stderr, "\n");
     }
-
-    return;
 }
 
 /************************************************************************/
 /* ARGSUSED */
-static void pannerCallback(w, client_data, call_data)
+static XtCallbackProc pannerCallback(w, client_data, call_data)
 Widget w;                /* Unused. */
 XtPointer client_data;   /* Unused. */
 XtPointer call_data;
@@ -76,13 +73,11 @@ XtPointer call_data;
         sx, sy, width, height);
 
     localPanEvent((doingPan == True), sx, sy, width, height);
-
-    return;
 }
 
 /************************************************************************/
 /* ARGSUSED */
-static void toggleCallback(w, client_data, call_data)
+static XtCallbackProc toggleCallback(w, client_data, call_data)
 Widget w;                /* Unused. */
 XtPointer client_data;
 XtPointer call_data;     /* Unused. */
@@ -150,7 +145,7 @@ XtPointer call_data;     /* Unused. */
 
 /************************************************************************/
 /* ARGSUSED */
-static void atodCallback(w, client_data, call_data)
+static XtCallbackProc atodCallback(w, client_data, call_data)
 Widget w;
 XtPointer client_data;
 XtPointer call_data;     /* Unused. */
@@ -161,20 +156,16 @@ XtPointer call_data;     /* Unused. */
       button = XtName(w);
 
     buttonPressed(button[0]);
-
-    return;
 }
 
 /************************************************************************/
 /* ARGSUSED */
-static void quitCallback(w, client_data, call_data)
+static XtCallbackProc quitCallback(w, client_data, call_data)
 Widget w;                /* Unused. */
 XtPointer client_data;   /* Unused. */
 XtPointer call_data;     /* Unused. */
 {
     (void)CloseDown(NULL, NULL, NULL, NULL);
-
-    return;
 }
 
 /************************************************************************/
@@ -366,7 +357,7 @@ Dimension w, h;
 
 /************************************************************************/
 /* ARGSUSED */
-void keyboardPressed(w, event, params, nparams)
+XtActionProc keyboardPressed(w, event, params, nparams)
 Widget w;
 XEvent *event;     /* Unused */
 String *params;
@@ -377,13 +368,11 @@ Cardinal *nparams;
 {
     if (*nparams == 1)
       buttonPressed(*params[0]);
-
-    return;
 }
 
 /************************************************************************/
 /* ARGSUSED */
-void canvasExpose(w, event, params, nparams)
+XtActionProc canvasExpose(w, event, params, nparams)
 Widget w;          /* Unused */
 XEvent *event;     /* Unused */
 String *params;    /* Unused */
@@ -393,13 +382,11 @@ Cardinal *nparams; /* Unused */
 ------------------------------------------------------------------------*/
 {
     imageRefresh();
-
-    return;
 }
 
 /************************************************************************/
 /* ARGSUSED */
-void cursorMotionEvent(w, event, params, nparams)
+XtActionProc cursorMotionEvent(w, event, params, nparams)
 Widget w;                /* Unused. */
 XEvent *event;
 String *params;          /* Unused. */
@@ -433,13 +420,11 @@ Cardinal *nparams;       /* Unused. */
     } else {
       (void)fprintf(stderr, "%s\n", label);
     }
-
-    return;
 }
 
 /************************************************************************/
 /* ARGSUSED */
-void buttonEvent(w, event, params, nparams)
+XtActionProc buttonEvent(w, event, params, nparams)
 Widget w;          /* Unused */
 XEvent *event;
 String *params;
@@ -472,8 +457,6 @@ Cardinal *nparams;
           break;
       }
     }
-
-    return;
 }
 
 /************************************************************************/

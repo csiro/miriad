@@ -1,7 +1,5 @@
 /*
  *	<screen.c> - screen re-write routines.
- *	19dec95 jm Force x/ymin positions in scrwrt() to be in
- *		   the range of 0 - Screen_WH.
  */
 
 #include "xmtv.h"
@@ -244,27 +242,24 @@ int xs, ys, xe, ye;
 
     choff = max(0, cur_chan - 1);
 
-    if (xs < 0) xs = 0;
-    if (ys < 0) ys = 0;
-    if (xe > Screen_Width - 1) xe = Screen_Width - 1;
-    if (ye > Screen_Height - 1) ye = Screen_Height - 1;
-
                                               /*  Upper left quadrant.  */
-    xoff = Screen_Width * upleft_mag;
     xmin = upleft_x[choff] + PortX;
-    while (xmin < 0) xmin += xoff;
-    while (xmin >= xoff) xmin -= xoff;
     xmax = xmin + PortW - 1;
-
+    xoff = Screen_Width * upleft_mag;
+    if (xmin >= xoff) {
+      xmin -= xoff;
+      xmax -= xoff;
+    }
     xext = xmax - ((Screen_Width - 1) * upleft_mag);
     if (xext > 0) xmax = (Screen_Width - 1) * upleft_mag;
 
-    yoff = Screen_Height * upleft_mag;
     ymin = upleft_y[choff] + PortY;
-    while (ymin < 0) ymin += yoff;
-    while (ymin >= yoff) ymin -= yoff;
     ymax = ymin + PortH - 1;
-
+    yoff = Screen_Height * upleft_mag;
+    if (ymin >= yoff) {
+      ymin -= yoff;
+      ymax -= yoff;
+    }
     yext = ymax - ((Screen_Height - 1) * upleft_mag);
     if (yext > 0) ymax = (Screen_Height - 1) * upleft_mag;
 

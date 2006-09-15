@@ -24,7 +24,7 @@ static Widget ChanParent = (Widget)NULL;
 
 /************************************************************************/
 /* ARGSUSED */
-static void nextMenu(w, client_data, call_data)
+static XtCallbackProc nextMenu(w, client_data, call_data)
 Widget w;                /* Unused. */
 XtPointer client_data;
 XtPointer call_data;     /* Unused. */
@@ -36,13 +36,11 @@ XtPointer call_data;     /* Unused. */
     menuIndex = (int)XawToggleGetCurrent(ms->toggle);
     menuIndex = (menuIndex % ms->maxMenuItems) + 1;
     XawToggleSetCurrent(ms->toggle, (XtPointer)menuIndex);
-
-    return;
 }
 
 /************************************************************************/
 /* ARGSUSED */
-static void menuButtonPushed(w, client_data, call_data)
+static XtCallbackProc menuButtonPushed(w, client_data, call_data)
 Widget w;
 XtPointer client_data;
 XtPointer call_data;     /* Unused. */
@@ -89,13 +87,11 @@ XtPointer call_data;     /* Unused. */
      */
     shell = XtParent(XtParent(w)); /* shell<-menuBox<-w */
     XtPopdown(shell);
-
-    return;
 }
 
 /************************************************************************/
 /* ARGSUSED */
-static void placeMenu(w, client_data, call_data)
+static XtCallbackProc placeMenu(w, client_data, call_data)
 Widget w;
 XtPointer client_data;
 XtPointer call_data;     /* Unused. */
@@ -118,8 +114,6 @@ XtPointer call_data;     /* Unused. */
     XtSetArg(args[i], XtNx, (XtArgVal)(x + width/2));  i++;
     XtSetArg(args[i], XtNy, (XtArgVal)(y + height/2)); i++;
     XtSetValues(w, args, i);
-
-    return;
 }
 
 /************************************************************************/
@@ -160,7 +154,6 @@ Widget parent;
       XtAddCallback(entry, XtNcallback, menuButtonPushed, (XtPointer)parent);
       if (j == 0) toggle = entry;
     }
-
     return(toggle);
 }
 

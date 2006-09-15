@@ -122,11 +122,11 @@
 static Boolean connected = False;
 
 static XtActionsRec actions[] = {
-  {"cursorMotionEvent", cursorMotionEvent},
-  {"keyboardPressed",   keyboardPressed},
-  {"buttonEvent",       buttonEvent},
-  {"quit",              CloseDown},
-  {"canvasExpose",      canvasExpose},
+  {"cursorMotionEvent", (XtActionProc)cursorMotionEvent},
+  {"keyboardPressed",   (XtActionProc)keyboardPressed},
+  {"buttonEvent",       (XtActionProc)buttonEvent},
+  {"quit",              (XtActionProc)CloseDown},
+  {"canvasExpose",      (XtActionProc)canvasExpose},
   {NULL, NULL}
 };
 
@@ -271,12 +271,7 @@ static char *fallback_resources[] = {
 /* Global variables. */
 
 XtAppContext context;
-static void checkSocket(
-#if NeedFunctionPrototypes
-    XtPointer client_data,
-    XtIntervalId *ptrTimer
-#endif
-);
+static XtTimerCallbackProc checkSocket();
 
 /* Source code. */
 
@@ -337,7 +332,7 @@ String service;
 
 /************************************************************************/
 /* ARGSUSED */
-static void readSocket(client_data, iosocket, inputID)
+static XtInputCallbackProc readSocket(client_data, iosocket, inputID)
 XtPointer client_data;  /* Unused */
 int *iosocket;
 XtInputId *inputID;
@@ -355,17 +350,16 @@ XtInputId *inputID;
 
     if (connected == True)
       WriteLink(fd, &xbuf, &ybuf);
-
-    return;
 }
 
 /************************************************************************/
 /* ARGSUSED */
-static void checkSocket(client_data, ptrTimer)
+static XtTimerCallbackProc checkSocket(client_data, ptrTimer)
 XtPointer client_data;
 XtIntervalId *ptrTimer;
 {
     int listenSocket, ioSocketId;
+    XtInputId FdId;
     XtInputMask condition = XtInputReadMask;
 
     listenSocket = (int)client_data;
@@ -375,12 +369,11 @@ XtIntervalId *ptrTimer;
       if ((ioSocketId = CheckLink(listenSocket)) < 0)
         bug("checkSocket:accept");
       if (ioSocketId > 0) {
-        (void)XtAppAddInput(context, ioSocketId, (XtPointer)condition,
+        FdId = XtAppAddInput(context, ioSocketId, (XtPointer)condition,
           readSocket, (XtPointer)NULL);
         connected = True;
       }
     }
-
     return;
 }
 
@@ -404,8 +397,6 @@ int iconw, iconh;
       *x += (RootWidth - iconw);
     if ((bitmask & (YNegative|YValue)) == (YNegative|YValue))
       *y += (RootHeight - iconh);
-
-    return;
 }
 
 /************************************************************************/
@@ -433,11 +424,11 @@ Widget topwidget;
     }
 
     if (displayDepth > 8) {
-      (void)fprintf(stderr, "*******************************************\n");
-      (void)fprintf(stderr, "**  depth = %d > 8!", displayDepth);
-      (void)fprintf(stderr, "  Sorry, it must be limited to 8\n");
-      (void)fprintf(stderr, "** due to the 1-character I/O limit.\n");  
-      (void)fprintf(stderr, "*******************************************\n");
+      fprintf (stderr, "*******************************************\n");
+      fprintf (stderr, "**  depth = %d > 8!", displayDepth);
+      fprintf (stderr, "  Sorry, it must be limited to 8\n");
+      fprintf (stderr, "** due to the 1-character I/O limit.\n");  
+      fprintf (stderr, "*******************************************\n");
       displayDepth = 8;
     }
 
@@ -459,29 +450,19 @@ Widget topwidget;
 int screenDepth;
 {
     int nvis;                        /* Number of visuals in the list.  */
-    Display *dpy;
     XVisualInfo template;                 /* type of visual XMTV uses.  */
     XVisualInfo *vislist;    /* list of visuals matching the template.  */
 
-    dpy = XtDisplay(topwidget);
-    template.screen = DefaultScreen(dpy);
+    template.screen = DefaultScreen(XtDisplay(topwidget));
     template.depth = screenDepth;
     template.class = PseudoColor;
 
-    vislist = XGetVisualInfo(dpy,
+    vislist = XGetVisualInfo(XtDisplay(topwidget),
       (VisualScreenMask|VisualDepthMask|VisualClassMask), &template, &nvis);
  
-    /*  If no PseudoColor visuals are found, try the default Visual.   */
     if (nvis == 0) {
-      template.visualid = XVisualIDFromVisual(DefaultVisual(dpy,
-        DefaultScreen(dpy)));
-      vislist = XGetVisualInfo(dpy,
-        (VisualScreenMask|VisualDepthMask|VisualIDMask), &template, &nvis);
-      /*  The default did not work; send a warning message. */
-      if (nvis == 0) {
-        perror("No suitable visual");
-        return(NULL);
-      }
+      perror("No suitable visual");
+      return(NULL);
     }
 
     return(vislist);
@@ -489,7 +470,7 @@ int screenDepth;
 
 /************************************************************************/
 /* ARGSUSED */
-void CloseDown(w, event, params, nparams)
+XtActionProc CloseDown(w, event, params, nparams)
 Widget w;          /* Unused */
 XEvent *event;     /* Unused */
 String *params;    /* Unused */
@@ -529,7 +510,7 @@ char *argv[];
     (void)fprintf(stderr,"%s\n", title);
 
     toplevel = XtAppInitialize(&context, "XMtv", options, XtNumber(options),
-       &argc, argv, fallback_resources, NULL, (Cardinal)0);
+       (Cardinal *)&argc, argv, fallback_resources, NULL, (Cardinal)0);
 
     XtGetApplicationResources(toplevel, (XtPointer)&AppData,
        resources, XtNumber(resources), (ArgList)NULL, (Cardinal)0);
@@ -560,7 +541,7 @@ char *argv[];
       bug("Trouble allocating storage for the color table.");
 
     iconPixmap = XCreateBitmapFromData(XtDisplay(toplevel),
-       XtWindow(toplevel), (char *)xmtv_bits, xmtv_width, xmtv_height);
+       XtWindow(toplevel), xmtv_bits, xmtv_width, xmtv_height);
 
     i = 0;
     XtSetArg(args[i], XtNminWidth,          (XtArgVal)100); i++;
@@ -601,6 +582,4 @@ char *argv[];
 
     /* Because of XDebug; call my own MainLoop routine. */
     privateXtAppMainLoop(context);
-
-    return(0);
 }
