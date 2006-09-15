@@ -6,13 +6,13 @@
  * static void privateXtAppMainLoop();
  * static void startTimer();
  * static void initializeSocket();
- * static XtInputCallbackProc readSocket();
- * static XtTimerCallbackProc checkSocket();
+ * static void readSocket();
+ * static void checkSocket();
  * static void ParseIconGeometry();
  * static int initScreen();
  * static XVisualInfo *getVisualList();
  */
-extern XtActionProc CloseDown();
+extern void CloseDown();
 
 /* -- colors.c -- */
 /* -- -- static routines -- -- */
@@ -38,6 +38,7 @@ extern int cmap_wgrfx();
 extern int cmap_rgrfx();
 
 /* -- comm.c -- */
+extern short int dontohs();
 extern int MakeLink();
 extern int CheckLink();
 extern int ReadLink();
@@ -74,18 +75,18 @@ extern int read_zoom();
  * static void privateZoom();
  */
 extern void localResize();
-extern XtCallbackProc resizeCallback();
-extern XtCallbackProc localZoomDown();
-extern XtCallbackProc localZoomUp();
-extern XtCallbackProc localReset();
+extern void resizeCallback();
+extern void localZoomDown();
+extern void localZoomUp();
+extern void localReset();
 extern void localPanEvent();
 
 /* -- menus.c -- */
 /* -- -- static routines -- -- */
 /*
- * static XtCallbackProc nextMenu();
- * static XtCallbackProc menuButtonPushed();
- * static XtCallbackProc placeMenu();
+ * static void nextMenu();
+ * static void menuButtonPushed();
+ * static void placeMenu();
  * static Widget CreateMenuList();
  */
 extern void resetMenus();
@@ -126,20 +127,20 @@ extern int selectPoints();
 /* -- widgets.c -- */
 /* -- -- static routines -- -- */
 /*
- * static XtCallbackProc portholeCallback();
- * static XtCallbackProc pannerCallback();
- * static XtCallbackProc toggleCallback();
- * static XtCallbackProc atodCallback();
- * static XtCallbackProc quitCallback();
+ * static void portholeCallback();
+ * static void pannerCallback();
+ * static void toggleCallback();
+ * static void atodCallback();
+ * static void quitCallback();
  * static Widget CreatePanner();
  * static Widget BuildControlPanel();
  * static Widget BuildCanvas();
  */
 extern Widget BuildWindow();
-extern XtActionProc keyboardPressed();
-extern XtActionProc canvasExpose();
-extern XtActionProc cursorMotionEvent();
-extern XtActionProc buttonEvent();
+extern void keyboardPressed();
+extern void canvasExpose();
+extern void cursorMotionEvent();
+extern void buttonEvent();
 extern void setSizeOfPanner();
 extern void movePanner();
 extern void zoomEnable();

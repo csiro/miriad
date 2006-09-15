@@ -31,6 +31,13 @@ static struct sockaddr_un server_un;
 /* Source code. */
 
 /************************************************************************/
+short int dontohs(item)
+short int item;
+{
+    return(ntohs(item));
+}
+
+/************************************************************************/
 int MakeLink(inet, buffered, service, portnumber)
 Boolean inet;
 Boolean buffered;
@@ -60,7 +67,7 @@ unsigned int portnumber;
       server_in.sin_port = htons(portnumber);
       server_in.sin_addr.s_addr = htonl(INADDR_ANY);
 
-      if ((service != (String)NULL) && (strlen(service) > 0) &&
+      if ((service != (String)NULL) && ((int)strlen(service) > 0) &&
           ((sp_in = getservbyname((char *)service, "tcp")) != NULL)) {
         if (sp_in->s_port != portnumber)
           (void)fprintf(stderr, "XMTV: Service %s %s %d to %d\n",
@@ -178,7 +185,7 @@ XMTVinput *in;
     abuf = (char *)lbuf;
     bytes_togo = 6 * sizeof(short int);
     while (bytes_togo > 0) {
-      bytes_trans = read(link, abuf, bytes_togo);
+      bytes_trans = read(link, abuf, (unsigned int)bytes_togo);
       if (bytes_trans <= 0) {
         (void)fprintf(stderr, "ReadLink read header error - shutdown\n");
         return(-1);
@@ -199,7 +206,7 @@ XMTVinput *in;
     abuf = (char *)in->data;
     bytes_togo = in->data_length + (in->data_length % 2);
     while (bytes_togo > 0) {
-      bytes_trans = read(link, abuf, bytes_togo);
+      bytes_trans = read(link, abuf, (unsigned int)bytes_togo);
       if (bytes_trans <= 0) {
         (void)fprintf(stderr, "ReadLink read data error - shutdown\n");
         return (-1);
@@ -227,7 +234,7 @@ XMTVinput *in;
       for(i = 2, j = 0; j < buflen; i++, j++)
         packet[i] = htons(out->data[j]);
       buflen = (buflen + 2) * sizeof(short int);
-      if (write(link, (char *)packet, buflen) < buflen) {
+      if (write(link, (char *)packet, (unsigned int)buflen) < buflen) {
         perror("XMTV:WriteLink - write");
         out->status = -1;
         return(-1);

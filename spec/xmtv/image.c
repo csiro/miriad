@@ -57,7 +57,6 @@ int screenDepth;
 ------------------------------------------------------------------------*/
 {
     register int i;
-    register int j;
     int size, offset;
     static Boolean initialized = False;
 
@@ -149,7 +148,7 @@ int imwrt()
 ------------------------------------------------------------------------*/
 {
     unsigned char gph_mask;
-    register int i, npix;
+    register short int i, npix;
     int xs, ys, iangl, channel, j, vv;
 
     channel = xbuf.parms[2];
@@ -250,14 +249,14 @@ short int *nwpix;
     unsigned char gph_mask;
     int xs, ys, iangl, channel, j;
     unsigned short int jj;
-    register int i, npix;
+    register short int i, npix;
 
     xs = Memory_x(xbuf.parms[0]);
     ys = Memory_y(xbuf.parms[1]);
     channel = xbuf.parms[2];
     iangl = xbuf.parms[3];
     jj = *((unsigned short int *)xbuf.data); /* Special I*2 word in buffer. */
-    npix = ntohs(jj);
+    npix = dontohs(jj);
     *nwpix = npix;
 
     if ((channel < 1) || (channel > NGRTOT)) {
