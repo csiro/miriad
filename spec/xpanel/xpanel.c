@@ -1,4 +1,4 @@
-#define VERSION_ID  "31-oct-94"
+#define VERSION_ID  "15-feb-95"
 /*= XPANEL - X-window control panel program
 /*& jm
 /*: tools
@@ -18,10 +18,10 @@ tree layout used by Xpanel is shown below:
 	Top level shell:	"Xpanel"
 
 	Level 2:
-	Child of "Xpanel":	"subframe"
+	Child of "Xpanel":	"Miriad Control Panel" (PopupShell)
 
 	Level 3:
-	Child of "subframe":	"panel"      (formWidget)
+	Child of "Miriad Control Panel":	"panel"      (formWidget)
 
 	Level 4:
 	Children of "panel":	"button"     (commandWidget)
@@ -65,6 +65,7 @@ Xpanel provides the following resources, along with their defaults:
                 reassigned (also added a message).  Also, cleaned
                 socket code section and removed some global
                 variables they depended on.
+    rjs 15feb95 Added htons/ntohs to buffer exchange.
 /************************************************************************/
 #include <stdlib.h>
 #include <stdio.h>
@@ -338,21 +339,26 @@ XtPointer dummy;  /* Unused */
 int *iosocket;
 XtInputId *fdid;
 {
-  int fd,nread,size;
+  int fd,nread,size,i;
   short int buffer[MAXBUF];
 
   fd = *iosocket;
-  nread = read(fd,(char *)buffer,4);
-  if(nread != 4){
+  size=2;
+  nread = read(fd,(char *)buffer,2*size);
+  buffer[0] = ntohs(buffer[0]);
+  buffer[1] = ntohs(buffer[1]);
+  if(nread != 2*size){
     destroy_control_panel();
     XtRemoveInput(*fdid);
     close(fd);
     connected = False;
     visible = False;
   }else if(buffer[0] == CTRL_DEFINE){
-    size = 2*buffer[1] + 4;
-    nread = read(fd,(char *)&buffer[2],size);
-    if(nread < size) bug("Unexpected End-of-Data");
+    size = buffer[1] + 2;
+    nread = read(fd,(char *)&buffer[2],2*size);
+    if(nread < 2*size) bug("Unexpected End-of-Data");
+    size+=2;
+    for(i=2; i < size; i++)buffer[i] = ntohs(buffer[i]);
     define_control_panel(buffer);
   }else if(buffer[0] == CTRL_DISPLAY){
     create_control_panel();
@@ -363,9 +369,11 @@ XtInputId *fdid;
   }else if(buffer[0] == CTRL_WAIT){
     wait_control_panel();
   }else if(buffer[0] == CTRL_SET){
-    size = 2*buffer[1] + 2;
-    nread = read(fd,(char *)&buffer[2],size);
-    if(nread < size) bug("Unexpected End-of-Data");
+    size = buffer[1] + 1;
+    nread = read(fd,(char *)&buffer[2],2*size);
+    if(nread < 2*size) bug("Unexpected End-of-Data");
+    size+=2;
+    for(i=2; i < size; i++)buffer[i] = ntohs(buffer[i]);
     set_control_panel(buffer);
   }else bug("readSocket:I should never get here");
 
@@ -412,6 +420,10 @@ int itno;
   buf[1] = ip->changes;
   changes -= ip->changes;
   ip->changes = 0;
+  buf[0] = htons(buf[0]);
+  buf[1] = htons(buf[1]);
+  buf[2] = htons(buf[2]);
+  buf[3] = htons(buf[3]);
   write(ioSocket,(char *)buf,8);
 }
 /************************************************************************/
@@ -634,8 +646,8 @@ static void create_control_panel()
 /* Create the subframe, and its panel. */
 
   i = 0;
-  subframe = XtCreatePopupShell("Miriad Control Panel", transientShellWidgetClass,
-                top_level, args, i);
+  subframe = XtCreatePopupShell("Miriad Control Panel",
+    transientShellWidgetClass, top_level, args, i);
   XtAddCallback(subframe, XtNpopupCallback, (XtCallbackProc)PlaceMenu,
     (XtPointer)NULL);
 
