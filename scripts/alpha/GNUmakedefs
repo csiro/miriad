@@ -1,0 +1,18 @@
+#-----------------------------------------------------------------------------
+# GNUmakedefs: Platform-specific definitions used by Miriad makefiles
+#-----------------------------------------------------------------------------
+# This GNU makefile is read by $MIR/GNUmakedefs to override certain default
+# variable definitions with values suitable for alpha systems.
+#
+#                      DO NOT MODIFY THIS FILE
+#
+# since changes will be lost if a newer version is installed.  Overriding
+# definitions should instead be made in the installation-specific makedefs
+# file, $MIR/alpha/GNUmakedefs, which is included by $MIR/GNUmakedefs after
+# this one.
+#
+# Original: 2006/09/13, Mark Calabretta, ATNF
+# $Id: GNUmakedefs,v 1.1 2006/09/15 08:07:23 cal103 Exp $
+#=============================================================================
+
+# No overriding definitions are required.

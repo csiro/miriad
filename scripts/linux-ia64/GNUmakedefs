@@ -1,0 +1,31 @@
+#-----------------------------------------------------------------------------
+# GNUmakedefs: Platform-specific definitions used by Miriad makefiles
+#-----------------------------------------------------------------------------
+# This GNU makefile is read by $MIR/GNUmakedefs to override certain default
+# variable definitions with values suitable for linux-ia64 systems.
+#
+#                      DO NOT MODIFY THIS FILE
+#
+# since changes will be lost if a newer version is installed.  Overriding
+# definitions should instead be made in the installation-specific makedefs
+# file, $MIR/alpha/GNUmakedefs, which is included by $MIR/GNUmakedefs after
+# this one.
+#
+# Original: 2006/09/13, Mark Calabretta, ATNF
+# $Id: GNUmakedefs,v 1.1 2006/09/15 08:07:23 cal103 Exp $
+#=============================================================================
+
+# Fortran compiler flags; disable optimization.
+FC       := ifort
+FCSTD    := -i8 -align dcommon
+FCOPT     = $(FCSTD)
+
+# Extra intf2c flags.
+F2CFLAGS += -c -x -z
+
+# C preprocessor defines.
+CPPSTD   := -Dlinux
+CPPSTD   += -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE
+
+# C compiler flags.
+CC       := icc

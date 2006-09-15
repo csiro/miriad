@@ -1,0 +1,31 @@
+#-----------------------------------------------------------------------------
+# GNUmakedefs: Platform-specific definitions used by Miriad makefiles
+#-----------------------------------------------------------------------------
+# This GNU makefile is read by $MIR/GNUmakedefs to override certain default
+# variable definitions with values suitable for darwin systems.
+#
+#                      DO NOT MODIFY THIS FILE
+#
+# since changes will be lost if a newer version is installed.  Overriding
+# definitions should instead be made in the installation-specific makedefs
+# file, $MIR/alpha/GNUmakedefs, which is included by $MIR/GNUmakedefs after
+# this one.
+#
+# Original: 2006/09/13, Mark Calabretta, ATNF
+# $Id: GNUmakedefs,v 1.1 2006/09/15 08:07:23 cal103 Exp $
+#=============================================================================
+# These first-pass definitions for Darwin are taken as found in the old Miriad
+# compile/link scripts.  It seems to be a bit of a hybrid!  Undoubtedly some
+# changes will be needed.
+
+# ratty flags.
+RATFLAGS := -b -s linux
+
+# Fortran compiler flags.
+FCSTD    := -ff90-intrinsics-hide
+
+# intf2c flags.
+F2CFLAGS := -s linux
+
+# C preprocessor defines; add -Dsun to -Ddarwin - both are used.
+CPPSTD   += -Dsun
