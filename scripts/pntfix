@@ -1,0 +1,32 @@
+#!/bin/csh -xef
+
+#
+#  This is a script to patch a visibility dataset to fix up
+#  erroneous values of pointing centre RA and pointing centre DEC.
+#
+#  Usage:
+#    pntfix vis-dataset ....
+#
+#  Many visibility datasets can be given. 
+
+#  Visibility data which satisfies all four of the following will be affected:
+#    - Have used a version of atlod with version date earlier than 23-Oct-2004,
+#    - Have used a version of uvsplit with version date of 16-Aug-2004 or later
+#    - Have RPFITS data observed in October 2003 or later.
+#    - Are interested in mosaicing the visibility data or doing primary
+#      beam correction of resultant images.
+
+#  Users with data as above will probably not notice a problem until after the
+#  "invert options=mosaic" or "linmos" stages.
+
+#  This script works by renaming the pointing centre information to non-standard
+#  names that will not be recognised by Miriad tasks. When this happens,
+#  Miriad tasks will default to assuming the pointing centre is the same as the
+#  delay tracking centre.
+
+foreach file ($argv)
+  if ( -f $file/vartable ) then
+    sed -e "s/ pntra/ xpntra/" -e "s/ pntdec/ xpntdec/" $file/vartable > /tmp/junk.$$
+    if ( ! $status ) mv /tmp/junk.$$ $file/vartable
+  endif
+end
