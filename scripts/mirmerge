@@ -2,16 +2,32 @@
 #
 # Merge one Miriad directory tree into another.
 
-set dir1 = $1
+set date = `date +%d%h%y`
+if ( ! -e $MIR/old ) mkdir $MIR/old
+set docopy = ( -d $MIR/old )
+set dodelete = 0
+set dir1 = ""
+set dir2 = ""
+
+foreach arg ($argv)
+  if ( "$arg" == "-delete" ) then
+    set dodelete = 1
+  else if ( "$dir1" == "" ) then
+    set dir1 = "$arg"
+  else if ( "$dir2" == "" ) then
+    set dir2 = "$arg"
+  endif
+end
+
 if ( "$dir1" == "" ) set dir1 = .
 set dir1 = `(cd $dir1;pwd)`
-set dir2 = $2
 if ( "$dir2" == "" ) set dir2 = $MIR
 set dir2 = `(cd $dir2;pwd)`
 
 cd $dir1
 foreach file ( * )
   if ( -d $file ) then
+    echo " "
     echo -n "Process directory $dir1/$file? [y]:"
     set ok = $<
     if ( "$ok" == "q" ) exit 1
@@ -19,20 +35,53 @@ foreach file ( * )
       continue
     endif
     if ( ! -e $dir2/$file ) mkdir $dir2/$file
-    mirmerge  $file $dir2/$file
+    if ( $dodelete ) then
+      mirmerge -delete $file $dir2/$file
+    else
+      mirmerge $file $dir2/$file
+    endif
     if ( $status ) exit $status
   else
     if ( -e $dir2/$file ) then
       diff $file $dir2/$file > /dev/null
-      if ( ! $status ) continue
+      if ( ! $status ) then
+	if ( $dodelete ) then
+	  echo "Deleting $file"
+	  rm -rf $file
+	endif
+	continue
+      endif
+      echo " "
+      echo "$dir1/$file differs"
+      if ( -e $MIR/new/$file ) echo "A version also exists in $MIR/new"
+    else
+      echo " "
+      echo "$dir2/$file does not exist"
     endif
+10:
     echo -n "Copy $dir1/$file? [y]:"
     set ok = $<
+    if ( "$ok" == "d" ) then
+      echo "< differences are for $dir1/$file"
+      echo "> differences are for $dir2/$file"
+      diff $file $dir2/$file
+      goto 10
+    endif
     if ( "$ok" == "q" ) exit 1
+    if ( "$ok" == "r" ) then
+      rm -rf $file
+      echo "Deleting $file"
+      continue
+    endif
     if ( "$ok" != "y" && "$ok" != "" ) then
       continue
     endif
+    if ( $docopy && -e $dir2/$file ) mv $dir2/$file $MIR/old/$file.$date
     cp $file $dir2
+    if ( $dodelete ) then
+      echo "Deleting $file"
+      rm -rf $file
+    endif
     if ( $status ) exit $status
     chmod u+rw,g+rw $dir2/$file
     if ( $status ) exit $status
