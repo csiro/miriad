@@ -1,4 +1,4 @@
-#!/bin/csh -xef
+#!/bin/csh -f
 
 #
 #  This is a script to patch a visibility dataset to fix up
@@ -26,7 +26,8 @@
 
 foreach file ($argv)
   if ( -f $file/vartable ) then
+    echo "Fixing $file"
     sed -e "s/ pntra/ xpntra/" -e "s/ pntdec/ xpntdec/" $file/vartable > /tmp/junk.$$
-    if ( ! $status ) mv /tmp/junk.$$ $file/vartable
+    if ( ! $status ) 'mv' /tmp/junk.$$ $file/vartable
   endif
 end
