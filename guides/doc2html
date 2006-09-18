@@ -1,4 +1,4 @@
-#!/bin/csh -f
+#!/bin/csh -xf
 
 # doc2html topic
 
@@ -10,20 +10,27 @@ set sed_script = /tmp/$$.sed
 
 # Is it one of the special topics?
 
-set specials = (device line options offset region \
-		select server stokes vis in out window oldflux telescop)
+set specials = (cgcoords device in line offset oldflux options out \
+		region select server stokes telescop vis window )
 
 set special_topic = 0
 foreach special ($specials)
   if ( $topic == $special ) set special_topic = 1
 end
 
-# Edit out the characters special to HTML (In <pre> mode, commands
-# like &lt do not seem to work).
+# Convert special characters.
 
 echo 's/\&/\&amp;/g' 				>> $sed_script
-echo 's/</\&lt;/g' 					>  $sed_script
-echo 's/>/\&gt;/g'					>> $sed_script
+echo 's/</\&lt;/g' 				>  $sed_script
+echo 's/>/\&gt;/g'				>> $sed_script
+
+# Look for HTML links.
+set links = (`docfmt $argv[1]|tr -s " " "[\012*]"|grep http://|sort|uniq`)
+if ( $#links > 0 ) then
+  foreach link ($links)
+    echo 's|'$link'|<a href="'$link'">'$link'</a>|' >> $sed_script
+  end
+endif
 
 # Create links to the special topics.
 
