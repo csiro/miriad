@@ -20,9 +20,11 @@ end
 
 # Convert special characters.
 
-echo 's/\&/\&amp;/g' 				>> $sed_script
-echo 's/</\&lt;/g' 				>  $sed_script
+echo 's/\&/\&amp;/g' 				>  $sed_script
+echo 's/</\&lt;/g' 				>> $sed_script
 echo 's/>/\&gt;/g'				>> $sed_script
+echo 's/WARNING:/<B>WARNING:<\/B>/g'		>> $sed_script
+echo 's/NOTE:/<B>NOTE:<\/B>/g'			>> $sed_script
 
 # Look for HTML and ftp links.
 cat $argv[1]|tr -s "[:space:]" "[\n*]" > junk.doc2html.$$
