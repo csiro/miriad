@@ -1,0 +1,132 @@
+#!/bin/csh -f
+#
+#Generates an HTML table, ncols wide, of all the task documentation.
+#ordered alphabetically in rows or columns. Default is rows.
+#
+
+set out = $MIR/html
+if ( $#argv >= 1 ) set out = $1
+
+set ncols = 7
+if ( $#argv >= 2 ) set ncols = $2
+
+set rowcol = "r"
+if ( $#argv >= 3 ) set rowcol = $3
+
+set tmpfile = /tmp/tmp$$
+set awkfile = /tmp/mirdex.awk
+set outfile = $out/taskindex.html
+  
+rm -fr ${tmpfile}.1
+
+foreach file ($MIRPDOC/*.doc)
+  set name = $file:t
+  set name = $name:r
+  if ( -e $MIRBIN/$name ) echo $name >> ${tmpfile}.1
+end
+
+sort ${tmpfile}.1 > ${tmpfile}
+
+set ntasks = `wc ${tmpfile} | awk '{print $1}'`
+
+cat << EOF > $awkfile
+BEGIN {total=${ntasks}; wrap=${ncols}; frac=100/${ncols}; order="${rowcol}";
+       i=1; lines=int(total/wrap); if (total/wrap > lines) lines++
+       print "<html><head>"
+       print "<title>Miriad Task Index</title>"
+       print "</head>"
+       print "<body bgcolor=white background=gmiriad.gif>"
+       print "<TABLE CELLSPACING="0" CELLPADDING="1"><TR VALIGN=TOP>"
+       print "<TD WIDTH=160 HEIGHT=800 NOWRAP>"
+       print "<BR><BR><BR><BR><BR><BR><BR><BR><BR><BR><BR>"
+       print "<FORM ACTION=\"/cgi-bin/miriad/mirsearch.pl\" METHOD=POST>"
+       print "<TABLE BORDER=0 CELLSPACING=0 CELLPADDING=0 NOWRAP>"
+       print "<TR><TH ALIGN=LEFT COLSPAN=2><FONT COLOR=white><B>Search</B></FONT></TH></TR>"
+       print "<TR><TD><INPUT TYPE=Text NAME=searchstring SIZE=10 MAXLENGTH=50></TD>"
+       print "<TD><INPUT TYPE=Image NAME=Go SRC=gblue.gif border=0></td></tr>"
+       print "</TABLE>"
+       print "</FORM>"
+       print "<BR>"
+       print "<FORM ACTION=/cgi-bin/miriad/mirman.pl METHOD=GET>"
+       print "<TABLE BORDER=0 CELLSPACING=0 CELLPADDING=0 NOWRAP>"
+       print "<TR><TH ALIGN=LEFT COLSPAN=2><FONT COLOR=\"#FFFFFF\"><B>Topic Lookup</B></FONT></TH></TR>"
+       print "<TR><TD><INPUT TYPE=Text NAME=topic SIZE=10 MAXLENGTH=50></TD>"
+       print "<TD><INPUT TYPE=Image NAME=Go SRC=gblue.gif BORDER=0></TD></TR>"
+       print "</TABLE>"
+       print "</FORM>"
+       print "</TD><TD>"
+       print "<BR>"
+
+       print "<h1><center><EM>Miriad</EM> Task Index</center></h1>"
+       print "<center>To learn about a particular task, click on the entry in the table below</center>"
+       print "<hr>"
+       print "<center>"
+       print "<table border=1 cellspacing=0 cellpadding=1>"
+}
+{     task[i]=\$1; i++
+}
+END {  i=1;j=1
+       if (index(order,"c")!=0) {
+          #reorder array.
+          for (i=1;i<=lines;i++) {
+             for (j=1;j<=wrap;j++) {
+                 k=i+(j-1)*lines
+                 n=j+(i-1)*wrap
+                 if ( k <= total ) {
+                    new[n]=task[k]
+                 }
+                 else {
+                    new[n]=""
+                 }
+             }
+          }
+       }
+
+       i=1
+       for (n=1;n<=(lines*wrap);n++) {
+          if (index(order,"c")!=0) {
+             name=new[n]
+          }
+          else {
+             name=task[n]
+          }
+          if ( i != wrap ) {
+             if ( i == 1 ) {print "<tr>"}
+	     if(name != "" ){
+	       print "<td align=\"center\" width=\""frac"%\"><a href=\""name".html\">"name"</a></td>";
+	     } else {
+	       print "<td align=\"center\" width=\""frac"%\"></td>";
+	     }
+             i++
+          }
+          else {
+	     if(name != "" ){
+               print "<td align=\"center\" width=\""frac"%\"><a href=\""name".html\">"name"</a></td>"
+	     } else {
+               print "<td align=\"center\" width=\""frac"%\"></td>"
+	     }
+             print "</tr>"
+             i=1
+          }
+       }
+       print "</table>"
+       print "</center>"
+       print "<HR><ADDRESS>miriad@atnf.csiro.au</ADDRESS></TD></TR></TABLE></BODY></HTML>"
+}
+EOF
+
+rm -f $outfile
+awk -f $awkfile $tmpfile >$outfile
+rm -f $awkfile ${tmpfile}*
+
+#************************************************************************
+# Convert the doc files to html
+ 
+echo "***************** Converting .doc files to .html file."
+foreach file ($MIRPDOC/*.doc)
+  set tmp = $file:t  
+  set tmp = $tmp:r
+  doc2html $file $out/taskref.txt
+  mv $tmp.html $out  
+end
+
