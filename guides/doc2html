@@ -53,7 +53,7 @@ set user = "$user@atnf.csiro.au"
 set date = (`date +"%d %h 19%y"`)
 
 echo "<title>" Documentation on $topic "</title>"			>  $out
-echo '<body bgcolor="ffffff">'						>> $out
+echo '<body bgcolor="#ffffff">'						>> $out
 echo "<h1>"    Documentation on $topic "</h1>"				>> $out
 echo "<pre>"								>> $out
 docfmt $argv[1] | sed -f $sed_script					>> $out
