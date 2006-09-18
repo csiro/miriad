@@ -24,8 +24,12 @@ echo 's/\&/\&amp;/g' 				>> $sed_script
 echo 's/</\&lt;/g' 				>  $sed_script
 echo 's/>/\&gt;/g'				>> $sed_script
 
-# Look for HTML links.
-set links = (`cat $argv[1]|tr -s "[:space:]" "[\n*]"|grep http://|sort|uniq`)
+# Look for HTML and ftp links.
+cat $argv[1]|tr -s "[:space:]" "[\n*]" > junk.doc2html.$$
+grep http:// junk.doc2html.$$ > junk.tmp.$$
+grep ftp:// junk.doc2html.$$ >> junk.tmp.$$
+set links = (`sort junk.tmp.$$|uniq`)
+rm -rf junk.tmp.$$ junk.doc2html.$$
 if ( $#links > 0 ) then
   foreach link ($links)
     echo 's|'$link'|<a href="'$link'">'$link'</a>|g' >> $sed_script
@@ -44,9 +48,11 @@ end
 
 if (! $special_topic ) then
   foreach special ( $specials )
-    echo 's/^Key: '$special'$/Key: <a href="'$special'.html">'$special'<\/a>/' >> $sed_script
+    echo 's/^Key: '$special'$/Key: <a name="'$special'"><a href="'$special'.html">'$special'<\/a>/' >> $sed_script
   end
 endif
+
+echo 's/^Key: \([a-z]*\)$/Key: <a name="\1">\1/'	>> $sed_script
 
 set user = `whoami`
 set user = "$user@atnf.csiro.au"
