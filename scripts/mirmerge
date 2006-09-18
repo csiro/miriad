@@ -1,0 +1,41 @@
+#!/bin/csh -f
+#
+# Merge one Miriad directory tree into another.
+
+set dir1 = $1
+if ( "$dir1" == "" ) set dir1 = .
+set dir1 = `(cd $dir1;pwd)`
+set dir2 = $2
+if ( "$dir2" == "" ) set dir2 = $MIR
+set dir2 = `(cd $dir2;pwd)`
+
+cd $dir1
+foreach file ( * )
+  if ( -d $file ) then
+    echo -n "Process directory $dir1/$file? [y]:"
+    set ok = $<
+    if ( "$ok" == "q" ) exit 1
+    if ( "$ok" != "y" && "$ok" != "" ) then
+      continue
+    endif
+    if ( ! -e $dir2/$file ) mkdir $dir2/$file
+    mirmerge  $file $dir2/$file
+    if ( $status ) exit $status
+  else
+    if ( -e $dir2/$file ) then
+      diff $file $dir2/$file > /dev/null
+      if ( ! $status ) continue
+    endif
+    echo -n "Copy $dir1/$file? [y]:"
+    set ok = $<
+    if ( "$ok" == "q" ) exit 1
+    if ( "$ok" != "y" && "$ok" != "" ) then
+      continue
+    endif
+    cp $file $dir2
+    if ( $status ) exit $status
+    chmod u+rw,g+rw $dir2/$file
+    if ( $status ) exit $status
+  endif
+end
+exit 0
