@@ -118,15 +118,3 @@ EOF
 rm -f $outfile
 awk -f $awkfile $tmpfile >$outfile
 rm -f $awkfile ${tmpfile}*
-
-#************************************************************************
-# Convert the doc files to html
- 
-echo "***************** Converting .doc files to .html file."
-foreach file ($MIRPDOC/*.doc)
-  set tmp = $file:t  
-  set tmp = $tmp:r
-  doc2html $file $out/taskref.txt
-  mv $tmp.html $out  
-end
-
