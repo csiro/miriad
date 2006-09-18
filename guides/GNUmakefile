@@ -2,13 +2,16 @@
 # GNUmakefile for compiling Miriad documentation.
 #
 # Original: 2006/09/18, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.1 2006/09/18 06:36:11 cal103 Exp $
+# $Id: GNUmakefile,v 1.2 2006/09/18 06:53:57 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
 
 # All doc files in this directory.
 MIRDOCS  := $(wildcard *.doc)
+
+# Special doc files are not converted to man pages.
+MIRMDOCS := $(filter-out $(notdir $(wildcard $(MIRSDOCD)/*.doc)),$(MIRDOCS))
 
 # All doc files associated with a Miriad task or other executable.
 MIREXES  := $(notdir $(wildcard $(MIRBIND)/*))
@@ -21,6 +24,7 @@ show ::
 	-@ echo "=========================================="
 	-@ echo ""
 	-@ echo "MIRDOCS  = $(MIRDOCS)"
+	-@ echo "MIRMDOCS = $(MIRMDOCS)"
 	-@ echo "MIREXES  = $(MIREXES)"
 	-@ echo "MIRTDOCS = $(MIRTDOCS)"
 
@@ -86,7 +90,7 @@ ifeq "$(MAKEMODE)" "system"
 
   html : $(MIRDOCS:%.doc=$(MIRHTMLD)/%.html) ;
 
-  man : $(MIRDOCS:%.doc=$(MIRMAN)/man1/%.1)
+  man : $(MIRMDOCS:%.doc=$(MIRMAN)/man1/%.1)
 	   $(MANDB) $(MIRMAND)
 
   help ::
@@ -97,10 +101,10 @@ ifeq "$(MAKEMODE)" "system"
 	-@ echo "      cheat: regenerate Miriad cheat sheet."
 	-@ echo "      tasks: regenerate Miriad task list."
 	-@ echo "  taskindex: regenerate Miriad HTML task index."
-	-@ echo "       html: regenerate html for all tasks."
-	-@ echo "     %.html: regenerate html for specified task."
-	-@ echo "        man: regenerate man page for all tasks."
-	-@ echo "      %.man: regenerate man page for specified task."
+	-@ echo "       html: regenerate html files."
+	-@ echo "     %.html: regenerate specified html file."
+	-@ echo "        man: regenerate man pages."
+	-@ echo "      %.man: regenerate specified man page."
 
 else
   # Programmer-oriented rules.
