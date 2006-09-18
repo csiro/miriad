@@ -1,4 +1,4 @@
-#!/bin/csh -xf
+#!/bin/csh -f
 
 # doc2html topic
 
@@ -25,10 +25,10 @@ echo 's/</\&lt;/g' 				>  $sed_script
 echo 's/>/\&gt;/g'				>> $sed_script
 
 # Look for HTML links.
-set links = (`docfmt $argv[1]|tr -s " " "[\012*]"|grep http://|sort|uniq`)
+set links = (`cat $argv[1]|tr -s "[:space:]" "[\n*]"|grep http://|sort|uniq`)
 if ( $#links > 0 ) then
   foreach link ($links)
-    echo 's|'$link'|<a href="'$link'">'$link'</a>|' >> $sed_script
+    echo 's|'$link'|<a href="'$link'">'$link'</a>|g' >> $sed_script
   end
 endif
 
