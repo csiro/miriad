@@ -11,7 +11,7 @@
 # $MIRARCH/GNUmakedefs, which is included by this file.
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakedefs,v 1.5 2006/09/15 07:53:58 cal103 Exp $
+# $Id: GNUmakedefs,v 1.6 2006/09/20 08:14:12 cal103 Exp $
 #-----------------------------------------------------------------------------
 # We rely only on the MIR and MIRARCH environment variables.
 MIRROOT  := $(MIR)
@@ -49,7 +49,7 @@ FCSTD    :=
 FCOPT     = -O $(FCSTD)
 FCDBG     = -g $(FCSTD)
 
-# Miriad's Fortran-C preprocessor.
+# Miriad's Fortran-C preprocessor, you shouldn't need to change this.
 INTF2C   := $(MIRBIND)/intf2c
 F2CFLAGS := -s $(ARCH)
 
@@ -71,14 +71,18 @@ AR       := ar
 ARFLAGS  := rv
 RANLIB   := :
 
-# Linker debug/optimize flags (FC is used to do the linking).  The -s option
-# strips symbols from the executable to reduce their size.
+# Linker debug/optimize flags (FC is used to do the linking).
 LDSTD    :=
-LDOPT     = -s $(LDSTD)
+LDOPT     = $(LDSTD)
 LDDBG     = $(LDSTD)
 
-# Miriad's doc file generator.
-MIRDOC   := $(MIRBIND)/doc
+# Command used to strip symbols from an executable to reduce its size.  Set
+# to ":" to defeat it.
+STRIP    := strip
+
+# How to regenerate the man page index database, the name of the manpage
+# directory will be added, e.g. in Solaris it would be 'catman -w -M'.
+MANDB    := mandb
 
 # Linker options for external libraries.
 #-----------------------------------------------------------------------------
@@ -94,11 +98,11 @@ RPFITSLIB  := /usr/local/lib/librpfits.a
 LINPACKLIB := -L$(MIRLIBD) -llinpack
 
 # PGPLOT (FORTRAN plotting package).  There is no telling what other libraries
-# it may require, it depends on what graphics drivers were compiled into it.
-# X11 will almost certainly be needed but it is defined separately below.
-# Typically -lpng will also be needed and in turn this may require -lz (the
-# zlib compression library).  You may also need to add -L options to tell the 
-# linker where to find them.
+# it may require since that depends on what graphics drivers were compiled
+# into it.  X11 will almost certainly be needed but it is defined separately
+# below.  Typically -lpng will also be needed and in turn this may require -lz
+# (the zlib compression library).  You may also need to add -L options to tell
+# the linker where to find them.
 PGPLOTLIB  := -lpgplot
 
 # X11 (just the basic X11 library, needed to satisfy PGPLOT dependencies).
@@ -119,6 +123,20 @@ XTRALIBS   := -lm
 # You may also need to add -I and/or -L options.
 READLINELIB := -lreadline -ltermcap
 
+
+# Define a command to list the global symbols defined by an object module.
+# This is used to identify the object modules in the Miriad library that an
+# executable actually uses and is mainly intended for Miriad systems where the
+# library is under development, to save having to recompile every Miriad task
+# if just one object module changes.  Appropriate commands are pre-defined for
+# linux, linux64, and sun4sol, if you don't know how to set this for your
+# platform (or don't want this dependency analysis) then simply leave nm-syms
+# undefined (or comment it out), each executable will then depend on the
+# library as a whole.  The name of the object module is $$OBJ.
+nm-syms.linux   := nm -g $$OBJ | awk '/ T / {print $$3}'
+nm-syms.linux64 := $(nm-syms.linux)
+nm-syms.sun4sol := nm -g -p $$OBJ | awk '/ T / {print $$3}'
+
 #=============================================================================
 #                         END OF DEFAULT DEFINITIONS
 #=============================================================================
@@ -130,6 +148,9 @@ READLINELIB := -lreadline -ltermcap
 -include $(MIR)/$(ARCH)/GNUmakedefs
 
 #-----------------------------------------------------------------------------
+# Ensure that we have a consistent collating sequence and character handling.
+export LC_COLLATE := POSIX
+export LC_TYPE    := POSIX
 
 # Internally set make options; unfortunately setting -r (--no-builtin-rules)
 # or -R (--no-builtin-variables, which implies -r) internally is ineffective
@@ -180,11 +201,16 @@ else
 endif
 
 # Miriad code directories.
-MIRINCD  := $(MIRROOT)/inc
+MIRSCRPD := $(MIRROOT)/scripts
 MIRTOOLD := $(MIRROOT)/tools
+MIRINCD  := $(MIRROOT)/inc
 MIRSUBSD := $(MIRROOT)/subs
 MIRPROGD := $(MIRROOT)/prog
 MIRSPECD := $(MIRROOT)/spec
+
+# Half-way between code and system.
+MIRSDOCD := $(MIRROOT)/specdoc
+MIRDOCD  := $(MIRROOT)/doc
 
 # This determines whether the RCS source repositories are present.
 MIRRCS   := $(wildcard $(MIRROOT)/RCS)
@@ -214,13 +240,15 @@ CODESUBS := $(addprefix $(CODEDIR)/,$(SUBDIRS))
 
 # Remaining Miriad system directories.
 MIRAUXD  := $(MIRARCHD)/aux
+MIRMAND  := $(MIRARCHD)/man
+MIRMAN1D := $(MIRMAND)/man1
 MIRTMPD  := $(MIRARCHD)/tmp
-MIRCATD  := $(MIRROOT)/cat
-MIRDOCD  := $(MIRROOT)/doc
-MIRSDOCD := $(MIRROOT)/specdoc
 
-SYSDIRS  := $(MIRARCHD) $(MIRAUXD) $(MIRBIND) $(MIRLIBD) $(MIRTMPD)
-SYSDIRS  += $(MIRCATD) $(MIRDOCD) $(MIRSDOCD)
+MIRCATD  := $(MIRROOT)/cat
+MIRHTMLD := $(MIRROOT)/html
+
+SYSDIRS  := $(MIRARCHD) $(MIRAUXD) $(MIRBIND) $(MIRLIBD) $(MIRMAND)
+SYSDIRS  += $(MIRMAN1D) $(MIRTMPD) $(MIRCATD) $(MIRHTMLD)
 
 # Programmer directories.
 ifeq "$(MAKEMODE)" "programmer"
@@ -296,14 +324,13 @@ export CODESUBS
 #-----------------------------------------------------------------------------
 # Canned rule definitions for dependency analysis apply to system and
 # programmer alike with only minor differences determined by the values of
-# DPNDLIST, DPNDTIME, DPNDLOCK, and DPNDTMPD defined in the makefiles that
+# DPNDINCL, DPNDTIME, DPNDLOCK, and DPNDTMPD defined in the makefiles that
 # use them (subs and prog).
 #
 # $(backsl) is used to insert a literal backslash.
 #-----------------------------------------------------------------------------
-
 # Locking mechanism to guard against multiple builds updating the dependency
-# list simultaneously.  The lock file is ignored if it's more than 60s old.
+# lists simultaneously.  The lock file is ignored if it's more than 60s old.
 # Otherwise, wait for up to 32s for it to disappear.  The lock file itself is
 # used to store the current dependency list minus any pre-existing entries for
 # the target.
@@ -323,9 +350,9 @@ define wait-lock
          sleep 5 ; $(backsl)
        fi ; $(backsl)
      fi
-  -@ touch $(DPNDLIST)
+  -@ touch $(DPNDINCL)
    @ TARGET='$$(DPNDTIME)($*) : ' ; $(backsl)
-       sed -n -e "\#^$$TARGET#!p" $(DPNDLIST) > $(DPNDLOCK)
+       sed -n -e "\#^$$TARGET#!p" $(DPNDINCL) > $(DPNDLOCK)
 endef
 
 # Command sequence for updating the dependency timestamp and unlocking.
@@ -339,6 +366,10 @@ define update-time
        $(RM) $(DPNDAUXD)/$* ; $(backsl)
        sleep 1 ; $(backsl)
      fi
+endef
+
+# Release the lock.
+define wait-unlock
    @ $(RM) $(DPNDLOCK)
 endef
 
@@ -355,7 +386,6 @@ ifdef MIRRCS
 	        -e '2s/.*\//	/' \
 	        -e '2s/\nrevision//' \
 	        -e '2s/$$//p'
-	@ chmod 444 $@
 
    %,v : ;
 endif
@@ -671,8 +701,6 @@ show ::
 	-@ echo "LDOPT      = $(LDOPT)"
 	-@ echo "LDDBG      = $(LDDBG)"
 	-@ echo ""
-	-@ echo "MIRDOC     = $(MIRDOC)"
-	-@ echo ""
 	-@ echo "Third-party libraries"
 	-@ echo "---------------------"
 	-@ echo "RPFITSLIB  = $(RPFITSLIB)"
@@ -685,6 +713,9 @@ show ::
 	-@ echo ""
 	-@ echo "Fundamental variables."
 	-@ echo "----------------------"
+	-@ echo "LC_COLLATE = $(LC_COLLATE)"
+	-@ echo "LC_TYPE    = $(LC_TYPE)"
+	-@ echo ""
 	-@ echo "MAKEFLAGS  = $(MAKEFLAGS)"
 	-@ echo ""
 	-@ echo "SHELL   =$(SHELL)"
@@ -701,10 +732,15 @@ show ::
 	-@ echo ""
 	-@ echo "Miriad code directories"
 	-@ echo "-----------------------"
+	-@ echo "MIRSCRPD   = $(MIRSCRPD)"
 	-@ echo "MIRINCD    = $(MIRINCD)"
+	-@ echo "MIRTOOLD   = $(MIRTOOLD)"
 	-@ echo "MIRSUBSD   = $(MIRSUBSD)"
 	-@ echo "MIRPROGD   = $(MIRPROGD)"
 	-@ echo "MIRSPECD   = $(MIRSPECD)"
+	-@ echo ""
+	-@ echo "MIRSDOCD   = $(MIRSDOCD)"
+	-@ echo "MIRDOCD    = $(MIRDOCD)"
 	-@ echo ""
 	-@ echo "MIRRCS     = $(MIRRCS)"
 	-@ echo "CODESUBD   = $(CODESUBD)"
@@ -720,10 +756,12 @@ show ::
 	-@ echo "MIRAUXD    = $(MIRAUXD)"
 	-@ echo "MIRBIND    = $(MIRBIND)"
 	-@ echo "MIRLIBD    = $(MIRLIBD)"
+	-@ echo "MIRMAND    = $(MIRMAND)"
+	-@ echo "MIRMAN1D   = $(MIRMAN1D)"
 	-@ echo "MIRTMPD    = $(MIRTMPD)"
+	-@ echo ""
 	-@ echo "MIRCATD    = $(MIRCATD)"
-	-@ echo "MIRDOCD    = $(MIRDOCD)"
-	-@ echo "MIRSDOCD   = $(MIRSDOCD)"
+	-@ echo "MIRHTMLD   = $(MIRHTMLD)"
 	-@ echo ""
 	-@ echo "SYSDIRS    = $(SYSDIRS)"
 	-@ echo ""
