@@ -3,7 +3,7 @@
 # dependency analysis for all source file types.
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.2 2006/09/15 07:47:51 cal103 Exp $
+# $Id: GNUmakefile,v 1.3 2006/09/20 08:19:53 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
@@ -43,11 +43,23 @@ show ::
 # Dependency analysis.
 #---------------------
 # See below for a detailed explanation of the dependency analysis scheme.
-# System and programmer dependency analysis is essentially the same, only
-# using different directories and timestamps.  The variables used are
+# There are two dependency analyses:
+#
+#   1) Dependencies on included files; this is done for system and programmer.
+#   2) Dependencies of executables on object modules in the Miriad library;
+#      this is handled by the prog GNUmakefile using a list of symbols
+#      constructed here.
+#
+# System and programmer dependency analysis for included files is essentially
+# the same, only using different directories and timestamps.  Dependency
+# analysis for object modules is only done for the system.  
+#
+# The variables used are:
 #
 #   DPNDAUXD: Full pathname of the directory where dependency files reside.
-#   DPNDLIST: Full pathname of the dependency list.
+#   DPNDINCL: Full pathname of the dependency list for included files.
+#   DPNDSYMS: Full pathname of the list of symbols defined by the object
+#             modules.
 #   DPNDTIME: Full pathname of the dependency timestamp archive.
 #   DPNDLOCK: Full pathname of the dependency lock file.
 #   DPNDTMPD: Full pathname of the area where intermediate files are staged.
@@ -60,10 +72,13 @@ show ::
 # These variables differ for system and programmer compilations and are
 # defined separately below.
 
-DPNDLIST  = $(DPNDAUXD)/subs.list
-DPNDTIME  = $(DPNDAUXD)/subs.time
+DPNDINCL  = $(DPNDAUXD)/subs.incl
 DPNDLOCK  = $(DPNDAUXD)/subs.lock
+DPNDSYMS  = $(DPNDAUXD)/subs.syms
+DPNDTIME  = $(DPNDAUXD)/subs.time
 
+# Dependency analysis for included files:
+#----------------------------------------
 # The wait-lock and update-time command sequences are defined in GNUmakedefs.
 # f-filter and i-filter differ in small but important ways for system and
 # programmer compilation and are defined below.
@@ -127,14 +142,17 @@ ifeq "$(MAKEMODE)" "system"
 	-@ echo "VPATH    = $(VPATH)"
 	-@ echo ""
 	-@ echo "DPNDAUXD = $(DPNDAUXD)"
-	-@ echo "DPNDLIST = $(DPNDLIST)"
-	-@ echo "DPNDTIME = $(DPNDTIME)"
+	-@ echo "DPNDINCL = $(DPNDINCL)"
 	-@ echo "DPNDLOCK = $(DPNDLOCK)"
+	-@ echo "DPNDSYMS = $(DPNDSYMS)"
+	-@ echo "DPNDTIME = $(DPNDTIME)"
 	-@ echo "DPNDTMPD = $(DPNDTMPD)"
 	-@ echo ""
 	-@ echo "DPNDINCS = $(DPNDINCS)"
 	-@ echo "DPNDOPT  = $(DPNDOPT)"
 
+  # Dependency analysis for included files:
+  #----------------------------------------
   # This command sequence identifies include files in the ratty output and
   # makes each of them a prerequisite of the object module's timestamp.  In
   # turn, rule-chaining also makes them a prerequisite of the object module
@@ -143,7 +161,7 @@ ifeq "$(MAKEMODE)" "system"
      @ sed -n -e 's#^c >>> $(MIRROOT)/##p' $(DPNDTMPD)/$*.f | $(backsl)
          sed -e 's#^inc#$$(DPNDTIME)($*) : $$(MIRINCD)#' $(backsl)
              -e 's#^subs#$$(DPNDTIME)($*) : $$(MIRSUBSD)#' | $(backsl)
-         sort -u | sort -m - $(DPNDLOCK) > $(DPNDLIST)
+         sort -u | sort -m - $(DPNDLOCK) > $(DPNDINCL)
   endef
 
   # As above, this command sequence identifies include files in the cpp output
@@ -152,13 +170,38 @@ ifeq "$(MAKEMODE)" "system"
      @ sed -n -e 's#.*$(MIRROOT)/\(.*\.h\)".*#\1#p' $(DPNDTMPD)/$*.i | $(backsl)
          sed -e 's#^inc#$$(DPNDTIME)($*) : $$(MIRINCD)#' $(backsl)
              -e 's#^subs#$$(DPNDTIME)($*) : $$(MIRSUBSD)#' | $(backsl)
-         sort -u | sort -m - $(DPNDLOCK) > $(DPNDLIST)
+         sort -u | sort -m - $(DPNDLOCK) > $(DPNDINCL)
   endef
+
+  # Dependency analysis for object modules:
+  #----------------------------------------
+  # The nm-syms command sequence must be defined in makedefs to list the
+  # global symbols defined by an object module.  If undefined this analysis is
+  # skipped and each executable is made to depend on the library as a whole.
+  # As in the analysis of included files, the lock file is used to store
+  # intermediaries.
+  ifdef nm-syms.$(ARCH)
+    define list-syms
+    -@ if [ -f "$(DPNDSYMS)" ] ; then $(backsl)
+         sed -e '/ $*.o$$/d' $(DPNDSYMS) > $(DPNDLOCK) ; $(backsl)
+       else $(backsl)
+         cat /dev/null > $(DPNDLOCK) ; $(backsl)
+       fi
+    -@ $(RM) $(DPNDSYMS)
+    -@ OBJ="$<" ; $(nm-syms.$(ARCH)) | $(backsl)
+         sed -e 's|$$| $*.o|' | $(backsl)
+         sort -m - $(DPNDLOCK) > $(DPNDSYMS)
+    endef
+  else
+    define list-syms
+    -@ $(RM) $(DPNDSYMS)
+    endef
+  endif
 
 
   # Pattern rules (rule-chaining, and dependency analysis).
   #--------------------------------------------------------
-  # This sequence of pattern rules forms many chains.  The chain is used to
+  # This sequence of pattern rules forms many chains.  Which chain is used to
   # resolve a particular target depends on the precedence of the rules in the
   # chain (established by their order of definition here) and the existence of
   # dependencies that can satisfy them.
@@ -179,11 +222,11 @@ ifeq "$(MAKEMODE)" "system"
   # timestamp, which for tidiness is stored in an archive library as
   # $MIR/linux/aux/subs.time(uvdat), by running ratty to generate
   # $MIR/linux/tmp/uvdat.f.  It uses uvdat.f to determine uvdat's
-  # dependencies, adds these to $MIR/linux/aux/subs.list, which is included at
+  # dependencies, adds these to $MIR/linux/aux/subs.incl, which is included at
   # the end of this makefile, and then touches uvdat's timstamp.
   #
   # uvdat.f and uvdat's timestamp are therefore generated by the same rule.
-  # This # mechanism is efficient because ratty always has to be run when
+  # This mechanism is efficient because ratty always has to be run when
   # compiling Miriad Fortran so the only overhead is in scanning uvdat.f for
   # included files (the filter-f command sequence).  C sources are treated in
   # precisely the same way with the C preprocessor (cpp) taking ratty's place.
@@ -191,11 +234,12 @@ ifeq "$(MAKEMODE)" "system"
   # cpp.  
   #
   # The last two steps compile uvdat.f to produce $MIR/linux/tmp/uvdat.o and
-  # then insert that into the object library.
+  # then insert that into the object library.  The list of global symbols
+  # defined by the object module is then updated.
   #
-  # uvdat's dependency list consists of the following entries in
-  # $MIR/linux/aux/subs.list (where $(DPNDTIME) is the makefile variable used
-  # for $MIR/linux/aux/subs.time):
+  # uvdat's dependency list for included files consists of the following
+  # entries in $MIR/linux/aux/subs.incl (where $(DPNDTIME) is the makefile
+  # variable used for $MIR/linux/aux/subs.time):
   #
   #   $(DPNDTIME)(uvdat) : $(MIRINCD)/maxdim.h
   #   $(DPNDTIME)(uvdat) : $(MIRINCD)/mirconst.h
@@ -218,25 +262,29 @@ ifeq "$(MAKEMODE)" "system"
   # the object library this rule ranlibs it.
   % lib(%) lib(%.o) : $(MIRLIBR)(%.o) ranlib ;
 
-  # Insert an object module in libmir.a.
+  # Insert an object module in libmir.a and extract the list of global symbols
+  # that it defines.
   $(MIRLIBR)(%.o) : $(MIRTMPD)/%.o
 	-@ $(AR) $(ARFLAGS) $@ $<
+	   $(list-syms)
+	   $(wait-unlock)
 	-@ $(RM) $<
 
   # Rules for compiling the preprocessor output generated as a by-product of
   # the dependency analysis.
-  $(MIRTMPD)/%.o : $(DPNDTMPD)/%.f
+  $(MIRTMPD)/%.o : $(DPNDTMPD)/%.f $(DPNDTIME)(%)
 	   $(FC) $(FCOPT) -c -o $@ $<
 	-@ $(RM) $<
   
-  $(MIRTMPD)/%.o : $(DPNDTMPD)/%.i
+  $(MIRTMPD)/%.o : $(DPNDTMPD)/%.i $(DPNDTIME)(%)
 	   $(CC) $(COPT) -c -o $@ $<
 	-@ $(RM) $<
   
-  # As explained above, the preprocessor output depends on the dependency
-  # timestamp which is stored in an archive file for tidiness.  Rule-chaining
-  # will resolve the timestamp to the appropriate source file, and the
-  # dependency list, $MIR/linux/aux/subs.list, may add further dependencies.
+  # As explained above, the preprocessor output and dependency timestamp are
+  # generated at the same time, the timestamp is stored in an archive file for
+  # tidiness.  Rule-chaining will resolve the object module to the appropriate
+  # source file, and the dependency list, $MIR/linux/aux/subs.incl, may add
+  # further dependencies.
   #
   # GNU make considers the $(DPNDTIME)(%) pattern rules in sequence, looking
   # for the first it can use to make the target.  Since the rules for
@@ -340,7 +388,7 @@ else
 	-@ echo "PGMROBJS = $(PGMROBJS)"
 	-@ echo ""
 	-@ echo "DPNDAUXD = $(DPNDAUXD)"
-	-@ echo "DPNDLIST = $(DPNDLIST)"
+	-@ echo "DPNDINCL = $(DPNDINCL)"
 	-@ echo "DPNDTIME = $(DPNDTIME)"
 	-@ echo "DPNDLOCK = $(DPNDLOCK)"
 	-@ echo "DPNDTMPD = $(DPNDTMPD)"
@@ -365,8 +413,8 @@ else
   # would force a recompile.
   #
   # For similar reasons the source file itself (.for, .f2c, or .c) must also
-  # be mentioned as a prerequisite in the programmer dependency list but is
-  # not needed in the system list.
+  # be mentioned as a prerequisite in the programmer dependency list for
+  # included files but is not needed in the system list.
   define f-filter
      @ echo $< | $(backsl)
          sed -e 's#^\([^/]\)#$(THISDIR)/\1#' | $(backsl)
@@ -374,7 +422,7 @@ else
          sed -n -e '{1p;s#^c >>> ##p;}' | $(backsl)
          sed -e 's#^$(PGMRROOT)/#$$(DPNDTIME)($*) : $$(PGMRROOT)/#' $(backsl)
              -e 's#^$(MIRROOT)/.*/#$$(DPNDTIME)($*) : #' | $(backsl)
-         sort -u | sort -m - $(DPNDLOCK) > $(DPNDLIST)
+         sort -u | sort -m - $(DPNDLOCK) > $(DPNDINCL)
   endef
 
   # As above, this command sequence identifies include files in the cpp output
@@ -389,7 +437,7 @@ else
                 -e 's#.*\($(MIRROOT)/.*\.h\)".*#\1#p' | $(backsl)
          sed -e 's#^$(PGMRROOT)/#$$(DPNDTIME)($*) : $$(PGMRROOT)/#' $(backsl)
              -e 's#^$(MIRROOT)/.*/#$$(DPNDTIME)($*) : #' | $(backsl)
-         sort -u | sort -m - $(DPNDLOCK) > $(DPNDLIST)
+         sort -u | sort -m - $(DPNDLOCK) > $(DPNDINCL)
   endef
 
 
@@ -499,6 +547,5 @@ else
 	-@ echo "        %.c: generate intf2c preprocessor output."
 endif
 
-ifndef NODEP
-  -include $(DPNDLIST)
-endif
+# Dependency lists.
+-include $(DPNDINCL)

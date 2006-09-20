@@ -2,7 +2,7 @@
 # GNUmakefile for compiling Miriad tasks.
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.2 2006/09/15 07:50:14 cal103 Exp $
+# $Id: GNUmakefile,v 1.3 2006/09/20 08:20:23 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
@@ -26,18 +26,32 @@ show ::
 # Dependency analysis.
 #---------------------
 # See below for a detailed explanation of the dependency analysis scheme.
-# Dependency analysis for Miriad programs only catches changed include files,
-# not modified object modules in the Miriad library.  For this reason the
-# executables are made to depend on the library as a whole.  System and
-# programmer dependency analysis is essentially the same, only using different
-# directories and timestamps.  The variables used are
+# There are two dependency analyses:
+#
+#   1) Dependencies on included files; this is done for system and programmer.
+#   2) Dependencies of executables on object modules in the Miriad library;
+#      this is handled by the prog GNUmakefile using a list of symbols
+#      constructed here.
+#
+# System and programmer dependency analysis for included files is essentially
+# the same, only using different directories and timestamps.  Dependency
+# analysis for object modules is only done for the system.  
+#
+# The variables used are:
 #
 #   DPNDAUXD: Full pathname of the directory where dependency files reside.
-#   DPNDLIST: Full pathname of the dependency list.
-#   DPNDTIME: Full pathname of the dependency timestamp archive.
+#   DPNDINCL: Full pathname of the dependency list for included files.
+#   DPNDLIBR: Blank if the object module dependency analysis is done,
+#             otherwise the name of the Miriad library for use as a
+#             dependency.
 #   DPNDLOCK: Full pathname of the dependency lock file.
+#   DPNDOBJS: Full pathname of the dependency list for object modules.
+#   DPNDSYMS: Full pathname of the list of symbols defined by the object
+#             modules (constructed by the subs GNUmakefile).
+#   DPNDTIME: Full pathname of the dependency timestamp archive.
 #   DPNDTMPD: Full pathname of the area where intermediate files are staged.
-#   DPNDINCS: Sequence of -I include path.
+#
+#   DPNDINCS: -I include path list.
 #   DPNDOPT : Compile option, either "OPT" (optimized) or "DBG" (debug).  This
 #             is used as a computed variable, e.g. if DPNDOPT is "DBG" then
 #             $(FC$(DPNDOPT)) evaluates to $(FCDBG), the debug Fortran compile
@@ -46,10 +60,14 @@ show ::
 # These variables differ for system and programmer compilations and are
 # defined separately below.
 
-DPNDLIST  = $(DPNDAUXD)/prog.list
-DPNDTIME  = $(DPNDAUXD)/prog.time
+DPNDINCL  = $(DPNDAUXD)/prog.incl
 DPNDLOCK  = $(DPNDAUXD)/prog.lock
+DPNDOBJS  = $(DPNDAUXD)/prog.objs
+DPNDSYMS  = $(DPNDAUXD)/subs.syms
+DPNDTIME  = $(DPNDAUXD)/prog.time
 
+# Dependency analysis for included files:
+#----------------------------------------
 # The wait-lock and update-time command sequences are defined in GNUmakedefs.
 # f-filter and i-filter differ in small but important ways for system and
 # programmer compilation and are defined below.
@@ -84,14 +102,19 @@ ifeq "$(MAKEMODE)" "system"
   show ::
 	-@ echo ""
 	-@ echo "DPNDAUXD = $(DPNDAUXD)"
-	-@ echo "DPNDLIST = $(DPNDLIST)"
-	-@ echo "DPNDTIME = $(DPNDTIME)"
+	-@ echo "DPNDINCL = $(DPNDINCL)"
 	-@ echo "DPNDLOCK = $(DPNDLOCK)"
+	-@ echo "DPNDOBJS = $(DPNDOBJS)"
+	-@ echo "DPNDSYMS = $(DPNDSYMS)"
+	-@ echo "DPNDTIME = $(DPNDTIME)"
 	-@ echo "DPNDTMPD = $(DPNDTMPD)"
 	-@ echo ""
 	-@ echo "DPNDINCS = $(DPNDINCS)"
+	-@ echo "DPNDLIBR = $(DPNDLIBR)"
 	-@ echo "DPNDOPT  = $(DPNDOPT)"
 
+  # Dependency analysis for included files:
+  #----------------------------------------
   # This command sequence identifies include files in the ratty output and
   # makes each of them a prerequisite of the program's timestamp.  In turn,
   # rule-chaining also makes them a prerequisite of the executable itself.
@@ -100,21 +123,57 @@ ifeq "$(MAKEMODE)" "system"
      @ sed -n -e 's#^c >>> $(MIRROOT)/##p' $(DPNDTMPD)/$*.f | $(backsl)
          sed -e 's#^inc#$$(DPNDTIME)($*) : $$(MIRINCD)#' $(backsl)
              -e 's#^prog#$$(DPNDTIME)($*) : $$(MIRPROGD)#' | $(backsl)
-         sort -u | sort -m - $(DPNDLOCK) > $(DPNDLIST)
+         sort -u | sort -m - $(DPNDLOCK) > $(DPNDINCL)
   endef
+
+  # Dependency analysis for object modules:
+  #----------------------------------------
+  # The nm-syms command sequence must be defined in makedefs to list the
+  # global symbols defined by an object module.  If undefined this analysis is
+  # skipped and each executable is made to depend on the library as a whole.
+  # As in the analysis of included files, the lock file is used to store
+  # intermediaries.
+  ifdef nm-syms.$(ARCH)
+    define depend-objs
+    -@ if [ -f "$(DPNDOBJS)" ] ; then $(backsl)
+         sed -e '/$$(MIRBIND)\/$* : /d' $(DPNDOBJS) > $(DPNDLOCK) ; $(backsl)
+       else $(backsl)
+         cat /dev/null > $(DPNDLOCK) ; $(backsl)
+       fi
+    -@ $(RM) $(DPNDOBJS)
+    -@ OBJ="$@" ; $(nm-syms.$(ARCH)) | $(backsl)
+         sort | $(backsl)
+         sort -m - $(DPNDSYMS) | $(backsl)
+         awk $(backsl)
+           'BEGIN {sym = ""} $(backsl)
+            NF == 1 {sym = $$1} $(backsl)
+            NF == 2 {if ($$1 == sym) print $$2}' | $(backsl)
+         sort -u | $(backsl)
+         sed -e 's|\(.*\)|$$(MIRBIND)/$* : $$(MIRLIBR)(\1)|' | $(backsl)
+         sort -m - $(DPNDLOCK) > $(DPNDOBJS)
+    endef
+
+    DPNDLIBR :=
+  else
+    define depend-objs
+    -@ $(RM) $(DPNDOBJS)
+    endef
+
+    DPNDLIBR := $(MIRLIBR)
+  endif
 
 
   # Pattern rules (rule-chaining, and dependency analysis).
   #--------------------------------------------------------
   # Dependency analysis for Miriad tasks is simpler in some respects than for
   # Miriad subroutines and functions because it need only deal with Fortran
-  # source code, and there are no architecture-specific variants.  Therefore
+  # source code and there are no architecture-specific variants.  Therefore
   # the possibilities for rule-chaining are limited.
   #
   # As an example, the dependency chain for atlod would look like
   #
-  #   $MIR/linux/bin/atlod <- $MIR/linux/aux/prog.time(atlod) and
-  #                           $MIR/linux/tmp/atlod.f
+  #   $MIR/linux/bin/atlod <- $MIR/linux/tmp/atlod.f and
+  #                           $MIR/linux/aux/prog.time(atlod)
   #                        <- $MIR/prog/atlod.for
   #
   # The chain is evaluated in reverse order, starting with
@@ -123,20 +182,23 @@ ifeq "$(MAKEMODE)" "system"
   # In the first step make generates atlod's dependency timestamp, stored in
   # archive library $MIR/linux/aux/prog.time(atlod) for tidiness, by running
   # ratty to generate $MIR/linux/tmp/atlod.f.  It uses atlod.f to determine
-  # atlod's dependencies, adds these to $MIR/linux/aux/prog.list, which is
+  # atlod's dependencies, adds these to $MIR/linux/aux/prog.incl, which is
   # included at the end of this makefile, and then touches atlod's timestamp.
   #
   # atlod.f and atlod's timestamp are therefore generated by the same rule.
   # The second and final step compiles and links atlod.f to produce
-  # $MIR/linux/bin/atlod.
+  # $MIR/linux/bin/atlod.  Global symbols are extracted from the executable
+  # and compared with the list of global symbols defined by the object modules
+  # in the Miriad library to generate the dependency list on object modules.
+  # The executable is then (optionally) stripped of symbols.
   #
   # This mechanism is efficient because ratty always has to be run when
   # compiling Miriad Fortran so the only overhead is in scanning atlod.f for
   # included files.
   #
-  # atlod's dependency list consists of the following entries in
-  # $MIR/linux/aux/prog.list (where $(DPNDTIME) is the makefile variable used
-  # for $MIR/linux/aux/prog.time):
+  # atlod's dependency list for included files consists of the following
+  # entries in $MIR/linux/aux/prog.incl (where $(DPNDTIME) is the makefile
+  # variable used for $MIR/linux/aux/prog.time):
   #
   #   $(DPNDTIME)(atlod) : $(MIRINCD)/maxdim.h
   #   $(DPNDTIME)(atlod) : $(MIRINCD)/mirconst.h
@@ -153,8 +215,11 @@ ifeq "$(MAKEMODE)" "system"
 
   .PRECIOUS : $(DPNDTIME)(%)
 
-  $(MIRBIND)/% : $(DPNDTMPD)/%.f $(MIRLIBR)
+  $(MIRBIND)/% : $(DPNDTMPD)/%.f $(DPNDTIME)(%) $(DPNDLIBR)
 	   $(FC) $(FCOPT) $(LDOPT) -o $@ $< $(MIRLIBR) $(XTRNLIBS)
+	   $(depend-objs)
+	   $(wait-unlock)
+	-@ $(STRIP) $@
 	-@ chmod 775 $@
 	-@ $(RM) $<
 
@@ -163,13 +228,14 @@ ifeq "$(MAKEMODE)" "system"
 
   # This little rule tells make not to fret if it can't find a header file.
   # It may be important if a header file is deleted but remains as a
-  # prerequisite for some of the object modules in the dependency list.
+  # prerequisite for some of the object modules in the dependency list for
+  # included files.
   %.h : ;
 
   # Extract preamble comments into a Miriad "doc" file.
   $(MIRDOCD)/%.doc : %.for
 	-@ $(RM) $(MIRDOCD)/$*.doc
-	   $(MIRDOC) -f $< > $@
+	   $(MIRBIND)/doc -f $< > $@
 	-@ chmod 664 $@
 
 
@@ -180,7 +246,6 @@ ifeq "$(MAKEMODE)" "system"
   allsys :: bin doc
 
   bin : $(MIREXES:%=$(MIRBIND)/%)
-	-@ echo ""
 
   doc : $(MIREXES:%=$(MIRDOCD)/%.doc) ;
 
@@ -234,7 +299,7 @@ else
 	-@ echo "PGMREXES = $(PGMREXES)"
 	-@ echo ""
 	-@ echo "DPNDAUXD = $(DPNDAUXD)"
-	-@ echo "DPNDLIST = $(DPNDLIST)"
+	-@ echo "DPNDINCL = $(DPNDINCL)"
 	-@ echo "DPNDTIME = $(DPNDTIME)"
 	-@ echo "DPNDLOCK = $(DPNDLOCK)"
 	-@ echo "DPNDTMPD = $(DPNDTMPD)"
@@ -259,8 +324,8 @@ else
   # would force a recompile.
   #
   # For similar reasons the source file itself (.for) must also be mentioned
-  # as a prerequisite in the programmer dependency list but is not needed in
-  # the system list.
+  # as a prerequisite in the programmer dependency list for included files but
+  # is not needed in the system list.
   define f-filter
      @ echo $< | $(backsl)
          sed -e 's#^\([^/]\)#$(THISDIR)/\1#' | $(backsl)
@@ -268,7 +333,7 @@ else
          sed -n -e '{1p;s#^c >>> ##p;}' | $(backsl)
          sed -e 's#^$(PGMRROOT)/#$$(DPNDTIME)($*) : $$(PGMRROOT)/#' $(backsl)
              -e 's#^$(MIRROOT)/.*/#$$(DPNDTIME)($*) : #' | $(backsl)
-         sort -u | sort -m - $(DPNDLOCK) > $(DPNDLIST)
+         sort -u | sort -m - $(DPNDLOCK) > $(DPNDINCL)
   endef
 
 
@@ -284,7 +349,7 @@ else
   # if a .f file preserved from a previous compilation is newer than the
   # target though constructed from header files that are now stale.  The stale
   # header files will be listed as prerequisites of the timestamp in the
-  # dependency list included at the end of this makefile.
+  # dependency list for included files included at the end of this makefile.
   $(PGMRBIND)/% : $(DPNDTMPD)/%.f $(DPNDTIME)(%) $(PGMRLIBR) $(MIRLIBR)
 	   $(FC) $(FCDBG) $(LDDBG) -o $@ $< $(PGMRLIBR) $(MIRLIBR) $(XTRNLIBS)
 	-@ chmod 775 $@
@@ -304,7 +369,7 @@ else
   # Extract preamble comments into a Miriad "doc" file.
   %.doc : %.for
 	-@ $(RM) $*.doc
-	   $(MIRDOC) -f $< > $@
+	   $(MIRBIND)/doc -f $< > $@
 	-@ chmod 664 $@
 
 
@@ -351,6 +416,6 @@ $(MIRBIND)/mopfix  : $(RPFITSLIB)
 $(MIRBIND)/rpfread : $(RPFITSLIB)
 $(MIRBIND)/wblod   : $(RPFITSLIB)
 
-ifndef NODEP
-  -include $(DPNDLIST)
-endif
+# Dependency lists.
+-include $(DPNDINCL)
+-include $(DPNDOBJS)
