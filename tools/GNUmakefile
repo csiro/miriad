@@ -2,7 +2,7 @@
 # GNUmakefile for compiling Miriad tools.
 #
 # Original: 2006/08/25, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.3 2006/09/15 07:46:53 cal103 Exp $
+# $Id: GNUmakefile,v 1.4 2006/09/22 02:06:43 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
@@ -27,9 +27,17 @@ ifeq "$(MAKEMODE)" "system"
 	   $(CC) $(CCOPT) -o $@ $<
 	-@ chmod 775 $@
 
+  # Extract preamble comments into a Miriad "doc" file.
+  $(MIRDOCD)/%.doc : %.c
+	-@ $(RM) $(MIRDOCD)/$*.doc
+	   $(MIRBIND)/doc -f $< > $@
+	-@ chmod 664 $@
+
   # Static and static pattern rules.
   #---------------------------------
-  allsys :: $(MIREXES:%=$(MIRBIND)/%)
+  allsys :: bin doc
+  
+  bin : $(MIREXES:%=$(MIRBIND)/%) ;
 
   ifneq "$(READLINELIB)" ""
     $(MIRBIND)/miriad : $(CODEDIR)/miriad.c
@@ -41,11 +49,15 @@ ifeq "$(MAKEMODE)" "system"
 	   $(CC) -Dposix $(CCOPT) -o $@ $<
 	-@ chmod 775 $@
 
+  doc : $(MIREXES:%=$(MIRDOCD)/%.doc) ;
+
   help ::
 	-@ echo ""
 	-@ echo "Targets defined in the tools GNUmakefile"
 	-@ echo "----------------------------------------"
 	-@ echo "     allsys: recompile MIREXES."
+	-@ echo "        bin: compile and link all programs."
+	-@ echo "        doc: generate doc files for all programs."
 
 else
   # Programmer-oriented rules.
