@@ -1,0 +1,13 @@
+#!/bin/csh -f
+
+# Generate the flow charts and diagrams from .fig and .g (gnuplot) files.
+ 
+foreach file (*.fig)  
+  set base = ${file:r}
+  fig2dev -L ps -p dummy_arg $file $base.ps
+end
+
+foreach file (*.g)
+  gnuplot $file
+end 
+

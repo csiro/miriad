@@ -1,0 +1,115 @@
+<HTML>
+<HEAD>
+<TITLE>Getting a Copy of Miriad</TITLE>
+</HEAD>
+<BODY BACKGROUND="gmiriad.gif">
+<TABLE CELLSPACING=0 CELLPADDING=2><TR VALIGN=TOP>
+
+<TD WIDTH=160 HEIGHT=800 NOWRAP>
+<BR><BR><BR><BR><BR><BR><BR><BR><BR>
+<BR><BR>
+
+<!-- General Search -->
+
+<FORM ACTION="/cgi-bin/miriad/mirsearch.pl" METHOD=POST>
+<TABLE BORDER="0" CELLSPACING="0" CELLPADDING="0" NOWRAP>
+<TR><TH ALIGN=LEFT COLSPAN=2><FONT COLOR="#FFFFFF"><B>Search</B></FONT></TH></TR>
+<TR><TD><INPUT TYPE="Text" NAME="searchstring" SIZE="10" MAXLENGTH="50"></TD>
+    <TD><INPUT TYPE="Image" NAME="Go" SRC="gblue.gif" BORDER="0"></TD></TR>
+</TABLE>
+</FORM>
+<BR>
+
+<!-- Task Lookup -->
+<FORM ACTION="/cgi-bin/miriad/mirman.pl" METHOD=GET>
+<TABLE BORDER="0" CELLSPACING="0" CELLPADDING="0" NOWRAP>
+<TR><TH ALIGN=LEFT COLSPAN=2><FONT COLOR="#FFFFFF"><B>Topic Lookup</B></FONT></TH></TR>
+<TR><TD><INPUT TYPE="Text" NAME="topic" SIZE="10" MAXLENGTH="50"></TD>
+    <TD><INPUT TYPE="Image" NAME="Go" SRC="gblue.gif" BORDER="0"></TD></TR>
+</TABLE>
+</FORM>
+
+<BR><BR>
+
+</TD><TD>
+<CENTER>
+<H1>Getting a Copy of <STRONG><EM>Miriad</EM></STRONG></H1>
+</CENTER>
+<HR>
+Please read the <A HREF="ftp://ftp.atnf.csiro.au/pub/software/miriad/disclaimer.txt">general disclaimer</A>.
+<P>
+The following are available (ftp access):
+<UL>
+<LI><STRONG>The full <EM>Miriad</EM> distribution.</STRONG><BR>
+This is available in 
+<A HREF="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad.tar.Z">compressed</A>
+(11 Mbytes),
+<A HREF="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad.tar.gz">gzipped</A>
+(8 Mbytes) and
+<A HREF="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad.tar">plain</A>
+(22 Mbytes) tar formats.
+<EM>Note:</EM> This distribution includes
+the Users and Programmer Guides, the installation notes and history of changes.
+<LI><strong><a href=README.html>Installation, update and system guide</a></strong>, which includes
+
+  <ul>  
+    <li><a href="README.html#installing">Instructions for installing <em>Miriad</em></a>
+    <li><a href="README.html#updates">Getting regular updates</a>
+    <li><a href="README.html#individual">Rebuilding individual tasks/subroutines</a>
+    <li><a href="README.html#sysdep">System-dependent issues</a>
+    <li><a href="README.html#special-cases">Special case tasks</a>
+    <li><a href="README.html#structure">The structure of <em>Miriad</em></a>
+  </ul>
+
+<LI><STRONG>The Users Guide.</STRONG><BR>This is available in
+<A HREF="ftp://ftp.atnf.csiro.au/pub/software/miriad/userguide.ps.Z">compressed</A>
+(800 kbytes) and
+<A HREF="ftp://ftp.atnf.csiro.au/pub/software/miriad/userguide.ps.gz">gzipped</A>
+postscript forms, configured for A4 paper size.
+US letter paper size versions
+(<A HREF="ftp://ftp.atnf.csiro.au/pub/software/miriad/userguide_US.ps.Z">compressed </A> and
+<A HREF="ftp://ftp.atnf.csiro.au/pub/software/miriad/userguide_US.ps.gz">gzipped</A> postscript) are also available.
+<LI><STRONG>The Programmers Guide.</STRONG><BR>This is available in
+<A HREF="ftp://ftp.atnf.csiro.au/pub/software/miriad/progguide.ps.Z">compressed</A> (180 kbytes) and
+<A HREF="ftp://ftp.atnf.csiro.au/pub/software/miriad/progguide.ps.gz">gzipped</A>
+postscript forms, configured for A4 paper.
+US letter paper size versions
+(<A HREF="ftp://ftp.atnf.csiro.au/pub/software/miriad/progguide_US.ps.Z">compressed</A>
+and
+<A HREF="ftp://ftp.atnf.csiro.au/pub/software/miriad/progguide_US.ps.gz">gzipped</A> postscript) are also available.
+This manual is rather out of date.
+<LI><STRONG>A <A HREF="ftp://ftp.atnf.csiro.au/pub/software/miriad/changes.txt">
+History of changes</A>.</STRONG><BR>This is in text form, giving changes from the ancient 
+to the recent. This reflects the the current distribution.
+<LI><STRONG>A directory of
+<A HREF="ftp://ftp.atnf.csiro.au/pub/software/miriad/bindir/"> 
+some statically-linked tasks.</A></STRONG>
+</UL>
+<EM>Miriad</EM> makes use of the following libraries:
+<UL>
+<LI>The <A HREF="http://astro.caltech.edu/~tjp/pgplot/">PGPLOT library</A>
+(essential for <EM>Miriad's</EM> plotting tasks). This is included
+in the <EM>Miriad</EM> distribution.
+<LI>Generally PGPLOT needs the libX11.a library. Additionally two
+<EM>Miriad</EM> utilities need the Athena widgets library.
+<LI>The ATNF <A HREF="http://www.atnf.csiro.au/computing/software/rpfits.html">
+RPFITS library</A>, which is only used by the task ATLOD. This library
+is needed to load raw ATNF data. The binaries of this (for some architectures!)
+are available in the
+<A HREF="ftp://ftp.atnf.csiro.au/pub/software/miriad/bindir/">
+statically-linked binaries</A> area.
+<LI> The <A HREF="ftp://prep.ai.mit.edu/pub/gnu/readline/readline-4.0.tar.gz">
+GNU readline library</A>, which is an optional library to give
+the <EM>Miriad</EM> shell command-line editting ability.
+</UL>
+Some additional software, of interest to BIMA users,
+is also available
+<A HREF="ftp://ftp.atnf.csiro.au/pub/software/miriad/bima.tar">from
+here</A> (the ATNF does not support this).
+<P>
+A memo on the relative performance of <EM>Miriad</EM>
+on different machines is <A HREF="http://bima.astro.umd.edu/memo/memo81.ps">
+available from BIMA</A>.
+</TD></TR></TABLE>
+</BODY>
+</HTML>

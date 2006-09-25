@@ -1,0 +1,46 @@
+\nonstopmode
+\documentstyle[html,epsf,makeidx]{report}
+\input htmldefs.inc
+
+% Begin the real work.
+
+\begin{document}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{2.5mm}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% User interface chapter
+\newchapter
+\input{iface.inc}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Plotting and TV device concepts.
+\newchapter
+\input{pltvcon.inc}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Main body
+\newchapter
+\input{cook.inc}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% The appendices.
+\appendix
+\newchapter
+\input{setup.inc}
+ 
+\newchapter
+\input{image.inc}
+ 
+\newchapter
+\input{uvvars.inc}
+
+\newchapter
+\input{oldcal.inc}
+
+\newchapter
+\input{xmtv.inc}
+
+\printindex
+
+\end{document}

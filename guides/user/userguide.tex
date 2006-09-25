@@ -1,0 +1,87 @@
+% LATEX document - also needs a 'makeindex' utility to generate the index
+%
+% HISTORY:
+%   xx-xxx-88   rjs Original version
+%   xx-jul-90   mjs 
+%   19-feb-91   pjt assembled together from previous versions
+%   22-feb-91   pjt included cookbook stuff
+%    1-mar-91   pjt glossary and many more fixes
+%    6-mar-91   pjt various user suggested improvements - added \newif's
+%   17-apr-91   pjt final version for the Spring 91 Release
+%    5-jun-92   rjs major rework to make it appropriate for ATNF.
+%   15-jul-94   rjs more changes. Some new commands to help support html
+
+\nonstopmode
+\input{latexdefs.inc}
+%\newcommand{\oneliner}[1]{\begin{flushleft}{\ \ \ #1}\end{flushleft}}
+\documentstyle[twoside,makeidx,html,epsf]{report}
+\makeindex
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{2.5mm}
+\setlength{\textheight}{245mm}
+\setlength{\textwidth}{160mm}
+\setlength{\oddsidemargin}{10mm}
+\setlength{\evensidemargin}{-10mm}
+\setlength{\topmargin}{-10mm}
+
+
+\pagenumbering{roman}
+\pagestyle{headings}
+\addcontentsline{toc}{chapter}{Table of Contents}
+
+\begin{document}
+\epsffile{titlepage.inc}
+\null\clearpage
+\null\clearpage
+\tableofcontents
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% User interface chapter
+
+\newchapter
+\input{iface.inc}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Plotting and TV device concepts.
+\newchapter
+\input{pltvcon.inc}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newchapter
+\input{cook.inc}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newchapter
+\appendix
+\input{setup.inc}
+
+\newchapter
+\input{image.inc}
+
+\newchapter
+\input{uvvars.inc}
+
+\newchapter
+\input{oldcal.inc}
+
+\newchapter
+\input{xmtv.inc}
+
+\newchapter
+\input{glossary.inc}
+
+\newchapter
+\input{trouble.inc}
+
+%\newchapter
+%\input cheat.inc
+
+\newchapter
+\input{biblio.inc}
+
+\newchapter
+\setcounter{chapter}{9}
+\addcontentsline{toc}{chapter}{Index}
+\printindex
+
+\end{document}
