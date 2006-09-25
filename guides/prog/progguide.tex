@@ -1,0 +1,2128 @@
+% History:
+%  rjs  Dark-ages Original version.
+%  rjs   9feb90   Improved documentation of ratty.
+%  rjs  13feb90   Corrected a few typos. Described hisinput routine. Updated
+%		  description of uvinfo.
+%  rjs  18feb90   Corrected gross errors in "Image coordinate system"
+%  rjs   7mar90   Corrected comments about hisopen. Make antenna number business
+%		  clearer.
+%  rjs  30apr90   Many changes.
+%  rjs  28nov90   Some cosmetic updates. This is starting to get out-of-date!
+%  rjs  25mar91   Started major updates -- gave up on the Illinois manual.
+%  rjs  17jun92   Significant rework.
+%
+% Work to be Done:
+%  single dish and polarization handling in general.
+%  uvdat -- needs more work.
+%  The ? modes to SelProbe
+%  memory management
+%  coordinate handling
+
+\nonstopmode
+\documentstyle[html,twoside,makeidx,epsf]{report}
+
+\input defs.inc
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{2.5mm}
+\setlength{\textheight}{245mm}
+\setlength{\textwidth}{160mm}
+\setlength{\oddsidemargin}{10mm}
+\setlength{\evensidemargin}{-10mm}
+\setlength{\topmargin}{-10mm}
+\pagenumbering{roman}
+\pagestyle{headings}
+\addcontentsline{toc}{chapter}{Table of Contents}
+\begin{document}
+\begin{latexonly}
+\epsffile{titlepage.inc}
+\null\clearpage
+\null\clearpage
+\end{latexonly}
+\tableofcontents
+
+\newpage
+\addcontentsline{toc}{chapter}{List of Tables}
+\listoftables
+
+\newchapter
+\pagenumbering{arabic}
+\chapter{Program Development}
+Programs are developed in the usual manner, making calls to the \miriad\
+subroutine library. It may be convenient to pass code through the RATTY
+preprocessor before compiling. RATTY
+preprocesses a few language extensions into standard Fortran, and flags a few
+bad programming practises. When linking, the \miriad\ object library, libmir,
+is used.
+
+\section{General Programming Conventions}
+\miriad\ tasks should be written in Fortran-77.
+Though you should program in standard FORTRAN, two
+extensions will generally be needed by the programmer. Firstly \miriad\
+uses both upper and lower case character strings (Fortran-77 strictly
+supports only upper case characters. However almost all compilers
+support both upper and lower case, and it would be a reasonably
+simple preprocessing job to convert all of \miriad\ to a strictly
+upper case system if the need ever arises). Generally \miriad\ routines
+are case-sensitive, with lower case being preferred.
+
+Secondly \miriad\ tasks should use the {\tt maxdim.h} include file where
+appropriate. This include file
+defines a parameter, {\tt maxdim}, which gives the maximum image dimension
+that a task should be prepared to accept. Currently this is set to
+4096, but by using {\tt maxdim} to define needed storage, it should
+be reasonably easy to rebuild all \miriad\ tasks to handle larger images.
+The include file also defines a parameter {\tt maxbuf}, which is a guide
+to the maximum amount of internal data storage that a program should contain.
+
+Despite the encouragement to use this include file, programmers are generally
+discouraged
+from using include files and common blocks. This is far from a strict rule.
+Avoid them if you can.
+
+See Chapter~\ref{ch:utilities} for a description of some utilities which
+simplify the development of code.
+
+\section{In-Line Documentation}
+Documentation for \miriad\ tasks and subroutines is included as comments
+within the body of the code (delimited by special ``directives''). This
+documentation is stripped out by the \verb+doc+ program to produce a
+\verb+.doc+ file. This \verb+.doc+ file is then used by the on-line
+help facilities and the manual generation utilities.
+
+This documentation should be at the head of the source code.  In FORTRAN
+notation, the documentation ``directives'' are:
+{\begin{verbatim}
+c=  [routine name] [one-line description]   (for programs)
+c*  [routine name] [one-line description]   (for subroutines)
+c&  programmer ID
+c:  comma-separated list of categories
+c+
+c   start of multi-line description block
+c@  keyword                                 (for tasks)
+c   multi-line keyword description          (for tasks)
+c<  standard keyword                        (for tasks - deprecated form)
+c-- 
+\end{verbatim}}
+For FORTRAN, comment lines can begin with either an uppercase or a 
+lowercase {\tt c}. In-line documentation in C is analogous, except that
+comment lines begin with a {\tt /*}. Note also that once a
+{\tt /*} is entered, everything until the next {\tt */} is considered
+a comment; it is the programmer's responsibility to determine where to
+place the {\tt */}.
+
+The entries in the comma-separated list of categories should be:
+\begin{center}
+\begin{tabular}{llll}
+\multicolumn{4}{l}{For executables:}\\
+\ General             &Utility             &Data Transfer       &Visual Display\\
+\ Calibration         &uv Analysis         &Map Making          &Deconvolution\\
+\ Plotting            &Map Manipulation    &Map Combination     &Map Analysis\\
+\ Profile Analysis    &Model Fitting       &Tools               &Other\\
+\multicolumn{4}{l}{\ }\\
+\multicolumn{4}{l}{\ }\\
+\multicolumn{4}{l}{For subroutines:}\\
+\ Baselines           &Calibration         &Convolution         &Coordinates\\
+\ Display             &Error-Handling      &Files               &Fits\\
+\ Fourier-Transform   &Gridding            &Header-I/O          &History\\
+\ Image-Analysis      &Image-I/O           &Interpolation       &Least-Squares\\
+\ Log-File            &Low-Level-I/O       &Mathematics         &Model\\
+\ PGPLOT              &Plotting            &Polynomials         &Region-of-Interest\\
+\ SCILIB              &Sorting             &Strings             &Terminal-I/O\\
+\ Text-I/O            &Transpose           &TV                  &User-Input\\
+\ User-Interaction    &Utilities           &uv-Data             &uv-I/O\\
+\ Zeeman              &Other               &                    & \\
+\end{tabular}
+\end{center}
+
+\subsection*{A Program Example}
+
+By way of illustration, below is the in-code documentation for
+\miriad\ task \task{varplot} which uses the ``directives'' noted previously.
+{\small\begin{verbatim}
+c= varplot - Plot uv variables
+c& lgm
+c: uv analysis, plotting
+c+
+c       VARPLOT makes X,Y plots selected variables from a uv data set.
+c       Only integer, real, and double precision variables maybe plotted.
+c       When curser is in the plot window, the following keys are active:
+c          X - expand window in X to give one column of plots
+c          Y - expand window in Y to give one row of plots
+c          Z - expand window in both X and Y to show only one plot
+c          N - step to "next" plot in x or y or both depending on expansion
+c@ vis
+c       Miriad uv data-set. No default.
+c@ device
+c       PGPLOT plotting device. No default.
+c@ xaxis
+c       Name of variable to be plotted along x-axis. Default is ut time.
+c@ yaxis
+c       Name of variable to be plotted along y-axis. No default.
+c@ multi
+c       Make multiple plots or a single plot? Yes yields multiple plots,
+c       No yields a single plot with multiple lines as needed. Default
+c       is yes.
+c@ compr
+c       Compress number of x or y variables to be plotted by averaging
+c       over spectral windows. Currently only SYSTEMP can be averaged.
+c--
+\end{verbatim}}
+The task's name is ``varplot'', its one-line description is ``Plot uv
+variables'', the responsible programmer is ``lgm'', and the program is
+categorized as both a ``uv analysis'' program and a ``plotting'' program.
+It has a general description (the text following the {\tt c+} line), and
+it has 6 keywords that the user may set:  ``vis'', ``device'',
+``xaxis'', ``yaxis'', ``multi'',
+and ``compr''.
+
+\subsection*{A Subroutine Example}
+
+By way of illustration, below is the in-code documentation for
+\miriad\ subroutine axistype, which uses the ``directives'' noted previously.
+{\small\begin{verbatim}
+c* Axistype - Find the axis label and plane value in user friendly units
+c& mchw
+c: plotting
+c+
+        subroutine AxisType(lIn,axis,plane,ctype,label,value,units)
+c
+        implicit none
+        integer lIn,axis,plane
+        character ctype*9,label*13,units*13
+        double precision value
+c
+c Find the axis label and plane value in user friendly units.
+c
+c  Inputs:
+c    lIn        The handle of the image.
+c    axis       The image axis.
+c    plane      The image plane along this axis.
+c  Output:
+c    ctype      The official ctype for the input axis.
+c    label      A nice label for this axis.
+c    value      The value at the plane along this axis.
+c    units      User friendly units for this axis.
+c--
+\end{verbatim}}
+Note that the programmer has woven executable code into the documentation
+(the lines that are not commented out):  anything between the {\tt c+} and
+the {\tt c--} is considered to be part of the documentation, even though
+the lines are actually part of the subroutine code itself.
+
+A subroutine source code file (or a program source code file) may contain
+multiple subroutines, each documented as above.
+
+\section{Code History}
+All source code files should contain comments (near the start of the file)
+describing the creation and modification history.  This is quite important
+in the \miriad\ development environment, where programs are spread
+across many computers and programmers are separated by many miles.
+
+Below are typical history comments (taken from the ``key'' routines,
+subroutine key.for):
+{\small\begin{verbatim}
+c************************************************************************
+c  The key routines provide keyword-oriented access to the command line.
+c
+c  History:
+c    rjs    6jun87    Original version.
+c    bs     7oct88    Converted it to use iargc and getarg. Added -f flag.
+c    rjs    8sep89    Improved documentation.
+c    nebk  10sep89    Added mkeyr.  I think rjs will not like it (Too right!).
+c    rjs   19oct89    Major rewrite to handle @ files.
+c    rjs   15nov89    Added keyf routine, and did the rework needed to support
+c                     this. Added mkeyf. Modified mkeyr.
+c    pjt   26mar90    Added mkeya. like mkeyr (again, bobs will not like this)
+c    pjt   10apr90    some more verbose bug calls.
+c    rjs   23apr90    Made pjt's last changes into standard FORTRAN (so the
+c                     Cray will accept it).
+c    pjt   10may90    Make it remember the programname in keyini (se key.h)
+c                     for bug calls - introduced progname
+c    rjs   22oct90    Check for buffer overflow in keyini.
+c    pjt   21jan90    Added mkeyi, variable index is now idx, exp is expd
+c************************************************************************
+\end{verbatim}}
+
+\section{Task Version Identification}
+The first executable statement of a program should be to print out a version
+identification. The following is typical:
+\begin{verbatim}
+c****************************************************************
+       program Clean
+          .
+          .
+          .
+       character version*(*)
+       parameter(version='Clean: version 1.0 26-jan-90')
+          .
+          .
+          .
+       call output(version)
+\end{verbatim}
+This gives a version and the date when the task {\tt CLEAN} was last modified.
+Additionally, this version identification should be included
+in any history generated by the task.
+
+\newchapter
+\chapter{\miriad\ Subroutine Library}
+\section{Task Parameters}\index{command-line}\index{user-input}
+\begin{verbatim}
+
+     subroutine keyini
+     subroutine keyr(keyword,value,default)
+     subroutine keyd(keyword,value,default)
+     subroutine keyi(keyword,value,default)
+     subroutine keyl(keyword,value,default)
+     subroutine keya(keyword,value,default)
+     subroutine keyf(keyword,value,default)
+     subroutine mkeyr(keyword,values,nmax,n)
+     subroutine mkeyi(keyword,values,nmax,n)
+     subroutine mkeya(keyword,values,nmax,n)
+     subroutine mkeyf(keyword,values,nmax,n)
+     logical function keyprsnt(keyword)
+     subroutine keyfin
+
+\end{verbatim}
+The {\tt key} routines are used to get task parameters, which describe the
+processing that is to be performed.
+Typically the {\tt key} routines
+will be called in the first few lines of the task, and never called
+again. All checking for the validity of the parameters should be
+carried out at this time.
+
+{\tt Keyini} initializes the {\tt key} routines, and must be the first
+routine called. Similarly {\tt keyfin} tidies up, and closes down.
+{\tt Keyr, keyd, keyi, keyl} and {\tt keya} return the value of a task parameter
+from the user. Their inputs are {\tt keyword} (a character string) and
+{\tt default}, the default value for the parameter. {\em The
+keyword must be in lower case.} The task
+parameter is returned in {\tt value}.
+ {\tt Keyi}, {\tt keyr}, {\tt keyl}, {\tt keyd} and {\tt keya} are used
+for integer, real, logical, double precision  and character values respectively.
+Only one value is returned at a time.
+The {\tt keyf} routine is like {\tt keya}, except that the string entered
+by the user is treated as a file name, and wildcard expansion is performed.
+The {\tt key} routines can be called several times, giving the same
+keyword, and each successive call will get the next value associated
+with the keyword.
+
+For example, if TRC is defined by the user as:
+\begin{verbatim}
+
+      % TRC = 45,50
+
+\end{verbatim}
+then the code:
+\begin{verbatim}
+
+     call keyi('trc',n1,1)
+     call keyi('trc',n2,1)
+
+\end{verbatim}
+will return the values 45 and 50 to {\tt n1} and {\tt n2} respectively.
+
+These routines always return a value, even if it is only the default
+value. To determine if a parameter was actually set by the use, the
+{\tt keyprsnt} routine can be called. This returns {\tt .true.} if a value for
+the keyword still remains. An alternate way to test if a value is still
+present is to use a default which is 
+clearly illegal (e.g. a blank string for a file name, or 0 for a
+pixel index).
+
+The {\tt mkey} routine return all values entered by the user for that
+particular keyword where all the values of the keyword are of the same
+data type. For these routines {\tt values} is an array of {\tt nmax}
+elements. The number of values returned (which may be zero) is given
+by {\tt n}.
+
+\section{Error Handling}\index{error-handling}
+Many \miriad\ routines perform error checking internally, and bomb out if an
+error is detected. Other \miriad\ routines pass back a status value (generally
+the last subroutine argument). A status value of zero indicates success,
+-1 indicates end-of-file, and a positive value indicates some other error
+(what the positive values indicate is system dependent). Two routines can
+be called to indicate an error:
+\begin{verbatim}
+
+      subroutine bug(severity,text)
+      subroutine bugno(severity,number)
+
+\end{verbatim}
+Here {\tt severity} is a single character, being either {\tt 'w', 'e'} or
+{\tt 'f'}, meaning warning, error and fatal respectively. When {\tt bug}
+or {\tt bugno}
+is called with a fatal error, it will not return. Rather it will
+cause the task to exit. For routine {\tt bug}, {\tt text} is a character
+string describing the error. For routine {\tt bugno}, {\tt number} is a
+status value, returned by a \miriad\ routine.
+
+\section{Text I/O}\index{text-i/o}
+Though standard Fortran-77 routines would appear to be adequate for text i/o,
+there are invariably minor differences between systems, mainly related to
+carriage control. Additionally placing them in a module of routines forces
+the programmer to follow the `handle' convention.
+\begin{verbatim}
+
+      subroutine output(text)
+      subroutine txtopen(handle,name,status,iostat)
+      subroutine txtread(handle,text,length,iostat)
+      subroutine txtwrite(handle,text,length,iostat)
+      subroutine txtclose(handle)
+
+\end{verbatim}
+{\tt Output} prints {\tt text} (a character string) on the users terminal.
+
+{\tt Txtopen} opens a text file (passing back a handle) with name {\tt name}.
+{\tt Status} can be either {\tt 'old'} or {\tt 'new'}. When opening a new
+file, any old files which exist with the same name may be deleted.
+{\tt Txtread} and {\tt txtwrite} read and write a character string, {\tt text},
+of {\tt length} characters. {\tt Length} is passed back from {\tt txtread},
+whereas it is passed into {\tt txtwrite}. It may be zero in either case.
+All these routines return an i/o status variable, {\tt iostat}.
+
+{\tt Txtclose} closes the file.
+
+\section{General Data Set Handling}\index{data-sets}
+\miriad\ makes few distinctions between what some systems (e.g. GIPSY,
+AIPS and FITS) call ``data'' and ``header''.
+Instead a data ``file'' (usually called a data set in this
+document) consists of a collection of items. Some
+items are small (a few bytes) whereas others are large (e.g. the collection
+of pixels in an image). All items are accessed by their name (a lower case
+string of up to 8 alphanumeric characters. Underscore and dollar
+characters are to be avoided). Convention dictates the names
+assigned to the various items within a data set. For example, the
+item name ``image'' is always used to store the pixel data of an image, 
+``naxis'' is the number of dimensions in an image, and ``naxis1'' is
+the number of pixels along the first axis of an image. New
+sorts of data items can be invented as the need arises.
+
+What would be conventionally call header variables, are stored as small items.
+The naming convention is close to the FITS standard (though the names are
+lower case).
+
+The following sections describe routines that in some way package together
+several calls to the lower level i/o routines. Their first argument is
+a ``handle'' returned by one of the open routines.
+
+\section{UV Data Sets}\index{uv-data}
+\subsection{General}
+At the very least, a uv data set can be viewed as a sequence of 
+correlation
+records, with associated u and v coordinates, time and baseline number.
+Associated with each correlation is a flag, indicating whether the
+correlation is believed to be good or bad.
+
+The \miriad\ uv data structure required a more general structure. Unfortunately
+this is more complicated and somewhat cumbersome for simple cases.
+A uv data set can be viewed as an ordered (generally time ordered) stream of
+named records or ``variables''. There are markers in this data stream, to
+indicate when
+several variables change ``simultaneously'' (i.e. they correspond to the
+same time). Each variable
+consists of an array of values, the type of which can be either integer, real
+or double precision, etc. Correlation data, u and v coordinates,
+time and baseline numbers are specific examples of variables.
+Because of the special nature of these variables, special routines are
+available to simplify accessing them. A list of the variables
+that may be present in a uv data set is given in Appendix I.
+
+In addition to this variable stream, a uv file will contain a file giving
+flagging information.
+
+It should be noted that ``variables'' and ``items''
+are quite distinct. For a particular data set, variables vary, or at least may
+vary,
+whereas data items are fixed. The notion of variables is unique to uv data sets,
+whereas all \miriad\ data sets are composed of data items. The stream of
+uv variables is implemented as three data items, called {\tt visdata},
+{\tt vartable} and {\tt flags}.
+
+There is a ``miriad'' of uv routines.
+The routines used to access and manipulate a uv data set are given in the
+following table.
+\begin{table}
+\begin{verbatim}
+
+      subroutine uvopen(tno,dataname,status)
+      subroutine uvread(tno,preamble,data,flags,n,nread)
+      subroutine uvflgwr(tno,flags)
+      subroutine uvwrite(tno,preamble,data,flags,n)
+      subroutine uvclose(tno)
+      subroutine uvrewind(tno)
+
+      subroutine uvwread(tno,data,flags,n,nread)
+      subroutine uvwwrite(tno,data,flags,n)
+
+      subroutine uvgetvra(tno,varname,data)
+      subroutine uvgetvri(tno,varname,data,n)
+      subroutine uvgetvrr(tno,varname,data,n)
+      subroutine uvgetvrd(tno,varname,data,n)
+      subroutine uvgetvrc(tno,varname,data,n)
+
+      subroutine uvrdvra(tno,varname,data,default)
+      subroutine uvrdvri(tno,varname,data,default)
+      subroutine uvrdvrr(tno,varname,data,default)
+      subroutine uvrdvrd(tno,varname,data,default)
+      subroutine uvrdvrc(tno,varname,data,default)
+
+      subroutine uvprobvr(tno,varname,type,length,update)
+
+      subroutine uvputvra(tno,varname,data)
+      subroutine uvputvri(tno,varname,data,n)
+      subroutine uvputvrr(tno,varname,data,n)
+      subroutine uvputvrd(tno,varname,data,n)
+      subroutine uvputvrc(tno,varname,data,n)
+
+      subroutine uvtrack(tno,varname,switches)
+      integer function uvscan(tno,varname)
+      logical function uvupdate(tno)
+      subroutine uvmark(tno,onoff)
+      subroutine uvcopyvr(tin,tout)
+      subroutine uvnext(tno)
+
+      subroutine uvset(tno,object,type,n,p1,p2,p3)
+      subroutine uvselect(tno,object,p1,p2,flag)
+      subroutine uvinfo(tno,object,data)
+\end{verbatim}
+\caption{UV Data Subroutines}
+\end{table}
+
+\subsection{Open, Close and Rewind}
+The routine {\tt uvopen} opens a uv data set and readies it for access.
+Here {\tt dataname} is a string giving the data set's name. {\tt Status} can
+be either {\tt 'old'} or {\tt 'new'}, depending whether an old data set is
+being read, or a new data set is being created. {\tt Tno} is an integer
+handle passed back by the open routine (and is used for all future access
+to the data set). The routine {\tt uvclose} closes the data set.
+The routine {\tt uvrewind} positions a uv file at its beginning, and
+allows it to be read again.
+
+\subsection{Reading and Writing Visibilities}
+The routines {\tt uvread} and {\tt uvwrite} are routines used to read and
+write the correlation data (and the associated flagging information).
+Here {\tt preamble} is an array of four double precision elements, {\tt data}
+is an array of {\tt n} 
+complex elements, whereas {\tt flags} is an array of {\tt n} logical values.
+{\tt Preamble}, {\tt data} and {\tt flags} are output from {\tt uvread},
+whereas they are input to {\tt uvwrite}. The four elements of
+{\tt preamble} are the u coordinate, v coordinate (measured in nanoseconds),
+time (Julian date) and baseline number. The baseline number, $Bl$, is
+calculated  as:
+\[
+Bl = 256 A_1 + A_2
+\]
+where $A_1$ and $A_2$ are the numbers of the first and second antennae
+respectively (antenna numbers vary from 1 to $N_{antenna}$). The array
+{\tt data} is used to store the complex correlation data, whereas the logical
+values of the array
+{\tt flags} indicate whether the corresponding correlation is
+deemed good or bad (true or false, respectively). For {\tt uvread}, {\tt n}
+limits the number of correlations that can be read; the actual number of
+correlations read is passed back as {\tt nread}. {\tt Uvread} can perform
+a number of additional processing steps -- see the description of
+{\tt uvset} (Section~\ref{sect:uvset}).
+
+The flags of a data file can be modified using the {\tt uvflgwr} subroutine.
+When called, the flags associated with the previous call to
+{\tt uvread} and {\tt uvwrite} are changed to those values given in the
+{\tt flags} array. Using {\tt uvflgwr} when reading a visibility file,
+is the method used to develop flagging tasks. Currently {\tt uvflgwr}
+has the limitation that the linetype is either `channel' or `wide', and that
+the `start' and `width' linetype parameters are 1 (see
+Section~\ref{sect:uvset}). Also {\tt uvflgwr}
+aborts if no flagging file exists
+
+\subsection{Reading and Writing Continuum Visibilities}
+\miriad\ uv datasets can contain both spectral and continuumn visibility
+data simultaneously. When both are present, the user/programmer will
+normally select which of these data to read, using the {\tt uvset} routine
+(see Section~\ref{sect:uvset}). However this allows only one ``linetype'' to be
+read and written at a time. The {\tt uvwread} and {\tt uvwwrite} allow
+the programmer to read and write the continuum data independently
+of the ``linetype''. These routines completely bypass linetype processing.
+They should be used only when both a particular linetype, and the continuum
+data are required. {\tt Uvwread} should be called after the call to
+{\tt uvread}, whereas {\tt uvwwrite} should be called before the call to
+{\tt uvwrite}.
+
+The routine {\tt uvwflgwr} is the ``wide'' equivalent of {\tt uvflgwr}.
+That is, by calling {\tt uvwflgwr}, you can overwrite the flags associated
+with the previous call to 
+{\tt uvwread} and {\tt uvwwrite}. Note that {\tt uvwflgwr} aborts if no
+flagging file exists.
+
+\subsection{Direct Access to UV Variables}
+The main routines to access the variables are the {\tt uvgetvr} and
+{\tt uvputvr} routines. These read or write (respectively) an array of
+variables of given name ({\tt varname}). The data read or written are
+in the array {\tt data} (which can be a character string or an integer, real
+or double precision
+array, depending on the routine called). Exactly {\tt n} values are
+read or written. Except for character strings, it is a fatal error,
+when reading, if {\tt n} does not
+agree with the actual number of values for the variable). For a character
+string, the string is blank padded on a read (no {\tt n} parameter is
+needed).
+
+When reading an old data set, the {\tt uvgetvr} routines should not be called
+before the first call to {\tt uvread}.
+When creating a data set, the initial values for all variables should be
+written, by calls to the {\tt uvputvr} routines, before the first call
+to the {\tt uvwrite} routine (see Section~\ref{sect:uvnext} for
+some enlightenment on this issue).
+
+Often it occurs that we are interested in a variable which has a single
+value, but we are not sure if the variable is present in the dataset.
+It would be possible to handle this with {\tt uvprobvr}
+(Section~\ref{sect:uvprobvr}) and {\tt uvgetvr}.
+If the variable is not present, then we would want to use a default value.
+The {\tt uvrdvr} routines package these three steps. It returns the
+value of the variable, {\tt data}. If the variable is missing from the
+data stream, the default value, {\tt default}, is returned. One disadvantage
+is that the {\tt uvrdvr} routines only every return a single value (the first
+value in a multi-element variable).
+
+The routine {\tt uvread} functions by scanning through the variable streams,
+and returns with its results, when the ``correlation data'' (``corr'' or
+``wcorr'')
+is encountered. If you are not interested in reading the correlation data
+(i.e. if you do not intend calling {\tt uvread}),
+then the {\tt uvscan} routine can be used to scan through the variable stream
+until another variable is encountered. Actually {\tt uvscan} may well read
+somewhat past the desired variable, until it has read
+all variables which changed simultaneously with the desired one.
+{\tt Uvscan} returns 0 is the variable was
+successfully found, -1 if an end of file was encountered, or 1 if the
+variable was not found. Note that it may not make a great
+deal of sense to intermix calls to {\tt uvscan} and {\tt uvread}.
+
+\subsection{Variable Override}
+Occassionally it is useful for the user to override the value of a uv variable.
+This is especially useful if the value of the variable is both wrong and
+important! When uvio opens an old file, for each variable name that is
+present in the uv file, it checks if there is a corresponding item with
+the same name. If there is, then the value of the item is used to override the
+value of the variable. Unfortunately the item must consist of a single
+number, and this single number will be copied into each value of the variable
+(if the variable consists of several elements).
+
+\subsection{UVNEXT}\label{sect:uvnext}
+The uv i/o routines need to know what variables change simultaneously.
+all variables that have changes simultaneously. Conversely routine
+{\tt uvwrite} assumes that all variables that change simultaneously with
+the variables that it writes, have already been written with routine
+{\tt uvputvr}. Hence if the programmer is using {\tt uvscan}, {\tt uvread} or
+{\tt uvwrite}, then simultaneity is not a concern, as long as variables are
+read after {\tt uvscan/uvread}, and written before {\tt uvwrite}. The routine
+{\tt uvnext} provides better control, where this is needed. For an input
+file, a call to {\tt uvnext} causes the next set of variables (which
+change simultaneously) to be read. For an output file, {\tt uvnext} causes
+a marker to be written into the data, to indicate that variables written
+after the call did not change simultaneously with variables written before
+the call.
+
+\subsection{Determining UV Variables and Their Characteristics}
+\label{sect:uvprobvr}
+Routine {\tt uvprobvr} checks for the existence of a variable, and
+returns information about it. The string {\tt varname}, the variable name,
+is input. The single character {\tt type} is output, being either
+`a', `r', `d', `c', `i', `j' or ` ' (a blank), which indicates (respectively)
+that the variable is of type string (ascii),
+real, double precision, complex, integer, short integer or (in the case of the
+blank) that the variable is not present in the data-set.
+The output integer {\tt length}
+gives the number of elements in the variable, and the output logical
+{\tt update} indicates whether the variable has been updated `recently' (see
+Section~\ref{sect:uvchanges}).
+Both {\tt length} and {\tt update} have no meaning if the variable is not
+present in the data-set. Before a variable is first read,
+{\tt length} will be zero, and {\tt update} will be {\tt .false.}.
+
+There is no special routine to return a complete list of the variables
+present in a uv data set, however this information is present in the 
+item ``{\tt vartable}''. This is a text file with each line
+consisting of two fields separated by a blank. The first is the ``type''
+(either a, r, d, c, i or j) of the variable, the second is the variables name.
+The following section of FORTRAN lists the variables present in a
+uv data set.
+\begin{verbatim}
+
+       character var*12,name*(?)
+       integer iostat,tno,item
+
+       call uvopen(tno,name,'old')
+       call haccess(tno,item,'vartable','read',iostat)
+       call hreada(item,var,iostat)
+       dowhile(iostat.eq.0)
+         call output(var(3:10))
+         call hreada(item,var,iostat)
+       enddo
+       call hdaccess(item,iostat)
+       call uvclose(tno)
+
+\end{verbatim}
+
+\subsection{Keeping Track of UV Variables}
+With many variables streaming past, there is a need to keep track on some
+particular variables. It would be rather inefficient and laborious to need
+to continually call {\tt uvprobvr}, to check on particular variables. The
+{\tt uvtrack} routine is used to instruct the uv routines to keep track
+of when certain variable changes its value, and to perform special
+processing on these variables at a later stage. Typically {\tt uvtrack}
+would be called soon after {\tt uvopen}, marking all the variables of
+particular interest. The special processing that the uv routines perform
+is dictated by the {\tt switches} argument. This is a string,
+consisting of several characters, each character representing a particular
+processing step to be taken. Currently there are two switches --
+{\tt u} and {\tt c}. The {\tt u} switch is used by {\tt uvupdate}, whereas
+the {\tt c} switch is used by {\tt uvcopyvr}.
+
+The routine
+{\tt uvupdate} returns a {\tt .true.} value if one of the variables, marked
+with the {\tt u} switch, has been updated ``recently''
+(see Section~\ref{sect:uvchanges}).
+
+The routine {\tt uvcopyvr} copies variables marked with the {\tt c}
+switch, from the input dataset (given by {\tt tin}) to the output
+dataset (given by {\tt tout}) if they have changed ``recently'' (see
+Section~\ref{sect:uvchanges}). You need only
+mark the variables in the input dataset.
+
+\subsection{When Do UV Variables Change?}
+\label{sect:uvchanges}
+A uv variable can change its value in any part of the
+uv variable stream. So it can change its value after each call to
+{\tt uvread}, {\tt uvnext} or {\tt uvscan}. The uv routines which need to
+know if a uv variable has changed ({\tt uvprobvr}, {\tt uvcopyvr} and
+{\tt uvupdated}) normally (i.e. by default) work on whether the particular
+variable(s) of interest has changed since the last ``mark'' in the uv stream.
+By default any routine which
+causes more of the uv stream to be read ({\tt uvread}, {\tt uvscan} and
+{\tt uvnext}) move this marker to the current point in the uv stream, before
+reading more. The {\tt uvmark} routine provides greater control at
+marking the position in the stream. Calling
+\begin{verbatim}
+      call uvmark(tno,.true.)
+\end{verbatim}
+sets the marker at the current position in the uv file, and disables
+{\tt uvread}, etc, from resetting the marker. Calling
+\begin{verbatim}
+      call uvmark(tno,.false.)
+\end{verbatim}
+also sets the marker at the current position, and enables {\tt uvread}, etc,
+to reset the marker on each call.
+
+\subsection{Massaging Steps Performed by UVREAD -- UVSET}
+\label{sect:uvset}
+\begin{table}\centering
+\begin{tabular}{|l|l|l|}					   \hline
+\bf Object	& \bf Type	& \bf N,P1,P2,P3		\\ \hline
+data		& channel	& nchan, start, width, step	\\
+		& wide		& nchan, start, width, step	\\
+		& velocity	& nchan, start, width, step	\\
+reference	& channel	&  ---, start, width, ---	\\
+		& wide		&  ---, start, width, ---	\\
+		& velocity	&  ---, start, width, ---	\\
+coord		& wavelength	&  ---, ---, ---, ---		\\
+		& nanosec	&  ---, ---, ---, ---		\\
+planet		& ---		&  ---, plmaj, plmin, plangle	\\
+selection	& amplitude	&  n, ---, ---, ---		\\
+		& window	&  n, ---, ---, ---		\\ \hline
+\end{tabular}
+\caption{Arguments to UVSET, for STATUS=OLD}
+\label{t:uvset-old}\end{table}
+As mentioned above, the {\tt uvread} routine can perform, at the programmers
+request, extra processing steps on the visibility data. These steps
+consist of averaging and
+resampling frequency channels, uv coordinate conversion and some corrections for
+planet observations. The
+steps are requested by calls to {\tt uvset}. In the call to {\tt uvset},
+the argument {\tt object} (a string) gives the general processing step that
+is being requested. The {\tt type} argument (another string)
+gives more specific details, and the arguments {\tt n} (integer)
+and {\tt p1}, {\tt p2} and {\tt p3} (reals) give any numerical values
+needed.
+
+Note that the set-up given by {\tt uvset} only becomes correctly
+activated during the next call to {\tt uvread}. Before this next call,
+the setup is in a somewhat nebulous state. So you should not expect
+various other routines associated with {\tt uvread} to work
+as expected until after the next call to {\tt uvread}. Associated
+routines include {\tt uvflgwr} and {\tt uvinfo}.
+
+Table~\ref{t:uvset-old} summarizes the possible values of the arguments to {\tt uvset}.
+Here the column titled ``Object'' and ``Type'' are the possible string
+values that {\tt object} and {\tt type} can take on. The third column
+gives the meaning for the parameters \verb+n,p1,p2,p3+.
+Dashes in the third column indicate that the arguments value is ignored in
+this particular call. While several processing can be performed
+simultaneously (several calls to {\tt uvset} will be needed to specify them
+all), others are mutually inconsistent. When mutually inconsistent
+steps are requested, the last requested step is honored. Each processing
+step requires further explanation. 
+\begin{description}
+\item[\verb+object='data'+] This gives operations on the spectral
+data. Type {\tt 'channel'} selects the channels to be returned, and possible
+averaging together of the channel data. If the original channels are
+numbers from 1 to $N$, then, by using \verb+type='channel'+, {\tt uvread} will
+return $nchan$ massaged channels, where channel $i$ of the massaged channels
+is formed by averaging $width$ channels of the original data, starting at
+channel $(i-1)\cdot step + start$. If {\tt uvset} is
+called with $nchan$ being zero, all channels are selected (note that this
+only makes sense if $start$, $step$ and $width$ are all 1).
+
+\verb+type='wide'+ is similar, but
+uses the continuum data rather than the spectral data.
+
+\verb+type='velocity'+ is also
+similar, returning a weighted sum of the spectral data. However in this
+case $start$, $width$ and $step$ are given in units of
+km/s (rather than channels). This is particularly useful if the
+spectrometer setup is not constant throughout the data or there is no
+Doppler tracking, and so the velocity of a given channel changes.
+Note that {\tt 'channel'}, {\tt 'wide'} and {\tt 'velocity'} are
+mutually exclusive. The default is {\tt 'channel'} (or {\tt wide} if there is
+no spectral data in the file), with start,increment
+and width of 1.
+
+If there are fewer than $nchan$ channels, then dummy channels, which are
+flagged as bad, are added. If $nchan$ is specified as 0, then {\tt uvread}
+will return as many channels as possible.
+
+\item[\verb+object='reference'+] The ``reference line'' is a spectral channel,
+or an average of spectral channels, which the main data is divided by. Typically
+the reference line would be a strong point source (e.g. a maser). The resultant
+data is essentially normalized and shifted, but it also has atmospheric-based
+and instrument-base calibration problems removed. The extra parameters needed
+to describe the reference line is the same as for \verb+object='data'+, except
+that the number of channels, and the increment is ignored (there is only ever
+one reference line). The default is not to have a reference line.
+\item[\verb+object='coord'+] This sets the
+units of the $u$ and $v$ coordinates returned in the preamble. Using
+{\tt 'wavelength'} or {\tt 'nanosec'} sets the units of the returned $u$
+and $v$. For {\tt 'wavelength'}, the sky frequency used is that of the first
+channel returned. The default value is {\tt 'nanosec'}.
+\item[\verb+object='planet'+] This causes 
+the $u$ and $v$ coordinates to be scaled and rotated, and the correlation
+values to be scaled,
+to adjust for changes when observing planets.
+The parameters {\tt plmaj, plmin} and {\tt plangle} give the reference
+size (arcseconds) and position angle (degrees) of the planet. If the reference
+size is 0, then the size of the first selected data record is used.
+\item[\verb+object='selection'+] This gives extra control over the uv
+selection process (see \ref{sect:select}). Currently there is only
+one possible type, {\tt 'amplitude'}, which enables or disables the
+amplitude selection process. If the argument {\tt n} is positive, then
+amplitude selection is applied (i.e. the normal action), otherwise
+amplitude selection is not applied.
+\end{description}
+
+\subsection{Setting Up UVWRITE -- UVSET}
+\begin{table}\centering
+\begin{tabular}{|l|l|l|}					   \hline
+\bf Object	& \bf Type	& \bf N,P1,P2,P3		\\ \hline
+ corr		& c		&  ---, ---, ---, ---		\\
+		& j		&  ---, ---, ---, ---		\\
+ data		& channel	&  ---, ---, ---, ---		\\
+		& wide		&  ---, ---, ---, ---		\\ \hline
+\end{tabular}
+\caption{Arguments to UVSET, for STATUS=NEW}
+\label{t:uvset-new}
+\end{table}
+\begin{description}
+\item[\verb+object='corr'+]
+The uv routines allow the correlation data to be stored on disk, either
+as floating point numbers, or as 16 bit integers with an associated scale
+factor. The 16 bit format roughly halves the disk space required, but slows
+the read and write operation, and can cause precision problems. On the
+first call to {\tt uvwrite}, the uv routines decide on the format to
+use, using a simple rule. The {\tt uvset} call
+can be used to override this rule. To be of use, it must be called before
+the first call to {\tt uvwrite}. The {\tt type} argument is a single
+character, being {\tt `r'} or {\tt `j'}, which instructs floating
+point or scaled integers, respectively, to be used.
+\item[\verb+object='data'+] This conrtols whether {\tt UVWRITE} writes the
+data to the {\tt corr} or {\tt wcorr} variable. The default is to write it
+to the {\tt corr} item (i.e. it assumes that the data is spectral, rather
+than continuum data).
+\end{description}
+
+\subsection{Selection Steps Performed by UVREAD -- UVSELECT}\index{uv-selection}
+\begin{table}\centering
+\begin{tabular}{|l|l|l|}				   \hline
+\bf Object	& \bf Units	& \bf P1,P2 		\\ \hline
+time		& Julian date	& tmin,tmax		\\
+dra		& radians	& dramin, dramax	\\
+ddec		& radians	& ddecmin, ddecmax	\\
+ra		& radians	& ramin, ramax		\\
+dec		& radians	& decmin, decmax	\\
+uvrange		& wavelengths	& uvmin, uvmax		\\
+uvnrange	& nanoseconds	& uvmin, uvmax		\\
+pointing	& arcseconds	& pntmin, pntmax	\\
+visibility	&		& vismin, vismax	\\
+increment	&		& incr, --		\\
+on		&		& state, --		\\
+polarization	& FITS code	& polval, --		\\
+amplitude	&		& ampmin, ampmax	\\
+frequency	& GHz		& freqmin, freqmax	\\
+source		&		&			\\
+window		& 		& win, --		\\
+antennae	&		& ant1, ant2		\\
+or		&		& --, --		\\
+and		&		& --, --		\\
+clear		&		& --, --		\\ \hline
+\end{tabular}
+\caption{Arguments to UVSELECT}
+\label{t:uvselect}
+\end{table}
+Another function performed by {\tt uvread} is skip or flag data that is not
+required. The routine {\tt uvselect} is used to instruct {\tt uvread} on
+which data are to be selected and rejected. Normally the programmer will
+not call {\tt uvselect} directly, but will use the {\tt SelInput} and
+{\tt SelApply} routines (see Section~\ref{sect:select}). The Users Manual gives a description
+about the way the user normally interacts with these routines.
+
+Generally {\tt uvselect} will be
+called many times, each call giving a different selection or discard criteria.
+The routines {\tt SelInput} and {\tt SelApply} merely sequentially parse and pass
+the user-given
+criteria to {\tt uvselect}. Hence the `grammar' of the sequence of calls to
+{\tt uvselect} (i.e. use of ``or'', or multiple occurrences of
+criteria based on the same parameter) is the same as the `grammar' of the
+user-specified task parameter. The `grammar' will not be repeated here.
+
+The argument {\tt object} is a string giving the parameter on which a
+select/discard criteria is based. The
+arguments {\tt p1} and {\tt p2} (both double precision) give
+added numerical parameters. Generally {\tt p1,p2} give a range of
+parameter values to select or discard. Note that the units of the values are
+consistent with the units of the underlying uv variables. These are not
+necessarily the most convenient units for the user, and so the user
+interface (given by SelInput and SelApply) performs some conversion
+between user-units and program-units.
+
+There are a few additions objects, when compared with the {\tt SelInput}
+and {\tt SelApply}
+routines. These include the {\tt ra} and {\tt dec} objects, which give the
+pointing centre RA and DEC (after {\tt dra} and {\tt ddec} have been taken
+into account). Another is the {\tt and} operator. {\tt Uvselect} treates
+{\tt and} and {\tt or} as having identical precedence, and handles these
+operators in the order in which they are given. Beware of this lack of
+precedence.
+
+The {\tt clear} object causes the selection criteria to be reset to its
+default of selected everything.
+
+The argument {\tt flag} determines
+whether data which matches the associated criteria is to be selected
+({\tt flag=.true.}) or discarded ({\tt flag=.false.}).
+
+For example, to select data with Julian days 2444239.5 to 2444240.5 (i.e.
+data for 1 January, 1980), use:
+\begin{verbatim}
+     call uvselect(tno,'time',2444239.5d0,2444240.5d0,.true.)
+\end{verbatim}
+To select all data, except for 1 January, 1980, use:
+\begin{verbatim}
+     call uvselect(tno,'time',2444239.5d0,2444240.5d0,.false.)
+\end{verbatim}
+Note: In the {\tt 'antennae'} criteria, an antennae number of 0 is treated
+as a ``match-all'' number.
+
+\subsection{Getting Information After UVREAD}
+\begin{table}\centering
+\begin{tabular}{|l|c|c|}				    \hline
+\bf Object	& \bf Units	& \bf No. Values Returned\\ \hline
+restfreq	& GHz		& nread \\
+velocity	& km/s		& nread \\
+bandwidth	& GHz		& nread \\
+frequency	& GHz		& nread \\
+sfreq		& GHz		& nread \\
+visno		&		& 1\\
+line		&		& 6\\
+amprange	& (flux units)	& 3\\			    \hline
+\end{tabular}
+\caption{Arguments to UVINFO}
+\label{t:uvinfo}
+\end{table}
+The routine {\tt uvinfo} returns information about the data returned by
+the last call to {\tt uvread}. The argument {\tt object} is a character
+string indicating the information that is desired. The argument {\tt data}
+is a double precision array, containing the returned information.
+Possible values for {\tt object} are:
+\begin{description}
+\item[\verb+'restfreq'+] {\tt Data} contains the rest frequency (GHz) for
+each channel returned by {\tt uvread}.
+\item[\verb+'velocity'+] {\tt Data} contains the velocity (km/s) for each
+channel returned by {\tt uvread}.
+\item[\verb+'frequency'+] {\tt Data} contains the frequency (GHz) of the
+channel returned by {\tt uvread}, after removing the doppler contribution.
+\item[\verb+'bandwidth'+] {\tt Data} contains the bandwidth (GHz) of each
+channel returned by {\tt uvread}.
+\item[\verb+'sfreq'+] {\tt Data} contains the sky frequency (GHz) of each
+channel returned by {\tt uvread}.
+\item[\verb+'visno'+] {\tt Data} contains a single number, which is the
+visibility number (running from 1 upwards) of the last channel read.
+\item[\verb+'amprange'+] {\tt Data} contains three values. The first value
+indicate the sort of amplitude selection that was requested for this
+record, and the second and third values give a flux range.
+Possible value of data(1) are -1 (data outside the range [data(2),data(3)]
+were rejected), 0 (no amplitude selection was active) or +1 (data inside the
+range [data(2),data(3)] were rejected).
+\end{description}
+For example, consider the following code fragment.
+\begin{verbatim}
+      integer maxchan
+      parameter(maxchan=512)
+      integer tno,nread
+      complex data(maxchan)
+      logical flags(maxchan)
+      double precision preamble(4),velocity(maxchan)
+           .
+           .
+           .
+      call uvread(tno,preamble,data,flags,maxchan,nread)
+      call uvinfo(tno,'velocity',velocity)
+\end{verbatim}
+After the call to {\tt uvinfo} will contain the velocity of each channel
+read by {\tt uvread}.
+
+\section{UV Selection -- SelInput and SelApply}\index{uv-selection}
+\label{sect:select}
+\begin{verbatim}
+     subroutine SelInput(key,sels,maxsels)
+     logical function SelProbe(sels,object,value)
+     subroutine SelApply(tno,sels,flag)
+\end{verbatim}
+These routines are the usual programmer interface to the uv selection
+routines. They perform the parsing and checking of the user input, and
+the calling of the {\tt uvselect} routine to actually implement the
+selection process. For
+more information see uv selection in the Users Manual, and the {\tt uvselect}
+routine in this Programmers Manual.
+
+{\tt SelInput} calls the {\tt keya} routine to get the user-specified
+selection criteria. This criteria is then broken into an intermediate form.
+The argument {\tt key} is the keyword to be used. Generally it should be
+{\tt 'select'}. The real array {\tt sels} (of size {\tt maxsels} elements)
+is used to hold the intermediate form of the selection.
+
+{\tt SelApply} takes a selection criteria, in its intermediate form, and
+calls the {\tt uvselect} routine to apply it. The argument {\tt flag} determines
+whether criteria is actually to be used for selection ({\tt flag=.true.}), or
+rejection ({\tt flag=.false.}).
+
+
+\begin{table}\centering
+\begin{tabular}{|l|l|}					   \hline
+\bf Object	& \bf Units				\\ \hline
+time		& Julian day.				\\
+antennae	& Baseline number = 256*ant1 + ant2.	\\
+		& One of ant1 or ant2 can be zero.	\\
+uvrange		& Wavelengths.				\\
+uvnrange	& Nanoseconds.				\\
+visibility	& Visibility number (1 relative).	\\
+dra		& Radians.				\\
+ddec		& Radians.				\\
+pointing	& Arcseconds.				\\
+amplitude	& Same as correlation data.		\\
+window		& Window Number.			\\ \hline
+\end{tabular}
+\caption{Arguments to SelProbe}
+\label{t:selprobe}
+\end{table}
+
+{\tt SelProbe} returns information about whether uv data with a particular
+parameter value may have been selected.
+It does not guarantee that such data might exist
+in any particular data file. It also has the limitation that
+information is not present to convert ``uvrange'' and ``uvnrange''
+calls into each other. These should be treated with caution. The {\tt sels}
+array is the intermediate form returned by {\tt SelInput}, and {\tt value}
+is a double precision value, giving the parameter value that is of interest.
+The {\tt object} argument determines the meaning (and the units) of this
+value. Possible values are given in Table~\ref{t:selprobe}.
+
+Note that this does not support all objects to {\tt uvselect}.
+The name must be given in full (no abbreviations and case is significant).
+
+\section{The UVDAT routines}\index{uv-data}\index{uvdat}
+The {\tt uvdat} routines are a layer of routines which sit on top of the {\tt uvio}
+routines. They are used to read old uv data-sets. They perform a number of
+functions commonly used in handling uv data. The services include:
+\begin{itemize}
+\item Retrieve a number of standard task parameters (dealing with uv files) from the
+user. These include the {\tt vis}, {\tt line}, {\tt select}, {\tt stokes} and
+{\tt ref} keywords. The uvDat routines support processing of several visibility
+files, and simplifies the book-keeping involved in tracking the several files.
+\item Apply antenna gain solutions to the data on the fly, if applicable.
+\item Perform polarization conversion steps, if required.
+\end{itemize}
+
+The {\tt uvdat} routines still allow the programmer to use most of the {\tt uvio}
+routines, to get the best of both worlds.
+Routines available are:
+\begin{verbatim}
+      subroutine uvDatInp(key,flags)
+      logical function uvDatOpn(tno)
+      subroutine uvDatCls()
+      subroutine uvDatRd(preamble,data,flags,n,nread)
+      subroutine uvDatWRd(data,flags,n,nread)
+      subroutine uvDatGti(object,ival)
+      subroutine uvDatGtr(object,rval)
+      subroutine uvDatGta(object,aval)
+      subroutine uvDatSet(object,ival)
+      logical function uvDatPrb(object,dval)
+\end{verbatim}
+
+\begin{table}\centering
+\begin{tabular}{|l|l|} \hline
+\bf Flag	& \bf Meaning \\ \hline
+\verb+'r'+	& Get reference linetype specification (keyword \verb+'ref'+). \\
+\verb+'s'+	& Get Stokes/polarisations (keyword \verb+'stokes'+). \\
+\verb+'d'+	& Perform input selection (keyword \verb+'select'+). \\
+\verb+'l'+	& Get data linetype specification (keyword \verb+'line'+). \\
+\verb+'p'+	& Apply planet rotation and scaling. \\
+\verb+'w'+	& Return u and v in wavelengths. \\
+\verb+'1'+	& Default number of channels is 1.\\
+\verb+'c'+	& Apply selfcal gain solutions.\\
+\verb+'x'+	& Data must be cross-correlation data.\\
+\verb+'a'+	& Data must be auto-correlation data.\\
+\verb+'b'+	& Input must be a single file.\\ \hline
+\end{tabular}
+\caption{Flag Values for the uvDatInp Call}
+\label{t:uvdatinp}
+\end{table}
+
+The {\tt uvDatInp} routine is called to setup the uvDat routines, and to
+retrieve the user parameters. The {\tt key} argument (a character string)
+gives the name of the keyword to use to retrieve the input visibility
+data-set name. Normally it will be {\tt 'vis'}. The {\tt flags} argument
+specifies what processing steps are to be
+performed, and which user parameters to retrieve. The {\tt flags} argument is a
+character string, each character representing a processing step or parameter
+retrieval request. The legitimate characters are given in
+Table~\ref{t:uvdatinp}.
+
+The {\tt uvDatInp} subroutine should be called when retrieving task parameters
+(i.e. between calls to {\tt keyini} and {\tt keyfin}. It does not open any files.
+
+The logical function {\tt uvDatOpn} is responsible for opening the requested
+uv data-set, and performing most of the initialization steps (e.g. calling
+uvio routines to set the selection, linetype and planet processing options
+requested by its caller and by the user). {\tt uvDatOpn} returns {\tt .true.}
+if a visibility file was successfully opened. Otherwise it returns {\tt .false.},
+indicating that there are no more files to process. {\tt uvDatOpn} also returns
+the handle of the opened uv data-set, in the variable {\tt tno}. The routine
+{\tt uvDatCls} closes the opened uv data-set. When dealing with several files,
+the caller will go through the sequence: {\tt uvDatOpn}, read data, {\tt uvDatCls},
+until {\tt uvDatOpn} returns {\tt .false.} (indicating no more files).
+
+After opening, the {\tt uvDatRd} routine can be used to read through the data.
+The arguments are the same as the {\tt uvread} call, except that the file handle
+({\tt tno}) is not required. The routine {\tt uvDatWRd} is equivalent to the
+{\tt uvwread} routine -- that is it reads the ``wide'' channels, ignoring the
+current linetype.
+
+The {\tt uvDatGt} routines are a set of inquiry routines, for the caller to
+determine what is going on inside the {\tt uvdat} routines. Blurb-blurb.
+
+The {\tt uvDatSet} routine is used for the caller to instruct {\tt uvdat} on what to
+do. Blurb-blurb
+
+The {\tt uvDatPrb} routine is used in exactly the same way (with the same
+restrictions) as the {\tt SelProbe} routine -- it is used to
+determine information about the selection criteria in force. Its arguments are the
+same as the {\tt SelProbe} routine, except that the {\tt sels} array is not needed
+(this array is stored internally in the {\tt uvdat} routines.
+
+\section{Image Data Sets}\index{image-data}
+These routines access image data sets.
+\begin{verbatim}
+      subroutine xyopen(tno,dataname,status,naxis,nsize)
+      subroutine xyclose(tno)
+      subroutine xyread(tno,index,array)
+      subroutine xywrite(tno,index,array)
+      subroutine xysetpl(tno,naxis,nsize)
+\end{verbatim}
+Here {\tt xyopen} opens the image data set, and readies it for reading or
+writing. {\tt Dataname} is the name of the data set, {\tt status} is either
+{\tt `old'} or {\tt `new'}, depending on whether an old data set is being opened
+to be read, or a new data set is being created. {\tt Naxis} gives the dimension
+of the {\tt nsize} array. {\tt Naxis} is always an input parameter.
+{\tt Nsize} gives the size, along each axis of the
+image. When opening an old data set, {\tt nsize} is filled in by {\tt xyopen},
+and passed back to the caller. For a new data set, {\tt nsize} must be set to the
+size of the desired image before the open routine is called. The argument
+{\tt tno} is the handle passed back by the open routine, and is used
+in all subsequent calls to identify the data set.
+
+{\tt Xyclose} closes the data set.
+
+{\tt Xyread} and {\tt xywrite} read or write a single row of the image. 
+The row number is given by {\tt index}, and the pixel data is stored in
+{\tt array} (a real array). By default, {\tt xyread} and {\tt xywrite} access
+a row in the first image of a multi-image data set. The routine {\tt xysetpl}
+is used to change this default to another image. In this {\tt naxis} gives the
+dimension of the {\tt nsize} array, and {\tt nsize} is an integer array
+giving the indices along the third, fourth, etc, dimension of access. For
+example, to access the n'th image in a cube, use:
+\begin{verbatim}
+
+      call xysetpl(tno,1,n)
+
+\end{verbatim}
+
+\section{Image Coordinate System}
+\miriad\ defines and stores image coordinate system information in a similar
+fashion to AIPS and FITS. Most cubes will have coordinates along its three
+axis of RA, DEC and velocity. The item {\tt ctype} gives the
+type of coordinate along a particular axis, whereas {\tt crval, crpix} and
+{\tt cdelt} give the value of the coordinate at the reference pixel, the
+value of the reference pixel, and the increment between pixels, respectively.
+Unlike AIPS and FITS, RA and DEC are given in radians, and velocity is given
+in km/sec. RA and DEC will generally need to be converted to
+hours,minutes,seconds, or degrees,minutes,seconds, before being presented
+to the user.
+
+\begin{table}\centering
+\begin{tabular}{|lcccl|}\hline
+Ctype & Crval & Crpix & Cdelt & Equation		\\ \hline
+{\tt RA---xxx}& $\alpha_0$ & $i_0$ & $\Delta\alpha$ &
+  $\alpha=\alpha_0+\Delta\alpha/\cos(\delta_0)(i-i_0)$	\\
+{\tt DEC--xxx}& $\delta_0$ & $i_0$ & $\Delta\delta$ &
+  $\delta=\delta_0+\Delta\delta(i-i_0)$			\\
+{\tt VELO-xxx}& $v_0$ & $i_0$ & $\Delta v$ &
+  $v=v_0+\Delta v(i-i_0)$				\\
+Others& $x_0$ & $i_0$ & $\Delta x$ &
+  $x=x_0+\Delta x(i-i_0)$				\\ \hline
+\end{tabular}
+\caption{Image Coordinate System}
+\label{t:coord}
+\end{table}
+
+Table~\ref{t:coord} gives quite approximate formulae for converting from
+pixel number to an astronomical coordinate. For more accurate formulae, see
+AIPS Memo No. 27, ``Non-linear Coordinate Systems in AIPS'' (Eric Greisen).
+
+For example, the following code fragment calculates RA, DEC and velocity.
+\begin{table}
+\begin{verbatim}
+      character ctype1*8,ctype2*8,ctype3*8
+      double precision crval1,crpix1,cdelt1,crval2,crpix2,cdelt2
+      double precision crval3,crpix3,cdelt3
+      double precision alpha,delta,v
+      integer i,j,k
+          .
+          .
+      (assume i,j,k contains the grid coordinate of interest)
+          .
+      call rdhda(tno,'ctype1',ctype1,' ')
+      if(ctype1(1:5).ne.'RA---')
+     *    call bug('f','First axis is not RA')
+      call rdhda(tno,'ctype2',ctype2,' ')
+      if(ctype2(1:5).ne.'DEC--')
+     *    call bug('f','Second axis is not DEC')
+      call rdhda(tno,'ctype3',ctype3,' ')
+      if(ctype1(1:5).ne.'VELO-')
+     *    call bug('f','Third axis is not velocity')
+      call rdhdd('crval1',crval1,0.d0)
+      call rdhdd('crval2',crval2,0.d0)
+      call rdhdd('crval3',crval3,0.d0)
+      call rdhdd('crpix1',crpix1,1.d0)
+      call rdhdd('crpix2',crpix2,1.d0)
+      call rdhdd('crpix3',crpix3,1.d0)
+      call rdhdd('cdelt1',cdelt1,1.d0)
+      call rdhdd('cdelt2',cdelt3,1.d0)
+      call rdhdd('cdelt3',cdelt3,1.d0)
+      alpha = crval1 + cdelt1/cos(crval2)*(i-crpix1)
+      delta = crval2 + cdelt2            *(j-crpix2)
+      v     = crval3 + cdelt3            *(k-crpix3)
+\end{verbatim}
+\caption{Coordinate System Code Example}
+\end{table}
+
+This code fragment checks that the  axis are in the order RA, DEC then velocity
+(i.e. the normal ordering)
+and aborts if they are not. Smarter code would allow them in any order, and
+would probably treat any unrecognized ctype as a linear coordinate system.
+It uses default values (if values of crval, crpix and cdelt are missing)
+of 0, 1 and 1. Probably better default values could be chosen, though if
+ctype is an item, then we can be fairly certain that the other parameters
+will also be present.
+
+\section{Region of Interest and Pixel Blanking}\index{region-of-interest}
+\index{blanking}
+It is a common situation for the user to want to process a limited subset
+of an image. It is also common for an image to contain pixels which are
+``blanked'' or have an ``undefined value''. \miriad\ routines are available to
+treat these two pixel selection operations together. The input to these
+routines are the task parameters which describe the subregion the user
+is interested in, and a masking item that may be associated with an image.
+The output is a description of the pixels selected.
+
+Each image dataset may have a masking item. This
+is a bitmap containing a flag for each pixel, indicating
+whether the pixel is good or bad. For bad pixels, the pixel value actually
+stored
+in the image is not defined, though it will be a legal or typical value.
+Zero, or the value of the pixel before blanking, is a good choice.
+
+\subsection{Regular Regions of Interest}
+Generally a minimum of three routines are needed to process even ``regular''
+regions of interest. By ``regular'' we mean that the region of interest is
+describable by a bottom left corner and top right corner (i.e. it is a filled
+grid). The routines of interest are:
+\begin{verbatim}
+        subroutine BoxInput(key,dataset,boxes,maxboxes)
+        subroutine BoxSet(boxes,naxis,nsize,flags)
+        subroutine BoxInfo(boxes,naxis,blc,trc)
+\end{verbatim}
+All routines require an integer array, {\tt boxes}, which is used to
+accumulate a description of the region of interest. Its size is given
+by argument {\tt maxboxes}. The required size is a function of the
+complexity of the region of interest, etc. Typically 1024 elements
+should be adequate.
+
+{\tt BoxInput} reads the task parameters that the user gives to
+specify the region of interest. The way this is specified is moderately
+general and (consequently) complex. See the description in the users guide.
+Included is the ability to give the region specification in a variety of
+units. To convert between some units and absolute pixels, {\tt BoxInput}
+needs information about the coordinate system being used (e.g.
+parameters {\tt crval}, {\tt crpix} and {\tt cdelt}). {\tt BoxInput} determines
+these from the \miriad\ data-set given by {\tt dataset}. Normally this is the name
+of the image dataset which we are interested in. If {\tt dataset} is
+blank, {\tt BoxInput} still functions correctly, but cannot perform unit
+conversion.
+
+{\tt BoxInput} breaks up the specification into an intermediate form, and
+stores it in the {\tt boxes} array.
+The keyword associated with the task parameter is {\tt key},
+which would normally be {\tt 'region'}. If the {\tt key} argument is blank,
+{\tt BoxInput} does not attempt to get a region-of-interest specification,
+but instead just initialises the {\tt boxes} array with the default
+region-of-interest.
+
+The programmer passes to {\tt BoxSet} information about the size of the image
+of interest. This is given in the integer array {\tt nsize}, which consists
+if {\tt naxis} elements (as with the corresponding arguments to {\tt xyopen}).
+The {\tt flags} argument is an input character string, giving information
+about the default region of interest. It can consist of:
+\begin{itemize}
+\item[q] The default region of interest is the inner quarter of the image.
+\item[1] The default region of interest consists of the first plane only.
+\item[s] The region of interest must be ``regular''. If it is not, {\tt BoxSet}
+generates a warning message, and will use the bounding box of the selected
+region.
+\end{itemize}
+
+{\tt BoxInfo} returns integer arrays {\tt blc} and {\tt trc}, which give the
+bottom
+left corner and top right corner of the region which encloses the overall
+region of interest. Both these arrays are of size {\tt naxis} integers.
+
+\subsection{Arbitrary Regions of Interest and Blanking Information}
+In addition to the above routines, there are three routines to allow treatment
+of more complex regions of interest. These are:
+\begin{verbatim}
+        subroutine BoxMask(tno,boxes,maxboxes)
+        logical function BoxRect(boxes)
+        subroutine BoxRuns(naxis,nsize,flags,boxes,
+    *        runs,maxruns,nruns,xblx,xtrc,yblc,ytrc)
+\end{verbatim}
+
+{\tt BoxMask} requests that an image mask be ANDed with the region
+requested by the user. The input to the routine is the image dataset handle,
+{\tt tno}, whereas the {\tt boxes} array is an input/output integer array
+used to accumulate region of interest information. {\tt BoxMask} can be
+called multiple times, each time ANDing in a new image mask. This is an optional
+routine. Typically it would be called for each of the input images, so that
+``blanked'' pixels in the input images would be excluded from the region of
+interest.
+
+{\tt BoxRect} returns {\tt .true.} if the region
+of interest is rectangular (i.e. whether the region of interest is entirely
+described by {\tt blc} and {\tt trc}.
+
+{\tt BoxRuns} returns the region selected for a particular plane.
+The input arguments {\tt naxis} and {\tt nsize} are analogous to the same
+arguments in the {\tt xysetpl} routine. {\tt runs} is
+an integer array of size $3\times maxruns$. On output it indicates which
+pixels in the plane are to be process.
+{\tt Runs} consists of {\tt nruns} entries of the form:
+\begin{verbatim}
+     j,imin,imax
+\end{verbatim}
+This indicates that pixels (imin,j) to (imax,j) are to be processed.
+All entries are non-overlapping.
+There may be zero or many  entries for a particular value of j. The
+table is in increasing order of j and imin. On output, the integers
+{\tt xblc, xtrc, yblc} and {\tt ytrc} give the bottom left and top right
+corners, in x and y, of the smallest subimage which contains the selected
+pixels.
+The {\tt flags} argument, an input character
+string, indicates some extra options. These are:
+\begin{itemize}
+\item[r] Make the coordinates, returned in the {\tt runs} table,
+relative to {\tt (xblc,yblc)}.
+\end{itemize}
+
+\subsection{Reading and Writing Blanking Information}
+Though the {\tt box} routines are the preferred way to read blanking
+information, it is possible to read the blanking information associated with
+an image directly. Also a routine is needed to write blanking information.
+Blanking information can be read and written by two sets of routines.
+These routines are:
+\begin{verbatim}
+
+      subroutine xyflgrd(tno,index,mask)
+      subroutine xyflgwr(tno,index,mask)
+      subroutine xymkrd(tno,index,runs,n,nread)
+      subroutine xymkwr(tno,index,runs,n)
+
+\end{verbatim}
+Here {\tt tno} is the image handle returned by {\tt xyopen}, {\tt index} gives
+the row number (analogous to {\tt xyread} and {\tt xywrite}).
+Analogous to the working of {\tt xyread} and {\tt xywrite}, the plane of the
+masking file that the routines access is set with the {\tt xysetpl} routine.
+
+The {\tt xyflgrd} and {\tt xyflgwr} routines read and write the logical
+array {\tt mask}. The {\tt mask} array has a {\tt .true.} value if the
+corresponding pixel is good, or {\tt .false.} if it is bad (or blanked).
+
+The {\tt xymkrd} and {\tt xymkwr} routines read and write a ``{\tt runs}''
+array. The {\tt runs} array is a table of the form:
+\begin{verbatim}
+
+    imin,imax
+
+\end{verbatim}
+where pixels {\tt imin} to {\tt imax} are good (not blanked). Note that
+the size of {\tt runs} is {\tt n} integers of {\tt n/2} pairs of
+ordinates. {\tt Runs} is input to
+{\tt xywrite} and output from {\tt xyread}. For {\tt xyread}, {\tt nread}
+returns the number of elements of {\tt runs} that have been filled in.
+
+Because many images are completely good (i.e. no blanked pixels),
+it would be superfluous to always carry around blanking information.
+Hence the
+mask containing the blanking information need not exist. If it does not
+exist, the read routines described above will return indicating that all
+pixels are good.
+A programmer can check if the mask exists, using the logical function
+{\tt hdprsnt}:
+\begin{verbatim}
+
+     logical exists
+     logical hdprsnt
+          .
+          .
+          .
+     exists = hdprsnt(tno,'mask')
+
+\end{verbatim}
+
+\section{Scratch Files}\index{scratch-files}
+\begin{verbatim}
+
+      subroutine scropen(tno)
+      subroutine scrread(tno,buffer,offset,length)
+      subroutine scrwrite(tno,buffer,offset,length)
+      subroutine scrclose(tno)
+
+\end{verbatim}
+The scratch i/o routines are used to create and read and write from a
+scratch file containing real-valued data. Here {\tt tno} is a handle passed
+back by the open routine,
+and must be used in all subsequent calls to the scratch i/o routines.
+{\tt Scrread} and {\tt scrwrite} read and write scratch data to/from the
+real array {\tt buffer}. {\tt Length} values are accessed, starting
+at the offset given by {\tt offset} (for a scratch file of $N$ real
+values, {\tt offset} can vary from 0 to $N-1$).
+
+\section{General Item Routines}\index{item-routines}
+These routines read and write ``small'' items (items consisting of a single
+value), or perform some operation on an entire item.
+
+In many processing systems these routines would be called ``header handling''
+routines. This has led to the rather misleading use of the
+letters ``hd'' as a component of each of the following routine names.
+\begin{verbatim}
+
+      subroutine rdhda(tno,itemname,value,default)
+      subroutine rdhri(tno,itemname,value,default)
+      subroutine rdhdr(tno,itemname,value,default)
+      subroutine rdhdd(tno,itemname,value,default)
+      subroutine rdhdc(tno,itemname,value,default)
+      subroutine wrhda(tno,itemname,value)
+      subroutine wrhdi(tno,itemname,value)
+      subroutine wrhdr(tno,itemname,value)
+      subroutine wrhdd(tno,itemname,value)
+      subroutine wrhdc(tno,itemname,value)
+      logical function hdprsnt(tno,itemname)
+      subroutine hdcopy(tin,tout,itemname)
+      subroutine hdprobe(tno,itemname,descr,type,n)
+
+\end{verbatim}
+Before these can be accessed, the data set must be
+opened with either {\tt xyopen}, {\tt uvopen} or {\tt hopen}. {\tt Tno} is the
+handle returned by these open routines.
+The name of the item to access is given by {\tt itemname} (a string).
+These names should be up to 8 lowercase alphanumeric
+characters, and (where possible) they should conform to the FITS standard.
+The {\tt rdhd} routines read an item, returning its value in {\tt value}.
+The routines {\tt rdhda, rdhdi, rdhdr, rdhdd} and {\tt rdhdc} return a string,
+integer, real, double precision or complex value, respectively. If the item
+is not found, the {\tt rdhd} routines return the default value given
+by {\tt default} (note {\tt value} and {\tt default} should be a string,
+integer, real, double precision or complex values, depending on the routine
+called). Similarly
+the {\tt wrhd} routines save the value of an item.
+
+The logical function {\tt hdprsnt} can be called to determine if a
+particular item exists.
+
+The routine {\tt hdcopy} copies an item from one data set to another.
+The item can be
+arbitrarily large. {\tt Hdcopy} copies from the data set, whose handle
+is given by {\tt tin}, to the data set whose handle is {\tt tout}.
+
+The routine {\tt hdprobe} is used to probe the characteristics of an
+item.  The string {\tt descr} returns a brief description of the item
+(intended for people, not programs, to read). If the item consists of a 
+single value (or string), the description gives the value. Otherwise
+the description gives the type and size of the item (in human readable
+form). The string {\tt type} is one of {\tt 'nonexistent',
+'integer*2', 'integer', 'real', 'double', 'complex', 'character', 'text'}
+or {\tt 'binary'} (unknown type). The integer {\tt n} gives the number
+of elements in the item. If the item does not exist, {\tt type} returns
+{\tt 'nonexistent'} and {\tt n} returns zero.
+
+\section{History Item}\index{history-file}
+Most data sets will have an associated history item. This is a text file
+containing a description of the data set, and the processing that has been
+performed on it. The routines to access the history item are as follows:
+\begin{verbatim}
+
+      subroutine hisopen(tno,status)
+      subroutine hisread(tno,line,eof)
+      subroutine hiswrite(tno,line)
+      subroutine hisinput(tno,taskname)
+      subroutine hisclose(tno)
+
+\end{verbatim}
+{\tt Hisopen} must be called before the history item can be accessed. Here
+{\tt tno} is the handle passed back by a previous call to {\tt xyopen}
+or {\tt uvopen}, and {\tt status} is a string which can be either
+{\tt 'read'}, {\tt 'write'} or {\tt 'append'}. {\tt Hisread} and {\tt hiswrite} can be
+called to read from, or append to the history item a line at a time
+({\tt line} is a character string). When reading, the
+logical value {\tt eof} turns true when the end of the history item is
+encountered. {\tt Hisinput} writes a number of history comments, giving
+the command line input parameters. This is a particularly useful routine
+to summarize user inputs. For {\tt hisinput}, {\tt taskname} is the name
+of the task. {\tt Hisclose} closes the history item.
+
+Note that there is no routine to copy a history file from one dataset to
+another. This is easily performed using the {\tt hdcopy} routine described
+in the previous section.
+
+For uniformities sake, history comments follow a standard format. The
+following is an example of the history comments written by the task
+DEMOS:
+\begin{verbatim}
+DEMOS: Miriad DeMos: version 1.0 30-apr-90'
+DEMOS: Input parameters are
+DEMOS:   vis=uvn
+DEMOS:   map=mosclean
+DEMOS: Pointing offset used (arcsec):   24.0 -30.0
+\end{verbatim}
+Note that all comments start with the task name. The first comment gives a
+version date of the program. The next
+three lines were generated by {\tt HisInput}, and the last line was an
+extra comment.
+
+\section{Low Level I/O Routines}\index{low-level-i/o}
+All i/o routines described above are built on top of a set of
+low level routines. In \miriad, a ``data set'' is a collection of 
+named items. Each item is an unstructured, byte addressable collection of data.
+It is up
+to the higher level software to impose some structure to the data items, and
+to provide a better interface for the high level programmer.
+The higher level routines should be adequate for most
+programmers. Though direct use of the following low level routines is
+discouraged, there are some instances where they may be needed.
+\begin{verbatim}
+
+      subroutine hopen(tno,dataname,status,iostat)
+      subroutine hclose(tno,iostat)
+      subroutine haccess(tno,item,itemname,status,iostat)
+      subroutine hdaccess(item,iostat)
+      subroutine hdelete(tno,itemname,iostat)
+      integer function hsize(item)
+
+      subroutine hreada(item,buffer,iostat)
+      subroutine hreadb(item,buffer,offset,length,iostat)
+      subroutine hreadj(item,buffer,offset,length,iostat)
+      subroutine hreadi(item,buffer,offset,length,iostat)
+      subroutine hreadr(item,buffer,offset,length,iostat)
+      subroutine hreadd(item,buffer,offset,length,iostat)
+
+      subroutine hwritea(item,buffer,iostat)
+      subroutine hwriteb(item,buffer,offset,length,iostat)
+      subroutine hwritej(item,buffer,offset,length,iostat)
+      subroutine hwritei(item,buffer,offset,length,iostat)
+      subroutine hwriter(item,buffer,offset,length,iostat)
+      subroutine hwrited(item,buffer,offset,length,iostat)
+
+\end{verbatim}
+Only two operations can be performed on a data set as a whole, namely to
+open and to close it. The routines to perform these are
+{\tt hopen} and {\tt hclose}. Here {\tt tno} is a handle passed back
+by {\tt hopen}, {\tt dataname} is a string giving the name of the data set,
+and {\tt status} is either {\tt 'old'} (when accessing an old data set)
+or {\tt 'new'} (when creating a data set). {\tt Iostat} is a error
+indicator, being zero if the operation was successful. Because of
+buffering performed by the i/o routines, it is very 
+important to close a data set when it is no longer needed.
+
+Before any item can be read or written, it must be ``opened'' with the
+{\tt haccess} routine. The inputs to this are: {\tt tno} (the handle passed
+back by {\tt hopen}); {\tt itemname}, a string giving the item name;
+{\tt status}, a string which can be {\tt 'read'}, {\tt 'write'} {\tt 'append'}
+or {\tt 'scratch'} (if an item is opened with {\tt status='scratch'}, an item
+is created, but then destroyed when the item is closed). The outputs from
+{\tt haccess} are firstly a handle, {\tt item}, which is used to perform i/o on
+the item, and secondly a status return, {\tt iostat}. All items should be
+closed down, with {\tt hdaccess}, before the data set as a whole is closed. 
+
+The {\tt hdelete} subroutine deletes an item.
+The integer function {\tt hsize} returns the size of an item in bytes.
+
+There are a group of i/o routines provided to read and write items. Because
+items are stored in a machine independent format, there are separate i/o
+routines for each data type.  Each i/o routine performs the conversion between
+the external (disk) format and the hosts internal format. For example, the
+{\tt hreadr} routine reads real numbers. On disk, \miriad\ reals are stored
+as IEEE floating point numbers. Internally, however, reals are stored in the
+hosts machines ``real number format''. The {\tt hreadr} routine performs the
+conversion. The read/write
+routines know nothing about the type of the data it is accessing. The
+caller must know this, and call the appropriate read/write routine.
+
+All read/write routines take the handle {\tt item} (passed back by
+{\tt haccess}) as their first argument, and pass back an i/o status as the last
+argument. The second argument is a buffer, which can be either a character
+string ({\tt hreada, hwritea, hreadb, hwriteb}), an integer array ({\tt hreadj,
+hwritej, hreadi, hwritei}), real ({\tt hreadr, hwriter}) or double precision
+({\tt hreadd, hwrited)}. {\tt Hreada} and {\tt hwritea} read/write a text file,
+performing i/o on a line at a time. Text files are stored using a line-feed
+character to delimit the end of a line (i.e. the normal UNIX convention, or the
+VMS Stream\_LF convention). The routines {\tt hreadb} and {\tt hwriteb} perform
+i/o on bytes, no conversion being performed -- these routines should rarely be
+needed). The routines {\tt hreadj} and {\tt hwritej} assume the integers are
+externally stored as 16 bit quantities, whereas {\tt hreadi} and {\tt hwritei}
+assume the integers are externally stored as 32 bit quantities. Internally,
+integers are always stored in the hosts standard integer format ({\tt int}
+in C, and an {\tt INTEGER} in FORTRAN. Real and double
+precision values are externally stored in IEEE 32 bit and 64 bit floating point
+format. All read/write routines (except {\tt hreada} and {\tt hwritea}) take
+(as inputs) a byte {\tt offset} and byte {\tt length} as their third and fourth
+arguments. Both {\tt offset} and {\tt length} must be a multiple of the size
+of the data type being accessed (e.g. they must be a multiple of 4 for
+reals, or 8 for double precision numbers). Apart from this alignment
+restriction, data items can be read in a random fashion.
+
+All I/O routines pass back an i/o status indicator. A value of zero
+indicates success, -1 indicates end-of-file, and any other values indicate
+some other error (that is system dependent).
+
+\section{Numeric Routines}
+The following numeric routines should be used in preference to others that do
+the same function, as these are reasonably optimized. Generally these are
+tailored to the target machine (e.g. on the Cray these are
+based on Cray SCILIB routines, on the Convex, they are partially based
+on VECLIB routines).
+\subsection{FFT Routines}
+\index{fft}\index{fourier-transform}
+There are three FFT routines, namely:
+\begin{verbatim}
+
+      subroutine fftrc(in,out,sign,n)
+      subroutine fftcr(in,out,sign,n)
+      subroutine fftcc(in,out,sign,n)
+
+\end{verbatim}
+These perform one-dimensional FFTs. In all cases, {\tt sign} is the sign
+of the exponent in the transform (i.e. a {\tt sign} of -1 is conventionally
+viewed as a forward transform), and {\tt n} is a power of 2 giving the
+length of the (full) sequence. ${1\over N}$ scaling is never performed
+(it is up to you to scale at the best time). {\tt In} is the input
+array, and {\tt out} is the output array. These routines
+evaluate:
+\[
+Out(l)=\sum_{k=1}^N In(k)\exp(\pm j {2\pi\over N} (k-1)(l-1))
+\]
+where $k$ and $l$ vary from $1$ to $N$.
+{\tt Fftrc} transforms a real
+sequence (i.e. {\tt in} is a real array) and outputs only the first $N/2 + 1$
+complex values. No information is lost because of the conjugate
+symmetry of FFTs of real sequences. Conversely {\tt fftcr} takes a
+complex sequence of length $N/2+1$ and produces a real sequence of length $N$.
+Finally {\tt fftcc} performs a complex to complex transform, with
+both input and output being of length $N$.
+
+\subsection{Min and Max Value Routines}\index{scilib}\index{vector}
+There are two routines to find the index of the minimum and maximum values
+of an array, namely:
+\begin{verbatim}
+
+      integer function IsMin(n,data,step)
+      integer function IsMax(n,data,step)
+
+\end{verbatim}
+
+\subsection{WHEN and ISRCH Routines}
+\begin{verbatim}
+
+      subroutine whenxxx(n,array,step,target,index,nindex)
+      integer function isrchxxx(n,array,step,target)
+
+\end{verbatim}
+The {\tt when} routines return the indices of all locations in an array that
+have a ``true relational value'' to the target. See page 4-64 of the
+Cray ``Library Reference Manual'' for more information. The {\tt isrch}
+routines return the first location in an array that has a ``true
+relational value'' to the target. See page 4-59 of the Cray ``Library
+Reference Manual''. For both routines, ``{\tt xxx}'' can be one of
+{\tt ieq, ine, ilt, ile, igt, ige, feq, fne, flt, fle, fgt} or {\tt fge}.
+These give the type of {\tt array} (Integer or Floating), and the relation
+(equal, not equal, less than, etc).
+
+Because these are well optimized routines, these routines should be used in
+preference to straightforward FORTRAN
+code that performs an equivalent function.
+
+\subsection{Blas and Linpack Routines}\index{blas}\index{linpack}
+The Blas routines are ``Basic Linear Algebra Subprograms'', while the
+Linpack routines are a suite of linear equation solving routines. It is
+common to find these routines, in an optimized form, on vector computers.
+Additionally they are public domain routines in standard FORTRAN, making them
+easy to port. The \miriad\ library (or a system library) has
+these routines in their single precision real and complex forms.
+There are a number of good references on Blas and Linpack routines
+available (e.g. 4-1 and 4-38 in the Cray ``Library Reference Manual'',
+or the Convex ``VECLIB Users Manual'').
+
+\newchapter
+\chapter{Utility Programs}\label{ch:utilities}
+A few programs have been developed to simplify the development of good
+portable code.
+
+\section{FLINT}\index{flint}
+Flint is a FORTRAN program checker. It aims at uncovering programming
+bugs and bad programming practises. Given FORTRAN source as input, Flint
+produces warnings on the terminal and in a listing file (flint.log).
+Flint checks for variables which are unused, uninitialized or
+undeclared. It also checks that the number, type and intent of arguments
+passed to a subroutine remains consistent amongst all calls (an arguments
+intent is whether its  value is input to, or output from a routine).
+\begin{verbatim}
+     flint [-acdfhjkrsux2?] [-I incdir] [-o file] [-l] file ...
+\end{verbatim}
+There are many command line switches (though the defaults are usually adequate).
+Invoking Flint with the ``?'' switch causes it to print out brief information
+about Flint, and all the command line switches. For example:
+\begin{verbatim}
+     flint -?
+\end{verbatim}
+will give some help information.
+
+\subsection{Making Flint Quieter}
+Flint assumes that the programmer follows a fairly strict programming
+convention. If the programmer does not, then Flint can produce a voluminous
+number of warning messages. There are a number of switches which help
+quieten Flint to manageable proportions.
+\begin{description}
+\item[--c] Allow interwoven continuation and comment lines. Normally Flint
+generates warnings about this (even though it is standard FORTRAN)
+An unpleasant side effect of allowing interwoven
+comment and continuation lines is that comments are not copied to the
+listing file.
+\item[--d] Do not warn when variables are not explicitly declared. Normally
+Flint insists that all variables must be explicitly declared with a `REAL',
+`INTEGER', etc, statement.
+\item[--f] Do not generate warnings about lines greater than 72 characters long
+or with an odd number of quotes. When checking if a line is
+greater than 72 characters, Flint interprets tabs as if the equivalent
+number of spaces had been typed (the VMS compiler treats a tab as a single
+character, rather than as multiple spaces).
+\item[--h] By default, Flint does not understand hollerith data. The {\tt -h}
+flag instructs Flint to recognize hollerith data as integers.
+\item[--j] Do not check if a variable has been initialized before being used.
+If a variable is not in a DATA, COMMON, PARAMETER or SAVE statement,
+and if it is not a dummy subroutine argument, then Flint normally
+attempts to check that the variable is initialized before it is used. It does
+this by checking that it is assigned to at a earlier line in the routine than
+where it is first used. This is not necessarily correct in routines with
+EQUIVALENCE statements, a maze of gotos, or which
+have conditional blocks within loops. Applying this same rule to subroutine
+arguments provides Flint with a technique for determining subroutine argument
+intent. Disabling initialization checking will also disable these
+intent-determining rules, and so should eliminate
+spurious warnings about inconsistent subroutine argument intent.
+\item[--k] Suppress warnings about common blocks with possible alignment
+problems.
+\item[--r] Do not warn about seemingly redundant variables. Redundant variables
+are those that are assigned to but never otherwise used. A common
+source of most messages is when a value returned by a subroutine
+is never used. For example, Flint will complain if you ignore values
+returned in an array used by a subroutine for scratch storage, or if values
+returned by a general subroutine are ignored in specific cases.
+\item[--s] Load definitions of FORTRAN-IV and specific intrinsic functions.
+By default, Flint only knows about the standard FORTRAN-77 generic intrinsic
+functions (e.g. COS, REAL, MAX). It does not know specific function names
+or obsolete FORTRAN-IV functions (e.g. DCOS, FLOAT, AMAX0). The `s'
+flag causes Flint to load the definitions of these as well.
+\item[--u] Do not generate a warning about variables which do not seem to be
+used. By default Flint produces such a warning for local variables (but
+not COMMON or PARAMETER variables).
+\item[--x] Allow extended subroutine and variable names. By default Flint
+warns if subroutine or variable names are longer than 8 characters, or if
+they contain underline or dollar characters. Using this flag
+allows names of arbitrary length, with dollar and underline characters.
+\end{description}
+
+\subsection{Other Flags and Arguments}
+\begin{description}
+\item[--a] This causes flint to include a crude cross-reference map in its
+log file.
+\item[--I] This flag is used to give the name of a directory to search for
+include files. When it encounters an `include' statement, flint first checks
+the local directory for the include file, and then checks other
+directories given by the {\tt -I} switch, in the order they were present
+on the command line. This is also equivalent to {\tt -i}.
+\item[--?] This causes some help information to be printed.
+\end{description}
+
+\subsection{Bugs and Shortcomings}
+Flint has a number of bugs and shortcomings, in addition to those described
+above. Flint is intended to be run on a FORTRAN that a compiler would
+accept. During the early stages of program development, a good FORTRAN compiler
+is a far better tool to find programming problems. Flint bugs and
+shortcomings include:
+\begin{itemize}
+\item IMPLICIT statements are ignored.
+\item EQUIVALENCE statements are rcudely treated.
+\item A number of archaic, poor or non-standard FORTRAN features are not
+recognized. These include the ASSIGN statement and assigned GOTO, alternate
+return statements, PAUSE, ENTRY, DECODE, ENCODE, many
+archaic forms of i/o statements, NAMELIST and many VMS extensions.
+\item While BYTE, INTEGER*2, INTEGER*4, REAL*4, REAL*8, etc statements are
+recognized, a warning message is generated, Flint otherwise treats these
+variables as either standard INTEGERs or REALs.
+\item Columns 72 to 80 of an input line (if they are present) are assumed
+to be part of the FORTRAN statement, rather than a comment field. Flint
+generates a warning if a line contains more than 72 characters.
+\end{itemize}
+Flint recognizes the following extensions, and digests them without
+complaint:
+\begin{itemize}
+\item DO/ENDDO and DOWHILE/ENDDO constructs.
+\item INCLUDE statements.
+\item Lower case characters are considered equivalent to upper case. Tabs
+are treated as if they were the equivalent number of spaces. The full
+printable ascii character set can appear in character strings.
+\item A comment line starting with the hash character (\#).
+\item The INTENT statement (see the section on Interface Definition Libraries).
+\end{itemize}
+
+\subsection{Determining the Intent of Subroutine Arguments}
+Whenever Flint finds a call to a subroutine, or the source of a subroutine,
+it attempts to determine whether a subroutine argument is either input or
+output (this is called an arguments intent). Usually Flint will build up its
+knowledge of a particular routines arguments by analyzing many uses of the
+subroutine, and generate a warning whenever inconsistent use is noted.
+
+Note that Flint expects an argument's intent to be either input or output
+or input/output. Some routines use an argument as input in some situations
+and output in others. Such routines may confuse Flint, and it
+may well generate spurious messages about the variable in the subroutine
+call being uninitialized or redundant, or that the arguments intent is
+inconsistent.
+
+Normally Flint performs a single pass, analyzing files in the order that they
+are given on the command line. When analyzing the early part of the
+input source, Flints knowledge of argument intent is very poor. Thus some
+problems (uninitialized and redundant variables) may be missed. There are
+two recipes to partially avoid this. Firstly files on the command line
+should be ordered with the files containing low level subroutines first,
+and high level programs and application code last (generally interface
+definition libraries should go first). Additionally inside files, the lower
+level routines should be first, and higher level routines last. Secondly,
+the user can ask Flint to perform two passes of the input files, by using
+the {\tt -2} flag. Two passes will not necessarily correctly
+determine the intent of all arguments  (in general $N$ passes will always
+be enough for program with subroutine calls to a depth of $N$).
+
+The following contrived example shows the worst case sort of behavior,
+where Flint builts up its knowledge of argument intent quite slowly.
+\begin{verbatim}
+     subroutine a(x)
+     real x
+     call b(x)
+     end
+     subroutine b(x)
+     real x
+     call c(x)
+     end
+     subroutine c(x)
+     real x
+     write(*,*)x
+     end
+\end{verbatim}
+It would require three passes for Flint to determine that the
+intent of argument {\tt x} in subroutine {\tt a} was input
+(the first pass would determine the intent of {\tt x} in {\tt c}, the
+second would determine the intent of {\tt x} in {\tt b}). Usually
+Flint determines argument intents by other means than just allowing information
+to bubble up from the lowest level to the higher level routines. But in the
+above example, none of these could be applied. One of the techniques is
+derived from initialization checking (described under the {\tt -i} flag).
+When determining intent accurately is important, and if the initialization
+checking algorithm is failing (i.e. producing spurious messages), then
+initialization checking should be disabled.
+
+Small changes can significantly change the number of passes needed to uncover
+all intent information. For instance, in the example above, if
+the ordering of the routines was reversed (i.e. {\tt c} first and {\tt a}
+last), or if a piece of code such as
+\begin{verbatim}
+      call a(1.0)
+\end{verbatim}
+appeared before subroutine {\tt a}, then Flint would require only one pass.
+
+\subsection{Interface Definition Libraries}
+It is a common (normal) situation in program development to have a library
+of standard functions and routines. Though Flint knows the interface
+definitions (i.e. number, type and intent of each argument) of standard
+FORTRAN
+functions, it is desirable for users to build and use a file (or
+files) describing the interfaces to their own library. This section describes
+the features in Flint to achieve this.
+
+Flint can output a text file, in a pseudo-FORTRAN, which contains interface
+descriptions of all the routines that it has encountered in this run. The
+format is:
+\begin{verbatim}
+     flint -o file ....
+\end{verbatim}
+Each routine in the output file will probably contain many `{\tt INTENT}'
+statements (part of the FORTRAN-8X standard). INTENT is used to indicate
+whether a
+subroutine argument is input to or output from a routine (or both),
+or whether this is unknown. Typically a routine description would look
+like:
+\begin{verbatim}
+      subroutine example(arg1,arg2,arg3,arg4)
+      real arg1,arg2
+      integer arg3,arg4
+      intent(in) arg1,arg3
+      intent(out) arg3,arg4
+      intent(unknown) arg2
+      end
+\end{verbatim}
+Here Flint believes {\tt arg1} is input, {\tt arg4} is output, and {\tt arg3}
+is both input and output. Flint could not determine whether {\tt arg2} was
+input or output.
+
+The user can edit an interface file created by Flint, or create an
+entire interface description by hand.
+
+Such an interface description file appears as normal FORTRAN to Flint, so it
+can be input to Flint (to teach Flint about a users standard routine interfaces)
+on subsequent uses of Flint. While these interface definitions could
+be input along with normal source files, preceding the interface file with
+the {\tt -l} (library) switch has the advantage that the source of this
+file does not appear in the listing file. Warning messages generated by
+analyzing this file are also suppressed.
+
+The following example generates a interface description file, {\tt library.dat},
+from source files {\tt routine1.for, routine2.for} and {\tt routine3.for}.
+The interface definition is then used in a subsequent Flint run on
+{\tt program.for}.
+\begin{verbatim}
+     flint -o library.dat routine1.for routine2.for routine3.for
+     flint -l library.dat program.for
+\end{verbatim}
+
+\section{RATTY}\index{ratty}
+RATTY is a FORTRAN preprocessor, which is intended to simplify the job of
+developing code that is to run on several machines.
+RATTY checks for some non-ANSI or dubious programming
+practises, secondly it converts some FORTRAN extensions into standard
+FORTRAN, and thirdly it handles some compiler directives associated with
+conditional compilation or code optimization.
+
+Apart from the
+extra trouble of running the preprocessor before compilation,  preprocessors
+are generally a nuisance, in that they make the code that is developed
+and the code that is debugged different (both compile and run time debugging).
+This tends to complicate the debugging process. To this end, RATTY
+attempts to make the minimum changes necessary to code to get it to compile.
+Comments and indentation are retained in the output, so that the output
+should
+be nearly as readable as the input. Additionally when 
+conditional compilation directives are avoided, it will be found that much
+code does not need to be preprocessed on a number of compilers.
+
+\subsection{The Command}
+The command is:
+\begin{verbatim}
+     % ratty [-s system] [-I incdir] [-D symbol] [-b] [-?] input output
+\end{verbatim}
+``Input'' is a text file containing a mildly extended FORTRAN, whereas
+``output'' is the resultant standard (?) code. The default input and
+output are the standard input and standard output. A few command line
+flags are also recognized.
+\begin{description}
+\item[-s] The string following this flag indicates the target compiler.
+RATTY performs some special processing for the following
+compilers:
+\begin{description}
+\item[vms] VAX/VMS FORTRAN compiler.
+\item[cft] Cray FORTRAN compiler for both CTSS and COS.
+\item[f77] UNIX FORTRAN-77 compiler.
+\item[convex] Convex C-1 compiler.
+\item[fx] Alliants compiler.
+\item[trace] Multiflow Trace computers.
+\item[sun] Sun computers.
+\end{description}
+RATTY assumes that target compilers other than these are strict FORTRAN-77
+compilers.
+\item[-I] The string following this flag indicates an alternate directory to
+search for include files. The -I flag can occur several times, giving several
+directories. When opening include files, first the current directory is
+check, and then each directory given by the -I flag is check in the order
+in which they appeared on the command line.
+\item[-D] The name following this flag is treated as if it appeared in a
+\#define statement. Note that unlike the cc compiler, a space is required
+between the -D and the name.
+\item[-b] If this flag is given, every backslash in the input is converted to
+two backslashes in the output. This is useful when the target compiler
+treats backslash as an ``escape character'' (i.e. several UNIX FORTRAN
+compilers).
+\item[?] This causes some help (on using ratty) to be printed.
+\end{description}
+
+\subsection{Language Extensions}
+RATTY coverts converts the following language extensions into standard
+FORTRAN, where necessary.
+\begin{itemize}
+\item Tab characters are replaced with the corresponding number of blanks.
+\item DO/ENDDO and DOWHILE/ENDDO can be replaced with standard FORTRAN-77
+loops.
+\item The IMPLICIT NONE and IMPLICIT UNDEFINED statements may be converted
+to the form required by the local compiler, or eliminated altogether.
+\item INCLUDE files are expanded.
+\end{itemize}
+
+\subsection{Optimization Directives}
+Vector computers occasionally need directives to help optimize some
+loops. The needed directives, however, vary between manufacturers. RATTY
+takes optimization directives in a standard form and converts them to
+the form recognized by the target compiler. A directive is
+introduced by either a
+`c\#' or a `\#' starting a line (i.e. starting in column 1), for example:
+\begin{verbatim}
+  c#directive
+\end{verbatim}
+or
+\begin{verbatim}
+  #directive
+\end{verbatim}
+Either form can be used, but the `c\#' form is preferable, as 
+the directive will be seen as a comment to a standard
+compiler. The directives are:
+\begin{description}
+\item[ivdep] This instructs the compiler to ignore any apparent
+vector dependencies in the immediately following loop.
+This is modestly commonly used.
+\item[maxloop nn] This indicates that the loop count of the immediately
+following loop will not exceed `nn'. This enables the compiler to
+optimize some short loops. For example
+\begin{verbatim}
+  c#maxloop 32
+      do i=1,n
+         .
+         .
+      enddo
+\end{verbatim}
+indicates that the do loop will not execute more than 32 times.
+\item[nooptimize] This directive appears just before a do-loop that should
+not be optimized.
+\end{description}
+
+\subsection{Conditional Compilation Directives}
+When coding a task for several machines, it is sometimes desirable that
+different code is executed for different machines. For example, to
+achieve good efficiency,
+the inner loops may need to be different on a scalar and vector
+machine.
+
+The basic syntax is the same as the optimization directives (i.e.
+`c\#' or `\#' starting a line, followed by the directive). However,
+as code using conditional compilation will have to be passed through
+RATTY to produce the correct code, the `\#' form is preferred.
+This will be seen as an error by a standard compiler, thus preventing
+code from accidently no being passed through the preprocessor.
+
+There are four directives of interest, namely {\tt ifdef, ifndef,
+else} and {\tt endif}. Like the cpp preprocessor, {\tt ifdef} and
+{\tt ifndef} pass the following section of code to the compiler
+if a particular ``symbol'' is defined or not.  Currently there
+are only one or two symbols that are defined. Firstly
+a symbol with the compiler target name is defined (the target compiler name
+is gained from the command line -s flag). Secondly a symbol
+``vector'' is defined if the target computer is a vector
+machine. For example the command line:
+\begin{verbatim}
+   % ratty -s cft input output
+\end{verbatim}
+causes the symbol `cft' and `vector' to become defined.
+Then, given the following code
+fragment from ``input'', the first section is copied to ``output'', whereas the
+second is discarded.
+\begin{verbatim}
+     #ifdef cft
+        .
+        .  Use this code on the Cray.
+        .
+     #else
+        .
+        .  This code on all other machines.
+        .
+     #endif
+\end{verbatim}
+
+\appendix
+\newchapter
+\input image.inc
+
+\newchapter
+\input uvvars.inc
+
+\newchapter
+\input ccall.inc
+
+\newchapter
+\input install.inc
+
+\newchapter
+\addcontentsline{toc}{chapter}{Index}
+\printindex
+
+\end{document}
