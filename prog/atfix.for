@@ -130,12 +130,13 @@ c    29jan06 rjs  Major revisions.
 c    18feb06 rjs  Various tidy up and change in defaults.
 c    24feb06 rjs  Fix bug in tsyscal=none and some tidying.
 c    27feb06 rjs  Fix bug when there are multiple frequencies.
+c    25sep06 tw/rjs  Fix bug precluding inst phase correction without dantpos
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
 	character version*(*)
 	integer MAXSELS,ATANT
-	parameter(version='AtFix: version 1.0 27-Feb-06')
+	parameter(version='AtFix: version 1.0 25-Sep-06')
 	parameter(MAXSELS=256,ATANT=6)
 c
 	real sels(MAXSELS),xyz(3*MAXANT)
@@ -924,7 +925,7 @@ c
 	delZ = xyz(3,ant2) - xyz(3,ant1)
 c
 c  The following is the model of the elevation dependence
-c  of the phase of CA01.
+c  of the phase of CA01 and CA05.
 c
 	if(doinst)then
 	  offset = 7.4563 - (15.2243 - 7.2267*el)*el
@@ -942,13 +943,15 @@ c
           sindec = sin(dec)
           antphz = 2*DPI*((delX*cosHA - delY*sinHA)*cosdec +
      *			   delZ*sindec + offset)
+        else
+          antphz = 2*DPI*offset
+        endif
 c
-	  do i=1,nchan
-	    theta = -antphz*freq(i)
-	    w = cmplx(cos(theta),sin(theta))
-	    data(i) = w*data(i)
-	  enddo
-	endif
+        do i=1,nchan
+          theta = -antphz*freq(i)
+          w = cmplx(cos(theta),sin(theta))
+          data(i) = w*data(i)
+        enddo
 c
 	end
 c************************************************************************
