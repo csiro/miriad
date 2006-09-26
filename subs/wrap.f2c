@@ -165,7 +165,7 @@ fortran subroutine uvwread(integer tno,
   tbuffer = iface_larr(n.val);
   uvwread_c(tno.val,data.addr,tbuffer,n.val,&temp);
   iface_c2f_lcvt(tbuffer,flags.addr,temp);
-#else  
+#else
   uvwread_c(tno.val,data.addr,flags.addr,n.val,&temp);
 #endif
   *(nread.addr) = temp;
@@ -264,7 +264,7 @@ fortran subroutine uvrdvra(integer tno,character var,
 {
   uvrdvr_c(tno.val,H_BYTE,var.zterm,data.addr,def.zterm,data.len);
   data.pad;
-}  
+}
 /************************************************************************/
 fortran subroutine uvrdvri(integer tno,character var,integer data,integer def)
 {
@@ -293,7 +293,7 @@ fortran subroutine uvgetvra(integer tno,character var,character data)
 {
   uvgetvr_c(tno.val,H_BYTE,var.zterm,data.addr,data.len);
   data.pad;
-}  
+}
 /************************************************************************/
 fortran subroutine uvgetvri(integer tno,character var,integer data,integer n)
 {
@@ -584,7 +584,7 @@ fortran subroutine hisread(integer tno,character line,logical eof)
 {
   int temp;
   hisread_c(tno.val,line.addr,line.len,&temp);
-  if(temp)line.pad;
+  if(!temp)line.pad;
   *(eof.addr) = (temp ? FORT_TRUE : FORT_FALSE);
 }
 /************************************************************************/
