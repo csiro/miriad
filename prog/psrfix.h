@@ -1,8 +1,8 @@
-c************************************************************************
+c***********************************************************************
 	include 'maxdim.h'
 	include 'mem.h'
 	integer MAXPOL,MAXBINS,MAXSLOT
-	parameter(MAXPOL=4,MAXBINS=32,MAXSLOT=1000)
+	parameter(MAXPOL=4,MAXBINS=64,MAXSLOT=1000)
 	integer slot(MAXPOL,MAXBASE)
 	integer pFlags(MAXBINS,MAXSLOT),pData(MAXBINS,MAXSLOT)
 	integer nchans,pols(MAXPOL)
