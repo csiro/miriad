@@ -34,8 +34,9 @@ c 11jul06 - tw - rewritten for miriad, MOPS, ATCA data
 c 17jul06 - tw - increase precision for UT spectral timestamp
 c 27jul06 - tw - fix bug in output call
 c 02aug06 - tw - accommodate Parkes MB data, report obstype
+c 25sep06 - tw - output az/el every cycle (Mopra)
 c
-c $Id: rpfread.for,v 1.4 2006/08/03 00:13:02 cal103 Exp $
+c $Id: rpfread.for,v 1.5 2006/09/26 01:17:23 cal103 Exp $
 c-----------------------------------------------------------------------
 
 	program rpfread
@@ -75,7 +76,7 @@ c-----------------------------------------------------------------------
 	character*12 dangle
 
 c program version
-	parameter (provers = 'RPFREAD: version 02-Aug-2006')
+	parameter (provers = 'RPFREAD: version 25-Sep-2006')
 
 *--------------------------------------------------------------
 
@@ -257,7 +258,7 @@ c	     write(*,*)
 		   az  = sc_buffer(iptr+1)*180./pi
 		   el  = sc_buffer(iptr+2)*180./pi
 		   par = sc_buffer(iptr+3)*180./pi
-		   if (nsp.eq.0) then
+		   if (ifno.eq.1) then
 		      if (.not.(atca .or. brief .or. header)) then
 			 write(6,104) az,el,par
 		      endif
