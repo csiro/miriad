@@ -3,7 +3,7 @@
 # dependency analysis for all source file types.
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.3 2006/09/20 08:19:53 cal103 Exp $
+# $Id: GNUmakefile,v 1.4 2006/09/26 05:29:23 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
@@ -265,7 +265,7 @@ ifeq "$(MAKEMODE)" "system"
   # Insert an object module in libmir.a and extract the list of global symbols
   # that it defines.
   $(MIRLIBR)(%.o) : $(MIRTMPD)/%.o
-	-@ $(AR) $(ARFLAGS) $@ $<
+	 @ $(AR) $(ARFLAGS) $@ $<
 	   $(list-syms)
 	   $(wait-unlock)
 	-@ $(RM) $<
@@ -449,7 +449,8 @@ else
   % lib(%) lib(%.o) : $(PGMRLIBR)(%.o) ranlib ;
 
   $(PGMRLIBR)(%.o) : $(PGMRLIBD)/%.o
-	   $(AR) $(ARFLAGS) $@ $<
+	 @ $(AR) $(ARFLAGS) $@ $<
+	   $(wait-unlock)
 	-@ $(RM) $<
 
   # Making the timestamp a prerequisite of the Fortran object module prevents
