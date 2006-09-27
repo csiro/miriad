@@ -11,7 +11,7 @@
 # $MIRARCH/GNUmakedefs, which is included by this file.
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakedefs,v 1.6 2006/09/20 08:14:12 cal103 Exp $
+# $Id: GNUmakedefs,v 1.7 2006/09/27 02:26:17 cal103 Exp $
 #-----------------------------------------------------------------------------
 # We rely only on the MIR and MIRARCH environment variables.
 MIRROOT  := $(MIR)
@@ -24,13 +24,13 @@ MIRLIBD  := $(MIRARCHD)/lib
 #=============================================================================
 #                        START OF DEFAULT DEFINITIONS
 #=============================================================================
-# Compiler options.  The *OPT and *DBG variables are for system (optimized) 
+# Compiler options.  The *OPT and *DBG variables are for system (optimized)
 # and code development (debug) compilation.  They should be defined in terms
 # of the corresponding *STD variables containig flags common to both.
 #
 # Many of these variables are overridden by the platform-specific GNUmakedefs
 # files in $MIR/scripts/*/GNUmakedefs.  For testing it may also be convenient
-# to override them on the GNU 'make' command line, e.g. gmake FCDBG=-O2.  
+# to override them on the GNU 'make' command line, e.g. gmake FCDBG=-O2.
 #-----------------------------------------------------------------------------
 
 # Source code checkout; only needed if you have the Miriad RCS repository.
@@ -84,14 +84,23 @@ STRIP    := strip
 # directory will be added, e.g. in Solaris it would be 'catman -w -M'.
 MANDB    := mandb
 
+# For compiling Miriad user and programmer guides.
+LATEX     := latex
+MAKEINDEX := makeindex
+DVIPS     := dvips
+FIG2DEV   := fig2dev
+GNUPLOT   := gnuplot
+GZIP      := gzip
+
 # Linker options for external libraries.
 #-----------------------------------------------------------------------------
 
 # RPFITS (required by a handful of tasks, primarily atlod, that read ATNF data
-# using subroutine RPFITSIN).  The full pathname must be specified because
-# this library is listed as an explicit prerequisite of some tasks (i.e. they
-# will be recompiled if it changes).
-RPFITSLIB  := /usr/local/lib/librpfits.a
+# using subroutine RPFITSIN).  It is supplied with Miriad in the binary
+# distribution kit available for some platforms.  The full pathname must be
+# specified because this library is listed as an explicit prerequisite of some
+# tasks (i.e. they will be recompiled if it changes).
+RPFITSLIB  := $(MIRLIBD)/librpfits.a
 
 # LINPACK (linear algebra package used by 17 numerically intensive programs).
 # Leave as is to use the version supplied with Miriad.
@@ -124,15 +133,18 @@ XTRALIBS   := -lm
 READLINELIB := -lreadline -ltermcap
 
 
+# Object module dependency analysis.
+#-----------------------------------------------------------------------------
 # Define a command to list the global symbols defined by an object module.
-# This is used to identify the object modules in the Miriad library that an
-# executable actually uses and is mainly intended for Miriad systems where the
-# library is under development, to save having to recompile every Miriad task
-# if just one object module changes.  Appropriate commands are pre-defined for
-# linux, linux64, and sun4sol, if you don't know how to set this for your
-# platform (or don't want this dependency analysis) then simply leave nm-syms
-# undefined (or comment it out), each executable will then depend on the
-# library as a whole.  The name of the object module is $$OBJ.
+# This is used to identify the object modules in the Miriad library that
+# define symbols needed by an executable and is mainly intended for Miriad
+# systems where the library is under development, to save having to recompile
+# every Miriad task if just one object module changes.  Appropriate commands
+# are pre-defined for linux, linux64, and sun4sol, if you don't know how to
+# set this for your platform (or don't want this dependency analysis) then
+# simply leave nm-syms undefined (or comment it out), each executable will
+# then depend on the library as a whole.  The name of the object module is
+# $$OBJ.
 nm-syms.linux   := nm -g $$OBJ | awk '/ T / {print $$3}'
 nm-syms.linux64 := $(nm-syms.linux)
 nm-syms.sun4sol := nm -g -p $$OBJ | awk '/ T / {print $$3}'
@@ -200,17 +212,16 @@ else
   MAKEMODE = system
 endif
 
-# Miriad code directories.
+# Miriad code directories.  Most of the special docs are hand-written though
+# some (cheat,tasks) are generated.
 MIRSCRPD := $(MIRROOT)/scripts
 MIRTOOLD := $(MIRROOT)/tools
 MIRINCD  := $(MIRROOT)/inc
 MIRSUBSD := $(MIRROOT)/subs
 MIRPROGD := $(MIRROOT)/prog
 MIRSPECD := $(MIRROOT)/spec
-
-# Half-way between code and system.
+MIRGUIDD := $(MIRROOT)/guides
 MIRSDOCD := $(MIRROOT)/specdoc
-MIRDOCD  := $(MIRROOT)/doc
 
 # This determines whether the RCS source repositories are present.
 MIRRCS   := $(wildcard $(MIRROOT)/RCS)
@@ -244,15 +255,21 @@ MIRMAND  := $(MIRARCHD)/man
 MIRMAN1D := $(MIRMAND)/man1
 MIRTMPD  := $(MIRARCHD)/tmp
 
+MIRDOCD  := $(MIRROOT)/doc
 MIRCATD  := $(MIRROOT)/cat
 MIRHTMLD := $(MIRROOT)/html
 
 SYSDIRS  := $(MIRARCHD) $(MIRAUXD) $(MIRBIND) $(MIRLIBD) $(MIRMAND)
 SYSDIRS  += $(MIRMAN1D) $(MIRTMPD) $(MIRCATD) $(MIRHTMLD)
 
+# For Miriad code distribution from ATNF (currently only accessible from
+# Solaris hosts).
+MIRFTPD  := /nfs/ftp/software/miriad
+
+
 # Programmer directories.
 ifeq "$(MAKEMODE)" "programmer"
-  PGMRROOT := $(shell echo $(THISDIR)/ | sed -e 's=\(^.*/miriad\).*=\1=')
+  PGMRROOT := $(shell echo $(THISDIR) | sed -e 's=^\(.*/miriad\).*=\1=')
   PGMRINCD := $(PGMRROOT)/inc
   PGMRARCH := $(PGMRROOT)/$(ARCH)
   PGMRAUXD := $(PGMRARCH)/aux
@@ -298,15 +315,15 @@ MIRSRCS  := $(filter-out $(ALLSUBD),$(MIRSRCS))
 SUBSalpha      := alpha_linux
 SUBSconvex     := convex
 SUBScygwin     := alpha_linux
-SUBSdarwin     := 
+SUBSdarwin     :=
 SUBShpux       := hpux
 SUBSi86sol     := alpha_linux
-SUBSirix       := 
+SUBSirix       :=
 SUBSirix64     := irix64
 SUBSlinux      := alpha_linux
 SUBSlinux-ia64 := alpha_linux
 SUBSlinux64    := alpha_linux
-SUBSsun4       := 
+SUBSsun4       :=
 SUBSsun4sol    :=
 SUBSunicos     := unicos
 
@@ -700,6 +717,15 @@ show ::
 	-@ echo "LDSTD      = $(LDSTD)"
 	-@ echo "LDOPT      = $(LDOPT)"
 	-@ echo "LDDBG      = $(LDDBG)"
+	-@ echo "STRIP      = $(STRIP)"
+	-@ echo ""
+	-@ echo "MANDB      = $(MANDB)"
+	-@ echo "LATEX      = $(LATEX)"
+	-@ echo "MAKEINDEX  = $(MAKEINDEX)"
+	-@ echo "DVIPS      = $(DVIPS)"
+	-@ echo "FIG2DEV    = $(FIG2DEV)"
+	-@ echo "GNUPLOT    = $(GNUPLOT)"
+	-@ echo "GZIP       = $(GZIP)"
 	-@ echo ""
 	-@ echo "Third-party libraries"
 	-@ echo "---------------------"
@@ -738,6 +764,7 @@ show ::
 	-@ echo "MIRSUBSD   = $(MIRSUBSD)"
 	-@ echo "MIRPROGD   = $(MIRPROGD)"
 	-@ echo "MIRSPECD   = $(MIRSPECD)"
+	-@ echo "MIRGUIDD   = $(MIRGUIDD)"
 	-@ echo ""
 	-@ echo "MIRSDOCD   = $(MIRSDOCD)"
 	-@ echo "MIRDOCD    = $(MIRDOCD)"
@@ -762,6 +789,7 @@ show ::
 	-@ echo ""
 	-@ echo "MIRCATD    = $(MIRCATD)"
 	-@ echo "MIRHTMLD   = $(MIRHTMLD)"
+	-@ echo "MIRFTPD    = $(MIRFTPD)"
 	-@ echo ""
 	-@ echo "SYSDIRS    = $(SYSDIRS)"
 	-@ echo ""
