@@ -11,7 +11,7 @@
 # $MIRARCH/GNUmakedefs, which is included by this file.
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakedefs,v 1.7 2006/09/27 02:26:17 cal103 Exp $
+# $Id: GNUmakedefs,v 1.8 2006/10/03 08:34:21 cal103 Exp $
 #-----------------------------------------------------------------------------
 # We rely only on the MIR and MIRARCH environment variables.
 MIRROOT  := $(MIR)
@@ -278,14 +278,17 @@ ifeq "$(MAKEMODE)" "programmer"
 
   ifeq "$(wildcard $(PGMRAUXD))" ""
     $(shell mkdir -p $(PGMRAUXD))
+    $(shell chmod u+rwx $(PGMRAUXD))
   endif
 
   ifeq "$(wildcard $(PGMRLIBD))" ""
     $(shell mkdir -p $(PGMRLIBD))
+    $(shell chmod u+rwx $(PGMRLIBD))
   endif
 
   ifeq "$(wildcard $(PGMRBIND))" ""
     $(shell mkdir -p $(PGMRBIND))
+    $(shell chmod u+rwx $(PGMRBIND))
   endif
 endif
 
@@ -341,22 +344,20 @@ export CODESUBS
 #-----------------------------------------------------------------------------
 # Canned rule definitions for dependency analysis apply to system and
 # programmer alike with only minor differences determined by the values of
-# DPNDINCL, DPNDTIME, DPNDLOCK, and DPNDTMPD defined in the makefiles that
-# use them (subs and prog).
+# DPNDINCD, DPNDLOCK, and DPNDTMPD defined in the makefiles that use them
+# (subs and prog).
 #
 # $(backsl) is used to insert a literal backslash.
 #-----------------------------------------------------------------------------
 # Locking mechanism to guard against multiple builds updating the dependency
 # lists simultaneously.  The lock file is ignored if it's more than 60s old.
-# Otherwise, wait for up to 32s for it to disappear.  The lock file itself is
-# used to store the current dependency list minus any pre-existing entries for
-# the target.
+# Otherwise, wait for up to 32s for it to disappear.
 define wait-lock
   -@ echo ""
   -@ echo "Updating dependencies for $<"
   -@ if [ -f "$(DPNDLOCK)" ] ; then $(backsl)
        $(MIRBIND)/tract -q60 "$(DPNDLOCK)" && $(backsl)
-         $(RM) "$(DPNDLOCK)" ; $(backsl)
+         $(RM) $(DPNDLOCK) ; $(backsl)
        for i in 9 8 7 6 5 4 3 2 1 ; do $(backsl)
          [ ! -f "$(DPNDLOCK)" ] && break ; $(backsl)
          echo "	waiting for lock file ($$i)..." ; $(backsl)
@@ -365,29 +366,25 @@ define wait-lock
        if [ -f "$(DPNDLOCK)" ] ; then $(backsl)
          echo "About to forcibly break lock..." ; $(backsl)
          sleep 5 ; $(backsl)
+         $(RM) $(DPNDLOCK) ; $(backsl)
        fi ; $(backsl)
      fi
-  -@ touch $(DPNDINCL)
-   @ TARGET='$$(DPNDTIME)($*) : ' ; $(backsl)
-       sed -n -e "\#^$$TARGET#!p" $(DPNDINCL) > $(DPNDLOCK)
+   @ cat /dev/null > $(DPNDLOCK)
+  -@ $(RM) $(DPNDINCD)/$*
 endef
 
-# Command sequence for updating the dependency timestamp and unlocking.
-# The 'sleep 1' is required on very fast machines to ensure that the timestamp
-# is at least one second older than the target.
-define update-time
-   @ if [ -f "$(DPNDLOCK)" ] ; then $(backsl)
-       trap "$(RM) $(DPNDAUXD)/$*" 1 2 3 15 ; $(backsl)
-       cat /dev/null > $(DPNDAUXD)/$* ; $(backsl)
-       $(AR) r $(DPNDTIME) $(DPNDAUXD)/$* ; $(backsl)
-       $(RM) $(DPNDAUXD)/$* ; $(backsl)
-       sleep 1 ; $(backsl)
-     fi
+# Command sequence for updating the full include-file dependency list.  The
+# 'sleep 1' is required on very fast machines to ensure that the timestamp is
+# at least one second older than the target.
+define update-list
+  -@ $(RM) $(DPNDINCL)
+   @ cat $(DPNDINCD)/* > $(DPNDINCL)
+  -@ sleep 1
 endef
 
 # Release the lock.
 define wait-unlock
-   @ $(RM) $(DPNDLOCK)
+  -@ $(RM) $(DPNDLOCK)
 endef
 
 
@@ -493,8 +490,7 @@ ifeq "$(MAKEMODE)" "system"
   ifdef SUBDIRS
     $(CODESUBS) : FORCE
 	 @ if [ ! -d $@ ] ; then \
-	      mkdir $@ ; \
-	      chmod ug=rwx,g+s,o=rx $@ ; \
+	      mkdir -m 2775 $@ ; \
 	      echo "" ; \
 	      echo "Created directory $@" ; \
 	   fi
@@ -510,8 +506,7 @@ ifeq "$(MAKEMODE)" "system"
 
     $(SUBDIRS) : FORCE
 	 @ if [ ! -d $@ ] ; then \
-	      mkdir $@ ; \
-	      chmod ug=rwx,g+s,o=rx $@ ; \
+	      mkdir -m 2775 $@ ; \
 	      echo "" ; \
 	      echo "Created directory $@" ; \
 	   fi
@@ -531,8 +526,7 @@ ifeq "$(MAKEMODE)" "system"
 
   $(SYSDIRS) :
 	 @ if [ ! -d "$@" ] ; then \
-	     mkdir $@ ; \
-	     chmod ug=rwx,g+s,o=rx $@ ; \
+	     mkdir -m 2775 $@ ; \
 	     echo "" ; \
 	     echo "Created directory $@" ; \
 	   fi
