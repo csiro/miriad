@@ -2,7 +2,7 @@
 # GNUmakefile for compiling Miriad documentation.
 #
 # Original: 2006/09/18, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.6 2006/10/06 05:13:55 cal103 Exp $
+# $Id: GNUmakefile,v 1.7 2006/10/06 05:20:53 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
@@ -71,10 +71,6 @@ ifeq "$(MAKEMODE)" "system"
 	 @ ./doc2html $< $(MIRHTMLD)/taskref.txt > $@ || $(RM) $@
 	-@ chmod 664 $@
 
-  .PRECIOUS : $(MIRMAND)/man1/%.1 $(MIRHTMLD)/%.html
-  %.man : $(MIRMAND)/man1/%.1 ;
-  %.html : $(MIRHTMLD)/%.html ;
-
 
   # Static and static pattern rules.
   #---------------------------------
@@ -139,9 +135,7 @@ ifeq "$(MAKEMODE)" "system"
 	-@ echo "      cheat: regenerate the Miriad cheat sheet."
 	-@ echo "      tasks: regenerate the Miriad task list."
 	-@ echo "        man: regenerate all man pages."
-	-@ echo "      %.man: regenerate the specified man page."
 	-@ echo "       html: regenerate all top-level HTML files."
-	-@ echo "     %.html: regenerate the specified html file."
 	-@ echo "  taskindex: regenerate the Miriad HTML task index."
 
 else
