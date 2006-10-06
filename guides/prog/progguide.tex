@@ -21,6 +21,7 @@
 \nonstopmode
 \documentstyle[html,twoside,makeidx,epsf]{report}
 
+\makeindex
 \input defs.inc
 
 \setlength{\parindent}{0pt}
@@ -35,7 +36,7 @@
 \addcontentsline{toc}{chapter}{Table of Contents}
 \begin{document}
 \begin{latexonly}
-\epsffile{titlepage.inc}
+\epsffile{titlepage.eps}
 \null\clearpage
 \null\clearpage
 \end{latexonly}
@@ -2115,11 +2116,11 @@ second is discarded.
 \newchapter
 \input uvvars.inc
 
-\newchapter
-\input ccall.inc
+%\newchapter
+%\input ccall.inc
 
-\newchapter
-\input install.inc
+%\newchapter
+%\input install.inc
 
 \newchapter
 \addcontentsline{toc}{chapter}{Index}
