@@ -11,7 +11,7 @@
 # $MIRARCH/GNUmakedefs, which is included by this file.
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakedefs,v 1.8 2006/10/03 08:34:21 cal103 Exp $
+# $Id: GNUmakedefs,v 1.9 2006/10/06 03:54:27 cal103 Exp $
 #-----------------------------------------------------------------------------
 # We rely only on the MIR and MIRARCH environment variables.
 MIRROOT  := $(MIR)
@@ -533,7 +533,7 @@ ifeq "$(MAKEMODE)" "system"
 
   # Rule for cleaning out system directories.
   cleansys ::
-	   $(RM) $(MIRTMPD)/*
+	   $(RM) -r $(MIRTMPD)/*
 	-@ for i in $$SUBDIRS ; do \
            if [ "$Q" != "@" -o "$(MAKELEVEL)" = 0 ] ; then \
 	      echo "" ; \
