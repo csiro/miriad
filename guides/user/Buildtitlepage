@@ -1,42 +1,63 @@
-#!/bin/csh -f
+#!/bin/sh
+#-----------------------------------------------------------------------------
+# Usage: Buildtitlepage [id]
+#-----------------------------------------------------------------------------
+# Generate the front page of the Miriad User or Programmer manual in
+# encapsulated PostScript.
+#
+# Implemented as a shell script in order to capture the date and to handle
+# both guides.  The id argument should be specified as User (default) or
+# Programmer.
+#
+# $Id: Buildtitlepage,v 1.2 2006/10/06 04:29:38 cal103 Exp $
+#-----------------------------------------------------------------------------
 
-# This contains a postscript program to generate the front page
-# of the Miriad manual.
+  if [ $# -lt 1 ]
+  then
+    ID=User
+  else
+    ID=$1
+  fi
 
-set date = (`date +"%d %h %Y"`)
-echo Title page date is $date
-cat << END-OF-FILE > titlepage.inc
+  DATE=`date +"%d %h %Y"`
+  echo "$ID Guide title page date is $DATE."
+
+cat << EOF > titlepage.eps
 %!PS
 /TM 820 def
 /BM -70 def
 /LM -20 def
 /RM 630 def
-/newline
- {currentpoint 13 sub
+
+/newline {
+  currentpoint 13 sub
   exch pop LM
-  exch moveto} def
-/nlIfNec
- {currentpoint pop RM gt
-   {newline}if} def
-/done?
- {currentpoint exch pop
-  BM lt} def
-/fillpage
- {/strg exch def
+  exch moveto
+} def
+
+/nlIfNec {currentpoint pop RM gt {newline}if} def
+
+/done? {currentpoint exch pop BM lt} def
+
+/fillpage {
+  /strg exch def
   { {pop pop nlIfNec} strg kshow
      done? {exit} if
-  }loop
-}def
+  } loop
+} def
+
 /Times-Bold findfont 10 scalefont setfont
 LM TM moveto
-.7 setgray
+0.6 setgray
 ( Miriad ) fillpage
+
 /Times-Roman findfont 50 scalefont setfont
 RM LM sub
 (Miriad)stringwidth pop sub
 2 div 500 moveto
 0 setgray
 (Miriad)show
+
 /Times-Roman findfont 20 scalefont setfont
 RM LM sub (Multichannel Image Reconstruction,) stringwidth pop sub
 2 div 460 moveto
@@ -44,18 +65,20 @@ RM LM sub (Multichannel Image Reconstruction,) stringwidth pop sub
 RM LM sub (Image Analysis and Display) stringwidth pop sub
 2 div 430 moveto
 (Image Analysis and Display)show
+
 /Times-Roman findfont 50 scalefont setfont
-RM LM sub (Users Guide) stringwidth pop sub
+RM LM sub ($ID Guide) stringwidth pop sub
 2 div 360 moveto
-(Users Guide)show
+($ID Guide)show
+
 /Times-Roman findfont 20 scalefont setfont
 RM LM sub (Bob Sault and Neil Killeen) stringwidth pop sub
 2 div 130 moveto
 (Bob Sault and Neil Killeen) show
-RM LM sub ($date) stringwidth pop sub
+RM LM sub ($DATE) stringwidth pop sub
 2 div 100 moveto
-($date) show
+($DATE) show
 RM LM sub (See http://www.atnf.csiro.au/computing/software/miriad)
 stringwidth pop sub 2 div 20 sub 50 moveto
 (See http://www.atnf.csiro.au/computing/software/miriad) show
-END-OF-FILE
+EOF
