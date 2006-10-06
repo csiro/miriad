@@ -2,7 +2,7 @@
 # GNUmakefile used to compile Miriad.
 #
 # Original: 2006/08/28, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.5 2006/10/03 08:15:14 cal103 Exp $
+# $Id: GNUmakefile,v 1.6 2006/10/06 03:57:25 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
@@ -10,8 +10,10 @@ include $(MIR)/GNUmakedefs
 ifeq "$(MAKEMODE)" "system"
   # Subdirectories in which to invoke "allsys", in order.
   #------------------------------------------------------
-  ALLSYSD  := $(findstring linpack,$(SUBDIRS))
-  ALLSYSD  += scripts tools inc subs prog spec guides
+  # Scripts must be done first to check out architecture-specific GNUmakedefs.
+  ALLSYSD  := scripts
+  ALLSYSD  += $(findstring linpack,$(SUBDIRS))
+  ALLSYSD  += tools inc subs prog spec guides
 
   show ::
 	-@ echo ""
@@ -24,7 +26,7 @@ ifeq "$(MAKEMODE)" "system"
   #---------------------------------
   .PHONY : initial
 
-  allsys :: initial MIRRC MIRRC.sh sysdirs $(ALLSYSD)
+  allsys :: initial MIRRC MIRRC.sh $(ALLSYSD)
 
   initial :: FORCE
 	-@ echo "Rebuilding/updating Miriad for $(ARCH) machines."
