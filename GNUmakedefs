@@ -11,7 +11,7 @@
 # $MIRARCH/GNUmakedefs, which is included by this file.
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakedefs,v 1.9 2006/10/06 03:54:27 cal103 Exp $
+# $Id: GNUmakedefs,v 1.10 2006/10/06 05:14:51 cal103 Exp $
 #-----------------------------------------------------------------------------
 # We rely only on the MIR and MIRARCH environment variables.
 MIRROOT  := $(MIR)
@@ -84,7 +84,11 @@ STRIP    := strip
 # directory will be added, e.g. in Solaris it would be 'catman -w -M'.
 MANDB    := mandb
 
-# For compiling Miriad user and programmer guides.
+# It should not be necessary to compile the Miriad User or Programmer Guides
+# as these are supplied with the Miriad distribution in a separate tar file.
+# However, if you do want to, uncomment the next line (thereby setting GUIDES
+# to "prog user") and ensure that the following definitions are correct.
+# GUIDES  := prog user
 LATEX     := latex
 MAKEINDEX := makeindex
 DVIPS     := dvips
@@ -714,6 +718,7 @@ show ::
 	-@ echo "STRIP      = $(STRIP)"
 	-@ echo ""
 	-@ echo "MANDB      = $(MANDB)"
+	-@ echo "GUIDES     = $(GUIDES)"
 	-@ echo "LATEX      = $(LATEX)"
 	-@ echo "MAKEINDEX  = $(MAKEINDEX)"
 	-@ echo "DVIPS      = $(DVIPS)"
