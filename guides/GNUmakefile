@@ -2,7 +2,7 @@
 # GNUmakefile for compiling Miriad documentation.
 #
 # Original: 2006/09/18, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.5 2006/10/06 04:16:15 cal103 Exp $
+# $Id: GNUmakefile,v 1.6 2006/10/06 05:13:55 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
@@ -33,6 +33,8 @@ ifeq "$(MAKEMODE)" "system"
 	-@ echo ""
 	-@ echo "MIRGIFS  = $(MIRGIFS)"
 	-@ echo "MIRHTMLS = $(MIRHTMLS)"
+	-@ echo ""
+	-@ echo "GUIDES   = $(GUIDES)"
 
 
   # Pattern rules.
@@ -79,7 +81,7 @@ ifeq "$(MAKEMODE)" "system"
   .PHONY : cheat html man symlinks taskindex tasks
 
   # The User Guide must be built before HTML in order to generate taskref.txt.
-  allsys :: symlinks cheat tasks man $(CODESUBS) html
+  allsys :: symlinks cheat tasks man $(GUIDES) html
 
   symlinks : $(MIRSDOCS:%=$(MIRDOCD)/%) ;
 
