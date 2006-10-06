@@ -2,19 +2,27 @@
 # GNUmakefile for compiling Miriad documentation.
 #
 # Original: 2006/09/18, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.4 2006/09/22 06:32:34 cal103 Exp $
+# $Id: GNUmakefile,v 1.5 2006/10/06 04:16:15 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
 
-# All doc files in the MIRSDOCD and MIRDOCD directories.
-MIRSDOCS := $(notdir $(wildcard $(MIRSDOCD)/*.doc))
-MIRDOCS  := $(filter-out $(MIRSDOCS),$(notdir $(wildcard $(MIRDOCD)/*.doc)))
+ifeq "$(MAKEMODE)" "system"
+  # System-oriented rules.
+  #-----------------------
+  # Special doc files.
+  MIRSDOCS := $(notdir $(wildcard $(MIRSDOCD)/*.doc))
 
-# Add cheat.doc and tasks.doc which may be generated for the first time here.
-MIRSDOCS := $(sort $(MIRSDOCS) cheat.doc tasks.doc)
+  # Add cheat.doc and tasks.doc which may be generated for the first time here.
+  MIRSDOCS := $(sort $(MIRSDOCS) cheat.doc tasks.doc)
 
-show ::
+  # Task and tool doc files.
+  MIRDOCS  := $(filter-out $(MIRSDOCS),$(notdir $(wildcard $(MIRDOCD)/*.doc)))
+
+  MIRGIFS  := $(filter %.gif,$(MIRSRCS))
+  MIRHTMLS := $(filter %.html,$(MIRSRCS))
+
+  show ::
 	-@ echo ""
 	-@ echo ""
 	-@ echo "Variables defined in the guides GNUmakefile"
@@ -22,10 +30,10 @@ show ::
 	-@ echo ""
 	-@ echo "MIRSDOCS = $(MIRSDOCS)"
 	-@ echo "MIRDOCS  = $(MIRDOCS)"
+	-@ echo ""
+	-@ echo "MIRGIFS  = $(MIRGIFS)"
+	-@ echo "MIRHTMLS = $(MIRHTMLS)"
 
-ifeq "$(MAKEMODE)" "system"
-  # System-oriented rules.
-  #-----------------------
 
   # Pattern rules.
   #---------------
@@ -34,13 +42,6 @@ ifeq "$(MAKEMODE)" "system"
 	-@ $(RM) $@
 	   ln -s ../specdoc/$*.doc $@
 
-  # Generate HTML from doc.
-  $(MIRHTMLD)/%.html : $(MIRDOCD)/%.doc
-	-@ $(RM) $@
-	-@ echo "doc2html ../doc/$*.doc ../html/taskref.txt > ../html/$*.html"
-	 @ ./doc2html $< $(MIRHTMLD)/taskref.txt > $@
-	-@ chmod 664 $@
-
   # Generate unix man page from doc.
   $(MIRMAND)/man1/%.1 : $(MIRDOCD)/%.doc
 	-@ $(RM) $@
@@ -48,16 +49,37 @@ ifeq "$(MAKEMODE)" "system"
 	 @ $(MIRBIND)/doc2man $< > $@
 	-@ chmod 664 $@
 
-  .PRECIOUS : $(MIRHTMLD)/%.html $(MIRMAND)/man1/%.1
-  %.html : $(MIRHTMLD)/%.html ;
+  # Install an HTML file.
+  $(MIRHTMLD)/%.html : %.html
+	-@ $(RM) $@
+	   cp $< $@
+	-@ chmod 664 $@
+
+  # Install a GIF file.
+  $(MIRHTMLD)/%.gif : %.gif
+	-@ $(RM) $@
+	   cp $< $@
+	-@ chmod 664 $@
+
+  # Generate HTML from doc.  taskref.txt lists all references to Miriad tasks
+  # in the userguide and is generated from the HTML version of the userguide.
+  $(MIRHTMLD)/%.html : $(MIRDOCD)/%.doc $(MIRHTMLD)/taskref.txt
+	-@ $(RM) $@
+	-@ echo "doc2html doc/$*.doc html/taskref.txt > html/$*.html"
+	 @ ./doc2html $< $(MIRHTMLD)/taskref.txt > $@ || $(RM) $@
+	-@ chmod 664 $@
+
+  .PRECIOUS : $(MIRMAND)/man1/%.1 $(MIRHTMLD)/%.html
   %.man : $(MIRMAND)/man1/%.1 ;
+  %.html : $(MIRHTMLD)/%.html ;
 
 
   # Static and static pattern rules.
   #---------------------------------
   .PHONY : cheat html man symlinks taskindex tasks
 
-  allsys :: symlinks cheat tasks taskindex html man
+  # The User Guide must be built before HTML in order to generate taskref.txt.
+  allsys :: symlinks cheat tasks man $(CODESUBS) html
 
   symlinks : $(MIRSDOCS:%=$(MIRDOCD)/%) ;
 
@@ -83,18 +105,28 @@ ifeq "$(MAKEMODE)" "system"
 	     chmod 664 $@ ; \
 	   fi
 
+  # Special doc files are not converted to man pages.
+  man : $(MIRDOCS:%.doc=$(MIRMAND)/man1/%.1)
+	-@ echo ""
+	   $(MANDB) $(MIRMAND)
+
+  html : $(MIRHTMLD)/INSTALL.html $(MIRHTMLS:%=$(MIRHTMLD)/%) \
+    $(MIRGIFS:%=$(MIRHTMLD)/%) taskindex \
+    $(patsubst %.doc,$(MIRHTMLD)/%.html,$(MIRDOCS) $(MIRSDOCS))
+
+  $(MIRHTMLD)/INSTALL.html : $(MIRROOT)/INSTALL.html
+	-@ $(RM) $@
+	   cp $< $@
+	-@ chmod 664 $@
+
   taskindex : $(MIRHTMLD)/taskindex.html ;
 
   $(MIRHTMLD)/taskindex.html : $(MIRDOCS:%=$(MIRDOCD)/%)
 	-@ echo "Buildhtmltask"
 	 @ ./Buildhtmltask
 
-  html : $(patsubst %.doc,$(MIRHTMLD)/%.html,$(MIRDOCS) $(MIRSDOCS)) ;
-
-  # Special doc files are not converted to man pages.
-  man : $(MIRDOCS:%.doc=$(MIRMAND)/man1/%.1)
-	-@ echo ""
-	   $(MANDB) $(MIRMAND)
+  cleansys ::
+	   $(RM) junk.doc2html.* junk.tmp.*
 
   help ::
 	-@ echo ""
@@ -102,13 +134,13 @@ ifeq "$(MAKEMODE)" "system"
 	-@ echo "--------------------------------------"
 	-@ echo "     allsys: regenerate documentation from doc files."
 	-@ echo "   symlinks: create doc -> specdoc symlinks."
-	-@ echo "      cheat: regenerate Miriad cheat sheet."
-	-@ echo "      tasks: regenerate Miriad task list."
-	-@ echo "  taskindex: regenerate Miriad HTML task index."
-	-@ echo "       html: regenerate html files."
-	-@ echo "     %.html: regenerate specified html file."
-	-@ echo "        man: regenerate man pages."
-	-@ echo "      %.man: regenerate specified man page."
+	-@ echo "      cheat: regenerate the Miriad cheat sheet."
+	-@ echo "      tasks: regenerate the Miriad task list."
+	-@ echo "        man: regenerate all man pages."
+	-@ echo "      %.man: regenerate the specified man page."
+	-@ echo "       html: regenerate all top-level HTML files."
+	-@ echo "     %.html: regenerate the specified html file."
+	-@ echo "  taskindex: regenerate the Miriad HTML task index."
 
 else
   # Programmer-oriented rules.
