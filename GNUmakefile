@@ -2,7 +2,7 @@
 # GNUmakefile used to compile Miriad.
 #
 # Original: 2006/08/28, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.7 2006/10/06 05:44:01 cal103 Exp $
+# $Id: GNUmakefile,v 1.8 2006/10/10 05:33:05 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
@@ -10,10 +10,8 @@ include $(MIR)/GNUmakedefs
 ifeq "$(MAKEMODE)" "system"
   # Subdirectories in which to invoke "allsys", in order.
   #------------------------------------------------------
-  # Scripts must be done first to check out architecture-specific GNUmakedefs.
-  ALLSYSD  := scripts
   ALLSYSD  += $(findstring linpack,$(SUBDIRS))
-  ALLSYSD  += tools inc subs prog spec guides
+  ALLSYSD  += tools scripts inc subs prog spec guides
 
   show ::
 	-@ echo ""
@@ -28,8 +26,13 @@ ifeq "$(MAKEMODE)" "system"
 
   allsys :: initial MIRRC MIRRC.sh $(ALLSYSD)
 
+  # Run chkout in scripts first to update architecture-specific GNUmakedefs.
   initial :: FORCE
+	-@ echo ""
 	-@ echo "Rebuilding/updating Miriad for $(ARCH) machines."
+     ifdef MIRRCS
+	-@ $(MAKE) -C scripts chkout
+     endif
 
   help ::
 	-@ echo ""
@@ -46,7 +49,7 @@ ifeq "$(MAKEMODE)" "system"
 
     # The Miriad distribution is split into RCS, code, compiled documentation,
     # and platform-specific binary kits.
-    DISTRCS  := .rcs ./RCS ./*/RCS ./*/*/RCS ./*/*/*/RCS
+    DISTRCS  := .rcs RCS */RCS */*/RCS */*/*/RCS
     DISTCODE := DISCLAIMER GNUmake* MIRRC* INSTALL.html cat guides inc linpack
     DISTCODE += prog scripts spec specdoc subs tests tools 
     DISTDOC  := doc html man progguide*.ps userguide*.ps
@@ -98,27 +101,31 @@ ifeq "$(MAKEMODE)" "system"
     # Regenerate the Miriad ftp distribution kits.
     dist : allsys $(MIRFTPS:%=$(MIRFTPD)/%)
 	-@ echo ""
-	   tar cf miriad-rcs.tar $(DISTRCS)
+	   cd .. ; tar cf miriad/miriad-rcs.tar $(DISTRCS:%=miriad/%)
 	   gzip miriad-rcs.tar
 	-@ $(RM) $(MIRFTPD)/miriad-rcs.tar.gz
-	 @ mv miriad-rcs.tar.gz $(MIRFTPD)/
+	   mv miriad-rcs.tar.gz $(MIRFTPD)/
+	-@ echo ""
 	-@ $(RM) .rcs-list
-	 @ find . -name RCS | sort > .rcs-list
-	   tar cXf .rcs-list miriad-code.tar $(DISTCODE)
+	 @ cd .. ; find miriad -name RCS | sort > miriad/.rcs-list
+	   cd .. ; tar cXf miriad/.rcs-list miriad/miriad-code.tar $(DISTCODE:%=miriad/%)
 	   gzip miriad-code.tar
 	-@ $(RM) $(MIRFTPD)/miriad-code.tar.gz
-	 @ mv miriad-code.tar.gz $(MIRFTPD)/
+	   mv miriad-code.tar.gz $(MIRFTPD)/
 	 @ $(RM) .rcs-list
-	   tar cf miriad-doc.tar $(DISTDOC)
+	-@ echo ""
+	   cd .. ; tar cf miriad/miriad-doc.tar $(DISTDOC:%=miriad/%)
 	   gzip miriad-doc.tar
 	-@ $(RM) $(MIRFTPD)/miriad-doc.tar.gz
-	 @ mv miriad-doc.tar.gz $(MIRFTPD)/
+	   mv miriad-doc.tar.gz $(MIRFTPD)/
+	-@ echo ""
 	 @ for bin in $(DISTBINS) ; do \
 	     echo "tar cf miriad-$$bin.tar $$bin" ; \
-	     tar cf miriad-$$bin.tar $$bin ; \
+	     tar cf miriad-$$bin.tar -C .. miriad/$$bin ; \
 	     echo "gzip miriad-$$bin.tar" ; \
 	     gzip miriad-$$bin.tar ; \
 	     $(RM) $(MIRFTPD)/miriad-$$bin.tar.gz ; \
+	     echo "mv miriad-$$bin.tar.gz $(MIRFTPD)/" ; \
 	     mv miriad-$$bin.tar.gz $(MIRFTPD)/ ; \
 	   done
 
