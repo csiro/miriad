@@ -2,7 +2,7 @@
 # GNUmakefile used to compile Miriad.
 #
 # Original: 2006/08/28, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.9 2006/10/10 05:47:34 cal103 Exp $
+# $Id: GNUmakefile,v 1.10 2006/10/10 07:14:53 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
@@ -49,7 +49,7 @@ ifeq "$(MAKEMODE)" "system"
     DISTRCS  := .rcs RCS */RCS */*/RCS */*/*/RCS
     DISTCODE := DISCLAIMER GNUmake* MIRRC* INSTALL.html cat guides inc linpack
     DISTCODE += prog scripts spec specdoc subs tests tools 
-    DISTDOC  := doc html man progguide*.ps userguide*.ps
+    DISTDOC  := doc html man progguide* userguide*
     DISTBINS := $(subst /bin,,$(wildcard */bin))
 
     show ::
@@ -98,21 +98,23 @@ ifeq "$(MAKEMODE)" "system"
 	   cp $< $@
 	 @ ci -u -m"Updated from /usr/local/include/rpfits.inc." $@
 
-    # Regenerate the Miriad ftp distribution kits.
-    dist : allsys $(MIRFTPS:%=$(MIRFTPD)/%)
+    ifeq "$(ARCH)" "sun4sol"
+      # Regenerate the Miriad ftp distribution kits.  Requires the sun4sol
+      # version of tar.
+      dist : allsys $(MIRFTPS:%=$(MIRFTPD)/%)
 	-@ echo ""
 	   cd .. ; tar cf miriad/miriad-rcs.tar $(DISTRCS:%=miriad/%)
 	   gzip miriad-rcs.tar
 	-@ $(RM) $(MIRFTPD)/miriad-rcs.tar.gz
 	   mv miriad-rcs.tar.gz $(MIRFTPD)/
 	-@ echo ""
-	-@ $(RM) .rcs-list
-	 @ cd .. ; find miriad -name RCS | sort > miriad/.rcs-list
-	   cd .. ; tar cXf miriad/.rcs-list miriad/miriad-code.tar $(DISTCODE:%=miriad/%)
+	-@ $(RM) .tarX
+	 @ cd .. ; find miriad -name RCS | sort > miriad/.tarX
+	   cd .. ; tar cXf miriad/.tarX miriad/miriad-code.tar $(DISTCODE:%=miriad/%)
 	   gzip miriad-code.tar
 	-@ $(RM) $(MIRFTPD)/miriad-code.tar.gz
 	   mv miriad-code.tar.gz $(MIRFTPD)/
-	 @ $(RM) .rcs-list
+	 @ $(RM) .tarX
 	-@ echo ""
 	   cd .. ; tar cf miriad/miriad-doc.tar $(DISTDOC:%=miriad/%)
 	   gzip miriad-doc.tar
@@ -120,24 +122,28 @@ ifeq "$(MAKEMODE)" "system"
 	   mv miriad-doc.tar.gz $(MIRFTPD)/
 	-@ echo ""
 	 @ for bin in $(DISTBINS) ; do \
+	     echo "" ; \
 	     echo "tar cf miriad-$$bin.tar $$bin" ; \
-	     tar cf miriad-$$bin.tar -C .. miriad/$$bin ; \
+	     echo miriad/$$bin/GNUmakedefs > .tarX ; \
+	     tar cXf .tarX miriad-$$bin.tar -C .. miriad/$$bin ; \
 	     echo "gzip miriad-$$bin.tar" ; \
 	     gzip miriad-$$bin.tar ; \
 	     $(RM) $(MIRFTPD)/miriad-$$bin.tar.gz ; \
 	     echo "mv miriad-$$bin.tar.gz $(MIRFTPD)/" ; \
 	     mv miriad-$$bin.tar.gz $(MIRFTPD)/ ; \
 	   done
+	-@ $(RM) .tarX
 
-    bookings :
+      bookings :
 	-@ echo ""
 	-@ echo "Checking for users needing help..."
 	 @ cd $(MIRROOT)/at_friends && ./CheckBookings.csh
 
-    updates :
+      updates :
 	-@ echo ""
 	-@ echo "Creating updates..."
 	 @ $(MIRBIND)/mirexport
+    endif
 
     help ::
 	-@ echo "       dist: allsys, then generate distribution kits."
