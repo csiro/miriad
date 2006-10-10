@@ -11,7 +11,7 @@
 # $MIRARCH/GNUmakedefs, which is included by this file.
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakedefs,v 1.10 2006/10/06 05:14:51 cal103 Exp $
+# $Id: GNUmakedefs,v 1.11 2006/10/10 05:27:56 cal103 Exp $
 #-----------------------------------------------------------------------------
 # We rely only on the MIR and MIRARCH environment variables.
 MIRROOT  := $(MIR)
@@ -86,9 +86,11 @@ MANDB    := mandb
 
 # It should not be necessary to compile the Miriad User or Programmer Guides
 # as these are supplied with the Miriad distribution in a separate tar file.
-# However, if you do want to, uncomment the next line (thereby setting GUIDES
-# to "prog user") and ensure that the following definitions are correct.
-# GUIDES  := prog user
+# However, if you do want to, set GUIDES as follows in your local GNUmakedefs
+#
+#  GUIDES := prog user
+#
+# and ensure that the following definitions are correct:
 LATEX     := latex
 MAKEINDEX := makeindex
 DVIPS     := dvips
@@ -259,12 +261,12 @@ MIRMAND  := $(MIRARCHD)/man
 MIRMAN1D := $(MIRMAND)/man1
 MIRTMPD  := $(MIRARCHD)/tmp
 
-MIRDOCD  := $(MIRROOT)/doc
 MIRCATD  := $(MIRROOT)/cat
+MIRDOCD  := $(MIRROOT)/doc
 MIRHTMLD := $(MIRROOT)/html
 
 SYSDIRS  := $(MIRARCHD) $(MIRAUXD) $(MIRBIND) $(MIRLIBD) $(MIRMAND)
-SYSDIRS  += $(MIRMAN1D) $(MIRTMPD) $(MIRCATD) $(MIRHTMLD)
+SYSDIRS  += $(MIRMAN1D) $(MIRTMPD) $(MIRCATD) $(MIRDOCD) $(MIRHTMLD)
 
 # For Miriad code distribution from ATNF (currently only accessible from
 # Solaris hosts).
