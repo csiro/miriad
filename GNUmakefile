@@ -2,7 +2,7 @@
 # GNUmakefile used to compile Miriad.
 #
 # Original: 2006/08/28, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.8 2006/10/10 05:33:05 cal103 Exp $
+# $Id: GNUmakefile,v 1.9 2006/10/10 05:47:34 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
@@ -30,9 +30,6 @@ ifeq "$(MAKEMODE)" "system"
   initial :: FORCE
 	-@ echo ""
 	-@ echo "Rebuilding/updating Miriad for $(ARCH) machines."
-     ifdef MIRRCS
-	-@ $(MAKE) -C scripts chkout
-     endif
 
   help ::
 	-@ echo ""
@@ -87,6 +84,9 @@ ifeq "$(MAKEMODE)" "system"
 
     # Update the copy of the RPFITS library and include file via allsys.
     initial :: $(MIRINCD)/rpfits.inc $(MIRLIBD)/librpfits.a
+     ifdef MIRRCS
+	-@ $(MAKE) -C scripts chkout
+     endif
 
     $(MIRLIBD)/librpfits.a : /usr/local/lib/librpfits.a
 	-@ $(RM) $@
