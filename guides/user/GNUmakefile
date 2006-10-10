@@ -2,7 +2,7 @@
 # GNUmakefile for compiling the Miriad user guide.
 #
 # Original: 2006/09/25, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.1 2006/10/06 04:27:40 cal103 Exp $
+# $Id: GNUmakefile,v 1.2 2006/10/10 05:39:38 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
@@ -45,13 +45,13 @@ ifeq "$(MAKEMODE)" "system"
 
   # Static and static pattern rules.
   #---------------------------------
-  allsys :: userguide.ps userguide_US.ps.gz $(USRHTMLD)/userhtml.html \
-    $(MIRHTMLD)/taskref.txt
+  allsys :: $(MIRROOT)/userguide.ps $(MIRROOT)/userguide_US.ps.gz \
+    $(USRHTMLD)/userhtml.html $(MIRGUIDD)/taskref.txt
 
   # Make the PostScript depend only on the source files so we won't have to
   # retain any intermediaries.
-  userguide.ps userguide_US.ps.gz : userguide.tex Buildtitlepage $(MIRINCS) \
-    $(MIRFIGS) $(MIRGS)
+  $(MIRROOT)/userguide.ps $(MIRROOT)/userguide_US.ps.gz : userguide.tex \
+    Buildtitlepage $(MIRINCS) $(MIRFIGS) $(MIRGS)
 	 @ Buildtitlepage User
 	 @ for FIG in $(basename $(MIRFIGS)) ; do \
 	     $(FIG2DEV) -L ps -p dummy_arg $$FIG.fig $$FIG.ps ; \
@@ -70,11 +70,17 @@ ifeq "$(MAKEMODE)" "system"
 	-@ $(RM) userguide.aux userguide.log userguide.lot userguide.toc
 	-@ echo ""
 	   $(DVIPS) -D 600 -Z -o userguide.ps userguide.dvi
+	-@ chmod 644 userguide.ps
+	-@ $(RM) $(MIRROOT)/userguide.ps
+	   mv userguide.ps $(MIRROOT)/
 	-@ echo ""
 	   $(DVIPS) -D 600 -Z -tletter -y940 -o userguide_US.ps userguide.dvi
 	-@ $(RM) userguide.dvi titlepage.eps
 	-@ $(RM) $(MIRFIGS:%.fig=%.ps) $(MIRGS:%.g=%.ps)
 	   $(GZIP) -f userguide_US.ps
+	-@ chmod 644 userguide_US.ps.gz
+	-@ $(RM) $(MIRROOT)/userguide_US.ps.gz
+	   mv userguide_US.ps.gz $(MIRROOT)/
 
   $(USRHTMLD)/userhtml.html : userhtml.tex $(MIRINCS) $(MIRFIGS) $(MIRGS)
 	 @ for FIG in $(basename $(MIRFIGS)) ; do \
@@ -102,9 +108,12 @@ ifeq "$(MAKEMODE)" "system"
 	-@ $(RM) userguide.dvi titlepage.eps
 
   # taskref.txt lists all references to Miriad tasks in the userguide.
-  $(MIRHTMLD)/taskref.txt : $(USRHTMLD)/userhtml.html
-	   cd $(USRHTMLD) ; $(MIRGUIDD)/user/TaskRef.pl > $@
-	-@ if [ $$? != 0 ] ; then $(RM) $@ ; fi
+  $(MIRGUIDD)/taskref.txt : $(USRHTMLD)/userhtml.html
+	   cd $(USRHTMLD) ; $(MIRGUIDD)/user/TaskRef.pl > $(MIRTMPD)/$@
+	-@ if [ $$? = 0 ] ; then \
+	     $(RM) $@ ; \
+	     mv -f $(MIRTMPD)/$@ . ; \
+	   fi
 
   cleansys ::
 	   $(RM) titlepage.eps $(MIRFIGS:%.fig=%.ps) $(MIRGS:%.g=%.ps)
