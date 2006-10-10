@@ -3,7 +3,7 @@
 # dependency analysis for all source file types.
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.5 2006/10/03 08:07:49 cal103 Exp $
+# $Id: GNUmakefile,v 1.6 2006/10/10 05:37:53 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
@@ -303,13 +303,14 @@ ifeq "$(MAKEMODE)" "system"
   # Since the rules for dependency analysis are complicated and are used
   # repeatedly they are implemented via canned rule definitions, above.
   $(DPNDTMPD)/%.f $(DPNDINCD)/% : %.for
-	$(depend-for)
+	   $(depend-for)
 
   $(DPNDTMPD)/%.i $(DPNDINCD)/% : %.f2c
-	$(depend-f2c)
+	   $(depend-f2c)
+	-@ $(RM) $(DPNDTMPD)/$*.c
 
   $(DPNDTMPD)/%.i $(DPNDINCD)/% : %.c
-	$(depend-c)
+	   $(depend-c)
 
   # This little rule tells make not to fret if it can't find a header file.
   # It may be important if a header file is deleted but remains as a
