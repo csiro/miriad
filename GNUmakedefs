@@ -8,12 +8,22 @@
 #
 # since changes will be lost if a newer version is installed.  Overriding
 # definitions should instead be made in the site-specific makedefs file,
-# $MIRARCH/GNUmakedefs, which is included by this file.
+# $MIRARCH/GNUmakedefs, which is included by this file.  Typically you should
+# only need to modify compiler names and options and the variables relating to
+# external libraries.
+#
+# Note that this makefile also includes $(MIRROOT)/scripts/$(ARCH)/GNUmakedefs
+# to fine-tune some variables with architecture-specific values.  To list all
+# variable definitions, type 'gmake show' in any Miriad directory that
+# contains a GNUmakefile ('gmake' here refers to GNU make, it may be installed
+# simply as 'make' on linux and other systems).  You can also get a summary of
+# target names by running 'gmake help'
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakedefs,v 1.11 2006/10/10 05:27:56 cal103 Exp $
+# $Id: GNUmakedefs,v 1.12 2006/10/10 06:23:36 cal103 Exp $
 #-----------------------------------------------------------------------------
-# We rely only on the MIR and MIRARCH environment variables.
+# We rely only on the MIR and MIRARCH environment variables.  ARCH will
+# evaluate to something like alpha, linux, or sun4sol.
 MIRROOT  := $(MIR)
 ARCH     := $(notdir $(MIRARCH))
 
@@ -148,15 +158,17 @@ READLINELIB := -lreadline -ltermcap
 # every Miriad task if just one object module changes.  Appropriate commands
 # are pre-defined for linux, linux64, and sun4sol, if you don't know how to
 # set this for your platform (or don't want this dependency analysis) then
-# simply leave nm-syms undefined (or comment it out), each executable will
-# then depend on the library as a whole.  The name of the object module is
-# $$OBJ.
+# simply leave nm-syms undefined (or undefine it in your GNUmakedefs), each
+# executable will then depend on the library as a whole.  The name of the
+# object module is $$OBJ.
 nm-syms.linux   := nm -g $$OBJ | awk '/ T / {print $$3}'
 nm-syms.linux64 := $(nm-syms.linux)
 nm-syms.sun4sol := nm -g -p $$OBJ | awk '/ T / {print $$3}'
 
 #=============================================================================
 #                         END OF DEFAULT DEFINITIONS
+#
+# You shouldn't need to read past here - I hope that makes you feel better!
 #=============================================================================
 
 # Get platform-specific redefinitions of the defaults defined above.
@@ -170,7 +182,7 @@ nm-syms.sun4sol := nm -g -p $$OBJ | awk '/ T / {print $$3}'
 export LC_COLLATE := POSIX
 export LC_TYPE    := POSIX
 
-# Internally set make options; unfortunately setting -r (--no-builtin-rules)
+# Internally set gmake options; unfortunately setting -r (--no-builtin-rules)
 # or -R (--no-builtin-variables, which implies -r) internally is ineffective
 # because built-in rules and variables would already have been loaded by now.
 # Those options are useful for reducing irrelevant diagnostic output from the
@@ -195,7 +207,7 @@ override define ;
 
 endef
 
-# Setting this to "@" quietens system targets.
+# Setting this to "@" quietens some system targets.
 Q := @
 
 # Indentation levels.
@@ -317,7 +329,7 @@ MIRSRCS  := $(filter-out $(ALLSUBD),$(MIRSRCS))
 #
 #   $(MIRSUBD)/unix/$(SUBS$(ARCH)):$(MIRSUBD)/unix:$(MIRSUBD)
 #
-# For example, if ARCH is linux64, using SUBSlinux below the path is
+# For example, if ARCH is linux64, using SUBSlinux64 below the path would be
 #
 #   $MIR/subs/unix/alpha_linux:$MIR/subs/unix:$MIR/subs
 
@@ -421,7 +433,8 @@ endif
 %.o: %.f
 %.o: %.c
 
-# Harmless except for producing nuisance entries in 'make -d' output.
+# The remainder are harmless except for producing nuisance entries in
+# 'gmake -d' output.
 %:: %,v
 %:: RCS/%
 %:: s.%
@@ -468,7 +481,7 @@ endif
 ifeq "$(MAKEMODE)" "system"
   # System-oriented rules.
   #-----------------------
-  .PHONY : allsys cleansys sysdirs help
+  .PHONY : allsys chkout cleansys sysdirs help
 
   # At the minimum the default rule checks out sources if the RCS repositories
   # exist.  Additional dependencies may be defined for allsys in the including
@@ -618,7 +631,7 @@ endif
 
 # Rules common to system and programmer.
 #---------------------------------------
-.PHONY : chkout command eval_vars null printenv show
+.PHONY : command eval_vars null printenv show
 
 # Target without any dependencies or commands which when used as a dependency
 # forces a target to be remade.
