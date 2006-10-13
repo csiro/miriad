@@ -2,7 +2,7 @@
 # GNUmakefile for compiling Miriad documentation.
 #
 # Original: 2006/09/18, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.8 2006/10/10 05:38:29 cal103 Exp $
+# $Id: GNUmakefile,v 1.9 2006/10/13 06:41:51 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
@@ -42,7 +42,7 @@ ifeq "$(MAKEMODE)" "system"
   # Create a doc -> specdoc symlink.
   $(MIRDOCD)/%.doc :
 	-@ $(RM) $@
-	   ln -s ../specdoc/$*.doc $@
+	   $(LN_S) ../specdoc/$*.doc $@
 
   # Generate unix man page from doc.
   $(MIRMAND)/man1/%.1 : $(MIRDOCD)/%.doc
