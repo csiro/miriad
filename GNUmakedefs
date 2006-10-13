@@ -8,11 +8,17 @@
 #
 # since changes will be lost if a newer version is installed.  Overriding
 # definitions should instead be made in the site-specific makedefs file,
-# $MIRARCH/GNUmakedefs, which is included by this file.  Typically you should
+#
+#   $(MIRARCHD)/GNUmakedefs,
+#
+# which is included by this file.  Typically you should
 # only need to modify compiler names and options and the variables relating to
 # external libraries.
 #
-# Note that this makefile also includes $(MIRROOT)/scripts/$(ARCH)/GNUmakedefs
+# Note that this makefile also includes
+#
+#   $(MIRROOT)/scripts/$(MIRARCH)/GNUmakedefs
+#
 # to fine-tune some variables with architecture-specific values.  To list all
 # variable definitions, type 'gmake show' in any Miriad directory that
 # contains a GNUmakefile ('gmake' here refers to GNU make, it may be installed
@@ -20,14 +26,14 @@
 # target names by running 'gmake help'
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakedefs,v 1.12 2006/10/10 06:23:36 cal103 Exp $
+# $Id: GNUmakedefs,v 1.13 2006/10/13 06:43:29 cal103 Exp $
 #-----------------------------------------------------------------------------
-# We rely only on the MIR and MIRARCH environment variables.  ARCH will
-# evaluate to something like alpha, linux, or sun4sol.
+# We rely only on the MIR environment variable.
 MIRROOT  := $(MIR)
-ARCH     := $(notdir $(MIRARCH))
 
-MIRARCHD := $(MIRROOT)/$(ARCH)
+# MIRARCH will evaluate to something like alpha, linux, or sun4sol.
+MIRARCH  := $(shell $(MIRROOT)/scripts/mirarch)
+MIRARCHD := $(MIRROOT)/$(MIRARCH)
 MIRBIND  := $(MIRARCHD)/bin
 MIRLIBD  := $(MIRARCHD)/lib
 
@@ -38,7 +44,7 @@ MIRLIBD  := $(MIRARCHD)/lib
 # and code development (debug) compilation.  They should be defined in terms
 # of the corresponding *STD variables containig flags common to both.
 #
-# Many of these variables are overridden by the platform-specific GNUmakedefs
+# Some of these variables are overridden by the platform-specific GNUmakedefs
 # files in $MIR/scripts/*/GNUmakedefs.  For testing it may also be convenient
 # to override them on the GNU 'make' command line, e.g. gmake FCDBG=-O2.
 #-----------------------------------------------------------------------------
@@ -47,11 +53,14 @@ MIRLIBD  := $(MIRARCHD)/lib
 CO       := co
 COFLAGS  := -f
 
+# Soft symbolic link.
+LN_S     := ln -s
+
 # Miriad's Fortran preprocessor and options.  The -b option causes backslashes
 # inside quoted text strings to be doubled; this satisfies compilers (e.g. g77
 # and Sun's f77) which treat the backslash as an escape character.
 RATTY    := $(MIRBIND)/ratty
-RATFLAGS := -b -s $(ARCH)
+RATFLAGS := -b -s $(MIRARCH)
 
 # Fortran compiler and debug/optimize flags.
 FC       := f77
@@ -61,10 +70,10 @@ FCDBG     = -g $(FCSTD)
 
 # Miriad's Fortran-C preprocessor, you shouldn't need to change this.
 INTF2C   := $(MIRBIND)/intf2c
-F2CFLAGS := -s $(ARCH)
+F2CFLAGS := -s $(MIRARCH)
 
 # C preprocessor debug/optimize flags.
-CPPSTD   := -D$(ARCH)
+CPPSTD   := -D$(MIRARCH)
 CPPOPT    = $(CPPSTD)
 CPPDBG    = $(CPPSTD)
 
@@ -107,6 +116,9 @@ DVIPS     := dvips
 FIG2DEV   := fig2dev
 GNUPLOT   := gnuplot
 GZIP      := gzip
+
+# For putting timestamps in the build log.
+TIMER     := date +"%a %Y/%m/%d %X %z, executing on $$HOST"
 
 # Linker options for external libraries.
 #-----------------------------------------------------------------------------
@@ -172,10 +184,10 @@ nm-syms.sun4sol := nm -g -p $$OBJ | awk '/ T / {print $$3}'
 #=============================================================================
 
 # Get platform-specific redefinitions of the defaults defined above.
--include $(MIR)/scripts/$(ARCH)/GNUmakedefs
+-include $(MIRROOT)/scripts/$(MIRARCH)/GNUmakedefs
 
 # Get installation-specific redefinitions of the defaults defined above.
--include $(MIR)/$(ARCH)/GNUmakedefs
+-include $(MIRARCHD)/GNUmakedefs
 
 #-----------------------------------------------------------------------------
 # Ensure that we have a consistent collating sequence and character handling.
@@ -289,10 +301,9 @@ MIRFTPD  := /nfs/ftp/software/miriad
 ifeq "$(MAKEMODE)" "programmer"
   PGMRROOT := $(shell echo $(THISDIR) | sed -e 's=^\(.*/miriad\).*=\1=')
   PGMRINCD := $(PGMRROOT)/inc
-  PGMRARCH := $(PGMRROOT)/$(ARCH)
-  PGMRAUXD := $(PGMRARCH)/aux
-  PGMRLIBD := $(PGMRARCH)/lib
-  PGMRBIND := $(PGMRARCH)/bin
+  PGMRAUXD := $(PGMRROOT)/$(MIRARCH)/aux
+  PGMRLIBD := $(PGMRROOT)/$(MIRARCH)/lib
+  PGMRBIND := $(PGMRROOT)/$(MIRARCH)/bin
 
   ifeq "$(wildcard $(PGMRAUXD))" ""
     $(shell mkdir -p $(PGMRAUXD))
@@ -327,9 +338,10 @@ MIRSRCS  := $(filter-out $(ALLSUBD),$(MIRSRCS))
 
 # The search path for operating system specific subroutines is defined as
 #
-#   $(MIRSUBD)/unix/$(SUBS$(ARCH)):$(MIRSUBD)/unix:$(MIRSUBD)
+#   $(MIRSUBD)/unix/$(SUBS$(MIRARCH)):$(MIRSUBD)/unix:$(MIRSUBD)
 #
-# For example, if ARCH is linux64, using SUBSlinux64 below the path would be
+# For example, if MIRARCH is linux64, using SUBSlinux64 below the path would
+# be
 #
 #   $MIR/subs/unix/alpha_linux:$MIR/subs/unix:$MIR/subs
 
@@ -515,12 +527,13 @@ ifeq "$(MAKEMODE)" "system"
 	   fi
         ifdef MIRRCS
 	   @ if [ ! -d $@/RCS ] ; then \
-	      ln -s $(subst $(CODEDIR),$(RCSDIR),$@) $@/RCS ; \
+	      $(LN_S) $(subst $(CODEDIR),$(RCSDIR),$@) $@/RCS ; \
 	      echo "Created symlink   $@/RCS" ; \
 	   fi
         endif
 	-@ echo ""
 	-@ echo gmake[$(MAKELEVEL)]: $(MAKE) -C $(@F) allsys
+	-@ $(TIMER)
 	-@ $(MAKE) -C $@ allsys
 
     $(SUBDIRS) : FORCE
@@ -531,12 +544,13 @@ ifeq "$(MAKEMODE)" "system"
 	   fi
         ifdef MIRRCS
 	   @ if [ ! -d $@/RCS ] ; then \
-	      ln -s $(RCSDIR)/$@ $@/RCS ; \
+	      $(LN_S) $(RCSDIR)/$@ $@/RCS ; \
 	      echo "Created symlink   $@/RCS" ; \
 	   fi
         endif
 	-@ echo ""
 	-@ echo gmake[$(MAKELEVEL)]: $(MAKE) -C $@
+	-@ $(TIMER)
 	-@ $(MAKE) -C $@
   endif
 
@@ -695,8 +709,8 @@ show ::
 	-@ echo "Variables defined in GNUmakedefs"
 	-@ echo "================================"
 	-@ echo ""
-	-@ echo "MIR        = $(MIR)"
-	-@ echo "ARCH       = $(ARCH)"
+	-@ echo "MIRROOT    = $(MIRROOT)"
+	-@ echo "MIRARCH    = $(MIRARCH)"
 	-@ echo ""
 	-@ echo "Preprocessors, compilers, etc. and their flags."
 	-@ echo "-----------------------------------------------"
@@ -812,7 +826,6 @@ show ::
 	-@ echo "----------------------"
 	-@ echo "PGMRROOT   = $(PGMRROOT)"
 	-@ echo "PGMRINCD   = $(PGMRINCD)"
-	-@ echo "PGMRARCH   = $(PGMRARCH)"
 	-@ echo "PGMRLIBD   = $(PGMRLIBD)"
 	-@ echo "PGMRBIND   = $(PGMRBIND)"
 	-@ echo ""
