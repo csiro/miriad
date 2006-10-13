@@ -7,9 +7,9 @@ c& nebk
 c: image analysis
 c+
 c	MAXFIT finds the maximum value of a region of an image.
-c	This region may be three dimensional.  It then fits a 
-c	parabola to a 3x3 array extracted from the first two 
-c	dimensions of the image and centred on the maximum pixel 
+c	This region may be three dimensional.  It then fits a
+c	parabola to a 3x3 array extracted from the first two
+c	dimensions of the image and centred on the maximum pixel
 c	in the specified region.  MAXFIT then returns the location
 c	and value of the maximum pixel and the fitted pixel.
 c
@@ -19,7 +19,7 @@ c@ region
 c	Region of interest in which to search for the maximum pixel.
 c	The default is the whole image.
 c@ options
-c	"abs"  means that MAXFIT search for the maximum absolute 
+c	"abs"  means that MAXFIT search for the maximum absolute
 c	       pixel value rather than the default, which is just
 c	       the maximum pixel value.
 c@ log
@@ -34,7 +34,7 @@ c    nebk 20may92  Improve documentation
 c    nebk 02dec92  Add RA and DEC format output
 c    rjs  04jan93  Rename "pad" to "pader" to avoid conflict.
 c    mjs  12mar93  Use maxnax.h file instead of setting own value.
-c    nebk 22jun93  Increase the size of STR 
+c    nebk 22jun93  Increase the size of STR
 c    nebk 26aug93  Include new "absdeg" and "reldeg" axis types
 c    nebk 16sep93  Add keyword log
 c    nebk 09jan94  Convert CRPIX to double precision
@@ -46,6 +46,8 @@ c    nebk 29nov95  New call for CTYPECO
 c    rjs  03jul96  In "abs" mode, print out the value of the pixel (not
 c		   absolute value).
 c    rjs  23jul99  Break out "solve" routine to new subroutine pkfit.for
+c
+c  $Id: maxfit.for,v 1.2 2006/10/13 02:21:08 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -58,10 +60,10 @@ c
       double precision pixmax(maxnax)
       real data(maxdim), dmax, fit(9), coeffs(6), fmax, dd
       integer nsize(maxnax), blc(maxnax), trc(maxnax), boxes(maxboxes),
-     +  runs(3,maxruns), ploc(maxnax), strlen(maxnax), nruns, lun, 
+     +  runs(3,maxruns), ploc(maxnax), strlen(maxnax), nruns, lun,
      +  naxis, i, j, k, l, ip, il, len1
-      character ctype*9, typesi(maxnax)*9, typeso(maxnax)*9, 
-     +  strout(maxnax)*50, file*40, text*132, logf*132
+      character ctype*9, typesi(maxnax)*9, typeso(maxnax)*9,
+     +  strout(maxnax)*50, infile*128, text*132, logf*132
       logical doabs
 c-----------------------------------------------------------------------
       call output ('MAXFIT: version 29-Nov-95')
@@ -69,16 +71,16 @@ c
 c  Get inputs
 c
       call keyini
-      call keya ('in', file, ' ')
-      if (file.eq.' ') call bug ('f', 'Input file must be given')
-      call boxinput ('region', file, boxes, maxboxes)
+      call keya ('in', infile, ' ')
+      if (infile.eq.' ') call bug ('f', 'Input file must be given')
+      call boxinput ('region', infile, boxes, maxboxes)
       call keya ('log', logf, ' ')
       call getopt (doabs)
       call keyfin
 c
 c  Open file
 c
-      call xyopen (lun, file, 'old', maxnax, nsize)
+      call xyopen (lun, infile, 'old', maxnax, nsize)
       call rdhdi (lun, 'naxis', naxis, 0)
       if (naxis.eq.0) call bug ('f', 'Zero dimensions in image')
       naxis = min(3,naxis)
@@ -145,12 +147,12 @@ c
         end if
       end do
 c
-c Now pick out the 3x3 region for fitting.  Blanked pixels are not 
-c dealt with in this step. 
+c Now pick out the 3x3 region for fitting.  Blanked pixels are not
+c dealt with in this step.
 c
       call xysetpl (lun, 1, ploc(3))
       k = 0
-c 
+c
       do j = ploc(2)-1, ploc(2)+1
         call xyread (lun, j, data)
         do i = ploc(1)-1, ploc(1)+1
@@ -230,7 +232,7 @@ c
         typesi(i) = 'abspix'
       end do
       call setoaco (lun, 'off', naxis, 0, typeso)
-      call w2wfco (lun, naxis, typesi, ' ', pixmax, typeso, ' ', 
+      call w2wfco (lun, naxis, typesi, ' ', pixmax, typeso, ' ',
      +             .false., strout, strlen)
 c
 c Tell user
@@ -246,7 +248,7 @@ c
         call output (text)
         if (logf.ne.' ') call logwrit (text)
       end do
-c                
+c
 c Compute world coordinate
 c
       call output (' ')
@@ -257,7 +259,7 @@ c
 c Convert coordinates
 c
       call setoaco (lun, 'abs', naxis, 0, typeso)
-      call w2wfco (lun, naxis, typesi, ' ', pixmax, typeso, ' ', 
+      call w2wfco (lun, naxis, typesi, ' ', pixmax, typeso, ' ',
      +             .false., strout, strlen)
 c
 c Tell user
@@ -301,24 +303,24 @@ c************************************************************************
       subroutine getopt (doabs)
 c
 c     Decode options array into named variables.
-c       
+c
 c   Output:
 c     doabs     Search for absolute maximum pixel
-c       
+c
 c-----------------------------------------------------------------------
       implicit none
-c       
+c
       logical doabs
 cc
       integer maxopt
       parameter (maxopt = 1)
-c       
+c
       character opshuns(maxopt)*3
       logical present(maxopt)
       data opshuns /'abs'/
 c-----------------------------------------------------------------------
       call options ('options', opshuns, present, maxopt)
-c       
+c
       doabs = present(1)
 c
       end
