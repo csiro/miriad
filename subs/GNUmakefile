@@ -3,7 +3,7 @@
 # dependency analysis for all source file types.
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.6 2006/10/10 05:37:53 cal103 Exp $
+# $Id: GNUmakefile,v 1.7 2006/10/13 06:40:59 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
@@ -14,12 +14,12 @@ MIROS1D  := $(MIRSUBSD)/unix
 MIROSRCS := $(notdir $(wildcard $(MIROS1D)/*.*))
 
 MIROS2D  :=
-ifneq "$(SUBS$(ARCH))" ""
-  MIROS2D  := $(MIROS1D)/$(SUBS$(ARCH))
+ifneq "$(SUBS$(MIRARCH))" ""
+  MIROS2D  := $(MIROS1D)/$(SUBS$(MIRARCH))
   MIROSRCS := $(sort $(MIROSRCS) $(notdir $(wildcard $(MIROS2D)/*.*)))
 endif
 
-MIRINCS  := -I $(MIRSUBS) -I $(MIRINC)
+MIRINCS  := -I $(MIRSUBSD) -I $(MIRINCD)
 MIRLIBR  := $(MIRLIBD)/libmir.a
 MIROBJS  := $(subst .for,.o,$(filter %.for,$(MIRSRCS) $(MIROSRCS)))
 MIROBJS  += $(subst .f2c,.o,$(filter %.f2c,$(MIRSRCS) $(MIROSRCS)))
@@ -194,11 +194,11 @@ ifeq "$(MAKEMODE)" "system"
   # The nm-syms command sequence must be defined in makedefs to list the
   # global symbols defined by an object module.  If undefined this analysis is
   # skipped and each executable is made to depend on the library as a whole.
-  ifneq "$(nm-syms.$(ARCH))" ""
+  ifneq "$(nm-syms.$(MIRARCH))" ""
     define list-syms
     -@ mkdir -p $(DPNDSYMD)
     -@ $(RM) $(DPNDSYMD)/$*
-     @ OBJ="$<" ; $(nm-syms.$(ARCH)) | sed -e 's|$$| $*.o|' > $(DPNDSYMD)/$*
+     @ OBJ="$<" ; $(nm-syms.$(MIRARCH)) | sed -e 's|$$| $*.o|' > $(DPNDSYMD)/$*
     -@ $(RM) $(DPNDSYML)
      @ sort $(DPNDSYMD)/* > $(DPNDSYML)
     endef
@@ -356,7 +356,7 @@ else
   # Resolve paths for operating-system specific source code.  Look first in
   # programmer directories then in the relevant Miriad directories.
   ifneq "$(MIROS2D)" ""
-    PGMROSD  := ./unix/$(SUBS$(ARCH))
+    PGMROSD  := ./unix/$(SUBS$(MIRARCH))
     VPATH    := $(PGMROSD):$(MIROS2D):
   endif
   PGMROSD  += ./unix

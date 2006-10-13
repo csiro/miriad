@@ -2,7 +2,7 @@
 # GNUmakefile used to install Miriad scripts.
 #
 # Original: 2006/09/18, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.4 2006/10/10 05:36:16 cal103 Exp $
+# $Id: GNUmakefile,v 1.5 2006/10/13 06:41:34 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
@@ -38,7 +38,7 @@ ifeq "$(MAKEMODE)" "system"
 
   # Static and static pattern rules.
   #---------------------------------
-  allsys :: bin doc $(ARCH)
+  allsys :: bin doc $(MIRARCH)
   
   bin : $(MIRSCRPS:%=$(MIRBIND)/%) ;
 
