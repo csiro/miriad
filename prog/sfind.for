@@ -115,7 +115,7 @@ c
 c@ in
 c       The input image.
 c@ type
-c       Specifies the type of the image in the IN keyword. Minimum match 
+c       Specifies the type of the image in the IN keyword. Minimum match
 c       is supported.   Choose from:
 c
 c       "contour"   (contour plot)
@@ -126,18 +126,18 @@ c       as contour plots may be deceiving. Default is "pixel".
 c       Ignored in 'FDR' mode (the default).
 c
 c@ region
-c       Region of interest.  Choose only one spatial region (bounding 
-c       box only supported), but as many spectral regions (i.e., 
+c       Region of interest.  Choose only one spatial region (bounding
+c       box only supported), but as many spectral regions (i.e.,
 c       multiple IMAGE specifications) as you like.  If you display a
-c       3-D image, the cursor options are activated after each sub-plot 
-c       (channel or group of channels; see CHAN below) is drawn.  
+c       3-D image, the cursor options are activated after each sub-plot
+c       (channel or group of channels; see CHAN below) is drawn.
 c       Default is full image.
 c@ xybin
 c       Upto 4 values.  These give the spatial increment and binning
 c       size in pixels for the x and y axes to be applied to the selected
 c       region.   If the binning size is not unity, it must be equal
-c       to the increment.  For example, to bin up the image by 4 pixels in 
-c       the x direction and to pick out every third pixel in the y 
+c       to the increment.  For example, to bin up the image by 4 pixels in
+c       the x direction and to pick out every third pixel in the y
 c       direction, set XYBIN=4,4,3,1
 c       Defaults are 1,XYBIN(1),XYBIN(1),XYBIN(3)
 c@ chan
@@ -181,7 +181,7 @@ c       Default is zero.
 c       Ignored in 'FDR' mode (the default).
 c@ rmsbox
 c       In 'FDR' mode (the default) this is the size of the 'smoothing'
-c       box used when estimating the background and standard deviation 
+c       box used when estimating the background and standard deviation
 c       of the image. It is suggested that this be several to many times
 c       the beam size to prevent sources from artificially skewing the
 c       background estimates. This may require some experimentation,
@@ -218,7 +218,7 @@ c       Ignored in 'FDR' mode (the default).
 c@ labtyp
 c       Two values.  The spatial label type of the x and y axes.
 c       Minimum match is active.  Select from:
-c       
+c
 c       "hms"       the label is in H M S (e.g. for RA)
 c       "dms"       the label is in D M S (e.g. for DEC)
 c       "arcsec"    the label is in arcsecond offsets
@@ -232,44 +232,46 @@ c       "abskms"    the label is in Km/s
 c       "relkms"    the label is in Km/s offsets
 c       "absghz"    the label is in GHz
 c       "relghz"    the label is in GHz offsets
-c       "absnat"    the label is in linear coordinates as defined by 
+c       "absnat"    the label is in linear coordinates as defined by
 c                   the header you might call this the natural axis label
 c       "relnat"    the label is in offset natural coordinates
-c       
-c       All offsets are from the reference pixel.  
+c
+c       All offsets are from the reference pixel.
 c       Defaults are "abspix", LABTYP(1) unless LABTYP(1)="hms"
 c       whereupon LABTYP(2) defaults to "dms" (for RA and DEC).
 c       Ignored in 'FDR' mode (the default).
+c@ logfile
+c       Log file name, default 'sfind.log'.
 c@ options
 c       Task enrichment options.  Minimum match is active.
 c
 c       "fiddle" means enter a routine to allow you to interactively change
 c         the display lookup table.  You can cycle through b&w and colour
-c         displays, as well as alter the transfer function by the cursor 
-c         location, or by selecting predefined transfer functions such as 
+c         displays, as well as alter the transfer function by the cursor
+c         location, or by selecting predefined transfer functions such as
 c         histogram equalization, logarithmic, & square root.
 c       "wedge" means that if you are drawing a pixel map, also draw
-c         and label a wedge to the right of the plot, showing the map 
+c         and label a wedge to the right of the plot, showing the map
 c         of intensity to colour
 c
 c       "3value"  means label each sub-plot with the appropriate value
-c         of the third axis (e.g. velocity or frequency for an xyv ordered 
+c         of the third axis (e.g. velocity or frequency for an xyv ordered
 c         cube, position for a vxy ordered cube).
 c       "3pixel"  means label each sub-plot with the pixel value of the
-c         the third axis.   Both "3pixel" and "3value" can appear, and both 
+c         the third axis.   Both "3pixel" and "3value" can appear, and both
 c         will be written on the plot.  They are the average values when
 c         the third axis is binned up with CHAN.  If the third axis is
-c         not velocity or frequency, the units type for "3VALUE" will be 
-c         chosen to be the complement of any like axis in the first 2. 
-c        E.g., the cube is in vxy order and LABTYP=ABSKMS,ARCSEC the units 
-c        for the "3VALUE" label will be arcsec.  If LABTYP=ABSKMS,HMS the 
+c         not velocity or frequency, the units type for "3VALUE" will be
+c         chosen to be the complement of any like axis in the first 2.
+c        E.g., the cube is in vxy order and LABTYP=ABSKMS,ARCSEC the units
+c        for the "3VALUE" label will be arcsec.  If LABTYP=ABSKMS,HMS the
 c        "3VALUE" label will be DMS (if the third [y] axis is declination).
 c
 c       "grid" means draw a coordinate grid on the plot rather than just ticks
 c
-c       "noerase"  Don't erase a snugly fitting rectangle into which the 
+c       "noerase"  Don't erase a snugly fitting rectangle into which the
 c        "3-axis" value string is written.
-c      
+c
 c       "unequal" means draw plots with unequal scales in x and y. The
 c        default is that the scales are equal.
 c
@@ -283,7 +285,7 @@ c         flux densities from this fit are bi-parabolically fitted *peak*
 c         flux densities, and the positions are to the peak flux density
 c         position (which will always be within 1 pixel of the brightest
 c         pixel in the source). This option is useful for providing a starting
-c         point for groups of sources which the gaussian fitting procedure 
+c         point for groups of sources which the gaussian fitting procedure
 c         hasn't taken a liking to.
 c
 c       "asciiart" During the interactive section of the program, an ascii
@@ -334,10 +336,10 @@ c         dividing by the standard deviation. The mean and sigma are
 c         calculated in regions of size 'rmsbox' tiled over the image.
 c         Ignored if 'oldsfind' is present.
 c
-c       "kvannot" As well as the regular log file (sfind.log, always
-c         written) create a kview format annotation file, called
-c         'sfind.ann,' containing one ellipse per object, with the
-c         appropriate location, size, and position angle.
+c       "kvannot" As well as the regular log file (always written)
+c         create a kview format annotation file, called 'sfind.ann'
+c         containing one ellipse per object, with the appropriate
+c         location, size, and position angle.
 c
 c       "fdrpeak" The default for source measurement is to use only pixels
 c         above the FDR threshold in measuring the properties of
@@ -457,9 +459,9 @@ c    nebk 12feb96  Massaged to fix subroutine call mismatches, remove
 c                  unused variables, remove hangovers from cgcurs that
 c                  were not needed, gave unvalued variables a value,
 c                  remove unused subroutines.  Made no default for "cutoff"
-c                  and xrms. Put some protection into BASECAL for bad 
+c                  and xrms. Put some protection into BASECAL for bad
 c                  rms values. Change structure of code in subroutine SEARCH
-c                  deal with blanks in BASECAL. 
+c                  deal with blanks in BASECAL.
 c    amh  05mar96  added iterative section to subroutine FITTING, whereby
 c                  sources with fwhm comparable to area used for selecting
 c                  pixels are re-calculated with a larger area. Also deal
@@ -546,67 +548,72 @@ c       cursor). This could be used as well as or instead of the current
 c       method. Think about two seperate options to indicate user's desire
 c       of which.
 c
+c  $Id: sfind.for,v 1.2 2006/10/13 04:40:52 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
       include 'mem.h'
-c
+
       real wedisp, wedwid, tfdisp
       integer maxlev, maxpos, nxdef, nydef, nbins
       parameter (maxlev = 50, maxpos = 50, nxdef = 4, nydef = 4,
      +   wedisp = 1.0, tfdisp = 0.5, wedwid = 0.05, nbins = 128)
-c
+
       integer ipim, ipnim
-c
-      real levs(maxlev), pixr(2), tr(6), cs(2), pixr2(2), scale(2), 
+
+      real levs(maxlev), pixr(2), tr(6), cs(2), pixr2(2), scale(2),
      +  tfvp(4), wdgvp(4), cumhis(nbins), dmm(3)
-      real slev, vxmin, vymin, vymax, vx, vy, vxsize, vysize, vxgap, 
+      real slev, vxmin, vymin, vymax, vx, vy, vxsize, vysize, vxgap,
      +  vygap, ydispb, xdispl, groff, blank, cut, xrms, alpha
-c
-      integer blc(3), trc(3), size(maxnax), win(maxnax),
+
+      integer blc(3), trc(3), size(maxnax), win(maxnax), nc,
      +  grpbeg(maxchan), ngrp(maxchan), srtlev(maxlev), his(nbins)
       integer nx, ny, nlevs, lin, naxis, k, ierr, pgbeg, iostat, ipage,
      +  ibin(2), jbin(2), kbin(2), krng(2), nlast, ngrps,
      +  llog, jj, wedcod, labcol, poscol, statcol, regcol, rmsbox,
      +  npnt
-c
-      character labtyp(2)*6
-      character in*64, pdev*64, xlabel*40, ylabel*40, trfun*3, levtyp*1
-c
+
+      character in*128, labtyp(2)*6, levtyp*1, logfil*128, pdev*64,
+     +  trfun*3, xlabel*40, ylabel*40
+
       logical do3val, do3pix, eqscale, doblnk, dotr, donxlab(2),
      +  donylab(2), dopixel, gaps, doabut, doaxlab, doaylab,
      +  mark, doerase, dowedge, dofid, grid, nofit, asciiart,
      +  auto, negative, pbcor, oldsfind, fdrimg, sigmaimg, normimg,
      +  kvannot, fdrpeak, allpix, psfsize, rmsimg
-c
+
       data ipage, scale /0, 0.0, 0.0/
       data dmm /1.0e30, -1.0e30, -1.0/
       data gaps, doabut, dotr /.false., .false., .false./
+
+      character rcsrev*32
+      data rcsrev /'$Date: 2006/10/13 04:40:52 $'/
 c-----------------------------------------------------------------------
       call output (' ')
-      call output ('Sfind: Version 10-Jun-2004')
+      call output ('sfind: Version' // rcsrev(7:26) // ' UTC')
       call output (' ')
 c
 c Get user inputs
 c
-      call inputs (maxlev, in, ibin, jbin, kbin, levtyp, slev, levs, 
-     +   nlevs, pixr, trfun, pdev, labtyp, do3val, do3pix, eqscale, 
-     +   nx, ny, cs, dopixel, mark, doerase, dowedge, dofid, grid,
-     +   cut, rmsbox, alpha, xrms, nofit, asciiart, auto, negative,
-     +   pbcor, oldsfind, sigmaimg, rmsimg, fdrimg, normimg, kvannot,
-     +   fdrpeak, allpix, psfsize)
+      call inputs (maxlev, in, ibin, jbin, kbin, levtyp, slev, levs,
+     +   nlevs, pixr, trfun, pdev, labtyp, logfil, do3val, do3pix,
+     +   eqscale, nx, ny, cs, dopixel, mark, doerase, dowedge, dofid,
+     +   grid, cut, rmsbox, alpha, xrms, nofit, asciiart, auto,
+     +   negative, pbcor, oldsfind, sigmaimg, rmsimg, fdrimg, normimg,
+     +   kvannot, fdrpeak, allpix, psfsize)
       if (oldsfind) then
-       call output ('Running as Sfind: version 1.4, 09-Nov-98')
-       call output (' ')
+        call output ('Running as Sfind: version 1.4, 09-Nov-98')
+        call output (' ')
       end if
 c
 c Open log files
 c
-      call txtopen (llog, 'sfind.log', 'append', iostat)
-      if (iostat.ne.0) 
-     +  call bug ('f', 'Error opening text file "sfind.log"')
+      call txtopen (llog, logfil, 'append', iostat)
+      nc = nelc(logfil)
+      if (iostat.ne.0)
+     +  call bug ('f', 'Error opening log file "' // logfil(:nc) // '"')
       call output (' ')
-      call output ('*** Source list output to sfind.log')
+      call output ('*** Source list output to ' // logfil(:nc))
       call output (' ')
       call output ('Now opening image...')
       call output (' ')
@@ -622,7 +629,7 @@ c
       call region (in, naxis, size, ibin, jbin, kbin, blc, trc,
      +             win, ngrps, grpbeg, ngrp)
 c
-c Try to allocate memory for images.  
+c Try to allocate memory for images.
 c
       call memalloc (ipim,  win(1)*win(2), 'r')
       call memalloc (ipnim, win(1)*win(2), 'i')
@@ -653,8 +660,8 @@ c
        call nxnycg (nxdef, nydef, ngrps, nx, ny, nlast)
 c
 c Work out if wedge outside or inside subplots. Also work out
-c if plotting one wedge per subplot or one wedge for all  
-c       
+c if plotting one wedge per subplot or one wedge for all
+c
        call wedgincg ('NO', dofid, dowedge, nx, ny, 1, trfun, wedcod)
 c
 c Work out default character sizes for axis and channel labels
@@ -675,24 +682,24 @@ c
 c Set line graphics colour indices
 c
        call setlgc (labcol, poscol, statcol, regcol)
-c       
+c
 c Init OFM routines
-c       
+c
        if (dopixel) call ofmini
 c
 c Set axis labels
 c
        call setlabcg (lin, labtyp, .false., xlabel, ylabel)
-c 
+c
 c Set label displacements from axes
 c
        call setdspcg (lin, labtyp, blc, trc, xdispl, ydispb)
 c
-c Work out view port encompassing all sub-plots. Also return 
+c Work out view port encompassing all sub-plots. Also return
 c the viewport size of sub-plots.
 c
        call vpsizcg (.false., dofid, 0, ' ', ' ', 0, ' ', maxlev,
-     +   nlevs, srtlev, levs, slev, nx, ny, cs, xdispl, ydispb, 
+     +   nlevs, srtlev, levs, slev, nx, ny, cs, xdispl, ydispb,
      +   gaps, doabut, dotr, wedcod, wedwid, tfdisp, labtyp, vxmin,
      +   vymin, vymax, vxgap, vygap, vxsize, vysize, tfvp, wdgvp)
 c
@@ -729,11 +736,11 @@ c Apply transfer function
 c
          call pgsci (labcol)
          if (dopixel) then
-           if (trfun.ne.'lin') call apptrfcg (pixr, trfun, groff, 
+           if (trfun.ne.'lin') call apptrfcg (pixr, trfun, groff,
      +        win(1)*win(2), memi(ipnim), memr(ipim), nbins,
      +        his, cumhis)
 c
-c Draw wedge 
+c Draw wedge
 c
            if (wedcod.eq.1 .or. wedcod.eq.2) then
             call pgsch (cs(1))
@@ -749,7 +756,7 @@ c
            if (k.eq.1) call ofmcol (1, pixr2(1), pixr2(2))
            call pgimag (memr(ipim), win(1), win(2), 1, win(1), 1,
      +                  win(2), pixr2(1), pixr2(2), tr)
-         else 
+         else
 c
 c Draw contours
 c
@@ -785,7 +792,7 @@ c
 c
 c Modify lookup table
 c
-         if (dofid) call ofmmod (tfvp, win(1)*win(2), memr(ipim), 
+         if (dofid) call ofmmod (tfvp, win(1)*win(2), memr(ipim),
      +                           memi(ipnim), pixr2(1), pixr2(2))
 c
 c Write velocity or channel label
@@ -800,12 +807,12 @@ c
 c Interactive graphical source finding routine
 c
          call search_old (lin, win(1), win(2), memr(ipim), memi(ipnim),
-     +     blc, ibin, jbin, krng, llog, mark, cut, rmsbox, xrms, 
+     +     blc, ibin, jbin, krng, llog, mark, cut, rmsbox, xrms,
      +     nofit, asciiart, auto, negative, pbcor, in, psfsize)
 c
 c Increment sub-plot viewport locations and row counter
 c
-         call subinccg (k, nx, ny, vxmin, vymax, vxsize, vysize, 
+         call subinccg (k, nx, ny, vxmin, vymax, vxsize, vysize,
      +                  vxgap, vygap, vx, vy)
 c
 c Page plot device
@@ -843,7 +850,7 @@ c The source-detection subroutine.
 c
         if (oldsfind) then
          call search_old (lin, win(1), win(2), memr(ipim), memi(ipnim),
-     +     blc, ibin, jbin, krng, llog, mark, cut, rmsbox, xrms, 
+     +     blc, ibin, jbin, krng, llog, mark, cut, rmsbox, xrms,
      +     nofit, asciiart, auto, negative, pbcor, in, psfsize)
         else
          call search(lin, win(1), win(2), memr(ipim), memi(ipnim),
@@ -890,7 +897,7 @@ c background rms around the source, and if so an elliptical gaussian fit is
 c carryed out. The results are then written to the screen and the cursor
 c moved to the position of the object where it waits for the users yay or nay.
 c After user input, the source parameters are written, along with a flag (Y
-c or N), to the log file, sfind.log
+c or N), to the log file.
 c
 c  Input:
 c     lin       Image handle
@@ -1278,7 +1285,7 @@ c    Iteratively calculate the base level around the found source using
 c    all pixels falling within a square of side length rmsbox pixels
 c    centred on the peak, but excluding those falling within a circle
 c    with radius of boxsize.
-c    
+c
 c  Input:
 c    nx,ny   Size of image array
 c    l,m     Bright pixel position
@@ -1721,7 +1728,7 @@ c
 c-----------------------------------------------------------------------
 c  This is the *new* master subroutine for the detecting of sources.
 c It runs subroutine fdr, which makes the normalised image, sigma image
-c and fdr image (if necessary), and most importantly, establishes the 
+c and fdr image (if necessary), and most importantly, establishes the
 c fdr threshold. Then sources are measured, in routine fdrfit.
 c
 c  Input:
@@ -1730,7 +1737,7 @@ c     nx,ny     Size of image
 c     image     Image
 c     nimage    blanking image (0 for blanked pixels)
 c     blc       blc of window being displayed
-c     i,jbin    Spatial pixel increment 
+c     i,jbin    Spatial pixel increment
 c     krng      Start plane and number of planes averaged together
 c               to make the current displayed plane
 c     llog      Handle of log file
@@ -1783,14 +1790,14 @@ c
 c Start by checking beam parameters, since will die if the beam doesn't
 c exist.
 c
-      call BeamPar (lIn, k, bvol, bvolp, bmaj, bmin, bpa, 
+      call BeamPar (lIn, k, bvol, bvolp, bmaj, bmin, bpa,
      +              bmajp, bminp, bpap, nobeam)
       if (nobeam) then
        call bug('f','No beam information found - FDR analysis'
      +      //' needs this to work')
       end if
 c Now begin properly.
-      call output (' ')  
+      call output (' ')
       call output ('****************************************')
       call output ('Beginning Non-Interactive Source Finding')
       call output ('****************************************')
@@ -1837,7 +1844,7 @@ c
       call txtwrite (llog, line4, len1(line4), iostat)
 c
 c Set the plane appropriate to the displayed image.  Since
-c this may be a range of planes averaged together, take the 
+c this may be a range of planes averaged together, take the
 c integer nearest the average plane
 c
       k = nint(real(krng(1) + krng(1) + krng(2) - 1)/2.0)
@@ -1884,7 +1891,7 @@ c    method of fitting a gaussian to the pixel histogram, using
 c    all pixels falling within a square of side length rmsbox pixels
 c    centred on the peak. If this fails, fall back on iterative method
 c    used in the original version of sfind.
-c     
+c
 c  Input:
 c    nx,ny   Size of image array
 c    l,m     Bright pixel position
@@ -2147,7 +2154,7 @@ c        call bug('w','No data in histogram')
         ok = .false.
         return
       end if
-c     
+c
 c Normalise histogram volume to 1.0
 c
       bmax = -1.0e30
@@ -2205,7 +2212,7 @@ c
       end
 c
 c
-      subroutine decopt(do3val, do3pix, eqscale, mark, doerase, 
+      subroutine decopt(do3val, do3pix, eqscale, mark, doerase,
      +                  dowedge, dofid, grid, nofit, asciiart, auto,
      +                  negative, pbcor, oldsfind, fdrimg, sigmaimg,
      +                  rmsimg, normimg, kvannot, fdrpeak, allpix,
@@ -2302,7 +2309,7 @@ c
 c
 c
       subroutine inputs (maxlev, in, ibin, jbin, kbin, levtyp, slev,
-     +   levs, nlevs, pixr, trfun, pdev, labtyp, do3val, do3pix, 
+     +   levs, nlevs, pixr, trfun, pdev, labtyp, logfil, do3val, do3pix,
      +   eqscale, nx, ny, cs, dopixel, mark, doerase, dowedge, dofid,
      +   grid, cut, rmsbox, alpha, xrms, nofit, asciiart, auto,
      +   negative, pbcor, oldsfind, sigmaimg, rmsimg, fdrimg, normimg,
@@ -2321,10 +2328,11 @@ c   slev       Contour levels scale factors (absolute or percentage)
 c   levs       Contour levels.  Will be scaled by SLEV for contouring
 c   nlevs      Number of contour levels
 c   pixr       Pixel map intensity range
-c   trfun      Type of pixel map transfer function: 'log', 'lin', 
+c   trfun      Type of pixel map transfer function: 'log', 'lin',
 c             'heq', or 'sqr'
 c   pdev       PGPLOT plot device/type
 c   labtyp     Type of labels for x and y axes
+c   logfil     Log file name.
 c   do3val     True means label sub-plots with value of third axis
 c   do3pix     True means label sub-plots with pixel of third axis
 c   eqscale    True means plot with x and y scales
@@ -2364,21 +2372,21 @@ c              decreasing ones
 c   psfsize    true to restrict minimum source size to that of the psf
 c-----------------------------------------------------------------------
       implicit none
-c
+
       integer maxlev, nx, ny, nlevs, ibin(2), jbin(2), kbin(2), rmsbox
       real levs(maxlev), pixr(2), cs(2), slev, cut, xrms, alpha
-      character*(*) labtyp(2), in, pdev, trfun, levtyp
+      character*(*) in, labtyp(2), levtyp, logfil, pdev, trfun
       logical do3val, do3pix, eqscale, dopixel, mark, doerase,
      + dowedge, dofid, grid, nofit, asciiart, auto, negative, pbcor,
      + oldsfind, fdrimg, sigmaimg, rmsimg, normimg, kvannot, fdrpeak,
      + allpix, psfsize
-cc
+
       integer ntype, nlab, ntype2, nimtype
       parameter (ntype = 14, ntype2 = 3)
       character type(ntype)*6, imtype*7, type2(ntype2)*7
-      data type  /'hms   ', 'dms   ', 'abspix', 'relpix', 
-     +            'arcsec', 'arcmin', 'absghz', 'relghz', 
-     +            'abskms', 'relkms', 'absnat', 'relnat', 
+      data type  /'hms   ', 'dms   ', 'abspix', 'relpix',
+     +            'arcsec', 'arcmin', 'absghz', 'relghz',
+     +            'abskms', 'relkms', 'absnat', 'relnat',
      +            'absdeg', 'reldeg'/
       data type2 /'contour', 'pixel', 'grey'/
 c-----------------------------------------------------------------------
@@ -2389,7 +2397,7 @@ c-----------------------------------------------------------------------
       if (nimtype.eq.0) imtype = 'pixel'
       dopixel = .true.
       if (imtype.eq.'contour') dopixel = .false.
-c
+
       call keyi ('xybin', ibin(1), 1)
       call keyi ('xybin', ibin(2), ibin(1))
       if (ibin(2).ne.1 .and. ibin(2).ne.ibin(1)) call bug ('f',
@@ -2403,32 +2411,32 @@ c
      +  'Non-unit y spatial averaging must be equal to increment')
       jbin(1) = max(jbin(1), 1)
       jbin(2) = max(jbin(2), 1)
-c
-      call keyi ('chan', kbin(1), 1) 
-      call keyi ('chan', kbin(2), 1) 
+
+      call keyi ('chan', kbin(1), 1)
+      call keyi ('chan', kbin(2), 1)
       kbin(1) = max(kbin(1), 1)
       kbin(2) = max(kbin(2), 1)
-c
+
       call keya ('slev', levtyp, 'a')
       call keyr ('slev', slev, 0.0)
       call lcase (levtyp)
       if (levtyp.ne.'p' .and. levtyp.ne.'a') call bug ('f',
      +   'Unrecognized contour level scale type; must be "p" or "a"')
-c
+
       call mkeyr ('levs', levs, maxlev, nlevs)
-c
+
       call keyr ('range', pixr(1), 0.0)
       call keyr ('range', pixr(2), 0.0)
       call keya ('range', trfun, 'lin')
       call lcase (trfun)
       if (dopixel) then
-        if (trfun.ne.'lin' .and. trfun.ne.'log' .and. trfun.ne.'heq' 
-     +      .and. trfun.ne.'sqr') call bug ('f', 
+        if (trfun.ne.'lin' .and. trfun.ne.'log' .and. trfun.ne.'heq'
+     +      .and. trfun.ne.'sqr') call bug ('f',
      +    'Unrecognized pixel map transfer function type')
       else
         trfun = ' '
       end if
-c
+
       call decopt (do3val, do3pix, eqscale, mark, doerase, dowedge,
      +             dofid, grid, nofit, asciiart, auto, negative,
      +             pbcor, oldsfind, fdrimg, sigmaimg, rmsimg, normimg,
@@ -2437,34 +2445,37 @@ c
         dofid = .false.
         dowedge = .false.
       end if
-c
+
       call keya ('device', pdev, ' ')
       if ((pdev.eq.' ').and.(.not.auto)) then
         call pgldev
         call bug ('f', 'A PGPLOT device must be given')
       end if
-c
+
       call keymatch ('labtyp', ntype, type, 2, labtyp, nlab)
       if (nlab.eq.0) labtyp(1) = 'abspix'
       if (nlab.le.1) then
         labtyp(2) = labtyp(1)
         if (labtyp(1).eq.'hms') labtyp(2) = 'dms'
       end if
-c
-      if ( (index(labtyp(1),'lin').ne.0  .and. 
+
+      call keya ('logfile', logfil, ' ')
+      if (logfil.eq.' ') logfil = 'sfind.log'
+
+      if ( (index(labtyp(1),'lin').ne.0  .and.
      +      index(labtyp(2),'lin').eq.0) .or.
-     +     (index(labtyp(2),'lin').ne.0  .and. 
+     +     (index(labtyp(2),'lin').ne.0  .and.
      +      index(labtyp(1),'lin').eq.0) ) then
-        if (eqscale) call bug ('i', 
+        if (eqscale) call bug ('i',
      +  'You might consider options=unequal with these axis types')
       end if
-c
+
       call keyi ('nxy', nx, 0)
       call keyi ('nxy', ny, nx)
-c
+
       call keyr ('csize', cs(1), 0.0)
       call keyr ('csize', cs(2), 0.0)
-c
+
       call keyr('cutoff',cut,0.0)
       if (cut.lt.0.0)
      +  call bug('f','You must give a non-negative value for cutoff')
@@ -2482,10 +2493,10 @@ c
         call bug('f','Invalid value for keyword "xrms"')
        end if
       end if
-c
+
       end
-c
-c       
+
+
       subroutine setlgc (labcol, poscol, statcol, regcol)
 c-----------------------------------------------------------------------
 c     Set line graphics colours
@@ -2550,13 +2561,13 @@ c                  channel increment is reached.
 c    ngrp          Number of channels in each group of channel to
 c                  be averaged together for each sub-plot.
 c    blc,trc       3-D Hyper-rectangle surrounding region of interest
-c    win           Size of BINNED region of interest for 
+c    win           Size of BINNED region of interest for
 c                  first 2 dimensions
 c
 c----------------------------------------------------------------------
       implicit none
 c
-      integer naxis, size(naxis), blc(*), trc(*), win(2), ngrp(*), 
+      integer naxis, size(naxis), blc(*), trc(*), win(2), ngrp(*),
      +  grpbeg(*), ngrps, ibin(2), jbin(2), kbin(2)
       character in*(*)
 cc
@@ -2592,7 +2603,7 @@ c
       end
 c
 c
-      subroutine fitting (lIn, krng, nx, ny, image, rms, xpos, 
+      subroutine fitting (lIn, krng, nx, ny, image, rms, xpos,
      +    xposerr, ypos, yposerr, pkfl, pkflerr, intfl, amaj,
      +    amin, posa, posns, blc, bin, lx, my, bvol, bpap,
      +    bvolp, bmajp, bminp, nimage, boxsize, image2, pcut, fitok,
@@ -2689,7 +2700,7 @@ c
       fitok = .true.
 c
 c Set the plane appropriate to the displayed image.  Since
-c this may be a range of planes averaged together, take the 
+c this may be a range of planes averaged together, take the
 c integer nearest the average plane
 c
       k = nint(real(krng(1) + krng(1) + krng(2) - 1)/2.0)
@@ -2886,7 +2897,7 @@ c
 c  Convert to astronomical units, and report - ie, finalise results.
 c
       call CoordFid(lIn,k,.false.)
-      call Report (bvol, bvolp, xposerr, yposerr, 
+      call Report (bvol, bvolp, xposerr, yposerr,
      +   pkfl, pkflerr, intfl, amaj, amin, posa, posns, lIn)
 c
       end
@@ -2953,7 +2964,7 @@ c
             endif
             sl0(i) = sl0(i) * dx
             sm0(i) = sm0(i) * dy
-            spa(i) = spa(i) / ( dy/dx*cos(pa(i))**2 + 
+            spa(i) = spa(i) / ( dy/dx*cos(pa(i))**2 +
      +                          dx/dy*sin(pa(i))**2 )
           endif
 c
@@ -3255,7 +3266,7 @@ c
       yoff = yt / real(ndata)
 c
       end
- 
+
 c
       subroutine slopey(xx,yy,xc,yc,nx,ny,image,slpdwn)
 c-----------------------------------------------------------------------------
@@ -3506,7 +3517,7 @@ c
        end if
       enddo
 c
-      end      
+      end
 c
 c
       subroutine Eval1(x0,Model,n)
@@ -4172,7 +4183,7 @@ c
       write(line,'(a,f7.2,a)')
      +  'This corresponds to a threshold of ', sigctoff, ' sigma,'
       call output(line)
-      write(line,'(a,f16.10,a)') 
+      write(line,'(a,f16.10,a)')
      +  'which means a minimum flux threshold of ',fluxctoff,' Jy.'
       call output(line)
       write(line,'(a)')
@@ -4250,7 +4261,7 @@ c----------------------------------------------------------------------
       dumcount = 0
       if (kvannot) then
        call txtopen (lann, 'sfind.ann', 'append', iostat)
-       if (iostat.ne.0) 
+       if (iostat.ne.0)
      +  call bug ('f', 'Error opening text file "sfind.ann"')
        write(line,'("color green")')
        call txtwrite (lann, line, len1(line), iostat)
@@ -4383,7 +4394,7 @@ c
      +         radec(2)(1:radeclen(2))//' '//line
 c
 c write to log file, after appending 'Y' (as source confirmation, for
-c consistency, since FDR mode is run in 'auto' mode, so all sources 
+c consistency, since FDR mode is run in 'auto' mode, so all sources
 c are defined to be real).
 c
           line(len1(line)+1:len1(line)+6) = '     Y'
@@ -4442,7 +4453,7 @@ c      end if
 c-----------------------------------------------------------------------
 c calculates integrated gaussian values, and assigns pvalue (pv) as
 c the value corresponding to the intensity nearest 'val'
-c     
+c
 c  Input:
 c    nn         number of points in the gaussian pdf
 c    gsabsc     abscissa values
