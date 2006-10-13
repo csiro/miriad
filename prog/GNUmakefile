@@ -2,7 +2,7 @@
 # GNUmakefile for compiling Miriad tasks.
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.5 2006/10/13 04:26:43 cal103 Exp $
+# $Id: GNUmakefile,v 1.6 2006/10/13 04:42:25 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
@@ -407,7 +407,7 @@ else
   cleaner :: clean
 	$(RM) *.doc
 	$(RM) $(DPNDTMPD)/*.f
-	$(RM) $(DPNDAUXD)/prog.*
+	$(RM) -r $(DPNDAUXD)/prog.*
 
   cleanest :: clean
 	$(RM) $(PGMRBIND)/*
