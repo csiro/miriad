@@ -2,7 +2,7 @@
 # GNUmakefile for compiling Miriad tasks.
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.4 2006/10/03 08:12:17 cal103 Exp $
+# $Id: GNUmakefile,v 1.5 2006/10/13 04:26:43 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
@@ -146,11 +146,11 @@ ifeq "$(MAKEMODE)" "system"
   # The nm-syms command sequence must be defined in makedefs to list the
   # global symbols defined by an object module.  If undefined this analysis is
   # skipped and each executable is made to depend on the library as a whole.
-  ifneq "$(nm-syms.$(ARCH))" ""
+  ifneq "$(nm-syms.$(MIRARCH))" ""
     define depend-objs
     -@ mkdir -p $(DPNDOBJD)
     -@ $(RM) $(DPNDOBJD)/$*
-    -@ OBJ="$@" ; $(nm-syms.$(ARCH)) | $(backsl)
+    -@ OBJ="$@" ; $(nm-syms.$(MIRARCH)) | $(backsl)
          sort | $(backsl)
          sort -m - $(DPNDSYML) | $(backsl)
          awk $(backsl)
@@ -367,6 +367,7 @@ else
   # makefile.
   $(PGMRBIND)/% : $(DPNDTMPD)/%.f $(DPNDINCD)/% $(PGMRLIBR) $(MIRLIBR)
 	   $(FC) $(FCDBG) $(LDDBG) -o $@ $< $(PGMRLIBR) $(MIRLIBR) $(XTRNLIBS)
+	   $(wait-unlock)
 	-@ chmod 775 $@
   
   $(DPNDTMPD)/%.f $(DPNDINCD)/% : %.for
