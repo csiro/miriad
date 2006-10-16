@@ -2,7 +2,7 @@
 # GNUmakefile for compiling Miriad tasks.
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.6 2006/10/13 04:42:25 cal103 Exp $
+# $Id: GNUmakefile,v 1.7 2006/10/16 08:18:04 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
@@ -35,7 +35,7 @@ show ::
 #
 # System and programmer dependency analysis for included files is essentially
 # the same, only using different directories and lists.  Dependency analysis
-# for object modules is only done for the system.  
+# for object modules is only done for the system.
 #
 # The variables used are:
 #
@@ -215,13 +215,14 @@ ifeq "$(MAKEMODE)" "system"
   #   $(MIRBIND)/atlod : $(MIRPROGD)/atlod.h
   #
   # This means that if maxdim.h is touched then make will consider that
-  # atlod's dependency list is out-of-date and needs to be remade.  Similarly
-  # if atlod.for was touched.
-  #
+  # atlod is out-of-date and needs to be remade.  Similarly if atlod.for was
+  # touched.  Since the only rule to make atlod has atlod.f as a prerequisite,
+  # and since atlod.f is not preserved between compilations, this causes it to
+  # be regenerated afresh from the .for and all include files.
+
   # make automatically deletes the intermediate products of the rule-chain
   # except for those marked as a dependency of the pseudo-rule ".PRECIOUS"
   # This is used to protect the dependency lists themselves.
-
   .PRECIOUS : $(DPNDINCD)/%
 
   $(MIRBIND)/% : $(DPNDTMPD)/%.f $(DPNDINCD)/% $(DPNDLIBR)
@@ -321,56 +322,68 @@ else
 	-@ echo "DPNDINCS = $(DPNDINCS)"
 	-@ echo "DPNDOPT  = $(DPNDOPT)"
 
-  # This command sequence identifies include files in the ratty output and
-  # makes each of them a prerequisite of the object module's dependency list.
-  # In turn, rule-chaining also makes them a prerequisite of the object module
-  # itself.
+  # The f-filter command sequence identifies include files in the ratty output
+  # and makes each of them a prerequisite of the .f file.  In turn, rule-
+  # chaining also makes them a prerequisite of the executable itself.  This
+  # differs in several important ways from the system version:
   #
-  # It differs in several important ways from the system version.  Header
-  # files in the programmer directories listed as prerequisites are specified
-  # via a full pathname.  If one of these header files was subsequently
-  # deleted the prerequisite would not be satisfied and a recompile forced,
-  # whereupon the checked-in Miriad file would be found via VPATH.
+  #   Header files used in creating the .f file are listed directly as its
+  #   prerequisites in the dependency list.  Because they are listed by name,
+  #   make will consider that they "ought to exist" and will remake the
+  #   executable if not.  However, unlike system compilations, this is not
+  #   a problem because it is intended that the .f files be preserved.
   #
-  # On the other hand, header files in the Miriad directories are given
-  # without pathname.  If one of these was subsequently checked out into a
-  # programmer directory it would be found first via VPATH and, being newer,
-  # would force a recompile.
+  #   Header files in the programmer directories listed as prerequisites are
+  #   specified via a full pathname.  If one of these header files was
+  #   subsequently deleted the prerequisite would not be satisfied and a
+  #   recompile forced, whereupon the checked-in Miriad file would be found
+  #   via VPATH.
   #
-  # For similar reasons the source file itself (.for) must also be mentioned
-  # as a prerequisite in the programmer include-file dependency list but is
-  # not needed in the system list.
+  #   On the other hand, header files in the Miriad directories are given
+  #   without pathname.  If one of these was subsequently checked out into a
+  #   programmer directory it would be found first via VPATH and, being newer,
+  #   would force a recompile.
+  #
+  #   For similar reasons the source file itself (.for) must also be mentioned
+  #   as a prerequisite in the programmer include-file dependency list but is
+  #   not needed in the system list.
+  #
+  # Hence, with atlod.for checked-out in the programmer's workspace, the
+  # programmer dependency list for atlod would be as follows:
+  #
+  #   $(PGMRBIND)/atlod.f : $(PGMRROOT)/prog/atlod.for
+  #   $(PGMRBIND)/atlod.f : atlod.h
+  #   $(PGMRBIND)/atlod.f : maxdim.h
+  #   $(PGMRBIND)/atlod.f : mirconst.h
+  #   $(PGMRBIND)/atlod.f : rpfits.inc
+  #
+  # This may be compared with the system list cited above.
+
   define f-filter
      @ echo $< | $(backsl)
          sed -e 's#^\([^/]\)#$(THISDIR)/\1#' | $(backsl)
-         cat - $(DPNDTMPD)/$*.f | $(backsl)
+         cat - $(PGMRBIND)/$*.f | $(backsl)
          sed -n -e '{1p;s#^c >>> ##p;}' | $(backsl)
-         sed -e 's#^$(PGMRROOT)/#$$(PGMRBIND)/$* : $$(PGMRROOT)/#' $(backsl)
-             -e 's#^$(MIRROOT)/.*/#$$(PGMRBIND)/$* : #' | $(backsl)
+         sed -e 's#^$(PGMRROOT)/#$$(PGMRBIND)/$*.f : $$(PGMRROOT)/#' $(backsl)
+             -e 's#^$(MIRROOT)/.*/#$$(PGMRBIND)/$*.f : #' | $(backsl)
          sort -u > $(DPNDINCD)/$*
   endef
 
 
   # Pattern rules.
   #---------------
-  # These are essentially the same as for system compilation.
-  .PRECIOUS : $(DPNDINCD)/% $(PGMRBIND)/% $(DPNDTMPD)/%.f
+  .PRECIOUS : $(DPNDINCD)/% $(PGMRBIND)/% $(PGMRBIND)/%.f
 
   % : $(PGMRBIND)/% ;
 
   # Making the dependency list a prerequisite of the Fortran executable
-  # prevents rule-chaining from stopping prematurely at this point.  This
-  # could happen if a .f file preserved from a previous compilation is newer
-  # than the target though constructed from header files that are now stale.
-  # The stale header files will be listed as prerequisites of the dependency
-  # list in the full include-file dependency list included at the end of this
-  # makefile.
-  $(PGMRBIND)/% : $(DPNDTMPD)/%.f $(DPNDINCD)/% $(PGMRLIBR) $(MIRLIBR)
+  # ensures that it will be created if it doesn't already exist.
+  $(PGMRBIND)/% : $(PGMRBIND)/%.f $(DPNDINCD)/% $(PGMRLIBR) $(MIRLIBR)
 	   $(FC) $(FCDBG) $(LDDBG) -o $@ $< $(PGMRLIBR) $(MIRLIBR) $(XTRNLIBS)
 	   $(wait-unlock)
 	-@ chmod 775 $@
-  
-  $(DPNDTMPD)/%.f $(DPNDINCD)/% : %.for
+
+  $(PGMRBIND)/%.f $(DPNDINCD)/% : %.for
 	   $(depend-for)
 
   # Don't worry if a source file in the dependency list can't be located.
@@ -380,7 +393,7 @@ else
   %.h : ;
 
   # Convenience rules for generating preprocessor output.
-  %.f : $(DPNDTMPD)/%.f ;
+  %.f : $(PGMRBIND)/%.f ;
 
   # Extract preamble comments into a Miriad "doc" file.
   %.doc : %.for
@@ -401,12 +414,12 @@ else
 
   clean ::
 	$(RM) *.o
-	$(RM) $(DPNDTMPD)/*.o
+	$(RM) $(PGMRBIND)/*.o
 	$(RM) $(DPNDLOCK)
 
   cleaner :: clean
 	$(RM) *.doc
-	$(RM) $(DPNDTMPD)/*.f
+	$(RM) $(PGMRBIND)/*.f
 	$(RM) -r $(DPNDAUXD)/prog.*
 
   cleanest :: clean
@@ -434,7 +447,7 @@ $(MIRBIND)/wblod   : $(RPFITSLIB)
 
 # Dependency lists.  GNU make allows wildcarding in the include file
 # specification so it should be possible to include $(DPNDINCD)/*.  However,
-# it then apparently considers that the .f intermediary of the
+# it then apparently considers that the .f intermediary of the system
 # "$(DPNDTMPD)/%.f $(DPNDINCD)/%" pattern rule "ought to exist" and recompiles
 # the executable if it doesn't.
 -include $(DPNDINCL)
