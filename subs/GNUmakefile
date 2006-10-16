@@ -3,7 +3,7 @@
 # dependency analysis for all source file types.
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.7 2006/10/13 06:40:59 cal103 Exp $
+# $Id: GNUmakefile,v 1.8 2006/10/16 08:24:02 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
@@ -52,7 +52,7 @@ show ::
 #
 # System and programmer dependency analysis for included files is essentially
 # the same, only using different directories and lists.  Dependency analysis
-# for object modules is only done for the system.  
+# for object modules is only done for the system.
 #
 # The variables used are:
 #
@@ -217,7 +217,7 @@ ifeq "$(MAKEMODE)" "system"
   # dependencies that can satisfy them.
   #
   # For example, in linux, 'gmake lib(uvdat)' would be resolved by the
-  # following chain rooted at $MIR/subs/uvdat.for: 
+  # following chain rooted at $MIR/subs/uvdat.for:
   #
   #   lib(uvdat) <- $MIR/linux/lib/libmir.a(uvdat.o)
   #              <- $MIR/linux/tmp/uvdat.o
@@ -241,7 +241,7 @@ ifeq "$(MAKEMODE)" "system"
   # included files (the filter-f command sequence).  C sources are treated in
   # precisely the same way with the C preprocessor (cpp) taking ratty's place.
   # Likewise for .f2c sources, except that intf2c is invoked on these before
-  # cpp.  
+  # cpp.
   #
   # The last two steps compile uvdat.f to produce $MIR/linux/tmp/uvdat.o and
   # then insert that into the object library.  The list of global symbols
@@ -256,7 +256,10 @@ ifeq "$(MAKEMODE)" "system"
   #
   # This means that if maxdim.h is touched then make will consider that the
   # uvdat.o library module is out-of-date and needs to be remade.  Similarly
-  # if uvdat.for was touched.
+  # if uvdat.for was touched.  Since the rule-chain that makes (uvdat.o) has
+  # uvdat.o and uvdat.f as prerequisites, and since neither of these are
+  # preserved between compilations, this causes uvdat.f to be regenerated
+  # afresh from the .for and all include files.
   #
   # make automatically deletes the intermediate products of the rule-chain
   # except for those marked as a dependency of the pseudo-rule ".PRECIOUS".
@@ -284,11 +287,11 @@ ifeq "$(MAKEMODE)" "system"
   $(MIRTMPD)/%.o : $(DPNDTMPD)/%.f $(DPNDINCD)/%
 	   $(FC) $(FCOPT) -c -o $@ $<
 	-@ $(RM) $<
-  
+
   $(MIRTMPD)/%.o : $(DPNDTMPD)/%.i $(DPNDINCD)/%
 	   $(CC) $(COPT) -c -o $@ $<
 	-@ $(RM) $<
-  
+
   # As explained above, the preprocessor output and dependency list are
   # generated at the same time.  Rule-chaining will resolve the object module
   # to the appropriate source file, and the dependency list may add further
@@ -409,47 +412,66 @@ else
 	-@ echo "DPNDINCS = $(DPNDINCS)"
 	-@ echo "DPNDOPT  = $(DPNDOPT)"
 
-  # This command sequence identifies include files in the ratty output and
-  # makes each of them a prerequisite of the object module's dependency list.
-  # In turn, rule-chaining also makes them a prerequisite of the object module
-  # itself.
+  # The f-filter command sequence identifies include files in the ratty output
+  # and makes each of them a prerequisite of the .f file.  In turn, rule-
+  # chaining also makes them a prerequisite of the object module itself.  This
+  # differs in several important ways from the system version:
   #
-  # It differs in several important ways from the system version.  Header
-  # files in the programmer directories listed as prerequisites are specified
-  # via a full pathname.  If one of these header files was subsequently
-  # deleted the prerequisite would not be satisfied and a recompile forced,
-  # whereupon the checked-in Miriad file would be found via VPATH.
+  #   Header files used in creating the .f file are listed directly as its
+  #   prerequisites in the dependency list.  Because they are listed by name,
+  #   gmake will consider that they "ought to exist" and will remake the
+  #   object module if not.  However, unlike system compilations, this is not
+  #   a problem because it is intended that the .f files be preserved.
   #
-  # On the other hand, header files in the Miriad directories are given
-  # without pathname.  If one of these was subsequently checked out into a
-  # programmer directory it would be found first via VPATH and, being newer,
-  # would force a recompile.
+  #   Header files in the programmer directories listed as prerequisites are
+  #   specified via a full pathname.  If one of these header files was
+  #   subsequently deleted the prerequisite would not be satisfied and a
+  #   recompile forced, whereupon the checked-in Miriad file would be found
+  #   via VPATH.
   #
-  # For similar reasons the source file itself (.for, .f2c, or .c) must also
-  # be mentioned as a prerequisite in the programmer include-file dependency
-  # list but is not needed in the system list.
+  #   On the other hand, header files in the Miriad directories are given
+  #   without pathname.  If one of these was subsequently checked out into a
+  #   programmer directory it would be found first via VPATH and, being newer,
+  #   would force a recompile.
+  #
+  #   For similar reasons the source file itself (.for, .f2c, or .c) must also
+  #   be mentioned as a prerequisite in the programmer include-file dependency
+  #   list but is not needed in the system list.
+  #
+  # Hence, with uvdat.for checked-out in the programmer's workspace, the
+  # programmer dependency list for uvdat would be as follows:
+  #
+  #   $(PGMRLIBD)/uvdat.f : $(PGMRROOT)/subs/uvdat.for
+  #   $(PGMRLIBD)/uvdat.f : maxdim.h
+  #   $(PGMRLIBD)/uvdat.f : mirconst.h
+  #   $(PGMRLIBD)/uvdat.f : uvdat.h
+  #
+  # This may be compared with the system list cited above.
+
   define f-filter
      @ echo $< | $(backsl)
          sed -e 's#^\([^/]\)#$(THISDIR)/\1#' | $(backsl)
-         cat - $(DPNDTMPD)/$*.f | $(backsl)
+         cat - $(PGMRLIBD)/$*.f | $(backsl)
          sed -n -e '{1p;s#^c >>> ##p;}' | $(backsl)
-         sed -e 's#^$(PGMRROOT)/#$$(PGMRLIBR)($*.o) : $$(PGMRROOT)/#' $(backsl)
-             -e 's#^$(MIRROOT)/.*/#$$(PGMRLIBR)($*.o) : #' | $(backsl)
+         sed -e 's#^$(PGMRROOT)/#$$(PGMRLIBD)/$*.f : $$(PGMRROOT)/#' $(backsl)
+             -e 's#^$(MIRROOT)/.*/#$$(PGMRLIBD)/$*.f : #' | $(backsl)
          sort -u > $(DPNDINCD)/$*
   endef
 
-  # As above, this command sequence identifies include files in the cpp output
-  # and makes each of them a prerequisite of the object module's dependency
-  # list.  The difference is in the second sed filter alone.
+  # As above, this command sequence identifies include files in the cpp
+  # output.  However, unlike f-filter, there is no reason to preserve the
+  # intermediate .i file and it is explicitly deleted.  Hence the header files
+  # are made prerequisites of the dependency list itself, since this is
+  # generated together with the .i file and is preserved.
   define i-filter
      @ echo $< | $(backsl)
          sed -e 's#^\([^/]\)#$(THISDIR)/\1#' | $(backsl)
-         cat - $(DPNDTMPD)/$*.i | $(backsl)
+         cat - $(PGMRLIBD)/$*.i | $(backsl)
          sed -n -e 1p $(backsl)
                 -e 's#.*\($(PGMRROOT)/.*\.h\)".*#\1#p' $(backsl)
                 -e 's#.*\($(MIRROOT)/.*\.h\)".*#\1#p' | $(backsl)
-         sed -e 's#^$(PGMRROOT)/#$$(PGMRLIBR)($*.o) : $$(PGMRROOT)/#' $(backsl)
-             -e 's#^$(MIRROOT)/.*/#$$(PGMRLIBR)($*.o) : #' | $(backsl)
+         sed -e 's#^$(PGMRROOT)/#$$(DPNDINCD)/$* : $$(PGMRROOT)/#' $(backsl)
+             -e 's#^$(MIRROOT)/.*/#$$(DPNDINCD)/$* : #' | $(backsl)
          sort -u > $(DPNDINCD)/$*
   endef
 
@@ -457,7 +479,7 @@ else
   # Pattern rules.
   #---------------
   # These are essentially the same as for system compilation.
-  .PRECIOUS : $(DPNDINCD)/% $(PGMRLIBR)(%.o) $(DPNDTMPD)/%.f $(DPNDTMPD)/%.i
+  .PRECIOUS : $(DPNDINCD)/% $(PGMRLIBR)(%.o) $(PGMRLIBD)/%.f $(PGMRLIBD)/%.i
 
   % lib(%) lib(%.o) : $(PGMRLIBR)(%.o) ranlib ;
 
@@ -467,30 +489,29 @@ else
 	-@ $(RM) $<
 
   # Making the dependency list a prerequisite of the Fortran object module
-  # prevents rule-chaining from stopping prematurely at this point.  This
-  # could happen if a .f file preserved from a previous compilation is newer
-  # than the target though constructed from header files that are now stale.
-  # The stale header files will be listed as prerequisites of the object
-  # module's dependency list in the full dependency list included at the end
-  # of this makefile.
-  $(PGMRLIBD)/%.o : $(DPNDTMPD)/%.f $(DPNDINCD)/%
+  # ensures that it will be created if it doesn't already exist.
+  $(PGMRLIBD)/%.o : $(PGMRLIBD)/%.f $(DPNDINCD)/%
 	   $(FC) $(FCDBG) -c -o $@ $<
-  
-  # Although .i files are not preserved they can be generated on demand and
-  # there is always the possibility of a stale one causing the same problem
-  # as as a stale .f.  Hence the dependency list must also be a prerequisite
-  # here.
-  $(PGMRLIBD)/%.o : $(DPNDTMPD)/%.i $(DPNDINCD)/%
+
+  # Making the dependency list a prerequisite here prevents rule-chaining from
+  # stopping prematurely at this point.  Although .i files are not preserved
+  # they can be generated on demand, and it could happen that a .i file was
+  # newer than the target though constructed from header files that are now
+  # stale.  However, since the stale header files would be listed as
+  # prerequisites of the object module's dependency list in the full
+  # dependency list included at the end of this makefile, this will stop the
+  # rule-chain from stalling.
+  $(PGMRLIBD)/%.o : $(PGMRLIBD)/%.i $(DPNDINCD)/%
 	   $(CC) $(CDBG) -c -o $@ $<
 	-@ $(RM) $<
 
-  $(DPNDTMPD)/%.f $(DPNDINCD)/% : %.for
+  $(PGMRLIBD)/%.f $(DPNDINCD)/% : %.for
 	$(depend-for)
 
-  $(DPNDTMPD)/%.i $(DPNDINCD)/% : %.f2c
+  $(PGMRLIBD)/%.i $(DPNDINCD)/% : %.f2c
 	$(depend-f2c)
 
-  $(DPNDTMPD)/%.i $(DPNDINCD)/% : %.c
+  $(PGMRLIBD)/%.i $(DPNDINCD)/% : %.c
 	$(depend-c)
 
   # Don't worry if a source file in the dependency list can't be located.
@@ -502,13 +523,13 @@ else
   %.h : ;
 
   # Convenience rules for generating preprocessor output.
-  %.f : $(DPNDTMPD)/%.f ;
+  %.f : $(PGMRLIBD)/%.f ;
 
-  %.c : $(DPNDTMPD)/%.c ;
+  %.c : $(PGMRLIBD)/%.c ;
 
-  %.i : $(DPNDTMPD)/%.i ;
+  %.i : $(PGMRLIBD)/%.i ;
 
-  $(DPNDTMPD)/%.c : %.f2c
+  $(PGMRLIBD)/%.c : %.f2c
 	$(INTF2C) $(F2CFLAGS) $< $@
 
 
@@ -517,7 +538,7 @@ else
   .PHONY : depend mylib lib ranlib
 
   all :: mylib
-  
+
   mylib : $(PGMROBJS:%=$(PGMRLIBR)(%)) ranlib ;
 
   lib : $(MIROBJS:%=$(PGMRLIBR)(%)) ranlib ;
@@ -538,12 +559,12 @@ else
 
   clean ::
 	$(RM) *.o
-	$(RM) $(DPNDTMPD)/*.[io]
+	$(RM) $(PGMRLIBD)/*.[io]
 	$(RM) $(DPNDLOCK)
 
   cleaner :: clean
-	$(RM) $(DPNDTMPD)/*.[cf]
-	$(RM) $(DPNDAUXD)/subs.*
+	$(RM) $(PGMRLIBD)/*.[cf]
+	$(RM) -r $(DPNDAUXD)/subs.*
 
   cleanest :: cleaner
 	$(RM) $(PGMRLIBD)/.last_ranlib
@@ -565,7 +586,7 @@ endif
 
 # Dependency lists.  GNU make allows wildcarding in the include file
 # specification so it should be possible to include $(DPNDINCD)/*.  However,
-# it then apparently considers that the .f or .i intermediaries of the
+# it then apparently considers that the .f or .i intermediaries of the system
 # "$(DPNDTMPD)/%.f $(DPNDINCD)/%" pattern rule "ought to exist" and recompiles
 # the library module if they don't.
 -include $(DPNDINCL)
