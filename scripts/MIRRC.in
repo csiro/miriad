@@ -1,54 +1,39 @@
 #!/bin/csh -f
+#-----------------------------------------------------------------------------
+# Usage: source MIRRC
+#-----------------------------------------------------------------------------
+# Set Miriad environment variables.
+#
+# $Id: MIRRC.in,v 1.3 2006/10/17 08:25:45 cal103 Exp $
+#-----------------------------------------------------------------------------
+# Miriad root directory set by configure or otherwise.
+  setenv MIR @MIRROOT@
 
-# The following must be the 4th line
-setenv MIR /nfs/applic/miriad
+# Important Miriad subdirectories.
+  setenv MIRCAT  $MIR/cat
+  setenv MIRPDOC $MIR/doc
+  setenv MIRINC  $MIR/inc
+  setenv MIRCHNG $MIR/new
+  setenv MIRPROG $MIR/prog
+  setenv MIRSUBS $MIR/subs
+  if (-e $MIR/man) setenv MIRMAN $MIR/man
 
-set temp = `uname -s`
-if ("$temp" == ConvexOS) then
-  set arch = convex
-else if ("$temp" == SunOS) then
-  set arch = sun4
-  if (`uname -r` =~ 5.*)  set arch = sun4sol
-  if (`uname -m` =~ *86*) set arch = i86sol
-else if ("$temp" =~ "CYGWIN*" ) then
-  set arch = cygwin
-else if ("$temp" == OSF1) then
-  set arch = alpha
-else if ("$temp" == "HP-UX" ) then
-  set arch = hpux
-else if ("$temp" == "Linux" ) then
-  set arch = linux
-  if (`uname -m` == "x86_64" ) set arch = linux64
-else
-  set arch = `echo $temp|tr "[A-Z]" "[a-z]"`
-endif
-unset temp
+# Miriad architecture.
+  setenv MIRARCH `$MIR/scripts/mirarch`
+  if ("$MIRARCH" == unknown) then
+    echo "### Unknown host architecture -- no Miriad executables."
+  endif
 
-# Set the Miriad environment variables.
+# Miriad system subdirectories.
+  setenv MIRARCHD $MIR/$MIRARCH
+  setenv MIRBIN   $MIRARCHD/bin
+  setenv MIRLIB   $MIRARCHD/lib
 
-setenv MIRINC $MIR/inc
-setenv MIRPDOC $MIR/doc
-if ( -e $MIR/man ) setenv MIRMAN $MIR/man
-setenv MIRCAT $MIR/cat
-setenv MIRCHNG $MIR/new
-setenv MIRPROG $MIR/prog
-setenv MIRSUBS $MIR/subs
+# Set up the user's directory to receive .def files.
+  if (! $?MIRDEF) then
+    setenv MIRDEF .
+    if (-d ~/mirdef) setenv MIRDEF ~/mirdef
+  endif
 
-if ( $?arch ) then
-  setenv MIRARCH $MIR/$arch
-  setenv MIRBIN  $MIRARCH/bin
-  setenv MIRLIB  $MIRARCH/lib
-else
-  echo "### Unknown host architecture -- no Miriad executables."
-  setenv MIRBIN " "
-  setenv MIRLIB " "
-endif
-
-# Set up the directory to receive .def files.
-if ( ! $?MIRDEF ) then
-  setenv MIRDEF .
-  if ( -d ~/mirdef ) setenv MIRDEF ~/mirdef
-endif
-
-#setenv PGPLOT_BUFFER TRUE
-if ( -e $MIRLIB/grfont.dat ) setenv PGPLOT_FONT $MIRLIB/grfont.dat
+# setenv PGPLOT_BUFFER TRUE
+  if (-e $MIRLIB/grfont.dat) setenv PGPLOT_FONT $MIRLIB/grfont.dat
