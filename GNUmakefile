@@ -2,8 +2,15 @@
 # GNUmakefile used to compile Miriad.
 #
 # Original: 2006/08/28, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.11 2006/10/13 06:42:41 cal103 Exp $
+# $Id: GNUmakefile,v 1.12 2006/10/17 07:54:17 cal103 Exp $
 #-----------------------------------------------------------------------------
+ifeq "$(MIR)" ""
+  # Try to deduce basic Miriad environment variables.  Obviously this only
+  # works if make is invoked in the top-level Miriad directory.
+  export MIR     := $(shell pwd)
+  export MIRARCH := $(shell $(MIR)/scripts/mirarch)
+endif
+
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
 
@@ -30,6 +37,7 @@ ifeq "$(MAKEMODE)" "system"
   initial :: FORCE
 	-@ echo ""
 	-@ echo "Rebuilding/updating Miriad for $(MIRARCH) machines."
+	-@ $(TIMER)
 
   help ::
 	-@ echo ""
@@ -47,8 +55,9 @@ ifeq "$(MAKEMODE)" "system"
     # The Miriad distribution is split into RCS, code, compiled documentation,
     # and platform-specific binary kits.
     DISTRCS  := .rcs RCS */RCS */*/RCS */*/*/RCS
-    DISTCODE := DISCLAIMER GNUmake* MIRRC* INSTALL.html cat guides inc linpack
-    DISTCODE += prog scripts spec specdoc subs tests tools 
+    DISTCODE := DISCLAIMER GNUmake* INSTALL.html config configure configure.ac
+    DISTCODE += cat guides inc linpack prog scripts spec specdoc subs tests
+    DISTCODE += tools
     DISTDOC  := doc html man progguide* userguide*
     DISTBINS := $(subst /bin,,$(wildcard */bin))
 
@@ -101,13 +110,15 @@ ifeq "$(MAKEMODE)" "system"
     ifeq "$(MIRARCH)" "sun4sol"
       # Regenerate the Miriad ftp distribution kits.  Requires the sun4sol
       # version of tar.
-      dist : allsys $(MIRFTPS:%=$(MIRFTPD)/%)
+      dist : allsys $(MIRFTPS:%=$(MIRFTPD)/%) configure
 	-@ echo ""
+	-@ $(TIMER)
 	   cd .. ; tar cf miriad/miriad-rcs.tar $(DISTRCS:%=miriad/%)
 	   gzip miriad-rcs.tar
 	-@ $(RM) $(MIRFTPD)/miriad-rcs.tar.gz
 	   mv miriad-rcs.tar.gz $(MIRFTPD)/
 	-@ echo ""
+	-@ $(TIMER)
 	-@ $(RM) .tarX
 	 @ cd .. ; find miriad -name RCS | sort > miriad/.tarX
 	   cd .. ; tar cXf miriad/.tarX miriad/miriad-code.tar $(DISTCODE:%=miriad/%)
@@ -116,6 +127,7 @@ ifeq "$(MAKEMODE)" "system"
 	   mv miriad-code.tar.gz $(MIRFTPD)/
 	 @ $(RM) .tarX
 	-@ echo ""
+	-@ $(TIMER)
 	   cd .. ; tar cf miriad/miriad-doc.tar $(DISTDOC:%=miriad/%)
 	   gzip miriad-doc.tar
 	-@ $(RM) $(MIRFTPD)/miriad-doc.tar.gz
@@ -123,6 +135,7 @@ ifeq "$(MAKEMODE)" "system"
 	-@ echo ""
 	 @ for bin in $(DISTBINS) ; do \
 	     echo "" ; \
+	     $(TIMER) ; \
 	     echo "tar cf miriad-$$bin.tar $$bin" ; \
 	     echo miriad/$$bin/GNUmakedefs > .tarX ; \
 	     tar cXf .tarX miriad-$$bin.tar -C .. miriad/$$bin ; \
@@ -134,13 +147,20 @@ ifeq "$(MAKEMODE)" "system"
 	   done
 	-@ $(RM) .tarX
 
+      configure : configure.ac
+	-@ echo ""
+	-@ $(TIMER)
+	   autoconf
+
       bookings :
 	-@ echo ""
+	-@ $(TIMER)
 	-@ echo "Checking for users needing help..."
 	 @ cd $(MIRROOT)/at_friends && ./CheckBookings.csh
 
       updates :
 	-@ echo ""
+	-@ $(TIMER)
 	-@ echo "Creating updates..."
 	 @ $(MIRBIND)/mirexport
     endif
