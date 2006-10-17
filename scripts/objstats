@@ -1,0 +1,48 @@
+#!/bin/sh
+#-----------------------------------------------------------------------------
+# Usage: objstats
+#-----------------------------------------------------------------------------
+# Use the object module dependency list to count the number of Miriad tasks
+# that use each Miriad library module.
+#
+# Summary for linux at 2006/09/20:
+# --------------------------------
+#   The median number of tasks that use a randomly chosen Miriad object module
+#   is seven.
+#
+#   Some modules are used by all tasks: bug, bugwrap, headio, hio, interface,
+#   maskio, numbpg, scrio, string, txtio, uvio, wrap, xyio;
+#   or all but one: assert, key, oscalls;
+#   or more than 90%: ephem, julday, tangle, velocity, bsrch;
+#   or 50% or more: angles, hisinput, options, pols.
+#
+#   Seventeen modules are used by only one task: convl, fitsio, fullname,
+#   hdtab, intpio, lsf, lspoly, lsqu1, mapper, medfit, nearest, powell, rest,
+#   tabflux, trans, trnio, zeebin.
+#
+#   Some object modules are not used by any tasks: antennas, keyc, linetype,
+#   lsearch, plotone, plproc, shadowed, tvsubs, uvgetbl.
+#
+#   iface.f2c provides symbols that may be used by packwrap, wrap, and/or
+#   xyziowrap subject to conditional compilation on the FORTRAN_CVT_LOG and
+#   FORTRAN_CVT_INT C-preprocessor defines which are added by invoking intf2c
+#   with the "-c" option (linux-ia64 only).
+#
+# Original: 2006/09/20 Mark Calabretta, ATNF
+# $Id: objstats,v 1.1 2006/10/17 08:12:01 cal103 Exp $
+#-----------------------------------------------------------------------------
+
+  if [ ! -f $MIRARCHD/aux/prog.objlist ]
+  then
+    echo "The object module dependency list is not available." 1>&2
+    exit 1
+  fi
+
+  cd $MIRSUBS
+
+  for i in *.[fc]*
+  do
+    j=`echo $i | sed -e 's/\..*//'`
+    k=`grep "($j.o)" $MIRARCHD/aux/prog.objlist | wc -l`
+    printf "%4d  %s\n" $k $j
+  done

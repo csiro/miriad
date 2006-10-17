@@ -1,0 +1,61 @@
+#!/bin/sh
+#-----------------------------------------------------------------------------
+# Usage: mirarch
+#-----------------------------------------------------------------------------
+# Write the Miriad architecture name to stdout.
+#
+# $Id: mirarch,v 1.1 2006/10/17 08:14:54 cal103 Exp $
+#-----------------------------------------------------------------------------
+
+  MIRARCH=`uname -s`
+
+  case "$MIRARCH" in
+  ConvexOS)
+    MIRARCH=convex
+    ;;
+  SunOS)
+    case `uname -r` in
+    4.*)
+      MIRARCH=sun4
+      ;;
+    5.*)
+      MIRARCH=sun4sol
+      ;;
+    *)
+      case `uname -m` in
+      *86*)
+        MIRARCH=i86sol
+        ;;
+      esac
+    esac
+    ;;
+  CYGWIN*)
+    MIRARCH=cygwin
+    ;;
+  OSF1)
+    MIRARCH=alpha
+    ;;
+  HP-UX)
+    MIRARCH=hpux
+    ;;
+  Linux)
+    case `uname -m` in
+    x86_64)
+      MIRARCH=linux64
+      ;;
+    *)
+      MIRARCH=linux
+      ;;
+    esac
+    ;;
+  "")
+    MIRARCH=unknown
+    ;;
+  *)
+    MIRARCH=`echo "$MIRARCH" | tr "[A-Z]" "[a-z]"`
+    ;;
+  esac
+
+  echo "$MIRARCH"
+
+  exit 0
