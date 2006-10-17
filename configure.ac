@@ -3,12 +3,12 @@
 #-----------------------------------------------------------------------------
 # Author: Mark Calabretta, Australia Telescope National Facility
 # http://www.atnf.csiro.au/~mcalabre/index.html
-# $Id: configure.ac,v 1.1 2006/10/17 08:00:48 cal103 Exp $
+# $Id: configure.ac,v 1.2 2006/10/17 08:33:21 cal103 Exp $
 #-----------------------------------------------------------------------------
 
 AC_INIT([Miriad], [ATNF2.0], [miriad@atnf.csiro.au], [miriad-ATNF2.0])
 AC_PREREQ([2.53])
-AC_REVISION([$Revision: 1.1 $])
+AC_REVISION([$Revision: 1.2 $])
 
 AC_CONFIG_SRCDIR([tools/miriad.c])
 AC_CONFIG_AUX_DIR([config])
@@ -112,7 +112,7 @@ AC_MSG_NOTICE([
 Checking for miscellaneous utilities...])
 
 AC_PATH_PROG([AR],    [ar])
-AC_PATH_PROG([MANDB], [mandb])
+AC_PATH_PROGS([MANDB], [mandb catman])
 AC_PATH_PROG([STRIP], [strip])
 AC_PROG_LN_S
 AC_PROG_RANLIB
