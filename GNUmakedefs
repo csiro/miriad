@@ -26,7 +26,7 @@
 # target names by running 'gmake help'
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakedefs,v 1.14 2006/10/16 07:19:06 cal103 Exp $
+# $Id: GNUmakedefs,v 1.15 2006/10/17 08:01:32 cal103 Exp $
 #-----------------------------------------------------------------------------
 # We rely only on the MIR environment variable.
 MIRROOT  := $(MIR)
@@ -234,7 +234,7 @@ I8 := $(I7)$(null)    $(null)
 MAKEINDENT := $(I$(MAKELEVEL))
 
 # If we're within $(MIRROOT)/... it's a system compile, else programmer.
-MIRDIR  := $(shell cd $$MIR && /bin/pwd)
+MIRDIR  := $(shell cd $(MIR) && /bin/pwd)
 THISDIR := $(shell /bin/pwd)
 ifeq "$(findstring $(MIRDIR),$(THISDIR))" ""
   MAKEMODE = programmer
