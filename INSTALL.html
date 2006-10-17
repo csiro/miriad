@@ -1,0 +1,777 @@
+<html>
+<header>
+<title>Installing and Updating Miriad</title>
+</header>
+<body bgcolor="#FFFFFF">
+<center><h1>Installing and updating <em>Miriad</em></h1></center>
+<em>Miriad</em> is a radio-astronomy data reduction package. It was originally
+developed to meet the needs of the BIMA consortium, although ATNF and
+the SMA have developed it further.
+<p>
+Please read the file DISCLAIMER to see a legal disclaimer, and the
+<em>Miriad</em> website
+<pre>
+
+  <A HREF="http://www.atnf.csiro.au/computing/software/miriad">http://www.atnf.csiro.au/computing/software/miriad</A>
+
+</pre>
+<em>Miriad</em> is portable to a variety of UNIX machines as well as VMS.  The
+notes below describe how to install it on a UNIX machine.  The
+distribution contains installation scripts for SunOS 4.x and SunOS 5.x
+(also called Solaris 1 and Solaris 2 respectively), ConvexOS, IRIX and
+IRIX64, LINUX (32 and 64 bit machines), OSF/1 or Digital UNIX, HPUX, the
+Mac Darwin OS (including tiger), the Windows CYGWIN environment and UNICOS. 
+<p>
+The FTP and web point to the same place, which contain both compressed
+and uncompressed versions of the tar distribution file -- these tar files
+contain no binaries. These distributions are updated weekly.
+<p>
+The FTP and Web areas also contain the users and programmers guides
+as separate files (these are also in the distribution). The Web pages
+contain hypertext versions of the documentation.
+<h3>Contents</h3>
+<ul>
+<li><a href="#installing">Instructions for installing <em>Miriad</em></a>
+<li><a href="#updates">Getting regular updates</a>
+<li><a href="#individual">Rebuilding individual tasks/subroutines</a>
+<li><a href="#sysdep">System-dependent issues</a>
+<li><a href="#special-cases">Special case tasks</a>
+<li><a href="#structure">The structure of <em>Miriad</em></a>
+</ul>
+&nbsp;<br>
+<a href="mailto:miriad@atnf.csiro.au"><em>miriad@atnf.csiro.au</em></a>
+
+<hr>
+<a name="installing"><h1>Instructions for installing <em>Miriad</em></h1>
+
+<font size=+1><em>Please see the end of this note for <a href="#sysdep">some system-dependent comments</a>.</em></font>
+
+<ol>
+<li>
+Get a copy of the <em>Miriad</em> distribution.
+    A <em>Miriad</em> installation is available from the web:
+<pre>
+    Anonymous ftp:  Host:      ftp.atnf.csiro.au
+                    Directory: /pub/software/miriad
+                    File:      miriad.tar.Z, miriad.tar.gz or miriad.tar
+
+    Wget:           ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad.tar.Z
+                    ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad.tar.gz
+                    ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad.tar
+
+    or Web URL:     <a href=http://www.atnf.csiro.au/computing/software/miriad>http://www.atnf.csiro.au/computing/software/miriad</a>
+	            Click on "Distribution,installation and update info"
+</pre>
+    Alternatively, if you have access to our machines, you can generate a 
+    tar file yourself with the desired binaries. You can create a tar file of
+    the <em>Miriad</em> environment with the command
+<pre>
+  % mirtar <i>device</i> <i>arch</i>
+</pre>
+where "<i>device</i>" is the output device or tar file name, and
+"<i>arch</i>" (machine architecture) can be one of: all, none or a machine
+type. The "arch" argument determines which executables and object
+libraries (if any) are written to the tar tape/file.
+<p>
+For example
+<pre>
+  % mirtar /dev/nrst0 all
+</pre>
+    will write <em>Miriad</em> source and binaries for all the architectures that we
+    have binaries for. To see the supported architectures, use "mirtar"
+    without any arguments.
+<p>
+    <b>NOTE:</b> Problems with operating system/compiler/shared library mismatches
+    can cause binaries that work on one machine NOT to run on another
+    very similar machine. If you take binaries -- good luck -- but it is
+    moderately likely that you will have to recompile anyway.
+<li>
+    Untar the distribution in a target directory. This directory should be
+    the root directory where you want to install <em>Miriad</em>. e.g. if your root
+    directory for <em>Miriad</em> is <code>/usr/local/miriad</code>, and <em>Miriad</em> is in a tar file
+    on device <code>/dev/nrst0</code>, use
+<pre>
+  % cd /usr/local/miriad
+  % tar -xvf /dev/nrst0
+</pre>
+    The source, manuals, etc take up about 15 Mbytes. The executables and
+    libraries take up about 50 Mbytes on a Sun4 (not using shareable libraries).
+<p>
+    We use the environment variable $MIR to indicate this root directory.
+<li>
+    Most of the work of installing is done by the "Install"
+    script in <em>Miriad</em>'s root directory. However <em>Miriad</em> relies on some
+    external libraries. Although Install looks in many places, it will
+    not find libraries squirreled away in unlikely places. To ensure that
+    Install finds the appropriate libraries, before running Install you should
+    set the environment variable LD_LIBRARY_PATH to a directory search
+    list (a colon-separated list of directories to be searched for
+    libraries). e.g. if you keep your libraries in subdirectories
+    <code>lib</code> and <code>X11/lib</code> of the directory <code>/obscure</code>, then
+<pre>
+  % setenv LD_LIBRARY_PATH /obscure/lib:/obscure/X11/lib
+</pre>
+    The directories are searched in the order given (left to right).
+<p>
+    If you lack (and need!) any of the libraries mentioned below,
+    install them before running the Install script! If you have to build
+    them yourself, you will need to put the library in a directory where
+    the Install script can find them. The simplest place is the <em>Miriad</em> library
+    directory (pointed to by environment variable $MIRLIB).
+<p>
+<ul>
+<li>
+      The PGPLOT plotting library is used by a significant number of tasks.
+      <em>Miriad</em> requires PGPLOT version 5.0 or later. See the installation
+      notes that come with PGPLOT on how to install it.
+<p>
+      PGPLOT may depend on other libraries (e.g. probably the X11 libraries).
+
+      PGPLOT is available from
+<pre>
+      <a href="http://www.astro.caltech.edu/~tjp/pgplot/">http://www.astro.caltech.edu/~tjp/pgplot/</a>
+</pre>
+      Also Tim Pearson (<a href="mailto:tjp@astro.caltech.edu"><em>tjp@astro.caltech.edu</em></a>)
+      can give advice on PGPLOT.
+<p>
+      The tar distribution for <em>Miriad</em> also comes with this distribution,
+      (subdirectory pgplot). However if you already have an up-to-date copy,
+      you will probably want to disregard (or delete) the <em>Miriad</em> copy.
+<li>
+      X11 libraries: In addition to PGPLOT, the tools xmtv and xpanel use
+      the X11 system. PGPLOT usually requires purely libX11.a, whereas
+      xmtv and xpanel require Athena widgets and other X11 libraries.
+      Instructions on installing X11 are beyond the scope of this note!
+<li>
+      The ATLOD task (and only ATLOD) uses the ATNF RPFITS library.
+      If you want the ATLOD task, you will have to install the RPFITS
+      library. The <em>Miriad</em> distribution comes with only the
+      binary library for the RPFITS library -- depending on your
+      system, this may be adequate.
+<p>
+      However compiler/library incompatibilities between your system and
+      ours may exist. If the binary libraries (as shipped) are not adequate
+      for your system, source code are available from
+<pre>
+  <a href="ftp://ftp.atnf.csiro.au/pub/software/rpfits/">ftp://ftp.atnf.csiro.au/pub/software/rpfits</a>.
+</pre>
+      Also see
+<pre>
+   <a href="http://www.atnf.csiro.au/computing/software/rpfits">http://www.atnf.csiro.au/computing/software/rpfits</a>
+</pre>
+      Installing RPFITS should be straightforward. Having installed it, you
+      should copy the include, rpfits.inc, that comes with the
+      distribution to the <em>Miriad</em> include file are, $MIR/inc
+<pre>
+  % cp rpfits.inc $MIR/inc
+</pre>
+      Advice is available from <a href="mailto:miriad@atnf.csiro.au"><em>miriad@atnf.csiro.au</em></a>.
+<li>
+      The <code>miriad</code> front-end can use the GNU READLINE library to allow
+      command line editting. This is very useful. If you fail to have
+      the <code>readline</code> libraries, the front-end will still work -- but it
+      will not have command-line editting. LINUX systems should already
+      have a copy of <code>readline</code> installed.
+      A copy of the <code>readline</code> source
+      is available as
+<pre>
+  <a href=http://ftp.gnu.org/pub/gnu/readline/readline-5.0.tar.gz">http://ftp.gnu.org/pub/gnu/readline/readline-5.0.tar.gz</a>.
+</pre>
+Some old versions may require you
+to link with both libreadline and libhistory. Be warned.
+<p>
+Linking with the <code>readline</code> library also needs either the termcap or
+ncurses library. Make sure that the Install script can find one of
+these if you are going to use the <code>readline</code> library.
+</ul>
+    If you lack some of the above libraries (rpfits, <code>readline</code>, Athena
+    widgets) and are disinclined to install them, see <a href="#special-cases">Special cases</a>
+    below for a possible solution.
+<li>
+    Well-supported machine architectures include:
+<p>
+<i>SunOS 4.x, SunOS 5.x, Convex, IRIX, IRIX64, OFS1/Digital UNIX, Linux,
+HPUX, UNICOS, Mac Darwin, Windows/Cygwin</i>
+<p>
+    If you are using one of these, <em>in principle</em>, you need to
+    change your directory to the <em>Miriad</em> root directory, and run
+<pre>
+  % ./Install
+</pre>
+    This prompts you with a number of questions. Hopefully these are
+    largely self-explanatory. Depending on some answers, and whether
+    some libraries can be found, some questions may be skipped, or extra ones
+    may appear.
+<p>
+    The operations performed by Install are not "destructive" -- you
+    can rerun Install without causing damage or confusion.
+<p>
+    The questions are:
+<ul>
+<li>
+     "Change MIRRC to use a different root directory". You will normally
+      say yes the first time (and no on any possible subsequent runs).
+<li>
+     "Give the root directory name". This defaults to the your current
+      directory, but you might want to explicitly give the name of the
+      current directory in a more digestible form than the pwd command
+      can produce.
+<li>
+     "Re-generate the mirfind script" and then
+      "Re-generate the mirlibs script". Normally answer yes. However if
+      you are rerunning Install and have already made a good version of
+      mirfind and/or mirlibs (either automatically or by hand), then answer no.
+<li>
+     "Does the PGPLOT library need Xwindows". Normally answer yes.
+<li>
+     "Is this OK". This is asking whether the link list (the libraries
+      and options used to link a <em>Miriad</em> task) are OK. If the link list is
+      not OK, then answer no, and edit the file "mirlibs.csh" by hand, and
+      then copy it to the directory $MIR/scripts/unix/$arch. See note 11
+      below for information on mirlibs. It is then safe to rerun
+      Install.
+<li>
+     "Rebuild the <em>Miriad</em> library/tasks from scratch". You will only
+      get this question if you have a binary distribution or are
+      rerunning Install. Answer no if you think that the binaries
+      are probably in good shape. Also answer no, if you are re-running 
+      Install after the build failed mid-way through (eg during liking).
+<p>
+    The script starts to build the bulk of <em>Miriad</em> at this stage. This
+    can take quite a while...
+<li>
+    If all has gone well, you will eventually get the question:
+<p>
+     "Record update time". And you can answer yes.
+<p>
+    If there has been a problem, the compilation will usually terminate
+    with a error such as:
+<pre>
+    Processing /applic/miriad/prog/cgdisp.for
+    Number of lines = 4496; number of routines = 25
+    /usr/bin/ld: cannot find -lpgplot
+    collect2: ld returned 1 exit status
+    ### /applic/miriad/bin/linux/mirclnk /applic/miriad/prog/cgdisp.for: returned with status=256
+</pre>
+    In this case, you should stop the install (answer no to the "Build
+    special tasks" question) and work out what the problem is. Feel free to 
+    email <a href="mailto:miriad@atnf.csiro.au"><em>miriad@atnf.csiro.au</em></a> for help!! 
+<li>
+     "Build special tasks". Generally answer yes to this.
+    After this, it tries to build a few special programs.
+</ul>
+<p>
+    If something goes wrong, it is safe to re-run the Install script
+
+<li>  Having build the <em>Miriad</em> system, you will the UNIX system to
+    automatically initialise the <em>Miriad</em> environment when you log in.
+    For csh/tsch users, in your .login file, add the lines
+<pre>
+  % source  miriad-root-directory/bin/MIRRC 
+  % set path = ($MIRBIN $path)
+</pre>
+This gives you the correct <em>Miriad</em> environment when you log in.
+In the above <code>miriad-root-directory</code> is the name of
+the directory where you installed <em>Miriad</em>.
+<p>
+For the Korn/sh/bash shells, you will want to do the equivalent, but use
+the initialisation script <code>MIRRC.sh</code> instead of <code>MIRRC</code>.
+<p>
+    For many sites, the installation is complete. Read further only if
+    you have had problems installing <em>Miriad</em>, or if you want to re-build
+    individual subroutines or programs, etc.
+<p>
+<b>NOTE for BIMA <i>Miriad</i> users:</b> The ATNF and BIMA versions
+of <i>Miriad</i> largely depend on a couple of environment variables, plus
+the executables in a users path. However there are a few incompatibilities
+in a user's login environment that need attention if a user were first to
+initialise the environment to use BIMA <i>Miriad</i>, and then switch to
+ATNF <i>Miriad</i>. For C shell users, you will need to do the following:
+<pre>
+  %  unsetenv MIRPAGER
+  %  unalias mirhelp
+</pre>
+
+</ol>
+<hr>
+<a name="updates"><h1>Getting regular updates</h1>
+    Having installed a current version of <em>Miriad</em>, you can readily keep this
+    up-to-date -- provided your machine can ftp to the ATNF.
+<p>
+    To bring your machine up-to-date, simply use
+<pre>
+   % mirimport
+</pre>
+    This ftps across any needed updates and then unpacks and installs
+    them. Only use this command if you have write access to the
+    <em>Miriad</em> area, and if you are set up to compile etc.
+<p>
+    This can be simply done, periodically, as a cron job. Note the
+    cron job should:
+<ul>
+<li>
+          Set up its environment so that the <em>Miriad</em> executables are in
+          its path, and that the <em>Miriad</em> environment variables are defined.
+          People unfamiliar with cron jobs, and the difference between .cshrc
+          and .login might find this step more involved than it appears!
+<li>
+          Execute the c-shell script.
+<pre>
+    mirimport
+</pre>
+</ul>
+       For example, the crontab commands might look like
+<pre>
+30 22 * * 4 csh%source /miriad/bin/MIRRC%mirimport
+</pre>
+       This runs at 10:30 pm on Thursdays, uses the c-shell, sets the <em>Miriad</em>
+       environment, and runs mirimport.
+<p>
+Although the update process is conveniently down automatically, it can
+also be done by hand. This may make more sense for a laptop which is only
+occassionally connected to the network.
+
+<hr>
+
+<a name="individual"><h1>Rebuilding individual tasks/subroutines</h1>
+
+The easiest way to recompile/relink individual tasks/subroutines
+is to use the <em>Miriad</em> script "mirupdate". This checks all relevant
+source code for something that has been modified or "touched" since
+mirupdate was last used.
+<p>
+For example, to update task $MIR/prog/example.for, touch the file and
+then run mirupdate.
+<pre>
+  % touch $MIR/prog/example.for
+  % mirupdate
+</pre>
+It should give various messages about building "example", and finally ask
+<pre>
+  Record update time:
+</pre>
+    If all has gone OK, answer yes.
+
+<hr>
+<a name="sysdep"><h1>System-dependent issues</h1>
+
+NOTE: If you have to change any of <em>Miriad</em>'s scripts, do so for those
+pieces of code in $MIR/scripts/unix of $MIR/scripts/unix/$arch. Note
+that changing scripts in the directory $MIRBIN will get overwritten
+by the Install and mirupdate scripts.
+
+<h2>GNU Compilers and f2c</h2>
+<em>Miriad</em> has been successfully build using the gcc and g77 compilers. The
+installation scripts use the commands "cc" and "f77" to compile C and
+FORTRAN code respectively. If your system uses different names to these,
+you will need to edit the mirclnk.csh and mircadd.csh scripts in 
+$MIR/scripts/unix/$arch to use the correct names.
+<p>
+If you are using g77, and depending on the particular version/variant of g77, 
+you may want to use the compiler switch
+<pre>
+   -ff90-intrinsics-hide
+</pre>
+which turns off g77's knowledge of FORTRAN-90 intrinsic functions
+(g77 gives warnings when some <em>Miriad</em> routines happen to have the same
+name as these intrinsics). This should be safe with modern variants of <code>g77</code>. Some other f77/cc switchs may need to change
+as well. If modifying the sun4sol scripts to work with
+g77, you will want to remove the "-libmil" switch, and perhaps replace "-O2"
+with "-O".
+<p>
+Our experience with FORTRAN compilers based on "f2c" is not entirely
+positive. Tasks "atlod" is believed to fail to work
+properly when using f2c-based compilers. <code>g77</code> seems more reliable.
+<p>
+There is no experience with <em>Miriad</em> using the <code>gfortran</code>
+compiler, but this is a reflection on this compiler's comparative newness.
+
+<h2>LINUX</h2>
+See comments above on GNU compilers.
+<p>
+Additionally, in the bad old days of LINUX, the FORTRAN compiler can be known as 
+"f77", "g77" or "fort77", depending on the software you have. This seems
+ti have settled now. There are
+problems with what are believed to be compiler and library bugs on various
+old variants of LINUX. There problems are rarely reproducable on other LINUX
+systems, so it appears that the compiler/library bugs are created and
+corrected quite rapidly.
+<p>
+<em>Miriad</em> runs on Linux machines with both 32 and 64 bit addresses. This
+is invisible in the installation process. 
+<p>
+On a 64-bit machine where the Intel FORTRAN and C compilers are
+available, <em>Miriad</em> can be build to use 64-bit integers in the FORTRAN
+code. The advantages of this include access to a bigger address
+space and substantially less chance of integer overflows when
+counting quantities. As of the writing of this, the C compiler does not support 64-bit
+int. <em>However I do not believe the PGPLOT or RPFITS libraries can be
+build or linked in such an environment.</em>
+<p>
+To use the Intel compilers in 64-bit mode, modify the MIRRC and MIRRC.sh
+scripts to that the machine architecture is set to linux-ia64.
+
+
+<h2>CYWIN/Windows</h2>
+CYGWIN is a Linux-like environment layered on top of Windows. This is
+quite easy to install on a Windows machine, although it can take a while
+to find all the packages that you will want. The packages needed to
+install cygwin are available from
+<pre>
+   <a href="http://www.cygwin.com">http://www.cygwin.com</a>
+</pre>
+Required packages include the FORTRAN and C compilers, a number of X11
+packages (both for users and developers), the make utility, <code>readline</code>
+(both for users and developers packages), the tcsh shell, and probably a
+bunch more.
+
+<h2>SunOS 5.x (Solaris 2.x)</h2>
+You must have /usr/ccs/bin in your path to find ar, ld, etc.
+<p>
+The /usr/ucb cc and f77 compilers should not be used. They do not work!!
+<p>
+Sun's /opt/SUNWSpro/bin compilers should be used (make sure this is
+in the path ahead of /usr/ucb!!).
+
+<h2>Mac Darwin OS</h2>
+Some versions of Darwin OS will require you to include the library
+<pre>
+  -lcc_dynamic
+</pre>
+within the <code>mirlibs</code> script. You will need this library if you
+get warning messages about "restFP" and "saveFP" being undefined when
+you link.
+<p>
+On some versions of the compiler (some on tiger?), it is best to disable
+optimisation -
+go into the <code>$MIR/scripts/unix/darwin</code> directory and
+change the <code>f77</code> command in <code>mircadd.csh</code> and
+<code>mirclnk.csh</code>. Generally you should do this before
+starting to do any compiling (which is a nuisance, as you do not know whether
+it is an issue until after you have compiled).
+<p>
+<p>
+Currently the building of the RPFITS library on the Mac darwin OS
+is a fiddle (the RPFITS library does not have darwin in mind). For
+this OS only, there is a simple script to retrieve and build the RPFITS
+library
+<pre>
+      $MIR/scripts/unix/darwin/Build_rpfits
+</pre>
+This builds the RPFITS library, and places it in the main <em>Miriad</em>
+library directory. It expects that the <code>$MIR</code> environment variable
+is defined.
+
+<h2>IRIX</h2>
+The compilers are buggy. Be on your guard. Do not use optimisation.
+
+<h2>IRIX64</h2>
+The FORTRAN optimiser is very buggy. I recommend that you do not use
+optimisation above -O0.
+<p>
+On our IRIX64 machine, the system library complib.sgimath contains BLAS,
+LINPACK and FFT routines. If your machine does not have this library,
+you will need to modify the file $MIR/scripts/unix/sgi/mirupdate.csh.
+See the comments in that file (look for the double
+exclamation marks -- !!). You will also have to exclude -lcomplib.sgimath
+from the mirlibs script.
+<p>
+Some old versions of the readline library require the compiler switches
+<pre>
+  cc -32 -D_BSD_SIGNALS
+</pre>
+on the irix64 operating system.
+
+
+<h2>DEC OSF/1 or Digital UNIX</h2>
+On some DEC OSF/1 systems, in linking some tasks, you can get
+messages like ...
+<pre>
+Assertion failed: 0, file ../../../../../../src/usr/ccs/lib....
+</pre>
+It seems that this is a known bug with the OSF/1 V3.2 operating
+system. I am told the workarounds are:
+<ul>
+<li> Install patch ID OSF320-094, which gives you a new linker, or
+<li> Disable all optimization when compiling, or
+<li> Upgrade to Digital Unix.
+</ul>
+Another work around, that the build script tries when a link operation fails,
+is to retry linking but with switches to produce static executables. 
+This works sometimes, but not others.  You may also play with whether the
+libraries used in linking (e.g. PGPLOT) are static or not. 
+
+<h2>UNICOS</h2>
+The FORTRAN compiler has the option to use either 64-bit or 128-bit
+values for DOUBLE PRECISION numbers. The 64-bit option MUST be used
+as the C compiler only supports this mode.
+<p>
+Currently the atlod task does not work on UNICOS.
+<hr>
+
+<a name="special-cases"><h1>Special case tasks</h1>
+    For tasks that require special libraries (<code>atlod</code> needs rpfits;
+    <code>miriad</code> can be linked with <code>readline</code>; <code>xpanel</code> and <code>xmtv</code> need
+    Athena widgets), a collection of statically linked versions
+    exist in 
+<pre>
+      <a href="ftp://ftp.atnf.csiro.au/software/miriad/bindir">ftp://ftp.atnf.csiro.au/software/miriad/bindir</a>
+</pre>
+    The files there have (hopefully!) names which makes their
+    contents obvious. Each file is a compressed tar file. Having
+    retrieved them (ftp in binary mode!), uncompressed and untared,
+    you should then move the executable to <code>$MIRBIN</code> and any <code>.doc</code> file
+    to $MIRPDOC. For example:
+<pre>
+       uncompress atlod.sun4sol.Z
+       tar -xvf atlod.sun4sol
+       mv atlod $MIRBIN
+       mv atlod.doc $MIRPDOC
+</pre>
+<hr>
+<a name="structure"><h1>The structure of <em>Miriad</em></h1>
+
+Here we outline the structure of <em>Miriad</em>. <em>Miriad</em> consists of
+   a largish number of independent executables. Most executables will function
+   without the presence of any other parts of <em>Miriad</em>. If your interest in
+   <em>Miriad</em> is limited to a very small subset of tasks, these are the only
+   executables that you will need to compile.
+<p>
+   The scripts that compile <em>Miriad</em> and keep it up to date are similarly
+   does not have a list of source files built into it. They work by
+   assuming all code in a few particular directories is to be compiled
+   and either added to a library, or linked into an executable. If you
+   do not want a particular set of tasks, simply delete them from the
+   tasks directory before you start to build the system (or delete
+   their executables afterwards if you find out later that a particular
+   task is not of interest).
+<p>
+   <em>Miriad</em> directory structure. The current directory structure is as
+   follows. The contents of the first three directories are generated
+   from the other directories.
+<pre>
+    $MIR/bin/$arch	Executables.
+        /lib/$arch	Libraries and some time-stamp files.
+	/doc		On-line help.
+</pre>
+    The followign directories contain the "source" from which the 
+    system is generated.
+<pre>
+	/cat		  Miscellaneous tables, etc, used by tasks and
+			  users
+	/spec		  Special-case source programs.
+	     /*		  Various special-case programs.
+	/specdoc	  Special-case documentation files.
+	/inc		  A few include files.
+	/linpack	  LINPACK source code.
+	/bindir           Directory of some binaries.
+        /guides		  Miriad manuals -- in LaTex and Postscript.
+	    /user	  Users guide.
+	    /prog	  Programmers guide.
+	/pgplot		  PGPLOT distribution.
+	/prog		  Miriad tasks.
+	/scripts	  General scripts.
+		/unix     Unix-specific scripts.
+		     /sun4    Scripts specific to Sun machines running old SunOS
+                     /sun4sol Scripts specific to Sun machines running solaris
+		     /convex  Scripts specific to Convex machines.
+		     /irix    Scripts specific to Silicon Graphics/IRIX machines.
+		     /irix64  Scripts specific to Silicon Graphics/IRIX 64-bit addresses.
+		     /unicos  Scripts specific to Unicos Crays.
+		     /alpha   Scripts specific to DEC OSF/1 Alpha
+		     /hpux    Scripts specific to HP-UX machines
+		     /linux   Scripts specific to LINUX.
+                     /linux64 Scripts specific to LINUX with 64-bit addresses.
+                     /linux-ia64 Scripts specific to LINUX with 64-bit addresses and Intel compilers.
+                     /cygwin  Scripts specific to the CYGWIN environment on Windows.             
+                     /darwin  Scripts specific to Darwin OS.
+		/vms	  Scripts specific to VMS.
+	/subs		  Miriad subroutines
+	     /vms	  Subroutines specific to VMS.
+	     /unix	  Subroutines specific to UNIX.
+		  /alpha_linux Subroutines specific to DEC OSF/1 Alphas and
+			  LINUX.
+		  /convex Subroutines specific to Convex UNIX.
+		  /unicos Subroutines specific to Unicos UNIX.
+		  /hpux	  Subroutines specific to HP-UX.
+		  /sgi    Subroutines specific to Silicon Graphics.
+		  /bsdvax Subroutines specific to a VAX under BSD Unix.
+	/tests		  A collection of test scripts, run by mirtester.
+	/tools		  Additional tools, in C.
+</pre>
+Most of <em>Miriad</em> code is written in fairly standard Fortran-77 and C.
+<em>Miriad</em>, however, uses both a FORTRAN and C preprocessor to add some
+simple language extensions and to aid portability.
+<p>
+The FORTRAN preprocessor, <code>ratty</code>, needs to be applied to all <code>.for</code> files.
+The FORTRAN extensions are to make some VAX extensions universally
+available, to provide conditional compilation directives (little
+used) and machine-independent compiler optimisation directives. The
+output of <code>ratty</code> generally changes very little from the input, and looks
+like fairly vanilla FORTRAN (with a few VAX extensions).
+<p>
+    The C preprocessor, <code>intf2c</code> (which is in addition to the normal C
+    preprocessor) needs to be applied to all <code>.f2c</code> files. Passing standard
+    C through it simple prepends a few lines. <code>Intf2c</code>'s only use
+    is to aid in the calling of C from FORTRAN. A special syntax is used
+    for function declarations and their dummy arguments, when these functions
+    are to be called by FORTRAN.
+<p>
+    See the preamble comments of <code>ratty.c</code> and <code>intf2c.c</code> for more information.
+    It is beyond the scope of this note to mention how <code>ratty</code> and <code>intf2c</code>
+    might need to be adapted to support a new architecture. 
+<p>
+    With a modest amount of work, you should be able to get <em>Miriad</em> to
+    run on any supposedly POSIX complient (or nearly complient) machine.
+<p>
+Although most tasks and subroutines exist in the <em>Miriad</em>'s standard
+areas (and are updated by the mirupdate script), there are some
+special cases. The source for most of these special cases is found 
+in subdirectories of <code>$MIR/spec</code>. Each subdirectory has a "<code>Build</code>"
+script used to compile and link the task. Machine-specific versions
+of the Build script may exist as well -- e.g. <code>Build.sun4sol</code>.
+<p>
+The <code>Build</code> scripts are all simple and easily adapted to your local
+environment. The only trick in them is that they invoke the
+<code>mirfind</code> script, which attempts to find libraries needed for linking.
+<p>
+Tasks found in the <code>$MIR/spec</code> area are not automatically updated
+by the mirupdate script. You will need to update them by hand,
+as the need arises.
+
+<h2>Adding a new architecture</h2>
+<em>Miriad</em> is built and updated using one C program (mirnewer - source in the
+directory $MIR/tools) and five C-shell scripts (<code>mirupdate, mircadd, mirclnk,
+mirlibs, mirfind</code> -- source in <code>$MIR/scripts/unix/$arch</code>, where <code>$arch</code> is
+a machine type name). The <code>mirfind</code> and <code>mirlibs</code>
+scripts are generated
+automatically by <code>$MIR/Install</code>. For a new architecture, you will 
+need to
+develop the other three. You will might need to modify
+<code>$MIR/Install</code> and <code>$MIR/bin/MIRRC</code> to know about your architecture.
+
+<h2>The mirupdate script</h2
+The <code>mirupdate</code> script looks for source files which are out of date
+by using <code>mirnewer</code>. <code>Mirnewer</code>, in turn, invokes 
+<code>mircadd</code> and <code>mirclnk</code>
+when it finds an out-of-date file.
+<p>
+The heart of <code>mirupdate</code> looks something like:
+<pre>
+	doscripts $MIR/scripts/unix{/sun4,}
+	dosubs $MIR/subs{/unix/sun4,/unix,} $MIR/linpack
+	dotools $MIR/tools
+	doprog $MIR/prog
+	dodocs $MIR/specdoc
+</pre>
+    (check on using curly brackets, {}, in the C-shell if you are not
+    familiar with this syntax). Each line consists of a "do" command which
+    searches a list of directories for modified source files. It searches
+    the directories in order, and if multiple files with the same name
+    are found, the one found first is the one that takes precedence. So
+    you place the more machine-specific directories earliest in the list.
+    This way if you have a machine-specific version of some code (e.g.
+    optimised for your machine, or calls the appropriate system services),
+    it will be used rather than the more generic version.
+    Modify the search lists to your particular needs.
+
+<h2>The mircadd and mirclnk scripts</h2>
+    mircadd and mirclnk invoke compiles, libraries and linkers.
+    All compiler flags are built into these two scripts. Both are
+    passed the name of a source file (.for, .c, .f2c, .doc, .csh),
+    and performs the appropriate action based on the file type.
+<p>
+    mircadd compiles FORTRAN, C or ".f2c" files, and places it the
+    binary in the $MIRLIB/libmir.a library.
+<p>
+    mirclnk compiles/links FORTRAN tasks ($MIR/prog) (as well as
+    generating .doc files) and C tools ($MIR/tools). Additionally, it
+    moves shell scripts and <code>.doc</code> files to the <code>$MIRBIN</code> and <code>$MIRPDOC</code>
+    directories respectively.
+    
+<h2>The MIRRC and Install scripts</h2>
+
+    <code>$MIR/bin/MIRRC</code> and <code>$MIR/bin/MIRRC.sh</code> sets the root directory, 
+    determines the machine architecture and sets various environment
+    variables. It is a simple script and easy to adapt.
+<p>
+    Apart from the automatic generation of the mirlibs scripts,
+    Install is rather independent in the specific architecture.
+
+<h2>The mirlibs script</h2>
+    The way that you tell the <em>Miriad</em> compile/link scripts what
+    libraries and link switches to use when linking (where these libraries
+    are) is done by a trivial script -- <code>mirlibs</code>. The <code>Install</code> script
+    attempts to generate this automatically.
+<p>
+    <code>mirlibs</code> is a one-line script, which echos the libraries/switches needed to
+    link a <em>Miriad</em> task. It is the ONE and ONLY place where the link
+    libraries are mentioned in <em>Miriad</em>'s installation scripts. You must
+    set this so that tasks can be linked correctly. Typical usage of
+    the <code>mirlibs</code> command (within <code>mirclnk</code>) is
+<pre>
+        f77 -o $MIRBIN/task task.f `mirlibs`
+</pre>
+    Typically <code>mirlibs</code> will look something like
+<pre>
+      #!/bin/csh -f
+      echo $MIRLIB/libmir.a -lpgplot -lm -lX11
+</pre>
+    which indicates that the <em>Miriad</em> library (<code>libmir.a</code>), plus the PGPLOT
+    library and some libraries needed by PGPLOT.
+<p>
+    All flags, etc, appropriate for the linker can be used in
+    <code>mirlibs</code>. As well as a list of libraries, <code>mirlibs</code> may, for example, include
+    the <code>-L</code> switch to indicate a directory to search for libraries.
+
+
+<h2>Customising the Problem Size</h2>
+    The include file, <code>$MIRINC/maxdim.h</code>, gives some parameters which
+    set the maximum sized problems that <em>Miriad</em> can cope with. Increase
+    the values set here if your site needs to work with bigger problems.
+    Decrease the values if you are short of swap space or memory. No
+    code allocate memory which is more that a few times any of the
+    parameters in the maxdim.h file (i.e. there are no arrays of size
+    <code>MAXDIM**2</code>, <code>MAXDIM</code> being the maximum dimension of an image). <em>Miriad</em>
+    programs generally dynamically allocate memory when needed.
+<p>
+    Some exceptions are tasks that use the include file <code>$MIRINC/tmpdim.h</code>
+    This is similar to <code>maxdim.h</code>, except the values are invariably set
+    to smaller numbers. This is as programs which use this include file
+    do statically declare arrays of size <code>MAXDIM**2</code> or similar.
+<p>
+    In summary, you may wish to edit the parameter settings in <code>maxdim.h</code>
+    and <code>tmpdim.h</code> to reflect your problem sizes and memory availability.
+<p>
+    Parameters in <code>maxdim.h</code>:
+<pre>
+	MAXBUF  -- Maximum general scratch buffer size. The value of this
+		   is much less critical than you might expect, as most
+		   scratch buffers are allocated dynamically.
+	MAXDIM  -- Maximum image dimension.
+	MAXCHAN -- Maximum number of spectral channels.
+	MAXANT  -- Maximum number of antennas.
+	MAXBASE -- Maximum number of baselines (normally derived from MAXANT).
+	MAXWIN  -- Maximum number of simultaneous frequency bands ("windows").
+	MAXWIDE -- Maximum number of wideband channels (Hat Ck specific).
+</pre>
+<h2>Trouble shooting</h2>
+If <code>mirupdate</code> successfully finishes compiling the subroutines, but starts
+to fail to link the tasks, interrupt it! At this stage try to compile
+and link a task by hand. e.g. to compile <code>prthd</code>, use
+<pre>
+       % fortran -o $MIRBIN/prthd prthd.for `mirlibs`
+</pre>
+When you have sorted out the problem (perhaps mirlibs was inappropriate)
+use the following commands to proceed without having to start from 
+scratch:
+<pre>
+       % touch $MIRLIB/Last_update
+       % touch $MIR/prog/*
+       % mirupdate
+</pre>
+This causes the time-stamp file (<code>Last_update</code>) to be more recently
+modified than the subroutines, but the programs appear to have
+been modified even more recently.
+</body>
+</html>
