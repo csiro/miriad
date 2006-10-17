@@ -1,85 +1,50 @@
 #!/bin/sh
-# Korn/sh shell version of MIRRC by George Martin
-# The following must be the 4th line
-MIR=/nfs/applic/miriad;export MIR
+#-----------------------------------------------------------------------------
+# Usage: . MIRRC.sh
+#-----------------------------------------------------------------------------
+# Bourne shell (bash or ksh) version of MIRRC by George Martin.
+#
+# $Id: MIRRC.sh.in,v 1.3 2006/10/17 08:26:47 cal103 Exp $
+#-----------------------------------------------------------------------------
+# Miriad root directory set by configure or otherwise.
+  MIR=@MIRROOT@ ; export MIR
 
-OS=`uname -s`
-VERS=`uname -r`
-MACH=`uname -m`
+# Important Miriad subdirectories.
+  MIRCAT=$MIR/cat  ; export MIRCAT
+  MIRPDOC=$MIR/doc ; export MIRPDOC
+  MIRINC=$MIR/inc  ; export MIRINC
+  MIRCHNG=$MIR/new ; export MIRCHNG
+  MIRPROG=$MIR/prog; export MIRPROG
+  MIRSUBS=$MIR/subs; export MIRSUBS
+  [ -d $MIR/man ] && MIRMAN=$MIR/man ; export MIRMAN
 
-case $OS in			# Which executable directory?
+# Miriad architecture.
+  MIRARCH=`$MIR/scripts/mirarch` ; export MIRARCH
+  if [ "$MIRARCH" = unknown ]
+  then
+    echo "### Unknown host architecture -- no Miriad executables."
+  fi
 
-   ConvexOS) arch=convex
-             ;;
-      SunOS) arch=sun4
-             if [ "`echo $VERS | awk -F. '{print $1}'`" = "5" ]
-             then		# A gross test for Solaris (5.x.y)
-                arch=sun4sol
-             fi
-	     if [ "`echo $MACH | awk '/86/{print 1}'`" != "" ]
-	     then
-		arch=i86sol
-	     fi
-             ;;
-    CYGWIN*) arch=cygwin
-	     ;;
-      Linux) arch=linux
-             if [ "`echo $MACH`" = "x86_64" ]
-             then
-                arch=linux64
-             fi
-             ;;
-       OSF1) arch=alpha
-             ;;
-      HP-UX) arch=hpux
-             ;;
-          *) arch=`echo $OS | tr "[A-Z]" "[a-z]"`
-             ;;
-esac
+# Miriad system subdirectories.
+  MIRARCHD=$MIR/$arch  ; export MIRARCHD
+  MIRBIN=$MIRARCHD/bin ; export MIRBIN
+  MIRLIB=$MIRARCHD/lib ; export MIRLIB
 
-# The enviroment variables
+# Set up the user's directory to receive .def files.
+  if [ -z "$MIRDEF" ]
+  then
+    if [ -d $HOME/mirdef ]
+    then
+      MIRDEF=$HOME/mirdef
+    else
+      MIRDEF=.
+    fi
 
-MIRINC=$MIR/inc;export MIRINC
-MIRPDOC=$MIR/doc;export MIRPDOC
-if [ -d $MIR/man ]
-then
-   MIRMAN=$MIR/man;export MIRMAN
-fi
-MIRCAT=$MIR/cat;export MIRCAT
-MIRCHNG=$MIR/new;export MIRCHNG
-MIRPROG=$MIR/prog;export MIRPROG
-MIRSUBS=$MIR/subs;export MIRSUBS
+    export MIRDEF
+  fi
 
-if [ $arch ]			# Set variable for executables and libraries
-then
-   if [ -d $MIR/$arch/bin -a -d $MIR/$arch/lib ]
-   then
-      MIRARCH=$MIR/$arch;export MIRARCH
-      MIRBIN=$MIRARCH/bin;export MIRBIN
-      MIRLIB=$MIRARCH/lib;export MIRLIB
-   else
-      echo "### Either $MIR/$arch/bin or $MIR/$arch/lib does not exist"
-   fi
-else
-   echo "### Unknown host architecture -- no Miriad executables"
-fi
-
-# Directory for .def files if necessary
-
-if [ -z $MIRDEF ]
-then
-   export MIRDEF=.
-   if [ -d $HOME/mirdef ]
-   then
-      MIRDEF=$HOME/mirdef;export MIRDEF
-   fi
-fi
-
-#export PGPLOT_BUFFER=TRUE
-if [ -f $MIRLIB/grfont.dat ]
-then
-  PGPLOT_FONT=$MIRLIB/grfont.dat;export PGPLOT_FONT
-fi
-
-unset OS
-unset VERS
+# PGPLOT_BUFFER=TRUE ; export PGPLOT_BUFFER
+  if [ -f $MIRLIB/grfont.dat ]
+  then
+    PGPLOT_FONT=$MIRLIB/grfont.dat ; export PGPLOT_FONT
+  fi
