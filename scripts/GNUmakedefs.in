@@ -1,0 +1,44 @@
+# Version.
+V := @PACKAGE_VERSION@
+
+# Soft symbolic link.
+LN_S  := @LN_S@
+
+# Fortran compiler and debug/optimize flags.
+FC    := @F77@
+FCSTD := @FCSTD@
+
+# C compiler.
+CC    := @CC@
+
+# Object library utilities.
+AR    := @AR@
+
+# Linker flags.
+LDSTD := @LDFLAGS@
+
+# Command used to strip symbols from an executable to reduce its size.
+STRIP := @STRIP@
+
+# How to regenerate the man page index database.
+MANDB := @MANDB@
+
+# RPFITS library.
+RPFITSLIB := @RPFITSLIB@
+
+# PGPLOT library.
+PGPLOTLIB := @PGPLOTLIB@
+
+# X11 (just the basic X11 library, needed to satisfy PGPLOT dependencies).
+# Also used to build sxmtv if xmtv fails to compile.
+X11LIB    := @X11LIB@
+
+# X11 with widget libraries for building X clients (xmtv and xpanel).
+X11INCD   := @X11INCD@
+X11LIBS   := @X11LIBS@
+
+# Any other libraries that may be required.
+XTRALIBS  := @XTRALIBS@
+
+# READLINE library.
+READLINELIB := @READLINELIB@
