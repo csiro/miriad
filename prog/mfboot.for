@@ -6,13 +6,13 @@ c= mfboot -- Set the flux scale of a visibility dataset.
 c& rjs
 c: calibration
 c+
-c	MFBOOT is a MIRIAD program which corrects the flux scale in
+c	MFBOOT is a MIRIAD program that corrects the flux scale in
 c	visibility datasets. In doing this, it assumes that the flux
 c	density scale is out by a constant scale factor. MFBOOT computes
 c	and applies a scale factor to the calibration tables of visibility
 c	datasets to account for this.
 c
-c	To determine this factor, MFBOOT compares the flux 
+c	To determine this factor, MFBOOT compares the flux
 c	density of measured visibilities with models of the expected
 c	visibility. The visibilities can correspond to measurements of
 c	planets or point sources. For point sources, they can be either
@@ -21,7 +21,8 @@ c	latter case the user must specify its flux density.
 c
 c@ vis
 c	Input visibility datasets. Several datasets can be given (wildcards
-c	are supported).
+c	are supported).  The scale factor will be applied uniformly to all
+c	datasets whether or not they contain the source used to determine it.
 c@ line
 c	Normal uv data "line" parameter, with the normal defaults. See
 c	the help on "line" for more information.
@@ -62,7 +63,7 @@ c	In "vector" mode, the real part of the data is compare with the model.
 c	The data need to be phase calibrated.
 c@ clip
 c	For planets, this parameter can be used to discard data for baselines
-c	that are significantly resolved. Data for a particular baseline will 
+c	that are significantly resolved. Data for a particular baseline will
 c	be discarded when the expected flux density on that baseline is
 c	less than the clip factor times the total flux density. The clip
 c	parameter takes on values between 0 to 1.0, with the default being 0
@@ -80,6 +81,8 @@ c    rjs     15jan06 Original version adapted from plboot.
 c    rjs     19jan06 Fix call to subroutine with //char*(*) arg.
 c    rjs     09may06 Increase size of MAXPNT.
 c    rjs     07jul06 Increase size of MAXPNT again.
+c
+c  $Id: mfboot.for,v 1.3 2006/10/18 02:08:17 cal103 Exp $
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
