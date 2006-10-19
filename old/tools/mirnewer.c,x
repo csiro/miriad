@@ -1,40 +1,42 @@
-/************************************************************************/
-/*									*/
-/*  newer is a command which searches a directory, looking for source	*/
-/*  code files, that are younger than a particular "timefile". When a	*/
-/*  file is found, it is passed to the command given by the -e flag,	*/
-/*  (or echoed to stdout if no -e flag present). If a file with the	*/
-/*  root name is found in multiple directories, only the first is	*/
-/*  considered.								*/
-/*									*/
-/*  Usage:								*/
-/*    newer [-i] [-e command] -x exclude timefile dirs ...		*/
-/*									*/
-/*  History:								*/
-/*    rjs  3mar90 Original version.					*/
-/*    rjs  9mar90 Fixed Cray-2 portability problem.			*/
-/*    rjs 23mar90 Fixed bug in variable initialisation in hashcheck.	*/
-/*		  Added -x flag.					*/
-/*    rjs  4jan93 Support .f2c files.					*/
-/*    rjs  5oct95 -i flag.						*/
-/*									*/
-/*  Compiling:								*/
-/*    You must specify one (and only one) of the following "defines"	*/
-/*    when compiling -- to indicate the machine type.			*/
-/*    This dictates the way directories are search.			*/
-/*      posix		The new POSIX style of handling directories.	*/
-/*      sysv		Old System V (without opendir, etc).		*/
-/*      bsd		Old BSD -- not the posix directory setup.	*/
-/*      vms		Vms-style routines.				*/
-/*----------------------------------------------------------------------*/
+/*============================================================================
+*
+*  mirnewer searches a directory for files that are younger than a specified
+*  file - the timestamp.  When one is found it is passed to the command given
+*  by the -e flag, (or echoed to stdout if no -e flag present).  If a file
+*  with the root name is found in multiple directories, only the first is
+*  considered.
+*
+*  Usage:
+*    newer [-i] [-e command] -x exclude timefile dirs ...
+*
+*  History:
+*    rjs  3mar90 Original version.
+*    rjs  9mar90 Fixed Cray-2 portability problem.
+*    rjs 23mar90 Fixed bug in variable initialisation in hashcheck.
+*    rjs  4jan93 Support .f2c files.
+*    rjs  5oct95 -i flag.
+*
+*  Compiling:
+*    You must specify one (and only one) of the following "defines"
+*    when compiling -- to indicate the machine type.
+*    This dictates the way directories are search.
+*      posix		The new POSIX style of handling directories.
+*      sysv		Old System V (without opendir, etc).
+*      bsd		Old BSD -- not the posix directory setup.
+*      vms		Vms-style routines.
+*
+*  $Id: mirnewer.c,x 1.2 2006/10/19 06:19:25 cal103 Exp $
+*===========================================================================*/
 
 #define TRUE 1
 #define FALSE 0
 #define MAXBUF 256
 #define MAXDIRS 128
-#include <stdio.h>
+
 #include <ctype.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 /* Some definitions, etc, to help make BSD, VAX-C and System-V look alike. */
 
@@ -94,7 +96,7 @@
   void closedir();
 #endif
 
-  
+
 
 #define private static
 
@@ -188,7 +190,7 @@ int level;
   DIR *dirp;
   struct dirent *dp;
   struct stat buf;
-  
+
 
 /* Form the root directory spec. */
 
@@ -362,9 +364,9 @@ DIR *dirp;
 {
   char *p,path[MAXBUF];
   static struct dirent d;
-  struct dsc$descriptor_s Path = 
+  struct dsc$descriptor_s Path =
    {sizeof(path)-1,DSC$K_DTYPE_T,DSC$K_CLASS_S,path};
-  struct dsc$descriptor_s asterisk = 
+  struct dsc$descriptor_s asterisk =
    {5,DSC$K_DTYPE_T,DSC$K_CLASS_S,"*.*;0"};
 
   if(lib$find_file(&dirp->dir,&Path,&dirp->contxt,&asterisk)%2){
