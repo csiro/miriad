@@ -1,10 +1,16 @@
-/* Simple program to return variable sizes used on your platform.
-   To build:  cc -o varsizes varsizes.c
-   Author: Chris.Phillips@csiro.au
-   Date: 2005-03-31
-*/
-int main (void) {
+/*============================================================================
+*  Simple program to return variable sizes used on your platform.
+*  To build: cc -o varsizes varsizes.c
+*
+*  Author: Chris.Phillips@csiro.au
+*  Date: 2005-03-31
+*  $Id: varsizes.c,v 1.2 2006/10/19 06:21:20 cal103 Exp $
+*===========================================================================*/
 
+#include<stdio.h>
+
+int main (void)
+{
   int i;
 
   printf("System variable sizes (in bytes)\n\n");
@@ -19,5 +25,5 @@ int main (void) {
   printf(" Sizeof long double = %d\n", sizeof(long double));
   printf("\n");
 
-  return(0);
+  return 0;
 }
