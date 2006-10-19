@@ -132,7 +132,7 @@ int n;
 # ifdef HAS_STRERROR
   return(strerror(n));
 # else
-#  if !defined(linux) && !defined(darwin)
+#  if !defined(linux) && !defined(darwin_ppc)
   extern int sys_nerr;
   extern char *sys_errlist[];
 #  endif
