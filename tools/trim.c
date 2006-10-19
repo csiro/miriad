@@ -1,22 +1,26 @@
-/************************************************************************/
-/*									*/
-/*	This compacts a text file, by discarding unnecessary		*/
-/*									*/
-/*  History:								*/
-/*    rjs  18sep89  Original version.					*/
-/*    rjs  17feb04  Gosh is it really 15 years old! Return a status.    */
-/*									*/
-/* Operations performed include:					*/
-/*	Trim off trailing  blanks.					*/
-/*	Replace multiple spaces with tabs where possible.		*/
-/*	Remove FORTRAN sequence numbers (-f flag).			*/
-/*	Handle backspace and delete characters.				*/
-/*	Delete blank lines (-b flag).					*/
-/*									*/
-/************************************************************************/
+/*============================================================================
+*
+*	This compacts a text file, by discarding unnecessary
+*
+*  History:
+*    rjs  18sep89  Original version.
+*    rjs  17feb04  Gosh is it really 15 years old! Return a status.
+*
+*  Operations performed include:
+*	Trim off trailing  blanks.
+*	Replace multiple spaces with tabs where possible.
+*	Remove FORTRAN sequence numbers (-f flag).
+*	Handle backspace and delete characters.
+*	Delete blank lines (-b flag).
+*
+*  $Id: trim.c,v 1.2 2006/10/19 06:24:12 cal103 Exp $
+*===========================================================================*/
 
 #define private static
+
 #include <stdio.h>
+#include <stdlib.h>
+
 #define MAXLINE 512
 
 #define TRUE 1
@@ -101,7 +105,7 @@ int fort,blank;
     t = line;
     for(s=line; *s; s++){
       if(*s == '\b' || *s == '\177' ){ if(t > line) t--; }
-      else if((*s < ' ' && *s != '\t') || (*s > '\177'));
+      else if((*s < ' ' && *s != '\t') || (*s > '\176'));
       else *t++ = *s;
     }
     *t = 0;
