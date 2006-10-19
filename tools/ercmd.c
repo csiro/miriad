@@ -13,13 +13,16 @@
     rjs  16feb95 Derived from "er" command.
     rjs  23apr99 Bring it into line with modern UNIX.
 
+  $Id: ercmd.c,v 1.2 2006/10/19 06:14:40 cal103 Exp $
 ------------------------------------------------------------------------*/
-#include <stddef.h>
-#include <stdlib.h>
-#include <unistd.h>
 #include <fcntl.h>
-#include <termios.h>
 #include <signal.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <termios.h>
+#include <unistd.h>
 
 # define LENGTH 256 	/* Maximum length of command */
 
@@ -30,7 +33,7 @@ static void output(),insert(),wipe();
 int main(argc,argv)
 int argc;
 char *argv[];
-{ 
+{
   char ch,buffer[LENGTH],line[LENGTH+20];
   int j,ct,i,in_length,c_length;
   struct termios b,old_b;
@@ -59,20 +62,20 @@ char *argv[];
   tcsetattr(ct,TCSANOW,&b);
 
 /* Open the terminal for standard i/o. */
-  
+
   strcpy(buffer,argv[1]);
   for(j=2; j < argc; j++){
     strcat(buffer," ");
     strcat(buffer,argv[j]);
   }
 
-  output(ct,"\15\33[K");output(ct,buffer); 
+  output(ct,"\15\33[K");output(ct,buffer);
   c_length = in_length = strlen(buffer);
 
-  while((ch = mychar(ct)) != '\n'){ 
+  while((ch = mychar(ct)) != '\n'){
     switch (ch){
 
-/* Arrow keys. */     
+/* Arrow keys. */
      case '': if ((ch = mychar(ct)) != '[') {}    /*The arrows....*/
 
                  else { switch ((ch = mychar(ct)))
@@ -133,7 +136,7 @@ char *argv[];
 
      case '': for (j=1;
 		!(buffer[c_length+j] == ' ' && buffer[c_length+j+1] != ' ')
-	        && (c_length+j+1 <= in_length); j++) { output(ct,"\33[C");}; 
+	        && (c_length+j+1 <= in_length); j++) { output(ct,"\33[C");};
 	        if(c_length+j <= in_length)
 		{output(ct,"\33[C");
 		c_length += j; break;}; break; /* Skip forwards on words */
@@ -142,9 +145,9 @@ char *argv[];
 
      case '': for (j=1;
 		!(buffer[c_length-j] == ' ' && buffer[c_length-j-1] != ' ')
-	        && (c_length-j-1 >= 0); j++) { output(ct,"\33[D");}; 
+	        && (c_length-j-1 >= 0); j++) { output(ct,"\33[D");};
 	        if(c_length-j >= 0)
-		{output(ct,"\33[D"); 
+		{output(ct,"\33[D");
 		c_length -= j; break;}; break; /* Skip backwards on words */
 
 /* Transpose characters. */
@@ -217,10 +220,10 @@ char ch;
 static void wipe(line,coord,size)
 char *line;
 int coord,size;
-/* 
+/*
     Wipe out line[coord] to line[coord+size]
 ------------------------------------------------------------------------*/
-{       
+{
   char temp[LENGTH];
   int i,j;
   for ( j = 0; j < (coord - 1) ; j++) temp[j] = line[j];
