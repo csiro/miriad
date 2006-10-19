@@ -1,23 +1,25 @@
-/************************************************************************/
-/*									*/
-/*		This converts data between disk and internal		*/
-/*		format. Disk format is IEEE reals and 16 or 32		*/
-/*		bit integers (most significant byte first).		*/
-/*									*/
-/*		This assumes that these are the local machine format	*/
-/*		(float == IEEE real, int == 32 bit integer,		*/
-/*		short int == 16 bit integer).				*/
-/*									*/
-/*		packx_c, unpackx_c, pack32_c and unpack32_c are		*/
-/*		implemented as macros (calling bcopy) in the		*/
-/*		system dependent include file.				*/
-/*									*/
-/*  History:								*/
-/*    rjs  Dark-ages Original version.					*/
-/*    bs   ?????89   Improved efficiency using "register" declarations.	*/
-/*    rjs   1nov89   Incoporated Brian's changes.			*/
-/*    rjs  02jan05   Added pack64/unpack64				*/
-/************************************************************************/
+/*============================================================================
+*
+*  Functions to convert data between disk and machine format.  The disk format
+*  in Miriad is always big-endian (most significant byte first) IEEE floating-
+*  point and 16- or 32-bit integer.
+*
+*  This version is for machines where float == IEEE big-endian, int == 32-bit
+*  integer, short int == 16-bit integer.
+*
+*  packx_c, unpackx_c, pack32_c and unpack32_c are implemented as macros
+*  (calling bcopy) in the system dependent include file.
+*
+*  History:
+*    rjs  Dark-ages Original version.
+*    bs   ?????89   Improved efficiency using "register" declarations.
+*    rjs   1nov89   Incoporated Brian's changes.
+*    rjs  02jan05   Added pack64/unpack64
+*
+*  $Id: pack.c,v 1.2 2006/10/19 06:45:14 cal103 Exp $
+*===========================================================================*/
+
+#include <string.h>
 
 #include "miriad.h"
 #include "sysdep.h"
@@ -126,4 +128,3 @@ int n;
     bug_c('f',"Unsupported size of int8 variables in unpack64_c");
   }
 }
-
