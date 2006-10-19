@@ -12,11 +12,17 @@
     16jul91 rjs  Changed output format to appease nebk, and added -k
 		 switch.
      9aug93 rjs  Exit (rather than return) with 0 to appease VAXs.
+
+  $Id: docfmt.c,v 1.2 2006/10/19 06:10:52 cal103 Exp $
 ************************************************************************/
 
 #define VERSION "Docfmt: version 1.0 16-Jul-91"
 #define private static
+
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #define MAXLINE 128
 
 #define TRUE 1
