@@ -3,8 +3,8 @@
 /*& pjt 								*/
 /*: tools								*/
 /*+
-  doc2man is a tool that formats a MIRIAD .doc file into an even less 
-  readable form: the unix man format. However, with X windows utilities 
+  doc2man is a tool that formats a MIRIAD .doc file into an even less
+  readable form: the unix man format. However, with X windows utilities
   like xman or hman, a much more superior online help system is created.
   Within miriad a script 'mir.man' or alias 'mirman' should be present
   to aid in starting up a windows based man browser.
@@ -26,12 +26,14 @@
     21jul93 pjt  improved doc for release
     26jul93 pjt  merge PURPOSE and NAME for the whatis database - I've
 		 seen to have done this before. Also added -section option
-    
+
+  $Id: doc2man.c,v 1.2 2006/10/19 06:09:47 cal103 Exp $
 ************************************************************************/
 
 #define VERSION "Doc2man: version 1.3 26-jul-93"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define private static
@@ -61,12 +63,12 @@ char *argv[];
       argv[i] = NULL;
       while(*++s)switch(*s){
 	case '?': usage(); exit(0);
-	case '0': 
-	case '1': 
-	case '2': 
-	case '3': 
-	case '4': 
-	case '5': 
+	case '0':
+	case '1':
+	case '2':
+	case '3':
+	case '4':
+	case '5':
 	case '6':
 	case '7':
 	case '8':
@@ -137,9 +139,9 @@ char *section;
   files[0] = 0;
   while(gline(line,MAXLINE,fin) != NULL) {
 
-/* 
+/*
  * If the line does not start with a percent, just write it out. Otherwise
- * do some processing. 
+ * do some processing.
  */
 
     if(*line != '%') {
@@ -150,7 +152,7 @@ char *section;
         fputs(".sp",fout);
       fputs("\n",fout);
     } else switch(line[1]){
-      case 'N': 
+      case 'N':
 	has_file = strchr(&line[1],'%');
 	if (has_file) {
 	    *has_file++ = 0;        /* patch the string locally */
@@ -166,20 +168,20 @@ char *section;
         seen_name = 1;
         strcpy(name,skip(line));
         break;
-      case 'D': 
+      case 'D':
         seen_purpose = 1;
         if (seen_name)
           fprintf(fout,".SH NAME\n%s - %s\n",name,skip(line));	
         else
           fprintf(stderr,"### doc2man: %%D before %%N seen\n");
         break;
-      case ':': 
+      case ':':
 	if (!seen_purpose) seen_purpose++;
         fprintf(fout,".SH CATEGORIES\n%s\n",skip(line));break;
       case 'H':
 	if (!seen_purpose) seen_purpose++;
 	fprintf(fout,".SH SEE ALSO\n%s\n",skip(line));  break;
-      case 'B': 
+      case 'B':
 	if (!seen_purpose) seen_purpose++;
         fprintf(fout,".SH DESCRIPTION\n");		break;
       case 'P':
@@ -196,7 +198,7 @@ char *section;
         }
 	s = skip(line);
 	fprintf(fout,".TP\n\\fI%s\\fP\n",skip(line));  	break;
-      default: 
+      default:
 	if (!seen_purpose) seen_purpose++;
         filling(line,fout);
         fputs(line,fout);

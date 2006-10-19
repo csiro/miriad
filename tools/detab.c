@@ -1,6 +1,16 @@
-#include <stdio.h>
+/*============================================================================
+* Usage: detab [infile [outfile]]
+*-----------------------------------------------------------------------------
+* detab converts tabs into the equivalent number of blanks (replicating the
+* function of the 'expand' utility in unix).  By default, output goes to
+* stdout and input comes from stdin.
+*
+* $Id: detab.c,v 1.2 2006/10/19 06:07:43 cal103 Exp $
+*===========================================================================*/
 
-/************************************************************************/
+#include <stdio.h>
+#include <stdlib.h>
+
 main(argc,argv)
 int argc;
 char *argv[];
@@ -9,7 +19,7 @@ char *argv[];
   char *infile,*outfile,*s;
   FILE *in,*out;
 
-  outfile = infile = NULL; 
+  outfile = infile = NULL;
   for(i=1;i<argc;i++){
     s = argv[i];
     if(infile == NULL) infile = s;
