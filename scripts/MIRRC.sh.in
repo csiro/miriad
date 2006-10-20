@@ -4,7 +4,7 @@
 #-----------------------------------------------------------------------------
 # Bourne shell (bash or ksh) version of MIRRC originally by George Martin.
 #
-# $Id: MIRRC.sh.in,v 1.4 2006/10/20 05:39:01 cal103 Exp $
+# $Id: MIRRC.sh.in,v 1.5 2006/10/20 06:00:10 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Miriad root directory set by configure or otherwise.
   MIR=@MIRROOT@ ; export MIR
@@ -29,6 +29,7 @@
   MIRARCHD=$MIR/$MIRARCH ; export MIRARCHD
   MIRBIN=$MIRARCHD/bin   ; export MIRBIN
   MIRLIB=$MIRARCHD/lib   ; export MIRLIB
+  MIRMAN=$MIRARCHD/man   ; export MIRMAN
 
 # Set up the user's directory to receive .def files.
   if [ -z "$MIRDEF" ]

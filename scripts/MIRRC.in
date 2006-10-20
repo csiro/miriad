@@ -4,7 +4,7 @@
 #-----------------------------------------------------------------------------
 # Set Miriad environment variables.
 #
-# $Id: MIRRC.in,v 1.3 2006/10/17 08:25:45 cal103 Exp $
+# $Id: MIRRC.in,v 1.4 2006/10/20 06:00:10 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Miriad root directory set by configure or otherwise.
   setenv MIR @MIRROOT@
@@ -28,6 +28,7 @@
   setenv MIRARCHD $MIR/$MIRARCH
   setenv MIRBIN   $MIRARCHD/bin
   setenv MIRLIB   $MIRARCHD/lib
+  setenv MIRMAN   $MIRARCHD/man
 
 # Set up the user's directory to receive .def files.
   if (! $?MIRDEF) then
