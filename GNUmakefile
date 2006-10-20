@@ -2,13 +2,14 @@
 # GNUmakefile used to compile Miriad.
 #
 # Original: 2006/08/28, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.12 2006/10/17 07:54:17 cal103 Exp $
+# $Id: GNUmakefile,v 1.13 2006/10/20 03:48:21 cal103 Exp $
 #-----------------------------------------------------------------------------
 ifeq "$(MIR)" ""
   # Try to deduce basic Miriad environment variables.  Obviously this only
   # works if make is invoked in the top-level Miriad directory.
   export MIR     := $(shell pwd)
   export MIRARCH := $(shell $(MIR)/scripts/mirarch)
+  export MIRBIN  := $(MIR)/$(MIRARCH)/bin
 endif
 
 # Get common makefile variables and rules.
