@@ -3,12 +3,12 @@
 #-----------------------------------------------------------------------------
 # Author: Mark Calabretta, Australia Telescope National Facility
 # http://www.atnf.csiro.au/~mcalabre/index.html
-# $Id: configure.ac,v 1.2 2006/10/17 08:33:21 cal103 Exp $
+# $Id: configure.ac,v 1.3 2006/10/20 03:49:51 cal103 Exp $
 #-----------------------------------------------------------------------------
 
 AC_INIT([Miriad], [ATNF2.0], [miriad@atnf.csiro.au], [miriad-ATNF2.0])
 AC_PREREQ([2.53])
-AC_REVISION([$Revision: 1.2 $])
+AC_REVISION([$Revision: 1.3 $])
 
 AC_CONFIG_SRCDIR([tools/miriad.c])
 AC_CONFIG_AUX_DIR([config])
@@ -38,7 +38,7 @@ if test "x$F77" = x; then
 fi
 
 if test "x$ac_cv_f77_compiler_gnu" = xyes ; then
-  FCSTD=-Wno-globals
+  FCSTD="-ff90-intrinsics-hide -Wno-globals"
 fi
 
 AC_SUBST([FCSTD])
@@ -116,6 +116,7 @@ AC_PATH_PROGS([MANDB], [mandb catman])
 AC_PATH_PROG([STRIP], [strip])
 AC_PROG_LN_S
 AC_PROG_RANLIB
+if test "x$MANDB" = x ; then MANDB=: ; fi
 
 
 # Extra places to look for third-party libraries.
@@ -131,14 +132,18 @@ EXTDIRS="$MIRROOT/$MIRARCH/lib \
          /local/pgplot         \
          /local/gnu/lib        \
          /local/lib            \
-         /opt/SUNWspro/lib     \
+         /opt/lib              \
+         /opt/local/lib        \
+         /sw/lib               \
+         /sw/lib/pgplot        \
          /usr/lib              \
          /lib                  \
+         /opt/SUNWspro/lib     \
          /usr/ucblib"
 
 DIRS=
 for EXTDIR in $EXTDIRS ; do
-  AC_CHECK_FILE([$EXTDIR], [DIRS="$DIRS $EXTDIR"], [continue])
+  AC_CHECK_FILE([$EXTDIR], [DIRS="$DIRS $EXTDIR"])
 done
 EXTDIRS=$DIRS
 
@@ -148,23 +153,29 @@ AC_MSG_NOTICE([
 
 Setting -L flags that may be needed by the linker...])
 
+# Shared library suffix.
+AC_MSG_CHECKING([shared library suffix])
+SO=so
+if test -f /usr/lib/libc.dylib ; then SO=dylib ; fi
+AC_MSG_RESULT([$SO])
+
 EXTLIBS=" pgplot png z F77 M77 sunmath g2c m "
 for EXTDIR in $EXTDIRS ; do
   DIR=
   for EXTLIB in $EXTLIBS ; do
-    AC_CHECK_FILES([$EXTDIR/lib$EXTLIB.so $EXTDIR/lib$EXTLIB.a],
+    AC_CHECK_FILES([$EXTDIR/lib$EXTLIB.$SO $EXTDIR/lib$EXTLIB.a],
                    [DIR=$EXTDIR
-                    EXTLIBS=`echo "$EXTLIBS" | sed -e "s/ $EXTLIB / /"`
-                    continue])
+                    EXTLIBS=`echo "$EXTLIBS" | sed -e "s/ $EXTLIB / /"`])
   done
 
-  if test "$DIR" != "" -a "$DIR" != /usr/lib -a "$DIR" != /lib
+  if test "x$DIR" != x -a "x$DIR" != x/usr/lib -a "x$DIR" != x/lib
   then
     LDFLAGS="$LDFLAGS -L$DIR"
   fi
 done
 
 LDFLAGS=`echo $LDFLAGS`
+AC_MSG_NOTICE([LDFLAGS set to $LDFLAGS])
 
 
 # Extra platform-specific libraries.
@@ -173,6 +184,12 @@ AC_MSG_NOTICE([
 Looking for platform-specific libraries...])
 
 XTRALIBS=$LIBS
+# Darwin.
+#AC_CHECK_LIB([SystemStubs],
+#             [_fprintf$LDBLStub], [XTRALIBS="-lSystemStubs $XTRALIBS"],
+#             [], [$XTRALIBS])
+
+# Solaris.
 AC_CHECK_LIB([nsl],     [gethostent], [XTRALIBS="-lnsl $XTRALIBS"],
              [], [$XTRALIBS])
 AC_CHECK_LIB([socket],  [socket],     [XTRALIBS="-lsocket $XTRALIBS"],
@@ -212,7 +229,7 @@ AC_MSG_NOTICE([
 Looking for the full pathname of the RPFITS library...])
 
 for EXTDIR in $EXTDIRS ; do
-  AC_CHECK_FILES([$EXTDIR/librpfits.so $EXTDIR/librpfits.a],
+  AC_CHECK_FILES([$EXTDIR/librpfits.$SO $EXTDIR/librpfits.a],
                  [RPFITSLIB="$EXTDIR/librpfits.a" ; break])
 done
 
@@ -258,19 +275,19 @@ Looking for READLINE and related libraries...])
 
 DIRS=
 for EXTDIR in $EXTDIRS ; do
-  AC_CHECK_FILES([$EXTDIR/libtermcap.so $EXTDIR/libtermcap.a],
+  AC_CHECK_FILES([$EXTDIR/libtermcap.$SO $EXTDIR/libtermcap.a],
                  [DIRS=$EXTDIR ; break])
 done
 
 if test "x$DIRS" = x ; then
   for EXTDIR in $EXTDIRS ; do
-    AC_CHECK_FILES([$EXTDIR/libncurses.so $EXTDIR/libncurses.a],
+    AC_CHECK_FILES([$EXTDIR/libncurses.$SO $EXTDIR/libncurses.a],
                    [DIRS=$EXTDIR ; break])
   done
 fi
 
 for EXTDIR in $EXTDIRS ; do
-  AC_CHECK_FILES([$EXTDIR/libreadline.so $EXTDIR/libreadline.a],
+  AC_CHECK_FILES([$EXTDIR/libreadline.$SO $EXTDIR/libreadline.a],
                  [if test "x$DIRS" != "x$EXTDIR" ; then
                     DIRS="$EXTDIR $DIRS"
                   fi
@@ -279,7 +296,7 @@ done
 
 for DIR in $DIRS
 do
-  if test "$DIR" != /usr/lib -a "$DIR" != /lib
+  if test "x$DIR" != x/usr/lib -a "x$DIR" != x/lib
   then
     READLINEDIR="$READLINEDIR -L$DIR"
   fi
