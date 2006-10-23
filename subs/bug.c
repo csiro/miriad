@@ -1,15 +1,17 @@
-/************************************************************************/
-/*									*/
-/* This handles errors and can abort your program.			*/
-/*									*/
-/*  History:								*/
-/*    rjs,mjs ????    Very mixed history. Created, destroyed, rewritten.*/
-/*    rjs     26aug93 Call habort_c.					*/
-/*    rjs     14jul98 Add a caste operation in errmsg_c, to attempt	*/
-/*		      to appease some compilers.			*/
-/*    rjs      9aug02 Support for "darwin" OS.				*/
-/*    rjs      3jul04 Use strerror routine.				*/
-/************************************************************************/
+/*============================================================================
+*
+* This handles errors and can abort your program.
+*
+*  History:
+*    rjs,mjs ????    Very mixed history. Created, destroyed, rewritten.
+*    rjs     26aug93 Call habort_c.
+*    rjs     14jul98 Add a caste operation in errmsg_c, to attempt
+*		     to appease some compilers.
+*    rjs      9aug02 Support for "darwin" OS.
+*    rjs      3jul04 Use strerror routine.
+*
+*  $Id: bug.c,v 1.3 2006/10/23 07:50:32 cal103 Exp $
+*===========================================================================*/
 
 #include <string.h>
 #include <stdio.h>
@@ -132,7 +134,7 @@ int n;
 # ifdef HAS_STRERROR
   return(strerror(n));
 # else
-#  if !defined(linux) && !defined(darwin_ppc)
+#  if !defined(linux) && !defined(darwin_ppc) && !defined(darwin_x86)
   extern int sys_nerr;
   extern char *sys_errlist[];
 #  endif
