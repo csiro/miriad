@@ -12,12 +12,8 @@
 # this one.
 #
 # Original: 2006/09/13, Mark Calabretta, ATNF
-# $Id: GNUmakedefs,v 1.1 2006/09/15 08:07:23 cal103 Exp $
+# $Id: GNUmakedefs,v 1.2 2006/10/24 01:07:26 cal103 Exp $
 #=============================================================================
-# These first-pass definitions for Darwin are taken as found in the old Miriad
-# compile/link scripts.  It seems to be a bit of a hybrid!  Undoubtedly some
-# changes will be needed.
-
 # ratty flags.
 RATFLAGS := -b -s linux
 
@@ -27,5 +23,5 @@ FCSTD    := -ff90-intrinsics-hide
 # intf2c flags.
 F2CFLAGS := -s linux
 
-# C preprocessor defines; add -Dsun to -Ddarwin - both are used.
+# C preprocessor defines; add -Dsun to -Ddarwin_ppc - both are used.
 CPPSTD   += -Dsun
