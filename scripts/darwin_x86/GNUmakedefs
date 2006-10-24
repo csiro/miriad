@@ -1,0 +1,32 @@
+#-----------------------------------------------------------------------------
+# GNUmakedefs: Platform-specific definitions used by Miriad makefiles
+#-----------------------------------------------------------------------------
+# This GNU makefile is read by $MIR/GNUmakedefs to override certain default
+# variable definitions with values suitable for darwin systems.
+#
+#                      DO NOT MODIFY THIS FILE
+#
+# since changes will be lost if a newer version is installed.  Overriding
+# definitions should instead be made in the installation-specific makedefs
+# file, $MIR/alpha/GNUmakedefs, which is included by $MIR/GNUmakedefs after
+# this one.
+#
+# Original: 2006/09/13, Mark Calabretta, ATNF
+# $Id: GNUmakedefs,v 1.1 2006/10/24 05:18:54 cal103 Exp $
+#=============================================================================
+# ratty flags.
+RATFLAGS := -b -s linux
+
+# Fortran compiler flags.
+FCSTD    := -ff90-intrinsics-hide
+
+# intf2c flags.
+F2CFLAGS := -s linux
+
+# C preprocessor defines; add -Dsun to -Ddarwin_x86 - both are used.
+CPPSTD   += -Dsun
+
+# Object library utilities.  Assuming that gfortran is used to compile and
+# link, it may be important to generate an unsorted table-of-contents to
+# satisfy the odcctools linker which it uses by default.
+RANLIB   := /usr/bin/ranlib -a
