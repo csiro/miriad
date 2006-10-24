@@ -26,7 +26,7 @@
 # target names by running 'gmake help'
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakedefs,v 1.15 2006/10/17 08:01:32 cal103 Exp $
+# $Id: GNUmakedefs,v 1.16 2006/10/24 04:39:26 cal103 Exp $
 #-----------------------------------------------------------------------------
 # We rely only on the MIR environment variable.
 MIRROOT  := $(MIR)
@@ -344,11 +344,17 @@ MIRSRCS  := $(filter-out $(ALLSUBD),$(MIRSRCS))
 # be
 #
 #   $MIR/subs/unix/alpha_linux:$MIR/subs/unix:$MIR/subs
+#
+# Note that $MIR/subs/unix/alpha_linux/pack.c defines conversion routines
+# applicable to little-endian IEEE floating point machines which explains why
+# it is used for DEC alphas and a variety of Intel-based platforms apart from
+# linux.
 
 SUBSalpha      := alpha_linux
 SUBSconvex     := convex
 SUBScygwin     := alpha_linux
-SUBSdarwin     :=
+SUBSdarwin_ppc :=
+SUBSdarwin_x86 := alpha_linux
 SUBShpux       := hpux
 SUBSi86sol     := alpha_linux
 SUBSirix       :=
