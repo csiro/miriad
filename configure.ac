@@ -3,12 +3,12 @@
 #-----------------------------------------------------------------------------
 # Author: Mark Calabretta, Australia Telescope National Facility
 # http://www.atnf.csiro.au/~mcalabre/index.html
-# $Id: configure.ac,v 1.3 2006/10/20 03:49:51 cal103 Exp $
+# $Id: configure.ac,v 1.4 2006/10/24 04:42:14 cal103 Exp $
 #-----------------------------------------------------------------------------
 
 AC_INIT([Miriad], [ATNF2.0], [miriad@atnf.csiro.au], [miriad-ATNF2.0])
 AC_PREREQ([2.53])
-AC_REVISION([$Revision: 1.3 $])
+AC_REVISION([$Revision: 1.4 $])
 
 AC_CONFIG_SRCDIR([tools/miriad.c])
 AC_CONFIG_AUX_DIR([config])
@@ -26,8 +26,10 @@ AC_MSG_NOTICE([
 
 Looking for the Fortran compiler...])
 
-AC_PROG_F77
-if test "x$F77" = x; then
+AC_PROG_F77([g77 f77 gfortran ifort xlf frt pgf77 fl32 af77 fort77 f90 xlf90 \
+             pgf90 epcf90 f95 fort xlf95 lf95 g95])
+
+if test "x$F77" = x ; then
   AC_MSG_ERROR([
     -------------------------------------------------------
     Fortran compiler not found.
@@ -38,7 +40,10 @@ if test "x$F77" = x; then
 fi
 
 if test "x$ac_cv_f77_compiler_gnu" = xyes ; then
-  FCSTD="-ff90-intrinsics-hide -Wno-globals"
+  # Beware of gfortran!
+  if test "x$F77" = xg77 -o "x$F77" = xf77 ; then
+    FCSTD="-ff90-intrinsics-hide -Wno-globals"
+  fi
 fi
 
 AC_SUBST([FCSTD])
@@ -55,7 +60,7 @@ AC_C_CONST
 AC_TYPE_SIZE_T
 if test "x$ac_cv_prog_cc_stdc" = xno -o \
         "x$ac_cv_c_const"      = xno -o \
-        "x$ac_cv_type_size_t"  = xno; then
+        "x$ac_cv_type_size_t"  = xno ; then
   AC_MSG_ERROR([
     -------------------------------------------------------
     An ANSI standard C library is required to build Miriad.
@@ -72,7 +77,7 @@ Checking ANSI C header files...])
 
 AC_HEADER_STDC
 AC_CHECK_HEADERS([errno.h limits.h math.h stdio.h stdlib.h string.h])
-if test "x$ac_cv_header_stdc" = xno; then
+if test "x$ac_cv_header_stdc" = xno ; then
   AC_MSG_ERROR([
     -------------------------------------------------------------------
     An ANSI standard C library is required to build Miriad.  One of the
@@ -136,6 +141,8 @@ EXTDIRS="$MIRROOT/$MIRARCH/lib \
          /opt/local/lib        \
          /sw/lib               \
          /sw/lib/pgplot        \
+         /opt/sw/lib           \
+         /opt/sw/lib/pgplot    \
          /usr/lib              \
          /lib                  \
          /opt/SUNWspro/lib     \
@@ -212,7 +219,7 @@ AC_SUBST([XTRALIBS])
 
 
 # X11 includes and libraries.
-if test "x$ac_x_libraries" != x; then
+if test "x$ac_x_libraries" != x ; then
   X11INCD=$ac_x_includes
   X11LIB="-L$ac_x_libraries -lX11"
   X11LIBS="-L$ac_x_libraries -lXaw -lXmu -lXext -lXt -lX11"
@@ -233,7 +240,7 @@ for EXTDIR in $EXTDIRS ; do
                  [RPFITSLIB="$EXTDIR/librpfits.a" ; break])
 done
 
-if test "x$RPFITSLIB" = x; then
+if test "x$RPFITSLIB" = x ; then
   AC_MSG_WARN([RPFITS library not found.  Some tasks will fail to link.])
 else
   AC_MSG_NOTICE([RPFITS appears to be available.])
@@ -257,7 +264,7 @@ AC_LANG(Fortran 77)
 AC_CHECK_LIB([pgplot],  [pgbeg],     [PGPLOTLIB="-lpgplot $PGPLOTLIB"],
              [PGPLOTLIB=], [$PGPLOTLIB $X11LIB $XTRALIBS])
 
-if test "x$PGPLOTLIB" = x; then
+if test "x$PGPLOTLIB" = x ; then
   AC_MSG_WARN([PGPLOT library not found.  Some tasks will fail to link.])
 else
   AC_MSG_NOTICE([PGPLOT appears to be available.])
@@ -315,7 +322,7 @@ AC_CHECK_LIB([readline], [readline],
              [READLINELIB="$READLINEDIR -lreadline $READLINELIB"],
              [READLINELIB=], [$READLINEDIR $READLINELIB])
 
-if test "x$READLINELIB" = x; then
+if test "x$READLINELIB" = x ; then
   AC_MSG_WARN([READLINE library not found.
 The Miriad shell will be compiled without command-line editing.])
 else
@@ -330,6 +337,13 @@ AC_SUBST([READLINELIB])
 AC_MSG_NOTICE([
 
 Constructing MIRRC and $MIRARCH/GNUmakedefs...])
+
+if test -f $MIRARCH/GNUmakedefs ; then
+  # Preserve a copy of the old GNUmakedefs.
+  rm -f $MIRARCH/GNUmakedefs.bak
+  cp $MIRARCH/GNUmakedefs $MIRARCH/GNUmakedefs.bak
+  AC_MSG_NOTICE([Preserved the old GNUmakedefs in $MIRARCH.])
+fi
 
 AC_CONFIG_FILES([MIRRC:scripts/MIRRC.in MIRRC.sh:scripts/MIRRC.sh.in])
 AC_CONFIG_FILES([$MIRARCH/GNUmakedefs:scripts/GNUmakedefs.in])
