@@ -2,7 +2,7 @@
 # GNUmakefile used to compile Miriad.
 #
 # Original: 2006/08/28, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.13 2006/10/20 03:48:21 cal103 Exp $
+# $Id: GNUmakefile,v 1.14 2006/10/26 04:35:54 cal103 Exp $
 #-----------------------------------------------------------------------------
 ifeq "$(MIR)" ""
   # Try to deduce basic Miriad environment variables.  Obviously this only
@@ -48,7 +48,7 @@ ifeq "$(MAKEMODE)" "system"
 
 
   # The following rules are for ATNF use only.
-  ifdef ATNF
+  ifdef MIRATNF
     # Files distributed separately.
     MIRFTPS  := DISCLAIMER INSTALL.html progguide.ps.gz progguide_US.ps.gz \
                 userguide.ps.gz userguide_US.ps.gz
@@ -76,16 +76,51 @@ ifeq "$(MAKEMODE)" "system"
     #---------------
     VPATH := $(MIRROOT):$(MIRGUIDD)/user:$(MIRGUIDD)/prog
 
+    # For copying third-party libraries and associated utilities such as
+    # RPFITS, PGPLOT & READLINE into the Miriad system directories for export.
+    # Darwin requires that the library be ranlib'd if moved.
+    define mir-copy
+      -@ $(RM) $@
+         cp $< $@
+      -@ chgrp miriad $@
+      -@ case $(@F) in lib*.a) $(RANLIB) $@ ;; esac
+      -@ chmod 664 $@
+    endef
+
+    $(MIRLIBD)/% : /usr/local/lib/%
+	   $(mir-copy)
+
+    $(MIRLIBD)/% : /usr/local/gnu/lib/%
+	   $(mir-copy)
+
+    $(MIRLIBD)/% : /sw/lib/%
+	   $(mir-copy)
+
+    $(MIRLIBD)/% : /usr/lib/%
+	   $(mir-copy)
+
+    $(MIRBIND)/% : /usr/local/bin/%
+	   $(mir-copy)
+	-@ chmod ug+x $@
+
+    $(MIRBIND)/% : /usr/bin/%
+	   $(mir-copy)
+	-@ chmod 775 $@
+
+    # Don't worry if they can't be found.
+    $(MIRLIBD)/% : ;
+    $(MIRBIND)/% : ;
+
+    # For installing the ftp distribution files.
     $(MIRFTPD)/% : %
-	-@ $(RM) $@
-	   cp -p $< $@
-	-@ chmod 644 $@
+	   $(mir-copy)
 
     $(MIRFTPD)/%.gz : %
 	-@ $(RM) $@
-	   cp -p $< $(MIRFTPD)/$*
+	   cp $< $(MIRFTPD)/$*
 	   gzip $(MIRFTPD)/$*
-	-@ chmod 644 $@
+	-@ chgrp miriad $@
+	-@ chmod 664 $@
 
 
     # Static and static pattern rules.
@@ -93,20 +128,24 @@ ifeq "$(MAKEMODE)" "system"
     .PHONY : bookings dist updates
 
     # Update the copy of the RPFITS library and include file via allsys.
-    initial :: $(MIRINCD)/rpfits.inc $(MIRLIBD)/librpfits.a
+    initial :: rpfits pgplot readline
      ifdef MIRRCS
 	-@ $(MAKE) -C scripts chkout
      endif
 
-    $(MIRLIBD)/librpfits.a : /usr/local/lib/librpfits.a
-	-@ $(RM) $@
-	   cp $< $@
+    rpfits : $(MIRINCD)/rpfits.inc $(MIRLIBD)/librpfits.a
 
     $(MIRINCD)/rpfits.inc : /usr/local/include/rpfits.inc
 	-@ rcs -l $@ < /dev/null
 	-@ $(RM) $@
 	   cp $< $@
 	 @ ci -u -m"Updated from /usr/local/include/rpfits.inc." $@
+
+    pgplot : $(patsubst %,$(MIRLIBD)/lib%.a,pgplot png z) \
+      $(addprefix $(MIRLIBD)/,grfont.dat rgb.txt) \
+      $(addprefix $(MIRBIND)/,pgdisp pgxwin_server)
+
+    readline : $(patsubst %,$(MIRLIBD)/lib%.a,readline termcap)
 
     ifeq "$(MIRARCH)" "sun4sol"
       # Regenerate the Miriad ftp distribution kits.  Requires the sun4sol
