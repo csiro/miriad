@@ -12,13 +12,10 @@
 # this one.
 #
 # Original: 2006/09/13, Mark Calabretta, ATNF
-# $Id: GNUmakedefs,v 1.2 2006/10/24 06:10:40 cal103 Exp $
+# $Id: GNUmakedefs,v 1.3 2006/10/26 03:13:39 cal103 Exp $
 #=============================================================================
 # ratty flags.
 RATFLAGS := -b -s linux
-
-# Fortran compiler flags.
-FCSTD    := -ff90-intrinsics-hide
 
 # intf2c flags.
 F2CFLAGS := -s linux
