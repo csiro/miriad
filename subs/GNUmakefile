@@ -3,7 +3,7 @@
 # dependency analysis for all source file types.
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.8 2006/10/16 08:24:02 cal103 Exp $
+# $Id: GNUmakefile,v 1.9 2006/10/26 03:31:47 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
@@ -326,6 +326,7 @@ ifeq "$(MAKEMODE)" "system"
   .PHONY : depend initial lib ranlib
 
   allsys :: $(MIRLIBR)
+	-@ chmod 664 $<
 
   $(MIRLIBR) : $(MIROBJS:%=$(MIRLIBR)(%)) ;
      ifneq "$(RANLIB)" ":"

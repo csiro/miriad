@@ -2,7 +2,7 @@
 # GNUmakefile for compiling the LINPACK subroutine library in Miriad.
 #
 # Original: 2006/08/25, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.2 2006/09/15 07:49:42 cal103 Exp $
+# $Id: GNUmakefile,v 1.3 2006/10/26 03:31:17 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
@@ -38,6 +38,7 @@ ifeq "$(MAKEMODE)" "system"
   # Static and static pattern rules.
   #---------------------------------
   allsys :: $(LINLIBR)
+	-@ chmod 664 $<
 
   $(LINLIBR) : $(LINOBJS:%=$(LINLIBR)(%)) ;
      ifneq "$(RANLIB)" ":"
