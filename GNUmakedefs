@@ -26,7 +26,7 @@
 # target names by running 'gmake help'
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakedefs,v 1.16 2006/10/24 04:39:26 cal103 Exp $
+# $Id: GNUmakedefs,v 1.17 2006/10/26 04:32:33 cal103 Exp $
 #-----------------------------------------------------------------------------
 # We rely only on the MIR environment variable.
 MIRROOT  := $(MIR)
@@ -134,13 +134,15 @@ RPFITSLIB  := $(MIRLIBD)/librpfits.a
 # Leave as is to use the version supplied with Miriad.
 LINPACKLIB := -L$(MIRLIBD) -llinpack
 
-# PGPLOT (FORTRAN plotting package).  There is no telling what other libraries
+# PGPLOT (FORTRAN plotting package required by tasks such as uvplt that
+# produce graphics).  It is supplied with Miriad in the binary distribution
+# kit available for some platforms.  There is no telling what other libraries
 # it may require since that depends on what graphics drivers were compiled
 # into it.  X11 will almost certainly be needed but it is defined separately
 # below.  Typically -lpng will also be needed and in turn this may require -lz
 # (the zlib compression library).  You may also need to add -L options to tell
 # the linker where to find them.
-PGPLOTLIB  := -lpgplot
+PGPLOTLIB  := -lpgplot -lpng -lz
 
 # X11 (just the basic X11 library, needed to satisfy PGPLOT dependencies).
 # Also used to build sxmtv if xmtv fails to compile.
@@ -154,10 +156,12 @@ X11LIBS    := -L/usr/X11R6/lib -lXaw -lXmu -lXext -lXt -lX11
 # Solaris for the tv tasks.  -lm is the standard maths library.
 XTRALIBS   := -lm
 
-# READLINE (used only by the Miriad shell).  If GNU readline is not available
-# then clear this and the Miriad shell will be compiled without command line
-# editing capability.  Readline needs either the termcap or ncurses library.
-# You may also need to add -I and/or -L options.
+# READLINE (used only by the Miriad shell).  The static library (without
+# header files) is supplied with Miriad in the binary distribution kit
+# available for some platforms.  If GNU readline is not available then clear
+# this and the Miriad shell will be compiled without command line editing
+# capability.  Readline needs either the termcap or ncurses library.  You may
+# also need to add -I and/or -L options.
 READLINELIB := -lreadline -ltermcap
 
 
@@ -165,17 +169,19 @@ READLINELIB := -lreadline -ltermcap
 #-----------------------------------------------------------------------------
 # Define a command to list the global symbols defined by an object module.
 # This is used to identify the object modules in the Miriad library that
-# define symbols needed by an executable and is mainly intended for Miriad
+# define symbols needed by an executable.  It is mainly intended for Miriad
 # systems where the library is under development, to save having to recompile
 # every Miriad task if just one object module changes.  Appropriate commands
-# are pre-defined for linux, linux64, and sun4sol, if you don't know how to
-# set this for your platform (or don't want this dependency analysis) then
-# simply leave nm-syms undefined (or undefine it in your GNUmakedefs), each
-# executable will then depend on the library as a whole.  The name of the
-# object module is $$OBJ.
-nm-syms.linux   := nm -g $$OBJ | awk '/ T / {print $$3}'
-nm-syms.linux64 := $(nm-syms.linux)
-nm-syms.sun4sol := nm -g -p $$OBJ | awk '/ T / {print $$3}'
+# are pre-defined for linux, linux64, darwin_ppc, darwin_x86, and sun4sol.
+# If you don't know how to set this for your platform (or don't want this
+# dependency analysis) then simply leave nm-syms undefined (or undefine it in
+# your GNUmakedefs), each executable will then depend on the library as a
+# whole.  The name of the object module is $$OBJ.
+nm-syms.linux      := nm -g $$OBJ | awk '/ T / {print $$3}'
+nm-syms.linux64    := $(nm-syms.linux)
+nm-syms.darwin_ppc := $(nm-syms.linux)
+nm-syms.darwin_x86 := $(nm-syms.linux)
+nm-syms.sun4sol    := nm -g -p $$OBJ | awk '/ T / {print $$3}'
 
 #=============================================================================
 #                         END OF DEFAULT DEFINITIONS
