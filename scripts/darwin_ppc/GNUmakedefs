@@ -12,13 +12,15 @@
 # this one.
 #
 # Original: 2006/09/13, Mark Calabretta, ATNF
-# $Id: GNUmakedefs,v 1.3 2006/10/24 06:11:46 cal103 Exp $
+# $Id: GNUmakedefs,v 1.4 2006/10/31 01:47:51 cal103 Exp $
 #=============================================================================
 # ratty flags.
 RATFLAGS := -b -s linux
 
-# Fortran compiler flags.
-FCSTD    := -ff90-intrinsics-hide
-
 # intf2c flags.
 F2CFLAGS := -s linux
+
+# Object library utilities.  Assuming that gfortran is used to compile and
+# link, it may be important to generate an unsorted table-of-contents to
+# satisfy the odcctools linker which it uses by default.
+RANLIB   := /usr/bin/ranlib -a
