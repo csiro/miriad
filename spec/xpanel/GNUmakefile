@@ -2,7 +2,7 @@
 # GNUmakefile for compiling Miriad utility xpanel.
 #
 # Original: 2006/09/15, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.1 2006/09/15 06:38:29 cal103 Exp $
+# $Id: GNUmakefile,v 1.2 2006/10/31 01:34:36 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
@@ -18,6 +18,7 @@ show ::
 ifeq "$(MAKEMODE)" "system"
   # System-oriented rules.
   #-----------------------
+  CFLAGS   := $(CPPOPT) -I../xmtv -I$(X11INCD) $(CCOPT) $(LDOPT)
 
   # Static and static pattern rules.
   #---------------------------------
@@ -25,7 +26,7 @@ ifeq "$(MAKEMODE)" "system"
 
   $(MIRBIND)/xpanel.exe : $(CODEDIR)/xpanel.c
 	-@ $(RM) $@
-	   $(CC) $(CPPOPT) $(CCOPT) -o $@ $< $(X11LIBS) $(XTRALIBS)
+	   $(CC) $(CFLAGS) -o $@ $< $(X11LIBS) $(XTRALIBS)
 	-@ chmod 775 $@
 
   $(MIRBIND)/xpanel : $(CODEDIR)/xpanel.csh
@@ -42,6 +43,8 @@ ifeq "$(MAKEMODE)" "system"
 else
   # Programmer-oriented rules.
   #---------------------------
+  CFLAGS   := $(CPPDBG) -I../xmtv -I$(CODEDIR)/../xmtv -I$(X11INCD) $(CCDBG)
+  CFLAGS   += $(LDDBG)
   VPATH    := .:$(CODEDIR)
 
   # Static and static pattern rules.
@@ -49,7 +52,7 @@ else
   all :: $(PGMRBIND)/xpanel.exe
 
   $(PGMRBIND)/xpanel.exe : xpanel.c
-	$(CC) $(CPPDBG) $(CCDBG) -o $@ $< $(X11LIBS) $(XTRALIBS)
+	$(CC) $(CFLAGS) -o $@ $< $(X11LIBS) $(XTRALIBS)
 
   clean ::
 	$(RM) *.o
