@@ -11,9 +11,8 @@
 #
 #   $(MIRARCHD)/GNUmakedefs,
 #
-# which is included by this file.  Typically you should
-# only need to modify compiler names and options and the variables relating to
-# external libraries.
+# which is included by this file.  Typically you should only need to modify
+# compiler names and options and the variables relating to external libraries.
 #
 # Note that this makefile also includes
 #
@@ -26,7 +25,7 @@
 # target names by running 'gmake help'
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakedefs,v 1.17 2006/10/26 04:32:33 cal103 Exp $
+# $Id: GNUmakedefs,v 1.18 2006/11/06 07:29:40 cal103 Exp $
 #-----------------------------------------------------------------------------
 # We rely only on the MIR environment variable.
 MIRROOT  := $(MIR)
@@ -40,14 +39,15 @@ MIRLIBD  := $(MIRARCHD)/lib
 #=============================================================================
 #                        START OF DEFAULT DEFINITIONS
 #=============================================================================
-# Compiler options.  The *OPT and *DBG variables are for system (optimized)
-# and code development (debug) compilation.  They should be defined in terms
-# of the corresponding *STD variables containig flags common to both.
+# Compiler options.
+#
+# The *OPT and *DBG variables are for system (optimized) and code development
+# (debug) compilation.  They should be defined in terms of the corresponding
+# *STD variables containing flags common to both.
 #
 # Some of these variables are overridden by the platform-specific GNUmakedefs
 # files in $MIR/scripts/*/GNUmakedefs.  For testing it may also be convenient
 # to override them on the GNU 'make' command line, e.g. gmake FCDBG=-O2.
-#-----------------------------------------------------------------------------
 
 # Source code checkout; only needed if you have the Miriad RCS repository.
 CO       := co
@@ -120,8 +120,39 @@ GZIP      := gzip
 # For putting timestamps in the build log.
 TIMER     := date +"%a %Y/%m/%d %X %z, executing on $$HOST"
 
-# Linker options for external libraries.
 #-----------------------------------------------------------------------------
+# The search path for operating system specific routines is defined as
+#
+#   $(MIRSUBD)/unix/$(SUBS$(MIRARCH)):$(MIRSUBD)/unix:$(MIRSUBD)
+#
+# For example, if MIRARCH is linux64, using SUBSlinux64 below the path would
+# be
+#
+#   $MIR/subs/unix/alpha_linux:$MIR/subs/unix:$MIR/subs
+#
+# Note that $MIR/subs/unix/alpha_linux/pack.c defines conversion routines
+# applicable to little-endian IEEE floating point machines which explains why
+# it is used for DEC alphas and a variety of Intel-based platforms apart from
+# linux.
+
+SUBSalpha      := alpha_linux
+SUBSconvex     := convex
+SUBScygwin     := alpha_linux
+SUBSdarwin_ppc :=
+SUBSdarwin_x86 := alpha_linux
+SUBShpux       := hpux
+SUBSi86sol     := alpha_linux
+SUBSirix       :=
+SUBSirix64     := irix64
+SUBSlinux      := alpha_linux
+SUBSlinux-ia64 := alpha_linux
+SUBSlinux64    := alpha_linux
+SUBSsun4       :=
+SUBSsun4sol    :=
+SUBSunicos     := unicos
+
+#-----------------------------------------------------------------------------
+# Linker options for external libraries.
 
 # RPFITS (required by a handful of tasks, primarily atlod, that read ATNF data
 # using subroutine RPFITSIN).  It is supplied with Miriad in the binary
@@ -164,19 +195,21 @@ XTRALIBS   := -lm
 # also need to add -I and/or -L options.
 READLINELIB := -lreadline -ltermcap
 
-
-# Object module dependency analysis.
 #-----------------------------------------------------------------------------
+# Object module dependency analysis.
+#
 # Define a command to list the global symbols defined by an object module.
 # This is used to identify the object modules in the Miriad library that
 # define symbols needed by an executable.  It is mainly intended for Miriad
 # systems where the library is under development, to save having to recompile
 # every Miriad task if just one object module changes.  Appropriate commands
 # are pre-defined for linux, linux64, darwin_ppc, darwin_x86, and sun4sol.
+#
 # If you don't know how to set this for your platform (or don't want this
 # dependency analysis) then simply leave nm-syms undefined (or undefine it in
 # your GNUmakedefs), each executable will then depend on the library as a
 # whole.  The name of the object module is $$OBJ.
+
 nm-syms.linux      := nm -g $$OBJ | awk '/ T / {print $$3}'
 nm-syms.linux64    := $(nm-syms.linux)
 nm-syms.darwin_ppc := $(nm-syms.linux)
@@ -328,7 +361,7 @@ ifeq "$(MAKEMODE)" "programmer"
 endif
 
 
-# All files in the miriad directory.
+# All files in the Miriad directory.
 ifdef MIRRCS
   # Ignore source files that haven't been checked in.
   MIRSRCS  := $(subst $(comma)v,,$(notdir $(wildcard $(RCSDIR)/*,v)))
@@ -339,38 +372,6 @@ endif
 # Filter out subdirectories.
 ALLSUBD  := $(notdir $(patsubst %/.,%,$(wildcard $(CODEDIR)/*/.)))
 MIRSRCS  := $(filter-out $(ALLSUBD),$(MIRSRCS))
-
-#-----------------------------------------------------------------------------
-
-# The search path for operating system specific subroutines is defined as
-#
-#   $(MIRSUBD)/unix/$(SUBS$(MIRARCH)):$(MIRSUBD)/unix:$(MIRSUBD)
-#
-# For example, if MIRARCH is linux64, using SUBSlinux64 below the path would
-# be
-#
-#   $MIR/subs/unix/alpha_linux:$MIR/subs/unix:$MIR/subs
-#
-# Note that $MIR/subs/unix/alpha_linux/pack.c defines conversion routines
-# applicable to little-endian IEEE floating point machines which explains why
-# it is used for DEC alphas and a variety of Intel-based platforms apart from
-# linux.
-
-SUBSalpha      := alpha_linux
-SUBSconvex     := convex
-SUBScygwin     := alpha_linux
-SUBSdarwin_ppc :=
-SUBSdarwin_x86 := alpha_linux
-SUBShpux       := hpux
-SUBSi86sol     := alpha_linux
-SUBSirix       :=
-SUBSirix64     := irix64
-SUBSlinux      := alpha_linux
-SUBSlinux-ia64 := alpha_linux
-SUBSlinux64    := alpha_linux
-SUBSsun4       :=
-SUBSsun4sol    :=
-SUBSunicos     := unicos
 
 
 #-----------------------------------------------------------------------------
@@ -592,7 +593,7 @@ ifeq "$(MAKEMODE)" "system"
   # Help.
   help ::
 	-@ echo ""
-	-@ echo "System-oriented rules for building the miriad system"
+	-@ echo "System-oriented rules for building the Miriad system"
 	-@ echo "===================================================="
 	-@ echo ""
 	-@ echo "Where a target is defined as a variable (shown in upper"
