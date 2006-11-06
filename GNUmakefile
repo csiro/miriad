@@ -2,7 +2,7 @@
 # GNUmakefile used to compile Miriad.
 #
 # Original: 2006/08/28, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.15 2006/10/31 01:49:07 cal103 Exp $
+# $Id: GNUmakefile,v 1.16 2006/11/06 07:31:59 cal103 Exp $
 #-----------------------------------------------------------------------------
 ifeq "$(MIR)" ""
   # Try to deduce basic Miriad environment variables.  Obviously this only
@@ -53,13 +53,13 @@ ifeq "$(MAKEMODE)" "system"
     MIRFTPS  := DISCLAIMER INSTALL.html progguide.ps.gz progguide_US.ps.gz \
                 userguide.ps.gz userguide_US.ps.gz
 
-    # The Miriad distribution is split into RCS, code, compiled documentation,
+    # The Miriad distribution is split into RCS, code, common runtime files,
     # and platform-specific binary kits.
     DISTRCS  := .rcs RCS */RCS */*/RCS */*/*/RCS
-    DISTCODE := DISCLAIMER GNUmake* INSTALL.html config configure configure.ac
-    DISTCODE += cat guides inc linpack prog scripts spec specdoc subs tests
-    DISTCODE += tools
-    DISTDOC  := doc html man progguide* userguide*
+    DISTCODE := GNUmake* config configure configure.ac
+    DISTCODE += guides inc linpack prog scripts spec subs tests tools
+    DISTCOMM := DISCLAIMER INSTALL.html progguide* userguide*
+    DISTCOMM += cat doc html man specdoc
     DISTBINS := $(subst /bin,,$(wildcard */bin))
 
     show ::
@@ -68,7 +68,7 @@ ifeq "$(MAKEMODE)" "system"
 	-@ echo ""
 	-@ echo "MIRFTPS  = $(MIRFTPS)"
 	-@ echo "DISTCODE = $(DISTCODE)"
-	-@ echo "DISTDOC  = $(DISTDOC)"
+	-@ echo "DISTCOMM = $(DISTCOMM)"
 	-@ echo "DISTBINS = $(DISTBINS)"
 
 
@@ -77,7 +77,7 @@ ifeq "$(MAKEMODE)" "system"
     VPATH := $(MIRROOT):$(MIRGUIDD)/user:$(MIRGUIDD)/prog
 
     # For copying third-party libraries and associated utilities such as
-    # RPFITS, PGPLOT & READLINE into the Miriad system directories for export.
+    # RPFITS & PGPLOT into the Miriad system directories for export.
     # Darwin requires that the library be ranlib'd if moved.
     define mir-copy
       -@ $(RM) $@
@@ -101,11 +101,11 @@ ifeq "$(MAKEMODE)" "system"
 
     $(MIRBIND)/% : /usr/local/bin/%
 	   $(mir-copy)
-	-@ chmod ug+x $@
+	-@ chmod a+x $@
 
     $(MIRBIND)/% : /usr/bin/%
 	   $(mir-copy)
-	-@ chmod 775 $@
+	-@ chmod a+x $@
 
     # Don't worry if they can't be found.
     $(MIRLIBD)/% : ;
@@ -128,7 +128,7 @@ ifeq "$(MAKEMODE)" "system"
     .PHONY : bookings dist updates
 
     # Update the copy of the RPFITS library and include file via allsys.
-    initial :: rpfits pgplot readline
+    initial :: rpfits pgplot
      ifdef MIRRCS
 	-@ $(MAKE) -C scripts chkout
      endif
@@ -144,8 +144,6 @@ ifeq "$(MAKEMODE)" "system"
     pgplot : $(patsubst %,$(MIRLIBD)/lib%.a,pgplot png z) \
       $(addprefix $(MIRLIBD)/,grfont.dat rgb.txt) \
       $(addprefix $(MIRBIND)/,pgdisp pgxwin_server)
-
-    readline : $(patsubst %,$(MIRLIBD)/lib%.a,readline termcap)
 
     ifeq "$(MIRARCH)" "sun4sol"
       # Regenerate the Miriad ftp distribution kits.  Requires the sun4sol
@@ -168,10 +166,10 @@ ifeq "$(MAKEMODE)" "system"
 	 @ $(RM) .tarX
 	-@ echo ""
 	-@ $(TIMER)
-	   cd .. ; tar cf miriad/miriad-doc.tar $(DISTDOC:%=miriad/%)
-	   gzip miriad-doc.tar
-	-@ $(RM) $(MIRFTPD)/miriad-doc.tar.gz
-	   mv miriad-doc.tar.gz $(MIRFTPD)/
+	   cd .. ; tar cf miriad/miriad-common.tar $(DISTCOMM:%=miriad/%)
+	   gzip miriad-common.tar
+	-@ $(RM) $(MIRFTPD)/miriad-common.tar.gz
+	   mv miriad-common.tar.gz $(MIRFTPD)/
 	-@ echo ""
 	 @ for bin in $(DISTBINS) ; do \
 	     echo "" ; \
