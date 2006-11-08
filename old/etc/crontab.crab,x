@@ -1,0 +1,3 @@
+# The nightly darwin_ppc build runs after linux but before sun4sol.
+# It has no special work to do.
+30 22 * * * . $HOME/.profile ; cd $MIR && ./etc/updatem
