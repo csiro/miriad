@@ -25,7 +25,7 @@
 # target names by running 'gmake help'
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakedefs,v 1.18 2006/11/06 07:29:40 cal103 Exp $
+# $Id: GNUmakedefs,v 1.19 2006/11/08 01:36:29 cal103 Exp $
 #-----------------------------------------------------------------------------
 # We rely only on the MIR environment variable.
 MIRROOT  := $(MIR)
@@ -118,7 +118,8 @@ GNUPLOT   := gnuplot
 GZIP      := gzip
 
 # For putting timestamps in the build log.
-TIMER     := date +"%a %Y/%m/%d %X %z, executing on $$HOST"
+HOST      := $(shell uname -n | sed -e 's/\..*//')
+TIMER     := date +"%a %Y/%m/%d %X %z, executing on $(HOST)"
 
 #-----------------------------------------------------------------------------
 # The search path for operating system specific routines is defined as
