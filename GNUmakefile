@@ -2,7 +2,7 @@
 # GNUmakefile used to compile Miriad.
 #
 # Original: 2006/08/28, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.17 2006/11/08 01:28:31 cal103 Exp $
+# $Id: GNUmakefile,v 1.18 2006/11/08 22:51:00 cal103 Exp $
 #-----------------------------------------------------------------------------
 ifeq "$(MIR)" ""
   # Try to deduce basic Miriad environment variables.  Obviously this only
@@ -57,9 +57,9 @@ ifeq "$(MAKEMODE)" "system"
     # and platform-specific binary kits.
     DISTRCS  := .rcs RCS */RCS */*/RCS */*/*/RCS
     DISTCODE := GNUmake* config configure configure.ac
-    DISTCODE += guides inc linpack prog scripts spec subs tests tools
+    DISTCODE += guides inc linpack prog spec subs tests tools
     DISTCOMM := DISCLAIMER INSTALL.html progguide* userguide*
-    DISTCOMM += cat doc html man specdoc
+    DISTCOMM += cat doc html man scripts specdoc
     DISTBINS := $(subst /bin,,$(wildcard */bin))
 
     show ::
