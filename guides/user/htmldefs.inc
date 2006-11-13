@@ -1,5 +1,5 @@
-\bodytext{background=hmiriad.gif}
-\newcommand{\task}[1]{\htmladdnormallink{#1}{../#1.html}}
+\bodytext{background=../hmiriad.gif}
+\newcommand{\task}[1]{\htmladdnormallink{#1}{../doc/#1.html}}
 \newcommand{\unix}[1]{\htmladdnormallink{#1}{/cgi-bin/miriad/mirman.pl?topic=#1}}
 \newcommand{\miriad}{{\it Miriad}}
 \newcommand{\aips}{AIPS}
