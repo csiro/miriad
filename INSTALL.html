@@ -50,11 +50,38 @@ system is available for them and other unix-based platforms.
 <p>
 <h3>Contents</h3>
 <ul>
-<li><a href="#installing">Installing <em>Miriad</em></a>
-<li><a href="#post-install">Post-installation</a>
-<li><a href="#trouble-shooting">Trouble-shooting and system-dependent issues</a>
-<li><a href="#updates">Getting regular updates</a>
-<li><a href="#structure">The <em>Miriad</em> directory structure</a>
+  <li>
+    <a href="#installing">Instructions for installing <em>Miriad</em></a>
+    <ul>
+      <li><a href="#third-party">Required third-party software</a></li>
+      <li><a href="#customising">Customising array sizes</a></li>
+      <li><a href="#binary">Installing from a binary distribution</a></li>
+      <li><a href="#source">Installing from source code</a></li>
+    </ul>
+  </li>
+  <li>
+    <a href="#post-install">Post-installation</a>
+  </li>
+  <li>
+    <a href="#trouble-shooting">Trouble-shooting and system-dependent
+    issues</a>
+    <ul>
+      <li><a href="#loader">Loader reports library not found</a></li>
+      <li><a href="#GCC">GNU Fortran and C compilers</a></li>
+      <li><a href="#linker">Linker reports unresolved symbols</a></li>
+      <li><a href="#LFS">Large File Support (LFS)</a></li>
+      <li><a href="#Linux">Linux (32- and 64-bit)</a></li>
+      <li><a href="#SunOS">SunOS 5.x (Solaris 2.x)</a></li>
+      <li><a href="#Darwin">Darwin / Mac OS X</a></li>
+      <li><a href="#Cygwin">Cywin/Windows</a></li>
+    </ul>
+  </li>
+  <li>
+    <a href="#updates">Getting regular updates</a>
+  </li>
+  <li>
+    <a href="#structure">The <em>Miriad</em> directory structure</a>
+  </li>
 </ul>
 &nbsp;<br>
 <a href="mailto:miriad@atnf.csiro.au"><em>miriad@atnf.csiro.au</em></a>
@@ -82,6 +109,8 @@ homepage</em></a> contains
 forms are included in the distribution).
 </p>
 
+<a name="third-party"><h4>Required third-party software</h4>
+
 <p>
 <em>Miriad</em> relies on the following third-party software
 <a href="http://en.wikipedia.org/wiki/Library_%28computer_science%29">
@@ -93,7 +122,7 @@ libraries</a>:
   RPFITS</code> library</a> (currently version 2.15) is used by
   <a href="http://www.atnf.csiro.au/computing/software/miriad/atlod.html">
   <code>atlod</code></a> and a number of other specialized tasks to read the
-  ATNF data format.
+  ATNF data format.  It is provided in binary installations.
   </p>
 </li>
 
@@ -112,7 +141,8 @@ libraries</a>:
   <p>
   <code>PGPLOT</code> uses a number of auxiliary data files
   <code>grfont.dat</code> and <code>rgb.txt</code>, and the display servers
-  <code>pgdisp</code> and <code>pgxwin_server</code>.
+  <code>pgdisp</code> and <code>pgxwin_server</code>.  Everything required is
+  provided in binary installations.
   </p>
 </li>
 
@@ -183,7 +213,37 @@ Of these, most Linux distributions will contain packages for all but
 unless you can use one of the binary distribution kits.
 </p>
 
-<b>Installing from a binary distribution</b>
+<a name="customising"><h4>Customising array sizes</h4>
+
+<p>
+One advantage of installing from source code is that it provides an
+opportunity to adjust the following parameters in the Fortran include files
+<code>$MIR/inc/maxdim.h</code> and <code>tmpdim.h</code> to reflect your
+problem sizes and memory availability:
+<pre>
+	MAXBUF  -- Maximum general scratch buffer size. The value of this
+		   is much less critical than you might expect, as most
+		   scratch buffers are allocated dynamically.
+	MAXDIM  -- Maximum image dimension.
+	MAXCHAN -- Maximum number of spectral channels.
+	MAXANT  -- Maximum number of antennas.
+	MAXBASE -- Maximum number of baselines (normally derived from MAXANT).
+	MAXWIN  -- Maximum number of simultaneous frequency bands ("windows").
+	MAXWIDE -- Maximum number of wideband channels (Hat Ck specific).
+</pre>
+No <em>Miriad</em> code allocates memory for arrays of length more than a few
+times any of the parameters in <code>maxdim.h</code> (e.g. there are no arrays
+of size <code>MAXDIM**2</code>).  <em>Miriad</em> programs mostly allocate
+memory dynamically when needed.
+</p>
+
+<p>
+<code>tmpdim.h</code> is similar to <code>maxdim.h</code> except the values
+are invariably set lower because tasks that use it <em>do</em> statically
+declare arrays of size <code>MAXDIM**2</code> or similar.
+</p>
+
+<a name="binary"><h4>Installing from a binary distribution</h4>
 
 <p>
 If a
@@ -257,7 +317,7 @@ Note that if you intend to keep your installation up-to-date by running
   <p>
   Multiple architectures can safely be downloaded and live alongside one
   another without conflict.  Allow about
-  <a href="http://en.wikipedia.org/wiki/100">100</a>
+  <a href="http://en.wikipedia.org/wiki/100_%28number%29">100</a>
   <a href="http://en.wikipedia.org/wiki/MiB">MiB</a> for each binary
   format.
   </p>
@@ -299,7 +359,7 @@ Refer to the <a href="#post-install">post-installation</a> instructions
 for initialization and testing.
 </p>
 
-<a name="source"><b>Installing from source code</b>
+<a name="source"><h4>Installing from source code</h4>
 
 <p>
 Source code management for ATNF Miriad was completely revised in late 2006.
@@ -1039,7 +1099,7 @@ add notes provided from elsewhere.
 
 <ul>
 <li>
-  <h4>Cywin/Windows</h4>
+  <a name="Cygwin"><h4>Cywin/Windows</h4>
   <p>
   <a href="http://en.wikipedia.org/wiki/Cygwin">Cygwin</a> is a Linux-like
   environment layered on top of Windows.  It is quite easy to install on a
@@ -1286,37 +1346,6 @@ referred to as <code>$MIRARCHD</code>), where <code>$MIRARCH</code> is the
 
 <hr>
 
-<h2>Customising array sizes</h2>
-
 <p>
-You may wish to adjust the following parameters in the Fortran include files
-<code>$MIR/inc/maxdim.h</code> and <code>tmpdim.h</code> to reflect your
-problem sizes and memory availability:
-<pre>
-	MAXBUF  -- Maximum general scratch buffer size. The value of this
-		   is much less critical than you might expect, as most
-		   scratch buffers are allocated dynamically.
-	MAXDIM  -- Maximum image dimension.
-	MAXCHAN -- Maximum number of spectral channels.
-	MAXANT  -- Maximum number of antennas.
-	MAXBASE -- Maximum number of baselines (normally derived from MAXANT).
-	MAXWIN  -- Maximum number of simultaneous frequency bands ("windows").
-	MAXWIDE -- Maximum number of wideband channels (Hat Ck specific).
-</pre>
-No <em>Miriad</em> code allocates memory for arrays of length more than a few
-times any of the parameters in <code>maxdim.h</code> (e.g. there are no arrays
-of size <code>MAXDIM**2</code>).  <em>Miriad</em> programs mostly allocate
-memory dynamically when needed.
-</p>
-
-<p>
-<code>tmpdim.h</code> is similar to <code>maxdim.h</code> except the values
-are invariably set lower because tasks that use it <em>do</em> statically
-declare arrays of size <code>MAXDIM**2</code> or similar.
-</p>
-
-<hr>
-
-<p>
-$Id: INSTALL.html,v 1.2 2006/11/08 04:04:23 cal103 Exp $
+<small>$Id: INSTALL.html,v 1.3 2006/11/13 07:39:44 cal103 Exp $</small>
 </p>
