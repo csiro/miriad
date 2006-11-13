@@ -2,7 +2,7 @@
 # GNUmakefile for compiling Miriad documentation.
 #
 # Original: 2006/09/18, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.9 2006/10/13 06:41:51 cal103 Exp $
+# $Id: GNUmakefile,v 1.10 2006/11/13 07:41:26 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
@@ -65,9 +65,9 @@ ifeq "$(MAKEMODE)" "system"
 
   # Generate HTML from doc.  taskref.txt lists all references to Miriad tasks
   # in the userguide and is generated from the HTML version of the userguide.
-  $(MIRHTMLD)/%.html : $(MIRDOCD)/%.doc taskref.txt
+  $(MIRHTMLD)/doc/%.html : $(MIRDOCD)/%.doc taskref.txt
 	-@ $(RM) $@
-	-@ echo "doc2html ../doc/$*.doc taskref.txt > ../html/$*.html"
+	-@ echo "doc2html ../doc/$*.doc taskref.txt > ../html/doc/$*.html"
 	 @ ./doc2html $< taskref.txt > $@ || $(RM) $@
 	-@ chmod 664 $@
 
@@ -110,7 +110,7 @@ ifeq "$(MAKEMODE)" "system"
 
   html : $(MIRHTMLD)/INSTALL.html $(MIRHTMLS:%=$(MIRHTMLD)/%) \
     $(MIRGIFS:%=$(MIRHTMLD)/%) taskindex \
-    $(patsubst %.doc,$(MIRHTMLD)/%.html,$(MIRDOCS) $(MIRSDOCS))
+    $(patsubst %.doc,$(MIRHTMLD)/doc/%.html,$(MIRDOCS) $(MIRSDOCS))
 
   $(MIRHTMLD)/INSTALL.html : $(MIRROOT)/INSTALL.html
 	-@ $(RM) $@
