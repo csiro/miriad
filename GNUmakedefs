@@ -25,7 +25,7 @@
 # target names by running 'gmake help'
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakedefs,v 1.19 2006/11/08 01:36:29 cal103 Exp $
+# $Id: GNUmakedefs,v 1.20 2006/11/13 08:20:42 cal103 Exp $
 #-----------------------------------------------------------------------------
 # We rely only on the MIR environment variable.
 MIRROOT  := $(MIR)
@@ -328,9 +328,11 @@ MIRTMPD  := $(MIRARCHD)/tmp
 MIRCATD  := $(MIRROOT)/cat
 MIRDOCD  := $(MIRROOT)/doc
 MIRHTMLD := $(MIRROOT)/html
+MIRHDOCD := $(MIRHTMLD)/doc
 
 SYSDIRS  := $(MIRARCHD) $(MIRAUXD) $(MIRBIND) $(MIRLIBD) $(MIRMAND)
 SYSDIRS  += $(MIRMAN1D) $(MIRTMPD) $(MIRCATD) $(MIRDOCD) $(MIRHTMLD)
+SYSDIRS  += $(MIRHDOCD)
 
 # For Miriad code distribution from ATNF (currently only accessible from
 # Solaris hosts).
@@ -831,6 +833,7 @@ show ::
 	-@ echo ""
 	-@ echo "MIRCATD    = $(MIRCATD)"
 	-@ echo "MIRHTMLD   = $(MIRHTMLD)"
+	-@ echo "MIRHDOCD   = $(MIRHDOCD)"
 	-@ echo "MIRFTPD    = $(MIRFTPD)"
 	-@ echo ""
 	-@ echo "SYSDIRS    = $(SYSDIRS)"
