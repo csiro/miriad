@@ -2,7 +2,7 @@
 # GNUmakefile for compiling the Miriad user guide.
 #
 # Original: 2006/09/25, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.3 2006/11/13 07:46:59 cal103 Exp $
+# $Id: GNUmakefile,v 1.4 2006/11/13 08:35:28 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
@@ -112,7 +112,7 @@ ifeq "$(MAKEMODE)" "system"
 	   cd $(USRHTMLD) ; $(MIRGUIDD)/user/TaskRef.pl > $(MIRTMPD)/$(@F)
 	-@ if [ $$? = 0 ] ; then \
 	     $(RM) $(@F) ; \
-	     mv -f $(MIRTMPD)/$(@F) . ; \
+	     mv -f $(MIRTMPD)/$(@F) $@ ; \
 	   fi
 
   cleansys ::
