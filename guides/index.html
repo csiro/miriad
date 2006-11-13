@@ -1,17 +1,18 @@
 <html>
 <head>
   <title>ATNF Miriad Data Reduction Software</title>
-  <! $Id: index.html,v 1.2 2006/11/10 06:18:01 cal103 Exp $ >
+  <! $Id: index.html,v 1.3 2006/11/13 07:44:41 cal103 Exp $ >
 </head>
 <body background="gmiriad.gif">
 
-<table cellspacing=0 cellpadding=1>
+<table cellspacing="0" cellpadding="1">
   <tr valign="top">
     <td width="160" height="800" nowrap>
-      <br><br><br><br><br><br><br><br><br><br><br>
+      <br><br><br><br><br><br><br><br><br><br>
 
       <! General Search >
-      <form action="/cgi-bin/miriad/mirsearch.pl" method="post">
+      <form action="http://www.atnf.csiro.au/cgi-bin/miriad/mirsearch.pl"
+        method="post">
         <table border="0" cellspacing="0" cellpadding="0" nowrap>
           <tr>
             <th align="left" colspan="2">
@@ -31,7 +32,8 @@
       <br>
 
       <! Task Lookup >
-      <form action="/cgi-bin/miriad/mirman.pl" method="get">
+      <form action="http://www.atnf.csiro.au/cgi-bin/miriad/mirman.pl"
+        method="get">
         <table border="0" cellspacing="0" cellpadding="0" nowrap>
           <tr>
             <th align="left" colspan="2">
@@ -40,39 +42,45 @@
           </tr>
           <tr>
             <td>
-              <input type="Text" name="topic" size="10" maxlength="50">
+              <input type="text" name="topic" size="10" maxlength="50">
             </td>
             <td>
-              <input type="Image" name="Go" src="gblue.gif" border="0">
+              <input type="image" name="Go" src="gblue.gif" border="0">
             </td>
           </tr>
         </table>
       </form>
+
       <br><br>
     </td>
-  
+
     <td>
-      <br><br><br>
+      <br><br>
       <center>
         <font size="+5"><strong><img src="miriad.gif" alt="Miriad"></strong>
         </font>
       </center>
       <hr size="1" noshade>
       <p>
-      <em>Miriad</em> is a radio interferometry data reduction package.  It
-      has particular emphasis on aspects of interest to users of the Australia
-      Telescope Compact Array (ATCA).  <em>Miriad</em> can be used for the
-      reduction of continuum and spectral line experiments from the original
-      loading of the data (either FITS, the ATNF RPFITS or old BIMA formats)
-      through to the image analysis and display stages (publication quality
-      output).
+      <b><em>Miriad</em></b> is a
+      <a href="http://en.wikipedia.org/wiki/Aperture_synthesis">radio
+      interferometry</a> data reduction package of particular interest to
+      users of the <a href="http://www.narrabri.atnf.csiro.au/">Australia
+      Telescope Compact Array</a> (ATCA).  It can be used for the reduction of
+      continuum and spectral line observations from beginning to end, starting
+      with the loading of the data (either
+      <a href="http://fits.gsfc.nasa.gov/">FITS</a>, the
+      <a href="http://www.atnf.csiro.au/computing/software/rpfits.html">ATNF
+      RPFITS</a> or old <a href="http://bima.astro.umd.edu/">BIMA</a> formats)
+      through to image synthesis, analysis and display with publication
+      quality graphics.
       </p>
 
       <p>
-      <em>Miriad</em>, in particular, supports a number of niche areas.  These
-      include calibration and analysis of polarimetric data from the ATCA,
+      In particular <em>Miriad</em> supports a number of niche areas including
+      calibration and analysis of polarimetric data from the ATCA,
       multi-frequency synthesis imaging, mosaicing, ATCA pulsar bin mode, and
-      some spectral line observing applications (e.g. Zeeman experiments).
+      specialized spectral line observations (e.g. Zeeman).
       </p>
 
       <p>
@@ -80,40 +88,105 @@
       </p>
 
       <p>
-      The following documentation and source is available on-line:
+      <em>Miriad</em> software and documentation are distributed under the
+      <a href="http://www.gnu.org/copyleft/gpl.html">GNU General Public
+      License</a> from the <em>Miriad</em> ftp area,
+      <a href="ftp://ftp.atnf.csiro.au/pub/software/miriad">
+      ftp://ftp.atnf.csiro.au/pub/software/miriad/</a>:
+
+      <h4>Software download</h4>
       <ul>
-        <li><a href="userguide/userhtml.html">The User Guide</a>.
-          <a href="getting.html">Postscript versions</a> are also available.
+        <li>
+          <a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/DISCLAIMER">
+	  GPL disclaimer</a> for <em>Miriad</em>.
+        </li>
 
-        <li><a href="getting.html">Distribution, installation and update
-          information on <em>Miriad</em>.</a>
+        <li>
+          <a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/INSTALL.html">
+	  Distribution, installation and update information on
+	  <em>Miriad</em>.</a>
+        </li>
 
-        <li><a href="changes.html">Recent changes to <i>Miriad</i>.</a>
+        <li>
+          <a href="http://www.atnf.csiro.au/computing/software/karma/">Karma
+          </a>, the
+          <a href="http://www.atnf.csiro.au/computing/software/visualisation/">
+          ATNF visualisation software</a> package, recognises the
+          <em>Miriad</em> data format and may be used to display and analyse
+          images.
+        </li>
+      </ul>
 
-        <li><a href="taskindex.html">Documentation on Individual tasks.</a>
+      <h4>User documentation</h4>
+      <ul>
+        <li>
+	  The <em>Miriad</em> <a href="userguide/userhtml.html">User Guide</a>
+	  in HTML format.
+        </li>
 
-        <li>The ATNF <a href="/computing/software/visualisation/">
-          Visualisation Software</a> is a set of software than can be used to
-          display images in <em>Miriad</em> format.
+        <li>
+	  PostScript versions of the User Guide are also available in
+	  <a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/userguide.ps.gz">
+	  A4 format</a> and 
+	  <a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/userguide_US.ps.gz">
+	  US letter format</a>.
+        </li>
 
-        <li>The <a href="http://bima.astro.umd.edu/miriad/">BIMA</a>,
+        <li>
+          <a href="taskindex.html">Documentation on Individual tasks.</a>
+        </li>
+
+        <li>
+          <a href="http://www.atnf.csiro.au/computing/at_bugs.html">
+          Information on some ATCA data acquisition problems.</a>
+        </li>
+
+        <li>
+          <a href="tutorials.html">Various data tutorials using
+          <em>Miriad</em>.</a>
+        </li>
+      </ul>
+
+      <h4>Programmer documentation</h4>
+      <ul>
+        <li>
+	  The <em>Miriad</em> <a href="progguide/progguide.html">Programmer
+	  Guide</a> in HTML format.
+        </li>
+
+        <li>
+	  PostScript versions of the Programmer Guide are also available in
+	  <a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/progguide.ps.gz">
+	  A4 format</a> and 
+	  <a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/progguide_US.ps.gz">
+	  US letter format</a>.
+        </li>
+      </ul>
+
+      <h4>Related sites</h4>
+      <ul>
+
+        <li>
+          The <a href="http://bima.astro.umd.edu/miriad/">BIMA</a>,
           <a href="http://sma-www.cfa.harvard.edu/miriadWWW/manuals/SMAuguide/smauserhtml/">SMA</a>
           and <a href="http://www.astron.nl/~oosterlo/wsrtMiriad/">WSRT</a>
           <em>Miriad</em> sites.
-
-        <li><a href="http://www.atnf.csiro.au/computing/at_bugs.html">
-          Information on some ATCA data acquisition problems.</a>
-
-        <li><a href="tutorials.html">Various data tutorials using <em>Miriad</em>.</a>
-
-        <li><a href="progguide/progguide.html">The Programmer Guide</a>.
-          <a href="getting.html">Postscript versions</a> are also available.
+        </li>
       </ul>
 
+      <p>
       More information on <em>Miriad</em> is available from
       <a href="mailto:miriad@atnf.csiro.au">miriad@atnf.csiro.au</a>
+      </p>
+
+      <hr>
+
+      <p>
+      <small>$Id: index.html,v 1.3 2006/11/13 07:44:41 cal103 Exp $</small>
+      </p>
     </td>
   </tr>
 </table>
+
 </body>
 </html>
