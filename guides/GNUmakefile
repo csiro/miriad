@@ -2,7 +2,7 @@
 # GNUmakefile for compiling Miriad documentation.
 #
 # Original: 2006/09/18, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.10 2006/11/13 07:41:26 cal103 Exp $
+# $Id: GNUmakefile,v 1.11 2006/11/14 07:45:16 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
@@ -108,8 +108,7 @@ ifeq "$(MAKEMODE)" "system"
 	-@ echo ""
 	   $(MANDB) $(MIRMAND)
 
-  html : $(MIRHTMLD)/INSTALL.html $(MIRHTMLS:%=$(MIRHTMLD)/%) \
-    $(MIRGIFS:%=$(MIRHTMLD)/%) taskindex \
+  html : $(MIRHTMLS:%=$(MIRHTMLD)/%) $(MIRGIFS:%=$(MIRHTMLD)/%) taskindex \
     $(patsubst %.doc,$(MIRHTMLD)/doc/%.html,$(MIRDOCS) $(MIRSDOCS))
 
   $(MIRHTMLD)/INSTALL.html : $(MIRROOT)/INSTALL.html
