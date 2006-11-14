@@ -2,7 +2,7 @@
 # GNUmakefile for compiling the Miriad user guide.
 #
 # Original: 2006/09/25, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.4 2006/11/13 08:35:28 cal103 Exp $
+# $Id: GNUmakefile,v 1.5 2006/11/14 04:12:55 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
@@ -104,8 +104,7 @@ ifeq "$(MAKEMODE)" "system"
 	     mv $(TMPHTMLD) $(USRHTMLD) ; \
 	   fi
 	-@ $(RM) $(MIRFIGS:%.fig=%.ps) $(MIRGS:%.g=%.ps)
-	-@ $(RM) userguide.aux userguide.log userguide.lot userguide.toc
-	-@ $(RM) userguide.dvi titlepage.eps
+	-@ $(RM) userhtml.aux userhtml.dvi userhtml.log 
 
   # taskref.txt lists all references to Miriad tasks in the userguide.
   $(MIRGUIDD)/taskref.txt : $(USRHTMLD)/userhtml.html
