@@ -4,7 +4,7 @@
 #-----------------------------------------------------------------------------
 # Generate Miriad update tar files for distribution from the ftp area.
 #
-# $Id: mirexport,v 1.6 2006/11/14 07:26:38 cal103 Exp $
+# $Id: mirexport,v 1.7 2006/11/14 07:37:41 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Initialize.
   cd $MIR
@@ -14,7 +14,7 @@
   set contents = /tmp/mirupd-contents-$$
   set scratch  = /tmp/mirupd-dir-$$
 
-  rm -f $updates/mirupd-99999999-9.tar.gz $updates/updates.txt $updates/junk
+  rm -f $updates/mirupd-99999999-9.tar.gz $updates/mirupdates $updates/junk
 
 # Determine which files need to be updated.
   set distcode = (./GNUmake* config ./configure ./configure.ac \
@@ -106,4 +106,4 @@ l100:
   end
 
 # Produce the list of update tar files.
-  ls mirupd-????????-?.tar.gz > updates.txt
+  ls mirupd-????????-?.tar.gz > mirupdates
