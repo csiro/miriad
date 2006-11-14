@@ -2,7 +2,7 @@
 # GNUmakefile used to compile Miriad.
 #
 # Original: 2006/08/28, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.18 2006/11/08 22:51:00 cal103 Exp $
+# $Id: GNUmakefile,v 1.19 2006/11/14 07:08:34 cal103 Exp $
 #-----------------------------------------------------------------------------
 ifeq "$(MIR)" ""
   # Try to deduce basic Miriad environment variables.  Obviously this only
@@ -58,7 +58,7 @@ ifeq "$(MAKEMODE)" "system"
     DISTRCS  := .rcs RCS */RCS */*/RCS */*/*/RCS
     DISTCODE := GNUmake* config configure configure.ac
     DISTCODE += guides inc linpack prog spec subs tests tools
-    DISTCOMM := DISCLAIMER INSTALL.html progguide* userguide*
+    DISTCOMM := DISCLAIMER INSTALL.html VERSION progguide* userguide*
     DISTCOMM += cat doc html man scripts specdoc
     DISTBINS := $(subst /bin,,$(wildcard */bin))
 
@@ -147,7 +147,7 @@ ifeq "$(MAKEMODE)" "system"
 
     ifeq "$(MIRARCH)" "sun4sol"
       # Regenerate the Miriad ftp distribution kits.  Requires the sun4sol
-      # version of tar.
+      # variant of tar.
       dist : allsys $(MIRFTPS:%=$(MIRFTPD)/%) configure
 	-@ echo ""
 	-@ $(TIMER)
@@ -166,7 +166,11 @@ ifeq "$(MAKEMODE)" "system"
 	 @ $(RM) .tarX
 	-@ echo ""
 	-@ $(TIMER)
+	-@ $(RM) VERSION
+	   date -u +'%Y%m%d' > VERSION
+	-@ chmod 444 VERSION
 	   cd .. ; tar cf miriad/miriad-common.tar $(DISTCOMM:%=miriad/%)
+	-@ $(RM) VERSION
 	   gzip miriad-common.tar
 	-@ $(RM) $(MIRFTPD)/miriad-common.tar.gz
 	   mv miriad-common.tar.gz $(MIRFTPD)/
