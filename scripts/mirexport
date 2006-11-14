@@ -1,81 +1,109 @@
 #!/bin/csh -ef
-
-# Initialise.
-
-  set etc     = $MIR/etc
-  set updates = $MIR/ftp/updates
-  set scratch = /tmp/mirupd-dir-$$
-  set files   = /tmp/mirupd-files-$$
-
-  rm -f $updates/mirupd-99999999-9.tar.Z $updates/updates.txt $updates/junk
-  if ( ! -d $etc ) mkdir $etc
+#-----------------------------------------------------------------------------
+# Usage: mirexport
+#-----------------------------------------------------------------------------
+# Generate Miriad update tar files for distribution from the ftp area.
+#
+# $Id: mirexport,v 1.6 2006/11/14 07:26:38 cal103 Exp $
+#-----------------------------------------------------------------------------
+# Initialize.
   cd $MIR
 
-# Determine which files need to be updated.
+  set etc      = $MIR/etc
+  set updates  = /nfs/ftp/software/miriad/updates
+  set contents = /tmp/mirupd-contents-$$
+  set scratch  = /tmp/mirupd-dir-$$
 
-  find cat inc linpack prog scripts spec specdoc subs tests tools \
-	\! -type d \! -name junk\* \! -name \*.o \! -name rpfits.inc \
-	\! -name \*.log \! -name \*.dvi \! -name \*.def \! -name RCS \
-	-newer $etc/Last_export \
-	-print > $files
-  mirnewer -i $etc/Last_export ./README.html >> $files
-  mirnewer -i $etc/Last_export ./Install     >> $files
-  mirnewer -i $etc/Last_export ./DISCLAIMER  >> $files
-  mirnewer -i $etc/Last_export ./changes.txt >> $files
-  if ( -z $files ) goto l100
+  rm -f $updates/mirupd-99999999-9.tar.gz $updates/updates.txt $updates/junk
+
+# Determine which files need to be updated.
+  set distcode = (./GNUmake* config ./configure ./configure.ac \
+                  guides inc linpack prog spec subs tests tools)
+  set distcomm = (./DISCLAIMER ./INSTALL.html ./progguide* ./userguide* \
+                  cat doc html man scripts specdoc)
+
+  find $distcode $distcomm \
+    \! -type d \
+    \! -name RCS \
+    \! -name rpfits.inc \
+    \! -name '*.aux' \
+    \! -name '*.dvi' \
+    \! -name '*.log' \
+    \! -name '*.lot' \
+    \! -name '*.toc' \
+    -newer $etc/Last_export -print > $contents
+
+  if (-z "$contents") goto l100
 
 # Generate the output tar file.
+  set output = `date -u +'mirupd-%Y%m%d-8.tar'`
+  if (-f "$updates/$output.gz") then
+    # It already exists - create an addendum.
+    set output = mirupd-99999999-9.tar
+  endif
 
-  set output = `date +%Y%m%d`
-  set output = mirupd-${output}-8.tar
-  if ( -f $updates/$output.Z ) set output = mirupd-99999999-9.tar
-  tar -cf $output `cat $files`
-  compress -f $output
-  mv $output.Z $updates
+# Create the version date (UTC) for this update.
+  rm -f VERSION
+  date -u +'%Y%m%d' > VERSION
+  chmod 444 VERSION
 
-# Remember the time that we did this.
+  tar -cf $output VERSION `sort $contents`
+  rm -f VERSION
 
-  if ( "$output" != "mirupd-99999999-9.tar" ) echo $output.Z >> $etc/Last_export
+  gzip -f $output
+  mv $output.gz $updates
 
-# Send a message to let me know what was copied to the tar file.
+# Record the time.
+  if ("$output" != mirupd-99999999-9.tar) then
+    echo $output.gz >> $etc/Last_export
+  endif
 
-  echo Generated tar file $output, containing
-  cat $files
-        
-# Now let us compress together files where this makes sense.
+# Report the contents of tar file.
+  echo "Contents of update tar file ${output}:"
+  zcat $updates/$output.gz | tar tvf -
 
 l100:
+  rm -rf $contents $scratch
 
-  rm -rf $files $scratch
+# Combine tar files in a hierarchical fashion: starting at level 8, if there
+# are more than the specified number of files (usually 4) at level n then
+# combine the oldest four into one file at level n-1.  The lower levels
+# therefore span progressively longer times.
   cd $updates
+  foreach n (8 7 6 5 4 3 2 1)
+    set files = (`find . -name "mirupd-????????-$n.tar.gz" -print | sort`)
+    if ($#files == 0) break
 
-  foreach n ( 8 7 6 5 4 3 2 1 )
-    set list = ( `find . -name "mirupd-????????-$n.tar.Z" -print|sort` )
-    if ( $#list == 0 ) break
+    # Allow level 8 to grow a bit larger since it contains the most recent.
     set limit = 4
-    if ( $n == 8 ) set limit = 7
-    while ( $#list > $limit )
-      set process = ( $list[1-4] )   
-      set list = ( $list[5-] )
+    if ($n == 8) set limit = 7
+
+    while ($#files > $limit)
+      # Combine the oldest four.
+      set combine = ($files[1-4])
+      set files = ($files[5-])
+
       mkdir $scratch
-      foreach f ( $process )
-        zcat $f | ( cd $scratch; tar -xmf -)
+      foreach file ($combine)
+        zcat $file | (cd $scratch; tar -xmf -)
       end
+
+      # Put the combined file in the level below with the more recent date.
       @ nm1 = $n - 1
-      set output = `echo $process[4]|sed -e "s/-$n\.tar\.Z/-$nm1\.tar/"`
+      set output = `echo $combine[4] | sed -e "s/-$n\.tar\.gz/-$nm1\.tar/"`
       tar -cf /tmp/$output -C $scratch .
-      compress -f /tmp/$output
+      gzip -f /tmp/$output
 
-# Copy then rename. This way we can be sure that if the copy crashes,
-# that we do not get left with a half finished, corrupt file there.
+      # Copy then rename so that if the copy crashes we are not left with a
+      # corrupted tar file.
+      cp /tmp/$output.gz junk
+      mv junk $output.gz
 
-      cp /tmp/$output.Z junk
-      mv junk $output.Z
-      rm -r $scratch $process /tmp/$output.Z
-      echo Compressed $process into $output
+      # Clean up.
+      rm -rf $scratch $combine /tmp/$output.gz
+      echo "Combined $combine into $output."
     end
   end
 
-# Final tidy up.
-
-  ls mirupd-????????-?.tar.Z > updates.txt
+# Produce the list of update tar files.
+  ls mirupd-????????-?.tar.gz > updates.txt
