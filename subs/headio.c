@@ -25,6 +25,7 @@
 /*  rjs 02jan05   Fix up bug in rdhdl. Tidy.				*/
 /*  rjs 26nov05   Better handling of logical values.			*/
 /*  rjs 28jun06   Correct doc comment.					*/
+/*  rjs 27nov06   Get rdhdd to handle long integers			*/
 /************************************************************************/
 
 #include <stdlib.h>
@@ -482,6 +483,7 @@ void rdhdd_c(int thandle,Const char *keyword,double *value,double defval)
   int iostat,itemp;
   off_t offset,length;
   float rtemp;
+  int8 ltemp;
 
 /* Firstly assume the variable is missing. Try to get it. If successful
    read it. */
@@ -500,6 +502,12 @@ void rdhdd_c(int thandle,Const char *keyword,double *value,double defval)
       if(offset + H_INT_SIZE == length){
 	hreadi_c(item,&itemp,offset,H_INT_SIZE,&iostat);
 	*value = itemp;
+      }
+    } else if(!memcmp(s,int8_item,ITEM_HDR_SIZE)){
+      offset = mroundup(ITEM_HDR_SIZE,H_INT8_SIZE);
+      if(offset + H_INT8_SIZE == length){
+        hreadl_c(item,&ltemp,offset,H_INT8_SIZE,&iostat);
+        *value = ltemp;
       }
     } else if(!memcmp(s,real_item,ITEM_HDR_SIZE)){
       offset = mroundup(ITEM_HDR_SIZE,H_REAL_SIZE);
