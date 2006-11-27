@@ -39,9 +39,9 @@ c	conventions, past sign errors and how they affect you, see the
 c	memo ``The Sign of Stokes-V, etc'' by Bob Sault.
 c
 c@ vis
-c	Input visibility data file. The data must contain raw linear
-c	polarisations. No default. The visibility data must be in time
-c	order.
+c	Input visibility data file. The data should be either raw linear
+c	or raw circular polarisations. No default. The visibility data
+c	must be in time	order.
 c@ select
 c	Standard uv selection. Default is all data.
 c@ line
@@ -200,6 +200,7 @@ c		     source.
 c    rjs     19aug98 Changes in ampsolxy and ampsol to avoid an SGI compiler bug.
 c    rjs     12oct99 Attempts to perform absolute flux calibration.
 c    rjs      7oct04 Set senmodel parameter.
+c    rjs     27nov06 Doc correction only.
 c
 c  Bugs:
 c    * Polarisation solutions when using noamp are wrong! The equations it
