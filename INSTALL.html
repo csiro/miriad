@@ -1118,14 +1118,34 @@ add notes provided from elsewhere.
 <a name="updates"><h1>Getting regular updates</h1>
 
 <p>
-If you have installed <em>Miriad</em> from source code you can keep your
-system up-to-date by running
+Those with ATNF computer accounts and network access might consider using
+<code>rsync</code> to update their Miriad installation.  Only the relevant
+<a href="#structure">subdirectories</a> need be updated from
+<code>atlas.atnf.csiro.au:/nfs/atapplic/miriad/</code>.  A script,
+<code>$MIR/scripts/mirsync</code>, is available that will refresh any files or
+directories in <code>$MIR</code> that are present on the master and
+<font color="#ff0000"> delete anything it finds within those subdirectories
+that is not present on the master.</font>
+</p>
+
+<p>
+The full <em>Miriad</em> distribution tar files are regenerated weekly and are
+normally ready for collection some time before midnight on Thursday Sydney
+time (UTC+1000 in non-daylight-savings months).  It would not be difficult to
+write a script to fetch and install these automatically.
+</p>
+
+<p>
+Incremental source code updates are generated nightly and are usually ready
+for collection shortly after 2300 Sydney time.  If you have installed
+<em>Miriad</em> from source code you can keep your system up-to-date by
+running
 <pre>
   % mirimport
 </pre>
-This uses <code>ftp</code> to fetch incremental source code updates from the
-ATNF, then unpacks and installs them.  You must then invoke <code>gmake</code>
-from within <code>$MIR</code> to rebuild <em>Miriad</em>.
+This uses <code>ftp</code> to fetch the updates from the ATNF, then unpacks
+and installs them.  You must then invoke <code>gmake</code> from within
+<code>$MIR</code> to rebuild <em>Miriad</em>.
 </p>
 
 <p>
@@ -1162,8 +1182,10 @@ where it is assumed that the <em>Miriad</em> environment and a sensible
 
 <p>
 The <em>Miriad</em> runtime system consists of a number of directories that
-are common to all architectures, and some that are platform-specific.  The
-latter exist as subdirectories of <code>$MIR/$MIRARCH</code> (otherwise
+are common to all architectures (distributed as
+<a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-common.tar.gz">
+<code>miriad-common.tar.gz</code></a>) and some that are platform-specific.
+The latter exist as subdirectories of <code>$MIR/$MIRARCH</code> (otherwise
 referred to as <code>$MIRARCHD</code>), where <code>$MIRARCH</code> is the
 <em>Miriad</em> platform name, e.g. <code>linux</code>,
 <code>darwin_x86</code>, etc.
@@ -1257,6 +1279,15 @@ referred to as <code>$MIRARCHD</code>), where <code>$MIRARCH</code> is the
   <tr valign="top">
     <td></td>
     <td></td>
+    <td><code>/scripts</code></td>
+    <td></td>
+    <td>Utility scripts, the most important being <code>mirarch</code>.
+        Platform-specific subdirectories contain specialized
+	<code>GNUmakedefs</code>.</td>
+  </tr>
+  <tr valign="top">
+    <td></td>
+    <td></td>
     <td><code>/specdoc</code></td>
     <td></td>
     <td>"Special" <code>doc</code> files, not associated with a particular
@@ -1267,7 +1298,9 @@ referred to as <code>$MIRARCHD</code>), where <code>$MIRARCH</code> is the
 </p>
 
 <p>
-<em>Miriad</em> source code and utilities exist in the following directories:
+<em>Miriad</em> source code and utilities (distributed as
+<a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-code.tar.gz">
+<code>miriad-code.tar.gz</code></a>) exist in the following directories:
 <table>
   <tr valign="top">
     <td width="40"></td>
@@ -1309,15 +1342,6 @@ referred to as <code>$MIRARCHD</code>), where <code>$MIRARCH</code> is the
   <tr valign="top">
     <td></td>
     <td></td>
-    <td><code>/scripts</code></td>
-    <td></td>
-    <td>Utility scripts, the most important being <code>mirarch</code>.
-        Platform-specific subdirectories contain specialized
-	<code>GNUmakedefs</code>.</td>
-  </tr>
-  <tr valign="top">
-    <td></td>
-    <td></td>
     <td><code>/spec/*</code></td>
     <td></td>
     <td>Source code for special-case utilities, the main ones being the
@@ -1347,5 +1371,5 @@ referred to as <code>$MIRARCHD</code>), where <code>$MIRARCH</code> is the
 <hr>
 
 <p>
-<small>$Id: INSTALL.html,v 1.4 2006/11/20 06:17:46 cal103 Exp $</small>
+<small>$Id: INSTALL.html,v 1.5 2006/11/28 07:31:07 cal103 Exp $</small>
 </p>
