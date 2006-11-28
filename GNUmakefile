@@ -2,7 +2,7 @@
 # GNUmakefile used to compile Miriad.
 #
 # Original: 2006/08/28, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.19 2006/11/14 07:08:34 cal103 Exp $
+# $Id: GNUmakefile,v 1.20 2006/11/28 23:39:20 cal103 Exp $
 #-----------------------------------------------------------------------------
 ifeq "$(MIR)" ""
   # Try to deduce basic Miriad environment variables.  Obviously this only
@@ -34,7 +34,7 @@ ifeq "$(MAKEMODE)" "system"
 
   allsys :: initial MIRRC MIRRC.sh $(ALLSYSD)
 
-  # Run chkout in scripts first to update architecture-specific GNUmakedefs.
+  # Announce what we're about to do.
   initial :: FORCE
 	-@ echo ""
 	-@ echo "Rebuilding/updating Miriad for $(MIRARCH) machines."
@@ -50,7 +50,8 @@ ifeq "$(MAKEMODE)" "system"
   # The following rules are for ATNF use only.
   ifdef MIRATNF
     # Files distributed separately.
-    MIRFTPS  := DISCLAIMER INSTALL.html progguide.ps.gz progguide_US.ps.gz \
+    MIRFTPS  := DISCLAIMER INSTALL.html README \
+                progguide.ps.gz progguide_US.ps.gz \
                 userguide.ps.gz userguide_US.ps.gz
 
     # The Miriad distribution is split into RCS, code, common runtime files,
@@ -115,6 +116,9 @@ ifeq "$(MAKEMODE)" "system"
     $(MIRFTPD)/% : %
 	   $(mir-copy)
 
+    $(MIRFTPD)/% : etc/%
+	   $(mir-copy)
+
     $(MIRFTPD)/%.gz : %
 	-@ $(RM) $@
 	   cp $< $(MIRFTPD)/$*
@@ -129,9 +133,10 @@ ifeq "$(MAKEMODE)" "system"
 
     # Update the copy of the RPFITS library and include file via allsys.
     initial :: rpfits pgplot
-     ifdef MIRRCS
+      ifdef MIRRCS
+        # Update architecture-specific GNUmakedefs.
 	-@ $(MAKE) -C scripts chkout
-     endif
+      endif
 
     rpfits : $(MIRINCD)/rpfits.inc $(MIRLIBD)/librpfits.a
 
