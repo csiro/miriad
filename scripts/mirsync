@@ -1,0 +1,75 @@
+#!/bin/sh
+#-----------------------------------------------------------------------------
+# Usage: mirsync
+#-----------------------------------------------------------------------------
+# Use rsync to update a Miriad installation from the master at ATNF.  It
+# refreshes any files or subdirectories in $MIR that are present on the
+# master and DELETES anything it finds within those subdirectories that is not
+# present on the master (except for RCS symlinks and $MIR/*/GNUmakedefs).
+#
+# With a few exceptions (see below) it only updates files or subdirectories
+# that are already present in the local installation, i.e. it won't create or
+# update $MIR/darwin_ppc if it doesn't already exist.  To fetch a file or
+# subdirectory that does not already exist within $MIR simply create an empty
+# version (e.g. mkdir $MIR/darwin_ppc) before running mirsync.
+#
+# Exceptions:
+#   $MIR/*/GNUmakedefs	...never updated.
+#   $MIR/.../RCS	...never updated.
+#
+#   $MIR/DISCLAIMER	...always updated.
+#   $MIR/cat/		...always updated.
+#   $MIR/doc/		...always updated.
+#   $MIR/html/		...always updated.
+#   $MIR/man/		...always updated.
+#   $MIR/scripts/	...always updated.
+#   $MIR/specdoc/	...always updated.
+#
+# Original: 2006/11/28 MRC
+# $Id: mirsync,v 1.1 2006/11/28 07:30:33 cal103 Exp $
+#-----------------------------------------------------------------------------
+
+  trap 'exit 1' 1 2 3 15
+
+  if [ "$MIR" = "" -o ! -d "$MIR" ]
+  then
+    echo 'mirsync: $MIR is not defined or does not exist.' 1>&2
+    exit 1
+  fi
+
+  cd $MIR || exit 1
+
+  RSYNC="rsync -v --archive --delete"
+  RSYNC="$RSYNC --exclude=RCS --exclude=/*/GNUmakedefs"
+  RSYNC="$RSYNC --rsh=ssh --rsync-path=/usr/local/bin/rsync"
+
+  ATMIR=/nfs/atapplic/miriad
+  echo "Updating Miriad files from atlas.atnf.csiro.au:$ATMIR/..."
+
+  FILES="GNUmakedefs GNUmakefile INSTALL.html configure configure.ac"
+  FILES="$FILES progguide.ps progguide_US.ps.gz"
+  FILES="$FILES userguide.ps userguide_US.ps.gz"
+
+  DIRS="config etc guides inc linpack prog scripts spec subs tests tools"
+  DIRS="$DIRS darwin_ppc darwin_x86 linux linux64 sun4sol"
+
+# Files that must be present.
+  SRC="$ATMIR/DISCLAIMER"
+
+# Files to update only if already present.
+  for FILE in $FILES
+  do
+    [ -f "$MIR/$FILE" ] && SRC="$SRC $ATMIR/$FILE"
+  done
+
+# Miriad-common subdirectories are always updated.
+  SRC="$SRC $ATMIR/cat $ATMIR/doc $ATMIR/html $ATMIR/man $ATMIR/scripts"
+  SRC="$SRC $ATMIR/specdoc"
+
+# Other subdirectories to update (verbatim) only if already present.
+  for DIR in $DIRS
+  do
+    [ -d "$MIR/$DIR" ] && SRC="$SRC $ATMIR/$DIR"
+  done
+
+  $RSYNC atlas.atnf.csiro.au:"$SRC" .
