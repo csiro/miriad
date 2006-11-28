@@ -2,7 +2,7 @@
 # GNUmakefile used to compile Miriad.
 #
 # Original: 2006/08/28, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.20 2006/11/28 23:39:20 cal103 Exp $
+# $Id: GNUmakefile,v 1.21 2006/11/28 23:47:34 cal103 Exp $
 #-----------------------------------------------------------------------------
 ifeq "$(MIR)" ""
   # Try to deduce basic Miriad environment variables.  Obviously this only
@@ -134,7 +134,8 @@ ifeq "$(MAKEMODE)" "system"
     # Update the copy of the RPFITS library and include file via allsys.
     initial :: rpfits pgplot
       ifdef MIRRCS
-        # Update architecture-specific GNUmakedefs.
+        # Update local stuff and architecture-specific GNUmakedefs.
+	-@ $(MAKE) -C etc chkout
 	-@ $(MAKE) -C scripts chkout
       endif
 
