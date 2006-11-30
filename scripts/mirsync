@@ -1,17 +1,31 @@
 #!/bin/sh
 #-----------------------------------------------------------------------------
-# Usage: mirsync
+# Usage: mirsync [-h <host] [-u <user>]
 #-----------------------------------------------------------------------------
-# Use rsync to update a Miriad installation from the master at ATNF.  It
-# refreshes any files or subdirectories in $MIR that are present on the
-# master and DELETES anything it finds within those subdirectories that is not
-# present on the master (except for RCS symlinks and $MIR/*/GNUmakedefs).
+# mirsync uses rsync to update a Miriad installation from the master at ATNF.
+# It requires ssh access to an ATNF computer, venice.atnf.csiro.au by default.
 #
-# With a few exceptions (see below) it only updates files or subdirectories
-# that are already present in the local installation, i.e. it won't create or
-# update $MIR/darwin_ppc if it doesn't already exist.  To fetch a file or
-# subdirectory that does not already exist within $MIR simply create an empty
-# version (e.g. mkdir $MIR/darwin_ppc) before running mirsync.
+# mirsync refreshes each file (apart from MIRRC and MIRRC.sh) that resides in
+# the top-level Miriad directory, $MIR, and is also present on the master.  It
+# recursively refreshes each subdirectory of $MIR, DELETING anything it finds
+# within each subdirectory tree that is not present on the master (except for
+# RCS symlinks and $MIR/*/GNUmakedefs).  Files and subdirectories in $MIR that
+# are not present on the master remain untouched.
+#
+# With a few exceptions (see below) mirsync only updates files or subdirectory
+# hierarchies that are already present in the local installation, i.e. it
+# wouldn't create or update $MIR/darwin_x86/ if it didn't already exist.  To
+# fetch a file or subdirectory that does not already exist within $MIR simply
+# create an empty version (e.g. mkdir $MIR/darwin_x86) before running mirsync.
+#
+# Options:
+#   -h <host>
+#          Specify the name of the ATNF host from which to rsync.  External
+#          access to the ATNF network is only allowed via venice.atnf.csiro.au
+#          and this is the default.  Within the ATNF, atlas, the host that
+#          serves the Miriad directory hierarchy, is a better choice.
+#   -u <user>
+#          Specify your ATNF account name if your local account name differs.
 #
 # Exceptions:
 #   $MIR/*/GNUmakedefs	...never updated.
@@ -25,12 +39,13 @@
 #   $MIR/scripts/	...always updated.
 #   $MIR/specdoc/	...always updated.
 #
-# Original: 2006/11/28 MRC
-# $Id: mirsync,v 1.1 2006/11/28 07:30:33 cal103 Exp $
+# Original: 2006/11/28 Mark Calabretta, ATNF
+# $Id: mirsync,v 1.2 2006/11/30 04:20:56 cal103 Exp $
 #-----------------------------------------------------------------------------
 
   trap 'exit 1' 1 2 3 15
 
+# Sanity checks.
   if [ "$MIR" = "" -o ! -d "$MIR" ]
   then
     echo 'mirsync: $MIR is not defined or does not exist.' 1>&2
@@ -39,12 +54,58 @@
 
   cd $MIR || exit 1
 
-  RSYNC="rsync -v --archive --delete"
+# Check that we're not trying to update the master itself!
+  ATMIR=/nfs/atapplic/miriad
+  if [ "$MIR" = "$ATMIR" ]
+  then
+    # The master's inode number will almost certainly be unique.
+    INODE=`ls -d -i $MIR | awk '{print $1}'`
+    if [ "$INODE" = 692036 ]
+    then
+      echo "mirsync: ERROR - attempting reflexive update of master." 1>&2
+      exit 1
+    fi
+  fi
+
+
+# Parse options.
+  SYNCHOST=venice.atnf.csiro.au
+  SYNCUSER=
+
+  while [ "$#" -gt 0 ]
+  do
+    case $1 in
+    -h)
+      shift
+      SYNCHOST="$1"
+      ;;
+
+    -u)
+      shift
+      SYNCUSER="$1"
+      ;;
+
+    *)
+      exec 1>&2
+      echo ""
+      echo "Usage: mirsync [-h <host] [-u <user>]"
+      exit 1
+      ;;
+    esac
+
+    [ "$2" = "" ] && break
+
+    shift
+  done
+
+  [ "$SYNCUSER" = "" ] || SYNCHOST=$SYNCUSER@$SYNCHOST
+
+
+  RSYNC="rsync -v --archive --delete --compress"
   RSYNC="$RSYNC --exclude=RCS --exclude=/*/GNUmakedefs"
   RSYNC="$RSYNC --rsh=ssh --rsync-path=/usr/local/bin/rsync"
 
-  ATMIR=/nfs/atapplic/miriad
-  echo "Updating Miriad files from atlas.atnf.csiro.au:$ATMIR/..."
+  echo "Updating Miriad files from $SYNCHOST:$ATMIR/..."
 
   FILES="GNUmakedefs GNUmakefile INSTALL.html configure configure.ac"
   FILES="$FILES progguide.ps progguide_US.ps.gz"
@@ -62,7 +123,7 @@
     [ -f "$MIR/$FILE" ] && SRC="$SRC $ATMIR/$FILE"
   done
 
-# Miriad-common subdirectories are always updated.
+# Miriad-common subdirectories are always updated verbatim.
   SRC="$SRC $ATMIR/cat $ATMIR/doc $ATMIR/html $ATMIR/man $ATMIR/scripts"
   SRC="$SRC $ATMIR/specdoc"
 
@@ -72,4 +133,6 @@
     [ -d "$MIR/$DIR" ] && SRC="$SRC $ATMIR/$DIR"
   done
 
-  $RSYNC atlas.atnf.csiro.au:"$SRC" .
+  $RSYNC $SYNCHOST:"$SRC" .
+
+  exit
