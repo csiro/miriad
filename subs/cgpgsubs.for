@@ -138,6 +138,8 @@ c     rjs    15apr97     Mr K was not checking for ANGL axis type in
 c			 LAB3CG -- and causing things to vomit.
 c     rjs    10nov97     Make more robust to things missing from headers.
 c     jwr    08jul04     Replaced MemAlloc where MemFree was meant
+c
+c $Id: cgpgsubs.for,v 1.2 2006/12/14 05:46:17 cal103 Exp $
 c**********************************************************************
 c
 c* annboxCG -- Annotate plot with information from a box image 
@@ -1083,8 +1085,9 @@ c-----------------------------------------------------------------------
       real xline(n), yline(n)
       character*(*) type(3), axis
 cc
+      logical valid
+      integer i, naxis, npt
       double precision inc, wi(3), po(3)
-      integer i, naxis
       character typei(3)*6, typeo(3)*6
 c-----------------------------------------------------------------------
       inc = (p2-p1)/real(n-1)
@@ -1114,11 +1117,17 @@ c
       end if
       wi(3) = zp
 c
+      npt = 0
       do i = 1, n
-        call w2wco (lun, naxis, typei, ' ', wi, typeo, ' ', po)
+        call w2wcov (lun, naxis, typei, ' ', wi, typeo, ' ', po, valid)
+        if (.not.valid) then
+          if (npt.gt.1) call pgline (npt, xline, yline)
+          npt = 0
+        end if
 c
-        xline(i) = po(1)
-        yline(i) = po(2)
+        npt = npt + 1
+        xline(npt) = po(1)
+        yline(npt) = po(2)
 c
         if (axis.eq.'x') then
           wi(2) = wi(2) + inc 
@@ -1126,7 +1135,8 @@ c
           wi(1) = wi(1) + inc
         end if
       end do
-      call pgline (n, xline, yline)
+c
+      if (npt.gt.1) call pgline (npt, xline, yline)
 c
       end
 c
