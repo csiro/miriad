@@ -47,6 +47,8 @@ c    nebk   26apr96    Make AXTYPCO more flexible in recognizing velocity axes
 c    rjs    17jul97    Get rid of calls to rdhd, and just use coordinate
 c                      object as source of information.
 c    rjs    10nov97    Make ctypeco robust to a blank axis.
+c
+c $Id: cosubs.for,v 1.3 2006/12/14 05:40:53 cal103 Exp $
 c******************************************************************************
 c
 c* axfndCO -- Find a specified generic axis in an image
@@ -738,7 +740,7 @@ c
 c
 c
 c* w2wCO -- Convert an array of coordinates
-c& nebk
+c& mrc
 c: coordinates
 c+
       subroutine w2wco (lun, n, typei, stypei, win, typeo, stypeo, wout)
@@ -748,7 +750,36 @@ c
       double precision win(n), wout(n)
       character*(*) typei(n), typeo(n), stypei, stypeo
 c
-c  Convert an array of NEBK style coordinates with the COCVT routines.
+c  For backwards-compatibility, call w2wcov to convert an NEBK-style
+c  coordinate vector and go belly-up if the coordinate conversion fails.
+c  Refer to the prologue of w2wcov for usage information.
+c--
+c-----------------------------------------------------------------------
+      logical valid
+c-----------------------------------------------------------------------
+      call w2wcov (lun, n, typei, stypei, win, typeo, stypeo, wout,
+     :  valid)
+      if (.not.valid) then
+        call bug('f', 'Invalid coordinate conversion in coCvtv')
+      end if
+c
+      end
+c
+c
+c* w2wCOv -- Convert an array of coordinates, with validation.
+c& nebk
+c: coordinates
+c+
+      subroutine w2wcov (lun, n, typei, stypei, win, typeo, stypeo,
+     :  wout, valid)
+      implicit none
+c
+      logical valid
+      integer lun, n
+      double precision win(n), wout(n)
+      character*(*) typei(n), typeo(n), stypei, stypeo
+c
+c  Convert an NEBK-style coordinate vector using the CO routines.
 c
 c  Input
 c    lun     Handle of open file
@@ -854,7 +885,8 @@ c Now convert to pixels (pixels being converted to pixels here
 c will be done with no loss of precision so don't bother with
 c extra code to trap it
 c
-      call cocvt (lun, cti, wloc, cto, wout)
+      call cocvtv (lun, cti, wloc, cto, wout, valid)
+      if (.not.valid) return
 c
 c Now check that we need to go on.  The user may want absolute
 c pixels whereupon we are done.  Note that absolute pixels
