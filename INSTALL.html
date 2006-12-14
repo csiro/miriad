@@ -100,9 +100,9 @@ anonymous <code>ftp</code></a> as
 <a href="http://www.atnf.csiro.au/computing/software/miriad"><em>Miriad
 homepage</em></a> contains
 <a href="http://en.wikipedia.org/wiki/HTML">hypertext</a> versions of the
-<a href="http://www.atnf.csiro.au/computing/software/miriad/userhtml.html">
+<a href="http://www.atnf.csiro.au/computing/software/miriad/userguide/index.html">
 <em>User</em></a> and
-<a href="http://www.atnf.csiro.au/computing/software/miriad/progguide/progguide.html">
+<a href="http://www.atnf.csiro.au/computing/software/miriad/progguide/index.html">
 <em>Programmer Guides</em></a>, and these are also available as separate
 <code>gzip</code>'d
 <a href="http://en.wikipedia.org/wiki/PostScript">PostScript</a> files (both
@@ -267,8 +267,9 @@ install them yourself.
 </p>
 
 <p>
-Note that if you intend to keep your installation up-to-date by running
-<a href="#updates"><code>mirimport</code></a> then you will have to
+Note that if you don't have an account at the ATNF that would allow you to run
+<code>mirsync</code> and intend to <a href="#updates">keep your installation
+up-to-date</a> by running <code>mirimport</code> then you will have to
 <a href="#source">install <em>Miriad</em> from source code</a>.
 </p>
 
@@ -1118,14 +1119,16 @@ add notes provided from elsewhere.
 <a name="updates"><h1>Getting regular updates</h1>
 
 <p>
-Those with ATNF computer accounts and network access might consider using
-<code>rsync</code> to update their Miriad installation.  Only the relevant
-<a href="#structure">subdirectories</a> need be updated from
-<code>atlas.atnf.csiro.au:/nfs/atapplic/miriad/</code>.  A script,
+Those with <code>ssh</code> access to an ATNF computer account might consider
+using <code>rsync</code> to update their Miriad installation.  Only the
+relevant <a href="#structure">subdirectories</a> need be updated from
+<code>venice.atnf.csiro.au:/nfs/atapplic/miriad/</code>.  A script,
 <code>$MIR/scripts/mirsync</code>, is available that will refresh any files or
-directories in <code>$MIR</code> that are present on the master and
+subdirectories in <code>$MIR</code> that are present on the master and
 <font color="#ff0000"> delete anything it finds within those subdirectories
-that is not present on the master.</font>
+that is not present on the master.</font>  Use the <code>-d</code> (dry-run)
+option to <code>mirsync</code> to see what it would do without actually
+changing anything.
 </p>
 
 <p>
@@ -1371,5 +1374,5 @@ referred to as <code>$MIRARCHD</code>), where <code>$MIRARCH</code> is the
 <hr>
 
 <p>
-<small>$Id: INSTALL.html,v 1.5 2006/11/28 07:31:07 cal103 Exp $</small>
+<small>$Id: INSTALL.html,v 1.6 2006/12/14 06:52:54 cal103 Exp $</small>
 </p>
