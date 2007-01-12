@@ -34,7 +34,7 @@ c
 c
 	include 'maxdim.h'
 	integer MAXTAB,MAXFEEDS,MAXGAINS,MAXSPECT
-	parameter(MAXTAB=2,MAXFEEDS=2,MAXSPECT=32)
+	parameter(MAXTAB=2,MAXFEEDS=2,MAXSPECT=MAXWIN)
 	parameter(MAXGAINS=3*MAXANT)
 	integer t1,t2,nsols,nants,nfeeds,ntau,ngains,gitem,solno(MAXTAB)
 	double precision timetab(MAXTAB),dtime
