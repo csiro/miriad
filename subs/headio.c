@@ -26,12 +26,14 @@
 /*  rjs 26nov05   Better handling of logical values.			*/
 /*  rjs 28jun06   Correct doc comment.					*/
 /*  rjs 27nov06   Get rdhdd to handle long integers			*/
+/*  rjs 01jan07   Extra checks for large integers.			*/
 /************************************************************************/
 
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include <stdio.h>
+#include <limits.h>
 #include "miriad.h"
 #include "io.h"
 
@@ -259,7 +261,7 @@ void wrhdl_c(int thandle,Const char *keyword,int8 value)
 /* Always try to write an integer if possible. */
 
   haccess_c(thandle,&item,keyword,"write",&iostat);		check(iostat);
-  if(value > 0x7FFFFFFF){
+  if(value > 0x7FFFFFFF || value < 0x80000000){
     hwriteb_c(item,int8_item,0,ITEM_HDR_SIZE,&iostat);		check(iostat);
     offset = mroundup(ITEM_HDR_SIZE,H_INT8_SIZE);
     hwritel_c(item,&value,offset,H_INT8_SIZE,&iostat);		check(iostat);
@@ -388,6 +390,7 @@ void rdhdi_c(int thandle,Const char *keyword,int *value,int defval)
   double dvalue,ddefval;
   ddefval = defval;
   rdhdd_c(thandle,keyword,&dvalue,ddefval);
+  if(dvalue > INT_MAX || dvalue < INT_MIN)bug_c('f',"Integer overflow in rdhdi");
   *value = dvalue;
 }
 /************************************************************************/
