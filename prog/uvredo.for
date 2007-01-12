@@ -37,7 +37,7 @@ c	This gives extra processing options. Several options can be given,
 c	each separated by commas. They may be abbreviated to the minimum
 c	needed to avoid ambiguity. Possible options are:
 c	   'velocity'    Recompute velocity information.
-c	   'chi'         Recompute parallactic angle information.
+c	   'chi'         Recompute polarisation feed angle information.
 c	The following options can be used to turn off calibration corrections.
 c	The default is to apply any calibration present.
 c	   'nocal'       Do not apply the gains table.
@@ -70,6 +70,7 @@ c		  history. I have improved it a bit.
 c    rjs  19jun97 Eliminate jupaxis business (now in uvjup).
 c    dpr  22may01 Marginal XY-EW support
 c    mchw 26aug03 Added Nasmyth for SMA
+c    rjs  08jan07 More support for the SMA Nasmyth mount.
 c
 c  Bugs:
 c    * Much more needs to be added.
@@ -77,7 +78,7 @@ c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
 	character version*(*)
-	parameter(version='UvRedo: version 1.0 19-Jun-97')
+	parameter(version='UvRedo: version 1.0 08-Jan-07')
 	integer OBS,HEL,LSR
 	parameter(OBS=1,HEL=2,LSR=3)
 c
@@ -341,7 +342,7 @@ c------------------------------------------------------------------------
 	real evec,chi
 	integer mount
 	double precision lat,dtemp
-        double precision elev,ha,sinha,cosha,sind,cosd,sinl,cosl
+        double precision elev,ha,cosha,sind,cosd,sinl,cosl
 	logical ok
 	character telescop*32
 c
@@ -372,9 +373,11 @@ c
 	  call uvrdvra(lIn,'telescop',telescop,' ')
 	  call obspar(telescop,'evector',dtemp,ok)
 	  if(.not.ok)call bug('f',
-     *	    'Could not evector for the telescope')
+     *	    'Could not find evector for the telescope')
 	  evec = dtemp
 	endif
+c
+c  Determine the feed angle by considering the mount.
 c
 	if(mount.eq.EQUATOR)then
 	  chi = 0
@@ -382,35 +385,41 @@ c
 	  if(varprsnt(lIn,'latitud'))then
 	    call uvgetvrd(lIn,'latitud',lat,1)
 	  else
+	    ok = .false.
 	    call uvrdvra(lIn,'telescop',telescop,' ')
-	    call obspar(telescop,'latitude',lat,ok)
+	    if(telescop.ne.' ')call obspar(telescop,'latitude',lat,ok)
 	    if(.not.ok)call bug('f',
      *		'Unable to determine telescope latitude')
 	  endif
 	  call parang(rapp,dapp,lst,lat,chi)
+c
+c  For Nasmyth SMA -- Needs to be modified by elev
+c
 	else if(mount.eq.NASMYTH) then
 	  if(varprsnt(lIn,'latitud'))then
 	    call uvgetvrd(lIn,'latitud',lat,1)
 	  else
+	    ok = .false.
 	    call uvrdvra(lIn,'telescop',telescop,' ')
-	    call obspar(telescop,'latitude',lat,ok)
+	    if(telescop.ne.' ')call obspar(telescop,'latitude',lat,ok)
 	    if(.not.ok)call bug('f',
      *		'Unable to determine telescope latitude')
 	  endif
 	  call parang(rapp,dapp,lst,lat,chi)
+          ha = lst-rapp
+          cosha = cos(ha)
+          sind = sin(dapp)
+          cosd = cos(dapp)
+          sinl = sin(lat)
+          cosl = cos(lat)
+          elev = asin(sinl*sind+cosl*cosd*cosha)
+          chi = - elev + chi
+	  call uvputvrr(lOut,'chi2',-real(elev),1)
 c
-c       For Nasmyth SMA -- Needs to be modified by elev
+c  Unknown mount type. Assume 0 parallactic angle.
 c
-               ha = lst-rapp
-               sinha = sin(ha)
-               cosha = cos(ha)
-               sind = sin(dapp)
-               cosd = cos(dapp)
-               sinl = sin(lat)
-               cosl = cos(lat)
-               elev = asin(sinl*sind+cosl*cosd*cosha)
-               chi = - elev + chi
-          else
+	else
+	  chi = 0
 	endif
 c
 c  At last, write out the "chi" variable.
