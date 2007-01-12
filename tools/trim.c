@@ -1,26 +1,24 @@
-/*============================================================================
-*
-*	This compacts a text file, by discarding unnecessary
-*
-*  History:
-*    rjs  18sep89  Original version.
-*    rjs  17feb04  Gosh is it really 15 years old! Return a status.
-*
-*  Operations performed include:
-*	Trim off trailing  blanks.
-*	Replace multiple spaces with tabs where possible.
-*	Remove FORTRAN sequence numbers (-f flag).
-*	Handle backspace and delete characters.
-*	Delete blank lines (-b flag).
-*
-*  $Id: trim.c,v 1.2 2006/10/19 06:24:12 cal103 Exp $
-*===========================================================================*/
+/************************************************************************/
+/*									*/
+/*	This compacts a text file, by discarding unnecessary characters	*/
+/*									*/
+/*  History:								*/
+/*    rjs  18sep89  Original version.					*/
+/*    rjs  17feb04  Gosh is it really 15 years old! Return a status.    */
+/*    rjs  30dec06  Simple handling of escape sequences.		*/
+/*									*/
+/* Operations performed include:					*/
+/*	Trim off trailing  blanks.					*/
+/*	Replace multiple spaces with tabs where possible.		*/
+/*	Remove FORTRAN sequence numbers (-f flag).			*/
+/*	Handle backspace and delete characters, escape sequences.	*/
+/*	Delete blank lines (-b flag).					*/
+/*									*/
+/************************************************************************/
 
 #define private static
-
-#include <stdio.h>
 #include <stdlib.h>
-
+#include <stdio.h>
 #define MAXLINE 512
 
 #define TRUE 1
@@ -93,7 +91,10 @@ int fort,blank;
 {
   char line[MAXLINE];
   char *s,*t;
-  int dofort,dowrite,linelen0,linelen;
+  int dofort,dowrite,linelen0,linelen,mode;
+
+#define mESC  1
+#define mESCB 2
 
 /* Process the input file. */
 
@@ -102,11 +103,19 @@ int fort,blank;
 /* Eliminate backspace and delete characters from the line, as well as
    any other rubbish. */
 
+    mode = 0;
     t = line;
     for(s=line; *s; s++){
-      if(*s == '\b' || *s == '\177' ){ if(t > line) t--; }
-      else if((*s < ' ' && *s != '\t') || (*s > '\176'));
-      else *t++ = *s;
+      if(mode == mESC && *s == '['){ mode = mESCB;}
+      else if(mode == mESCB){
+        if(!isdigit(*s))mode=0;
+      }else{
+	mode = 0;
+        if(*s == '\b' || *s == '\177' ){ if(t > line) t--; }
+        else if(*s == '\e'){mode = mESC;}
+        else if((*s < ' ' && *s != '\t') || (*s > '\177'));
+        else *t++ = *s;
+      }
     }
     *t = 0;
 
