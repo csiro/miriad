@@ -890,8 +890,9 @@ c    pDat,nDat
 c    pFlags
 c    pFreq,nFreq
 c------------------------------------------------------------------------
+	include 'maxdim.h'
 	integer MAXSPECT
-	parameter(MAXSPECT=32)
+	parameter(MAXSPECT=MAXWIN)
 	integer nspect0,nschan0(MAXSPECT)
 	double precision sfreq0(MAXSPECT),sdf0(MAXSPECT)
 	double precision swidth0(MAXSPECT)
@@ -899,7 +900,6 @@ c------------------------------------------------------------------------
 c
 c  Dynamic memory commons.
 c
-	include 'maxdim.h'
 	logical lref(MAXBUF)
 	double precision dref(MAXBUF/2)
 	complex cref(MAXBUF/2)
@@ -1004,6 +1004,7 @@ c    sdf	Frequency increment between each output channel.
 c    swidth	Bandwidth of each output channel.
 c    nschan	Number of channels in each window.
 c------------------------------------------------------------------------
+	include 'maxdim.h'
 	integer LINE,WIDE,VELO
 	parameter(LINE=1,WIDE=2,VELO=3)
 	integer TYPE,COUNT,START,WIDTH,STEP
@@ -1012,7 +1013,7 @@ c------------------------------------------------------------------------
 	double precision data(6)
 c
 	integer MSPECT1
-	parameter(MSPECT1=32)
+	parameter(MSPECT1=MAXWIN)
 	double precision sfreq0(MSPECT1),sdf0(MSPECT1)
 	real wfreq(MSPECT1),wwidth(MSPECT1)
 	integer nschan0(MSPECT1),nspect0,maxspect
@@ -1116,8 +1117,9 @@ c
 c  Match up the data with the measured bandpass functions.
 c
 c------------------------------------------------------------------------
+	include 'maxdim.h'
 	integer MAXSPECT
-	parameter(MAXSPECT=32)
+	parameter(MAXSPECT=MAXWIN)
 	integer i,j,k,l,ibeg,iend,n,win(MAXSPECT),ischan(MAXSPECT),off
 	integer i0
 	double precision startt,endt,startd,endd,width

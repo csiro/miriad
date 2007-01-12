@@ -112,8 +112,8 @@ c------------------------------------------------------------------------
 	parameter(PolXX=-5,PolYY=-6,PolRR=-1,PolLL=-2,PolI=1)
 	include 'maxdim.h'
 	integer MAXSPECT,MAXVIS,MAXSOLN,MAXITER,MAXPOL
-	parameter(MAXSPECT=33,MAXVIS=700000,MAXITER=30,MAXSOLN=1024)
-	parameter(MAXPOL=2)
+	parameter(MAXSPECT=3*MAXWIN,MAXVIS=7000000,MAXITER=30)
+	parameter(MAXSOLN=1024,MAXPOL=2)
 c
 	character version*(*)
 	parameter(version='MfCal: version 1.0 15-Jan-06')
@@ -1628,7 +1628,7 @@ c    spect
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer CHANNEL,WIDE,MSPECT
-	parameter(CHANNEL=1,WIDE=2,MSPECT=32)
+	parameter(CHANNEL=1,WIDE=2,MSPECT=MAXWIN)
 	integer i,j,n,ispect,ltype,start,nschan0(MSPECT),nspect0,nwide
 	integer chans,ibeg,iend,bdrop,edrop,nwidth,nstep
 	double precision line(6),sfreq0(MSPECT),sdf0(MSPECT),f
@@ -1751,6 +1751,10 @@ c------------------------------------------------------------------------
 	integer ispect,i
 	double precision f0
 c
+c  Externals.
+c
+	character itoaf*8
+c
 c  See if we have a match.
 c
 	f0 = f + bdrop * df
@@ -1797,8 +1801,11 @@ c
 	endif
 c
 	i = i + 1
-	if(i.gt.maxspect+2)
-     *	  call bug('f','Buffer overflow, in despect-2')
+	if(i.gt.maxspect+2)then
+	  call bug('w','Current value for MAXSPECT in despect-2: '
+     *						//itoaf(maxspect))
+	  call bug('f','Buffer overflow, in despect-2')
+	endif
 	state(1,i) = ispect
 	state(2,i) = 1
 	state(3,i) = nchan - bdrop - edrop
