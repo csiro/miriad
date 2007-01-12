@@ -1,7 +1,7 @@
 	include 'maxdim.h'
 c
-	integer EQUATOR,ALTAZ
-	parameter(EQUATOR=1,ALTAZ=0)
+	integer EQUATOR,ALTAZ,NASMYTH
+	parameter(EQUATOR=1,ALTAZ=0,NASMYTH=4)
 c
 	integer uvCrval,uvCdelt,uvCrpix
 	integer uvStokes,uvFreq,uvRa,uvDec
