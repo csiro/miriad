@@ -39,8 +39,9 @@ c    pjt  24sep04 Final location of CARMA at Cedar Flats
 c    sdw  06jul06 Change to read observatory data from a paramater file,
 c                 allow greater flexability. Rather than having data hard
 c                 coded into the program.
+c    rjs  08jan07 Eliminate spurious message. Tidy up to use tin routines.
 c
-c $Id: obspar.for,v 1.6 2006/08/24 03:13:46 mirmgr Exp $
+c $Id: obspar.for,v 1.7 2007/01/12 15:25:42 rsault Exp $
 c************************************************************************
 c* ObsPrint -- Print list of known observatories.
 c: utility
@@ -134,15 +135,16 @@ c
 	parameter(ALTAZ=0.d0, EQUATOR=1.d0, XYEW=3.d0, NASMYTH=4.d0)
 c
         double precision value
-        character*24 input,param,observatory,cvalue
-        integer iostat,lu,length
-        character*80 line, obsfile
-        integer sign,deg,min
+        character input*24,param*24,observ*24,cvalue*24
+        character obsfile*80
+        integer sgn,deg,mins
         real    sec
 c
 c  Externals.
 c
 	double precision obsdms
+	character stcat*80
+	integer tinNext
 c
 	logical first
 	save first
@@ -151,73 +153,60 @@ c
 	if(.not.first)return
 	first = .false.
 	nparms = 0
-
-c       Locate observatories.dat.
+c
+c  Locate and open observatories.dat.
+c  Use $MIRCAT/observatories.dat if neded.
+c
         call getenv('MIROBS',obsfile)
         if (obsfile.eq.' ') then
-c          Use $MIRCAT/observatories.dat.
-           call getenv('MIRCAT',obsfile)
-           obsfile = obsfile(:index(obsfile, ' ')-1) //
-     *                 '/observatories.dat'        
+          call getenv('MIRCAT',obsfile)
+          obsfile = stcat(obsfile,'/observatories.dat')
         end if 
-
-        call output('Reading ' // obsfile)
-
-c       Open and read observatories.dat.
-        call txtopen(lu,obsfile,'old',iostat)
-        if(iostat.ne.0) then
-           call bug('w','Error opening' // obsfile)
-           call bugno('f',iostat)
-        else
-           dowhile(iostat.eq.0)
-             call txtread(lu,line,length,iostat)
-             if (iostat.ne.0) goto 10
-             if (line(1:3).eq.'EOF') goto 10
-
-c            Ignore comment lines in file, ie line(1:1)='#'
-             if (line(1:1).ne.'#' .and. line.ne.' ') then
-               read(line,*) observatory, param
-               input=observatory(1:index(observatory,' ')-1)//'/'//
-     *               param(1:index(param,' ')-1)
-
-c              Allow for param = mount, latitude or longitude
-
-               if (param(1:5).eq.'mount') then
-                 read(line,*)observatory,param,cvalue
-                 if (cvalue(1:5).eq.'ALTAZ') then
-                    call obsad(input,ALTAZ)
-                 else if (cvalue(1:7).eq.'EQUATOR') then
-                    call obsad(input,EQUATOR)
-                 else if (cvalue(1:5).eq.'XYEW')then
-                    call obsad(input,XYEW)
-                 else if (cvalue(1:7).eq.'NASMYTH') then
-                    call obsad(input,NASMYTH)
-                 end if
-               else if (param(1:8).eq.'latitude') then
-                  read(line,*)observatory,param,sign,deg,min,sec
-                  call obsad(input,obsdms(sign,deg,min,sec))
-               else if (param(1:9).eq.'longitude') then  
-                  read(line,*)observatory,param,sign,deg,min,sec
-                  call obsad(input,obsdms(sign,deg,min,sec))
-
-c              For ellimit & evector convert
-
-               else if (param(1:7).eq.'ellimit') then
-                  read(line,*)observatory,param,value   
-                  call obsad(input,value*dpi/180.d0) 
-               else if (param(1:7).eq.'evector') then
-                  read(line,*)observatory,param,value   
-                  call obsad(input,value*dpi/180.0) 
-               else
-                 read(line,*)observatory,param,value   
-                 call obsad(input,value)
-               endif
-              endif
-           enddo
-        endif
-
-10      call txtclose(lu)
 c
+c  Open and read observatories.dat.
+c
+        call tinOpen(obsfile,'n')
+        dowhile(tinNext().gt.0)
+	  call tinGeta(observ,' ')
+	  call tinGeta(param,' ')
+	  input = stcat(observ,'/'//param)
+	  if(param.eq.'mount')then
+	    call tinGeta(cvalue,' ')
+	    call ucase(cvalue)
+            if (cvalue.eq.'ALTAZ') then
+              call obsad(input,ALTAZ)
+            else if (cvalue.eq.'EQUATOR') then
+              call obsad(input,EQUATOR)
+            else if (cvalue.eq.'XYEW')then
+              call obsad(input,XYEW)
+            else if (cvalue.eq.'NASMYTH') then
+              call obsad(input,NASMYTH)
+            end if
+c
+c  Latitude and longitude.
+c
+          else if (param.eq.'latitude'.or.param.eq.'longitude') then
+	    call tinGeti(sgn,0)
+	    call tinGeti(deg,0)
+	    call tinGeti(mins,0)
+	    call tinGetr(sec,0.)
+            call obsad(input,obsdms(sgn,deg,mins,sec))
+c
+c  For ellimit & evector convert
+c
+          else if (param.eq.'ellimit'.or.param.eq.'evector') then
+            call tinGetd(value,0.d0)
+            call obsad(input,value*dpi/180.0) 
+c
+c  General parameter.
+c
+          else
+	    call tinGetd(value,0.d0)
+            call obsad(input,value)
+          endif
+        enddo
+c
+	call tinClose()
 c
 	end
 c************************************************************************
