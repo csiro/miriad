@@ -42,7 +42,7 @@
 #    Extracted from obspar.for by Stuart Weston - Auckland University of
 #    Technology, July 2006
 #
-# $Id: observatories.dat,v 1.4 2007/01/12 17:24:09 rsault Exp $
+# $Id: observatories.dat,v 1.5 2007/01/12 20:08:26 rsault Exp $
 #-----------------------------------------------------------------------------
 
 # Atacama Large Millimeter Array - provisional.
@@ -290,6 +290,7 @@ sma		latitude	+1  19 49 27.1389
 sma		longitude	+1 204 31 22.79606
 sma		mount		NASMYTH
 sma		nants		    8.0
+sma		subdiam		    0.35
 sma		systemp		  200.0
 
 # SZA - Sunyaev-Zeldovich Array of eight 3.5m antennas - part of CARMA.
