@@ -104,6 +104,7 @@ c    rjs   2jan06 Stokes selection. Weight by variance, push XY phase
 c		  into bandpass, duplicate gains when bandpass dual polarisation
 c		  and gains is single polarisation.
 c    rjs  15jan06 Improve weighting.
+c    rjs  08jan07 Use MAXWIN more rigorously.
 c
 c  Problems:
 c    * Should do simple spectral index fit.
@@ -116,7 +117,7 @@ c------------------------------------------------------------------------
 	parameter(MAXSOLN=1024,MAXPOL=2)
 c
 	character version*(*)
-	parameter(version='MfCal: version 1.0 15-Jan-06')
+	parameter(version='MfCal: version 1.0 08-Jan-07')
 c
 	integer tno
 	integer pWGains,pFreq,pSource,pPass,pGains,pTau
