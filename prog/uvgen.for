@@ -318,6 +318,8 @@ c    27oct00 rjs   Call antbas to compute baseline number.
 c    22may01 dpr   Marginal XY-EW support
 c    08dec02 rjs   Fixed bug in determining whether source is up or not.
 c    13mar05 rjs   Add antenna azimuth and elevation to output dataset.
+c    01jan07 rjs   Parameterise number of windows than this can handle.
+c		   Tidy up messages.
 c
 c  Bugs/Shortcomings:
 c    * Frequency and time smearing is not simulated.
@@ -345,8 +347,10 @@ c	error beam with FWHM=480'' and 10% of the amplitude of the main beam.
 c	pbfwhm=76,137,-0.2 simulates a primary beam pattern between
 c	10m and 6m antennas at 100 GHz. 
 c------------------------------------------------------------------------
+	integer MW
+	parameter(MW=4)
 	character version*(*)
-	parameter(version = 'Uvgen: version 1.0 08-Dec-02')
+	parameter(version = 'Uvgen: version 1.0 01-Jan-07')
 	integer ALTAZ,EQUATOR,XYEW
 	parameter(ALTAZ=0,EQUATOR=1,XYEW=3)
 	integer PolRR,PolLL,PolRL,PolLR,PolXX,PolYY,PolXY,PolYX
@@ -357,7 +361,7 @@ c
 	include 'maxdim.h'
 	include 'uvgen.h'
 c
-        real corfin(4),corbw(4),zeeman
+        real corfin(MW),corbw(MW),zeeman
         complex vis,modI,oldI,gradI,gain(MAXANT),leak(2,MAXANT)
 	complex wcorr(maxspect,maxpol),chan(MAXCHAN,maxpol)
 	real wsignal(maxspect),tpower(MAXANT),pnoise(MAXANT)
@@ -413,6 +417,7 @@ c
         integer PolsP2C,len1,tinNext
 	logical keyprsnt
 	double precision antbas
+	character itoaf*8,stcat*80
 c
 c  Data initialisation.
 c
@@ -429,6 +434,7 @@ c
 c
         call keyi('corr',nchan,0)
         call keyi('corr',nospect,1)
+	if(nospect.gt.MW)call bug('f','Too many windows set in corr')
 	do i=1,nospect
           call keyr('corr',corfin(i),0.)
 	enddo
@@ -473,8 +479,14 @@ c
 	sind = sin(sdec)
 	cosd = cos(sdec)
 	call GetPol(pol,npol,maxpol)
+c
 	call mkeya('polar',polar,MAXPOLAR,npolar)
 	dopolar = npolar.gt.0
+	if(dopolar)then
+	  npol = 1
+	  pol(1) = 0
+	endif
+c
 	call keyt('lat',alat,'dms',40.d0*pi/180)
 	sinl = sin(alat)
 	cosl = cos(alat)
@@ -538,6 +550,9 @@ c
 c  Determine the rise and set times of the source, at the minimum
 c  elevation angle.
 c
+	call output(' ')
+	call output('Observation information:')
+	call output('------------------------')
 	if(doellim)then
 	  sinel = sin(elev)
 	  if(abs(sinel - sinl*sind ).gt.abs(cosl*cosd))then
@@ -563,12 +578,13 @@ c
 	  endif
 	endif
 c
-c  Find HA limits.
+c  Check other things to simulate.
 c
 	donoise = tsys.gt.0
 	dogains = arms.gt.0.or.prms.gt.0.or.patm.gt.0.
 	doleak = leakrms.gt.0
 	doatm = patm.gt.0.
+c
 	if(doleak)then
 	  doleak = npol.eq.4
 	  if(doleak)doleak = (pol(1).eq.-1.and.pol(4).eq.-4).or.
@@ -589,13 +605,16 @@ c
         call hisinput(unit,'UVGEN')
         umsg = 'UVGEN: '//line
 	call hiswrite(unit, umsg )
-
+c
 c  Open the source components file.
 c
+	call output(' ')
+	call output('Source information:')
+	call output('-------------------')
 	call hiswrite(unit,'UVGEN: Source specifications:')
         write(line,'(a)')'     Flux     RA      DEC    Major  Minor  '//
      *    '  Axis    Pol-I  Pol-PA  Pol-V'
-	call output(line(1:80))
+	call output(line)
         umsg = 'UVGEN: '//line(1:75)
 	call hiswrite(unit, umsg )
         write(line,'(a)')'     (Jy)     (")     (")     (")    (")   '//
@@ -642,11 +661,14 @@ c
 	enddo
 c
 	call tinClose
-	write(line,'(i4,a)')  ns,' sources read from model'
+	line = stcat(itoaf(ns),' sources read from model')
 	call output(line)
 c
 c  Read the antenna positions file.
 c
+	call output(' ')
+	call output('Array information:')
+	call output('------------------')
 	call output('Antenna positions :')
 	call hiswrite(unit,'UVGEN: Antenna positions :')
 	nant = 0
@@ -691,12 +713,17 @@ c
 c
 c  correlator and spectral line parameters.
 c
-        write(line,'(a,4f8.2)') 'Correlator freq:',(corfin(i),i=1,4)
+	call output(' ')
+	call output('Correlator/Spectral information:')
+	call output('--------------------------------')
+        write(line,'(a,8f8.2)') 'Correlator freq:',
+     *				(corfin(i),i=1,nospect)
         call output(line)
         umsg = 'UVGEN: '//line
         call hiswrite(unit, umsg)
 c
-        write(line,'(a,4f8.2)') 'Correlator band:',(corbw(i),i=1,4)
+        write(line,'(a,8f8.2)') 'Correlator band:',
+     *				(corbw(i),i=1,nospect)
         call output(line)
         umsg = 'UVGEN: '//line
         call hiswrite(unit, umsg)
@@ -772,7 +799,7 @@ c
 	call uvputvri(unit,'ntemp',0,1)
 	call uvputvri(unit,'npol',npol,1)
 	call wrhdi(unit,'npol',npol)
-	if(npol.eq.1) call uvputvri(unit,'pol',pol(1),1)
+	if(npol.eq.1.and..not.dopolar)call uvputvri(unit,'pol',pol(1),1)
 c
 	if(nspect.gt.0)then
 	  call uvputvri(unit,'nchan',numchan,1)
@@ -801,6 +828,10 @@ c
 	call uvputvrd(unit,'antpos',antpos,nant*3)
 c
 c  Determine the rms for each polarisation using systemp at zenith.
+c
+	call output(' ')
+	call output('Atmosphere/noise model:')
+	call output('-----------------------')
 c
 	if(Tsky*tau.gt.0.)then
           systemp(1) = 2.*(Tsys + Tsky*(1-exp(-tau)))*exp(tau)
@@ -863,10 +894,15 @@ c
 c
 c  Determine the polarization leakage parameters.
 c
+
 	if(doleak)then
+	  call output(' ')
+	  call output('Polarization Model:')
+	  call output('-------------------')
 	  call output('Polarization Leakage Terms')
 	  call hiswrite(unit,'UVGEN: Polarization Leakage Terms')
-	  call Gaus(Leak,4*nant)
+	  call gaus(leak,4*nant)
+	  Leak(1,1) = 0
 	  do i=1,nant
 	    Leak(1,i) = leakrms * leak(1,i)
 	    Leak(2,i) = leakrms * leak(2,i)
@@ -884,13 +920,10 @@ c  Set atmospheric gain.
 c
 	gatm = 1
 c
-c  Start the polarization switching cycle.
-c
-	ipolar = -1
-c
 c  Compute visibility for each hour angle.
 c
 	ha = hbeg
+	ipolar = 0
 	ipnt = 0
 	ra = sra
 	dec = sdec
@@ -899,10 +932,10 @@ c
 c
 c  Increment the polarization switching cycle.
 c
-	if(dopolar) then
-	  ipolar = mod(ipolar+1,npolar)
-	  xpolar = polar(ipolar+1)
-	endif
+	  if(dopolar) then
+	    ipolar = mod(ipolar,npolar) + 1
+	    xpolar = polar(ipolar)
+	  endif
 c
 c  Compute effective source parameters when mosaicing.
 c
@@ -1099,8 +1132,8 @@ c
 c
 c  All done. Summarize, tidy up and exit.
 c
-	write(line,'(i7,a,a)')
-     *	  Item,' records written to file: ',outfile
+	call output(' ')
+	line = stcat(itoaf(item),' records written to file: '//outfile)
 	call output(line)
 	umsg = 'UVGEN: '//line
 	call hiswrite(unit, umsg )
@@ -1328,11 +1361,10 @@ c
 c  This generates a gaussian random number with mean "xmean" and standard
 c  deviation "xsd".
 c------------------------------------------------------------------------
-	real data(5)
+	real data
 c
-	call uniform(data,5)
-	rang = data(1) + data(2) + data(3) + data(4) + data(5)
-	rang = (rang*0.2-0.5) * xsd * sqrt(60.0) + xmean
+	call gaus(data,1)
+	rang = data*xsd + xmean
 	end
 c************************************************************************
 	subroutine GetPol(pol,npol,maxpol)
@@ -1398,7 +1430,6 @@ c
      *	  PolsC2P(pol(1)))
 c
 	end
-
 c************************************************************************
 	subroutine modvis (uns,vns,wns,freq,ns,ta,sx,sy,sz,
      *		smaj,smin,spa,per,pa,polV,code,psi,cont,zeeman,modI)
