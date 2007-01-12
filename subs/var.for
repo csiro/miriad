@@ -40,7 +40,8 @@ c    pjt  25oct98 Added tau230,rmspath (BIMA specific)
 c    rjs  16nov03 Added wind and axismax.
 c    rjs  15feb04 Added calcode and name.
 c    rjs  19sep04 Added smon,rain,refpnt,sctype
-c    rks  02jan06 Added refpnt
+c    rjs  02jan06 Added refpnt
+c    rjs  08jan07 Added chi2
 c************************************************************************
 c*VarInit -- Initialise the copy routines.
 c:uv-data
@@ -133,7 +134,7 @@ c
      *	   'winddir ','windmph ','delay   ','delay0  ','xtsys   ',
      *	   'ytsys   ','xsampler','ysampler','xyamp   ','pbtype  ',
      *     'tau230  ','rmspath ','smonrms ','rain    ','sctype  ',
-     *	   'refpnt  '/
+     *	   'chi2    '/
 c------------------------------------------------------------------------
 	avall = .false.
 c
