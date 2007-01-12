@@ -114,10 +114,11 @@ c   18mar97 rjs  - Consistently write to log file.
 c   11may97 rjs  - Better listing format for options=array
 c   19aug98 rjs  - Correct printing of longitude in options=array
 c   22may01 dpr  - XY-EW support
+c   01jan07 rjs  - Handle more than 100 antennas in a simple way.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
-	parameter(version='Uvlist: version 1.0 19-Aug-98')
+	parameter(version='Uvlist: version 1.0 01-Jan-07')
 c
 	character out*50,last*1,date*18,uvflags*8
 	complex data(MAXCHAN)
@@ -145,7 +146,15 @@ c
 	  call keyi('recnum',numrec,20)
 	endif
 c
+c  Determine the uvDat flags. If no data are being handled, then turn off
+c  all calibration.
+c
 	uvflags = 'sdlwb'
+	if(.not.dodata.and..not.dosigma)then
+	  docal = .false.
+	  dopol = .false.
+	  dopass = .false.
+	endif
 	if(docal) uvflags(6:6) = 'c'
 	if(dopol) uvflags(7:7) = 'e'
 	if(dopass)uvflags(8:8) = 'f'
@@ -314,11 +323,19 @@ c
 	call JulDay(timein,'H',line(1:18))
 	ctime = line(9:18)
 c
-	length = 6 + 1 + 10 + 3 + 1 + 2 + 1 + 2 + 18 + nchand*(8+4+1)
-	write(line,100)mod(VisNo,1000000),ctime,
+	if(b2.lt.100)then
+	  length = 6 + 1 + 10 + 3 + 1 + 2 + 1 + 2 + 18 + nchand*(8+4+1)
+	  write(line,100)mod(VisNo,1000000),ctime,
      *   	       b1,b2,pol,0.001*uin,0.001*vin,
      *		       (amp(j),nint(arg(j)),cflag(j),j=1,nchand)
- 100	format(i6,1x,a,i3,'-',i2,1x,a,2f9.2,10(f8.3,i4,a))
+ 100	  format(i6,1x,a,i3,'-',i2,1x,a,2f9.2,10(f8.3,i4,a))
+	else
+	  length = 6 + 1 + 10 + 3 + 1 + 3 + 1 + 3 + 18 + nchand*(8+4+1)
+	  write(line,110)mod(VisNo,1000000),ctime,
+     *   	       b1,b2,pol,0.001*uin,0.001*vin,
+     *		       (amp(j),nint(arg(j)),cflag(j),j=1,nchand)
+ 110	  format(i6,1x,a,i4,'-',i3,1x,a,2f9.2,10(f8.3,i4,a))
+	endif
 	call LogWrite(line(1:length),more)
 	end
 c************************************************************************
@@ -373,9 +390,15 @@ c
 	call JulDay(timein,'H',line(1:18))
 	ctime = line(9:18)
 c
-	write(line,100)mod(VisNo,1000000),ctime,
+	if(b2.lt.100)then
+	  write(line,100)mod(VisNo,1000000),ctime,
      *   	       b1,b2,pol,amp,nint(arg),cflag,sqrt(rms2)
- 100	format(i6,1x,a,i3,'-',i2,1x,a,f8.3,i4,a,f8.4)
+ 100	  format(i6,1x,a,i3,'-',i2,1x,a,f8.3,i4,a,f8.4)
+	else
+	  write(line,110)mod(VisNo,1000000),ctime,
+     *   	       b1,b2,pol,amp,nint(arg),cflag,sqrt(rms2)
+ 110	  format(i6,1x,a,i4,'-',i3,1x,a,f8.3,i4,a,f8.4)
+	endif
 	call LogWrite(line,more)
 	end
 c************************************************************************
@@ -427,9 +450,15 @@ c
 	if(p.ne.0) pol = PolsC2P(p)
 	call JulDay(timein,'H',date)
 c
-	write(line,'(''|'',i6,i3,''-'',i2,x,a,1x,a,2f9.2,f10.4)')
-     *	  mod(Visno,1000000),i1,i2,date(1:16),pol,0.001*uin,0.001*vin,
-     *	  lst*12.0/pi
+	if(i2.lt.100)then
+	  write(line,'(''|'',i6,i3,''-'',i2,x,a,1x,a,2f9.2,f10.4)')
+     *	    mod(Visno,1000000),i1,i2,date(1:16),pol,0.001*uin,0.001*vin,
+     *	    lst*12.0/pi
+	else
+	  write(line,'(''|'',i6,i4,''-'',i3,x,a,1x,a,2f9.2,f10.4)')
+     *	    mod(Visno,1000000),i1,i2,date(1:16),pol,0.001*uin,0.001*vin,
+     *	    lst*12.0/pi
+	endif
 	call LogWrite(line,more)
 c
 c  List the channel data.
@@ -717,7 +746,7 @@ c
 c
 c  Externals.
 c
-	character hangle*13,rangle*13
+	character hangle*13,rangle*13,stcat*80,itoaf*12
 	integer len1
 c
 	call LogWrite(' ',more)
@@ -755,8 +784,9 @@ c
      *			varname(k)//': '//rangle(dble(data(1))),23)
 	      else if (varname(k).eq.'baseline') then
 		call basant(dble(data(1)),ant1,ant2)
-	        write(line,'(a8,'':'',i2,i2.2)') varname(k),ant1,ant2
-	        call writeit(line,15)
+	        line = stcat(varname(k)//':'//itoaf(ant1),
+     *					'-'//itoaf(ant2))
+	        call writeit(line,len1(line))
 	      else
 	        do j=1,vsubs,5
 		  nsubs=min(vsubs-j+1,5)
@@ -1071,12 +1101,14 @@ c------------------------------------------------------------------------
 	double precision FAC
 	parameter(FAC=DCMKS*1D-9)
 c
-	integer nants,i,n
+	integer nants,i,n,mount
 	character type*1,line*64,telescop*16
 	logical update,ok,more
-	double precision xyz(3*MAXANT),lat,long,mount
+	double precision xyz(3*MAXANT),lat,long,dtemp
 c
-	character rangle*16
+c  Externals.
+c
+	character rangle*16,itoaf*8
 c
 	call uvrdvra(lIn,'telescop',telescop,' ')
 	if(telescop.ne.' ')
@@ -1100,14 +1132,26 @@ c
 	endif
 	if(ok)call logwrite('Longitude: '//rangle(long),more)
 c
-	call uvrdvrd(lIn,'mount',mount,-1.d0)
+	call uvrdvri(lIn,'mount',mount,-1)
 	ok = mount.ge.0
-	if(.not.ok.and.telescop.ne.' ')
-     *	  call obspar(telescop,'mount',mount,ok)
+	if(.not.ok.and.telescop.ne.' ')then
+	  dtemp = -1
+	  call obspar(telescop,'mount',dtemp,ok)
+	  mount = nint(dtemp)
+	endif	  
 	if(ok)then
-	  if(nint(mount).eq.0)call logwrite('Mounts: Alt-az',more)
-	  if(nint(mount).eq.1)call logwrite('Mounts: Equatorial',more)
-	  if(nint(mount).eq.3)call logwrite('Mounts: XY-EW',more)
+	  if(mount.eq.0)then
+	    call logwrite('Mounts: Alt-az',more)
+	  else if(mount.eq.1)then
+	    call logwrite('Mounts: Equatorial',more)
+	  else if(mount.eq.3)then
+	    call logwrite('Mounts: XY-EW',more)
+	  else if(mount.eq.4)then
+	    call logwrite('Mounts: Nasmyth',more)
+	  else
+	    call logwrite('Mounts: Unrecognized mount code '//
+     *						itoaf(mount),more)
+	  endif
 	endif
 	call logwrite(' ',more)
 c
