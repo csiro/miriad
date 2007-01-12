@@ -344,9 +344,11 @@ c		     velocity formula. Handle AIPS OB tables.
 c    rjs  24-sep-05  Increase max number of sources in op=uvout
 c    rjs  03-aug-06  In reading in images, llrot was sometimes not
 c                    correct. Also handle some rare keywords a little better.
+c    rjs  01-jan-07  Extended baseline numbering convention. Better handling
+c		     of SMA-style Nasmyth mounts.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 03-Aug-06')
+	parameter(version='Fits: version 1.1 01-Jan-07')
 	integer maxboxes
 	parameter(maxboxes=2048)
 	character in*128,out*128,op*8,uvdatop*12
@@ -606,7 +608,7 @@ c  Externals.
 c
 	integer len1,PolCvt
 	character itoaf*8
-	double precision fuvGetT0
+	double precision fuvGetT0,antbas
 c
 c  Open the input FITS and output MIRIAD files.
 c
@@ -735,10 +737,7 @@ c
 	    ww = 0
 	  endif
 	  time = visibs(uvT) + T0
-	  bl = int(visibs(uvBl) + 0.01)
-	  ant1 = bl/256
-	  ant2 = mod(bl,256)
-	  config = nint(100*(visibs(uvBl)-bl))+1
+	  call fbasant(visibs(uvBl),ant1,ant2,config)
 	  if(uvSrcid.gt.0) srcid  = nint(visibs(uvSrcId))
 	  if(uvFreqid.gt.0)freqid = nint(visibs(uvFreqId))
 c
@@ -774,7 +773,7 @@ c  do not start at 1 it keeps the nants from the table
           else 
 	    nants = max(nants,ant1,ant2)
 	  end if
-	  bl = 256*ant1 + ant2
+	  bl = nint(antbas(ant1,ant2))
 	  nconfig = max(config,nconfig)
 c
 c  Determine some times at whcih data are observed. Use these later to
@@ -2212,8 +2211,8 @@ c------------------------------------------------------------------------
 	include 'fits.h'
 	integer i,j,k
 	logical newsrc,newfreq,newconfg,newlst,newchi,newvel,neweq
-	real chi,dT
-	double precision lst,vel
+	real chi,chi2,dT
+	double precision lst,vel,az,el
 	double precision sfreq0(MAXIF),sdf0(MAXIF),rfreq0(MAXIF)
 c
 c  Externals.
@@ -2324,10 +2323,19 @@ c
 c  Compute and save the parallactic angle. Recompute whenever LST changes.
 c
 	newchi = (newlst.or.newsrc.or.newconfg).and.llok.and.
-     *		 emok.and.(mount(config).eq.ALTAZ)
+     *		 emok.and.
+     *		(mount(config).eq.ALTAZ.or.mount(config).eq.NASMYTH)
 	if(newchi)then
 	  call parang(raapp(srcidx),decapp(srcidx),lst,lat(config),chi)
-	  call uvputvrr(tno,'chi',chi+evec,1)
+	  if(mount(config).eq.NASMYTH)then
+	    call azel(raapp(srcidx),decapp(srcidx),lst,lat(config),
+     *								 az,el)
+	    chi2 = -el
+	    call uvputvrr(tno,'chi2',chi2,1)
+	  else
+	    chi2 = 0
+	  endif
+	  call uvputvrr(tno,'chi',chi+evec+chi2,1)
 	endif
 c
 c  Compute and save the radial velocity. Compute a new velocity every
@@ -2630,7 +2638,7 @@ c
 	    OutData(uvV+1) = -1e-9 * preamble(2)
 	    OutData(uvW+1) = -1e-9 * preamble(3)
 	    OutData(uvT+1) = preamble(4) - T0
-	    OutData(uvBl+1) = 256*ant1 + ant2
+	    call fantbas(ant1,ant2,1,OutData(uvBl+1))
 	    OutData(uvSrc+1) = iSrc
 	    OutData(1) = P
 	    i0 = uvData
