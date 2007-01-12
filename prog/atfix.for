@@ -75,8 +75,7 @@ c	              accounts for predicted changes in Tsys with elevation
 c	              and measured weather. This is the default.
 c@ options
 c	Extra processing options. Several options can be given,
-c	separated by commas. Minimum match is supported. There is only
-c	one possible option at the moment:
+c	separated by commas. Minimum match is supported.
 c	  nogainel  This disables applying a instrumental gain/elevation
 c	            correction to the data. Currently the gains of the
 c	            antennas are a function of elevation. By default,
@@ -131,12 +130,13 @@ c    18feb06 rjs  Various tidy up and change in defaults.
 c    24feb06 rjs  Fix bug in tsyscal=none and some tidying.
 c    27feb06 rjs  Fix bug when there are multiple frequencies.
 c    25sep06 tw/rjs  Fix bug precluding inst phase correction without dantpos
+c    08jan07 rjs  Small documentation correction.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
 	character version*(*)
 	integer MAXSELS,ATANT
-	parameter(version='AtFix: version 1.0 25-Sep-06')
+	parameter(version='AtFix: version 1.0 08-Jan-07')
 	parameter(MAXSELS=256,ATANT=6)
 c
 	real sels(MAXSELS),xyz(3*MAXANT)
