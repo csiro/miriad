@@ -25,6 +25,7 @@ c		  windows and bandpass averaging taking place.
 c    10dec97 rjs  Check gain table size is correct.
 c    24feb97 rjs  Make "bandpass calibration" work for wide-only files.
 c    01jan05 rjs  Double precision baselines and use basant.
+c    08jan07 rjs  Use MAXWIN more rigorously.
 c************************************************************************
 	subroutine uvGnIni(tno1,dogains1,dopass1)
 	implicit none
