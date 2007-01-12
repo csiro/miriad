@@ -42,7 +42,7 @@
 #    Extracted from obspar.for by Stuart Weston - Auckland University of
 #    Technology, July 2006
 #
-# $Id: observatories.dat,v 1.3 2007/01/12 15:12:41 rsault Exp $
+# $Id: observatories.dat,v 1.4 2007/01/12 17:24:09 rsault Exp $
 #-----------------------------------------------------------------------------
 
 # Atacama Large Millimeter Array - provisional.
@@ -279,16 +279,18 @@ sest		height		 2400.0
 sest		latitude	-1  29 15 34.0
 sest		longitude	+1 070 44 04.0
 
-# Submillimeter Array (SMA`).
+# Submillimeter Array (SMA).
 # Supplied by Ramprasad Rao.
 sma		antdiam		    6.0
-sma		evector		    0.0
+sma		ellimit		   14.0
+sma		evector		   45.0
 sma		height		 4080.0
 sma		jyperk		  130.0
-sma		latitude	+1  19 49 33.8
-sma		longitude	-1 155 28 46.4
+sma		latitude	+1  19 49 27.1389
+sma		longitude	+1 204 31 22.79606
 sma		mount		NASMYTH
 sma		nants		    8.0
+sma		systemp		  200.0
 
 # SZA - Sunyaev-Zeldovich Array of eight 3.5m antennas - part of CARMA.
 sza		antdiam		    3.5
