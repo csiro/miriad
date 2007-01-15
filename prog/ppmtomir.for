@@ -15,17 +15,18 @@ c	The input PPM file.
 c@ out
 c	The output Miriad file.
 c--
+c $Id: ppmtomir.for,v 1.2 2007/01/15 04:24:49 cal103 Exp $
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
 	parameter(version='PpmtoMir: version 1.0 17-Dec-97')
 	character in*64,out*64
-	integer nsize(2),i,j,k,val(3),lOut,v,levels(16)
+	integer nsize(2),i,j,val(3),lOut,v,levels(16)
 	real data(MAXDIM)
 c
 c  Externals.
 c
-	integer tinLen,tinNext
+	integer tinNext
 c
 	data levels/      0, 917504,1441792,1966080,1973248,1977344,
      *		    1981440,1457152, 932864,  15416,  15448,  15480,
@@ -54,12 +55,6 @@ c
 	    call tinGeti(val(2),0)
 	    call tinGeti(val(3),0)
 	    v = val(1) + val(2) + val(3)
-c	    v = val(1)/2 + 128*(val(2)/2) + 128*128*(val(3)/2)'
-c
-c	    data(i) = 75.5
-c	    do k=1,16
-c	      if(v.eq.levels(k)) data(i) = -(29.5 - 7*k)
-c	    enddo
 	  enddo
 	  call xywrite(lOut,j,data)
 	enddo

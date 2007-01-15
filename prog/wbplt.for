@@ -83,6 +83,8 @@ c  History:
 c    lss  14sep02 Original version copied from calred.
 c    nebk 09sep04 Add format fix from Chris Phillips
 c    lss  17sep04 More formatting changes
+c
+c $Id: wbplt.for,v 1.2 2007/01/15 04:29:11 cal103 Exp $
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
@@ -110,7 +112,8 @@ c
 	integer npol, nvis, ivis, inc, nflag, nflag0, nflagpos
 	integer i1, i2, j1, j2, j3, kmax, ki1, ki2, k, kk
 	double precision preamble(4),lst
-	complex data(MAXCHAN), cdata(MAXCHAN), avdata
+	complex data(MAXCHAN), avdata
+c	complex cdata(MAXCHAN)
 	real lag(2*MAXCHAN-2), xph(2*MAXCHAN-2)
 	double precision freq(MAXCHAN)
 	logical flag(MAXCHAN),relax,stats,dtrack,dofft,first,lagwt
