@@ -2205,7 +2205,7 @@ c less than length dispersion.; fitted 1/width^2 -> abs & reverse lt, gt
       integer   ngauss
       real      limlist(*)
 
-      integer   cmpind, errind, errpar, rmsind
+      integer   cmpind, errind, errpar
 
       integer   i, j, k, eflag
       real      a,w

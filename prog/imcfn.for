@@ -103,6 +103,8 @@ c  History:
 c    nebk 13sep95 Original version
 c    rjs   2jul98 Increase ize of pbtype variable.
 c    rjs  08may00 Change incorrect call to keyf to keya.
+c
+c $Id: imcfn.for,v 1.2 2007/01/15 04:20:21 cal103 Exp $
 c------------------------------------------------------------------------
       implicit none
 c
@@ -121,7 +123,7 @@ cc
 c
       double precision crpixi(maxnax), crpixo(maxnax), cdelti(maxnax), 
      +  smin, smax, sb, a, b, c(maxpc), sum, s1, s2, s3, ds, n0(2), 
-     +  sold, s, nn, n, dlogs, ss, sJy
+     +  sold, s, nn, n, dlogs, sJy
       integer naxisi, sizei(maxnax), sizeo(maxnax), li, lo, ipi, ipo, 
      +  ip, i, j, nc
       character in*132, out*132, str*1, itoaf*1, device*80, line*80,
