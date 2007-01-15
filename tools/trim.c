@@ -112,8 +112,8 @@ int fort,blank;
       }else{
 	mode = 0;
         if(*s == '\b' || *s == '\177' ){ if(t > line) t--; }
-        else if(*s == '\e'){mode = mESC;}
-        else if((*s < ' ' && *s != '\t') || (*s > '\177'));
+        else if(*s == '\033'){mode = mESC;}
+        else if((*s < ' ' && *s != '\t') || (*s < 0));
         else *t++ = *s;
       }
     }
