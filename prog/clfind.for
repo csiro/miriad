@@ -260,7 +260,7 @@ c-----------------------------------------------------------------
       include 'clfind.h'
 
       integer nlevs,npx1,npx2
-      integer nps,npx,ngy,ngx
+      integer nps,npx,ngy
       real t(*)
 
       nlevs=-999
@@ -290,7 +290,7 @@ c     only count when in range, above the minimum (p1)
          if(ngy.gt.1 .and. npx.gt.maxpix)
      *       call bug('f','Too many pixels per level')
 
-c         print 1011, ngx
+c         print 1011, npx
 c 1011   format(' Number of pixels in level 1:                   ',i4)
 
          if(ngy.eq.1 .and. npx.gt.maxpix1)
