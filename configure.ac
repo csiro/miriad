@@ -3,12 +3,12 @@
 #-----------------------------------------------------------------------------
 # Author: Mark Calabretta, Australia Telescope National Facility
 # http://www.atnf.csiro.au/~mcalabre/index.html
-# $Id: configure.ac,v 1.5 2006/12/11 07:12:40 cal103 Exp $
+# $Id: configure.ac,v 1.6 2007/01/24 23:40:13 cal103 Exp $
 #-----------------------------------------------------------------------------
 
 AC_INIT([Miriad], [ATNF2.0], [miriad@atnf.csiro.au], [miriad-ATNF2.0])
 AC_PREREQ([2.53])
-AC_REVISION([$Revision: 1.5 $])
+AC_REVISION([$Revision: 1.6 $])
 
 AC_CONFIG_SRCDIR([tools/miriad.c])
 AC_CONFIG_AUX_DIR([config])
@@ -221,8 +221,14 @@ AC_SUBST([XTRALIBS])
 # X11 includes and libraries.
 if test "x$no_x" = x ; then
   X11INCD=$ac_x_includes
-  X11LIB="-L$ac_x_libraries -lX11"
-  X11LIBS="-L$ac_x_libraries -lXaw -lXmu -lXext -lXt -lX11"
+  if test "x$ac_x_libraries" = x ; then
+    # E.g. for Gentoo or Redhat which installs X11 libraries in /usr/lib.
+    X11LIB="-lX11"
+    X11LIBS="-lXaw -lXmu -lXext -lXt -lX11"
+  else
+    X11LIB="-L$ac_x_libraries -lX11"
+    X11LIBS="-L$ac_x_libraries -lXaw -lXmu -lXext -lXt -lX11"
+  fi
 fi
 
 AC_SUBST([X11INCD])
