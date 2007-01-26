@@ -57,47 +57,54 @@ c	data-set.
 c@ mode
 c	This determines what is written out. The default is to write out
 c	the line data. The following are possible values:
-c	   'line'        The output data-set is the line data. This is
-c	                 the default.
-c	   'fit'         The output data-set is the fitted line shape data.
-c	                 This is valid only when using the 'lpropc' option.
-c	   'chan0'       The output data-set is an average of all the
-c	                 continuum data in a visibility record.
-c	   'continuum'   The output data-set is the continuum data. This
-c	                 has the same number of channels as the input
-c	                 data-set.
+c	   line        The output data-set is the line data. This is
+c	               the default.
+c	   fit         The output data-set is the fitted line shape data.
+c	               This is valid only when using the 'lpropc' option.
+c	   chan0       The output data-set is an average of all the
+c	               continuum data in a visibility record.
+c	   continuum   The output data-set is the continuum data. This
+c	               has the same number of channels as the input
+c	               data-set.
 c@ options
 c	This gives extra processing options. Several options can be given,
 c	each separated by commas. They may be abbreivated to the minimum
 c	needed to avoid ambiguity. Possible options are:
-c	   'sun'         With this options, the OFFSET keyword is ignored,
-c	                 and a shift appropriate for the Sun is determined
-c	                 This can be useful to eliminate solar interference.
-c	   'twofit'      If either the OFFSET parameter is set, or the SUN
-c	                 option invoked, this options instructs UVLIN to
-c	                 perform a simultaneous polynomial fit for a emission
-c	                 both at the phase centre and at the appropriate
-c	                 offset.
-c	   'lpropc'      The line shape is constant throughout the data-set,
-c			 and the intensity is proportional to the continuum
-c	                 strength. This cannot be used together with
-c	                 the 'twofit' option.
-c	   'relax'       Normally UVLIN attempts to avoid overfitting the
-c	                 data by reducing the order of the fit. It does this
-c	                 if a significant number of channels are flagged
-c	                 (more than 40% bad) or if it believes there is
-c	                 inadequate data to perform the fit (less than
-c	                 5*(order+1) channels). You can overwrite this
-c	                 conservatism, if you know what you are doing, with
-c	                 the `relax' option.
+c	   sun         With this options, the OFFSET keyword is ignored,
+c	               and a shift appropriate for the Sun is determined
+c	               This can be useful to eliminate solar interference.
+c	   twofit      If either the OFFSET parameter is set, or the SUN
+c	               option invoked, this options instructs UVLIN to
+c	               perform a simultaneous polynomial fit for a emission
+c	               both at the phase centre and at the appropriate
+c	               offset.
+c	   nowindow    Normally uvlin processes the different windows separately.
+c	               This will usually give the best result when the different
+c	               windows are at quite different frequencies. However when the
+c	               windows are at similar frequencies, or perhaps even abutting,
+c	               then it is better to perform a single fit over all windows
+c	               simultaneously. The "nowindow" option causes uvlin to do a
+c	               single fit over all windows.
+c	   lpropc      The line shape is constant throughout the data-set,
+c		       and the intensity is proportional to the continuum
+c	               strength. This cannot be used together with
+c	               the 'twofit' option.
+c	   relax       Normally UVLIN attempts to avoid overfitting the
+c	               data by reducing the order of the fit. It does this
+c	               if a significant number of channels are flagged
+c	               (more than 40% bad) or if it believes there is
+c	               inadequate data to perform the fit (less than
+c	               5*(order+1) channels). You can overwrite this
+c	               conservatism, if you know what you are doing, with
+c	               the `relax' option.
 c	The following options can be used to turn off calibration corrections.
 c	The default is to apply any calibration present.
-c	   'nocal'       Do not apply the gains table.
-c	   'nopass'      Do not apply bandpass corrections. It is unwise
-c	                 to turn off bandpass correction, as the continuum
-c	                 estimation process will be confused by a bandpass
-c	                 which is not flat.
-c	   'nopol'       Do not apply polarization corrections.
+c	   nocal       Do not apply the gains table.
+c	   nopass      Do not apply bandpass corrections. It is unwise
+c	               to turn off bandpass correction, as the continuum
+c	               estimation process will be confused by a bandpass
+c	               which is not flat.
+c	   nopol       Do not apply polarization corrections.
 c--
 c  History:
 c    rjs  11aug93 Original version
@@ -113,17 +120,20 @@ c   rjs   16aug94 Zeroth order fits were failing again!
 c   rjs   17aug94 Slightly better handling of offset value.
 c   rjs    9sep94 Handle felocity linetype.
 c   rjs   19sep04 Handle varying jyperk.
+c   pjt   11feb05 Change MAXCH to be more reflective of MAXCHAN (tried MAXCHAN/4)
+c   jhz   22jul05 Change MAXSPECT and MSPECT to 48.
 c   rjs   18sep05 More rigorously avoid mixed use of arrays.
+c   rjs   24jan07 Added nowin option. Change MAXSPECT and MSPECT to MAXWIN.
 c  Bugs:
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
 	integer MAXCH,MAXORDER
 	character version*(*)
-	parameter(MAXCH=32,MAXORDER=11)
-	parameter(version='UvLin: version 1.0 28-Sep-05')
+	parameter(MAXORDER=11,MAXCH=MAXCHAN/4)
+	parameter(version='UvLin: version 1.0 24-Jan-07')
 c
-	logical sun,twofit,relax,lpropc,cflags(MAXCHAN)
+	logical sun,twofit,relax,lpropc,nowin,cflags(MAXCHAN)
 	character uvflags*16,out*64,ltype*32,mode*12
 	integer chans(2,MAXCH),nch,order,i,j
 	integer lIn,lOut
@@ -137,7 +147,7 @@ c  Get the input parameters.
 c
 	call output(version)
 	call keyini
-	call GetOpt(sun,twofit,lpropc,relax,uvflags)
+	call GetOpt(sun,twofit,lpropc,relax,nowin,uvflags)
 	call GetMode(mode)
 	call uvDatInp('vis',uvflags)
 	call keya('out',out,' ')
@@ -171,6 +181,8 @@ c
 	endif
 	if(twofit.and.lpropc)call bug('f',
      *	  'OPTIONS=TWOFIT,LPROPC cannot be used together')
+	if(nowin.and.lpropc)call bug('f',
+     *	  'OPTIONS=NOWIN,LPROPC cannot be used together')
 c
 c  Determine the array giving continuum-only channels.
 c
@@ -211,7 +223,7 @@ c
 	  call lineprop(lIn,lOut,mode,order,relax,sun,shift,
      *						cflags,MAXCHAN)
 	else
-	  call uvlsf(lIn,lOut,mode,order,relax,sun,shift,twofit,
+	  call uvlsf(lIn,lOut,mode,order,relax,sun,shift,twofit,nowin,
      *						cflags,MAXCHAN)
 	endif
 c
@@ -238,10 +250,10 @@ c
 	if(nout.eq.0) mode = 'line'
 	end
 c************************************************************************
-	subroutine GetOpt(sun,twofit,lpropc,relax,uvflags)
+	subroutine GetOpt(sun,twofit,lpropc,relax,nowin,uvflags)
 c
 	implicit none
-	logical lpropc,relax,sun,twofit
+	logical lpropc,relax,sun,twofit,nowin
 	character uvflags*(*)
 c
 c  Determine extra processing options.
@@ -249,23 +261,25 @@ c
 c  Output:
 c    sun
 c    twofit
+c    nowin
 c    lpropc
 c    relax
 c    uvflags
 c------------------------------------------------------------------------
 	integer NOPTS
-	parameter(NOPTS=7)
+	parameter(NOPTS=8)
 	logical present(NOPTS)
 	character opts(NOPTS)*9
 c
 	data opts/'lpropc   ','relax     ','nocal    ','nopol    ',
-     *	          'nopass   ','sun      ','twofit   '/
+     *	          'nopass   ','sun       ','twofit   ','nowindow '/
 c
 	call options('options',opts,present,NOPTS)
 	lpropc = present(1)
 	relax  = present(2)
 	sun = present(6)
 	twofit = present(7)
+	nowin = present(8)
 c
 c  Determine the flags to pass to the uvDat routines.
 c    d - Data selection.
@@ -294,9 +308,9 @@ c
 	double precision shift(2)
 c------------------------------------------------------------------------
 	include 'maxdim.h'
-	integer MAXPOL,MAXSPECT
-	parameter(MAXPOL=4,MAXSPECT=16)
-	integer npol,poltype(MAXPOL),nvis,nchan,nspect,nschan(MAXSPECT)
+	integer MAXPOL
+	parameter(MAXPOL=4)
+	integer npol,poltype(MAXPOL),nvis,nchan,nspect,nschan(MAXWIN)
 	integer lScr
 	complex line(MAXCHAN*MAXPOL)
 	logical lflags(MAXCHAN*MAXPOL)
@@ -312,7 +326,7 @@ c
 c
 c  Read the data.
 c
-	call SpecRd(lIn,lScr,nvis,nchan,nspect,nschan,MAXSPECT,
+	call SpecRd(lIn,lScr,nvis,nchan,nspect,nschan,MAXWIN,
      *			sun,shift,npol,poltype,MAXPOL,inttime)
 	call output('Number of visibilities:     '//itoaf(nvis))
 	call output('Number of spectral windows: '//itoaf(nspect))
@@ -385,8 +399,8 @@ c
 	    call VarCopy(lIn,lOut)
 	    call PolCpy(lOut)
 	    call ProcAll(lIn,preamble,data,dflags,line(1,j),lflags(1,j),
-     *		nchan,nspect,nschan,order,relax,sun,shft,.false.,
-     *		mode,nout)
+     *	      nchan,nspect,nschan,order,relax,sun,shft,.false.,.false.,
+     *	      mode,nout)
 	    call uvwrite(lOut,preamble,data,dflags,nout)
 	  endif
 	  call uvDatRd(preamble,data,dflags,MAXCHAN,nread)
@@ -467,10 +481,12 @@ c
 	character string*64
 	complex tc
 	complex da(MAXCHAN,MAXPOL),data(MAXCHAN),cont(MAXCHAN)
+	double precision sfreq(MAXCHAN)
 	logical dflags(MAXCHAN)
 	real    aa(MAXCHAN,MAXPOL)
 	integer n
 	complex fac
+c
 c  Initialise the spectra.
 c
 	do j=1,npol
@@ -478,6 +494,10 @@ c
 	    line(i,j) = 1
 	    lflags(i,j) = .true.
 	  enddo
+	enddo
+c
+	do i=1,nchan
+	  sfreq(i) = i
 	enddo
 c
 c  Loop.
@@ -509,10 +529,10 @@ c  Given the spectrum, fit the continuum. On the first time through, use
 c  only the continuum channels.
 c
 	    if(first)then
-	      call ContFit(data,dflags,cont,line(1,j),cflags,
+	      call ContFit(sfreq,data,dflags,cont,line(1,j),cflags,
      *			nchan,nspect,nschan,order,relax,.false.)
 	    else
-	      call ContFit(data,dflags,cont,line(1,j),lflags(1,j),
+	      call ContFit(sfreq,data,dflags,cont,line(1,j),lflags(1,j),
      *			nchan,nspect,nschan,order,relax,.false.)
 	    endif
 c
@@ -645,7 +665,7 @@ c------------------------------------------------------------------------
 	complex data(MAXCHAN),w(MAXCHAN),unit(MAXCHAN)
 	logical dflags(MAXCHAN),doshift
 	real d(3*MAXCHAN+1),t
-	double precision preamble(4),shft(2)
+	double precision preamble(4),shft(2),sfreq(MAXCHAN)
 c
 c  Is a shift to be performed?
 c
@@ -692,7 +712,8 @@ c
 	      pindx(pol) = npol
 	    endif
 	    if(doshift)then
-	      call ShiftMod(sun,lIn,preamble,unit,nchan,shft,w)
+	      call uvinfo(lIn,'sfreq',sfreq)
+	      call ShiftMod(sun,lIn,preamble,unit,sfreq,nchan,shft,w)
 	      do j=1,nchan
 		Data(j) = conjg(w(j)) * Data(j)
 	      enddo
@@ -718,12 +739,12 @@ c
 	end
 c************************************************************************
 	subroutine uvlsf(lIn,lOut,mode,order,relax,sun,shift,twofit,
-     *							cflags,mchan)
+     *						nowin,cflags,mchan)
 c
 	implicit none
 	integer lIn,lOut
 	integer order,mchan
-	logical cflags(mchan),relax,sun,twofit
+	logical cflags(mchan),relax,sun,twofit,nowin
 	double precision shift(2)
 	character mode*(*)
 c
@@ -732,10 +753,8 @@ c
 c  Inputs:
 c
 c------------------------------------------------------------------------
-	integer MAXSPECT
 	include 'maxdim.h'
-	parameter(MAXSPECT=16)
-	integer vupd,nchan,nspect,nschan(MAXSPECT),i,nout
+	integer vupd,nchan,nspect,nschan(MAXWIN),i,nout
 	double precision preamble(4),shft(2)
 	complex data(MAXCHAN),line(MAXCHAN)
 	logical dflags(MAXCHAN)
@@ -760,11 +779,12 @@ c
 c
 	dowhile(nchan.gt.0)
 	  if(nchan.gt.mchan)call bug('f','Too many channels')
-	  call dspect(lIn,vupd,nchan,MAXSPECT,nspect,nschan)
+	  call dspect(lIn,vupd,nchan,MAXWIN,nspect,nschan)
 	  call VarCopy(lIn,lOut)
 	  call PolCpy(lOut)
 	  call ProcAll(lIn,preamble,data,dflags,line,cflags,
-     *	    nchan,nspect,nschan,order,relax,sun,shft,twofit,mode,nout)
+     *	    nchan,nspect,nschan,order,relax,sun,shft,twofit,nowin,
+     *	    mode,nout)
 	  call uvwrite(lOut,preamble,data,dflags,nout)
 	  call uvDatRd(preamble,data,dflags,MAXCHAN,nchan)
 	enddo
@@ -772,13 +792,13 @@ c
 c
 	end
 c************************************************************************
-	subroutine ProcAll(lIn,preamble,data,dflags,line,lflags,
-     *	  nchan,nspect,nschan,order,relax,sun,shift,twofit,mode,nread)
+	subroutine ProcAll(lIn,preamble,data,dflags,line,lflags,nchan,
+     *	  nspect,nschan,order,relax,sun,shift,twofit,nowin,mode,nread)
 c
 	implicit none
 	integer lIn,nchan,nspect,nschan(nspect),nread,order
 	complex data(nchan),line(nchan)
-	logical dflags(nchan),lflags(nchan),relax,sun,twofit
+	logical dflags(nchan),lflags(nchan),relax,sun,twofit,nowin
 	double precision shift(2)
 	double precision preamble(4)
 	character mode*(*)
@@ -789,14 +809,23 @@ c------------------------------------------------------------------------
 	complex cont(MAXCHAN),w(MAXCHAN),ctemp
 	logical doshift
 	integer i,ntemp
+	double precision sfreq(MAXCHAN)
 c
 c  Generate the model of the spectrum. This is the initial model
 c  possibly multiplied by a phase factor.
 c
 	doshift = abs(shift(1))+abs(shift(2)).gt.0.or.sun
 	if(doshift)then
-	  call ShiftMod(sun,lIn,preamble,line,nchan,shift,w)
+	  call uvinfo(lIn,'sfreq',sfreq)
+	  call ShiftMod(sun,lIn,preamble,line,sfreq,nchan,shift,w)
 	else
+	  if(nowin)then
+	    call uvinfo(lIn,'sfreq',sfreq)
+	  else
+	    do i=1,nchan
+	      sfreq(i) = i
+	    enddo
+	  endif
 	  do i=1,nchan
 	    w(i) = line(i)
 	  enddo
@@ -804,8 +833,13 @@ c
 c
 c  Fit the continuum.
 c
-	call ContFit(data,dflags,cont,w,lflags,
+	if(nowin)then
+	  call ContFit(sfreq,data,dflags,cont,w,lflags,
+     *		nchan,1,nchan,order,relax,twofit)
+	else
+	  call ContFit(sfreq,data,dflags,cont,w,lflags,
      *		nchan,nspect,nschan,order,relax,twofit)
+	endif
 c
 c  Generate the line output.
 c
@@ -847,13 +881,13 @@ c
 c
 	end
 c************************************************************************
-	subroutine ShiftMod(sun,lIn,preamble,line,nchan,shift,w)
+	subroutine ShiftMod(sun,lIn,preamble,line,sfreq,nchan,shift,w)
 c
 	implicit none
 	integer lIn,nchan
 	double precision preamble(4)
 	logical sun
-	double precision shift(2)
+	double precision shift(2),sfreq(nchan)
 	complex w(nchan),line(nchan)
 c
 c  Apply a shift to the model of the spectrum.
@@ -871,7 +905,6 @@ c------------------------------------------------------------------------
 	include 'mirconst.h'
 	integer i
 	real theta,theta0
-	double precision sfreq(MAXCHAN)
 c
 c  Determine the fringe rate.
 c
@@ -883,7 +916,6 @@ c
 c
 c  Get the sky frequency and set the rotation factors.
 c
-	call uvinfo(lIn,'sfreq',sfreq)
 	do i=1,nchan
 	  theta = theta0 * sfreq(i)
 	  w(i) = cmplx(cos(theta),sin(theta)) * line(i)
@@ -1014,10 +1046,9 @@ c  Output:
 c    nspect
 c    nschan
 c------------------------------------------------------------------------
-	integer MSPECT
-	parameter(MSPECT=16)
+	include 'maxdim.h'
 	double precision line(6)
-	integer start,step,n,nschand(MSPECT),ispect
+	integer start,step,n,nschand(MAXWIN),ispect
 c
 c  Externals.
 c
@@ -1035,7 +1066,7 @@ c
 	  if(nspect.eq.1)then
 	    nschan(1) = n
 	  else
-	    if(nspect.gt.MSPECT)
+	    if(nspect.gt.MAXWIN)
      *		call bug('f','Too many spectral windows')
 	    call uvgetvri(lIn,'nschan',nschand,nspect)
 	    ispect = 1
@@ -1114,18 +1145,20 @@ c
 c
 	end
 c************************************************************************
-	subroutine ContFit(data,dflags,cont,line,lflags,
+	subroutine ContFit(sfreq,data,dflags,cont,line,lflags,
      *				nchan,nspect,nschan,order,relax,twofit)
 c
 	implicit none
 	integer nchan,nspect,nschan(nspect),order
 	logical dflags(nchan),lflags(nchan),relax,twofit
 	complex data(nchan),cont(nchan),line(nchan)
+	double precision sfreq(nchan)
 c
 c  Given data and a model of the spectrum, determine a new model which is
 c  a poly times the old model.
 c
 c  Input:
+c    sfreq	The frequency of each channel.
 c    data	The raw data.
 c    line	The model of the spectrum.
 c    lflags	Flags associated with the spectral model.
@@ -1153,16 +1186,20 @@ c
 	logical ok
 	complex coeff1(0:MAXORDER),coeff2(0:MAXORDER)
 	complex y(MAXCHAN),l(MAXCHAN)
-	integer x(MAXCHAN)
+	real x(MAXCHAN),xval(MAXCHAN)
 	real f
 c
 	i0 = 1
 	do j=1,nspect
 c
+c  Get values of x.
+c
+	  call ContX(sfreq(i0),xval,nschan(j))
+c
 c  Extract all the good data.
 c
-	  call ContExt(data(i0),dflags(i0),line(i0),lflags(i0),
-     *					nschan(j),npt,npos,x,y,l)
+	  call ContExt(xval,data(i0),dflags(i0),line(i0),
+     *			lflags(i0),nschan(j),npt,npos,x,y,l)
 c
 c  Determine the number of free parameters that we are going to solve for.
 c
@@ -1185,9 +1222,9 @@ c
 	    ok = .false.
 	  else if(twofit)then
 	    npar = npar/2
-	    call ContPol2(nschan(j),npt,x,y,l,npar-1,coeff1,coeff2,ok)
+	    call ContPol2(npt,x,y,l,npar-1,coeff1,coeff2,ok)
 	  else
-	    call ContPol1(nschan(j),npt,x,y,l,npar-1,coeff1,ok)
+	    call ContPol1(npt,x,y,l,npar-1,coeff1,ok)
 	    do i=0,npar-1
 	      coeff2(i) = 0
 	    enddo
@@ -1197,7 +1234,7 @@ c  If the fit was ok, generate the continuum, otherwise blank the output.
 c
 	  if(ok)then
 	    Count(npar) = Count(npar) + 1
-	    call ContGen(cont(i0),nschan(j),
+	    call ContGen(xval,cont(i0),nschan(j),
      *					npar-1,coeff1,coeff2,line(i0))
 	  else
 	    Fail = Fail + 1
@@ -1214,10 +1251,46 @@ c
 c
 	end
 c************************************************************************
-	subroutine ContExt(data,dflags,line,lflags,nchan,npt,npos,x,y,l)
+	subroutine ContX(sfreq,xval,nchan)
 c
 	implicit none
-	integer nchan,npt,npos,x(nchan)
+	integer nchan
+	real xval(nchan)
+	double precision sfreq(nchan)
+c
+c  This returns scaled values of x.
+c
+c------------------------------------------------------------------------
+	double precision dmin,dmax,a,b
+	integer i
+c
+	dmin = sfreq(1)
+	dmax = dmin
+	do i=2,nchan
+	  dmin = min(dmin,sfreq(i))
+	  dmax = max(dmax,sfreq(i))
+	enddo
+c
+	b = 0.5d0*(dmin+dmax)
+	a = 0.5d0*(dmax-dmin)
+	if(a.le.0)then
+	  a = 1
+	else
+	  a = 1/a
+	endif
+c
+	do i=1,nchan
+	  xval(i) = a*(sfreq(i)-b)
+	enddo
+c
+	end
+c************************************************************************
+	subroutine ContExt(xval,data,dflags,line,lflags,nchan,npt,
+     *							npos,x,y,l)
+c
+	implicit none
+	integer nchan,npt,npos
+	real xval(nchan),x(nchan)
 	complex data(nchan),line(nchan),y(nchan),l(nchan)
 	logical dflags(nchan),lflags(nchan)
 c
@@ -1231,7 +1304,7 @@ c
 	  if(lflags(i))npos = npos + 1
 	  if(dflags(i).and.lflags(i))then
 	    npt = npt + 1
-	    x(npt) = i
+	    x(npt) = xval(i)
 	    y(npt) = data(i)
 	    l(npt) = line(i)
 	  endif
@@ -1239,36 +1312,34 @@ c
 c
 	end
 c************************************************************************
-	subroutine ContGen(d,nchan,order,coeff1,coeff2,line)
+	subroutine ContGen(xval,d,nchan,order,coeff1,coeff2,line)
 c
 	implicit none
 	integer nchan,order
 	complex d(nchan),line(nchan),coeff1(0:order),coeff2(0:order)
+	real xval(nchan)
 c
 c  Generate the continuum.
 c------------------------------------------------------------------------
 	integer i,j
-	real a,b
 c
 	do i=1,nchan
 	  d(i) = coeff2(order) + coeff1(order)*line(i)
 	enddo
 c
-	a = 2.0/real(nchan-1)
-	b = 0.5*(nchan+1)
-c
 	do j=order-1,0,-1
 	  do i=1,nchan
-	    d(i) = d(i)*a*(i-b) + coeff2(j) + coeff1(j)*line(i)
+	    d(i) = d(i)*xval(i) + coeff2(j) + coeff1(j)*line(i)
 	  enddo
 	enddo
 c
 	end
 c************************************************************************
-	subroutine ContPol2(nchan,npt,x,y,l,order,coeff1,coeff2,ok)
+	subroutine ContPol2(npt,x,y,l,order,coeff1,coeff2,ok)
 c
 	implicit none
-	integer npt,x(npt),order,nchan
+	integer npt,order
+	real x(npt)
 	complex y(npt),l(npt),coeff1(0:order),coeff2(0:order)
 	logical ok
 c
@@ -1291,12 +1362,10 @@ c------------------------------------------------------------------------
 	integer MAXORDER,MAXSIZE
 	parameter(MAXORDER=11,MAXSIZE=2*(MAXORDER+1))
 	integer ifail,i,j,n,i0
-	real beta(MAXSIZE*MAXSIZE),a,b,p
+	real beta(MAXSIZE*MAXSIZE),p
 	real alpha(MAXSIZE),eqr(MAXSIZE),eqi(MAXSIZE)
 	integer pivot(MAXSIZE)
 c
-	a = 2.0/real(nchan-1)
-	b = 0.5*(nchan+1)
 	n = 4*(order+1)
 	if(n.gt.MAXSIZE)call bug('f','Cannot work it out')
 c
@@ -1319,7 +1388,7 @@ c
 	    eqi(i0+2) = 0
 	    eqi(i0+3) = p
 	    i0 = i0 + 4
-	    p = p * a * (x(j) - b)
+	    p = p * x(j)
 	  enddo
 	  call LlsquAcc( real(y(j)),eqr,alpha,Beta,1,n)
 	  call LlsquAcc(aimag(y(j)),eqi,alpha,Beta,1,n)
@@ -1341,10 +1410,11 @@ c
 c
 	end
 c************************************************************************
-	subroutine ContPol1(nchan,npt,x,y,l,order,coeff,ok)
+	subroutine ContPol1(npt,x,y,l,order,coeff,ok)
 c
 	implicit none
-	integer npt,x(npt),order,nchan
+	integer npt,order
+	real x(npt)
 	complex y(npt),l(npt),coeff(0:order)
 	logical ok
 c
@@ -1367,8 +1437,8 @@ c------------------------------------------------------------------------
 	integer MAXORDER
 	parameter(MAXORDER=11)
 	integer ifail,i
-	real rnorm,a,b
-	real wv(MAXCHAN),xv(MAXCHAN),yv(MAXCHAN)
+	real rnorm
+	real wv(MAXCHAN),yv(MAXCHAN)
 	real wrk1(2*(MAXORDER+1)),wrk2(4*MAXCHAN)
 	real rcoeff(0:MAXORDER),icoeff(0:MAXORDER)
 	complex sum
@@ -1395,10 +1465,7 @@ c
 c
 c  Determine the weights.
 c
-	a = 2.0/real(nchan-1)
-	b = 0.5*(nchan+1)
 	do i=1,npt
-	  xv(i) = a*(x(i)-b)
 	  wv(i) = real(l(i))**2 + aimag(l(i))**2
 	enddo
 c
@@ -1407,7 +1474,7 @@ c
 	do i=1,npt
 	  yv(i) = real(y(i)/l(i))
 	enddo
-	call wpfit(order,npt,xv,yv,wv,rcoeff,rnorm,wrk1,wrk2,ifail)
+	call wpfit(order,npt,x,yv,wv,rcoeff,rnorm,wrk1,wrk2,ifail)
 	ok = ifail.eq.0
 	if(.not.ok)return
 c
@@ -1416,7 +1483,7 @@ c
 	do i=1,npt
 	  yv(i) = aimag(y(i)/l(i))
 	enddo
-	call wpfit(order,npt,xv,yv,wv,icoeff,rnorm,wrk1,wrk2,ifail)
+	call wpfit(order,npt,x,yv,wv,icoeff,rnorm,wrk1,wrk2,ifail)
 	ok = ifail.eq.0
 	if(.not.ok)return
 c
