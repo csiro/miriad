@@ -35,7 +35,8 @@ c	  gains	       Plot/list the gains vs time. This is the default if
 c		       nothing else is requested.
 c	  xygains      Plot/list the ratio of X gain to Y gain.
 c	  xbyygain     Plot/list the product of X gain by Y gain.
-c	  polarization Plot/list the polarizations vs antenna number.
+c	  polarization Plot/list the leakages vs antenna number.
+c	  2polarization Plot/list the second leakages vs antenna number.
 c	  delays       Plot/list the delays vs time.
 c	  speccor      Plot/list the spectral correction vs time.
 c	  bandpass     Plot/list the bandpass shape vs frequency.
@@ -100,12 +101,13 @@ c    rjs  10jun97 Correct amptiude to amplitude.
 c    rjs  09mar98 Trim the device name before passing it through to PGPLOT.
 c    rjs  13mar98 Change format statement.
 c    nebk 13jul04 More sig figs for leakages
+c    rjs  23jan07 Handle second leakage table.
 c  Bugs:
 c------------------------------------------------------------------------
 	integer MAXSELS
 	character version*(*)
 	parameter(MAXSELS=256)
-	parameter(version='GpPlt: version 13-Jul-04')
+	parameter(version='GpPlt: version 23-Jan-07')
 	include 'gpplt.h'
 	integer iostat,tIn,nx,ny,nfeeds,nants,nsols,ierr,symbol,nchan
 	integer ntau,length
@@ -113,7 +115,7 @@ c------------------------------------------------------------------------
 	double precision T0
 	logical doamp,dophase,doreal,doimag,dogains,dopol,dodtime,doxy
 	logical doxbyy,doplot,dolog,more,ltemp,dodots,dodelay,dopass
-	logical dospec,dowrap
+	logical dospec,dowrap,dopol2
 	complex G1(maxGains),G2(maxGains)
 	real alpha(maxGains)
 	real times(maxTimes),range(2)
@@ -140,7 +142,7 @@ c
 	if(.not.(dolog.or.doplot))
      *	  call bug('f','One of the device and log must be given')
 	call GetAxis(doamp,dophase,doreal,doimag)
-	call GetOpt(dogains,doxy,doxbyy,dopol,dodtime,dodots,
+	call GetOpt(dogains,doxy,doxbyy,dopol,dopol2,dodtime,dodots,
      *	  dodelay,dospec,dopass,dowrap)
 	call keyi('nxy',nx,0)
 	call keyi('nxy',ny,0)
@@ -164,7 +166,7 @@ c
 c
 c  Fill in the defaults.
 c
-	if(.not.(dogains.or.doxy.or.doxbyy.or.dopol.or.
+	if(.not.(dogains.or.doxy.or.doxbyy.or.dopol.or.dopol2.or.
      *		dodelay.or.dopass.or.dospec))dogains = .true.
 	if(.not.(doamp.or.dophase.or.doreal.or.doimag))doamp = .true.
 c
@@ -187,6 +189,11 @@ c
 	  dopol = hdprsnt(tIn,'leakage')
 	  if(.not.dopol)call bug('w',
      *		'Polarization leakage table not present')
+	endif
+	if(dopol2)then
+	  dopol2 = hdprsnt(tIn,'leakage2')
+	  if(.not.dopol2)call bug('w',
+     *		'Polarization second leakage table not present')
 	endif
 c
 	if(dogains.or.doxy.or.doxbyy.or.dodelay.or.dospec)then
@@ -216,8 +223,8 @@ c
 	    endif
 	  endif
 	endif
-	if(.not.(dodelay.or.dospec.or.dopol.or.doxy.or.doxbyy.or.
-     *	  dogains.or.dopass))
+	if(.not.(dodelay.or.dospec.or.dopol.or.dopol2.or.doxy.or.
+     *	  doxbyy.or.dogains.or.dopass))
      *	  call bug('f','Requested options cannot be performed')
 c
 c  Open up the other devices now that we think everything looks OK.
@@ -291,8 +298,16 @@ c
 c  Do the polarization leakage term plots.
 c
 	if(dopol)then
-	  if(doLog)call LogWrite('# Polarization Information',more)
-	  call PLoad(tIn,G1,nfeeds,nants,maxGains)
+	  if(doLog)call LogWrite('# Polarization leakage table',more)
+	  call PLoad(tIn,G1,nfeeds,nants,maxGains,.false.)
+	  call PolPlt(G1,nfeeds,nants,range,Feeds(nfeeds),
+     *		doamp,dophase,doreal,doimag,doplot,dolog,symbol)
+	endif
+c
+	if(dopol2)then
+	  if(doLog)call LogWrite('# Second polarization leakage table',
+     *								   more)
+	  call PLoad(tIn,G1,nfeeds,nants,maxGains,.true.)
 	  call PolPlt(G1,nfeeds,nants,range,Feeds(nfeeds),
      *		doamp,dophase,doreal,doimag,doplot,dolog,symbol)
 	endif
@@ -620,11 +635,12 @@ c
 c
 	end
 c************************************************************************
-	subroutine PLoad(tIn,Leaks,nfeeds,nants,maxLeaks)
+	subroutine PLoad(tIn,Leaks,nfeeds,nants,maxLeaks,do2)
 c
 	implicit none
 	integer tIn,nfeeds,nants,maxLeaks
 	complex Leaks(2,maxLeaks)
+	logical do2
 c
 c  Load the polarisation leakage table.
 c
@@ -635,7 +651,11 @@ c  Externals.
 c
 	integer hsize
 c
-	call haccess(tIn,item,'leakage','read',iostat)
+	if(do2)then
+	  call haccess(tIn,item,'leakage2','read',iostat)
+	else
+	  call haccess(tIn,item,'leakage','read',iostat)
+	endif
 	if(iostat.ne.0)then
 	  call bug('w','Error accessing the leakage table')
 	  call bugno('f',iostat)
@@ -1403,12 +1423,12 @@ c
 	enddo
 	end
 c************************************************************************
-	subroutine GetOpt(dogains,doxy,doxbyy,dopol,dodtime,dodots,
-     *		          dodelay,dospec,dopass,dowrap)
+	subroutine GetOpt(dogains,doxy,doxbyy,dopol,dopol2,dodtime,
+     *			dodots,dodelay,dospec,dopass,dowrap)
 c
 	implicit none
 	logical dogains,dopol,dodtime,doxy,doxbyy,dodots,dodelay
-	logical dospec,dopass,dowrap
+	logical dospec,dopass,dowrap,dopol2
 c
 c  Get extra processing options.
 c
@@ -1416,7 +1436,8 @@ c  Output:
 c    dogains	If true, process the gains.
 c    doxy	If true, process the ratio of X/Y gains.
 c    doxbyy	If true, process the product of X*Y gains
-c    dopol	If true, process the polarizations.
+c    dopol	If true, process the leakage table.
+c    dopol2     If true, process the second leakage table.
 c    dodtime	If true, give time as day fractions.
 c    dodots	If true, plot small dots (rather than big circles).
 c    dodelay	If true, process the delays table.
@@ -1424,14 +1445,14 @@ c    dopass	If true, process the bandpass table.
 c    dowrap     If true, don't unwrap phases
 c------------------------------------------------------------------------
 	integer nopt
-	parameter(nopt=10)
+	parameter(nopt=11)
 	logical present(nopt)
-	character opts(nopt)*12
+	character opts(nopt)*14
 c
-	data opts/'gains       ','polarization','dtime       ',
-     *		  'xygains     ','xbyygains   ','dots        ',
-     *		  'delays      ','bandpass    ','speccor     ',
-     *            'wrap        '/
+	data opts/'gains         ','polarization  ','dtime         ',
+     *		  'xygains       ','xbyygains     ','dots          ',
+     *		  'delays        ','bandpass      ','speccor       ',
+     *            'wrap          ','2polarization '/
 c
 	call options('options',opts,present,nopt)
 	dogains = present(1)
@@ -1444,6 +1465,8 @@ c
 	dopass  = present(8)
 	dospec  = present(9)
         dowrap  = present(10)
+	dopol2  = present(11)
+
 	end
 c************************************************************************
 	subroutine GetAxis(doamp,dophase,doreal,doimag)
