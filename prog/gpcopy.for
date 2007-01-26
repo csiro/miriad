@@ -65,11 +65,12 @@ c    rjs  10dec97 Change some fatal messages to warnings only, to
 c		  prevent tables getting corrupted. Add check for
 c		  apparently corrupt gain table.
 c    rjs  19sep04 Copy across sensitivity model.
+c    rjs  23jan07 Correct some logical errors and also copy "leakage2" table.
 c  Bugs:
 c    None?
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='GpCopy: version 19-Sep-04')
+	parameter(version='GpCopy: version 23-Jan-07')
 	logical dopol,docal,dopass,docopy
 	integer iostat,tIn,tOut
 	character vis*64,out*64,mode*8,line*64
@@ -113,13 +114,14 @@ c
 	if(dopol) dopol = hdprsnt(tIn,'leakage')
 	if(dopol)then
 	  dopol = .not.docopy.and.hdprsnt(tOut,'leakage')
-	  if(mode.eq.'merge'.and.dopass)then
+	  if(mode.eq.'merge'.and.dopol)then
 	    call bug('w','Merging of polarization table unimplemented')
-	  else if(mode.eq.'apply'.and.dopass)then
+	  else if(mode.eq.'apply'.and.dopol)then
 	    call bug('w','Applying of polarization table unimplemented')
 	  else
 	    call output('Copying leakage table')
 	    call hdcopy(tIn,tOut,'leakage')
+	    call hdcopy(tIn,tOut,'leakage2')
 	  endif
         end if
 c
