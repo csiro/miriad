@@ -346,9 +346,10 @@ c    rjs  03-aug-06  In reading in images, llrot was sometimes not
 c                    correct. Also handle some rare keywords a little better.
 c    rjs  01-jan-07  Extended baseline numbering convention. Better handling
 c		     of SMA-style Nasmyth mounts.
+c    rjs  24-jan-07  More robust to bad antenna tables.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 01-Jan-07')
+	parameter(version='Fits: version 1.1 24-Jan-07')
 	integer maxboxes
 	parameter(maxboxes=2048)
 	character in*128,out*128,op*8,uvdatop*12
@@ -1480,8 +1481,8 @@ c
 	  call fitrdhdd(lu,'ARRAYZ',zc,0.d0)
 	  call ftabGetd(lu,'STABXYZ',0,xyz)
 	  call antproc(lefty,xc,yc,zc,xyz,n,antpos(1,nconfig),
-     *		lat(nconfig),long(nconfig))
-	  llok = .true.
+     *		lat(nconfig),long(nconfig),found)
+	  llok = llok.or.found
 	  call ftabNxt(lu,'AIPS AN',found)
 	enddo
 c
@@ -1528,8 +1529,8 @@ c
 	    call fitrdhdd(lu,'ARRAYZ',zc,0.d0)
 	    call ftabGetd(lu,'ORBXYZ',0,xyz)
 	    call antproc(lefty,xc,yc,zc,xyz,n,antpos(1,nconfig),
-     *		lat(nconfig),long(nconfig))
-	    llok = .true.
+     *		lat(nconfig),long(nconfig),found)
+	    llok = llok.or.found
 	  endif
 	endif
 c
@@ -1731,47 +1732,68 @@ c
 c
 	end
 c************************************************************************
-	subroutine antproc(lefty,xc,yc,zc,xyz,n,antpos,lat,long)
+	subroutine antproc(lefty,xc,yc,zc,xyz,n,antpos,lat,long,badan)
 c
 	implicit none
 	integer n
 	double precision xc,yc,zc,antpos(n,3),lat,long,xyz(3,n)
-	logical lefty
+	logical lefty,badan
 c
 c  Fiddle the antenna information.
 c
+c  Intput:
+c    lefty	The antenna table is in a left handed coordinate system.
+c    xc,yc,zc	Array centre.
+c    xyz	Antenna positions relative to the array centre.
+c    n		Number of antennas.
+c
+c  Output:
+c    badan	The antenna coordinates were bad, and the remaining values
+c		are unset.
+c    lat,long	The latitude and longitude of the observatory.
+c    antpos	Antenna positions, in Miriad format.
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	double precision r,cost,sint,height,temp
-	integer i
+	integer i,idx
 c
 c  Determine the latitude, longitude and height of the first antenna
 c  (which is taken to be the observatory lat,long,height). Handle
 c  geocentric and local coordinates.
 c
-	if(abs(xc)+abs(yc)+abs(zc).eq.0)then
-	  call xyz2llh(xyz(1,1),xyz(2,1),xyz(3,1),
-     *	      lat,long,height)
-	else
-	  call xyz2llh(xc,yc,zc,
-     *	       lat,long,height)
-	endif
-c
 c  Convert them to the Miriad system: y is local East, z is parallel to pole
 c  Units are nanosecs.
 c
+	badan = .false.
 	if(abs(xc)+abs(yc)+abs(yc).eq.0)then
-	  r = sqrt(xyz(1,1)*xyz(1,1) + xyz(2,1)*xyz(2,1))
-	  cost = xyz(1,1) / r
-	  sint = xyz(2,1) / r
-	  do i=1,n
-	    temp = xyz(1,i)*cost + xyz(2,i)*sint - r
-	    antpos(i,1) = (1d9/DCMKS) * temp
-	    temp = -xyz(1,i)*sint + xyz(2,i)*cost
-	    antpos(i,2) = (1d9/DCMKS) * temp
-	    antpos(i,3) = (1d9/DCMKS) * (xyz(3,i)-xyz(3,1))
-	  enddo
+	  call goodxyz(idx,xyz,n)
+	  if(idx.ne.0)then
+	    call xyz2llh(xyz(1,idx),xyz(2,idx),xyz(3,idx),
+     *	      lat,long,height)
+	    r = sqrt(xyz(1,idx)*xyz(1,idx) + xyz(2,idx)*xyz(2,idx))
+	    cost = xyz(1,idx) / r
+	    sint = xyz(2,idx) / r
+	    do i=1,n
+	      temp = xyz(1,i)*cost + xyz(2,i)*sint - r
+	      antpos(i,1) = (1d9/DCMKS) * temp
+	      temp = -xyz(1,i)*sint + xyz(2,i)*cost
+	      antpos(i,2) = (1d9/DCMKS) * temp
+	      antpos(i,3) = (1d9/DCMKS) * (xyz(3,i)-xyz(3,idx))
+	    enddo
+	  else
+	    call bug('w','Bad antenna coordinates ignored')
+	    lat = 0
+	    long = 0
+	    height = 0
+	    do i=1,n
+	      antpos(i,1) = 0
+	      antpos(i,2) = 0
+	      antpos(i,3) = 0
+	    enddo
+	    badan = .true.
+	  endif
 	else
+	  call xyz2llh(xc,yc,zc,lat,long,height)
 	  do i=1,n
 	    antpos(i,1) = (1d9/DCMKS) * xyz(1,i)
  	    antpos(i,2) = (1d9/DCMKS) * xyz(2,i)
@@ -1782,12 +1804,40 @@ c
 c  If the antenna table uses a left-handed system, convert it to a 
 c  right-handed system.
 c
-	if(lefty)then
+	if(lefty.and..not.badan)then
 	  long = -long
 	  do i=1,n
 	    antpos(i,2) = -antpos(i,2)
 	  enddo
 	endif
+c
+	end
+c************************************************************************
+	subroutine goodxyz(idx,xyz,n)
+c
+	implicit none
+	integer idx,n
+	double precision xyz(3,n)
+c
+c  Locate the first antenna coordinate that looks valid. If no valid
+c  coordinates are found, return 0.
+c
+c  Input:
+c    xyz	Antenna coordinates.
+c    n		Number of antennas.
+c  Output:
+c    idx	Index of first good antenna.
+c------------------------------------------------------------------------
+	real r
+	integer i
+c
+	idx = 0
+	i = 0
+	dowhile(idx.eq.0.and.i.lt.n)
+	  i = i + 1
+	  r = xyz(1,i)*xyz(1,i)+xyz(2,i)*xyz(2,i)+xyz(3,i)*xyz(3,i)
+	  if(r.gt.1e12)idx = i
+	enddo
 c
 	end
 c************************************************************************
