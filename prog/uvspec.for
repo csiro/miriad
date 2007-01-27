@@ -109,6 +109,8 @@ c    rjs  31oct97 Use colours in the label.
 c    rjs   3dec97 Replace part of label that dropped off in above change.
 c    rjs  13sep99 Added Doppler corrected freq to possibilities to plot.
 c    rjs  29jun05 Use 3D shift algorithm.
+c    rjs  26jan07 Adjust size of title to prevent overflow on multipanel
+c	          plot.
 c  Bugs:
 c------------------------------------------------------------------------
 	include 'mirconst.h'
@@ -117,7 +119,7 @@ c------------------------------------------------------------------------
         parameter (maxco=15)
 c
 	character version*(*)
-	parameter(version='UvSpec: version 1.0 29-Jun-05')
+	parameter(version='UvSpec: version 1.0 26-Jan-07')
 	character uvflags*8,device*64,xaxis*12,yaxis*12,logf*64
 	character xtitle*64,ytitle*64
 	logical ampsc,rms,nobase,avall,first,buffered,doflush,dodots
@@ -953,7 +955,7 @@ c------------------------------------------------------------------------
 	character pollab*32
 	double precision T0
 	real yranged(2)
-	real xlen,ylen,xloc
+	real xlen,ylen,xloc,size
 	integer k1,k2
 c
 c  Externals.
@@ -1051,27 +1053,28 @@ c
 	xl = len1(xtitle)
 	yl = len1(ytitle)
 c
-	if(npol.eq.1)then
-	  call pglab(xtitle(1:xl),ytitle(1:yl),title(1:l))
-	else
-	  call pglab(xtitle(1:xl),ytitle(1:yl),' ')
-	  call pglen(5,title(1:l),xlen,ylen)
-	  xloc = 0.5 - 0.5*xlen
-c
-	  k1 = 1
-	  do i=1,npol
-	    k2 = k1 + len1(polsc2p(pol(i))) - 1
-	    if(i.ne.npol)k2 = k2 + 1
-	    call pgsci(i)
-	    call pgmtxt('T',2.0,xloc,0.,title(k1:k2))
-	    call pglen(5,title(k1:k2),xlen,ylen)
-	    xloc = xloc + xlen
-	    k1 = k2 + 1
-	  enddo
-	  call pgsci(1)
-	  k2 = l
-	  call pgmtxt('T',2.0,xloc,0.,title(k1:k2))
+	call pglab(xtitle(1:xl),ytitle(1:yl),' ')
+	call pglen(5,title(1:l),xlen,ylen)
+	xloc = 0.5 - 0.5*xlen
+	call pgqch(size)
+	if(xloc.lt.0)then
+	  call pgsch(size/xlen)
+	  xloc = 0
 	endif
+c
+	k1 = 1
+	do i=1,npol
+	  k2 = k1 + len1(polsc2p(pol(i))) - 1
+	  if(i.ne.npol)k2 = k2 + 1
+	  call pgsci(i)
+	  call pgmtxt('T',2.0,xloc,0.,title(k1:k2))
+	  call pglen(5,title(k1:k2),xlen,ylen)
+	  xloc = xloc + xlen
+	  k1 = k2 + 1
+	enddo
+	call pgsci(1)
+	k2 = l
+	call pgmtxt('T',2.0,xloc,0.,title(k1:k2))
+	call pgsch(size)
 	  
 	end
-
