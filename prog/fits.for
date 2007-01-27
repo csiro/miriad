@@ -347,9 +347,10 @@ c                    correct. Also handle some rare keywords a little better.
 c    rjs  01-jan-07  Extended baseline numbering convention. Better handling
 c		     of SMA-style Nasmyth mounts.
 c    rjs  24-jan-07  More robust to bad antenna tables.
+c    rjs  26-jan-07  Fix bug I introduced two days ago!
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 24-Jan-07')
+	parameter(version='Fits: version 1.1 26-Jan-07')
 	integer maxboxes
 	parameter(maxboxes=2048)
 	character in*128,out*128,op*8,uvdatop*12
@@ -1316,7 +1317,7 @@ c------------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'fits.h'
 c
-	logical badapp,badepo,more,found,badmnt
+	logical badapp,badepo,more,found,badmnt,badan
 	double precision Coord(3,4),rfreq,freq
 	double precision veldef
 	character defsrc*16,num*2
@@ -1481,8 +1482,8 @@ c
 	  call fitrdhdd(lu,'ARRAYZ',zc,0.d0)
 	  call ftabGetd(lu,'STABXYZ',0,xyz)
 	  call antproc(lefty,xc,yc,zc,xyz,n,antpos(1,nconfig),
-     *		lat(nconfig),long(nconfig),found)
-	  llok = llok.or.found
+     *		lat(nconfig),long(nconfig),badan)
+	  llok = llok.or..not.badan
 	  call ftabNxt(lu,'AIPS AN',found)
 	enddo
 c
@@ -1529,8 +1530,8 @@ c
 	    call fitrdhdd(lu,'ARRAYZ',zc,0.d0)
 	    call ftabGetd(lu,'ORBXYZ',0,xyz)
 	    call antproc(lefty,xc,yc,zc,xyz,n,antpos(1,nconfig),
-     *		lat(nconfig),long(nconfig),found)
-	    llok = llok.or.found
+     *		lat(nconfig),long(nconfig),badan)
+	    llok = llok.or..not.badan
 	  endif
 	endif
 c
