@@ -6,7 +6,7 @@ c= GpCopy -- Copy or merge gains, bandpass and polarization correction.
 c& rjs
 c: calibration
 c+
-c	GpCopy is a MIRIAD task which copies or merges calibration corrections 
+c	GpCopy is a MIRIAD task which copies or merges calibration corrections
 c	(antenna gains, polarization leakages, frequency table, bandpass item)
 c	from one data-set to another.
 c@ vis
@@ -252,7 +252,7 @@ c------------------------------------------------------------------------
 	logical present(nopt)
 	character opts(nopt)*8
 c
-	data opts/'nopol   ','nocal   ','nopass   '/
+	data opts/'nopol   ','nocal   ','nopass  '/
 c
 	call options('options',opts,present,nopt)
 	dopol = .not.present(1)

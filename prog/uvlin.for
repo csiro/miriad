@@ -271,8 +271,8 @@ c------------------------------------------------------------------------
 	logical present(NOPTS)
 	character opts(NOPTS)*9
 c
-	data opts/'lpropc   ','relax     ','nocal    ','nopol    ',
-     *	          'nopass   ','sun       ','twofit   ','nowindow '/
+	data opts/'lpropc   ','relax    ','nocal    ','nopol    ',
+     *	          'nopass   ','sun      ','twofit   ','nowindow '/
 c
 	call options('options',opts,present,NOPTS)
 	lpropc = present(1)
@@ -1243,7 +1243,7 @@ c
 	      cont(i) = 0
 	    enddo
 	  endif
-c 
+c
 c  Go back for another spectral window.
 c
 	  i0 = i0 + nschan(j)
