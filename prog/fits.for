@@ -348,9 +348,11 @@ c    rjs  01-jan-07  Extended baseline numbering convention. Better handling
 c		     of SMA-style Nasmyth mounts.
 c    rjs  24-jan-07  More robust to bad antenna tables.
 c    rjs  26-jan-07  Fix bug I introduced two days ago!
+c    jhz  09-feb-07  Set MAXFREQ=MAXWIN fits.h so that it
+c                    can read SMA FITS output data from IDL.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 26-Jan-07')
+	parameter(version='Fits: version 1.1 09-Feb-07')
 	integer maxboxes
 	parameter(maxboxes=2048)
 	character in*128,out*128,op*8,uvdatop*12
