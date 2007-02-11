@@ -9,7 +9,7 @@ c
 	parameter(uvStokes=1,uvFreq=2,uvRa=3,uvDec=4)
 c
 	integer MAXSRC,MAXIF,MAXFREQ,MAXCONFG
-	parameter(MAXSRC=1000,MAXFREQ=16,MAXIF=MAXFREQ,MAXCONFG=40)
+	parameter(MAXSRC=1000,MAXFREQ=MAXWIN,MAXIF=MAXFREQ,MAXCONFG=40)
 c
 	double precision raepo(MAXSRC),decepo(MAXSRC)
 	double precision raapp(MAXSRC),decapp(MAXSRC)
