@@ -78,6 +78,7 @@ c    rjs   6sep99 Added "lflag" parameter to "line" keyword.
 c    pjt  18jan03 extra char for f2c interfaces
 c    rjs  18sep04 Support the variance being scaled by the noise level.
 c    rjs  01jan05 Change arg of uvgnfac to double precision.
+c    rjs  02feb07 Correct call to uvgetvr for 'baseline'
 c
 c  User-Callable Routines:
 c    uvDatInp(key,flags)
@@ -1082,7 +1083,8 @@ c
      *		'Cannot perform polarisation processing, in uvDatWRd')
 	  call uvwread(tno,data,flags,n,nread)
 	  if(nread.ne.0.and.WillCal)then
-	    call uvgetvrd(tno,'baseline',baseline,1)
+	    call uvrdvrd(tno,'baseline',baseline,0.d0)
+	    if(baseline.le.0)call bug('f','Invalid baseline number')
 	    call uvgetvrd(tno,'time',time,1)
 	    call uvGnFac(time,baseline,0,.true.,data,flags,nread,GWt)
 	    Gwt = GWt*GWt
