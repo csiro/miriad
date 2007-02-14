@@ -48,7 +48,7 @@ c    rjs    17jul97    Get rid of calls to rdhd, and just use coordinate
 c                      object as source of information.
 c    rjs    10nov97    Make ctypeco robust to a blank axis.
 c
-c $Id: cosubs.for,v 1.3 2006/12/14 05:40:53 cal103 Exp $
+c $Id: cosubs.for,v 1.4 2007/02/14 07:07:16 cal103 Exp $
 c******************************************************************************
 c
 c* axfndCO -- Find a specified generic axis in an image
@@ -845,12 +845,16 @@ c
             nix(i) = .true.
           end if
         end if
+
         if (.not.nix(i)) none = .false.
       end do
+
       if (none) then
         do i = 1, n
           wout(i) = win(i)
         end do
+
+        valid = .true.
         return
       end if
 c
