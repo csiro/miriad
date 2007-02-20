@@ -250,7 +250,7 @@ c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='AtLod: version 1.0 02-Jan-06')
 c
-	character in(MAXFILES)*64,out*64,line*64,t1*18,t2*18
+	character in(MAXFILES)*128,out*64,line*64,t1*18,t2*18
 	integer tno,ntimes
 	integer ifile,ifsel,nfreq,iostat,nfiles,i
 	double precision rfreq(2),times(2,MAXTIMES)
