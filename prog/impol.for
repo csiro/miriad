@@ -122,13 +122,13 @@ c    rjs  23jul97 added pbtype.
 c    nebk 13mar98 position angle error was factor of 2 too big
 c    nebk 27jul00 as above but in another location.  thanks Bryan
 c    mchw 14may02 added bunit to polarized intensity.
+c
+c $Id: impol.for,v 1.5 2007/02/21 05:29:48 cal103 Exp $
 c------------------------------------------------------------------------
       implicit none
 c
       include 'maxdim.h'
       include 'maxnax.h'
-      character version*(*)
-      parameter (version = 'ImPol: version 14-May-2002')
 cc
       real iline(maxdim), qline(maxdim), uline(maxdim), pline(maxdim),
      +  mline(maxdim), paline(maxdim), epline(maxdim), emline(maxdim),
@@ -142,10 +142,10 @@ c
      +  qsize(maxnax), usize(maxnax), inaxis, qnaxis, unaxis, istkax,
      +  qstkax, ustkax, npout, npaout, nmout, nin
 c
-      character ins(3)*64, iin*64, qin*64, uin*64, pout(2)*64,
-     +  paout(2)*64, mout(2)*64, ustr*8, ictype(maxnax)*9,
-     +  qctype(maxnax)*9, uctype(maxnax)*9,
-     +  bflag, line*80, blstr*7, device*80
+      character bflag, blstr*7, device*80, ictype(maxnax)*9, iin*64,
+     +          ins(3)*64, line*80, mout(2)*64, paout(2)*64, pout(2)*64,
+     +          qctype(maxnax)*9, qin*64, uctype(maxnax)*9, uin*64,
+     +          ustr*8, versan*80, version*80
 c
       logical radians, debias, iflags(maxdim), qflags(maxdim),
      +  uflags(maxdim), pflags(maxdim), mflags(maxdim), epflags(maxdim),
@@ -154,18 +154,19 @@ c
 c
       integer len1
       integer nkeys
-      parameter (nkeys = 23)
+      parameter (nkeys = 24)
       character keyw(nkeys)*8
 c
-      data keyw/     'obstime ','epoch   ','history ','instrume',
-     +    'niters  ','object  ','restfreq','telescop','vobs    ',
-     +    'obsra   ','obsdec  ','observer','cellscal',
-     +    'bmaj    ','bmin    ','bpa     ','pbfwhm  ','lstart  ',
-     +    'lstep   ','ltype   ','lwidth  ','vobs    ','pbtype  '/
+      data keyw /'bmaj    ', 'bmin    ', 'bpa     ', 'cellscal',
+     +           'epoch   ', 'history ', 'instrume', 'lstart  ',
+     +           'lstep   ', 'ltype   ', 'lwidth  ', 'mostable',
+     +           'niters  ', 'object  ', 'obsdec  ', 'observer',
+     +           'obsra   ', 'obstime ', 'pbfwhm  ', 'pbtype  ',
+     +           'restfreq', 'telescop', 'vobs    ', 'vobs    '/
       data li, lpout, lmout, lpaout /0, 2*0, 2*0, 2*0/
-c-------------------------------------------------------------------------
-      call output (version)
-      call output (' ')
+c-----------------------------------------------------------------------
+      version = versan ('impol',
+     + '$Id: impol.for,v 1.5 2007/02/21 05:29:48 cal103 Exp $')
 c
 c Get the inputs
 c
@@ -674,7 +675,7 @@ c
       call wrbtype (lout, btype)
 c
       call hisopen  (lout, 'append')
-      aline = 'IMPOL: Miriad '//version
+      aline = 'IMPOL: Miriad ' // version(:len1(version))
       call hiswrite (lout, aline)
       call hisinput (lout, 'IMPOL')
       call hisclose (lout)
@@ -887,10 +888,10 @@ c         Write out position angle and error.
       enddo
 
       if (lpout(1).ne.0) then
-        call wrhda   (lpout(1), 'bunit', 'JY/BEAM')
+        call wrhda (lpout(1), 'bunit', 'JY/BEAM')
       endif
-      if (lpout(1).ne.0) then
-        call wrhda   (lpout(2), 'bunit', 'JY/BEAM')
+      if (lpout(2).ne.0) then
+        call wrhda (lpout(2), 'bunit', 'JY/BEAM')
       endif
       if (lpaout(1).ne.0) then
         if (radians) then
