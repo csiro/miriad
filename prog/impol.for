@@ -123,7 +123,7 @@ c    nebk 13mar98 position angle error was factor of 2 too big
 c    nebk 27jul00 as above but in another location.  thanks Bryan
 c    mchw 14may02 added bunit to polarized intensity.
 c
-c $Id: impol.for,v 1.5 2007/02/21 05:29:48 cal103 Exp $
+c $Id: impol.for,v 1.6 2007/02/21 05:37:10 cal103 Exp $
 c------------------------------------------------------------------------
       implicit none
 c
@@ -166,7 +166,7 @@ c
       data li, lpout, lmout, lpaout /0, 2*0, 2*0, 2*0/
 c-----------------------------------------------------------------------
       version = versan ('impol',
-     + '$Id: impol.for,v 1.5 2007/02/21 05:29:48 cal103 Exp $')
+     + '$Id: impol.for,v 1.6 2007/02/21 05:37:10 cal103 Exp $')
 c
 c Get the inputs
 c
@@ -654,7 +654,7 @@ c
       double precision crval(naxis), cdelt(naxis), crpix(naxis)
       character*(*) keyw(nkeys), out, version, ctype(naxis), btype*(*)
 cc
-      integer i
+      integer i, len1
       character itoaf*1, istr*1, aline*80
 c-----------------------------------------------------------------------
       call xyopen (lout, out, 'new', naxis, size)
