@@ -123,7 +123,7 @@ c    nebk 13mar98 position angle error was factor of 2 too big
 c    nebk 27jul00 as above but in another location.  thanks Bryan
 c    mchw 14may02 added bunit to polarized intensity.
 c
-c $Id: impol.for,v 1.6 2007/02/21 05:37:10 cal103 Exp $
+c $Id: impol.for,v 1.7 2007/02/22 00:32:36 cal103 Exp $
 c------------------------------------------------------------------------
       implicit none
 c
@@ -166,7 +166,7 @@ c
       data li, lpout, lmout, lpaout /0, 2*0, 2*0, 2*0/
 c-----------------------------------------------------------------------
       version = versan ('impol',
-     + '$Id: impol.for,v 1.6 2007/02/21 05:37:10 cal103 Exp $')
+     + '$Id: impol.for,v 1.7 2007/02/22 00:32:36 cal103 Exp $')
 c
 c Get the inputs
 c
@@ -257,27 +257,61 @@ c Open the input images
 c
       if (doimage) then
 c
-c I
+c Stokes I
 c
-        if (iin.ne.' ') call openin (bflag, maxdim, maxnax, iin, li,
-     +      inaxis, isize, iepoch, icrpix, icdelt, icrval, ictype,
-     +      istkax)
-        if (istkax.ne.0 .and. icrval(istkax).ne.1) call bug (bflag,
-     +     iin(1:len1(iin))//' does not appear to be an I image')
+        if (iin.ne.' ') then
+          call openin (bflag, maxdim, maxnax, iin, li, inaxis, isize,
+     +      iepoch, icrpix, icdelt, icrval, ictype, istkax)
+          if (istkax.ne.0) then
+            if (icrpix(istkax).ne.1) then
+c             Shift the coordinate reference pixel.
+              icrval(istkax) = icrval(istkax) +
+     +          (1 - icrpix(istkax)) * icdelt(istkax)
+              icrpix(istkax) = 1
+            end if
+
+            if (icrval(istkax).ne.1) then
+              call bug (bflag,
+     +          iin(1:len1(iin)) // ' does not appear to be an I image')
+            end if
+          end if
+        end if
 c
-c Q
+c Stokes Q
 c
         call openin (bflag, maxdim, maxnax, qin, lq, qnaxis, qsize,
-     +     qepoch, qcrpix, qcdelt, qcrval, qctype, qstkax)
-        if (qstkax.ne.0 .and. qcrval(qstkax).ne.2) call bug (bflag,
-     +     qin(1:len1(qin))//' does not appear to be a Q image')
+     +    qepoch, qcrpix, qcdelt, qcrval, qctype, qstkax)
+        if (qstkax.ne.0) then
+          if (qcrpix(qstkax).ne.1) then
+c           Shift the coordinate reference pixel.
+            qcrval(qstkax) = qcrval(qstkax) +
+     +        (1 - qcrpix(qstkax)) * qcdelt(qstkax)
+            qcrpix(qstkax) = 1
+          end if
+
+          if (qcrval(qstkax).ne.2) then
+            call bug (bflag,
+     +        qin(1:len1(qin)) // ' does not appear to be a Q image')
+          end if
+        end if
 c
-c U
+c Stokes U
 c
         call openin (bflag, maxdim, maxnax, uin, lu, unaxis, usize,
      +      uepoch, ucrpix, ucdelt, ucrval, uctype, ustkax)
-        if (ustkax.ne.0 .and. ucrval(ustkax).ne.3) call bug (bflag,
-     +     uin(1:len1(uin))//' does not appear to be a U image')
+        if (ustkax.ne.0) then
+          if (ucrpix(ustkax).ne.1) then
+c           Shift the coordinate reference pixel.
+            ucrval(ustkax) = ucrval(ustkax) +
+     +        (1 - ucrpix(ustkax)) * ucdelt(ustkax)
+            ucrpix(ustkax) = 1
+          end if
+
+          if (ucrval(ustkax).ne.3) then
+            call bug (bflag,
+     +        uin(1:len1(uin)) // ' does not appear to be a U image')
+          end if
+        end if
 c
 c Compare images for consistency
 c
