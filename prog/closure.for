@@ -1,40 +1,39 @@
-c************************************************************************
+c***********************************************************************
 	program closure
-	implicit none
 c
-c= closure
+c= closure - Plot closure quantities
 c& rjs
 c: uv analysis, plotting
 c+
-c	CLOSURE is a Miriad task which plots some closure quantities.
-c	The these include the closure phase (the "triple phase"), the
-c	closure amplitude (the "quad amplitude"), and two less well known
-c	quantities -- the triple amplitude and quad phase.
+c	CLOSURE is a Miriad task that plots closure quantities: the
+c	closure phase ("triple phase"), closure amplitude ("quad
+c	amplitude"), and two less well known quantities - the triple
+c	amplitude and quad phase.
 c
-c	These are gefined as
+c	These are defined as
 c
-c	  Closure phase     (triple phase):   arg( V12*V23*conjg(V13) )
-c	  Closure amplitude (quad amplitude): abs( (V12*V34)/(V14*conjg(V34)) )
-c	  Triple amplitude:                   abs( V12*V23*conjg(V13) )**0.3333
-c	  Quad phase:                         arg( (V12*V34)/(V14*conjg(V34)) )
+c	  Closure (triple) phase:    arg( V12*V23*conjg(V13) )
+c	  Closure (quad) amplitude:  abs( (V12*V34)/(V14*conjg(V34)) )
+c	  Triple amplitude:          abs( V12*V23*conjg(V13) )**0.3333
+c	  Quad phase:                arg( (V12*V34)/(V14*conjg(V34)) )
 c
 c	The closure phase, quad phase and closure amplitude should be
-c	independent of antenna-based errors, and for a point source should
-c	have values of 	zero phase or unit amplitude. The triple amplitude is
-c	independent of antenna-based phase errors (but not amplitude errors),
-c	and for a point source is a measure of the flux density.
+c	independent of antenna-based errors, and for a point source
+c	should have values of zero phase or unit amplitude.  The triple
+c	amplitude is independent of antenna-based phase errors (but not
+c	amplitude errors), and for a point source is a measure of the
+c	flux density.
 c	
 c	The task works by averaging the quantites that are the argument
-c	of the abs or arg function.
-c	These are always averaged over the selected frequency channels and
-c	over the parallel-hand polarizations. Optionally the averaging
-c	can also be done over time and over the different closure paths.
+c	of the abs or arg function.  These are always averaged over the
+c	selected frequency channels and over the parallel-hand
+c	polarizations. Optionally the averaging can also be done over
+c	time and over the different closure paths.
 c
 c	CLOSURE also prints (and optionally plots) the theoretical error
-c	(as a result of thermal noise) of the quantities.
-c	Note this assumes a point source model, and that the
-c	signal-to-noise ratio is appreciable (at least 10) in each averaged
-c	product.
+c	(as a result of thermal noise) of the quantities.  Note this
+c	assumes a point source model, and that the signal-to-noise ratio
+c	is appreciable (at least 10) in each averaged product.
 c
 c@ vis
 c	The input visibility datasets. Several datasets can be given.
@@ -42,10 +41,11 @@ c@ select
 c	Standard visibility selection. See help on "select" for more
 c	information.
 c@ line
-c	Standard visibility linetype. See the help "line" for more information.
+c	Standard visibility linetype. See the help "line" for more
+c	information.
 c@ stokes
-c	Normal Stokes/polaization selection. The default is to process all
-c	parallel-hand polarisations.
+c	Normal Stokes/polaization selection. The default is to process
+c	all parallel-hand polarisations.
 c@ device
 c	PGPLOT plotting device. The default is no plotting device (the
 c	program merely prints out some statistics).
@@ -58,9 +58,11 @@ c@ interval
 c	Time averaging interval. The default is no time averaging of the
 c	triple correlations.
 c@ options
-c	Task enrichment parameters. Several parameters can be given, separated
-c	by commas. Minimum match is supported. Possible options are:
-c	  amplitude Plot the amplitude quantity (the default is to plot phase).
+c	Task enrichment parameters.  Several parameters can be given,
+c	separated by commas.  Minimum match is supported. Possible
+c	options are:
+c	  amplitude Plot the amplitude quantity (the default is to plot
+c	            phase).
 c	  quad      Plot the quad quantity (the default is to plot the
 c	            triple quantity).
 c	  avall     Average all quantities from different triangles
@@ -71,7 +73,8 @@ c	  rms       Plot theoretical error bars on the points. The error
 c	            bars are +/- sigma.
 c	The following give control over calibration to be applied to the
 c	visibility data before the triple correlations are formed. Note
-c	that applying phase calibrations does not affect the closure phase!
+c	that applying phase calibrations does not affect the closure
+c	phase!
 c	  nocal     Do not perform gain calibration.
 c	  nopol     Do not perform polarisation calibration on the data.
 c	  nopass    Do not perform bandpass calibration on the data.
@@ -79,7 +82,8 @@ c--
 c  History:
 c    rjs   7sep94 Original version.
 c    rjs  14sep95 Bring it up to scratch.
-c    rjs  19sep95 Reset the valid flag on a baseline after an integration.
+c    rjs  19sep95 Reset the valid flag on a baseline after an
+c	          integration.
 c    rjs   9nov95 Time axis was mislabelled by 1 integration.
 c    pjt  20jun96 Larger MAXPLOTS for BIMA (20 -> 90)
 c    rjs  29jul97 Added quad quantities.
@@ -89,19 +93,19 @@ c    rjs  20oct00 Print out number of points when giving stats.
 c    rjs  31jan01 Support other stokes types.
 c    rjs  08apr02 Allow negative values when taking cube roots.
 c    rjs  18jul04 Check for division by zero in quad quantities.
-c------------------------------------------------------------------------
+c
+c $Id: closure.for,v 1.2 2007/02/22 23:41:13 cal103 Exp $
+c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
 	integer MAXPNTS,MAXPLOTS,MAXTRIP
 	integer PolMin,PolMax,MAXPOL
-	character version*(*)
-	parameter(version='version 18-Jul-04')
 	parameter(MAXPNTS=5000,MAXPLOTS=120)
 	parameter(MAXTRIP=(MAXANT*(MAXANT-1)*(MAXANT-2))/6)
 	parameter(PolMin=-8,PolMax=4,MAXPOL=2)
 c
 	logical avall,notrip,doamp,doerr,quad
-	character uvflags*16,device*64
+	character uvflags*16,device*64,version*80
 	real interval,yrange(2)
 	integer nx,ny,nread,i,j,mpnts,mplots,tno,pnt1,pnt2
 	integer npol,polcvt(PolMin:PolMax),p,ant1,ant2,nants,bl
@@ -134,10 +138,13 @@ c
 c  Externals.
 c
 	logical uvDatOpn
+	character versan*80
+c-----------------------------------------------------------------------
+	version = versan ('closure',
+     :    '$Id: closure.for,v 1.2 2007/02/22 23:41:13 cal103 Exp $')
 c
 c Lets go! Get user inputs.
 c
-	call output('Closure: '//version)
 	call keyini
 	call GetOpt(avall,notrip,doamp,doerr,quad,uvflags)
 	notrip = notrip.or.avall
@@ -304,7 +311,6 @@ c************************************************************************
      *	  ntrip,trip,triptime,tripsig2,tripplot,maxtrip,
      *	  x,y,yerr,npnts,nplots,title,maxpnts,maxplots)
 c
-	implicit none
 	integer nants,maxpnts,maxplots,maxtrip
 	logical notrip,avall,doamp,quad
 	integer ntrip(maxtrip),tripplot(maxtrip)
@@ -369,7 +375,6 @@ c
 c************************************************************************
 	subroutine triplab(notrip,quad,i1,i2,i3,i4,title)
 c
-	implicit none
 	logical notrip,quad
 	integer i1,i2,i3,i4
 	character title*(*)
@@ -401,7 +406,6 @@ c
 c************************************************************************
 	subroutine Tripcalc(doamp,quad,n,time,trip,sigma2,x,y,yerr)
 c
-	implicit none
 	logical doamp,quad
 	integer n
 	double precision time
@@ -447,7 +451,6 @@ c************************************************************************
      *	  init,Corrs,CorrPnt,Flags,FlagPnt,nchan,sigma2,maxbase,maxpol,
      *	  ntrip,trip,triptime,tripsig2,maxtrip)
 c
-	implicit none
 	integer nants,npol,maxbase,maxpol,maxtrip
 	double precision time,triptime(maxtrip)
 	integer CorrPnt(maxbase,maxpol),FlagPnt(maxbase,maxpol)
@@ -578,7 +581,6 @@ c
 c************************************************************************
 	subroutine GetOpt(avall,notrip,doamp,doerr,quad,uvflags)
 c
-	implicit none
 	logical avall,notrip,doamp,doerr,quad
 	character uvflags*(*)
 c------------------------------------------------------------------------
@@ -608,7 +610,6 @@ c
 c************************************************************************
 	subroutine PolIdx(p,npol,polcvt,PolMin,PolMax,MAXPOL,doii)
 c
-	implicit none
 	integer p,PolMin,PolMax,npol,MAXPOL
 	integer polcvt(PolMin:PolMax)
 	logical doii
@@ -635,7 +636,6 @@ c************************************************************************
 	subroutine Plotit(doamp,doerr,device,nx,ny,yrange,
      *			x,y,yerr,npnts,nplots,title,maxpnts)
 c
-	implicit none
 	logical doamp,doerr
 	character device*(*)
 	real yrange(2)
@@ -766,7 +766,6 @@ c
 c************************************************************************
 	subroutine sorter(jd,title,nplots)
 c
-	implicit none
 	integer jd,nplots
 	character title(nplots)*(*)
 c------------------------------------------------------------------------
@@ -794,7 +793,6 @@ c
 c************************************************************************
 	subroutine RelAxis(lo,hi)
 c
-	implicit none
 	real lo,hi
 c------------------------------------------------------------------------
 	real delta,maxv

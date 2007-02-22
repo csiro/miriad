@@ -1,24 +1,24 @@
-c************************************************************************
+c***********************************************************************
 	program calred
-	implicit none
 c
-c= calred
+c= calred - Analyse flux densities of sources with poor phase stability
 c& rjs
 c: uv analysis, plotting
 c+
-c	CALRED is a program used to analyse flux densities of sources where
-c	phase stability is poor. It uses either the amplitude of the data
-c	or an averaged triple produce.
+c	CALRED is a program used to analyse flux densities of sources
+c	where phase stability is poor. It uses either the amplitude of
+c	the data or an averaged triple product.
 c@ vis
 c	The input visibility datasets. Several datasets can be given.
 c@ select
 c	Standard visibility selection. See help on "select" for more
 c	information.
 c@ line
-c	Standard visibility linetype. See the help "line" for more information.
+c	Standard visibility linetype. See the help "line" for more
+c	information.
 c@ stokes
-c	Normal Stokes/polaization selection. The default is to process all
-c	parallel-hand polarisation.
+c	Normal Stokes/polaization selection. The default is to process
+c	all parallel-hand polarisation.
 c@ interval
 c	Seperate estimates of the various parameters are determined for
 c	data over an interval. This parameter gives the interval, in
@@ -28,7 +28,7 @@ c	  triple    Do triple processing.
 c	  nocal     Do not perform gain calibration.
 c	  nopol     Do not perform polarisation calibration on the data.
 c	  nopass    Do not perform bandpass calibration on the data.
-c         norm      Divide the noise estimates by the square root of the
+c	  norm      Divide the noise estimates by the square root of the
 c	            number of points.
 c--
 c  History:
@@ -37,25 +37,24 @@ c    rjs  04feb01 Some small tidying.
 c    rjs  02apr02 Get it to work for Stokes parameters.
 c    rjs  04apr02 Realy fix it this time.
 c    rjs  08apr02 Allow negative values when taking cube roots,
-c		  and print out number of triples.
+c	          and print out number of triples.
 c    rjs  04may04 Handle more antennas.
-c    rjs  08aug04 The algorithm to determine the confusion was hopelessly
-c		  flawed. Correct this.
+c    rjs  08aug04 The algorithm to determine the confusion was
+c	          hopelessly flawed. Correct this.
 c    rjs  02jul05 Improved error estimates.
-c------------------------------------------------------------------------
+c
+c $Id: calred.for,v 1.2 2007/02/22 23:41:13 cal103 Exp $
+c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
 	integer MAXDAT,MAXSRC,MAXPOL
 	integer PolMin,PolMax
-	character version*(*)
-	parameter(version='version 02-Jul-05')
 	parameter(MAXDAT=(MAXANT*(MAXANT-1)*(MAXANT-2))/6)
 	parameter(MAXPOL=2,MAXSRC=1024)
 	parameter(PolMin=-8,PolMax=4)
 c
 	logical dotrip,polp,dopara,donorm
-	character uvflags*16,line*80,con*6
-	character sources(MAXSRC)*16
+	character con*6,line*80,sources(MAXSRC)*16,uvflags*16,version*80
 	real scat2,SSms,flux,flux2,SSmm,rp,ip,SconN,SConD,norm
 	integer ncorr
 	complex SSdm
@@ -84,10 +83,13 @@ c
 c  Externals.
 c
 	logical uvDatOpn,uvVarUpd
+	character versan*80
+c-----------------------------------------------------------------------
+	version = versan ('calred',
+     :    '$Id: calred.for,v 1.2 2007/02/22 23:41:13 cal103 Exp $')
 c
 c Lets go! Get user inputs.
 c
-	call output('Calred: '//version)
 	call keyini
 	call GetOpt(dotrip,donorm,uvflags)
 	call uvDatInp('vis',uvflags)
@@ -296,7 +298,6 @@ c
 c************************************************************************
 	subroutine GetOpt(dotrip,donorm,uvflags)
 c
-	implicit none
 	logical dotrip,donorm
 	character uvflags*(*)
 c------------------------------------------------------------------------
@@ -324,7 +325,6 @@ c************************************************************************
 	subroutine PolIdx(p,npol,dopara,polcvt,PolMin,PolMax,MAXPOL,
      *								polp)
 c
-	implicit none
 	integer p,PolMin,PolMax,npol,MAXPOL
 	integer polcvt(PolMin:PolMax)
 	logical polp,dopara
@@ -351,7 +351,6 @@ c
 c************************************************************************
 	subroutine SetPl(tno,uv,time,iplanet,model,nchan)
 c
-	implicit none
 	integer tno,iplanet,nchan
 	double precision uv(2),time
 	real model(nchan)
@@ -388,7 +387,6 @@ c
 c************************************************************************
 	subroutine GetSrc(tno,sources,maxsrc,nsrc,isrc,iplanet)
 c
-	implicit none
 	integer tno,maxsrc,nsrc,isrc,iplanet
 	character sources(MAXSRC)*(*)
 c------------------------------------------------------------------------
@@ -432,7 +430,6 @@ c************************************************************************
      *	  Corrs,CorrPnt,Modl,ModPnt,Flags,FlagPnt,
      *	  nchan,maxbase,maxpol,maxdat,npnt,Smm,Sms,Sdd,Sdm)
 c
-	implicit none
 	integer nants,npol,maxbase,maxpol,maxdat,ndat
 	integer indx(maxbase,maxpol)
 	integer CorrPnt(maxbase,maxpol),FlagPnt(maxbase,maxpol)
