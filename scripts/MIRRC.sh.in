@@ -4,7 +4,7 @@
 #-----------------------------------------------------------------------------
 # Bourne shell (bash or ksh) version of MIRRC originally by George Martin.
 #
-# $Id: MIRRC.sh.in,v 1.5 2006/10/20 06:00:10 cal103 Exp $
+# $Id: MIRRC.sh.in,v 1.6 2007/02/23 02:59:25 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Miriad root directory set by configure or otherwise.
   MIR=@MIRROOT@ ; export MIR
@@ -13,7 +13,6 @@
   MIRCAT=$MIR/cat  ; export MIRCAT
   MIRPDOC=$MIR/doc ; export MIRPDOC
   MIRINC=$MIR/inc  ; export MIRINC
-  MIRCHNG=$MIR/new ; export MIRCHNG
   MIRPROG=$MIR/prog; export MIRPROG
   MIRSUBS=$MIR/subs; export MIRSUBS
   [ -d $MIR/man ] && MIRMAN=$MIR/man ; export MIRMAN

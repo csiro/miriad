@@ -4,7 +4,7 @@
 #-----------------------------------------------------------------------------
 # Set Miriad environment variables.
 #
-# $Id: MIRRC.in,v 1.4 2006/10/20 06:00:10 cal103 Exp $
+# $Id: MIRRC.in,v 1.5 2007/02/23 02:59:25 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Miriad root directory set by configure or otherwise.
   setenv MIR @MIRROOT@
@@ -13,7 +13,6 @@
   setenv MIRCAT  $MIR/cat
   setenv MIRPDOC $MIR/doc
   setenv MIRINC  $MIR/inc
-  setenv MIRCHNG $MIR/new
   setenv MIRPROG $MIR/prog
   setenv MIRSUBS $MIR/subs
   if (-e $MIR/man) setenv MIRMAN $MIR/man
