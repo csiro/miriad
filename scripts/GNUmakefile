@@ -2,7 +2,7 @@
 # GNUmakefile used to install Miriad scripts.
 #
 # Original: 2006/09/18, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.6 2006/11/30 04:18:58 cal103 Exp $
+# $Id: GNUmakefile,v 1.7 2007/03/06 01:51:16 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
@@ -10,7 +10,7 @@ include $(MIR)/GNUmakedefs
 ifeq "$(MAKEMODE)" "system"
   # Scripts are not installed unless listed explicitly.
   MIRSCRPS := mirarch mirbug mirexport mirhelp mirimport mirmerge mirsync
-  MIRSCRPS += mirtester mirversion pntfix
+  MIRSCRPS += mirtester mirtree mirversion pntfix
 
   # Only a few of the scripts have doc markup.
   MIRDOCS  := mirbug mirhelp mirversion
