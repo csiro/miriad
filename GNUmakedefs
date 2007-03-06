@@ -25,7 +25,7 @@
 # target names by running 'gmake help'
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakedefs,v 1.22 2007/01/15 06:13:37 cal103 Exp $
+# $Id: GNUmakedefs,v 1.23 2007/03/06 23:31:31 cal103 Exp $
 #-----------------------------------------------------------------------------
 # We rely only on the MIR environment variable.
 MIRROOT  := $(MIR)
@@ -656,10 +656,14 @@ else
 	-@ echo "Targets defined in GNUmakedefs:"
 	-@ echo "-------------------------------"
 	-@ echo "        all: (default target) rebuild all in this directory."
-	-@ echo "      clean: delete intermediate files."
-	-@ echo "    cleaner: clean, and also delete source files checked out"
-	-@ echo "             without a lock (no write permission)."
-	-@ echo "   cleanest: cleaner, and also delete purify cache."
+	-@ echo "      clean: delete intermediate files (e.g. .o, .i, etc.)."
+	-@ echo "    cleaner: clean, and also delete preprocessed files (e.g."
+	-@ echo "             .f, .c, .doc), dependency lists, and source"
+	-@ echo "             files checked out without a lock (no write"
+	-@ echo "             permission)."
+	-@ echo "   cleanest: cleaner, and also delete generated files (e.g."
+	-@ echo "             the object library or executables depending on"
+	-@ echo "             the context)."
 endif
 
 
