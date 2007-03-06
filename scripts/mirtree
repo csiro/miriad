@@ -1,0 +1,71 @@
+#!/bin/sh
+#-----------------------------------------------------------------------------
+# Usage: mirtree
+#-----------------------------------------------------------------------------
+# Construct a workspace for Miriad software development.
+#
+# Original: 2007/03/06 Mark Calabretta, ATNF
+# $Id: mirtree,v 1.1 2007/03/06 01:48:34 cal103 Exp $
+#-----------------------------------------------------------------------------
+  trap 'exit 1' 1 2 3 15
+
+# Sanity checks.
+  if [ "$MIR" = "" -o ! -d "$MIR" ]
+  then
+    echo 'mirtree: $MIR is not defined or does not exist.' 1>&2
+    exit 1
+  fi
+
+# Are RCS repositories present?
+  MIRRCS="$MIR/RCS"
+  [ -d "$MIRRCS" ] || MIRRCS=
+
+# The name of the root of the programmer workspace MUST accord with $MIR.
+  PGMRROOT=`echo "$MIR" | sed -e 's|.*/|./|'`
+
+# Create only relevant subdirectories.
+  SUBDIRS="cat etc guides guides/prog guides/user inc linpack prog scripts"
+  SUBDIRS="$SUBDIRS scripts/$MIRARCH spec spec/miriad spec/sxmtv spec/xmtv"
+  SUBDIRS="$SUBDIRS spec/xpanel subs subs/unix subs/unix/alpha_linux tools"
+
+  for SUBDIR in "" $SUBDIRS
+  do
+    [ -n "$SUBDIR" ] && SUBDIR=/$SUBDIR
+
+    if [ ! -d "$PGMRROOT$SUBDIR" ]
+    then
+      echo "Creating $PGMRROOT$SUBDIR/"
+      mkdir "$PGMRROOT$SUBDIR/"
+    fi
+
+    if [ -n "$MIRRCS" ]
+    then
+      # RCS repositories are present so link to them.
+      if [ ! -h "$PGMRROOT$SUBDIR/RCS" ]
+      then
+        echo "Creating symlink $PGMRROOT$SUBDIR/RCS"
+        ln -s "$MIR$SUBDIR/RCS" "$PGMRROOT$SUBDIR/RCS"
+      fi
+    else
+      # RCS repositories are absent so link to the makefile.
+      if [ ! -h "$PGMRROOT$SUBDIR/GNUmakefile" ]
+      then
+        echo "Creating symlink $PGMRROOT$SUBDIR/GNUmakefile"
+        ln -s "$MIR$SUBDIR/GNUmakefile" "$PGMRROOT$SUBDIR/GNUmakefile"
+      fi
+    fi
+  done
+
+  # Create architecture-specific subdirectories.
+  for SUBDIR in "" aux bin lib
+  do
+    [ -n "$SUBDIR" ] && SUBDIR=/$SUBDIR
+
+    if [ ! -d "$PGMRROOT/$MIRARCH$SUBDIR" ]
+    then
+      echo "Creating $PGMRROOT/$MIRARCH$SUBDIR/"
+      mkdir "$PGMRROOT/$MIRARCH$SUBDIR/"
+    fi
+  done
+
+  exit 0
