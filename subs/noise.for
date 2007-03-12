@@ -16,6 +16,8 @@ c    rjs  24oct99  Added "save" statement in "ran" function.
 c    rjs  04jul00  Use double precision arithmetic in "ran" to avoid some
 c		   machine rounding biases.
 c    rjs  18oct00  Setting the seedon "vms-style" machines was not working.
+c
+c $Id: noise.for,v 1.2 2007/03/12 06:01:58 cal103 Exp $
 c************************************************************************
 c
 c  Choose which random number style we are to use. We have three choices:
@@ -54,7 +56,6 @@ c:random-variables,noise
 c+
 	subroutine RandSet(seed)
 c
-	implicit none
 	integer seed
 c
 c  This sets the seed of the random number generator. Future sequences
@@ -87,7 +88,6 @@ c:random-variables,noise
 c+
 	subroutine uniform(data,n)
 c
-	implicit none
 	integer n
 	real data(n)
 c
@@ -123,6 +123,9 @@ c------------------------------------------------------------------------
 	real ran
 	integer iseed
 	logical first
+#ifdef inc_ran
+	external ran
+#endif
 	save first
 	common/noisecom/iseed
 	data first/.true./
@@ -130,7 +133,7 @@ c------------------------------------------------------------------------
 	  call setseed(0)
 	  first = .false.
 	endif
-c	
+
 	do i=1,n
 	  data(i) = ran(iseed)
 	enddo
@@ -146,7 +149,6 @@ c
 c************************************************************************
 	subroutine setseed(seed)
 c
-	implicit none
 	integer seed
 c
 c  Set the seed for the VMS-style random number generator.
@@ -174,7 +176,6 @@ c:random-variables,noise
 c+
 	subroutine gaus(data,n)
 c
-	implicit none
 	integer n
 	real data(n)
 c
@@ -226,7 +227,6 @@ c************************************************************************
 #ifdef inc_ran
       real function ran(iseed)
 c
-      implicit none
       integer iseed
 
 c  Generate a random number in the range 0 to 1.
