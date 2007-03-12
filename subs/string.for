@@ -26,6 +26,8 @@ c   rjs     06feb95 Fixed handling of quotes in getfield. What did bpw do?
 c   rjs     25jul97 Treat " and ' as quote characters.
 c   rjs     03aug98 Included updated version of matodf and matorf.
 c   rjs     05feb01 Added st routines.
+c
+c $Id: string.for,v 1.2 2007/03/12 06:12:34 cal103 Exp $
 c************************************************************************
 c* stcat - Concatenate two strings together (avoiding blank pads).
 c& rjs
@@ -33,7 +35,6 @@ c: string
 c+
 	character*(*) function stcat(a,b)
 c
-	implicit none
 	character a*(*),b*(*)
 c
 c  Concatenate two strings together, ignoring blank padding.
@@ -55,7 +56,6 @@ c
 c************************************************************************
 	character*(*) function streal(a,b)
 c
-	implicit none
 	real a
 	character b*(*)
 c------------------------------------------------------------------------
@@ -76,7 +76,6 @@ c: strings
 c+
 	subroutine atoif(string,result,ok)
 c
-	implicit none
 	character string*(*)
 	integer result
 	logical ok
@@ -94,6 +93,7 @@ c    ok		This will be true if the decoding succeeded.
 c--
 c------------------------------------------------------------------------
 	integer k,i,i0,sign1,nbase
+	character ch*1, ch2*2
 c
 c  External
 c
@@ -101,62 +101,68 @@ c
 c
 c  Ignore leading blanks.
 c
-	i = 1
-	do while (string(i:i) .le. ' ')
-	  i = i + 1
+	do i = 1, len(string)
+	  if (string(i:i).gt.' ') go to 10
 	enddo
-c
-c  Find number base.
-c
-	sign1 = 1
+
+ 10     result = 0
+	ok = i.le.len(string)
+	if (.not.ok) return
+
+c       Find number base.
 	call lcase(string)
-	if(string(i:i+1).eq.'0x'.or.string(1:2).eq.'%x')then
-	  i0 = i+2
-	  nbase = 16
-	else if(string(i:i).eq.'h')then
-	  i0 = i+1
-	  nbase = 16
-	else if(string(i:i+1).eq.'%o')then
-	  i0 = i+2
-	  nbase = 8
-	else if(string(i:i).eq.'o')then
-	  i0 = i+1
-	  nbase = 8
-	else if(string(i:i).eq.'-')then
+	nbase = 10
+	sign1 = 1
+	i0    = i
+
+	ch = string(i:i)
+	if(ch.eq.'+')then
+	  i0 = i + 1
+	else if(ch.eq.'-')then
 	  sign1 = -1
 	  i0 = i + 1
-	  nbase = 10
-	else if(string(1:1).eq.'+')then
+	else if(ch.eq.'h')then
+	  nbase = 16
 	  i0 = i + 1
-	  nbase = 10
-	else
-	  i0 = i
-	  nbase = 10
+	else if(ch.eq.'o')then
+	  nbase = 8
+	  i0 = i + 1
+	else if (i.lt.len(string)) then
+	  ch2 = string(i:i+1)
+	  if(ch2.eq.'0x' .or. ch2.eq.'%x')then
+	    nbase = 16
+	    i0 = i + 2
+	  else if(ch2.eq.'%o')then
+	    nbase = 8
+	    i0 = i + 2
+	  endif
 	endif
-c	
-c  Decode value.
-c
-        result = 0
+
+c	Decode value.
 	ok = i0.le.len1(string)
-	do i=i0,len1(string)
-	  if(ok)then
-	    k = ichar(string(i:i))
-	    if(k.ge.ichar('0').and.k.le.ichar('9'))then
-	      k = k - ichar('0')
-	    else if(k.ge.ichar('a').and.k.le.ichar('z'))then
-	      k = k - ichar('a') + 10
-	    else
-	      ok = .false.
-	    endif
-	    if(ok.and.k.ge.0.and.k.lt.nbase)then
-	      result = nbase*result + k
-	    else
-	      ok = .false.
-	    endif
+	if (.not.ok) return
+
+	do i = i0, len1(string)
+	  ch = string(i:i)
+	  if(ch.ge.'0' .and. ch.le.'9')then
+	    k = ichar(ch) - ichar('0')
+	  else if(ch.ge.'a' .and. ch.le.'f')then
+	    k = ichar(ch) - ichar('a') + 10
+	  else
+	    k = -1
+	  endif
+
+	  if(k.ge.0 .and. k.lt.nbase)then
+	    result = nbase*result + k
+	  else
+	    result = 0
+	    ok = .false.
+	    return
 	  endif
 	enddo
-c
+
 	result = sign1 * result
+
 	end
 c************************************************************************
 c* atorf -- Convert a string into a real
@@ -165,7 +171,6 @@ c: strings
 c+
 	subroutine atorf(string,result,ok)
 c
-	implicit none
 	character string*(*)
 	real result
 	logical ok
@@ -191,7 +196,6 @@ c: strings
 c+
 	subroutine atodf(string,d,ok)
 c
-	implicit none
 	character string*(*)
 	double precision d
 	logical ok
@@ -293,15 +297,14 @@ c: strings
 c+
       subroutine matodf( string, array, n, ok )
 c
-      implicit none 
-      integer          n 
+      integer          n
       character*(*)    string
       double precision array(n)
       logical          ok
-c 
+c
 c Convert a string to many double precision numbers.
 c
-c Input: 
+c Input:
 c   string      The ascii string containing the numbers
 c   n           The number of values wanted
 c Output:
@@ -337,15 +340,15 @@ c& rjs
 c: strings
 c+
       subroutine matorf( string, array, n, ok )
- 
+
       character*(*)    string
+      integer          n
       real             array(n)
-      integer          n 
       logical          ok
-c 
+c
 c Convert a string to many real numbers.
 c
-c Input: 
+c Input:
 c   string      The ascii string containing the numbers
 c   n           The number of values wanted
 c Output:
@@ -382,7 +385,6 @@ c: strings
 c+
 	character*(*) function itoaf(n)
 c
-	implicit none
 	integer n
 c
 c  Convert an integer into its ascii representation. It is returned
@@ -422,7 +424,6 @@ c: strings
 c+
 	subroutine mitoaf(array,n,line,length)
 c
-	implicit none
 	integer n,array(n),length
 	character line*(*)
 c
@@ -466,7 +467,6 @@ c: strings
 c+
       character*(*) function dtoaf(value, form, nsf)
 c
-      implicit none
       double precision value
       integer form, nsf
 c
@@ -504,7 +504,6 @@ c: strings
 c+
       character*(*) function rtoaf(value, form, nsf)
 c
-      implicit none
       real value
       integer form, nsf
 c
@@ -533,7 +532,6 @@ c: strings
 c+
 	subroutine gettok(string,k1,k2,token,length)
 c
-	implicit none
 	integer k1,k2,length
 	character string*(*),token*(*)
 c
@@ -589,7 +587,6 @@ c: strings
 c+
 	subroutine getfield(string,k1,k2,token,length)
 c
-	implicit none
 	integer k1,k2,length
 	character string*(*),token*(*)
 c
@@ -676,7 +673,6 @@ c: strings
 c+
 	subroutine spanchar(string,k1,k2,c)
 c
-	implicit none
 	character string*(*),c*1
 	integer k1,k2
 c
@@ -708,7 +704,6 @@ c: strings
 c+
 	subroutine scanchar(string,k1,k2,c)
 c
-	implicit none
 	character string*(*),c*1
 	integer k1,k2
 c
@@ -740,7 +735,6 @@ c: strings
 c+
 	integer function len1(string)
 c
-	implicit none
 	character string*(*)
 c
 c  This determines the unblanked length of a character string.
@@ -773,7 +767,6 @@ c: strings
 c+
 	subroutine lcase(string)
 c
-	implicit none
 	character string*(*)
 c
 c  Convert a string to lower case.
@@ -798,7 +791,6 @@ c: strings
 c+
 	subroutine ucase(string)
 c
-	implicit none
 	character string*(*)
 c
 c  Convert a string to upper case.
@@ -823,7 +815,6 @@ c: strings
 c+
       subroutine padleft(string, length)
 c
-      implicit none
       character string*(*)
       integer length
 c
@@ -863,7 +854,6 @@ c: strings
 c+
       integer function indek ( string, substrng )
 c
-      implicit none
       character*(*) string, substrng
 
 c Indek works basically the same as the intrinsic function index, but if the
