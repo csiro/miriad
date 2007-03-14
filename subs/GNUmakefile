@@ -3,7 +3,7 @@
 # dependency analysis for all source file types.
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.9 2006/10/26 03:31:47 cal103 Exp $
+# $Id: GNUmakefile,v 1.10 2007/03/14 05:30:26 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
@@ -71,7 +71,7 @@ show ::
 #   DPNDINCS: -I include path sequence.
 #   DPNDOPT : Compile option, either "OPT" (optimized) or "DBG" (debug).  This
 #             is used as a computed variable, e.g. if DPNDOPT is "DBG" then
-#             $(FC$(DPNDOPT)) evaluates to $(FCDBG), the debug Fortran compile
+#             $(CPP$(DPNDOPT)) evaluates to $(CPPDBG), the debug preprocessor
 #             options set in GNUmakedefs.
 #
 # Certain of these variables differ for system and programmer compilations and
