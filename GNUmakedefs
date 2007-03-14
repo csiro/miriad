@@ -25,7 +25,7 @@
 # target names by running 'gmake help'
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakedefs,v 1.23 2007/03/06 23:31:31 cal103 Exp $
+# $Id: GNUmakedefs,v 1.24 2007/03/14 06:05:43 cal103 Exp $
 #-----------------------------------------------------------------------------
 # We rely only on the MIR environment variable.
 MIRROOT  := $(MIR)
@@ -35,6 +35,18 @@ MIRARCH  := $(shell $(MIRROOT)/scripts/mirarch)
 MIRARCHD := $(MIRROOT)/$(MIRARCH)
 MIRBIND  := $(MIRARCHD)/bin
 MIRLIBD  := $(MIRARCHD)/lib
+
+# If we're within $(MIRROOT)/... it's a system compile, else programmer.
+MIRDIR   := $(shell cd $(MIR) && /bin/pwd)
+THISDIR  := $(shell /bin/pwd)
+ifeq "$(findstring $(MIRDIR),$(THISDIR))" ""
+  MAKEMODE := programmer
+else
+  MAKEMODE := system
+endif
+
+# Name of the top-level Miriad directory.
+miriad   := $(notdir $(MIRROOT))
 
 #=============================================================================
 #                        START OF DEFAULT DEFINITIONS
@@ -156,14 +168,14 @@ SUBSunicos     := unicos
 #-----------------------------------------------------------------------------
 # Linker options for external libraries.
 
-# RPFITS (required by a handful of tasks, primarily atlod, that read ATNF data
-# using subroutine RPFITSIN).  It is supplied with Miriad in the binary
+# RPFITS, required by a handful of tasks, primarily atlod, that read ATNF data
+# using subroutine RPFITSIN.  It is supplied with Miriad in the binary
 # distribution kit available for some platforms.  The full pathname must be
 # specified because this library is listed as an explicit prerequisite of some
 # tasks (i.e. they will be recompiled if it changes).
 RPFITSLIB  := $(MIRLIBD)/librpfits.a
 
-# LINPACK (linear algebra package used by 17 numerically intensive programs).
+# LINPACK, a linear algebra package used by 17 numerically intensive programs.
 # Leave as is to use the version supplied with Miriad.
 LINPACKLIB := -L$(MIRLIBD) -llinpack
 
@@ -177,7 +189,7 @@ LINPACKLIB := -L$(MIRLIBD) -llinpack
 # the linker where to find them.
 PGPLOTLIB  := -lpgplot -lpng -lz
 
-# X11 (just the basic X11 library, needed to satisfy PGPLOT dependencies).
+# X11, just the basic X11 library, needed to satisfy PGPLOT dependencies.
 # Also used to build sxmtv if xmtv fails to compile.
 X11LIB     := -L/usr/X11R6/lib -lX11
 
@@ -189,12 +201,12 @@ X11LIBS    := -L/usr/X11R6/lib -lXaw -lXmu -lXext -lXt -lX11
 # Solaris for the tv tasks.  -lm is the standard maths library.
 XTRALIBS   := -lm
 
-# READLINE (used only by the Miriad shell).  The static library (without
-# header files) is supplied with Miriad in the binary distribution kit
-# available for some platforms.  If GNU readline is not available then clear
-# this and the Miriad shell will be compiled without command line editing
-# capability.  Readline needs either the termcap or ncurses library.  You may
-# also need to add -I and/or -L options.
+# READLINE, used only by the Miriad shell.  The static library (without header
+# files) is supplied with Miriad in the binary distribution kit available for
+# some platforms.  If GNU readline is not available then clear this and the
+# Miriad shell will be compiled without command line editing capability.
+# Readline needs either the termcap or ncurses library.  You may also need to
+# add -I and/or -L options.
 READLINELIB := -lreadline -ltermcap
 
 #-----------------------------------------------------------------------------
@@ -230,6 +242,12 @@ nm-syms.sun4sol    := nm -g -p $$OBJ | awk '/ T / {print $$3}'
 
 # Get installation-specific redefinitions of the defaults defined above.
 -include $(MIRARCHD)/GNUmakedefs
+
+ifeq "$(MAKEMODE)" "programmer"
+  # Programmer-specific definitions.
+  PGMRROOT := $(shell echo $(THISDIR) | sed -e 's=^\(.*/$(miriad)\).*=\1=')
+  -include $(PGMRROOT)/$(MIRARCH)/GNUmakedefs
+endif
 
 #-----------------------------------------------------------------------------
 # Ensure that we have a consistent collating sequence and character handling.
@@ -275,15 +293,6 @@ I7 := $(I5)$(tab)
 I8 := $(I7)$(null)    $(null)
 MAKEINDENT := $(I$(MAKELEVEL))
 
-# If we're within $(MIRROOT)/... it's a system compile, else programmer.
-MIRDIR  := $(shell cd $(MIR) && /bin/pwd)
-THISDIR := $(shell /bin/pwd)
-ifeq "$(findstring $(MIRDIR),$(THISDIR))" ""
-  MAKEMODE = programmer
-else
-  MAKEMODE = system
-endif
-
 # Miriad code directories.  Most of the special docs are hand-written though
 # some (cheat,tasks) are generated.
 MIRSCRPD := $(MIRROOT)/scripts
@@ -299,7 +308,6 @@ MIRSDOCD := $(MIRROOT)/specdoc
 MIRRCS   := $(wildcard $(MIRROOT)/RCS)
 
 # Miriad code directories.
-miriad   := $(notdir $(MIRROOT))
 CODESUBD := $(shell echo $(THISDIR)/ | sed -e '{s=^.*/$(miriad)/==;s=/*$$==;}')
 CODEDIR  := $(patsubst %/,%,$(MIRROOT)/$(CODESUBD))
 
@@ -736,6 +744,10 @@ show ::
 	-@ echo "MIRROOT    = $(MIRROOT)"
 	-@ echo "MIRARCH    = $(MIRARCH)"
 	-@ echo ""
+	-@ echo "MIRDIR     = $(MIRDIR)"
+	-@ echo "THISDIR    = $(THISDIR)"
+	-@ echo "MAKEMODE   = $(MAKEMODE)"
+	-@ echo ""
 	-@ echo "Preprocessors, compilers, etc. and their flags."
 	-@ echo "-----------------------------------------------"
 	-@ echo "CO         = $(CO)"
@@ -803,10 +815,6 @@ show ::
 	-@ echo "<space> =<$(space)>"
 	-@ echo "<;>     =<" $(;)		echo ">"
 	-@ echo ""
-	-@ echo ""
-	-@ echo "MIRDIR     = $(MIRDIR)"
-	-@ echo "THISDIR    = $(THISDIR)"
-	-@ echo "MAKEMODE   = $(MAKEMODE)"
 	-@ echo ""
 	-@ echo "Miriad code directories"
 	-@ echo "-----------------------"
