@@ -2,7 +2,7 @@
 # GNUmakefile for compiling Miriad tasks.
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.7 2006/10/16 08:18:04 cal103 Exp $
+# $Id: GNUmakefile,v 1.8 2007/03/14 05:26:26 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
@@ -57,10 +57,6 @@ show ::
 #   DPNDTMPD: Full pathname of the area where intermediate files are staged.
 #
 #   DPNDINCS: -I include path sequence.
-#   DPNDOPT : Compile option, either "OPT" (optimized) or "DBG" (debug).  This
-#             is used as a computed variable, e.g. if DPNDOPT is "DBG" then
-#             $(FC$(DPNDOPT)) evaluates to $(FCDBG), the debug Fortran compile
-#             options set in GNUmakedefs.
 #
 # Certain of these variables differ for system and programmer compilations and
 # are defined separately below.
@@ -109,9 +105,8 @@ ifeq "$(MAKEMODE)" "system"
     $(shell mkdir -m 2775 -p $(DPNDOBJD))
   endif
 
-  # System include directory search path and optimized compilation.
+  # System include directory search path.
   DPNDINCS := $(MIRINCS)
-  DPNDOPT  := OPT
 
   show ::
 	-@ echo ""
@@ -126,7 +121,6 @@ ifeq "$(MAKEMODE)" "system"
 	-@ echo ""
 	-@ echo "DPNDINCS = $(DPNDINCS)"
 	-@ echo "DPNDLIBR = $(DPNDLIBR)"
-	-@ echo "DPNDOPT  = $(DPNDOPT)"
 
   # Dependency analysis for included files:
   #----------------------------------------
@@ -302,9 +296,8 @@ else
     $(shell chmod u+rwx $(DPNDINCD))
   endif
 
-  # Programmer include directory search path and debug compilation.
+  # Programmer include directory search path.
   DPNDINCS := $(PGMRINCS)
-  DPNDOPT  := DBG
 
   show ::
 	-@ echo ""
@@ -320,7 +313,6 @@ else
 	-@ echo "DPNDTMPD = $(DPNDTMPD)"
 	-@ echo ""
 	-@ echo "DPNDINCS = $(DPNDINCS)"
-	-@ echo "DPNDOPT  = $(DPNDOPT)"
 
   # The f-filter command sequence identifies include files in the ratty output
   # and makes each of them a prerequisite of the .f file.  In turn, rule-
