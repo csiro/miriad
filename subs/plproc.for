@@ -1,4 +1,4 @@
-c************************************************************************
+c***********************************************************************
 	subroutine PlInit(dist1,plant,erad1,prad1)
 c
 	implicit none
@@ -14,7 +14,7 @@ c    plant	Planet number. Mercury=1, Venus=2, etc
 c  Output:
 c    erad	Planet major axis in radians.
 c    prad	Planet minor axis in radians.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'plproc.h'
 	double precision alpha,delta,w,r,f
 c
@@ -34,7 +34,7 @@ c
 	tprev = 0
 	fake = .false.
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine PlFake(dist1,lambda,De)
 c
 	implicit none
@@ -46,7 +46,7 @@ c  Inputs:
 c    dist1	The Earth/planet distance in AU.
 c    lambda     Planetocentric CML of the fake observation.
 c    De         The planetocentric declination of the Earth.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	double precision AUKM
 	parameter(AUKM=149.597870D6)
 	include 'plproc.h'
@@ -64,13 +64,13 @@ c
 	fake = .true.
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine plComm
 c
 	implicit none
 c
 c  Some things common to Pluvw and Plfake.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'plproc.h'
 	double precision l1(3),m1(3),n1(3),scale
 	integer i
@@ -82,8 +82,8 @@ c
 	  n1(i) = -n0(i)
 	enddo
 c
-c  Compute the planetocentric vectors corresponding to the Earth-equatorial
-c  l-, m- and n-axes.
+c  Compute the planetocentric vectors corresponding to the Earth-
+c  equatorial l-, m- and n-axes.
 c
 	scale = 1/sqrt( n1(1)**2 + n1(2)**2)
 	l1(1) = -scale * n1(2)
@@ -110,7 +110,7 @@ c
 	  smat(i,3,nmat) = n1(i)
 	enddo
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine Pluvw(uv,time,uvw,a,b,fac1,smatidx,bpa1,sub)
 c
 	implicit none
@@ -134,7 +134,7 @@ c    fac1	Flux normalisation parameter.
 c    smatidx	Index to the shadowing matrix.
 c    bpa1	Angle of the rotation axis.
 c    sub	Sub-earth point in a planetocentric direction cosines.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'plproc.h'
 	include 'mirconst.h'
 c
@@ -169,14 +169,15 @@ c
      *		    + (bmin*(uv(1)*sinpa+uv(2)*cospa))**2)
 	a = 2 * PI/4 * bmaj*bmin * fac * fac
 c
-c  Return the flux normalisation parameter and the shadowing matrix index.
+c  Return the flux normalisation parameter and the shadowing matrix
+c  index.
 c
 	bpa1 = bpa
 	fac1 = fac * fac
 	smatidx = nmat
 c
 	end
-c************************************************************************
+c***********************************************************************
 	logical function PlShadow(idx,x,y,z)
 c
 	implicit none
@@ -189,15 +190,9 @@ c
 c  Input:
 c    idx	Shadow matrix index.
 c    x,y,z	Planetocentric coordinate of interest, in radians.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'plproc.h'
-	real xd,yd,zd,r2
-c
-c  Check whether the point is within the planet.
-c
-c	PlShadow = .true.
-c	r2 = (x/erad)*(x/erad) + (y/erad)*(y/erad) + (z/prad)*(z/prad)
-c	if(r2.lt.1)return
+	real xd,yd,zd
 c
 c  Check whether the point is in front of the planet centre.
 c
@@ -212,7 +207,7 @@ c
 	if(xd*xd+yd*yd.gt.1)return
 	PlShadow = .true.
 	end
-c************************************************************************
+c***********************************************************************
 	logical function PlInt(x,y,z)
 c
 	implicit none
@@ -222,7 +217,7 @@ c  Determine whether a point is within the planet.
 c
 c  Input:
 c    x,y,z	Planetocentric coordinate of interest, in radians.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'plproc.h'
 	real r2
 c
