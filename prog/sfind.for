@@ -548,7 +548,7 @@ c       cursor). This could be used as well as or instead of the current
 c       method. Think about two seperate options to indicate user's desire
 c       of which.
 c
-c  $Id: sfind.for,v 1.2 2006/10/13 04:40:52 cal103 Exp $
+c  $Id: sfind.for,v 1.3 2007/03/15 01:31:53 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -571,7 +571,7 @@ c-----------------------------------------------------------------------
       integer nx, ny, nlevs, lin, naxis, k, ierr, pgbeg, iostat, ipage,
      +  ibin(2), jbin(2), kbin(2), krng(2), nlast, ngrps,
      +  llog, jj, wedcod, labcol, poscol, statcol, regcol, rmsbox,
-     +  npnt
+     +  npnt, nelc
 
       character in*128, labtyp(2)*6, levtyp*1, logfil*128, pdev*64,
      +  trfun*3, xlabel*40, ylabel*40
@@ -586,12 +586,10 @@ c-----------------------------------------------------------------------
       data dmm /1.0e30, -1.0e30, -1.0/
       data gaps, doabut, dotr /.false., .false., .false./
 
-      character rcsrev*32
-      data rcsrev /'$Date: 2006/10/13 04:40:52 $'/
+      character versan*80, version*80
 c-----------------------------------------------------------------------
-      call output (' ')
-      call output ('sfind: Version' // rcsrev(7:26) // ' UTC')
-      call output (' ')
+      version = versan('sfind',
+     +  '$Id: sfind.for,v 1.3 2007/03/15 01:31:53 cal103 Exp $')
 c
 c Get user inputs
 c
@@ -1641,7 +1639,7 @@ c  Input:
 c    clip      Clip level.
 c  Output:
 c    m            Number of points loaded.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       implicit none
       include 'sfind.h'
       integer m,nx,ny,lmn,lmx,mmn,mmx,nimage(nx,ny)
@@ -2217,7 +2215,7 @@ c
      +                  negative, pbcor, oldsfind, fdrimg, sigmaimg,
      +                  rmsimg, normimg, kvannot, fdrpeak, allpix,
      +                  psfsize)
-c----------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c     Decode options array into named variables.
 c
 c   Output:
@@ -2543,7 +2541,7 @@ c
 c
       subroutine region (in, naxis, size, ibin, jbin, kbin, blc, trc,
      +                   win, ngrps, grpbeg, ngrp)
-c----------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c     Finish key routine inputs for region of interest now.
 c
 c  Input:
@@ -2564,7 +2562,7 @@ c    blc,trc       3-D Hyper-rectangle surrounding region of interest
 c    win           Size of BINNED region of interest for
 c                  first 2 dimensions
 c
-c----------------------------------------------------------------------
+c-----------------------------------------------------------------------
       implicit none
 c
       integer naxis, size(naxis), blc(*), trc(*), win(2), ngrp(*),
@@ -2576,7 +2574,7 @@ cc
       parameter (maxbox = 1024)
 c
       integer boxes(maxbox)
-c----------------------------------------------------------------------
+c-----------------------------------------------------------------------
       call boxinput ('region', in, boxes, maxbox)
       call boxset (boxes, naxis, size, 's')
       call keyfin
@@ -2904,7 +2902,7 @@ c
 c
 c
       subroutine CoordFid(lIn,k,topix)
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
 c  Convert coordinates between world and pixel coordinates.
 c
@@ -2912,7 +2910,7 @@ c  Input:
 c    lIn      Handle of the coordinate system.
 c    k
 c    topix
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       implicit none
       include 'sfind.h'
       integer lIn,k
@@ -2922,7 +2920,7 @@ c------------------------------------------------------------------------
       character ctype(2)*16
       real bmaj,bmin,bpa,dx,dy
       integer i
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       do i=1,nsrc
 c
 c  Convert the position.
@@ -2977,10 +2975,10 @@ c
 c
 c
       subroutine GetEst
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c  Generate an initial estimate for a single component model.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       implicit none
       include 'sfind.h'
       include 'mirconst.h'
@@ -2988,7 +2986,7 @@ c
       integer i
       double precision P,XP,YP,XYP,XXP,YYP,SP
       real t,fac
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       SP = 0
       P = 0
       XP = 0
@@ -3057,7 +3055,7 @@ c    fitok     false if had problems
 c    x,ypixused list of pixel positions to be 'blanked' if fit works,
 c               to prevent multiple detections of the same source
 c    nfdrused  number of FDR pixels used in the fit
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       implicit none
       include 'sfind.h'
       integer m,nx,ny,lmn,lmx,mmn,mmx,nimage(nx,ny)
@@ -3269,16 +3267,16 @@ c
 
 c
       subroutine slopey(xx,yy,xc,yc,nx,ny,image,slpdwn)
-c-----------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c this subroutine checks that a given pixel is less than all the pixels
 c between it and the central (brightest) pixel.
 c
-c-----------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       integer xx,yy,xc,yc,nx,ny,closerx,closery
       integer furtherx,furthery,pp,qq,stepl,stepm
       real image(nx,ny)
       logical slpdwn
-c-----------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       if (xx.gt.xc) then
        closerx = xx-1
        furtherx = xx+1
@@ -3339,7 +3337,7 @@ c-----------------------------------------------------------------------
 c
 c  Store all the things that we need to vary.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       implicit none
       include 'sfind.h'
       integer nvar,MAXVAR
@@ -3390,16 +3388,16 @@ c
 c
 c
       subroutine UpackCov(covar,nvar)
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
 c  Unpack the covariance matrix.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       implicit none
       include 'sfind.h'
       integer nvar
       real covar(nvar,nvar)
       integer i,n
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       n = 0
       do i=1,nsrc
         if(vflux(i))then
@@ -3435,17 +3433,17 @@ c
 c
 c
       subroutine UPackVar(var,nvar)
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
 c  Unpack all the things that we need to vary.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       implicit none
       include 'sfind.h'
       integer nvar
       real var(nvar)
       integer i,n
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       n = 0
       do i=1,nsrc
         if(vflux(i))then
@@ -3481,16 +3479,16 @@ c
 c
 c
       subroutine FUNCTION(m,nvar,var,fvec,iflag)
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       implicit none
       include 'sfind.h'
       integer m,nvar,iflag
       real var(nvar)
       real fvec(m)
       integer i
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       if(m.ne.ndata)call bug('f','Inconsistency in FUNCTION')
 c
 c  Unpack the things that we are solving for.
@@ -3521,7 +3519,7 @@ c
 c
 c
       subroutine Eval1(x0,Model,n)
-c-------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
 c  Evaluate the current model at some pixels.
 c
@@ -3530,7 +3528,7 @@ c    n            Number of points.
 c    x0         Pixel coordinates at which to evaluate the model.
 c  Output:
 c    model      The evaluated model.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       implicit none
       include 'sfind.h'
       integer n
@@ -3539,7 +3537,7 @@ c------------------------------------------------------------------------
 c      integer x0(n)
       integer i,j
       real t,xx,xscal
-c-------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c  Set the model to zero initially.
 c
       do i=1,n
@@ -3564,7 +3562,7 @@ c
 c
 c
       subroutine Eval(x0,y0,Model,n)
-c-------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
 c  Evaluate the current model at some pixels.
 c
@@ -3573,7 +3571,7 @@ c    n            Number of points.
 c    x0,y0      Pixel coordinates at which to evaluate the model.
 c  Output:
 c    model      The evaluated model.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       implicit none
       include 'sfind.h'
       integer n
@@ -3582,7 +3580,7 @@ c------------------------------------------------------------------------
 c      integer x0(n),y0(n)
       integer i,j
       real cospa,sinpa,t,xx,yy,xp,yp,xscal,yscal
-c-------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c  Set the model to zero initially.
 c
       do i=1,n
@@ -3614,7 +3612,7 @@ c
 c
       subroutine Report(bvol,bvolp,xposerr,yposerr,pkfl,pkflerr,
      +                    intfl,amaj,amin,posa,posns,lIn)
-c-----------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c  Report on the source component solution.
 c
 c  Input:
@@ -3627,7 +3625,7 @@ c    pkfl, pkflerr  peak flux density of source, and its error.
 c    intfl          integrated flux density of the source
 c    amaj, amin     major and minor fwhm of source (arcsec)
 c    posa           position angle of source (degrees E of N)
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       implicit none
       include 'mirconst.h'
       include 'sfind.h'
@@ -3638,7 +3636,7 @@ c
         real xposerr, yposerr, pkfl, pkflerr, intfl
         real amaj, amin, posa
         double precision posns(2),newpos(2)
-c-----------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       if(bvolp.gt.0)then
         sfac = sqrt(bvolp)
       else
@@ -3673,15 +3671,15 @@ c
 c
       subroutine GauFid(fwhm1,fwhm2,sfwhm1,sfwhm2,pa,spa,f1,f2,
      +                                          sf1,sf2,p,sp)
-c-----------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
 c  Convert the gaussian parameters to arcsec.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       implicit none
       include 'mirconst.h'
       real fwhm1,fwhm2,pa,f1,f2,p,sfwhm1,sfwhm2,spa,sf1,sf2,sp
       real t
-c----------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       f1 = 3600*180/pi * abs(fwhm1)
       f2 = 3600*180/pi * abs(fwhm2)
       sf1 = 3600*180/pi * sfwhm1
@@ -3717,7 +3715,7 @@ c            be determined.
 c    bvolp      Beam volume in pixels.
 c    bmaj,bmin,bpa Beam major, minor axes and position angle.
 c    bmajp,bminp,bpap Beam major, minor axes and position angle in pix. coords.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       implicit none
       integer lIn,k
       real bvol,bvolp,bmaj,bmin,bpa
@@ -4252,7 +4250,7 @@ c
 c
       logical blnkannulus,atpeak
       character line*160,typei(2)*6,typeo(2)*6,radec(2)*80
-c----------------------------------------------------------------------
+c-----------------------------------------------------------------------
       call output(' ')
       call output('********************************')
       call output('Beginning source measurements...')
