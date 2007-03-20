@@ -19,7 +19,13 @@
 # create an empty version (e.g. mkdir $MIR/darwin_x86) before running mirsync.
 #
 # Options:
-#   -c     Fetch code and compiled documentation only, no binaries.
+#   -c     Fetch code and compiled documentation only, no binaries.  File
+#          modification times are not preserved in this case on the assumption
+#          that the code will be compiled locally - old timestamps may mislead
+#          gmake.  Instead checksum comparison is used to identify changes and
+#          this can be slow.  Modification times are preserved if this option
+#          is not used as this allows size/time comparison which is much more
+#          efficient.
 #   -d     Dry-run, don't change anything.
 #   -h <host>
 #          Specify the name of the ATNF host from which to rsync.  External
@@ -42,7 +48,7 @@
 #   $MIR/specdoc/	...always updated.
 #
 # Original: 2006/11/28 Mark Calabretta, ATNF
-# $Id: mirsync,v 1.6 2007/03/20 01:44:17 cal103 Exp $
+# $Id: mirsync,v 1.7 2007/03/20 03:32:13 cal103 Exp $
 #-----------------------------------------------------------------------------
 
   trap 'exit 1' 1 2 3 15
@@ -134,9 +140,16 @@
 
 
   # Add rsync options.
-  RSYNC="$RSYNC -v --archive --delete --compress"
+  RSYNC="$RSYNC --verbose"
+  RSYNC="$RSYNC --compress --rsh=ssh --rsync-path=/usr/local/bin/rsync"
+  RSYNC="$RSYNC --delete --links --perms --recursive"
+  if [ "$DOBIN" = 1 ]
+  then
+    RSYNC="$RSYNC --times"
+  else
+    RSYNC="$RSYNC --checksum"
+  fi
   RSYNC="$RSYNC --exclude=RCS --exclude=/*/GNUmakedefs"
-  RSYNC="$RSYNC --rsh=ssh --rsync-path=/usr/local/bin/rsync"
 
   FILES="GNUmakedefs GNUmakefile INSTALL.html configure configure.ac"
   FILES="$FILES progguide.ps progguide_US.ps.gz"
