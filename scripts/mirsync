@@ -42,7 +42,7 @@
 #   $MIR/specdoc/	...always updated.
 #
 # Original: 2006/11/28 Mark Calabretta, ATNF
-# $Id: mirsync,v 1.5 2007/03/20 01:15:18 cal103 Exp $
+# $Id: mirsync,v 1.6 2007/03/20 01:44:17 cal103 Exp $
 #-----------------------------------------------------------------------------
 
   trap 'exit 1' 1 2 3 15
@@ -72,6 +72,7 @@
 
 # Parse options.
   DOBIN=1
+  DRYRUN=
   RSYNC=rsync
   SYNCHOST=venice.atnf.csiro.au
   SYNCUSER=
@@ -80,11 +81,11 @@
   do
     case $1 in
     -c)
-      # Don't fetch binaries.
       DOBIN=
       ;;
     -d)
       # Dry-run only.
+      DRYRUN=1
       RSYNC="$RSYNC --dry-run"
       ;;
     -h)
@@ -114,13 +115,28 @@
 
   [ "$SYNCUSER" = "" ] || SYNCHOST=$SYNCUSER@$SYNCHOST
 
+  echo
+
+  if [ "$DRYRUN" = "" ]
+  then
+    echo "Updating Miriad files from the ATNF master at"
+  else
+    echo "Doing a dry-run update of Miriad files from the ATNF master at"
+  fi
+  echo "$SYNCHOST:$ATMIR/..."
+
+  if [ "$DOBIN" = "" ]
+  then
+    echo "Considering code and compiled documentation only, no binaries."
+  fi
+
+  echo
+
 
   # Add rsync options.
   RSYNC="$RSYNC -v --archive --delete --compress"
   RSYNC="$RSYNC --exclude=RCS --exclude=/*/GNUmakedefs"
   RSYNC="$RSYNC --rsh=ssh --rsync-path=/usr/local/bin/rsync"
-
-  echo "Updating Miriad files from $SYNCHOST:$ATMIR/..."
 
   FILES="GNUmakedefs GNUmakefile INSTALL.html configure configure.ac"
   FILES="$FILES progguide.ps progguide_US.ps.gz"
@@ -149,5 +165,12 @@
   done
 
   $RSYNC $SYNCHOST:"$SRC" .
+
+  if [ "$DRYRUN" = 1 ]
+  then
+    echo
+    echo "NOTE: this was a dry-run only, NO FILES WERE UPDATED."
+    echo
+  fi
 
   exit
