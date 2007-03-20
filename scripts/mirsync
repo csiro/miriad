@@ -1,6 +1,6 @@
 #!/bin/sh
 #-----------------------------------------------------------------------------
-# Usage: mirsync -d [-h <host>] [-u <user>]
+# Usage: mirsync -c -d [-h <host>] [-u <user>]
 #-----------------------------------------------------------------------------
 # mirsync uses rsync to update a Miriad installation from the master at ATNF.
 # It requires ssh access to an ATNF computer, venice.atnf.csiro.au by default.
@@ -19,6 +19,7 @@
 # create an empty version (e.g. mkdir $MIR/darwin_x86) before running mirsync.
 #
 # Options:
+#   -c     Fetch code and compiled documentation only, no binaries.
 #   -d     Dry-run, don't change anything.
 #   -h <host>
 #          Specify the name of the ATNF host from which to rsync.  External
@@ -41,7 +42,7 @@
 #   $MIR/specdoc/	...always updated.
 #
 # Original: 2006/11/28 Mark Calabretta, ATNF
-# $Id: mirsync,v 1.4 2006/12/14 06:54:30 cal103 Exp $
+# $Id: mirsync,v 1.5 2007/03/20 01:15:18 cal103 Exp $
 #-----------------------------------------------------------------------------
 
   trap 'exit 1' 1 2 3 15
@@ -70,6 +71,7 @@
 
 
 # Parse options.
+  DOBIN=1
   RSYNC=rsync
   SYNCHOST=venice.atnf.csiro.au
   SYNCUSER=
@@ -77,15 +79,22 @@
   while [ "$#" -gt 0 ]
   do
     case $1 in
+    -c)
+      # Don't fetch binaries.
+      DOBIN=
+      ;;
     -d)
+      # Dry-run only.
       RSYNC="$RSYNC --dry-run"
       ;;
     -h)
+      # Remote host.
       shift
       SYNCHOST="$1"
       ;;
 
     -u)
+      # Remote user
       shift
       SYNCUSER="$1"
       ;;
@@ -93,7 +102,7 @@
     *)
       exec 1>&2
       echo ""
-      echo "Usage: mirsync -d [-h <host>] [-u <user>]"
+      echo "Usage: mirsync -c -d [-h <host>] [-u <user>]"
       exit 1
       ;;
     esac
@@ -118,7 +127,7 @@
   FILES="$FILES userguide.ps userguide_US.ps.gz"
 
   DIRS="config etc guides inc linpack prog scripts spec subs tests tools"
-  DIRS="$DIRS darwin_ppc darwin_x86 linux linux64 sun4sol"
+  [ "$DOBIN" = 1 ] && DIRS="$DIRS darwin_ppc darwin_x86 linux linux64 sun4sol"
 
 # Files that must be present.
   SRC="$ATMIR/DISCLAIMER"
