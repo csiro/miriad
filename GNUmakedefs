@@ -25,7 +25,7 @@
 # target names by running 'gmake help'
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakedefs,v 1.24 2007/03/14 06:05:43 cal103 Exp $
+# $Id: GNUmakedefs,v 1.25 2007/03/21 07:13:50 cal103 Exp $
 #-----------------------------------------------------------------------------
 # We rely only on the MIR environment variable.
 MIRROOT  := $(MIR)
@@ -640,7 +640,7 @@ else
   cleaner :: clean
 	-@ FILES="$(wildcard $(MIRSRCS))" ; DLIST="" ; \
 	   for i in $$FILES ; do \
-	     [ -w $$i ] || DLIST="$$i $$DLIST" ; \
+	     [ -w $$i -o -h $$i ] || DLIST="$$i $$DLIST" ; \
 	   done ; \
 	   if [ "$$DLIST" != "" ] ; then \
 	     echo "" ; \
