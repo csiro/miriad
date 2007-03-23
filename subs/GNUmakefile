@@ -3,7 +3,7 @@
 # dependency analysis for all source file types.
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.10 2007/03/14 05:30:26 cal103 Exp $
+# $Id: GNUmakefile,v 1.11 2007/03/23 04:23:10 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
@@ -19,7 +19,10 @@ ifneq "$(SUBS$(MIRARCH))" ""
   MIROSRCS := $(sort $(MIROSRCS) $(notdir $(wildcard $(MIROS2D)/*.*)))
 endif
 
-MIRINCS  := -I $(MIRSUBSD) -I $(MIRINCD)
+# See note for DPNDINCS regarding -I options forming the include path.
+MIRINCS  := -I $(MIRSUBSD)
+MIRINCS  += $(patsubst %,-I %, $(wildcard $(MIRINCD)/$(MIRARCH)))
+MIRINCS  += -I $(MIRINCD)
 MIRLIBR  := $(MIRLIBD)/libmir.a
 MIROBJS  := $(subst .for,.o,$(filter %.for,$(MIRSRCS) $(MIROSRCS)))
 MIROBJS  += $(subst .f2c,.o,$(filter %.f2c,$(MIRSRCS) $(MIROSRCS)))
@@ -68,7 +71,9 @@ show ::
 #             modules.
 #   DPNDTMPD: Full pathname of the area where intermediate files are staged.
 #
-#   DPNDINCS: -I include path sequence.
+#   DPNDINCS: -I include path sequence.  This is used by ratty, which requires
+#             a space following the "-I", as well as by cpp which doesn't
+#             care.
 #   DPNDOPT : Compile option, either "OPT" (optimized) or "DBG" (debug).  This
 #             is used as a computed variable, e.g. if DPNDOPT is "DBG" then
 #             $(CPP$(DPNDOPT)) evaluates to $(CPPDBG), the debug preprocessor
@@ -371,7 +376,9 @@ else
 
   # Tell ratty and intf2c to look for include files in the programmer
   # directories first, then in the relevant Miriad directories.
-  PGMRINCS := -I . -I $(PGMRINCD) $(MIRINCS)
+  PGMRINCS := -I .
+  PGMRINCS += $(patsubst %,-I %, $(wildcard $(PGMRINCD)/$(MIRARCH)))
+  PGMRINCS += -I $(PGMRINCD) $(MIRINCS)
   PGMRLIBR := $(PGMRLIBD)/libmir.a
   PGMROBJS := $(subst .for,.o,$(wildcard *.for) $(filter %.for,$(PGMROSRC)))
   PGMROBJS += $(subst .f2c,.o,$(wildcard *.f2c) $(filter %.f2c,$(PGMROSRC)))
