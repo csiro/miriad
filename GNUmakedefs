@@ -25,7 +25,7 @@
 # target names by running 'gmake help'
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakedefs,v 1.25 2007/03/21 07:13:50 cal103 Exp $
+# $Id: GNUmakedefs,v 1.26 2007/03/26 02:47:58 cal103 Exp $
 #-----------------------------------------------------------------------------
 # We rely only on the MIR environment variable.
 MIRROOT  := $(MIR)
@@ -45,8 +45,9 @@ else
   MAKEMODE := system
 endif
 
-# Name of the top-level Miriad directory.
+# Name of the top-level Miriad directory and this subdirectory.
 miriad   := $(notdir $(MIRROOT))
+CODESUBD := $(shell echo $(THISDIR)/ | sed -e '{s=^.*/$(miriad)/==;s=/*$$==;}')
 
 #=============================================================================
 #                        START OF DEFAULT DEFINITIONS
@@ -308,7 +309,6 @@ MIRSDOCD := $(MIRROOT)/specdoc
 MIRRCS   := $(wildcard $(MIRROOT)/RCS)
 
 # Miriad code directories.
-CODESUBD := $(shell echo $(THISDIR)/ | sed -e '{s=^.*/$(miriad)/==;s=/*$$==;}')
 CODEDIR  := $(patsubst %/,%,$(MIRROOT)/$(CODESUBD))
 
 ifdef MIRRCS
