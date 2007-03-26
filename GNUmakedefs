@@ -25,7 +25,7 @@
 # target names by running 'gmake help'
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakedefs,v 1.26 2007/03/26 02:47:58 cal103 Exp $
+# $Id: GNUmakedefs,v 1.27 2007/03/26 06:56:54 cal103 Exp $
 #-----------------------------------------------------------------------------
 # We rely only on the MIR environment variable.
 MIRROOT  := $(MIR)
@@ -299,6 +299,7 @@ MAKEINDENT := $(I$(MAKELEVEL))
 MIRSCRPD := $(MIRROOT)/scripts
 MIRTOOLD := $(MIRROOT)/tools
 MIRINCD  := $(MIRROOT)/inc
+MIRINCOD := $(wildcard $(MIRINCD)/$(MIRARCH))
 MIRSUBSD := $(MIRROOT)/subs
 MIRPROGD := $(MIRROOT)/prog
 MIRSPECD := $(MIRROOT)/spec
@@ -355,6 +356,7 @@ ifeq "$(MAKEMODE)" "programmer"
   # The name of the root of the programmer workspace MUST accord with $MIR.
   PGMRROOT := $(shell echo $(THISDIR) | sed -e 's=^\(.*/$(miriad)\).*=\1=')
   PGMRINCD := $(PGMRROOT)/inc
+  PGMRINOD := $(wildcard $(PGMRINCD)/$(MIRARCH))
   PGMRAUXD := $(PGMRROOT)/$(MIRARCH)/aux
   PGMRLIBD := $(PGMRROOT)/$(MIRARCH)/lib
   PGMRBIND := $(PGMRROOT)/$(MIRARCH)/bin
@@ -820,6 +822,7 @@ show ::
 	-@ echo "-----------------------"
 	-@ echo "MIRSCRPD   = $(MIRSCRPD)"
 	-@ echo "MIRINCD    = $(MIRINCD)"
+	-@ echo "MIRINCOD   = $(MIRINCOD)"
 	-@ echo "MIRTOOLD   = $(MIRTOOLD)"
 	-@ echo "MIRSUBSD   = $(MIRSUBSD)"
 	-@ echo "MIRPROGD   = $(MIRPROGD)"
@@ -859,6 +862,7 @@ show ::
 	-@ echo "----------------------"
 	-@ echo "PGMRROOT   = $(PGMRROOT)"
 	-@ echo "PGMRINCD   = $(PGMRINCD)"
+	-@ echo "PGMRINOD   = $(PGMRINOD)"
 	-@ echo "PGMRLIBD   = $(PGMRLIBD)"
 	-@ echo "PGMRBIND   = $(PGMRBIND)"
 	-@ echo ""
