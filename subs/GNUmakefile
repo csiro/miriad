@@ -3,7 +3,7 @@
 # dependency analysis for all source file types.
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.11 2007/03/23 04:23:10 cal103 Exp $
+# $Id: GNUmakefile,v 1.12 2007/03/26 07:18:15 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
@@ -21,7 +21,7 @@ endif
 
 # See note for DPNDINCS regarding -I options forming the include path.
 MIRINCS  := -I $(MIRSUBSD)
-MIRINCS  += $(patsubst %,-I %, $(wildcard $(MIRINCD)/$(MIRARCH)))
+MIRINCS  += $(patsubst %,-I %, $(MIRINCOD))
 MIRINCS  += -I $(MIRINCD)
 MIRLIBR  := $(MIRLIBD)/libmir.a
 MIROBJS  := $(subst .for,.o,$(filter %.for,$(MIRSRCS) $(MIROSRCS)))
@@ -133,9 +133,14 @@ ifeq "$(MAKEMODE)" "system"
   #-----------------------
   # Resolve paths for operating-system specific source code.
   ifneq "$(MIROS2D)" ""
-    VPATH    := $(MIROS2D):
+    VPATH  := $(MIROS2D):
   endif
-  VPATH    := $(VPATH)$(MIROS1D):$(CODEDIR):$(MIRINCD)
+  VPATH    := $(VPATH)$(MIROS1D):$(CODEDIR)
+
+  ifneq "$(MIRINCOD)" ""
+    VPATH  := $(VPATH):$(MIRINCOD)
+  endif
+  VPATH    := $(VPATH):$(MIRINCD)
 
   # Dependency files go into the system aux directory, while preprocessor
   # output is staged in the tmp directory and deleted after use.
@@ -369,7 +374,15 @@ else
     VPATH    := $(PGMROSD):$(MIROS2D):
   endif
   PGMROSD  += ./unix
-  VPATH    := $(VPATH)./unix:$(MIROS1D):.:$(CODEDIR):$(PGMRINCD):$(MIRINCD)
+  VPATH    := $(VPATH)./unix:$(MIROS1D):.:$(CODEDIR)
+  ifneq "$(PGMRINOD)" ""
+    VPATH  := $(VPATH):$(PGMRINOD)
+  endif
+  VPATH    := $(VPATH):$(PGMRINCD):$(MIRINCD)
+  ifneq "$(MIRINCOD)" ""
+    VPATH  := $(VPATH):$(MIRINCOD)
+  endif
+  VPATH    := $(VPATH):$(MIRINCD)
 
   PGMROSRC := $(sort $(notdir \
                 $(foreach DIR,$(PGMROSD),$(wildcard $(DIR)/*.*))))
@@ -377,7 +390,7 @@ else
   # Tell ratty and intf2c to look for include files in the programmer
   # directories first, then in the relevant Miriad directories.
   PGMRINCS := -I .
-  PGMRINCS += $(patsubst %,-I %, $(wildcard $(PGMRINCD)/$(MIRARCH)))
+  PGMRINCS += $(patsubst %,-I %, $(PGMRINOD))
   PGMRINCS += -I $(PGMRINCD) $(MIRINCS)
   PGMRLIBR := $(PGMRLIBD)/libmir.a
   PGMROBJS := $(subst .for,.o,$(wildcard *.for) $(filter %.for,$(PGMROSRC)))

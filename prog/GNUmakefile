@@ -2,14 +2,14 @@
 # GNUmakefile for compiling Miriad tasks.
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.9 2007/03/23 04:21:56 cal103 Exp $
+# $Id: GNUmakefile,v 1.10 2007/03/26 07:20:49 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
 
 # See note for DPNDINCS regarding -I options forming the include path.
 MIRINCS  := -I $(MIRPROGD)
-MIRINCS  += $(patsubst %,-I %, $(wildcard $(MIRINCD)/$(MIRARCH)))
+MIRINCS  += $(patsubst %,-I %, $(MIRINCOD))
 MIRINCS  += -I $(MIRINCD)
 MIRLIBR  := $(MIRLIBD)/libmir.a
 XTRNLIBS := $(RPFITSLIB) $(LINPACKLIB) $(PGPLOTLIB) $(X11LIB) $(XTRALIBS)
@@ -283,11 +283,19 @@ else
   # Look for source files in the current directory first where a programmer
   # may be working on them, then in the relevant Miriad directory.
   VPATH    := .:$(CODEDIR):$(PGMRINCD):$(MIRINCD)
+  ifneq "$(PGMRINOD)" ""
+    VPATH  := $(VPATH):$(PGMRINOD)
+  endif
+  VPATH    := $(VPATH):$(PGMRINCD)
+  ifneq "$(MIRINCOD)" ""
+    VPATH  := $(VPATH):$(MIRINCOD)
+  endif
+  VPATH    := $(VPATH):$(MIRINCD)
 
   # Tell ratty to look for include files in the programmer directories first,
   # then in the relevant Miriad directories.
   PGMRINCS := -I .
-  PGMRINCS += $(patsubst %,-I %, $(wildcard $(PGMRINCD)/$(MIRARCH)))
+  PGMRINCS += $(patsubst %,-I %, $(PGMRINOD))
   PGMRINCS += -I $(PGMRINCD) $(MIRINCS)
   PGMRLIBR := $(wildcard $(PGMRLIBD)/libmir.a)
   PGMRLIBS := $(wildcard $(PGMRLIBD)/libmir.a) $(XTRNLIBS)
