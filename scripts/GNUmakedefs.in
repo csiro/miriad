@@ -1,3 +1,21 @@
+#=============================================================================
+# GNUmakedefs
+#-----------------------------------------------------------------------------
+# $MIR/@MIRARCH@/GNUmakedefs is the place to redefine makefile variables for
+# @MIRARCH@ systems.  The initial version was constructed by 'configure'
+# (from the template $MIR/scripts/GNUmakedefs.in) when you installed Miriad
+# from source code.  However, you may need to change the definitions or add
+# new ones.
+#
+# Defaults values for all makefile variables are defined in $MIR/GNUmakedefs
+# and you should consult that file to learn what the variables are used
+# for and how they may need to be changed.  You should also be aware that
+# defaults may be defined in an architecture-specific file (if one exists)
+# $MIR/scripts/@MIRARCH@/GNUmakedefs.
+#
+# Original: 2006/10/17, Mark Calabretta, ATNF
+# $Id: GNUmakedefs.in,v 1.2 2007/03/28 01:23:37 cal103 Exp $
+#-----------------------------------------------------------------------------
 # Version.
 V := @PACKAGE_VERSION@
 
