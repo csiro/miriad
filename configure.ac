@@ -2,13 +2,12 @@
 # Process this file with autoconf-2.53 or later to produce a configure script.
 #-----------------------------------------------------------------------------
 # Author: Mark Calabretta, Australia Telescope National Facility
-# http://www.atnf.csiro.au/~mcalabre/index.html
-# $Id: configure.ac,v 1.6 2007/01/24 23:40:13 cal103 Exp $
+# $Id: configure.ac,v 1.7 2007/03/28 01:29:22 cal103 Exp $
 #-----------------------------------------------------------------------------
 
 AC_INIT([Miriad], [ATNF2.0], [miriad@atnf.csiro.au], [miriad-ATNF2.0])
 AC_PREREQ([2.53])
-AC_REVISION([$Revision: 1.6 $])
+AC_REVISION([$Revision: 1.7 $])
 
 AC_CONFIG_SRCDIR([tools/miriad.c])
 AC_CONFIG_AUX_DIR([config])
@@ -19,6 +18,7 @@ AC_SUBST([MIRROOT])
 
 # Determine the Miriad architecture name.
 MIRARCH=`$MIRROOT/scripts/mirarch`
+AC_SUBST([MIRARCH])
 
 
 # Look for a Fortran compiler.
