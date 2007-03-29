@@ -243,6 +243,16 @@ are invariably set lower because tasks that use it <em>do</em> statically
 declare arrays of size <code>MAXDIM**2</code> or similar.
 </p>
 
+<p>
+Include files may exist within architecture-specific subdirectories of
+<code>$MIR/inc</code> and take preference if so; this search-path mechanism
+allows multiple architectures to be maintained with a single set of source
+code.  For example, since 64-bit systems typically have more memory,
+<code>$MIR/inc/linux64/maxdim.h</code> defines larger values of
+<code>MAXBUF</code> and <code>MAXDIM</code> for the <code>linux64</code>
+architecture and is the relevant one to change on those systems.
+</p>
+
 <a name="binary"><h4>Installing from a binary distribution</h4>
 
 <p>
@@ -1386,5 +1396,5 @@ referred to as <code>$MIRARCHD</code>), where <code>$MIRARCH</code> is the
 <hr>
 
 <p>
-<small>$Id: INSTALL.html,v 1.8 2007/02/13 04:08:31 cal103 Exp $</small>
+<small>$Id: INSTALL.html,v 1.9 2007/03/29 00:14:44 cal103 Exp $</small>
 </p>
