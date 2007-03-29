@@ -60,6 +60,8 @@ c    rjs  12oct99 Change in subroutine name only.
 c    rjs  14dec99 Support for visibility datasets as models.
 c    rjs  14aug00 Re-Added "sources" file support.
 c    rjs  18sep05 Type mismatch error.
+c
+c $Id: model.for,v 1.2 2007/03/29 01:24:59 cal103 Exp $
 c************************************************************************
 c*ModelIni -- Ready the uv data file for processing by the Model routine.
 c&rjs
@@ -292,7 +294,7 @@ c
 	real Out(maxlen),uu,vv,u,v
 	logical accept,flags(maxchan),doshift,GotFreq
 	logical domodl
-	complex Buffer((maxbuf+1)/2)
+	complex Buffer(1+(MAXBUF-1)/2)
 	complex In(maxchan),Intp(maxchan+1)
 	double precision sfreq(maxchan),freq0
 	common Buffer
