@@ -300,7 +300,7 @@ c    rjs   01jul99  CHanges in call sequence to hdfiddle.
 c    rjs   29jun05  Handle changes in calling sequence to mostab/hdtab routines.
 c  Bugs:
 c
-c $Id: invert.for,v 1.2 2007/04/02 07:38:35 cal103 Exp $
+c $Id: invert.for,v 1.3 2007/04/03 00:01:00 cal103 Exp $
 c-----------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'maxdim.h'
@@ -333,13 +333,14 @@ c
 c
 c  Externals.
 c
-	character itoaf*10, polsc2p*3, versan*80
 	logical keyprsnt
+	integer nextpow2
+	character itoaf*10, polsc2p*3, versan*80
 c
 	data slops/'zero        ','interpolate '/
 c-----------------------------------------------------------------------
         version = versan ('invert',
-     :    '$Id: invert.for,v 1.2 2007/04/02 07:38:35 cal103 Exp $')
+     :    '$Id: invert.for,v 1.3 2007/04/03 00:01:00 cal103 Exp $')
 c
 c  Get the input parameters. Convert all angular things into
 c  radians as soon as possible!!
