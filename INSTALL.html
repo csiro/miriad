@@ -221,26 +221,31 @@ opportunity to adjust the following parameters in the Fortran include files
 <code>$MIR/inc/maxdim.h</code> and <code>tmpdim.h</code> to reflect your
 problem sizes and memory availability:
 <pre>
-	MAXBUF  -- Maximum general scratch buffer size. The value of this
-		   is much less critical than you might expect, as most
-		   scratch buffers are allocated dynamically.
-	MAXDIM  -- Maximum image dimension.
+	MAXBUF  -- Maximum general scratch buffer size.
+	MAXDIM  -- Maximum number of pixels on an image axis.
 	MAXCHAN -- Maximum number of spectral channels.
 	MAXANT  -- Maximum number of antennas.
 	MAXBASE -- Maximum number of baselines (normally derived from MAXANT).
 	MAXWIN  -- Maximum number of simultaneous frequency bands ("windows").
 	MAXWIDE -- Maximum number of wideband channels (Hat Ck specific).
 </pre>
-No <em>Miriad</em> code allocates memory for arrays of length more than a few
-times any of the parameters in <code>maxdim.h</code> (e.g. there are no arrays
-of size <code>MAXDIM**2</code>).  <em>Miriad</em> programs mostly allocate
-memory dynamically when needed.
+and, in <code>$MIR/inc/maxnax.h</code>,
+<pre>
+	MAXNAX  -- Maximum number of image axes.
+</pre>
+Except for <code>MAXBUF</code>, these parameters must also be set for C source
+code in <code>$MIR/inc/maxdimc.h</code>.  Please read the comments in the
+prologue of that file.
 </p>
 
 <p>
-<code>tmpdim.h</code> is similar to <code>maxdim.h</code> except the values
-are invariably set lower because tasks that use it <em>do</em> statically
-declare arrays of size <code>MAXDIM**2</code> or similar.
+No <em>Miriad</em> code allocates memory for arrays of length more than a few
+times any of the parameters in <code>maxdim.h</code> (e.g. there are no arrays
+of size <code>MAXDIM**2</code>).  <em>Miriad</em> programs mostly allocate
+memory dynamically when needed.  <code>tmpdim.h</code> is similar to
+<code>maxdim.h</code> except the values are invariably set lower because
+tasks that use it <em>do</em> statically declare arrays of size
+<code>MAXDIM**2</code> or similar.
 </p>
 
 <p>
@@ -1396,5 +1401,5 @@ referred to as <code>$MIRARCHD</code>), where <code>$MIRARCH</code> is the
 <hr>
 
 <p>
-<small>$Id: INSTALL.html,v 1.9 2007/03/29 00:14:44 cal103 Exp $</small>
+<small>$Id: INSTALL.html,v 1.10 2007/04/13 01:30:01 cal103 Exp $</small>
 </p>
