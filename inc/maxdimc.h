@@ -1,29 +1,44 @@
-/*
-	-------------------------------------------------------------
-	maxdimc.h - include file for C code containing MIRIAD-wide
-		    parameters
+/*----------------------------------------------------------------------------
+*  maxdimc.h - C include file containing MIRIAD-wide parameters.
+*
+*  Note that MAXBUF defined here is only used by the routines in xyzio.c
+*  which are only used by a handful of tasks.  It is NOT the same as the
+*  MAXBUF defined for Fortran use in maxdim.h and only needs to be large
+*  enough for efficient I/O.  The default value of 4MiB should be enough.
+*
+*  The remaining parameters must match those in maxdim.h, or maxnax.h for
+*  MAXNAX.
+*
+*  MAXDIM is only used by the xyio.c routines.
+*
+*  MAXNAX is only used by the xyio.c, xyzio.c and xyziowrap.c routines.
+*
+*  MAXANT and MAXWIN are only used by the uvio.c routines.
+*
+*  MAXBASE, MAXCHAN, and MAXWIDE are not used by anything.
+*
+* $Id: maxdimc.h,v 1.2 2007/04/13 00:58:01 cal103 Exp $
+*---------------------------------------------------------------------------*/
+/* Maximum buffer size for xyzio (N.B. see comment above). */
+#define MAXBUF  4194304
 
-	MAXDIM .... maximum number of elements in any one plane
-		    (ie, maximum dimensionality of a map)
-	MAXANT .... maximum number of antennae
-	MAXBASE ... maximum number of baselines
-	MAXCHAN ... maximum number of channels in spectral data
+/* Maximum number of pixels on an image axis. */
+#define MAXDIM  512
 
-	History:
+/* Maximum number of image axes. */
+#define MAXNAX  7
 
-	04aug91 mjs   Original version.
-	05aug91 mjs   Put parentheses around MAXBASE defined value.
-        bpw  20jul91  Created as xyzio.h
-        mjs  08apr92  Minor mod to compile on VAX
-        rjs  23feb93  Merged maxdimc.h and xyzio.h. Include MAXNAX.
-	rjs   9sep94  Add MAXWIN
-	-------------------------------------------------------------
-*/
-#define		MAXDIM		512
-#define		MAXANT		30
-#define		MAXBASE		((MAXANT * (MAXANT + 1)) / 2)
-#define		MAXCHAN		512
-#define		MAXNAX		7
-#define		MAXWIN		16
-#define		MAXWIDE		18
-#define		MAXBUF		4194304
+/* Maximum number of antennas. */
+#define MAXANT  30
+
+/* Maximum number of baselines. */
+#define MAXBASE ((MAXANT * (MAXANT + 1)) / 2)
+
+/* Maximum number of channels in spectral data. */
+#define MAXCHAN 512
+
+/* Maximum number of windows in uv data. */
+#define MAXWIN  16
+
+/* Maximum number of wideband channels. */
+#define MAXWIDE 18
