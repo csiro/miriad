@@ -1,5 +1,4 @@
 	program imfit
-	implicit none
 c
 c= imfit -- Fit models to a given image dataset
 c& rjs
@@ -45,7 +44,7 @@ c@ spar
 c	This gives initial estimates of source parameters.  For
 c	each object given by the `object' keyword, either 1 (for
 c	the level) or 6 (for disks and gaussians) values should be
-c	given. The initial estimates for each object a simply separated 
+c	given. The initial estimates for each object a simply separated
 c       by a comma. The values are as follows:
 c	  Object Type             SPAR values
 c	  -----------             -----------
@@ -89,11 +88,11 @@ c	is circular.
 c	The default is to assume that everything can vary.
 c@ out
 c	The optional output data-set. This is a miriad image. The default
-c       is not to create an output data-set. If an output dataset name is 
+c       is not to create an output data-set. If an output dataset name is
 c       given, then either the model or residual image can be saved.
 c@ options
-c	Extra processing options. Several can be given, separated by commas.
-c	Minimum match is used. Possible values are:
+c	Extra processing options.  Several can be given, separated by
+c       commas.  Minimum match is used.  Possible values are:
 c	  residual The output data-set is the residual image.
 c	           If an output is being created, the default is to make
 c	           this the fitted model.
@@ -113,23 +112,24 @@ c    rjs  02dec96 Print out RA and DEC as well.
 c    rjs  12dec96 Correct bug in the above.
 c    nebk 28feb97 Add object to output
 c    rjs  02jul97 cellscal change.
-c    smw  15feb98 added one extra digit in printout: rangle->rangleh, etc
+c    smw  15feb98 added one extra digit in printout: rangle->rangleh,
+c                 etc.
 c    mchw 21apr98 more precise Offset position.
 c    rjs  27apr98 Merge above two sets of changes.
 c    rjs  27oct98 Improved format statements.
 c    rjs  30jun99 Ditto.
 c    paj  28Mar03 Fix bug in uncertainty estimates
-c------------------------------------------------------------------------
+c
+c $Id: imfit.for,v 1.3 2007/04/16 02:52:20 cal103 Exp $
+c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'maxnax.h'
 	include 'mem.h'
 c
-	character version*(*)
-	parameter(version='version 1.0 30-Jun-99')
 	integer MAXBOX,MAXVAR
 	parameter(MAXBOX=1024,MAXVAR=30)
 c
-	character in*64,out*64,object*32
+	character in*64, out*64, object*32, version*80
 	real clip,x(MAXVAR),covar(MAXVAR*MAXVAR),rms,trms
 	real bmaj,bmin,bpa,bvol,bvolp
 	logical dores,inten,defsrc,doOut,dofit
@@ -141,12 +141,14 @@ c
 c  Externals.
 c
 	logical PolsPara
-	character itoaf*2
+	character itoaf*2, versan*80
 	external FUNCTION
+c-----------------------------------------------------------------------
+        version = versan ('imfit',
+     :    '$Id: imfit.for,v 1.3 2007/04/16 02:52:20 cal103 Exp $')
 c
 c  Get the input parameters.
 c
-	call output('ImFit: '//version)
 	call keyini
 	call keya('in',in,' ')
 	call BoxInput('region',in,boxes,MAXBOX)
@@ -208,9 +210,9 @@ c
 	  call LoadDat(lIn,Boxes,k,nin(1),nin(2),clip,inten,m)
 	  dofit = m.gt.0
 c
-c  Get the beam parameters, fill in "the appropriate values for POINT and
-c  BEAM types, convert the coordinates to pixels, and fill in defaults
-c  if necessary.
+c  Get the beam parameters, fill in "the appropriate values for POINT
+c  and BEAM types, convert the coordinates to pixels, and fill in
+c  defaults if necessary.
 c
 	  if(dofit)then
 	    call BeamPar(lIn,k,bvol,bvolp,bmaj,bmin,bpa)
@@ -265,15 +267,14 @@ c
 	if(doOut)call xyclose(lOut)
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine BeamSet(lIn)
 c
-	implicit none
 	integer lIn
 c
 c  Write the beam parameters if it looks appropriate. This is if only a
 c  BEAM object was fitted for, and if the dataset is writable.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'imfit.h'
 	include 'mirconst.h'
 	real f1,f2,sf1,sf2,p,sp
@@ -291,17 +292,16 @@ c
 	endif
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine ParFill(bmaj,bmin,bpa)
 c
-	implicit none
 	real bmaj,bmin,bpa
 c
 c  Fill in parameters for POINT and BEAM types.
 c
 c  Input:
 c    bmaj,bmin,bpa  Beam parameters, in radians.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'imfit.h'
 	integer i
 c
@@ -320,10 +320,9 @@ c
 	enddo
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine CoordFid(lIn,k,topix)
 c
-	implicit none
 	integer lIn,k
 	logical topix
 c
@@ -333,7 +332,7 @@ c  Input:
 c    lIn	Handle of the coordinate system.
 c    k
 c    topix
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'imfit.h'
 	double precision in(3),out(3)
 	double precision crpix(2),crval(2),cdelt(2)
@@ -384,7 +383,7 @@ c
 	      endif
 	      sl0(i) = sl0(i) * dx
 	      sm0(i) = sm0(i) * dy
-	      spa(i) = spa(i) / ( dy/dx*cos(pa(i))**2 + 
+	      spa(i) = spa(i) / ( dy/dx*cos(pa(i))**2 +
      *				  dx/dy*sin(pa(i))**2 )
 	    endif
 c
@@ -395,10 +394,9 @@ c
 	enddo
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine GenOut(lIn,lOut,n1,n2,dores)
 c
-	implicit none
 	integer lIn,lOut,n1,n2
 	logical dores
 c
@@ -410,7 +408,7 @@ c    lOut	Handle of the output dataset.
 c    n1,n2	Size of the input and output images.
 c    dores	True if we are to write the residuals.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	integer i,j
 	real data(MAXDIM),model(MAXDIM)
@@ -448,13 +446,12 @@ c
 	enddo
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine GetEst
-	implicit none
 c
 c  Generate an initial estimate for a single component model.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'imfit.h'
 	include 'mirconst.h'
 c
@@ -513,15 +510,14 @@ c
 	endif
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine MkHead(lIn,lOut,off,version)
 c
-	implicit none
 	integer lIn,lOut,off
 	character version*(*)
 c
 c  Make the header of the output image.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer i
 	double precision crpix3
 	character umsg*64
@@ -558,10 +554,9 @@ c
 	call hisinput(lOut,'IMFIT')
 	call hisclose(lOut)
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine LoadDat(lIn,Boxes,k,n1,n2,clip,inten,m)
 c
-	implicit none
 	integer lIn,Boxes(*),m,k,n1,n2
 	real clip
 	logical inten
@@ -575,7 +570,7 @@ c    inten	Is "clip" an upper or absolute threshold.
 c    clip	Clip level.
 c  Output:
 c    m		Number of points loaded.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	integer MAXRUNS
 	parameter(MAXRUNS=3*MAXDIM)
@@ -621,16 +616,15 @@ c
 	yoff = yt / real(ndata)
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine PackVar(var,nvar,MAXVAR)
 c
-	implicit none
 	integer nvar,MAXVAR
 	real var(MAXVAR)
 c
 c  Store all the things that we need to vary.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'imfit.h'
 	integer i,j,ncurr
 	real tmp(6)
@@ -675,15 +669,14 @@ c
 	enddo
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine UpackCov(covar,nvar)
 c
-	implicit none
 	integer nvar
 	real covar(nvar,nvar)
 c
 c  Unpack the covariance matrix.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'imfit.h'
 	integer i,n
 c
@@ -721,16 +714,15 @@ c
      *	  call bug('f','Inconsistency in UPackCov')
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine UPackVar(var,nvar)
 c
-	implicit none
 	integer nvar
 	real var(nvar)
 c
 c  Unpack all the things that we need to vary.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'imfit.h'
 	integer i,n
 c
@@ -768,36 +760,34 @@ c
      *	  call bug('f','Inconsistency in UPackVar')
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine GetOpt(dores)
 c
-	implicit none
 	logical dores
 c
 c  Get extra processing options.
 c
 c  Output:
 c    dores
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer nopts
 	parameter(nopts=1)
 	character opts(nopts)*8
 	logical present(nopts)
-	data opts/'residual '/
+	data opts /'residual'/
 c
 	call options('options',opts,present,nopts)
 c
 	dores = present(1)
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine FUNCTION(m,nvar,var,fvec,iflag)
 c
-	implicit none
 	integer m,nvar,iflag
 	real var(nvar)
 	real fvec(m)
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'imfit.h'
 	integer i
 c
@@ -817,11 +807,10 @@ c
 	  fvec(i) = Data(i) - fvec(i)
 	enddo
 c
-	end	
-c************************************************************************
+	end
+c***********************************************************************
 	subroutine Eval(x0,y0,Model,n)
 c
-	implicit none
 	integer n,x0(n),y0(n)
 	real Model(n)
 c
@@ -832,7 +821,7 @@ c    n		Number of points.
 c    x0,y0	Pixel coordinates at which to evaluate the model.
 c  Output:
 c    model	The evaluated model.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'imfit.h'
 	integer i,j
 	real cospa,sinpa,t,xx,yy,xp,yp,xscal,yscal
@@ -890,10 +879,9 @@ c
 	enddo
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine Report(object,rms,trms,bvol,bvolp,bmaj,bmin,bpa)
 c
-	implicit none
 	real rms,trms,bvol,bvolp,bmaj,bmin,bpa
         character*(*) object
 c
@@ -908,7 +896,7 @@ c    bvol	Beam volume, in pixels.
 c    bmaj	Beam major axis (radians).
 c    bmin	Beam minor axis (radians).
 c    bpa	Beam position angle (radians).
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'imfit.h'
 c
@@ -1087,15 +1075,14 @@ c
 	call output('-------------------------------------------------')
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine GauFid(fwhm1,fwhm2,sfwhm1,sfwhm2,pa,spa,f1,f2,
      *							sf1,sf2,p,sp)
 c
-	implicit none
 	real fwhm1,fwhm2,pa,f1,f2,p,sfwhm1,sfwhm2,spa,sf1,sf2,sp
 c
 c  Convert the gaussian parameters to arcsec.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'mirconst.h'
 	real t
 c
@@ -1118,14 +1105,13 @@ c
 	if(p.lt.-90) p = p + 180
 	if(p.gt. 90) p = p - 180
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine LoadSrc(defsrc)
 c
-	implicit none
 	logical defsrc
 c
 c  Load the source components and their initial estimates.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'imfit.h'
 	integer nout,i
@@ -1238,10 +1224,9 @@ c
      *	  'Can only estimate initial source for 1 component only')
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine BeamPar(lIn,k,bvol,bvolp,bmaj,bmin,bpa)
 c
-	implicit none
 	integer lIn,k
 	real bvol,bvolp,bmaj,bmin,bpa
 c
@@ -1255,7 +1240,7 @@ c    bvol	Beam volume, in radians**2. Set to zero if this cannot
 c		be determined.
 c    bvolp	Beam volume in pixels.
 c    bmaj,bmin,bpa Beam major, minor axes and position angle.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'mirconst.h'
 	character bunit*16,ctype(2)*16
 	real bmajp,bminp,bpap

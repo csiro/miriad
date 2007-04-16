@@ -1,12 +1,11 @@
 c************************************************************************
       program uvclip
-      implicit none
 c
 c= UVCLIP - determine data to flag from channel-0 uv dataset
 c& njt
 c: uv analysis
 c+
-c	UVCLIP flags UV channel 0 data set by statistical clipping 
+c	UVCLIP flags UV channel 0 data set by statistical clipping
 c@ vis
 c	The input UV dataset name. No default.
 c
@@ -21,9 +20,9 @@ c       doall .... include all data (flagged and unflagged)
 c       noapply .. do not apply flagging
 c
 c@ interval
-c       Data clipping interval in minutes. The maximum interval between 
+c       Data clipping interval in minutes. The maximum interval between
 c       data points for continuous clipping.  Must be greater than the
-c       integration time.  The default is infinite.       
+c       integration time.  The default is infinite.
 c
 c@ clip
 c       Clipping level.  Number of rms beyond which data is flagged.
@@ -35,12 +34,12 @@ c--
 c
 c  History:
 c   09sep94 njt  - Created
-c------------------------------------------------------------------------
+c
+c $Id: uvclip.for,v 1.2 2007/04/16 02:52:20 cal103 Exp $
+c-----------------------------------------------------------------------
 
       include 'maxdim.h'
 
-      character version*(*)
-      parameter (version='Uvclip: version 1.0 09-Sep-94')
       integer   NOPTS, MAXVIS, MAXCYC, MAXDAT, MAXSELS
       parameter (NOPTS=4, MAXVIS=128, MAXCYC=768, MAXSELS=512,
      -           MAXDAT=MAXCYC*MAXVIS)
@@ -56,32 +55,32 @@ c------------------------------------------------------------------------
      -          doamp,
      -          dotrip
 
-      double precision preamble(4),         
-     -          oldjd,                      
-     -          delmin,                     
-     -          minday,                   
-     -          interval,                 
+      double precision preamble(4),
+     -          oldjd,
+     -          delmin,
+     -          minday,
+     -          interval,
      -          tx(MAXCYC),
      -          ft(MAXDAT)
 
-      complex   vis(MAXVIS,MAXCYC),        
-     -          tv(MAXVIS,MAXCYC)           
+      complex   vis(MAXVIS,MAXCYC),
+     -          tv(MAXVIS,MAXCYC)
 
-      integer   tno,                        
-     -          nchan,                      
-     -          nrec,                      
-     -          ip,                        
-     -          na, nc,                
-     -          i1, i2,                     
-     -          a1(MAXBASE), a2(MAXBASE),  
-     -          mb, nb, ib,                  
+      integer   tno,
+     -          nchan,
+     -          nrec,
+     -          ip,
+     -          na, nc,
+     -          i1, i2,
+     -          a1(MAXBASE), a2(MAXBASE),
+     -          mb, nb, ib,
      -          i, j, k, n,
-     -          vx(MAXCYC),               
-     -          px(MAXVIS,MAXCYC),         
-     -          bx(MAXVIS,MAXCYC),         
-     -          tn(MAXCYC),                
-     -          tb(3,MAXVIS,MAXCYC),       
-     -          tp(MAXVIS,MAXCYC),        
+     -          vx(MAXCYC),
+     -          px(MAXVIS,MAXCYC),
+     -          bx(MAXVIS,MAXCYC),
+     -          tn(MAXCYC),
+     -          tb(3,MAXVIS,MAXCYC),
+     -          tp(MAXVIS,MAXCYC),
      -          flg,
      -          fp(MAXDAT)
 
@@ -89,7 +88,8 @@ c------------------------------------------------------------------------
 
       character opts(NOPTS)*9,
      -          calday*18,
-     -          file*64
+     -          file*64,
+     -          version*80
 
       logical   present(NOPTS),
      -          baseline(MAXBASE),
@@ -100,32 +100,34 @@ c------------------------------------------------------------------------
      -          sels(MAXSELS)
 
       character type(-8:4)*2
- 
+
 c     external declarations
 
       integer   len1
- 
+      character versan*80
+
 c     initialise some variables
 
-      data opts / 'noapply  ','doall    ','notrip    ','noamp    ' /
+      data opts / 'noapply  ','doall    ','notrip   ','noamp    ' /
 
-      data minday / 1440.0d0 / 
+      data minday / 1440.0d0 /
 
       data type / 'YX', 'XY', 'YY', 'XX', 'LR', 'RL', 'LL', 'RR',
-     -            '  ', 'I ', 'Q ', 'U ', 'V ' /  
-
-      call output(version)          
+     -            '  ', 'I ', 'Q ', 'U ', 'V ' /
+c-----------------------------------------------------------------------
+      version = versan ('uvclip',
+     :  '$Id: uvclip.for,v 1.2 2007/04/16 02:52:20 cal103 Exp $')
 
 c     +++ read inputs
 
-      call keyini                   
+      call keyini
       call keya('vis',file,' ')
-      call selinput('select',sels,maxsels) 
+      call selinput('select',sels,maxsels)
       call options('options',opts,present,nopts)
       call keyd('interval',interval,0.0d0)
       call keyr('clip',clip,3.0)
-      call keya('log',log,' ')      
-      call keyfin                   
+      call keya('log',log,' ')
+      call keyfin
 
 c     setup option logicals
 
@@ -137,9 +139,9 @@ c     setup option logicals
 c     open the data file and apply selection criteria
 
       call uvopen(tno,file,'old')
-     
+
       call uvset(tno,'coord','wavelength',0,0.0,0.0,0.0)
-      call uvset(tno,'planet',' ',0,0.0,0.0,0.0) 
+      call uvset(tno,'planet',' ',0,0.0,0.0,0.0)
 
       call selapply(tno,sels,.true.)
 
@@ -154,7 +156,7 @@ c     initialise variables
         baseline(i) = .false.
         a1(i) = 0
         a2(i) = 0
-      end do 
+      end do
       do i = 1, MAXCYC
         vx(i) = 0.0
       end do
@@ -164,10 +166,10 @@ c     initialise variables
       flg = 0
 
 c     +++ begin processing uv data
- 
+
       call uvread(tno,preamble,data,flags,maxchan,nchan)
 
-      call uvrdvri(tno,'nants',na,0)  
+      call uvrdvri(tno,'nants',na,0)
       mb = na * (na - 1) / 2
 
       oldjd = preamble(3)
@@ -179,29 +181,29 @@ c     +++ begin processing uv data
 
         if(flags(nchan).or.doall) then
 
-          nrec = nrec + 1            
-           
+          nrec = nrec + 1
+
 c     process previous integration cycle
 
-          delmin = (preamble(3) - oldjd) * minday 
+          delmin = (preamble(3) - oldjd) * minday
           oldjd = preamble(3)
-  
+
           if(delmin.ne.0.0d0) then
-         
+
             nb = 0
             do i = 1, mb
               if(baseline(i)) then
                 nb = nb + 1
-              end if 
+              end if
             end do
             call triple(nc,nb,a1,a2,vx,bx,px,vis,tn,tb,tp,tv)
             do i = 1, mb
               baseline(i) = .false.
               a1(i) = 0
               a2(i) = 0
-            end do     
+            end do
 
-            nc = nc + 1   
+            nc = nc + 1
 
           end if
 
@@ -211,18 +213,18 @@ c     process previous integration cycle
 
             write(line,'(a,i3.3)') '! # accumulated cycles = ', nc
             call logwrit(line(1:len1(line)))
-                      
-            call uvstat(nc,vx,px,vis,tn,tp,tv,m) 
- 
+
+            call uvstat(nc,vx,px,vis,tn,tp,tv,m)
+
             if(doamp) call clipamp(clip,nc,m,vx,tx,px,bx,vis,
      -       flg,ft,fp,fb)
 
             if(dotrip) call cliptrp(clip,mb,nc,m,tx,tn,tb,tp,tv,
      -       flg,ft,fp,fb)
-  
-c     initialise interval accumulation variables   
 
-            nc = 1                      
+c     initialise interval accumulation variables
+
+            nc = 1
             do i = 1, MAXCYC
               vx(i) = 0.0
             end do
@@ -230,7 +232,7 @@ c     initialise interval accumulation variables
             call julday(oldjd,'H',calday)
             write(line,'(a,a18)') '! new interval @ ', calday
             call logwrit(line(1:len1(line)))
- 
+
           end if
 
 c     record baseline and antenna / cycle - all polarizations
@@ -241,23 +243,23 @@ c     record baseline and antenna / cycle - all polarizations
           ib = (i2 - 1) * (i2 - 2) / 2 + i1
           if(.not.baseline(ib)) baseline(ib) = .true.
           a1(ib) = i1
-          a2(ib) = i2 
+          a2(ib) = i2
 
 c     setup time ordered visibility indices and data
 
           call uvrdvri(tno,'pol',ip,0)
           if(ip.eq.0) call bug('f','% bad polarization index read')
 
-          tx(nc) = oldjd                 
-          vx(nc) = vx(nc) + 1            
-          px(vx(nc),nc) = ip              
-          bx(vx(nc),nc) = ib            
-          vis(vx(nc),nc) = data(nchan)  
- 
+          tx(nc) = oldjd
+          vx(nc) = vx(nc) + 1
+          px(vx(nc),nc) = ip
+          bx(vx(nc),nc) = ib
+          vis(vx(nc),nc) = data(nchan)
+
         end if
- 
+
 c     read next record
-        
+
         call uvread(tno,preamble,data,flags,MAXCHAN,nchan)
 
       end do
@@ -265,27 +267,27 @@ c     read next record
 c     process any remaining data
 
       if(nc.gt.0) then
-    
+
         write(line,'(a,i3.3)') '! # accumulated cycles = ', nc
         call logwrit(line(1:len1(line)))
-         
+
         nb = 0
         do i = 1, mb
           if(baseline(i)) then
             nb = nb + 1
-          end if 
+          end if
         end do
-   
+
         call triple(nc,nb,a1,a2,vx,bx,px,vis,tn,tb,tp,tv)
-            
-        call uvstat(nc,vx,px,vis,tn,tp,tv,m) 
-     
+
+        call uvstat(nc,vx,px,vis,tn,tp,tv,m)
+
         if(doamp) call clipamp(clip,nc,m,vx,tx,px,bx,vis,
      -   flg,ft,fp,fb)
 
         if(dotrip) call cliptrp(clip,mb,nc,m,tx,tn,tb,tp,tv,
      -   flg,ft,fp,fb)
-   
+
       end if
 
       write(line,'(a,i5.5)') '! # records processed = ', nrec
@@ -315,20 +317,20 @@ c     remove duplicate flags from amp and triple flagging
           end do
         end do
 
-c     rewind to the beginning 
+c     rewind to the beginning
 
         call uvrewind(tno)
 
         nrec = 0
         n = 0
-      
+
         call uvread(tno,preamble,data,flags,MAXCHAN,nchan)
-        
+
         do while (nchan.gt.0)
-             
+
           if(flags(nchan).or.doall) then
 
-            nrec = nrec + 1 
+            nrec = nrec + 1
 
             call uvrdvri(tno,'pol',ip,0)
             if(ip.eq.0) call bug('f','% bad polarization index read')
@@ -341,36 +343,36 @@ c     rewind to the beginning
             gotone = .false.
             i = 0
             do while(.not.gotone .and. i.le.flg)
-              i = i + 1 
+              i = i + 1
               gotone = ft(i).eq.preamble(3) .and. fp(i).eq.ip .and.
      -         fb(i).eq.ib
             end do
             if(gotone) then
               n = n + 1
-              if(doapply) then 
+              if(doapply) then
                 flags(nchan) = .false.
-                call uvflgwr(tno,flags)                        
-              else 
+                call uvflgwr(tno,flags)
+              else
                 call julday(preamble(3),'H',calday)
                 write(line,'(a,a18,x,a2,2(x,i2.2))') '> FLAGGED ',
-     -           calday, type(ip), i1, i2 
+     -           calday, type(ip), i1, i2
                 call logwrit(line(1:len1(line)))
-              end if 
-            end if 
+              end if
+            end if
 
           end if
 
           call uvread(tno,preamble,data,flags,MAXCHAN,nchan)
 
         end do
-  
+
         write(line,'(a,i5.5)') '! # flagged = ', n
         call logwrit(line(1:len1(line)))
-   
+
       end if
 
 c     close up the log
- 
+
       call uvclose(tno)
       call logclose
 
@@ -381,10 +383,9 @@ c     close up the log
 c     ----------------------------------------------------------------72
 c     +++ compute uv data statistics over the previous interval, returns
 c     (1) the median of visibility amplitude,
-c     (2) the mean and rms of the absolute visibility 
+c     (2) the mean and rms of the absolute visibility
 
       subroutine uvstat(nc,vx,px,vis,tn,tp,tv,m)
-      implicit none   
 
       integer   MAXVIS, MAXCYC, MAXDAT
       parameter (MAXVIS=128, MAXCYC=768, MAXDAT=MAXVIS*MAXCYC)
@@ -421,14 +422,14 @@ c     (2) the mean and rms of the absolute visibility
       integer   len1
 
       data type / 'YX', 'XY', 'YY', 'XX', 'LR', 'RL', 'LL', 'RR',
-     -            '  ', 'I ', 'Q ', 'U ', 'V ' /  
+     -            '  ', 'I ', 'Q ', 'U ', 'V ' /
 
 c     initialise arrays
 
-      do ip = -8, 4 
+      do ip = -8, 4
 
-        sumamp(ip) = 0.0 
-        sumsqua(ip) = 0.0 
+        sumamp(ip) = 0.0
+        sumsqua(ip) = 0.0
         sumphs(ip) = 0.0
         sumsqup(ip) = 0.0
         n1(ip) = 0
@@ -440,11 +441,11 @@ c     loop through integration cycles summing amplitudes &c.
 
       do ic = 1, nc
 
-        do iv = 1, vx(ic)  
+        do iv = 1, vx(ic)
 
           ip = px(iv,ic)
           data = vis(iv,ic)
- 
+
           n1(ip) = n1(ip) + 1
 
           call amphase(data,amp(n1(ip),ip),tmp)
@@ -453,21 +454,21 @@ c     loop through integration cycles summing amplitudes &c.
           sumsqua(ip) = sumsqua(ip) + amp(n1(ip),ip) ** 2
 
         end do
- 
+
         do it = 1, tn(ic)
- 
+
           ip = tp(it,ic)
           data = tv(it,ic)
 
           n2(ip) = n2(ip) + 1
 
           call amphase(data,tmp,phs(n2(ip),ip))
-          
+
           sumphs(ip) = sumphs(ip) + phs(n2(ip),ip)
           sumsqup(ip) = sumsqup(ip) + phs(n2(ip),ip) ** 2
 
         end do
- 
+
       end do
 
       do ip = -8, 4
@@ -485,14 +486,14 @@ c     compute amplitude statistics / polarization
             tmp = tmp / 2.0
           end if
           m(1,ip) = tmp
- 
+
           m(2,ip) = sumamp(ip) / n1(ip)
           m(3,ip) = sqrt(sumsqua(ip) / n1(ip) - m(2,ip) ** 2)
- 
+
           write(line,'(a,x,a2,x,a,3(x,e9.3),x,i5.5)') '>',
      -     type(ip), 'amp ( Jy)', (m(i,ip),i=1,3), n1(ip)
           call logwrit(line(1:len1(line)))
-    
+
         end if
 
 c     compute visibility triple phase statistics / polarization
@@ -529,7 +530,6 @@ c     +++ compute closure relation of visibility triples for previous
 c     integration cycle
 
       subroutine triple(nc,nb,a1,a2,vx,bx,px,vis,tn,tb,tp,tv)
-      implicit none
 
       include 'maxdim.h'
 
@@ -546,7 +546,7 @@ c     integration cycle
       logical   same,
      -          zero,
      -          comb
-  
+
       complex   vis(MAXVIS,MAXCYC),
      -          tmp,
      -          data(MAXBASE,-8:4),
@@ -579,8 +579,8 @@ c     initialise arrays
 c     form triple product combinations and compute triple visibility
 
       do ip = -8, 4
-    
-        if(dn(ip).gt.0) then 
+
+        if(dn(ip).gt.0) then
 
           do i = 1, nb - 2
             do j = i + 1, nb - 1
@@ -596,21 +596,21 @@ c     form triple product combinations and compute triple visibility
                   tn(nc) = tn(nc) + 1
 
                   tmp = data(i,ip) * conjg(data(j,ip)) * data(k,ip)
-               
+
                   tb(1,tn(nc),nc) = i
                   tb(2,tn(nc),nc) = j
                   tb(3,tn(nc),nc) = k
- 
+
                   tp(tn(nc),nc) = ip
                   tv(tn(nc),nc) = tmp
 
                 end if
-            
+
               end do
-            end do                                                
+            end do
           end do
-    
-        end if 
+
+        end if
 
       end do
 
@@ -686,7 +686,6 @@ c     ----------------------------------------------------------------72
 c     +++ determine visibilities to clip based on amplitude statistics
 
       subroutine clipamp(clip,nc,m,vx,tx,px,bx,vis,flg,ft,fp,fb)
-      implicit none
 
       integer   MAXCYC, MAXVIS, MAXDAT
       parameter (MAXCYC=768, MAXVIS=128, MAXDAT=MAXCYC*MAXVIS)
@@ -695,7 +694,7 @@ c     +++ determine visibilities to clip based on amplitude statistics
      -          vx(MAXCYC),
      -          px(MAXVIS,MAXCYC),
      -          bx(MAXVIS,MAXCYC)
-       
+
       real      m(6,-8:4)
 
       double precision tx(MAXCYC),
@@ -724,7 +723,7 @@ c     +++ determine visibilities to clip based on amplitude statistics
         do j = 1, vx(i)
 
           ip = px(j,i)
-          ib = bx(j,i) 
+          ib = bx(j,i)
 
           call amphase(vis(j,i),amp,tmp)
 
@@ -732,26 +731,25 @@ c     +++ determine visibilities to clip based on amplitude statistics
           upper = m(1,ip) + clip * m(3,ip)
 
           if(amp.lt.lower .or. upper.lt.amp) then
-           
+
             flg = flg + 1
             ft(flg) = tx(i)
             fp(flg) = ip
             fb(flg) = ib
- 
+
           end if
 
         end do
- 
+
       end do
 
       return
-      end 
-   
+      end
+
 c     ----------------------------------------------------------------72
 c     +++ determine visibilities to clip based on closure phase stats
 
       subroutine cliptrp(clip,mb,nc,m,tx,tn,tb,tp,tv,flg,ft,fp,fb)
-      implicit none
 
       include 'maxdim.h'
 
@@ -793,7 +791,7 @@ c     +++ determine visibilities to clip based on closure phase stats
       character calday*18
 
 c     loop through all collected cycles
-      
+
       do i = 1, nc
 
         call julday(tx(i),'H',calday)
@@ -809,7 +807,7 @@ c     separate good triples / polarization from the rest
 
           ip = tp(j,i)
           doip(ip) = .true.
-          
+
           call amphase(tv(j,i),tmp,phs)
 
           lower = m(4,ip) - clip * m(6,ip)
@@ -828,17 +826,17 @@ c     keep baselines found in the good triples / polarization, flag the rest
 
         do ip = -8, 4
 
-          if(doip(ip)) then  
-          
+          if(doip(ip)) then
+
             do ib = 1, mb
               flag(ib,ip) = .true.
-            end do 
+            end do
 
             do j = 1, nok(ip)
               do k = 1, 3
                 ib = tb(k,tok(j,ip),nc)
-                flag(ib,ip) = .false. 
-              end do 
+                flag(ib,ip) = .false.
+              end do
             end do
 
             do ib = 1, mb
@@ -851,9 +849,9 @@ c     keep baselines found in the good triples / polarization, flag the rest
             end do
 
           end if
-                                                        
+
         end do
-        
+
       end do
 
       return

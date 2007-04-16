@@ -55,20 +55,20 @@ c    rjs  24jan94  Change ownership
 c    rjs  23jul94  Major rewrite. No error estimates for the time
 c		   being.
 c    rjs  31aug94  Reborn as uvpit.
-c------------------------------------------------------------------------
+c
+c $Id: uvpit.for,v 1.3 2007/04/16 02:52:20 cal103 Exp $
+c-----------------------------------------------------------------------
 	integer PolXX,PolYY,PolXY,PolYX
 	parameter(PolXX=-5,PolYY=-6,PolXY=-7,PolYX=-8)
 	integer MAXVAR
 	parameter(MAXVAR=20)
 	include 'maxdim.h'
-	character version*(*)
-        parameter(version='version 1.0 23-Jul-94')
 	include 'uvpit.h'
 c
 	real tol,epsfcn
 	parameter(tol=1e-6,epsfcn=1e-3)
 c
-	character out*64,ltype*16
+	character out*64, ltype*16, version*80
 	integer lIn,lOut
 	integer nread,ifail,i,nvar,npol
 	real x(MAXVAR),rms
@@ -81,17 +81,19 @@ c
 c
 c  Externals.
 c
-        character itoaf*8
+        character itoaf*8, versan*80
 	logical uvDatOpn
         external FUNCTION
 c
 c  Dynamic memory commons.
 c
 	include 'mem.h'
+c-----------------------------------------------------------------------
+        version = versan ('uvpit',
+     :    '$Id: uvpit.for,v 1.3 2007/04/16 02:52:20 cal103 Exp $')
 c
 c  Get the inputs.
 c
-	call output('Uvpit: '//version)
 	call keyini
 	call uvDatInp('vis','dlpxbcef')
 	call keya('out',out,' ')
@@ -189,7 +191,7 @@ c
 	  if(.not.uvDatOpn(lIn))
      *	    call bug('f','Error opening input file')
 	  call VarInit(lIn,ltype)
-c	  
+c
 	  call uvopen(lOut,out,'new')
 	  call hdcopy(lIn,lOut,'history')
 	  call hisopen(lOut,'append')
@@ -235,15 +237,14 @@ c
 	endif
 c
         end
-c************************************************************************
+c***********************************************************************
 	subroutine CoordFid(lIn,topix)
 c
-	implicit none
 	integer lIn
 	logical topix
 c
 c  Convert between true offset coordinates and grid coordinates.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'uvpit.h'
 	double precision x1(2),x2(2)
 c
@@ -260,16 +261,15 @@ c
 	offset(2) = x2(2)
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine GetRMS(m,fvec,rms)
 c
-	implicit none
 	integer m
 	real rms
 	complex fvec(m)
 c
 c  Determine the rms residual.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer i
 	double precision dtemp
 c
@@ -280,15 +280,14 @@ c
 c
 	rms = sqrt(dtemp / (2*m))
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine PackPar(x,nvar,MAXVAR)
 c
-	implicit none
 	integer nvar,MAXVAR
 	real x(MAXVAR)
 c
 c  Store all the things that we need to vary.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'uvpit.h'
 c
@@ -314,15 +313,14 @@ c
 	endif
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine UPackPar(x,nvar)
 c
-	implicit none
 	integer nvar
 	real x(nvar)
 c
 c  Store all the things that we need to vary.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'uvpit.h'
 	integer n
@@ -351,15 +349,14 @@ c
 	if(n.ne.nvar)call bug('f','Inconsistency in UnPackPar')
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine FUNCTION(m,nvar,x,fvec,iflag)
 c
-	implicit none
 	integer m,nvar,iflag
 	real x(nvar)
 	complex fvec(m/2)
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'uvpit.h'
 	integer i
 c
@@ -379,17 +376,16 @@ c
 	enddo
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine Eval(uu,vv,chi0,t0,pol0,model,n)
 c
-	implicit none
 	integer n
 	real uu(n),vv(n),chi0(n),t0(n)
 	integer pol0(n)
 	complex model(n)
 c
 c  Evaluate the source model.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'mirconst.h'
 	integer PolXX,PolYY,PolXY,PolYX
 	parameter(PolXX=-5,PolYY=-6,PolXY=-7,PolYX=-8)
@@ -417,13 +413,12 @@ c
 	  theta = 2*pi*(uu(i)*offset(1)+vv(i)*offset(2))
 	  w = cmplx(cos(theta),sin(theta))
 	  model(i) = model(i) * (1 + dfdt*t0(i)) * w
-	enddo	    
+	enddo
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine GetOpt(dores,noqu,nov,const,noshift)
 c
-	implicit none
 	logical dores,noqu,nov,const,noshift
 c
 c  Get extra processing options.
@@ -434,13 +429,13 @@ c    noqu
 c    nov
 c    const
 c    noshift
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer nopts
 	parameter(nopts=5)
 	character opts(nopts)*8
 	logical present(nopts)
-	data opts/'residual ','noqu    ','nov     ','constant',
-     *		  'noshift  '/
+	data opts/'residual','noqu    ','nov     ','constant',
+     *		  'noshift '/
 c
 	call options('options',opts,present,nopts)
 c
@@ -450,15 +445,14 @@ c
 	const   = present(4)
 	noshift = present(5)
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine Report(time0,rms)
 c
-	implicit none
 	double precision time0
 	real rms
 c
 c  Report on the source component solution.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'uvpit.h'
 	include 'mirconst.h'
 	real per,pa
@@ -518,13 +512,11 @@ c
   50    format('Offset position:           ',2f9.2,' arcsec')
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine LoadSrc
 c
-	implicit none
-c
 c  Load initial estimates of the source parameters.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'uvpit.h'
 c

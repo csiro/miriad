@@ -109,15 +109,15 @@ c    bmg  29may96  Added fitting for a thin face-on ring. I have coded
 c                  spheres and thick shells, but they don't work yet!
 c    rjs  18mar97  Handle multiple files, autocorr data, better message.
 c    bmg  14jan05  Added 2 more significant figures to offset position
-c------------------------------------------------------------------------
+c
+c $Id: uvfit.for,v 1.3 2007/04/16 02:52:20 cal103 Exp $
+c-----------------------------------------------------------------------
 	integer MAXVAR
 	parameter(MAXVAR=20)
 	include 'maxdim.h'
-	character version*(*)
-        parameter(version='version 1.0 18-Mar-97')
 	include 'uvfit.h'
 c
-	character out*64,ltype*16
+	character out*64, ltype*16, version*80
 	integer lIn,lOut
 	integer nread,ifail1,ifail2,i,nvar,npol,pol
 	real x(MAXVAR),rms,covar(MAXVAR*MAXVAR)
@@ -127,13 +127,15 @@ c
 c
 c  Externals.
 c
-        character itoaf*8
+        character itoaf*8, versan*80
 	logical uvDatOpn
         external FUNCTION
+c-----------------------------------------------------------------------
+        version = versan ('uvfit',
+     :    '$Id: uvfit.for,v 1.3 2007/04/16 02:52:20 cal103 Exp $')
 c
 c  Get the inputs.
 c
-	call output('Uvfit: '//version)
 	call keyini
 	call uvDatInp('vis','sdlpcef')
 	call LoadSrc
@@ -208,7 +210,7 @@ c
 	  if(.not.uvDatOpn(lIn))
      *	    call bug('f','Error opening input file')
 	  call VarInit(lIn,ltype)
-c	  
+c
 	  call uvopen(lOut,out,'new')
 	  call hdcopy(lIn,lOut,'history')
 	  call hisopen(lOut,'append')
@@ -250,15 +252,14 @@ c
 	endif
 c
         end
-c************************************************************************
+c***********************************************************************
 	subroutine PackPar(x,nvar,MAXVAR)
 c
-	implicit none
 	integer nvar,MAXVAR
 	real x(MAXVAR)
 c
 c  Store all the things that we need to vary.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'uvfit.h'
 	integer i,j,ncurr
@@ -309,15 +310,14 @@ c
 	enddo
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine UPackPar(x,nvar)
 c
-	implicit none
 	integer nvar
 	real x(nvar)
 c
 c  Store all the things that we need to vary.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'uvfit.h'
 	integer i,n
@@ -361,15 +361,14 @@ c
      *	  call bug('f','Inconsistent number of free parameters')
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine UPackCov(covar,nvar)
 c
-	implicit none
 	integer nvar
 	real covar(nvar,nvar)
 c
 c  Unpack the covariance matrix.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'uvfit.h'
 	integer i,n
@@ -413,15 +412,14 @@ c
      *	  call bug('f','Inconsistent number of free parameters')
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine FUNCTION(m,nvar,x,fvec,iflag)
 c
-	implicit none
 	integer m,nvar,iflag
 	real x(nvar)
 	complex fvec(m/2)
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'uvfit.h'
 	integer i
 c
@@ -441,16 +439,15 @@ c
 	enddo
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine Eval(uu,vv,model,n)
 c
-	implicit none
 	integer n
 	real uu(n),vv(n)
 	complex model(n)
 c
 c  Evaluate the source model.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'uvfit.h'
 	integer i,j
@@ -548,35 +545,33 @@ c
 	enddo
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine GetOpt(dores)
 c
-	implicit none
 	logical dores
 c
 c  Get extra processing options.
 c
 c  Output:
 c    dores
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer nopts
 	parameter(nopts=1)
 	character opts(nopts)*8
 	logical present(nopts)
-	data opts/'residual '/
+	data opts/'residual'/
 c
 	call options('options',opts,present,nopts)
 c
 	dores = present(1)
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine Report(rms)
 c
-	implicit none
 	real rms
 c
 c  Report on the source component solution.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'uvfit.h'
 	real f1,f2,p,t,sf1,sf2,sp
@@ -648,7 +643,7 @@ c
             write(line,30)f1,f2
 
    30       format('  Major,minor axes (arcsec):',2f11.4)
-   
+
 	    call output(line)
 	    if(sf1+sf2.gt.0)then
 	      write(line,31)sf1,sf2
@@ -666,14 +661,13 @@ c
 	  endif
 	enddo
 	call output('------------------------------------------------')
-c	  
+c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine LoadSrc
-	implicit none
 c
 c Load the source components and their initial estimates.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'uvfit.h'
 	integer nout,i
@@ -688,7 +682,7 @@ c  Externals.
 c
 	logical keyprsnt
 	integer binsrcha
- 
+
  	data objects/'disk    ','gaussian','point   ','ring   ',
      *               'shell   '/
 	data objtype/ DISK,      GAUSSIAN,  POINT, RING,  SHELL/
@@ -749,8 +743,8 @@ c
 	  vflux(nsrc) = index(fix,'f').eq.0
 	  vl0(nsrc)   = index(fix,'x').eq.0
 	  vm0(nsrc)   = index(fix,'y').eq.0
-	  
-   
+
+
          if(srctype(nsrc).eq.DISK.or.srctype(nsrc).eq.GAUSSIAN.or.
      *        srctype(nsrc).eq.SHELL.or.srctype(nsrc).eq.RING)then
             vfwhm1(nsrc)= index(fix,'a').eq.0
