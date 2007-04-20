@@ -25,7 +25,7 @@
 # target names by running 'gmake help'
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakedefs,v 1.27 2007/03/26 06:56:54 cal103 Exp $
+# $Id: GNUmakedefs,v 1.28 2007/04/20 00:27:54 cal103 Exp $
 #-----------------------------------------------------------------------------
 # We rely only on the MIR environment variable.
 MIRROOT  := $(MIR)
@@ -262,7 +262,7 @@ export LC_TYPE    := POSIX
 # -d (--debug=[abvijm]) option and must be set on the command line.  (These
 # makefiles do not rely on any built-in rules or variables, in fact some
 # interfere with the rules defined here and must be defeated explicitly.)
-MAKEFLAGS := -i $(MAKEFLAGS)
+MAKEFLAGS := -i --no-print-directory $(MAKEFLAGS)
 
 # Basic variables.
 override SHELL    := /bin/sh
@@ -515,7 +515,7 @@ endif
 %.o: %.s
 %.o: %.S
 
-(%): %
+(%): %		# Archive library member.
 
 #-----------------------------------------------------------------------------
 # General static rules applicable to all Miriad makefiles.
@@ -523,7 +523,7 @@ endif
 ifeq "$(MAKEMODE)" "system"
   # System-oriented rules.
   #-----------------------
-  .PHONY : allsys chkout cleansys sysdirs help
+  .PHONY : allsys chklog chkout cleansys sysdirs help
 
   # At the minimum the default rule checks out sources if the RCS repositories
   # exist.  Additional dependencies may be defined for allsys in the including
@@ -532,16 +532,18 @@ ifeq "$(MAKEMODE)" "system"
 
   # Rules for checking out sources if the RCS repository is available.
   ifdef MIRRCS
-    chkout : $(CODEDIR)
+    chkout : chklog $(CODEDIR)
 	-@ for i in $$SUBDIRS ; do \
-	     if [ "$Q" != "@" -o "$(MAKELEVEL)" = 0 ] ; then \
-	       echo "" ; \
-	       echo gmake[$(MAKELEVEL)]: $(MAKE) -C $(CODEDIR)/$$i $@ ; \
-	     else \
-	       echo $@[$(MAKELEVEL)]:"$(MAKEINDENT)"$$i ; \
-	     fi ; \
-	     $(MAKE) -C $$i $@ ; \
+	     $(MAKE) -C $$i chkout ; \
 	   done
+
+    chklog :
+	-@ if [ "$Q" != "@" -o "$(MAKELEVEL)" = 0 ] ; then \
+	     echo "" ; \
+	     echo gmake[$(MAKELEVEL)]: $(MAKE) -C $(CODESUBD) chkout ; \
+	   else \
+	     echo chkout[$(MAKELEVEL)]:"$(MAKEINDENT)"$(notdir $(CODESUBD)) ; \
+	   fi
 
     $(CODEDIR) : $(MIRSRCS:%=$(CODEDIR)/%)
   endif
