@@ -70,6 +70,7 @@ c    rjs  18sep05    Fix up type inconsistency bug.
 c    rjs  20sep05    Correct handling of degenerate extension tables.
 c    rjs  01jan07    Added routines fantbas and fbasant to convert baseline
 c		     numbering convension.
+c    pjt  08mar07    Added support for reading bitpix=-64 images
 c
 c  Bugs and Shortcomings:
 c    * IF frequency axis is not handled on output of uv data.
@@ -245,8 +246,13 @@ c
 	if(status.ne.'new')then
 	  call fitopen(lu,name,status)
 	  call fitrdhdi(lu,'BITPIX', bitpix,0)
-	  if(bitpix.ne.16.and.abs(bitpix).ne.32)
-     *		call bug('f','Unsupported value for BITPIX')
+	  if(bitpix.ne.16.and.abs(bitpix).ne.32) then
+             if (bitpix.eq.-64) then
+                call bug('w','Loosing precision for BITPIX=-64')
+             else
+                call bug('f','Unsupported value for BITPIX')
+             endif
+          endif
 	  Bytes = abs(BitPix)/8
 	  dofloat = BitPix.lt.0
 	  call fitrdhdi(lu,'NAXIS',ndim,0)
@@ -404,6 +410,7 @@ c------------------------------------------------------------------------
 	integer i,offset,length,iostat,blank
 	real bs,bz
 	include 'fitsio.h'
+        double precision data8(MAXDIM)
 c
 c  Check that it is the right sort of operation for this file.
 c
@@ -423,7 +430,14 @@ c
 c  Do the floating point case. Blank the data if needed.
 c
 	if(float(lu))then
-	  call hreadr(item(lu),data,offset,BypPix(lu)*length,iostat)
+          if (BypPix(lu).eq.4) then
+             call hreadr(item(lu),data,offset,BypPix(lu)*length,iostat)
+          else 
+             call hreadd(item(lu),data8,offset,BypPix(lu)*length,iostat)
+             do i=1,length
+                data(i) = data8(i)
+             enddo
+          endif
 	  if(iostat.ne.0)call bugno('f',iostat)
 c
 	  if(bs.ne.1.or.bz.ne.0)then
@@ -4337,6 +4351,8 @@ c    baseline = (Ant1 * 256) + Ant2.  (when ant1,ant2 < 256)
 c  or
 c    baseline = (Ant1 * 2048) + Ant2 + 65536. (otherwise)
 c
+c  See also: basant
+c
 c  Input:
 c    bl	      The baseline number.
 c  Output:
@@ -4373,6 +4389,8 @@ c
 	real bl
 c
 c  Determine the baseline number of a pair of antennas.
+c
+c  See also: antbas
 c
 c------------------------------------------------------------------------
 	if(max(i1,i2).gt.255)then
