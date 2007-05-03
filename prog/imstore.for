@@ -1,6 +1,5 @@
-c************************************************************************
+c***********************************************************************
       PROGRAM imstore
-      IMPLICIT NONE
 c
 c= imstore - Write out image data in an ascii format.
 c& pjt
@@ -20,10 +19,10 @@ c     Only image pixels above the clip value are written. The default
 c     is all data.
 c@ scale
 c     Scale factor with which the image data is multiplied
-c     before output. The default is 1. Note this scaling is done before the
-c     clip test (as described above).
+c     before output. The default is 1. Note this scaling is done before
+c     the clip test (as described above).
 c@ mode
-c     Output mode. This determines the format of the output. Currently 
+c     Output mode. This determines the format of the output. Currently
 c     accepted are: dump, uvgen and nemo. The default is dump.
 c
 c     mode=dump writes out the values of the selected pixel, only, with
@@ -42,10 +41,10 @@ c     Override the default mode-dependant output format. Default: none.
 c     Note: The format specification must be a legal fortran
 c     format, including the parenthesis; e.g. ``format=(3F20.10)''
 c@ units
-c     Units of the output axes. Valid options are "absolute" and "relative"
-c     (with respect to the reference pixel).
-c     If an axis is a known astronomical coordinate system, the units are
-c     displayed in arcsecs. The default is "relative".
+c     Units of the output axes. Valid options are "absolute" and
+c     "relative" (with respect to the reference pixel).
+c     If an axis is a known astronomical coordinate system, the units
+c     are displayed in arcsecs. The default is "relative".
 c@ log
 c     The output log file. The default is the terminal.
 c--
@@ -65,21 +64,21 @@ c      5apr94 pjt   fixed units bug when 2nd axis is an angle
 c      9jun94 pjt   region= clarification + export bug fix 5apr94
 c     08may00 rjs   Change incorrect call of keyf to keya
 c     19jun00 rjs   Tidy up at add mode=dump.
-c------------------------------------------------------------------------
 c
+c $Id: imstore.for,v 1.2 2007/05/03 05:43:51 cal103 Exp $
+c-----------------------------------------------------------------------
       INCLUDE 'mirconst.h'
       INCLUDE 'maxdim.h'
       INCLUDE 'maxnax.h'
+c
       INTEGER MAXBOXES,MAXRUNS,NBUF
       REAL RAD2SEC
-      CHARACTER PVERSION*(*)
       PARAMETER(MAXBOXES=2048)
       PARAMETER(MAXRUNS=3*MAXDIM,NBUF=8)
       PARAMETER(RAD2SEC=3600.0*180.0/PI)
-      PARAMETER(PVERSION='Version 1.0 19-Jun-00')
 c
-      CHARACTER file*132,line*256,mode*20,logfile*132, 
-     *          ctype1*10, ctype2*10, format*30, units*20
+      CHARACTER file*132,line*256,mode*20,logfile*132,
+     *          ctype1*10, ctype2*10, format*30, units*20, version*80
       INTEGER nsize(MAXNAX),plane(MAXNAX)
       INTEGER blc(MAXNAX),trc(MAXNAX)
       INTEGER i,j,k, npoints
@@ -97,11 +96,13 @@ c
 c  Externals.
 c
       LOGICAL keyprsnt, astaxis
+      character versan*80
 c
       data unitss/'relative','absolute'/
       data modes /'dump    ','uvgen   ','nemo    '/
-c
-      CALL output( 'ImStore: ' // PVERSION)
+c-----------------------------------------------------------------------
+      version = versan('imstore',
+     +  '$Id: imstore.for,v 1.2 2007/05/03 05:43:51 cal103 Exp $')
 c
 c  Get user inputs
 c
@@ -132,7 +133,7 @@ c
          CALL output('Output mode=uvgen; format='//format)
          douvgen = .TRUE.
       ELSE IF(mode.eq.'nemo') THEN
-         IF(format.EQ.' ') format = '(3G16.9)'
+         IF(format.EQ.' ') format = '(3G16.8)'
          CALL output('Output mode=nemo; format='//format)
          donemo = .TRUE.
       ENDIF
@@ -140,7 +141,7 @@ c
       CALL logopen(logfile,' ')
 c
 c  Open file, and get some header info
-c 
+c
       CALL xyopen(lun,file,'old',MAXNAX,nsize)
       CALL rdhdi(lun,'naxis',naxis,0)
       naxis = MIN(naxis,MAXNAX)
@@ -243,7 +244,6 @@ c
 c***********************************************************************
       SUBROUTINE planeinc(n,blc,trc,plane,done)
 c
-	IMPLICIT NONE
 	INTEGER n,blc(n),trc(n),plane(n)
 	LOGICAL done
 c
@@ -271,7 +271,7 @@ c***********************************************************************
         CHARACTER ctype*(*)
 c
         astaxis = .FALSE.
-        
+
         IF(ctype(1:2).EQ.'RA') THEN
             astaxis = .TRUE.
         ELSE IF (ctype(1:3).EQ.'DEC') THEN
