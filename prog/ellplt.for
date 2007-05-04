@@ -1,6 +1,5 @@
-c**********************************************************************c
+c***********************************************************************
         program ellplt
-        implicit none
 c
 c= ELLPLT - Plot points in elliptical annuli.
 c& rjs
@@ -10,27 +9,31 @@ c	ELLPLT plots the values of a Miriad image along ellipses.
 c@ in
 c	Input image name. No default.
 c@ region
-c	Region of image to be displayed. See the help on "region" for more
-c	information.
+c	Region of image to be displayed. See the help on "region" for
+c       more information.
 c@ center
-c	The offset of the center of the annuli in arcsec (or natural units
-c	if options=natural is used) offset from the reference pixel.
+c	The offset of the center of the annuli in arcsec (or natural
+c       units if options=natural is used) offset from the reference
+c       pixel.
 c@ pa
-c	Position angle of ellipse major axis in degrees. Default is 0 (north).
+c	Position angle of ellipse major axis in degrees.  Default is 0
+c       (north).
 c@ incline
 c	The ellipse is assumed to be a circular structure that appears
-c	ellitpical because it is viewed at some inclination. The "incline"
-c	parameter gives this inclination angle in degrees. Default=0. (face on)
+c	elliptical because it is viewed at some inclination.  The
+c       "incline" parameter gives this inclination angle in degrees.
+c       Default=0. (face on)
 c@ radius
 c	This gives one or two values, determining the radii of the major
-c	axis of the annulus of interest. If one value is given, then this
-c	is taken as the radius at the center of the annulus, and the annulus
-c	is 5% wide. If two values are given, these are taken as the inner
-c	and outer radii of the annulus. The units are (by default) arcsec,
-c	but can be natural units if options=natural is used. No default.
+c	axis of the annulus of interest. If one value is given, then
+c       this is taken as the radius at the center of the annulus, and
+c       the annulus is 5% wide.  If two values are given these are taken
+c       as the inner and outer radii of the annulus.  The units are (by
+c       default) arcsec, but can be natural units if options=natural is
+c       used.  No default.
 c@ range
-c	Min and max greyscale values for the greyscale plot. The default is
-c	the image minimum and maximum.
+c	Min and max greyscale values for the greyscale plot.  The
+c       default is the image minimum and maximum.
 c@ device
 c	Plotting device. See the help on "device" for more information.
 c	The default is not to make a plot.
@@ -44,21 +47,22 @@ c--
 c  History:
 c    rjs   06mar97	Adapted from ellint.
 c    rjs   18sep05      Corrected incorrect type.
-c----------------------------------------------------------------------c
+c
+c $Id: ellplt.for,v 1.2 2007/05/04 07:06:48 cal103 Exp $
+c-----------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'maxdim.h'
 	include 'mem.h'
 c
-        character*(*) version
-        parameter(version='version 1.0 06-Mar-97')
         integer maxboxes
         parameter(maxboxes=2048)
 c
-	real pa,incline,rmin,rmax,cospa,sinpa,cosi,zmin,zmax
+	real pa,incline,rmin,rmax,zmin,zmax
         integer boxes(maxboxes),i,blc(3),trc(3),nsize(3),lIn,nx,ny,k
 	character in*64,cin*2,xlab*24,ylab*24,device*64,logf*64
 	logical natural
 	double precision center(2),cdelt(2),crpix(2),rts
+        character version*80
 c
 	integer MAXPNT
 	parameter(MAXPNT=1000000)
@@ -67,12 +71,14 @@ c
 c
 c  Externals.
 c
-	character itoaf*8
 	integer pgbeg
+	character itoaf*8, versan*80
+c-----------------------------------------------------------------------
+        version = versan('ellplt',
+     +    '$Id: ellplt.for,v 1.2 2007/05/04 07:06:48 cal103 Exp $')
 c
 c Get inputs.
 c
-        call output( 'ELLPLT: '//version )
         call keyini
         call keya('in',in,' ')
         if(in .eq. ' ') call bug('f','No input specified.')
@@ -140,10 +146,6 @@ c
 	  rts = 3600.*180./PI
 	endif
 c
-        cospa = cos(pa*pi/180.)
-        sinpa = sin(pa*pi/180.)
-        cosi = cos(incline*pi/180.)
-c
 	nx = trc(1) - blc(1)
 	ny = trc(2) - blc(2)
 	mpnt = min(nx*ny,MAXPNT)
@@ -172,7 +174,7 @@ c
      *	    rts*cdelt(1),rts*cdelt(2),crpix(1),crpix(2),
      *	    center(1),center(2),
      *	    memr(pxval),memr(pyval),memr(ptheta),memr(pval),mpnt,npnt,
-     *	    cospa,sinpa,cosi,rmin,rmax)
+     *	    pa,incline,rmin,rmax)
 c
 c  Plot the data.
 c
@@ -194,17 +196,16 @@ c
         call xyclose(lin)
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine Plotit(Array,nx,ny,dx,dy,x0,y0,xc,yc,zmin,zmax,
      *	  xlab,ylab,xval,yval,theta,val,npnt)
 c
-	implicit none
 	integer nx,ny,npnt
 	real Array(nx,ny),zmin,zmax
 	real xval(npnt),yval(npnt),theta(npnt),val(npnt)
 	double precision dx,dy,x0,y0,xc,yc
 	character xlab*(*),ylab*(*)
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	real xmin,xmax,ymin,ymax,zlo,zhi,minv,maxv,tr(6)
 	integer symbol,mark,i
 c
@@ -255,16 +256,15 @@ c
 	call pgbox('BCNST',0.,0,'BCNST',0.,0)
 	call pglab('\gl\dIII\u (degrees)','Intensity',' ')
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine Load(lIn,Data,nx,ny,i0,j0,dx,dy,x0,y0,xc,yc,
-     *	  xval,yval,theta,val,maxpnt,npnt,cospa,sinpa,cosi,rmin,rmax)
+     *	  xval,yval,theta,val,maxpnt,npnt,pa,incline,rmin,rmax)
 c
-	implicit none
 	integer lIn,nx,ny,i0,j0,maxpnt,npnt
 	double precision x0,y0,dx,dy,xc,yc
 	real xval(maxpnt),yval(maxpnt),val(maxpnt),theta(maxpnt)
-	real data(nx,ny),cospa,sinpa,cosi,rmin,rmax
-c------------------------------------------------------------------------
+	real data(nx,ny),pa,cospa,sinpa,incline,cosi,rmin,rmax
+c-----------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'maxdim.h'
 	integer i,j,id,jd
@@ -272,6 +272,10 @@ c------------------------------------------------------------------------
 	logical mask(MAXDIM)
 c
 c  Initialize integrals for each axis.
+c
+	cospa = cos(pa*pi/180.0)
+	sinpa = sin(pa*pi/180.0)
+	cosi  = cos(incline*pi/180.0)
 c
 	npnt = 0
 	jd = j0 - 1
@@ -285,7 +289,7 @@ c
 	    id = id + 1
 	    data(i,j) = buf(id)
             x = (id-x0)*dx - xc
-            r = sqrt((y*cospa-x*sinpa)**2+((y*sinpa+x*cospa)/cosi)**2)
+            r = sqrt((y*cospa+x*sinpa)**2+((-y*sinpa+x*cospa)/cosi)**2)
             if(r.ge.rmin.and.r.le.rmax.and.mask(id))then
 	      npnt = npnt + 1
 	      if(npnt.gt.MAXPNT)call bug('f','Too many points to plot')
@@ -303,9 +307,8 @@ c
         enddo
 c
         end
-c********1*********2*********3*********4*********5*********6*********7*c
+c***********************************************************************
       subroutine getopt(natural)
-      implicit none
 c
       logical natural
 c
@@ -326,15 +329,14 @@ c
       natural = present(1)
 c
       end
-c************************************************************************
+c***********************************************************************
 	subroutine Logit(k,theta,val,npnt)
 c
-	implicit none
 	integer k,npnt
 	real theta(npnt),val(npnt)
 c
 c  Write out the values of the intensity as a function of angle.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer i
 	character line*64
 	logical more
