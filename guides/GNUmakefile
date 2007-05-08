@@ -2,7 +2,7 @@
 # GNUmakefile for compiling Miriad documentation.
 #
 # Original: 2006/09/18, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.12 2006/11/29 00:01:32 cal103 Exp $
+# $Id: GNUmakefile,v 1.13 2007/05/08 01:40:14 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
@@ -103,8 +103,13 @@ ifeq "$(MAKEMODE)" "system"
 	     chmod 664 $@ ; \
 	   fi
 
-  # Special doc files are not converted to man pages.
-  man : $(MIRDOCS:%.doc=$(MIRMAND)/man1/%.1)
+  man : $(MIRMAND) ;
+
+  # Special doc files are not converted to man pages.  The timestamp on the
+  # system-specific directory itself will be updated when the index is
+  # updated.  This is used because the index has different names on different
+  # systems.
+  $(MIRMAND) :: $(MIRDOCS:%.doc=$(MIRMAN1D)/%.1)
     ifneq "$(MANDB)" ":"
 	-@ echo ""
 	   $(MANDB) $(MIRMAND)
