@@ -25,7 +25,7 @@
 # target names by running 'gmake help'
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakedefs,v 1.28 2007/04/20 00:27:54 cal103 Exp $
+# $Id: GNUmakedefs,v 1.29 2007/05/08 01:13:08 cal103 Exp $
 #-----------------------------------------------------------------------------
 # We rely only on the MIR environment variable.
 MIRROOT  := $(MIR)
@@ -589,7 +589,7 @@ ifeq "$(MAKEMODE)" "system"
   # Rules for creating system directories.
   sysdirs : $(SYSDIRS)
 
-  $(SYSDIRS) :
+  $(SYSDIRS) ::
 	 @ if [ ! -d "$@" ] ; then \
 	     mkdir -m 2775 $@ ; \
 	     echo "" ; \
