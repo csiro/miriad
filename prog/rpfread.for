@@ -37,7 +37,7 @@ c 02aug06 - tw - accommodate Parkes MB data, report obstype
 c 25sep06 - tw - output az/el every cycle (Mopra)
 c 16may07 - tw - detab; change label 900 from GOTO to CONTINUE
 c
-c $Id: rpfread.for,v 1.7 2007/05/18 04:07:37 cal103 Exp $
+c $Id: rpfread.for,v 1.8 2007/05/23 00:35:32 cal103 Exp $
 c-----------------------------------------------------------------------
 
       program rpfread
@@ -51,7 +51,6 @@ c-----------------------------------------------------------------------
       integer MAXCHAN, MAXPOL
       parameter (MAXCHAN = 8192)
       parameter (MAXPOL = 4)
-      character*50 provers
       logical dohms, isref, atca, brief, header, present(MAXOPT)
       character ctime*10, rastr*12, dcstr*12, fitsfile*80, wuvfmt*10
       character cdash*2, src*16, opts(MAXOPT)*8, posfile*40, tline*80
@@ -75,9 +74,7 @@ c-----------------------------------------------------------------------
       real      amin1, amax1
       character dangle*12, versan*80
 
-*--------------------------------------------------------------
-      versn = versan('rpfread',
-     :  '$Id: rpfread.for,v 1.7 2007/05/18 04:07:37 cal103 Exp $')
+*-----------------------------------------------------------------------
 
       dohms = .false.
       atca = .false.
@@ -89,7 +86,10 @@ c-----------------------------------------------------------------------
       call options ('options',opts,present,2)
       brief = present(1)
       header = present(2)
-      if (.not.brief) call output(provers)
+
+      if (.not.brief) versn = versan('rpfread',
+     :  '$Id: rpfread.for,v 1.8 2007/05/23 00:35:32 cal103 Exp $')
+
       if (fitsfile.eq.' ') then
          call bug('f','Input file must be given (in=)')
       endif
@@ -98,7 +98,7 @@ c-----------------------------------------------------------------------
       endif
       call keyfin ()
 
-*-------------------------------------------------------
+*-----------------------------------------------------------------------
 
       ln = len1(fitsfile)
       write (file,'(A)') fitsfile(1:ln)
@@ -418,7 +418,7 @@ c         write(*,*) 'Pol ',i,' has ',if_nfreq(if_no),' chans'
       stop
       end
 
-*****************************************************
+************************************************************************
 
       subroutine  format_time (uts, tim_str)
 
@@ -427,7 +427,7 @@ c         write(*,*) 'Pol ',i,' has ',if_nfreq(if_no),' chans'
 
       integer ihr, imn, isec, fsec
 
-*-------------------------------------------------
+*-----------------------------------------------------------------------
 
       ut = uts/3600.
       ihr = ut
