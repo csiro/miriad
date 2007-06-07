@@ -3,10 +3,10 @@
 /*  This is a simple shell to run the MIRIAD, Werong and NEMO systems.  */
 /*                                                                      */
 /************************************************************************/
-/*									*/
-/*= miriad -- Simple Miriad front-end for dumb terminals.		*/
-/*& rjs									*/
-/*: tools 								*/
+/*                                                                      */
+/*= miriad -- Simple Miriad front-end for dumb terminals.               */
+/*& rjs                                                                 */
+/*: tools                                                               */
 /*+
   "miriad" is a command-line front-end to run Miriad tasks from a dumb
   terminal. The commands that you give it are somewhat AIPS-like.
@@ -34,9 +34,9 @@
 
   Type
     help tasks
-  for more information about Miriad tasks.				*/
+  for more information about Miriad tasks.                              */
 
-/*-- 									*/
+/*--                                                                    */
 
 
 #define VERSION_ID "version 1.0 26-Oct-99"
@@ -52,11 +52,11 @@
 /*                 $MIRBIN only).                                       */
 /*  NOINTERRUPT    if set, interrupts like ^\, ^C, ^Y are not caught    */
 /*  GETENV         set this if your OS has no char *getenv()            */
-/*  READLINE	   GNU readline library is available. In this case, link*/
-/*		   with -lreadline -ltermcap.				*/
-/*  DO_CSHRC	   Shed csh with just the -c flag (not -cf).		*/
-/*									*/
-/*  vms		   Set if this is being compiled on VMS.		*/
+/*  READLINE       GNU readline library is available. In this case, link*/
+/*                 with -lreadline -ltermcap.                           */
+/*  DO_CSHRC       Shed csh with just the -c flag (not -cf).            */
+/*                                                                      */
+/*  vms            Set if this is being compiled on VMS.                */
 /************************************************************************/
 
 #if defined(vms)
@@ -93,33 +93,33 @@
 /*                   and SETENV, thinking on tget/tput command          */
 /*    pjt  20jun90   quit/exit is now different - load/save have def    */
 /*    pjt  10jul90   catch a few signals                                */
-/*    rjs  13aug90   Different pager for help command.			*/
-/*    rjs  21mar91   The "er" command.					*/
-/*    rjs  22may91   Fixed the "er" command!				*/
-/*    rjs  22may91   Stole various things from pjt's version.		*/
-/*    rjs  20jun91   Various mods to the help command.			*/
+/*    rjs  13aug90   Different pager for help command.                  */
+/*    rjs  21mar91   The "er" command.                                  */
+/*    rjs  22may91   Fixed the "er" command!                            */
+/*    rjs  22may91   Stole various things from pjt's version.           */
+/*    rjs  20jun91   Various mods to the help command.                  */
 /*    rjs  29aug91   Auto TPUT on "go" to $MIRDEF, TGET from $MIRDEF,   */
-/*    rjs  16sep91   Better error message.				*/
-/*    rjs   9oct91   -l flag for tget and tput.				*/
-/*    rjs   1may92   Wait for subprocess to finish, in docommand.	*/
-/*    rjs  21may92   Warn when unrecognised variables are set.		*/
+/*    rjs  16sep91   Better error message.                              */
+/*    rjs   9oct91   -l flag for tget and tput.                         */
+/*    rjs   1may92   Wait for subprocess to finish, in docommand.       */
+/*    rjs  21may92   Warn when unrecognised variables are set.          */
 /*    rjs   4jun92   Increased some buffers. Better bounds checking.    */
 /*                   Removed much pjt bs.                               */
-/*    rjs  11sep92   View puts files in MIRDEF.				*/
-/*    rjs  19dec92   -Dhpux. csh -cf when shedding a command.		*/
-/*    rjs  05dec92   -Dhpux is the only thing to shed with csh -cf.	*/
-/*    rjs  16sep93   Background tasks ignore signals.			*/
+/*    rjs  11sep92   View puts files in MIRDEF.                         */
+/*    rjs  19dec92   -Dhpux. csh -cf when shedding a command.           */
+/*    rjs  05dec92   -Dhpux is the only thing to shed with csh -cf.     */
+/*    rjs  16sep93   Background tasks ignore signals.                   */
 /*    rjs  20nov93   More args. Better treatment if a environment var   */
-/*		     missing.						*/
-/*    rjs   1dec93   go command can redirect standard output.		*/
-/*    rjs   4oct94   All machines shed csh with -cf.			*/
-/*    rjs  16feb95   New er command handling.				*/
-/*    rjs   3may96   Tidy defines. Fiddle with reading input a bit.	*/
-/*    rjs   4jun96   Really attempt to kill off children.		*/
-/*    rjs  29oct99   help -w						*/
-/*    rjs  22may06   Change to appease cygwin.				*/
+/*                   missing.                                           */
+/*    rjs   1dec93   go command can redirect standard output.           */
+/*    rjs   4oct94   All machines shed csh with -cf.                    */
+/*    rjs  16feb95   New er command handling.                           */
+/*    rjs   3may96   Tidy defines. Fiddle with reading input a bit.     */
+/*    rjs   4jun96   Really attempt to kill off children.               */
+/*    rjs  29oct99   help -w                                            */
+/*    rjs  22may06   Change to appease cygwin.                          */
 /*    mrc  14jul06   Compile with 'gcc -Wall' without warnings.         */
-/*									*/
+/*                                                                      */
 /*    ToDo anyhow:                                                      */
 /*      check earlier if lastexit can be written, otherwise complain    */
 /*    Complaints/Wishes from users:                                     */
@@ -161,11 +161,11 @@
 #define MAXARG    32
 #define HASHSIZE 127
 #define MAXINPUT  10
-typedef struct variable { 
+typedef struct variable {
     char *name;
-    char *value; 
+    char *value;
     int user,taught;
-    struct variable *fwd; 
+    struct variable *fwd;
 } VARIABLE;
 
 
@@ -181,8 +181,8 @@ char buffer[MAXBUF];
 char taskname[MAXBUF];          /* current default name of task */
 int mecho;
 int Qkeys = 0;      /* 0: keys were not updated     1: were */
-int input_level = 0;	     /* nesting level of INPUT command */
-int pid = 0;		     /* Process ID of child */
+int input_level = 0;         /* nesting level of INPUT command */
+int pid = 0;                 /* Process ID of child */
 FILE *fpinput[MAXINPUT];
 int   dopopen[MAXINPUT];
 
@@ -221,29 +221,29 @@ char *av[];
 #if defined(INTERRUPT)
   signal(SIGTERM, review);            /* catch interrupts */
   signal(SIGQUIT, review);            /* for review */
-  signal(SIGINT,  review);            /* and ^C also */ 
+  signal(SIGINT,  review);            /* and ^C also */
 #endif
   for(i=0; i<HASHSIZE; i++){        /* Initialise the hash table. */
         hashtable[i] = NULL;
   }
 
   get_vars("lastexit");             /* Read "lastexit". */
-  motd();			    /* Give the message of the day. */
-  strcpy(taskname,"miriad");	    /* The default tawsk is "miriad" */
+  motd();                           /* Give the message of the day. */
+  strcpy(taskname,"miriad");        /* The default tawsk is "miriad" */
 
   more = 1;
   while(more) {                      /* Loop to get a command. */
     argc = get_line(argv);
     if(!argc);
     else if(!strcmp(argv[0],"set"))      {mecho = input_level == 0;
-					  doset(argc,argv);
-					  mecho = 0;
-					  Qkeys++; }
+                                          doset(argc,argv);
+                                          mecho = 0;
+                                          Qkeys++; }
     else if(!strcmp(argv[0],"unset"))    {dounset(argc,argv); Qkeys++; }
     else if(!strcmp(argv[0],"inp"))      {doinp(argc,argv); }
     else if(!strcmp(argv[0],"go"))       {dogo(argc,argv); }
 #ifndef vms
-    else if(!strcmp(argv[0],"er"))	 {doer(argc,argv);   Qkeys++; }
+    else if(!strcmp(argv[0],"er"))       {doer(argc,argv);   Qkeys++; }
     else if(!strcmp(argv[0],"setenv"))   {dosetenv(argc,argv); }
     else if(!strcmp(argv[0],"unsetenv")) {dounsetenv(argc,argv); }
 #endif
@@ -257,13 +257,13 @@ char *av[];
     else if(!strcmp(argv[0],"task"))     {dotask(argc,argv); }
     else if(!strcmp(argv[0],"exit"))     {more = 0; }
     else if(!strcmp(argv[0],"quit"))     {Qkeys = 0; more = 0; }
-    else if(!strcmp(argv[0],"cd"))	 {docd(argc,argv); }
+    else if(!strcmp(argv[0],"cd"))       {docd(argc,argv); }
     else                                 {docommand(argc,argv); }
 
     if(input_level>0 && more==0) {  /* if exit from input file */
         input_level--;                /* decrease stack of input filesx */
-	if(dopopen[input_level]) pclose(fpinput[input_level]);
-	else			 fclose(fpinput[input_level]);
+        if(dopopen[input_level]) pclose(fpinput[input_level]);
+        else                     fclose(fpinput[input_level]);
         more=1;                     /* and keep on trucking */
     }
   } /* while */
@@ -335,7 +335,7 @@ char *argv[];
   } else if(fgets(buffer2,MAXBUF-1,fpinput[input_level-1])==NULL) {
     input_level--;
     if(dopopen[input_level])pclose(fpinput[input_level]);
-    else		    fclose(fpinput[input_level]);
+    else                    fclose(fpinput[input_level]);
     buffer2[0] = 0;
   }
 
@@ -343,7 +343,7 @@ char *argv[];
 
   s = xpand(buffer,buffer2);
   if(s == NULL)buffer[0] = 0;
-  else	       *s = 0;
+  else         *s = 0;
 
 /* Break the line into words. */
 
@@ -457,12 +457,12 @@ char *argv[];
     for(i=0;i<HASHSIZE;i++) {
       v = hashtable[i];
       while(v) {
-	if(v->value != NULL)printf("%8s = %s\n",v->name,v->value);
-	v = v->fwd;
+        if(v->value != NULL)printf("%8s = %s\n",v->name,v->value);
+        v = v->fwd;
       }
     }
     return;
-  } 
+  }
 
 /* Find the value of the parameter, stored in the hash table. */
 
@@ -557,7 +557,7 @@ char *argv[];
   char line[MAXBUF];
   int hashval;
   char *t;
-  VARIABLE *v;  
+  VARIABLE *v;
 
 /* Check the arguments. */
 
@@ -627,8 +627,8 @@ char *argv[];
 
   if(argc==1) return;
   if(input_level+1 > MAXINPUT) {
-	fprintf(stderr,"### Too many nested inputs in %s\n",argv[1]);
-	return;
+        fprintf(stderr,"### Too many nested inputs in %s\n",argv[1]);
+        return;
   }
   fpinput[input_level] = fopen(argv[1],"r");
   dopopen[input_level] = FALSE;
@@ -694,8 +694,8 @@ char *argv[];
   for(i=1; i < argc; i++){
     s = argv[i];
     if(*s == '-')while(*++s)switch(*s){
-      case 'l':	dolocal = TRUE; break;
-      default:	fprintf(stderr,"### Unrecognised flag %c ignored\n",*s);
+      case 'l': dolocal = TRUE; break;
+      default:  fprintf(stderr,"### Unrecognised flag %c ignored\n",*s);
     } else if(task == NULL) task = s;
     else fprintf(stderr,"### Ignoring %s\n",s);
   }
@@ -752,7 +752,7 @@ char *argv[];
     } else {
       for(i=0; i<n; i++)
         if(args[i].value != NULL)
-	  fprintf(fd,"%-9s= %s\n",args[i].name,args[i].value);
+          fprintf(fd,"%-9s= %s\n",args[i].name,args[i].value);
       fclose(fd);
     }
 /* Check if the foreign command is defined. If not, define it. */
@@ -801,10 +801,10 @@ char *argv[];
   for(i=1; i < argc; i++){
     s = argv[i];
     if(*s == '-')while(*++s != 0)switch(*s){
-      case 'r':	if(++i < argc) runner = argv[i]; break;
+      case 'r': if(++i < argc) runner = argv[i]; break;
       case 'b': bg = 1; break;
       default:
-	fprintf(stderr,"### Unrecognised flag %c ignored\n",*s);
+        fprintf(stderr,"### Unrecognised flag %c ignored\n",*s);
     } else if( *s == '>'){
       if(*(s+1) != 0) output = s + 1;
       else if(++i < argc) output = argv[i];
@@ -834,7 +834,7 @@ char *argv[];
     } else {
       for(i=0; i<n; i++)
         if(args[i].value != NULL)
-	  fprintf(fd,"%-9s= %s\n",args[i].name,args[i].value);
+          fprintf(fd,"%-9s= %s\n",args[i].name,args[i].value);
       fclose(fd);
     }
 
@@ -858,12 +858,12 @@ char *argv[];
     length = 0;
     for(i=0; i<n; i++){
       if(args[i].value != NULL){
-	s = parameter + length;
+        s = parameter + length;
         length += strlen(args[i].name) + strlen(args[i].value) + 2;
         if(length > MAXBUF){
-	  fprintf(stderr,"### Internal bug: Argument list too long\n");
- 	  return;
-	}
+          fprintf(stderr,"### Internal bug: Argument list too long\n");
+          return;
+        }
         sprintf(s,"%s=%s",args[i].name,args[i].value);
         *t++ = s;
       }
@@ -880,14 +880,14 @@ char *argv[];
 #if defined(INTERRUPT)
         signal(SIGTERM, SIG_IGN);
         signal(SIGQUIT, SIG_IGN);
-        signal(SIGINT,  SIG_IGN); 
+        signal(SIGINT,  SIG_IGN);
 #endif
       }
       if(output != NULL){
-	fh = open(output,O_WRONLY|O_CREAT|O_TRUNC,0644);
-	if(fh < 0)fprintf(stderr,"### Unable to open redirected output\n");
-	dup2(fh,1);
-	close(fh);
+        fh = open(output,O_WRONLY|O_CREAT|O_TRUNC,0644);
+        if(fh < 0)fprintf(stderr,"### Unable to open redirected output\n");
+        dup2(fh,1);
+        close(fh);
       }
 
 #if defined(PATHSEARCH)
@@ -922,19 +922,19 @@ char *argv[];
     for(i=1; i < argc; i++){
       s = argv[i];
       if(*rest){
-	strcat(rest," ");strcat(rest,s);
+        strcat(rest," ");strcat(rest,s);
       }else if (*s == '-'){
-	s++;
+        s++;
         while(*s)switch(*s++){
-	  case 'w': doweb = TRUE;			break;
-	  case 'k': if( ++i < argc ) key = argv[i];	break;
-	}
+          case 'w': doweb = TRUE;                       break;
+          case 'k': if( ++i < argc ) key = argv[i];     break;
+        }
       }else if(*s == '|' || *s == '>' ){
-	strcpy(rest,s);
+        strcpy(rest,s);
       } else {
-	task = s;
+        task = s;
       }
-    }    
+    }
   }
   if(!task) task = taskname;
 
@@ -1004,8 +1004,8 @@ char *argv[];
   for(i=1; i < argc; i++){
     s = argv[i];
     if(*s == '-')while(*++s)switch(*s){
-      case 'l':	dolocal = TRUE;	break;
-      default:	fprintf(stderr,"### Unrecognised flag %c ignored\n",*s);
+      case 'l': dolocal = TRUE; break;
+      default:  fprintf(stderr,"### Unrecognised flag %c ignored\n",*s);
     } else if(task == NULL) task = s;
     else fprintf(stderr,"### Ignoring %s\n",s);
   }
@@ -1025,7 +1025,7 @@ char *argv[];
       if(narg > 1)dounset(narg,vals);
     }
     get_vars(path);
-    if(task != taskname)strcpy(taskname,task);    
+    if(task != taskname)strcpy(taskname,task);
     doinp(1,"inp");
   } else fprintf(stderr,"### Could not read %s.def\n",task);
 }
@@ -1039,8 +1039,8 @@ char *argv[];
     if (argc == 2) {     /* change directory */
         if (chdir(argv[1]) != 0)
             fprintf(stderr,"### Failed to change directory %s\n",argv[1]);
-    	/* printf("Current directory is: ***\n"); */
-    } else {            
+        /* printf("Current directory is: ***\n"); */
+    } else {
         if (argc == 1) {    /* if one arg: show current dir */
 #ifdef VMS
             system("show default");
@@ -1048,7 +1048,7 @@ char *argv[];
             system("pwd");
 #endif
         } else
-	    fprintf(stderr, "### Incorrect number of arguments\n");
+            fprintf(stderr, "### Incorrect number of arguments\n");
     }
 }
 /************************************************************************/
@@ -1258,8 +1258,8 @@ char *task;
 /* Save the name and value. */
 
       if(n >= MAXARGS){
-	fprintf(stderr,"### Internal bug: Too many arguments...aborting\n");
-	exit(0);
+        fprintf(stderr,"### Internal bug: Too many arguments...aborting\n");
+        exit(0);
       }
       args[n].value = v->value;
       args[n].name = v->name;
@@ -1336,7 +1336,7 @@ char *var, *value;
 
     newep = (char **)  malloc( (nev+2) * sizeof(char **) );   /* allocate new */
     for (i=0, epfrom=environ, epto=newep; i<nev; i++)     /* copy old stuff */
-       *epto++ = *epfrom++;   
+       *epto++ = *epfrom++;
     cp = malloc(vlen+strlen(value)+2);          /* allocate for new one */
     if (cp==NULL) {
         fprintf(stderr,"### No memory to add environment %s=%s\n",var,value);
