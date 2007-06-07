@@ -44,7 +44,7 @@
 /************************************************************************/
 /*  COMPILE DEFINE OPTIONS:                                             */
 /*                                                                      */
-/*  Use as:  -Doption (unix) or /DEFINE=(option=1) (VMS) in CC          */
+/*  Use as:  -Doption (unix) in CC                                      */
 /*                                                                      */
 /*   <option>      <explanation>                                        */
 /*   --------      -------------                                        */
@@ -55,14 +55,8 @@
 /*  READLINE       GNU readline library is available. In this case, link*/
 /*                 with -lreadline -ltermcap.                           */
 /*  DO_CSHRC       Shed csh with just the -c flag (not -cf).            */
-/*                                                                      */
-/*  vms            Set if this is being compiled on VMS.                */
 /************************************************************************/
 
-#if defined(vms)
-#  define NOPATHSEARCH 1
-#  define NOINTERRUPT  1
-#endif
 #if !defined(NOPATHSEARCH)
 #  define PATHSEARCH 1
 #endif
@@ -84,9 +78,7 @@
 /*    pjt  15mar90   'gob' is same as 'go' with backgrounding           */
 /*    pjt  16mar90   added save, and help with no options               */
 /*    pjt   9apr90   some more help                                     */
-/*    rjs  26apr90   Looks in local directory for .doc files. On VMS,   */
-/*                   it checks for the foreign command definitiion,     */
-/*                   before overwriting it with its own.                */
+/*    rjs  26apr90   Looks in local directory for .doc files.           */
 /*    pjt   6may90   compile option to search $PATH in Unix (execvp)    */
 /*    pjt  13may90   -b BIN -d DEF -p PDOC options                      */
 /*    pjt  15jun90   added TASK command - to set default task           */
@@ -188,10 +180,8 @@ int   dopopen[MAXINPUT];
 
 /* forward references to make (ansi) compilers happy */
 
-#ifndef vms
 char *getenv();
 void dosetenv(),dounsetenv();
-#endif
 void get_vars(),save_vars(),doset(),dounset(),doinp(),dogo(),dohelp(),
      dotask(),dosource(), doer(), docd(), doload(), dosave(),
      docommand(), doview(), dotput(), dotget(),motd(),newenv();
@@ -202,12 +192,8 @@ void review();
 #endif
 char *xpand(),*tlate();
 
-#ifdef vms
-#include <errno.h>
-#else
 extern int errno;       /* or <errno.h> */
 extern char **environ;  /* point to environment */
-#endif
 /************************************************************************/
 int main(ac,av)
 int ac;
@@ -242,11 +228,9 @@ char *av[];
     else if(!strcmp(argv[0],"unset"))    {dounset(argc,argv); Qkeys++; }
     else if(!strcmp(argv[0],"inp"))      {doinp(argc,argv); }
     else if(!strcmp(argv[0],"go"))       {dogo(argc,argv); }
-#ifndef vms
     else if(!strcmp(argv[0],"er"))       {doer(argc,argv);   Qkeys++; }
     else if(!strcmp(argv[0],"setenv"))   {dosetenv(argc,argv); }
     else if(!strcmp(argv[0],"unsetenv")) {dounsetenv(argc,argv); }
-#endif
     else if(!strcmp(argv[0],"help"))     {dohelp(argc,argv); }
     else if(!strcmp(argv[0],"view"))     {doview(argc,argv); Qkeys++; }
     else if(!strcmp(argv[0],"save"))     {dosave(argc,argv); }
@@ -431,12 +415,7 @@ char *var;
   if(v != NULL) return(v->value);
 
 /* If we failed, check for an environment variable. */
-
-#ifndef vms
   t = getenv(var);
-#else
-  t = NULL;
-#endif
 
   if(t == NULL) fprintf(stderr,"### No such variable: %s\n",var);
   return(t);
@@ -545,7 +524,6 @@ char *argv[];
     }
   }
 }
-#ifndef vms
 /************************************************************************/
 void doer(argc,argv)
 int argc;
@@ -591,7 +569,6 @@ char *argv[];
   dopopen[input_level] = TRUE;
   input_level++;
 }
-#endif
 /************************************************************************/
 void doinp(argc,argv)
 int argc;
@@ -667,12 +644,8 @@ char *argv[];
       fprintf(fd,"%-9s= %s\n",args[i].name,(args[i].value == NULL ?
                                           "" : args[i].value));
     fclose(fd);
-#ifdef vms
-    viewer = "edit";
-#else
     if((viewer = getenv("VISUAL")) == NULL)
         if((viewer = getenv("EDITOR")) == NULL) viewer = "vi";
-#endif
     sprintf(command,"%s %s",viewer,name);
     system(command);
     get_vars(name);
@@ -720,64 +693,6 @@ char *argv[];
     fclose(fd);
   }
 }
-#ifdef vms
-/************************************************************************/
-void dogo(argc,argv)
-int argc;
-char *argv[];
-/*  VMS version (no backgrounding/spawning yet)
-------------------------------------------------------------------------*/
-{
-  FILE *fd;
-  int i,n,table;
-  char line[MAXBUF],parameter[MAXBUF],*task;
-  struct {int length; char *pnt; } name,value;
-#define LIB$K_CLI_GLOBAL_SYM 2
-#define assign(descriptor,string) descriptor.length = strlen(string);\
-                                  descriptor.pnt    = string
-
-  if(argc < 1) return;
-  if(argc > 2) fprintf(stderr,"### Extra arguments on line ignored.\n");
-  task = ( argc > 1 ? argv[1] : taskname);
-  n = task_args(task);
-  if(n < 0){
-    fprintf(stderr,"### Found no documentation on task %s.\n",task);
-  } else {
-/* Write out the "TPUT" file. */
-
-    filename(path,"MIRDEF",task,".def");
-    fd = fopen(path,"w");
-    if(fd == NULL){
-      fprintf(stderr,"### Failed to open %s\n",name);
-    } else {
-      for(i=0; i<n; i++)
-        if(args[i].value != NULL)
-          fprintf(fd,"%-9s= %s\n",args[i].name,args[i].value);
-      fclose(fd);
-    }
-/* Check if the foreign command is defined. If not, define it. */
-    assign(name,task);
-    value.length = MAXBUF; value.pnt = line;
-    if(lib$get_symbol(&name,&value) != 1){
-      table = LIB$K_CLI_GLOBAL_SYM;
-      sprintf(line,"$MIRBIN:%s.exe",task);
-      assign(name,task); assign(value,line);
-      lib$set_symbol(&name,&value,&table);
-    }
-
-/* Build up the command line. */
-
-    strcpy(line,task);
-    for(i=0; i<n; i++){                 /* CHECK IF THIS STILL WORKS 15-jun-90 PJT */
-      if(args[i].value != NULL){
-        sprintf(parameter," %s=%s",args[i].name,args[i].value);
-        strcat(line,parameter);
-      }
-    }
-    system(line);
-  }
-}
-#else
 /************************************************************************/
 void dogo(argc,argv)
 int argc;
@@ -901,7 +816,6 @@ char *argv[];
   }
   pid = 0;
 }
-#endif
 /************************************************************************/
 void dohelp(argc,argv)
 int argc;
@@ -911,9 +825,6 @@ char *argv[];
 {
   char rest[MAXBUF],command[MAXBUF],*task,*key,*s;
   int i,doweb;
-#ifdef vms
-  char path[MAXBUF];
-#endif
 
 /* Determine the thing we want help on. */
 
@@ -943,17 +854,11 @@ char *argv[];
   if(task_args(task) < 0){
     fprintf(stderr,"### Cannot find and/or read help for %s\n",task);
   }else{
-#ifdef vms
-    sprintf(path,"%s.doc",task);
-    if(access(path,R_OK))filename(path,"MIRPDOC",task,".doc");
-    sprintf(command, "type/page %s",path);
-#else
     strcpy(command,"mirhelp ");
     if(doweb)strcat(command,"-w ");
     if(key){ strcat(command,"-k "); strcat(command,key); strcat(command," ");}
     strcat(command,task);
     if(*rest)strcat(command,rest);
-#endif
     system(command);
   }
 }
@@ -1042,11 +947,7 @@ char *argv[];
         /* printf("Current directory is: ***\n"); */
     } else {
         if (argc == 1) {    /* if one arg: show current dir */
-#ifdef VMS
-            system("show default");
-#else
             system("pwd");
-#endif
         } else
             fprintf(stderr, "### Incorrect number of arguments\n");
     }
@@ -1064,7 +965,6 @@ char *argv[];
     printf("Current default task is: %s\n",taskname);
   }
 }
-#ifndef vms
 /************************************************************************/
 void dosetenv(argc,argv)
 int argc;
@@ -1091,7 +991,6 @@ char *argv[];
     }
     newenv(argv[1],"");
 }
-#endif
 /************************************************************************/
 void docommand(argc,argv)
 int argc;
@@ -1111,9 +1010,6 @@ char *argv[];
   while (*s == ' ' || *s == '\t')   /* skip whitespace */
     s++;
   if (! *s || (*s == '#')) return;
-#ifdef vms
-  system(buffer);         /* and execute it by the host cmd.interpreter */
-#else
                         /* In UNIX: pass it such that aliases are known */
   pid = fork();
 #ifdef DO_CSHRC
@@ -1131,7 +1027,6 @@ char *argv[];
   signal(SIGTERM, review);            /* restore status */
   signal(SIGQUIT, review);            /* of signals */
   signal(SIGINT,  review);
-#endif
 #endif
 }
 /************************************************************************/
@@ -1276,17 +1171,12 @@ char *out,*envvar,*name,*type;
   This makes a filename from the input components.
 ------------------------------------------------------------------------*/
 {
-#ifdef vms
-  if(envvar && *envvar)sprintf(out,"%s:%s%s",envvar,name,type);
-  else       sprintf(out,"%s%s",name,type);
-#else
   char *s;
   if(envvar && *envvar){
     s = getenv(envvar);
     if(s == NULL || *s == 0) sprintf(out,"%s%s",name,type);
     else sprintf(out,"%s/%s%s",s,name,type);
   }else sprintf(out,"%s%s",name,type);
-#endif
 }
 /************************************************************************/
 void bug(message)
@@ -1298,7 +1188,6 @@ char *message;
   fprintf(stderr,"%s\n",message);
   exit(1);
 }
-#ifndef vms
 /************************************************************************/
 void newenv(var,value)
 char *var, *value;
@@ -1370,7 +1259,6 @@ char *var;
     return(NULL);
 }
 
-#endif
 #endif
 /**********************************************************************/
 #if defined(INTERRUPT)
