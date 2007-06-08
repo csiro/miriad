@@ -2,7 +2,7 @@
 # GNUmakefile used to compile Miriad.
 #
 # Original: 2006/08/28, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.25 2007/05/10 06:54:56 cal103 Exp $
+# $Id: GNUmakefile,v 1.26 2007/06/08 02:16:06 cal103 Exp $
 #-----------------------------------------------------------------------------
 ifeq "$(MIR)" ""
   # Try to deduce basic Miriad environment variables.  Obviously this only
@@ -88,9 +88,6 @@ ifeq "$(MAKEMODE)" "system"
       -@ chmod 664 $@
     endef
 
-    $(MIRLIBD)/% : /sw/lib/%
-	   $(mir-copy)
-
     $(MIRLIBD)/% : /usr/local/lib/%
 	   $(mir-copy)
 
@@ -98,9 +95,6 @@ ifeq "$(MAKEMODE)" "system"
 	   $(mir-copy)
 
     $(MIRLIBD)/% : /usr/lib/%
-	   $(mir-copy)
-
-    $(MIRBIND)/% : /sw/bin/%
 	   $(mir-copy)
 
     $(MIRBIND)/% : /usr/local/bin/%
