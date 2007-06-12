@@ -39,7 +39,7 @@
 /*--                                                                        */
 
 
-#define VERSION_ID "version 1.0 26-Oct-99"
+#define VERSION_ID "version 1.5, 2007/06/12"
 
 /*****************************************************************************
 *  COMPILE DEFINE OPTIONS:
@@ -118,7 +118,7 @@
 *      - also remember per keyword which program used it, such that they can
 *        be used next to each other
 *
-* $Id: miriad.c,v 1.5 2007/06/12 04:57:05 cal103 Exp $
+* $Id: miriad.c,v 1.6 2007/06/12 04:59:46 cal103 Exp $
 *****************************************************************************/
 
 #include <ctype.h>
@@ -270,7 +270,7 @@ void motd()
   char path[MAXBUF],line[MAXBUF];
   FILE *f;
 
-  filename(path,"MIRPDOC","motd",".doc");
+  filename(path, "MIR", "doc/motd", ".doc");
   f = fopen(path,"r");
   if(f != NULL){
     while(fgets(line,MAXBUF,f) != NULL)fputs(line,stdout);
@@ -1145,24 +1145,40 @@ int task_args(task)
 char *task;
 
 {
-  char line[MAXBUF],path[MAXBUF],keyword[MAXBUF],*t;
+  char *dir, keyword[MAXBUF], line[MAXBUF], path[MAXBUF], *t;
   FILE *fd;
   VARIABLE *v;
   int n,hashval;
 
-/* Check both the local directory, and the standard directory for the .doc
-   file. */
+/* Search for the .doc file. */
+  sprintf(path, "./%s.doc", task);
+  fd = fopen(path, "r");
+  if (!fd) {
+    if ((dir = getenv("HOME"))) {
+      sprintf(path, "%s/miriad/doc/%s.doc", dir, task);
+      fd = fopen(path, "r");
+    }
 
-  sprintf(path,"%s.doc",task);
-  fd = fopen(path,"r");
-  if(!fd){
-    filename(path,"MIRPDOC",task,".doc");
-    fd = fopen(path,"r");
+    if (!fd) {
+      if ((dir = getenv("MIRPDOC"))) {
+        while (dir) {
+          if ((t = strchr(dir, ':'))) {
+            sprintf(path, "%.*s/%s.doc", (t-dir), dir, task);
+            dir = t + 1;
+          } else {
+            sprintf(path, "%s/%s.doc", dir, task);
+            dir = 0;
+          }
+
+          if (fd = fopen(path, "r")) break;
+        }
+      }
+
+      if (!fd) return -1;
+    }
   }
-  if(!fd)return(-1);
 
 /* Scan the .doc file for the keywords. */
-
   n = 0;
   while( fgets(line,sizeof(line),fd) != NULL){
     if(sscanf(line,"%%N %s",keyword) == 1){
@@ -1211,11 +1227,17 @@ char *out,*envvar,*name,*type;
 
 {
   char *s;
-  if(envvar && *envvar){
+
+  if (envvar && *envvar) {
     s = getenv(envvar);
-    if(s == NULL || *s == 0) sprintf(out,"%s%s",name,type);
-    else sprintf(out,"%s/%s%s",s,name,type);
-  }else sprintf(out,"%s%s",name,type);
+    if (s == NULL || *s == 0) {
+      sprintf(out,"%s%s",name,type);
+    } else {
+      sprintf(out,"%s/%s%s",s,name,type);
+    }
+  } else {
+    sprintf(out,"%s%s",name,type);
+  }
 }
 
 
