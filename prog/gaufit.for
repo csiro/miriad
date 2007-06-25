@@ -263,8 +263,10 @@ c                 compiler.
 c     bpw 28feb01 Make it work under linux
 c     bpw 21may01 Add smooth keyword
 c     rjs 18sep05 Corrected type mismatch error.
+c     tw  21jun07 ngauss=1 default; fix seg fault when writing residual
+c                 cube; fix mask error on residual and model cubes
 c
-c $Id: gaufit.for,v 1.3 2007/03/15 01:29:54 cal103 Exp $
+c $Id: gaufit.for,v 1.4 2007/06/25 01:32:14 cal103 Exp $
 c***********************************************************************
 
 c The main program first gets all inputs and then calls the workhorse.
@@ -324,7 +326,7 @@ c              el 4=max # gaussians, used when sorting a range
       character versan*80, version*80
 c-----------------------------------------------------------------------
       version = versan ('gaufit',
-     :  '$Id: gaufit.for,v 1.3 2007/03/15 01:29:54 cal103 Exp $')
+     :  '$Id: gaufit.for,v 1.4 2007/06/25 01:32:14 cal103 Exp $')
 
       call inputs(units,prfinfo,runs,ngauss,limlist,cmpsort,prnm)
       call work(  units,prfinfo,runs,ngauss,limlist,cmpsort,prnm)
@@ -435,6 +437,7 @@ c dumprf(1) is unit to copy header from
          dumprf(1) = units(1)
          if( mdl.ne.' ' )
      *   call setopen( mdl,'new',units(3), naxis,axleni, dumprf,fitax)
+         dumprf(1) = units(1)
          if( res.ne.' ' )
      *   call setopen( res,'new',units(4), naxis,axleni, dumprf,fitax)
       endif
@@ -687,7 +690,7 @@ c     a0,a1,am1 keep flint quiet
 
 c        Get maximum number of gaussian components from keyword
          nchan = prfinfo(2)
-         call keyi( 'ngauss', ngauss(1), 0 )
+         call keyi( 'ngauss', ngauss(1), 1 )
          call assertl( nchan.gt.3*ngauss(1),
      *             'Not enough datapoints to fit this many parameters' )
 
@@ -1111,7 +1114,7 @@ c write model, residual to output datasets
      *        call gaussmod(model,nchan,gausspar,ngauss(4))
             do i = 1, nchan
                residual(i) = data(i) - model(i)
-               mask(i)     = .false.
+               mask(i)     = .true.
             enddo
          else
             do i = 1, nchan
