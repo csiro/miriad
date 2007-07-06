@@ -2,7 +2,7 @@
 # GNUmakefile used to compile Miriad.
 #
 # Original: 2006/08/28, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.26 2007/06/08 02:16:06 cal103 Exp $
+# $Id: GNUmakefile,v 1.27 2007/07/06 03:47:21 cal103 Exp $
 #-----------------------------------------------------------------------------
 ifeq "$(MIR)" ""
   # Try to deduce basic Miriad environment variables.  Obviously this only
@@ -175,17 +175,17 @@ ifeq "$(MAKEMODE)" "system"
 	   gzip miriad-code.tar
 	-@ $(RM) $(MIRFTPD)/miriad-code.tar.gz
 	   mv miriad-code.tar.gz $(MIRFTPD)/
-	 @ $(RM) .tarX
 	-@ echo ""
 	-@ $(TIMER)
 	-@ $(RM) VERSION
 	   date -u +'%Y%m%d' > VERSION
 	-@ chmod 444 VERSION
-	   cd .. ; tar cf miriad/miriad-common.tar $(DISTCOMM:%=miriad/%)
+	   cd .. ; tar cXf miriad/.tarX miriad/miriad-common.tar $(DISTCOMM:%=miriad/%)
 	-@ $(RM) VERSION
 	   gzip miriad-common.tar
 	-@ $(RM) $(MIRFTPD)/miriad-common.tar.gz
 	   mv miriad-common.tar.gz $(MIRFTPD)/
+	 @ $(RM) .tarX
 	-@ echo ""
 	 @ for bin in $(DISTBINS) ; do \
 	     echo "" ; \
