@@ -19,8 +19,8 @@ At the ATNF it runs under
 <a href="http://en.wikipedia.org/wiki/Powerpc">PowerPC</a> and
 <a href="http://en.wikipedia.org/wiki/Intel">Intel</a>
 <a href="http://en.wikipedia.org/wiki/Macintosh">Macs</a> running
-<a href="http://en.wikipedia.org/wiki/Mac_OS_X">Mac OS X</a> 10.4.8 ("Tiger")
-which is based on
+<a href="http://en.wikipedia.org/wiki/Mac_OS_X">Mac&nbsp;OS&nbsp;X</a> 10.4.8
+("Tiger") which is based on
 <a href="http://en.wikipedia.org/wiki/Darwin_%28operating_system%29">
 Darwin</a> 8.8.0.  Binary distribution kits are provided for these
 platforms.
@@ -72,7 +72,7 @@ system is available for them and other unix-based platforms.
       <li><a href="#LFS">Large File Support (LFS)</a></li>
       <li><a href="#Linux">Linux (32- and 64-bit)</a></li>
       <li><a href="#SunOS">SunOS 5.x (Solaris 2.x)</a></li>
-      <li><a href="#Darwin">Darwin / Mac OS X</a></li>
+      <li><a href="#Darwin">Darwin / Mac&nbsp;OS&nbsp;X</a></li>
       <li><a href="#Cygwin">Cywin/Windows</a></li>
     </ul>
   </li>
@@ -475,9 +475,9 @@ To build <em>Miriad</em> from source code you will need
   wish, although this is not necessary and not supported as the pre-compiled
   documentation is provided as part of the
   <a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-common.tar.gz">
-  <code>miriad-common.tar.gz</code></a> distribution tar file.  To compile it
-  you would need the document processing utilities listed in the
-  <a href="#step6">generic <code>GNUmakedefs</code></a>.
+  <code>miriad-common.tar.gz</code></a> distribution <code>tar</code> file.
+  To compile it you would need the document processing utilities listed in
+  the <a href="#step6">generic <code>GNUmakedefs</code></a>.
 </li>
 </ul>
 </p>
@@ -498,9 +498,7 @@ tweaking is likely to be required.
 <li>
   <p>
   Before anything else you must install the compilers, utilities and
-  third-party libraries listed above.  Most Linux systems, and Mac
-  Darwin-based systems using
-  <a href="http://en.wikipedia.org/wiki/Fink">Fink</a>, will provide
+  third-party libraries listed above.  Most Linux systems provide
   <a href="http://en.wikipedia.org/wiki/Package_management">packages</a>
   for all but <a href="http://www.atnf.csiro.au/computing/software/rpfits">
   <code>RPFITS</code></a> which you may need to install from source code.
@@ -875,8 +873,7 @@ A few more steps are required to finalize the installation:
   <em>Miriad</em> has been built successfully on Darwin systems using
   <code>gfortran</code> 4.1.0 (<code>darwin_ppc</code>) and 4.2.0
   (<code>darwin_x86</code>) in conjunction with <code>gcc</code> 4.x,
-  including all third-party Fortran libraries (see
-  <a href="#Darwin">Darwin</a> below.)
+  including all third-party Fortran libraries.
   </p>
 
   <p>
@@ -1076,49 +1073,51 @@ A few more steps are required to finalize the installation:
 </li>
 
 <li>
-  <a name="Darwin"><h4>Darwin / Mac OS X</h4>
+  <a name="Darwin"><h4>Darwin / Mac&nbsp;OS&nbsp;X</h4>
   <p>
   Problems with unresolved symbols reported by the linker in Darwin may arise
   from having incompatible compilers installed on the system.  The
-  Apple-provided GNU compilers, which are installed in <code>/usr/bin</code>
-  with libraries in <code>/usr/lib</code>, must be preserved as they are an
-  important part of the operating system.  Unfortunately, Apple does not
-  currently provide a Fortran compiler in this suite and one must be obtained
-  from elsewhere.
+  Mac&nbsp;OS&nbsp;X-provided GNU compilers, which are installed in
+  <code>/usr/bin</code> with libraries in <code>/usr/lib</code>, must be
+  preserved as they are an important part of the operating system.
+  Unfortunately, Mac&nbsp;OS&nbsp;X does not currently provide a Fortran
+  compiler in this suite and one must be obtained from elsewhere.
   </p>
 
   <p>
-  <code>g77</code> 3.4.3 is available for PowerPC Macs
-  (<code>darwin_ppc</code>) and we have used it to compile the
-  <code>RPFITS</code> and <code>PGPLOT</code> libraries, the latter in
-  particular because <code>gfortran</code> does not support the
-  <a href="#%VAL">use of <code>%VAL</code></a> by some of the graphics drivers.
-  However, we use <code>gfortran</code> 4.1.0 from the
-  <a href="http://pdb.finkproject.org/pdb/package.php/gcc4"><code>gcc4</code>
-  Fink package</a> to compile <em>Miriad</em>.  As <a href="#linker">discussed
-  above</a>, this requires the addition of <code>-lg2c</code> when linking.
+  Fortunately, <code>g77</code> 3.4 is now available for PowerPC
+  (<code>darwin_ppc</code>) and Intel (<code>darwin_x86</code>) Macs from the
+  <a href="http://hpc.sourceforge.net">High Performance Computing</a> web
+  site.  It is supplied as a <code>tar</code> file that installs without fuss
+  directly into <code>/usr/local</code>.  Most importantly, this build of the
+  GNU Fortran 77 compiler is compatible with the GNU C compilers provided
+  with Mac&nbsp;OS&nbsp;X as <code>/usr/bin/gcc-3.3</code> for PowerPC, and
+  <code>gcc-4.0</code> for Intel.  However, on PowerPC systems it may be
+  necessary to extract <code>darwin-fpsave.o</code> from
+  <code>/usr/lib/gcc/darwin/3.3/libgcc.a</code> and insert it into
+  <code>/usr/local/lib/gcc/powerpc-apple-darwin8.8.0/3.4.6/libgcc.a</code>;
+  this module contains the symbols <code>saveFP</code> and
+  <code>restFP</code> needed by <code>gcc-3.3</code>-compiled C code when
+  <code>g77-3.4</code> is used to drive the linker.
   </p>
 
   <p>
-  <code>g77</code> is not available for Intel Macs (<code>darwin_x86</code>).
-  We use the <a href="http://pdb.finkproject.org/pdb/package.php/gcc4">
-  <code>gcc4</code> package</a> from the
-  <a href="http://fink.sourceforge.net/">Fink project</a> which contains
-  version 4.x of the GNU compiler suite, including <code>gfortran</code>
-  4.2.0.  However, it is only available in the <em>unstable</em> distribution
-  and you may need to
-  <a href="http://fink.sourceforge.net/faq/usage-fink.php?phpLang=en#unstable">
-  reconfigure Fink</a> to install it.
+  Previous versions of the Darwin binary distribution kits were built with
+  the Fink Fortran and C compilers, including <code>gfortran</code> 4.1.0
+  for the Intel Macs.  However, the HPC g77 Fortran compiler is now used
+  exclusively, including for the <code>RPFITS</code> and <code>PGPLOT</code>
+  libraries provided in the binary distribution kits.
   </p>
 
   <p>
   As mentioned, the installation of multiple incompatible compilers is more
-  likely to cause problems than not.  The Apple-provided GNU compilers
-  installed in <code>/usr/{bin,lib}</code> must be preserved, and the
-  Fink-installed compilers in <code>/sw/{bin,lib}</code> are required to
-  provide Fortran.  Everything else should be avoided, including DarwinPorts
-  installations in <code>/opt/local/{bin,lib}</code> and anything that may
-  have been installed from source code in <code>/usr/local/{bin,lib}</code>.
+  likely to cause problems than not.  The Mac&nbsp;OS&nbsp;X-provided GNU
+  compilers installed in <code>/usr/{bin,lib}</code> must be preserved, and
+  the HPC Fortran compiler is compatible with them.  Everything else should
+  be avoided, including the Fink compilers in <code>/sw/{bin,lib}</code>, the
+  DarwinPorts compilers in <code>/opt/local/{bin,lib}</code>, and anything
+  else that may have been installed from source code in
+  <code>/usr/local/{bin,lib}</code>.
   </p>
 </li>
 </ul>
@@ -1165,10 +1164,10 @@ changing anything.
 </p>
 
 <p>
-The full <em>Miriad</em> distribution tar files are regenerated weekly and are
-normally ready for collection some time before midnight on Thursday Sydney
-time (UTC+1000 in non-daylight-savings months).  It would not be difficult to
-write a script to fetch and install these automatically.
+The full <em>Miriad</em> distribution <code>tar</code> files are regenerated
+weekly and are normally ready for collection some time before midnight on
+Thursday Sydney time (UTC+1000 in non-daylight-savings months).  It would not
+be difficult to write a script to fetch and install these automatically.
 </p>
 
 <p>
@@ -1519,5 +1518,5 @@ private version:
 <hr>
 
 <p>
-<small>$Id: INSTALL.html,v 1.11 2007/05/16 03:55:33 cal103 Exp $</small>
+<small>$Id: INSTALL.html,v 1.12 2007/07/06 05:05:50 cal103 Exp $</small>
 </p>
