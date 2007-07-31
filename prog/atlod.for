@@ -244,7 +244,7 @@ c		  Added nopol option.
 c    rjs  14jan06 Be relaxed about missing met data scans when applying
 c		  opacity correction.
 c
-c $Id: atlod.for,v 1.3 2007/07/31 00:35:18 cal103 Exp $
+c $Id: atlod.for,v 1.4 2007/07/31 00:39:09 cal103 Exp $
 c-----------------------------------------------------------------------
 	integer MAXFILES,MAXTIMES
 	parameter(MAXFILES=128,MAXTIMES=32)
@@ -262,8 +262,8 @@ c  Externals.
 c
 	character itoaf*8, rperr*32, versan*80
 c-----------------------------------------------------------------------
-	version = versan ('atlod',
-     :    '$Id: atlod.for,v 1.3 2007/07/31 00:35:18 cal103 Exp $')
+      version = versan ('atlod',
+     :  '$Id: atlod.for,v 1.4 2007/07/31 00:39:09 cal103 Exp $')
 c
 c  Get the input parameters.
 c
@@ -1493,7 +1493,7 @@ c
 	    else
 	      stemp = mdata(1) + 273.15
 	      spress = 97.5*mdata(2)
-	      shumid = 0.01*data(3)
+	      shumid = 0.01*mdata(3)
 	    endif
 	    call opacGet(nifs,freq0,real(el),stemp,spress,shumid,
      *					     		   fac,Tb)
