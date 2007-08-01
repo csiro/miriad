@@ -13,16 +13,25 @@ c  string is also returned as the value of the function, e.g. for use
 c  in the history log.
 c
 c  Input:
-c    task       The task name.
+c    task       The task name.  If prefixed with '-' the version will
+c               not be reported.
 c    rcsid      RCS version Id string.
 c--
-c  $Id: versan.for,v 1.1 2007/02/21 05:27:50 cal103 Exp $
+c  $Id: versan.for,v 1.2 2007/08/01 00:22:40 cal103 Exp $
 c-----------------------------------------------------------------------
+      logical   quiet
       integer   i0, i1, i2, l, len1
 c-----------------------------------------------------------------------
-      versan = task
+c     Quiet mode?
+      quiet = task(:1).eq.'-'
+      if (quiet) then
+        versan = task(2:)
+      else
+        versan = task
+      end if
+
       call lcase (versan)
-      i0 = len1(task) + 1
+      i0 = len1(versan) + 1
 
       versan(i0:) = ': Version'
       i0 = i0 + 9
@@ -51,9 +60,11 @@ c-----------------------------------------------------------------------
         versan(i0:) = ' (not recorded)'
       endif
 
-      call output (' ')
-      call output (versan(:len1(versan)))
-      call output (' ')
+      if (.not.quiet) then
+        call output (' ')
+        call output (versan(:len1(versan)))
+        call output (' ')
+      end if
 
       return
       end
