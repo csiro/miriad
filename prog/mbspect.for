@@ -148,7 +148,7 @@ c    lss  14jun02  added a position-fitting option
 c    nebk 12nov03  in subroutine pfit, declare xmom and coord to be of
 c                  size maxnax, not of passed in naxis (illegal fortran)
 c
-c $Id: mbspect.for,v 1.2 2007/08/01 00:25:15 cal103 Exp $
+c $Id: mbspect.for,v 1.3 2007/08/01 00:29:14 cal103 Exp $
 c----------------------------------------------------------------------c
 	include 'maxdim.h'
 	integer maxco,maxnax,naxis,maxch
@@ -188,8 +188,8 @@ c
 c----------------------------------------------------------------------c
 c
 c  Don't report the program ID so that gif and ps output can be piped.
-       version = versan ('-mbspect',
-      :  '$Id: mbspect.for,v 1.2 2007/08/01 00:25:15 cal103 Exp $')
+      version = versan ('-mbspect',
+     :  '$Id: mbspect.for,v 1.3 2007/08/01 00:29:14 cal103 Exp $')
 c
 c  Get inputs
 c
@@ -2009,7 +2009,7 @@ c
 c
 c  Log results
 c
-	if(.not.skip50.and..not.skip20) then
+	if(.not.skip50 .or. .not.skip20) then
          call output(' ')
          call output('      Width maximiser:')
          call output('                             50%            20%')
