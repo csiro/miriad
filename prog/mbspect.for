@@ -1,8 +1,7 @@
 c**********************************************************************c
 	program MbSpect
-	implicit none
 c
-c  	MBSPECT makes an average spectrum of a specified region of a
+c	MBSPECT makes an average spectrum of a specified region of a
 c	Miriad image. The average spectrum can be plotted and/or written
 c	out as an ascii file for further analysis.
 c
@@ -17,13 +16,13 @@ c       baselines can be fitted, and the profile parameterised (velocities,
 c       widths, moments). The output spectrum can be plotted and/or written
 c       out as a miriad and/or ascii file for further analysis.
 c@ in
-c	The input image. vxy and xyv images are acceptable inputs. 
+c	The input image. vxy and xyv images are acceptable inputs.
 c	No default.
 c@ out
 c	The output spectrum, if required. Spectral units are always in the
 c       same units as the input file (even if a conversion is performed for
 c       the plot and/or log file). This spectrum can be read back into
-c       MbSpect. 
+c       MbSpect.
 c@ coord
 c       The position, in world coordinates, for which the spectrum is
 c       required, e.g. coord=12:00:13,-42:00:43. The cube must have
@@ -35,13 +34,13 @@ c       Two numbers, being the spatial width of the box in pixels (in RA
 c       and DEC) within which the spectrum is averaged (or integrated).
 c       Must be odd numbers. Default is 1,1.
 c@ xaxis
-c	The x-axis can be plotted as 'channel', 'frequency' ('FREQ'), 
+c	The x-axis can be plotted as 'channel', 'frequency' ('FREQ'),
 c       'optical' velocity ('FELO'),  'radio' velocity ('VELO'), or the units
 c       in the image. The default which is whatever units are in the header.
 c@ yaxis
 c	If 'average' then the pixels enclosed in the x-y area specified
 c	are averaged. If 'sum' they are summed and normalized if the units
-c	are known. If 'point' they are optimally weighted according to 
+c	are known. If 'point' they are optimally weighted according to
 c       the beam parameters, assuming that the source is unresolved.
 c       Default is 'average'
 c@ xrange
@@ -57,8 +56,8 @@ c@ order
 c       Order of optional robust (clipped polynomial) fit (0-10) to be applied
 c       to the spectral axis. If the order is positive (0 to 10), the fit is
 c       plotted on top of the data; if negative (-0 to -10), the fit is
-c       subtracted before plotting. The fit is always subtracted from any 
-c       output data written. (For bulk removal of baselines in a cube, use 
+c       subtracted before plotting. The fit is always subtracted from any
+c       output data written. (For bulk removal of baselines in a cube, use
 c       contsub). Default is no fit.
 c@ options
 c	List of minimum match task enrichment options.
@@ -74,18 +73,18 @@ c               should be inserted into the comment field).
 c	pstyle2 Alternative plot style, where the object and position
 c               information is omitted, the comment field is centered
 c               at the top of the plot (as with options=pstyle1), and
-c               the x and y axis labels are omitted. Typically, this is 
+c               the x and y axis labels are omitted. Typically, this is
 c               used to generate publication-quality n x m matrix plots
-c               (the source name, if required should be inserted into 
+c               (the source name, if required should be inserted into
 c               the comment field).
 c       posfit  If width>1, a source position is estimated from a Gaussian
-c               fit to the moment map. The moment map is formed using the 
+c               fit to the moment map. The moment map is formed using the
 c               velocity range specified by the profile parameter. If
 c               yaxis=point, this new position is used when forming
-c               the spectrum (the region set by the initial coord 
+c               the spectrum (the region set by the initial coord
 c               parameter and the width parameter is not changed).
 c       measure Measure various spectral parameters on plotted spectrum.
-c               If a profile window is set, the line is only measured 
+c               If a profile window is set, the line is only measured
 c               within this window. If the order keyword is used, the fit
 c               is always subtracted before spectral fitting. If a plot
 c               device is selected, the width-maximised 50% and 20% points
@@ -103,21 +102,21 @@ c       Two values. Exclude pixels with values in the range clip(1) to clip(2).
 c       If only one value is given, then exclude -abs(clip) to abs(clip).
 c@ mask
 c       This specifies the x-axis ranges to be excluded from any
-c       continuum fit, e.g. those containing line emission. It consists 
-c       of a number of pairs, each pair giving a start and end x-value. 
-c       The default is that all channels are line-free, which is quite a 
-c       good approximation if the line is weak compared to the continuum. 
+c       continuum fit, e.g. those containing line emission. It consists
+c       of a number of pairs, each pair giving a start and end x-value.
+c       The default is that all channels are line-free, which is quite a
+c       good approximation if the line is weak compared to the continuum.
 c       The units of the x-axis values are the same as given by the xaxis
 c       keyword.
 c@ profile
 c       Two values. This specifies the x-axis range to be included for
 c       profile measurement (options=measure). It consists of a start
 c       and end x-value. The default is that all channels are used for
-c       profile measurement. For weak lines, you will normally need to 
-c       set a profile window, a mask window a clip level, or any 
-c       combination of the above. The profile and mask windows may be 
-c       the same, although the profile window is limited to a single pair 
-c       of values. The units of the x-axis values are the same as given 
+c       profile measurement. For weak lines, you will normally need to
+c       set a profile window, a mask window a clip level, or any
+c       combination of the above. The profile and mask windows may be
+c       the same, although the profile window is limited to a single pair
+c       of values. The units of the x-axis values are the same as given
 c       by the xaxis keyword.
 c@ device
 c	Standard PGPLOT device. See the help on "device" for more information.
@@ -146,14 +145,13 @@ c                  log strings
 c    lss   3jun02  coordinate now has a default, subroutines vaxis1 and vaxis3
 c                  replaced by vaxis13
 c    lss  14jun02  added a position-fitting option
-c    nebk 12nov03  in subroutine pfit, declare xmom and coord to be of 
+c    nebk 12nov03  in subroutine pfit, declare xmom and coord to be of
 c                  size maxnax, not of passed in naxis (illegal fortran)
+c
+c $Id: mbspect.for,v 1.2 2007/08/01 00:25:15 cal103 Exp $
 c----------------------------------------------------------------------c
 	include 'maxdim.h'
 	integer maxco,maxnax,naxis,maxch
- 	character version*(*)
-
-	parameter(version='version 1.0 20-Sep-99')
 
 	parameter(maxco=15,maxnax=3)
 	parameter(maxch=32)
@@ -180,16 +178,18 @@ c
 	character*9 object,date,rctype*9,dctype*9,vctype*9
 	character*16 unit0
 	character ra1*13, ra2*13, dec1*13, dec2*13, fitnote*13
+        character version*80
 c
 c  Externals.
 c
-	integer len1, pgbeg
-        character itoaf*3, hangle*32, rangle*32
+	integer   len1, pgbeg
+        character hangle*32, itoaf*3, rangle*32, versan*80
         logical   keyprsnt
+c----------------------------------------------------------------------c
 c
-c  Remove program ID, so this can pipe gif and ps files straight to web
-c
-c        call output( 'MbSpect: '//version )
+c  Don't report the program ID so that gif and ps output can be piped.
+       version = versan ('-mbspect',
+      :  '$Id: mbspect.for,v 1.2 2007/08/01 00:25:15 cal103 Exp $')
 c
 c  Get inputs
 c
@@ -308,14 +308,14 @@ c
 c  Mandatory for certain operations
 c
 	if(yaxis.eq.'sum'.or.yaxis.eq.'point') then
-	  if(bmaj.eq.0.0.or.bmin.eq.0.0) 
+	  if(bmaj.eq.0.0.or.bmin.eq.0.0)
      *     call bug('f','beam parameters not found')
 	end if
 	if(yaxis.eq.'point') then
 c
 c  Only deal with circular beams just now
 c
-	    if(bmaj.ne.bmin) 
+	    if(bmaj.ne.bmin)
      *       call bug('f','can only deal with circular beam')
 	end if
 c
@@ -510,7 +510,7 @@ c
 	  if(width(1).le.1.and.width(2).le.1) then
 	     call bug('f','width parameter too small')
 	  end if
- 	  if(vaxis.eq.3) then
+	  if(vaxis.eq.3) then
 	     imax=abs(ptrc(1)-pblc(1))+1
 	     jmax=abs(ptrc(2)-pblc(2))+1
 	  else
@@ -576,8 +576,8 @@ c  Open plot device if requested.
 c
 	if(device.ne.' ') then
 	  iostat = pgbeg(0,device,1,1)
-	  if(iostat.eq.0) call bug ('f', 'Error opening plot device') 
-c 
+	  if(iostat.eq.0) call bug ('f', 'Error opening plot device')
+c
 c  Work out limits
 c
 	  if(xrange(1).ne.0.0 .or. xrange(2).ne.0.0) then
@@ -592,19 +592,19 @@ c
             ydmin = yrange(1)
             ydmax = yrange(2)
           else
-  	    ydmin = spec(1)
-  	    ydmax = ydmin
+	    ydmin = spec(1)
+	    ydmax = ydmin
 	    do i = 1,nchan
 	      ydmax = max(ydmax, spec(i))
 	      ydmin = min(ydmin, spec(i))
 	    enddo
 c
-  	    ydmax = ydmax + 0.05 * (ydmax - ydmin)
+	    ydmax = ydmax + 0.05 * (ydmax - ydmin)
 	    ydmin = ydmin - 0.05 * (ydmax - ydmin)
           end if
 c
 c  Make plots if requested.
-c       
+c
 	  call pgscf(2)
 
 c  Label sizes
@@ -630,7 +630,7 @@ c  Label sizes
 	  call pgbox('BCNTS1',0.0,0.0,'BCNTS',0.0,0.0)
 c	  call pgenv (xdmin, xdmax, ydmin, ydmax, 0, 0)
           if (histo) then
-  	    call pgHline (nchan,value,spec,2.)
+	    call pgHline (nchan,value,spec,2.)
           else
             call pgline (nchan,value,spec)
           endif
@@ -685,7 +685,7 @@ c  Axis labelling, except for options=pstyle2
 c
 c  Title and extra information
 c
-	  
+
 	  call pgqvp(0,xv(1),xv(2),yv(1),yv(2))
 	  call pgqwin(xw(1),xw(2),yw(1),yw(2))
 	  call pgsvp(xv(1),xv(2),yv(2),1.0)
@@ -801,7 +801,6 @@ c
 c
 	subroutine GetVaxis(lIn,vaxis,vctype)
 c
-	implicit none
 	integer lIn,vaxis
         character*(*) vctype
 c
@@ -837,7 +836,6 @@ c
 c
 	subroutine GetRaxis(lIn,raxis,rctype)
 c
-	implicit none
 	integer lIn,raxis
         character*(*) rctype
 c
@@ -871,7 +869,6 @@ c
 c
 	subroutine GetDaxis(lIn,daxis,dctype)
 c
-	implicit none
 	integer lIn,daxis
         character*(*) dctype
 c
@@ -908,7 +905,6 @@ c********1*********2*********3*********4*********5*********6*********7*c
      1                  cdelt1,cdelt2,cdelt3,bmaj,bmin,bpa,dtrc,rac,
      2                  dec,none,ierr)
 c
-	implicit none
 	integer lIn,naxis,blc(naxis),trc(naxis),nchan,vaxis
 	integer imax,jmax
 	real bmaj,bmin,bpa,cdelt1,cdelt2,cdelt3
@@ -925,7 +921,7 @@ c    naxis	Number of image axes.
 c    blc,trc	Corners of region of interest.
 c    nchan	Number of channels.
 c    vaxis      Velocity axis
-c    imax       Maximum spatial pixels 
+c    imax       Maximum spatial pixels
 c    jmax       Maximum spatial pixels
 c    cdelt1     Increment on 1-axis
 c    cdelt2     Increment on 2-axis
@@ -965,7 +961,7 @@ c
 	character*32 hangle,rangle
 	external mbgauss
 c
-        none = .true. 
+        none = .true.
 	ierr=0
 
 c  Initialise moment matrix
@@ -1063,7 +1059,7 @@ c
 	call lsqfit(mbgauss,m,npar,xf,covar,rms,ifail1,ifail2)
 
 	if(ifail1.ne.0) call bug('f', 'Position fitting failed')
-	if(ifail2.ne.0) 
+	if(ifail2.ne.0)
      *           call bug('f', 'Position error determination failed')
 c
 c  Errors
@@ -1129,7 +1125,6 @@ c
 	else
 	   xf(6)=atan(sin(d2r*xf(6))/cos(d2r*xf(6)))/d2r
 	end if
-	
 c
 c  Flag bad position errors
 c
@@ -1242,7 +1237,6 @@ c********1*********2*********3*********4*********5*********6*********7*c
 	subroutine vaxis13(lIn,naxis,dtrc,blc,trc,cdelt1,cdelt2,cdelt3,
      *               bmaj,bmin,yaxis,nchan,vaxis,chan,spec,wpix,none)
 c
-	implicit none
 	integer lIn,naxis,blc(naxis),trc(naxis),nchan,vaxis
 	real chan(nchan),spec(nchan),wpix(nchan)
 	real dr,dd,fac,bmaj,bmin,cdelt1,cdelt2,cdelt3
@@ -1279,9 +1273,9 @@ c
 	do i = 1, nchan
 	  spec(i)  = 0.0
 	  chan(i) = i + blc(vaxis) -1
-   	  wpix(i) = 0.0
+	  wpix(i) = 0.0
 	enddo
-        none = .true. 
+        none = .true.
 c
 	do k = blc(3),trc(3)
 	  call xysetpl(lIn,1,k)
@@ -1291,7 +1285,7 @@ c
 	    do i = blc(1),trc(1)
 	      if(flags(i)) then
 		if(yaxis.eq.'point') then
-		  if(vaxis.eq.3) then 
+		  if(vaxis.eq.3) then
 		    dr=(real(i)-real(dtrc(1)))*cdelt1
 		    dd=(real(j)-real(dtrc(2)))*cdelt2
 		  else
@@ -1318,7 +1312,6 @@ c
 c********1*********2*********3*********4*********5*********6*********7*c
 	subroutine axes(lIn,vaxis,xaxis,yaxis,nchan,naxis,wpix,
      *			xlabel,ylabel,chan,value,spec,unit0)
-	implicit none
 	integer lIn,vaxis,naxis,nchan
 	character*(*) xaxis,yaxis,xlabel,ylabel,unit0
 	real chan(nchan),spec(nchan),value(nchan)
@@ -1332,7 +1325,7 @@ c    naxis	Number of image axes.
 c    xaxis	Units for xaxis. Can be 'channel','frequency','optical',
 c               'radio' or (default) units in image.
 c    yaxis	Units for yaxis. Can be 'average' (default), 'sum' or 'point'.
-c    wpix	Number or weight of good pixels in integrated spectrum for 
+c    wpix	Number or weight of good pixels in integrated spectrum for
 c               each channel
 c    nchan	Number of channels.
 c    chan	Array of channel numbers
@@ -1412,7 +1405,7 @@ c
 	       unit0 = 'Jy/b'
 	       ylabel = 'Flux Density (Jy beam\u-1\d)'
 	     end if
-	  else   
+	  else
              unit0=bunit(1:len1(bunit))
 	     ylabel = 'Average Intensity ('//unit0(1:len1(unit0))//')'
 	  end if
@@ -1430,15 +1423,13 @@ c
 c  Shouldn't get here now - disallowed
 
 	  unit0=bunit(1:len1(bunit))//'*pix'
-	  ylabel = 
-     *      'Total Intensity ('//unit0//' x pixels)'
+	  ylabel = 'Total Intensity ('//unit0//' x pixels)'
 	endif
 c
 	end
 
 	Subroutine ImHeader(lIn,object,restfreq,date)
 c
-	implicit none
 	integer lIn
 	character*9 object,date
 	double precision restfreq
@@ -1475,7 +1466,6 @@ c     pstyle2    True means use alternative plot style 2
 c     posfit     True means fit for source position
 c
 c-----------------------------------------------------------------------
-      implicit none
 c
       logical deriv1, deriv2, histo, measure, pstyle1, pstyle2,
      +        posfit
@@ -1512,7 +1502,6 @@ c     nchan        Number of channels
 c     spec         SPectrum. On output contains derivative
 c     work         Work array.
 c-----------------------------------------------------------------------
-      implicit none
 c
       logical deriv1
       integer nchan
@@ -1524,14 +1513,14 @@ c-----------------------------------------------------------------------
         do i = 2, nchan
           work(i) = spec(i) - spec(i-1)
         end do
-      else 
+      else
         do i = 2, nchan-1
           work(i) = 0.5 * (spec(i+1) - spec(i-1))
         end do
 c
 c  Fudge end
 c
-        work(nchan) = work(nchan-1)      
+        work(nchan) = work(nchan-1)
       end if
 c
 c  Fudge beginning
@@ -1567,7 +1556,6 @@ c     weight       Weight array (maxdim)
 c     fit          Polynomial fit
 c     serr         rms
 c-----------------------------------------------------------------------
-      implicit none
 c
       integer nchan,poly,nmask
       real spec(*),value(*),fit(*),work2(*),weight(*)
@@ -1673,7 +1661,7 @@ c  sigma clip
 
       do i=1,nchan
 	 if(weight(i).gt.0.0) then
-	   if(abs(spec(i)-fit(i)).gt.clip*serr) 
+	   if(abs(spec(i)-fit(i)).gt.clip*serr)
      *        weight(i)=0.0
 	 end if
       end do
@@ -1689,7 +1677,7 @@ c  Iteration count
       write(line(1:80), 1020) npts, nchan
  1020	format('#FN   (', i4, ' out of ', i4,  ' channels)')
       call output(line)
-      end	
+      end
 
 c
       subroutine vmom (nchan,value,spec,fit,xaxis,unit0,clip,
@@ -1714,7 +1702,6 @@ c     subpoly   Subtract polynomial
 c     device    pgplot device
 c     serr      rms in spectrum
 c-----------------------------------------------------------------------
-      implicit none
 c
       integer nchan,npts,poly
       real profile(*),fit(*), serr
@@ -1940,7 +1927,7 @@ c
             goto 640
 	 end if
        end do
- 640   do i=npts-1,1,-1	
+ 640   do i=npts-1,1,-1
 	 if(sg*work1(i).gt.spmaxb/5.0) then
 	    i20b(1)=i+1
 	    i20b(2)=i
@@ -2176,7 +2163,6 @@ c     clip      Flux clip values
 c   Output:
 c     vmom0-3   Moments
 c-----------------------------------------------------------------------
-      implicit none
       integer ntot
       double precision vmom0, vmom1, vmom2
       real vel(*), flux(*), vwork(4096), fwork(4096), clip(*)
@@ -2284,7 +2270,6 @@ c
 
 c************************************************************************
 	subroutine mbheader(lIn,lOut,coord,raxis,daxis,vaxis,blc,unit0)
-	implicit none
 	integer lin,lOut,raxis,daxis,vaxis,blc(*)
 	double precision coord(*)
 	character*(*) unit0
@@ -2316,7 +2301,7 @@ c
 	character keyw(nkeys)*8, ckeyw(nckeys)*5
 c
 	data keyw/   'bmaj    ','bmin    ','bpa     ',
-     *    'obstime ','epoch   ','history ',  
+     *    'obstime ','epoch   ','history ',
      *    'ltype   ','lstart  ','lstep   ','lwidth  ','pbfwhm  ',
      *    'instrume','niters  ','object  ','telescop','pbtype  ',
      *    'restfreq','vobs    ','observer','obsra   ',
