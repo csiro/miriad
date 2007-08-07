@@ -244,7 +244,7 @@ c		  Added nopol option.
 c    rjs  14jan06 Be relaxed about missing met data scans when applying
 c		  opacity correction.
 c
-c $Id: atlod.for,v 1.4 2007/07/31 00:39:09 cal103 Exp $
+c $Id: atlod.for,v 1.5 2007/08/07 04:46:35 cal103 Exp $
 c-----------------------------------------------------------------------
 	integer MAXFILES,MAXTIMES
 	parameter(MAXFILES=128,MAXTIMES=32)
@@ -263,7 +263,7 @@ c
 	character itoaf*8, rperr*32, versan*80
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :  '$Id: atlod.for,v 1.4 2007/07/31 00:39:09 cal103 Exp $')
+     :  '$Id: atlod.for,v 1.5 2007/08/07 04:46:35 cal103 Exp $')
 c
 c  Get the input parameters.
 c
@@ -872,9 +872,9 @@ c
 c
 	if(dohann.and.nfreq(if).gt.33)then
 	  edge(if) = 1
-	  sfreq(if) = sfreq(if) + edge(if)*sdf(if)
+	  sfreq(if) = sfreq(if) + sdf(if)
 	  sdf(if) = 2*sdf(if)
-	  nfreq(if) = (nfreq(if)-2*edge(if)+1)/2
+	  nfreq(if) = (nfreq(if)-1)/2
 	endif
 c
 c  If birdie mode, flag out the birdie channel.
@@ -1243,7 +1243,10 @@ c
 	if(chan.le.nfreq)then
 	  if(nfreq.gt.MAXDIM+1)
      *	    call bug('f','Buffer overflow when debirding 8MHz')
-	  n = 2*nfreq-2
+
+	  n = 2*nfreq
+	  if (mod(nfreq,2).eq.1) n = n - 2
+
 	  do j=1,npol
 	    do i=1,nfreq
 	      cbuff(i) = vis(j,i)
