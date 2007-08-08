@@ -26,6 +26,7 @@ c    10dec97 rjs  Check gain table size is correct.
 c    24feb97 rjs  Make "bandpass calibration" work for wide-only files.
 c    01jan05 rjs  Double precision baselines and use basant.
 c    08jan07 rjs  Use MAXWIN more rigorously.
+c    08aug07 rjs  Correct bug in averaging wide channels.
 c************************************************************************
 	subroutine uvGnIni(tno1,dogains1,dopass1)
 	implicit none
@@ -1088,8 +1089,8 @@ c
 	    sfreq(j) = 0
 	    swidth(j) = 0
 	    do i=1,lwidth
-	      sfreq(j) = sfreq(j) + wfreq(i0)*wwidth(i0)
-	      swidth(j) = swidth(j) + wwidth(i0)
+	      sfreq(j) = sfreq(j) + wfreq(i0)*abs(wwidth(i0))
+	      swidth(j) = swidth(j) + abs(wwidth(i0))
 	      i0 = i0 + 1
 	    enddo
 	    sfreq(j) = sfreq(j) / swidth(j)
