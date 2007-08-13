@@ -164,8 +164,8 @@ c             (id=1) seconds of arc ('dms') or time ('hms')
 c--
 c-----------------------------------------------------------------------
       include 'mirconst.h'
-      double precision as2r, st2r
-      parameter (as2r=dpi/3600.d0/180.d0, st2r=dpi/3600.d0/12.0d0)
+      double precision st2r
+      parameter (st2r=dpi/3600.d0/12.0d0)
 c-----------------------------------------------------------------------
       if (id.eq.1) then
 c
@@ -174,7 +174,7 @@ c
         if (labtyp.eq.'hms') then
           w = w / st2r
         else if (labtyp.eq.'dms') then
-          w = w / as2r
+          w = w / AS2R
         end if
       else if (id.eq.2) then
 c
@@ -183,7 +183,7 @@ c
         if (labtyp.eq.'hms') then
           w = w * st2r
         else if (labtyp.eq.'dms') then
-          w = w * as2r
+          w = w * AS2R
         end if
       else
         call bug ('f', 'ANGCONCG: unrecognized conversion code')
