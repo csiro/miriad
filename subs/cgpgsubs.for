@@ -139,7 +139,7 @@ c			 LAB3CG -- and causing things to vomit.
 c     rjs    10nov97     Make more robust to things missing from headers.
 c     jwr    08jul04     Replaced MemAlloc where MemFree was meant
 c
-c $Id: cgpgsubs.for,v 1.2 2006/12/14 05:46:17 cal103 Exp $
+c $Id: cgpgsubs.for,v 1.3 2007/08/13 09:20:51 cal103 Exp $
 c**********************************************************************
 c
 c* annboxCG -- Annotate plot with information from a box image 
@@ -1470,8 +1470,8 @@ c--
 c-----------------------------------------------------------------------
       include 'mirconst.h'
 c
-      double precision as2r, st2r
-      parameter (as2r=dpi/3600.d0/180.d0, st2r=dpi/3600.d0/12.0d0)
+      double precision st2r
+      parameter (st2r=dpi/3600.d0/12.0d0)
 c
       double precision wwi(3), wblc(3), wtrc(3), wbrc(3), wtlc(3),
      + tickd(2), xmin, xmax, ymin, ymax, zp, ticklp(2), dp, dw, 
