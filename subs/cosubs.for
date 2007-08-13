@@ -48,7 +48,7 @@ c    rjs    17jul97    Get rid of calls to rdhd, and just use coordinate
 c                      object as source of information.
 c    rjs    10nov97    Make ctypeco robust to a blank axis.
 c
-c $Id: cosubs.for,v 1.4 2007/02/14 07:07:16 cal103 Exp $
+c $Id: cosubs.for,v 1.5 2007/08/13 09:20:51 cal103 Exp $
 c******************************************************************************
 c
 c* axfndCO -- Find a specified generic axis in an image
@@ -457,8 +457,6 @@ c-----------------------------------------------------------------------
       double precision win
 cc
       include 'mirconst.h'
-      double precision a2r, d2r
-      parameter (a2r = dpi/180.0d0/3600.0d0, d2r = dpi/180.0d0)
       character*132 str
 c-----------------------------------------------------------------------
 c
@@ -475,10 +473,10 @@ c
         cti = 'op'
       else if (type.eq.'arcsec') then
         cti = 'ow'
-        win = win * a2r
+        win = win * DAS2R
       else if (type.eq.'arcmin') then
         cti = 'ow'
-        win = win * a2r * 60.0d0
+        win = win * DAS2R * 60.0d0
       else if (type.eq.'absghz' .or. type.eq.'abskms' .or.
      +         type.eq.'absnat') then
         cti = 'aw'
@@ -487,10 +485,10 @@ c
         cti = 'ow'
       else if (type.eq.'absdeg') then
         cti = 'aw'
-        win = win * d2r
+        win = win * DD2R
       else if (type.eq.'reldeg') then
         cti = 'ow'
-        win = win * d2r
+        win = win * DD2R
       else
         str = 'SCTICO: Unrecognized axis type ('//type//')'
         call bug ('f', str)
@@ -521,15 +519,13 @@ c-----------------------------------------------------------------------
       double precision wout
 cc
       include 'mirconst.h'
-      double precision r2a, r2d
-      parameter (r2a = 180.0d0*3600.0d0/dpi, r2d = 180.0d0/dpi)
 c-----------------------------------------------------------------------
       if (type.eq.'arcsec') then
-        wout = wout * r2a
+        wout = wout * DR2AS
       else if (type.eq.'arcmin') then
-        wout = wout * r2a / 60.0d0
+        wout = wout * DR2D * 60D0
       else if (type.eq.'absdeg' .or. type.eq.'reldeg') then
-        wout = wout * r2d
+        wout = wout * DR2D
       end if
 c
       end
