@@ -548,7 +548,7 @@ c       cursor). This could be used as well as or instead of the current
 c       method. Think about two seperate options to indicate user's desire
 c       of which.
 c
-c  $Id: sfind.for,v 1.5 2007/08/14 01:20:03 cal103 Exp $
+c  $Id: sfind.for,v 1.6 2007/08/14 05:41:16 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -589,7 +589,7 @@ c-----------------------------------------------------------------------
       character versan*80, version*80
 c-----------------------------------------------------------------------
       version = versan('sfind',
-     +  '$Id: sfind.for,v 1.5 2007/08/14 01:20:03 cal103 Exp $')
+     +  '$Id: sfind.for,v 1.6 2007/08/14 05:41:16 cal103 Exp $')
 c
 c Get user inputs
 c
@@ -1497,7 +1497,6 @@ c
 c
 c  Convert the coordinates to pixels, and fill in defaults if necessary.
 c
-      call CoordFid(lIn,k,.true.)
       call GetEst
 c
 c  Pack the variables into an array.
@@ -1617,12 +1616,10 @@ c
        call bug('w','Source may still be real, but parameters may'
      +          //' be incorrect.')
       end if
-c
-c  Convert to astronomical units, and report - ie, finalise results.
-c
-      call CoordFid(lIn,k,.false.)
-      call Report (bvol, bvolp, xposerr, yposerr,
-     +   pkfl, pkflerr, intfl, amaj, amin, posa, posns, lIn)
+
+c     Convert the fit parameters to astronomical units.
+      call gaucvt (lIn, k, bvol, bvolp, xposerr, yposerr,
+     +   pkfl, pkflerr, intfl, amaj, amin, posa, posns)
 c
       end
 c
@@ -2714,7 +2711,6 @@ c      if (m.eq.0) then
 c
 c  Convert the coordinates to pixels, and fill in defaults if necessary.
 c
-      call CoordFid(lIn,k,.true.)
       call GetEst
 c make sure it's a 2-D gaussian
       gdim = 2
@@ -2774,7 +2770,6 @@ c area covered by beam, or no pixels at all were used.
 c
 c  Convert the coordinates to pixels, and fill in defaults if necessary.
 c
-       call CoordFid(lIn,k,.true.)
        call GetEst
 c make sure it's a 2-D gaussian
        gdim = 2
@@ -2872,84 +2867,14 @@ c the same source can't be detected and fit multiple times
       end do
 c record number of used pixels
       usedpixels = usedpixels + nfdrused
-c
-c  Convert to astronomical units, and report - ie, finalise results.
-c
-      call CoordFid(lIn,k,.false.)
-      call Report (bvol, bvolp, xposerr, yposerr,
-     +   pkfl, pkflerr, intfl, amaj, amin, posa, posns, lIn)
-c
+
+c     Convert to astronomical units.
+      call gaucvt (lIn, k, bvol, bvolp, xposerr, yposerr,
+     :   pkfl, pkflerr, intfl, amaj, amin, posa, posns)
+
       end
-c
-c
-      subroutine CoordFid(lIn,k,topix)
-c-----------------------------------------------------------------------
-c
-c  Convert coordinates between world and pixel coordinates.
-c
-c  Input:
-c    lIn      Handle of the coordinate system.
-c    k
-c    topix
-c-----------------------------------------------------------------------
-      include 'sfind.h'
-      integer lIn,k
-      logical topix
-      double precision in(3),out(3)
-      double precision crpix(2),crval(2),cdelt(2)
-      character ctype(2)*16
-      real bmaj,bmin,bpa,dx,dy
-c-----------------------------------------------------------------------
-c
-c  Convert the position.
-c
-      in(1) = l0
-      in(2) = m0
-      in(3) = k
-      if (topix) then
-        call coCvt(lIn,'ow/ow/ap',in,'ap/ap/ap',out)
-      else
-        call coCvt(lIn,'ap/ap/ap',in,'ow/ow/ap',out)
-      endif
-      l0 = out(1)
-      m0 = out(2)
-c
-c  Convert the gaussian parameters.
-c
-      if (topix) then
-        call coGauCvt(lIn,'ow/ow/ap',in,
-     +          'w',fwhm1,fwhm2,pa,'p',bmaj,bmin,bpa)
-      else
-        call coGauCvt(lIn,'ap/ap/ap',in,
-     +          'p',fwhm1,fwhm2,pa,'w',bmaj,bmin,bpa)
-      endif
-c
-c  Convert the uncertainties.
-c
-      sfwhm1 = sfwhm1 * bmaj / fwhm1
-      sfwhm2 = sfwhm2 * bmin / fwhm2
-      if ((spa+sl0+sm0).gt.0.0) then
-        if (topix) then
-          call coLin(lIn,'ow/ow/ap',in,2,ctype,crpix,crval,cdelt)
-          dx = 1.0/abs(cdelt(1))
-          dy = 1.0/abs(cdelt(2))
-        else
-          call coLin(lIn,'ap/ap/ap',in,2,ctype,crpix,crval,cdelt)
-          dx = abs(cdelt(1))
-          dy = abs(cdelt(2))
-        endif
-        sl0 = sl0 * dx
-        sm0 = sm0 * dy
-        spa = spa / ((dy/dx)*cos(pa)**2 + (dx/dy)*sin(pa)**2 )
-      endif
-c
-      fwhm1 = bmaj
-      fwhm2 = bmin
-      pa    = bpa
-c
-      end
-c
-c
+
+
       subroutine GetEst
 c-----------------------------------------------------------------------
 c  Generate an initial estimate for a single component model.
@@ -2957,45 +2882,47 @@ c
 c-----------------------------------------------------------------------
       include 'sfind.h'
       include 'mirconst.h'
-c
+
       integer i
       double precision P,XP,YP,XYP,XXP,YYP,SP
       real t,fac
 c-----------------------------------------------------------------------
-      SP = 0
-      P = 0
-      XP = 0
-      YP = 0
-      XYP = 0
-      XXP = 0
-      YYP = 0
-c
+      SP = 0D0
+      P  = 0D0
+      XP = 0D0
+      YP = 0D0
+      XYP = 0D0
+      XXP = 0D0
+      YYP = 0D0
+
       do i=1,ndata
         SP  = SP + data(i)
-        t = abs(data(i))
+        t   = abs(data(i))
         P   = P   + t
         XP  = XP  + t*x(i)
         YP  = YP  + t*y(i)
-        XYP = XYP + t*x(i)*y(i)
         XXP = XXP + t*x(i)*x(i)
+        XYP = XYP + t*x(i)*y(i)
         YYP = YYP + t*y(i)*y(i)
       enddo
-c
-      fac = 4*log(2.)
+
       XP  = XP / P
       YP  = YP / P
-      XYP = XYP / P - XP*YP
       XXP = XXP / P - XP*XP
+      XYP = XYP / P - XP*YP
       YYP = YYP / P - YP*YP
       l0  = XP
       m0  = YP
+
+      fac = 4.0*log(2.0)
       fwhm1 = sqrt(fac*(XXP + YYP + sqrt( (XXP-YYP)**2 + 4*(XYP)**2 )))
       fwhm2 = sqrt(fac*(XXP + YYP - sqrt( (XXP-YYP)**2 + 4*(XYP)**2 )))
       pa    = 0.5*atan2(2*XYP,YYP-XXP)
       flux  = sign(fac*P/(PI*fwhm1*fwhm2), SP)
-c
+
       end
-c
+
+
       subroutine LoadDat(m,nx,ny,xpos,ypos,blc,bin,image,boxsize,
      +    lx,my,nimage,maxline,image2,pcut,fitok,slopearry,connct,
      +    xpixused,ypixused,meanimg,sgimg,nfdrused,fdrpeak,allpix)
@@ -3558,32 +3485,59 @@ c     Loop over the various model types.
       end
 
 
-      subroutine Report(bvol,bvolp,xposerr,yposerr,pkfl,pkflerr,
-     +                    intfl,amaj,amin,posa,posns,lIn)
+      subroutine gaucvt (lIn, k, bvol, bvolp, xposerr, yposerr, pkfl,
+     :  pkflerr, intfl, amaj, amin, posa, awpos)
 c-----------------------------------------------------------------------
-c  Report on the source component solution.
+c  Convert the source component parameters from pixel coordinates to
+c  astronomical (angular) measures.
 c
 c  Input:
-c    lIn            handle of image
+c    lIn            Handle of the coordinate system.
+c
 c  Output:
-c    posns          x and y positions in abs. world coords (radians)
+c    bvol
+c    bvolp
 c    xposerr        xposition error.
 c    yposerr        yposition error.
 c    pkfl, pkflerr  peak flux density of source, and its error.
 c    intfl          integrated flux density of the source
 c    amaj, amin     major and minor fwhm of source (arcsec)
 c    posa           position angle of source (degrees E of N)
+c    awpos          x and y positions in abs. world coords (radians)
 c-----------------------------------------------------------------------
       include 'mirconst.h'
       include 'sfind.h'
-c
-      integer lin
-      real bvol,bvolp
-      real f1,f2,p,sf1,sf2,sp,tflux,sfac
-        real xposerr, yposerr, pkfl, pkflerr, intfl
-        real amaj, amin, posa
-        double precision posns(2),newpos(2)
+
+      integer   lIn, k
+      real      amaj, amin, bmaj, bmin, bpa, bvol, bvolp, dx, dy, intfl,
+     :          pkfl, pkflerr, posa, sfac, tmp, xposerr, yposerr
+      double precision appos(2), awpos(2), cdelt(2), crpix(2), crval(2),
+     :          x1(3)
+      character ctype(2)*16
 c-----------------------------------------------------------------------
+c     Convert the gaussian parameters to world coordinates.
+      x1(1) = l0
+      x1(2) = m0
+      x1(3) = k
+      call coGauCvt(lIn, 'ap/ap/ap', x1,
+     +  'p', fwhm1, fwhm2, pa, 'w', bmaj, bmin, bpa)
+
+c     Convert the uncertainties.
+      sfwhm1 = sfwhm1 * bmaj / fwhm1
+      sfwhm2 = sfwhm2 * bmin / fwhm2
+      if ((spa+sl0+sm0).gt.0.0) then
+        call coLin(lIn,'ap/ap/ap',x1,2,ctype,crpix,crval,cdelt)
+        dx = abs(cdelt(1))
+        dy = abs(cdelt(2))
+        sl0 = sl0 * dx
+        sm0 = sm0 * dy
+        spa = spa / ((dy/dx)*cos(pa)**2 + (dx/dy)*sin(pa)**2 )
+      endif
+
+      fwhm1 = bmaj
+      fwhm2 = bmin
+      pa    = bpa
+
       if (bvolp.gt.0) then
         sfac = sqrt(bvolp)
       else
@@ -3591,63 +3545,41 @@ c-----------------------------------------------------------------------
       endif
 
       pkfl = 1000.0*flux
-      pkflerr = 1000.*sfac*sflux
+      pkflerr = 1000.0*sfac*sflux
       if (bvol.gt.0.0) then
-        tflux = flux * abs(fwhm1 * fwhm2) * PI_4
-        tflux = tflux / log(2.0)
-        tflux = tflux / bvol
-        intfl = 1000.0*tflux
+        intfl = 1000.0*flux * abs(fwhm1*fwhm2) * PI_4 / (log(2.0)*bvol)
       else
         intfl = 0.0
       endif
 
-      posns(1) = l0
-      posns(2) = m0
-      call coCvt(lIn,'ow/ow',posns,'aw/aw',newpos)
-      posns(1) = newpos(1)
-      posns(2) = newpos(2)
+      appos(1) = l0
+      appos(2) = m0
+      call coCvt(lIn, 'ap/ap', appos, 'aw/aw', awpos)
       xposerr = sl0 * sfac * R2AS
       yposerr = sm0 * sfac * R2AS
-      call GauFid(fwhm1, fwhm2, sfac*sfwhm1, sfac*sfwhm2, pa,
-     :            sfac*spa, f1, f2, sf1, sf2, p, sp)
-      amaj = f1
-      amin = f2
-      posa = p
+
+c     Convert gaussian parameters to arcsec.
+      amaj = abs(fwhm1) * R2AS
+      amin = abs(fwhm2) * R2AS
+      posa = pa * R2D
+
+      if (amaj.lt.amin) then
+        tmp  = amaj
+        amaj = amin
+        amin = tmp
+        posa = posa + 90.0
+      end if
+
+      posa = mod(posa, 180.0)
+      if (posa.lt.-90.0) then
+        posa = posa + 180.0
+      else if (posa.gt. 90.0) then
+        posa = posa - 180.0
+      end if
 
       end
 
 
-      subroutine GauFid(fwhm1,fwhm2,sfwhm1,sfwhm2,pa,spa,f1,f2,
-     +                                          sf1,sf2,p,sp)
-c-----------------------------------------------------------------------
-c
-c  Convert the gaussian parameters to arcsec.
-c-----------------------------------------------------------------------
-      include 'mirconst.h'
-      real fwhm1,fwhm2,pa,f1,f2,p,sfwhm1,sfwhm2,spa,sf1,sf2,sp
-      real t
-c-----------------------------------------------------------------------
-      f1  = abs(fwhm1) * R2AS
-      f2  = abs(fwhm2) * R2AS
-      sf1 = sfwhm1 * R2AS
-      sf2 = sfwhm2 * R2AS
-      p  =  pa * R2D
-      sp = spa * R2D
-      if (f1.lt.f2) then
-        t = f1
-        f1 = f2
-        f2 = t
-        t = sf1
-        sf1 = sf2
-        sf2 = t
-        p = p + 90
-      endif
-      p = mod(p,180.)
-      if (p.lt.-90) p = p + 180
-      if (p.gt. 90) p = p - 180
-      end
-c
-c
       subroutine BeamPar(lIn,k,bvol,bvolp,bmaj,bmin,bpa,bmajp,bminp,
      +                   bpap,nobeam)
 c-----------------------------------------------------------------------
