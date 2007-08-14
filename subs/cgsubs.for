@@ -41,7 +41,7 @@ c                        CHNSELPG, because they may get modified
 c                        if blanked pixels exist
 c     nebk   28apr92     "g" format seems to behave capriciously
 c                        Try to do something better in VCLABPG
-c                        Renamed subroutines to *cg from *pg 
+c                        Renamed subroutines to *cg from *pg
 c                        as pgdisp etc -> cgdisp etc
 c     nebk   12may92     Return actual scales in VPADJCG
 c     nebk   14may92     Add  LIMTRCG. Add a couple more
@@ -49,18 +49,18 @@ c                        parameters to HEDINFCG
 c     nebk   18may92     Add AXFNDCG
 c     nebk   04jul92     Don't modify variable (PLAV) in READIMCG. Add
 c                        O2PIXCG, SETTRCG, CONLINCG, STRERSCG, DEGHSMCG,
-c			 ANN*CG, CHKDESCG, CHKDIMCG,  add argument 
-c			 MIRROR to CONLEVCG 
-c     nebk   08jul82     Add OPTCG and INIT/NORM to READIMCG call. FIx 
-c                        bug in CHNSELCG causing groups to be redundantly
-c                        specified under some circumstances
+c			 ANN*CG, CHKDESCG, CHKDIMCG,  add argument
+c			 MIRROR to CONLEVCG
+c     nebk   08jul82     Add OPTCG and INIT/NORM to READIMCG call. FIx
+c                        bug in CHNSELCG causing groups to be specified
+c                        redundantly under some circumstances
 c     nebk   14jul92     Add POSOFF to O2PIXCG. Type CDELT and CRVAL
 c			 as DOUBLE PRECISION
-c     nebk   07aug92     Try to instill some more modularity into all 
+c     nebk   07aug92     Try to instill some more modularity into all
 c                        coordinate conversions with PIX2WCG and
 c                        W2PIXCG, removing SETTRCG along the way.
-c     nebk   22oct92     Add units to velocity and frequency axes 
-c			 in LIMTRCG.  SETLABCG was not correctly 
+c     nebk   22oct92     Add units to velocity and frequency axes
+c			 in LIMTRCG.  SETLABCG was not correctly
 c                        setting the dms,hms PGTBOX strings.
 c     nebk   28nov92     Add 'abs/relkms' and 'abs/relghz' label types
 c                        Change "linear" to "abslin"
@@ -72,8 +72,8 @@ c                        subroutine call sequence variables.
 c     nebk   21apr93     Add AXTYPCG
 c     nebk   27may93     Add 0.5 pixel to blc,trc in LIMTRCG so that
 c                        image edges are at n.5,m.5 not n,m
-c     nebk   29may93     Remove CHTONVCG as now there is PGQCS 
-c     nebk   02jun93     Move ANNDEFCG, VPASPCG and VPADJCG to 
+c     nebk   29may93     Remove CHTONVCG as now there is PGQCS
+c     nebk   02jun93     Move ANNDEFCG, VPASPCG and VPADJCG to
 c                        CGPGSUBS.FOR as they now call PGQVSZ
 c     nebk   22jun93     Change PIX2WCG, W2PIXCG, LIMTRCG for RA axes to
 c			 return abslin/rellin in rads of polar rotation
@@ -91,7 +91,7 @@ c     nebk   10dec93     Add MASKORCG and READBCG
 c     nebk   14dec93     Add AXABSCG and LIMITSCG
 c     nebk   03jan94     Add new argument to OMATCHCG and rename MATCHCG
 c		         Add SETCOLCG
-c     nebk   09jan94     Convert CRPIX -> double precision. 
+c     nebk   09jan94     Convert CRPIX -> double precision.
 c			 Add W2WCG, W2WFCG
 c     nebk   27jan94     Add square root transfer function to GRFIXCG
 c                        Rename TAKLOG to APPTRF and include h.e., log,
@@ -102,10 +102,10 @@ c     nebk   08mar94     Move WEDGECG to CGPGSUBS.FOR, add WINDFIDCG
 c                        Implement spatial binning in READBCG, READIMCG,
 c                        LIMITSCG and LIMTRCG. Add COPYIMCG, PPCONCG
 c     nebk   09jun94     Recognize UU and VV image axes
-c     nebk   21jun94     Add OPIMCG 
+c     nebk   21jun94     Add OPIMCG
 c     nebk   12jul94     Fix dimensioning bug in SETDESCG
 c     nebk   19jul94     Allow roundoff tolerance in CHKDESCG
-c     nebk   27aug94     Convert OL2PIXCG to use correct coordinate 
+c     nebk   27aug94     Convert OL2PIXCG to use correct coordinate
 c                        conversion routines via COSUBS.FOR
 c     nebk   15jan95     Add SAVDESCG
 c     nebk   14apr95     Add HARD and DOFID arguments to WEDGINCCG
@@ -116,27 +116,31 @@ c     nebk   19oct95     Bias images by pixr(1) rather than image min
 c			 when log or square root transfer function
 c     nebk   14nov95     Remove a number of subroutines whose use is
 c			 no longer required becuase of internal changes
-c                        to the cg* programs and use of cosubs.for; AXABSCG,
-c                        AXFNDCG, AXTYPCG, COSDECCG, PIX2WCG, PIX2WFCG, 
-c                        SAVDESCG, SETDESCG, SUNITCG, W2PIXCG, W2WCG, W2WFCG
+c                        to the cg* programs and use of cosubs.for;
+c                        AXABSCG, AXFNDCG, AXTYPCG, COSDECCG, PIX2WCG,
+c                        PIX2WFCG, SAVDESCG, SETDESCG, SUNITCG, W2PIXCG,
+c                        W2WCG, W2WFCG
 c     nebk   29nov95     New call for CTYPECO, new ANGCONCG internals,
 c			 new routine RAZEROCG
 c     nebk   04dec95     DOLABCG was forgetting some right hand labels
-c     nebk   30jan96     In CHNSELCG remove the restictions on channel 
+c     nebk   30jan96     In CHNSELCG remove the restictions on channel
 c                        averaging and incrementing which previously
 c			 groups of channels could not overlap
 c     rjs     8mar96     Change ctype*9 to ctype*32
 c     nebk   26apr96     Km -> km is setlabcg.  rats.
 c     nebk   02may96     COmments in ANGCONCG were no longer the truth
-c     nebk   16oct96     Make sure all LONG axes are trapped for zero 
+c     nebk   16oct96     Make sure all LONG axes are trapped for zero
 c                        crossing too in RAZEROCG
-c     nebk   16jul98     CHNSELCG was messing up regions like image(3),image(7)
+c     nebk   16jul98     CHNSELCG was messing up regions like image(3),
+c                        image(7)
 c     nebk   09sep98     RAZEROCG only got it right if the ref value was
 c                        close to zero.  Failed if close to 2pi
 c    nebk    30nov98     Finally make a decent algorithm for RAZEROCG
 c     rjs    15dec98     Some tidying.
-c     rjs    06jan99     Yet another go at a decent algorithm for RAZEROCG
-c    nebk    14nov01     Add abs max to min/max vector returned by readimcg
+c     rjs    06jan99     Yet another go at a decent algorithm for
+c                        RAZEROCG
+c    nebk    14nov01     Add abs max to min/max vector returned by
+c                        readimcg
 c***********************************************************************
 c
 c* angconCG -- Convert radians to and from seconds of time/arc
@@ -144,22 +148,21 @@ c& nebk
 c: plotting
 c+
       subroutine angconcg (id, labtyp, w)
-      implicit none
       character*(*) labtyp
       double precision w
       integer id
 c
-c  Convert RA/DEC axis world coordinates between seconds (arc/time) 
+c  Convert RA/DEC axis world coordinates between seconds (arc/time)
 c  and radians.
 c
 c  Input
 c    id       1 -> convert from radians
 c	      2 -> convert to   radians
-c    labtyp   axis label type 
+c    labtyp   axis label type
 c	         hms    seconds of time
 c		 dms    arc seconds
 c  Input/Ouput
-c    w        world coordinate. SHould be radians (id=1), or 
+c    w        world coordinate. SHould be radians (id=1), or
 c             (id=1) seconds of arc ('dms') or time ('hms')
 c--
 c-----------------------------------------------------------------------
@@ -169,7 +172,7 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
       if (id.eq.1) then
 c
-c From radians 
+c From radians
 c
         if (labtyp.eq.'hms') then
           w = w / st2r
@@ -187,8 +190,8 @@ c
         end if
       else
         call bug ('f', 'ANGCONCG: unrecognized conversion code')
-      end if      
-c 
+      end if
+c
       end
 c
 c* apptrfCG -- Apply transfer function to image
@@ -198,7 +201,6 @@ c+
       subroutine apptrfcg (pixr, trfun, groff, size, nimage, image,
      +                     nbins, his, cumhis)
 c
-      implicit none
       integer nimage(*), size, nbins, his(nbins)
       real groff, image(*), pixr(2), cumhis(*)
       character trfun*3
@@ -206,7 +208,7 @@ c
 c  Apply the desired transfer function to the image
 c
 c  Input:
-c   pixr     Intensity range with NO bias or logs/sqrt taken 
+c   pixr     Intensity range with NO bias or logs/sqrt taken
 c   trfun    Transfer function.  "lin", "log", "heq" or "sqr"
 c   groff    Bias to make image positive if necessary
 c   size     Size of image
@@ -214,17 +216,17 @@ c   nimage   Normalization image
 c   nbins    Number of bins for histogram equalization
 c  Input/output:
 c   image    Image.  Transfer function applied on output. Pixels
-c	     below pixr(1) are set equal to pixr(1)
+c            below pixr(1) are set equal to pixr(1)
 c   his      Image histogram for histogram equalization
 c   cumhis   Cumulative histogram for histogram equalization
-c            Values for each bin are the intensities assigned to 
-c            the image.  Thus if an image pixel ended up in 
+c            Values for each bin are the intensities assigned to
+c            the image.  Thus if an image pixel ended up in
 c            cumhis bin idx, then its new value is cumhis(idx)
-c            
+c
 c--
-c---------------------------------------------------------------------
+c-----------------------------------------------------------------------
       integer i
-c---------------------------------------------------------------------
+c-----------------------------------------------------------------------
       if (trfun.eq.'log') then
         do i = 1, size
           if (nimage(i).ne.0) then
@@ -252,7 +254,6 @@ c: plotting
 c+
       subroutine chkdescg (relax, type, iaxis, im1, im2, des1, des2)
 c
-      implicit none
       character type*(*), im1*(*), im2*(*)
       integer iaxis
       double precision des1, des2
@@ -280,7 +281,7 @@ c-----------------------------------------------------------------------
         if (relax) then
           call bug ('w', line)
         else
-          call bug ('i', 
+          call bug ('i',
      +       'CHKDESCG: You might consider, with care, OPTIONS=RELAX')
           call bug ('f', line)
         end if
@@ -293,26 +294,25 @@ c* chnselCG -- Make list of CHAN and REGION selected channel groups
 c& nebk
 c: plotting
 c+
-      subroutine chnselcg (blc, trc, kbin, maxbox, boxes, ngrps, 
+      subroutine chnselcg (blc, trc, kbin, maxbox, boxes, ngrps,
      +                     grpbeg, ngrp)
 c
-      implicit none
       integer maxbox, boxes(maxbox), grpbeg(*), ngrp(*), ngrps, kbin(2),
      +  blc(3), trc(3)
 c
 c  Find the channels designated by the CHAN and REGION specifiations
-c  via the RUNS arrays.    Note that currently, none of the 
+c  via the RUNS arrays.    Note that currently, none of the
 c  CG programs call BOXMASK so that all planes offered by the
-c  REGION keyword are selected by CHANSELCG as being good.  
+c  REGION keyword are selected by CHANSELCG as being good.
 c  Blanked pixels are dealt with by READIMCG
 c
 c  Input
 c    blc,trc    Cube surrounding region of interest
 c    kbin       Channel increment and average to step through image.
-c		If kbin(1) and kbin(2) = 0 then output groups begin
-c		every time the selected channels are non-contiguous
-c		and the end channel of each group is made equal to 
-c		the number of contiguous channels in that group
+c               If kbin(1) and kbin(2) = 0 then output groups begin
+c               every time the selected channels are non-contiguous
+c               and the end channel of each group is made equal to
+c               the number of contiguous channels in that group
 c    maxbox     Maximum number of boxes
 c    boxes      Boxes following BOXINPUT,BOXSET,BOXINFO (optional) and
 c               BOXMASK
@@ -347,7 +347,7 @@ c
 c
         if (nruns.gt.0) start(1) = j
       end do
-      if (start(1).eq.0) call bug ('f', 
+      if (start(1).eq.0) call bug ('f',
      +  'CHNSELCG: There were no valid pixels in the region')
 c
 c Loop over remaining planes, and accumulate start and end channels
@@ -385,7 +385,7 @@ c
             end if
             last = j
           end if
-        end do  
+        end do
 c
 c Assign the end channel to the last group if need be
 c
@@ -402,7 +402,7 @@ c
           ngrp(k) = end(k) - start(k) + 1
         end do
       else
-c         
+c
 c Now loop over the number of groups of contiguous channels
 c and divide up into smaller collections of channels reflecting
 c the users averaging and incrementing requests
@@ -434,10 +434,9 @@ c* conlevCG -- Compute contour levels
 c& nebk
 c: plotting
 c+
-      subroutine conlevcg (mirror, maxlev, lcin, levtyp, slev, nlevs, 
+      subroutine conlevcg (mirror, maxlev, lcin, levtyp, slev, nlevs,
      +                     levs, srtlev)
 c
-      implicit none
       integer lcin, nlevs, maxlev, srtlev(maxlev)
       real slev, levs(maxlev)
       character*1 levtyp
@@ -483,14 +482,14 @@ c
            do i = -nlevs, -1, 1
              levs(ilev) = i * slev
              ilev = ilev + 1
-           end do 
+           end do
 c
            nlevs = cdmax / slev
            do i = 1, nlevs, 1
              levs(ilev) = i * slev
              ilev = ilev + 1
-           end do          
-c 
+           end do
+c
            nlevs = ilev - 1
            slev = 1.0
            levtyp = 'a'
@@ -542,11 +541,11 @@ c
 100   do i = 1, nlevs
         levs(i) = levs(i) * slev
       end do
-c 
+c
 c Sort in increasing order
 c
       call sortidxr (nlevs, levs, srtlev)
-c      
+c
       end
 c
 c
@@ -556,10 +555,9 @@ c: plotting
 c+
       subroutine copyimcg (n, in, copy)
 c
-      implicit none
       integer n
       real in(n), copy(n)
-c 
+c
 c  Copy an image for safe keeping
 c
 c Input
@@ -576,7 +574,7 @@ c-----------------------------------------------------------------------
       end do
 c
       end
-c  
+c
 c
 c* defchrCG -- Give a default char. height for axis & velocity labels
 c& nebk
@@ -584,12 +582,11 @@ c: plotting
 c+
       subroutine defchrcg (nx, ny, cs)
 c
-      implicit none
       real cs(*)
       integer nx, ny
 c
-c  Work out default character size for axis labels and for velocity 
-c  label.  Add a linear ramp otherwise they come out too big for 
+c  Work out default character size for axis labels and for velocity
+c  label.  Add a linear ramp otherwise they come out too big for
 c  single plots per page, and too small for multiple plots per page
 c
 c  Input:
@@ -602,7 +599,7 @@ c
 c Axis labels
 c
       if (cs(1).le.0.0) then
-        cs(1) = 1.2 / max(nx,ny) 
+        cs(1) = 1.2 / max(nx,ny)
         cs(1) = (0.13*max(nx,ny) + 0.67) * cs(1)
       end if
 c
@@ -622,13 +619,12 @@ c+
       subroutine dolabcg (gaps, dotr, nx, ny, nz, nlast, iplot, labtyp,
      +                    doaxlab, doaylab, donxlab, donylab)
 c
-      implicit none
       integer nx, ny, nz, nlast, iplot
       logical gaps, dotr, doaxlab, doaylab, donxlab(2), donylab(2)
       character labtyp(2)*(*)
 c
-c  Label axes and prepare options strings for PGTBOX according to whether 
-c  the sub-plots abut each other or not.
+c  Label axes and prepare options strings for PGTBOX according to
+c  whether the sub-plots abut each other or not.
 c
 c  Input
 c    gaps    False means sub-plots abut, else they don't
@@ -652,7 +648,7 @@ c Number if subplot on current page
 c
       jplot = mod(iplot,nx*ny)
       if (jplot.eq.0) jplot = nx*ny
-c      
+c
       doaxlab = .false.
       doaylab = .false.
       donxlab(1) = .false.
@@ -662,7 +658,8 @@ c
 c
       if (.not.gaps) then
 c
-c Only put character and numeric labels along the bottom for the bottom row
+c Only put character and numeric labels along the bottom for the bottom
+c row
 c
         if (labtyp(1).ne.'none') then
           if (jplot.ge.nx*ny-nx+1 .or. iplot.ge.nz-nlast+1 .or.
@@ -680,7 +677,7 @@ c Now y axis
 c
         if (labtyp(2).ne.'none') then
 c
-c Only put character and numeric labels along the left 
+c Only put character and numeric labels along the left
 c for the leftmost column
 c
           if (mod(jplot,nx).eq.1 .or. nx.eq.1) then
@@ -693,7 +690,7 @@ c
           if (dotr .and. (mod(jplot,nx).eq.0 .or. iplot.eq.nz))
      +       donylab(2) = .true.
         end if
-      else       
+      else
 c
 c Each subplot separated by gaps, always write labels
 c
@@ -715,16 +712,15 @@ c* grfixCG -- Fix up a grey scale range with optional bias for log taking
 c& nebk
 c: plotting
 c+
-      subroutine grfixcg (pixr, lgin, gnaxis, gsize, trfun, 
+      subroutine grfixcg (pixr, lgin, gnaxis, gsize, trfun,
      +                    pixr2, groff, blankg)
 c
-      implicit none
       real pixr(2), pixr2(2), groff, blankg
       integer lgin, gnaxis, gsize(*)
       character trfun*(*)
 c
 c  Make sure the grey scale range is valid, and take logs if
-c  desired.  This may require a DC bias to avoid negative 
+c  desired.  This may require a DC bias to avoid negative
 c  numbers in the image.
 c
 c  Input:
@@ -736,7 +732,8 @@ c  Input/Output:
 c    pixr     User supplied grey scale range.  Defaults filled in
 c             on output
 c  Output:
-c    pixr2    Grey scale range with bias and logs/sqrt taken if necessary
+c    pixr2    Grey scale range with bias and logs/sqrt taken if
+c             necessary
 c    groff    DC bias to avoid negatives in image if logs taken
 c    blankg   Value to use for blanked pixels
 c--
@@ -749,7 +746,7 @@ c
       if (pixr(1).eq.0.0 .and. pixr(2).eq.0.0) then
         call imminmax (lgin, gnaxis, gsize, pixr(1), pixr(2))
       else if (pixr(1).eq.pixr(2)) then
-        call bug ('w', 
+        call bug ('w',
      +  'GRFIXCG: Zero pixel map range, reset to image intensity range')
         call imminmax (lgin, gnaxis, gsize, pixr(1), pixr(2))
       end if
@@ -761,14 +758,14 @@ c
       groff = 0.0
       fac = 100.0
       if (trfun.eq.'log' .or. trfun.eq.'sqr') then
-        if (pixr(1).eq.0.0 .and. pixr(2).eq.0.0) call imminmax (lgin, 
+        if (pixr(1).eq.0.0 .and. pixr(2).eq.0.0) call imminmax (lgin,
      +      gnaxis, gsize, pixr(1), pixr(2))
         if (pixr(1).le.0.0) groff = pixr(1) - (pixr(2)-pixr(1))/fac
 c
         if (trfun.eq.'log') then
           pixr2(1) = log10(pixr(1)-groff)
           pixr2(2) = log10(pixr(2)-groff)
-        else 
+        else
           pixr2(1) = sqrt(pixr(1)-groff)
           pixr2(2) = sqrt(pixr(2)-groff)
         end if
@@ -785,15 +782,14 @@ c& nebk
 c: plotting
 c+
       subroutine heqcg (pixr, n, nimage, image, nbins, his, cumhis)
-      implicit none
       integer nbins, n, nimage(n), his(nbins)
       real image(n), pixr(2), cumhis(nbins)
 c
-c  Apply histogram equalization to an image directly.  128 bins 
+c  Apply histogram equalization to an image directly.  128 bins
 c  are used in the histogram.
 c
 c  Input
-c   pixr   Display intensity range 
+c   pixr   Display intensity range
 c   n      Number of pixels
 c   nimage Normalization image
 c   nbins  Number of bins in histogram
@@ -830,11 +826,11 @@ c
         end if
       end do
 c
-c Generate cumulative histogram.  
+c Generate cumulative histogram.
 c
       cum = 0.0
       do i = 1, nbins
-        cum = cum + his(i) 
+        cum = cum + his(i)
         cumhis(i) = cum
       end do
 c
@@ -875,11 +871,10 @@ c: plotting
 c+
       subroutine limitscg (blc, ibin, jbin, tr)
 c
-      implicit none
       integer blc(*), ibin, jbin
       real tr(6)
 c
-c   Work out window world coordinate limits and PGPLOT 
+c   Work out window world coordinate limits and PGPLOT
 c   transformation matrix
 c
 c     Input
@@ -888,9 +883,9 @@ c       i,jbin       x and y increments to step through image in
 c     Output
 c       tr           Matrix transforming from array indices to world
 c                    coordinates.  Note this accounts for the fact that
-c                    only the desired window is read into the data arrays,
-c                    so there is a blc offset included in tr.  It also
-c		     accounts for any spatial binning.
+c                    only the desired window is read into the data
+c                    arrays, so there is a blc offset included in tr.
+c                    It also accounts for any spatial binning.
 c
 c-----------------------------------------------------------------------
 c
@@ -916,7 +911,6 @@ c: plotting
 c+
       subroutine maskorcg (blank, win, bimage, nimage, image)
 c
-      implicit none
       integer nimage(*), win(2)
       real image(*), blank
       logical bimage(*)
@@ -931,9 +925,9 @@ c  Input/Output
 c    nimage      The normalization image.  0-> blanked
 c    image       The image.  New blanks may be set
 c--
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       integer i, imsize
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       imsize = win(1) * win(2)
       do i = 1, imsize
         if (.not.bimage(i)) then
@@ -950,11 +944,10 @@ c:plotting
 c+
       subroutine matchcg (n, field, string, struct, ntype, types)
 c
-      implicit none
       integer ntype, n
       character*(*) types(ntype), string, field, struct
 c
-c  Look for string in list of allowed ones.  If not found die with 
+c  Look for string in list of allowed ones.  If not found die with
 c  fatal error.  Expand string for minimum match.  Extra variables
 c  can be used to provide error messages.  These messages expect
 c  that the string is one field from several fields making up
@@ -964,8 +957,8 @@ c  many rows, each describing one overlay.  Each row contains
 c  several fields, each of which may take on different values.
 c
 c  Inputs:
-c    ntype	The number of possible values that STRING can have
-c    type	An array of possible values for STRING
+c    ntype      The number of possible values that STRING can have
+c    type       An array of possible values for STRING
 c
 c    n          Number of the thing that we are matching (used
 c               in  error messages if non zero)
@@ -981,18 +974,17 @@ c               expanded from minimum  match on output
 c
 c  An example of an error message would be:
 c
-c      STRING is ambiguous for STRUCT # N field FIELD.  Choose from: ...
+c   STRING is ambiguous for STRUCT # N field FIELD.  Choose from: ...
 c
-c      Thus, if STRING was "rel", STRUCT was "overlay", N was 14
-c      and FIELD was "xotype" then the message would read
+c  Thus, if STRING was "rel", STRUCT was "overlay", N was 14 and FIELD
+c  was "xotype" then the message would read
 c
+c   "rel" is ambiguous for overlay # 14 field "xotype". Choose from: ...
 c
-c      "rel" is ambiguous for overlay # 14 field "xotype". Choose from: ...
+c  Got it ??
 c
-c       Got it ??
-c 
 c--
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       integer l, i, iopt, j, il, il2
       integer len1
       character*130 umsg, str*10
@@ -1086,7 +1078,6 @@ c: plotting
 c+
       subroutine nxnycg (nxdef, nydef, nz, nx, ny, nlast)
 c
-      implicit none
       integer nxdef, nydef, nx, ny, nz, nlast
 c
 c  Work out number of plots in the x and y directions and the
@@ -1099,12 +1090,12 @@ c  Outputs
 c    nx,ny     Number of sub-plots in x and y directions per page
 c    nlast     Number of sub-plots on the last row of the last page
 c--
-c--------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       if (nx.le.0 .or. ny.le.0) then
         if (nz.lt.nxdef*nydef) then
           nx = 1
           ny = 1
-          do while (nz.gt.nx*ny) 
+          do while (nz.gt.nx*ny)
             if (nx.eq.ny) then
               nx = nx + 1
             else
@@ -1127,12 +1118,11 @@ c:plotting
 c+
       subroutine opimcg (maxnax, in, lin, size, naxis)
 c
-      implicit none
 c
       integer maxnax, lin, size(maxnax), naxis
       character*(*) in
 c
-c     Open an image and return some header descriptors 
+c     Open an image and return some header descriptors
 c
 c   Input:
 c     maxnax     Maximum number of allowed axes
@@ -1174,27 +1164,26 @@ c:plotting
 c+
       subroutine optcg (key, opts, present, nopt)
 c
-      implicit none
       character key*(*)
       integer nopt
       character opts(nopt)*(*)
       logical present(nopt)
 c
 c  Get options from the command line, and return to the caller those
-c  options that are present. 
+c  options that are present.
 c
-c  Unrecognized options generate a warning only, unlike the standard 
+c  Unrecognized options generate a warning only, unlike the standard
 c  Miriad subroutine that does this which issues a fatal error.
 c
 c  Inputs:
-c    key	The task keyword to use.
-c    opts	An array of possible option values. These should be in lower
-c		case.
-c    nopt	The number of possible options.
+c    key        The task keyword to use.
+c    opts       An array of possible option values.  These should be in
+c               lower case.
+c    nopt       The number of possible options.
 c  Output:
-c    present	This indicates whether the option was present.
+c    present    This indicates whether the option was present.
 c--
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       character string*16
       integer l,i,iopt
 c
@@ -1243,32 +1232,31 @@ c& nebk
 c: plotting
 c+
       subroutine ol2pixcg (lun, pix3, otype, off, dsign, nums, opos, np)
-      implicit none
 c
       double precision off(*), nums(*), opos(*), pix3
       integer lun, dsign(2), np
       character*(*) otype(2)
 c
-c Convert overlay location from OTYPE units to pixels.  This is 
+c Convert overlay location from OTYPE units to pixels.  This is
 c a conversion from true world coordinates to image pixels
 c
 c Input
 c   lun       Handle of image
-c   pix3      Third axis pixel (channel) that we are displaying 
+c   pix3      Third axis pixel (channel) that we are displaying
 c             this overlay on
 c   otype     Overlay units  for each axis ('arcsec' etc)
-c   dsign     SIgn for dms axes. +/-1  
+c   dsign     SIgn for dms axes. +/-1
 c   nums      The array of numbers read from the overlay file
 c             starting with the first one to use here.  These
 c             are in true coordinates such as those given by IMPOS
 c   off       Offset to be added to the locations decoded from
-c	      the text file and held in NUMS.  These are in the same
+c             the text file and held in NUMS.  These are in the same
 c             units as OTYPE so no conversion is done.  Is ignored
 c             for RA and DEC because I am too lazy.
 c Output
 c   opos      Output location in pixels for x and y
 c   np        This is the number of locations of the NUMS array used
-c             
+c
 c--
 c-----------------------------------------------------------------------
       include 'mirconst.h'
@@ -1286,7 +1274,7 @@ c
           win(i) = win(i) * dpi / 12.0d0
           ip = ip + 3
         else if (otype(i).eq.'dms') then
-          win(i) = abs(nums(ip)) + nums(ip+1)/60.d0 + 
+          win(i) = abs(nums(ip)) + nums(ip+1)/60.d0 +
      +             nums(ip+2)/3600.0d0
           win(i) = dsign(i) * abs(win(i)) * dpi / 180.0d0
           ip = ip + 3
@@ -1322,10 +1310,9 @@ c+
 c
       subroutine ppconcg (id, blc, bin, p)
 c
-      implicit none
       integer id, blc, bin
       double precision p
-c    
+c
 c  Convert pixel values from a full image unbinned pixel to
 c  a subimage binned pixel, and vice versa
 c
@@ -1333,7 +1320,8 @@ c  Input
 c   id        Direction of convsersion
 c                1 -> p      -> pb-sub
 c                2 -> pb-sub -> p
-c   blc       BLC (in full image unbinned pixels) at which subimage begins
+c   blc       BLC (in full image unbinned pixels) at which subimage
+c             begins
 c   bin       Pixel increment with which we are stepping through image
 c  Input/output
 c   p         Pixel with bin=1 and blc=1 OR pixel appropriate to BIN
@@ -1366,7 +1354,6 @@ c& nebk
 c: plotting
 c+
       subroutine razerocg (lun, blc, trc, zero)
-      implicit none
       integer lun, blc(2), trc(2)
       logical zero(2)
 c
@@ -1375,7 +1362,7 @@ c     first two axes
 c
 c     Input:
 c       lun     Handle of image
-c       blc,trc Window being displayed in absolute 
+c       blc,trc Window being displayed in absolute
 c               unbinned full image pixels
 c     Output
 c       zero   True if that axis is a) RA and b) crosses 0
@@ -1389,15 +1376,15 @@ c
       call coInit(lun)
       call coFindAx(lun,'longitude',i1)
       if(i1.eq.1.or.i1.eq.2)then
-	i2 = 3 - i1
-	x(i1) = blc(i1)
-	x(i2) = blc(i2)
-	call coCvt(lun,'ap/ap',x,'aw/aw',ya)
-	x(i1) = 0.5*(blc(i1)+trc(i1))
-	call coCvt(lun,'ap/ap',x,'aw/aw',yb)
-	x(i1) = trc(i1)
-	call coCvt(lun,'ap/ap',x,'aw/aw',yc)
-	zero(i1) = (yc(i1)-yb(i1))*(yb(i1)-ya(i1)).lt.0
+        i2 = 3 - i1
+        x(i1) = blc(i1)
+        x(i2) = blc(i2)
+        call coCvt(lun,'ap/ap',x,'aw/aw',ya)
+        x(i1) = 0.5*(blc(i1)+trc(i1))
+        call coCvt(lun,'ap/ap',x,'aw/aw',yb)
+        x(i1) = trc(i1)
+        call coCvt(lun,'ap/ap',x,'aw/aw',yc)
+        zero(i1) = (yc(i1)-yb(i1))*(yb(i1)-ya(i1)).lt.0
       endif
 c
       call coFin(lun)
@@ -1408,17 +1395,16 @@ c& nebk
 c: plotting
 c+
 c
-      subroutine readbcg (init, lun, ibin, jbin, krng, blc, trc, 
+      subroutine readbcg (init, lun, ibin, jbin, krng, blc, trc,
      +                    bimage, blanks)
 c
-      implicit none
       logical bimage(*)
       integer lun, blc(*), trc(*), ibin(2), jbin(2), krng(2)
       logical blanks, init
 c
 c  Read in the blanking mask from the specified window from the image
 c  When reading more than one plane, the mask image pixel is considered
-c  blanked if any of the planes are blanked at that pixel.  When 
+c  blanked if any of the planes are blanked at that pixel.  When
 c  spatially binning images, a binned pixel is considered blanked if
 c  any of the input pixels were blanked.
 c
@@ -1438,24 +1424,24 @@ c                false means bad (flagged pixel).  Will be bad if any
 c                pixel in spectral range is bad for each spatial pixel
 c
 c--
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       include 'maxdim.h'
       integer i, j, k, ii, jj, pi, po, kst, kav, kend, io, jo,
      +  nii, nji, nio, njo, no
       logical good(maxdim)
-c------------------------------------------------------------------------
-c  
-c Find size of unbinned and binned image 
-c 
+c-----------------------------------------------------------------------
+c
+c Find size of unbinned and binned image
+c
       nii = trc(1) - blc(1) + 1
       nji = trc(2) - blc(2) + 1
       if (ibin(2).ne.1) then
-        nio = nii / ibin(1) 
+        nio = nii / ibin(1)
       else
         nio = (nii-1)/ibin(1) + 1
       end if
       if (jbin(2).ne.1) then
-        njo = nji / jbin(1) 
+        njo = nji / jbin(1)
       else
         njo = (nji-1)/jbin(1) + 1
       end if
@@ -1497,16 +1483,16 @@ c Step through row
 c
             io = 1
             do i = 1, nii, ibin(1)
-c 
+c
 c Accumulate desired pixels
 c
               do ii = i, i+ibin(2)-1
-c           
+c
 c Input row and output image pointers
 c
                 pi = ii + blc(1) - 1
                 po = (jo-1)*nio + io
-c           
+c
 c If any pixel in the binned region is bad, set the binned pixel to bad
 c
                 if (.not.good(pi)) then
@@ -1531,7 +1517,6 @@ c+
       subroutine readimcg (init, blank, lun, ibin, jbin, krng, blc,
      +                     trc, norm, nimage, image, blanks, dmm)
 c
-      implicit none
       real blank, image(*), dmm(3)
       integer nimage(*), lun, ibin(2), jbin(2), krng(2), blc(3),
      +  trc(3)
@@ -1551,11 +1536,11 @@ c    krng        First pixel in k direction to read and number of
 c                pixels to average
 c    blc,trc     Input window, in unbinned pixels, to read and bin
 c    norm        If true, normalize the summed image before
-c                exiting.  It is up to you to renitialize at	
+c                exiting.  It is up to you to renitialize at
 c                the appropriate time with INIT on the next call
 c  Output
 c    nimage      Normalization image; it is the number of pixels
-c                that were averaged together at each output pixel 
+c                that were averaged together at each output pixel
 c                location.  Will be zero for blanked pixels
 c    image       Output image (binned, normalized)
 c    blanks      True if blanks in output image
@@ -1563,13 +1548,13 @@ c  Input/output
 c    dmm         Data min, max, abs max so far
 c
 c--
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       include 'maxdim.h'
       real row(maxdim)
       logical good(maxdim), mask, hdprsnt
       integer i, j, k, ii, jj, pi, po, kst, kav, kend, io, jo,
      +  nii, nji, nio, njo, no
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
 c Does image have a mask
 c
@@ -1577,15 +1562,15 @@ c
 c
 c Find size of unbinned and binned images
 c
-      nii = trc(1) - blc(1) + 1 
+      nii = trc(1) - blc(1) + 1
       nji = trc(2) - blc(2) + 1
       if (ibin(2).ne.1) then
-        nio = nii / ibin(1) 
+        nio = nii / ibin(1)
       else
         nio = (nii-1)/ibin(1) + 1
       end if
       if (jbin(2).ne.1) then
-        njo = nji / jbin(1) 
+        njo = nji / jbin(1)
       else
         njo = (nji-1)/jbin(1) + 1
       end if
@@ -1669,7 +1654,7 @@ c
         end do
       end do
 c
-c Normalize and blank 
+c Normalize and blank
 c
       do i = 1, no
         if (nimage(i).ne.0) then
@@ -1690,7 +1675,6 @@ c& nebk
 c: plotting
 c+
       subroutine setccscg (labtyp, ccstr)
-      implicit none
       character*(*) labtyp(2), ccstr
 c
 c  For the non-linear tick labelling, we need to convert from world
@@ -1709,7 +1693,7 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 c
 c Loop over first two axes
-c 
+c
       ip = 1
       do i =1, 2
         if (labtyp(i).eq.'hms' .or. labtyp(i).eq.'dms' .or.
@@ -1730,7 +1714,7 @@ c
 c
       ccstr(6:) = '/ap'
 c
-      end 
+      end
 c
 c* setcolCG --  Set multiple line graphics PGPLOT colours
 c& nebk
@@ -1738,7 +1722,6 @@ c: plotting
 c+
       subroutine setcolcg (i, icol)
 c
-      implicit none
       integer i, icol
 c
 c  Return a PGPLOT colour index given a graph number, where you plan
@@ -1746,33 +1729,32 @@ c  to put many graphs with different colours on the one plot.  The
 c  colours are chosen so that similar colours are not consecutive
 c
 c Input:
-c   i      Graph number in the range 1 -> NGRAPH, where NGRAPH is the number
-c          of graphs that will be drawn on the one plot
+c   i      Graph number in the range 1 -> NGRAPH, where NGRAPH is the
+c          number of graphs that will be drawn on the one plot
 c Output:
 c   icol   The colour index to set with PGSCI (ICOL)
 c
 c--
 c-----------------------------------------------------------------------
-      integer maxcol 
+      integer maxcol
       parameter (maxcol = 13)
       integer lcols(maxcol), ip
 c
       save lcols
       data lcols /2, 7, 5, 3, 1, 6, 8, 12, 4, 10, 11, 9, 13/
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       ip = mod(i,maxcol)
       if (ip.eq.0) ip = maxcol
       icol = lcols(ip)
 c
       end
 c
-c* setlabCG -- Set axis labels 
+c* setlabCG -- Set axis labels
 c& nebk
 c: plotting
 c+
       subroutine setlabCG (lh, labtyp, doepoch, xlabel, ylabel)
 c
-      implicit none
       integer lh
       character*(*) labtyp(2), xlabel, ylabel
       logical doepoch
@@ -1896,7 +1878,6 @@ c: plotting
 c+
       subroutine strprpcg (maxloc, aline, comloc, nfield, lena)
 c
-      implicit none
       character*(*) aline
       integer nfield, maxloc, comloc(maxloc), lena
 c
@@ -1915,12 +1896,12 @@ c               first and second fields etc
 c       nfield  Number of fields in string
 c       lena    Length of output string after massaging
 c--
-c---------------------------------------------------------------------
+c-----------------------------------------------------------------------
       integer i, j, lenb, idx
       character bline*132
 c
       integer len1
-c--------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
 c Strip leading white space
 c
@@ -1932,7 +1913,7 @@ c
       aline = ' '
       aline = bline
 c
-c Strip additional white space out. Catch cases where commas 
+c Strip additional white space out. Catch cases where commas
 c already the separator too
 c
       bline = ' '
@@ -1972,21 +1953,20 @@ c
       aline = bline
       lena = lenb
 c
-      end 
+      end
 c
 c* subincCG -- Step to next sub-plot
 c& nebk
 c: plotting
 c+
-      subroutine subinccg (iplot, nx, ny, vxmin, vymax, vxsize, vysize, 
+      subroutine subinccg (iplot, nx, ny, vxmin, vymax, vxsize, vysize,
      +                     vxgap, vygap, vx, vy)
 c
-      implicit none
       real vxmin, vymax, vxsize, vysize, vxgap, vygap, vx, vy
       integer iplot, nx, ny
 c
 c  Increment view port locations ready for next sub-plot
-c 
+c
 c  Input
 c    iplot    Current sub-plot number
 c    nx,ny    Number of sub-plots in x and y directions on view-surface
@@ -2014,17 +1994,16 @@ c* wedginCG -- See if grey scale wedges are inside or outside subplots
 c& nebk
 c: plotting
 c+
-      subroutine wedgincg (hard, dofid, dowedge, nx, ny, npixr, 
+      subroutine wedgincg (hard, dofid, dowedge, nx, ny, npixr,
      +                     trfun, wedcod)
 c
-      implicit none
       logical dowedge, dofid
       integer nx, ny, npixr, wedcod
       character trfun*3, hard*3
 c
 c Work out whether the grey scale wedges are to be drawn inside
 c or outside the subplots, and whether there will be one or many
-c  
+c
 c Input
 c  hard      'YES' if writing to hardcopy PGPLOT device
 c  dofid     True if user has requested OFM fiddle option
@@ -2041,17 +2020,17 @@ c--
 c-----------------------------------------------------------------------
       if (.not.dowedge) then
         wedcod = 0
-      else      
+      else
         if (hard.eq.'YES') then
           if (nx*ny.eq.1) then
-            wedcod = 1   
+            wedcod = 1
           else
             if (dofid) then
               wedcod = 3
             else
               if (npixr.eq.1 .and. trfun.ne.'heq') then
                 wedcod = 1
-              else if (ny.gt.1.and.nx.eq.1 .and. ((npixr.eq.1 .and. 
+              else if (ny.gt.1.and.nx.eq.1 .and. ((npixr.eq.1 .and.
      +                 trfun.eq.'heq') .or. npixr.gt.1)) then
                 wedcod = 2
               else
@@ -2062,10 +2041,10 @@ c-----------------------------------------------------------------------
         else
           if (nx*ny.eq.1 .or. (npixr.eq.1 .and. trfun.ne.'heq')) then
               wedcod = 1
-          else if (ny.gt.1.and.nx.eq.1 .and. ((npixr.eq.1 .and. 
+          else if (ny.gt.1.and.nx.eq.1 .and. ((npixr.eq.1 .and.
      +             trfun.eq.'heq') .or. npixr.gt.1)) then
             wedcod = 2
-          else 
+          else
             wedcod = 3
           end if
         end if
@@ -2078,19 +2057,18 @@ c& nebk
 c: plotting
 c+
       subroutine winfidcg (size, axis, bin, blc, trc, win)
-      implicit none
       integer axis, bin(2), blc, trc, size, win
 c
 c     Adjust the size of the window so that the bin width fits
-c     an integer number of times 
+c     an integer number of times
 c
 c     Input:
 c        size    SIze of total available image
-c        axis    Axis number 
+c        axis    Axis number
 c        bin     Pixel increment and binning width across image
 c     Input/output
 c        blc,trc Window in pixels, adjusted if necessary to fit
-c		 an integral number of bins
+c                an integral number of bins
 c     Output
 c        win     Size of binned window
 c
