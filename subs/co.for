@@ -67,7 +67,6 @@ c: coordinates
 c+
 	subroutine coInit(lu)
 c
-	implicit none
 	integer lu
 c
 c  Initialise the coordinate conversion system.
@@ -119,7 +118,6 @@ c: coordinates
 c+
 	subroutine coDup(lin,lout)
 c
-	implicit none
 	integer lin,lout
 c
 c  Duplicate a coordinate object.
@@ -168,7 +166,6 @@ c: coordinates
 c+
 	subroutine coRaDec(lu,proj,ra0,dec0)
 c
-	implicit none
 	integer lu
 	character proj*(*)
 	double precision ra0,dec0
@@ -199,7 +196,6 @@ c: coordinates
 c+
 	subroutine CoCreate(lu)
 c
-	implicit none
 	integer lu
 c
 c  Begin building up a coordinate object from scratch.
@@ -233,7 +229,6 @@ c: coordinates
 c+
 	subroutine coAxSet(lu,iax,ctypei,crpixi,crvali,cdelti)
 c
-	implicit none
 	integer lu,iax
 	character ctypei*(*)
 	double precision crpixi,crvali,cdelti
@@ -278,7 +273,6 @@ c: coordinates
 c+
 	subroutine coSetd(lu,object,value)
 c
-	implicit none
 	integer lu
 	character object*(*)
 	double precision value
@@ -335,7 +329,6 @@ c: coordinates
 c+
 	subroutine coSeta(lu,object,value)
 c
-	implicit none
 	integer lu
 	character object*(*),value*(*)
 c
@@ -384,7 +377,6 @@ c: coordinates
 c+
 	subroutine coGetd(lu,object,value)
 c
-	implicit none
 	integer lu
 	character object*(*)
 	double precision value
@@ -447,7 +439,6 @@ c: coordinates
 c+
 	subroutine coGeta(lu,object,value)
 c
-	implicit none
 	integer lu
 	character object*(*),value*(*)
 c
@@ -495,7 +486,6 @@ c: coordinates
 c+
 	subroutine CoReinit(lu)
 c
-	implicit none
 	integer lu
 c
 c  Finish up initialising a coordinate object.
@@ -571,7 +561,6 @@ c: coordinates
 c+
 	subroutine coFin(lu)
 c
-	implicit none
 	integer lu
 c
 c  This tidies up, and deletes a coordinate system previously initialised
@@ -593,72 +582,29 @@ c
 	if(nalloc(k).eq.0)Lus(k) = 0
 	end
 c************************************************************************
-c* coCvt -- Convert coordinates.
-c& rjs
+c* coCvt -- Convert coordinates, die on error.
+c& mrc
 c: coordinates
 c+
-	subroutine coCvt(lu,in,x1,out,x2)
+      subroutine coCvt(lu,in,x1,out,x2)
 c
-	implicit none
-	integer lu
-	character in*(*),out*(*)
-	double precision x1(*),x2(*)
+      integer lu
+      character in*(*),out*(*)
+      double precision x1(*),x2(*)
 c
-c  Convert coordinates from one coordinate system to another.
-c  Input and output coordinates can be either "pixel" or "world"
-c  coordinates, and either "absolute" or "offset".
-c
-c  "World" coordinates are the normal physical units associated with
-c  a coordinate. World coordinates are given in radians (for astronomical
-c  positions), GHz (frequencies), km/s (velocities) and lambda (U-V axes).
-c
-c  Pixel coordinates are fairly conventional.
-c
-c  For world coordinates, absolute and offset values differ only by the
-c  reference world value (crval). The exception is longitude-type axes
-c  (e.g. RA), where offset coordinates are offsets on the sky -- that is
-c  the offsets are multiplied by the cos(latitude) (cos(DEC)) term.
-c
-c  For pixel coordinates, absolute and offset values differ by reference
-c  pixel value (crpix).
-c
-c  For visibility datasets (where the axes are simply RA and DEC), "pixel
-c  coordinates" are defined as those that would result from imaging (using
-c  a conventional 2D Fourier transform algorithm) the data-set with a cell
-c  size of 1 radian. Additionally the reference pixel values (crpix) are set
-c  to 0. This means that the "absolute pixel" and "offset pixel" coordinates
-c  are identical, and that "offset pixel" and "offset world" coordinates
-c  differ only by the inaccuracy in the normal small angle approximation for
-c  offsets in RA and DEC.
-c
-c  Input:
-c    in		This indicates the units of the input coordinates.
-c		It consists of a sequence of,
-c		  'op'	Offset pixel coordinate
-c		  'ap'	Absolute pixel coordinate
-c		  'ow'	Offset world coordinate
-c		  'aw'	Absolute world coordinate,
-c		one for each coordinate requiring conversion. Each
-c		coordinate unit specifier is separated from the other
-c		by a slash (/).
-c		For example 'ap/ap' indicates two coordinates, both in
-c		absolute pixels.
-c    x1		The input coordinates, in units as givien by the `in'
-c		parameter. The dimensionality must agree with the number
-c		of units given in `in'.
-c    out	This indicates the units of the output coordinates, in the
-c		same fashion as the `in' value. The outputs must correspond
-c		one-for-one with the inputs.
-c  Output:
-c    x2		The output coordinates, in units given by `out'. 
+c  Call coCvtv and die immediately if the conversion is invalid.  This
+c  interface exists for backwards compatibility only.  It should not be
+c  used in new code.
 c--
 c------------------------------------------------------------------------
-	logical valid
-c
-	call coCvtv(lu,in,x1,out,x2,valid)
-	if(.not.valid)call bug('f',
-     *	  'Invalid coordinate conversion in coCvt')
-	end
+      logical valid
+
+      call coCvtv (lu, in, x1, out, x2, valid)
+      if (.not.valid) then
+        call bug ('f', 'Invalid coordinate conversion in coCvt')
+      end if
+
+      end
 c************************************************************************
 c* coCvtv -- Convert coordinates - with validation.
 c& rjs
@@ -666,7 +612,6 @@ c: coordinates
 c+
 	subroutine coCvtv(lu,in,x1,out,x2,valid)
 c
-	implicit none
 	integer lu
 	character in*(*),out*(*)
 	double precision x1(*),x2(*)
@@ -718,7 +663,7 @@ c    out	This indicates the units of the output coordinates, in the
 c		same fashion as the `in' value. The outputs must correspond
 c		one-for-one with the inputs.
 c  Output:
-c    x2		The output coordinates, in units given by `out'. 
+c    x2		The output coordinates, in units given by `out'.
 c    valid	If true, all is OK. If false then the coordinate conversion
 c		requested was invalid.
 c--
@@ -824,7 +769,6 @@ c: coordinates
 c+
 	subroutine coFreq(lu,in,x1,freq1)
 c
-	implicit none
 	integer lu
 	character in*(*)
 	double precision x1(*),freq1
@@ -891,7 +835,6 @@ c: coordinates
 c+
 	subroutine coLMN(lu,in,x1,lmn)
 c
-	implicit none
 	integer lu
 	character in*(*)
 	double precision x1(*),lmn(3)
@@ -939,7 +882,7 @@ c  Convert to direction cosines.
 c
 	lmn(1) = sin(ra-ra0) * cos(dec)
 	lmn(2) = sin(dec)*cos(dec0) - cos(ra-ra0)*cos(dec)*sin(dec0)
-	lmn(3) = sin(dec)*sin(dec0) + cos(ra-ra0)*cos(dec0)*cos(dec) 
+	lmn(3) = sin(dec)*sin(dec0) + cos(ra-ra0)*cos(dec0)*cos(dec)
 	end
 c************************************************************************
 c* coGeom -- Compute linear coefficients to convert geometries.
@@ -948,7 +891,6 @@ c: coordinates
 c+
 	subroutine coGeom(lu,in,x1,ucoeff,vcoeff,wcoeff)
 c
-	implicit none
 	integer lu
 	character in*(*)
 	double precision x1(*),ucoeff(3),vcoeff(3),wcoeff(3)
@@ -1037,7 +979,6 @@ c: coordinates
 c+
 	subroutine coCvt1(lu,iax,in,x1,out,x2)
 c
-	implicit none
 	integer lu,iax
 	double precision x1,x2
 	character in*(*),out*(*)
@@ -1125,7 +1066,6 @@ c+
 	subroutine coGauCvt(lu,in,x1,ing,bmaj1,bmin1,bpa1,
      *				     outg,bmaj2,bmin2,bpa2)
 c
-	implicit none
 	integer lu
 	double precision x1(*)
 	character in(*),ing*(*),outg*(*)
@@ -1247,7 +1187,6 @@ c: coordinates
 c+
 	subroutine coVelSet(lu,type)
 c
-	implicit none
 	integer lu
 	character type*(*)
 c
@@ -1277,7 +1216,7 @@ c  Externals.
 c
 	integer coLoc
 c
-c  Standardise. For compatibility with old interface, use 
+c  Standardise. For compatibility with old interface, use
 	ttype = type
 	call ucase(ttype)
 	if(ttype.eq.'RADIO')then
@@ -1385,7 +1324,6 @@ c
 c************************************************************************
 	subroutine coGetVel(raepo,decepo,epoch,vel)
 c
-	implicit none
 	double precision raepo,decepo,epoch,vel
 c
 c  Determine the Sun's LSR velocity component in a given direction.
@@ -1419,7 +1357,6 @@ c: coordinates
 c+
 	subroutine coAxGet(lu,iax,ctypei,crpixi,crvali,cdelti)
 c
-	implicit none
 	integer lu,iax
 	character ctypei*(*)
 	double precision crpixi,crvali,cdelti
@@ -1464,7 +1401,6 @@ c: coordinates
 c+
 	subroutine coFindAx(lu,axis,iax)
 c
-	implicit none
 	integer lu,iax
 	character axis*(*)
 c
@@ -1544,7 +1480,6 @@ c: coordinates
 c+
 	logical function coCompar(lu1,lu2,match)
 c
-	implicit none
 	integer lu1,lu2
 	character match*(*)
 c
@@ -1666,7 +1601,6 @@ c: coordinates
 c+
 	subroutine coLin(lu,in,x1,n,ctype1,crpix1,crval1,cdelt1)
 c
-	implicit none
 	integer lu,n
 	character in*(*),ctype1(n)*(*)
 	double precision x1(*),crpix1(n),crval1(n),cdelt1(n)
@@ -1762,7 +1696,6 @@ c: coordinates
 c+
 	subroutine coPrint(lu)
 c
-	implicit none
 	integer lu
 c
 c  Print out a description of a coordinate system.
@@ -1841,7 +1774,6 @@ c: coordinates
 c+
 	subroutine coPrjSet(lu,p)
 c
-	implicit none
 	integer lu
 	character p*(*)
 c
@@ -1882,7 +1814,6 @@ c: coordinates
 c+
 	subroutine coWrite(lu,tno)
 c
-	implicit none
 	integer lu,tno
 c
 c  This writes out the coordinate system description to an image
@@ -1931,7 +1862,6 @@ c
 c************************************************************************
 	subroutine CoCompat(ctype1,ctype2,ok)
 c
-	implicit none
 	character ctype1*(*),ctype2*(*)
 	logical ok
 c
@@ -1967,7 +1897,6 @@ c
 c************************************************************************
 	subroutine CoExt(ctype,type,qual)
 c
-	implicit none
 	character ctype*(*),type*(*),qual*(*)
 c------------------------------------------------------------------------
 	integer l,i,length
@@ -1998,7 +1927,6 @@ c
 c************************************************************************
 	subroutine CoInitXY(k)
 c
-	implicit none
 	integer k
 c
 c  Initialise the coordinate information for an image data-set.
@@ -2071,7 +1999,6 @@ c
 c************************************************************************
 	subroutine CoTyCvt(type,itype,proj)
 c
-	implicit none
 	character type*(*),proj*(*)
 	integer itype
 c
@@ -2144,7 +2071,7 @@ c
 	    proj = 'car'
 	  else if(type(l1:l2).eq.'GLS')then
 	    proj = 'gls'
-	  else 
+	  else
 	    umsg = 'Using cartesian projection for axis '//type
 	    call bug('w',umsg)
 	    proj = 'car'
@@ -2163,7 +2090,6 @@ c
 c************************************************************************
 	subroutine CoInitUV(k)
 c
-	implicit none
 	integer k
 c
 c  Initialise the coordinate information for a visibility data-set.
@@ -2208,7 +2134,6 @@ c
 c************************************************************************
 	integer function CoLoc(lu,alloc)
 c
-	implicit none
 	integer lu
 	logical alloc
 c------------------------------------------------------------------------
@@ -2323,7 +2248,6 @@ c
 c************************************************************************
 	subroutine coFqFac(x1,type,xval,xpix,dx,vobs,x1off,x1pix,scal)
 c
-	implicit none
 	double precision x1,xval,xpix,dx,vobs,scal
 	logical x1off,x1pix
 	character type*4
@@ -2368,7 +2292,6 @@ c************************************************************************
 	subroutine coFelo(x10,x2,xval,xpix,dx,
      *					x1pix,x1off,x2pix,x2off)
 c
-	implicit none
 	double precision x10,x2,xval,xpix,dx
 	logical x1pix,x1off,x2pix,x2off
 c
@@ -2433,7 +2356,6 @@ c************************************************************************
      *	  xval,xpix,dx,yval,ypix,dy,
      *	  x1pix,y1pix,x2pix,y2pix,x1off,y1off,x2off,y2off,valid)
 c
-	implicit none
 	double precision x10,y10,x2,y2,llcos,llsin
 	character proj*(*)
 	double precision xval,yval,xpix,ypix,dx,dy
@@ -2548,7 +2470,6 @@ c************************************************************************
 	subroutine CoLinear(xval,xpix,dx,x1pix,x1off,x2pix,x2off,
      *	  bscal,bzero)
 c
-	implicit none
 	logical x1pix,x1off,x2pix,x2off
 	double precision xpix,dx,xval
 	double precision bscal,bzero
@@ -2607,7 +2528,6 @@ c************************************************************************
 	subroutine coll2xy(x1,y1,x2,y2,
      *	  xpix,dx,xval,ypix,dy,yval,llcos,llsin,proj,valid)
 c
-	implicit none
 	double precision x1,y1,x2,y2
 	double precision xpix,dx,xval,ypix,dy,yval,llcos,llsin
 	character proj*(*)
@@ -2640,7 +2560,7 @@ c
 	else if(proj.eq.'gls')then
 	  L = Dalp * cos(y1)
 	  M = (y1 - yval)
-	else 
+	else
 	  td = sin(y1)*sinyval+cos(y1)*cosyval*cos(Dalp)
 	  if(td.lt.0)then
 	    valid = .false.
@@ -2688,7 +2608,6 @@ c************************************************************************
 	subroutine coxy2ll(x1,y1,x2,y2,
      *	  xpix,dx,xval,ypix,dy,yval,llcos,llsin,proj,valid)
 c
-	implicit none
 	double precision x1,y1,x2,y2
 	double precision xpix,dx,xval,ypix,dy,yval,llcos,llsin
 	character proj*(*)
@@ -2773,7 +2692,6 @@ c************************************************************************
 	subroutine comixed(x1,y1,x2,y2,xpix,dx,xval,ypix,dy,yval,
      *					llcos,llsin,proj,pw2wp,valid)
 c
-	implicit none
 	double precision x1,y1,x2,y2
 	double precision xpix,dx,xval,ypix,dy,yval,llcos,llsin
 	character proj*(*)
