@@ -123,7 +123,7 @@ c    nebk 13mar98 position angle error was factor of 2 too big
 c    nebk 27jul00 as above but in another location.  thanks Bryan
 c    mchw 14may02 added bunit to polarized intensity.
 c
-c $Id: impol.for,v 1.7 2007/02/22 00:32:36 cal103 Exp $
+c $Id: impol.for,v 1.8 2007/08/14 00:56:55 cal103 Exp $
 c------------------------------------------------------------------------
       implicit none
 c
@@ -166,7 +166,7 @@ c
       data li, lpout, lmout, lpaout /0, 2*0, 2*0, 2*0/
 c-----------------------------------------------------------------------
       version = versan ('impol',
-     + '$Id: impol.for,v 1.7 2007/02/22 00:32:36 cal103 Exp $')
+     + '$Id: impol.for,v 1.8 2007/08/14 00:56:55 cal103 Exp $')
 c
 c Get the inputs
 c
@@ -742,8 +742,6 @@ c
       character*(*) ctype(naxis)
 cc
       include 'mirconst.h'
-      double precision r2d
-      parameter (r2d = 180.0d0/dpi)
 c
       integer i, j, k, frqax
       double precision fac
@@ -753,7 +751,7 @@ c-----------------------------------------------------------------------
       fac = 1.0
       ustr = ' radians'
       if (.not.radians) then
-        fac = r2d
+        fac = DR2D
         ustr = ' degrees'
       end if
 
