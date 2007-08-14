@@ -1795,6 +1795,11 @@ c
         call ctypeco (lh, iax, ctype, ipos)
         str = ctype(1:ipos)
         l2 = len1(str)
+
+c       Don't qualify galactic coordinates with an equinox.
+        if (str(1:l2).eq.'GLON' .or. str(1:l2).eq.'GLAT') then
+          estr = ' '
+        end if
 c
 c Set the axis label depending on label type
 c
