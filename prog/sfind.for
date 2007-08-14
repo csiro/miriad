@@ -548,7 +548,7 @@ c       cursor). This could be used as well as or instead of the current
 c       method. Think about two seperate options to indicate user's desire
 c       of which.
 c
-c  $Id: sfind.for,v 1.4 2007/08/13 08:29:59 cal103 Exp $
+c  $Id: sfind.for,v 1.5 2007/08/14 01:20:03 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -589,7 +589,7 @@ c-----------------------------------------------------------------------
       character versan*80, version*80
 c-----------------------------------------------------------------------
       version = versan('sfind',
-     +  '$Id: sfind.for,v 1.4 2007/08/13 08:29:59 cal103 Exp $')
+     +  '$Id: sfind.for,v 1.5 2007/08/14 01:20:03 cal103 Exp $')
 c
 c Get user inputs
 c
@@ -2706,8 +2706,7 @@ c
       if (.not.fitok) return
 c reject source if number of FDR pixels used is less than 1/4 the
 c area covered by beam, or no pixels at all were used.
-      if (((float(nfdrused)).lt.(sqrt(bmajp*bminp*pi)/4.)).or.
-     +       (m.eq.0)) then
+      if (m.eq.0 .or. float(nfdrused).lt.sqrt(bmajp*bminp*PI)/4.0) then
 c      if (m.eq.0) then
        fitok = .false.
        return
@@ -2745,7 +2744,7 @@ c
 c If fit is much larger than number of pixels used, trying fitting again
 c with more pixels to refine the fit. m is the number of used pixels.
 c
-      if ((m).lt.(pi*fwhm1*fwhm2/4)) then
+      if (m.lt.fwhm1*fwhm2*PI_4) then
          dumcount = dumcount+1
 c allocate memory for slopearry and connct again
        call memalloc(ipim,(boxsize+1)*(boxsize+1),'l')
@@ -2768,10 +2767,9 @@ c
        if (.not.fitok) return
 c reject source if number of FDR pixels used is less than 1/4 the
 c area covered by beam, or no pixels at all were used.
-       if (((float(nfdrused)).lt.(sqrt(bmajp*bminp*pi)/4.)).or.
-     +       (m.eq.0)) then
-        fitok = .false.
-        return
+       if (m.eq.0 .or. float(nfdrused).lt.sqrt(bmajp*bminp*PI)/4.0) then
+         fitok = .false.
+         return
        end if
 c
 c  Convert the coordinates to pixels, and fill in defaults if necessary.
@@ -2994,7 +2992,7 @@ c
       fwhm1 = sqrt(fac*(XXP + YYP + sqrt( (XXP-YYP)**2 + 4*(XYP)**2 )))
       fwhm2 = sqrt(fac*(XXP + YYP - sqrt( (XXP-YYP)**2 + 4*(XYP)**2 )))
       pa    = 0.5*atan2(2*XYP,YYP-XXP)
-      flux  = sign(fac*P/(pi*fwhm1*fwhm2), SP)
+      flux  = sign(fac*P/(PI*fwhm1*fwhm2), SP)
 c
       end
 c
@@ -3591,33 +3589,34 @@ c-----------------------------------------------------------------------
       else
         sfac = 1
       endif
-c
-        pkfl = 1000.0*flux
-        pkflerr = 1000.*sfac*sflux
+
+      pkfl = 1000.0*flux
+      pkflerr = 1000.*sfac*sflux
       if (bvol.gt.0.0) then
-        tflux = flux * pi/4 * abs(fwhm1) * abs(fwhm2)
+        tflux = flux * abs(fwhm1 * fwhm2) * PI_4
         tflux = tflux / log(2.0)
         tflux = tflux / bvol
-          intfl = 1000.*tflux
-        else
-          intfl = 0.
+        intfl = 1000.0*tflux
+      else
+        intfl = 0.0
       endif
+
       posns(1) = l0
       posns(2) = m0
       call coCvt(lIn,'ow/ow',posns,'aw/aw',newpos)
       posns(1) = newpos(1)
       posns(2) = newpos(2)
-      xposerr = sl0 * sfac * 3600.0*(180.0/pi)
-      yposerr = sm0 * sfac * 3600.0*(180.0/pi)
+      xposerr = sl0 * sfac * R2AS
+      yposerr = sm0 * sfac * R2AS
       call GauFid(fwhm1, fwhm2, sfac*sfwhm1, sfac*sfwhm2, pa,
      :            sfac*spa, f1, f2, sf1, sf2, p, sp)
       amaj = f1
       amin = f2
       posa = p
-c
+
       end
-c
-c
+
+
       subroutine GauFid(fwhm1,fwhm2,sfwhm1,sfwhm2,pa,spa,f1,f2,
      +                                          sf1,sf2,p,sp)
 c-----------------------------------------------------------------------
@@ -3628,12 +3627,12 @@ c-----------------------------------------------------------------------
       real fwhm1,fwhm2,pa,f1,f2,p,sfwhm1,sfwhm2,spa,sf1,sf2,sp
       real t
 c-----------------------------------------------------------------------
-      f1  = abs(fwhm1) * 3600.0*(180.0/pi)
-      f2  = abs(fwhm2) * 3600.0*(180.0/pi)
-      sf1 = sfwhm1 * 3600.0*(180.0/pi)
-      sf2 = sfwhm2 * 3600.0*(180.0/pi)
-      p  =  pa * (180.0/pi)
-      sp = spa * (180.0/pi)
+      f1  = abs(fwhm1) * R2AS
+      f2  = abs(fwhm2) * R2AS
+      sf1 = sfwhm1 * R2AS
+      sf2 = sfwhm2 * R2AS
+      p  =  pa * R2D
+      sp = spa * R2D
       if (f1.lt.f2) then
         t = f1
         f1 = f2
@@ -3680,7 +3679,7 @@ c
       call rdhdr(lIn,'bmaj',bmaj,0.)
       call rdhdr(lIn,'bmin',bmin,0.)
       call rdhdr(lIn,'bpa',bpa,0.)
-      bpa = pi/180 * bpa
+      bpa =bpa * R2D
         if ((bmaj.eq.0.).or.(bmin.eq.0.)) then
          call bug('w','Beam not detected in map -')
          call bug('w','Using arbitrary value of 5 pixels.')
@@ -3713,8 +3712,8 @@ c
         bvol = abs(cdelt(1)*cdelt(2))
         bvolp = 1
       else if (index(bunit,'/BEAM').ne.0 .and. bmaj*bmin.gt.0.0) then
-        bvol  = pi/4/log(2.0)*bmaj*bmin
-        bvolp = pi/4/log(2.0)*bmajp*bminp
+        bvol  = bmaj  * bmin  * PI_4 / log(2.0)
+        bvolp = bmajp * bminp * PI_4 / log(2.0)
       else
         bvol = 0
         bvolp = 0
@@ -3987,53 +3986,16 @@ c
       mmn = 1
       mmx = ny
 c calculate area covered by beam, in pixels
-      bareap = bmajp*bminp*pi/4./log(2.)
+      bareap = bmajp *bminp * PI_4 / log(2.0)
 c ee is constant e.
-      ee = exp(1.)
+      ee = exp(1.0)
 c
       npix = 0
-
-c Don't have to manually define gaussian PDF since I discovered
-c how to do it using a call to errfun(x). Doing it my old way is
-c seriously much slower, but kept here commented out for historical
-c reasons.
-cc defining gaussianpdf for lookup table, setting mean and sigma to 0
-cc and 1 since have 'normalised' the image above
-c      mean = 0
-c      sigma = 1
-c      xmin = mean - 30.*sigma
-c      xmax = mean + 30.*sigma
-cc filling in a gaussian with area=1
-c      dx = (xmax - xmin)/(nn-1)
-c      do ii = 1,nn/2
-c       gsabsc(ii) = xmin + (xmax-xmin)*(ii-1)/(nn-1)
-c       gsord(ii) = exp(-0.5*(gsabsc(ii)-mean)**2/sigma**2)/
-c     +              sqrt(2.*pi*sigma**2)
-cc integrate
-c       if (ii.gt.1) then
-c        inty(ii) = inty(ii-1) + gsord(ii)*dx
-c       else
-c        inty(ii) = gsord(ii)*dx
-c       end if
-c       gsabsc(nn-ii+1) = xmax - (xmax-xmin)*(ii-1)/(nn-1)
-c       gsord(nn-ii+1) = exp(-0.5*(gsabsc(nn-ii+1)-mean)**2/sigma**2)/
-c     +              sqrt(2.*pi*sigma**2)
-cc integrate
-c       inty(nn-ii+1) = 1.-inty(ii)
-c      end do
 
 c looping over pixels assigning pvalues - the actual FDR bit
       do ii = lmn,lmx
        do jj = mmn,mmx
         if (nimage(ii,jj).ne.0) then
-cc extreme values
-c         if (image2(ii,jj).gt.xmax) then
-c          pvalue = 1.
-c         else if (image2(ii,jj).lt.xmin) then
-c          pvalue = 0.
-c         else
-c          call gaussianpdf(nn,gsabsc,gsord,inty,image2(ii,jj),pvalue)
-c         end if
 c Note: Gaussian Probability Distribution Function (GPDF) is related to
 c the error function erf(x) by GPDF(x) = 0.5(1+erf(x/sqrt(2)))
          pvalue = 0.5*(1+errfun(image2(ii,jj)/sqrt(2.)))
@@ -4064,25 +4026,16 @@ c bareap=1 (uncorrelated) to N (fully correlated)
 c find crossing point
       gotit = .false.
       pcut = 0.
-c This is not approved miriad procedure - used by AMH for quick testing
-c only
-c      open(1,file='tt',status='unknown')
       do ii = npix,1,-1
        pline = (alpha/(100.*fdrdenom))
 c       pline = (alpha/(100.*log(float(npix))))
 c       pline = (alpha/100.)
      +              *(float(ii)/float(npix))
-c This is not approved miriad procedure - used by AMH for quick testing
-c only
-c       write(1,*) float(ii)/float(npix),pline,plist(ii)
        if ((pline.ge.plist(ii)).and.(.not.gotit)) then
         pcut = pline
         gotit = .true.
        end if
       end do
-c This is not approved miriad procedure - used by AMH for quick testing
-c only
-c      close(1)
 c
 c Loop over all pixels to test whether image2(l,m)<P_cut.
 c If image2(l,m) > pcut, then pixel is most likely background,
@@ -4301,10 +4254,10 @@ c
           if (.not.fitok) goto 60
 c write out annotation file line if necessary
           if (kvannot) then
-           write(line,49) posns(1)*180/pi,posns(2)*180/pi,
-     +        amaj/3600.,amin/3600.,90.-posa
-49         format("ellipse ",f16.10,f16.10,f16.10,f16.10,f8.2)
-           call txtwrite (lann, line, len1(line), iostat)
+            write(line,49) posns(1)*R2D, posns(2)*R2D,
+     +         amaj/3600.0, amin/3600.0, 90.0-posa
+49          format("ellipse ",f16.10,f16.10,f16.10,f16.10,f8.2)
+            call txtwrite (lann, line, len1(line), iostat)
           end if
 c
 c Convert location (peak or fitted) to formatted coordinate string
@@ -4394,37 +4347,4 @@ c     +              nflse
 c       call output(line)
 c      end if
       return
-      end
-
-
-      subroutine gaussianpdf(nn,gsabsc,gsord,inty,val,pv)
-c-----------------------------------------------------------------------
-c calculates integrated gaussian values, and assigns pvalue (pv) as
-c the value corresponding to the intensity nearest 'val'
-c
-c  Input:
-c    nn         number of points in the gaussian pdf
-c    gsabsc     abscissa values
-c    gsord      ordinate values
-c    inty       gaussian pdf values (integrated ordinate values)
-c    val        pixel intensity value
-c  Output:
-c    pv         P-value of input pixel
-c-----------------------------------------------------------------------
-      integer rr,nn
-      real val,pv,gsabsc(nn),gsord(nn),inty(nn)
-c-----------------------------------------------------------------------
-      do rr = 1,nn
-c check to see if we've reached 'val' yet, and finish if so.
-       if (gsabsc(rr).ge.val) then
-        if (rr.gt.1) then
-c linearly interpolate between bounding values
-         pv = inty(rr-1) + (inty(rr)-inty(rr-1))*(val-gsabsc(rr-1))/
-     +        (gsabsc(rr)-gsabsc(rr-1))
-        else
-         pv = inty(1)
-        end if
-        return
-       end if
-      end do
       end
