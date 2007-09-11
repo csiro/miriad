@@ -5,31 +5,52 @@ c& nebk
 c: uv analysis
 c+
 c       UVSUB reads a file containing point source models and subtracts
-c       them from the visibilities.  The models can be for a subset of
-c       the channels, but the output file will contain all the input
-c       channels.
+c       them from the visibilities.  Each model applies either to a
+c       single spectral channel, or to all channels (continuum mode).
+c       The output file contains all of the input channels whether
+c       modified or not.
 c
 c@ vis
-c       The name of the input uv data sets.  No default.
+c       The name of the input visibility data sets (no default).
 c@ line
-c       Standard Linetype.  This assumes only a single spectral
-c       window is processed.
+c       Standard Linetype: 'channel' (default) and 'velocity' are
+c       recognized.  Do 'help line' for more information.  uvsub assumes
+c       that only a single spectral window is processed.
 c@ model
-c       A text file containing the models.  Each row should contain
-c       four columns giving
+c       The name of a text file containing the models (no default).
+c       Each row must contain four columns which depend on the line type
+c       specified.  For line = 'channel':
+c
+c         CHAN No.    FLUX DENSITY    X OFFSET      Y OFFSET
+c
+c       A channel number of zero is recognized as applying to all
+c       channels (i.e. continuum).  Otherwise, it is an error for the
+c       channel number to lie outside the range in the data.
+c
+c       The flux density is in Jy and the offsets, true angular
+c       distances in radians, are measured from the phase centre in the
+c       sense
+c
+c         offset = point source location - phase centre
+c
+c       For line = 'velocity', the channel number is replaced by
+c       velocity:
 c
 c         VELOCITY    FLUX DENSITY    X OFFSET      Y OFFSET
 c
-c       The velocity must be in Km/s (radio definition), with the same
-c       rest standard as the data-set.  The flux density is in Jy and
-c       the offsets in radians are from the phase centre in the
-c       convention
+c       The velocity must be in km/s, radio definition, i.e.
 c
-c             offset = point source location - phase centre
+c         v = c (f0 - f) / f0,
 c
-c       Lines beginning with a "#" are ignored.
+c       with the same rest standard as the data-set.  The model
+c       visibility will be subtracted from the channel closest to this
+c       velocity.  Note that a rest frequency (f0) must be set in the
+c       input visibility dataset in order to convert between velocity
+c       and channel number (i.e. frequency).
+c
+c       Lines beginning with "#" are ignored.
 c@ out
-c       The name of the output uv data set.  No default.
+c       The name of the output visibility data set (no default).
 c--
 c  History:
 c    05jan94 nebk  Original version.
@@ -37,36 +58,45 @@ c    12jan94 nebk  Convert to use velocity line type
 c    17aug94 rjs   Fiddle offsets to give better results.
 c    14nov95 nebk  Remove dependence on cgsubs.for
 c
-c $Id: uvsub.for,v 1.2 2007/09/11 01:22:01 cal103 Exp $
+c $Id: uvsub.for,v 1.3 2007/09/11 06:11:01 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
+      include 'mirconst.h'
+
       integer MAXMOD
       parameter (MAXMOD = 500)
 
-      logical flags(MAXCHAN)
-      integer iostat, lmod, lout, lvis, nchan, nmod, npol, nschan,
-     :        ntemp, pol
-      real    vel1, vels, velw
-      double precision model(4,MAXMOD), preamble(4), sfreq(MAXCHAN),
-     :        vel(MAXCHAN)
+      logical first, flags(MAXCHAN)
+      integer ichan, ichan1, ichan2, imod, lout, lvis, nchan, nmod,
+     :        npol, ntemp, pol
+      real    start, step, width
+      double precision arg, delv, model(4,MAXMOD), preamble(4),
+     :        sfreq(MAXCHAN), vel(MAXCHAN), uv(2), x(2)
       complex data(MAXCHAN)
       character ltype*8, modl*80, out*80, versan*80, version*80, vis*80
 
       character ltypes(2)*8
-      data ltypes/'channel ','velocity'/
+      data ltypes /'channel ','velocity'/
 c-----------------------------------------------------------------------
       version = versan ('uvsub',
-     :  '$Id: uvsub.for,v 1.2 2007/09/11 01:22:01 cal103 Exp $')
+     :  '$Id: uvsub.for,v 1.3 2007/09/11 06:11:01 cal103 Exp $')
 
 c     Get the inputs
       call keyini
       call keya ('vis', vis, ' ')
+
       call keymatch ('line', 2, ltypes, 1, ltype, ntemp)
       if (ntemp.eq.0) ltype = ltypes(1)
-      call keyi ('line', nschan, 0)
-      call keyr ('line', vel1, 1.0)
-      call keyr ('line', velw, 1.0)
-      call keyr ('line', vels, velw)
+      call keyi ('line', nchan, 0)
+      if (ltype.eq.'channel') then
+        call keyr ('line', start, 1.0)
+        call keyr ('line', width, 1.0)
+      else
+        call keyr ('line', start, 0.0)
+        call keyr ('line', width, 0.0)
+      end if
+      call keyr ('line', step, width)
+
       call keya ('model', modl, ' ')
       call keya ('out', out, ' ')
       call keyfin
@@ -75,19 +105,16 @@ c     Get the inputs
       if (modl.eq.' ') call bug ('f', 'A model must be given')
       if (out.eq.' ')  call bug ('f', 'An output must be given')
 
-c     Open the model file and read it.
-      call txtopen (lmod, modl, 'old', iostat)
-      if (iostat.ne.0) call bug ('f', 'Error opening model file')
-      call decmod (lmod, MAXMOD, model, nmod)
-      call txtclose (lmod)
+c     Read the model file.
+      call decmod (modl, MAXMOD, model, nmod)
 
 c     Open the visibility files and prepare to copy the data.
       call uvopen (lvis, vis, 'old')
-      call varinit (lvis, 'velocity')
-      call uvset (lvis, 'data', 'velocity', nschan, vel1, velw, vels)
+      call varinit (lvis, ltype)
+      call uvset (lvis, 'data', ltype, nchan, start, width, step)
 
       call uvopen (lout, out, 'new')
-      call varonit (lvis, lout, 'velocity')
+      call varonit (lvis, lout, ltype)
 
 c     Make the output history.
       call hdcopy (lvis, lout, 'history')
@@ -96,25 +123,81 @@ c     Make the output history.
       call hisinput (lout, 'UVSUB')
       call hisclose (lout)
 
+c     Convert true offsets to pseudo-offsets to correct for geometry.
+      call coinit(lvis)
+
+      do imod = 1, nmod
+        x(1) = model(3,imod)
+        x(2) = model(4,imod)
+        call cocvt(lvis, 'ow/ow', x, 'op/op', model(3,imod))
+      enddo
+
+      call cofin(lvis)
+
 c     Get the first visibility
       call uvread (lvis, preamble, data, flags, MAXCHAN, nchan)
 
-c     Fudge the offsets.
-      call modfudg (lvis, nmod, model)
 
+      first = .true.
       do while (nchan.gt.0)
+c       Get channel frequencies (GHz).
         call uvinfo (lvis, 'sfreq', sfreq)
-        call uvinfo (lvis, 'velocity', vel)
-        call uvgetvri (lvis, 'npol', npol, 1)
-        call uvgetvri (lvis, 'pol', pol, 1)
+        if (ltype.eq.'velocity') then
+c         Get channel velocities (km/s).
+          call uvinfo (lvis, 'velocity', vel)
+          delv = vel(2) - vel(1)
+        end if
 
-c       Subtract the model.
-        call modsub (nmod, model, nchan, vel, sfreq, preamble, data)
+        uv(1) = preamble(1)
+        uv(2) = preamble(2)
+
+c       Loop over models.
+        do imod = 1, nmod
+          if (ltype.eq.'channel') then
+            ichan = nint(model(1,imod))
+            if (ichan.eq.0) then
+c             Do all channels (continuum).
+              ichan1 = 1
+              ichan2 = nchan
+            else
+              ichan1 = ichan
+              ichan2 = ichan
+            end if
+          else
+c           Compute channel number for the specified velocity.
+            ichan1 = 1 + nint((model(1,imod) - vel(1)) / delv)
+            ichan2 = ichan1
+
+            if (first) then
+              write (*, *) 'v_mod, idx, v_dat', model(1,imod), ichan1,
+     :          vel(ichan1)
+            end if
+          end if
+
+          if (ichan1.lt.1 .or. ichan1.gt.nchan) then
+            call bug ('f', 'Channel number out of range')
+          end if
+
+          do ichan = ichan1, ichan2
+c           Compute model visibility and subtract it.
+            arg = dtwopi*sfreq(ichan) * (uv(1)*model(3,imod) +
+     :                                   uv(2)*model(4,imod))
+            data(ichan) = data(ichan) -
+     :        model(2,imod)*cmplx(cos(arg), sin(arg))
+          end do
+        end do
+
+        first = .false.
 
 c       Copy variables and data.
         call varcopy (lvis, lout)
+
+        call uvgetvri (lvis, 'npol', npol, 1)
         call uvputvri (lout, 'npol', npol, 1)
+
+        call uvgetvri (lvis, 'pol', pol, 1)
         call uvputvri (lout, 'pol', pol, 1)
+
         call uvwrite (lout, preamble, data, flags, nchan)
 
 c       Get the next visibility.
@@ -128,58 +211,33 @@ c     Close up shop.
       end
 
 
-      subroutine modfudg (lvis, nmod, model)
+      subroutine decmod (modl, MAXMOD, model, nmod)
 c-----------------------------------------------------------------------
-c    Convert model offsets from true offsets to pseudo-offsets to
-c    correct for geometry.
-c
-c  Input:
-c    lvis    Handle of the input visibility dataset
-c    nmod    Number of models
-c    model   VELOCITY, FLUX DENSITY, X OFFSET, YOFFSET
-c
-c-----------------------------------------------------------------------
-      integer lvis, nmod
-      double precision model(4,nmod)
-
-      integer i
-      double precision x(2)
-c-----------------------------------------------------------------------
-c     Initialise the coordinate routines.
-      call coinit(lvis)
-
-      do i=1,nmod
-        x(1) = model(3,i)
-        x(2) = model(4,i)
-        call cocvt(lvis,'ow/ow',x,'op/op',model(3,i))
-      enddo
-
-      call cofin(lvis)
-
-      end
-
-
-      subroutine decmod (lmod, MAXMOD, model, nmod)
-c-----------------------------------------------------------------------
-c     Read model text file and decode
+c     Read model text file and decode.
 c
 c  Input
-c    lmod    Handle of file
+c    modl    Model file.
 c    MAXMOD  Max number of model entries allowed
 c  Output
 c    model   VELOCITY, FLUX DENSITY, X OFFSET, YOFFSET
 c    nmod    Number of models
 c
 c-----------------------------------------------------------------------
-      integer MAXMOD, lmod, nmod
+      integer   MAXMOD, nmod
       double precision model(4,MAXMOD)
+      character modl*(*)
 
-      integer iostat, ilen, iline
-      character aline*100
+      logical ok
+      integer alen, icomm(4), iostat, iline, ipres, lmod, slen
+      character aline*100, str*4
 
       integer len1
-      character itoaf*2
+      character itoaf*4
 c-----------------------------------------------------------------------
+c     Open the model file.
+      call txtopen (lmod, modl, 'old', iostat)
+      if (iostat.ne.0) call bug ('f', 'Error opening model file')
+
 c     Read and decode models.
       iline = 0
       nmod = 0
@@ -187,20 +245,35 @@ c     Read and decode models.
 
       do while (iostat.ne.-1)
         aline = ' '
-        call txtread (lmod, aline, ilen, iostat)
+        call txtread (lmod, aline, alen, iostat)
         if (iostat.eq.0) then
           if (aline(1:1).ne.'#' .and. aline.ne.' ') then
 
 c           Fish out model.
             iline = iline + 1
             if (nmod.eq.MAXMOD) then
-              call bug ('w', 'Reducing no. models to max. '//
-     :                       'allowed = '//itoaf(MAXMOD))
+              call bug ('w', 'Reducing no. models to max. ' //
+     :                       'allowed = ' // itoaf(MAXMOD))
               iostat = -1
             else
               nmod = nmod + 1
-              ilen = len1(aline)
-              call posdec2 (nmod, aline(1:ilen), model(1,nmod))
+              str  = itoaf(nmod)
+              slen = len1(str)
+
+c             Prepare string for matodf.
+              alen = len1(aline)
+              call strprp (4, aline, icomm, ipres, alen)
+              if (ipres.lt.4) then
+                call bug ('f',
+     :            'Insufficient fields for model # ' // str(1:slen))
+              end if
+
+c             Now extract the numbers.
+              call matodf (aline(1:alen), model(1,nmod), ipres, ok)
+              if (.not.ok .or. ipres.ne.4) then
+                call bug ('f', 'Error decoding model # ' // str(1:slen))
+              end if
+
             end if
           end if
         else
@@ -217,100 +290,8 @@ c           Fish out model.
         call bug ('f', 'There were no valid models')
       end if
 
-      end
+      call txtclose (lmod)
 
-
-      subroutine posdec2 (nmod, aline, model)
-c-----------------------------------------------------------------------
-c     Decode string into model values
-c
-c     Input:
-c       nmod     Model number
-c       aline    Input string
-c     Output
-c       model    VELOCITY FLUX  DELX  DELY
-c                VELOCITY in KM/S, DELX and DELY are in radians
-c
-c-----------------------------------------------------------------------
-      integer nmod
-      double precision model(4)
-      character*(*) aline
-
-      integer slen, lena, ipres, icomm(4)
-      logical ok
-      character str*4, estr*80
-
-      integer len1
-      character itoaf*4
-c-----------------------------------------------------------------------
-c     Prepare string for matodf.
-      str = itoaf(nmod)
-      slen = len1(str)
-      call strprp (4, aline, icomm, ipres, lena)
-      if (ipres.lt.4) then
-        estr = 'There are insufficient fields for model # '//
-     :          str(1:slen)
-        call bug ('f', estr)
-      end if
-
-c     Now extract the numbers.
-      call matodf (aline(1:lena), model, ipres, ok)
-      if (.not.ok .or. ipres.ne.4) then
-        estr = 'Error decoding model # '//str(1:slen)
-        call bug ('f', estr)
-      end if
-
-      end
-
-
-      subroutine modsub (nmod, model, nchan, vel, sfreq, uv, data)
-c-----------------------------------------------------------------------
-c     Subtract the model
-c
-c  Input
-c    nmod     Number of models
-c    model    MOdel records:  chan, flux (Jy), delx (rad), dely (rad)
-c    nchan    Number of channels
-c    vel      Velocity of each channel in km/s
-c    sfreq    Frequency of each channel in GHz
-c    uv       u and v in ns
-c  Input/output
-c    data     complex visibilities
-c
-c-----------------------------------------------------------------------
-      integer nmod, nchan
-      double precision model(4,nmod), vel(nchan), sfreq(nchan), uv(2)
-      complex data(nchan)
-
-      include 'mirconst.h'
-      include 'maxdim.h'
-
-      double precision arg, delv, v1
-      complex modvis
-      integer ic, j
-      logical first
-      save first
-      data first /.true./
-c-----------------------------------------------------------------------
-      delv = vel(2) - vel(1)
-      v1 = vel(1)
-
-c     Loop over models.
-      do j = 1, nmod
-c       Compute channel number.
-        ic = nint((model(1,j)-v1)/delv) + 1
-        if (ic.lt.1 .or. ic.gt.nchan) call bug ('f',
-     :    'Indexing error in MODSUB')
-        if (first) write (*,*)
-     :     'v_mod, idx, v_dat', model(1,j),ic,vel(ic)
-
-c       Compute model visibility and subtract it.
-        arg =  dtwopi*sfreq(ic) * (uv(1)*model(3,j) + uv(2)*model(4,j))
-        modvis = model(2,j)*cmplx(cos(arg), sin(arg))
-        data(ic) = data(ic) - modvis
-      end do
-
-      first = .false.
       end
 
 
