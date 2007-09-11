@@ -1,67 +1,64 @@
       program uvsub
-c
-      implicit none
-c
+
 c= uvsub - Subtract point source models from visibilities
 c& nebk
 c: uv analysis
 c+
-c	UVSUB reads a file containing point source models and subtracts
-c	them from the visibilities.  The models can be for a subset of
-c	the channels, but the output file will contain all the input
-c	channels.
+c       UVSUB reads a file containing point source models and subtracts
+c       them from the visibilities.  The models can be for a subset of
+c       the channels, but the output file will contain all the input
+c       channels.
 c
 c@ vis
-c	The name of the input uv data sets. No default.
+c       The name of the input uv data sets.  No default.
 c@ line
-c	Standard Linetype. This assumes only a single spectral
-c	window is processed.
+c       Standard Linetype.  This assumes only a single spectral
+c       window is processed.
 c@ model
-c	A text file containing the models. Each row should contain
-c	four columns giving
+c       A text file containing the models.  Each row should contain
+c       four columns giving
 c
-c	  VELOCITY    FLUX DENSITY    X OFFSET      Y OFFSET
+c         VELOCITY    FLUX DENSITY    X OFFSET      Y OFFSET
 c
-c	The velocity must be in Km/s (radio definition), with the same
-c	rest standard as the data-set. The flux density is in Jy and the
-c	offsets in radians are from the phase centre in the convention 
+c       The velocity must be in Km/s (radio definition), with the same
+c       rest standard as the data-set.  The flux density is in Jy and
+c       the offsets in radians are from the phase centre in the
+c       convention
 c
 c             offset = point source location - phase centre
 c
-c	Lines beginning with a "#" are ignored.
+c       Lines beginning with a "#" are ignored.
 c@ out
-c       The name of the output uv data set. No default.
+c       The name of the output uv data set.  No default.
 c--
 c  History:
 c    05jan94 nebk  Original version.
 c    12jan94 nebk  Convert to use velocity line type
-c    17aug94 rjs   Fiddle offsets to give better results. 
+c    17aug94 rjs   Fiddle offsets to give better results.
 c    14nov95 nebk  Remove dependence on cgsubs.for
 c
-c Bugs:
-c   Too little code to have bugs
-c------------------------------------------------------------------------
+c $Id: uvsub.for,v 1.2 2007/09/11 01:22:01 cal103 Exp $
+c-----------------------------------------------------------------------
       include 'maxdim.h'
       integer MAXMOD
-      character version*(*)
-      parameter (version = 'UVSUB: version 14-Nov-94')
       parameter (MAXMOD = 500)
-c
-      complex data(MAXCHAN)
-      double precision preamble(4), vel(MAXCHAN), sfreq(MAXCHAN), 
-     +  model(4,MAXMOD)
-      real vel1, velw, vels
-      integer lvis, lout, lmod, iostat, nchan, nmod, nschan, npol, pol
-      integer ntemp
-      character vis*80, out*80, modl*80, ltype*8
+
       logical flags(MAXCHAN)
+      integer iostat, lmod, lout, lvis, nchan, nmod, npol, nschan,
+     :        ntemp, pol
+      real    vel1, vels, velw
+      double precision model(4,MAXMOD), preamble(4), sfreq(MAXCHAN),
+     :        vel(MAXCHAN)
+      complex data(MAXCHAN)
+      character ltype*8, modl*80, out*80, versan*80, version*80, vis*80
+
       character ltypes(2)*8
       data ltypes/'channel ','velocity'/
 c-----------------------------------------------------------------------
-c
-c Get the inputs
-c
-      call output (version)
+      version = versan ('uvsub',
+     :  '$Id: uvsub.for,v 1.2 2007/09/11 01:22:01 cal103 Exp $')
+
+c     Get the inputs
       call keyini
       call keya ('vis', vis, ' ')
       call keymatch ('line', 2, ltypes, 1, ltype, ntemp)
@@ -73,74 +70,64 @@ c
       call keya ('model', modl, ' ')
       call keya ('out', out, ' ')
       call keyfin
-c
+
       if (vis.eq.' ')  call bug ('f', 'An input must be given')
       if (modl.eq.' ') call bug ('f', 'A model must be given')
       if (out.eq.' ')  call bug ('f', 'An output must be given')
-c
-c Open the model file and read it
-c
-      call txtopen (lmod, modl, 'old', iostat)      
+
+c     Open the model file and read it.
+      call txtopen (lmod, modl, 'old', iostat)
       if (iostat.ne.0) call bug ('f', 'Error opening model file')
       call decmod (lmod, MAXMOD, model, nmod)
       call txtclose (lmod)
-c
-c Open the visibility files and prepare to copy the data
-c
+
+c     Open the visibility files and prepare to copy the data.
       call uvopen (lvis, vis, 'old')
       call varinit (lvis, 'velocity')
       call uvset (lvis, 'data', 'velocity', nschan, vel1, velw, vels)
-c
+
       call uvopen (lout, out, 'new')
       call varonit (lvis, lout, 'velocity')
-c
-c Make the output history.
-c
+
+c     Make the output history.
       call hdcopy (lvis, lout, 'history')
       call hisopen (lout, 'append')
-      call hiswrite (lout, 'UVSUB: Miriad '//version)
+      call hiswrite (lout, 'UVSUB: Miriad ' // version)
       call hisinput (lout, 'UVSUB')
       call hisclose (lout)
-c
-c Get the first visibility
-c
+
+c     Get the first visibility
       call uvread (lvis, preamble, data, flags, MAXCHAN, nchan)
-c
-c  Fudge the offsets.
-c
+
+c     Fudge the offsets.
       call modfudg (lvis, nmod, model)
-c
+
       do while (nchan.gt.0)
         call uvinfo (lvis, 'sfreq', sfreq)
         call uvinfo (lvis, 'velocity', vel)
         call uvgetvri (lvis, 'npol', npol, 1)
         call uvgetvri (lvis, 'pol', pol, 1)
-c
-c Subtract the model
-c
+
+c       Subtract the model.
         call modsub (nmod, model, nchan, vel, sfreq, preamble, data)
-c
-c Copy variables and data
-c
+
+c       Copy variables and data.
         call varcopy (lvis, lout)
         call uvputvri (lout, 'npol', npol, 1)
         call uvputvri (lout, 'pol', pol, 1)
         call uvwrite (lout, preamble, data, flags, nchan)
-c
-c Get the next visibility
-c
+
+c       Get the next visibility.
         call uvread (lvis, preamble, data, flags, MAXCHAN, nchan)
       end do
-c
-c
-c  Close up shop
-c
+
+c     Close up shop.
       call uvclose (lvis)
       call uvclose (lout)
-c
+
       end
-c
-c
+
+
       subroutine modfudg (lvis, nmod, model)
 c-----------------------------------------------------------------------
 c    Convert model offsets from true offsets to pseudo-offsets to
@@ -152,29 +139,26 @@ c    nmod    Number of models
 c    model   VELOCITY, FLUX DENSITY, X OFFSET, YOFFSET
 c
 c-----------------------------------------------------------------------
-      implicit none
       integer lvis, nmod
       double precision model(4,nmod)
-cc
+
       integer i
       double precision x(2)
 c-----------------------------------------------------------------------
-c
-c  Initialise the coordinate routines.
-c
+c     Initialise the coordinate routines.
       call coinit(lvis)
-c
+
       do i=1,nmod
         x(1) = model(3,i)
         x(2) = model(4,i)
         call cocvt(lvis,'ow/ow',x,'op/op',model(3,i))
       enddo
-c
+
       call cofin(lvis)
-c
+
       end
-c
-c
+
+
       subroutine decmod (lmod, MAXMOD, model, nmod)
 c-----------------------------------------------------------------------
 c     Read model text file and decode
@@ -187,36 +171,31 @@ c    model   VELOCITY, FLUX DENSITY, X OFFSET, YOFFSET
 c    nmod    Number of models
 c
 c-----------------------------------------------------------------------
-      implicit none
-c
       integer MAXMOD, lmod, nmod
       double precision model(4,MAXMOD)
-cc
+
       integer iostat, ilen, iline
       character aline*100
-c
+
       integer len1
       character itoaf*2
-c------------------------------------------------------------------------
-c
-c Read and decode models.
-c
+c-----------------------------------------------------------------------
+c     Read and decode models.
       iline = 0
       nmod = 0
       iostat = 0
-c
+
       do while (iostat.ne.-1)
         aline = ' '
-        call txtread (lmod, aline, ilen, iostat) 
+        call txtread (lmod, aline, ilen, iostat)
         if (iostat.eq.0) then
           if (aline(1:1).ne.'#' .and. aline.ne.' ') then
-c
-c Fish out model 
-c
+
+c           Fish out model.
             iline = iline + 1
             if (nmod.eq.MAXMOD) then
               call bug ('w', 'Reducing no. models to max. '//
-     +                       'allowed = '//itoaf(MAXMOD))
+     :                       'allowed = '//itoaf(MAXMOD))
               iostat = -1
             else
               nmod = nmod + 1
@@ -225,11 +204,11 @@ c
             end if
           end if
         else
-          if (iostat.ne.-1) call bug ('f', 
-     +       'Error reading from input slice positions file')
+          if (iostat.ne.-1) call bug ('f',
+     :       'Error reading from input slice positions file')
         end if
       end do
-c
+
       if (nmod.gt.0) then
         write (aline,100) nmod
 100     format ('There were ', i4, ' models')
@@ -237,12 +216,12 @@ c
       else
         call bug ('f', 'There were no valid models')
       end if
-c
+
       end
-c
-c
+
+
       subroutine posdec2 (nmod, aline, model)
-c---------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c     Decode string into model values
 c
 c     Input:
@@ -252,43 +231,38 @@ c     Output
 c       model    VELOCITY FLUX  DELX  DELY
 c                VELOCITY in KM/S, DELX and DELY are in radians
 c
-c---------------------------------------------------------------------
-      implicit none
-c
+c-----------------------------------------------------------------------
       integer nmod
       double precision model(4)
       character*(*) aline
-cc 
+
       integer slen, lena, ipres, icomm(4)
       logical ok
       character str*4, estr*80
-c
+
       integer len1
       character itoaf*4
-c--------------------------------------------------------------------
-c
-c Prepare string for matodf
-c
+c-----------------------------------------------------------------------
+c     Prepare string for matodf.
       str = itoaf(nmod)
       slen = len1(str)
       call strprp (4, aline, icomm, ipres, lena)
       if (ipres.lt.4) then
         estr = 'There are insufficient fields for model # '//
-     +          str(1:slen)
+     :          str(1:slen)
         call bug ('f', estr)
       end if
-c
-c Now extract the numbers
-c
+
+c     Now extract the numbers.
       call matodf (aline(1:lena), model, ipres, ok)
       if (.not.ok .or. ipres.ne.4) then
         estr = 'Error decoding model # '//str(1:slen)
         call bug ('f', estr)
       end if
-c
+
       end
-c
-c
+
+
       subroutine modsub (nmod, model, nchan, vel, sfreq, uv, data)
 c-----------------------------------------------------------------------
 c     Subtract the model
@@ -304,14 +278,13 @@ c  Input/output
 c    data     complex visibilities
 c
 c-----------------------------------------------------------------------
-      implicit none
       integer nmod, nchan
       double precision model(4,nmod), vel(nchan), sfreq(nchan), uv(2)
       complex data(nchan)
-cc
+
       include 'mirconst.h'
       include 'maxdim.h'
-c
+
       double precision arg, delv, v1
       complex modvis
       integer ic, j
@@ -321,36 +294,31 @@ c
 c-----------------------------------------------------------------------
       delv = vel(2) - vel(1)
       v1 = vel(1)
-c
-c Loop over models
-c
+
+c     Loop over models.
       do j = 1, nmod
-c
-c Compute model
-c
+c       Compute channel number.
         ic = nint((model(1,j)-v1)/delv) + 1
         if (ic.lt.1 .or. ic.gt.nchan) call bug ('f',
-     +    'Indexing error in MODSUB')
-        if (first) write (*,*) 
-     +     'v_mod, idx, v_dat', model(1,j),ic,vel(ic)
-c
+     :    'Indexing error in MODSUB')
+        if (first) write (*,*)
+     :     'v_mod, idx, v_dat', model(1,j),ic,vel(ic)
+
+c       Compute model visibility and subtract it.
         arg =  dtwopi*sfreq(ic) * (uv(1)*model(3,j) + uv(2)*model(4,j))
         modvis = model(2,j)*cmplx(cos(arg), sin(arg))
-c
-c Subtract model
-c
         data(ic) = data(ic) - modvis
       end do
-c
+
       first = .false.
       end
-c
-c
+
+
       subroutine strprp (maxloc, aline, comloc, nfield, lena)
-c
-      implicit none
+c-----------------------------------------------------------------------
       character*(*) aline
       integer nfield, maxloc, comloc(maxloc), lena
+c-----------------------------------------------------------------------
 c
 c     Take a string with a number of mixed ascii/numeric fields in it
 c     and prepare it for use by stripping out extra white space and
@@ -367,15 +335,13 @@ c               first and second fields etc
 c       nfield  Number of fields in string
 c       lena    Length of output string after massaging
 c--
-c---------------------------------------------------------------------
+c-----------------------------------------------------------------------
       integer i, j, lenb, idx
       character bline*132
-c
+
       integer len1
-c--------------------------------------------------------------------
-c
-c Strip leading white space
-c
+c-----------------------------------------------------------------------
+c     Strip leading white space
       idx = 1
       do while (aline(idx:idx).eq.' ')
         idx = idx + 1
@@ -383,36 +349,34 @@ c
       bline = aline(idx:)
       aline = ' '
       aline = bline
-c
-c Strip additional white space out. Catch cases where commas 
-c already the separator too
-c
+
+c     Strip additional white space out. Catch cases where commas
+c     already the separator too.
       bline = ' '
       lena = len1(aline)
       bline(1:1) = aline(1:1)
       j = 2
       do i = 2, lena
         if ((aline(i:i).eq.' ' .and. aline(i-1:i-1).eq.' ') .or.
-     +      (aline(i:i).eq.' ' .and. aline(i-1:i-1).eq.',')) then
+     :      (aline(i:i).eq.' ' .and. aline(i-1:i-1).eq.',')) then
           continue
         else
           bline(j:j) = aline(i:i)
           j = j + 1
         end if
       end do
-c
-c Replace spaces and colons (which may come from RA or DEC formatted
-c strings) by commas (for matodf) and count how many fields there are
-c
+
+c     Replace spaces and colons (which may come from RA or DEC formatted
+c     strings) by commas (for matodf) and count fields.
       lenb = len1(bline)
       nfield = 0
       do i = 1, lenb
         if (bline(i:i).eq.' ' .or. bline(i:i).eq.':' .or.
-     +      bline(i:i).eq.',') then
+     :      bline(i:i).eq.',') then
           bline(i:i) = ','
           nfield = nfield  + 1
           if (nfield.gt.maxloc) call bug ('f',
-     +      'STRPRP: Too many fields for internal storage')
+     :      'STRPRP: Too many fields for internal storage')
           comloc(nfield) = i
         end if
       end do
@@ -423,6 +387,5 @@ c
       end if
       aline = bline
       lena = lenb
-c
-      end 
 
+      end
