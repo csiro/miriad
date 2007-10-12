@@ -12,7 +12,8 @@
 	  yymmmdd:hh:mm:ss.s
 	Various abbreviations are possible. If no date part is given, then
 	the time matchs all data (regardless of its date) for the given
-	time of day.
+	time of day. The year is given by just two digits. The year is
+	assumed to be in the century 1940 to 2040.      
 
 	  antennae(a1,a2,...)(b1,b2...)
 	Select all baselines pairs formed between first and second list of
@@ -105,7 +106,7 @@
 
 	  window(w1,w2,...)
 	Select by spectral window (IF band in AIPS terminology). See
-	the help on windows for more information.
+	the help on "window" for more information.
 
 	  or
 	The list of subcommands before and after the 'or' are "ored"
