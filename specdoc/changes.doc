@@ -1,7 +1,3 @@
-04aug98 rjs	velplot.for -- Elimiate mmatod and replace with call to
-		string.for matod routine.
-04aug98 rjs	uvgen.for -- Loop over "nspect" to retrieve window centre
-		frequency and bandwidth.
 27feb98 mwp	moment.for -- Added mom=-2 for peak temperature
 05aug98 mchw    obspar.for -- Added mount and nants to ovro.
 19aug98 rjs	immerge.for -- Fix bug introduced on 16 March where the first
@@ -25,5 +21,9 @@
 15sep98 pjt	fits.for -- Recognise galactic and ecliptic coordinates the right way
 24sep98 rjs	pops.for -- Get the telescope elevation limit.
 24sep98 rjs	obspar.for -- Added VLA elevation limit.
+25sep98 rjs	demos.for -- Less fussy about freq axis for single-plane datasets.
+25sep98 rjs	fits.for -- Correct handling of OBSRA and OBSDEC in op=xyin
+28sep98 rjs	calplot.for -- Print out flux at central freq.
+30sep98 rjs	tangle.for -- Allow plus signs in angles.
  
 See $MIR/changes.txt for a history of earlier changes.
