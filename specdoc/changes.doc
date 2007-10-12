@@ -1,13 +1,3 @@
-		more robustly.
-24feb98 rjs	mossen.for -- Write bunit keyword to the output.
-25feb98 rjs	restor.for -- Honour documentation so that a beam is not
-		needed with mode=convolve.
-25feb98 rjs	gaupar.for -- Fix bug in determining outout "bunit" value, Problem
-		introduced in December 98 I think.
-05mar98 rjs	uvfft.for -- some FORTRAN standardisation
-05mar98 rjs	ratty.c,intf2c.c,velplot.for,noise.for,tv.for,tv.h,oscalls.f2c,
-		tcpio.f2c,sysdep.h,doc.c -- Rationalise the names of the different architectures.
-05mar98 rjs	nllsqu.for,lsqu.for -- Broke these into separate files to
 		work around a problem on some LINUX systems.
 09mar98 rjs	gpplt.for -- Trim down the device spec before passing it
 		through to PGPLOT.
@@ -25,5 +15,15 @@
 31mar98 rjs	cgdisp.for -- Honour the cols1 parameter.
 02apr98 rjs	avmaths.for -- Increase maxruns.
 02apr98 rjs	medfit.for -- New subroutines.
+06apr98 rjs	atlod.for -- Increase the max size of an integration.
+21apr98 rjs	fits.for -- Increased max number of antenna configurations.
+20apr98 amh	sfind.for -- Various changes to the log file.
+23apr98 rjs	cgcurs.for -- Increase size of "bunit" variable.
+21apr98 mchw	imfit.for -- more precise Offset position.
+27apr98 rjs	imfit.for -- Merged above two sets of changes.
+01may98 pjt	log.for -- Check that logopen gets called.
+07may98 rjs	atlod.for -- New way of handling jstat.eq.5 returned by rpfitsin.
+07may98 rjs	log.for -- Fix to PJT's change.
+07may98 rjs	cgslice.for -- Increase size of "bunit" variable.
  
 See $MIR/changes.txt for a history of earlier changes.
