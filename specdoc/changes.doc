@@ -1,6 +1,3 @@
-10apr01 dpr     atlod.for - handle correlator UT day rollover bug
-11apr01 dpr	iffix.for - New task. Adapted from transifx.
-24apr01 rjs	opplt.for,dsdplt.for,opcal.for,refract.for -- Change (improve)
 		"standard" model of the atmosphere. Put this model into
 		refract.for and get opplt,dsdplt,opcal to call this routine.
 03may01 rjs	psrplt.for -- Add mode=phase
@@ -25,5 +22,8 @@
 29jun01 dpr     Install - accept version suffixes for dynamic libraries
 02jul01 dpr     fits - relax AN table restrictions properly
 05jul01 dpr     opcal - re-allow orig met format
+31jul01 rjs	planet.for - Improved brightness temperature for
+		Mercury
+30jul01 rjs	sdip.for - Slightly improved plotting.
  
 See $MIR/changes.txt for a history of earlier changes.
