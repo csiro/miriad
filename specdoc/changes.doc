@@ -1,21 +1,3 @@
-		to cogaucvt when pixel increments differ and gaussian axis is
-		non-zero.
-08jan99 rjs	imstat.for,imspec.for -- Change coordinate conversion to use
-		the co routines (which also fixes a bug converting RAs).
-12jan99 rjs	uvgen.for,blflag.for -- Doc change only.
-15jan99 rjs	ephem.for -- Added new leap second.
-19jan99 rjs	mosmem.for -- It was failing to access the correct single dish plane!!
-20jan99 rjs	mfcal.for -- The frequency assosicated with a channel was
-		being incorrectly determined when the line "width" and "step"
-		parameters differed.
-25jan99 rjs	fitsio.for -- The uv FITS writer was still writing in the old
-		date format.
-22jan99 rjs	mosmem.for -- Fudge to get the rms noise information to propogate
-		through correctly for single pointing work.
-27jan99 rjs	invert.for -- Change the default "line" parameter to all
-		channels.
-29jan99 rjs	mossdi.for -- Fix up a message.
-05feb99 mchw	obspar.for,obspar.h -- Added carma for combined hatcreek 
 		and ovro arrays.
 10feb99 rjs	mosmem.for,maxen.for -- Get measure=cornwell to work by
 		setting initial estimate to zero.
@@ -24,6 +6,24 @@
 26feb99 rjs	fitsio.for,fits.for -- Changes to be more robust to bad
 		dates.
 05mar99	rjs	fitsio.for -- Fix to the above change.
-
+27jun97 bpw	contsub.for -- add options=verbose
+22mar99 pjt	contsub.for -- fixed treating options(2) as integer in boolean expr
+23mar99 rjs	imstat.for,imspec.for -- Fix bug in determining region of interest.
+12mar99 bpw	convol.for -- Increase size of map/beam/out to 512 to allow directories
+27mar99 pjt	headio.c -- make history a static, so nobody can see it :-)
+19dec97 bpw	imspec.for,imstat.for -- Add cutoff,lower and options=guaranteespaces
+22dec97 bpw	imspec.for,imstat.for -- Add options hanning,boxcar,deriv also to imstat
+23mar99 bpw	imspec.for,imstat.for -- Merged bpw updates and rjs updates
+07apr99 rjs	imspec.for,imstat.for -- Merge rjs and bpw versions.
+09apr99 rjs	blflag.for -- Added an extra error check.
+09apr99 nebk	cgdisp.for -- Fix problem with hard copy colour tables
+14apr99 rjs	sigest.for -- New task to estimate the variance in an
+		image.
+21apr99 rjs	psrfix.for -- Allow de-dispersion and bin selection in the
+		one run.
+28apr99 pjt,rjs	mathd.for,pcsub.for -- Increase size of "descr" argument to
+		hdprobe.
+28apr99 rjs	headio.c -- Check for string buffer overflow.
+05mar99 mchw	velplot.for -- added logarithmic contour levels.
  
 See $MIR/changes.txt for a history of earlier changes.
