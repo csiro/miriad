@@ -1,4 +1,3 @@
-06apr98 rjs	atlod.for -- Increase the max size of an integration.
 21apr98 rjs	fits.for -- Increased max number of antenna configurations.
 20apr98 amh	sfind.for -- Various changes to the log file.
 23apr98 rjs	cgcurs.for -- Increase size of "bunit" variable.
@@ -21,9 +20,10 @@
 22may98 rjs	uvgen.for -- Include circular polarization handling.
 22may98	rjs	gpcal.for -- Turn off xyref on early iterations of weakly polarised
 		source.
-
 16jun98 nebk    cgdisp.for -- FIx problem in posdec2 where ocen2 was of 
                 size 2 instead of 3. Was stuffing up in w2wco for ellipses.
 18jun98 nebk    uvplt.for -- Document nofqav option better
+25jun98 nebk    cgdisp.for -- Add Chris PHillip's change to OLAY
+                with overlay type 'sym'
  
 See $MIR/changes.txt for a history of earlier changes.
