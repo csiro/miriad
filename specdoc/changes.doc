@@ -1,7 +1,3 @@
-09oct97 rjs	tvflag.for -- Handle width parameter which is not 1.
-09oct97 rjs	uvio.c -- Add check for restfreq==0 when converting to
-		velocity.
-10oct97 rjs	uvaver.for -- Eliminate bad call to uvvarcopy just before
 		final buffer flush (when time averaging).
 10oct97 rjs	blflag.for -- Added options=rms
 10oct97 rjs	uvstat.for -- General tidy up.
@@ -25,5 +21,9 @@
 		the header.
 12nov97 rjs	imhist.for -- Add 's' flag to boxset call.
 26nov97 bmg	psrplt.for -- Added log keyword.
+28nov97 rjs	hio.c -- Make it work for text files missing a final newline.
+28nov97 rjs	gpnorm.for -- Add more decimal points to the printout.
+28nov97 rjs	mosmem.for,mossdi.for -- Increase max number of boxes.
+03dec97 rjs	uvspec.for -- Put back labels that disappeared 5 weeks ago.
  
 See $MIR/changes.txt for a history of earlier changes.
