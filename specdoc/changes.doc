@@ -1,5 +1,3 @@
-07jan99 rjs	fits.for -- Write dates in new FITS form.
-08jan99 rjs	co.for -- Better handling of sky/grid rotation, and corrections
 		to cogaucvt when pixel increments differ and gaussian axis is
 		non-zero.
 08jan99 rjs	imstat.for,imspec.for -- Change coordinate conversion to use
@@ -25,5 +23,7 @@
 		images, including mosaics.
 26feb99 rjs	fitsio.for,fits.for -- Changes to be more robust to bad
 		dates.
+05mar99	rjs	fitsio.for -- Fix to the above change.
+
  
 See $MIR/changes.txt for a history of earlier changes.
