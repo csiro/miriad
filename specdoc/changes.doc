@@ -1,20 +1,3 @@
-11jun99 nebk    cgcurs.for - some hacks to handle /BEAM or /B and following strings
-11jun99 nebk    cgrego.for - handle planes
-21jun99 rjs	uvplanet.for -- Added options=replace.
-22jun99 rjs	atmos.for -- Tidy up, and change RA/DEC format to standard
-		hms/dms format.
-24jun99 rjs	uvflux.for -- More sources and cope with longer source names.
-30jun99 rjs	imfit.for -- Improved format statement.
-01jul99 rjs	hdtab.for,hdtab.h,invert.for -- Slightly better output
-		headers for created images.
-07jul99 lss	imgen.for -- Add 3D gaussian model for cubes.
-19jul99 rjs	fitsio.for -- Write out EXTVER card in extension tables.
-19jul99 rjs	doc2html.csh -- Minor improvements.
-22jul99 rjs	mirhelp.csh -- Minor improvements -- direct output to netscape.
-28jul99 rjs	hdtab.for -- Always initialise pbtype parameter.
-20jul99 rjs	fits.for -- uvout writes AIPS SU tables.
-30aug99 rjs	fits.for -- Changed some "PI" to "DPI"
-23jul99 rjs	immerge.for -- Taper down the low resolution image to make it
 		compatible with the high resolution one. Added shift option.
 23jul99 rjs	maxfit.for -- Break out "solve" routine to new subroutine pkfit.for
 23jul99 rjs	pkfit.for -- Broke this out of maxfit.for
@@ -25,5 +8,22 @@
 		various buffer sizes.
 14aug99 rjs	cgrego.for -- Correct some non-standard fortran
 31aug99 rjs	uvio.c -- Correct an error message.
+03sep99 swa	uvplt.for -- Add options=notitle
+03sep99 lss	mbspect.for -- pgpt bug when order negative; added rms output line
+08sep99 rjs	co.for -- More robust algorithm in comixed.
+02sep99 rjs	uvio.c,uvdat.for,keyline.for -- Added average channel
+		flagging tolerance. 
+08sep99 rjs	cgrego.for -- Initialise uninitialised variables.
+13sep99 rjs	ephem.for -- Make jullst more robust.
+13sep99 rjs	uvspec.for -- Added axis=dfreq
+20sep99 pjt	mbspect.for - fixed obvious syntax error - does anybody use flint anymore
+23sep99 rjs	uvcat.for -- Fix window selection again!!
+28sep99 rjs	fitsio.for -- Change in number of digits printed in fitwrhdd
+		to work around GILDAS flaw.
+30sep99 rjs	mossen.for -- Make the size of the output equal to the input
+		image bounding box (i.e. count blanked pixels).
+30sep99 rjs	fft.for -- Change bunit in the output header.
+01oct99 vjm	imom.for -- New program: Compute intensity-weighted moment of an image
+05oct99 rjs	blflag.for --  Added options=scalar
  
 See $MIR/changes.txt for a history of earlier changes.
