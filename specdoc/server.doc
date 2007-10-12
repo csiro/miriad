@@ -1,0 +1,45 @@
+%A server
+	This is used to specify the TV display device. It is giving in the
+	form:
+
+	  type@server
+
+	or
+
+	  type@device
+
+	The first form causes a connection to be made with a network
+	display server, whereas the second form uses local hardware
+	directly. For the network servers, the server process may have
+	to be started before invoking the Miriad task -- see below.
+
+	Currently supported types are:
+
+	  xmtv          Miriad X server. `server' is the servers hostname.
+			Normally the xmtv server will be the same host as
+			the X server. The user will normally invoke the xmtv
+			server before running any Miriad TV tasks, with
+
+			  % xmtv &
+
+			If the X server and xmtv server are on different
+			hosts, you may need to set the DISPLAY environment
+			variable on the xmtv server, and use xhost on the
+			X server.
+
+	  ivas		IVAS (VMS only). `device' is the VMS device name.
+			You will require an IIS IVAS for this.
+
+	  ivserver	IVAS server. `server' is the servers hostname.
+			Servers are currently installed on
+			castor.astro.uiuc.edu and bkyast.berkeley.edu.
+
+	  msss		Miriad Sun Screen server. `server' is the serving
+			Sun, which can be any Sun with a console. The user
+			will normally invoke the server before running
+			any Miriad TV tasks, with
+
+			  % msss &
+
+	  mxas		Miriad X server. `server' is the servers hostname.
+			This is an inferior server to xmtv.

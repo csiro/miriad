@@ -1,0 +1,7 @@
+%A in
+	This is the standard name for an input dataset -- usually
+	an image, though sometimes either an image or visibility dataset
+	or some foreign dataset format. Some tasks support multiple
+	input datasets at a time (with wildcard supported) whereas
+	others can handle only a single one at a time. There is
+	generally no default input name.

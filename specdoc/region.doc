@@ -1,0 +1,42 @@
+%A region
+	This selects a subregion of an image. Multiple subregions can be
+	selected, which are "ored" together. The following subcommands are
+	recognized (each of which can be abbreviated to uniqueness).
+
+	  images(z1,z2)
+	Select image planes z1 to z2 inclusive. z2 defaults to z1.
+
+	  quarter(z1,z2)
+	Select the inner quarter of the image planes z1 to z2 inclusive.
+	If both z1 and z2 are missing, then all planes are selected. If
+	only z2 is omitted, z2 defaults	to z1.
+
+	  boxes(xmin,ymin,xmax,ymax)(z1,z2)
+	Select the pixels within a box with corners xmin,ymin,xmax,ymax.
+	z1 and z2 are the same as in the "image" subcommand. If z1 and z2
+	are omitted, all planes are selected.
+
+	  polygon(x0,y0,x1,y1,x2,y2,...)(z1,z2)
+	Select the pixels within the polygon defined by the list of vertices.
+	z1 and z2 are the same as in the "image" subcommand. If z1 and z2 are
+	missing, all planes are selected. If only z2 is omitted, it defaults
+	to z1.
+
+	  mask(file)
+	Select  pixels according to the mask given in the file.
+
+	The units of the numbers given in the above commands are, in
+	general, absolute pixels. But this can be changed (and rechanged)
+	by using one of the following subcommands.
+
+	  abspixel
+	Coordinates are interpreted as absolute pixel values, the default.
+	  relpixel
+	Coordinates are relative to the reference pixel of the map.
+	  relcenter
+	Coordinates are relative to the central pixel of the map,
+	(defined as (naxis1/2+1,naxis2/2+1)).
+	  arcsec
+	Coordinates are in arcseconds, relative to the reference pixel.
+	  kms
+	Coordinates in the third dimension are in km/s.

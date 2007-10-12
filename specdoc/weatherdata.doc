@@ -1,5 +1,10 @@
-A few tasks require ATCA weather data for their operation. To
-get the appropriate data, go to the ATCA's monthly weather data page
+A few tasks require ATCA weather data for their operation. Prior to
+October 2003 meteorlogical data was not recorded in the RPFITS file.
+Prior to the December 2003 version of atlod, these data were not
+copied from the RPFITS file to the Miriad output file. 
+
+If your Miriad data set does not contain your weather information
+you can get the  data from the ATCA's monthly weather data page
 
 http://www.narrabri.atnf.csiro.au/cgi-bin/Weather/hisdata.cgi
 
@@ -12,8 +17,8 @@ line, red line and big green dots - which in principle should all
 agree (roughly). There is a systematic difference between the black
 and red sensors. The red sensor is attached to the control building,
 is moderated by the building and so shows less diurnal fluctuation.
-The black is freestanding in the weather tower, and is the sensor we tend
-to believe. The green dots are measurements at Narrabri airport.
+The black is freestanding in the weather tower, and is the sensor that best
+reflects the weather. The green dots are measurements at Narrabri airport.
 
 If the black line/dots in these plots shows normal diurnal cycling
 around the time of your observation, then you are in good shape. If it
@@ -21,8 +26,9 @@ shows a flat line or nothing ... then the data are probably bad and
 something went wrong with the monitoring/archiving of the weather
 data.
 
-The files are in AEST times.  If you observe over an AEST month change -
-you will need to download the two months, and concatenate them together. 
+The files are in AEST times.  If you observe over an AEST month change,
+then you will need to download the files for the two months, and concatenate
+them together. 
 
-The data files are updated nightly.
+The data file for the current month is updated nightly.
 

@@ -91,6 +91,19 @@
 	If some data is shadowed, it is advisable to use an antenna diameter value 
 	greater than the physical antenna size (e.g. 20% larger).
 
+	  ha(h1,h2)
+	Select based on the hour angle of the data. h1 and h2 are the
+	hour angle (in decimal hours).
+
+	  elevation(e1,e2)
+	Select data based on the elevation at which the data were observed.
+	e1 and e2 give the elevation range in degrees.
+
+	  lst(l1,l2)
+	Select data based on the LST of the observation. l1 and l2 are the
+	start and end LST values, and can be given in the form hh:mm:ss
+	or in decimal hours.
+
 	  bin(b1,b2)
 	Select visibilities which have pulsar bin numbers in the range
 	b1 to b2 inclusive. If b2 is omitted, just pulsar bin b1 is

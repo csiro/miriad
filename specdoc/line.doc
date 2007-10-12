@@ -1,5 +1,5 @@
 %A line
-	The "line" parameter determines the channels that are to be processed
+	The ``line'' parameter determines the channels that are to be processed
 	from a uv data-set. The parameter value consists of a string
 	followed by up to four numbers. Defaults are used for any missing
 	trailing portion of the parameter value.
@@ -45,7 +45,7 @@
 	given in km/s. The output channels are centered on velocities:
 	start, start+step, start+2*step, etc.
 
-	The "line" parameter interacts with the "select=window" selection
+	The `line' parameter interacts with the "select=window" selection
 	for "channel" and "velocity"/"felocity" linetypes. See the help on
 	"select" for more information.
 

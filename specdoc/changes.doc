@@ -1,29 +1,29 @@
-03may01 rjs	psrplt.for -- Add mode=phase
-10may01 dpr     fits.for - change options dss to rawdss
-10may01 dpr     im2uv.for - doc change only
-11may01 dpr     fits.for - check history exists before copying it
-11may01 dpr     headio.c - more informative hisopen_c message
-14may01 bmg     imbin.for - add options=sum
-16may01 rjs	obsrms.for - Copy across MCHW's program.
-15may01 dpr     mirimport.csh - make OS specific.
-15may01 dpr     mirimport.csh - change alpha to delete files before tar xvf
-29may01 dpr     gpcomb - first version
-29may01 dpr     gpdof  - first version
-07jun01 dpr     gpdof  - finesse output
-18jun01 dpr     cgdisp - added blacklab option
-19jun01 dpr     smooth - lenghten in and out keys
-20jun01 dpr     elevcor - new task
-21jun01 dpr     convol - doc change only
-21jun01 dpr     smooth - added options=force
-26jun01 dpr     fits - relax antenna table input format restrictions
-28jun01 rjs	restor.for - Doc change only.
-29jun01 dpr     Install - accept version suffixes for dynamic libraries
-02jul01 dpr     fits - relax AN table restrictions properly
-05jul01 dpr     opcal - re-allow orig met format
-31jul01 rjs	planet.for - Improved brightness temperature for
-		Mercury
-30jul01 rjs	sdip.for - Slightly improved plotting.
-08aug01 rjs	sdip.for - Include CMB temperature. Echo theoretical values.
-07sep01 rjs	opplt.for - Give log file output.
- 
+		uvio.c,keyc.c,iface.f2c - Changes to support FORTRAN and C integers being different data types.
+24feb06 rjs	atfix.for - Fix bug in tsyscal=none and some tidying.
+27feb06 rjs	atfix.for - Fix bug when there are multiple frequencies.
+13mar06 rjs	mm.f2c - Conditional include of malloc.h, which appears not to
+		exist in MacOS.
+09may06 rjs	mfboot.for - Increase size of MAXPNT.
+09may06 rjs	uvplt.for - Disable planet processing steps.
+22may06 rjs	doc.c,ratty.c,flint.c,miriad.c - Change a routine name to avoid a name conflict
+		when compiling under Cygwin/Windows.
+31may06 rjs	mirhelp.csh - Support mozilla browser.
+01jun06 rjs	uvrot.for - New task. Rotate uv coordinates.
+01jun06 rjs	plgeom.for - New task. Image a facet on a planet.
+01jun06 rjs	co.for,pcvt.for - Added coCvtv routine to check for invalid coordinates. Change
+		call sequence of pcvt.for to support this.
+01jun06 rjs	imcomb.for,regrid.for - Changes to better support handling large areas of the sky.
+16jun06 rjs	unix/dio.c - Add O_BINARY to opening flags for cygwin support.
+28jun06 rjs	headio.c - Doc comment correction only.
+28jun06 rjs	mirhelp.csh - Added cygstart browser (invokes standard Windows
+		web browser in cygwin environment)
+28jun06 rjs	uvio.c - Prototype arguments and some tidying.
+30jun06 rjs	mirtester.csh,mirtar.csh,mirexport.csh,tests/* - Sets of scripts to help test Miriad. Changes to
+		mirtar and mirexport to distribute these.
+07jul06 rjs	mfboot.for - Increase max number of points (again).
+07jul06 rjs	uvplt.for - Tidy up some messages.
+09jul06 rjs	uvio.c - uvread_updated_uvw checks no. of antennas.
+04aug06 rjs	fits.for - Correct setting of llrot in some instances. Also
+		inproved handling of some rare keywords.
+
 See $MIR/changes.txt for a history of earlier changes.

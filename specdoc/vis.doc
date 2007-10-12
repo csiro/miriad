@@ -1,0 +1,5 @@
+%A vis
+	This is the normal keyword for an input visibility dataset. There
+	is generally no default input name. Some tasks allow multiple input
+	datasets (with wildcards supported, such as an asterisk). Other tasks
+	can handle only a single dataset at a time.

@@ -1,0 +1,21 @@
+%N tpcp
+%D Tape copy.
+%P rjs
+%: tools
+%B
+tpcp is a utility to copy to or from a tape.
+
+Usage:
+  tpcp [-b blocksize] in out
+
+where "in" is the input, which may be either a disk file or a tape
+device. Similarly "out" may be either a file or a tape device. 
+
+If the input is a file and the output is a tape device, the "-b"
+flag should be used to set the block size of write operations.
+
+Example:
+  Tape-to-tape copy:    tpcp /dev/nrst0 /dev/nrst1
+  Tape-to-disk copy:	tpcp /dev/nrst0 data.fits
+  Disk-to-tape copy:	tpcp -b 2880 data.fits /dev/nrst0
+        								

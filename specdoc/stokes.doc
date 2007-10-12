@@ -12,8 +12,8 @@
 	source is unpolarised.
 
 	There is an alternate way to specifiy the desired
-	Stokes/polarisation data, using "select" (see the help on select).
-	The "select" mechanism is rather different, and may be more or
+	Stokes/polarisation data, using `select' (see the help on "select").
+	The `select' mechanism is rather different, and may be more or
 	less appropriate to the job in hand.
 
 	Examples:

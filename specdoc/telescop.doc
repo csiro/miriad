@@ -1,0 +1,12 @@
+%A telescop
+	This keyword gives the name of an telescope (or perhaps more
+	liberally by some tasks, an observatory or a primary beam type).
+	Some values include:
+	  ATCA     The Australia Telescope Compact Array (Narrabri)
+	  PARKES   The Parkes telescope.
+	  MOPRA    The Mopra telescope.
+	  HATCREEK BIMA's Hat Creek Observatory.
+	  VLA      NRAO's Very Large Array
+	  WSRT     NFRA's Westerbork telescope.
+	Other possible values are given by the ``telepar'' task
+	(without giving any parameters).

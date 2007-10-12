@@ -1,0 +1,16 @@
+	In August 1994, the nominal flux density of the ATCA's primary flux
+	calibrator, 1934-638, was revised to give better agreement between
+	the ATCA's flux density scale and the flux scales used in the northern
+	hemisphere (the VLA in particular). For more discussion, see John
+	Reynold's memo ``A revised flux scale for the AT Compact Array''.
+
+	This introduces a problem when mixing data (either combining or
+	just comparing) calibrated before and after this change. By default
+	Miriad tasks use the new flux scale. However if you use the option
+	`oldflux' in GPCAL and MFCAL when calibrating 1934-638, the old
+	flux scale will be used. In this way, new data can be calibrated
+	to have the old flux scale, and so can be combined/compared
+	directly with data calibrated before the revision.
+
+
+

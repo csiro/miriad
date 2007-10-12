@@ -1,0 +1,4 @@
+%A out
+	The name of the output dataset, either image or visibility.
+	There is generally no default (although some tasks simply
+	do not produce an output if this is not set).

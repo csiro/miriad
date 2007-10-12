@@ -1,0 +1,27 @@
+%A windows
+	The use of "select=window" is used to select a subset of spectral
+	windows (or IF bands in AIPS terminology) in a uv data-set. For
+	example, to select the second and third spectral windows, use
+
+	  select=window(2,3)
+
+	Some explanation is needed for the interaction between "select=window"
+	and the "line" keyword.
+
+	Window selection complements velocity linetypes (line=velocity or
+	line=felocity). In this case only data from the selected windows
+	is used in determining the velocity channels.
+
+	There are some limitations when using window selection with channel
+	linetype ("line=channel"). Firstly the selected windows must
+	be contiguous (i.e. you cannot give "select=window(1,4)") when combined
+	with "line=channel" selection. Secondly the channel specification
+	in the "line" keyword is relative to the first channel in the first
+	selected window. For example, if you use
+
+	  line=channel,10,1,1 select=window(2,3)
+
+	you will be get 10 channels starting from the first channel in window
+	2. If windows 2 and 3 had 8 channels each, then you would get all
+	8 channels from window 2, and the first two channels from window 3.
+

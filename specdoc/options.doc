@@ -1,0 +1,14 @@
+%A options
+	This keyword is often used to specify extra processing options
+	to a task. Where several options are to be given, they are
+	separated by commas. Minimum match is used.
+
+	Some common options are:
+	  nocal    This option is used by uv programs which apply
+	           antenna gain corrections to the data (assuming the
+	           appropriate tables are present). This option disables
+	           this correction step.
+	  nopol    This option is used by uv programs which apply
+	           instrumental polarisation corrections to the data (assuming
+	           the appropriate tables are present). This option disables
+	           this step.

@@ -1,0 +1,50 @@
+%N xmtv
+%D Miriad X-windows display
+%P rjs
+%: tools
+%B
+
+xmtv is a Miriad utility to display image-like data in an
+X-windows environment. It is becoming of less use with time.
+The only place where it is still useful is in association
+with the interactive visibility flagging task "tvflag". 
+
+XMTV has a number of flaws. One is that it only works on 8-bit
+screens. If your workstation has more than 8-bits, you can make
+it simulate an 8-bit screen with the following recipes.
+
+Under Solaris - when using the standard ATNF login script
+=========================================================
+In your .login file, include the statement
+
+  % setenv WINDOWS OpenWin8
+
+Under Solaris - otherwise
+=========================
+Formerly Solaris would enter 8-bit mode (even if you had a 24-bit display)
+by default. The newer SunBlades enter 24-bit by default. To start X-Windows
+up in 8-bit mode, use
+
+  % openwin -dev "/dev/fb defclass PseudoColor defdepth 8" -ar1 250
+
+
+Under Linux
+===========
+Peter Teuben (teuben@astro.umd.edu) states that you can use virtual
+consoles in Linux (normally there are 6, accessible via ALT-F1 ... ALT-F6.
+Each X binds itself to VC7..VC12, i.e. VC1 X display (normally :0)
+displays on VC7, VC2 on VC8 etc. So, one does (in extraneous full
+syntax to show the arguments, for which the vc1 can be defaulted):
+
+vc1>  startx -- :0 -bpp 8       
+                (will start X on VC7)
+                now hit CTRL-ALT-F2 to get to VC2
+vc2>  startx -- :1 -bpp 16
+                (will start X on VC8)
+                
+
+and viola! you can now flip back between DISPLAY :0 (in 8 bit mode) and
+DISPLAY :1 (in 16 bit mode) via CTRL-ALT-F7 and CTRL-ALT-F8. Cheap but
+effective.
+
+

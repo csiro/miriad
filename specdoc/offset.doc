@@ -1,0 +1,19 @@
+%A offset
+	A number of Miriad tasks either take or return celestial coordinates
+	as offsets from some reference position -- invariably the observing
+	center or the reference pixel. Although the `offset' keyword is
+	generally used, the fitting tasks include offsets in their
+	"spar" keyword, whereas IMPOS uses the "coord" keyword.
+
+	Offset celestial coordinates are always given in arcseconds on the
+	sky. The offset, (x,y), is related to a true sky coordinate, (RA,DEC),
+	by
+
+	  x = (RA - RA0) * cos(DEC0)
+	  y = DEC - DEC0
+
+	(These equations should be viewed as a definition, rather than a
+	small angle approximation). Tasks invariably convert the offset
+	coordinates to true sky coordinates before further converting them
+	to something more computationally convenient (e.g. pixel coordinates
+	or direction cosines).
