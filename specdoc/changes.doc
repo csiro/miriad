@@ -1,13 +1,3 @@
-16feb01 dpr     co.for - Increase MAXITERS in comixed
-27feb01 dpr     cgdisp.for - Add scale-bar
-28feb01 dpr4tao calstokes - Changed values for 3C48 and 3C147
-02mar01 rjs	mirhelp.csh - Make it compatible with more systems.
-02mar01 rjs	opcal.for - Label some of the output better.
-02mar01 rjs	uvplt.for - Able to plot airmass.
-03mar01 rjs	planet.for -- Improved brightness temperature functions for the
-		planets.
-15mar01 dpr     psrbl.for - New task for pulsar off-bin subtraction.
-05apr01 dpr	fits.for Add region key for op=xyout
 10apr01 dpr     atlod.for - handle correlator UT day rollover bug
 11apr01 dpr	iffix.for - New task. Adapted from transifx.
 24apr01 rjs	opplt.for,dsdplt.for,opcal.for,refract.for -- Change (improve)
@@ -25,5 +15,15 @@
 29may01 dpr     gpcomb - first version
 29may01 dpr     gpdof  - first version
 07jun01 dpr     gpdof  - finesse output
+18jun01 dpr     cgdisp - added blacklab option
+19jun01 dpr     smooth - lenghten in and out keys
+20jun01 dpr     elevcor - new task
+21jun01 dpr     convol - doc change only
+21jun01 dpr     smooth - added options=force
+26jun01 dpr     fits - relax antenna table input format restrictions
+28jun01 rjs	restor.for - Doc change only.
+29jun01 dpr     Install - accept version suffixes for dynamic libraries
+02jul01 dpr     fits - relax AN table restrictions properly
+05jul01 dpr     opcal - re-allow orig met format
  
 See $MIR/changes.txt for a history of earlier changes.
