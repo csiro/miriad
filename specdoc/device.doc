@@ -1,0 +1,34 @@
+%A device
+	This keyword is used to specify the plotting device. It uses
+	the normal PGPLOT format of
+
+	  file/type
+
+	 or
+
+	  device/type
+
+	Usually there exists a default file name or device name.
+	The part after the slash gives the plotter type. Examples of the
+	type are:
+
+	  xs	X-windows output. This window is resizeable and
+	        persistent. 
+	  xw	X-windows output. A transient window that disappears
+		when your task exists.
+	  ps	Postscript (landscape mode).
+	  vps   Postscript (portrait mode).
+	  cps   Colour postscript (landscape mode).
+	  vcps  Colour postscript (portrait mode).
+	  tek	Tektronix 4010 or equivalent.
+	  xterm Xterm window (better for simple plots over
+		slow X links).
+
+	A `?' as device name generates a complete list of the recognized
+	types (which will most likely vary from system to system).
+
+	Files created for hardcopy devices must be spooled to the printer
+	separately. The command needed for this is site and device specific.
+
+	For a comprehensive description of PGPLOT devices, see
+	  http://astro.caltech.edu/~tjp/pgplot/
