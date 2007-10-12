@@ -1,13 +1,3 @@
-
-Mosaicing Bug:
-==============
-A bug has just been corrected in "invert" which affects multi-channel
-mosaics (it does not affect mosaics where the output is a single plane or
-or cubes made from a single pointing even if options=mosaic was used). 
-The bug is a misregistration of pointings by up to a half a pixel.
-Each pointing and each plane will have a different "random" error. Please
-contact me if you think this bug might have affected you significantly.
-
 Year 2000 Issues:
 =================
 Miriad should not have any problems with the coming of the year 2000.
@@ -22,6 +12,6 @@ So 00jan01 will correspond to 1st January 2000.
 
 Bob Sault
 rsault@atnf.csiro.au
-28 October 1999
+16 December 1999
 
 
