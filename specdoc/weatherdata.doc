@@ -1,25 +1,19 @@
 A few tasks require ATCA weather data for their operation. To
-get the appropriate data, go to the ATCA's weather page
+get the appropriate data, go to the ATCA's monthly weather data page
 
-http://www.narrabri.atnf.csiro.au/cgi-bin/Weather/narweather.cgi
+http://www.narrabri.atnf.csiro.au/cgi-bin/Weather/hisdata.cgi
 
-at the bottom of the page you can enter a date to get historical data.
-Once at the right historical data page, you should see at the top a
-section "Extra weather data".
+Using your browser, download the data file for the appropriate month.
 
-Download the data file behind the "Raw ATCA data file for the month".
-Voila! This is what you need.
-
-Also look at the "Raw ATCA weather data plot for the month".
-
+If available, you might look at the plot for the month.
 The plot file shows temperature and "wet path" (roughly proportional
 to zenith opacity) plots. It shows three sets of readings - black
 line, red line and big green dots - which in principle should all
 agree (roughly). There is a systematic difference between the black
 and red sensors. The red sensor is attached to the control building,
 is moderated by the building and so shows less diurnal fluctuation.
-The black is freestanding and the sensor we tend to believe.
-The green dots are measurements at Narrabri airport.
+The black is freestanding in the weather tower, and is the sensor we tend
+to believe. The green dots are measurements at Narrabri airport.
 
 If the black line/dots in these plots shows normal diurnal cycling
 around the time of your observation, then you are in good shape. If it
@@ -30,6 +24,5 @@ data.
 The files are in AEST times.  If you observe over an AEST month change -
 you will need to download the two months, and concatenate them together. 
 
-The monthly data files get updated about a week into the following month
-(e.g. February's file should have been updated a week or so into March). 
+The data files are updated nightly.
 
