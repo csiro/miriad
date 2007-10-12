@@ -1,16 +1,3 @@
-14apr99 rjs	sigest.for -- New task to estimate the variance in an
-		image.
-21apr99 rjs	psrfix.for -- Allow de-dispersion and bin selection in the
-		one run.
-28apr99 pjt,rjs	mathd.for,pcsub.for -- Increase size of "descr" argument to
-		hdprobe.
-28apr99 rjs	headio.c -- Check for string buffer overflow.
-05mar99 mchw	velplot.for -- added logarithmic contour levels.
-14may99 rjs	histo.for -- Increase buffers to hold blanking info.
-14may99 rjs	calc.for -- Increase string buffer size.
-19mar99 mchw    imgen.for -- Add model isothermal 2D projection for cluster gas.
-18may99 rjs	regrid.for -- Handle wrap arounds in the offsets.
-27may99 rjs	model.for -- Better check for no visibility data.
 11jun99 nebk    cgcurs.for - some hacks to handle /BEAM or /B and following strings
 11jun99 nebk    cgrego.for - handle planes
 21jun99 rjs	uvplanet.for -- Added options=replace.
@@ -25,5 +12,18 @@
 19jul99 rjs	doc2html.csh -- Minor improvements.
 22jul99 rjs	mirhelp.csh -- Minor improvements -- direct output to netscape.
 28jul99 rjs	hdtab.for -- Always initialise pbtype parameter.
+20jul99 rjs	fits.for -- uvout writes AIPS SU tables.
+30aug99 rjs	fits.for -- Changed some "PI" to "DPI"
+23jul99 rjs	immerge.for -- Taper down the low resolution image to make it
+		compatible with the high resolution one. Added shift option.
+23jul99 rjs	maxfit.for -- Break out "solve" routine to new subroutine pkfit.for
+23jul99 rjs	pkfit.for -- Broke this out of maxfit.for
+21jul99 rjs	doc.c -- Improved indenting algorithm somewhat. Added X command.
+26jul99 lss	mbspect.for -- New task. Copied "imspect" to "mbspect" for
+		HIPASS-specific chores
+30aug99 rjs	uvio.c,key.for,keyc.c,selcalf.for,uvflag.for -- Increased
+		various buffer sizes.
+14aug99 rjs	cgrego.for -- Correct some non-standard fortran
+31aug99 rjs	uvio.c -- Correct an error message.
  
 See $MIR/changes.txt for a history of earlier changes.
