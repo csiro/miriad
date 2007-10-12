@@ -1,0 +1,31 @@
+%N mirbug
+%D Send mail about bugs to appropriate person
+%P rjs
+%: user utility
+%B
+  Usage: mirbug [-r] [-b] taskname [file]
+
+  Mirbug allows the user to send bug reports to the appropriate people.
+
+  mirbug creates a template report or prepends it to the optional file
+  and then starts an editor. The editor is that indicated by the VISUAL
+  or EDITOR environment variable, or vi if neither environment variable
+  is set.
+
+  After exiting the editor the user is given the option of not mailing
+  the report by using ^C. If this is not done within 5 seconds, the
+  report is mailed to the person responsible, to a central address and
+  to the sender. If ^C is used, the report is saved.
+
+  Arguments:
+
+    taskname should be one of the miriad tasks/tools/scripts or the
+             string 'general'.
+
+    file     (optional) is the name of a previously created file containing
+             the report. This must be the second argument.
+
+    -r       The -r switch causes mirbug to run the task, and include
+             any output in the template bug report.
+
+    -b       Do not invoke an editor -- just mail the template.
