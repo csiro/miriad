@@ -1,19 +1,3 @@
-		compatible with the high resolution one. Added shift option.
-23jul99 rjs	maxfit.for -- Break out "solve" routine to new subroutine pkfit.for
-23jul99 rjs	pkfit.for -- Broke this out of maxfit.for
-21jul99 rjs	doc.c -- Improved indenting algorithm somewhat. Added X command.
-26jul99 lss	mbspect.for -- New task. Copied "imspect" to "mbspect" for
-		HIPASS-specific chores
-30aug99 rjs	uvio.c,key.for,keyc.c,selcalf.for,uvflag.for -- Increased
-		various buffer sizes.
-14aug99 rjs	cgrego.for -- Correct some non-standard fortran
-31aug99 rjs	uvio.c -- Correct an error message.
-03sep99 swa	uvplt.for -- Add options=notitle
-03sep99 lss	mbspect.for -- pgpt bug when order negative; added rms output line
-08sep99 rjs	co.for -- More robust algorithm in comixed.
-02sep99 rjs	uvio.c,uvdat.for,keyline.for -- Added average channel
-		flagging tolerance. 
-08sep99 rjs	cgrego.for -- Initialise uninitialised variables.
 13sep99 rjs	ephem.for -- Make jullst more robust.
 13sep99 rjs	uvspec.for -- Added axis=dfreq
 20sep99 pjt	mbspect.for - fixed obvious syntax error - does anybody use flint anymore
@@ -25,5 +9,21 @@
 30sep99 rjs	fft.for -- Change bunit in the output header.
 01oct99 vjm	imom.for -- New program: Compute intensity-weighted moment of an image
 05oct99 rjs	blflag.for --  Added options=scalar
+12oct99 rjs	imblr.for -- Do not produce output mask.
+12oct99 rjs	imbin.for,imsub.for,mostab.for,mc.for,model.for -- Fix imbin
+		and imsub to correctly copy mosaic tables. Some tidying in
+		mostab.for, which has reprocussions in mc.for, model.for.
+12oct99 rjs	gpcal.for,gpscal.for,getxy.for,gpboot.for -- gpcal now attempts
+		to honour the flux scale of any input gain table. options=noxy
+		has been removed from gpboot. Change in the call sequence to
+		getxy.for, with corresponding change in gpscal.for
+17oct99 rjs	headcopy.for -- Copy mostable.
+22oct99 rjs	clean.for -- Doc change only.
+23oct99 pjt	contsub.for,gpaver.for -- Initialisation problems in LINUX.
+24oct99 rjs	noise.for -- Initalisation problems in LINUX.
+27oct99 rjs	imspec.for,imstat.for -- Get first axis label correct.
+28oct99 rjs	mostab.for -- There was a bug which caused a fractional pixel
+		shift error.
+05mar99 bpw	headcopy.for -- real->double for last argument fixed call to rdhdd
  
 See $MIR/changes.txt for a history of earlier changes.
