@@ -1,0 +1,31 @@
+%A stokes
+	This keyword specifies the Stokes/polarisations parameters that
+	are to be processed. Tasks which use this keyword can usually convert
+	raw polarisations to Stokes parameters (but not the other way).
+	Generally several values can be given, separated by commas.
+	Possible values are:
+	  For raw linear polarisations:             xx,yy,xy,yx
+	  For raw circular polarisations:           rr,ll,rl,lr
+	  For Stokes parameters:                    i,q,u,v
+	  For Stokes I of an unpolarised source:    ii
+	The "ii" form gives Stokes I, using the assumption that the
+	source is unpolarised.
+
+	There is an alternate way to specifiy the desired
+	Stokes/polarisation data, using "select" (see the help on select).
+	The "select" mechanism is rather different, and may be more or
+	less appropriate to the job in hand.
+
+	Examples:
+
+	To process the 4 Stokes parameters:
+	  stokes=i,q,u,v
+
+	To process just the linear parallel hand polarisations:
+	  stokes=xx,yy
+
+	To process both the linear parallel hands, and Stokes I:
+	  stokes=xx,yy,i
+
+	NOTE: Some tasks restrict or prohibit the concurrent use of stokes
+	and select=pol.
