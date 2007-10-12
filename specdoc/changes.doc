@@ -1,9 +1,3 @@
-		limb darkening models.
-17jan01 rjs	nswc.for -- Included a few more subroutines.
-18jan01 dpr     cgslice - add third labtyp
-20jan01	rjs	uvplt.for - Change default number of potential baselines
-		to plot to allow for possible presence of autocorrelations.
-21jan01 rjs	uvplanet.for - Protect the limb darking calculation from
 		zero spacings.
 30jan01 rjs	closure.for - Get it to work for polarization parameters other
 		than the parallel hands.
@@ -25,5 +19,11 @@
 16feb01 dpr     co.for - Increase MAXITERS in comixed
 27feb01 dpr     cgdisp.for - Add scale-bar
 28feb01 dpr4tao calstokes - Changed values for 3C48 and 3C147
+02mar01 rjs	mirhelp.csh - Make it compatible with more systems.
+02mar01 rjs	opcal.for - Label some of the output better.
+02mar01 rjs	uvplt.for - Able to plot airmass.
+03mar01 rjs	planet.for -- Improved brightness temperature functions for the
+		planets.
+15mar01 dpr     psrbl.for - New task for pulsar off-bin subtraction.
  
 See $MIR/changes.txt for a history of earlier changes.
