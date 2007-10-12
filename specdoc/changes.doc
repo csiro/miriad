@@ -1,13 +1,3 @@
-		final buffer flush (when time averaging).
-10oct97 rjs	blflag.for -- Added options=rms
-10oct97 rjs	uvstat.for -- General tidy up.
-13oct97 nebk    mfplan.for -- Add 210m array and colours
-15oct97 rjs	co.for,uvio.c -- Minor correction to the definition of "felocity"
-22oct97 rjs	uvio.c,select.for -- Change form of "on" selection.
-23oct97 rjs	uvaver.for -- Do not average across changes in the "on" variable.
-29oct97 rjs	imgen.for -- Check that point source lies within the image.
-29oct97 rjs	tin.for -- tinLen was terribly flawed ... fix it.
-23oct97 mchw	imgen.for -- Add comet model for parent molecule.
 31oct97 rjs	uvspec.for -- Use colours in the plot label.
 02nov97 rjs	tin.for,tin.h -- Added a few options, settable in the tinopen
 		call.
@@ -25,5 +15,15 @@
 28nov97 rjs	gpnorm.for -- Add more decimal points to the printout.
 28nov97 rjs	mosmem.for,mossdi.for -- Increase max number of boxes.
 03dec97 rjs	uvspec.for -- Put back labels that disappeared 5 weeks ago.
+05dec97 rjs	convol.for -- Make sure the output is always the same size as
+		the input.
+09dec97 rjs	uvflag.for -- Make buffer to give "antennas used" message
+		longer.
+10dec97 rjs	uvgn.for -- Check that the gain table size looks OK.
+11dec97 rjs	uvplanet.for -- New task. Perform fiddles on planetary
+		visibility data.
+11dec97 rjs	gaupar.for -- Support units of Kelvin.
+11dec97 rjs	imgen.for -- Make totflux option consistent when there
+		is an input image.
  
 See $MIR/changes.txt for a history of earlier changes.
