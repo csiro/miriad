@@ -1,4 +1,3 @@
-		zero spacings.
 30jan01 rjs	closure.for - Get it to work for polarization parameters other
 		than the parallel hands.
 02feb01 rjs	varplt.for -- Added options=equal.
@@ -25,5 +24,6 @@
 03mar01 rjs	planet.for -- Improved brightness temperature functions for the
 		planets.
 15mar01 dpr     psrbl.for - New task for pulsar off-bin subtraction.
+10apr01 dpr     atlod.for - handle correlator UT day rollover bug
  
 See $MIR/changes.txt for a history of earlier changes.
