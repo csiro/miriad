@@ -1,19 +1,3 @@
-05jan00 rjs	plproc.for,plproc.h -- Planetary subroutines.
-07feb00 rjs	gethd.for -- Added "format" keyword.
-29feb00 rjs	psrplt.for -- mode keyword.
-07feb00 rjs	planets.for -- Print out SysI and SysII for Jupiter
-10mar00 rjs	uvplt.for -- Set maxbase2=91.
-15mar00 rjs	blcal.for -- Change in meaning of options=nopolsol
-21mar00 rjs	fitsio.for,fitsio.h -- Handle FITS vis files with freq before
-		pol axis.
-22mar00 rjs	mc.for -- Protect against convolving up to something larger than
-		MAXDIM.
-22mar00 rjs	gpscal.for -- Relax implicit assumption that XX/YY much stronger
-		than RL/LR.
-28mar00 rjs	uvplt.for -- Correctly handle colour indices when there are more
-		than 12 inputs.
-31mar00	rjs	obspar.for -- Added SEST/
-30mar00 lss,vk	hanning.for -- Adapted from hanning to include boxcar
 05apr00 mchw	velplot.for - specify RA and DEC cuts with a range and increment.
 07apr00 rjs	key.for -- Check for file existence in keyf.
 11apr00 rjs	fits.for - uvout was always writing multi-source files
@@ -25,5 +9,21 @@
 03may00 rjs	offaxis.for -- Support for C and X band.
 04may00 rjs	uvplt.for -- Relax requirements for lat/long variables in the
 		header.
+08may00 rjs	hanning.for,cgcurs.for,colden.for,gaufit.for,impoly.for,
+		psrplt.for,cgdisp.for,contsub.for,imblr.for,imtab.for,uvedit.for
+		cgslice.for,imcfn.for,pcsub.for,uvwide.for -- Change incorrect
+		call of keyf to a call to keya.
+09may00 rjs	pb.for -- Check in pbExtent that the extent of the primary beam
+		is well-defined.
+09may00	rjs	uvgen.for -- Output primary beam type even when its not
+		simulated. Tidy up documentation of pbfwhm.
+09may00 rjs	hdtab.for -- Make there no default image size for pbtype=SINGLE
+09may00 rjs	hio.c - Eliminate spurious error messages eminating from hrm_c.
+09may00 rjs	regrid.for - Make sure the max output size is no larger than
+		MAXDIM.
+10may00 rjs	fits.for -- Increase size of descr buffer in call to hdprobe.
+17may00 mchw	uvgen.for -- allow for saturated spectral absorption model.
+18may00 rjs	uvgen.for -- Merge mchw and rjs versions of uvgen.for
+19may00 rjs	impos.for -- Make default "type" abspix.
  
 See $MIR/changes.txt for a history of earlier changes.
