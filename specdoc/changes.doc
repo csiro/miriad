@@ -1,21 +1,3 @@
-20nov98 heb/rjs uvflux.for -- Added options=uvpol to print out linear polarization
-		parameters.
-20nov98 rjs	fits.for -- Better handling of some projections and also
-		handle sky rotation.
-20nov98 rjs	co.for,co.h,regrid.for,headcopy.for -- Handling of sky rotation.
-25nov98 rjs	regrid.for -- Better handling of sky rotation.
-25nov98 rjs	prthd.for,imsub.for -- Handling of sky rotation.
-18nov98 mchw	gpedit.for -- Added options=scale.
-25nov98 rjs	cgcurs.for -- Fix compaction algorithm again!
-25nov98 rjs	fits.for -- Lots of fiddles regarding reading/writing image
-		coordinate systems.
-30nov98 rjs	maths.for -- Added options=grow, which "grows" of dummy axes
-		to the size of other non-dummy axes.
-30nov98 nebk    cgsubs.for -- Finally invent a decent algorithm for razerocg
-01dec98 rjs	selfcal.for,gpscal.for,uvmodel.for -- More warning messages.
-01dec98 rjs	gpedit.for -- Added options=dup.
-02dec98 rjs	maths.for,ari.for -- Quadrupled the size of a stack buffer.
-04dec98 rjs	tin.for,tin.h -- Better error messages.
 15dec98 rjs	cgsubs.for -- Some tidying.
 21dec98 nebk    atmos.for -- The binary was not atmos !  It said it was atmos,
                    version 1.0 from Feb 1996, but I can't work out whatsource
@@ -25,5 +7,23 @@
 06jan99 rjs	cgsubs.for -- Yet again another try at a decent algorithm for
 		razerocg.
 07jan99 rjs	fits.for -- Write dates in new FITS form.
+08jan99 rjs	co.for -- Better handling of sky/grid rotation, and corrections
+		to cogaucvt when pixel increments differ and gaussian axis is
+		non-zero.
+08jan99 rjs	imstat.for,imspec.for -- Change coordinate conversion to use
+		the co routines (which also fixes a bug converting RAs).
+12jan99 rjs	uvgen.for,blflag.for -- Doc change only.
+15jan99 rjs	ephem.for -- Added new leap second.
+19jan99 rjs	mosmem.for -- It was failing to access the correct single dish plane!!
+20jan99 rjs	mfcal.for -- The frequency assosicated with a channel was
+		being incorrectly determined when the line "width" and "step"
+		parameters differed.
+25jan99 rjs	fitsio.for -- The uv FITS writer was still writing in the old
+		date format.
+22jan99 rjs	mosmem.for -- Fudge to get the rms noise information to propogate
+		through correctly for single pointing work.
+27jan99 rjs	invert.for -- Change the default "line" parameter to all
+		channels.
+29jan99 rjs	mossdi.for -- Fix up a message.
  
 See $MIR/changes.txt for a history of earlier changes.
