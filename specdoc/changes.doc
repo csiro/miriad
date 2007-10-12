@@ -23,7 +23,7 @@
 17jul00 rjs	attsys.for -- Apply or unapply ATCA Tsys correction.
 27jul00 nebk    impol.for -- position angle error was factor of 2 too big in a second
             	             place.  grrr.
-
-
+28jul00 rjs	select.for -- Change on 16-Jul was buggy and could give spurious
+		error messages ... correct it.
  
 See $MIR/changes.txt for a history of earlier changes.
