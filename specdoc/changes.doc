@@ -1,18 +1,3 @@
-28nov97 rjs	mosmem.for,mossdi.for -- Increase max number of boxes.
-03dec97 rjs	uvspec.for -- Put back labels that disappeared 5 weeks ago.
-05dec97 rjs	convol.for -- Make sure the output is always the same size as
-		the input.
-09dec97 rjs	uvflag.for -- Make buffer to give "antennas used" message
-		longer.
-10dec97 rjs	uvgn.for -- Check that the gain table size looks OK.
-11dec97 rjs	uvplanet.for -- New task. Perform fiddles on planetary
-		visibility data.
-11dec97 rjs	gaupar.for -- Support units of Kelvin.
-11dec97 rjs	imgen.for -- Make totflux option consistent when there
-		is an input image.
-16dec97 rjs	imsad.for -- refix the plotting of the cross in the image.
-16dec97 rjs	key.for,key.h -- Added keyinic and keyputc. Some tidying.
-16dec97 rjs	mbanal.for -- Some enhancements.
 17dec97 rjs	qvack.for -- Allow the "interval" parameter to be negative.
 17dec97 rjs	ppmtomir.for -- New task. Convert non-raw PPM format to Miriad
 		format image.
@@ -23,7 +8,22 @@
 07jan98 rjs	qvack.for -- Added options=anticipate, and the interval
 		parameter capable of two inputs.
 07jan98 rjs	atlod.for -- Print source names after the de-mangling process.
-09jan97 rjs	julday.for -- Make it tolerant of dates containing blanks.
-09jan97 rjs	model.for -- Break a statement into two to avoid a compiler bug.
+09jan98 rjs	julday.for -- Make it tolerant of dates containing blanks.
+09jan98 rjs	model.for -- Break a statement into two to avoid a compiler bug.
+07feb98 rjs	gpboot.for -- Doc change only.
+15feb98 pjt	imfit.fir -- More precision in outputing results.
+23feb98 rjs	mosmem.for -- Better protection against underflow.
+24feb98 rjs	prthd.for -- Use MAXWIDE rather than MAXWIN for number of wide
+		channels.
+24feb98 rjs	uvgn.for -- Handle applying "bandpass" functions to wide-only
+		files.
+24feb98 rjs	plotone.for -- Some fortran standardisation.
+24feb98	rjs	uvsector.for -- Handle near vertical and horizontal regions
+		more robustly.
+24feb98 rjs	mossen.for -- Write bunit keyword to the output.
+25feb98 rjs	restor.for -- Honour documentation so that a beam is not
+		needed with mode=convolve.
+25feb98 rjs	gaupar.for -- Fix bug in determining outout "bunit" value, Problem
+		introduced in December 98 I think.
  
 See $MIR/changes.txt for a history of earlier changes.
