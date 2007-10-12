@@ -1,29 +1,29 @@
-09sep98 nebk	cgsubs.for -- RAZEROCG only got it right if the ref value was
-                close to zero.  Failed if close to 2pi
-17sep98 nebk    cgdisp.for -- Was ignoring color table for hardcopy
-15sep98 pjt	fits.for -- Recognise galactic and ecliptic coordinates the right way
-24sep98 rjs	pops.for -- Get the telescope elevation limit.
-24sep98 rjs	obspar.for -- Added VLA elevation limit.
-25sep98 rjs	demos.for -- Less fussy about freq axis for single-plane datasets.
-25sep98 rjs	fits.for -- Correct handling of OBSRA and OBSDEC in op=xyin
-28sep98 rjs	calplot.for -- Print out flux at central freq.
-30sep98 rjs	tangle.for -- Allow plus signs in angles.
-04oct98 rjs	atlod.for -- Extra check for validity of a record.
-05oct98 rjs	keyc.c -- Added Jim Morgan's key routines to the ATNF collection.
-05oct98 rjs	miriad.h -- Added the key routines to this include file.
-12oct98 rjs	uvflux.for -- Changed print format somewhat.
-12oct98 pjt	var.for -- Added copying of some BIMA-specific variables.
-14oct98 rjs	paraplot.for -- Plot sin(2*chi) as well as cos(2*chi).
-16oct98 rjs	var.for --Reduce the number of continuation lines in above
-                change to bring it in line with FORTRAN standard.  
-20oct98 rjs	gaufit.for -- Change to avoid floating underflow in exp() function.
-21oct98 rjs	sfunc.for -- 
-07nov97 rjs	uvaflag.for -- Handle multiple templates [A long lost update
-		that was accidently never propogated from Narrabri].
-21oct98 rjs	sfunc.for -- Significantly enhanced.
-22oct98 rjs	uvaflag.for -- noapply option.
-27oct98 rjs	imfit.for -- Better format statements.
-27oct98 rjs	mostab.for -- Added subroutine mosval.
-27oct98 rjs	fits.for -- Look in CD keyword for pixel increment.
+                attenuation in images, including mosaics. Uses the mosLoad
+                and mosVal routines written by rjs.
+09nov98 rjs	blflag.for -- Added axis type hangle.
+09nov98 rjs	selfcal.for -- Made the rTime variable double precision to
+		stop loss of precision in time tags.
+11nov98 rjs	gpscal.for -- Made the "Time" variable double precision to
+		stop loss of precision in time tags.
+19nov98 rjs     uvplt.for -- Minor correction to computation of LST, and
+		recompute from scratch the parallactic angle.
+19nov98 rjs	doc.c -- Complete rewrite.
+20nov98 heb/rjs uvflux.for -- Added options=uvpol to print out linear polarization
+		parameters.
+20nov98 rjs	fits.for -- Better handling of some projections and also
+		handle sky rotation.
+20nov98 rjs	co.for,co.h,regrid.for,headcopy.for -- Handling of sky rotation.
+25nov98 rjs	regrid.for -- Better handling of sky rotation.
+25nov98 rjs	prthd.for,imsub.for -- Handling of sky rotation.
+18nov98 mchw	gpedit.for -- Added options=scale.
+25nov98 rjs	cgcurs.for -- Fix compaction algorithm again!
+25nov98 rjs	fits.for -- Lots of fiddles regarding reading/writing image
+		coordinate systems.
+30nov98 rjs	maths.for -- Added options=grow, which "grows" of dummy axes
+		to the size of other non-dummy axes.
+30nov98 nebk    cgsubs.for -- Finally invent a decent algorithm for razerocg
+01dec98 rjs	selfcal.for,gpscal.for,uvmodel.for -- More warning messages.
+01dec98 rjs	gpedit.for -- Added options=dup.
+02dec98 rjs	maths.for,ari.for -- Quadrupled the size of a stack buffer.
  
 See $MIR/changes.txt for a history of earlier changes.
