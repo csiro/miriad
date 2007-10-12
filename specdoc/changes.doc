@@ -1,15 +1,3 @@
-21apr98 rjs	fits.for -- Increased max number of antenna configurations.
-20apr98 amh	sfind.for -- Various changes to the log file.
-23apr98 rjs	cgcurs.for -- Increase size of "bunit" variable.
-21apr98 mchw	imfit.for -- more precise Offset position.
-27apr98 rjs	imfit.for -- Merged above two sets of changes.
-01may98 pjt	log.for -- Check that logopen gets called.
-07may98 rjs	atlod.for -- New way of handling jstat.eq.5 returned by rpfitsin.
-07may98 rjs	log.for -- Fix to PJT's change.
-07may98 rjs	cgslice.for -- Increase size of "bunit" variable.
-08may98 rjs	imsad.for -- Do not call logclose unless needed.
-11may98 rjs	fitsio.for -- Change it so that NaNs and Infs in floating
-		point FITS are always recognised as blanked.
 14may98 rjs	atlod.for -- Changes to handle high-time-resolution
 		data.
 14may96 rjs	clfind.for,clstats.for,clplot.for -- New programs from
@@ -25,5 +13,17 @@
 18jun98 nebk    uvplt.for -- Document nofqav option better
 25jun98 nebk    cgdisp.for -- Add Chris PHillip's change to OLAY
                 with overlay type 'sym'
+02jul98 rjs	imcfn.for -- Change pbtype declaration to 16 chars.
+14jul98 rjs	bug.c -- Add extra caste operation to appease some compilers.
+16jul98 nebk	cgdisp.for -- Fix problem when region selected planes were not contiguious
+03aug98 rjs	string.for -- Updated matodf and matorf.
+03aug98 mchw	velplot.for -- Various enhancements.
+03aug98 pjt	clstats.for,clfind.for,clplot.for -- Various enhancements.
+04aug98 rjs	velplot.for -- Elimiate mmatod and replace with call to
+		string.for matod routine.
+04aug98 rjs	uvgen.for -- Loop over "nspect" to retrieve window centre
+		frequency and bandwidth.
+27feb98 mwp	moment.for -- Added mom=-2 for peak temperature
+05aug98 mchw    obspar.for -- Added mount and nants to ovro.
  
 See $MIR/changes.txt for a history of earlier changes.
