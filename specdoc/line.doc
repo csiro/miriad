@@ -1,0 +1,73 @@
+%A line
+	The "line" parameter determines the channels that are to be processed
+	from a uv data-set. The parameter value consists of a string
+	followed by up to four numbers. Defaults are used for any missing
+	trailing portion of the parameter value.
+
+	A uv data-set can have correlations from either (or both) a spectral
+	or a wideband (continuum) correlator. Both the spectral and wideband
+	correlators produce multiple correlations (channels). The string
+	part of the "line" parameter is used to select the spectral or wideband
+	channels. It may be one of:
+	  "channel"   Spectral channels.
+	  "wide"      Wideband (continuum) channels.
+	  "velocity"  Spectral channels, resampled at equal increments in
+	              velocity (using the radio definition). The resampling
+	              involves a weighted average of the spectral channels.
+	              This is useful if the source was not Doppler tracked
+	              correctly.
+	  "felocity"  Similar to "velocity", except that the parameters are
+	              given using the optical velocity definition.
+	Generally the default is "channel" if the data-set has spectral
+	channel data, and "wide" otherwise.
+
+	The four numbers that accompany the string give:
+
+	  nchan, start, width, step
+
+	These four numbers specify which channels to select from the input
+	dataset and how to combine them to produce the output channels that
+	the Miriad task will work on.
+	
+	nchan   is the number of output channels produced. Generally it
+	        defaults to the number of input channels.
+
+	start   is the first channel from input dataset that is to be used.
+	        It defaults to 1 (i.e. first channel).
+
+	width   gives the number of input channels to average together to
+	        produce a single output channel. It defaults to 1.
+
+	step    gives the increment between selected input channels. It
+	        defaults to the value of "width".
+
+	For "velocity" linetype, the start, width and step parameters are
+	given in km/s. The output channels are centered on velocities:
+	start, start+step, start+2*step, etc.
+
+	The "line" parameter interacts with the "select=window" selection
+	for "channel" and "velocity"/"felocity" linetypes. See the help on
+	"select" for more information.
+
+	For example:
+
+	  line=channel,10
+
+	selects 10 output channels, being input spectral channels 1 to 10.
+	Similarly
+
+	  line=channel,10,8,1,2
+
+	selects 10 output channels, starting at input channel 8, and skipping
+	every second input channel, whereas
+
+	  line=channel,10,8,2,2
+
+	selects 10 output channels, again starting at input channel 8, but
+	each of the output channels consists of the average of two of the
+	input channels. Finally
+
+	  line=velocity,10,-10,1,1
+
+	resamples the spectral data in velocity, to give 10 channels of width
+	1 km/s. The channels are centered at -10.0,-9.0,-8.0, etc, km/s.
