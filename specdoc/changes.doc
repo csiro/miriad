@@ -1,7 +1,3 @@
-05sep00 rjs	uvedit.for -- Change some code to double precision to avoid
-		rounding problem.
-08sep00 rjs	mfflat.for -- Make sure that the "freq0" item is always there.
-11sep00 rjs	offaxis.for - Correct bug introduced in July.
 14sep00 rjs	boxes.for - Make sure that coordinate file can only be an
 		image.
 21sep00 rjs	tvclip.for -- Added options=nosrc
@@ -25,5 +21,9 @@
 09nov00 dpr     psrfix -- handle (+n,-n) in binsl
 15nov00 dpr     gaufit -- keyf bugfix
 27nov00 dpr     fits --  fix stokes convention for xyin
+08dec00 dpr     immask -- doc only
+14dec00 dpr     imhist -- added xrange key
+03jan01 dpr     mirexport.pl -- users can generate their own updates
+03jan01 dpr     ellint -- allow radii with non-integral number of steps
  
 See $MIR/changes.txt for a history of earlier changes.
