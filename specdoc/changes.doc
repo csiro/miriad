@@ -1,7 +1,3 @@
-		to work around GILDAS flaw.
-30sep99 rjs	mossen.for -- Make the size of the output equal to the input
-		image bounding box (i.e. count blanked pixels).
-30sep99 rjs	fft.for -- Change bunit in the output header.
 01oct99 vjm	imom.for -- New program: Compute intensity-weighted moment of an image
 05oct99 rjs	blflag.for --  Added options=scalar
 12oct99 rjs	imblr.for -- Do not produce output mask.
@@ -24,6 +20,10 @@
 12nov99 rjs	fits.for,fits.h -- options=varwt and better history comments
 		in output FITS files.
 07dec99 rjs	imdiff.for - Fix writing of history for "adjust" image.
-
+10jan00 rjs	imgen.for -- Added "seed" keyword.
+23jan00 rjs	gaufit.for -- Change some subroutine args to real-valued.
+27jan00 rjs	moslst.for -- New task. Reworked/renamed version of lmclst.
+28jan00 rjs	gaufit.for -- Standardise FORTRAN.
+05jan00 rjs	plproc.for,plproc.h -- Planetary subroutines.
  
 See $MIR/changes.txt for a history of earlier changes.
