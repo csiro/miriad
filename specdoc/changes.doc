@@ -1,10 +1,3 @@
-26feb99 rjs	fitsio.for,fits.for -- Changes to be more robust to bad
-		dates.
-05mar99	rjs	fitsio.for -- Fix to the above change.
-27jun97 bpw	contsub.for -- add options=verbose
-22mar99 pjt	contsub.for -- fixed treating options(2) as integer in boolean expr
-23mar99 rjs	imstat.for,imspec.for -- Fix bug in determining region of interest.
-12mar99 bpw	convol.for -- Increase size of map/beam/out to 512 to allow directories
 27mar99 pjt	headio.c -- make history a static, so nobody can see it :-)
 19dec97 bpw	imspec.for,imstat.for -- Add cutoff,lower and options=guaranteespaces
 22dec97 bpw	imspec.for,imstat.for -- Add options hanning,boxcar,deriv also to imstat
@@ -25,5 +18,12 @@
 19mar99 mchw    imgen.for -- Add model isothermal 2D projection for cluster gas.
 18may99 rjs	regrid.for -- Handle wrap arounds in the offsets.
 27may99 rjs	model.for -- Better check for no visibility data.
+11jun99 nebk    cgcurs.for - some hacks to handle /BEAM or /B and following strings
+11jun99 nebk    cgrego.for - handle planes
+21jun99 rjs	uvplanet.for -- Added options=replace.
+22jun99 rjs	atmos.for -- Tidy up, and change RA/DEC format to standard
+		hms/dms format.
+24jun99 rjs	uvflux.for -- More sources and cope with longer source names.
+30jun99 rjs	imfit.for -- Improved format statement.
  
 See $MIR/changes.txt for a history of earlier changes.
