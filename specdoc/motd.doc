@@ -1,1 +1,14 @@
 
+	There is a new program called "cgrego" which converts
+	polygonal region text files (as written by "cgcurs") into
+	overlay files (as read by "cgdisp").  Thus you can (finally)
+	plot a previously region on an image.  Will this
+	be the last "cg" program ???
+
+	nebk, 16-May-98 
+
+	A new task, clfind, to decompose a spectral cube into a
+	collection of clumps has been installed. Further information
+	on clfind can be found at
+	  http://cfa-www.harvard.edu/~jpw/clfind.html
+
