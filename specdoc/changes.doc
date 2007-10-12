@@ -1,20 +1,3 @@
-27feb98 mwp	moment.for -- Added mom=-2 for peak temperature
-05aug98 mchw    obspar.for -- Added mount and nants to ovro.
-19aug98 rjs	immerge.for -- Fix bug introduced on 16 March where the first
-		plane in the output was the last plane in the selected region 
-                for factor determination.
-19aug98 rjs	uvlist.for - Correct printing of longitude in options=array
-19aug98 rjs	fits.for -- Added options=lefty and made the uv writer check obspar
-		for observatory latitude/longitude if it was missing
-		from the vis dataset.
-19aug98 rjs	gpcal.for -- Changes in ampsol and ampsolxy to avoid an SGI compiler bug
-31aug98 rjs	imframe.for -- Correct incorrect default arg in call to rdhdd
-		and eliminate flint complaints.
-02sep98 rjs	miriad.h -- Added macros of uvgetvr and uvrdvr
-02sep98 rjs	immerge.for -- Change a subroutine name to avoid a LINUX
-		complaint.
-09sep98 nebk	cgdisp.for -- "sym" overlay ID strings were not being written
-                in the right place
 09sep98 nebk	cgsubs.for -- RAZEROCG only got it right if the ref value was
                 close to zero.  Failed if close to 2pi
 17sep98 nebk    cgdisp.for -- Was ignoring color table for hardcopy
@@ -25,5 +8,22 @@
 25sep98 rjs	fits.for -- Correct handling of OBSRA and OBSDEC in op=xyin
 28sep98 rjs	calplot.for -- Print out flux at central freq.
 30sep98 rjs	tangle.for -- Allow plus signs in angles.
+04oct98 rjs	atlod.for -- Extra check for validity of a record.
+05oct98 rjs	keyc.c -- Added Jim Morgan's key routines to the ATNF collection.
+05oct98 rjs	miriad.h -- Added the key routines to this include file.
+12oct98 rjs	uvflux.for -- Changed print format somewhat.
+12oct98 pjt	var.for -- Added copying of some BIMA-specific variables.
+14oct98 rjs	paraplot.for -- Plot sin(2*chi) as well as cos(2*chi).
+16oct98 rjs	var.for --Reduce the number of continuation lines in above
+                change to bring it in line with FORTRAN standard.  
+20oct98 rjs	gaufit.for -- Change to avoid floating underflow in exp() function.
+21oct98 rjs	sfunc.for -- 
+07nov97 rjs	uvaflag.for -- Handle multiple templates [A long lost update
+		that was accidently never propogated from Narrabri].
+21oct98 rjs	sfunc.for -- Significantly enhanced.
+22oct98 rjs	uvaflag.for -- noapply option.
+27oct98 rjs	imfit.for -- Better format statements.
+27oct98 rjs	mostab.for -- Added subroutine mosval.
+27oct98 rjs	fits.for -- Look in CD keyword for pixel increment.
  
 See $MIR/changes.txt for a history of earlier changes.
