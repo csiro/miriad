@@ -1,21 +1,3 @@
-27oct00 rjs	uvgen.for -- Call antbas subroutine to compute baseline
-		number for a particular antenna pair.
-01nov00 dpr     fits.for -- Change CROTAn to AIPS convention for xyout
-08nov00 dpr     imbin.for -- Make 3-axis bin specs unnecessary for 2-D 
-                images.
-09nov00 dpr     psrfix -- handle (+n,-n) in binsl
-15nov00 dpr     gaufit -- keyf bugfix
-27nov00 dpr     fits --  fix stokes convention for xyin
-08dec00 dpr     immask -- doc only
-14dec00 dpr     imhist -- added xrange key
-03jan01 dpr     mirexport.pl -- users can generate their own updates
-03jan01 dpr     ellint -- allow radii with non-integral number of steps
-08jan01 rjs	gpscal.for - Fix buggy error message.
-08jan01 dpr     tidy up scripts
-10jan01 rjs	uvplt.for - Plot axes of az, el and lst.
-12jan01 dpr     linux/mirclnk - forced removal of files 
-16jan01 dpr     bugfix mirexport.pl
-17jan01 rjs	uvplanet.for -- Handle large shifts of the planets and
 		limb darkening models.
 17jan01 rjs	nswc.for -- Included a few more subroutines.
 18jan01 dpr     cgslice - add third labtyp
@@ -25,5 +7,23 @@
 		zero spacings.
 30jan01 rjs	closure.for - Get it to work for polarization parameters other
 		than the parallel hands.
+02feb01 rjs	varplt.for -- Added options=equal.
+04feb01	rjs	opcal.for,opplt.for - New tasks to correct for and to
+		plot atmospheric opacity and sky brightness.
+04feb01 rjs	planet.for,calred.for - Removed subroutine pltbs from
+		calred, and included it in the subroutines planet.for.
+04feb01	rjs	plplt.for -- New task. Plot the visibility function of
+		a planet.
+05feb01 rjs	string.for - Various tidying. Added subroutines stcat,streal.
+05feb01 rjs	gperror.for - Use basant routine.
+05feb01 dpr     opplt.for - update doc and error messages
+05feb01 rjs	plboot.for - New task. Flux bootstrapping program, using
+		planets as calibrators.
+14feb01 rjs	lagflg.for - New task. Flag bad lags in the lag spectrum.
+14feb01 dpr     cgdisp.fr - Add beamtyp keyword
+15feb01 dpr/pjt moment.for - Add rngmsk keyword
+16feb01 dpr     co.for - Increase MAXITERS in comixed
+27feb01 dpr     cgdisp.for - Add scale-bar
+28feb01 dpr4tao calstokes - Changed values for 3C48 and 3C147
  
 See $MIR/changes.txt for a history of earlier changes.
