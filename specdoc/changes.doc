@@ -1,4 +1,3 @@
-                attenuation in images, including mosaics. Uses the mosLoad
                 and mosVal routines written by rjs.
 09nov98 rjs	blflag.for -- Added axis type hangle.
 09nov98 rjs	selfcal.for -- Made the rTime variable double precision to
@@ -25,5 +24,6 @@
 01dec98 rjs	selfcal.for,gpscal.for,uvmodel.for -- More warning messages.
 01dec98 rjs	gpedit.for -- Added options=dup.
 02dec98 rjs	maths.for,ari.for -- Quadrupled the size of a stack buffer.
+04dec98 rjs	tin.for,tin.h -- Better error messages.
  
 See $MIR/changes.txt for a history of earlier changes.
