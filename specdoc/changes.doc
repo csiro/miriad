@@ -1,11 +1,3 @@
-25jun98 nebk    cgdisp.for -- Add Chris PHillip's change to OLAY
-                with overlay type 'sym'
-02jul98 rjs	imcfn.for -- Change pbtype declaration to 16 chars.
-14jul98 rjs	bug.c -- Add extra caste operation to appease some compilers.
-16jul98 nebk	cgdisp.for -- Fix problem when region selected planes were not contiguious
-03aug98 rjs	string.for -- Updated matodf and matorf.
-03aug98 mchw	velplot.for -- Various enhancements.
-03aug98 pjt	clstats.for,clfind.for,clplot.for -- Various enhancements.
 04aug98 rjs	velplot.for -- Elimiate mmatod and replace with call to
 		string.for matod routine.
 04aug98 rjs	uvgen.for -- Loop over "nspect" to retrieve window centre
@@ -25,5 +17,13 @@
 02sep98 rjs	miriad.h -- Added macros of uvgetvr and uvrdvr
 02sep98 rjs	immerge.for -- Change a subroutine name to avoid a LINUX
 		complaint.
+09sep98 nebk	cgdisp.for -- "sym" overlay ID strings were not being written
+                in the right place
+09sep98 nebk	cgsubs.for -- RAZEROCG only got it right if the ref value was
+                close to zero.  Failed if close to 2pi
+17sep98 nebk    cgdisp.for -- Was ignoring color table for hardcopy
+15sep98 pjt	fits.for -- Recognise galactic and ecliptic coordinates the right way
+24sep98 rjs	pops.for -- Get the telescope elevation limit.
+24sep98 rjs	obspar.for -- Added VLA elevation limit.
  
 See $MIR/changes.txt for a history of earlier changes.
