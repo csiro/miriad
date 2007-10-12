@@ -1,0 +1,29 @@
+01aug97 rjs	prthd.for -- Better format for bmaj,bmin
+01aug97 rjs	gpedit.for -- Added options=zmean.
+01aug97 rjs	mosmem.for -- Make it more robust in the face of poor
+		defaults.
+04aug97 rjs	linmos.for -- Doc change only.
+05aug97 rjs	fits.for -- Make treatment of EPOCH keyword more robust.
+05aug97 rjs	regrid.for -- Give messages about what is happening with
+		equinox conversion.
+07aug97 rjs	cotra.for -- Correct usage of epo2jul.
+11aug97 rjs	closure.for -- Minor improvements.
+11aug97 rjs	gaupar.for -- More robust when beams are perfectly circular.
+12aug97 rjs	calc.for -- Know pi
+12aug97 rjs	fft.for -- Drop -NCP projection in some circumstances.
+12aug97 rjs	blcal.for -- Fix bug introduced on 31jul, and improve
+		polarisation handling.
+19aug97 rjs	uvspec.for -- Added axis=lag
+19aug97 rjs	gpcal.for -- options=vsolve and change to normalisation.
+21aug97 rjs	cgdisp.for -- Call initco earlier for type=box
+21aug97 rjs	psrplt.for -- Count the number of good correlations.
+21aug97 rjs	sfind.for -- Call initco earlier.
+22aug97 rjs	fits.for -- More robust. Put all unknown keywords into history.
+22aug98 rjs	calflux.for -- Somewhat better printing.
+25aug97 rjs	selfcal.for -- Correct summing of weights in "merger"
+25aug97 rjs	linmos.for -- Better doc and an extra error message.
+25aug97 rjs	tin.for -- Text file input handling subroutines.
+25aug97 rjs	uvgen.for -- Tidy up. Free-format input of text files. Some
+		better defaults. Some change to handling of "corr" files.
+ 
+See $MIR/changes.txt for a history of earlier changes.
