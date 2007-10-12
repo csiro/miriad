@@ -1,18 +1,3 @@
-01aug97 rjs	prthd.for -- Better format for bmaj,bmin
-01aug97 rjs	gpedit.for -- Added options=zmean.
-01aug97 rjs	mosmem.for -- Make it more robust in the face of poor
-		defaults.
-04aug97 rjs	linmos.for -- Doc change only.
-05aug97 rjs	fits.for -- Make treatment of EPOCH keyword more robust.
-05aug97 rjs	regrid.for -- Give messages about what is happening with
-		equinox conversion.
-07aug97 rjs	cotra.for -- Correct usage of epo2jul.
-11aug97 rjs	closure.for -- Minor improvements.
-11aug97 rjs	gaupar.for -- More robust when beams are perfectly circular.
-12aug97 rjs	calc.for -- Know pi
-12aug97 rjs	fft.for -- Drop -NCP projection in some circumstances.
-12aug97 rjs	blcal.for -- Fix bug introduced on 31jul, and improve
-		polarisation handling.
 19aug97 rjs	uvspec.for -- Added axis=lag
 19aug97 rjs	gpcal.for -- options=vsolve and change to normalisation.
 21aug97 rjs	cgdisp.for -- Call initco earlier for type=box
@@ -25,5 +10,20 @@
 25aug97 rjs	tin.for -- Text file input handling subroutines.
 25aug97 rjs	uvgen.for -- Tidy up. Free-format input of text files. Some
 		better defaults. Some change to handling of "corr" files.
+08sep97 rjs	pops.for -- Use ephem's azel.
+08sep97 rjs	tin.for -- Improved error message.
+09sep97 rjs	regrid.for -- Added options=nearest
+11sep97 rjs/jm	julday.for -- Added "caljul" and generalised the routines
+		to support new IAU formats.
+10sep97 rjs	refract.for -- Routines to calculate the complex
+		refractivity of air (dry and wet).
+15sep97 rjs	uvio.c -- Fix pointing selection.
+10sep97 mchw	velplot.for,velplot.h -- Upgraded, Report absolute positions
+		with cursor. Fix new bug at exactly 45.0 position angle.
+05sep97 mchw	pb.for -- Change lower freq for HATCREEK to 24 GHz.
+17sep97 rjs	demos.for -- Doc change only.
+21sep97 rjs	fits.for,fitsio.for -- Replace julfdate,fdatejul with julday,dayjul
+25sep97 rjs	refract.for -- Minor changes.
+25sep97 rjs	julday.for -- Added subroutine julcal.
  
 See $MIR/changes.txt for a history of earlier changes.
