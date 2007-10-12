@@ -1,12 +1,3 @@
-                and mosVal routines written by rjs.
-09nov98 rjs	blflag.for -- Added axis type hangle.
-09nov98 rjs	selfcal.for -- Made the rTime variable double precision to
-		stop loss of precision in time tags.
-11nov98 rjs	gpscal.for -- Made the "Time" variable double precision to
-		stop loss of precision in time tags.
-19nov98 rjs     uvplt.for -- Minor correction to computation of LST, and
-		recompute from scratch the parallactic angle.
-19nov98 rjs	doc.c -- Complete rewrite.
 20nov98 heb/rjs uvflux.for -- Added options=uvpol to print out linear polarization
 		parameters.
 20nov98 rjs	fits.for -- Better handling of some projections and also
@@ -25,5 +16,14 @@
 01dec98 rjs	gpedit.for -- Added options=dup.
 02dec98 rjs	maths.for,ari.for -- Quadrupled the size of a stack buffer.
 04dec98 rjs	tin.for,tin.h -- Better error messages.
+15dec98 rjs	cgsubs.for -- Some tidying.
+21dec98 nebk    atmos.for -- The binary was not atmos !  It said it was atmos,
+                   version 1.0 from Feb 1996, but I can't work out whatsource
+                   that was from.  It gave an error message that did appear
+                   to be releavent to atmos.  I pushed MAXSCAL up to 500
+                   in atmos.h (arbitary as I don't know what it does)
+06jan99 rjs	cgsubs.for -- Yet again another try at a decent algorithm for
+		razerocg.
+07jan99 rjs	fits.for -- Write dates in new FITS form.
  
 See $MIR/changes.txt for a history of earlier changes.
