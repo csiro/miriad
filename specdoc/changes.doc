@@ -1,4 +1,3 @@
-17dec97 rjs	qvack.for -- Allow the "interval" parameter to be negative.
 17dec97 rjs	ppmtomir.for -- New task. Convert non-raw PPM format to Miriad
 		format image.
 02jan98	mchw	uvaver.for -- Increase averaging buffer size to 163840.
@@ -25,5 +24,6 @@
 		needed with mode=convolve.
 25feb98 rjs	gaupar.for -- Fix bug in determining outout "bunit" value, Problem
 		introduced in December 98 I think.
+05mar98 rjs	uvfft.for -- some FORTRAN standardisation
  
 See $MIR/changes.txt for a history of earlier changes.
