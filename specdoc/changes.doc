@@ -1,5 +1,3 @@
-01oct99 vjm	imom.for -- New program: Compute intensity-weighted moment of an image
-05oct99 rjs	blflag.for --  Added options=scalar
 12oct99 rjs	imblr.for -- Do not produce output mask.
 12oct99 rjs	imbin.for,imsub.for,mostab.for,mc.for,model.for -- Fix imbin
 		and imsub to correctly copy mosaic tables. Some tidying in
@@ -25,5 +23,7 @@
 27jan00 rjs	moslst.for -- New task. Reworked/renamed version of lmclst.
 28jan00 rjs	gaufit.for -- Standardise FORTRAN.
 05jan00 rjs	plproc.for,plproc.h -- Planetary subroutines.
+07feb00 rjs	gethd.for -- Added "format" keyword.
+
  
 See $MIR/changes.txt for a history of earlier changes.
