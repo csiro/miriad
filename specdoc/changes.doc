@@ -1,7 +1,3 @@
-13sep99 rjs	ephem.for -- Make jullst more robust.
-13sep99 rjs	uvspec.for -- Added axis=dfreq
-20sep99 pjt	mbspect.for - fixed obvious syntax error - does anybody use flint anymore
-23sep99 rjs	uvcat.for -- Fix window selection again!!
 28sep99 rjs	fitsio.for -- Change in number of digits printed in fitwrhdd
 		to work around GILDAS flaw.
 30sep99 rjs	mossen.for -- Make the size of the output equal to the input
@@ -25,5 +21,9 @@
 28oct99 rjs	mostab.for -- There was a bug which caused a fractional pixel
 		shift error.
 05mar99 bpw	headcopy.for -- real->double for last argument fixed call to rdhdd
+01nov99 lss	mbspect.for -- Minor improvements.
+12nov99 rjs	fits.for,fits.h -- options=varwt and better history comments
+		in output FITS files.
+
  
 See $MIR/changes.txt for a history of earlier changes.
