@@ -1,0 +1,43 @@
+%N miriad
+%D Simple Miriad front-end for dumb terminals.
+%P rjs
+%: tools
+%B
+
+  Miriad is a a synthesis radio-astronomy data reduction, imaging and
+  analysis package. Full documentation on Miriad is available from
+
+    http://www.atnf.csiro.au/computing/software/miriad
+
+
+  Type
+    help tasks
+  for a list of Miriad tasks, or 
+    help <topic>
+  for information about a specific topic.
+
+  The "miriad" shell is a command-line front-end to run Miriad tasks.
+  The commands that you give it are somewhat AIPS-like.
+  Unrecognised commands are passed to the host command interpreter, so
+  you can use the normal host commands within the shell (with occasional
+  caveats).
+
+  The following are the recognised commands:
+
+    set <key> <value>          Set or show a keyword.
+    <key>=<value>              Set a keyword.
+    unset <key> [<key> ... ]   Unset keyword(s).
+    er <key>                   Line-edit a keyword value.
+    task [<task>]              Set/show default task.
+    inp [<task>]               Show settings of keywords to task.
+    go [-b] [<task>]           Run a task.
+    help [<task>] [-k key]     Help on a task or topic.
+    view [<task>]              Edit keyword file for task.
+    save/load [file]           Save/load global keyword file.
+    tget/tput [-l] [<task>]    Save/load task keyword file.
+    setenv env value           Set environment variable.
+    unsetenv env               Unset environment variable.
+    cd <dir>                   Change and/or show current directory
+    source <file>              Read commands from <file>
+    exit                       Exit miriad and save variables.
+    quit                       Exit miriad and do not save variables.
