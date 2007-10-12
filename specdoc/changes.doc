@@ -1,15 +1,3 @@
-12oct99 rjs	imblr.for -- Do not produce output mask.
-12oct99 rjs	imbin.for,imsub.for,mostab.for,mc.for,model.for -- Fix imbin
-		and imsub to correctly copy mosaic tables. Some tidying in
-		mostab.for, which has reprocussions in mc.for, model.for.
-12oct99 rjs	gpcal.for,gpscal.for,getxy.for,gpboot.for -- gpcal now attempts
-		to honour the flux scale of any input gain table. options=noxy
-		has been removed from gpboot. Change in the call sequence to
-		getxy.for, with corresponding change in gpscal.for
-17oct99 rjs	headcopy.for -- Copy mostable.
-22oct99 rjs	clean.for -- Doc change only.
-23oct99 pjt	contsub.for,gpaver.for -- Initialisation problems in LINUX.
-24oct99 rjs	noise.for -- Initalisation problems in LINUX.
 27oct99 rjs	imspec.for,imstat.for -- Get first axis label correct.
 28oct99 rjs	mostab.for -- There was a bug which caused a fractional pixel
 		shift error.
@@ -24,6 +12,18 @@
 28jan00 rjs	gaufit.for -- Standardise FORTRAN.
 05jan00 rjs	plproc.for,plproc.h -- Planetary subroutines.
 07feb00 rjs	gethd.for -- Added "format" keyword.
-
+29feb00 rjs	psrplt.for -- mode keyword.
+07feb00 rjs	planets.for -- Print out SysI and SysII for Jupiter
+10mar00 rjs	uvplt.for -- Set maxbase2=91.
+15mar00 rjs	blcal.for -- Change in meaning of options=nopolsol
+21mar00 rjs	fitsio.for,fitsio.h -- Handle FITS vis files with freq before
+		pol axis.
+22mar00 rjs	mc.for -- Protect against convolving up to something larger than
+		MAXDIM.
+22mar00 rjs	gpscal.for -- Relax implicit assumption that XX/YY much stronger
+		than RL/LR.
+28mar00 rjs	uvplt.for -- Correctly handle colour indices when there are more
+		than 12 inputs.
+31mar00	rjs	obspar.for -- Added SEST/
  
 See $MIR/changes.txt for a history of earlier changes.
