@@ -1,17 +1,3 @@
-		work around a problem on some LINUX systems.
-09mar98 rjs	gpplt.for -- Trim down the device spec before passing it
-		through to PGPLOT.
-11mar98 rjs	uvflag.for -- Some FORTRAN standardisation to appease g77.
-11mar98 rjs	imlist.for -- Change a subroutine name to appease g77.
-12mar98 rjs	maths.for -- Increase rbuf to allow for more complex expressions.
-13mar98 rjs	doc.c -- Eliminate check for pre-existing .doc file.
-13mar98 nebk    impol.for -- position angle error was factor of 2 too big
-16mar98 rjs	immerge.for -- Added "region" keyword.
-17mar98 rjs	mosmem.for -- Added single dish ability, factor parameter and
-		options=dofactor.
-19mar98 rjs	imgen.for -- Copy across mosaic table.
-26mar98 rjs	uvdat.for -- Corrected some comments only.
-26mar98 nebk    cgdisp.for -- channel range was wrongly interpreted for line overlays
 31mar98 rjs	cgdisp.for -- Honour the cols1 parameter.
 02apr98 rjs	avmaths.for -- Increase maxruns.
 02apr98 rjs	medfit.for -- New subroutines.
@@ -25,5 +11,19 @@
 07may98 rjs	atlod.for -- New way of handling jstat.eq.5 returned by rpfitsin.
 07may98 rjs	log.for -- Fix to PJT's change.
 07may98 rjs	cgslice.for -- Increase size of "bunit" variable.
+08may98 rjs	imsad.for -- Do not call logclose unless needed.
+11may98 rjs	fitsio.for -- Change it so that NaNs and Infs in floating
+		point FITS are always recognised as blanked.
+14may98 rjs	atlod.for -- Changes to handle high-time-resolution
+		data.
+14may96 rjs	clfind.for,clstats.for,clplot.for -- New programs from
+		Maryland.
+16may98 nebk    cgrego.for -- COnvert regions to overlays
+18may98 rjs	cgrego.for -- Fortran standardisation.
+18may98 rjs	imspect.for -- Correct velocity axis labelling.
+22may98 rjs	uvgen.for -- Include circular polarization handling.
+22may98	rjs	gpcal.for -- Turn off xyref on early iterations of weakly polarised
+		source.
+
  
 See $MIR/changes.txt for a history of earlier changes.
