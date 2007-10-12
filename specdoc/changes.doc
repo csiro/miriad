@@ -1,4 +1,3 @@
-28sep99 rjs	fitsio.for -- Change in number of digits printed in fitwrhdd
 		to work around GILDAS flaw.
 30sep99 rjs	mossen.for -- Make the size of the output equal to the input
 		image bounding box (i.e. count blanked pixels).
@@ -24,6 +23,7 @@
 01nov99 lss	mbspect.for -- Minor improvements.
 12nov99 rjs	fits.for,fits.h -- options=varwt and better history comments
 		in output FITS files.
+07dec99 rjs	imdiff.for - Fix writing of history for "adjust" image.
 
  
 See $MIR/changes.txt for a history of earlier changes.
