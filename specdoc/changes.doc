@@ -1,11 +1,3 @@
-09may00 rjs	hio.c - Eliminate spurious error messages eminating from hrm_c.
-09may00 rjs	regrid.for - Make sure the max output size is no larger than
-		MAXDIM.
-10may00 rjs	fits.for -- Increase size of descr buffer in call to hdprobe.
-17may00 mchw	uvgen.for -- allow for saturated spectral absorption model.
-18may00 rjs	uvgen.for -- Merge mchw and rjs versions of uvgen.for
-19may00 rjs	impos.for -- Make default "type" abspix.
-11jun00 rjs     atlod.for -- Include pmps switch. More robust to bad number
 		of channels etc in RPFITS file. Increase buffer space.
 14jun00 rjs	reorder.for -- Copy across llrot keyword.
 13jun00 rjs	uvindex.for -- Handle blank source names somewhat better.
@@ -25,5 +17,13 @@
             	             place.  grrr.
 28jul00 rjs	select.for -- Change on 16-Jul was buggy and could give spurious
 		error messages ... correct it.
+07aug00 rjs	zapchan.for,vblank.for,uvputhd.for -- Updated from BIMA.
+14aug00 rjs	mfclean.for -- Added output log file.
+14aug00 rjs	model.for -- Re-include external sources.
+25aug00 nebk    imrm.for -- bump to 20 images.  subroutine chkdes should not
+                  be checking cdelt/crpix on frequency axis
+28aug00 rjs	clean.for - Increase max complexity of region-of-interest.
+05sep00 rjs	uvedit.for -- Change some code to double precision to avoid
+		rounding problem.
  
 See $MIR/changes.txt for a history of earlier changes.
