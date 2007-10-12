@@ -1,0 +1,112 @@
+%A select
+	This keyword selects the subset of the visibility data to be
+	processed. There are a number of subcommands, which may be
+	abbreviated. Each may be prefixed with a plus or minus sign to
+	indicate using or discarding the selected data. Many subcommands
+	can be given (separate them by commas). Subcommands include:
+
+	  time(t1,t2)
+	Select data between times t1 and t2 (UT). Times are in the format:
+	  yymmmdd.fff
+	or
+	  yymmmdd:hh:mm:ss.s
+	Various abbreviations are possible. If no date part is given, then
+	the time matchs all data (regardless of its date) for the given
+	time of day.
+
+	  antennae(a1,a2,...)(b1,b2...)
+	Select all baselines pairs formed between first and second list of
+	antennas. The second list is optional and defaults to all antennas.
+
+	  uvrange(uvmin,uvmax)
+	Select visibilities with uv radius between uvmin and uvmax (in kilo
+	wavelenghts). If only one value is given, uvmin is taken as zero.
+
+	  uvnrange(uvmin,uvmax)
+	Select visibilities with uv radius between uvmin and uvmax (in
+	nanoseconds). If only one value is given, uvmin is taken as zero. 
+
+	  visibility(n1,n2)
+	Select visibilities numbered n1 to n2 inclusive.
+
+	  increment(inc)
+	Select every inc'th visibility.
+
+	  ra(r1,r2)
+	Select visibilities whose RA is in the range r1 to r2. RAs are given
+	in the format
+	  hh:mm:ss
+	or
+	  hh.hhh
+	Various abbreviations are possible.
+	
+	  dec(d1,d2)
+	Select visibilites whose DEC is in the range d1 to d2. Declinations
+	are given in the format
+	  dd:mm:ss
+	or
+	  dd.ddd
+	Various abbreviations are possible.
+
+	  dra(p1,p2)
+	Select visibilities for which the RA of the pointing center is offset
+	from the main pointing center by between p1 and p2 arcseconds.
+
+	  ddec(p1,p2)
+	Select visibilities for which the DEC of the pointing center is offset
+	from the main pointing center by between p1 and p2 arcseconds.
+
+	  pointing(p1,p2)
+	Select visibilities with the rms pointing error in the range p1 to p2
+	arcseconds. If only one number is given, p1 is taken as 0.
+
+	  polarization(p1,p2,p3,...)
+	Select visibilities on the basis of their polarization/Stokes parameter.
+	p1,p2,p3,... can be selected from "i,q,u,v,xx,yy,xy,yx,rr,ll,rl,lr"
+	Conversion between polarizations Stokes parameters (e.g. convert
+	linears to Stokes)  is not performed by this mechanism (see keyword stokes).
+
+	  source(srcnam1,srcnam2,...)
+	Select correlations from the particular source. Several sources
+	can be given. An asterisk in the source name is treated as a
+	wildcard.
+
+	  frequency(f1,f2)
+	Select correlations, where the sky frequency of the first correlation
+	is in the range f1 to f2 (in GHz). If only a single frequency is
+	given, then correlations are selected if the first correlation
+        is within 1% of the given frequency.  Note this selects the whole
+	record.  This may include several spectral-windows whose frequency
+	is quite different from the first correlation in the first window.
+
+	  amplitude(amplo,amphi)
+	Select any correlation, where the amplitude is between "amplo" and
+	"amphi". If only one value is given, then "amphi" is assumed to be
+	infinite.
+
+	  shadow(d)
+	Selects data that would be shadowed by an antenna of diameter "d" meters. 
+	If "d" is zero, then the actual diameter of the antennas (if known) is used. 
+	If some data is shadowed, it is advisable to use an antenna diameter value 
+	greater than the physical antenna size (e.g. 20% larger).
+
+	  bin(b1,b2)
+	Select visibilities which have pulsar bin numbers in the range
+	b1 to b2 inclusive. If b2 is omitted, just pulsar bin b1 is
+	selected.
+
+	  on
+	This is used with single dish observations, anbd selects based
+	whether the "on" variable in the data is on!
+
+	  auto
+	This is used with files that contain a mix of autocorrelations and
+	crosscorrelations. This selects just the autocorrelation data.
+
+	  window(w1,w2,...)
+	Select by spectral window (IF band in AIPS terminology). See
+	the help on windows for more information.
+
+	  or
+	The list of subcommands before and after the 'or' are "ored"
+	together.
