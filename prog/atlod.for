@@ -243,8 +243,9 @@ c    rjs  02jan06 Save reference pointing information. 8MHz debirdie algorithm.
 c		  Added nopol option.
 c    rjs  14jan06 Be relaxed about missing met data scans when applying
 c		  opacity correction.
+c    mhw  19oct07 Cope with new 3mm receiver on ca02 which has xyphase
 c
-c $Id: atlod.for,v 1.5 2007/08/07 04:46:35 cal103 Exp $
+c $Id: atlod.for,v 1.6 2007/10/23 22:08:41 wie017 Exp $
 c-----------------------------------------------------------------------
 	integer MAXFILES,MAXTIMES
 	parameter(MAXFILES=128,MAXTIMES=32)
@@ -263,7 +264,7 @@ c
 	character itoaf*8, rperr*32, versan*80
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :  '$Id: atlod.for,v 1.5 2007/08/07 04:46:35 cal103 Exp $')
+     :  '$Id: atlod.for,v 1.6 2007/10/23 22:08:41 wie017 Exp $')
 c
 c  Get the input parameters.
 c
@@ -1114,9 +1115,9 @@ c
 	end
 c************************************************************************
 	subroutine PokeData(u1,v1,w1,baseln,if,bin,vis,nfreq1,nstoke1,
-     *		flag1,inttime1,docon,doxyflip,doxy)
+     *		flag1,inttime1,docon,doxyflip,doxy,wbandxy)
 c
-	integer nfreq1,nstoke1,if,baseln,bin
+	integer nfreq1,nstoke1,if,baseln,bin,wbandxy
 	real u1,v1,w1,inttime1
 	logical flag1(nstoke1),docon,doxyflip,doxy
 	complex vis(nfreq1*nstoke1)
@@ -1203,7 +1204,7 @@ c
 c
 c  Do XY phase correction if needed.
 c
-	  if(doxyp.and.doxy)then
+	  if(doxyp.and.(doxy.or.wbandxy.gt.0))then
 	    if(dosw(bl))then
 	      pol = polcode(if,p)
 	      if(pol.eq.PolXY)then
@@ -1212,10 +1213,10 @@ c
 		pol = PolXY
 	      endif
 	      call XypCorr(nfreq(if),data(ipnt),pol,
-     *		i1,i2,if,xyphase,ATIF,ATANT)
+     *		i1,i2,if,xyphase,ATIF,ATANT,wbandxy)
 	    else
 	      call XYpCorr(nfreq(if),data(ipnt),polcode(if,p),
-     *		i2,i1,if,xyphase,ATIF,ATANT)
+     *		i2,i1,if,xyphase,ATIF,ATANT,wbandxy)
 	    endif
 	  endif
 	enddo
@@ -1302,13 +1303,16 @@ c
 c
 	end
 c************************************************************************
-	subroutine XypCorr(nfreq,vis,pol,i1,i2,if,xyphase,ATIF,ATANT)
+	subroutine XypCorr(nfreq,vis,pol,i1,i2,if,xyphase,ATIF,ATANT,
+     *                     wbandxy)
 c
-	integer nfreq,pol,i1,i2,if,ATIF,ATANT
+	integer nfreq,pol,i1,i2,if,ATIF,ATANT,wbandxy
 	complex vis(nfreq)
 	real xyphase(ATIF,ATANT)
 c
 c  Correct the data with the measured XY phase.
+c  As of 18OCT07 antenna 2 has valid xyphase at 3mm, use wbandxy==2 to
+c  indicate this
 c------------------------------------------------------------------------
 	integer PolXX,PolYY,PolXY,PolYX
 	parameter(PolXX=-5,PolYY=-6,PolXY=-7,PolYX=-8)
@@ -1316,12 +1320,23 @@ c------------------------------------------------------------------------
 	complex fac
 	real theta
 c
+        theta = 0
 	if(pol.eq.PolYY)then
-	  theta = xyphase(if,i1) - xyphase(if,i2)
+          if (wbandxy.eq.0) then
+	    theta = xyphase(if,i1) - xyphase(if,i2)
+          endif
 	else if(pol.eq.PolXY)then
-	  theta =                - xyphase(if,i2)
+          if (wbandxy.eq.0) then
+             theta =                - xyphase(if,i2)
+          else
+             theta =                - xyphase(if,wbandxy)
+          endif
 	else if(pol.eq.PolYX)then
-	  theta = xyphase(if,i1)
+          if (wbandxy.eq.0) then
+	    theta = xyphase(if,i1)
+          else
+            theta = xyphase(if,wbandxy)
+          endif
 	else
 	  theta = 0
 	endif
@@ -2122,10 +2137,10 @@ c------------------------------------------------------------------------
 	include 'mirconst.h'
 	integer MAXPOL,MAXSIM,MAXXYP,NDATA
 	parameter(MAXPOL=4,MAXSIM=4,MAXXYP=5,NDATA=MAXCHAN*MAXPOL)
-	double precision J01Jul04
-	parameter(J01Jul04=2453187.5d0)
+	double precision J01Jul04,J18Oct07
+	parameter(J01Jul04=2453187.5d0,J18Oct07=2454390.5d0)
 	include 'rpfits.inc'
-	integer scanno,i1,i2,baseln,i,id,j
+	integer scanno,i1,i2,baseln,i,id,j,wbandxy
 	logical NewScan,NewSrc,NewFreq,NewTime,Accum,ok,badbit
 	logical flags(MAXPOL),corrfud,kband,wband,flipper
 	integer jstat,flag,bin,ifno,srcno,simno,Ssrcno,Ssimno
@@ -2494,6 +2509,12 @@ c	      tint = 0
 	      if(tint.eq.0)tint = 15.0
 	      flipper = .not.kband.or.time.gt.J01Jul04
 c
+c  Only CA02 has XY noise cal at wband
+c
+              wbandxy=0
+              if (wband.and.time.gt.J18Oct07
+     *            .and.instrument(1:4).eq.'ATCA') wbandxy=2 
+c
 c  It is pretty late to be checking for a buffer overflow, but RPFITSIN's
 c  interface does not guard against it at all! So at least we are checking!
 c
@@ -2506,7 +2527,7 @@ c
 c
 	      call PokeData(u,v,w,baseln,Sif(ifno),bin,
      *		vis,if_nfreq(ifno),nstoke(ifno),flags,
-     *		tint,if_invert(ifno).lt.0,flipper,.not.wband)
+     *		tint,if_invert(ifno).lt.0,flipper,.not.wband,wbandxy)
 c
 c  Reinitialise things.
 c
