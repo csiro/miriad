@@ -61,6 +61,11 @@
 	Select visibilities with the rms pointing error in the range p1 to p2
 	arcseconds. If only one number is given, p1 is taken as 0.
 
+	  seeing(p1,p2)
+	Select visibilities with the rms seeing (pathlength) in the range 
+        p1 to p2 microns. If only one number is given, p1 is taken as 0.
+        The corresponding uv variable is called smonrms.
+
 	  polarization(p1,p2,p3,...)
 	Select visibilities on the basis of their polarization/Stokes parameter.
 	p1,p2,p3,... can be selected from "i,q,u,v,xx,yy,xy,yx,rr,ll,rl,lr"
