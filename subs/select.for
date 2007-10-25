@@ -37,6 +37,7 @@ c    rjs  16jun00 Check for bad antenna numbers.
 c    rjs  28jul00 Correct bug introduced in the above.
 c    rjs  27oct00 Handle change in baseline numbering convention.
 c    rjs  16aug04 Handle elevation and HA selection.
+c    mhw  08oct07 Handle seeing selection
 c
 c  Routines are:
 c    subroutine SelInput(key,sels,maxsels)
@@ -86,6 +87,7 @@ c    bin(lo,hi)		Select pulsar bin
 c    ha(hstart,hend)    Select on hour angle (values in decimal hours or hh:mm:ss)
 c    lst(lst1,lst2)     Select on LST (value as above).
 c    elevation(el1,el2) Select on elevation (angles in degrees).
+c    seeing(r1,r2)      Select on seeing monitor rms path lenght (in microns)
 c
 c  The input command would look something like:
 c    select=time(t1,t2),uv(uv1,uv2),...
@@ -144,6 +146,7 @@ c		  'bin'			Select on bin number.
 c		  'ha'			Select on hour angle.
 c		  'lst'			Select on LST.
 c		  'elevation'		Select on elevation.
+c                 'seeing'              Select on seeing (micrometers)
 c		Note that this does not support all objects to uvselect.
 c		The object name may have a suffix of '?' (e.g. 'window?')
 c		in which case the "value" argument is ignored, and SelProbe
@@ -376,7 +379,8 @@ c
      *		seltype.eq.AMP.or.seltype.eq.UVN.or.
      *		seltype.eq.DRA.or.seltype.eq.DDEC.or.
      *		seltype.eq.SHADOW.or.seltype.eq.FREQ.or.
-     *		seltype.eq.ELEV.or.seltype.eq.HA)then
+     *		seltype.eq.ELEV.or.seltype.eq.HA.or.
+     *          seltype.eq.SEEING)then
 	    call SelDcde(spec,k1,k2,vals,n,2,'real')
 c
 c  Expand to two parameters, using some default mechanism.
