@@ -54,6 +54,7 @@ c   27jul95   rjs    Initialise ifail before calling rpolyzr
 c   06nov95   rjs    Larger ATCA primary beam size.
 c   29nov95   rjs    Use "pbtype" to describe primary beam type in
 c		     datasets. Added pblist.
+c   26mar97   rjs    Less precision in pbencode.
 c************************************************************************
 c* pbList -- List known primary beam types.
 c& rjs
@@ -196,7 +197,7 @@ c
 	integer len1
 c
 	if(type.eq.'gaus')then
-	  write(string,'(1pe10.4)')3600*180/pi * val
+	  write(string,'(1pe10.3)')3600*180/pi * val
 	  i1 = 1
 	  i2 = len1(string)
 	  dowhile(i1.lt.i2.and.string(i1:i1).eq.' ')
