@@ -92,6 +92,7 @@ c    rjs  17aug94 Handle offsets somewhat better.
 c    rjs  09mar97 CHange label "visibs" to "corrs" and change doc file.
 c    rjs  12oct98 Changed printing format.
 c    heb/rjs 20nov98 Added options=uvpol to print out polarization params.
+c    rjs  24jun99 Increase max number of sources.  
 c  Bugs:
 c    ?? Perfect?
 c------------------------------------------------------------------------
@@ -99,19 +100,19 @@ c------------------------------------------------------------------------
 	include 'mirconst.h'
 	integer MAXPOL,MAXSRC,PolMin,PolMax
 	character version*(*)
-	parameter(MAXPOL=4,MAXSRC=256,PolMin=-9,PolMax=4)
-	parameter(version='UvFlux: version 1.0 12-Oct-98')
+	parameter(MAXPOL=4,MAXSRC=1024,PolMin=-9,PolMax=4)
+	parameter(version='UvFlux: version 1.0 24-Jun-99')
 c
 	character uvflags*16,polcode*2,line*132
 	logical docal,dopol,dopass,found,doshift,douvpol,ok
-	character sources(MAXSRC)*12,source*12
+	character sources(MAXSRC)*32,source*32
 	double precision fluxr(MAXPOL,MAXSRC),fluxi(MAXPOL,MAXSRC)
 	double precision amp(MAXPOL,MAXSRC),amp2(MAXPOL,MAXSRC)
 	double precision rms2(MAXPOL,MAXSRC)
 	double precision shift(2),shft(2)
 	complex vecaver
 	real vecscat,scalscat,temp,vecamp,vecpha,scalamp,sig2
-	integer i,j,t,nlines
+	integer i,j,t,nlines,lmax
 	integer ncnt(MAXPOL,MAXSRC)
 	integer PolIndx(PolMin:PolMax),p(MAXPOL),pp(MAXPOL)
 	integer nsrc,npol,isrc,ipol,vsource,tno
@@ -128,6 +129,7 @@ c  Externals.
 c
 	logical uvDatOpn,uvVarUpd
 	character PolsC2P*2
+	integer len1
 c
 c  Get the user parameters.
 c
@@ -166,6 +168,7 @@ c  Convert the shift to radians.
 c
 	shift(1) = pi/180/3600 * shift(1)
 	shift(2) = pi/180/3600 * shift(2)
+	lmax = 0
 c
 c  Loop the loop until we have no more files.
 c
@@ -212,6 +215,7 @@ c
 		if(nsrc.gt.MAXSRC)
      *		  call bug('f','Too many sources')
 		sources(nsrc) = source
+		lmax = max(lmax,len1(source)+1)
 		do i=1,MAXPOL
 		  fluxr(i,nsrc) = 0
 		  fluxi(i,nsrc) = 0
@@ -276,14 +280,19 @@ c
 c
 c  Print out the results.
 c
+	lmax = max(lmax,12)
 	nlines = 0
 	call output('---------------------------------------------'//
      *		'-----------------------------------')
-	call output('Source     Pol Theoretic   Vector Average'//
+	source = 'Source'
+	call output(source(1:lmax-1)//'Pol Theoretic   Vector Average'//
      *		'      RMS      Average  RMS Amp  Number')
-	call output('                  RMS        (real,imag) '//
+	source = ' '
+	call output(source(1:lmax-1)//'       RMS        (real,imag) '//
      *		'    Scatter      Amp    Scatter  Corrs')
-	call output('------     --- -------- -----------------'//
+	source = '------'
+
+	call output(source(1:lmax-1)//'--- -------- -----------------'//
      *		'--- -------  --------- --------  ------')
 
 c
@@ -308,7 +317,7 @@ c
 	      sig2 = sqrt(rms2(ipol,isrc)/ncnt(ipol,isrc))
 	      write(line,
      *		'(a,a,1pe8.1,1pe11.3,1pe11.3,1pe8.1,1pe11.3,1pe9.2,i8)')
-     *		source,polcode,sig2,fluxr(ipol,isrc),
+     *		source(1:lmax),polcode,sig2,fluxr(ipol,isrc),
      *		fluxi(ipol,isrc),vecscat,
      *		scalamp,scalscat,ncnt(ipol,isrc)
 	      call output(line)
