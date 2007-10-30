@@ -193,10 +193,6 @@ c
 	end
 
 c************************************************************************
-c*VarFix -- Fix and write out variables.
-c:uv-data
-c& dpr
-c+
 	subroutine VarFix(tIn,tOut)
 c
 	implicit none
