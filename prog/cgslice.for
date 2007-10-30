@@ -316,6 +316,8 @@ c		   can now overlap
 c    nebk 05feb96  Make format of POSOUT file the same as that for POSIN
 c    nebk 28feb96  Was getting slice vectors wrong with keyword POSIN
 c		   when a subimage was displayed.
+c    nebk 24jun96  Set slice frame colour depening upon background colour
+c
 c Notes:
 c
 c   SLice abcissa values are still in linear world coordiantes as
@@ -381,7 +383,7 @@ c
       data dmm, dunsl, gaps /1.0e30, -1.0e30, .false., .false./
       data xdispls, ydispbs /3.5, 3.5/
 c-----------------------------------------------------------------------
-      call output ('CgSlice: version 28-Feb-96')
+      call output ('CgSlice: version 24-Jun-96')
       call output (' ')
 c
 c Get user inputs
@@ -3503,7 +3505,9 @@ c    bgcol  background colour. 0 -> black
 c			       1 -> white
 c			      -1 -> something else
 c  OUtput
-c    colour indices to use
+c    labcol labels
+c    concol contours
+c    slbcol slice plot borders
 c-----------------------------------------------------------------------
       implicit none
       integer labcol, concol, slbcol, bgcol
@@ -3511,29 +3515,28 @@ c-----------------------------------------------------------------------
 c
 c Labels first
 c
-      labcol = 7
       if (bgcol.eq.1) then
 c
 c White background
 c
         labcol = 2
+        slbcol = 2
+
       else if (bgcol.eq.0) then
 c
 c Black background
 c
         labcol = 7
+        slbcol = 7
       else
         call bug ('w', 'Non black/white background colour on device')
         labcol = 7
+        slbcol = 2
       end if
 c
 c Now contours
 c
       concol = 7
       if (bgcol.eq.1) concol = 2
-c
-c Slice display frame
-c
-      slbcol = 7
 c
       end
