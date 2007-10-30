@@ -48,18 +48,20 @@ c	            default behaviour is to apply bandpass calibration.
 c--
 c  History:
 c    rjs  03jun96 Original version.
+c    rjs  21aug97 Count the number of accepted correlations.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
 	integer MAXPOL,MAXBIN,PolMin,PolMax
 	character version*(*)
 	parameter(MAXPOL=4,MAXBIN=32,PolMin=-9,PolMax=4)
-	parameter(version='PsrPlt: version 1.0 3-Jun-96')
+	parameter(version='PsrPlt: version 1.0 21-Aug-97')
 c
 	character uvflags*16,device*32
 	logical docal,dopol,dopass,doshift,doimag,dogrey,dochan
 c
 	integer nchan,nread,nbin,npol,ipol,ibin,i,j,k,nout,tno,mpol
+	integer ngood,nbad
 	integer polIndx(PolMin:PolMax),pols(MAXPOL)
 	double precision preamble(4),offset(2),shift(2)
 	complex data(MAXCHAN)
@@ -71,12 +73,12 @@ c
 	integer NXAXES,NYAXES
 	parameter(NXAXES=1,NYAXES=3)
 	character xaxes(NXAXES)*9,yaxes(NYAXES)*9,xaxis*9,yaxis*9
-
 c
 c  Externals.
 c
 	logical uvDatOpn
 	integer pgbeg
+	character itoaf*8
 c
 	data xaxes/'bin      '/
 	data yaxes/'amplitude','frequency','channel  '/
@@ -149,6 +151,8 @@ c  Convert the shift to radians.
 c
 	shift(1) = pi/180/3600 * shift(1)
 	shift(2) = pi/180/3600 * shift(2)
+	ngood = 0
+	nbad  = 0
 c
 c  Loop the loop until we have no more files.
 c
@@ -199,6 +203,9 @@ c
 	      if(flags(i))then
 		acc(i,ibin,ipol) = acc(i,ibin,ipol) + w*data(i)
 		wt (i,ibin,ipol) = wt (i,ibin,ipol) + w
+		ngood = ngood + 1
+	      else
+		nbad = nbad + 1
 	      endif
 	    enddo
 c
@@ -210,6 +217,10 @@ c
      *		'Number of channels changed while reading data')
 	  call uvDatCls
 	enddo
+	if(nbad.gt.0)call bug('w',
+     *	  'Number of flagged correlations rejected: '//itoaf(nbad))
+	call output('Number of correlations accepted: '//itoaf(ngood))
+	if(ngood.eq.0)call bug('f','No correlations to plot')
 c
 	if(dogrey)then
 	  call FrPlot(sfreq,acc,wt,MAXCHAN,nchan,nbin,pols(1),
