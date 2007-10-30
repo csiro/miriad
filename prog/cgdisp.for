@@ -45,12 +45,12 @@ c	Specifies the type of each image, respectively, listed in the IN
 c	keyword. Minimum match is supported (note that "pixel" was 
 c	formerly "grey" [which is still supported]).   Choose from:
 c
-c	"contour"   (contour;            up to 3 of these)
-c	"pixel"     (pixel map;          up to 1 of these)
-c	"amplitude" (vector amplitude;   up to 1 of these)
-c	"angle"     (vector pos'n angle; up to 1 of these)
-c	"box"       (box;                up to 1 of these)
-c	"mask"      (mask;               up to 1 of these)
+c	 "contour"   (contour;            up to 3 of these)
+c	 "pixel"     (pixel map;          up to 1 of these)
+c	 "amplitude" (vector amplitude;   up to 1 of these)
+c	 "angle"     (vector pos'n angle; up to 1 of these)
+c	 "box"       (box;                up to 1 of these)
+c	 "mask"      (mask;               up to 1 of these)
 c
 c	You can't give one of "amplitude" or "angle" without the other.
 c	Default is "pixel" for one image, "contour" if more than one.
@@ -104,7 +104,8 @@ c@ levs3
 c	LEVS for the third contour image.
 c@ cols1
 c	PGPLOT colours for LEVS1 contours. 0 is background colour, 1 
-c	foreground, others are different colours
+c	foreground, others are different colours. If you give one value
+c	it is used for all contours.
 c@ range
 c	N groups of 4 values (1 group per subplot and N is the maximum
 c	number of channels allowed by Miriad; typically 2048). These are 
@@ -160,23 +161,23 @@ c@ labtyp
 c	Up to 2 values.  The spatial label type of the x and y axes.
 c	Minimum match is active.  Select from:
 c
-c	"hms"       the label is in H M S.S (e.g. for RA)
-c	"dms"       the label is in D M S.S (e.g. for DEC)
-c	"arcsec"    the label is in arcsecond offsets
-c	"arcmin"    the label is in arcminute offsets
-c	"absdeg"    the label is in degrees
-c	"reldeg"    the label is in degree offsets
-c		    The above assume the pixel increment is in radians.
-c	"abspix"    the label is in pixels
-c	"relpix"    the label is in pixel offsets
-c	"abskms"    the label is in Km/s
-c	"relkms"    the label is in Km/s offsets
-c	"absghz"    the label is in GHz
-c	"relghz"    the label is in GHz offsets
-c	"absnat"    the label is in natural coordinates as defined by 
-c	            the header. 
-c	"relnat"    the label is in offset natural coordinates
-c	"none"      no label and no numbers or ticks on the axis
+c	 "hms"       the label is in H M S.S (e.g. for RA)
+c	 "dms"       the label is in D M S.S (e.g. for DEC)
+c	 "arcsec"    the label is in arcsecond offsets
+c	 "arcmin"    the label is in arcminute offsets
+c	 "absdeg"    the label is in degrees
+c	 "reldeg"    the label is in degree offsets
+c	             The above assume the pixel increment is in radians.
+c	 "abspix"    the label is in pixels
+c	 "relpix"    the label is in pixel offsets
+c	 "abskms"    the label is in km/s
+c	 "relkms"    the label is in km/s offsets
+c	 "absghz"    the label is in GHz
+c	 "relghz"    the label is in GHz offsets
+c	 "absnat"    the label is in natural coordinates as defined by 
+c	             the header. 
+c	 "relnat"    the label is in offset natural coordinates
+c	 "none"      no label and no numbers or ticks on the axis
 c
 c	All offsets are from the reference pixel.  
 c	Defaults are "relpix", LABTYP(1)   except if LABTYP(1)="hms" when
@@ -341,8 +342,8 @@ c
 c	 ##### The first 5 columns in each line must be
 c
 c	  1      2       3     4    5        Column
-c	--------------------------------
-c	OFIG  XOTYPE  YOTYPE  ID  WRITE      where
+c	 --------------------------------
+c	 OFIG  XOTYPE  YOTYPE  ID  WRITE      where
 c
 c	OFIG is the type of overlay; choose from
 c	 "star"    for stars (crosses; give centre and half-sizes)
@@ -353,7 +354,7 @@ c	 "oellipse for an open ellipse (give centre, half axes and p.a.)
 c	 "box"     for boxes (give centre and half-sizes)
 c	 "line"    for line segments (give ends)
 c	 "clear"   for a see-through overlay -- thus you can write the
-c	 	   overlay ID string (see below) without the overlay
+c	           overlay ID string (see below) without the overlay
 c
 c	XOTYPE and YOTYPE  give the units of the overlay location (and 
 c	overlay half-sizes) contained in the file for the x- and y-
@@ -379,21 +380,21 @@ c
 c
 c	 ##### Columns beyond number 5 depend upon OFIG, XOTYPE, and YOTYPE
 c
-c	6   7    8   9  10  11  12   Logical column
-c	---------------------------
-c	X   Y   XS  YS  CS  CE       for OFIG="box" and "star"
-c	X1  Y1  X2  Y2  CS  CE       for OFIG="line"
-c	X   Y   R   CS  CE           for "circle" and "ocircle"
-c	X   Y   R1  R2  PA  CS  CE   for "ellipse" and "oellipse"
-c	X   Y   CS  CE               for OFIG="clear"
+c	 6   7    8   9  10  11  12   Logical column
+c	 ---------------------------
+c	 X   Y   XS  YS  CS  CE       for OFIG="box" and "star"
+c	 X1  Y1  X2  Y2  CS  CE       for OFIG="line"
+c	 X   Y   R   CS  CE           for "circle" and "ocircle"
+c	 X   Y   R1  R2  PA  CS  CE   for "ellipse" and "oellipse"
+c	 X   Y   CS  CE               for OFIG="clear"
 c
 c	X,Y defines the center of the overlay in the nominated OTYPE
 c	coordinate system (X- and Y-OTYPE can be different).  
 c	(X1,Y1) & (X2,Y2) are the end points of the line segment in the
 c	nominated OTYPE (mixed OTYPEs are supported here too).
 c	For %OTYPE = "abspix ", "relpix", "arcsec", "arcmin", "absdeg", 
-c		     "reldeg", "absghz", "relghz", "abskms", "relkms", 
-c		     "absnat" & "relnat" X,Y,X1,Y1,X2,Y2 are single numbers.
+c	             "reldeg", "absghz", "relghz", "abskms", "relkms", 
+c	             "absnat" & "relnat" X,Y,X1,Y1,X2,Y2 are single numbers.
 c
 c	For %OTYPE = "hms" or "dms", the X and/or Y location is/are replaced
 c	by three numbers such as  HH MM SS.S or DD MM SS.S.  Thus if
@@ -404,13 +405,13 @@ c
 c
 c	XS, YS are the overlay half-sizes in the following units.
 c	%OTYPE = "abspix" and "relpix" in pixels
-c		 "hms"    and "dms"    in arcseconds
-c		 "arcsec"              in arcseconds
-c		 "arcmin"              in arcminutes
-c		 "absdeg" and "reldeg" in degrees
-c		 "absghz" and "relghz" in GHz
-c		 "abskms" and "relkms" in Km/s
-c	 	 "absnat" and "relnat" in natural coordinates
+c	         "hms"    and "dms"    in arcseconds
+c	         "arcsec"              in arcseconds
+c	         "arcmin"              in arcminutes
+c	         "absdeg" and "reldeg" in degrees
+c	         "absghz" and "relghz" in GHz
+c	         "abskms" and "relkms" in km/s
+c	         "absnat" and "relnat" in natural coordinates
 c
 c	R is the radius of circle overlays.  It is in the units given
 c	in the above list according to XOTYPE only. 
@@ -593,6 +594,7 @@ c    nebk 13feb97  Add keyword "3form", finally admitting defeat
 c    nebk 24mar97  Add COLS1 keyword
 c    nebk 01apr97  Don't write overlat ID string if overlay off plot
 c    nebk 15may97  Options=nofirst got broken at some point
+c    nebk 16may97  Replciate one value for all contours for COLS1
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -656,7 +658,7 @@ c
       data lwid /maxconp3*1/
       data getvsc /.true./
 c-----------------------------------------------------------------------
-      call output ('CgDisp: version 15-May-97')
+      call output ('CgDisp: version 16-May-97')
       call output (' ')
 c
 c Get user inputs
@@ -3876,7 +3878,11 @@ c
       end if
 c
       do i = 1, nlevs
-        call pgsci (cols(i))
+        if (ncols.eq.1) then
+          call pgsci(cols(1))
+        else
+          call pgsci (cols(i))
+        end if
         if (levs(i).ge.sdbreak) then
           call pgsls (stylehi)
         else
