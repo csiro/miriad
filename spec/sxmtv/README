@@ -1,0 +1,5 @@
+sxmtv (Simple XMTV) is a no-frills version of xmtv.  It has none of the
+buttons to pan/zoom/fiddle, etc, that xmtv has.  Its only advantage is
+that it requires a minimum of X libraries (just libX11.a), and is
+more portable (runs on a variety of hosts).  If you can compile and
+link xmtv, you will not be interested in sxmtv.
