@@ -6,6 +6,7 @@ c    25oct94 rjs  Original version.
 c    23nov94 rjs  Fix labelling of velocity axis for velocity linetype.
 c    25apr95 rjs  Write "object" rather than "source" item.
 c     1nov95 rjs  Added HdDefSiz
+c     1jul99 rjs  Create somewhat better headers.
 c************************************************************************
 	subroutine HdInit(mfs1,mosaic1)
 c
@@ -31,7 +32,6 @@ c------------------------------------------------------------------------
 	include 'hdtab.h'
 	double precision t1,dv,v0,epsi,r0,line(6),dtemp
 	real t2,rtemp,vsource
-	integer nchan
 	character s*16
 c
 c  Get all the values we can possibly want when we see a file for the
@@ -117,7 +117,7 @@ c------------------------------------------------------------------------
 	include 'mirconst.h'
 	double precision line(6),epsi
 	real vsource,dra,ddec
-	integer nchan,itype
+	integer itype
 	logical ew
 c
 c  Initialise all the logicals to check whether things are consistent.
@@ -139,9 +139,9 @@ c
 	  call uvrdvrr(tno,'ddec',ddec,0.0)
 	  crval1 = crval1 + dra/cos(crval2)
 	  crval2 = crval2 + ddec
-	  call uvrdvrd(tno,'obsra',obsra,crval1)
-	  call uvrdvrd(tno,'obsdec',obsdec,crval2)
-	  call uvrdvrr(tno,'pbfwhm',pbfwhm,-1.0)
+	  call uvrdvrd(tno,'pntra', obsra,crval1)
+	  call uvrdvrd(tno,'pntdec',obsdec,crval2)
+	  call pbRead(tno,pbtype)
 	endif
 	call uvrdvrr(tno,'epoch',epoch,1950.0)
 c
@@ -202,6 +202,7 @@ c
 	else if(restfreq.eq.0)then
 	  if(nchan.gt.1)then
 	    call uvfit2(tno,'sfreq',nchan,cdelt3,crval3,epsi)
+	    VLinear = epsi.le.0.1*abs(cdelt3)
 	  else
 	    call uvinfo(tno,'sfreq',crval3)
 	  endif
@@ -263,7 +264,8 @@ c
 	if(RChange)call bug('w',
      *	  'Rest frequencies varied by > 0.1% while reading data')
 	if(.not.VLinear)call bug('w',
-     *	  'Channel velocities deviated by > 10% from linearity')
+     *	  'Channel frequencies/velocities deviated by > 10% from'//
+     *	  ' linearity')
 	if(VChange)call bug('w',
      *	  'Channel velocities varied by > 10% while reading data')
 	if(XChange)call bug('w',
@@ -287,6 +289,9 @@ c
 	call coAxSet(coObj,3,ctype3,1.d0,crval3,cdelt3)
 	call coSetd(coObj,'vobs',dble(vobs/naver))
 	if(restfreq.ne.0)call coSetd(coObj,'restfreq',restfreq)
+	call coSetd(coObj,'obstime',obstime/naver)
+	call coSetd(coObj,'epoch',dble(epoch))
+	if(nchan.eq.1.or.mfs)call coSeta(coObj,'cellscal','CONSTANT')
 	call coReinit(coObj)
 c
 	end
@@ -305,14 +310,12 @@ c------------------------------------------------------------------------
 c
 c  Determine the FWHM of the telescope.
 c
-	if(pbfwhm.gt.0) then
-	  fwhm = pi/180/3600 * pbfwhm
-	else if(telescop.eq.' ')then
+	if(pbtype.eq.' ')then
 	  call bug('f',
      *	    'Unknown telescope -- cannot determine default image size')
 	else
 	  call HdCoObj(coObj)
-	  call pbInit(pbObj,telescop,coObj)
+	  call pbInit(pbObj,pbtype,coObj)
 	  call pbInfo(pbObj,fwhm,cutoff,maxrad)
 	  call pbFin(pbObj)
 	  call coFin(coObj)
@@ -322,32 +325,35 @@ c
 	ny = max(nint(abs(fwhm/cdelt2)),1)
 	end
 c************************************************************************
-	subroutine HdWrite(tno)
+	subroutine HdWrite(tno,rms,nx,ny)
 c
 	implicit none
 	integer tno
+	real rms
+	integer nx,ny
 c
 c  Write all the header rubbish out to an image dataset.
 c
 c------------------------------------------------------------------------
 	include 'hdtab.h'
 c
-	call wrhdr(tno,'epoch',epoch)
-c
 	call wrhda(tno,'ltype', ltype)
 	call wrhdr(tno,'lstart',lstart)
 	call wrhdr(tno,'lwidth',lwidth)
 	call wrhdr(tno,'lstep', lstep)
 c
-	call wrhdd(tno,'obstime',obstime/naver)
-c
 	if(telescop.ne.' ')call wrhda(tno,'telescop',telescop)
 	if(source.ne.' ')  call wrhda(tno,'object',  source)
 	if(observer.ne.' ')call wrhda(tno,'observer',observer)
+	if(rms.gt.0)call wrhdr(tno,'rms',rms)
 	if(.not.mosaic)then
-	  if(pbfwhm.gt.0) call wrhdr(tno,'pbfwhm',  pbfwhm)
-	  call wrhdd(tno,'obsra', obsra)
-	  call wrhdd(tno,'obsdec',obsdec)
+	  if(obsra.ne.crval1.or.obsdec.ne.crval2)then
+	    call mosInit(nx,ny)
+	    call mosSet(1,obsra,obsdec,rms,pbtype)
+	    call mosSave(tno)
+	  else if(pbtype.ne.telescop)then
+	    call wrhda(tno,'pbtype',pbtype)
+	  endif
 	endif
 c
 	end
