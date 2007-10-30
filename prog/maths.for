@@ -116,6 +116,8 @@ c   rjs   3dec94   Copy across mosaic table.
 c   rjs  26jan95   Eliminate non-standard string concatentation.
 c   rjs  10jan97   Handle 5th axis correctly.
 c  nebk  05jun97   Handle 6th and 7th axes correctly in oldhdr !
+c   rjs  02jul97   cellscal change.
+c   rjs  23jul97   Added pbtype.
 c------------------------------------------------------------------------
 	INCLUDE 'maths.h'
 	INTEGER ERROR,VECTOR,SCALAR,CONSTANT
@@ -441,7 +443,7 @@ c------------------------------------------------------------------------
 	integer i,lblc,ltrc
 	real def,crpix
 	integer nkeys
-	parameter(nkeys=45)
+	parameter(nkeys=46)
 	character keyw(nkeys)*8
 c
 c  Externals.
@@ -458,7 +460,7 @@ c
      *	  'obstime ','epoch   ','history ',
      *	  'ltype   ','lstart  ','lstep   ','lwidth  ','pbfwhm  ',
      *	  'instrume','niters  ','object  ','telescop','cellscal',
-     *	  'restfreq','vobs    ','observer','obsra   ',
+     *	  'restfreq','vobs    ','observer','obsra   ','pbtype  ',
      *	  'obsdec  ','btype   ','mostable'/
 C
 	do i=1,nkeys
