@@ -26,6 +26,7 @@ c	more information. Currently only 'uvrange' selection is supported.
 c--
 c  History:
 c    11-Feb-97 rjs  Preliminary version.
+c    14-Feb-97 rjs  Correct horrendous bug.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
@@ -36,7 +37,7 @@ c
 	parameter(MAXSELS=1000,MAXBOXES=2048,MAXRUNS=3*MAXDIM)
 	character model*64,vis*64
 	real sels(MAXSELS),xpix,ypix,dx,dy
-	double precision time
+	double precision time,freq
 	integer boxes(MAXBOXES),runs(3,MAXRUNS),xmin,xmax,ymin,ymax
 	integer nsize(2),tIn,tOut,pnt,nRuns,n1,n2
 	logical doSel
@@ -63,7 +64,7 @@ c  Open the input model and output vis datasets.
 c
 	call xyopen(tIn,model,'old',2,nsize)
 	call uvopen(tOut,vis,'new')
-	call SetUp(tIn,tOut,version,xpix,ypix,dx,dy,time)
+	call SetUp(tIn,tOut,version,xpix,ypix,dx,dy,time,freq)
 c
 c  Set the region of interest.
 c
@@ -85,11 +86,9 @@ c
 c
 c  Do the real work.
 c
-	call output('Doing the transform ...')
 	call DoFFT(tIn,memc(pnt),nsize(1),nsize(2),n1,n2,Runs,nRuns,
      *							xpix,ypix)
-	call output('Writing the output ...')
-	call WriteOut(tOut,memc(pnt),n1,n2,dx,dy,time,doSel,Sels)
+	call WriteOut(tOut,memc(pnt),n1,n2,dx,dy,time,doSel,Sels,freq)
 c
 c  Tidy up and close down.
 c
@@ -114,11 +113,12 @@ c------------------------------------------------------------------------
 	real data(MAXDIM),shift(MAXDIM)
 	complex cdata(MAXDIM)
 	integer ic,jc,i,j,iprev,r,i0,j0,offset
-	real dx,dy,theta
+	real dx,dy,theta,s
 	complex w
 c
 c  Determine the reference pixel to use.
 c
+	call output('Doing the transform ...')
 	ic = nint(xpix)
 	if(ic.lt.1.or.ic.gt.nx)ic = nx/2 + 1
 	jc = nint(ypix)
@@ -182,12 +182,20 @@ c
 	enddo
 	do i=1,n1/2+1
 	  offset = jc-1
+	  s = 1
 	  do j=1,ny-jc+1
-	    cdata(j) = Buf(j+offset,i)
+	    cdata(j) = s*Buf(j+offset,i)
+	    s = -s
 	  enddo
 	  offset = -(n2-jc+1)
+	  if(2*(jc/2).eq.jc)then
+	    s = -1
+	  else
+	    s =  1
+	  endif
 	  do j=n2-jc+2,n2
-	    cdata(j) = Buf(j+offset,i)
+	    cdata(j) = s*Buf(j+offset,i)
+	    s = -s
 	  enddo
 	  call fftcc(cdata,Buf(1,i),1,n2)
 	enddo
@@ -199,6 +207,7 @@ c
 	dx = xpix - ic
 	dy = ypix - jc
 	if(abs(dx)+abs(dy).gt.1e-4)then
+	  call output('Performing fractional pixel shift ...')
 	  do i=1,n1/2+1
 	    do j=1,n2
 	      theta = -2*PI*(dx*real(i-i0)/real(n1) +
@@ -211,14 +220,14 @@ c
 c
 	end
 c************************************************************************
-	subroutine WriteOut(tOut,Buf,n1,n2,dx,dy,time,doSel,Sels)
+	subroutine WriteOut(tOut,Buf,n1,n2,dx,dy,time,doSel,Sels,freq)
 c
 	implicit none
 	integer n1,n2,tOut
 	complex Buf(n2,n1/2+1)
 	logical doSel
 	real Sels(*),dx,dy
-	double precision time
+	double precision time,freq
 c
 c  Write out the visibility data.
 c
@@ -231,6 +240,7 @@ c  Externals.
 c
 	logical selProbe
 c
+	call output('Writing the output ...')
 	do i=1,n1/2+1
 	  do j=1,n2
 	    preamble(1) = real(i-1)/real(n1)*dx
@@ -240,7 +250,7 @@ c
 	    preamble(5) = 258
 	    if(doSel)then
 	      ok = selProbe(sels,'uvrange',
-     *		dble(sqrt(real(preamble(1)**2+preamble(2)**2))))
+     *		freq*sqrt(real(preamble(1)**2+preamble(2)**2)))
 	    else
 	      ok = .true.
 	    endif
@@ -250,13 +260,13 @@ c
 c
 	end
 c************************************************************************
-	subroutine SetUp(tIn,tOut,version,xpix,ypix,dx,dy,obstime)
+	subroutine SetUp(tIn,tOut,version,xpix,ypix,dx,dy,obstime,freq)
 c
 	implicit none
 	integer tIn,tOut
 	real xpix,ypix,dx,dy
 	character version*(*)
-	double precision obstime
+	double precision obstime,freq
 c
 c  Fill in all the details about the output dataset.
 c
@@ -293,6 +303,7 @@ c
 	endif
 	call uvputvrr(tOut,'wfreq',real(sfreq),1)
 	call uvputvrr(tOut,'wwidth',real(sdf),1)
+	freq = sfreq
 c
 c  Rest frequency and velocity info.
 c
