@@ -100,6 +100,7 @@ c   rjs  24dec92 - Doc change only.
 c   rjs  05jan93 - Doc changes only.
 c   rjs  10feb93 - Get rid of maxdim**2 arrays (use memalloc). Copy restor.h
 c		   to tvcln.h.
+c   rjs  10sep96 - Get rid fo tvclncom common block.
 c
 c  Important Constants:
 c    MaxDim	The max linear dimension of an input (or output) image.
@@ -584,7 +585,6 @@ c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer imin,imax,jmin,jmax,i,j
 	real Data(maxdim)
-	common/TvClnCom/Data
 c
 	imin = ic - maxPatch/2
 	imax = imin + maxPatch - 1
@@ -697,7 +697,6 @@ c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer i,j,k,imin,imax,jmin,jmax,nHisto
 	real Data(maxdim),bmax
-	common/TvClnCom/Data
 c
 c  External.
 c
@@ -871,7 +870,6 @@ c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer i,j,Ncmpd,x0,y0,n0,itemp
 	integer YMap(maxdim+1)
-	common/TvClnCom/YMap
 c
 c  Clear out YMap.
 c
@@ -1055,7 +1053,6 @@ c------------------------------------------------------------------------
 	real TermRes,ResMax,Wts,alpha
 	integer Temp(maxrun),Indx(maxrun)
 	logical more
-	common/TvClnCom/Temp,Indx
 c
 c  Externals.
 c
@@ -1239,7 +1236,6 @@ c------------------------------------------------------------------------
 	integer i,j,k,l,Ncmpd,x0,y0,n0,itemp
 	real Temp(maxdim)
 	integer Indx(maxdim)
-	common/TvClnCom/Indx,Temp
 c
 c  Clear the mapping array.
 c
@@ -1883,7 +1879,6 @@ c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer i,j,imin,imax,jmin,jmax
 	real Data(maxdim)
-	common/TvClnCom/Data
 c
 c  Externals.
 c
@@ -1952,7 +1947,6 @@ c------------------------------------------------------------------------
 	real f(nPM*nPM),fp(nPM*nPM),dfdx(3*nPM*nPM)
 	integer ifail,k,i,j
 	external FUNCTION,DERIVE
-	common/TvClnCom/f,fp,dfdx
 c
 c  Initialise the arrays ready for the optimisation routine.
 c
