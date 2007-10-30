@@ -55,12 +55,13 @@ c    rjs  07apr97 Include improved 13-cm fits, and make it work at L-band
 c		  as well.
 c    rjs  03may00 Now supports C and X band.
 c    rjs  25jul00 Simple support for stokes keyword.
+c    rjs  11sep00 Correct bug in above.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
 	character version*(*)
 	integer MAXPOL,PolXX,PolYY,PolXY,PolYX,PolI
-	parameter(version='Offaxis: version 1.0 25-Jul-00')
+	parameter(version='Offaxis: version 1.0 11-Sep-00')
 	parameter(MAXPOL=4)
 	parameter(PolXX=-5,PolYY=-6,PolXY=-7,PolYX=-8,PolI=1)
 c
@@ -104,6 +105,7 @@ c
 	  call uvDatSet('stokes',PolYY)
 	  call uvDatSet('stokes',PolXY)
 	  call uvDatSet('stokes',PolYX)
+	  npol = 4
 	else
 	  call uvDatGti('pols',pols)
 	  if(npol.eq.4)then
