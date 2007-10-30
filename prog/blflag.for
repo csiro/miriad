@@ -75,6 +75,7 @@ c--
 c  History:
 c    26jun96 rjs  Original version.
 c    30jul96 rjs  Correct labelling of uvdist plots.
+c    26feb97 rjs  Fix bug in the dimensioning of ltemp.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
@@ -98,7 +99,7 @@ c
 	integer nplt,blplt(MAXPLT)
 	double precision timeplt(MAXPLT)
 	real xplt(MAXPLT),yplt(MAXPLT)
-	logical ltemp(MAXPLT)
+	logical ltemp(MAXDAT)
 c
 c  The editting buffer.
 c
