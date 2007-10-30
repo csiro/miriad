@@ -102,6 +102,9 @@ c@ levs2
 c	LEVS for the second contour image.
 c@ levs3
 c	LEVS for the third contour image.
+c@ cols1
+c	PGPLOT colours for LEVS1 contours. 0 is background colour, 1 
+c	foreground, others are different colours
 c@ range
 c	N groups of 4 values (1 group per subplot and N is the maximum
 c	number of channels allowed by Miriad; typically 2048). These are 
@@ -587,6 +590,7 @@ c                  fed to NAXLABCG
 c    nebk 23jan97  Was getting vector scales wrong if first subplot
 c                  all blank.
 c    nebk 13feb97  Add keyword "3form", finally admitting defeat
+c    nebk 24mar97  Add COLS1 keyword
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -620,9 +624,9 @@ c
      +  vecinc(2), boxinc(2), srtlev(maxlev,maxcon), nlevs(maxcon), 
      +  grpbeg(maxchan), ngrp(maxchan), his(nbins), ibin(2), 
      +  jbin(2), kbin(2), krng(2), coltab(maxchan), gnaxis, 
-     +  cnaxis(maxcon), vnaxis(2), bnaxis, mnaxis
+     +  cnaxis(maxcon), vnaxis(2), bnaxis, mnaxis, cols1(maxlev)
       integer  nx, ny, ierr, pgbeg, ilen, igr, nlast, ngrps,
-     +  ncon, i, j, nvec, ipage, jj, npixr, wedcod, bgcol
+     +  ncon, i, j, nvec, ipage, jj, npixr, wedcod, bgcol, ncols1
 c
       character labtyp(2)*6, levtyp(maxcon)*1, trfun(maxchan)*3
       character pdev*64, xlabel*40, ylabel*40, hard*20, ofile*64, 
@@ -649,7 +653,7 @@ c
       data lwid /maxconp3*1/
       data getvsc /.true./
 c-----------------------------------------------------------------------
-      call output ('CgDisp: version 13-Feb-97')
+      call output ('CgDisp: version 24-Mar-97')
       call output (' ')
 c
 c Get user inputs
@@ -661,7 +665,7 @@ c
      +   gaps, solneg, nx, ny, lwid, break, cs, scale, ofile, dobeam, 
      +   beaml, beamb, relax, rot90, signs, mirror, dowedge, doerase, 
      +   doepoch, dofid, dosing, nofirst, grid, dotr, dodist, conlab,
-     +   doabut, val3form)
+     +   doabut, val3form, ncols1, cols1)
 c
 c Open images as required
 c
@@ -927,8 +931,14 @@ c
              call pgslw (lwid(i+1))
              call pgsci (concol(i))
              call pgsch (cs(4))
-             call conturcg (conlab, blankc, solneg(i), win(1), win(2), 
-     +          doblc, memr(ipim), nlevs(i), levs(1,i), tr, break(i))
+             if (i.eq.1 .and. ncols1.gt.0) then
+               call contur (conlab, blankc, solneg(i), win(1), win(2), 
+     +            doblc, memr(ipim), nlevs(i), levs(1,i), tr, break(i),
+     +            ncols1, cols1)
+             else
+               call conturcg (conlab, blankc, solneg(i), win(1), win(2), 
+     +            doblc, memr(ipim), nlevs(i), levs(1,i), tr, break(i))
+             end if
            end do
          end if
 c
@@ -2256,7 +2266,7 @@ c
      +   gaps, solneg, nx, ny, lwid, break, cs, scale, ofile, dobeam, 
      +   beaml, beamb, relax, rot90, signs, mirror, dowedge, doerase, 
      +   doepoch, dofid, dosing, nofirst, grid, dotr, dodist, conlab,
-     +   doabut, val3form)
+     +   doabut, val3form, ncols1, cols1)
 c-----------------------------------------------------------------------
 c     Get the unfortunate user's long list of inputs
 c
@@ -2332,6 +2342,8 @@ c   dodist     Distort overlays with grid
 c   conlab     Label contours
 c   doabut     No white space bewteen subplots
 c   val3form   Format for options=3val labelling
+c   cols1      Colours for LEVS1 contours
+c   ncols1
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -2339,7 +2351,8 @@ c
       real levs(maxlev,maxcon), pixr(2,maxgr), scale(2), cs(*),
      +  slev(maxcon), break(maxcon), vecfac, boxfac
       integer nx, ny, nlevs(maxcon), lwid(maxcon+3), vecinc(2), 
-     +  boxinc(2), ibin(2), jbin(2), kbin(2), coltab(maxgr)
+     +  boxinc(2), ibin(2), jbin(2), kbin(2), coltab(maxgr),
+     +  cols1(maxlev), ncols1
       character*(*) labtyp(2), cin(maxcon), gin, vin(2), bin, mskin,
      +  pdev, ofile, trfun(maxgr), levtyp(maxcon), ltypes(maxtyp),
      +  val3form
@@ -2476,6 +2489,13 @@ c
         str = itoaf(i)
         call mkeyr ('levs'//str,  levs(1,i), maxlev, nlevs(i))
       end do
+      ncols1 = 0
+      call mkeyi ('cols1', cols1, maxlev, ncols1)
+      if (ncols1.gt.0 .and. ncols1.lt.nlevs(1)) then
+        do i = ncols1, nlevs(1)
+          cols1(i) = 1
+        end do
+      end if
 c
 c Get pixel map ranges and transfer functions for each subplot
 c
@@ -3792,3 +3812,105 @@ c
       bemcol = 4
 c
       end
+c
+c
+      subroutine contur (conlab, blank, solneg, win1, win2, dobl,
+     +                   data, nlevs, levs, tr, sdbreak, ncols, cols)
+c
+      implicit none   
+      integer win1, win2, nlevs, ncols, cols(*)
+      real data(win1,win2), levs(*), tr(6), sdbreak, blank
+      logical solneg, dobl, conlab
+c
+c  Draw contours
+c
+c  Input:
+c    conlab   Label contours ?
+c    blank    Vaue used for magic blanks
+c    solneg   False => Positive contours solid, negative dashed.
+c             True  => Positive contours dashed, negative solid.
+c             "Positive" above means values >= SDBREAK
+c    win1,2   Window sizes in x and y
+c    dobl     True if blanks present in image section to contour
+c    data     Image to contour
+c    nlevs    Number of contour levels
+c    levs     Contour levels
+c    tr       Transformation matrix between array inices and
+c             world coords
+c    sdbreak  Value for distinction between solid and dashed contours
+c--
+c-----------------------------------------------------------------------
+      integer stylehi, stylelo, i, intval, minint, il, ns
+      character label*20
+c-----------------------------------------------------------------------
+c 
+c Set how often we label contours.  The PGPLOT routine is prett dumb.
+c Because contouring is done in quadrants, each quadrant is labelled
+c individually.  The size of the quadrants is 256 pixels (see
+c pgconx, pgcnxb).  MININT says draw first label after contours
+c cross this many cells, and every INTVAL thereafter.
+c
+      minint = 20
+      intval = 40
+      if (conlab) then
+c        write (*,*) 'default minint, intval=', minint,intval
+c        write (*,*) 'enter minint, intval'
+c        read (*,*) minint,intval
+        if (dobl) then
+          call output ('Contour labelling is not yet implemented')
+          call output ('for images containing blanked pixels')
+        end if
+      end if
+c
+      if (.not.solneg) then
+        stylehi = 1
+        stylelo = 2
+      else
+        stylehi = 2
+        stylelo = 1
+      end if
+c
+      do i = 1, nlevs
+        call pgsci (cols(i))
+        if (levs(i).ge.sdbreak) then
+          call pgsls (stylehi)
+        else
+          call pgsls (stylelo)
+        end if           
+        if (dobl) then
+c
+c
+c This PG contouring routine does not do a very good job on dashed
+c contours and is slower than PGCONT
+c  
+          call pgconb (data, win1, win2, 1, win1, 1, win2,
+     +                 levs(i), -1, tr, blank)
+        else
+c    
+c Run faster contouring routine if no blanks
+c    
+          call pgcont (data, win1, win2, 1, win1, 1, win2,
+     +                 levs(i), -1, tr)   
+        end if
+c  
+c Label contour value
+c          
+        if (conlab) then
+          ns = int(abs(log10(abs(levs(i))))) + 3
+          call strfmtcg (real(levs(i)), ns, label, il)
+          if (dobl) then
+c            call pgcnlb (data, win1, win2, 1, win1, 1, win2,
+c     +                 levs(i), tr, blank, label(1:il),
+c     +                 intval, minint)
+          else
+            call pgconl (data, win1, win2, 1, win1, 1, win2,
+     +                 levs(i), tr, label(1:il), intval, minint)
+          end if
+        end if
+      end do
+      call pgupdt
+      call pgsls (1)
+c
+      end
+c
+
