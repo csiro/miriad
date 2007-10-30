@@ -6,6 +6,7 @@ c     20-jun-91   Correction due to dsfetr/dsfetra doc error         MJS
 c     24-sep-93   Implemented two-step using intermediate EQ         PJT
 c     23-jul-97   General tidy up.				     RJS
 c     30-jul-97   More precision for RA and add "epoch" keyword.     RJS
+c     07-aug-97   Correct use of epo2jul routine.		     RJS
 c-----------------------------------------------------------------------
 c= cotra - coordinate transformations
 c& pjt
@@ -14,11 +15,11 @@ c+
 c	COTRA is a MIRIAD task to transform between astronomical coordinate 
 c	systems.  The coordinate systems must be one of:
 c	equatorial, galactic, ecliptic, super-galactic
-c@radec
+c@ radec
 c	Input RA/DEC or longitude/latitude. RA is given in hours
 c	(or hh:mm:ss), whereas all the others are given in degrees
 c	(or dd:mm:ss). There is no default.
-c@type
+c@ type
 c	Input coordinate system. Possible values are
 c	"b1950" (the default), "j2000", "galactic", "ecliptic"
 c	and "super-galactic". b1950 and j2000 are equatorial coordinates
@@ -32,7 +33,7 @@ c	arcsecond. The default is b1950.
 c----------------------------------------------------------------------
 	INCLUDE 'mirconst.h'
 	CHARACTER  VERSION*(*)
-	PARAMETER (VERSION='Version 1.0 30-Jul-97')
+	PARAMETER (VERSION='Version 1.0 07-Aug-97')
 c
 	double precision lon,lat,blon,blat,dra,ddec,epoch
 	character line*64
@@ -61,7 +62,7 @@ c
 	  CALL keyt('radec',blon,'dms',0.0d0)
 	endif
 	call keyt('radec',blat,'dms',0.d0)
-	call keyt('epoch',epoch,'atime',epo2jul(1950.0,'B'))
+	call keyt('epoch',epoch,'atime',epo2jul(1950.0d0,'B'))
 	CALL keyfin
 c
 c  Convert to b1950 coordinates.
