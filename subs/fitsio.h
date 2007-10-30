@@ -97,14 +97,15 @@ c  ColType	The "TTYPE" value.
 c  ColUnits	The "TUNIT" value.
 c  
 	integer MAXCOL,NFORMS
-	parameter(MAXCOL=40,NFORMS=6)
+	parameter(MAXCOL=400,NFORMS=7)
 	integer rows(MAXOPEN),cols(MAXOPEN),width(MAXOPEN)
 	integer ColForm(MAXCOL,MAXOPEN),ColCnt(MAXCOL,MAXOPEN)
 	integer ColOff(MAXCOL,MAXOPEN)
-	character ColType(MAXCOL,MAXOPEN)*16
+	character ColType(MAXCOL,MAXOPEN)*32
 	character ColUnits(MAXCOL,MAXOPEN)*16
 c
-	integer FormI,FormJ,FormA,FormE,FormD,FormX
-	parameter(FormJ=1,FormI=2,FormA=3,FormE=4,FormD=5,FormX=6)
+        integer FormI,FormJ,FormA,FormE,FormD,FormX,FormL
+	parameter(FormJ=1,FormI=2,FormA=3,FormE=4,FormD=5,FormX=6,
+     *            FormL=7)
 	common/fitstab/rows,cols,width,ColForm,ColCnt,ColOff
 	common/fitstabc/ColType,ColUnits
