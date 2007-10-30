@@ -72,6 +72,7 @@ c    rjs   27feb95    Put phase in the range -180 to 180.
 c    rjs    2nov95    A "break" in CopyDat is dependent on inttime, as
 c		      suggested by jm.
 c    rjs   11jan96    options=nosrc.
+c    jm    19feb96    Added History entry for each (final) flag.
 c***********************************************************************
 c= TvFlag - Interactive editing of a UV data set on a TV device.
 c& jm
@@ -234,6 +235,7 @@ c
       integer Lin, nchan, MostChan, channel
       integer maxxpix, maxypix, levels, msglen
       integer jx0, jy0, nout
+      integer chanoff
       real start, width, step
       real pmin, pmax
       real amp
@@ -361,7 +363,7 @@ c  Determine the flagging to be done.
 c
       call doEdit(Lin,apri,taver,center,jx0,jy0,channel,
      *	  Ctrl,nosrc,pmin,pmax,
-     *    edits,MAXBASE,day0,times,chans,flagval,MAXEDIT,nedit)
+     *    edits,MAXBASE,day0,times,chans,flagval,MAXEDIT,nedit,chanoff)
 c
 c  Do the flagging.
 c
@@ -371,7 +373,8 @@ c
 	call HisWrite(Lin,PROG // 'Miriad '// VERSION)
 	call HisInput(Lin,PROG)
 	call UvRewind(Lin)
-	call doFlag(Lin,edits,MAXBASE,day0,times,chans,flagval,nedit)
+	call doFlag(Lin,edits,MAXBASE,day0,times,chans,flagval,
+     *    nedit,chanoff)
 	call HisClose(Lin)
       endif
 c
@@ -403,10 +406,11 @@ c
 c************************************************************************
 	subroutine doEdit(Lin,apri,taver,center,jx0,jy0,channel,
      *	  Ctrl,nosrc,pmin,pmax,
-     *    edits,nbase,day0,times,chans,flagval,MAXEDIT,nedit)
+     *    edits,nbase,day0,times,chans,flagval,MAXEDIT,nedit,chanoff)
 c
 	implicit none
 	integer Lin,channel,jx0,jy0,nbase,maxedit,nedit
+	integer chanoff
 	character apri*1
 	logical center,Ctrl,nosrc
 	real taver(2),pmin,pmax
@@ -434,6 +438,8 @@ c    times
 c    edits
 c    chans
 c    day0	Base time.
+c    chanoff	Offset to add to channel number to convert to a true
+c		channel number.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
@@ -452,7 +458,7 @@ c------------------------------------------------------------------------
 	integer bl2idx(MAXBASE),idx2bl(MAXBASE),trevidx(2,MAXTREV)
 	integer idx1(MAXTIME2),idx2(MAXTIME2)
 	integer isave(5,MAXSAVE)
-	integer maxxpix,maxypix,mostchan,levels,chanoff
+	integer maxxpix,maxypix,mostchan,levels
 c
 c  Externals.
 c
@@ -1223,7 +1229,7 @@ c
 	end
 c************************************************************************
 	subroutine doFlag(Lin,edits,nbase,day0,times,chans,flagval,
-     *								  nedit)
+     *							  nedit,chanoff)
 c
 	implicit none
 	integer Lin,nbase,nedit
@@ -1232,6 +1238,7 @@ c
 	real times(2,nedit)
 	integer chans(2,nedit)
 	logical flagval(nedit)
+	integer chanoff
 c
 c  Apply the flagging commands to the data.
 c
@@ -1244,13 +1251,35 @@ c    times	Time range to flag/unflag.
 c    chans	Channel range to flag/unflag.
 c    flagval	The flagging value.
 c    nedit	Number of edit commands.
+c    chanoff	Offset to add to channel number to convert to a true
+c		channel number.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
+	character string*80
 	integer nchan,ant1,ant2,bl,i,j
+	integer isave(5)
 	complex data(MAXCHAN)
 	logical flags(MAXCHAN),flagged
-	real t
+	real t, t2
 	double precision preamble(4)
+c
+	integer Len1
+c
+	do bl = 1, nbase
+	  do j = edits(1, bl), edits(2, bl)
+	    isave(1) = 1
+	    isave(2) = max(chans(1, j), 1)
+	    isave(3) = 1
+	    isave(4) = chans(2, j)
+	    isave(5) = 0
+	    if (flagval(j)) isave(5) = 1
+	    t = times(1, j)
+	    t2 = times(2, j)
+	    call FmtCmd(string, isave, t, t2, 1, chanoff)
+	    i = Len1(string)
+	    if (i .gt. 0) call HisWrite(Lin, string(:i))
+	  enddo
+	enddo
 c
 	call uvread(Lin,preamble,data,flags,MAXCHAN,nchan)
 	dowhile(nchan.gt.0)
