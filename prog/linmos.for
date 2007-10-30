@@ -7,7 +7,7 @@ c  input, and produces a single cube as its output. The correction weights
 c  used are optimum in a minimum mean square sense.
 c
 c= linmos - Linear mosaicing of datacubes
-c& mchw
+c& rjs
 c: map combination
 c+
 c	LINMOS is a MIRIAD task which performs a simple linear mosaicing of
@@ -100,6 +100,8 @@ c		  have the same geometry. Handle single-pointing
 c		  mosaic tables.
 c    rjs   3dec94 More lenient "exactness" algorithm in thingchk.
 c    rjs  30jan95 Taper option. Eliminate "signal" parameter.
+c    mhw  13aug95 Clip input if output too big, instead of giving up.
+c    rjs  14aug95 Fix to the above.
 c
 c  Bugs:
 c    * Blanked images are not handled when interpolation is necessary.
@@ -115,7 +117,7 @@ c		by less than "tol", they are taken as being the same
 c		pixel (i.e. no interpolation done).
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Linmos: version 1.0 30-Jan-95')
+	parameter(version='Linmos: version 1.0 14-Aug-95')
 	include 'maxdim.h'
 c
 	real tol
@@ -227,8 +229,19 @@ c
 c
 	nOut(1) = nint(extent(3) - extent(1)) + 1
 	nOut(2) = nint(extent(4) - extent(2)) + 1
-	if(max(nOut(1),nOut(2)).gt.maxdim)
-     *	  call bug('f','Output image is too large')
+	if(max(nOut(1),nOut(2)).gt.maxdim) then
+     	  call bug('w','Output image is too large, clipping input')
+          if (nOut(1).gt.maxdim) then
+             extent(1)=extent(1)+(nOut(1)-maxdim+1)/2
+             extent(3)=extent(3)-(nOut(1)-maxdim+1)/2
+	     nOut(1) = nint(extent(3) - extent(1)) + 1
+	  endif
+          if (nOut(2).gt.maxdim) then
+             extent(2)=extent(2)+(nOut(2)-maxdim+1)/2
+             extent(4)=extent(4)-(nOut(2)-maxdim+1)/2
+	     nOut(2) = nint(extent(4) - extent(2)) + 1
+	  endif
+	endif
 	nOut(3) = nsize(3,1)
 	if(dosen.or.dogain)nOut(3) = 1
 	nOut(4) = 1
@@ -467,7 +480,7 @@ c
 c  Determine the weights, and add the contribution of the input plane.
 c
 	  do j=ylo,yhi
-	    call GetDat(tIn,xoff,yoff,xlo,xhi,j,pbObj,
+	    call GetDat(tIn,nx,xoff,yoff,xlo,xhi,j,pbObj,
      *						In,Pb,n1,interp,mask)
 	    yoff = yoff + 1
 c
@@ -510,11 +523,11 @@ c
 c
 	end
 c************************************************************************
-	subroutine GetDat(tIn,xoff,yoff,xlo,xhi,j,pbObj,
+	subroutine GetDat(tIn,nx,xoff,yoff,xlo,xhi,j,pbObj,
      *						In,Pb,n1,interp,mask)
 c
 	implicit none
-	integer tIn,xoff,yoff,xlo,xhi,n1,j,pbObj
+	integer tIn,xoff,yoff,xlo,xhi,n1,j,pbObj,nx
 	logical interp,mask
 	real In(n1),Pb(n1)
 c
@@ -536,6 +549,7 @@ c		blanked).
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	logical flags(MAXDIM)
+	real dat(MAXDIM)
 	integer i
 c
 	external xyread
@@ -545,6 +559,11 @@ c  Get the data.
 c
 	if(interp)then
 	  call IntpRd(tIn,yoff,In(xoff),xyread)
+	else if(xoff.lt.1.or.xoff+nx-1.gt.n1)then
+	  call xyread(tin,yoff,Dat)
+	  do i=xlo,xhi
+	    In(i) = Dat(i-xoff+1)
+	  enddo
 	else
 	  call xyread(tIn,yoff,In(xoff))
 	endif
@@ -558,9 +577,9 @@ c
 c  Zero the primary beam where the data are flagged.
 c
 	if(mask)then
-	  call xyflgrd(tIn,yoff,flags(xoff))
+	  call xyflgrd(tIn,yoff,flags)
 	  do i=xlo,xhi
-	    if(.not.flags(i))Pb(i) = 0
+	    if(.not.flags(i-xoff+1))Pb(i) = 0
 	  enddo
 	endif
 	end
