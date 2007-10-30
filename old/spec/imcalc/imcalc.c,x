@@ -170,7 +170,9 @@ OPERATOR operators[] ={
 	{"extract",OP_FUNC,2,10,extract_x,NULL,NULL,NULL},
 	{"fft",OP_FUNC,2,10,fft_x,NULL,NULL,NULL},
 	{"floor",OP_FUNC,1,10,NULL,floor,NULL,NULL},
+#ifndef linux
 	{"gamma",OP_FUNC,1,10,NULL,gamma,NULL,NULL},
+#endif
 	{"ismax",OP_FUNC,1,10,ismax_x,NULL,NULL,NULL},
 	{"ismin",OP_FUNC,1,10,ismin_x,NULL,NULL,NULL},
 	{"j0",OP_FUNC,1,10,NULL,j0,NULL,NULL},
@@ -1382,7 +1384,7 @@ int val[2];
 /**********************************************************************/
 private char *string_value(exp,val)
 char *exp;
-char **val;
+char *val;
 /*
   This decodes a string value, and returns the pointer in the input
   expression, to the next expression.
@@ -2184,7 +2186,7 @@ int type;
     case TYPE_STRING:
       length = strlen(name) - 2;
       v->value = Malloc(length+1);
-      strcpy(v->value,name+1,length);
+      strncpy(v->value,name+1,length);
       *(v->value + length) = 0;				   break;
     case TYPE_REAL:  sscanf(name,"%lg",&d1);
 		     v->val[0] = d1;
