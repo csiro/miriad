@@ -28,7 +28,7 @@ c	This sets the relative clip level. Values are typically 0.75 to 0.9.
 c	The default is conservative and image dependent.
 c@ region
 c	The standard region of interest keyword. See `help region' for more
-c	information.
+c	information. The default is the entire image.
 c@ options
 c	Task enrichment parameters. Several can be given, separated by
 c	commas. Minimum match is used. Possible values are:
@@ -433,7 +433,7 @@ c
 	call hisopen(lOut,'append')
         line = 'MOSSDI: Miriad '//version
 	call hiswrite(lOut,line)
-	call hisinput(lOut,'MAXEN')
+	call hisinput(lOut,'MOSSDI')
 c
 	call mitoaf(blc,3,txtblc,lblc)
 	call mitoaf(trc,3,txttrc,ltrc)
@@ -441,7 +441,7 @@ c
      *				       '),Trc=('//txttrc(1:ltrc)//')'
 	call hiswrite(lOut,line)
 c
-	call hiswrite(lOut,'MAXEN: Total Iterations = '//itoaf(Niter))
+	call hiswrite(lOut,'MOSSDI: Total Iterations = '//itoaf(Niter))
 	call hisclose(lOut)
 c
 	end
