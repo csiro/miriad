@@ -19,9 +19,7 @@ c
 c@ vis
 c	Name of input visibility data file. No default.
 c@ select
-c	Standard uv data selection criteria. Generally this should not include
-c	a "dra" and "ddec" selection, as SELFCAL automatically matches data
-c	with the appropriate observing center.
+c	Standard uv data selection criteria.
 c@ model
 c	Name of the input models. Several models can be given, which can
 c	cover different channel ranges, different pointing and sources, and
@@ -38,10 +36,10 @@ c
 c	NOTE: When you give SELFCAL a model, it will, by default, select the
 c	data associated with this model from the visibility data-set. This
 c	includes selecting the appropriate range of channels, the appropriate
-c	polarisation type and the appropriate pointing (if options=selradec
+c	polarisation type and the appropriate pointing (if options=mosaic
 c	is used). If you use a point source model, if it YOUR responsibility
 c	to select the appropriate data. In particular, you may well want
-c	to select appropriate polarisations and sourcings or sources.
+c	to select appropriate polarisations, channels and sources.
 c@ clip
 c	Clip level. For models of intensity, any pixels below the clip level
 c	are set to zero. For models of Stokes Q,U,V, or MFS I*alpha models,
@@ -87,9 +85,9 @@ c	             option should be used with the apriori option.
 c	             It must be used if selfcal is being used to determine
 c	             Jy/K, and should also be used if the model is believed
 c	             to have the correct scale.
-c	  selradec   This causes SELFCAL to select only those visibilities
+c	  mosaic     This causes SELFCAL to select only those visibilities
 c	             whose observing center is within plus or minus three
-c	             pixels of the model reference pixel. This is needed
+c	             pixels of the model pointing center. This is needed
 c	             if there are multiple pointings or multiple sources in
 c	             the input uv file. By default no observing center
 c	             selection is performed.
@@ -165,6 +163,8 @@ c    rjs  24sep93 Doc changes only.
 c    rjs   9nov93 Better recording of time of a particular solution interval.
 c    rjs  23dec93 Minimum match for linetypes.
 c    mchw 28oct94 restored output file to enable uv-data to be read-only.
+c    rjs  30jan95 Change option "selradec" to "mosaic", and update doc
+c	          file somewhat. Change to helper routine.
 c  Bugs/Shortcomings:
 c   * Selfcal should check that the user is not mixing different
 c     polarisations and pointings.
@@ -172,7 +172,7 @@ c   * It would be desirable to apply bandpasses, and merge gain tables,
 c     apply polarisation calibration, etc.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Selfcal: version 1.0 28-Oct-94')
+	parameter(version='Selfcal: version 1.0 30-Jan-95')
 	integer MaxMod,maxsels,nhead
 	parameter(MaxMod=32,maxsels=256,nhead=3)
 c
@@ -358,7 +358,7 @@ c------------------------------------------------------------------------
 	logical present(nopt)
 	data opts/'amplitude','phase    ','smooth   ',
      *		  'apriori  ','noscale  ','relax    ',
-     *		  'polarized','mfs      ','selradec '/
+     *		  'polarized','mfs      ','mosaic   '/
 	call options('options',opts,present,nopt)
 	amp = present(1)
 	phase = present(2)
@@ -381,7 +381,7 @@ c************************************************************************
 	complex data(nchan)
 	logical flags(nchan),accept
 	real Out(nhead)
-	double precision preamble(4)
+	double precision preamble(5)
 c
 c  This is a service routine called by the model subroutines. It is
 c  called every time a visibility is read from the data file.
@@ -413,22 +413,22 @@ c
      *	    'The data file does not contain the number of antennae')
 	  if(nants.lt.MinAnts)call bug('f',
      *	    'Fewer than the minimum number of antennae are present')
-	  time0 = int(preamble(3)) + 0.5
+	  time0 = int(preamble(4)) + 0.5
 	  nbad = 0
 	  first = .false.
 	endif
 c
 c  Determine antenna numbers, to make sure they are OK.
 c
-	call basant(preamble(4),i1,i2)
+	call basant(preamble(5),i1,i2)
 	accept = i1.le.nants.and.i2.le.nants
 c
 c  If all looks OK, then calculate the theoretical rms, and store away
 c  the information that we need.
 c
 	if(accept)then
-	  out(1) = preamble(4)
-	  out(2) = preamble(3) - time0
+	  out(1) = preamble(5)
+	  out(2) = preamble(4) - time0
 	  call uvinfo(tvis,'variance',rms)
 	  if(rms.le.0)rms=1
 	  out(3) = rms
@@ -560,7 +560,7 @@ c    interval	Self-cal interval.
 c  Input/Output:
 c  In the following, t=time (within a solution interval), f=channels,
 c		b=baseline number, a = antenna number.
-c    Time	The integer time, nint((preamble(3)-time0)/interval).
+c    Time	The integer time, nint((preamble(4)-time0)/interval).
 c    Hash	Hash table, used to locate a solution interval.
 c    Indx	Index from hash table to solution interval.
 c    SumVM	Sum(over t,f)conjg(Model)*Vis/sigma**2. Varies with b.
