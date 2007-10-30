@@ -23,6 +23,7 @@ c   subroutine Mosaicer
 c   subroutine MosMFin
 c
 c   subroutine MosPnt
+c   subroutine MosVal
 c
 c  History:
 c    rjs  26oct94 Original version
@@ -37,6 +38,7 @@ c    rjs  15oct96 Modify call sequence to coGeom.
 c    rjs  26mar97 Better support for "pbtype" parameter in vis datasets.
 c    rjs  30apr97 Comments only.
 c    rjs  07jul97 Change coaxdesc to coaxget.
+c    rjs  27oct98 Added mosval.
 c************************************************************************
 	subroutine MosCIni
 c
@@ -1198,6 +1200,48 @@ c
 	do i=1,npnt
 	  call pbFin(pbObj(i))
 	enddo
+c
+	end
+c************************************************************************
+	subroutine MosVal(coObj,in,x,gain,rms)
+c
+	implicit none
+	integer coObj
+	character in*(*)
+	double precision x(*)
+	real gain,rms
+c
+c  Determine the gain and rms response at a particular position.
+c
+c  Input:
+c    coObj	Coordinate object.
+c    in,x	These are the normal arguments to coCvr, giving the
+c		location (in RA,DEC,freq) of interest.
+c  Output:
+c    gain	The gain response at the position.
+c    rms	The rms at the position.
+c------------------------------------------------------------------------
+	include 'maxdim.h'
+	include 'mostab.h'
+	integer runs(3)
+	double precision xref(3)
+c
+c  Determine the location of the reference position, in grid units.
+c
+	call coCvt(coObj,in,x,'ap/ap/ap',xref)
+c
+c  Initialise, mosaic, tidy up.
+c
+	call mosMini(coObj,real(xref(3)))
+	Runs(1) = nint(xref(2))
+	Runs(2) = nint(xref(1))
+	Runs(3) = Runs(2)
+	call mosWtsr(Runs,1,Gain,Rms,1)
+	if(Gain.gt.0)then
+	  Gain = 1/Gain
+	  Rms = sqrt(Rms*Gain)
+	endif
+	call mosMFin
 c
 	end
 c************************************************************************
