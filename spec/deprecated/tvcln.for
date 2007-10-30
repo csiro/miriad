@@ -105,6 +105,7 @@ c   rjs  10sep96 - Get rid fo tvclncom common block.
 c   rjs  29jan97 - Change default region of interest.
 c   rjs  10mar97 - Default region is all channels.
 c   jm   16may97 - Modified interini() for server/panel changes.
+c   rjs  02jul97 - cellscal change.
 c
 c  Important Constants:
 c    MaxDim	The max linear dimension of an input (or output) image.
@@ -434,7 +435,7 @@ c------------------------------------------------------------------------
 	real crpix1,crpix2,crpix3
 	character line*72,txtblc*32,txttrc*32
 	integer nkeys
-	parameter(nkeys=32)
+	parameter(nkeys=31)
 	character keyw(nkeys)*8
 c
 c  Externals.
@@ -444,9 +445,9 @@ c
 	data keyw/   'cdelt1  ','cdelt2  ','cdelt3  ','cdelt4  ',
      *	  'crpix4  ','crval1  ','crval2  ','crval3  ','crval4  ',
      *		     'ctype1  ','ctype2  ','ctype3  ','ctype4  ',
-     *    'date-obs','epoch   ','history ','instrume','lstart  ',
+     *    'obstime ','epoch   ','history ','instrume','lstart  ',
      *	  'lstep   ','ltype   ','lwidth  ','object  ',
-     *	  'observer','telescop','xshift  ','yshift  ','obsra   ',
+     *	  'observer','telescop','cellscal','obsra   ',
      *	  'obsdec  ','restfreq','vobs    ','pbfwhm  ','btype   '/
 c
 c  Fill in some parameters that will have changed between the input
