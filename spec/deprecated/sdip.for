@@ -16,6 +16,9 @@ c@ htime
 c	Time range of hot loads.
 c@ stime
 c	Time range of sky dips.
+c@ freq
+c	Observing frequency, in GHz. This value is used to determine
+c	sky temperatures based on meteorology data.
 c@ ant
 c	The antenna to process. Use either 3 or 4. The default is 3.
 c@ options
@@ -27,12 +30,14 @@ c	the "fit" in red. The default is to not plot the results.
 c--
 c  History:
 c    27apr01 rjs   Original version.
+c    08aug01 rjs   Added model sky calculations and met info.
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	character version*(*)
-	parameter(version='Sdip: version 27-Apr-01')
+	parameter(version='Sdip: version 08-Aug-01')
 	integer MAXT,MAXEQ
-	parameter(MAXT=10,MAXEQ=2000)
+	real Tcmb
+	parameter(MAXT=10,MAXEQ=2000,Tcmb=2.7)
 c
 	logical onoff,ht,st
 	character dsdlog*64,device*64,state*2,ch(8)*5,line*64
@@ -40,7 +45,9 @@ c
 	integer neq,nht,nst,nhts,nsts,i,j,ifail,ant,off,offsets(8)
 	real times(MAXEQ),y1(MAXEQ),y2(MAXEQ)
 	real Thot,Tant,Trec,Tcal,Tsky,xlo,xhi,ylo,yhi,el,dsdon,dsdoff
-	real ymin,ymax
+	real temp,press,humid,temp0,press0,humid0,fac,Tmod
+	integer nmet
+	real ymin,ymax,freq
 	real eqs(3,MAXEQ,4),bs(MAXEQ,4),temps(3)
 c
 c  Scratch arrays.
@@ -50,7 +57,7 @@ c
 c
 c  Externals.
 c
-	character itoaf*4
+	character itoaf*4,stcat*64,streal*64
 	integer pgBeg,tinNext
 c
 	data offsets/ -286,  155, -259,  437,  -38,  -35,  608, -324/
@@ -70,11 +77,17 @@ c
 	call mkeyt('stime',stime,2*MAXT,nst,'atime')
 	if(2*(nst/2).ne.nst)call bug('f','Odd no. of sky dip times')
 	if(nst.lt.2)call bug('f','Sky dip times must be given')
+	call keyr('freq',freq,0.0)
 	call getopt(onoff)
 	call keyfin
 c
 	off = 0
 	if(ant.eq.4)off = 4
+c
+	nmet = 0
+	temp = 0
+	press = 0
+	humid = 0
 c
 	neq = 0
 	nhts = 0
@@ -129,9 +142,18 @@ c
 		  eqs(1,neq,j) = 1
 		  eqs(2,neq,j) = -dsdon
 		  eqs(3,neq,j) = 1./sin(el)
-		  bs(neq,j) = -tant
+		  bs(neq,j) = - tant - tcmb
 		endif
 	      enddo
+	      if(ant.eq.3)call tinSkip(8)
+	      call tinSkip(2)
+	      call tinGetr(temp0,0.)
+	      call tinGetr(press0,0.)
+	      call tinGetr(humid0,0.)
+	      temp = temp + temp0 + 273.15
+	      press = press + 0.975*100*press0
+	      humid = humid + 0.01*humid0
+	      nmet = nmet + 1
 	    endif
 	  endif
 	enddo
@@ -139,6 +161,34 @@ c
 	call output('Hot load samples: '//itoaf(nhts))
 	call output('Sky dip samples:  '//itoaf(nsts))
 	if(nhts.eq.0.or.nsts.eq.0)call bug('f','Ill conditioned')
+c
+c  Check that we have some met data.
+c
+	if(nmet.le.0)call bug('f','No met data!')
+	if(nmet.gt.0)then
+	  temp = temp/nmet
+	  press = press/nmet
+	  humid = humid/nmet
+	  line = stcat('Mean met parameters: T =',
+     *	       stcat(' '//streal(temp-273.15,'(f10.1)'),' Celsius'))
+	  call output(line)
+	  line = stcat('                     P =',
+     *	       stcat(' '//streal(press/100/0.975,'(f10.1)'),' hPa'))
+	  call output(line)
+	  line = stcat('                     h =',
+     *		stcat(' '//streal(humid*100,'(f10.1)'),'%'))
+	  call output(line)
+	  if(freq.gt.0)then
+	    call opacGet(1,freq*1e9,0.5*PI,temp,press,humid,fac,Tmod)
+	    line = stcat('Model sky brightness: Tsky =',
+     *		stcat(' '//streal(Tmod,'(f10.1)'),' Kelvin'))
+	    call output(line)
+	    line = stcat('Model sky opacity:    tau  =',
+     *		stcat(' '//streal(-log(fac),'(f10.3)'),' nepers'))
+	    call output(line)
+	    call output(' ')
+	  endif
+	endif
 c
 c  Now solve for all the parameters.
 c
@@ -162,7 +212,7 @@ c
 	  else
 	    trec = temps(1)
 	    tcal = temps(2)
-	    tsky = temps(3)
+	    tsky = temps(3) + tcmb
 	  endif
 	  write(line,'(a,3f7.1)')ch(j+off),Trec,Tcal,Tsky
 	  call output(line)
@@ -173,7 +223,7 @@ c
 	      if(eqs(1,i,j).eq.0)then
 		y2(i) = 0
 	      else if(eqs(3,i,j).gt.0)then
-	        y2(i) = (trec+tant+tsky*eqs(3,i,j))
+	        y2(i) = (trec+tant+tcmb+(tsky-tcmb)*eqs(3,i,j))
 	      else
 	        y2(i) = (trec+thot)
 	      endif
