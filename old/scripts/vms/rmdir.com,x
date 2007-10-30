@@ -1,0 +1,24 @@
+$	verify = 'f$verify("NO")'
+$
+$! Command procedure to remove a directory tree.
+$
+$	p1 = f$parse(p1,"[].dir;1")
+$	root = f$parse(p1,,,"node") + f$parse(p1,,,"device") + -
+				      f$parse(p1,,,"directory")
+$	name = f$parse(p1,,,"name")
+$	dir = root - "]" + "." + name + "]"
+$
+$! Remove directory files.
+$
+$10:	file = f$search(dir+"*.dir;1")
+$	if file.eqs."" then goto 20
+$	rmdir 'file'
+$	goto 10
+$
+$! Remove ordinary files.
+$
+$20:	if f$search(dir+"*.*;*").nes."" then delete 'dir'*.*;*
+$	set protection=o:rwed 'p1'
+$	delete 'p1'
+$
+$	if verify then set verify

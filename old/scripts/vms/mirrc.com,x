@@ -1,0 +1,63 @@
+$! Local definitions.
+$
+$ define/nolog mirbin   ed:[mirth.bin]
+$ define/nolog mirlib   ed:[mirth.lib]
+$ define/nolog mirinc   ed:[mirth.inc]
+$ define/nolog mirpdoc  ed:[mirth.doc.prog]
+$ define/nolog mirsdoc  ed:[mirth.doc.subs]
+$ define/nolog mirdoc   ed:[mirth.doc]
+$ define/nolog mirnews  ed:[mirth.doc.news]
+$ define/nolog mirsrc   ed:[mirth.src]
+$ define/nolog mirupd   ed:[mirth.update]
+$ define/nolog mircat   ed:[mirth.cat]
+$
+$ define/nolog pglib    ed:[graphics.pgplot.lib]
+$ define/nolog grpshr   pglib:grpshr.exe
+$ define/nolog plt$font ed:[graphics.pgplot.fonts]grfont.dat
+$ define/nolog genplt   ed:[graphics.genplot]
+$ genplot == "$genplt:genplot"
+$
+$! Update procedures.
+$
+$ update == "@mirupd:update.com"
+$ oneoff == "@mirupd:oneoff.com"
+$ note	 == "@mirupd:note.com"
+$
+$! Odds and ends.
+$
+$ mirhelp == @mirbin:mirhelp
+$ doc     == "$mirbin:doc"
+$ detab   == "$mirbin:detab"
+$ trim    == "$mirbin:trim"
+$ ratty   == "$mirbin:ratty"
+$ flint   == "$mirbin:flint"
+$ rmdir   == "@mirbin:rmdir"
+$
+$! Menu programs.
+$
+$ miriad == "$mirbin:miriad"
+$ go     == "$mirbin:vmenu"
+$
+$! Miriad tasks
+$
+$ clean   == "$mirbin:clean"
+$ fits    == "$mirbin:fits"
+$ hatmap  =="$mirbin:hatmap"
+$ histo   == "$mirbin:histo"
+$ imsub   == "$mirbin:imsub"
+$ invert  == "$mirbin:invert"
+$ itemize == "$mirbin:itemize"
+$ linmos  == "$mirbin:linmos"
+$ mapgen  == "$mirbin:mapgen"
+$ maths   == "$mirbin:maths
+$ maxen   == "$mirbin:maxen"
+$ mplot   == "$mirbin:mplot"
+$ restore == "$mirbin:restore"
+$ tvall   == "$mirbin:tvall"
+$ tvdisp  == "$mirbin:tvdisp"
+$ tvinit  == "$mirbin:tvinit"
+$ views   == "$mirbin:views"
+$ uvlist  == "$mirbin:uvlist"
+$ uvhat   == "$mirbin:uvhat"
+$ uvpoint == "$mirbin:uvpoint"
+$ zeemap  == "$mirbin:zeemap"
