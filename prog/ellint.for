@@ -14,13 +14,13 @@ c	included.
 c
 c	The output consists of 6 columns. They are the
 c
-c	outer radius (arcsec) of the annulus
-c	number of pixels in the annulus
-c	the average (median) in the annulus
-c	the rms of the annulus
+c	outer radius (arcsec) of the annulus;
+c	number of pixels in the annulus;
+c	the average (median) in the annulus;
+c	the rms of the annulus;
 c	the sum in the annulus normalized by the volume of the primary beam
-c	   if there is one
-c	the cumulative sum for all annuli so far
+c	   (if there is one);
+c	the cumulative sum for all annuli so far.
 c
 c@ in
 c	Input image name. xyz images only. No default.
@@ -90,12 +90,13 @@ c			intermediate changes. History is uncertain.
 c    rjs   06mar97	Added options=natural, and some other changes.
 c    mchw  29apr97	Fix bug if neither median nor mode. Again.
 c    rjs   10jun97      Change pbtype to telescop
+c    dpr   02jan01      Allow radii with non-integral number steps
 c----------------------------------------------------------------------c
 	include 'mirconst.h'
 	include 'maxdim.h'
 	include 'mem.h'
         character*(*) label,version
-        parameter(version='version 1.0 10-Jun-97')
+        parameter(version='version 1.0 01-Jan-2001')
         double precision rts,value
         parameter(label='Integrate a Miriad image in elliptical annuli')
         integer maxnax,maxboxes,maxruns,naxis,axis,plane,maxring
@@ -209,11 +210,11 @@ c
 c
 c  Convert the inputs to more useful numbers, and defaults.
 c
-	if(natural)then
-	  rts = 1
-	else
-	  rts = 3600.*180./PI
-	endif
+        if(natural)then
+          rts = 1
+        else
+          rts = 3600.*180./PI
+        endif
 c
         do i=1,2
           if(cdelt(i).lt.0.) center(i) = -center(i)
@@ -261,13 +262,11 @@ c
               endif
 c
               r = sqrt((y*cospa-x*sinpa)**2+((y*sinpa+x*cospa)/cosi)**2)
-              if(r.ge.rmin .and. r.le.rmax .and. keep)then
+              if(r.ge.rmin .and. r.lt.rmax .and. keep)then
 c
-c  Make sure pixels on outer edge of ring go into current
-c  not next ring
+c  Pixels on outer edge of ring go into next ring
 c
-                ir = r/rstep + 1
-                if (mod(r,rstep).eq.0.0 .and. r.ne.0.0) ir = ir - 1
+                ir = (r-rmin)/rstep + 1
 c
                 pixe(ir) = pixe(ir) + 1.
                 flux(ir) = flux(ir) + buf(i)
@@ -303,9 +302,8 @@ c
 c
                 r =
      *            sqrt((y*cospa-x*sinpa)**2+((y*sinpa+x*cospa)/cosi)**2)
-                if(r.ge.rmin .and. r.le.rmax .and. keep)then
-                  ir = r/rstep + 1
-                  if (mod(r,rstep).eq.0.0 .and. r.ne.0.0) ir = ir - 1
+                if(r.ge.rmin .and. r.lt.rmax .and. keep)then
+                  ir = (r-rmin)/rstep + 1
 c
                   pixe(ir) = pixe(ir) + 1.
                   memr(ipm(ir)+nint(pixe(ir))-1) = buf(i)
@@ -329,7 +327,7 @@ c
           call logwrit(line(1:72))
 c
           do ir = irmin,irmax
-            r = ir*rstep
+            r = ir*rstep+rmin
             if(pixe(ir).ne.0.) then
               ave = flux(ir)/pixe(ir)
               var = flsq(ir)/pixe(ir)-ave*ave
@@ -362,9 +360,9 @@ c
 c   write out the results for mode
 c
 c
-	if(domode)then
+        if(domode)then
           call logwrit(' ')
-          if (domode) then
+          if (domode) then 
             write(line,'(a,a,a,a,a,a)') '   Radius(") ',
      *       '   Pixels   ', '  Mode    ', '      rms  ',
      *       ' Ann. Sum  ',' Cum. Sum '
@@ -376,7 +374,7 @@ c
           call logwrit(line(1:72))
 c
           do ir = irmin,irmax
-            r = ir*rstep
+            r = ir*rstep+rmin
             if(pixe(ir).ne.0.) then
               ave = flux(ir)/pixe(ir)
               var = flsq(ir)/pixe(ir)-ave*ave
@@ -404,7 +402,7 @@ c
               call memfree (ipm(ir), nint(pixe(ir)), 'r')
             end do
           end if
-	endif
+        endif
 c
 c  End our mode addition.
 c
@@ -452,14 +450,14 @@ c Mode -- Find the mode of an array of data.
 c vjm, wmw
 c miscellaneous
 c
-	subroutine mode(x,n,xmode)
+        subroutine mode(x,n,xmode)
 c
-	implicit none
-	integer n
+        implicit none
+        integer n
         real    x(n)
-	integer MAXBINS
-	parameter(MAXBINS=100)
-
+        integer MAXBINS
+        parameter(MAXBINS=100)
+c
 c
 c  Determine the mode (distribution peak) of an array of real numbers.
 c  On output, the input data array is sorted.
@@ -473,65 +471,65 @@ c  Output:
 c    xmode	The mode of the data.
 c
 c------------------------------------------------------------------------
-	integer i,j,ilo,ihi,iter,maxcount
-	real sum,sum2,av,rms,xi,xmed,xmode
-	real xlo,xhi,dx,xnext,xcount(MAXBINS)
-
+        integer i,j,ilo,ihi,iter,maxcount
+        real sum,sum2,av,rms,xi,xmed,xmode
+        real xlo,xhi,dx,xnext,xcount(MAXBINS)
+c
 c     sort data and evaluate the median
-
+c
         call sortr(x,n)
-	i = n/2
-	if (2*i.eq.n) then
-	  xmed = 0.5*(x(i) + x(i+1))
-	else
-	  xmed = x(i+1)
-	endif
-
+        i = n/2
+        if (2*i.eq.n) then
+          xmed = 0.5*(x(i) + x(i+1))
+        else
+          xmed = x(i+1)
+        endif
+c
 c       compute stats; another version of this program might
 c       drop the upper & lower ?rms to reduce outlier effects
 c       note that this works out the rms of the array of pixels
 c       which has already had the outer deciles deleted
-
+c
         iter=0
         sum=0.0
         sum2=0.0
         ilo=n/10
         ihi=9*n/10
-	do i=ilo,ihi
-	   xi=x(i)
-	   sum=sum+xi
-	   sum2=sum2+xi*xi
+        do i=ilo,ihi
+           xi=x(i)
+           sum=sum+xi
+           sum2=sum2+xi*xi
            iter=iter+1
-	enddo
+        enddo
         av = sum/(real(iter))
         rms=sqrt(sum2/iter - sum*sum/iter**2)
-
-c       divide inner 8 deciles of data into MAXBINS bins 
-
-        dx=(x(n*9/10)-x(n/10))/MAXBINS 
+c
+c       divide inner 8 deciles of data into MAXBINS bins
+c
+        dx=(x(n*9/10)-x(n/10))/MAXBINS
         xlo=x(n/10)
         xhi=x(n*9/10)
 c        write(6,*)'dx,xlo,xhi,ilo,ihi',dx,xlo,xhi,ilo,ihi
-	xnext=xlo+dx
+        xnext=xlo+dx
         maxcount=0
         xcount(1)=0
         j=1
-
+c
 c       find which bin contains the most data points: call the
 c       middle of this bin the mode
-
-	do i=ilo,ihi
-	   if (x(i).lt.xnext) then
+c
+        do i=ilo,ihi
+           if (x(i).lt.xnext) then
               xcount(j)=xcount(j)+1
               if (xcount(j).gt.maxcount) then
                  maxcount=xcount(j)
                  xmode=xnext-dx/2
               endif
-	   else
+           else
               j=j+1
-	      xnext=xnext+dx
-	      xcount(j)=0
-	   endif
-	enddo
-
-	end
+              xnext=xnext+dx
+              xcount(j)=0
+           endif
+        enddo
+c
+        end
