@@ -37,7 +37,7 @@ c
 c
 c  Externals.
 c
-	real pb1der,pb1get
+	real pbder,pbget
 	integer pgbeg
 c
 c  Get input parameters.
@@ -63,8 +63,8 @@ c  the max value of X to plot.
 c
 	xmax = 0
 	do j=1,ntel
-	  call pb1Init(pbObj(j),telescop(j),coObj)
-	  call pb1Info(pbObj(j),pbfwhm,cutoff,maxrad)
+	  call pbInit(pbObj(j),telescop(j),coObj)
+	  call pbInfo(pbObj(j),pbfwhm,cutoff,maxrad)
 	  call output('Primary beam: '//telescop(j))
 	  write(line,10)180*60/pi*pbfwhm
   10	  format('  FWHM (arcmin):',f7.2)
@@ -87,12 +87,12 @@ c
 	do j=1,ntel
 	  do i=1,npts
 	    if(doder)then
-	      y(i,j) = pb1Der(pbObj(j),x(i),0.)
+	      y(i,j) = pbDer(pbObj(j),x(i),0.)
 	    else
-	      y(i,j) = pb1Get(pbObj(j),x(i),0.)
+	      y(i,j) = pbGet(pbObj(j),x(i),0.)
 	    endif
 	  enddo
-	  call pb1Fin(pbObj(j))
+	  call pbFin(pbObj(j))
 	enddo
 	call coFin(coObj)
 c
