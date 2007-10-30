@@ -266,6 +266,7 @@ c		   to image type "pixel" instead of "grey"
 c    nebk 14apr95  Make sure old lookup table not lost when stepping to
 c		   new subplot
 c    nebk 11aug95  Add arcmin labtyp
+c    rjs  30aug95  Add a comma to appease g77
 c To do:
 c
 c-----------------------------------------------------------------------
@@ -1095,7 +1096,7 @@ c
      +            wstr(1)(1:wl(1)), wstr(2)(1:wl(2)),
      +            wwstr(1)(1:wwl(1)), wwstr(2)(1:wwl(2)),
      +            plstr(1:ipl)
-8               format ('star ', a, 1x, a, i4, ' no ' a, 1x,
+8               format ('star ', a, 1x, a, i4, ' no ', a, 1x,
      +                  a, 1x, a, 1x, a, 1x, a)
                 call txtwrite (lcurs, line, len1(line), iostat)
               end if
