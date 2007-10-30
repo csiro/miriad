@@ -5,7 +5,7 @@
 alias dosubs    mirnewer -x junk			-e mircadd $MIRLIB/Last_update
 alias doprog    mirnewer -x junk 			-e mirclnk $MIRLIB/Last_update
 alias doscripts mirnewer -x junk -x mirupdate -x mirclnk -e mirclnk $MIRLIB/Last_update
-alias dotools   mirnewer -x junk -x newer 		-e mirclnk $MIRLIB/Last_update
+alias dotools   mirnewer -x junk -x mirnewer 		-e mirclnk $MIRLIB/Last_update
 alias dodoc     mirnewer -x junk 			-e mirclnk $MIRLIB/Last_update
 
 # Do the real work.
