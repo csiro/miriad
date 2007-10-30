@@ -55,6 +55,11 @@ c	separated by commas. Minimum match is supported. Possible values
 c	are:
 c	  srcbreak  Generate break points every time there is a change
 c	            in source.
+c	  undo      Apply the negative of the XY phase correction. There
+c	            should be no sensible reason to ever use this option.
+c	  reweight  Reweight the data (in the lag domain) to minimise the
+c	            so-called Gibbs phenomena and to help localise
+c	            interference.
 c--
 c  History:
 c    15oct93 rjs  Original version.
@@ -67,7 +72,7 @@ c     1sep94 rjs  w-axis changes.
 c    21sep94 rjs  Vote on whether to use -1 or +1 for the default
 c		  correction.
 c     7sep94 rjs  Correct bug in deteriming time solution.
-c    19jan95 rjs  Copy pulsar bin variable across.
+c    22mar95 rjs  Added the undo (madness) and reweight options.
 c
 c  Bugs:
 c    * Probably a more sophiticated fitting process (rather than just
@@ -76,19 +81,22 @@ c------------------------------------------------------------------------
 	integer PolXX,PolYY,PolXY,PolYX
 	parameter(PolXX=-5,PolYY=-6,PolXY=-7,PolYX=-8)
 	include 'maxdim.h'
-	integer MAXBREAK,ATANT,ATIF
+	integer MAXBREAK,ATANT,ATIF,NWTS
 	character version*(*)
-	parameter(MAXBREAK=128,ATANT=6,ATIF=2)
-	parameter(version='AtXY: version 1.0 19-Jan-95')
+	parameter(MAXBREAK=128,ATANT=6,ATIF=2,NWTS=64)
+	parameter(version='AtXY: version 1.0 22-Mar-95')
 c
 	integer lVis,lOut,vCopy,vFreq
 	character vis*64,out*64,txt*64,dtype*1
 	integer ants(MAXANT),nbreak,nants,npol,nschan(ATIF),nspect
 	integer dside(ATIF),uside(ATIF),nside
 	integer ngood,nbad,i,length,nchan,i1,i2,pol
+	integer nrewt,nnowt,nsus
+	real Ratio
+	character line*64
 	logical antmask(ATANT),updated,flags(MAXCHAN),doxy1,doxy2
-	logical dovar,doauto
-	real interval,gap
+	logical dovar,doauto,undo,dowt
+	real interval,gap,lags(NWTS),wts(NWTS)
 	double precision break(MAXBREAK),freq(ATIF)
 	double precision preamble(5)
 	complex data(MAXCHAN)
@@ -107,7 +115,7 @@ c
         call mkeyt('break',break,MAXBREAK,nbreak,'time')
 	call mkeyi('refant',ants,MAXANT,nants)
 	call mkeyi('sideband',uside,ATIF,nside)
-	call GetOpt(doauto)
+	call GetOpt(doauto,undo,dowt)
 	call keyfin
 c
 c  Check the inputs.
@@ -136,6 +144,10 @@ c
      *	    call bug('f','Illegal antenna number')
 	  antmask(ants(i)) = .true.
 	enddo
+c
+c  Determine the reweighting coefficients, if necessary.
+c
+	if(dowt)call CalcWts(wts,NWTS,0.04)
 c
 c  Get ready to copy the data.
 c
@@ -186,6 +198,10 @@ c
 c
 	ngood = 0
 	nbad  = 0
+	nrewt = 0
+	nnowt = 0
+	nsus  = 0
+	ratio = 0
 	dowhile(nchan.gt.0)
 	  call BasAnt(preamble(5),i1,i2)
 	  doxy1 = i1.gt.0.and.i1.le.ATANT
@@ -194,18 +210,26 @@ c
 	  if(doxy2)doxy2 = antmask(i2)
 	  call uvrdvri(lVis,'pol',pol,PolXX)
 c
+	  if(dowt)then
+	    call FreqUpd(lVis,vFreq,freq,dside,nschan,nspect,ATIF)
+	    call Reweight(data,flags,nchan,nschan,nspect,wts,lags,NWTS,
+     *	      nrewt,nnowt,nsus,ratio)
+	  endif
+c
 	  if(pol.eq.PolXX.or.(pol.eq.PolYY.and..not.(doxy1.or.doxy2)))
      *								   then
 	    ngood = ngood + nchan
 	  else
-	    if(doxy1.or.doxy2)
+	    if((doxy1.or.doxy2).and..not.dowt)
      *	      call FreqUpd(lVis,vFreq,freq,dside,nschan,nspect,ATIF)
 	    if(nside.ge.nspect)then
 	      call XYCorr(data,flags,nchan,freq,uside,nschan,nspect,
-     *		  dovar,preamble(4),i1,i2,doxy1,doxy2,pol,ngood,nbad)
+     *		  dovar,undo,preamble(4),i1,i2,doxy1,doxy2,pol,
+     *		  ngood,nbad)
 	    else
 	      call XYCorr(data,flags,nchan,freq,dside,nschan,nspect,
-     *		  dovar,preamble(4),i1,i2,doxy1,doxy2,pol,ngood,nbad)
+     *		  dovar,undo,preamble(4),i1,i2,doxy1,doxy2,pol,
+     *		  ngood,nbad)
 	    endif
 	  endif
 c
@@ -219,7 +243,20 @@ c
 	call output('Number of correlations XY phase corrected: '//
      *						      itoaf(ngood))
 	if(nbad.gt.0)call bug('w',
-     *	  'Correlations flagged for lack of xy phase: '//itoaf(nbad))	
+     *	  'Correlations flagged for lack of xy phase: '//itoaf(nbad))
+	if(nrewt.gt.0)then
+	  call output('Number of spectra reweighted: '//itoaf(nrewt))
+	  ratio = sqrt(ratio/nrewt)
+	  write(line,'(a,1pe7.1)')'RMS Ratio of Lag(32)/Lag(0): ',ratio
+	  call output(line)
+	  if(ratio.gt.1e-4)
+     *	    call bug('w','This lag ratio looks bad -- seek advice')
+	endif
+	if(nsus.gt.0)call bug('w',
+     *	  'Number of suspect spectra flagged: '//itoaf(nsus))
+	if(nnowt.gt.0)call bug('w',
+     *	  'Spectra not reweighted (incorrect no. channels): '//
+     *	  itoaf(nnowt))
 c
 c  Close up and die.
 c
@@ -228,25 +265,71 @@ c
 c
 	end
 c************************************************************************
-	subroutine GetOpt(doauto)
+	subroutine Reweight(data,flags,nchan,nschan,nspect,
+     *	  wts,lags,nwts,nrewt,nnowt,nsus,ratio)
 c
 	implicit none
-	logical doauto
+	integer nchan,nspect,nschan(nspect),nwts,nrewt,nnowt,nsus
+	complex data(nchan)
+	real wts(nwts),lags(nwts),ratio
+	logical flags(nchan)
+c
+c  Fourier transform the data, multiply the data by the weight,
+c  and Fourier transform back.
+c------------------------------------------------------------------------
+	integer i,j,n,nfreq
+c
+	nfreq = nwts/2 + 1
+c
+	n = 0
+	do j=1,nspect
+	  if(nschan(j).eq.nfreq)then
+	    call fftcr(data(n+1),lags,-1,nwts)
+	    if(abs(lags(1)).le.1000*abs(lags(nfreq)))then
+	      nsus = nsus + 1
+	      do i=1,nfreq
+		flags(i+n) = .false.
+	      enddo
+	    else
+	      ratio = ratio + (lags(nfreq)/lags(1))**2
+	      do i=1,nwts
+	        lags(i) = lags(i)*wts(i)/real(nwts)
+	      enddo
+	      call fftrc(lags,data(n+1),1,nwts)
+	      nrewt = nrewt + 1
+	    endif
+	  else
+	    nnowt = nnowt + 1
+	  endif
+	  n = n + nschan(j)
+	enddo
+c
+	end
+c************************************************************************
+	subroutine GetOpt(doauto,undo,dowt)
+c
+	implicit none
+	logical doauto,undo,dowt
 c
 c  Get extra processing options.
 c
 c  Output:
 c    doauto	True if srcbreak has been given.
+c    undo	True if we are to apply the negative of the phase
+c		correction.
+c    dowt	True if we are to reweight the data.
 c------------------------------------------------------------------------
 	integer NOPTS
-	parameter(NOPTS=1)
+	parameter(NOPTS=3)
 	logical present(NOPTS)
 	character opts(NOPTS)*8
-	data opts/'srcbreak'/
+	data opts/'srcbreak','undo    ','reweight'/
 c
 	call options('options',opts,present,NOPTS)
 c
 	doauto = present(1)
+	undo   = present(2)
+	dowt   = present(3)
 	end
 c************************************************************************
 	subroutine InitCpy(lVis,vCopy)
@@ -258,7 +341,7 @@ c  Get the handle of the variables to be copied.
 c
 c------------------------------------------------------------------------
 	integer NCOPY
-	parameter(NCOPY=72)
+	parameter(NCOPY=71)
 	integer i
 	character copy(NCOPY)*8
         data copy/    'airtemp ','antdiam ','antpos  ','atten   ',
@@ -275,7 +358,7 @@ c------------------------------------------------------------------------
      *     'veldop  ','veltype ','version ','vsource ','winddir ',
      *     'windmph ','xyphase ','delay0  ','npol    ','pol     ',
      *	   'nspect  ','restfreq','ischan  ','nschan  ','sfreq   ',
-     *	   'sdf     ','systemp ','bin     '/
+     *	   'sdf     ','systemp '/
 c
 c  Determine the things to be checked and the things to be copied.
 c
@@ -350,7 +433,7 @@ c
 	end
 c************************************************************************
 	subroutine XYCorr(data,flags,nchan,freq,side,
-     *		  nschan,nspect,domir,time,i1,i2,
+     *		  nschan,nspect,domir,undo,time,i1,i2,
      *		  doxy1,doxy2,pol,ngood,nbad)
 c
 	implicit none
@@ -358,7 +441,7 @@ c
 	integer side(nspect)
 	double precision freq(nspect),time
 	complex data(nchan)
-	logical flags(nchan),doxy1,doxy2,domir
+	logical flags(nchan),doxy1,doxy2,domir,undo
 c
 c  Correct for the XY phase.
 c
@@ -412,6 +495,7 @@ c
 	  else if(pol.eq.PolYX)then
 	    fac = 1/xy1
 	  endif
+	  if(undo) fac = conjg(fac)
 c
 c  Correct the data.
 c
@@ -1081,6 +1165,220 @@ c
 	indx = 1
 	do i=2,nfreq
 	  if(abs(f-freq(i)).lt.abs(f-freq(indx)))indx = i
+	enddo
+c
+	end
+c************************************************************************
+	subroutine CalcWts(wts,nwts,fac)
+c
+	implicit none
+	integer nwts
+	real wts(nwts),fac
+c
+c  Determine the best re-weighting scheme to apply. This involves
+c  solving a minimax problem to determine the optimum filter coefficients.
+c  A simple Remez exchange algorithm is used.
+c------------------------------------------------------------------------
+	integer MAXCOEFF
+	parameter(MAXCOEFF=31)
+	integer i,ncoeff,ngrid
+	double precision coeff(MAXCOEFF+1),temp,scale
+	integer indx(MAXCOEFF+1),zero(MAXCOEFF+2)
+	integer pEval,pA,pGrid
+	logical convrg
+	character line*64
+	include 'maxdim.h'
+	include 'mem.h'
+c
+c  Allocate memory for the cosine lookup table, and initialise it.
+c
+	ncoeff = nWts/2 - 1
+	ngrid = 20*ncoeff
+	if(ncoeff.gt.MAXCOEFF)
+     *	  call bug('f','Not enough buffer space, in Calcwt')
+	call memAlloc(pEval,ngrid,'d')
+	call memAlloc(pGrid,ncoeff*ngrid,'d')
+	call memAlloc(pA,(ncoeff+1)*(ncoeff+1),'d')
+c
+c  Initialise the cosine table.
+c
+	call IniTab(memD(pGrid),ngrid,ncoeff,fac)
+c
+c  Set initial estimates of the ripple locations -- just equispaced.
+c
+	do i=1,ncoeff+1
+	  indx(i) = ((ngrid-1)*(i-1))/ncoeff + 1
+	enddo
+c
+c  Invoke the Remez exchange algorithm to solve the filter design
+c  problem.
+c
+	convrg = .false.
+	dowhile(.not.convrg)
+	  call exchange(ncoeff,coeff,indx,memD(pGrid),ngrid,zero,
+     *	    memD(pEval),memD(pA),convrg)
+	enddo
+c
+c  Report on the spectral sidelobe level.
+c
+	write(line,10)'Maximum spectral sidelobe after reweighting is',
+     *		      real(abs(coeff(ncoeff+1)))
+  10	format(a,1pe8.1)
+	call output(line)
+c
+c  Determine normalisation coefficient.
+c
+	temp = 1
+	do i=1,ncoeff
+	  temp = temp - coeff(i)
+	enddo
+c
+c  Copy the coefficients to the output, putting them in the strange
+c  order, and normalising.
+c
+	wts(1) = 1
+	wts(ncoeff+2) = 1
+	scale = 0.5d0/temp
+c# ivdep
+	do i=1,ncoeff
+	  temp = scale*coeff(i)/(1.0d0-i/dble(ncoeff+1))
+	  wts(i+1)      = temp
+	  wts(nwts-i+1) = temp
+	enddo
+c
+c  Free the memory now.
+c
+	call memFree(pEval,ngrid,'d')
+	call memFree(pGrid,ncoeff*ngrid,'d')
+	call memFree(pA,(ncoeff+1)*(ncoeff+1),'d')
+c
+	end
+c************************************************************************
+	subroutine exchange(n,coeff,indx,grid,m,zero,eval,a,convrg)
+c
+	implicit none
+	integer m,n,indx(n+1),zero(n+2)
+	double precision coeff(n+1),grid(m,n),eval(m),a(n+1,n+1)
+	logical convrg
+c
+c  Perform a Remez exchange.
+c------------------------------------------------------------------------
+	integer i,j,itemp,themaxi,themaxj,ifail
+	double precision themax,maxpk,s,temp
+c
+c  Set up the matrix to determine the coefficients.
+c
+	s = 1
+	do j=1,n+1
+	  itemp = indx(j)
+	  do i=1,n
+	    a(i,j) = grid(itemp,i)
+	  enddo
+	  a(n+1,j) = s
+	  s = -s
+	  coeff(j) = -1
+	enddo
+c
+c  Solve for the coefficients.
+c
+	call dgefa(a,n+1,n+1,eval,ifail)
+	if(ifail.ne.0)call bug('f','Matrix inversion failed')
+	call dgesl(a,n+1,n+1,eval,coeff,1)
+c
+c  Evaluate the function at out grid.
+c
+	do i=1,m
+	  eval(i) = 1
+	enddo
+c
+	do j=1,n
+	  do i=1,m
+	    eval(i) = eval(i) + coeff(j)*grid(i,j)
+	  enddo
+	enddo
+c
+c  Find the n+1 zeros or end-points.
+c
+	zero(1) = 1
+	do j=1,n
+	  do i=indx(j),indx(j+1)-1
+	    if(eval(i).eq.0.or.eval(i)*eval(i+1).lt.0)zero(j+1) = i
+	  enddo
+	enddo
+	zero(n+2) = m
+c
+c  Locate the trial set of points.
+c
+	convrg = .true.
+	themax = 0
+	themaxi = 1
+	themaxj = 1
+	maxpk = 0
+c
+	do j=1,n+1
+	  temp = eval(indx(j))
+	  itemp = indx(j)
+	  do i=zero(j),zero(j+1)
+	    if(temp*eval(i).gt.temp*eval(itemp))then
+	      itemp = i
+	    else if(abs(eval(i)).gt.themax)then
+	      themax = abs(eval(i))
+	      themaxi = i
+	      themaxj = j
+	    endif
+	  enddo
+	  convrg = convrg.and.indx(j).eq.itemp
+	  indx(j) = itemp
+	  maxpk = max(maxpk,abs(eval(itemp)))
+	enddo
+c
+c  Do we have the right set, or do we need to exchange.
+c
+	if(themax.gt.maxpk)then
+	  convrg = .false.
+	  if(themaxi.gt.indx(themaxj))then
+	    if(themaxj.eq.n+1)then
+	      do j=1,n
+		indx(j) = indx(j+1)
+	      enddo
+	      indx(n) = themaxi
+	    else
+	      indx(themaxj+1) = themaxi
+	    endif
+	  else if(themaxi.lt.indx(themaxj))then
+	    if(themaxj.eq.1)then
+	      do j=n+1,2,-1
+	        indx(j) = indx(j-1)
+	      enddo
+	      indx(1) = themaxi
+	    else
+	      indx(themaxj-1) = themaxi
+	    endif
+	  endif
+	endif
+c
+	end
+c************************************************************************
+	subroutine IniTab(Grid,ngrid,ncoeff,fac)
+c
+	implicit none
+	integer ncoeff,ngrid
+	double precision Grid(ngrid,ncoeff)
+	real fac
+c
+c  Initialise the cosine lookup table.
+c------------------------------------------------------------------------
+	include 'mirconst.h'
+	double precision theta,t0,dt
+	integer i,j
+c
+	t0 = 2*fac*DPI
+	dt = (DPI-t0)/(ngrid-1)
+	do i=1,ngrid
+	  theta = t0 + (i-1)*dt
+	  do j=1,ncoeff
+	    grid(i,j) = cos(j*theta) - 1
+	  enddo
 	enddo
 c
 	end
