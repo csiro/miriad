@@ -60,7 +60,7 @@ c
 c
 c  Externals.
 c
-	real sinc
+	double precision dsinc
 c
 c  Convert to coordinates at the delay centre.
 c
@@ -78,14 +78,14 @@ c
 	  theta = 0.256/freq0*(ll*uu+mm*vv+(nn-1)*ww)
 	  bsmear = 0
 	  do i=1,nwts
-	    bsmear = bsmear + wts(i)*( sinc(0.5*(theta+i-1)) +
-     *				       sinc(0.5*(theta-i+1)) )
+	    bsmear = bsmear + wts(i)*( dsinc(0.5d0*(theta+i-1)) +
+     *				       dsinc(0.5d0*(theta-i+1)) )
 	  enddo
 c
 c  Time smearing factor. This assumes an east-west array.
 c
 	  theta = (-ll*vv/sind+mm*uu*sind-(nn-1)*uu*cosd)*omegae*inttime
-	  tsmear = sinc(theta)
+	  tsmear = dsinc(dble(theta))
 c
 c  Overall factor.
 c
@@ -110,7 +110,7 @@ c
 c  Externals.
 c
 	integer len1
-	real sinc
+	double precision dsinc
 c
 c  Determine the reference frequency.
 c
@@ -160,7 +160,7 @@ c  Normalise the lag weights.
 c
 	dtemp = 0
 	do i=1,nwts
-	  dtemp = dtemp + wts(i)*2*sinc(0.5*(i-1))
+	  dtemp = dtemp + wts(i)*2*dsinc(0.5d0*(i-1))
 	enddo
 	do i=1,nwts
 	  wts(i) = wts(i) / dtemp
