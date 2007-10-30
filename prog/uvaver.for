@@ -86,6 +86,7 @@ c    rjs  24oct94 Weight data (in time averaging) according to integration
 c		  time.
 c    rjs  19sep95 Handle data that is not quite in time order.
 c    rjs  21sep95 Really do it this time.
+c    rjs  14dec95 Increase buffer in averaging (MAXAVER).
 c
 c  Bugs:
 c    * The way of determining whether a source has changed is imperfect.
