@@ -57,6 +57,7 @@ c		  and arbitrary dimensionality.
 c    rjs  11oct93 Increase max file name length.
 c    rjs   8nov94 Minor header beautification.
 c    rjs  02dec96 Better header.
+c    rjs  02jul97 cellscal change.
 c------------------------------------------------------------------------
 	include 'maxnax.h'
 	include 'maxdim.h'
@@ -394,7 +395,7 @@ c  Create the output header for the transformed file.
 c
 c------------------------------------------------------------------------
 	integer nkeys
-	parameter(nkeys=21)
+	parameter(nkeys=22)
 c
 	integer i
 	double precision cdelt
@@ -407,6 +408,7 @@ c
 c
 	data keyw/   'bunit   ','obstime ','epoch   ','history ',
      *    'object  ','telescop','vobs    ','restfreq','btype   ',
+     *	  'cellscal',
      *	  'cdelt3  ','crval3  ','crpix3  ','ctype3  ',
      *	  'cdelt4  ','crval4  ','crpix4  ','ctype4  ',
      *	  'cdelt5  ','crval5  ','crpix5  ','ctype5  '/
