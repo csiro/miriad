@@ -98,6 +98,7 @@ c	          the operation to proceed by first growing the image into
 c	          a cube through replication the plane. Normally (i.e. 
 c	          without this option), MATHS insists that the inputs must
 c	          be identical in size.
+c	  unmask  Treat all pixels as if they were valid.
 c	          
 c--
 c
@@ -132,6 +133,7 @@ c   rjs  23jul97   Added pbtype.
 c   rjs  12mar98   Allow for more complex expressions.
 c   rjs  30nov98   Added options=grow
 c   rjs  02dec98   Increased BUFLEN again.
+c   rjs  17oct00   Added options=unmask
 c------------------------------------------------------------------------
 	INCLUDE 'maths.h'
 	INTEGER ERROR,VECTOR,SCALAR,CONSTANT
@@ -139,7 +141,7 @@ c------------------------------------------------------------------------
 	INTEGER BUFLEN,MAXBOX
         PARAMETER(BufLen=256,MaxBox=2048)
 	CHARACTER VERSION*(*)
-	PARAMETER (VERSION='Maths: version 1.0 30-Nov-98')
+	PARAMETER (VERSION='Maths: version 1.0 17-Oct-00')
 c
 	CHARACTER expr*256,mask*256,out*64,template*64
 	INTEGER   rbuflen,pnt
@@ -147,7 +149,7 @@ c
 	INTEGER   maskbuf(BUFLEN),expbuf(BUFLEN),boxes(MAXBOX)
 	REAL      maskrbuf(BUFLEN),exprbuf(BUFLEN)
 	INTEGER   nMRB,nERB,nBuf,xblc,xtrc,yblc,ytrc,npixels
-	LOGICAL   doMask,doExp,doRuns
+	LOGICAL   doMask,doExp,doRuns,unmask
 	INTEGER   scratch(3,MAXRUNS),nout(MAXNAX)
 	REAL	  RBUF(MAXBUF)
 	COMMON	  RBUF
@@ -163,7 +165,7 @@ c
 c  Get the input parameters.
 c
 	call keyini
-	call getopt(grow)
+	call getopt(grow,unmask)
 	call keya('exp',Expr,' ')
 	call keya('mask',Mask,' ')
 	call keya('out',Out,' ')
@@ -243,11 +245,13 @@ c
 c  If there are input files, "and" all there flagging masks into
 c  regions where the computation is to take place.
 c
-	do i=1,nfiles
-	  if(naxes(i).lt.naxes(ref).and.hdprsnt(lIn(i),'mask'))
-     *	    call bug('f','Cannot handle masks with options=grow')
-	  call BoxMask(lIn(i),boxes,maxBox)
-	enddo
+	if(.not.unmask)then
+	  do i=1,nfiles
+	    if(naxes(i).lt.naxes(ref).and.hdprsnt(lIn(i),'mask'))
+     *	      call bug('f','Cannot handle masks with options=grow')
+	    call BoxMask(lIn(i),boxes,maxBox)
+	  enddo
+	endif
 	doRuns = .not.BoxRect(boxes)
 c
 	do i=1,naxis
@@ -710,18 +714,19 @@ c
 	endif
 	end
 c************************************************************************
-	subroutine getopt(grow)
+	subroutine getopt(grow,unmask)
 c
-	logical grow
+	logical grow,unmask
 c
 c------------------------------------------------------------------------
 	integer NOPTS
-	parameter(NOPTS=1)
+	parameter(NOPTS=2)
 	character opts(NOPTS)*8
 	logical present(NOPTS)
-	data opts/'grow    '/
+	data opts/'grow    ','unmask  '/
 c
 	call options('options',opts,present,NOPTS)
 c
 	grow = present(1)
+	unmask = present(2)
 	end
