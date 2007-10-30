@@ -58,6 +58,8 @@ c	            with 1 indicating a transparent atmosphere).
 c	  airtemp   Measured air temperature, in celsius.
 c	  pressmb   Measured air pressure, in millibars.
 c	  relhumid  Measured relative humidity, as a percent.
+c         antel     Antenna elevation, in degrees.
+c	  airmass   Airmass - cosec(antel)
 c@ mdata
 c	Input text file giving the ATCA meteorology data. No default.
 c@ mode
@@ -67,12 +69,14 @@ c	perform opacity correciton only.
 c--
 c  History:
 c    02feb01 rjs  Original version.
+c    07feb01 rjs  Write out elevation variable.
 c------------------------------------------------------------------------
 	integer MAXPOL
 	parameter(MAXPOL=2)
 	include 'maxdim.h'
+	include 'mirconst.h'
 	character version*(*)
-	parameter(version='opcal: version 1.0 02-Feb-01')
+	parameter(version='opcal: version 1.0 07-Feb-01')
 	integer PolXX,PolYY,PolXY,PolYX
 	parameter(PolXX=-5,PolYY=-6,PolXY=-7,PolYX=-8)
 c
@@ -87,7 +91,7 @@ c
 	double precision preamble(5),ptime
 	double precision sfreq(MAXWIN),sdf(MAXWIN)
 	double precision lst,lat,az,el,ra,dec,dtemp
-	real freq0(MAXWIN),t0,p0,h0,fac(MAXWIN),jyperk,Tb(MAXWIN)
+	real freq0(MAXWIN),t0,p0,h0,fac(MAXWIN),Tb(MAXWIN)
 	real dfac(MAXPOL,MAXWIN,MAXANT),doff(MAXPOL,MAXWIN,MAXANT)
 c
 	integer NMODES
@@ -215,12 +219,13 @@ c
 	    call azel(ra,dec,lst,lat,az,el)
 	    call metGet(ptime,t0,p0,h0)
 	    call opacGet(nif,freq0,real(el),t0,p0,h0,fac,Tb)
-	    call uvrdvrr(lVis,'jyperk',jyperk,0.0)
 	    call uvputvrr(lOut,'tsky',Tb,nif)
 	    call uvputvrr(lOut,'trans',fac,nif)
 	    call uvputvrr(lOut,'airtemp',t0-273.15,1)
 	    call uvputvrr(lOut,'pressmb',p0/100.0,1)
 	    call uvputvrr(lOut,'relhumid',100.0*h0,1)
+	    call uvputvrd(lOut,'antel',180.0d0/DPI*el,1)
+	    call uvputvrr(lOut,'airmass',1./sin(real(el)),1)
 c
 	    if(.not.dotrans)then
 	      do i=1,nif
