@@ -577,6 +577,8 @@ c    nebk 04sep96  Remove spurious call to pgsci in subroutine DROVER
 c    nebk 24sep96  Remove another (!) spurious call to pgsci in DROVER
 c    nebk 31oct96  FIx problem with an incorrect krng sometimes being
 c                  fed to NAXLABCG
+c    nebk 23jan97  Was getting vector scales wrong if first subplot
+c                  all blank.
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -622,7 +624,7 @@ c
       logical do3val, do3pix, dofull, gaps, eqscale, doblc, doblg,
      +  dobeam, beaml, beamb, relax, rot90, signs, mirror, dowedge, 
      +  doerase, doepoch, bdone, doblb, doblm, dofid, dosing, nofirst,
-     +  grid, dotr, dodist, conlab, doabut
+     +  grid, dotr, dodist, conlab, doabut, getvsc
 c
       data blankc, blankv, blankb /-99999999.0, -99999999.0, 
      +                             -99999999.0/
@@ -637,8 +639,9 @@ c
       data dmm /2*0.0/
       data coltab /maxchan*0/
       data lwid /maxconp3*1/
+      data getvsc /.true./
 c-----------------------------------------------------------------------
-      call output ('CgDisp: version 31-Oct-96')
+      call output ('CgDisp: version 23-Jan-96')
       call output (' ')
 c
 c Get user inputs
@@ -950,9 +953,9 @@ c
            call pgslw (lwid(ncon+2))
            call pgsci (veccol)
 c
-           call drawvec (lv, j, tr, vecfac, vecinc, win(1), win(2),
+           call drawvec (lv, tr, vecfac, vecinc, win(1), win(2),
      +        memr(ipim), memi(ipnim), memr(ipim2), memi(ipnim2),
-     +        scale, signs, rot90, vfac, nx, ny)
+     +        scale, signs, rot90, nx, ny, getvsc, vfac)
          end if
 c
 c Draw box plots
@@ -1770,8 +1773,9 @@ c
       end
 c
 c
-      subroutine drawvec (lv, iplot, tr, vecfac, vecinc, npixx, npixy,
-     +    amp, namp, pa, npa, scale, signs, rot90, vfac, nx, ny)
+      subroutine drawvec (lv, tr, vecfac, vecinc, npixx, npixy,
+     +    amp, namp, pa, npa, scale, signs, rot90, nx, ny, 
+     +    getvsc, vfac)
 c-----------------------------------------------------------------------
 c     Draw vectors.   The vector position angle must come out
 c     correctly on the plot regardless of the x and y scales,
@@ -1779,10 +1783,6 @@ c     it is not tied to the world coordinate scales.
 c
 c  Input
 c    lv       Handle of image
-c    iplot    sub-plot number.  Only work out vector length scale
-c             factors from first sub-plot so that the correct number
-c             get written into the plot annotation at the end
-c             of each page
 c    tr       Transformation matrix from pixels to world coordinates
 c    vecfac   Multiply amplitudes by this factor after self-scaling
 c    vecinc   Increment through image in these steps
@@ -1796,15 +1796,18 @@ c             E and N to the left and top
 c    rot90    Add 90 if true to position angle
 c    nx,ny    Number of subplots in x and y directions
 c  Input/output:
+c    getvsc   If true, work out the automatic vector scaling factor
+c             from this image if possible.
 c    vfac     Maximum vector amplitude and the vector scale in
 c             pixel units per mm (e.g. Jy/beam per mm).  Set on first
 c             sub-plot
 c
+c
 c-----------------------------------------------------------------------
       implicit none
 c
-      logical rot90, signs
-      integer vecinc(2), nx, ny, iplot, npixx, npixy, namp(npixx,npixy),
+      logical rot90, signs, getvsc
+      integer vecinc(2), nx, ny, npixx, npixy, namp(npixx,npixy),
      +  npa(npixx,npixy), lv
       real vecfac, amp(npixx,npixy), pa(npixx,npixy), tr(6), scale(2), 
      +  vfac(2)
@@ -1814,6 +1817,7 @@ cc
       real xv(2), yv(2), x, y
       integer i, j, pas
       real delx, dely, theta, sx, sy, x1, x2, y1, y2, vsizmax
+      logical allbl
       double precision dr
       parameter (dr = dpi / 180.0)
 c-----------------------------------------------------------------------
@@ -1823,29 +1827,56 @@ c
       call rdhdd (lv, 'cdelt1', cdelt(1), 0.0d0)
       call rdhdd (lv, 'cdelt2', cdelt(2), 0.0d0)
 c
-c Find maximum selected vector amplitude for first sub-plot
+c Find maximum selected vector amplitude for first partly unblanked sub-plot
 c
-      if (iplot.eq.1) then
+      if (getvsc) then
+        allbl = .true.
         vfac(1) = -1.0e30
         do j = 1, npixy, vecinc(2)
           do i = 1, npixx, vecinc(1)
-            if (namp(i,j).gt.0 .and. npa(i,j).gt.0) 
-     +         vfac(1) = max(vfac(1), abs(amp(i,j)))
+            if (namp(i,j).gt.0 .and. npa(i,j).gt.0) then
+              vfac(1) = max(vfac(1), abs(amp(i,j)))
+              allbl = .false.
+            end if
           end do
         end do
 c
 c Make maximum amplitude on the plot 1/20 of min(width,height)
 c of the plot, multipled by the users factor.  Scale in mm.
 c
-        call pgqvsz (2, x1, x2, y1, y2)
-        vsizmax = min((x2-x1)/nx, (y2-y1)/ny) / 20.0
-        vfac(2) = abs(vfac(1) / vecfac / vsizmax)
+        if(allbl) then
+c
+c Only do this in case the user has asked for full annotation,
+c and is plotting one subplot per page.  It will look nicer
+c than seeing 1e30s
+c
+          vfac(1) = 0
+          vfac(2) = 0
+        else
+          getvsc = .false.
+          call pgqvsz (2, x1, x2, y1, y2)
+          vsizmax = min((x2-x1)/nx, (y2-y1)/ny) / 20.0
+          vfac(2) = abs(vfac(1) / vecfac / vsizmax)
+        end if
+      else
+c
+c We just assume there are some good pixels if we haven't looked
+c But if there aren't, nothing will be drawn anyway
+c
+        allbl = .false.
       end if
+c
+c If plane all blank, good bye. We will only know
+c this if we bothered to try and work out the scale
+c factor from it though.
+c
+      if (allbl) return
 c
 c Convert scale in natural coords per mm to world coords per mm
 c Because we now do everything internally in pixels, this is really
 c pixels per mm (tr(2) = ibin, tr(6) = jbin now)
 c
+      
       sx = tr(2) * abs(scale(1) / cdelt(1)) 
       sy = tr(6) * abs(scale(2) / cdelt(2))
 c
