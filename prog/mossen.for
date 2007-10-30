@@ -108,7 +108,7 @@ c
 c  Do the real work now.
 c
 	  call mosMini(tIn,real(k))
-	  call mosWtCom(Runs1,nRuns1,memr(pGain),memr(pSen),npix1)
+	  call mosWtsR(Runs1,nRuns1,memr(pGain),memr(pSen),npix1)
 	  call Compress(memr(pSen),memr(pGain),npix1,npix2,
      *	    Runs1,nRuns1,Runs2,nRuns2,MAXRUNS)
 c
