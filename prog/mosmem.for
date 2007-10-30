@@ -82,9 +82,10 @@ c    rjs  12oct95  Support "default" and "model" being different sizes from
 c		   the deconvolved region.
 c    rjs  27oct95  Increased max length of filenames.
 c    rjs  24nov95  Default default image is now proportional to the gain.
+c    rjs  29Feb96  Call xyflush after each plane.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='MosMem: version 1.0 24-Nov-95')
+	parameter(version='MosMem: version 1.0 29-Feb-96')
 	include 'maxdim.h'
 	include 'maxnax.h'
 	include 'mem.h'
@@ -222,6 +223,8 @@ c
 	  nOut(i) = 1
 	enddo
 	call xyopen(lOut,OutNam,'new',naxis,nOut)
+	call Header(lMap,lOut,blc,trc,version)
+	call xyflush(lOut)
 c
 c  Loop.
 c
@@ -430,12 +433,8 @@ c
 	  call xysetpl(lOut,1,k-kmin+1)
 	  call PutPlane(lOut,Run,nRun,1-imin,1-jmin,
      *				nOut(1),nOut(2),memr(pEst),nPoint)
+	  call xyflush(lOut)
 	enddo
-c
-c  Construct a header for the output file, and give some history
-c  information.
-c
-	call Header(lMap,lOut,blc,trc,version,niter)
 c
 c  Close up the files. Ready to go home.
 c
@@ -925,12 +924,11 @@ c
 c
 	end
 c************************************************************************
-	subroutine Header(lMap,lOut,blc,trc,version,niter)
+	subroutine Header(lMap,lOut,blc,trc,version)
 c
 	integer lMap,lOut
 	integer blc(3),trc(3)
 	character version*(*)
-	integer niter
 c
 c  Write a header for the output file.
 c
@@ -940,7 +938,6 @@ c    lMap	The handle of the input map.
 c    lOut	The handle of the output estimate.
 c    blc	Blc of the bounding region.
 c    trc	Trc of the bounding region.
-c    niter	The maximum number of iterations performed.
 c
 c------------------------------------------------------------------------
 	include 'maxnax.h'
@@ -964,7 +961,6 @@ c  Fill in some parameters that will have changed between the input
 c  and output.
 c
 	call wrhda(lOut,'bunit','JY/PIXEL')
-	call wrhdi(lOut,'niters',Niter)
 c
 	do i=1,MAXNAX
 	  num = itoaf(i)
@@ -1001,7 +997,6 @@ c
      *				       '),Trc=('//txttrc(1:ltrc)//')'
 	call hiswrite(lOut,line)
 c
-	call hiswrite(lOut,'MOSMEM: Total Iterations = '//itoaf(Niter))
 	call hisclose(lOut)
 c
 	end
