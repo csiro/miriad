@@ -48,10 +48,11 @@ c    rjs  14mar97 Original version.
 c    rjs  17mar97 Enhanced version.
 c    rjs  19jun97 Output has uvw in wrong units.
 c    rjs  30jul97 Added options=nopassol
+c    rjs  31jul97 Improve gain normalisation with options=nopassol.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
-	parameter(version='BlCal: version 1.0 30-Jul-97')
+	parameter(version='BlCal: version 1.0 3-Jul-97')
 	character out*64,line*32
 	integer lVis,lRef,lOut
 	integer nchan,pol,npol,nfiles
@@ -413,27 +414,35 @@ c------------------------------------------------------------------------
 	integer i,n
 	complex Csum
 c
+c  Get the mean.
+c
 	CSum = 0
 	n = 0
 	do i=1,nchan
+	  if(cnt(i).gt.0)CSum = CSum + vis(i)
 	  n = n + cnt(i)
-	  if(cnt(i).gt.0)then
-	    sum = sum + 
-     *		(real(vis(i))**2 + aimag(vis(i))**2)/cnt(i)
-	    CSum = CSum + vis(i)
-	    vis(i) = vis(i) / cnt(i)
-	  endif
 	enddo
-	SumCnt = SumCnt + n
-	time = time / n
-c
-c  Fill the spectrum with the fudged data, where necessary.
 c
 	CSum = CSum / n
-	do i=1,nchan
-	  if(cnt(i).eq.0.or.nopass)vis(i) = CSum
-	enddo
-	  
+c
+	if(nopass)then
+	  do i=1,nchan
+	    vis(i) = CSum
+	  enddo
+	  sum = sum + (real(CSum)**2 + aimag(CSum)**2) * n
+	else
+	  do i=1,nchan
+	    if(cnt(i).gt.0)then
+	      sum = sum +
+     *		(real(vis(i))**2 + aimag(vis(i))**2)/cnt(i)
+	    else
+	      vis(i) = CSum
+	    endif
+	  enddo
+	endif
+c
+	SumCnt = SumCnt + n
+	time = time / n
 c
 	end
 c************************************************************************
