@@ -19,6 +19,8 @@ c	0.1 hours (6 minutes). This might be inadequate for sources
 c	with a declination near -30 degrees.
 c@ dec
 c	Declination of the source. The default is -45 degrees.
+c@ imsize
+c	The image size. The default is 255.
 c--
 c  History:
 c    rjs  24apr97 Original version.
@@ -38,6 +40,7 @@ c
 	real rad,psi,chi,x,y,pb
 	double precision sfreq,delta,dec
 	integer ic,jc,nx,ny,i,j,ifreq,tiir,tqqr,tuur,tvvr,lout
+	integer nx,ny
 	character c*1,out*64
 	complex xx,yy,xy,yx,jo(2,2),t,qq,uu
 	real qqr(MAXDIM),iir(MAXDIM),uur(MAXDIM),vvr(MAXDIM)
@@ -59,6 +62,9 @@ c
 	call keyt('harange',dha,'hms',0.1d0)
 	nha = nint((ha1 - ha0)/dha) + 1
 	call keyt('dec',dec,'dms',-0.25d0*DPI)
+	call keyi('imsize',nx,255)
+	call keyi('imsize',ny,nx)
+	if(nx.le.0.or.ny.le.0)call bug('f','Invalid image size')
 	call keyfin
 c
 	do ifreq=1,2
@@ -71,8 +77,6 @@ c
 	    c = 's'
 	    delta = 20.9882
 	  endif
-	  nx = 255
-	  ny = 255
 	  ic = nx/2 + 1
 	  jc = ny/2 + 1
 	  delta = 2 * delta * PI/180/60 / nx
@@ -270,6 +274,7 @@ c
 	call hisclose(tno)
 	call coWrite(coObj,tno)
 	call coFin(coObj)
+	call wrhda(tno,'telescop','ATCA')
 	end
 	
 
