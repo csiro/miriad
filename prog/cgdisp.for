@@ -592,6 +592,7 @@ c                  all blank.
 c    nebk 13feb97  Add keyword "3form", finally admitting defeat
 c    nebk 24mar97  Add COLS1 keyword
 c    nebk 01apr97  Don't write overlat ID string if overlay off plot
+c    nebk 15may97  Options=nofirst got broken at some point
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -627,7 +628,8 @@ c
      +  jbin(2), kbin(2), krng(2), coltab(maxchan), gnaxis, 
      +  cnaxis(maxcon), vnaxis(2), bnaxis, mnaxis, cols1(maxlev)
       integer  nx, ny, ierr, pgbeg, ilen, igr, nlast, ngrps,
-     +  ncon, i, j, nvec, ipage, jj, npixr, wedcod, bgcol, ncols1
+     +  ncon, i, j, nvec, ipage, jj, npixr, wedcod, bgcol, ncols1,
+     +  jplot
 c
       character labtyp(2)*6, levtyp(maxcon)*1, trfun(maxchan)*3
       character pdev*64, xlabel*40, ylabel*40, hard*20, ofile*64, 
@@ -637,7 +639,7 @@ c
       logical do3val, do3pix, dofull, gaps, eqscale, doblc, doblg,
      +  dobeam, beaml, beamb, relax, rot90, signs, mirror, dowedge, 
      +  doerase, doepoch, bdone, doblb, doblm, dofid, dosing, nofirst,
-     +  grid, dotr, dodist, conlab, doabut, getvsc
+     +  grid, dotr, dodist, conlab, doabut, getvsc, noflab
 c
       data blankc, blankv, blankb /-99999999.0, -99999999.0, 
      +                             -99999999.0/
@@ -654,7 +656,7 @@ c
       data lwid /maxconp3*1/
       data getvsc /.true./
 c-----------------------------------------------------------------------
-      call output ('CgDisp: version 01-Apr-97')
+      call output ('CgDisp: version 15-May-97')
       call output (' ')
 c
 c Get user inputs
@@ -889,8 +891,10 @@ c Draw frame, write numeric labels, ticks and optional grid
 c
          krng(1) = grpbeg(j)
          krng(2) = ngrp(j)
+         jplot = mod(j,nx*ny)
+         noflab = nofirst .and. mod(jplot,nx).ne.1
          call naxlabcg (lhead, .true., blc, trc, krng, labtyp, 
-     +                  donxlab, donylab, nofirst, grid)
+     +                  donxlab, donylab, noflab, grid)
 c
 c Draw wedge now so that it overwrites axis label ticks when wedge
 c drawn inside subplot
