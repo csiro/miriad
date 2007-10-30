@@ -21,16 +21,18 @@ c	Name of input visibility data file. No default.
 c@ select
 c	Standard uv data selection criteria. Generally this should not include
 c	a "dra" and "ddec" selection, as SELFCAL automatically matches data
-c	with the appropriate pointing center.
+c	with the appropriate observing center.
 c@ model
 c	Name of the input models. Several models can be given, which can
-c	cover different channel ranges, different pointing centers, and
+c	cover different channel ranges, different pointing and sources, and
 c	different polarizations of the input visibility data. Generally
 c	the model should be derived (by mapping and deconvolution) from the
 c	input visibility file, so that the channels in the model correspond
 c	to channels in the visibility file. Though the maps can be made using
 c	any linetype, generally "channel" linetype will give best results (??).
-c	The units of the model MUST be Jy/pixel, rather than Jy/beam. If
+c	The units of the model MUST be JY/PIXEL, rather than JY/BEAM, and
+c	should be weighted by the primary beam. The task DEMOS can be used
+c	to extract primary beam weighted models from a mosaiced image. If
 c	no models are given, a point source model is assumed.
 c@ clip
 c	Clip level. For models of intensity, any pixels below the clip level
@@ -131,9 +133,10 @@ c    rjs   3apr92 Use memalloc routines.
 c    rjs  26apr92 Handle clip level better.
 c    rjs   1may92 Added nfeeds keyword to output gains header.
 c    rjs  17may92 More fiddles to the way clipping is handled.
+c    rjs  23jun92 Changes to doc and messages (centre=>center, etc).
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Selfcal: version 1.0 17-May-92')
+	parameter(version='Selfcal: version 1.0 23-Jun-92')
 	integer MaxMod,maxsels,nhead
 	parameter(MaxMod=32,maxsels=256,nhead=3)
 c
@@ -196,7 +199,8 @@ c
 c
 	if(nModel.eq.0)then
 	  if(abs(offset(1))+abs(offset(2)).eq.0)then
-	    call output('Model is a point source at the phase centre')
+	    call output(
+     *		'Model is a point source at the observing center')
 	  else
 	    call output('Using a point source model')
 	  endif
