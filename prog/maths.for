@@ -118,6 +118,7 @@ c   rjs  10jan97   Handle 5th axis correctly.
 c  nebk  05jun97   Handle 6th and 7th axes correctly in oldhdr !
 c   rjs  02jul97   cellscal change.
 c   rjs  23jul97   Added pbtype.
+c   rjs  12mar98   Allow for more complex expressions.
 c------------------------------------------------------------------------
 	INCLUDE 'maths.h'
 	INTEGER ERROR,VECTOR,SCALAR,CONSTANT
@@ -251,7 +252,7 @@ c
 c
 c  Allocate memory.
 c
-	rbuflen = 4*nOut(1)*nOut(2)
+	rbuflen = 6*nOut(1)*nOut(2)
 	call memalloc(pnt,rbuflen,'r')
 	Indx = pnt
 c
