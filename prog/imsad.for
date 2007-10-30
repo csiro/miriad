@@ -2,31 +2,36 @@
       implicit none  
 c
 c= IMSAD - image search and destroy
-c& njt
+c& nebk
 c: image analysis
 c+
-c       IMSAD fits a gaussian to the image histogram to determiine the true
+c       IMSAD fits a gaussian to the image histogram to determine the true
 c       image rms noise, then searches for islands of pixels above some
 c       cutoff, and attempts to fit gaussian components to the islands. The
 c       fitting is borrowed from the miriad imfit task and the island
 c       detection from the AIPS SAD task. 
 c
-c	IMFIT is a Miriad task which fits model components to a
-c	image data-set. If several image planes are given, each plane
-c	is fitted separately. Optionally the model or the residuals can be
-c	written out.
+c       Pixels above the clip level are marked in yellow.  Then a square
+c	region centred on each island is coloured in. 
+c
+c       When fitting Gaussians, a cross is plotted at the midpoint of
+c       the island.  Each island is displayed separately in the top
+c	left of the display as it is fit.  The centroid of the fit is
+c	plotted.
+c
+c	Information about the fit for each island is given.
 c
 c@ in
 c
 c	The name of the input image data set.
-c
 c@ region
 c
 c	The region of interest within the image (rectangular only).
-c
+c@ range
+c	Image intensity range to display. Default is min to max for the
+c	current plane being displayed.
 c@ clip
-c
-c	Clip level. For input images of intensity, any pixels below the
+c	Clip  level. For input images of intensity, any pixels below the
 c	clip level are excluded from the fitting process. For other sorts
 c	of images (e.g. Stokes Q, U or V) pixels whose absolute values are
 c	below the clip level are excluded from the fit.
@@ -34,30 +39,22 @@ c
 c       The clip level can be specified as a multiple of the true image 
 c       rms (using the hist option) or as an absolute pixel value. No
 c       default.
-c
 c@ box
-c
 c       The minimum extents for island boundaries. This would usually be
 c       some multiple of the beam extents in x and y (2,2 is the default).
 c       For images with no beam characteristics there is no default, the
 c       units in this case are pixels.
-c
 c@ max
-c
 c	Sets the maximum number of boxes to return, if more then max
 c	are detected then the max boxes with largest peak flux / pixel
 c       are returned. 
-c
 c@ rad  
-c
 c       Will only report those islands detected within some angular radius
 c       of the specified coordinate pair.  The default units are absolute
 c       pixels, eg. 16,18,10.  If units other than the default are used
 c       you must specify these after the radius, eg. 10:34:45.3,-45:54:02,
 c       0.005,hms,dms,degrees. 
-c
 c@ options
-c
 c	Extra processing options. Possible values are:
 c
 c       hist ....... compute the image pixel histogram and compute the
@@ -75,24 +72,35 @@ c       nofit ...... do not perform any fitting
 c       noplt ...... disable the plotting features
 c	nodet ....... skip island detection and fit the box given by region 
 c		     - not implemented
-c 
 c@ device
-c
-c	Plot device (usually /xs or /xw).
-c
+c	PGPLOT plot device
 c@ out
+c	Dataset to write fitted source parameters.  Each line of this file
+c	summarises the result of the Gaussian fit for one islsnd.
+c	Each line contains:
 c
-c	Dataset to write fitted source parameters.
+c	Island name, island number, ra and dec of island centroid, 
+c	peak flux density, integrated flux density, deconvolved (from
+c	beam) major axis FWHM (arcsec), deconvolved minor axis (arcsec),
+c	deconvolved position angle (degrees), FLAG, DFLAG, FFLAG
 c
+c	FLAG:   IFAIL value (an integer) means Gaussian fit did not converge
+c	        F means failed to find covariance matrix for Gaussian fit
+c	        N means it was not possible to attempt a Gaussian fit
+c	        C converged OK
+c
+c       DFLAG:  D  deconvolution of size from beam OK
+c		P  deconvolution gave result close to point source
+c		?  No synthesised beam so could not deconvolve
+c	        F  deconvolution failed
+c
+c       FFLAG:  F  Integrated flux < peak flux (caused by beam > source size)
+c               If blank then ok.
 c@ log
-c
 c       If specified, output is written to the file given by log= instead
 c       of to the terminal.
-c
 c@ label
-c
 c       Special purpose label 
-c
 c--
 c
 c   History:
@@ -106,710 +114,895 @@ c    02Oct95   njt  added some more detail to the flagging in report and
 c                   modified limits in gaupar.for to be more flexible wrt
 c                   source/beam parmater errors, added label to fit records
 c                   based on flux weighted centroid of component coords.
-c    26jan96   nebk Hacked about to be more in line with MIriad code standards
+c    26jan96   nebk Lots of work to bring it in line with Miriad, F77 and nebk
+c		    (who will be its keeper) coding standards.  Added keyword 
+c		    "range". Added more documentation about output.  Redid 
+c		    histogram stuff as there were a variety of bugs associated 
+c		    with it. Elimiate use of non-standard angle conversion 
+c		    subroutines.
 c
- 
-      include       'mirconst.h'
-      include       'maxdim.h'
-      include       'maxnax.h'
-      include       'mem.h'
-      include       'imsad.h'
-
-      integer        MAXSRC, MAXBOX
-      parameter     (MAXSRC=2048, MAXBOX=1024)
-
-      integer        lui, i, j,
-     -               ip,
-     -               iwin(2,MAXSRC), jwin(2,MAXSRC),
-     -               ni, nj,
-     -               iptr, mptr
-
-      integer        nsize(MAXNAX),
-     -               boxes(MAXBOX),
-     -               naxis,
-     -               blc(MAXNAX),
-     -               trc(MAXNAX),
-     -               nbox,
-     -               luo
-     
-      real           clip,
-     -               box(2),
-     -               bmaj, bmin, bpa, bvol,
-     -               bmajp, bminp, bpap, bvolp,
-     -               ra0, de0
-
-      double precision in(3), out(3),
-     -               Diwin(2,MAXSRC), Djwin(2,MAXSRC),
-     -               RADSEC,
-     -               Dimax, Djmax,
-     -		     imin, imax,
-     -		     jmin, jmax
-
-      character*80   line
-      character*64   logfile,
-     -               outfile
-
-      logical        dohist,
-     -               dolog,
-     -               domask,
-     -               beam,
-     -               dobox,
-     -               doplot,
-     -               inten,
-     -               arcsec,
-     -               nofit,
-     -               dofid
-
-      RADSEC = (180.0 / PI) * 3600.0
-
-c     initialise program enviroment
-
+c-----------------------------------------------------------------------------
+      include 'mirconst.h'
+      include 'maxdim.h'
+      include 'maxnax.h'
+      include 'mem.h'
+      include 'imsad.h'
+c
+      integer  MAXSRC, MAXBOX
+      character*40   version
+      parameter     (version='version 26-Jan-96')
+      parameter (MAXSRC=2048, MAXBOX=1024)
+c
+      integer lui, luo, ip, ni, nj, iptr, mptr, ng, iwin(2,MAXSRC), 
+     + jwin(2,MAXSRC), nsize(MAXNAX), boxes(MAXBOX), naxis, nbox,
+     + blc(MAXNAX), trc(MAXNAX)
+      double precision Diwin(2,MAXSRC), Djwin(2,MAXSRC)
+      real clip,  box(2),  bmaj, bmin, bpa, bvol, bmajp, bminp, bpap, 
+     + bvolp, ra0, de0, range(2), range2(2), hvp(4), ivp(4), ivp2(4)
+      character*80 line
+      character*64 logfile, outfile
+      logical dohist, dolog, beam, dobox, doplot, inten,
+     + arcsec, nofit, dofid, hisok
+c
+c Viewports for histogram, image, and subimage
+c
+      data hvp /0.1, 0.3, 0.2, 0.5/
+      data ivp /0.4, 0.95, 0.1, 0.9/
+      data ivp2 /0.1, 0.3, 0.6, 0.9/
+c---------------------------------------------------------------------------
+c
+c Initialise program enviroment
+c
+      call output ('IMSAD : '//version)
       call init(lui,logfile,boxes,nsize,naxis,blc,trc,clip,dolog,dohist,
-     - box,dobox,doplot,inten,arcsec,nbox,nofit,outfile,luo,dofid)
-
-c      write(*,'(''> NAXIS ='',x,i1)') naxis
-c      write(*,'(''> NSIZE ='',7(x,i4.4))') (nsize(i),i=1,naxis)
-c      write(*,'(''> BLC ='',3(x,i4.4))') blc(1), blc(2), blc(3)
-c      write(*,'(''> TRC ='',3(x,i4.4))') trc(1), trc(2), trc(3)
-
-c     allocate memory for image and mask in blank common via mem.h
-
+     + box,dobox,doplot,inten,arcsec,nbox,nofit,outfile,luo,dofid,range)
+c
+c Allocate memory for image and mask in blank common via mem.h
+c
       ni = trc(1) - blc(1) + 1
       nj = trc(2) - blc(2) + 1
-
+c
       call memalloc(iptr,ni*nj,'r') 
       call memalloc(mptr,ni*nj,'l') 
-
-c     loop over image file planes
-
+c
+c Loop over image file planes
+c
       do ip = blc(3), trc(3)
-
-c     compute beam parameters
-
+        write (line, 10) ip
+10      format ('Begin plane', i4)
+        call output (line)
+        call output (' ')
+c
+c Compute beam parameters
+c
         call imparm(lui,ip,bmajp,bminp,bpap,bvolp,bmaj,bmin,bpa,bvol,
-     -   beam,ra0,de0,dolog)
+     +              beam,ra0,de0,dolog)
         if(dopoint.and..not.beam) 
-     -   call bug('f','no beam parameters for point fitting')
-
-c     load image plane data
-
-        call imload(lui,ip,blc,trc,memr(iptr),meml(mptr),domask)
-
-c     compute true image rms (if required)
-
-        if(dohist) call hist(lui,blc,trc,memr(iptr),meml(mptr),
-     -   domask,clip,doplot,dolog)
-
-c     display image
-
-        if(doplot) 
-     -   call imdisp(memr(iptr),ni,nj,blc,trc,-clip,9*clip,dofid)
-   
-c     search for islands of pixels above clip with resolution checking 
-
-        call island(memr(iptr),meml(mptr),domask,blc,trc,clip,
-     -   iwin,jwin,ns,doplot,inten)
-
+     +   call bug('f','No beam parameters for point fitting')
+c
+c Load image plane data
+c
+        call imload(lui,ip,blc,trc,memr(iptr),meml(mptr),range2,ng)
+        if (ng.eq.0) then
+          write (line, 20) ip, ' because no good pixels'
+20        format ('Skipping plane ', i4, a)
+          call output (line)
+          goto 600
+        end if
+c
+c Compute fitted image rms if required
+c
+        if (dohist) then
+          call hist(hvp,blc,trc,memr(iptr),meml(mptr),clip,doplot,
+     +              dolog,range2,hisok)
+          if (.not.hisok) then
+            write (line, 20) ip, ' because could not make histogram'
+            call output (line)
+            goto 600
+          end if            
+        end if
+c
+c Display image
+c
+        if(doplot) call imdisp(lui,memr(iptr),ni,nj,range,range2,
+     +                         dofid,ivp)
+c   
+c Search for islands of pixels above clip with resolution checking 
+c
+        call island(memr(iptr),meml(mptr),blc,trc,clip,iwin,jwin,
+     +              ns,doplot,inten)
+c
         call ischeck(ns,iwin,jwin,blc,trc,bmajp,bminp,bpap,bvolp,
-     -   beam,box,nbox,memr(iptr),meml(mptr),domask,inten)
-
-c     report island box boundaries (if required)
-
-        if(dobox) then
-
-          Dimax = -9.0e9
-          Djmax = -9.0e9 
-
-	  imin = 9.0e9
-	  imax = -imin
-	  jmin = 9.0e9
-	  jmax = -jmin
-
-          do i = 1, ns
-            
-            if(arcsec) then
-
-              do j = 1, 2
-
-                in(1) = dble(iwin(j,i)) 
-                in(2) = dble(jwin(j,i))
-                in(3) = dble(ip) 
-                call coCvt(lui,'ap/ap/ap',in,'ow/ow/ap',out)
-                Diwin(j,i) = out(1) * RADSEC
-                Djwin(j,i) = out(2) * RADSEC
-
-                if(abs(Diwin(j,i)).gt.Dimax) Dimax = abs(Diwin(j,i))
-                if(abs(Djwin(j,i)).gt.Djmax) Djmax = abs(Djwin(j,i))
-
-                if(Diwin(j,i).lt.imin) imin = Diwin(j,i)
-                if(Djwin(j,i).lt.jmin) jmin = Djwin(j,i)
-
-                if(Diwin(j,i).gt.imax) imax = Diwin(j,i)
-                if(Djwin(j,i).gt.jmax) jmax = Djwin(j,i)
-
-              end do
-              write(line,100) Diwin(1,i), Djwin(1,i),
-     -         Diwin(2,i), Djwin(2,i)
-            else
-              write(line,200) iwin(1,i), jwin(1,i),
-     -         iwin(2,i), jwin(2,i)
-            end if
-
-            if(dolog) then
-              call logwrit(line)
-            else
-              write(*,'(a)') line
-            end if
-
-          end do
-
-          if(arcsec.and.ns.ge.1) then
-            write(line,300) Dimax, Djmax
-            if(dolog) then
-              call logwrit(line)
-            else
-              write(*,'(a)') line
-            end if
-            write(line,400) imin-4.0, imax+4.0, jmin-4.0, jmax+4.0
-            if(dolog) then
-              call logwrit(line)
-            else
-              write(*,'(a)') line
-            end if	    
-          end if 
-
-        end if
-
-c     fit Gaussian components to islands
-
-        if(.not.nofit) then
-
-          call isfit(lui,ip,memr(iptr),meml(mptr),domask,blc,trc,iwin,
-     -     jwin,bmajp,bminp,bpap,bvolp,bmaj,bmin,bpa,bvol,beam,ra0,de0,
-     -     doplot,outfile,luo)
-
-        end if
-
+     +               beam,box,nbox,memr(iptr),meml(mptr),inten)
+c
+c Report island box boundaries (if required)
+c
+        if(dobox) call isbox (lui, ip, MAXSRC, iwin, jwin, Diwin, Djwin, 
+     +                        arcsec, dolog, ns)
+c
+c Fit Gaussian components to islands
+c
+        if(.not.nofit) call isfit(lui,ip,memr(iptr),meml(mptr),blc,
+     +    trc,iwin,jwin,bmajp,bminp,bpap,bvolp,bmaj,bmin,bpa,
+     +    bvol,beam,ra0,de0,doplot,outfile,luo,ivp,ivp2)
+600     continue
       end do
-
-c     tidy up and close
-
+c
+c Tidy up and close
+c
+      call cofin (lui)
       call pgend
       call xyclose(lui)
       call logclose
-      if(outfile.ne.' ') close(luo)
-
+      if(outfile.ne.' ') call txtclose (luo)
+c
       call memfree(iptr,ni*nj,'r')
       call memfree(mptr,ni*nj,'l')
-
-
-  100 format('arcsec,box(',sp,e10.3,',',sp,e10.3,',',sp,e10.3,
-     - ',',sp,e10.3,')')
-  200 format('box(',i4.4,',',i4.4,',',i4.4,',',i4.4,')')
-
-  300 format('maxima',2(x,f8.3))  
-
-  400 format('extent',4(x,f8.3))
-
+c
       end
-
-c -----------------------------------------------------------------------
-c +++ INIT
 c
-c     program initialisation 
 c
-c ---
-
-      subroutine init(lui,logfile,boxes,nsize,naxis,blc,trc,clip,dolog,
-     - dohist,box,dobox,doplot,inten,arcsec,nbox,nofit,outfile,luo,
-     - dofid)
+      subroutine coordfid(lu,ip)
+c-----------------------------------------------------------------------
+c     Convert coordinates between world and pixel coordinates, need to
+c     fix error estimates, the imfit ones are suspect
+c
+c  Input:
+c     lu ...... handle of the coordinate system.
+c     ip ...... image plane index
+c-----------------------------------------------------------------------
       implicit none
-
-      include       'maxdim.h'
-      include       'maxnax.h'
-      include       'imsad.h' 
-
-      integer        pgbeg
-
-      integer        MAXBOX, MAXSRC
-      parameter     (MAXBOX=1024, MAXSRC=2048)
-
-      character*40   version
-      parameter     (version='version 1.0 13-Feb-95')
-
-      integer        lui,
-     -               nsize(MAXNAX),
-     -               boxes(MAXBOX),
-     -               naxis,
-     -               blc(MAXNAX),
-     -               trc(MAXNAX),
-     -               iax,
-     -               nbox,
-     -               luo
-
-      double precision dpol
-
-      real           clip,
-     -               box(2)
-
-      character*64   logfile,
-     -               file,
-     -               outfile
-      character*80   device
-
-      integer        NOPTS
-      parameter     (NOPTS=10)
-
-      logical        dolog,
-     -               dohist,
-     -               polspara,
-     -               inten,
-     -               doplot,
-     -               dobox,
-     -               nofit,
-     -               arcsec,
-     -               dofid,
-     -               dodet
-
-      character*6    opts(NOPTS)
-      character*2    pol,
-     -               PolsC2P
-
-      logical        present(NOPTS)
-
-      data opts / 'hist  ', 'gauss ', 'fixed ', 'point ', 'box   ',
-     - 'noplt ', 'arcsec', 'nofit ', 'fiddle', 'region' /
-
-      call output('IMSAD: '//version)
-
-c     setup user inputs
-
-      call keyini
-
-      call keya('in',file,' ')
-      if(file.eq.' ') call bug('f','Input file must be given')
-
-      call boxinput('region',file,boxes,MAXBOX)
-
-c     open log file and out file
-
-      call keya('log',logfile,' ')
-      dolog = logfile.ne.' '
-      if(dolog) call logopen(logfile,' ')
-
-      call keya('out',outfile,' ')
-      if(outfile.ne.' ') then
-        luo = 10
-        open(luo,access='sequential',file=outfile,status='new') 
-      end if
-
-c     parameters borrowed from IMFIT
-
-      call keyr('clip',clip,0.0)
-
-c     island boxing parameters
-   
-      call keyi('max',nbox,MAXSRC)
-
-      call keyr('box',box(1),2.0) 
-      call keyr('box',box(2),2.0) 
-
-c     determine processing options - add a check
-
-      call options('options',opts,present,nopts)
-      dohist = present(1)
-      dogauss = present(2) .or. .not.present(4)
-      dofixed = present(3)
-      dopoint = present(4)
-      dobox = present(5)
-      doplot = .not.present(6)
-      arcsec = present(7)
-      nofit = present(8)
-      dofid = present(9)
-      dodet = .not.present(10)
-
-c     initailise plotting
-
-      call keya('device',device,' ')
-      doplot = device.ne.' '.and.doplot
-      if(doplot) then
-        call pgask(.false.)
-        if(pgbeg(0,device,0,0).ne.1) then
-          call pgldev
-          call bug('f','Error opening plot device')
-        end if
-      end if
-
-      call keyfin
-
-c     open image file
-
-      call xyopen(lui,file,'old',MAXNAX,nsize)
-      call rdhdi(lui,'naxis',naxis,0)
-      if(naxis.eq.0) call bug('f','Zero dimensions in image')
-      naxis = min(naxis,MAXNAX)
-      if(nsize(1).gt.MAXDIM) call bug('f','Input file to big')
-
-c     setup the region of interest
-
-      call boxmask(lui,boxes,MAXBOX)
-      call boxset(boxes,MAXNAX,nsize,' ')
-      call boxinfo(boxes,MAXNAX,blc,trc)
-
-c     IMFIT: determine image type: total intensity I or Q, U or V
-
-      call coInit(lui)
-      call coFindAx(lui,'stokes',iax)
-      if(iax.ne.0) then
-        call coCvt1(lui,iax,'ap',1.d0,'aw',dpol)
-        inten = PolsPara(nint(dpol))
-        pol = PolsC2P(nint(dpol))
-      else
-        inten = .true.
-      end if
-
-      return
+      include  'imsad.h'
+      include  'mirconst.h'
+c
+      integer lu, ip
+      double precision in(3), out(3)
+      real ma, mi, pa
+      integer   i
+c-----------------------------------------------------------------------
+c
+c Loop over components to fit
+c
+      do i = 1, nc
+c
+c Convert the position FR: absolute pixel TO: offset world radians
+c
+        in(1) = dble(pf(2,i))
+        in(2) = dble(pf(3,i)) 
+        in(3) = dble(ip) 
+        call coCvt(lu,'ap/ap/ap',in,'ow/ow/ap',out)
+c       
+        pf(2,i) = real(out(1))            
+        pf(3,i) = real(out(2))            
+c
+c Convert gaussian parameters FR: absolute pixel TO: world radians
+c
+        call coGauCvt(lu,'ap/ap/ap',in,'p', pf(4,i),pf(5,i),pf(6,i),
+     +   'w',ma,mi,pa)
+c
+c Convert units - the errors are screwed
+c
+        pf(4,i) = ma                     
+        pf(5,i) = mi                     
+        pf(6,i) = pa                     
+      end do
+c
       end
-
-c -----------------------------------------------------------------------
-c +++ INITVARY
 c
-c     determine parameter varriability
 c
-c     vf(1) flux
-c     vf(2) l-coordinate
-c     vf(3) m-coordinate
-c     vf(4) semi-major axis
-c     vf(5) semi-minor axis
-c     vf(6) position angle
-c
-c ---
-
-      subroutine initvary
+      subroutine estimate(bmaj,bmin,bpa)
+c-----------------------------------------------------------------------
+c     Generate an estimate of the model parameters, units are pixels,
+c     radians and Jansky's
+c-----------------------------------------------------------------------
       implicit none
-
       include 'imsad.h'
-
-      vf(1) = .true.       
-      vf(2) = .true.       
-      vf(3) = .true.       
-
-      if(dopoint) then
-        vf(4) = .false.  
-        vf(5) = .false.
-        vf(6) = .false.
-      else if(dogauss) then
-        vf(4) = .true.
+      include 'mirconst.h'
+c
+      integer i, ic 
+      double precision P, XP, YP, XYP, XXP, YYP, SP, WS, dd, dx, dy, tmp
+      real bmaj, bmin, bpa
+c-----------------------------------------------------------------------
+      nc = 1
+      ic = nc 
+      SP = 0.0d0
+      P = 0.0d0
+      XP = 0.0d0
+      YP = 0.0d0
+      XYP = 0.0d0
+      XXP = 0.0d0
+      YYP = 0.0d0
+c
+c Need to cope with multi-component sources
+c
+      do i = 1, nd
+        dd = dble(data(i))
+        dx = dble(xd(i))
+        dy = dble(yd(i))
+c
+        SP  = SP + dd            
+        tmp = abs(dd)         
+        P   = P   + tmp                   
+        XP  = XP  + tmp * dx          
+        YP  = YP  + tmp * dy         
+        XYP = XYP + tmp * dx * dy
+        XXP = XXP + tmp * dx * dx
+        YYP = YYP + tmp * dy * dy
+      end do
+      if(P.eq.0.0d0) call bug ('f', 'ESTIMATE: Error - zero flux')
+      WS = 4.0d0 * log(2.0d0)  
+      XP  = XP / P                      
+      YP  = YP / P                   
+      XYP = XYP / P - XP*YP  
+      XXP = XXP / P - XP*XP
+      YYP = YYP / P - YP*YP
+c
+      pf(2,ic) = real(XP)
+      pf(3,ic) = real(YP)
+c
+      if(dogauss) then
+        tmp = sqrt((XXP-YYP)**2 + 4.0d0*XYP**2)
+        pf(4,ic) = real(sqrt(WS*(XXP + YYP + tmp)))
+        pf(5,ic) = real(sqrt(WS*(XXP + YYP - tmp)))
+c
         if(dofixed) then
-          vf(5) = .false.
-          vf(6) = .false.
+          pf(4,ic) = sqrt(pf(4,ic)*pf(5,ic))
+          pf(5,ic) = pf(4,ic)
+          pf(6,ic) = 0.0
         else
-          vf(5) = .true.   
-          vf(6) = .true.
+          pf(6,ic) = 0.5 * atan2(2.0*XYP,YYP-XXP)
         end if
+      else if(dopoint) then
+        pf(4,ic) = bmaj
+        pf(5,ic) = bmin
+        pf(6,ic) = bpa
       end if
+      if(pf(4,ic)*pf(5,ic).eq.0.0) call bug ('f', 'Error - zero width')
+      pf(1,ic) = sign(WS*P/(PI*pf(4,ic)*pf(5,ic)),SP)
 
-      return
-      end 
+c      write(*,*) pf(1,ic), pf(2,ic), pf(3,ic)
+c      write(*,*) pf(4,ic), pf(5,ic), pf(6,ic)
 
-c -----------------------------------------------------------------------
-c +++ HIST
+      end
 c
-c     compute image plane histogram and moments
 c
-c ---
-
-      subroutine hist(lui,blc,trc,image,mask,domask,clip,doplot,dolog)
+      subroutine eval1(pf,nc,x,n,model)
+c-----------------------------------------------------------------------
+c     Evaluate the 1-D model Gaussian function
+c
+c  Input:
+c     n ....... number of points
+c     x ....... pixel coordinates at which to evaluate the model
+c
+c  Output:
+c     model ... the evaluated model
+c
+c-----------------------------------------------------------------------
       implicit none
-
-      include       'maxdim.h'
-      include       'maxnax.h'
-      include       'imsad.h'
-
-      external       function
-
-      integer        MAXBOX, MAXVAR, MAXBIN
-      parameter     (MAXBOX=1024, MAXVAR=20, MAXBIN=50)
-
-      integer        lui, i, j, n,
-     -               ifail1, ifail2,
-     -               nvar,
-     -               blc(MAXNAX),
-     -               trc(MAXNAX),   
-     -               id, imax, p, q,
-     -               ptr,
-     -               i0, j0,
-     -               ni
-
-      real           clip, trms,
-     -               mom(3),
-     -               pmin, pmax,
-     -               wmin, wmax,
-     -               range, wid,
-     -               rms, sum, squ,
-     -               covar(MAXVAR*MAXVAR),
-     -               x(MAXVAR),
-     -               image(*),
-     -               bmax, norm
-
-      character*2    itoaf 
-      character*80   line
-
-      logical        dofit,
-     -               domask,
-     -               mask(*),
-     -               found,
-     -               doplot,
-     -               dolog
-
+      integer MAXCOMP
+      parameter (MAXCOMP=2)
+      integer nc, n
+      real pf(6,MAXCOMP), x(*), model(*)
+      integer i, j
+      real tmp, xx, fac
+c-----------------------------------------------------------------------
+c
+c Set the model to zero initiallpy
+c
+      do i = 1, n
+        model(i) = 0.0
+      end do
+c
+c Compute model Gaussian component(s); can fit more than
+c one Gaussian
+c
+      do j = 1, nc
+        fac = 4.0 * log(2.0) / pf(3,j)**2
+        do i = 1, n
+          xx = (x(i) - pf(2,j))**2
+          tmp = fac * xx
+          if(tmp.lt.70.0) model(i) = model(i) + pf(1,j) * exp(-tmp)
+        end do
+      end do 
+c
+      end
+c
+c
+      subroutine eval2(pf,nc,x,y,n,model)
+c-----------------------------------------------------------------------
+c     Evaluate the 2-D model Gaussian function
+c
+c  Input:
+c     n ....... number of points
+c     x, y .... pixel coordinates at which to evaluate the model
+c
+c  Output:
+c     model ... the evaluated model
+c
+c-----------------------------------------------------------------------
+      implicit none
+      integer MAXCOMP
+      parameter (MAXCOMP=2)
+      integer nc, n
+      real pf(6,MAXCOMP), x(*), y(*), model(*)
+      integer i, j
+      real cospa, sinpa, tmp, xx, yy, xp, yp, xscal, yscal
+c-----------------------------------------------------------------------
+c
+c Set the model to zero initiallpy
+c
+      do i = 1, n
+        model(i) = 0.0
+      end do
+c
+c Compute model [2] Gaussian component(s)
+c
+      do j = 1, nc
+        cospa = cos(pf(6,j))
+        sinpa = sin(pf(6,j))
+        xscal = 4.0 * log(2.0) / pf(5,j)**2
+        yscal = 4.0 * log(2.0) / pf(4,j)**2
+        do i = 1, n
+          xx = x(i) - pf(2,j)
+          yy = y(i) - pf(3,j)
+c
+c          if(i.eq.1) write(*,*) xx, yy
+c
+          yp =  yy*cospa + xx*sinpa
+          xp = -yy*sinpa + xx*cospa
+          tmp = xscal*(xp**2) + yscal*(yp**2)
+          if(tmp.lt.70.0) model(i) = model(i) + pf(1,j) * exp(-tmp)
+        end do
+      end do 
+c
+      end
+c
+c
+      subroutine FUNCTION(m,nvar,var,fvec,iflag)
+c-----------------------------------------------------------------------
+c     Used by least-squares fitting LMDIFF
+c
+c  Input:
+c     m ..... number of functions      (number of data points)
+c     n ..... number of variables (n <= m)
+c     x ..... array of length n, on input contains an intial estimate
+c             of the solution vector, on output contains the final
+c             estimate of the solution vector
+c
+c  Output:
+c     fvec .. output array of length m which contains the function(s)
+c             evaluated at the output x
+c     iflag . the value of iflag should not be changed by function unless 
+c             the user wants to terminate execution of lmdiff, in this
+c             case set iflag to a negative integer
+c-----------------------------------------------------------------------
+      implicit none
+      include 'imsad.h'
+      integer m, nvar, iflag
+      real var(nvar), fvec(m)
+      integer i
+c-----------------------------------------------------------------------
+      if(m.ne.nd) call bug('f','Inconsistency in FUNCTION')
+c
+c Unpack the things that we are solving for
+c
+      call upackvar(var,nvar)
+c
+c Evaluate the model.  EIther 1 or 2 dimensional
+c Gaussians being fit.
+c
+      if (gdim.eq.1) then
+        call eval1(pf,nc,xd,m,fvec)
+      else if (gdim.eq.2) then
+        call eval2(pf,nc,xd,yd,m,fvec)
+      else
+        call bug ('f', 'Unrecognized Gaussian dimensionality')
+      end if
+c
+      do i = 1, m
+        model(i) = fvec(i)          
+        fvec(i) = data(i) - fvec(i) 
+      end do
+c
+      end	
+c
+c 
+      subroutine gaussfid(a1,b1,p1,a2,b2,p2)
+c-----------------------------------------------------------------------
+c     Fiddle gaussian parameters by converting from radians to arcsec
+c     and degrees and fixing orientation
+c
+c Input:
+c     a1	axis 1 (radians)
+c     b1	axis 2 (radians)
+c     p1	position angle (radians)
+c
+c Output:
+c     a2	major axis (arcsec)
+c     b2	minor axis (arcsec)
+c     p2	position angle (degrees)
+c
+c------------------------------------------------------------------------
+      implicit none
+      include 'mirconst.h'
+c
+      real a1, b1, p1, a2, b2, p2, ma, mi, pa, tmp
+c-----------------------------------------------------------------------
+      ma = a1 * 3600*180/pi
+      mi = b1 * 3600*180/pi
+      pa = p1 * 180/pi
+c
+      if(ma.lt.mi) then
+        tmp = ma
+        ma = mi
+        mi = tmp
+        pa = pa + 90.0
+      end if
+c
+      pa = mod(pa,180.0)
+      if(pa.lt.-90.0) pa = pa + 180.0
+      if(pa.gt.+90.0) pa = pa - 180.0 
+c
+      a2 = ma
+      b2 = mi
+      p2 = pa
+c
+      end
+c
+c
+      subroutine hist(hvp,blc,trc,image,mask,clip,doplot,dolog,range,ok)
+c-----------------------------------------------------------------------
+c     Compute image plane histogram and moments
+c
+c  INput
+c    range is the min and max of the current plane
+c
+c-----------------------------------------------------------------------
+      implicit none
+      include 'maxdim.h'
+      include 'maxnax.h'
+      include 'imsad.h'
+c
+      integer MAXBOX, MAXVAR, MAXBIN
+      parameter (MAXBOX=1024, MAXVAR=20, MAXBIN=50)
+c
+      integer i, j, n, ifail1, ifail2, nvar, ni, nj,
+     +  blc(MAXNAX), trc(MAXNAX), id
+      real clip, trms, mom(3), wmin, wmax, wid, hvp(4),
+     +  rms, sum, squ, covar(MAXVAR*MAXVAR), x(MAXVAR), image(*), dx,
+     +  bmax, norm, range(2), drange, xtemp(MAXBIN), dtemp(MAXBIN)
+c
+      character itoaf*2, line*80
+      logical mask(*), doplot, dolog, ok
+c
+      external function
+c-----------------------------------------------------------------------
       ns = 1
       nd = MAXBIN
-      nc = 1 
-
-c     initialise some things
-
-      pmin = +9.9e9
-      pmax = -9.9e9
-
+      ok = .true.
+c
+c Initialise some things
+c
       sum = 0.0
       squ = 0.0
       do i = 1, nd
         data(i) = 0
         xd(i) = 0.0
-        yd(i) = 1.0
       end do
- 
-c     set offsets to zero (relative positions)
-
-      xoff = 0.0
-      yoff = 0.0
-
-c     read image data, compute moments and determine pixel max and min values
-
+c
+c Read image data and compute moments
+c
       ni = trc(1) - blc(1) + 1 
+      nj = trc(2) - blc(2) + 1 
+c
       n = 0
-      do j = blc(2), trc(2)
-        j0 = j - blc(2) + 1
-        do i = blc(1), trc(1)
-          i0 = i - blc(1) + 1
-          ptr = (j0-1)*ni + i0 
-          if(.not.(domask .and. .not.mask(ptr))) then     
-            n = n + 1
-            sum = sum + image(ptr)
-            squ = squ + image(ptr)**2
-            if(image(ptr).lt.pmin) pmin = image(ptr)
-            if(image(ptr).gt.pmax) pmax = image(ptr)     
-          end if
-        end do 
+      do i = 1, ni*nj
+        if(mask(i)) then     
+          n = n + 1
+          sum = sum + image(i)
+          squ = squ + image(i)**2
+        end if
       end do
- 
+c 
       if(n.eq.0) then
-        call bug('w','no data to bin')
+        call bug('w', 'Image plane all blank')
         return
       end if
-
+c
+c Compute mean and standard deviation
+c
       mom(1) = sum/n
       mom(2) = sqrt(squ/n - mom(1)**2)
-
-c     compute minimum range of data to bin and bin width
-
-      range = 2.0 * min(abs(pmax),abs(pmin))
-
-      if(range.eq.0.0) then
-        call bug('w','distribution not valid')
-        return
-      end if
-
-      wid = range / nd
- 
-c     write to logfile (if required)
-
+c 
+c Write to logfile (if required)
+c
       write(line,100) mom(1)
+  100 format('Image mean = ', 1pe10.3)
+      call output (' ')
       if(dolog) then
         call logwrit(line)
       else
-        write(*,'(a)') line
+        call output (line)
       end if
-
+c
       write(line,200) mom(2)
+  200 format('Image rms = ',1pe10.3)
       if(dolog) then
         call logwrit(line)
       else
-        write(*,'(a)') line
+        call output (line)
       end if
-
-      write(line,300) pmin, pmax
+c
+      write(line,300) range(1), range(2)
+  300 format('Image min = ', 1pe10.3, 1x, 'max = ',1pe10.3)
       if(dolog) then
         call logwrit(line)
       else
-        write(*,'(a)') line
+        call output (line)
       end if
-
-c     form histogram of image pixel values
-
-      wmin = mom(1) - range / 2.0
-      wmax = mom(1) + range / 2.0
-
-      do j = blc(2), trc(2)
-        j0 = j - blc(2) + 1
-        do i = blc(1), trc(1)
-          i0 = i - blc(1) + 1
-          ptr = (j0-1)*ni + i0        
-          if(.not.(domask .and. .not.mask(ptr))) then
-
-            if(wmin.le.image(ptr) .and. image(ptr).le.wmax) then 
-
-              id = int((image(ptr) - wmin) / wid) + 1
-              data(id) = data(id) + 1.0
-              xd(id) = xd(id) + image(ptr)
-
-            end if
-
-          end if
-        end do 
+c
+c Set bin width and limits; try to exclude distant outliers
+c
+      drange = 2*min(abs(range(1)),abs(range(2)))
+      wmin = mom(1) - drange / 2.0
+      wmax = mom(1) + drange / 2.0
+      wid = (wmax - wmin) / nd
+c
+c Form histogram
+c
+      do i = 1, ni*nj
+        if (mask(i) .and. image(i).ge.wmin.and.image(i).le.wmax) then 
+          id = int((image(i) - wmin) / wid) + 1
+          id = max(1,min(id,nd))
+c
+          data(id) = data(id) + 1.0
+          xd(id) = xd(id) + image(i)
+        end if
       end do
-
-c     compute average of values contributing to each bin
-
+c
+c Work out some scaling factors and set the abcissa bin values by the 
+c average contributing to that bin
+c
+      norm = 0.0
       do i = 1, nd
-        if(data(i).gt.0.0) xd(i) = xd(i) / data(i) 
+        if(data(i).gt.0.0) then
+          xd(i) = xd(i) / data(i) 
+c
+          norm = norm + data(i)
+        end if
+c
+        xtemp(i) = xd(i)
+        dtemp(i) = data(i)
       end do 
- 
-c     remove empty bins from fit
-
-      i = 1
-      do while(i.le.nd)
-        if(data(i).le.0.0) then
-          nd = nd - 1 
-          do j = i, nd
-            data(j) = data(j+1)
-            xd(j) = xd(j+1)
-          end do  
-        end if 
-        i = i + 1
-      end do 
+c 
+c Remove empty bins from fit
+c
+      j = 1
+      do i = 1, nd
+        if (dtemp(i).gt.0.0) then
+          data(j) = dtemp(i)
+          xd(j) = xtemp(i)
+          j = j + 1
+        end if
+      end do
+      nd = j - 1
+c
       if(nd.eq.0) then
-        call bug('w','no data in histogram')
+        call bug('w','No data in histogram')  
+        ok = .false.
         return
       end if
-
-c     form Gaussian parameter estimates
-
-      norm = 0.0 
-      bmax = 0.0
-      do i = 1, nd
-        norm = norm + data(i)
-        if(data(i).gt.bmax) then
-          bmax = data(i)
-          imax = i
-        end if
-      end do
-      pf(1,1) = data(imax)          
-      pf(2,1) = xd(imax)            
-      
-      found = .false.
-      do i = 1, nd
-        if(data(i).gt.bmax/2.0) then
-          if(.not.found) then
-            p = i                   
-            found = .true.
-          else
-            q = i                   
-          end if
-        end if
-      end do
-      pf(5,1) = abs(xd(q) - xd(p))  
-
-c     normalise and plot histogram data
-
+c      
+c Normalise histogram volume to 1.0
+c
+      bmax = -1.0e30
       do i = 1, nd
         data(i) = data(i) / norm
+        bmax = max(bmax,data(i))
       end do
-
+c
+c Plot histogram
+c
       if(doplot) then
-        call pgsvp(0.1,0.3,0.2,0.5)
-        call pgswin(xd(1),xd(nd),0.0,data(imax))
+        dx = 0.05*(wmax-wmin)
+        call pgsvp(hvp(1), hvp(2), hvp(3), hvp(4))
+        call pgswin(wmin-dx,wmax+dx,0.0,1.05*bmax)
         call pgsch(0.8)
-        call pgbox('bcnts',0.0,0,'bcnts',0.0,0)
-        call pglabel('Flux (mJy pixel\u-1\d)','Counts',' ') 
+        call pgbox('BCNTS',0.0,0,'BCNTS',0.0,0)
+        call pglabel('Image Intensity', 'Normalized counts',' ') 
         call pgpoint(nd,xd,data,21)
       end if 
-
-c     setup fitting parameters
-
-      pf(3,1) = 1.0
-      pf(4,1) = 1.0
+c
+c Set Gaussian fits parameter estimates.   
+c 1: peak, 2: centre, 3: FWHM
+c
+      pf(1,1) = bmax
+      pf(2,1) = mom(1)
+      pf(3,1) = mom(2) * sqrt(8.0 * log(2.0))
+c
+      pf(4,1) = 0.0
+      pf(5,1) = 0.0
       pf(6,1) = 0.0 
-
+c 
       vf(1) = .true. 
       vf(2) = .true.  
-      vf(3) = .false. 
-      vf(4) = .false.  
-      vf(5) = .true. 
+      vf(3) = .true. 
+      vf(4) = .false.
+      vf(5) = .false. 
       vf(6) = .false.
-
-c     fit histogram with a Gaussian
-
+c
+c Fit histogram with a Gaussian
+c
+      nc = 1 
+      xoff = 0.0
+      yoff = 0.0
+      gdim = 1
+c
       call packvar(x,nvar,MAXVAR)     
-      if(nvar.ne.0) dofit = .true.
-
-      if(dofit) then 
-        call lsqfit(FUNCTION,nd,nvar,x,covar,rms,ifail1,ifail2)
-        call upackvar(x,nvar)
-        if(ifail2.eq.0) call upackcov(covar,nvar)
-        if(ifail1.ne.0)
-     -    call bug('w','Failed to converge: ifail='//itoaf(ifail1))
-        if(ifail2.ne.ifail1)
-     -    call bug('w','Failed to determine covariance matrix')
-      else
-        call bug('w','Nothing to fit!')
-        rms = 0
+      if(nvar.eq.0) call bug ('f', 'HIST: Internal logic error')
+c
+      call lsqfit(FUNCTION,nd,nvar,x,covar,rms,ifail1,ifail2)
+c
+      call upackvar(x,nvar)
+      if(ifail2.eq.0) call upackcov(covar,nvar)
+      if(ifail1.ne.0)
+     +  call bug('w','HIST: Failed to converge: ifail='//itoaf(ifail1))
+      if(ifail2.ne.ifail1)
+     +  call bug('w','HIST: Failed to determine covariance matrix')
+      if (ifail1.ne.0 .or. ifail2.ne.0) then
+        ok = .false.
+        return
       end if
-
-c     compute true image rms
-
-      trms = pf(5,1) / sqrt(8.0 * log(2.0)) 
+c
+c Compute fitted image rms
+c
+      trms = pf(3,1) / sqrt(8.0 * log(2.0)) 
       clip = clip * trms
-
-c     write to logfile (if required)
-
+c
+c Write to logfile (if required)
+c
       write(line,400) trms
+  400 format('Fitted image rms = ',1pe9.3)
       if(dolog) then
         call logwrit(line)
       else
-        write(*,'(a)') line
+        call output (line)
       end if
-
+c
       write(line,500) clip
+  500 format('Computed clipping level = ',1pe9.3)
       if(dolog) then
         call logwrit(line)
       else
-        write(*,'(a)') line
+        call output (line)
       end if
-
-      if(doplot) call pgpoint(nd,xd,model,17)
-
-      return
-
-  100 format('mean = ',e9.3)
-  200 format('rms = ',e9.3)
-  300 format('min = ',e9.3,x,'max = ',e9.3)
-  400 format('fitted image rms = ',e9.3)
-  500 format('clipping level = ',e9.3)
-
+      call output (' ')
+c
+c Plot fit
+c
+      if(doplot) then
+        call pgline(nd,xd,model)
+        write (line, 600) trms
+600     format ('Fitted rms = ', 1pe10.4)
+        call pglab (' ', ' ', line)
+      end if
+c
       end
-
-c +++ IMPARM
 c
-c     get things dealing with units
 c
-c     input:
+      subroutine iadd(newisl,ns,inew,iwin,jwin,i,j)
+c-----------------------------------------------------------------------
+c     Add an island, ripped off from AIPS SAD
+c-----------------------------------------------------------------------
+      implicit none
+      integer MAXSRC
+      parameter (MAXSRC=2048)
 c
+      integer inew, i, j, iwin(2,MAXSRC), jwin(2,MAXSRC), ns
+      logical newisl
+c-----------------------------------------------------------------------
+      if(newisl) then
+        if(ns.le.MAXSRC) then
+          ns = ns + 1
+          inew = ns
+          iwin(1,inew) = i
+          iwin(2,inew) = i
+          jwin(1,inew) = j
+          jwin(2,inew) = j
+        else
+          call output ('Maximum number of islands reached')
+          inew = 0 
+        end if
+      else
+        if(inew.ne.0) then
+          iwin(1,inew) = min(iwin(1,inew),i)
+          iwin(2,inew) = max(iwin(2,inew),i)        
+          jwin(2,inew) = j
+        end if
+      end if  
+c
+      end 
+c
+c
+      subroutine imdisp(lui,image,ni,nj,range,range2,dofid,ivp)
+c-----------------------------------------------------------------------
+c     Display image on pgplot device
+c
+c  Input
+c    range    User given display range
+c    range2   Min and max for current plane
+c-----------------------------------------------------------------------
+      implicit none
+      real tr(6), image(*), range(2), tfvp(4), range2(2), ivp(4)
+      integer ni, nj, lui,i1,i2,len1
+      logical dofid
+      character ctype1*9, ctype2*9
+c-----------------------------------------------------------------------
+c 
+c Initialise OFM routines
+c
+      call ofmini
+c
+c Setup viewport and window
+c
+      call pgsvp(ivp(1), ivp(2), ivp(3), ivp(4))
+      call pgwnad(1.0,real(ni),1.0,real(nj))
+      call pgsch(1.0)
+c
+c     setup world-coordinate transformation matrix
+c
+c     x = tr(1) + tr(2)*i + tr(3)*j
+c     y = tr(4) + tr(5)*i + tr(6)*j 
+c
+      tr(1) = 0.0
+      tr(2) = 1.0
+      tr(3) = 0.0
+      tr(4) = 0.0
+      tr(5) = 0.0
+      tr(6) = 1.0       
+c
+c Display image
+c
+      if (range(1).ne.range(2)) then
+        range2(1) = range(1)
+        range2(2) = range(2)
+      end if
+      call pgimag(image,ni,nj,1,ni,1,nj,range2(1),range2(2),tr)
+c
+c Simple label
+c
+      call pgbox ('BCNST', 0.0, 0, 'BCNST', 0.0, 0)
+      call rdhda (lui, 'CTYPE1', ctype1, ' ')
+      call rdhda (lui, 'CTYPE2', ctype2, ' ')
+      i1 = index(ctype1,'--') 
+      if (i1.eq.0) then 
+        i1 = len1(ctype1)
+      else
+        i1 = i1 - 1
+      end if
+      i2 = index(ctype2,'--')
+      if (i2.eq.0) then
+        i2 = len1(ctype2)
+      else
+        i2 = i2  -1
+      end if
+      call pglabel (ctype1(1:i1)//' (pixels)', 
+     +              ctype2(1:i2)//' (pixels)', ' ')
+c
+c Modify lookup table
+c
+      tfvp(1) = 0.1
+      tfvp(2) = 0.6
+      tfvp(3) = 0.3
+      tfvp(4) = 0.9
+c
+      if(dofid) call ofmmod(tfvp,1,0.0,0,0.0,0.0)
+c
+      end
+c
+c
+      subroutine imerge(inew,iold,LHS,RHS,new,old,iwin,jwin)
+c-----------------------------------------------------------------------
+c     Island merge, ripped off from AIPS SAD and modified
+c-----------------------------------------------------------------------
+      implicit none
+      include 'maxdim.h'
+      integer MAXSRC
+      parameter (MAXSRC=2048) 
+      integer new(MAXDIM), old(MAXDIM), inew, iold, LHS, RHS,
+     +  i, il, ih, iwin(2,MAXSRC), jwin(2,MAXSRC)
+c-----------------------------------------------------------------------
+      il = min(inew,iold) 
+      ih = max(inew,iold) 
+c
+      iwin(1,il) = min(iwin(1,il),iwin(1,ih))
+      iwin(2,il) = max(iwin(2,il),iwin(2,ih))
+      jwin(1,il) = min(jwin(1,il),jwin(1,ih))
+      jwin(2,il) = max(jwin(2,il),jwin(2,ih))
+c
+      iwin(1,ih) = 0
+      iwin(2,ih) = 0
+      jwin(1,ih) = 0
+      jwin(2,ih) = 0
+c
+      do i = LHS, RHS
+        if(old(i).eq.ih) old(i) = il
+        if(new(i).eq.ih) new(i) = il
+      end do
+c
+      end
+c
+c
+      subroutine imload(lui,ip,blc,trc,image,mask,range2,ng)
+c-----------------------------------------------------------------------
+c      Load image region and mask (if any) into memory
+c
+c-----------------------------------------------------------------------
+      implicit none
+      include 'maxdim.h' 
+c
+      logical hdprsnt
+      integer blc(3), trc(3), ip, lui, i, j, ptr, ng, nb
+      real image(*), irow(MAXDIM), range2(2)
+      logical mask(*), mrow(MAXDIM)
+      character line*80
+c-----------------------------------------------------------------------
+c
+c Set image plane
+c
+      call xysetpl(lui,1,ip)
+c
+c Initialise 
+c
+      if(hdprsnt(lui,'mask')) 
+     +  call output ('Pixel blanking will be applied')
+      nb = 0
+      ng = 0 
+      ptr = 1
+      range2(1) =  1.0e30
+      range2(2) = -1.0e30
+c
+c Read image and mask (if required)
+c
+      do j = blc(2), trc(2)
+        call xyflgrd(lui,j,mrow)
+        call xyread(lui,j,irow)            
+c
+        do i = blc(1), trc(1)
+           image(ptr) = irow(i)
+           mask(ptr) = mrow(i)
+           if(mask(ptr)) then
+             ng = ng + 1
+             range2(1) = min(range2(1),irow(i))
+             range2(2) = max(range2(2),irow(i))
+           else
+             nb = nb + 1
+           end if
+c
+          ptr = ptr + 1
+        end do
+      end do
+c
+      write (line, 100) nb
+100   format ('Number of blanked pixels = ', i7)
+      call output (line)
+      write (line, 200) ng
+200   format ('Number of good pixels = ', i7)
+      call output (line)
+c
+      end
+c
+c
+      subroutine imparm(lu,ip,bmajp,bminp,bpap,bvolp,bmaj,bmin,bpa,bvol,
+     + beam,ra0,de0,dolog)
+c-----------------------------------------------------------------------
+c     Get things dealing with units
+c
+c  Input:
 c     lu ............ handle of the input dataset
-c     k ............. plane of interest
+c     ip............. plane of interest
 c
-c     output:
-c
+c  Output:
 c     bvol .......... beam volume, in radians**2. Set to zero if this
 c                     cannot be determined.
 c     bvolp ......... beam volume in pixels.
@@ -817,77 +1010,61 @@ c     bmaj,bmin,bpa . beam major, minor axes and position angle.
 c
 c     bpa is measured from North through East in radians, where North is
 c     the direct of increasing value along 2nd axis and East the direct-
-c     ion of increasing value along the first axis
+c     in of increasing value along the first axis
 c
-c ---
-
-      subroutine imparm(lu,ip,bmajp,bminp,bpap,bvolp,bmaj,bmin,bpa,bvol,
-     - beam,ra0,de0,dolog)
+c-------------------------------------------------------------------------
       implicit  none
-
       include  'mirconst.h'
-
+c
       integer   lu, ip
-
-      real      bvol,
-     -          bmaj, ma,
-     -          bmin, mi,
-     -          bpa, pa,
-     -          ra0, de0
-
-      double precision    tmp
-
-      character bunit*16, ctype(2)*16,
-     -          line*80
-
-      real      bmajp, bminp, bpap, bvolp
-
+      real bvol, bmaj, ma, bmin, mi, bpa, pa, ra0, de0
+      double precision tmp
+      character bunit*16, ctype(2)*16, line*80
+      real bmajp, bminp, bpap, bvolp
       double precision crpix(2), crval(2), cdelt(2), x(3)
-
-      logical   beam,
-     -          dolog
-
+c
+      logical beam, dolog
+c-----------------------------------------------------------------------
       beam = .true.
-
-c     get pointing parameters from image header
- 
-      call rdhdd(lu,'crval1',tmp,0.0)
-      ra0 = real(tmp)
-      call rdhdd(lu,'crval2',tmp,0.0)
-      de0 = real(tmp)
-
-c     get beam parameters from image header
-
-      call rdhdr(lu,'bmaj',bmaj,0.)
-      call rdhdr(lu,'bmin',bmin,0.)
-      call rdhdr(lu,'bpa',bpa,0.)
+c
+c Get spatial reference value
+c 
+      call rdhdd(lu,'crval1',tmp,0.0d0)
+      ra0 = tmp
+      call rdhdd(lu,'crval2',tmp,0.0d0)
+      de0 = tmp
+c
+c Get beam parameters from image header
+c
+      call rdhdr(lu,'bmaj',bmaj,0.0)
+      call rdhdr(lu,'bmin',bmin,0.0)
+      call rdhdr(lu,'bpa',bpa,0.0)
       call rdhda(lu,'bunit',bunit,' ')
       call ucase(bunit)
-
+c
       bpa = PI / 180.0 * bpa 
-
       if(bmaj*bmin.eq.0.0) beam = .false.
-
-c     convert the beam to radians for the current plane
-
+c
+c Convert the beam to radians for the current plane
+c
       if(beam) then   
-
-c     convert from world to pixel 
-
+c
+c Convert from world to pixel 
+c
         x(1) = 0.0d0
         x(2) = 0.0d0
         x(3) = 0.0d0
         call coGauCvt(lu,'op/op/op',x,'w',bmaj,bmin,bpa,
-     -	 'p',bmajp,bminp,bpap)
-
-c     convert from pixel to world
-
+     +	 'p',bmajp,bminp,bpap)
+c
+c Convert from pixel to world
+c
         x(3) = dble(ip)
         call coGauCvt(lu,'op/op/ap',x,'p',bmajp,bminp,bpap,
-     -	 'w',bmaj,bmin,bpa)
-
-c     determine the beam FWHM area in radians**2
-
+     +	 'w',bmaj,bmin,bpa)
+c
+c Determine the beam FWHM area in radians**2
+c
         if(index(bunit,'/PIXEL').ne.0)then
           x(1) = 0.0d0
           x(2) = 0.0d0
@@ -902,1514 +1079,44 @@ c     determine the beam FWHM area in radians**2
           bvol = 0.0
           bvolp = 0.0
         end if
-
       else
-
-        write(*,'(''! zero image header beam parameters'')')
+        call bug ('w', 'Image synthesised beam parameters are zero')
         bvol = 0.0
         bvolp = 0.0
-
       end if 
-
+c 
       call gaussfid(bmaj,bmin,bpa,ma,mi,pa)
-
-c     write out beam parameters
-
-      write(line,'(''> BEAM major axis = '',e9.3)') ma
+c
+c Write out beam parameters
+c
+      write (line, 100) ma, mi, pa
+100   format ('BEAM major/minor/pa = ', 2(1x,f7.3), ' arcsec',
+     +        1x, f6.1, ' degrees')
       if(dolog) then
         call logwrit(line)
       else
-        write(*,'(a)') line
+        call output (line)
       end if
-      write(line,'(''> BEAM minor axis = '',e9.3)') mi
+c
+      write (line, 400) bvol, bvolp
+400   format ('BEAM area = ', 1pe9.3, ' str', 1x, 1pe9.3, ' pixels**2')
       if(dolog) then
         call logwrit(line)
       else
-        write(*,'(a)') line
+        call output (line)      
       end if
-      write(line,'(''> BEAM position angle = '',e9.3)') pa
+c
+      write (line, 500) bunit
+500   format ('Image units = ', a)   
       if(dolog) then
         call logwrit(line)
       else
-        write(*,'(a)') line
+        call output (line)
       end if
-      write(line,'(''> BEAM units = '',a16)') bunit   
-      if(dolog) then
-        call logwrit(line)
-      else
-        write(*,'(a)') line
-      end if
-      write(line,'(''> BEAM area = '',e9.3,x,e9.3)') bvol, bvolp
-      if(dolog) then
-        call logwrit(line)
-      else
-        write(*,'(a)') line
-      end if
-
-      return
+c
       end
-
-c +++ COORDFID
 c
-c     convert coordinates between world and pixel coordinates, need to
-c     fix error estimates, the imfit ones are suspect
 c
-c     input:
-c
-c     lu ...... handle of the coordinate system.
-c     ip ...... image plane index
-c
-c ---
-
-      subroutine coordfid(lu,ip)
-      implicit none
-
-      include  'imsad.h'
-      include  'mirconst.h'
-
-      integer   lu, ip
-
-      double precision in(3), out(3)
-
-      real      ma,
-     -          mi,
-     -          pa
-
-      integer   i
-
-c     loop over components to fit
-
-      do i = 1, nc
-
-c     convert the position FR: absolute pixel TO: offset world radians
-
-        in(1) = dble(pf(2,i))
-        in(2) = dble(pf(3,i)) 
-        in(3) = dble(ip) 
-
-        call coCvt(lu,'ap/ap/ap',in,'ow/ow/ap',out)
-       
-        pf(2,i) = real(out(1))            
-        pf(3,i) = real(out(2))            
-
-c     convert gaussian parameters FR: absolute pixel TO: world radians
-
-        call coGauCvt(lu,'ap/ap/ap',in,'p', pf(4,i),pf(5,i),pf(6,i),
-     -   'w',ma,mi,pa)
-
-c     convert units - the errors are screwed
-
-        pf(4,i) = ma                     
-        pf(5,i) = mi                     
-        pf(6,i) = pa                     
-     
-      end do
-
-      return
-      end
-
-c -----------------------------------------------------------------------
-c +++ ESTIMATE
-c
-c     generate an estimate of the model parameters, units are pixels,
-c     radians and Jansky's
-c
-c ---
-
-      subroutine estimate(bmaj,bmin,bpa)
-      implicit none
-
-      include 'imsad.h'
-      include 'mirconst.h'
-
-      integer i, ic 
-
-      double precision  P,
-     -        XP, YP,
-     -        XYP, XXP, YYP,
-     -        SP,
-     -        WS,
-     -        dd, dx, dy,
-     -        tmp
-
-      real    bmaj, bmin, bpa
-
-      nc = 1
-      ic = nc 
-
-      SP = 0.0d0
-      P = 0.0d0
-      XP = 0.0d0
-      YP = 0.0d0
-      XYP = 0.0d0
-      XXP = 0.0d0
-      YYP = 0.0d0
-
-c     need to cope with multi-component sources
-
-      do i = 1, nd
-
-        dd = dble(data(i))
-        dx = dble(xd(i))
-        dy = dble(yd(i))
-
-        SP  = SP + dd            
-        tmp = abs(dd)         
-        P   = P   + tmp                   
-        XP  = XP  + tmp * dx          
-        YP  = YP  + tmp * dy         
-        XYP = XYP + tmp * dx * dy
-        XXP = XXP + tmp * dx * dx
-        YYP = YYP + tmp * dy * dy
-
-      end do
-
-      if(P.eq.0.0d0) call bug ('f', 'error - zero flux')
-     
-      WS = 4.0d0 * log(2.0d0)  
-
-      XP  = XP / P                      
-      YP  = YP / P                   
-      XYP = XYP / P - XP*YP  
-      XXP = XXP / P - XP*XP
-      YYP = YYP / P - YP*YP
-
-      pf(2,ic) = real(XP)
-      pf(3,ic) = real(YP)
-
-      if(dogauss) then
- 
-        tmp = sqrt((XXP-YYP)**2 + 4.0d0*XYP**2)
-        pf(4,ic) = real(sqrt(WS*(XXP + YYP + tmp)))
-        pf(5,ic) = real(sqrt(WS*(XXP + YYP - tmp)))
-
-        if(dofixed) then
-          pf(4,ic) = sqrt(pf(4,ic)*pf(5,ic))
-          pf(5,ic) = pf(4,ic)
-          pf(6,ic) = 0.0
-        else
-          pf(6,ic) = 0.5 * atan2(2.0*XYP,YYP-XXP)
-        end if
-
-      else if(dopoint) then
-
-        pf(4,ic) = bmaj
-        pf(5,ic) = bmin
-        pf(6,ic) = bpa
-  
-      end if
-
-      if(pf(4,ic)*pf(5,ic).eq.0.0) call bug ('f', 'error - zero width')
-
-      pf(1,ic) = sign(WS*P/(PI*pf(4,ic)*pf(5,ic)),SP)
-
-c      write(*,*) pf(1,ic), pf(2,ic), pf(3,ic)
-c      write(*,*) pf(4,ic), pf(5,ic), pf(6,ic)
-
-      return
-      end
-
-c -----------------------------------------------------------------------
-c +++ PACKVAR
-c
-c     store all the things that we need to vary
-c
-c ---
-
-      subroutine packvar(var,nvar,MAXVAR)
-      implicit none
-
-      include 'imsad.h'
-
-      integer nvar,MAXVAR
-      real    var(MAXVAR)
-
-      integer i, j,
-     -        ncurr
-
-      real    tmp(6)
-
-      nvar = 0
-
-      do i = 1, nc
-        ncurr = 0
-        if(vf(1)) then
-          ncurr = ncurr + 1
-          tmp(ncurr) = pf(1,i)
-        end if
-        if(vf(2)) then
-          ncurr = ncurr + 1
-          tmp(ncurr) = pf(2,i) - xoff
-        end if
-        if(vf(3)) then
-          ncurr = ncurr + 1
-          tmp(ncurr) = pf(3,i) - yoff
-        end if
-        if(vf(4)) then
-          ncurr = ncurr + 1
-          tmp(ncurr) = pf(4,i)
-        end if
-        if(vf(5)) then
-          ncurr = ncurr + 1
-          tmp(ncurr) = pf(5,i)
-        end if
-        if(vf(6)) then
-          ncurr = ncurr + 1
-          tmp(ncurr) = pf(6,i)
-        end if
-
-c     copy the estimates to the variables
-
-        if(nvar+ncurr.gt.MAXVAR) 
-     -   call bug('f','Too many free parameters')
-
-        do j = 1, ncurr
-          nvar = nvar + 1
-          var(nvar) = tmp(j)
-        end do
-
-      end do
-
-      return
-      end
-
-c -----------------------------------------------------------------------
-c +++ UPACKVAR
-c
-c     unpack all the things that we need to vary
-c
-c ---
-
-      subroutine upackvar(var,nvar)
-      implicit none
-
-      include 'imsad.h'
-
-      integer nvar
-
-      real    var(nvar)
-
-      integer i, n
-
-      n = 0
-
-      do i = 1, nc
-        if(vf(1)) then
-          n = n + 1
-          pf(1,i) = var(n)
-        end if
-        if(vf(2)) then
-          n = n + 1
-          pf(2,i) = var(n) + xoff
-        end if
-        if(vf(3)) then
-          n = n + 1
-          pf(3,i) = var(n) + yoff
-        end if
-        if(vf(4)) then
-          n = n + 1
-          pf(4,i) = var(n)
-          if(dofixed) pf(5,i) = pf(4,i)
-        end if
-        if(vf(5)) then
-          n = n + 1
-          pf(5,i) = var(n)
-        end if
-        if(vf(6)) then
-          n = n + 1
-          pf(6,i) = var(n)
-        end if
-      end do
-
-      if(n.ne.nvar) call bug('f','Inconsistency in UPackVar')
-
-      return
-      end
-
-c -----------------------------------------------------------------------
-c +++ UPACKCOV
-c
-c     unpack the covariance matrix
-c
-c ---
-
-      subroutine upackcov(covar,nvar)
-      implicit none
-
-      include 'imsad.h'
-
-      integer nvar
-
-      real    covar(nvar,nvar)
-
-      integer i, n
-
-      n = 0
-
-      do i = 1, nc
-        if(vf(1)) then
-          n = n + 1
-          sf(1,i) = covar(n,n)
-        end if
-        if(vf(2)) then
-          n = n + 1
-          sf(2,i) = covar(n,n)
-        end if
-        if(vf(3)) then
-          n = n + 1
-          sf(3,i) = covar(n,n)
-        end if
-        if(vf(4)) then
-          n = n + 1
-          sf(4,i) = covar(n,n)
-          if(dofixed) sf(5,i) = sf(4,i)
-        end if
-        if(vf(5)) then
-          n = n + 1
-          sf(5,i) = covar(n,n)
-        end if
-        if(vf(6)) then
-          n = n + 1
-          sf(6,i) = covar(n,n)
-        end if
-      end do
-
-      if(n.ne.nvar) call bug('f','Inconsistency in UPackCov')
-
-      return
-      end
-
-c -----------------------------------------------------------------------
-c +++ FUNCTION
-c
-c     used by least-squares fitting LMDIFF
-c
-c     input:
-c
-c     m ..... number of functions     
-c     n ..... number of variables (n <= m)
-c     x ..... array of length n, on input contains an intial estimate
-c             of the solution vector, on output contains the final
-c             estimate of the solution vector
-c
-c     ouput:
-c
-c     fvec .. output array of length m which contains the function(s)
-c             evaluated at the output x
-c     iflag . the value of ifalg should not be changed by function unless 
-c             the user wants to terminate execution of lmdiff, in this
-c             case set iflag to a negative integer
-c
-c ---
-
-      subroutine FUNCTION(m,nvar,var,fvec,iflag)
-      implicit none
-
-      include 'imsad.h'
-
-      integer m,
-     -        nvar,
-     -        iflag
-
-      real    var(nvar),
-     -        fvec(m)
-
-      integer i
-
-      if(m.ne.nd) call bug('f','Inconsistency in FUNCTION')
-
-c     unpack the things that we are solving for
-
-      call upackvar(var,nvar)
-
-c     evaluate the model
-
-      call eval(pf,nc,xd,yd,m,fvec)
-
-      do i = 1, m
-        model(i) = fvec(i)          
-        fvec(i) = data(i) - fvec(i) 
-      end do
-
-      return
-      end	
-
-c -----------------------------------------------------------------------
-c +++ EVAL
-c
-c     evaluate the model Gaussian function
-c
-c     input:
-c
-c     n ....... number of points
-c     x, y .... pixel coordinates at which to evaluate the model
-c
-c     output:
-c
-c     model ... the evaluated model
-c
-c ---
-
-      subroutine eval(pf,nc,x,y,n,model)
-      implicit none
-
-      integer    MAXCOMP
-      parameter (MAXCOMP=2)
-
-      integer    nc, n
-
-      real       pf(6,MAXCOMP),
-     -           x(*),
-     -           y(*),
-     -           model(*)
-
-      integer    i, j
-     
-      real       cospa, sinpa,
-     -           tmp,
-     -           xx, yy,
-     -           xp, yp,
-     -           xscal, yscal
-
-c     set the model to zero initially
-
-      do i = 1, n
-        model(i) = 0.0
-      end do
-
-c     compute model [2] Gaussian component(s)
-
-      do j = 1, nc
-
-        cospa = cos(pf(6,j))
-        sinpa = sin(pf(6,j))
-        xscal = 4.0 * log(2.0) / pf(5,j)**2
-        yscal = 4.0 * log(2.0) / pf(4,j)**2
-
-        do i = 1, n
-
-          xx = x(i) - pf(2,j)
-          yy = y(i) - pf(3,j)
-
-c          if(i.eq.1) write(*,*) xx, yy
-
-          yp =  yy*cospa + xx*sinpa
-          xp = -yy*sinpa + xx*cospa
-          tmp = xscal*(xp**2) + yscal*(yp**2)
-          if(tmp.lt.70.0) model(i) = model(i) + pf(1,j) * exp(-tmp)
-           
-        end do
-
-      end do 
-
-      return
-      end
-
-c +++ IMDISP
-c
-c     display image on pgplot device
-c
-c ---
-
-      subroutine imdisp(image,ni,nj,blc,trc,pmin,pmax,dofid)
-      implicit none
- 
-      include 'maxnax.h'
-
-      real     tr(6),
-     -         image(*),
-     -         pmin, pmax,
-     -         tfvp(4)
-
-      integer  ni, nj,
-     -         blc(MAXNAX), trc(MAXNAX)
-
-      logical  dofid
- 
-c     initialise OFM routines
-
-      call ofmini
-
-c     setup viewport and window
-
-      call pgsvp(0.35,0.9,0.1,0.9)
-      call pgwnad(1.0,real(ni),1.0,real(nj))
-      call pgsch(1.0)
-
-c     setup world-coordinate transformation matrix
-c
-c     x = tr(1) + tr(2)*i + tr(3)*j
-c     y = tr(4) + tr(5)*i + tr(6)*j 
-
-      tr(1) = 0.0
-      tr(2) = 1.0
-      tr(3) = 0.0
-      tr(4) = 0.0
-      tr(5) = 0.0
-      tr(6) = 1.0       
-
-c     display image
-
-      call pgimag(image,ni,nj,1,ni,1,nj,pmin,pmax,tr)
-
-c     modify lookup table
-
-      tfvp(1) = 0.1
-      tfvp(2) = 0.6
-      tfvp(3) = 0.3
-      tfvp(4) = 0.9
-
-      if(dofid) call ofmmod(tfvp,1,0.0,0,0.0,0.0)
-
-      call pgpoint(1,real(ni)/2.0,real(nj)/2.0,2)
-
-      return
-      end
-
-c +++ IMLOAD
-c
-c     load image region and mask (if any) into memory
-c
-c ---
-
-      subroutine imload(lui,ip,blc,trc,image,mask,domask)
-      implicit none
-
-      include 'maxdim.h' 
-
-      logical        hdprsnt
-
-      integer blc(3), trc(3),
-     -        ip,
-     -        lui,
-     -        i, j,
-     -        ptr,
-     -        ng, nb
-
-      real    image(*),
-     -        irow(MAXDIM)
- 
-      logical mask(*),
-     -        domask,
-     -        mrow(MAXDIM)
-
-c     set image plane
-
-      call xysetpl(lui,1,ip)
-
-c     initialise and setup image mask and data arrays 
-
-      domask = hdprsnt(lui,'mask')
-      if(domask) write(*,'(''> pixel blanking will be applied'')')
-
-      nb = 0
-      ng = 0 
-      ptr = 1
-
-c     read image and mask (if required)
-
-      do j = blc(2), trc(2)
-
-        if(domask) call xyflgrd(lui,j,mrow)
-        call xyread(lui,j,irow)            
-
-        do i = blc(1), trc(1)
-
-          if(domask) then
-            mask(ptr) = mrow(i)
-            if(mask(ptr)) then
-              ng = ng + 1
-            else
-              nb = nb + 1
-            end if
-          else
-            ng = ng + 1
-          end if
-
-          image(ptr) = irow(i)
-          ptr = ptr + 1
-
-        end do
-
-      end do
-
-      write(*,'(''> number of blanked pixels = '',i7)') nb
-      write(*,'(''> number of good pixels = '',i7)') ng
-
-      return
-      end
-
-c +++ ISLAND
-c
-c     detect islands of pixels above the cliping level 
-c
-c ---
-
-      subroutine island(image,mask,domask,blc,trc,clip,iwin,jwin,ns,
-     - doplot,inten)
-      implicit none
-
-      include 'maxdim.h'
-      include 'maxnax.h'
-
-      integer      MAXSRC
-      parameter   (MAXSRC=2048)
-
-      real         image(*),
-     -             clip,
-     -             px, py
-
-      logical      mask(*),
-     -             doplot
-
-      integer      iwin(2,MAXSRC), jwin(2,MAXSRC),
-     -             blc(MAXNAX),
-     -             trc(MAXNAX),
-     -             LHS, RHS,
-     -             new(MAXDIM),
-     -             old(MAXDIM),
-     -             ptr,
-     -             i, j,
-     -             ns,
-     -             i0, j0, ni,
-     -             pi, pj,
-     -             ci
-
-      logical      merge,
-     -             domask,
-     -             null,
-     -             inten
-
-      if(doplot) call pgsci(7)
-
-c     initailse parameters and arrays
-
-      ns = 0
-      do i = 1, MAXDIM
-        old(i) = 0
-        new(i) = 0
-      end do
-
-      LHS = blc(1)
-      RHS = trc(1)
-      ni = RHS - LHS + 1
-
-c     begin search for islands
-
-      do j = blc(2), trc(2)
-
-        j0 = j - blc(2) + 1 
-
-        do i = LHS, RHS
-
-          i0 = i - blc(1) + 1
-          ptr = (j0-1)*ni + i0  
-
-c     includes all stokes parameters I > clip "OR" |QUV| > clip
-
-          if((inten .and. image(ptr).lt.clip) .or.
-     -       (.not.inten .and. abs(image(ptr)).lt.clip) .or.
-     -       (domask .and. .not.mask(ptr)) ) then
-
-            new(i) = 0
-
-          else 
-
-            px = real(i - blc(1) + 1)
-            py = real(j - blc(2) + 1)
-            if(doplot) call pgpoint(1,px,py,-1)
-
-            if(i.gt.LHS .and. new(i-1).ne.0) then
-
-              new(i) = new(i-1)
-              call iadd(.false.,ns,new(i),iwin,jwin,i,j)
-
-              merge = i.lt.RHS .and. old(i+1).ne.0 .and.
-     -         old(i+1).ne.new(i)
-              if(merge) 
-     -         call imerge(new(i),old(i+1),ns,LHS,RHS,new,old,iwin,jwin)
-
-            else if(i.gt.LHS .and. old(i-1).ne.0) then
-
-              new(i) = old(i-1)
-              call iadd(.false.,ns,new(i),iwin,jwin,i,j)
-
-              merge = i.lt.RHS .and. old(i+1).ne.0 .and.
-     -         old(i+1).ne.new(i)
-              if(merge) 
-     -         call imerge(new(i),old(i+1),ns,LHS,RHS,new,old,iwin,jwin)
- 
-            else if(old(i).ne.0) then
-
-              new(i) = old(i)
-              call iadd(.false.,ns,new(i),iwin,jwin,i,j) 
-
-            else if(i.lt.RHS .and. old(i+1).ne.0) then
-
-              new(i) = old(i+1)
-              call iadd(.false.,ns,new(i),iwin,jwin,i,j)
-
-            else
-
-              call iadd(.true.,ns,new(i),iwin,jwin,i,j)
-
-            end if
-
-          end if 
-
-        end do
-           
-        do i = LHS, RHS
-          old(i) = new(i)
-        end do 
-
-      end do
-
-c     remove null islands from collection
-
-      i = 1
-      do while(i.le.ns)
-        null = iwin(1,i).eq.0 .and. iwin(2,i).eq.0 .and. jwin(1,i).eq.0
-     -   .and. jwin(2,i).eq.0
-        if(null) then
-          do j = i, ns - 1
-            iwin(1,j) = iwin(1,j+1)
-            iwin(2,j) = iwin(2,j+1)
-            jwin(1,j) = jwin(1,j+1)
-            jwin(2,j) = jwin(2,j+1)
-          end do
-          ns = ns - 1
-        else
-          i = i + 1
-        end if         
-      end do
-       
-      write(*,'(''> number of islands found = '',i4.4)') ns
-
-c     plot bounded islands
-
-      if(doplot) then 
-        ci = 5
-        do i = 1, ns
-          ci = ci + 1
-          if(ci.eq.7) ci = 5
-          call pgsci(ci)
-          do pi = iwin(1,i), iwin(2,i)
-            px = real(pi - blc(1) + 1)
-            do pj = jwin(1,i), jwin(2,i)
-              py = real(pj - blc(2) + 1)   
-              call pgpoint(1,px,py,-1)
-            end do
-          end do
-        end do
-      end if
-
-      return
-      end
-
-c +++ ISCHECK
-c
-c     check islands for valid extents and minimum pixels, could add an
-c     island merger if necessary
-c
-c     bvol ... future use
-c
-c ---
-
-      subroutine ischeck(ns,iwin,jwin,blc,trc,bmaj,bmin,bpa,bvol,beam,
-     - box,nbox,image,mask,domask,inten)
-      implicit none
-
-      include 'maxnax.h'
-      include 'mirconst.h'
-
-      integer      MAXSRC
-      parameter   (MAXSRC=2048)
-
-      integer      iwin(2,MAXSRC), jwin(2,MAXSRC),
-     -             itmp(2,MAXSRC), jtmp(2,MAXSRC),
-     -             blc(MAXNAX),
-     -             trc(MAXNAX),
-     -             ns,
-     -             imin, jmin,
-     -             ni, nj,
-     -             i, j,
-     -             di, dj,
-     -             i0, j0, ptr,
-     -             mi(MAXSRC),
-     -             nbox,
-     -             is
-
-      real         bmaj, bmin, bpa, pa,
-     -             bvol,
-     -             tmpx, tmpy,
-     -             dxy, dx, dy,
-     -             box(2),
-     -             maxpix(MAXSRC),
-     -             image(*)
-
-      logical      beam,
-     -             mask(*),
-     -             domask,
-     -		   inten
-
-c     compute beam extents as box(1) * dx or box(1) if zero beam parms 
-
-      if(beam) then
-
-        pa = PI - bpa 
-
-c     code fragment taken from AIPS SAD task - units are pixels/radians
-
-        tmpx = (sin(pa)/bmaj)**2 + (cos(pa)/bmin)**2
-        tmpy = (cos(pa)/bmaj)**2 + (sin(pa)/bmin)**2
-        dxy = ((1.0/bmaj)**2 - (1.0/bmin)**2)*(sin(pa)*cos(pa))**2
-        dx = sqrt(0.25/(tmpx - dxy**2/tmpy))
-        dy = sqrt(0.25/(tmpy - dxy**2/tmpx))
-
-        imin = int(box(1) * dx)
-        jmin = int(box(2) * dy)
-
-      else
-
-        imin = int(box(1))
-        jmin = int(box(2))
-
-      end if              
-
-c     check minimum island extents based on beam parameters
-
-      do i = 1, ns
-  
-        ni = iwin(2,i) - iwin(1,i) + 1 
-        nj = jwin(2,i) - jwin(1,i) + 1
-
-        di = int((imin - ni) / 2.0 + 0.5)
-        dj = int((jmin - nj) / 2.0 + 0.5)
-
-        if(ni.lt.imin) then
-          iwin(1,i) = max(blc(1),iwin(1,i) - di)
-          iwin(2,i) = min(trc(1),iwin(2,i) + di)          
-        end if
-        if(nj.lt.jmin) then
-          jwin(1,i) = max(blc(2),jwin(1,i) - dj)
-          jwin(2,i) = min(trc(2),jwin(2,i) + dj)
-        end if
-    
-      end do
-
-c     check box number limit
-
-      if(ns.gt.nbox) then
-
-        ni = trc(1) - blc(1) + 1
-
-c     determine box pixel maxima - fixed sign problem for stokes QUV
- 
-        do is = 1, ns
-
-          maxpix(i) = -9.0e9
-
-          do j = jwin(1,is), jwin(2,is)
-            j0 = j - blc(2) + 1   
-            do i = iwin(1,is), iwin(2,is)
-              i0 = i - blc(1) + 1
-              ptr = (j0-1)*ni + i0
-              if(.not.(mask(ptr) .and. .not.domask)) then
-
-                if(inten) then
-		  if(image(ptr).gt.maxpix(is)) 
-     +               maxpix(is) = image(ptr)
-                else
-	          if(abs(image(ptr)).gt.maxpix(is)) 
-     +               maxpix(is) = abs(image(ptr)) 
-		end if
-
-              end if
-            end do
-          end do
-
-        end do
-
-c     index maxima in ascending order
-
-        call indexx(ns,maxpix,mi)
-
-c     re-shuffle box arrays
-
-        do is = 1, nbox
-          i0 = ns - is + 1
-          write(*,'(''> keeping box '',x,e10.3)') maxpix(mi(i0))
-          itmp(1,is) = iwin(1,mi(i0))
-          itmp(2,is) = iwin(2,mi(i0)) 
-          jtmp(1,is) = jwin(1,mi(i0))
-          jtmp(2,is) = jwin(2,mi(i0))
-        end do
-        ns = nbox
-        do is = 1, ns
-          iwin(1,is) = itmp(1,is)
-          iwin(2,is) = itmp(2,is)
-          jwin(1,is) = jtmp(1,is)
-          jwin(2,is) = jtmp(2,is)  
-        end do
-
-      end if
-
-c     check minimum island pixel numbers based on beam area - necessary ???
-
-      return
-      end
-
-c +++ IADD
-c
-c     add an island, ripped off from AIPS SAD
-c
-c ---
-
-      subroutine iadd(newisl,ns,inew,iwin,jwin,i,j)
-      implicit none
-
-      integer      MAXSRC
-      parameter   (MAXSRC=2048)
-
-      integer inew,
-     -        i, j,
-     -        iwin(2,MAXSRC), jwin(2,MAXSRC),
-     -        ns
-
-      logical newisl
-
-      if(newisl) then
- 
-        if(ns.le.MAXSRC) then
-          ns = ns + 1
-          inew = ns
-          iwin(1,inew) = i
-          iwin(2,inew) = i
-          jwin(1,inew) = j
-          jwin(2,inew) = j
-        else
-          write(*,'(''maximum islands detected'')')
-          inew = 0 
-        end if
- 
-      else
-
-        if(inew.ne.0) then
-          iwin(1,inew) = min(iwin(1,inew),i)
-          iwin(2,inew) = max(iwin(2,inew),i)        
-          jwin(2,inew) = j
-        end if
-
-      end if  
- 
-      return
-      end 
-
-c +++ IMERGE
-c
-c     island merge, ripped off from AIPS SAD and modified
-c
-c ---
-
-      subroutine imerge(inew,iold,ns,LHS,RHS,new,old,iwin,jwin)
-      implicit none
-
-      include 'maxdim.h'
-
-      integer    MAXSRC
-      parameter (MAXSRC=2048) 
-
-      integer    new(MAXDIM), old(MAXDIM),
-     -           inew, iold, ns,
-     -           LHS, RHS,
-     -           i, il, ih,
-     -           iwin(2,MAXSRC), jwin(2,MAXSRC)
-
-      il = min(inew,iold) 
-      ih = max(inew,iold) 
-
-      iwin(1,il) = min(iwin(1,il),iwin(1,ih))
-      iwin(2,il) = max(iwin(2,il),iwin(2,ih))
-      jwin(1,il) = min(jwin(1,il),jwin(1,ih))
-      jwin(2,il) = max(jwin(2,il),jwin(2,ih))
-
-      iwin(1,ih) = 0
-      iwin(2,ih) = 0
-      jwin(1,ih) = 0
-      jwin(2,ih) = 0
-
-      do i = LHS, RHS
-        if(old(i).eq.ih) old(i) = il
-        if(new(i).eq.ih) new(i) = il
-      end do
-
-      return
-      end
-
-c +++ ISFIT
-c
-c     fit Gaussian components to detected pixel islands
-c
-c ---
-
-      subroutine isfit(lui,ip,image,mask,domask,blc,trc,iwin,jwin,
-     - bmajp,bminp,bpap,bvolp,bmaj,bmin,bpa,bvol,beam,ra0,de0,
-     - doplot,outfile,luo)
-      implicit none
-
-      include 'maxnax.h'
-      include 'imsad.h'
-
-      external     function
-
-      integer      MAXSRC, MAXVAR
-      parameter   (MAXSRC=2048, MAXVAR=20)
-
-      character*2  itoaf
-
-      integer      ifail1, ifail2,
-     -             nvar,
-     -             iwin(2,MAXSRC), jwin(2,MAXSRC),
-     -             ptr,
-     -             i0, j0,
-     -             ni, nj,
-     -             i, j,
-     -             ip, ic,
-     -             lui,
-     -             blc(MAXNAX),
-     -             trc(MAXNAX),
-     -             is,
-     -             in, jn, ii, jj,
-     -             luo
-
-      real         bmaj, bmin, bpa, bvol,
-     -             bmajp, bminp, bpap, bvolp,
-     -             rms,
-     -             covar(MAXVAR*MAXVAR),
-     -             x(MAXVAR),
-     -             image(*),
-     -             tr(6),
-     -             island(MAXPIX,MAXPIX),
-     -             dmin, dmax,
-     -             px, py,
-     -             ra0, de0,
-     -             xt, yt
-
-      logical      dofit,
-     -             domask,
-     -             done,
-     -             mask(*),
-     -             beam,
-     -             doplot
-
-      character*2  flag(MAXCOMP),
-     -             ctmp
-      character*64 outfile
-
-      data tr / 0.0, 1.0, 0.0, 0.0, 0.0, 1.0 /
-
-      ni = trc(1) - blc(1) + 1
-      nj = trc(2) - blc(2) + 1
-
-c     setup fitting paramters and units
-
-      call initvary
-
-c     loop through islands
-
-      do is = 1, ns
-
-        dmin = +9.0e9
-        dmax = -9.0e9
-
-        jn = jwin(2,is) - jwin(1,is) + 1
-        in = iwin(2,is) - iwin(1,is) + 1
-
-c     plot mid-point of box we are fitting
-
-	if(doplot) then
-          call pgsvp(0.35,0.9,0.1,0.9)
-          call pgwnad(1.0,real(ni),1.0,real(nj))
-          call pgpoint(1,(iwin(1,is)+iwin(2,is))/2.0,
-     -     (jwin(1,is)+jwin(2,is))/2.0,2)
-        end if
-
-c     setup data arrays
- 
-        nd = 0
-        xt = 0.0
-        yt = 0.0
-
-        do j = jwin(1,is), jwin(2,is)
-
-          j0 = j - blc(2) + 1  
-          jj = j - jwin(1,is) + 1 
-
-          do i = iwin(1,is), iwin(2,is)
-
-            i0 = i - blc(1) + 1
-            ptr = (j0-1)*ni + i0
-
-            ii = i - iwin(1,is) + 1
-
-            if(.not.(mask(ptr) .and. .not.domask)) then
-
-              if(image(ptr).lt.dmin) dmin = image(ptr)
-              if(image(ptr).gt.dmax) dmax = image(ptr) 
-
-              island(ii,jj) = image(ptr)
-
-              nd = nd + 1
-              data(nd) = image(ptr)
-              xd(nd) = real(i)
-              yd(nd) = real(j)
-
-              xt = xt + xd(nd)
-              yt = yt + yd(nd)
-
-c	      write(*,'(i2,2(x,f4.0),x,e10.3)') nd, xd(nd),
-c     -         yd(nd), data(nd)
-
-            else
-              island(ii,jj) = 0.0   
-            end if
-
-          end do
-
-        end do
-
-        xoff = xt / real(nd)
-        yoff = yt / real(nd)
-
-c     check data for multiple peaks (if required)
-
-
-c     plot island
-
-        if(doplot) then
-          call pgsvp(0.1,0.3,0.6,0.9)                  
-          call pgswin(0.5,real(in)+0.5,0.5,real(jn)+0.5)
-          call pgimag(island,MAXPIX,MAXPIX,1,in,1,jn,dmin,dmax,tr)
-        end if
-
-c     begin fitting data             
-
-        nc = 0
-        done = .false. 
-        do while(.not.done)
-
-          ctmp = '  '
-
-c     determine estimates and prepare for fitting
-
-          call estimate(bminp,bmajp,bpap) 
-          call packvar(x,nvar,MAXVAR)
-
-          dofit = nvar.ne.0 .and. .not.(nvar.ge.nd) .and. nd.gt.0
-
-c     begin fitting
-
-          if(dofit) then
-
-            call lsqfit(FUNCTION,nd,nvar,x,covar,rms,ifail1,ifail2)
-            call upackvar(x,nvar)
-
-            if(ifail1.ne.0) then
-              ctmp(1:1) = itoaf(ifail1) 
-              call bug('w','failed to converge, ifail='//ctmp(1:1))
-            end if
-
-            if(ifail2.ne.ifail1) then
-              call bug('w','failed to determine covariance matrix')
-              ctmp(2:2) = 'F'              
-            else if(ifail2.eq.0) then
-              call upackcov(covar,nvar)
-            end if
-
-          else
-            call bug('w','fit not possible')
-            ctmp(1:1) = 'N'
-          end if
-
-c     inspect residue for multi-component islands and refit (if required)
-
-          done = .true.
-
-          flag(nc) = ctmp(1:2)
-
-        end do
-        
-c     plot position of fitted centroid
- 
-        if(doplot) then
-          call pgsci(10)
-          do ic = 1, nc
-            px = pf(2,ic) - real(iwin(1,is)) + 1.0        
-            py = pf(3,ic) - real(jwin(1,is)) + 1.0
-            call pgpoint(1,px,py,2)
-          end do
-        end if
-
-c     convert fitted parameters to astronomical units and report fit
-
-        call report(flag,ra0,de0,bmaj,bmin,bpa,bvol,beam,outfile,
-     -   luo,lui,ip)
- 
-      end do 
-
-      return
-      end
-
-c +++ REPORT
-c
-c     generate fit report
-c
-c ---
-
-      subroutine report(flag,ra0,de0,bmaj,bmin,bpa,bvol,beam,
-     - outfile,luo,lui,ip)
-      implicit none
-
-      include 'imsad.h'
-      include 'mirconst.h' 
-
-      integer      i,
-     -             rc,
-     -             fac,
-     -             luo,
-     -             lui, ip,
-     -		   rlen, dlen
-
-      real         ra0, de0,
-     -             ra ,de,
-     -             dra, dde,
-     -             RADDEG,
-     -             bmaj, bmin, bpa,
-     -             smaj, smin, spa,
-     -             dmaj, dmin, dpa,
-     -             bvol,
-     -             iflux, 
-     -             wgt, sumwgt,
-     -             wra, sumwra,
-     -             wde, sumwde
-
-      double precision	   ratmp,
-     -		   detmp
-
-      character*1  dflag, fflag
-      character*2  flag(MAXCOMP)
-      character*11 ras,
-     -             des,
-     -             dangle
-      character*64 outfile
-      character*86 line(MAXCOMP)
-      character*9  label
-
-      logical      beam
-
-      RADDEG = 180.0 / PI
-
-      sumwgt = 0.0
-      sumwra = 0.0
-      sumwde = 0.0
-
-c     convert the fitted parameters to meaningful units
-     
-      call coordfid(lui,ip)
-
-c     write beam characteristics
-
-      call gaussfid(bmaj,bmin,bpa,smaj,smin,spa)
-
-      write(*,1000) smaj, smin
-      write(*,2000) spa
-
-c     generate record label based on flux weighted mean component coordinates
-
-      do i = 1, nc
-
-c     compute integrated flux (if possible)
-
-	write(*,4000) pf(1,i)
-
-        if(bvol.gt.0.0) then
-          iflux = pf(1,i) * pi/4 * pf(4,i) * pf(5,i) 
-          iflux = iflux / log(2.0)
-          iflux = iflux / bvol
-        else 
-          iflux = 0.0
-        end if 
-
-c     flag integrated flux < peak flux (caused by beam > source size)
-
-        fflag = ' '
-        if(iflux.ne.-999999.9 .and. iflux.lt.pf(1,i)) fflag = 'F'
-
-        write(*,5000) iflux
-
-c     convert major, minor and position angle 
-
-        call gaussfid(pf(4,i),pf(5,i),pf(6,i),smaj,smin,spa)
-
-        write(*,6000) smaj, smin
-        write(*,7000) spa
-
-c     deconvolve the beam (if possible) and setup source min/maj/pa
-c     TODO - add as an option
-
-        if(beam) then 
-          call gaudfac(pf(4,i),pf(5,i),pf(6,i)*180/pi,bmaj,bmin,
-     -     bpa*180/pi,fac,dmaj,dmin,dpa,rc)
-          if(rc.eq.0) then
-            dpa = pi/180 * dpa
-            call gaussfid(dmaj,dmin,dpa,smaj,smin,spa)
-            dflag = 'D'
-          else if (rc.eq.1) then
-            dflag = 'P'
-	  else if (rc.eq.2) then
-	    dflag = 'F'
-          end if
-        else
-          dflag = '?'
-        end if 
-
-c     add centroid offsets to reference RA and Dec
-
-        dra = (pf(2,i) * RADDEG) / cos(de0)
-        dde = (pf(3,i) * RADDEG)
-
-        write(*,3000) pf(2,i)*3600*RADDEG, pf(3,i)*3600*RADDEG
-
-        ra = (RADDEG * ra0) + dra
-        de = (RADDEG * de0) + dde
-
-c     sum weighted coordinates
-
-        wgt = pf(1,i)
-        sumwgt = sumwgt + wgt 
-        sumwra = sumwra + wgt * ra
-        sumwde = sumwde + wgt * de
-
-c     convert RA and Dec to sexigesimal notation
-
-	if(ra.lt.0.0) ra = 360.0 + ra
-c	ra = ra / 15.0
-
-c        ras = dangle(dble(ra))
-c        if(ras(3:3).ne.':') ras = '0'//ras(1:10)
-c        des = dangle(dble(de))
-
-	ratmp = dble(ra)
-	detmp = dble(de)
-
-	call ang2str('RD',1,ratmp,ras,rlen)
-	call ang2str('DD',1,detmp,des,dlen)
-
-c     write to display/logfile
-
-        write(line(i),100) i, ras, des, pf(1,i),
-     -   iflux, smaj, smin, spa, flag(i), dflag, fflag
-
-      end do  
-
-c     determine source label
-
-      wra = sumwra / sumwgt
-      wde = sumwde / sumwgt
-
-      if(wra.lt.0.0) wra = 360.0 + wra
-c      wra = wra / 15.0
-
-c      ras = dangle(dble(wra))
-c      if(ras(3:3).ne.':') ras = '0'//ras(1:10)
-c      des = dangle(dble(wde))
-
-      ratmp = dble(wra)
-      detmp = dble(wde)
-
-      call ang2str('RD',1,ratmp,ras,rlen)
-      call ang2str('DD',1,detmp,des,dlen)
-
-      label = ras(1:2)//ras(4:5)//des(1:3)//des(5:6)
-
-c     write report records
-
-      do i = 1, nc
-
-        if(outfile.ne.' ') then
-          write(luo,'(a9,'':'',a86)') label,line(i)
-        else
-          write(*,'(a9,'':'',a86)') label,line(i)
-        end if
-
-      end do
-
-      return
-
-  100 format(i2.2,2(x,a11),5(x,e10.3),x,a2,a1,a1)
-
- 1000 format('> beam major/minor axes',2(x,f6.2))
- 2000 format('> beam position angle',x,f6.1)
- 3000 format('> offsets',2(x,e10.3))
- 4000 format('> peak flux (Jy)',x,e10.3)
- 5000 format('> integrated flux (Jy)',x,e10.3)
- 6000 format('> major/minor axes',2(x,f6.2))
- 7000 format('> position angle',x,f6.1)
-
-      end 
- 
-c +++ GAUSSFID
-c
-c     fiddle gaussian parameters by converting from radians to arcsec
-c     and degrees and fixing orientation
-c
-c     input:
-c
-c     a1	axis 1 (radians)
-c     b1	axis 2 (radians)
-c     p1	position angle (radians)
-c
-c     output:
-c
-c     a2	major axis (arcsec)
-c     b2	minor axis (arcsec)
-c     p2	position angle (degrees)
-c
-c ---
-
-      subroutine gaussfid(a1,b1,p1,a2,b2,p2)
-      implicit none
-
-      include 'mirconst.h'
-
-      real a1, b1, p1,
-     -     a2, b2, p2,
-     -     ma, mi, pa,
-     -     tmp
-
-      ma = a1 * 3600*180/pi
-      mi = b1 * 3600*180/pi
-      pa = p1 * 180/pi
-
-      if(ma.lt.mi) then
-        tmp = ma
-        ma = mi
-        mi = tmp
-        pa = pa + 90.0
-      end if
-
-      pa = mod(pa,180.0)
-      if(pa.lt.-90.0) pa = pa + 180.0
-      if(pa.gt.+90.0) pa = pa - 180.0 
-
-      a2 = ma
-      b2 = mi
-      p2 = pa
-
-      return
-      end
-
       SUBROUTINE indexx(n,arr,indx)
       INTEGER n,indx(n),M,NSTACK
       REAL arr(n)
@@ -2491,257 +1198,990 @@ c ---
       END
 c
 c
-
-c +++ ANG2STR
-c
-c     convert degrees/hours value into a formatted string of required
-c     precision
-c
-c     Command:
-c
-c     RR	input is RA expressed as radians
-c      D	                         degrees
-c      H                                 hours
-c
-c     DR	input is DEC expressed as radians
-c      D                                  degrees
-c
-c     Precision:	
-c
-c     RA:				DEC:
-c
-c     0 HH:MM:SS.S			[+/-]DD:MM:SS
-c     1 HH:MM:SS.SS			[+/-]DD:MM:SS.S
-c     2 HH:MM.SS.SSS			[+/-]DD:MM:SS.SS
-c     3 HH:MM:SS.SSSS			[+/-]DD:MM:SS.SSS
-c
-c     input:
-c
-c     cmd	conversion command(s)
-c     p		string precision 
-c     theta	angle in decimal degrees or hours.
-c
-c     output:
-c
-c     dangle	angle formated into a string with format [+/-]DD:MM:SS.SS
-c
-c ---
-
-      subroutine ang2str(cmd,p,theta,tmpstr,length)
+      subroutine init(lui,logfile,boxes,nsize,naxis,blc,trc,clip,dolog,
+     + dohist,box,dobox,doplot,inten,arcsec,nbox,nofit,outfile,luo,
+     + dofid,range)
+c-----------------------------------------------------------------------
+c      Get user inputs
+c-----------------------------------------------------------------------
       implicit none
-      include 'mirconst.h'
-      double precision degrad, raddeg
-      parameter (raddeg=180.0d0/dpi, degrad=dpi/180.0d0)    
-
-
-      double precision ROUND,
-     -          theta,
-     -          tmp,
-     -          prec,
-     -          frac
-
-      parameter (ROUND=0.5/360000000.0d0)
-
-      integer   p,
-     -          lra(4), lde(4), 
-     -          dra(4), dde(4), 
-     -          dd, mm, ss,
-     -          N,
-     -          length
-
-      character line*13,
-     -          tmpstr*(*),
-     -          cmd*2
-
-      logical   doRA, 
-     -          doDEC
-   
-      data lra / 10, 11, 12, 13 /
-      data lde /  9, 11, 12, 13 / 
-      data dra /  1,  2,  3,  4 /
-      data dde /  0,  1,  2,  3 /
-
-      doRA = .false.
-      doDEC = .false.
-
-c     interpret command sequence and setup precision
-
-      if(cmd(1:1).eq.'R') then
-        doRA = .true.
-        if(cmd(2:2).eq.'R') tmp = theta * RADDEG / 15.0d0
-        if(cmd(2:2).eq.'D') tmp = theta / 15.0d0 
-        if(cmd(2:2).eq.'H') tmp = theta
-      else if(cmd(1:1).eq.'D') then
-        doDEC = .true.
-        if(cmd(2:2).eq.'R') tmp = theta * RADDEG
-        if(cmd(2:2).eq.'D') tmp = theta  
+c
+      include 'maxdim.h'
+      include 'maxnax.h'
+      include 'imsad.h' 
+c
+      integer pgbeg
+c
+      integer MAXBOX, MAXSRC, NOPTS
+      parameter (MAXBOX=1024, MAXSRC=2048, NOPTS=10)
+c
+      integer lui, nsize(MAXNAX), boxes(MAXBOX), naxis, blc(MAXNAX),
+     + trc(MAXNAX), iax, nbox, luo, iostat
+      double precision dpol
+      real clip, box(2), range(2)
+      character*64 logfile, file, outfile
+      character*80 device
+c
+      logical dolog, dohist, polspara, inten, doplot, dobox,
+     +  nofit, arcsec, dofid, dodet
+      character*6 opts(NOPTS)
+      logical present(NOPTS)
+c
+      data opts / 'hist  ', 'gauss ', 'fixed ', 'point ', 'box   ',
+     +            'noplt ', 'arcsec', 'nofit ', 'fiddle', 'region' /
+c-----------------------------------------------------------------------
+      call keyini
+      call keya('in',file,' ')
+      if(file.eq.' ') call bug('f','Input file must be given')
+      call boxinput('region',file,boxes,MAXBOX)
+c
+      call keya('log',logfile,' ')
+      dolog = logfile.ne.' '
+      if(dolog) call logopen(logfile,' ')
+c
+      call keya('out',outfile,' ')
+      if(outfile.ne.' ') then
+        call txtopen (luo, outfile, 'new', iostat)
+        if (iostat.ne.0) 
+     +    call bug ('f', 'Could not opend output text file')
       end if
-
-c     fix rounding errors
-
-      tmp = abs(tmp) + ROUND
- 
-c     setup line   
-
-      if(doRA) then
-        length = lra(p+1) 
-        N = dra(p+1)
-        prec = 10.0 ** (p+1)
-      else if(doDEC) then
-        length = lde(p+1)
-        N = dde(p+1)
-        prec = 10.0 ** p
+c
+      call keyr ('range', range(1), 0.0)
+      call keyr ('range', range(2), 0.0)
+      call keyr('clip',clip,0.0)
+c
+      call keyi('max',nbox,MAXSRC)
+      call keyr('box',box(1),2.0) 
+      call keyr('box',box(2),2.0) 
+c
+      call options('options',opts,present,nopts)
+      dohist = present(1)
+      dogauss = present(2) .or. .not.present(4)
+      dofixed = present(3)
+      dopoint = present(4)
+      dobox = present(5)
+      doplot = .not.present(6)
+      arcsec = present(7)
+      nofit = present(8)
+      dofid = present(9)
+      dodet = .not.present(10)
+c
+      if (clip.le.0.0 .and. .not.dohist) call bug ('f',
+     +  'You must specify the clip level or use the histogram option')
+c
+c Initialize plotting
+c
+      call keya('device',device,' ')
+      doplot = device.ne.' '.and.doplot
+      if(doplot) then
+        call pgask(.false.)
+        if(pgbeg(0,device,0,0).ne.1) then
+          call pgldev
+          call bug('f','Error opening plot device')
+        end if
       end if
-
-      dd = int(tmp)                              
-      mm = mod(int(60.0*tmp),60)                 
-      ss = mod(int(3600.0*tmp),60)               
-      frac = mod(int(3600.0*tmp*prec),prec)      
-
-      if(N.gt.0) then 
-        write (line,100) dd, mm, ss, int(frac)
+      call keyfin
+c
+c Open image file
+c
+      call xyopen(lui,file,'old',MAXNAX,nsize)
+      call rdhdi(lui,'naxis',naxis,0)
+      if(naxis.eq.0) call bug('f','Zero dimensions in image')
+      naxis = min(naxis,MAXNAX)
+      if(nsize(1).gt.MAXDIM) call bug('f','Input file to big')
+c
+c Setup the region of interest
+c
+      call boxmask(lui,boxes,MAXBOX)
+      call boxset(boxes,MAXNAX,nsize,' ')
+      call boxinfo(boxes,MAXNAX,blc,trc)
+c
+c IMFIT: determine image type: total intensity I or Q, U or V
+c
+      call coInit(lui)
+      call coFindAx(lui,'stokes',iax)
+      if(iax.ne.0) then
+        call coCvt1(lui,iax,'ap',1.d0,'aw',dpol)
+        inten = PolsPara(nint(dpol))
       else
-        write (line,200) dd, mm, ss
+        inten = .true.
       end if
-
-c     setup result
-
-      if(doRA) then
-        tmpstr(1:length) = line(1:length)
-      else if(doDEC) then
-        if(theta.lt.0.0) then
-          tmpstr(1:length) = '-'//line(1:length-1)
+c
+      end
+c
+c
+      subroutine initvary
+c-----------------------------------------------------------------------
+c     Determine parameter varriability
+c
+c     vf(1) flux
+c     vf(2) l-coordinate
+c     vf(3) m-coordinate
+c     vf(4) semi-major axis
+c     vf(5) semi-minor axis
+c     vf(6) position angle
+c-----------------------------------------------------------------------
+      implicit none
+      include 'imsad.h'
+c-----------------------------------------------------------------------
+      vf(1) = .true.       
+      vf(2) = .true.       
+      vf(3) = .true.       
+c
+      if(dopoint) then
+        vf(4) = .false.  
+        vf(5) = .false.
+        vf(6) = .false.
+      else if(dogauss) then
+        vf(4) = .true.
+        if(dofixed) then
+          vf(5) = .false.
+          vf(6) = .false.
         else
-          tmpstr(1:length) = '+'//line(1:length-1)
+          vf(5) = .true.   
+          vf(6) = .true.
         end if
       end if
-
-      return
-  
-  100 format(i2.2,':',i2.2,':',i2.2,'.',i<N>.<N>)
-  200 format(i2.2,':',i2.2,':',i2.2)
-
-      end
-
-c +++ STR2ANG
 c
-c     convert formatted string into degrees/hours value of required
-c     precision
+      end 
 c
-c     Command:
 c
-c     RR	output is RA expressed as radians
-c      D	                         degrees
-c      H                                 hours
-c
-c     DR	output is DEC expressed as radians
-c      D                                  degrees
-c
-c     Precision:	
-c
-c     RA:				DEC:
-c
-c     0 HH:MM:SS.S			[+/-]DD:MM:SS
-c     1 HH:MM:SS.SS			[+/-]DD:MM:SS.S
-c     2 HH:MM.SS.SSS			[+/-]DD:MM:SS.SS
-c     3 HH:MM:SS.SSSS			[+/-]DD:MM:SS.SSS
-c
-c     input:
-c
-c     cmd	conversion command(s)
-c     p		string precision 
-c     theta	angle in decimal degrees or hours.
-c
-c     output:
-c
-c     dangle	angle formated into a string with format [+/-]DD:MM:SS.SS
-c
-c ---
-
-      subroutine str2ang(cmd,p,theta,tmpstr)
+      subroutine isbox (lui, ip, MAXSRC, iwin, jwin, diwin, djwin, 
+     +                  arcsec, dolog, ns)
+c-----------------------------------------------------------------------
       implicit none
+      integer lui, MAXSRC, ns, ip, iwin(2,MAXSRC), jwin(2,MAXSRC)
+      logical arcsec, dolog
+cc
       include 'mirconst.h'
-      double precision degrad, raddeg
-      parameter (raddeg=180.0d0/dpi, degrad=dpi/180.0d0)
-    
-      integer      dd, mm, ss, frac,
-     -             lra(4), lde(4), 
-     -             dra(4), dde(4), 
-     -             N,
-     -             length,
-     -             p
-
-      character*2  cmd
-      character*(*) tmpstr
-      character*13  line
-
-      double precision theta,
-     -             tmp,
-     -             prec,
-     -             s
-
-      logical      doRA,
-     -             doDEC
-
-      data lra / 10, 11, 12, 13 /
-      data lde /  9, 11, 12, 13 / 
-      data dra /  1,  2,  3,  4 /
-      data dde /  0,  1,  2,  3 /
-
-      doRA = .false.
-      doDEC = .false.
-
-c     setup line   
-
-      if(cmd(1:1).eq.'R') then
-        doRA = .true.
-        length = lra(p+1) 
-        N = dra(p+1)
-        prec = 10.0d0 ** (p+1)
-        line(1:length) = tmpstr(1:length)
-        s = +1.0d0
-      else if(cmd(1:1).eq.'D') then
-        doDEC = .true.
-        length = lde(p+1)
-        N = dde(p+1)
-        prec = 10.0d0 ** p
-        if(tmpstr(1:1).eq.'+' .or. tmpstr(1:1).eq.'-') then
-          line(1:length-1) = tmpstr(2:length)
-          if(tmpstr(1:1).eq.'-') s = -1.0d0
-          if(tmpstr(1:1).eq.'+') s = +1.0d0 
-          length = length - 1
-        else 
-          line(1:length) = tmpstr(1:length)
-          s = +1.0d0 
+      double precision RADSEC
+      parameter (RADSEC=180.0d0/DPI*3600.0d0)
+c
+      double precision in(3), out(3), Diwin(2,MAXSRC), Djwin(2,MAXSRC),
+     + Dimax, Djmax, imin, imax, jmin, jmax
+      integer i, j
+      character line*132
+c-----------------------------------------------------------------------
+      Dimax = -9.0e9
+      Djmax = -9.0e9 
+c
+      imin = 9.0e9
+      imax = -imin
+      jmin = 9.0e9
+      jmax = -jmin
+c
+      do i = 1, ns
+        if(arcsec) then
+          do j = 1, 2
+            in(1) = dble(iwin(j,i)) 
+            in(2) = dble(jwin(j,i))
+            in(3) = dble(ip) 
+            call coCvt(lui,'ap/ap/ap',in,'ow/ow/ap',out)
+            Diwin(j,i) = out(1) * RADSEC
+            Djwin(j,i) = out(2) * RADSEC
+c
+            if(abs(Diwin(j,i)).gt.Dimax) Dimax = abs(Diwin(j,i))
+            if(abs(Djwin(j,i)).gt.Djmax) Djmax = abs(Djwin(j,i))
+c
+            if(Diwin(j,i).lt.imin) imin = Diwin(j,i)
+            if(Djwin(j,i).lt.jmin) jmin = Djwin(j,i)
+c
+            if(Diwin(j,i).gt.imax) imax = Diwin(j,i)
+            if(Djwin(j,i).gt.jmax) jmax = Djwin(j,i)
+          end do
+          write(line,100) Diwin(1,i), Djwin(1,i),
+     +                    Diwin(2,i), Djwin(2,i)
+100       format('arcsec,box(',sp,1pe10.3,',',sp,1pe10.3,',',
+     +           sp,1pe10.3,',',sp,1pe10.3,')')
+        else
+          write(line,200) iwin(1,i), jwin(1,i),
+     +                    iwin(2,i), jwin(2,i)
+200       format('abspix,box(',i4,',',i4,',',i4,',',i4,')')
         end if
-      end if
-
-      if(N.gt.0) then 
-        read(line(1:length),100) dd, mm, ss, frac
-      else
-        read(line(1:length),200) dd, mm, ss
-        frac = 0.0d0
-      end if
-
-c     determine angle and perform conversions
-
-      tmp = s * (dble(dd) + dble(mm)/60.0d0 + dble(ss)/3600.0d0 +
-     - dble(frac) / (3600.0 * prec))  
-
-      if(doRA) then
-        if(cmd(2:2).eq.'R') theta = tmp * 15.0d0 * DEGRAD
-        if(cmd(2:2).eq.'D') theta = tmp * 15.0d0 
-        if(cmd(2:2).eq.'H') theta = tmp
-      else if(doDEC) then
-        if(cmd(2:2).eq.'R') theta = tmp * DEGRAD
-        if(cmd(2:2).eq.'D') theta = tmp  
-      end if
-
-      return
-
-  100 format(i2.2,':',i2.2,':',i2.2,'.',i<N>.<N>)
-  200 format(i2.2,':',i2.2,':',i2.2)
-
+c
+        if(dolog) then
+          call logwrit(line)
+        else
+          call output (line)
+        end if
+      end do
+c
+      if(arcsec.and.ns.ge.1) then
+        write(line,300) Dimax, Dimax
+300     format ('maxima',2(1x,f8.3))  
+        if(dolog) then
+          call logwrit(line)
+        else
+         call output (line)
+        end if
+        write(line,400) imin-4.0, imax+4.0, jmin-4.0, jmax+4.0
+400     format('extent',4(1x,f8.3))
+        if(dolog) then
+          call logwrit(line)
+        else
+          call output (line)
+        end if	    
+      end if 
+c
       end
- 
-
+c
+c
+      subroutine ischeck(ns,iwin,jwin,blc,trc,bmaj,bmin,bpa,bvol,beam,
+     +                   box,nbox,image,mask,inten)
+c-----------------------------------------------------------------------
+c     Check islands for valid extents and minimum pixels, could add an
+c     island merger if necessary
+c
+c     bvol ... future use
+c
+c-----------------------------------------------------------------------
+      implicit none
+      include 'maxnax.h'
+      include 'mirconst.h'
+c
+      integer MAXSRC
+      parameter (MAXSRC=2048)
+c 
+      integer iwin(2,MAXSRC), jwin(2,MAXSRC), itmp(2,MAXSRC), 
+     +  jtmp(2,MAXSRC), blc(MAXNAX), trc(MAXNAX), ns, imin, jmin,
+     +  ni, nj, i, j, di, dj, i0, j0, ptr, mi(MAXSRC), nbox, is
+      real bmaj, bmin, bpa, pa, bvol, tmpx, tmpy, dxy, dx, dy,
+     +  box(2), maxpix(MAXSRC), image(*)
+      character line*80
+      logical beam, mask(*), inten
+c-----------------------------------------------------------------------
+c
+c Compute beam extents as box(1) * dx or box(1) if zero beam parms 
+c
+      if(beam) then
+        pa = PI - bpa 
+c
+c Code fragment taken from AIPS SAD task - units are pixels/radians
+c
+        tmpx = (sin(pa)/bmaj)**2 + (cos(pa)/bmin)**2
+        tmpy = (cos(pa)/bmaj)**2 + (sin(pa)/bmin)**2
+        dxy = ((1.0/bmaj)**2 - (1.0/bmin)**2)*(sin(pa)*cos(pa))**2
+        dx = sqrt(0.25/(tmpx - dxy**2/tmpy))
+        dy = sqrt(0.25/(tmpy - dxy**2/tmpx))
+c
+        imin = int(box(1) * dx)
+        jmin = int(box(2) * dy)
+      else
+        imin = int(box(1))
+        jmin = int(box(2))
+      end if              
+c
+c Check minimum island extents based on beam parameters
+c
+      do i = 1, ns
+        ni = iwin(2,i) - iwin(1,i) + 1 
+        nj = jwin(2,i) - jwin(1,i) + 1
+c
+        di = int((imin - ni) / 2.0 + 0.5)
+        dj = int((jmin - nj) / 2.0 + 0.5)
+c
+        if(ni.lt.imin) then
+          iwin(1,i) = max(blc(1),iwin(1,i) - di)
+          iwin(2,i) = min(trc(1),iwin(2,i) + di)          
+        end if
+        if(nj.lt.jmin) then
+          jwin(1,i) = max(blc(2),jwin(1,i) - dj)
+          jwin(2,i) = min(trc(2),jwin(2,i) + dj)
+        end if
+      end do
+c
+c Check box number limit
+c
+      if(ns.gt.nbox) then
+        ni = trc(1) - blc(1) + 1
+c
+c Determine box pixel maxima - fixed sign problem for stokes QUV
+c 
+        do is = 1, ns
+          maxpix(i) = -9.0e9
+          do j = jwin(1,is), jwin(2,is)
+            j0 = j - blc(2) + 1   
+            do i = iwin(1,is), iwin(2,is)
+              i0 = i - blc(1) + 1
+              ptr = (j0-1)*ni + i0
+              if(mask(ptr)) then
+                if(inten) then
+		  if(image(ptr).gt.maxpix(is)) 
+     +               maxpix(is) = image(ptr)
+                else
+	          if(abs(image(ptr)).gt.maxpix(is)) 
+     +               maxpix(is) = abs(image(ptr)) 
+		end if
+              end if
+            end do
+          end do
+        end do
+c
+c Index maxima in ascending order
+c
+        call indexx(ns,maxpix,mi)
+c
+c Re-shuffle box arrays
+c
+        do is = 1, nbox
+          i0 = ns - is + 1
+          write (line,100) maxpix(mi(i0))
+100       format ('Keeping box ', 1x, 1pe10.3)
+          call output (line)
+c
+          itmp(1,is) = iwin(1,mi(i0))
+          itmp(2,is) = iwin(2,mi(i0)) 
+          jtmp(1,is) = jwin(1,mi(i0))
+          jtmp(2,is) = jwin(2,mi(i0))
+        end do
+        ns = nbox
+        do is = 1, ns
+          iwin(1,is) = itmp(1,is)
+          iwin(2,is) = itmp(2,is)
+          jwin(1,is) = jtmp(1,is)
+          jwin(2,is) = jtmp(2,is)  
+        end do
+      end if
+c
+c Check minimum island pixel numbers based on beam area - necessary ???
+c
+c
+      end
+c
+c
+      subroutine isfit (lui,ip,image,mask,blc,trc,iwin,jwin,
+     + bmajp,bminp,bpap,bvolp,bmaj,bmin,bpa,bvol,beam,ra0,de0,
+     + doplot,outfile,luo,ivp,ivp2)
+c-----------------------------------------------------------------------
+c     Fit Gaussian components to detected pixel islands
+c-----------------------------------------------------------------------
+      implicit none
+      include 'maxnax.h'
+      include 'imsad.h'
+      external function
+c
+      integer MAXSRC, MAXVAR
+      parameter (MAXSRC=2048, MAXVAR=20)
+c
+      character*2 itoaf
+      integer ifail1, ifail2, nvar, iwin(2,MAXSRC), jwin(2,MAXSRC),
+     +  ptr, i0, j0, ni, nj, i, j, ip, ic, lui, blc(MAXNAX), 
+     +  trc(MAXNAX), is, in, jn, ii, jj, luo
+c
+      real bmaj, bmin, bpa, bvol, bmajp, bminp, bpap, bvolp,
+     +  rms, covar(MAXVAR*MAXVAR), x(MAXVAR), image(*), tr(6),
+     +  island(MAXPIX,MAXPIX), dmin, dmax, px, py, ra0, de0,
+     +  xt, yt, ivp(4), ivp2(4)
+      logical dofit, done, mask(*), beam, doplot
+      character*2 flag(MAXCOMP), ctmp
+      character*64 outfile
+c
+      data tr / 0.0, 1.0, 0.0, 0.0, 0.0, 1.0 /
+c-----------------------------------------------------------------------
+      ni = trc(1) - blc(1) + 1
+      nj = trc(2) - blc(2) + 1
+c
+c Setup fitting paramters and units
+c
+      call initvary
+c
+c Loop through islands
+c
+      do is = 1, ns
+        dmin = +9.0e9
+        dmax = -9.0e9
+c
+        jn = jwin(2,is) - jwin(1,is) + 1
+        in = iwin(2,is) - iwin(1,is) + 1
+c
+c Plot mid-point of box we are fitting
+c
+	if(doplot) then
+          call pgsvp(ivp(1), ivp(2), ivp(3), ivp(4))
+          call pgwnad(1.0,real(ni),1.0,real(nj))
+          call pgpoint(1,(iwin(1,is)+iwin(2,is))/2.0,
+     +     (jwin(1,is)+jwin(2,is))/2.0,2)
+        end if
+c
+c Setup data arrays
+c 
+        nd = 0
+        xt = 0.0
+        yt = 0.0
+        do j = jwin(1,is), jwin(2,is)
+          j0 = j - blc(2) + 1  
+          jj = j - jwin(1,is) + 1 
+          do i = iwin(1,is), iwin(2,is)
+            i0 = i - blc(1) + 1
+            ptr = (j0-1)*ni + i0
+            ii = i - iwin(1,is) + 1
+c
+            if(mask(ptr)) then
+              if(image(ptr).lt.dmin) dmin = image(ptr)
+              if(image(ptr).gt.dmax) dmax = image(ptr) 
+              island(ii,jj) = image(ptr)
+c
+              nd = nd + 1
+              data(nd) = image(ptr)
+              xd(nd) = real(i)
+              yd(nd) = real(j)
+c
+              xt = xt + xd(nd)
+              yt = yt + yd(nd)
+c
+c	      write(*,'(i2,2(x,f4.0),x,e10.3)') nd, xd(nd),
+c     -         yd(nd), data(nd)
+c
+            else
+              island(ii,jj) = 0.0   
+            end if
+          end do
+        end do
+c
+        xoff = xt / real(nd)
+        yoff = yt / real(nd)
+c
+c Check data for multiple peaks (if required)
+c
+c
+c     plot island
+c
+        if(doplot) then
+          call pgsvp(ivp2(1), ivp2(2), ivp2(3), ivp2(4))
+          call pgswin(0.5,real(in)+0.5,0.5,real(jn)+0.5)
+          call pgimag(island,MAXPIX,MAXPIX,1,in,1,jn,dmin,dmax,tr)
+        end if
+c
+c Begin fitting data             
+c
+        nc = 0
+        done = .false. 
+        do while(.not.done)
+          ctmp = '  '
+c
+c Determine estimates and prepare for fitting
+c
+          call estimate(bminp,bmajp,bpap) 
+          call packvar(x,nvar,MAXVAR)
+          dofit = nvar.ne.0 .and. .not.(nvar.ge.nd) .and. nd.gt.0
+c
+c Begin fitting
+c
+          if(dofit) then
+            gdim = 2
+            call lsqfit(FUNCTION,nd,nvar,x,covar,rms,ifail1,ifail2)
+            call upackvar(x,nvar)
+c
+            if(ifail1.ne.0) then
+              ctmp(1:1) = itoaf(ifail1) 
+              call bug('w','Gaussian fit failed to converge, ifail='//
+     +                 ctmp(1:1))
+            else
+              ctmp(1:1) = 'C'
+            end if
+c
+            if(ifail2.ne.ifail1) then
+              call bug('w','Failed to determine covariance matrix'//
+     +                 ' during Gaussian fit')
+              ctmp(2:2) = 'F'              
+            else if(ifail2.eq.0) then
+              call upackcov(covar,nvar)
+            end if
+          else
+            call bug('w','Gaussian fit not possible')
+            ctmp(1:1) = 'N'
+          end if
+c
+c Inspect residual for multi-component islands and refit (if required)
+c Refitting currently not implemented.
+c
+          done = .true.
+          flag(nc) = ctmp(1:2)
+        end do
+c        
+c Plot position of fitted centroid
+c 
+        if(doplot) then
+          call pgsci(10)
+          do ic = 1, nc
+            px = pf(2,ic) - real(iwin(1,is)) + 1.0        
+            py = pf(3,ic) - real(jwin(1,is)) + 1.0
+            call pgpoint(1,px,py,2)
+          end do
+        end if
+c
+c Convert fitted parameters to astronomical units and report fit
+c
+        call report(flag,ra0,de0,bmaj,bmin,bpa,bvol,beam,outfile,
+     +              luo,lui,ip)
+      end do 
+c
+      end
+c
+c
+      subroutine island(image,mask,blc,trc,clip,iwin,jwin,ns,
+     +                  doplot,inten)
+c-----------------------------------------------------------------------
+c     Detect islands of pixels above the clipping level 
+c-----------------------------------------------------------------------
+      implicit none
+      include 'maxdim.h'
+      include 'maxnax.h'
+c
+      integer MAXSRC
+      parameter (MAXSRC=2048)
+      real image(*), clip, px, py
+      logical mask(*), doplot
+      integer iwin(2,MAXSRC), jwin(2,MAXSRC),
+     +  blc(MAXNAX), trc(MAXNAX), LHS, RHS, new(MAXDIM), old(MAXDIM),
+     +  ptr, i, j, ns, i0, j0, ni, pi, pj, ci
+      character line*80
+      logical merge, null, inten
+c-----------------------------------------------------------------------
+c
+c Set yellow colour to mark pixels above clip level
+c
+      if(doplot) call pgsci(7)
+c
+c Initialse parameters and arrays
+c
+      ns = 0
+      do i = 1, MAXDIM
+        old(i) = 0
+        new(i) = 0
+      end do
+c
+      LHS = blc(1)
+      RHS = trc(1)
+      ni = RHS - LHS + 1
+c
+c Begin search for islands
+c
+      do j = blc(2), trc(2)
+        j0 = j - blc(2) + 1 
+        do i = LHS, RHS
+          i0 = i - blc(1) + 1
+          ptr = (j0-1)*ni + i0  
+c
+c Includes all stokes parameters I > clip "OR" |QUV| > clip
+c
+          if((inten .and. image(ptr).lt.clip) .or.
+     +       (.not.inten .and. abs(image(ptr)).lt.clip) .or.
+     +       .not.mask(ptr) ) then
+            new(i) = 0
+          else 
+c
+c Put a yellow point on pixel above clip level
+c
+            px = real(i - blc(1) + 1)
+            py = real(j - blc(2) + 1)
+            if(doplot) call pgpoint(1,px,py,-1)
+c
+            if(i.gt.LHS .and. new(i-1).ne.0) then
+              new(i) = new(i-1)
+              call iadd(.false.,ns,new(i),iwin,jwin,i,j)
+              merge = i.lt.RHS .and. old(i+1).ne.0 .and.
+     +                old(i+1).ne.new(i)
+              if(merge) 
+     +         call imerge(new(i),old(i+1),LHS,RHS,new,old,iwin,jwin)
+            else if(i.gt.LHS .and. old(i-1).ne.0) then
+              new(i) = old(i-1)
+              call iadd(.false.,ns,new(i),iwin,jwin,i,j)
+c
+              merge = i.lt.RHS .and. old(i+1).ne.0 .and.
+     +                old(i+1).ne.new(i)
+              if(merge) 
+     +         call imerge(new(i),old(i+1),LHS,RHS,new,old,iwin,jwin)
+            else if(old(i).ne.0) then
+              new(i) = old(i)
+              call iadd(.false.,ns,new(i),iwin,jwin,i,j) 
+            else if(i.lt.RHS .and. old(i+1).ne.0) then
+              new(i) = old(i+1)
+              call iadd(.false.,ns,new(i),iwin,jwin,i,j)
+            else
+              call iadd(.true.,ns,new(i),iwin,jwin,i,j)
+            end if
+          end if 
+        end do
+c           
+        do i = LHS, RHS
+          old(i) = new(i)
+        end do 
+      end do
+c
+c Remove null islands from collection
+c
+      i = 1
+      do while(i.le.ns)
+        null = iwin(1,i).eq.0 .and. iwin(2,i).eq.0 .and. jwin(1,i).eq.0
+     +         .and. jwin(2,i).eq.0
+        if(null) then
+          do j = i, ns - 1
+            iwin(1,j) = iwin(1,j+1)
+            iwin(2,j) = iwin(2,j+1)
+            jwin(1,j) = jwin(1,j+1)
+            jwin(2,j) = jwin(2,j+1)
+          end do
+          ns = ns - 1
+        else
+          i = i + 1
+        end if         
+      end do
+c       
+      write (line,100) ns
+100   format ('Number of islands found = ', i4)
+      call output (line)
+c
+c Plot bounded islands in some colour other than yellow
+c
+      if(doplot) then 
+        ci = 5
+        do i = 1, ns
+          ci = ci + 1
+          if(ci.eq.7) ci = 5
+          call pgsci(ci)
+          do pi = iwin(1,i), iwin(2,i)
+            px = real(pi - blc(1) + 1)
+            do pj = jwin(1,i), jwin(2,i)
+              py = real(pj - blc(2) + 1)   
+              call pgpoint(1,px,py,1)
+            end do
+          end do
+        end do
+      end if
+c
+      end
+c
+c
+      subroutine packvar(var,nvar,MAXVAR)
+c-----------------------------------------------------------------------
+c     Store all the things that we need to vary
+c-----------------------------------------------------------------------
+      implicit none
+      include 'imsad.h'
+c
+      integer nvar,MAXVAR
+      real var(MAXVAR), tmp(6)
+      integer i, j, ncurr
+c-----------------------------------------------------------------------
+      nvar = 0
+c
+c Loop over number of components
+c
+      do i = 1, nc
+        ncurr = 0
+        if(vf(1)) then
+          ncurr = ncurr + 1
+          tmp(ncurr) = pf(1,i)
+        end if
+        if(vf(2)) then
+          ncurr = ncurr + 1
+          tmp(ncurr) = pf(2,i) - xoff
+        end if
+        if(vf(3)) then
+          ncurr = ncurr + 1
+          tmp(ncurr) = pf(3,i) - yoff
+        end if
+        if(vf(4)) then
+          ncurr = ncurr + 1
+          tmp(ncurr) = pf(4,i)
+        end if
+        if(vf(5)) then
+          ncurr = ncurr + 1
+          tmp(ncurr) = pf(5,i)
+        end if
+        if(vf(6)) then
+          ncurr = ncurr + 1
+          tmp(ncurr) = pf(6,i)
+        end if
+c
+c Copy the estimates to the variables
+c
+        if(nvar+ncurr.gt.MAXVAR) 
+     +    call bug('f','Too many free parameters')
+c
+        do j = 1, ncurr
+          nvar = nvar + 1
+          var(nvar) = tmp(j)
+        end do
+      end do
+c
+      end
+c
+c
+      subroutine report(flag,ra0,de0,bmaj,bmin,bpa,bvol,beam,
+     +                  outfile,luo,lui,ip)
+c-----------------------------------------------------------------------
+c     Generate fit report for current island.
+c-----------------------------------------------------------------------
+      implicit none
+      include 'imsad.h'
+      include 'mirconst.h' 
+c
+      double precision RADDEG, DEGRAD
+      parameter (RADDEG = 180.0d0 / DPI, DEGRAD = DPI / 180.0d0)
+c
+      integer i, rc, fac, luo, lui, ip, len1, iostat
+      real ra0, de0, ra, de, dra, dde, bmaj, bmin, bpa, smaj, smin,
+     + spa, dmaj, dmin, dpa, bvol, iflux, wgt, sumwgt, wra,
+     + sumwra, wde, sumwde
+c
+      character*1 dflag, fflag
+      character*2 flag(MAXCOMP)
+      character*11 ras, des
+      character*64 outfile
+      character line(MAXCOMP)*90, line2*130
+      character*9 label
+      character*40 rangle, hangle, ctmp
+      logical      beam
+c-----------------------------------------------------------------------
+      sumwgt = 0.0
+      sumwra = 0.0
+      sumwde = 0.0
+c
+c Convert the fitted parameters to meaningful units
+c     
+      call coordfid(lui,ip)
+c
+c Write beam characteristics
+c
+      call gaussfid(bmaj,bmin,bpa,smaj,smin,spa)
+c
+      call output (' ')
+      write(line2,1000) smaj, smin, spa
+ 1000 format('BEAM major/minor/pa ', 2(1x,f7.3), ' arcsec', 
+     +       1x, f6.1, ' degrees')
+      call output (line2)
+c
+c Generate record label based on flux weighted mean component coordinates
+c Here we loop over the number of times the fits was attempted.
+c Currently, nc is always 1 (see subroutine isfit)
+c
+      do i = 1, nc
+c
+c Compute integrated flux (if possible)
+c
+	write(line2,4000) pf(1,i)
+4000    format('Peak flux (Jy)', 1x, 1pe10.3)
+        call output (line2)
+c
+        if(bvol.gt.0.0) then
+          iflux = pf(1,i) * pi/4 * pf(4,i) * pf(5,i) 
+          iflux = iflux / log(2.0)
+          iflux = iflux / bvol
+        else 
+          iflux = 0.0
+        end if 
+c
+c Flag integrated flux < peak flux (caused by beam > source size)
+c
+        fflag = ' '
+        if(iflux.lt.pf(1,i)) fflag = 'F'
+        write(line2,5000) iflux
+ 5000   format('Integrated flux (Jy)', 1x, 1pe10.3)
+        call output (line2)
+c
+c Convert major, minor and position angle 
+c
+        call gaussfid(pf(4,i),pf(5,i),pf(6,i),smaj,smin,spa)
+        write(line2,6000) smaj, smin, spa
+ 6000   format('Fitted major/minor/pa ',2(1x,f6.2), ' arcsec',
+     +         2x, f6.1, ' degrees')
+        call output (line2)
+c
+c Deconvolve the beam (if possible) and setup source min/maj/pa
+c TODO - add as an option
+c
+        if(beam) then 
+          call gaudfac(pf(4,i),pf(5,i),pf(6,i)*180/pi,bmaj,bmin,
+     +                 bpa*180/pi,fac,dmaj,dmin,dpa,rc)
+          if(rc.eq.0) then
+c
+c Deconvolution ok
+c
+            dpa = pi/180 * dpa
+            call gaussfid(dmaj,dmin,dpa,smaj,smin,spa)
+            dflag = 'D'
+          else if (rc.eq.1) then
+c
+c Result is close to a point source
+c
+            dflag = 'P'
+	  else if (rc.eq.2) then
+c
+c Deconvolution failed
+c
+	    dflag = 'F'
+          end if
+        else
+          dflag = '?'
+        end if 
+c
+c Add centroid offsets to reference RA and Dec
+c In radians
+c
+        dra = pf(2,i) / cos(de0)
+        dde = pf(3,i)
+c
+        write(line2,3000) pf(2,i)*3600*RADDEG, pf(3,i)*3600*RADDEG
+ 3000   format('Fitted offsets', 2(1x,1pe10.3), ' arcsec')
+        call output (line2)
+c
+        ra = ra0 + dra
+        de = de0 + dde
+c
+c Sum weighted coordinates
+c
+        wgt = pf(1,i)
+        sumwgt = sumwgt + wgt 
+        sumwra = sumwra + wgt * ra
+        sumwde = sumwde + wgt * de
+c
+c Convert RA and Dec to formatted strings
+c
+	if(ra.lt.0.0) ra = 2.0d0*DPI + ra
+        ras = hangle(dble(ra))
+        if(ras(3:3).ne.':') then
+          ctmp = ras
+          ras = '0'//ctmp
+        end if
+        des = rangle(dble(de))
+        if (des(1:1).ne.'-') then
+          ctmp = des
+          des = '+'//ctmp
+        end if
+        if (des(4:4).ne.':') then
+          ctmp = des
+          des(2:) = '0'//ctmp(2:)
+        end if
+c
+c Write to display/logfile
+c
+        write(line(i),100) ras, des, pf(1,i),
+     +    iflux, smaj, smin, spa, flag(i), dflag, fflag
+  100   format(2(1x,a11),5(1x,1pe10.3),1x,a1,1x,a1,1x,a1)
+      end do  
+c
+c Determine source label
+c
+      wra = sumwra / sumwgt
+      wde = sumwde / sumwgt
+c
+      if(wra.lt.0.0) wra = 2.0d0*DPI + wra
+      ras = hangle(dble(wra))
+      if(ras(3:3).ne.':') then
+        ctmp = ras
+        ras = '0'//ctmp
+      end if
+      des = rangle(dble(wde))
+      if (des(1:1).ne.'-') then
+        ctmp = des
+        des = '+'//ctmp
+      end if
+      if (des(4:4).ne.':') then
+        ctmp = des
+        des(2:) = '0'//ctmp(2:)
+      end if
+c
+      label = ras(1:2)//ras(4:5)//des(1:3)//des(5:6)
+c
+c Write report records
+c 
+      do i = 1, nc
+        if(outfile.ne.' ') then
+          line2 = label//' : '//line(i)
+          call txtwrite (luo, line2, len1(line2), iostat)
+          if (iostat.ne.0) 
+     +      call bug ('f','Error writing to output file')
+        else
+          call output (label//' : '//line(i))
+        end if
+      end do
+c
+      end 
+c
+c
+      subroutine upackcov(covar,nvar)
+c-----------------------------------------------------------------------
+c     Unpack the covariance matrix
+c-----------------------------------------------------------------------
+      implicit none
+      include 'imsad.h'
+      integer nvar
+      real covar(nvar,nvar)
+      integer i, n
+c-----------------------------------------------------------------------
+      n = 0
+      do i = 1, nc
+        if(vf(1)) then
+          n = n + 1
+          sf(1,i) = covar(n,n)
+        end if
+        if(vf(2)) then
+          n = n + 1
+          sf(2,i) = covar(n,n)
+        end if
+        if(vf(3)) then
+          n = n + 1
+          sf(3,i) = covar(n,n)
+        end if
+        if(vf(4)) then
+          n = n + 1
+          sf(4,i) = covar(n,n)
+          if(dofixed) sf(5,i) = sf(4,i)
+        end if
+        if(vf(5)) then
+          n = n + 1
+          sf(5,i) = covar(n,n)
+        end if
+        if(vf(6)) then
+          n = n + 1
+          sf(6,i) = covar(n,n)
+        end if
+      end do
+      if(n.ne.nvar) call bug('f','Inconsistency in UPackCov')
+c
+      end
+c
+c
+      subroutine upackvar(var,nvar)
+c-----------------------------------------------------------------------
+c     Unpack all the things that we need to vary
+c-----------------------------------------------------------------------
+      implicit none
+      include 'imsad.h'
+      integer nvar
+      real var(nvar)
+      integer i, n
+c-----------------------------------------------------------------------
+      n = 0
+      do i = 1, nc
+        if(vf(1)) then
+          n = n + 1
+          pf(1,i) = var(n)
+        end if
+        if(vf(2)) then
+          n = n + 1
+          pf(2,i) = var(n) + xoff
+        end if
+        if(vf(3)) then
+          n = n + 1
+          pf(3,i) = var(n) + yoff
+        end if
+        if(vf(4)) then
+          n = n + 1
+          pf(4,i) = var(n)
+          if(dofixed) pf(5,i) = pf(4,i)
+        end if
+        if(vf(5)) then
+          n = n + 1
+          pf(5,i) = var(n)
+        end if
+        if(vf(6)) then
+          n = n + 1
+          pf(6,i) = var(n)
+        end if
+      end do
+      if(n.ne.nvar) call bug('f','Inconsistency in UPackVar')
+c
+      end
