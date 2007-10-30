@@ -41,13 +41,24 @@ c	system temperature is then computed. Using this procedure should only
 c	be attempted when the observation samples an appreciable range of
 c	elevations.
 c
+c	NOTE: The model sky brightnesses are just that - models, not reality.
+c	They will probably be quite inaccurate in cloudy weather, and
+c	very inaccurate in rainy weather. Do not use this except in clear
+c	weather.
+c
 c	NOTE: This procedure to estimate flux calibration factor is not 
 c	necessarily correct. The system temperature scale may differ from
 c	with the model data because the system efficiency used in the
 c	conversion process (the telescope Jy/Kelvin) was wrong, and the
 c	system temperature scale may have been adjusted to account for this.
 c@ vis
-c	The names of the input uv data sets. No default.
+c	The name of the input uv data set. No default.
+c@ select
+c	Normal Miriad uv data selection. See the help on "select" for
+c	more information. This selection criteria is used in checking
+c	which data are to be used in determining the flux scale calibration
+c	(i.e. mode=flux or mode=both). All data (regardless of the select
+c	keyword) is copied to the output file.
 c@ out
 c	The name of the output uv data set. No default.
 c	The output dataset contains extra uv variables, which might be
@@ -75,8 +86,8 @@ c    24apr01 rjs  Change format (and allow multiple formats) of met data file.
 c		  Remove code for opacGet.
 c    05jul01 dpr  Re-allow default met data format.
 c------------------------------------------------------------------------
-	integer MAXPOL
-	parameter(MAXPOL=2)
+	integer MAXPOL,MAXSELS
+	parameter(MAXPOL=2,MAXSELS=1024)
 	include 'maxdim.h'
 	include 'mirconst.h'
 	character version*(*)
@@ -97,6 +108,7 @@ c
 	double precision lst,lat,az,el,ra,dec,dtemp
 	real freq0(MAXWIN),t0,p0,h0,fac(MAXWIN),Tb(MAXWIN)
 	real dfac(MAXPOL,MAXWIN,MAXANT),doff(MAXPOL,MAXWIN,MAXANT)
+	real sels(MAXSELS)
 c
 	integer NMODES
 	parameter(NMODES=3)
@@ -105,13 +117,14 @@ c
 c
 c  Externals.
 c
-	logical uvvarUpd
+	logical uvvarUpd,hdprsnt
 c
 	data modes/'opacity ','flux    ','both    '/
 c
 	call output(version)
 	call keyini
 	call keya('vis',vis,' ')
+	call SelInput('select',sels,MAXSELS)
 	call keya('out',out,' ')
 	call keya('mdata',mdata,' ')
 	call keymatch('mode',NMODES,modes,1,mode,nout)
@@ -131,7 +144,7 @@ c  Get the diode calibration if needed.
 c
 	if(dodiode)then
 	  call diodeGet(vis,mdata,dfac,doff,MAXPOL,MAXWIN,MAXANT,
-     *							nif,nants)
+     *						  nif,nants,sels)
 	  call output('System temperature scale factor and offsets')
 	  call output('===========================================')
 	  do i=1,nif
@@ -167,6 +180,21 @@ c  Get ready to copy the data.
 c
 	call metInit(mdata)
 	call uvopen(lVis,vis,'old')
+c
+c  Check and warn about calibration tables.
+c
+        if(hdprsnt(lVis,'gains').or.hdprsnt(lVis,'leakage').or.
+     *     hdprsnt(lVis,'bandpass'))then
+          call bug('w',
+     *      'Uvdiff does not apply pre-existing calibration tables')
+          if(hdprsnt(lVis,'gains'))
+     *      call bug('w','No antenna gain calibration applied')
+          if(hdprsnt(lVis,'leakage'))
+     *      call bug('w','No polarization calibration applied')
+          if(hdprsnt(lVis,'bandpass'))
+     *      call bug('w','No bandpass calibration applied')
+        endif
+	
 	call uvset(lVis,'preamble','uvw/time/baseline',0,0.,0.,0.)
 	call varInit(lVis,'channel')
 c
@@ -524,12 +552,12 @@ c
       end
 c************************************************************************
 	subroutine diodeGet(vis,mdata,dfac,doff,MPOL,MWIN,MANT,
-     *							nifs,nants)
+     *						nifs,nants,sels)
 c
 	implicit none
 	character vis*(*),mdata*(*)
 	integer MPOL,MWIN,MANT,nifs,nants
-	real dfac(MPOL,MWIN,MANT),doff(MPOL,MWIN,MANT)
+	real dfac(MPOL,MWIN,MANT),doff(MPOL,MWIN,MANT),sels(*)
 c
 c  Determine a scale factor to apply to the system temperatures to
 c  make the model data agree with the nominal data.
@@ -540,30 +568,36 @@ c------------------------------------------------------------------------
 	parameter(MAXPNTS=1000000,MAXN=10000)
 c
 	real t0,p0,h0,freq0(MAXWIN),tau(MAXWIN)
-	integer lVis,iostat,nschan(MAXWIN),npnts,i,j,k,n
-	double precision sfreq(MAXWIN),sdf(MAXWIN)
+	integer lVis,nschan(MAXWIN),npnts,i,j,k,n
+	double precision sfreq(MAXWIN),sdf(MAXWIN),preamble(4)
+	complex visdata(MAXCHAN)
+	logical flags(MAXCHAN)
 	real data(MAXPNTS),x(MAXN),y(MAXN)
 	logical doinit
 	double precision dtemp,time,ra,dec,lst,lat,az,el
 	character xt*1,yt*1
-	integer xn,yn
+	integer xn,yn,vupd,nchan
 	logical xupd,yupd
 c
 c  Externals.
 c
-	integer uvscan
+	logical uvvarUpd
 c
 	call output('Getting data for flux scale calibration')
 	npnts = 1
 	doinit = .true.
 	call metInit(mdata)
 	call uvopen(lVis,vis,'old')
-	iostat = uvscan(lVis,'systemp')
-	dowhile(iostat.eq.0)
+	call uvvarIni(lVis,vupd)
+	call uvvarSet(vupd,'systemp')
+	call SelApply(lVis,sels,.true.)
+	call uvread(lVis,preamble,visdata,flags,MAXCHAN,nchan)
+	dowhile(nchan.gt.0)
 c
 c  On the first time through, get all the information which we
 c  assume will not change.
 c
+	  if(uvvarUpd(vupd))then
 	  if(doinit)then
 	    doinit = .false.
 	    call uvprobvr(lVis,'nschan',xt,nifs,xupd)
@@ -605,7 +639,8 @@ c
 	    call uvgetvrr(lVis,'ytsys',data(npnts),nants*nifs)
 	    npnts = npnts + nants*nifs
 	  endif
-	  iostat = uvscan(lVis,'systemp')
+	  endif
+	  call uvread(lVis,preamble,visdata,flags,MAXCHAN,nchan)
 	enddo
 	call uvclose(lVis)
 	call metFin
