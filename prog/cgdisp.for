@@ -181,6 +181,10 @@ c	LABTYP(2) defaults to "dms"  (to give RA and DEC)
 c@ options
 c	Task enrichment options. Minimum match of all keywords is active.
 c
+c	"abut" means don't leave any white space between subplots.  The
+c	  default is to leave a little bit between subplots, and 
+c	  OPTIONS=GAPS leaves a lot of space and labels eacg subplot
+c	  separately.
 c	"beamAB", where "A" is one of "b" or "t" and 
 c	                "B" is one of "l" or "r"
 c	  means draw the beam FWHM on the plot in the corner indicated
@@ -210,10 +214,11 @@ c	  function and colour lookup tables.
 c	"full" means do full plot annotation with contour levels, pixel
 c	  displa range, file names, reference values, etc.  Otherwise 
 c	  more room for the plot is available. 
-c	"gaps" means leave gaps between subplots and label each 
-c	  subplot, otherwise they will abut each other with just
-c	  a small amount of space between each subplot, and only
-c	  labelled around the borders of the full page
+c	"gaps" means leave large gaps between subplots and individually
+c	  label the axes of each subplot. By default, the subplots will 
+c	  have a small amount of white space between each subplot and 
+c	  they will only be labelled around the borders of the full page.  
+c	  See also OPTIONS=ABUT to eliminate the small amount of white space.
 c	"grid" means draw a coordinate grid on the plot rather than just ticks
 c	"mirror" causes all specified contour levels for all images
 c	  to be multiplied by -1 and added to the list of contours
@@ -563,6 +568,7 @@ c                  '*lin' -> '*nat'
 c    nebk 22nov95  Add ellipse overlays
 c    nebk 29nov95  Add options=conlab
 c    nebk 04dec95  If > 1 contour image, their sizes were being lost
+c    nebk 18dec95  Add options=abut
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -608,7 +614,7 @@ c
       logical do3val, do3pix, dofull, gaps, eqscale, doblc, doblg,
      +  dobeam, beaml, beamb, relax, rot90, signs, mirror, dowedge, 
      +  doerase, doepoch, bdone, doblb, doblm, dofid, dosing, nofirst,
-     +  grid, dotr, dodist, conlab
+     +  grid, dotr, dodist, conlab, doabut
 c
       data blankc, blankv, blankb /-99999999.0, -99999999.0, 
      +                             -99999999.0/
@@ -624,11 +630,10 @@ c
       data coltab /maxchan*0/
       data lwid /maxconp3*1/
 c-----------------------------------------------------------------------
-      call output ('CgDisp: version 04-Dec-95')
+      call output ('CgDisp: version 18-Dec-95')
+      call output ('New options=abut to eliminate all white space '//
+     +             'between subplots')
       call output ('New options=conlabel to label contour values')
-      call output ('New overlay types "ellipse" and "oellipse"')
-      call output ('New options=nodist prevents overlay distortion'//
-     +             ' with coordinate grid')
       call output (' ')
 c
 c Get user inputs
@@ -639,7 +644,8 @@ c
      +   boxfac, boxinc, pdev, labtyp, dofull, do3val, do3pix, eqscale, 
      +   gaps, solneg, nx, ny, lwid, break, cs, scale, ofile, dobeam, 
      +   beaml, beamb, relax, rot90, signs, mirror, dowedge, doerase, 
-     +   doepoch, dofid, dosing, nofirst, grid, dotr, dodist, conlab)
+     +   doepoch, dofid, dosing, nofirst, grid, dotr, dodist, conlab,
+     +   doabut)
 c
 c Open images as required
 c
@@ -739,8 +745,8 @@ c Work out view port sizes and increments.
 c
       call vpsizcg (dofull, dofid, ncon, gin, vin, 0, bin, maxlev,
      +   nlevs, srtlev, levs, slev, nx, ny, cs, xdispl, ydispb, 
-     +   gaps, dotr, wedcod, wedwid, tfdisp, labtyp, vxmin, vymin,
-     +   vymax, vxgap, vygap, vxsize, vysize, tfvp, wdgvp)
+     +   gaps, doabut, dotr, wedcod, wedwid, tfdisp, labtyp, vxmin, 
+     +   vymin, vymax, vxgap, vygap, vxsize, vysize, tfvp, wdgvp)
 c
 c Adjust viewport increments and start locations if equal scales 
 c requested or if scales provided by user
@@ -1557,7 +1563,7 @@ c
       subroutine decopt  (dofull, do3val, do3pix, eqscale, gaps, solneg,
      +   beambl, beambr, beamtl, beamtr, relax, rot90, signs, 
      +   mirror, dowedge, doerase, doepoch, dofid, dosing, nofirst,
-     +   grid, dotr, dodist, conlab)
+     +   grid, dotr, dodist, conlab, doabut)
 c----------------------------------------------------------------------
 c     Decode options array into named variables.
 c
@@ -1589,16 +1595,17 @@ c     grid      Extend ticks to grid
 c     dotr      Label top and right as well as left and bottom axes
 c     dodist    Distort overlays with grid
 c     conlab    Label contours
+c     doabut    No white space between subplots
 c-----------------------------------------------------------------------
       implicit none
 c
       logical dofull, do3val, do3pix, eqscale, gaps, solneg(*),
      +  beambl, beambr, beamtl, beamtr, relax, rot90, signs,
      +  mirror, dowedge, doerase, doepoch, dofid, dosing, nofirst,
-     +  grid, dotr, dodist, conlab
+     +  grid, dotr, dodist, conlab, doabut
 cc
       integer maxopt
-      parameter (maxopt = 26)
+      parameter (maxopt = 27)
 c
       character opshuns(maxopt)*9
       logical present(maxopt)
@@ -1608,7 +1615,7 @@ c
      +              'relax   ', 'rot90   ', 'signs   ', 'mirror',
      +              'wedge   ', 'noerase ', 'noepoch ', 'fiddle',
      +              'single  ', 'nofirst',  'grid    ', 'trlab',
-     +              'nodistort', 'conlabel'/
+     +              'nodistort', 'conlabel','abut    '/
 c-----------------------------------------------------------------------
       call optcg ('options', opshuns, present, maxopt)
 c
@@ -1638,6 +1645,7 @@ c
       dotr      =      present(24)
       dodist    = .not.present(25)
       conlab    =      present(26)
+      doabut    =      present(27)
 c
       end
 c
@@ -2206,7 +2214,8 @@ c
      +   boxfac, boxinc, pdev, labtyp, dofull, do3val, do3pix, eqscale, 
      +   gaps, solneg, nx, ny, lwid, break, cs, scale, ofile, dobeam, 
      +   beaml, beamb, relax, rot90, signs, mirror, dowedge, doerase, 
-     +   doepoch, dofid, dosing, nofirst, grid, dotr, dodist, conlab)
+     +   doepoch, dofid, dosing, nofirst, grid, dotr, dodist, conlab,
+     +   doabut)
 c-----------------------------------------------------------------------
 c     Get the unfortunate user's long list of inputs
 c
@@ -2280,6 +2289,7 @@ c   grid       Extend ticks to grid
 c   dotr       Label top and right axes as well as bototm and left
 c   dodist     Distort overlays with grid
 c   conlab     Label contours
+c   doabut     No white space bewteen subplots
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -2293,7 +2303,7 @@ c
       logical do3val, do3pix, dofull, gaps, eqscale, solneg(maxcon),
      +  dobeam, beaml, beamb, relax, rot90, signs, mirror, dowedge,
      +  doerase, doepoch, dofid, dosing, nofirst, grid, dotr, 
-     +  dodist, dunw, conlab
+     +  dodist, dunw, conlab, doabut
 cc
       integer nmaxim
       parameter (nmaxim = 8)
@@ -2477,12 +2487,15 @@ c
       call decopt (dofull, do3val, do3pix, eqscale, gaps, solneg,
      +   beambl, beambr, beamtl, beamtr, relax, rot90, signs, 
      +   mirror, dowedge, doerase, doepoch, dofid, dosing, nofirst,
-     +   grid, dotr, dodist, conlab)
+     +   grid, dotr, dodist, conlab, doabut)
 c
       if (gin.eq.' ') then
         dowedge = .false.
         dofid = .false.
       end if
+c
+      if (gaps .and. doabut) 
+     +  call bug ('f', 'options=gaps,abut is inconsistent')
 c
       call keymatch ('labtyp', maxtyp, ltypes, 2, labtyp, nlab)
       if (nlab.eq.0) then
