@@ -6,7 +6,7 @@ c  General image calculator program. This puts images thru an arbitrary
 c  arithmetic expression. Uses a lot (preferably max) of memory.
 c
 c= maths - Mathematical operations on images and image data
-c& pjt
+c& rjs
 c: utility, map combination, map manipulation
 c+
 c	MATHS is a MIRIAD task which performs arithmetic expressions on a
@@ -110,6 +110,7 @@ c   rjs  21sep93 - Fiddles with the order in which things are done so that
 c		   there is a template to the Boxinp routine.
 c   pjt   8jun94 - clarified region=
 c   rjs   3dec94   Copy across mosaic table.
+c   rjs  26jan95   Eliminate non-standard string concatentation.
 c------------------------------------------------------------------------
 	INCLUDE 'maths.h'
 	INTEGER ERROR,VECTOR,SCALAR,CONSTANT
@@ -117,7 +118,7 @@ c------------------------------------------------------------------------
 	INTEGER BUFLEN,MAXBOX
         PARAMETER(BufLen=64,MaxBox=2048)
 	CHARACTER VERSION*(*)
-	PARAMETER (VERSION='Maths: version 1.0 21-Sep-93')
+	PARAMETER (VERSION='Maths: version 1.0 26-Jan-95')
 c
 	CHARACTER expr*256,mask*256,out*64,template*64
 	INTEGER   rbuflen,pnt
@@ -539,6 +540,7 @@ c------------------------------------------------------------------------
 	parameter(error=0,constant=1,scalar=2,vector=3)
 	integer i
 	integer nin(maxnax)
+	character umsg*64
 c
 c  Externals.
 c
@@ -577,9 +579,11 @@ c
 	      Offset(1) = 0
 	    else
 	      do i=1,naxis
-	        if(nin(i).ne.nsize(i)) call bug('f',
-     * 		  'Input images/mask have different sizes: ' // 
-     *		  Symbol(1:len1(Symbol)))
+	        if(nin(i).ne.nsize(i)) then
+		  umsg = 'Input images/mask have different sizes: ' // 
+     *		    Symbol(1:len1(Symbol))
+		  call bug('f',umsg)
+		endif
 	      enddo
 	    endif
 	    Offset(nfiles+1) = Offset(nfiles) + len1(symbol)
