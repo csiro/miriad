@@ -142,6 +142,8 @@ c                  in eformat mode and add some decimal places to the freq
 c    10jan96  rjs  Make MAXRUNS depend on MAXDIM. Also eliminate dfloat.
 c    08oct96  rjs  Fix call to inbox. Use Fortran-5 functions. Propogate
 c	           MAXBOXES.
+c    29nov96  rjs  Change crpix from integer to double, and include mhw's
+c		   formatting changes.
 c------------------------------------------------------------------------
 
 c Main program of imstat and imspec. Puts out the identification, where
@@ -176,7 +178,7 @@ c the include file.
       program imstaspc
 
       character*21     version
-      parameter        ( version = 'version 2.2 10-Jan-96' )
+      parameter        ( version = 'version 2.2 28-Nov-96' )
       character*29     string
 
       include          'imstat.h'
@@ -193,7 +195,7 @@ c the include file.
       string = NAME // ': ' // version
       call output( string )
       call inputs( tinp,naxis,dim,corners,boxes,cut,counts,
-     *             beaminfo,axlabel,device, MAXBOXES)
+     *             beaminfo,axlabel,device, MAXBOXES )
       call stats(  tinp,naxis,dim,corners,boxes,cut,counts,
      *             beaminfo,axlabel,device )
       call xyzclose( tinp )
@@ -576,7 +578,7 @@ c              Following is workaround HP compiler bug
                temp = ctype(n)
                call rdhda( tinp, keyw('ctype',i), ctype(n), temp      )
                call rdhdd( tinp, keyw('crval',i), crval(n-dim), 1.d0  )
-               call rdhdi( tinp, keyw('crpix',i), crpix(n-dim), 1     )
+               call rdhdd( tinp, keyw('crpix',i), crpix(n-dim), 1.d0  )
                call rdhdd( tinp, keyw('cdelt',i), cdelt(n-dim), 0.d0  )
             endif
          enddo
@@ -1305,7 +1307,7 @@ c For ra and dec axes special conversions are done.
              cvalues(i)(13-j:12) = radec(13:12+j)
              coords(i) = coords(i) * 3600.
          else
-             write( cvalues(i), '( f10.3, 2x )' ) coords(i)
+             write( cvalues(i), '( f10.1, 2x )' ) coords(i)
          endif
       enddo
 
@@ -1540,7 +1542,7 @@ c Construct the output line for the typed list
 c 13 is really len(axlabel)+1, but axlabel is an unknown variable here
 c and it would be messy to transfer just to get the length of it.
             if(plotvar(EFMT).eq.1) then
-	      write( fmt, '( ''( '',i1,''(1pe10.2),i8 )'' )' ) nstat-1
+	      write( fmt, '( ''( '',i1,''(1pe10.3),i8 )'' )' ) nstat-1
             else
               write( fmt, '( ''( '',i1,''(1pg10.3),i8 )'' )' ) nstat-1
             endif
