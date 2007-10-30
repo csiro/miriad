@@ -174,7 +174,12 @@ c	  chosen to be the complement of any like axis in the first 2.
 c	  E.g., the cube is in vxy order and LABTYP=ABSKMS,ARCSEC the units 
 c	  for the "3VALUE" label will be arcsec.  If LABTYP=ABSKMS,HMS the 
 c	  "3VALUE" label will be DMS (if the third [y] axis is declination).
-c
+c@ 3format
+c       If you ask for "3value" labelling, this keyword allows you
+c       specify the FORTRAN format of the labelling.  I have given
+c       up trying to invent a decent algorithm to choose this. Examples
+c       are "1pe12.6", or "f5.2" etc   If you leave this blank cgdisp 
+c       will try something that you probably won't like.
 c@ csize
 c	Two values.  Character sizes in units of the PGPLOT default
 c	(which is ~ 1/40 of the view surface height) for the plot axis
@@ -277,6 +282,7 @@ c    nebk 30jan96  Remove restrictions on CHAN so groups of channels
 c		   can now overlap
 c    nebk 24jun96  Add some commonsense for 2-d images in sub. curpos
 c    nebk 13aug96  Prevent some problems with non-interactive devices
+c    nebk 13feb97  Add keyrod "3format"
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -302,7 +308,7 @@ c
 c
       character labtyp(2)*6
       character in*64, pdev*64, xlabel*40, ylabel*40, 
-     +  trfun*3, levtyp*1, result*3
+     +  trfun*3, levtyp*1, result*3, val3form*20
 c
       logical do3val, do3pix, eqscale, doblnk, cursor, stats, doreg,
      +  smore, rmore, cmore, dopixel, display, doabs, gaps, dolog,
@@ -314,7 +320,7 @@ c
       data dmm /1.0e30, -1.0e30/
       data gaps, doabut /.false., .false./
 c-----------------------------------------------------------------------
-      call output ('CgCurs: version 13-Aug-96')
+      call output ('CgCurs: version 13-Feb-97')
       call output (' ')
 c
 c Get user inputs
@@ -323,7 +329,7 @@ c
      +   nlevs, pixr, trfun, pdev, labtyp, do3val, do3pix, 
      +   eqscale, nx, ny, cs, dopixel, cursor, stats, doreg, 
      +   doabs, dolog, cgspec, cgdisp, mark, doerase, dobox, near, 
-     +   dowedge, dofid, dotr, grid)
+     +   dowedge, dofid, dotr, grid, val3form)
 c
 c Open image
 c
@@ -565,7 +571,7 @@ c
              call pgsch (cs(2))
              call pgsci (1)
              call lab3cg (lin, doerase, do3val, do3pix, labtyp,
-     +                    grpbeg(k), ngrp(k))
+     +                    grpbeg(k), ngrp(k), val3form)
            end if
 c
 c Cursor options
@@ -1738,7 +1744,7 @@ c
      +   levs, nlevs, pixr, trfun, pdev, labtyp, do3val, 
      +   do3pix, eqscale, nx, ny, cs, dopixel, cursor, stats, doreg, 
      +   doabs, dolog, cgspec, cgdisp, mark, doerase, dobox, near, 
-     +   dowedge, dofid, dotr, grid)
+     +   dowedge, dofid, dotr, grid, val3form)
 c-----------------------------------------------------------------------
 c     Get the unfortunate user's long list of inputs
 c
@@ -1781,12 +1787,13 @@ c   dofid      FIddle lookup tbale of pixel map
 c   dowedge    Draw wedge with pixel map
 c   dotr       Label top/right as well
 c   grid       Draw coordinate grid
+c   val3for    FOrmat for 3value labelling
 c-----------------------------------------------------------------------
       implicit none
 c
       integer maxlev, nx, ny, nlevs, ibin(2), jbin(2), kbin(2)
       real levs(maxlev), pixr(2), cs(2), slev
-      character*(*) labtyp(2), in, pdev, trfun, levtyp
+      character*(*) labtyp(2), in, pdev, trfun, levtyp, val3form
       logical do3val, do3pix, eqscale, cursor, stats, doreg, dopixel,
      +  doabs, dolog, cgspec, mark, cgdisp, doerase, dobox, near,
      +  dowedge, dofid, grid, dotr, dunw
@@ -1892,6 +1899,8 @@ c
         if (eqscale) call bug ('i', 
      +  'You might consider options=unequal with these axis types')
       end if
+c
+      call keyf ('3format', val3form, ' ')
 c
       call keyi ('nxy', nx, 0)
       call keyi ('nxy', ny, nx)
