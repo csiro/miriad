@@ -3,15 +3,16 @@ c************************************************************************
 	implicit none
 c
 c= demos - Inverse mosaicing operation
-c& mchw
+c& rjs
 c: map manipulation
 c+
-c	DEMOS (de-mosaic) is a MIRIAD task which takes a primary beam
-c	corrected cube, and forms output cubes. The output cubes are formed
-c	by applying a primary beam at various pointing centres. Thus this task
+c	DEMOS (de-mosaic) is a MIRIAD task which takes an input image, or
+c	cube, and forms output images by applying a primary beam. Several
+c	pointing centers are accepted, with a different output image
+c	formed for each pointing. Thus this task
 c	performs the inverse operation of mosaicing. The input pointing
-c	centres and the primary beam size are specified either directly, or
-c	by giving a uvdata file containing multiple pointings.
+c	centres and the primary beam size are indirectly specified by
+c	a visibility dataset.
 c
 c	Because the output of DEMOS are not primary beam corrected, they can
 c	be used for comparison with other uncorrected images and uvdata. In
@@ -21,29 +22,16 @@ c	multiple pointings. Thus you could use DEMOS to break the model into
 c	several models which are not primary beam corrected.
 c@ map
 c	This is the name of image, that is to be de-mosaiced. No default.
-c	The input is primary beam corrected image, or single dish image.
+c	The input is primary beam corrected image, single dish image, or
+c	one that is partially primary beam corrected (e.g. the output
+c	of MOSMEM).
 c@ vis
-c	This is an input uv file, whose pointing centres can act as
-c	defaults (templates) for the ``center'' parameter. As this is only
-c	used to determine defaults, it makes no sense to specify both ``vis''
-c	and ``center''.
-c@ center
-c	This gives a list of pairs of offset pointing positions, relative
-c	to the reference pixel of ``map''. The offsets are measured in
-c	arcseconds in the plane of the sky, in the directions of (ra,dec).
-c	A pair of values must be given for each pointing, giving the offset
-c	in x and y. If this is not given, the pointing centers are determined
-c	from the ``vis'' file. Either ``vis'' or ``center'' must be present.
-c@ pbtype
-c	The demosaicing procedure requires you to apply a primary beam.
-c	Normally DEMOS determines the primary beam type from the visibility
-c	dataset. To override this, or if you do not give a visibility
-c	dataset, you must specify the primary beam type.
-c	The primary beam type is normally just the name of a telescope whose
-c	primary beam is known (e.g. atca, hatcreek, vla). However to specify
-c	a gaussian primary beam of a particular size, use "gaus(xxx)", 
-c	where xxx is the primary beam FWHM in arcseconds. For example 
-c	"gaus(120)" corresponds to a primary beam with FWHM of 2 arcminute.
+c	This is an input uv file. The pointing centres and primary beams
+c	corresponding to the selected  visibilities in this dataset are used
+c	in the de-mosaicing process.
+c@ select
+c	Normal uv selection. See `help select'. Generally you will select
+c	only those pointings of interest.
 c@ out
 c	This gives a template name for the output images. The actual output
 c	image names are formed by appending a number corresponding to each
@@ -55,6 +43,11 @@ c	If no value is given, then the outputs will be one primary beam
 c	width in size. If one value is given, then this is used for both
 c	x and y. Each output size might be smaller than this, to prevent
 c	each output from extending beyond the edges of the input image.
+c@ options
+c	Extra processing options. There is currently only one option.
+c	  detaper    This indicates that the input image is not fully
+c	             primary beam corrected. Such images are formed by
+c	             MOSMEM or LINMOS with options=taper.
 c--
 c  History:
 c    rjs  25apr90 Original version.
@@ -70,18 +63,23 @@ c    nebk 28jan93 New primary beam interface.
 c    mchw 12feb93 Convert uvvariables ra and dec to double precision.
 c    rjs  26aug94 Rework to use new co routines.
 c    rjs  24oct94 Use new pb routines.
+c    rjs  30jan95 Write mosaic table with the output image.
+c    rjs   3feb95 options=detaper. Better uv handling. Get rid of pbtype
+c		  and center keywords.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='version 24-Oct-94')
+	parameter(version='version 3-Feb-95')
+	integer MAXSELS,MAXPNT
+	parameter(MAXSELS=256,MAXPNT=2048)
 	include 'maxdim.h'
         include 'mirconst.h'
+
 c
-	integer maxpnt
-	parameter(maxpnt=16)
-c
-	real pntoff(2,maxpnt)
-	character map*64,vis*64,out*64,name*64,pbtype*16
-	integer imsize(2),nsize(3),npnt,lout,i,tmap,iax,tvis
+	character map*64,vis*64,out*64,name*64,pbtype(MAXPNT)*16
+	integer imsize(2),nsize(3),npnt,lout,i,tmap,iax
+	logical detaper
+	real sels(MAXSELS)
+	double precision ra(MAXPNT),dec(MAXPNT)
 c
 c  Externals.
 c
@@ -95,10 +93,10 @@ c
 	call keya('map',map,' ')
 	call keya('vis',vis,' ')
 	call keya('out',out,' ')
-	call mkeyr('center',pntoff,2*maxpnt,npnt)
-	call keya('pbtype',pbtype,' ')
 	call keyi('imsize',imsize(1),0)
 	call keyi('imsize',imsize(2),imsize(1))
+	call SelInput('select',sels,MAXSELS)
+	call GetOpt(detaper)
 	call keyfin
 c
 c  Check that the input parameters are reasonable.
@@ -107,15 +105,8 @@ c
      *	  call bug('f','An input map must be given')
 	if(out.eq.' ')
      *	  call bug('f','An output template name must be given')
-	if(mod(npnt,2).ne.0) call bug('f',
-     *	 'There must be an even number of values in the "center"')
-	npnt = npnt / 2
-	if(vis.eq.' '.and.npnt.eq.0)
-     *	  call bug('f','No pointing centers were given')
-	if(vis.ne.' '.and.npnt.gt.0)
-     *	  call bug('w','Values for center override vis file')
-	if(vis.eq.' '.and.pbtype.eq.' ')
-     *	  call bug('f','Primary beam type should be given')
+	if(vis.eq.' ')
+     *	  call bug('f','A visibility dataset must be given')
 c
 c  Open the input map.
 c
@@ -134,63 +125,104 @@ c
 	if(iax.gt.0.and.iax.ne.3) call bug('f',
      *    'The spectral axis of this image must be number 3')
 c
+c  Get the pointing centres, etc, associated with the vis dataset.
 c
-c  Do we need the frequency for primary beam correction ?
+	call GetPnt(vis,sels,MAXPNT,npnt,ra,dec,pbtype)
 c
-        if (vis.ne.' ') then
-          call uvopen (tvis, vis, 'old')
-          call uvnext (tvis)
-        end if
-c
-c  Get the primary beam type, if needed.
-c
-	if(pbtype.eq.' ')call pbread(tvis,pbtype)
-c
-c  Convert from user-units to radians.
-c
-	do i=1,npnt
-	  pntoff(1,i) = pntoff(1,i) / 3600 / 180 * dpi
-	  pntoff(2,i) = pntoff(2,i) / 3600 / 180 * dpi
-	enddo
-c
-c  Determine the default pointings, if needed.
-c
-	if(npnt.eq.0) call Defaults(tmap,tvis,pntoff,maxpnt,npnt)
-c
-c  If the image size was not given, determine this from the size of the
-c  primary beam.
-c	
-	if(imsize(1).le.0.or.imsize(2).le.0)
-     *    call defsiz(tmap,pbtype,nsize,imsize)
-c
-	if(imsize(1).le.0)
-     *	    call bug('f','Internal bug in DEMOS: bad imsize1')
-	if(imsize(2).le.0)
-     *	    call bug('f','Internal bug in DEMOS: bad imsize2')
-c
-c  We have fooled around with the inputs long enough! Lets go and start
-c  de-mosaicing!
+c  Process each of the pointings.
 c
 	lout = len1(out)
 	do i=1,npnt
 	  name = out(1:lout)//itoaf(i)
-c
-	  call Process(tmap,pbtype,name,nsize,imsize,
-     *				pntoff(1,i),pntoff(2,i),version)
+	  call Process(tmap,pbtype(i),ra(i),dec(i),
+     *				name,nsize,imsize,version,detaper)
 	enddo
 c
 	call xyclose(tmap)
-        if (vis.ne.' ') call uvclose (tvis)
 c
 	end
-c********1*********2*********3*********4*********5*********6*********7*c
-	subroutine Process(tmap,pbtype,name,insize,outsize,
-     *				pntoffx,pntoffy,version)
+c************************************************************************
+	subroutine GetPnt(vis,sels,MAXPNT,npnt,ra,dec,pbtype)
+c
+	implicit none
+	character vis*(*)
+	real sels(*)
+	integer npnt,MAXPNT
+	double precision ra(MAXPNT),dec(MAXPNT)
+	character pbtype(MAXPNT)*(*)
+c
+c  Get the pointing centers and primary beam types. The "mos" routines
+c  do the real work.
+c------------------------------------------------------------------------
+	integer nread,ipnt,length,tvis
+	double precision preamble(4)
+	complex data
+	real rms
+	character type*1
+	logical flag,update
+c
+c  Open the visibility dataset, select the appropriate data, and
+c  get it to return just the first channel.
+c
+	call uvopen(tvis,vis,'old')
+	call SelApply(tvis,sels,.true.)
+	call mosCIni
+c
+c  Just read the first channel, to avoid unecessary work.
+c
+	call uvprobvr(tvis,'corr',type,length,update)
+	if(type.ne.' ')then
+	  call uvset(tvis,'data','channel',1,1.,1.,1.)
+	else
+	  call uvset(tvis,'data','wide',   1,1.,1.,1.)
+	endif
+c
+	npnt = 0
+	call uvread(tvis,preamble,data,flag,1,nread)
+	dowhile(nread.ne.0)
+	  call mosChk(tvis,ipnt)
+	  npnt = max(npnt,ipnt)
+	  if(npnt.gt.MAXPNT)
+     *		call bug('f','Too many pointings for me')
+	  call uvread(tvis,preamble,data,flag,1,nread)
+	enddo
+c
+	call uvclose(tvis)
+c
+c  Now get all the information from the pointing table.
+c
+	do ipnt=1,npnt
+	  call mosGet(ipnt,ra(ipnt),dec(ipnt),rms,pbtype(ipnt))
+	enddo
+c
+	end
+c************************************************************************
+	subroutine GetOpt(detaper)
+c
+	implicit none
+	logical detaper
+c
+c  Return processing options.
+c
+c------------------------------------------------------------------------
+	integer NOPTS
+	parameter(NOPTS=1)
+	logical present(NOPTS)
+	character opts(NOPTS)*8
+	data opts/'detaper '/
+c
+	call options('options',opts,present,NOPTS)
+	detaper = present(1)
+	end
+c************************************************************************
+	subroutine Process(tmap,pbtype,ra,dec,name,insize,outsize,
+     *						    version,detaper)
 c
 	implicit none
 	character name*(*),version*(*),pbtype*(*)
 	integer tmap,insize(3),outsize(2)
-	real pntoffx,pntoffy
+	double precision ra,dec
+	logical detaper
 c
 c  This is the main processing routine in DEMOS. It reads a part of the
 c  input map, applies the primary beam, and writes it out. It also
@@ -201,25 +233,18 @@ c    tmap	Handle of the input cube.
 c    name	Name of the output cube.
 c    insize	Size of the input image.
 c    outsize	Max size of the output image.
-c    pntoffx	Offset pointing, in x, in radians.
-c    pntoffy	Offset pointing, in y, in radians.
 c    version	A version id, for the history file.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'maxnax.h'
         include 'mirconst.h'
+	include 'mem.h'
 c
-	integer tout,naxis,pbObj
-	integer nsize(MAXNAX),i,j,k,n3,x1,x2,y1,y2
-	real x0,y0,data(MAXDIM)
-        logical flags(MAXDIM)
+	integer tout,naxis,pbObj,pScr,pWts,npnt
+	integer nsize(MAXNAX),i,k,n1,n2,n3,x1,x2,y1,y2
+	real x0,y0,rms
 	double precision crpix1,crpix2,xin(3),xout(3)
 	character line*64
-        real pbfac
-c
-c  Externals.
-c
-        real pbget
 c
 c  Header keywords.
 c
@@ -239,24 +264,39 @@ c
 	n3 = insize(3)
 	nsize(3) = n3
 c
+c  Determine the output map size.
+c
+	n1 = outsize(1)
+	n2 = outsize(2)
+	if(n1.le.0.or.n2.le.0)call defsiz(tmap,pbtype,n1,n2)
+c
 c  Determine the field extent in pixels.
 c
-	xin(1) = pntoffx
-	xin(2) = pntoffy
+	xin(1) = ra
+	xin(2) = dec
 	xin(3) = 1
-	call coCvt(tmap,'ow/ow/ap',xin,'ap/ap/ap',xout)
+	call coCvt(tmap,'aw/aw/ap',xin,'ap/ap',xout)
 	x0 = xout(1)
 	y0 = xout(2)
 c
-	x1 = nint(x0 - 0.5*outsize(1))
-	x2 = x1 + outsize(1) - 1
+	x1 = nint(x0 - 0.5*n1)
+	x2 = x1 + n1 - 1
 	x1 = max(x1,1)
 	x2 = min(x2,insize(1))
 c
-	y1 = nint(y0 - 0.5*outsize(2))
-	y2 = y1 + outsize(2) - 1
+	y1 = nint(y0 - 0.5*n2)
+	y2 = y1 + n2 - 1
 	y1 = max(y1,1)
 	y2 = min(y2,insize(2))
+c
+c  Check if the output file is of some size!
+c
+	if(x2.lt.x1.or.y2.lt.y1)then
+	  line = 'Unable to form output dataset '//name
+	  call bug('w',line)
+	  call bug('w','... pointing does not overlap with input image')
+	  return
+	endif
 c
 c Open the output file.
 c
@@ -286,18 +326,31 @@ c
 	enddo
 	call pbWrite(tOut,pbtype)
 c
+c  Create output mosaic table.
+c
+	call rdhdr(tMap,'rms',rms,0.)
+	if(rms.le.0)rms = 1
+c
+	call mosInit(outsize(1),outsize(2))
+	call mosSet(1,ra,dec,rms,pbtype)
+	call mosSave(tOut) 
+c
 c  Write some history info.
 c
 	call hisopen(tOut,'append')
 	line = 'DEMOS: Miriad DeMos '//version
         call hiswrite(tOut, line)
 	call hisinput(tOut,'DEMOS')
-	write(line,'(a,1p2g9.2)')'DEMOS: Pointing offsets(arcsec):',
-     *		3600*180/pi * pntoffx, 3600*180/pi * pntoffy
-	call hiswrite(tOut,line)
-	line = 'DEMOS: Primary beam type used: '//pbtype
 	call hiswrite(tOut,line)
 	call hisclose(tOut)
+c
+c  Prepare to iterate.
+c
+	call memAlloc(pWts,nsize(1)*nsize(2),'r')
+	if(detaper)then
+	  call memAlloc(pScr,nsize(1)*nsize(2),'r')
+	  call mosLoad(tMap,npnt)
+	endif
 c
 c  Loop over all planes
 c
@@ -307,167 +360,139 @@ c
 c
 c  Initialise the primary beam object.
 c
-	  xin(1) = pntoffx
-	  xin(2) = pntoffy
+	  xin(1) = ra
+	  xin(2) = dec
 	  xin(3) = k
-	  call pbInitc(pbObj,pbtype,tmap,'ow/ow/ap',xin)
+	  call pbInitc(pbObj,pbtype,tmap,'aw/aw/ap',xin)
 c
-c  Do the real work.
+	  if(detaper)then
+	    call mosMIni(tmap,real(k))
+	    call TapWts(pbObj,memr(pWts),memr(pScr),
+     *				x1-1,y1-1,nsize(1),nsize(2))
+	    call mosMFin
+	  else
+	    call PbWts(pbObj,memr(pWts),x1-1,y1-1,nsize(1),nsize(2))
+	  endif
 c
-	  do j=y1,y2
-	    call xyread(tmap,j,data)
-	    call xyflgrd(tmap,j,flags)
-	    do i=x1,x2
-              pbfac = pbget(pbObj,real(i),real(j))
-              data(i) = pbfac*data(i)
-              flags(i) = pbfac.gt.0.and.flags(i)
-	    enddo
-	    call xywrite(tOut,j-y1+1,data(x1))
-            call xyflgwr(tout,j-y1+1,flags(x1))
-	  enddo
 	  call pbFin(pbObj)
+c
+c  Now write out the data.
+c
+	  call WrOut(tmap,tOut,memr(pWts),x1-1,y1-1,nsize(1),nsize(2))
 	enddo
 c
+c  All said and done.
+c
+	call memFree(pWts,nsize(1)*nsize(2),'r')
+	if(detaper)call memFree(pScr,nsize(1)*nsize(2),'r')
 	call xyclose(tOut)
+c
 	end
-c********1*********2*********3*********4*********5*********6*********7*c
-	subroutine Defaults(tmap,tvis,pntoff,maxpnt,npnt)
+c************************************************************************
+	subroutine TapWts(pbObj,Wts,Scr,xoff,yoff,nx,ny)
 c
 	implicit none
-	integer tmap,tvis
-	integer maxpnt,npnt
-	real pntoff(2,maxpnt)
+	integer pbObj,xoff,yoff,nx,ny
+	real Wts(nx,ny),Scr(nx,ny)
 c
-c  This determines the defaults for pointing offsets from the visibility data
-c  file.
+c  Determine the primary beam weights.
 c
-c  Inputs:
-c    tmap	The handle of the input map.
-c    tvis	The handle of the visibility file to determine the defaults
-c		from.
-c    maxpnt	Maximum number of pointings.
-c  Output:
-c    npnt	Number of pointings given by the user. If this is zero, then
-c		it is determined from the data file.
-c    pntoff	Pointing offsets. This is output, if on entry npnt is 0.
 c------------------------------------------------------------------------
-	include 'mirconst.h'
-	integer i
-	double precision ra,dec,cdelt1,cdelt2,x1(2),x2(2)
-	real tol,dra,ddec,offra,offdec
-	character line*64
-	logical more,found
+	integer i,j
 c
 c  Externals.
 c
-	integer uvscan
-	logical uvupdate
+	real pbGet
 c
-c  Get info about the map.
+c  Get the de-tapering weights.
 c
-	call rdhdd(tmap,'cdelt1',cdelt1,dpi/(180*3600))
-	call rdhdd(tmap,'cdelt2',cdelt2,dpi/(180*3600))
-	tol = max(abs(cdelt1),abs(cdelt2))
+	call mosWts(Wts,Scr,nx,ny,xoff,yoff)
 c
-c  Rewind vis file, get the first record.
-c
-        call uvrewind (tvis)
-	call uvtrack(tvis,'ra','u')
-	call uvtrack(tvis,'dra','u')
-	call uvtrack(tvis,'dec','u')
-	call uvtrack(tvis,'ddec','u')
-	call uvnext(tvis)
-c
-c  Loop through the file, getting the data.
-c
-	more = .true.
-	dowhile(more)
-	  call uvgetvrd(tvis,'ra',ra,1)
-	  call uvrdvrr(tvis,'dra',dra,0.)
-	  call uvgetvrd(tvis,'dec',dec,1)
-	  call uvrdvrr(tvis,'ddec',ddec,0.)
-c
-c  Convert to offset coordinates.
-c
-	  x1(1) = ra + dra/cos(dec)
-	  x1(2) = dec + ddec
-	  call coCvt(tmap,'aw/aw',x1,'ow/ow',x2)
-	  offra  = x2(1)
-	  offdec = x2(2)
-c
-	  found = .false.
-	  i = 1
-	  dowhile(.not.found.and.i.le.npnt)
-	    found = abs(offra -pntoff(1,i)).lt.tol.and.
-     *		    abs(offdec-pntoff(2,i)).lt.tol
-	    i = i + 1
-	  enddo
-	  if(.not.found)then
-	    if(npnt.ge.maxpnt)
-     *	      call bug('f','Too many different pointing in vis')
-	    npnt = npnt + 1
-	    pntoff(1,npnt) = offra
-	    pntoff(2,npnt) = offdec
-	  endif
-c
-c  Wait for one of the RA, DEC, etc variables to be updated.
-c
-	  found = .false.
-	  more = .true.
-	  dowhile(more.and..not.found)
-	    more = uvscan(tvis,' ').eq.0
-	    if(more)found = uvupdate(tvis)
+	do j=1,ny
+	  do i=1,nx
+	    Wts(i,j) = pbGet(pbObj,real(i+xoff),real(j+yoff)) * Wts(i,j)
 	  enddo
 	enddo
 c
-c  Give a summary to the user.
+	end
+c************************************************************************
+	subroutine PbWts(pbObj,Wts,xoff,yoff,nx,ny)
 c
-	call output(
-     *	  'The visibility file contains the following pointings')
-	call output(
-     *	  'Number  xoff(arcsec)  yoff(arcsec)')
-	do i=1,npnt
-	  write(line,'(i4,f13.2,f14.2)')i,
-     *	    180*3600/pi * pntoff(1,i),
-     *	    180*3600/pi * pntoff(2,i)
-	  call output(line)
+	implicit none
+	integer pbObj,xoff,yoff,nx,ny
+	real Wts(nx,ny)
+c
+c  Determine the primary beam weights.
+c
+c------------------------------------------------------------------------
+	integer i,j
+c
+c  Externals.
+c
+	real pbGet
+c
+	do j=1,ny
+	  do i=1,nx
+	    Wts(i,j) = pbGet(pbObj,real(i+xoff),real(j+yoff))
+	  enddo
 	enddo
 c
-c Rewind vis file
+	end
+c************************************************************************
+	subroutine WrOut(tIn,tOut,Wts,xoff,yoff,nx,ny)
 c
-        call uvrewind (tvis)
+	implicit none
+	integer tIn,tOut,nx,ny,xoff,yoff
+	real Wts(nx,ny)
+c
+c  Write out the weighted data.
+c
+c------------------------------------------------------------------------
+	include 'maxdim.h'
+	real data(MAXDIM)
+	logical flags(MAXDIM)
+	integer i,j
+c
+	do j=1,ny
+	  call xyread(tIn,j+yoff,data)
+	  call xyflgrd(tIn,j+yoff,flags)
+	  do i=1,nx
+	    data(i+xoff) = wts(i,j) * data(i+xoff)
+	    flags(i+xoff) = wts(i,j).gt.0.and.flags(i+xoff)
+	  enddo
+	  call xywrite(tOut,j,data(1+xoff))
+	  call xyflgwr(tOut,j,flags(1+xoff))
+	enddo
+c
 	end
 c********1*********2*********3*********4*********5*********6*********7*c
-      subroutine defsiz(tmap,pbtype,nsize,size)
+      subroutine defsiz(tmap,pbtype,n1,n2)
 c
       implicit none
-      integer tmap,nsize(2),size(2)
+      integer tmap,n1,n2
       character pbtype*(*)
 c
 c  Set default size of image to one primary beam
 c
 c   Input
 c    tmap	Handle of the input dataset.
-c    nsize	Max size of the axis.
 c    pbtype	Primary beam type.
 c  Output
-c    size     Size of image
+c    n1,n2      Size of image
 c
 c-----------------------------------------------------------------------
 	double precision cdelt,crval,crpix
 	character ctype*16
 	real pbfwhm,cutoff,maxrad
-	integer pbObj,i
+	integer pbObj
 c
 	call pbInit(pbObj,pbtype,tmap)
 	call pbInfo(pbObj,pbfwhm,cutoff,maxrad)
 c
-	do i=1,2
-	  if(size(i).le.0)then
-	    call coAxDesc(tmap,i,ctype,crpix,crval,cdelt)
-	    size(i) = min(2 * nint(pbfwhm / abs(cdelt)), nsize(i))
-	  endif
-	enddo
+	call coAxDesc(tmap,1,ctype,crpix,crval,cdelt)
+	n1 = 2*nint(maxrad/abs(cdelt))
+	call coAxDesc(tmap,2,ctype,crpix,crval,cdelt)
+	n2 = 2*nint(maxrad/abs(cdelt))
 c
 	call pbFin(pbObj)
 c
