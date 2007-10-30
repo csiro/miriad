@@ -30,8 +30,8 @@ c@ pparams
 c	Pointing parameter table. These tables are stored on LEON at
 c	Narrabri in the file at$log:pparams.log. It is usually entered as an
 c	indirect parameter file. The table consists of 6 lines (one per
-c	antenna, each consisting of 12 numbers (the first number being the
-c	anntenna number).
+c	antenna), each consisting of 12 numbers (the first number being the
+c	antenna number).
 c@ options
 c	Task enrichment options. Possible values are
 c	  replace  Replace the XY and YX correlations with an estimate
@@ -44,7 +44,7 @@ c	  nopass   Do no apply bandpass calibration.
 c	
 c@ out
 c	The name of the output uv data-set. There is no default name.
-c
+c--
 c  History:
 c    27jun97 rjs  Adapted from uvredo
 c    23jul97 rjs  Improved equations, care mjk.
