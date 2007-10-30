@@ -20,6 +20,8 @@ c	whereas the source contains the data that is corrected and written
 c	out. If only a single dataset is given, then this is self-calibrated.
 c	Baseline-based self-calibration is a very dubious operation, and
 c	generally should not be performed.
+c
+c	Note: Both the reference and source datasets should be in time order.
 c@ select
 c	The normal uv selection commands -- see the help on "select" for
 c	more information. This selection is applied to both the reference
@@ -52,10 +54,11 @@ c    rjs  30jul97 Added options=nopassol
 c    rjs  31jul97 Improve gain normalisation with options=nopassol.
 c    rjs  12aug97 Correct scaling bug introduced above. Improve cross-hand
 c		  polarisation handling.
+c    rjs  14aug97 Handle caase of data beyond solutions.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
-	parameter(version='BlCal: version 1.0 3-Jul-97')
+	parameter(version='BlCal: version 1.0 14-Jul-97')
 	character out*64,line*32
 	integer lVis,lRef,lOut
 	integer nchan,pol,npol,nfiles
@@ -165,7 +168,7 @@ c
 	logical flags(nchan1)
 c------------------------------------------------------------------------
 	include 'blcal.h'
-	integer pol,bl,i1,i2,i
+	integer pol,bl,i0,i1,i2,i
 	logical more
 c
 	if(nchan.ne.nchan1)call bug('f','Channel mismatch')
@@ -180,8 +183,10 @@ c  Search for the appropriate solution.
 c
 	i1 = head(pol,bl)
 	i2 = i1
+	i0 = i1
 	more = .true.
 	dowhile(i2.ne.0.and.more)
+	  if(abs(time(i2)-co(1)).lt.abs(time(i0)-co(1)))i0 = i2
 	  if(time(i1).gt.co(1).or.co(1).gt.time(i2))then
 	    i1 = i2
 	    i2 = next(i2)
@@ -195,6 +200,10 @@ c
 	if(.not.more)then
 	  call datApply(memc(gidx(i1)),memi(fidx(i1)),time(i1),
      *			memc(gidx(i2)),memi(fidx(i2)),time(i2),
+     *			data,flags,co(1),nchan)
+	else if(i0.ne.0)then
+	  call datApply(memc(gidx(i0)),memi(fidx(i0)),co(1),
+     *			memc(gidx(i0)),memi(fidx(i0)),co(1),
      *			data,flags,co(1),nchan)
 	else
 	  do i=1,nchan
