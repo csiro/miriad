@@ -122,10 +122,11 @@ c    rjs   1oct96 Major tidy up.
 c    rjs  11nov98 Make "time" array double precision to avoid precision
 c		  problems.
 c    rjs  01dec98 More warning messages.
+c    rjs  22mar00 Relax implicit assumption that XX/YY much stronger than XY/YX.
 c------------------------------------------------------------------------
 	include 'gpscal.h'
 	character version*(*)
-	parameter(version='GpsCal: version 1.0 11-Nov-98')
+	parameter(version='GpsCal: version 1.0 22-Mar-00')
 	integer MAXSELS,nhead
 	parameter(MAXSELS=256,nhead=5)
 c
@@ -1137,7 +1138,7 @@ c
 	do j=2,nants
 	  do i=1,j-1
 	    k = k + 1
-	    if(SumMM(XX,k).gt.0.and.SumMM(YY,k).gt.0)then
+	    if(SumMM(XX,k)+SumMM(YY,k)+SumMM(XY,k)+SumMM(YX,k).gt.0)then
 	      nbld = nbld + 1
 	      if(Indx(i).eq.0)then
 	        nantsd = nantsd + 1
@@ -1609,7 +1610,7 @@ c
 	enddo
 c
 	do i=1,nbl
-	  SVM(i) = SumVM(XX,i) + SumVM(YY,i)
+	  SVM(i) = SumVM(XX,i) + SumVM(YY,i) + SumVM(XY,i) + SumVM(YX,i)
 	enddo
 c
 	Factor = 0.8
