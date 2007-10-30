@@ -47,7 +47,9 @@ c	of the first input image is used as the grid system of the output.
 c@ rms
 c	The rms noise levels in the input cubes. Only the relative sizes are
 c	of importance. There should be as many values as there are input
-c	cubes. The default is that all inputs have the same noise level.
+c	cubes. If no value is given, a value of 1 is used. If there are
+c	fewer than one value of `rms' for each input image, then the last
+c	value given is used for the remaining images.
 c@ signal
 c	An rms signal level. Only one value is required. Only the relative
 c	size of this to the "rms" parameters is used. The default value is
@@ -57,6 +59,15 @@ c	tapers off, and thus prevents the output being swamped by noise
 c	amplification. By assigning a low signal/rms ratio for the first image,
 c	and a finite signal/rms ratio for the second image, LINMOS can be used
 c	to interpolate the second image, using the first image as a template.
+c@ options
+c	Extra processing options. Several can be given, separated by
+c	commas. Minimum match is supported. Possible values are:
+c	  sensitivity  Rather than a mosaiced image, produce an image
+c	               giving the rms noise across the field.
+c	  gain         Rather than a mosaiced image, produce an image
+c	               giving the effective gain across the field. If the
+c	               "signal" parameter is allowed to default, the gain
+c	               function will be either 0 or 1 across the field.
 c--
 c
 c  History:
@@ -83,6 +94,10 @@ c    rjs   4oct93 Increase number of cubes that can be handled.
 c    rjs  26oct93 Fixed geometry problem.
 c    rjs   6dec93 Improve some messages.
 c    mhw  13jan94 Relax alignment requirement on the third axis.
+c    rjs  22jul94 Added options=sensivitivy and options=gain. Use some
+c		  standard include files.
+c    rjs  26jul94 Doc changes only.
+c    rjs  17aug94 Change projection code to cartesian.
 c
 c  Bugs:
 c    * Blanked images are not handled when interpolation is necessary.
@@ -98,7 +113,7 @@ c		by less than "tol", they are taken as being the same
 c		pixel (i.e. no interpolation done).
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Linmos: version 1.0 4-Oct-93')
+	parameter(version='Linmos: version 1.0 22-Jul-94')
 	include 'maxdim.h'
 c
 	real tol
@@ -117,11 +132,10 @@ c
 	double precision GridSys(5)
 	double precision crval,cdelt
 	character ctype*16
-	logical defrms,init
+	logical defrms,init,dosen,dogain
 c
 	integer pOut,pWts
-	real ref(MAXBUF)
-	common ref
+	include 'mem.h'
 c
 c  Externals.
 c
@@ -173,6 +187,10 @@ c
           call bug('w','Giving signal but not rms noise is senseless')
 	  signal = 0
 	endif
+c
+c  Get processing options.
+c
+	call GetOpt(dosen,dogain)
 	call keyfin
 c
 c  Open the files, determine the size of the output. Determine the grid
@@ -228,10 +246,11 @@ c
 	if(max(nOut(1),nOut(2)).gt.maxdim)
      *	  call bug('f','Output image is too large')
 	nOut(3) = nsize(3,1)
+	if(dosen.or.dogain)nOut(3) = 1
 	nOut(4) = 1
 c
 	call xyopen(tout,out,'new',naxis,nout)
-	call hdout(tIn(1),tout,nsize(1,1),extent,version)
+	call hdout(tIn(1),tout,nsize(1,1),extent,version,dosen,dogain)
 c
 c  Correct the blctrc parameter for the extent of the image.
 c
@@ -265,8 +284,9 @@ c
           call output ('Processing image '//inbuf(k1(i):k2(i)))
 	  if(i.gt.nOpen) call xyopen(tIn(i),InBuf(k1(i):k2(i)),
      *						'old',3,nsize(1,i))
-	  call Process(init,tScr,tWts,tIn(i),ref(pOut),ref(pWts),
+	  call Process(init,tScr,tWts,tIn(i),memR(pOut),memR(pWts),
      *	    nsize(1,i),nsize(2,i),nOut(1),nOut(2),nOut(3),
+     *      dosen.or.dogain,
      *	    BlcTrc(1,i),rms(i),dx,dy,f0(i),df(i),x0(i),y0(i))
 	  if(i.gt.nOpen) call xyclose(tin(i))
 	enddo
@@ -275,8 +295,8 @@ c
 c  Go through the scratch file one more time, correcting for the change
 c  in the weights, and writting out the final data.
 c
-	call LastPass(tOut,tScr,tWts,ref(pOut),ref(pWts),Signal,
-     *				nOut(1),nOut(2),nOut(3))
+	call LastPass(tOut,tScr,tWts,memR(pOut),memR(pWts),Signal,
+     *				nOut(1),nOut(2),nOut(3),dosen)
 c
 c  Free up the memory.
 c
@@ -293,8 +313,34 @@ c
 	call xyclose(tOut)
 	end
 c************************************************************************
+	subroutine GetOpt(dosen,dogain)
+c
+	implicit none
+	logical dosen,dogain
+c
+c  Get extra processing options.
+c
+c  Output:
+c    dosen	True if we are to produce a sensitivity image.
+c    dogain	True if we are to produce an image of the effective gain.
+c------------------------------------------------------------------------
+	integer NOPTS
+	parameter(NOPTS=2)
+	logical present(NOPTS)
+	character opts(NOPTS)*11
+	data opts/'sensitivity','gain       '/
+c
+	call options('options',opts,present,NOPTS)
+c
+	dosen  = present(1)
+	dogain = present(2)
+c
+	if(dosen.and.dogain)call bug('f',
+     *	  'Cannot do options=sensitivity,gains simultaneously')
+	end
+c************************************************************************
 	subroutine Process(init,tScr,tWts,tIn,Out,Wts,
-     *	  nx,ny,n1,n2,n3,BlcTrc,rms,dx,dy,f0,df,x0,y0)
+     *	  nx,ny,n1,n2,n3,dosen,BlcTrc,rms,dx,dy,f0,df,x0,y0)
 c
 	implicit none
 	logical init
@@ -303,6 +349,7 @@ c
 	real Out(n1,n2),Wts(n1,n2)
 	real BlcTrc(4),rms,x0,y0,dx,dy
 	double precision f0,df
+	logical dosen
 c
 c  First determine the initial weight to apply to each pixel, and accumulate
 c  info so that we can determine the normalisation factor later on.
@@ -321,6 +368,8 @@ c    x0,y0	Pointing centre, in grid coordinates of the output.
 c    dx,dy	Grid increments, in radians, of the output.
 c    f0,df	Frequency of the first plane, and the frequency
 c		increment between planes.
+c    dosen	True if we are to compute the sensitivity or gain
+c		function rather than the normal mosaic.
 c  Input/Output:
 c    init	True if things have been initialised.
 c  Scratch:
@@ -437,10 +486,23 @@ c
 	    call GetDat(tIn,xoff,yoff,xlo,xhi,j,ddx,ddy,x0,y0,
      *						In,Pb,n1,interp,mask)
 	    yoff = yoff + 1
-	    do i=xlo,xhi
-	      Wts(i,j) = Wts(i,j) + Pb(i)*Pb(i)*oneonsig
-	      Out(i,j) = Out(i,j) + In(i)*Pb(i)*oneonsig
-	    enddo
+c
+c  Accumulate the sensitivity function.
+c
+	    if(dosen)then
+	      do i=xlo,xhi
+	        Wts(i,j) = Wts(i,j) + Pb(i)*Pb(i)*oneonsig
+	        Out(i,j) = Out(i,j) + Pb(i)*Pb(i)*oneonsig
+	      enddo
+c
+c  Accumulate the mosaiced field.
+c
+	    else
+	      do i=xlo,xhi
+	        Wts(i,j) = Wts(i,j) + Pb(i)*Pb(i)*oneonsig
+	        Out(i,j) = Out(i,j) + In(i)*Pb(i)*oneonsig
+	      enddo
+	    endif
 	  enddo
 c
 c  Save the output.
@@ -581,11 +643,13 @@ c
 	endif
 	end    
 c************************************************************************
-	subroutine LastPass(tout,tScr,tWts,Out,Wts,Signal,n1,n2,n3)
+	subroutine LastPass(tout,tScr,tWts,Out,Wts,Signal,n1,n2,n3,
+     *								dosen)
 c
 	implicit none
 	integer tOut,tScr,tWts,n1,n2,n3
 	real Signal,Out(n1,n2),Wts(n1,n2)
+	logical dosen
 c
 c  Read in the data from the scratch file, multiply by the scale factor,
 c  and then write out the data.
@@ -596,6 +660,7 @@ c    tScr	Handle of the input image file.
 c    tWts	Handle of the input weights file.
 c    Signal
 c    n1,n2,n3	Size of the output cube.
+c    dosen	Determine the sensitivity function.
 c  Scratch:
 c    Wts	Array containing the weights to be applied.
 c    Out	Used to store a plane of the output image.
@@ -624,16 +689,35 @@ c
 c  Calculate and apply the weights.
 c
 	  do j=1,n2
-	    do i=1,n1
-	      if(Wts(i,j).gt.0)then
-	        Out(i,j) = Out(i,j)/(temp + Wts(i,j))
-		flags(i) = .true.
-	      else
-		Out(i,j) = 0
-		flags(i) = .false.
-		doflag = .true.
-	      endif
-	    enddo
+c
+c  Determine the sensitivity function.
+c
+	    if(dosen)then
+	      do i=1,n1
+	        if(Wts(i,j).gt.0)then
+		  Out(i,j) = sqrt(Out(i,j))/(temp + Wts(i,j))
+		  flags(i) = .true.
+		else
+		  Out(i,j) = 0
+		  flags(i) = .false.
+		  doflag = .true.
+		endif
+	      enddo
+c
+c  Determine the gain function or the mosaic.
+c
+	    else
+	      do i=1,n1
+	        if(Wts(i,j).gt.0)then
+		  Out(i,j) = Out(i,j)/(temp + Wts(i,j))
+		  flags(i) = .true.
+		else
+		  Out(i,j) = 0
+		  flags(i) = .false.
+		  doflag = .true.
+		endif
+	      enddo
+	    endif
 c
 c  Write out the flags. We do not write any flagging info
 c  until we have found a bad pixel.
@@ -694,12 +778,13 @@ c
 c
 	end
 c************************************************************************
-	subroutine hdout(tin,tout,nsize,extent,version)
+	subroutine hdout(tin,tout,nsize,extent,version,dosen,dogain)
 c
 	implicit none
 	integer tin,tout,nsize(3)
 	real extent(4)
 	character version*(*)
+	logical dosen,dogain
 c
 c  Make up the header of the output file.
 c
@@ -708,27 +793,39 @@ c    tin	The handle of the input file, which is to be used as a template.
 c    tout	The handle of the output file.
 c    nsize	The size of the input image.
 c    extent	The expanded extent of the output.
+c    dosen	True if the sensitivity function is being evaluated.
+c    dogain	True if the gain function is being evaluated.
 c------------------------------------------------------------------------
 	real crpix1,crpix2
+	character ctype1*16,ctype2*16
 	integer i
 	character line*80
 c
 	integer nkeys
-	parameter(nkeys=45)
+	parameter(nkeys=38)
 	character keyw(nkeys)*8
-	data keyw/   'bunit   ','crota1  ','crota2  ','crota3  ',
-     *	  'crota4  ','crota5  ','crval1  ','crval2  ','crval3  ',
-     *	  'crval4  ','crval5  ','ctype1  ','ctype2  ','ctype3  ',
-     *	  'ctype4  ','ctype5  ','cdelt1  ','cdelt2  ','cdelt3  ',
+	data keyw/   'bunit   ','crval1  ','crval2  ','crval3  ',
+     *	  'crval4  ','crval5  ','cdelt1  ','cdelt2  ','cdelt3  ',
      *	  'cdelt4  ','cdelt5  ','crpix3  ','crpix4  ','crpix5  ',
+     *	  'ctype3  ','ctype4  ','ctype5  ',
      *	  'date-obs','epoch   ','bmaj    ','bmin    ','bpa     ',
      *	  'instrume','niters  ','object  ','telescop','observer',
      *	  'restfreq','vobs    ','xshift  ','yshift  ','obsra   ',
      *	  'obsdec  ','lstart  ','lstep   ','ltype   ','lwidth  ',
      *    'btype   '/
 c
+c  Write the output projection as cartesian.
+c
+	call rdhda(tIn,'ctype1',ctype1,'RA---CAR')
+	call rdhda(tIn,'ctype2',ctype2,'DEC--CAR')
+	if(ctype1(5:5).eq.'-')ctype1(5:8) = '-CAR'
+	if(ctype2(5:5).eq.'-')ctype2(5:8) = '-CAR'
+	call wrhda(tOut,'ctype1',ctype1)
+	call wrhda(tOut,'ctype2',ctype2)
+c
 c  Determine the location of the reference pixel in the output image.
 c
+
 	call rdhdr(tIn,'crpix1',crpix1,real(nsize(1)/2+1))
 	call rdhdr(tIn,'crpix2',crpix2,real(nsize(2)/2+1))
 	crpix1 = crpix1 - (extent(1)-1)
@@ -754,6 +851,18 @@ c
 	line = 'LINMOS: Miriad '//version
 	call hiswrite(tout,line)
 	call hisinput(tout,'LINMOS')
+	if(dosen.and.dogain)then
+	  call hiswrite(tout,
+     *		'LINMOS: First plane is the rms noise function')
+	  call hiswrite(tout,
+     *		'LINMOS: Second plane is the gain function')
+	else if(dosen)then
+	  call hiswrite(tout,
+     *		'LINMOS: The image is the rms noise function')
+	else if(dogain)then
+	  call hiswrite(tout,
+     *		'LINMOS: The image is the gain function')
+	endif
 	call hisclose(tout)
 	end
 c************************************************************************
@@ -782,8 +891,7 @@ c		right relative to first map.
 c    x0		Pointing centre in x, in grid units.
 c    y0		Pointint centre in y, in grid units.
 c------------------------------------------------------------------------
-	real pi
-	parameter(pi=3.141592653589793)
+	include 'mirconst.h'
 	double precision crpix1,crpix2
 	integer i
 c
