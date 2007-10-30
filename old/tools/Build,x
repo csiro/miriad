@@ -4,7 +4,7 @@
 
 set lib = `mirfind readline`
 
-rm -f miriad ercmd
+rm -f miriad
 
 if ( "$lib" != "" ) then
   cc -o miriad -DREADLINE $MIR/tools/miriad.c -L$lib -lreadline -ltermcap
@@ -17,9 +17,10 @@ else
   echo "### Failed to find the readline library when building readline-Miriad"
 endif
 
-cc -o ercmd ercmd.c
-if ( -x ercmd ) then
-  mv ercmd $MIRBIN
-else
-  echo "### Failed to build ercmd"
-endif
+#rm -f ercmd
+#cc -o ercmd ercmd.c
+#if ( -x ercmd ) then
+#  mv ercmd $MIRBIN
+#else
+#  echo "### Failed to build ercmd"
+#endif
