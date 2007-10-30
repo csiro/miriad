@@ -5,7 +5,7 @@ c
 	integer ATIF,ATANT,ATPOL,ATDATA,ATBASE,ATBIN,ATCONT
 	parameter(ATIF=2,ATANT=6,ATPOL=4,ATBASE=((ATANT+1)*ATANT)/2)
 	parameter(ATBIN=32,ATCONT=33)
-	parameter(ATDATA=2*MAXCHAN*ATBASE)
+	parameter(ATDATA=5*MAXCHAN*ATBASE)
 	integer nifs,nfreq(ATIF),nstoke(ATIF),polcode(ATIF,ATPOL)
 	double precision sfreq(ATIF),sdf(ATIF),restfreq(ATIF)
 	double precision time
@@ -20,7 +20,7 @@ c
 	logical flag(ATIF,ATPOL,ATBASE,ATBIN),dosw(ATBASE)
 	integer nused,tno,nants
 	logical dosam,dohann,birdie,doif,dobary,newfreq,newsc,newpnt
-	logical dowt,doxyp,hires
+	logical dowt,dopmps,doxyp,hires
 	real wts(2*ATCONT-2)
 	double precision obsra,obsdec,lat,long,ra,dec
 	character sname*64
@@ -33,6 +33,6 @@ c
      *	    inttim,wts,
      *	  pnt,nbin,nused,tno,nants,nifs,nfreq,nstoke,polcode,edge,
      *	    bchan,
-     *	  flag,dosw,dosam,dohann,birdie,dowt,doxyp,doif,dobary,newfreq,
-     *	    hires,
+     *	  flag,dosw,dosam,dohann,birdie,dowt,dopmps,doxyp,doif,dobary,
+     *	    newfreq,hires,
      *	  newsc,newpnt
