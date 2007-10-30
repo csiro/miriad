@@ -569,6 +569,7 @@ c    nebk 22nov95  Add ellipse overlays
 c    nebk 29nov95  Add options=conlab
 c    nebk 04dec95  If > 1 contour image, their sizes were being lost
 c    nebk 18dec95  Add options=abut
+c    nebk 10jan96  NAXIS in POSDEC2 was not always beeing assigned to
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -630,7 +631,7 @@ c
       data coltab /maxchan*0/
       data lwid /maxconp3*1/
 c-----------------------------------------------------------------------
-      call output ('CgDisp: version 18-Dec-95')
+      call output ('CgDisp: version 10-Jan-96')
       call output ('New options=abut to eliminate all white space '//
      +             'between subplots')
       call output ('New options=conlabel to label contour values')
@@ -3043,6 +3044,8 @@ c
       call chkaxco (lun, type(2), 2, ' ')
       off(1) = xoff
       off(2) = yoff
+      call rdhdi (lun, 'naxis', naxis, 0)
+      naxis = min(3,naxis)
 c
 c Now manipulate the fields depending upon the overlay type
 c 
@@ -3060,9 +3063,6 @@ c
         ipt = ipt + nuse
 c
 c Convert centre back into units given by OTYPE
-c
-        call rdhdi (lun, 'naxis', naxis, 0)
-        naxis = min(3,naxis)
 c
         win(1) = ocen(1)
         win(2) = ocen(2)
