@@ -10,6 +10,7 @@ c    rjs  29sep93 Added 0823 and 0407.
 c    rjs  18jan94 Added new1934
 c    rjs   1aug94 Added really new 1934. Change source name matching criteria.
 c    rjs   3aug95 Added new 0823-500, care jer.
+c    rjs  23aug96 Added polys from Ott et al, 1995.
 c************************************************************************
 c* CalStoke -- Flux characteristics of selected calibrators.
 c& nebk, rjs
@@ -42,7 +43,7 @@ c--
 c-----------------------------------------------------------------------
       integer nsrc, nnames
       integer loglog,loglin,linlin,linlog
-      parameter (nsrc = 8, nnames = 20)
+      parameter (nsrc = 10, nnames = 24)
       parameter (loglog=1,loglin=2,linlin=3,linlog=4)
 c
       character name*32
@@ -55,26 +56,29 @@ c
       save coeffs, names, srcnum, coeftype
 c
 c  All lists are in the order:
-c       3C286,    Perley/Killeen, 1991
-c       3C48,     Baars et al
-c       3C147,    Baars et al
-c       3C138,    Perley/Killeen, 1991
-c       1934-638, Reynolds, 1994
-c       0823-500  John Reynolds
-c       0407-658  ??
+c       3C286,    Ott et al, 1995 (total intensity)
+c		  Perley/Killeen, 1991 (unpublished -- polarised component)
+c       3C48,     Ott et al, 1995
+c       3C147,    Ott et al, 1995
+c       3C138,    Perley/Killeen, 1991 (unpublished)
+c       1934-638, Reynolds, 1994, ATNF Technical Memo 39.3040
+c       0823-500  John Reynolds (unpublished)
+c       0407-658  (unknown origin -- unreliable)
+c       3c161     Ott et al, 1995
+c       3c218     Ott et al, 1995
 c
+c     +	    1.099506E2,  -44.80922,   4.618715,    0.0,       0.0,
       data ((coeffs(i,j,1),i=1,5),j=1,nsrc) /
-     +	    1.099506E2,  -44.80922,   4.618715,    0.0,       0.0,
-     +      2.345,         0.071,    -0.138,       0.0,       0.0,
-     +      1.766,         0.447,    -0.184,       0.0,       0.0,
+     +	     0.956,        0.584,    -0.1644,      0.0,       0.0,
+     +      2.465,        -0.004,    -0.1251,      0.0,       0.0,
+     +      2.806,         0.140,    -0.1031,      0.0,       0.0,
      +    178.2661,     -114.4718,   25.23650,    -1.905347,  0.0,
      +    -30.7667,       26.4908,   -7.0977,      0.605334,  0.0,
-     +    -51.0361,       41.4101,  -10.7771,	   0.90468,  0.0,
-c     +      8.1685,       -1.3370,    6.4657e-2,   0.0,       0.0,
+     +    -51.0361,       41.4101,  -10.7771,	   0.90468,   0.0,
      +      1.6863,        0.75933,  -0.29088,     0.0,       0.0,
-     +    -23.839,        19.569,    -4.8168,      0.35836,   0.0/
-c     +	   -1.1472989,	  -9.9004221, 9.5516825,  -2.7583933, 0.2533961/
-c
+     +    -23.839,        19.569,    -4.8168,      0.35836,   0.0,
+     +	    1.250,	   0.726,    -0.2286,	   0.0,       0.0,
+     +	    4.729,        -1.025,     0.0130,      0.0,       0.0/
 c
 c  Q coefficients.
 c
@@ -83,6 +87,8 @@ c
      +               0.0,        0.0,         0.0,         0.0,0.0,
      +               0.0,        0.0,         0.0,         0.0,0.0,
      +               0.7228561,  0.258980,   -0.09490732,  0.0,0.0,
+     +               0.0,        0.0,         0.0,         0.0,0.0,
+     +               0.0,        0.0,         0.0,         0.0,0.0,
      +               0.0,        0.0,         0.0,         0.0,0.0,
      +               0.0,        0.0,         0.0,         0.0,0.0,
      +               0.0,        0.0,         0.0,         0.0,0.0,
@@ -98,11 +104,15 @@ c
      +               0.0,        0.0,         0.0,         0.0,0.0,
      +               0.0,        0.0,         0.0,         0.0,0.0,
      +               0.0,        0.0,         0.0,         0.0,0.0,
+     +               0.0,        0.0,         0.0,         0.0,0.0,
+     +               0.0,        0.0,         0.0,         0.0,0.0,
      +               0.0,        0.0,         0.0,         0.0,0.0/
 c
 c  V coefficients.
 c
       data ((coeffs(i,j,4),i=1,5),j=1,nsrc) /
+     +		    0.0, 0.0, 0.0, 0.0,0.0,
+     +		    0.0, 0.0, 0.0, 0.0,0.0,
      +		    0.0, 0.0, 0.0, 0.0,0.0,
      +              0.0, 0.0, 0.0, 0.0,0.0,
      +              0.0, 0.0, 0.0, 0.0,0.0,
@@ -121,30 +131,39 @@ c
      +            '1934',  '1934-638', '1939-637',
      +            '0823',  '0823-500',
      +            '0407',  '0407-658',
-     +		  'OLD1934'/
+     +		  'OLD1934',
+     +		  '3C161', '0624-058',
+     +		  '3C218', '0915-119'/
 c
 c Source number in coef table
 c
-      data srcnum /1,1,1, 2,2,2, 3,3,3, 4,4,4, 5,5,5, 6,6, 7,7, 8/
+      data srcnum /1,1,1, 2,2,2, 3,3,3, 4,4,4, 5,5,5, 6,6, 7,7, 8,
+     +		   9,9, 10,10/
 c
 c  What sort of fit is the polynomial (logarithmic? linear?).
 c
       data coeftype /
-     +  loglin,loglog,loglog,loglin,loglog,loglog,loglog,loglog,
+     +  loglog,loglog,loglog,loglin,loglog,loglog,loglog,loglog,
+     +		loglog,loglog,
      +  loglin,linlin,linlin,loglin,linlin,linlin,linlin,linlin,
+     +		linlin,linlin,
      +  loglin,linlin,linlin,loglin,linlin,linlin,linlin,linlin,
-     +  linlin,linlin,linlin,linlin,linlin,linlin,linlin,linlin/
+     +		linlin,linlin,
+     +  linlin,linlin,linlin,linlin,linlin,linlin,linlin,linlin,
+     +		linlin,linlin/
 c
 c Frequency range polynomial fits done over (0.0 means don't know)
 c
       data frange /0.3275,  14.9850,
-     +               0.0,      0.0,
-     +               0.0,      0.0, 
+     +             1.408,   23.780,
+     +             1.408,   23.780,
      +             0.3275,  14.985,
      +             0.4080,   8.400,
      +             1.380,    8.640,
      +             0.408,    8.400,
-     +             0.4080,   8.400/
+     +             0.4080,   8.400,
+     +		   1.408,   10.550,
+     +		   1.408,   10.550/
 c-----------------------------------------------------------------------
       ierr = 2
       name = source
