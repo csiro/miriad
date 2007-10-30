@@ -1,4 +1,11 @@
 c************************************************************************
+c  A set of routines to perform mosaic "convolution" operations.
+c
+c  History:
+c    rjs 18nov94  Original version.
+c    rjs 28nov94  Miscellaneous enhancements.
+c    rjs  2dec94  Fix bug in mccnvl when convolving regions which are blanked.
+c************************************************************************
 	subroutine mcInitFG(tno1,bmaj1,bmin1,bpa1)
 c
 	implicit none
@@ -601,6 +608,11 @@ c
 	y1 = nint(y0)
 	ylo = max(ylo, ymin-n2/2,     y1-n2d/2)
 	yhi = min(yhi, ymax+(n2-1)/2, y1+(n2d-1)/2)
+c
+	xmin = max(xmin,xlo)
+	ymin = max(ymin,ylo)
+	xmax = min(xmax,xhi)
+	ymax = min(ymax,yhi)
 c
 	end
 c************************************************************************
