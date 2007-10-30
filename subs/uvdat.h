@@ -5,7 +5,8 @@ c	History:
 c
 c	??????? mchw Original version.
 c	04aug91 mjs  Replaced MAXANT(S) by including maxdim.h
-c       29mar94 nebk Add logical DUNREW
+c       29mar94 nebk Add logical CALMSG
+c       10dec95 nebk Extend CALMSG to an array
 c
 c  General variables:
 c
@@ -44,7 +45,8 @@ c    auto			If true, input data must be autocorrelation
 c				data.
 c    cross			If true, input data must be crosscorrelation
 c				data.
-c    dunrew                     If true, uvdatrew has been called
+c    calmsg                     If true, calibration message already issued
+c			        for this file 
 c    npream			Number of elements in the preamble.
 c    idxT			Index of "time" in the preamble.
 c    idxBL			Index of "baseline" in the preamble.
@@ -54,7 +56,7 @@ c
 	real sels(maxsels),lstart,lwidth,lstep,rstart,rwidth,rstep
 	real plmaj,plmin,plangle
 	logical doplanet,dowave,doref,dodata,docal,dosels,doleak,dopass
-	logical PlInit,WillCal,WillLeak,auto,cross,dunrew,dow
+	logical PlInit,WillCal,WillLeak,auto,cross,calmsg(maxIn),dow
 	integer k1(maxIn),k2(maxIn),nchan,npream,idxT,idxBL
 	character line*32,ref*32,InBuf*(maxNam)
 	integer nIn,pnt,tno
@@ -112,7 +114,7 @@ c
 	common/UVDatCoA/sels,lstart,lwidth,lstep,rstart,rwidth,rstep,
      *	 plmaj,plmin,plangle,doplanet,dowave,doref,dodata,dosels,dow,
      *	 plinit,k1,k2,nchan,nIn,pnt,tno,auto,cross,docal,WillCal,doleak,
-     *	 WillLeak,dopass,dunrew,npream,idxT,idxBL
+     *	 WillLeak,dopass,calmsg,npream,idxT,idxBL
 c
 	common/UVDatCoB/line,ref,InBuf
 c
