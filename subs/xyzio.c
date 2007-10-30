@@ -29,7 +29,8 @@
      rjs   6-nov-94  Change item handle to an integer.
      bpw   8-dec-94  Adapt two loop in bufferalloc for the fact that since
                      6 nov image handles are no longer in sequence.
-
+     rjs  10-jan-96  Correct comparision bug in bufferallocation routine.
+		     Also eliminate nested comments.
 *******************************************************************************/
 
 /******************************************************************************/
@@ -117,7 +118,8 @@ int     axnumr[ARRSIZ],    inv_axnumr[ARRSIZ],   reverses[ARRSIZ];
 /* Some variables not used, but left in for the (hopefully never occuring)
    case that an error occurred and debugging is needed.
    Most if(.test) statements have been left active. Some, the ones in inner
-   loops, are disabled. They can be found by searching for /*$$ */
+   loops, are disabled. They can be found by searching for $$ */
+
 int     itest = 0; /* Information on buffers and datasets */
 int     otest = 0; /* Information on subcubes */
 int     rtest = 0; /* Information on each array element */
@@ -144,10 +146,10 @@ int putnio(x) int x; {return nio;}
 /*                                                                            */
 /******************************************************************************/
 
-/** xyzopen -- Open an image file.
-/*& bpw
-/*: image-i/o
-/*+
+/** xyzopen -- Open an image file.					      */
+/*& bpw									      */
+/*: image-i/o								      */
+/*+						
       subroutine xyzopen( tno, name, status, naxis, axlen )
       integer       tno
       character*(*) name
@@ -168,7 +170,7 @@ used to define the dataset.
                    output dimension of datacube; for 'new' datasets: dimension
                    of new dataset
        axlen       The length of the axes, output for 'old' datasets, 'input'
-                   for 'new' datasets
+                   for 'new' datasets					     */
 /*-- */
 
 int first=TRUE;
@@ -250,9 +252,9 @@ int  *naxis, axlen[];
 
 
 
-/** xyzclose - Close an image file
-/*& bpw
-/*: image-i/o
+/** xyzclose - Close an image file					*/
+/*& bpw									*/
+/*: image-i/o								*/
 /*+
       subroutine xyzclose( tno )
       integer    tno
@@ -260,7 +262,7 @@ int  *naxis, axlen[];
 This closes an image file.
 
    Input:
-      tno:     The image-file handle
+      tno:     The image-file handle					*/
 /*--*/
 
 void xyzclose_c( tno )
@@ -279,9 +281,9 @@ int tno;
     }
 }
 
-/** xyzflush - Force output buffer to be written to disk
-/*& bpw
-/*: image-i/o
+/** xyzflush - Force output buffer to be written to disk		      */
+/*& bpw									      */
+/*: image-i/o								      */
 /*+
       subroutine xyzflush( tno )
       integer    tno
@@ -292,7 +294,7 @@ is a limit on the number of open datasets, so that one cannot have them
 open all at the same time, and then do all setups once.
 
    Input:
-      tno:     The image-file handle
+      tno:     The image-file handle					      */
 /*--*/
 
 void xyzflush_c( tno )
@@ -309,9 +311,9 @@ int tno;
 /******************************************************************************/
 /******************************************************************************/
 
-/** xyzsetup - Set up arbitrary subcube
-/*& bpw
-/*: image-i/o
+/** xyzsetup - Set up arbitrary subcube					      */
+/*& bpw									      */
+/*: image-i/o								      */
 /*+
       subroutine xyzsetup( tno, subcube, blc, trc, viraxlen, vircubesize )
       integer       tno
@@ -368,7 +370,7 @@ should be done before working on the data.
     Output:
       viraxlen:     length of axes of virtual cube
       vircubesize:  size of subcubes:
-                    vircubesize(d) = Prod(i=1->d) viraxlen(i)
+                    vircubesize(d) = Prod(i=1->d) viraxlen(i)		    */
 
 /*--*/
 
@@ -505,9 +507,9 @@ char  arg;
 /******************************************************************************/
 /******************************************************************************/
 
-/** xyzmkbuf - create the i/o buffer (only once)
-/*& bpw
-/*: image-i/o
+/** xyzmkbuf - create the i/o buffer (only once)			      */
+/*& bpw									      */
+/*: image-i/o								      */
 /*++
       subroutine xyzmkbuf
 
@@ -517,7 +519,7 @@ be done before any reading or writing is done. However, it may allocate
 too much memory if calls to xyzsetup are followed by calls to xyzclose so
 that all datasets are closed, and then more opens and setups are done. To
 circumvent this, xyzmkbuf creates an i/o buffer of maximum size, and makes
-sure it is never deallocated.
+sure it is never deallocated.						      */
 
 /*--*/
 
@@ -532,9 +534,9 @@ void xyzmkbuf_c()
 /******************************************************************************/
 /******************************************************************************/
 
-/** xyzs2c - Get the fixed coordinates for a given subcube
-/*& bpw
-/*: image-i/o
+/** xyzs2c - Get the fixed coordinates for a given subcube		      */
+/*& bpw									      */
+/*: image-i/o								      */
 /*++
       subroutine xyzs2c( tno, subcubenr, coords )
       integer    tno
@@ -556,7 +558,7 @@ or xyzwrite.
       tno           The handle of the dataset
       subcubenr     Identification of the subcube
    Output:
-      coords        Coordinates of the blc of the subcube
+      coords        Coordinates of the blc of the subcube		    */
 /*--*/
 
 void xyzs2c_c( tno, subcubenr, coords )
@@ -598,9 +600,9 @@ int coords[];
 
 /******************************************************************************/
 
-/** xyzc2s - Get the subcubenr at a fixed coordinate
-/*& bpw
-/*: image-i/o
+/** xyzc2s - Get the subcubenr at a fixed coordinate			      */
+/*& bpw									      */
+/*: image-i/o								      */
 /*++
       subroutine xyzc2s( tno, coords, subcubenr )
       integer    tno
@@ -615,7 +617,7 @@ call to xyzsetup to define a particular type of subcube in a datacube.
       tno           The handle of the dataset
       coords        Coordinates of the blc of the subcube
    Output:
-      subcubenr     Identification of the subcube
+      subcubenr     Identification of the subcube			      */
 /*--*/
 
 void xyzc2s_c( tno, coords, subcubenr )
@@ -659,9 +661,9 @@ int *subcubenr;
 /******************************************************************************/
 /******************************************************************************/
 
-/** xyzread - Read arbitrary subcube
-/*& bpw
-/*: image-i/o
+/** xyzread - Read arbitrary subcube					      */
+/*& bpw									      */
+/*: image-i/o								      */
 /*+
       subroutine xyzread( tno, coords, data, mask, ndata )
       integer    tno
@@ -709,7 +711,7 @@ time-consuming.
     Output:
       data          array containing data read in
       mask          FALSE values indicate undefined pixels
-      ndata         number of elements read
+      ndata         number of elements read				      */
 
 /*--*/
 
@@ -743,9 +745,9 @@ int   *ndata;
 
 
 
-/** xyzpixrd - Get a pixel from a dataset
-/*& bpw
-/*: image-i/o
+/** xyzpixrd - Get a pixel from a dataset				      */
+/*& bpw									      */
+/*: image-i/o								      */
 /*+
       subroutine xyzpixrd( tno, pixelnr, value, mask )
       integer    tno
@@ -767,7 +769,7 @@ by more than a factor 10.
       
     Output:
       value         pixel value
-      mask          FALSE if pixel was undefined
+      mask          FALSE if pixel was undefined			      */
 /*--*/
 
 void xyzpixrd_c( tno, pixelnr, data, mask )
@@ -790,9 +792,9 @@ int   *mask;
 
 
 
-/** xyzprfrd - Get a profile from a dataset
-/*& bpw
-/*: image-i/o
+/** xyzprfrd - Get a profile from a dataset				      */
+/*& bpw									      */
+/*: image-i/o								      */
 /*+
       subroutine xyzprfrd( tno, profilenr, profile, mask, ndata )
       integer    tno
@@ -815,7 +817,7 @@ overhead by 10% (for 256-long profiles) to 30% (for 64-long profiles).
     Output:
       profile       will contain the profile
       mask          FALSE values indicate undefined pixels
-      ndata         number of elements read
+      ndata         number of elements read				      */
 /*--*/
 
 void xyzprfrd_c( tno, profilenr, data, mask, ndata )
@@ -834,9 +836,9 @@ int   *ndata;
 
 
 
-/** xyzplnrd - Get a plane from a dataset
-/*& bpw
-/*: image-i/o
+/** xyzplnrd - Get a plane from a dataset				     */
+/*& bpw									     */
+/*: image-i/o								     */
 /*+
       subroutine xyzplnrd( tno, planenr, plane, mask, ndata )
       integer    tno
@@ -861,7 +863,7 @@ by 1% (for 64**2 cubes) or less.
     Output:
       plane         will contain the plane as a 1-d array
       mask          FALSE values indicate undefined pixels
-      ndata         number of elements read
+      ndata         number of elements read				     */
 /*--*/
 
 void xyzplnrd_c( tno, planenr, data, mask, ndata )
@@ -882,9 +884,9 @@ int   *ndata;
 /******************************************************************************/
 /******************************************************************************/
 
-/** xyzwrite - Write arbitrary subcube
-/*& bpw
-/*: image-i/o
+/** xyzwrite - Write arbitrary subcube					      */
+/*& bpw									      */
+/*: image-i/o								      */
 /*+
       subroutine xyzwrite( tno, coords, data, mask, ndata )
       integer    tno
@@ -931,7 +933,7 @@ superfluous and time-consuming.
                     along the complementary axes
       data          array containing data to be written
       mask          FALSE values indicate undefined pixel
-      ndata         number of elements to write
+      ndata         number of elements to write				      */
 
 /*--*/
 
@@ -965,9 +967,9 @@ int   *ndata;
 
 
 
-/** xyzpixwr - Write a pixel to a dataset
-/*& bpw
-/*: image-i/o
+/** xyzpixwr - Write a pixel to a dataset				      */
+/*& bpw									      */
+/*: image-i/o								      */
 /*+
       subroutine xyzpixwr( tno, pixelnr, value, mask )
       integer    tno
@@ -987,7 +989,7 @@ by more than a factor 10.
       tno           image file handle
       pixelnr       pixelnr to be read from virtual cube
       value         pixel value
-      mask          FALSE indicates pixel is undefined
+      mask          FALSE indicates pixel is undefined			      */
 /*--*/
 
 void xyzpixwr_c( tno, pixelnr, data, mask )
@@ -1011,9 +1013,9 @@ int   *mask;
 
 
 
-/** xyzprfwr - Write a profile to a dataset
-/*& bpw
-/*: image-i/o
+/** xyzprfwr - Write a profile to a dataset				      */
+/*& bpw									      */
+/*: image-i/o								      */
 /*+
       subroutine xyzprfwr( tno, profilenr, profile, mask, ndata )
       integer    tno
@@ -1035,7 +1037,7 @@ overhead by 10% (for 256-long profiles) to 30% (for 64-long profiles).
       profilenr     profile nr to be read from virtual cube
       profile       contains the profile to be written
       mask          FALSE values indicate undefined pixels
-      ndata         number of elements to write
+      ndata         number of elements to write				      */
 /*--*/
 
 void xyzprfwr_c( tno, profilenr, data, mask, ndata )
@@ -1055,9 +1057,9 @@ int   *ndata;
 
 
 
-/** xyzplnwr - Write a plane to a dataset
-/*& bpw
-/*: image-i/o
+/** xyzplnwr - Write a plane to a dataset				      */
+/*& bpw									      */
+/*: image-i/o								      */
 /*+
       subroutine xyzplnwr( tno, planenr, plane, mask, ndata )
       integer    tno
@@ -1081,7 +1083,7 @@ by 1% (for 64**2 cubes) or less.
       planenr       plane nr to be read from virtual-cube
       plane         contains the plane to be written as a 1-d array
       mask          FALSE values indicate undefined pixels
-      ndata         number of elements to write
+      ndata         number of elements to write				      */
 /*--*/
 
 void xyzplnwr_c( tno, planenr, data, mask, ndata )
@@ -1375,7 +1377,7 @@ int get_buflen()
     }
     try = (ntno+1) * maxsize;
 
-    if( buffer == NULL | try > currentallocation ) try = bufferallocation(try);
+    if( buffer == NULL || try > currentallocation ) try = bufferallocation(try);
     allocatebuffer = FALSE;
 
     buffersize = try / (ntno+1);
@@ -1402,9 +1404,11 @@ int n;
     if( buffer != NULL ) { free( buffer ); buffer = NULL; }
     if( mbuffr != NULL ) { free( mbuffr ); mbuffr = NULL; }
 
-    n  = ( (n<MAXBUF) ? n : MAXBUF );
+    n  = ( (n > MAXBUF) ? n : MAXBUF );
     n *= 2;
-    while( (buffer == NULL | mbuffr == NULL) & n>1 ) {
+    while( (buffer == NULL || mbuffr == NULL) && n>1 ) {
+        if( buffer != NULL ) { free( buffer ); buffer = NULL; }
+        if( mbuffr != NULL ) { free( mbuffr ); mbuffr = NULL; }
         n /= 2;
         if(itest)printf("try %d\n",n);
         buffer = (float *)malloc((unsigned)(n*sizeof(float)));

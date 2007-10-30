@@ -10,8 +10,10 @@
 /*    rjs  23feb93   Include maxdimc.h, which contains maxnax.		*/
 /*    rjs   6nov94   Change item handle to an integer.			*/
 /*    rjs  27feb96   Added xyflush.					*/
+/*    rjs  15mar96   Inlcude an exrta include file.			*/
 /*----------------------------------------------------------------------*/
 
+#include <string.h>
 #include "maxdimc.h"
 #include "io.h"
 
@@ -32,7 +34,6 @@ static struct { char *mask;
 	 int naxis,axes[MAXNAX],offset,mask_exists,image_exists;} images[MAXOPEN];
 
 #define Strcpy (void)strcpy
-char *strcpy();
 void bug_c(),bugno_c();
 void rdhdi_c(),wrhdi_c();
 void mkclose_c(),mkwrite_c();
