@@ -42,12 +42,12 @@ c------------------------------------------------------------------------
 	parameter(MAXRUN=3*maxdim,MAXBOXES=1024)
 c
 	character MapNam*64,BeamNam*64,ModelNam*64,OutNam*64,line*64
-	integer Boxes(MAXBOXES),Run(3,MAXRUN),nRun,blc(3),trc(3),maxMap
+	integer Boxes(MAXBOXES),Run(3,MAXRUN),nRun,blc(3),trc(3),nAlloc
 	integer nPoint
 	integer lMap,lBeam,lModel,lOut
 	integer i,k,imin,imax,jmin,jmax,kmin,kmax,xmin,xmax,ymin,ymax
 	integer naxis,nMap(3),nbeam(3),nout(MAXNAX),nModel(3)
-	integer pStep,pStepR,pRes,pEst
+	integer pStep,pStepR,pRes,pEst,pWt
 	integer maxniter,niter,ncomp
 	logical more
 	real dmin,dmax,drms,cutoff,clip,gain,flux
@@ -102,11 +102,7 @@ c
 c
 c  Allocate arrays to hold everything.
 c
-	MaxMap = nOut(1)*nOut(2)
-	call MemAlloc(pStep, MaxMap,'r')
-	call MemAlloc(pStepR,MaxMap,'r')
-	call MemAlloc(pEst,  MaxMap,'r')
-	call MemAlloc(pRes,  MaxMap,'r')
+	nAlloc = 0
 c
 c  Open the model if needed, and check that is is the same size as the
 c  output.
@@ -137,45 +133,69 @@ c
 c
 	  call BoxRuns(1,k,' ',boxes,Run,MaxRun,nRun,
      *					xmin,xmax,ymin,ymax)
-	  call mcPlaneR(lMap,k,Run,nRun)
+	  call BoxCount(Run,nRun,nPoint)
+c
+c  Allocate the memory, if needed.
+c
+	  if(nPoint.gt.0)then
+	    if(nPoint.gt.nAlloc)then
+	      if(nAlloc.gt.0)then
+		call memFree(pStep, nAlloc,'r')
+		call memFree(pStepR,nAlloc,'r')
+		call memFree(pEst,  nAlloc,'r')
+		call memFree(pRes,  nAlloc,'r')
+		call memFree(pWt,   nAlloc,'r')
+	      endif
+	      nAlloc = nPoint
+	      call memAlloc(pStep, nAlloc,'r')
+	      call memAlloc(pStepR,nAlloc,'r')
+	      call memAlloc(pEst,  nAlloc,'r')
+	      call memAlloc(pRes,  nAlloc,'r')
+	      call memAlloc(pWt,   nAlloc,'r')
+	    endif
 c
 c  Get the Map.
 c
-	  call xysetpl(lMap,1,k)
-	  call GetPlane(lMap,Run,nRun,0,0,nMap(1),nMap(2),
-     *				memr(pRes),MaxMap,nPoint)
+	    call mcPlaneR(lMap,k,Run,nRun,nPoint)
+	    call xysetpl(lMap,1,k)
+	    call GetPlane(lMap,Run,nRun,0,0,nMap(1),nMap(2),
+     *				memr(pRes),nAlloc,nPoint)
+	    call mcSigma2(memr(pWt),nPoint,.false.)
 c
 c  Get the Estimate and Residual. Also get information about the
 c  current situation.
 c
-	  if(ModelNam.eq.' ')then
-	    call Zero(nPoint,memr(pEst))
-	  else
-	    call xysetpl(lModel,1,k-kmin+1)
-	    call GetPlane(lModel,Run,nRun,1-imin,1-jmin,
-     *			nModel(1),nModel(2),memr(pEst),MaxMap,nPoint)
-	    call Diff(memr(pEst),memr(pRes),memr(pStep),nPoint,Run,nRun)
-	    call swap(pRes,pStep)
-	  endif
+	    if(ModelNam.eq.' ')then
+	      call Zero(nPoint,memr(pEst))
+	    else
+	      call xysetpl(lModel,1,k-kmin+1)
+	      call GetPlane(lModel,Run,nRun,1-imin,1-jmin,
+     *			nModel(1),nModel(2),memr(pEst),nAlloc,nPoint)
+	      call Diff(memr(pEst),memr(pRes),memr(pStep),nPoint,
+     *							     Run,nRun)
+	      call swap(pRes,pStep)
+	    endif
 c
 c  Do the real work.
 c
-	  niter = 0
-	  more = .true.
-	  dowhile(more)
-	    call Steer(memr(pEst),memr(pRes),memr(pStep),memr(pStepR),
-     *	      nPoint,Run,nRun,gain,clip,dmin,dmax,drms,flux,ncomp)
-	    niter = niter + ncomp
-	    line = 'Steer Iterations: '//itoaf(niter)
-	    call output(line)
-	    write(line,'(a,1p3e12.3)')' Residual min,max,rms: ',
+	    niter = 0
+	    more = .true.
+	    dowhile(more)
+	      call Steer(memr(pEst),memr(pRes),memr(pStep),memr(pStepR),
+     *	        memr(pWt),nPoint,Run,nRun,
+     *	        gain,clip,dmin,dmax,drms,flux,ncomp)
+	      niter = niter + ncomp
+	      line = 'Steer Iterations: '//itoaf(niter)
+	      call output(line)
+	      write(line,'(a,1p3e12.3)')' Residual min,max,rms: ',
      *					dmin,dmax,drms
-	    call output(line)
-	    write(line,'(a,1pe12.3)') ' Total CLEANed flux: ',Flux
-	    call output(line)
-	    more = niter.lt.maxniter.and.
+	      call output(line)
+	      write(line,'(a,1pe12.3)') ' Total CLEANed flux: ',Flux
+	      call output(line)
+	      more = niter.lt.maxniter.and.
      *		   max(abs(dmax),abs(dmin)).gt.cutoff
-	  enddo
+	    enddo
+	  endif
 c
 c  Write out this plane.
 c
@@ -188,6 +208,16 @@ c  Make the header of the output.
 c
 	call Header(lMap,lOut,blc,trc,version,niter)
 c
+c  Free up memory.
+c
+	if(nAlloc.gt.0)then
+	  call memFree(pStep, nAlloc,'r')
+	  call memFree(pStepR,nAlloc,'r')
+	  call memFree(pEst,  nAlloc,'r')
+	  call memFree(pRes,  nAlloc,'r')
+	  call memFree(pWt,   nAlloc,'r')
+	endif
+c
 c  Close up the files. Ready to go home.
 c
 	call xyclose(lMap)
@@ -199,13 +229,14 @@ c  Thats all folks.
 c
 	end
 c************************************************************************
-	subroutine Steer(Est,Res,Step,StepR,nPoint,Run,nRun,
+	subroutine Steer(Est,Res,Step,StepR,Wt,nPoint,Run,nRun,
      *	  gain,clip,dmin,dmax,drms,flux,ncomp)
 c
 	implicit none
 	integer nPoint,nRun,Run(3,nRun),ncomp
 	real gain,clip,dmin,dmax,drms,flux
 	real Est(nPoint),Res(nPoint),Step(nPoint),StepR(nPoint)
+	real Wt(nPoint)
 c
 c  Perform a Steer iteration.
 c
@@ -214,6 +245,8 @@ c    nPoint	Number of points in the input.
 c    Run,nRun	This describes the region-of-interest.
 c    gain	CLEAN loop gain.
 c    clip	Steer clip level.
+c    Wt		The array of 1/Sigma**2 -- which is used as a weight
+c		when determining the maximum residual.
 c  Input/Output:
 c    Est	The current deconvolved image estimate.
 c    Res	The current residuals.
@@ -228,20 +261,19 @@ c------------------------------------------------------------------------
 	real g,thresh
 	double precision SS,RS,RR
 c
-c  Externals.
-c
-	integer isamax
-c
 c  Determine the threshold.
 c
-	i = isamax(nPoint,Res,1)
-	thresh = clip * abs(Res(i))
+	thresh = 0
+	do i=1,nPoint
+	  thresh = max(thresh,Res(i)*Res(i)*Wt(i))
+	enddo
+	thresh = clip * thresh
 c
 c  Get the step to try.
 c
 	ncomp = 0
 	do i=1,nPoint
-	  if(abs(Res(i)).gt.thresh)then
+	  if(Res(i)*Res(i)*Wt(i).gt.thresh)then
 	    Step(i) = Res(i)
 	    ncomp = ncomp + 1
 	  else
@@ -259,8 +291,8 @@ c
 	SS = 0
 	RS = 0
 	do i=1,nPoint
-	  SS = SS + StepR(i) * StepR(i)
-	  RS = RS + Res(i)*StepR(i)
+	  SS = SS + Wt(i) * StepR(i) * StepR(i)
+	  RS = RS + Wt(i) * Res(i)   * StepR(i)
 	enddo
 	g = RS / SS
 c
