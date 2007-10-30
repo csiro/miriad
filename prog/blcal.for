@@ -42,6 +42,7 @@ c	The name of the output uv data set. No default.
 c@ options
 c	Extra processing options. Possible values are:
 c	  nopassol  Determine a solution which is independent of channel number.
+c	  nopolsol  Apply and solve for parallel-hand polarisations only.
 c--
 c  History:
 c    rjs  14mar97 Original version.
@@ -49,6 +50,8 @@ c    rjs  17mar97 Enhanced version.
 c    rjs  19jun97 Output has uvw in wrong units.
 c    rjs  30jul97 Added options=nopassol
 c    rjs  31jul97 Improve gain normalisation with options=nopassol.
+c    rjs  12aug97 Correct scaling bug introduced above. Improve cross-hand
+c		  polarisation handling.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
@@ -58,17 +61,17 @@ c------------------------------------------------------------------------
 	integer nchan,pol,npol,nfiles
 	double precision interval,preamble(6)
 	complex data(MAXCHAN)
-	logical flags(MAXCHAN),self,nopass
+	logical flags(MAXCHAN),self,nopass,nopol
 c
 c  Externals.
 c
-	logical uvDatOpn
+	logical uvDatOpn,polsPara
 c
 c  Get the inputs.
 c
 	call output(version)
 	call keyini
-	call GetOpt(nopass)
+	call GetOpt(nopass,nopol)
 	call uvDatInp('vis','sdlcef3')
 	call keyd('interval',interval,5.d0)
 	if(interval.le.0)call bug('f','Invalid value for interval')
@@ -114,7 +117,8 @@ c
      *	    'Unable to determine number of polarisations')
 	  call uvDatGti('pol',pol)
 	  preamble(6) = pol
-	  call DatCorr(preamble(4),data,flags,nchan)
+	  if(.not.nopol.or.polsPara(pol))
+     *	    call DatCorr(preamble(4),data,flags,nchan)
 	  call varCopy(lVis,lOut)
 	  if(pol.ne.0)then
 	    call uvputvri(lOut,'pol',pol,1)
@@ -134,20 +138,21 @@ c
 	call uvclose(lOut)
 	end
 c************************************************************************
-	subroutine GetOpt(nopass)
+	subroutine GetOpt(nopass,nopol)
 c
 	implicit none
-	logical nopass
+	logical nopass,nopol
 c------------------------------------------------------------------------
 	integer NOPTS
-	parameter(NOPTS=1)
+	parameter(NOPTS=2)
 	character opts(NOPTS)*8
 	logical present(NOPTS)
 c
-	data opts/'nopassol'/
+	data opts/'nopassol','nopolsol'/
 c
 	call options('options',opts,present,NOPTS)
 	nopass = present(1)
+	nopol  = present(2)
 c
 	end
 c************************************************************************
@@ -371,18 +376,29 @@ c
 	logical nopass
 c------------------------------------------------------------------------
 	include 'blcal.h'
-	double precision Sum
-	integer cnt,p,b,pnt
+	double precision Sum,Sum2
+	integer cnt,cnt2,p,b,pnt
 	real g
+	logical par
+c
+	logical polspara
 c
 	Sum = 0
+	Sum2 = 0
 	Cnt = 0
+	Cnt2 = 0
 	do b=1,MAXBASE
 	  do p=1,MAXPOL
 	    pnt = Head(p,b)
+	    par = polspara(p-9)
 	    dowhile(pnt.ne.0)
-	      call datNorm1(memc(gidx(pnt)),memi(fidx(pnt)),
+	      if(par)then
+		call datNorm1(memc(gidx(pnt)),memi(fidx(pnt)),
      *				time(pnt),nchan,Sum,Cnt,nopass)
+	      else
+		call datNorm1(memc(gidx(pnt)),memi(fidx(pnt)),
+     *				time(pnt),nchan,Sum2,Cnt2,nopass)
+	      endif
 	      pnt = Next(pnt)
 	    enddo
 	  enddo
@@ -435,6 +451,7 @@ c
 	    if(cnt(i).gt.0)then
 	      sum = sum +
      *		(real(vis(i))**2 + aimag(vis(i))**2)/cnt(i)
+	      vis(i) = vis(i)/cnt(i)
 	    else
 	      vis(i) = CSum
 	    endif
