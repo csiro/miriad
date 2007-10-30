@@ -103,7 +103,7 @@ c
 	character In1*80,In2*80,out*80,device*64,line*80
 	character mess1*64,mess2*64
 	double precision freq1,freq2,cdelt1,cdelt2
-	real fac,uvlo,uvhi,freq,lambda,temp,du,dv
+	real fac,uvlo,uvhi,freq,lambda,temp,du,dv,pfac
 	real bmaj1,bmin1,bpa1,bmaj2,bmin2,bpa2
 	real bmaj,bmin,bpa,bmajt,bmint,bpat,norm
 	real sfac,sxx,sxy,syy
@@ -247,8 +247,9 @@ c
 	if(dofac)then
 	  call GetDat(lIn1,memr(pIn1),nIn(1),nIn(2),ngx,ngy,dozero)
 	  call GetDat(lIn2,memr(pIn2),nIn(1),nIn(2),ngx,ngy,dozero)
+	  pfac = (4.0*log(2.0))/PI*abs(cdelt1*cdelt2)/(bmaj2*bmin2)
 	  call GetFac(device,memr(pIn1),memr(pIn2),ngx,ngy,
-     *	      sfac,sxx,sxy,syy,uvlo,uvhi,du,dv,fac)
+     *	      sfac,sxx,sxy,syy,uvlo,uvhi,du,dv,fac,pfac)
 	  write(line,'(a,1pe11.3)')'Flux calibration factor:',fac
 	  call trimout(line)
 	endif
@@ -572,12 +573,12 @@ c
 	end
 c************************************************************************
 	subroutine GetFac(device,In1,In2,ngx,ngy,
-     *		sfac,sxx,sxy,syy,uvlo,uvhi,du,dv,fac)
+     *		sfac,sxx,sxy,syy,uvlo,uvhi,du,dv,fac,pfac)
 c
 	implicit none
 	integer ngx,ngy
 	complex In1(ngx/2+1,ngy),In2(ngx/2+1,ngy)
-	real sfac,sxx,sxy,syy,uvlo,uvhi,fac,du,dv
+	real sfac,sxx,sxy,syy,uvlo,uvhi,fac,du,dv,pfac
 	character device*(*)
 c
 c  Determine the scale factor to normalise everything.
@@ -590,6 +591,7 @@ c    sfac,sxx,sxy,syy Gaussian parameters.
 c    uvlo,uvhi	Annulus of interest, in lambda.
 c    du,dv	Cell increments in u and v.
 c    device	PGPLOT device to plot the fit on.
+c    pfac	Scale factor used in plotting.
 c  Output:
 c    fac	Scale factor to apply to the coarser resolution data.
 c------------------------------------------------------------------------
@@ -625,7 +627,8 @@ c
 c
 c  Plot the scale factor, if the user wanted this.
 c
-	if(device.ne.' ')call PlotFac(device,memr(pX),memr(pY),np,fac)
+	if(device.ne.' ')call PlotFac(device,memr(pX),memr(pY),np,
+     *							  fac,pfac)
 c
 c  Free the allocated memory.
 c
@@ -634,12 +637,12 @@ c
 c
 	end
 c************************************************************************
-	subroutine PlotFac(device,X,Y,n,a)
+	subroutine PlotFac(device,X,Y,n,a,pfac)
 c
 	implicit none
 	integer n
 	character device*(*)
-	real X(n),Y(n),a
+	real X(n),Y(n),a,pfac
 c
 c------------------------------------------------------------------------
 	real xmin,xmax,xlo,xhi,xp(2)
@@ -651,10 +654,11 @@ c
 c
 c  Find the min and max.
 c
-	xmin = x(1)
+	xmin = pfac*x(1)
 	xmax = xmin
 	do i=1,n
-	  y(i) = a*y(i)
+	  x(i) = pfac*x(i)
+	  y(i) = pfac*a*y(i)
 	  xmin = min(xmin,x(i),y(i))
 	  xmax = max(xmax,x(i),y(i))
 	enddo
@@ -687,8 +691,8 @@ c
 c  Label it
 c
 	call pgsci(1)
-	call pglab('High Resolution Data',
-     *		   'Scaled Low Resolution Data',
+	call pglab('High Resolution Data (Jy)',
+     *		   'Scaled Low Resolution Data (Jy)',
      *		   'Plot of Data in Fourier Annulus')
 	call pgend
 c
@@ -808,7 +812,7 @@ c
 	do j=1,ngy/2+1
 	  do i=1,ngx/2+1
 	    uv2 = ((i-ic)*du)**2 + ((j-jc)*dv)**2
-	    if(uv2.gt.uvlo*uvlo.and.uv2.lt.uvhi*uvhi)then
+	    if(uv2.ge.uvlo*uvlo.and.uv2.le.uvhi*uvhi)then
 	      t = sxx*(i-ic)*(i-ic) + sxy*(i-ic)*(j-jc) + 
      *		  syy*(j-jc)*(j-jc)
 	      t = sfac*exp(t)
@@ -829,7 +833,7 @@ c
 	do j=ngy/2+2,ngy
 	  do i=1,ngx/2+1
 	    uv2 = ((i-ic)*du)**2 + ((j-jc)*dv)**2
-	    if(uv2.gt.uvlo*uvlo.and.uv2.lt.uvhi*uvhi)then
+	    if(uv2.ge.uvlo*uvlo.and.uv2.le.uvhi*uvhi)then
 	      t = sxx*(i-ic)*(i-ic) + sxy*(i-ic)*(j-jc) + 
      *		  syy*(j-jc)*(j-jc)
 	      t = sfac*exp(t)
