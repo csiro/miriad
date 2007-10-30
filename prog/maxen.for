@@ -107,9 +107,10 @@ c   rjs  10aug95 - New routine to change alpha and beta.
 c   rjs  120ct95 - Support model and default being different size to selected
 c		   region.
 c   rjs  18Oct05 - Handle higher axes somewhat better.
+c   rjs  27oct95 - Increased max length of filenames.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Maxen: version 1.0 18-Oct-95')
+	parameter(version='Maxen: version 1.0 27-Oct-95')
 	include 'maxnax.h'
 	include 'maxdim.h'
 	integer MaxRun,MaxBoxes
@@ -121,7 +122,7 @@ c
 	integer gull,cornwell
 	parameter(gull=1,cornwell=2)
 c
-	character MapNam*32,BeamNam*32,ModelNam*32,OutNam*32,DefNam*32
+	character MapNam*64,BeamNam*64,ModelNam*64,OutNam*64,DefNam*64
 	character entropy*8,messlev*8,flags*8,line*72
 	integer lBeam,lMap,lModel,lOut,lDef
 	integer nMap(3),nModel(3),nOut(MAXNAX),nBeam(2),nDef(3),i
