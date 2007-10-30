@@ -46,6 +46,7 @@ c   07jan93   nebk   Rewrite calling interface again
 c   15feb93   nebk   pbfwhm=0 -> single dish, <0 -> unknown
 c   25oct93   rjs    Prevent floating underflow in exp function.
 c   25oct94   rjs    Complete rewrite.
+c   15mar95   rjs    Better model for Hat Ck and WSRT.
 c************************************************************************
 c* pbRead -- Determine the primary beam type of a dataset.
 c& rjs
@@ -250,7 +251,7 @@ c
 	integer l1,l2,iax,k,kd
 	double precision f,dtemp,x2(2),antdiam
 	double precision crpix,crval,cdelt1,cdelt2
-	real error,t
+	real error,t,alpha
 	character ctype*16,line*64
 c
 c  Externals.
@@ -355,6 +356,10 @@ c
 	if(pbtype(k).eq.POLY)then
 	  xc(pbObj) = (f*cdelt1*180*60/pi)**2
 	  yc(pbObj) = (f*cdelt2*180*60/pi)**2
+	else if(pbtype(k).eq.COS6)then
+	  alpha = 2*acos(2**(-0.1666667))
+	  xc(pbObj) = (alpha*cdelt1*180*60/pi/fwhm(pbObj)) ** 2
+	  yc(pbObj) = (alpha*cdelt2*180*60/pi/fwhm(pbObj)) ** 2
 	else if(pbtype(k).eq.GAUS)then
 	  xc(pbObj) = 4*log(2.) * (cdelt1*180*60/pi/fwhm(pbObj))**2
 	  yc(pbObj) = 4*log(2.) * (cdelt2*180*60/pi/fwhm(pbObj))**2
@@ -427,6 +432,8 @@ c
 	    P = P*r2 + pbvals(i)
 	  enddo
 	  pbGet = 1/P
+	else if(pbtype(k).eq.COS6)then
+	  pbGet = cos(sqrt(r2))**6
 	else if(pbtype(k).eq.GAUS)then
 	  pbGet = exp(-r2)
 	else if(pbtype(k).eq.SINGLE)then
@@ -481,6 +488,9 @@ c
 	    n = n - 2
 	  enddo
 	  pbDer = -Pdash/(freq(pbObj)*P*P)
+	else if(pbtype(k).eq.COS6)then
+	  P = sqrt(r2)
+	  pbDer = -6*P/freq(pbObj)*cos(P)**5*sin(P)
 	else if(pbtype(k).eq.GAUS)then
 	  pbDer = -2*r2*exp(-r2)/freq(pbObj)
 	else if(pbtype(k).eq.SINGLE)then
@@ -513,12 +523,16 @@ c------------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'pb.h'
 	integer k
+	real alpha
 c
 	k = pnt(pbObj)
 	pbfwhmd = pi/180/60 * fwhm(pbObj)
 	cutoffd = cutoff(k)
 	if(pbtype(k).eq.GAUS)then
 	  maxradd = pbfwhmd * sqrt( -log(cutoffd)/(4*log(2.)) )
+	else if(pbtype(k).eq.COS6)then
+	  alpha = 2*acos(2.0**(-0.1666667))
+	  maxradd = pbfwhmd*acos(cutoffd**(0.1666667))/alpha
 	else if(pbtype(k).eq.POLY)then
 	  maxradd = pi/180/60 * sqrt(maxrad(k))/freq(pbObj)
 	else
@@ -549,7 +563,6 @@ c    The primary beam will be non-zero only in the region
 c    [x0-xext,x0+xext] x [y0-yext,y0+yext].
 c--
 c------------------------------------------------------------------------
-	include 'mirconst.h'
 	include 'pb.h'
 	integer k
 c
@@ -599,7 +612,8 @@ c
 	enddo
 	pnt(MAXOBJ) = 0
 c
-c  Make the list of known primary beam objects.
+c  Make the list of known primary beam objects. The ATCA primary beams
+c  are taken from ATNF technical memo by Wieringa and Kesteven.
 c
 	call pbAdd('ATCA',    1.15,1.88,    47.9, 0.03, POLY,
      *							 NCOEFF,atcal)
@@ -607,14 +621,32 @@ c
      *							 NCOEFF,atcas)
 	call pbAdd('ATCA',    4.30,6.70,    48.3, 0.03, POLY,
      *							 NCOEFF,atcac)
-	call pbAdd('ATCA',    7.90,9.30,    50.6, 0.03, POLY,
+	call pbAdd('ATCA',    7.90,9.3,    50.6, 0.03, POLY,
      *							 NCOEFF,atcax)
+c
+c  VLA primary beam is taken from AIPS code.
+c
 	call pbAdd('VLA',     0.071,24.510, 44.3, 0.023,POLY,
      *							 NCOEFF,vla)
-	call pbAdd('HATCREEK',74.0,116.0,   184., 0.05, GAUS,0,0.)
-	call pbAdd('FST',     1.00,2.00,    67.0, 0.05, GAUS,0,0.)
-	call pbAdd('GAUS',    0.0,1e4,	      1.0, 0.05, GAUS,0,0.)
-	call pbAdd('SINGLE',  0.0,1e4,	      0.0, 0.5,  SINGLE,0,0.)
+c
+c  The Hat Ck primary beam is a gaussian of size is 191.67 arcmin.GHz
+c  according to "John L"
+c
+	call pbAdd('HATCREEK',74.0,116.0,   191.67, 0.05, GAUS,0,0.)
+c
+c  The following values for the WSRT are derived from the NEWSTAR
+c  manual, which gives pb = cos**6(beta*freq(MHz)*angle(degrees))
+c  where beta = 0.0629 for f < 500 MHz, and 0.065 for f > 500 MHz.
+c  These numbers look a bit large (WSRT under-illuminated?).
+c
+	call pbAdd('WSRT',    0.0,0.5,	     51.54, 0.02,  COS6,0,0.)
+	call pbAdd('WSRT',    0.5,8.0,	     49.87, 0.02,  COS6,0,0.)
+c
+c  Miscellaneous.
+c
+	call pbAdd('FST',     1.00,2.00,     67.00, 0.05, GAUS,0,0.)
+	call pbAdd('GAUS',    0.0,1e4,	      1.00, 0.05, GAUS,0,0.)
+	call pbAdd('SINGLE',  0.0,1e4,	      0.00, 0.5,  SINGLE,0,0.)
 c
 	end
 c************************************************************************
@@ -630,7 +662,7 @@ c
 c  Input:
 c    tel	Primary beam name.
 c    f1,f2	Frequency range where valid (in GHz).
-c    pbfwhm	Approx primary beam FWHM, in arcsec, at 1 GHz.
+c    pbfwhm	Approx primary beam FWHM, in arcmin, at 1 GHz.
 c    cutoff	Level below which primary beam is invalid.
 c    pbtype	Functional form used to represent the primary beam.
 c    nval	Number of values used to parameterize the functional form.
@@ -666,6 +698,8 @@ c
 	  maxrad(npb) = -log(cutoff(npb))
 	else if(pbtyped.eq.SINGLE)then
 	  maxrad(npb) = 1
+	else if(pbtyped.eq.COS6)then
+	  maxrad(npb) = acos(cutoff(npb)**0.1666667)**2
 	else if(pbtyped.eq.POLY)then
 	  call pbradp(cutoffd,vals,nval,pbfwhmd,maxrad(npb))
 	endif
