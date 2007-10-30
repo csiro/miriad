@@ -16,10 +16,10 @@ c A few items must be treated in a special way, as described below.
 c
 c - The following items are copied directly:
 c    'history ','bmaj    ','bmin    ','bpa     ','bunit   ',
-c    'date-obs','epoch   ','instrume','ltype   ','lstart  ',
+c    'obstime ','epoch   ','instrume','ltype   ','lstart  ',
 c    'lwidth  ','lstep   ','niters  ','object  ','observer',
 c    'obsdec  ','obsra   ','pbfwhm  ','restfreq','telescop',
-c    'vobs    ','xshift  ','yshift  ','btype'
+c    'vobs    ','cellscal','btype'
 c
 c - The datamin and datamax items are explicitly excluded. One should
 c recalculate the min and max of the output dataset and update these
@@ -72,6 +72,7 @@ c    bpw  11dec92  Add btype
 c    bpw  16dec92  No special copy for btype, per Neil's remark
 c    bpw   1feb93  Made crpix double precision too
 c    pjt  15mar95  fixed statement order for f2c (linux)
+c    rjs  02jul97  cellscal change.
 c
 c***********************************************************************
 
@@ -83,17 +84,17 @@ c***********************************************************************
       logical          hdprsnt
 
       integer          NKEYS
-      parameter        ( NKEYS = 29 )
+      parameter        ( NKEYS = 28 )
       character*8      keyw(NKEYS)
       data keyw/
      *    'crpix   ','crval   ','cdelt   ','crota   ','ctype   ',
-     *    'history ',
+     *    'history ','cellscal',
      *    'bmaj    ','bmin    ','bpa     ','bunit   ',
-     *    'date-obs','epoch   ','instrume',
+     *    'obstime ','epoch   ','instrume',
      *	  'ltype   ','lstart  ','lwidth  ','lstep   ',
      *    'niters  ','object  ','observer','obsdec  ','obsra   ',
      *    'pbfwhm  ','restfreq','telescop','vobs    ',
-     *    'xshift  ','yshift  ','btype'/
+     *    'btype'/
 
       do k = 1, 5
          do n = 1, naxis
