@@ -57,6 +57,7 @@ c     5apr93 pjt   Since rjs is walkabouting, I had to fix that amazing bug:
 c		   indexor's (i0,j0) in moment3 wrong if blc,trc used
 c    04jan96 nebk  Write header descriptors as double precision
 c    26nov96 rjs   Increase length of input and output file names.
+c    07mar97 rjs   Improve a message.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
  	character version*(*)
@@ -303,7 +304,7 @@ c
 	call rdhda(lIn,'ctype'//cin,ctype,' ')
 	if(ctype(1:4).ne.'VELO' .and. ctype(1:4).ne.'FELO' .and.
      *						ctype(1:4).ne.'FREQ')
-     *        call bug('w','axis must be VELO, FELO, or FREQ.')
+     *        call bug('w','Axis is not VELO, FELO, or FREQ.')
 	call rdhdr(lin,'cdelt'//cin,cdelt,0.0)
 	if(cdelt.eq. 0.0) call bug('f','cdelt is 0 or not present.')
 c
