@@ -83,6 +83,7 @@ c    nebk 28jun94 Add multiply option
 c    nebk 04jan96 With options=replace, make third axis descriptors
 c	          reflect size of the selected region on the third axis
 c    nebk 06may97 Comment out the "INcluding plane ..." message
+c    rjs  02jul97 cellscal change.
 c------------------------------------------------------------------------
       implicit none
 c
@@ -107,7 +108,7 @@ c
       logical more, flags(maxdim), dosub, dood, dorepl, dored, domul
 c
       integer nkeys
-      parameter (nkeys = 44)
+      parameter (nkeys = 46)
       character keyw(nkeys)*8
 c
       data keyw/     'cdelt1  ','cdelt2  ','cdelt3  ',
@@ -117,9 +118,9 @@ c
      +    'crval4  ','crval5  ','ctype1  ','ctype2  ','ctype3  ',
      +    'ctype4  ','ctype5  ','date-obs','epoch   ','history ',
      +    'instrume','niters  ','object  ','restfreq','telescop',
-     +    'vobs    ','obsra   ','obsdec  ','observer','xshift  ',
-     +    'yshift  ','bmaj    ','bmin    ','bpa     ','pbfwhm  ',
-     +    'btype   '/
+     +    'vobs    ','obsra   ','obsdec  ','observer','rms     ',
+     +    'bmaj    ','bmin    ','bpa     ','pbfwhm  ',
+     +    'btype   ','mostable','obstime ','cellscal'/
 c-------------------------------------------------------------------------
       call output ('AvMaths version '//version)
 c
