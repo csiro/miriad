@@ -59,6 +59,7 @@ c    nebk  20nov93   Attempts to make units Jy/beam automatically.
 c    rjs   25nov93   Change "width" to "fwhm".
 c    rjs   02jul97   cellscale change.
 c    rjs   23jul97   Add pbtype.
+c    dpr   19jul01   Longer in and out keys
 c------------------------------------------------------------------------
       implicit none
       include 'maxdim.h'
@@ -70,13 +71,13 @@ c
       character version*25
       parameter (maxk = 100, maxk2 = (2*maxk+1)**2, 
      +           a2r = dpi / 180.0d0 / 3600.0d0)
-      parameter (version = 'version 20-Nov-93')
+      parameter (version = 'version 19-Jun-01')
 c
       integer ipin, ipout, ipmin, ipmout
       real data(maxbuf)
       common data
 c
-      character in*32, out*32, line*80, ktype*8, bunit*8
+      character in*256, out*256, line*80, ktype*8, bunit*8
       integer nsize(maxnax), kipnt(maxk2), kjpnt(maxk2), lin, lout,
      +naxis, ksizex, ksizey, ksize2, k, nktype
       double precision cdelt1, cdelt2
