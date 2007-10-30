@@ -159,6 +159,7 @@ c
 	character pbtype*(*),type*(*)
 	real val
 c------------------------------------------------------------------------
+	include 'mirconst.h'
 	integer i1,i2
 	character string*10
 c
@@ -167,7 +168,7 @@ c
 	integer len1
 c
 	if(type.eq.'gaus')then
-	  write(string,'(1pe10.4)')val
+	  write(string,'(1pe10.4)')3600*180/pi * val
 	  i1 = 1
 	  i2 = len1(string)
 	  dowhile(i1.lt.i2.and.string(i1:i1).eq.' ')
