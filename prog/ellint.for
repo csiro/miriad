@@ -36,7 +36,9 @@ c	reference pixel, measured in the directions of RA and DEC.
 c@ pa
 c	Position angle of ellipse major axis in degrees. Default is 0 (north).
 c@ incline
-c	Inclination angle in degrees. Default=0. (face on)
+c	The ellipse is assumed to be a circular structure that appears
+c	ellitpical because it is viewed at some inclination. The "incline"
+c	parameter gives this inclination angle in degrees. Default=0. (face on)
 c@ radius
 c	Inner and outer radii and step size along major axis in arcsecs.
 c	The default is the whole image in steps equal to the pixel size.
@@ -51,9 +53,12 @@ c	with "gaus(xxx)". Here xxx is the primary beam FWHM in arcseconds.
 c	For example gaus(120) is a telescope with a 120 arcsec primary beam.
 c@ options
 c	Task enrichment options.  Minimum match is active.
-c	  pbcorr    means correct the image for the primary beam
+c	  pbcorr    This causes the images to be corrected for primary beam
 c	            attenutation before integrating.
-c	  median    Find the median of each annulus instead of the average
+c	  median    Find the median of each annulus instead of the average.
+c	  mode      Find the mode of each annulus instead of the average.
+c	  natural   Assume keywords "center" and "radius" are in natural
+c	            units rather than arcsec.
 c@ log
 c	The output log file. The default is the terminal.
 c--
@@ -82,14 +87,14 @@ c    rjs   24oct94	Use new pb routines.
 c    nebk  27feb96      Add options=median, more doc.
 c    rjs   20nov96      Re-instate Wilfred's version, with some trivial
 c			intermediate changes. History is uncertain.
+c    rjs   06mar97	Added options=natural, and some other changes.
 c----------------------------------------------------------------------c
 	include 'mirconst.h'
 	include 'maxdim.h'
 	include 'mem.h'
         character*(*) label,version
-        parameter(version='version 1.0 20-Nov-96')
+        parameter(version='version 1.0 06-Mar-97')
         double precision rts,value
-        parameter(rts=3600.d0*180.d0/dpi)
         parameter(label='Integrate a Miriad image in elliptical annuli')
         integer maxnax,maxboxes,maxruns,naxis,axis,plane,maxring
         parameter(maxnax=3,maxboxes=2048)
@@ -102,7 +107,7 @@ c
         real center(2),pa,incline,rmin,rmax,rstep
         real buf(maxdim),cospa,sinpa,cosi,x,y,r,ave,rms,fsum,cbof
         real pixe(maxdim),flux(maxdim),flsq(maxdim),pbfac
-        logical mask(maxdim),dopb,keep,domedian, domode
+        logical mask(maxdim),dopb,keep,domedian,domode,natural
         character in*64,logf*64,line*132,cin*1,ctype*9,caxis*13,units*13
         character btype*25,pbtype*16
 c
@@ -117,6 +122,7 @@ c
         call output( 'ELLINT: '//version )
         call keyini
         call keya('in',in,' ')
+        if(in .eq. ' ') call bug('f','No input specified.')
         call boxinput('region',in,boxes,maxboxes)
         call keyr('center',center(1),0.)
         call keyr('center',center(2),0.)
@@ -126,14 +132,12 @@ c
         call keyr('radius',rmax,0.)
         call keyr('radius',rstep,0.)
         call keya('pbtype',pbtype,' ')
-        call getopt(dopb,domedian,domode)
+        call getopt(dopb,domedian,domode,natural)
         call keya('log',logf,' ')
         call keyfin
-      
 c
-c  Check inputs.
+c  Open the input.
 c
-        if(in .eq. ' ') call bug('f','No input specified.')
         call xyopen(lin,in,'old',maxnax,nsize)
         call rdhdi(lin,'naxis',naxis,0)
         naxis = min(naxis,maxnax)
@@ -153,8 +157,6 @@ c
           call rdhdr(lin,'crpix'//cin,crpix(i),0.)
           call rdhdr(lin,'cdelt'//cin,cdelt(i),0.)
           if(i.le.2)then
-            if(ctype(1:2).ne.'RA'.and.ctype(1:3).ne.'DEC')
-     *      call bug('w','Axes 1 and 2 are not RA or DEC')
             if(crpix(i).eq.0)then
               crpix(i) = nsize(i)/2+1
               call bug('w','Center pixel missing - assume naxis/2+1')
@@ -204,6 +206,12 @@ c
         endif
 c
 c  Convert the inputs to more useful numbers, and defaults.
+c
+	if(natural)then
+	  rts = 1
+	else
+	  rts = 3600.*180./PI
+	endif
 c
         do i=1,2
           if(cdelt(i).lt.0.) center(i) = -center(i)
@@ -394,17 +402,9 @@ c
             end do
           end if
 c
+c  End our mode addition.
 c
-c     end our mode addition
-c
-
-
-
-
-
-c
-c Increment plane
-c
+c  Increment plane.
 c
           plane = plane + 1
         enddo
@@ -415,34 +415,34 @@ c
         call logclose
         end
 c********1*********2*********3*********4*********5*********6*********7*c
-      subroutine getopt (dopb,median,mode)
-c----------------------------------------------------------------------
-c     Decode options array into named variables.
+      subroutine getopt (dopb,median,mode,natural)
+      implicit none
+c
+      logical dopb, median, mode, natural
+c
+c  Decode options array into named variables.
 c
 c   Output:
 c     dopb       DO primary beam corection
 c     median     Use medians not means
+c     mode	 Use modes not means.
+c     natural	 Use natural units rather than arcsec.
 c-----------------------------------------------------------------------
-      implicit none
-c
-      logical dopb, median, mode
-cc
       integer maxopt
-      parameter (maxopt = 3)
+      parameter (maxopt = 4)
 c
-      character opshuns(maxopt)*6
+      character opshuns(maxopt)*8
       logical present(maxopt)
-      data opshuns /'pbcorr', 'median', 'mode'/
+      data opshuns /'pbcorr  ', 'median  ', 'mode    ','natural '/
 c-----------------------------------------------------------------------
       call options ('options', opshuns, present, maxopt)
 c
       dopb = present(1)
       median = present(2)
       mode = present(3)
+      natural = present(4)
 c
       end
-
-c our mode subroutine
 c************************************************************************
 c Mode -- Find the mode of an array of data.
 c vjm, wmw
@@ -499,7 +499,7 @@ c       which has already had the outer deciles deleted
 	   sum2=sum2+xi*xi
            iter=iter+1
 	enddo
-        av = sum/(float(iter))
+        av = sum/(real(iter))
         rms=sqrt(sum2/iter - sum*sum/iter**2)
 
 c       divide inner 8 deciles of data into MAXBINS bins 
