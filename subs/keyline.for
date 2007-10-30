@@ -4,6 +4,58 @@ c
 c  History:
 c    rjs  ??      Original version.
 c    rjs  16nov94 Fix reference line retrieval.
+c    rjs  06sep99 Added lflag parameter to keygline routine.
+c************************************************************************
+c  Get line and reference line parameters
+c
+c  History:
+c    rjs  ??      Original version.
+c    rjs  16nov94 Fix reference line retrieval.
+c************************************************************************
+c* KeygLine -- Get the linetype from the user interface.
+c& rjs
+c: user-input
+c+
+        subroutine keygline(line,nchan,lstart,lwidth,lstep,lflag)
+c
+        implicit none
+        character line*(*)
+        integer nchan
+        real lstart,lwidth,lstep,lflag
+c
+c  Get the linetype from the user interface.
+c
+c  Output:
+c    line	Either 'channel', 'velocity','felocity' or 'wide'.
+c    nchan	Number of channels.
+c    lstart,lwidth,lstep  Line parameters.
+c--
+c------------------------------------------------------------------------
+        integer ntypes
+        parameter(ntypes=4)
+        character ltypes(ntypes)*8
+        integer nout
+        data ltypes/'channel  ','velocity','felocity','wide    '/
+c
+        call keymatch('line',ntypes,ltypes,1,line,nout)
+        if(nout.eq.0)line = ' '
+        call keyi('line',nchan,0)
+        if(nchan.lt.0)call bug('f',
+     *    'Invalid number of chans in line parameter')
+c
+        if(line.eq.'felocity'.or.line.eq.'velocity')then
+          call keyr('line',lstart,0.)
+          call keyr('line',lwidth,0.)
+          call keyr('line',lstep,lwidth)
+          lflag = 1.0
+        else
+          call keyr('line',lstart,1.0)
+          call keyr('line',lwidth,1.0)
+          call keyr('line',lstep,lwidth)
+          call keyr('line',lflag,1.0)
+        endif
+c
+        end
 c************************************************************************
 c* KeyLine -- Get the linetype from the user interface.
 c& rjs
