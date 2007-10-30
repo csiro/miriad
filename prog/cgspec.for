@@ -450,7 +450,7 @@ c
      +  slines(2,maxspec), blines(2), srtlev(maxlev,maxcon),
      +  nlevs(maxcon), sblc(maxnax), strc(maxnax), nblnkc(3), 
      +  his(nbins)
-      integer nofile, npos, ierr, pgbeg, ilen, ncon, i, j, nspec, iofm,
+      integer nofile, npos, ierr, pgbeg, ilen, ncon, i, j, nspec,
      +  sizespec, ngrps, defwid, npts, iblc, nblnkg, nblnkcs, coltab
       integer axisnum, virsiz(maxnax), vircsiz(maxnax)
       integer len1, tflen(0:2)
@@ -463,7 +463,7 @@ c
       logical dofull, eqscale, doblnkc, doblnkg, doblnkb, relax, doaxes, 
      +  doframe, fits(2), mark, spnorm, naked, number, mirror, init, 
      +  imnorm, colour, skip, blconly, doerase, doepoch, igblank,
-     +  allgood, allblnk, dofid, dowedge, reverse
+     +  allgood, allblnk, dofid, dowedge
 c
       data blankc /-99999999.00/
       data cin, gin, bin /maxcon*' ', ' ', ' '/
@@ -479,9 +479,6 @@ c-----------------------------------------------------------------------
       call output ('CgSpec: version 10-Apr-95')
       call output ('Keyword "grange" can now be used to specify the')
       call output ('colour lookup table as well the transfer function')
-      call output (' ')
-      call output ('Options=fiddle is now keyboard driven for '//
-     +             'hard-copy devices')
       call output (' ')
 c
 c Get user inputs
@@ -622,7 +619,7 @@ c
 c       
 c Init OFM routines
 c       
-      call ofmini
+      if (gin.ne.' ') call ofmini
 c
 c Set label displacements from axes and set PGTBOX labelling 
 c option strings
@@ -692,42 +689,41 @@ c
      +    win(1)*win(2), memi(ipnim), memr(ipim), nbins, 
      +    his, cumhis)
 c
-c Apply user specified OFM or b&w OFM as default
+c Deal with OFM modifications for harcdopy device before calling PGIMAG
 c
-        call ofmcol (coltab, pixr2(1), pixr2(2))
-c
-c Modify OFM for hard copy devices before calling PGIMAG
-c
-        if (dofid .and. hard.eq.'YES') 
-     +    call ofmmod (tfvp, win(1)*win(2), memr(ipim), 
-     +                 memi(ipnim), pixr2(1), pixr2(2))
-c
-c Draw image.  Note that for hardcopy devices we generally want
-c black on white, not white on black.  So if no colour table has
-c been applied, make it so.  
-c
-        reverse = .false.
         if (hard.eq.'YES') then
-          call ofminq (iofm)
-          if (iofm.eq.1) reverse = .true.
-          if (iofm.eq.9) call ofmfudge
+c
+c Apply user given OFM or b&w as default
+c
+          call ofmcol (coltab, pixr2(1), pixr2(2))
+c
+c Interactive fiddle of OFM
+c
+          if (dofid) call ofmmod (tfvp, win(1)*win(2), memr(ipim), 
+     +                            memi(ipnim), pixr2(1), pixr2(2))
+c
+c Take complement of b&w lookup tables
+c
+          call ofmcmp
         end if
 c
-        if (reverse) then
-          call pgimag (memr(ipim), win(1), win(2), 1, win(1),
-     +                 1, win(2), pixr2(2), pixr2(1), tr)
-        else
-          call pgimag (memr(ipim), win(1), win(2), 1, win(1),
-     +                 1, win(2), pixr2(1), pixr2(2), tr)
-        end if
+c Draw image and apply user given OFM to interactive PGPLOT devices
+c
+        call pgimag (memr(ipim), win(1), win(2), 1, win(1),
+     +               1, win(2), pixr2(1), pixr2(2), tr)
+        if (hard.eq.'NO') call ofmcol (coltab, pixr2(1), pixr2(2))
 c
 c Draw optional wedge
 c
         call pgslw (1)
         call pgsci (7)
         if (hard.eq.'YES') call pgsci (2)
-        if (dowedge) call wedgecg (reverse, 1, wedwid, 1, trfun, groff, 
-     +                  nbins, cumhis, wdgvp, pixr(1), pixr(2))
+        if (dowedge) call wedgecg (1, wedwid, 1, trfun, groff, nbins,
+     +                             cumhis, wdgvp, pixr(1), pixr(2))
+c
+c Retake OFM b&w complement for hardcopy devices
+c
+        if (hard.eq.'YES') call ofmcmp
 c
 c Save normalization image if there are some blanks
 c
@@ -1644,7 +1640,7 @@ c              by SLEV for contouring
 c   nlevs      Number of contour levels for each contour image
 c   pixr       Pixel map intensity range
 c   trfun      Type of pixel map transfer function: log,lin,sqr,or heq
-c   coltab     Colour table to apply to device.  1 -> 8 (negate to reverse)
+c   coltab     Colour table to apply to device.  
 c   pdev       PGPLOT plot device/type
 c   labtyp     Type of labels for x and y axes
 c   dofull     True means do full annotaiton of plot
@@ -2913,7 +2909,7 @@ c Find hyper-rectangle surrounding region of interest from highest
 c dimension image involved (i.e., 2-D/3-D).
 c
       call boxinfo (boxes, 3, blc, trc)
-      do i = 1, naxis
+      do i = 1, min(3,naxis)
         blc(i) = max(1,blc(i))
         trc(i) = min(size(i),trc(i))
       end do        
