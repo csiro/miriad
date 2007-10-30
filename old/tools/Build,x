@@ -2,12 +2,27 @@
 
 # Look for the readline library.
 
-set lib = `mirfind readline`
+set llib = `mirfind readline`
+set tlib = `mirfind termcap`
+set nlib = `mirfind ncurses`
+
+if ( "$llib" == "" ) then
+  echo "### Failed to find readline library when building readline-Miriad"
+  exit
+endif
+if ( "$tlib" == "" && "$nlib" == "" ) then
+  echo "### Failed to find either termcap or ncurses library when building readline-Miriad"
+  exit
+endif
 
 rm -f miriad
 
-if ( "$lib" != "" ) then
-  cc -o miriad -DREADLINE $MIR/tools/miriad.c -L$lib -lreadline -ltermcap
+if ( "$llib" != "" ) then
+  if ( "$tlib" != "" ) then
+    cc -o miriad -DREADLINE $MIR/tools/miriad.c -L$llib -lreadline -L$tlib -ltermcap
+  else
+    cc -o miriad -DREADLINE $MIR/tools/miriad.c -L$llib -lreadline -L$nlib -lncurses
+  endif
   if ( -x miriad ) then
     mv miriad $MIRBIN
   else
