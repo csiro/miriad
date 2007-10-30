@@ -26,6 +26,7 @@ c	is that no gain image is formed.
 c--
 c  History:
 c    rjs   6nov94 Original version.
+c    rjs  13mar95 Add call to mosMFin
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'maxnax.h'
@@ -129,6 +130,7 @@ c
 	    call PutRuns( tGain,Runs2,nRuns2,1-blc(1),1-blc(2),
      *				nOut(1),nOut(2))
 	  endif
+	  call mosMFin
 	enddo
 c
 c  Close up shop.
@@ -190,13 +192,16 @@ c
 	  enddo
 	  if(ngood.gt.0)then
 	    nRuns2 = nRuns2 + 1
-	    if(nRuns2.gt.MAXRUNS)call bug('f','Runs array overflow')
+	    if(nRuns2.ge.MAXRUNS)call bug('f','Runs array overflow')
 	    Runs2(1,nRuns2) = Runs1(1,iRuns)
 	    Runs2(2,nRuns2) = Runs1(3,iRuns) - ngood + 1
 	    Runs2(3,nRuns2) = Runs1(3,iRuns)
 	  endif
 	enddo
 c
+	Runs2(1,nRuns2+1) = 0
+	Runs2(2,nRuns2+1) = 0
+	Runs2(3,nRuns2+1) = 0
 	npix2 = opt
 c
 	end
