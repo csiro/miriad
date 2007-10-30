@@ -69,6 +69,7 @@ c		   primary beam correction.
 c    rjs  26may92  Write btype keyword. Change of sign convention for
 c		   spectral index.
 c    nebk 28jan93  Adapt to new primary beam routines.
+c    rjs  24oct94  Use newer pb routines.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
@@ -76,7 +77,7 @@ c------------------------------------------------------------------------
 	integer nP,PolQ,PolU,PolV
 	integer MAXRUNS
 	parameter(MAXRUNS=5*MAXDIM,nP=11)
-	parameter(version='MfSpin: version 28-Jan-93')
+	parameter(version='MfSpin: version 24-Oct-93')
 	parameter(PolQ=2,PolU=3,PolV=4)
 c
 	real dat(MAXBUF)
@@ -89,7 +90,7 @@ c
 	integer Runs(3,MAXRUNS),nruns,npix
 	integer lBeam,lMod1,lMod2,xBeam,yBeam
 	integer Flux1,Flux2,Alpha1,Alpha2,Gaus,handle
-	character line*72,pbtype*6
+	character line*72,pbtype*16
 	real Patch(nP*nP)
 	real fwhm1,fwhm2,pa
 	real clip(2),cdelt1,cdelt2,crpix1,crpix2,nu0
@@ -271,8 +272,7 @@ c
 	else
 	  call Divide1(npix,dat(Alpha1),dat(Flux1))
 	endif
-	if(pbcorr)call CorrSI(lMod1,npix,dat(Alpha1),Runs,nRuns,
-     *	  crpix1,cdelt1,crpix2,cdelt2,pbtype)
+	if(pbcorr)call CorrSI(lMod1,npix,dat(Alpha1),Runs,nRuns,pbtype)
 c
 c  Save the spectral index map.
 c
@@ -442,13 +442,12 @@ c
 	enddo
 	end
 c************************************************************************
-	subroutine CorrSI(tin,npix,Data,Runs,nRuns,
-     *	  crpix1,cdelt1,crpix2,cdelt2,pbtype)
+	subroutine CorrSI(tin,npix,Data,Runs,nRuns,type)
 c
 	implicit none
 	integer nRuns,npix,Runs(3,nRuns),tin
-	real Data(npix),crpix1,crpix2,cdelt1,cdelt2
-        character pbtype*(*)
+	real Data(npix)
+        character type*(*)
 c
 c  Correct the spectral index, in Data, for the effect of the primary beam.
 c
@@ -456,43 +455,43 @@ c  Input:
 c    tin        Handle of first model image
 c    npix	Total number of pixels.
 c    nRuns,Runs	Runs specification.
-c    crpix1,crpix2 The reference pixel, which is assumed to be the
-c		pointing centre.
-c    cdelt1,cdelt2 Pixel increment, in radians.
 c  Output:
-c    pbtype     Type of primary beam correction; 'GAUSS', 'POLY','SINGLE'
+c    type       Type of primary beam correction; 'GAUSS', 'POLY','SINGLE'
 c  Input/Output:
 c    Data	The spectral index, before and after correction.
 c------------------------------------------------------------------------
-	integer i,j,k,pix,ierr,ifax
-	real theta2,pbcut,pbfwhm
-        double precision freq,pbc(5),finc
-        real pbget,pbder,pbfac
+	integer i,j,k,pbObj,pix
+	real pbfac,pbdif
+	double precision freq
+c
+c  Externals.
+c
+        real pbget,pbder
 c
 c Find frequency of model image and set primary beam
 c
-        ifax = 0
-        call getfreq(tin,1.0,ifax,freq,finc,ierr)
-        if (ierr.gt.0) call bug ('f', 'Could not find model frequency')
-        call pbinit(0.0,freq,tin,.true.)
-        call pbinfo(pbfwhm,pbc,pbcut,pbtype)
+	call coInit(tin)
+	call coFreq(tin,'op',0.d0,freq)
+	call pbRead(tin,type)
+	call pbInit(pbObj,type,tin)
 c
         pix = 0
         do k=1,nRuns
           j = Runs(1,k)
           do i=Runs(2,k),Runs(3,k)
 	    pix = pix + 1
-	    theta2 = cdelt1*cdelt1*(i-crpix1)*(i-crpix1) +
-     *	             cdelt2*cdelt2*(j-crpix2)*(j-crpix2)
-            pbfac = pbget(theta2)
+	    pbfac = pbGet(pbObj,real(i),real(j))
+	    pbdif = pbDer(pbObj,real(i),real(j))
             if (pbfac.gt.0.0) then
-  	      Data(pix) = Data(pix) - freq*pbder(theta2)/pbfac
+  	      Data(pix) = Data(pix) - freq*pbdif/pbfac
             else
               Data(pix) = 0.0
-            end if
+            endif
 	  enddo
 	enddo
 c
+	call pbFin(pbObj)
+	call coFin(tin)
 	end
 c************************************************************************
 	subroutine Divide1(npix,Num,Denom)
@@ -711,13 +710,8 @@ c
      *          ' arcsec, pa = ', 1pe10.3, ' degrees')
 	call hiswrite(lOut,line)
 	if(pbcorr.and.si)then
-          if(pbtype.eq.'GAUSS') then
-            call hiswrite(lOut,
-     *        'MFSPIN: Gaussian primary beam correction done')
-          else if(pbtype.eq.'POLY') then
-            call hiswrite(lOut,
-     *        'MFSPIN: Polynomial primary beam correction done')
-          endif
+	  line = 'MFSPIN: Corrected with primary beam type '//pbtype
+	  call hiswrite(lOut,line)
 	endif
 	call hisclose(lOut)
 c
@@ -739,8 +733,7 @@ c    cdelt1,cdelt2,fwhm1,fwhm2,pa Gaussian parameters.
 c  Output:
 c    Beam	  The output beam.
 c------------------------------------------------------------------------
-	real pi
-	parameter(pi=3.141592653589793)
+	include 'mirconst.h'
 	integer i,j
 	real theta,s2,c2,sxx,syy,sxy,a,b,t
 c
@@ -851,9 +844,9 @@ c    Fwhm2	Fwhm, in degrees along the minor axis.
 c    Pa		Position angle, in degrees, measured east of north.
 c
 c------------------------------------------------------------------------
+	include 'mirconst.h'
 	integer MaxIter
-	real pi
-	parameter(MaxIter=100,pi=3.141592653589793)
+	parameter(MaxIter=100)
 	include 'mfspin.h'
 	real X(3),dx(3),aa(3*3),t1,t2
 	real f(nPM*nPM),fp(nPM*nPM),dfdx(3*nPM*nPM)
