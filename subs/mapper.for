@@ -9,6 +9,8 @@ c    Mapper(ichan,pMap)
 c
 c  History:
 c    rjs  25oct94 Original version.
+c    rjs  22nov94 Array bound vioolation in mapfft2, which affected images
+c		  that were larger than maxdim/2.
 c************************************************************************
 	subroutine MapFin
 c
@@ -128,17 +130,15 @@ c------------------------------------------------------------------------
 	include 'mapper.h'
 	include 'mem.h'
 c
-	integer ioff,ooff,i
+	integer ioff,ooff,i,pcent
+	character line*64
 c
-c  Do a gridding pass if necessary, and determine the offset of the
-c  plane of interest.
+c  Do a gridding pass if necessary.
 c
 	if(mode.eq.'fft')then
 	  if(ichan.lt.chan1.or.ichan.gt.chan2)call MapGrid(ichan)
 c
 c  Now do the Fourier transform and grid correction of this plane.
-c
-	  call output('Starting FFT phase ...')
 c
 	  ioff = 2*nu*nv*npnt*(ichan-chan1) + nextra
 	  ooff = 0
@@ -163,6 +163,14 @@ c
      *		memr(pBuff),nxc,nyc,scale(1))
 	endif
 	pMap = pBuff
+c
+c  Keep the user awake.
+c
+	if(ichan.eq.chan2.and.ichan.lt.totchan)then
+	  pcent = nint(100.0 * real(ichan) / real(totchan))
+	  write(line,'(a,i3,a)')'Completed',pcent,'% ...'
+	  call output(line)
+	endif
 c
 	end
 c************************************************************************
@@ -236,7 +244,6 @@ c
 c
 c  Now actually do the work.
 c
-	call output('Starting gridding phase ...')
 	call MapVis(tscr,cgf,ncgf,width,nvis,offcorr+2*(chan1-1),
      *	  chan2-chan1+1,offcorr+2*totchan-1,memr(pBuff+nextra),
      *	  nu,nv,npnt,u0,v0,n1,n2)
@@ -639,7 +646,7 @@ c
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 c
-	real cdata(maxdim),rdata(maxdim),scale1
+	real cdata(maxdim+2),rdata(maxdim),scale1
 	integer i,j,offi,offo,nud,ioff
 c
 	if(outoff+nx*ny.gt.inoff+2*nu*nv)
@@ -650,7 +657,7 @@ c
 c
 	nud = nu - u0 + 1
 c
-	do i=2*nud+1,2*n1
+	do i=2*nud+1,n1+2
 	  cdata(i) = 0
 	enddo
 c
