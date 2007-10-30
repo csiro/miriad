@@ -126,6 +126,9 @@ c		    in write with format 300.
 c    28jun96   nebk Fix some porblems with output flags (courtesy mark wieringa)
 c		    fix a problem with fit locations being plotted in wrong place when
 c		    a region specified.
+c    16dec97   rjs  fix a problem with fit locations being plotted in wrong place when
+c		    a region specified. What did NEBK do?
+
 c-----------------------------------------------------------------------------
       include 'mirconst.h'
       include 'maxdim.h'
@@ -1609,8 +1612,8 @@ c
 	if(doplot) then
           call pgsvp(ivp(1), ivp(2), ivp(3), ivp(4))
           call pgwnad(1.0,real(ni),1.0,real(nj))
-          call pgpoint(1,(iwin(1,is)+iwin(2,is))/2.0,
-     +     (jwin(1,is)+jwin(2,is))/2.0,2)
+          call pgpoint(1,(iwin(1,is)+iwin(2,is))/2.0-blc(1)+1.0,
+     +     (jwin(1,is)+jwin(2,is))/2.0-blc(2)+1.0,2)
         end if
 c
 c Setup data arrays
@@ -1714,8 +1717,8 @@ c
         if(doplot) then
           call pgsci(10)
           do ic = 1, nc
-            px = pf(2,ic) - real(iwin(1,is)) +  blc(1)
-            py = pf(3,ic) - real(jwin(1,is)) +  blc(2) 
+            px = pf(2,ic) - real(iwin(1,is)) + 1
+            py = pf(3,ic) - real(jwin(1,is)) + 1
             call pgpoint(1,px,py,2)
           end do
         end if
