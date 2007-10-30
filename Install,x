@@ -211,6 +211,7 @@ l01:
 
 # Regenerate the search list.
 
+l015:
 	echo "#\!/bin/csh -f" 			>  mirfind.csh
         echo 'if ( "$1" == "-l" ) then'		>> mirfind.csh
 	echo "  echo $searchlist"		>> mirfind.csh
@@ -275,6 +276,7 @@ l1:
 
 # Determine which libraries to use in the in the link process.
 
+        rm -f $MIRBIN/mirlibs
 	set linklist = '$MIRLIB/libmir.a'
 
 # Try to find the RPFITS library.
@@ -311,6 +313,15 @@ l2:
 	  set pgplotdir = $<
 	  goto l2
 	endif
+
+# Check whether the pgplot directory looks valid.
+
+	if ( ! ( -e $pgplotdir/libpgplot.a || -e $pgplotdir/libpgplot.so ) ) then
+          echo "Could not find PGPLOT library in $pgplotdir"
+          set pgplotdir = ""
+          goto l2
+        endif
+    
 	if ( "$pgplotdir" == "$MIRLIB" ) set pgplotdir = '$MIRLIB'
 	echo ""
 	echo "Using $pgplotdir for the PGPLOT library directory ..."
@@ -324,7 +335,7 @@ l2:
 
 l3:
 	echo ""
-	echo -n "Does PGPLOT tasks need the X11 library? [y/n] "
+	echo -n "Do PGPLOT tasks need the X11 library (almost certainly yes)? [y/n] "
 	set answer = $<
 	if ( "$answer" != "y" && "$answer" != "n" ) goto l3
 	if ( "$answer" == "n" ) goto l5
