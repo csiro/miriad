@@ -71,6 +71,7 @@ c    rjs   20feb95    Grid multiple thingos in one pass.
 c    rjs   27feb95    Put phase in the range -180 to 180.
 c    rjs    2nov95    A "break" in CopyDat is dependent on inttime, as
 c		      suggested by jm.
+c    rjs   11jan96    options=nosrc.
 c***********************************************************************
 c= TvFlag - Interactive editing of a UV data set on a TV device.
 c& jm
@@ -203,9 +204,14 @@ c     average is started.  The default for TTOT is 5 minutes, whereas
 c     the default TGAP is the value of TTOT.
 c
 c< select
-c
 c     NOTE: The default is to use all visibilities.
 c
+c@ options
+c     Extra processing options. Several can be given, separated by
+c     commas. Minimum match is used. Possible values are:
+c       nosrc   Do not cause a break in the display when the source
+c               changes. Normally TVFLAG puts a gap in the display
+c               whenever the source changes.
 c--
 c-----------------------------------------------------------------------
 c
@@ -215,7 +221,7 @@ c
       character PROG*(*)
       parameter (PROG = 'TVFLAG: ')
       character VERSION*(*)
-      parameter (VERSION = PROG // 'version 2.3 9-Mar-94')
+      parameter (VERSION = PROG // 'version 2.3 11-Jan-96')
       integer NOPT,MAXSELS,MAXEDIT
       parameter (NOPT=4,MAXSELS=256,MAXEDIT=1024)
 c
@@ -233,7 +239,7 @@ c
       real amp
       real taver(2)
       real Sels(MAXSELS)
-      logical center, Ctrl
+      logical center, Ctrl, nosrc
       integer nedit,edits(2,MAXBASE)
       real times(2,MAXEDIT)
       integer chans(2,MAXEDIT)
@@ -276,6 +282,8 @@ c
       if(nout.eq.0) apri = 'amplitude'
       call Keyr('taver', taver(1), 5.0)
       call Keyr('taver', taver(2), taver(1) )
+c
+      call GetOpt(nosrc)
 c
       call KeyFin
 c
@@ -352,7 +360,7 @@ c
 c  Determine the flagging to be done.
 c
       call doEdit(Lin,apri,taver,center,jx0,jy0,channel,
-     *	  Ctrl,pmin,pmax,
+     *	  Ctrl,nosrc,pmin,pmax,
      *    edits,MAXBASE,day0,times,chans,flagval,MAXEDIT,nedit)
 c
 c  Do the flagging.
@@ -377,14 +385,30 @@ c
       call UvClose(Lin)
       end
 c************************************************************************
+        subroutine GetOpt(nosrc)
+c
+        implicit none
+        logical nosrc
+c------------------------------------------------------------------------
+        integer NOPTS
+        parameter(NOPTS=1)
+        character opts(NOPTS)*8
+        logical present(NOPTS)
+        data opts/'nosrc   '/
+c
+        call options('options',opts,present,NOPTS)
+        nosrc = present(1)
+c
+        end
+c************************************************************************
 	subroutine doEdit(Lin,apri,taver,center,jx0,jy0,channel,
-     *	  Ctrl,pmin,pmax,
+     *	  Ctrl,nosrc,pmin,pmax,
      *    edits,nbase,day0,times,chans,flagval,MAXEDIT,nedit)
 c
 	implicit none
 	integer Lin,channel,jx0,jy0,nbase,maxedit,nedit
 	character apri*1
-	logical center,Ctrl
+	logical center,Ctrl,nosrc
 	real taver(2),pmin,pmax
 	double precision day0
 	real times(2,maxedit)
@@ -402,6 +426,7 @@ c    jx0,jy0	BLC of the region to display.
 c    channel	Channel to use for the display.
 c    Ctrl	Whether to use the panel server or not.
 c    pmin,pmax	Scaling parameters.
+c    nosrc      Do not cause a gap when the source changes.
 c  Output:
 c    nedit	Number of editting instructions.
 c    flagval
@@ -454,7 +479,7 @@ c  baselines and times are present.
 c
 	call Output('Loading the data ...')
 	call CopyDat(lIn,lScr,apri,nchan,t1,MAXTIME,ntime,day0,ttol,
-     *		blpres,nbased,nvis,chanoff)
+     *		blpres,nbased,nvis,chanoff,nosrc)
 c
 c  Determine the time ranges to average together.
 c
@@ -950,14 +975,14 @@ c
 	end
 c************************************************************************
 	subroutine CopyDat(lIn,lScr,apri,nchan,time,MAXTIME,ntime,
-     *		day0,ttol,blpres,nbase,nvis,chanoff)
+     *		day0,ttol,blpres,nbase,nvis,chanoff,nosrc)
 c
 	implicit none
 	integer lIn,lScr,nchan,maxtime,ntime,nbase,nvis,chanoff
 	character apri*1
 	real time(maxtime),ttol
 	double precision day0
-	logical blpres(nbase)
+	logical blpres(nbase),nosrc
 c
 c  Copy the data to a scratch file.
 c
@@ -968,6 +993,7 @@ c    apri	Sort of quantity to display.
 c    maxtime	Dimension of time array.
 c    ttol	Time tolerance.
 c    nbase	Maximum number of baselines.
+c    nosrc      Do not cause a gap when the source changes.
 c  Output:
 c    blpres	Indicates whether a particular baseline is present.
 c    day0	Base time.
@@ -1029,7 +1055,11 @@ c
 	  if(bl.gt.0.and.bl.lt.nbase)then
 	    if(abs(t-tprev).gt.ttol)then
 	      if(t.lt.tprev)torder = .false.
-	      newsrc = uvVarUpd(vsrc)
+	      if(nosrc)then
+		newsrc = .false.
+	      else
+		newsrc = uvVarUpd(vsrc)
+	      endif
 	      if(ntime.gt.0.and.
      *		(newsrc.or.t-tprev.gt.maxgap.or.t.lt.tprev))then
 		if(ntime.ge.MAXTIME)
