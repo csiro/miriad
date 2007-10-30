@@ -88,6 +88,7 @@ c    rjs  19sep95 Handle data that is not quite in time order.
 c    rjs  21sep95 Really do it this time.
 c    rjs  14dec95 Increase buffer in averaging (MAXAVER).
 c    rjs  14jun96 Add warning about time averaging pulsar bin data.
+c    rjs  10feb97 Improve averaging in the face of bad, out-of-sequence, data.
 c
 c  Bugs:
 c    * The way of determining whether a source has changed is imperfect.
@@ -97,7 +98,7 @@ c    * Too much of this code worries about polarisations.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
-	parameter(version='UvAver: version 1.0 13-Jun-96')
+	parameter(version='UvAver: version 1.0 10-Feb-97')
 	character uvflags*12,ltype*16,out*64
 	integer npol,Snpol,pol,tIn,tOut,vupd,nread,nrec,i,nbin
 	real inttime
@@ -250,9 +251,11 @@ c
 c
 c  Keep on going. Read in another record.
 c
-	    Tprev = preamble(4)
-	    Tmin = min(Tmin,Tprev)
-	    Tmax = max(Tmax,Tprev)
+	    if(ok)then
+	      Tprev = preamble(4)
+	      Tmin = min(Tmin,Tprev)
+	      Tmax = max(Tmax,Tprev)
+	    endif
 	    call uvDatRd(preamble,data,flags,maxchan,nread)
 	  enddo
 c
