@@ -43,10 +43,11 @@ c--
 c  History:
 c    rjs  14mar97 Original version.
 c    rjs  17mar97 Enhanced version.
+c    rjs  19jun97 Output has uvw in wrong units.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
-	parameter(version='BlCal: version 1.0 17-Mar-97')
+	parameter(version='BlCal: version 1.0 19-Jun-97')
 	character out*64,line*32
 	integer lVis,lRef,lOut
 	integer nchan,pol,npol,nfiles
@@ -62,7 +63,7 @@ c  Get the inputs.
 c
 	call output(version)
 	call keyini
-	call uvDatInp('vis','sdlwcef3')
+	call uvDatInp('vis','sdlcef3')
 	call keyd('interval',interval,5.d0)
 	if(interval.le.0)call bug('f','Invalid value for interval')
 	interval = interval/(60.*24.)
