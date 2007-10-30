@@ -122,6 +122,7 @@ c   rjs  27nov93 - Another algorithm to try to limit the size of the spectral
 c		   component.
 c   rjs   4may95 - Doc change only.
 c   rjs  29nov95 - Better treatment of model.
+c   rjs  13sep96 - Friday 13th! Improve check for negative components.
 c
 c  Bugs and Shortcomings:
 c     * The way it does convolutions is rather inefficent, partially
@@ -147,7 +148,7 @@ c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer maxBeam,maxCmp1,maxCmp2,maxBox,maxRun,maxP
 	parameter(maxCmp1=66000,maxCmp2=32000,maxP=257)
-	parameter(maxBeam=maxP*maxP,maxBox=1024,maxRun=3*maxDim)
+	parameter(maxBeam=maxP*maxP,maxBox=3*MAXDIM,maxRun=3*maxDim)
 c
 	integer Boxes(maxBox),Run(3,maxRun),nPoint,nRun
 	integer Map0,Map1,Res0,Res1,Est0,Est1,Tmp
@@ -1026,7 +1027,7 @@ c
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer Ymap(maxdim+1)
-	integer nPatch,nCmp,i
+	integer nPatch,nCmp
 c
 c  Find the limiting residual that we can fit into the residual list, then
 c  go and fill the residual list.
@@ -1034,15 +1035,8 @@ c
 	call GetLimit(Res0,nPoint,ResAMax,maxCmp,Histo,maxPatch,
      *				nPatch,Limit)
 	Limit = max(Limit, 0.5 * Cutoff)
-	call GetComp(Res0,Res1,nPoint,ny,Ymap,Limit,
-     *		Icmp,Jcmp,Rcmp0,Rcmp1,maxCmp,nCmp,Run,nRun)
-c
-c  Initialise the current components to zero.
-c
-	do i=1,nCmp
-	  CCmp0(i) = 0
-	  CCmp1(i) = 0
-	enddo
+	call GetComp(Res0,Res1,Est0,Est1,nPoint,ny,Ymap,Limit,
+     *		Icmp,Jcmp,Rcmp0,Rcmp1,Ccmp0,Ccmp1,maxCmp,nCmp,Run,nRun)
 c
 c  Determine the patch size to use, perform the minor iterations, then
 c  add the new components to the new estimate.
@@ -1128,7 +1122,7 @@ c
 	P11 = Patch11(c,c)
 	P01 = Patch01(c,c)
 	call GetPk(Ncmp,Rcmp0,Rcmp1,P00,P11,P01,Tmp,Pk,Wt0,Wt1,ResMax)
-	negFound = negFound .or. ResMax.lt.0
+	negFound = negFound .or. ResMax.lt.0 .or. Wt0+Ccmp0(Pk).lt.0
 	TermRes = Limit
 	beta = g * Limit**(Speed+1)
 c
@@ -1205,7 +1199,7 @@ c
 	  TermRes = TermRes + 
      *	   beta * abs(Wt0) / ( EstASum * abs(ResMax)**Speed )
 	  call GetPk(Ncmp,Rcmp0,Rcmp1,P00,P11,P01,Tmp,Pk,Wt0,Wt1,ResMax)
-	  negFound = negFound.or.ResMax.lt.0
+	  negFound = negFound.or.ResMax.lt.0  .or. Wt0+Ccmp0(Pk).lt.0
 	  more = abs(ResMax).gt.TermRes .and. Niter.lt.MaxNiter .and.
      *		.not.(negStop.and.negFound)
 
@@ -1347,12 +1341,15 @@ c
 c
 	end
 c************************************************************************
-	subroutine GetComp(Res0,Res1,nPoint,ny,Ymap,Limit,
-     *		           Icmp,Jcmp,Rcmp0,Rcmp1,maxCmp,nCmp,Run,nRun)
+	subroutine GetComp(Res0,Res1,Est0,Est1,nPoint,ny,Ymap,Limit,
+     *		           Icmp,Jcmp,Rcmp0,Rcmp1,Ccmp0,Ccmp1,
+     *			   maxCmp,nCmp,Run,nRun)
 c
 	implicit none
 	integer nPoint,ny,maxCmp,nCmp,nRun,Run(3,nrun)
-	real Limit,Res0(nPoint),Res1(nPoint),Rcmp0(maxCmp),Rcmp1(maxCmp)
+	real Limit
+	real Res0(nPoint), Res1(nPoint), Est0(nPoint), Est1(nPoint)
+	real Rcmp0(maxCmp),Rcmp1(maxCmp),Ccmp0(maxCmp),Ccmp1(maxCmp)
 	integer Ymap(ny+1),Icmp(maxCmp),Jcmp(maxCmp)
 c
 c  Get the residuals that are greater than a certain cutoff.
@@ -1404,6 +1401,8 @@ c
           do i = 1, Ncmpd
             Rcmp0(i+Ncmp) = Res0(l+Indx(i))
             Rcmp1(i+Ncmp) = Res1(l+Indx(i))
+	    Ccmp0(i+Ncmp) = Est0(l+Indx(i))
+	    Ccmp1(i+Ncmp) = Est1(l+Indx(i))
 	    Icmp(i+Ncmp) = x0 + Indx(i)
 	    Jcmp(i+Ncmp) = y0
           enddo
@@ -1467,8 +1466,8 @@ c
 	    k = k + 1
 	  enddo
 	  i = ICmp(l) - Run(2,k) + j
-	  Est0(i) = Est0(i) + CCmp0(l)
-	  Est1(i) = Est1(i) + CCmp1(l)
+	  Est0(i) = CCmp0(l)
+	  Est1(i) = CCmp1(l)
 	enddo
 	end
 c************************************************************************
