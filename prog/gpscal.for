@@ -1494,7 +1494,7 @@ c    xyp	The initial xyphases.
 c------------------------------------------------------------------------
 	include 'gpscal.h'
 	integer i,n,item,iostat,count(MAXANT)
-	real theta,phase(MAXANT),sd(MAXANT)
+	real theta,phase(MAXANT),fac
 c
 c  Externals.
 c
@@ -1503,19 +1503,17 @@ c
 c  See if there is an XY phase table associated with this data file.
 c  If so use this.
 c
-	call GetXY(tIn,phase,sd,count,MAXANT,n)
-	n = min(n,nants)
-	do i=1,n
+	call GetXY(tIn,fac,phase,count,MAXANT,n)
+	do i=n+1,nants
+	  count(i) = 0
+	enddo
+	do i=1,nants
 	  if(count(i).gt.0)then
 	    theta = phase(i)
 	    xyp(i) = cmplx(cos(theta),sin(theta))
 	  else
 	    xyp(i) = (1.,0.)
 	  endif
-	enddo
-c
-	do i=n+1,nants
-	  xyp(i) = (1.,0.)
 	enddo
 c
 c  Initialise the leakage terms. See if there is already a leakage
