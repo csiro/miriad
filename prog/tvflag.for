@@ -79,6 +79,7 @@ c                     increased the default value.  Also added a check
 c                     to see if ANY valid data have been selected.
 c    rjs   20may96    Change way maxgap is determined.
 c    rjs   12may97    Check that linetype is compatible with flagging.
+c    rjs    5oct97    Relax restriction that linetype width and step must be 1.
 c***********************************************************************
 c= TvFlag - Interactive editing of a UV data set on a TV device.
 c& jm
@@ -189,8 +190,8 @@ c     value is input, the y coordinate value is set to the x value.
 c
 c< line
 c
-c     NOTE: Here ``type'' must be `channel' and the maximum of
-c     both ``width'' and ``step'' must be 1.  The default is
+c     NOTE: Here ``type'' must be `channel' and the ``width'' and
+c     ``step'' parameters must be equal. The default is
 c     to display all channels.
 c
 c@ mode
@@ -241,10 +242,9 @@ c
       integer Lin, nchan, MostChan, channel
       integer maxxpix, maxypix, levels, msglen
       integer jx0, jy0, nout
-      integer chanoff
+      integer chanoff,chanw
       real start, width, step
       real pmin, pmax
-      real amp
       real taver(2)
       real Sels(MAXSELS)
       logical center, Ctrl, nosrc
@@ -284,7 +284,7 @@ c
       call Keyi('line', nchan, 0)
       call Keyr('line', start, 1.0)
       call Keyr('line', width, 1.0)
-      call Keyr('line', step, 1.0)
+      call Keyr('line', step, width)
       call SelInput('select', Sels, MAXSELS)
       call keymatch('mode', NOPT, Opts, 1, apri, nout)
       if(nout.eq.0) apri = 'amplitude'
@@ -329,9 +329,8 @@ c
         msglen = Len1(errmsg)
         call Bug('f', errmsg(1:msglen))
       endif
-      amp = max(width, step)
-      if (amp .ne. 1.0) then
-        errmsg = PROG // 'Maximum width and step must be 1.'
+      if(width.ne.step)then
+        errmsg = PROG // 'Linetype width and step must be equal.'
         msglen = Len1(errmsg)
         call Bug('f', errmsg(1:msglen))
       endif
@@ -369,7 +368,8 @@ c  Determine the flagging to be done.
 c
       call doEdit(Lin,apri,taver,center,jx0,jy0,channel,
      *	  Ctrl,nosrc,pmin,pmax,
-     *    edits,MAXBASE,day0,times,chans,flagval,MAXEDIT,nedit,chanoff)
+     *    edits,MAXBASE,day0,times,chans,flagval,MAXEDIT,nedit,
+     *	  chanoff,chanw)
 c
 c  Do the flagging.
 c
@@ -379,8 +379,10 @@ c
 	call HisWrite(Lin,PROG // 'Miriad '// VERSION)
 	call HisInput(Lin,PROG)
 	call UvRewind(Lin)
+      if (nchan .ge. 0 .and. chanw.ne. 1) call UvSet(Lin,'data',Line,
+     *	chanw*nchan,real(chanoff+1),1.0,1.0)
 	call doFlag(Lin,edits,MAXBASE,day0,times,chans,flagval,
-     *    nedit,chanoff)
+     *    nedit,chanoff,chanw)
 	call HisClose(Lin)
       endif
 c
@@ -412,11 +414,12 @@ c
 c************************************************************************
 	subroutine doEdit(Lin,apri,taver,center,jx0,jy0,channel,
      *	  Ctrl,nosrc,pmin,pmax,
-     *    edits,nbase,day0,times,chans,flagval,MAXEDIT,nedit,chanoff)
+     *    edits,nbase,day0,times,chans,flagval,MAXEDIT,nedit,
+     *	  chanoff,chanw)
 c
 	implicit none
 	integer Lin,channel,jx0,jy0,nbase,maxedit,nedit
-	integer chanoff
+	integer chanoff,chanw
 	character apri*1
 	logical center,Ctrl,nosrc
 	real taver(2),pmin,pmax
@@ -446,6 +449,7 @@ c    chans
 c    day0	Base time.
 c    chanoff	Offset to add to channel number to convert to a true
 c		channel number.
+c    chanw	Width of logical channel.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
@@ -491,7 +495,7 @@ c  baselines and times are present.
 c
 	call Output('Loading the data ...')
 	call CopyDat(lIn,lScr,apri,nchan,t1,MAXTIME,ntime,day0,ttol,
-     *		blpres,nbased,nvis,chanoff,nosrc)
+     *		blpres,nbased,nvis,chanoff,chanw,nosrc)
 c
 c  Determine the time ranges to average together.
 c
@@ -561,7 +565,7 @@ c
 	    iFlgo = iFlg + (j-1)*nchan*ntime
 	    iDato = iDat + (j-1)*nchan*ntime
 	    call EdDisp(memI(iFlgo),memR(iDato),nchan,ntime,
-     *	      t1,t2,taver,chanoff,
+     *	      t1,t2,taver,chanoff,chanw,
      *	      center,jx0,jy0,channel,pmin,pmax,Ctrl,bl,
      *	      isave,iret)
 c
@@ -771,11 +775,11 @@ c
 c
 	end
 c************************************************************************
-	subroutine EdDisp(iflag,array,Nx,Ny,t1,t2,taver,chanoff,
+	subroutine EdDisp(iflag,array,Nx,Ny,t1,t2,taver,chanoff,chanw,
      *	      center,jx,jy,chan,pmin,pmax,Ctrl,bl,isave,iret)
 c
 	implicit none
-	integer Nx,Ny,jx,jy,chan,bl,iret,chanoff
+	integer Nx,Ny,jx,jy,chan,bl,iret,chanoff,chanw
 	logical center,Ctrl
 	integer iflag(Nx,Ny),isave(5,*)
 	real array(Nx,Ny),pmin,pmax,t1(Ny),t2(Ny),taver(2)
@@ -797,6 +801,7 @@ c                 its own panel buttons; false otherwise.
 c    t1,t2	  Start and end time of a time slot.
 c    chanoff	  Offset to add to channel number to convert to a true
 c		  channel number.
+c    chanw	  Width used in line type.
 c
 c  Output:
 c    pmin, pmax   The real minimum/maximum (pmin/pmax) of the array.
@@ -883,13 +888,15 @@ c
 	param(1) = 0
 c
 	if (First) call edflag(iflag, array, sumoverx, sumovery,
-     *	  NoverX, NoverY, Nx, Nx, Ny, t1, t2, taver,chanoff,antmsg(1:l),
+     *	  NoverX, NoverY, Nx, Nx, Ny, t1, t2, taver,chanoff,chanw,
+     *	  antmsg(1:l),
      *    iINITALL,param, x0, y0, chan, bmin, bmax, isave, Ctrl, istate)
 c
 	First = .false.
 c
 	call edflag(iflag, array, sumoverx, sumovery,
-     *	  NoverX, NoverY, Nx, Nx, Ny, t1, t2, taver,chanoff,antmsg(1:l),
+     *	  NoverX, NoverY, Nx, Nx, Ny, t1, t2, taver,chanoff,chanw,
+     *	  antmsg(1:l),
      *    iINITBL, param, x0, y0, chan, bmin, bmax, isave, Ctrl, istate)
 c
 	if (Ctrl) call CtrlClr
@@ -905,7 +912,8 @@ c
 	    call GetCmd(comm, param)
 	  endif
 	  call edflag(iflag, array, sumoverx, sumovery,
-     *	    NoverX, NoverY, Nx, Nx, Ny, t1,t2,taver,chanoff,antmsg(1:l),
+     *	    NoverX, NoverY, Nx, Nx, Ny, t1,t2,taver,chanoff,chanw,
+     *	    antmsg(1:l),
      *      comm, param, x0, y0, chan, bmin, bmax, isave, Ctrl, istate)
 	enddo
 c
@@ -987,10 +995,10 @@ c
 	end
 c************************************************************************
 	subroutine CopyDat(lIn,lScr,apri,nchan,time,MAXTIME,ntime,
-     *		day0,ttol,blpres,nbase,nvis,chanoff,nosrc)
+     *		day0,ttol,blpres,nbase,nvis,chanoff,chanw,nosrc)
 c
 	implicit none
-	integer lIn,lScr,nchan,maxtime,ntime,nbase,nvis,chanoff
+	integer lIn,lScr,nchan,maxtime,ntime,nbase,nvis,chanoff,chanw
 	character apri*1
 	real time(maxtime),ttol
 	double precision day0
@@ -1014,6 +1022,7 @@ c    nvis	Number of visibilities.
 c    ntime	Number of times.
 c    nchan	Number of channels.
 c    chanoff	Offset to add to channel numbers to get true channel numbers.
+c    chanw	Width of channel specified in linetype
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	logical flags(MAXCHAN),newsrc
@@ -1046,6 +1055,7 @@ c
 	call uvrdvrr(lIn,'inttime',maxgap,35.0)
 	maxgap = max(3.5*maxgap,50.0)*ttol
 	chanoff = nint(line(3)) - 1
+	chanw   = nint(line(4))
 	day0 = nint(preamble(3)-1) + 0.5d0
 	tprev = -1
 	length = 2*nchan + 3
@@ -1237,7 +1247,7 @@ c
 	end
 c************************************************************************
 	subroutine doFlag(Lin,edits,nbase,day0,times,chans,flagval,
-     *							  nedit,chanoff)
+     *						nedit,chanoff,chanw)
 c
 	implicit none
 	integer Lin,nbase,nedit
@@ -1246,7 +1256,7 @@ c
 	real times(2,nedit)
 	integer chans(2,nedit)
 	logical flagval(nedit)
-	integer chanoff
+	integer chanoff,chanw
 c
 c  Apply the flagging commands to the data.
 c
@@ -1261,11 +1271,12 @@ c    flagval	The flagging value.
 c    nedit	Number of edit commands.
 c    chanoff	Offset to add to channel number to convert to a true
 c		channel number.
+c    chanw	Width given in linetype.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character string*80
 	integer nchan,ant1,ant2,bl,i,j
-	integer isave(5)
+	integer isave(5),chan1,chan2
 	complex data(MAXCHAN)
 	logical flags(MAXCHAN),flagged
 	real t, t2
@@ -1283,7 +1294,7 @@ c
 	    if (flagval(j)) isave(5) = 1
 	    t = times(1, j)
 	    t2 = times(2, j)
-	    call FmtCmd(string, isave, t, t2, 1, chanoff)
+	    call FmtCmd(string, isave, t, t2, 1, chanoff,chanw)
 	    i = Len1(string)
 	    if (i .gt. 0) call HisWrite(Lin, 'TVFLAG: '//string(:i))
 	  enddo
@@ -1299,7 +1310,9 @@ c
 	    do j=edits(1,bl),edits(2,bl)
 	      if(t.ge.times(1,j).and.t.le.times(2,j))then
 	        flagged = .true.
-	        do i=max(chans(1,j),1),min(chans(2,j),nchan)
+		chan1 = max(1,(chans(1,j)-1)*chanw+1)
+		chan2 = min(nchan,chans(2,j)*chanw)
+	        do i=chan1,chan2
 	          flags(i) = flagval(j)
 	        enddo
 	      endif
@@ -1676,13 +1689,14 @@ c
       end
 c***********************************************************************
       subroutine edflag(iflag, array, sumoverx, sumovery,
-     *	NoverX, NoverY, Mx, Nx, Ny, t1, t2, taver, chanoff, bltext,
+     *	NoverX, NoverY, Mx, Nx, Ny, t1, t2, taver, chanoff,chanw,
+     *  bltext,
      *  opt, param, x0, y0, chan, pmin, pmax, isave, Ctrl, status)
 c
       implicit none
       integer Mx, Nx, Ny, opt
       integer x0, y0, chan, status
-      integer iflag(Mx, Ny), param(5), isave(5, *), chanoff
+      integer iflag(Mx, Ny), param(5), isave(5, *), chanoff, chanw
       integer NoverX(Ny), NoverY(Nx)
       real pmin, pmax, taver(2)
       real array(Mx, Ny), sumoverx(Ny), sumovery(Nx), t1(Ny), t2(Ny)
@@ -2032,7 +2046,7 @@ c  Do the editting and redisplay.
 c
 	  call Edit(array,iflag,Mx,Nx,Ny,SumoverX,SumoverY,
      *		NoverX,NoverY,isave(1,changes),x0,y0,bmin,bmax,chan,
-     *		t1,t2,chanoff)
+     *		t1,t2,chanoff,chanw)
           Undone = .false.
         endif
 c
@@ -2047,12 +2061,12 @@ c
 	    Undone = .false.
 	    call Edit(array,iflag,Mx,Nx,Ny,SumoverX,SumoverY,
      *		NoverX,NoverY,isave(1,changes),x0,y0,bmin,bmax,chan,
-     *		t1,t2,chanoff)
+     *		t1,t2,chanoff,chanw)
 	  else
 	    isave(5,changes) = 1 - isave(5,changes)
 	    call Edit(array,iflag,Mx,Nx,Ny,SumoverX,SumoverY,
      *		NoverX,NoverY,isave(1,changes),x0,y0,bmin,bmax,chan,
-     *		t1,t2,chanoff)
+     *		t1,t2,chanoff,chanw)
 	    isave(5,changes) = 1 - isave(5,changes)
 	    Undone = .true.
 	    changes = changes - 1
@@ -2083,7 +2097,7 @@ c
 	else
 	  call Output('Listing of Current Flagging Commands')
           do j = 1, changes
-	    call FmtCmd(line,isave(1,j),t1,t2,Ny,chanoff)
+	    call FmtCmd(line,isave(1,j),t1,t2,Ny,chanoff,chanw)
 	    call Output(line)
           enddo
 	endif
@@ -2109,7 +2123,7 @@ c  Loop until some button is pressed...
             y = y - y0 + 1
             if (x.ge.1.and.x.le.Nx.and.y.ge.1.and.y.le.Ny)then
 	      call FmtVal(line,x,y,array(x,y),iflag(x,y),
-     *		t1,t2,Ny,chanoff)
+     *		t1,t2,Ny,chanoff,chanw)
 	      call Output(line)
 	    endif
           endif
@@ -2370,14 +2384,14 @@ c
 c************************************************************************
 	subroutine Edit(array,iflag,Mx,Nx,Ny,SumoverX,SumoverY,
      *		NoverX,NoverY,isave,x0,y0,bmin,bmax,chan,
-     *		t1,t2,chanoff)
+     *		t1,t2,chanoff,chanw)
 c
 	implicit none
 	integer Mx, Nx, Ny
 	real array(Mx,Ny),SumoverX(Ny),SumoverY(Nx)
 	real bmin,bmax,t1(Ny), t2(Ny)
 	integer iflag(Mx,Ny),NoverX(Ny),NoverY(Nx),isave(5)
-	integer x0,y0,chan,chanoff
+	integer x0,y0,chan,chanoff,chanw
 c
 c  Apply an editting operation to the data, recompute the wedges,
 c  and redisplay the necessary parts that need redisplaying.
@@ -2391,7 +2405,7 @@ c
 c
 c  Give the user a message about what is going on.
 c
-	call FmtCmd(string,isave,t1,t2,Ny,chanoff)
+	call FmtCmd(string,isave,t1,t2,Ny,chanoff,chanw)
 	call output(string)
 c
 c  Apply the flagging operation to the iflag array, and recompute the
@@ -2689,11 +2703,12 @@ c
 c
 	end
 c************************************************************************
-	subroutine FmtVal(string,x,y,val,iflag,t1,t2,ntime,chanoff)
+	subroutine FmtVal(string,x,y,val,iflag,t1,t2,ntime,
+     *						chanoff,chanw)
 c
 	implicit none
 	character string*(*)
-	integer x,y,iflag,chanoff,ntime
+	integer x,y,iflag,chanoff,chanw,ntime
 	real val,t1(ntime),t2(ntime)
 c
 c  Format the value of a pixel.
@@ -2722,15 +2737,15 @@ c
 	  time = 2*pi*mod(0.5*(t1(y)+t2(y)),1.0)
 	  string = 'Pixel is '//flagval//' value '//pixval//
      *		', time '//hangle(time)//
-     *		', channel '//itoaf(x+chanoff)
+     *		', channel '//itoaf(chanw*(x-1)+chanoff+1)
 	endif
 	end
 c************************************************************************
-	subroutine FmtCmd(string,isave,t1,t2,ntime,chanoff)
+	subroutine FmtCmd(string,isave,t1,t2,ntime,chanoff,chanw)
 c
 	implicit none
 	character string*(*)
-	integer isave(5),ntime,chanoff
+	integer isave(5),ntime,chanoff,chanw
 	real t1(ntime),t2(ntime)
 c
 c  Nicely format an editting instruction.
@@ -2758,8 +2773,8 @@ c
 	  if(time1.lt.0)time1 = time1 + 2*pi
 	  time2 = 2*pi*mod(t2(i2),1.0)
 	  if(time2.lt.0)time2 = time2 + 2*pi
-	  chan1  = isave(2) + chanoff
-	  chan2  = isave(4) + chanoff
+	  chan1 = chanw*(isave(2)-1) + chanoff + 1
+	  chan2 = chanw*isave(4)     + chanoff
 	  flagval = 'BAD'
 	  if(isave(5).gt.0) flagval = 'GOOD'
 	  string = 'Changing times '//hangle(time1)//' to '//
@@ -2926,7 +2941,5 @@ c
 	call uvinfo(tno,'line',line)
 	if(nint(line(1)).ne.CHANNEL.and.nint(line(1)).ne.WIDE)
      *	  call bug('f','Can only flag "channel" or "wide" linetypes')
-	if(nint(line(4)).ne.1)
-     *	  call bug('f','Cannot flag when the linetype width is not 1')
 c
 	end
