@@ -114,6 +114,7 @@ c   rjs  10mar97 - Default region is all channels.
 c   rjs  25mar97 - Check whether data are selected for a given plane.
 c   rjs  24jun97 - Correct check for alignment mismatch.
 c   rjs  02jul97 - cellscal change.
+c   rjs  23jul97 - Added pbtype.
 c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='Maxen: version 1.0 24-Jun-97')
@@ -1082,7 +1083,7 @@ c------------------------------------------------------------------------
 	real crpix
 	character line*72,txtblc*32,txttrc*32,num*2
 	integer nkeys
-	parameter(nkeys=15)
+	parameter(nkeys=16)
 	character keyw(nkeys)*8
 c
 c  Externals.
@@ -1092,7 +1093,7 @@ c
 	data keyw/   'obstime ','epoch   ','history ','lstart  ',
      *	  'lstep   ','ltype   ','lwidth  ','object  ','pbfwhm  ',
      *	  'observer','telescop','restfreq','vobs    ','btype   ',
-     *	  'cellscal'/
+     *	  'cellscal','pbtype  '/
 c
 c  Fill in some parameters that will have changed between the input
 c  and output.
