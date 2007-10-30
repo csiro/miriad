@@ -1,4 +1,4 @@
-      program cgdisp
+       program cgdisp
 c-----------------------------------------------------------------------
 c
 c= CGDISP - displays and overlays images on a PGPLOT device
@@ -518,6 +518,7 @@ c    nebk 20feb95  Add colour table selection to keyword "range" and
 c		   get pgimag to make black on white for hard copy.
 c		   Move to image type "pixel" instead of "grey"
 c    nebk 10apr95  Accomodate absolute b&w lookup table 
+c    nebk 11aug95  Reversed lookup tables getting lost
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -592,9 +593,9 @@ c
      +             'absghz', 'relghz', 'abskms', 'relkms', 'abslin', 
      +             'rellin', 'absdeg', 'reldeg', 'none'/
       data dmm /2*0.0/
-      data coltab /maxgr*-1/
+      data coltab /maxgr*0/
 c-----------------------------------------------------------------------
-      call output ('CgDisp: version 10-Apr-95')
+      call output ('CgDisp: version 11-Aug-95')
       call output ('New absolute b&w lookup table available')
       call output (' ')
       call output ('Keyword "range" can now be used to specify the')
@@ -2046,18 +2047,18 @@ c-----------------------------------------------------------------------
 c
 c Apply user specified OFM to PGPLOT device.   
 c
-      if (coltab.ne.-1) then
-c
-c The user has given an OFM with the "range" keyword for this subplot.
-c
-        call ofmcol (coltab, pixr2(1), pixr2(2))
-      else if (coltab.eq.-1) then
+      if (coltab.eq.0) then
 c
 c The user has not specified an OFM with the "range" keyword.  If first 
 c subplot on first page, apply b&w as default.  Otherwise, leave OFM at 
 c whatever it was last set to for the previous subplot.
 c
         if (j.eq.1) call ofmcol (1, pixr2(1), pixr2(2))
+      else
+c
+c The user has given an OFM with the "range" keyword for this subplot.
+c
+        call ofmcol (coltab, pixr2(1), pixr2(2))
       end if
 c
 c Interactive modification of OFM for hardcopy devices here; must be 
@@ -2084,18 +2085,18 @@ c-----------------------------------------------------------------------
       integer coltab, j
       real pixr2(2)
 c------------------------------------------------------------------------
-      if (coltab.ne.-1) then
-c
-c The user has given an OFM with the "range" keyword for this subplot.
-c
-        call ofmcol (coltab, pixr2(1), pixr2(2))
-      else if (coltab.eq.-1) then
+      if (coltab.eq.0) then
 c
 c The user has not specified an OFM with the "range" keyword.  If first 
 c subplot on first page, apply b&w as default.  Otherwise, leave OFM at 
 c whatever it was last set to for the previous subplot.
 c
         if (j.eq.1) call ofmcol (1, pixr2(1), pixr2(2))
+      else
+c
+c The user has given an OFM with the "range" keyword for this subplot.
+c
+        call ofmcol (coltab, pixr2(1), pixr2(2))
       end if
 c
       end
