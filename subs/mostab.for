@@ -14,6 +14,8 @@ c
 c   subroutine MosInit
 c   subroutine MosSet
 c   subroutine MosGet
+c   subroutine MosGetn
+c   subroutine MosSetn
 c   subroutine MosSave
 c   subroutine MosLoad
 c   subroutine MosPrint
@@ -820,6 +822,34 @@ c------------------------------------------------------------------------
 	telescop(i) = pbtype1
 	end
 c************************************************************************
+	subroutine mosGetn(nx2d,ny2d,npnt1)
+c
+	implicit none
+	integer nx2d,ny2d,npnt1
+c
+c  Return information about the mosaicing setup.
+c------------------------------------------------------------------------
+	include 'mostab.h'
+c
+	nx2d = nx2
+	ny2d = ny2
+	npnt1 = npnt
+	end
+c************************************************************************
+	subroutine mosSetn(nx2d,ny2d)
+c
+	implicit none
+	integer nx2d,ny2d
+c    
+c  Set info about the image size.
+c------------------------------------------------------------------------
+        include 'mostab.h'
+c
+        nx2 = nx2d
+        ny2 = ny2d
+c
+        end
+c************************************************************************
 	subroutine MosSave(tno)
 c
 	implicit none
@@ -1359,42 +1389,6 @@ c
 c
 	end
 c************************************************************************
-	subroutine mosRaDec(k,ra,dec)
-c
-	implicit none
-	integer k
-	double precision ra,dec
-c
-c  Return the RA and DEC of the k'th pointing.
-c
-c  Input:
-c    k		Pointing number
-c  Output:
-c    ra,dec	RA and DEC (radians) of the pointing.
-c------------------------------------------------------------------------
-	include 'mostab.h'
-c
-	if(k.lt.1.or.k.gt.npnt)call bug('f',
-     *		'Invalid pointing number if mosRaDec')
-c
-	ra = radec(1,k)
-	dec = radec(2,k)
-	end
-c************************************************************************
-	subroutine mosInfo(nx2d,ny2d,npnt1)
-c
-	implicit none
-	integer nx2d,ny2d,npnt1
-c
-c  Return information about the mosaicing setup.
-c------------------------------------------------------------------------
-	include 'mostab.h'
-c
-	nx2d = nx2
-	ny2d = ny2
-	npnt1 = npnt
-	end
-c************************************************************************
 	real function mosWt3(k)
 c
 	implicit none
@@ -1475,7 +1469,7 @@ c
 c
 c  Deternime some things.
 c
-	call mosInfo(nx2,ny2,npnt)
+	call mosGetn(nx2,ny2,npnt)
 c
 	do k=1,npnt
 	  pbObj = mosPb(k)
@@ -1526,7 +1520,7 @@ c
 c
 c  Deternime some things.
 c
-	call mosInfo(nx2,ny2,npnt)
+	call mosGetn(nx2,ny2,npnt)
 c
 	do k=1,npnt
 	  pbObj = mosPb(k)
@@ -1592,3 +1586,43 @@ c
 	enddo
 c
 	end
+c************************************************************************
+	subroutine mosRaDec(k,ra,dec)
+c
+	implicit none
+	integer k
+	double precision ra,dec
+c
+c  Return the RA and DEC of the k'th pointing.
+c
+c  Input:
+c    k		Pointing number
+c  Output:
+c    ra,dec	RA and DEC (radians) of the pointing.
+c
+c OBSOLETE: Use mosGet
+c------------------------------------------------------------------------
+	include 'mostab.h'
+c
+	if(k.lt.1.or.k.gt.npnt)call bug('f',
+     *		'Invalid pointing number if mosRaDec')
+c
+	ra = radec(1,k)
+	dec = radec(2,k)
+	end
+c************************************************************************
+	subroutine mosInfo(nx2d,ny2d,npnt1)
+c
+	implicit none
+	integer nx2d,ny2d,npnt1
+c
+c  Return information about the mosaicing setup.
+c  OBSOLETE: Use mosGetn
+c------------------------------------------------------------------------
+	include 'mostab.h'
+c
+	nx2d = nx2
+	ny2d = ny2
+	npnt1 = npnt
+	end
+
