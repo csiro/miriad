@@ -66,9 +66,10 @@ c    rjs  24oct94 Use new pb routines.
 c    rjs  30jan95 Write mosaic table with the output image.
 c    rjs   3feb95 options=detaper. Better uv handling. Get rid of pbtype
 c		  and center keywords.
+c    rjs  27feb95 Correct sign error in the sign of an offset.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='version 3-Feb-95')
+	parameter(version='version 27-Feb-95')
 	integer MAXSELS,MAXPNT
 	parameter(MAXSELS=256,MAXPNT=2048)
 	include 'maxdim.h'
@@ -406,7 +407,8 @@ c
 c
 c  Get the de-tapering weights.
 c
-	call mosWts(Wts,Scr,nx,ny,xoff,yoff)
+	write(*,*)xoff,yoff
+	call mosWts(Wts,Scr,nx,ny,-xoff,-yoff)
 c
 	do j=1,ny
 	  do i=1,nx
