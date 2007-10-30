@@ -33,6 +33,7 @@ c
 c  History:
 c    nebk 11Jan95  Original version
 c    nebk 14nov95  New call for READIMCG
+c    nebk 25may96  Fix glaring error with 2-D images
 c
 c  Notes:
 c    Uses cgsubs.for
@@ -47,7 +48,7 @@ c
       character version*20
       integer maxnax2, maxbox
       parameter (maxnax2 = maxnax*2, maxbox = 1024,
-     +           version = 'Version 14-Nov-95')
+     +           version = 'Version 25-May-96')
 c
       integer sizin(maxnax), sizout(maxnax), blc(maxnax), trc(maxnax), 
      + bin(2,maxnax), nbin, boxes(maxbox), krng(2), lin, lout, ip, ipn, 
@@ -108,6 +109,13 @@ c
      +   'Image increment must equal bin size')
         call winfidcg (sizin(i), i, bin(1,i), blc(i), trc(i), sizout(i))
       end do
+      if (naxis.lt.3) then
+        do i = naxis+1,3
+          sizout(i) = 1
+          blc(i) = 1
+          trc(i) = 1
+        end do
+      end if        
 c
 c Open output image and copy header items to it
 c  
