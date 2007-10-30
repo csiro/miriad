@@ -1,4 +1,4 @@
-c**********************************************************************c
+c********1*********2*********3*********4*********5*********6*********7**
 	program velplot
 	implicit none
 c
@@ -104,12 +104,14 @@ c    21sep93 mchw  Added nint to integer expressions using pixel size.
 c    25oct93 mchw  Added nint in subroutine readmap.
 c    01feb95 jm/mchw Elliminate some questions.	call pgask(.FALSE.)
 c    02feb95 jm    De-FLINT'd.
-c    10jan96 rjs   Changes to appease g77.
+c    16jun95 mchw  Change default: no Gaus fit. Trap typo. pgask(.TRUE.)
+c			swap P and V cursor options.
+c    30jan96 mchw  Merge AT version with 16jun95 update.
 c----------------------------------------------------------------------c
 	include 'tmpdim.h'
 	include 'velplot.h'
 	character*(*) version
-	parameter(version='(version 3.0 02-FEB-95)')
+	parameter(version='(version 3.0 30-JAN-96)')
 	integer maxnax,maxboxes
 	parameter(maxnax=3,maxboxes=128)
 	integer boxes(maxboxes),nsize(maxnax),blc(maxnax),trc(maxnax)
@@ -131,7 +133,7 @@ c
 	pspec = 'Y'
 	gray = 'N'
 	defgray = 'Y'
-	lgaufit = 'Y'
+	lgaufit = 'N'
 	lgauplot = 'Y'
 	nlevels = 6
 	do nc = 1, nlevels
@@ -194,20 +196,18 @@ c  Prompt for interactive options:
 c
 10	call output(' ')
 	call output('      OPTIONS')
-	call output('Comment - Write comment into log')
-	call output('Help -  Type  explanation of options')
-	call output('List -  List header and velocity information')
-	call output('Integral - Integrated flux and statistics')
-	call output('Menu -  Select plot parameters')
-	call output('Pos-Vel - Plot versus position & velocity')
-	call output('Spectra - Plot spectra')
-	call output('Vel-map - Plot integrated velocity maps')
-	call output('Write - Write Miriad Image to disk file')
-	call output(
-     *	         'RA - Read file of spectra & position-velocity cuts')
-	call output(
-     *	         'WA - Write file of spectra & position-velocity cuts')
-	call output('Exit - Exit from program')
+	call output('Comment   Write comment into log')
+	call output('Help      Type  explanation of options')
+	call output('List      List header and velocity information')
+	call output('Integral  Integrated flux and statistics')
+	call output('Menu      Select plot parameters')
+	call output('Pos-Vel   Plot versus position & velocity')
+	call output('Spectra   Plot spectra')
+	call output('Vel-map   Plot integrated velocity maps')
+	call output('Write     Write Miriad Image to disk file')
+	call output('RA        Read spectra & position-velocity file')
+	call output('WA        Write spectra & position-velocity file')
+	call output('Exit      Exit from program')
 	call output(' ')
 	call prompt(ans,length,'Select option (type 1st character) :')
 	call ucase(ans)
@@ -836,15 +836,15 @@ c  Type options
 	  call output(' J - Jy contours')
           call output(' K - Kelvin contours')
           call output(' N - negative contours')
-          call output(' P - cursor position')
+	  call output(' P - define pos-vel cut')
 	  call output(' Q - Plot spec/pos-vel positions')
 	  call output(' I - integral and rms in box')
           call output(' B - blc for integral')
+	  call output(' T - trc for integral')
 	  call output(' R - replot maps')
           call output(' S - Spectra position')
-	  call output(' T - trc for integral')
-	  call output(' V - define pos-vel cut')
-	  call output(' W - Write out this map')
+          call output(' V - value and cursor position')
+	  call output(' W - write out this map')
 	  call output('(x,y) positions are in (HA,DEC) directions.')
 	  call output('(Position angle is measured from N through E)')
 c********1*********2*********3*********4*********5*********6*********7**
@@ -878,7 +878,7 @@ c  Plot negative contours
 	    cneg='Y'
             call output('-will plot negative contours')
           endif
-c  Plot specta positions
+c  Plot spectra positions
         ELSE IF(KEY.EQ.'Q') THEN
           if(pspec.eq.'Y')then
             pspec='N'
@@ -917,7 +917,7 @@ c  Get position for spectra
           sym=nspec+64
           call pgpt(1,sx,sy,sym)
 c  Get pos-vel cuts 
-	else if (key.eq.'V') then
+	else if (key.eq.'P') then
 	  if(ncut.ge.25) then
 	    call output('maximum 25 pos-vel cuts')
 	    go to 10
@@ -963,8 +963,8 @@ c  write out map
             write='N'
             call output('-will not write MIRIAD Image to disk')
           endif
-c  cursor position
-	else if (key.eq.'P') then
+c  cursor position and value
+	else if (key.eq.'V') then
 	  flux = ary(nint(xx)+mid,nint(yy)+midy)
 	  write(msg, *) 'x=',xx, '  y=',yy, '  value=',flux
 	  call output(msg)
@@ -1165,19 +1165,20 @@ c
 	call prompt(defgray,l,
      *    '>Use map min/max for graysacle (Y/[N]) :')
 	call ucase(defgray)
-	if(defgray.eq.'Y')return
+	if(defgray.eq.'Y') return
         call output(' pgplot grayscale shade is a number in the ')
         call output(' range 0 to 1 obtained by linear interpolation')
         call output(' between the background and foreground level,') 
         call output('e.g. shade=[A(i,j)-bg]/[fg-bg] ')
-	write(msg, 122)
-122	format(/,'>Enter grayscale background (bg) level:')
+	call output(' ')
+100	write(msg, '(a)') '>Enter grayscale background (bg) level:'
 	call output(msg)
-        read(*,*) bg
-	write(msg, 123)
-123	format(/,'>Enter grayscale foreground (fg) level:')
+	read(5,110,err=100) bg
+	call output(' ')
+200	write(msg, '(a)') '>Enter grayscale foreground (fg) level:'
 	call output(msg)
-        read(*,*) fg
+	read(5,110,err=200) fg
+110	format(f20.0)
         end
 c********1*********2*********3*********4*********5*********6*********7**
 	subroutine GetRange(imaps,vmin,vmax,vlsr,nc)
@@ -1283,7 +1284,7 @@ c********1*********2*********3*********4*********5*********6*********7**
 	subroutine GetList(imaps,vmin,vmax,vlsr,nc)
 	implicit none
 	integer imaps,nc
-	real vmin(1),vmax(1),vlsr(1)
+	real vmin(*),vmax(*),vlsr(nc)
 c
 c	Get list of velocity intervals.
 c
@@ -1948,7 +1949,7 @@ c  Initialize plot device.
 c
         call getpanel(nspec,windx,windy)
 50      call pgbeg(0,device,windx,windy)
-	call pgask(.FALSE.)
+c	call pgask(.FALSE.)
 	call pgslw(lwidth)
 c
 c  Calculate the conversion factor for map units.
@@ -2297,7 +2298,7 @@ c
 	if (write.ne.'Y' .and. apint.ne.'Y') then
           call getpanel(imaps,windx,windy)
 	  call pgbeg(0,device,windx,windy)
-	  call pgask(.FALSE.)
+c	  call pgask(.FALSE.)
 	  call pgslw(lwidth)
 	endif
 c
@@ -3108,7 +3109,7 @@ c
 	call output(line(1:len1(line)))
 c
 	end
-c--------------------------------------------------------------------------
+c********1*********2*********3*********4*********5*********6*********7**
       subroutine gaufit(nc,vlsr,t,spec,rms)
       implicit none
 	real rms
@@ -3173,6 +3174,7 @@ c get number of simultaneous gaussians to fit
       ngauss(spec)=1
       call promptf(value,'f2.0',
      *  '>Enter number of gaussians to fit',real(ngauss(spec)))
+      if(value.lt.1.)return
       ngauss(spec)=value
 c ma is the number of free parameters to be fit
       ma=ngauss(spec)*3
@@ -3558,7 +3560,7 @@ c--------------------------------------------------------------------------
       RETURN
       END
 
-c---------------------------------------------------------------------
+c********1*********2*********3*********4*********5*********6*********7**
       subroutine gauplot(nc,vlsr,t,spec)
       implicit none
 c 
@@ -3631,7 +3633,7 @@ c      call pgHline(nc,vlsr,tres,2.)
       call pgsls(1)
       return
       end
-c********1*********2*********3*********4*********5*********6*********7*c
+c********1*********2*********3*********4*********5*********6*********7**
 	subroutine moment1(nc,vlsr,buf,clip,amp,mom1,mom2)
 	implicit none
 	integer nc
@@ -3840,7 +3842,10 @@ c
 	else 
 	  goto 9
 	endif	    
-50	if(ncut.eq.0) goto 51
+50	if(ncut.eq.0) then
+51	  call output('--- no current selection of cuts ---')
+	  return
+	endif
 c
 c  Set up convolution function.
 c
@@ -4052,11 +4057,6 @@ c
 c  Restore original plot device.
 c
 	device = oldevice
-        return
-c
-c
-51	call output('--- no current selection of cuts ---')
-	return
 	end
 c********1*********2*********3*********4*********5*********6*********7**
 	subroutine intannot(nchan,ichan,vlsr,nc)
@@ -4152,11 +4152,11 @@ c
 	length=52
 	if(iostat.eq.0)call TxtWrite(lu,text,length,iostat)
 c
-	write(text, '(A, A)')
-     *    'The columns are: offset from center (arcsec), ',
-     *    'and channel values.'
-	length=64
-	if(iostat.eq.0)call TxtWrite(lu,text,length,iostat)
+c	write(text, '(A, A)')
+c     *    'The columns are: offset from center (arcsec), ',
+c     *    'and channel values.'
+c	length=64
+c	if(iostat.eq.0)call TxtWrite(lu,text,length,iostat)
 c
 	    if(cf.eq.0.)cf=1.
 	    xdelta=(xstart-xend)/real(np-1)
@@ -4193,7 +4193,7 @@ c
 	  call prompt(text,ktext,'      comment >')
 	enddo
 	end
-c********1*********2*********3*********4*********5*********6*********7*c
+c********1*********2*********3*********4*********5*********6*********7**
       subroutine WrGauss(outfile,nc,vlsr,cmaj,cmin,cpa)
       implicit none
 c
@@ -4329,4 +4329,3 @@ c
 c
       return
       end
-
