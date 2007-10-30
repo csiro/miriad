@@ -29,18 +29,18 @@ c     *'tb,noheader,nolist,list,eformat,style,title,xmin,xmax,ymin,ymax')
 
 c plot and options for IMSPEC
       parameter    ( NAME = 'IMSPEC' )
-      character*21 plotopts
+      character    plotopts*(*)
       parameter    ( plotopts = 'mean,sum,flux,pbcflux' )
-      character    defplt*4, idstr*8
+      character    defplt*(*), idstr*(*)
       parameter    ( defplt = 'flux', idstr = 'spectrum' )
-      character*80 commonop
+      character   commonop*(*)
       parameter    ( commonop =
-     *'tb,noheader,nolist,list,eformat,hanning,boxcar,deriv,style,title,
-     *xmin,xmax,ymin,ymax' )
+     *'tb,noheader,nolist,list,eformat,hanning,boxcar,deriv,style,'//
+     *'title,xmin,xmax,ymin,ymax' )
 
 c common variables for IMSTAT and IMSPEC
 
-      character*20 styles
+      character    styles*(*)
       parameter    ( styles = 'connect,step,histo' )
 
       integer      NPLOTV, NPLOTR, NPLOTP
