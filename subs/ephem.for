@@ -12,6 +12,7 @@ c		  a routine for TAI-UTC and TDT-UTC. Improved precession
 c		  and LST routines.
 c     4mar94 rjs  Added sunradec.
 c     5nov94 rjs  Update leap second table.
+c     8dec95 rjs  Add lmn2sph
 c
 c  General Reference:
 c    Explanatory Supplement to the Astronomical Almanac. 1993.
@@ -268,6 +269,28 @@ c------------------------------------------------------------------------
 	lmn(1) = cos(ra)*cos(dec)
 	lmn(2) = sin(ra)*cos(dec)
 	lmn(3) = sin(dec)
+	end
+c************************************************************************
+c* lmn2sph -- Convert from direction cosines to spherical coordinates.
+c& rjs
+c: utilities
+c+
+	subroutine lmn2sph(lmn,ra,dec)
+c
+	implicit none
+	double precision ra,dec,lmn(3)
+c
+c  Convert from direction cosines into spherical coordinates
+c  (e.g. ra,dec or long,lat) into 
+c
+c  Input:
+c    lmn	Direction cosines.
+c  Output:
+c    ra,dec	Angles in radians.
+c--
+c------------------------------------------------------------------------
+	dec = asin(lmn(3))
+	ra  = atan2(lmn(2),lmn(1))
 	end
 c************************************************************************
 	double precision function epo2jul(epoch,code)
