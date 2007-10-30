@@ -1,0 +1,230 @@
+#! /bin/csh -f
+#--
+#
+#* mirbug - Send mail about bugs to appropriate person
+#& rjs
+#: user utility
+#+
+#  Usage: mirbug [-r] [-b] taskname [file]
+#
+#  Mirbug allows the user to send bug reports to the appropriate people.
+#
+#  mirbug creates a template report or prepends it to the optional file
+#  and then starts an editor. The editor is that indicated by the VISUAL
+#  or EDITOR environment variable, or vi if neither environment variable
+#  is set.
+#
+#  After exiting the editor the user is given the option of not mailing
+#  the report by using ^C. If this is not done within 5 seconds, the
+#  report is mailed to the person responsible, to a central address and
+#  to the sender. If ^C is used, the report is saved.
+#
+#  Arguments:
+#
+#    taskname should be one of the miriad tasks/tools/scripts or the
+#             string 'general'.
+#
+#    file     (optional) is the name of a previously created file containing
+#             the report. This must be the second argument.
+#
+#    -r       The -r switch causes mirbug to run the task, and include
+#	      any output in the template bug report.
+#    -b       Do not invoke an editor -- just mail the template.
+#
+#--
+
+#  Parse the input line.
+
+  set task; set usefile; set dorun = 0; set doedit = 1;
+  foreach arg ( $argv )
+    if( "$arg" == "-r" ) then
+      set dorun = 1
+    else if ( "$arg" == "-b" ) then
+      set doedit = 0
+    else if ( "$task" == "" ) then
+      set task = $arg
+    else
+      set usefile = ( $usefile $arg )
+    endif
+  end
+  if ( "$task" == "" ) then
+    echo "### Fatal Error: Task name must be given"; exit 1;
+  endif
+
+#  Initializations
+
+  set mirprg	= $MIRCAT/miriad.pgmrs
+  set addresses	= ("rsault@atnf.csiro.au" `whoami`)
+  set awk_script = /tmp/$$.awk
+  set templ    = $task.mirbug
+  set template = /tmp/$templ
+  set stderr = /tmp/$$.stderr
+
+#  Does this OS support the -s flag to "mail" ?
+
+  set hosttype = ""
+  set tmp = ( `which uname` )
+  if ( $#tmp == 1 && "$tmp" != "" ) set hosttype = `uname -s`
+  @ dosubject = ( $hosttype == SunOS || $hosttype == ConvexOS )
+
+#  Checks
+
+  if ( ! -w /tmp ) then
+     echo "### Fatal Error: Can't write to /tmp"; exit 1
+  endif
+
+# Locate the .doc file for this task.
+
+  set dotdoc = $MIRPDOC/$task.doc
+  if ( "$task" == "general" ) then
+    set dotdoc
+  else if ( ! -f $dotdoc ) then
+    echo "### Fatal Error: No task or script with the name $task exists"; exit 1
+  endif
+
+#  Locate a .def file for this task.
+
+  if ( "$dotdoc" != "" ) then
+    if ( $?MIRDEF ) then
+      set dotdef = $MIRDEF/$task.def
+    else
+      set dotdef = ./$task.def
+    endif
+    if ( ! -r $dotdef ) set dotdef
+  endif
+
+#  Obtain information about the person responsible.
+
+  set doperson = 0
+  if ( "$dotdoc" != "" ) then
+    set person = ( `grep "^%P" $dotdoc` )
+    if ( $#person >= 2 ) then
+      set person = ( `grep -i ^$person[2] $mirprg` )
+      if ( $#person == 5 ) then
+	set name    = ( $person[2] $person[3] )
+	set address = $person[4]
+	set phone   = $person[5]
+	set addresses = ( $addresses $address )
+	set doperson = 1
+      endif
+    endif
+    if ( ! $doperson )  echo "### Warning: Unable to determine who is responsible"
+  endif
+
+#  Generate an awk script file used to parse the .doc and .def files.
+
+cat << "END_OF_FILE" > $awk_script
+/%A/	{ param[$2] = ""; key[nkeys++] = $2; }
+	{ if (dotdef) param[$1] = $3; }
+/%%/	{ dotdef = 1; }
+END	{ for (i=0; i < nkeys; i++) 
+	    print sprintf("  %-10s= %s",key[i],param[key[i]]);
+	}
+"END_OF_FILE"
+
+#  Construct template
+
+  onintr quit
+  if ( $task == "general" ) then
+    set title = "General bug report"
+  else
+    set title = "Bug report on task: $task"
+  endif
+  echo "$title"							>! $template
+  if ( $doperson ) then
+    echo "Person responsible: $name"				>> $template
+    echo "    e-mail address: $address"				>> $template
+    echo "             phone: $phone"				>> $template
+    echo " "							>> $template
+  endif
+
+  echo "Date:              " `date`				>> $template
+
+  set first = 1
+  foreach addr ( $addresses )
+    if ( $first   ) echo "Message sent to:    $addr"		>> $template
+    if ( ! $first ) echo "                    $addr"		>> $template
+    set first = 0
+  end
+
+  echo " "							>> $template
+  echo "------------------------------------------------------" >> $template
+  echo " "							>> $template
+  echo "Current working directory:" `pwd`			>> $template
+  echo "Current host:" `hostname`				>> $template
+  echo " "							>> $template
+  if ( "$dotdoc" != "" ) then
+    echo "Keywords:"						>> $template
+    if ( "$dotdef" != "" ) then
+      ( cat $dotdoc; echo "%%"; cat $dotdef ) | awk -f $awk_script >> $template
+    else
+      awk -f $awk_script $dotdoc	 			>> $template
+    endif
+  endif
+
+  echo " "							>> $template
+  echo "Description:"						>> $template
+  echo " "							>> $template
+
+  if ( "$usefile" != "" ) then
+    cat $usefile						>> $template
+  endif
+
+# Attempt to run the task, if required.
+
+  if ( $dorun && ( "$dotdef" != "" ) ) then
+    echo " "							>> $template
+    echo " "							>> $template
+    echo "Output from ${task}:"					>> $template
+    echo "Running $task ..."
+    ( $task -f $dotdef >> $template )				>& $stderr
+    cat $stderr							>> $template   
+  endif
+
+#  Invoke the user's editor of choice.
+
+  if ( $doedit ) then
+    if ( $?VISUAL ) then
+      $VISUAL $template
+    else if ( $?EDITOR ) then
+      $EDITOR $template
+    else
+      vi $template
+    endif
+  endif
+
+#  Send the mail
+
+  onintr save
+  echo "OK to send? Hit CTRL-C within 5 seconds if not"
+  sleep 5
+
+  foreach addr ( $addresses )
+    echo "Mailing $addr ..."
+    if ( $dosubject ) then
+      mail -s "$title" $addr < $template
+    else
+      mail $addr < $template
+    endif
+  end
+
+#  Normal quit or quit before finishing editing
+
+quit:
+  rm -f $template $awk_script $stderr
+  exit 0
+
+
+#  Quit by hitting ^C after editing
+
+save:
+  echo " "
+  if ( -w `pwd` ) then
+    echo "Report saved as $templ"
+    mv $template `pwd`/$templ
+  else
+    echo "No write permission on current directory"
+    echo "Report saved as $templ on your home directory"
+    mv $template $HOME/$templ
+  endif
+  exit 0
