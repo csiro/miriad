@@ -315,6 +315,7 @@ c    nebk 10apr95  Add doc for absolute b&w lookup table
 c    nebk 03sep95  Detect black/white background, add non-linear 
 c		   ticks and grid
 c    nebk 12nov95  Change to deal internally in absolute pixels 
+c    nebk 29nov95  New call for CONTURCG
 c
 c Notes:
 c
@@ -381,7 +382,7 @@ c
       data dmm, dunsl, gaps /1.0e30, -1.0e30, .false., .false./
       data xdispls, ydispbs /3.5, 3.5/
 c-----------------------------------------------------------------------
-      call output ('CgSlice: version 12-Nov-95')
+      call output ('CgSlice: version 29-Nov-95')
       call output (' ')
 c
 c Get user inputs
@@ -596,8 +597,8 @@ c
 c Draw contours
 c
                call pgsci (concol)
-               call conturcg (blank, .false., win(1), win(2), doblnk,
-     +                        memr(ipim), nlevs, levs, tr, 0.0)
+               call conturcg (.false., blank, .false., win(1), win(2), 
+     +                        doblnk, memr(ipim), nlevs, levs, tr, 0.0)
              end if
 c
 c Label if first time through redisplay loop; axes not erased
@@ -3041,7 +3042,7 @@ c
       subroutine slposw (lin, lpos, krng, radians, blc, ibin, jbin, 
      +                   maxnsl, nslice, slpos)
 c-----------------------------------------------------------------------
-c     Save the slice locations in a text file.  Coordiantes
+c     Save the slice locations in a text file.  Coordinates
 c     are converted to true world coordinates
 c
 c  Input
@@ -3052,7 +3053,7 @@ c-----------------------------------------------------------------------
      +  slpos(6,maxnsl)
       logical radians
 cc
-      integer i, ilen, iostat
+      integer i, ilen, iostat, naxis
       double precision win(3), wout(3), blcx, blcy, trcx, trcy
       character aline*130, typei(3)*6, typeo(3)*6
 c
@@ -3069,7 +3070,9 @@ c-----------------------------------------------------------------------
         typeo(2) = 'abspix'
       end if
       typeo(3) = 'abspix'
-      win(3) = dble(2*krng(1)+krng(2)-1)/2.0
+      win(3) = dble(2*krng(1)+krng(2)-1)/2.0 
+      call rdhdi (lin, 'naxis', naxis, 0)
+      naxis = min(3,naxis)
       call initco (lin)
 c
       do i = 1, nslice
@@ -3080,7 +3083,7 @@ c
         call ppconcg (2, blc(1), ibin, win(1))
         win(2) = slpos(2,i)
         call ppconcg (2, blc(2), jbin, win(2))
-        call w2wco (lin, 3, typei, ' ', win, typeo, ' ', wout)
+        call w2wco (lin, naxis, typei, ' ', win, typeo, ' ', wout)
         blcx = wout(1)
         blcy = wout(2)
 c
@@ -3088,7 +3091,7 @@ c
         call ppconcg (2, blc(1), ibin, win(1))
         win(2) = slpos(5,i)
         call ppconcg (2, blc(2), jbin, win(2))
-        call w2wco (lin, 3, typei, ' ', win, typeo, ' ', wout)
+        call w2wco (lin, naxis, typei, ' ', win, typeo, ' ', wout)
         trcx = wout(1)
         trcy = wout(2)
 c
