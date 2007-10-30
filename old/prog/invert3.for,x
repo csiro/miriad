@@ -1,0 +1,1498 @@
+c************************************************************************
+	program invert3
+	implicit none
+c
+c= invert3 - Three-dimensional Jupiter imaging.
+c& rjs
+c: map making
+c+
+c@ vis
+c	Input visibility data files. Several files can be given. No default.
+c@ map
+c	Output map (image) file name. Each output file consists of a single
+c	polarization/Stokes parameter. If several different pols/Stokes
+c	images are being made, then several file names should be given. No
+c	default.
+c@ beam
+c	Output beam (point-spread function) file name. The default is not
+c	to make a beam.
+c@ imsize
+c	The size of the output dataset. The default is to image out to
+c	primary beam half power points.
+c@ pltb
+c	Disk black-body temperature in Kelvin that will be subtracted
+c	off. Default is 0.
+c@ cell
+c	Image cell size, in arcsec. If two values are given, they give
+c	the RA and DEC cell sizes. If only one value is given, the cells
+c	are made square. The default is about one third of the resolution
+c	of the resultant images.
+c@ fwhm
+c	This determines a gaussian taper to apply to the visibility data.
+c	It specifies the FWHM of an image-domain gaussian -- tapering the
+c	visibility data is equivalent to convolving with this image-domain
+c	gaussian.
+c
+c	Either one or two values can be given, in arcsec, being the FWHM in
+c	the RA and DEC directions. If only one value is given, the taper is
+c	assumed to be symmetric. The default is no taper.
+c
+c	The signal-to-noise ratio will be optimised in the output image if
+c	this parameter is set to the FWHM of typical image features of
+c	interest.
+c
+c	If you are more accustomed to giving this parameter in the uv plane
+c	(as AIPS requires), then:
+c	  fwhm(image plane) = 182 / fwhm(uv plane)
+c	where the image plane fwhm is measured in arcseconds, and the uv plane
+c	fwhm is measured in kilowavelengths.
+c@ sup
+c	Sidelobe suppression area, given in arcseconds. This parameter
+c	gives the area around a source where INVERT attempts to suppress
+c	sidelobes. Two values (for the RA and DEC directions respectively)
+c	can be given. If only one value is given, the suppression area is
+c	made square. The default is to suppress sidelobes in an area as
+c	large as the field being mapped.
+c
+c	The suppression area is essentially an alternate way of specifying
+c	the weighting scheme being used. Suppressing sidelobes in the entire
+c	field corresponds to uniform weighting (so the default corresponds to
+c	uniform weighting). Natural weighting gives the best signal to noise
+c	ratio, at the expense of no sidelobe suppression. Natural weighting
+c	corresponds to SUP=0. Values between these extremes give a tradeoff
+c	between signal to noise and sidelobe suppression, and roughly
+c	correspond to AIPS ``super-uniform'' weighting.
+c@ robust
+c	Brigg's visibility weighting robustness parameter. This parameter
+c	can be used to down-weight excessive weight being given to
+c	visibilities in relatively sparsely filled regions of the u-v plane.
+c	Most useful settings are in the range [-2,2], with values less than
+c	-2 corresponding to very little down-weighting, and values greater than
+c	+2 reducing the weighting to natural weighting. 
+c
+c	Sidelobe levels and beam-shape degrade with increasing values of
+c	robustness, but the theoretical noise level will also decrease.
+c
+c	The default is no down-weighting (robust=-infinity).
+c@ line
+c	Standard "line" parameter, with the normal defaults. See the
+c	help on "line" for more information.
+c	More specifically, the "line" parameter consists of a string
+c	followed by up to four numbers, viz:
+c
+c	  linetype,nchan,start,width,step
+c
+c	where ``linetype'' is one of "channel", "wide", "velocity" or
+c	"felocity". The default is "channel" if spectral data is present
+c	in the data-set. Otherwise the default is ``wide''.
+c@ select
+c	This allows a subset of the uv data to be used in the mapping
+c	process. See the Users Manual for information on how to specify
+c	this parameter. The default is to use all data.
+c@ stokes
+c	Standard polarisation/Stokes parameter selection. See the help
+c	on "stokes" for more information. Several polarisations can be
+c	given. The default is ``ii'' (i.e. Stokes-I, given the
+c	assumption that the source is unpolarised).
+c@ options
+c	This gives extra processing options. Several options can be
+c	given (abbreviated to uniqueness), and separated by commas:
+c	  nocal    Do not apply gains table calibration to the data.
+c	  nopol    Do not apply polarisation leakage corrections.
+c	  nopass   Do not apply bandpass table calibration to the data.
+c	  double   Normally INVERT makes the beam patterns the same
+c	           size as the output image. This option causes the
+c	           beam patterns to be twice as large.
+c	  systemp  Weight each visibility in inverse proportion to the
+c	           noise variance. Normally visibilities are weighted in
+c	           proportion to integration time. Weighting based on the
+c	           noise variance optimises the signal-to-noise ratio
+c	           (provided the measures of the system temperature are
+c	           reliable!).
+c	  tfit     Determine the planet black-body temperature.
+c	  zflip    Flip the Z axis (useful because the visualisation
+c	           software uses a left-handed coordinate system).
+c	  cotag    Put bright lines along the positive X, Y and Z axes.
+c	  redisk   Re-add the disk as a final step.
+c@ niters
+c	Maximum number of CLEAN iterations. The default is 0.
+c@ minor
+c	Maximum number of CLEAN iterations per minor cycle. Default is
+c	niters.
+c@ gain
+c	CLEAN gain. The default is 0.1
+c@ cutoff
+c	The CLEAN cutoff level. The default is 0.
+c@ rads
+c	Two values, giving the radiation belt radius (in the Jovian
+c	equatorial plane) and height. Both are in arcsec.
+c--
+c  History
+c    rjs   13dec95  Adapted from INVERT.
+c  Bugs:
+c
+c------------------------------------------------------------------------
+	include 'mirconst.h'
+	include 'maxdim.h'
+	include 'mem.h'
+c
+	character version*(*)
+	parameter(version='Invert3: version 1.0 13-Dec-95')
+	integer MAXPOL,JUPITER,MAXPATCH,StokesQ,StokesU
+	parameter(MAXPOL=4,StokesQ=2,StokesU=3)
+	parameter(JUPITER=5,MAXPATCH=65)
+c
+	real cellx,celly,cellz,fwhmx,fwhmy,fwhmz,freq0,supx,supy,supz
+	real umax,vmax,wmax,wdu,wdv,wdw,tu,tv,tw,rms,robust,pltb
+	real xymax,zmax,xymin,zmin,erad,prad,xyfwhm,zfwhm
+	character maps(MAXPOL)*64,beam*64,uvflags*16,vis*64
+	character line*64
+	integer i,j,nmap,tscr,nvis,npol,coObj,pols(MAXPOL)
+	integer nx,ny,nz,bnx,bny,bnz,wnu,wnv,wnw,qidx,uidx
+	integer offcorr,maxiters,minor
+	real cutoff,gain
+	logical defWt,Natural,systemp,tfit,zflip,double,cotag,redisk
+	logical dobeam,doclean,dofit
+c
+	integer tno,tvis
+	integer nUWts
+	integer UWts,Map,Bm
+c
+c  Externals.
+c
+	character polsc2p*3
+	logical keyprsnt
+c
+c  Get the input parameters. Convert all angular things into
+c  radians as soon as possible!!
+c
+	call output(version)
+	call keyini
+	call keya('beam',beam,' ')
+	dobeam = beam.ne.' '
+	call mkeya('map',maps,MAXPOL,nmap)
+	if(nmap.eq.0)call bug('f','An output must be given')
+c
+	call GetOpt(uvflags,systemp,double,tfit,zflip,cotag,redisk)
+	pltb = 0
+	if(.not.tfit)call keyr('pltb',pltb,0.)
+	call uvDatInp('vis',uvflags)
+c
+	call keyr('cell',cellx,0.)
+	celly = cellx
+	call keyr('cell',cellz,cellx)
+	cellx = abs(cellx * pi/180/3600)
+	celly = abs(celly * pi/180/3600)
+	cellz = abs(cellz * pi/180/3600)
+c
+	call keyr('fwhm',fwhmx,0.)
+	fwhmy = fwhmx
+	call keyr('fwhm',fwhmz,fwhmx)
+	fwhmx = fwhmx * pi/180/3600
+	fwhmy = fwhmy * pi/180/3600
+	fwhmz = fwhmz * pi/180/3600
+c
+	call keyi('imsize',nx,0)
+	ny = nx
+	call keyi('imsize',nz,nx)
+	if(nx.le.0.or.nz.le.0)
+     *	  call bug('f','A image size must be given')
+	if(max(nx,ny,nz).gt.MAXDIM)call bug('f','Output image too big')
+	if(double.and.2*max(nx,ny,nz).gt.MAXDIM)
+     *	  call bug('f','Output beam too big')
+c
+	defWt = .not.keyprsnt('sup')
+	call keyr('sup',supx,0.)
+	supy = supx
+	call keyr('sup',supz,supx)
+	supx = supx * pi/180/3600
+	supy = supy * pi/180/3600
+	supz = supz * pi/180/3600
+	if(min(supx,supy,supz).lt.0)
+     *	    call bug('f','Invalid sup parameter')
+c
+	call keyr('robust',robust,-10.0)
+	if(robust.gt.4.and.max(supx,supy,supz).gt.0)then
+	  call bug('i','Robust value resulting in natural weights')
+	  supx = 0
+	  supy = 0
+	  supz = 0
+	  defWt = .false.
+	endif
+c
+c  CLEAN parameters.
+c
+	call keyi('niters',maxiters,0)
+	call keyi('minor',minor,maxiters)
+	doclean = maxiters.gt.0
+	call keyr('gain',gain,0.1)
+	call keyr('cutoff',cutoff,0.)
+	call keyr('rads',xymax,0.)
+	call keyr('rads',zmax,0.)
+	xymax = xymax * pi/180/3600
+	zmax  = zmax  * pi/180/3600
+	call keyfin
+c
+c  Check the number of polarisations, and check that there is a consistent
+c  number of output files. Also check that none of the output files
+c  already exist.
+c
+	call uvDatGti('npol',npol)
+	if(npol.eq.0)then
+	  npol = 1
+	  call uvDatSet('stokes',0)
+	endif
+	if(npol.ne.nmap)call bug('f',
+     *	  'Bad number of maps for the requested polarisations')
+	call uvDatGti('pols',pols)
+c
+	if(beam.ne.' ')call assertf(beam,.false.,
+     *	    'Dataset already exists: '//beam)
+	qidx = 0
+	uidx = 0
+	do i=1,npol
+	  call assertf(maps(i),.false., 
+     *	    'Dataset already exists: '//maps(i))
+	  if(pols(i).eq.StokesQ)qidx = i
+	  if(pols(i).eq.StokesU)uidx = i
+	enddo
+	if((qidx.ne.0).neqv.(uidx.ne.0))then
+	  call bug('w','You should image Q and U simultaneously')
+	  qidx = 0
+	  uidx = 0
+	endif
+c
+c  Determine the max u and v values to map.
+c
+	if(cellx*celly*cellz.gt.0)then
+	  umax = 0.5 / cellx
+	  vmax = 0.5 / celly
+	  wmax = 0.5 / cellz
+	else
+	  umax = 1e20
+	  vmax = 1e20
+	  wmax = 1e20
+	endif
+c
+c  Load the visibility data.
+c
+	call output('Reading the visibility data ...')
+	call HdInit(.true.,.false.)
+	call PlInit(4.04,JUPITER,erad,prad)
+	call scropen(tscr)
+	call GetVis(systemp,npol,qidx,uidx,
+     *		tscr,vis,nvis,umax,vmax,wmax,freq0)
+c
+c  Set appropriate values for cellx and celly if needed. Try to make
+c  the pixels square if the X and Y resolutions are approx the same.
+c
+	if(cellx*celly*cellz.le.0)then
+	  cellx = min( max( 0.25 / umax, 0.3*fwhmx),
+     *		       max( 0.25 / vmax, 0.3*fwhmy) )
+	  cellz = max( 0.25 / wmax, 0.3*fwhmz)
+	  if(max(cellx,cellz).lt.2*min(cellx,cellz))then
+	    cellx = min(cellx,cellz)
+	    cellz = cellx
+	  endif
+	  celly = cellx
+	endif
+c	cellx = -cellx
+c	celly = -celly
+	if(zflip)cellz = -cellz
+c
+c  Fiddle the sizes and determine the size of the output beam.
+c
+	nx = min(nx,MAXDIM)
+	ny = min(ny,MAXDIM)
+	nz = min(nz,MAXDIM)
+	if(double)then
+	  bnx = min(2*nx - 1,MAXDIM)
+	  bny = min(2*ny - 1,MAXDIM)
+	  bnz = min(2*nz - 1,MAXDIM)
+	else
+	  bnx = nx
+	  bny = ny
+	  bnz = nz
+	endif
+	if(.not.dobeam)then
+	  bnx = min(bnx,MAXPATCH)
+	  bny = min(bny,MAXPATCH)
+	  bnz = min(bnz,MAXPATCH)
+	endif
+c
+c  Fiddle the region-of-interests.
+c
+	xymin = max(abs(erad/cellx)-1.0,0.5)
+	zmin  = max(abs(prad/cellz)-1.0,0.5)
+	xymax = abs(xymax/cellx)
+	if(xymax.eq.0)xymax = max(nx,ny)
+	zmax  = abs(zmax /cellz)
+	if(zmax.eq.0) zmax  = nz
+c
+c  Tell about the mean frequency, if necessary.
+c
+	write(line,'(a,1pg9.3)')'Mean Frequency(GHz):    ',freq0
+	call output(line)
+c
+c  Subtract the disk if needed.
+c
+	if(tfit.or.pltb.gt.0)then
+	  call output('Subtracting the disk ...')
+	  call doDisk(tscr,pltb,nvis,npol,freq0)
+	endif
+	redisk = redisk.and.pltb.gt.0
+c
+c  Determine some things for the weighting process, and then go
+c  and determine the weights (if its not natural weighting).
+c
+	call WtIni(defWt,supx,supy,supz,bnx,bny,bnz,
+     *	  cellx,celly,cellz,fwhmx,fwhmy,fwhmz,
+     *	  umax,vmax,wmax,Natural,wnu,wnv,wnw,wdu,wdv,wdw,tu,tv,tw)
+c
+	if(.not.Natural)then
+	  call output('Calculating the weights ...')
+	  nUWts = (wnu/2+1) * wnv * wnw
+	  call Memalloc(UWts,nUWts,'r')
+	  call WtCalc(tscr,memr(UWts),wdu,wdv,wdw,wnu,wnv,wnw,
+     *						nvis,npol)
+	  if(robust.gt.-4)
+     *		call WtRobust(robust,memr(UWts),wnu,wnv,wnw)
+	else
+	   UWts = 1
+	   nUWts = 0
+	endif
+c
+c  Apply the weights, shifts and geometric corrections, and then free
+c  the weighting array.
+c
+	call output('Applying the weights ...')
+	call Wter(tscr,Natural,memr(UWts),wdu,wdv,wdw,wnu,wnv,wnw,
+     *	  Tu,Tv,Tw,nvis,npol,Rms,umax,vmax,wmax,cellx,celly,cellz)
+c
+	if(nUWts.gt.0)call MemFree(UWts,nUWts,'r')
+c
+c  Tell the user about the noise level in the output images.
+c
+	write(line,'(a,1pg10.3)')'Theoretical rms noise:',Rms
+	call output(line)
+c
+c  Reopen the first visibility dataset, to extract history from.
+c
+	call uvopen(tvis,vis,'old')
+c
+c  Initialise the mapper, and start mapping!
+c
+	offcorr = 4
+	call MapIni3(tscr,nvis,umax,vmax,wmax,
+     *				offcorr,1+npol)
+	call MapDef3(1,bnx,bny,bnz)
+	call MapDef3(npol,nx,ny,nz)
+c
+c  Grid the beam.
+c
+	call output('Gridding the beam ...')
+	call MapScal3(1)
+	dofit = doclean.or.dobeam.or.redisk
+	if(dofit)call Mapper3(1,Map)
+	if(doclean)then
+	  call memAlloc(Bm,bnx*bny*bnz,'r')
+	  call Copy(memr(Map),memr(Bm),bnx*bny*bnz)
+	else
+	  Bm = Map
+	endif
+	if(dofit)then
+	  call Fit3(memr(Bm),bnx,bny,bnz,xyfwhm,zfwhm)
+          write(line,10)180*3600/pi*abs(cellx*xyfwhm),
+     *                  180*3600/pi*abs(celly*xyfwhm),
+     *                  180*3600/pi*abs(cellz* zfwhm)
+  10      format('Beam FWHM is',f5.1,' by',f5.1,' by',f5.1,' arcsec')
+          call output(line)
+	endif
+	
+c
+c  Store the beam if appropriate.
+c
+	if(doBeam)then
+	  call output('Storing the beam ...')
+	  call CreateCo(coObj,bnx,bny,bnz,cellx,celly,cellz,freq0)
+	  call coReinit(coObj)
+	  call BeamMake(tno,beam,coObj,bnx,bny,bnz,tvis,version,line)
+	  call DatWrite(tno,memr(Bm),bnx,bny,bnz)
+	  call xyclose(tno)
+	  call coFin(coObj)
+	endif
+c
+c  Map all the images.
+c
+	do j=1,npol
+	  call CreateCo(coObj,nx,ny,nz,cellx,celly,cellz,freq0)
+	  call coAxSet(coObj,4,'STOKES',1.d0,dble(pols(j)),1.d0)
+	  call coReinit(coObj)
+	  call ImMake(tno,maps(j),coObj,nx,ny,nz,tvis,version,line,rms)
+	  if(doclean)then
+	    call Cleaner3(tScr,nvis,j,npol,Map,nx,ny,nz,
+     *		memr(Bm),bnx,bny,bnz,gain,cutoff,maxiters,minor,
+     *		cellx,celly,cellz,xymax,zmax,xymin,zmin)
+	  else
+	    call output('Forming Stokes '//polsc2p(pols(j))//'image...')
+	    call Mapper3(j+1,Map)
+	  endif
+	  if(cotag)call Tagger(memr(Map),nx,ny,nz,zflip)
+	  if(redisk)then
+	    call output('Adding disk back in ...')
+	    call addDisk(freq0,pltb,abs(xyfwhm*cellx),abs(zfwhm*cellz),
+     *	      memr(Map),nx,ny,nz,abs(erad/cellx),abs(prad/cellz))
+	  endif
+	  call DatWrite(tno,memr(Map),nx,ny,nz)
+	  call xyclose(tno)
+	  call coFin(coObj)
+	enddo
+c
+c  All said and done. Tidy up and exit.
+c
+	if(doclean)call memFree(Bm,bnx*bny*bnz,'r')
+	call MapFin3
+	call uvclose(tvis)
+	call scrclose(tscr)
+c
+	end
+c************************************************************************
+	subroutine Tagger(Map,nx,ny,nz,zflip)
+c
+	implicit none
+	integer nx,ny,nz
+	logical zflip
+	real Map(nx,ny,nz)
+c------------------------------------------------------------------------
+	integer i,j,k,ic,jc,kc
+	real amax
+c
+c  Determine the absolute maximum.
+c
+	amax = 0
+	do k=1,nz
+	  do j=1,ny
+	    do i=1,nx
+	      amax = max(amax,abs(Map(i,j,k)))
+	    enddo
+	  enddo
+	enddo
+c
+c  Double this as a tag for the axes.
+c
+	amax = 2*amax
+	ic = nx/2 + 1
+	jc = ny/2 + 1
+	kc = nz/2 + 1
+c
+	if(zflip)then
+	  do k=1,kc
+	    Map(ic,jc,k) = amax
+	  enddo
+	else
+	  do k=kc,nz
+	    Map(ic,jc,k) = amax
+	  enddo
+	endif
+c
+	do j=jc,ny
+	  Map(ic,j,kc) = amax
+	enddo
+c
+	do i=ic,nx
+	  Map(i,jc,kc) = amax
+	enddo
+c
+	end
+c************************************************************************
+	subroutine addDisk(freq0,pltb,bmaj,bmin,Map,nx,ny,nz,erad,prad)
+c
+	implicit none
+	integer nx,ny,nz
+	real freq0,pltb,bmaj,bmin,Map(nx,ny,nz),erad,prad
+c
+c  Re-add the disk to the image.
+c
+c  Inputs:
+c    freq0	Observing frequency.
+c    pltb	Planet black-body temperature.
+c    bmaj,bmin	Resolution, in radians.
+c    erad,prad	Equatorial and polar radii of the planet, in pixels!
+c    nx,ny,nz	Dimension of the image.
+c  Input/Output:
+c    Map	The image to add the planet to.
+c------------------------------------------------------------------------
+	include 'mirconst.h'
+	integer ic,jc,kc,i,j,k,imin,imax,jmin,jmax,kmin,kmax
+	real flux,omega,krad,jrad,irad
+c
+c  Use the Rayleigh-Jeans approx of the black body function to determine
+c  the apparent flux.
+c
+	omega = 0.2*bmaj*bmin*PI/4/log(2.0)
+	flux = omega*(1e26*2*KMKS)*pltb*(freq0*1e9/CMKS)**2
+c
+	ic = nx/2 + 1
+	jc = ny/2 + 1
+	kc = nz/2 + 1
+	krad = prad
+c
+	kmin = max(nint(kc-krad),1)
+	kmax = min(nint(kc+krad),nz)
+	do k=kmin,kmax
+	  jrad = erad*sqrt(  max(1.0 - ((k-kc)/krad)**2,0.0))
+	  jmin = max(nint(jc-jrad),1)
+	  jmax = min(nint(jc+jrad),ny)
+	  do j=jmin,jmax
+	    irad = jrad*sqrt(max(1.0 - ((j-jc)/jrad)**2,0.0))
+	    imin = max(nint(ic-irad),1)
+	    imax = min(nint(ic+irad),nx)
+	    do i=imin,imax
+	      Map(i,j,k) = Map(i,j,k) + flux
+	    enddo
+	  enddo
+	enddo
+c
+	end
+c************************************************************************
+	subroutine Copy(In,Out,n)
+c
+	implicit none
+	integer n
+	real In(n),Out(n)
+c
+c------------------------------------------------------------------------
+	integer i
+c
+	do i=1,n
+	  Out(i) = In(i)
+	enddo
+	end
+c************************************************************************
+	subroutine CreateCo(coObj,nx,ny,nz,cellx,celly,cellz,freq0)
+c
+	implicit none
+	integer coObj,nx,ny,nz
+	real freq0,cellx,celly,cellz
+c
+	call coCreate(coObj)
+	call coAxSet(coObj,1,'ANGLE',dble(nx/2+1),0.d0,dble(cellx))
+	call coAxSet(coObj,2,'ANGLE',dble(ny/2+1),0.d0,dble(celly))
+	call coAxSet(coObj,3,'ANGLE',dble(nz/2+1),0.d0,dble(cellz))
+	call coAxSet(coObj,4,'FREQ',1.d0,dble(freq0),0.008d0)
+	end
+c************************************************************************
+	subroutine DatWrite(tno,Dat,nx,ny,nz)
+c
+	implicit none
+	integer tno,nx,ny,nz
+	real Dat(nx,ny,nz)
+c
+c  The routine that does the real work in writing out the data.
+c------------------------------------------------------------------------
+	integer j,k
+c
+	do k=1,nz
+	  call xysetpl(tno,1,k)
+	  do j=1,ny
+	    call xywrite(tno,j,Dat(1,j,k))
+	  enddo
+	enddo
+	end
+c************************************************************************
+	subroutine BeamMake(tno,beam,coObj,bnx,bny,bnz,tvis,
+     *							version,line)
+c
+	implicit none
+	integer tno,bnx,bny,bnz,coObj,tvis
+	character beam*(*),version*(*),line*(*)
+c
+c  Create an output beam dataset. It takes a bit of thinking to determine
+c  the dimensionality of the output.
+c------------------------------------------------------------------------
+	integer imsize(3)
+c
+	imsize(1) = bnx
+	imsize(2) = bny
+	imsize(3) = bnz
+c
+	call xyopen(tno,beam,'new',3,imsize)
+	call HdFiddle(tvis,tno,version,line,coObj,'beam',0.0)
+	end
+c************************************************************************
+	subroutine ImMake(tno,map,coIn,nx,ny,nz,tvis,version,line,rms)
+c
+	implicit none
+	integer tno,coIn,nx,ny,nz,tvis
+	real rms
+	character map*(*),version*(*),line*(*)
+c
+c  Create an output image dataset -- this is pretty easy!
+c------------------------------------------------------------------------
+	integer imsize(4),naxis
+c
+	imsize(1) = nx
+	imsize(2) = ny
+	imsize(3) = nz
+	imsize(4) = 1
+	naxis = 4
+c
+	call xyopen(tno,map,'new',naxis,imsize)
+	call HdFiddle(tvis,tno,version,line,coIn,'intensity',rms)
+	end
+c************************************************************************
+	subroutine HdFiddle(tvis,tno,version,bfwhm,coIn,btype,rms)
+c
+	implicit none
+	integer tvis,tno,coIn
+	character version*(*),btype*(*),bfwhm*(*)
+	real rms
+c
+c  Make the header of the output dataset.
+c------------------------------------------------------------------------
+	character line*64
+c
+c  Call the various routines which handle these sorts of things.
+c
+	call hdWrite(tno)
+	call coWrite(coIn,tno)
+	call wrbtype(tno,btype)
+	call wrhda(tno,'bunit','JY/BEAM')
+	if(rms.gt.0)call wrhdr(tno,'rms',rms)
+c
+c  Write the history file.
+c
+	call hdcopy(tvis,tno,'history')
+	call hisOpen(tno,'append')
+	line = 'INVERT3: Miriad '//version
+	call hisWrite(tno,line)
+	call hisInput(tno,'INVERT3')
+	line = 'INVERT3: '//bfwhm
+	call hisWrite(tno,line)
+	call hisClose(tno)
+c
+	end
+c************************************************************************
+	subroutine WtCalc(tvis,Wts,wdu,wdv,wdw,wnu,wnv,wnw,nvis,nchan)
+c
+	implicit none
+	integer tvis,wnu,wnv,wnw,nvis,nchan
+	real Wts(wnu/2+1,wnv,wnw),wdu,wdv,wdw
+c
+c  Calculate the weight to be applied to each visibility.
+c
+c  Input:
+c    tvis	Handle of the visibility scratch file.
+c    wnu,wnv,wnw Full size of the weights array.
+c    wdu,wdv,wdw Cell increments (wavelengths).
+c    nvis	Number of visibilities.
+c    nchan	Number of channels.
+c
+c  Output:
+c    Wts	Array containing the visibility weights.
+c
+c------------------------------------------------------------------------
+	integer InU,InV,InW,InWt,InRms2,InData
+	parameter(InU=0,InV=1,InW=2,InWt=6,InRms2=4,InData=8)
+	integer Maxrun
+	parameter(Maxrun=2048)
+	integer i,j,k,jd,kd,VispBuf, VisSize,u,v,w,m,mtot,l,ltot
+	real Visibs(Maxrun),t1,t2
+c
+c  Determine the number of visibilities perr buffer.
+c
+	VisSize = InData + 2*nchan
+	VispBuf = (Maxrun-InData)/VisSize + 1
+c
+c  Zero out the array.
+c
+	do k=1,wnw
+	  do j=1,wnv
+	    do i=1,wnu/2+1
+	      Wts(i,j,k) = 0.
+	    enddo
+	  enddo
+	enddo
+c
+c  Accumulate the weight function.
+c
+	m = 0
+	mtot = nvis
+	dowhile(m.lt.mtot)
+	  ltot = min(VispBuf,mtot-m)
+	  call scrread(tvis,Visibs,m*VisSize,(ltot-1)*VisSize+InData)
+	  do l=1,ltot*VisSize,VisSize
+	    if(Visibs(l+InU).lt.0)then
+	      u = nint(-Visibs(l+InU)/wdu) + 1
+	      v = nint(-Visibs(l+InV)/wdv) + wnv/2 + 1
+	      w = nint(-Visibs(l+InW)/wdw) + wnw/2 + 1
+	    else
+	      u = nint(Visibs(l+InU)/wdu) + 1
+	      v = nint(Visibs(l+InV)/wdv) + wnv/2 + 1
+	      w = nint(Visibs(l+InW)/wdw) + wnw/2 + 1
+	    endif
+	    Wts(u,v,w) = Wts(u,v,w) + Visibs(l+InWt)
+	  enddo
+	  m = m + ltot
+	enddo
+c
+c  Correct the first row.
+c
+	kd = wnw/2+1
+	do k=wnw/2+1,wnw
+	  jd = wnv/2+1
+	  do j=wnv/2+1,wnv
+	    t1 = Wts(1,j,k) + Wts(1,jd,kd)
+	    t2 = Wts(1,j,kd) + Wts(1,jd,k)
+	    Wts(1,j,k)   = t1
+	    Wts(1,jd,kd) = t1
+	    Wts(1,j,kd)  = t2
+	    Wts(1,jd,k)  = t2
+	    jd = jd - 1
+	  enddo
+	  kd = kd - 1
+	enddo
+c
+	end
+c************************************************************************
+	subroutine WtIni(defWt,supx,supy,supz,nx,ny,nz,
+     *	  cellx,celly,cellz,fwhmx,fwhmy,fwhmz,umax,vmax,wmax,
+     *	  Natural,wnu,wnv,wnw,wdu,wdv,wdw,tu,tv,tw)
+c
+	implicit none
+	logical defWt,Natural
+	real supx,supy,supz,cellx,celly,cellz,fwhmx,fwhmy,fwhmz
+	real wdu,wdv,wdw,tu,tv,tw,umax,vmax,wmax
+	integer nx,ny,nz,wnu,wnv,wnw
+c
+c  Determine some things about the weighting process, and tell the
+c  user as much.
+c
+c  Input:
+c    defWt	True if the default weighting scheme is to be used.
+c    supx,supy	Sidelobe suppression region (radians).
+c    nx,ny	Output image size.
+c    cellx,celly Image cell size.
+c    fwhmx,fwhmy Image-domain taper.
+c    umax,vmax	 Maximum baselines in u and v.
+c  Output:
+c    wnu,wnv,wnw Size of the weights grid.
+c    wdu,wdv,wdw Weight grid cell size.
+c    tu,tv,tw	 Taper parameters.
+c    Natural	 True if natural weighting is being used.
+c------------------------------------------------------------------------
+	include 'mirconst.h'
+	integer n(3),length,i,nxd,nyd,nzd
+	character line*64
+	logical Uni
+c
+c  Externals.
+c
+	integer nextpow2
+c
+	nxd = nextpow2(nx)
+	nyd = nextpow2(ny)
+	nzd = nextpow2(nz)
+	call Sizes(defWt,supx,nxd,cellx,fwhmx,umax,wnu,wdu,tu)
+	call Sizes(defWt,supy,nyd,celly,fwhmy,vmax,wnv,wdv,tv)
+	call Sizes(defWt,supz,nzd,cellz,fwhmz,wmax,wnw,wdw,tw)
+c
+	Natural = wnu.le.2.and.wnv.le.2.and.wnw.le.2
+	Uni     = abs(1-nxd*abs(cellx*wdu)).lt.0.01.and.
+     *		  abs(1-nyd*abs(celly*wdv)).lt.0.01.and.
+     *		  abs(1-nzd*abs(cellz*wdw)).lt.0.01
+c
+	n(1) = nint(3600*180/pi/wdu)
+	n(2) = nint(3600*180/pi/wdv)
+	n(3) = nint(3600*180/pi/wdw)
+	call mitoaf(n,3,line,length)
+	i = index(line(1:length),',')
+	line(i:i) = 'x'
+	i = index(line(1:length),',')
+	line(i:i) = 'x'
+	call output('Sidelobe suppression area is '//line(1:length)//
+     *		' arcsec')
+	if(Natural)then
+	  call output(' ... this corresponds to natural weighting')
+	else if(Uni)then
+	  call output(' ... this corresponds to uniform weighting')
+	else
+	  call output(' ... this corresponds to a super-uniform '//
+     *						'weighting')
+	endif
+c
+	end
+c************************************************************************
+	subroutine Sizes(defWt,sup,gn,cell,fwhm,uvmax,wn,wd,T)
+c
+	implicit none
+	real cell,sup,wd,fwhm,T,uvmax
+	integer gn,wn
+	logical defWt
+c
+c  Determine various cell and size parameters, which are independent of
+c  whether we are dealing with the x or y axis.
+c
+c  Input:
+c    defWt	True if we are to use the default weighting scheme.
+c    cell	Image cell size (arcseconds).
+c    uvmax
+c    sup	Suppression region (arcseconds).
+c    fwhm	Gausian taper fwhm (arcseconds).
+c    gn		Image dimension (pixels).
+c
+c  Output:
+c    wn		Dimension of weights array (pixels).
+c    wd		Uv plane weights cell size (wavelengths).
+c    T		Taper exponent parameter (nepers/wavelength**2).
+c
+c------------------------------------------------------------------------
+	include 'maxdim.h'
+	include 'mirconst.h'
+	real gd
+c
+c  Externals.
+c
+	character itoaf*8
+c
+	T = - Fwhm**2 * (pi**2 / (4.*log(2.)))
+	gd = 1/abs(Cell * gn)
+c
+	if(Sup.gt.0)then
+	  wd = 1/sup
+	  wn = 2*nint( uvmax / wd ) + 1
+	else if(defWt)then
+	  wd = gd
+	  wn = 2*nint( uvmax / wd ) + 1
+	else
+	  wd = 1/abs(Cell)
+	  wn = 1
+	endif
+c
+	if(gn.gt.maxdim)call bug('f',
+     *	  'Maximum permitted image size is '//itoaf(maxdim))
+c
+	end
+c************************************************************************
+	subroutine WtRobust(robust,UWts,wnu,wnv,wnw)
+c
+	implicit none
+	integer wnv,wnu,wnw
+	real robust,UWts(wnu/2+1,wnv,wnw)
+c
+c  Use Brigg's scheme to make the weights robust.
+c------------------------------------------------------------------------
+	integer i,j,k
+	real SumW,SumW2,t,Wav,S2
+c
+c  Determine the mean weight.
+c
+	SumW = 0
+	SumW2 = 0
+	do k=1,wnw
+	  do j=1,wnv
+	    do i=1,wnu/2+1
+	      t = UWts(i,j,k)
+	      SumW = SumW + t
+	      SumW2 = SumW2 + t*t
+	    enddo
+	  enddo
+	enddo
+	if(SumW.eq.0)call bug('f','Something is screwy in WtRobust')
+c
+	Wav = SumW2 / SumW
+	S2 = 12.5 * 10.0**(-2*robust)/Wav
+c
+	do k=1,wnw
+	  do j=1,wnv
+	    do i=1,wnu/2+1
+	      UWts(i,j,k) = 1 + UWts(i,j,k)*S2
+	    enddo
+	  enddo
+	enddo
+c
+	end
+c************************************************************************
+	subroutine Wter(tscr,Natural,UWts,wdu,wdv,wdw,wnu,wnv,wnw,
+     *	  Tu,Tv,Tw,nvis,npol,Rms2,umax,vmax,wmax,cellx,celly,cellz)
+c
+	implicit none
+	integer tscr,wnu,wnv,wnw,nvis,npol
+	logical Natural
+	real Tu,Tv,Tw,wdu,wdv,wdw,UWts(wnu/2+1,wnv,wnw)
+	real Rms2,umax,vmax,wmax,cellx,celly,cellz
+c
+c  Apply weights and calculate RMS noise for each pointing.
+c
+c  Input:
+c    tscr	Scratch file of the visibility data.
+c    Natural	True if natural weighting is to be used.
+c    Tu,Tv	Scale factors for determining taper.
+c    UWts	If its not natural weighting, this contains the
+c		uniform weight information.
+c    wnu,wnv	Weight array size.
+c    wdu,wdv	Weight cell size.
+c    nvis	Number of visibilities.
+c    npol	Number of polarisations.
+c  Output:
+c    Rms2	An estimate of the rms noise in the output map.
+c    umax,vmax	Maximum u and v values.
+c------------------------------------------------------------------------
+	integer InU,InV,InW,InRms,InWt,InData
+	parameter(InU=0,InV=1,InW=2,InRms=4,InWt=6,InData=8)
+	integer maxrun
+	parameter(maxrun=8192)
+c
+	real Wts(maxrun/(InData+2)),Vis(maxrun),SumWt
+	integer i,j,k,l,size,step,n,u,v,w,offcorr,nbeam,ncorr
+c
+c  Miscellaneous initialisation.
+c
+	RMS2 = 0
+	SumWt = 0
+c
+	umax = 0
+	vmax = 0
+	wmax = 0
+c
+	nbeam = 1
+	offcorr = InData - 2*nbeam + 1
+	ncorr = nbeam + npol
+c
+	size = 2*npol + InData
+	step = maxrun/size
+	if(step.le.0)
+     *	  call bug('f','Too many channels for buffer in AppWts')
+c
+c  Do the real work.
+c
+	do l=1,nvis,step
+	  n = min(nvis-l+1,step)
+	  call scrread(tscr,Vis,(l-1)*size,n*size)
+c
+c  Calculate the basic weight, either natural or pseudo-uniform.
+c
+	  if(Natural)then
+	    k = 1
+	    do i=1,n
+	      Wts(i) = Vis(k+InWt)
+	      Vis(k+InWt) = 1
+	      k = k + size
+	    enddo
+	  else
+	    k = 1
+	    do i=1,n
+	      if(Vis(k+InU).gt.0)then
+	        u = nint(Vis(k+InU)/wdu)         + 1
+	        v = nint(Vis(k+InV)/wdv) + wnv/2 + 1
+		w = nint(Vis(k+InW)/wdw) + wnw/2 + 1
+	      else
+	        u = nint(-Vis(k+InU)/wdu)         + 1
+	        v = nint(-Vis(k+InV)/wdv) + wnv/2 + 1
+	        w = nint(-Vis(k+InW)/wdw) + wnw/2 + 1
+	      endif
+	      Wts(i) = Vis(k+InWt) / UWts(u,v,w)
+	      Vis(k+InWt) = 1
+	      k = k + size
+	    enddo
+	  endif
+c
+c  Include a taper in the weights, if necessary.
+c
+	  if(abs(Tu)+abs(Tv).gt.0)then
+	    k = 1
+	    do i=1,n
+	      Wts(i) = Wts(i) * exp( Tu*Vis(k+InU)*Vis(k+InU) +
+     *				     Tv*Vis(k+InV)*Vis(k+InV) +
+     *				     Tw*Vis(k+InW)*Vis(k+InW) )
+	      k = k + size
+	    enddo
+	  endif
+c
+c  Normalise the uv coordinates, and determine the rms noise (for
+c  a mosaicing observation, this is the mean over all fields).
+c
+	  k = 1
+	  do i=1,n
+	    Vis(k+InU) = Vis(k+InU) * cellx
+	    Vis(k+InV) = Vis(k+InV) * celly
+	    Vis(k+InW) = Vis(k+InW) * cellz
+	    umax = max( umax, abs(Vis(k+InU)) )
+	    vmax = max( vmax, abs(Vis(k+InV)) )
+	    wmax = max( wmax, abs(Vis(k+InW)) )
+	    SumWt = SumWt + Wts(i)
+	    RMS2 = RMS2 + Wts(i)*Wts(i)*Vis(k+InRms)
+	    k = k + Size
+	  enddo
+
+c
+c  Apply the weights to the data.
+c
+	  do j=1,ncorr
+	    k = 2*(j-1) + offcorr
+	    do i=1,n
+	      Vis(k)   = Wts(i)*Vis(k)
+	      Vis(k+1) = Wts(i)*Vis(k+1)
+	      k = k + size
+	    enddo
+	  enddo
+c
+c  All done. Write out the results.
+c
+	  call scrwrite(tscr,Vis,(l-1)*size,n*size)
+	enddo
+c
+c  Finish up the RMS noise estimates.
+c
+	if(SumWt.gt.0)then
+	  RMS2 = sqrt(RMS2 / SumWt/SumWt )
+	else
+	  RMS2 = 0
+	endif
+c
+	end
+c************************************************************************
+	subroutine GetOpt(uvflags,systemp,double,tfit,zflip,
+     *							cotag,redisk)
+c
+	implicit none
+	character uvflags*(*)
+	logical systemp,double,tfit,zflip,cotag,redisk
+c
+c  Get extra processing options.
+c
+c------------------------------------------------------------------------
+	integer NOPTS
+	parameter(NOPTS=9)
+	character opts(NOPTS)*9
+	logical present(NOPTS)
+c
+	data opts/'nocal    ','nopol    ','nopass   ','systemp  ',
+     *		  'double   ','tfit     ','zflip    ','cotag    ',
+     *		  'redisk'  /
+c
+c  Get extra processing options.
+c
+	call options('options',opts,present,NOPTS)
+	systemp = present(4)
+	double  = present(5)
+	tfit    = present(6)
+	zflip   = present(7)
+	cotag   = present(8)
+	redisk  = present(9)
+c
+c  Set the processing flags for the uvDat routines.
+c
+	uvflags = 'xwlds'
+	if(.not.present(1))uvflags(9:9)   = 'c'
+	if(.not.present(2))uvflags(10:10) = 'e'
+	if(.not.present(3))uvflags(11:11) = 'f'
+	end
+c************************************************************************
+	subroutine doDisk(tscr,pltb,nvis,npol,freq0)
+c
+	implicit none
+	integer tscr,npol,nvis
+	real freq0,pltb
+c
+c  Determine the temperature and subtract a disk model from the data.
+c------------------------------------------------------------------------
+	include 'mirconst.h'
+	integer MAXBUF
+	parameter(MAXBUF=16)
+	integer InDisk,InData
+	parameter(InDisk=6,InData=9)
+c
+	integer VisSize,i
+	double precision SumXX,SumXY
+	real data(MAXBUF),a
+c
+	character itoaf*4
+c
+	VisSize = InData - 1 + 2*npol
+	if(VisSize.gt.MAXBUF)call bug('f','Buffer overflow in doDisk')
+c
+	if(pltb.gt.0)then
+	  a = 2*freq0*freq0*pltb*(KMKS*1e18)/(CMKS*CMKS*1e-26)
+	else
+	  SumXX = 0
+	  SumXY = 0
+c
+	  do i=1,nvis
+	    call scrread(tScr,data,(i-1)*VisSize,VisSize)
+	    SumXX = SumXX + Data(InDisk)*Data(InDisk)
+	    SumXY = SumXY + Data(InDisk)*Data(InData)
+	  enddo
+c
+	  a = SumXY / SumXX
+	endif
+c
+c  Determine what this is in Kelvin, using the Rayleigh Jeans
+c  approximation.
+c
+	pltb= (a*1e-26*CMKS*CMKS)/(2*freq0*freq0*(KMKS*1e18))
+	call output('Using black-body temperature of (Kelvin): '
+     *	  //itoaf(nint(pltb)))
+c
+c  Now subtract it off.
+c
+	do i=1,nvis
+	  call scrread(tScr,data,(i-1)*VisSize,VisSize)
+	  Data(InData) = Data(InData) - a * Data(InDisk)
+	  call scrwrite(tScr,data,(i-1)*VisSize,VisSize)
+	enddo
+c
+	end
+c************************************************************************
+	subroutine GetVis(systemp,npol,qidx,uidx,tscr,vis,nvis,
+     *					umax,vmax,wmax,freq0)
+c
+	implicit none
+	logical systemp
+	integer npol,tscr,nvis,qidx,uidx
+	real umax,vmax,wmax,freq0
+	character vis*(*)
+c
+c  Get the data to be processed imaged. This writes out a scratch file
+c  with records.
+c    u,v,w,pointing,rms**2,log(freq),wt,0,r1,i1,r2,i2,...
+c
+c
+c  Input:
+c    systemp	Use weights proportional to 1/rms**2
+c    npol	Number of polarisations.
+c    tscr	Handle of the scratch file.
+c    qidx,uidx	Indices of the Q and U parameters.
+c  Input/Output:
+c    umax,vmax	Max u,v spacing.
+c  Output:
+c    nvis	The number of visibilities read.
+c    ChanWt	Extra weighting factor for each channel.
+c    freq0	MFS reference frequency.
+c------------------------------------------------------------------------
+	include 'maxdim.h'
+	integer MAXPOL,MAXLEN
+	parameter(MAXPOL=4,MAXLEN=4+MAXPOL*MAXCHAN)
+	integer tno,nread,nchan,offset,nbad,nrec,ncorr,nlen
+	integer smatidx
+	complex data(MAXCHAN,MAXPOL),out(MAXLEN)
+	logical flags(MAXCHAN,MAXPOL),more
+	real uumax,vvmax,wwmax,rms2,Wt,fac,a,b,theta
+	double precision uvw(4),uvw2(4),dSumWt,dfreq0
+c
+c  Externals.
+c
+	character itoaf*8
+c
+c  Get the first record.
+c
+	tno = 0
+	call GetRec(tno,uvw,data,flags,npol,MAXCHAN,nchan)
+	nread = nchan
+	more = nchan.gt.0
+	if(nread.eq.0)call bug('f','No data to process')
+	call uvDatGta('name',vis)
+c
+c  Initialise everything.
+c
+	dSumWt = 0
+c
+	offset = 0
+	nvis = 0
+	nbad = 0
+	uumax = umax
+	vvmax = vmax
+	wwmax = wmax
+	umax = 0
+	vmax = 0
+	wmax = 0
+	dfreq0 = 0
+c
+c  Loop over all the data.
+c  Determine whether to accept this record, and copy it to the output
+c  buffer. Then write it out if needed.
+c
+	dowhile(more)
+c
+	  call uvDatGtr('variance',rms2)
+	  if(systemp)then
+	    if(rms2.gt.0)then
+	      Wt = 1/rms2
+	    else
+	      Wt = 0
+	    endif
+	  else
+	    call uvrdvrr(tno,'inttime',Wt,0.0)
+	  endif
+c
+c  Process it all.
+c
+	  call Pluvw(uvw(1),uvw(3),uvw2,a,b,fac,smatidx,theta)
+	  if(qidx.ne.0.and.uidx.ne.0)
+     *		call QUrot(theta,data(1,qidx),data(1,uidx),nread)
+	  uvw2(4) = uvw(3)
+	  call ProcMFS(tno,uvw2,smatidx,Wt,a,b,fac,rms2,data,flags,
+     *		npol,MAXCHAN,nread,nvis,nbad,out,MAXLEN,nrec,ncorr,
+     *		uumax,vvmax,wwmax,umax,vmax,wmax,dSumWt,dfreq0)
+c
+c  Process an accepted record.
+c
+	  if(nrec.gt.0)then
+	    call HdChk(tno)
+	    nlen = 2*nrec * ( ncorr + 4)
+	    call scrwrite(tscr,Out,offset,nlen)
+	    offset = offset + nlen
+	  endif
+	  call GetRec(tno,uvw,data,flags,npol,MAXCHAN,nread)
+	  more = nread.gt.0
+	enddo
+c
+c  Say how many records were rejected.
+c
+	call output('Visibilities accepted: '//itoaf(nvis))
+	if(nbad.gt.0)
+     *	  call bug('w','Visibilities rejected: '//itoaf(nbad))
+	if(nvis.eq.0)call bug('f','No visibilities to map')
+c
+c  Get MFS mean frequency.
+c
+	freq0 = exp(dfreq0/dSumWt)
+c
+	end
+c************************************************************************
+	subroutine QUrot(theta,qdata,udata,nchan)
+c
+	implicit none
+	integer nchan
+	real theta
+	complex qdata(nchan),udata(nchan)
+c
+c  Rotate the Q and U values.
+c
+c  Input:
+c    theta	Angle to rotate by, in radians.
+c    nchan	Number of channels.
+c  Input/Output:
+c    qdata,udata The Q and U data vectors.
+c------------------------------------------------------------------------
+	integer i
+	real cost,sint
+	complex temp
+c
+	cost = cos(2*theta)
+	sint = sin(2*theta)
+c
+	do i=1,nchan
+	  temp     =  qdata(i)*cost + udata(i)*sint
+	  udata(i) = -qdata(i)*sint + udata(i)*cost
+	  qdata(i) = temp
+	enddo
+c
+	end
+c************************************************************************
+	subroutine ProcMFS(tno,uvw,smatidx,Wt,a,b,fac,rms2,data,flags,
+     *		npol,mchan,nchan,nvis,nbad,out,MAXLEN,nrec,ncorr,
+     *		uumax,vvmax,wwmax,umax,vmax,wmax,SumWt,freq0)
+c
+	implicit none
+	integer tno,nchan,npol,mchan,nvis,nbad,MAXLEN,nrec,ncorr
+	integer smatidx
+	double precision uvw(3)
+	real rms2,uumax,vvmax,wwmax,umax,vmax,wmax,Wt,fac,a,b
+	double precision freq0,SumWt
+	complex data(mchan,npol),out(MAXLEN)
+	logical flags(mchan,npol)
+c
+c  Process a visibility spectrum in MFS mode.
+c
+c  Input:
+c    tno	Handle of the input dataset.
+c    nchan	Number of channels.
+c    npol	Number of polarisations.
+c    mchan	First dim of data and flags.
+c    Data	Visibility data.
+c    flags	Flags associated with the visibility data.
+c    Wt		Basic weight.
+c    rms2	Noise variance.
+c    fac	Factor to scale the visibilities by.
+c    smatidx	Index to the shadowing matrix.
+c    uumax,vvmax u,v limits.
+c  Input/Output:
+c    SumWt	Sum of all the weights.
+c    umax,vmax	Max value for abs(u),abs(v).
+c    nvis	Number of good visibilities.
+c    nbad	Number of bad visibilities.
+c  Output:
+c    out	A record consisting of
+c		u,v,w,pointing,rms**2,log(freq),wt,0,r1,i1,r2,i2,...
+c    nrec	Number of records.
+c    ncorr	Number of correlations in each record.
+c------------------------------------------------------------------------
+	include 'maxdim.h'
+	integer i,j,nlen
+	logical ok
+	real u,v,w,uu,vv,ww,f,t,bb
+	double precision sfreq(MAXCHAN)
+c
+c  Externals.
+c
+	real j1xbyx
+c
+c  Check whether the weight is positive.
+c
+	ok = Wt.gt.0
+	nlen = 0
+c
+c  Collapse all the polarisation flags into one flag vector.
+c
+	if(ok)then
+	  do j=2,npol
+	    do i=1,nchan
+	      flags(i,1) = flags(i,1).and.flags(i,j)
+	    enddo
+	  enddo
+c
+c  Get frequency information.
+c
+	  call uvinfo(tno,'sfreq',sfreq)
+	  uu = uvw(1) / sfreq(1)
+	  vv = uvw(2) / sfreq(1)
+	  ww = uvw(3) / sfreq(1)
+	  bb = b / sfreq(1)
+c
+c  Copy them to the output buffer.
+c
+	  do i=1,nchan
+	    f = sfreq(i)
+	    u = abs(uu * f)
+	    v = abs(vv * f)
+	    w = abs(ww * f)	    
+	    if(flags(i,1).and.u.lt.uumax.and.v.lt.vvmax
+     *			 .and.w.lt.wwmax)then
+ 	      if(nlen+4+npol.gt.MAXLEN)call bug('f',
+     *			'Buffer overflow, in ProcMFS')
+	      t = a * j1xbyx(bb*f)
+	      out(nlen+1) = cmplx(uu*f,vv*f)
+	      out(nlen+2) = cmplx(ww*f,real(smatidx))
+	      out(nlen+3) = cmplx(rms2,t)
+	      out(nlen+4) = Wt
+	      freq0 = freq0 + Wt * log(f)
+	      SumWt = SumWt + Wt
+	      umax = max(u,umax)
+	      vmax = max(v,vmax)
+	      wmax = max(w,wmax)
+c
+	      nlen = nlen + 4
+	      do j=1,npol
+		nlen = nlen + 1
+		out(nlen) = fac*data(i,j)
+	      enddo
+	      nvis = nvis + 1
+	    else
+	      nbad = nbad + 1
+	    endif
+	  enddo
+	else
+	  nbad = nbad + nchan
+	endif
+c
+	ncorr = npol
+	nrec = nlen / (4 + ncorr)
+c
+	end
+c************************************************************************
+	subroutine GetRec(tno,uvw,data,flags,npol,MAXCHAN,nchan)
+c
+	implicit none
+	integer npol,MAXCHAN,nchan,tno
+	double precision uvw(5)
+	complex data(MAXCHAN,npol)
+	logical flags(MAXCHAN,npol)
+c
+c  Get a record from the input dataset.
+c------------------------------------------------------------------------
+	integer nread,i
+	logical more,first
+c
+c  Externals.
+c
+	logical uvDatOpn
+c
+	nread = 0
+	more = .true.
+	first = .false.
+c
+	dowhile(nread.eq.0.and.more)
+	  if(tno.ne.0)then
+	    call uvDatRd(uvw,data,flags,MAXCHAN,nread)
+	    if(nread.eq.0)then
+	      call uvDatCls
+	      call HdDone(tno)
+	    else
+	      more = .false.
+	    endif
+	  else
+	    nread = 0
+	  endif
+c
+	  if(nread.eq.0)then
+	    more = uvDatOpn(tno)
+	    first = more
+	  endif
+	enddo
+c
+c  Read the rest of the polarisation records.
+c
+	if(nread.gt.0)then
+	  do i=2,npol
+	    call uvDatRd(uvw,data(1,i),flags(1,i),nread,nchan)
+	    if(nread.ne.nchan)call bug('f',
+     *		'Number of channels differ between polarisations')
+	  enddo
+	endif
+c
+	nchan = nread
+	if(first)call VarChk(tno)
+c
+	end
+c************************************************************************
+	subroutine VarChk(tno)
+c
+	implicit none
+	integer tno
+c
+c  Check whether we can successfully compute the noise variance.
+c------------------------------------------------------------------------
+	integer CHANNEL,WIDE
+	parameter(CHANNEL=1,WIDE=2)
+	real rtemp
+	character name*32
+	double precision line(6)
+	integer itype
+c
+	call uvDatGtr('variance',rtemp)
+	if(rtemp.le.0)then
+	  call uvDatGta('name',name)
+	  call bug('w','Noise variance cannot be determined for '//name)
+	  call uvrdvrr(tno,'inttime',rtemp,0.)
+	  if(rtemp.le.0)call bug('w',
+     *	    '... variable inttime is missing or non-positive')
+	  call uvrdvrr(tno,'jyperk',rtemp,0.)
+	  if(rtemp.le.0)call bug('w',
+     *	    '... variable jyperk is missing or non-positive')
+	  call uvinfo(tno,'line',line)
+	  itype = nint(line(1))
+	  if(itype.eq.WIDE)then
+	    call uvrdvrr(tno,'wsystemp',rtemp,0.)
+	    if(rtemp.le.0)call bug('w',
+     *	      '... variable wsystemp is missing or non-positive')
+	  else
+	    call uvrdvrr(tno,'systemp',rtemp,0.)
+	    if(rtemp.le.0)call bug('w',
+     *	      '... variable systemp is missing or non-positive')
+	  endif
+	  call bug('w','Set the variable(s) using puthd')
+	endif
+c
+	end
+
