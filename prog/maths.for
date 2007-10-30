@@ -441,7 +441,7 @@ c------------------------------------------------------------------------
 	integer i,lblc,ltrc
 	real def,crpix
 	integer nkeys
-	parameter(nkeys=46)
+	parameter(nkeys=45)
 	character keyw(nkeys)*8
 c
 c  Externals.
@@ -455,10 +455,10 @@ c
      *    'crval6  ','crval7  ',
      *	  'ctype1  ','ctype2  ','ctype3  ','ctype4  ','ctype5  ',
      *    'ctype6  ','ctype7  ',
-     *	  'date-obs','epoch   ','history ',
+     *	  'obstime ','epoch   ','history ',
      *	  'ltype   ','lstart  ','lstep   ','lwidth  ','pbfwhm  ',
-     *	  'instrume','niters  ','object  ','telescop','xshift  ',
-     *	  'yshift  ','restfreq','vobs    ','observer','obsra   ',
+     *	  'instrume','niters  ','object  ','telescop','cellscal',
+     *	  'restfreq','vobs    ','observer','obsra   ',
      *	  'obsdec  ','btype   ','mostable'/
 C
 	do i=1,nkeys
