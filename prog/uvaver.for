@@ -82,6 +82,8 @@ c    rjs  25sep93 Check when we run out of baseline slots in bufacc.
 c    rjs  19oct93 Check that data is read.
 c    rjs  23sep93 W axis change.
 c    rjs  10oct94 relax option.
+c    rjs  24oct94 Weight data (in time averaging) according to integration
+c		  time.
 c
 c  Bugs:
 c    * The way of determining whether a source has changed is imperfect.
@@ -405,46 +407,27 @@ c
 	    call uvputvri(tOut,'pol',pols(i,j),1)
 	    doamp = ampsc.or.(vecamp.and.PolsPara(pols(i,j)))
 	    nbp = nbp + 1
-	    if(cntp(i,j).gt.1)then
-	      do k=1,nchan(i,j)
-		if(count(k+p).gt.0)then
-		  flags(k) = .true.
 c
-c Amp-scalar averaging; vector phase scalar amplitude
+c  Loop over the channels. If we are doing amp-scalar averaging, and
+c  the average visibility is zero, flag the data. Otherwise just
+c  depend on whether we have good data or not.
 c
-		  if(doamp)then
-                    amp = abs(buf(k+p))
-                    if (amp.gt.0) then
-		      data(k) = (bufr(k+p) / count(k+p)) *  
+	    do k=1,nchan(i,j)
+	      if(doamp.and.
+     *		abs(real(buf(k+p)))+abs(aimag(buf(k+p))).eq.0)
+     *		count(k+p) = 0
+	      flags(k) = count(k+p).gt.0
+	      if(.not.flags(k))then
+		data(k) = 0
+	      else if(doamp)then
+                amp = abs(buf(k+p))
+		data(k) = (bufr(k+p) / count(k+p)) *  
      *                          (buf(k+p) / amp)
-                    else
-		      flags(k) = .false.
-		      data(k) = 0
-                    endif
-c
-c  Vector averaging.
-c
-		  else
-		    data(k) = buf(k+p) / count(k+p)
-                  endif
-c
-c  Case of no data.
-c
-		else
-		  flags(k) = .false.
-		  data(k) = 0
-		endif
-	      enddo
- 	      call uvwrite(tOut,preambl,data,flags,nchan(i,j))
-c
-c  Case of just one set of data.
-c
-	    else
-	      do k=1,nchan(i,j)
-	        flags(k) = count(k+p).gt.0
-	      enddo
-	      call uvwrite(tOut,preambl,buf(p+1),flags,nchan(i,j))
-	    endif		
+	      else
+		data(k) = buf(k+p) / count(k+p)
+              endif
+	    enddo
+ 	    call uvwrite(tOut,preambl,data,flags,nchan(i,j))
 	  enddo
 	enddo
 c
@@ -496,21 +479,21 @@ c
 c  Add in this visibility.
 c
 	if(cnt(bl).eq.0)then
-	  cnt(bl) = 1
+	  cnt(bl) = inttime
 	  npols(bl) = 0
-	  preamble(1,bl) = preambl(1)
-	  preamble(2,bl) = preambl(2)
-	  preamble(3,bl) = preambl(3)
-	  preamble(4,bl) = preambl(4)
-	  preamble(5,bl) = preambl(5)
+	  preamble(1,bl) = inttime * preambl(1)
+	  preamble(2,bl) = inttime * preambl(2)
+	  preamble(3,bl) = inttime * preambl(3)
+	  preamble(4,bl) = inttime * preambl(4)
+	  preamble(5,bl) = inttime * preambl(5)
 	  preamble(6,bl) = inttime
 	else
-	  cnt(bl) = cnt(bl) + 1
-	  preamble(1,bl) = preamble(1,bl) + preambl(1)
-	  preamble(2,bl) = preamble(2,bl) + preambl(2)
-	  preamble(3,bl) = preamble(3,bl) + preambl(3)
-	  preamble(4,bl) = preamble(4,bl) + preambl(4)
-	  preamble(5,bl) = preamble(5,bl) + preambl(5)
+	  cnt(bl) = cnt(bl) + inttime
+	  preamble(1,bl) = preamble(1,bl) + inttime * preambl(1)
+	  preamble(2,bl) = preamble(2,bl) + inttime * preambl(2)
+	  preamble(3,bl) = preamble(3,bl) + inttime * preambl(3)
+	  preamble(4,bl) = preamble(4,bl) + inttime * preambl(4)
+	  preamble(5,bl) = preamble(5,bl) + inttime * preambl(5)
 	  preamble(6,bl) = preamble(6,bl) + inttime
 	endif
 c
@@ -530,7 +513,6 @@ c
 	  if(p.gt.MAXPOL) call bug('f',
      *	    'Too many polarizations, in BufAcc')
 	  pols(p,bl) = pol
-	  cntp(p,bl) = 1
 	  nchan(p,bl) = nread
 	  pnt(p,bl) = free
 	  free = free + nread
@@ -542,9 +524,9 @@ c
 	  p = pnt(p,bl) - 1
 	  do i=1,nread
 	    if(flags(i))then
-	      buf(i+p) = data(i)
-              bufr(i+p) = abs(data(i))
-	      count(i+p) = 1
+	      buf(i+p) = inttime * data(i)
+              bufr(i+p) = inttime * abs(data(i))
+	      count(i+p) = inttime
 	    else
 	      buf(i+p) = (0.0,0.0)
               bufr(i+p) = 0.0
@@ -555,15 +537,14 @@ c
 c  Else accumulate new data for old baseline.
 c
 	else
-	  cntp(p,bl) = cntp(p,bl) + 1
 	  nread = min(nread,nchan(p,bl))
 	  nchan(p,bl) = nread
 	  p = pnt(p,bl) - 1
 	  do i=1,nread
 	    if(flags(i))then
-	      buf(i+p) = buf(i+p) + data(i)
-              bufr(i+p) = bufr(i+p) + abs(data(i))
-	      count(i+p) = count(i+p) + 1
+	      buf(i+p) = buf(i+p) + inttime * data(i)
+              bufr(i+p) = bufr(i+p) + inttime * abs(data(i))
+	      count(i+p) = count(i+p) + inttime
 	    endif
 	  enddo
 	endif
