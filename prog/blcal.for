@@ -39,21 +39,25 @@ c@ interval
 c	Solution time interval, in minutes. The default is 5 minutes.
 c@ out
 c	The name of the output uv data set. No default.
+c@ options
+c	Extra processing options. Possible values are:
+c	  nopassol  Determine a solution which is independent of channel number.
 c--
 c  History:
 c    rjs  14mar97 Original version.
 c    rjs  17mar97 Enhanced version.
 c    rjs  19jun97 Output has uvw in wrong units.
+c    rjs  30jul97 Added options=nopassol
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
-	parameter(version='BlCal: version 1.0 19-Jun-97')
+	parameter(version='BlCal: version 1.0 30-Jul-97')
 	character out*64,line*32
 	integer lVis,lRef,lOut
 	integer nchan,pol,npol,nfiles
 	double precision interval,preamble(6)
 	complex data(MAXCHAN)
-	logical flags(MAXCHAN),self
+	logical flags(MAXCHAN),self,nopass
 c
 c  Externals.
 c
@@ -63,6 +67,7 @@ c  Get the inputs.
 c
 	call output(version)
 	call keyini
+	call GetOpt(nopass)
 	call uvDatInp('vis','sdlcef3')
 	call keyd('interval',interval,5.d0)
 	if(interval.le.0)call bug('f','Invalid value for interval')
@@ -87,7 +92,7 @@ c
      *	  'Error opening reference dataset')
 	call datLoad(interval)
 	call uvDatCls
-	call datNorm
+	call datNorm(nopass)
 c
 c  Open the input and output.
 c
@@ -126,6 +131,23 @@ c
 c
 	call uvDatCls
 	call uvclose(lOut)
+	end
+c************************************************************************
+	subroutine GetOpt(nopass)
+c
+	implicit none
+	logical nopass
+c------------------------------------------------------------------------
+	integer NOPTS
+	parameter(NOPTS=1)
+	character opts(NOPTS)*8
+	logical present(NOPTS)
+c
+	data opts/'nopassol'/
+c
+	call options('options',opts,present,NOPTS)
+	nopass = present(1)
+c
 	end
 c************************************************************************
 	subroutine datCorr(co,data,flags,nchan1)
@@ -342,9 +364,10 @@ c
 c
 	end
 c************************************************************************
-	subroutine datNorm
+	subroutine datNorm(nopass)
 c
 	implicit none
+	logical nopass
 c------------------------------------------------------------------------
 	include 'blcal.h'
 	double precision Sum
@@ -358,7 +381,7 @@ c
 	    pnt = Head(p,b)
 	    dowhile(pnt.ne.0)
 	      call datNorm1(memc(gidx(pnt)),memi(fidx(pnt)),
-     *					time(pnt),nchan,Sum,Cnt)
+     *				time(pnt),nchan,Sum,Cnt,nopass)
 	      pnt = Next(pnt)
 	    enddo
 	  enddo
@@ -379,28 +402,38 @@ c
 c
 	end
 c************************************************************************
-	subroutine datNorm1(vis,cnt,time,nchan,Sum,SumCnt)
+	subroutine datNorm1(vis,cnt,time,nchan,Sum,SumCnt,nopass)
 c
 	implicit none
 	integer nchan,cnt(nchan),SumCnt
 	complex vis(nchan)
 	double precision time,Sum
+	logical nopass
 c------------------------------------------------------------------------
 	integer i,n
+	complex Csum
 c
+	CSum = 0
 	n = 0
 	do i=1,nchan
 	  n = n + cnt(i)
 	  if(cnt(i).gt.0)then
 	    sum = sum + 
      *		(real(vis(i))**2 + aimag(vis(i))**2)/cnt(i)
+	    CSum = CSum + vis(i)
 	    vis(i) = vis(i) / cnt(i)
-	  else
-	    vis(i) = 1
 	  endif
 	enddo
 	SumCnt = SumCnt + n
 	time = time / n
+c
+c  Fill the spectrum with the fudged data, where necessary.
+c
+	CSum = CSum / n
+	do i=1,nchan
+	  if(cnt(i).eq.0.or.nopass)vis(i) = CSum
+	enddo
+	  
 c
 	end
 c************************************************************************
