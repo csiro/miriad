@@ -6,89 +6,99 @@ c= selfcal - Determine self-calibration of calibration gains.
 c& mchw
 c: calibration, map making
 c+
-c       SELFCAL is a MIRIAD task to perform self-calibration of visibility data.
-c       Either phase only or amplitude and phase calibration can be performed.
-c       The input to SELCAL are a visibility data file, and model images.
+c	SELFCAL is a MIRIAD task to perform self-calibration of visibility data.
+c	Either phase only or amplitude and phase calibration can be performed.
+c	The input to SELCAL are a visibility data file, and model images.
 c	This program then calculates the visibilities corresponding to the
 c	model, accumulates the statistics needed to determine the antennae
 c	solutions, and then calculates the self-cal solutions.
 c
-c       The output is a calibration file, ready to be applied to the
-c       visibility data.
+c	The output is a calibration file, ready to be applied to the
+c	visibility data.
 c
 c@ vis
-c       Name of input visibility data file. No default.
+c	Name of input visibility data file. No default.
 c@ select
-c       Standard uv data selection criteria. Generally this should not include
-c       a "dra" and "ddec" selection, as SELFCAL automatically matches data
-c       with the appropriate pointing center.
+c	Standard uv data selection criteria. Generally this should not include
+c	a "dra" and "ddec" selection, as SELFCAL automatically matches data
+c	with the appropriate pointing center.
 c@ model
-c       Name of the input models. Several models can be given, which can
-c       cover different channel ranges of the input visibility data. Generally
-c       the model should be derived (by mapping and deconvolution) from the
-c       input visibility file, so that the channels in the model correspond
-c       to channels in the visibility file. Though the maps can be made using
-c       any linetype, generally "channel" linetype will give best results (??).
-c       The units of the model MUST be Jy/pixel, rather than Jy/beam. If
-c       no models are given, a point source model is assumed.
+c	Name of the input models. Several models can be given, which can
+c	cover different channel ranges, different pointing centers, and
+c	different polarizations of the input visibility data. Generally
+c	the model should be derived (by mapping and deconvolution) from the
+c	input visibility file, so that the channels in the model correspond
+c	to channels in the visibility file. Though the maps can be made using
+c	any linetype, generally "channel" linetype will give best results (??).
+c	The units of the model MUST be Jy/pixel, rather than Jy/beam. If
+c	no models are given, a point source model is assumed.
 c@ clip
-c       Clip level. Anything, in the input model, below the clip level is set
-c       to zero. Default is 0.
-c@ out
-c       Name of output calibration file. The default is to write the gain
-c       corrections into the input visibility file.
+c	Clip level. Anything, in the input model, below the clip level is set
+c	to zero. Default is 0.
 c@ interval
-c       The length of time, in minutes, of a gain solution. Default is 5,
-c       but use a larger value in cases of poor signal to noise, or
+c	The length of time, in minutes, of a gain solution. Default is 5,
+c	but use a larger value in cases of poor signal to noise, or
 c	if the atmosphere and instrument is fairly stable.
 c@ options
 c       This gives several processing options. Possible values are:
-c          amplitude     Perform amplitude and phase self-cal.
-c          phase                Perform phase only self-cal.
-c          smooth        Determine the solutions in such a way that they are
-c                        smooth with time.
-c	   relax         Relax the convergence criteria. This is useful when
-c	                 selfcal'ing with a very poor model.
-c          apriori       This is used if there is no input model, and the
-c                        source in the visibility data is either a planet,
-c                        or a standard calibrator. This causes the model data to
-c                        be scaled by the known flux of the source. For a planet,
-c                        this flux will be a function of baseline. If the
-c                        source is a point source, the ``apriori'' option is only
-c                        useful if the ``amplitude'' and ``noscale'' option are
-c                        being used. For a planet, this option should also be
-c                        used for a phase selfcal, to get the correct weighting
-c                        of the different baselines in the solution.
-c          noscale       Do not scale the model. Normally the model is scaled
-c                        so that the flux in the model visibilities and the
-c                        observed visibilities are the same. Generally this
-c                        option should be used with at least the apriori option.
-c                        It must be used if selfcal is being used to determine
-c                        Jy/K, and should also be used if the model is believed
-c                        to have the correct scale.
-c       Note that "amplitude" and "phase" are mutually exclusive.
-c       The default is options=phase.
+c	  amplitude  Perform amplitude and phase self-cal.
+c	  phase      Perform phase only self-cal.
+c	  smooth     Determine the solutions in such a way that they are
+c	             smooth with time.
+c	  polarized  The source is polarised. By default the source is
+c	             assumed to be unpolarised. For a polarized source,
+c	             SELFCAL cannot perform polarization conversion. That
+c	             is, if the model is of a particular polarization, then
+c	             the visibility file should contain that sort of
+c	             polarization. For example, if the model is Stokes-Q,
+c	             then the visibility file should contain Stokes-Q.
+c	  mfs        This is used if there is a single plane in the input
+c	             model, which is assumed to represent the image at all
+c	             frequencies. This should also be used if the model has
+c	             been derived from MFCLEAN.
+c	  relax      Relax the convergence criteria. This is useful when
+c	             selfcal'ing with a very poor model.
+c	  apriori    This is used if there is no input model, and the
+c	             source in the visibility data is either a planet,
+c	             or a standard calibrator. This causes the model data
+c	             to be scaled by the known flux of the source. For a
+c	             planet, this flux will be a function of baseline. If
+c	             the source is a point source, the ``apriori'' option
+c	             is only useful if the ``amplitude'' and ``noscale''
+c	             option are being used. For a planet, this option
+c	             should also be used for a phase selfcal, to get the
+c	             correct weighting of the different baselines in the
+c	             solution.
+c	  noscale    Do not scale the model. Normally the model is scaled
+c	             so that the flux in the model visibilities and the
+c	             observed visibilities are the same. Generally this
+c	             option should be used with at least the apriori option.
+c	             It must be used if selfcal is being used to determine
+c	             Jy/K, and should also be used if the model is believed
+c	             to have the correct scale.
+c	Note that "amplitude" and "phase" are mutually exclusive.
+c	The default is options=phase.
 c@ minants
-c       Data at a given solution interval is deleted  if there are fewer than
-c       MinAnts antennae operative during the solution interval. The default
-c       is 3 for options=phase and 4 for options=amplitude.
+c	Data at a given solution interval is deleted  if there are fewer than
+c	MinAnts antennae operative during the solution interval. The default
+c	is 3 for options=phase and 4 for options=amplitude.
 c@ refant
-c       This sets the reference antenna, which is given a phase angle of zero.
-c       The default, for a given solution interval, is the antennae with the
-c       greatest weight.
+c	This sets the reference antenna, which is given a phase angle of zero.
+c	The default, for a given solution interval, is the antennae with the
+c	greatest weight.
 c@ offset
-c       This gives the offset in arcseconds of a point source model (the
-c       offset is positive to the north and to the east). This parameter is
-c       used if the MODEL parameter is blank. The default is 0,0. The
-c       amplitude of the point source is chosen so that flux in the model
-c       is the same as the visibility flux.
+c	This gives the offset in arcseconds of a point source model (the
+c	offset is positive to the north and to the east). This parameter is
+c	used if the MODEL parameter is blank. The default is 0,0. The
+c	amplitude of the point source is chosen so that flux in the model
+c	is the same as the visibility flux.
 c@ line
-c       The visibility linetype to use, in the standard form, viz:
-c         type,nchan,start,width,step
-c       Generally if there is an input model, this parameter defaults to the
-c       linetype parameters used to construct the map. If you wish to override
-c       this, or if the info is not in the header, or if you are using
-c       a point source model, this parameter can be useful.
+c	The visibility linetype to use, in the standard form, viz:
+c	  type,nchan,start,width,step
+c	Generally if there is an input model, this parameter defaults to the
+c	linetype parameters used to construct the map. If you wish to override
+c	this, or if the info is not in the header, or if you are using
+c	a point source model, this parameter can be useful.
 c--
 c
 c  History:
@@ -112,18 +122,20 @@ c    rjs  25mar91 Added `relax' option. Minor changes to appease flint.
 c    rjs   5apr91 Trivial change to get ModelIni to do some polarisation
 c		  handling.
 c    mjs  04aug91 Replaced local maxants/maxbl to use maxdim.h values
+c    rjs  15oct91 Increased hash table size. Extra messages.
+c    rjs   1nov91 Polarized and mfs options. Removed out.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='version 1.0 5-Apr-91')
+	parameter(version='Selfcal: version 1.0 1-Nov-91')
 	integer MaxMod,maxsels,nhead
 	parameter(MaxMod=32,maxsels=256,nhead=3)
 c
-	character Models(MaxMod)*64,vis*64,out*64,ltype*32,flag*2
-	character obstype*32
-	integer tvis,tmod,tscr,tgains
-	integer nModel,minants,refant,nsize(3),nchan,nvis,i,iostat
+	character Models(MaxMod)*64,vis*64,ltype*32
+	character flag1*8,flag2*8,obstype*32
+	integer tvis,tmod,tscr
+	integer nModel,minants,refant,nsize(3),nchan,nvis,i
 	real sels(maxsels),clip,interval,offset(2),lstart,lwidth,lstep
-	logical phase,amp,smooth,doline,apriori,noscale,relax
+	logical phase,amp,smooth,doline,apriori,noscale,relax,doPol,mfs
 c
 c  Externals.
 c
@@ -132,13 +144,12 @@ c
 c
 c  Get the input parameters.
 c
-	call output('Selfcal: '//version)
+	call output(version)
 	call keyini
 	call keyf('vis',vis,' ')
 	call SelInput('select',sels,maxsels)
 	call mkeyf('model',Models,MaxMod,nModel)
 	call keyr('clip',clip,0.)
-	call keya('out',out,' ')
 	call keyr('interval',interval,5.)
 	call keyi('minants',minants,0)
 	call keyi('refant',refant,0)
@@ -152,7 +163,7 @@ c
 	  call keyr('line',lwidth,1.)
 	  call keyr('line',lstep,lwidth)
 	endif
-	call GetOpt(phase,amp,smooth,apriori,noscale,relax)
+	call GetOpt(phase,amp,smooth,apriori,noscale,relax,doPol,mfs)
 	call keyfin
 c
 c  Check that the inputs make sense.
@@ -194,72 +205,68 @@ c
 	if(doline)call uvset(tvis,'data',ltype,nchan,lstart,lwidth,
      *								lstep)
 c
-c  Determine MODEL subroutine flags.
+c  Determine the flags to the MODELINI and MODEL routines.
 c
-	flag = ' '
-	if(apriori)flag(1:1) = 'c'
-	if(.not.noscale) flag(2:2) = 'a'
+c
+	flag1 = 'ps'
+	if(.not.doline.and..not.mfs)flag1(3:3) = 'l'
+	if(doPol)		    flag1(4:4) = 't'
+c
+	flag2 = ' '
+	if(apriori)      flag2(1:1) = 'c'
+	if(.not.noscale) flag2(2:2) = 'a'
+	if(mfs)          flag2(3:3) = 'm'
 c
 c  Loop over all the models.
 c
 	if(nModel.eq.0)then
+	  call output('Reading the visibility file ...')
 	  call SelfSet(.true.,MinAnts,.true.) 
 	  call SelApply(tvis,sels,.true.)
-	  call Model(flag,tvis,0,offset,1.0,tscr,
+	  call Model(flag2,tvis,0,offset,1.0,tscr,
      *					nhead,header,nchan,nvis)
 	  call SelfIni
+	  call output('Accumulating statistics ...')
 	  call SelfAcc(tscr,nchan,nvis,interval)
 	  call scrclose(tscr)
 	else
 	  do i=1,nModel
-	    if(nModel.gt.1) call output('Processing '//Models(i))
+	    call output('Calculating the model for '//Models(i))
 	    call SelfSet(i.eq.1,MinAnts,.true.)
 	    call xyopen(tmod,Models(i),'old',3,nsize)
-	    if(doline)then
-	      call ModelIni(tmod,tvis,sels,'ps')
-	    else
-	      call ModelIni(tmod,tvis,sels,'lps')
-	    endif
-	    call Model(flag,tvis,tmod,offset,Clip,tscr,
+	    call ModelIni(tmod,tvis,sels,flag1)
+	    call Model(flag2,tvis,tmod,offset,Clip,tscr,
      *					nhead,header,nchan,nvis)
+	    call xyclose(tmod)
+	    call output('Accumulating statistics ...')
 	    if(i.eq.1) call SelfIni
 	    call SelfAcc(tscr,nchan,nvis,interval)
 	    call scrclose(tscr)
-	    call xyclose(tmod)
 	  enddo
 	endif
 c
 c  Open the output file to contain the gain solutions.
 c
-	if(out.eq.' ')then
-	  tgains = tvis
-	  call HisOpen(tgains,'append')
-	else
-	  call hopen(tgains,out,'new',iostat)
-	  if(iostat.ne.0)then
-	    call bug('w','Error opening output gains file '//out)
-	    call bugno('f',iostat)
-	  endif
-	  call HisOpen(tgains,'write')
-	endif
-	call HisWrite(tgains,'SELFCAL: Miriad SelfCal '//version)
-	call HisInput(tgains,'SELFCAL')
+	call HisOpen(tvis,'append')
+	call HisWrite(tvis,'SELFCAL: Miriad '//version)
+	call HisInput(tvis,'SELFCAL')
 c
 c  Calculate the self-cal gains.
 c
-	call Solve(tgains,phase,smooth,relax,refant,interval)
+	call output('Finding the selfcal solutions ...')
+	call Solve(tvis,phase,smooth,relax,refant,interval)
 c
 c  Close up.
 c
-	call HisClose(tgains)
+	call HisClose(tvis)
 	call uvclose(tvis)
-	if(out.ne.' ') call hclose(tgains,iostat)
 	end
 c************************************************************************
-	subroutine GetOpt(phase,amp,smooth,apriori,noscale,relax)
+	subroutine GetOpt(phase,amp,smooth,apriori,noscale,relax,
+     *							  doPol,mfs)
 c
 	implicit none
-	logical phase,amp,smooth,apriori,noscale,relax
+	logical phase,amp,smooth,apriori,noscale,relax,doPol,mfs
 c
 c  Determine extra processing options.
 c
@@ -271,13 +278,17 @@ c    apriori	If true, model routine checks calibrator flux table
 c		for an estimate of the calibrator flux.
 c    noscale	Do not scale the model to conserve flux.
 c    relax	Relax convergence criteria.
+c    doPol	Source is polarized.
+c    mfs	Model is frequency independent, or has been derived
+c		from MFCLEAN.
 c------------------------------------------------------------------------
 	integer nopt
-	parameter(nopt=6)
+	parameter(nopt=8)
 	character opts(nopt)*9
 	logical present(nopt)
 	data opts/'amplitude','phase    ','smooth   ',
-     *		  'apriori  ','noscale  ','relax    '/
+     *		  'apriori  ','noscale  ','relax    ',
+     *		  'polarized','mfs      '/
 	call options('options',opts,present,nopt)
 	amp = present(1)
 	phase = present(2)
@@ -285,6 +296,8 @@ c------------------------------------------------------------------------
 	apriori = present(4)
 	noscale = present(5)
 	relax = present(6)
+	doPol = present(7)
+	mfs = present(8)
 	if(amp.and.phase)
      *	  call bug('f','Cannot do both amp and phase self-cal')
 	if(.not.(amp.or.phase)) phase = .true.
