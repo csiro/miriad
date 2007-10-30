@@ -129,6 +129,8 @@ c   rjs  31jan95 - Copy across mosaic table. Eliminate scratch common.
 c   rjs  14feb95 - Changes to the area of the way "model" is handled.
 c   rjs   2jun95 - Fix spurious warning message resulting from the above
 c		   change.
+c   rjs  12oct95 - Tidy up above changes.
+c
 c  Important Constants:
 c    MaxDim	The max linear dimension of an input (or output) image.
 c
@@ -248,7 +250,7 @@ c
 	if(ModelNam.ne.' ')then
 	  call xyopen(lModel,ModelNam,'old',3,nModel)
 	  call rdhdi(lModel,'niters',totNiter,0)
-	  call align(lModel,lMap,nModel(1),nModel(2),nModel(3),
+	  call AlignIni(lModel,lMap,nModel(1),nModel(2),nModel(3),
      *						xoff,yoff,zoff)
 	else
 	  totNiter = 0
@@ -308,7 +310,7 @@ c
 	    call NoModel(Data(pMap),Data(pEst),Data(pRes),nPoint)
 	  else
             call output ('Subtracting initial model ...')
-	    call GetPort(lModel,Run,nRun,k,xmin+xoff-1,ymin+yoff-1,
+	    call AlignGet(lModel,Run,nRun,k,xmin+xoff-1,ymin+yoff-1,
      *		zoff,nModel(1),nModel(2),nModel(3),
      *		Data(pEst),MaxMap,nPoint)
 	    call Diff(pBem,Data(pEst),Data(pMap),Data(pRes),
@@ -1483,122 +1485,4 @@ c
 	  Residual(i) = Map(i) - Residual(i)
 	enddo
 c
-	end
-c************************************************************************
-	subroutine align(lModel,lMap,mMap,nMap,oMap,xoff,yoff,zoff)
-c
-	implicit none
-	integer lModel,lMap
-	integer mMap,nMap,oMap,xoff,yoff,zoff
-c
-c  Determine the alignment parameters between the map and the model.
-c  This insists that they line up on pixels.
-c
-c  Input:
-c    lModel	Handle of the model file.
-c    lMap	Handle of the map file.
-c    mMap,nMap,oMap Map dimensions.
-c
-c  Output:
-c    xoff,yoff,zoff These values have to be added to the grid units of
-c		the model to convert them to grid units of the map.
-c
-c------------------------------------------------------------------------
-	integer i,offset(3),nsize(3)
-	character num*1
-	real vM,dM,rM,vE,dE,rE,temp
-c
-c  Externals.
-c
-	character itoaf*2
-c
-	nsize(1) = mMap
-	nsize(2) = nMap
-	nsize(3) = oMap
-c
-	do i=1,3
-	  num = itoaf(i)
-	  call rdhdr(lModel,'crval'//num,vM,0.)
-	  call rdhdr(lModel,'cdelt'//num,dM,1.)
-	  call rdhdr(lModel,'crpix'//num,rM,1.)
-	  call rdhdr(lMap,'crval'//num,vE,0.)
-	  call rdhdr(lMap,'cdelt'//num,dE,1.)
-	  call rdhdr(lMap,'crpix'//num,rE,1.)
-	  if(dE.eq.0)call bug('f','Increment on axis '//num//' is zero')
-	  temp = (vM-vE)/dE + (rM-rE)
-	  offset(i) = nint(temp)
-	  if(abs(offset(i)-temp).gt.0.05)
-     *	    call bug('f','Map and model do not align on pixels')
-	  if(abs(dM-dE).ge.0.001*abs(dM))
-     *	    call bug('f','Map and model increments are different')
-	  if(offset(i).gt.0.or.offset(i).le.-nsize(i))
-     *	    call bug('w','Map and model do not overlap well')
-	enddo
-c
-	xoff = offset(1)
-	yoff = offset(2)
-	zoff = offset(3)
-c
-	end
-c************************************************************************
-	subroutine GetPort(lModel,Runs,nRuns,k,ioff,joff,koff,
-     *	  n1,n2,n3,Data,MaxData,nData)
-c
-	implicit none
-	integer lModel,ioff,joff,koff,nRuns,Runs(3,nRuns),k,n1,n2,n3
-	integer nData,MaxData
-	real Data(MaxData)
-c
-c  Get the portion of a image that overlaps with the selected region.
-c
-c  Input:
-c  Output:
-c    Data	The image data.
-c    nData	Number of pixels.
-c------------------------------------------------------------------------
-	include 'maxdim.h'
-	integer i,i1,i2,j,jsave,ipnt,iRuns
-	real Buf(MAXDIM)
-c
-	call BoxCount(Runs,nRuns,nData)
-	if(nData.gt.MaxData)call bug('f','Buffer too small, in GetMod')
-c
-	if(k+koff.lt.1.or.k+koff.gt.n3)then
-	  do i=1,nData
-	    Data(i) = 0
-	  enddo
-	  ipnt = nData
-	else
-	  ipnt = 0
-	  jsave = 0
-	  call xysetpl(lModel,1,k+koff)
-	  do iRuns=1,nRuns
-	    j = Runs(1,iRuns) + joff
-	    i1 = Runs(2,iRuns) + ioff
-	    i2 = Runs(3,iRuns) + ioff
-	    if(j.lt.1.or.j.gt.n2.or.i1.gt.n1.or.i2.lt.1)then
-	      do i=i1,i2
-		ipnt = ipnt + 1
-		Data(ipnt) = 0
-	      enddo
-	    else
-	      if(j.ne.jsave)call xyread(lModel,j,Buf)
-	      jsave = j
-	      do i=i1,0
-		ipnt = ipnt + 1
-		Data(ipnt) = 0
-	      enddo
-	      do i=max(i1,1),min(i2,n1)
-		ipnt = ipnt + 1
-		Data(ipnt) = Buf(i)
-	      enddo
-	      do i=n1+1,i2
-		ipnt = ipnt + 1
-		Data(ipnt) = 0
-	      enddo
-	    endif
-	  enddo
-	endif
-c
-	if(ipnt.ne.nData)call bug('f','Algorithmic failure in GetMod')
 	end
