@@ -1,5 +1,5 @@
 	integer MAXPNT,MAXHASH
-	parameter(MAXPNT=512,MAXHASH=4*MAXPNT+1)
+	parameter(MAXPNT=2048,MAXHASH=4*MAXPNT+1)
 	integer nxy,pX,pY,coRef
 	integer pntno,npnt,vPntUpd,HashSize,Hash(MAXHASH),nx2,ny2
 	integer pbObj(MAXPNT)
