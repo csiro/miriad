@@ -597,6 +597,7 @@ c    nebk 15may97  Options=nofirst got broken at some point
 c    nebk 16may97  Replciate one value for all contours for COLS1
 c    nebk 18jul97  Doc change (masks ANDed not ORed)
 c    rjs  21jul97  Call initco earlier.
+c    rjs  21aug97  Missed calling initco earlier for boxes.
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -660,7 +661,7 @@ c
       data lwid /maxconp3*1/
       data getvsc /.true./
 c-----------------------------------------------------------------------
-      call output ('CgDisp: version 18-Jul-97')
+      call output ('CgDisp: version 21-Aug-97')
       call output (' ')
 c
 c Get user inputs
@@ -3748,7 +3749,10 @@ c
 c
 c Open box image as required
 c
-      if (bin.ne.' ') call opimcg (maxnax, bin, lb, bsize, bnaxis)
+      if (bin.ne.' ') then
+        call opimcg (maxnax, bin, lb, bsize, bnaxis)
+        call initco(lb)
+      endif
 c
 c Open mask image as required
 c
@@ -3758,6 +3762,7 @@ c
         maskm = hdprsnt (lm, 'mask')
         if (.not.maskm)  then
           call bug ('w', 'The mask image does not have a mask')
+          call finco(lm)
           call xyclose (lm)
           mskin = ' '
         end if
