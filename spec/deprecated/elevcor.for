@@ -41,11 +41,12 @@ c    20jun01 dpr  Original version.
 c     5jun02 rjs  Added 3mm gain/elevation curve, and options=replace
 c     7jun02 rjs  Added Tony Wong's version of the gain/elev curve.
 c    17dec02 tw   Don't die if observing frequency is out of range.
+c    04may03 rjs  getlst would not work in some circumstances.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
 	character version*(*)
-	parameter(version='elevcor: version 1.0 17-Dec-02')
+	parameter(version='elevcor: version 1.0 04-May-03')
 	integer PolXX,PolYY,PolXY,PolYX
 	parameter(PolXX=-5,PolYY=-6,PolXY=-7,PolYX=-8)
 c
@@ -205,6 +206,7 @@ c
 	call uvrdvrd (lin, 'ra', dtemp, 0.d0)
 	call uvrdvrd (lin, 'obsra', ra, dtemp)
 	call getlong(lin,long)
+	call uvrdvrd (lin, 'time', time, 0.d0)
         call jullst (time, long, lst)
 	lst = lst + eqeq(time)
       else
