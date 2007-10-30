@@ -11,7 +11,8 @@
 /*		   types.						*/
 /*    23dec92 rjs  Use intf2c, to make it more system independent.	*/
 /*     5nov94 rjs  Try to be a bit more pedantic.			*/
-/*    19jan06 rjs  Call mallopt on 64-bit address machines on Linux     */
+/*    18sep05 rjs  Changes to support different C and FORTRAN ints      */
+/*    29jan06 rjs  Call mallopt on 64-bit address machines on Linux	*/
 /*                                                                      */
 /************************************************************************/
 
@@ -19,6 +20,12 @@
 #include <stdlib.h>
 #include <malloc.h>
 #include "miriad.h"
+
+/* The size of all data items should be a multiple of the base unit.
+   The base unit is preferably larger than 1 byte to help access
+   larger memory areas on machines better than 32 bit addressing.	*/
+
+#define base_unit sizeof(int)
 
 /************************************************************************/
 fortran integer function mmsize(integer type)
@@ -50,14 +57,15 @@ c
 {
   int size;
   switch(type.val){
-    case 'i':	size = 1;					break;
-    case 'r':	size = (sizeof(float)-1)/sizeof(int) + 1;	break;
-    case 'd':	size = (sizeof(double)-1)/sizeof(int) + 1;	break;
-    case 'l':	size = 1;		     			break;
-    case 'c':	size = (2*sizeof(float)-1)/sizeof(int) + 1;	break;
+    case 'i':	size = sizeof(fort_integer);			break;
+    case 'r':	size = sizeof(fort_real);			break;
+    case 'd':	size = sizeof(fort_double);			break;
+    case 'l':	size = sizeof(fort_logical);	   		break;
+    case 'c':	size = 2*sizeof(fort_real);			break;
     default:	bug_c('f',"Unrecognised data type, in mmSize");
   }
-  return size;
+  if(size % base_unit)bug_c('f',"Something wrong in mmSize");
+  return size/base_unit;
 }
 /************************************************************************/
 fortran integer function mmalloc(integer data,integer size)
@@ -90,16 +98,16 @@ c
 /*----------------------------------------------------------------------*/
 {
   ptrdiff_t offset;
-  int t;
-  int *s;
+  fort_integer t;
+  fort_integer *s;
 
 #if defined(linux)
-  if(sizeof(void *)>=8 && sizeof(int) < 8)mallopt(M_MMAP_MAX,0);
+  if(sizeof(void *)> sizeof(fort_integer))mallopt(M_MMAP_MAX,0);
 #endif
-  s = (int *)malloc( (size_t)(size.val * sizeof(int)) );
-  if(s == (int *)NULL) return 0;
+  s = (fort_integer *)malloc( (size_t)(size.val * base_unit) );
+  if(s == (fort_integer *)NULL) return 0;
   offset = s - data.addr;
-  t = (int)offset;
+  t = (fort_integer)offset;
   if(t != offset)bug_c('f',"Some odd form of rounding problem, in mmAlloc");
 
   return t + 1;
