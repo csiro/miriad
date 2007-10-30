@@ -24,7 +24,7 @@ c
 c *  ofmini      Initialize ofm routines
 c *  ofmmod      Interactively modify the ofm
 c *  ofmcol      Apply a specified colour ofm
-c *  ofminq      Inquire about applied ofm
+c *  ofmcmp      Apply complement of current OFM if b&w
 c
 c    ofmapp      Apply the ACTIVE ofm to the PGPLOT device
 c    ofmevl      Evaluate BASIC ofm spline coefficients and 
@@ -111,6 +111,7 @@ c                 changes for the use of new PGIMAG instead of PGGRAY
 c                 Remove OFMRAP as no longer needed with PGIMAG
 c   nebk 10feb95  Add OFMCOL and OFMINQ
 c   nebk 10apr95  Add OFMTABW
+c   nebk 14apr95  Add OFMCMP. Remove OFMINQ
 c***********************************************************************
 c
       subroutine ofmapp 
@@ -198,6 +199,48 @@ c
       end
 c
 c
+c
+c
+c* OfmCmp -- Apply complement of b&w OFMs
+c& nebk
+c: PGPLOT,display
+c+
+      subroutine ofmcmp
+      implicit none
+c
+c     Apply the b&w complement of the current OFM.   I.e. take 
+c     one minus the current values of the OFMs.   Only active for
+c     b&w tables
+c
+c  Input in common
+c    na      Number of levels in ACTIVE ofm
+c  Input/output in common
+c    ofma    ACTIVE ofm
+c    ofms    SAVE ofm = ACTIVE ofm at this point
+c--
+c-----------------------------------------------------------------------
+      include 'ofm.h'
+      integer i 
+c-----------------------------------------------------------------------
+c
+c This only makes sense for b&w lookup tables so don't do anything
+c for other types
+c
+      if (iofm.eq.1 .or. iofm.eq.9) then
+        do i = 1, na
+          ofms(i,1) = 1.0 - ofms(i,1)
+          ofms(i,2) = 1.0 - ofms(i,2)
+          ofms(i,3) = 1.0 - ofms(i,3)
+          ofma(i,1) = 1.0 - ofma(i,1)
+          ofma(i,2) = 1.0 - ofma(i,2)
+          ofma(i,3) = 1.0 - ofma(i,3)
+        end do
+        call ofmapp
+      end if
+c
+      end
+c
+c
       subroutine ofmevl 
 c-----------------------------------------------------------------------
 c     Evaluate the spline coefficients fit to the BASIC ofm and
@@ -210,6 +253,7 @@ c    x1d,y1d Fitting arrays
 c  Output in common
 c    ofma    New ACTIVE ofm
 c    ofms    New SAVE ofm = ACTIVE ofm at this point
+
 c-----------------------------------------------------------------------
       implicit none
       include 'ofm.h'
@@ -417,29 +461,6 @@ c      write (*,*) 'ci1,ci2=',ci1,ci2
         call bug ('w', 'OFMINI: Not enough colours on this device')
         na = 0
       end if
-c
-      end
-c
-c
-c
-c* OfmInq -- Inquire about OFM
-c& nebk
-c: PGPLOT,display
-c+
-      subroutine ofminq (jofm)
-c
-      implicit none
-      integer jofm
-c
-c  Inquire about OFM being applied
-c 
-c Output
-c  jofm    Number describing OFM (see ofmtab)
-c--
-c-----------------------------------------------------------------------
-      include 'ofm.h'
-c-----------------------------------------------------------------------
-      jofm = iofm
 c
       end
 c
@@ -2537,21 +2558,3 @@ c-----------------------------------------------------------------------
       call lcase (cch)
 c
       end
-c
-c
-      subroutine ofmfudge
-      implicit none
-      include 'ofm.h'
-      integer i 
-      do i = 1, na
-        ofms(i,1) = 1.0 - ofms(i,1)
-        ofms(i,2) = 1.0 - ofms(i,2)
-        ofms(i,3) = 1.0 - ofms(i,3)
-        ofma(i,1) = 1.0 - ofma(i,1)
-        ofma(i,2) = 1.0 - ofma(i,2)
-        ofma(i,3) = 1.0 - ofma(i,3)
-      end do
-      call ofmapp
-c
-      end
-
