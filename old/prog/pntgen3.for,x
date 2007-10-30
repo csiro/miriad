@@ -1,0 +1,166 @@
+c************************************************************************
+	program pntgen3
+	implicit none
+c
+c= pntgen3 - Generate a point source at a particular position.
+c& rjs
+c: map making
+c+
+c@ vis
+c	Input visibility data files. Several files can be given. No default.
+c@ select
+c	Standard visibility selection. The default is to select everything.
+c@ out
+c	An output visibility dataset, containing the input, but with the
+c	data replaced with a point source.
+c@ stokes
+c	Stokes/polarisation type to select. The default is Stokes-I. Only
+c	a single Stokes can be selected.
+c@ xyz
+c	Position of the point source. Three numbers, in arcsec, are expected.
+c@ tvary
+c	Time that the source varied.
+c--
+c  History
+c    rjs   03jul96  Adapted from INVERT3.
+c  Bugs:
+c
+c------------------------------------------------------------------------
+	include 'mirconst.h'
+	include 'maxdim.h'
+c
+	character version*(*)
+	parameter(version='PntGen3: version 1.0 03-Jul-96')
+	integer JUPITER,StokesI
+	parameter(StokesI=1,JUPITER=5)
+c
+	character out*64,ltype*16
+	integer npol,pol,lIn,lOut,nchan
+	real x(3),erad,prad,flux
+	logical first
+	double precision preamble(5)
+	complex data(MAXCHAN)
+	logical flags(MAXCHAN)
+	double precision sfreq(MAXCHAN)
+c
+	double precision tvary,tdelt
+c
+c  Externals.
+c
+	logical uvDatOpn
+c
+c  Get the input parameters. 
+c
+	call output(version)
+	call keyini
+	call keyt('tvary',tvary,'atime',0.d0)
+	call keyt('tvary',tdelt,'dtime',0.d0)
+	call uvDatInp('vis','dcefs3')
+	call keya('out',out,' ')
+	if(out.eq.' ')call bug('f','An output must be given')
+c
+c  Get the source, and convert it to radians.
+c
+	call keyr('xyz',x(1),0.0)
+	call keyr('xyz',x(2),0.0)
+	call keyr('xyz',x(3),0.0)
+c
+	x(1) = x(1) * PI/180/3600
+	x(2) = x(2) * PI/180/3600
+	x(3) = x(3) * PI/180/3600
+	call keyfin
+c
+c  Check the polarisations.
+c
+	call uvDatGti('npol',npol)
+	if(npol.eq.0)then
+	  call uvDatSet('stokes',1)
+	else if(npol.ne.1)then
+	  call bug('f','Can handle only a single polarisation')
+	endif
+	call uvDatGti('pols',pol)
+c
+c  Initialise the Jupiter-handling routines.
+c
+	call plInit(4.04,JUPITER,erad,prad)
+c
+c  Process the data.
+c
+	first = .true.
+	dowhile(uvDatOpn(lIn))
+	  call uvDatGta('ltype',ltype)
+	  call VarInit(lIn,ltype)
+c
+	  call uvDatRd(preamble,data,flags,MAXCHAN,nchan)
+	  if(first.and.nchan.gt.0)then
+	    call uvopen(lOut,out,'new')
+	    call uvset(lOut,'preamble','uvw/time/baseline',0,0.,0.,0.)
+	    call hdcopy(lIn,lOut,'history')
+	    call hisopen(lOut,'append')
+	    call hiswrite(lOut,'PNTGEN3: Miriad '//version)
+	    call hisinput(lOut,'PNTGEN3')
+	    call hisclose(lOut)
+	    call uvputvri(lOut,'npol',1,1)
+	    call uvputvri(lOut,'pol',pol,1)
+	    call wrhdi(lOut,'npol',1)
+	    call wrhdi(lOut,'pol',pol)
+	    first = .false.
+	  endif
+	  if(nchan.gt.0)call VarOnit(lIn,lOut,ltype)
+c
+	  dowhile(nchan.gt.0)
+	    if(preamble(4).lt.tvary.or.preamble(4).gt.tvary+tdelt)then
+	      flux = 0
+	    else
+	      flux = 1
+	    endif
+	    call uvinfo(lIn,'sfreq',sfreq)
+	    call SrcGen(flux,preamble,preamble(4),data,sfreq,nchan,x)
+	    call varCopy(lIn,lOut)
+	    call uvwrite(lOut,preamble,data,flags,nchan)
+	    call uvDatRd(preamble,data,flags,MAXCHAN,nchan)
+	  enddo
+	  call uvDatCls
+	enddo
+c
+	if(first)call bug('f','No data found!')
+	call uvclose(lOut)
+c
+	end
+c************************************************************************
+	subroutine SrcGen(f,uv,time,data,sfreq,nchan,x)
+c
+	implicit none
+	integer nchan
+	double precision uv(2),time,sfreq(nchan)
+	real x(3),f
+	complex data(nchan)
+c------------------------------------------------------------------------
+	include 'mirconst.h'
+	double precision uvw(3),theta0
+	real a,b,fac,theta,flux
+	logical shadowed
+	integer smatidx,i
+c
+c  Externals.
+c
+	logical plShadow
+c
+	call plUVW(uv,time,uvw,a,b,fac,smatidx,theta)
+c
+	theta0 = 2.d0*DPI*(x(1)*uvw(1) + x(2)*uvw(2) + x(3)*uvw(3))
+	flux = f/fac
+	shadowed = plShadow(smatidx,x(1),x(2),x(3))
+c
+	if(shadowed)then
+	  do i=1,nchan
+	    data(i) = 0
+	  enddo
+	else
+	  do i=1,nchan
+	    theta = sfreq(i)*theta0
+	    data(i) = flux*cmplx(cos(theta),sin(theta))
+	  enddo
+	endif
+c
+	end
