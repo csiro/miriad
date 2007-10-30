@@ -224,10 +224,14 @@ END	{ for (i=0; i < nkeys; i++)
 
   if ( $doedit ) then
     if ( $?VISUAL ) then
+      echo "VISUAL environment variable is set to $VISUAL"
       $VISUAL $template
     else if ( $?EDITOR ) then
+      echo "EDITOR environment variable is set to $EDITOR"
       $EDITOR $template
     else
+      echo 'EDITOR environment variable is unset, so using "vi"'
+      sleep 3
       vi $template
     endif
   endif
