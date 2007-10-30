@@ -8,6 +8,7 @@
 /*    rjs   7feb90   Added comments, ready to be stripped out by "doc". */
 /*    rjs  13jul92   Improved error messages in xyopen, to appease nebk.*/
 /*    rjs  23feb93   Include maxdimc.h, which contains maxnax.		*/
+/*    rjs   6nov94   Change item handle to an integer.			*/
 /*----------------------------------------------------------------------*/
 
 #include "maxdimc.h"
@@ -25,7 +26,8 @@
 
 static char message[132];
 
-static struct { char *image,*mask;
+static struct { char *mask;
+	 int image;
 	 int naxis,axes[MAXNAX],offset,mask_exists,image_exists;} images[MAXOPEN];
 
 #define Strcpy (void)strcpy
