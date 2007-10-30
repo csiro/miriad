@@ -277,7 +277,14 @@ c	  will be chosen to be the complement of any like axis in the
 c	  first 2. E.g., the cube is in vxy order and LABTYP=ABSKMS,ARCSEC 
 c	  the units for the "3VALUE" label will be arcsec.  If 
 c	  LABTYP=ABSKMS,HMS the "3VALUE" label will be DMS (if the 
-c	  third [y] axis is declination).
+c	  third [y] axis is declination).  See also keyword "3format"
+c	  where you can input the format for the "3value" labelling.
+c@ 3format
+c	If you ask for "3value" labelling, this keyword allows you
+c	specify the FORTRAN format of the labelling.  I have given
+c	up trying to invent a decent algorithm to choose this. Examples
+c	are "1pe12.6", or "f5.2" etc   If you leave this blank cgdisp 
+c	will try something that you probably won't like.
 c@ lines
 c 	Up to 6 values.  The line widths for the axes, each contour 
 c       image (in the order of TYPE), the vector image, and any overlays.
@@ -579,6 +586,7 @@ c    nebk 31oct96  FIx problem with an incorrect krng sometimes being
 c                  fed to NAXLABCG
 c    nebk 23jan97  Was getting vector scales wrong if first subplot
 c                  all blank.
+c    nebk 13feb97  Add keyword "3form", finally admitting defeat
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -618,7 +626,7 @@ c
 c
       character labtyp(2)*6, levtyp(maxcon)*1, trfun(maxchan)*3
       character pdev*64, xlabel*40, ylabel*40, hard*20, ofile*64, 
-     +  aline*72
+     +  aline*72, val3form*20
 c
       logical solneg(maxcon), doblv(2), bemprs(maxcon+4)
       logical do3val, do3pix, dofull, gaps, eqscale, doblc, doblg,
@@ -641,7 +649,7 @@ c
       data lwid /maxconp3*1/
       data getvsc /.true./
 c-----------------------------------------------------------------------
-      call output ('CgDisp: version 23-Jan-96')
+      call output ('CgDisp: version 13-Feb-97')
       call output (' ')
 c
 c Get user inputs
@@ -653,7 +661,7 @@ c
      +   gaps, solneg, nx, ny, lwid, break, cs, scale, ofile, dobeam, 
      +   beaml, beamb, relax, rot90, signs, mirror, dowedge, doerase, 
      +   doepoch, dofid, dosing, nofirst, grid, dotr, dodist, conlab,
-     +   doabut)
+     +   doabut, val3form)
 c
 c Open images as required
 c
@@ -988,7 +996,7 @@ c
            call pgsch (cs(2))
            call pgsci (1)
            call lab3cg (lhead, doerase, do3val, do3pix, labtyp,
-     +                  grpbeg(j), ngrp(j))
+     +                  grpbeg(j), ngrp(j), val3form)
          end if
 c
 c Read overlay positions list and decode positions into pixels 
@@ -2248,7 +2256,7 @@ c
      +   gaps, solneg, nx, ny, lwid, break, cs, scale, ofile, dobeam, 
      +   beaml, beamb, relax, rot90, signs, mirror, dowedge, doerase, 
      +   doepoch, dofid, dosing, nofirst, grid, dotr, dodist, conlab,
-     +   doabut)
+     +   doabut, val3form)
 c-----------------------------------------------------------------------
 c     Get the unfortunate user's long list of inputs
 c
@@ -2323,6 +2331,7 @@ c   dotr       Label top and right axes as well as bototm and left
 c   dodist     Distort overlays with grid
 c   conlab     Label contours
 c   doabut     No white space bewteen subplots
+c   val3form   Format for options=3val labelling
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -2332,7 +2341,8 @@ c
       integer nx, ny, nlevs(maxcon), lwid(maxcon+3), vecinc(2), 
      +  boxinc(2), ibin(2), jbin(2), kbin(2), coltab(maxgr)
       character*(*) labtyp(2), cin(maxcon), gin, vin(2), bin, mskin,
-     +  pdev, ofile, trfun(maxgr), levtyp(maxcon), ltypes(maxtyp)
+     +  pdev, ofile, trfun(maxgr), levtyp(maxcon), ltypes(maxtyp),
+     +  val3form
       logical do3val, do3pix, dofull, gaps, eqscale, solneg(maxcon),
      +  dobeam, beaml, beamb, relax, rot90, signs, mirror, dowedge,
      +  doerase, doepoch, dofid, dosing, nofirst, grid, dotr, 
@@ -2520,6 +2530,8 @@ c
      +   beambl, beambr, beamtl, beamtr, relax, rot90, signs, 
      +   mirror, dowedge, doerase, doepoch, dofid, dosing, nofirst,
      +   grid, dotr, dodist, conlab, doabut)
+c
+      call keyf ('3format', val3form, ' ')
 c
       if (gin.eq.' ') then
         dowedge = .false.
