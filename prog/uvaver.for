@@ -34,21 +34,24 @@ c@ options
 c	This gives extra processing options. Several options can be given,
 c	each separated by commas. They may be abbreivated to the minimum
 c	needed to avoid ambiguity. Possible options are:
-c	   'nocal'       Do not apply the gains file. By default, UVAVER
-c	                 applies the gains file in copying the data.
-c	   'nopass'      Do not apply bandpass corrections. By default,
-c	                 UVAVER corrects for the bandpass shape if the
-c	                 required information is available.
-c	   'nopol'       Do not apply polarizatiopn corrections. By default
-c	                 UVAVER corrects for polarization corss-talk.
-c	   'vector'      Means do vector averaging.  This is the default.
-c	   'scalar'      Means do scalar averaging for the amplitudes
-c	                 and vector averaging for the phase.
-c	   'scavec'      Means do scalar averaging for the amplitudes of
-c	                 the  `parallel-hand' polarisations (i,xx,yy,rr,ll).
-c	                 Vector averaging is used for the amplitudes of
-c	                 the cross-hand visibilities (q,u,v,xy,yx,rl,lr)
-c	                 and for the phases for all visibilities.
+c	   nocal       Do not apply the gains file. By default, UVAVER
+c	               applies the gains file in copying the data.
+c	   nopass      Do not apply bandpass corrections. By default,
+c	               UVAVER corrects for the bandpass shape if the
+c	               required information is available.
+c	   nopol       Do not apply polarizatiopn corrections. By default
+c	               UVAVER corrects for polarization corss-talk.
+c	   relax       Normally UVAVER discards a correlation record if
+c	               all the correlations are bad. This option causes
+c	               UVAVER to retain all records.
+c	   vector      Means do vector averaging.  This is the default.
+c	   scalar      Means do scalar averaging for the amplitudes
+c	               and vector averaging for the phase.
+c	   scavec      Means do scalar averaging for the amplitudes of
+c	               the  `parallel-hand' polarisations (i,xx,yy,rr,ll).
+c	               Vector averaging is used for the amplitudes of
+c	               the cross-hand visibilities (q,u,v,xy,yx,rl,lr)
+c	               and for the phases for all visibilities.
 c@ out
 c	The name of the output uv data set. No default.
 c--
@@ -78,6 +81,7 @@ c    rjs  10feb93 Cosmetic change to history comments.
 c    rjs  25sep93 Check when we run out of baseline slots in bufacc.
 c    rjs  19oct93 Check that data is read.
 c    rjs  23sep93 W axis change.
+c    rjs  10oct94 relax option.
 c
 c  Bugs:
 c    * The way of determining whether a source has changed is imperfect.
@@ -89,9 +93,10 @@ c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='UvAver: version 1.0 23-Sep-94')
 	character uvflags*12,ltype*16,out*64
-	integer npol,Snpol,pol,tIn,tOut,vupd,nread,nrec
+	integer npol,Snpol,pol,tIn,tOut,vupd,nread,nrec,i
 	real inttime
 	logical dotaver,doflush,buffered,PolVary,ampsc,vecamp,first
+	logical relax,ok,donenpol
 	double precision preamble(5),T0,T1,Tprev,interval
 	complex data(MAXCHAN)
 	logical flags(MAXCHAN)
@@ -104,7 +109,7 @@ c  Get the input parameters.
 c
 	call output(version)
 	call keyini
-	call GetOpt(uvflags,ampsc,vecamp)
+	call GetOpt(uvflags,ampsc,vecamp,relax)
 	call uvDatInp('vis',uvflags)
 	call keyd('interval',interval,0.d0)
 	call keya('out',out,' ')
@@ -126,6 +131,7 @@ c
 	PolVary = .false.
 	doflush = .false.
 	buffered = .false.
+	donenpol = .false.
 	dotaver = interval.gt.0.or.uvDatPrb('polarization?',0.d0)
 	call BufIni
 	nrec = 0
@@ -166,9 +172,19 @@ c  Count the number of records read.
 c
 	    nrec = nrec + 1
 c
+c  Do we want to keep this record.
+c
+	    ok = relax.or.donenpol
+	    if(.not.ok)then
+	      do i=1,nread
+		ok = ok.or.flags(i)
+	      enddo
+	    endif
+c
 c  Determine if we need to flush out the averaged data.
 c
-	    if(dotaver)then
+	    doflush = ok.and.dotaver
+	    if(doflush)then
 	      doflush = uvVarUpd(vupd)
 	      doflush = (doflush.or.preamble(4).gt.T1.or.
      *				    preamble(4).lt.T0).and.buffered
@@ -188,23 +204,26 @@ c
 c  Flush out the accumulated data -- the case of no time averaging.
 c
 	    else if(.not.dotaver)then
-	      call uvDatGti('pol',pol)
-	      call uvputvri(tOut,'pol',pol,1)
-	      if(npol.le.0)then
-	        call uvDatGti('npol',npol)
-	        call uvputvri(tOut,'npol',npol,1)
-	        PolVary = PolVary.or.
-     *		  (Snpol.ne.npol.and.Snpol.gt.0)
-	        Snpol = npol
+	      if(npol.le.0)call uvDatGti('npol',npol)
+	      if(ok)then
+		if(.not.donenpol)then
+		  call uvputvri(tOut,'npol',npol,1)
+		  PolVary = PolVary.or.
+     *		    (Snpol.ne.npol.and.Snpol.gt.0)
+	          Snpol = npol
+		endif
+		call uvDatGti('pol',pol)
+		call uvputvri(tOut,'pol',pol,1)
+		call VarCopy(tIn,tOut)
+		call uvwrite(tOut,preamble,data,flags,nread)
+		donenpol = npol.gt.1
 	      endif
-	      call VarCopy(tIn,tOut)
-	      call uvwrite(tOut,preamble,data,flags,nread)
 	      npol = npol - 1
 	    endif
 c
 c  Accumulate more data, if we are time averaging.
 c
-	    if(dotaver)then
+	    if(dotaver.and.ok)then
 	      call uvrdvrr(tIn,'inttime',inttime,10.)
 	      call BufAcc(preamble,inttime,data,flags,nread)
 	      buffered = .true.
@@ -241,10 +260,10 @@ c
 	call uvclose(tOut)
 	end
 c************************************************************************
-	subroutine GetOpt(uvflags, ampsc, vecamp)
+	subroutine GetOpt(uvflags, ampsc, vecamp,relax)
 c
 	implicit none
-        logical ampsc,vecamp
+        logical ampsc,vecamp,relax
 	character uvflags*(*)
 c
 c  Determine the flags to pass to the uvdat routines.
@@ -254,14 +273,15 @@ c    uvflags	Flags to pass to the uvdat routines.
 c    ampsc      True for amp-scalar averaging
 c    vecamp	True for vector averaging on everything except
 c		parallel-hand amplitudes.
+c    relax	Do not discard bad records.
 c------------------------------------------------------------------------
 	integer nopts
-	parameter(nopts=6)
+	parameter(nopts=7)
 	character opts(nopts)*9
 	integer l
 	logical present(nopts),docal,dopol,dopass,vector
-	data opts/'nocal','nopol','nopass',
-     *            'vector','scalar','scavec'/
+	data opts/'nocal    ','nopol    ','nopass   ',
+     *            'vector   ','scalar   ','scavec   ','relax    '/
 c
 	call options('options',opts,present,nopts)
 	docal = .not.present(1)
@@ -270,6 +290,7 @@ c
         vector = present(4)
         ampsc  = present(5)
         vecamp = present(6)
+	relax  = present(7)
 c
 c Default averaging is vector
 c
