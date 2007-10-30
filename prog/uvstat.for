@@ -5,29 +5,36 @@ c= UVSTAT - plot uvdata statistics.
 c& mchw
 c: uv analysis, checking
 c+
-c	UVSTAT is a Miriad program to check the uvdata.
-c	The default is to read through the selected uvdata and plot
-c	the rms across the line for each record.
+c	UVSTAT is a Miriad program to plot statistics of a visibility
+c	dataset. The default is to read through the selected data and plot
+c	the rms of each record.
 c@ vis
 c	The input visibility file. No default.
 c@ select
 c	This selects which visibilities to be used. Default is
-c	all visibilities. See the Users Guide for information about
-c	how to specify uv data selection.
+c	all visibilities. See the help on "select" for more information.
 c@ line
-c	Linetype of the data in the format line,nchan,start,width,step
-c	"line" can be `channel', `wide' or `velocity'.
-c	Default is channel,0,1,1,1, which returns actual number of spectral
-c	channels. Use line=wide to check number of wideband correlations.
-c	If the linetype requested is not present it will NOT be listed.
+c	Normal visibility linetype specification. See the help on "line"
+c	for more information. The linetype is in the format
+c	  line,nchan,start,width,step
+c	where "line" can be `channel', `wide' or `velocity'.
+c	The default is all spectral channels.
 c@ device
-c	PGPLOT device. Default is to prompt the user.
-c@ xaxis
-c	The xaxis to plot can be 'visno' 'time' or uvdist'. Default=visno.
-c@ yaxis
-c	The yaxis to plot can be 'rms' 'tsys'. Default=rms.
-c@ log
-c	The output log file. Default is the terminal.
+c	PGPLOT device. No default.
+c@ axis
+c	This gives the x and y axes to plot.
+c	The xaxis to plot can be "recnum", "time" or "uvdist".
+c	Default is "recnum".  The yaxis to plot can be "rms", "trms"
+c	(the theoretical rms) or "tsys". The default is "rms".
+c@ options
+c	Extra processing options. Several can be given, separated by
+c	commas. Minimum match applies. Possible options are:
+c	  nocal   Do not apply antenna gain calibration. The default is to
+c	          apply these.
+c	  nopol   Do not apply polarisation leakage correction. The default
+c	          is to apply any leakage corrections present.
+c	  nopass  Do no apply bandpass calibration. The default is to apply
+c	          bandpass calibration if possible.
 c--
 c
 c  History:
@@ -35,120 +42,89 @@ c    mchw 29oct91  Initial version.
 c    rjs  31oct91  Check that the plot buffer is not overflowed.
 c    mjs  13mar93  pgplot subr names have less than 7 chars.
 c    rjs  12nov93  Call logclose.
-c
-c  Optional extra ?
-c	The yaxis to plot can be 'rms' 'linfit' or 'tsys'. Default=rms.
+c    rjs  10oct97  Significant tidy up.
 c----------------------------------------------------------------------c
 	include 'maxdim.h'
 	integer MAXPNT
-	parameter(MAXPNT=10000)
+	parameter(MAXPNT=100000)
 	character*(*) version
-	parameter(version='UVSTAT: version 1.0 29-Oct-91')
-	integer maxsels
-	parameter(maxsels=512)
-	real sels(maxsels)
+	parameter(version='UVSTAT: version 1.0 10-Oct-97')
 	double precision preamble(4),time0
-	integer lIn,nchan,nread,nvis,length
-	real start,width,step
-	character vis*64,log*64,device*64,xaxis*64,yaxis*64
-	character date*18,line*80
+	integer lIn,nchan,nvis
+	character device*64,xaxis*64,yaxis*64
+	character date*18,line*80,uvflags*16
 	complex data(maxchan)
-	logical flags(maxchan)
-	real xx(MAXPNT),yy(MAXPNT),xmin,xmax,ymin,ymax,rms,tsys
+	logical flags(maxchan),ok
+	real xx(MAXPNT),yy(MAXPNT)
+	real xlo,xhi,ylo,yhi,xmin,xmax,ymin,ymax,x,y
+	double precision dtemp
 c
 c  Externals
 c
-	integer len1,ismin,ismax
+	integer ismin,ismax,pgbeg
+	logical uvdatOpn
 c
 c  Get the parameters given by the user.
 c
 	call output(version)
 	call keyini
-	call keya ('vis',vis,' ')
+	call GetOpt(uvflags)
+	call uvdatinp('vis',uvflags)
 	call keya ('line',line,'channel')
-	call keyi ('line',nchan,0)
-	call keyr ('line',start,1.) 
-	call keyr ('line',width,1.)
-	call keyr ('line',step,1.)
-	call SelInput ('select',sels,maxsels)
-	call keya ('device',device,'?')
-	call keya ('xaxis',xaxis,'recnum')
-	call keya ('yaxis',yaxis,'rms')
-	call keya ('log',log,' ')
+	call keya ('device',device,' ')
+	if(device.eq.' ')call bug('f','No plot device given')
+	call GetAxis(xaxis,yaxis)
 	call keyfin
-c
-c  Check that the inputs are reasonable.
-c
-	if (vis.eq.' ') call bug ('f', 'Input name must be given')
-	if (nchan.gt.0) nchan = min (nchan,maxchan)
-	if (nchan.lt.0) call bug ('f', 'Bad number of channels')
-	if (width.le.0.0) call bug ('f','Negative width is useless')
-	if (step.eq.0.0) call bug ('f', 'Step=0.0 is useless') 
-	if (xaxis.ne.'time'.and.xaxis.ne.'uvdist'
-     *			.and.xaxis.ne.'recnum') xaxis = 'recnum'
-	if (yaxis.ne.'rms'.and.yaxis.ne.'tsys') yaxis = 'rms'
-c    *			.and.yaxis.ne.'linfit') yaxis = 'rms'
 c
 c  Open an old visibility file, and apply selection criteria.
 c
-	call uvopen (lIn,vis,'old')
-	call uvset(lIn,'data',line,nchan,start,width,step)
-	call uvset (lIn,'coord','nanosec',0, 0.0, 0.0, 0.0)
-	call uvset (lIn,'planet', ' ', 0, 0.0, 0.0, 0.0)
-	call SelApply(lIn,sels,.true.)
-c
-c  Open log file and write title.
-c
-	call LogOpen(log,'q')
-	call LogWrit(version)
-	line = 'File: '//vis
-	call LogWrit(line(1:len1(line)))
-	call LogWrit(' ')
-c
-c  Miscelaneous initialization.
-c
-	nvis = 0
+	if(.not.uvDatOpn(lIn))call bug('f','Error opening input')
 c
 c  Read the first record.
 c
-	call uvread (lIn, preamble, data, flags, maxchan, nread)
-	if(nread.le.0) call bug('f','No data found in the input.')
-	time0 = preamble(3)
-	call JulDay(preamble(3),'H',date)
+	call uvDatRd(preamble,data,flags,maxchan,nchan)
+	if(nchan.le.0) call bug('f','No data found in the input.')
+	time0 = nint(preamble(3)) - 0.5d0
+	call JulDay(time0,'H',date)
 c
 c  Read through the selected data.
 c
-	do while(nread.gt.0.and.nvis.lt.MAXPNT)
-	  nvis = nvis + 1
+	nvis = 0
+	do while(nchan.gt.0)
 c
 c  Fill in the xaxis
 c
 	  if(xaxis.eq.'time')then
-	    xx(nvis) = preamble(3)-time0
+	    x = 86400*(preamble(3)-time0)
 	  else if(xaxis.eq.'uvdist')then
-	    xx(nvis) = 
-     *		sqrt(preamble(1)*preamble(1)+preamble(2)*preamble(2))
+	    x = sqrt(preamble(1)*preamble(1)+preamble(2)*preamble(2))
 	  else
-	    xx(nvis) = nvis
+	    call uvinfo(lIn,'visno',dtemp)
+	    x = dtemp
 	  endif
 c
 c  Fill in the yaxis
 c
+	  ok = .true.
 	  if(yaxis.eq.'tsys')then
-	    call uvrdvrr(lIn,'systemp',tsys,0.)
-	    yy(nvis) = tsys
-c	  else if(yaxis.eq.'linfit')then
-c	    call uvfit(data, flags, nread, maxchan, rms)
-c	    yy(nvis) = rms
+	    call uvrdvrr(lIn,'systemp',y,0.)
+	  else if(yaxis.eq.'trms')then
+	    call uvinfo(lIn,'variance',dtemp)
+	    y = sqrt(real(dtemp))
 	  else
-	    call uvrms(data, flags, nread, maxchan, rms)
-	    yy(nvis) = rms
+	    call uvrms(data, flags, nchan, y, ok)
 	  endif
 c
-	  call uvread(lIn, preamble, data, flags, maxchan, nread)
+	  if(ok)then
+	    nvis = nvis + 1
+	    if(nvis.gt.MAXPNT)call bug('f','Too many points to plot')
+	    xx(nvis) = x
+	    yy(nvis) = y
+	  endif
+c
+	  call uvDatRd(preamble,data,flags,maxchan,nchan)
 	enddo
-	if(nread.gt.0)call bug('w',
-     *	  'Too much data -- some data discarded')
+	call uvDatCls
 c
 c  Plot the statistics.
 c
@@ -156,36 +132,47 @@ c
 	xmax = xx(ismax(nvis,xx,1))
 	ymin = yy(ismin(nvis,yy,1))
 	ymax = yy(ismax(nvis,yy,1))
-	call pgbeg(0,device,1,1)
-	call pgsvp(.1,.9,.1,.7)
-	call pgswin(xmin,xmax,ymin,ymax)
-	call pgbox('bcnst',0.,0.,'bcnst',0.,0.)
-	call pghline(nvis,xx,yy,2.)
-	call pglab(xaxis,yaxis,vis)
+	call pgrnge(xmin,xmax,xlo,xhi)
+	call pgrnge(ymin,ymax,ylo,yhi)
+c
+	if(pgbeg(0,device,1,1).ne.1)
+     *	  call bug('f','Error opening PGPLOT device')
+	call pgscf(2)
+	call pgpage
+	call pgvstd
+	call pgswin(xlo,xhi,ylo,yhi)
+	if(xaxis.eq.'time')then
+	  call pgtbox('BCNSTHZO',0.,0,'BCNST',0.,0)
+	else
+	  call pgbox('BCNST',0.,0.,'BCNST',0.,0.)
+	endif
+	if(nvis.lt.100)then
+	  call pgpt(nvis,xx,yy,17)
+	else
+	  call pgpt(nvis,xx,yy,1)
+	endif
+	call pglab(xaxis,yaxis,' ')
 	call pgend
 c
-c  Write summary.
-c
 	write(line,'(a,a,i6)') date,' number of records= ',nvis
-	    length = 18 + 20 + 6
-	    call LogWrit(line(1:length))
-	call LogClose
+	call output(line)
+c
 	end
 c********1*********2*********3*********4*********5*********6*********7**
-	subroutine uvrms(data, flags, nread, maxchan, rms)
+	subroutine uvrms(data, flags, nchan, rms, ok)
 	implicit none
-	integer nread,maxchan
+	integer nchan
 	real rms
-	complex data(maxchan)
-	logical flags(maxchan)
+	complex data(nchan)
+	logical flags(nchan),ok
 c
 c  Input:
-c    nread	Number of channels
-c    maxchan	Maximum number of channels
+c    nchan	Number of channels
 c    flags	Flags
 c    data	Data.
 c  Output:
 c    rms
+c    ok
 c-----------------------------------------------------------------------
 	integer i
 	real sumx,sumy,sumsqx,sumsqy,count,x,y
@@ -196,7 +183,7 @@ c
 	sumsqy = 0.
 	count = 0.
 c
-	do i = 1,nread
+	do i = 1,nchan
 	  if(flags(i))then
 	    x = real(data(i))
 	    y = aimag(data(i))
@@ -211,8 +198,59 @@ c
 	if(count.gt.1)then
 	  rms = sqrt( (sumsqx+sumsqy)/count
      *		 - (sumx*sumx+sumy*sumy)/(count*count) )
+	  ok = .true.
 	else
-	  rms = 0.
+	  ok = .false.
 	endif
 c
 	end
+c************************************************************************
+	subroutine GetOpt(uvflags)
+c
+	implicit none
+	character uvflags*(*)
+c
+c  Get the processing options.
+c------------------------------------------------------------------------
+	integer NOPTS
+	parameter(NOPTS=3)
+	character opts(NOPTS)*8
+	logical present(NOPTS),nocal,nopol,nopass
+c
+	data opts/'nocal   ','nopol   ','nopass  '/
+c
+	call options('options',opts,present,NOPTS)
+	nocal = present(1)
+	nopol = present(2)
+	nopass= present(3)
+	uvflags = 'sldpbw'
+	if(.not.nocal) uvflags(7:7) = 'c'
+	if(.not.nopol) uvflags(8:8) = 'e'
+	if(.not.nopass)uvflags(9:9) = 'f'
+	end
+c************************************************************************
+        subroutine GetAxis(xaxis,yaxis)
+c
+        implicit none
+        character xaxis*(*),yaxis*(*)
+c
+c  Determine the X and Y axis to plot.
+c
+c  Output: 
+c    xaxis
+c    yaxis
+c------------------------------------------------------------------------
+        integer NX,NY
+        parameter(NX=3,NY=3)
+c
+        integer n
+        character xaxes(NX)*9,yaxes(NY)*9
+        data xaxes/'recnum   ','uvdist   ','time     '/
+        data yaxes/'rms      ','tsys     ','trms     '/
+c    
+        call keymatch('axis',NX,xaxes,1,xaxis,n)
+        if(n.eq.0)xaxis = xaxes(1)
+        call keymatch('axis',NY,yaxes,1,yaxis,n)
+        if(n.eq.0)yaxis = yaxes(1)
+        end
+
