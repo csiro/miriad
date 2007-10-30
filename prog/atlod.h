@@ -3,9 +3,9 @@ c  The common block (yuk) used to buffer up an integration.
 c
 	include 'maxdim.h'
 	integer ATIF,ATANT,ATPOL,ATDATA,ATBASE,ATBIN,ATCONT
-	parameter(ATIF=2,ATANT=6,ATPOL=4,ATBASE=((ATANT+1)*ATANT)/2)
-	parameter(ATBIN=32,ATCONT=33)
-	parameter(ATDATA=5*MAXCHAN*ATBASE)
+	parameter(ATIF=2,ATANT=8,ATPOL=4,ATBASE=((ATANT+1)*ATANT)/2)
+	parameter(ATBIN=1024,ATCONT=33)
+	parameter(ATDATA=8*MAXCHAN*ATBASE)
 	integer nifs,nfreq(ATIF),nstoke(ATIF),polcode(ATIF,ATPOL)
 	double precision sfreq(ATIF),sdf(ATIF),restfreq(ATIF)
 	double precision time
