@@ -285,6 +285,7 @@ c    nebk 13aug96  Prevent some problems with non-interactive devices
 c    nebk 13feb97  Add keyrod "3format"
 c    rjs  21jul97  Called initco earlier.
 c    rjs  31jul97  Simplify calls to initco,finco.
+c    rjs  23apr98  Increase size of bunit variable.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -322,7 +323,7 @@ c
       data dmm /1.0e30, -1.0e30/
       data gaps, doabut /.false., .false./
 c-----------------------------------------------------------------------
-      call output ('CgCurs: version 31-Jul-97')
+      call output ('CgCurs: version 23-Apr-98')
       call output (' ')
 c
 c Get user inputs
@@ -1208,7 +1209,7 @@ c
      +  pix(3), pixbs(2)
       real vx(nvmax), vy(nvmax), sum, sumsq, mean, var, rms,
      +  dmin, dmax, bmin, bmaj, barea, ival
-      character line*80, ans*1, bunit*8, typei(3)*6, typeo(3)*6,
+      character line*80, ans*1, bunit*16, typei(3)*6, typeo(3)*6,
      +  wstr(3)*132
       logical good, more
 c------------------------------------------------------------------------
