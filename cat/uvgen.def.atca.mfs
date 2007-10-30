@@ -1,0 +1,15 @@
+source=$MIRCAT/point.source
+ant=$MIRCAT/3.0a.ant
+baseunit=-51.0204
+telescop=atca
+ellim=12
+corr=13,1,0,104
+freq=1.38
+radec=0,-50
+stokes=xx,yy,xy,yx
+lat=-30
+harange=-6,6,0.1
+cycle=0.1,0.4
+systemp=50
+leakage=2
+jyperk=12.7
