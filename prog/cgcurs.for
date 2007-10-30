@@ -275,6 +275,7 @@ c                  call for CONTURCG
 c    nebk 18dec95  New call for VPSIZCG (arg. DOABUT)
 c    nebk 30jan96  Remove restrictions on CHAN so groups of channels
 c		   can now overlap
+c    nebk 24jun96  Add some commonsense for 2-d images in sub. curpos
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -312,7 +313,7 @@ c
       data dmm /1.0e30, -1.0e30/
       data gaps, doabut /.false., .false./
 c-----------------------------------------------------------------------
-      call output ('CgCurs: version 30-Jan-95')
+      call output ('CgCurs: version 24-Jun-96')
       call output (' ')
 c
 c Get user inputs
@@ -1088,11 +1089,16 @@ c
             typeo(2) = 'abspix'
             typeo(3) = 'abspix'
             call w2wfco (lin, naxis, typei, ' ', pix, typeo, ' ',
-     +                   .true., wstr, wl)
-            write (line, 10) wstr(1)(1:wl(1)), wstr(2)(1:wl(2)), 
-     +                       wstr(3)(1:wl(3))
-10          format ('Image pixel coordinates x,y,z : ', a, ', ', a, 
-     +              ', ', a)
+     +                   .true., wstr, wl) 
+            if (naxis.gt.2) then
+              write (line, 10) wstr(1)(1:wl(1)), wstr(2)(1:wl(2)), 
+     +                         wstr(3)(1:wl(3))
+10            format ('Image pixel coordinates x,y,z : ', a, ', ', a, 
+     +                ', ', a)
+            else
+              write (line, 20) wstr(1)(1:wl(1)), wstr(2)(1:wl(2))
+20            format ('Image pixel coordinates x,y   : ', a, ', ', a)
+            end if
             call output (line)
             if (dolog .and. (.not.cgspec .and. .not.cgdisp))
      +          call txtwrite (lcurs, line, len1(line), iostat)
@@ -1104,18 +1110,32 @@ c
             if (nimage(ib,jb).ne.0) then
               ival = image(ib,jb)
 c
-              write (line, 40) ival, wstr(1)(1:wl(1)), 
-     +           wstr(2)(1:wl(2)), wstr(3)(1:wl(3))
-40            format ('Image intensity               :', 1pe12.4,
-     +                ' at pixel (', a, ', ', a, ', ', a, ')')
+              if (naxis.gt.2) then
+                write (line, 40) ival, wstr(1)(1:wl(1)), 
+     +             wstr(2)(1:wl(2)), wstr(3)(1:wl(3))
+40              format ('Image intensity               :', 1pe12.4,
+     +                  ' at pixel (', a, ', ', a, ', ', a, ')')
+              else
+                write (line, 45) ival, wstr(1)(1:wl(1)), 
+     +             wstr(2)(1:wl(2))
+45              format ('Image intensity               :', 1pe12.4,
+     +                  ' at pixel (', a, ', ', a, ')')
+              end if
               call output (line)
               if (dolog .and. (.not.cgspec .and. .not.cgdisp))
      +          call txtwrite (lcurs, line, len1(line), iostat)
             else
-              write (line, 50) wstr(1)(1:wl(1)), 
-     +          wstr(2)(1:wl(2)), wstr(3)(1:wl(3))
-50            format ('Image intensity               : blanked',
-     +                ' at pixel (', a, ', ', a, ', ', a, ')')
+              if (naxis.gt.2) then
+                write (line, 50) wstr(1)(1:wl(1)), 
+     +            wstr(2)(1:wl(2)), wstr(3)(1:wl(3))
+50              format ('Image intensity               : blanked',
+     +                  ' at pixel (', a, ', ', a, ', ', a, ')')
+              else
+                write (line, 55) wstr(1)(1:wl(1)), 
+     +            wstr(2)(1:wl(2))
+55              format ('Image intensity               : blanked',
+     +                  ' at pixel (', a, ', ', a, ')')
+              end if
               call output (line)
               if (dolog .and. (.not.cgspec .and. .not.cgdisp))
      +          call txtwrite (lcurs, line, len1(line), iostat)
