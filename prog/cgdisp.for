@@ -614,6 +614,8 @@ c    cjp  16jun98  Added "sym" overlay type
 c    nebk 16jul98  Fix problem when region selected planes were not contiguious
 c    nebk 09sep98  "sym" overlay ID strings were not being written 
 c 		   in the right place
+c    nebk 17sep98  hardcopy devices were over-riding too much colour
+c                  table control
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -881,7 +883,7 @@ c If we are going to use a b&w transfer function we must account for the
 c background colour of the device.  So make the OFM the complement of 
 c itself here if the background is going to be white.  Only works for b&w OFMs
 c
-             if (bgcol.eq.1) call ofmcmp
+             if (bgcol.eq.1 .and. coltab(j).eq.0) call ofmcmp
            end if
 c
 c Draw image
@@ -925,7 +927,8 @@ c
 c
 c Retake complement of OFM if needed (hardcopy/white backgrounds)
 c
-         if (hard.eq.'YES' .and. bgcol.eq.1) call ofmcmp
+         if (hard.eq.'YES' .and. bgcol.eq.1 .and. coltab(j).eq.0)
+     +       call ofmcmp
 c
 c Interactive modification of OFM for interactive devices here
 c
@@ -2554,7 +2557,7 @@ c
       pixr(1,1) = 0.0
       pixr(2,1) = 0.0
       trfun(1) = 'lin'
-      coltab(1) = 1
+      coltab(1) = 0
       present = keyprsnt ('range')
       i = 0
 c
@@ -2569,7 +2572,7 @@ c
           call keyr ('range', pixr(2,i), 0.0)
           call keya ('range', trfun(i), 'lin')
           call lcase (trfun)
-          call keyi ('range', coltab(i), 1)
+          call keyi ('range', coltab(i), 0)
 c
           if (gin.ne.' ' .and. trfun(i).ne.'lin' .and. 
      +        trfun(i).ne.'log' .and. trfun(i).ne.'heq' .and.
