@@ -25,7 +25,20 @@ c@ options
 c	This gives extra processing options. Several options can be given,
 c	each separated by commas. They may be abbreivated to the minimum
 c	needed to avoid ambiguity.
-c
+c	  nocopy    By default, uvsplit copies any calibration tables
+c	            present in the input to the output. The nocopy
+c	            option suppresses this.
+c	  mosaic    Typically this option is used when splitting datasets
+c	            observed in mosaic mode. UVSPLIT attempts to place all
+c	            pointing centres of the source of interest into the one
+c	            output dataset. This requires that the field names of
+c	            the different pointings be composed of two parts,
+c	            separated by an underscore, viz
+c	                  a_b
+c	            Where "a" is common to all field names (typically
+c	            a source) and "b" is a field-specific name (typically
+c	            a field number). For example field 123 of a mosaic
+c	            experiment of the LMC might be called "lmc_123"
 c	The following three options determine which data-set characteristics
 c	result in UVSPLIT generating different output data-sets.
 c	  nosource  Do not produce new data-sets based on source name. That
@@ -38,30 +51,28 @@ c	            frequency switches.
 c	  nowindow  Do not generate a separate output data-set for each
 c	            spectral window. The default is to create a new
 c	            output for each spectral window.
-c	  nocopy    By default, uvsplit copies any calibration tables
-c	            present in the input to the output. The nocopy
-c	            option suppresses this.
 c--
 c  History:
 c    rjs  13oct93 Original version.
 c    rjs  29aug94 W-axis change.
 c    rjs   6sep94 Use MAXWIN in maxdim.h. Better treatment of xyphase.
-c    rjs  19jan95 Copy pulsar bin variable across.
+c    rjs  25jan95 Added options=mosaic.
 c
 c  Bugs:
-c    * Not written yet.
+c   Perfect?
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer MAXSELS
 	parameter(MAXSELS=256)
 	character version*(*)
-	parameter(version='UvSplit: version 1.0 6-Sep-94')
+	parameter(version='UvSplit: version 1.0 25-Jan-95')
 c
 	character vis*64,dtype*1
 	integer tvis
 	real sels(MAXSELS)
 	integer length
 	logical dosource,dofreq,dowin,updated,dowide,docomp,docopy
+	logical mosaic
 	logical more,first
 c
 c  Externals.
@@ -72,7 +83,7 @@ c  Get the input parameters.
 c
 	call output(version)
 	call keyini
-	call GetOpt(dosource,dofreq,dowin,docopy)
+	call GetOpt(dosource,dofreq,dowin,docopy,mosaic)
 	call keyf('vis',vis,' ')
 	call SelInput('select',sels,MAXSELS)
 	call keyfin
@@ -113,7 +124,7 @@ c
 c
 c  Read through the file.
 c
-	  call Process(tVis,dosource,dofreq,dowin,dowide)
+	  call Process(tVis,dosource,dofreq,dowin,dowide,mosaic)
 c
 	  first = .false.
 	  call FileFin(docopy,more)
@@ -122,11 +133,11 @@ c
 c
 	end
 c************************************************************************
-	subroutine Process(tVis,dosource,dofreq,dowin,dowide)
+	subroutine Process(tVis,dosource,dofreq,dowin,dowide,mosaic)
 c
 	implicit none
 	integer tVis
-	logical dosource,dofreq,dowin,dowide
+	logical dosource,dofreq,dowin,dowide,mosaic
 c
 c  Do a pass through the data file.
 c
@@ -136,6 +147,7 @@ c    dosource
 c    dofreq
 c    dowin
 c    dowide
+c    mosaic
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer MAXINDX
@@ -165,7 +177,7 @@ c
 c  Update the indices if necessary.
 c
 	  if(uvVarUpd(vCheck))then
-	    call GetIndx(tVis,dosource,dofreq,dowin,dowide,
+	    call GetIndx(tVis,dosource,dofreq,dowin,dowide,mosaic,
      *	      indx,nschan,nIndx,MAXINDX)
 	    skip = .true.
 	    do i=1,nIndx
@@ -193,12 +205,12 @@ c
 c
 	end
 c************************************************************************
-	subroutine GetIndx(tVis,dosource,dofreq,dowin,dowide,
+	subroutine GetIndx(tVis,dosource,dofreq,dowin,dowide,mosaic,
      *	  Indx,nschan,nIndx,MAXINDX)
 c
 	implicit none
 	integer tVis,nIndx,MAXINDX,nschan(MAXINDX),Indx(MAXINDX)
-	logical dosource,dofreq,dowin,dowide
+	logical dosource,dofreq,dowin,dowide,mosaic
 c
 c  Determine the current indices of interest.
 c
@@ -208,6 +220,7 @@ c------------------------------------------------------------------------
 	integer maxi,n,nchan,nwide,length,lenb,i
 	double precision sdf(MAXWIN),sfreq(MAXWIN)
 	real wfreq(MAXWIN)
+	logical discard
 c
 c  Externals.
 c
@@ -225,9 +238,12 @@ c
 	  call uvrdvra(tVis,'source',source,' ')
 	  length = min(len1(source),len(base))
 	  lenb = 0
+	  discard = .false.
 	  do i=1,length
 	    c = source(i:i)
-	    if((c.ge.'a'.and.c.le.'z').or.
+	    if(discard.or.(c.eq.'_'.and.mosaic))then
+	      discard = .true.
+	    else if((c.ge.'a'.and.c.le.'z').or.
      *	       (c.ge.'A'.and.c.le.'Z').or.
      *	       (c.ge.'0'.and.c.le.'9').or.
      *	       c.eq.'-'.or.c.eq.'+'.or.c.eq.'_'.or.c.eq.'.')then
@@ -351,10 +367,10 @@ c------------------------------------------------------------------------
 c
 	end
 c************************************************************************
-	subroutine GetOpt(dosource,dofreq,dowin,docopy)
+	subroutine GetOpt(dosource,dofreq,dowin,docopy,mosaic)
 c
 	implicit none
-	logical dosource,dofreq,dowin,docopy
+	logical dosource,dofreq,dowin,docopy,mosaic
 c
 c  Determine extra processing options.
 c
@@ -362,18 +378,22 @@ c  Output:
 c    dosource
 c    dofreq
 c    dowin
+c    docopy
+c    mosaic
 c------------------------------------------------------------------------
 	integer NOPTS
-	parameter(NOPTS=4)
+	parameter(NOPTS=5)
 	logical present(NOPTS)
 	character opts(NOPTS)*8
-	data opts/'nosource','nofreq  ','nowindow','nocopy  '/
+	data opts/'nosource','nofreq  ','nowindow','nocopy  ',
+     *		  'mosaic  '/
 c
 	call options('options',opts,present,NOPTS)
 	dosource = .not.present(1)
 	dofreq   = .not.present(2)
 	dowin    = .not.present(3)
 	docopy   = .not.present(4)
+	mosaic   =      present(5)
 c
 	end
 c************************************************************************
@@ -637,7 +657,7 @@ c------------------------------------------------------------------------
 	character line*64
 c
 	integer NCOPY,NSCHECK,NWCHECK
-	parameter(NCOPY=64,NSCHECK=8,NWCHECK=3)
+	parameter(NCOPY=63,NSCHECK=8,NWCHECK=3)
 	character copy(NCOPY)*8,scheck(NSCHECK)*8,wcheck(NWCHECK)*8
         data copy/    'airtemp ','antdiam ','antpos  ','atten   ',
      *     'axisrms ','chi     ','corbit  ','corbw   ','corfin  ',
@@ -651,7 +671,7 @@ c
      *     'plmin   ','pltb    ','precipmm','ra      ','relhumid',
      *     'source  ','telescop','temp    ','tpower  ','ut      ',
      *     'veldop  ','veltype ','version ','vsource ','winddir ',
-     *     'windmph ','delay0  ','npol    ','pol     ','bin     '/
+     *     'windmph ','delay0  ','npol    ','pol     '/
 c
 	data SCheck/  'nspect  ','restfreq','ischan  ','nschan  ',
      *     'sfreq   ','sdf     ','systemp ','xyphase '/
