@@ -130,6 +130,7 @@ c   rjs  14feb95 - Changes to the area of the way "model" is handled.
 c   rjs   2jun95 - Fix spurious warning message resulting from the above
 c		   change.
 c   rjs  12oct95 - Tidy up above changes.
+c   rjs  27nov95 - Increase max complexity of clean region.
 c
 c  Important Constants:
 c    MaxDim	The max linear dimension of an input (or output) image.
@@ -147,11 +148,11 @@ c		to write.
 c
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Clean: version 1.0 2-Jun-95')
+	parameter(version='Clean: version 1.0 27-Nov-95')
 	include 'maxdim.h'
 	integer MaxBeam,maxCmp1,maxCmp2,MaxBox,MaxRun,MaxP
 	parameter(maxCmp1=66000,MaxCmp2=32000,MaxP=257)
-	parameter(MaxBeam=MaxP*MaxP,MaxBox=1024,MaxRun=3*maxdim)
+	parameter(MaxBeam=MaxP*MaxP,MaxBox=2048,MaxRun=3*maxdim)
 c
 	real Data(MaxBuf)
 	integer Boxes(MaxBox),Run(3,MaxRun),MaxMap
