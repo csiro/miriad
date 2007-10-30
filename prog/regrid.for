@@ -57,6 +57,8 @@ c	  offset    The coordinate system described by the template or
 c	            descriptors is modified (shift and expansion/contraction)
 c	            by an integral number of pixels so that it completely
 c	            encloses the input.
+c	  nearest   Use nearest neighbour interpolation rather than the 
+c	            default higher order interpolation scheme.
 c	  galeqsw   Switch the output coordinate system between equatorial
 c	            and galactic.
 c	  equisw    Switch the equinox of the output bwtween B1950 and J2000.
@@ -108,12 +110,12 @@ c----------------------------------------------------------------------
 	include 'mem.h'
 c
 	character version*(*)
-	parameter(version='Regrid: version 1.0 22-Jul-97')
+	parameter(version='Regrid: version 1.0 9-Sep-97')
 c
 	character in*64,out*64,tin*64,ctype*16,cellscal*12,proj*3
 	character line*64
 	double precision desc(4,MAXNAX),crpix,crval,cdelt,epoch1,epoch2
-	logical noscale,dooff,doepo,dogaleq
+	logical noscale,dooff,doepo,dogaleq,nearest
 	integer ndesc,nax,naxis,nin(MAXNAX),nout(MAXNAX),ntin(MAXNAX)
 	integer i,k,n,lIn,lOut,lTmp,cOut,axes(MAXNAX)
 	integer GridSize,gnx,gny,minv(3),maxv(3),order(3)
@@ -132,8 +134,6 @@ c
 c  Get the input parameters.
 c
 	call output(version)
-	call bug('i',
-     *	  'Regrid now handles non-linear coordinates correctly')
 	call keyini
 	call keya('in',in,' ')
 	if(in.eq.' ')call bug('f','An input must be given')
@@ -148,7 +148,7 @@ c
 	call keyr('tol',tol,0.05)
 	if(tol.le.0.or.tol.ge.0.5)
      *	  call bug('f','Invalid value for the tol parameter')
-	call getopt(noscale,dooff,doepo,dogaleq)
+	call getopt(noscale,dooff,doepo,dogaleq,nearest)
 	call keymatch('project',NPROJS,projs,1,proj,nproj)
 	if(nproj.eq.0)proj = ' '
 	call keyfin
@@ -290,7 +290,7 @@ c  statistics about it.
 c
 	  call GridGen(nOut(1),nOut(2),k,
      *		memr(Xv),memr(Yv),memr(Zv),gnx,gny)
-	  call GridStat(memr(Xv),memr(Yv),memr(Zv),gnx,gny,
+	  call GridStat(nearest,memr(Xv),memr(Yv),memr(Zv),gnx,gny,
      *	    nin(1),nin(2),nin(3),tol,minv,maxv,order)
 c
 	  if(minv(1).gt.maxv(1).or.minv(2).gt.maxv(2).or.
@@ -344,23 +344,25 @@ c
 c
 	end
 c************************************************************************
-	subroutine getopt(noscale,offset,doepo,dogaleq)
+	subroutine getopt(noscale,offset,doepo,dogaleq,nearest)
 c
 	implicit none
-	logical noscale,offset,doepo,dogaleq
+	logical noscale,offset,doepo,dogaleq,nearest
 c
 c------------------------------------------------------------------------
 	integer NOPTS
-	parameter(NOPTS=4)
+	parameter(NOPTS=5)
 	character opts(NOPTS)*8
 	logical present(NOPTS)
-	data opts/'noscale ','offset  ','equisw  ','galeqsw '/
+	data opts/'noscale ','offset  ','equisw  ','galeqsw ',
+     *		  'nearest '/
 c
 	call options('options',opts,present,NOPTS)
 	noscale = present(1)
 	offset  = present(2)
 	doepo   = present(3)
 	dogaleq = present(4)
+	nearest = present(5)
 	end
 c************************************************************************
 	subroutine CoordSw(lOut,doepo,dogaleq)
@@ -499,10 +501,11 @@ c
 c
 	end
 c************************************************************************
-	subroutine GridStat(Xv,Yv,Zv,gnx,gny,n1,n2,n3,
+	subroutine GridStat(nearest,Xv,Yv,Zv,gnx,gny,n1,n2,n3,
      *	    tol,minv,maxv,order)
 c
 	implicit none
+	logical nearest
 	integer gnx,gny,n1,n2,n3,minv(3),maxv(3),order(3)
 	real Xv(gnx,gny),Yv(gnx,gny),Zv(gnx,gny),tol
 c------------------------------------------------------------------------
@@ -536,7 +539,7 @@ c
 	  minr(i) = max(minr(i),1.0)
 	  maxr(i) = min(maxr(i),real(n(i)))
 	  diff = max(maxr(i)-minr(i),abs(nint(minr(i))-minr(i)))
-	  if(n(i).le.5.or.diff.lt.tol)then
+	  if(n(i).le.5.or.diff.lt.tol.or.nearest)then
 	    order(i) = 0
 	    minv(i) = max(1,   nint(minr(i)))
 	    maxv(i) = min(n(i),nint(maxr(i)))
