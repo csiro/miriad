@@ -596,6 +596,7 @@ c    nebk 01apr97  Don't write overlat ID string if overlay off plot
 c    nebk 15may97  Options=nofirst got broken at some point
 c    nebk 16may97  Replciate one value for all contours for COLS1
 c    nebk 18jul97  Doc change (masks ANDed not ORed)
+c    rjs  21jul97  Call initco earlier.
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -1072,12 +1073,25 @@ c
       if (mskin.ne.' ') call memfree (ipimm, win(1)*win(2), 'i')
 c
       do i = 1, ncon
+	call finco(lc(i))
         call xyclose (lc(i))
       end do
-      if (gin.ne.' ') call xyclose (lg)
-      if (vin(1).ne.' ') call xyclose (lv(1))
-      if (vin(2).ne.' ') call xyclose (lv(2))
-      if (mskin.ne.' ') call xyclose (lm)
+      if (gin.ne.' ')then
+	call finco(lg)
+	call xyclose (lg)
+      endif
+      if (vin(1).ne.' ')then
+	call finco(lv(1))
+	call xyclose (lv(1))
+      endif
+      if (vin(2).ne.' ')then
+	call finco(lv(2))
+	call xyclose (lv(2))
+      endif
+      if (mskin.ne.' ')then
+	call finco(lm)
+	call xyclose (lm)
+      endif
 c
       end
 c
@@ -1225,7 +1239,6 @@ c
 c
 c Work out the beam polygon
 c
-      call initco (lun)
       do i = 0, 360
         pa = i * dpi / 180.0 	  
         xx = bbmaj * cos(pa)
@@ -1239,7 +1252,6 @@ c
         xs(i) = wout(1) + xcen
         ys(i) = wout(2) + ycen
       end do
-      call finco (lun)
 c
 c  Draw the beam with the desired line style and fill style
 c
@@ -1337,7 +1349,6 @@ c
           ymin = 1.0e30
           ymax = -1.e30
 c
-          call initco (luns(j))
           do i = 0, 360, 4
             pa = i * dpi / 180.0 	  
             xx = bbmaj * cos(pa)
@@ -1357,7 +1368,6 @@ c
             ymin = min(wout(2),dble(ymin))
             ymax = max(wout(2),dble(ymax))
           end do
-          call finco (luns(j))
 c
 c  Work out biggest x,y sizes
 c
@@ -2720,8 +2730,6 @@ c------------------------------------------------------------------------
 c
 c Initialize coordinate routines
 c
-        call initco (lun)
-c
         xoff = 0.0
         yoff = 0.0
         i = 0
@@ -2764,7 +2772,6 @@ c
           end if
         end do
 c
-        call finco (lun)
         call txtclose (lpos)
       end if
 c
@@ -3715,6 +3722,7 @@ c
       if (ncon.gt.0)  then
         do i = 1, ncon
           call opimcg (maxnax, cin(i), lc(i), csize(1,i), cnaxis(i))
+	  call initco(lc(i))
           cmm(1,i) = 1e30
           cmm(2,i) = -1e30
         end do
@@ -3724,6 +3732,7 @@ c Open pixel map image as required
 c
       if (gin.ne.' ') then
         call opimcg (maxnax, gin, lg, gsize, gnaxis)
+	call initco(lg)
         gmm(1) = 1e30
         gmm(2) = -1e30
       end if
@@ -3733,6 +3742,7 @@ c
       if (vin(1).ne.' ' .and. vin(2).ne.' ') then
         do i = 1, 2
           call opimcg (maxnax, vin(i), lv(i), vsize(1,i), vnaxis(i))
+	  call initco(lv(i))
         end do
       end if
 c
@@ -3744,6 +3754,7 @@ c Open mask image as required
 c
       if (mskin.ne.' ') then
         call opimcg (maxnax, mskin, lm, msize, mnaxis)
+	call initco(lm)
         maskm = hdprsnt (lm, 'mask')
         if (.not.maskm)  then
           call bug ('w', 'The mask image does not have a mask')
