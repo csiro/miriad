@@ -134,6 +134,7 @@ c           rjs     23dec93 Minimum match of line parameter.
 c	    rjs     10oct94 Eliminate spurious extra call to uvflgwr.
 c	    rjs     16aug96 Eliminate MAXWIDE definition. Change NSELS,
 c			    standardise some FORTRAN.
+c           rjs     09dec97 Make antennas used message more robust.
 c***********************************************************************
 c
 c************************************************************************
@@ -965,11 +966,13 @@ c Entry antuse produces an output line with the result.
       include          'maxdim.h'
       logical          antused ( MAXANT )
       save             antused
-      character*80     fmt, rtfmt
-      integer          i, j, k, n, nfigi
-
-      character*79     outline, line
+      integer          i, j, k, n
+      character        outline*(*)
+c
+c  Externals.
+c
       integer          len1
+      character        itoaf*4
 
       data             antused / MAXANT*.FALSE. /
 
@@ -978,31 +981,27 @@ c Entry antuse produces an output line with the result.
           write( line, '( ''Refers to antenna '',i2 )' ) ant1
           call bug( 'w', line )
       else
-         antused( ant1 ) = .TRUE.
+          antused( ant1 ) = .TRUE.
       endif
       if( ant2.lt.1 .or. ant2.gt.MAXANT ) then
           write( line, '( ''Refers to antenna '',i2 )' ) ant2
           call bug( 'w', line )
       else
-         antused( ant2 ) = .TRUE.
+          antused( ant2 ) = .TRUE.
       endif
       return
 
       entry antuse( outline )
-      write( outline, '( ''Antennae used: '' )' )
-      i = len1( outline ) + 2
+      outline = 'Antennas used:'
+      i = len1( outline ) + 1
       do n = 1, MAXANT
-        if( antused(n) )
-     *  then
-           k = nfigi(n)
-           j = i + k-1 + 2
-           fmt = rtfmt( ' i<>,'', '' ',k,1 )
-           write( outline(i:j), fmt ) n
-           i = j + 1
+        if( antused(n) )then
+	  outline(i+1:i+2) = itoaf(n)
+	  i = len1(outline(1:i+2)) + 1
+	  outline(i:i) = ','
         endif
       enddo
-      outline( len1(outline): ) = ' '
-      return
+      outline(i:i) = ' '
       end
 
 
@@ -1022,7 +1021,7 @@ c Type an overview and update history to finish off
       integer       lt, lt1, lt2
       integer       reccount, treccnt
       integer       totcount, totcnt(6), i
-      character*79  outline
+      character*128 outline
       integer       len1
 
       if( ropt.eq.'none' ) return
