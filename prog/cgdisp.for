@@ -612,6 +612,8 @@ c    nebk 16jun98  FIx problem in posdec2 where ocen2 was of
 c                  size 2 instead of 3.  Was stuffing up w2wco
 c    cjp  16jun98  Added "sym" overlay type
 c    nebk 16jul98  Fix problem when region selected planes were not contiguious
+c    nebk 09sep98  "sym" overlay ID strings were not being written 
+c 		   in the right place
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -2032,7 +2034,7 @@ c
           isym = nint(ocorn(2,1))
           if (ocen(1).ge.blc(1).and.ocen(1).le.trc(1).and.
      +        ocen(2).ge.blc(2).and.ocen(2).le.trc(2)) miss = .false.
-
+c
           if (ssize.le.0.0) then 
             if (csize.le.0.0) then
               ssize = 2.0
@@ -2852,12 +2854,16 @@ c
       call pgqvsz (0, vsx1, vsx2, vsy1, vsy2)
 c 
 c Find the fraction of the view-surface taken up by the overlay
-c        
+c figure
+c
       if (ofig.eq.'clear') then
 c
 c No overlay size in this case.  Use arbitrary fraction.
 c
         xfr = 1.0 / 15.0
+        yfr = xfr
+      else if (ofig.eq.'sym') then
+        xfr = 1./40.
         yfr = xfr
       else
         xfr = abs((vpx2-vpx1) / (vsx2-vsx1) * (xr - xl) / (wx2-wx1))
@@ -2905,13 +2911,20 @@ c
         mx = xr + dx
         my = yt - dy
         just = 0.0
-      else if (ofig.eq.'box' .or. ofig.eq.'star'
-     +       .or. ofig.eq.'sym') then
+      else if (ofig.eq.'box' .or. ofig.eq.'star') then
+
 c
 c Write ID in top right corner of overlay
 c
         mx = xr - xbox(4) - dx2/50.0
         my = yt - ybox(2) - dy2/50.0
+        just = 0.0
+      else if (ofig.eq.'sym') then      
+c
+c Write ID to right of symbol
+c
+        mx = x + 1.5*csize*(wx2-wx1)/40.0
+        my = y + 1.5*csize*(wy2-wy1)/40.0
         just = 0.0
       end if
 c
