@@ -62,6 +62,7 @@ c    rjs  22sep95 Re-added support for pulsar binning.
 c    rjs  05oct95 Handle xyphase and systemp being temporarily
 c		  missing.
 c    rjs  29may96 Added nbin to uvvariables.
+c    rjs  05aug96 Increased maxfiles.
 c  Bugs:
 c   Perfect?
 c------------------------------------------------------------------------
