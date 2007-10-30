@@ -47,5 +47,9 @@ set ratio = `calc -f f8.2 "$rms/$trms"`
 set trms = `calc -f 1pe8.2 "$trms"`
 set pk   = `calc -f f6.3 "$pk"`
 
-echo "$file $trms $ratio $dr $pk" | \
-  awk '{printf "%-26s %8s  %8s  %5d  %6s\n",$1,$2,$3,$4,$5}'
+cat << "END-OF-FILE" > junk.awk
+{ if( $4 >= 10 )printf "%-26s %8s  %8s  %5d  %6s\n",$1,$2,$3,$4,$5;
+  else          printf "%-26s %8s  %8s         %6s\n",$1,$2,$3,$5; }
+"END-OF-FILE"
+
+echo "$file $trms $ratio $dr $pk" | awk -f junk.awk

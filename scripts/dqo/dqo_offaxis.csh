@@ -1,48 +1,20 @@
 #!/bin/csh -fx
 ########################################################################
+#
 # Script to apply calibration solutions from on-axis
 # data to off-axis fields, make images and work out some things
 # about them.  It is assumed that you have run
-# doit_init and doit_onaxis.
+# dqo_init and dqo_onaxis.
 # Not very modular !
-#
-#  SSSS = 1934_a, 1934_b
-#  FFFF = 8640, 4800, 2382, 1344
-#
-# Creates images
-#   SSSS.FFFF-low.bem
-#   SSSS.FFFF-low.imap
-#   SSSS.FFFF-low.qmap
-#   SSSS.FFFF-low.umap
-#   SSSS.FFFF-low.vmap
-#   SSSS.FFFF-low.cube
-#   1934_a.FFFF-low.imod
-#   1934_a.FFFF-low.icln
-#
-#   SSSS.FFFF-full.bem
-#   SSSS.FFFF-full.imap
-#   SSSS.FFFF-full.qmap
-#   SSSS.FFFF-full.umap
-#   SSSS.FFFF-full.vmap
-#   SSSS.FFFF-full.cube
-#   1934_a.FFFF-full.imod
-#   1934_a.FFFF-full.icln
-#
-# Creates postscript files called
-#   SSSS.FFFF-full.ps
-#
-# Creates text files called
-#   SSSS.FFFF-full-stats.txt
 #
 ########################################################################
 
+  set array    = 6
   set roffsets = ( 0 0 0 0 )
   set doffsets = ( 0 0 0 0 )
   source dqo.params
 
   set targets=($offset1 $offset2)
-
-#  goto plot
 
 # Copy tables and average gain solutions. Then make calibrated datasets
 
@@ -71,6 +43,13 @@
 # Make images. Natural weighting, all channels, mfs, full resolution
 # Put offset1 field in centre of image
 
+  set alength = `echo $array|sed "s/[abcdABCD]//"`
+  if ( $alength != 6 ) then
+    set select = "select=-ant(6)"
+  else
+    set select = "select=-ant(7)"
+  endif
+
   foreach frq ($flist)
     if ("$frq" =~ 8*) then
       set cell=0.3
@@ -89,6 +68,7 @@
       set raoffset  = $roffsets[1]
       set decoffset = $doffsets[1]
     endif
+    set cell = `calc "$cell*6/$alength"`
 
     foreach src ($targets)
 
@@ -104,65 +84,62 @@
         set offsetm=0
       endif
 
-      rm -rf $file-full.{imap,qmap,umap,vmap,bem}
+      rm -rf $file.{imap,qmap,umap,vmap,bem}
       invert vis=$file-cal offset=$offsetl,$offsetm \
-        map=$file-full.imap,$file-full.qmap,$file-full.umap,$file-full.vmap \
-        beam=$file-full.bem imsize=512 cell=$cell sup=0 stokes=i,q,u,v \
-        options=mfs,double
+        map=$file.imap,$file.qmap,$file.umap,$file.vmap \
+        beam=$file.bem imsize=512 cell=$cell sup=0 stokes=i,q,u,v \
+        options=mfs,double "$select"
     end
   end
 
-# Deconvolve total intensity for offset1 field
-# 500 iterations may need tweaking
+# Deconvolve total intensity for offset1 field.
+# 500 iterations may need tweaking.
 
   foreach frq ($flist)
     set file=$offset1.$frq
-    rm -rf $file-full.imod $file-full.icln
-    clean map=$file-full.imap beam=$file-full.bem \
-      out=$file-full.imod "region=relcen,box(-250,-250,250,250)" niters=500
-    restor map=$file-full.imap beam=$file-full.bem \
-      model=$file-full.imod out=$file-full.icln
+    rm -rf $file.imod $file.icln
+    clean map=$file.imap beam=$file.bem \
+      out=$file.imod "region=relcen,box(-250,-250,250,250)" niters=500
+    restor map=$file.imap beam=$file.bem \
+      model=$file.imod out=$file.icln
   end
 
-# Put images into cubes for display
+# Put images into cubes for display.
 
-plot:
   foreach frq ($flist)
-    set file=$offset1.$frq-full
-    rm -rf $file.cube
-    imcat in=$file.icln,$file.qmap,$file.umap,$file.vmap \
-      options=relax out=$file.cube
-    set file=$offset2.$frq-full
-    rm -rf $file.cube
-    imcat in=$file.imap,$file.qmap,$file.umap,$file.vmap \
-      options=relax out=$file.cube
-
-# Make grey scale. Fiddle with levels
-
-    foreach file($offset1.$frq-full $offset2.$frq-full)
+    foreach src ($cal $offset1 $offset2)
+      set file = $src.$frq
+      rm -rf $file.cube
+      set itype = icln
+      if ($src == $offset2 ) set itype = imap
+      imcat in=$file.$itype,$file.qmap,$file.umap,$file.vmap \
+        options=relax out=$file.cube
       set plot=$file.ps
       cgdisp in=$file.cube type=p labtyp=hms,dms region=quarter \
         device=$plot/ps nxy=2,2 options=full,wedge range=-.003,.003
-      dqo_preview $plot
+      rm -rf $file.cube
     end
   end
 
-# Add stats to the log file.
+# Create the map statistics log file.
 
   set log = map.stats
-  foreach frq ($flist)
-    set file = $offset1.$frq
-    dqo_mapstats -x $file-full.icln >> $log
-    dqo_mapstats    $file-full.qmap >> $log
-    dqo_mapstats    $file-full.umap >> $log
-    dqo_mapstats    $file-full.vmap >> $log
-  end
-  foreach frq ($flist)
-    set file = $offset2.$frq
-    dqo_mapstats    $file-full.imap >> $log
-    dqo_mapstats    $file-full.qmap >> $log
-    dqo_mapstats    $file-full.umap >> $log
-    dqo_mapstats    $file-full.vmap >> $log
+  echo " " 			> $log
+  dqo_mapstats -t		>> $log
+
+  foreach src ($cal $offset1 $offset2)
+    foreach frq ($flist)
+      set file = $src.$frq
+      if ($src != $offset2 ) then
+        dqo_mapstats -x $file.icln >> $log
+      else
+        dqo_mapstats    $file.imap >> $log
+      endif
+      dqo_mapstats    $file.qmap >> $log
+      dqo_mapstats    $file.umap >> $log
+      dqo_mapstats    $file.vmap >> $log
+    end
+    echo " "			 >> $log
   end
 
 # Get the statistics of flagged points after all flagging
@@ -173,7 +150,7 @@ plot:
   echo "Post-reduction flagging statistics" >> $log
   echo "----------------------------------" >> $log
   dqo_flagstats -t >> $log
-  foreach src ($sources)
+  foreach src ($cal $offset1 $offset2)
     foreach frq ($flist)
       dqo_flagstats $src.$frq-cal >> $log
     end
