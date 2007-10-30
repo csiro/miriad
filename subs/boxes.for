@@ -38,6 +38,7 @@ c    rjs  6sep95  Check selected region really does fall within the image.
 c    rjs 13dec95  Increase MAXSHAPES in BoxRuns.
 c    rjs 29jan97  Added BoxDef -- to set the default region of interest,
 c		  and removed this capacity from BoxSet.
+c    rjs 07jul97  Change argument to coVelSet and replace coAxDesc with coAxGet
 c************************************************************************
 c* Boxes -- Summary of region of interest routines.
 c& mjs
@@ -267,9 +268,9 @@ c
 	    else if(boxtype.eq.KMS)then
 	      call coFindAx(lu,'spectral',iax)
 	      if(iax.ne.3)call BoxBug(spec,'No spectral axis present')
-	      call coAxDesc(lu,iax,line,t1,t2,t3)
+	      call coAxGet(lu,iax,line,t1,t2,t3)
 	      if(line(1:4).ne.'FELO'.and.line(1:4).ne.'VELO')
-     *		call coVelSet(lu,'radio')
+     *		call coVelSet(lu,'VELO')
 	    endif
 	  else
 	    boxes(offset+ITYPE) = boxtype
