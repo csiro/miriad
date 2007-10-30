@@ -88,6 +88,12 @@ c	This can be either "hogbom", "clark" or "any", and
 c	determines the Clean algorithm used. If the mode is "any", then
 c	MFCLEAN determines which is the best algorithm to use. The default
 c	is "any". 
+c@ log
+c	Output log file containing a list of all the components. The log
+c	file consists of 5 columns, being the iteration number, the x and
+c	y pixel coordinate (in the output model; this goes from 1 to N),
+c	the "I" component and the "I*alpha" component. The default is to not
+c	create a log file.
 c--
 c  History:
 c    rjs   Nov89 - Original version.
@@ -127,6 +133,7 @@ c   rjs  10mar97 - Default region is all channels.
 c   rjs  24jun97 - Correct check for good alignment.
 c   rjs  02jul97 - Added cellscal.
 c   rjs  23jul97 - Added pbtype.
+c   rjs  14aug00 - Added log file output.
 c
 c  Bugs and Shortcomings:
 c     * The way it does convolutions is rather inefficent, partially
@@ -165,11 +172,12 @@ c
 c
 	character Mode*8,Text*7
 	real Cutoff,Gain0,Gain1,Speed,Limit,Scale
-	logical NegStop,NegFound,More
+	logical NegStop,NegFound,More,dolog
 	integer maxNiter,Niter,totNiter,minPatch,maxPatch
 	integer naxis,n1,n2,n1d,n2d,ic,jc,nx,ny,ntmp
 	integer xmin,xmax,ymin,ymax,xoff,yoff,zoff
 	character MapNam*64,BeamNam*64,ModelNam*64,OutNam*64,line*72
+	character logf*64
 	integer lMap,lBeam,lModel,lOut
 	integer nMap(3),nBeam(3),nModel(3),nOut(4)
 	real EstASum
@@ -186,7 +194,12 @@ c  Get the input parameters.
 c
 	call output(version)
 	call inputs(MapNam,BeamNam,ModelNam,OutNam,maxNiter,NegStop,
-     *	  Cutoff,Boxes,maxBox,MinPatch,Gain0,Gain1,Speed,mode)
+     *	  Cutoff,Boxes,maxBox,MinPatch,Gain0,Gain1,Speed,mode,logf)
+c
+c  Open the log file, if required.
+c
+	dolog = logf.ne.' '
+	if(dolog)call logOpen(logf,' ')
 c
 c  Open the beam, get some characteristics about it, then read in the
 c  beam patch. The beam patch is not required if we are performing Steer
@@ -373,7 +386,6 @@ c  Get statistics about the residuals.
 c
 	call output('Starting to iterate ...')
 	call Stats(dat(Res0),nPoint,ResMin,ResMax,ResAMax,ResRms)
-	
 c
 c  Perform the appropriate iteration until no more.
 c
@@ -386,13 +398,13 @@ c
 	    call Hogbom(maxPatch,Patch00,Patch11,Patch01,Patch10,nx,ny,
      *	      dat(Res0),dat(Res1),dat(Est0),dat(Est1),Icmp,Jcmp,
      *	      dat(Tmp),nPoint,Run,nRun,EstASum,Cutoff,Gain0,Gain1,
-     *	      negStop,negFound,maxNiter,Niter)
+     *	      negStop,negFound,maxNiter,Niter,dolog)
 	      text = ' Hogbom'
 	  else
 	    call Clark(nx,ny,dat(Res0),dat(Res1),dat(Est0),dat(Est1),
      *	      nPoint,Run,nRun,Histo,Patch00,Patch11,Patch01,Patch10,
      *	      minPatch,maxPatch,Cutoff,negStop,maxNiter,Gain0,Gain1,
-     *	      Speed,ResAMax,EstASum,Niter,Limit,negFound,
+     *	      Speed,ResAMax,EstASum,Niter,dolog,Limit,negFound,
      *	      Rcmp0,Rcmp1,Ccmp0,Ccmp1,Icmp,Jcmp,dat(Tmp),maxCmp2)
 	    call Diff(dat(Est0),dat(Est1),dat(Map0),dat(Map1),
      *	      dat(Res0),dat(Res1),dat(Tmp),nPoint,nx,ny,Run,nRun,
@@ -440,6 +452,7 @@ c
 c
 c  Close up the files. Ready to go home.
 c
+	if(dolog)call logClose
 	call xyclose(lMap)
 	call xyclose(lBeam)
 	call xyclose(lOut)
@@ -698,7 +711,7 @@ c
 	end
 c************************************************************************
 	subroutine inputs(map,beam,estimate,out,Niter,negStop,
-     *	  cutoff,box,maxbox,minpatch,gain0,gain1,speed,mode)
+     *	  cutoff,box,maxbox,minpatch,gain0,gain1,speed,mode,logf)
 c
 	implicit none
 	integer Niter, minpatch, maxbox
@@ -706,6 +719,7 @@ c
 	real cutoff,gain0,gain1,speed
 	logical negStop
 	character map*(*),beam*(*),estimate*(*),out*(*),mode*(*)
+	character logf*(*)
 c
 c       Get user supplied inputs
 c
@@ -757,6 +771,7 @@ c
 	call keya('mode',mode,'any')
 	if(mode.ne.'clark'.and.mode.ne.'any'.and.mode.ne.'hogbom')
      *	  call bug('f','Bad value for mode')
+	call keya('log',logf,' ')
 	call keyfin
 c
         end
@@ -879,7 +894,8 @@ c
 c************************************************************************
 	subroutine Hogbom(n,Patch00,Patch11,Patch01,Patch10,nx,ny,
      *	  Rcmp0,Rcmp1,Ccmp0,Ccmp1,Icmp,Jcmp,Tmp,Ncmp,Run,nRun,
-     *	  EstASum,Cutoff,gain0,gain1,negStop,negFound,MaxNiter,Niter)
+     *	  EstASum,Cutoff,gain0,gain1,negStop,negFound,MaxNiter,
+     *	  Niter,dolog)
 c
 	implicit none
 	integer nx,ny,nCmp,nRun,n
@@ -887,7 +903,7 @@ c
 	real Rcmp0(nCmp),Rcmp1(nCmp),Ccmp0(nCmp),Ccmp1(nCmp),Tmp(nCmp)
 	real Patch00(n,n),Patch11(n,n),Patch01(n,n),Patch10(n,n)
 	real Cutoff,gain0,gain1,EstASum
-	logical negStop,negFound
+	logical negStop,negFound,dolog
 	integer MaxNiter,Niter
 c
 c  Perform a Hogbom Clean.
@@ -967,20 +983,20 @@ c  Ready to perform the subtraction step. Lets go.
 c
 	call SubComp(nx,ny,Ymap,Patch00,Patch11,Patch01,Patch10,n,n/2,
      *	  Gain0,Gain1,MaxNiter,NegStop,0.,0.,Cutoff,EstASum,Icmp,Jcmp,
-     *	  Rcmp0,Rcmp1,Ccmp0,Ccmp1,Tmp,Ncmp,Niter,negFound)
+     *	  Rcmp0,Rcmp1,Ccmp0,Ccmp1,Tmp,Ncmp,Niter,dolog,negFound)
 	end
 c************************************************************************
 	subroutine Clark(nx,ny,Res0,Res1,Est0,Est1,
      *	  nPoint,Run,nRun, Histo,Patch00,Patch11,Patch01,Patch10,
      *	  minPatch,maxPatch,Cutoff,negStop,maxNiter,
-     *	  Gain0,Gain1,Speed,ResAMax,EstASum,Niter,Limit,negFound,
+     *	  Gain0,Gain1,Speed,ResAMax,EstASum,Niter,dolog,Limit,negFound,
      *	  Rcmp0,Rcmp1,Ccmp0,Ccmp1,Icmp,Jcmp,Tmp,maxCmp)
 c
 	implicit none
 	integer nx,ny,minPatch,maxPatch,maxNiter,Niter,nRun,nPoint
 	integer Run(3,nrun)
 	real Res0(nPoint),Res1(nPoint),Est0(nPoint),Est1(nPoint)
-	logical negStop,negFound
+	logical negStop,negFound,dolog
 	real Cutoff,Gain0,Gain1,Speed,Limit,ResAMax,EstASum
 	real Patch00(maxPatch,maxPatch),Patch11(maxPatch,maxPatch)
 	real Patch01(maxPatch,maxPatch),Patch10(maxPatch,maxPatch)
@@ -1050,7 +1066,7 @@ c
 	call SubComp(nx,ny,Ymap,Patch00,Patch11,Patch01,Patch10,
      *	  maxPatch,nPatch,Gain0,Gain1,MaxNiter,negStop,1.,Speed,Limit,
      *	  EstASum,Icmp,Jcmp,RCmp0,Rcmp1,
-     *	  Ccmp0,Ccmp1,Tmp,Ncmp,Niter,negFound)
+     *	  Ccmp0,Ccmp1,Tmp,Ncmp,Niter,dolog,negFound)
 c
 	call NewEst(Ccmp0,Ccmp1,Icmp,Jcmp,nCmp,Est0,Est1,
      *	  nPoint,Run,nRun)
@@ -1059,7 +1075,7 @@ c************************************************************************
 	subroutine SubComp(nx,ny,Ymap,Patch00,Patch11,Patch01,Patch10,
      *	  n,PWidth,Gain0,Gain1,maxNiter,NegStop,g,Speed,Limit,
      *	  EstASum,Icmp,Jcmp,Rcmp0,Rcmp1,
-     *	  Ccmp0,Ccmp1,Tmp,Ncmp,Niter,negFound)
+     *	  Ccmp0,Ccmp1,Tmp,Ncmp,Niter,dolog,negFound)
 c
 	implicit none
 	integer nx,ny,n,Ncmp,Niter,MaxNiter,PWidth
@@ -1067,7 +1083,7 @@ c
 	integer Icmp(Ncmp),Jcmp(Ncmp),Ymap(ny+1)
 	real Patch00(n,n),Patch11(n,n),Patch01(n,n),Patch10(n,n)
 	real Rcmp0(Ncmp),Rcmp1(Ncmp),Ccmp0(Ncmp),Ccmp1(Ncmp),Tmp(Ncmp)
-	logical negStop, negFound
+	logical negStop,negFound,dolog
 c
 c  Perform minor iterations. This quits performing minor iterations when
 c
@@ -1118,7 +1134,8 @@ c------------------------------------------------------------------------
 	integer Pk,p,ipk,jpk,ipkd,jpkd
 	real TermRes,ResMax,Wt0,Wt1,beta,P00,P11,P01
 	integer Temp(maxrun),Indx(maxrun)
-	logical more
+	logical more,ok
+	character line*80
 c
 c  Initialise.
 c
@@ -1145,6 +1162,13 @@ c  Determine the breakup between the Patch0 and Patch1 beams.
 c
 	  Wt0 = gain0 * Wt0
 	  Wt1 = gain1 * Wt1
+	  Niter = Niter + 1
+c
+	  if(dolog)then
+	    write(line,10)niter,ipk,jpk,wt0,wt1
+  10	    format(i8,2i5,1p2e15.7)
+	    call logwrite(line,ok)
+	  endif	    
 c
 c  Find the residuals which have suitable y values.
 c
@@ -1200,15 +1224,12 @@ c
 c
 c  Ready for the next loop.
 c
-	  Niter = Niter + 1
 	  TermRes = TermRes + 
      *	   beta * abs(Wt0) / ( EstASum * abs(ResMax)**Speed )
 	  call GetPk(Ncmp,Rcmp0,Rcmp1,P00,P11,P01,Tmp,Pk,Wt0,Wt1,ResMax)
 	  negFound = negFound.or.ResMax.lt.0  .or. Wt0+Ccmp0(Pk).lt.0
 	  more = abs(ResMax).gt.TermRes .and. Niter.lt.MaxNiter .and.
      *		.not.(negStop.and.negFound)
-
-
 	enddo
 	end
 c************************************************************************
