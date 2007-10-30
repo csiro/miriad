@@ -36,6 +36,7 @@ c    rjs  06sep93 Change ownership. Fix bug which inverted (!) the masking
 c		  file.
 c    rjs  07feb96 Handle 4th, etc, dimension.
 c    rjs  02jul97 cellscal change.
+c    rjs  23jul97 Add pbtype.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'maxnax.h'
@@ -267,7 +268,7 @@ c
 c  Header keywords.
 c
 	integer nkeys
-	parameter(nkeys=22)
+	parameter(nkeys=23)
 	character keyw(nkeys)*8
 c
 c  Externals.
@@ -276,7 +277,7 @@ c
 c
 	data keyw/   'bmaj    ','bmin    ','bpa     ','bunit   ',
      *    'obstime ','epoch   ','history ','instrume',
-     *	  'ltype   ','lstart  ','lwidth  ','lstep   ',
+     *	  'ltype   ','lstart  ','lwidth  ','lstep   ','pbtype  ',
      *	  'niters  ','object  ','observer','obsra   ','obsdec  ',
      *	  'pbfwhm  ','restfreq','telescop','vobs    ','cellscal'/
 c
