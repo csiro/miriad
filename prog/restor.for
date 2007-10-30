@@ -44,10 +44,15 @@ c	full-width at half-maximum of the major and minor axes of the
 c	gaussian. If only one number is given, the gaussian will have
 c	equal major and minor axes. If no values are given, they are
 c	either retrieved from the beam header, or computed by fitting a
-c	gaussian to the given dirty beam. Note that the fitting routine
-c	will probably give different values to the AIPS MX and APCLN tasks.
-c	Generally the value computed by RESTOR is to be preferred to the
-c	APCLN and MX values.
+c	gaussian to the given dirty beam.
+c
+c	Note that the model image is convolved with this gaussian beam, and 
+c	then added to the residuals. These residuals are not affected by the
+c	choice of this gaussian beam size. So if you want the residuals and
+c	convolved image to have approximately the same beam size, then
+c	the gaussian beam size chosen should be the same size as the dirty beam.
+c	If you want coarser resolution than that provided by this, you
+c	should use task CONVOL to smooth the restored image afterwards.
 c@ pa
 c	The position angle, in degrees, of the gaussian restoring beam,
 c	measured east from north. The default is determined from the dirty
@@ -86,6 +91,7 @@ c    rjs  02jul97  Cellscal change.
 c    rjs  23jul97  Add pbtype.
 c    rjs  25feb98  Honour documentation so that a beam is not needed when
 c		   convolving.
+c    rjs  28jun01  Doc change only.
 c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='Restor: version 1.2 25-Feb-98')

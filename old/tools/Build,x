@@ -1,6 +1,6 @@
 #!/bin/csh -f
 
-# Look for the readline library.
+# Look for the the libraries required for command line editting within the miriad shell.
 
 set llib = `mirfind readline`
 set tlib = `mirfind termcap`
@@ -11,31 +11,20 @@ if ( "$llib" == "" ) then
   exit
 endif
 if ( "$tlib" == "" && "$nlib" == "" ) then
-  echo "### Failed to find either termcap or ncurses library when building readline-Miriad"
+  echo "### Failed to find both termcap and ncurses library when building readline-Miriad"
   exit
 endif
 
 rm -f miriad
 
-if ( "$llib" != "" ) then
-  if ( "$tlib" != "" ) then
-    cc -o miriad -DREADLINE $MIR/tools/miriad.c -L$llib -lreadline -L$tlib -ltermcap
-  else
-    cc -o miriad -DREADLINE $MIR/tools/miriad.c -L$llib -lreadline -L$nlib -lncurses
-  endif
-  if ( -x miriad ) then
-    mv miriad $MIRBIN
-  else
-    echo "### Failed to compile/link readline-Miriad"
-  endif
+if ( "$tlib" != "" ) then
+  cc -o miriad -DREADLINE $MIR/tools/miriad.c -L$llib -lreadline -L$tlib -ltermcap
 else
-  echo "### Failed to find the readline library when building readline-Miriad"
+  cc -o miriad -DREADLINE $MIR/tools/miriad.c -L$llib -lreadline -L$nlib -lncurses
 endif
 
-#rm -f ercmd
-#cc -o ercmd ercmd.c
-#if ( -x ercmd ) then
-#  mv ercmd $MIRBIN
-#else
-#  echo "### Failed to build ercmd"
-#endif
+if ( -x miriad ) then
+  mv miriad $MIRBIN
+else
+  echo "### Failed to compile/link readline-Miriad"
+endif
