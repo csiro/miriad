@@ -131,12 +131,13 @@ c   rjs  02jul97   cellscal change.
 c   rjs  23jul97   Added pbtype.
 c   rjs  12mar98   Allow for more complex expressions.
 c   rjs  30nov98   Added options=grow
+c   rjs  02dec98   Increased BUFLEN again.
 c------------------------------------------------------------------------
 	INCLUDE 'maths.h'
 	INTEGER ERROR,VECTOR,SCALAR,CONSTANT
 	PARAMETER(ERROR=0,VECTOR=3,SCALAR=2,CONSTANT=1)
 	INTEGER BUFLEN,MAXBOX
-        PARAMETER(BufLen=64,MaxBox=2048)
+        PARAMETER(BufLen=256,MaxBox=2048)
 	CHARACTER VERSION*(*)
 	PARAMETER (VERSION='Maths: version 1.0 30-Nov-98')
 c
