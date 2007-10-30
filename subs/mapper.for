@@ -12,6 +12,8 @@ c    rjs  25oct94 Original version.
 c    rjs  22nov94 Array bound vioolation in mapfft2, which affected images
 c		  that were larger than maxdim/2.
 c    rjs   8dec94 Check MAXDIM is big enough. Better messages.
+c    rjs  12jan95 Fixed bug dealing with the amount of memory to allocate.
+c    rjs  13jan95 Second try at the above.
 c************************************************************************
 	subroutine MapFin
 c
@@ -361,7 +363,7 @@ c		memory.
 c    npass   -- Number of i/o passes needed to grid all these images.
 c
 	plsize= 2*nu*nv*npnt
-	nextra = max(0,npnt*(nxc*nyc - 2*nu*nv))
+	nextra = max(0,npnt*nxc*nyc - 2*nu*((npnt-1)*nv+(v0+nyc/2)) )
 	nextra = 2*((nextra+1)/2)
 c
 	nplanes = max(nBuff-nextra,memBuf()-nextra,plsize)/plsize
@@ -658,8 +660,6 @@ c
 	real cdata(maxdim+2),rdata(maxdim),scale1
 	integer i,j,offi,offo,nud,ioff
 c
-	if(outoff+nx*ny.gt.inoff+2*nu*nv)
-     *		call bug('f','Cannot work in-place')
 	offi = 2*( (u0-1) + nu*(v0-(ny/2 + 1)) ) + inoff
 	offo = outoff
 
@@ -671,6 +671,8 @@ c
 	enddo
 c
 	do j=1,ny
+	  if(offo.gt.offi)call bug('f',
+     *		'Memory conservation algorithm failed, in Mapper')
 	  do i=1,2*nud
 	    cdata(i) = Grd(i+offi)
 	  enddo
@@ -683,6 +685,8 @@ c
 c
 	  offi = offi + 2*nu
 	  offo = offo + nx
+	  if(offo.gt.offi)call bug('f',
+     *		'Memory conservation algorithm failed, in Mapper')
 	enddo
 c
 	end
