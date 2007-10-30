@@ -15,13 +15,17 @@ c@ beam
 c	The input dirty beam, also produced by INVERTs mosaic mode. No
 c	default
 c@ model
-c	An initial model of the deconvolved image. This could be the output
-c	from a previous run of MOSMEM or any other deconvolution
-c	task. It must have flux units of Jy/pixel. The default is a flat
-c	estimate, with the correct flux.
+c	An initial estimate of the deconvolved image. For point sources,
+c	giving a good initial model may help convergence. In principle,
+c	this only helps convergence, but should not affect the final
+c	solution. The model could be the output from a previous run of
+c	MOSMEM or any other deconvolution task. It must have flux units of
+c	Jy/pixel. The default is a flat estimate, with the correct flux.
 c@ default
-c	The default image. This could be a smoothed version of a previous
-c	MOSMEM run, or some other smooth estimate of the image.
+c	The default image. This is the image that the final solution will
+c	tend towards. The final result will be influenced by this default
+c	if the constrains that the data put on the solution are weak.
+c	The default is a flat estimate, with the correct flux.
 c@ out
 c	The name of the output map. The units of the output will be Jy/pixel.
 c	It can be input to RESTOR or MOSMEM (as a model, to continue the
