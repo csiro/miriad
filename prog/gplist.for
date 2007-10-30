@@ -72,6 +72,7 @@ c    smw     25may95 Added 'multiply' option
 c    smw     07sep95 Converted to 12 antennas
 c    smw     01jan96 Added phase option, deleted redundant solarfix option
 c    smw     17feb96 Compiled at Hat Creek and prettied up some things
+c    rjs     15may96 Trivial FORTRAN standardisation.
 c
 c  Bugs and Shortcomings:
 c    Like gpaver, gplist is hardwired for 12 antennas!
@@ -337,7 +338,7 @@ c
 99    format(a8,2x,12f5.1)
 97    format(10x,a,i2,a,f9.3,f9.3)
 96    format(a8,2x,a,i2,a,f9.3,f9.3)
-95    format(a8,6(x,f5.1,f5.1))
+95    format(a8,6(1x,f5.1,f5.1))
 94    format(a)
 c
 c  Do the replacement of current amp corrections with specified list
