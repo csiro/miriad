@@ -27,8 +27,8 @@
                      (problems for 1-plane datasets)
      rjs   4-sep-94  Change "word" to "words" to satisfy Cray compiler.
      rjs   6-nov-94  Change item handle to an integer.
-     bpw   8-dec-94  Adapt two loop in bufferalloc for the fact that image
-                     handle are no longer in order but a hashtable.
+     bpw   8-dec-94  Adapt two loop in bufferalloc for the fact that since
+                     6 nov image handles are no longer in sequence.
 
 *******************************************************************************/
 
@@ -200,8 +200,8 @@ int  *naxis, axlen[];
 
     if(itest)printf("Open %s; %s; naxis %d\n",name,status,*naxis);
     n_axis = *naxis;
-    if(      !strcmp( "old",     status ) ) { access = OLD; mode = "read";    printf("old\n");}
-    else if( !strcmp( "new",     status ) ) { access = NEW; mode = "write";  printf("new\n"); }
+    if(      !strcmp( "old",     status ) ) { access = OLD; mode = "read";  }
+    else if( !strcmp( "new",     status ) ) { access = NEW; mode = "write"; }
     else { bug_c( 'f', "xyzopen: Unrecognised status" ); printf("bug\n"); }
 
     hopen_c(  &tno, name, status, &iostat );                   check(iostat);
