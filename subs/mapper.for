@@ -14,6 +14,7 @@ c		  that were larger than maxdim/2.
 c    rjs   8dec94 Check MAXDIM is big enough. Better messages.
 c    rjs  12jan95 Fixed bug dealing with the amount of memory to allocate.
 c    rjs  13jan95 Second try at the above.
+c    rjs  16jan93 A third try at the above.
 c************************************************************************
 	subroutine MapFin
 c
@@ -363,7 +364,7 @@ c		memory.
 c    npass   -- Number of i/o passes needed to grid all these images.
 c
 	plsize= 2*nu*nv*npnt
-	nextra = max(0,npnt*nxc*nyc - 2*nu*((npnt-1)*nv+(v0+nyc/2)) )
+	nextra = max(0,npnt*nxc*nyc - 2*nu*((npnt-1)*nv+(v0+nyc/2-1)) )
 	nextra = 2*((nextra+1)/2)
 c
 	nplanes = max(nBuff-nextra,memBuf()-nextra,plsize)/plsize
