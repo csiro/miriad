@@ -1,0 +1,35 @@
+	.title	Packi2
+
+in  = 4
+out = 8
+n   = 12
+
+; Register Usage:
+; r0	Counter
+; (r1)	in(i)
+; (r2)	Out(i)
+
+	.entry	unpacki2,^m<iv,r2>
+	moval	@out(ap),r2
+	movaw	@in(ap),r1
+	movl	@n(ap),r0
+	pushl	#0			; Space on the stack.
+10$:	movb	(r1)+,1(sp)
+	movb	(r1)+,(sp)
+	cvtwl	(sp),(r2)+
+	sobgtr	r0,10$
+	ret
+
+	.entry	packi2,^m<iv,r2>
+	moval	@in(ap),r1
+	movaw	@out(ap),r2
+	movl	@n(ap),r0
+	pushl	#0			; Space on the stack.
+10$:	movl	(r1)+,(sp)
+;	cvtlw	(r1)+,(sp)
+	movb	1(sp),(r2)+
+	movb	(sp),(r2)+
+	sobgtr	r0,10$
+	ret
+
+	.end
