@@ -31,25 +31,21 @@ c  History:
 c    rjs  31aug93 Original version.
 c    nebk 07oct93 Doc change
 c    nebk 01jul94 Replace guts by stripped out subroutine spaxsw
+c    nebk 20aug94 Scrap SPAXSW for new cocvt routines
 c
 c  Bugs:
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'maxnax.h'
 	character version*(*)
-	parameter(version='VelSw: version 1.0 01-Jul-94')
+	parameter(version='VelSw: 20-Aug-1994')
 c
-	character in*64,aname*1,num*2,ctype*16
-	integer nr,nout,nsize(MAXNAX),lIn
-	double precision crval,cdelt
+	character in*64
+	integer nout,nsize(MAXNAX),lIn
 c
 	integer nswitch
 	parameter(nswitch=3)
 	character switches(nswitch)*9,switch*9
-c
-c  Externals.
-c
-	character itoaf*2
 c
 	data switches/'frequency','optical  ','radio    '/
 c
@@ -68,27 +64,13 @@ c
 c  Open the input, and find the velocity axis.
 c
 	call xyopen(lIn,in,'old',MAXNAX,nsize)
-	aname = ' '
-	nr = 0
-	call fndaxnum(lIn,'freq',aname,nr)
-	if(nr.eq.0)call bug('f','Could not find velocity axis')
-	num = itoaf(nr)
-c
-c  Get the values that we need.
-c
-	call rdhda(lIn,'ctype'//num,ctype,' ')
-	call rdhdd(lIn,'cdelt'//num,cdelt,0.d0)
-	call rdhdd(lIn,'crval'//num,crval,0.d0)
 c
 c  Perform the transformation
 c
-	call spaxsw(lIn,switch,ctype,cdelt,crval)
-c
-c  Write out the new information.
-c
-	call wrhda(lIn,'ctype'//num,ctype)
-	call wrhdd(lIn,'cdelt'//num,cdelt)
-	call wrhdd(lIn,'crval'//num,crval)
+        call coinit (lIn)
+        call covelset (lIn, switch)
+        call cowrite (lIn)
+        call cofin (lIn)
 c
 c  Write out some history.
 c
