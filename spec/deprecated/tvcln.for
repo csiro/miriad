@@ -41,7 +41,8 @@ c	before this point, however, if NITERS is negative and the absolute
 c	maximum residual becomes negative valued, or if the cutoff level
 c	(as described above) is reached. 
 c@ region
-c	This specifies the region to be Cleaned.
+c	This specifies the region to be Cleaned. The default is the largest,
+c	centered region that it is safe to deconvolve.
 c@ phat
 c	Cornwells prussian hat parameter. When cleaning extended sources,
 c	CLEAN may produce a badly corrugated image. This can be suppressed
@@ -101,6 +102,7 @@ c   rjs  05jan93 - Doc changes only.
 c   rjs  10feb93 - Get rid of maxdim**2 arrays (use memalloc). Copy restor.h
 c		   to tvcln.h.
 c   rjs  10sep96 - Get rid fo tvclncom common block.
+c   rjs  29jan97 - Change default region of interest.
 c
 c  Important Constants:
 c    MaxDim	The max linear dimension of an input (or output) image.
@@ -118,7 +120,7 @@ c		to write.
 c
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='TvCln: version 1.0 10-Feb-93')
+	parameter(version='TvCln: version 1.0 29-Jan-97')
 	include 'maxdim.h'
 	integer MaxBeam,maxCmp1,maxCmp2,MaxBox,MaxRun,MaxP
 	parameter(maxCmp1=66000,MaxCmp2=32000,MaxP=257)
@@ -203,8 +205,9 @@ c
 	call xyopen(lMap,MapNam,'old',3,nMap)
 	call rdhdi(lMap,'naxis',naxis,3)
 	naxis = min(naxis,3)
+	call defregio(boxes,nMap,nBeam,icentre,jcentre)
 	call BoxMask(lMap,boxes,maxbox)
-	call BoxSet(boxes,3,nMap,'q')
+	call BoxSet(boxes,3,nMap,' ')
 	call BoxInfo(boxes,3,blc,trc)
 	nOut(1) = trc(1) - blc(1) + 1
 	nOut(2) = trc(2) - blc(2) + 1
@@ -2136,4 +2139,29 @@ c
 	  temp = exp(sxxc(i)*x(1) + syyc(i)*x(2) + sxyc(i)*x(3))
 	  f(i) = Patch(i) - temp
 	enddo
+	end
+c************************************************************************
+	subroutine defregio(boxes,nMap,nBeam,icentre,jcentre)
+c
+	implicit none
+	integer boxes(*),nMap(3),nBeam(2),icentre,jcentre
+c
+c  Set the region of interest to the lastest area that can be safely
+c  deconvolved.
+c------------------------------------------------------------------------
+	integer blc(3),trc(3),width
+c
+	width = min(icentre-1,nBeam(1)-icentre) + 1
+	blc(1) = max(1,(nMap(1)-width)/2)
+	trc(1) = min(nMap(1),blc(1)+width-1)
+c
+	width = min(jcentre-1,nBeam(2)-jcentre) + 1
+	blc(2) = max(1,(nMap(2)-width)/2)
+	trc(2) = min(nMap(2),blc(2)+width-1)
+c
+	blc(3) = 1
+	trc(3) = 1
+c
+	call BoxDef(boxes,3,blc,trc)
+c
 	end
