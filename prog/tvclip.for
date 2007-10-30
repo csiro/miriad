@@ -223,15 +223,19 @@ c     Common values are 4,5,6. Flagging on stokes V data with clip=4
 c     usually gets rid of most interference. The default is 5.
 c
 c@ options
-c     - 'nochannel', 'notime' and 'nopixel' are clip options. 
-c     By default the "CLIP" command will flag channels, times and 
-c     individual pixels with an rms that is too far from the median. 
-c     These options allow you to exclude some forms of clipping.
-c     - 'notv' : display option, do not show anything on the tv.
-c     Speeds up non-interactive clipping. This can only be used if you 
-c     also fill in the commands keyword. Because with 'notv' the data 
-c     does not have to fit on the screen, less time averaging is needed. 
-c     Usually the data will be flagged at full time resolution.
+c     Extra processing options. Several are possible:
+c       'nochannel', 'notime' and 'nopixel' are clip options. 
+c               By default the "CLIP" command will flag channels, times and 
+c               individual pixels with an rms that is too far from the median. 
+c               These options allow you to exclude some forms of clipping.
+c       'notv'  display option, do not show anything on the tv.
+c               Speeds up non-interactive clipping. This can only be used if you 
+c               also fill in the commands keyword. Because with 'notv' the data 
+c               does not have to fit on the screen, less time averaging is needed. 
+c               Usually the data will be flagged at full time resolution.
+c       'nosrc' Do not cause a break in the display when the source
+c               changes. Normally TVFLAG puts a gap in the display
+c               whenever the source changes.
 c
 c@ commands
 c     This allows non-interactive flagging using the "CLIP" command.
@@ -241,15 +245,8 @@ c     The "EXIT" command is implicitly added at the end of the list.
 c     You will not be able to interact with tvclip using mouse or
 c     keyboard if "commands" is set.
 c
-c
 c< select
 c     NOTE: The default is to use all visibilities.
-c@ options
-c     Extra processing options. Several can be given, separated by
-c     commas. Minimum match is used. Possible values are:
-c       nosrc   Do not cause a break in the display when the source
-c               changes. Normally TVFLAG puts a gap in the display
-c               whenever the source changes.
 c--
 c-----------------------------------------------------------------------
 c
