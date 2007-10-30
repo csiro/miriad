@@ -39,6 +39,7 @@ c    rjs 13dec95  Increase MAXSHAPES in BoxRuns.
 c    rjs 29jan97  Added BoxDef -- to set the default region of interest,
 c		  and removed this capacity from BoxSet.
 c    rjs 07jul97  Change argument to coVelSet and replace coAxDesc with coAxGet
+c    rjs 09jul97  Correctly handle ANDing with completely flagged plane.
 c************************************************************************
 c* Boxes -- Summary of region of interest routines.
 c& mjs
@@ -1215,8 +1216,9 @@ c
 	nshapes = 0
 	offset = OFFSET0
 	do i=1,boxes(1)
-	  if(boxes(offset+ZMIN).le.plane(1).and.
-     *	     boxes(offset+ZMAX).ge.plane(1).and.
+	  if(((boxes(offset+ZMIN).le.plane(1).and.
+     *	      boxes(offset+ZMAX).ge.plane(1)).or.
+     *	      (boxes(offset+ITYPE).lt.0.and.nshapes.gt.0)).and.
      *	    (boxes(offset+ITYPE).gt.0.or.nshapes.gt.0))then
 	    nshapes = nshapes + 1
 	    if(nshapes.gt.MAXSHAPE)
