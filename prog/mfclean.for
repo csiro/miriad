@@ -121,6 +121,7 @@ c   rjs  30mar93 - Limit the size of the spectral component.
 c   rjs  27nov93 - Another algorithm to try to limit the size of the spectral
 c		   component.
 c   rjs   4may95 - Doc change only.
+c   rjs  29nov95 - Better treatment of model.
 c
 c  Bugs and Shortcomings:
 c     * The way it does convolutions is rather inefficent, partially
@@ -162,7 +163,7 @@ c
 	logical NegStop,NegFound,More
 	integer maxNiter,Niter,totNiter,minPatch,maxPatch
 	integer naxis,n1,n2,n1d,n2d,ic,jc,nx,ny,ntmp
-	integer xmin,xmax,ymin,ymax
+	integer xmin,xmax,ymin,ymax,xoff,yoff,zoff
 	character MapNam*64,BeamNam*64,ModelNam*64,OutNam*64,line*72
 	integer lMap,lBeam,lModel,lOut
 	integer nMap(3),nBeam(3),nModel(3),nOut(4)
@@ -338,14 +339,13 @@ c
 	else
 	  call output('Loading the model and getting residuals ...')
 	  call xyopen(lModel,ModelNam,'old',3,nModel)
-	  if(nx.ne.nModel(1).or.ny.ne.nModel(2).or.nModel(3).ne.2)
-     *	     call bug('f','Model and output size do not agree')
-	  call xysetpl(lModel,1,1)
-	  call GetPlane(lModel,Run,nRun,0,0,
-     *			nModel(1),nModel(2),dat(Est0),nPoint,ntmp)
-	  call xysetpl(lModel,1,2)
-	  call GetPlane(lModel,Run,nRun,0,0,
-     *	    nModel(1),nModel(2),dat(Est1),nPoint,ntmp)
+	  call AlignIni(lModel,lMap,nModel(1),nModel(2),nModel(3),
+     *						xoff,yoff,zoff)
+	  zoff = 0
+	  call AlignGet(lModel,Run,nRun,1,xmin+xoff-1,ymin+yoff-1,zoff,
+     *		nModel(1),nModel(2),nModel(3),dat(Est0),nPoint,ntmp)
+	  call AlignGet(lModel,Run,nRun,2,xmin+xoff-1,ymin+yoff-1,zoff,
+     *		nModel(1),nModel(2),nModel(3),dat(Est1),nPoint,ntmp)
 	  call Diff(dat(Est0),dat(Est1),dat(Map0),dat(Map1),
      *	    dat(Res0),dat(Res1),dat(Tmp),nPoint,nx,ny,Run,nRun,
      *	    FFT00,FFT11,FFT01,FFT10)
@@ -1232,7 +1232,7 @@ c    Wt0,WT1	Values of beams to subtract off.
 c    ResMax	Current residual maximum.
 c------------------------------------------------------------------------
 	integer i,j
-	real delta,twt0,twt1
+	real delta
 c
 c  Externals.
 c
