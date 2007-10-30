@@ -23,37 +23,43 @@ c	PGPLOT device. Default is no plot.
 c--
 c  History:
 c    rjs  20oct94 Original version.
+c    rjs  21nov95 Added title.
 c  Bugs:
 c
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	character version*(*)
 	integer npts,MAXTEL
-	parameter(version='PbPlot: version 1.0 20-Oct-94')
+	parameter(version='PbPlot: version 1.0 21-Nov-95')
 	parameter(npts=256,MAXTEL=8)
 c
-	character device*64,telescop(MAXTEL)*16,line*64
-	real freq,x(npts),y(npts,MAXTEL),xmin,xmax,ymin,ymax
-	real maxrad,pbfwhm,cutoff,delta
-	integer i,j,ntel,pbObj(MAXTEL),coObj
+	character device*64,telescop(MAXTEL)*16,line*64,title*32
+	real freq,x(npts),y(npts,MAXTEL),maxrad,pbfwhm,cutoff
+	real xmin,xmax,ymin,ymax,xlo,xhi,ylo,yhi
+	integer i,j,ntel,pbObj(MAXTEL),coObj,length
 	logical doder
 c
 c  Externals.
 c
 	real pbder,pbget
-	integer pgbeg
+	integer pgbeg,len1
 c
 c  Get input parameters.
 c
 	call output(version)
 	call keyini
 	call mkeya('pbtype',telescop,MAXTEL,ntel)
-	if(ntel.eq.0)call bug('f','A telescope name must be given')
 	call keyr('freq',freq,1.4)
 	if(freq.le.0)call bug('f','Invalid frequency')
 	call keya('device',device,' ')
 	call GetOpt(doder)
 	call keyfin
+c
+c  If no telescopes were given, just list the possibilities.
+c
+	if(ntel.eq.0)then
+	  call pbList
+	else
 c
 c  Create a simple coorindate object.
 c
@@ -79,6 +85,12 @@ c
   20	  format('  Cutoff Value: ',f6.3)
 	  call output(line)
 	  xmax = max(xmax, maxrad)
+	  if(j.eq.1)then
+	    title = 'Telescopes: '//telescop(1)
+	  else
+	    title(length+1:) = ','//telescop(j)
+	  endif
+	  length = len1(title)
 	enddo
 c
 c  Evaluate the primary beams at npt points.
@@ -116,12 +128,8 @@ c
 	  enddo
 	enddo
 c
-	delta = 0.05 * (xmax - xmin)
-	xmax = xmax + delta
-	xmin = xmin - delta
-	delta = 0.05 * (ymax - ymin)
-	ymax = ymax + delta
-	ymin = ymin - delta
+	call pgrnge(xmin,xmax,xlo,xhi)
+	call pgrnge(ymin,ymax,ylo,yhi)
 c
 c  Do the plotting.
 c
@@ -132,7 +140,7 @@ c
 	  endif
 	  call pgpage
           call pgvstd
-	  call pgswin(xmin,xmax,ymin,ymax)
+	  call pgswin(xlo,xhi,ylo,yhi)
 	  call pgtbox('BCNST',0.,0,'BCNST',0.,0)
 	  call pgsls(1)
 	  do j=1,ntel
@@ -140,12 +148,13 @@ c
 	  enddo
 	  if(doder)then
 	    call pglab(	'Radial Distance (arcmin)',
-     *			'Primary Beam Derivative',' ')
+     *			'Primary Beam Derivative',title(1:length))
 	  else
 	    call pglab(	'Radial Distance (arcmin)',
-     *			'Primary Beam Response',' ')
+     *			'Primary Beam Response',title(1:length))
 	  endif
 	  call pgend
+	endif
 	endif
 c
 	end
