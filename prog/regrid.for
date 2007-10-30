@@ -81,6 +81,7 @@ c    15apr94 nebk  Keyword range input was failing.
 c    03jan95 nebk  REGZ was failing if output longer than input
 c    26jun95 nebk  Warning instead of fatal if ungridded axes
 c		   have silly axis descriptors. options=quiet
+c    16nov96 nebk  AXFNDCG -> AXFNDCO and new call sequence
 c
 c To do:
 c     add simple transformation option (scale,shift etc)
@@ -91,7 +92,7 @@ c-----------------------------------------------------------------------
       character version*30
       parameter (maxboxes = 2048)
       parameter (maxruns = 3*maxdim)
-      parameter (version = 'Version 26-Jun-95')
+      parameter (version = 'Version 16-Nov-95')
 c
       character filei*80, fileo*80, filet*80
       integer axes(maxnax), naxes
@@ -1850,8 +1851,8 @@ c
 c
 c  Look for RA and DEC axes 
 c
-      call axfndcg ('RA', naxis, ctype, ira)
-      call axfndcg ('DEC', naxis, ctype, idec)
+      call axfndco (lun, 'RA', naxis, 0, ira)
+      call axfndco (lun, 'DEC', naxis, 0, idec)
       cosd = 1.0
       if (ira*idec.ne.0) cosd = cos(crval(idec))
 c
