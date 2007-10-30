@@ -131,6 +131,7 @@ c   rjs   2jun95 - Fix spurious warning message resulting from the above
 c		   change.
 c   rjs  12oct95 - Tidy up above changes.
 c   rjs  27nov95 - Increase max complexity of clean region.
+c   rjs  05aug96 - Better check for psf not 1.
 c
 c  Important Constants:
 c    MaxDim	The max linear dimension of an input (or output) image.
@@ -737,8 +738,10 @@ c
 	  endif
 	enddo
 c
-	if(abs(bmax-1.0).gt.0.001)
-     *	  call bug('f','Beam peak value is not 1')
+	if(abs(bmax-1.0).gt.0.001.and.abs(bmax-1.0).le.0.01)
+     *	  call bug('w','Beam peak value is not 1')
+	if(abs(bmax-1.0).gt.0.01)
+     *	  call bug('f','Beam peak value differs from 1 by more than 1%')
 c
 c  Initialise the "histo" array.
 c
