@@ -4,6 +4,7 @@ c    22nov93 rjs  Original version.
 c    13sep94 rjs  Added gaudfac.
 c    11aug97 rjs  Protect against atan2(0,0)
 c    11dec97 rjs  Handle images in units of Kelvin.
+c    25feb98 rjs  Correct bunit shortcoming introduced above.
 c
 c************************************************************************
 c* gaupar1 - Determine effective beam of the convolution of two images.
@@ -142,7 +143,7 @@ c--
 c------------------------------------------------------------------------
 	logical pPix1,pBem1,pPix2,pBem2,pKel1,pKel2
 	integer l,ifail
-	character line*64,bunit1*32,bunit2*32
+	character line*64,b1a*32,b1b*32,b2a*32,b2b*32,btemp*32
 c
 c  Externals.
 c
@@ -150,10 +151,31 @@ c
 c
 c  Set defaults.
 c
-	bunit1 = bunit1x
-	call ucase(bunit1)
-	bunit2 = bunit2x
-	call ucase(bunit2)
+	btemp = bunit1x
+	call ucase(btemp)
+	l = index(btemp,'/')
+	if(l.gt.1.and.l.lt.len(btemp))then
+	  b1a = btemp(1:l-1)
+	  b1b = btemp(l+1:)
+	else
+	  b1a = btemp
+	  b1b = ' '
+	endif
+	btemp = bunit2x
+	call ucase(btemp)
+	l = index(btemp,'/')
+	if(l.gt.1.and.l.lt.len(btemp))then
+	  b2a = btemp(1:l-1)
+	  b2b = btemp(l+1:)
+	else
+	  b2a = btemp
+	  b2b = ' '
+	endif
+	if(b1a.eq.'?')b1a = b2a
+	if(b2a.eq.'?')b2a = b1a
+c
+	if(b2a.ne.b1a)call bug('w','Inconsistent units')
+	bunit = b1a
 c
 	bmaj = 0
 	bmin = 0
@@ -162,27 +184,17 @@ c
 c
 c  Determine what are the units of the map and beam.
 c
-	bunit = bunit1
-	l = index(bunit1,'/')
-	if(l.gt.1)bunit = bunit1(1:l-1)
-	pPix1 = index(bunit1,'/PIXEL').gt.1
-	pBem1 = index(bunit1,'/BEAM').gt.1
-	pKel1 = bunit1.eq.'KELVIN'
+	pPix1 = b1b.eq.'PIXEL'
+	pBem1 = b1b.eq.'BEAM'
+	pKel1 = b1a.eq.'KELVIN'
 	if(.not.pPix1.and..not.pBem1.and..not.pKel1)then
 	  call bug('w','Unknown units for first image ... no scaling')
 	  return
 	endif
 c
-	l = index(bunit2,'/')
-	if(l.gt.1)then
-	  if(bunit2(1:l-1).ne.bunit.and.bunit2(1:l-1).ne.'?'.and.
-     *	     bunit.eq.'?')call bug('w','Inconsistent units')
-	  if(bunit.eq.'?')bunit = bunit2(1:l-1)
-	endif
-c
-	pPix2 = index(bunit2,'/PIXEL').gt.1
-	pBem2 = index(bunit2,'/BEAM').gt.1
-	pKel2 = bunit2.eq.'KELVIN'
+	pPix2 = b2b.eq.'PIXEL'
+	pBem2 = b2b.eq.'BEAM'
+	pKel2 = b2a.eq.'KELVIN'
 	if(.not.pPix2.and..not.pBem2.and..not.pKel2)then
 	  call bug('w','Unknown units for second image ... no scaling')
 	  return
@@ -205,12 +217,12 @@ c
 c  One of the other is in /PIXEL. Effective beam is just the other or one
 c
 	else if(pPix1)then
-	  bunit = bunit2
+	  if(b2b.ne.' ')bunit(l+1:) = '/'//b2b
 	  bmaj = bmaj2
 	  bmin = bmin2
 	  bpa  = bpa2
 	else if(pPix2)then
-	  bunit = bunit1
+	 if(b1b.ne.' ')bunit(l+1:) = '/'//b1b
 	  bmaj = bmaj1
 	  bmin = bmin1
 	  bpa  = bpa1
