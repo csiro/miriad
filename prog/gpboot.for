@@ -45,6 +45,7 @@ c    rjs     20may97 Print out the xy phasr that is being applied.
 c		     Get the wraps right.
 c    rjs      6feb98 Doc change oonly.
 c    rjs     12oct99 Get rid of options=noxy.
+c    rjs     21jan01 Change print format.
 c  Bugs and Shortcomings:
 c    * The xy phase is not applied to the polarisation solution.
 c------------------------------------------------------------------------
@@ -52,7 +53,7 @@ c------------------------------------------------------------------------
 	include 'mirconst.h'
 	character version*(*)
 	integer MAXSELS
-	parameter(version='GpBoot: version 12-Oct-99')
+	parameter(version='GpBoot: version 21-Jan-01')
 	parameter(MAXSELS=256)
 c
 	character cal*64,vis*64,line*72
@@ -127,7 +128,7 @@ c
 c  Inform user, not appeasing Bob, who would rather the user
 c  be kept bare foot and ignorant.
 c
-        write(line,'(a,f6.3)') 'Secondary flux density scaled by:',
+        write(line,'(a,f8.3)') 'Secondary flux density scaled by:',
      *                         factor**2
         call output(line)
 c
