@@ -276,6 +276,7 @@ c    nebk 18dec95  New call for VPSIZCG (arg. DOABUT)
 c    nebk 30jan96  Remove restrictions on CHAN so groups of channels
 c		   can now overlap
 c    nebk 24jun96  Add some commonsense for 2-d images in sub. curpos
+c    nebk 13aug96  Prevent some problems with non-interactive devices
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -297,32 +298,32 @@ c
      +  grpbeg(maxchan), ngrp(maxchan), srtlev(maxlev), his(nbins)
       integer nx, ny, nlevs, lin, naxis, k, ierr, pgbeg, iostat, ipage,
      +  ibin(2), jbin(2), kbin(2), krng(2), nlast, ngrps, lstat, 
-     +  lreg, lcurs, jj, wedcod, labcol, poscol, statcol, regcol
+     +  lreg, lcurs, jj, wedcod, labcol, poscol, statcol, regcol, ilen
 c
       character labtyp(2)*6
       character in*64, pdev*64, xlabel*40, ylabel*40, 
-     +  trfun*3, levtyp*1
+     +  trfun*3, levtyp*1, result*3
 c
       logical do3val, do3pix, eqscale, doblnk, cursor, stats, doreg,
      +  smore, rmore, cmore, dopixel, display, doabs, gaps, dolog,
      +  cgspec, cgdisp, mark, doerase, dobox, near, dowedge, dofid,
      +  first, grid, doaxlab, doaylab, donxlab(2), donylab(2), dotr,
-     +  doabut
+     +  doabut, intdev
 c
       data ipage, scale /0, 0.0, 0.0/
       data dmm /1.0e30, -1.0e30/
       data gaps, doabut /.false., .false./
 c-----------------------------------------------------------------------
-      call output ('CgCurs: version 24-Jun-96')
+      call output ('CgCurs: version 13-Aug-96')
       call output (' ')
 c
 c Get user inputs
 c
       call inputs (maxlev, in, ibin, jbin, kbin, levtyp, slev, levs, 
-     +   nlevs, pixr, trfun, pdev, labtyp, do3val, do3pix, eqscale, 
-     +   nx, ny, cs, dopixel, cursor, stats, doreg, doabs, dolog, 
-     +   cgspec, cgdisp, mark, doerase, dobox, near, dowedge, 
-     +   dofid, dotr, grid)
+     +   nlevs, pixr, trfun, pdev, labtyp, do3val, do3pix, 
+     +   eqscale, nx, ny, cs, dopixel, cursor, stats, doreg, 
+     +   doabs, dolog, cgspec, cgdisp, mark, doerase, dobox, near, 
+     +   dowedge, dofid, dotr, grid)
 c
 c Open image
 c
@@ -412,6 +413,15 @@ c
         call pgldev
         call bug ('f', 'Error opening plot device')
       endif
+c
+      call pgqinf ('hardcopy', result, ilen)
+      intdev = .true.
+      if (result(1:ilen).eq.'YES') then
+        intdev = .false.
+        call bug ('w', 
+     +    'Interactive cursor features not available with this device')
+      end if
+
 c
       call pgpage
       call pgscf(2)
@@ -560,7 +570,7 @@ c
 c
 c Cursor options
 c
-           if (cmore) then
+           if (cmore .and. intdev) then
 c
 c Read value and location under cursor
 c
@@ -572,7 +582,7 @@ c
            end if
 c
            display = .false.
-           if (smore) then
+           if (smore .and. intdev) then
 c
 c Find image statistics in polygonal region defined by cursor
 c
@@ -582,7 +592,7 @@ c
      +          smore, dolog, mark, near, lstat)
            end if
 c
-           if (.not.display .and. rmore) then
+           if (.not.display .and. rmore .and. intdev) then
 c
 c Define polygonal region with cursor
 c
@@ -1725,9 +1735,9 @@ c
 c
 c
       subroutine inputs (maxlev, in, ibin, jbin, kbin, levtyp, slev,
-     +   levs, nlevs, pixr, trfun, pdev, labtyp, do3val, do3pix, 
-     +   eqscale, nx, ny, cs, dopixel, cursor, stats, doreg, doabs, 
-     +   dolog, cgspec, cgdisp, mark, doerase, dobox, near, 
+     +   levs, nlevs, pixr, trfun, pdev, labtyp, do3val, 
+     +   do3pix, eqscale, nx, ny, cs, dopixel, cursor, stats, doreg, 
+     +   doabs, dolog, cgspec, cgdisp, mark, doerase, dobox, near, 
      +   dowedge, dofid, dotr, grid)
 c-----------------------------------------------------------------------
 c     Get the unfortunate user's long list of inputs
