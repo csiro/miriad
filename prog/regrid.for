@@ -53,6 +53,7 @@ c	Extra processing options. Several can be given, separated by commas.
 c	Only the minimum characters to avoid ambiguity is needed.
 c	  noscale   Produce a cube where the RA/DEC cell size does not scale
 c	            with frequency/velocity.
+c	  norotate  Produce an output without any sky/image rotation.
 c	  offset    The coordinate system described by the template or
 c	            descriptors is modified (shift and expansion/contraction)
 c	            by an integral number of pixels so that it completely
@@ -103,6 +104,7 @@ c		   axis conversion.
 c    23jul97 rjs   Add warning about blanked pixels. Add pbtype
 c    05aug97 rjs   Messages about equinox fiddles.
 c    20nov98 rjs   Handle and eliminate sky rotation.
+c    25nov98 rjs   Better handling of sky rotation parameter.
 c
 c To do:
 c----------------------------------------------------------------------
@@ -111,14 +113,15 @@ c----------------------------------------------------------------------
 	include 'mem.h'
 c
 	character version*(*)
-	parameter(version='Regrid: version 1.0 20-Nov-98')
+	parameter(version='Regrid: version 1.0 25-Nov-98')
 c
 	character in*64,out*64,tin*64,ctype*16,cellscal*12,proj*3
 	character line*64
 	double precision desc(4,MAXNAX),crpix,crval,cdelt,epoch1,epoch2
-	logical noscale,dooff,doepo,dogaleq,nearest
+	double precision llrot
+	logical noscale,dooff,doepo,dogaleq,nearest,norot
 	integer ndesc,nax,naxis,nin(MAXNAX),nout(MAXNAX),ntin(MAXNAX)
-	integer i,k,n,lIn,lOut,lTmp,cOut,axes(MAXNAX)
+	integer i,k,n,lIn,lOut,lTmp,cOut,axes(MAXNAX),ilat
 	integer GridSize,gnx,gny,minv(3),maxv(3),order(3)
 	integer nBuf(3),off(3),minc(3),maxc(3),BufSize,rBuf,lBuf
 	integer offset,nxy,nblank
@@ -149,7 +152,7 @@ c
 	call keyr('tol',tol,0.05)
 	if(tol.le.0.or.tol.ge.0.5)
      *	  call bug('f','Invalid value for the tol parameter')
-	call getopt(noscale,dooff,doepo,dogaleq,nearest)
+	call getopt(noscale,dooff,doepo,dogaleq,nearest,norot)
 	call keymatch('project',NPROJS,projs,1,proj,nproj)
 	if(nproj.eq.0)proj = ' '
 	call keyfin
@@ -183,7 +186,6 @@ c
      *	  'Inconsistent number of axes descriptors given')
 	call coInit(lIn)
 	call coDup(lIn,cOut)
-	call coSetd(cOut,'llrot',0.d0)
 c
 c  Set up the output size/coordinate system given template or descriptors.
 c
@@ -192,12 +194,17 @@ c
 	  call rdhdi(lTmp,'naxis',n,0)
 	  n = min(n,MAXNAX)
 	  call coInit(lTmp)
+	  call coFindAx(lTmp,'latitude',ilat)
 	  do i=1,nax
 	    if(axes(i).gt.n)call bug('f',
      *		'Requested axis does not exist in the template')
 	    nout(axes(i)) = ntin(axes(i))
 	    call coAxGet(lTmp,axes(i),ctype,crpix,crval,cdelt)
 	    call coAxSet(cOut,axes(i),ctype,crpix,crval,cdelt)
+	    if(axes(i).eq.ilat)then
+	      call coGetd(lTmp,'llrot',llrot)
+	      call coSetd(cOut,'llrot',llrot)
+	    endif
 	  enddo
 	  call coGetd(lTmp,'epoch',epoch1)
 	  call coSetd(cOut,'epoch',epoch1)
@@ -220,6 +227,7 @@ c
 c  Set that it does not scale, if requested.
 c
 	if(noscale)call coSeta(cOut,'cellscal','CONSTANT')
+	if(norot)  call coSetd(cOut,'llrot',0.d0)
 	if(proj.ne.' ')call coPrjSet(cOut,proj)
 	call coReInit(cOut)
 c
@@ -346,18 +354,18 @@ c
 c
 	end
 c************************************************************************
-	subroutine getopt(noscale,offset,doepo,dogaleq,nearest)
+	subroutine getopt(noscale,offset,doepo,dogaleq,nearest,norot)
 c
 	implicit none
-	logical noscale,offset,doepo,dogaleq,nearest
+	logical noscale,offset,doepo,dogaleq,nearest,norot
 c
 c------------------------------------------------------------------------
 	integer NOPTS
-	parameter(NOPTS=5)
+	parameter(NOPTS=6)
 	character opts(NOPTS)*8
 	logical present(NOPTS)
 	data opts/'noscale ','offset  ','equisw  ','galeqsw ',
-     *		  'nearest '/
+     *		  'nearest ','norotate'/
 c
 	call options('options',opts,present,NOPTS)
 	noscale = present(1)
@@ -365,6 +373,7 @@ c
 	doepo   = present(3)
 	dogaleq = present(4)
 	nearest = present(5)
+	norot   = present(6)
 	end
 c************************************************************************
 	subroutine CoordSw(lOut,doepo,dogaleq)
