@@ -7,46 +7,34 @@ c& rjs
 c: map combination
 c+
 c	PSFMOS is a MIRIAD task which determines the point spread function
-c	for a linear mosaic of dirty images (as produced by LINMOS).
+c	for a linear mosaic of dirty images (as produced by INVERT).
 c
-c	Strictly speaking, the PSF varies with position. However if the
-c	pointing grid is fairly regular and the individual beam patterns
-c	are nearly the same, then the PSF is reasonably independent of
-c	position.
-c
-c	To determine the primary beam of the telescope, PSFMOS first checks
-c	the map header for the presence of the "pbfwhm" parameter. If present,
-c	PSFMOS assumes the primary beam is a Gaussian, whose FWHM (in arcsec)
-c	at the reference frequency, is given by the "pbfwhm" parameter. A
-c	single dish has a zero or negative value for pbfwhm. If
-c	the "pbfwhm" parameter is missing, PSFMOS checks if the telescope
-c	is one that it knows. If so, then the best known form for the
-c	primary beam is used. Currently PSFMOS knows about the VLA, the
-c	ATCA and the BIMA array.
-c
-c	If the map neither has a pbfwhm parameter nor is it from a known
-c	telescope, PSFMOS will refuse to do anything! In this case, you
-c	should add the pbfwhm parameter to the map header, using puthd.
-c	For example:
-c	  % puthd in=mymap/pbfwhm value=120.0
-c	will set a primary beam FWHM of 120 arcsec at the reference frequency.
-c@ in
-c	This gives the names of the input images. Many cubes can be given.
-c	There is no default. These inputs are only used to determine the
-c	pointing grid. The basis of PSF is that the pointing grid is reasonably
-c	regular and complete.
+c	Strictly speaking, the PSF varies with position and frequency.
+c	However if the pointing grid is fairly complete and the individual
+c	synthesised beam patterns are similar, the PSF is reasonably
+c	independent of position. It is also usually a good approximation
+c	that it is independent of frequency.
 c@ beam
-c	The input beam. As PSFMOS assumes that the beam function is independent
-c	of pointing centre, this should be some form of average of the beams
-c	for the individual pointings.
+c	This gives the name of the input beam-cube (as produced by INVERT).
+c	No default.
 c@ out
-c	The name of the output beam (PSF). It will be the same size as
-c	the input.
+c	The name of the output point-spread function. It will be the same size
+c	as the input.
+c@ radec
+c	The RA and DEC (either in the form hh:mm:ss,dd:mm:ss or decimals hours
+c	and degrees) at which to compute the point-spread function. The default
+c	is the reference RA,DEC of the beam-cube.
+c@ freq
+c	The frequency (in GHz) at which to compute the point-spread function.
+c	The default is the reference frequency of the beam-cube. The
+c	point-spread function is reasonably independent of frequency for most
+c	spectral line observations.
 c--
 c
 c  History:
 c    rjs  25oct93 Adapted from LINMOS.
 c    nebk 22aug94 Adapt to GETFREQ error status change
+c    rjs  26oct94 Complete rewrite to cope with the new INVERT.
 c
 c  Bugs:
 c
@@ -55,169 +43,120 @@ c    maxIn	Maximum number of input files.
 c    maxlen	Size of buffer to hold all the input file names.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Psfmos: version 1.0 22-Aug-94')
+	parameter(version='Psfmos: version 1.0 26-Oct-94')
 	include 'maxdim.h'
 	include 'maxnax.h'
-c
-	integer maxIn,maxLen
-	parameter(maxIn=350,maxLen=17000)
-c
-	character inbuf*(maxlen),in*64,out*64,beam*64
-	integer tIn,tOut,tBeam,k1(maxIn),k2(maxIn),nIn,offset,length
-	integer naxis,nBeam(MAXNAX),nSize(MAXNAX)
-	integer i
-	integer pBeam,pWBeam,pWts
-c
 	include 'mem.h'
+	character beam*64,out*64,coin*12
+	double precision ra,dec,freq,x(3)
+	logical doradec,dofreq
+	integer i,nx,ny,npnt,naxis,nsize(MAXNAX),tIn,tOut,pIn,pOut
 c
 c  Externals.
 c
-	integer len1
+	logical keyprsnt
 c
-c  Get the input parameters, and do some checking.
+c  Get the input parameters.
 c
 	call output(version)
 	call keyini
-	nIn = 0
-	offset = 0
-	call keyf('in',in,' ')
-	dowhile(in.ne.' ')
-	  nIn = nIn + 1
-	  if(nIn.gt.maxIn) call bug('f','Too many input cubes')
-	  length = len1(in)
-	  if(offset+length.gt.maxLen)
-     *	    call bug('f','Input name buffer overflow')
-	  k1(nIn) = offset + 1
-	  k2(nIn) = offset + length
-	  Inbuf(k1(nIn):k2(nIn)) = In
-	  offset = offset + length
-	  call keyf('in',in,' ')
-	enddo
-	if(nIn.eq.0)	   call bug('f','No input cubes given')
-	call keya('out',out,' ')
-	if(out.eq.' ') call bug('f','No output name given')
-c
 	call keya('beam',beam,' ')
-	if(beam.eq.' ')call bug('f','No beam name given')
-c
+	if(beam.eq.' ')call bug('f','Input beam must be given')
+	call keya('out',out,' ')
+	if(out.eq.' ')call bug('f','Output PSF must be given')
+	doradec = .not.keyprsnt('radec')
+	call keyt('radec',ra,'hms',0.d0)
+	call keyt('radec',dec,'dms',0.d0)
+	dofreq = .not.keyprsnt('freq')
+	call keyd('freq',freq,0.d0)
 	call keyfin
 c
-c  Open the beam.
+c  Open the input and the output.
 c
-	call xyopen(tBeam,beam,'old',2,nbeam)
-	call rdhdi(tBeam,'naxis',naxis,2)
-	naxis = min(naxis,MAXNAX)
+	call xyopen(tIn,beam,'old',3,nsize)
+	call coInit(tIn)
+	call mosLoad(tIn,npnt)
+	nx = nsize(1)
+	ny = nsize(2)
+	if(npnt.ne.nsize(3))
+     *	  call bug('f','Inconsistent number of pointings')
 c
-c  Initalise the primary beam routine.
+c  Set the position at which to compute the PSF.
 c
-	call InitPb(tBeam)
-c
-c  Allocate three arrays for the beam, the weighted beam and the weights.
-c
-	call MemAlloc(pBeam,nBeam(1)*nBeam(2),'r')
-	call MemAlloc(pWBeam,nBeam(1)*nBeam(2),'r')
-	call MemAlloc(pWts,nBeam(1)*nBeam(2),'r')
-c
-c  Get the beam and initialise the weights arrays.
-c
-	call GetBeam(tBeam,memR(pBeam),nBeam(1),nBeam(2))
-	call Zeroit(memR(pWBeam),nBeam(1)*nBeam(2))
-	call Zeroit(memR(pWBeam),nBeam(1)*nBeam(2))
-c
-c  Loop over all the input maps.
-c
-	do i=1,nIn
-	  call xyopen(tIn,InBuf(k1(i):k2(i)),'old',MAXNAX,nsize)
-	  call output('Processing '//InBuf(k1(i):k2(i)))
-	  call SumIt(tIn,tBeam,nBeam(1),nBeam(2),
-     *	    memR(pBeam),memR(pWBeam),memR(pWts))
-	  call xyclose(tIn)
-	enddo
-c
-c  Normalise the resultant beam.
-c
-	call NormIt(nBeam(1)*nBeam(2),memR(pWBeam),memR(pWts))
-c
-c  Create the output beam.
-c
-	do i=3,naxis
-	  nbeam(i) = 1
-	enddo
-	call xyopen(tOut,out,'new',naxis,nbeam)
-	call MkHead(tBeam,tOut)
-	call hisopen(tOut,'append')
-	call hiswrite(tOut,'PSFMOS: Miriad '//version)
-	call hisinput(tOut,'PSFMOS')
-	call hisclose(tOut)
-c
-c  Write the output data.
-c
-	call PutBeam(tOut,memR(pWBeam),nBeam(1),nBeam(2))
-c
-c  Close up shop.
-c
-	call xyclose(tBeam)
-	call xyclose(tOut)
-	call MemFree(pBeam,nBeam(1)*nBeam(2),'r')
-	call MemFree(pWBeam,nBeam(1)*nBeam(2),'r')
-	call MemFree(pWts,nBeam(1)*nBeam(2),'r')
-c
-	end
-c************************************************************************
-	subroutine InitPb(tBeam)
-c
-	implicit none
-	integer tBeam
-c
-c  Initialise the primary beam routine.
-c
-c------------------------------------------------------------------------
-	logical needf
-	double precision freq,finc
-	character axnam*16
-	integer ifax,ierr
-	call pbcheck(0.0,tBeam,.true.,.false.,needf)
-	if(needf)then
-	  axnam = ' '
-	  call fndaxnum(tBeam,'freq',axnam,ifax)
-	  call getfreq(tBeam,1.0,ifax,freq,finc,ierr)
-	  if(ierr.gt.0) call bug('f','Could not get frequency')
+	x(1) = ra
+	x(2) = dec
+	x(3) = freq
+	if(doradec.and.dofreq)then
+	  coin = 'op/op/op'
+	else if(doradec)then
+	  coin = 'op/op/aw'
+	else if(dofreq)then
+	  coin = 'aw/aw/op'
 	else
-	  freq = -1.d0
+	  coin = 'aw/aw/aw'
 	endif
-	call pbinit(0.0,freq,tBeam,.true.)
+c
+c  Allocate memory and load the input PSF data.
+c
+	call memAlloc(pIn,nx*ny*npnt,'r')
+	call memAlloc(pOut,nx*ny,'r')
+c
+c  Read the input data.
+c
+	call GetDat(tIn,memr(pIn),nx,ny,npnt)
+c
+c  Do the real work.
+c
+	call mosPsf(tIn,coin,x,memr(pIn),memr(pOut),nx,ny,npnt)	
+c
+c  Create the output dataset.
+c
+	call rdhdi(tIn,'naxis',naxis,0)
+	naxis = min(naxis-1,MAXNAX)
+	do i=3,naxis
+	  nsize(i) = 1
+	enddo
+	call xyopen(tOut,out,'new',naxis,nsize)
+	call MakeHd(tIn,tOut,version,naxis)
+c
+c  Write the output.
+c
+	call PutDat(tOut,memr(pOut),nx,ny)
+c
+c  All said and done. Close up.
+c
+	call xyclose(tOut)
+	call MemFree(pOut,nx*ny,'r')
+	call MemFree(pIn,nx*ny*npnt,'r')
+	call xyclose(tIn)
 c
 	end
 c************************************************************************
-	subroutine MkHead(tIn,tOut)
+	subroutine MakeHd(tIn,tOut,version,naxis)
 c
 	implicit none
-	integer tIn,tOut
+	integer tIn,tOut,naxis
+	character version*(*)
 c
-c  Generate the header for the output. It should be just a copy of the
-c  input.
-c
+c  Make a header for the output dataset.
 c------------------------------------------------------------------------
+	character line*64,ctype*16,numi*2,numo*2
 	integer i
+	double precision dval
+c
+c  Externals.
+c
+	character itoaf*2
 c
 	integer nkeys
-	parameter(nkeys=49)
+	parameter(nkeys=27)
 	character keyw(nkeys)*8
-	data keyw/   'bunit   ','crota1  ','crota2  ','crota3  ',
-     *	  'crota4  ','crota5  ','crval1  ','crval2  ','crval3  ',
-     *	  'crval4  ','crval5  ','ctype1  ','ctype2  ','ctype3  ',
-     *	  'ctype4  ','ctype5  ','cdelt1  ','cdelt2  ','cdelt3  ',
-     *	  'cdelt4  ','cdelt5  ','crpix1  ','crpix2  ','crpix3  ',
-     *	  'crpix4  ','crpix5  ',
-     *	  'date-obs','epoch   ','bmaj    ','bmin    ','bpa     ',
-     *	  'instrume','niters  ','object  ','telescop','observer',
-     *	  'restfreq','vobs    ','xshift  ','yshift  ','obsra   ',
-     *	  'obsdec  ','lstart  ','lstep   ','ltype   ','lwidth  ',
+	data keyw/   'bunit   ','crval1  ','crval2  ','ctype1  ',
+     *	  'ctype2  ','cdelt1  ','cdelt2  ','crpix1  ','crpix2  ',
+     *	  'obstime ','epoch   ','bmaj    ','bmin    ','bpa     ',
+     *	  'niters  ','object  ','telescop','observer','restfreq',
+     *	  'vobs    ','lstart  ','lstep   ','ltype   ','lwidth  ',
      *    'btype   ','history ','mask    '/
-c
-c  Set the primary beam size to indicate that it is primary beam corrected.
-c
-	call wrhdr(tOut,'pbfwhm',0.)
 c
 c  Copy other parameters.
 c
@@ -225,162 +164,62 @@ c
 	  call hdcopy(tIn,tOut,keyw(i))
 	enddo
 c
-	end
-c************************************************************************
-	subroutine GetBeam(tBeam,Array,n1,n2)
+c  Copy the coordinate information about the axes that want.
 c
-	implicit none
-	integer n1,n2,tBeam
-	real Array(n1,n2)
-c
-c  Read the beam.
-c
-c------------------------------------------------------------------------
-	integer j
-c
-	do j=1,n1
-	  call xyread(tBeam,j,Array(1,j))
-	enddo
-c
-	end
-c************************************************************************
-	subroutine PutBeam(tBeam,Array,n1,n2)
-c
-	implicit none
-	integer n1,n2,tBeam
-	real Array(n1,n2)
-c
-c  Write the beam.
-c
-c------------------------------------------------------------------------
-	integer j
-c
-	do j=1,n1
-	  call xywrite(tBeam,j,Array(1,j))
-	enddo
-c
-	end
-c************************************************************************
-	subroutine Zeroit(Array,n)
-c
-	implicit none
-	integer n
-	real Array(n)
-c
-c  Zero an array.
-c
-c------------------------------------------------------------------------
-	integer i
-c
-	do i=1,n
-	  Array(i) = 0
-	enddo
-c
-	end
-c************************************************************************
-	subroutine Normit(n,Warray,Wts)
-c
-	implicit none
-	integer n
-	real Warray(n),Wts(n)
-c
-c  Normalise the thing.
-c------------------------------------------------------------------------
-	integer i
-c
-	do i=1,n
-	  if(Wts(i).gt.0)then
-	    Warray(i) = Warray(i) / Wts(i)
-	  else
-	    Warray(i) = 0
+	do i=3,naxis
+	  numi = itoaf(i+1)
+	  numo = itoaf(i)
+	  call rdhda(tIn,'ctype'//numi,ctype,' ')
+	  if(ctype.ne.' ')then
+	    call wrhda(tOut,'ctype'//numo,ctype)
+	    call rdhdd(tIn, 'crpix'//numi,dval,0.d0)
+	    call wrhdd(tOut,'crpix'//numo,dval)
+	    call rdhdd(tIn, 'crval'//numi,dval,0.d0)
+	    call wrhdd(tOut,'crval'//numo,dval)
+	    call rdhdd(tIn, 'cdelt'//numi,dval,0.d0)
+	    call wrhdd(tOut,'cdelt'//numo,dval)
 	  endif
 	enddo
 c
+c  Handle the history.
+c
+	call hisopen(tOut,'append')
+	line = 'PSFMOS: Miriad '//version
+	call hiswrite(tOut,line)
+	call hisinput(tOut,'PSFMOS')
+	call hisclose(tOut)
+c
 	end
 c************************************************************************
-	subroutine SumIt(tIn,tBeam,n1,n2,Beam,WBeam,Wts)
+	subroutine GetDat(tIn,In,nx,ny,npnt)
 c
 	implicit none
-	integer tIn,tBeam,n1,n2
-	real Beam(n1,n2),WBeam(n1,n2),Wts(n1,n2)
+	integer tIn,nx,ny,npnt
+	real In(nx,ny,npnt)
 c
-c  Sum up the beam conributions.
-c
+c  Read the input data.
 c------------------------------------------------------------------------
-	double precision crvalb1,crpixb1,crvalb2,crpixb2
-	double precision crvali1,crvali2,crpixi1,crpixi2
-	double precision cdelti1,cdelti2,cdeltb1,cdeltb2
-	double precision x1,xn,y1,yn
-	real tx,ty,r,x0,y0,dx,dy,wt,fac
-	integer i,j,imin,imax,jmin,jmax,nx,ny,i1,in,j1,jn
-	character line*64
+	integer j,k
 c
-c  Externals.
-c
-	real PbGet
-c
-c  Determine the beam and image coordinate parameters.
-c
-	call rdhdd(tBeam,'crval1',crvalb1,0.d0)
-	call rdhdd(tBeam,'crval2',crvalb2,0.d0)
-	call rdhdd(tBeam,'crpix1',crpixb1,0.d0)
-	call rdhdd(tBeam,'crpix2',crpixb2,0.d0)
-	call rdhdd(tBeam,'cdelt1',cdeltb1,0.d0)
-	call rdhdd(tBeam,'cdelt2',cdeltb2,0.d0)
-	call rdhdd(tIn,  'crval1',crvali1,0.d0)
-	call rdhdd(tIn,  'crval2',crvali2,0.d0)
-	call rdhdd(tIn,  'crpix1',crpixi1,0.d0)
-	call rdhdd(tIn,  'crpix2',crpixi2,0.d0)
-	call rdhdd(tIn,  'cdelt1',cdelti1,0.d0)
-	call rdhdd(tIn,  'cdelt2',cdelti2,0.d0)
-	call rdhdi(tIn,  'naxis1',nx,0)
-	call rdhdi(tIn,  'naxis2',ny,0)
-c
-c  Determine where this image overlaps with the beam.
-c
-	x1 = (1-crpixi1) *cdelti1/cos(crvali2)  + crvali1
-	xn = (nx-crpixi1)*cdelti1/cos(crvali2)  + crvali1
-	y1 = (1-crpixi2) *cdelti2               + crvali2
-	yn = (ny-crpixi2)*cdelti2		+ crvali2
-	i1 = nint((x1-crvalb1)*cos(crvalb2)/cdeltb1 + crpixb1)
-	in = nint((xn-crvalb1)*cos(crvalb2)/cdeltb1 + crpixb1)
-	j1 = nint((y1-crvalb2)/cdeltb2		    + crpixb2)
-	jn = nint((yn-crvalb2)/cdeltb2		    + crpixb2)
-c
-c  Determine the extend to sum this component.
-c
-	imin = max(1,min(i1,in))
-	imax = min(n1,max(i1,in))
-	jmin = max(1,min(j1,jn))
-	jmax = min(n2,max(j1,jn))
-c
-c  What is the factor that the point source is attenuated by?
-c
-	x0 = (crvali1-crvalb1) * cos(crvalb2)
-	y0 = (crvali2-crvalb2)
-	r = x0*x0 + y0*y0
-	fac = PbGet(r)
-	write(line,'(a,f6.4)')'Weighted Point source strength is ',fac
-	call output(line)
-c
-c  Get ready to do.
-c
-	dx = cdeltb1
-	dy = cdeltb2
-	x0 = x0 / dx + crpixb1
-	y0 = y0 / dy + crpixb2
-c
-c  Sum the contribution.
-c
-	do j=jmin,jmax
-	  ty = dy*(j-y0)
-	  do i=imin,imax
-	    tx = dx*(i-x0)
-	    r = tx*tx + ty*ty
-	    wt = PbGet(r)
-	    WBeam(i,j) = WBeam(i,j) + fac*wt*Beam(i,j)
-	    Wts(i,j) = Wts(i,j) + wt*wt
+	do k=1,npnt
+	  call xysetpl(tIn,1,k)
+	  do j=1,ny
+	    call xyread(tIn,j,In(1,j,k))
 	  enddo
 	enddo
 c
+	end
+c************************************************************************
+	subroutine PutDat(tOut,Out,nx,ny)
+c
+	implicit none
+	integer tOut,nx,ny
+	real Out(nx,ny)
+c
+c  Write the output data.
+c------------------------------------------------------------------------
+	integer j
+	do j=1,ny
+	  call xywrite(tOut,j,Out(1,j))
+	enddo
 	end
