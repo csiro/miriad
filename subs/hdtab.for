@@ -5,6 +5,7 @@ c  History:
 c    25oct94 rjs  Original version.
 c    23nov94 rjs  Fix labelling of velocity axis for velocity linetype.
 c    25apr95 rjs  Write "object" rather than "source" item.
+c     1nov95 rjs  Added HdDefSiz
 c************************************************************************
 	subroutine HdInit(mfs1,mosaic1)
 c
@@ -288,6 +289,37 @@ c
 	if(restfreq.ne.0)call coSetd(coObj,'restfreq',restfreq)
 	call coReinit(coObj)
 c
+	end
+c************************************************************************
+	subroutine HdDefSiz(nx,ny)
+c
+	implicit none
+	integer nx,ny
+c
+c  Determine the default size of an image.
+c------------------------------------------------------------------------
+	include 'mirconst.h'
+	include 'hdtab.h'
+	real fwhm,cutoff,maxrad
+	integer coObj,pbObj
+c
+c  Determine the FWHM of the telescope.
+c
+	if(pbfwhm.gt.0) then
+	  fwhm = pi/180/3600 * pbfwhm
+	else if(telescop.eq.' ')then
+	  call bug('f',
+     *	    'Unknown telescope -- cannot determine default image size')
+	else
+	  call HdCoObj(coObj)
+	  call pbInit(pbObj,telescop,coObj)
+	  call pbInfo(pbObj,fwhm,cutoff,maxrad)
+	  call pbFin(pbObj)
+	  call coFin(coObj)
+	endif
+c
+	nx = max(nint(abs(fwhm/cdelt1)),1)
+	ny = max(nint(abs(fwhm/cdelt2)),1)
 	end
 c************************************************************************
 	subroutine HdWrite(tno)
