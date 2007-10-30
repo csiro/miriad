@@ -6,21 +6,35 @@ c= blcal - Compute and apply baseline calibration.
 c& rjs
 c: uv analysis
 c+
-c	UVAVER copies a uv dataset, performing averaging, both in time
-c	and/or frequency.
+c	BLCAL computes and applies baseline-based calibration to a visibility
+c	dataset.
+c
+c	This reads two datasets. It uses the first dataset to determine
+c	baseline-based calibration, and applies these calibration corrections
+c	to the second dataset.
 c@ vis
-c	The name of the input uv data sets. No default.
+c	Normally, this gives the name of two visibility datasets, being
+c	the "reference" and the "source" datasets respectively. The
+c	reference dataset is used to determine the baseline calibration,
+c	whereas the source contains the data that is corrected and written
+c	out. If only a single dataset is given, then this is self-calibrated.
+c	Baseline-based self-calibration is a very dubious operation, and
+c	generally should not be performed.
 c@ select
-c	The normal uv selection commands. The default is copy everything.
-c@ ref
-c	Reference visibility dataset. This dataset is used to determine
-c	the baseline gain function.
+c	The normal uv selection commands -- see the help on "select" for
+c	more information. This selection is applied to both the reference
+c	and source input datasets.
 c@ line
 c	The normal uv linetype in the form:
 c	  line,nchan,start,width,step
+c	See the help on "line" for more information.
 c	The default is all channels (or all wide channels if there are no
 c	spectral channels). The output will consist of only spectral or
 c	wideband data (but not both).
+c@ stokes
+c	Normal Stokes/polarisation processing. See the help on "stokes"
+c	for more information. The default is to use the Stokes/polarisations
+c	present in the dataset.
 c@ interval
 c	Solution time interval, in minutes. The default is 5 minutes.
 c@ out
@@ -28,32 +42,27 @@ c	The name of the output uv data set. No default.
 c--
 c  History:
 c    rjs  14mar97 Original version.
-c
+c    rjs  17mar97 Enhanced version.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
-	integer MAXSELS
-	parameter(version='BlCal: version 1.0 14-Mar-97')
-	parameter(MAXSELS=200)
-	character vis*64,ref*64,out*64,line*32
+	parameter(version='BlCal: version 1.0 17-Mar-97')
+	character out*64,line*32
 	integer lVis,lRef,lOut
-	integer nchan,pol,npol
+	integer nchan,pol,npol,nfiles
 	double precision interval,preamble(6)
-	real lstart,lwidth,lstep,sels(MAXSELS)
 	complex data(MAXCHAN)
-	logical flags(MAXCHAN)
+	logical flags(MAXCHAN),self
+c
+c  Externals.
+c
+	logical uvDatOpn
 c
 c  Get the inputs.
 c
 	call output(version)
 	call keyini
-	call keya('vis',vis,' ')
-	if(vis.eq.' ')call bug('f','Input vis file must be given')
-	call keya('ref',ref,' ')
-	if(ref.eq.' ')call bug('f','Input ref file must be given')
-	call keyline(line,nchan,lstart,lwidth,lstep)
-	if(line.eq.' ')line = 'channel'
-	call selinput('select',sels,MAXSELS)
+	call uvDatInp('vis','sdlwcef3')
 	call keyd('interval',interval,5.d0)
 	if(interval.le.0)call bug('f','Invalid value for interval')
 	interval = interval/(60.*24.)
@@ -61,31 +70,42 @@ c
 	if(out.eq.' ')call bug('f','An output must be given')
 	call keyfin
 c
+c  Check the number of input files.
+c
+	call uvDatGti('nfiles',nfiles)
+	self = nfiles.eq.1
+	if(nfiles.ne.1.and.nfiles.ne.2)call bug('f',
+     *	  'Either one or two input datasets must be given')
+	if(self)call bug('w','Baseline-based self-calibration '//
+     *	  'is a rather dangerous/dubious operation')
+c
 c  Open the reference, get the solution, and close.
 c
 	call output('Calculating the baseline gains ...')
-	call uvopen(lRef,ref,'old')
-	call uvset(lRef,'data',line,nchan,lstart,lwidth,lstep)
-	call uvset(lRef,'preamble','time/baseline/pol',0,0.,0.,0.)
-	call datLoad(lRef,interval)
-	call uvclose(lRef)
+	if(.not.uvDatOpn(lRef))call bug('f',
+     *	  'Error opening reference dataset')
+	call datLoad(interval)
+	call uvDatCls
 	call datNorm
 c
 c  Open the input and output.
 c
+	if(self)call uvDatRew
 	call output('Applying the baseline gains ...')
-	call uvopen(lVis,vis,'old')
-	call selApply(lVis,sels,.true.)
-	call uvset(lVis,'preamble','uvw/time/baseline',0,0.,0.,0.)
+	if(.not.uvDatOpn(lVis))call bug('f',
+     *	  'Error opening source dataset')
+	call uvDatGta('ltype',line)
 	call varInit(lVis,line)
 	call uvopen(lOut,out,'new')
 	call uvset(lOut,'preamble','uvw/time/baseline',0,0.,0.,0.)
 	call varOnit(lVis,lOut,line)
 c
-	call uvread(lVis,preamble,data,flags,MAXCHAN,nchan)
+	call uvDatRd(preamble,data,flags,MAXCHAN,nchan)
 	dowhile(nchan.gt.0)
-	  call uvrdvri(lVis,'pol',pol,0)
-	  call uvrdvri(lVis,'npol',npol,1)
+	  call uvDatGti('npol',npol)
+	  if(npol.le.0)call bug('f',
+     *	    'Unable to determine number of polarisations')
+	  call uvDatGti('pol',pol)
 	  preamble(6) = pol
 	  call DatCorr(preamble(4),data,flags,nchan)
 	  call varCopy(lVis,lOut)
@@ -94,7 +114,7 @@ c
 	    call uvputvri(lOut,'npol',npol,1)
 	  endif
 	  call uvwrite(lOut,preamble,data,flags,nchan)
-	  call uvread(lVis,preamble,data,flags,MAXCHAN,nchan)
+	  call uvDatRd(preamble,data,flags,MAXCHAN,nchan)
 	enddo
 c
 	call hdcopy(lVis,lOut,'history')
@@ -103,7 +123,7 @@ c
 	call hisInput(lOut,'BLCAL')
 	call hisClose(lOut)
 c
-	call uvclose(lVis)
+	call uvDatCls
 	call uvclose(lOut)
 	end
 c************************************************************************
@@ -201,14 +221,13 @@ c
 c
 	end
 c************************************************************************
-	subroutine datLoad(lVis,interval)
+	subroutine datLoad(interval)
 c
 	implicit none
-	integer lVis
 	double precision interval
 c------------------------------------------------------------------------
 	include 'blcal.h'
-	double precision co(3)
+	double precision co(5)
 	integer pol,bl,pmin,pmax,bmin,bmax,nread,ngood,i,j,i1,i2
 	integer Tail(MAXPOL,MAXBASE)
 	logical buffered
@@ -226,7 +245,7 @@ c
 	  enddo
 	enddo
 c
-	call uvread(lVis,co,data,flags,MAXCHAN,nread)
+	call uvDatRd(co,data,flags,MAXCHAN,nread)
 	nchan = nread
 	buffered = .false.
 	tmin = 0
@@ -240,12 +259,13 @@ c
 c
 c  Get the parameters of this record.
 c
-	    pol = nint(co(3)) + 9
+	    call uvDatGti('pol',pol)
+	    pol = pol + 9
 	    if(pol.le.0.or.pol.gt.MAXPOL)
      *	      call bug('f','Invalid polarisation')
-	    call basant(co(2),i1,i2)
+	    call basant(co(5),i1,i2)
 	    bl = ((i2-1)*i2)/2 + i1
-	    t = co(1)
+	    t = co(4)
 c
 c  Is this the end of an integration.
 c
@@ -269,7 +289,7 @@ c
 c  Add in this solution.
 c
  	    call datAdd(memc(gidx(i)),memi(fidx(i)),time(i),
-     *		data,flags,co,nchan)
+     *		data,flags,co(4),nchan)
 c
 c  Book keeping.
 c	
@@ -293,8 +313,9 @@ c
 c
 c  Go back for more.
 c
-	  call uvread(lVis,co,data,flags,MAXCHAN,nread)
+	  call uvDatRd(co,data,flags,MAXCHAN,nread)
 	enddo
+	if(nread.ne.0)call bug('f','Number of channels changed')
 c
 	if(buffered)call datFlush(Tail,MAXPOL,MAXBASE,pmin,pmax,
      *							bmin,bmax)
