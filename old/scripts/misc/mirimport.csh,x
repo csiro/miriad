@@ -1,0 +1,41 @@
+#!/bin/csh -f
+
+set path = ($MIRBIN $path)
+
+# Parse the input argument.
+
+set input = ( `echo $1|sed "s/:/ /"` )
+if ( $#input == 2 ) then
+  set rhost = $input[1]
+  set base  = $input[2]
+else
+  set rhost = ""
+  set base  = $input[1]
+endif
+
+if ( ! -e $MIR/import ) mkdir $MIR/import
+
+# If they are local files, just get a list of them. Otherwise
+# get them from the remote machine.
+
+if ( "$rhost" == "" ) then
+  set files = ( $base/*.tar.Z )
+else
+  cd $MIR/import
+  touch junk.tar.Z
+  rm -rf *.tar.Z
+  rcp ${rhost}:${base}/\*.tar.Z .
+  if ( $status ) exit
+  set files = ( *.tar.Z )
+endif
+
+# Process each file.
+
+foreach file ( $files )
+  zcat $file | ( cd $MIR; tar -xmf - )
+  if ( "$rhost" != "" ) rsh $rhost rm $base/$file
+  rm -r $file
+  echo Untarred $file at `date`
+end
+yes | update
+echo Done ...
