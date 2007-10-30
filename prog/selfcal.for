@@ -165,6 +165,7 @@ c    rjs  23dec93 Minimum match for linetypes.
 c    mchw 28oct94 restored output file to enable uv-data to be read-only.
 c    rjs  30jan95 Change option "selradec" to "mosaic", and update doc
 c	          file somewhat. Change to helper routine.
+c    rjs  16apr96 Increase select routine arrays.
 c  Bugs/Shortcomings:
 c   * Selfcal should check that the user is not mixing different
 c     polarisations and pointings.
@@ -174,7 +175,7 @@ c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='Selfcal: version 1.0 30-Jan-95')
 	integer MaxMod,maxsels,nhead
-	parameter(MaxMod=32,maxsels=256,nhead=3)
+	parameter(MaxMod=32,maxsels=1024,nhead=3)
 c
 	character Models(MaxMod)*64,vis*64,ltype*32,out*80
 	character flag1*8,flag2*8,obstype*32
