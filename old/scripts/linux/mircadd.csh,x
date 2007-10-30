@@ -12,7 +12,7 @@ foreach in ($argv)
    set file = $tmp.f
    set out = $file:t
    set out = $out:r
-   f77 -c -fPIC -O -o ${out}.o $file
+   f77 -ff90-intrinsics-hide -c -fPIC -O -o ${out}.o $file
    ar rl $MIRLIB/libmir.a ${out}.o
    rm -f $file ${out}.o
    breaksw
