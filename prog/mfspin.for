@@ -72,14 +72,15 @@ c    nebk 28jan93  Adapt to new primary beam routines.
 c    rjs  24oct94  Use newer pb routines.
 c    rjs  27oct94  Fix bug in runs-determining routine.
 c    rjs  23jul97  Added pbtype,cellscal.
+c    rjs  26nov97  Increase MAXRUNS.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
 	character version*(*)
 	integer nP,PolQ,PolU,PolV
 	integer MAXRUNS
-	parameter(MAXRUNS=5*MAXDIM,nP=11)
-	parameter(version='MfSpin: version 24-Oct-93')
+	parameter(MAXRUNS=30*MAXDIM,nP=11)
+	parameter(version='MfSpin: version 26-Nov-97')
 	parameter(PolQ=2,PolU=3,PolV=4)
 c
 	real dat(MAXBUF)

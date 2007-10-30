@@ -45,10 +45,14 @@ c	  nopol     This option suppresses polarisation calibration. The
 c	            default behaviour is to apply polarisation calibration.
 c	  nopass    This option suppresses bandpass calibration. The
 c	            default behaviour is to apply bandpass calibration.
+c@ log
+c	File in which to write the data, if y-axis is amplitude.
+c	The default is no logfile.
 c--
 c  History:
 c    rjs  03jun96 Original version.
 c    rjs  21aug97 Count the number of accepted correlations.
+c    bmg  26nov97 Added log keyword
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
@@ -57,15 +61,15 @@ c------------------------------------------------------------------------
 	parameter(MAXPOL=4,MAXBIN=32,PolMin=-9,PolMax=4)
 	parameter(version='PsrPlt: version 1.0 21-Aug-97')
 c
-	character uvflags*16,device*32
+	character uvflags*16,device*32,logfile*80
 	logical docal,dopol,dopass,doshift,doimag,dogrey,dochan
 c
 	integer nchan,nread,nbin,npol,ipol,ibin,i,j,k,nout,tno,mpol
-	integer ngood,nbad
+	integer ngood,nbad,llog
 	integer polIndx(PolMin:PolMax),pols(MAXPOL)
 	double precision preamble(4),offset(2),shift(2)
 	complex data(MAXCHAN)
-	logical flags(MAXCHAN)
+	logical flags(MAXCHAN),dolog
 	complex acc(MAXCHAN,MAXBIN,MAXPOL)
 	real    wt(MAXCHAN,MAXBIN,MAXPOL),sig2,w
 	double precision sfreq(MAXCHAN)
@@ -76,7 +80,7 @@ c
 c
 c  Externals.
 c
-	logical uvDatOpn
+	logical uvDatOpn,keyprsnt
 	integer pgbeg
 	character itoaf*8
 c
@@ -95,6 +99,8 @@ c
 	if(nout.eq.0)yaxis = yaxes(1)
 	dogrey = yaxis.ne.'amplitude'
 	dochan = yaxis.eq.'channel'
+	dolog = (keyprsnt('log').and.(.not.dogrey))
+	if(dolog) call keyf('log',logfile,' ')
 c
 c  Determine the shift.
 c
@@ -227,7 +233,7 @@ c
      *							doimag,dochan)
 	else
 	  call PrPlot(acc,wt,MAXCHAN,MAXBIN,nchan,npol,nbin,
-     *							pols,doimag)
+     *	                 	pols,doimag,llog,dolog,logfile)
 	  continue
 	endif
 c
@@ -356,20 +362,23 @@ c
 c
 	end
 c************************************************************************
-	subroutine PrPlot(acc,wt,mchan,mbin,nchan,npol,nbin,pols,doimag)
+	subroutine PrPlot(acc,wt,mchan,mbin,nchan,npol,nbin,pols,doimag,
+     + 	 	llog,dolog,logfile)
 c
 	implicit none
-	integer nchan,npol,nbin,mchan,mbin
+	character logfile*80,line*256
+	character polsc2p*2
+	integer nchan,npol,nbin,mchan,mbin,llog
 	integer pols(npol)
-	logical doimag
+	logical doimag,dolog
 	complex acc(mchan,mbin,npol)
 	real    wt (mchan,mbin,npol)
 c------------------------------------------------------------------------
 	integer MAXPOL,MAXBIN
 	parameter(MAXPOL=4,MAXBIN=32)
 	real ymin,ymax,xlo,xhi,ylo,yhi
-	real x(MAXBIN,MAXPOL),y(MAXBIN,MAXPOL)
-	integer npnt(MAXPOL),i,j,k
+	real x(MAXBIN,MAXPOL),y(MAXBIN,MAXPOL),loglist(MAXBIN,MAXPOL)
+	integer npnt(MAXPOL),i,j,k,iostat,len1	
 	complex ctemp
 	real vtemp,wtemp
 	logical first
@@ -430,6 +439,44 @@ c
 	  endif
 	enddo
 	call pgsci(1)
+c
+c  Write the data to a file if log option is present
+c
+      if (dolog) then
+         call txtopen(llog,logfile,'new',iostat)
+         if(iostat.NE.0) then
+            call bug('i','Error opening logfile')
+            call bugno('f',iostat)
+         endif
+	 do i=1,nbin
+	   do j=1,npol
+	      loglist(i,j)=0.
+	      do k=1,npnt(j)
+		  if (int(x(k,j)).eq.i) loglist(i,j) = y(k,j)
+	      enddo
+	   enddo
+	 enddo
+	 write(line,'(''  Bin   '',4(5x,a2,8x))') 
+     +             (polsc2p(pols(i)),i=1,npol)
+         call txtwrite(llog,line,len1(line),iostat)
+         if(iostat.ne.0) then
+               call bug('i','Error writing to logfile')
+               call bugno('f',iostat)
+         endif
+	 write(line,'(1x)')
+         call txtwrite(llog,line,len1(line),iostat)
+
+         do i=1,nbin
+           write(line,'(x,i4,4(3x,e12.5))') i,(loglist(i,j), j=1,npol)
+           call txtwrite(llog,line,len1(line),iostat)
+           if(iostat.ne.0) then
+               call bug('i','Error writing to logfile')
+               call bugno('f',iostat)
+           endif
+         enddo
+         call txtclose(llog)
+      endif
+c
 c
 	end
 c************************************************************************
