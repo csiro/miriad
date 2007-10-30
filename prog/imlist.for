@@ -19,8 +19,7 @@ c	             the default if no other options are given.
 c	  data       List some data.
 c	  mosaic     List the mosaic table of an image (if present).
 c	  history    List the history item.
-c	  statistics This lists the total flux, min and max values and
-c	             rms for each plane.
+c	  statistics List total flux, min and max and rms for each plane.
 c@ region
 c	Region of image to be listed. E.g.
 c	  % imlist  options=data region=relpix,box(-4,-4,5,5)(1,2)
@@ -64,13 +63,14 @@ c  nebk 25nov92  Add btype to header
 c  nebk 18nov93  Allow semi-infinite sized regions in data listing
 c  rjs  18oct94  Print contents of mosaic tables.
 c  pjt  15mar95  fixed declaration order for f2c (linux)
+c  mchw 23may96  Convert cordinates to double; use rangleh and hangleh
 c
 c  Bugs:
 c    Data format still needs work to prevent format overflow.
 c    Doesn't handle pixel blanking outside region of interest.
 c----------------------------------------------------------------------c
 	character version*(*)
-	parameter(version='version 15-mar-95')
+	parameter(version='version 23-MAY-96')
 	include 'maxdim.h'
 	integer maxboxes,maxnax
 	parameter(maxboxes=2048,maxnax=3)
@@ -247,7 +247,7 @@ c-------------------------------------------------------------------c
 	character descr*10,type*10,line*80,RA*1,DEC*1,axis*1
 	character xtype*12
 	integer i,n
-	real data
+	double precision ddata
 	logical more
 
 c  Header keywords.
@@ -258,7 +258,7 @@ c
 c
 c  Externals.
 c
-	character angles*13
+	character hangleh*13, rangleh*13
 	integer len1
 c
 c  Data
@@ -291,25 +291,25 @@ c
 		 DEC = axis
 	    endif
 	    if (keyw(i)(1:5).eq.'crval'.and.axis.eq.RA) then
-	      call rdhdr(tno,'crval'//axis,data,0.)
-	      call writeit(keyw(i)//': '//angles(dble(data)*rtoh),23)
+	      call rdhdd(tno,'crval'//axis,ddata,0.)
+	      call writeit(keyw(i)//': '//hangleh(ddata),23)
 	    else if (keyw(i)(1:5).eq.'crval'.and.axis.eq.DEC) then
-	      call rdhdr(tno,'crval'//axis,data,0.)
-	      call writeit(keyw(i)//': '//angles(dble(data)*rtod),23)
+	      call rdhdd(tno,'crval'//axis,ddata,0.)
+	      call writeit(keyw(i)//': '//rangleh(ddata),23)
 	    else if (keyw(i)(1:5).eq.'cdelt'
      *				.and.(axis.eq.RA.or.axis.eq.DEC)) then
-	      call rdhdr(tno,'cdelt'//axis,data,0.)
-	      call writeit(keyw(i)//': '//angles(dble(data)*rtod),23)
+	      call rdhdd(tno,'cdelt'//axis,ddata,0.)
+	      call writeit(keyw(i)//': '//rangleh(ddata),23)
 	    else if (keyw(i).eq.'obsra') then
-	      call rdhdr(tno,'obsra',data,0.)
-	      call writeit(keyw(i)//': '//angles(dble(data)*rtoh),23)
+	      call rdhdd(tno,'obsra',ddata,0.)
+	      call writeit(keyw(i)//': '//hangleh(ddata),23)
 	    else if (keyw(i).eq.'obsdec') then
-	      call rdhdr(tno,'obsdec',data,0.)
-	      call writeit(keyw(i)//': '//angles(dble(data)*rtod),23)
+	      call rdhdd(tno,'obsdec',ddata,0.)
+	      call writeit(keyw(i)//': '//rangleh(ddata),23)
 	    else if (keyw(i).eq.'bmaj'.or.keyw(i).eq.'bmin'
      *		.or.keyw(i).eq.'xshift'.or.keyw(i).eq.'yshift') then
-	      call rdhdr(tno,keyw(i),data,0.)
-	      call writeit(keyw(i)//': '//angles(dble(data)*rtod),23)
+	      call rdhdd(tno,keyw(i),ddata,0.)
+	      call writeit(keyw(i)//': '//rangleh(ddata),23)
 	    else
 	      call writeit(keyw(i)//': '//
      *				descr(1:len1(descr)),10+len1(descr))
