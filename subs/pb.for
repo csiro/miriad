@@ -11,6 +11,7 @@ c  subroutine pbInit(pbObj,pbtype,coObj)
 c  subroutine pbInitc(pbObj,pbtype,coObj,in,x1)
 c  subroutine pbInfo(pbObj,pbfwhm,cutoff,maxrad)
 c  subroutine pbExtent(pbObj,x0,y0,xrad,yrad)
+c  subroutine pbList
 c  real function pbGet(pbObj,x,y)
 c  real function pbDer(pbObj,x,y)
 c  subroutine pbFin(pbObj)
@@ -36,6 +37,8 @@ c
 c  Similarly pbExtent returns information about a primary beam, such as
 c  its centre (x0,y0), and maximum extent in x and y (all in grid units).
 c
+c  pbList lists the available primary beam models.
+c
 c  Finally pbFin tidies up whatever it needs to.
 c
 c  History:
@@ -49,6 +52,44 @@ c   25oct94   rjs    Complete rewrite.
 c   15mar95   rjs    Better model for Hat Ck and WSRT.
 c   27jul95   rjs    Initialise ifail before calling rpolyzr
 c   06nov95   rjs    Larger ATCA primary beam size.
+c   29nov95   rjs    Use "pbtype" to describe primary beam type in
+c		     datasets. Added pblist.
+c************************************************************************
+c* pbList -- List known primary beam types.
+c& rjs
+c: image-data
+c+
+	subroutine pbList
+c
+	implicit none
+c
+c  List the primary beam types that are modelled.
+c
+c--
+c------------------------------------------------------------------------
+	include 'pb.h'
+c
+	integer i
+	character line*80
+c
+	call pbFirst
+c
+c         12345678901234561234567890123456 xxx.xx xxx.xx 0.xxxx
+	call output(
+     *	 'Name            Description                     '//
+     *   '      Freq Range    Cutoff')
+	call output(
+     *   '                                                '//
+     *   '         (GHz)')
+	call output(
+     *	 '----            -----------                     '//
+     *	 '    --------------  ------')
+	do i=1,npb
+	  write(line,'(2a,2f9.3,f8.4)')
+     *	    pb(i),descrip(i),f1(i),f2(i),cutoff(i)
+	  call output(line)
+	enddo
+	end
 c************************************************************************
 c* pbRead -- Determine the primary beam type of a dataset.
 c& rjs
@@ -81,12 +122,19 @@ c
 c
 c  Get telescope and primary beam parameters.
 c
+	pbfwhm = -1
 	if(hdprsnt(tno,'visdata'))then
-	  call uvrdvra(tno,'telescop',telescop,' ')
-	  call uvrdvrr(tno,'pbfwhm',pbfwhm,-1.0)
+	  call uvrdvra(tno,'pbtype',telescop,' ')
+	  if(telescop.eq.' ')then
+	    call uvrdvra(tno,'telescop',telescop,' ')
+	    call uvrdvrr(tno,'pbfwhm',pbfwhm,-1.0)
+	  endif
 	else
-	  call rdhda(tno,'telescop',telescop,' ')
-	  call rdhdr(tno,'pbfwhm',pbfwhm,-1.0)
+	  call rdhda(tno,'pbtype',telescop,' ')
+	  if(telescop.eq.' ')then
+	    call rdhda(tno,'telescop',telescop,' ')
+	    call rdhdr(tno,'pbfwhm',pbfwhm,-1.0)
+	  endif
 	endif
 c
 c  If the primary beam parameter is zero, treat it as a single dish.
@@ -121,49 +169,14 @@ c		"gaus(xxx)", where xxx gives the FWHM of a gaussian
 c		primary beam in arcsec.
 c--
 c------------------------------------------------------------------------
-	double precision dtemp
-	real pbfwhm
-	character telescop*16
-	logical dotel,ok
-	integer l
-c
-c  Externals.
-c
 	logical hdprsnt
-	integer len1
-c
-c  Determine the primary beam type.
-c
-	telescop = pbtype
-	call ucase(telescop)
-	dotel = telescop(1:5).ne.'GAUS('
-c
-	if(telescop.eq.'SINGLE')then
-	  pbfwhm = 0
-	  dotel = .false.
-	else if(.not.dotel)then
-	  l = len1(telescop)
-	  ok = l.gt.6.and.telescop(l:l).eq.')'
-	  if(ok)call atodf(telescop(6:l-1),dtemp,ok)
-	  if(.not.ok)
-     *	    call bug('f','Error with gaussian pb parameter: '//telescop)
-	  pbfwhm = dtemp
-	endif
 c
 c  Handle a visibility dataset.
 c
 	if(hdprsnt(tno,'visdata'))then
-	  if(dotel)then
-	    call uvputvra(tno,'telescop',telescop)
-	  else
-	    call uvputvrr(tno,'pbfwhm',pbfwhm,1)
-	  endif
+	  call uvputvra(tno,'pbtype',pbtype)
 	else
-	  if(dotel)then
-	    call wrhda(tno,'telescop',telescop)
-	  else
-	    call wrhdr(tno,'pbfwhm',pbfwhm)
-	  endif
+	  call wrhda(tno,'pbtype',pbtype)
 	endif
 c
 	end
@@ -249,7 +262,7 @@ c------------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'pb.h'
 c
-	logical init,more,ok
+	logical more,ok
 	integer l1,l2,iax,k,kd
 	double precision f,dtemp,x2(2),antdiam
 	double precision crpix,crval,cdelt1,cdelt2
@@ -259,12 +272,10 @@ c
 c  Externals.
 c
 	integer len1
-	data init/.false./
 c
 c  Initialise the PB routines first up.
 c
-	if(.not.init)call pbFirst
-	init = .true.
+	call pbFirst
 c
 c  Get a PB object from the free list.
 c
@@ -317,7 +328,7 @@ c
 	  call obspar(ctype(1:l1),'antdiam',antdiam,ok)
 	  if(ok)then
 	    call pbAdd(ctype(1:l1),0.1,1e4,real(1100.d0/antdiam),
-     *							0.05,GAUS,0,0.)
+     *				0.05,GAUS,0,0.,'Truncated Gaussian')
 	    more = .false.
 	    k = npb
 	  endif
@@ -461,6 +472,7 @@ c
 	else if(pbtype(k).eq.SINGLE)then
 	  pbGet = 1
 	endif
+	if(pbGet.le.cutoff(k))pbGet = 0
 c
 	end
 c************************************************************************
@@ -616,6 +628,8 @@ c  Store all the primary beams that I know about.
 c------------------------------------------------------------------------
 	include 'pb.h'
 	integer i
+	logical init
+	save init
 c
 c Set coefficients for each telescope and frequency range
 c
@@ -625,6 +639,7 @@ c
 	real atcal3(NATCAL3),atcal1(NATCAL1),atcal2(NATCAL2)
 	real vla(NCOEFF)
 c
+	data init/.false./
 	data atcal1 /1.0, 8.99e-4, 2.15e-6, -2.23e-9,  1.56e-12/
 	data atcal2 /1.0,-1.0781341990755E-03,
      *			 4.6179146405726E-07,
@@ -632,13 +647,18 @@ c
      *		      	 1.2073518438662E-14,
      *			-7.5132629268134E-19,
      *			 1.9083641820123E-23/
-	data atcal3/0.023, 0.631, 2.0/
+	data atcal3/0.023, 0.631, 4.0/
 	data atcas /1.0, 1.02e-3, 9.48e-7, -3.68e-10, 4.88e-13/
 	data atcac /1.0, 1.08e-3, 1.31e-6, -1.17e-9,  1.07e-12/
 	data atcax /1.0, 1.04e-3, 8.36e-7, -4.68e-10, 5.50e-13/
 c
 	data vla /0.9920378, 0.9956885e-3, 0.3814573e-5, -0.5311695e-8,
      *		  0.3980963e-11/
+c
+c  Return if we are already initialised.
+c
+	if(init)return
+	init = .true.
 c
 c  Initialise the common block. In particular, form a linked list
 c  of free PB objects.
@@ -655,49 +675,57 @@ c
 c  Make the list of known primary beam objects. The ATCA primary beams
 c  are taken from ATNF technical memo by Wieringa and Kesteven.
 c
-	call pbAdd('ATCA',  1.15,1.88,    47.9, 0.03,  IPOLY,
-     *							 NATCAL1,atcal1)
-	call pbAdd('ATCAL2',  1.15,1.88,    47.9, 0.002, POLY,
-     *							 NATCAL2,atcal2)
-	call pbAdd('ATCAL3',    1.15,1.88,    58.713*2*0.514497/1.22, 
-     *					    0.0,BLOCKED, NATCAL3,atcal3)
+	call pbAdd('ATCA',    1.15,1.88,    47.9, 0.03,  IPOLY,
+     *			NATCAL1,atcal1,'Recipocal 4th order poly')
+	call pbAdd('ATCA.2',  1.15,1.88,    47.9, 0.002, POLY,
+     *			NATCAL2,atcal2,'Sixth order poly')
+	call pbAdd('ATCA.3',  1.15,1.88,    58.713*2*0.514497/1.22, 
+     *			1e-3,BLOCKED, NATCAL3,atcal3,
+     *			'Blocked aperture J1(x)/x form')
 	call pbAdd('ATCA',    2.10,2.60,    49.7, 0.03,  IPOLY,
-     *							 NCOEFF,atcas)
+     *			NCOEFF,atcas,'Reciprocal 4th order poly')
 	call pbAdd('ATCA',    4.30,6.70,    48.3, 0.03,  IPOLY,
-     *							 NCOEFF,atcac)
+     *			NCOEFF,atcac,'Reciprocal 4th order poly')
 	call pbAdd('ATCA',    7.90,9.3,     50.6, 0.03,  IPOLY,
-     *							 NCOEFF,atcax)
+     *			NCOEFF,atcax,'Reciprocal 4th order poly')
 c
 c  VLA primary beam is taken from AIPS code.
 c
 	call pbAdd('VLA',     0.071,24.510, 44.3, 0.023,IPOLY,
-     *							 NCOEFF,vla)
+     *			NCOEFF,vla,'Reciprocal 4th order poly')
 c
 c  The Hat Ck primary beam is a gaussian of size is 191.67 arcmin.GHz
 c  according to "John L"
 c
-	call pbAdd('HATCREEK',74.0,116.0,   191.67, 0.05, GAUS,0,0.)
+	call pbAdd('HATCREEK',74.0,116.0,   191.67, 0.05, GAUS,0,0.,
+     *				   'Truncated Gaussian')
 c
 c  The following values for the WSRT are derived from the NEWSTAR
 c  manual, which gives pb = cos**6(beta*freq(MHz)*angle(degrees))
 c  where beta = 0.0629 for f < 500 MHz, and 0.065 for f > 500 MHz.
 c  These numbers look a bit large (WSRT under-illuminated?).
 c
-	call pbAdd('WSRT',    0.0,0.5,	     51.54, 0.02,  COS6,0,0.)
-	call pbAdd('WSRT',    0.5,8.0,	     49.87, 0.02,  COS6,0,0.)
+	call pbAdd('WSRT',    0.0,0.5,	     51.54, 0.02,  COS6,0,0.,
+     *				   'Cos**6 function')
+	call pbAdd('WSRT',    0.5,8.0,	     49.87, 0.02,  COS6,0,0.,
+     *				   'Cos**6 function')
 c
 c  Miscellaneous.
 c
-	call pbAdd('FST',     1.00,2.00,     67.00, 0.05, GAUS,0,0.)
-	call pbAdd('GAUS',    0.0,1e4,	      1.00, 0.05, GAUS,0,0.)
-	call pbAdd('SINGLE',  0.0,1e4,	      0.00, 0.5,  SINGLE,0,0.)
+	call pbAdd('FST',     1.00,2.00,     67.00, 0.05, GAUS,0,0.,
+     *				   'Truncated Gaussian')
+	call pbAdd('GAUS',    0.0,999.,	      1.00, 0.05, GAUS,0,0.,
+     *				   'Truncated Gaussian')
+	call pbAdd('SINGLE',  0.0,999.,	      0.00, 0.5,  SINGLE,0,0.,
+     *				   'Single dish')
 c
 	end
 c************************************************************************
-	subroutine pbAdd(tel,f1d,f2d,pbfwhmd,cutoffd,pbtyped,nval,vals)
+	subroutine pbAdd(tel,f1d,f2d,pbfwhmd,cutoffd,pbtyped,nval,vals,
+     *				   descripd)
 c
 	implicit none
-	character tel*(*)
+	character tel*(*),descripd*(*)
 	integer nval,pbtyped
 	real f1d,f2d,pbfwhmd,cutoffd,vals(nval)
 c
@@ -721,6 +749,7 @@ c
 	pb(npb) = tel
 	f1(npb) = f1d
 	f2(npb) = f2d
+	descrip(npb) = descripd
 	pbfwhm(npb) = pbfwhmd
 	cutoff(npb) = cutoffd
 	pbtype(npb) = pbtyped
