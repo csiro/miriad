@@ -26,6 +26,9 @@ c  History:
 c    rjs  26oct94 Original version
 c    rjs  16nov94 Added mosWt
 c    rjs  26nov94 Fix bug which allocated too many coordinate objects.
+c    rjs   3dec94 Changes to the way a single pointing is mosaiced.
+c    rjs   2feb95 Fix initialisation and potential integer overflow
+c		  problems.
 c************************************************************************
 	subroutine MosCIni
 c
@@ -140,7 +143,7 @@ c------------------------------------------------------------------------
 	double precision tol
 	parameter(tol=dpi/180.d0/3600.d0)
 	logical found
-	integer indx,i
+	integer indx,pnt
 	double precision lm(2),ll1,mm1
 c
 c  Externals.
@@ -159,14 +162,15 @@ c
      *	     tel1.eq.telescop(pntno).and.
      *	     pbfwhm1.eq.pbfwhm(pntno))then
 	    found = .true.
+	    pnt = pntno
 	  else
 	    indx = MosHash(ll1,mm1,HashSize)
 	    dowhile(.not.found.and.Hash(indx).ne.0)
-	      i = Hash(indx)
-	      if(abs(ll1-llmm(1,i)).lt.tol.and.
-     *		 abs(mm1-llmm(2,i)).lt.tol.and.
-     *		 tel1.eq.telescop(i).and.
-     *		 pbfwhm1.eq.pbfwhm(i))then
+	      pnt = Hash(indx)
+	      if(abs(ll1-llmm(1,pnt)).lt.tol.and.
+     *		 abs(mm1-llmm(2,pnt)).lt.tol.and.
+     *		 tel1.eq.telescop(pnt).and.
+     *		 pbfwhm1.eq.pbfwhm(pnt))then
 		found = .true.
 	      else
 		indx = indx + 1
@@ -192,10 +196,11 @@ c
 	    indx = indx + 1
 	    if(indx.gt.HashSize) indx = 1
 	  enddo
-	  Hash(indx) = npnt	  
+	  Hash(indx) = npnt
+	  pnt = npnt
 	endif
 c
-	MosLoc = Hash(indx)
+	MosLoc = pnt
 c
 	end
 c************************************************************************
@@ -222,7 +227,9 @@ c
 	else
 	  indx = (2*n-1)*(2*n-1) + 2*n + i + j + 1
 	  if(i.gt.j)indx = indx + 4*n
-	  indx = mod(indx,HashSize) + 1
+	  indx = mod(indx,HashSize)
+	  if(indx.lt.0)indx = indx + HashSize
+	  indx = indx + 1
 	endif
 	MosHash = indx
 	end
@@ -926,23 +933,85 @@ c
 	if(npnt1.ne.npnt)
      *	  call bug('f','Inconsistency in Mosaic')
 c
-	call MemAlloc(pWts,mnx*mny,'r')
-c
-c  Do the simple mosaicing.
-c
-	if(nx2.gt.(nx-1)/2.or.ny2.gt.(ny-1)/2)
-     *	  call bug('f','Inconsistency in Mosaicer')
-	call Mosaic1(In,Out,memr(pWts),nx,ny,npnt,mnx,mny,Rms2)
-
-c
-c  Determine what data are flagged.
-c
-	call mosRuns(memr(pWts),mnx,mny,Runs,MAXRUNS,nRuns)
-c
-	call memFree(pWts,mnx*mny,'r')
+	if(npnt.eq.1)then
+	  call Mosaic1(In,Out,nx,ny,mnx,mny,Runs,MAXRUNS,nRuns)
+	else
+	  call MemAlloc(pWts,mnx*mny,'r')
+	  if(nx2.gt.(nx-1)/2.or.ny2.gt.(ny-1)/2)
+     *	    call bug('f','Inconsistency in Mosaicer')
+	  call Mosaic2(In,Out,memr(pWts),nx,ny,npnt,mnx,mny,Rms2)
+	  call mosRuns(memr(pWts),mnx,mny,Runs,MAXRUNS,nRuns)
+	  call memFree(pWts,mnx*mny,'r')
+	endif
 	end
 c************************************************************************
-	subroutine Mosaic1(In,Out,Wts,nx,ny,npnt,mnx,mny,Rms2)
+	subroutine Mosaic1(In,Out,nx,ny,mnx,mny,Runs,maxruns,nruns)
+c
+	implicit none
+	integer nx,ny,mnx,mny,MAXRUNS,nRuns,Runs(3,MAXRUNS)
+	real In(nx,ny),Out(mnx,mny)
+c
+c  DO the linear mosaic on all the fields in the simple case that
+c  there is only one field. This consists of simply copying the input
+c  to the output.
+c------------------------------------------------------------------------
+	integer pbObj,imin,imax,jmin,jmax,ic,jc,ioff,joff,i,j
+	real x,y,xext,yext
+c
+c  Externals.
+c
+	integer mosPb
+c
+	pbObj = mosPb(1)
+	call mosExt(1,imin,imax,jmin,jmax)
+	call pbExtent(pbObj,x,y,xext,yext)
+	ic = nx/2 + 1
+	jc = ny/2 + 1
+	ioff = ic - nint(x)
+	joff = jc - nint(y)
+	imin = max(imin,1)
+	imax = min(imax,mnx)
+	jmin = max(jmin,1)
+	jmax = min(jmax,mny)
+c
+	if(MAXRUNS.lt.jmax-jmin+2)
+     *	  call bug('f','Runs buffer overflow, in Mosaicer')
+c
+	nRuns = 0
+c
+	do j=1,jmin-1
+	  do i=1,mnx
+	    Out(i,j) = 0
+	  enddo
+	enddo
+c
+	do j=jmin,jmax
+	  do i=1,imin-1
+	    Out(i,j) = 0
+	  enddo
+	  do i=imin,imax
+	    Out(i,j) = In(i+ioff,j+joff)
+	  enddo
+	  do i=imax+1,mnx
+	    Out(i,j) = 0
+	  enddo
+c
+	  nRuns = nRuns + 1
+	  Runs(1,nRuns) = j
+	  Runs(2,nRuns) = imin
+	  Runs(3,nRuns) = imax
+	enddo
+c
+	do j=jmax+1,mny
+	  do i=1,mnx
+	    Out(i,j) = 0
+	  enddo
+	enddo
+c
+	Runs(1,nRuns+1) = 0
+	end		
+c************************************************************************
+	subroutine Mosaic2(In,Out,Wts,nx,ny,npnt,mnx,mny,Rms2)
 c
 	implicit none
 	integer nx,ny,npnt,mnx,mny
