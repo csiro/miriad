@@ -34,12 +34,7 @@ c                     allows old data to be read) made on 12feb93.
 c    jm    23apr93    Corrected an argument mismatch in the call
 c                     to hreada() in the subroutine trackit().
 c    jm    03jun93    Added apfile keyword.
-c    rjs   11aug93    Rotation of uv coordinates to correct epoch.
-c                     Also fixed continuation bug in getcoor.
-c    rjs   19nov93    Output correlations are in the same format as the
-c                     input.
-c    jm    03dec93    Only call uvset for corr format if corr exists!
-c   bpw/jm 17dec93    Added options=dra to correct for MINT problems.
+c
 c***********************************************************************
 c= Uvedit - Editing of the baseline of a UV data set.
 c& jm
@@ -75,10 +70,6 @@ c     one source is present in a UV data set.  All UV data that does
 c     not correspond to the input source name is copied without being
 c     edited.  If this keyword is not set (the default), then all
 c     sources are edited.  Only one source name may be input.
-c     Note: it probably doesn't make sense to use this keyword with
-c     any other options except the ra and dec keywords.  If any other
-c     editing (except ra/dec) is requested along with this keyword,
-c     a warning message will be issued but the editing will proceed.
 c
 c@ apfile
 c     The name of a file that contains the absolute antenna positions
@@ -176,15 +167,6 @@ c       nouv     Do not recompute the u and v variables (coord(1) and
 c                coord(2), respectively).  This option should, in
 c                principle, only be used with the delay correction;
 c                all other corrections should recompute u and v.
-c       dra
-c                Multiply the dra values by a cos(obsdec) correction.
-c                This is used to correct the dra value in the uv
-c                dataset for MINT data taken at Hat Creek before
-c                11dec93.  Before that date, the 1/cos(obsdec)
-c                correction was not applied to the dra in the grid
-c                file, so that the pointing was incorrect (instead
-c                of dra arcseconds offsets, the offsets were
-c                dra*cos(obsdec) arcseconds).
 c
 c--
 c-----------------------------------------------------------------------
@@ -196,7 +178,7 @@ c
       character PROG*(*)
       parameter (PROG = 'UVEDIT: ')
       character VERSION*(*)
-      parameter (VERSION = 'version 1.8 17-Dec-93')
+      parameter (VERSION = 'V1.6 03-Jun-93')
 c
       real SECRAD, ASECRAD
 c  -------------(SECRAD = PI / (12.0 * 3600.0))
@@ -217,7 +199,7 @@ c  Internal variables.
 c
       character Vis(MAXFILES)*132, Outsave*132, Outfile*132
       character Selsrc*132, apFile*132, source*132
-      character except(15)*11, type*1, corrtype*1
+      character except(15)*11, type*1
       character errmsg*175, mesg*80, antkey*7
       integer j, k, m
       integer Lin, Lout
@@ -229,7 +211,6 @@ c
       integer ant1, ant2
       integer nschan(MAXCHAN), ischan(MAXCHAN)
       real timeoff
-      real olddra, dra
       real wt, wtup, wtdn
       real phase, timphz, radphz, antphz, tmphaz, tmpdelay
       real delay(MAXANT)
@@ -248,13 +229,12 @@ c
       double precision antpos(MAXANT, 3)
       double precision XYZ(MAXANT, 3), newxyz(MAXANT, 3)
       double precision sdf(MAXCHAN), sfreq(MAXCHAN)
-      double precision epoch, jepoch, theta, costh, sinth
       complex delta
       complex data(MAXCHAN), wdata(MAXCHAN)
       logical suffix, allsrc
       logical raabs, decabs, antabs
-      logical dotime, dorad, doants, dodelay, douv, dodra
-      logical updUT, updLst, updodra, updora, updodec, updra, upddec
+      logical dotime, dorad, doants, dodelay, douv
+      logical updUT, updLst, updora, updodec, updra, upddec
       logical dowide, docorr
       logical more, updated
       logical flags(MAXCHAN), wflags(MAXCHAN)
@@ -263,7 +243,6 @@ c  Externals.
 c
       integer Len1
       logical KeyPrsnt
-      double precision epo2jul
 c
 c  End declarations.
 c-----------------------------------------------------------------------
@@ -462,16 +441,6 @@ c  Initialize the delay array.
         Nflags = Nflags + 1
       endif
 c
-c Options.
-c
-      call GetOpt(douv, dodra)
-      if ((.not. douv) .and. (dorad .or. dotime .or. doants))
-     *  call Bug('w',
-     *  'OPTIONS=NOUV possibly unsafe for these editing options.')
-      if (dodra) Nflags = Nflags + 1
-c
-      call KeyFin
-c
 c Should never get in this if-conditional!
 c
       if (Nflags .eq. 0) then
@@ -479,17 +448,14 @@ c
         call Bug('f', errmsg)
       endif
 c
-c  Check if the user has specified a source name but not selected
-c  RA/Dec editing.  If this is the case, send a warning message
-c  but continue on with the program.
+c Options.
 c
-      if (.not. allsrc) then
-        if ((.not. dorad) .or. dotime .or. doants .or. dodelay) then
-          errmsg = PROG //
-     *      'Options selected for a single source might cause problems?'
-          call Bug('w', errmsg)
-        endif
-      endif
+      call GetOpt(douv)
+      if ((.not. douv) .and. (dorad .or. dotime .or. doants))
+     *  call Bug('w',
+     *  'OPTIONS=NOUV possibly unsafe for these editing options.')
+
+      call KeyFin
 c
 c  End of user inputs.
 c-----------------------------------------------------------------------
@@ -520,10 +486,6 @@ c
         except(Nexcept + 4) = 'obsdec'
         Nexcept = Nexcept + 4
       endif
-      if (dodra) then
-        except(Nexcept + 1) = 'dra'
-        Nexcept = Nexcept + 1
-      endif
       Nant = -1
 c
 c  Open the input visibility file.
@@ -537,7 +499,7 @@ c
 c  Check that this data set is in cross correlation mode.
 c
         k = Len1(Vis(j))
-        call uvrdvri(Lin, 'coropt', coropt, 0)
+        call Uvrdvri(Lin, 'coropt', coropt, 0)
         if (coropt .ne. 0) then
           errmsg = PROG //
      *             'Correlator is not set in cross correlation mode.'
@@ -553,7 +515,6 @@ c
           call UvProbvr(Lin, 'corr', type, k, updated)
           call Lcase(type)
           docorr = ((type .eq. 'r') .or. (type .eq. 'j'))
-          corrtype =  type
           if (.not. docorr) then
             k = Len1(Vis(j))
             errmsg = PROG //
@@ -596,16 +557,14 @@ c
             call UvOpen(Lout, Outfile, 'new')
             mesg = PROG // 'Writing visibilities to: '// Outfile
             call Output(mesg)
-            if (docorr)
-     *        call uvset(Lout, 'corr', corrtype, 0, 0.0, 0.0, 0.0)
 c
 c  Copy the old history entries to the new file and then add a few
 c  additional history entries to the new file.
 c
             call hdcopy(Lin, Lout, 'history')
             call HisOpen(Lout, 'append')
-            call HisWrite(Lout, PROG // ' Miriad '// PROG // VERSION)
-            call HisInput(Lout, PROG)
+            call HisWrite(Lout, PROG // ' (MIRIAD)  ' // VERSION)
+            call HisInput(Lout, PROG // ' (MIRIAD)')
 c
 c  Initialize the new coordinate array, but only if necessary.
 c
@@ -648,7 +607,7 @@ c
 c               call UvProbvr(Lin, 'nants', type, k, updated)
 c               if (updated) then
 c--             call UvGetvri(Lin, 'nants', k, 1)
-                call uvrdvri(Lin, 'nants', k, 0)
+                call UvRdVri(Lin, 'nants', k, 0)
                 if (k .ne. Nant) then
                   if (Nant .eq. -1) then
                     Nant = k
@@ -665,10 +624,10 @@ c  Get lo1 and lo2 for use with delay corrections.
 c
                 call UvProbvr(Lin, 'lo1', type, k, updated)
 c--             if (updated) call UvGetvrd(Lin, 'lo1', lo1, 1)
-                if (updated) call uvrdvrd(Lin, 'lo1', lo1, 0.0D0)
+                if (updated) call UvRdVrd(Lin, 'lo1', lo1, 0.0D0)
                 call UvProbvr(Lin, 'lo2', type, k, updated)
 c--             if (updated) call UvGetvrd(Lin, 'lo2', lo2, 1)
-                if (updated) call uvrdvrd(Lin, 'lo2', lo2, 0.0D0)
+                if (updated) call UvRdVrd(Lin, 'lo2', lo2, 0.0D0)
 c
 c  Check if we are looking at the proper source.
 c
@@ -736,7 +695,6 @@ c
                   call GetUpd(Lin, 'lst', dotime, Lst, updLst)
                   call GetUpd(Lin, 'obsra', dorad, obsra, updora)
                   call GetUpd(Lin, 'obsdec', dorad, obsdec, updodec)
-                  call GetUpr(Lin, 'dra', dodra, olddra, updodra) 
                   call GetUpd(Lin, 'ra', dorad, RA, updra)
                   call GetUpd(Lin, 'dec', dorad, dec, upddec)
    10             format(A, A, ' changed from ', G17.9, ' to ', G17.9)
@@ -750,12 +708,6 @@ c
                     val1 = Lst + timeoff
                     call UvPutvrd(Lout, 'lst', val1, 1)
                     write (mesg, 10) PROG, 'LST', Lst, val1
-                    call HisWrite(Lout, mesg)
-                  endif
-                  if (updodra) then
-                    dra = olddra * cos(obsdec)
-                    call UvPutvrr(Lout, 'dra', dra, 1)
-                    write (mesg, 10) PROG, 'DRA', olddra, dra
                     call HisWrite(Lout, mesg)
                   endif
                   if (updora) then
@@ -825,9 +777,6 @@ c
 c  Set headers variables to new values.
 c
 c  Get new uv coordinates...
-                  if (dotime) then
-                    preamble(3) = preamble(3) + (timeoff / (2 * PI))
-                  endif
                   if (dotime) HA = HA + timeoff
                   if (dorad) HA = HA - delra
                   if (dotime .or. dorad) then
@@ -840,15 +789,11 @@ c  Get new uv coordinates...
                     uu = (bxnew * sinHA) + (bynew * cosHA)
                     vv = (((-bxnew * cosHA) + (bynew * sinHA)) * sindec)
      *                 + (bznew * cosdec)
-c
-                    call uvrdvrd(Lin, 'epoch', epoch, 2000.0d0)
-                    jepoch = epo2jul(epoch, ' ')
-                    call prerotat(jepoch, RA, dec, preamble(3), theta)
-                    costh = cos(theta)
-                    sinth = sin(theta)
-c
-                    preamble(1) = (uu * costh) + (vv * sinth)
-                    preamble(2) = (vv * costh) - (uu * sinth)
+                    preamble(1) = uu
+                    preamble(2) = vv
+                  endif
+                  if (dotime) then
+                    preamble(3) = preamble(3) + (timeoff / (2 * PI))
                   endif
 c
 c  Get particular headers necessary to do editing (these items have
@@ -997,9 +942,9 @@ cc= GetOpt - Internal routine to get command line options.
 cc& jm
 cc: internal utility
 cc+
-      subroutine GetOpt(douv, dodra)
+      subroutine GetOpt(douv)
       implicit none
-      logical douv, dodra
+      logical douv
 c
 c  Get user options from the command line.
 c
@@ -1007,24 +952,22 @@ c  Input:
 c    none
 c
 c  Output:
-c    douv     If true, then recompute u and v.
-c    dodra    If true, then multiply dra by 1/cos(obsdec).
+c    douv     If true, recompute u and v.
 c
 c--
 c-----------------------------------------------------------------------
 c
 c  Internal variables.
 c
-      integer NOPTS
-      parameter (NOPTS = 2)
+      integer nopts
+      parameter (nopts = 1)
 c
-      character opts(NOPTS)*9
-      logical present(NOPTS)
-      data opts/'nouv', 'dra'/
+      character opts(nopts)*9
+      logical present(nopts)
+      data opts/'nouv    '/
 c
-      call Options('options', opts, present, NOPTS)
+      call Options('options', opts, present, nopts)
       douv = .not. present(1)
-      dodra = present(2)
 c
       end
 c
@@ -1233,7 +1176,7 @@ c
         value = 0.0
       else if (updated) then
 c--     call UvGetvrd(Lin, variable, value, 1)
-        call uvrdvrd(Lin, variable, value, 0.0D0)
+        call Uvrdvrd(Lin, variable, value, 0.0D0)
       endif
       updated = updated .and. doedit
       return
@@ -1276,7 +1219,7 @@ c
         value = 0.0
       else if (updated) then
 c--     call UvGetvrr(Lin, variable, value, 1)
-        call uvrdvrr(Lin, variable, value, 0.0)
+        call Uvrdvrr(Lin, variable, value, 0.0)
       endif
       updated = updated .and. doedit
       return
@@ -1316,7 +1259,7 @@ c
 c
       call UvProbvr(Lin, 'nwide', type, length, nupd)
 c--   if (nupd) call UvGetvri(Lin, 'nwide', nwide, 1)
-      if (nupd) call uvrdvri(Lin, 'nwide', nwide, 0)
+      if (nupd) call UvRdVri(Lin, 'nwide', nwide, 0)
       call UvProbvr(Lin, 'wfreq', type, length, updated)
       if ((nupd .or. updated) .and. (nwide .gt. 0))
      *  call UvGetvrr(Lin, 'wfreq', wfreq, nwide)
@@ -1362,24 +1305,24 @@ c
 c
       call UvProbvr(Lin, 'nspect', type, length, nupd)
 c--   if (nupd) call UvGetvri(Lin, 'nspect', nspect, 1)
-      if (nupd) call uvrdvri(Lin, 'nspect', nspect, 0)
+      if (nupd) call UvRdVri(Lin, 'nspect', nspect, 0)
 c
       if (nspect .gt. 0) then
         call UvProbvr(Lin, 'nschan', type, length, update)
         if (nupd .or. update)
-     *    call UvGetvri(Lin, 'nschan', nschan, nspect)
+       *  call UvGetvri(Lin, 'nschan', nschan, nspect)
 c
         call UvProbvr(Lin, 'ischan', type, length, update)
         if (nupd .or. update)
-     *    call UvGetvri(Lin, 'ischan', ischan, nspect)
+       *  call UvGetvri(Lin, 'ischan', ischan, nspect)
 c
         call UvProbvr(Lin, 'sdf', type, length, update)
         if (nupd .or. update)
-     *    call UvGetvrd(Lin, 'sdf', sdf, nspect)
+       *  call UvGetvrd(Lin, 'sdf', sdf, nspect)
 c
         call UvProbvr(Lin, 'sfreq', type, length, update)
         if (nupd .or. update)
-     *    call UvGetvrd(Lin, 'sfreq', sfreq, nspect)
+       *  call UvGetvrd(Lin, 'sfreq', sfreq, nspect)
       endif
       return
       end
