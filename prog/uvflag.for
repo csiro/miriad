@@ -132,6 +132,8 @@ c                           account, and that therefore line=wide did not
 c                           flag properly if nwchan!=0
 c           rjs     23dec93 Minimum match of line parameter.
 c	    rjs     10oct94 Eliminate spurious extra call to uvflgwr.
+c	    rjs     16aug96 Eliminate MAXWIDE definition. Change NSELS,
+c			    standardise some FORTRAN.
 c***********************************************************************
 c
 c************************************************************************
@@ -144,13 +146,13 @@ c the flagging is done.
 c Then it asks for the next visibility file and does the whole process
 c again until the list is exhausted.
 
-      character*30 version
+      character*(*) version
       parameter ( version = 'uvflag: version 2.5 10-Oct-94')
 
-      character*1024   vis
+      character*64     vis
 
       integer          NSELS
-      parameter        ( NSELS = 5000 )
+      parameter        ( NSELS = 25000 )
       real             sels(NSELS)
 
       integer          line(7)
@@ -387,8 +389,8 @@ c tformat is transfered to report.
      *                         flagval, apply,ropt,tformat )
 
       character*(*)    vis
-      real             sels(*)
       integer          nsels
+      real             sels(nsels)
       integer          line(*)
       character*(*)    type
       logical          usech(*)
@@ -400,8 +402,6 @@ c tformat is transfered to report.
       integer          unit
       double precision preamble(4)
       include          'maxdim.h'
-      integer          MAXWIDE
-      parameter        ( MAXWIDE = 4 )
       integer          mxchan
       complex          data(MAXCHAN)
       logical          oldflags(MAXCHAN), newflags(MAXCHAN)
@@ -705,6 +705,9 @@ c Loop through flag arrays to get counts
       do i = 1, NCOUNTS
         totcnts(i,j) = totcnts(i,j) + counts(i,j)
       enddo
+c
+      counting = 0
+c
       return
 
       entry count(nr,type)
@@ -764,8 +767,8 @@ c Type an overview of keyword values
      *       '( ''Linetype '',a, ''; select channel '',i4     )' )
      *       type(:len1(type)), int(line(2))
          if( line(1).gt.1 ) write( outline,
-     *       '( ''Linetype '',a, ''; select '',i4,'' channels; '',
-     *          ''start '',i4,'', width '',i4,'', step '',i4  )' )
+     *       '( ''Linetype '',a, ''; select '',i4,'' channels; '','//
+     *          '''start '',i4,'', width '',i4,'', step '',i4  )' )
      *       type(:len1(type)), line(1), line(2), line(3), line(4)
       elseif( equals( type, 'both' ) )
      *then
@@ -886,11 +889,11 @@ c coded as yymmmdd:hh:mm:ss; extract antennae from baselinenumber
       do i = 1, 4
          counts(i) = count(i,type)
       enddo
-      write( outline, '(
-     *       i4,1x,      a1,1x,     f8.4,1x, f8.4,1x, a,1x,
-     *       i2,1x, i2,2x,
-     *       i4,1x,               i4,2x,    i4,1x,    i4           )' )
-     *       int(visno), type(1:1), sngl(u), sngl(v), caltime(1:16),
+      write( outline, '('//
+     *       'i4,1x,      a1,1x,     f8.4,1x, f8.4,1x, a,1x,'//
+     *       'i2,1x, i2,2x,'//
+     *       'i4,1x,               i4,2x,    i4,1x,    i4           )' )
+     *       int(visno), type(1:1), real(u), real(v), caltime(1:16),
      *       ant1,  ant2, counts
       call logwrit( outline )
 
@@ -939,9 +942,9 @@ c new flag.
             off = mod( off+1, 3 )
             if( off.eq.0 ) outline = ' '
             write( outline( off*hdlen+1 : off*hdlen+hdlen-1 ),
-     *             '( i4,1x,   f8.2,1x,       f6.1,1x,
-     *                l1,''->'',   l1 )' )
-     *                chan(n), cabs(data(n)), arg(data(n)),
+     *             '( i4,1x,   f8.2,1x,       f6.1,1x,'//
+     *                'l1,''->'',   l1 )' )
+     *                chan(n), abs(data(n)), arg(data(n)),
      *                oldflags(n), newflags(n)
           endif
           if( off.eq.2 ) call logwrit( outline )
@@ -1040,8 +1043,8 @@ c Type an overview and update history to finish off
 
       call nrecords( reccount, 1 )
       call nrecords( treccnt,  2 )
-      write( outline, '( ''Total number of records selected: '',i5,
-     *                   ''; out of '',i5, '' records'' )' )
+      write( outline, '( ''Total number of records selected: '',i5,'//
+     *                   '''; out of '',i5, '' records'' )' )
      *                     reccount, treccnt
       call lhwr( outline, unit, apply )
 
@@ -1054,8 +1057,8 @@ c Type an overview and update history to finish off
       if( type.eq.'channel' ) lt2 = 1
       if( type.eq.'wide'    ) lt1 = 2
       if( type.eq.'wide'    ) lt2 = 2
-      write( outline, '(
-     *     ''Counts of correlations within selected channels'' )' )
+      write( outline, '('//
+     *     '''Counts of correlations within selected channels'' )' )
       call lhwr( outline, unit, apply )
 
       do lt = lt1, lt2
@@ -1069,15 +1072,15 @@ c Type an overview and update history to finish off
             totcnt(i) = totcount(i,lt)
          enddo
          write( outline, '( ''Good:  '', 3x, i10, 1x, i10 )' )
-      *         totcnt(1), totcnt(3)
-         if( .not.flagval ) write( outline( len1(outline)+1 : ), '(
-      *         4x, ''Changed to bad: '', i10 )' ) totcnt(5)
+     *         totcnt(1), totcnt(3)
+         if( .not.flagval ) write( outline( len1(outline)+1 : ), '('//
+     *         '4x, ''Changed to bad: '', i10 )' ) totcnt(5)
          call lhwr( outline, unit, apply )
 
          write( outline, '( ''Bad:   '', 3x, i10, 1x, i10 )' )
-      *         totcnt(2), totcnt(4)
-         if(      flagval ) write( outline( len1(outline)+1 : ), '(
-      *         4x, ''Changed to good: '',i10 )' ) totcnt(6)
+     *          totcnt(2), totcnt(4)
+         if(      flagval ) write( outline( len1(outline)+1 : ), '('//
+     *          '4x, ''Changed to good: '',i10 )' ) totcnt(6)
          call lhwr( outline, unit, apply )
 
        enddo
