@@ -395,7 +395,7 @@ c		   Ammend for new wedge call sequences.  Add lookuptable
 c	           to "grange" keyword. Move to image type "pixel"
 c		   instead of "grey"
 c    nebk 10apr95  Add doc for new absolute b&w lookup table
-c    nebk 11aug95  Add labtyp=arcmin 
+c    nebk 03sep95  Add labtyp=arcmin, nonlinear ticks
 c
 c Ideas:
 c  * Be cleverer for sub-cubes which have spectra partly all zero
@@ -455,7 +455,7 @@ c
       integer nofile, npos, ierr, pgbeg, ilen, ncon, i, j, nspec,
      +  sizespec, ngrps, defwid, npts, iblc, nblnkg, nblnkcs, coltab
       integer axisnum, virsiz(maxnax), vircsiz(maxnax)
-      integer len1, tflen(0:2)
+      integer len1, tflen(0:2), labcol, bgcol
 c
       character labtyp(2)*6, levtyp(maxcon)*1, ofile(maxspec)*64
       character pdev*64, xlabel*40, ylabel*40, xopts*20, yopts*20, 
@@ -479,9 +479,8 @@ c
       data txtfill, tflen /'spectrum', 'derivative spectrum', 
      +                     'derivative spectrum', 8, 19, 19/
 c-----------------------------------------------------------------------
-      call output ('CgSpec: version 11-Aug-95')
-      call output ('Keyword "grange" can now be used to specify the')
-      call output ('colour lookup table as well the transfer function')
+      call output ('CgSpec: version 03-Sep-95')
+      call output ('Non-linear coordinate labels now correctly handled')
       call output (' ')
 c
 c Get user inputs
@@ -610,6 +609,8 @@ c
       call pgqinf ('hardcopy', hard, ilen)
       defwid = 1
       if (hard.eq.'YES') defwid = 2
+      call bgcolcg (bgcol)
+      call setlgc (bgcol, labcol)
 c
       do i = 1, ncon
         if (clines(i).eq.0) clines(i) = defwid
@@ -627,14 +628,16 @@ c
 c Set label displacements from axes and set PGTBOX labelling 
 c option strings
 c
-      call setlabcg (labtyp, ymin, ymax, xdispl, ydispb, xopts, yopts)
+      call setlabcg (.false., labtyp, ymin, ymax, xdispl, 
+     +               ydispb, xopts, yopts)
 c
 c Work out view port sizes and increments.
 c   
       call vpsizcg (dofull, dofid, ncon, gin, ' ', nspec, ' ',
      +  maxlev, nlevs, srtlev, levs, slev, 1, 1, cs, xdispl, ydispb,
-     +  .false., 1, wedwid, wedisp, tfdisp, labtyp, vxmin, vymin, 
-     +   vymax, vxgap, vygap, vxsize, vysize, tfvp, wdgvp)
+     +  .false., .false., 1, wedwid, wedisp, tfdisp, labtyp, vxmin, 
+     +   vymin, vymax, vxgap, vygap, vxsize, vysize, tfvp, wdgvp)
+c
 c
 c Adjust viewport increments and start locations if equal scales 
 c requested or if scales provided by user
@@ -688,7 +691,7 @@ c
 c
 c Apply transfer function to pixel map image if required
 c
-        if (trfun.ne.'lin') call apptrfcg (pixr2, trfun, groff, 
+        if (trfun.ne.'lin') call apptrfcg (pixr, trfun, groff, 
      +    win(1)*win(2), memi(ipnim), memr(ipim), nbins, 
      +    his, cumhis)
 c
@@ -707,7 +710,7 @@ c
 c
 c Take complement of b&w lookup tables
 c
-          call ofmcmp
+          if (bgcol.eq.1) call ofmcmp
         end if
 c
 c Draw image and apply user given OFM to interactive PGPLOT devices
@@ -719,14 +722,13 @@ c
 c Draw optional wedge
 c
         call pgslw (1)
-        call pgsci (7)
-        if (hard.eq.'YES') call pgsci (2)
+        call pgsci (labcol)
         if (dowedge) call wedgecg (1, wedwid, 1, trfun, groff, nbins,
      +                             cumhis, wdgvp, pixr(1), pixr(2))
 c
 c Retake OFM b&w complement for hardcopy devices
 c
-        if (hard.eq.'YES') call ofmcmp
+        if (hard.eq.'YES' .and. bgcol.eq.1) call ofmcmp
 c
 c Save normalization image if there are some blanks
 c
@@ -740,12 +742,12 @@ c Label and draw axes.  Forces pixel map to update on /xd as well
 c
       call pgslw (blines(1))
       call pgsch (cs(1))
-      call pgsci (7)
-      if (hard.eq.'YES') call pgsci (2)
-      call axlabcg (.false., .true., 1, 1, 1, 1, 1, xopts, yopts, 
-     +              xdispl, ydispb, labtyp, xlabel, ylabel, 
+      call pgsci (labcol)
+      call axlabcg (.false., .true., .false., 1, 1, 1, 1, 1, xopts, 
+     +              yopts, xdispl, ydispb, labtyp, xlabel, ylabel, 
      +              xxopts, yyopts)
-      call pgtbox (xxopts, 0.0, 0, yyopts, 0.0, 0)
+      call labaxcg (lh, .true., blc, trc, krng, labtyp, 
+     +              xxopts, yyopts)
 c
 c Modify OFM for interactive devices here
 c
@@ -798,8 +800,7 @@ c Plot annotation
 c
       if (dofull) then
         call pgslw (1)
-        call pgsci (1)
-        if (hard.eq.'NO') call pgsci (7)
+        call pgsci (labcol)
         call fullann (ncon, cin, gin, nspec, spin, lc, lg, maxlev,
      +       nlevs, levs, srtlev, slev, trfun, pixr, naxis, size, 
      +       crval2, crpix2, cdelt2, ctype2, vymin, blc, trc, cs, 
@@ -3279,4 +3280,34 @@ c
       size = size + 2
 c
       end
-
+c
+c
+      subroutine setlgc (bgcol, labcol)
+c-----------------------------------------------------------------------
+c     Set line graphics colours
+c
+c  Input
+c    bgcol  colour of background 0-> black, 1->white
+c  OUtput
+c    colour indices to use
+c-----------------------------------------------------------------------
+      implicit none
+      integer labcol, bgcol
+c-----------------------------------------------------------------------
+      labcol = 7
+      if (bgcol.eq.1) then
+c
+c White background
+c
+        labcol = 2
+      else if (bgcol.eq.0) then
+c
+c Black background
+c
+        labcol = 7
+      else
+        call bug ('w', 'Non black/white background colour on device')
+        labcol = 7
+      end if
+c
+      end
