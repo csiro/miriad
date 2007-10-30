@@ -68,6 +68,7 @@ c                     warning on convex (does not affect run time performance)
 c    rjs   27jul94    Get rid of some debugging write statements.
 c    rjs   11nov94    Eliminate bounds violation for large numbers of times.
 c    rjs   20feb95    Grid multiple thingos in one pass.
+c    rjs   27feb95    Put phase in the range -180 to 180.
 c***********************************************************************
 c= TvFlag - Interactive editing of a UV data set on a TV device.
 c& jm
@@ -1260,7 +1261,7 @@ c
       call AmPhase(data, amp, phase)
       if (apri.eq.'p') then
 c       Initial range is -180<=phase<=180; push it up to 0<=phase<=360.
-        if (phase .lt. 0) phase = phase + 360.0
+c        if (phase .lt. 0) phase = phase + 360.0
         ctoapri = phase
       else if (apri.eq.'a') then
         ctoapri = amp
