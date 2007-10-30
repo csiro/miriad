@@ -124,6 +124,7 @@ c   rjs  29nov95 - Better treatment of model.
 c   rjs  13sep96 - Friday 13th! Improve check for negative components.
 c   rjs  29jan97 - Change default region of interest.
 c   rjs  10mar97 - Default region is all channels.
+c   rjs  24jun97 - Correct check for good alignment.
 c
 c  Bugs and Shortcomings:
 c     * The way it does convolutions is rather inefficent, partially
@@ -145,7 +146,7 @@ c		to write.
 c
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='MfClean: version 1.0 10-Mar-97')
+	parameter(version='MfClean: version 1.0 24-Jun-97')
 	include 'maxdim.h'
 	integer maxBeam,maxCmp1,maxCmp2,maxBox,maxRun,maxP
 	parameter(maxCmp1=66000,maxCmp2=32000,maxP=257)
@@ -342,7 +343,7 @@ c
 	else
 	  call output('Loading the model and getting residuals ...')
 	  call xyopen(lModel,ModelNam,'old',3,nModel)
-	  call AlignIni(lModel,lMap,nModel(1),nModel(2),nModel(3),
+	  call AlignIni(lModel,lMap,nMap(1),nMap(2),nMap(3),
      *						xoff,yoff,zoff)
 	  zoff = 0
 	  call AlignGet(lModel,Run,nRun,1,xmin+xoff-1,ymin+yoff-1,zoff,
