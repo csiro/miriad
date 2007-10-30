@@ -17,7 +17,7 @@ c	Both vector and scalar averages are formed. It also prints out
 c	the rms scatter around the vector mean, and the RMS variation
 c	in the amplitude.
 c
-c	Definitions in Detail: UvFlux prints out five quantities.
+c	Definitions in Detail: UvFlux prints out six quantities.
 c
 c	Theoretical RMS -- This is the rms error, resulting from
 c	receiver thermal noise, that would be expected in the real or
@@ -49,9 +49,9 @@ c	is much less than 1, then this should be 0.65 times the ``Theoretical
 c	RMS'. If the S/N ratio is much greater than 1, this should be the
 c	same as ``Theoretical RMS''.
 c
-c	Number Visibs -- This gives the number of visibilities, N, used in
+c	Number Corrs -- This gives the number of correlations, N, used in
 c	forming each mean. NOTE that the three RMS values printed are RMS
-c	difference between the visibilities and some mean -- it is not
+c	difference between the correlations and some mean -- it is not
 c	an error-of-the-mean. To convert an RMS to an error-in-the-mean,
 c	divide by sqrt(N).
 c
@@ -87,6 +87,7 @@ c    rjs   5nov93 Avoid divide-by-zero problem when data are identically 0.
 c    rjs  16nov93 Do not do planet processing.
 c    rjs   4may94 Use double precision, better doc, print number visibs.
 c    rjs  17aug94 Handle offsets somewhat better.
+c    rjs  09mar97 CHange label "visibs" to "corrs" and change doc file.
 c  Bugs:
 c    ?? Perfect?
 c------------------------------------------------------------------------
@@ -274,7 +275,7 @@ c
 	call output('Source         Pol Theoretic Vector Average  '//
      *		'  RMS      Average  RMS Amp  Number')
 	call output('                      RMS      (amp,phase)   '//
-     *		'Scatter      Amp    Scatter  Visibs')
+     *		'Scatter      Amp    Scatter  Corrs')
 	call output('------         --- --------  -------------- '//
      *		'--------  --------- --------  ------')
 

@@ -16,7 +16,7 @@ c  cnt		Weights of the things accumulated into the preambles.
 c  
 	include 'maxdim.h'
 	integer MAXAVER,MAXPOL
-	parameter(MAXAVER=81920,MAXPOL=4)
+	parameter(MAXAVER=163840,MAXPOL=4)
 	complex buf(MAXAVER)
         real    bufr(MAXAVER)
 	double precision count(MAXAVER),cnt(MAXBASE)
