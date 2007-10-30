@@ -1,4 +1,4 @@
-c=  imstat - calculate and plot map statistics
+c= imstat - calculate and plot map statistics
 c& bpw
 c: map analysis
 c+
@@ -297,8 +297,9 @@ c    22dec97  bpw  Add options hanning,boxcar,deriv also to imstat
 c     8jan99  rjs  Use co routines to return coordinates (which fixes abug
 c                  in converting to RA)
 c    23mar99  bpw  Merged bpw updates and rjs updates
-c    23mar99  rjs  Fix bug in determining region of interes
-c    07apr99  rjs  Merge rjs and bpw versions.
+c    23mar99  rjs  Fix bug in determining region of interest
+c    07apr99  rjs  Merge bpw and rjs versions.
+c    27oct99  rjs  Correct labelling of unrecognised axes.
 c------------------------------------------------------------------------
 
 c Main program of imstat and imspec. Puts out the identification, where
@@ -334,7 +335,7 @@ c the include file.
       program imstaspc
 
       character*21     version
-      parameter        ( version = 'version 2.2 07-Apr-99' )
+      parameter        ( version = 'version 2.2 27-Oct-99' )
       character*29     string
 
       include          'imstat.h'
@@ -650,7 +651,7 @@ c Here the axes keyword is decoded.
 
       logical          keyprsnt
       integer          NAXOPT
-      parameter        ( NAXOPT = 17 )
+      parameter        ( NAXOPT = 18 )
       logical          present( 3*NAXOPT )
       character*12     axopt(3*NAXOPT), axunit(NAXOPT), axtype(NAXOPT)
       character*512    axopts
@@ -666,22 +667,25 @@ c Here the axes keyword is decoded.
       data             axopt /
      *                 'R.A.',       'Declination', 'Longitude',
      *                 'Latitude',   'Glongitude',  'Glatitude',
-     *                 'Velocity',   'Frequency',   'Channel',
+     *                 'Velocity',   'Felocity',    'Frequency',
+     *		       'Channel',
      *                 'Stokes',     'x', 'y', 'z', 'a', 'b', 'c', 'd',
      *                 'rascension', 'declination', 'longitude',
      *                 'latitude',   'glongitude',  'glatitude',
-     *                 'velocity',   'frequency',   'channel',
+     *                 'velocity',   'felocity',    'frequency',
+     *		       'channel',
      *                 'stokes',     '1', '2', '3', '4', '5', '6', '7',
      *                 'RAscension', 'DECLINATION', 'LONGITUDE',
      *                 'LATITUDE',   'GLONGITUDE',  'GLATITUDE',
-     *                 'VELOCITY',   'FREQUENCY',   'CHANNEL',
+     *                 'VELOCITY',   'FELOCITY',    'FREQUENCY',
+     *		       'CHANNEL',
      *                 'STOKES',     'X', 'Y', 'Z', 'A', 'B', 'C', 'D' /
       data             axunit /
      *                 '[]','[]','[deg]','[deg]','[deg]','[deg]',
-     *                 '[km/s]','[GHz]','[]','[]', 7*'[]' /
+     *                 '[km/s]','[km/s]','[GHz]','[]','[]', 7*'[]' /
       data             axtype /
      *                 'Lon',  'Lat',  'Lon',  'Lat',  'Lon',  'Lat',
-     *                 'Freq', 'Freq', 'Freq', 'Stokes',
+     *                 'Freq', 'Freq','Freq', 'Freq', 'Stokes',
      *                 'x', 'y', 'z', 'a', 'b', 'c', 'd' /
       axopts = ' '
       do i = 1, 3*NAXOPT
@@ -755,6 +759,8 @@ c and character cases) and an index is returned. Next this is converted
 c to a standard label.
 c The units of the first axis (the one which will be the x-axis on the
 c plot) are saved in axlabel(naxis+1).
+c
+      axlabel(naxis+1) = '[]'
       do i = 1, naxis-dim
          axlabel(i) = ctype(dim+i)( : indek(ctype(dim+i),'-')-1 )
          if( match( axlabel(i)(:len1(axlabel(i))), axopts, n ) ) then
