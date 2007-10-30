@@ -10,9 +10,10 @@ c	CALC is a calculator program. An expression is given in FORTRAN
 c	like syntax, and the result printed out.
 c
 c	Usage:
-c	  calc [-ir] expression
+c	  calc [-ir] [-f xxx] expression
 c
 c	  -i             Print the result as an integer.
+c	  -f xxx         Print the result using FORTRAN format xxx.
 c	  -r             Treat the input as a single integer, and
 c	                 print it out in various radix formats.
 c	                 The input integer can be in a radix format.
@@ -25,13 +26,17 @@ c	                 characters to some UNIX shells. These characters
 c	                 may need to be escaped or quoted when giving the
 c	                 expression.
 c--
+c  History:
+c    rjs  ??????? Original version.
+c    rjs  13sep95 Added -f flag.
 c------------------------------------------------------------------------
 	integer dim,scalar
 	parameter(dim=128,scalar=2)
 	integer buf(dim),index,type,rin
 	real rbuf(dim)
 	character in*80,out*80,line*128,dec*40,oct*40,hex*40
-	integer lin,lout,lline,ldec,loct,lhex,narg
+	character format*32,form*32
+	integer lin,lout,lline,ldec,loct,lhex,narg,lform,i
 	logical doradix,doint
 c
 c  Externals.
@@ -43,34 +48,42 @@ c
 c  Get the command line and extract the first token.
 c
 	narg = iargc()
-	if(1.gt.narg) call bug('f','The input expression is missing')
-	call getarg(1,out)
-	lout = len1(out)
+	i = 0
 	doradix = .false.
 	doint = .false.
+	format = ' '
+	out = ' '
 c
 c  Perform a radix conversion operation.
 c
-	if(lout.eq.2.and.out(1:2).eq.'-r')then
-	  doradix = .true.
-	  if(2.gt.narg) call bug('f','The input expression is missing')
-	  call getarg(2,out)
-	  lout = len1(out)
-	else if(lout.eq.2.and.out(1:2).eq.'-i')then
-	  doint = .true.
-	  if(2.gt.narg) call bug('f','The input expression is missing')
-	  call getarg(2,out)
-	  lout = len1(out)
-	endif
+	dowhile(i.lt.narg)
+	  i = i + 1
+	  call getarg(i,in)
+	  if(in.eq.'-i')then
+	    doint = .true.
+	  else if(in.eq.'-r')then
+	    doradix = .true.
+	  else if(in.eq.'-f')then
+	    i = i + 1
+	    if(i.le.narg)call getarg(i,format)
+	  else
+	    if(out.ne.' ')call bug('f','Only one expression allowed')
+	    out = in
+	  endif
+	enddo
+	lout = len1(out)
+	if(lout.eq.0)call bug('f','An expression must be given')
 c
-c  Check that everything is sensible.
+c  Fill in output format.
 c
-	if(lout.le.0.or.lout.gt.len(out))then
-	  call bug('f','Error with the input expression')
+	if(format.eq.' '.and..not.doint)format = '1pg14.7'
+	lform = len1(format)
+	form = ' '
+	if(lform.gt.0)form = '('//format(1:lform)//')'
 c
 c  Perform a radix conversion operation.
 c
-	else if(doradix)then
+	if(doradix)then
 	  if(out(1:1).eq.'%')then
 	    if(lout.le.2)call bug('f','Bad radix syntax')
 	    rin = 0
@@ -100,9 +113,13 @@ c
 	  if(type.eq.scalar)then
 	    call ariExec(vaction,1,Buf,dim,RBuf,dim,Index)
 	    if(doint)then
-	      line = itoaf(nint(RBuf(Index)))
+	      if(form.eq.' ')then
+	        line = itoaf(nint(RBuf(Index)))
+	      else
+	        write(line,form)nint(RBuf(Index))
+	      endif
 	    else
-	      write(line,'(1pg14.7)')RBuf(Index)
+	      write(line,form)RBuf(Index)
 	    endif
 	  else
 	    call bug('f','Syntax error in the arithmetic expression')
