@@ -283,6 +283,7 @@ c		   can now overlap
 c    nebk 24jun96  Add some commonsense for 2-d images in sub. curpos
 c    nebk 13aug96  Prevent some problems with non-interactive devices
 c    nebk 13feb97  Add keyrod "3format"
+c    rjs  21jul97  Called initco earlier.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -334,6 +335,7 @@ c
 c Open image
 c
       call opimcg (maxnax, in, lin, size, naxis)
+      call initco (lin)
 c
 c Finish key inputs for region of interest now
 c
@@ -762,7 +764,6 @@ c
       typeo(2) = 'arcsec'
       typeo(3) = 'abspix'
 c
-      call initco (lin)
       win(3) = (real(2*krng(1)+krng(2))-1.0)/2.0
       call rdhdi (lin, 'naxis', naxis, 0)
       naxis = min(3,naxis)
