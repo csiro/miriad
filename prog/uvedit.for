@@ -49,6 +49,7 @@ c    rjs   24mar97    Copy all calibration tables.
 c    rjs   12may97    Doc change only.
 c    rjs   14jul97    nspect etc was not getting read when the source
 c		      selected was not the first source in the file.
+c    rjs   08may00    Change incorrect call of keyf to keya.
 c***********************************************************************
 c= Uvedit - Editing of the baseline of a UV data set.
 c& jm
@@ -303,7 +304,7 @@ c
 c
       suffix = .TRUE.
       if (Nfiles .eq. 1) then
-        call Keyf('out', Outsave, ' ')
+        call Keya('out', Outsave, ' ')
         if (Outsave .ne. ' ') suffix = .FALSE.
       endif
 c
