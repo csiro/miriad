@@ -245,6 +245,21 @@ void scrclose_c ARGS((int handle));
 void scrread_c ARGS((int handle, float *buffer, int offset, int length));
 void scrwrite_c ARGS((int handle, Const float *buffer, int offset, int length));
 
+/* keyc.c */
+
+void keyini_c ARGS((int argc, char *argv[]));
+void keyfin_c ARGS((void));
+int keyprsnt_c ARGS((Const char *keyword));
+void keya_c ARGS((Const char *keyword, char *value, char *keydef));
+void keyf_c ARGS((Const char *keyword, char *value, char *keydef));
+void keyd_c ARGS((Const char *keyword, double *value, double keydef));
+void keyr_c ARGS((Const char *keyword, float *value, float keydef));
+void keyi_c ARGS((Const char *keyword, int *value, int keydef));
+void keyl_c ARGS((Const char *keyword, int *value, int keydef));
+void mkeyd_c ARGS((Const char *keyword, double value[], int nmax, int *n));
+void mkeyr_c ARGS((Const char *keyword, float value[], int nmax, int *n));
+void mkeyi_c ARGS((Const char *keyword, int value[], int nmax, int *n));
+
 #if defined(__cplusplus)
 }
 #endif
