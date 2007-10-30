@@ -405,11 +405,11 @@ c
       include 'maxdim.h'
       include 'maxnax.h'
       include 'mem.h'
-      real wedisp, wedwid, tfdisp
+      real wedwid, tfdisp
       integer maxlev, maxpos, maxcon, maxspec, maxtyp, nbins
       parameter (maxlev = 50, maxpos = 256*256, maxtyp = 13,
-     +   maxcon = 3, maxspec = 5, wedisp = 1.0, 
-     +   wedwid = 0.05, tfdisp = 0.5, nbins = 128)
+     +   maxcon = 3, maxspec = 5, wedwid = 0.05, tfdisp = 0.5, 
+     +   nbins = 128)
 c
       integer ipim, ipnim, ipimb, ixsp, iysp, insp, ipsp, imsp, iwsp
 c
@@ -602,8 +602,8 @@ c Work out view port sizes and increments.
 c   
       call vpsizcg (dofull, dofid, ncon, gin, ' ', nspec, ' ',
      +  maxlev, nlevs, srtlev, levs, slev, 1, 1, cs, xdispl, ydispb,
-     +  gaps, dotr, 1, wedwid, wedisp, tfdisp, labtyp, vxmin, 
-     +   vymin, vymax, vxgap, vygap, vxsize, vysize, tfvp, wdgvp)
+     +  gaps, dotr, 1, wedwid, tfdisp, labtyp, vxmin, vymin, vymax, 
+     +  vxgap, vygap, vxsize, vysize, tfvp, wdgvp)
 c
 c Adjust viewport increments and start locations if equal scales 
 c requested or if scales provided by user
