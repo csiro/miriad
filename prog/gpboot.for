@@ -66,7 +66,6 @@ c
 c  Get the input parameters.
 c
 	call output(version)
-	call bug('i','options=noxy and options=nocal have been removed')
 	call keyini
 	call keya('cal',cal,' ')
 	call keya('vis',vis,' ')
