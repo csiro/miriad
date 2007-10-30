@@ -2,18 +2,18 @@ c*********************************************************************c
 c		velplot.h
 c	include file for velplot program
 c---------------------------------------------------------------------c
-	common /box/ is,ie,ib,it,mid,midy
         integer      is,ie,ib,it,mid,midy
+	common /box/ is,ie,ib,it,mid,midy
 c  box in absolute pixels. (is,ib) (ie,it) can be reset by cursor.
 c---------------------------------------------------------------------c
 
-	common/head/ras,decs,epoch,xy,vel,delv,posx,posy,pospa,
-     *	     bmaj,bmin,bpa,dperjy,cbof,restfreq,posend,velend,
-     *	     amin,amax,arms,niters
 	real        ras,decs,epoch,xy,vel,delv,posx,posy,pospa
 	real bmaj,bmin,bpa,dperjy,cbof,restfreq,posend,velend
 	real amin,amax,arms
 	integer		     niters
+	common/head/ras,decs,epoch,xy,vel,delv,posx,posy,pospa,
+     *	     bmaj,bmin,bpa,dperjy,cbof,restfreq,posend,velend,
+     *	     amin,amax,arms,niters
 c
 c  ras,decs, (epoch), bmaj,bmin (beam) [radians]
 c  xy (map pixel),  [arcsecs]
@@ -26,17 +26,21 @@ c  amin,amax,arms - min,max,rms for current plot.
 c  niters - clean iterations.
 c---------------------------------------------------------------------c
 
-	common/image/file,object,bunit,ctype
 	character*9       object,bunit,ctype(3)
 	character*40 file
-	common/plotpar/units,cneg,alabel,write,abscoord,apint,percent,
-     *			maptype,pspec,gray,defgray,lgaufit,lgauplot 
+	common/image/file,object,bunit,ctype
+c
 	character*1    units,cneg,alabel,write,abscoord,apint,percent,
      *                  pspec,gray,defgray,lgaufit,lgauplot 
-	character maptype*9,device*64
-	common/args/src,levels,nlevels,conlabel,device,fg,bg,cutoff
+	character maptype*9
+	common/plotpar/units,cneg,alabel,write,abscoord,apint,percent,
+     *			maptype,pspec,gray,defgray,lgaufit,lgauplot 
+c
+	character device*64
 	real    src,levels(10),fg,bg,cutoff
 	integer	nlevels,conlabel
+	common/args/src,levels,nlevels,conlabel,fg,bg,cutoff
+	common/chargs/device
 c
 c  file		filename of image.
 c  object	source name from image.
@@ -57,3 +61,4 @@ c  nlevels	Number of levels
 c  conlabel	Label interval for contours
 c  cutoff	Cutoff level in moment maps.
 c---------------------------------------------------------------------c
+
