@@ -372,6 +372,40 @@ c
 	endif
 	end
 c************************************************************************
+	double precision function jul2epo(jday,code)
+c
+	implicit none
+	double precision jday
+	character code*1
+c
+c  Convert a Julian day into an epoch (in years).
+c
+c  Input:
+c    jday	The epoch.
+c    code	Either 'B' (Besselian epoch) or 'J' (Julian) or ' '
+c		If its blank, Julian epoch is assumed for values
+c		greater than 1984.
+c  Output:
+c    jul2epo	The Julian day.
+c------------------------------------------------------------------------
+	logical julian
+c
+	if(code.eq.' ')then
+	  julian = jday.gt.2445701d0
+	else
+	  julian = code.eq.'J'.or.code.eq.'j'
+	  if(code.ne.'J'.and.code.ne.'j'.and.
+     *	     code.ne.'B'.and.code.ne.'b')
+     *	    call bug('f','Unrecognized epoch type, in jul2epo')
+	endif
+c
+	if(julian)then
+	  jul2epo = (jday-2451545d0)/365.25 + 2000
+	else
+	  jul2epo = (jday-2415020.31352d0)/365.242198781 + 1900
+	endif
+	end
+c************************************************************************
 c* DelTime -- Difference between UTC and some other time systems.
 c& rjs
 c: utilities
