@@ -70,6 +70,7 @@ c    rjs  26may92  Write btype keyword. Change of sign convention for
 c		   spectral index.
 c    nebk 28jan93  Adapt to new primary beam routines.
 c    rjs  24oct94  Use newer pb routines.
+c    rjs  27oct94  Fix bug in runs-determining routine.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
@@ -626,7 +627,16 @@ c
 	      ngood = 0
 	    endif
 	  enddo
+	  if(ngood.gt.0)then
+	    nruns = nruns + 1
+	    if(nruns.ge.MAXRUNS)call bug('f','Runs buffer overflow')
+	    Runs(1,nruns) = j
+	    Runs(2,nruns) = nx - ngood + 1
+	    Runs(3,nruns) = nx
+	  endif
 	enddo
+c
+	Runs(1,nruns+1) = 0
 	end
 c************************************************************************
 	subroutine WriteOut(Out,Data,npix,nx,ny,Runs,nRuns,
