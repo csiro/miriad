@@ -29,21 +29,15 @@ c	Inclination angle in degrees. Default=0. (face on)
 c@ radius
 c	Inner and outer radii and step size along major axis in arcsecs.
 c	The default is the whole image in steps equal to the pixel size.
-c@ pbfwhm
+c@ pbtype
 c	If you request that the fluxes be corrected for the primary beam
-c	(see OPTIONS), ELLINT will construct a primary beam from either
-c	the header item "pbfwhm" if it exists, or from its internal knowledge
-c	of the HatCreek, ATCA and VLA telescopes.  Generally, this internal
-c	primary	beam representation is better than the simple Gaussian 
-c	afforded by the "pbfwhm" item.  The internal one varies with 
-c	frequency (image plane) and is generally a polynomial fit to the
-c	true primary beam.   Note that such polynomial representations
-c	have a cutoff, generally at about the 2-3% level.  Any pixels
-c	which have a primary beam value below this cutoff are treated
-c	as blanked and do not contribute to the integration sums.
-c	If you wish to over-ride both the above methods for setting
-c	the primary beam, you can set a Gaussian FWHM in arcseconds here 
-c	with this keyword.
+c	(see OPTIONS), ELLINT will normally construct a primary beam type
+c	using information from the dataset. However you can override this
+c	with a primary beam type of your own choosing. The primary beam
+c	type can either be a telescope name whose primary beam is known
+c	(e.g. hatcreek, vla, atca, etc) or you can select a Gaussian form
+c	with "gaus(xxx)". Here xxx is the primary beam FWHM in arcseconds.
+c	For example gaus(120) is a telescope with a 120 arcsec primary beam.
 c@ options
 c	Task enrichment options.  Minimum match is active.
 c	  pbcorr    means correct the image for the primary beam 
@@ -72,12 +66,13 @@ c    mchw  22sep92	Change keyword to inclination angle.
 c    nebk  28jan93      Adapt to new primary beam routines. Put pixels
 c                       exactly on outer ring edge into that ring.
 c    nebk  22aug94      Adapt to GETFREQ error status change
+c    rjs   24oct94	Use new pb routines.
 c----------------------------------------------------------------------c
         include 'mirconst.h'
 	include 'maxdim.h'
 	character*(*) label,version
-	parameter(version='version 1.0 22-Aug-94')
-	double precision rts,value,frqref,finc
+	parameter(version='version 1.0 24-Oct-94')
+	double precision rts,value
 	parameter(rts=3600.d0*180.d0/dpi)
 	parameter(label='Integrate a Miriad image in elliptical annuli')
 	integer maxnax,maxboxes,maxruns,naxis,axis,plane
@@ -85,14 +80,14 @@ c----------------------------------------------------------------------c
 	parameter(maxruns=3*maxdim)
 	integer boxes(maxboxes)
 	integer i,j,ir,lIn,nsize(maxnax),blc(maxnax),trc(maxnax)
-	integer irmin,irmax,ifax,ierr
+	integer irmin,irmax,pbObj
 	real crpix(maxnax),cdelt(maxnax),var
-	real center(2),pa,incline,rmin,rmax,rstep,pbfwhm
+	real center(2),pa,incline,rmin,rmax,rstep
 	real buf(maxdim),cospa,sinpa,cosi,x,y,r,ave,rms,fsum,cbof
-	real pixe(maxdim),flux(maxdim),flsq(maxdim),pbfac,xpbsq,ypbsq
-        logical mask(maxdim),dopb,keep,needf
+	real pixe(maxdim),flux(maxdim),flsq(maxdim),pbfac
+        logical mask(maxdim),dopb,keep
 	character in*64,logf*64,line*80,cin*1,ctype*9,caxis*13,units*13
-        character btype*25,axnam*1
+        character btype*25,pbtype*16
 c
 c  Externals.
 c
@@ -113,7 +108,7 @@ c
 	call keyr('radius',rmin,0.)
 	call keyr('radius',rmax,0.)
 	call keyr('radius',rstep,0.)
-	call keyr('pbfwhm',pbfwhm,0.0)
+	call keya('pbtype',pbtype,' ')
         call getopt(dopb)
 	call keya('log',logf,' ')
 	call keyfin
@@ -153,7 +148,6 @@ c
 c Set up for primary beam correction
 c
         if (dopb) then
-          pbfwhm = pbfwhm / rts
           call rdbtype(lin,btype,' ')
           if (btype.ne.' ' .and. btype.ne.'intensity') then
             call bug ('w',
@@ -161,27 +155,11 @@ c
      *        ' image; are you sure')
             call bug ('w', 
      *        'you want to apply the primary beam correction')
-          end if
-c        
-          axnam = ' '      
-          call fndaxnum (lin, 'freq', axnam, ifax)
-          if (ifax.ne.0 .and. ifax.ne.3) then
-            call bug ('f', 
-     *        'Contrary to assumption, the spectral axis is not # 3')
-          end if
+          endif
 c
-          call pbcheck (pbfwhm, lIn, .true., .false., needf)
-          if (needf) then
-            if (ifax.eq.0) call bug ('f',
-     *       'No spectral axis. Can''t get freq. for p.b. correction')
-            call getfreq (lIn, crpix(ifax), ifax, frqref, finc, ierr)
-            if (ierr.gt.0) call bug ('f',
-     *        'Error finding frequency of spectral reference pixel')
-          else
-            frqref = -1.0d0
-          end if
-c
-          call pbinit (pbfwhm, frqref, lIn, .true.)
+	  if(pbtype.eq.' ')call pbRead(lin,pbtype)
+	  call coInit(lin)
+	  call pbInit(pbObj,pbtype,lin)
         end if
 c
 c  Open the output text file and write title.
@@ -245,22 +223,17 @@ c
 	    call xyread(lIn,j,buf)
 	    call xyflgrd(lIn,j,mask)
 	    y = (j-crpix(2))*cdelt(2) - center(2)
-            ypbsq = ((j-crpix(2))*cdelt(2)/rts)**2
 	    do i = blc(1),trc(1)
 	      x = (i-crpix(1))*cdelt(1) - center(1)
-              keep  = .true.
-              if (dopb) then
-  	        xpbsq = ((i-crpix(1))*cdelt(1)/rts)**2
-                pbfac = pbget(xpbsq+ypbsq)
-                if (pbfac.gt.0.0) then
-                  buf(i)=buf(i)/pbfac
-                else
-                  keep = .false.
-                end if
-              end if
+              keep  = mask(i)
+              if (keep.and.dopb) then
+                pbfac = pbget(pbObj,real(i),real(j))
+		keep = pbfac.gt.0
+                if(keep) buf(i)=buf(i)/pbfac
+              endif
 c
 	      r = sqrt((y*cospa-x*sinpa)**2+((y*sinpa+x*cospa)/cosi)**2)
-	      if(r.ge.rmin .and. r.le.rmax .and. mask(i) .and. keep)then
+	      if(r.ge.rmin .and. r.le.rmax .and. keep)then
 c
 c  Make sure pixels on outer edge of ring go into current
 c  not next ring
