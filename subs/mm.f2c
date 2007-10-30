@@ -13,12 +13,16 @@
 /*     5nov94 rjs  Try to be a bit more pedantic.			*/
 /*    18sep05 rjs  Changes to support different C and FORTRAN ints      */
 /*    29jan06 rjs  Call mallopt on 64-bit address machines on Linux	*/
+/*    13mar06 rjs  Coditional include of malloc.h, which appears not    */
+/*		   to be part of MacOS dialect.				*/
 /*                                                                      */
 /************************************************************************/
 
 #include <stddef.h>
 #include <stdlib.h>
+#if defined(linux)
 #include <malloc.h>
+#endif
 #include "miriad.h"
 
 /* The size of all data items should be a multiple of the base unit.

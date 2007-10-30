@@ -4,6 +4,8 @@ c  projection and to determine the alignment between them.
 c
 c  History:
 c    rjs  12oct95 Derived from routines in CLEAN.
+c    rjs  15jul97 Make AlignIni less fussy about the 3rd axis
+c		  it there is only one pixel there.
 c************************************************************************
 	subroutine AlignIni(lModel,lMap,mMap,nMap,oMap,xoff,yoff,zoff)
 c
@@ -24,7 +26,7 @@ c    xoff,yoff,zoff These values have to be added to the grid units of
 c		the model to convert them to grid units of the map.
 c
 c------------------------------------------------------------------------
-	integer i,offset(3),nsize(3)
+	integer i,offset(3),nsize(3),naxis,n3map,n3mod
 	character num*1
 	real vM,dM,rM,vE,dE,rE,temp
 c
@@ -36,7 +38,18 @@ c
 	nsize(2) = nMap
 	nsize(3) = oMap
 c
-	do i=1,3
+c  Decide whether we should process 2 or 3 axes.
+c
+	call rdhdi(lMap,'naxis3',n3map,1)
+	call rdhdi(lModel,'naxis3',n3mod,1)
+	if(n3map.eq.1.and.n3mod.eq.1)then
+	  naxis = 2
+	  offset(3) = 0
+	else
+	  naxis = 3
+	endif
+c
+	do i=1,naxis
 	  num = itoaf(i)
 	  call rdhdr(lModel,'crval'//num,vM,0.)
 	  call rdhdr(lModel,'cdelt'//num,dM,1.)
@@ -51,11 +64,11 @@ c
 	  temp = (rM-rE)
 	  offset(i) = nint(temp)
 	  if(abs(offset(i)-temp).gt.0.05)
-     *	    call bug('f','Map and model do not align on pixels')
+     *	    call bug('f','Input images do not align on pixels')
 	  if(abs(dM-dE).ge.0.001*abs(dM))
-     *	    call bug('f','Map and model increments are different')
+     *	    call bug('f','Input image increments are different')
 	  if(offset(i).gt.0.or.offset(i).le.-nsize(i))
-     *	    call bug('w','Map and model do not overlap well')
+     *	    call bug('w','Input images do not overlap well')
 	enddo
 c
 	xoff = offset(1)

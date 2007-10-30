@@ -6,15 +6,35 @@
 /*    bpw  ??????? Original version.                                          */
 /*    rjs  22dec92 Converted from xyziowrap.h                                 */
 /*    bpw  15jul93 Add xyzflush and xyzmkbuf                                  */
+/*    rjs  18sep05 Support FORTRAN/C integer difference.		      */
+/*    rjs  26nov05 Support FORTRAN/C logical difference.		      */
 /******************************************************************************/
 
+#include <strings.h>
+#include "maxdimc.h"
 #include "miriad.h"
 
 /************************************************************************/
 fortran subroutine xyzopen(integer tno,character name,character status,
 	integer naxis,integer axlen)
 {
-  xyzopen_c( tno.addr, name.zterm, status.zterm, naxis.addr, axlen.addr );
+#if FORTRAN_CVT_INT
+  int ttno,isnew,*taxes,tnaxis;
+  tnaxis = naxis.val;
+  taxes = iface_iarr(tnaxis);
+  if(!strcmp(status.zterm,"new")){
+    iface_f2c_icvt(axlen.addr,taxes,tnaxis);
+    isnew = 1;
+  }else isnew = 0;
+  xyzopen_c(&ttno, name.zterm, status.zterm, &tnaxis, taxes );
+  if(!isnew){
+    iface_c2f_icvt(taxes,axlen.addr,tnaxis);
+    *(naxis.addr) = tnaxis;
+  }
+  *(tno.addr) = ttno;
+#else
+  xyzopen_c(tno.addr, name.zterm, status.zterm, naxis.addr, axlen.addr );
+#endif
 }
 /************************************************************************/
 fortran subroutine xyzclose( integer tno )
@@ -27,7 +47,7 @@ fortran subroutine xyzflush( integer tno )
   xyzflush_c(tno.val);
 }
 /************************************************************************/
-fortran subroutine xyzmkbuf( integer dummy )
+fortran subroutine xyzmkbuf()
 {
   xyzmkbuf_c();
 }
@@ -35,64 +55,162 @@ fortran subroutine xyzmkbuf( integer dummy )
 fortran subroutine xyzsetup(integer tno, character subcube,
 	integer blc, integer trc, integer viraxlen, integer vircubesize )
 {
+#if FORTRAN_CVT_INT
+  int tblc[MAXNAX],ttrc[MAXNAX],tviraxlen[MAXNAX],tvircubesize[MAXNAX];
+  int naxis,dimsub;
+
+  xyzdim_c(tno.val,&naxis,&dimsub);
+  iface_f2c_icvt(blc.addr,tblc,naxis);
+  iface_f2c_icvt(trc.addr,ttrc,naxis);
+  xyzsetup_c(tno.val,subcube.zterm,tblc,ttrc,tviraxlen,tvircubesize);
+  iface_c2f_icvt(tviraxlen,viraxlen.addr,naxis);
+  iface_c2f_icvt(tvircubesize,vircubesize.addr,naxis);
+#else
   xyzsetup_c(tno.val,subcube.zterm,blc.addr,trc.addr,
 	viraxlen.addr,vircubesize.addr);
+#endif
 }
 /************************************************************************/
 fortran subroutine xyzs2c( integer tno, integer subcubenr, integer coords )
 {
+#if FORTRAN_CVT_INT
+  int dimsub,naxis,tcoords[MAXNAX+1];
+  xyzdim_c(tno.val,&naxis,&dimsub);
+  xyzs2c_c( tno.val, subcubenr.val-1, tcoords );
+  iface_c2f_icvt(tcoords,coords.addr,naxis-dimsub);
+#else
   xyzs2c_c( tno.val, subcubenr.val-1, coords.addr );
+#endif
 }
 /************************************************************************/
 fortran subroutine xyzc2s( integer tno, integer coords, integer subcubenr )
 {
+#if FORTRAN_CVT_INT
+  int dimsub,naxis,tcoords[MAXNAX+1],tsubcubenr;
+  xyzdim_c(tno.val,&naxis,&dimsub);
+  iface_f2c_icvt(coords.addr,tcoords,naxis-dimsub);
+  xyzc2s_c( tno.val, tcoords, &tsubcubenr);
+  *(subcubenr.addr) = tsubcubenr + 1;
+#else
   xyzc2s_c( tno.val, coords.addr, subcubenr.addr ); *(subcubenr.addr) += 1;
+#endif
 }
 /************************************************************************/
 fortran subroutine xyzread( integer tno, integer coords, real data,
 	logical mask, integer ndata )
 {
+#if FORTRAN_CVT_INT || FORTRAN_CVT_LOG
+  int dimsub,naxis,tcoords[MAXNAX+1],tndata,*tbuffer,npix;
+  xyzdim_c(tno.val,&naxis,&dimsub);
+  npix = xyzpix_c(tno.val,0);
+  tbuffer = iface_larr(npix);
+  iface_f2c_icvt(coords.addr,tcoords,naxis-dimsub);
+  xyzread_c(tno.val,tcoords,data.addr,tbuffer,&tndata);
+  if(tndata != npix)bug_c('f',"Number of pixel mismatch in xyzread");
+  iface_c2f_lcvt(tbuffer,mask.addr,npix);
+  *(ndata.addr) = tndata;
+#else
   xyzread_c(tno.val,coords.addr,data.addr,mask.addr,ndata.addr);
+#endif
 }
 /************************************************************************/
 fortran subroutine xyzpixrd( integer tno, integer pixelnr,
 	real data, logical mask )
 {
-  xyzpixrd_c(tno.val,pixelnr.val,data.addr,mask.addr);
+  int temp;
+  xyzpixrd_c(tno.val,pixelnr.val,data.addr,&temp);
+  *(mask.addr) = temp;
 }
 /************************************************************************/
 fortran subroutine xyzprfrd( integer tno, integer profilenr,
 	real data, logical mask, integer ndata )
 {
-  xyzprfrd_c(tno.val,profilenr.val,data.addr,mask.addr,ndata.addr);
+  int tndata;
+#if FORTRAN_CVT_LOG
+  int *tbuffer,npix;
+  npix = xyzpix_c(tno.val,1);
+  tbuffer = iface_larr(npix);
+  xyzprfrd_c(tno.val,profilenr.val,data.addr,tbuffer,&tndata);
+  if(tndata != npix)bug_c('f',"Number of pixel mismatch in xyzprfrd");
+  iface_c2f_lcvt(tbuffer,mask.addr,npix);
+#else
+  xyzprfrd_c(tno.val,profilenr.val,data.addr,mask.addr,&tndata);
+#endif
+  *(ndata.addr) = tndata;
 }
 /************************************************************************/
 fortran subroutine xyzplnrd( integer tno, integer planenr,
 	real data, logical mask, integer ndata )
 {
-  xyzplnrd_c(tno.val,planenr.val,data.addr,mask.addr,ndata.addr);
+  int tndata;
+#if FORTRAN_CVT_LOG
+  int *tbuffer,npix;
+  npix = xyzpix_c(tno.val,2);
+  tbuffer = iface_larr(npix);
+  xyzplnrd_c(tno.val,planenr.val,data.addr,tbuffer,&tndata);
+  if(tndata != npix)bug_c('f',"Number of pixel mismatch in xyzplnrd");
+  iface_c2f_lcvt(tbuffer,mask.addr,npix);
+#else
+  xyzplnrd_c(tno.val,planenr.val,data.addr,mask.addr,&tndata);
+#endif
+  *(ndata.addr) = tndata;
 }
 /************************************************************************/
 fortran subroutine xyzwrite( integer tno, integer coords,
 	real data, logical mask, integer ndata )
 {
+#if FORTRAN_CVT_INT || FORTRAN_CVT_LOG
+  int dimsub,naxis,tcoords[MAXNAX+1],tndata,npix,*tbuffer;
+  xyzdim_c(tno.val,&naxis,&dimsub);
+  npix = xyzpix_c(tno.val,0);
+  tbuffer = iface_larr(npix);
+  iface_f2c_lcvt(mask.addr,tbuffer,npix);
+  iface_f2c_icvt(coords.addr,tcoords,naxis-dimsub);
+  tndata = ndata.val;
+  xyzwrite_c(tno.val,tcoords,data.addr,tbuffer,&tndata);
+#else
   xyzwrite_c(tno.val,coords.addr,data.addr,mask.addr,ndata.addr);
+#endif
 }
 /************************************************************************/
 fortran subroutine xyzpixwr( integer tno, integer pixelnr,
 	real data, logical mask )
 {
-  xyzpixwr_c(tno.val,pixelnr.val,data.addr,mask.addr);
+  int temp;
+  temp = *(mask.addr);
+  xyzpixwr_c(tno.val,pixelnr.val,data.addr,&temp);
 }
 /************************************************************************/
 fortran subroutine xyzprfwr( integer tno, integer profilenr,
 	real data, logical mask, integer ndata )
 {
-  xyzprfwr_c(tno.val,profilenr.val,data.addr,mask.addr,ndata.addr);
+  int tndata;
+#if FORTRAN_CVT_LOG
+  int *tbuffer,npix;
+  tndata = ndata.val;
+  npix = xyzpix_c(tno.val,1);
+  tbuffer = iface_larr(npix);
+  iface_f2c_lcvt(mask.addr,tbuffer,npix);
+  xyzprfwr_c(tno.val,profilenr.val,data.addr,tbuffer,&tndata);
+#else
+  tndata = ndata.val;
+  xyzprfwr_c(tno.val,profilenr.val,data.addr,mask.addr,&tndata);
+#endif
 }
 /************************************************************************/
 fortran subroutine xyzplnwr( integer tno, integer planenr,
 	real data, logical mask, integer ndata )
 {
-  xyzplnwr_c(tno.val,planenr.val,data.addr,mask.addr,ndata.addr);
+  int tndata;
+#if FORTRAN_CVT_LOG
+  int *tbuffer,npix;
+  tndata = ndata.val;
+  npix = xyzpix_c(tno.val,2);
+  tbuffer = iface_larr(npix);
+  iface_f2c_lcvt(mask.addr,tbuffer,npix);
+  xyzplnwr_c(tno.val,planenr.val,data.addr,tbuffer,&tndata);
+#else
+  tndata = ndata.val;
+  xyzplnwr_c(tno.val,planenr.val,data.addr,mask.addr,&tndata);
+#endif
 }

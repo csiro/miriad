@@ -1,3 +1,9 @@
+c     nswc.for:   some math routines
+c
+c pre-1994			created
+c somewhere before 2001:	somebody added gamma etc.
+c 5-oct-2001			declared variables to make it compile with -u on solaris
+c
       REAL FUNCTION ENORM(N,X)
       INTEGER N
       REAL X(N)
@@ -2093,6 +2099,8 @@ C          DAHLGREN, VIRGINIA
 C-----------------------------------------------------------------------
       REAL P(7), Q(7)
       DOUBLE PRECISION D, G, Z, LNX, GLOG
+      REAL pi,r1,r2,r3,r4,r5,a,x,t,s,w,spmpar,top,bot,exparg
+      INTEGER i,j,m,n
 C--------------------------
 C     D = 0.5*(LN(2*PI) - 1)
 C--------------------------
@@ -3116,6 +3124,7 @@ C
       RETURN
       END
       SUBROUTINE JAIRY(X,RX,C,AI,DAI)
+      REAL             X,RX,C,AI,DAI
 C
 C     CDC 6600 ROUTINE
 C     1-2-74
@@ -3140,10 +3149,21 @@ C                                D. E. AMOS
 C                               S. L. DANIEL
 C                               M. K. WESTON
 C
-      DIMENSION AK1(14),AK2(23),AK3(14)
-      DIMENSION AJP(19),AJN(19),A(15),B(15)
-      DIMENSION DAK1(14),DAK2(24),DAK3(14)
-      DIMENSION DAJP(19),DAJN(19),DA(15),DB(15)
+c modified to appease flint, but clearly there is not enough precision
+c for these numbers, as CDC single prec is really double prec on IEEE
+c
+      REAL AK1(14),AK2(23),AK3(14)
+      REAL AJP(19),AJN(19),A(15),B(15)
+      REAL DAK1(14),DAK2(24),DAK3(14)
+      REAL DAJP(19),DAJN(19),DA(15),DB(15)
+      INTEGER N1,N2,N3,N4,M1,M2,M3,M4
+      REAL    FPI12,CON1,CON2,CON3,CON4,CON5
+      INTEGER N1D,N2D,N3D,N4D
+      INTEGER M1D,M2D,M3D,M4D
+      REAL    t,tt,f1,f2,temp1,rtrx,ec,e1,e2
+      REAL    temp2,cv,ccv,scv
+      INTEGER i,j
+
 C
       DATA N1,N2,N3,N4/14,23,19,15/
       DATA M1,M2,M3,M4/12,21,17,13/
@@ -3460,12 +3480,17 @@ C
       DAI=(TEMP1*E1-TEMP2*E2)*RTRX
       RETURN
       END
+c
+c - again, accurary of GLOG beyond real isn't likely with the current CDC code
+c
       DOUBLE PRECISION FUNCTION GLOG(X)
+      REAL X
 C     -------------------
 C     EVALUATION OF LN(X) FOR X .GE. 15
 C     -------------------
-      REAL X
       DOUBLE PRECISION Z, W(163)
+      REAL c1,c2,c3,t,t2
+      INTEGER n
 C     -------------------
       DATA C1/.286228750476730/, C2/.399999628131494/,
      1     C3/.666666666752663/
@@ -3571,7 +3596,9 @@ C
    10 GLOG = ALOG(X)
       RETURN
       END
+c
       REAL FUNCTION EXPARG (L)
+      INTEGER L
 C--------------------------------------------------------------------
 C     IF L = 0 THEN  EXPARG(L) = THE LARGEST POSITIVE W FOR WHICH
 C     EXP(W) CAN BE COMPUTED.
@@ -3581,7 +3608,7 @@ C     WHICH THE COMPUTED VALUE OF EXP(W) IS NONZERO.
 C
 C     NOTE... ONLY AN APPROXIMATE VALUE FOR EXPARG(L) IS NEEDED.
 C--------------------------------------------------------------------
-      INTEGER B
+      INTEGER B,IPMPAR,M
       REAL LNB
 C
       B = IPMPAR(4)
@@ -3604,7 +3631,9 @@ C
       EXPARG = 0.99999 * (M * LNB)
       RETURN
       END
+c
       REAL FUNCTION GAMLN(A)
+      REAL A
 C     ******************************************************************
 C     EVALUATION OF LN(GAMMA(A)) FOR POSITIVE A
 C     ******************************************************************
@@ -3614,6 +3643,8 @@ C          DAHLGREN, VIRGINIA
 C     ---------------------
 C     D = 0.5*(LN(2*PI) - 1)
 C     ---------------------
+      REAL D,C0,C1,C2,C3,C4,X,W,GAMLN1
+      INTEGER N,I
       DATA D/.418938533204673/
 C     ---------------------
       DATA C0/.833333333333333E-01/, C1/-.277777777770481E-02/,
@@ -3643,9 +3674,15 @@ C
       GAMLN = (D + W) + (A - 0.5)*(ALOG(A) - 1.0)
       END
       REAL FUNCTION GAMLN1(A)
+      REAL A
 C     ------------------------------------------------------------------
 C     EVALUATION OF LN(GAMMA(1 + A)) FOR -0.2 .LE. A .LE. 1.25
 C     ------------------------------------------------------------------
+      REAL P0,P1,P2,P3,P4,P5,P6
+      REAL    Q1,Q2,Q3,Q4,Q5,Q6
+      REAL R0,R1,R2,R3,R4,R5
+      REAL    S1,S2,S3,S4,S5
+      REAL W,X
       DATA P0/ .577215664901533E+00/, P1/ .844203922187225E+00/,
      *     P2/-.168860593646662E+00/, P3/-.780427615533591E+00/,
      *     P4/-.402055799310489E+00/, P5/-.673562214325671E-01/,

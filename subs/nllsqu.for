@@ -10,6 +10,7 @@ c    bpw 11sep90   Add linlsq
 c    bpw 12jul91   Corrected backwards relation in documentation of linlsq
 c    mjs 25jul91   Re-included "programmer" in in-code docs
 c    rjs 05mar98   Broken out freom lsqu.for, to work around LINUX problem.
+c    rjs 18sep05   Fix type inconsistency flaw.
 c
 c************************************************************************
 c*Nllsqu -- Nonlinear least squares fitting
@@ -83,11 +84,16 @@ cc Outputs:
 cc	f	Value of the m nonlinear equations, given x.
 c--
 c------------------------------------------------------------------------
+	include 'maxdim.h'
+	include 'mem.h'
 	real lambda
 	parameter(lambda=0.2)
 	integer i,k,z,l
 	real hf,hl,hs,hz,hh
 	logical first
+	integer pivot
+c
+	call memAlloc(pivot,n,'i')
 c
 	first = .true.
 	hs = 0
@@ -140,7 +146,7 @@ c
 c
 c  Perform the linear least squares solution.
 c
-	call llsqu(f,dfdx,n,m,dx,ifail,aa,fp)
+	call llsqu(f,dfdx,n,m,dx,ifail,aa,memi(pivot))
 	if(ifail.ne.0)goto 30
 c
 c  Add the estimated step change to x and check for convergence.
@@ -156,4 +162,5 @@ c
 c
 c ENDE:
   30	continue
+	call memfree(pivot,n,'i')
 	end

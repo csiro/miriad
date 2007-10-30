@@ -17,6 +17,7 @@ c    rjs  13jan95 Second try at the above.
 c    rjs  16jan93 A third try at the above.
 c    rjs   4aug95 Check that the beam is non-zero. Bug out if not.
 c    rjs  13dec95 Set minimum transform size to be 16 (FFT limitation).
+c    rjs  07jan97 Fiddle memory conservation alogirthm yet again.
 c************************************************************************
 	subroutine MapFin
 c
@@ -368,7 +369,8 @@ c		memory.
 c    npass   -- Number of i/o passes needed to grid all these images.
 c
 	plsize= 2*nu*nv*npnt
-	nextra = max(0,npnt*nxc*nyc - 2*nu*((npnt-1)*nv+(v0+nyc/2-1)) )
+	nextra = max(0, npnt*nxc*nyc - 2*nu*((npnt-1)*nv+(v0+nyc/2-1)),
+     *		        nxc*nyc-2*nu*nyc-2*((u0-1)+nu*(v0-(nyc/2+1))) )
 	nextra = 2*((nextra+1)/2)
 c
 	nplanes = max(nBuff-nextra,memBuf()-nextra,plsize)/plsize

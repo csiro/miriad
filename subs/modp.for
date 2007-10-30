@@ -133,8 +133,8 @@ c
 c
 c  Determine characteristics about the delay tracking centre.
 c
-	call uvrdvrd(tvis,'radel',radel,radec(1))
-	call uvrdvrd(tvis,'decdel',decdel,radec(2))
+	call uvrdvrd(tvis,'delra',radel,radec(1))
+	call uvrdvrd(tvis,'deldec',decdel,radec(2))
 	call uvrdvrr(tvis,'inttime',inttime,10.0)
 c
 	cosd = cos(decdel)

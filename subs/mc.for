@@ -10,6 +10,8 @@ c		  via changes in mcExtent.
 c    rjs 12oct99  Change in subroutine name only.
 c    rjs 22mar00  Protect against trying to convolve up to something larger
 c		  than MAXDIM.
+c    rjs 12jul03  Guard against array bounds violations in mccnvl1.
+c
 c************************************************************************
 	subroutine mcInitFG(tno1,bmaj1,bmin1,bpa1)
 c
@@ -185,7 +187,9 @@ c
 c
 c  Aloocate memory, if needed.
 c
-	  if(xmin.le.xmax.and.ymin.le.ymax)then
+	  if(xmin.le.xmax.and.ymin.le.ymax.and.
+     *	     xlo.le.nix.and.xhi.ge.1.and.
+     *	     ylo.le.niy.and.yhi.ge.1)then
 	    if(nWrk.lt.mnx*mny)then
 	      if(nWrk.gt.0)call memFree(pWrk1,2*nWrk,'r')
 	      nWrk = mnx*mny
@@ -239,7 +243,7 @@ c  Get the data and primary beam that we are interested in.
 c
 	do j=ylo,yhi
 	  if(j.gt.1.and.j.le.niy)then
-	    do i=xlo,0
+	    do i=xlo,min(0,xhi)
 	      Resid(i+ioff,j+joff) = 0
 	      Pb(i+ioff,j+joff) = pbGet(pbObj,real(i),real(j))
 	    enddo
@@ -248,7 +252,7 @@ c
 	      Pb(i+ioff,j+joff) = t
 	      Resid(i+ioff,j+joff) = In(i,j)*t*Wts1(i+xoff,j+yoff)
 	    enddo
-	    do i=nix+1,xhi
+	    do i=max(xlo,nix+1),xhi
 	      Pb(i+ioff,j+joff) = pbGet(pbObj,real(i),real(j))
 	      Resid(i+ioff,j+joff) = 0
 	    enddo

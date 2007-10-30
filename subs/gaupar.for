@@ -5,6 +5,7 @@ c    13sep94 rjs  Added gaudfac.
 c    11aug97 rjs  Protect against atan2(0,0)
 c    11dec97 rjs  Handle images in units of Kelvin.
 c    25feb98 rjs  Correct bunit shortcoming introduced above.
+c    26apr05 tw   Default is Kelvin-like scaling rather than no scaling in gaupar
 c
 c************************************************************************
 c* gaupar1 - Determine effective beam of the convolution of two images.
@@ -50,7 +51,7 @@ c
 
 	call GauPar(bunit1,  dx,dy,bmaj1,bmin1,bpa1,
      *		    '?/BEAM',dx,dy,bmaj2,bmin2,bpa2,
-     *		    bunit,         bmaj, bmin, bpa, fac)
+     *		    bunit,	   bmaj, bmin, bpa, fac)
 c
 	end
 c************************************************************************
@@ -103,7 +104,7 @@ c  Get the gaussian parameters.
 c
 	call GauPar(bunit1,dx1,dy1,bmaj1,bmin1,bpa1,
      *		    bunit2,dx2,dy2,bmaj2,bmin2,bpa2,
-     *		    bunit,         bmaj, bmin, bpa, fac)
+     *		    bunit,	   bmaj, bmin, bpa, fac)
 c
 	end
 c************************************************************************
@@ -185,12 +186,13 @@ c
 c  Determine what are the units of the map and beam.
 c
 	pPix1 = b1b.eq.'PIXEL'
-	pBem1 = b1b.eq.'BEAM'
-	pKel1 = b1a.eq.'KELVIN'
-	if(.not.pPix1.and..not.pBem1.and..not.pKel1)then
-	  call bug('w','Unknown units for first image ... no scaling')
-	  return
-	endif
+	pBem1 = b1b(1:4).eq.'BEAM'
+	pKel1 = (.not.pPix1).and.(.not.pBem1)
+c	pKel1 = b1a.eq.'KELVIN'
+c	if(.not.pPix1.and..not.pBem1.and..not.pKel1)then
+c	  call bug('w','Unknown units for first image ... no scaling')
+c	  return
+c	endif
 c
 	pPix2 = b2b.eq.'PIXEL'
 	pBem2 = b2b.eq.'BEAM'
@@ -231,7 +233,7 @@ c  The hard one. Map and beam are in units of /BEAM. Calculate the effective
 c  beam and scale factor.
 c
 	else if(pBem1.and.pBem2)then
-	  bunit(l+1:) = '/BEAM'
+	  bunit(l+1:) = '/'//b1b
 	  if(bmaj1*bmin1.ne.0.and.bmaj1*bmin1.ne.0.and.
      *		dx1*dy1.ne.0)then
 	    call Gaufac(bmaj1,bmin1,bpa1,bmaj2,bmin2,bpa2,
@@ -253,13 +255,15 @@ c
 	  else
 	    call bug('w','Bmaj or bmin missing ... no scaling')
 	  endif
+c
 	else if(pKel1.and.pBem2)then
-	  bunit = 'KELVIN'
+	  bunit = bunit1x
 	  if(bmaj1*bmin1.ne.0.and.bmaj1*bmin1.ne.0.and.
      *		dx1*dy1.ne.0)then
 	    call Gaufac(bmaj1,bmin1,bpa1,bmaj2,bmin2,bpa2,
      *		fac,bmaj,bmin,bpa,ifail)
 	    fac = abs(dx1*dy1/fac)*abs((bmaj1*bmin1)/(bmaj*bmin))
+	    call output('Assuming Kelvin-like image units ...')
 	    call output('Determining the appropriate scale factor ...')
 	  else
 	    call bug('w','Bmaj or bmin missing ... no scaling')
@@ -269,7 +273,7 @@ c  Both are in Kelvin ... this makes no sense.
 c
 	else if(pKel1.and.pKel2)then
 	  call bug('w',
-     *   'Map and beam are in units of Kelvin ... no scaling performed')
+     *	 'Map and beam are in units of Kelvin ... no scaling performed')
 	endif
 c
 	write(line,'(a,1pe10.3)')'Scaling the output by',fac
@@ -329,7 +333,7 @@ c************************************************************************
 	subroutine GauDPar1(lIn,bmaj1,bmin1,bpa1,
      *		bmaj,bmin,bpa,fac,ifail)
 c
-	implicit none	
+	implicit none
 	integer lIn,ifail
 	real bmaj1,bmin1,bpa1,bmaj,bmin,bpa,fac
 c------------------------------------------------------------------------
@@ -405,7 +409,7 @@ c
 	  else
 	    bpa  = 180. / pi * 0.5 * atan2(-gamma,alpha-beta)
 	  endif
-	  ifail = 0	
+	  ifail = 0
 	endif
 	fac = 1
 c

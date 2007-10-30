@@ -11,12 +11,14 @@ c    CnvlA
 c    CnvlF
 c    CnvlR
 c    CnvlFin
+c    CnvlExt
 c
 c  History:
 c    rjs  10sep91 Adapted from the Convl and ConvlC routines. This,
 c		  hopefully, includes all the functionality of these.
 c    rjs   1oct91 Changes to the CnvlCorr routine (renamed it CnvlCo
 c		  for a start.
+c    rjs  31oct94 Added CnvlExt, plus some comments.
 c
 c************************************************************************
 c* CnvlIniF -- Ready a beam, from a file, for a convolution operation.
@@ -629,6 +631,39 @@ c
 c  Bring home the bacon.
 c
 	call MemFree(Trans,space,'r')
+	end
+c************************************************************************
+c* CnvlExt -- Determine the extent of the point-spread function, etc.
+c& rjs
+c: convolution,FFT
+c+
+	subroutine CnvlExt(handle,n1,n2,n1d,n2d)
+c
+	implicit none
+	integer handle,n1,n2,n1d,n2d
+c
+c  Return the size of the point-spread function, and the maximum sized
+c  input image that can be handled.
+c
+c  Input:
+c    handle	Handle of the beam, previously returned by CnvlInA or CnvlInF.
+c  Output:
+c    n1,n2	Size of the point-spread function.
+c    n1d,n2d	Maximum sized input image that the CNVL routines can
+c		cope with for this beam
+c--
+c------------------------------------------------------------------------
+	include 'maxdim.h'
+	real dat(MAXBUF)
+	common dat
+c
+c  Extract beam info.
+c
+	n1 = nint(dat(Handle  ))
+	n2 = nint(dat(Handle+1))
+	n1d = nint(dat(Handle+2))
+	n2d = nint(dat(Handle+3))
+c
 	end
 c************************************************************************
 	subroutine Cnvl0(handle,nx,ny,n1,n2,n1a,n2a,n1d,n2d,space,

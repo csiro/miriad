@@ -25,16 +25,15 @@ c    History:
 c
 c    mchw --apr93 Extracted from a task and installed as a genl subr.
 c    mjs  22apr93 Trivial doc mod.
+c    27oct00 mchw Changes to support more antennas.
 c------------------------------------------------------------------------
-	integer i,i1,i2
+	integer i, ant1, ant2
 c
-	i2 = nint(preambl(4))
-	i1 = i2 / 256
-	i2 = i2 - 256 * i1
-	if(i1.le.i2)then
-	  bl = ((i2-2)*(i2-1))/2 + i1
+        call basant(preambl(4),ant1,ant2)
+	if(ant1.le.ant2)then
+	  bl = ((ant2-2)*(ant2-1))/2 + ant1
 	else
-	  bl = ((i1-2)*(i1-1))/2 + i2
+	  bl = ((ant1-2)*(ant1-1))/2 + ant2
 	  preambl(1) = -preambl(1)
 	  preambl(2) = -preambl(2)
 	  do i=1,nread

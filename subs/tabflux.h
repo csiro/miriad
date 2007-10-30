@@ -1,5 +1,5 @@
       integer NTABLE
-      parameter (NTABLE=2000)
+      parameter (NTABLE=5000)
 c
       character TSOURCE(NTABLE)*40
       character ROOT(NTABLE)*40

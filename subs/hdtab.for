@@ -9,6 +9,7 @@ c     1nov95 rjs  Added HdDefSiz
 c     1jul99 rjs  Create somewhat better headers.
 c    28jul99 rjs  Initialise pbtype.
 c    09may00 rjs  Do not allow default image size if pbtype=SINGLE.
+c    28jun05 rjs  Check the u,v coordinates to see if NCP projection is best.
 c************************************************************************
 	subroutine HdInit(mfs1,mosaic1)
 c
@@ -21,10 +22,11 @@ c------------------------------------------------------------------------
 	doinit = .true.
 	end
 c************************************************************************
-	subroutine HdChk(tno)
+	subroutine HdChk(tno,uvw)
 c
 	implicit none
 	integer tno
+	double precision uvw(3)
 c
 c  Check that the header is the same.
 c------------------------------------------------------------------------
@@ -42,7 +44,9 @@ c
 	if(doinit)then
 	  call HdFirst(tno)
 	  doinit = .false.
-	else if(Count.eq.0)then
+	endif
+	if(Count.eq.0)then
+	  mcount = min(2*mcount+1,MAXCOUNT)
 c
 c  Form an average time and observatory velocity.
 c
@@ -90,12 +94,17 @@ c
 c
 c  Check for a change in DEC.
 c
+	  call uvrdvrd(tno,'dec',t1,0.d0)
+	  call uvrdvrr(tno,'ddec',t2,0.0)
+	  t1 = t1 + t2
 	  if(.not.YChange.and..not.mosaic)then
-	    call uvrdvrd(tno,'dec',t1,0.d0)
-	    call uvrdvrr(tno,'ddec',t2,0.0)
-	    t1 = t1 + t2
 	    YChange = abs(crval2-t1).gt.tol
 	  endif
+c
+c  Accumulate info to determine whether its an e-w array.
+c
+	  sumlumv = sumlumv + (cos(t1)*uvw(2)+sin(t1)*uvw(3))**2
+	  sumuuvv = sumuuvv + uvw(2)*uvw(2) + uvw(3)*uvw(3)
 c
 c  Check for a change in source name.
 c
@@ -105,7 +114,7 @@ c
 	  endif
 	endif
 c
-	Count = mod(Count+1,MAXCOUNT)
+	Count = mod(Count+1,mcount)
 	end
 c************************************************************************
 	subroutine HdFirst(tno)
@@ -118,9 +127,8 @@ c------------------------------------------------------------------------
 	include 'hdtab.h'
 	include 'mirconst.h'
 	double precision line(6),epsi
-	real vsource,dra,ddec
+	real dra,ddec
 	integer itype
-	logical ew
 c
 c  Initialise all the logicals to check whether things are consistent.
 c
@@ -131,6 +139,8 @@ c
 	XChange = .false.
 	YChange = .false.
 	SChange = .false.
+	Count = 0
+	mcount = 0
 c
 c  Handle the first two axes.
 c
@@ -153,28 +163,17 @@ c
 	call uvrdvra(tno,'telescop',telescop,' ')
 	call uvrdvra(tno,'observer',observer,' ')
 c
-c  Is this an East-west array.
+c  Initialise.
 c
-	ew = .false.
-	if(telescop.ne.' ')call obspar(telescop,'ew',epsi,ew)
-	if(ew) ew = epsi.gt.0
-	if(ew)then
-	  ctype1 = 'RA---NCP'
-	  ctype2 = 'DEC--NCP'
-	else
-	  ctype1 = 'RA---SIN'
-	  ctype2 = 'DEC--SIN'
-	endif
+	sumuuvv = 0
+	sumlumv = 0
+	vobs = 0
+	obstime = 0
+	naver = 0
 c
 c  Handle the spectral axis.
 c
-	call uvrdvrr(tno,'vsource',vsource,0.0)
-	call uvrdvrr(tno,'veldop',vobs,0.0)
-	vobs = vobs - vsource
 	call uvrdvra(tno,'veltype',ctype3,' ')
-	call uvrdvrd(tno,'time',obstime,0.d0)
-	naver = 1
-c
 	call uvinfo(tno,'line',line)
 	itype = nint(line(1))
 	if(itype.eq.CHANNEL)then
@@ -229,13 +228,13 @@ c
 c------------------------------------------------------------------------
 	include 'hdtab.h'
 	Count = 0
+	mcount = 1
 	end
 c************************************************************************
-	subroutine HdSet(cellx,celly,ra0,dec0,proj,freq0)
+	subroutine HdSet(cellx,celly,ra0,dec0,freq0)
 c
 	real cellx,celly,freq0
 	double precision ra0,dec0
-	character proj*(*)
 c
 c  Set some things that have not been set yet, and create a coordinate
 c  object.
@@ -246,14 +245,22 @@ c    proj	Projection geometry code (mosaicing only).
 c    ra0,dec0	crval1,crval2 (mosaicing only).
 c    freq0	Reference frequency (mfs only).
 c------------------------------------------------------------------------
+	character proj*3
+	real tol
+	parameter(tol=0.01)
 	include 'hdtab.h'
 c
 	if(mosaic)then
 	  crval1 = ra0
 	  crval2 = dec0
-	  ctype1 = 'RA---'//proj
-	  ctype2 = 'DEC--'//proj
 	endif
+	if(sumlumv/sumuuvv.lt.tol)then
+	  proj = 'NCP'
+	else
+	  proj = 'SIN'
+	endif
+	ctype1 = 'RA---'//proj
+	ctype2 = 'DEC--'//proj
 	if(mfs)crval3 = freq0
 c
 	cdelt1 = cellx

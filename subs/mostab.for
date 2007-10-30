@@ -43,6 +43,7 @@ c    rjs  07jul97 Change coaxdesc to coaxget.
 c    rjs  27oct98 Added mosval.
 c    rjs  12oct99 Added mosgetn and mossetn
 c    rjs  28oct99 Fix fractional pixel shift bug. 
+c    rks  29jun05 Geometry determination now outside these routines.
 c************************************************************************
 	subroutine MosCIni
 c
@@ -245,12 +246,11 @@ c
 	MosHash = indx + 1
 	end
 c************************************************************************
-	subroutine mosChar(ra1,dec1,npnt1,proj)
+	subroutine mosChar(ra1,dec1,npnt1)
 c
 	implicit none
 	double precision ra1,dec1
 	integer npnt1
-	character proj*(*)
 c
 c  Get the reference location, number of pointings and the projection
 c  geometry.
@@ -258,14 +258,11 @@ c
 c  Output:
 c    ra1,dec1	Reference pointing.
 c    npnt1	Number of pointings.
-c    proj	Projection geometry.
 c------------------------------------------------------------------------
 	include 'mostab.h'
 	include 'mirconst.h'
 	integer i,i0
-	double precision l0,m0,dtemp
-	character tel1*16
-	logical ew
+	double precision l0,m0
 c
 c  Determine the average (l,m).
 c
@@ -292,32 +289,11 @@ c
 	  call coCvt(coRef,'ap/ap',llmm(1,i0),'aw/aw',radec0)
 	endif
 c
-c  Determine whether all the telescopes are of an E-W type.
-c
-	ew = .true.
-	i = 0
-	tel1 = '??'
-	dowhile(ew.and.i.lt.npnt)
-	  i = i + 1
-	  if(telescop(i).ne.tel1.or.i.eq.1)then
-	    tel1 = telescop(i)
-	    ew = tel1.ne.' '
-	    if(ew)call obspar(tel1,'ew',dtemp,ew)
-	    if(ew)ew = dtemp.gt.0
-	  endif
-	enddo
-c
 c  Return with all the goodies.
 c
 	ra1 = radec0(1)
 	dec1 = radec0(2)
 	npnt1 = npnt
-	if(ew)then
-	  proj = 'NCP'
-	else
-	  proj = 'SIN'
-	endif
-c
 	call coFin(coRef)
 c
 	end

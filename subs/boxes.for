@@ -43,6 +43,8 @@ c    rjs 09jul97  Correctly handle ANDing with completely flagged plane.
 c    rjs 17may99  Increase size of a buffer.
 c    rjs 14sep00  Make sure that coordinate file can only be an image.
 c    rjs 10oct00  Fix bungle in the above.
+c    pjt  6mar01  increase string size for boxes to 2048 :-)
+c    mchw 14mar02 increase string size for boxes to 4096 :-)
 c************************************************************************
 c* Boxes -- Summary of region of interest routines.
 c& mjs
@@ -142,7 +144,7 @@ c
 	integer ntypes
 	parameter(ntypes=10)
 	integer nshape,length,k1,k2,n,spare,offset,i,boxtype,lu(3)
-	character types(ntypes)*9,type*9,spec*512,xytype*6,ztype*6
+	character types(ntypes)*9,type*9,spec*4096,xytype*6,ztype*6
 	character line*64
 	integer iax,iax1,iax2,tmp(4),nsize(MAXNAX)
 	double precision t1,t2,t3

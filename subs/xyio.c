@@ -13,6 +13,7 @@
 /*    rjs  15mar96   Inlcude an exrta include file.			*/
 /*    pjt  17jun02   MIR4 prototypes, > 2GB patches                     */
 /*    rjs/pjt 3jun03 "append" mode in xyopen - long live non-CVS devel. */
+/*    rjs  26nov05   Added xydim routine.				*/
 /*----------------------------------------------------------------------*/
 
 #include <stdio.h>
@@ -391,6 +392,21 @@ void xyflgwr_c(int thandle,int index,Const int *flags)
   length = images[thandle].axes[0];
   offset = images[thandle].offset + (index-1) * length;
   mkwrite_c(images[thandle].mask,MK_FLAGS,(int *)flags,offset,length,length);
+}
+/************************************************************************/
+int xydim_c(int thandle)
+/**xydim -- Return the first dimension of the image of interest.	*/
+/*:image-i/o								*/
+/*+ FORTRAN call sequence:
+
+	integer function xydim(tno)
+	integer tno
+
+  Input:
+    tno		Handle of the image file.
+/*----------------------------------------------------------------------*/
+{
+  return(images[thandle].axes[0]);
 }
 /************************************************************************/
 void xyflgrd_c(int thandle,int index,int *flags)

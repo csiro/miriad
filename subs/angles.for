@@ -9,6 +9,7 @@ c                  functions rangle and hangle.
 c     3sep93 nebk  Add dangleh (h=high precision)
 c    17aug94 nebk  Add hangleh (h=high precision)
 c    18apr96 rjs   Added rangleh (h=high precision).
+c    14jun96 mchw  Corrected doc for hangleh
 c
 c***********************************************************************
 c* Dangle - Convert degrees/hours value into a formatted string.
@@ -183,7 +184,7 @@ c    theta    Angle in radians.
 
 c  Output:
 c    rangle   Angle formated into a string with format:
-c               [+/-]HH:MM:SS.SS
+c               [+/-]HH:MM:SS.SSS
 c
 c--
 c-----------------------------------------------------------------------

@@ -1,5 +1,5 @@
 /*
-  The routines to manipulate the file heirarchy.
+  The routines to manipulate the file hierarchy.
 
 	6-dec-89  pjt	extended bug() messages
        30-apr-90  rjs   Support for zero-length items. Added hdelete.
@@ -31,18 +31,21 @@
 			a newline char.
        09-may-00  rjs   Get rid of spurious error message in hrm_c. Why didn't
 		        I see this ages ago?
+       10-jun-02  pjt   MIR4 changes to handle 2GB+ files and new int8 types
+       15-jan-03  pjt   fix a few prototypes for Const's
+       30-jan-03  pjt   allow itemnames to contain _ (e.g. for cd1_1)
+       23-feb-03  pjt   merged MIR4
+       22-jul-04  jwr	changed type of "size" in hexists_c() from int to size_t
+       05-nov-04  jwr	changed file sizes from size_t to off_t
+       02-jan-05  rjs   Correct type of hreada/hwritea "length" parameter. Tidy.
 */
 
 
 #include <stdlib.h>
 #include <string.h>
 
+#include "miriad.h"
 #include "hio.h"
-
-#define private static
-#if !defined(NULL)
-#  define NULL 0
-#endif
 
 #define MAXNAME 9
 #define CACHESIZE 64			/* Max size of items to cache. */
@@ -66,17 +69,29 @@
 #define RDWR_RDONLY  1
 #define RDWR_RDWR    2
 
-typedef struct { int offset,length,state; char *buf;} IOB;
+typedef struct {          /* buffer for I/O operations */
+  off_t  offset;
+  size_t length;
+  int    state; 
+  char   *buf;
+} IOB;
 
-typedef struct item {	char *name;
-			int handle,size,flags,fd,last,bsize,offset;
-			struct tree *tree;
-			IOB io[2];
-			struct item *fwd; } ITEM;
+typedef struct item {	
+  char *name;
+  int handle,flags,fd,last;
+  off_t size;
+  size_t bsize;       /* bsize can technicall be an int, since it's an internal buffer size */
+  off_t offset;
+  struct tree *tree;
+  IOB io[2];
+  struct item *fwd;
+} ITEM;
 
-typedef struct tree { char *name;
-		 int handle,flags,rdwr,wriostat;
-		 ITEM *itemlist; } TREE;
+typedef struct tree { 
+  char *name;
+  int handle,flags,rdwr,wriostat;
+  ITEM *itemlist; 
+} TREE;
 
 static TREE foreign = {"",0,0,0,0,NULL};
 #define MAXITEM 1024
@@ -88,7 +103,7 @@ private ITEM *item_addr[MAXITEM];
 #define hget_tree(tno) (tree_addr[tno])
 #define hget_item(tno) (item_addr[tno])
 
-private int header_ok,expansion[10],align_size[10];
+private int header_ok,expansion[MAXTYPES],align_size[MAXTYPES];
 private char align_buf[BUFSIZE];
 private int first=TRUE;
 
@@ -109,24 +124,21 @@ private int first=TRUE;
 #define dwait_c(a,b)
 #endif
 
-/* Declare a few private routines. */
+/* Declare our private routines. */
 
-private void hcheckbuf_c(),hcache_read_c(),hrelease_item_c(),
-  hcache_create_c(),hwrite_fill_c(),hdir_c(),hinit_c();
-private int hname_check();
-private ITEM *hcreate_item_c();
-private TREE *hcreate_tree_c();
+static void hinit_c(void);
+static int hfind_nl(char *buf, int len);
+static void hcheckbuf_c(ITEM *item, off_t next, int *iostat);
+static void hwrite_fill_c(ITEM *item, IOB *iob, int next, int *iostat);
+static void hcache_create_c(TREE *t, int *iostat);
+static void hcache_read_c(TREE *t, int *iostat);
+static int hname_check(char *name);
+static void hdir_c(ITEM *item);
+static void hrelease_item_c(ITEM *item);
+static ITEM *hcreate_item_c(TREE *tree, char *name);
+static TREE *hcreate_tree_c(char *name);
 
 #define check(iostat) if(iostat) bugno_c('f',iostat)
-
-/* Define a few things so that I can avoid lint being pedantic. */
-
-void bug_c(),bugno_c(),dopendir_c(),dclosedir_c(),dreaddir_c(),drmdir_c();
-void ddelete_c(),pack16_c(),unpack16_c();
-void dtrans_c(),dmkdir_c(),dopen_c(),dclose_c(),dread_c(),dwrite_c();
-
-private int hfind_nl();
-
 #define Malloc(a) malloc((size_t)(a))
 #define Realloc(a,b) realloc((a),(size_t)(b))
 #define Strcpy (void)strcpy
@@ -134,11 +146,9 @@ private int hfind_nl();
 #define Memcpy (void)memcpy
 
 /************************************************************************/
-void hopen_c(tno,name,status,iostat)
-int *iostat,*tno;
-char *name,*status;
+void hopen_c(int *tno,Const char *name,Const char *status,int *iostat)
 /**hopen -- Open a data set.			 			*/
-/*&mjs									*/
+/*&pjt							         	*/
 /*:low-level-i/o							*/
 /*+ FORTRAN call sequence
 
@@ -167,7 +177,7 @@ char *name,*status;
 
 /* Find a spare slot, and set the name etc. */
 
-  dtrans_c(name,path,iostat);
+  dtrans_c((char *)name,path,iostat);
   if(*iostat)return;
   t = hcreate_tree_c(path);
 
@@ -210,6 +220,7 @@ private void hinit_c()
   expansion[H_BYTE] = 1;
   expansion[H_INT]  = sizeof(int)/H_INT_SIZE;
   expansion[H_INT2] = sizeof(int2)/H_INT2_SIZE;
+  expansion[H_INT8] = sizeof(int8)/H_INT8_SIZE;
   expansion[H_REAL] = sizeof(float)/H_REAL_SIZE;
   expansion[H_DBLE] = sizeof(double)/H_DBLE_SIZE;
   expansion[H_CMPLX] = 2*sizeof(float)/H_CMPLX_SIZE;
@@ -218,6 +229,7 @@ private void hinit_c()
   align_size[H_BYTE] = 1;
   align_size[H_INT]  = H_INT_SIZE;
   align_size[H_INT2] = H_INT2_SIZE;
+  align_size[H_INT8] = H_INT8_SIZE;
   align_size[H_REAL] = H_REAL_SIZE;
   align_size[H_DBLE] = H_DBLE_SIZE;
   align_size[H_CMPLX] =H_REAL_SIZE;
@@ -226,10 +238,9 @@ private void hinit_c()
   header_ok = FALSE;
 }
 /************************************************************************/
-void hflush_c(tno,iostat)
-int tno,*iostat;
+void hflush_c(int tno,int *iostat)
 /**hflush -- Close a Miriad data set.		 			*/
-/*&mjs									*/
+/*&pjt									*/
 /*:low-level-i/o							*/
 /*+ FORTRAN call sequence
 
@@ -303,7 +314,7 @@ int tno,*iostat;
 /************************************************************************/
 void habort_c()
 /**habort -- Abort handling of all open data-sets.			*/
-/*&mjs									*/
+/*&pjt									*/
 /*:low-level-i/o							*/
 /*+ FORTRAN call sequence
 
@@ -365,10 +376,9 @@ void habort_c()
   }
 }
 /************************************************************************/
-void hrm_c(tno)
-int tno;
+void hrm_c(int tno)
 /**hrm -- Remove a data-set.						*/
-/*&mjs									*/
+/*&pjt									*/
 /*:low-level-i/o							*/
 /*+ FORTRAN call sequence
 
@@ -411,10 +421,9 @@ int tno;
   hclose_c(tno);
 }
 /************************************************************************/
-void hclose_c(tno)
-int tno;
+void hclose_c(int tno)
 /**hclose -- Close a Miriad data set.		 			*/
-/*&mjs									*/
+/*&pjt									*/
 /*:low-level-i/o							*/
 /*+ FORTRAN call sequence
 
@@ -464,11 +473,9 @@ int tno;
   ntree--;
 }
 /************************************************************************/
-void hdelete_c(tno,keyword,iostat)
-int *iostat,tno;
-char *keyword;
+void hdelete_c(int tno,Const char *keyword,int *iostat)
 /**hdelete -- Delete an item from a data-set.				*/
-/*&mjs									*/
+/*&pjt									*/
 /*:low-level-i/o							*/
 /*+ FORTRAN call sequence
 
@@ -496,7 +503,7 @@ char *keyword;
 
   if(first)hinit_c();
 
-  if(tno != 0) if(*iostat = hname_check(keyword)) return;
+  if(tno != 0) if( (*iostat = hname_check((char *)keyword)) ) return;
 
 /* Check if the item is aleady here abouts. */
 
@@ -530,12 +537,9 @@ char *keyword;
   if(ent_del) *iostat = 0;
 }
 /************************************************************************/
-void haccess_c(tno,ihandle,keyword,status,iostat)
-int *iostat,tno;
-int *ihandle;
-char *keyword,*status;
+void haccess_c(int tno,int *ihandle,Const char *keyword,Const char *status,int *iostat)
 /**haccess -- Open an item of a data set for access.			*/
-/*&mjs									*/
+/*&pjt									*/
 /*:low-level-i/o							*/
 /*+ FORTRAN call sequence
 
@@ -562,7 +566,7 @@ char *keyword,*status;
   char path[MAXPATH];
   ITEM *item;
   TREE *t;
-  int mode;
+  int mode=0;
   char string[3];
 
   if(first)hinit_c();
@@ -577,7 +581,7 @@ char *keyword,*status;
      !strcmp("history",keyword)|| tno == 0 	       ||
      (mode & ITEM_SCRATCH)		)mode |= ITEM_NOCACHE;
 
-  if(tno != 0) if(*iostat = hname_check(keyword))return;
+  if(tno != 0) if( (*iostat = hname_check((char *)keyword)) )return;
   t = hget_tree(tno);
 
 /* If we are writing, check whether we have write permission. */
@@ -598,7 +602,7 @@ char *keyword,*status;
 /* If the item does not exist, create it. Otherwise the item must
    be cacheable, in which case we truncate its length to zero if needed. */
 
-  if(item == NULL)item = hcreate_item_c(t,keyword);
+  if(item == NULL)item = hcreate_item_c(t,(char *)keyword);
   else if((mode & (ITEM_WRITE|ITEM_SCRATCH)) && item->size != 0){
     item->size = 0;
     item->io[0].length = item->io[1].length = 0;
@@ -620,7 +624,7 @@ char *keyword,*status;
     			    && !(item->flags & ITEM_CACHE)){
     Strcpy(path,t->name);
     Strcat(path,keyword);
-    dopen_c(&(item->fd),path,status,&(item->size),iostat);
+    dopen_c(&(item->fd),path,(char *)status,&(item->size),iostat);
 
     item->bsize = BUFSIZE;
     item->io[0].buf = Malloc(BUFSIZE);
@@ -640,12 +644,10 @@ char *keyword,*status;
   if(*iostat)hrelease_item_c(item);
 }
 /************************************************************************/
-void hmode_c(tno,mode)
-int tno;
-char *mode;
+void hmode_c(int tno,char *mode)
 /*									*/
 /**hmode -- Return access modes of a dataset.				*/
-/*&mjs									*/
+/*&pjt									*/
 /*:low-level-i/o							*/
 /*+ FORTRAN call sequence
 
@@ -692,11 +694,9 @@ char *mode;
 
 }
 /************************************************************************/
-int hexists_c(tno,keyword)
-int tno;
-char *keyword;
+int hexists_c(int tno,Const char *keyword)
 /**hexists -- Check if an item exists.					*/
-/*&mjs									*/
+/*&pjt									*/
 /*:low-level-i/o							*/
 /*+ FORTRAN call sequence
 
@@ -717,13 +717,14 @@ char *keyword;
 /*----------------------------------------------------------------------*/
 {
   char path[MAXPATH];
-  int iostat,fd,size;
+  int iostat,fd;
+  off_t size;
   ITEM *item;
   TREE *t;
 
 /* Check for an invalid name. */
 
-  if(tno != 0) if(hname_check(keyword)) return(FALSE);
+  if(tno != 0) if(hname_check((char *)keyword)) return(FALSE);
 
 /* Check if the item is aleady here abouts. */
 
@@ -749,11 +750,9 @@ char *keyword;
   return(TRUE);
 }
 /************************************************************************/
-void hdaccess_c(ihandle,iostat)
-int ihandle;
-int *iostat;
+void hdaccess_c(int ihandle,int *iostat)
 /**hdaccess -- Finish up access to an item.				*/
-/*&mjs									*/
+/*&pjt									*/
 /*:low-level-i/o							*/
 /*+ FORTRAN call sequence
 
@@ -813,10 +812,9 @@ int *iostat;
   }
 }
 /************************************************************************/
-int hsize_c(ihandle)
-int ihandle;
+off_t hsize_c(int ihandle)
 /**hsize -- Determine the size (in bytes) of an item. 			*/
-/*&mjs									*/
+/*&pjt									*/
 /*:low-level-i/o							*/
 /*+ FORTRAN call sequence
 
@@ -837,12 +835,10 @@ int ihandle;
   return(item->size);
 }
 /************************************************************************/
-void hio_c(ihandle,dowrite,type,buf,offset,length,iostat)
-int ihandle;
-int dowrite,type,offset,length,*iostat;
-char *buf;
+void hio_c(int ihandle,int dowrite,int type,char *buf,
+	   off_t offset, size_t length,int *iostat)
 /**hread,hwrite -- Read and write items.	 			*/
-/*&mjs									*/
+/*&pjt									*/
 /*:low-level-i/o							*/
 /*+ FORTRAN call sequence
 
@@ -892,7 +888,7 @@ char *buf;
 
   Note that "offset" and "length" must obey an alignment requirement. Both
   must be a multiple of the size of the element they are performing I/O on.
-  For eaxample, they must be a multiple of 2 for hreadj,hwritej; a multiple
+  For example, they must be a multiple of 2 for hreadj,hwritej; a multiple
   of 4 for hreadi,hwritei,hreadr,hwriter; a multiple of 8 for hreadd,hwrited.
 
   Inputs(hwrite) or Outputs(hread):
@@ -925,7 +921,9 @@ char *buf;
 
 {
   char *s;
-  int next,b,off,len,size;
+  int b;              /* 0 or 1, pointing in one of two IOB buffers */
+  off_t next, off;
+  size_t size, len;
   IOB *iob1,*iob2;
   ITEM *item;
 
@@ -934,7 +932,7 @@ char *buf;
 
 /* Check various end-of-file conditions and for adequate buffers. */
 
-  next = offset + (!dowrite && type == H_TXT ? 1 : length );
+  next = offset + (off_t) (!dowrite && type == H_TXT ? 1 : length );
 /*  if(!dowrite && type == H_TXT) length = min(length, item->size - offset); */
   *iostat = -1;
   if(!dowrite && next > item->size)return;
@@ -1057,6 +1055,8 @@ char *buf;
 			break;
         case H_INT2:	pack16_c((int2 *)buf,s,len/H_INT2_SIZE);
 			break;
+        case H_INT8:	pack64_c((int8 *)buf,s,len/H_INT8_SIZE);
+			break;
         case H_REAL:	packr_c((float *)buf,s,len/H_REAL_SIZE);
 			break;
         case H_DBLE:	packd_c((double *)buf,s,len/H_DBLE_SIZE);
@@ -1080,6 +1080,8 @@ char *buf;
         case H_INT:  	unpack32_c(s,(int *)buf,len/H_INT_SIZE);
 			break;
         case H_INT2:	unpack16_c(s,(int2 *)buf,len/H_INT2_SIZE);
+			break;
+        case H_INT8:	unpack64_c(s,(int8 *)buf,len/H_INT8_SIZE);
 			break;
         case H_REAL:	unpackr_c(s,(float *)buf,len/H_REAL_SIZE);
 			break;
@@ -1108,9 +1110,7 @@ char *buf;
   }
 }
 /************************************************************************/
-private int hfind_nl(buf,len)
-char *buf;
-int len;
+private int hfind_nl(char *buf,int len)
 /*
   Return the character number of the first new-line character.
 ------------------------------------------------------------------------*/
@@ -1120,9 +1120,7 @@ int len;
   return(len);
 }
 /************************************************************************/
-private void hcheckbuf_c(item,next,iostat)
-ITEM *item;
-int next,*iostat;
+private void hcheckbuf_c(ITEM *item,off_t next,int *iostat)
 /*
   Check to determine that we have adequate buffer space, and a file,
   if needed.
@@ -1167,10 +1165,7 @@ int next,*iostat;
   }
 }
 /************************************************************************/
-private void hwrite_fill_c(item,iob,next,iostat)
-ITEM *item;
-IOB *iob;
-int next,*iostat;
+private void hwrite_fill_c(ITEM *item,IOB *iob,int next,int *iostat)
 /*
   A nonaligned nonsequential write operation has been requested. Read in the
   portion that we are missing. We need to fill the i/o buffer up to at
@@ -1201,11 +1196,9 @@ int next,*iostat;
   iob->length += length;
 }
 /************************************************************************/
-void hseek_c(ihandle,offset)
-int ihandle;
-int offset;
+void hseek_c(int ihandle,off_t offset)
 /**hseek -- Set default offset (in bytes) of an item. 			*/
-/*&mjs									*/
+/*&pjt									*/
 /*:low-level-i/o							*/
 /*+ FORTRAN call sequence
 
@@ -1227,10 +1220,9 @@ int offset;
   item->offset = offset;
 }
 /************************************************************************/
-int htell_c(ihandle)
-int ihandle;
+off_t htell_c(int ihandle)
 /**htell -- Return the default offset (in bytes) of an item.		*/
-/*&mjs									*/
+/*&pjt									*/
 /*:low-level-i/o							*/
 /*+ FORTRAN call sequence
 
@@ -1251,10 +1243,7 @@ int ihandle;
   return(item->offset);
 }
 /************************************************************************/
-void hreada_c(ihandle,line,length,iostat)
-int ihandle;
-int length,*iostat;
-char *line;
+void hreada_c(int ihandle,char *line,size_t length,int *iostat)
 /*----------------------------------------------------------------------*/
 {
   ITEM *item;
@@ -1263,21 +1252,16 @@ char *line;
   hio_c( ihandle, FALSE, H_TXT, line, item->offset, length, iostat);
 }
 /************************************************************************/
-void hwritea_c(ihandle,line,length,iostat)
-int ihandle;
-int length,*iostat;
-char *line;
+void hwritea_c(int ihandle,Const char *line,size_t length,int *iostat)
 /*----------------------------------------------------------------------*/
 {
   ITEM *item;
 
   item = hget_item(ihandle);
-  hio_c( ihandle ,TRUE, H_TXT, line, item->offset, length, iostat);
+  hio_c( ihandle ,TRUE, H_TXT, (char *)line, item->offset, length, iostat);
 }
 /************************************************************************/
-private void hcache_create_c(t,iostat)
-int *iostat;
-TREE *t;
+private void hcache_create_c(TREE *t,int *iostat)
 /*
   Create a cache.
 ------------------------------------------------------------------------*/
@@ -1289,9 +1273,7 @@ TREE *t;
   if(!*iostat) hdaccess_c(ihandle,iostat);
 }
 /************************************************************************/
-private void hcache_read_c(t,iostat)
-int *iostat;
-TREE *t;
+private void hcache_read_c(TREE *t,int *iostat)
 /*
   Read in all small items, which are stored in the file "header".
   Errors should never happen when reading the cache. If they do,
@@ -1325,8 +1307,7 @@ TREE *t;
   hdaccess_c(ihandle,iostat);
 }
 /************************************************************************/
-private int hname_check(name)
-char *name;
+private int hname_check(char *name)
 /*
   This checks if the name of an item is OK. Generally an item must be 1 to
   8 characters, alphanumeric, starting with an alpha. Only lower case
@@ -1343,13 +1324,13 @@ char *name;
   if(!header_ok && length == 6 && !strcmp("header",name))return(-1);
   for(i=0; i < length; i++){
     c = *name++;
-    if((c < 'a' || c > 'z') && (c < '0' || c > '9') && (c != '-'))return(-1);
+    if((c < 'a' || c > 'z') && (c < '0' || c > '9') && (c != '-') && (c != '_'))
+      return(-1);
   }
   return(0);
 }
 /************************************************************************/
-private void hdir_c(item)
-ITEM *item;
+private void hdir_c(ITEM *item)
 /*
   Read the directory contents into a buffer (make it look like a text
   file.
@@ -1416,8 +1397,7 @@ ITEM *item;
   item->bsize = plength;
 }
 /************************************************************************/
-private void hrelease_item_c(item)
-ITEM *item;
+private void hrelease_item_c(ITEM *item)
 /*
   Release the item on the top of the list.
 ------------------------------------------------------------------------*/
@@ -1449,9 +1429,7 @@ ITEM *item;
   nitem--;
 }
 /************************************************************************/
-private ITEM *hcreate_item_c(tree,name)
-TREE *tree;
-char *name;
+private ITEM *hcreate_item_c(TREE *tree,char *name)
 /*
   Create an item, and initialise as much of it as possible.
 ------------------------------------------------------------------------*/
@@ -1497,8 +1475,7 @@ char *name;
   return(item);
 }
 /************************************************************************/
-private TREE *hcreate_tree_c(name)
-char *name;
+private TREE *hcreate_tree_c(char *name)
 /*
   Create an item, and initialise as much of it as possible.
 ------------------------------------------------------------------------*/
@@ -1528,5 +1505,5 @@ char *name;
   t->handle = hash;
   t->flags = 0;
   t->itemlist = NULL;
-  return(t);
+  return t;
 }

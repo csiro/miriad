@@ -118,13 +118,14 @@ c  The common blocks.
 c
 	common/UVDatCoA/sels,lstart,lwidth,lstep,lflag,
      *	 rstart,rwidth,rstep,
-     *	 plmaj,plmin,plangle,doplanet,dowave,doref,dodata,dosels,dow,
+     *	 plmaj,plmin,plangle
+	common/UVDatCoD/doplanet,dowave,doref,dodata,dosels,dow,
      *	 dogsv,plinit,k1,k2,nchan,nIn,pnt,tno,npream,idxT,idxBL,
      *	 auto,cross,docal,WillCal,doleak,WillLeak,dopass,calmsg
 c
 	common/UVDatCoB/line,ref,InBuf
 c
-	common/UvDatCoC/Spreambl,Leaks,coeffs,SumWts,GWt,WillPol,
-     *	 PolCpy,
+	common/UvDatCoC/Spreambl,Leaks,coeffs,SumWts,GWt
+	common/UVDatCoE/WillPol,PolCpy,
      *	 SelPol,SelPol1,nPol,nPolF,Pols,iPol,Snread,SData,ncoeff,doaver,
      *	 Sflags,indices,nLeaks

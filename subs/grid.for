@@ -5,6 +5,7 @@ c
 c  History:
 c    rjs Dark-ages  Original version.
 c    rjs   8sep89   Improved documentation.
+c    rjs  03jul96   Guard against 0**0 in gcffun.
 c************************************************************************
 c*CorrFun -- Generate the gridding convolution correction function.
 c: gridding,interpolation
@@ -91,15 +92,22 @@ c
 	real spheroid
 c
 c  Spheroidal function. Hopefully P is the nearest half integer
-c  to ALPHA.
+c  to ALPHA. Evaluate separately for j=0, to guard against 0**0.
 c
 	if(func.eq.'spheroidal')then
 	  j = nint(2.*alpha)
 	  p = 0.5 * real(j)
-	  do i=1,n
-	    x = real(2*(i-1)-(n-1))/real(n-1)
-	    phi(i) = sqrt(1-x*x)**j * spheroid(x,width,p)
-	  enddo
+	  if(j.eq.0)then
+	    do i=1,n
+	      x = real(2*(i-1)-(n-1))/real(n-1)
+	      phi(i) = 			spheroid(x,width,p)
+	    enddo
+	  else
+	    do i=1,n
+	      x = real(2*(i-1)-(n-1))/real(n-1)
+	      phi(i) = sqrt(1-x*x)**j * spheroid(x,width,p)
+	    enddo
+	  endif
 	else
 	  call bug('f','Unknown gridding function type')
 	endif

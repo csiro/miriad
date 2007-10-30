@@ -112,6 +112,7 @@ c                 Remove OFMRAP as no longer needed with PGIMAG
 c   nebk 10feb95  Add OFMCOL and OFMINQ
 c   nebk 10apr95  Add OFMTABW
 c   nebk 14apr95  Add OFMCMP. Remove OFMINQ
+c   nebk 31apr95  Better fixed zero colour contours
 c***********************************************************************
 c
       subroutine ofmapp 
@@ -172,32 +173,28 @@ c    iofm    Type of ofm
 c-
 c-----------------------------------------------------------------------
       include 'ofm.h'
+      logical dofcc
 c-----------------------------------------------------------------------
 c
 c Do we have enough colour indices to play with ?
 c
       if (na.eq.0) return
 c
-c Is it possible to generate the fixed zero colour contour ofm ?
-c
-      if (imin.lt.0.0 .and. imax.gt.0.0 .and.
-     +    abs(imax).ge.abs(imin)) dofcc = .true.
-      if (.not.dofcc .and. jofm.eq.5) then
-        call bug ('w', 
-     +    'Cannot generate fixed zero colour contours for this image')
-        iofm = 1
-      else
-        iofm = abs(jofm)
-      end if
-c
 c Generate the table, reverse it if needed, and apply
 c
-      call ofmtba (imin, imax)
+      iofm = abs(jofm)
+      call ofmtba (imin, imax, dofcc)
+c
+c If couldn't do fixed zero colour contours give b&w
+c
+      if (iofm.eq.5 .and. .not.dofcc) then
+        iofm = 1
+        call ofmtba (imin, imax, dofcc)
+      end if
       if (jofm.lt.0) call ofmrev
       call ofmapp
 c
       end
-c
 c
 c
 c
@@ -432,33 +429,42 @@ c+
 c
       implicit none
 c
-c  Initialize ofm routines.
+c  Initialize ofm routines.  PGPLOT device must be open.
 c
 c All output in common
 c   na    Number of available colour indices.  If 0, then
 c         ofmini has decided it cannot function on this device
 c         (too many or too few colour indices)
+c   fidun Indicate fiddle has not been done yet
+c   ofmdun Says that an ofm has not yet been applied to a device
+c   nocurs Says that the device has no cursor
 c--
       include 'ofm.h'
+      character ans*3
+      integer il
 c
 c Set state switches
 c
       fidun = .false.
       ofmdun = .false.
-      dofcc = .false.
+c
+c Does this device have a cursor ?
+c
+      call pgqinf ('CURSOR', ans, il)
       nocurs = .false.
+      if (ans.eq.'NO') nocurs = .true.
 c
 c Get available colour indices on this device.  
 c
       call pgqcir (ci1, ci2)
       na = ci2 - ci1 + 1
-c      write (*,*) 'ci1,ci2=',ci1,ci2
       if (na.gt.maxlev) then
         call bug ('w',
      +   'OFMINI: Too many colours on this device for internal storage')
         na = 0
       else if (na.lt.3) then
-        call bug ('w', 'OFMINI: Not enough colours on this device')
+        call bug ('w', 
+     +    'OFMINI: Not enough colours on this device for manipulation')
         na = 0
       end if
 c
@@ -508,6 +514,8 @@ c    domsg   Tell user what to do
 c  Input in comon
 c    na      Number of levels in ACTIVE table
 c    ofms    SAVE ofm
+c    ci0     Colour index for zero intensity boundary for
+c            fixed zero colour contours
 c  Output in common
 c    yt      Y values for transfer function plot
 c    ofma    ACTIVE ofm
@@ -551,9 +559,9 @@ c so that the boundary between blue and green is kept at 0.0
 c
       if (iofm.eq.5) then
         if (m.gt.1.0) then
-          x = real(ci0) / real(na) * (1.0 - 1.0/m)
+          x = real(ci0-1) / real(na) * (1.0 - 1.0/m)
         else
-          x = -real(ci0) / real(na) * (1.0 - m)
+          x = -real(ci0-1) / real(na) * (1.0 - m)
         end if  
       end if
 c  
@@ -766,7 +774,6 @@ c Input/output in common
 c    fidun     .false. says no fiddle done to transfer function yet
 c    ofmdun    .false. says no ofm has been applied to this device
 c Output in common
-c    dofcc     True if possible to generate fixed zero colour contours
 c    hedun     Says no h.e. done yet. Always reset by OFMMOD
 c    tfvp      Transfer function plot viewport
 c    nocurs    True if device does not have a cursor
@@ -776,17 +783,12 @@ c-----------------------------------------------------------------------
       integer npix, il, i
       real x, y, x1, x2, y1, y2, xi, yi
       character ch*1, ans*3
-      logical hard
+      logical hard, dofcc
 c-----------------------------------------------------------------------
 c
 c Do we have enough colour indices to play with
 c
       if (na.eq.0) return
-c
-c Does this device have a cursor ?
-c
-      call pgqinf ('CURSOR', ans, il)
-      if (ans.eq.'NO') nocurs = .true.
 c
 c Is this a hardcopy device ?
 c
@@ -794,19 +796,14 @@ c
       call pgqinf ('HARDCOPY', ans, il)
       if (ans.eq.'YES') hard = .true.
 c
-c Is it possible to generate the fixed zero colour contour ofm ?
-c
-      if (imin.lt.0.0 .and. imax.gt.0.0 .and. 
-     +    abs(imax).gt.abs(imin)) dofcc = .true.
-c
 c If no ofm has been applied, apply the greyscale ofm.  With /ps
 c devices, the ofm must be loaded before calling PGIMAG. WIth
-c interactive devices, the ofm cam be loaded after PGIMAG.
+c interactive devices, the ofm can be loaded after PGIMAG.
 c Also initialize fiddle array.
 c
       if (.not.ofmdun) then
         iofm = 1
-        call ofmtba (0.0, 0.0)
+        call ofmtba (0.0, 0.0, dofcc)
         call ofmapp
 c
         do i = 1, na
@@ -1054,6 +1051,7 @@ c-----------------------------------------------------------------------
 cc
       real x, y
       character ch*1
+      logical good, dofcc
 c-----------------------------------------------------------------------
 c
 c Tell user what's available
@@ -1088,40 +1086,27 @@ c
 c Step to next ofm and tell user
 c
           iofm = iofm + 1   
-          if (iofm.eq.5 .and. .not.dofcc) iofm = iofm + 1
           if (iofm.gt.9) iofm = 1
-c
-          if (iofm.eq.1) then
-            call output ('Loading black and white')
-          else if (iofm.eq.2) then
-            call output ('Loading spectrum colours')   
-          else if (iofm.eq.3) then
-            call output ('Loading linear colours')
-          else if (iofm.eq.4) then
-            call output ('Loading colour contours')
-          else if (iofm.eq.5) then
-            call output ('Loading fixed zero colour contours')
-          else if (iofm.eq.6) then
-            call output ('Loading RGB colours')
-          else if (iofm.eq.7) then
-            call output ('Loading background colours')
-          else if (iofm.eq.8) then
-            call output ('Loading heat colours')
-          else if (iofm.eq.9) then
-            call output ('Loading absolute black and white')
-          end if
 c
 c Tabulate the new ACTIVE and SAVE ofms
 c     
-          call ofmtba (imin, imax)
+          call ofmtba (imin, imax, dofcc)
+c
+c If unsuccessfully asked for fixed zero colour contours
+c do nothing
+c
+          good = (iofm.ne.5) .or. (iofm.eq.5 .and. dofcc)
+          if (good) then
 c
 c Restore last fiddle to ACTIVE ofm except for iofm=5
 c    
-          if (iofm.ne.5) call ofmrsf
+          
+            if (iofm.ne.5) call ofmrsf
 c
 c Apply ACTIVE ofm
 c    
-          call ofmapp
+            call ofmapp
+          end if
         else if (ch.eq.'d') then
 c    
 c Reverse ofm and apply it
@@ -1248,6 +1233,7 @@ cc
       real dc, col, m
       integer i, nl, iz
 c-----------------------------------------------------------------------
+      call output ('Tabulating absolute black and white table')
 c
 c For a linear transfer function, find the colour index (in the
 c range 1 -> na) that is equivalent to zero intensity
@@ -1260,7 +1246,6 @@ c of which is such that the maximum absolute value of the
 c displayed image has colour [R,G,B]=1.0 
 c 
       nl = max(na-iz,iz-1)
-c      write (*,*) 'iz=', iz
       dc = 1.0 / real(nl)
 c        
 c Set ACTIVE and SAVE table indices from the zero intensity colour 
@@ -1280,8 +1265,6 @@ c
 c
           col = col+dc
         end do
-c        write (*,*) 'ci range=', iz, 1
-c        write (*,*) 'col range=', 0.0, col-dc
       end if
 c
 c Set ACTIVE and SAVE table indices from the zero intensity colour 
@@ -1301,14 +1284,12 @@ c
 c
           col = col+dc
         end do
-c        write (*,*) 'ci range=', iz+1, na
-c        write (*,*) 'col range=', dc, col-dc
       end if
 c
       end 
 c
 c
-      subroutine ofmtba (imin, imax)
+      subroutine ofmtba (imin, imax, dofcc)
 c-----------------------------------------------------------------------
 c     Tabulate the ACTIVE and SAVE ofms for the specified ofm type
 c
@@ -1316,7 +1297,6 @@ c  Input
 c    imin,max   Image min and max that PGIMAG was called with. Only
 c		used for iofm=5
 c  Input in common
-c    dofcc   True if possible to generate fized zero colour contours
 c    iofm    Type of ofm
 c               1 => B&W
 c               2 => RJS rainbow 
@@ -1328,6 +1308,8 @@ c               7 => Background
 c               8 => Heat
 c	        9 => Absolute b&w
 c
+c  Output
+c    dofcc   True if generated fixed zero colour contours
 c  Output in common
 c    na      Number of levels in ACTIVE table
 c    ci1     First available colour index
@@ -1335,11 +1317,13 @@ c-----------------------------------------------------------------------
       implicit none
       include 'ofm.h'
       real imin, imax
+      logical dofcc
 c-----------------------------------------------------------------------
       if (iofm.lt.1 .or .iofm.gt.9) then
         iofm = 1
         call bug ('w', 'Unrecognized lookup table, setting b&w')
       end if
+      dofcc = .false.
 c
       if (iofm.eq.1 .or. iofm.eq.4 .or. iofm.eq.5 .or. iofm.eq.9) then
 c
@@ -1354,12 +1338,12 @@ c
 c
 c Floating zero colour contours
 c
-          call ofmtcc (0.0, 0.0)
+          call ofmtcc (0.0, 0.0, dofcc)
         else if (iofm.eq.5) then
 c
 c Fixed zero colour contours if possible
 c
-          if (dofcc) call ofmtcc (imin, imax)
+          call ofmtcc (imin, imax, dofcc)
         else if (iofm.eq.9) then
 c
 c Absolute b&w; if no zero crossing, just generate normal b&w table
@@ -1938,14 +1922,19 @@ c Select table of interest
 c
       if (iofm.eq.2) then
         itab = 1
+        call output ('Tabulating spectrum colours table')
       else if (iofm.eq.3) then
         itab = 4
+        call output ('Tabulating linear colours table')
       else if (iofm.eq.6) then
         itab = 7
+        call output ('Tabulating RGB colours table')
       else if (iofm.eq.7) then
         itab = 10
+        call output ('Tabulating background colours table')
       else if (iofm.eq.8) then
         itab = 13
+        call output ('Tabulating heat colours table')
       else        
         call bug ('f', 'Unrecognized lookup table type')
       end if
@@ -1979,6 +1968,7 @@ cc
       integer i
       real col
 c-----------------------------------------------------------------------
+      call output ('Tabulating linear black and white table')
       do i = 1, na
         col = real(i-1) / real(na-1)
         ofms(i,1) = col
@@ -1992,7 +1982,7 @@ c
       end
 c
 c
-      subroutine ofmtcc (imin, imax)
+      subroutine ofmtcc (imin, imax, dofcc)
 c-----------------------------------------------------------------------
 c     Generate Ron Ekers' colour contours SAVE and BASIC tables.  This
 c     lookup table is designed to show quickly whether you have signal
@@ -2012,74 +2002,115 @@ c    imin,max  Image min and max that was used in call to PGIMAG
 c              If given, fix blue/green boundary at zero.
 c  Input in common
 c    na        Number of levels in ACTIVE ofm
-c    dofcc     True if possible to generate fixed zero colour contours
+c  Output
+c    dofcc     True if generated fixed zero colour contours
 c  Output in common
+c    ci0       Zero intensity colour boundary colour index for
+c              fixed zero colour contours
 c    ofma      New ACTIVE ofm
 c    ofms      New SAVE ofm = ACTIVE ofm at this point
 c-----------------------------------------------------------------------
       implicit none
       include 'ofm.h'
       real imin, imax
+      logical dofcc
 cc
-      integer i1, i2, i, dn, diff, ntot, nlevs(10)
       real f
+      integer ci, nlc, cis(10), cie(10), i, j, diff, ntot
 c-----------------------------------------------------------------------
+c
+c See if we are doing fixed or floating zero colour contours.
+c If the former, we may not be able to make them for the given
+c pixel intensiy range
+c
+      if (iofm.eq.5) then
+        if (imin.lt.0.0 .and. imax.gt.0.0 .and.
+     +      abs(imax).gt.abs(imin)) then
+          dofcc = .true.
+        else
+          call bug ('w', 'Can''t generate fixed zero colour '//
+     +                 'contours for this pixel range')
+          return
+        end if
+      else
+        dofcc = .false.
+      end if
 c
 c Generate colours with blue/green boundary at zero if possible.
 c Otherwise evenly distribute the colours.
 c
-      if (imin.ne.0.0 .and. imax.ne.0.0) then
+      if (dofcc) then
+        call output ('Tabulating fixed zero colour contours table')
 c
-c Work out how many levels per colour for first 8 colours
+c Work out the colour index nearest to zero
 c
-        ntot = 0
         f = abs(imin) / (abs(imax) + abs(imin))
-        dn = int(f*real(na)/4.0)
-        diff = nint(f*real(na)) - 4*dn
-        do i = 1, 4
-          nlevs(i) = dn 
-          nlevs(i+4) = dn 
-        end do
-        ntot = 8 * dn
-        do i = 1, diff
-          nlevs(i) = nlevs(i) + 1
-          nlevs(9-i) = nlevs(9-i) + 1
-          ntot = ntot + 2
+        ci0 = nint(f*real(na) + 0.5)
+c
+c Nominal number of levels per colour
+c
+        nlc = nint(f*real(na)/4.0)
+c
+c Set colour index ranges for first 4 colours. We work backwards
+c from the colour index closest to zero, to ensure the boundary
+c is as close as possible to zero
+c
+        ci = ci0 - 1
+        do i = 4, 1, -1
+          cis(i) = max(1,ci-nlc+1)
+          cie(i) = max(1,ci)
+c
+          ci = ci - nlc
         end do
 c
-c Split the last two colours with whatever is left. 
+c Set colour index ranges for colours 5 to 8. We work forwards from
+c the zero boundary, and use the same number of colour indices
+c for the matching negative intensity colour.
 c
-        dn = (na - ntot)/2
-        nlevs(9) = dn
-        ntot = ntot + dn
-        nlevs(10) = na - ntot
-        ntot = ntot + nlevs(10)
+        j = 1
+        ci = ci0
+        do i = 5, 8, 1
+          nlc = cie(i-j) - cis(i-j) + 1
+          cis(i) = min(na,ci)
+          cie(i) = min(na,ci+nlc-1)
+c
+          j = j + 2
+          ci = ci + nlc
+        end do
+c
+c Now split whatever is left between the last two colours
+c        
+        diff = na - ci
+        nlc = nint(real(diff)/2.0)
+        do i = 9, 10
+          cis(i) = min(na,ci)
+          cie(i) = min(na,ci+nlc-1)
+c
+          ci = ci + nlc
+        end do
       else
+        call output ('Tabulating floating zero colour contours table')
 c
-c Work out how many levels per colour
+c Work out how many levels per colour and distribute any extra 
+c ones over all the colours
 c
-        dn = int(real(na)/10.0)
-        ntot = dn*10
-c
-c Distribute any extra ones over all the colours
-c
-        do i = 1, 10
-          nlevs(i) = dn
-        end do
-c
+        nlc = int(real(na)/10.0)
+        ntot = nlc*10
         diff = na - ntot
-        do i = 1, diff
-          nlevs(i) = nlevs(i) + 1
-          ntot = ntot + 1
+c
+        ci = 1
+        do i = 1, 10
+          cis(i) = ci
+          cie(i) = ci + nlc - 1
+          if (i.le.diff) cie(i) = cie(i) + 1
+c
+          ci = cie(i) + 1
         end do
       end if
 c
 c Black
 c
-      i1 = 1
-      i2 = i1 + nlevs(1) - 1
-c      write (*,*) 'i1,i2=',i1,i2
-      do i = i1, i2
+      do i = cis(1), cie(1)
         ofms(i,1) = 0.19608
         ofms(i,2) = 0.19608
         ofms(i,3) = 0.19608
@@ -2090,10 +2121,7 @@ c      write (*,*) 'i1,i2=',i1,i2
 c
 c Purple
 c
-      i1 = i2 + 1
-      i2 = i1 + nlevs(2) - 1
-c      write (*,*) 'i1,i2=',i1,i2
-      do i = i1, i2
+      do i = cis(2), cie(2)
         ofms(i,1) = 0.47451 
         ofms(i,2) = 0.0
         ofms(i,3) = 0.60784
@@ -2104,10 +2132,7 @@ c      write (*,*) 'i1,i2=',i1,i2
 c
 c Dark blue
 c
-      i1 = i2 + 1
-      i2 = i1 + nlevs(3) - 1
-c      write (*,*) 'i1,i2=',i1,i2
-      do i = i1, i2
+      do i = cis(3), cie(3)
         ofms(i,1) = 0.0
         ofms(i,2) = 0.0
         ofms(i,3) = 0.78431
@@ -2118,10 +2143,7 @@ c      write (*,*) 'i1,i2=',i1,i2
 c
 c Light blue
 c
-      i1 = i2 + 1
-      i2 = i1 + nlevs(4) - 1
-c      write (*,*) 'i1,i2=',i1,i2
-      do i = i1, i2
+      do i = cis(4), cie(4)
         ofms(i,1) = 0.37255
         ofms(i,2) = 0.65490
         ofms(i,3) = 0.92549
@@ -2130,18 +2152,9 @@ c      write (*,*) 'i1,i2=',i1,i2
         ofma(i,3) = 0.92549
       end do
 c
-c This is the colour index at the boundary between blue and green.
-c It is needed by the linear fiddler if we are keeping the zero
-c intensity fixed at this colour.
-c
-      ci0 = i - 1
-c
 c Light green
 c
-      i1 = i2 + 1
-      i2 = i1 + nlevs(5) - 1
-c      write (*,*) 'i1,i2=',i1,i2
-      do i = i1, i2
+      do i = cis(5), cie(5)
         ofms(i,1) = 0.0
         ofms(i,2) = 0.96471 
         ofms(i,3) = 0.0
@@ -2152,10 +2165,7 @@ c      write (*,*) 'i1,i2=',i1,i2
 c
 c Dark green
 c
-      i1 = i2 + 1
-      i2 = i1 + nlevs(6) - 1
-c      write (*,*) 'i1,i2=',i1,i2
-      do i = i1, i2
+      do i = cis(6), cie(6)
         ofms(i,1) = 0.0
         ofms(i,2) = 0.56863
         ofms(i,3) = 0.0
@@ -2166,10 +2176,7 @@ c      write (*,*) 'i1,i2=',i1,i2
 c
 c Yellow
 c
-      i1 = i2 + 1
-      i2 = i1 + nlevs(7) - 1
-c      write (*,*) 'i1,i2=',i1,i2
-      do i = i1, i2
+      do i = cis(7), cie(7)
         ofms(i,1) = 1.0
         ofms(i,2) = 1.0
         ofms(i,3) = 0.0
@@ -2180,10 +2187,7 @@ c      write (*,*) 'i1,i2=',i1,i2
 c
 c Orange
 c
-      i1 = i2 + 1
-      i2 = i1 + nlevs(8) - 1
-c      write (*,*) 'i1,i2=',i1,i2
-      do i = i1, i2
+      do i = cis(8), cie(8)
         ofms(i,1) = 1.0
         ofms(i,2) = 0.69412
         ofms(i,3) = 0.0
@@ -2194,11 +2198,8 @@ c      write (*,*) 'i1,i2=',i1,i2
 c
 c Red
 c
-      if (i2.lt.na) then
-        i1 = i2 + 1
-        i2 = min(na, i1+nlevs(9)-1)
-c        write (*,*) 'i1,i2=',i1,i2
-        do i = i1, i2
+      if (i-1.lt.na) then
+        do i = cis(9), cie(9)
           ofms(i,1) = 1.0
           ofms(i,2) = 0.0
           ofms(i,3) = 0.0
@@ -2210,11 +2211,8 @@ c        write (*,*) 'i1,i2=',i1,i2
 c
 c White
 c
-      if (i2.lt.na) then
-        i1 = i2 + 1
-        i2 = min(na, i1+nlevs(10)-1)
-c        write (*,*) 'i1,i2=',i1,i2
-        do i = i1, i2
+      if (i-1.lt.na) then
+        do i = cis(10), cie(10)
           ofms(i,1) = 1.0
           ofms(i,2) = 1.0
           ofms(i,3) = 1.0

@@ -8,6 +8,7 @@ c    rjs  11sep89 Improved documentation.
 c    rjs  30mar92 Use memalloc/memfree routines.
 c    rjs  19dec92 Near total rewrite, to appease nebk!
 c    rjs  22feb93 Include maxnax.h
+c    rjs  18sep05 Corrected declaration of the work array.
 c
 c************************************************************************
 c*TrnIni -- Initialise the transpose routines.
@@ -115,7 +116,7 @@ c		of size size(1,lu) by size(2,lu). This may be destroyed
 c		on output.
 c------------------------------------------------------------------------
 	include 'trnio.h'
-	real work(MAXDIM)
+	integer work(MAXDIM)
 	integer n1,n2,n3,pnt,k,j,i,offset,length,ifail
 c
 	n1 = size(1,lu)
@@ -194,7 +195,7 @@ c--
 c------------------------------------------------------------------------
 	include 'trnio.h'
 	integer i,j,k,ktot,ltot,pnt,n1,n2,n3,ifail,offset,length,pd,n3d
-	real work(MAXDIM)
+	integer work(MAXDIM)
 c
 	n1 = size(1,lu)
 	n2 = size(2,lu)

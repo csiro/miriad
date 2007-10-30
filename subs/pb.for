@@ -64,6 +64,7 @@ c   23jun03   pjt    add LOFAR
 c   30jun04   gmx    Updated WSRT beam
 c   01jan05   rjs    Merge ATNF and BIMA versions.
 c   21may05   rjs    Improved beamshape at 12mm.
+c   23jun05   rjs    Add model for 3mm primary beam.
 c************************************************************************
 c* pbList -- List known primary beam types.
 c& rjs
@@ -645,11 +646,11 @@ c------------------------------------------------------------------------
 c
 c Set coefficients for each telescope and frequency range
 c
-	integer NCOEFF,NATCAL1,NATCAL2,NATCAL3,NATCAK
+	integer NCOEFF,NATCAL1,NATCAL2,NATCAL3,NATCAK,NATCAW
 	parameter(NCOEFF=5,NATCAL3=3,NATCAL1=5,NATCAL2=7)
-	parameter(NATCAK=4)
+	parameter(NATCAK=4,NATCAW=4)
 	real atcas(NCOEFF),atcac(NCOEFF),atcax(NCOEFF)
-	real atcak2(NATCAK),atcak(NCOEFF)
+	real atcak2(NATCAK),atcak(NCOEFF),atcaw(NATCAW)
 	real atcal3(NATCAL3),atcal1(NATCAL1),atcal2(NATCAL2)
 	real vla(NCOEFF)
 c
@@ -666,6 +667,7 @@ c
 	data atcac /1.0, 1.08e-3, 1.31e-6, -1.17e-9,  1.07e-12/
 	data atcax /1.0, 1.04e-3,  8.36e-7,  -4.68e-10, 5.50e-13/
 	data atcak /1.0, 9.832e-4, 1.081e-6, -4.676e-10, 6.650e-13/
+	data atcaw /1.0, 1.271e-3,-3.040e-7,  1.410e-9/
 c
 c Model by Ravi at 22.235 GHz - 4th order poly.
 c
@@ -712,6 +714,8 @@ c
      *			NATCAK,atcak2,'Fourth order poly')
 	call pbAdd('ATCA',  15.5,25.5,    50.6, 0.03,  IPOLY,
      *			NCOEFF,atcak,'Reciprocal 4th order poly')
+	call pbAdd('ATCA',  80.0,120.0,   50.6, 0.03,  IPOLY,
+     *			NATCAW,atcaw,'Reciprocal 3th order poly')
 c
 c  VLA primary beam is taken from AIPS code.
 c
