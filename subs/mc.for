@@ -8,6 +8,8 @@ c    rjs  2dec94  Fix bug in mccnvl when convolving regions which are blanked.
 c    rjs 24nov95  Fix minor optimisation in mcCnvlr, and avoid aliasing
 c		  via changes in mcExtent.
 c    rjs 12oct99  Change in subroutine name only.
+c    rjs 22mar00  Protect against trying to convolve up to something larger
+c		  than MAXDIM.
 c************************************************************************
 	subroutine mcInitFG(tno1,bmaj1,bmin1,bpa1)
 c
@@ -39,6 +41,7 @@ c    tno1	Handle of the beam dataset.
 c    flags	Flags, as for CnvlIniF
 c
 c------------------------------------------------------------------------
+	include 'maxdim.h'
 	include 'mc.h'
 	integer npnt1,k,nx2,ny2
 	double precision crpix1,crpix2
@@ -83,7 +86,8 @@ c
 	flags = 's'
 	n1d = nextpow2(n1)
 	n2d = nextpow2(n2)
-	if(n1d.lt.4*nx2.or.n2d.lt.4*ny2)then
+	if((n1d.lt.4*nx2.or.n2d.lt.4*ny2).and.
+     *	   (2*max(n1d,n2d).le.MAXDIM))then
 	  flags = 'se'
 	  n1d = n1d + n1d
 	  n2d = n2d + n2d
