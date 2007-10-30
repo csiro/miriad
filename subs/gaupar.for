@@ -275,6 +275,26 @@ c
 c
 	end
 c************************************************************************
+	subroutine GauDPar1(lIn,bmaj1,bmin1,bpa1,
+     *		bmaj,bmin,bpa,fac,ifail)
+c
+	implicit none	
+	integer lIn,ifail
+	real bmaj1,bmin1,bpa1,bmaj,bmin,bpa,fac
+c------------------------------------------------------------------------
+	real bmaj2,bmin2,bpa2
+c
+c  Determine the parameters for the first one.
+c
+	call rdhdr(lIn,'bmaj',bmaj2,0.)
+	call rdhdr(lIn,'bmin',bmin2,bmaj2)
+	call rdhdr(lIn,'bpa',bpa2,0.)
+c
+	call GauDFac(bmaj1,bmin1,bpa1,bmaj2,bmin2,bpa2,
+     *	  fac,bmaj,bmin,bpa,ifail)
+c
+	end
+c************************************************************************
 	subroutine GauDfac(bmaj1,bmin1,bpa1,bmaj2,bmin2,bpa2,
      *	  fac,bmaj,bmin,bpa,ifail)
 c
@@ -314,7 +334,7 @@ c
 c
 	s = alpha + beta
 	t = sqrt((alpha-beta)**2 + gamma**2)
-	limit = min(bmaj,bmin)
+	limit = min(bmaj1,bmin1,bmaj2,bmin2)
 	limit = 0.1*limit*limit
 	if(alpha.lt.0.or.beta.lt.0.or.s.lt.t)then
 	  bmaj = 0
