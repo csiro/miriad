@@ -105,6 +105,7 @@ c    rjs  16oct90 Check that the vis file is cross-correlation data.
 c   mchw  24nov90 Corrected comment and protected sqrt in solve1.
 c    rjs  26nov90 Minor changes to the phase-solution routine, to make it
 c		  more persistent.
+c    mjs  25feb91 Changed references of itoa to itoaf.
 c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='(version 1.0 26-nov-90)')
@@ -579,14 +580,14 @@ c------------------------------------------------------------------------
 c
 c  Externals.
 c
-	character itoa*8
+	character itoaf*8
 c
 	if(nbad.ne.0) call bug('w',
-     *	  'No. visibilities with bad baseline numbers = '//itoa(nbad))
-	line = 'Total number of visibilities processed: '//itoa(TotVis)
+     *	  'No. visibilities with bad baseline numbers = '//itoaf(nbad))
+	line = 'Total number of visibilities processed: '//itoaf(TotVis)
 	call HisWrite(tgains,'SELFCAL: '//line)
 	call output(line)
-	line = 'Total number of solution intervals: '//itoa(nSols)
+	line = 'Total number of solution intervals: '//itoaf(nSols)
 	call HisWrite(tgains,'SELFCAL: '//line)
 	call output(line)
 c
@@ -642,7 +643,7 @@ c------------------------------------------------------------------------
 c
 c  Externals.
 c
-	character itoa*8
+	character itoaf*8
 c
 c  Sort the self-cal solutions into order of increasing time.
 c
@@ -712,10 +713,10 @@ c
 c
 c  Write out a summary to wake the user up from his/her slumber.
 c
-	call output('Number of solution intervals: '//itoa(nSols))
+	call output('Number of solution intervals: '//itoaf(nSols))
 	if(nbad.eq.nsols) call bug('f','No solutions were found')
 	if(nbad.ne.0) call bug('w','Intervals with no solution: '//
-     *							itoa(nbad))
+     *							itoaf(nbad))
 	Phi = sqrt(max(SumPhi/SumWts,0.))
 	Amp = sqrt(max(SumAmp/SumWts,0.))
 	Sigma = sqrt(max(SumChi2/SumExp,0.))
