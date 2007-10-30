@@ -68,6 +68,7 @@ c    rjs   3feb95 options=detaper. Better uv handling. Get rid of pbtype
 c		  and center keywords.
 c    rjs  27feb95 Correct sign error in the sign of an offset. Allow multiple
 c		  input vis datasets.
+c    rjs  17may95 More messages.
 c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='version 27-Feb-95')
@@ -138,6 +139,8 @@ c
 	lout = len1(out)
 	do i=1,npnt
 	  name = out(1:lout)//itoaf(i)
+	  call output('Image '//itoaf(i)//' used primary beam type '
+     *		//pbtype(i))
 	  call Process(tmap,pbtype(i),ra(i),dec(i),
      *				name,nsize,imsize,version,detaper)
 	enddo
@@ -258,6 +261,7 @@ c
 	integer nkeys
 	parameter(nkeys=38)
 	character keyw(nkeys)*8
+c
 	data keyw/   'bunit   ','btype   ',
      *	  'cdelt1  ','cdelt2  ','cdelt3  ','cdelt4  ','cdelt5  ',
      *				'crpix3  ','crpix4  ','crpix5  ',
@@ -348,6 +352,7 @@ c
 	line = 'DEMOS: Miriad DeMos '//version
         call hiswrite(tOut, line)
 	call hisinput(tOut,'DEMOS')
+	line = 'DEMOS: Primary beam used is '//pbtype
 	call hiswrite(tOut,line)
 	call hisclose(tOut)
 c
