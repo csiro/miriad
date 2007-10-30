@@ -43,11 +43,12 @@ c  History:
 c    rjs   1sep92 Original version.
 c    nebk  1dec95 Add keyword FORCE.  Will RJS talk to me again ?
 c    rjs  17dec97 Allow "interval" to be negative.
+c    rjs  06jan98 Make the above change work!
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
 	integer MAXSELS
-	parameter(version='Qvack: version 1.0 17-Dec-97')
+	parameter(version='Qvack: version 1.0 06-Jan-98')
 	parameter(MAXSELS=1024)
 c
 	character vis*64
@@ -129,13 +130,13 @@ c
 	    t1 = min(porg(3),porg(3)+interval)
 	    t2 = max(porg(3),porg(3)+interval)
 	    n = 0
-	    dowhile(pCopy(3).lt.t1)
+	    dowhile(pCopy(3).lt.t1.and.cnchan.gt.0)
 	      call uvread(tCopy,pCopy,data,cflags,maxchan,cnchan)
 	    enddo
-	    dowhile(pCopy(3).le.t2)
+	    dowhile(pCopy(3).le.t2.and.cnchan.gt.0)
 	      do i=1,cnchan
-	        if(flags(i))n = n + 1
-	        flags(i) = .false.
+	        if(cflags(i))n = n + 1
+	        cflags(i) = .false.
 	      enddo
 	      if(n.gt.0)nrec = nrec + 1
 	      ncorr = ncorr + n
