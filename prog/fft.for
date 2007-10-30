@@ -59,12 +59,13 @@ c    rjs   8nov94 Minor header beautification.
 c    rjs  02dec96 Better header.
 c    rjs  02jul97 cellscal change.
 c    rjs  12aug97 Forget NCP projection geometry.
+c    rjs  30sep99 Fiddles to bunit in the header.
 c------------------------------------------------------------------------
 	include 'maxnax.h'
 	include 'maxdim.h'
 	include 'mem.h'
 	character version*(*)
-	parameter(version='FFT: version 1.0 8-Nov-94' )
+	parameter(version='FFT: version 1.0 30-Sep-99' )
 c
 	character rIn*64,iIn*64,rOut*64,iOut*64,Mag*64,Phase*64
 	integer lrIn,liIn,lrOut,liOut,lMag,lPhase
@@ -396,19 +397,19 @@ c  Create the output header for the transformed file.
 c
 c------------------------------------------------------------------------
 	integer nkeys
-	parameter(nkeys=22)
+	parameter(nkeys=20)
 c
 	integer i
 	double precision cdelt
-	character ax*1
+	character ax*1,bunit*32
 	character keyw(nkeys)*8,line*64,ctype*16
 c
 c  Externals.
 c
 	character itoaf*1
 c
-	data keyw/   'bunit   ','obstime ','epoch   ','history ',
-     *    'object  ','telescop','vobs    ','restfreq','btype   ',
+	data keyw/   'obstime ','epoch   ','history ',
+     *    'object  ','telescop','vobs    ','restfreq',
      *	  'cellscal',
      *	  'cdelt3  ','crval3  ','crpix3  ','ctype3  ',
      *	  'cdelt4  ','crval4  ','crpix4  ','ctype4  ',
@@ -455,6 +456,17 @@ c
 	do i=1,nkeys
 	  call hdcopy(lIn,lOut,keyw(i))
 	enddo
+c
+c  Determine correct bunit.
+c
+	call rdhda(lin,bunit,' ')
+	if(bunit.eq.'JY/BEAM'.or.bunit.eq.'JY')then
+	  bunit = 'JY'
+	else
+	  bunit = ' '
+	endif
+	if(Type.eq.'Phase')bunit = 'DEGREES'
+	if(bunit.ne.' ')call wrhda(lOut,'bunit',bunit)
 c
 c  Write the history.
 c
