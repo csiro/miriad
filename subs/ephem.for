@@ -21,6 +21,7 @@ c    21mar97 rjs  Added llh2xyz.
 c    07jul97 rjs  Included fk45z and fk54z (from slalib), as well as
 c		  making lmn2sph return RA in range 0 to 2*PI.
 c    16jul97 rjs  Added azel.
+c    15jan99 rjs  Added new leap second.
 c
 c  General Reference:
 c    Explanatory Supplement to the Astronomical Almanac. 1993.
@@ -475,7 +476,7 @@ c------------------------------------------------------------------------
 c
 	logical init
 	integer NLEAP
-	parameter(NLEAP=21)
+	parameter(NLEAP=22)
 	character leap(NLEAP)*7
 	double precision dtime(NLEAP)
 	save init,leap
@@ -488,7 +489,7 @@ c
      *		   '77JAN01','78JAN01','79JAN01','80JAN01','81JUL01',
      *		   '82JUL01','83JUL01','85JUL01','88JAN01','90JAN01',
      *		   '91JAN01','92JUL01','93JUL01','94JUL01','96JAN01',
-     *		   '97JUL01'/
+     *		   '97JUL01','99JAN01'/
 c
 c  Initialise the table of leap seconds.
 c
