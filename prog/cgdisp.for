@@ -3210,10 +3210,10 @@ c
         ochan(1) = 0
         ochan(2) = 0
         if (nextra.ge.1) then
-          width(1) = nums(ipt)
-          width(2) = width(1)
+          ochan(1) = nums(ipt)
+          ochan(2) = ochan(1)
         end if
-        if (nextra.ge.2) width(2) = nums(ipt+1)
+        if (nextra.ge.2) ochan(2) = nums(ipt+1)
 c
 c Extremeties not used
 c
