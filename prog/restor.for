@@ -82,6 +82,7 @@ c    rjs  17jan94  Make sure beam is writable before writing out
 c		   beam parameters.
 c    rjs  16nov94  Substantial rework. Use new "restore" routines.
 c    rjs   3dec94  Copy mosaic table across, if it exists.
+c    rjs  02jul97  Cellscal change.
 c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='Restor: version 1.2 3-Dec-94')
@@ -361,14 +362,14 @@ c------------------------------------------------------------------------
 	real crpix
 	character line*72
 	integer nkeys
-	parameter(nkeys=30)
+	parameter(nkeys=31)
 	character keyw(nkeys)*8
 	data keyw/   'cdelt1  ','cdelt2  ','cdelt3  ','cdelt4  ',
      *	  'crpix4  ','crval1  ','crval2  ','crval3  ','crval4  ',
      *	  'ctype1  ','ctype2  ','ctype3  ','ctype4  ','btype   ',
      *	  'obstime ','epoch   ','niters  ','object  ',
      *	  'ltype   ','lstart  ','lwidth  ','lstep   ','pbfwhm  ',
-     *	  'telescop','history ','restfreq',
+     *	  'telescop','history ','restfreq','cellscal',
      *	  'vobs    ','observer','obsra   ','obsdec  '/
 c
 c  Copy keywords across, which have not changed.
