@@ -123,6 +123,7 @@ c   rjs   4may95 - Doc change only.
 c   rjs  29nov95 - Better treatment of model.
 c   rjs  13sep96 - Friday 13th! Improve check for negative components.
 c   rjs  29jan97 - Change default region of interest.
+c   rjs  10mar97 - Default region is all channels.
 c
 c  Bugs and Shortcomings:
 c     * The way it does convolutions is rather inefficent, partially
@@ -144,7 +145,7 @@ c		to write.
 c
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='MfClean: version 1.0 29-Jan-97')
+	parameter(version='MfClean: version 1.0 10-Mar-97')
 	include 'maxdim.h'
 	integer maxBeam,maxCmp1,maxCmp2,maxBox,maxRun,maxP
 	parameter(maxCmp1=66000,maxCmp2=32000,maxP=257)
@@ -1533,7 +1534,7 @@ c
 	trc(2) = min(nMap(2),blc(2)+width-1)
 c
 	blc(3) = 1
-	trc(3) = 1
+	trc(3) = nMap(3)
 c
 	call BoxDef(boxes,3,blc,trc)
 c
