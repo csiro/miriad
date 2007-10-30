@@ -15,6 +15,7 @@ c     5nov94 rjs  Update leap second table.
 c     8dec95 rjs  Add lmn2sph
 c    12dec95 rjs  Added veccross,lstjul.
 c    11mar96 rjs  Update leap second table.
+c    03oct96 rjs  Corrected leap second table error.
 c
 c  General Reference:
 c    Explanatory Supplement to the Astronomical Almanac. 1993.
@@ -372,7 +373,7 @@ c
 	data leap /'72JUL01','73JAN01','74JAN01','75JAN01','76JAN01',
      *		   '77JAN01','78JAN01','79JAN01','80JAN01','81JUL01',
      *		   '82JUL01','83JUL01','85JUL01','88JAN01','90JAN01',
-     *		   '91JAN01','92JUL01','93JUL01','94JUL01','95JAN01'/
+     *		   '91JAN01','92JUL01','93JUL01','94JUL01','96JAN01'/
 c
 c  Initialise the table of leap seconds.
 c
