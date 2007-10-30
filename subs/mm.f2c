@@ -1,0 +1,121 @@
+/************************************************************************/
+/*									*/
+/*  A set of FORTRAN-callable routines to allocate and free memory.	*/
+/*                                                                      */
+/*  Strictly speaking this is machine specific, but it should work on   */
+/*  most machines with fairly standard C support.			*/
+/*                                                                      */
+/*  History:                                                            */
+/*    26mar92 rjs  Original version.                                    */
+/*    27jul92 rjs  Significant changes, to support 'd','c' and 'l' data */
+/*		   types.						*/
+/*    23dec92 rjs  Use intf2c, to make it more system independent.	*/
+/*                                                                      */
+/************************************************************************/
+
+#include <stddef.h>
+#include <stdlib.h>
+
+/************************************************************************/
+fortran integer function mmsize(integer type)
+/**mmsize -- Determine the size of a data element in terms of "int"s.	*/
+/*&rjs                                                                  */
+/*:miscellaneous                                                        */
+/*+ FORTRAN call sequence:
+
+        integer function mmsize(type)
+c
+	implicit none
+        integer type
+
+  This returns the size of a data element in terms of a standard "int".
+
+  Input:
+    type	The data type. Possible values are:
+		  ichar('i')	Normal integer.
+		  ichar('r')	Real.
+		  ichar('d')	Double precision.
+		  ichar('l')    Logical.
+		  ichar('c')    Complex.
+
+  Output:
+    mmsize	An integer giving the size in terms of ints.
+
+/*--                                                                    */
+/*----------------------------------------------------------------------*/
+{
+  int size;
+
+  size = sizeof(int);
+
+  switch(type.val){
+    case 'i':	size = 1;		     break;
+    case 'r':	size = sizeof(float)/size;   break;
+    case 'd':	size = sizeof(double)/size;  break;
+    case 'l':	size = 1;		     break;
+    case 'c':	size = 2*sizeof(float)/size; break;
+    default:	bug_c('f',"Unrecognised data type, in mmSize");
+  }
+  return size;
+}
+/************************************************************************/
+fortran integer function mmalloc(integer data,integer size)
+/**mmalloc -- Allocate a block of memory.				*/
+/*&rjs                                                                  */
+/*:miscellaneous                                                        */
+/*+ FORTRAN call sequence:
+
+        integer function mmalloc(data,size)
+c
+	implicit none
+        integer size
+	integer data(*)
+
+  This allocates memory on the heap. This returns a FORTRAN index,
+  relative to data(1) of the allocated memory. The data type is
+  given by type.
+
+  Input:
+    data	The returned index is relative to data(1). That is, if
+		this routine returns index "i", the allocated memory is
+		at data(i).
+    size        Number of integers to allocate.
+
+  Output:
+    mmAlloc	Index to the allocated data. If the allocation fails,
+		an index of zero is returned.
+
+/*--                                                                    */
+/*----------------------------------------------------------------------*/
+{
+  int bytes,offset;
+  char *s;
+
+  bytes = sizeof(int);
+  s = malloc(size.val * bytes);
+  if(s == NULL) return 0;
+  offset = s - (char *)(data.addr);
+  if(offset % bytes) bug_c('f',"Allocated memory was not aligned");
+
+  return offset / bytes + 1;
+}
+/************************************************************************/
+fortran subroutine mmfree(integer data)
+/**mmfree -- Free a block of memory.					*/
+/*&rjs                                                                  */
+/*:miscellaneous                                                        */
+/*+ FORTRAN call sequence:
+
+        subroutine mmfree(data)
+        integer data(*)
+
+  This frees up a block of memory allocated with mmalloc.
+
+  Input:
+    data	Pointer to the block of memory to free.
+
+/*--                                                                    */
+/*----------------------------------------------------------------------*/
+{
+  free((char *)(data.addr));
+}
