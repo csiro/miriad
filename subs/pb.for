@@ -47,6 +47,7 @@ c   15feb93   nebk   pbfwhm=0 -> single dish, <0 -> unknown
 c   25oct93   rjs    Prevent floating underflow in exp function.
 c   25oct94   rjs    Complete rewrite.
 c   15mar95   rjs    Better model for Hat Ck and WSRT.
+c   27jul95   rjs    Initialise ifail before calling rpolyzr
 c************************************************************************
 c* pbRead -- Determine the primary beam type of a dataset.
 c& rjs
@@ -742,6 +743,7 @@ c
 c
 c  Now find the roots of the poly.
 c
+	ifail = 0
 	call rpolyzr(a,ncoeff-1,roots,ifail)
 	if(ifail.ne.0)call bug('f','Failed to find the poly roots')
 c
