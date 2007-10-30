@@ -136,6 +136,7 @@ c   rjs  29jan97 - Better default region.
 c   rjs  10mar97 - Default region is all channels.
 c   rjs  25mar97 - Checks when plane is constant and when a plane is not
 c		   selected.
+c   rjs  24jun97 - Correct call to Alignini.
 c  Important Constants:
 c    MaxDim	The max linear dimension of an input (or output) image.
 c
@@ -152,7 +153,7 @@ c		to write.
 c
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Clean: version 1.0 10-Mar-97')
+	parameter(version='Clean: version 1.0 24-Jun-97')
 	include 'maxdim.h'
 	integer MaxBeam,maxCmp1,maxCmp2,MaxBox,MaxRun,MaxP
 	parameter(maxCmp1=66000,MaxCmp2=32000,MaxP=257)
@@ -256,7 +257,7 @@ c
 	if(ModelNam.ne.' ')then
 	  call xyopen(lModel,ModelNam,'old',3,nModel)
 	  call rdhdi(lModel,'niters',totNiter,0)
-	  call AlignIni(lModel,lMap,nModel(1),nModel(2),nModel(3),
+	  call AlignIni(lModel,lMap,nMap(1),nMap(2),nMap(3),
      *						xoff,yoff,zoff)
 	else
 	  totNiter = 0
