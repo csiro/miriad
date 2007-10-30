@@ -29,6 +29,7 @@ c History:
 c   bpw   11sep90  created
 c   rjs   22feb91  Changed GetLun to LunGet to avoid a naming conflict.
 c   bpw   24feb91  changed references of atoi,etc to atoif,etc.
+c   pjt    5jan95  statement order for f2c (linux)
 c-----------------------------------------------------------------------
 
 
@@ -43,11 +44,11 @@ c- and then convert data to those coordinates
       integer          nitem
       integer          i, j
       logical          isdigitf
+      real             a(6)
+      real             pi
       integer          lun_kld
       data             lun_kld / 0 /
       save             lun_kld
-      real             a(6)
-      real             pi
 
       if( mode(1:2).eq.'ra' ) nnum = 6
       if( mode(1:2).eq.'lb' ) nnum = 2
