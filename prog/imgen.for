@@ -30,6 +30,7 @@ c	   point      A point source.
 c	   gaussian   An elliptical or circular gaussian.
 c	   disk       An elliptical or circular disk.
 c	   j1x        A J1(x)/x function
+c	   shell      2D projection of an optically-thin spherical shell
 c@ spar
 c	Parameters which give the characteristics of the object. The
 c	parameters are given as a sequence of values, with one to six
@@ -45,6 +46,7 @@ c	   point                  amp,x,y
 c	   gaussian               amp,x,y,bmaj,bmin,pa
 c	   disk                   amp,x,y,bmaj,bmin,pa
 c	   j1x                    amp,x,y,bmaj,bmin,pa
+c	   shell                  amp,x,y,bmaj
 c	Here "offset" is the offset level, "rms" is the rms value of
 c	the noise, "amp" is the normally peak value of the object (but
 c	see options=totflux below), "x" and "y" are the offset positions (in
@@ -102,6 +104,7 @@ c    mchw  19may93  Merged lgm and mchw versions; Adjust doc to match code.
 c    rjs   19aug94  Major rework. Multiple objects. Position angle. Better
 c		    coords.
 c    rjs   12sep94  totflux option.
+c    bmg   08may96  Added object=shell
 c  Bugs/Wishlist:
 c------------------------------------------------------------------------
 	character version*(*)
@@ -128,11 +131,12 @@ c
 	character objs(MAXOBJS)*8
 c
 	integer NOBJECTS
-	parameter(NOBJECTS=6)
+	parameter(NOBJECTS=7)
 	integer nobjs
 	character objects(NOBJECTS)*8
 	data objects/'level   ','noise   ','point   ',
-     *		     'gaussian','disk    ','j1x     '/
+     *		     'gaussian','disk    ','j1x     ',
+     *               'shell   '/
 c
 c  Get the parameters from the user.
 c
@@ -170,6 +174,12 @@ c
 	    if(min(fwhm1(i),fwhm2(i)).le.0)
      *	      call bug('f','BMAJ and BMIN parameters must be positive')
 	    posang(i) = posang(i) * pi/180.
+	  elseif(objs(i).eq.'shell') then
+            call keyr('spar',fwhm1(i),5.)
+	    fwhm1(i) = fwhm1(i) / 3600. * pi/180.
+	    if(fwhm1(i).le.0)
+     *	      call bug('f','BMAJ and BMIN parameters must be positive')
+	    posang(i) = 0
 	  else
 	    fwhm1(i) = 0
 	    fwhm2(i) = 0
@@ -502,7 +512,34 @@ c
               t = (xp*xp)/(fwhm2*fwhm2) + (yp*yp)/(fwhm1*fwhm1)
 	      if(t.lt.0.25) data(i) = data(i) + a
 	    enddo
+	  endif 
+c
+c  Handle a spherical shell.
+c
+	else if(object.eq.'shell')then
+	  if(totflux)then
+	    a = amp / (pi * sqrt(fwhm1 * fwhm1))
+	  else
+	    a = amp
 	  endif
+	  cospa = cos(posang)
+	  sinpa = sin(posang)
+	  limit = 0.5 * max(fwhm1,fwhm1)
+	  ymin = nint(y-limit)
+	  ymax = nint(y+limit)
+	  xmin = max(nint(x-limit),1)
+	  xmax = min(nint(x+limit),n1)
+	  if(ymin.le.j0.and.j0.le.ymax)then
+	    yy = (j0-y)
+	    do i=xmin,xmax
+	      xx = (i-x)
+              yp =  yy*cospa + xx*sinpa
+              xp = -yy*sinpa + xx*cospa
+              t = (xp*xp)/(fwhm1*fwhm1) + (yp*yp)/(fwhm1*fwhm1)
+	      if(t.lt.0.25) data(i) = data(i) + a/0.5/fwhm1/
+      *            sqrt(1.-4.*t)
+	    enddo
+	  endif 
 c
 c  Handle a DC level.
 c
