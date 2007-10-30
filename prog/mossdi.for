@@ -39,6 +39,7 @@ c    rjs  6feb95 - Copy mosaic table to output component table.
 c    rjs 27feb97 - Fix glaring bug in the default value for "clip".
 c    rjs 28feb97 - Last day of summer. Add options=positive.
 c    rjs 02jul97 - cellscal change.
+c    rjs 23jul97 - add pbtype.
 c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='MosSDI: version 1.0 28-Feb-97')
@@ -407,7 +408,7 @@ c------------------------------------------------------------------------
 	real crpix1,crpix2,crpix3
 	character line*72,txtblc*32,txttrc*32,num*2
 	integer nkeys
-	parameter(nkeys=16)
+	parameter(nkeys=17)
 	character keyw(nkeys)*8
 c
 c  Externals.
@@ -417,7 +418,7 @@ c
 	data keyw/   'obstime ','epoch   ','history ','lstart  ',
      *	  'lstep   ','ltype   ','lwidth  ','object  ','pbfwhm  ',
      *	  'observer','telescop','restfreq','vobs    ','btype   ',
-     *	  'mostable','cellscal'/
+     *	  'mostable','cellscal','pbtype  '/
 c
 c  Fill in some parameters that will have changed between the input
 c  and output.
