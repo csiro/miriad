@@ -98,7 +98,9 @@ c    07jul97 rjs   Gone back to the drawing board and rewrite program.
 c    22jul97 rjs   Fix bug when subimaging grossly.
 c    22jul97 rjs   Support epoch,projection and galactic/equatorial
 c		   axis conversion.
-c    23jul97 rjs   Add warning about blanked pixels. Add pbtype.
+c    23jul97 rjs   Add warning about blanked pixels. Add pbtype
+c    05aug97 rjs   Messages about equinox fiddles.
+c
 c To do:
 c----------------------------------------------------------------------
 	include 'maxdim.h'
@@ -110,7 +112,7 @@ c
 c
 	character in*64,out*64,tin*64,ctype*16,cellscal*12,proj*3
 	character line*64
-	double precision desc(4,MAXNAX),crpix,crval,cdelt,epoch
+	double precision desc(4,MAXNAX),crpix,crval,cdelt,epoch1,epoch2
 	logical noscale,dooff,doepo,dogaleq
 	integer ndesc,nax,naxis,nin(MAXNAX),nout(MAXNAX),ntin(MAXNAX)
 	integer i,k,n,lIn,lOut,lTmp,cOut,axes(MAXNAX)
@@ -195,8 +197,8 @@ c
 	    call coAxGet(lTmp,axes(i),ctype,crpix,crval,cdelt)
 	    call coAxSet(cOut,axes(i),ctype,crpix,crval,cdelt)
 	  enddo
-	  call coGetd(lTmp,'epoch',epoch)
-	  call coSetd(cOut,'epoch',epoch)
+	  call coGetd(lTmp,'epoch',epoch1)
+	  call coSetd(cOut,'epoch',epoch1)
 	  call coGeta(lTmp,'cellscal',cellscal)
 	  call coSeta(cOut,'cellscal',cellscal)
 	  call xyclose(lTmp)
@@ -241,6 +243,25 @@ c
 	GridSize = 0
 	call pcvtInit(cOut,lIn)
 	call BufIni(nBuf,off,minc,maxc,BufSize)
+c
+c  Give a message about any epoch conversion that is going to happen.
+c
+	call coGetd(lIn,'epoch',epoch1)
+	call coGetd(cOut,'epoch',epoch2)
+	if(abs(epoch1-epoch2).gt.0.5)then
+	  if(epoch1.eq.0)then
+	    call bug('w','Assuming the equinox of the input is B1950')
+	    epoch1 = 1950
+	  else if(epoch2.eq.0)then
+	    call bug('w','Assuming the equinox of the template is '
+     *							    //'B1950')
+	    epoch2 = 1950
+	  endif
+	  write(line,'(a,i5,a,i5,a)')'Input equinox is',
+     *		   nint(epoch1),'; Output equinox is',nint(epoch2),'.'
+	  call output(line)
+	endif
+c
 c
 	nblank = 0
 	do k=1,nOut(3)
@@ -366,7 +387,11 @@ c
 	call coAxGet(lOut,ira,ctype1,crpix1,crval1,cdelt1)
 	call coAxGet(lOut,idec,ctype2,crpix2,crval2,cdelt2)
 	call cogetd(lOut,'epoch',epoch)
-	if(epoch.eq.0)epoch = 1950
+	if(epoch.eq.0)then
+	  call bug('w','Assuming the equinox of the template '//
+     *						'is B1950')
+	  epoch = 1950
+	endif
 	call cogetd(lOut,'obstime',obstime)
 	if(obstime.eq.0)obstime = epo2jul(1950.0d0,'B')
 c
