@@ -661,15 +661,15 @@ c     lout  output file pointer
 c
 c-----------------------------------------------------------------------
       INTEGER NKEYS
-      PARAMETER(NKEYS=48)
+      PARAMETER(NKEYS=47)
       CHARACTER keyw(NKEYS)*8
       INTEGER   i
       DATA keyw/   'bunit   ','crota1  ','crota2  ','crota3  ',
      *  'crota4  ','crota5  ','crval1  ','crval2  ','crval3  ',
      *  'crval4  ','crval5  ','ctype1  ','ctype2  ','ctype3  ',
-     *  'ctype4  ','ctype5  ','date-obs','epoch   ','history ',
+     *  'ctype4  ','ctype5  ','obstime ','epoch   ','history ',
      *  'instrume','niters  ','object  ','telescop','observer',
-     *  'restfreq','vobs    ','xshift  ','yshift  ','obsra   ',
+     *  'restfreq','vobs    ','cellscal','obsra   ',
      *  'obsdec  ','cdelt1  ','cdelt2  ','cdelt3  ','cdelt4  ',
      *  'cdelt5  ','crpix1  ','crpix2  ','crpix3  ','crpix4  ',
      *  'crpix5  ','ltype   ','lstart  ','lwidth  ','lstep   ',
