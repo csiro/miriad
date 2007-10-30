@@ -46,6 +46,7 @@ c    mchw 10apr94   Put MAXWIN into maxdim.h
 c    rjs  27feb95   Fix options=unflagged for files with multiple
 c		    polarisations.
 c    rjs  12oct95   Copy xyphase variable.
+c    rjs  13jun96   Fix window selection.
 c  Bugs:
 c
 c= uvcat - Catenate and copy uv datasets; Apply gains file, Select windows.
@@ -87,7 +88,7 @@ c--
 c------------------------------------------------------------------------
         include 'maxdim.h'
 	character version*(*)
-	parameter(version='UvCat: version 1.0 12-Oct-95')
+	parameter(version='UvCat: version 1.0 13-Jun-96')
 c
 	integer nchan,vhand,lIn,lOut,i,j,nspect,nPol,Pol,SnPol,SPol
 	integer nschan(MAXWIN),ischan(MAXWIN),ioff,nwdata,length
@@ -359,7 +360,7 @@ c------------------------------------------------------------------------
 	double precision sdf(MAXWIN),sfreq(MAXWIN),restfreq(MAXWIN)
 	real systemp(MAXANT*MAXWIN),xyphase(MAXANT*MAXWIN)
 	character type*1
-	logical unspect,unschan,uischan,usdf,usfreq,urest,usyst,concat
+	logical unspect,unschan,uischan,usdf,usfreq,urest,usyst
 	logical uxyph
 c
 c  Get the dimensioning info.
@@ -400,6 +401,8 @@ c
 	do i=1,nspect
 	  if(wins(i))then
 	    nout = nout + 1
+	    nschand(nout) = nschan(i)
+	    ischand(nout) = ischan(i)	    
 	    nschan(nout) = nschan(i)
 	    ischan(nout) = offset
 	    offset = offset + nschan(i)
@@ -438,19 +441,14 @@ c  Determine the output parameters.
 c
 	window = nout.ne.nspect
 	if(window)then
-	  nspectd = 0
-	  do i=1,nspect
-	    if(wins(i))then
-	      concat = nspectd.gt.0
-	      if(concat)
-     *		concat = ischand(nspectd)+nschan(nspectd).eq.ischan(i)
-	      if(concat)then
-		nschand(nspectd) = nschand(nspectd) + nschan(i)
-	      else
-		nspectd = nspectd + 1
-		nschand(nspectd) = nschan(i)
-		ischand(nspectd) = ischan(i)
-	      endif
+	  nspectd = 1
+	  do i=2,nout
+	    if(ischand(nspectd)+nschand(nspectd).eq.ischan(i))then
+	      nschand(nspectd) = nschand(nspectd) + nschand(i)
+	    else
+	      nspectd = nspectd + 1
+	      nschand(nspectd) = nschand(i)
+	      ischand(nspectd) = ischand(i)
 	    endif
 	  enddo
 	endif
