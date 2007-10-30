@@ -286,6 +286,7 @@ c    nebk 13feb97  Add keyrod "3format"
 c    rjs  21jul97  Called initco earlier.
 c    rjs  31jul97  Simplify calls to initco,finco.
 c    rjs  23apr98  Increase size of bunit variable.
+c    rjs  25nov98  Fix compacting algorithm again!
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -323,7 +324,7 @@ c
       data dmm /1.0e30, -1.0e30/
       data gaps, doabut /.false., .false./
 c-----------------------------------------------------------------------
-      call output ('CgCurs: version 23-Apr-98')
+      call output ('CgCurs: version 25-Nov-98')
       call output (' ')
 c
 c Get user inputs
@@ -673,15 +674,20 @@ c
 cc
       integer il, len1, i, j
       character line*1000
+      logical dot
 c-----------------------------------------------------------------------
+      
       il = len1(str)
 c
-      if ((str(il:il).eq.'0'.and.trim0).or.
-     *	   str(il:il).eq.'.') str(il:il) = ' '
-      do i = il-1, 1, -1
-        if (((str(i:i).eq.'0'.and.trim0).or.str(i:i).eq.'.') .and.
-     *    str(i+1:i+1).eq.' ') str(i:i) = ' '
-      end do
+      dot = .true.
+      do i=il,1,-1
+	if(((str(i:i).eq.'0'.and.trim0).or.str(i:i).eq.'.').and.dot)then
+	  dot = str(i:i).eq.'0'
+	  str(i:i) = ' '
+	else 
+	  dot = str(i:i).eq.' '.or.str(i:i).eq.','
+	endif
+      enddo
 c
       j = 0
       do i = 1, il
