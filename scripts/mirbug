@@ -90,7 +90,11 @@
 
 # Locate the .doc file for this task.
 
-  set dotdoc = $MIRPDOC/$task.doc
+  if ( -r ./$task.doc ) then
+    set dotdoc = ./$task.doc
+  else
+    set dotdoc = $MIRPDOC/$task.doc
+  endif
   if ( "$task" == "general" ) then
     set dotdoc
   else if ( ! -f $dotdoc ) then
@@ -124,7 +128,7 @@
 	set doperson = 1
       endif
     endif
-    if ( ! $doperson )  echo "### Warning: Unable to determine who is responsible"
+    if ( ! $doperson )  echo "### Warning: Unable to determine who is responsible for this code"
   endif
 
 #  Get rid of any duplicate addresses.
