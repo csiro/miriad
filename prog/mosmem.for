@@ -86,9 +86,10 @@ c    rjs  24nov95  Default default image is now proportional to the gain.
 c    rjs  29Feb96  Call xyflush after each plane.
 c    mwp  27May97  Allow flux estimates for each plane.
 c    rjs  21jun97  Tidies up above change.
+c    rjs  24jun97  Correct call to alignini
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='MosMem: version 1.0 21-Jun-97')
+	parameter(version='MosMem: version 1.0 24-Jun-97')
 	include 'maxdim.h'
 	include 'maxnax.h'
 	include 'mem.h'
@@ -216,7 +217,7 @@ c  output.
 c
 	if(ModelNam.ne.' ')then
 	  call xyopen(lModel,ModelNam,'old',3,nModel)
-	  call AlignIni(lModel,lMap,nModel(1),nModel(2),nModel(3),
+	  call AlignIni(lModel,lMap,nMap(1),nMap(2),nMap(3),
      *						xmoff,ymoff,zmoff)
 	endif
 c
@@ -230,7 +231,7 @@ c  output.
 c
 	if(DefNam.ne.' ')then
 	  call xyopen(lDef,DefNam,'old',3,nDef)
-	  call AlignIni(lDef,lMap,nDef(1),nDef(2),nDef(3),
+	  call AlignIni(lDef,lMap,nMap(1),nMap(2),nMap(3),
      *						xdoff,ydoff,zdoff)
 	endif
 c
