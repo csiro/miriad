@@ -30,7 +30,7 @@ c	The "box" image is displayed by drawing little boxes (solid and
 c	hollow for positive and negative pixels) at the location of each
 c	selected pixel.  The size of the box scales with the value of the
 c	pixel.  This is a useful way to display rotation measure images 
-c	for example. The mask image blanking mask is logically ORed to all
+c	for example. The mask image blanking mask is logically ANDed to all
 c	the other image masks before they are displayed. The mask image 
 c	is not displayed.
 c
@@ -595,6 +595,7 @@ c    nebk 24mar97  Add COLS1 keyword
 c    nebk 01apr97  Don't write overlat ID string if overlay off plot
 c    nebk 15may97  Options=nofirst got broken at some point
 c    nebk 16may97  Replciate one value for all contours for COLS1
+c    nebk 18jul97  Doc change (masks ANDed not ORed)
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -658,7 +659,7 @@ c
       data lwid /maxconp3*1/
       data getvsc /.true./
 c-----------------------------------------------------------------------
-      call output ('CgDisp: version 16-May-97')
+      call output ('CgDisp: version 18-Jul-97')
       call output (' ')
 c
 c Get user inputs
