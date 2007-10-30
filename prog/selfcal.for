@@ -98,8 +98,8 @@ c	The default, for a given solution interval, is the antennae with the
 c	greatest weight.
 c@ flux
 c	If MODEL is blank, then the flux (Jy) of a point source model can
-c	be specified here. The default is 1 (assuming the model parameter
-c	is not given, and the apriori option is not selected).
+c	be specified here. Also used as the default flux for the apriori
+c	option. The default is 1 (assuming the model parameter is not given)
 c@ offset
 c	This gives the offset in arcseconds of a point source model (the
 c	offset is positive to the north and to the east). This parameter is
@@ -146,9 +146,12 @@ c    rjs  17may92 More fiddles to the way clipping is handled.
 c    rjs  23jun92 Changes to doc and messages (centre=>center, etc).
 c    rjs  22nov92 Added ntau keyword to output gains header.
 c    mchw 20apr93 Added flux keyword and option selradec.
+c    rjs  29mar93 Fiddle noise calculation. BASANT changes.
+c    rjs  18may93 If rms=0, assume rms=1.
+c    rjs  19may93 Merge mchw and rjs versions of selfcal.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Selfcal: version 1.0 20-Apr-93')
+	parameter(version='Selfcal: version 1.0 19-May-93')
 	integer MaxMod,maxsels,nhead
 	parameter(MaxMod=32,maxsels=256,nhead=3)
 c
@@ -258,7 +261,7 @@ c  Loop over all the models.
 c
 	if(nModel.eq.0)then
 	  call output('Reading the visibility file ...')
-	  call SelfSet(.true.,MinAnts,.true.) 
+	  call SelfSet(.true.,MinAnts) 
 	  call SelApply(tvis,sels,.true.)
 	  call Model(flag2,tvis,0,offset,flux,tscr,
      *				nhead,header,calget,nchan,nvis)
@@ -269,7 +272,7 @@ c
 	else
 	  do i=1,nModel
 	    call output('Calculating the model for '//Models(i))
-	    call SelfSet(i.eq.1,MinAnts,.true.)
+	    call SelfSet(i.eq.1,MinAnts)
 	    call xyopen(tmod,Models(i),'old',3,nsize)
 	    call ModelIni(tmod,tvis,sels,flag1)
 	    call Model(flag2,tvis,tmod,offset,Clip,tscr,
@@ -375,9 +378,8 @@ c   accept	This determines whether the data is accepted or discarded.
 c		It is always accepted unless the baseline number looks bad.
 c------------------------------------------------------------------------
 	include 'selfcal.h'
-	real inttime,tsys,JyperK
-	integer ant,i1,i2
-	double precision dbw,epsi
+	integer i1,i2
+	double precision rms
 c
 	if(first)then
 	  call uvrdvri(tvis,'nants',nants,0)
@@ -389,49 +391,35 @@ c
 	  nbad = 0
 	  first = .false.
 	endif
-	if(calcbw)then
-	  call uvfit1(tvis,'bandwidth',nchan,dbw,epsi)	  
-	  if(epsi.gt.0.1*dbw) call bug('w',
-     *	    'Channel bandwidths differ by greater than 10%')
-	  bw = 1.0e9 * dbw
-	  if(bw.le.0) call bug('f','Channels have zero bandwidth')
-	  calcbw = .false.
-	endif
 c
 c  Determine antenna numbers, to make sure they are OK.
 c
-	ant = nint(preamble(4))
-	i1 = ant / 256
-	i2 = ant - 256 * i1
-	accept = i1.ge.1.and.i1.le.nants.and.i2.ge.1.and.i2.le.nants
-     *		 	.and.i1.ne.i2
+	call basant(preamble(4),i1,i2)
+	accept = i1.le.nants.and.i2.le.nants
 c
 c  If all looks OK, then calculate the theoretical rms, and store away
 c  the information that we need.
 c
 	if(accept)then
-	  out(1) = ant
+	  out(1) = preamble(4)
 	  out(2) = preamble(3) - time0
-	  call uvrdvrr(tvis,'inttime',inttime,1.)
-	  call uvrdvrr(tvis,'systemp',tsys,0.)
-	  call uvrdvrr(tvis,'jyperk',JyperK,200.)
-	  out(3) = (JyperK*Tsys)**2/(inttime*bw)
-	  if(Out(3).le.0)out(3) = 1/inttime
+	  call uvinfo(tvis,'variance',rms)
+	  if(rms.le.0)rms=1
+	  out(3) = rms
 	else
 	  nbad = nbad + 1
 	endif
 	end
 c************************************************************************
-	subroutine SelfSet(firstd,MinAntsd,calcbwd)
+	subroutine SelfSet(firstd,MinAntsd)
 c
 	implicit none
-	logical firstd,calcbwd
+	logical firstd
 	integer MinAntsd
 c------------------------------------------------------------------------
 	include 'selfcal.h'
 	first = firstd
 	MinAnts = MinAntsd
-	calcbw = calcbwd
 	end
 c************************************************************************
 	subroutine SelfIni
@@ -615,24 +603,13 @@ c  We have found the slot containing the info. Accumulate in the
 c  info about this visibility record.
 c
 	  i = Indx(i)
-	  wt = 1/Out(3)
-	  bl = nint(Out(1))
-	  i1 = bl / 256
-	  i2 = bl - 256 * i1
-	  if(i1.lt.i2)then
-	    bl = (i2-1)*(i2-2)/2 + i1
-	  else
-	    bl = (i1-1)*(i1-2)/2 + i2
-	  endif
+	  wt = 0.5/Out(3)
+	  call basant(dble(out(1)),i1,i2)
+	  bl = (i2-1)*(i2-2)/2 + i1
 	  do k=nhead+1,nhead+5*nchan,5
 	    if(out(k+4).gt.0)then
-	      if(i1.lt.i2)then
-	        SumVM(bl,i) = SumVM(bl,i) +
-     *		  Wt*cmplx(Out(k),-Out(k+1))*cmplx(Out(k+2),Out(k+3))
-	      else
-	        SumVM(bl,i) = SumVM(bl,i) +
-     *		  Wt*cmplx(Out(k), Out(k+1))*cmplx(Out(k+2),-Out(k+3))
-	      endif
+	      SumVM(bl,i) = SumVM(bl,i) +
+     *		Wt*cmplx(Out(k),-Out(k+1))*cmplx(Out(k+2),Out(k+3))
 	      SumVV(bl,i) = SumVV(bl,i) + Wt * (Out(k)**2 + Out(k+1)**2)
 	      SumMM(i) = SumMM(i) + Wt * (Out(k+2)**2 + Out(k+3)**2)
 	      Weight(bl,i) = Weight(bl,i) + Wt
@@ -799,9 +776,9 @@ c
 	if(nbad.eq.nsols) call bug('f','No solutions were found')
 	if(nbad.ne.0) call bug('w','Intervals with no solution: '//
      *							itoaf(nbad))
-	Phi = sqrt(max(SumPhi/SumWts,0.))
-	Amp = sqrt(max(SumAmp/SumWts,0.))
-	Sigma = sqrt(max(SumChi2/SumExp,0.))
+	Phi = sqrt(abs(SumPhi/SumWts))
+	Amp = sqrt(abs(SumAmp/SumWts))
+	Sigma = sqrt(abs(SumChi2/SumExp))
 	write(line,'(a,f6.1)')'Rms phase change (degrees):',phi
 	call output(line)
 	call HisWrite(tgains,'SELFCAL: '//line)
@@ -1063,12 +1040,8 @@ c
 c  Accumulate the various statistics.
 c
 	  SumChi2 = SumChi2 + Resid
-	  if(phase)then
-	    SumExp   = SumExp + Count - sqrt(0.5)*(nantenna - 1)
-	  else
-	    SumExp = SumExp + Count - nantenna - 1
-	  endif
-	
+	  SumExp  = SumExp + Count
+c	
 	  k = 0
 	  do j=2,nants
 	    do i=1,j-1
