@@ -67,10 +67,10 @@ c
 c
 c  Perform the transformation
 c
-        call coinit (lIn)
-        call covelset (lIn, switch)
-        call cowrite (lIn)
-        call cofin (lIn)
+        call coinit(lIn)
+        call covelset(lIn, switch)
+        call cowrite(lIn,lIn)
+        call cofin(lIn)
 c
 c  Write out some history.
 c
