@@ -16,6 +16,7 @@ c     8dec95 rjs  Add lmn2sph
 c    12dec95 rjs  Added veccross,lstjul.
 c    11mar96 rjs  Update leap second table.
 c    03oct96 rjs  Corrected leap second table error.
+c    01mar97 rjs  Added new leap second.
 c
 c  General Reference:
 c    Explanatory Supplement to the Astronomical Almanac. 1993.
@@ -352,6 +353,7 @@ c		'tai'	International atomic time.
 c		'tdt'	Terrestial dynamical time. )
 c		'tdb'	Barycentric dynamical time.) Taken as identical.
 c		'et'	Ephemeris time.            )
+c		'tt'    Terrestial time		   )
 c		'utc'	Coordinated universal time.
 c  Output:
 c    deltime	The time difference, T - UTC, in days.
@@ -361,7 +363,7 @@ c------------------------------------------------------------------------
 c
 	logical init
 	integer NLEAP
-	parameter(NLEAP=20)
+	parameter(NLEAP=21)
 	character leap(NLEAP)*7
 	double precision dtime(NLEAP)
 	save init,leap
@@ -373,7 +375,8 @@ c
 	data leap /'72JUL01','73JAN01','74JAN01','75JAN01','76JAN01',
      *		   '77JAN01','78JAN01','79JAN01','80JAN01','81JUL01',
      *		   '82JUL01','83JUL01','85JUL01','88JAN01','90JAN01',
-     *		   '91JAN01','92JUL01','93JUL01','94JUL01','96JAN01'/
+     *		   '91JAN01','92JUL01','93JUL01','94JUL01','96JAN01',
+     *		   '97JUL01'/
 c
 c  Initialise the table of leap seconds.
 c
@@ -404,7 +407,8 @@ c  Determine what time system the user really wanted.
 c
 	if(sys.eq.'tai')then
 	  continue
-	else if(sys.eq.'tdt'.or.sys.eq.'tdb'.or.sys.eq.'et')then
+	else if(sys.eq.'tdt'.or.sys.eq.'tdb'.or.sys.eq.'et'.or.
+     *	  sys.eq.'tt')then
 	  deltime = deltime + 32.184
 	else if(sys.eq.'utc')then
 	  deltime = 0
