@@ -107,10 +107,11 @@ c    rjs   12sep94  totflux option.
 c    bmg   08may96  Added object=shell
 c    rjs   24sep96  Some corrections to object=shell.
 c    rjs   13dec96  Increase max number of objects.
+c    rjs   02jul97  cellscal change.
 c  Bugs/Wishlist:
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Imgen: version 1.1 12-Sep-94' )
+	parameter(version='Imgen: version 1.1 14-Jul-97' )
 	include 'mirconst.h'
 	include 'maxdim.h'
 	include 'maxnax.h'
@@ -125,7 +126,7 @@ c
 c  Source parameters.
 c
 	integer MAXOBJS
-	parameter(MAXOBJS=2048)
+	parameter(MAXOBJS=3000)
 	real fwhm1(MAXOBJS),fwhm2(MAXOBJS),posang(MAXOBJS)
 	real amp(MAXOBJS),x(MAXOBJS),y(MAXOBJS)
 	real fwhm1d(MAXOBJS),fwhm2d(MAXOBJS),posangd(MAXOBJS)
@@ -136,6 +137,11 @@ c
 	parameter(NOBJECTS=7)
 	integer nobjs
 	character objects(NOBJECTS)*8
+c
+c  Externals.
+c
+	logical keyprsnt
+c
 	data objects/'level   ','noise   ','point   ',
      *		     'gaussian','disk    ','j1x     ',
      *               'shell   '/
@@ -152,6 +158,7 @@ c
 	  objs(1) = 'gaussian'
 	  nobjs = 1
 	endif
+	if(keyprsnt('object'))call bug('f','Too many object for me!')
 c
 c  Get the source parameters.
 c
@@ -377,7 +384,7 @@ c------------------------------------------------------------------------
      *	  'epoch   ','ltype   ','lstart  ','lwidth  ',
      *	  'lstep   ','mask    ','niters  ','object  ','history ',
      *    'observer','obsra   ','obsdec  ','restfreq','telescop',
-     *	  'vobs    ','xshift  ','yshift  ','pbfwhm  ','btype   '/
+     *	  'vobs    ','cellscal','obstime ','pbfwhm  ','btype   '/
 c
 c  Either create a new header, or copy the old one.
 c
