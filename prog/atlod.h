@@ -9,6 +9,7 @@ c
 	integer nifs,nfreq(ATIF),nstoke(ATIF),polcode(ATIF,ATPOL)
 	double precision sfreq(ATIF),sdf(ATIF),restfreq(ATIF)
 	double precision time
+	integer tcorr
 	real xtsys(ATIF,ATANT),ytsys(ATIF,ATANT),chi
 	real u(ATBASE),v(ATBASE),w(ATBASE)
 	real xyphase(ATIF,ATANT),xyamp(ATIF,ATANT)
@@ -32,7 +33,7 @@ c
      *	  xtsys,ytsys,chi,xyphase,xyamp,xsampler,ysampler,u,v,w,inttime,
      *	    inttim,wts,
      *	  pnt,nbin,nused,tno,nants,nifs,nfreq,nstoke,polcode,edge,
-     *	    bchan,
+     *	    bchan,tcorr,
      *	  flag,dosw,dosam,dohann,birdie,dowt,dopmps,doxyp,doif,dobary,
      *	    newfreq,hires,
      *	  newsc,newpnt
