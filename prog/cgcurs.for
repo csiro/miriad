@@ -272,6 +272,7 @@ c    rjs  30aug95  Add a comma to appease g77
 c    nebk 03sep95  Add options=grid, non-linear axis labels and
 c		   detect black/white background of device
 c    rjs  12oct95  Fix compacting algorithm for integers.
+c    nebk 19oct95  Use image copy for all non-linear tranfer functions
 c To do:
 c
 c-----------------------------------------------------------------------
@@ -311,7 +312,7 @@ c
       data ipage, scale /0, 0.0, 0.0/
       data dmm /1.0e30, -1.0e30/
 c-----------------------------------------------------------------------
-      call output ('CgCurs: version 03-Sep-95')
+      call output ('CgCurs: version 19-Oct-95')
       call output ('Non-linear coordinate labels now correctly handled')
       call output ('New options=grid to overlay coordinate grid')
       call output (' ')
@@ -340,7 +341,7 @@ c "cursor" or "stats" option to find out image values.
 c
       call memalloc (ipim,  win(1)*win(2), 'r')
       call memalloc (ipnim, win(1)*win(2), 'i')
-      if (trfun.eq.'heq' .and. (cursor .or. stats)) then
+      if (cursor.or.stats) then
         call memalloc (ipims, win(1)*win(2), 'r')
       else
 c
@@ -429,9 +430,9 @@ c
 c
 c Useless for harcopy device
 c
-      call pgqinf ('hardcopy', hard, ilen)
-      if (hard.eq.'YES')
-     +   call bug ('f', 'This program not useful for hard copy devices')
+c      call pgqinf ('hardcopy', hard, ilen)
+c      if (hard.eq.'YES')
+c     +   call bug ('f', 'This program not useful for hard copy devices')
 c
 c Set line graphics colour indices
 c
@@ -491,14 +492,14 @@ c Read in image and save it if necessary
 c
          call readimcg (.true., mask, blank, lin, ibin, jbin, krng,
      +         blc, trc, .true., memi(ipnim), memr(ipim), doblnk, dmm)
-         if (trfun.eq.'heq' .and. (cursor .or. stats)) 
+         if (cursor .or. stats)
      +     call copyimcg (win(1)*win(2), memr(ipim), memr(ipims))
 c
 c Apply transfer function
 c
          call pgsci (labcol)
          if (dopixel) then
-           if (trfun.ne.'lin') call apptrfcg (pixr2, trfun, groff, 
+           if (trfun.ne.'lin') call apptrfcg (pixr, trfun, groff, 
      +        win(1)*win(2), memi(ipnim), memr(ipim), nbins,
      +        his, cumhis)
 c
@@ -508,7 +509,7 @@ c
            if (wedcod.eq.1 .or. wedcod.eq.2) then
             call pgsch (cs(1))
             call wedgecg (wedcod, wedwid, jj, trfun, groff, nbins,
-     +                    cumhis, wdgvp, pixr2(1), pixr2(2))
+     +                    cumhis, wdgvp, pixr(1), pixr(2))
            end if
          end if
 c
@@ -546,7 +547,7 @@ c
            if (wedcod.eq.3) then
             call pgsch (cs(1))
             call wedgecg (wedcod, wedwid, jj, trfun, groff, nbins,
-     +                    cumhis, wdgvp, pixr2(1), pixr2(2))
+     +                    cumhis, wdgvp, pixr(1), pixr(2))
            end if
 c
 c Modify lookup table
@@ -570,10 +571,10 @@ c
 c Read value and location under cursor
 c
              call pgsci (poscol)
-             call curpos (lin, win(1), win(2), memr(ipim), memr(ipims),
+             call curpos (lin, win(1), win(2), memr(ipims),
      +           memi(ipnim), labtyp, blc, naxis, cdelt, crpix, 
      +           crval, ctype, ibin, jbin, krng, dolog, lcurs, 
-     +           cgspec, cgdisp, mark, dobox, near, trfun, groff)
+     +           cgspec, cgdisp, mark, dobox, near)
              cmore = .false.
            end if
 c
@@ -583,10 +584,10 @@ c
 c Find image statistics in polygonal region defined by cursor
 c
              call pgsci (statcol)
-             call curstat (lin, blc, win(1), win(2), memr(ipim),
-     +          memr(ipims), memi(ipnim), labtyp, naxis, crval, 
-     +          cdelt, crpix, ctype, ibin, jbin, doreg, display, 
-     +          smore, dolog, mark, near, lstat, trfun, groff)
+             call curstat (lin, blc, win(1), win(2), memr(ipims), 
+     +          memi(ipnim), labtyp, naxis, crval, cdelt, crpix, 
+     +          ctype, ibin, jbin, doreg, display, smore,
+     +          dolog, mark, near, lstat)
            end if
 c
            if (.not.display .and. rmore) then
@@ -925,20 +926,16 @@ c
       end
 c
 c
-      subroutine curpos (lin, nx, ny, image, images, nimage, labtyp, 
-     +   blc, naxis, cdelt, crpix, crval, ctype, ibin, jbin, krng, 
-     +   dolog, lcurs, cgspec, cgdisp, mark, dobox, near, trfun, groff)
+      subroutine curpos (lin, nx, ny, image, nimage, labtyp, blc,
+     +   naxis, cdelt, crpix, crval, ctype, ibin, jbin, krng, 
+     +   dolog, lcurs, cgspec, cgdisp, mark, dobox, near)
 c-----------------------------------------------------------------------
 c     Return pixel location and value under cursor
 c
 c  Input:
 c     lin     Image handle
 c     nx,ny   Size of image
-c     image   Image
-c     images  A copy of image before the transfer function is applied
-c             This will only contain a meaningful image for trfun='heq'
-c             because we can't recover the true pixel value from the
-c             histogram equalized image
+c     image   The image without the transfer function is applied
 c     blc     blc of window being displayed
 c     labtyp  axis label types
 c     naxis   Number of axes in image
@@ -956,8 +953,6 @@ c     cgdisp  OUtput log file appropriate to CGDISP
 c     mark    Mark cursor locaitons
 c     dobox   Peak in 5x5 box
 c     near    FOrce cursor to nearest pixel
-c     trfun   Transfer function type
-c     groff   Offset for log offset
 c     plst,av STart plane and  number of planes averaged
 c
 c-----------------------------------------------------------------------
@@ -966,8 +961,8 @@ c
       integer nx, ny, nimage(nx,ny), blc(2), lcurs, naxis, 
      +  ibin, jbin, krng(2), lin
       double precision cdelt(naxis), crval(naxis), crpix(naxis)
-      real image(nx,ny), images(*), groff
-      character*(*) labtyp(2), ctype(naxis), trfun
+      real image(nx,ny)
+      character*(*) labtyp(2), ctype(naxis)
       logical dolog, cgspec, cgdisp, mark, dobox, near
 cc
       double precision pix(3), pixbs(2), ww(2)
@@ -1137,19 +1132,12 @@ c
             if (dolog .and. (.not.cgspec .and. .not.cgdisp))
      +          call txtwrite (lcurs, line, len1(line), iostat)
 c
-c Image intensity; allow for transfer function
+c Image intensity; allow for transfer function taking
 c  
             call strfi (nint(pix(1)), '(i4)', wstr(1), wl(1))
             call strfi (nint(pix(2)), '(i4)', wstr(2), wl(2))
             if (nimage(ib,jb).ne.0) then
               ival = image(ib,jb)
-              if (trfun.eq.'sqr') then
-                ival = ival**2 - groff
-              else if (trfun.eq.'log') then
-                ival = 10**ival - groff
-              else if (trfun.eq.'heq') then
-                call heqval (nx, ny, images, ib, jb, ival)
-              end if
 c
               write (line, 40) ival, wstr(1)(1:wl(1)), 
      +           wstr(2)(1:wl(2)), wstr(3)(1:wl(3))
@@ -1176,9 +1164,9 @@ c
       end
 c
 c
-      subroutine curstat (lin, blc, nx, ny, image, images, nimage, 
+      subroutine curstat (lin, blc, nx, ny, image, nimage, 
      +    labtyp, naxis, crval, cdelt, crpix, ctype, ibin, jbin,
-     +    doreg, redisp, smore, dolog, mark, near, lstat, trfun, groff)
+     +    doreg, redisp, smore, dolog, mark, near, lstat)
 c-----------------------------------------------------------------------
 c     Work out statistics from region marked with cursor.  If the
 c     delineated region is invalid, you exit from here, the sub-plot
@@ -1197,9 +1185,7 @@ c    crpix  Reference pixel
 c    crval  Reference value
 c    ctype  Axis types
 c    nx,ny  Size of displayed sub-image
-c    image  Sub-image
-c    images Copy of images before any transfer function applied
-c           Only meaningful image here if "heq" transfer function
+c    image  Sub-image (values without transfer function applied)
 c    nimage Normalization sub-image
 c    i,jbin Spatial pixel increment
 c    doreg  True if going on to cursor region option next
@@ -1210,17 +1196,15 @@ c    lstat  Handle of output text file
 c  Output:
 c    redisp Redisplay the image
 c    smore  Do more statistics options
-c    trfun  pixel map transfer function type
-c    groff  Log offset
 c-----------------------------------------------------------------------
       implicit none
 c
       integer nx, ny, nimage(nx,ny), blc(2), lin, lstat, naxis,
      +  ibin, jbin
       double precision crval(naxis), cdelt(naxis), crpix(naxis)
-      real image(nx,ny), images(*), groff
+      real image(nx,ny)
       logical redisp, doreg, smore, dolog, mark, near
-      character*(*) trfun, ctype(naxis), labtyp(2)
+      character*(*) ctype(naxis), labtyp(2)
 cc
       integer symb, nvmax, maxruns
       parameter (symb = 17, nvmax = 100, maxruns = 50)
@@ -1393,13 +1377,6 @@ c
 c Pixel unblanked, find value
 c
                       ival = image(i,j)
-                      if (trfun.eq.'sqr') then
-                        ival = ival**2 - groff
-                      else if (trfun.eq.'log') then
-                        ival = 10**ival - groff
-                      else if (trfun.eq.'heq') then
-                        call heqval (nx, ny, images, i, j, ival)
-                      end if
 c
 c Accumulate
 c
@@ -1710,15 +1687,6 @@ c
 c
         if(n.lt.3)call bug ('w', 'Degenerate polygon in ElimRVi')
       end if
-c
-      end
-c
-c
-      subroutine heqval (nx, ny, image, i, j, val)
-      implicit none
-      integer nx, ny, i, j
-      real image(nx,ny), val
-      val = image(i,j)
 c
       end
 c
