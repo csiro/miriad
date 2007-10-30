@@ -22,6 +22,9 @@ c	select all data. See the help on "select" for more information.
 c@ line
 c	Normal line parameter with the normal defaults. See the help on
 c	"line" for more information. 
+c@ stokes
+c	Stokes/polarisations to be processed. The default is XX,YY,XY,YX.
+c	The only other legitimate value is I.
 c@ model
 c	Input model of the total intensity image. No default. This should
 c	be the apparent total intensity (i.e. not corrected for primary
@@ -51,14 +54,19 @@ c    rjs  12dec96 Improve checks on reasonableness and error messages.
 c    rjs  07apr97 Include improved 13-cm fits, and make it work at L-band
 c		  as well.
 c    rjs  03may00 Now supports C and X band.
+c    rjs  25jul00 Simple support for stokes keyword.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
 	character version*(*)
-	parameter(version='Offaxis: version 1.0 03-May-00')
+	integer MAXPOL,PolXX,PolYY,PolXY,PolYX,PolI
+	parameter(version='Offaxis: version 1.0 25-Jul-00')
+	parameter(MAXPOL=4)
+	parameter(PolXX=-5,PolYY=-6,PolXY=-7,PolYX=-8,PolI=1)
 c
 	logical replace
 	integer nx,ny,nsize(2),tMod,tVis,tOut,nchan,i,j
+	integer npol,pols(MAXPOL)
 	integer pFlux,pll,pmm,pRad,pPsi
 	integer nCmp
 	real clip,chi
@@ -90,10 +98,25 @@ c
 c
 c  We must process all the 4 polarisation parameters.
 c
-	call uvDatSet('stokes',-5)
-	call uvDatSet('stokes',-6)
-	call uvDatSet('stokes',-7)
-	call uvDatSet('stokes',-8)
+	call uvDatGti('npol',npol)
+	if(npol.eq.0)then
+	  call uvDatSet('stokes',PolXX)
+	  call uvDatSet('stokes',PolYY)
+	  call uvDatSet('stokes',PolXY)
+	  call uvDatSet('stokes',PolYX)
+	else
+	  call uvDatGti('pols',pols)
+	  if(npol.eq.4)then
+	    if(pols(1).ne.PolXX.or.pols(2).ne.PolYY.or.
+     *	       pols(3).ne.PolXY.or.pols(4).ne.PolYX)
+     *	         call bug('f','Invalid polarizations selected')
+	  else if(npol.eq.1)then
+	    if(pols(1).ne.PolI)
+     *	         call bug('f','Invalid polarizations selected')
+	  else
+	    call bug('f','Invalid number of polarizations to process')
+	  endif
+	endif
 c
 c  Open the model, get the components.
 c
@@ -131,17 +154,17 @@ c
 	    call hisWrite(tOut,'OFFAXIS: Miriad '//version)
 	    call hisInput(tOut,'OFFAXIS')
 	    call hisClose(tOut)
-	    call uvputvri(tOut,'npol',4,1)
-	    call wrhdi(tOut,'npol',4)
+	    call uvputvri(tOut,'npol',npol,1)
+	    call wrhdi(tOut,'npol',npol)
 	  endif
 	  call VarOnit(tVis,tOut,ltype)
 c
 	  call uvDatRd(preamble,data(1,1),flags(1,1),MAXCHAN,nchan)
 	  if(nchan.eq.0)call bug('f','No appropriate data were found')
 	  dowhile(nchan.gt.0)
-	    call uvDatRd(preamble,data(1,2),flags(1,2),MAXCHAN,nchan)
-	    call uvDatRd(preamble,data(1,3),flags(1,3),MAXCHAN,nchan)
-	    call uvDatRd(preamble,data(1,4),flags(1,4),MAXCHAN,nchan)
+	    do j=2,npol
+	      call uvDatRd(preamble,data(1,j),flags(1,j),MAXCHAN,nchan)
+	    enddo
 	    call uvinfo(tVis,'sfreq',sfreq)
 c
 c  Generate the simulated stuff.
@@ -152,7 +175,12 @@ c
 c
 c  Difference or replace it now.
 c
-	    do j=1,4
+	    if(npol.eq.1)then
+	      do i=1,nchan
+		sim(i,1) = 0.5*(sim(i,1)+sim(i,2))
+	      enddo
+	    endif
+	    do j=1,npol
 	      if(replace)then
 	        do i=1,nchan
 		  data(i,j) = sim(i,j)
@@ -332,8 +360,8 @@ c
 	call options('options',opts,present,NOPTS)
 	replace = present(1)
 c
-	uvflags = 'dl3'
-	if(.not.present(2))uvflags(4:4) = 'c'
+	uvflags = 'dl3s'
+	if(.not.present(2))uvflags(7:7) = 'c'
 	if(.not.present(3))uvflags(5:5) = 'e'
 	if(.not.present(4))uvflags(6:6) = 'f'
 c
