@@ -74,6 +74,7 @@ c	  nopol   Do not apply polarisation leakage correction.
 c--
 c  History:
 c    26jun96 rjs  Original version.
+c    30jul96 rjs  Correct labelling of uvdist plots.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
@@ -800,7 +801,7 @@ c------------------------------------------------------------------------
 	else if(axis.eq.'phase')then
 	  GetVal = 180/pi * atan2(aimag(corr),real(corr))
 	else if(axis.eq.'uvdistance')then
-	  GetVal = sqrt(uvdist2/npnt)
+	  GetVal = 0.001 * sqrt(uvdist2/npnt)
 	else if(axis.eq.'time')then
 	  GetVal = 86400*(time - time0)
 	else if(axis.eq.'lst')then
