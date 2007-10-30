@@ -24,7 +24,7 @@ c	  % imspect  region=relpix,box(-4,-4,5,5)(10,50) for an xyv
 c	image, makes a spectrum of image planes 10 to 50 integrated
 c	over the center 10 x 10 pixels in the x-y plane. For a vxy
 c	image where the x and y size is 128x128, the corresponding
-c	region=box(10,61,50,70)(61,70).	Box refers image axes 1 and 2
+c	region=box(10,61,50,70)(61,70). Box refers image axes 1 and 2
 c	for either vxy or xyv images. The default is the entire image.
 c@ xaxis
 c	The x-axis can be plotted as 'channel' or the units in the image.
@@ -34,9 +34,9 @@ c	If 'average' then the pixels enclosed in the x-y area specified
 c	are averaged. If 'sum' they are summed and normalized if the units
 c	are known. Default is 'average'
 c@ yrange
-c	Y-axis range for plot.  Default self-scales.
+c	Y-axis range for plot. The default is to self-scale.
 c@ hann
-c	Hanning smoothing length (an odd integer < 15) Default is
+c	Hanning smoothing length (an odd integer < 15). The default is
 c	no smoothing (hann = 1).
 c@ options
 c	List of minimum match task enrichment options.
@@ -46,12 +46,7 @@ c	2deriv  Take 2-sided derivative of spectrum before plotting.
 c	curve   Plot the spectrum joining up the dots instead of the
 c	        default step-plot.
 c@ device
-c	Plot device/type (e.g. /retro, filename/im for hardcopy on a Vax,
-c	/sunview, filename/ps for harcopy on a Sun). The default is no plot.
-c	To print the hardcopy on the Vax use:
-c	  $PGPLOT filename
-c	To print the postscript file on the Sun:
-c	  %lpr filename
+c	Standard PGPLOT device. See the help on "device" for more information.
 c@ log
 c	Write spectrum to this ascii file. Default is no output file.
 c@ comment
@@ -94,6 +89,7 @@ c                  OPTIONS=CURVE in it has come back.  Fix properly.
 c    mjs  13mar93  pgplot subr names have less than 7 chars.
 c    nebk 28mar94  Write frequency axis label into log
 c    dar  28jun95  Added this comment to test RCS
+c    rjs  18may98  Correct computation of velocity axis values.
 c----------------------------------------------------------------------c
 	include 'maxdim.h'
 	integer maxco,maxnax,maxboxes,maxruns,naxis
@@ -106,11 +102,11 @@ c
 	real coeffs(maxco),hwork(maxco),yrange(2)
 	double precision restfreq
 	real xdmin, xdmax, ydmin, ydmax
-	integer lIn,lOut,vaxis,i,nsmth,nchan,iostat,ilen
+	integer lIn,lOut,vaxis,i,nsmth,nchan,iostat
 	integer lblc,ltrc
         logical none, deriv1, deriv2, curve
 	character*64 in,logf,xlabel,ylabel,device,xaxis,yaxis
-	character title*130, line*72, ans*3, comment*80, str*3, word*80
+	character title*130, line*72,comment*80, str*3, word*80
 	character*9 object,date,vctype*9
 	character*20 txtblc,txttrc
 c
@@ -120,7 +116,7 @@ c
         character itoaf*3
         logical   keyprsnt
 
-        call output( 'Imspect: version 1.0 28-Mar-94' )
+        call output( 'Imspect: version 1.0 18-May-98' )
 c
 c  Get inputs
 c
@@ -241,12 +237,7 @@ c
 c
 c  Make plots if requested.
 c       
-	  call pgqinf ('hardcopy',ans,ilen)
-	  if(ans.eq.'YES') then
-	    call pgscf(2)
-	  else
-	    call pgscf(1)
-	  end if
+	  call pgscf(2)
 	  call pgsch (1.1)
 	  call pgsls (1)
 	  call pgenv (xdmin, xdmax, ydmin, ydmax, 0, 0)
@@ -453,25 +444,18 @@ c    to get beam oversampling factor.
 c
 c----------------------------------------------------------------------c
 	integer i
-	real crpix,crval,cdelt
-	character caxis*1,ctype*9,bunit*10
+	character ctype*16,bunit*16
 	real bmaj,bmin,omega,cbof
+	double precision dtemp
 c
 c  Externals.
 c
 	character*1 itoaf
 	integer len1
 c
-c  Get coordinates and units from image.
-c
-	caxis = itoaf(vaxis)
-	call rdhda(lIn,'ctype'//caxis,ctype,' ')
-	call rdhdr(lIn,'crval'//caxis,crval,0.)
-	call rdhdr(lIn,'crpix'//caxis,crpix,0.)
-	call rdhdr(lIn,'cdelt'//caxis,cdelt,0.)
-c
 c  Get xlabel.
 c
+	call rdhda(lIn,'ctype'//itoaf(vaxis),ctype,' ')
 	if(xaxis.eq.'channel') then
 	  xlabel = 'Channel'
 	else if(ctype(1:4).eq.'FREQ') then
@@ -486,9 +470,12 @@ c
 c
 c  Convert xaxis units.
 c
+	call coInit(lIn)
 	do i=1,nchan
-	  value(i) = crval + (chan(i)-crpix)*cdelt
+	  call coCvt1(lIn,vaxis,'ap',dble(chan(i)),'aw',dtemp)
+	  value(i) = dtemp
 	enddo
+	call coFin(lIn)
 c
 c  Get units and beam oversampling factor from image header.
 c
