@@ -16,7 +16,8 @@ c
 	complex data(ATDATA)
 	integer pnt(ATIF,ATPOL,ATBASE,ATBIN),maxbin
 	real inttime(ATBASE)
-	logical flag(ATIF,ATPOL,ATBASE,ATBIN),dosw(ATBASE)
+	logical flag(ATIF,ATPOL,ATBASE,ATBIN),dosw(ATBASE),
+     *    bflags(33,ATIF),nobird(ATIF)
 	integer nused,tno,nants
 	logical dosam,dohann,doif,dobary,newfreq,newsc,newpnt
 	double precision obsra,obsdec,lat,long,ra,dec
@@ -26,4 +27,5 @@ c
      *	  data,
      *	  xtsys,ytsys,chi,xyphase,xyamp,xsampler,ysampler,u,v,w,inttime,
      *	  pnt,maxbin,nused,tno,nants,nifs,nfreq,nstoke,polcode,
-     *	  flag,dosw,dosam,dohann,doif,dobary,newfreq,newsc,newpnt
+     *	  flag,dosw,dosam,dohann,doif,dobary,newfreq,newsc,newpnt,
+     *    bflags,nobird
