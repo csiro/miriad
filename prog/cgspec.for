@@ -395,6 +395,7 @@ c    nebk 18dec95  New call for VPSIZCG (arg. DOABUT)
 c    nebk 18jan95  Fix silly problem in SPECBLNK causing overlays
 c                  to be ignored if there were blanks in spatial image
 c    nebk 30jan96  New call for CHNSELCG
+c    rjs  21jul97  Fiddles with calls to initco/finco.
 c
 c Ideas:
 c  * Be cleverer for sub-cubes which have spectra partly all zero
@@ -498,6 +499,7 @@ c
       if (ncon.gt.0)  then
         do i = 1, ncon
           call opimcg (maxnax, cin(i), lc(i), csize(1,i), cnaxis(i))
+	  call initco(lc(i))
           cmm(1,i) =  1.0e30
           cmm(2,i) = -1.0e30
           call chkax (lc(i), .false., cin(i))
@@ -512,6 +514,7 @@ c Open pixel map image as required
 c
       if (gin.ne.' ') then
         call opimcg (maxnax, gin, lg, gsize, gnaxis)
+	call initco(lg)
         gmm(1) =  1.0e30
         gmm(2) = -1.0e30
         call chkax (lg, .false., gin)
@@ -530,10 +533,12 @@ c Open mask image as required
 c
       if (bin.ne.' ') then
         call opimcg (maxnax, bin, lb, bsize, bnaxis)
+	call initco(lb)
         call chkax (lb, .false., bin)
         maskb = hdprsnt (lb, 'mask')
         if (.not.maskb)  then
           call bug ('w', 'The mask image does not have a mask')
+	  call finco(lb)
           call xyclose (lb)
           bin = ' '
         end if
@@ -635,6 +640,7 @@ c
            call readbcg (init, lb, ibin, jbin, krng, blc, trc, 
      +                  meml(ipimb), doblnkb)
         end do
+	call finco (lb)
         call xyclose (lb)
       end if
 c
@@ -788,9 +794,13 @@ c
 c
 c Close files and free up memory
 c
-      if (gin.ne.' ') call xyclose(lg)
+      if (gin.ne.' ')then
+	call finco(lg)
+	call xyclose(lg)
+      endif
       if (ncon.gt.0) then
         do i = 1, ncon
+	  call finco(lc(i))
           call xyclose (lc(i))
         end do
       end if
@@ -838,6 +848,7 @@ c for coordinate transformations in OLAYDEC because xyz and xy can
 c cannot exist together
 c
       call xyopen (lh, hin, 'old', maxnax, size)
+      call initco(lh)
       if (nofile.eq.1) then
         if (grid(1)) then
           call genpos (lh, ofile(1), blc, trc, maxpos, npos, opos)
@@ -918,6 +929,7 @@ c
 c Open image
 c
         call opimxyz (maxnax, spin(i), ls, ssize, snaxis)
+	call initco(ls)
         call chkax (ls, .true., spin(i))
 c
 c Find velocity/freq axis (again; checked to exist in OPNCHK)
@@ -1028,8 +1040,10 @@ c
         call memfree (ipsp, sizespec, 'r')
         call memfree (imsp, sizespec, 'l')
         if (iside(i).gt.0) call memfree (iwsp, sizespec, 'r')
+	call finco(ls)
         call xyzclose (ls)
       end do
+      call finco(lh)
       call xyclose (lh)
 c
 c Free up merged mask memory and close PGPLOT device
@@ -2159,7 +2173,6 @@ c
       npos = 0
       iostat = 0
       pix3 = dble(2*pl1+npl-1) / 2.0
-      call initco(lun)
 c
       do while (iostat.ne.-1)
         aline = ' '
@@ -2189,7 +2202,6 @@ c
         end if
       end do
 c
-      call finco (lun)
       call txtclose (lpos)
       aline = 'There were no locations in overlay file '//ofile(1:lo)
       if (npos.eq.0) call bug ('f', aline)
@@ -2270,6 +2282,7 @@ c
         end if
         call output (line)
         call xyopen (lh, spin(i), 'old', maxnax, size)
+	call initco(lh)
         call rdhdi (lh, 'naxis', naxis, 0)
 c
         call imminmax (lh, naxis, size, limin, limax)
@@ -2284,16 +2297,15 @@ c
           call bug ('f', line) 
         end if         
 c
-        call initco (lh)
         call w2wsco  (lh, iax, 'abspix', ' ', 1.0d0, 'absnat', ' ', v1)
         call w2wsco  (lh, iax, 'abspix', ' ', dble(size(iax)), 
      +                'absnat', ' ', v2)
-        call finco (lh)
 c
         lvmin = min(v1,v2)
         lvmax = max(v1,v2)
         vmin = min(vmin, lvmin)
         vmax = max(vmax, lvmax)
+	call finco(lh)
         call xyclose (lh)
       end do
 c
@@ -2920,7 +2932,6 @@ c
         typeo(i) = 'arcsec'
         win(i) = pos(i)
       end do
-      call initco (lh)
       call w2wco (lh, 2, typei, ' ', win, typeo, ' ', wout)
 c
       do i = 1, 2
@@ -3135,14 +3146,11 @@ c
         win(i) = pos(i)
         typeo(i) = 'absnat'
       end do
-      call initco (lh)
       call w2wco (lh, 2, typei, ' ', win, typeo, ' ', wout)
-      call finco (lh)
 c
 c Now work out the centre of the spectrum in spectrum image
 c coordinates (linear for velocity, arcsec for spatial)
 c
-      call initco (ls)
       naxis = min(3,snaxis)
       j = 1
       do i = 1, naxis
@@ -3193,7 +3201,6 @@ c
       do i = 1, naxis
         strc(i) = nint(wout(i))
       end do
-      call finco (ls)
 c
 c Make sure BLC and TRC in increasing order
 c
