@@ -140,6 +140,7 @@ c    rjs  19feb97 Better error messages.
 c    rjs  25aug97 Correct summing of weights in "merger"
 c    rjs  09nov98 Make rtime variable double precision to avoid loss
 c		  of timing precision.
+c    rjs  01dec98 Added extra warning message.
 c
 c  Bugs/Shortcomings:
 c   * Selfcal should check that the user is not mixing different
@@ -148,7 +149,7 @@ c   * It would be desirable to apply bandpasses, and merge gain tables,
 c     apply polarisation calibration, etc.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Selfcal: version 1.0 09-Nov-98')
+	parameter(version='Selfcal: version 1.0 01-Dec-98')
 	integer MaxMod,maxsels,nhead
 	parameter(MaxMod=32,maxsels=1024,nhead=3)
 c
@@ -164,6 +165,7 @@ c
 c  Externals.
 c
 	external header
+	logical hdprsnt
 c
 c  Get the input parameters.
 c
@@ -222,6 +224,14 @@ c
 	call rdhda(tvis,'obstype',obstype,'crosscorrelation')
 	if(obstype(1:5).ne.'cross')
      *	  call bug('f','The vis file is not cross correlation data')
+	if(hdprsnt(tvis,'leakage').or.hdprsnt(tvis,'bandpass'))then
+	  call bug('w',
+     *	    'Selfcal does not apply pre-existing calibration tables')
+	  if(hdprsnt(tvis,'leakage'))
+     *	    call bug('w','No polarization calibration applied')
+	  if(hdprsnt(tvis,'bandpass'))
+     *	    call bug('w','No bandpass calibration applied')
+	endif
 	if(doline)call uvset(tvis,'data',ltype,nchan,lstart,lwidth,
      *								lstep)
 c
