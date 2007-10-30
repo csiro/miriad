@@ -164,7 +164,7 @@ c
 	    do i=2,nchan
 	      freq = freq + sfreq(i)
 	    enddo
-	    freq = freq / nchan
+	    freq = freq / nchan * 1e9
 	    call opacGet(1,freq,els(j),temps(j),
      *	      presss(j),humids(j),factor(nselect),Tsky(nselect))
 	    airmass(nselect) = 1/sin(els(j))
@@ -263,7 +263,7 @@ c
 	      do i=2,nchan
 	        freq = freq + sfreq(i)
 	      enddo
-	      freq = freq / nchan
+	      freq = freq / nchan * 1e9
 	      call opacGet(1,freq,els(j),temps(j),
      *	      presss(j),humids(j),factor,Tsky)
 	      t3 = t3 / factor(1)

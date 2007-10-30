@@ -71,13 +71,15 @@ c  History:
 c    02feb01 rjs  Original version.
 c    07feb01 rjs  Write out elevation variable.
 c    02mar01 rjs  Label some output better.
+c    24apr01 rjs  Change format (and allow multiple formats) of met data file.
+c		  Remove code for opacGet.
 c------------------------------------------------------------------------
 	integer MAXPOL
 	parameter(MAXPOL=2)
 	include 'maxdim.h'
 	include 'mirconst.h'
 	character version*(*)
-	parameter(version='opcal: version 1.0 02-Mar-01')
+	parameter(version='opcal: version 1.0 24-Apr-01')
 	integer PolXX,PolYY,PolXY,PolYX
 	parameter(PolXX=-5,PolYY=-6,PolXY=-7,PolYX=-8)
 c
@@ -208,6 +210,7 @@ c
 	    call uvgetvrd(lVis,'sdf',sdf,nif)
 	    do i=1,nif
 	      freq0(i) = sfreq(i) + 0.5*(nschan(i)-1)*sdf(i)
+	      freq0(i) = freq0(i) * 1e9
 	    enddo
 	    call uvrdvrd(lVis,'ra',dtemp,0.d0)
 	    call uvrdvrd(lVis,'obsra',ra,dtemp)
@@ -318,25 +321,35 @@ c
 	double precision time
 c------------------------------------------------------------------------
 	double precision dtime
+	character type*12
 c
 c  Externals.
 c
 	integer tinNext
 c
 	if(tinNext().le.0)call bug('f','Error getting met data')
-	call tinGett(time,0.d0,'atime')
-        call tinGett(dtime,0.0d0,'dtime')
-	call tinSkip(1)
-	call tinGetr(t0,0.0)
-	call tinSkip(2)
-	call tinGetr(p0,0.0)
-	call tinSkip(1)
-	call tinGetr(h0,0.0)
+	call tinGeta(type,' ')
+	if(type.eq.'dsd34')then
+	  call tinGett(time,0.d0,'atime')
+	  call tinSkip(21)
+	  call tinGetr(t0,0.0)
+	  call tinGetr(p0,0.0)
+	  call tinGetr(h0,0.0)
+	else if(type.eq.'met')then
+	  call tinGett(time,0.d0,'atime')
+          call tinGett(dtime,0.0d0,'dtime')
+	  time = time + dtime - 10.0d0/24.0d0
+	  call tinSkip(1)
+	  call tinGetr(t0,0.0)
+	  call tinSkip(2)
+	  call tinGetr(p0,0.0)
+	  call tinSkip(1)
+	  call tinGetr(h0,0.0)
+	endif
 c
 c  Convert time to UT, temperature to kelvin, pressue to Pascals at Narrabri
 c  and humidity to a fraciton.
 c
-	time = time + dtime - 10.0d0/24.0d0
 	t0 = t0 + 273.15
 	p0 = 0.975*100.0*p0
 	h0 = 0.01*h0
@@ -496,69 +509,6 @@ c------------------------------------------------------------------------
 c
       end
 c************************************************************************
-	subroutine opacGet(nfreq,freq,el,t0,p0,h0,fac,Tb)
-c
-	implicit none
-	integer nfreq
-	real freq(nfreq),el,t0,p0,h0,fac(nfreq),Tb(nfreq)
-c
-c  Return the transmissivity of the atmosphere given frequency, elevation
-c  angle and met data.
-c
-c  Input:
-c    freq	Frequency (GHz).
-c    el		Elevation angle (radians).
-c    t0,p0,h0	Met data - Observatory temperature, pressure and humidity
-c		(Kelvins, Pascals and fraction).
-c
-c  Output:
-c    fac	Transmissivity.
-c    Tb		Sky brightness temperature.
-c------------------------------------------------------------------------
-	integer N
-	parameter(N=50)
-	real tau,Ldry,Lvap,T(N),Pdry(N),Pvap(N),z(N),P,zd
-	integer i
-c
-c  Atmospheric parameters.
-c
-        real M,R,Mv,g,rho0
-        parameter(M=28.96e-3,R=8.314,Mv=18e-3,rho0=1e3,g=9.81)
-c
-c  d - Temperature lapse rate                0.0065 K/m.
-c  z0 - Water vapour scale height,           2000 m.
-c  zmax - Max altitude of model atmosphere,  10000 m.
-c
-	real d,z0,zmax
-	parameter(d=0.0065,z0=2000.0,zmax=10000.0)
-c
-c  Externals.
-c
-	real pvapsat
-c
-c  Generate a model of the atmosphere -- T is temperature,
-c  Pdry is partial pressure of "dry" consistuents, Pvap is the
-c  partial pressure of the water vapour.
-c
-	do i=1,N
-	  zd = (i-1)*zmax/real(N)
-	  z(i) = zd
-	  T(i) = T0/(1+d/T0*zd)
-	  P = P0*exp(-M*g/(R*T0)*(zd+0.5*d*zd*zd/T0))
-	  Pvap(i) = min(h0*exp(-zd/z0)*pvapsat(T(1)),pvapsat(T(i)))
-	  Pdry(i) = P - Pvap(i)
-	enddo
-c
-c  Determine the transmissivity and sky brightness.
-c
-	do i=1,nfreq
-	  call refract(T,Pdry,Pvap,z,N,freq(i)*1e9,2.7,el,Tb(i),tau,
-     *							    Ldry,Lvap)
-	  fac(i) = exp(-tau)
-	enddo
-c
-	end
-c************************************************************************
 	subroutine diodeGet(vis,mdata,dfac,doff,MPOL,MWIN,MANT,
      *							nifs,nants)
 c
@@ -612,6 +562,7 @@ c
 	    call uvgetvrd(lVis,'sdf',sdf,nifs)
 	    do i=1,nifs
 	      freq0(i) = sfreq(i) + 0.5*(nschan(i)-1)*sdf(i)
+	      freq0(i) = freq0(i) * 1e9
 	    enddo
 	    call getlat(lVis,lat)
 	  endif
