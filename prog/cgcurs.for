@@ -1103,10 +1103,10 @@ c
               if (dolog .and. (.not.cgspec .and. .not.cgdisp))
      +          call txtwrite (lcurs, line, len1(line), iostat)
             else
-              write (line, 50) wstr(1)(1:wl(1)), wstr(2)(1:wl(2)), 
-     +                         wstr(3)(1:wl(3))
-50            format ('Image intensity(', a, ',', a, ',', a,
-     +                ')     : blanked')
+              write (line, 50) wstr(1)(1:wl(1)), 
+     +          wstr(2)(1:wl(2)), wstr(3)(1:wl(3))
+50            format ('Image intensity               : blanked',
+     +                ' at pixel (', a, ', ', a, ', ', a, ')')
               call output (line)
               if (dolog .and. (.not.cgspec .and. .not.cgdisp))
      +          call txtwrite (lcurs, line, len1(line), iostat)
