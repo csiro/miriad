@@ -42,11 +42,12 @@ c     5jun02 rjs  Added 3mm gain/elevation curve, and options=replace
 c     7jun02 rjs  Added Tony Wong's version of the gain/elev curve.
 c    17dec02 tw   Don't die if observing frequency is out of range.
 c    04may03 rjs  getlst would not work in some circumstances.
+c    17sep03 rjs  New gain/elevation curve at 3mm.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
 	character version*(*)
-	parameter(version='elevcor: version 1.0 04-May-03')
+	parameter(version='elevcor: version 1.0 17-Sep-03')
 	integer PolXX,PolYY,PolXY,PolYX
 	parameter(PolXX=-5,PolYY=-6,PolXY=-7,PolYX=-8)
 c
@@ -354,14 +355,22 @@ c	data (wpc(6,j),j=1,3)/1.0000, 0.0000,     0.0000/
 c
 c  Gain curve deduced by Tony Wong on 04-Jun-02.
 c
+c	data (wpc(1,j),j=1,3)/1.0000, 0.0000,     0.0000/
+c	data (wpc(2,j),j=1,3)/0.4927, 1.6729e-2, -1.3791e-4/
+c	data (wpc(3,j),j=1,3)/0.2367, 2.0487e-2, -1.3748e-4/
+c	data (wpc(4,j),j=1,3)/0.5405, 1.7040e-2, -1.5798e-4/
+c	data (wpc(5,j),j=1,3)/1.0000, 0.0000,     0.0000/
+c	data (wpc(6,j),j=1,3)/1.0000, 0.0000,     0.0000/
+c
+c  Gain curve deduced by Ravi on 04-Sep-03.
+c
 	data (wpc(1,j),j=1,3)/1.0000, 0.0000,     0.0000/
-	data (wpc(2,j),j=1,3)/0.4927, 1.6729e-2, -1.3791e-4/
-	data (wpc(3,j),j=1,3)/0.2367, 2.0487e-2, -1.3748e-4/
-	data (wpc(4,j),j=1,3)/0.5405, 1.7040e-2, -1.5798e-4/
+        data (wpc(2,j),j=1,3)/0.4877, 1.7936e-2, -1.5699e-4/
+        data (wpc(3,j),j=1,3)/0.7881, 0.8458e-2, -0.8442e-4/
+        data (wpc(4,j),j=1,3)/0.7549, 1.2585e-2, -1.6153e-4/
 	data (wpc(5,j),j=1,3)/1.0000, 0.0000,     0.0000/
 	data (wpc(6,j),j=1,3)/1.0000, 0.0000,     0.0000/
-
-
+c
 	call basant(baseline, ant1, ant2)
 	if(max(ant1,ant2).gt.ATANT.or.min(ant1,ant2).lt.1)
      *	  call bug('f','Bad antenna numbers')

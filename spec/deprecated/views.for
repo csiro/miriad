@@ -9,6 +9,7 @@ c    rjs  30apr90   Changed call sequence to BoxInput.
 c    bpw  28jan91   Include standard keywords
 c    rjs   3apr92   Uses memalloc. Standardised history.
 c    rjs   8mar93   Standardise history again?
+c    rjs   2jul97   cellscal change.
 c
 c= VIEWS - Generate a projection of the datacube
 c& bpw
@@ -167,12 +168,11 @@ c    version	Program version.
 c
 c------------------------------------------------------------------------
 	integer nkeys
-	parameter(nkeys=10)
+	parameter(nkeys=8)
 	integer i
 	character keyw(nkeys)*8,card*72
-	data keyw/   'bunit   ','date-obs','epoch   ','history ',
-     *	  'instrume','niters  ','object  ','telescop','xshift  ',
-     *	  'yshift  '/
+	data keyw/   'bunit   ','obstime ','epoch   ','history ',
+     *	  'instrume','niters  ','object  ','telescop'/
 c
 c  Copy crap from the input to the output header.
 c

@@ -116,6 +116,7 @@ c    13dec93 mchw   Added FFT option and worked on documentation.
 c    16dec93 mchw   Added option to switch x-axis to channel number.
 c    10apr94 mchw   Put MAXWIN into maxdim.h
 c    20oct94 mchw - Added colour. Changed default mode=inter.
+c    25dec94 pjt    Added pgask for interactive mode - nice with /xs !! 
 c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	integer maxsels
@@ -134,7 +135,7 @@ c-----------------------------------------------------------------------
 c
 c  Get the parameters given by the user.
 c
-        call output('UVSPECT: version 1.0 20-Oct-94')
+        call output('UVSPECT: version 1.0 25-Dec-94')
 	call keyini
 	call keyf('vis',vis,' ')
 	call keya('line',line,'channel')
@@ -413,7 +414,8 @@ c
 	    call pgend
 	  endif
 	  if(pdev.ne.device) call pgend
-	end do
+	end do 
+	call output('Going to the next interval')
 	call pgend
 	end
 c*******************************************************************
@@ -456,9 +458,7 @@ c
 c
 c  Options.
 c
-	call output ('Options: Help, Device, Limits, Freq, Velocity')
-	call output ('Options: Position, Write, Quit, Replot, End')
-	call output ('Options: Channel')
+	call showhelp
 	replot = .false.
 	loop = .true.
 	nloop = 0
@@ -468,6 +468,7 @@ c  cursor is available on device=/retro but pgplot does not think so !!
 c	  call pgqinf('CURSOR',curse,il)
 c	  if(curse.eq.'YES'.and.mode.eq.'inter') then
 	  if(mode.eq.'inter') then
+	    call pgask(.FALSE.)
 	    call pgcurs(xx,yy,ans)
 	    if(ans.eq.char(0)) loop = .false.
 	    call output('Enter option: ')
@@ -475,7 +476,9 @@ c	  if(curse.eq.'YES'.and.mode.eq.'inter') then
 	    call prompt (ans, il, 'Enter option: ')
 	  endif
 	  call ucase(ans)
-	  if(ans.eq.'D') then
+	  if(ans.eq.'?') then
+	    call showhelp
+	  else if(ans.eq.'D') then
 	    call prompt(pdev,il,'Enter plot device: ')
 	  else if(ans.eq.'L') then
 	    call getwin (xlo,ylo,xhi,yhi)
@@ -554,7 +557,13 @@ c
 	  end if
 	enddo
 	end
-c****************************************************************
+c***********************************************************************
+	subroutine showhelp
+	call output ('Options: Help, Device, Limits, Freq, Velocity')
+	call output ('Options: Position, Write, Quit, Replot, End')
+	call output ('Options: Channel')
+	end
+c***********************************************************************
 	subroutine help
 	call output('Type 1st character to select option:')
 	call output('Device - enter new plot device')

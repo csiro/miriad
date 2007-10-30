@@ -91,13 +91,14 @@ c    26may02 rjs  Added mode=neither!
 c    04may03 rjs  Looks like it has been flawed with default met file format
 c	          for 2 years!!
 c    04may03 rjs  getlst would return the wrong lst in some circumstances.
+c    13may04 rjs  Trivial error message correction.
 c------------------------------------------------------------------------
 	integer MAXPOL,MAXSELS
 	parameter(MAXPOL=2,MAXSELS=1024)
 	include 'maxdim.h'
 	include 'mirconst.h'
 	character version*(*)
-	parameter(version='opcal: version 1.0 04-May-03')
+	parameter(version='opcal: version 1.0 13-May-04')
 	integer PolXX,PolYY,PolXY,PolYX
 	parameter(PolXX=-5,PolYY=-6,PolXY=-7,PolYX=-8)
 c
@@ -192,7 +193,7 @@ c
         if(hdprsnt(lVis,'gains').or.hdprsnt(lVis,'leakage').or.
      *     hdprsnt(lVis,'bandpass'))then
           call bug('w',
-     *      'Uvdiff does not apply pre-existing calibration tables')
+     *      'OpCal does not apply pre-existing calibration tables')
           if(hdprsnt(lVis,'gains'))
      *      call bug('w','No antenna gain calibration applied')
           if(hdprsnt(lVis,'leakage'))

@@ -33,7 +33,12 @@ c@ elmin
 c	Minimum platform elevation in degrees. The default is 20.
 c@ trange
 c	Three parameters giving the LST of start, end and increment, all in
-c	hours. The default is -6,6,0.1
+c	hours. The default is -6,6,0.
+c@ ddec
+c	This gives a set of offset declinations, in degrees, to scan. Several
+c	values can be given. The offset declinations are scanned on successive
+c	days, each with the LST range given by the "trange" parameter. The
+c	default is 0.
 c@ dish
 c	This gives two parameters: the dish diameter (in metres) and the
 c	overall efficiency (including any correlator sensitivity loss).
@@ -54,10 +59,11 @@ c-
 c  History:
 c    mjk  16aug01 Original version.
 c    rjs  23aug01 Change to output Miriad dataset.
+c    rjs  10dec01 Added ddec parameter.
 c------------------------------------------------------------------------
 	character version*(*)
-	integer MAXMOD
-	parameter(MAXMOD=3)
+	integer MAXMOD,MAXDEC
+	parameter(MAXMOD=3,MAXDEC=30)
 	parameter(version='version 1.0 23-Aug-01')
 	include 'maxdim.h'
 	include 'mirconst.h'
@@ -67,11 +73,11 @@ c
 	double precision ra,dec,ra0,dec0
 	real Dextent,overhead,offset,lat,freq,bw,elmin,sigma
 	real T,Tstart,Tstop,Tinc,inttime,psi,systemp
-	integer nchan,nant,tno,i,j,k,nrec,nout,offsrc,errcnt
-	integer id,npr,nmod
+	integer nchan,nant,tno,i,j,k,l,nrec,nout,offsrc,errcnt
+	integer id,npr,nmod,ndec
 	complex data(MAXCHAN*MAXMOD)
 	logical flags(MAXCHAN)
-	real uvw(3,MAXANT),pbfwhm
+	real uvw(3,MAXANT),pbfwhm,ddec(MAXDEC)
 	real az,el,dT,sfreq,sdf,dishdiam,eta,jyperk,Trec,Tsky
 	double precision along,t0,preamble(5),u,v,w
 	character sctypes(2)*8,sctype*8
@@ -100,6 +106,14 @@ c
 	call keyr('drift',overhead,0.)
 	call keyr('offset',offset,0.)
 	call keyr('lat',lat,45.)
+	call mkeyr('ddec',ddec,MAXDEC,ndec)
+	if(ndec.eq.0)then
+	  ddec(1) = 0
+	  ndec = 1
+	endif
+	do i=1,ndec
+	  ddec(i) = PI/180.0 * ddec(i)
+	enddo
 	call mkeya('model',model,MAXMOD,nmod)
 	if(nmod.ne.1.and.nmod.ne.3)call bug('f',
      *	  'Invalid number of models')
@@ -142,7 +156,7 @@ c  Initialise the description of the observation.
 c
 	call output('Initialising description of the array ...')
 	call amInit(config,sctype,dopara,Dextent,overhead,offset,
-     *	   real(180.d0/DPI*dec),lat,CMKS*1e-9,elmin,nant,err)
+     *	   lat,CMKS*1e-9,elmin,nant,err)
 	if(err)
      *	  call bug('f','Error initialising the observation description')
 c
@@ -198,51 +212,55 @@ c
 	errcnt = 0
 	nrec = int((Tstop - Tstart) / Tinc) + 1
 	npr = max(10,nint(0.01*nrec))
-	T = Tstart
-	do k=1,nrec
-	  call amComp(T,dT,uvw,psi,az,el,onflag,err)
-	  if(err)then
-	    errcnt = errcnt + 1
-	  else if(onflag)then
-	    call uvputvrr(tno,'dra',real(dT*DPI/12.d0*cos(dec)),1)
-	    call uvputvrr(tno,'chi',psi,1)
-	    ra0 = ra + dT*DPI/12.d0
-	    dec0 = dec
-	    call visNext(ra0,dec0)
+	do l=1,ndec
+	  call amDec(dec+ddec(l))
+	  T = Tstart
+	  do k=1,nrec
+	    call amComp(T,dT,uvw,psi,az,el,onflag,err)
+	    if(err)then
+	      errcnt = errcnt + 1
+	    else if(onflag)then
+	      ra0 = ra + dT*DPI/12.d0
+	      dec0 = dec + ddec(l)
+	      call uvputvrr(tno,'dra',real(dT*DPI/12.d0*cos(dec)),1)
+	      call uvputvrr(tno,'ddec',ddec(l),1)
+	      call uvputvrr(tno,'chi',psi,1)
+	      call visNext(ra0,dec0)
 c
-	    systemp = Trec + Tsky/sin(el)
-	    if(systemp.gt.0)call uvputvrr(tno,'systemp',systemp,1)
-	    sigma = jyperk*systemp/sqrt(2*abs(sdf)*1e9*inttime)
-	    do j=2,nant
-	      do i=1,j-1
-		u = uvw(1,j) - uvw(1,i)
-		v = uvw(2,j) - uvw(2,i)
-		w = uvw(3,j) - uvw(3,i)
-		preamble(1) = u/(CMKS * 1e-9)
-		preamble(2) = v/(CMKS * 1e-9)
-		preamble(3) = w/(CMKS * 1e-9)
-		preamble(4) = 365.25/366.25/24.0*T + T0
-		preamble(5) = antbas(i,j)
+	      systemp = Trec + Tsky/sin(el)
+	      if(systemp.gt.0)call uvputvrr(tno,'systemp',systemp,1)
+	      sigma = jyperk*systemp/sqrt(2*abs(sdf)*1e9*inttime)
+	      do j=2,nant
+	        do i=1,j-1
+		  u = uvw(1,j) - uvw(1,i)
+		  v = uvw(2,j) - uvw(2,i)
+		  w = uvw(3,j) - uvw(3,i)
+		  preamble(1) = u/(CMKS * 1e-9)
+		  preamble(2) = v/(CMKS * 1e-9)
+		  preamble(3) = w/(CMKS * 1e-9)
+		  preamble(4) = 365.25/366.25*(l-1+T/24.0) + T0
+		  preamble(5) = antbas(i,j)
 c
-		call visPnt(data,nchan,u,v,w,chat,dishdiam)
-		if(nmod.eq.1)then
-		  if(sigma.gt.0)call AddNoise(data,nchan,sigma)
-		  call uvwrite(tno,preamble,data,flags,nchan)
-		else
-		  call writeout(tno,preamble,data,flags,nchan,nmod,
+		  call visPnt(data,nchan,u,v,w,chat,dishdiam)
+		  if(nmod.eq.1)then
+		    if(sigma.gt.0)call AddNoise(data,nchan,sigma)
+		    call uvwrite(tno,preamble,data,flags,nchan)
+		  else
+		    call writeout(tno,preamble,data,flags,nchan,nmod,
      *							psi,sigma,circ)
-		endif
+		  endif
+	        enddo
 	      enddo
-	    enddo
-	  else
-	    offsrc = offsrc + 1
-	  endif
-	  T = T + Tinc
-	  if(mod(k,npr).eq.0)then
-	    id = nint(100.0*real(k)/nrec)
-	    if(id.lt.100)
+	    else
+	      offsrc = offsrc + 1
+	    endif
+	    T = T + Tinc
+	    if(mod(k,npr).eq.0)then
+	      id = nint(100.0*real(k+(l-1)*nrec)/(ndec*nrec))
+	      if(id.lt.100)
      *		call output(stcat(' Completed '//itoaf(id),'% ...'))
-	  endif
+	    endif
+	  enddo
 	enddo
 c
 	call visFin

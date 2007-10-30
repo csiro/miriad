@@ -1,7 +1,7 @@
 
 	subroutine aminit (config, xsctype, xparallactify,
      :                         xDextent, xoverhead,
-     :                         xoffset, xdec, xlat, xfrq, xelmin,
+     :                         xoffset, xlat, xfrq, xelmin,
      :                         xnant, err)
 
 
@@ -18,7 +18,6 @@
 	real xDextent
 	real xoverhead
 	real xoffset
-	real xdec
 	real xlat
 	real xfrq
 	real xelmin
@@ -31,7 +30,6 @@
 
 	err = .false.
 
-	dec   = xdec * degrad
 	lat   = xlat * degrad
 	elmin = xelmin * degrad
 
@@ -284,10 +282,19 @@
 	end if
 
 	end
-
-
-******************************************************
-
+c************************************************************************
+	subroutine amDEc(xdec)
+c
+	implicit none
+	double precision xdec
+c
+c  Feed in the declination.
+c
+c------------------------------------------------------------------------
+	include 'amgen.h'
+	dec = xdec
+	end
+c************************************************************************
 	subroutine amComp (T, dT, uvw, pa,
      :                         az, el, onflag, err)
 

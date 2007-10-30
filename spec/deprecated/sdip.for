@@ -48,10 +48,11 @@ c    27apr01 rjs   Original version.
 c    08aug01 rjs   Added model sky calculations and met info.
 c    17nov01 rjs   Handle "dsdn" format.
 c    02dec01 rjs   Get rid of the optically thin approximation.
+c    07jun02 rjs   Added support for dsd234 format.
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	character version*(*)
-	parameter(version='Sdip: version 02-Dec-01')
+	parameter(version='Sdip: version 07-Jun-02')
 	integer MAXT,MAXFREQ
 	parameter(MAXT=10,MAXFREQ=3)
 c
@@ -408,6 +409,41 @@ c
 	    call tinGetr(press,0.)
 	    call tinGetr(humid,0.)
 	  endif
+c
+c  Intermediate format
+c
+	else if(ftype.eq.'dsd234')then
+	  nants = 3
+	  call tinGett(time,0.d0,'atime')
+	  call tinGeta(state,' ')
+	  ok = (state.eq.'i'.or.state.eq.'t').and.
+     *		ant.ge.2.and.ant.le.4
+	  if(ok)then
+	    call tinSkip(1)
+	    call tinGetr(el,0.)
+	    call tinSkip(2)
+	    call tinGetr(temp,0.)
+	    call tinGetr(press,0.)
+	    call tinGetr(humid,0.)
+	    ok = .false.
+	    iant = 1
+	    dowhile(nants.gt.0.and..not.ok)
+	      i = tinNext()
+	      nants = nants - 1
+	      iant = iant + 1
+	      if(iant.eq.ant)then
+		ok = .true.
+		do i=1,4
+		  call tinGetr(dsdons(i),0.)
+		  call tinGetr(dsdoffs(i),0.)
+		enddo
+	      endif
+	    enddo
+	  endif
+	  dowhile(nants.gt.0)
+	    i = tinNext()
+	    nants = nants - 1
+	  enddo
 c
 c  The newer format.
 c

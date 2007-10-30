@@ -35,6 +35,7 @@ c--
 c  History:
 c    rjs  15mar01 Original version.
 c    rjs  24apr01 Extract opacGet. Allow selecting by polarisation.
+c    rjs  18sep05 Corrected incorrect type.
 c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='DSDCAL version 1.0 24-Apr-01')
@@ -79,7 +80,7 @@ c
 	call keya('device',device,' ')
 	call keya('out',out,' ')
 	if(device.eq.' '.and.out.eq.' ')call bug('f','No work to do')
-	call keyd('tol',tol,4.0d0)
+	call keyr('tol',tol,4.0)
 	if(tol.le.0)call bug('f','Invalid tolerance')
 	call getopt(atmcor)
 	call keya('dsdlog',dsdlog,' ')

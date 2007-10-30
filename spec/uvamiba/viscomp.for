@@ -1,10 +1,10 @@
 c************************************************************************
-	subroutine VisInit(model,sfreq1,sdf1,nchan1,ra,dec)
+	subroutine VisInit(model,nmod1,sfreq1,sdf1,nchan1,ra,dec)
 c
 	implicit none
-	character model*(*)
+	integer nchan1,nmod1
+	character model(nmod1)*(*)
 	real sfreq1,sdf1
-	integer nchan1
 	double precision ra,dec
 c
 c  Initialise the routine used to compute the visibilities.
@@ -21,29 +21,37 @@ c------------------------------------------------------------------------
 	include 'mirconst.h'
 	real Tcmb
 	parameter(Tcmb=2.7)
-	integer nsize(2),nx,ny,i,ira,idec
+	integer nsize(2),nx,ny,i,ira,idec,tno1
 	character ctype*16,bunit*16
 	double precision crpix,cdelt1,cdelt2
 	real f,hnuonkt,temp,lambda
 c
+	nmod = nmod1
+	if(nmod.lt.1.or.nmod.gt.MAXMOD)call bug('f',
+     *	  'Invalid number of models')
 	sfreq = sfreq1
 	sdf = sdf1
 	nchan = nchan1
 	if(nchan.gt.MAXCHAN)call bug('f','Too many channels for me')
-	call xyopen(tno,model,'old',2,nsize)
-	call coInit(tno)
-	nx = nsize(1)
-	ny = nsize(2)
-	call rdhda(tno,'bunit',bunit,'K')
-	call ucase(bunit)
-	if(bunit.ne.'K'.and.bunit.ne.'KELVIN')
-     *	  call bug('f','Unsupported brightness unit of input image')
+	do i=1,nmod
+	  call xyopen(tno1,model(i),'old',2,nsize)
+	  if(i.eq.1)then
+	    tno = tno1
+	    call coInit(tno)
+	    nx = nsize(1)
+	    ny = nsize(2)
+	    call rdhda(tno,'bunit',bunit,'K')
+	    call ucase(bunit)
+	    if(bunit.ne.'K'.and.bunit.ne.'KELVIN')
+     *	      call bug('f','Unsupported brightness unit of input image')
 c
-	nu = nx/2+1
-	nv = ny
-	call memAlloc(pGrid,nu*nv,'c')
-	call VisFFT(tno,nx,ny,memc(pGrid),nu,nv,du,dv,u0,v0)
-	call xyclose(tno)
+	    nu = nx/2+1
+	    nv = ny
+	  endif
+	  call memAlloc(pGrid(i),nu*nv,'c')
+	  call VisFFT(tno1,nx,ny,memc(pGrid(i)),nu,nv,du,dv,u0,v0)
+	  call xyclose(tno1)
+	enddo
 c
 c  Get info about the image coordinate system.
 c
@@ -61,7 +69,7 @@ c
 	do i=1,nchan
 	  f = (sfreq + sdf*(i-1) ) * 1e9
 	  hnuonkt = (HMKS*f)/(KMKS*Tcmb)
-	  lambda = CMKS/(nu*1e9)
+	  lambda = CMKS/f
 	  temp = exp(hnuonkt)
 	  fac(i) = 2*hnuonkt*hnuonkt*(KMKS*1e26)/lambda/lambda*
      *	    temp/(temp-1)/(temp-1)*abs(cdelt1*cdelt2)
@@ -72,9 +80,13 @@ c************************************************************************
 	subroutine VisFin
 	implicit none
 c------------------------------------------------------------------------
+	integer i
 	include 'viscomp.h'
+c
 	call coFin(tno)
-	call memFree(pGrid,nu*nv,'c')
+	do i=1,nmod
+	  call memFree(pGrid(i),nu*nv,'c')
+	enddo
 	end
 c************************************************************************
 	subroutine VisFFT(tno,nx,ny,Grid,nu,nv,du,dv,u0,v0)
@@ -209,20 +221,24 @@ c    vis	Visibility, in Jy.
 c------------------------------------------------------------------------
 	include 'viscomp.h'
 	include 'mirconst.h'
-	integer i
+	integer i,id,j
 	real lambda,ud,vd
 c
 	if(nchan.ne.nchan1)
      *	  call bug('f','Number of channels disagrees')
 c
-	do i=1,nchan
-	  lambda = CMKS*1e-9/(sfreq+sdf*(i-1))
-	  ud = ( u*ucoeff(1) + v*ucoeff(2) + w*ucoeff(3) ) / lambda
-	  vd = ( u*vcoeff(1) + v*vcoeff(2) + w*vcoeff(3) ) / lambda
-	  call VisPnt1(vis(i),ll,mm,ud,vd,pbfunc,pbwidth/lambda,
-     *					memc(pGrid),nu,nv,du,dv,u0,v0)
-	  vis(i) = vis(i) * fac(i) *
+	id = 0
+	do j=1,nmod
+	  do i=1,nchan
+	    id = id + 1
+	    lambda = CMKS*1e-9/(sfreq+sdf*(i-1))
+	    ud = ( u*ucoeff(1) + v*ucoeff(2) + w*ucoeff(3) ) / lambda
+	    vd = ( u*vcoeff(1) + v*vcoeff(2) + w*vcoeff(3) ) / lambda
+	    call VisPnt1(vis(id),ll,mm,ud,vd,pbfunc,pbwidth/lambda,
+     *				   memc(pGrid(j)),nu,nv,du,dv,u0,v0)
+	    vis(id) = vis(id) * fac(i) *
      *		(4*lambda/(PI*pbwidth))**2 * abs(du*dv)
+	  enddo
 	enddo
 c
 	end
