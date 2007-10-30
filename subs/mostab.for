@@ -30,6 +30,7 @@ c    rjs   3dec94 Changes to the way a single pointing is mosaiced.
 c    rjs  31jan95 Added mosIni, mosAdd. Changes to mosGeom and its helpers.
 c    rjs   2feb95 Change in mosHash to help avoid integer overflows. Avoid
 c    		  initialisation problem.
+c    rjs  13mar95 Add tolerance to checking for primary beam size.
 c************************************************************************
 	subroutine MosCIni
 c
@@ -141,8 +142,13 @@ c  Locate a particular pointing in my table.
 c------------------------------------------------------------------------
 	include 'mostab.h'
 	include 'mirconst.h'
+c
+c  Tolerances are 1 arcsec in pointing and in primary beam size.
+c
 	double precision tol
+	real pbtol
 	parameter(tol=dpi/180.d0/3600.d0)
+	parameter(pbtol=1.0)
 	logical found
 	integer indx,pnt
 	double precision lm(2),ll1,mm1
@@ -161,7 +167,7 @@ c
 	  if(abs(ll1-llmm(1,pntno)).lt.tol.and.
      *	     abs(mm1-llmm(2,pntno)).lt.tol.and.
      *	     tel1.eq.telescop(pntno).and.
-     *	     pbfwhm1.eq.pbfwhm(pntno))then
+     *	     abs(pbfwhm1-pbfwhm(pntno)).lt.pbtol)then
 	    found = .true.
 	    pnt = pntno
 	  else
@@ -171,7 +177,7 @@ c
 	      if(abs(ll1-llmm(1,pnt)).lt.tol.and.
      *		 abs(mm1-llmm(2,pnt)).lt.tol.and.
      *		 tel1.eq.telescop(pnt).and.
-     *		 pbfwhm1.eq.pbfwhm(pnt))then
+     *		 abs(pbfwhm1-pbfwhm(pnt)).lt.pbtol)then
 		found = .true.
 	      else
 		indx = indx + 1
