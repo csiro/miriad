@@ -1,4 +1,4 @@
-#! /bin/csh -f
+#! /bin/csh -ef
 
 foreach name ($*)
   set file = $name:t

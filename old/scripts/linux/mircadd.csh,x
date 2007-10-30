@@ -1,4 +1,4 @@
-#! /bin/csh -f
+#! /bin/csh -ef
 
 foreach in ($argv)
  set dir = $in:h
