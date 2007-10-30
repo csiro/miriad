@@ -704,7 +704,7 @@ c
 c  The OVRO primary beam is a gaussian of size is 128.4 arcmin.GHz
 c  according to numbers from Shardha Jogee.
 c
-	call pbAdd('OVRO',24.0,350.0,   128.4, 0.05, GAUS,0,0.,
+	call pbAdd('OVRO',24.0,350.0,   107.3, 0.05, GAUS,0,0.,
      *				   'Truncated Gaussian')
 c
 c  The Hat Ck primary beam is a gaussian of size is 191.67 arcmin.GHz
