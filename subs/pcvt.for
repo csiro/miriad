@@ -5,7 +5,7 @@ c
 c  History:
 c    21jul97 rjs  Stripped out of regrid.
 c    22jul97 rjs  Support galactic/equatorial and epoch conversion
-c
+c    23jul97 rjs  Correct order of doing epoch/coordinate conversion.
 c************************************************************************
 	subroutine PcvtInit(coObj1d,coObj2d)
 c
@@ -143,17 +143,17 @@ c
 	if(n.ne.3)call bug('f','Can only handle converting with n=3')
 	call coCvt(coObj1,'ap/ap/ap',x1,'aw/aw/aw',xa)
 c
-	if(dofk45z)then
-	  call fk45z(xa(ira),xa(idec),obstime,ra2000,dec2000)
-	  xa(ira) = ra2000
-	  xa(idec) = dec2000
-	endif
-	if(galeq.lt.0)call dsfetra(xa(ira),xa(idec),.false.,-galeq)
-	if(galeq.gt.0)call dsfetra(xa(ira),xa(idec),.true.,  galeq)
 	if(dofk54z)then
 	  call fk54z(xa(ira),xa(idec),obstime,ra1950,dec1950,dra,ddec)
 	  xa(ira) = ra1950
 	  xa(idec) = dec1950
+	endif
+	if(galeq.lt.0)call dsfetra(xa(ira),xa(idec),.false.,-galeq)
+	if(galeq.gt.0)call dsfetra(xa(ira),xa(idec),.true.,  galeq)
+	if(dofk45z)then
+	  call fk45z(xa(ira),xa(idec),obstime,ra2000,dec2000)
+	  xa(ira) = ra2000
+	  xa(idec) = dec2000
 	endif
 c
 	call coCvt(coObj2,'aw/aw/aw',xa,'ap/ap/ap',x2)
