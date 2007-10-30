@@ -41,7 +41,7 @@ c  History:
 c    rjs  29nov94 Original version.
 c    rjs  12jan95 COrrect alignment code on axis 3. Write mask file.
 c    rjs   3aug95 Mask file was not correctly set for options=nonorm.
-c
+c    rjs  15mar97 Handle processing multiple more than MAXOPEN files.
 c
 c	  mosaic       Weight the data to account for the primary beam
 c	               of a synthesis telescope. This option causes
@@ -93,7 +93,6 @@ c
 	  nOpen = nIn
 	else
 	  nOpen = maxOpen - 1
-	  call bug('f','Too many input datasets')
 	endif
 c
 	equal  = .false.
@@ -169,8 +168,10 @@ c
 	do k=1,nOut(3)
 	  call CombIni(memr(pData),memr(pWts),nOut(1),nOut(2))
 	  do i=1,nIn
+	    if(i.gt.nOpen)call xyopen(tno(i),In(i),'old',3,nsize(1,i))
 	    call Combo(k,tno(i),blctrc(1,i),nsize(1,i),1/rms(i)**2,
      *		       memr(pData),memr(pWts),nOut(1),nOut(2))
+	    if(i.gt.nOpen)call xyclose(tno(i))
 	  enddo
 	  call CombFin(k,tOut,nonorm,
      *		       memr(pData),memr(pWts),nOut(1),nOut(2))
@@ -183,7 +184,7 @@ c
 c
 c  Close up.
 c
-	do i=1,nIn
+	do i=1,nOpen
 	  call xyclose(tno(i))
 	enddo
 	call xyclose(tOut)
