@@ -44,7 +44,12 @@ c	The name of the output uv data set. No default.
 c@ options
 c	Extra processing options. Possible values are:
 c	  nopassol  Determine a solution which is independent of channel number.
-c	  nopolsol  Apply and solve for parallel-hand polarisations only.
+c	  nopolsol  Solve for parallel-hand polarisations only. When
+c	            applying corrections, cross-hand correlations get corrected
+c	            with a parallel-hand gain. In particular XY and YX are
+c	            corrected with the mean of the XX and YY gains; RL and LR
+c	            are corrected with the mean of RR and LL gains; Q,U, and V
+c	            are corrected with the I gain.
 c--
 c  History:
 c    rjs  14mar97 Original version.
@@ -55,20 +60,26 @@ c    rjs  31jul97 Improve gain normalisation with options=nopassol.
 c    rjs  12aug97 Correct scaling bug introduced above. Improve cross-hand
 c		  polarisation handling.
 c    rjs  14aug97 Handle caase of data beyond solutions.
+c    rjs  15mar00 Generalise options=nopol.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
-	parameter(version='BlCal: version 1.0 14-Jul-97')
+	parameter(version='BlCal: version 1.0 15-Mar-00')
 	character out*64,line*32
 	integer lVis,lRef,lOut
 	integer nchan,pol,npol,nfiles
 	double precision interval,preamble(6)
 	complex data(MAXCHAN)
 	logical flags(MAXCHAN),self,nopass,nopol
+	integer pols(-8:4)
 c
 c  Externals.
 c
-	logical uvDatOpn,polsPara
+	logical uvDatOpn
+c
+c  Data.
+c	
+	data pols/-7,-7,-6,-5,-3,-3,-2,-1,0,1,1,1,1/
 c
 c  Get the inputs.
 c
@@ -97,7 +108,7 @@ c
 	call output('Calculating the baseline gains ...')
 	if(.not.uvDatOpn(lRef))call bug('f',
      *	  'Error opening reference dataset')
-	call datLoad(interval)
+	call datLoad(interval,nopol)
 	call uvDatCls
 	call datNorm(nopass)
 c
@@ -119,9 +130,12 @@ c
 	  if(npol.le.0)call bug('f',
      *	    'Unable to determine number of polarisations')
 	  call uvDatGti('pol',pol)
-	  preamble(6) = pol
-	  if(.not.nopol.or.polsPara(pol))
-     *	    call DatCorr(preamble(4),data,flags,nchan)
+	  if(nopol)then
+	    preamble(6) = pols(pol)
+	  else
+	    preamble(6) = pol
+	  endif
+	  call DatCorr(preamble(4),data,flags,nchan)
 	  call varCopy(lVis,lOut)
 	  if(pol.ne.0)then
 	    call uvputvri(lOut,'pol',pol,1)
@@ -259,19 +273,25 @@ c
 c
 	end
 c************************************************************************
-	subroutine datLoad(interval)
+	subroutine datLoad(interval,nopol)
 c
 	implicit none
 	double precision interval
+	logical nopol
 c------------------------------------------------------------------------
 	include 'blcal.h'
 	double precision co(5)
 	integer pol,bl,pmin,pmax,bmin,bmax,nread,ngood,i,j,i1,i2
+	integer ps(2),np,p
 	integer Tail(MAXPOL,MAXBASE)
 	logical buffered
 	double precision t,tmin,tmax
 	complex data(MAXCHAN)
 	logical flags(MAXCHAN)
+c
+c  Externals.
+c
+	logical polspara
 c
 c  Initialise
 c
@@ -290,17 +310,19 @@ c
 	tmax = 0
 	dowhile(nchan.eq.nread)
 	  ngood = 0
-	  do i=1,nchan
-	    if(flags(i))ngood = ngood + 1
-	  enddo
+	  call uvDatGti('pol',pol)
+	  if(.not.nopol.or.polspara(pol))then
+	    do i=1,nchan
+	      if(flags(i))ngood = ngood + 1
+	    enddo
+	  endif
 	  if(ngood.gt.0)then
 c
 c  Get the parameters of this record.
 c
-	    call uvDatGti('pol',pol)
 	    pol = pol + 9
 	    if(pol.le.0.or.pol.gt.MAXPOL)
-     *	      call bug('f','Invalid polarisation')
+     *	        call bug('f','Invalid polarisation')
 	    call basant(co(5),i1,i2)
 	    bl = ((i2-1)*i2)/2 + i1
 	    t = co(4)
@@ -313,40 +335,50 @@ c
 	      buffered = .false.
 	    endif
 c
-	    if(tail(pol,bl).eq.0)then
-	      nsols = nsols + 1
-	      tail(pol,bl) = nsols
-	      call memAlloc(gidx(nsols),nchan,'c')
-	      call ZeroC(memc(gidx(nsols)),nchan)
-	      call memAlloc(fidx(nsols),nchan,'i')
-	      call ZeroI(memi(fidx(nsols)),nchan)
-	      time(nsols) = 0
+	    ps(1) = pol
+	    if(nopol.and.pol.lt.10)then
+	      np = 2
+	      ps(2) = 2*((pol-1)/2)
+	    else
+	      np = 1
 	    endif
-	    i = tail(pol,bl)
+	    do p=1,np
+	      pol = ps(p)
+	      if(tail(pol,bl).eq.0)then
+	        nsols = nsols + 1
+	        tail(pol,bl) = nsols
+	        call memAlloc(gidx(nsols),nchan,'c')
+	        call ZeroC(memc(gidx(nsols)),nchan)
+	        call memAlloc(fidx(nsols),nchan,'i')
+	        call ZeroI(memi(fidx(nsols)),nchan)
+	        time(nsols) = 0
+	      endif
+	      i = tail(pol,bl)
 c
 c  Add in this solution.
 c
- 	    call datAdd(memc(gidx(i)),memi(fidx(i)),time(i),
+ 	      call datAdd(memc(gidx(i)),memi(fidx(i)),time(i),
      *		data,flags,co(4),nchan)
 c
 c  Book keeping.
 c	
-	    if(.not.buffered)then
-	      pmin = pol
-	      pmax = pmin
-	      bmin = bl
-	      bmax = bmin
-	      tmin = t
-	      tmax = tmin
-	    else
-	      pmin = min(pmin,pol)
-	      pmax = max(pmax,pol)
-	      bmin = min(bmin,bl)
-	      bmax = max(bmax,bl)
-	      tmin = min(tmin,t)
-	      tmax = max(tmax,t)
-	    endif
-	    buffered = .true.
+	      if(.not.buffered)then
+	        pmin = pol
+	        pmax = pmin
+	        bmin = bl
+	        bmax = bmin
+	        tmin = t
+	        tmax = tmin
+	      else
+	        pmin = min(pmin,pol)
+	        pmax = max(pmax,pol)
+	        bmin = min(bmin,bl)
+	        bmax = max(bmax,bl)
+	        tmin = min(tmin,t)
+	        tmax = max(tmax,t)
+	      endif
+	      buffered = .true.
+	    enddo
 	  endif
 c
 c  Go back for more.
