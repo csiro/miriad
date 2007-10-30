@@ -13,9 +13,11 @@
 # Put the most important directories first!!
 
 	set searchlist = ( \
-	  /usr/lib /usr/local/pgplot /usr/local/gnu/lib /usr/local/lib \
-	  /usr/X11/lib /usr/lib/X11R5 /usr/local/X11/lib /usr/local/X11R5/lib \
-	  /usr/local/lib/X11 /usr/local/lib/X11R5 /usr/openwin/lib )
+	 /usr/lib /usr/local/pgplot /usr/local/gnu/lib /usr/local/lib \
+	 /usr/X11/lib   /usr/local/X11/lib   /usr/lib/X11   /usr/local/lib/X11 \
+	 /usr/X11R6/lib /usr/local/X11R6/lib /usr/lib/X11R6 /usr/local/lib/X11R6 \
+	 /usr/X11R5/lib /usr/local/X11R5/lib /usr/lib/X11R5 /usr/local/lib/X11R5 \
+	 /usr/openwin/lib )
 
 # Add the OpenWin library directory, if it looks believable. On machines
 # without OpenWindows ... this addition to the search directory will be
