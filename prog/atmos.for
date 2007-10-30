@@ -68,6 +68,8 @@ c	hh:mm:ss, or decimal hours; and for declination is dd:mm:ss, or
 c	decimal degrees). The default is the RA and DEC of the first
 c	source to be observed (i.e. already on source).
 c--
+c   History:
+c     rjs  31-dec-00 Get it to work for 1 source.
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	integer MAXSRC
@@ -143,8 +145,12 @@ c
 c  Sort the list into a travelling salesman order.
 c
 	call output('Optimising the slew time ...')
-	call sorter(source,ra,dec,nsrc,lst,interval,
+	if(nsrc.eq.1)then
+	  indx(1) = 1
+	else
+	  call sorter(source,ra,dec,nsrc,lst,interval,
      *					cycles,ra0,dec0,indx)
+	endif
 c
 c  Some comments.
 c
