@@ -572,6 +572,8 @@ c    nebk 18dec95  Add options=abut
 c    nebk 10jan96  NAXIS in POSDEC2 was not always beeing assigned to
 c    nebk 30jan96  Remove restictions on CHAN so that groups of channels
 c		   can now overlap
+c    nebk 23may96  Bump up size of OLAY line
+c    nebk 04sep96  Remove spurious call to pgsci in subroutine DROVER
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -633,7 +635,7 @@ c
       data coltab /maxchan*0/
       data lwid /maxconp3*1/
 c-----------------------------------------------------------------------
-      call output ('CgDisp: version 30-Jan-96')
+      call output ('CgDisp: version 04-Sep-96')
       call output (' ')
 c
 c Get user inputs
@@ -1922,7 +1924,6 @@ cc
       character line*80
       integer cs, ce
 c----------------------------------------------------------------------
-      call pgsci (3)
 c
 c Only draw on specified channels
 c
@@ -2638,7 +2639,7 @@ cc
       double precision xoff, yoff, pix3, ocen(2), ocorn(2,4)
       real opoly(0:180,2), xl, xr, yb, yt
       integer iostat, ilen, len1, lpos, i, ochan(2)
-      character aline*100, oid*80, ofig*8
+      character aline*300, oid*80, ofig*8
       logical owrite
 c------------------------------------------------------------------------
       if (ofile.ne.' ') then
