@@ -71,6 +71,7 @@ c    bpw  05aug91  Add axnum(1)=0 possibility
 c    bpw  11dec92  Add btype
 c    bpw  16dec92  No special copy for btype, per Neil's remark
 c    bpw   1feb93  Made crpix double precision too
+c    pjt  15mar95  fixed statement order for f2c (linux)
 c
 c***********************************************************************
 
