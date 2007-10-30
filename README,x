@@ -101,7 +101,7 @@ Instructions for Installing Miriad
       PGPLOT may depend on other libraries (e.g. probably the X11 libraries).
 
       PGPLOT is available from ftp://astro.caltech.edu/pub/pgplot in file
-      pgplot5.1.tar.gz -- which is a gzip'd tar file. Tim Pearson
+      pgplot5.2.tar.gz -- which is a gzip'd tar file. Tim Pearson
       (tjp@astro.caltech.edu) can give advice on PGPLOT.
 
       The tar distribution for Miriad also comes with this distribution,
