@@ -120,7 +120,9 @@ c		    "range". Added more documentation about output.  Redid
 c		    histogram stuff as there were a variety of bugs associated 
 c		    with it. Elimiate use of non-standard angle conversion 
 c		    subroutines.
-c
+c    17apr96   nebk/njt
+c		    Fiddle with formatting in ISBOX and fix typo dimax->djmax 
+c		    in wrtie with format 300.
 c-----------------------------------------------------------------------------
       include 'mirconst.h'
       include 'maxdim.h'
@@ -130,7 +132,7 @@ c-----------------------------------------------------------------------------
 c
       integer  MAXSRC, MAXBOX
       character*40   version
-      parameter     (version='version 26-Jan-96')
+      parameter     (version='version 17-Apr-96')
       parameter (MAXSRC=2048, MAXBOX=1024)
 c
       integer lui, luo, ip, ni, nj, iptr, mptr, ng, iwin(2,MAXSRC), 
@@ -1407,7 +1409,7 @@ c
       end do
 c
       if(arcsec.and.ns.ge.1) then
-        write(line,300) Dimax, Dimax
+        write(line,300) Dimax+4.0, Djmax+4.0
 300     format ('maxima',2(1x,f8.3))  
         if(dolog) then
           call logwrit(line)
