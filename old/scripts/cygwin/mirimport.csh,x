@@ -1,0 +1,125 @@
+#!/bin/csh -ef
+
+set path = ($MIRBIN $path)
+
+# Get the name of the machine we are running on.
+
+set noupdate = 0   
+if ( "$1" == "-noupdate" ) then
+  set noupdate = 1
+endif
+
+# Move to the import directory.
+
+if ( ! -e $MIR/etc ) mkdir $MIR/etc
+cd $MIR/etc
+if ( $status ) then
+  echo "### Fatal: Failed to cd to $MIR/etc"
+  exit 1
+endif
+
+#------------------------------------------------------------------------
+# Get the list of update files from the anon ftp area.
+
+touch mirupd-99999999-9.tar.Z
+rm -f junk.updates mirupd-????????-?.tar.Z
+ftp -in << END_OF_FILE >& /dev/null
+open ftp.atnf.csiro.au
+user ftp rsault@atnf.csiro.au
+cd /pub/software/miriad/updates
+get updates.txt junk.updates
+quit
+END_OF_FILE
+
+if ( ! -f junk.updates ) then
+  echo "### Fatal: Failed to find list of updates."
+  exit 1
+endif
+
+#------------------------------------------------------------------------
+# If there is no "Last_import" file, then determine the date of the last
+# import, and generate a Last_import file.
+
+if (! -e $MIR/etc/Last_import ) then
+  cat << END_OF_FILE > junk.sed
+s/\([0-9][0-9]\)\([a-z][a-z][a-z]\)\([0-9][0-9]\)/\3\2\1/
+s/jan/01/
+s/feb/02/
+s/mar/03/
+s/apr/04/
+s/may/05/
+s/jun/06/
+s/jul/07/
+s/aug/08/
+s/sep/09/
+s/oct/10/
+s/nov/11/
+s/dec/12/
+END_OF_FILE
+  set date = `grep '^[0-9]' $MIR/changes.txt|tail -1|awk '{print $1}'|sed -f junk.sed`
+  if ( $date > 500000 ) then
+    set lastimport = "mirupd-19${date}-0.tar.Z"
+  else
+    set lastimport = "mirupd-20${date}-0.tar.Z"
+  endif
+  echo $lastimport > $MIR/etc/Last_import
+endif
+
+#------------------------------------------------------------------------
+# Now determine which updates are needed.
+
+set lastimport = `tail -1 $MIR/etc/Last_import`
+cat << "EOF" > junk.awk
+BEGIN {print "open ftp.atnf.csiro.au";
+       print "user ftp rsault@atnf.csiro.au";
+       print "cd /pub/software/miriad/updates";
+       print "binary";}
+/^mirupd-00000000-0/ {base = $2;}
+      {if($1 > base)print "get",$1;}
+END   {print "quit";}
+"EOF"
+(echo mirupd-00000000-0 $lastimport; cat junk.updates)|awk -f junk.awk > junk.ftp
+
+set lines = (`wc -l junk.ftp`)
+if ( $lines[1] <= 5 ) then
+  echo "### Fatal: No new updates found"
+  exit 1
+endif
+
+#------------------------------------------------------------------------
+# Get all the update files.
+
+ftp -in < junk.ftp >& /dev/null
+
+#------------------------------------------------------------------------
+# Check for files.
+
+  ls mirupd-????????-?.tar.Z >& /dev/null
+  if ( $status ) then
+    echo "### Fatal: No updates found"
+    exit 1
+  endif
+
+#------------------------------------------------------------------------
+# Untar the updates.
+
+foreach file ( mirupd-????????-?.tar.Z )
+  echo Untarred $file at `date`
+  zcat $file | ( cd $MIR; tar -xvmf - )
+  set stat1 = $status
+  if ( $stat1 == 141 ) then
+    echo "### Warning: Untarring ended with status=$stat1"
+  else if ( $stat1 ) then
+    echo "### Fatal: Failed to successfully untar - status=$stat1"
+    exit 1
+  endif
+  rm -r $file
+  if ( "$file" != "mirupd-99999999-9.tar.Z" ) echo $file >> $MIR/etc/Last_import
+end
+
+#------------------------------------------------------------------------
+# Compile if requested.
+
+if ( $noupdate ) exit
+echo y | mirupdate 
+
