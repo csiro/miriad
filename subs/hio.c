@@ -25,6 +25,7 @@
        30-jun-95  rjs   Declaration to appease gcc.
        15-may-96  rjs	More fiddles with roundup macro.
        18-mar-97  rjs   Remove alignment restriction on hio_c.
+       21-mar-97  rjs   Make some previously dynamic allocations static.
 */
 
 
@@ -72,6 +73,7 @@ typedef struct tree { char *name;
 		 int handle,flags,rdwr,wriostat;
 		 ITEM *itemlist; } TREE;
 
+static TREE foreign = {"",0,0,0,0,NULL};
 #define MAXITEM 1024
 
 private int nitem,ntree;
@@ -82,7 +84,7 @@ private ITEM *item_addr[MAXITEM];
 #define hget_item(tno) (item_addr[tno])
 
 private int header_ok,expansion[10],align_size[10];
-private char *align_buf;
+private char align_buf[BUFSIZE];
 private int first=TRUE;
 
 /* Macro to wait for I/O to complete. If its a synchronous i/o system,
@@ -194,7 +196,10 @@ private void hinit_c()
   nitem = ntree = 0;
   for(i=0; i < MAXITEM; i++)item_addr[i] = NULL;
   for(i=0; i < MAXOPEN; i++)tree_addr[i] = NULL;
-  (void)hcreate_tree_c("");
+
+/* Tree-0 is a special tree used for "foreign" files. */
+
+  tree_addr[0] = &foreign;
 
   expansion[H_BYTE] = 1;
   expansion[H_INT]  = sizeof(int)/H_INT_SIZE;
@@ -213,7 +218,6 @@ private void hinit_c()
   align_size[H_TXT]  = 1;
   first = FALSE;
   header_ok = FALSE;
-  align_buf = Malloc(BUFSIZE);
 }
 /************************************************************************/
 void hflush_c(tno,iostat)
@@ -350,7 +354,7 @@ void habort_c()
 
       t->flags &= ~TREE_CACHEMOD;
       if(t->flags & TREE_NEW)hrm_c(t->handle);
-      else hclose_c(t->handle);
+      else if(i != 0)hclose_c(t->handle);
     }
   }
 }
