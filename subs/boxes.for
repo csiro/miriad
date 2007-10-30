@@ -40,6 +40,7 @@ c    rjs 29jan97  Added BoxDef -- to set the default region of interest,
 c		  and removed this capacity from BoxSet.
 c    rjs 07jul97  Change argument to coVelSet and replace coAxDesc with coAxGet
 c    rjs 09jul97  Correctly handle ANDing with completely flagged plane.
+c    rjs 17may99  Increase size of a buffer.
 c************************************************************************
 c* Boxes -- Summary of region of interest routines.
 c& mjs
@@ -1195,8 +1196,9 @@ c    xmaxv,ymaxv)
 c--
 c------------------------------------------------------------------------
 	include 'boxes.h'
+	include 'maxdim.h'
 	integer WORKSIZE,MAXSHAPE
-	parameter(WORKSIZE=512,MAXSHAPE=256)
+	parameter(WORKSIZE=MAXDIM,MAXSHAPE=256)
 	integer n1,n2,n3,pnt1,pnt2,pnt3,i,j,k,boxtype
 	integer offset,jmin,jmax,nshapes,shapes(MAXSHAPE)
 	integer work(WORKSIZE,3)
