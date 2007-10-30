@@ -67,8 +67,7 @@ c	factor, IMMERGE can produce a plot showing the correspondence
 c	between the high and low resolution data points in the annulus
 c	(after correcting for resolution effects and the deduced flux
 c	calibration factor). Ideally it will show a line with "y=x".
-c	The default is not to produce a plot. It also plots the
-c	difference from this "y=x" line as a function of spatial frequency.
+c	The default is not to produce a plot. 
 c@ guard
 c	Before Fourier transforming, the images are padded with a guard
 c	band. "guard" gives one or two values, being the minimum width of
