@@ -149,9 +149,10 @@ c    mchw 20apr93 Added flux keyword and option selradec.
 c    rjs  29mar93 Fiddle noise calculation. BASANT changes.
 c    rjs  18may93 If rms=0, assume rms=1.
 c    rjs  19may93 Merge mchw and rjs versions of selfcal.
+c    rjs  28jun93 Iterate a bit longer. Better memory allocation.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Selfcal: version 1.0 19-May-93')
+	parameter(version='Selfcal: version 1.0 28-Jun-93')
 	integer MaxMod,maxsels,nhead
 	parameter(MaxMod=32,maxsels=256,nhead=3)
 c
@@ -445,7 +446,7 @@ c    real Count(maxSol)
 c
 	nBl = (nants*(nants-1))/2
 	SolSize = 2 + 4*nBl
-	maxSol = min(nHash,max(minSol,MemBuf()/SolSize))
+	maxSol = min(nHash,max(minSol,(MemBuf()-10)/SolSize))
 	nSols = 0
 	TotVis = 0
 	call MemAlloc(pSumVM,maxSol*2*nBl,'r')
@@ -1085,8 +1086,8 @@ c    Convrg	If .true., then the algorithm converged.
 c    Gain	The antenna gain solution.
 c------------------------------------------------------------------------
 	integer MaxIter
-	real Epsi
-	parameter(MaxIter=100,Epsi=1.e-5)
+	real Epsi,Epsi2
+	parameter(MaxIter=100,Epsi=1.e-8,Epsi2=1.e-4)
 c
 	real Factor,Change
 	complex Temp
@@ -1136,6 +1137,7 @@ c#maxloop 32
 	  enddo
 	  Convrg = Change/nants .lt. Epsi
 	enddo
+	Convrg = Change/nants .lt. Epsi2
 	end
 c************************************************************************
 	subroutine amphasol(NBlines,NAnts,Sum,Sum2,SumVM,SumVV,
@@ -1167,8 +1169,8 @@ c    Gain	The antenna gain solution.
 c
 c------------------------------------------------------------------------
 	integer maxiter
-	real Epsi
-	parameter(maxiter=100,Epsi=5.e-4)
+	real Epsi,Epsi2
+	parameter(maxiter=100,Epsi=1.e-8,Epsi2=1e-4)
 	integer i,Niter
 	real Factor,Change,SumRVV,SumWt,SumRVM
 	complex Temp
@@ -1246,4 +1248,5 @@ c#maxloop 32
 	  enddo
 	  Convrg = Change/SumWt .lt. Epsi
 	enddo
+	Convrg = Change/SumWt .lt. Epsi2
 	end
