@@ -103,6 +103,7 @@ c    rjs  30jan95 Taper option. Eliminate "signal" parameter.
 c    mhw  13aug95 Clip input if output too big, instead of giving up.
 c    rjs  14aug95 Fix to the above.
 c    rjs  02jul97 cellscal change.
+c    rjs  23jul97 pbtype change.
 c
 c  Bugs:
 c    * Blanked images are not handled when interpolation is necessary.
@@ -854,7 +855,7 @@ c
 c
 c  Set the primary beam size to indicate that it is primary beam corrected.
 c
-	call wrhdr(tOut,'pbfwhm',0.)
+	call wrhda(tOut,'pbtype','SINGLE')
 c
 c  Copy other parameters.
 c
