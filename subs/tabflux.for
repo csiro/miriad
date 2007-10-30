@@ -44,6 +44,8 @@ c                     in the routine TabFlux.  Also eliminated redundant
 c                     file name changes in the same routine.
 c    jm    04oct95    Fixed long standing date>0 problem in tabflux.
 c    jm    21dec95    Fixed calget because fix above broke it.
+c    jm    25aug97    Changed call from mgetenv() to fullname() for 
+c                     the environment variable $MIRFLUXTAB in tabflux.
 c
 c***********************************************************************
 c* calget -- Routine to retrieve an interpolated calibrator flux.
@@ -354,7 +356,7 @@ c
         if (Len1(filename) .gt. 0) then
           newname = fullname(filename)
         else
-          call mgetenv(newname, '$MIRFLUXTAB')
+          newname = fullname('$MIRFLUXTAB')
           if ((Len1(newname) .lt. 1) .or.
      *        (.not. hexists(0, newname))) then
             tmpname = DEFFILE
