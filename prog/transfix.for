@@ -47,12 +47,13 @@ c	The name of the output uv data-set. There is no default name.
 c
 c  History:
 c    27jun97 rjs  Adapted from uvredo
+c    23jul97 rjs  Improved equations, care mjk.
 c
 c  Bugs:
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	character version*(*)
-	parameter(version='Transfix: version 1.0 27-Jun-97')
+	parameter(version='Transfix: version 1.0 23-Jul-97')
 	integer ATANTS,ATPARS
 	parameter(ATANTS=6,ATPARS=12)
 c
@@ -184,17 +185,18 @@ c    lOut
 c    pparams	Pointing parameters, as retrieved from Narrabri.
 c    npars,nants Number of pointing parameters and antennas.
 c------------------------------------------------------------------------
-	integer PAY,PAX,PFZ
-	parameter(PAX=2,PAY=3,PFZ=6)
+	integer PAY,PAX,PFZ,PEY
+	parameter(PAX=2,PAY=3,PEY=4,PFZ=6)
 	include 'maxdim.h'
 c
 	integer nchan
 	double precision preamble(5)
 	logical flags(MAXCHAN,4)
 	complex data(MAXCHAN,4),Exy,Eyx
-	double precision ra,dec,lat,long,ha,az,el,lst
+	double precision ra,dec,lat,az,el,lst
 	integer i1,i2,i
-	real chi,daz1,daz2,dchi1,dchi2
+c	real chi,daz1,daz2,dchi1,dchi2
+	real dchi1,dchi2
 c
 c  Stuff which is common.
 c
@@ -217,26 +219,27 @@ c  Get or get azimuth,parallactic angle, latitude, HA and declination.
 c
 	call uvgetvrd(lIn,'obsra',ra,1)
 	call uvgetvrd(lIn,'obsdec',dec,1)
-	call uvgetvrd(lIn,'longitu',long,1)
+c	call uvgetvrd(lIn,'longitu',long,1)
 	call uvgetvrd(lIn,'latitud',lat,1)
 	call uvgetvrd(lIn,'lst',lst,1)
 c
-	call parang(ra,dec,lst,lat,chi)
-        ha = lst - ra
-        el = asin(sin(lat)*sin(dec) + cos(lat)*cos(dec)*cos(ha))
-        az = atan2(-cos(dec)*sin(ha),
-     *          cos(lat)*sin(dec)-sin(lat)*cos(dec)*cos(ha))
+c	call parang(ra,dec,lst,lat,chi)
+c        ha = lst - ra
+	call azel(ra,dec,lst,lat,az,el)
+c        el = asin(sin(lat)*sin(dec) + cos(lat)*cos(dec)*cos(ha))
+c        az = atan2(-cos(dec)*sin(ha),
+c     *          cos(lat)*sin(dec)-sin(lat)*cos(dec)*cos(ha))
 c
 c  Determine the error for this baseline.
 c
 	call basant(preamble(5),i1,i2)
 c
-	daz1 = ( (-pparams(PAY,i1)*cos(az) + pparams(PAX,i1)*sin(az))
-     *		 * sin(el) + pparams(PFZ,i1) ) / cos(el)
-	daz2 = ( (-pparams(PAY,i2)*cos(az) + pparams(PAX,i2)*sin(az))
-     *		 * sin(el) + pparams(PFZ,i2) ) / cos(el)
-	dchi1 = cos(lat)*cos(az)/(cos(dec)*cos(chi)) * daz1
-	dchi2 = cos(lat)*cos(az)/(cos(dec)*cos(chi)) * daz2
+	dchi1 =   -(pparams(PFZ,i1)*sin(el) + pparams(PEY,i1) -
+     *		    pparams(PAY,i1)*cos(az) + pparams(PAX,i1)*sin(az))
+     *		  * tan(el)
+	dchi2 =   -(pparams(PFZ,i2)*sin(el) + pparams(PEY,i2) -
+     *		    pparams(PAY,i2)*cos(az) + pparams(PAX,i2)*sin(az))
+     *		  * tan(el)
 c
 	do i=1,nchan
 	  Exy =  dchi1*data(i,2) - dchi2*data(i,1)
