@@ -32,6 +32,7 @@ c--
 c
 c  History:
 c    nebk 11Jan95  Original version
+c    nebk 14nov95  New call for READIMCG
 c
 c  Notes:
 c    Uses cgsubs.for
@@ -46,7 +47,7 @@ c
       character version*20
       integer maxnax2, maxbox
       parameter (maxnax2 = maxnax*2, maxbox = 1024,
-     +           version = 'Version 11-Jan-95')
+     +           version = 'Version 14-Nov-95')
 c
       integer sizin(maxnax), sizout(maxnax), blc(maxnax), trc(maxnax), 
      + bin(2,maxnax), nbin, boxes(maxbox), krng(2), lin, lout, ip, ipn, 
@@ -54,7 +55,7 @@ c
       double precision cdelti(maxnax), crvali(maxnax), crpixi(maxnax),
      + cdelto(maxnax), crpixo(maxnax)
       real dmm(2), mm(2), blank
-      logical flags(maxdim), mask, hdprsnt, blanks
+      logical flags(maxdim), blanks
       character in*64, out*64, itoaf*1, str*1, line*80
 c
       data bin /maxnax2*1/
@@ -107,7 +108,6 @@ c
      +   'Image increment must equal bin size')
         call winfidcg (sizin(i), i, bin(1,i), blc(i), trc(i), sizout(i))
       end do
-      mask = hdprsnt (lin, 'mask')
 c
 c Open output image and copy header items to it
 c  
@@ -146,9 +146,10 @@ c
 c
 c Bin up next subcube
 c
-        call readimcg (.true., mask, blank, lin, bin(1,1), 
-     +     bin(1,2), krng, blc, trc, .true., memi(ipn), 
-     +     memr(ip), blanks, mm)
+        mm(1) = 1.0e32
+        mm(2) = -1.0e32
+        call readimcg (.true., blank, lin, bin(1,1), bin(1,2), krng,
+     +    blc, trc, .true., memi(ipn), memr(ip), blanks, mm)
         dmm(1) = min(dmm(1), mm(1))
         dmm(2) = max(dmm(2), mm(2))
         krng(1) = krng(1) + bin(1,3)
