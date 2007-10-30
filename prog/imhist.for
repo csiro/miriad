@@ -30,10 +30,6 @@ c   'noheader'    Do not write the header information, just the numbers,
 c                 producing an ASCII file for a plotting program
 c   'nolist'      Do not write the statistics to the screen/logfile
 c
-c   'xmin,#'      Left edge of histogram plot, default determined from
-c                 selected data
-c   'xmax,#'      Right edge of histogram plot, default determined from
-c                 selected data
 c   'ymax,#'      The plot will be cut off at this y-value, default
 c                 is 1.25 times maximum histogram value
 c   'title,#1,#2,#3' Put the string #1 at x-position #2 and y-position #3,
@@ -52,6 +48,17 @@ c  All datavalues below the cutoff are not used for the calculation of
 c  the histogram. Give one real value, which may be followed by the
 c  string ',abs' to get a cutoff in the absolute value of the datavalues.
 c  Default is no cutoff.
+c
+c@ xrange
+c  This gives two numbers, being the acceptable datavalues to include
+c  in the statistics and histogram. 
+c  
+c  This is, in effect, the opposite of cutoff. 
+c
+c  Specifying both cutoff and xrange is possible. In this case,
+c  the two constraints are 'and-ed' together to determine which
+c  data are to be included. The xrange key alone, however, defines the 
+c  xrange of the plot axis.
 c
 c< device
 c@ log
@@ -81,22 +88,24 @@ c    15jun93  bpw  Did paging with pgcurs to get back preferred situation before
 c                  pgplot changes, where clicking left resulted in paging
 c    30sep93   jm  Corrected pgplot calling sequence.
 c    12nov97  rjs  Added 's' flag to boxset call.
+c    14dec00  dpr  added xrange
 c
 c------------------------------------------------------------------------
 
       program imhist
 
       character*40     version
-      parameter        ( version = 'version 2.1 12-Nov-97' )
+      parameter        ( version = 'version 2.1 14-Dec-2000' )
 
       integer          tinp
       real             cut(2)
+      real             xrange(2)
       integer          naxis, npixels
       character*80     device
 
       call output( 'IMHIST: ' // version )
-      call inputs( tinp, cut, npixels, naxis, device )
-      call histo(  tinp, cut, npixels, naxis, device )
+      call inputs( tinp, cut, xrange, npixels, naxis, device )
+      call histo(  tinp, cut, xrange, npixels, naxis, device )
       call xyzclose( tinp )
       call logclose
 
@@ -106,10 +115,12 @@ c------------------------------------------------------------------------
 ************************************************************************
 
 
-      subroutine inputs( tinp, cut, npixels, naxis, device )
+      subroutine inputs( tinp, cut, xrange, npixels, naxis, device )
+      implicit none
 
       integer            tinp
-      real               cut(*)
+      real               cut(2)
+      real               xrange(2)
       integer            npixels, naxis
       character*(*)      device
       include            'imhist.h'
@@ -122,6 +133,8 @@ c------------------------------------------------------------------------
       integer            boxes( MAXBOXES )
       integer            blc(MAXNAX), trc(MAXNAX)
       integer            viraxlen( MAXNAX ), vircsz( MAXNAX )
+
+      logical            rangeisset
 
       call keyini
 
@@ -136,6 +149,18 @@ c------------------------------------------------------------------------
       call optinp
 
       call cutinp( cut )
+
+c  input xrange, defaulting to 0,0, which implies unset!!
+      xrange(1)=0.
+      xrange(2)=0.
+      call keyr('xrange',xrange(1),0.)
+      call keyr('xrange',xrange(2),xrange(1)*-1.)
+
+c  if the xrange is set, set the plot range too
+c  this overrides values set using options (which is depricated)
+      if ( rangeisset(xrange) ) then
+        call setrange(xrange)
+      endif
 
       call xyzsetup( tinp, ' ', blc, trc, viraxlen, vircsz )
       npixels = vircsz(naxis)
@@ -157,7 +182,7 @@ c------------------------------------------------------------------------
 
       subroutine cutinp( cut )
 
-      real          cut(*)
+      real          cut(2)
 
       character*10  string
       logical       keyprsnt
@@ -267,6 +292,35 @@ c------------------------------------------------------------------------
       if(plotvar(STYLE).eq.-1) plotvar(STYLE)=matchnr('histo',styles)
 
       return
+      end
+
+
+
+ 
+***********************************************************************
+c
+c  Set the plotting global pltrange to reflect the values specified
+c  by the key xrange
+c
+c  Dont really know what this does - just copied opint
+c
+c  dpr 14-12-00
+c
+
+      subroutine setrange(xrange)
+
+      implicit none
+      real     xrange(*)
+
+      include       'imhist.h'
+c  (I know, but I didn't do it)
+
+      plotrnge(FLXL) = 1.
+      plotrnge(XLOW) = xrange(1)
+      
+      plotrnge(FLXU) = 1.
+      plotrnge(XUPP) = xrange(2)
+
       end
 
 
@@ -387,10 +441,11 @@ c------------------------------------------------------------------------
 ************************************************************************
 
 
-      subroutine histo( tinp, cut, npixels, naxis, device )
+      subroutine histo( tinp, cut, xrange, npixels, naxis, device )
 
       integer       tinp
-      real          cut(*)
+      real          cut(2)
+      real          xrange(2)
       integer       npixels, naxis
       character*(*) device
       include       'imhist.h'
@@ -413,9 +468,9 @@ c------------------------------------------------------------------------
          endif
       endif
 
-      call histset( tinp, cut, npixels, HLEN, binmax )
+      call histset( tinp, cut, xrange, npixels, HLEN, binmax )
 
-      call histmake( tinp, binmax, cut, npixels, xvals, hist )
+      call histmake( tinp, binmax, cut, xrange, npixels, xvals, hist )
 
       call histout( doplot, naxis, binmax, xvals, hist )
 
@@ -426,10 +481,11 @@ c------------------------------------------------------------------------
 ************************************************************************
 
 
-      subroutine histset( tinp, cut, npixels, HLEN, binmax )
+      subroutine histset( tinp, cut, xrange, npixels, HLEN, binmax )
 
       integer          tinp
-      real             cut(*)
+      real             cut(2)
+      real             xrange(2)
       integer          npixels
       integer          HLEN, binmax
       include          'imhist.h'
@@ -441,7 +497,8 @@ c------------------------------------------------------------------------
       integer          delimi
       real             r, gausetup
 
-      call histvars( tinp,cut,npixels, npoints,sum,sumsq,minval,maxval )
+      call histvars( tinp,cut,xrange,npixels, npoints,sum,sumsq,
+     *  minval,maxval )
 
       if( histpar(FLAG,BINSP).eq.0. )
      *histpar(VALUE,BINSP) = 
@@ -466,11 +523,12 @@ c------------------------------------------------------------------------
 ************************************************************************
 
 
-      subroutine histvars( tinp, cut, npixels,
+      subroutine histvars( tinp, cut, xrange, npixels,
      *                     npoints, sum, sumsq, minval, maxval )
 
       integer          tinp
-      real             cut(*)
+      real             cut(2)
+      real             xrange(2)
       integer          npixels
       integer          npoints
       double precision sum, sumsq
@@ -489,7 +547,7 @@ c------------------------------------------------------------------------
       init = .true.
       do i = 1, npixels
          call xyzpixrd( tinp, i, data, mask )
-         if( unmasked( data, mask, cut ) ) then
+         if( unmasked( data, mask, cut, xrange ) ) then
             if( init ) then
                npoints = 0
                minval  = data
@@ -530,11 +588,13 @@ c------------------------------------------------------------------------
 ***********************************************************************
 
 
-      subroutine histmake( tinp, binmax, cut, npixels, xvals, hist )
+      subroutine histmake( tinp, binmax, cut, xrange, npixels, xvals,
+     *   hist )
 
       integer          tinp
       integer          binmax
-      real             cut(*)
+      real             cut(2)
+      real             xrange(2)
       integer          npixels
       real             xvals(0:*), hist(0:*)
       include          'imhist.h'
@@ -553,7 +613,7 @@ c------------------------------------------------------------------------
 
       do i = 1, npixels
          call xyzpixrd( tinp, i, data, mask )
-         if( unmasked( data, mask, cut ) ) then
+         if( unmasked( data, mask, cut, xrange ) ) then
             rbin = (data-plotrnge(XLOW)) / histpar(VALUE,BINSP)
             if( rbin.ge.0. ) bin = int(rbin)+1
             if( rbin.lt.0. ) bin = int(rbin)
@@ -842,22 +902,47 @@ c------------------------------------------------------------------------
 ************************************************************************
 ************************************************************************
 
-      logical function unmasked( data, mask, cut )
+      logical function unmasked( data, mask, cut, xrange )
       real       data
       logical    mask
-      real       cut(*)
+      real       cut(2)
+      real       xrange(2)
+
+      logical            rangeisset
+
+      unmasked=mask
+
       if( cut(2).gt.0. ) then
-         unmasked =
-     *   ( ( cut(2).eq.1. .and.     data .ge.cut(1) ) .or.
-     *     ( cut(2).eq.2. .and. abs(data).ge.cut(1) )     )
-     *     .and. mask
-      else
-         unmasked = mask
+        unmasked =
+     *       ( ( cut(2).eq.1. .and.     data .ge.cut(1) ) .or.
+     *       ( cut(2).eq.2. .and. abs(data).ge.cut(1) )     )
+     *       .and. unmasked
       endif
+      
+      if ( rangeisset(xrange) ) then
+        unmasked = 
+     *  (xrange(1) .le. data) .and. (xrange(2) .ge. data)
+     *  .and. unmasked
+      endif
+
       return
       end
 
 
+***********************************************************************
+
+      logical function rangeisset( range )
+c
+c     true if either of the values of range is ne zero
+c
+      implicit none
+      real       range(2)
+
+      rangeisset=( range(1) .ne. 0. ) .or. 
+     *  ( range(2) .ne. 0. )
+
+      return
+      end
 ***********************************************************************
 
 
