@@ -44,6 +44,8 @@ c	            option suppresses this.
 c--
 c  History:
 c    rjs  13oct93 Original version.
+c    rjs  29aug94 W-axis change.
+c    rjs   6sep94 Use MAXWIN in maxdim.h. Better treatment of xyphase.
 c
 c  Bugs:
 c    * Not written yet.
@@ -52,7 +54,7 @@ c------------------------------------------------------------------------
 	integer MAXSELS
 	parameter(MAXSELS=256)
 	character version*(*)
-	parameter(version='UvSplit: version 1.0 13-Oct-93')
+	parameter(version='UvSplit: version 1.0 6-Sep-94')
 c
 	character vis*64,dtype*1
 	integer tvis
@@ -99,6 +101,7 @@ c
 c  Open the input, and determine some things about it.
 c
 	  call uvopen(tVis,vis,'old')
+	  call uvset(tVis,'preamble','uvw/time/baseline',0,0.,0.,0.)
 	  call SelApply(tVis,sels,.true.)
 	  if(first)then
 	    call uvprobvr(tVis,'corr',dtype,length,updated)
@@ -139,7 +142,7 @@ c------------------------------------------------------------------------
 c
 	complex data(MAXCHAN)
 	logical flags(MAXCHAN),skip
-	double precision preamble(4)
+	double precision preamble(5)
 	integer nchan,nindx,vCheck,indx(MAXINDX),nschan(MAXINDX)
 	integer i,offset
 c
@@ -199,12 +202,11 @@ c
 c  Determine the current indices of interest.
 c
 c------------------------------------------------------------------------
-	integer MAXSPECT
-	parameter(MAXSPECT=16)
+	include 'maxdim.h'
 	character base*32,source*32,c*1
 	integer maxi,n,nchan,nwide,length,lenb,i
-	double precision sdf(MAXSPECT),sfreq(MAXSPECT)
-	real wfreq(MAXSPECT)
+	double precision sdf(MAXWIN),sfreq(MAXWIN)
+	real wfreq(MAXWIN)
 c
 c  Externals.
 c
@@ -213,7 +215,7 @@ c
 c
 c  Initialise.
 c
-	maxi = min(MAXINDX,MAXSPECT)
+	maxi = min(MAXINDX,MAXWIN)
 c
 c  Generate the base name.
 c
@@ -401,7 +403,7 @@ c************************************************************************
 c
 	implicit none
 	integer tindx,nchan
-	double precision preamble(4)
+	double precision preamble(5)
 	complex data(nchan)
 	logical flags(nchan)
 c
@@ -456,13 +458,9 @@ c    lOut
 c    nchan
 c    ifno
 c------------------------------------------------------------------------
-	integer MAXSPECT
-	parameter(MAXSPECT=16)
 	include 'maxdim.h'
-	integer nwide,off,nsystemp,nants
-	logical usyst
-	character type*1
-	real wfreq(MAXSPECT),wwidth(MAXSPECT),wsystemp(MAXANT*MAXSPECT)
+	integer nwide
+	real wfreq(MAXWIN),wwidth(MAXWIN)
 c
 	if(nchan.ne.1)call bug('f','Inconsistency!!')
 c
@@ -474,22 +472,9 @@ c
 	call uvputvrr(lOut,'wfreq',wfreq(ifno),1)
 	call uvputvrr(lOut,'wwidth',wwidth(ifno),1)
 c
-c  Now for (*&%** system temperatures -- the more troublesome one.
+c  Now the wide-band system temperature.
 c
-	call uvprobvr(lVis,'wsystemp',type,nsystemp,usyst)
-	usyst = type.eq.'r'.and.nsystemp.lt.MAXANT*MAXSPECT
-	if(usyst)then
-	  call uvgetvrr(lVis,'wsystemp',wsystemp,nsystemp)
-	  call uvrdvri(lVis,'nants',nants,0)
-	  if(nsystemp.lt.nants*nwide)then
-	    nsystemp = min(nsystemp,nants)
-	    off = 1
-	  else
-	    nsystemp = nants
-	    off = (ifno-1)*nants + 1
-	  endif
-	  call uvputvrr(lOut,'wsystemp',wsystemp(off),nsystemp)
-	endif
+	call UpdVar(lVis,lOut,ifno,nwide,'wsystemp')
 c
 	end
 c************************************************************************
@@ -506,15 +491,10 @@ c    lOut
 c    nchan
 c    ifno
 c------------------------------------------------------------------------
-	integer MAXSPECT
-	parameter(MAXSPECT=16)
 	include 'maxdim.h'
-	integer nspect,off,nsystemp,nants
-	logical usyst
-	character type*1
-	double precision sdf(MAXSPECT),sfreq(MAXSPECT)
-	double precision restfreq(MAXSPECT)
-	real systemp(MAXANT*MAXSPECT)
+	integer nspect
+	double precision sdf(MAXWIN),sfreq(MAXWIN)
+	double precision restfreq(MAXWIN)
 c
 	call uvrdvri(lVis,'nspect',nspect,1)
 	if(ifno.gt.nspect)call bug('f','Something is screwy')
@@ -529,21 +509,40 @@ c
 	call uvputvrd(lOut,'sfreq',sfreq(ifno),1)
 	call uvputvrd(lOut,'restfreq',restfreq(ifno),1)
 c
-c  Now for (*&%** system temperatures -- the more troublesome one.
+c  Update the system temperature and the XY phase.
 c
-	call uvprobvr(lVis,'systemp',type,nsystemp,usyst)
-	usyst = type.eq.'r'.and.nsystemp.lt.MAXANT*MAXSPECT
-	if(usyst)then
-	  call uvgetvrr(lVis,'systemp',systemp,nsystemp)
+	call UpdVar(lVis,lOut,ifno,nspect,'systemp')
+	call UpdVar(lVis,lOut,ifno,nspect,'xyphase')
+c
+	end
+c************************************************************************
+	subroutine UpdVar(lVis,lOut,ifno,nspect,var)
+c
+	implicit none
+	integer lVis,lOut,ifno,nspect
+	character var*(*)
+c
+c  Update a variable which is of dimension (nants,nspect).
+c------------------------------------------------------------------------
+	include 'maxdim.h'
+	integer n,nants,off
+	real buf(MAXANT*MAXWIN)
+	logical upd
+	character type*1
+c
+	call uvprobvr(lVis,var,type,n,upd)
+	upd = type.eq.'r'.and.n.le.MAXANT*MAXWIN
+	if(upd)then
+	  call uvgetvrr(lVis,var,buf,n)
 	  call uvrdvri(lVis,'nants',nants,0)
-	  if(nsystemp.lt.nants*nspect)then
-	    nsystemp = min(nsystemp,nants)
+	  if(n.lt.nants*nspect)then
+	    n = min(n,nants)
 	    off = 1
 	  else
-	    nsystemp = nants
+	    n = nants
 	    off = (ifno-1)*nants + 1
 	  endif
-	  call uvputvrr(lOut,'systemp',systemp(off),nsystemp)
+	  call uvputvrr(lOut,var,buf(off),n)
 	endif
 c
 	end
@@ -637,7 +636,7 @@ c------------------------------------------------------------------------
 	character line*64
 c
 	integer NCOPY,NSCHECK,NWCHECK
-	parameter(NCOPY=64,NSCHECK=7,NWCHECK=3)
+	parameter(NCOPY=63,NSCHECK=8,NWCHECK=3)
 	character copy(NCOPY)*8,scheck(NSCHECK)*8,wcheck(NWCHECK)*8
         data copy/    'airtemp ','antdiam ','antpos  ','atten   ',
      *     'axisrms ','chi     ','corbit  ','corbw   ','corfin  ',
@@ -651,10 +650,10 @@ c
      *     'plmin   ','pltb    ','precipmm','ra      ','relhumid',
      *     'source  ','telescop','temp    ','tpower  ','ut      ',
      *     'veldop  ','veltype ','version ','vsource ','winddir ',
-     *     'windmph ','xyphase ','delay0  ','npol    ','pol     '/
+     *     'windmph ','delay0  ','npol    ','pol     '/
 c
 	data SCheck/  'nspect  ','restfreq','ischan  ','nschan  ',
-     *     'sfreq   ','sdf     ','systemp '/
+     *     'sfreq   ','sdf     ','systemp ','xyphase '/
         data WCheck/  'wfreq   ','wwidth  ','wsystemp'/
 c
 c  Open the file, and set the correlation type.
@@ -662,6 +661,7 @@ c
 	line = 'Creating '//name
 	call output(line)
 	call uvopen(lOut,name,'new')
+	call uvset(lOut,'preamble','uvw/time/baseline',0,0.,0.,0.)
 	if(dowide)then
 	  call uvset(lOut,'data','wide',0,0.,0.,0.)
 	else
