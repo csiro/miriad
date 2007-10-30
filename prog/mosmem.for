@@ -894,7 +894,7 @@ c------------------------------------------------------------------------
 c
 	flux = 0
 	do i=1,nPoint
-	  flux = flux + Gain(i)*Model(i)
+	  if(Gain(i)*Model(i).gt.0)flux = flux + Gain(i)*Model(i)
 	enddo
 c
 	end
