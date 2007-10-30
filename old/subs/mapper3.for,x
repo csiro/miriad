@@ -1,0 +1,705 @@
+c************************************************************************
+c  A set of subroutines to form an image from visibility data.
+c
+c  User callable routines are:
+c    MapIni(tscr,nvis,umax,vmax,wmax,offcorr,totchan)
+c    MapFin
+c    MapDef
+c    MapScale(ichan)
+c    Mapper(ichan,pMap)
+c
+c  History:
+c    rjs  25oct94 Original version.
+c    rjs  22nov94 Array bound vioolation in mapfft2, which affected images
+c		  that were larger than maxdim/2.
+c    rjs   8dec94 Check MAXDIM is big enough. Better messages.
+c    rjs  12jan95 Fixed bug dealing with the amount of memory to allocate.
+c    rjs  13jan95 Second try at the above.
+c    rjs  16jan93 A third try at the above.
+c    rjs   4aug95 Check that the beam is non-zero. Bug out if not.
+c************************************************************************
+	subroutine MapFin3
+c
+	implicit none
+c
+c  Finish and tidy up.
+c------------------------------------------------------------------------
+	include 'mapper3.h'
+	if(nBuff.gt.0)call memFree(pBuff,nBuff,'r')
+	nBuff = 0
+	end
+c************************************************************************
+	subroutine MapIni3(tscr1,nvis1,umax1,vmax1,wmax1,
+     *						offcorr1,totchan1)
+c
+	implicit none
+	integer tscr1,offcorr1,totchan1,nvis1
+	real umax1,vmax1,wmax1
+c
+c  Set the basic mapping parameters.
+c------------------------------------------------------------------------
+	include 'mapper3.h'
+c
+	tscr = tscr1
+	nvis = nvis1
+	umax = umax1
+	vmax = vmax1
+	wmax = wmax1
+	offcorr = 2*offcorr1 - 1
+	totchan = totchan1
+c
+	chan1 = 0
+	chan2 = 0
+	nBuff = 0
+	nt = 0
+	ginit = .false.
+c
+	end
+c************************************************************************
+	subroutine MapDef3(nchan1,nx1,ny1,nz1)
+c
+	implicit none
+	integer nchan1,nx1,ny1,nz1
+c
+c  Define the size of a particular channel.
+c------------------------------------------------------------------------
+	include 'mapper3.h'
+	logical merge
+c
+c  Externals.
+c
+	character itoaf*6
+c
+	if(max(nx1,ny1).gt.MAXDIM)
+     *	  call bug('f','MAXDIM value is too small, in mapper.for.'//
+     *	   ' Current max image size is '//itoaf(MAXDIM))
+c
+	merge = nt.gt.0
+	if(merge) merge = nx(nt).eq.nx1.and.ny(nt).eq.ny1.and.
+     *			  nz(nt).eq.nz1
+	if(merge)then
+	  nchan(nt) = nchan(nt) + nchan1
+	else
+	  nt = nt + 1
+	  if(nt.gt.MAXT)call bug('f','Too many different types of maps')
+	  nx(nt) = nx1
+	  ny(nt) = ny1
+	  nz(nt) = nz1
+	  nchan(nt) = nchan1
+	endif
+c
+	end
+c************************************************************************
+	subroutine MapScal3(ichan)
+c
+	implicit none
+	integer ichan
+c
+c  Set the factors to scale the maps by.
+c    Input:
+c      ichan	Channel to use in setting the scale.
+c------------------------------------------------------------------------
+	include 'mapper3.h'
+	include 'mem.h'
+c
+	integer pMap
+	real Sum
+c
+c  Do a gridding pass if necessary, and determine the offset of the
+c  plane of interest.
+c
+	if(ichan.lt.chang.or.ichan.gt.chan2)call MapGrid3(ichan)
+	pMap = pBuff + 2*nu*nv*nw*(ichan-chan1) + nextra
+	call MapVSum3(memr(pMap),nu*nv*nw,Sum)
+	if(Sum.eq.0)call bug('f','No data found for pointing')
+	Scale = 0.5/Sum
+c
+	end
+c************************************************************************
+	subroutine Mapper3(ichan,pMap)
+c
+	implicit none
+	integer ichan,pMap
+c
+c  Get an image.
+c
+c  Input:
+c    ichan	Channel to use in setting the scale.
+c------------------------------------------------------------------------
+	include 'mapper3.h'
+	include 'mem.h'
+c
+	integer ioff,ooff
+c
+c  Do a gridding pass if necessary.
+c
+	if(ichan.lt.chang.or.ichan.gt.chan2)call MapGrid3(ichan)
+c
+c  Now do the Fourier transform and grid correction of this plane.
+c
+	ioff = 2*nu*nv*nw*(ichan-chan1) + nextra
+	ooff = 0
+c
+	call MapRefl3(memr(pBuff+ioff),nu,nv,nw,u0,v0,w0)
+	call MapFFTw3(memr(pBuff+ioff),nu,nv,nw,u0,w0,n3)
+	call MapFFTv3(memr(pBuff+ioff),nu,nv,nw,u0,v0,n2)
+	call MapFFTu3(memr(pBuff),ioff,ooff,nu,nv,nw,
+     *				nxc,nyc,nzc,u0,v0,w0,n1)
+	call MapCorr3(memr(pBuff),nxc,nyc,nzc,scale,
+     *	  xCorr(n1/2-nxc/2+1),yCorr(n2/2-nyc/2+1),zCorr(n3/2-nzc/2+1))
+	pMap = pBuff
+	chang = ichan + 1
+c
+	end
+c************************************************************************
+	subroutine MapVSum3(Dat,n,Sum)
+c
+	implicit none
+	integer n
+	complex Dat(n)
+	real Sum
+c
+c  Determine the sum of the complex data, and set this as the pointing
+c  scale factor.
+c------------------------------------------------------------------------
+	integer i
+	double precision temp
+c
+	temp = 0
+	do i=1,n
+	  temp = temp + real(Dat(i))
+	enddo
+c
+	Sum = temp
+	end
+c************************************************************************
+	subroutine MapGrid3(ichan)
+c
+	implicit none
+	integer ichan
+c
+c  Perform a gridding pass ...
+c------------------------------------------------------------------------
+	include 'mapper3.h'
+	include 'mem.h'
+c
+c  Initialise the gridder, if needed.
+c
+	if(.not.ginit)call MapGini3
+	ginit = .true.
+c
+c  Determine things about grid sizes, buffers, centres, etc.
+c
+	call mapBuf3(ichan)
+c
+c  Now actually do the work.
+c
+	call MapVis3(tscr,cgf,ncgf,width,nvis,offcorr+2*(chan1-1),
+     *	  chan2-chan1+1,offcorr+2*totchan-1,memr(pBuff+nextra),
+     *	  nu,nv,nw,u0,v0,w0,n1,n2,n3)
+c
+	end
+c************************************************************************
+	subroutine MapGini3
+c
+	implicit none
+c
+c  Initialise ready for gridding.
+c------------------------------------------------------------------------
+	include 'mapper3.h'
+c
+	integer WIDE
+	character func*(*)
+	real alpha
+	parameter(WIDE=4,alpha=0.0,func='spheroidal')
+c
+	integer nxm,nym,nzm,i
+c
+c  Externals.
+c
+	integer nextpow2
+c
+c  Determine the maximum image size.
+c
+	nxm = nx(1)
+	nym = ny(1)
+	nzm = nz(1)
+	do i=2,nt
+	  nxm = max(nxm,nx(i))
+	  nym = max(nym,nx(i))
+	  nzm = max(nzm,nz(i))
+	enddo
+c
+c  Determine the transform size.
+c
+	n1 = max(nextpow2(nxm),16)
+	n2 = max(nextpow2(nym),16)
+	n3 = max(nextpow2(nzm),16)
+c
+c  Get the convolutional gridding function.
+c
+	width = WIDE
+	ncgf = width * ( (MAXCGF-1)/width ) + 1
+	call gcffun(func,cgf,ncgf,width,alpha)
+	call corrfun(func,xcorr,n1,width,alpha)
+	call corrfun(func,ycorr,n2,width,alpha)
+	call corrfun(func,zcorr,n3,width,alpha)
+c
+	end
+c************************************************************************
+	subroutine mapBuf3(ichan)
+c
+	implicit none
+	integer ichan
+c
+c  Determine the gridding/mapping buffer size to be used, etc.
+
+c  Input:
+c    ichan	Channel to grid.
+c  Output (in common):
+c    chan1,chan2 Range of channels to grid.
+c    nu,nv,nw	Grid size (in complex elements).
+c    u0,v0,w0	Pixel coordinate of the origin of the uv plane.
+c    nextra	Number of "extra" things to allocate (to hold a final
+c		image).
+c    pBuff	Pointer to the buffer.
+c    nBuff	The number of elements allocated.
+c------------------------------------------------------------------------
+	include 'mapper3.h'
+	integer plsize,it,nplanes
+c
+c  Determine the range of things to possibly grid.
+c
+	chan2 = 0
+	chan1 = ichan
+	it = 0
+	dowhile(chan2.lt.chan1)
+	  it = it + 1
+	  chan2 = chan2 + nchan(it)
+	enddo
+	nxc = nx(it)
+	nyc = ny(it)
+	nzc = nz(it)
+c
+	nu = 2*int(umax*n1 + 0.5*width) + 1
+	nv = 2*int(vmax*n2 + 0.5*width) + 1
+	nw = 2*int(wmax*n3 + 0.5*width) + 1
+c
+	nu = min(nu,n1-1)
+	nv = min(nv,n2-1)
+	nw = min(nw,n3-1)
+c
+	nu = nu/2 + width/2 + 1
+c
+	nu = max(nu,(nxc-1)/2+1)
+	nv = max(nv,nyc)
+	nw = max(nw,nzc)
+c
+	u0 = width/2 + 1
+	v0 = nv/2 + 1
+	w0 = nw/2 + 1
+c
+c  Determine some things ...
+c    plsize -- the size, in REALs of the grid needed for a plane.
+c    nextra -- the number of extra REALs needed so that we can hold a plane
+c	       in place after FFTing.
+c    nplanes -- Number of planes we can fit in a reasonable amount of
+c		memory.
+c    npass   -- Number of i/o passes needed to grid all these images.
+c
+	plsize= 2*nu*nv*nw
+	nextra = 0
+	nplanes = 1
+c
+c  Is the current buffer big enough? If not, make it big enough.
+c
+	if(nplanes*plsize+nextra.gt.nBuff)then
+	  if(nBuff.gt.0)call memFree(pBuff,nBuff,'r')
+	  nBuff = nplanes * plsize + nextra
+	  call memAlloc(pBuff,nBuff,'r')
+	endif
+c
+c  Set the channel range that we will grid.
+c
+	chan1 = ichan
+	chang = ichan
+	chan2 = chan1 + nplanes - 1
+c
+	end
+c************************************************************************
+	subroutine MapVis3(tvis,cgf,ncgf,width,nvis,nstart,ncount,
+     *	  VisSize,Grd,nu,nv,nw,u0,v0,w0,n1,n2,n3)
+c
+	implicit none
+	integer tvis,ncgf,width,nu,nv,nw,u0,v0,w0,n1,n2,n3
+	integer nstart,ncount,nvis,VisSize
+	real cgf(ncgf)
+	complex Grd(nu,nv,nw)
+c
+c  The start of the gridding process.
+c
+c  Inputs:
+c    tvis	Handle of the visibility scratch file.
+c    width	Width of gridding convolution function.
+c    cgf	Tabulated values of gridding convolutiuon function.
+c    ncgf	Number of tabulated values of gridding convolution function.
+c    nu,nv,nw	Size of grid array.
+c    u0,v0,w0	Index of grid point corresponding to (u,v,w) = (0,0,0).
+c    n1,n2,n3	Transform size.
+c    nvis	Number of visibilities.
+c    VisSize	Size of each visibility record.
+c    nstart	First frequency channel to map.
+c    ncount	Number of frequency channels to map.
+c
+c  Output:
+c    Grd	Gridded visibiliites.
+c
+c------------------------------------------------------------------------
+	include 'maxdim.h'
+	integer maxrun
+	parameter(maxrun=8*MAXCHAN+20)
+	integer i,j,k,l,ltot,mtot,VispBuf
+	real Visibs(maxrun)
+c
+c  Some constants.
+c
+	VispBuf = Maxrun/VisSize
+	if(VispBuf.eq.0)
+     *	  call bug('f','Too many channels for buffer in GridVis')
+	if(ncount.ne.1)call bug('f','ncount != 1')
+c
+c  Zero the grid array.
+c
+	do k=1,nw
+	  do j=1,nv
+	    do i=1,nu
+	      Grd(i,j,k) = 0
+	    enddo
+	  enddo
+	enddo
+c
+c  Loop through the visibilities, gridding the appropriate ones.
+c
+	l = 0
+	ltot = nvis
+	dowhile(l.lt.ltot)
+	  mtot = min(VispBuf,ltot-l)
+	  call scrread(tvis,Visibs,l*VisSize,mtot*VisSize)
+	  call Mapit3(Visibs,mtot,nstart,VisSize,
+     *	    Grd,nu,nv,nw,u0,v0,w0,n1,n2,n3,Cgf,ncgf,width)
+	  l = l + mtot
+	enddo
+c
+	end
+c***********************************************************************
+	subroutine Mapit3(Vis,nvis,offset,size,
+     *		Grd,nu,nv,nw,u0,v0,w0,n1,n2,n3,
+     *		cgf,ncgf,width)
+c
+	implicit none
+	integer nVis,size,offset
+	integer nu,nv,nw,u0,v0,w0,n1,n2,n3
+	complex Grd(nu,nv,nw)
+	real Vis(size,nvis)
+	integer ncgf,width
+	real cgf(ncgf)
+c
+c  Grid a buffer of visibilities. This is the version for a vector
+c  machine.
+c
+c------------------------------------------------------------------------
+	include 'mirconst.h'
+	integer InU,InV,InW
+	parameter(InU=1,InV=2,InW=3)
+	integer i,j,k,m,uu,vv,ww,p0,q0,r0,pp,qq,rr,Step
+	complex Dat,Dat1,Dat2
+	real u,v,w,hwd,du,dv,dw
+	logical ok
+c
+c  Initialise.
+c
+	Step = (Ncgf-1)/Width
+	hwd = 0.5 * (width - 1)
+c
+c  Loop thru this buffer of visibilities. The early part is the
+c  initialisation for the most important loop in the code.
+c
+c  Convert u and v to grid units and work out the limits of the convolving
+c  region.
+c
+	do m=1,nvis
+	  u = Vis(InU,m) * n1
+	  v = Vis(InV,m) * n2
+	  w = Vis(InW,m) * n3
+	  Dat = cmplx(Vis(offset,m),Vis(offset+1,m))
+c
+c  Conjugate the data, if needed.
+c
+	  if(u.lt.0)then
+	    u = -u
+	    v = -v
+	    w = -w
+	    Dat = conjg(Dat)
+	  endif
+c
+c  Determine where to grid it.
+c
+	  uu = nint(u - hwd)
+	  du = u - uu
+	  uu = uu + u0 - 1
+c
+	  vv = nint(v - hwd)
+	  dv = v - vv
+	  vv = vv + v0 - 1
+c
+	  ww = nint(w - hwd)
+	  dw = w - ww
+	  ww = ww + w0 - 1
+c
+c  Check if the data fits on the grid. If not, discard it. Otherwise
+c  grid it.
+c
+	  ok = uu.ge.0.and.uu+width.le.nu.and.
+     *	       vv.ge.0.and.vv+width.le.nv.and.
+     *	       ww.ge.0.and.ww+width.le.nw
+c
+	  if(ok)then
+	    p0 = ncgf/2 - nint( Step * du ) + 1
+	    q0 = ncgf/2 - nint( Step * dv ) + 1
+	    r0 = ncgf/2 - nint( Step * dw ) + 1
+c
+	    rr = r0
+	    do k=ww+1,ww+width
+	      Dat1 = cgf(rr) * Dat
+	      qq = q0
+	      do j=vv+1,vv+width
+	        Dat2 = cgf(qq) * Dat1
+		pp = p0
+		do i=uu+1,uu+width
+		  Grd(i,j,k) = Grd(i,j,k) + cgf(pp) * Dat2
+		  pp = pp + Step
+		enddo
+		qq = qq + Step
+	      enddo
+	      rr = rr + Step
+	    enddo	      
+	  endif
+c
+	enddo
+c
+	end
+c************************************************************************
+	subroutine MapFFTw3(Grd,nu,nv,nw,u0,w0,n3)
+c
+	implicit none
+	integer nu,nv,nw,u0,w0,n3
+	complex Grd(nu,nv,nw)
+c------------------------------------------------------------------------
+	include 'maxdim.h'
+	complex cdat1(MAXDIM),cdat2(MAXDIM)
+	integer i,j,k,kd,koff
+	real fac
+c
+	do k=1,n3
+	  cdat1(k) = 0
+	enddo
+c
+	do j=1,nv
+	  do i=u0,nu
+	    fac = 1
+	    kd = 1
+	    do k=w0,nw
+	      cdat1(kd) = fac*Grd(i,j,k)
+	      fac = -fac
+	      kd = kd + 1
+	    enddo
+c
+	    kd = n3 - w0 + 2
+	    if(2*(kd/2).ne.kd)then
+	      fac = 1
+	    else
+	      fac = -1
+	    endif
+c
+	    do k=1,w0-1
+	      cdat1(kd) = fac*Grd(i,j,k)
+	      fac = -fac
+	      kd = kd + 1
+	    enddo
+c
+	    call fftcc(cdat1,cdat2,-1,n3)
+c
+	    koff = (n3/2 + 1) - w0
+	    do k=1,nw
+	      Grd(i,j,k) = cdat2(k+koff)
+	    enddo
+	  enddo
+	enddo
+c
+	end
+c************************************************************************
+	subroutine MapFFTv3(Grd,nu,nv,nw,u0,v0,n2)
+c
+	implicit none
+	integer nu,nv,nw,u0,v0,n2
+	complex Grd(nu,nv,nw)
+c------------------------------------------------------------------------
+	include 'maxdim.h'
+	complex cdat1(MAXDIM),cdat2(MAXDIM)
+	integer i,j,k,jd,joff
+	real fac
+c
+	do j=1,n2
+	  cdat1(j) = 0
+	enddo
+c
+	do k=1,nw
+	  do i=u0,nu
+	    fac = 1
+	    jd = 1
+	    do j=v0,nv
+	      cdat1(jd) = fac*Grd(i,j,k)
+	      fac = -fac
+	      jd = jd + 1
+	    enddo
+c
+	    jd = n2 - v0 + 2
+	    if(2*(jd/2).ne.jd)then
+	      fac = 1
+	    else
+	      fac = -1
+	    endif
+c
+	    do j=1,v0-1
+	      cdat1(jd) = fac*Grd(i,j,k)
+	      fac = -fac
+	      jd = jd + 1
+	    enddo
+c
+	    call fftcc(cdat1,cdat2,-1,n2)
+c
+	    joff = (n2/2 + 1) - v0
+	    do j=1,nv
+	      Grd(i,j,k) = cdat2(j+joff)
+	    enddo
+	  enddo
+	enddo
+c
+	end
+c************************************************************************
+	subroutine MapFFTu3(Grd,inoff,outoff,nu,nv,nw,
+     *					nx,ny,nz,u0,v0,w0,n1)
+c
+	implicit none
+	integer nu,nv,nw,u0,v0,w0,nx,ny,nz,n1
+	integer inoff,outoff
+	real Grd(*)
+c------------------------------------------------------------------------
+	include 'maxdim.h'
+c
+	real cdat(MAXDIM+2),rdat(MAXDIM),fac
+	integer i,j,k,offi,offo,ioff,nud
+c
+	offi = inoff + 
+     *	  2*( (u0 -1) + nu*(v0-(ny/2+1)) + nu*nv*(w0-(nz/2+1)) )
+	offo = outoff
+	nud = nu - u0 + 1
+c
+	do i=1,2*nu+2
+	  cdat(i) = 0
+	enddo
+c
+	do k=1,nz
+	  do j=1,ny
+	    if(offo.gt.offi)call bug('f',
+     *	      'Memory conservation algorithm failed, in Mapper')
+	    fac = 1
+	    do i=1,2*nud,2
+	      cdat(i)   = fac*Grd(i+offi)
+	      cdat(i+1) = fac*Grd(i+offi+1)
+	      fac = -fac
+	    enddo
+c
+	    call fftcr(cdat,rdat,-1,n1)
+	    ioff = n1/2 - nx/2
+c
+	    do i=1,nx
+	      Grd(i+offo) = rdat(i+ioff)
+	    enddo
+c
+	    offi = offi + 2*nu
+	    offo = offo + nx
+	    if(offo.gt.offi)call bug('f',
+     *	      'Memory conservation algorithm failed, in Mapper')
+	  enddo
+	  offi = offi + 2*nu*(nv-ny)
+	enddo
+c
+	end
+c************************************************************************
+	subroutine MapCorr3(Map,nx,ny,nz,scale,xCorr,yCorr,zCorr)
+c
+	implicit none
+	integer nx,ny,nz
+	real Map(nx,ny,nz),xCorr(nx),yCorr(ny),zCorr(nz),Scale
+c
+c  Scale the image and apply the convolutional gridding correction.
+c------------------------------------------------------------------------
+	integer i,j,k
+	real scale1,scale2,scale3
+c
+	scale1 = scale*xCorr(nx/2+1)*yCorr(ny/2+1)*zCorr(nz/2+1)
+	do k=1,nz
+	  scale2 = scale1/zCorr(k)
+	  do j=1,ny
+	    scale3 = scale2/yCorr(j)
+	    do i=1,nx
+	      Map(i,j,k) = Map(i,j,k) * scale3/xCorr(i)
+	    enddo
+	  enddo
+	enddo
+c
+	end
+c************************************************************************
+	subroutine MapRefl3(Grd,nu,nv,nw,u0,v0,w0)
+c
+	implicit none
+	integer nu,nv,nw,u0,v0,w0
+	complex Grd(nu,nv,nw)
+c
+c  Reflect the visibities in the range 1 to u0-1 to the appropriate
+c  point in the rest of the grid.
+c  Inputs:
+c    u0,v0,w0	Index of the pixel in the grid array corresponding to
+c		(u,v,w) = (0,0,0).
+c    nu,nv,nw	Input gridded visibility data size.
+c
+c  Input/Output:
+c    Grd	Input gridded visibility. Destroyed in the FFT process.
+c
+c------------------------------------------------------------------------
+	integer i,j,k,id,jd,kd
+	complex t1,t2,t3,t4
+c
+	kd = w0
+	do k=w0,nw
+	  jd = v0
+	  do j=v0,nv
+	    id = u0
+	    do i=u0,2*u0-1
+	      t1 = Grd(i,j,k)   + conjg(Grd(id,jd,kd))
+	      t2 = Grd(i,jd,k)  + conjg(Grd(id,j,kd))
+	      t3 = Grd(i,j,kd)  + conjg(Grd(id,jd,k))
+	      t4 = Grd(i,jd,kd) + conjg(Grd(id,j,k))
+	      Grd(i,j,k)   = t1
+	      Grd(i,jd,k)  = t2
+	      Grd(i,j,kd)  = t3
+	      Grd(i,jd,kd) = t4	
+	      id = id - 1
+	    enddo
+	    jd = jd - 1
+	  enddo
+	  kd = kd - 1
+	enddo
+c
+	end
