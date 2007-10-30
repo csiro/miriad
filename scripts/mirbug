@@ -54,7 +54,7 @@
 #  Initializations
 
   set mirprg	= $MIRCAT/miriad.pgmrs
-  set addresses	= ("rsault@atnf.csiro.au" `whoami`)
+  set addresses	= ("miriad@atnf.csiro.au" `whoami`)
   set awk_script = /tmp/$$.awk
   set templ    = $task.mirbug
   set template = /tmp/$templ
