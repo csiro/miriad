@@ -40,11 +40,12 @@ c  History:
 c    20jun01 dpr  Original version.
 c     5jun02 rjs  Added 3mm gain/elevation curve, and options=replace
 c     7jun02 rjs  Added Tony Wong's version of the gain/elev curve.
+c    17dec02 tw   Don't die if observing frequency is out of range.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
 	character version*(*)
-	parameter(version='elevcor: version 1.0 7-Jun-02')
+	parameter(version='elevcor: version 1.0 17-Dec-02')
 	integer PolXX,PolYY,PolXY,PolYX
 	parameter(PolXX=-5,PolYY=-6,PolXY=-7,PolYX=-8)
 c
@@ -381,7 +382,9 @@ c
 	  write(line,'(a,f6.3,a)')
      -     'Elevation corrections are unknown for freq ',
      -     freq0/1e+9,'GHz'
-	  call bug('f',line)
+	  call bug('w',line)
+	  g1=1.
+	  g2=1.
 	endif
 c
 	EleScale=g1*g2
