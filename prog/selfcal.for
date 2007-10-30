@@ -134,9 +134,10 @@ c    rjs  26apr92 Handle clip level better.
 c    rjs   1may92 Added nfeeds keyword to output gains header.
 c    rjs  17may92 More fiddles to the way clipping is handled.
 c    rjs  23jun92 Changes to doc and messages (centre=>center, etc).
+c    rjs  22nov92 Added ntau keyword to output gains header.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Selfcal: version 1.0 23-Jun-92')
+	parameter(version='Selfcal: version 1.0 22-Nov-92')
 	integer MaxMod,maxsels,nhead
 	parameter(MaxMod=32,maxsels=256,nhead=3)
 c
@@ -770,6 +771,7 @@ c
 	call wrhdi(tgains,'ngains',nants)
 	call wrhdi(tgains,'nsols',nsols-nbad)
 	call wrhdi(tgains,'nfeeds',1)
+	call wrhdi(tgains,'ntau',0)
 c
 c  Write out a summary to wake the user up from his/her slumber.
 c
