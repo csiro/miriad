@@ -159,6 +159,7 @@ c    rjs  19may93 Merge mchw and rjs versions of selfcal.
 c    rjs  28jun93 Iterate a bit longer. Better memory allocation.
 c    rjs  31aug93 Better amplitude calibration with low S/N data.
 c    rjs  24sep93 Doc changes only.
+c    rjs   9nov93 Better recording of time of a particular solution interval.
 c  Bugs/Shortcomings:
 c   * Selfcal should check that the user is not mixing different
 c     polarisations and pointings.
@@ -166,7 +167,7 @@ c   * It would be desirable to apply bandpasses, and merge gain tables,
 c     apply polarisation calibration, etc.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Selfcal: version 1.0 31-Aug-93')
+	parameter(version='Selfcal: version 1.0 9-Nov-93')
 	integer MaxMod,maxsels,nhead
 	parameter(MaxMod=32,maxsels=256,nhead=3)
 c
@@ -459,7 +460,7 @@ c    real SumVV(nBl,maxSol),SumMM(maxSol),Weight(nBl,maxSol)
 c    real Count(maxSol)
 c
 	nBl = (nants*(nants-1))/2
-	SolSize = 2 + 4*nBl + 2*nants
+	SolSize = 3 + 4*nBl + 2*nants
 	maxSol = min(nHash,max(minSol,(MemBuf()-10)/SolSize))
 	nSols = 0
 	TotVis = 0
@@ -469,6 +470,7 @@ c
 	call MemAlloc(pWeight,maxSol*nBl,'r')
 	call MemAlloc(pCount,maxSol,'r')
 	call MemAlloc(pGains,maxSol*nants,'c')
+	call MemAlloc(prTime,maxSol,'r')
 c
 	end
 c************************************************************************
@@ -486,6 +488,7 @@ c------------------------------------------------------------------------
 	call MemFree(pWeight,maxSol*nBl,'r')
 	call MemFree(pCount,maxSol,'r')
 	call MemFree(pGains,maxSol*nants,'c')
+	call MemFree(prTime,maxSol,'r')
 	end
 c************************************************************************
 	subroutine SelfAcc(tscr,nchan,nvis,interval)
@@ -510,12 +513,12 @@ c
 	call SelfAcc1(tscr,nchan,nvis,nBl,maxSol,nSols,
      *	  nhash,Hash,Indx,interval,Time,
      *	  Memc(pSumVM),Memr(pSumVV),Memr(pSumMM),
-     *	  Memr(pWeight),Memr(pCount))
+     *	  Memr(pWeight),Memr(pCount),Memr(prTime))
 	end
 c************************************************************************
 	subroutine SelfAcc1(tscr,nchan,nvis,nBl,maxSol,nSols,
      *	  nHash,Hash,Indx,interval,
-     *	  Time,SumVM,SumVV,SumMM,Weight,Count)
+     *	  Time,SumVM,SumVV,SumMM,Weight,Count,rTime)
 c
 	implicit none
 	integer tscr,nchan,nvis,nBl,maxSol,nSols
@@ -524,7 +527,7 @@ c
 	real interval
 	complex SumVM(nBl,maxSol)
 	real SumVV(nBl,maxSol),SumMM(maxSol),Weight(nBl,maxSol)
-	real Count(maxSol)
+	real Count(maxSol),rTime(maxSol)
 
 	include 'maxdim.h'
 c
@@ -555,6 +558,7 @@ c    SumVV	Sum(over t,f)|Model|**2/sigma**2. Varies with b.
 c    SumMM	Sum(over t,f,b) |Vis|**2/sigma**2.
 c    Weight	Sum(over t,f) 1/sigma**2. Varies with b.
 c    Count	Sum(over t,f,b) 1.
+c    rTime	Sum(over t,f,b) t.
 c
 c  The Visibility Records:
 c    The scratch file consists of "nvis" records, each of size nhead+5*nchan
@@ -615,6 +619,7 @@ c
 	    enddo
 	    SumMM(nSols) = 0
 	    Count(nSols) = 0
+	    rTime(nSols) = 0
 	  endif
 c
 c  We have found the slot containing the info. Accumulate in the
@@ -632,6 +637,7 @@ c
 	      SumMM(i) = SumMM(i) + Wt * (Out(k)**2 + Out(k+1)**2)
 	      Weight(bl,i) = Weight(bl,i) + Wt
 	      Count(i) = Count(i) + 1
+	      rTime(i) = rTime(i) + Out(2)
 	    endif
 	  enddo
 	enddo
@@ -671,12 +677,12 @@ c
 	call Solve1(tgains,nSols,nBl,nants,phase,smooth,relax,noscale,
      *	  minants,refant, Time0,interval,Time,Indx,
      *	  Memc(pSumVM),Memr(pSumVV),Memr(pSumMM),Memc(pGains),
-     *	  Memr(pWeight),Memr(pCount))
+     *	  Memr(pWeight),Memr(pCount),memr(prTime))
 	end
 c************************************************************************
 	subroutine Solve1(tgains,nSols,nBl,nants,phase,smooth,relax,
      *	  noscale,minants,refant,Time0,interval,Time,TIndx,
-     *	  SumVM,SumVV,SumMM,Gains,Weight,Count)
+     *	  SumVM,SumVV,SumMM,Gains,Weight,Count,rTime)
 c
 	implicit none
 	integer tgains
@@ -685,7 +691,7 @@ c
 	integer Time(nSols),TIndx(nSols)
 	complex SumVM(nBl,nSols),Gains(nants,nSols)
 	real SumVV(nBl,nSols),SumMM(nSols),Weight(nBl,nSols)
-	real Count(nSols),interval
+	real Count(nSols),rTime(nSols),interval
 	double precision Time0
 c
 c  This runs through all the accumulated data, and calculates the
@@ -703,6 +709,7 @@ c    refant
 c    time
 c    Weight
 c    Count
+c    rTime
 c    SumMM
 c    SumVM
 c    SumVV
@@ -726,7 +733,7 @@ c
 c  Partially combine adjacent time slots, if desired.
 c
 	if(smooth) call SmthData(nSols,nBl,Time,TIndx,
-     *	  SumVM,SumVV,SumMM,Weight,Count)
+     *	  SumVM,SumVV,SumMM,Weight,Count,rTime)
 c
 c  Now calculate the solutions.
 c
@@ -774,7 +781,7 @@ c
 	do k=1,nSols
 	  k0 = TIndx(k)
 	  if(Count(k0).gt.0)then
-	    dtime = Time(k0)*interval + time0
+	    dtime = rTime(k0) / Count(k0) + time0
 	    call hwrited(item,dtime,offset,8,iostat)
 	    offset = offset + 8
 	    call GFudge(gains(1,k0),nants)
@@ -857,13 +864,13 @@ c
 	end
 c************************************************************************
 	subroutine SmthData(nSols,nBl,Time,TIndx,SumVM,SumVV,
-     *	  SumMM,Weight,Count)
+     *	  SumMM,Weight,Count,rTime)
 c
 	implicit none
 	integer nSols,nBl,Time(nSols),TIndx(nSols)
 	complex SumVM(nBl,nSols)
 	real SumVV(nBl,nSols),SumMM(nSols),Weight(nBl,nSols)
-	real Count(nSols)
+	real Count(nSols),rTime(nSols)
 c
 c  This adds in a contribution, to the statistics (needed for determining
 c  self-cal solutions), from adjacent time intervals.
@@ -879,10 +886,11 @@ c    SumVV
 c    SumMM
 c    Weight
 c    Count
+c    rTime
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	complex SaveVM(MAXBASE),ctemp
-	real SaveVV(MAXBASE),SaveMM,SaveWt(MAXBASE),SaveCnt,temp
+	real SaveVV(MAXBASE),SaveMM,SaveWt(MAXBASE),SaveCnt,SaveTim,temp
 	logical saved,dosave
 	integer i,k,k0,k1
 c
@@ -907,8 +915,10 @@ c
 	      enddo
 	      SaveMM = SumMM(k0)
 	      SaveCnt = Count(k0)
+	      SaveTim = rTime(k0)
 	      SumMM(k0) = SumMM(k0) + 0.5*SumMM(k1)
 	      Count(k0) = Count(k0) + 0.5*Count(k1)
+	      rTime(k0) = rTime(k0) + 0.5*rTime(k1)
 	    else
 	      do i=1,nBl
 		ctemp = SumVM(i,k0)
@@ -930,6 +940,9 @@ c
 	      temp = Count(k0)
 	      Count(k0) = Count(k0) + 0.5 * ( SaveCnt + Count(k1) )
 	      SaveCnt = temp
+	      temp = rTime(k0)
+	      rTime(k0) = rTime(k0) + 0.5 * ( SaveTim + rTime(k1) )
+	      SaveTim = temp
 	    endif
 	  else
 	    if(saved)then
@@ -940,6 +953,7 @@ c
 	      enddo
 	      SumMM(k0) = SumMM(k0) + 0.5*SaveMM
 	      Count(k0) = Count(k0) + 0.5*SaveCnt
+	      rTime(k0) = rTime(k0) + 0.5*SaveTim
 	    endif
 	  endif
 	  saved = dosave
