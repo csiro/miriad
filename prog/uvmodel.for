@@ -131,6 +131,7 @@ c    mhw  05jan96 Add zero option to avoid flagging outer uvplane
 c    rjs  30sep96 Tidy up and improved polarisation handling.
 c    rjs  19jun97 Point source models can be different polarisations.
 c    rjs  26sep97 Re-add mhw's zero option.
+c    rjs  01dec98 More warning messages.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
@@ -157,7 +158,7 @@ c
 c  Externals.
 c
 	external header
-	logical keyprsnt
+	logical keyprsnt,hdprsnt
 	integer polsp2c
 c
 c  Get the input parameters.
@@ -196,6 +197,16 @@ c
 c  Miscellaneous initialisation.
 c
 	call uvopen(tvis,vis,'old')
+	if(hdprsnt(tvis,'gains').or.hdprsnt(tvis,'leakage').or.
+     *	   hdprsnt(tvis,'bandpass'))then
+	  call bug('w','UVMODEL does not apply any calibration tables')
+	  if(hdprsnt(tvis,'gains'))call bug('w',
+     *	    'Antenna gain calibration not applied')
+	  if(hdprsnt(tvis,'leakage'))call bug('w',
+     *	    'Polarization leakage calibration not applied')
+	  if(hdprsnt(tvis,'bandpass'))call bug('w',
+     *	    'Bandpass calibration not applied')
+	endif
 c
 c  Determine the flags to the ModelIni and Model routines.
 c
