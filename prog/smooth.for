@@ -9,6 +9,11 @@ c	SMOOTH is a MIRIAD task which convolves an image by an elliptical
 c	gaussian or a boxcar the hard way.   The convolving Gaussian and 
 c	boxcar have peaks of unity.  Additional scaling is provided by 
 c	the keyword "scale"
+c
+c       By default, SMOOTH will mask pixels in the output image if
+c       there are more masked pixels than unmaked pixels in the 
+c       Gaussian convolution area. This means that pixels which were
+c       maked in the input may be unmasked in the output.
 c@ in 
 c	The input image.  Wild card expansion is supported, no default.
 c@ out
@@ -41,6 +46,8 @@ c	"nocheck"   By default, blanked input pixels do not contribute to the
 c	   convolution sum.  If you set NOCHECK then blanked input pixels 
 c	   are not checked for (but the output image is blanked around the 
 c	   unconvolved edge, and wherever the input image is blanked).
+c       "force"     Force masking of pixels in the output image which
+c          are masked in the input image.
 c
 c--
 c
@@ -60,6 +67,7 @@ c    rjs   25nov93   Change "width" to "fwhm".
 c    rjs   02jul97   cellscale change.
 c    rjs   23jul97   Add pbtype.
 c    dpr   19jul01   Longer in and out keys
+c    dpr   21jun01   Added options "force"
 c------------------------------------------------------------------------
       implicit none
       include 'maxdim.h'
@@ -83,7 +91,7 @@ c
       double precision cdelt1, cdelt2
       real kern(maxk2), fwhm1, fwhm2, pa, scale, major, minor, ksum,
      +bmaj, bmin, bpa
-      logical lrow(maxdim), hdprsnt, nocheck
+      logical lrow(maxdim), hdprsnt, nocheck,force
 c
       integer ntype
       parameter (ntype = 2)
@@ -106,7 +114,7 @@ c
       call keyr ('fwhm', fwhm2, fwhm1)
       call keyr ('pa', pa, 0.0)
       call keyr ('scale', scale, -1.0)
-      call getopt (nocheck)
+      call getopt (nocheck,force)
       call keyfin
 c
 c  Check inputs.
@@ -212,7 +220,7 @@ c
         if (.not.nocheck) then
           call sm1 (nsize(1), nsize(2), ksize2, ksizex, ksizey, scale,
      +              kern, kipnt, kjpnt, data(ipin), data(ipmin),
-     +              data(ipout), data(ipmout))
+     +              data(ipout), data(ipmout),force)
         else 
           call sm2 (nsize(1), nsize(2), ksize2, ksizex, ksizey, ksum,
      +              scale, kern, kipnt, kjpnt, data(ipin), data(ipmin),
@@ -233,28 +241,31 @@ c
       end
 c
 c
-      subroutine getopt (nocheck)
+      subroutine getopt (nocheck,force)
 c----------------------------------------------------------------------
 c     Decode options array into named variables.
 c
 c   Output:
 c     nocheck   don't check for blanks
+c     force     force masking of output pixel when input pixel masked
 c
 c-----------------------------------------------------------------------
       implicit none
 c
       logical nocheck
+      logical force
 cc
       integer maxopt
-      parameter (maxopt = 1)
+      parameter (maxopt = 2)
 c
       character opshuns(maxopt)*8
       logical present(maxopt)
-      data opshuns /'nocheck'/
+      data opshuns /'nocheck', 'force   '/
 c-----------------------------------------------------------------------
       call options ('options', opshuns, present, maxopt)
 c
       nocheck =      present(1)
+      force   =      present(2)
 c
       end
 c
@@ -525,14 +536,14 @@ c
 c
 c
       subroutine sm1 (size1, size2, ksize2, ksizex, ksizey, scale,
-     +                kern, ip, jp, in, maskin, out, maskout)
+     +                kern, ip, jp, in, maskin, out, maskout,force)
 c-----------------------------------------------------------------------
 c     Convolve image via multiplication and summation with checks for
-c     blanking.  For a given output pixel,  if an input pixel in the
-c     convolution sum is blank, it just doesn't contribute to the sum.
-c     If the normalization is by the volume of the  convolving kernel
-c     then the weight that would normally have been assigned the blanked
-c     pixel is not included in the normalization sum either. 
+c     blanking.  By default, for a given output pixel, if an input pixel
+c     in the convolution sum is blank, it just doesn't contribute to the
+c     sum.  If the normalization is by the volume of the convolving
+c     kernel then the weight that would normally have been assigned the
+c     blanked pixel is not included in the normalization sum either.
 c
 c  Input:
 c     size1,2   i   Dimensions of image arrays
@@ -548,6 +559,7 @@ c     ip,jp     i   For each KERN(I), IP(I) and JP(I) are the pixel
 c                   offsets in X and Y from the kernel centre 
 c     in        r   Input image
 c     maskin    r   Input blanking mask; +1 = .true., -1 = .false.
+c     force     l   Force masking of output pixel if input pixel masked
 c  Output:
 c     out       r   Output image
 c     maskout   r   Output blanking mask; +1 = .true., -1 = .false.
@@ -562,11 +574,14 @@ c
 cc
       integer h, i, j, n
       real sum, ksum, kscale
+      logical force
 c-----------------------------------------------------------------------
       kscale = scale
       do j = 1, size2
         do i = 1, size1
-          if (j.gt.ksizey .and. i.gt.ksizex .and.
+          if ((maskin(i,j) .lt. 0.0) .and. force) then
+            maskout(i,j) = -1.0
+          else if (j.gt.ksizey .and. i.gt.ksizex .and.
      +        j.lt.size2-ksizey .and. i.lt.size1-ksizex) then
             sum = 0.0
             ksum = 0.0
