@@ -87,6 +87,7 @@ c		  time.
 c    rjs  19sep95 Handle data that is not quite in time order.
 c    rjs  21sep95 Really do it this time.
 c    rjs  14dec95 Increase buffer in averaging (MAXAVER).
+c    rjs  14jun96 Add warning about time averaging pulsar bin data.
 c
 c  Bugs:
 c    * The way of determining whether a source has changed is imperfect.
@@ -96,9 +97,9 @@ c    * Too much of this code worries about polarisations.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
-	parameter(version='UvAver: version 1.0 21-Sep-95')
+	parameter(version='UvAver: version 1.0 13-Jun-96')
 	character uvflags*12,ltype*16,out*64
-	integer npol,Snpol,pol,tIn,tOut,vupd,nread,nrec,i
+	integer npol,Snpol,pol,tIn,tOut,vupd,nread,nrec,i,nbin
 	real inttime
 	logical dotaver,doflush,buffered,PolVary,ampsc,vecamp,first
 	logical relax,ok,donenpol
@@ -144,6 +145,16 @@ c
 c  Open the input and the output files.
 c
 	dowhile(uvDatOpn(tIn))
+	  nbin = 1
+	  if(dotaver)then
+	    call uvrdvri(tIn,'nbin',nbin,1)
+	    if(nbin.gt.1)then
+	      call bug('w',
+     *	      'Time averaging or pol''n selection of bin-mode data')
+	      call bug('w',
+     *	      'This will average all bins together')
+	    endif
+	  endif
 	  call uvDatGta('ltype',ltype)
 	  call VarInit(tIn,ltype)
 	  call uvVarIni(tIn,vupd)
@@ -234,6 +245,7 @@ c
 	      call BufAcc(preamble,inttime,data,flags,nread)
 	      buffered = .true.
 	      call VarCopy(tIn,tOut)
+	      if(nbin.gt.1)call uvputvri(tOut,'nbin',1,1)
 	    endif
 c
 c  Keep on going. Read in another record.
@@ -248,6 +260,7 @@ c  Flush out anything remaining.
 c
 	  if(buffered)then
 	    call VarCopy(tIn,tOut)
+	    if(nbin.gt.1)call uvputvri(tOut,'nbin',1,1)
 	    call BufFlush(tOut,ampsc,vecamp,npol)
 	    PolVary = PolVary.or.npol.le.0.or.
      *	      (Snpol.ne.npol.and.Snpol.gt.0)
