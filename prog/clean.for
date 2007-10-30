@@ -37,12 +37,6 @@ c	Extra processing options. Several can be given, separated
 c	by commas. Minimum match is used. Possible values are:
 c	  negstop   Stop when the first negative component is encounters.
 c	            This does not apply when using Steer iterations.
-c	  pad       Double the beam size by padding it with zeros. This
-c	            will give you better stability with Clark and Steer
-c	            modes if you are daring enough to CLEAN more than the
-c	            inner quarter of the dirty image.
-c
-c	Expert's options only, use with understanding only.
 c	  positive  Apply a positivity constraint. This constrains the
 c	            component image to be non-negative. A side-effect of this
 c	            is that CLEAN will stop iterating if it cannot continue
@@ -51,6 +45,10 @@ c	            iterations.
 c	  asym      The beam is asymmetric. By default CLEAN assumes the
 c	            beam has a 180 degree rotation symmetry, which is the
 c	            norm for beams in radio-astronomy.
+c	  pad       Double the beam size by padding it with zeros. This
+c	            will give you better stability with Clark and Steer
+c	            modes if you are daring enough to CLEAN more than the
+c	            inner quarter of the dirty image.
 c@ cutoff
 c	CLEAN finishes either when the absolute maximum residual falls
 c	below CUTOFF, or when the criteria described below is
@@ -129,8 +127,8 @@ c   rjs  26feb93 - add positive option, and get negstop parameter via
 c		   an option.
 c   rjs  31jan95 - Copy across mosaic table. Eliminate scratch common.
 c   rjs  14feb95 - Changes to the area of the way "model" is handled.
-c   nebk 29apr95 - DOc change only
-c
+c   rjs   2jun95 - Fix spurious warning message resulting from the above
+c		   change.
 c  Important Constants:
 c    MaxDim	The max linear dimension of an input (or output) image.
 c
@@ -147,7 +145,7 @@ c		to write.
 c
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Clean: version 1.0 14-Feb-95')
+	parameter(version='Clean: version 1.0 2-Jun-95')
 	include 'maxdim.h'
 	integer MaxBeam,maxCmp1,maxCmp2,MaxBox,MaxRun,MaxP
 	parameter(maxCmp1=66000,MaxCmp2=32000,MaxP=257)
@@ -1487,18 +1485,18 @@ c
 c
 	end
 c************************************************************************
-	subroutine align(lMap,lModel,mMap,nMap,oMap,xoff,yoff,zoff)
+	subroutine align(lModel,lMap,mMap,nMap,oMap,xoff,yoff,zoff)
 c
 	implicit none
-	integer lMap,lModel
+	integer lModel,lMap
 	integer mMap,nMap,oMap,xoff,yoff,zoff
 c
 c  Determine the alignment parameters between the map and the model.
 c  This insists that they line up on pixels.
 c
 c  Input:
-c    lMap	Handle of the map file.
 c    lModel	Handle of the model file.
+c    lMap	Handle of the map file.
 c    mMap,nMap,oMap Map dimensions.
 c
 c  Output:
@@ -1520,12 +1518,12 @@ c
 c
 	do i=1,3
 	  num = itoaf(i)
-	  call rdhdr(lMap,'crval'//num,vM,0.)
-	  call rdhdr(lMap,'cdelt'//num,dM,1.)
-	  call rdhdr(lMap,'crpix'//num,rM,1.)
-	  call rdhdr(lModel,'crval'//num,vE,0.)
-	  call rdhdr(lModel,'cdelt'//num,dE,1.)
-	  call rdhdr(lModel,'crpix'//num,rE,1.)
+	  call rdhdr(lModel,'crval'//num,vM,0.)
+	  call rdhdr(lModel,'cdelt'//num,dM,1.)
+	  call rdhdr(lModel,'crpix'//num,rM,1.)
+	  call rdhdr(lMap,'crval'//num,vE,0.)
+	  call rdhdr(lMap,'cdelt'//num,dE,1.)
+	  call rdhdr(lMap,'crpix'//num,rE,1.)
 	  if(dE.eq.0)call bug('f','Increment on axis '//num//' is zero')
 	  temp = (vM-vE)/dE + (rM-rE)
 	  offset(i) = nint(temp)
@@ -1533,7 +1531,7 @@ c
      *	    call bug('f','Map and model do not align on pixels')
 	  if(abs(dM-dE).ge.0.001*abs(dM))
      *	    call bug('f','Map and model increments are different')
-	  if(offset(i).lt.0.or.offset(i).ge.nsize(i))
+	  if(offset(i).gt.0.or.offset(i).le.-nsize(i))
      *	    call bug('w','Map and model do not overlap well')
 	enddo
 c
