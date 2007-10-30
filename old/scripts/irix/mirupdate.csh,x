@@ -1,0 +1,26 @@
+#!/bin/csh -f
+
+# Some convenient aliases.
+
+alias dosubs    mirnewer -x junk			-e mircadd $MIRLIB/Last_update
+alias doprog    mirnewer -x junk 			-e mirclnk $MIRLIB/Last_update
+alias doscripts mirnewer -x junk -x mirupdate -x mirclnk -e mirclnk $MIRLIB/Last_update
+alias dotools   mirnewer -x junk -x newer 		-e mirclnk $MIRLIB/Last_update
+alias dodoc     mirnewer -x junk 			-e mirclnk $MIRLIB/Last_update
+
+# Do the real work.
+
+doscripts $MIR/scripts/unix{/irix,}
+dodoc     $MIR/specdoc
+dotools   $MIR/tools
+dosubs    $MIR/subs{/unix,} $MIR/linpack
+doprog    $MIR/prog
+
+# Write out the update time.
+
+echo -n "Record the update time? [y/n] "
+set update = $<
+if ( "$update" == y ) then
+  echo Last updated at `date` by `whoami` >> $MIRLIB/Last_update
+  touch $MIRLIB/Last_update
+endif
