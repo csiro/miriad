@@ -22,6 +22,7 @@
        27-dec-94  pjt   Fixed (?) bug in hexist for regular files
 			and documented this feature
        13-mar-95  rjs   Increase max number of open items.
+       30-jun-95  rjs   Declaration to appease gcc.
 */
 
 
@@ -119,6 +120,8 @@ private TREE *hcreate_tree_c();
 
 void bug_c(),bugno_c(),dopendir_c(),dclosedir_c(),dreaddir_c();
 void dtrans_c(),dmkdir_c(),dopen_c(),dclose_c(),dread_c(),dwrite_c();
+
+private int hfind_nl();
 
 #define Malloc(a) malloc((size_t)(a))
 #define Realloc(a,b) realloc((a),(size_t)(b))
@@ -291,7 +294,7 @@ void habort_c()
 	subroutine habort()
 
   This closes all open Miriad data-sets, and deletes any new ones. No
-  buffers are flushed.
+  buffers are flushed.							*/
 /*--									*/
 /*----------------------------------------------------------------------*/
 {
@@ -360,7 +363,7 @@ int tno;
   This completely removes a Miriad data-set.
 
   Input:
-    tno		The file handle of the open data-set.
+    tno		The file handle of the open data-set.			*/
 /*--									*/
 /*----------------------------------------------------------------------*/
 {
@@ -623,7 +626,7 @@ char *keyword,*status;
 void hmode_c(tno,mode)
 int tno;
 char *mode;
-/*
+/*									*/
 /**hmode -- Return access modes of a dataset.				*/
 /*&mjs									*/
 /*:low-level-i/o							*/
@@ -640,7 +643,7 @@ char *mode;
   Output:
     mode	This will be either "" (unknown access mode),
 				    "r" (read-only)
-				    "rw" (read-write).
+				    "rw" (read-write).			*/
 /*--									*/
 /*----------------------------------------------------------------------*/
 {
@@ -692,7 +695,7 @@ char *keyword;
     tno		The handle of the data set. 0 also allowed.
     keyword	The name of the item or filename to check.
   Output:
-    hexists	True if the item exists.
+    hexists	True if the item exists.				*/
 /*--									*/
 /*----------------------------------------------------------------------*/
 {
@@ -1182,7 +1185,7 @@ int offset;
 
   Input:
     itno	The handle of the item of interest.
-    offset	The new offset.
+    offset	The new offset.						*/
 /*--									*/
 /*----------------------------------------------------------------------*/
 {
@@ -1206,7 +1209,7 @@ int ihandle;
   when reading/writing using hreada/hwritea.
 
   Input:
-    itno	The handle of the item of interest.
+    itno	The handle of the item of interest.			*/
 /*--									*/
 /*----------------------------------------------------------------------*/
 {
