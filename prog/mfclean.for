@@ -15,7 +15,7 @@ c	should have an appreciable guard band around it to the map edge (of
 c	size comparable to the width of the region being cleaned).
 c
 c	To form a multi-frequency synthesis image and beam, use INVERTs
-c	``mfs'' option, and set the value of sbeams to 1. This will create
+c	``mfs'' and ``sdb'' options. This will create
 c	a map with one plane, and a beam with two planes (the normal dirty
 c	beam, and the spectral dirty beam).
 c
@@ -40,8 +40,8 @@ c@ map
 c	The input dirty map, which should have units of Jy/beam. No
 c	default. 
 c@ beam
-c	The input dirty beam. This should be formed using INVERT using
-c	sbeams=1. No default.
+c	The input dirty beam. This should be formed using INVERT with
+c	options=sdb. No default.
 c@ model
 c	An initial model of the deconvolved image. This could be the
 c	output from a previous run of MFCLEAN. It must have flux units of
@@ -120,6 +120,7 @@ c   nebk 25nov92 - COpy btype to output
 c   rjs  30mar93 - Limit the size of the spectral component.
 c   rjs  27nov93 - Another algorithm to try to limit the size of the spectral
 c		   component.
+c   rjs   4may95 - Doc change only.
 c
 c  Bugs and Shortcomings:
 c     * The way it does convolutions is rather inefficent, partially
