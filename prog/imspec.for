@@ -172,12 +172,16 @@ c                  because Doug needed it
 c    25oct94  bpw  introduce option 'eformat'
 c    22nov94  bpw  fixed non-plotting: forgot to change some values of plotvar
 c                  parameters (equivalent to a C 'enum').
-c    10jan96  rjs  Use MAXDIM to determine MAXRUNS parameter.
+c    28jun95  mhw  change printing formats: guarantee 1 space between fields
+c                  in eformat mode and add some decimal places to the freq
+c    10jan96  rjs  Make MAXRUNS depend on MAXDIM. Also eliminate dfloat.
 c     9apr96  rjs  Changed dfloat to dble.
-c    08oct96  rjs  Fix call to inbox. Use Fortran-5 functions. Propogate
-c		   MAXBOXES.
+c    08oct96  rjs  Fix call to inbox. Use Fortran-5 functions. Propagate
+c                  MAXBOXES.
 c    14nov96  nebk Change crpix from integer to double precision as it was
 c                  messing up coordinate labelling
+c    29nov96  rjs  Change crpix from integer to double, and include mhw's
+c                  formatting changes.
 c------------------------------------------------------------------------
 
 c Main program of imstat and imspec. Puts out the identification, where
@@ -212,7 +216,7 @@ c the include file.
       program imstaspc
 
       character*21     version
-      parameter        ( version = 'version 2.2 14-Nov-96' )
+      parameter        ( version = 'version 2.2 28-Nov-96' )
       character*29     string
 
       include          'imspec.h'
@@ -1172,7 +1176,7 @@ c Unless dim was -2, in which case a plane is read profile by profile
 c if datapoint falls within limits as defined by cutoff and masking, use it
 c          print*,i,data(i),mask(i)
            if( inbox(dim,i.eq.1.and.iloop.eq.1,
-     *		data(i),mask(i),runs,corners,cut) ) then
+     *         data(i),mask(i),runs,corners,cut) ) then
 c              print*,'    used'
 c convert to Kelvin if requested.
                if( plotvar(DUNIT).eq.KELVIN )
@@ -1576,7 +1580,7 @@ c Construct the output line for the typed list
 c 13 is really len(axlabel)+1, but axlabel is an unknown variable here
 c and it would be messy to transfer just to get the length of it.
             if(plotvar(EFMT).eq.1) then
-	      write( fmt, '( ''( '',i1,''(1pe10.3),i8 )'' )' ) nstat-1
+              write( fmt, '( ''( '',i1,''(1pe10.3),i8 )'' )' ) nstat-1
             else
               write( fmt, '( ''( '',i1,''(1pg10.3),i8 )'' )' ) nstat-1
             endif
@@ -1621,7 +1625,8 @@ c find min and max for plot
       call pgpage
       call pgvstd
       call pgqinf( 'hardcopy',  pginfo, i )
-      call pgscf(  index( 'NY', pginfo(:1) ) )
+      i = index( 'NY', pginfo(:1) )
+      call pgscf(i)
 
       if( imin.ne.imax .and. plotvar(HEAD).eq.1 ) then
          call pgswin( imin, imax, ymin, ymax )
@@ -1931,5 +1936,3 @@ c Write out an identifying message above the plot.
       endif
       return
       end
-
-
