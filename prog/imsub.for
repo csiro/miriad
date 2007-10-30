@@ -39,9 +39,10 @@ c    nebk 10jan96  Change crpix and cdelt to double
 c    rjs  02jul97  cellscale change.
 c    rjs  18jul97  Correct handling of flags when incr != 1.
 c    rjs  23jul97  added pbtype.
+c    rjs  25nov98  added llrot.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Imsub: version 1.0 18-Jul-97' )
+	parameter(version='Imsub: version 1.0 25-Nov-98' )
 c
 	integer maxboxes
 	parameter(maxboxes=2048)
@@ -64,7 +65,7 @@ c
 c  Header keywords.
 c
 	integer nkeys
-	parameter(nkeys=36)
+	parameter(nkeys=37)
 	character keyw(nkeys)*8
 	data keyw/   'bmaj    ','bmin    ','bpa     ','bunit   ',
      *	  'crval1  ','crval2  ','crval3  ','crval4  ','crval5  ',
@@ -73,7 +74,7 @@ c
      *	  'object  ','observer','obsra   ','obsdec  ','pbfwhm  ',
      *	  'restfreq','telescop','vobs    ','btype   ','rms     ',
      *	  'ltype   ','lstart  ','lwidth  ','lstep   ','mostable',
-     *	  'cellscal','pbfwhm  '/
+     *	  'cellscal','pbfwhm  ','llrot   '/
 c
 c  Get the input parameters.
 c
