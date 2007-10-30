@@ -40,6 +40,7 @@ c--
 c  History:
 c    rjs  29nov94 Original version.
 c    rjs  12jan95 COrrect alignment code on axis 3. Write mask file.
+c    rjs   3aug95 Mask file was not correctly set for options=nonorm.
 c
 c
 c	  mosaic       Weight the data to account for the primary beam
@@ -448,6 +449,10 @@ c
 	  if(.not.nonorm)then
 	    do i=1,nx
 	      if(Wts(i,j).gt.0)Data(i,j) = Data(i,j) / Wts(i,j)
+	      flags(i) = Wts(i,j).gt.0
+	    enddo
+	  else
+	    do i=1,nx
 	      flags(i) = Wts(i,j).gt.0
 	    enddo
 	  endif
