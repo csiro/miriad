@@ -32,6 +32,9 @@
 #    -b       Do not invoke an editor -- just mail the template.
 #
 #--
+# History:
+#  bpw  dark-ages Original version.
+#  rjs  27sep00   Mail goes only to miriad.
 
 #  Parse the input line.
 
@@ -116,20 +119,20 @@
 #  Obtain information about the person responsible.
 
   set doperson = 0
-  if ( "$dotdoc" != "" ) then
-    set person = ( `grep "^%P" $dotdoc` )
-    if ( $#person >= 2 ) then
-      set person = ( `grep -i ^$person[2] $mirprg` )
-      if ( $#person == 5 ) then
-	set name    = ( $person[2] $person[3] )
-	set address = $person[4]
-	set phone   = $person[5]
-	set addresses = ( $addresses $address )
-	set doperson = 1
-      endif
-    endif
-    if ( ! $doperson )  echo "### Warning: Unable to determine who is responsible for this code"
-  endif
+#  if ( "$dotdoc" != "" ) then
+#    set person = ( `grep "^%P" $dotdoc` )
+#    if ( $#person >= 2 ) then
+#      set person = ( `grep -i ^$person[2] $mirprg` )
+#      if ( $#person == 5 ) then
+#	set name    = ( $person[2] $person[3] )
+#	set address = $person[4]
+#	set phone   = $person[5]
+#	set addresses = ( $addresses $address )
+#	set doperson = 1
+#      endif
+#    endif
+#    if ( ! $doperson )  echo "### Warning: Unable to determine who is responsible for this code"
+#  endif
 
 #  Get rid of any duplicate addresses.
 
