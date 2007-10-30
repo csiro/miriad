@@ -551,7 +551,7 @@ c
         call aliases(source, srcalias)
         if (Len1(srcalias) .gt. 0) then
           if (justonce) then
-	    errmsg = 'TABFLUX: Alias used for source ' // source
+            errmsg = 'TABFLUX: Alias used for source ' // source
             call bug('i', errmsg)
             justonce = .FALSE.
           endif
@@ -706,7 +706,7 @@ c
       call atorf(token(1:tlen), TFREQ(NTAB), okay)
       if (.not. okay) then
         call bug('w', 'TABPARSE: Trouble decoding the frequency term.')
-	errmsg = 'TABPARSE: ' // string
+        errmsg = 'TABPARSE: ' // string
         call bug('w', errmsg)
         TFREQ(NTAB) = 0.0
       endif
@@ -715,7 +715,7 @@ c
       call atorf(token(1:tlen), TFLUX(NTAB), okay)
       if (.not. okay) then
         call bug('w', 'TABPARSE: Trouble decoding the flux term.')
-	errmsg = 'TABPARSE: ' // string
+        errmsg = 'TABPARSE: ' // string
         call bug('w', errmsg)
         TFLUX(NTAB) = 0.0
       endif
@@ -726,7 +726,7 @@ c
         call atorf(token(1:tlen), TRMS(NTAB), okay)
         if (.not. okay) then
           call bug('w', 'TABPARSE: Trouble decoding the rms term.')
-	  errmsg = 'TABPARSE; ' // string
+          errmsg = 'TABPARSE; ' // string
           call bug('w', errmsg)
           TFLUX(NTAB) = 0.0
         endif
