@@ -22,7 +22,7 @@ foreach in ($argv)
    set out=$file:t
    set out=$out:r
    intf2c -s sun $in $file;
-   cc -O -c -o ${out}.o -I$MIRINC -Dsun $file
+   cc -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -O -c -o ${out}.o -I$MIRINC -I$MIR/subs -Dsun $file
    ar r $MIRLIB/libmir.a ${out}.o
    rm -f ${out}.o $file
    breaksw
@@ -30,7 +30,7 @@ foreach in ($argv)
    set out = $in:t
    set out = /tmp/$out:r
    setenv TMPDIR $MIR
-   cc -O -c -o ${out}.o -I$MIRINC -Dsun $in
+   cc -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -O -c -o ${out}.o -I$MIRINC -I$MIR/subs -Dsun $in
    ar r $MIRLIB/libmir.a ${out}.o
    rm -f ${out}.o
    breaksw

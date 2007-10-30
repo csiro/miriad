@@ -23,14 +23,16 @@ foreach in ($argv)
    set out=$file:t
    set out=$out:r
    $MIRBIN/intf2c -s linux $in $file
-   cc -fPIC -O -Dlinux -c -o ${out}.o -I$MIRINC $file
+   cc -fPIC -O -Dlinux -c -o ${out}.o -D_FILE_OFFSET_BITS=64 \
+	-D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -I$MIRINC -I$MIR/subs $file
    ar rl $MIRLIB/libmir.a ${out}.o
    rm -f ${out}.o $file
    breaksw
  case *.c:
    set out = $in:t
    set out = /tmp/$out:r
-   (cd $dir; cc -fPIC -O -Dlinux -c -o ${out}.o -I$MIRINC $in)
+   (cd $dir; cc -fPIC -O -Dlinux -c -o ${out}.o -D_FILE_OFFSET_BITS=64 \
+	-D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -I$MIRINC -I$MIR/subs $in)
    ar rl $MIRLIB/libmir.a ${out}.o
    rm -f ${out}.o
    breaksw
