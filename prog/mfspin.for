@@ -71,6 +71,7 @@ c		   spectral index.
 c    nebk 28jan93  Adapt to new primary beam routines.
 c    rjs  24oct94  Use newer pb routines.
 c    rjs  27oct94  Fix bug in runs-determining routine.
+c    rjs  23jul97  Added pbtype,cellscal.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
@@ -673,10 +674,10 @@ c------------------------------------------------------------------------
      *		     'crval1  ','crval2  ','crval3  ','crval4  ',
      *		     'crpix1  ','crpix2  ','crpix3  ','crpix4  ',
      *		     'ctype1  ','ctype2  ','ctype3  ','ctype4  ',
-     *	  'date-obs','epoch   ','instrume','niters  ','object  ',
+     *	  'obstime ','epoch   ','instrume','niters  ','object  ',
      *	  'ltype   ','lstart  ','lwidth  ','lstep   ','pbfwhm  ',
-     *	  'telescop','xshift  ','yshift  ','history ','restfreq',
-     *	  'vobs    ','observer','obsra   ','obsdec  '/
+     *	  'telescop','history ','restfreq','vobs    ','observer',
+     *	  'obsra   ','obsdec  ','cellscal','pbtype  '/
 c
 c  Open the output.
 c
