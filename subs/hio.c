@@ -26,6 +26,7 @@
        15-may-96  rjs	More fiddles with roundup macro.
        18-mar-97  rjs   Remove alignment restriction on hio_c.
        21-mar-97  rjs   Make some previously dynamic allocations static.
+       30-sep-97  rjs   Start ntree off at 1 (rather than 0).
 */
 
 
@@ -193,7 +194,8 @@ private void hinit_c()
 {
   int i;
 
-  nitem = ntree = 0;
+  nitem = 0;
+  ntree = 1;
   for(i=0; i < MAXITEM; i++)item_addr[i] = NULL;
   for(i=0; i < MAXOPEN; i++)tree_addr[i] = NULL;
 
