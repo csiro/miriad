@@ -23,12 +23,13 @@ c--
 c  History
 c    rjs  13dec95 Original version
 c    rjs  15dec95 Miscellaneous minor enhancements.
+c    rjs  18dec95 Sub-earth point uses right-handed coord system.
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	character version*(*)
 	double precision AUKM
 	integer EARTH,SUN
-	parameter(version='Solar: version 1.0 15-Dec-95')
+	parameter(version='Solar: version 1.0 18-Dec-95')
 	parameter(AUKM=149.597870D6,EARTH=3,SUN=0)
 c
 	character planet*8,observ*16
@@ -83,6 +84,7 @@ c
 	  if(ra.lt.0)ra = ra + 2*pi
 	  call output('RA:  '//hangle(ra))
 	  call output('DEC: '//rangle(dec))
+	  sub(2) = -sub(2)
 	  call lmn2sph(sub,long,lat)
 	  long = mod(long+2*dpi,2*dpi)
 	  write(line,'(a,f7.2)')'Longitude  (deg)   ',real(long*180/dpi)
