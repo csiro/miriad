@@ -115,6 +115,7 @@ c   pjt   8jun94 - clarified region=
 c   rjs   3dec94   Copy across mosaic table.
 c   rjs  26jan95   Eliminate non-standard string concatentation.
 c   rjs  10jan97   Handle 5th axis correctly.
+c  nebk  05jun97   Handle 6th and 7th axes correctly in oldhdr !
 c------------------------------------------------------------------------
 	INCLUDE 'maths.h'
 	INTEGER ERROR,VECTOR,SCALAR,CONSTANT
@@ -122,7 +123,7 @@ c------------------------------------------------------------------------
 	INTEGER BUFLEN,MAXBOX
         PARAMETER(BufLen=64,MaxBox=2048)
 	CHARACTER VERSION*(*)
-	PARAMETER (VERSION='Maths: version 1.0 10-Jan-97')
+	PARAMETER (VERSION='Maths: version 1.0 05-Jun-97')
 c
 	CHARACTER expr*256,mask*256,out*64,template*64
 	INTEGER   rbuflen,pnt
@@ -440,7 +441,7 @@ c------------------------------------------------------------------------
 	integer i,lblc,ltrc
 	real def,crpix
 	integer nkeys
-	parameter(nkeys=40)
+	parameter(nkeys=46)
 	character keyw(nkeys)*8
 c
 c  Externals.
@@ -449,8 +450,11 @@ c
 c
 	data keyw/   'bmaj    ','bmin    ','bpa     ','bunit   ',
      *    'cdelt1  ','cdelt2  ','cdelt3  ','cdelt4  ','cdelt5  ',
+     *    'cdelt6  ','cdelt7  ',
      *	  'crval1  ','crval2  ','crval3  ','crval4  ','crval5  ',
+     *    'crval6  ','crval7  ',
      *	  'ctype1  ','ctype2  ','ctype3  ','ctype4  ','ctype5  ',
+     *    'ctype6  ','ctype7  ',
      *	  'date-obs','epoch   ','history ',
      *	  'ltype   ','lstart  ','lstep   ','lwidth  ','pbfwhm  ',
      *	  'instrume','niters  ','object  ','telescop','xshift  ',
