@@ -125,6 +125,7 @@ c    mjs  04aug91 Replaced local maxants/maxbl to use maxdim.h values
 c    rjs  15oct91 Increased hash table size. Extra messages.
 c    rjs   1nov91 Polarized and mfs options. Removed out.
 c    rjs  29jan92 New call sequence to "Model".
+c    rjs   3apr92 Use memalloc routines.
 c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='Selfcal: version 1.0 29-Jan-92')
@@ -153,7 +154,7 @@ c
 	call keyr('clip',clip,0.)
 	call keyr('interval',interval,5.)
 	call keyi('minants',minants,0)
-	call keyi('refant',refant,0)
+ 	call keyi('refant',refant,0)
 	call keyr('offset',offset(1),0.)
 	call keyr('offset',offset(2),0.)
 	doline = keyprsnt('line')
@@ -259,6 +260,7 @@ c
 c
 c  Close up.
 c
+	call SelfFin
 	call HisClose(tvis)
 	call uvclose(tvis)
 	end
@@ -401,7 +403,7 @@ c------------------------------------------------------------------------
 c
 c  Externals.
 c
-	integer prime
+	integer prime,MemBuf
 c
 	nHash = prime(maxHash-1)
 	do i=1,nHash+1
@@ -416,15 +418,30 @@ c    real Count(maxSol)
 c
 	nBl = (nants*(nants-1))/2
 	SolSize = 2 + 4*nBl
-	maxSol = min(BufSize/SolSize,nHash)
-	if(maxSol.le.0) call bug('f','No solutions will fit!')
+	maxSol = min(nHash,max(minSol,MemBuf()/SolSize))
 	nSols = 0
 	TotVis = 0
-	pSumVM = 1
-	pSumVV = pSumVM + maxSol*2*nBl
-	pSumMM = pSumVV	+ maxSol*nBl
-	pWeight = pSumMM + maxSol
-	pCount = pWeight + maxSol*nBl
+	call MemAlloc(pSumVM,maxSol*2*nBl,'r')
+	call MemAlloc(pSumVV,maxSol*nBl,'r')
+	call MemAlloc(pSumMM,maxSol,'r')
+	call MemAlloc(pWeight,maxSol*nBl,'r')
+	call MemAlloc(pCount,maxSol,'r')
+c
+	end
+c************************************************************************
+	subroutine SelfFin
+c
+	implicit none
+c
+c  Release allocated memory.
+c
+c------------------------------------------------------------------------
+	include 'selfcal.h'
+	call MemFree(pSumVM,maxSol*2*nBl,'r')
+	call MemFree(pSumVV,maxSol*nBl,'r')
+	call MemFree(pSumMM,maxSol,'r')
+	call MemFree(pWeight,maxSol*nBl,'r')
+	call MemFree(pCount,maxSol,'r')
 	end
 c************************************************************************
 	subroutine SelfAcc(tscr,nchan,nvis,interval)
