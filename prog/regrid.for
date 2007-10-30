@@ -60,7 +60,7 @@ c		be able to allocate the needed resources. This option
 c               offers a slower and less memory greedy method.
 c	relax   Only issue warnings rather than fatal errors if axis type
 c	        mismatches between template and input files exist
-c
+c	quiet   Don't give so many messages about what row its on etc.
 c--
 c
 c  History:
@@ -80,7 +80,7 @@ c    22jun93 nebk  Take cos(DEC) into account for RA/DEC axes
 c    15apr94 nebk  Keyword range input was failing.
 c    03jan95 nebk  REGZ was failing if output longer than input
 c    26jun95 nebk  Warning instead of fatal if ungridded axes
-c		   have silly axis descriptors.
+c		   have silly axis descriptors. options=quiet
 c
 c To do:
 c     add simple transformation option (scale,shift etc)
@@ -106,7 +106,7 @@ c
      +  naxist, naxiso, irai, ideci, irao, ideco
       character*9 ctypei(maxnax), ctypet(maxnax), ctypeo(maxnax), 
      +  itoaf*1, str*1
-      logical do(maxnax), hog, relax
+      logical do(maxnax), hog, relax, quiet
 c-----------------------------------------------------------------------
       call output( 'REGRID: '//version)
 c
@@ -119,7 +119,7 @@ c
       call mkeyd ('desc', desc, maxnax*4, ndesc)
       call mkeyd ('range', grid, maxnax*3, ngrid)
       call mkeyi ('axis', axes, maxnax, naxes)
-      call getopt (hog, relax)
+      call getopt (hog, relax, quiet)
       call keyfin
 c
 c Check inputs
@@ -357,25 +357,25 @@ c it is clearer this way, rather than trying to be clever (heaven forbid).
 c
       if (do(1) .and. do(2) .and. do(3)) then
         call do123 (naxisi, ni, crpixi, crvali, cdelti, naxiso, no,
-     +     crpixo, crvalo, cdelto, luni, luno, hog, faci, faco)
+     +     crpixo, crvalo, cdelto, luni, luno, hog, faci, faco, quiet)
       else if (do(1) .and. do(2)) then
         call do12 (naxisi, ni, crpixi, crvali, cdelti, naxiso, no,
-     +     crpixo, crvalo, cdelto, luni, luno, faci, faco)
+     +     crpixo, crvalo, cdelto, luni, luno, faci, faco, quiet)
       else if (do(1) .and. do(3)) then
         call do13 (naxisi, ni, crpixi, crvali, cdelti, naxiso, no,
-     +     crpixo, crvalo, cdelto, luni, luno, hog, faci, faco)
+     +     crpixo, crvalo, cdelto, luni, luno, hog, faci, faco, quiet)
       else if (do(2) .and. do(3)) then
         call do23 (naxisi, ni, crpixi, crvali, cdelti, naxiso, no,
-     +     crpixo, crvalo, cdelto, luni, luno, hog, faci, faco)
+     +     crpixo, crvalo, cdelto, luni, luno, hog, faci, faco, quiet)
       else if (do(3)) then
         call do3 (naxisi, ni, crpixi, crvali, cdelti, naxiso, no,
-     +     crpixo, crvalo, cdelto, luni, luno, hog, faci, faco)
+     +     crpixo, crvalo, cdelto, luni, luno, hog, faci, faco, quiet)
       else if (do(2)) then
         call do2 (naxisi, ni, crpixi, crvali, cdelti, naxiso, no,
-     +     crpixo, crvalo, cdelto, luni, luno, faci, faco)
+     +     crpixo, crvalo, cdelto, luni, luno, faci, faco, quiet)
       else if (do(1)) then
         call do1 (naxisi, ni, crpixi, crvali, cdelti, naxiso, no,
-     +     crpixo, crvalo, cdelto, luni, luno, faci, faco)
+     +     crpixo, crvalo, cdelto, luni, luno, faci, faco, quiet)
       else
         call bug ('f', 'I forgot a case, silly me')
       end if
@@ -397,7 +397,7 @@ c
 c
 c
       subroutine do1 (naxi, ni, crpixi, crvali, cdelti, naxo, no,
-     +                crpixo, crvalo, cdelto, li, lo, faci, faco)
+     +  crpixo, crvalo, cdelto, li, lo, faci, faco, quiet)
 c-----------------------------------------------------------------------
 c     Regrid just the first axis of an image
 c
@@ -416,6 +416,7 @@ c
       integer naxi, ni(naxi), naxo, no(naxo), li, lo
       double precision crvali, cdelti, crvalo, cdelto,
      +  crpixi, crpixo, faci, faco
+      logical quiet
 cc
       include 'maxdim.h'
       double precision dbuf(maxbuf/2)
@@ -448,7 +449,7 @@ c Loop over image
 c
       do k = 1, ni(3)
         str = itoaf(k)
-        call output ('Beginning plane '//str)
+        if (.not.quiet) call output ('Beginning plane '//str)
 c
         call xysetpl (li, 1, k)
         call xysetpl (lo, 1, k)
@@ -489,7 +490,7 @@ c
 c
 c
       subroutine do12 (naxi, ni, crpixi, crvali, cdelti, naxo, no,
-     +                 crpixo, crvalo, cdelto, li, lo, faci, faco)
+     +   crpixo, crvalo, cdelto, li, lo, faci, faco, quiet)
 c-----------------------------------------------------------------------
 c     Regrid the first two axes of an image.  In this subroutine,
 c     we try to keep the i,j,k indices attached to the x,y,z axes
@@ -511,6 +512,7 @@ c
       integer naxi, ni(naxi), naxo, no(naxo), li, lo
       double precision crvali(naxi), cdelti(naxi), crvalo(naxo), 
      +  cdelto(naxo), crpixi(naxi), crpixo(naxo), faci(2), faco(2)
+      logical quiet
 cc
       include 'maxdim.h'
       double precision dbuf(maxbuf/2)
@@ -537,7 +539,7 @@ c Loop over image planes
 c
       do k = 1, ni(3)
         str = itoaf(k)
-        call output ('Beginning plane '//str)
+        if (.not.quiet) call output ('Beginning plane '//str)
 c
         call xysetpl (li, 1, k)
         call xysetpl (lo, 1, k)
@@ -589,7 +591,7 @@ c
 c
 c
       subroutine do13 (naxi, ni, crpixi, crvali, cdelti, naxo, no,
-     +                 crpixo, crvalo, cdelto, li, lo, hog, faci, faco)
+     +   crpixo, crvalo, cdelto, li, lo, hog, faci, faco, quiet)
 c-----------------------------------------------------------------------
 c     Regrid the first and third axes of an image.   In this subroutine,
 c     we try to keep the i,j,k indices attached to the x,y,z axes
@@ -611,6 +613,7 @@ c
       integer naxi, ni(naxi), naxo, no(naxo), li, lo
       double precision crvali(naxi), cdelti(naxi), crvalo(naxo), 
      +  cdelto(naxo), crpixi(naxi), crpixo(naxo), faci(3), faco(3)
+      logical quiet
 cc
       include 'maxdim.h'
       double precision dbuf(maxbuf/2)
@@ -642,7 +645,7 @@ c
       call output ('Regridding first axis')
       do k = 1, ni(3)
         str = itoaf(k)
-        call output ('Beginning plane '//str)
+        if (.not.quiet) call output ('Beginning plane '//str)
         call xysetpl (li, 1, k)
 c
 c Read x-axis and regrid writing into yx image in core.  We could just
@@ -679,7 +682,7 @@ c
 c
 c
       subroutine do2 (naxi, ni, crpixi, crvali, cdelti, naxo, no,
-     +                crpixo, crvalo, cdelto, li, lo, faci, faco)
+     +  crpixo, crvalo, cdelto, li, lo, faci, faco, quiet)
 c-----------------------------------------------------------------------
 c     Regrid the second axis of an image. In this subroutine,
 c     we try to keep the i,j,k indices attached to the x,y,z axes
@@ -700,6 +703,7 @@ c
       integer naxi, ni(naxi), naxo, no(naxo), li, lo
       double precision crvali(naxi), cdelti(naxi), crvalo(naxo), 
      +  cdelto(naxo), crpixi(naxi), crpixo(naxo), faci(2), faco(2)
+      logical quiet
 cc
       include 'maxdim.h'
       double precision dbuf(maxbuf/2)
@@ -726,7 +730,7 @@ c Loop over image planes
 c
       do k = 1, ni(3)
         str = itoaf(k)
-        call output ('Beginning plane '//str)
+        if (.not.quiet) call output ('Beginning plane '//str)
 c
         call xysetpl (li, 1, k)
         call xysetpl (lo, 1, k)
@@ -793,7 +797,7 @@ c
 c
 c
       subroutine do123 (naxi, ni, crpixi, crvali, cdelti, naxo,
-     +   no, crpixo, crvalo, cdelto, li, lo, hog, faci, faco)
+     +   no, crpixo, crvalo, cdelto, li, lo, hog, faci, faco, quiet)
 c-----------------------------------------------------------------------
 c     Regrid the first three axes of an image.   In this subroutine,
 c     we try to keep the i,j,k indices attached to the x,y,z axes
@@ -815,6 +819,7 @@ c
       integer naxi, ni(naxi), naxo, no(naxo), li, lo
       double precision crvali(naxi), cdelti(naxi), crvalo(naxo), 
      +  cdelto(naxo), crpixi(naxi), crpixo(naxo), faci(3), faco(3)
+      logical quiet
 cc
       include 'maxdim.h'
       double precision dbuf(maxbuf/2)
@@ -847,7 +852,7 @@ c
       call output ('Regridding first two axes')
       do k = 1, ni(3)
         str = itoaf(k)
-        call output ('Beginning plane '//str)
+        if (.not.quiet) call output ('Beginning plane '//str)
         call xysetpl (li, 1, k)
 c
 c Read x-axis and regrid writing into yx image in core
@@ -886,7 +891,7 @@ c
 c
 c
       subroutine do23 (naxi, ni, crpixi, crvali, cdelti, naxo,
-     +   no, crpixo, crvalo, cdelto, li, lo, hog, faci, faco)
+     +   no, crpixo, crvalo, cdelto, li, lo, hog, faci, faco, quiet)
 c-----------------------------------------------------------------------
 c     Regrid the second and thrid axes of an image.   In this subroutine,
 c     we try to keep the i,j,k indices attached to the x,y,z axes
@@ -908,6 +913,7 @@ c
       integer naxi, ni(naxi), naxo, no(naxo), li, lo
       double precision crvali(naxi), cdelti(naxi), crvalo(naxo), 
      +  cdelto(naxo), crpixi(naxi), crpixo(naxo), faci(3), faco(3)
+      logical quiet
 cc
       include 'maxdim.h'
       double precision dbuf(maxbuf/2)
@@ -940,7 +946,7 @@ c
       call output ('Regridding second axis')
       do k = 1, ni(3)
         str = itoaf(k)
-        call output ('Beginning plane '//str)
+        if (.not.quiet) call output ('Beginning plane '//str)
         call xysetpl (li, 1, k)
 c
 c Allocate memory
@@ -995,7 +1001,7 @@ c
 c
 c
       subroutine do3 (naxi, ni, crpixi, crvali, cdelti, naxo,
-     +   no, crpixo, crvalo, cdelto, li, lo, hog, faci, faco)
+     +   no, crpixo, crvalo, cdelto, li, lo, hog, faci, faco, quiet)
 c-----------------------------------------------------------------------
 c     Regrid the third axis of an image.   In this subroutine,
 c     we try to keep the i,j,k indices attached to the x,y,z axes
@@ -1017,6 +1023,7 @@ c
       integer naxi, ni(naxi), naxo, no(naxo), li, lo
       double precision crvali(naxi), cdelti(naxi), crvalo(naxo), 
      +  cdelto(naxo), crpixi(naxi), crpixo(naxo), faci(3), faco(3)
+      logical quiet
 cc
       include 'maxdim.h'
       double precision dbuf(maxbuf/2)
@@ -1048,7 +1055,7 @@ c
       call output ('Transposing cube')
       do k = 1, ni(3)
         str = itoaf(k)
-        call output ('Beginning plane '//str)
+        if (.not.quiet) call output ('Beginning plane '//str)
         call xysetpl (li, 1, k)
 c
 c Read in image and mask
@@ -1930,29 +1937,31 @@ c
       end
 c
 c
-      subroutine getopt (hog, relax)
+      subroutine getopt (hog, relax, quiet)
 c----------------------------------------------------------------------
 c     Decode options array into named variables.
 c
 c   Output:
 c     hog       Be greedy
 c     relax     Be nice
+c     quiet     Be quiet
 c
 c-----------------------------------------------------------------------
       implicit none
 c
-      logical hog, relax
+      logical hog, relax, quiet
 cc
       integer maxopt
-      parameter (maxopt = 2)
+      parameter (maxopt = 3)
 c
       character opshuns(maxopt)*6
       logical present(maxopt)
-      data opshuns /'nohog', 'relax'/
+      data opshuns /'nohog', 'relax', 'quiet'/
 c-----------------------------------------------------------------------
       call options ('options', opshuns, present, maxopt)
 c
       hog   = .not.present(1)
       relax =      present(2)
+      quiet =      present(3)
 c
       end
