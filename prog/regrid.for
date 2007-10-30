@@ -522,8 +522,8 @@ c  Set the template ranges. If its weird, just go with the template range.
 c
 	do i=1,3
 	  if(weird(i))then
-	    minv(i) = 1
-	    maxv(i) = nOut(i)
+	    minv(i) = min(1,minv(i))
+	    maxv(i) = max(nOut(i),maxv(i))
 	  endif
 	  nOut(i) = maxv(i) - minv(i) + 1
 	  call coGetd(lOut,'crpix'//itoaf(i),crpix)
