@@ -17,7 +17,8 @@ c
 	double precision restfreq(MAXOPEN),vobs(MAXOPEN)
 	character ctype(MAXNAX,MAXOPEN)*16,coproj(MAXOPEN)*3
 	integer cotype(MAXNAX,MAXOPEN)
+	logical cellscal(MAXOPEN)
 c
 	common/cocom/crval,crpix,cdelt,restfreq,vobs,lus,nalloc,naxis,
-     *		cotype,ilong,ilat,ifreq
+     *		cotype,ilong,ilat,ifreq,cellscal
 	common/cocomc/ctype,coproj
