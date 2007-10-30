@@ -1,0 +1,70 @@
+	.title	Wollongong Error Messages
+
+	.facility	WIN,2
+
+	.severity	fatal
+PERM		<Not owner>
+NOENT		<No such file or directory>
+SRCH		<No such process>
+INTR		<Interrupted system call>
+IO		<I/O error>
+NXIO		<No such device or address>
+TOOBIG		<Arg list too long>
+NOEXEC		<Exec format error>
+BADF		<Bad file number>
+CHILD		<No children>
+AGAIN		<No more processes>
+NOMEM		<Not enough core>
+ACCES		<Permission denied>
+FAULT		<Bad address>
+NOTBLK		<Block device required>
+BUSY		<Mount device busy>
+EXIT		<File exists>
+XDEV		<Cross-device link>
+NODEV		<No such device>
+NOTDIR		<Not a directory>
+ISDIR		<Is a directory>
+INVAL		<Invalid argument>
+NFILE		<File table overflow>
+MFILE		<Too many open files>
+NOTTY		<Not a typewriter>
+TXTBSY		<Text file busy>
+FBIG		<File too big>
+NOSPC		<No space left on device>
+SPIPE		<Illegal seek on pipe>
+ROFS		<Read-only file system>
+MLINK		<Too many links>
+PIPE		<Broken pipe>
+DOM		<Math argument>
+RANGE		<Result too large>
+WOULDBLOCK	<Operation would block>
+INPROGRESS	<Operation now in progress>
+ALREADY		<Operation already in progress>
+NOTSOCK		<Socket operation on non-socket>
+DESTADDRREQ	<Destination address required>
+MSGSIZZE	<Message too long>
+PROTOTYPE	<Protocol wrong type for socket>
+NOPROTOOPT	<Protocol not available>
+PROTONOSUPPORT	<Protocol not supported>
+SOCKTNOSUPPORT	<Socket type not supported>
+OPNOTSUPP	<Operation not supported on socket>
+PFNOSUPPORT	<Protocol family not supported>
+AFNOSUPPORT	<Address family not supported by protocol family>
+ADDRINUSE	<Address already in use>
+ADDRNOTAVAIL	<Can't assign requested address>
+NETDOWN		<Network is down>
+NETUNREACH	<Network is unreachable>
+NETRESET	<Network dropped connection on reset>
+CONNABORTED	<Software caused connection abort>
+CONNRESET	<Connection reset by peer>
+NOBUFS		<No buffer space available>
+ISCONN		<Socket is already connected>
+NOTCONN		<Socket is not connected>
+SHUTDOWN	<Can't send after socket shutdown>
+
+TIMEDOUT	<Connection timed out>
+CONNREFUSED	<Connection refused>
+LOOP		<Too many levels of symbolic links>
+NAMETOOLONG	<File name too long>
+NOTEMPTY	<Directory not empty>
+	.end
