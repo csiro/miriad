@@ -89,9 +89,10 @@ c    rjs  21jun97  Tidies up above change.
 c    rjs  24jun97  Correct call to alignini
 c    rjs  02jul97  cellscal change.
 c    rjs  23jul97  Add pbtype.
+c    rjs  01aug97  Fiddle default to make it always reasonably valued.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='MosMem: version 1.0 24-Jun-97')
+	parameter(version='MosMem: version 1.0 1-Aug-97')
 	include 'maxdim.h'
 	include 'maxnax.h'
 	include 'mem.h'
@@ -126,6 +127,7 @@ c
 c  Externals.
 c
 	character itoaf*4
+	integer ismax
 c
 c  Get the input parameters.
 c
@@ -301,6 +303,8 @@ c
 	  else
 	    call AlignGet(lDef,Run,nRun,k,xdoff,ydoff,zdoff,
      *		nDef(1),nDef(2),nDef(3),memr(pDef),maxPoint,nPoint)
+	    imax = ismax(npoint,memr(pDef),1)
+	    call clipper(1e-3*abs(memr(pDef+imax-1)),memr(pDef),nPoint)
 	  endif
 c
 c  Get the Estimate and Residual. Also get information about the
@@ -551,6 +555,21 @@ c
 	minlev = 1e-6*TFlux/npoint
 	do i=1,npoint
 	  Def(i) = max(alpha*Def(i),minlev)
+	enddo
+c
+	end
+c************************************************************************
+	subroutine clipper(cliplev,Def,nPoint)
+c
+	implicit none
+	integer nPoint
+	real cliplev,Def(nPoint)
+c
+c------------------------------------------------------------------------
+	integer i
+c
+	do i=1,nPoint
+	  def(i) = max(Def(i),cliplev)
 	enddo
 c
 	end
