@@ -102,6 +102,7 @@ c    22jul97 rjs   Support epoch,projection and galactic/equatorial
 c		   axis conversion.
 c    23jul97 rjs   Add warning about blanked pixels. Add pbtype
 c    05aug97 rjs   Messages about equinox fiddles.
+c    20nov98 rjs   Handle and eliminate sky rotation.
 c
 c To do:
 c----------------------------------------------------------------------
@@ -110,7 +111,7 @@ c----------------------------------------------------------------------
 	include 'mem.h'
 c
 	character version*(*)
-	parameter(version='Regrid: version 1.0 9-Sep-97')
+	parameter(version='Regrid: version 1.0 20-Nov-98')
 c
 	character in*64,out*64,tin*64,ctype*16,cellscal*12,proj*3
 	character line*64
@@ -182,6 +183,7 @@ c
      *	  'Inconsistent number of axes descriptors given')
 	call coInit(lIn)
 	call coDup(lIn,cOut)
+	call coSetd(cOut,'llrot',0.d0)
 c
 c  Set up the output size/coordinate system given template or descriptors.
 c
