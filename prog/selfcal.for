@@ -33,7 +33,9 @@ c	any linetype, generally "channel" linetype will give best results (??).
 c	The units of the model MUST be Jy/pixel, rather than Jy/beam. If
 c	no models are given, a point source model is assumed.
 c@ clip
-c	Clip level. Anything, in the input model, below the clip level is set
+c	Clip level. For models of intensity, any pixels below the clip level
+c	are set to zero. For models of Stokes Q,U,V, or MFS I*alpha models,
+c	any pixels whose absolute value is below the clip level are set
 c	to zero. Default is 0.
 c@ interval
 c	The length of time, in minutes, of a gain solution. Default is 5,
@@ -126,9 +128,12 @@ c    rjs  15oct91 Increased hash table size. Extra messages.
 c    rjs   1nov91 Polarized and mfs options. Removed out.
 c    rjs  29jan92 New call sequence to "Model".
 c    rjs   3apr92 Use memalloc routines.
+c    rjs  26apr92 Handle clip level better.
+c    rjs   1may92 Added nfeeds keyword to output gains header.
+c    rjs  17may92 More fiddles to the way clipping is handled.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Selfcal: version 1.0 29-Jan-92')
+	parameter(version='Selfcal: version 1.0 17-May-92')
 	integer MaxMod,maxsels,nhead
 	parameter(MaxMod=32,maxsels=256,nhead=3)
 c
@@ -207,17 +212,26 @@ c
 	if(doline)call uvset(tvis,'data',ltype,nchan,lstart,lwidth,
      *								lstep)
 c
-c  Determine the flags to the MODELINI and MODEL routines.
-c
+c  Determine the flags to the MODELINI routine.
+c  p -- Perform pointing selection.
+c  s -- Perform polarisation selection.
+c  l -- Set up line type.
+c  t -- Source is polarised.
 c
 	flag1 = 'ps'
 	if(.not.doline.and..not.mfs)flag1(3:3) = 'l'
 	if(doPol)		    flag1(4:4) = 't'
 c
-	flag2 = ' '
-	if(apriori)      flag2(1:1) = 'c'
+c  Determine the flags to the MODEL routine.
+c  l - Perform clipping.
+c  a - Perform auto-scaling.
+c  m - Model is a mfs one.
+c  c - Use calibration file to determine model characteristics.
+c
+	flag2 = 'l'
 	if(.not.noscale) flag2(2:2) = 'a'
 	if(mfs)          flag2(3:3) = 'm'
+	if(apriori)      flag2(4:4) = 'c'
 c
 c  Loop over all the models.
 c
@@ -751,6 +765,7 @@ c
 	call wrhdd(tgains,'interval',dble(interval))
 	call wrhdi(tgains,'ngains',nants)
 	call wrhdi(tgains,'nsols',nsols-nbad)
+	call wrhdi(tgains,'nfeeds',1)
 c
 c  Write out a summary to wake the user up from his/her slumber.
 c
