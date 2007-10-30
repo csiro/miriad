@@ -26,8 +26,9 @@ c@ nchan
 c	Number of correlator channels. The default is 8.
 c@ model
 c	Image giving the model of the sky. This must be in units of
-c	Kelvin, and must be a power of 2 in size on each axis.
-c	There is no default.
+c	Kelvin, and must be a power of 2 in size on each axis. Either one
+c	or three models can be given, with these representing a Stokes I image
+c	or I, Q and U images. There is no default.
 c@ elmin
 c	Minimum platform elevation in degrees. The default is 20.
 c@ trange
@@ -47,28 +48,31 @@ c@ options
 c	Extra processing options.
 c	  noparallactify   Do not parallactify the platform. The default
 c	                   is to parallactify.
+c	  linear           Simulate linear feeds. The default is to simulate
+c	                   circular feeds.
 c-
 c  History:
 c    mjk  16aug01 Original version.
 c    rjs  23aug01 Change to output Miriad dataset.
 c------------------------------------------------------------------------
 	character version*(*)
+	integer MAXMOD
+	parameter(MAXMOD=3)
 	parameter(version='version 1.0 23-Aug-01')
 	include 'maxdim.h'
 	include 'mirconst.h'
 c
-	character config*80,out*80,model*80
-	logical dopara,err
+	character config*80,out*80,model(MAXMOD)*80
+	logical dopara,err,circ,onflag
 	double precision ra,dec,ra0,dec0
 	real Dextent,overhead,offset,lat,freq,bw,elmin,sigma
 	real T,Tstart,Tstop,Tinc,inttime,psi,systemp
 	integer nchan,nant,tno,i,j,k,nrec,nout,offsrc,errcnt
-	integer id,nmod
-	complex data(MAXCHAN)
+	integer id,npr,nmod
+	complex data(MAXCHAN*MAXMOD)
 	logical flags(MAXCHAN)
 	real uvw(3,MAXANT),pbfwhm
 	real az,el,dT,sfreq,sdf,dishdiam,eta,jyperk,Trec,Tsky
-	logical onflag
 	double precision along,t0,preamble(5),u,v,w
 	character sctypes(2)*8,sctype*8
 c
@@ -89,16 +93,16 @@ c
 	if(out.eq.' ')call bug('f','An output filename must be given')
 	call keya ('config',config,' ')
 	if(config.eq.' ')call bug('f','A config file must be given')
-	call options('options','noparallactify',dopara,1)
-	dopara = .not.dopara
+	call getopt(dopara,circ)
 	call keymatch('sctype',2,sctypes,1,sctype,nout)
 	if(nout.eq.0)sctype = sctypes(1)
 	call keyr('drift',Dextent,0.25)
 	call keyr('drift',overhead,0.)
 	call keyr('offset',offset,0.)
 	call keyr('lat',lat,45.)
-	call keya('model',model,' ')
-	if(model.eq.' ')call bug('f','A model of the sky must be given')
+	call mkeya('model',model,MAXMOD,nmod)
+	if(nmod.ne.1.and.nmod.ne.3)call bug('f',
+     *	  'Invalid number of models')
 	call keyr('freq',freq,95.)
 	call keyr('freq',bw,20.)
 	call keyi('nchan',nchan,8)
@@ -132,7 +136,7 @@ c
 c  Initailise the model of the sky.
 c
 	call output('Initalising model of the sky ...')
-	call visInit(model,sfreq,sdf,nchan,ra,dec)
+	call visInit(model,nmod,sfreq,sdf,nchan,ra,dec)
 c
 c  Initialise the description of the observation.
 c
@@ -174,11 +178,16 @@ c
         call uvputvri(tno,'nschan',nchan,1)
 	call uvputvrr(tno,'jyperk',jyperk,1)
 	call uvputvrr(tno,'pbfwhm',pbfwhm,1)
+	if(nmod.eq.1)then
+	  call uvputvri(tno,'npol',1,1)
+	  call uvputvri(tno,'pol',1,1)
+	else
+	  call uvputvri(tno,'npol',4,1)
+	endif
 c
 c  Initialise the dummy data.
 c
 	do k=1,nchan
-	  data(k) = 0
 	  flags(k) = .true.
 	enddo
 c
@@ -188,7 +197,7 @@ c
 	offsrc = 0
 	errcnt = 0
 	nrec = int((Tstop - Tstart) / Tinc) + 1
-	nmod = max(10,nint(0.01*nrec))
+	npr = max(10,nint(0.01*nrec))
 	T = Tstart
 	do k=1,nrec
 	  call amComp(T,dT,uvw,psi,az,el,onflag,err)
@@ -206,8 +215,6 @@ c
 	    sigma = jyperk*systemp/sqrt(2*abs(sdf)*1e9*inttime)
 	    do j=2,nant
 	      do i=1,j-1
-c	    do j=5,5
-c	      do i=2,3
 		u = uvw(1,j) - uvw(1,i)
 		v = uvw(2,j) - uvw(2,i)
 		w = uvw(3,j) - uvw(3,i)
@@ -216,17 +223,22 @@ c	      do i=2,3
 		preamble(3) = w/(CMKS * 1e-9)
 		preamble(4) = 365.25/366.25/24.0*T + T0
 		preamble(5) = antbas(i,j)
-c	write(*,*)'u,v = ',u,v
+c
 		call visPnt(data,nchan,u,v,w,chat,dishdiam)
-		if(sigma.gt.0)call AddNoise(data,nchan,sigma)
-		call uvwrite(tno,preamble,data,flags,nchan)
+		if(nmod.eq.1)then
+		  if(sigma.gt.0)call AddNoise(data,nchan,sigma)
+		  call uvwrite(tno,preamble,data,flags,nchan)
+		else
+		  call writeout(tno,preamble,data,flags,nchan,nmod,
+     *							psi,sigma,circ)
+		endif
 	      enddo
 	    enddo
 	  else
 	    offsrc = offsrc + 1
 	  endif
 	  T = T + Tinc
-	  if(mod(k,nmod).eq.0)then
+	  if(mod(k,npr).eq.0)then
 	    id = nint(100.0*real(k)/nrec)
 	    if(id.lt.100)
      *		call output(stcat(' Completed '//itoaf(id),'% ...'))
@@ -236,6 +248,75 @@ c
 	call visFin
 	call hisclose(tno)
 	call uvclose(tno)
+	end
+c************************************************************************
+	subroutine getopt(dopara,circ)
+c
+	implicit none
+	logical dopara,circ
+c------------------------------------------------------------------------
+	integer NOPTS
+	parameter(NOPTS=2)
+	character opts(NOPTS)*16
+	logical present(NOPTS)
+c
+	data opts/'noparallactify  ','linear          '/
+c
+	call options('options',opts,present,NOPTS)
+	dopara = .not.present(1)
+	circ   = .not.present(2)
+	end
+c************************************************************************
+	subroutine writeout(tno,preamble,data,flags,nchan,nmod,
+     *	  psi,sigma,circ)
+c
+	implicit none
+	integer nchan,nmod,tno
+	real psi,sigma
+	double precision preamble(5)
+	complex data(nchan,nmod)
+	logical flags(nchan)
+	logical circ
+c
+c  Generate the correct correlation type from the data.
+c------------------------------------------------------------------------
+	integer XX,YY,XY,YX
+	parameter(XX=1,YY=2,XY=3,YX=4)
+	include 'maxdim.h'
+	real cos2chi,sin2chi
+	integer i,off
+	complex out(MAXCHAN,4),W,iW
+	if(nchan.gt.MAXCHAN)call bug('f','Too many channels')
+	if(nmod.ne.3)call bug('f','Invalid number of models')
+c
+	cos2chi = cos(2*psi)
+	sin2chi = sin(2*psi)
+	if(circ)then
+	  off = 0
+	  W = cmplx(cos2chi,sin2chi)
+	  iW = cmplx(-sin2chi,cos2chi)
+	  do i=1,nchan
+	    out(i,XX) = data(i,1)
+	    out(i,YY) = data(i,1)
+	    out(i,XY) = W*data(i,2) - iW*data(i,3)
+	    out(i,YX) = conjg(W)*data(i,2)-conjg(iW)*data(i,3)
+	  enddo
+	else
+	  off = -4
+	  do i=1,nchan
+	    out(i,XX) = data(i,1)+cos2chi*data(i,2)+sin2chi*data(i,3)
+	    out(i,YY) = data(i,1)-cos2chi*data(i,2)-sin2chi*data(i,3)
+	    out(i,XY) =          -sin2chi*data(i,2)+cos2chi*data(i,3)
+	    out(i,YX) = out(i,XY)
+	  enddo
+	endif
+c
+	do i=1,4
+	  if(sigma.gt.0)call AddNoise(out(1,i),nchan,sigma)
+	  call uvputvri(tno,'pol',off-i,1)
+	  call uvwrite(tno,preamble,out(1,i),flags,nchan)
+	enddo
+c
 	end
 c************************************************************************
 	subroutine AddNoise(data,nchan,sigma)
