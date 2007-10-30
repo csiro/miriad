@@ -36,7 +36,7 @@ c    rjs 25jun93 Fudges to ZedFudge to make it more robust (but still
 c		 give poor fudge factors).
 c    nebk01jul94 Improve zedscale to correctly work out the frequency 
 c                increment from optical as well as radio velocity axes
-c
+c    nebk20aug94 Use new cocvt routines in zedscale in favour of spaxsw
 c  Routines:
 c    ZedScale Returns the conversion factor between channel increment and
 c	      magnetic field.
@@ -80,8 +80,8 @@ c----------------------------------------------------------------------
       integer nfreq
       parameter (nfreq = 4)
 c
-      double precision cdelt, crval
-      integer j, ifreq, imch
+      double precision cdelt, crval, crpix
+      integer j, ifreq, imch, ifax
       character ctype*9
 c
       integer cfreq(nfreq)
@@ -93,13 +93,13 @@ c
       data zsplit /2.80E6, 3.2787E6, 1.9608E6, 0.6536E6/
 c-----------------------------------------------------------------------
 c
-c Convert channel increment in whatever spectral units to Hz
+c Get frequency increment in Hz
 c
-      call rdhda (lunI, 'ctype1', ctype, ' ')
-      call rdhdd (lunI, 'cdelt1', cdelt, 0.0d0)
-      call rdhdd (lunI, 'crval1', crval, 0.0d0)
-c
-      call spaxsw (lunI, 'frequency', ctype, cdelt, crval)
+      call coinit (lunI)
+      call covelset (lunI, 'frequency')
+      call cofindax (lunI, 'spectral', ifax)
+      call coaxdesc (lunI, ifax, ctype, crpix, crval, cdelt)
+      call cofin (lunI)
       cdelt = cdelt * 1.0e9
 c
 c Integer frequency in MHz; try and match it
