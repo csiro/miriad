@@ -617,6 +617,7 @@ c 		   in the right place
 c    nebk 17sep98  hardcopy devices were over-riding too much colour
 c                  table control
 c    nebk 09apr99  fix problem with hard copy colour tbales and multipanel plots
+c    rjs  08may00  Change incorrect keyf call to keya.
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -2608,7 +2609,7 @@ c
      +   mirror, dowedge, doerase, doepoch, dofid, dosing, nofirst,
      +   grid, dotr, dodist, conlab, doabut)
 c
-      call keyf ('3format', val3form, ' ')
+      call keya ('3format', val3form, ' ')
 c
       if (gin.eq.' ') then
         dowedge = .false.
