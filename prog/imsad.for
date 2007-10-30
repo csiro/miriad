@@ -129,17 +129,20 @@ c		    a region specified.
 c    16dec97   rjs  fix a problem with fit locations being plotted in wrong place when
 c		    a region specified. What did NEBK do?
 c     8may98   rjs  Do not call logclose if no log file open.
+c    18sep03   nebk Prevent buffer overflow if isalnd size too large
+c                   Parameter MAXSRC split out into imsad2.h
 c-----------------------------------------------------------------------------
       include 'mirconst.h'
       include 'maxdim.h'
       include 'maxnax.h'
       include 'mem.h'
       include 'imsad.h'
+      include 'imsad2.h'
 c
-      integer  MAXSRC, MAXBOX
+      integer  MAXBOX
       character*40   version
       parameter     (version='version 8-May-98')
-      parameter (MAXSRC=2048, MAXBOX=1024)
+      parameter (MAXBOX=1024)
 c
       integer lui, luo, ip, ni, nj, iptr, mptr, ng, iwin(2,MAXSRC), 
      + jwin(2,MAXSRC), nsize(MAXNAX), boxes(MAXBOX), naxis, nbox,
@@ -808,8 +811,7 @@ c-----------------------------------------------------------------------
 c     Add an island, ripped off from AIPS SAD
 c-----------------------------------------------------------------------
       implicit none
-      integer MAXSRC
-      parameter (MAXSRC=2048)
+      include 'imsad2.h'
 c
       integer inew, i, j, iwin(2,MAXSRC), jwin(2,MAXSRC), ns
       logical newisl
@@ -920,8 +922,7 @@ c     Island merge, ripped off from AIPS SAD and modified
 c-----------------------------------------------------------------------
       implicit none
       include 'maxdim.h'
-      integer MAXSRC
-      parameter (MAXSRC=2048) 
+      include 'imsad2.h'
       integer new(MAXDIM), old(MAXDIM), inew, iold, LHS, RHS,
      +  i, il, ih, iwin(2,MAXSRC), jwin(2,MAXSRC)
 c-----------------------------------------------------------------------
@@ -997,10 +998,10 @@ c
       end do
 c
       write (line, 100) nb
-100   format ('Number of blanked pixels = ', i7)
+100   format ('Number of blanked pixels = ', i9)
       call output (line)
       write (line, 200) ng
-200   format ('Number of good pixels = ', i7)
+200   format ('Number of good pixels = ', i9)
       call output (line)
 c
       end
@@ -1222,11 +1223,12 @@ c
       include 'maxdim.h'
       include 'maxnax.h'
       include 'imsad.h' 
+      include 'imsad2.h' 
 c
       integer pgbeg
 c
-      integer MAXBOX, MAXSRC, NOPTS
-      parameter (MAXBOX=1024, MAXSRC=2048, NOPTS=10)
+      integer MAXBOX, NOPTS
+      parameter (MAXBOX=1024, NOPTS=10)
 c
       integer lui, nsize(MAXNAX), boxes(MAXBOX), naxis, blc(MAXNAX),
      + trc(MAXNAX), iax, nbox, luo, iostat
@@ -1451,9 +1453,7 @@ c-----------------------------------------------------------------------
       implicit none
       include 'maxnax.h'
       include 'mirconst.h'
-c
-      integer MAXSRC
-      parameter (MAXSRC=2048)
+      include 'imsad2.h'
 c 
       integer iwin(2,MAXSRC), jwin(2,MAXSRC), itmp(2,MAXSRC), 
      +  jtmp(2,MAXSRC), blc(MAXNAX), trc(MAXNAX), ns, imin, jmin,
@@ -1571,10 +1571,11 @@ c-----------------------------------------------------------------------
       implicit none
       include 'maxnax.h'
       include 'imsad.h'
+      include 'imsad2.h'
       external function
 c
-      integer MAXSRC, MAXVAR
-      parameter (MAXSRC=2048, MAXVAR=20)
+      integer MAXVAR
+      parameter (MAXVAR=20)
 c
       character*2 itoaf
       integer ifail1, ifail2, nvar, iwin(2,MAXSRC), jwin(2,MAXSRC),
@@ -1606,6 +1607,16 @@ c
 c
         jn = jwin(2,is) - jwin(1,is) + 1
         in = iwin(2,is) - iwin(1,is) + 1
+
+c 
+c If island too big, give up
+c
+        if (in*jn .gt. maxpix*maxpix) then
+           call bug('w','Island too big - skipping')
+           flag(1) = 'N '
+           goto 1000
+        end if
+
 c
 c Plot mid-point of box we are fitting
 c
@@ -1668,7 +1679,7 @@ c
 c Begin fitting data             
 c
         nc = 0
-        done = .false. 
+        done = .false.  
         do while(.not.done)
           ctmp = '  '
 c
@@ -1725,6 +1736,7 @@ c
 c
 c Convert fitted parameters to astronomical units and report fit
 c
+1000    continue
         call report(flag,ra0,de0,bmaj,bmin,bpa,bvol,beam,outfile,
      +              luo,lui,ip)
       end do 
@@ -1740,9 +1752,8 @@ c-----------------------------------------------------------------------
       implicit none
       include 'maxdim.h'
       include 'maxnax.h'
+      include 'imsad2.h'
 c
-      integer MAXSRC
-      parameter (MAXSRC=2048)
       real image(*), clip, px, py
       logical mask(*), doplot
       integer iwin(2,MAXSRC), jwin(2,MAXSRC),
@@ -1847,7 +1858,7 @@ c
 c
 c Plot bounded islands in some colour other than yellow
 c
-      if(doplot) then 
+      if(doplot) then  
         ci = 5
         do i = 1, ns
           ci = ci + 1
