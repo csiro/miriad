@@ -2,12 +2,17 @@ c************************************************************************
 	program sfunc
 	implicit none
 c
-c  Plot phase structure functions.
+c= sfunc - Plot phase structure functions.
+c+
+c sfunc - Plot phase structure functions.
 c
 c@ vis
 c@ device
 c@ select
 c@ interval
+c@ range
+c@ options
+c	nocal
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
