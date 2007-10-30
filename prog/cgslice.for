@@ -335,10 +335,10 @@ c-----------------------------------------------------------------------
       include 'mem.h'
 c
       integer maxlev, nxdef, nydef, maxnsl, nltype, nbins
-      real grid, wedwid, wedisp, tfdisp
+      real grid, wedwid, tfdisp
       parameter (maxlev = 50, nxdef = 4, nydef = 4, maxnsl = 20,
-     +   nbins = 128, grid = 0.25, nltype = 17, wedisp = 1.0, 
-     +   wedwid = 0.05, tfdisp = 0.5)
+     +  nbins = 128, grid = 0.25, nltype = 17, wedwid = 0.05, 
+     +  tfdisp = 0.5)
 c
       integer ipim, ipp, ipims, ipnim, ipslx(maxnsl), ipsly(maxnsl),
      +  ipsls(maxnsl), ipsle(maxnsl)
@@ -499,7 +499,7 @@ c that defines the slice plotting region.   Also return the
 c the viewport size of sub-plots, and the gap between sub-plots.
 c
       call vpsiz (noimage, dofid, nx, ny, cs, xdispl, ydispb, xdispls,
-     +  ydispbs, wedcod, wedisp, wedwid, tfdisp, vblc, vtrc, vxsize, 
+     +  ydispbs, wedcod, wedwid, tfdisp, vblc, vtrc, vxsize, 
      +  vysize, vxgap, vygap, tfvp, wdgvp)
 c
 c Adjust viewport increments and start locations if equal scales
@@ -3247,8 +3247,8 @@ c
 c
 c
       subroutine vpsiz (noimage, dofid, nx, ny, pcs, xdispl, ydispb, 
-     +  xdispls, ydispbs, wedcod, wedisp, wedwid, tfdisp, vblc, vtrc, 
-     +  vxsize, vysize, vxgap, vygap, tfvp, wdgvp)
+     +  xdispls, ydispbs, wedcod, wedwid, tfdisp, vblc, vtrc, vxsize,
+     +  vysize, vxgap, vygap, tfvp, wdgvp)
 c---------------------------------------------------------------------------
 c     Work out viewports for image and slice display for unequal scales 
 c     in x and y here. If user wants equal scales, adjust later.
@@ -3272,7 +3272,6 @@ c                 2 -> one wedge to right per subplot
 c                 3 -> one wedge per subplot inside subplot
 c     wedwid      Width of wedge as a fraction of the full x viewport
 c	          for wedcod = 1
-c     wedisp      Displacement of wedge from right axis in char heights
 c     tfdisp      Displacement of transfer function plot from right axis 
 c                 in char heights
 c   Output
@@ -3288,7 +3287,7 @@ c---------------------------------------------------------------------------
       implicit none
 c
       real vblc(2,2), vtrc(2,2), vxsize, vysize, pcs(3), ydispb, xdispl,
-     +  tfvp(4), wdgvp(4), wedisp, wedwid, tfdisp, xdispls, ydispbs,
+     +  tfvp(4), wdgvp(4), wedwid, tfdisp, xdispls, ydispbs,
      +  vxgap, vygap
       integer nx, ny, wedcod
       logical noimage, dofid
@@ -3371,7 +3370,7 @@ c
         if (dowedge) then        
           dvww = wedwid
           dvwl = 2.0 * xhti
-          dvwd = wedisp * xhti
+          dvwd = xhti
 c
           dvwtot = dvwd + dvww + dvwl 
         else
