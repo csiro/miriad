@@ -53,6 +53,10 @@ c	  mfs       This is used if there is a single plane in the input
 c	            model, which is assumed to represen t the data at all
 c	            frequencies. This should also be used if the model has
 c	            been derived using MFCLEAN.
+c	  zero      Use the value zero for the model if it cannot be
+c	            calculated. This can be used to avoid flagging the
+c                   data in the outer parts of the u-v-plane when subtracting
+c	            a low resolution model.
 c	The operations add, subtract, multiply, divide, replace and flag are
 c	mutually exclusive. The operations flag and unflag are also mutually
 c	exclusive.
@@ -126,17 +130,18 @@ c    rjs  31jan95 Changes to support w-axis.
 c    mhw  05jan96 Add zero option to avoid flagging outer uvplane
 c    rjs  30sep96 Tidy up and improved polarisation handling.
 c    rjs  19jun97 Point source models can be different polarisations.
+c    rjs  26sep97 Re-add mhw's zero option.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
-	parameter(version='version 1.0 19-Jun-97')
+	parameter(version='version 1.0 26-Sep-97')
 	integer maxsels,nhead,nbuf
 	parameter(maxsels=64,nhead=1,nbuf=5*maxchan+nhead)
 c
 	character vis*64,modl*64,out*64,oper*8,ltype*32,type*1
 	character flag1*8,flag2*8,poltype*4
 	logical unflag,updated,defline
-	logical mfs,selradec,doclip
+	logical mfs,selradec,doclip,zero
 	real sels(maxsels),offset(2),flux(2),clip,sigma
 	real lstart,lstep,lwidth
 	integer nsize(3),nchan,nread,nvis,length,i,npol,pol
@@ -161,7 +166,7 @@ c
 	call keyini
 	call keya('vis',vis,' ')
 	call SelInput('select',sels,maxsels)
-	call GetOpt(oper,unflag,mfs,selradec)
+	call GetOpt(oper,unflag,mfs,selradec,zero)
 	call keya('model',modl,' ')
 	doclip = keyprsnt('clip')
 	call keyr('clip',clip,0.)
@@ -199,6 +204,7 @@ c
 	flag2 = ' '
 	if(mfs)	     flag2(1:1) = 'm'
 	if(doclip)   flag2(2:2) = 'l'
+	if(zero)     flag2(3:3) = 'z'
 c       
 	calcrms = oper.eq.'flag'
 	dounflag = unflag
@@ -428,11 +434,11 @@ c
 	endif
 	end
 c************************************************************************
-	subroutine GetOpt(oper,unflag,mfs,selradec)
+	subroutine GetOpt(oper,unflag,mfs,selradec,zero)
 c
 	implicit none
 	character oper*(*)
-	logical unflag,mfs,selradec
+	logical unflag,mfs,selradec,zero
 c
 c  Get the various processing options.
 c
@@ -445,11 +451,12 @@ c		sources.
 c------------------------------------------------------------------------
 	integer i,j
 	integer nopt
-	parameter(nopt=9)
+	parameter(nopt=10)
 	character opts(nopt)*9
 	logical present(nopt)
 	data opts/    'add      ','divide   ','flag     ','multiply ',
-     *	  'replace  ','subtract ','unflag   ','mfs      ','mosaic   '/
+     *	  'replace  ','subtract ','unflag   ','mfs      ','mosaic   ',
+     *	  'zero     '/
 	call options('options',opts,present,nopt)
 c
 	j = 0
@@ -467,6 +474,7 @@ c
 	unflag = present(7)
 	mfs = present(8)
 	selradec = present(9)
+	zero = present(10)
 	if(oper.eq.'flag'.and.unflag)
      *	  call bug('f','You cannot use options=flag,unflag')
 	end
