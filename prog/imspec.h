@@ -19,11 +19,11 @@ c 4) Change name to imspec.for
 
 c plot and options for IMSTAT
 c      parameter    ( NAME = 'IMSTAT' )
-c      character*28 plotopts
+c      character    plotopts*(*)
 c      parameter    ( plotopts = 'mean,sum,rms,maximum,minimum' )
-c      character    defplt*3, idstr*10
+c      character    defplt*(*), idstr*(*)
 c      parameter    ( defplt = 'rms', idstr = 'statistics' )
-c      character*80 commonop
+c      character    commonop*(*)
 c      parameter    ( commonop =
 c     *'tb,noheader,nolist,list,eformat,style,title,xmin,xmax,ymin,ymax')
 
@@ -33,7 +33,7 @@ c plot and options for IMSPEC
       parameter    ( plotopts = 'mean,sum,flux,pbcflux' )
       character    defplt*(*), idstr*(*)
       parameter    ( defplt = 'flux', idstr = 'spectrum' )
-      character   commonop*(*)
+      character    commonop*(*)
       parameter    ( commonop =
      *'tb,noheader,nolist,list,eformat,hanning,boxcar,deriv,style,'//
      *'title,xmin,xmax,ymin,ymax' )

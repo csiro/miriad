@@ -19,28 +19,28 @@ c 4) Change name to imspec.for
 
 c plot and options for IMSTAT
       parameter    ( NAME = 'IMSTAT' )
-      character*28 plotopts
+      character    plotopts*(*)
       parameter    ( plotopts = 'mean,sum,rms,maximum,minimum' )
-      character    defplt*3, idstr*10
+      character    defplt*(*), idstr*(*)
       parameter    ( defplt = 'rms', idstr = 'statistics' )
-      character*80 commonop
+      character    commonop*(*)
       parameter    ( commonop =
      *'tb,noheader,nolist,list,eformat,style,title,xmin,xmax,ymin,ymax')
 
 c plot and options for IMSPEC
 c      parameter    ( NAME = 'IMSPEC' )
-c      character*21 plotopts
+c      character    plotopts*(*)
 c      parameter    ( plotopts = 'mean,sum,flux,pbcflux' )
-c      character    defplt*4, idstr*8
+c      character    defplt*(*), idstr*(*)
 c      parameter    ( defplt = 'flux', idstr = 'spectrum' )
-c      character*80 commonop
+c      character    commonop*(*)
 c      parameter    ( commonop =
-c     *'tb,noheader,nolist,list,eformat,hanning,boxcar,deriv,style,title,
-c     *xmin,xmax,ymin,ymax' )
+c     *'tb,noheader,nolist,list,eformat,hanning,boxcar,deriv,style,'//
+c     *'title,xmin,xmax,ymin,ymax' )
 
 c common variables for IMSTAT and IMSPEC
 
-      character	   styles*(*)
+      character    styles*(*)
       parameter    ( styles = 'connect,step,histo' )
 
       integer      NPLOTV, NPLOTR, NPLOTP
