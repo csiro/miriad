@@ -10,9 +10,9 @@ A tar distribution of Miriad is available via three paths
 
 Anonymous ftp:	Host:      ftp.atnf.csiro.au
 		Directory: /pub/software/miriad
-		File:	   miriad.tar.Z  or miriad.tar
+		File:	   miriad.tar.Z, miriad.tar.gz or miriad.tar
 
-WWW	       	URL:       http://www.atnf.csiro.au/Software/Analysis/miriad
+WWW	       	URL:       http://www.atnf.csiro.au/computing/software/miriad
 			   Click on "Distribution,installation and update info"
 
 On ATNF machines:	   Run "mirtar" yourself
@@ -552,26 +552,27 @@ Instructions for Installing Miriad
 System-Dependent Issues
 =======================
 
-GNU Compilers
--------------
+GNU Compilers and f2c
+---------------------
 Miriad has been successfully build using the gcc and g77 compilers.
 If "cc" and "f77" are not symbollicaly linked to these, you will
 need to change the mircadd and mirclnk scripts accordingly.
+
+If you are using g77, you will want to use the compiler switch
+
+   -ff90-intrinsics-hide
+
+which turns off g77's knowledge of FORTRAN-90 intrinsic functions
+(g77 gets confused when some Miriad routines happen to have the same
+name as these intrinsics).
 
 Our experience with FORTRAN compilers based on "f2c" is not entirely
 positive. Tasks "atlod" is believed to fail to work
 properly when using f2c-based compilers. g77 seems more reliable.
 
-g77 issues a number of warnings like
-
-  Reference to unimplemented intrinsic .... (assumed EXTERNAL)
-
-This suggest a flaw in the g77 compiler (a violation of the FORTRAN standard),
-but can be safely ignored (at the moment!).
-
 IRIX
 ----
-The compilers are buggy. Be on your guard.
+The compilers are buggy. Be on your guard. Do not use optimisation.
 
 IRIX64
 ------
