@@ -34,6 +34,7 @@ c     2mar93 rjs   Use maxnax.h.
 c    19nov93 rjs   Better summary of flux or sum.
 c    31jan96 nebk  More grace when no valid pixels in region.  
 c    08oct96 nebk  Make accumulation sums double precision
+c    28feb97 nebk  Add object to output
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'maxnax.h'
@@ -43,7 +44,8 @@ c------------------------------------------------------------------------
 	parameter(maxruns=80000)
 	parameter(version = 'version 08-Oct-96' )
 c
-	character file*64,asterisk*30,line*72,coord*64,bunit*32
+	character file*64,asterisk*30,line*72,coord*64,bunit*32,
+     +   object*32
 	integer nsize(MAXNAX),plane(MAXNAX),maxv(MAXNAX),minv(MAXNAX)
 	integer blc(MAXNAX),trc(MAXNAX)
 	integer i,j,k,under,over,bin(nbinmax),maxbin
@@ -79,6 +81,8 @@ c
 	call rdhdi(lun,'naxis',naxis,0)
 	naxis = min(naxis,MAXNAX)
 	if(nsize(1).gt.maxdim)call bug('f','Input file too big for me')
+        call rdhda(lun,'object',object,' ')
+
 c
 c  Determine the min and max value, if needed.
 c
@@ -193,6 +197,11 @@ c
         if (cdelt1*cdelt2.ne.0.0) 
      *    barea = 1.1331 * bmaj * bmin / abs(cdelt1*cdelt2)
 c
+        if (object.ne.' ') then
+          line = 'Object  '//object
+          call output (line)
+        end if
+
         if (barea.gt.0.0 .and. bunit.eq.'JY/BEAM') then
           write(line,100) av,rms,sum/barea
 	else if (bunit.eq.'JY/PIXEL') then
