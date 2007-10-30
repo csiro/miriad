@@ -29,6 +29,11 @@ c	z direction, set BIN=2,2, 1,1, 3,1
 c	Defaults are 1,1 for each axis.  
 c@ out
 c	Output image
+c@ options
+c       Extra processing options. Only the minimum characters to avoid 
+c       ambiguity is needed.
+c         sum       Produce sum rather than average of pixels in
+c                   each bin
 c--
 c
 c  History:
@@ -39,6 +44,7 @@ c    rjs  12oct99  Correctly handle mosaic tables. Other cosmetic
 c		   improvements.
 c    dpr  08nov00  make bin specs for 3rd axis redundant for 2-D 
 c                  images.
+c    bmg  11may01  Added options=sum
 c
 c-----------------------------------------------------------------------
       implicit none
@@ -50,7 +56,13 @@ c
       character version*(*)
       integer maxbox
       parameter (maxbox = 1024)
-      parameter (version = 'ImBin: version 1.0 12-Oct-99')
+      integer NOPTS
+      parameter(NOPTS=1) 
+      character opts(NOPTS)*8 
+      logical present(NOPTS)
+      data opts/'sum     '/
+
+      parameter (version = 'ImBin: version 1.0 14-Dec-01')
 c
       integer sizin(maxnax), sizout(maxnax), blc(maxnax), trc(maxnax), 
      + bin(2,maxnax), nbin, boxes(maxbox), krng(2), lin, lout, ip, ipn, 
@@ -58,7 +70,7 @@ c
       double precision cdelti(maxnax), crvali(maxnax), crpixi(maxnax),
      + cdelto(maxnax), crpixo(maxnax)
       real dmm(2), mm(2)
-      logical flags(maxdim), blanks
+      logical flags(maxdim), blanks, aver
       character in*64, out*64, itoaf*1, str*1, line*80
 c
 c  Externals.
@@ -79,7 +91,10 @@ c
       if (nbin.eq.0) call bug ('f', 'You must give some binning')
       if (mod(nbin,2).ne.0)call bug('f','Invalid number of bins')
       call boxinput ('region', in, boxes, maxbox)
+      call options('options',opts,present,NOPTS)
+      aver = .not.present(1)
       call keyfin
+
 c
 c Open input image
 c
@@ -175,7 +190,7 @@ c
         mm(1) = 1.0e32
         mm(2) = -1.0e32
         call readimcg (.true., 0.0, lin, bin(1,1), bin(1,2), krng,
-     +    blc, trc, .true., memi(ipn), memr(ip), blanks, mm)
+     +    blc, trc, aver, memi(ipn), memr(ip), blanks, mm)
         dmm(1) = min(dmm(1), mm(1))
         dmm(2) = max(dmm(2), mm(2))
         krng(1) = krng(1) + bin(1,3)
