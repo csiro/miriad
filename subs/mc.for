@@ -5,6 +5,8 @@ c  History:
 c    rjs 18nov94  Original version.
 c    rjs 28nov94  Miscellaneous enhancements.
 c    rjs  2dec94  Fix bug in mccnvl when convolving regions which are blanked.
+c    rjs 24nov95  Fix minor optimisation in mcCnvlr, and avoid aliasing
+c		  via changes in mcExtent.
 c************************************************************************
 	subroutine mcInitFG(tno1,bmaj1,bmin1,bpa1)
 c
@@ -168,10 +170,10 @@ c
 	  xmax = min(xmax,nox-xoff)
 	  ymax = min(ymax,noy-yoff)
 c
-	  if(xlo.lt.1)  xlo = xmin
-	  if(xhi.gt.nix)xhi = xmax
-	  if(ylo.lt.1)  ylo = ymin
-	  if(yhi.gt.niy)yhi = ymax
+	  if(xlo.lt.1)  xlo = min(1,  xmin)
+	  if(xhi.gt.nix)xhi = max(nix,xmax)
+	  if(ylo.lt.1)  ylo = min(1,  ymin)
+	  if(yhi.gt.niy)yhi = max(niy,ymax)
 c
 	  mnx = xhi - xlo + 1
 	  mny = yhi - ylo + 1
@@ -305,8 +307,43 @@ c
 c
 	end
 c************************************************************************
+	subroutine mcGain(Gain,nPoint)
+c
+	implicit none
+	integer nPoint
+	real Gain(nPoint)
+c
+c  Return the gain at each point in the region-of-interest.
+c------------------------------------------------------------------------
+	include 'maxdim.h'
+	include 'mem.h'
+	include 'mc.h'
+c
+	call mcGn(Gain,memr(pWts1),nPoint)
+	end	
+c************************************************************************
+	subroutine mcGn(Gain,Wt1,nPoint)
+c
+	implicit none
+	integer nPoint
+	real Gain(nPoint),Wt1(nPoint)
+c
+c------------------------------------------------------------------------
+	integer i
+c
+	do i=1,nPoint
+	  if(Wt1(i).eq.0)then
+	    Gain(i) = 0
+	  else
+	    Gain(i) = 1/Wt1(i)
+	  endif
+	enddo
+c
+	end
+c************************************************************************
 	subroutine mcSigma2(Sigma2,nPoint,noinvert)
 c
+	implicit none
 	integer nPoint
 	real Sigma2(nPoint)
 	logical noinvert
@@ -461,7 +498,9 @@ c
 	  if(Runs(1,iRuns).ge.ylo.and.Runs(1,iRuns).le.yhi.and.
      *	     Runs(3,iRuns).ge.xlo.and.Runs(2,iRuns).le.xhi)then
 c
-c  Determine the range where the primary beam is non-zero.
+c  Determine the range where the primary beam is non-zero. Places
+c  where the primary beam is zero can be ignored (places where the
+c  model is zero generally cannot be ignored).
 c
 	    x1 = max(xlo,Runs(2,iRuns))
 	    x2 = min(xhi,Runs(3,iRuns))
@@ -504,7 +543,9 @@ c
 	enddo
 	Runs2(1,nRuns2+1) = 0
 c
-	if(n.eq.0)return
+c  If there is nothing non-zero, then there is nothing to do.
+c
+	if(ncomp.eq.0)return
 c
 c  Initialise the convolver if needed.
 c
@@ -594,20 +635,21 @@ c  Its size is set by
 c    * the extent where the primary beam is non-zero (radius (xrad,yrad)),
 c    * the size of the beam function that we are convolving with (n1,n2), and
 c    * the maximum size that the convolution routines impose (n1d,n2d)
+c    * to avoid aliasing.
 c
 	call pbExtent(pbObj,x0,y0,xrad,yrad)
 c
 	xlo = nint(x0 - xrad + 0.5)
 	xhi = nint(x0 + xrad - 0.5)
 	x1 = nint(x0)
-	xlo = max(xlo, xmin-n1/2,     x1-n1d/2)
-	xhi = min(xhi, xmax+(n1-1)/2, x1+(n1d-1)/2)
+	xlo = max(xlo, xmin-(n1-1)/2, x1-n1d/2,     xmax+(n1-1)/2-n1d)
+	xhi = min(xhi, xmax+n1/2,     x1+(n1d-1)/2, xmin-n1/2+n1d    )
 c
 	ylo = nint(y0 - yrad + 0.5)
 	yhi = nint(y0 + yrad - 0.5)
 	y1 = nint(y0)
-	ylo = max(ylo, ymin-n2/2,     y1-n2d/2)
-	yhi = min(yhi, ymax+(n2-1)/2, y1+(n2d-1)/2)
+	ylo = max(ylo, ymin-(n2-1)/2, y1-n2d/2,     ymax+(n2-1)/2-n2d)
+	yhi = min(yhi, ymax+n2/2,     y1+(n2d-1)/2, ymin-n2/2+n2d    )
 c
 	xmin = max(xmin,xlo)
 	ymin = max(ymin,ylo)
