@@ -2,6 +2,9 @@
 /*									*/
 /*	A collection of routines to manipulate scratch files.		*/
 /*									*/
+/*  History:								*/
+/*   rjs Dark-ages Original version.					*/
+/*   rjs   6nov94  Change item handle to an integer.			*/
 /************************************************************************/
 
 #include "io.h"
@@ -29,7 +32,7 @@ int *handle;
   char name[32];
 
   (void)sprintf(name,"scratch%d",number++);
-  haccess_c(0,(char **)handle,name,"scratch",&iostat);
+  haccess_c(0,handle,name,"scratch",&iostat);
   if(iostat) bugno_c('f',iostat);
 }
 /************************************************************************/
@@ -51,7 +54,7 @@ int handle;
 {
   int iostat;
 
-  hdaccess_c((char *)handle,&iostat);
+  hdaccess_c(handle,&iostat);
   if(iostat) bugno_c('f',iostat);
 }
 /************************************************************************/
@@ -79,7 +82,7 @@ float *buffer;
 {
   int iostat;
 
-  hreadb_c((char *)handle,(char *)buffer,
+  hreadb_c(handle,(char *)buffer,
     sizeof(float)*offset,sizeof(float)*length,&iostat);
   if(iostat) bugno_c('f',iostat);
 }
@@ -107,7 +110,7 @@ float *buffer;
 {
   int iostat;
 
-  hwriteb_c((char *)handle,(char *)buffer,
+  hwriteb_c(handle,(char *)buffer,
     sizeof(float)*offset,sizeof(float)*length,&iostat);
   if(iostat) bugno_c('f',iostat);
 }
