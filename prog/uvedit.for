@@ -45,6 +45,7 @@ c    jm    19feb96    Added warnings if no obvious changes are made or
 c                     if the requested source is not found.
 c    jm    06jun96    Correctly add dra/ddec to RA/Dec in Getrdphz.
 c    rjs   11oct96    Added delra,deldec,pntra,pntdec to the output.
+c    rjs   24mar97    Copy all calibration tables.
 c***********************************************************************
 c= Uvedit - Editing of the baseline of a UV data set.
 c& jm
@@ -619,6 +620,10 @@ c
             if (docorr)
      *        call uvset(Lout, 'corr', corrtype, 0, 0.0, 0.0, 0.0)
 c
+c  Copy all calibration tables.
+c
+	    call CalCopy(Lin,Lout,PROG)
+c
 c  Copy the old history entries to the new file and then add a few
 c  additional history entries to the new file.
 c
@@ -1047,9 +1052,71 @@ c
 c
 c  End of main routine.
 c
-      stop
       end
+c***********************************************************************
+	subroutine CalCopy(Lin,Lout,prog)
 c
+	implicit none
+	integer Lin,Lout
+	character prog*(*)
+c
+c  Copy the calibration tables from the input to the output.
+c
+c  Input:
+c    Lin,Lout	Handles of the input and output datasets.
+c    prog	Program name (for messages).
+c------------------------------------------------------------------------
+	character umsg*64
+c
+c  Externals.
+c
+	logical hdprsnt
+c
+	if(hdprsnt(Lin,'gains'))then
+	  umsg = prog//'Copying antanne gain calibration'
+	  call output(umsg)
+          call hdcopy(Lin,Lout,'interval')
+          call hdcopy(Lin,Lout,'nsols')
+          call hdcopy(Lin,Lout,'ngains')
+          call hdcopy(Lin,Lout,'nfeeds')
+          call hdcopy(Lin,Lout,'ntau')
+          call hdcopy(Lin,Lout,'gains')
+          call hdcopy(Lin,Lout,'freq0')
+	endif
+c
+	if(hdprsnt(Lin,'bandpass'))then
+	  umsg = prog//'Copying bandpass calibration'
+	  call output(umsg)
+	  call hdcopy(Lin,Lout,'ngains')
+          call hdcopy(Lin,Lout,'nfeeds')
+          call hdcopy(Lin,Lout,'ntau')
+          call hdcopy(Lin,Lout,'bandpass')
+          call hdcopy(Lin,Lout,'freqs')
+          call hdcopy(Lin,Lout,'nspect0')
+          call hdcopy(Lin,Lout,'nchan0')
+	endif
+c
+	if(hdprsnt(Lin,'cgains'))then
+	  umsg = prog//'Copying cgains table'
+	  call output(umsg)
+          call hdcopy(tIn,tOut,'cgains')
+          call hdcopy(tIn,tOut,'ncbase')
+          call hdcopy(tIn,tOut,'ncgains')
+	endif
+	if(hdprsnt(Lin,'wgains'))then
+	  umsg = prog//'Copying wgains table'
+	  call output(umsg)
+          call hdcopy(tIn,tOut,'wgains')
+          call hdcopy(tIn,tOut,'nwbase')
+          call hdcopy(tIn,tOut,'nwgains')
+	endif
+c
+	if(hdprsnt(Lin,'leakage'))then
+	  umsg = prog//'Copying polarisation calibration'
+	  call output(umsg)
+	  call hdcopy(Lin,Lout,'leakage')
+	endif
+	end
 c***********************************************************************
 cc= GetOpt - Internal routine to get command line options.
 cc& jm
