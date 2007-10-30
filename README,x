@@ -143,7 +143,8 @@ Instructions for Installing Miriad
 
 3)  Well-supported machines include:
 
-	SunOS 4.x, SunOS 5.x, Convex, IRIX, OFS1/Digital UNIX, Linux, HPUX.
+	SunOS 4.x, SunOS 5.x, Convex, IRIX, IRIX64, OFS1/Digital UNIX, Linux,
+	HPUX, UNICOS.
 
     If you are using one of these, *in principle*, you need to
     change your directory to the Miriad root directory, and run
@@ -560,12 +561,12 @@ Our experience with FORTRAN compilers based on "f2c" is not entirely
 positive. Tasks "atlod" and "uvplt" are believed to fail to work
 properly when using f2c-based compilers. g77 seems more reliable.
 
-IRIX (SGI)
-----------
+IRIX64 (SGI)
+------------
 The FORTRAN optimiser is very buggy. I recommend that you do not use
 optimisation above -O0.
 
-On our SGI machine (IRIX64), the system library complib.sgimath contains BLAS,
+On our IRIX64 machine, the system library complib.sgimath contains BLAS,
 LINPACK and FFT routines. If your machine does not have this library,
 you will need to modify the file $MIR/scripts/unix/sgi/mirupdate.csh.
 See the comments in that file (look for the double
