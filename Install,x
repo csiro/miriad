@@ -103,7 +103,7 @@ l0:
 	endif
 	set root = `pwd`
 	echo ""
-	echo -n "Give a new root directory name (default is $root): "
+	echo -n "Please enter a new root directory name (default is $root): "
 	set answer = $<
 	if ( "$answer" != "" ) set root = $answer
 	if ( ! -e $root/Install || ! -d $root/bin || ! -d $root/subs \
@@ -307,7 +307,7 @@ l2:
 	  echo "    not been installed already ... abort this and"
 	  echo "    install it now."
 	  echo ""
-	  echo -n "Give the directory of the PGPLOT library: "
+	  echo -n "Please enter the directory of the PGPLOT library: "
 	  set pgplotdir = $<
 	  goto l2
 	endif
@@ -337,7 +337,7 @@ l4:
 	if ( "$xdir" == "" || ! ( -e $xdir/libX11.a || -e $xdir/libX11.so ) ) then
 	  echo "### Could not find X11 library"
 	  echo ""
-	  echo -n "Give the directory of the X11 library: "
+	  echo -n "Please enter the directory of the X11 library: "
 	  set xdir = $<
 	  goto l4
 	endif
@@ -465,7 +465,7 @@ l10:
 
 	echo ""
 	echo "Starting to build special tools ..."
-	foreach special ( miriad xpanel xmtv sxmtv)
+	foreach special ( miriad xpanel xmtv sxmtv )
 	  set s = $MIR/spec/$special
 	  if ( -e $s/Build.$arch ) then
 	    echo ""
