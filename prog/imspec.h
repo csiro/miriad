@@ -12,6 +12,8 @@ c 4) Change name to imspec.for
       include      'maxnax.h'
       include      'maxdim.h'
       include      'mirconst.h'
+      integer      MAXBOXES
+      parameter    ( MAXBOXES = 1024 )
 
       character*6  NAME
 
