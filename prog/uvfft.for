@@ -40,6 +40,7 @@ c--
 c  History:
 c   18nov93 mchw - original version adopted from onedfft.for
 c   07mar94 mchw - improved doc and more checks.
+c   05mar98 rjs  - some fortran standardisation.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
@@ -49,7 +50,7 @@ c------------------------------------------------------------------------
 	parameter(MAXSELS=1024,MAXSIZE=1024,MAXIN=33)
 	real sels(maxsels)
 	real start,step,width
-	character linetype*20,vis*50,log*50,date*18,line*200,device*20
+	character linetype*20,vis*50,logf*50,date*18,line*200,device*20
 	character options*20
 	complex data(maxchan),in(MAXSIZE,MAXIN),out(MAXSIZE,MAXIN)
 	real amp(MAXIN),phase(MAXIN)
@@ -73,8 +74,8 @@ c
 	call keyr('line',width,1.)
 	call keyr('line',step,width)
 	call keyi('size',size,128)
-	call keyr('delay',delay,0.)
- 	call keya('log',log,' ')
+	call keyi('delay',delay,0)
+ 	call keya('log',logf,' ')
  	call keya('device',device,' ')
  	call keya('options',options,' ')
 	call keyfin
@@ -89,7 +90,7 @@ c
 c
 c  Open the output text file.
 c
- 	call LogOpen(log,' ')
+ 	call LogOpen(logf,' ')
 c
 c  Open the data file, apply selection, do linetype initialisation and
 c  determine the variables of interest.
@@ -204,17 +205,17 @@ c
 	  enddo
 	  maxamp=amp(ismax(size,amp,1))
 	  call pgsvp(0.1,.9,.98-i*yh,.98-i*yh+yh)
-	  call pgswin(0.,float(size),0.,maxamp)
+	  call pgswin(0.,real(size),0.,maxamp)
 	  call pgmove(1.,amp(1))
 	  do j=2,size
-	    call pgdraw(float(j),amp(j))
+	    call pgdraw(real(j),amp(j))
 	  end do
 c		  
 c  Phase plots are scaled to -180/180 and drawn as dots.
 c
-	  call pgswin(0.,float(size),-180.,180.)
+	  call pgswin(0.,real(size),-180.,180.)
 	  do j=1,size
-	    call pgpt(1,float(j),phase(j),1)
+	    call pgpt(1,real(j),phase(j),1)
 	  end do
 	  xflag = 'BSCT'
 	  if(i.eq.numchan) xflag(5:5)='N'

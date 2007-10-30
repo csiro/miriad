@@ -1335,7 +1335,7 @@ c-----------------------------------------------------------------------
 	real velmin,velmax,swap
 	integer i,k,length
 	character line*80
-#ifdef cft
+#ifdef unicos
 c
 c  External
 c
@@ -1358,7 +1358,7 @@ c
 10	  call prompt(line,length,
      *      '>Enter map number and velocity interval (N,Vmin,Vmax): ')
 	  if(length.eq.0) return
-#ifdef cft
+#ifdef unicos
 	  read(substr(line,1),101,err=20) i
 	  read(substr(line,2),103) velmin
 	  read(substr(line,3),103) velmax
@@ -1784,7 +1784,7 @@ c
 c
 	data maxspec/49/
 c
-#ifdef cft
+#ifdef unicos
 c
 c  External
 c
@@ -1886,7 +1886,7 @@ c
 10	  call prompt(line,length,
      *		'>Enter spectrum number and position (n,X,Y): ')
 	  if(length.eq.0) goto 20
-#ifdef cft
+#ifdef unicos
 	  read(substr(line,1),101,err=11) i
 	  read(substr(line,2),103) x
 	  read(substr(line,3),103) y
@@ -2727,7 +2727,7 @@ c    ncon		Size of convolution array.
 c----------------------------------------------------------------------c
 	character*80 line
 	integer length
-#ifdef cft
+#ifdef unicos
 c
 c  External
 c
@@ -2743,7 +2743,7 @@ c
 10	call prompt(line,length,
      *	  '>Enter convolving beam (major("), minor("), pa(deg): ')
 	if(length.eq.0) goto 20
-#ifdef cft
+#ifdef unicos
 	read(substr(line,1),102,err=10) cmaj
 	read(substr(line,2),102) cmin
 	read(substr(line,3),102) cpa
@@ -3786,7 +3786,7 @@ c
         integer ncut
 	real xcut(128),ycut(128),pa(128)
         common /cuts/ xcut,ycut,pa,ncut
-#ifdef cft
+#ifdef unicos
 c
 c  External
 c
@@ -3851,7 +3851,7 @@ c
 10	  call prompt(line,length,
      *      '>Enter cut number, position and angle (n,x,y,pa): ')
 	  if(length.eq.0) goto 50
-#ifdef cft
+#ifdef unicos
 	  read(substr(line,1),101,err=20) i
 	  read(substr(line,2),103) xin
 	  read(substr(line,3),103) yin
