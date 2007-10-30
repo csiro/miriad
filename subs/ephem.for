@@ -17,6 +17,7 @@ c    12dec95 rjs  Added veccross,lstjul.
 c    11mar96 rjs  Update leap second table.
 c    03oct96 rjs  Corrected leap second table error.
 c    01mar97 rjs  Added new leap second.
+c    21mar97 rjs  Added llh2xyz.
 c
 c  General Reference:
 c    Explanatory Supplement to the Astronomical Almanac. 1993.
@@ -249,6 +250,46 @@ c
 	long = atan2(y,x)
 	lat =  atan(z/sqrt(x*x+y*y)/fm12)
 	height = z/sin(lat) - ae*fm12/sqrt(1-f*(2-f)*sin(lat)**2)
+c
+	end
+c************************************************************************
+c* llh2xyz -- Convert from latitude/longitude/height to CIO (x,y,z).
+c& rjs
+c: utilities
+c+
+	subroutine llh2xyz(lat,long,height,x,y,z)
+c
+	implicit none
+	double precision x,y,z,lat,long,height
+c
+c  Convert betweena location defined in terms
+c  geodetic latitude, longitude, and height above the reference geoid to
+c  CIO coordinates.
+c
+c  Reference:
+c    Kenneth R. Lang, "Astrophysical Formulae", pages 493-497.
+c    Values for flattening and equatorial radius from John Reynolds,
+c    who says they are the IAU 1976 values.
+c
+c  Input:
+c   lat,long	Geodetic latitude and longitude, in radians.
+c   height	Height above the reference geoid (i.e. sea level), in meters.
+c  Output:
+c   x,y,z	CIO coordinates, in meters.
+c--
+c------------------------------------------------------------------------
+c f  -- Earth's flattening factor
+c ae -- Earth's equatorial radius, in meters.
+c
+	double precision f,ae,fm12
+	parameter(f=1/298.257,ae=6.378140d6,fm12=(1-f*(2-f)))
+c
+	double precision Nphi
+c
+	Nphi = ae/sqrt(1-f*(2-f)*sin(lat)**2)
+	x = (Nphi+height)*cos(long)*cos(lat)
+	y = (Nphi+height)*sin(long)*cos(lat)
+	z = (fm12*Nphi+height)*sin(lat)
 c 
 	end
 c************************************************************************
