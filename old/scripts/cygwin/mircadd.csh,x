@@ -1,0 +1,45 @@
+#! /bin/csh -ef
+
+foreach in ($argv)
+ set dir = $in:h
+ if ( "$dir" == "$in" ) set dir = "."
+ cd $dir
+ echo Processing $in
+ switch ($in)
+   case *.for:
+   set tmp=$in:r
+   (cd $dir; $MIRBIN/ratty -s linux -b -I $MIRINC $in $tmp.f)
+   set file = $tmp.f
+   set out = $file:t
+   set out = $out:r
+#   f77 -ff90-intrinsics-hide -c -fPIC -O -o ${out}.o $file
+   g77 -ff90-instrinsics-hide -c -O -o ${out}.o $file
+   ar rl $MIRLIB/libmir.a ${out}.o
+   rm -f $file ${out}.o
+   breaksw
+ case *.f2c:
+   set tmp=$in:r
+   set file=${tmp}.c
+   set out=$file:t
+   set out=$out:r
+   $MIRBIN/intf2c -s linux $in $file
+   cc -O -Dlinux -c -o ${out}.o -D_FILE_OFFSET_BITS=64 \
+	-D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -I$MIRINC -I$MIR/subs $file
+   ar rl $MIRLIB/libmir.a ${out}.o
+   rm -f ${out}.o $file
+   breaksw
+ case *.c:
+   set out = $in:t
+   set out = /tmp/$out:r
+   (cd $dir; gcc -O -Dlinux -c -o ${out}.o -D_FILE_OFFSET_BITS=64 \
+	-D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -I$MIRINC -I$MIR/subs $in)
+   ar rl $MIRLIB/libmir.a ${out}.o
+   rm -f ${out}.o
+   breaksw
+ default:
+   echo Ignoring $in
+   breaksw
+ endsw
+end
+
+exit 0
