@@ -18,6 +18,8 @@ c    11mar96 rjs  Update leap second table.
 c    03oct96 rjs  Corrected leap second table error.
 c    01mar97 rjs  Added new leap second.
 c    21mar97 rjs  Added llh2xyz.
+c    07jul97 rjs  Included fk45z and fk54z (from slalib), as well as
+c		  making lmn2sph return RA in range 0 to 2*PI.
 c
 c  General Reference:
 c    Explanatory Supplement to the Astronomical Almanac. 1993.
@@ -334,8 +336,11 @@ c  Output:
 c    ra,dec	Angles in radians.
 c--
 c------------------------------------------------------------------------
-	dec = asin(lmn(3))
+	include 'mirconst.h'
+c
+	dec = asin(lmn(3)/sqrt(lmn(1)**2+lmn(2)**2+lmn(3)**2))
 	ra  = atan2(lmn(2),lmn(1))
+	if(ra.lt.0)ra = ra + 2*DPI
 	end
 c************************************************************************
 	double precision function epo2jul(epoch,code)
@@ -762,4 +767,562 @@ c
 	enddo
 	LstJul = myday
 	end
+************************************************************************
+      SUBROUTINE FK45Z (R1950,D1950,JDAY,R2000,D2000)
+*+
+*     - - - - - -
+*      F K 4 5 Z
+*     - - - - - -
+*
+*  Convert B1950.0 FK4 star data to J2000.0 FK5 assuming zero
+*  proper motion in an inertial frame (double precision)
+*
+*  This routine converts stars from the old, Bessel-Newcomb, FK4
+*  system to the new, IAU 1976, FK5, Fricke system, in such a
+*  way that the FK5 proper motion is zero.  Because such a star
+*  has, in general, a non-zero proper motion in the FK4 system,
+*  the routine requires the epoch at which the position in the
+*  FK4 system was determined.
+*
+*  The method is from Appendix 2 of Ref 1, but using the constants
+*  of Ref 4.
+*
+*  Given:
+*     R1950,D1950     dp    B1950.0 FK4 RA,Dec at epoch (rad)
+*     JDAY            dp    Julian date of epoch
+*
+*  Returned:
+*     R2000,D2000     dp    J2000.0 FK5 RA,Dec (rad)
+*
+*  Notes:
+*
+*  2)  Conversion from Besselian epoch 1950.0 to Julian epoch
+*      2000.0 only is provided for.  Conversions involving other
+*      epochs will require use of the appropriate precession,
+*      proper motion, and E-terms routines before and/or
+*      after FK425 is called.
+*
+*  3)  In the FK4 catalogue the proper motions of stars within
+*      10 degrees of the poles do not embody the differential
+*      E-term effect and should, strictly speaking, be handled
+*      in a different manner from stars outside these regions.
+*      However, given the general lack of homogeneity of the star
+*      data available for routine astrometry, the difficulties of
+*      handling positions that may have been determined from
+*      astrometric fields spanning the polar and non-polar regions,
+*      the likelihood that the differential E-terms effect was not
+*      taken into account when allowing for proper motion in past
+*      astrometry, and the undesirability of a discontinuity in
+*      the algorithm, the decision has been made in this routine to
+*      include the effect of differential E-terms on the proper
+*      motions for all stars, whether polar or not.  At epoch 2000,
+*      and measuring on the sky rather than in terms of dRA, the
+*      errors resulting from this simplification are less than
+*      1 milliarcsecond in position and 1 milliarcsecond per
+*      century in proper motion.
+*
+*  References:
+*
+*     1  Aoki,S., et al, 1983.  Astron.Astrophys., 128, 263.
+*
+*     2  Smith, C.A. et al, 1989.  "The transformation of astrometric
+*        catalog systems to the equinox J2000.0".  Astron.J. 97, 265.
+*
+*     3  Yallop, B.D. et al, 1989.  "Transformation of mean star places
+*        from FK4 B1950.0 to FK5 J2000.0 using matrices in 6-space".
+*        Astron.J. 97, 274.
+*
+*     4  Seidelmann, P.K. (ed), 1992.  "Explanatory Supplement to
+*        the Astronomical Almanac", ISBN 0-935702-68-7.
+*
+*
+*  Original:                      P.T.Wallace  24 December 1992
+*  Modified to use within Miriad: Bob Sault    30 April 1997
+*-
 
+      IMPLICIT NONE
+
+      DOUBLE PRECISION R1950,D1950,JDAY,R2000,D2000
+
+      DOUBLE PRECISION D2PI
+      PARAMETER (D2PI=6.283185307179586476925287D0)
+
+      DOUBLE PRECISION W
+      INTEGER I,J
+
+*  Position and position+velocity vectors
+      DOUBLE PRECISION R0(3),A1(3),V1(3),V2(6)
+
+*  Radians per year to arcsec per century
+      DOUBLE PRECISION PMF
+      PARAMETER (PMF=100D0*60D0*60D0*360D0/D2PI)
+
+*
+*  JULIAN DATE of B1950 and J2000.
+      DOUBLE PRECISION B1950,J2000
+      PARAMETER(B1950=2433282.423D0,J2000=2451545.000D0)
+
+*
+*  CANONICAL CONSTANTS  (see references)
+*
+
+*  Vectors A and Adot, and matrix M (only half of which is needed here)
+      DOUBLE PRECISION A(3),AD(3),EM(6,3)
+      DATA A,AD/ -1.62557D-6,  -0.31919D-6, -0.13843D-6,
+     :           +1.245D-3,    -1.580D-3,   -0.659D-3/
+
+      DATA (EM(I,1),I=1,6) / +0.9999256782D0,
+     :                       +0.0111820610D0,
+     :                       +0.0048579479D0,
+     :                       -0.000551D0,
+     :                       +0.238514D0,
+     :                       -0.435623D0 /
+
+      DATA (EM(I,2),I=1,6) / -0.0111820611D0,
+     :                       +0.9999374784D0,
+     :                       -0.0000271474D0,
+     :                       -0.238565D0,
+     :                       -0.002667D0,
+     :                       +0.012254D0 /
+
+      DATA (EM(I,3),I=1,6) / -0.0048579477D0,
+     :                       -0.0000271765D0,
+     :                       +0.9999881997D0,
+     :                       +0.435739D0,
+     :                       -0.008541D0,
+     :                       +0.002117D0 /
+
+
+
+*  Spherical to Cartesian
+      CALL SPH2LMN(R1950,D1950,R0)
+
+*  Adjust vector A to give zero proper motion in FK5
+      W=(JDAY-B1950)/365.242198781d0/PMF
+      DO I=1,3
+         A1(I)=A(I)+W*AD(I)
+      END DO
+
+*  Remove e-terms
+      W=R0(1)*A1(1)+R0(2)*A1(2)+R0(3)*A1(3)
+      DO I=1,3
+         V1(I)=R0(I)-A1(I)+W*R0(I)
+      END DO
+
+*  Convert position vector to Fricke system
+      DO I=1,6
+         W=0D0
+         DO J=1,3
+            W=W+EM(I,J)*V1(J)
+         END DO
+         V2(I)=W
+      END DO
+
+*  Allow for fictitious proper motion in FK4
+      W=(JDAY-J2000)/365.25d0/PMF
+      DO I=1,3
+         V2(I)=V2(I)+W*V2(I+3)
+      END DO
+
+*  Revert to spherical coordinates
+      CALL LMN2SPH(V2,R2000,D2000)
+
+      END
+************************************************************************
+      SUBROUTINE FK54Z (R2000,D2000,JDAY,
+     :                      R1950,D1950,DR1950,DD1950)
+*+
+*     - - - - - -
+*      F K 5 4 Z
+*     - - - - - -
+*
+*  Convert a J2000.0 FK5 star position to B1950.0 FK4 assuming
+*  zero proper motion and parallax (double precision)
+*
+*  This routine converts star positions from the new, IAU 1976,
+*  FK5, Fricke system to the old, Bessel-Newcomb, FK4 system.
+*
+*  Given:
+*     R2000,D2000     dp    J2000.0 FK5 RA,Dec (rad)
+*     JDAY            dp    Julian date of epoch.
+*
+*  Returned:
+*     R1950,D1950     dp    B1950.0 FK4 RA,Dec (rad) at epoch JDAY
+*     DR1950,DD1950   dp    B1950.0 FK4 proper motions (rad/trop.yr)
+*
+*  Notes:
+*
+*  1)  The proper motion in RA is dRA/dt rather than cos(Dec)*dRA/dt.
+*
+*  2)  Conversion from Julian epoch 2000.0 to Besselian epoch 1950.0
+*      only is provided for.  Conversions involving other epochs will
+*      require use of the appropriate precession routines before and
+*      after this routine is called.
+*
+*  3)  Unlike in the FK524 routine, the FK5 proper motions, the
+*      parallax and the radial velocity are presumed zero.
+*
+*  4)  It is the intention that FK5 should be a close approximation
+*      to an inertial frame, so that distant objects have zero proper
+*      motion;  such objects have (in general) non-zero proper motion
+*      in FK4, and this routine returns those fictitious proper
+*      motions.
+*
+*  5)  The position returned by this routine is in the B1950
+*      reference frame but at epoch JDAY.  For
+*      comparison with catalogues the JDAY argument will
+*      frequently correspond to B1950.
+*
+*  Called:  FK524, PM
+*
+*  Author:   P.T.Wallace   Starlink   10 April 1990
+*  Modified: Bob Sault		       7 July  1997
+*  
+*-
+
+      IMPLICIT NONE
+
+      DOUBLE PRECISION R2000,D2000,JDAY,
+     :                 R1950,D1950,DR1950,DD1950
+
+      DOUBLE PRECISION R,D,PX,RV
+
+      DOUBLE PRECISION B1950
+      PARAMETER(B1950=2433282.423D0)
+
+
+*  FK5 equinox J2000 (any epoch) to FK4 equinox B1950 epoch B1950
+      CALL FK524(R2000,D2000,0D0,0D0,0D0,0D0,
+     :               R,D,DR1950,DD1950,PX,RV)
+
+*  Fictitious proper motion to epoch BEPOCH
+      CALL PM(R,D,DR1950,DD1950,0D0,0D0,B1950,JDAY,
+     :            R1950,D1950)
+
+      END
+************************************************************************
+      SUBROUTINE FK524 (R2000,D2000,DR2000,DD2000,P2000,V2000,
+     :                      R1950,D1950,DR1950,DD1950,P1950,V1950)
+*+
+*     - - - - - -
+*      F K 5 2 4
+*     - - - - - -
+*
+*  Convert J2000.0 FK5 star data to B1950.0 FK4 (double precision)
+*
+*  This routine converts stars from the new, IAU 1976, FK5, Fricke
+*  system, to the old, Bessel-Newcomb, FK4 system.  The precepts
+*  of Smith et al (Ref 1) are followed, using the implementation
+*  by Yallop et al (Ref 2) of a matrix method due to Standish.
+*  Kinoshita's development of Andoyer's post-Newcomb precession is
+*  used.  The numerical constants from Seidelmann et al (Ref 3) are
+*  used canonically.
+*
+*  Given:  (all J2000.0,FK5)
+*     R2000,D2000     dp    J2000.0 RA,Dec (rad)
+*     DR2000,DD2000   dp    J2000.0 proper motions (rad/Jul.yr)
+*     P2000           dp    parallax (arcsec)
+*     V2000           dp    radial velocity (km/s, +ve = moving away)
+*
+*  Returned:  (all B1950.0,FK4)
+*     R1950,D1950     dp    B1950.0 RA,Dec (rad)
+*     DR1950,DD1950   dp    B1950.0 proper motions (rad/trop.yr)
+*     P1950           dp    parallax (arcsec)
+*     V1950           dp    radial velocity (km/s, +ve = moving away)
+*
+*  Notes:
+*
+*  1)  The proper motions in RA are dRA/dt rather than
+*      cos(Dec)*dRA/dt, and are per year rather than per century.
+*
+*  2)  Note that conversion from Julian epoch 2000.0 to Besselian
+*      epoch 1950.0 only is provided for.  Conversions involving
+*      other epochs will require use of the appropriate precession,
+*      proper motion, and E-terms routines before and/or after
+*      FK524 is called.
+*
+*  3)  In the FK4 catalogue the proper motions of stars within
+*      10 degrees of the poles do not embody the differential
+*      E-term effect and should, strictly speaking, be handled
+*      in a different manner from stars outside these regions.
+*      However, given the general lack of homogeneity of the star
+*      data available for routine astrometry, the difficulties of
+*      handling positions that may have been determined from
+*      astrometric fields spanning the polar and non-polar regions,
+*      the likelihood that the differential E-terms effect was not
+*      taken into account when allowing for proper motion in past
+*      astrometry, and the undesirability of a discontinuity in
+*      the algorithm, the decision has been made in this routine to
+*      include the effect of differential E-terms on the proper
+*      motions for all stars, whether polar or not.  At epoch 2000,
+*      and measuring on the sky rather than in terms of dRA, the
+*      errors resulting from this simplification are less than
+*      1 milliarcsecond in position and 1 milliarcsecond per
+*      century in proper motion.
+*
+*  References:
+*
+*     1  Smith, C.A. et al, 1989.  "The transformation of astrometric
+*        catalog systems to the equinox J2000.0".  Astron.J. 97, 265.
+*
+*     2  Yallop, B.D. et al, 1989.  "Transformation of mean star places
+*        from FK4 B1950.0 to FK5 J2000.0 using matrices in 6-space".
+*        Astron.J. 97, 274.
+*
+*     3  Seidelmann, P.K. (ed), 1992.  "Explanatory Supplement to
+*        the Astronomical Almanac", ISBN 0-935702-68-7.
+*
+*  P.T.Wallace   Starlink   19 December 1993
+*-
+
+      IMPLICIT NONE
+
+      DOUBLE PRECISION R2000,D2000,DR2000,DD2000,P2000,V2000,
+     :                 R1950,D1950,DR1950,DD1950,P1950,V1950
+
+
+*  Miscellaneous
+      DOUBLE PRECISION R,D,UR,UD,PX,RV
+      DOUBLE PRECISION SR,CR,SD,CD,X,Y,Z,W
+      DOUBLE PRECISION V1(6),V2(6)
+      DOUBLE PRECISION XD,YD,ZD
+      DOUBLE PRECISION RXYZ,WD,RXYSQ,RXY
+      INTEGER I,J
+
+*  2Pi
+      DOUBLE PRECISION D2PI
+      PARAMETER (D2PI=6.283185307179586476925287D0)
+
+*  Radians per year to arcsec per century
+      DOUBLE PRECISION PMF
+      PARAMETER (PMF=100D0*60D0*60D0*360D0/D2PI)
+
+*  Small number to avoid arithmetic problems
+      DOUBLE PRECISION TINY
+      PARAMETER (TINY=1D-30)
+
+*
+*  CANONICAL CONSTANTS  (see references)
+*
+
+*  Km per sec to AU per tropical century
+*  = 86400 * 36524.2198782 / 149597870
+      DOUBLE PRECISION VF
+      PARAMETER (VF=21.095D0)
+
+*  Constant vector and matrix (by columns)
+      DOUBLE PRECISION A(6),EMI(6,6)
+      DATA A/ -1.62557D-6,  -0.31919D-6, -0.13843D-6,
+     :        +1.245D-3,    -1.580D-3,   -0.659D-3/
+
+      DATA (EMI(I,1),I=1,6) / +0.9999256795D0,
+     :                        -0.0111814828D0,
+     :                        -0.0048590040D0,
+     :                        -0.000551D0,
+     :                        -0.238560D0,
+     :                        +0.435730D0 /
+
+      DATA (EMI(I,2),I=1,6) / +0.0111814828D0,
+     :                        +0.9999374849D0,
+     :                        -0.0000271557D0,
+     :                        +0.238509D0,
+     :                        -0.002667D0,
+     :                        -0.008541D0 /
+
+      DATA (EMI(I,3),I=1,6) / +0.0048590039D0,
+     :                        -0.0000271771D0,
+     :                        +0.9999881946D0,
+     :                        -0.435614D0,
+     :                        +0.012254D0,
+     :                        +0.002117D0 /
+
+      DATA (EMI(I,4),I=1,6) / -0.00000242389840D0,
+     :                        +0.00000002710544D0,
+     :                        +0.00000001177742D0,
+     :                        +0.99990432D0,
+     :                        -0.01118145D0,
+     :                        -0.00485852D0 /
+
+      DATA (EMI(I,5),I=1,6) / -0.00000002710544D0,
+     :                        -0.00000242392702D0,
+     :                        +0.00000000006585D0,
+     :                        +0.01118145D0,
+     :                        +0.99991613D0,
+     :                        -0.00002716D0 /
+
+      DATA (EMI(I,6),I=1,6) / -0.00000001177742D0,
+     :                        +0.00000000006585D0,
+     :                        -0.00000242404995D0,
+     :                        +0.00485852D0,
+     :                        -0.00002717D0,
+     :                        +0.99996684D0 /
+
+
+
+*  Pick up J2000 data (units radians and arcsec/JC)
+      R=R2000
+      D=D2000
+      UR=DR2000*PMF
+      UD=DD2000*PMF
+      PX=P2000
+      RV=V2000
+
+*  Spherical to Cartesian
+      SR=SIN(R)
+      CR=COS(R)
+      SD=SIN(D)
+      CD=COS(D)
+
+      X=CR*CD
+      Y=SR*CD
+      Z=   SD
+
+      W=VF*RV*PX
+
+      V1(1)=X
+      V1(2)=Y
+      V1(3)=Z
+
+      V1(4)=-UR*Y-CR*SD*UD+W*X
+      V1(5)= UR*X-SR*SD*UD+W*Y
+      V1(6)=         CD*UD+W*Z
+
+*  Convert position+velocity vector to BN system
+      DO I=1,6
+         W=0D0
+         DO J=1,6
+            W=W+EMI(I,J)*V1(J)
+         END DO
+         V2(I)=W
+      END DO
+
+*  Position vector components and magnitude
+      X=V2(1)
+      Y=V2(2)
+      Z=V2(3)
+      RXYZ=SQRT(X*X+Y*Y+Z*Z)
+
+*  Apply E-terms to position
+      W=X*A(1)+Y*A(2)+Z*A(3)
+      X=X+A(1)*RXYZ-W*X
+      Y=Y+A(2)*RXYZ-W*Y
+      Z=Z+A(3)*RXYZ-W*Z
+
+*  Recompute magnitude
+      RXYZ=SQRT(X*X+Y*Y+Z*Z)
+
+*  Apply E-terms to both position and velocity
+      X=V2(1)
+      Y=V2(2)
+      Z=V2(3)
+      W=X*A(1)+Y*A(2)+Z*A(3)
+      WD=X*A(4)+Y*A(5)+Z*A(6)
+      X=X+A(1)*RXYZ-W*X
+      Y=Y+A(2)*RXYZ-W*Y
+      Z=Z+A(3)*RXYZ-W*Z
+      XD=V2(4)+A(4)*RXYZ-WD*X
+      YD=V2(5)+A(5)*RXYZ-WD*Y
+      ZD=V2(6)+A(6)*RXYZ-WD*Z
+
+*  Convert to spherical
+      RXYSQ=X*X+Y*Y
+      RXY=SQRT(RXYSQ)
+
+      IF (X.EQ.0D0.AND.Y.EQ.0D0) THEN
+         R=0D0
+      ELSE
+         R=ATAN2(Y,X)
+         IF (R.LT.0.0D0) R=R+D2PI
+      END IF
+      D=ATAN2(Z,RXY)
+
+      IF (RXY.GT.TINY) THEN
+         UR=(X*YD-Y*XD)/RXYSQ
+         UD=(ZD*RXYSQ-Z*(X*XD+Y*YD))/((RXYSQ+Z*Z)*RXY)
+      END IF
+
+*  Radial velocity and parallax
+      IF (PX.GT.TINY) THEN
+         RV=(X*XD+Y*YD+Z*ZD)/(PX*VF*RXYZ)
+         PX=PX/RXYZ
+      END IF
+
+*  Return results
+      R1950=R
+      D1950=D
+      DR1950=UR/PMF
+      DD1950=UD/PMF
+      P1950=PX
+      V1950=RV
+
+      END
+************************************************************************
+      SUBROUTINE PM (R0, D0, PR, PD, PX, RV, JEP0, JEP1, R1, D1)
+*+
+*     - - -
+*      P M
+*     - - -
+*
+*  Apply corrections for proper motion to a star RA,Dec
+*  (double precision)
+*
+*  References:
+*     1984 Astronomical Almanac, pp B39-B41.
+*     (also Lederle & Schwan, Astron. Astrophys. 134,
+*      1-6, 1984)
+*
+*  Given:
+*     R0,D0    dp     RA,Dec at epoch JEP0 (rad)
+*     PR,PD    dp     proper motions:  RA,Dec changes per year of epoch
+*     PX       dp     parallax (arcsec)
+*     RV       dp     radial velocity (km/sec, +ve if receding)
+*     JEP0     dp     start epoch in years (e.g. Julian epoch)
+*     JEP1     dp     end epoch in years (same system as EP0)
+*
+*  Returned:
+*     R1,D1    dp     RA,Dec at epoch EP1 (rad)
+*
+*  Called:
+*     sph2lmn       spherical to Cartesian
+*     lmn2sph       Cartesian to spherical
+*
+*  Note:
+*     The proper motions in RA are dRA/dt rather than
+*     cos(Dec)*dRA/dt, and are in the same coordinate
+*     system as R0,D0.
+*
+*  P.T.Wallace   Starlink   12 April 1990
+*-
+
+      IMPLICIT NONE
+
+      DOUBLE PRECISION R0,D0,PR,PD,PX,RV,JEP0,JEP1,R1,D1
+
+*  Km/s to AU/year multiplied by arc seconds to radians
+      DOUBLE PRECISION VFR
+      PARAMETER (VFR=0.21094502D0*0.4848136811095359949D-05)
+
+      INTEGER I
+      DOUBLE PRECISION W,EM(3),T,P(3)
+
+
+
+*  Spherical to Cartesian
+      CALL SPH2LMN(R0,D0,P)
+
+*  Space motion (radians per year)
+      W=VFR*RV*PX
+      EM(1)=-PR*P(2)-PD*COS(R0)*SIN(D0)+W*P(1)
+      EM(2)= PR*P(1)-PD*SIN(R0)*SIN(D0)+W*P(2)
+      EM(3)=         PD*COS(D0)        +W*P(3)
+
+*  Apply the motion
+      T=(JEP1-JEP0)/365.242198781d0
+      DO I=1,3
+         P(I)=P(I)+T*EM(I)
+      END DO
+
+*  Cartesian to spherical
+      CALL LMN2SPH(P,R1,D1)
+
+      END
