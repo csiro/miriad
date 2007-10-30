@@ -87,6 +87,8 @@ c    nebk  22aug94      Adapt to GETFREQ error status change
 c    rjs   24oct94	Use new pb routines.
 c    nebk  27feb96      Add options=median, more doc.
 c    vjm   04jun96      Various changes including median and modes.
+c    vjm/rjs 11jun96	Use rpa (rather than pa) in one place. Remove
+c			call to boxmask (done manually).
 c----------------------------------------------------------------------c
 	include 'mirconst.h'
 	include 'maxdim.h'
@@ -148,7 +150,6 @@ c
 c
 c  Set up the region of interest.
 c
-        call boxmask(lin,boxes,maxboxes)
         call boxset(boxes,maxnax,nsize,'s')
         call boxinfo(boxes,maxnax,blc,trc)
 c
@@ -312,7 +313,7 @@ c
                   r =
      *            sqrt((y*cospa-x*sinpa)**2+((y*sinpa+x*cospa)/cosi)**2)
 c                 opening angle is angle on the sky, not in disk plane.
-                  theta = abs(atan2(y,x)-(pa+0.5*pi))
+                  theta = abs(atan2(y,x)-(rpa+0.5*pi))
                   if (theta.gt.twopi) theta=theta-twopi
                   if(r.ge.rmin.and.r.le.rmax.and.theta.le.rwedge)then
                      ir = r/rstep + 1
