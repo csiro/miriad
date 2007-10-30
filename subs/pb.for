@@ -58,6 +58,7 @@ c   26mar97   rjs    Less precision in pbencode.
 c   07jul97   rjs    Change call to coaxdesc to coaxget.
 c   05sep97   mchw   Change lower freq for HATCREEK to 24 GHz.
 c   09may00   rjs    Add extra check.
+c   10may02   rjs    Add model for OVRO.
 c************************************************************************
 c* pbList -- List known primary beam types.
 c& rjs
@@ -700,10 +701,16 @@ c
 	call pbAdd('VLA',     0.071,24.510, 44.3, 0.023,IPOLY,
      *			NCOEFF,vla,'Reciprocal 4th order poly')
 c
+c  The OVRO primary beam is a gaussian of size is 128.4 arcmin.GHz
+c  according to numbers from Shardha Jogee.
+c
+	call pbAdd('OVRO',24.0,350.0,   128.4, 0.05, GAUS,0,0.,
+     *				   'Truncated Gaussian')
+c
 c  The Hat Ck primary beam is a gaussian of size is 191.67 arcmin.GHz
 c  according to "John L"
 c
-	call pbAdd('HATCREEK',24.0,116.0,   191.67, 0.05, GAUS,0,0.,
+	call pbAdd('HATCREEK',24.0,350.0,   191.67, 0.05, GAUS,0,0.,
      *				   'Truncated Gaussian')
 c
 c  The following values for the WSRT are derived from the NEWSTAR
