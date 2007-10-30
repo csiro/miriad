@@ -124,9 +124,10 @@ c		  handling.
 c    mjs  04aug91 Replaced local maxants/maxbl to use maxdim.h values
 c    rjs  15oct91 Increased hash table size. Extra messages.
 c    rjs   1nov91 Polarized and mfs options. Removed out.
+c    rjs  29jan92 New call sequence to "Model".
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Selfcal: version 1.0 1-Nov-91')
+	parameter(version='Selfcal: version 1.0 29-Jan-92')
 	integer MaxMod,maxsels,nhead
 	parameter(MaxMod=32,maxsels=256,nhead=3)
 c
@@ -140,7 +141,7 @@ c
 c  Externals.
 c
 	logical keyprsnt
-	external header
+	external header,calget
 c
 c  Get the input parameters.
 c
@@ -224,7 +225,7 @@ c
 	  call SelfSet(.true.,MinAnts,.true.) 
 	  call SelApply(tvis,sels,.true.)
 	  call Model(flag2,tvis,0,offset,1.0,tscr,
-     *					nhead,header,nchan,nvis)
+     *				nhead,header,calget,nchan,nvis)
 	  call SelfIni
 	  call output('Accumulating statistics ...')
 	  call SelfAcc(tscr,nchan,nvis,interval)
@@ -236,7 +237,7 @@ c
 	    call xyopen(tmod,Models(i),'old',3,nsize)
 	    call ModelIni(tmod,tvis,sels,flag1)
 	    call Model(flag2,tvis,tmod,offset,Clip,tscr,
-     *					nhead,header,nchan,nvis)
+     *				nhead,header,calget,nchan,nvis)
 	    call xyclose(tmod)
 	    call output('Accumulating statistics ...')
 	    if(i.eq.1) call SelfIni
