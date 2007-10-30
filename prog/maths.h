@@ -12,12 +12,12 @@ c
 	PARAMETER(XVAL=MAXFILES+1,YVAL=MAXFILES+2,ZVAL=MAXFILES+3)
 c
 	INTEGER   nfiles,nsize(MAXNAX),naxis,Plane(MAXNAX)
-	INTEGER   lIn(MAXFILES),Offset(MAXFILES+1)
-	INTEGER   runs(3,MAXRUNS),nruns,blc(MAXNAX),trc(MAXNAX)
+	INTEGER   lIn(MAXFILES),Offset(MAXFILES+1),naxes(MAXFILES)
+	INTEGER   runs(3,MAXRUNS),nruns,blc(MAXNAX),trc(MAXNAX),ref
 	REAL      range(2,MAXNAX)
-	LOGICAL   xused,yused,zused
+	LOGICAL   xused,yused,zused,grow
 	CHARACTER names*256
-	COMMON/mathcom/nfiles,nsize,naxis,Plane,lIn,Offset,Runs,nRuns,
-     *		blc,trc,Range,Xused,Yused,Zused
+	COMMON/mathcom/nfiles,nsize,naxes,naxis,Plane,ref,lIn,Offset,
+     *		Runs,nRuns,blc,trc,Range,Xused,Yused,Zused,grow
 	COMMON/mathcomc/names
 
