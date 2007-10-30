@@ -134,7 +134,8 @@ c   rjs  27nov95 - Increase max complexity of clean region.
 c   rjs  05aug96 - Better check for psf not 1.
 c   rjs  29jan97 - Better default region.
 c   rjs  10mar97 - Default region is all channels.
-c
+c   rjs  25mar97 - Checks when plane is constant and when a plane is not
+c		   selected.
 c  Important Constants:
 c    MaxDim	The max linear dimension of an input (or output) image.
 c
@@ -284,52 +285,58 @@ c
 c
 c  Determine the CLEAN algorithm that is to be used.
 c
-	  moded = mode
-	  if((mode.eq.'any'.or.mode.eq.'hogbom').and.
-     *	    nPoint.le.maxCmp1.and.
-     *	    (2*nx-1).le.maxPatch.and.(2*ny-1).le.maxPatch)then
-	    moded = 'hogbom'
-	  else if(mode.eq.'hogbom')then
-	    call bug('w','Cannot use Hogbom algorithm -- using Clark')
-	    moded = 'clark'
-	  else
+	  if(nPoint.gt.0)then
 	    moded = mode
-	  endif
+	    if((mode.eq.'any'.or.mode.eq.'hogbom').and.
+     *	      nPoint.le.maxCmp1.and.
+     *	      (2*nx-1).le.maxPatch.and.(2*ny-1).le.maxPatch)then
+	      moded = 'hogbom'
+	    else if(mode.eq.'hogbom')then
+	      call bug('w','Cannot use Hogbom algorithm -- using Clark')
+	      moded = 'clark'
+	    else
+	      moded = mode
+	    endif
 c
 c  Initialise the FFT of the beam if needed.
 c
-	  if((moded.ne.'hogbom'.or.ModelNam.ne.' ').and..not.FFTIni)then
-	    FFTIni = .true.
-	    flags(1:1) = 'p'
-	    if(.not.asym) flags(2:2) = 's'
-	    if(pad)       flags(3:3) = 'e'
-	    call CnvlIniF(pBem,lBeam,n1,n2,icentre,jcentre,PHat,flags)
-	  endif
+	    if((moded.ne.'hogbom'.or.ModelNam.ne.' ')
+     *					.and..not.FFTIni)then
+	      FFTIni = .true.
+	      flags(1:1) = 'p'
+	      if(.not.asym) flags(2:2) = 's'
+	      if(pad)       flags(3:3) = 'e'
+	      call CnvlIniF(pBem,lBeam,n1,n2,icentre,jcentre,PHat,flags)
+	    endif
 c
 c  Initialise the estimate, and determine the residuals if the the user
 c  gave an estimate. Determine statistics about the estimate and the
 c  residuals.
 c
-	  if(ModelNam.eq.' ')then
-	    EstASum = 0
-	    call NoModel(Data(pMap),Data(pEst),Data(pRes),nPoint)
-	  else
-            call output ('Subtracting initial model ...')
-	    call AlignGet(lModel,Run,nRun,k,xmin+xoff-1,ymin+yoff-1,
+	    if(ModelNam.eq.' ')then
+	      EstASum = 0
+	      call NoModel(Data(pMap),Data(pEst),Data(pRes),nPoint)
+	    else
+              call output ('Subtracting initial model ...')
+	      call AlignGet(lModel,Run,nRun,k,xmin+xoff-1,ymin+yoff-1,
      *		zoff,nModel(1),nModel(2),nModel(3),
      *		Data(pEst),MaxMap,nPoint)
-	    call Diff(pBem,Data(pEst),Data(pMap),Data(pRes),
+	      call Diff(pBem,Data(pEst),Data(pMap),Data(pRes),
      *		nPoint,nx,ny,Run,nRun)
-	    call SumAbs(EstASum,Data(pEst),nPoint)
+	      call SumAbs(EstASum,Data(pEst),nPoint)
+	    endif
+	    call Stats(Data(pRes),nPoint,ResMin,ResMax,ResAMax,ResRms)
+            call output ('Begin iterating')
+	  else
+	    ResMin = 0
+	    ResMax = 1
 	  endif
-	  call Stats(Data(pRes),nPoint,ResMin,ResMax,ResAMax,ResRms)
 c
 c  Perform the appropriate iteration until no more.
 c
-          call output ('Begin iterating')
 	  Niter = 0
 	  negFound = .false.
-	  More = nPoint.gt.0
+	  More = nPoint.gt.0.and.ResMin.ne.ResMax
 	  Limit = 0
 	  dowhile(More)
 	    oNiter = Niter
@@ -392,8 +399,12 @@ c
 c
 c  Give a message about what terminated the iterations.
 c
-	  if(nPoint.eq.0)then
-	    call output(' No region selected in this plane')
+	  if(ResMin.eq.ResMax)then
+	    call bug('w','All pixels for this plane are identical')
+	    call bug('w','No cleaning performed')
+	    nPoint = 0
+	  else if(nPoint.eq.0)then
+	    call output('No region selected in this plane')
 	  else if(ResAMax.le.Cutoff)then
 	    call output(' Stopping -- Clean cutoff limit reached')
 	  else if(Niter.ge.MaxNiter)then
@@ -632,7 +643,7 @@ c------------------------------------------------------------------------
 	real crpix1,crpix2,crpix3
 	character line*72,txtblc*32,txttrc*32
 	integer nkeys
-	parameter(nkeys=33)
+	parameter(nkeys=31)
 	character keyw(nkeys)*8
 c
 c  Externals.
@@ -642,9 +653,9 @@ c
 	data keyw/   'cdelt1  ','cdelt2  ','cdelt3  ','cdelt4  ',
      *	  'crpix4  ','crval1  ','crval2  ','crval3  ','crval4  ',
      *		     'ctype1  ','ctype2  ','ctype3  ','ctype4  ',
-     *    'date-obs','epoch   ','history ','instrume','lstart  ',
+     *    'obstime ','epoch   ','history ','instrume','lstart  ',
      *	  'lstep   ','ltype   ','lwidth  ','object  ','mostab  ',
-     *	  'observer','telescop','xshift  ','yshift  ','obsra   ',
+     *	  'observer','telescop','obsra   ',
      *	  'obsdec  ','restfreq','vobs    ','pbfwhm  ','btype   '/
 c
 c  Fill in some parameters that will have changed between the input
@@ -1312,13 +1323,15 @@ c
 c  Initialise the histogram array, as well as other stuff.
 c
 	ResAMin = ResAMax * Histo(maxPatch/2+1)
+	if(ResAmin.eq.ResAmax)
+     *	  call bug('f','All pixel values are identical')
 	a = (HistSize-2)/(ResAMax-ResAMin)
 	b = 2 - a * ResAMin
 	do i=1,HistSize
 	  ResHis(i) = 0
 	enddo
 c
-c  Now get the histogram while taking accound of the boxes.
+c  Now get the histogram while taking account of the boxes.
 c
 	do i=1,nPoint
 	  m = max(int(a * abs(Residual(i)) + b),1)
