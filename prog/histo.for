@@ -32,6 +32,7 @@ c    10apr92 nebk  Add flux density to output
 c     1may92 rjs   Increase maxruns. Various trivial other mods.
 c     2mar93 rjs   Use maxnax.h.
 c    19nov93 rjs   Better summary of flux or sum.
+c    31jan96 nebk  More grace when no valid pixels in region.  
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'maxnax.h'
@@ -39,7 +40,7 @@ c------------------------------------------------------------------------
 	character version*(*)
 	parameter(nbindef=16,nbinmax=40,maxboxes=2048)
 	parameter(maxruns=80000)
-	parameter(version = 'version 1.0 19-Nov-93' )
+	parameter(version = 'version 1.0 31-Jan-96' )
 c
 	character file*40,asterisk*30,line*72,coord*64,bunit*32
 	integer nsize(MAXNAX),plane(MAXNAX),maxv(MAXNAX),minv(MAXNAX)
@@ -174,8 +175,12 @@ c
 c
 c  Determine average, rms etc.
 c
-	av = sum/npoints
-	rms = sqrt(abs(sum2/npoints-av*av))
+        if (npoints.gt.0) then
+  	  av = sum/npoints
+  	  rms = sqrt(abs(sum2/npoints-av*av))
+        else
+          call bug ('f', 'No valid pixels in selected region')
+        end if
 c
         call rdhdr(lun,'bmaj',bmaj,0.0)
         call rdhdr(lun,'bmin',bmin,0.0)
