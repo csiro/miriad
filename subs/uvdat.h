@@ -92,10 +92,11 @@ c
 	parameter(MAXPOL=4,MAXPRE=8)
 c
 	integer PolII,PolI,PolQ,PolU,PolV,PolRR,PolLL,PolRL,PolLR
-	integer PolXX,PolYY,PolXY,PolYX,PolMin,PolMax
+	integer PolXX,PolYY,PolXY,PolYX,PolQQ,PolUU,PolMin,PolMax
 	parameter(PolII=0,PolI=1,PolQ=2,PolU=3,PolV=4,PolRR=-1)
 	parameter(PolLL=-2,PolRL=-3,PolLR=-4,PolXX=-5,PolYY=-6)
-	parameter(PolXY=-7,PolYX=-8,PolMin=PolYX,PolMax=PolV)
+	parameter(PolXY=-7,PolYX=-8,PolQQ=5,PolUU=6)
+	parameter(PolMin=PolYX,PolMax=PolUU)
 c
 	integer nPol,Pols(MAXPOL),iPol,nPolF
 	logical WillPol,SelPol,SelPol1,PolCpy
