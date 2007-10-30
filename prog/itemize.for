@@ -18,6 +18,7 @@ c  pjt  7-mar-92  deleted seemingly redundant code in info, doc repair
 c  mchw 29oct92	  If "scan=image" makes an index of image parameters.
 c  rjs  19mar93   Delete scanning mode.
 c  rjs  15aug94   Honour format if given, even if there is only 1 value.
+c  rjs  25jul97   Get rid of announcement header.
 c
 c= itemize - List information about MIRIAD dataset(s)
 c& pjt
@@ -62,7 +63,6 @@ c------------------------------------------------------------------------
 c
 c  Get the input parameters.
 c
-	call output( 'Itemize: Version 1.1b 15-Aug-94' )
 	call keyini
 	call keya('in',in,' ')
 	call keya('log',outlog,' ')
@@ -82,6 +82,7 @@ c
 	  if(iostat.ne.0)call bugno('f',iostat)
 	else 
 	  item = ' '
+	  call output( 'Itemize: Version 1.1b 15-Aug-94' )
 	endif
 c
 c  Open the listing file, if one is required.
