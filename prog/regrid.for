@@ -105,6 +105,7 @@ c    23jul97 rjs   Add warning about blanked pixels. Add pbtype
 c    05aug97 rjs   Messages about equinox fiddles.
 c    20nov98 rjs   Handle and eliminate sky rotation.
 c    25nov98 rjs   Better handling of sky rotation parameter.
+c    18may99 rjs   Handle wrap arounds in the offsets.
 c
 c To do:
 c----------------------------------------------------------------------
@@ -113,7 +114,7 @@ c----------------------------------------------------------------------
 	include 'mem.h'
 c
 	character version*(*)
-	parameter(version='Regrid: version 1.0 25-Nov-98')
+	parameter(version='Regrid: version 1.0 18-May-99')
 c
 	character in*64,out*64,tin*64,ctype*16,cellscal*12,proj*3
 	character line*64
@@ -464,9 +465,9 @@ c
 c------------------------------------------------------------------------
 	double precision tol
 	parameter(tol=0.49)
-	double precision In(3),Out(3),crpix
-	integer minv(3),maxv(3),i,j,k
-	logical first
+	double precision In(3),Out(3,3,3,3),crpix
+	integer minv(3),maxv(3),i,j,k,l
+	logical weird(3)
 c
 c  Externals.
 c
@@ -474,35 +475,56 @@ c
 c
 	call pcvtInit(lIn,lOut)
 c
-	first = .true.
-	do k=1,nIn(3),max(nIn(3)-1,1)
-	  do j=1,nIn(2),max(nIn(2)-1,1)
-	    do i=1,nIn(1),max(nIn(1)-1,1)
-	      In(1) = i
-	      In(2) = j
-	      In(3) = k
-	      call pcvt(in,out,3)
-	      if(first)then
-		minv(1) = nint(out(1)-tol)
-		maxv(1) = nint(out(1)+tol)
-		minv(2) = nint(out(2)-tol)
-		maxv(2) = nint(out(2)+tol)
-		minv(3) = nint(out(3)-tol)
-		maxv(3) = nint(out(3)+tol)
-		first = .false.
-	      else
-		minv(1) = min(minv(1),nint(Out(1)-tol))
-		maxv(1) = max(maxv(1),nint(Out(1)+tol))
-		minv(2) = min(minv(2),nint(Out(2)-tol))
-		maxv(2) = max(maxv(2),nint(Out(2)+tol))
-		minv(3) = min(minv(3),nint(Out(3)-tol))
-		maxv(3) = max(maxv(3),nint(Out(3)+tol))
-	      endif
+	do k=1,3
+	  do j=1,3
+	    do i=1,3
+	      In(1) = 1 + 0.5*(i-1)*(nIn(1)-1)
+	      In(2) = 1 + 0.5*(j-1)*(nIn(2)-1)
+	      In(3) = 1 + 0.5*(k-1)*(nIn(3)-1)
+	      call pcvt(in,out(1,i,j,k),3)
 	    enddo
 	  enddo
 	enddo
 c
 	do i=1,3
+	  weird(i) = .false.
+	  minv(i) = nint(Out(i,1,1,1)-0.49)
+	  maxv(i) = nint(Out(i,1,1,1)+0.49)
+	enddo
+c
+c  Determine the min and max pixels that we are interested in.
+c
+	do k=1,3
+	  do j=1,3
+	    do i=1,3
+	      do l=1,3
+		minv(l) = min(minv(l),nint(Out(l,i,j,k)-0.49))
+		maxv(l) = max(maxv(l),nint(Out(l,i,j,k)+0.49))
+	      enddo
+	    enddo
+	  enddo
+	enddo
+c
+c  Look for weird twists or wrap arounds.
+c
+	do j=1,3
+	 do i=1,3
+	   weird(1) = weird(1).or.
+     *	    (Out(1,3,i,j)-Out(1,2,i,j))*(Out(1,2,i,j)-Out(1,1,i,j)).lt.0
+	   weird(2) = weird(2).or.
+     *	    (Out(2,i,3,j)-Out(2,i,2,j))*(Out(2,i,2,j)-Out(2,i,1,j)).lt.0
+	   weird(3) = weird(3).or.
+     *	    (Out(3,i,j,3)-Out(3,i,j,2))*(Out(3,i,j,2)-Out(3,i,j,1)).lt.0
+	 enddo
+	enddo
+c
+c  Set the template ranges. If its weird, just go with the template range.
+c
+	do i=1,3
+	  if(weird(i))then
+	    minv(i) = 1
+	    maxv(i) = nOut(i)
+	  endif
 	  nOut(i) = maxv(i) - minv(i) + 1
 	  call coGetd(lOut,'crpix'//itoaf(i),crpix)
 	  crpix = crpix - minv(i) + 1
