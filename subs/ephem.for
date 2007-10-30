@@ -13,6 +13,7 @@ c		  and LST routines.
 c     4mar94 rjs  Added sunradec.
 c     5nov94 rjs  Update leap second table.
 c     8dec95 rjs  Add lmn2sph
+c    12dec95 rjs  Added veccross,lstjul.
 c
 c  General Reference:
 c    Explanatory Supplement to the Astronomical Almanac. 1993.
@@ -643,4 +644,41 @@ c
 	if(ra.lt.0)ra = ra + dpi
 	dec = asin(sin(epsi)*sin(lambda))
  	end
+c************************************************************************
+	subroutine veccross(x,y,z)
+c
+	double precision x(3),y(3),z(3)
+c
+	z(1) = x(2)*y(3) - x(3)*y(2)
+	z(2) = x(3)*y(1) - x(1)*y(3)
+	z(3) = x(1)*y(2) - x(2)*y(1)
+	end
+c************************************************************************
+	double precision function LstJul(lst,jday,long)
+c
+	implicit none
+	double precision lst,jday,long
+c
+c  Convert an LST to a Julian day.
+c
+c------------------------------------------------------------------------
+	include 'mirconst.h'
+	double precision myday,mylst,delta
+	logical more
+c
+	double precision eqeq
+c
+	myday = jday
+	more = .true.
+	dowhile(more)
+	  call jullst(myday,long,mylst)
+	  mylst = mylst + eqeq(myday)
+	  delta = - (mylst - lst) * 365.25d0/366.25d0/(2*pi)
+	  if(delta.gt.0.5)delta = delta - 1
+	  if(delta.lt.-0.5) delta = delta + 1
+	  myday = myday + delta
+	  more = abs(delta).gt.1/(24.*3600.)
+	enddo
+	LstJul = myday
+	end
 
