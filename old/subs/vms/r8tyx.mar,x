@@ -1,0 +1,275 @@
+	.title	r8tyx
+
+; Macro routine to perform the radix-8 iterations of a complex FFT.
+
+; subroutine r8tyx(nxtlt,nthpo,lengt,cs,c0,c1,c2,c3,c4,c5,c6,c7)
+
+nxtlt = 4
+nthpo = 8
+lengt = 12
+cs    = 16
+c0    = 20
+c1    = 24
+c2    = 28
+c3    = 32
+c4    = 36
+c5    = 40
+c6    = 44
+c7    = 48
+
+p7 = ^f0.7071067811865475
+
+	.psect	$code,rd,nowrt,pic,shr,exe,long
+	.entry	r8tyx,^m<r2,r3,r4,r5,r6,r7,r8,r9,r10,r11>
+	auto	<<cs1,l>,<cs2,l>,<cs3,l>,<cs4,l>,<cs5,l>, -
+		 <cs6,l>,<cs7,l>,<x0,q>,<x1,q>,<x2,q>,<x3,q>,<x4,q>, -
+		 <x5,q>,<x6,q>,<x7,q>,<inc1,l>,<inc2,l>, -
+		 <inc3,l>,<inc4,l>,<inc5,l>,<inc6,l>,<inc7,l>,-
+		 <nthpo_less_1,l>,<nxtlt_less_1,l>,<lengt_,l>>
+
+; Initialise counters.
+
+	subl3	#1,@nthpo(ap),nthpo_less_1(fp)
+	subl3	#1,@nxtlt(ap),nxtlt_less_1(fp)
+	movl	@lengt(ap),lengt_(fp)
+	clrl	r10
+
+; Initialise pointers to twiddle factors and the pointer increments.
+
+	movaq	@cs(ap),r0
+	movl	r0,cs1(fp)
+	movl	r0,cs2(fp)
+	movl	r0,cs3(fp)
+	movl	r0,cs4(fp)
+	movl	r0,cs5(fp)
+	movl	r0,cs6(fp)
+	movl	r0,cs7(fp)
+	divl3	@lengt(ap),@nthpo(ap),r0
+	ashl	#3,r0,r0
+	movl	r0,inc1(fp)
+	addl3	r0,inc1(fp),inc2(fp)
+	addl3	r0,inc2(fp),inc3(fp)
+	addl3	r0,inc3(fp),inc4(fp)
+	addl3	r0,inc4(fp),inc5(fp)
+	addl3	r0,inc5(fp),inc6(fp)
+	addl3	r0,inc6(fp),inc7(fp)
+
+loop1:	movl	r10,r11
+loop2:	movq	@c0(ap)[r11],r2		; C0 = (r2,r3)
+	movq	@c2(ap)[r11],r4		; C2 = (r4,r5)
+	movq	@c4(ap)[r11],r6		; C4 = (r6,r7)
+	movq	@c6(ap)[r11],r8		; C6 = (r8,r9)
+
+	addf3	r6,r2,r0		; A0 = (r0,r1)
+	addf3	r7,r3,r1
+
+	subf2	r6,r2			; A4 = (r2,r3)
+	subf2	r7,r3
+
+	addf3	r8,r4,r6		; A2 = (r6,r7)
+	addf3	r9,r5,r7
+
+	subf2	r8,r4			; A6 = (-r5,r4)
+	subf2	r9,r5
+
+	addf3	r6,r0,x0(fp)		; B0 = A0 + A2
+	addf3	r7,r1,x0+4(fp)
+
+	subf3	r6,r0,x2(fp)		; B2 = A0 - A2
+	subf3	r7,r1,x2+4(fp)
+
+	subf3	r5,r2,x4(fp)		; B4 = A4 + A6
+	addf3	r4,r3,x4+4(fp)
+	addf3	r5,r2,x6(fp)		; B6 = A4 - A6
+	subf3	r4,r3,x6+4(fp)
+
+	movq	@c1(ap)[r11],r2		; C1 = (r2,r3)
+	movq	@c3(ap)[r11],r4		; C3 = (r4,r5)
+	movq	@c5(ap)[r11],r6		; C5 = (r6,r7)
+	movq	@c7(ap)[r11],r8		; C7 = (r8,r9)
+
+	addf3	r6,r2,r0		; A1 = (r0,r1)
+	addf3	r7,r3,r1
+
+	subf2	r6,r2			; A5 = (r2,r3)
+	subf2	r7,r3
+
+	addf3	r8,r4,r6		; A3 = (r6,r7)
+	addf3	r9,r5,r7
+
+	subf2	r8,r4			; A7 = (-r5,r4)
+	subf2	r9,r5
+
+	subf3	r5,r2,r8		; B5' = (r8,r8)
+	addf3	r4,r3,r9
+
+	mulf2	#p7,r8			; Finish and save B5.
+	mulf2	#p7,r9
+	subf3	r9,r8,x5(fp)
+	addf3	r9,r8,x5+4(fp)
+
+	addf2	r2,r5			; B7' = (r5,-r4)
+	subf2	r3,r4
+
+	mulf2	#p7,r4			; Finish and save B7.
+	mulf2	#p7,r5
+	subf3	r5,r4,x7(fp)
+	addf3	r5,r4,x7+4(fp)
+
+	addf3	r6,r0,r4		; B1
+	addf3	r7,r1,r5
+
+	subf2	r0,r6			; B3 = (r7,-r6)
+	subf2	r1,r7
+
+; Are all the twiddle factors 1 ? Remember B1 is in (r4,r5) and
+; 					   B3       (r6,r7)
+
+	tstl	r10
+	beql	5$
+	brw	10$
+
+; The special case when all the twiddle factors are 1.
+
+5$:	movq	x0(fp),r2
+;	movq	x1(fp),r4
+	addf3	r4,r2,r0
+	addf3	r5,r3,r1
+	movq	r0,@c0(ap)[r11]
+	subf2	r4,r2
+	subf2	r5,r3
+	movq	r2,@c1(ap)[r11]
+
+	movq	x2(fp),r2
+;	movq	x3(fp),r4
+	addf3	r7,r2,r0
+	subf3	r6,r3,r1
+	movq	r0,@c2(ap)[r11]
+	subf2	r7,r2
+	addf2	r6,r3
+	movq	r2,@c3(ap)[r11]
+
+	movq	x4(fp),r2
+	movq	x5(fp),r4
+	addf3	r4,r2,r0
+	addf3	r5,r3,r1
+	movq	r0,@c4(ap)[r11]
+	subf2	r4,r2
+	subf2	r5,r3
+	movq	r2,@c5(ap)[r11]
+
+	movq	x6(fp),r2
+	movq	x7(fp),r4
+	addf3	r4,r2,r0
+	addf3	r5,r3,r1
+	movq	r0,@c6(ap)[r11]
+	subf2	r4,r2
+	subf2	r5,r3
+	movq	r2,@c7(ap)[r11]
+	brw	20$
+	.align	long
+
+; Case when twiddle factors are not 1.
+
+10$:	movq	x0(fp),r2
+;	movq	x1(fp),r4
+	addf3	r4,r2,r0
+	addf3	r5,r3,r1
+	subf2	r4,r2
+	subf2	r5,r3
+	movq	r0,@c0(ap)[r11]
+	movq	@cs4(fp),r8
+	mulf3	r2,r8,r4
+	mulf3	r3,r9,r5
+	subf2	r5,r4
+	mulf2	r2,r9
+	mulf2	r3,r8
+	addf3	r8,r9,r5
+	movq	r4,@c1(ap)[r11]
+
+	movq	x2(fp),r2
+;	movq	x3(fp),r4
+	addf3	r7,r2,r0
+	subf3	r6,r3,r1
+	subf2	r7,r2
+	addf2	r6,r3
+	movq	@cs2(fp),r8
+	mulf3	r0,r8,r4
+	mulf3	r1,r9,r5
+	subf2	r5,r4
+	mulf2	r0,r9
+	mulf2	r1,r8
+	addf3	r8,r9,r5
+	movq	r4,@c2(ap)[r11]
+	movq	@cs6(fp),r8
+	mulf3	r2,r8,r4
+	mulf3	r3,r9,r5
+	subf2	r5,r4
+	mulf2	r2,r9
+	mulf2	r3,r8
+	addf3	r8,r9,r5
+	movq	r4,@c3(ap)[r11]
+
+	movq	x4(fp),r2
+	movq	x5(fp),r4
+	addf3	r4,r2,r0
+	addf3	r5,r3,r1
+	subf2	r4,r2
+	subf2	r5,r3
+	movq	@cs1(fp),r8
+	mulf3	r0,r8,r4
+	mulf3	r1,r9,r5
+	subf2	r5,r4
+	mulf2	r0,r9
+	mulf2	r1,r8
+	addf3	r8,r9,r5
+	movq	r4,@c4(ap)[r11]
+	movq	@cs5(fp),r8
+	mulf3	r2,r8,r4
+	mulf3	r3,r9,r5
+	subf2	r5,r4
+	mulf2	r2,r9
+	mulf2	r3,r8
+	addf3	r8,r9,r5
+	movq	r4,@c5(ap)[r11]
+
+	movq	x6(fp),r2
+	movq	x7(fp),r4
+	addf3	r4,r2,r0
+	addf3	r5,r3,r1
+	subf2	r4,r2
+	subf2	r5,r3
+	movq	@cs3(fp),r8
+	mulf3	r0,r8,r4
+	mulf3	r1,r9,r5
+	subf2	r5,r4
+	mulf2	r0,r9
+	mulf2	r1,r8
+	addf3	r8,r9,r5
+	movq	r4,@c6(ap)[r11]
+	movq	@cs7(fp),r8
+	mulf3	r2,r8,r4
+	mulf3	r3,r9,r5
+	subf2	r5,r4
+	mulf2	r2,r9
+	mulf2	r3,r8
+	addf3	r8,r9,r5
+	movq	r4,@c7(ap)[r11]
+
+; Common ground again.
+
+20$:	acbl	nthpo_less_1(fp),lengt_(fp),r11,loop2
+	
+; Update pointers to twiddle factors.
+
+	addl2	inc1(fp),cs1(fp)
+	addl2	inc2(fp),cs2(fp)
+	addl2	inc3(fp),cs3(fp)
+	addl2	inc4(fp),cs4(fp)
+	addl2	inc5(fp),cs5(fp)
+	addl2	inc6(fp),cs6(fp)
+	addl2	inc7(fp),cs7(fp)
+	acbl	nxtlt_less_1(fp),#1,r10,loop1
+
+	ret
+	.end

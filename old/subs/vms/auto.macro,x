@@ -1,0 +1,46 @@
+; Auto is a macro to create temporary space on the stack.
+;;; *** This is a VMS specific thingo - author Bob Sault ??? ***
+
+; This assumes that fp and sp are the same, which is true if sp
+; has not been modified since the last subroutine entry.
+
+; Offsets, relative to fp, are defined.
+; Method of use is
+
+;	auto	<<name1,type1,number1>,	-
+;		 <name2,type2,number2>,	-
+;			  .
+;		 <nameN,typeN,numberN>>
+; nameI	    Offset relative to fp is called this.
+; typeI	    Either b,w,l,f,q or d (byte,word,long,float,quad,double).
+;	    Default b.
+; numberI   Number of storage elements. Default is 1.
+
+	.macro	add	name,type=b,number=1
+
+	auto_b	= 1
+	auto_w	= 2
+	auto_l	= 4
+	auto_f	= 4
+	auto_q	= 8
+	auto_d	= 8
+
+	auto_bytes= auto_'type'
+	auto_count = <<auto_count+auto_bytes-1>/auto_bytes>*auto_bytes
+	auto_count = auto_count+<number*auto_bytes>
+	name  = -auto_count
+
+	.endm	add
+
+	.macro	auto	args
+
+auto_count	= 0
+
+	.irp	list,<args>
+	add	list
+	.endr
+
+auto_count = <<auto_count+3>/4>*4		; Longword align.
+
+	subl2	#auto_count,sp
+	.endm	auto
