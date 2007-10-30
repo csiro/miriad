@@ -35,8 +35,8 @@ c	   "abspix"      Pixels
 c	   "relpix"      Pixels relative to the reference pixel
 c	   "absghz"      GHz
 c	   "relghz"      GHz relative to the reference pixel
-c	   "abskms"      Km/s
-c	   "relkms"      Km/s relative to the reference pixel
+c	   "abskms"      km/s
+c	   "relkms"      km/s relative to the reference pixel
 c	   "abslin"      Linear coordinate 
 c	   "rellin"      Linear coordinate relative to the reference pixel
 c
