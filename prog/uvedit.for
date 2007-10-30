@@ -47,6 +47,8 @@ c    jm    06jun96    Correctly add dra/ddec to RA/Dec in Getrdphz.
 c    rjs   11oct96    Added delra,deldec,pntra,pntdec to the output.
 c    rjs   24mar97    Copy all calibration tables.
 c    rjs   12may97    Doc change only.
+c    rjs   14jul97    nspect etc was not getting read when the source
+c		      selected was not the first source in the file.
 c***********************************************************************
 c= Uvedit - Editing of the baseline of a UV data set.
 c& jm
@@ -581,11 +583,11 @@ c
           docorr = ((type .eq. 'r') .or. (type .eq. 'j'))
           corrtype =  type
           if (.not. docorr) then
-            k = Len1(Vis(j))
-            errmsg = PROG //
-     *             'No narrow band data present in ' // Vis(j)(1:k)
-            call Bug('w', errmsg)
             if (dodelay) then
+              k = Len1(Vis(j))
+              errmsg = PROG //
+     *             'No narrow band data present in ' // Vis(j)(1:k)
+              call Bug('w', errmsg)
               errmsg = PROG //
      *             'No delay correction will be applied to ' //
      *             Vis(j)(1:k)
@@ -595,12 +597,6 @@ c
           call UvProbvr(Lin, 'wcorr', type, k, updated)
           call Lcase(type)
           dowide = (type .eq. 'c')
-          if (.not. dowide) then
-            k = Len1(Vis(j))
-            errmsg = PROG //
-     *             'No wide band data present in ' // Vis(j)(1:k)
-            call Bug('w', errmsg)
-          endif
           if ((.not. docorr) .and. (.not. dowide)) then
             k = Len1(Vis(j))
             errmsg = PROG // 'No wide or narrow band data to edit.'
@@ -1463,29 +1459,18 @@ c  Input:
 c    lin      The input file descriptor.
 c    maxwide  Maximum size of the ``wfreq'' array.
 c
-c  Input/Output:
+c  Output:
 c    nwide    The number of wide band channels.
 c    wfreq    The array of wide band coorelation average frequencies.
 c             This value is updated if ``nwide'' or ``wfreq'' changes.
 c
 c--
 c-----------------------------------------------------------------------
+      call uvrdvri(Lin, 'nwide', nwide, 0)
+      if(nwide.gt.maxwide)call bug('f','Too many wideband chans for me')
+      if(nwide.gt.0)call UvGetvrr(Lin, 'wfreq', wfreq, nwide)
 c
-c  Internal variables.
-c
-      character type*1
-      integer length
-      logical nupd, updated
-c
-      call UvProbvr(Lin, 'nwide', type, length, nupd)
-c--   if (nupd) call UvGetvri(Lin, 'nwide', nwide, 1)
-      if (nupd) call uvrdvri(Lin, 'nwide', nwide, 0)
-      call UvProbvr(Lin, 'wfreq', type, length, updated)
-      if ((nupd .or. updated) .and. (nwide .gt. 0))
-     *  call UvGetvrr(Lin, 'wfreq', wfreq, nwide)
-      return
       end
-c
 c***********************************************************************
 cc= GetCoor - Internal routine to get the narrow band frequency arrays.
 cc& jm
@@ -1506,7 +1491,7 @@ c  Input:
 c    lin      The input file descriptor.
 c    maxn     Maximum size of the arrays.
 c
-c  Input/Output:
+c  Output:
 c    nspect   The number of filled elements in the arrays.
 c    nschan   The number of channels in a spectral window.
 c    ischan   The starting channel of the spectral window.
@@ -1516,37 +1501,17 @@ c             in each window.
 c
 c--
 c-----------------------------------------------------------------------
+      call uvrdvri(Lin, 'nspect', nspect, 0)
 c
-c  Internal variables.
-c
-      character type*1
-      integer length
-      logical nupd, update
-c
-      call UvProbvr(Lin, 'nspect', type, length, nupd)
-c--   if (nupd) call UvGetvri(Lin, 'nspect', nspect, 1)
-      if (nupd) call uvrdvri(Lin, 'nspect', nspect, 0)
-c
+      if(nspect.gt.maxn)call bug('f','Too many windows')
       if (nspect .gt. 0) then
-        call UvProbvr(Lin, 'nschan', type, length, update)
-        if (nupd .or. update)
-     *    call UvGetvri(Lin, 'nschan', nschan, nspect)
-c
-        call UvProbvr(Lin, 'ischan', type, length, update)
-        if (nupd .or. update)
-     *    call UvGetvri(Lin, 'ischan', ischan, nspect)
-c
-        call UvProbvr(Lin, 'sdf', type, length, update)
-        if (nupd .or. update)
-     *    call UvGetvrd(Lin, 'sdf', sdf, nspect)
-c
-        call UvProbvr(Lin, 'sfreq', type, length, update)
-        if (nupd .or. update)
-     *    call UvGetvrd(Lin, 'sfreq', sfreq, nspect)
+        call UvGetvri(Lin, 'nschan', nschan, nspect)
+	call UvGetvri(Lin, 'ischan', ischan, nspect)
+	call UvGetvrd(Lin, 'sdf', sdf, nspect)
+	call UvGetvrd(Lin, 'sfreq', sfreq, nspect)
       endif
-      return
-      end
 c
+      end
 c***********************************************************************
 cc= readAPF - Internal routine to read an antenna position file keyword.
 cc& jm
