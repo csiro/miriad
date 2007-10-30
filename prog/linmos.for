@@ -98,6 +98,7 @@ c    rjs  22jul94 Added options=sensivitivy and options=gain. Use some
 c		  standard include files.
 c    rjs  26jul94 Doc changes only.
 c    rjs  17aug94 Change projection code to cartesian.
+c    rjs  24oct94 Use new pb routines.
 c
 c  Bugs:
 c    * Blanked images are not handled when interpolation is necessary.
@@ -113,7 +114,7 @@ c		by less than "tol", they are taken as being the same
 c		pixel (i.e. no interpolation done).
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Linmos: version 1.0 22-Jul-94')
+	parameter(version='Linmos: version 1.0 24-Oct-94')
 	include 'maxdim.h'
 c
 	real tol
@@ -124,11 +125,10 @@ c
 	integer tScr,tWts,tIn(maxIn),tOut,k1(maxIn),k2(maxIn),nIn
 	integer offset,length
 	integer nsize(3,maxIn),nOut(4)
-	integer i,nOpen,naxis,itemp,ierr,ifax
-	real xoff,yoff,dx,dy
-	double precision f0(maxIn),df(maxIn)
+	integer i,nOpen,naxis,itemp
+	real xoff,yoff
 	real rms(maxIn),signal,BlcTrc(4,maxIn)
-	real x0(maxIn),y0(maxIn),Extent(4)
+	real Extent(4)
 	double precision GridSys(5)
 	double precision crval,cdelt
 	character ctype*16
@@ -211,23 +211,12 @@ c
 	    call rdhdi(tin(i),'naxis',naxis,3)
 	    naxis = min(naxis,4)
 	    call FirstMap(tIn(i),nsize(1,i),GridSys,
-     *		BlcTrc(1,i),Extent,x0(i),y0(i))
+     *		BlcTrc(1,i),Extent)
 	  else
 	    call AlignChk(tIn(i),ctype,cdelt,crval,nsize(3,1))
 	    call NotFirst(tin(i),nsize(1,i),GridSys,
-     *		BlcTrc(1,i),Extent,x0(i),y0(i))
+     *		BlcTrc(1,i),Extent)
 	  endif
-c
-c Check spectral axis and get frequency descriptors
-c
-          ifax = 0
-	  call GetFreq(tIn(i),1.0,ifax,f0(i),df(i),ierr)
-          if (ifax.ne.0 .and. ifax.ne.3) call bug ('f',
-     *    'Spectral axis is not #3 for '//InBuf(k1(i):k2(i)))
-          if(ierr.gt.0) then
-            f0(i) = 0.0
-            df(i) = 0.0
-          end if
 	  if(i.gt.nOpen) call xyclose(tIn(i))
 	enddo
 c
@@ -251,6 +240,7 @@ c
 c
 	call xyopen(tout,out,'new',naxis,nout)
 	call hdout(tIn(1),tout,nsize(1,1),extent,version,dosen,dogain)
+	call coInit(tout)
 c
 c  Correct the blctrc parameter for the extent of the image.
 c
@@ -261,14 +251,7 @@ c
 	  BlcTrc(2,i) = BlcTrc(2,i) - yoff
 	  BlcTrc(3,i) = BlcTrc(3,i) - xoff
 	  BlcTrc(4,i) = BlcTrc(4,i) - yoff
-	  x0(i) = x0(i) - xoff
-	  y0(i) = y0(i) - yoff
 	enddo
-c
-c  Get the grid increments, in radians, of the output.
-c
-	call rdhdr(tOut,'cdelt1',dx,1.0)
-	call rdhdr(tOut,'cdelt2',dy,1.0)
 c
 c  Allocate memory.
 c
@@ -284,11 +267,10 @@ c
           call output ('Processing image '//inbuf(k1(i):k2(i)))
 	  if(i.gt.nOpen) call xyopen(tIn(i),InBuf(k1(i):k2(i)),
      *						'old',3,nsize(1,i))
-	  call Process(init,tScr,tWts,tIn(i),memR(pOut),memR(pWts),
+	  call Process(init,tScr,tWts,tIn(i),tout,memR(pOut),memR(pWts),
      *	    nsize(1,i),nsize(2,i),nOut(1),nOut(2),nOut(3),
-     *      dosen.or.dogain,
-     *	    BlcTrc(1,i),rms(i),dx,dy,f0(i),df(i),x0(i),y0(i))
-	  if(i.gt.nOpen) call xyclose(tin(i))
+     *      dosen.or.dogain,BlcTrc(1,i),rms(i))
+	  call xyclose(tin(i))
 	enddo
 	if(.not.init) call bug('f','Something is screwy')
 c
@@ -307,9 +289,6 @@ c  All said and done. Close up anything that is still open.
 c
 	call ScrClose(tScr)
 	call ScrClose(tWts)
-	do i=1,nOpen
-	  call xyclose(tIn(i))
-	enddo
 	call xyclose(tOut)
 	end
 c************************************************************************
@@ -339,16 +318,15 @@ c
      *	  'Cannot do options=sensitivity,gains simultaneously')
 	end
 c************************************************************************
-	subroutine Process(init,tScr,tWts,tIn,Out,Wts,
-     *	  nx,ny,n1,n2,n3,dosen,BlcTrc,rms,dx,dy,f0,df,x0,y0)
+	subroutine Process(init,tScr,tWts,tIn,tOut,Out,Wts,
+     *	  nx,ny,n1,n2,n3,dosen,BlcTrc,rms)
 c
 	implicit none
 	logical init
-	integer tScr,tWts,tIn
+	integer tScr,tWts,tIn,tOut
 	integer nx,ny,n1,n2,n3
 	real Out(n1,n2),Wts(n1,n2)
-	real BlcTrc(4),rms,x0,y0,dx,dy
-	double precision f0,df
+	real BlcTrc(4),rms
 	logical dosen
 c
 c  First determine the initial weight to apply to each pixel, and accumulate
@@ -360,14 +338,11 @@ c  Inputs:
 c    tScr	Handle of the image scratch file.
 c    tWts	Handle of the weights scratch file.
 c    tIn	Handle of the input file.
+c    tOut	Coordinate system of the output dataset.
 c    nx,ny	Size of the image cube.
 c    n1,n2,n3	Size of the output cube.
 c    BlcTrc	Grid corrdinates, in the output, that the input maps to.
 c    rms	Rms noise parameter.
-c    x0,y0	Pointing centre, in grid coordinates of the output.
-c    dx,dy	Grid increments, in radians, of the output.
-c    f0,df	Frequency of the first plane, and the frequency
-c		increment between planes.
 c    dosen	True if we are to compute the sensitivity or gain
 c		function rather than the normal mosaic.
 c  Input/Output:
@@ -380,10 +355,11 @@ c------------------------------------------------------------------------
 	include 'maxdim.h'
 	real tol
 	parameter(tol=0.01)
-	real xinc,yinc,Sect(4),oneonsig,ddx,ddy
-	double precision f
-	integer i,j,k,xlo,xhi,ylo,yhi,xoff,yoff
+	real xinc,yinc,Sect(4),oneonsig
+	integer i,j,k,xlo,xhi,ylo,yhi,xoff,yoff,pbObj
+	double precision x(3)
 	logical interp,mask
+	character pbtype*16
 	real Pb(MAXDIM),In(MAXDIM)
 c
 c  Externals.
@@ -441,18 +417,17 @@ c
 	if(mask.and.interp)call bug('f',
      *	  'Blanked pixels cannot be used when interpolating')
 c
+c  Ready to construct the primary beam object.
+c
+	call pbRead(tIn,pbtype)
+	call rdhdd(tIn,'crval1',x(1),0.d0)
+	call rdhdd(tIn,'crval2',x(2),0.d0)
+	x(3) = 0
+	call pbInitc(pbObj,pbtype,tOut,'aw/aw/op',x)
+c
 c  Loop over all planes.
 c
 	do k=1,n3
-	  f = f0 + (k-1)*df
-          call PbInit (0.0, f, tIn, .true.)
-	  if(f.gt.0)then
-	    ddx = dx * f0 / f
-	    ddy = dy * f0 / f
-	  else
-	    ddx = dx
-	    ddy = dy
-	  endif
 	  call xysetpl(tIn,1,k)
 	  if(interp)call IntpRIni
 c
@@ -483,7 +458,7 @@ c
 c  Determine the weights, and add the contribution of the input plane.
 c
 	  do j=ylo,yhi
-	    call GetDat(tIn,xoff,yoff,xlo,xhi,j,ddx,ddy,x0,y0,
+	    call GetDat(tIn,xoff,yoff,xlo,xhi,j,pbObj,
      *						In,Pb,n1,interp,mask)
 	    yoff = yoff + 1
 c
@@ -516,16 +491,20 @@ c
 	  endif
 	enddo
 	init = .true.
+c
+c  Release the primary beam object.
+c
+	call pbFin(pbObj)
+c
 	end
 c************************************************************************
-	subroutine GetDat(tIn,xoff,yoff,xlo,xhi,j,dx,dy,x0,y0,
+	subroutine GetDat(tIn,xoff,yoff,xlo,xhi,j,pbObj,
      *						In,Pb,n1,interp,mask)
 c
 	implicit none
-	integer tIn,xoff,yoff,xlo,xhi,n1,j
+	integer tIn,xoff,yoff,xlo,xhi,n1,j,pbObj
 	logical interp,mask
 	real In(n1),Pb(n1)
-	real dx,dy,x0,y0
 c
 c  Get a row of data (either from xyread, or the interpolation routines).
 c
@@ -537,14 +516,15 @@ c    xlo,xhi
 c    n1
 c    interp
 c    mask
+c    pbObj	Primary beam object.
 c  Output:
-c    In
-c    Pb
+c    In		Image data.
+c    Pb		Primary beam response (zeroed out where the data are
+c		blanked).
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	logical flags(MAXDIM)
 	integer i
-	real tx,ty,r
 c
 	external xyread
 	real PbGet
@@ -559,11 +539,8 @@ c
 c
 c  Determine the primary beam.
 c
-	ty = dy*(j-y0)
 	do i=xlo,xhi
-	  tx = dx*(i-x0)
-	  r = tx*tx + ty*ty
-	  Pb(i) = PbGet(r)
+	  Pb(i) = PbGet(pbObj,real(i),real(j))
 	enddo
 c
 c  Zero the primary beam where the data are flagged.
@@ -866,11 +843,11 @@ c
 	call hisclose(tout)
 	end
 c************************************************************************
-	subroutine FirstMap(tno,nsize,GridSys,BlcTrc,Extent,x0,y0)
+	subroutine FirstMap(tno,nsize,GridSys,BlcTrc,Extent)
 c
 	implicit none
 	integer tno,nsize(2)
-	real BlcTrc(4),Extent(4),x0,y0
+	real BlcTrc(4),Extent(4)
 	double precision GridSys(5)
 c
 c  Determine the grid system.
@@ -888,8 +865,6 @@ c		  Increment in RA/cos(DEC).
 c    BlcTrc	Bottom left and top right pixels, relative to first map.
 c    Extent	Total area of the output, given as bottom left and top
 c		right relative to first map.
-c    x0		Pointing centre in x, in grid units.
-c    y0		Pointint centre in y, in grid units.
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	double precision crpix1,crpix2
@@ -914,16 +889,13 @@ c
 	  Extent(i) = BlcTrc(i)
 	enddo
 c
-	x0 = crpix1
-	y0 = crpix2
-c
 	end
 c************************************************************************
-	subroutine NotFirst(tno,nsize,GridSys,BlcTrc,Extent,x0,y0)
+	subroutine NotFirst(tno,nsize,GridSys,BlcTrc,Extent)
 c
 	implicit none
 	integer tno,nsize(2)
-	real BlcTrc(4),Extent(4),x0,y0
+	real BlcTrc(4),Extent(4)
 	double precision GridSys(5)
 c
 c  Determine where the input maps to in relation to the first map.
@@ -942,8 +914,6 @@ c		right, in the grid system of the first map.
 c  Output:
 c    BlcTrc	Bottom left and top right pixels, given in the grid system
 c		of the first map.
-c    x0		Pointing centre in x, in grid units.
-c    y0		Pointint centre in y, in grid units.
 c------------------------------------------------------------------------
 	double precision crval1,crval2,crpix1,crpix2,cdelt1,cdelt2
 	double precision cdelt1d
@@ -970,9 +940,6 @@ c
 	Extent(2) = min(BlcTrc(2),Extent(2))
 	Extent(3) = max(BlcTrc(3),Extent(3))
 	Extent(4) = max(BlcTrc(4),Extent(4))
-c
-	x0 = (crpix1-1) * dx + BlcTrc(1)
-	y0 = (crpix2-1) * dy + BlcTrc(2)
 c
 	end
 c************************************************************************
