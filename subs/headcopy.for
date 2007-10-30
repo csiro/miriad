@@ -19,7 +19,7 @@ c    'history ','bmaj    ','bmin    ','bpa     ','bunit   ',
 c    'obstime ','epoch   ','instrume','ltype   ','lstart  ',
 c    'lwidth  ','lstep   ','niters  ','object  ','observer',
 c    'obsdec  ','obsra   ','pbfwhm  ','restfreq','telescop',
-c    'vobs    ','cellscal','btype'
+c    'vobs    ','cellscal','btype   ','llrot   '
 c
 c - The datamin and datamax items are explicitly excluded. One should
 c recalculate the min and max of the output dataset and update these
@@ -74,6 +74,7 @@ c    bpw   1feb93  Made crpix double precision too
 c    pjt  15mar95  fixed statement order for f2c (linux)
 c    rjs  02jul97  cellscal change.
 c    rjs  23jul97  added pbtype.
+c    rjs  20nov98  added llrot.
 c
 c***********************************************************************
 
@@ -85,7 +86,7 @@ c***********************************************************************
       logical          hdprsnt
 
       integer          NKEYS
-      parameter        ( NKEYS = 29 )
+      parameter        ( NKEYS = 30 )
       character*8      keyw(NKEYS)
       data keyw/
      *    'crpix   ','crval   ','cdelt   ','crota   ','ctype   ',
@@ -95,7 +96,7 @@ c***********************************************************************
      *	  'ltype   ','lstart  ','lwidth  ','lstep   ',
      *    'niters  ','object  ','observer','obsdec  ','obsra   ',
      *    'pbfwhm  ','restfreq','telescop','vobs    ',
-     *    'btype   ','pbtype  '/
+     *    'btype   ','pbtype  ','llrot   '/
 
       do k = 1, 5
          do n = 1, naxis
