@@ -1,4 +1,4 @@
-#! /bin/csh -f
+#! /bin/csh -fe
 setenv TMPDIR $MIR
 foreach in ($argv)
  set dir = $in:h
@@ -11,7 +11,7 @@ foreach in ($argv)
    set file = $tmp.f
    set out = $file:t
    set out = $out:r
-   ratty -s sun -b -I $MIRINC -D sun4sol $in $tmp.f
+   ratty -s sun -b -I $MIRINC $in $tmp.f
    f77 -c -O2 -libmil -o ${out}.o $file
    ar r $MIRLIB/libmir.a ${out}.o
    rm -f $file ${out}.o
