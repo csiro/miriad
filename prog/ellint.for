@@ -89,6 +89,8 @@ c    nebk  27feb96      Add options=median, more doc.
 c    vjm   04jun96      Various changes including median and modes.
 c    vjm/rjs 11jun96	Use rpa (rather than pa) in one place. Remove
 c			call to boxmask (done manually).
+c    vjm   10oct96      Fix printing so fields do not overflow, de-implement
+c                       'mode' calculations
 c----------------------------------------------------------------------c
 	include 'mirconst.h'
 	include 'maxdim.h'
@@ -139,6 +141,13 @@ c
         call getopt(dopb,domedian,domode,doolay)
         call keya('log',logf,' ')
         call keyfin
+
+        if (domode) then
+           call bug('w',
+     *          ' mode subroutine has been diabled. Using median.')
+           domedian=.true.
+           domode=.false.
+        endif
 c
 c  Check inputs.
 c
@@ -356,18 +365,19 @@ c
               rms = 0.0
             endif
             fsum = fsum + flux(ir)
+
 c
             if (domode) then
                call mode (memr(ipm(ir)), nint(pixe(ir)), xmode)
-               write(line,'(6f11.3,1x)') r,pixe(ir),xmode,rms,
+               write(line,'(1p,6(1x,g10.5),1x,-1p)') r,pixe(ir),xmode,rms,
      *              flux(ir)/cbof,fsum/cbof
             else
                if (domedian) then
                   call median (memr(ipm(ir)), nint(pixe(ir)), med)
-                  write(line,'(6f11.3,1x)') r,pixe(ir),med,rms,
+                  write(line,'(1p,6(1x,g10.5),1x,-1p)') r,pixe(ir),med,rms,
      *                 flux(ir)/cbof,fsum/cbof
                else
-                  write(line,'(6f11.3,1x)') r,pixe(ir),ave,rms,
+                  write(line,'(1p,6(1x,g10.5),1x,-1p)') r,pixe(ir),ave,rms,
      *                 flux(ir)/cbof,fsum/cbof
                end if
             endif
@@ -593,7 +603,3 @@ c     find the mode
         endif
 c
 	end
- 
-
-
-
