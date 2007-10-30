@@ -28,6 +28,9 @@ c@ options
 c	This gives extra processing options. Several options can be given,
 c	each separated by commas. They may be abbreviated to the minimum
 c	needed to avoid ambiguity. Possible options are:
+c	   replace     Replace the data with the blackbody disk and point
+c	               sources (the normal behaviour is to subtract the
+c	               blackbody disk and point sources).
 c	   magnetic    For Jupiter only: The magnetic axis is used to 
 c	               set planet orientation parameters. This overrides the
 c	               normal behaviour of using the spin axis.
@@ -39,7 +42,7 @@ c	   nocal       Do not apply the gains table.
 c	   nopass      Do not apply bandpass corrections.
 c	   nopol       Do not apply polarization corrections.
 c@ sources
-c	This gives the position and flux of sources to be subtracted
+c	This gives the position and flux of point sources to be subtracted
 c	from the visibility dataset. Many sources can be given. Each
 c	source is specified by three numbers:
 c	  ra dec flux
@@ -89,18 +92,19 @@ c	are used to estimate positions between given times.
 c--
 c  History:
 c    10dec97 rjs  Created from uvjup, which this generalised and supercedes.
+c    21jun99 rjs  Added options=replace.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
 	integer MAXSCAN,MAXSRC
 	parameter(MAXSCAN=1024,MAXSRC=200)
 	character version*(*)
-	parameter(version='uvPlanet: version 1.0 10-Dec-97')
+	parameter(version='uvPlanet: version 1.0 21-Jun-99')
 c
 	character out*64,ltype*16,uvflags*16
 	real pltb
 	integer lIn,lOut
-	logical dojaxis,arcane,first
+	logical dojaxis,arcane,first,dorep
 	integer jscan,tscan
 	double precision jdata(6,MAXSCAN),tdata(6,MAXSCAN)
 	integer nsrc
@@ -117,7 +121,7 @@ c  Get the input parameters.
 c
 	call output(version)
 	call keyini
-	call GetOpt(dojaxis,arcane,uvflags)
+	call GetOpt(dorep,dojaxis,arcane,uvflags)
 	call uvDatInp('vis',uvflags)
 	call keyr('pltb',pltb,0.)
 	call keya('pmotion',jpath,' ')
@@ -163,8 +167,8 @@ c
 c
 c  Do the work.
 c
-	  call Process(lIn,lOut,pltb,dojaxis,tscan,tdata,jscan,jdata,
-     *	    sra,sdec,flux,nsrc)
+	  call Process(lIn,lOut,pltb,dorep,dojaxis,
+     *	    tscan,tdata,jscan,jdata,sra,sdec,flux,nsrc)
 c
 c  All said and done. Close up shop.
 c
@@ -175,10 +179,10 @@ c
 	call uvclose(lOut)
 	end
 c************************************************************************
-	subroutine GetOpt(dojaxis,arcane,uvflags)
+	subroutine GetOpt(dorep,dojaxis,arcane,uvflags)
 c
 	implicit none
-	logical dojaxis,arcane
+	logical dojaxis,arcane,dorep
 	character uvflags*(*)
 c
 c  Determine extra processing options.
@@ -187,16 +191,17 @@ c  Output:
 c    uvflags
 c------------------------------------------------------------------------
 	integer NOPTS
-	parameter(NOPTS=5)
+	parameter(NOPTS=6)
 	logical present(NOPTS)
 	character opts(NOPTS)*8
 c
 	data opts/'magnetic','nocal   ','nopol   ','nopass  ',
-     *		  'arcane  '/
+     *		  'arcane  ','replace '/
 c
 	call options('options',opts,present,NOPTS)
 	dojaxis = present(1)
 	arcane  = present(5)
+	dorep   = present(6)
 c
 c  Determine the flags to pass to the uvDat routines.
 c    d - Data selection.
@@ -212,12 +217,12 @@ c
 c
 	end
 c************************************************************************
-	subroutine Process(lIn,lOut,pltb,dojaxis,
+	subroutine Process(lIn,lOut,pltb,dorep,dojaxis,
      *			tscan,tdata,jscan,jdata,sra,sdec,flux,nsrc)
 c
 	implicit none
 	integer lIn,lOut
-	logical dojaxis
+	logical dojaxis,dorep
 	real pltb
 	integer tscan,jscan,nsrc
 	double precision tdata(6,*),jdata(6,*),sra(*),sdec(*)
@@ -273,6 +278,12 @@ c  the default rest frame, if we are doing velocity recomputation
 c  and a rest frame has not been given.
 c
 	dowhile(nchan.gt.0)
+c
+	  if(dorep)then
+	    do i=1,nchan
+	      data(i) = 0
+	    enddo
+	  endif
 c
 c  Get planet name.
 c
@@ -354,7 +365,12 @@ c
 	    enddo
 	  endif
 	  if(pltb.ne.0.and.iplanet.ne.0)call uvputvrr(lOut,'pltb',0.,1)
-	  
+c
+	  if(dorep)then
+	    do i=1,nchan
+	      data(i) = -data(i)
+	    enddo
+	  endif
 c
 c  Compute the position angle of the magnetic axis.
 c
