@@ -56,10 +56,11 @@ c     5feb93 rjs   Use memalloc.
 c     5apr93 pjt   Since rjs is walkabouting, I had to fix that amazing bug:
 c		   indexor's (i0,j0) in moment3 wrong if blc,trc used
 c    04jan96 nebk  Write header descriptors as double precision
+c    26nov96 rjs   Increase length of input and output file names.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
  	character version*(*)
-	parameter(version='version 1.0 4-Jan-96')
+	parameter(version='version 1.0 26-Nov-96')
 	integer maxnax,maxboxes,maxruns,naxis
 	parameter(maxnax=3,maxboxes=2048)
 	parameter(maxruns=3*maxdim)
@@ -67,7 +68,7 @@ c------------------------------------------------------------------------
 	integer i,j,lin,lout,nsize(maxnax),blc(maxnax),trc(maxnax)
 	integer size(maxnax),axis
 	real blo,bhi,clip(2)
-	character in*24, out*24
+	character in*64, out*64
 	character line*72
 	integer mom
 c
