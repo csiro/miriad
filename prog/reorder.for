@@ -34,6 +34,7 @@ c		  broke it.
 c    rjs  02mar93 Break out "Inc" routines.
 c    rjs  06sep93 Change ownership. Fix bug which inverted (!) the masking
 c		  file.
+c    rjs  07feb96 Handle 4th, etc, dimension.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'maxnax.h'
@@ -102,7 +103,7 @@ c
 	do i=1,naxis
 	  nOut(i) = nIn(idx(i))
 	enddo
-	call xyopen(lOut,out,'new',n,nOut)
+	call xyopen(lOut,out,'new',naxis,nOut)
 	call Header(lIn,lOut,nIn,sgn,idx,naxis,version)
 c
 	size = max(nIn(1)*nIn(2),nOut(1)*nOut(2))
@@ -268,6 +269,10 @@ c
 	parameter(nkeys=23)
 	character keyw(nkeys)*8
 c
+c  Externals.
+c
+	character itoaf*8
+c
 	data keyw/   'bmaj    ','bmin    ','bpa     ','bunit   ',
      *    'date-obs','epoch   ','history ','instrume',
      *	  'ltype   ','lstart  ','lwidth  ','lstep   ',
@@ -284,7 +289,7 @@ c
 c  Copy the coordinate information.
 c
 	do i=1,naxis
-	  numo = char(i+ichar('0'))
+	  numo = itoaf(i)
 	  same = idx(i).eq.i.and.sgn(i).eq.1
 	  if(same)then
 	    call hdcopy(lIn,lOut,'ctype'//numo)
@@ -306,7 +311,8 @@ c
 	enddo
 c
 	call hisopen(lOut,'append')
-	call hiswrite(lOut,version)
+	line = 'REORDER: Miriad '//version
+	call hiswrite(lOut,line)
 	call hisinput(lOut,'REORDER')
 	call hisclose(lOut)
 c
