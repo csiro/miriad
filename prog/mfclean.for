@@ -118,6 +118,8 @@ c   rjs  27may92 - Doc changes only.
 c   rjs  12nov92 - Doc changes only.
 c   nebk 25nov92 - COpy btype to output
 c   rjs  30mar93 - Limit the size of the spectral component.
+c   rjs  27nov93 - Another algorithm to try to limit the size of the spectral
+c		   component.
 c
 c  Bugs and Shortcomings:
 c     * The way it does convolutions is rather inefficent, partially
@@ -139,7 +141,7 @@ c		to write.
 c
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='MfClean: version 1.0 25-Nov-92')
+	parameter(version='MfClean: version 1.0 27-Nov-93')
 	include 'maxdim.h'
 	integer maxBeam,maxCmp1,maxCmp2,maxBox,maxRun,maxP
 	parameter(maxCmp1=66000,maxCmp2=32000,maxP=257)
@@ -1114,7 +1116,7 @@ c------------------------------------------------------------------------
 	parameter(maxrun=4096)
 	integer c,i,i0,j0,k,ktot,ltot,NIndx
 	integer Pk,p,ipk,jpk,ipkd,jpkd
-	real TermRes,ResMax,Wt0,Wt1,beta,delta0,delta1,P00,P11,P01
+	real TermRes,ResMax,Wt0,Wt1,beta,P00,P11,P01
 	integer Temp(maxrun),Indx(maxrun)
 	logical more
 c
@@ -1124,9 +1126,7 @@ c
 	P00 = Patch00(c,c)
 	P11 = Patch11(c,c)
 	P01 = Patch01(c,c)
-	delta0 = gain0/(P00*P11 - P01*P01)
-	delta1 = gain1/(P00*P11 - P01*P01)
-	call GetPk(Ncmp,Rcmp0,Rcmp1,P00,P11,P01,Tmp,Pk,ResMax)
+	call GetPk(Ncmp,Rcmp0,Rcmp1,P00,P11,P01,Tmp,Pk,Wt0,Wt1,ResMax)
 	negFound = negFound .or. ResMax.lt.0
 	TermRes = Limit
 	beta = g * Limit**(Speed+1)
@@ -1143,9 +1143,8 @@ c
 c
 c  Determine the breakup between the Patch0 and Patch1 beams.
 c
-	  Wt0 = delta0 * (P11*Rcmp0(pk) - P01*Rcmp1(pk))
-	  Wt1 = delta1 * (P00*Rcmp1(pk) - P01*Rcmp0(pk))
-c	  if(abs(Wt1).gt.2*abs(Wt0)) Wt1 = sign(2*Wt0,Wt1)
+	  Wt0 = gain0 * Wt0
+	  Wt1 = gain1 * Wt1
 c
 c  Find the residuals which have suitable y values.
 c
@@ -1204,18 +1203,20 @@ c
 	  Niter = Niter + 1
 	  TermRes = TermRes + 
      *	   beta * abs(Wt0) / ( EstASum * abs(ResMax)**Speed )
-	  call GetPk(Ncmp,Rcmp0,Rcmp1,P00,P11,P01,Tmp,Pk,ResMax)
+	  call GetPk(Ncmp,Rcmp0,Rcmp1,P00,P11,P01,Tmp,Pk,Wt0,Wt1,ResMax)
 	  negFound = negFound.or.ResMax.lt.0
 	  more = abs(ResMax).gt.TermRes .and. Niter.lt.MaxNiter .and.
      *		.not.(negStop.and.negFound)
+
+
 	enddo
 	end
 c************************************************************************
-	subroutine GetPk(n,R0,R1,P00,P11,P01,Tmp,Pk,ResMax)
+	subroutine GetPk(n,R0,R1,P00,P11,P01,Tmp,Pk,Wt0,Wt1,ResMax)
 c
 	implicit none
 	integer n,Pk
-	real P00,P11,P01,R0(n),R1(n),Tmp(n),ResMax
+	real P00,P11,P01,R0(n),R1(n),Tmp(n),ResMax,Wt0,Wt1
 c
 c  Determine the location of the peak residual.
 c  Input:
@@ -1226,24 +1227,50 @@ c  Scratch:
 c    Tmp	Holds the statistic used to determine the location.
 c  Output:
 c    Pk		Location to subtract from.
+c    Wt0,WT1	Values of beams to subtract off.
+c    ResMax	Current residual maximum.
 c------------------------------------------------------------------------
-	integer i
-	real rmin,rmax
+	integer i,j
+	real delta,twt0,twt1
 c
 c  Externals.
 c
 	integer ismax,ismin
 c
+c  Determine the optimum place to subtract flux from.
+c
 	do i=1,n
 	  Tmp(i) = R0(i)*R0(i)*P11 + R1(i)*R1(i)*P00 - 2*R0(i)*R1(i)*P01
 	enddo
 c
-	rmax = R0(ismax(n,R0,1))
-	rmin = R0(ismin(n,R0,1))
-	ResMax = rmax
-	if(abs(rmin).gt.abs(rmax))ResMax = rmin
-
-	Pk = ismax(n,Tmp,1)
+	pk = ismax(n,Tmp,1)
+c
+c  Determine the maximum residual.
+c
+	j = ismax(n,R0,1)
+	i = ismin(n,R0,1)
+	if(abs(R0(i)).lt.abs(R0(j))) i = j
+	ResMax = abs(R0(i))
+c
+	delta  = 1./(P00*P11 - P01*P01)
+	Wt0 = (P11*R0(pk) - P01*R1(pk))*delta
+	Wt1 = (P00*R1(pk) - P01*R0(pk))*delta
+c
+c  If the spectral component is more than 5 times the flux component,
+c  trim back the spectral component, and see whether it would be
+c  better to subtract from the residual peak instead.
+c
+c	if(abs(Wt1).gt.100*abs(Wt0))then
+c	  Wt1 = sign(5*Wt0,Wt1)
+c	  twt0 = (P11*R0(i) - P01*R1(i))*delta
+c	  twt1 = (P00*R1(i) - P01*R0(i))*delta
+c	  twt1 = sign(5*twt0,twt1)
+c	  if(twt0*R0(i)+twt1*R1(i).gt.Wt0*R0(pk)+Wt1*R1(pk))then
+c	    Wt0 = twt0
+c	    Wt1 = twt1
+c	    pk = i
+c	  endif
+c	endif
 c
 	end
 c************************************************************************
