@@ -47,19 +47,20 @@ c    rjs  21jul97 Handle image alignment better. Fix bug related to
 c		  incorrect flagging checks.
 c    rjs  23jul97 Added pbtype.
 c    rjs  13nov98 Increase MAXIN.
+c    rjs  03oct00 Output can be arbitrarily large.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'maxnax.h'
 	include 'mem.h'
 	character version*(*)
-	parameter(version='ImComb: version 1.0 21-Jul-97')
+	parameter(version='ImComb: version 1.0 3-Oct-00')
 	integer MAXIN,MAXOPEN
 	parameter(MAXIN=500,MAXOPEN=6)
 c
 	character in(MAXIN)*64,tin*64,out*64
 	integer nrms,nin,tno(MAXIN),tOut,nsize(3,MAXIN),nOpen
 	integer nOut(MAXNAX),minpix,maxpix,k,i,naxis,off(3)
-	integer pData,pWts
+	integer pData,pWts,pFlags
 	logical mosaic,nonorm,interp,equal
 	real rms(MAXIN),rms0,blctrc(6,MAXIN)
 c
@@ -157,6 +158,7 @@ c  Allocate arrays.
 c
 	call memAlloc(pData,nOut(1)*nOut(2),'r')
 	call memAlloc(pWts,nout(1)*nOut(2),'r')
+	call memAlloc(pFlags,nout(1),'l')
 c
 c  Process it.
 c
@@ -169,13 +171,15 @@ c
 	    if(i.gt.nOpen)call xyclose(tno(i))
 	  enddo
 	  call CombFin(k,tOut,nonorm,
-     *		       memr(pData),memr(pWts),nOut(1),nOut(2))
+     *			memr(pData),memr(pWts),nOut(1),nOut(2),
+     *			meml(pFlags))
 	enddo
 c
 c  Free arrays.
 c
 	call memFree(pData,nOut(1)*nOut(2),'r')
 	call memFree(pWts, nout(1)*nOut(2),'r')
+	call memFree(pFlags,nout(1),'l')
 c
 c  Close up.
 c
@@ -382,18 +386,17 @@ c
 c
 	end
 c************************************************************************
-	subroutine CombFin(k,tOut,nonorm,Data,Wts,nx,ny)
+	subroutine CombFin(k,tOut,nonorm,Data,Wts,nx,ny,flags)
 c
 	implicit none
 	integer k,tOut,nx,ny
 	logical nonorm
 	real Data(nx,ny),Wts(nx,ny)
+	logical flags(nx)
 c
 c  Normalise and write out the images.
 c------------------------------------------------------------------------
-	include 'maxdim.h'
 	integer i,j
-	logical flags(MAXDIM)
 c
 	if(k.gt.1)call xysetpl(tOut,1,k)
 c
