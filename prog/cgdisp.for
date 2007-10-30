@@ -618,6 +618,8 @@ c    nebk 17sep98  hardcopy devices were over-riding too much colour
 c                  table control
 c    nebk 09apr99  fix problem with hard copy colour tbales and multipanel plots
 c    rjs  08may00  Change incorrect keyf call to keya.
+c    rjs  13jul00  Correct angle of beam plotting when there is a rotation
+c		   between sky and pixel grid.
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -1139,11 +1141,15 @@ c
       logical pres
 cc
       integer il, len1, irad1, irad2
+      real lrot
       character line*80
 c-----------------------------------------------------------------------
+      include 'mirconst.h'
       call rdhdr (lin, 'bmin', bmin,  -1.0)
       call rdhdr (lin, 'bmaj', bmaj,  -1.0)
-      call rdhdr (lin, 'bpa',  bpa,  999.0)
+      call rdhdr (lin, 'bpa',  bpa,  0.0)
+      call rdhdr (lin, 'llrot',lrot, 0.0)
+      bpa = bpa + 180/DPI * lrot
 c
       if (bmin.gt.0.0 .and. bmaj.gt.0.0) then
 c
