@@ -377,10 +377,11 @@ c-----------------------------------------------------------------------
 	integer length,i,nants
 	double precision antpos(27),taudot(9)
 	double precision longitude,latitude,lst,obsdec,obsra,hdot
-	logical ok,updated,notify/.true./
+	logical ok,updated,notify
 	real cosh,sinh,cosd,sind
 	character telescop*9,type*1
 	parameter(HDOT = 7.272205216e-5 * 1.002737894)
+	data notify/.true./
 c
 c  Get the telescope parameters
 c
