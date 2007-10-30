@@ -133,6 +133,7 @@ c   rjs  12oct95 - Tidy up above changes.
 c   rjs  27nov95 - Increase max complexity of clean region.
 c   rjs  05aug96 - Better check for psf not 1.
 c   rjs  29jan97 - Better default region.
+c   rjs  10mar97 - Default region is all channels.
 c
 c  Important Constants:
 c    MaxDim	The max linear dimension of an input (or output) image.
@@ -150,7 +151,7 @@ c		to write.
 c
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Clean: version 1.0 29-Jan-97')
+	parameter(version='Clean: version 1.0 10-Mar-97')
 	include 'maxdim.h'
 	integer MaxBeam,maxCmp1,maxCmp2,MaxBox,MaxRun,MaxP
 	parameter(maxCmp1=66000,MaxCmp2=32000,MaxP=257)
@@ -1512,7 +1513,7 @@ c
 	trc(2) = min(nMap(2),blc(2)+width-1)
 c
 	blc(3) = 1
-	trc(3) = 1
+	trc(3) = nMap(3)
 c
 	call BoxDef(boxes,3,blc,trc)
 c
