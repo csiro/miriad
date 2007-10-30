@@ -108,8 +108,8 @@ c  6-cm response.
 c
 	else if(freq.gt.4.and.freq.lt.6)then
 	  rdist =  rad / ( 4.800/freq * 10.06250*PI/180/60 )
-	  x(1) = exp(-alpha2*(rdist/coeffx(1,1))**2)
-	  x(2) = coeffs(1,2)*sin(0.5*PI*rdist/coeffx(2,2))**2
+	  x(1) = exp(-alpha2*(rdist/coeffc(1,1))**2)
+	  x(2) = coeffc(1,2)*sin(0.5*PI*rdist/coeffc(2,2))**2
 	  pb = x(1)*x(1) + 0.5*x(2)*x(2)
 	  do i=3,5
 	    x(i) = (coeffc(2,i)*rdist + coeffc(1,i))*rdist
@@ -129,7 +129,7 @@ c
 	else if(freq.gt.8.and.freq.lt.9)then
 	  rdist =  rad / ( 8.640/freq * 5.86*PI/180/60 )
 	  x(1) = exp(-alpha2*(rdist/coeffx(1,1))**2)
-	  x(2) = coeffs(1,2)*sin(0.5*PI*rdist/coeffx(2,2))**2
+	  x(2) = coeffx(1,2)*sin(0.5*PI*rdist/coeffx(2,2))**2
 	  pb = x(1)*x(1) + 0.5*x(2)*x(2)
 	  do i=3,7
 	    x(i) = (coeffx(2,i)*rdist + coeffx(1,i))*rdist
