@@ -5,6 +5,7 @@ c     30-may-91   Quick and dirty				     PJT
 c     20-jun-91   Correction due to dsfetr/dsfetra doc error         MJS
 c     24-sep-93   Implemented two-step using intermediate EQ         PJT
 c     23-jul-97   General tidy up.				     RJS
+c     30-jul-97   More precision for RA and add "epoch" keyword.     RJS
 c-----------------------------------------------------------------------
 c= cotra - coordinate transformations
 c& pjt
@@ -23,12 +24,17 @@ c	"b1950" (the default), "j2000", "galactic", "ecliptic"
 c	and "super-galactic". b1950 and j2000 are equatorial coordinates
 c	in the B1950 and J2000 frames. All other coordinates are in the
 c	B1950 frames.
-c-----------------------------------------------------------------------
+c@ epoch
+c	Epoch (in standard Miriad time format) of the coordinate. Note
+c	that this is distinct from the equinox of the coordinate as given
+c	above. Varying epoch changes the coordinate values by less than an
+c	arcsecond. The default is b1950.
+c----------------------------------------------------------------------
 	INCLUDE 'mirconst.h'
 	CHARACTER  VERSION*(*)
-	PARAMETER (VERSION='Version 1.0 23-Jul-97')
+	PARAMETER (VERSION='Version 1.0 30-Jul-97')
 c
-	double precision lon,lat,blon,blat,dra,ddec
+	double precision lon,lat,blon,blat,dra,ddec,epoch
 	character line*64
 c
 	integer NTYPES
@@ -39,7 +45,7 @@ c
 c  Externals.
 c
 	double precision epo2jul
-	character rangle*13,hangle*14
+	character rangle*13,hangleh*15
 c
 	data types/'b1950           ','j2000           ',
      *		   'galactic        ',
@@ -55,6 +61,7 @@ c
 	  CALL keyt('radec',blon,'dms',0.0d0)
 	endif
 	call keyt('radec',blat,'dms',0.d0)
+	call keyt('epoch',epoch,'atime',epo2jul(1950.0,'B'))
 	CALL keyfin
 c
 c  Convert to b1950 coordinates.
@@ -68,17 +75,16 @@ c
 	else if(type.eq.'j2000')then
 	  lon = blon
 	  lat = blat
-	  call fk54z(lon,lat,epo2jul(1950.d0,'B'),
-     *				blon,blat,dra,ddec)
+	  call fk54z(lon,lat,epoch,blon,blat,dra,ddec)
 	endif
 c
 c  Convert from B1950 to all the other coordinate types, and write them out.
 c
-	call fk45z(blon,blat,epo2jul(1950.d0,'B'),lon,lat)
-	line = 'J2000:            '//hangle(lon)//rangle(lat)
+	call fk45z(blon,blat,epoch,lon,lat)
+	line = 'J2000:            '//hangleh(lon)//rangle(lat)
 	call output(line)
 c
-	line = 'B1950:            '//hangle(blon)//rangle(blat)
+	line = 'B1950:            '//hangleh(blon)//rangle(blat)
 	call output(line)
 c
 	lon = blon
