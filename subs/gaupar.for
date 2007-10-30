@@ -2,6 +2,7 @@ c************************************************************************
 c  History:
 c    22nov93 rjs  Original version.
 c    13sep94 rjs  Added gaudfac.
+c    11aug97 rjs  Protect against atan2(0,0)
 c
 c************************************************************************
 c* gaupar1 - Determine effective beam of the convolution of two images.
@@ -268,7 +269,11 @@ c
 	t = sqrt((alpha-beta)**2 + gamma**2)
 	bmaj = sqrt(0.5*(s+t))
 	bmin = sqrt(0.5*(s-t))
-	bpa  = 180 / pi * 0.5*atan2(-gamma,alpha-beta)
+	if(abs(gamma)+abs(alpha-beta).eq.0)then
+	  bpa = 0
+	else
+	  bpa = 180 / pi * 0.5*atan2(-gamma,alpha-beta)
+	endif
 	fac = pi / ( 4.*log(2.)) * bmaj1 * bmin1 * bmaj2 * bmin2 /
      *	   sqrt(alpha*beta - 0.25 * gamma * gamma)
 	ifail = 0
@@ -349,7 +354,11 @@ c
 	else
 	  bmaj = sqrt(0.5*(s+t))
 	  bmin = sqrt(0.5*(s-t))
-	  bpa  = 180. / pi * 0.5 * atan2(-gamma,alpha-beta)
+	  if(abs(gamma)+abs(alpha-beta).eq.0)then
+	    bpa = 0
+	  else
+	    bpa  = 180. / pi * 0.5 * atan2(-gamma,alpha-beta)
+	  endif
 	  ifail = 0	
 	endif
 	fac = 1
