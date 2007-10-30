@@ -75,6 +75,7 @@ c     7sep94 rjs  Correct bug in deteriming time solution.
 c    19jan95 rjs  Support pulsar binning mode.
 c    22mar95 rjs  Added the undo (madness) and reweight options.
 c    21sep95 rjs  Readd pulsar binning mode.
+c    10oct95 rjs  Double number of solution intervals.
 c
 c  Bugs:
 c    * Probably a more sophiticated fitting process (rather than just
@@ -86,7 +87,7 @@ c------------------------------------------------------------------------
 	integer MAXBREAK,ATANT,ATIF,NWTS
 	character version*(*)
 	parameter(MAXBREAK=128,ATANT=6,ATIF=2,NWTS=64)
-	parameter(version='AtXY: version 1.0 21-Sep-95')
+	parameter(version='AtXY: version 1.0 10-Oct-95')
 c
 	integer lVis,lOut,vCopy,vFreq
 	character vis*64,out*64,txt*64,dtype*1
@@ -583,7 +584,7 @@ c  Inputs:
 c    dovar	Get the XY phases from the dataset.
 c------------------------------------------------------------------------
 	integer MAXPNTS,MAXFREQ,ATANT,ATIF
-	parameter(MAXFREQ=32,MAXPNTS=10000,ATANT=6,ATIF=2)
+	parameter(MAXFREQ=32,MAXPNTS=20000,ATANT=6,ATIF=2)
 	real phi(MAXPNTS),buf(MAXPNTS)
 	double precision freqs(MAXFREQ)
 	double precision Tfirst,Tend,Tlast,T0,f,T,SumT
