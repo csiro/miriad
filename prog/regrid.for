@@ -46,6 +46,15 @@ c	the sky. Thus, dRA = dX / cos(dec) and dDEC = dY where you
 c	specify dX and dY.
 c
 c	Defaults are no axis descriptors.
+c@ options
+c	Extra processing options. Several can be given, separated by commas.
+c	Only the minimum characters to avoid ambiguity is needed.
+c	  noscale   Produce a cube where the RA/DEC cell size does not scale
+c	            with frequency/velocity.
+c	  offset    The coordinate system described by the template or
+c	            descriptors is modified (shift and expansion/contraction)
+c	            by an integral number of pixels so that it completely
+c	            encloses the input.
 c@ tol
 c	Interpolation tolerance. Tolerate an error of as much as "tol" in
 c	converting pixel locations in the input to the output. The default is
@@ -83,8 +92,9 @@ c
 	character version*(*)
 	parameter(version='Regrid: version 1.0 07-Jul-97')
 c
-	character in*64,out*64,tin*64,ctype*16
+	character in*64,out*64,tin*64,ctype*16,cellscal*12
 	double precision desc(4,MAXNAX),crpix,crval,cdelt,epoch
+	logical noscale,dooff
 	integer ndesc,nax,naxis,nin(MAXNAX),nout(MAXNAX),ntin(MAXNAX)
 	integer i,k,n,lIn,lOut,lTmp,cOut,axes(MAXNAX)
 	integer GridSize,gnx,gny,minv(3),maxv(3),order(3)
@@ -117,6 +127,7 @@ c
 	call keyr('tol',tol,0.05)
 	if(tol.le.0.or.tol.ge.0.5)
      *	  call bug('f','Invalid value for the tol parameter')
+	call getopt(noscale,dooff)
 	call keyfin
 c
 c  Open the input dataset.
@@ -177,9 +188,19 @@ c
 	  enddo
 	  call coGetd(lTmp,'epoch',epoch)
 	  call coSetd(cOut,'epoch',epoch)
+	  call coGeta(lTmp,'cellscal',cellscal)
+	  call coSeta(cOut,'cellscal',cellscal)
 	  call xyclose(lTmp)
 	endif
+c
+c  Set that it does not scale, if requested.
+c
+	if(noscale)call coSeta(cOut,'cellscal','CONSTANT')
 	call coReInit(cOut)
+c
+c  If the user wants to produce an offset one ... do that.
+c
+	if(dooff)call DoOffset(lIn,nIn,cOut,nOut)
 c
 c  Check that we can do this.
 c
@@ -263,6 +284,79 @@ c
 c
 	call xyclose(lOut)
 	call xyclose(lIn)
+c
+	end
+c************************************************************************
+	subroutine getopt(noscale,offset)
+c
+	implicit none
+	logical noscale,offset
+c
+c------------------------------------------------------------------------
+	integer NOPTS
+	parameter(NOPTS=2)
+	character opts(NOPTS)*8
+	logical present(NOPTS)
+	data opts/'noscale ','offset  '/
+c
+	call options('options',opts,present,NOPTS)
+	noscale = present(1)
+	offset  = present(2)
+	end
+c************************************************************************
+	subroutine DoOffset(lIn,nIn,lOut,nOut)
+c
+	implicit none
+	integer lIn,lOut,nIn(3),nOut(3)
+c
+c------------------------------------------------------------------------
+	double precision tol
+	parameter(tol=0.49)
+	double precision In(3),Out(3),crpix
+	integer minv(3),maxv(3),i,j,k
+	logical first
+c
+c  Externals.
+c
+	character itoaf*2
+c
+	call pcvtInit(lIn,lOut)
+c
+	first = .true.
+	do k=1,nIn(3),max(nIn(3)-1,1)
+	  do j=1,nIn(2),max(nIn(2)-1,1)
+	    do i=1,nIn(1),max(nIn(1)-1,1)
+	      In(1) = i
+	      In(2) = j
+	      In(3) = k
+	      call pcvt(in,out,3)
+	      if(first)then
+		minv(1) = nint(out(1)-tol)
+		maxv(1) = nint(out(1)+tol)
+		minv(2) = nint(out(2)-tol)
+		maxv(2) = nint(out(2)+tol)
+		minv(3) = nint(out(3)-tol)
+		maxv(3) = nint(out(3)+tol)
+		first = .false.
+	      else
+		minv(1) = min(minv(1),nint(Out(1)-tol))
+		maxv(1) = max(maxv(1),nint(Out(1)+tol))
+		minv(2) = min(minv(2),nint(Out(2)-tol))
+		maxv(2) = max(maxv(2),nint(Out(2)+tol))
+		minv(3) = min(minv(3),nint(Out(3)-tol))
+		maxv(3) = max(maxv(3),nint(Out(3)+tol))
+	      endif
+	    enddo
+	  enddo
+	enddo
+c
+	do i=1,3
+	  nOut(i) = maxv(i) - minv(i) + 1
+	  call coGetd(lOut,'crpix'//itoaf(i),crpix)
+	  crpix = crpix - minv(i) + 1
+	  call coSetd(lOut,'crpix'//itoaf(i),crpix)
+	enddo
+	call coReinit(lOut)
 c
 	end
 c************************************************************************
@@ -526,7 +620,7 @@ c
 	  In(2) = dble(ny-1)/dble(gny-1) * (j-1) + 1
 	  do i=1,gnx
 	    In(1) = dble(nx-1)/dble(gnx-1) * (i-1) + 1
-	    call pCvt(In,Out)
+	    call pCvt(In,Out,3)
 	    Xv(i,j) = Out(1)
 	    Yv(i,j) = Out(2)
 	    Zv(i,j) = Out(3)
@@ -565,13 +659,13 @@ c
 	    x(1,k) = (2-i) + (i-1)*nx
 	    x(2,k) = (2-j) + (j-1)*ny
 	    x(3,k) = plane
-	    call pcvt(x(1,k),tx(1,k))
+	    call pcvt(x(1,k),tx(1,k),3)
 	  enddo
 	enddo
 	mid(1) = 0.5*(nx+1)
 	mid(2) = 0.5*(ny+1)
 	mid(3) = plane
-	call pcvt(mid,tmid)
+	call pcvt(mid,tmid,3)
 c
 	more = .true.
 	dowhile(more)
@@ -581,7 +675,7 @@ c
 	    xmid(1,k) = 0.5*(x(1,k) + mid(1))
 	    xmid(2,k) = 0.5*(x(2,k) + mid(2))
 	    xmid(3,k) = 0.5*(x(3,k) + mid(3))
-	    call pcvt(xmid(1,k),txmid(1,k))
+	    call pcvt(xmid(1,k),txmid(1,k),3)
 	    err = max( abs(0.5*(tx(1,k)+tmid(1)) - txmid(1,k)),
      *		       abs(0.5*(tx(2,k)+tmid(2)) - txmid(2,k)),
      *		       abs(0.5*(tx(3,k)+tmid(3)) - txmid(3,k)))
@@ -606,8 +700,8 @@ c
 	    call TripMv(tmid(1),  tmid(2),tmid(3),     tx(1,k1))
 	    call TripMv(x(1,kmax),mid(2), dble(plane), x(1,k2))
 	    call TripMv(mid(1),x(2,kmax), dble(plane), x(1,k3))
-	    call pcvt(x(1,k2),tx(1,k2))
-	    call pcvt(x(1,k3),tx(1,k3))
+	    call pcvt(x(1,k2),tx(1,k2),3)
+	    call pcvt(x(1,k3),tx(1,k3),3)
 	    call TripMv(xmid(1,kmax), xmid(2,kmax), xmid(3,kmax),mid)
 	    call TripMv(txmid(1,kmax),txmid(2,kmax),txmid(3,kmax),tmid)
 	  endif
@@ -832,124 +926,4 @@ c
 	  call xyflgwr(lOut,j,Flag)
 	enddo
 c
-	end
-c************************************************************************
-	subroutine PcvtInit(coObj1d,coObj2d)
-c
-	implicit none
-	integer coObj1d,coObj2d
-c
-c  Initialise the coordinate system conversion routines.
-c------------------------------------------------------------------------
-	include 'regrid.h'
-	double precision dtemp,crval1,crpix1,cdelt1,crval2,crpix2,cdelt2
-	double precision epoch1,epoch2
-	character ctype1*16,ctype2*16
-	integer i,l1,l2
-c
-c  Externals.
-c
-	integer len1
-	double precision epo2jul
-c
-	coObj1 = coObj1d
-	coObj2 = coObj2d
-c
-	call coGetd(coObj1,'naxis',dtemp)
-	naxis = nint(dtemp)
-	call coGetd(coObj2,'naxis',dtemp)
-	if(naxis.ne.nint(dtemp))call bug('f','Differing number of axes')
-c
-	nop = .true.
-	dofk45z = .false.
-	dofk54z = .false.
-	ira = 0
-	idec = 0
-c
-	do i=1,naxis
-	  call coAxGet(coObj1,i,ctype1,crpix1,crval1,cdelt1)
-	  call coAxGet(coObj2,i,ctype2,crpix2,crval2,cdelt2)
-c
-c  Velocity and frequency axes.
-c
-	  if(ctype2(1:4).eq.'VELO'.or.ctype2(1:4).eq.'FELO')then
-	    call coVelSet(coObj1,ctype2)
-	  else if(ctype2(1:4).eq.'FREQ'.and.
-     *		  ctype1(1:4).ne.'FREQ')then
-	    call coVelSet(coObj1,'FREQ')
-c
-c  RA and DEC axes.
-c
-	  else if((ctype2(1:4).eq.'RA--'.or.ctype2(1:4).eq.'DEC-')
-     *	     .and.(ctype1(1:4).eq.ctype2(1:4)))then
-	    if(ctype1(1:4).eq.'RA--')then
-	      ira = i
-	    else
-	      idec = i
-	    endif
-	    call coGetd(coObj1,'epoch',epoch1)
-	    call coGetd(coObj2,'epoch',epoch2)
-	    if(epoch1.lt.1800)epoch1 = epoch2
-	    if(abs(epoch1-epoch2).gt.0.1)then
-	      if(abs(epoch1-1950).le.0.1.and.
-     *	         abs(epoch2-2000).le.0.1)then
-	        dofk45z = .true.
-	      else if(abs(epoch1-2000).le.0.1.and.
-     *		      abs(epoch2-1950).le.0.1)then
-		dofk54z = .true.
-	      else
-	        call bug('f','Unsupported epoch conversion requested')
-	      endif
-	    endif
-c
-c  All other conversions.
-c
-	  else if(ctype1.eq.ctype2)then
-	    continue
-	  else
-	    l1 = len1(ctype1)
-	    l2 = len1(ctype2)
-	    call bug('w','Error converting between axis types '//
-     *		ctype1(1:l1)//' and '//ctype2(1:l2))
-	    call bug('f','Impossible or unimplemented conversion')
-	  endif
-	enddo
-c
-c  If we are to do epoch conversion, check that it makes sense.
-c
-	if(dofk45z.or.dofk54z)then
-	  if(ira.eq.0.or.idec.eq.0)
-     *	    call bug('f','Missing RA or DEC in epoch conversion')
-	  if(dofk45z)call coGetd(coObj1,'obstime',obstime)
-	  if(dofk54z)call coGetd(coObj2,'obstime',obstime)
-	  if(obstime.eq.0)obstime = epo2jul(1950.d0,'B')
-	endif
-c
-	end
-c************************************************************************
-	subroutine pcvt(x1,x2)
-c
-	implicit none
-	double precision x1(*),x2(*)
-c
-c  Perform a coordinate system conversion.
-c------------------------------------------------------------------------
-	include 'regrid.h'
-	include 'maxnax.h'
-	double precision xa(MAXNAX),ra2000,dec2000,ra1950,dec1950
-	double precision dra,ddec
-c
-	call coCvt(coObj1,'ap/ap/ap',x1,'aw/aw/aw',xa)
-c
-	if(dofk45z)then
-	  call fk45z(xa(ira),xa(idec),obstime,ra2000,dec2000)
-	  xa(ira) = ra2000
-	  xa(idec) = dec2000
-	else if(dofk54z)then
-	  call fk54z(xa(ira),xa(idec),obstime,ra1950,dec1950,dra,ddec)
-	  xa(ira) = ra1950
-	  xa(idec) = dec1950
-	endif
-c
-	call coCvt(coObj2,'aw/aw/aw',xa,'ap/ap/ap',x2)
 	end
