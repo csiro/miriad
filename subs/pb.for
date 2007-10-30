@@ -55,6 +55,7 @@ c   06nov95   rjs    Larger ATCA primary beam size.
 c   29nov95   rjs    Use "pbtype" to describe primary beam type in
 c		     datasets. Added pblist.
 c   26mar97   rjs    Less precision in pbencode.
+c   07jul97   rjs    Change call to coaxdesc to coaxget.
 c************************************************************************
 c* pbList -- List known primary beam types.
 c& rjs
@@ -299,8 +300,8 @@ c
 	  f = 0
 	endif
 	call coCvt(coObj,in,x1,'ap/ap',x2)
-	call coAxDesc(coObj,1,ctype,crpix,crval,cdelt1)
-	call coAxDesc(coObj,2,ctype,crpix,crval,cdelt2)
+	call coAxGet(coObj,1,ctype,crpix,crval,cdelt1)
+	call coAxGet(coObj,2,ctype,crpix,crval,cdelt2)
 c
 c  Find a matching primary beam type. Also look for a near match.
 c
