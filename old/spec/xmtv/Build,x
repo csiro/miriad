@@ -16,4 +16,5 @@ endif
 cp XMtv.ad $MIRCAT/XMtv
 cp xmtv.csh $MIRBIN/xmtv
 chmod +x $MIRBIN/xmtv
-
+cp xmtv.doc $MIR/specdoc
+cp xmtv.doc $MIR/doc
