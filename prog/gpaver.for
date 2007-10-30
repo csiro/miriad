@@ -26,13 +26,14 @@ c    rjs     06jan95 Make interval the max of the old and new.
 c    rjs     10jan95 Fixed a serious bug I introduced on 6jan.
 c    rjs     28aug96 Minor change to get around gcc-related bug. Change
 c		     care Dave Rayner.
+c    pjt     20oct99 FIxed bug (at least on linux) of not initializing nnsols
 c
 c  Bugs and Shortcomings:
 c    ? Perfect ?
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
-	parameter(version='GpAver: version 1.0 28-Aug-96')
+	parameter(version='GpAver: version 1.0 20-oct-99')
 	logical dovec
 	double precision interval
 	character vis*64
@@ -239,6 +240,7 @@ c
 c  Loop over all the gains, accumulating while we go.
 c
 	totgood = 0
+	nnsols = 0
 	Tend = time(1) - 1
 	do j=1,nsols
 c

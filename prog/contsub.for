@@ -102,6 +102,7 @@ c    pjt  15mar95  fixed declaration order for f2c (linux)
 c    rjs  30aug95  Minor change of usage of optprsnt, to appease g77.
 c    bpw  27jun97  add options=verbose
 c    pjt  22mar99  fixed treating options(2) as integer in boolean expr
+c    pjt  22oct99  fixed initialization of opts(2)
 c
 c------------------------------------------------------------------------
 c
@@ -120,7 +121,7 @@ c contchan:    list of channel numbers to use to determine continuum
       program contsub
 
       character*50     version
-      parameter        ( version = 'contsub: version 2.0 22-Mar-99' )
+      parameter        ( version = 'contsub: version 2.0 22-oct-99' )
 
       include          'maxdim.h'
 
@@ -175,7 +176,7 @@ c data algopts must be adapted
       integer          naxis
       integer          axlen(MAXNAX), oaxlen(MAXNAX)
       integer          axnum(MAXNAX)
-      character*4      type
+      character*5      type
       character*1      velaxis
       integer          velaxnr, naxis1
       character*1      itoaf
@@ -185,7 +186,7 @@ c data algopts must be adapted
       integer          viraxlen(MAXNAX), vircubesize(MAXNAX)
 
       character*10     algopts(NOPT)
-      logical          optprsnt(NOPT)
+      logical          optprsnt(NOPT),verbose
       integer          nterms
       character*10     outopts(NOPTO)
       integer          maxranges
@@ -235,10 +236,13 @@ c algorithm 'poly' also what the fit order must be.
           if( nterms.ne.0 ) call bug( 'w', 'Polynomial order ignored' )
       endif
 
-c Check the output option.
+c opts(1): Check the output option.
       do i = 1, NOPTO
          optprsnt(i) = .FALSE.
       enddo
+c           Careful: this routine cannot know how many elements of opts
+c           to initialize; right now only 1 needed
+      opts(1) = 0
       call options( 'options', outopts, optprsnt, NOPTO )
       if( optprsnt(1) ) then
          n=0
@@ -253,8 +257,13 @@ c Check the output option.
          if( n.eq.0 ) opts(1) = -1
       endif
 
-c Check if verbose=true
-      call keyl( 'verbose', opts(2), .FALSE. )
+c opts(2): Check if verbose=true
+      call keyl( 'verbose', verbose, .FALSE. )
+      if (verbose) then
+	opts(2) = 1
+      else
+        opts(2) = 0
+      endif
 
 c Read names of input, output and continuum dataset.
       call keyf( 'in',   inp, ' ' )
