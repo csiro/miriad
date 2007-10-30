@@ -62,6 +62,8 @@ c  rjs  18oct94  Print contents of mosaic tables.
 c  pjt  15mar95  fixed declaration order for f2c (linux)
 c  mchw 23may96  Convert cordinates to double; use rangleh and hangleh
 c  rjs  02apr97  Tidy.
+c  rjs  11mar98  Change name of "stat" to "statit" to avoid confusion with
+c		 the UNIX subroutine.
 c
 c----------------------------------------------------------------------c
 	character version*(*)
@@ -418,7 +420,7 @@ c
 	  do while(plane.le.trc(axis))
 	    call xysetpl(lIn,1,plane)
 	    call AxisType(lIn,axis,plane,ctype,label,value,units)
-	    call stat(lin,naxis,blc,trc,sum,ave,rms,pmax,pmin)
+	    call statit(lin,naxis,blc,trc,sum,ave,rms,pmax,pmin)
 	    write(line,'(i5,x,a,1p5e12.4)')
      *		plane,units,sum/cbof,pmax,pmin,ave,rms
 	    call LogWrit(line(1:79))
@@ -430,13 +432,13 @@ c
 	write(header,'(a,a,a,a,a)') ' Total Flux  ','   Maximum   ',
      *		    '   Minimum   ','   Average   ','     rms     '
 	call LogWrit(header(1:65))
-	call stat(lin,naxis,blc,trc,sum,ave,rms,pmax,pmin)
+	call statit(lin,naxis,blc,trc,sum,ave,rms,pmax,pmin)
 	write(line,'(5(g12.5,x))') sum/cbof,pmax,pmin,ave,rms
 	call LogWrit(line(1:60))
       endif
       end
 c********1*********2*********3*********4*********5*********6*********7*c
-	subroutine stat(lin,naxis,blc,trc,sum,ave,rms,pmax,pmin)
+	subroutine statit(lin,naxis,blc,trc,sum,ave,rms,pmax,pmin)
 c
 	implicit none
 	integer lIn,naxis,blc(naxis),trc(naxis)
