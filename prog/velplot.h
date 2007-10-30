@@ -2,9 +2,14 @@ c*********************************************************************c
 c		velplot.h
 c	include file for velplot program
 c---------------------------------------------------------------------c
+c
+c  The maximum array dimensions and size
+c  MAXDIM is used to read the image, and for 1-dimensional arrays.
+	include 'maxdim.h'
+c
+c  box in absolute pixels. (is,ib) (ie,it) can be reset by cursor.
         integer      is,ie,ib,it,mid,midy
 	common /box/ is,ie,ib,it,mid,midy
-c  box in absolute pixels. (is,ib) (ie,it) can be reset by cursor.
 c---------------------------------------------------------------------c
 
 	real        ras,decs,epoch,xy,vel,delv,posx,posy,pospa
@@ -61,3 +66,4 @@ c  nlevels	Number of levels
 c  conlabel	Label interval for contours
 c  cutoff	Cutoff level in moment maps.
 c---------------------------------------------------------------------c
+
