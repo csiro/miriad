@@ -85,6 +85,7 @@ c    rjs  10oct94 relax option.
 c    rjs  24oct94 Weight data (in time averaging) according to integration
 c		  time.
 c    rjs  19sep95 Handle data that is not quite in time order.
+c    rjs  21sep95 Really do it this time.
 c
 c  Bugs:
 c    * The way of determining whether a source has changed is imperfect.
@@ -94,7 +95,7 @@ c    * Too much of this code worries about polarisations.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
-	parameter(version='UvAver: version 1.0 23-Sep-94')
+	parameter(version='UvAver: version 1.0 21-Sep-95')
 	character uvflags*12,ltype*16,out*64
 	integer npol,Snpol,pol,tIn,tOut,vupd,nread,nrec,i
 	real inttime
@@ -189,7 +190,7 @@ c
 	    doflush = ok.and.dotaver
 	    if(doflush)then
 	      doflush = uvVarUpd(vupd)
-	      doflush = (doflush.or.preamble(4)-Tmin.lt.interval.or.
+	      doflush = (doflush.or.preamble(4)-Tmin.gt.interval.or.
      *				    Tmax-preamble(4).gt.interval)
      *			.and.buffered
 	    endif
