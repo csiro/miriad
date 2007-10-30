@@ -72,9 +72,10 @@ c    rjs  17may95 More messages.
 c    rjs  02jul97 cellscal change.
 c    rjs  07jul97 Change coaxdesc to coaxget.
 c    rjs  17sep97 Doc change only.
+c    rjs  25sep98 Less fussy about freq axis for 1-plane files.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='version 27-Feb-95')
+	parameter(version='version 25-Sep-98')
 	integer MAXSELS,MAXPNT,MAXVIS
 	parameter(MAXSELS=256,MAXPNT=2048,MAXVIS=128)
 	include 'maxdim.h'
@@ -129,7 +130,7 @@ c
 	call coFindAx(tmap,'latitude',iax)
 	if(iax.ne.2)call bug('f','DEC axis must be the second axis')
 	call coFindAx(tmap,'spectral',iax)
-	if(iax.gt.0.and.iax.ne.3) call bug('f',
+	if(iax.gt.0.and.iax.ne.3.and.nsize(3).gt.1) call bug('f',
      *    'The spectral axis of this image must be number 3')
 c
 c  Get the pointing centres, etc, associated with the vis dataset.
