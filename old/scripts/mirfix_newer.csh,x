@@ -9,7 +9,7 @@ foreach in ( $MIR/bin/*/mir* $MIR/scripts/unix/*.csh $MIR/scripts/unix/*/*.csh )
   set base = $in:t
   if ( "$base" != "miriad" && "$base" != "mirnewer" && \
        "$base" != "mirfix_newer" && "$base" != "mirfix_newer.csh" ) then
-    sed -e "s/-newer/mirjunk/" -e "s/newer/mirnewer/" $in | \
+    sed -e "s/-newer/mirjunk/" -e "s/newer/mirnewer/g" $in | \
     sed -e "s/mirjunk/-newer/" -e "s/mirmirnewer/mirnewer/" > junk.$$
     diff $in junk.$$ > /dev/null
     if ( $status ) then
