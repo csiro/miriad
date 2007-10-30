@@ -119,11 +119,12 @@ c    04sep97 mchw  Upgrading. Report absolute positions with cursor.
 c    10sep97 mchw  Fix new bug at exactly 45.0 position angle.
 c    08jul98 mchw  Improve code in spectra and Gaussian fits.
 c    16jul98 mchw  More robust interactive input; Elliminate ifdef's.
+c    05mar99 mchw  added logarithmic contour levels.
 c----------------------------------------------------------------------c
 	include 'velplot.h'
 	include 'mem.h'
 	character*(*) version
-	parameter(version='(version 3.0 16-Jul-98)')
+	parameter(version='(version 3.0 05-Mar-99)')
 	integer maxnax,maxboxes
 	parameter(maxnax=3,maxboxes=128)
 	integer boxes(maxboxes),nsize(maxnax),blc(maxnax),trc(maxnax)
@@ -756,7 +757,7 @@ c	Return number of plotting windows in x and y directions (windx,windy)
 c	imaps is the number of maps to be plotted
 c----------------------------------------------------------------------c
 	character msg*80, line*80
-	integer uwindx, uwindy, length
+	integer length
 	double precision dval(2)
 	logical ok
 c
@@ -786,8 +787,8 @@ c
         if(length.ne.0)then
           call matodf(line,dval,2,ok)
           if(ok)then
-	    if(uwindx.ne.0) windx=dval(1)
-	    if(uwindy.ne.0) windy=dval(2)
+	    if(dval(1).ne.0.d0) windx=dval(1)
+	    if(dval(2).ne.0.d0) windy=dval(2)
           endif
         endif
 	end
@@ -1163,36 +1164,45 @@ c----------------------------------------------------------------------c
 c
 	call output(' ')
 	call prompt(percent,l,
-     *    '>Enter contours as % (Y), Absolute, [use previous levels] :')
+     *   '>Enter contours as % (Y), Absolute, Log, [previous levels] :')
 	if(l.eq.0)return
 	call ucase(percent)
-	call prompt(ans,l,'Enter contour List or Range (L/[R]) :')
-	call ucase(ans)
-	if(ans.eq.'L') then
-	  write(line, '(a)') '>Enter levels (max 10, end=-9999.):'
-	  call output(line)
-          do i=1,10
-            levels(i)=0.0
-          enddo
-          do i=1,10
-	   write(line,'(a,i2,a)') '>Enter: level(',i,')='
-           call output(line)
-           read(5,*) levels(i)
-           if(levels(i).eq.-9999. .or. i.eq.10)then
-             nlevels=i-1
-             goto 129
-           endif
-          enddo
+	if(percent.eq.'L')then
+	  percent='Y'
+	  nlevels=10
+	  levels(1)=1.584893
+	  do i=2,nlevels
+	    levels(i)=1.584893*levels(i-1)
+	  enddo
 	else
-	  write(line, '(a)') '>Enter min,max,interval :'
-	  call output(line)
-	  read(5,*) cmin,cmax,cint
-	  nlevels =1
-	  levels(1)=cmin
-	  do while(levels(nlevels).lt.cmax.and.nlevels.lt.10)
-	    nlevels = nlevels + 1
-	    levels(nlevels) = levels(nlevels-1) + cint
- 	  enddo
+	  call prompt(ans,l,'Enter contour List or Range (L/[R]) :')
+	  call ucase(ans)
+	  if(ans.eq.'L') then
+	    write(line, '(a)') '>Enter levels (max 10, end=-9999.):'
+	    call output(line)
+            do i=1,10
+              levels(i)=0.0
+            enddo
+            do i=1,10
+	     write(line,'(a,i2,a)') '>Enter: level(',i,')='
+             call output(line)
+             read(5,*) levels(i)
+             if(levels(i).eq.-9999. .or. i.eq.10)then
+               nlevels=i-1
+               goto 129
+             endif
+            enddo
+	  else
+	    write(line, '(a)') '>Enter min,max,interval :'
+	    call output(line)
+	    read(5,*) cmin,cmax,cint
+	    nlevels =1
+	    levels(1)=cmin
+	    do while(levels(nlevels).lt.cmax.and.nlevels.lt.10)
+	      nlevels = nlevels + 1
+	      levels(nlevels) = levels(nlevels-1) + cint
+ 	    enddo
+	  endif
 	endif
 129     end
 c********1*********2*********3*********4*********5*********6*********7**

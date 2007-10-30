@@ -22,15 +22,16 @@ c    pjt          Original version.
 c    rjs  15apr91 Total rewrite.
 c    rjs  23apr91 Fixed char*(*) in subroutine arg string concatenation.
 c		  Corrected hclose call sequence.
+c    rjs  28apr99 Increase size of "descr" variable in call to hdprobe.
 c------------------------------------------------------------------------
 	include 'mathd.h'
 	character version*(*)
 	integer BufLen,RBufLen
-	parameter(version='Mathd: version 1.0 23-Apr-91')
+	parameter(version='Mathd: version 1.0 27-Apr-99')
 	parameter(BufLen=64,RBufLen=5*MAXLEN)
 c
 	integer iostat
-	character in*64,item*12,exp*80,descr*16,dtype*16
+	character in*64,item*12,exp*80,descr*64,dtype*16
 	real ExprBuf(RBufLen)
 	integer ExpBuf(BufLen),pnt,i,n,type
 c
@@ -242,7 +243,7 @@ c    value	For CONSTANT, this is the value of the constant.
 c------------------------------------------------------------------------
 	include 'mathd.h'
 	integer n,iostat
-	character dtype*16,descr*32,line*64
+	character dtype*16,descr*64,line*64
 c
 c  Determine the characteristics of the item.
 c
