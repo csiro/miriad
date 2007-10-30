@@ -120,11 +120,12 @@ c    10sep97 mchw  Fix new bug at exactly 45.0 position angle.
 c    08jul98 mchw  Improve code in spectra and Gaussian fits.
 c    16jul98 mchw  More robust interactive input; Elliminate ifdef's.
 c    05mar99 mchw  added logarithmic contour levels.
+c    05apr00 mchw  specify RA and DEC cuts with a range and increment.
 c----------------------------------------------------------------------c
 	include 'velplot.h'
 	include 'mem.h'
 	character*(*) version
-	parameter(version='(version 3.0 05-Mar-99)')
+	parameter(version='(version 3.0 05-Apr-00)')
 	integer maxnax,maxboxes
 	parameter(maxnax=3,maxboxes=128)
 	integer boxes(maxboxes),nsize(maxnax),blc(maxnax),trc(maxnax)
@@ -3776,7 +3777,7 @@ c-----------------------------------------------------------------------
 	include 'velplot.h'
 	integer np,k,l,ncon
 	real xin,yin,pain,cmaj,cmin,cpa,cf
-	real xstart,xend,vstart,vend,xmin,xmax
+	real xstart,xend,vstart,vend,xmin,xmax,pstart,pend,pinc,pos
 c  convolution array maximum size
 	real con(99,99,4,4)
         real tr(6),ymax,ymin,xval(MAXDIM),xcoord(MAXDIM),xdelta
@@ -3893,22 +3894,48 @@ c
 c  RA-velocity maps.
 c
 	else if(ans.eq.'X') then
-	  ncut=ny
-	  do i=1,ncut
-	    xcut(i) = 0.0
-	    ycut(i) = (i-midx) * xy
-	    pa(i) = 90.0
-	  enddo
+          call prompt(line,length,
+     *      '>Enter starting DEC offset, ending DEC offset, interval:')
+          if(length.eq.0) goto 50
+          call matodf(line,dval,3,ok)
+          if(ok)then
+	    pstart = dval(1)
+	    pend   = dval(2)
+	    pinc   = dval(3)
+	    i = 1
+	    pos = pstart
+	    do while(i.le.128.and.pos.le.pend)
+	      ycut(i) = pos
+	      xcut(i) = 0.
+	      pa(i) = 90.
+	      pos = pos + pinc
+	      i = i + 1	
+	    enddo
+	    ncut = i - 1
+	  endif
 c
 c  DEC-velocity maps.
 c
 	else if (ans.eq.'Y') then
-	  ncut=nx
-	  do i=1,ncut
-	    xcut(i)=(i-midx) * xy
-	    ycut(i)=0.0
-	    pa(i)=0.0
-	  enddo
+          call prompt(line,length,
+     *      '>Enter starting X offset, ending X offset, interval:')
+          if(length.eq.0) goto 50
+          call matodf(line,dval,3,ok)
+          if(ok)then
+	    pstart = dval(1)
+	    pend   = dval(2)
+	    pinc   = dval(3)
+	    i = 1
+	    pos = pstart
+	    do while(i.le.128.and.pos.le.pend)
+	      xcut(i) = pos
+	      ycut(i) = 0.
+	      pa(i) = 0.001
+	      pos = pos + pinc
+	      i = i + 1	
+	    enddo
+	    ncut = i - 1
+	  endif
 	else 
 	  goto 9
 	endif	    
