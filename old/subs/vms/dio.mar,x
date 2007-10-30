@@ -1,0 +1,385 @@
+	.title	DIO
+
+; A collection of routines which implement asynchronous, block
+; i/o from a file. This assumes C calling convention. Output
+; files are created with Stream_LF characteristic.
+
+; History:
+;   rjs  Dark-ages Converted from the Werong-equivalent routines.
+;   rjs  15nov89   Improved dtrans_c to strip trailing ".dir;1" if
+;		   needed.
+
+;  DTRANS_C(path-in,path-out,iostat)
+;  DCREATE_C(path,iostat)
+
+;  DOPEN_C(fd,name,status,size,iostat)
+;  DCLOSE_C(fd)
+;  DREAD_C(fd,buffer,address,length)
+;  DWRITE_C(fd,buffer,address,length)
+;  DWAIT_C(fd)
+
+max_versions = 2
+	$ssdef
+	$rabdef
+	$fabdef
+	$rmsdef
+
+; Macro to determine the length of a zero-terminate string.
+
+	.macro	len	string,length
+	locc	#0,#^xFFFF,string	; Locate terminating zero.
+	subw3	r0,#^xFFFF,length	; Set length.
+	movzwl	length,length		; Convert length to longword.
+	.endm
+
+	.psect	$local,rd,wrt,pic,noshr,long,noexe
+fhc:	$xabfhc			; XAB so we can ge file length.
+fab:	$fab	dnm=<[].;>,fac=<bio,get,put>,fop=<tef>,org=seq,rfm=stmlf,-
+		alq=512,deq=512
+fablen	  = .-fab
+rab:	$rab	rop=<asy,bio>
+efn:	.long	0
+totlen = . - fab
+
+	.psect	$code,rd,nowrt,exe,pic,shr,long
+
+; subroutine dtrans_c(inpath,outpath,iostat)
+
+; Translate a hybrid VMS / UNIX directory specification into a VMS
+; specification.
+
+inpath  = 4
+outpath = 8
+iostat  =12
+
+	.entry	dtrans_c,^m<r2,r3,r4,r5>
+	clrl	@iostat(ap)
+	len	@inpath(ap),r0			; Get length of on inpath.
+
+; Trim off a possible ".DIR;1" specification.
+
+	movl	r0,-(sp)
+	locc	#^a";",r0,@inpath(ap)		; Locate semicolon.
+	movzwl	r0,r0				; Convert to long.
+	subl3	r0,(sp)+,r0			; New length, without version.
+	cmpl	#4,r0				; Are there less than 4 chars?
+	bgeq	9$				; Branch if so.
+	movab	@inpath(ap),r1			; Get address of string.
+	movab	-4(r1)[r0],r1			; Address of 4th last char.
+	cmpb	#^a".",(r1)			; Is it a period?
+	bneq	9$				; Branch if not.
+	cmpb	#^a"D",1(r1)			; Is the next "D" or "d"
+	beql	6$
+	cmpb	#^a"d",1(r1)
+	bneq	9$
+6$:	cmpb	#^a"I",2(r1)
+	beql	7$
+	cmpb	#^a"i",2(r1)
+	bneq	9$
+7$:	cmpb	#^a"R",3(r1)
+	beql	8$
+	cmpb	#^a"r",3(r1)
+	bneq	9$
+8$:	subl2	#4,r0				; Strip off ".DIR".
+	
+	
+9$:	addl3	#3,r0,r1			; Longword align.
+	bicl2	#^b11,r1
+	subl2	r1,sp				; Space on stack.
+
+; Loop converting "/" and "]" to ".". Remember if we notice a "[".
+
+	clrl	r4				; Flag if we find a [.
+	movab	(sp),r2
+	movab	@inpath(ap),r3
+	movl	r0,r1
+	beql	40$
+10$:	cmpb	(r3),#^a"["			; Is it a "["
+	beql	17$
+	cmpb	(r3),#^a"/"			; Is is slash?
+	beql	15$
+	cmpb	(r3),#^a"]"
+	bneq	20$
+15$:	movb	#^a".",(r2)+			; Replace with a period.
+	incl	r3
+	sobgtr	r1,10$
+	brb	30$
+17$:	incl	r4				; Indicate we found "[".
+20$:	movb	(r3)+,(r2)+			; Transfer byte.
+	sobgtr	r1,10$
+
+; Copy directory spec to output.
+
+30$:	movab	@outpath(ap),r2			; Address of output.
+	tstl	r4				; Did we find a "[".
+	bneq	40$				; Branch if so.
+	movw	#^a"[.",(r2)+			; Start dir spec with "[.".
+40$:	movc3	r0,(sp),(r2)			; Copy the bulk of it.
+50$:	cmpb	-(r3),#^a"."			; Trim trailing periods.
+	beql	50$
+	movb	#^a"]",1(r3)			; Terminate with a "]".
+	clrb	2(r3)				; Zero terminate.
+	ret
+
+; subroutine dmkdir_c(path,iostat)
+
+path   = 4
+iostat = 8
+	.entry	Dmkdir_c,^m<>
+	clrl	@iostat(ap)
+	len	@path(ap),r0
+	pushab	@path(ap)
+	pushl	r0
+	movaq	(sp),r0
+	pushl	#max_versions
+	pushal	(sp)
+	pushl	#0
+	clrq	-(sp)
+	pushaq	(r0)
+	calls	#5,g^lib$create_dir
+	bsbw	ret_err
+	ret
+
+read:	.ascii	"read"
+readl=.-read
+write:	.ascii	"write"
+writel=.-write
+scratch: .ascii	"scratch"
+scratchl=.-scratch
+append:	.ascii	"append"
+appendl=.-append
+
+; subroutine DOPEN_C(fd,name,status,size,iostat)
+
+; This opens a file and readies for block i/o. An event flag is also allocated.
+; Remember to clean everything up if an error occurs.
+
+fd	= 4
+name	= 8
+status	=12
+size	=16
+iostat	=20
+
+	.entry	DOpen_c,^m<r2,r3,r4,r5,r6,r7>
+	clrl	@iostat(ap)
+
+; Allocate and initialise a fab/rab.
+
+	pushl	#totlen				; Arg list to allocate a fab/rab.
+	calls	#1,g^malloc
+	movl	r0,@fd(ap)
+	bgtr	10$
+	pushab	b^5$
+	pushl	#^a"f"
+	calls	#2,bug_c
+5$:	.asciz	"Error allocating memory, in DOPEN"
+;	pushal	@fd(ap)
+;	pushal	4(sp)
+;	calls	#2,g^lib$get_vm
+;	bsbw	ret_err				; Return on error.
+
+10$:	movl	@fd(ap),r7			; Get fab/rab address.
+	movc3	#totlen,fab,(r7)		; Initialise.
+	movl	@fd(ap),r7			; Get fab/rab address into r7.
+	pushal	efn-fab(r7)			; Address of event flag.
+	calls	#1,g^lib$get_ef			; Get an event flag into ctx field.
+	bsbw	sig_err				; Check for bugs.
+	$clref_s efn-fab(r7)			; Clear the event flag.
+	bsbw	sig_err
+	movab	@name(ap),fab$l_fna(r7)		; Fill in file name
+	len	@name(ap),r0			; Get the length,
+	movb	r0,fab$b_fns(r7)		;  .. and file name length.
+	movab	fhc,r0				; Get address of header xab.
+	movab	(r0),fab$l_xab(r7)		; Link in the header xab.
+	clrl	xab$l_ebk(r0)			; Initialise file length
+	clrw	xab$w_ffb(r0)			;  ... to zero.
+
+	len	@status(ap),r6
+	cmpc5	#readl,read,#^a" ",r6,@status(ap) ; Is it old?
+	beql	40$				; Branch to old processing.
+	cmpc5	#scratchl,scratch,#^a" ",r6,@status(ap)
+	beql	50$
+	cmpc5	#appendl,append,#^a" ",r6,@status(ap)	; Is it append?
+	beql	55$
+	cmpc5	#writel,write,#^a" ",r6,@status(ap)	; Is it new?
+	beql	60$				; Branch to new processing.
+	movab	b^35$,r1
+	brw	err_mess
+35$:	.ascic	"Unrecognised STATUS in Dopen"
+
+; "read".
+
+40$:	bicb2	#fab$m_put,fab$b_fac(r7)	; Disable writes to the file.
+	$open	fab=(r7)			; Open it.
+	blbc	r0,65$
+	brb	70$
+
+; "scratch" "append" and "write".
+
+50$:	bisl2	#fab$m_tmd,fab$l_fop(r7) ; For scratch, make it temporary file.
+	brb	62$
+55$:	bisl2	#fab$m_cif,fab$l_fop(r7) ; For append, create if non-existent.
+	brb	62$
+60$:	bisl2	#fab$m_sup,fab$l_fop(r7) ; For write, supercede any existing.
+62$:	$create	fab=(r7)		 ; Create it!
+	blbs	r0,70$			 ; Branch on success.
+
+; Open failed. Clean up.
+
+65$:	movl	r0,@iostat(ap)			; Save error status.
+	bsbw	close_up2
+	ret
+
+; Now connect the record stream.
+
+70$:	clrl	fab$l_xab(r7)			; Free the header xab.
+	movab	fhc,r3				; Get address of header xab.
+	subl3	#1,xab$l_ebk(r3),r0		; Determine the file length
+	mull2	#512,r0				;  ... in bytes.
+	movzwl	xab$w_ffb(r3),r1
+	addl3	r0,r1,@size(ap)
+	moval	(r7),fablen+rab$l_fab(r7)	; Save fab address in rab.
+	$connect rab=fablen(r7)			; Connect.
+	blbs	r0,80$				; Skip on success.
+	movl	r0,@iostat(ap)			; Save error status.
+	bsbw	close_up			; Tidy up.
+80$:	ret					; Return.
+
+
+; Routine to close up a file.
+
+close_up:
+	$close	fab=(r7)			; Close it
+	bsbw	sig_err				; ... and check for bugs.
+close_up2:
+	pushal	efn-fab(r7)
+	calls	#1,g^lib$free_ef		; Free the event flag.
+	bsbw	sig_err				; Should never get an error.
+;	pushl	#totlen				; Free the memory.
+;	pushal	(r7)
+;	pushal	4(sp)
+;	calls	#2,g^lib$free_vm
+;	bsbw	sig_err
+;	addl2	#4,sp				; Tidy stack.
+	pushal	(r7)
+	calls	#1,g^free
+	tstl	r0
+	beql	10$
+	pushab	b^5$
+	pushl	#^a"f"
+	calls	#2,bug_c
+5$:	.asciz	"Error deallocating memory, in DCLOSE"
+
+10$:	rsb
+
+; subroutine DClose(fd,iostat)
+
+fd     = 4
+iostat = 8
+
+; Close up shop. If it was a scratch file, then it will be deleted
+; when the thing closes.
+
+
+	.entry	DClose_c,^m<r7>
+	clrl	@iostat(ap)
+	movl	fd(ap),r7
+	bicl2	#fab$m_dlt,fab$l_fop(r7)	; Save it on close.
+	bsbw	close_up
+	ret
+
+; subroutine Dread(fd,buffer,offset,length,iostat)
+; subroutine Dwrite(fd,buffer,offset,length,iostat)
+
+fd	= 4
+buffer	= 8
+offset	=12
+length	=16
+iostat	=20
+
+; A asynchronous block i/o routine.
+
+dio:	clrl	@iostat(ap)
+	addl3	#rab-fab,fd(ap),r7
+	$clref_s efn-rab(r7)			; Clear the event flag.
+	cmpw	r0,#ss$_wasset			; Its an error if its set.
+	bneq	10$
+	movab	b^5$,r1
+	brw	err_mess
+5$:	.ascic	"Call to DIO while i/o in progress"
+10$:	bsbw	ret_err
+	divl3	#512,offset(ap),r1
+	addl3	#1,r1,rab$l_bkt(r7)		; Set start block.
+	movl	length(ap),r0			; Transfer length.
+	movab	@buffer(ap),r1			; Transfer buffer.
+	rsb
+
+; Do a write.
+	.entry	dwrite_c,^m<r7>
+	bsbw	dio
+	movw	r0,rab$w_rsz(r7)
+	movab	(r1),rab$l_rbf(r7)
+	$write	rab=(r7),suc=fin,err=fin
+	bsbw	ret_err
+	ret
+
+; Do a read.
+	.entry	dread_c,^m<r7>
+	bsbw	dio
+	incw	r0
+	bicw3	#1,r0,rab$w_usz(r7)
+	movab	(r1),rab$l_ubf(r7)
+	$read	rab=(r7),suc=fin,err=fin
+	bsbw	ret_err
+	ret
+
+; Completion ast routines, one for writing, the other for reading.
+
+rabadr = 4
+
+fin:	.word	^m<r7>
+	movab	@rabadr(ap),r7		; Get rab address.
+	$setef_s efn-rab(r7)		; Set the event flag.
+	ret
+
+; subroutine DWait_c(lu,iostat)
+
+; Wait for i/o on a particular unit to complete.
+
+	.entry	DWait_c,^m<r7>
+	movl	fd(ap),r7
+	$waitfr_s efn-fab(r7)		; Wait!
+	bsbw	ret_err			; Check out the bugs!
+	$clref_s  efn-fab(r7)		; Clear it again.
+	bsbw	ret_err
+	movl	rab-fab+rab$l_sts(r7),r0 ; Get the completion code.
+	bsbw	ret_err
+	ret
+
+; Signal and error, with a message.
+; r1 = ascic of the message.
+
+err_mess:
+	movzbl	(r1)+,r0
+	movq	r0,-(sp)
+	pushal	(sp)
+	pushl	#^x10DC
+	calls	#2,g^lib$stop
+
+
+; Check for an error.
+; r0 = completion code.
+sig_err:
+	blbs	r0,10$
+	pushl	r0
+	calls	#1,g^lib$signal
+	halt
+10$:	rsb
+ret_err:
+	blbs	r0,20$
+	movzbl	(ap),r1			; get number of subroutine args.
+	moval	(ap)[r1],r1		; Get indirect address of last.
+	movl	r0,@(r1)		; Save iostat in last.
+	ret
+20$:	rsb
+	.end
