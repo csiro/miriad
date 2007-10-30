@@ -172,7 +172,8 @@ c                  because Doug needed it
 c    25oct94  bpw  introduce option 'eformat'
 c    22nov94  bpw  fixed non-plotting: forgot to change some values of plotvar
 c                  parameters (equivalent to a C 'enum').
-c
+c    10jan96  rjs  Use MAXDIM to determine MAXRUNS parameter.
+c     9apr96  rjs  Changed dfloat to dble.
 c------------------------------------------------------------------------
 
 c Main program of imstat and imspec. Puts out the identification, where
@@ -1104,6 +1105,8 @@ c statistics for a subcube with one higher dimension, etc.
       character*(*)    axlabel(*)
       character*(*)    device
       include          'imspec.h'
+      integer          MAXRUNS
+      parameter(MAXRUNS=3*MAXDIM)
 
       integer          subcube, i
       integer          iloop, nloop
@@ -1115,7 +1118,7 @@ c statistics for a subcube with one higher dimension, etc.
       real             data(MAXBUF/2)
       logical          mask(MAXBUF/2)
 
-      integer          runs(3,2048), nruns
+      integer          runs(3,MAXRUNS), nruns
       
       logical          inbox, init(MAXNAX)
       double precision v
@@ -1144,7 +1147,7 @@ c loop over all subcubes for which statistics are to be calculated.
          call xyzs2c( tinp, subcube, coo )
 
          if( abs(dim).eq.2 )
-     *     call boxruns(  naxis,coo,'r',boxes,runs,2048,nruns,
+     *     call boxruns(  naxis,coo,'r',boxes,runs,MAXRUNS,nruns,
      *                    corners(1),corners(2),corners(3),corners(4) )
 
 c if init(i)=.true., the statistics for this level must be reinitialized.
@@ -1776,7 +1779,7 @@ c Test if data are within unmasked, above the cut and inside the region
       integer dim, i
       real    data
       logical mask
-      integer runs(3,2048)
+      integer runs(3,*)
       integer corners(*)
       real    cut(*)
 
@@ -1836,7 +1839,7 @@ c Calculate the rms from the sum and sumsquared.
       double precision rms
 
       if(     npoints.ge.2 ) then
-         rms = ( sumsq - sum**2/dfloat(npoints) ) / dfloat(npoints-1) 
+         rms = ( sumsq - sum**2/dble(npoints) ) / dble(npoints-1) 
          if( rms.ge.0.d0 ) then
             rms = sqrt(rms)
             ok = .true.
