@@ -31,6 +31,7 @@ c    rjs  31jan95 Added mosIni, mosAdd. Changes to mosGeom and its helpers.
 c    rjs   2feb95 Change in mosHash to help avoid integer overflows. Avoid
 c    		  initialisation problem.
 c    rjs  13mar95 Add tolerance to checking for primary beam size.
+c    rjs  15oct96 Modify call sequence to coGeom.
 c************************************************************************
 	subroutine MosCIni
 c
@@ -391,7 +392,7 @@ c------------------------------------------------------------------------
 	include 'mostab.h'
 c
 	integer i
-	double precision crpix1,crpix2
+	double precision crpix1,crpix2,wcoeff(3)
 	character ctype*16
 c
 c  Get the cell increment -- for use later on.
@@ -402,7 +403,8 @@ c
 c  Do goemetry correction calculations.
 c
 	do i=1,npnt
-	  call coGeom(coObj,'aw/aw',radec(1,i),ucoeff(1,i),vcoeff(1,i))
+	  call coGeom(coObj,'aw/aw',radec(1,i),
+     *			ucoeff(1,i),vcoeff(1,i),wcoeff)
 	enddo
 c
 c  Allocate the arrays to determine shifts.
