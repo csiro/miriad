@@ -1,0 +1,965 @@
+c************************************************************************
+	program atmos
+	implicit none
+c
+c= atmos -- Generate ATCA-style mosaic file.
+c& rjs
+c: uv analysis
+c+
+c	ATMOS takes a list of sources (with RA and DEC), sorts them into
+c	an order to minimise the slew time between the sources, and then
+c	writes out an ATCA-style mosaic file which can be used by the
+c	ATCA on-line system to execute a mosaic observation.
+c
+c	In the mosaic file, the cycles spent on each source is adjusted
+c	to account for the slew time needed to reach each source.
+c
+c	NOTE: ATMOS assumes the ATCA does not have wrap limits. It is
+c	conceivable that the antennas might have to do a pirouette in the
+c	middle of a mosaic block to move from north to south wrap (or visa
+c	versa). This will foul up all of ATMOS's calculations.
+c@ source
+c	A text file giving a list of sources. Each line of the file contains
+c	  name ra dec
+c	The source name cannot contain blanks. RA and DEC are given as three
+c	numbers, being hh mm ss (for RA) and dd mm ss (for DEC).
+c
+c	If the source name ends in "C", it is assumed to be a calibrator.
+c	ATMOS assumes that sources follow their calibrator -- the rearrangement
+c	ensures that this continues to be so. 
+c	Note that, for calibrators in a mosaic file, the on-line imaging
+c	software (CASNAP and friends) require names of calibrators to be 10
+c	characters long and end in a "C".
+c
+c	Note that there must be at least two sources in the source list, and
+c	that the second source must not be a calibrator.
+c@ lst
+c	Start time, given either in the format hh:mm:ss or decimal
+c	hours. The default is 0:00
+c@ out
+c	Output mosaic text file. Default is mosaic.mos
+c@ cycles
+c	Number of cycles to spend on-source at each source. Default is 2.
+c@ interval
+c	Integration cycle time. Default is 15 seconds.
+c@ ref
+c	This gives the name, RA and DEC where the antennas are pointing
+c	before the mosaic sequence is executed. The default is the RA and
+c	DEC of the first source to be observed (i.e. already on source).
+c--
+c------------------------------------------------------------------------
+	include 'mirconst.h'
+	integer MAXSRC
+	parameter(MAXSRC=500)
+c
+	integer i,i0,nsrc,cycles,ncycles,iostat,length,lu
+	integer indx(MAXSRC)
+	character source(MAXSRC)*16,out*64,line*80,sfile*64
+	character ssource*16
+	double precision ra(MAXSRC),dec(MAXSRC),lst,long
+	double precision ra0,dec0,raprev,decprev
+	real interval,dt,dra,ddec
+	logical ok
+c
+c  Externals.
+c
+	integer len1
+	character hangle*11,rangle*13
+c
+c  Get the input parameters.
+c
+	call keyini
+	call keya('source',sfile,' ')
+	call keyr('interval',interval,15.)
+	call keyi('cycles',cycles,2)
+	call keya('out',out,'mosaic.mos')
+	call keyt('lst',lst,'hms',0.d0)
+	call keya('ref',ssource,' ')
+	call keyt('ref',ra0,'hms',0.d0)
+	call keyt('ref',dec0,'dms',0.d0)
+	call keyfin
+c
+c  Check inputs.
+c
+	if(sfile.eq.' ')call bug('f','Input source file must be given')
+	if(interval.le.0)call bug('f','Bad interval parameter')
+	if(cycles.le.0)call bug('f','Bad cycles parameter')
+c
+c  Read the source file.
+c
+	call RdSource(sfile,source,ra,dec,MAXSRC,nsrc)
+	if(nsrc.le.0)call bug('f','No sources given')
+c
+c  Fill in the place that we start from if necessary.
+c
+	if(ssource.eq.' ')then
+	  ssource = source(1)
+	  ra0 = ra(1)
+	  dec0 = dec(1)
+	endif
+c
+c  Give some messages.
+c
+	call output('*************************************************')
+	call output('Source file: '//sfile)
+	call output('Output file:  '//out)
+c
+c  Get the longitude of Narrabri.
+c
+	call obspar('atca','longitude',long,ok)
+	if(.not.ok)call bug('f','Could not find longitude')
+c
+c  Precess all the 1950 coordinates to 2000.
+c
+c	call output('Precessing B1950 sources ...')
+c	call doPrec(nsrc,source,ra,dec)
+c
+c  Open the output file.
+c
+	call txtopen(lu,out,'new',iostat)
+	if(iostat.ne.0)call bugno('f',iostat)
+c
+c  Sort the list into a travelling salesman order.
+c
+	call output('Optimising the slew time ...')
+	call sorter(source,ra,dec,nsrc,lst,interval,
+     *					cycles,ra0,dec0,indx)
+c
+c  Some comments.
+c
+	call output('Writing mosaic file ...')
+	call echo(lu,'Start LST is '//hangle(lst))
+c
+	line = 'Reference position = '//hangle(ra(1))//
+     *	  ' '//rangle(dec(1))
+	call echo(lu,line)
+c
+c  Loop over all the source.
+c
+	call output('Slewing from '//ssource)
+	raprev = ra0
+	decprev = dec0
+	do i=1,nsrc
+	  i0 = indx(i)
+	  call atdrive(raprev,decprev,ra(i0),dec(i0),lst,dt,ok)
+	  length = len1(source(i0))
+	  if(.not.ok)
+     *	    call bug('f','Source is not up: '//source(i0)(1:length))
+	  dra = 180./pi * (ra(i0) - ra(1))
+	  ddec = 180./pi * (dec(i0) - dec(1))
+	  ncycles = nint(dt/interval + 0.7) + cycles
+	  if(i.eq.1)then
+	    write(line,'(f9.4,f10.4,i3,a,a)')dra,ddec,cycles,'  $',
+     *							    source(i0)
+	  else
+	    write(line,'(f9.4,f10.4,i3,a,a)')dra,ddec,ncycles,'  $',
+     *							    source(i0)
+	  endif
+	  call txtwrite(lu,line,len1(line),iostat)
+	  if(iostat.ne.0)call bugno('f',iostat)
+c
+c  Give messages to keep the user awake.
+c
+	  if(dt.gt.0)then
+	    write(line,'(a,i4,a)')'Drive time to '//
+     *	    source(i0)(1:length)//' is',nint(dt),' seconds'
+	    call output(line)
+	  endif
+	  lst = lst + ncycles*interval * 2*pi/(24.*3600.)*366.25/365.25
+	  raprev = ra(i0)
+	  decprev = dec(i0)
+	enddo
+c
+	call txtclose(lu)
+c
+c  Add two cycles of dead time.
+c
+	lst = lst + 2*interval * 2*pi/(24.*3600.)*366.25/365.25
+	call output('End LST is '//hangle(lst))
+c
+c  Create an output text file containing the reference
+c
+	call txtopen(lu,'ref.txt','new',iostat)
+	if(iostat.ne.0)call bug('f','Error opening reference')
+	i0 = indx(nsrc)
+	line = source(i0)//' '//hangle(ra(i0))//' '//rangle(dec(i0))
+	call txtwrite(lu,line,len1(line),iostat)
+	if(iostat.ne.0)call bugno('f',iostat)
+	call txtclose(lu)
+	call output('End source is '//line)	
+c
+	end
+c************************************************************************
+	subroutine RdSource(sfile,source,ra,dec,MAXSRC,nsrc)
+c
+	implicit none
+	integer MAXSRC,nsrc
+	character sfile*(*),source(MAXSRC)*(*)
+	double precision ra(MAXSRC),dec(MAXSRC)
+c
+c  Read in all the sources.
+c------------------------------------------------------------------------
+	include 'mirconst.h'
+c
+	integer iostat,lu,length,k1,k2,i
+	double precision radec(6),t
+	logical ok
+	character line*128,number*32
+c
+	integer len1
+c
+	call txtopen(lu,sfile,'old',iostat)
+	if(iostat.eq.0)call txtread(lu,line,length,iostat)
+	nsrc = 0
+	dowhile(iostat.eq.0)
+	  if(length.gt.0)length = len1(line(1:length))
+	  if(length.gt.0)then
+	    nsrc = nsrc + 1
+	    if(nsrc.gt.MAXSRC)call bug('f','Too many sources')
+	    k1 = 1
+	    k2 = length
+	    call getfield(line,k1,k2,source(nsrc),length)
+	    do i=1,6
+	      call getfield(line,k1,k2,number,length)
+	      if(length.le.0)call bug('f','Decode error')
+	      call atodf(number(1:length),radec(i),ok)
+	      if(.not.ok)call bug('f','Decode error')
+	    enddo
+	    line = 'RA?DEC looks bad for '//source(nsrc)
+	    if(radec(1).lt.0.or.radec(1).gt.23.or.
+     *	       radec(2).lt.0.or.radec(2).gt.60.or.
+     *	       radec(3).lt.0.or.radec(3).gt.60.or.
+     *	       radec(4).lt.-90.or.radec(2).gt.90.or.
+     *	       radec(5).lt.0.or.radec(5).gt.60.or.
+     *	       radec(6).lt.0.or.radec(6).gt.60)
+     *		call bug('w',line)
+	    t = abs(radec(1)) + radec(2)/60. + radec(3)/3600
+	    if(radec(1).lt.0)t = -t
+	    ra(nsrc) = 15*pi/180 * t
+	    t = abs(radec(4)) + radec(5)/60. + radec(6)/3600
+	    if(radec(4).lt.0)t = -t
+	    dec(nsrc) = pi/180 * t
+	  endif
+	  call txtread(lu,line,length,iostat)
+	enddo
+c
+	call txtclose(lu)
+	if(iostat.ne.-1)call bugno('f',iostat)
+	end
+c************************************************************************
+	subroutine doPrec(nsrc,source,ra,dec)
+c
+	implicit none
+	integer nsrc
+	character source(nsrc)*(*)
+	double precision ra(nsrc),dec(nsrc)
+c
+c------------------------------------------------------------------------
+	integer i,l
+	logical b1950
+c
+	integer len1
+c
+	do i=1,nsrc
+	  call ucase(source(i))
+	  l = len1(source(i))
+	  b1950 = l.lt.2.or.source(i)(l:l).ne.'C'
+	  if(b1950) call preccer(ra(i),dec(i))
+	enddo
+c
+	end
+c************************************************************************
+	subroutine sorter(source,ra,dec,nsrc,lst,interval,
+     *	  cycles,ra0,dec0,indx)
+c
+	implicit none
+	integer nsrc,cycles,indx(nsrc)
+	double precision ra(nsrc),dec(nsrc),lst,ra0,dec0
+	real interval
+	character source(nsrc)*(*)
+c
+c  Sort the travelling salesman problem for a salesman slewing the ATCA
+c  around the sky.
+c------------------------------------------------------------------------
+	integer MAXITER,NTRY
+	parameter(MAXITER=100,NTRY=10)
+	integer i,nsucc,ntrial,nfail,n,niter
+	real sume,sume2,oldE,E,p,T,rand
+	character line*64
+	logical more
+c
+c  Externals.
+c
+	real tottime
+c
+c  Generate the initial guess at the order of travel.
+c
+	call IndxIni(source,nsrc)
+c
+c  Get the feel for the rms drive time.
+c
+	E = tottime(ra,dec,nsrc,lst,interval,cycles,ra0,dec0)
+	sume = E
+	sume2 = E**2
+	n = 1
+c
+	do i=1,NTRY
+	  call switcher(rand,.true.)
+	  E = tottime(ra,dec,nsrc,lst,interval,cycles,ra0,dec0)
+	  sume = sume + E
+	  sume2 = sume2 + E**2
+	  n = n + 1
+	enddo
+	sume = sume / n
+	sume2 = sume2 / n
+c
+c  The initial temperature is 3 times to variance in the total time.
+c
+	T = 3*sqrt(abs(sume2 - sume**2))
+	more = T.gt.interval
+	if(.not.more) call bug('w','Optimisation looks screwy')
+c
+c  Do some temperature settings.
+c
+	niter = 0
+	ntrial = 0
+	nsucc = 0
+	nfail = 0
+	dowhile(more)
+	  call switcher(rand,.true.)
+	  oldE = E
+	  E = tottime(ra,dec,nsrc,lst,interval,cycles,ra0,dec0)
+	  p = (oldE - E)/T
+	  if(p.lt.-20)then
+	    p = 0
+	  else if(p.gt.0)then
+	    p = 1
+	  else
+	    p = exp(p)
+	  endif
+	  if(p.gt.rand)then
+	    nsucc = nsucc + 1
+	  else
+	    E = oldE
+	    call switcher(rand,.false.)
+	    nfail = nfail + 1
+	  endif
+c
+c  Determine if we want to lower the temperature, or what.
+c
+	  if(nsucc.gt.10*nsrc.or.nfail.gt.100*nsrc)then
+	    T = 0.9*T
+	    nsucc = 0
+	    nfail = 0
+	    niter = niter + 1
+	  endif
+	  more = T.gt.0.2*interval.and.niter.lt.MAXITER
+c
+c  Give a message if its about time.
+c
+	  ntrial = ntrial + 1
+	  if(mod(ntrial,5000).eq.0.or.ntrial.eq.1.or..not.more)then
+	    write(line,'(a,i6,a,f8.2)')'Total Drive Time',nint(E),
+     *				       ', Time Tolerance',T
+	    call output(line)
+	  endif
+	enddo
+c
+c  Retrieve the index.
+c
+	call IndxFin(indx,nsrc)
+c
+	end
+c************************************************************************
+	subroutine IndxFin(indx,nsrc)
+c
+	implicit none
+	integer nsrc,indx(nsrc)
+c
+c------------------------------------------------------------------------
+	include 'atmos.h'
+c
+	integer ical,ical0,isrc,i
+c
+	i = 0
+	do ical=1,ncal
+	  ical0 = calidx(ical)
+	  do isrc=1,nscal(ical0)
+	    i = i + 1
+	    indx(i) = scalidx(isrc,ical0)
+	  enddo
+	enddo
+c
+	if(i.ne.nsrc)call bug('f','Consistency check failed in indxfin')
+	end
+c************************************************************************
+	subroutine IndxIni(source,nsrc)
+c
+	implicit none
+	integer nsrc
+	character source(nsrc)*(*)
+c
+c------------------------------------------------------------------------
+	include 'atmos.h'
+c
+	logical cal
+	character line*64
+	integer l,i
+c
+	integer len1
+c
+	ncal = 0
+	do i=1,nsrc
+	  l = len1(source(i))
+	  cal = source(i)(l:l).eq.'C'.or.i.eq.1
+	  if(cal)then
+	    if(ncal.gt.0)then
+	      line = 'No sources for cal '//source(i-1)
+	      if(nscal(ncal).le.1)call bug('f',line)
+	    endif
+	    ncal = ncal + 1
+	    if(ncal.gt.MAXCAL)call bug('f','Buffer overflow-MAXCAL')
+	    calidx(ncal) = ncal
+	    nscal(ncal) = 1
+	    scalidx(1,ncal) = i
+	  else
+	    if(ncal.eq.0)then
+	      line = 'No calibrator for '//source(i)
+	      call bug('f',line)
+	    endif
+	    nscal(ncal) = nscal(ncal) + 1
+	    if(nscal(ncal).gt.MAXSCAL)call bug('f',
+     *	      'Buffer overflow-MAXSCAL')
+	    scalidx(nscal(ncal),ncal) = i
+	  endif
+	enddo
+	end
+c************************************************************************
+	subroutine switcher(rand,dosw)
+c
+	implicit none
+	real rand
+	logical dosw
+c------------------------------------------------------------------------
+	include 'atmos.h'
+c
+	logical more
+	integer i1,i2,temp,ical
+c
+	more = .true.
+	dowhile(more)
+	  if(dosw)call uniform(uni,NRAN)
+	  rand = uni(1)
+c
+c  Are we going to do a intra-group swap, or a group swap.
+c
+c  Do a group swap.
+c
+	 if(uni(2).gt.0.5)then
+	    i1 = ncal*uni(3) + 1
+	    i2 = ncal*uni(4) + 1
+	    more = i1.eq.i2.or.i1.eq.1.or.i2.eq.1
+	    if(.not.more)then
+	      temp = calidx(i1)
+	      calidx(i1) = calidx(i2)
+	      calidx(i2) = temp
+	    endif
+c
+c  Do an intra-group swap.
+c
+	  else
+	    ical = ncal*uni(3) + 1
+	    i1 = (nscal(ical)-1)*uni(4) + 2
+	    i2 = (nscal(ical)-1)*uni(5) + 2
+	    more = i1.eq.i2
+	    temp = scalidx(i1,ical)
+	    scalidx(i1,ical) = scalidx(i2,ical)
+	    scalidx(i2,ical) = temp
+	  endif
+	enddo
+c
+	end
+c************************************************************************
+	real function tottime(ra,dec,nsrc,lst,interval,
+     *	  cycles,ra0,dec0)
+c
+	implicit none
+	integer nsrc
+	double precision ra(nsrc),dec(nsrc),lst,ra0,dec0
+	real interval
+	integer cycles
+c
+c  Determine the total time for this configuration.
+c
+c------------------------------------------------------------------------
+	include 'mirconst.h'
+	include 'atmos.h'
+c
+	double precision lst0,raprev,decprev
+	integer totcycle,ncycles,i1,ical,ical0,isrc
+	real dt,tdrive
+	logical ok
+c
+	lst0 = lst
+	totcycle = 0
+	tdrive = 0
+	raprev = ra0
+	decprev = dec0
+	do ical=1,ncal
+	 ical0 = calidx(ical)
+	 do isrc=1,nscal(ical0)
+	  i1 = scalidx(isrc,ical0)
+	  call atdrive(raprev,decprev,ra(i1),dec(i1),lst0,dt,ok)
+	  if(.not.ok)then
+	    tottime = 100000.
+	    return
+	  endif
+c
+	  tdrive = tdrive + dt
+	  ncycles =  (nint(dt/interval + 0.7) + cycles)
+	  totcycle = totcycle + ncycles
+	  dt = interval * ncycles
+	  lst0 = lst0 + 2*pi*366.25/365.25/24./3600. * dt
+	  raprev = ra(i1)
+	  decprev = dec(i1)
+	 enddo
+	enddo
+c
+	tottime = tdrive
+	end
+c************************************************************************
+	subroutine echo(lu,string)
+c
+	implicit none
+	integer lu
+	character string*(*)
+c------------------------------------------------------------------------
+	character line*80
+	integer iostat
+c
+	integer len1
+c
+	call output(string)
+	line = '# '//string
+	call txtwrite(lu,line,len1(line),iostat)
+	if(iostat.ne.0)call bugno('f',iostat)
+	end
+c************************************************************************
+	subroutine atdrive(ra1,dec1,ra2,dec2,lst,dt,ok)
+c
+	implicit none
+	double precision ra1,dec1,ra2,dec2,lst
+	real dt
+	logical ok
+c
+c  Determine drive time between sources for the atca antennas.
+c
+c  This accounts for a ramp up to the maximum slew rate at the
+c  start, and a ramp down at the end.
+c
+c  Input:
+c    ra1,dec1	Source driving from - radians.
+c    ra2,dec2	Source driving to - radians.
+c    lst	Local sidereal time - radians.
+c  Output:
+c    dt		Drive time in seconds.
+c    ok		True if the drive time is valid.
+c
+c  Bugs:
+c    This does not consider the wrap limits. 
+c------------------------------------------------------------------------
+	include 'mirconst.h'
+c
+c  Peak velocity and acceleration rates, in radians/sec, and radians/sec/sec.
+c  Also the critical time and distances in az and el.
+c
+	real azrate,elrate,acc,tcritaz,xcritaz,tcritel,xcritel
+	parameter(azrate=36./60.*pi/180.)
+	parameter(elrate=18./60.*pi/180.)
+	parameter(acc=400./60./60.*pi/180.)
+c
+	parameter(tcritaz = 2.*azrate/acc)
+	parameter(xcritaz = azrate*azrate/acc)
+	parameter(tcritel = 2.*elrate/acc)
+	parameter(xcritel = elrate*elrate/acc)
+c
+	real dtaz,dtel,daz,del,az1,el1,az2,el2
+	double precision lst2
+	logical more
+c
+c  Initialise the drive time to zero.
+c
+	dt = 0
+c
+c  Determine the az and elevation of the first source.
+c
+	call atazel(ra1,dec1,lst,az1,el1,ok)
+	if(.not.ok)return
+c
+c  Determine slew time to the other source.
+c
+	more = .true.
+	dowhile(more)
+	  lst2 = lst + 2*pi*366.25/365.25/(24.*3600.) * dt
+	  call atazel(ra2,dec2,lst2,az2,el2,ok)
+	  if(.not.ok)return
+c
+	  daz = abs(az1-az2)
+	  if(daz.gt.pi)daz = 2*pi - daz
+	  if(daz.lt.xcritaz)then
+	    dtaz = 2*sqrt(daz/acc)
+	  else
+	    dtaz = tcritaz + (daz-xcritaz)/azrate
+	  endif
+c
+	  del = abs(el1-el2)
+	  if(del.lt.xcritel)then
+	    dtel = 2*sqrt(del/acc)
+	  else
+	    dtel = tcritel + (del-xcritel)/elrate
+	  endif
+	  more = abs(max(dtaz,dtel) - dt).gt.1
+	  dt = max(dtaz,dtel)
+	enddo
+c
+	end
+c************************************************************************
+	subroutine atazel(ra,dec,lst,az,el,ok)
+c
+	implicit none
+	double precision ra,dec,lst
+	real az,el
+	logical ok
+c
+c  Determine the azimuth and elevation of a source.
+c
+c  Input:
+c    ra,dec	Apparent source position.
+c    lst	Local apparent sidereal time.
+c
+c  Output:
+c    az,el	Azimuth and elevation, in radians.
+c		Elevation is in the range 0 to pi/2.
+c		Azimuth is in the range -pi to pi. North
+c		corresponds to AZ 0, east to AZ of pi/2.
+c    ok		True if all is ok.
+c------------------------------------------------------------------------
+	include 'mirconst.h'
+c
+c  Observatory latitude in radians.
+c
+	double precision lat
+	parameter(lat=-dpi/180.d0*(30.d0+10.d0/60.d0+52.02/3600.d0))
+c
+c  Assume an elevation limit of 12 degrees.
+c
+	real ellimit
+	parameter(ellimit=12.*pi/180.)
+c
+	double precision ha
+c
+	ha = lst - ra
+	el = asin(sin(lat)*sin(dec) + cos(lat)*cos(dec)*cos(ha))
+	ok = el.gt.ellimit
+	if(.not.ok)return
+	az = atan2(-cos(dec)*sin(ha),
+     *		cos(lat)*sin(dec)-sin(lat)*cos(dec)*cos(ha))
+c
+	end
+c************************************************************************
+	subroutine preccer(ra,dec)
+c
+	double precision ra,dec
+c
+c------------------------------------------------------------------------
+	double precision ep1950,ep2000,pi,t
+	double precision epobsn,delra,phi,dsin,sinphi,dcos,cosphi,ras
+	double precision decs
+      double precision POS1(3), POS2(3), POS3(3), POS4(3),       
+     *     POS5(3), VEL1(3)     
+      DATA EP1950,  EP2000/2433282.423D0, 2451545.000D0 /
+
+      PI = 3.141592653589793D0  
+c
+      T = (1950.d0 - 2000.0D0) / 100.0D0  
+      EPOBSN = EP2000 + T * 36525.0D0   
+      DELRA = 0.0775D0 + 0.0851D0 * T + 0.0002D0 * T * T
+      PHI = -DELRA / 3600.0D0 * 15.0D0 * pi/180. 
+      SINPHI = DSIN(PHI)
+      COSPHI = DCOS(PHI)
+      RAS = 180/pi/15. * ra
+      DECS =180/pi * dec
+      CALL VECTRS (RAS,DECs,0.0D0,0.0D0,0.0D0,0.0D0,POS1,VEL1)   
+      CALL PRECS1 (EP1950,POS1,EPOBSN,POS2)     
+      POS3(1) =  POS2(1) * COSPHI + POS2(2) * SINPHI    
+      POS3(2) = -POS2(1) * SINPHI + POS2(2) * COSPHI    
+      POS3(3) =  POS2(3)
+      CALL PRECS2 (EPOBSN,POS3,EP2000,POS4)     
+      CALL ETERMS (EP2000,POS4,POS5)    
+      CALL gANGLES (POS5,RAS,DECs)
+c
+      ra = 15*pi/180 * ras
+      dec = pi/180 * decs
+c
+      END       
+c********1*********2*********3*********4*********5*********6*********7**
+	subroutine precs1 (tjd1,pos1,tjd2,pos2)  
+	implicit none
+	double precision tjd1,tjd2,pos1,pos2
+c       
+c     This subroutine precesses equatorial rectangular coordinates from 
+c     one epoch to another.  The coordinates are referred to the mean   
+c     equator and equinox of the two respective epochs.  See pages 30-34
+c     of the explanatory supplement to the AE.  
+c       
+C  TJD1 = JULIAN EPHEMERIS DATE OF FIRST EPOCH (IN)     
+C  POS1 = POSITION VECTOR, GEOCENTRIC EQUATORIAL RECTANGULAR    
+C COORDINATES, REFERRED TO MEAN EQUATOR AND EQUINOX OF  
+C FIRST EPOCH (IN)      
+C  TJD2 = JULIAN EPHEMERIS DATE OF SECOND EPOCH (IN)    
+C  POS2 = POSITION VECTOR, GEOCENTRIC EQUATORIAL RECTANGULAR    
+C COORDINATES, REFERRED TO MEAN EQUATOR AND EQUINOX OF  
+C SECOND EPOCH (OUT)    
+C       
+c-----------------------------------------------------------------------
+      DOUBLE PRECISION T0,T,T2,T3,SECCON,   
+     *     ZETA0,ZEE,THETA,CZETA0,SZETA0,CZEE,SZEE,CTHETA,STHETA,       
+     *     XX,YX,ZX,XY,YY,ZY,XZ,YZ,ZZ,T1LAST,T2LAST,DABS,DCOS,DSIN      
+      DIMENSION POS1(3), POS2(3)
+      DATA SECCON/206264.8062470964D0/  
+      DATA T1LAST,T2LAST/0.0D0,0.0D0/   
+C       
+      IF (DABS(TJD1-T1LAST).LT.1.0D-6.AND.DABS(TJD2-T2LAST).LT.1.0D-6)  
+     *     GO TO 20     
+C       
+      T0 = (TJD1 - 2415020.313D0) / 36524.219878D0      
+      T = (TJD2 - TJD1) / 36524.219878D0
+      T2 = T * T
+      T3 = T2 * T       
+      ZETA0 = (2304.250D0 + 1.396D0*T0)*T + 0.302D0*T2 + 0.018D0*T3     
+      ZEE = ZETA0 + 0.791D0*T2  
+      THETA = (2004.682D0 - 0.853D0*T0)*T - 0.426D0*T2 - 0.042D0*T3     
+      ZETA0 = ZETA0 / SECCON    
+      ZEE = ZEE / SECCON
+      THETA = THETA / SECCON    
+      CZETA0 = DCOS(ZETA0)      
+      SZETA0 = DSIN(ZETA0)      
+      CZEE = DCOS(ZEE)  
+      SZEE = DSIN(ZEE)  
+      CTHETA = DCOS(THETA)      
+      STHETA = DSIN(THETA)      
+C       
+C     PRECESSION ROTATION MATRIX FOLLOWS
+      XX = CZETA0*CTHETA*CZEE - SZETA0*SZEE     
+      YX = -SZETA0*CTHETA*CZEE - CZETA0*SZEE    
+      ZX = -STHETA*CZEE 
+      XY = CZETA0*CTHETA*SZEE + SZETA0*CZEE     
+      YY = -SZETA0*CTHETA*SZEE + CZETA0*CZEE    
+      ZY = -STHETA*SZEE 
+      XZ = CZETA0*STHETA
+      YZ = -SZETA0*STHETA       
+      ZZ = CTHETA       
+C       
+C     PERFORM ROTATION  
+   20 POS2(1) = XX*POS1(1) + YX*POS1(2) + ZX*POS1(3)    
+      POS2(2) = XY*POS1(1) + YY*POS1(2) + ZY*POS1(3)    
+      POS2(3) = XZ*POS1(1) + YZ*POS1(2) + ZZ*POS1(3)    
+C       
+      T1LAST = TJD1     
+      T2LAST = TJD2     
+      END       
+c********1*********2*********3*********4*********5*********6*********7**
+	subroutine precs2 (tjd1,pos1,tjd2,pos2)   
+	implicit none
+	double precision tjd1,tjd2,pos1,pos2
+C       
+C     THIS SUBROUTINE PRECESSES EQUATORIAL RECTANGULAR COORDINATES FROM 
+C     ONE EPOCH TO ANOTHER.  THE COORDINATES ARE REFERRED TO THE MEAN   
+C     EQUATOR AND EQUINOX OF THE TWO RESPECTIVE EPOCHS.  SEE PAGES 30-34
+C     OF THE EXPLANATORY SUPPLEMENT TO THE AE, AND LIESKE, ET AL. (1977)
+C     ASTRONOMY AND ASTROPHYSICS 58, 1-16.      
+C       
+C  TJD1 = TDB JULIAN DATE OF FIRST EPOCH (IN)   
+C  POS1 = POSITION VECTOR, GEOCENTRIC EQUATORIAL RECTANGULAR    
+C COORDINATES, REFERRED TO MEAN EQUATOR AND EQUINOX OF  
+C FIRST EPOCH (IN)      
+C  TJD2 = TDB JULIAN DATE OF SECOND EPOCH (IN)  
+C  POS2 = POSITION VECTOR, GEOCENTRIC EQUATORIAL RECTANGULAR    
+C COORDINATES, REFERRED TO MEAN EQUATOR AND EQUINOX OF  
+C SECOND EPOCH (OUT)    
+C       
+c-----------------------------------------------------------------------
+      DOUBLE PRECISION T0,T,T02,T2,T3,SECCON,       
+     *     ZETA0,ZEE,THETA,CZETA0,SZETA0,CZEE,SZEE,CTHETA,STHETA,       
+     *     XX,YX,ZX,XY,YY,ZY,XZ,YZ,ZZ,T1LAST,T2LAST,DABS,DCOS,DSIN      
+      DIMENSION POS1(3), POS2(3)
+      DATA SECCON/206264.8062470964D0/  
+      DATA T1LAST,T2LAST/0.0D0,0.0D0/   
+C       
+      IF (DABS(TJD1-T1LAST).LT.1.0D-6.AND.DABS(TJD2-T2LAST).LT.1.0D-6)  
+     *     GO TO 20     
+C       
+C     T0 AND T BELOW CORRESPOND TO LIESKE'S BIG T AND LITTLE T  
+      T0 = (TJD1 - 2451545.0D0) / 36525.0D0     
+      T = (TJD2 - TJD1) / 36525.0D0     
+      T02 = T0 * T0     
+      T2 = T * T
+      T3 = T2 * T       
+C     ZETA0, ZEE, AND THETA BELOW CORRESPOND TO LIESKE'S ZETA-SUB-A,    
+C     Z-SUB-A, AND THETA-SUB-A  
+      ZETA0 = (2306.2181D0 + 1.39656D0*T0 - 0.000139D0*T02) * T 
+     *      + (0.30188D0 - 0.000344D0*T0) * T2  
+     *      +  0.017998D0 * T3  
+      ZEE   = (2306.2181D0 + 1.39656D0*T0 - 0.000139D0*T02) * T 
+     *      + (1.09468D0 + 0.000066D0*T0) * T2  
+     *      +  0.018203D0 * T3  
+      THETA = (2004.3109D0 - 0.85330D0*T0 - 0.000217D0*T02) * T 
+     *      + (-0.42665D0 - 0.000217D0*T0) * T2 
+     *      -  0.041833D0 * T3  
+      ZETA0 = ZETA0 / SECCON    
+      ZEE = ZEE / SECCON
+      THETA = THETA / SECCON    
+      CZETA0 = DCOS(ZETA0)      
+      SZETA0 = DSIN(ZETA0)      
+      CZEE = DCOS(ZEE)  
+      SZEE = DSIN(ZEE)  
+      CTHETA = DCOS(THETA)      
+      STHETA = DSIN(THETA)      
+C       
+C     PRECESSION ROTATION MATRIX FOLLOWS
+      XX = CZETA0*CTHETA*CZEE - SZETA0*SZEE     
+      YX = -SZETA0*CTHETA*CZEE - CZETA0*SZEE    
+      ZX = -STHETA*CZEE 
+      XY = CZETA0*CTHETA*SZEE + SZETA0*CZEE     
+      YY = -SZETA0*CTHETA*SZEE + CZETA0*CZEE    
+      ZY = -STHETA*SZEE 
+      XZ = CZETA0*STHETA
+      YZ = -SZETA0*STHETA       
+      ZZ = CTHETA       
+C       
+C     PERFORM ROTATION  
+   20 POS2(1) = XX*POS1(1) + YX*POS1(2) + ZX*POS1(3)    
+      POS2(2) = XY*POS1(1) + YY*POS1(2) + ZY*POS1(3)    
+      POS2(3) = XZ*POS1(1) + YZ*POS1(2) + ZZ*POS1(3)    
+C       
+      T1LAST = TJD1     
+      T2LAST = TJD2     
+      END       
+c********1*********2*********3*********4*********5*********6*********7**
+	subroutine vectrs (ra,dec,pmra,pmdec,parllx,rv,pos,vel)   
+	implicit none
+	double precision ra,dec,pmra,pmdec,parllx,rv,pos,vel
+C       
+C     THIS SUBROUTINE CONVERTS ANGULAR QUATITIES TO VECTORS.    
+C       
+C  RA     = RIGHT ASCENSION IN HOURS (IN)       
+C  DEC    = DECLINATION IN DEGREES (IN) 
+C  PMRA   = PROPER MOTION IN RA IN SECONDS OF TIME PER  
+C   JULIAN CENTURY (IN) 
+C  PMDEC  = PROPER MOTION IN DEC IN SECONDS OF ARC PER  
+C   JULIAN CENTURY (IN) 
+C  PARLLX = PARALLAX IN SECONDS OF ARC (IN)     
+C  RV     = RADIAL VELOCITY IN KILOMETERS PER SECOND (IN)       
+C  POS    = POSITION VECTOR, EQUATORIAL RECTANGULAR COORDINATES,
+C   COMPONENTS IN AU (OUT)      
+C  VEL    = VELOCITY VECTOR, EQUATORIAL RECTANGULAR COORDINATES,
+C   COMPONENTS IN AU/DAY (OUT)  
+c-----------------------------------------------------------------------
+      DOUBLE PRECISION
+     *     SECCON,KMAU,PARALX,DIST,R,D,CRA,SRA,CDC,SDC,PMR,PMD,RVL,     
+     *     DCOS,DSIN    
+      DIMENSION POS(3), VEL(3)  
+      DATA SECCON/206264.8062470964D0/,     KMAU/1.49600D8/     
+C       
+C     IF PARALLAX IS UNKNOWN, UNDETERMINED, OR ZERO, SET IT TO 1/10,000,000     
+C     SECOND OF ARC, CORRESPONDING TO A DISTANCE OF 10 MEGAPARSECS      
+      PARALX = PARLLX   
+      IF (PARALX.LE.0.0D0) PARALX = 1.0D-7      
+C       
+C     CONVERT RIGHT ASCENSION, DECLINATION, AND PARALLAX TO POSITION VECTOR     
+C     IN EQUATORIAL SYSTEM WITH UNITS OF AU     
+      DIST = SECCON / PARALX    
+      R = RA * 54000.0D0 / SECCON       
+      D = DEC * 3600.0D0 / SECCON       
+      CRA = DCOS(R)     
+      SRA = DSIN(R)     
+      CDC = DCOS(D)     
+      SDC = DSIN(D)     
+      POS(1) = DIST * CDC * CRA 
+      POS(2) = DIST * CDC * SRA 
+      POS(3) = DIST * SDC       
+C       
+C     CONVERT PROPER MOTION AND RADIAL VELOCITY TO ORTHOGONAL COMPONENTS
+C     OF MOTION WITH UNITS OF AU/DAY    
+      PMR = PMRA * 15.0D0 * CDC / (PARALX * 36525.0D0)  
+      PMD = PMDEC / (PARALX * 36525.0D0)
+      RVL = RV * 86400.0D0 / KMAU       
+C       
+C     TRANSFORM MOTION VECTOR TO EQUATORIAL SYSTEM      
+      VEL(1) = - PMR * SRA   - PMD * SDC * CRA   + RVL * CDC * CRA      
+      VEL(2) =   PMR * CRA   - PMD * SDC * SRA   + RVL * CDC * SRA      
+      VEL(3) = PMD * CDC + RVL * SDC    
+C       
+      END       
+c********1*********2*********3*********4*********5*********6*********7**
+	subroutine gangles (pos,ra,dec)    
+	implicit none
+	double precision pos,ra,dec
+C       
+C     THIS SUBROUTINE CONVERTS A VECTOR TO ANGULAR QUANTITIES.  
+C       
+C  POS = POSITION VECTOR, EQUATORIAL RECTANGULAR COORDINATES (IN)       
+C  RA  = RIGHT ASCENSION IN HOURS (OUT) 
+C  DEC = DECLINATION IN DEGREES (OUT)   
+c-----------------------------------------------------------------------
+      DOUBLE PRECISION SECCON,XYPROJ,R,D,DSQRT,DATAN2
+      DIMENSION POS(3)  
+      DATA SECCON/206264.8062470964D0/  
+      XYPROJ = DSQRT(POS(1)**2 + POS(2)**2)     
+      R = DATAN2(POS(2),POS(1)) 
+      D = DATAN2(POS(3),XYPROJ) 
+      RA = R * SECCON / 54000.0D0       
+      DEC = D * SECCON / 3600.0D0       
+      IF (RA.LT.0.0D0) RA = RA + 24.0D0 
+      END       
+c********1*********2*********3*********4*********5*********6*********7**
+	subroutine eterms (tjd,pos1,pos2) 
+	implicit none
+	double precision tjd,pos1,pos2
+C       
+C     THIS SUBROUTINE REMOVES THE ELLIPTIC TERMS OF ABERRATION FROM THE 
+C     MEAN PLACES OF STARS AT EPOCH TJD, BY APPLYING CORRECTIONS TO     
+C     THE MEAN PLACE POSITION VECTOR COMPONENTS.  THEREFORE THIS
+C     SUBROUTINE CONVERTS CATALOG MEAN PLACES TO TRUE MEAN PLACES.      
+C       
+C  TJD  = JULIAN EPHEMERIS DATE OF EPOCH (IN)   
+C  POS1 = POSITION VECTOR OF CATALOG MEAN PLACE, EQUATORIAL     
+C RECTANGULAR COORDINATES (IN)  
+C  POS2 = POSITION VECTOR OF TRUE MEAN PLACE, EQUATORIAL
+C RECTANGULAR COORDINATES (OUT) 
+c-----------------------------------------------------------------------
+      DOUBLE PRECISION SECCON,K,TLAST,RADCON,T,T2,
+     *     OBL,E,LONPER,KE,COBL,SOBL,CPER,SPER,R,DABS,DSIN,DCOS,DSQRT   
+      DIMENSION POS1(3), POS2(3)
+      DATA SECCON/206264.8062470964D0/,     K/20.496D0/ 
+      DATA TLAST/0.0D0/ 
+      IF (DABS(TJD-TLAST).LT.1.0D-6) GO TO 20   
+      RADCON = 3600.0D0 / SECCON
+      T = (TJD - 2415020.0D0) / 36525.0D0       
+      T2 = T * T
+      OBL = (23.452294D0 - 0.0130125D0*T - 0.00000164D0*T2) * RADCON    
+      E = 0.01675104D0 - 0.00004180D0*T - 0.000000126D0*T2      
+      LONPER = (101.220844D0 + 1.719175D0*T + 0.000453D0*T2) * RADCON   
+      KE = K/SECCON * E 
+      COBL = DCOS(OBL)  
+      SOBL = DSIN(OBL)  
+      CPER = DCOS(LONPER)       
+      SPER = DSIN(LONPER)       
+      TLAST = TJD       
+C       
+   20 R = DSQRT (POS1(1)**2 + POS1(2)**2 + POS1(3)**2)  
+      POS2(1) = POS1(1) + R * KE * SPER 
+      POS2(2) = POS1(2) - R * KE * CPER * COBL  
+      POS2(3) = POS1(3) - R * KE * CPER * SOBL  
+C       
+      END       
