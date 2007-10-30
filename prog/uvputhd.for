@@ -12,6 +12,7 @@ c      pjt  2-jul-91  added notes on PUTHD in doc file and more witty comments
 c                     also uses keyf() now.
 c      mjs  7-apr-92  elim unused var -> elim compiler warning.
 c      pjt  6-aug-92  fixed read(,*,) to read(,'(a)',) for avarnew (READVAL)
+c      pjt/sally 31-mar-97  defined MAXVAL and increased from 8 to 16
 c
 c------ Inline doc (retrieved with doc to a .doc file) --------------72]
 c
@@ -48,13 +49,15 @@ c@ out
 c    Name of the output dataset. No default.
 c-----------------------------------------------------------------------
         include 'maxdim.h'
-	character version*(*),infile*50,varval(8)*30,hdvar*10
+	INTEGER MAXVAL
+	PARAMETER (MAXVAL=16)
+	character version*(*),infile*50,varval(MAXVAL)*30,hdvar*10
         character outfile*50,except(20)*10,newtype*1,line*80
-	parameter(version='(Version 6-aug-92)')
-	integer nread,inset,outset,i,nexcept,nwread,nvals,newlong
+	parameter(version='(Version 31-mar-97)')
+	integer nread,inset,outset,nexcept,nwread,nvals,newlong,nval
 	double precision preamble(4)
-	complex data(maxchan),wdata(maxchan)
-	logical flags(maxchan),wflags(maxchan),there,first
+	complex data(MAXCHAN),wdata(MAXCHAN)
+	logical flags(MAXCHAN),wflags(MAXCHAN),there,first
 c
 	call output('UVPUTHD: '//version)
 	call keyini
@@ -63,9 +66,7 @@ c
 	call keya('type',newtype,' ')
 	call keyi('length',newlong,1)
 	call keyi('nvals',nvals,1)
-	do i=1,nvals
-	   call keya('varval',varval(i),' ')
-        enddo  
+	call mkeya('varval',varval,MAXVAL,nval)
 	call keya('out',outfile,' ')
 	call keyfin
 c-----------------------------------------------------------------------
@@ -79,6 +80,8 @@ c-----------------------------------------------------------------------
      *                          'No value given for variable (varval=)')
 	if(outfile.eq.' ') call bug('f',
      *                             'No output dataset specified (out=)')
+	if (nval.NE.nvals) call bug('f','Wrong number of varval''s')
+
 c-----------------------------------------------------------------------
 c
 c  open input file
