@@ -23,6 +23,7 @@
 			and documented this feature
        13-mar-95  rjs   Increase max number of open items.
        30-jun-95  rjs   Declaration to appease gcc.
+       15-may-96  rjs	More fiddles with roundup macro.
 */
 
 
@@ -32,8 +33,6 @@
 #include "hio.h"
 
 #define private static
-#define TRUE 1
-#define FALSE 0
 #if !defined(NULL)
 #  define NULL 0
 #endif
@@ -103,22 +102,18 @@ private int first=TRUE;
 
 /* Declare a few private routines. */
 
-private void hcheckbuf_c(),hcache_read_c(),hcache_write_c(),hrelease_item_c(),
+private void hcheckbuf_c(),hcache_read_c(),hrelease_item_c(),
   hcache_create_c(),hwrite_fill_c(),hdir_c(),hinit_c();
 private int hname_check();
 private ITEM *hcreate_item_c();
 private TREE *hcreate_tree_c();
 
-/* Min and max value macros. */
-
-#define min(a,b) ((a) <= (b) ? (a) : (b))
-#define max(a,b) ((a) >= (b) ? (a) : (b))
-#define roundup(a,b) ((b)*(((a)+(b)-1)/(b)))
 #define check(iostat) if(iostat) bugno_c('f',iostat)
 
 /* Define a few things so that I can avoid lint being pedantic. */
 
-void bug_c(),bugno_c(),dopendir_c(),dclosedir_c(),dreaddir_c();
+void bug_c(),bugno_c(),dopendir_c(),dclosedir_c(),dreaddir_c(),drmdir_c();
+void ddelete_c(),pack16_c(),unpack16_c();
 void dtrans_c(),dmkdir_c(),dopen_c(),dclose_c(),dread_c(),dwrite_c();
 
 private int hfind_nl();
@@ -276,7 +271,7 @@ int tno,*iostat;
         }
 	item->io[0].state = IO_VALID;
 	item->flags |= ITEM_CACHE;
-        offset += roundup(item->size,CACHE_ENT);
+        offset += mroundup(item->size,CACHE_ENT);
       }
     }
     hdaccess_c(ihandle,iostat);					if(*iostat)return;
@@ -1287,7 +1282,7 @@ TREE *t;
     item->io[0].state = IO_VALID;
     item->io[0].buf = Malloc(item->size);
     hreadb_c(ihandle,item->io[0].buf,offset,item->size,iostat);	check(*iostat);
-    offset += roundup(item->size,CACHE_ENT);
+    offset += mroundup(item->size,CACHE_ENT);
   }
   if(*iostat != -1) bug_c('f',"hcache_read_c: Something wrong reading cache");
   hdaccess_c(ihandle,iostat);
