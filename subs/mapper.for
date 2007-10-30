@@ -15,6 +15,7 @@ c    rjs   8dec94 Check MAXDIM is big enough. Better messages.
 c    rjs  12jan95 Fixed bug dealing with the amount of memory to allocate.
 c    rjs  13jan95 Second try at the above.
 c    rjs  16jan93 A third try at the above.
+c    rjs   4aug95 Check that the beam is non-zero. Bug out if not.
 c************************************************************************
 	subroutine MapFin
 c
@@ -113,6 +114,7 @@ c
 	  pMap = pBuff + 2*nu*nv*npnt*(ichan-chan1) + nextra
 	  do i=1,npnt
 	    call MapVSum(memr(pMap+(i-1)*2*nu*nv),nu*nv,Sum)
+	    if(Sum.eq.0)call bug('f','No data found for pointing')
 	    Scale(i) = 0.5/Sum
 	  enddo
 	else
@@ -120,6 +122,7 @@ c
      *	    'Cannot handle multiple pointings for DFT or MEDIAN mode')
 	  call MapSlowS(tscr,nvis,offcorr+2*(ichan-1),
      *					offcorr+2*totchan-1,Sum)
+	  if(Sum.eq.0)call bug('f','No data found for pointing')
 	  if(mode.eq.'median')then
 	    Scale(1) = nvis/Sum
 	  else
