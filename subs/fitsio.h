@@ -5,7 +5,7 @@ c  Parameters setting internal buffers.
 c  NOTE: We should ensure that 13*MAXCHAN is greater than MAXDIM.
 c
 	integer MAXSIZE,MAXCARDS,MAXOPEN
-	parameter(MAXSIZE=13*MAXCHAN,MAXCARDS=16,MAXOPEN=2)
+	parameter(MAXSIZE=13*MAXCHAN,MAXCARDS=16,MAXOPEN=4)
 c
 c  Parameters associated with the FITS file as a whole.
 c  NOTE: DatOff,DatBase and new are used by higher level routines.
