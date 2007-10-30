@@ -826,6 +826,7 @@ c
            if (hard.eq.'YES') then
              call ofminq (iofm)
              if (iofm.eq.1) reverse = .true.
+             if (iofm.eq.9) call ofmfudge
            end if
 c
            if (reverse) then
@@ -3301,7 +3302,7 @@ c Find hyper-rectangle surrounding region of interest from highest
 c dimension image involved (i.e., 2-D/3-D).
 c
       call boxinfo (boxes, 3, blc, trc)
-      do i = 1, naxis
+      do i = 1, min(3,naxis)
         blc(i) = max(1,blc(i))
         trc(i) = min(size(i),trc(i))
       end do
