@@ -7,6 +7,7 @@ c    23nov94 rjs  Fix labelling of velocity axis for velocity linetype.
 c    25apr95 rjs  Write "object" rather than "source" item.
 c     1nov95 rjs  Added HdDefSiz
 c     1jul99 rjs  Create somewhat better headers.
+c    28jul99 rjs  Initialise pbtype.
 c************************************************************************
 	subroutine HdInit(mfs1,mosaic1)
 c
@@ -141,8 +142,8 @@ c
 	  crval2 = crval2 + ddec
 	  call uvrdvrd(tno,'pntra', obsra,crval1)
 	  call uvrdvrd(tno,'pntdec',obsdec,crval2)
-	  call pbRead(tno,pbtype)
 	endif
+	call pbRead(tno,pbtype)
 	call uvrdvrr(tno,'epoch',epoch,1950.0)
 c
 c  Miscellaneous.
