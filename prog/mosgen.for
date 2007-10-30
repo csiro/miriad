@@ -45,7 +45,7 @@ c------------------------------------------------------------------------
 	parameter(MAXPNT=2048)
 	character device*64,line*16,line1*80,name*12,logf*80,mode*8
 	character telescop*16
-	logical more
+	logical more,first
 	integer i,j,nx,ny,s,npnt,lu,cycles,l,nout
 	double precision ra,dec,x1(2),x2(2)
 	real h,v,widthx,widthy,freq
@@ -83,10 +83,6 @@ c
 	l = len1(name)
 c
 	call logOpen(logf,' ')
-	line1 = stcat('# Reference position is '//hangleh(ra),
-     *					     ','//rangleh(dec))
-	call logWrite(line1,more)
-	call logInput('mosgen')
 c
 	call coRaDec(lu,'SIN',ra,dec)
         call coAxSet(lu,3,'FREQ',1.d0,dble(freq),0.1d0*dble(freq))
@@ -106,12 +102,24 @@ c	v = PI/180*v
 	j = -ny
 	s =  1
 	npnt = 0
+	first = .true.
 	more = .true.
 	dowhile(more)
 	  x1(1) = i*h
 	  x1(2) = j*v
 	  call CoCvt(lu,'op/op',x1,'aw/aw',x2)
 	  call CoCvt(lu,'aw/aw',x2,'ow/ow',x1)
+c
+	  if(first)then
+	    ra = x2(1)
+	    dec = x2(2)
+	    line1 = stcat('# Reference position is '//hangleh(x2(1)),
+     *					         ','//rangleh(x2(2)))
+	    call logWrite(line1,more)
+	    call logInput('mosgen')
+	    first = .false.
+	  endif
+	
 	  npnt = npnt + 1
 	  if(npnt.gt.MAXPNT)call bug('f','Too many pointings')
 	  x(npnt) = 180/PI*x1(1)
