@@ -273,7 +273,8 @@ c                  '*lin' -> '*nat'
 c    nebk 29nov95  Add world coords to statistics output and new
 c                  call for CONTURCG
 c    nebk 18dec95  New call for VPSIZCG (arg. DOABUT)
-c
+c    nebk 30jan96  Remove restrictions on CHAN so groups of channels
+c		   can now overlap
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -311,7 +312,7 @@ c
       data dmm /1.0e30, -1.0e30/
       data gaps, doabut /.false., .false./
 c-----------------------------------------------------------------------
-      call output ('CgCurs: version 18-Dec-95')
+      call output ('CgCurs: version 30-Jan-95')
       call output (' ')
 c
 c Get user inputs
@@ -329,7 +330,7 @@ c
 c Finish key inputs for region of interest now
 c
       call region (in, naxis, size, ibin, jbin, kbin, blc, trc,
-     +             win, maxchan, grpbeg, ngrp, ngrps)
+     +             win, ngrps, grpbeg, ngrp)
 c
 c Try to allocate memory for images.  Need a copy of the image
 c if we have histogram equalized it and want to use the
@@ -1796,7 +1797,6 @@ c
       call keyi ('chan', kbin(2), 1) 
       kbin(1) = max(kbin(1), 1)
       kbin(2) = max(kbin(2), 1)
-      if (kbin(2).gt.kbin(1)) kbin(2) = kbin(1)
 c
       call keya ('slev', levtyp, 'a')
       call keyr ('slev', slev, 0.0)
@@ -2160,7 +2160,7 @@ c
 c
 c
       subroutine region (in, naxis, size, ibin, jbin, kbin, blc, trc,
-     +                   win, maxgrp, grpbeg, ngrp, ngrps)
+     +                   win, ngrps, grpbeg, ngrp)
 c----------------------------------------------------------------------
 c     Finish key routine inputs for region of interest now.
 c
@@ -2169,8 +2169,8 @@ c    in            Image file name
 c    naxis         Number of dimensions of image
 c    size          Dimensions of image
 c    i,j,kbin      Pixel increment and binning in x,yz directions
-c    maxgrp        Maximum nuber of groups of channels
 c  Output:
+c    ngrps         Number of groups of channels.
 c    grgbeg        List of start planes for each group of channels
 c                  that are to be avearged together for each sub-plot
 c                  A new group is begun at every interruption to the
@@ -2178,17 +2178,15 @@ c                  continuity of the selected channels, or if the
 c                  channel increment is reached.
 c    ngrp          Number of channels in each group of channel to
 c                  be averaged together for each sub-plot.
-c    ngrps         Number of groups of channels.
 c    blc,trc       3-D Hyper-rectangle surrounding region of interest
 c    win           Size of BINNED region of interest for 
 c                  first 2 dimensions
-c             
 c
 c----------------------------------------------------------------------
       implicit none
 c
-      integer naxis, size(naxis), blc(*), trc(*), win(2), maxgrp,
-     +  ngrp(maxgrp), grpbeg(maxgrp), ngrps, ibin(2), jbin(2), kbin(2)
+      integer naxis, size(naxis), blc(*), trc(*), win(2), ngrp(*), 
+     +  grpbeg(*), ngrps, ibin(2), jbin(2), kbin(2)
       character in*(*)
 cc
       include 'maxdim.h'
@@ -2218,8 +2216,7 @@ c
 c Find list of start channels and number of channels for each group
 c of channels selected.
 c
-      call chnselcg (blc, trc, kbin, maxbox, boxes, maxgrp,
-     +               grpbeg, ngrp, ngrps)
+      call chnselcg (blc, trc, kbin, maxbox, boxes, ngrps, grpbeg, ngrp)
 c
       end
 c
