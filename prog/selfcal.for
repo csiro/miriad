@@ -666,12 +666,12 @@ c  Externals.
 c
 	character itoaf*8
 c
-	if(nbstok.ne.0)call bug('w',
-     *	  'No. correlations with inappropriate Stokes type = '//
-     *	  itoaf(nbstok*nchan))
 	if(nbad.ne.0) call bug('w',
-     *	  'No. correlations with bad baseline numbers = '//
+     *	  'No. correlations with bad baseline numbers: '//
      *	  itoaf(nbad*nchan))
+	if(nbstok.ne.0)call output(
+     *	  'Correlations with inappropriate Stokes type discarded: '//
+     *	  itoaf(nbstok*nchan))
 	line = 'Total number of correlations being used: '//
      *	  itoaf(TotVis*nchan)
 	call HisWrite(tgains,'SELFCAL: '//line)
