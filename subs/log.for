@@ -171,8 +171,8 @@ c: text-i/o,log-file
 c+
         integer function lognopen(val)
 c
-        integer val
 	implicit none
+        integer val
 c
 c   This functions aids the logging usage of LogOpen/LogWrite/LogClose,
 c   since variables cannot appear in both a DATA and COMMON.
