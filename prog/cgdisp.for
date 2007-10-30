@@ -599,6 +599,8 @@ c    nebk 18jul97  Doc change (masks ANDed not ORed)
 c    rjs  21jul97  Call initco earlier.
 c    rjs  21aug97  Missed calling initco earlier for boxes.
 c    nebk 25mar98  Channel range was wrongly interpreted for line overlays
+c    rjs  31mar98  Get it to agree with documentation as far as cols1 parameter
+c		   goes.
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -662,7 +664,7 @@ c
       data lwid /maxconp3*1/
       data getvsc /.true./
 c-----------------------------------------------------------------------
-      call output ('CgDisp: version 25-Mar-98')
+      call output ('CgDisp: version 31-Mar-98')
       call output (' ')
 c
 c Get user inputs
@@ -2512,8 +2514,8 @@ c
       ncols1 = 0
       call mkeyi ('cols1', cols1, maxlev, ncols1)
       if (ncols1.gt.0 .and. ncols1.lt.nlevs(1)) then
-        do i = ncols1, nlevs(1)
-          cols1(i) = 1
+        do i = ncols1+1, nlevs(1)
+          cols1(i) = cols1(ncols1)
         end do
       end if
 c
