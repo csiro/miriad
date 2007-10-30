@@ -14,7 +14,7 @@ c
 	real xyphase(ATIF,ATANT),xyamp(ATIF,ATANT)
 	real xsampler(3,ATIF,ATANT),ysampler(3,ATIF,ATANT)
 	complex data(ATDATA)
-	integer pnt(ATIF,ATPOL,ATBASE,ATBIN),maxbin,edge(ATIF)
+	integer pnt(ATIF,ATPOL,ATBASE,ATBIN),nbin(ATIF),edge(ATIF)
 	integer bchan(ATIF)
 	real inttime(ATBASE)
 	logical flag(ATIF,ATPOL,ATBASE,ATBIN),dosw(ATBASE)
@@ -29,7 +29,7 @@ c
      *	  data,
      *	  xtsys,ytsys,chi,xyphase,xyamp,xsampler,ysampler,u,v,w,inttime,
      *	    wts,
-     *	  pnt,maxbin,nused,tno,nants,nifs,nfreq,nstoke,polcode,edge,
+     *	  pnt,nbin,nused,tno,nants,nifs,nfreq,nstoke,polcode,edge,
      *	    bchan,
      *	  flag,dosw,dosam,dohann,birdie,dowt,doxyp,doif,dobary,newfreq,
      *	  newsc,newpnt
