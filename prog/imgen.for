@@ -4,7 +4,7 @@ c
 	implicit none
 c
 c= imgen - All-purpose image manipulator/creator
-c& mchw
+c& rjs
 c: utility, map manipulation
 c+
 c	IMGEN is a MIRIAD task which modifies an image, or creates a new
@@ -13,42 +13,66 @@ c@ in
 c	The input image, which is to be modified. The default is a map
 c	with one plane which consists entirely of zeros. 
 c@ out
-c	The output image has the same dimensions as the input. No default. 
+c	The name of the output image. No default. The output image has the
+c	same characteristics as the input image, if present. If no input
+c	image is given, the `imsize', `cell' and `radec' keywords give the
+c	characteristics of the output.
 c@ factor
 c	Factor to multiply the input image by. This is meaningless if no
 c	input image is given. The default is 1. 
+c@ object
+c	This determines the type of objects added to the input image.
+c	Several objects can be given (the objects can be the same type, or
+c	different), and minimum match is supported. Possible objects are:
+c	   level      An offset (DC) level.
+c	   noise      Noise (gaussian distribution).
+c	   point      A point source.
+c	   gaussian   An elliptical or circular gaussian.
+c	   disk       An elliptical or circular disk.
+c	   j1x        A J1(x)/x function
+c@ spar
+c	Parameters which give the characteristics of the object. The
+c	parameters are given as a sequence of values, with one to six
+c	values needed per object (depending on the object type). When
+c	there are multiple objects, the parameter value for the second
+c	object follow those for the first object, etc. The values are
+c	as follows:
+c	  Object Type           SPAR values
+c	  -----------           -----------
+c	   level                  offset
+c	   noise                  rms
+c	   point                  amp,x,y
+c	   gaussian               amp,x,y,bmaj,bmin,pa
+c	   disk                   amp,x,y,bmaj,bmin,pa
+c	   j1x                    amp,x,y,bmaj,bmin,pa
+c	Here "offset" is the offset level, "rms" is the rms value of
+c	the noise, "amp" is the normally peak value of the object (but
+c	see options=totflux below), "x" and "y" are the offset positions (in
+c	arcsec) of the object relative to the reference pixel, "bmaj" and
+c	"bmin" are the major and minor axes FWHM (in arcsec), and "pa" is
+c	the position angle of an elliptical component (in degrees). The
+c	position angle is measured from north towards east.
+c	The default is an object of unit amplitude, at the reference pixel,
+c	with a FWHM of 5 arcsec.
 c@ imsize
 c	If not input image is given, then this determines the size, in
 c	pixels, of the output image. Either one or two numbers can be
 c	given. If only one number is given, then the output is square.
 c	The default is 256 pixels square. 
-c@ object
-c	This determines the type of object added to the input image.
-c	Valid objects are "gaussian" (elliptical gaussians), "disk"
-c	(elliptical disks), "j1x", (a J1(x)/x function), "point"
-c	(a point source), "noise" (gaussian noise) and "level" (a dc
-c	level). The same object is added to each plane of the input image.
-c	The default is "gaussian" . 
-c@ spar
-c	Parameters which give the characteristics of the object. For
-c	gaussian and j1x, spar consists of up to three numbers, being
-c	the amplitude (default 1), the object full-width at half-max in
-c	RA (default 1), and full-width half-max in DEC (default is width
-c	in RA). For a disk, spar consists of up to four numbers: 
-c	the amplitude (default 1), the object full-width major axis
-c	(default 1), full-width half-max minor axis (default is width
-c	of major axis), and the position angle of the major axis (defined
-c       as angle east of north). Widths are given in arcseconds and the
-c       position angle is in degrees. For points and levels, only one 
-c       number, the amplitude, is needed, which has a default of 1. 
-c@ xy
-c	This is two numbers giving the relative offset of the center of
-c	the object, in arcseconds. This is relative to the reference
-c	point of the input, or the image center if there is no input.
-c	This is ignored if the object is a level. The default is 0.
 c@ cell
 c	The increment between pixels, in arcseconds. This is only used if
 c	there is no input map. The default is 1 arcsec.
+c@ radec
+c	If no input image is given, this gives the RA and DEC of the
+c	image, in hours and degrees, respectively. They can be given in
+c	hh:mm:ss,dd:mm:ss, or as decimal hours and degrees. The default is
+c	RA=0, DEC=45.
+c@ options
+c	Extra processing options. Several can be given, separated by
+c	commas. Minimum match is used. Possible values are:
+c	  totflux  Interpret the "amp" values in the spar keyword as
+c	           total integrated flux densities (Normally the "amp"
+c	           parameters are interpretted as peak values).
 c--
 c
 c  History:
@@ -75,19 +99,40 @@ c    mchw  10apr93  Improved warning messages.
 c    lgm   27apr93  Added feature allowing specification of position angle
 c                   for disk model.
 c    mchw  19may93  Merged lgm and mchw versions; Adjust doc to match code.
+c    rjs   19aug94  Major rework. Multiple objects. Position angle. Better
+c		    coords.
+c    rjs   12sep94  totflux option.
 c  Bugs/Wishlist:
-c    * The objects could take position angles.
-c---------------------------------------------------------------
+c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Imgen: version 1.1 19-May-93' )
+	parameter(version='Imgen: version 1.1 12-Sep-94' )
 	include 'mirconst.h'
 	include 'maxdim.h'
-	integer n1,n2,n3,j,k,lIn,lOut,nsize(3),naxis
-	double precision crpix1,crpix2,crpix3,cdelt1,cdelt2,cdelt3
-	real factor,amp,fwhm1,fwhm2,posang,x,y
-	character In*80,Out*80,Object*10
+	include 'maxnax.h'
+	integer n1,n2,n3,i,j,k,lIn,lOut,nsize(MAXNAX),naxis
+	double precision crpix1,crpix2,cdelt1,cdelt2,crval1,crval2
+	double precision x1(3),x2(3)
+	real factor,bmaj,bmin,bpa
+	character In*80,Out*80
+	logical totflux
 	real Buff(maxdim)
-        double precision juld
+c
+c  Source parameters.
+c
+	integer MAXOBJS
+	parameter(MAXOBJS=32)
+	real fwhm1(MAXOBJS),fwhm2(MAXOBJS),posang(MAXOBJS)
+	real amp(MAXOBJS),x(MAXOBJS),y(MAXOBJS)
+	real fwhm1d(MAXOBJS),fwhm2d(MAXOBJS),posangd(MAXOBJS)
+	real xd(MAXOBJS),yd(MAXOBJS)
+	character objs(MAXOBJS)*8
+c
+	integer NOBJECTS
+	parameter(NOBJECTS=6)
+	integer nobjs
+	character objects(NOBJECTS)*8
+	data objects/'level   ','noise   ','point   ',
+     *		     'gaussian','disk    ','j1x     '/
 c
 c  Get the parameters from the user.
 c
@@ -96,136 +141,228 @@ c
 	call keya('in',In,' ')
 	call keya('out',Out,' ')
 	call keyr('factor',Factor,1.)
-	call keya('object',Object,'gaussian')
-	call keyi('imsize',n1,128)
-	call keyi('imsize',n2,n1)
-	call keyr('spar',amp,1.)
-	call keyr('spar',fwhm1,1.)
-	call keyr('spar',fwhm2,fwhm1)
-        call keyr('spar',posang,0.0)
-	call keyr('xy',x,0.)
-	call keyr('xy',y,0.)
-	call keyd('cell',cdelt1,0.0d0)
+	call keymatch('object',NOBJECTS,objects,MAXOBJS,objs,nobjs)
+	if(nobjs.eq.0)then
+	  objs(1) = 'gaussian'
+	  nobjs = 1
+	endif
+c
+c  Get the source parameters.
+c
+	do i=1,nobjs
+	  call keyr('spar',amp(i),1.)
+	  if(objs(i).ne.'level'.and.objs(i).ne.'noise')then
+	    call keyr('spar',x(i),0.)
+	    call keyr('spar',y(i),0.)
+	    x(i) = x(i) / 3600. * pi/180.
+	    y(i) = y(i) / 3600. * pi/180.
+	  else
+	    x(i) = 0
+	    y(i) = 0
+	  endif
+	  if(objs(i).eq.'gaussian'.or.objs(i).eq.'disk'.or.
+     *	     objs(i).eq.'j1x')then
+	    call keyr('spar',fwhm1(i),5.)
+	    call keyr('spar',fwhm2(i),5.)
+	    call keyr('spar',posang(i),0.)
+	    fwhm1(i) = fwhm1(i) / 3600. * pi/180.
+	    fwhm2(i) = fwhm2(i) / 3600. * pi/180.
+	    if(min(fwhm1(i),fwhm2(i)).le.0)
+     *	      call bug('f','BMAJ and BMIN parameters must be positive')
+	    posang(i) = posang(i) * pi/180.
+	  else
+	    fwhm1(i) = 0
+	    fwhm2(i) = 0
+	    posang(i) = 0
+	  endif
+	enddo
+c
+c  Get parameters used to construct the output image (if needed).
+c
+	call keyd('cell',cdelt1,-1.0d0)
 	call keyd('cell',cdelt2,cdelt1)
+	cdelt1 = -abs(cdelt1/3600 * pi/180.)
+	cdelt2 =  abs(cdelt2/3600 * pi/180.)
+	call keyi('imsize',n1,256)
+	call keyi('imsize',n2,n1)
+	n3 = 1
+	call keyt('radec',crval1,'hms',0.d0)
+	call keyt('radec',crval2,'dms',0.25*dpi)
+	crpix1 = n1/2 + 1
+	crpix2 = n2/2 + 1
+c
+	call GetOpt(totflux)
+c
 	call keyfin
-c
-c  Convert to radians.
-c
-	x = x/3600 * pi/180.
-	y = y/3600 * pi/180.
-	fwhm1 = fwhm1/3600 * pi/180.
-	fwhm2 = fwhm2/3600 * pi/180.
-        posang = posang * pi/180.
-	cdelt1 = cdelt1/3600 * pi/180.
-	cdelt2 = cdelt2/3600 * pi/180.
 c
 c  If there is an input file, open it and get parameters about it.
 c  Otherwise set the default parameters.
 c
 	if(Out.eq.' ')call bug('f','Output file name missing')
-	if( (fwhm1.le.0.or.fwhm2.le.0.) .and. (object.ne.'point') )
-     *	     call bug('f','FWHM parameters must be > zero')
 	if(In.ne.' ')then
 	  call xyopen(lIn,in,'old',3,nsize)
 	  n1 = nsize(1)
 	  n2 = nsize(2)
  	  n3 = nsize(3)
 	  if(nsize(3).ne.1)call bug('w','Crude handling of 3D images')
-	  call rdhdd(lIn,'crpix1',crpix1,dble(n1/2.0+1))
-	  call rdhdd(lIn,'crpix2',crpix2,dble(n2/2.0+1))
-	  call rdhdd(lIn,'crpix3',crpix3,dble(n3/2.0+1))
-	  call rdhdd(lIn,'cdelt1',cdelt1,0.0d0)
-	  call rdhdd(lIn,'cdelt2',cdelt2,0.0d0)
-	  call rdhdd(lIn,'cdelt3',cdelt3,0.0d0)
-	  if(cdelt1*cdelt2.eq.0)call bug('f','Pixel increment missing')
 	  call rdhdi(lIn,'naxis',naxis,1)
-	  naxis = min(naxis,3)
+	  naxis = min(naxis,MAXNAX)
+	  do i=4,naxis
+	    nsize(i) = 1
+	  enddo
 	else
-	  n3=1
+	  naxis = 2
 	  nsize(1) = n1
 	  nsize(2) = n2
-	  nsize(3) = 1
+	  nsize(3) = n3
 	  lIn = 0
 	  if(n1.le.0.or.n2.le.0)call bug('f','Image size error')
-	  crpix1 = dble(n1/2.0 + 1)
-          if (nsize(1).eq.1) crpix1 = 1.0
-	  crpix2 = dble(n2/2.0 + 1)
-          if (nsize(2).eq.1) crpix2 = 1.0
-	  if(cdelt1.eq.0)cdelt1 = -1./3600. * pi/180.
-	  cdelt1 = - abs(cdelt1)
-	  if(cdelt2.eq.0)cdelt2 =  1./3600. * pi/180.
-	  naxis = 2
+	endif
+	if(n1.gt.MAXDIM)call bug('f','Image dimension too big')
+c
+c  If we have a single gaussian object, use this as the beam
+c  parameters.
+c
+	if(nobjs.eq.1.and.objs(1).eq.'gaussian'.and..not.totflux)then
+	  if(fwhm1(1).gt.fwhm2(1))then
+	    bmaj = fwhm1(1)
+	    bmin = fwhm2(1)
+	    bpa  = 180/pi * posang(1)
+	  else
+	    bmaj = fwhm2(1)
+	    bmin = fwhm1(1)
+	    bpa  = 180/pi * posang(1) - 90
+	  endif
+	  if(bpa.lt.-90)bpa = bpa + 180
+	  if(bpa.gt. 90)bpa = bpa - 180
+	else
+	  bmaj = 0
+	  bmin = 0
+	  bpa = 0
 	endif
 c
 c  Now open the output, and add a header to it.
 c
 	call xyopen(lOut,Out,'new',naxis,nsize)
-	call header(lIn,lOut,crpix1,crpix2,cdelt1,cdelt2,
-     *	  object,fwhm1,fwhm2,version)
+	call header(lIn,lOut,crpix1,crpix2,crval1,crval2,cdelt1,cdelt2,
+     *	  bmaj,bmin,bpa,version)
 c
 c  Convert to units that we want, namely x and y in grid coordinates
 c  and fwhm in pixels.
 c
-	x = x/cdelt1 + crpix1
-	y = y/cdelt2 + crpix2
-	fwhm1 = fwhm1/abs(cdelt1)
-	fwhm2 = fwhm2/abs(cdelt2)
+	call coInit(lOut)
 c
-c  Do a second run, and write it out this time.
+c  Fiddle fwhm and position angle parameters to be with respect to the 
+c  pixel grid.
 c
-        if (object.eq.'noise') then
-          call todayjul (juld)
-          juld = mod(juld*100000.0d0,100000.0d0)
-          call randset (nint(juld))
-        end if
+	do k=1,n3
+	  if(lIn.ne.0)call xysetpl(lIn,1,k)
+	  call xysetpl(lOut,1,k)
 c
-	if (naxis.gt.2) then
-	  do k=1,n3
-	    call xysetpl(lIn,1,k)
-	    call xysetpl(lOut,1,k)
-	    do j=1,n2
-             call DoMod(lIn,j,object,Buff,n1,factor,amp,fwhm1,fwhm2,
-     *                    posang,x,y)
-	     call xywrite(lOut,j,Buff)
-	    enddo
+c  Convert the offsets and gaussian parameters from world to pixel units.
+c
+	  do i=1,nobjs
+	    x1(1) = x(i)
+	    x1(2) = y(i)
+	    x1(3) = k
+	    call coCvt(lOut,'ow/ow/p',x1,'ap/ap/ap',x2)
+	    xd(i) = x2(1)
+	    yd(i) = x2(2)
+	    if(fwhm1(i)*fwhm2(i).gt.0)then
+	      call coGauCvt(lOut,'ow/ow/p',x1,
+     *	        'w',fwhm1(i), fwhm2(i), posang(i),
+     *	        'p',fwhm1d(i),fwhm2d(i),posangd(i))
+	    else
+	      fwhm1d(i) = 0
+	      fwhm2d(i) = 0
+	      posangd(i) = 0
+	    endif
 	  enddo
-	else
+c
+c  Do the real work.
+c
 	  do j=1,n2
-	    call DoMod(lIn,j,object,Buff,n1,factor,amp,fwhm1,fwhm2,
-     *                    posang,x,y)
+	    call GetBuf(lIn,j,Buff,n1,factor)
+	    do i=1,nobjs
+	      call DoMod(j,objs(i),Buff,n1,amp(i),fwhm1d(i),fwhm2d(i),
+     *                    posangd(i),xd(i),yd(i),totflux)
+	    enddo
 	    call xywrite(lOut,j,Buff)
 	  enddo
-	endif
+	enddo
 c
 c  Close up shop.
 c
 	if(lIn.ne.0)call xyclose(lIn)
 	call xyclose(lOut)
 	end
+c************************************************************************
+	subroutine GetOpt(totflux)
+c
+	implicit none
+	logical totflux
+c
+c  Get extra processing options.
+c------------------------------------------------------------------------
+	integer NOPTS
+	parameter(NOPTS=1)
+	character opts(NOPTS)*8
+	logical present(NOPTS)
+c
+	data opts/'totflux '/
+c
+	call options('options',opts,present,NOPTS)
+	totflux = present(1)
+	end
+c************************************************************************
+	subroutine GetBuf(lIn,j,Buff,n1,factor)
+c
+	implicit none
+	integer lIn,j,n1
+	real factor,Buff(n1)
+c
+c  Initialise a row.
+c
+c------------------------------------------------------------------------
+	integer i
+c
+	if(lIn.eq.0.or.factor.eq.0)then
+	  do i=1,n1
+	    Buff(i) = 0
+	  enddo
+	else
+	  call xyread(lIn,j,Buff)
+	  do i=1,n1
+	    Buff(i) = factor * Buff(i)
+	  enddo
+	endif
+c
+	end
 c*******************************************************************
-	subroutine header(lIn,lOut,crpix1,crpix2,cdelt1,cdelt2,
-     *	  object,fwhm1,fwhm2,version)
+	subroutine header(lIn,lOut,crpix1,crpix2,crval1,crval2,
+     *	  cdelt1,cdelt2,bmaj,bmin,bpa,version)
 c
 	implicit none
 	integer lIn,lOut
-	real fwhm1,fwhm2
-        double precision crpix1,crpix2,cdelt1,cdelt2
-	character object*(*),version*(*)
+        double precision crpix1,crpix2,cdelt1,cdelt2,crval1,crval2
+	real bmaj,bmin,bpa
+	character version*(*)
 c
 c  Make a header for the output image.
 c
 c------------------------------------------------------------------------
 	integer nkeys
-	parameter(nkeys=39)
+	parameter(nkeys=43)
 	character line*64
 	integer i
 	character keyw(nkeys)*8
 	data keyw/   'bmaj    ','bmin    ','bpa     ','bunit   ',
-     *    'cdelt1  ','cdelt2  ','cdelt3  ','cdelt4  ','crpix1  ',
-     *    'crpix2  ','crpix3  ','crpix4  ','crval1  ','crval2  ',
-     *    'crval3  ','crval4  ','ctype1  ','ctype2  ','ctype3  ',
-     *    'ctype4  ','date-obs','epoch   ','instrume','ltype   ',
-     *    'lstart  ','lwidth  ','lstep   ','niters  ','object  ',
+     *    'cdelt1  ','cdelt2  ','cdelt3  ','cdelt4  ','cdelt5  ',
+     *	  'crpix1  ','crpix2  ','crpix3  ','crpix4  ','crpix5  ',
+     *	  'crval1  ','crval2  ','crval3  ','crval4  ','crval5  ',
+     *	  'ctype1  ','ctype2  ','ctype3  ','ctype4  ','ctype5  ',
+     *	  'epoch   ','ltype   ','lstart  ','lwidth  ',
+     *	  'lstep   ','mask    ','niters  ','object  ','history ',
      *    'observer','obsra   ','obsdec  ','restfreq','telescop',
      *	  'vobs    ','xshift  ','yshift  ','pbfwhm  ','btype   '/
 c
@@ -236,16 +373,16 @@ c
 	  call wrhdd(lOut,'crpix2',crpix2)
 	  call wrhdd(lOut,'cdelt1',cdelt1)
 	  call wrhdd(lOut,'cdelt2',cdelt2)
-	  call wrhdd(lOut,'crval1',0.0d0)
-	  call wrhdd(lOut,'crval2',0.0d0)
+	  call wrhdd(lOut,'crval1',crval1)
+	  call wrhdd(lOut,'crval2',crval2)
 	  call wrhda(lOut,'ctype1','RA---SIN')
 	  call wrhda(lOut,'ctype2','DEC--SIN')
-	  if(object.eq.'gaussian')then
+	  if(bmaj*bmin.gt.0)then
 	    call wrhda(lOut,'bunit','JY/BEAM')
-	    call wrhdr(lOut,'bmaj',fwhm1)
-	    call wrhdr(lOut,'bmin',fwhm2)
-            call wrhdr(lOut,'bpa',90.0)
-	  else if(object.eq.'point')then
+	    call wrhdr(lOut,'bmaj',bmaj)
+	    call wrhdr(lOut,'bmin',bmin)
+	    call wrhdr(lOut,'bpa',bpa)
+	  else
 	    call wrhda(lOut,'bunit','JY/PIXEL')
 	  endif
 	else
@@ -264,57 +401,60 @@ c
 c
 	end
 c************************************************************************
-	subroutine DoMod(lu,j0,object,Data,n1,factor,
-     *				amp,fwhm1,fwhm2,posang,x,y)
+	subroutine DoMod(j0,object,Data,n1,amp,fwhm1,fwhm2,posang,x,y,
+     *								totflux)
 c
 	implicit none
-	integer lu,n1,j0
+	integer n1,j0
 	character object*(*)
 	real Data(n1)
-        real factor,amp,fwhm1,fwhm2,posang,x,y
+        real amp,fwhm1,fwhm2,posang,x,y
+	logical totflux
 c
-c  Add the contribution.
+c  Add the contribution of a particular component.
 c
+c  Input:
+c    totflux	The "amp" parameter is the total flux.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
+	include 'mirconst.h'
 	integer i,j,ymin,ymax,xmin,xmax
-	real xx,yy,xp,yp,scale
+	real xx,yy,xp,yp,scale,cospa,sinpa,t,a,log2,limit
 	real Buff(maxdim)
 c
 c  Externals.
 c
 	real j1xbyx
 c
-c  Get the old data.
-c
-	if(lu.eq.0.or.factor.eq.0)then
-	  do i=1,n1
-	    Data(i) = 0
-	  enddo
-	else
-	  call xyread(lu,j0,Data)
-	  do i=1,n1
-	    Data(i) = Factor * Data(i)
-	  enddo
-	endif
-c
 c  Add the new contribution.First the gaussian. Work out the region
 c  where the exponential greater than exp(-25), and don't bother
 c  processing those regions.
 c
+c  Note: pi/4/log(2) == 1.1331.
+c
 	if(object.eq.'gaussian')then
-	  scale = 2. * sqrt(log(2.))
-	  ymin = nint(y-(5/scale)*fwhm2)
-	  ymax = nint(y+(5/scale)*fwhm2)
-	  xmin = max(nint(x-(5/scale)*fwhm1),1)
-	  xmax = min(nint(x+(5/scale)*fwhm1),n1)
+	  log2 = log(2.0)
+	  if(totflux)then
+	    a = amp / (pi/4/log2 * fwhm1 * fwhm2)
+	  else
+	    a = amp
+	  endif
+	  cospa = cos(posang)
+	  sinpa = sin(posang)
+	  scale = 2. * sqrt(log2)
+	  limit = 5/scale * max(fwhm1,fwhm2)
+	  ymin = nint(y-limit)
+	  ymax = nint(y+limit)
+	  xmin = max(nint(x-limit),1)
+	  xmax = min(nint(x+limit),n1)
 	  if(ymin.le.j0.and.j0.le.ymax)then
-	    yy = (scale/fwhm2) * (j0-y)
-	    yy = yy*yy
+	    yy = scale * (j0-y)
 	    do i=xmin,xmax
-	      xx = (scale/fwhm1) * (i-x)
-	      xx = xx * xx
-	      data(i) = data(i) + amp*exp(-(xx+yy))
+	      xx = scale * (i-x)
+              yp =  yy*cospa + xx*sinpa
+              xp = -yy*sinpa + xx*cospa
+              t = (xp*xp)/(fwhm2*fwhm2) + (yp*yp)/(fwhm1*fwhm1)
+	      if(t.lt.25)data(i) = data(i) + a*exp(-t)
 	    enddo
 	  endif
 c
@@ -322,30 +462,45 @@ c  Handle a J1(x)/x function.
 c
 	else if(object.eq.'j1x')then
 	  scale = 3.83
-	  yy = (scale/fwhm2) * (j0-y)
-	  yy = yy*yy
+	  if(totflux)then
+	    a = amp / (4*pi/scale/scale * fwhm1 * fwhm2)
+	  else
+	    a = amp
+	  endif
+	  cospa = cos(posang)
+	  sinpa = sin(posang)
+	  yy = scale * (j0-y)
 	  do i=1,n1
-	    xx = (scale/fwhm1) * (i-x)
-	    xx = xx*xx
-	    data(i) = data(i) + 2 * amp * j1xbyx(sqrt(xx+yy))
+	    xx = scale * (i-x)
+            yp =  yy*cospa + xx*sinpa
+            xp = -yy*sinpa + xx*cospa
+            t = (xp*xp)/(fwhm2*fwhm2) + (yp*yp)/(fwhm1*fwhm1)
+	    data(i) = data(i) + 2 * a * j1xbyx(sqrt(t))
 	  enddo
 c
 c  Handle a disk.
 c
 	else if(object.eq.'disk')then
-	  ymin = nint(y-0.5*fwhm1)
-	  ymax = nint(y+0.5*fwhm1)
-	  xmin = max(nint(x-0.5*fwhm1),1)
-	  xmax = min(nint(x+0.5*fwhm1),n1)
+	  if(totflux)then
+	    a = amp / (pi/4 * fwhm1 * fwhm2)
+	  else
+	    a = amp
+	  endif
+	  cospa = cos(posang)
+	  sinpa = sin(posang)
+	  limit = 0.5 * max(fwhm1,fwhm2)
+	  ymin = nint(y-limit)
+	  ymax = nint(y+limit)
+	  xmin = max(nint(x-limit),1)
+	  xmax = min(nint(x+limit),n1)
 	  if(ymin.le.j0.and.j0.le.ymax)then
 	    yy = (j0-y)
 	    do i=xmin,xmax
 	      xx = (i-x)
-              xp =  xx*cos(posang) + yy*sin(posang)
-              yp = -xx*sin(posang) + yy*cos(posang)
-              xp = (xp*xp)/(fwhm2*fwhm2)
-              yp = (yp*yp)/(fwhm1*fwhm1)
-	      if(xp+yp.lt.0.25) data(i) = data(i) + amp
+              yp =  yy*cospa + xx*sinpa
+              xp = -yy*sinpa + xx*cospa
+              t = (xp*xp)/(fwhm2*fwhm2) + (yp*yp)/(fwhm1*fwhm1)
+	      if(t.lt.0.25) data(i) = data(i) + a
 	    enddo
 	  endif
 c
