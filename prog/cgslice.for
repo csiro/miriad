@@ -328,6 +328,7 @@ c                  of label types
 c    nebk 13feb97  Add keyword "3format"
 c    rjs  21jul97  Call initco earlier
 c    rjs   7may98  Change the bunit variable to be 16 char (not 8 char).
+c    rjs  08may00  Change incorrect keyf call to keya.
 c
 c Notes:
 c
@@ -1972,7 +1973,7 @@ c
      +  'You might consider options=unequal with these axis types')
       end if
 c
-      call keyf ('3format', val3form, ' ')
+      call keya ('3format', val3form, ' ')
 c
       call keyi ('nxy', nx, 0)
       call keyi ('nxy', ny, nx)
