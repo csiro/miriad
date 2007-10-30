@@ -1,6 +1,11 @@
 c************************************************************************
-c Some routines to manipulate the ofm (output function map or
-c colour lookup table) of a PGPLOT device.
+c Some routines to manipulate the ofm (output function map or colour
+c lookup table) of a PGPLOT device.  It is expected that the image will 
+c have been displayed with PGIMAG (not PGGRAY or PGPIXL). To use PGIMAG
+c you should first load a lookup table with PGSCR and then call PGIMAG.
+c However, these routines do not know about it, and will overwrite
+c it with their own as soon as you go into the layer that loads colour
+c tables.
 c 
 c These routines work by first defining a BASIC 256 level ofm selected
 c from a variety of types.   This is then spline fit and resampled for 
@@ -18,8 +23,6 @@ c user to call.  You should always call OFMINI to begin with.
 c
 c *  ofmini      Initialize ofm routines
 c *  ofmmod      Interactively modify the ofm
-c *  ofmrap      Reapply the last change done by ofmmod 
-c                to the lookup table
 c
 c    ofmapp      Apply the ACTIVE ofm to the PGPLOT device
 c    ofmevl      Evaluate BASIC ofm spline coefficients and 
@@ -74,22 +77,15 @@ c            - ofmtfp - ofmtfe
 c            - ofml1f
 c
 c
-c  *** Call tree for OFMRAP ***
-c
-c     ofmapp
-c
 c
 c Note that the colour postscript drivers do not have a lookup table 
 c concept.  However, if the colour indices are set before the postscript 
 c file is written then they will be reproduced.  Thus, you can call
-c OFMMOD *before* calling PGGRAY.  It is not necessary to pass an all
+c OFMMOD *before* calling PGIMAG.  It is not necessary to pass an all
 c zero transfer function viewport.  The software will detect that for
 c hard copy devices it should not draw the transfer function plot. You
 c will not have access to the linear fiddler, but you will have access
 c to the different colour tables and the built in transfer functions.
-c
-c However, currently PGGRAY does not obey the PGSCR instructions
-c so this facility will have to wait for Tim's new PGIMAG
 c
 c
 c History:
@@ -97,8 +93,11 @@ c   nebk 17jan94  Enlightenment brings creation
 c   nebk 25feb94  Add fixed zero colour contours & hardcopy device
 c                 capability
 c   nebk 03aug94  Add replication capability (ofmrep)
-c
+c   nebk 05jan95  Replace PGQCOL with new PGQCIR and make some other minor
+c                 changes for the use of new PGIMAG instead of PGGRAY
+c                 Remove OFMRAP as no longer needed with PGIMAG
 c***********************************************************************
+c
       subroutine ofmapp 
 c-----------------------------------------------------------------------
 c     Apply the current ACTIVE ofm
@@ -108,7 +107,7 @@ c     na      Number of levels
 c     ofma    ACTIVE ofm
 c     ci1     First colour index to use
 c   Output in common
-c     ofmdun  OFM in ACTOVE table has been applied to device
+c     ofmdun  OFM in ACTIVE table has been applied to device
 c-----------------------------------------------------------------------
       implicit none
       include 'ofm.h'
@@ -230,8 +229,8 @@ c  Input
 c    npix    Number of pixels in image
 c    image   Image
 c    mask    Mask
-c    imin    Image minimum given to PGGRAY
-c    imax    Image maximum given to PGGRAY
+c    imin    Image minimum given to PGIMAG
+c    imax    Image maximum given to PGIMAG
 c  Input in common
 c    na      Number of levels in ACTIVE ofm
 c  Output in common
@@ -316,7 +315,7 @@ c+
 c
       implicit none
 c
-c  Initialize ofm routines
+c  Initialize ofm routines.
 c--
       include 'ofm.h'
 c
@@ -522,7 +521,7 @@ c     ACTIVE ofm
 c
 c  Input
 c    imin,imax
-c            Min and max intensities used in the call to PGGRAY
+c            Min and max intensities used in the call to PGIMAG
 c  Input in common
 c    na      Number of levels in ACTIVE table
 c    ofms    SAVE ofm
@@ -621,7 +620,7 @@ c              h.e. mode will not be activated
 c    mask      Image mask.  0 for blanked pixels otherwise good.  Is
 c              used only for histogram equalization such that blanked
 c	       pixels do not contribute to histograms. See above also.
-c    imin,max  Min and max used in call to PGGRAY.  Must be set for
+c    imin,max  Min and max used in call to PGIMAG.  Must be set for
 c              histogram equalization and logarithmic transfer
 c              functions to work
 c
@@ -658,38 +657,33 @@ c
       if (imin.lt.0.0 .and. imax.gt.0.0 .and. 
      +    abs(imax).gt.abs(imin)) dofcc = .true.
 c
-c If an ofm has already been applied, reapply it, as call to PGGRAY
-c will remove it.  If none applied yet, apply the b&w ofm
+c If no ofm has been applied, apply the greyscale ofm.  In reality, as
+c PGIMAG should have been called, an OFM should have been loaded via
+c PGSCR, but these routines don't know about it, so we will overwrite
+c it with our own greyscale.   Also initialize fiddle array.
 c
-      if (ofmdun) then
-        call ofmapp
-      else
+      if (.not.ofmdun) then
         iofm = 1
-        call ofmtba (imin, imax)
+        call ofmtba (0.0, 0.0)
         call ofmapp
+c
+        do i = 1, na
+          fid(i) = i
+        end do
       end if
 c
-c Reapply any previous transfer function fiddle
-c
-      if (fidun) call ofmrsf
-c
 c Initialize other parameters.  Always reinit histogram equalization
-c in case we are calling OFMMOD with a different image. If  image
-c min and max signal to h.e. routine that we can't do it.
+c in case we are calling OFMMOD with a different image. If image
+c min and max=0 signal to h.e. routine that we can't do it.
 c
       npix = nu
       if (imin.eq.0.0 .and. imax.eq.0.0) npix = 0
       hedun = .false.
 c
-      do i = 1, na
-c
 c Generate transfer plot abcissa
 c
+      do i = 1, na
         xt(i) = real(i-1) / real(na-1)
-c
-c Initialize fiddle index array
-c
-        fid(i) = i
       end do
 c
 c Copy of transfer function plot viewport in common
@@ -759,31 +753,6 @@ c
           call output (' ')
         end if
       end do
-c
-      end
-c
-c* OfmRap -- Reapply the last modification to the PGPLOT ofm
-c& nebk
-c: PGPLOT,display
-c+
-      subroutine ofmrap
-c
-      implicit none
-c
-c  Every call to PGGRAY resets the ofm back to its pristine
-c  state.  This gives you the chance to reapply the last change
-c  to the ofm after PGGRAY has gone and removed it again.  
-c
-c-
-c-----------------------------------------------------------------------
-      include 'ofm.h'
-c-----------------------------------------------------------------------
-      if (ofmdun) then
-        call ofmapp
-      else
-        call bug ('w', 'OFMRAP: No OFM applied yet')
-      end if
-      if (fidun) call ofmrsf
 c
       end
 c
@@ -922,7 +891,7 @@ c-----------------------------------------------------------------------
 c     Basic ofm selection routine with cursor.  Last fiddle is applied
 c
 c  Input
-c    imin,imax  Image minimum and maximum with which PGGRAY was called
+c    imin,imax  Image minimum and maximum with which PGIMAG was called
 c               Only needed for iofm=5
 c  Input in common
 c    dofcc   True if possible to generate fixed zero colour contours
@@ -1026,7 +995,7 @@ c
           call output (' ')
           call output (' ')
 c
-c Remind use of what they can do
+c Remind users of what they can do
 c
           call ofml1m
           ch = 'x'
@@ -1043,7 +1012,7 @@ c     the ACTIVE ofm
 c
 c  Input
 c    imin,imax
-c            Min and max intensities used in the call to PGGRAY
+c            Min and max intensities used in the call to PGIMAG
 c  Input in common
 c    na      Number of levels in ACTIVE table
 c    ofms    SAVE ofm
@@ -1113,12 +1082,12 @@ c
       end
 c
 c
-      subroutine ofmtba  (imin, imax)
+      subroutine ofmtba (imin, imax)
 c-----------------------------------------------------------------------
 c     Tabulate the ACTIVE and SAVE ofms for the specified ofm type
 c
 c  Input
-c    imin,max   Image min and max that PGGRAY was called with. Only
+c    imin,max   Image min and max that PGIMAG was called with. Only
 c		used for iofm=5
 c  Input in common
 c    dofcc   True if possible to generate fized zero colour contours
@@ -1141,13 +1110,9 @@ c-----------------------------------------------------------------------
       real imin, imax
 c-----------------------------------------------------------------------
 c
-c Get number of levels on this device.  Note that PGGRAY does not use
-c the first 16 colour indices.  Note that PGGRAY also only uses 128 
-c levels even if the device has more.  It uses levels NLEV-127 -> NLEV 
-c in this case.   
+c Get available colour indices on this device.  
 c
-      call pgqcol (ci1, ci2)
-      ci1 = max(17,ci2-127)
+      call pgqcir (ci1, ci2)
       na = ci2 - ci1 + 1
 c      write (*,*) 'ci1,ci2=',ci1,ci2
       if (na.gt.maxlev) call bug ('f','Too many colours on this device')
@@ -1808,7 +1773,7 @@ c     Otherwise, the colour contours are uniformly distributed
 c     and the linear fiddler will move the blue/green boundary.
 c
 c  Input
-c    imin,max  Image min and max that was used in call to PGGRAY  
+c    imin,max  Image min and max that was used in call to PGIMAG  
 c              If given, fix blue/green boundary at zero.
 c  Input in common
 c    na        Number of levels in ACTIVE ofm
@@ -2089,7 +2054,7 @@ c    image     Displayed image.  This is used only for the histogram
 c              equalization mode.  If you pass n=1, image=0 viz
 c              call ofmtff (1, 0, 0.0, 0.0, tfvp)  h.e. will not available
 c    mask      Image mask. 0 -> blanked.
-c    imin,max  Min and max used in call to PGGRAY.  Must be set for
+c    imin,max  Min and max used in call to PGIMAG.  Must be set for
 c              histogram equalization or logarithmic transfer
 c              functions to work
 c
