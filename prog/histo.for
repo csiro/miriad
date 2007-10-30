@@ -43,7 +43,7 @@ c------------------------------------------------------------------------
 	parameter(maxruns=80000)
 	parameter(version = 'version 08-Oct-96' )
 c
-	character file*40,asterisk*30,line*72,coord*64,bunit*32
+	character file*64,asterisk*30,line*72,coord*64,bunit*32
 	integer nsize(MAXNAX),plane(MAXNAX),maxv(MAXNAX),minv(MAXNAX)
 	integer blc(MAXNAX),trc(MAXNAX)
 	integer i,j,k,under,over,bin(nbinmax),maxbin
