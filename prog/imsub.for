@@ -38,6 +38,7 @@ c    rjs  21nov95  Use maxnax.h.
 c    nebk 10jan96  Change crpix and cdelt to double
 c    rjs  02jul97  cellscale change.
 c    rjs  18jul97  Correct handling of flags when incr != 1.
+c    rjs  23jul97  added pbtype.
 c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='Imsub: version 1.0 18-Jul-97' )
@@ -63,7 +64,7 @@ c
 c  Header keywords.
 c
 	integer nkeys
-	parameter(nkeys=35)
+	parameter(nkeys=36)
 	character keyw(nkeys)*8
 	data keyw/   'bmaj    ','bmin    ','bpa     ','bunit   ',
      *	  'crval1  ','crval2  ','crval3  ','crval4  ','crval5  ',
@@ -72,7 +73,7 @@ c
      *	  'object  ','observer','obsra   ','obsdec  ','pbfwhm  ',
      *	  'restfreq','telescop','vobs    ','btype   ','rms     ',
      *	  'ltype   ','lstart  ','lwidth  ','lstep   ','mostable',
-     *	  'cellscal'/
+     *	  'cellscal','pbfwhm  '/
 c
 c  Get the input parameters.
 c
