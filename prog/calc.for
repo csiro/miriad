@@ -32,6 +32,7 @@ c  History:
 c    rjs  ??????? Original version.
 c    rjs  13sep95 Added -f flag.
 c    rjs  12aug97 Support constants.
+c    rjs  13may99 Increase size of char string buffers.
 c------------------------------------------------------------------------
 	include 'calc.h'
 c
@@ -39,7 +40,7 @@ c
 	parameter(dim=128,scalar=2)
 	integer buf(dim),index,type,rin
 	real rbuf(dim)
-	character in*80,out*80,line*128,dec*40,oct*40,hex*40
+	character in*256,out*256,line*128,dec*40,oct*40,hex*40
 	character format*32,form*32,strval*32,def*32,unit*8
 	double precision value
 	integer lin,lout,lline,ldec,loct,lhex,narg,lform,i
