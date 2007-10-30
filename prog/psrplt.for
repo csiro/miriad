@@ -40,6 +40,7 @@ c	values are:
 c         real      Plot the real part of the data. This is the default.
 c	  imaginary Plot the imaginary part of the data.
 c         amplitude Plot the amplitude of the data.
+c	  phase     Plot the phase of the data.
 c@ options
 c	Extra processing options. Several can be given, separated by
 c	commas. Minimum match is supported.
@@ -59,13 +60,14 @@ c    rjs  21aug97 Count the number of accepted correlations.
 c    bmg  26nov97 Added log keyword
 c    rjs  29feb00 mode keyword to allow plots of real/imag/amp.
 c    rjs  08may00 Change incorrect call of keyf to keya.
+c    rjs  03may01 Added mode=phase.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
 	integer MAXPOL,MAXBIN,PolMin,PolMax
 	character version*(*)
 	parameter(MAXPOL=4,MAXBIN=32,PolMin=-9,PolMax=4)
-	parameter(version='PsrPlt: version 1.0 29-Feb-00')
+	parameter(version='PsrPlt: version 1.0 03-May-01')
 c
 	character uvflags*16,device*32,logfile*80,flux*9
 	logical docal,dopol,dopass,doshift
@@ -82,7 +84,7 @@ c
 	double precision sfreq(MAXCHAN)
 c
 	integer NXAXES,NYAXES,NFLUX
-	parameter(NXAXES=1,NYAXES=3,NFLUX=3)
+	parameter(NXAXES=1,NYAXES=3,NFLUX=4)
 	character xaxes(NXAXES)*9,yaxes(NYAXES)*9,xaxis*9,yaxis*9
 	character fluxes(NFLUX)*9
 c
@@ -94,7 +96,7 @@ c
 c
 	data xaxes/'bin      '/
 	data yaxes/'flux     ','frequency','channel  '/
-	data fluxes/'real     ','imaginary','amplitude'/
+	data fluxes/'real     ','imaginary','amplitude','phase    '/
 c
 c  Get the user parameters.
 c
@@ -166,8 +168,8 @@ c
 c
 c  Convert the shift to radians.
 c
-	shift(1) = pi/180/3600 * shift(1)
-	shift(2) = pi/180/3600 * shift(2)
+	shift(1) = PI/180/3600 * shift(1)
+	shift(2) = PI/180/3600 * shift(2)
 	ngood = 0
 	nbad  = 0
 c
@@ -310,6 +312,8 @@ c
 	  title = 'Imaginary Part: Stokes = '//polsc2p(pol)
 	else if(flux.eq.'real')then
 	  title = 'Real Part: Stokes = '//polsc2p(pol)
+	else if(flux.eq.'phase')then
+	  title = 'Phase: Stokes = '//polsc2p(pol)
 	else
 	  title = 'Ampltitude: Stokes = '//polsc2p(pol)
 	endif
@@ -333,6 +337,7 @@ c
 	complex Acc(mchan,nbin)
 	real Image(nbin,nchan),Wt(mchan,nbin),zmin,zmax
 c------------------------------------------------------------------------
+	include 'mirconst.h'
 	integer i,j
 	real temp
 	logical first
@@ -345,6 +350,12 @@ c
 	    if(Wt(i,j).gt.0)then
 	      if(flux.eq.'imaginary')then
 		temp = aimag(Acc(i,j))/Wt(i,j)
+	      else if(flux.eq.'phase')then
+		if(abs(real(Acc(i,j)))+abs(aimag(Acc(i,j))).gt.0)then
+		  temp = 180./PI*atan2(aimag(Acc(i,j)),real(Acc(i,j)))
+		else
+		  temp = 0
+		endif
 	      else
 		temp = real(Acc(i,j))/Wt(i,j)
 	      endif
@@ -368,6 +379,12 @@ c
 	    if(Wt(i,j).gt.0)then
 	      if(flux.eq.'imaginary')then
 		temp = aimag(Acc(i,j))/Wt(i,j)
+	      else if(flux.eq.'phase')then
+		if(abs(real(Acc(i,j)))+abs(aimag(Acc(i,j))).gt.0)then
+		  temp = 180./PI*atan2(aimag(Acc(i,j)),real(Acc(i,j)))
+		else
+		  temp = 0
+		endif
 	      else
 		temp = real(Acc(i,j))/Wt(i,j)
 	      endif
@@ -391,6 +408,8 @@ c
 	complex acc(mchan,mbin,npol)
 	real    wt (mchan,mbin,npol)
 c------------------------------------------------------------------------
+	include 'mirconst.h'
+c
 	integer MAXPOL,MAXBIN
 	parameter(MAXPOL=4,MAXBIN=32)
 	real ymin,ymax,xlo,xhi,ylo,yhi
@@ -422,6 +441,13 @@ c
 	    enddo
 	    if(flux.eq.'imaginary')then
 	      vtemp = aimag(ctemp)
+	    else if(flux.eq.'phase')then
+	      if(abs(aimag(ctemp))+abs(real(ctemp)).gt.0)then
+	        vtemp = 180./PI * atan2(aimag(ctemp),real(ctemp))
+		wtemp = 1
+	      else
+		wtemp = 0
+	      endif
 	    else
 	      vtemp = real(ctemp)
 	    endif
@@ -453,6 +479,8 @@ c
 	  call Label('Bin Number','Real Part',pols,npol)
 	else if(flux.eq.'imaginary')then
 	  call Label('Bin Number','Imaginary Part',pols,npol)
+	else if(flux.eq.'phase')then
+	  call Label('Bin Number','Phase (degrees)',pols,npol)
 	else
 	  call Label('Bin Number','Amplitude',pols,npol)
 	endif
@@ -566,7 +594,7 @@ c
 c  Perform the shift.
 c
 	do i=1,nchan
-	  theta = -2*pi * (shift(1)*uv(1) + shift(2)*uv(2)) * sfreq(i)
+	  theta = -2*PI * (shift(1)*uv(1) + shift(2)*uv(2)) * sfreq(i)
 	  w = cmplx(cos(theta),sin(theta))
 	  data(i) = w * data(i)
 	enddo
