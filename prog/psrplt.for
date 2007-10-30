@@ -58,6 +58,7 @@ c    rjs  03jun96 Original version.
 c    rjs  21aug97 Count the number of accepted correlations.
 c    bmg  26nov97 Added log keyword
 c    rjs  29feb00 mode keyword to allow plots of real/imag/amp.
+c    rjs  08may00 Change incorrect call of keyf to keya.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
@@ -110,7 +111,7 @@ c
 	dogrey = yaxis.ne.'flux'
 	dochan = yaxis.eq.'channel'
 	dolog = (keyprsnt('log').and.(.not.dogrey))
-	if(dolog) call keyf('log',logfile,' ')
+	if(dolog) call keya('log',logfile,' ')
 c
 c  Determine the shift.
 c
