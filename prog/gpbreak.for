@@ -32,6 +32,7 @@ c    rjs     30aug93 Increase MAXTIMES.
 c    rjs     16sep93 Rename bsrch to binsrch.
 c    rjs     13oct93 Changed the keyword "times" to "break".
 c    rjs     25nov93 Use library version of mkeyt.
+c    rjs     31jan97 Fix "feeds" keyword, which could never have worked.
 c  Bugs and Shortcomings:
 c------------------------------------------------------------------------
 	include 'maxdim.h'
@@ -469,6 +470,7 @@ c
 	nfeeds = 0
 	more = keyprsnt(keyw)
 	dowhile(nfeeds.lt.maxfeeds.and.more)
+	  call keya(keyw,string,' ')
 	  i = binsrcha(string,allfds,nallfds)
 	  if(i.eq.0)call bug('f','Unrecognised feed mnemonic: '//string)
 	  nfeeds = nfeeds + 1
