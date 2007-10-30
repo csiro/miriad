@@ -46,6 +46,7 @@ c                     if the requested source is not found.
 c    jm    06jun96    Correctly add dra/ddec to RA/Dec in Getrdphz.
 c    rjs   11oct96    Added delra,deldec,pntra,pntdec to the output.
 c    rjs   24mar97    Copy all calibration tables.
+c    rjs   12may97    Doc change only.
 c***********************************************************************
 c= Uvedit - Editing of the baseline of a UV data set.
 c& jm
@@ -129,7 +130,11 @@ c     number.  Antenna present in the data but not included in the
 c     input value list are treated as having a zero coordinate offset.
 c     NOTE: You may only specify at most one of the ``apfile'',
 c           ``antpos'', or ``dantpos'' keywords.
-c
+c     NOTE: The dantpos keyword is the usually used when correcting antenna
+c     position errors in a VLA observation. The  coordinate system used by
+c     Miriad and the VLA are the same, and the baseline changes provided
+c     by the VLAIS system need only be changed from units of meters to nanosec
+c     when using uvedit (1 nanosec = 0.2997 meters).
 c@ ra
 c     Input is either an absolute or delta right ascension of the
 c     phase tracking center.  If one value is present, it is considered
