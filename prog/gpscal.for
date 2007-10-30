@@ -43,7 +43,7 @@ c@ clip
 c	Clip level. For models of intensity, any pixels below the clip level
 c	are set to zero. For models of Stokes Q,U,V, or MFS I*alpha models,
 c	any pixels whose absolute value is below the clip level are set
-c	to zero. Default is 0.
+c	to zero. The default is not to do any clipping.
 c@ flux
 c	If not model is given, then a point source model is assumed. This
 c	keyword gives the flux of the point source model. Four values can be
@@ -118,10 +118,11 @@ c    rjs  13dec93 Sign convention of V change.
 c    rjs  23dec93 Minimum match for linetypes.
 c    rjs  13sep94 Improve an error message. FELO changes.
 c    rjs  31jan95 Accomodate model.for changes.
+c    rjs   1oct96 Default is not to clip.
 c------------------------------------------------------------------------
 	include 'gpscal.h'
 	character version*(*)
-	parameter(version='GpsCal: version 1.0 31-Jan-95')
+	parameter(version='GpsCal: version 1.0 1-Oct-96')
 	integer MAXSELS,nhead
 	parameter(MAXSELS=256,nhead=0)
 c
@@ -132,12 +133,13 @@ c
 	real sels(MAXSELS),clip,interval,offset(2),lstart,lwidth,lstep
 	real flux(4)
 	double precision Saved(16)
-	logical phase,amp,doline,mfs,doxy,xyvary,doref,noscale
+	logical phase,amp,doline,mfs,doxy,xyvary,doref,noscale,doclip
 c
 c  Externals.
 c
 	character PolsC2P*2
 	external Header,calget
+	logical keyprsnt
 c
 c  Get the input parameters.
 c
@@ -146,6 +148,7 @@ c
 	call keyf('vis',vis,' ')
 	call SelInput('select',sels,MAXSELS)
 	call mkeyf('model',Models,4,nModel)
+	doclip = keyprsnt('clip')
 	call keyr('clip',clip,0.)
 	call keyr('interval',interval,5.)
 	call keyi('minants',minants,0)
@@ -208,6 +211,7 @@ c
 	if(.not.doline.and..not.mfs)flag1(2:2) = 'l'
 c
 	flag2 = ' '
+	if(doclip) flag2(1:1) = 'l'
 	if(mfs)    flag2(2:2) = 'm'
 c
 c  Loop over all the models.
