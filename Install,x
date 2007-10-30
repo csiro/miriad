@@ -1,0 +1,416 @@
+#!/bin/csh -f
+
+# This script installs the Miriad system on a variety of UNIX systems.
+# Hopefully giving the simple command:
+
+#  ./Install
+
+# and answering the questions should be enough to install Miriad.
+# See the README file for more information.
+
+# The following is a list of directories to search for the PGPLOT,
+# X11, RPFITS and readline libraries. Add other directories if needed!!
+# Put the most important directories first!!
+
+	set searchlist = ( \
+	  /usr/lib /usr/local/pgplot /usr/local/gnu/lib /usr/local/lib \
+	  /usr/X11/lib /usr/lib/X11R5 /usr/local/X11/lib /usr/local/X11R5/lib \
+	  /usr/local/lib/X11 /usr/local/lib/X11R5 /usr/openwin/lib )
+
+# Add the OpenWin library directory, if it looks believable. On machines
+# without OpenWindows ... this addition to the search directory will be
+# discarded later on.
+
+	if ( $?OPENWINHOME ) then
+	  set searchlist = ($searchlist $OPENWINHOME/lib)
+	endif
+
+# Add all the libraries mentioned in LD_LIBRARY_PATH
+
+	if ( $?LD_LIBRARY_PATH ) then
+	  set searchlist = (`echo $LD_LIBRARY_PATH|sed 's/:/ /g'` $searchlist)
+	endif
+
+# Check for the standard Miriad structure.
+
+	onintr l100
+	if ( ! -e Install || ! -d bin || ! -d subs || ! -d scripts \
+	    || ! -d prog ) then
+	  echo "### This does not appear to be the Miriad root directory"
+	  echo "Change directory to the Miriad root directory"
+	  exit
+	endif
+	  
+# Determine the name of the Miriad root directory.
+
+	set root = `awk 'NR == 4 {print $3}' bin/MIRRC`
+	echo "Currently the Miriad root directory is set to $root"
+l0:
+	if ( ! -d $root ) then
+	  echo "### This directory does not exist"
+	else if ( ! -e $root/Install || ! -d $root/bin || ! -d $root/subs \
+	    || ! -d $root/scripts || ! -d $root/prog ) then
+	  echo "### This does not appear to contain the Miriad distribution"
+	else
+	  echo "This appears to be a valid root directory for Miriad."
+	  echo ""
+	  echo -n "Change this to use a different root directory? [y/n] "
+	  set answer = $<
+	  if ( "$answer" != "n" && "$answer" != "y" ) goto l0
+	  if ( "$answer" == "n" ) goto l8
+	endif
+	set root = `pwd`
+	echo ""
+	echo -n "Give a new root directory name (default is $root): "
+	set answer = $<
+	if ( "$answer" != "" ) set root = $answer
+	if ( ! -e $root/Install || ! -d $root/bin || ! -d $root/subs \
+	    || ! -d $root/scripts || ! -d $root/prog ) goto l0
+	cd $root
+
+# Edit MIRRC to reflect this root directory.
+
+	echo "#\!/bin/csh -f"	 			> MIRRC.tmp
+	echo "" 					>> MIRRC.tmp
+	echo "# The following must be the 4th line"	>> MIRRC.tmp
+	echo "setenv MIR $root"				>> MIRRC.tmp
+	sed 1,4d bin/MIRRC				>> MIRRC.tmp
+	mv MIRRC.tmp bin/MIRRC
+
+# Run the MIRRC script.
+
+l8:
+	echo ""
+	echo 'Running $MIR/bin/MIRRC ...'
+	source bin/MIRRC
+	if ("$MIRBIN" == "" ) then
+	  echo '### Could not determine the machine architecture ...'
+	  echo '### Please check/correct $MIR/bin/MIRRC'
+	  exit
+	else if ( ! -d $MIR/scripts/unix/$arch ) then
+	  echo "### Unknown machine architecture $arch"
+	  echo "### Either correct MIRRC"
+	  echo "    or develop mircadd,mirclnk,mirupdate in directory $MIR/scripts/unix/$arch"
+	  exit
+	else
+	  echo ""
+	  echo "The machine architecture is $arch"
+	endif
+	set path = ($MIRBIN $path)
+
+# Create the needed directories.
+
+	if ( ! -d lib ) mkdir lib
+
+	if ( ! -d $MIRBIN ) then
+	  echo ""
+	  echo Making \$MIRBIN
+	  mkdir $MIRBIN
+	endif
+	if ( ! -d $MIRPDOC ) then
+	  echo ""
+	  echo Making \$MIRPDOC ...
+	  mkdir $MIRPDOC
+	endif
+	if ( ! -d $MIRLIB ) then
+	  echo ""
+	  echo Making \$MIRLIB ...
+	  mkdir $MIRLIB
+	endif
+
+# Add the Miriad library to the places to look for libraries.
+
+	echo "Fiddling the library search list ..."
+	if ( -x $MIR/scripts/unix/$arch/mirfind.csh ) then
+	  set searchlist = ($searchlist $MIRLIB `$MIR/scripts/unix/$arch/mirfind.csh -l`)
+	else
+	  set searchlist = ($searchlist $MIRLIB)
+	endif
+
+# Strip down the library search path only to existing directories. Also
+# eliminate duplications.
+
+	set nsearchlist = ()
+	foreach dir ($searchlist)
+	  if ( -d $dir ) then
+	    set found = 0
+	    foreach ndir ($nsearchlist)
+	      if ( "$dir" == "$ndir" ) set found = 1
+	    end
+	    if ( ! $found ) set nsearchlist = ($nsearchlist $dir)
+	  endif
+	end
+	set searchlist = ($nsearchlist)
+
+# Create the mirfind script.
+
+	if ( -e $MIR/scripts/unix/$arch/mirfind.csh ) then
+l01:
+	  echo ""
+	  echo -n "Re-generate the mirfind script? [y/n] "
+	  set answer = $<
+	  if ( "$answer" == "n" ) goto l02
+	  if ( "$answer" != "y" ) goto l01
+	endif
+
+# Regenerate the search list.
+
+	echo "#\!/bin/csh -f" 			>  mirfind.csh
+        echo 'if ( "$1" == "-l" ) then'		>> mirfind.csh
+	echo "  echo $searchlist"		>> mirfind.csh
+	echo '  exit'				>> mirfind.csh
+	echo 'else if ( "$1" == "-i" ) then'	>> mirfind.csh
+	echo "  foreach dir ($searchlist /usr/include )"	>> mirfind.csh
+	echo '    foreach t (include inc)'	>> mirfind.csh
+	echo '      if ( -d $dir:h/$t/$2 ) then' >> mirfind.csh
+	echo '        echo $dir:h/$t'		>> mirfind.csh
+	echo '        exit'			>> mirfind.csh
+	echo '      endif'			>> mirfind.csh
+	echo '    end'				>> mirfind.csh
+	echo '  end'				>> mirfind.csh
+	echo 'else'				>> mirfind.csh
+	echo "  foreach dir ($searchlist)"	>> mirfind.csh
+	echo '    if(-e $dir/lib$1.a || -e $dir/lib$1.so ) then' >> mirfind.csh
+	echo '      echo $dir'			>> mirfind.csh
+	echo '      exit'			>> mirfind.csh
+	echo '    endif'			>> mirfind.csh
+	echo '  end'				>> mirfind.csh
+	echo 'endif'				>> mirfind.csh
+	chmod +x mirfind.csh
+	mv mirfind.csh $MIR/scripts/unix/$arch/mirfind.csh
+	if ( $status != 0) then
+	  echo "### Failed to move mirfind.csh to $MIR/scripts/unix/$arch"
+	  echo "### Aborting"
+	  exit
+	endif
+	echo "Libraries will be searched for in ..."
+	$MIR/scripts/unix/$arch/mirfind.csh -l
+	
+# If $MIRBIN/mirlibs exists, ask if the generation of mirlibs should be
+# skipped.
+
+l02:
+	if ( -e $MIR/scripts/unix/$arch/mirlibs.csh ) then
+	  echo ""
+	  echo "The current link library list is:"
+	  sed -n 's/echo //p' $MIR/scripts/unix/$arch/mirlibs.csh
+l1:
+	  echo ""
+	  echo -n "Re-generate the mirlibs script? [y/n] "
+	  set answer = $<
+	  if ( "$answer" == "n" ) goto l7
+	  if ( "$answer" != "y" ) goto l1
+	endif
+
+# Determine which libraries to use in the in the link process.
+
+	set linklist = '$MIRLIB/libmir.a'
+
+# Try to find the RPFITS library.
+
+	set rpfitsdir = ""
+	foreach dir ($searchlist)
+	  if ( -e $dir/librpfits.a ) set rpfitsdir = "$dir"
+	end
+	if ( "$rpfitsdir" == "" && -e bindir/$arch/librpfits.a ) then
+	  echo ""
+	  echo 'Copying the RPFITS library to $MIRLIB'
+	  cp bindir/$arch/librpfits.a $MIRLIB
+	  set rpfitsdir = "$MIRLIB"
+	endif
+
+	if ( "$rpfitsdir" == "" ) then
+	  echo "### Could not find the RPFITS library ... atlod will not link"
+	  echo "    If you want atlod to link ... abort this and install it"
+	  echo "    now."
+	else
+	  if ( "$rpfitsdir" == "$MIRLIB" ) set rpfitsdir = '$MIRLIB'
+	  echo ""
+	  echo "Using $rpfitsdir for the RPFITS library directory ..."
+	  set linklist = "$linklist $rpfitsdir/librpfits.a"
+	endif
+
+# Try to find the PGPLOT library.
+
+	set pgplotdir = ""
+	foreach dir ($searchlist)
+	  if ( -e $dir/libpgplot.a || -e $dir/libpgplot.so ) set pgplotdir = $dir
+	end
+l2:
+	if ( "$pgplotdir" == "" || ! ( -e $pgplotdir/libpgplot.a || -e $pgplotdir/libpgplot.so ) ) then
+	  echo "### Could not find PGPLOT library. If PGPLOT has"
+	  echo "    not been installed already ... abort this and"
+	  echo "    install it now."
+	  echo ""
+	  echo -n "Give the directory of the PGPLOT library: "
+	  set pgplotdir = $<
+	  goto l2
+	endif
+	if ( "$pgplotdir" == "$MIRLIB" ) set pgplotdir = '$MIRLIB'
+	echo ""
+	echo "Using $pgplotdir for the PGPLOT library directory ..."
+	if ( "$pgplotdir" == "/usr/lib" || "$pgplotdir" == "/lib" ) then
+	  set linklist = "$linklist -lpgplot"
+	else
+	  set linklist = "$linklist -L$pgplotdir -lpgplot"
+	endif
+
+# Try to find the X11 library.
+
+l3:
+	echo ""
+	echo -n "Does PGPLOT tasks need the X11 library? [y/n] "
+	set answer = $<
+	if ( "$answer" != "y" && "$answer" != "n" ) goto l3
+	if ( "$answer" == "n" ) goto l5
+
+	set xdir = ""
+	foreach dir ($searchlist)
+	  if ( -e $dir/libX11.a || -e $dir/libX11.so ) set xdir = $dir
+	end
+l4:
+	if ( "$xdir" == "" || ! ( -e $xdir/libX11.a || -e $xdir/libX11.so ) ) then
+	  echo "### Could not find X11 library"
+	  echo ""
+	  echo -n "Give the directory of the X11 library: "
+	  set xdir = $<
+	  goto l4
+	endif
+	if ( "$xdir" == "$MIRLIB" ) set xdir = '$MIRLIB'
+	echo ""
+	echo "Using $xdir for the X11 library directory ..."
+	if ( "$xdir" == "/usr/lib" || "$xdir" == "/lib" ) then
+	  set linklist = "$linklist -lX11"
+	else
+	  set linklist = "$linklist -L$xdir -lX11"
+	endif
+
+# Add machine-specific libraries.
+
+l5:
+	if ( "$arch" == "sun4sol" ) then
+	  set linklist = "$linklist -lsocket -lnsl -lm"
+	else if ( "$arch" == "sgi" ) then
+	  set linklist = "$linklist -lcomplib.sgimath -lm"
+	else if ( "$arch" == "convex" ) then
+	  set linklist = "$linklist -lveclib -lC2_old -lm"
+	else if ( "$arch" == "unicos" ) then
+	  set linklist = "$linklist -lscilib -lm"
+	else
+	  set linklist = "$linklist -lm"
+	endif
+	
+# Create mirlibs, and copy it to the correct place.
+
+l6:
+	echo "#\!/bin/csh -f"			> mirlibs.csh
+	echo "echo $linklist"			>> mirlibs.csh
+	chmod +x mirlibs.csh
+	echo ""
+	echo "The new link library list is:"
+	echo "$linklist"
+	echo ""
+	echo -n "Is this OK? [y/n] "
+	set answer = $<
+	
+	if ( "$answer" == "n" ) then
+	  echo "You should edit the file mirlibs.csh in the current directory,"
+	  echo "then copy it to $MIR/scripts/unix/$arch, and re-run Install"
+	  echo '(answering no to the "Re-generate the mirlibs script" question).'
+	  exit
+	else if ("$answer" == "y" ) then
+	  mv mirlibs.csh $MIR/scripts/unix/$arch/mirlibs.csh
+	  if ( $status != 0) then
+	    echo "### Failed to move mirlibs.csh to $MIR/scripts/unix/$arch"
+	    echo "### Aborting"
+	    exit
+	  endif
+	else
+	  goto l6
+	endif
+
+# Copy the update scripts.
+
+l7:
+	foreach file (mircadd mirclnk mirupdate)
+	  if ( -e $MIR/scripts/unix/$arch/$file.csh ) then
+	    echo "Copying $file"
+	    cp $MIR/scripts/unix/$arch/$file.csh $MIRBIN/$file
+	  else
+	    echo "### Could not find script $MIR/scripts/unix/$arch/$file.csh"
+	    echo "### Aborting"
+	    exit
+	  endif
+	  chmod u+x $MIRBIN/$file
+	end
+
+# Compile the "newer" tool.
+
+	echo "Compiling the newer tool ... (ignore posix redefined messages)"
+	cc -Dposix -o $MIRBIN/newer $MIR/tools/newer.c
+	if ( ! -x $MIRBIN/newer ) then
+	  echo "### Failed to build the newer tool"
+	  echo "### Aborting"
+	  exit
+	endif
+
+# Try to find the readline library. We are just trying to find a version in
+# a standard place at this stage.
+
+	set rldir = ""
+	foreach dir ($searchlist)
+	  if ( -e $dir/libreadline.a || -e $dir/libreadline.so ) set rldir = "$dir"
+	end
+	if ( "$rldir" == "" && -e bindir/$arch/libreadline.a ) then
+	  echo ""
+	  echo 'Copying the readline library to $MIRLIB'
+	  cp bindir/$arch/libreadline.a $MIRLIB
+	endif
+
+# Build the bulk of Miriad.
+
+	if ( -e $MIRLIB/Last_update ) then
+l9:
+	  echo ""
+	  echo "You can choose to rebuild the Miriad library and tasks from scratch."
+	  echo "Otherwise just an incremental update will be done."
+	  echo ""
+	  echo -n "Rebuild the Miriad library/tasks from scratch? [y/n] "
+	  set answer = $<
+	  if ( "$answer" != "y" && "$answer" != "n" ) goto l9
+	  if ( "$answer" == "y" ) rm -rf $MIRLIB/{Last_update,libmir.a}
+	endif
+	echo ""
+	echo "Starting to build the bulk of Miriad -- this may take a while ..."
+	rehash
+	mirupdate
+
+# Now try to build all the "special" tools.
+
+l10:
+	echo ""
+	echo -n "Build special tools? [y/n] "
+	set answer = $<
+	if ("$answer" == "n" ) exit
+	if ("$answer" != "y" ) goto l10
+
+	echo ""
+	echo "Starting to build special tools ..."
+	foreach special ( miriad xpanel xmtv sxmtv)
+	  set s = $MIR/spec/$special
+	  if ( -e $s/Build.$arch ) then
+	    echo ""
+	    echo "Building $special ..."
+	    chmod +x $s/Build.$arch
+	    (cd $s; ./Build.$arch)
+	  else if ( -e $s/Build ) then
+	    echo ""
+	    echo "Building $special ..."
+	    chmod +x $s/Build
+	    (cd $s; ./Build )
+	  else
+	    echo "### Failed to find a build script for $special"
+	  endif
+	end
+
+l100:
