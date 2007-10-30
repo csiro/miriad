@@ -6,16 +6,16 @@ c= demos - Inverse mosaicing operation
 c& rjs
 c: map manipulation
 c+
-c	DEMOS (de-mosaic) is a MIRIAD task which takes an input image, or
-c	cube, and forms output images by applying a primary beam. Several
-c	pointing centers are accepted, with a different output image
-c	formed for each pointing. Thus this task
-c	performs the inverse operation of mosaicing. The input pointing
-c	centres and the primary beam size are indirectly specified by
+c	DEMOS (de-mosaic) is a MIRIAD task which takes a model of the sky
+c	(which is primary beam corrected), and then multiplies by a primary
+c	beam response function  at a number of different pointing
+c	centers. It produces a different output for each pointing center.
+c	Thus this task performs the inverse of mosaicing. The input pointing
+c	centers and the primary beam size are indirectly specified by
 c	a visibility dataset.
 c
-c	Because the output of DEMOS are not primary beam corrected, they can
-c	be used for comparison with other uncorrected images and uvdata. In
+c	Because the output of DEMOS have primary beams applied, they can
+c	be used for comparison with visibility data and uncorrected images. In
 c	particular SELFCAL cannot handle a model which is primary beam
 c	corrected, though it can handle a visibility data file containing
 c	multiple pointings. Thus you could use DEMOS to break the model into
@@ -71,6 +71,7 @@ c		  input vis datasets.
 c    rjs  17may95 More messages.
 c    rjs  02jul97 cellscal change.
 c    rjs  07jul97 Change coaxdesc to coaxget.
+c    rjs  17sep97 Doc change only.
 c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='version 27-Feb-95')
