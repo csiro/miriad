@@ -16,16 +16,23 @@
         7-sep-93  rjs   Bug fix in habort.
        23-dec-93  rjs   hexists did not handle tno==0 correctly.
         5-jan-93  rjs   Added hmode to check access mode of dataset.
-       15-nov-94  rjs   Fixed bug affecting rewriting of "small" items
-			after they have been closed.
+        4-nov-94  rjs	Changes to the way trees and items are stored.
+       15-nov-94  rjs	Fixed bug affecting small items being rewritten
+			before the dataset is closed.
 */
+
+
+#include <stdlib.h>
+#include <string.h>
 
 #include "hio.h"
 
 #define private static
 #define TRUE 1
 #define FALSE 0
-#define NULL 0
+#if !defined(NULL)
+#  define NULL 0
+#endif
 
 #define MAXNAME 9
 #define CACHESIZE 64			/* Max size of items to cache. */
@@ -50,16 +57,26 @@
 #define RDWR_RDWR    2
 
 typedef struct { int offset,length,state; char *buf;} IOB;
-typedef struct item {	char name[MAXNAME];
-			int size,flags,fd,thandle,last,bsize,offset;
+
+typedef struct item {	char *name;
+			int handle,size,flags,fd,last,bsize,offset;
+			struct tree *tree;
 			IOB io[2];
 			struct item *fwd; } ITEM;
 
-typedef struct { char *name;
-		 int flags,rdwr,wriostat;
+typedef struct tree { char *name;
+		 int handle,flags,rdwr,wriostat;
 		 ITEM *itemlist; } TREE;
 
-private TREE trees[MAXOPEN];
+#define MAXITEM 256
+
+private int nitem,ntree;
+private TREE *tree_addr[MAXOPEN];
+private ITEM *item_addr[MAXITEM];
+
+#define hget_tree(tno) (tree_addr[tno])
+#define hget_item(tno) (item_addr[tno])
+
 private int header_ok,expansion[10];
 private int first=TRUE;
 
@@ -86,6 +103,7 @@ private void hcheckbuf_c(),hcache_read_c(),hcache_write_c(),hrelease_item_c(),
   hcache_create_c(),hwrite_fill_c(),hdir_c(),hinit_c();
 private int hname_check();
 private ITEM *hcreate_item_c();
+private TREE *hcreate_tree_c();
 
 /* Min and max value macros. */
 
@@ -96,18 +114,18 @@ private ITEM *hcreate_item_c();
 
 /* Define a few things so that I can avoid lint being pedantic. */
 
-char *malloc(),*strcpy(),*strcat(),*realloc();
 void bug_c(),bugno_c(),dopendir_c(),dclosedir_c(),dreaddir_c();
 void dtrans_c(),dmkdir_c(),dopen_c(),dclose_c(),dread_c(),dwrite_c();
 
-#define Malloc(a) malloc((unsigned int)(a))
-#define Realloc(a,b) realloc((a),(unsigned int)(b))
+#define Malloc(a) malloc((size_t)(a))
+#define Realloc(a,b) realloc((a),(size_t)(b))
 #define Strcpy (void)strcpy
 #define Strcat (void)strcat
+#define Memcpy (void)memcpy
 
 /************************************************************************/
-void hopen_c(thandle,name,status,iostat)
-int *iostat,*thandle;
+void hopen_c(tno,name,status,iostat)
+int *iostat,*tno;
 char *name,*status;
 /**hopen -- Open a data set.			 			*/
 /*&mjs									*/
@@ -131,7 +149,7 @@ char *name,*status;
 /*----------------------------------------------------------------------*/
 {
   char path[MAXPATH];
-  int tno;
+  TREE *t;
 
 /* Initialise if its the first time through. */
 
@@ -139,35 +157,28 @@ char *name,*status;
 
 /* Find a spare slot, and set the name etc. */
 
-  for(tno=1; tno<MAXOPEN; tno++)if(trees[tno].name == NULL)break;
-  if(tno == MAXOPEN)bug_c('f',"hopen_c: No spare slots");
   dtrans_c(name,path,iostat);
   if(*iostat)return;
-  trees[tno].name = Malloc(strlen(path)+1);
-  trees[tno].flags = 0;
-  Strcpy(trees[tno].name,path);;
-  trees[tno].itemlist = NULL;
+  t = hcreate_tree_c(path);
 
 /* Either open an old cache, or create a new cache. */
 
   if(!strcmp(status,"old")){
-    hcache_read_c(tno,iostat);
-    trees[tno].rdwr = RDWR_UNKNOWN;
+    hcache_read_c(t,iostat);
+    t->rdwr = RDWR_UNKNOWN;
   } else if(!strcmp(status,"new")){
     dmkdir_c(path,iostat);
-    if(!*iostat)hcache_create_c(tno,iostat);
-    trees[tno].flags |= TREE_NEW;
-    trees[tno].rdwr = RDWR_RDWR;
+    if(!*iostat)hcache_create_c(t,iostat);
+    t->flags |= TREE_NEW;
+    t->rdwr = RDWR_RDWR;
   } else *iostat = -1;
 
 /* Tidy up before we return. Make sure things are tidy if an error
    occurred during the operation. */
 
-  if(!*iostat){
-    *thandle = tno;
-  } else{
-    hclose_c(tno);
-  }
+  *tno = t->handle;
+  if(*iostat) hclose_c(*tno);
+
 }
 /************************************************************************/
 private void hinit_c()
@@ -175,12 +186,13 @@ private void hinit_c()
   Initialise everthing the first time through.
 ------------------------------------------------------------------------*/
 {
-  int tno;
-  for(tno=0; tno<MAXOPEN; tno++){
-    trees[tno].name     = NULL;
-    trees[tno].flags    = 0;
-    trees[tno].itemlist = NULL;
-  }
+  int i;
+
+  nitem = ntree = 0;
+  for(i=0; i < MAXITEM; i++)item_addr[i] = NULL;
+  for(i=0; i < MAXOPEN; i++)tree_addr[i] = NULL;
+  (void)hcreate_tree_c("");
+
   expansion[H_BYTE] = 1;
   expansion[H_INT]  = sizeof(int)/H_INT_SIZE;
   expansion[H_INT2] = sizeof(int2)/H_INT2_SIZE;
@@ -211,10 +223,10 @@ int tno,*iostat;
 {
   TREE *t;
   ITEM *item;
-  char s[CACHE_ENT],*ihandle;
-  int offset,i;
+  char s[CACHE_ENT];
+  int offset,i,ihandle;
 
-  t = &(trees[tno]);
+  t = hget_tree(tno);
   *iostat = 0;
 
 /* Determine whether the cache needs to be rewritten, and write out
@@ -295,45 +307,44 @@ void habort_c()
 
 /* Check each possible tree. */
 
-  t = trees;
-  for( i=0, t=trees; i < MAXOPEN; i++,t++){
-    it = t->itemlist;
-    while(it != NULL){
-      itfwd = it->fwd;
+  for( i=0; i < MAXOPEN; i++){
+    if( (t = hget_tree(i) ) != NULL){
+      it = t->itemlist;
+      while(it != NULL){
+        itfwd = it->fwd;
 
 /* Wait for any i/o to complete, and prevent further flushing of the buffers
    by pretending that nothing has been modified. */
 
-      WAIT(it,&iostat);
-      it->io[0].state = IO_VALID;
-      it->io[1].state = IO_VALID;
+        WAIT(it,&iostat);
+        it->io[0].state = IO_VALID;
+        it->io[1].state = IO_VALID;
 
 /* If its an item opened in WRITE mode, remember its name. */
 
-      if(it->flags & ITEM_WRITE)Strcpy(name,it->name);
-      else name[0] = 0;
+        if(it->flags & ITEM_WRITE)Strcpy(name,it->name);
+        else name[0] = 0;
 
 /* If the item is open, close it. */
 /* If it was in write mode, and the name was known, delete it. */
 
-      if(it->flags & ACCESS_MODE)hdaccess_c((char *)it,&iostat);
-      if(*name)hdelete_c(i,name,&iostat);
-      it = itfwd;
-    }
+        if(it->flags & ACCESS_MODE)hdaccess_c(it->handle,&iostat);
+        if(*name)hdelete_c(t->handle,name,&iostat);
+        it = itfwd;
+      }
     
 /* Pretend the cache has not changed and finish up. Completely delete
    trees that were opened as NEW. Otherwise finish up. */
 
-    if(t->name != NULL){
       t->flags &= ~TREE_CACHEMOD;
-      if(t->flags & TREE_NEW)hrm_c(i);
-      else hclose_c(i);
+      if(t->flags & TREE_NEW)hrm_c(t->handle);
+      else hclose_c(t->handle);
     }
   }
 }
 /************************************************************************/
-void hrm_c(thandle)
-int thandle;
+void hrm_c(tno)
+int tno;
 /**hrm -- Remove a data-set.						*/
 /*&mjs									*/
 /*:low-level-i/o							*/
@@ -351,14 +362,14 @@ int thandle;
 /*----------------------------------------------------------------------*/
 {
   char name[MAXPATH];
-  int iostat;
-  char *ihandle;
+  int iostat,ihandle;
+  TREE *t;
 
-  haccess_c(thandle,&ihandle,".","read",&iostat);
+  haccess_c(tno,&ihandle,".","read",&iostat);
   if(iostat == 0){
     hreada_c(ihandle,name,MAXPATH,&iostat);
     while(iostat == 0){
-      hdelete_c(thandle,name,&iostat);
+      hdelete_c(tno,name,&iostat);
       hreada_c(ihandle,name,MAXPATH,&iostat);
     }
     hdaccess_c(ihandle,&iostat);
@@ -367,17 +378,18 @@ int thandle;
 /* Delete the "header" item. */
 
   header_ok = TRUE;
-  hdelete_c(thandle,"header",&iostat);
+  hdelete_c(tno,"header",&iostat);
   header_ok = FALSE;
 
 /* Delete the directory itself. */
 
-  drmdir_c(trees[thandle].name,&iostat);
-  hclose_c(thandle);
+  t = hget_tree(tno);
+  drmdir_c(t->name,&iostat);
+  hclose_c(tno);
 }
 /************************************************************************/
-void hclose_c(thandle)
-int thandle;
+void hclose_c(tno)
+int tno;
 /**hclose -- Close a Miriad data set.		 			*/
 /*&mjs									*/
 /*:low-level-i/o							*/
@@ -394,40 +406,43 @@ int thandle;
 /*--									*/
 /*----------------------------------------------------------------------*/
 {
+  TREE *t;
   ITEM *item,*it1,*it2;
   int iostat;
   char message[40];
 
 /* Close any open items. */
 
-  for(item=trees[thandle].itemlist; item != NULL; item = item->fwd){
+  t = hget_tree(tno);
+  for(item=t->itemlist; item != NULL; item = item->fwd){
     if(item->flags & ACCESS_MODE){
       Strcpy(message,"Closing item -- ");
       Strcat(message,item->name);
       bug_c('w',message);
-      hdaccess_c((char *)item,&iostat);			check(iostat);
+      hdaccess_c(item->handle,&iostat);			check(iostat);
     }
   }
 
 /* Flush out the header, if needed. */
 
-  hflush_c(thandle,&iostat);				check(iostat);
+  hflush_c(tno,&iostat);				check(iostat);
 
 /* Release all allocated stuff. */
 
-  it1 = trees[thandle].itemlist;
+  it1 = t->itemlist;
   while(it1 != NULL){
     it2 = it1->fwd;
     hrelease_item_c(it1);
     it1 = it2;
   }
-  free(trees[thandle].name);
-  trees[thandle].name = NULL;
-  trees[thandle].itemlist = NULL;
+  tree_addr[tno] = NULL;
+  free(t->name);
+  free((char *)t);
+  ntree--;
 }
 /************************************************************************/
-void hdelete_c(thandle,keyword,iostat)
-int *iostat,thandle;
+void hdelete_c(tno,keyword,iostat)
+int *iostat,tno;
 char *keyword;
 /**hdelete -- Delete an item from a data-set.				*/
 /*&mjs									*/
@@ -453,18 +468,21 @@ char *keyword;
 {
   char path[MAXPATH];
   ITEM *item;
+  TREE *t;
   int ent_del;
 
   if(first)hinit_c();
 
-  if(thandle != 0) if(*iostat = hname_check(keyword)) return;
+  if(tno != 0) if(*iostat = hname_check(keyword)) return;
 
 /* Check if the item is aleady here abouts. */
 
+  t = hget_tree(tno);
+
   ent_del = FALSE;
   item = NULL;
-  if(thandle != 0)
-    for(item=trees[thandle].itemlist; item != NULL; item = item->fwd)
+  if(tno != 0)
+    for(item=t->itemlist; item != NULL; item = item->fwd)
       if(!strcmp(keyword,item->name))break;
 
 /* Delete the entry for this item, if there was one. */
@@ -472,18 +490,15 @@ char *keyword;
   if(item != NULL){
     if(item->flags & ACCESS_MODE)
       bug_c('f',"hdelete: Attempt to delete an accessed item");
-    if(item->flags & ITEM_CACHE) trees[thandle].flags |= TREE_CACHEMOD;
+    if(item->flags & ITEM_CACHE) t->flags |= TREE_CACHEMOD;
     hrelease_item_c(item);
     ent_del = TRUE;
   }
 
 /* Always try to delete a file associated with the item. */
 
-  if(thandle == 0)Strcpy(path,keyword);
-  else{
-    Strcpy(path,trees[thandle].name);
-    Strcat(path,keyword);
-  }
+  Strcpy(path,t->name);
+  Strcat(path,keyword);
   ddelete_c(path,iostat);
 
 /* If we have deleted it once already, do not give any errors if the
@@ -492,9 +507,9 @@ char *keyword;
   if(ent_del) *iostat = 0;
 }
 /************************************************************************/
-void haccess_c(thandle,ihandle,keyword,status,iostat)
-int *iostat,thandle;
-char **ihandle;
+void haccess_c(tno,ihandle,keyword,status,iostat)
+int *iostat,tno;
+int *ihandle;
 char *keyword,*status;
 /**haccess -- Open an item of a data set for access.			*/
 /*&mjs									*/
@@ -523,12 +538,12 @@ char *keyword,*status;
 {
   char path[MAXPATH];
   ITEM *item;
+  TREE *t;
   int mode;
   char string[3];
 
   if(first)hinit_c();
 
-  *ihandle = NULL;
   if(!strcmp("read",status))	    mode = ITEM_READ;
   else if(!strcmp("write",status))  mode = ITEM_WRITE;
   else if(!strcmp("scratch",status))mode = ITEM_SCRATCH;
@@ -536,34 +551,35 @@ char *keyword,*status;
   else bug_c('f',"haccess_c: Unrecognised STATUS");
 
   if(!strcmp("header",keyword) || !strcmp(".",keyword) ||
-     !strcmp("history",keyword)|| thandle == 0 	       ||
+     !strcmp("history",keyword)|| tno == 0 	       ||
      (mode & ITEM_SCRATCH)		)mode |= ITEM_NOCACHE;
 
-  if(thandle != 0) if(*iostat = hname_check(keyword))return;
+  if(tno != 0) if(*iostat = hname_check(keyword))return;
+  t = hget_tree(tno);
 
 /* If we are writing, check whether we have write permission. */
 
   if( !(mode & ITEM_READ) && !(mode & ITEM_NOCACHE) ){
-    if(trees[thandle].rdwr == RDWR_UNKNOWN)hmode_c(thandle,string);
-    *iostat = trees[thandle].wriostat;
+    if(t->rdwr == RDWR_UNKNOWN)hmode_c(tno,string);
+    *iostat = t->wriostat;
     if(*iostat) return;
   }
 
 /* Check if the item is aleady here abouts. */
 
   item = NULL;
-  if(thandle != 0)
-    for(item=trees[thandle].itemlist; item != NULL; item = item->fwd)
+  if(tno != 0)
+    for(item = t->itemlist; item != NULL; item = item->fwd)
       if(!strcmp(keyword,item->name))break;
 
 /* If the item does not exist, create it. Otherwise the item must
    be cacheable, in which case we truncate its length to zero if needed. */
 
-  if(item == NULL)item = hcreate_item_c(thandle,keyword);
+  if(item == NULL)item = hcreate_item_c(t,keyword);
   else if((mode & (ITEM_WRITE|ITEM_SCRATCH)) && item->size != 0){
     item->size = 0;
     item->io[0].length = item->io[1].length = 0;
-    if(item->flags & ITEM_CACHE) trees[thandle].flags |= TREE_CACHEMOD;
+    if(item->flags & ITEM_CACHE) t->flags |= TREE_CACHEMOD;
   }
 
 /* Check and set the read/write flags. */
@@ -579,11 +595,8 @@ char *keyword,*status;
     hdir_c(item);
   } else if(item->size == 0 && (!(mode & ITEM_WRITE) || (mode & ITEM_NOCACHE))
     			    && !(item->flags & ITEM_CACHE)){
-    if(thandle == 0)Strcpy(path,keyword);
-    else{
-      Strcpy(path,trees[thandle].name);
-      Strcat(path,keyword);
-    }
+    Strcpy(path,t->name);
+    Strcat(path,keyword);
     dopen_c(&(item->fd),path,status,&(item->size),iostat);
 
     item->bsize = BUFSIZE;
@@ -595,17 +608,17 @@ char *keyword,*status;
    writeable. */
 
     if(!(mode & ITEM_READ)){
-      if(*iostat == 0) trees[thandle].rdwr = RDWR_RDWR;
-      else	       trees[thandle].rdwr = RDWR_RDONLY;
-      trees[thandle].wriostat = *iostat;
+      if(*iostat == 0) t->rdwr = RDWR_RDWR;
+      else	       t->rdwr = RDWR_RDONLY;
+      t->wriostat = *iostat;
     }
   }
+  *ihandle = item->handle;
   if(*iostat)hrelease_item_c(item);
-  else 	     *ihandle = (char *)item;
 }
 /************************************************************************/
-void hmode_c(thandle,mode)
-int thandle;
+void hmode_c(tno,mode)
+int tno;
 char *mode;
 /*
 /**hmode -- Return access modes of a dataset.				*/
@@ -629,33 +642,35 @@ char *mode;
 /*----------------------------------------------------------------------*/
 {
   int iostat;
-  char *ihandle;
+  int ihandle;
+  TREE *t;
 
 /* If its tno==0, give up. */
 
   *mode = 0;
-  if(thandle == 0)return;
+  if(tno == 0)return;
 
 /* If we do not already know the read/write access, determine it the hard
    way. */
 
-  if(trees[thandle].rdwr == RDWR_UNKNOWN){
+  t = hget_tree(tno);
+  if(t->rdwr == RDWR_UNKNOWN){
     header_ok = TRUE;
-    haccess_c(thandle,&ihandle,"header","append",&iostat);
+    haccess_c(tno,&ihandle,"header","append",&iostat);
     header_ok = FALSE;
     if(!iostat)hdaccess_c(ihandle,&iostat);
   }
 
 /* Return the info. */
 
-  if(trees[thandle].rdwr == RDWR_RDONLY)    Strcpy(mode,"r");
-  else if(trees[thandle].rdwr == RDWR_RDWR) Strcpy(mode,"rw");
+  if(t->rdwr == RDWR_RDONLY)    Strcpy(mode,"r");
+  else if(t->rdwr == RDWR_RDWR) Strcpy(mode,"rw");
   else bug_c('f',"Algorithmic failure, in HMODE");
 
 }
 /************************************************************************/
-int hexists_c(thandle,keyword)
-int thandle;
+int hexists_c(tno,keyword)
+int tno;
 char *keyword;
 /**hexists -- Check if an item exists.					*/
 /*&mjs									*/
@@ -679,27 +694,26 @@ char *keyword;
   char path[MAXPATH];
   int iostat,fd,size;
   ITEM *item;
+  TREE *t;
 
 /* Check for an invalid name. */
 
-  if(thandle != 0) if(hname_check(keyword)) return(FALSE);
+  if(tno != 0) if(hname_check(keyword)) return(FALSE);
 
 /* Check if the item is aleady here abouts. */
 
-  if(thandle != 0){
+  t = hget_tree(tno);
+  if(tno != 0){
     item = NULL;
-    for(item=trees[thandle].itemlist; item != NULL; item = item->fwd)
+    for(item = t->itemlist; item != NULL; item = item->fwd)
       if(!strcmp(keyword,item->name))return(TRUE);
   }
 
 /* It was not found in the items currently opened, nor the items that
    live in "header". Now try and open a file with this name. */
 
-  if(thandle == 0)Strcpy(path,keyword);
-  else{
-    Strcpy(path,trees[thandle].name);
-    Strcat(path,keyword);
-  }
+  Strcpy(path,t->name);
+  Strcat(path,keyword);
 
   dopen_c(&fd,path,"read",&size,&iostat);
   if(iostat)return(FALSE);
@@ -709,7 +723,7 @@ char *keyword;
 }
 /************************************************************************/
 void hdaccess_c(ihandle,iostat)
-char *ihandle;
+int ihandle;
 int *iostat;
 /**hdaccess -- Finish up access to an item.				*/
 /*&mjs									*/
@@ -736,7 +750,7 @@ int *iostat;
 /* If it has an associated file, flush anything remaining to the file
    and close it up. */
 
-  item = (ITEM *)ihandle;
+  item = hget_item(ihandle);
 
 /* May be a binary file. Flush modified buffers, wait for i/o to complete,
    and close up. */
@@ -767,14 +781,13 @@ int *iostat;
 
   } else{
     item->flags &= ~ACCESS_MODE;
-    if(item->io[0].state == IO_MODIFIED)
-		trees[item->thandle].flags |= TREE_CACHEMOD;
+    if(item->io[0].state == IO_MODIFIED)item->tree->flags |= TREE_CACHEMOD;
     item->io[0].state = IO_VALID;
   }
 }
 /************************************************************************/
 int hsize_c(ihandle)
-char *ihandle;
+int ihandle;
 /**hsize -- Determine the size (in bytes) of an item. 			*/
 /*&mjs									*/
 /*:low-level-i/o							*/
@@ -793,12 +806,12 @@ char *ihandle;
 /*----------------------------------------------------------------------*/
 {
   ITEM *item;
-  item = (ITEM *)ihandle;
+  item = hget_item(ihandle);
   return(item->size);
 }
 /************************************************************************/
 void hio_c(ihandle,dowrite,type,buf,offset,length,iostat)
-char *ihandle;
+int ihandle;
 int dowrite,type,offset,length,*iostat;
 char *buf;
 /**hread,hwrite -- Read and write items.	 			*/
@@ -888,7 +901,7 @@ char *buf;
   IOB *iob1,*iob2;
   ITEM *item;
 
-  item = (ITEM *)ihandle;
+  item = hget_item(ihandle);
 
 /* Check various end-of-file conditions and for adequate buffers. */
 
@@ -929,7 +942,6 @@ char *buf;
 
     if(!WITHIN_BUF(b)){
       if(iob1->state == IO_MODIFIED){
-
 	next = iob1->offset + iob1->length;
         if(iob1->length%BUFALIGN && next < item->size)
 	  {hwrite_fill_c(item,iob1,next,iostat);	if(*iostat) return;}
@@ -993,7 +1005,6 @@ char *buf;
       if(iob1->offset + iob1->length < offset &&
          iob1->offset + iob1->length < item->size)
 	  {hwrite_fill_c(item,iob1,offset,iostat);	if(*iostat) return;}
-
       iob1->state = IO_MODIFIED;
       iob1->length = max(iob1->length,
 			 min(length + offset - iob1->offset, item->bsize));
@@ -1009,7 +1020,7 @@ char *buf;
     off  = offset - iob1->offset;
     len = min(length, iob1->length - off);
     if(dowrite)switch(type){
-      case H_BYTE: 	memcpy(iob1->buf+off,buf,len);
+      case H_BYTE: 	Memcpy(iob1->buf+off,buf,len);
 			break;
       case H_INT:  	pack32_c((int *)buf,iob1->buf+off,len/H_INT_SIZE);
 			break;
@@ -1021,12 +1032,12 @@ char *buf;
 			break;
       case H_CMPLX:	packr_c((float *)buf,iob1->buf+off,(2*len)/H_CMPLX_SIZE);
 			break;
-      case H_TXT:	memcpy(iob1->buf+off,buf,len);
+      case H_TXT:	Memcpy(iob1->buf+off,buf,len);
 			if(*(buf+len-1) == 0)*(iob1->buf+off+len-1) = '\n';
 			break;
       default:		bug_c('f',"hio_c: Unrecognised type");
     } else      switch(type){
-      case H_BYTE: 	memcpy(buf,iob1->buf+off,len);
+      case H_BYTE: 	Memcpy(buf,iob1->buf+off,len);
 			break;
       case H_INT:  	unpack32_c(iob1->buf+off,(int *)buf,len/H_INT_SIZE);
 			break;
@@ -1039,7 +1050,7 @@ char *buf;
       case H_CMPLX:	unpackr_c(iob1->buf+off,(float *)buf,(2*len)/H_CMPLX_SIZE);
 			break;
       case H_TXT:	len = hfind_nl(iob1->buf+off,len);
-			memcpy(buf,iob1->buf+off,len);
+			Memcpy(buf,iob1->buf+off,len);
 			if(*(iob1->buf+off+len-1) == '\n'){
 			  length = len;
 			  *(buf+len-1) = 0;
@@ -1076,7 +1087,7 @@ int next,*iostat;
 ------------------------------------------------------------------------*/
 {
   char *s,path[MAXPATH];
-  int thandle;
+  TREE *t;
 
   *iostat = 0;
 /* Allocate a small buffer if needed. */
@@ -1084,7 +1095,7 @@ int next,*iostat;
   if(item->bsize < next && next <= CACHESIZE){
     s = Malloc(CACHESIZE);
     item->bsize = CACHESIZE;
-    if(item->io[0].length > 0)memcpy(s,item->io[0].buf,item->io[0].length);
+    if(item->io[0].length > 0)Memcpy(s,item->io[0].buf,item->io[0].length);
     if(item->io[0].buf != NULL) free(item->io[0].buf);
     item->io[0].buf = s;
 
@@ -1093,7 +1104,7 @@ int next,*iostat;
   } else if(item->bsize <= CACHESIZE && next > CACHESIZE){
     s = Malloc(BUFSIZE);
     item->bsize = BUFSIZE;
-    if(item->io[0].length > 0)memcpy(s,item->io[0].buf,item->io[0].length);
+    if(item->io[0].length > 0)Memcpy(s,item->io[0].buf,item->io[0].length);
     if(item->io[0].buf != NULL) free(item->io[0].buf);
     item->io[0].buf = s;
     if(BUFDBUFF)item->io[1].buf = Malloc(BUFSIZE);
@@ -1102,15 +1113,15 @@ int next,*iostat;
 /* Open a file if needed. */
 
   if(item->fd == 0 && item->bsize > CACHESIZE && !(item->flags & ITEM_NOCACHE)){
-    thandle = item->thandle;
-    if(item->flags & ITEM_CACHE) trees[thandle].flags |= TREE_CACHEMOD;
+    t = item->tree;
+    if(item->flags & ITEM_CACHE) t->flags |= TREE_CACHEMOD;
     item->flags &= ~ITEM_CACHE;
-    Strcpy(path,trees[thandle].name);
+    Strcpy(path,t->name);
     Strcat(path,item->name);
     dopen_c(&(item->fd),path,"write",&(item->size),iostat);
-    if(*iostat == 0) trees[thandle].rdwr = RDWR_RDWR;
-    else	     trees[thandle].rdwr = RDWR_RDONLY;
-    trees[thandle].wriostat = *iostat;
+    if(*iostat == 0) t->rdwr = RDWR_RDWR;
+    else	     t->rdwr = RDWR_RDONLY;
+    t->wriostat = *iostat;
   }
 }
 /************************************************************************/
@@ -1144,12 +1155,12 @@ int next,*iostat;
   dwait_c(item->fd,iostat);				if(*iostat)return;
   offset = iob->offset + iob->length - offset;
   length -= offset;
-  memcpy(iob->buf+iob->length,buffer+offset,length);
+  Memcpy(iob->buf+iob->length,buffer+offset,length);
   iob->length += length;
 }
 /************************************************************************/
 void hseek_c(ihandle,offset)
-char *ihandle;
+int ihandle;
 int offset;
 /**hseek -- Set default offset (in bytes) of an item. 			*/
 /*&mjs									*/
@@ -1170,12 +1181,12 @@ int offset;
 {
   ITEM *item;
 
-  item = (ITEM *)ihandle;
+  item = hget_item(ihandle);
   item->offset = offset;
 }
 /************************************************************************/
 int htell_c(ihandle)
-char *ihandle;
+int ihandle;
 /**htell -- Return the default offset (in bytes) of an item.		*/
 /*&mjs									*/
 /*:low-level-i/o							*/
@@ -1194,49 +1205,51 @@ char *ihandle;
 {
   ITEM *item;
 
-  item = (ITEM *)ihandle;
+  item = hget_item(ihandle);
   return(item->offset);
 }
 /************************************************************************/
 void hreada_c(ihandle,line,length,iostat)
-char *ihandle;
+int ihandle;
 int length,*iostat;
 char *line;
 /*----------------------------------------------------------------------*/
 {
   ITEM *item;
 
-  item = (ITEM *)ihandle;
+  item = hget_item(ihandle);
   hio_c( ihandle, FALSE, H_TXT, line, item->offset, length, iostat);
 }
 /************************************************************************/
 void hwritea_c(ihandle,line,length,iostat)
-char *ihandle;
+int ihandle;
 int length,*iostat;
 char *line;
 /*----------------------------------------------------------------------*/
 {
   ITEM *item;
 
-  item = (ITEM *)ihandle;
+  item = hget_item(ihandle);
   hio_c( ihandle ,TRUE, H_TXT, line, item->offset, length, iostat);
 }
 /************************************************************************/
-private void hcache_create_c(tno,iostat)
-int tno,*iostat;
+private void hcache_create_c(t,iostat)
+int *iostat;
+TREE *t;
 /*
   Create a cache.
 ------------------------------------------------------------------------*/
 {
-  char *ihandle;
+  int ihandle;
   header_ok = TRUE;
-  haccess_c(tno,&ihandle,"header","write",iostat);
+  haccess_c(t->handle,&ihandle,"header","write",iostat);
   header_ok = FALSE;
   if(!*iostat) hdaccess_c(ihandle,iostat);
 }
 /************************************************************************/
-private void hcache_read_c(tno,iostat)
-int tno,*iostat;
+private void hcache_read_c(t,iostat)
+int *iostat;
+TREE *t;
 /*
   Read in all small items, which are stored in the file "header".
   Errors should never happen when reading the cache. If they do,
@@ -1245,16 +1258,17 @@ int tno,*iostat;
 {
   int offset;
   ITEM *item;
-  char s[CACHE_ENT],*ihandle;
+  char s[CACHE_ENT];
+  int ihandle;
 
   header_ok = TRUE;
-  haccess_c(tno,&ihandle,"header","read",iostat);
+  haccess_c(t->handle,&ihandle,"header","read",iostat);
   header_ok = FALSE;						if(*iostat)return;
-    
+
   offset = 0;
   while(hreadb_c(ihandle,s,offset,CACHE_ENT,iostat),!*iostat){
     offset += CACHE_ENT;
-    item = hcreate_item_c(((ITEM *)ihandle)->thandle,s);
+    item = hcreate_item_c(t,s);
     item->size = *(s+CACHE_ENT-1);
     item->bsize = item->size;
     item->flags = ITEM_CACHE;
@@ -1266,7 +1280,7 @@ int tno,*iostat;
     offset += roundup(item->size,CACHE_ENT);
   }
   if(*iostat != -1) bug_c('f',"hcache_read_c: Something wrong reading cache");
-  hdaccess_c((char *)ihandle,iostat);
+  hdaccess_c(ihandle,iostat);
 }
 /************************************************************************/
 private int hname_check(name)
@@ -1302,6 +1316,7 @@ ITEM *item;
   int length,plength,len;
   char *context,*s;
   ITEM *it;
+  TREE *t;
 
 #define MINLENGTH 128
 
@@ -1313,7 +1328,8 @@ ITEM *item;
    from the "header" file. */
 
   plength = 0;
-  for(it=trees[item->thandle].itemlist; it != NULL; it = it->fwd)
+  t = item->tree;
+  for(it = t->itemlist; it != NULL; it = it->fwd)
     plength += strlen(it->name) + 1;
   plength = max(plength,2*MINLENGTH);
   s = Malloc(plength);
@@ -1322,7 +1338,7 @@ ITEM *item;
    itself. */
 
   length = 0;
-  for(it=trees[item->thandle].itemlist; it != NULL; it = it->fwd){
+  for(it=t->itemlist; it != NULL; it = it->fwd){
     if(it->fd == 0 && !(it->flags & ITEM_NOCACHE)){
       Strcpy(s+length,it->name);
       length += strlen(it->name);
@@ -1334,7 +1350,7 @@ ITEM *item;
    "header" file. The size of the buffer is doubled as we go, when it
    gets too small. */
 
-  dopendir_c(&context,trees[item->thandle].name);
+  dopendir_c(&context,t->name);
   do{
     if(plength - length < MINLENGTH){
       plength *= 2;
@@ -1365,10 +1381,12 @@ ITEM *item;
 ------------------------------------------------------------------------*/
 {
   ITEM *it1,*it2;
+  TREE *t;
 
 /* Find the item. Less than attractive code. */
 
-  it2 = trees[item->thandle].itemlist;
+  t = item->tree;
+  it2 = t->itemlist;
   if(item != it2){
     do{
       it1 = it2;
@@ -1376,42 +1394,97 @@ ITEM *item;
     }while(item != it2);
 
     it1->fwd = it2->fwd;
-  } else trees[item->thandle].itemlist = item->fwd;
+  } else t->itemlist = item->fwd;
 
 /* Release any memory associated with the item. */
 
   if(item->io[0].buf != NULL) free(item->io[0].buf);
   if(item->io[1].buf != NULL) free(item->io[1].buf);
+
+  item_addr[item->handle] = NULL;
+  free(item->name);
   free((char *)item);
+  nitem--;
 }
 /************************************************************************/
-private ITEM *hcreate_item_c(thandle,name)
-int thandle;
+private ITEM *hcreate_item_c(tree,name)
+TREE *tree;
 char *name;
 /*
   Create an item, and initialise as much of it as possible.
 ------------------------------------------------------------------------*/
 {
   ITEM *item;
-  int i;
+  int i,hash;
+  char *s;
 
-  item = (ITEM *)Malloc(sizeof(ITEM));
-  if(thandle == 0)item->name[0] = 0;
-  else Strcpy(item->name,name);
+/* Hash the name. */
+
+  s = name;
+  hash = nitem++;
+  if(nitem > MAXITEM)bug_c('f',"Item address table overflow, in hio");
+  while(*s) hash += *s++;
+  hash %= MAXITEM;
+
+/* Find a slot in the list of addresses, and allocate it. */
+
+  while(hget_item(hash) != NULL) hash = (hash+1) % MAXITEM;
+  item_addr[hash] = (ITEM *)Malloc(sizeof(ITEM));
+
+/* Initialise it now. */
+
+  item = hget_item(hash);
+  item->name = Malloc(strlen(name) + 1);
+  Strcpy(item->name,name);
+  item->handle = hash;
   item->size = 0;
   item->flags = 0;
   item->fd = 0;
   item->last = 0;
   item->offset = 0;
   item->bsize = 0;
-  item->thandle = thandle;
+  item->tree = tree;
   for(i=0; i<2; i++){
     item->io[i].offset = 0;
     item->io[i].length = 0;
     item->io[i].state = 0;
     item->io[i].buf = NULL;
-  }
-  item->fwd = trees[thandle].itemlist;
-  trees[thandle].itemlist = item;
+   }
+  item->fwd = tree->itemlist;
+  tree->itemlist = item;
   return(item);
+}
+/************************************************************************/
+private TREE *hcreate_tree_c(name)
+char *name;
+/*
+  Create an item, and initialise as much of it as possible.
+------------------------------------------------------------------------*/
+{
+  TREE *t;
+  int hash;
+  char *s;
+
+/* Hash the name. */
+
+  s = name;
+  hash = ntree++;
+  if(ntree > MAXOPEN)bug_c('f',"Tree address table overflow, in hio");
+  while(*s) hash += *s++;
+  hash %= MAXOPEN;
+
+/* Find a slot in the list of addresses, and allocate it. */
+
+  while(hget_tree(hash) != NULL) hash = (hash+1) % MAXOPEN;
+  tree_addr[hash] = (TREE *)Malloc(sizeof(TREE));
+
+/* Initialise it. */
+
+  t = hget_tree(hash);
+  t->name = Malloc(strlen(name) + 1);
+  Strcpy(t->name,name);
+  t->handle = hash;
+  t->flags = 0;
+  t->itemlist = NULL;
+  return(t);
 }
