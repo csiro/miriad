@@ -1,8 +1,9 @@
+c********1*********2*********3*********4*********5*********6*********7*c
 c* Title -  Write title in standard format into LogFile.
 c& mchw
 c: image analysis,log-file
 c+
-	Subroutine Title(lIn,naxis,blc,trc,cbof)
+	subroutine Title(lIn,naxis,blc,trc,cbof)
 c
 	implicit none
 	integer lIn,naxis,blc(naxis),trc(naxis)
@@ -17,28 +18,35 @@ c  Output:
 c    cbof	Beam oversampling factor.
 c--
 c			mchw june 1990
+c  mchw 29oct96  Try harder to get frequency from image header.
 c-------------------------------------------------------------------c
 	double precision pi,rts
 	parameter(pi=3.141592654,rts=3600.d0*180.d0/pi)
 	integer length,lblc,ltrc
 	character line*80
-	character*9 bunit,ctype1,ctype2
+	character*9 bunit,ctype1,ctype2,ctype3
 	character*20 txtblc,txttrc
-	real bmaj,bmin,restfreq,omega,cbof,DperJy
+	real bmaj,bmin,freq,omega,cbof,DperJy
 	logical more
 c
 c  Get beam size etc.
 c
 	call GetBeam(lIn,naxis,bunit,bmaj,bmin,omega,cbof)
-	call rdhdr(lIn,'restfreq',restfreq,0.)
+	call rdhdr(lIn,'restfreq',freq,0.)
+	if(freq.eq.0.)then
+	  call rdhda(lIn,'ctype3',ctype3,' ')
+          if(ctype3(1:4).eq.'FREQ')then
+	    call rdhdr(lIn,'crval3',freq,0.)
+	  endif
+	endif
 	DperJy=1.
-	if(restfreq.ne.0.) then
-	  DperJy= (0.3/restfreq)**2 /(2.*1.38e3*omega)
+	if(freq.ne.0.) then
+	  DperJy= (0.3/freq)**2 /(2.*1.38e3*omega)
 	endif
 c
-	write(line,'(a,a,a,f10.6,a,f10.4)') '  bunit: ',bunit,
-     *		'  restfreq: ',restfreq,'    K/Jy: ',DperJy
-	length=9+10+12+10+10+10
+	write(line,'(a,a,a,f10.6,a,f15.4)') '  bunit: ',bunit,
+     *		'  frequency: ',freq,'    K/Jy: ',DperJy
+	length=9+10+12+10+10+15
 	call LogWrite(line(1:length),more)
 c
 	call rdhda(lIn,'ctype1',ctype1,' ')

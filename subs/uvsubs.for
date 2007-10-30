@@ -9,7 +9,8 @@ c    mchw 23Feb90 added default width for wideband correlator data only
 c    mchw 06Jul90 corrected bug in oneamp and changed to degrees.
 c		  - worked on documentation.
 c********1*********2*********3*********4*********5*********6*********7*c
-c* Width
+c* Width - Calculate wideband channel width
+c& mchw
 c: uv-data,visibility
 c+
 	subroutine width(nspect,sdf,nschan,wide)
@@ -44,7 +45,8 @@ c
 	if (wide.eq.0.) wide = 0.16
 	end
 c********1*********2*********3*********4*********5*********6*********7*c
-c* Token
+c* Token - Obtain token delimited by _ ()[]
+c& mchw
 c: i/o, user-interaction.
 c+
 	character*(*) function token(in,inext,iend,leng)
@@ -91,7 +93,8 @@ c
 	leng=j-i+1
 	end
 c********1*********2*********3*********4*********5*********6*********7*c
-c* Bselect
+c* Bselect - Find if given antenna is in given baseline code
+c& mchw
 c: uv-data,uv-selection,antennas,baselines
 c+
 	logical function bselect(base,ants)
@@ -190,8 +193,9 @@ c
 	  end if
 	end
 c********1*********2*********3*********4*********5*********6*********7*c
-c* Oneamp
-c: complex-data, uvdata
+c* Oneamp - Convert visibility to amp/phase or real/imag
+c& mchw
+c: complex-data, uv-data
 c+
 	real function oneamp(vis,flag)
 c
@@ -227,8 +231,9 @@ c
 	endif
 	end
 c********1*********2*********3*********4*********5*********6*********7*c
-c* Phase
-c:complex-data,uv-data
+c* Phase - Extract phase in radians from complex number
+c& mchw
+c: complex-data,uv-data
 c+
 	real function phase(vis)
 c
@@ -243,7 +248,8 @@ c----------------------------------------------------------------------c
 	phase = atan2(aimag(vis),real(vis))
 	end
 c********1*********2*********3*********4*********5*********6*********7*c
-c* Expi
+c* Expi - Extract complex exponent of input in radians
+c& mchw
 c: complex-data, uv-data, visibility
 c+
       complex function expi(x)
@@ -259,8 +265,9 @@ c---------------------------------------------------------------------c
       expi=cmplx(cos(x),sin(x))
       end
 c********1*********2*********3*********4*********5*********6*********7*c
-c* Angles
-c: units, conversion
+c* Angles - Convert angle in degrees/hours to a string
+c& mchw
+c: units, conversion, utilities
 c+
 	character*13 function angles(angle)
 c

@@ -1,6 +1,7 @@
 c************************************************************************
-c*Prime -- Returns a prime less than or equal to N.
-c:numbers
+c* Prime -- Returns a prime less than or equal to N.
+c& jm
+c: numbers,mathematics
 c+
 	integer function prime(n)
 c
