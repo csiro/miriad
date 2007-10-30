@@ -278,10 +278,10 @@ c-----------------------------------------------------------------------
       include 'maxnax.h'
       include 'mem.h'
 c
-      real wedisp, wedwid, tfdisp
+      real wedwid, tfdisp
       integer maxlev, maxpos, nxdef, nydef, nbins
       parameter (maxlev = 50, maxpos = 50, nxdef = 4, nydef = 4,
-     +   wedisp = 1.0, tfdisp = 0.5, wedwid = 0.05, nbins = 128)
+     +   tfdisp = 0.5, wedwid = 0.05, nbins = 128)
 c
       integer ipim, ipnim, ipims
 c
@@ -410,7 +410,7 @@ c
       endif
 c
       call pgpage
-      call pgscf(1)
+      call pgscf(2)
 c
 c Set line graphics colour indices
 c
@@ -433,8 +433,8 @@ c the viewport size of sub-plots.
 c
       call vpsizcg (.false., dofid, 0, ' ', ' ', 0, ' ', maxlev,
      +   nlevs, srtlev, levs, slev, nx, ny, cs, xdispl, ydispb, 
-     +   gaps, dotr, wedcod, wedwid, wedisp, tfdisp, labtyp, 
-     +   vxmin, vymin, vymax, vxgap, vygap, vxsize, vysize, tfvp, wdgvp)
+     +   gaps, dotr, wedcod, wedwid, tfdisp, labtyp, vxmin, vymin, 
+     +   vymax, vxgap, vygap, vxsize, vysize, tfvp, wdgvp)
 c
 c Adjust viewport increments and start locations if equal scales
 c requested or if scales provided by user
