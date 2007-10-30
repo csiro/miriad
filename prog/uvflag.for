@@ -131,7 +131,7 @@ c           bpw     14dec93 Realized that uvwread does not take uvset into
 c                           account, and that therefore line=wide did not
 c                           flag properly if nwchan!=0
 c           rjs     23dec93 Minimum match of line parameter.
-c
+c	    rjs     10oct94 Eliminate spurious extra call to uvflgwr.
 c***********************************************************************
 c
 c************************************************************************
@@ -145,12 +145,12 @@ c Then it asks for the next visibility file and does the whole process
 c again until the list is exhausted.
 
       character*30 version
-      parameter ( version = 'uvflag: version 2.5 23-Dec-93')
+      parameter ( version = 'uvflag: version 2.5 10-Oct-94')
 
       character*1024   vis
 
       integer          NSELS
-      parameter        ( NSELS = 500 )
+      parameter        ( NSELS = 5000 )
       real             sels(NSELS)
 
       integer          line(7)
@@ -416,21 +416,23 @@ c tformat is transfered to report.
       do while( nchan.ne.0 )
          if( type .eq. 'both' )
      *   then
-
             call uvset(  unit, 'data', 'channel', 0, 1.,1.,1. )
             call uvread( unit, preamble, data, oldflags, mxchan, nchan )
-            if( have(unit,'nchan') .and. nchan.ne.0 )
-     *      call work(   unit, preamble, 'channel',
+            if( have(unit,'nchan') .and. nchan.ne.0 )then
+	      call work(   unit, preamble, 'channel',
      *                   flagval, ropt,tformat,line,
      *                   data,oldflags,newflags, usech, nchan )
-            if( apply ) call uvflgwr( unit,newflags )
+              if( apply ) call uvflgwr( unit,newflags )
+	    endif
 
             if( have(unit,'nwide') .and. nchan.ne.0 ) then
-            call uvwread(unit, data, oldflags, mxchan, nwchan )
-            call work(   unit, preamble, 'wide',
+              call uvwread(unit, data, oldflags, mxchan, nwchan )
+	      if(nwchan.gt.0)then
+		call work(   unit, preamble, 'wide',
      *                   flagval, ropt,tformat,line,
      *                   data,oldflags,newflags, usech, nwchan )
-            if( apply ) call uvwflgwr( unit,newflags )
+                if( apply ) call uvwflgwr( unit,newflags )
+	      endif
             endif
 
          else
@@ -440,12 +442,13 @@ c tformat is transfered to report.
             call uvread( unit, preamble, data, oldflags, mxchan, nchan )
             if(  nchan.ne.0.  .and.
      *           ( (type.eq.'channel' .and. have(unit,'nchan')) .or.
-     *             (type.eq.'wide'    .and. have(unit,'nwide'))      ) )
-     *      call work(   unit, preamble, type,
+     *             (type.eq.'wide'    .and. have(unit,'nwide'))      ) 
+     *								)then
+	      call work(   unit, preamble, type,
      *                   flagval, ropt,tformat,line,
      *                   data,oldflags,newflags, usech, nchan )
-            if( apply ) call uvflgwr( unit,newflags )
-
+              if( apply ) call uvflgwr( unit,newflags )
+	    endif
          endif
          if( nchan.ne.0 ) call reccount(1)
       enddo
