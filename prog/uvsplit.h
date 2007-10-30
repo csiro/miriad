@@ -1,11 +1,12 @@
+	include 'maxdim.h'
 	integer MAXFILES,MAXOPEN
 	parameter(MAXFILES=256,MAXOPEN=6)
 c
-	integer npol,nopen,nfiles,ifno(MAXFILES),indx(MAXFILES)
+	integer npol,nopen,nfiles,ifno(MAXFILES),indx(MAXFILES),nwins
 	integer vCheck(MAXFILES),vCopy(MAXFILES),lOut(MAXFILES),lVis
-	logical done(MAXFILES),doif,dowide,docomp
+	logical done(MAXFILES),doif,dowide,docomp,wins(MAXWIN)
 	character out(MAXFILES)*64,version*64
 c
 	common/Files/npol,nopen,nfiles,ifno,indx,vCheck,vCopy,
-     *	    lOut,lVis,done,doif,dowide,docomp
+     *	    lOut,lVis,nwins,done,doif,dowide,docomp,wins
 	common/FilesC/out,version
