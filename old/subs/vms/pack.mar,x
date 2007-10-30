@@ -1,0 +1,155 @@
+	.title	Pack
+
+; These routines convert between Miriad's standard number format on disk
+; to the VAX number format.
+
+; History:
+;  rjs  Dark-ages Original version.
+;  rjs   2feb90   Fixed bug with double precision values equal to zero.
+
+	.psect	$code,rd,nowrt,pic,shr,long
+
+; Convert from VAX reals to IEEE.
+
+in = 4
+out   = 8
+n    = 12
+	.entry	packr_c,^m<r2>
+	movl	n(ap),r0
+	moval	@in(ap),r1
+	moval	@out(ap),r2
+	pushl	#0
+10$:	divf3	#4.,(r1)+,(sp)
+	movb	1(sp),(r2)+
+	movb	(sp),(r2)+
+	movb	3(sp),(r2)+
+	movb	2(sp),(r2)+
+	sobgtr	r0,10$
+	ret
+
+; Convert IEEE reals to VAX reals.
+
+in = 4
+out   = 8
+n    = 12
+	.entry	unpackr_c,^m<r2>
+	movl	n(ap),r0
+	moval	@in(ap),r1
+	moval	@out(ap),r2
+	pushl	#0
+10$:	movb	(r1)+,1(sp)
+	movb	(r1)+,(sp)
+	movb	(r1)+,3(sp)
+	movb	(r1)+,2(sp)
+	mulf3	#4.,(sp),(r2)+
+	sobgtr	r0,10$
+	ret
+
+; Convert a D_floating number into an IEEE double precision.
+
+	.entry	packd_c,^m<r2,r3>
+	movl	n(ap),r0
+	moval	@in(ap),r1
+	moval	@out(ap),r2
+	clrq	-(sp)
+
+10$:	movw	(r1)+,6(sp)		; Undo clunchy word reversal ordering.
+	movw	(r1)+,4(sp)
+	movw	(r1)+,2(sp)
+	movw	(r1)+,(sp)
+
+	ashq	#-3,(sp),(sp)		; Shift right 3 bits.
+	extzv	#4,#8,6(sp),r3		; Get the exponent.
+	beql	20$			; Branch if we have a zero exponent.
+	addw2	#<^x3FF-^x81>,r3	; Convert to IEEE exponent bias.
+20$:	insv	r3,#4,#11,6(sp)		; Put back IEEE exponent.
+
+	movb	7(sp),(r2)+		; Move to output, reversing bytes.
+	movb	6(sp),(r2)+
+	movb	5(sp),(r2)+
+	movb	4(sp),(r2)+
+	movb	3(sp),(r2)+
+	movb	2(sp),(r2)+
+	movb	1(sp),(r2)+
+	movb	(sp),(r2)+
+	sobgtr	r0,10$
+	ret
+
+; Unpack an IEEE double precision to VAX double precision.
+
+	.entry	unpackd_c,^m<r2,r3>
+	movl	n(ap),r0
+	moval	@in(ap),r1
+	moval	@out(ap),r2
+	clrq	-(sp)			; Spare space.
+
+10$:	movb	(r1)+,7(sp)		; Move the double to a buffer,
+	movb	(r1)+,6(sp)		;  performing byte reversal on the way.
+	movb	(r1)+,5(sp)
+	movb	(r1)+,4(sp)
+	movb	(r1)+,3(sp)
+	movb	(r1)+,2(sp)
+	movb	(r1)+,1(sp)
+	movb	(r1)+,(sp)
+	extzv	#4,#11,6(sp),r3		; Get the exponent.
+	beql	15$			; Skip if we have a zero exponent.
+	subw2	#<^x3FF-^x81>,r3	; Convert exponent.
+15$:	bbc	#15,6(sp),20$		; Branch if positive number.
+	bisw2	#^x100,r3		; Set the sign bit for neg. numbers.
+20$:	insv	r3,#4,#9,6(sp)		; Insert the exponent.
+	ashq	#3,(sp),(sp)		; Shift to account for different
+					;   exponent sizes.
+	movw	6(sp),(r2)+		; Move from buffer to output, doing
+	movw	4(sp),(r2)+		;   clunchy word reversal.
+	movw	2(sp),(r2)+
+	movw	(sp),(r2)+
+	sobgtr	r0,10$
+	ret
+
+
+; Routines which convert from or to FITS integer format. I.e. do
+; some byte flipping.
+
+; Register Usage:
+; r0	Counter
+; (r1)	in(i)
+; (r2)	Out(i)
+
+	.entry	unpack16_c,^m<iv,r2>
+	moval	@out(ap),r2
+	movaw	@in(ap),r1
+	movl	n(ap),r0
+	pushl	#0			; Space on the stack.
+10$:	movb	(r1)+,1(sp)
+	movb	(r1)+,(sp)
+	cvtwl	(sp),(r2)+
+	sobgtr	r0,10$
+	ret
+
+	.entry	pack16_c,^m<iv,r2>
+	moval	@in(ap),r1
+	movaw	@out(ap),r2
+	movl	n(ap),r0
+	pushl	#0			; Space on the stack.
+10$:	movl	(r1)+,(sp)
+;	cvtlw	(r1)+,(sp)
+	movb	1(sp),(r2)+
+	movb	(sp),(r2)+
+	sobgtr	r0,10$
+	ret
+
+unpack32_c::
+	.entry	pack32_c,^m<r2>
+	movl	n(ap),r0
+	moval	@in(ap),r1
+	moval	@out(ap),r2
+	pushl	#0
+10$:	movl	(r1)+,(sp)
+	movb	3(sp),(r2)+
+	movb	2(sp),(r2)+
+	movb	1(sp),(r2)+
+	movb	(sp),(r2)+
+	sobgtr	r0,10$
+	ret
+
+	.end
