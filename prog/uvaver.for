@@ -84,6 +84,7 @@ c    rjs  23sep93 W axis change.
 c    rjs  10oct94 relax option.
 c    rjs  24oct94 Weight data (in time averaging) according to integration
 c		  time.
+c    rjs  19sep95 Handle data that is not quite in time order.
 c
 c  Bugs:
 c    * The way of determining whether a source has changed is imperfect.
@@ -99,7 +100,7 @@ c------------------------------------------------------------------------
 	real inttime
 	logical dotaver,doflush,buffered,PolVary,ampsc,vecamp,first
 	logical relax,ok,donenpol
-	double precision preamble(5),T0,T1,Tprev,interval
+	double precision preamble(5),Tmin,Tmax,Tprev,interval
 	complex data(MAXCHAN)
 	logical flags(MAXCHAN)
 c
@@ -166,8 +167,8 @@ c  Loop over the data.
 c
 	  call uvDatRd(preamble,data,flags,maxchan,nread)
 	  Tprev = preamble(4)
-	  T1 = Tprev + interval
-	  T0 = Tprev
+	  Tmin = Tprev
+	  Tmax = Tmin
 	  dowhile(nread.gt.0)
 c
 c  Count the number of records read.
@@ -188,8 +189,9 @@ c
 	    doflush = ok.and.dotaver
 	    if(doflush)then
 	      doflush = uvVarUpd(vupd)
-	      doflush = (doflush.or.preamble(4).gt.T1.or.
-     *				    preamble(4).lt.T0).and.buffered
+	      doflush = (doflush.or.preamble(4)-Tmin.lt.interval.or.
+     *				    Tmax-preamble(4).gt.interval)
+     *			.and.buffered
 	    endif
 c
 c  Flush out the accumulated data -- the case of time averaging.
@@ -199,8 +201,8 @@ c
 	      PolVary = PolVary.or.npol.eq.0.or.
      *		(Snpol.ne.npol.and.Snpol.gt.0)
 	      Snpol = npol
-	      T0 = preamble(4)
-	      T1 = T0 + interval
+	      Tmin = preamble(4)
+	      Tmax = Tmin
 	      buffered = .false.
 c
 c  Flush out the accumulated data -- the case of no time averaging.
@@ -235,6 +237,8 @@ c
 c  Keep on going. Read in another record.
 c
 	    Tprev = preamble(4)
+	    Tmin = min(Tmin,Tprev)
+	    Tmax = max(Tmax,Tprev)
 	    call uvDatRd(preamble,data,flags,maxchan,nread)
 	  enddo
 c
