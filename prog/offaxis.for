@@ -14,8 +14,6 @@ c	off-axis effects (given its internal models of the effects),
 c	subtracts this from the data, and produces an output (nominally)
 c	corrected dataset.
 c
-c	Currently this handles 13-cm and 20-cm off-axis effects only!!
-c	No check is made for this!
 c@ vis
 c	Input visibility dataset. No default.
 c@ select
@@ -52,11 +50,12 @@ c    rjs  02may96 Original version.
 c    rjs  12dec96 Improve checks on reasonableness and error messages.
 c    rjs  07apr97 Include improved 13-cm fits, and make it work at L-band
 c		  as well.
+c    rjs  03may00 Now supports C and X band.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
 	character version*(*)
-	parameter(version='Offaxis: version 1.0 12-Dec-96')
+	parameter(version='Offaxis: version 1.0 03-May-00')
 c
 	logical replace
 	integer nx,ny,nsize(2),tMod,tVis,tOut,nchan,i,j
@@ -221,7 +220,7 @@ c
 	  XY = 0
 	  YX = 0
 	  do i=1,nCmp
-	    call GetJones(rad(i),psi(i)-chi,sfreq(j),Jo,pb)
+	    call atJones(rad(i),psi(i)-chi,sfreq(j),Jo,pb)
 	    theta = 2*PI*sfreq(j)*(uv(1)*ll(i) + uv(2)*mm(i))
 	    W = Flux(i) / pb * cmplx(cos(theta),sin(theta))
 	    XX = XX + W * ( real(Jo(1,1))**2 + aimag(Jo(1,1))**2 +
@@ -237,90 +236,6 @@ c
 	  sim(j,3) = XY
 	  sim(j,4) = YX
 	enddo
-c
-	end
-c************************************************************************
-	subroutine GetJones(rad,psi,freq,Jo,pb)
-c
-	implicit none
-	real rad,psi,pb
-	double precision freq
-	complex Jo(2,2)
-c
-c  Compute the corresponding Jones matrix at a particular position in the
-c  primary beam.
-c------------------------------------------------------------------------
-	include 'mirconst.h'
-c
-c  Alpha2 = 4*log(2).
-c
-	real alpha2
-	parameter(alpha2=2.772589)
-c
-	integer i
-	real rdist,x(7),px,py
-	real coeffs(2,7),coeffl(2,5)
-	save coeffs,coeffl
-	data coeffs/
-     *  1.3992E+00,   0.0000E+00,
-     *  6.6962E-02,   9.2800E-01,
-     * -8.1047E-02,   4.6582E-02,
-     *  5.5058E-02,  -4.5728E-02,
-     *  4.2927E-02,  -1.5807E-02,
-     *  5.2665E-02,  -3.8708E-02,
-     * -1.8535E-02,   1.3006E-02/
-c
-	data coeffl/
-     *  1.3523E+00,   0.0000E+00,
-     * -8.9658E-02,   4.1000E+00,
-     * -1.2942E-02,   6.4604E-03,
-     *  1.5156E-02,  -1.0285E-02,
-     * -1.5113E-03,   5.0859E-03/
-
-c
-c  Compute the coefficients of the trig functions in the Jones
-c  matrix. Also compute the primary beam response.
-c
-c  13-cm response.
-c
-	if(freq.gt.2)then
-	  rdist =  rad / ( 2.368/freq * 20.9882*PI/180/60 )
-	  x(1) = exp(-alpha2*(rdist/coeffs(1,1))**2)
-	  x(2) = coeffs(1,2)*sin(0.5*PI*rdist/coeffs(2,2))**2
-	  pb = x(1)*x(1) + 0.5*x(2)*x(2)
-	  do i=3,7
-	    x(i) = (coeffs(2,i)*rdist + coeffs(1,i))*rdist
-	    pb = pb + 0.5*x(i)*x(i)
-	  enddo
-c
-	  px = psi
-	  py = -psi - 0.5*PI
-  	  Jo(1,1) = x(1) + x(2)*cos(2*px) + x(3)*cos(px) + x(4)*sin(px)
-	  Jo(2,2) = x(1) + x(2)*cos(2*py) + x(3)*cos(py) + x(4)*sin(py)
-	  py = -py
-	  Jo(1,2) =   cmplx(x(5),x(6))*sin(px) + cmplx(x(7),0.)*cos(px)
-	  Jo(2,1) = -(cmplx(x(5),x(6))*sin(py) + cmplx(x(7),0.)*cos(py))
-c
-c  20-cm response.
-c
-	else
-	  rdist =  rad / ( 1.384/freq * 34.61*PI/180/60 )
-	  x(1) = exp(-alpha2*(rdist/coeffl(1,1))**2)
-	  x(2) = coeffl(1,2)*sin(0.5*PI*rdist/coeffl(2,2))**2
-	  pb = x(1)*x(1) + 0.5*x(2)*x(2)
-	  do i=3,5
-	    x(i) = (coeffl(2,i)*rdist + coeffl(1,i))*rdist
-	    pb = pb + 0.5*x(i)*x(i)
-	  enddo
-c
-	  px = psi
-	  py = -psi - 0.5*PI
-  	  Jo(1,1) = x(1) + x(2)*cos(2*px) + x(3)*cos(px) + x(4)*sin(px)
-	  Jo(2,2) = x(1) + x(2)*cos(2*py) + x(3)*cos(py) + x(4)*sin(py)
-	  py = -py
-	  Jo(1,2) =  x(5)*sin(2*px)
-	  Jo(2,1) = -x(5)*sin(2*py)
-	endif	
 c
 	end
 c************************************************************************
