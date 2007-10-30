@@ -369,16 +369,16 @@ c
 c
             if (domode) then
                call mode (memr(ipm(ir)), nint(pixe(ir)), xmode)
-               write(line,'(1p,6(1x,g10.5),1x,-1p)') r,pixe(ir),xmode,rms,
-     *              flux(ir)/cbof,fsum/cbof
+               write(line,'(1p,6(1x,g10.5),1x,-1p)') r,pixe(ir),xmode,
+     *		rms,flux(ir)/cbof,fsum/cbof
             else
                if (domedian) then
                   call median (memr(ipm(ir)), nint(pixe(ir)), med)
-                  write(line,'(1p,6(1x,g10.5),1x,-1p)') r,pixe(ir),med,rms,
-     *                 flux(ir)/cbof,fsum/cbof
+                  write(line,'(1p,6(1x,g10.5),1x,-1p)') r,pixe(ir),med,
+     *		   rms,flux(ir)/cbof,fsum/cbof
                else
-                  write(line,'(1p,6(1x,g10.5),1x,-1p)') r,pixe(ir),ave,rms,
-     *                 flux(ir)/cbof,fsum/cbof
+                  write(line,'(1p,6(1x,g10.5),1x,-1p)') r,pixe(ir),ave,
+     *		   rms,flux(ir)/cbof,fsum/cbof
                end if
             endif
 c
