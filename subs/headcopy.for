@@ -19,7 +19,7 @@ c    'history ','bmaj    ','bmin    ','bpa     ','bunit   ',
 c    'obstime ','epoch   ','instrume','ltype   ','lstart  ',
 c    'lwidth  ','lstep   ','niters  ','object  ','observer',
 c    'obsdec  ','obsra   ','pbfwhm  ','restfreq','telescop',
-c    'vobs    ','cellscal','btype   ','llrot   '
+c    'vobs    ','cellscal','btype   ','llrot   ','mostable'
 c
 c - The datamin and datamax items are explicitly excluded. One should
 c recalculate the min and max of the output dataset and update these
@@ -75,6 +75,7 @@ c    pjt  15mar95  fixed statement order for f2c (linux)
 c    rjs  02jul97  cellscal change.
 c    rjs  23jul97  added pbtype.
 c    rjs  20nov98  added llrot.
+c    rjs  17oct99  added mostable.
 c
 c***********************************************************************
 
@@ -86,13 +87,13 @@ c***********************************************************************
       logical          hdprsnt
 
       integer          NKEYS
-      parameter        ( NKEYS = 30 )
+      parameter        ( NKEYS = 31 )
       character*8      keyw(NKEYS)
       data keyw/
      *    'crpix   ','crval   ','cdelt   ','crota   ','ctype   ',
      *    'history ','cellscal',
      *    'bmaj    ','bmin    ','bpa     ','bunit   ',
-     *    'obstime ','epoch   ','instrume',
+     *    'obstime ','epoch   ','instrume','mostable',
      *	  'ltype   ','lstart  ','lwidth  ','lstep   ',
      *    'niters  ','object  ','observer','obsdec  ','obsra   ',
      *    'pbfwhm  ','restfreq','telescop','vobs    ',
