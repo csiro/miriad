@@ -102,6 +102,7 @@ c    rjs   3dec94 More lenient "exactness" algorithm in thingchk.
 c    rjs  30jan95 Taper option. Eliminate "signal" parameter.
 c    mhw  13aug95 Clip input if output too big, instead of giving up.
 c    rjs  14aug95 Fix to the above.
+c    rjs  02jul97 cellscal change.
 c
 c  Bugs:
 c    * Blanked images are not handled when interpolation is necessary.
@@ -815,16 +816,16 @@ c------------------------------------------------------------------------
 	character line*80
 c
 	integer nkeys
-	parameter(nkeys=35)
+	parameter(nkeys=36)
 	character keyw(nkeys)*8
 	data keyw/   'bunit   ','crval1  ','crval2  ','crval3  ',
      *	  'crval4  ','crval5  ','cdelt1  ','cdelt2  ','cdelt3  ',
      *	  'cdelt4  ','cdelt5  ','crpix3  ','crpix4  ','crpix5  ',
      *	  'ctype3  ','ctype4  ','ctype5  ',
-     *	  'obstime  ','epoch   ','bmaj    ','bmin    ','bpa     ',
+     *	  'obstime ','epoch   ','bmaj    ','bmin    ','bpa     ',
      *	  'niters  ','object  ','telescop','observer',
      *	  'restfreq','vobs    ','obsra   ','obsdec  ','lstart  ',
-     *	  'lstep   ','ltype   ','lwidth  ','btype   '/
+     *	  'lstep   ','ltype   ','lwidth  ','btype   ','cellscal'/
 c
 c  Write the output projection as cartesian.
 c
