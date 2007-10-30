@@ -136,12 +136,13 @@ c    mchw 04sep92 Fixed a missing argument in uvVarCpy.
 c    rjs  15feb93 Changes to make ra,dec variables double.
 c    rjs  29mar93 Fiddles with the sigma.
 c    rjs  23dec93 Minimum match of linetype name.
+c    rjs  31jan95 Changes to support w-axis.
 c  Bugs:
 c    * Polarisation processing is pretty crude.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
-	parameter(version='version 1.0 23-Dec-93')
+	parameter(version='version 1.0 31-Jan-95')
 	integer maxsels,nhead,nbuf
 	parameter(maxsels=64,nhead=1,nbuf=5*maxchan+nhead)
 c
@@ -152,7 +153,7 @@ c
 	real sels(maxsels),offset(2),flux,clip,sigma,lstart,lstep,lwidth
 	integer nsize(3),nchan,nread,nvis,length,i
 	integer tvis,tmod,tscr,tout,vcopy,pol
-	double precision preamble(4)
+	double precision preamble(5)
 	complex data(maxchan)
 	logical flags(maxchan)
 	real buffer(nbuf)
@@ -264,8 +265,10 @@ c  a copy operation.
 c
 	call uvrewind(tvis)
 	call uvset(tvis,'coord','nanosec',0,0.,0.,0.)
+	call uvset(tvis,'preamble','uvw/time/baseline',0,0.,0.,0.)
 c
 	call uvopen(tout,out,'new')
+	call uvset(tout,'preamble','uvw/time/baseline',0,0.,0.,0.)
 	if(imhead)then
 	  call ImHedIni(tvis,vcopy)
 	else
@@ -361,7 +364,7 @@ c************************************************************************
 	complex data(nchan)
 	logical flags(nchan),accept
 	real Out(nhead)
-	double precision preamble(4)
+	double precision preamble(5)
 c
 c  This is a service routine called by the model subroutines. It is
 c  called every time a visibility is read from the data file.
