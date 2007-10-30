@@ -59,12 +59,12 @@ c
 c
 c  The common block which contains this mess.
 c
-	common/fits/TimOff,curlu,curcard,item,bscale,bzero,
+	common/fitscom/TimOff,curlu,curcard,item,bscale,bzero,
      *	  scales1,scales2,zeros,axes,DatOff,HdOff,DatSize,HdSize,
      *	  DatBase,PixBase,BypPix,BlankVal,ncards,nRanFile,nRanProg,
      *	  ncomplex,indices1,indices2,visibs,pols,freqs,WtScal,
      *	  new,opened,float,array,rarray
-	common/fitsc/carray
+	common/fitscomc/carray
 c
 c  Info to help find an extension table that we are interested in.
 c
