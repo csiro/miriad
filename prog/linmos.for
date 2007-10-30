@@ -99,6 +99,10 @@ c		  standard include files.
 c    rjs  26jul94 Doc changes only.
 c    rjs  17aug94 Change projection code to cartesian.
 c    rjs  24oct94 Use new pb routines.
+c    rjs  30nov94 Preserve the projection geometry when all the inputs
+c		  have the same geometry. Handle single-pointing
+c		  mosaic tables.
+c    rjs   3dec94 More lenient "exactness" algorithm in thingchk.
 c
 c  Bugs:
 c    * Blanked images are not handled when interpolation is necessary.
@@ -114,7 +118,7 @@ c		by less than "tol", they are taken as being the same
 c		pixel (i.e. no interpolation done).
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Linmos: version 1.0 24-Oct-94')
+	parameter(version='Linmos: version 1.0 3-Dec-94')
 	include 'maxdim.h'
 c
 	real tol
@@ -129,10 +133,9 @@ c
 	real xoff,yoff
 	real rms(maxIn),signal,BlcTrc(4,maxIn)
 	real Extent(4)
-	double precision GridSys(5)
-	double precision crval,cdelt
-	character ctype*16
-	logical defrms,init,dosen,dogain
+	double precision crval(3),cdelt(3),crpix(3)
+	character ctype(3)*16
+	logical defrms,init,dosen,dogain,docar,exact
 c
 	integer pOut,pWts
 	include 'mem.h'
@@ -202,20 +205,23 @@ c
 	  nOpen = maxOpen - 1
 	endif
 c
+	docar = .false.
 	do i=1,nIn
 	  call xyopen(tin(i),InBuf(k1(i):k2(i)),'old',3,nsize(1,i))
 	  if(max(nsize(1,i),nsize(2,i)).gt.maxdim)
      *	    call bug('f','Input map is too big')
+
 	  if(i.eq.1)then
-	    call AlignSet(tIn(i),ctype,cdelt,crval)
+	    call ThingIni(tIn(i),nsize(1,i),ctype,crpix,crval,cdelt,
+     *					blctrc(1,i),extent)
 	    call rdhdi(tin(i),'naxis',naxis,3)
 	    naxis = min(naxis,4)
-	    call FirstMap(tIn(i),nsize(1,i),GridSys,
-     *		BlcTrc(1,i),Extent)
 	  else
-	    call AlignChk(tIn(i),ctype,cdelt,crval,nsize(3,1))
-	    call NotFirst(tin(i),nsize(1,i),GridSys,
-     *		BlcTrc(1,i),Extent)
+	    call ThingChk(tIn(i),nsize(1,i),ctype,crpix,crval,cdelt,
+     *				  exact,blctrc(1,i),extent)
+	    docar = docar.or..not.exact
+	    if(nsize(3,i).ne.nsize(3,1))
+     *	      call bug('f','Different lengths for 3rd axis')
 	  endif
 	  if(i.gt.nOpen) call xyclose(tIn(i))
 	enddo
@@ -225,11 +231,12 @@ c
 	do i=1,4
 	  itemp = nint(extent(i))
 	  if(abs(extent(i)-itemp).gt.tol)then
-	    if(i.ge.3) itemp = nint(extent(i)+0.5)
-	    if(i.lt.3) itemp = nint(extent(i)-0.5)
+	    if(i.ge.3) itemp = nint(extent(i)+0.49)
+	    if(i.lt.3) itemp = nint(extent(i)-0.49)
 	  endif
 	  extent(i) = itemp
 	enddo
+c
 	nOut(1) = nint(extent(3) - extent(1)) + 1
 	nOut(2) = nint(extent(4) - extent(2)) + 1
 	if(max(nOut(1),nOut(2)).gt.maxdim)
@@ -239,7 +246,8 @@ c
 	nOut(4) = 1
 c
 	call xyopen(tout,out,'new',naxis,nout)
-	call hdout(tIn(1),tout,nsize(1,1),extent,version,dosen,dogain)
+	call hdout(tIn(1),tout,nsize(1,1),extent,version,
+     *					dosen,dogain,docar)
 	call coInit(tout)
 c
 c  Correct the blctrc parameter for the extent of the image.
@@ -419,15 +427,13 @@ c
 c
 c  Ready to construct the primary beam object.
 c
-	call pbRead(tIn,pbtype)
-	call rdhdd(tIn,'crval1',x(1),0.d0)
-	call rdhdd(tIn,'crval2',x(2),0.d0)
-	x(3) = 0
-	call pbInitc(pbObj,pbtype,tOut,'aw/aw/op',x)
+	call pntcent(tIn,pbtype,x(1),x(2))
 c
 c  Loop over all planes.
 c
 	do k=1,n3
+	  x(3) = k
+	  call pbInitc(pbObj,pbtype,tOut,'aw/aw/ap',x)
 	  call xysetpl(tIn,1,k)
 	  if(interp)call IntpRIni
 c
@@ -489,12 +495,15 @@ c
 	    call PutSec(tScr,Out,k,n1,n2,1,n1,1,n2)
 	    call PutSec(tWts,Wts,k,n1,n2,1,n1,1,n2)
 	  endif
-	enddo
-	init = .true.
 c
 c  Release the primary beam object.
 c
-	call pbFin(pbObj)
+	  call pbFin(pbObj)
+	enddo
+c
+c  All done.
+c
+	init = .true.
 c
 	end
 c************************************************************************
@@ -755,13 +764,14 @@ c
 c
 	end
 c************************************************************************
-	subroutine hdout(tin,tout,nsize,extent,version,dosen,dogain)
+	subroutine hdout(tin,tout,nsize,extent,version,
+     *						dosen,dogain,docar)
 c
 	implicit none
 	integer tin,tout,nsize(3)
 	real extent(4)
 	character version*(*)
-	logical dosen,dogain
+	logical dosen,dogain,docar
 c
 c  Make up the header of the output file.
 c
@@ -772,6 +782,7 @@ c    nsize	The size of the input image.
 c    extent	The expanded extent of the output.
 c    dosen	True if the sensitivity function is being evaluated.
 c    dogain	True if the gain function is being evaluated.
+c    docar	True if we are to label with RA---CAR, DEC--CAR
 c------------------------------------------------------------------------
 	real crpix1,crpix2
 	character ctype1*16,ctype2*16
@@ -779,26 +790,31 @@ c------------------------------------------------------------------------
 	character line*80
 c
 	integer nkeys
-	parameter(nkeys=38)
+	parameter(nkeys=35)
 	character keyw(nkeys)*8
 	data keyw/   'bunit   ','crval1  ','crval2  ','crval3  ',
      *	  'crval4  ','crval5  ','cdelt1  ','cdelt2  ','cdelt3  ',
      *	  'cdelt4  ','cdelt5  ','crpix3  ','crpix4  ','crpix5  ',
      *	  'ctype3  ','ctype4  ','ctype5  ',
-     *	  'date-obs','epoch   ','bmaj    ','bmin    ','bpa     ',
-     *	  'instrume','niters  ','object  ','telescop','observer',
-     *	  'restfreq','vobs    ','xshift  ','yshift  ','obsra   ',
-     *	  'obsdec  ','lstart  ','lstep   ','ltype   ','lwidth  ',
-     *    'btype   '/
+     *	  'obstime  ','epoch   ','bmaj    ','bmin    ','bpa     ',
+     *	  'niters  ','object  ','telescop','observer',
+     *	  'restfreq','vobs    ','obsra   ','obsdec  ','lstart  ',
+     *	  'lstep   ','ltype   ','lwidth  ','btype   '/
 c
 c  Write the output projection as cartesian.
 c
-	call rdhda(tIn,'ctype1',ctype1,'RA---CAR')
-	call rdhda(tIn,'ctype2',ctype2,'DEC--CAR')
-	if(ctype1(5:5).eq.'-')ctype1(5:8) = '-CAR'
-	if(ctype2(5:5).eq.'-')ctype2(5:8) = '-CAR'
-	call wrhda(tOut,'ctype1',ctype1)
-	call wrhda(tOut,'ctype2',ctype2)
+	if(docar)then
+	  call rdhda(tIn,'ctype1',ctype1,'RA---CAR')
+	  call rdhda(tIn,'ctype2',ctype2,'DEC--CAR')
+	  if(ctype1(5:5).eq.'-')ctype1(5:8) = '-CAR'
+	  if(ctype2(5:5).eq.'-')ctype2(5:8) = '-CAR'
+	  call wrhda(tOut,'ctype1',ctype1)
+	  call wrhda(tOut,'ctype2',ctype2)
+	else
+	  call hdcopy(tIn,tOut,'ctype1')
+	  call hdcopy(tIn,tOut,'ctype2')
+	endif
+	
 c
 c  Determine the location of the reference pixel in the output image.
 c
@@ -842,156 +858,171 @@ c
 	endif
 	call hisclose(tout)
 	end
-c************************************************************************
-	subroutine FirstMap(tno,nsize,GridSys,BlcTrc,Extent)
+************************************************************************
+	subroutine ThingIni(tno,nsize,ctype,crpix,crval,cdelt,
+     *		blctrc,extent)
 c
 	implicit none
 	integer tno,nsize(2)
-	real BlcTrc(4),Extent(4)
-	double precision GridSys(5)
+	character ctype(3)*(*)
+	double precision crpix(3),crval(3),cdelt(3)
+	real blctrc(4),extent(4)
 c
-c  Determine the grid system.
-c
-c  Input:
-c    tno	Input file handle.
-c    nsize	Image size.
-c  Output:
-c    GridSys	Five elements, all in radians, being:
-c		  RA of pixel (1,1).
-c		  Increment in RA between pixels.
-c		  DEC of pixel (1,1).
-c		  Increment in DEC between pixels.
-c		  Increment in RA/cos(DEC).
-c    BlcTrc	Bottom left and top right pixels, relative to first map.
-c    Extent	Total area of the output, given as bottom left and top
-c		right relative to first map.
 c------------------------------------------------------------------------
-	include 'mirconst.h'
-	double precision crpix1,crpix2
+	character num*2
 	integer i
 c
-	call rdhdd(tno,'crval1',GridSys(1),0.d0)
-	call rdhdd(tno,'crpix1',crpix1,dble(nsize(1)/2+1))
-	call rdhdd(tno,'cdelt1',GridSys(2),1.d0)
-	call rdhdd(tno,'crval2',GridSys(3),0.d0)
-	call rdhdd(tno,'crpix2',crpix2,dble(nsize(2)/2+1))
-	call rdhdd(tno,'cdelt2',GridSys(4),1.d0)
+c  Externals.
 c
-	GridSys(5) = GridSys(2) / cos(GridSys(3))
-	GridSys(1) = GridSys(1) - (crpix1-1)*GridSys(5)
-	GridSys(3) = GridSys(3) - (crpix2-1)*GridSys(4)
+	character itoaf*2
 c
-	BlcTrc(1) = 1
-	BlcTrc(2) = 1
-	BlcTrc(3) = nsize(1)
-	BlcTrc(4) = nsize(2)
+c  Read the axis descriptors.
+c
+	do i=1,3
+	  num = itoaf(i)
+	  call rdhda(tno,'ctype'//num,ctype(i),' ')
+	  call rdhdd(tno,'crpix'//num,crpix(i),1.d0)
+	  call rdhdd(tno,'crval'//num,crval(i),1.d0)
+	  call rdhdd(tno,'cdelt'//num,cdelt(i),1.d0)
+	enddo
+c
+	blctrc(1) = 1
+	blctrc(2) = 1
+	blctrc(3) = nsize(1)
+	blctrc(4) = nsize(2)
+c
 	do i=1,4
-	  Extent(i) = BlcTrc(i)
+	  extent(i) = blctrc(i)
 	enddo
 c
 	end
 c************************************************************************
-	subroutine NotFirst(tno,nsize,GridSys,BlcTrc,Extent)
+	subroutine ThingChk(tno,nsize,ctype,crpix,crval,cdelt,
+     *		exact,blctrc,extent)
 c
 	implicit none
-	integer tno,nsize(2)
-	real BlcTrc(4),Extent(4)
-	double precision GridSys(5)
+	integer tno,nsize(3)
+	logical exact
+	character ctype(3)*(*)
+	double precision crpix(3),crval(3),cdelt(3)
+	real blctrc(4),extent(4)
 c
-c  Determine where the input maps to in relation to the first map.
-c
-c  Input:
-c    tno	Input file handle.
-c    nsize	Image size.
-c    GridSys	Four elements, all in radians, being:
-c		  RA of pixel (1,1).
-c		  Increment in RA between pixels.
-c		  DEC of pixel (1,1).
-c		  Increment in DEC between pixels.
-c  Input/Output:
-c    Extent	Total area of the output, given as bottom left and top
-c		right, in the grid system of the first map.
-c  Output:
-c    BlcTrc	Bottom left and top right pixels, given in the grid system
-c		of the first map.
 c------------------------------------------------------------------------
-	double precision crval1,crval2,crpix1,crpix2,cdelt1,cdelt2
-	double precision cdelt1d
-	real dx,dy
+	double precision crvalx(3),crpixx(3),cdeltx(3)
+	double precision x1,x1x,y1,y1x,z1,z1x,dx,dy,cosdec,cosdecx
+	double precision cdelt1,cdelt1x
+	character ctypex(3)*16,num*2
+	integer i
 c
-	call rdhdd(tno,'crval1',crval1,0.d0)
-	call rdhdd(tno,'crpix1',crpix1,dble(nsize(1)/2+1))
-	call rdhdd(tno,'cdelt1',cdelt1,1.d0)
-	call rdhdd(tno,'crval2',crval2,0.d0)
-	call rdhdd(tno,'crpix2',crpix2,dble(nsize(2)/2+1))
-	call rdhdd(tno,'cdelt2',cdelt2,1.d0)
-	cdelt1d = cdelt1 / cos(crval2)
-	dx = cdelt1d/GridSys(5)
-	dy = cdelt2/GridSys(4)
+c  Externals.
 c
-	BlcTrc(1) = ((1-crpix1)*cdelt1d+crval1-GridSys(1))/GridSys(5)+1
-	BlcTrc(2) = ((1-crpix2)*cdelt2+crval2-GridSys(3))/GridSys(4)+1
-	BlcTrc(3) = BlcTrc(1) + (nsize(1)-1) * dx
-	BlcTrc(4) = BlcTrc(2) + (nsize(2)-1) * dy
-	if(BlcTrc(3).lt.BlcTrc(1).or.BlcTrc(4).lt.BlcTrc(2))
-     *	  call bug('f','Signs of cdelt of the inputs are not identical')
+	character itoaf*2
+c
+c  Read the axis descriptors.
+c
+	do i=1,3
+	  num = itoaf(i)
+	  call rdhda(tno,'ctype'//num,ctypex(i),' ')
+	  call rdhdd(tno,'crpix'//num,crpixx(i),1.d0)
+	  call rdhdd(tno,'crval'//num,crvalx(i),1.d0)
+	  call rdhdd(tno,'cdelt'//num,cdeltx(i),1.d0)
+	enddo
+c
+	cosdec  = cos(crval(2))
+	cosdecx = cos(crvalx(2))
+c
+	cdelt1 = cdelt(1)/cosdec
+	cdelt1x = cdeltx(1)/cosdecx
+c
+	x1  = (1-crpix(1) )*cdelt1   + crval(1)
+	x1x = (1-crpixx(1))*cdelt1x  + crvalx(1)
+	y1  = (1-crpix(2) )*cdelt(2) + crval(2)
+	y1x = (1-crpixx(2))*cdeltx(2)+ crvalx(2)
+	dx = cdelt1x/cdelt1
+	dy = cdeltx(2)/cdelt(2)
+c
+	blctrc(1) = (x1x - x1)/cdelt1 + 1
+	blctrc(2) = (y1x - y1)/cdelt(2) + 1
+	blctrc(3) = blctrc(1) + (nsize(1)-1) * dx
+	blctrc(4) = blctrc(2) + (nsize(2)-1) * dy
+	if(blctrc(3).lt.blctrc(1).or.blctrc(4).lt.blctrc(2))
+     *    call bug('f','Signs of cdelt of the inputs are not identical') 
+c
+c  Update the extent.
 c
 	Extent(1) = min(BlcTrc(1),Extent(1))
 	Extent(2) = min(BlcTrc(2),Extent(2))
 	Extent(3) = max(BlcTrc(3),Extent(3))
 	Extent(4) = max(BlcTrc(4),Extent(4))
 c
+c  Are the axes identical?
+c
+	exact = .true.
+	do i=1,2
+	  exact = exact.and.
+     *		ctype(i).eq.ctypex(i).and.
+     *		abs(cdelt(i)-cdeltx(i)).le.0.01*abs(cdelt(i)).and.
+     *		abs(crval(i)-crvalx(i)).lt.0.01*abs(cdelt(i))
+	enddo
+c
+c  Check third axis alignment.
+c
+	z1  = crval(3)  + (1-crpix(3))* cdelt(3)
+	z1x = crvalx(3) + (1-crpixx(3))*cdeltx(3)
+	if(max( abs(z1-z1x),
+     *	        abs(cdelt(3)-cdeltx(3)) ).gt.0.5*abs(cdelt(3)))
+     *	  call bug('w','Third axis of inputs do not align')
+c
 	end
 c************************************************************************
-	subroutine AlignSet(tno,ctype,crval,cdelt)
+	subroutine pntcent(tno,pbtype,pra,pdec)
 c
 	implicit none
 	integer tno
-	character ctype*(*)
-	double precision crval,cdelt
+	double precision pra,pdec
+	character pbtype*(*)
 c
-c  Set up the values to keep track of alignment along the third axis.
+c  Determine the pointing centre and the primary beam type.
+c
+c  Inputs:
+c    tno	Handle of the input image dataset
+c  Output:
+c    pra,pdec	Pointing centre RA and DEC, in radians.
+c    pbtype	Primary beam type. This will normally just be the
+c		name of a telescope (e.g. 'HATCREEK' or 'ATCA'), but it
+c		can also be 'GAUS(xxx)', where xxx is a Gaussian primary
+c		beam size, with its FWHM given in arcseconds. For example
+c		'GAUS(120)' is a Gaussian primary beam with FWHM 120 arcsec.
 c------------------------------------------------------------------------
-	double precision crpix
+	integer mit,size,iostat
+	character string*16
 c
-	call rdhda(tno,'ctype3',ctype,' ')
-	call rdhdd(tno,'crval3',crval,0.d0)
-	call rdhdd(tno,'cdelt3',cdelt,1.d0)
-	call rdhdd(tno,'crpix3',crpix,1.d0)
-	crval = crval + (1-crpix)*cdelt
-	end
-c************************************************************************
-	subroutine AlignChk(tno,ctype,crval,cdelt,n3)
+c  Externals.
 c
-	implicit none
-	integer tno,n3
-	character ctype*(*)
-	double precision crval,cdelt
+	logical hdprsnt
+	integer hsize
 c
-c  Set up the values to keep track of alignment along the third axis.
-c------------------------------------------------------------------------
-	double precision crvald,cdeltd
-	integer n
-	character ctyped*16,line*80
+c  Is the mosaic table present?
 c
-c  Check that the third axes are the same size.
+	if(hdprsnt(tno,'mostable'))then
+	  call haccess(tno,mit,'mostable','read',iostat)
+	  if(iostat.ne.0)call bugno('f',iostat)
+	  size = hsize(mit)
+	  if(size.ne.56)
+     *	    call bug('f','Bad size for mosaic table')
+	  call hreadd(mit,pra,16,8,iostat)
+	  if(iostat.eq.0)call hreadd(mit,pdec,24,8,iostat)
+	  if(iostat.eq.0)call hreadb(mit,string,32,16,iostat)
+	  call hdaccess(mit,iostat)
+	  if(iostat.ne.0)call bugno('f',iostat)
+	  pbtype = string
 c
-	call rdhdi(tno,'naxis3',n,1)
-	if(n3.ne.n)
-     *	  call bug('f','Third dimensions are not the same size')
+c  Otherwise treat a regular synthesis image.
 c
-	call AlignSet(tno,ctyped,crvald,cdeltd)
-c
-	if(ctype.ne.ctyped)
-     *	  call bug('f','Axis type on the third axis differ')
-c
-	if(max(abs(crval-crvald),abs(cdelt-cdeltd)).gt.0.5*abs(cdelt)
-     *								   )then
-	  call bug('w','Third axis of the inputs to not align')
-	  write(line,10)crval,cdelt,crvald,cdeltd
-   10	  format('f,df=',1p2e10.3,' for ref; f,df=',1p2e10.3,
-     *					' for current')
-	  call bug('w',line)
+	else
+	  call rdhdd(tno,'crval1',pra, 0.d0)
+	  call rdhdd(tno,'crval2',pdec,0.d0)
+	  call pbRead(tno,pbtype)
 	endif
 c
 	end
