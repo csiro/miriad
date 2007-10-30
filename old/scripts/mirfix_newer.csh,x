@@ -1,0 +1,35 @@
+#!/bin/csh -f
+
+# Edit all the installation/update etc scripts.
+
+foreach in ( $MIR/bin/*/mir* $MIR/scripts/unix/*.csh $MIR/scripts/unix/*/*.csh )
+  set base = $in:t
+  if ( "$base" != "miriad" && "$base" != "mirnewer" && \
+       "$base" != "mirfix_newer" && "$base" != "mirfix_newer.csh" ) then
+    sed -e "s/-newer/mirjunk/" -e "s/newer/mirnewer/" $in | \
+    sed -e "s/mirjunk/-newer/" -e "s/mirmirnewer/mirnewer/" > junk.$$
+    diff $in junk.$$ > /dev/null
+    if ( $status ) then
+      echo "Editting $in"
+      mv junk.$$ $in
+      chmod +x $in
+    endif
+  endif
+end
+
+# Rename the executables.
+
+foreach in ( $MIR/bin/* )
+  if ( -f $in/newer ) then
+    echo Renaming $in/newer
+    mv $in/newer $in/mirnewer
+  endif
+end
+
+# Rename the source code.
+
+if ( -f $MIR/tools/newer.c ) then
+  echo Renaming $MIR/tools/newer.c
+  mv $MIR/tools/newer.c $MIR/tools/mirnewer.c
+endif
+
