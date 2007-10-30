@@ -5,10 +5,10 @@ c
 c& nebk
 c: plotting
 c+
-c	CGSLICE displays an image via a contour plot or a grey scale
-c	on a PGPLOT device.  The cursor (or a text file with slice
-c	positions) is then used to define the end points of 1-D slices 
-c	which are marked on the image, and then plotted. 
+c	CGSLICE displays an image via a contour plot or a pixel map
+c	representation on a PGPLOT device.  The cursor (or a text file 
+c	with slice positions) is then used to define the end points of 
+c	1-D slices which are marked on the image, and then plotted. 
 c
 c	After the image has been displayed, use the mouse (any button)
 c	or keyboard (enter any character) to define each end of the slice.
@@ -38,16 +38,21 @@ c
 c	Blanked pixels are not displayed (or saved) and each slice is 
 c	divided into segments with good points between blanked pixels. 
 c
+c	Manipulation of the device colour lookup table is available
+c	when you display with a pixel map representation (formerly
+c	called a "grey scale")
+c
 c@ in
 c	The input image.
 c@ type
 c	Specifies the image type given in the IN keyword.  Minimum
-c	match is supported.  Choose from:
+c	match is supported (note that "pixel" was formerly "grey"
+c	which is still supported).     Choose from:
 c
 c	"contour"  (contour)
-c	"grey"     (grey scale)
+c	"pixel"    (pixel map)
 c
-c	Default is "contour"
+c	Default is "pixel"
 c@ region
 c	Region of interest.  Choose only one spatial region (bounding
 c	box only supported), but as many spectral regions (i.e., 
@@ -86,15 +91,23 @@ c	Levels to contour for first image, are LEVS times SLEV
 c	(either percentage of the image peak or absolute).
 c	Defaults try to choose something sensible
 c@ range
-c	3 values. The grey scale range (background to foreground), and
-c	transfer function type.  The transfer function type can be one
-c	of "lin" (linear), "log" (logarithmic), "heq" (histogram equal-
-c	ization), and "sqr" (square root).  See also OPTIONS=FIDDLE which
-c	is in addition to the selections here.
+c       4 values. These are the image intensity range to display (min to max),
+c       the transfer function type and the colour lookup table for the displayed
+c       pixel map image.  The transfer function type can be one of "lin" (linear),
+c       "sqr" (square root), "log" (logarithmic), and "heq" (histogram
+c       equalization).  The colour lookup table is an integer from 1 to 8
+c       specifying a lookup table. Valid values are 1 (b&w), 2 (rainbow),
+c       3 (linear pseudo colour), 4 (floating zero colour contours), 5 (fixed
+c       zero colour contours), 6 (rgb), 7 (background) and 8 (heat).  If you
+c       enter a negative integer, then the reversed lookup table is displayed.
 c
-c	Default is linear between the image minimum and maximum
-c	If you wish to just give a transfer function type, set
-c	range=0,0,heq   say.
+c       The transfer function changes available with OPTIONS=FIDDLE are in
+c       addition (on top of) to the selections here, but the colour lookup
+c       table selections will replace those selected here.
+c
+c       Default is linear between the image minimum and maximum with
+c       a b&w lookup table.   You can default the intensity range with
+c       zeros, viz. "range=0,0,log,-2" say.
 c@ xrange
 c	The slice display x-axis range.  This may be useful if you use
 c	OPTIONS=accum (see below).  Default is autoscale.
@@ -140,7 +153,7 @@ c	  The initial slice window extrema are defined from the first
 c	  sub-plot so slices from succeeding sub-plots may not fit 
 c	  unless you use keywords XRANGE and YRANGE.
 c
-c	"noimage"  means do not generate the grey scale or contour plot
+c	"noimage"  means do not generate the pixel map or contour plot
 c	  display of the image.   Useful if you have specified the slice
 c	  locations with a text file via the POSIN keyword and you don't
 c	  want to see the slice locations displayed on the image. The region
@@ -159,9 +172,9 @@ c         and invoke the predefined transfer functions, but the linear
 c         fiddler is not available.   In this way you can make colour
 c         hardcopy plots.
 c
-c	"wedge" means that if you are drawing a grey scale, also draw
+c	"wedge" means that if you are drawing a pixel map, also draw
 c	  and label a wedge to the right of the plot, showing the map 
-c	  of intensity to grey level.  
+c	  of intensity to colour.
 c
 c	"fit" means fit a Gaussian to each slice.  The cursor is used
 c	  to make the initial estimates of the Gaussian parameters.
@@ -298,6 +311,10 @@ c    nebk 05jan95  Use new PGIMAG in favour of PGGRAY adding support
 c                  for fiddling of lookup table for hardcopy devices.
 c                  Make use of new PGBAND when defining slices.  Decouple
 c                  slice and image window label displacements
+c    nebk 20feb95  Make sure PGIMAG writes black on white for hardcopy.
+c                  Ammend for new wedge call sequences.  Add lookuptable
+c                  to "range" keyword. Move to image type "pixel"
+c                  instead of "grey"
 c
 c Notes:
 c
@@ -340,7 +357,8 @@ c
      +  seg(2,maxdim), nseg(maxnsl), his(nbins)
       integer nx, ny, nlevs, lin, naxis, ierr, pgbeg, iostat, ilen,
      +  nlast, ngrps, lval, lposi, lposo, lmod, i, j, k, jj, icol, 
-     +  iax, ipage, wedcod, ibin(2), jbin(2), kbin(2), krng(2)
+     +  iax, ipage, wedcod, ibin(2), jbin(2), kbin(2), krng(2), 
+     +  coltab, iofm
 c
       character ctype(maxnax)*9, labtyp(2)*6, ltype(nltype)*6
       character in*64, pdev*64, xlabel*40, ylabel*40, xlabel2*40, 
@@ -348,9 +366,9 @@ c
      +  trfun*3, levtyp*1, fslval*80, fslposo*80, fslposi*80, fslmod*80,
      +  units*8
 c
-      logical do3val, do3pix, eqscale, doblnk, mask, dogrey,  gaps,
-     +  doerase, redisp, accum, radians, none, noimage, dofit,
-     +  dobord, dobase, doxrng, dofid, dowedge, first, dunsl
+      logical do3val, do3pix, eqscale, doblnk, mask, dopixel,  gaps,
+     +  doerase, redisp, accum, radians, none, noimage, dofit, dobord,
+     +  dobase, doxrng, dofid, dowedge, first, dunsl, reverse
 c
       integer len1
 c
@@ -363,19 +381,19 @@ c
       data dunsl /.false./
       data xdispls, ydispbs /3.5, 3.5/
 c-----------------------------------------------------------------------
-      call output ('CgSlice: version 05-Jan-95')
-      call output ('Options=fiddle will now work partially for hard ')
-      call output ('copy devices -- see help options')
+      call output ('CgSlice: version 20-Feb-95')
+      call output ('Keyword "range" can now be used to specify the')
+      call output ('colour lookup table as well the transfer function')
       call output (' ')
-      call output ('Non-linear coordinates are now partially handled')
-      call output ('See "help cgcoords" for explanations')
+      call output ('Options=fiddle is now keyboard driven for '//
+     +             'hard-copy devices')
       call output (' ')
 c
 c Get user inputs
 c
       call inputs (nltype, ltype, maxlev, in, ibin, jbin, kbin, 
-     +   levtyp, slev, levs, nlevs, pixr, trfun, pdev, labtyp, 
-     +   do3val, do3pix, eqscale, nx, ny, cs, dogrey, doerase, 
+     +   levtyp, slev, levs, nlevs, pixr, trfun, coltab, pdev, labtyp,
+     +   do3val, do3pix, eqscale, nx, ny, cs, dopixel, doerase, 
      +   accum, noimage, dofit, dobase, fslval, fslposi, fslposo, 
      +   fslmod, xrange, yrange, doxrng, dofid, dowedge)
 c
@@ -398,7 +416,7 @@ c Try to allocate memory for image
 c
       call memalloc (ipim,  win(1)*win(2), 'r')
       call memalloc (ipnim, win(1)*win(2), 'i')
-      if (.not.noimage .and. dogrey .and. trfun.ne.'lin') 
+      if (.not.noimage .and. dopixel .and. trfun.ne.'lin') 
      +  call memalloc (ipims, win(1)*win(2), 'r')
 c
 c Open output text files
@@ -406,9 +424,9 @@ c
       call opento (units, radians, fslval, fslposo, fslmod, lval, 
      +             lposo, lmod)
 c
-c Compute contour levels or check grey scale for log/sqr offset
+c Compute contour levels or check pixel map for log/sqr offset
 c
-      if (dogrey) then
+      if (dopixel) then
         call grfixcg (pixr, lin, naxis, size, trfun, pixr2,
      +                groff, blank)
       else
@@ -473,10 +491,10 @@ c Step to first sub-plot, set font and basic character size
 c
       call pgpage
       call pgscf(1)
-c       
+c
 c Init OFM routines
 c       
-      if (dofid) call ofmini
+      call ofmini
 c
 c Set label displacements from axes and set PGTBOX labelling
 c option strings
@@ -525,23 +543,42 @@ c
          call readimcg (.true., mask, blank, lin, ibin, jbin, krng,
      +         blc, trc, .true., memi(ipnim), memr(ipim), doblnk, dmm)
 c
-c Save image if necessary, apply transfer function and draw grey 
-c scale wedge outside of redisplay loop if wedge outside subplots
+c Some imaging chores
 c
-         if (.not.noimage .and. dogrey) then
+         if (.not.noimage .and. dopixel) then
+c
+c Save image if needed
+c
            if (trfun.ne.'lin') call copyimcg (win(1)*win(2), 
      +                          memr(ipim), memr(ipims))
+c
+c Apply transfer function directly to image if desired
 c
            if (trfun.ne.'lin') call apptrfcg (pixr2, trfun, groff, 
      +       win(1)*win(2), memi(ipnim), memr(ipim), nbins, his,
      +       cumhis)
 c
+c Apply user specified OFM or b&w OFM as default to device
+c
+           call ofmcol (coltab, pixr2(1), pixr2(2))
+c
+c For hardcopy devices we generally want black on white, not white on 
+c black.  So if no colour table has been applied, make note of this.
+c
+           reverse = .false.
+           if (hard.eq.'YES') then
+             call ofminq (iofm)
+             if (iofm.eq.1) reverse = .true.
+           end if
+c
+c Draw wedge if needed
+c
            if (wedcod.eq.1 .or. wedcod.eq.2) then
-             call pgsci (1)
-             if (hard.eq.'NO') call pgsci (7)
+             call pgsci (7)
+             if (hard.eq.'YES') call pgsci (2)
              call pgsch (cs(1))
-             call wedgecg (wedcod, wedwid, jj, trfun, groff, nbins, 
-     +                     cumhis, wdgvp, pixr(2), pixr(1))
+             call wedgecg (reverse, wedcod, wedwid, jj, trfun, groff, 
+     +                     nbins, cumhis, wdgvp, pixr(1), pixr(2))
            end if
          end if
 c
@@ -551,7 +588,7 @@ c
          first = .true.
          do while (redisp)
            if (.not.noimage) then
-             if (dogrey) then
+             if (dopixel) then
 c
 c Modify OFM for harcopy devices here; must be done before
 c PGIMAG called
@@ -560,10 +597,15 @@ c
      +          call ofmmod (tfvp, win(1)*win(2), memr(ipim),
      +                       memi(ipnim), pixr2(1), pixr2(2))
 c
-c Draw grey scale
+c Draw pixel map
 c
-               call pgimag (memr(ipim), win(1), win(2), 1, win(1), 1,
-     +                      win(2), pixr2(1), pixr2(2), tr)
+               if (reverse) then
+                 call pgimag (memr(ipim), win(1), win(2), 1, win(1), 1,
+     +                        win(2), pixr2(2), pixr2(1), tr)
+               else
+                 call pgimag (memr(ipim), win(1), win(2), 1, win(1), 1,
+     +                        win(2), pixr2(1), pixr2(2), tr)
+               end if
              else 
 c
 c Draw contours
@@ -576,8 +618,8 @@ c
 c Label if first time through redisplay loop; axes not erased
 c
              call pgsch (cs(1))
-             call pgsci (1)
-             if (hard.eq.'NO') call pgsci (7)
+             call pgsci (7)
+             if (hard.eq.'YES') call pgsci (2)
              if (first) call axlabcg (gaps, nx, ny, ngrps, nlast, k, 
      +         xopts, yopts, xdispl, ydispb, labtyp, xlabel, ylabel, 
      +         xxopts, yyopts)
@@ -590,11 +632,11 @@ c
 c Draw wedge if inside subplot
 c
              if (wedcod.eq.3) then
-               call pgsci (1)
-               if (hard.eq.'NO') call pgsci (7)
+               call pgsci (7)
+               if (hard.eq.'YES') call pgsci (2)
                call pgsch (cs(1))
-               call wedgecg (wedcod, wedwid, jj, trfun, groff, nbins, 
-     +                       cumhis, wdgvp, pixr(2), pixr(1))
+               call wedgecg (reverse, wedcod, wedwid, jj, trfun, groff, 
+     +                       nbins, cumhis, wdgvp, pixr(1), pixr(2))
              end if
 c
 c Write velocity or channel label
@@ -677,7 +719,7 @@ c
 c Generate slice. Use copy of image if transfer function applied.
 c
              ipp = ipim
-             if (.not.noimage .and. dogrey .and. trfun.ne.'lin') 
+             if (.not.noimage .and. dopixel .and. trfun.ne.'lin') 
      +          ipp = ipims
              call slice (ibin, jbin, slpos(1,i), grid, win(1), win(2),
      +          memr(ipp), memi(ipnim), radians, naxis, cdelt, 
@@ -730,11 +772,11 @@ c
                if (dofit) then
                  call drawbox (dobord, vblc, vtrc, xrange, yrange, 
      +              bound(1,i), bound(3,i), bound(2,i), bound(4,i),
-     +              xlabel2, ylabel2, xdispls, ydispbs) 
+     +              xlabel2, ylabel2, xdispls, ydispb, hard)
                else
                  call drawbox (dobord, vblc, vtrc, xrange, yrange, 
      +              sxmin, sxmax, symin, symax, xlabel2, ylabel2, 
-     +              xdispls, ydispbs)
+     +              xdispls, ydispbs, hard)
                end if
                dunsl = .true.
 c
@@ -755,7 +797,7 @@ c Do Gaussian fit if desired
 c
                  if (dofit) call gaufit (lmod, dobase, doxrng, i, 
      +             nslp(i), nseg(i),ipslx(i), ipsly(i),  ipsls(i), 
-     +             ipsle(i), xdispls, ydispbs, xlabel2, ylabel2)
+     +             ipsle(i), xdispls, ydispbs, xlabel2, ylabel2, hard)
                end if
              end do
            end if
@@ -786,7 +828,7 @@ c Close up
 c
       call memfree (ipim,  win(1)*win(2), 'r')
       call memfree (ipnim, win(1)*win(2), 'i')
-      if (.not.noimage .and. dogrey .and. trfun.ne.'lin')
+      if (.not.noimage .and. dopixel .and. trfun.ne.'lin')
      +   call memfree (ipims, win(1)*win(2), 'i')
       call xyclose(lin)
       if (fslval.ne.' ') call txtclose (lval)
@@ -1055,7 +1097,7 @@ c     dofit     Fit Gaussians
 c     dobase    Fit basline too
 c     doxrng    Use cursor to define x range when fitting Gaussian
 c     dofid     FIddle lookup table
-c     dowedge   Draw greyscale wedge
+c     dowedge   Draw pixel map wedge
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -1089,7 +1131,7 @@ c
 c
 c
       subroutine drawbox (dobord, vblc, vtrc, xrange, yrange, sxmin,
-     +   sxmax, symin, symax, xlabel, ylabel, xdispl, ydispb)
+     +   sxmax, symin, symax, xlabel, ylabel, xdispl, ydispb, hard)
 c-----------------------------------------------------------------------
 c     Set the viewport and draw the box for the slice display
 c
@@ -1102,13 +1144,14 @@ c   sx,ymin,max  Auto plot extrema
 c   x,ylabel     x- and y-axis labels
 c   xdispl,ydispb
 c                Y and x axis label offsets
+c   hard         'YES' for hardcopy device
 c
 c-----------------------------------------------------------------------
       implicit none
       real vblc(2), vtrc(2), xrange(2), yrange(2), sxmin, sxmax, symin,
      +  symax, ydispb, xdispl
       logical dobord
-      character*(*) xlabel, ylabel
+      character*(*) xlabel, ylabel, hard*3
 cc
       real lim(4)
 c-----------------------------------------------------------------------
@@ -1119,6 +1162,7 @@ c-----------------------------------------------------------------------
 c
       if (dobord) then
         call pgsci (7)
+        if (hard.eq.'YES') call pgsci (1)
         call pgtbox ('BCNST', 0.0, 0, 'BCNST', 0.0, 0)
         call pgmtxt ('B', ydispb, 0.5, 0.5, xlabel)
         call pgmtxt ('L', xdispl, 0.5, 0.5, ylabel)
@@ -1319,7 +1363,7 @@ c
 c
 c
       subroutine gaufit (lmod, dobase, doxrng, islice, n, nseg, ipslx,
-     +   ipsly, ipsls, ipsle, xdispl, ydispb, xlabel, ylabel)
+     +   ipsly, ipsls, ipsle, xdispl, ydispb, xlabel, ylabel, hard)
 c-----------------------------------------------------------------------
 c     Fit a Gaussian to the slice
 c
@@ -1340,11 +1384,12 @@ c   x,ydispb,l
 c          Label displacements from axes
 c   x,ylabel
 c          labels
+c   hard      'YES' for hard copy device
 c-----------------------------------------------------------------------
       implicit none
       real xdispl, ydispb
       integer n, ipslx, ipsly, ipsls, ipsle, nseg, islice, lmod
-      character*(*) xlabel, ylabel
+      character*(*) xlabel, ylabel, hard*3
       logical dobase, doxrng
 cc
       include 'maxdim.h'
@@ -1442,7 +1487,7 @@ c Plot model and residual
 c
         if (ifail.ne.1)
      +    call plotm (dobase, islice, n, nseg, ipslx, ipsly, ipsls, 
-     +                ipsle, xsol, xdispl, ydispb, xlabel, ylabel)
+     +      ipsle, xsol, xdispl, ydispb, xlabel, ylabel, hard)
 c
 c Tell user result; inside redo loop because they may fit multiple
 c peaks in the one slice.
@@ -1468,7 +1513,7 @@ c Redraw data if redo
 c
         call redo (more)
         if (more) call slerdraw (ydispb, xdispl, xlabel, ylabel, islice,
-     +    n, nseg, ipslx, ipsly, ipsls, ipsle, .true., wy1s, wy2s)
+     +    n, nseg, ipslx, ipsly, ipsls, ipsle, .true., wy1s, wy2s, hard)
       end do
 c
 c Save model in text file
@@ -1773,10 +1818,10 @@ c
 c
 c
       subroutine inputs (nltype, ltype, maxlev, in, ibin, jbin, kbin,
-     +   levtyp, slev, levs, nlevs, pixr, trfun, pdev, labtyp, do3val,
-     +   do3pix, eqscale, nx, ny, cs, dogrey, doerase, accum, noimage,
-     +   dofit, dobase, fslval, fslposi, fslposo, fslmod, xrange, 
-     +   yrange, doxrng, dofid, dowedge) 
+     +   levtyp, slev, levs, nlevs, pixr, trfun, coltab, pdev, labtyp,
+     +   do3val, do3pix, eqscale, nx, ny, cs, dopixel, doerase, accum, 
+     +   noimage,dofit, dobase, fslval, fslposi, fslposo, fslmod, 
+     +   xrange, yrange, doxrng, dofid, dowedge) 
 c-----------------------------------------------------------------------
 c     Get the unfortunate user's long list of inputs
 c
@@ -1794,8 +1839,9 @@ c              'p'(ercentage) or 'a'(bsolute)
 c   slev       Contour levels scale factors (absolute or percentage)
 c   levs       Contour levels.  Will be scaled by SLEV for contouring
 c   nlevs      Number of contour levels
-c   pixr       Greyscale intensity range
+c   pixr       Pixel map intensity range
 c   trfun      Type of grtey scale transfer function: 'log' or 'lin'
+c   coltab     User given colour table to apply to plot device
 c   pdev       PGPLOT plot device/type
 c   labtyp     Type of labels for x and y axes
 c   do3val     True means label sub-plots with value of third axis
@@ -1804,13 +1850,13 @@ c   eqscale    True means plot with x and y scales
 c   nx,ny      Number of sub-plots per page
 c   cs         PGPLOT character sizes for the plot axis labels,
 c              velocity/channel label, and slice plot
-c   dogrey     True for grey scale, false for contour plot
+c   dopixel    True for pixel map, false for contour plot
 c   doerase    Erase rectangle behind "3-axis" value
 c   noimage    Don't display the image
 c   dofit      Fit Gaussians
 c   dobase     Git Guassian + slope
 c   dofid      FIddle lookup table
-c   dowedge    Draw greyscale wedge
+c   dowedge    Draw pixel map wedge
 c   accum      Accumulate slice plots without clearing between sub-plots
 c   doxrng     Use cursor to define x range when fitting Gaussian
 c   fslval     File to put slice values into
@@ -1821,25 +1867,26 @@ c   x,yrange   SLice display extrema
 c-----------------------------------------------------------------------
       implicit none
 c
-      integer maxlev, nx, ny, nlevs, ibin(2), jbin(2), kbin(2), nltype
+      integer maxlev, nx, ny, nlevs, ibin(2), jbin(2), kbin(2), nltype,
+     +  coltab
       real levs(maxlev), pixr(2), cs(3), slev, xrange(2), yrange(2)
       character*(*) labtyp(2), in, pdev, trfun, levtyp, fslval, fslposi,
      +  fslposo, fslmod, ltype(nltype)
-      logical do3val, do3pix, eqscale, dogrey, doerase, accum, noimage,
+      logical do3val, do3pix, eqscale, dopixel, doerase, accum, noimage,
      +  dofit, dobase, doxrng, dofid, dowedge
 cc
       integer nlab, ntype2, nimtype, nval
-      parameter (ntype2 = 2)
+      parameter (ntype2 = 3)
       character imtype*7, type2(ntype2)*7
-      data type2 /'contour', 'grey'/
+      data type2 /'contour', 'pixel', 'grey'/
 c-----------------------------------------------------------------------
       call keyini
       call keyf ('in', in, ' ')
       if (in.eq.' ') call bug ('f', 'No image specified')
       call keymatch ('type', ntype2, type2, 1, imtype, nimtype)
       if (nimtype.eq.0) imtype = 'contour'
-      dogrey = .true.
-      if (imtype.eq.'contour') dogrey = .false.
+      dopixel = .true.
+      if (imtype.eq.'contour') dopixel = .false.
 c
       call keyi ('xybin', ibin(1), 1)
       call keyi ('xybin', ibin(2), ibin(1))
@@ -1872,10 +1919,15 @@ c
       call keyr ('range', pixr(1), 0.0)
       call keyr ('range', pixr(2), 0.0)
       call keya ('range', trfun, 'lin')
+      call keyi ('range', coltab, 1)
       call lcase (trfun)
-      if (dogrey .and. trfun.ne.'lin' .and. trfun.ne.'log' .and. 
+      if (dopixel .and. trfun.ne.'lin' .and. trfun.ne.'log' .and. 
      +    trfun.ne.'sqr' .and. trfun.ne.'heq') call bug ('f',
-     +    'Unrecognized grey scale transfer function type')
+     +    'Unrecognized pixel map transfer function type')
+      if (coltab.lt.-8 .or. coltab.gt.8 .or. coltab.eq.0) then
+        coltab = 1
+        call bug ('w', 'Unrecognized lookup table, setting b&w')
+      end if
 c
       call mkeyr ('xrange', xrange, 2, nval)
       if (nval.ne.0 .and. nval.ne.2) call bug ('f',
@@ -1899,7 +1951,7 @@ c
      +             dofit, dobase, doxrng, dofid, dowedge)
       if (dobase .and. .not.dofit) dofit = .true.
       if (accum .and. dofit) accum = .false.
-      if (.not.dogrey .or. noimage) then
+      if (.not.dopixel .or. noimage) then
         dofid = .false.
         dowedge = .false.
       end if
@@ -2251,7 +2303,7 @@ c
 c
 c
       subroutine plotm (dobase, islice, n, nseg, ipslx, ipsly, ipsls, 
-     +                  ipsle, xsol, xdispl, ydispb, xlabel, ylabel)
+     +  ipsle, xsol, xdispl, ydispb, xlabel, ylabel, hard)
 c-----------------------------------------------------------------------
 c     Plot data, model and residual
 c
@@ -2269,12 +2321,13 @@ c              first segment
 c   xsol       Solution vector: peak, pos, fwhm, offset, slope
 c   x,ydispl,b Label displacements
 c   x,ylabel   Labels
+c   hard       'YES' for hard copy device
 c
 c-----------------------------------------------------------------------
       implicit none
       real xdispl, ydispb, xsol(5)
       integer n, ipslx, ipsly, ipsls, ipsle, nseg, islice
-      character*(*) xlabel, ylabel
+      character*(*) xlabel, ylabel, hard*3
       logical dobase
 cc
       include 'maxdim.h'
@@ -2313,7 +2366,7 @@ c
 c Erase slice display and redraw slice
 c
       call slerdraw (ydispb, xdispl, xlabel, ylabel, islice, n, nseg,
-     +               ipslx, ipsly, ipsls, ipsle, .true., ymin, ymax)
+     +  ipslx, ipsly, ipsls, ipsle, .true., ymin, ymax, hard)
 c
 c Write title
 c
@@ -2726,7 +2779,7 @@ c
 c
 c
       subroutine slerdraw (ydispb, xdispl, xlabel, ylabel, islice,
-     +   n, nseg, ipslx, ipsly, ipsls, ipsle, usenew, ymin, ymax)
+     +   n, nseg, ipslx, ipsly, ipsls, ipsle, usenew, ymin, ymax, hard)
 c-----------------------------------------------------------------------
 c     Erase old slice display, redraw box and redraw slice
 c
@@ -2746,13 +2799,13 @@ c              first segment
 c   usenew     Use the given ymin and ymax else use what it was before
 c              These will be stretched 5% as usual
 c   ymin,ymax  Optionally used Y extrema
-c
+c   hard       'YES' for hard copy device
 c-----------------------------------------------------------------------
       implicit none
       real ydispb, xdispl, ymin, ymax
       integer islice, nseg, ipslx, ipsly, ipsls, ipsle, n
       logical usenew
-      character*(*) xlabel, ylabel
+      character*(*) xlabel, ylabel, hard*3
 cc
       include 'maxdim.h'
       include 'mem.h'
@@ -2784,7 +2837,7 @@ c Redraw box and labels
 c
       call drawbox (.true., vblc, vtrc, xrange, yrange,
      +   wblc(1), wtrc(1), ymin, ymax, xlabel, ylabel,
-     +   xdispl, ydispb)
+     +   xdispl, ydispb, hard)
 c
 c Plot slice
 c
@@ -3257,7 +3310,8 @@ c     dofid       True for interactive fiddle
 c     wedcod      1 -> one wedge to right of all subplots
 c                 2 -> one wedge to right per subplot
 c                 3 -> one wedge per subplot inside subplot
-c     wedwid      Width of wedge in character heights
+c     wedwid      Width of wedge as a fraction of the full x viewport
+c	          for wedcod = 1
 c     wedisp      Displacement of wedge from right axis in char heights
 c     tfdisp      Displacement of transfer function plot from right axis 
 c                 in char heights
@@ -3353,7 +3407,7 @@ c from right hand edge of image plots in ndc
 c 
         dowedge = wedcod.eq.1 .or. wedcod.eq.2
         if (dowedge) then        
-          dvww = wedwid * xhti
+          dvww = wedwid
           dvwl = 2.0 * xhti
           dvwd = wedisp * xhti
 c
