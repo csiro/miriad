@@ -62,15 +62,18 @@ c	Name of the input visibility dataset. No default.
 c@ line
 c	Standard line-type specification. See the help on "line"
 c	for more information.
+c@ script
+c	Text file of commands to execute. The default is to
+c	interactively prompt at the terminal.
 c@ device
 c	Plotting device. Default is /xs. The plotting device can
 c	be overridden on the MBANAL prompt.
 c--
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Mbanal: version 1.0 03-Feb-97')
+	parameter(version='Mbanal: version 1.0 18-Dec-97')
 	character vis*64,device*64,ltype*16,string*128,type*1
-	character p1*32,p2*256,p3*32,p4*32,token*8
+	character p1*32,p2*256,p3*32,p4*32,token*8,script*64
 	integer nchan,tIn,k1,k2,length,lt,lp1,lp2,lp3,lp4
 	logical update
 	real lstart,lwidth,lstep
@@ -84,6 +87,7 @@ c
 	if(vis.eq.' ')call bug('f','Input vis must be given')
 	call keyline(ltype,nchan,lstart,lwidth,lstep)
 	call keya('device',device,'/xs')
+	call keya('script',script,' ')
 	call keyfin
 c
 	call SlotIni
@@ -105,10 +109,19 @@ c
 c
 c  Now go into the interactive loop.
 c
- 100	call prompt(string,length,'MBANAL> ')
-	call lcase(string)
+	if(script.ne.' ')call tinOpen(script,' ')
+ 100	if(script.ne.' ')then
+	  call tinLine(string,length)
+	  if(length.eq.0)then
+	    string(1:4) = 'exit'
+	    length = 4
+	  endif
+	else
+	  call prompt(string,length,'MBANAL> ')
+	endif
 	k2 = min(length,len(string))
 	if(k2.gt.0)k2 = len1(string(1:k2))
+	if(k2.gt.0)call lcase(string(1:k2))
 	k1 = 1
 	token = ' '
 	p1 = ' '
@@ -135,6 +148,7 @@ c
 	else if(index('exit',token(1:lt)).eq.1.or.
      *		index('quit',token(1:lt)).eq.1)then
 	  call uvclose(tIn)
+	  if(script.ne.' ')call tinClose
 	  call exit
 	else if(index('add',token(1:lt)).eq.1)then
 	  call doTwo(p1,p2,p3,Add)
