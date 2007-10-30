@@ -8,6 +8,7 @@ c      5feb91  jm  Convert routine into Miriad format and added the
 c                  functions rangle and hangle.
 c     3sep93 nebk  Add dangleh (h=high precision)
 c    17aug94 nebk  Add hangleh (h=high precision)
+c    18apr96 rjs   Added rangleh (h=high precision).
 c
 c***********************************************************************
 c* Dangle - Convert degrees/hours value into a formatted string.
@@ -209,13 +210,13 @@ c  Inputs:
 c    theta    Angle in radians.
 
 c  Output:
-c    rangle   Angle formated into a string with format:
-c               [+/-]DD:MM:SS.SS
+c    rangleh  Angle formated into a string with format:
+c               [+/-]DD:MM:SS.SSS
 c
 c--
 c-----------------------------------------------------------------------
       include 'mirconst.h'
-      character Dangle*14
+      character Dangleh*14
 c
       rangleh = Dangleh((180.0d0 * theta) / DPI)
       return
