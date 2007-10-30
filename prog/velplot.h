@@ -8,19 +8,19 @@ c  MAXDIM is used to read the image, and for 1-dimensional arrays.
 	include 'maxdim.h'
 c
 c  box in absolute pixels. (is,ib) (ie,it) can be reset by cursor.
-        integer      is,ie,ib,it,mid,midy
-	common /box/ is,ie,ib,it,mid,midy
+        integer      is,ie,ib,it,midx,midy
+	common /box/ is,ie,ib,it,midx,midy
 c---------------------------------------------------------------------c
 
-	real        ras,decs,epoch,xy,vel,delv,posx,posy,pospa
+	real crval1,crval2,epoch,xy,vel,delv,posx,posy,pospa
 	real bmaj,bmin,bpa,dperjy,cbof,restfreq,posend,velend
 	real amin,amax,arms
 	integer		     niters
-	common/head/ras,decs,epoch,xy,vel,delv,posx,posy,pospa,
+	common/head/crval1,crval2,epoch,xy,vel,delv,posx,posy,pospa,
      *	     bmaj,bmin,bpa,dperjy,cbof,restfreq,posend,velend,
      *	     amin,amax,arms,niters
 c
-c  ras,decs, (epoch), bmaj,bmin (beam) [radians]
+c  crval1, crval2, (epoch), bmaj, bmin (beam) [radians]
 c  xy (map pixel),  [arcsecs]
 c  vel,delv - lsr velocity and width of current map [km/s]
 c  restfreq, [GHz]
