@@ -118,10 +118,11 @@ c    rjs   29oct97  Check that the coordinates for a point source fall
 c		    within the image.
 c    rjs   11dec97  Make total flux option consistent when there is an
 c		    input image.
+c    rjs   19mar98  Copy across mosaic table.
 c  Bugs/Wishlist:
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Imgen: version 1.1 11-Dec-97' )
+	parameter(version='Imgen: version 1.1 19-Mar-98' )
 	include 'mirconst.h'
 	include 'maxdim.h'
 	include 'maxnax.h'
@@ -399,7 +400,7 @@ c  Make a header for the output image.
 c
 c------------------------------------------------------------------------
 	integer nkeys
-	parameter(nkeys=44)
+	parameter(nkeys=45)
 	character line*64
 	integer i
 	character keyw(nkeys)*8
@@ -408,7 +409,7 @@ c------------------------------------------------------------------------
      *	  'crpix1  ','crpix2  ','crpix3  ','crpix4  ','crpix5  ',
      *	  'crval1  ','crval2  ','crval3  ','crval4  ','crval5  ',
      *	  'ctype1  ','ctype2  ','ctype3  ','ctype4  ','ctype5  ',
-     *	  'epoch   ','ltype   ','lstart  ','lwidth  ',
+     *	  'epoch   ','ltype   ','lstart  ','lwidth  ','mostable',
      *	  'lstep   ','mask    ','niters  ','object  ','history ',
      *    'observer','obsra   ','obsdec  ','restfreq','telescop',
      *	  'vobs    ','cellscal','obstime ','pbfwhm  ','btype   ',
