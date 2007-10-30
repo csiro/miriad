@@ -29,13 +29,14 @@ c    rjs   6nov94 Original version.
 c    rjs  13mar95 Add call to mosMFin
 c    rjs  23jul97 Add pbtype.
 c    rjs  24feb98 Write bunit keyword to output.
+c    rjs  30sep99 Make output the full size of the region-of-interest.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'maxnax.h'
 	include 'mem.h'
 	character version*(*)
 	integer MAXBOXES,MAXRUNS
-	parameter(version='MosSen: version 1.0 6-Nov-94')
+	parameter(version='MosSen: version 1.0 30-Sep-99')
 	parameter(MAXBOXES=1024,MAXRUNS=3*MAXDIM)
 c
 	integer tIn,tSen,tGain,pSen,pGain,i,k,nBuff
@@ -75,9 +76,9 @@ c
 c
 c  Set up the region of interest and determine the output image size.
 c
-	call boxMask(tIn,Boxes,MAXBOXES)
 	call boxSet(boxes,3,nin,' ')
 	call boxInfo(boxes,naxis,blc,trc)
+	call boxMask(tIn,Boxes,MAXBOXES)
 	nout(1) = trc(1) - blc(1) + 1
 	nout(2) = trc(2) - blc(2) + 1
 	nout(3) = trc(3) - blc(3) + 1
