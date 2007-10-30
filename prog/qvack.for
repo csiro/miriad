@@ -16,12 +16,21 @@ c	Input visibility data file. No default.
 c@ select
 c	Standard uv data selection. Default is to select all data.
 c@ interval
-c	The time interval, in minutes, after a change in the setup, for
-c	which the data are flagged. Default is 0.1, which flags for the
-c	first 6 seconds after a switch.
+c	The time interval, in minutes, after a change in the setup, for 
+c	which the data are flagged. Default is 0.1, which flags for 
+c	the first 6 seconds after a switch.
+c@ force
+c	The time interval, in minutes, which indicates the amount of time 
+c	that should ellapse before forcing a (virtual) setup change.
+c	Thus you can QVACK on data that has distinct scans but no actual 
+c	change in observing setup.  Note that this means the first 
+c	INTERVAL amount of data is always flagged. The MODE option is 
+c	not needed, nor is it used if you set FORCE
+c	Defaults to no forced setup change.
 c@ mode
 c	This determines what changes in setup cause flagging. Several
 c	values can be given, separated by commas, Minimum match is used.
+c
 c	Possible values are:
 c	  "frequency"    A change in the frequency setup. Do not use this
 c	                 option if Doppler tracking is used.
@@ -31,20 +40,21 @@ c	                 observation.
 c--
 c  History:
 c    rjs   1sep92 Original version.
+c    nebk  1dec95 Add keyword FORCE.  Will RJS talk to me again ?
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
 	integer MAXSELS
-	parameter(version='Qvack: version 1.0 1-Sept-92')
+	parameter(version='Qvack: version 1.0 1-Dec-95')
 	parameter(MAXSELS=1024)
 c
 	character vis*64
-	double precision interval,preamble(4),time
+	double precision interval,preamble(4),time,tforce,t0
 	real sels(MAXSELS)
 	complex data(MAXCHAN)
 	logical flags(MAXCHAN)
 	integer tno,vhand,nchan,n,nrec,ncorr,i
-	logical dofreq,dosrc,domos
+	logical dofreq,dosrc,domos,first
 c
 c  Externals.
 c
@@ -58,10 +68,13 @@ c
 	call keya('vis',vis,' ')
 	if(vis.eq.' ')call bug('f','Input vis file must be given')
 	call keyd('interval',interval,0.1d0)
-	if(interval.le.0)call bug('f','Bad value for interval')
+	call keyd('force',tforce,0.0d0)
+	if(interval.le.0)call bug('f','Bad value for keyword interval')
+	if(tforce.lt.0)call bug('f','Bad value for keyword force')
 	interval = interval / (60.0*24.0)
+	tforce = tforce / (60.0*24.0)
 	call SelInput('select',sels,MAXSELS)
-	call GetMode(dofreq,dosrc,domos)
+	call GetMode(tforce,dofreq,dosrc,domos)
 	call keyfin
 c
 c  Open the data-set and initialise.
@@ -91,8 +104,20 @@ c
 	ncorr = 0
 	call uvread(tno,preamble,data,flags,maxchan,nchan)
 	time = preamble(3) - interval
+        t0 = preamble(3)
+        first = .true.
+c
 	dowhile(nchan.gt.0)
-	  if(uvvarupd(vhand))time = preamble(3) + interval
+          if (tforce.gt.0.0d0) then
+            if (first .or. preamble(3)-t0.gt.tforce) then
+              time = preamble(3) + interval
+	      t0 = preamble(3) 
+              first = .false.
+            end if
+          else
+   	    if(uvvarupd(vhand)) time = preamble(3) + interval
+          end if
+c
 	  if(preamble(3).lt.time)then
 	    n = 0
 	    do i=1,nchan
@@ -123,9 +148,10 @@ c
 	call uvclose(tno)
 	end
 c************************************************************************
-	subroutine GetMode(dofreq,dosrc,domos)
+	subroutine GetMode(tforce,dofreq,dosrc,domos)
 c
 	implicit none
+	double precision tforce
 	logical dofreq,dosrc,domos
 c
 c  Get processing modes.
@@ -147,6 +173,8 @@ c
 	dofreq = present(1)
 	dosrc  = present(2)
 	domos  = present(3)
-	if(.not.(dofreq.or.dosrc.or.domos))
-     *	  call bug('f','A flagging mode must be given')
+        if (tforce.le.0.0d0) then
+  	  if(.not.(dofreq.or.dosrc.or.domos))
+     *	    call bug('f','A flagging mode must be given')
+        end if
 	end
