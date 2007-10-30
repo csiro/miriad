@@ -46,6 +46,7 @@ c  History:
 c    rjs  13oct93 Original version.
 c    rjs  29aug94 W-axis change.
 c    rjs   6sep94 Use MAXWIN in maxdim.h. Better treatment of xyphase.
+c    rjs  19jan95 Copy pulsar bin variable across.
 c
 c  Bugs:
 c    * Not written yet.
@@ -636,7 +637,7 @@ c------------------------------------------------------------------------
 	character line*64
 c
 	integer NCOPY,NSCHECK,NWCHECK
-	parameter(NCOPY=63,NSCHECK=8,NWCHECK=3)
+	parameter(NCOPY=64,NSCHECK=8,NWCHECK=3)
 	character copy(NCOPY)*8,scheck(NSCHECK)*8,wcheck(NWCHECK)*8
         data copy/    'airtemp ','antdiam ','antpos  ','atten   ',
      *     'axisrms ','chi     ','corbit  ','corbw   ','corfin  ',
@@ -650,7 +651,7 @@ c
      *     'plmin   ','pltb    ','precipmm','ra      ','relhumid',
      *     'source  ','telescop','temp    ','tpower  ','ut      ',
      *     'veldop  ','veltype ','version ','vsource ','winddir ',
-     *     'windmph ','delay0  ','npol    ','pol     '/
+     *     'windmph ','delay0  ','npol    ','pol     ','bin     '/
 c
 	data SCheck/  'nspect  ','restfreq','ischan  ','nschan  ',
      *     'sfreq   ','sdf     ','systemp ','xyphase '/
