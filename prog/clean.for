@@ -47,8 +47,9 @@ c	            beam has a 180 degree rotation symmetry, which is the
 c	            norm for beams in radio-astronomy.
 c	  pad       Double the beam size by padding it with zeros. This
 c	            will give you better stability with Clark and Steer
-c	            modes if you are daring enough to CLEAN more than the
-c	            inner quarter of the dirty image.
+c	            modes if you are daring enough to CLEAN an area more
+c	            than half the size (in each dimension) of the dirty
+c	            beam.
 c@ cutoff
 c	CLEAN finishes either when the absolute maximum residual falls
 c	below CUTOFF, or when the criteria described below is
@@ -61,9 +62,9 @@ c	cutoff (see above) is reached, or if options=negstop was given and
 c	a negative component was found, or if options=positive was given,
 c	and no more positive components could be found.
 c@ region
-c	This specifies the region to be Cleaned. See the Users Manual for
-c	instructions on how to specify this. The default is the largest
-c	region that can be deconvolved safely.
+c	This specifies the region to be Cleaned. See the help on "region"
+c	for more information. The default is the largest region that can
+c	be deconvolved safely.
 c@ phat
 c	Cornwells prussian hat parameter. When cleaning extended sources,
 c	CLEAN may produce a badly corrugated image. This can be suppressed
@@ -139,6 +140,7 @@ c		   selected.
 c   rjs  24jun97 - Correct call to Alignini.
 c   rjs  02jul97 - cellscal change.
 c   rjs  23jul97 - added pbtype.
+c   rjs  22oct99 - doc change only.
 c
 c  Important Constants:
 c    MaxDim	The max linear dimension of an input (or output) image.
