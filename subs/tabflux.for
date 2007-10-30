@@ -37,6 +37,12 @@ c                     assumed that aliases are demarked by '!!' and
 c                     the first name is the anchor.  A source does not
 c                     have to have an alias list.
 c    rjs   26jan95    Eliminate non-standard string concatentation.
+c    jm    27feb95    Fixed a problem with date=0 and source=*.
+c    jm    05jul95    Tried to reduce the number of entries in the
+c                     common arrays by testing for source name changes
+c                     in the routine TabFlux.  Also eliminated redundant
+c                     file name changes in the same routine.
+c    jm    04oct95    Fixed long standing date>0 problem in tabflux.
 c
 c***********************************************************************
 c* CalGet -- Routine to retrieve an interpolated calibrator flux.
@@ -305,10 +311,13 @@ c
       parameter (DEFFILE='MIRCAT:cals.fluxes')
 c
       character oldname*132, tmpname*132, newname*132
-      integer icolon, newlen
+      character oldsrc*80
+      integer icolon, newlen, nlen
       real deltnu, deltime
+      logical reset
 c
-      save oldname
+      save oldname, newname
+      save oldsrc
 c
 c  External functions and data statements.
 c
@@ -316,7 +325,8 @@ c
       integer Len1
       logical hexists
 c
-      data oldname /' '/
+      data oldname /'@no#such!file%'/
+      data oldsrc /'@no#such!source%'/
 c
 c  End declarations.
 c-----------------------------------------------------------------------
@@ -332,38 +342,55 @@ c  environment variable $MIRFLUXTAB is set; if not, then set the
 c  file name to default value and search the current directory
 c  followed by $MIRCAT.
 c
-      if (Len1(FileName) .gt. 0) then
-        newname = fullname(FileName)
-      else
-        call mgetenv(newname, '$MIRFLUXTAB')
-        if ((Len1(newname) .lt. 1) .or.
-     *      (.not. hexists(0, newname))) then
-          tmpname = DEFFILE
-          icolon = index(tmpname, ':') + 1
-          newname = tmpname(icolon:)
-          if (.not. hexists(0, newname)) then
-            newname = fullname(DEFFILE)
+      reset = .FALSE.
+      newlen = Len1(filename)
+      if (newlen .lt. 1) newlen = 1
+      if (filename(1:newlen) .ne. oldname(1:newlen)) then
+        if (Len1(filename) .gt. 0) then
+          newname = fullname(filename)
+        else
+          call mgetenv(newname, '$MIRFLUXTAB')
+          if ((Len1(newname) .lt. 1) .or.
+     *        (.not. hexists(0, newname))) then
+            tmpname = DEFFILE
+            icolon = index(tmpname, ':') + 1
+            newname = tmpname(icolon:)
             if (.not. hexists(0, newname)) then
-              call bug('f',
-     *          'TABFLUX: Error finding calibrator flux table file.')
+              newname = fullname(DEFFILE)
+              if (.not. hexists(0, newname)) then
+                call bug('f',
+     *            'TABFLUX: Error finding calibrator flux table file.')
+              endif
             endif
           endif
         endif
+        oldname = filename
+        reset = .TRUE.
       endif
 c
       newlen = Len1(newname)
       if (newlen .le. 0) call bug('f',
-     *  'TABFLUX: Error finding calibrator flux table file.')
+     *  'TABFLUX: Calibrator flux table file name is blank.')
+c
+c  Check to see if the source name has changed.  If so, then reload
+c  based on this source name.
+c
+      nlen = Len1(source)
+      if (nlen .lt. 1) nlen = 1
+      call Ucase(source(1:nlen))
+      if (source(1:nlen) .ne. oldsrc(1:nlen)) then
+        oldsrc = source
+        reset = .TRUE.
+      endif
 c
 c  If input calibrator file name has changed since the last time this
 c  routine was called, then open the new file and load the source data
 c  into memory (and initialize the line number counter).
 c
-      if (newname(1:newlen) .ne. oldname(1:newlen)) then
-        call TabLoad(newname, iostat)
+      if (reset) then
+        call TabLoad(newname, source, iostat)
         if (iostat .ne. 0)
      *    call bug('f', 'TABFLUX: Error loading file ' // newname)
-        oldname = newname(1:newlen)
         Line = 0
       endif
 c
@@ -379,9 +406,10 @@ c
       return
       end
 c***********************************************************************
-      subroutine tabload(name, iostat)
+      subroutine tabload(name, source, iostat)
       implicit none
       character name*(*)
+      character source*(*)
       integer iostat
 c
 c  This routine reads a calibration file loading sources, observation
@@ -394,6 +422,7 @@ c  with each field separated by at least one space or TAB character.
 c
 c Input:
 c   name     The name of the flux calibrator file.
+c   source   The name of the source to match.  An alias can be used.
 c
 c Output:
 c   iostat   The returned error code.  0 means no error.
@@ -433,8 +462,7 @@ c
         length = Len1(string)
         if (length .gt. 0) then
           if (string(1:1) .ne. '!') then
-            nentry = nentry + 1
-            call TabParse(string, length, nentry)
+            call TabParse(string, length, source, nentry)
           elseif (string(1:2) .eq. '!!') then
             call NamParse(string(3:), length-2)
           endif
@@ -446,8 +474,12 @@ c  If the last return code was not an EOF, then it was an error.
 c  Otherwise, simply close the file and return.
 c
       if (iostat .ne. -1) call bugno('f', iostat)
-      if (nentry .eq. 0)
-     *  call bug('f', 'TABLOAD: No entries in this calibration file')
+      if (nentry .eq. 0) then
+        string =
+     *    'TABLOAD: No entries in this calibration file for source: ' //
+     *    source
+        call bug('f', string)
+      endif
 c
       call TxtClose(lu)
 c
@@ -550,7 +582,7 @@ c
         call Ucase(source(1:nlen))
         call aliases(source, srcalias)
         if (Len1(srcalias) .gt. 0) then
-          if (justonce) then
+          if (justonce .and. (source .ne. srcalias)) then
             errmsg = 'TABFLUX: Alias used for source ' // source
             call bug('i', errmsg)
             justonce = .FALSE.
@@ -592,7 +624,8 @@ c
       more = .TRUE.
       match = 0
    20 continue
-      testday = abs((nday * TDATE(j)) - day)
+      testday = (nday * TDATE(j)) - day
+      if (testday .lt. 0) testday = deltime + 1.0
       if (dwild .or. (testday .le. deltime) .or. (day .eq. 1.0)) then
         testfreq = abs(TFREQ(j) - freq)
         if (fwild .or. (testfreq .le. deltnu)) then
@@ -601,6 +634,7 @@ c
             if (swild) then
               source = TSOURCE(j)
               nlen = Len1(TSOURCE(j))
+              swild = .FALSE.
             endif
             if (fwild) freq = TFREQ(j)
             flux = TFLUX(j)
@@ -650,22 +684,27 @@ c
       return
       end
 c***********************************************************************
-      subroutine tabparse(string, length, nentry)
+      subroutine tabparse(string, length, source, nentry)
       implicit none
       character string*(*)
+      character source*(*)
       integer length, nentry
 c
 c Input:
 c   string   The input string to parse.
 c   length   The length of the input string.
+c   source   The name of the source to match.  An alias can be used.
+c Input/Output:
 c   nentry   A counter to the index of table entries.
 c
 c-----------------------------------------------------------------------
 c  Internal variables.
 c
-      character token*40, srcalias*40, errmsg*80
+      character token*40, tokalias*40, srcalias*40, errmsg*80
       integer k1, k2, tlen, j1, j2
       logical okay
+c
+      integer Len1
 c
 c  tabflux.h: Common block and declarations of table entries.
 c
@@ -674,14 +713,12 @@ c
 c  End declarations.
 c-----------------------------------------------------------------------
 c
-      if (nentry .gt. NTABLE) then
+      if (nentry .ge. NTABLE) then
         call bug('w',
      *    'TABPARSE: Include file tabflux.h must be adjusted.')
         call bug('f',
      *    'TABPARSE: Too many entries in the calibrator flux table.')
       endif
-      NTAB = nentry
-      TINDEX(NTAB) = NTAB
 c
       k1 = 1
       k2 = length
@@ -697,6 +734,15 @@ c
         call addalias(token(j1:j2), token(j1:j2))
         call aliases(token(j1:j2), srcalias)
       endif
+c
+      j2 = Len1(source)
+      call aliases(source(1:j2), tokalias)
+      if (tokalias .eq. ' ') tokalias = source(1:j2)
+      if ((tokalias .ne. '*') .and. (tokalias .ne. srcalias)) return
+c
+      nentry = nentry + 1
+      NTAB = nentry
+      TINDEX(NTAB) = NTAB
       TSOURCE(NTAB) = srcalias
 c
       call getfield(string, k1, k2, token, tlen)
