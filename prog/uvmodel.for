@@ -81,8 +81,8 @@ c	Clip level. Pixels in the model below this level are set to zero.
 c	The default is not to perform any clipping.
 c@ flux
 c	If MODEL is blank, then the flux (Jy) of a point source model should
-c	be specified here. The default is 1 (assuming the model parameter
-c	is not given).
+c	be specified here. Also used as the default flux in the apriori
+c	option. The default is 1 (assuming the model parameter is not given).
 c@ offset
 c	The RA and DEC offsets (arcseconds) of the point source from the
 c	observing center. A point source to the north and east has positive
@@ -134,12 +134,14 @@ c    rjs  17aug92 Updated call sequence to var routines, plus other
 c		  tidying.
 c    mchw 04sep92 Fixed a missing argument in uvVarCpy.
 c    rjs  15feb93 Changes to make ra,dec variables double.
+c    rjs  29mar93 Fiddles with the sigma.
+c    rjs  23dec93 Minimum match of linetype name.
 c  Bugs:
 c    * Polarisation processing is pretty crude.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
-	parameter(version='version 1.0 15-Feb-93')
+	parameter(version='version 1.0 23-Dec-93')
 	integer maxsels,nhead,nbuf
 	parameter(maxsels=64,nhead=1,nbuf=5*maxchan+nhead)
 c
@@ -155,9 +157,8 @@ c
 	logical flags(maxchan)
 	real buffer(nbuf)
 c
-	real bw
-	logical first,calcrms,dounflag
-	common/uvmodcom/bw,first,calcrms,dounflag
+	logical calcrms,dounflag
+	common/uvmodcom/calcrms,dounflag
 c
 c  Externals.
 c
@@ -179,11 +180,7 @@ c
 	call keyr('sigma',sigma,100.)
 	call keyr('offset',offset(1),0.)
 	call keyr('offset',offset(2),0.)
-	call keya('line',ltype,' ')
-	call keyi('line',nchan,0)
-	call keyr('line',lstart,1.)
-	call keyr('line',lwidth,1.)
-	call keyr('line',lstep,1.)
+	call keyline(ltype,nchan,lstart,lwidth,lstep)
 	call keya('out',out,' ')
 	call keyfin
 c
@@ -218,7 +215,6 @@ c
 c
 	calcrms = oper.eq.'flag'
 	dounflag = unflag
-	first = calcrms	
 	pol = 0
 c
 c  Determine the default linetype from the uvdata if needed.
@@ -385,22 +381,11 @@ c		  out(1) -- rms error.
 c   accept	This determines whether the data is accepted or discarded.
 c		It is always accepted unless the baseline number looks bad.
 c------------------------------------------------------------------------
-	real inttime,tsys,JyperK
-	double precision dbw,epsi
 	integer i
+	double precision sigma2
 c
-	real bw
-	logical first,calcrms,dounflag
-	common/uvmodcom/bw,first,calcrms,dounflag
-c
-	if(first)then
-	  call uvfit1(tvis,'bandwidth',nchan,dbw,epsi)	  
-	  if(epsi.gt.0.1*dbw) call bug('w',
-     *	    'Channel bandwidths differ by greater than 10%')
-	  bw = 1.0e9 * dbw
-	  if(bw.le.0) call bug('f','Channels have zero bandwidth')
-	  first = .false.
-	endif
+	logical calcrms,dounflag
+	common/uvmodcom/calcrms,dounflag
 c
 c  Unflag the data if necessary.
 c
@@ -413,15 +398,13 @@ c
 c  Determine the rms error, if needed.
 c
 	if(calcrms)then
-	  call uvrdvrr(tvis,'inttime',inttime,1.)
-	  call uvrdvrr(tvis,'systemp',tsys,0.)
-	  call uvrdvrr(tvis,'jyperk',JyperK,200.)
-	  out(1) = (JyperK*Tsys)**2/(inttime*bw)
-	  if(Out(1).le.0)out(1) = 1/inttime
+	  call uvinfo(tvis,'variance',sigma2)
+	  out(1) = sigma2
+	  accept = sigma2.gt.0
 	else
 	  Out(1) = 0.
+	  accept = .true.
 	endif
-	accept = .true.
 	end
 c************************************************************************
 	subroutine process(oper,rms,buffer,data,flags,nchan)
@@ -493,7 +476,7 @@ c
 c  Flag operation.
 c
 	else if(oper.eq.'flag')then
-	  rms2 = rms*rms
+	  rms2 = 2*rms*rms
 	  do i=1,nchan
 	    temp = (real (data(i))-buffer(3,i))**2 +
      *		   (aimag(data(i))-buffer(4,i))**2
