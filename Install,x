@@ -290,7 +290,7 @@ l4:
 l5:
 	if ( "$arch" == "sun4sol" ) then
 	  set linklist = "$linklist -lsocket -lnsl -lm"
-	else if ( "$arch" == "sgi" ) then
+	else if ( "$arch" == "irix64" ) then
 	  set linklist = "$linklist -lcomplib.sgimath -lm"
 	else if ( "$arch" == "convex" ) then
 	  set linklist = "$linklist -lveclib -lC2_old -lm"
