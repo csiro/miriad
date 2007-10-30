@@ -54,13 +54,14 @@ c    rjs      4aug92 The xyphases item is now history. Do without it!
 c    rjs     24sep93 Handle case of different number of feeds between
 c		     primary and secondary.
 c    rjs      5nov93 Do not copy polarisation solutions.
+c    rjs     17aug95 Antenna selection.
 c
 c  Bugs and Shortcomings:
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
 	integer MAXSELS
-	parameter(version='GpBoot: version 25-Mar-94')
+	parameter(version='GpBoot: version 17-Aug-95')
 	parameter(MAXSELS=256)
 c
 	logical docal,doxy
@@ -195,8 +196,8 @@ c    Cnt	The number of things that went into summing the amplitudes.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	complex Gains(3*MAXANT)
-	integer item,nsols,i,j,k,iostat,offset,ngains
-	logical ok,dosel
+	integer item,nsols,i,j,k,iostat,offset,ngains,ant
+	logical ok,dosel,doant(MAXANT)
 	double precision time
 c
 c  Externals.
@@ -209,12 +210,17 @@ c
 c
 c  Check out the selection criteria.
 c
+	do i=1,nants
+	  doant(i) = .true.
+	enddo
+c
 	dosel = .false.
 	if(doselect)then
 	  dosel = SelProbe(sels,'time?',0.d0)
 	  if(SelProbe(sels,'antennae?',0.d0))then
-	    call bug('w','Antenna selection processing is unsupported')
-	    call bug('w','Antenna selection ignored')
+	    do i=1,nants
+	      doant(i) = SelProbe(sels,'antennae',257.d0*i)
+	    enddo
 	  endif
 	endif
 c
@@ -243,16 +249,19 @@ c
 	    if(iostat.ne.0)
      *	      call BootBug(iostat,'Error reading gains file')
 	    k = 0
+	    ant = 0
 	    do j=1,ngains,nfeeds+ntau
+	      ant = ant + 1
 	      k = k + 1
-	      if(abs(real(Gains(j)))+abs(aimag(Gains(j))).gt.0)then
+	      if(doant(ant).and.
+     *		 abs(real(Gains(j)))+abs(aimag(Gains(j))).gt.0)then
 		Amp(k) = Amp(k) + abs(Gains(j))
 		Cnt(k) = Cnt(k) + 1
 	      endif
 	      if(nfeeds.eq.2)then
 	        k = k + 1
-	        if(abs(real(Gains(j+1)))+abs(aimag(Gains(j+1))).gt.0)
-     *								   then
+	        if(doant(ant).and.
+     *		  abs(real(Gains(j+1)))+abs(aimag(Gains(j+1))).gt.0)then
 		  Amp(k) = Amp(k) + abs(Gains(j+1))
 		  Cnt(k) = Cnt(k) + 1
 		endif
