@@ -611,6 +611,7 @@ c		   goes.
 c    nebk 16jun98  FIx problem in posdec2 where ocen2 was of 
 c                  size 2 instead of 3.  Was stuffing up w2wco
 c    cjp  16jun98  Added "sym" overlay type
+c    nebk 16jul98  Fix problem when region selected planes were not contiguious
 c-----------------------------------------------------------------------
       implicit none
 c
