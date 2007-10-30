@@ -41,9 +41,10 @@ c    rjs  18jul97  Correct handling of flags when incr != 1.
 c    rjs  23jul97  added pbtype.
 c    rjs  25nov98  added llrot.
 c    rjs  23jul99  Correct copying of pbtype keyword.
+c    rjs  12oct99  Correct copying of mostable.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Imsub: version 1.0 23-Jul-99' )
+	parameter(version='Imsub: version 1.0 12-Oct-99' )
 c
 	integer maxboxes
 	parameter(maxboxes=2048)
@@ -52,7 +53,7 @@ c
 	character in*80,out*80
 	integer Inplane(maxnax),Outplane(maxnax),one(maxnax)
 	integer blc(maxnax),trc(maxnax),Nin(maxnax),Nout(maxnax),i,j
-	integer i0,j0,incr(maxnax)
+	integer i0,j0,incr(maxnax),nx,ny,npnt
 	integer naxis,boxes(maxboxes)
 	integer lIn,lOut
 	logical done,rect
@@ -61,12 +62,12 @@ c
 c
 c  Externals.
 c
-	logical BoxRect
+	logical BoxRect,hdprsnt
 c
 c  Header keywords.
 c
 	integer nkeys
-	parameter(nkeys=37)
+	parameter(nkeys=36)
 	character keyw(nkeys)*8
 	data keyw/   'bmaj    ','bmin    ','bpa     ','bunit   ',
      *	  'crval1  ','crval2  ','crval3  ','crval4  ','crval5  ',
@@ -74,7 +75,7 @@ c
      *	  'obstime ','epoch   ','history ','instrume','niters  ',
      *	  'object  ','observer','obsra   ','obsdec  ','pbfwhm  ',
      *	  'restfreq','telescop','vobs    ','btype   ','rms     ',
-     *	  'ltype   ','lstart  ','lwidth  ','lstep   ','mostable',
+     *	  'ltype   ','lstart  ','lwidth  ','lstep   ',
      *	  'cellscal','pbtype  ','llrot   '/
 c
 c  Get the input parameters.
@@ -164,6 +165,20 @@ c
 	  call planeinc(maxnax-2,incr(3),blc(3),trc(3),Inplane,done)
 	  call planeinc(maxnax-2,one,one,Nout(3),Outplane,done)
 	enddo
+c
+c  Copy the mosaic table if neccessary.
+c
+	if(hdprsnt(lIn,'mostable'))then
+	  if(incr(1).ne.1.or.incr(2).ne.1)then
+	    call mosLoad(lIn,npnt)
+	    call mosGetn(nx,ny,npnt)
+	    call mosSetn(nx/incr(1),ny/incr(2))
+ 	    call mosSave(lOut)
+	  else
+	    call hdcopy(lIn,lOut,'mostable')
+	  endif
+	endif
+c
 	call xyclose(lIn)
 	call xyclose(lOut)
 	end
