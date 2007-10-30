@@ -27,19 +27,33 @@ set date = `date +%d%h%y`
 set dolocal = 0
 
 foreach arg ( $argv )
-  if ( $arg == "-l" ) then
+  if ( "$arg" == "-l" ) then
     set dolocal = 1
   else if( "$dir" == "" ) then
     set dir = $arg
   else
+    if ( ! -e $arg ) then
+      echo Cannot find $arg ... continuing
+      continue
+    endif
     set root = $arg:t
 
 # Save an old version of the file (if we have not updated it today
-# already!
+# already) ! Also move or remove the old version so that there
+# can be less possibility of protection stuff ups.
 
-    if ( -e $MIR/$dir/$root && ! -e $MIR/old/$root.$date ) then
-      echo Copying \$MIR/$dir/$root to \$MIR/old/$root.$date ...
-      cp $MIR/$dir/$root $MIR/old/$root.$date
+    if ( -e $MIR/$dir/$root ) then
+      diff -b $arg $MIR/$dir/$root > /dev/null
+      if ( ! $status ) then
+	echo $arg ignored\; it does not differ from the current version
+	continue
+      endif
+      if ( ! -e $MIR/old/$root.$date ) then
+        echo Moving \$MIR/$dir/$root to \$MIR/old/$root.$date ...
+        mv $MIR/$dir/$root $MIR/old/$root.$date
+      else
+	rm -f $MIR/$dir/$root
+      endif
     endif
 
 # Copy to the final resting place. Make sure protections are OK.
