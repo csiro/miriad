@@ -9,14 +9,16 @@
 # Convert to stokes.
 
   rm -rf $vis.stokes
-  uvaver vis=$vis out=$vis.stokes stokes=v options=relax
+  uvaver vis=$vis out=$vis.stokes stokes=i,q,u,v options=relax
 
 # Clip stokes v at 4 sigma.
 
   tvclip vis=$vis.stokes server=xmtv@junk taver=5 clip=4 \
-       commands=clip options=notv
+       "select=pol(v)" commands=clip options=notv
 
 # Transfer flags back.
 
-  uvaflag tvis=$vis.stokes vis=$vis options=nopol
-  rm -r $vis.stokes
+  uvaflag tvis=$vis.stokes vis=$vis
+  rm -r $vis.stokes 
+  uvpflag vis=$vis polt=xx,xy,yx,yy pols=xx,xy,yx,yy options=or
+

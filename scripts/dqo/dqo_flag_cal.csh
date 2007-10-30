@@ -22,5 +22,5 @@
 
 # Transfer flags to all polarizations.
 
-  uvaflag vis=$vis options=nopol
+  uvpflag vis=$vis polt=xx,xy,yx,yy pols=xx,xy,yx,yy options=or
 
