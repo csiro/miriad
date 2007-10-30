@@ -98,6 +98,7 @@ c    07jul97 rjs   Gone back to the drawing board and rewrite program.
 c    22jul97 rjs   Fix bug when subimaging grossly.
 c    22jul97 rjs   Support epoch,projection and galactic/equatorial
 c		   axis conversion.
+c    23jul97 rjs   Add warning about blanked pixels. Add pbtype.
 c To do:
 c----------------------------------------------------------------------
 	include 'maxdim.h'
@@ -108,13 +109,14 @@ c
 	parameter(version='Regrid: version 1.0 22-Jul-97')
 c
 	character in*64,out*64,tin*64,ctype*16,cellscal*12,proj*3
+	character line*64
 	double precision desc(4,MAXNAX),crpix,crval,cdelt,epoch
 	logical noscale,dooff,doepo,dogaleq
 	integer ndesc,nax,naxis,nin(MAXNAX),nout(MAXNAX),ntin(MAXNAX)
 	integer i,k,n,lIn,lOut,lTmp,cOut,axes(MAXNAX)
 	integer GridSize,gnx,gny,minv(3),maxv(3),order(3)
 	integer nBuf(3),off(3),minc(3),maxc(3),BufSize,rBuf,lBuf
-	integer offset,nxy
+	integer offset,nxy,nblank
 	real tol
 c
 	integer Xv,Yv,Zv
@@ -240,6 +242,7 @@ c
 	call pcvtInit(cOut,lIn)
 	call BufIni(nBuf,off,minc,maxc,BufSize)
 c
+	nblank = 0
 	do k=1,nOut(3)
 	  call xysetpl(lOut,1,k)
 c
@@ -271,6 +274,7 @@ c
 c
 	  if(minv(1).gt.maxv(1).or.minv(2).gt.maxv(2).or.
      *				   minv(3).gt.maxv(3))then
+	    nblank = nblank + nOut(1)*nOut(2)
 	    call BadPlane(lOut,nOut(1),nOut(2))
 c
 c  Get the required data.
@@ -287,10 +291,21 @@ c
      *	      memr(rBuf+offset*nxy),meml(lBuf+offset*nxy),
      *	      nBuf(1),nBuf(2),maxc(3)-minc(3)+1,
      *	      off(1),off(2),minc(3)-1,
-     *	      memr(Xv),memr(Yv),memr(Zv),gnx,gny)
+     *	      memr(Xv),memr(Yv),memr(Zv),gnx,gny,nblank)
 	  endif
 	enddo
 c
+c  Give warning about the number of blanked pixels.
+c
+	nblank = (100*nblank)/(nOut(1)*nOut(2)*nOut(3))
+	write(line,'(a,i3,a)')
+     *	  'Overall fraction of blanked pixels: ',nblank,'%'
+	if(nblank.ge.50)then
+	  call bug('w',line)
+	else if(nblank.ne.0)then
+	  call output(line)
+	endif
+c	
 c  All done. Tidy up.
 c
 	if(BufSize.gt.0)then
@@ -520,12 +535,12 @@ c------------------------------------------------------------------------
 	character line*64
 c
 	integer nkeys
-	parameter(nkeys=20)
+	parameter(nkeys=21)
 	character key(nkeys)*8
         data key /   'bmaj    ','bmin    ','bpa     ','bunit   ',
      *    'history ','instrume','niters  ',
      *    'object  ','observer','obsra   ','obsdec  ','pbfwhm  ',
-     *    'telescop','btype   ','rms     ',
+     *    'telescop','btype   ','rms     ','pbtype  ',
      *    'ltype   ','lstart  ','lwidth  ','lstep   ','mostable'/
 c
 	do i=1,nkeys
@@ -542,10 +557,11 @@ c
 	end
 c************************************************************************
 	subroutine Intp(lOut,order,nx,ny,In,flagIn,nix,niy,niz,
-     *		xoff,yoff,zoff,Xv,Yv,Zv,gnx,gny)
+     *		xoff,yoff,zoff,Xv,Yv,Zv,gnx,gny,nblank)
 c
 	implicit none
 	integer nx,ny,nix,niy,niz,gnx,gny,order(3),lOut,xoff,yoff,zoff
+	integer nblank
 	real In(nix,niy,niz),Xv(gnx,gny),Yv(gnx,gny),Zv(gnx,gny)
 	logical flagIn(nix,niy,niz)
 c------------------------------------------------------------------------
@@ -620,6 +636,7 @@ c
 	    if(flagOut(i))then
 	      Out(i) = Sum / SumWt
 	    else
+	      nblank = nblank + 1
 	      Out(i) = 0
 	    endif
 	  enddo
