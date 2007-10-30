@@ -96,6 +96,7 @@ c    bpw  15dec92  Add default velaxis='z' after changing fndaxnum
 c    bpw  19dec94  Add options=coeff,#
 c    bpw  12jan95  Fixed bug introduced by introducing options=coeff,#
 c    pjt  15mar95  fixed declaration order for f2c (linux)
+c    rjs  30aug95  Minor change of usage of optprsnt, to appease g77.
 c
 c------------------------------------------------------------------------
 c
@@ -234,7 +235,7 @@ c Check the output option.
          optprsnt(i) = .FALSE.
       enddo
       call options( 'options', outopts, optprsnt, NOPTO )
-      if( optprsnt(1).eq..TRUE. ) then
+      if( optprsnt(1)) then
          n=0
          do i = 1, MAXTERMS
             if( optprsnt(i+1) ) n=n+1
