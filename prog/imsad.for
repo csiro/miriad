@@ -128,7 +128,7 @@ c		    fix a problem with fit locations being plotted in wrong place when
 c		    a region specified.
 c    16dec97   rjs  fix a problem with fit locations being plotted in wrong place when
 c		    a region specified. What did NEBK do?
-
+c     8may98   rjs  Do not call logclose if no log file open.
 c-----------------------------------------------------------------------------
       include 'mirconst.h'
       include 'maxdim.h'
@@ -138,7 +138,7 @@ c-----------------------------------------------------------------------------
 c
       integer  MAXSRC, MAXBOX
       character*40   version
-      parameter     (version='version 28-Jun-96')
+      parameter     (version='version 8-May-98')
       parameter (MAXSRC=2048, MAXBOX=1024)
 c
       integer lui, luo, ip, ni, nj, iptr, mptr, ng, iwin(2,MAXSRC), 
@@ -241,7 +241,7 @@ c
       call cofin (lui)
       call pgend
       call xyclose(lui)
-      call logclose
+      if(dolog)call logclose
       if(outfile.ne.' ') call txtclose (luo)
 c
       call memfree(iptr,ni*nj,'r')
