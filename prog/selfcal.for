@@ -34,6 +34,14 @@ c	The units of the model MUST be JY/PIXEL, rather than JY/BEAM, and
 c	should be weighted by the primary beam. The task DEMOS can be used
 c	to extract primary beam weighted models from a mosaiced image. If
 c	no models are given, a point source model is assumed.
+c
+c	NOTE: When you give SELFCAL a model, it will, by default, select the
+c	data associated with this model from the visibility data-set. This
+c	includes selecting the appropriate range of channels, the appropriate
+c	polarisation type and the appropriate pointing (if options=selradec
+c	is used). If you use a point source model, if it YOUR responsibility
+c	to select the appropriate data. In particular, you may well want
+c	to select appropriate polarisations and sourcings or sources.
 c@ clip
 c	Clip level. For models of intensity, any pixels below the clip level
 c	are set to zero. For models of Stokes Q,U,V, or MFS I*alpha models,
@@ -150,6 +158,12 @@ c    rjs  18may93 If rms=0, assume rms=1.
 c    rjs  19may93 Merge mchw and rjs versions of selfcal.
 c    rjs  28jun93 Iterate a bit longer. Better memory allocation.
 c    rjs  31aug93 Better amplitude calibration with low S/N data.
+c    rjs  24sep93 Doc changes only.
+c  Bugs/Shortcomings:
+c   * Selfcal should check that the user is not mixing different
+c     polarisations and pointings.
+c   * It would be desirable to apply bandpasses, and merge gain tables,
+c     apply polarisation calibration, etc.
 c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='Selfcal: version 1.0 31-Aug-93')
