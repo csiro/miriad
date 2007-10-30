@@ -50,7 +50,7 @@ c	image.
 c@ measure
 c	The entropy measure to be used, either "gull" (-p*log(p/e)) or
 c	"cornwell" (-log(cosh(p)) -- also called the maximum emptiness
-c	criteria).
+c	criteria). Using the maximum emptiness criteria is not recommended.
 c@ tol
 c	Tolerance of solution. There is no need to change this from the
 c	default of 0.01.
@@ -89,8 +89,8 @@ c	it to the same flux units as the mosaic. The default is 1. If the
 c	``dofactor'' options is used (see below), MOSMEM solves for this
 c	parameter.
 c@ flux
-c	An estimate of the integrated flux of the source. This parameter cannot
-c	be used if there is an input single dish image. 
+c	An estimate of the integrated flux of the source. This parameter is
+c	generally not useful if there is an input single dish image. 
 c	Giving MOSMEM a good value for the integrated flux
 c	will help it find a good solution. On the other hand, giving
 c	a poor value may do harm. Normally MOSMEM will NOT constrain the
@@ -131,9 +131,12 @@ c    rjs  28nov97  Increase max number of boxes.
 c    rjs  23feb98  Added extra protection against underflow.
 c    rjs  17mar98  Added single dish support, "factor" parameter and
 c		   options=dofactor.
+c    rjs  19jan99  It was failing to access the correct single dish plane!!
+c		   Also some changes in some checks and guessing TFlux to
+c		   make it more robust.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='MosMem: version 1.0 17-Mar-98')
+	parameter(version='MosMem: version 1.0 19-Jan-99')
 	include 'maxdim.h'
 	include 'maxnax.h'
 	include 'mem.h'
@@ -200,9 +203,8 @@ c
 	nfret = 0
 	call mkeyr('flux',fluxlist,maxdim,nfret)
 	if(dosingle.and.nfret.gt.0)then
-	  call bug('w',
-     *	    'Flux parameter ignored when single dish data present')
-	  nfret = 0
+	  call bug('w','Setting the "flux" parameter when using '//
+     *			'single-dish data may be unwise')
 	endif
 	call BoxInput('region',MapNam,Boxes,MaxBoxes)
 	call GetOpt(verbose,doflux,dofac,entropy)
@@ -242,8 +244,8 @@ c  Open the single dish image.
 c
 	if(dosingle)then
 	  call xyopen(lMapb,MapSin,'old',3,nMapb)
-	  if(hdprsnt(lMapb,'mostable'))call bug('f',
-     *	    'Second input dirty map must be a single dish observation')
+	  if(hdprsnt(lMapb,'mostable'))call bug('w',
+     *	    'Is the second input map really a single dish observation?')
 	  if(nMap(1).ne.nMapb(1).or.nMap(2).ne.nMapb(2).or.
      *	     nMap(3).ne.nMapb(3))call bug('f',
      *	    'Input maps differ in size; they must have identical grids')
@@ -420,6 +422,7 @@ c
 	  call GetPlane(lMapa,Run,nRun,0,0,nMap(1),nMap(2),
      *				memr(pMapa),maxPoint,nPoint)
 	  if(dosingle)then
+	    call xysetpl(lMapb,1,k)
 	    call GetPlane(lMapb,Run,nRun,0,0,nMap(1),nMap(2),
      *				memr(pMapb),maxPoint,nPoint)
 	    call SDConWt(memr(pEst),memr(pWtb),nPoint)
@@ -438,18 +441,18 @@ c
 c  Get the Default map.
 c
 	  Tflux = fluxlist(k-kmin+1)
-	  if(TFlux.le.0)then
-	    if(dosingle)then
-	      call GetFxSD(memr(pEst),memr(pMapb),nPoint,TFlux)
-	      TFlux = fac * TFlux / ffacSD
-	    else if(DefNam.ne.' ')then
-	      if(ffacDef.le.0)call GetFFDef(lDef,ffacDef)
-	      call GetFxDef(memr(pDef),nPoint,TFlux)
-	      TFlux = TFlux / ffacDef
-	    else
-	      call GetRms(memr(pWta),nPoint,TFlux)
-	      TFlux = RmsFaca*TFlux*nPoint/Qa
-	    endif
+	  if(TFlux.le.0.and.dosingle)then
+	    call GetFxSD(memr(pEst),memr(pMapb),nPoint,TFlux)
+	    TFlux = fac * TFlux / ffacSD
+	  endif
+	  if(Tflux.le.0.and.DefNam.ne.' ')then
+	    if(ffacDef.le.0)call GetFFDef(lDef,ffacDef)
+	    call GetFxDef(memr(pDef),nPoint,TFlux)
+	    TFlux = TFlux / ffacDef
+	  endif
+	  if(Tflux.le.0)then
+	    call GetRms(memr(pWta),nPoint,TFlux)
+	    TFlux = RmsFaca*TFlux*nPoint/Qa
 	  endif
 	  call DefFudge(nPoint,memr(pDef),TFlux)
 	  write(line,'(a,1pe10.3)')'Using an integrated flux of',TFlux
@@ -803,7 +806,7 @@ c
 c
 	alpha = TFlux/Sum
 	do i=1,npoint
-	  Def(i) = alpha*Def(i)
+	  Def(i) = alpha*max(Def(i),temp)
 	enddo
 c
 	end
