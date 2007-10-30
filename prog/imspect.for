@@ -93,6 +93,7 @@ c    nebk 23sep91  Somehow a version with a half-finished
 c                  OPTIONS=CURVE in it has come back.  Fix properly.
 c    mjs  13mar93  pgplot subr names have less than 7 chars.
 c    nebk 28mar94  Write frequency axis label into log
+c    dar  28jun95  Added this comment to test RCS
 c----------------------------------------------------------------------c
 	include 'maxdim.h'
 	integer maxco,maxnax,maxboxes,maxruns,naxis
@@ -203,7 +204,7 @@ c
 	call axes(lIn,vaxis,xaxis,yaxis,nchan,naxis,npix,
      *		  xlabel,ylabel,chan,value,spec)
 c
-c  Optionally take derivatives
+c  Optionally take derivatives.
 c
         if (deriv1 .or. deriv2) call der (deriv1, nchan, spec, work)
 c
