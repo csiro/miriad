@@ -42,7 +42,7 @@ c	parameter gives this inclination angle in degrees. Default=0. (face on)
 c@ radius
 c	Inner and outer radii and step size along major axis in arcsecs.
 c	The default is the whole image in steps equal to the pixel size.
-c@ pbtype
+c@ telescop
 c	If you request that the fluxes be corrected for the primary beam
 c	(see OPTIONS), ELLINT will normally construct a primary beam type
 c	using information from the dataset. However you can override this
@@ -89,12 +89,13 @@ c    rjs   20nov96      Re-instate Wilfred's version, with some trivial
 c			intermediate changes. History is uncertain.
 c    rjs   06mar97	Added options=natural, and some other changes.
 c    mchw  29apr97	Fix bug if neither median nor mode. Again.
+c    rjs   10jun97      Change pbtype to telescop
 c----------------------------------------------------------------------c
 	include 'mirconst.h'
 	include 'maxdim.h'
 	include 'mem.h'
         character*(*) label,version
-        parameter(version='version 1.0 29-APR-97')
+        parameter(version='version 1.0 10-Jun-97')
         double precision rts,value
         parameter(label='Integrate a Miriad image in elliptical annuli')
         integer maxnax,maxboxes,maxruns,naxis,axis,plane,maxring
@@ -132,7 +133,7 @@ c
         call keyr('radius',rmin,0.)
         call keyr('radius',rmax,0.)
         call keyr('radius',rstep,0.)
-        call keya('pbtype',pbtype,' ')
+        call keya('telescop',pbtype,' ')
         call getopt(dopb,domedian,domode,natural)
         call keya('log',logf,' ')
         call keyfin
