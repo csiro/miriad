@@ -12,36 +12,29 @@ c	The input to SELCAL are a visibility data file, and model images.
 c	This program then calculates the visibilities corresponding to the
 c	model, accumulates the statistics needed to determine the antennae
 c	solutions, and then calculates the self-cal solutions.
-c
-c	The output is a calibration file, ready to be applied to the
-c	visibility data.
-c
 c@ vis
 c	Name of input visibility data file. No default.
 c@ select
-c	Standard uv data selection criteria. Generally this should not include
-c	a "dra" and "ddec" selection, as SELFCAL automatically matches data
-c	with the appropriate observing center.
+c	Standard uv data selection criteria. See the help on "select" for
+c	more information.
 c@ model
 c	Name of the input models. Several models can be given, which can
-c	cover different channel ranges, different pointing and sources, and
-c	different polarizations of the input visibility data. Generally
-c	the model should be derived (by mapping and deconvolution) from the
-c	input visibility file, so that the channels in the model correspond
-c	to channels in the visibility file. Though the maps can be made using
-c	any linetype, generally "channel" linetype will give best results (??).
-c	The units of the model MUST be JY/PIXEL, rather than JY/BEAM, and
-c	should be weighted by the primary beam. The task DEMOS can be used
-c	to extract primary beam weighted models from a mosaiced image. If
-c	no models are given, a point source model is assumed.
+c	cover different channel ranges and different pointing and sources
+c	of the input visibility data. Generally the model should be derived
+c	(by mapping and deconvolution) from the input visibility file, so
+c	that the channels in the model correspond to channels in the
+c	visibility file. The units of the model MUST be JY/PIXEL, rather
+c	than JY/BEAM, and should be weighted by the primary beam. The task
+c	DEMOS can be used to extract primary beam weighted models from a
+c	mosaiced image. If no models are given, a point source model is
+c	assumed.
 c
 c	NOTE: When you give SELFCAL a model, it will, by default, select the
 c	data associated with this model from the visibility data-set. This
-c	includes selecting the appropriate range of channels, the appropriate
-c	polarisation type and the appropriate pointing (if options=selradec
-c	is used). If you use a point source model, if it YOUR responsibility
-c	to select the appropriate data. In particular, you may well want
-c	to select appropriate polarisations and sourcings or sources.
+c	includes selecting the appropriate range of channels and the
+c	appropriate pointing/source (if options=mosaic is used). If you use
+c	a point source model, if it YOUR responsibility	to select the
+c	appropriate data.
 c@ clip
 c	Clip level. For models of intensity, any pixels below the clip level
 c	are set to zero. For models of Stokes Q,U,V, or MFS I*alpha models,
@@ -52,42 +45,19 @@ c	The length of time, in minutes, of a gain solution. Default is 5,
 c	but use a larger value in cases of poor signal to noise, or
 c	if the atmosphere and instrument is fairly stable.
 c@ options
-c       This gives several processing options. Possible values are:
+c	This gives several processing options. Possible values are:
 c	  amplitude  Perform amplitude and phase self-cal.
 c	  phase      Perform phase only self-cal.
-c	  smooth     Determine the solutions in such a way that they are
-c	             smooth with time.
-c	  polarized  The source is polarised. By default the source is
-c	             assumed to be unpolarised. For a polarized source,
-c	             SELFCAL cannot perform polarization conversion. That
-c	             is, if the model is of a particular polarization, then
-c	             the visibility file should contain that sort of
-c	             polarization. For example, if the model is Stokes-Q,
-c	             then the visibility file should contain Stokes-Q.
 c	  mfs        This is used if there is a single plane in the input
 c	             model, which is assumed to represent the image at all
 c	             frequencies. This should also be used if the model has
 c	             been derived from MFCLEAN.
 c	  relax      Relax the convergence criteria. This is useful when
 c	             selfcal'ing with a very poor model.
-c	  apriori    This is used if there is no input model, and the
-c	             source in the visibility data is either a planet,
-c	             or a standard calibrator. This causes the model data
-c	             to be scaled by the known flux of the source. For a
-c	             planet, this flux will be a function of baseline. If
-c	             the source is a point source, the ``apriori'' option
-c	             is only useful if the ``amplitude'' and ``noscale''
-c	             option are being used. For a planet, this option
-c	             should also be used for a phase selfcal, to get the
-c	             correct weighting of the different baselines in the
-c	             solution.
 c	  noscale    Do not scale the gains. By default the gains are scaled
-c	             so that the rms gain amplitude is 1. Generally this
-c	             option should be used with the apriori option.
-c	             It must be used if selfcal is being used to determine
-c	             Jy/K, and should also be used if the model is believed
-c	             to have the correct scale.
-c	  selradec   This causes SELFCAL to select only those visibilities
+c	             so that the rms gain amplitude is 1. In this way, the
+c	             total flux is not contrained to agree with the model.
+c	  mosaic     This causes SELFCAL to select only those visibilities
 c	             whose observing center is within plus or minus three
 c	             pixels of the model reference pixel. This is needed
 c	             if there are multiple pointings or multiple sources in
@@ -105,8 +75,7 @@ c	The default, for a given solution interval, is the antennae with the
 c	greatest weight.
 c@ flux
 c	If MODEL is blank, then the flux (Jy) of a point source model can
-c	be specified here. Also used as the default flux for the apriori
-c	option. The default is 1 (assuming the model parameter is not given)
+c	be specified here. The default is 1.
 c@ offset
 c	This gives the offset in arcseconds of a point source model (the
 c	offset is positive to the north and to the east). This parameter is
@@ -160,6 +129,16 @@ c    rjs  28jun93 Iterate a bit longer. Better memory allocation.
 c    rjs  31aug93 Better amplitude calibration with low S/N data.
 c    rjs  24sep93 Doc changes only.
 c    rjs   9nov93 Better recording of time of a particular solution interval.
+c    rjs  23dec93 Minimum match for linetypes.
+c    rjs  30jan95 Change option "selradec" to "mosaic", and update doc
+c                 file somewhat. Change to helper routine.
+c    rjs  16apr96 Increase select routine arrays.
+c    rjs  28aug96 Minor change to get around gcc-related bug. Change care
+c                 Dave Rayner.
+c    rjs   1oct96 Major tidy up.
+c    rjs  19feb97 Better error messages.
+c    rjs  25aug97 Correct summing of weights in "merger"
+c
 c  Bugs/Shortcomings:
 c   * Selfcal should check that the user is not mixing different
 c     polarisations and pointings.
@@ -167,23 +146,22 @@ c   * It would be desirable to apply bandpasses, and merge gain tables,
 c     apply polarisation calibration, etc.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Selfcal: version 1.0 9-Nov-93')
+	parameter(version='Selfcal: version 1.0 25-Aug-97')
 	integer MaxMod,maxsels,nhead
-	parameter(MaxMod=32,maxsels=256,nhead=3)
+	parameter(MaxMod=32,maxsels=1024,nhead=3)
 c
 	character Models(MaxMod)*64,vis*64,ltype*32
 	character flag1*8,flag2*8,obstype*32
 	integer tvis,tmod,tscr
 	integer nModel,minants,refant,nsize(3),nchan,nvis,i
 	real sels(maxsels),clip,interval,offset(2),lstart,lwidth,lstep
-	logical phase,amp,smooth,doline,apriori,noscale,relax,doPol,mfs
-	real flux
+	logical phase,amp,doline,noscale,relax,mfs
+	real flux(2)
 	logical selradec
 c
 c  Externals.
 c
-	logical keyprsnt
-	external header,calget
+	external header
 c
 c  Get the input parameters.
 c
@@ -195,20 +173,14 @@ c
 	call keyr('clip',clip,0.)
 	call keyr('interval',interval,5.)
 	call keyi('minants',minants,0)
- 	call keyi('refant',refant,0)
-	call keyr('flux',flux,1.)
+	call keyi('refant',refant,0)
+	call keyr('flux',flux(1),1.)
+	flux(2) = 1
 	call keyr('offset',offset(1),0.)
 	call keyr('offset',offset(2),0.)
-	doline = keyprsnt('line')
-	if(doline)then
-	  call keya('line',ltype,'channel')
-	  call keyi('line',nchan,1)
-	  call keyr('line',lstart,1.)
-	  call keyr('line',lwidth,1.)
-	  call keyr('line',lstep,lwidth)
-	endif
-	call GetOpt(phase,amp,smooth,apriori,noscale,relax,doPol,mfs,
-     *		selradec)
+	call keyline(ltype,nchan,lstart,lwidth,lstep)
+	doline = ltype.ne.' '
+	call GetOpt(phase,amp,noscale,relax,mfs,selradec)
 	call keyfin
 c
 c  Check that the inputs make sense.
@@ -253,34 +225,27 @@ c
 c
 c  Determine the flags to the MODELINI routine.
 c  p -- Perform pointing selection.
-c  s -- Perform polarisation selection.
 c  l -- Set up line type.
-c  t -- Source is polarised.
 c
-	flag1 = 's'
-	if(selradec) flag1(2:2) = 'p'
-	if(.not.doline.and..not.mfs)flag1(3:3) = 'l'
-	if(doPol)		    flag1(4:4) = 't'
+	flag1 = ' '
+	if(selradec)                flag1(1:1) = 'p'
+	if(.not.doline.and..not.mfs)flag1(2:2) = 'l'
 c
 c  Determine the flags to the MODEL routine.
 c  l - Perform clipping.
-c  a - Perform auto-scaling.
 c  m - Model is a mfs one.
-c  c - Use calibration file to determine model characteristics.
 c
 	flag2 = 'l'
-c	if(.not.noscale) flag2(2:2) = 'a'
-	if(mfs)          flag2(3:3) = 'm'
-	if(apriori)      flag2(4:4) = 'c'
+	if(mfs)flag2(2:2) = 'm'
 c
 c  Loop over all the models.
 c
 	if(nModel.eq.0)then
 	  call output('Reading the visibility file ...')
-	  call SelfSet(.true.,MinAnts) 
+	  call SelfSet(.true.,MinAnts)
 	  call SelApply(tvis,sels,.true.)
 	  call Model(flag2,tvis,0,offset,flux,tscr,
-     *				nhead,header,calget,nchan,nvis)
+     *				nhead,header,nchan,nvis)
 	  call SelfIni
 	  call output('Accumulating statistics ...')
 	  call SelfAcc(tscr,nchan,nvis,interval)
@@ -292,7 +257,7 @@ c
 	    call xyopen(tmod,Models(i),'old',3,nsize)
 	    call ModelIni(tmod,tvis,sels,flag1)
 	    call Model(flag2,tvis,tmod,offset,Clip,tscr,
-     *				nhead,header,calget,nchan,nvis)
+     *				nhead,header,nchan,nvis)
 	    call xyclose(tmod)
 	    call output('Accumulating statistics ...')
 	    if(i.eq.1) call SelfIni
@@ -310,7 +275,8 @@ c
 c  Calculate the self-cal gains.
 c
 	call output('Finding the selfcal solutions ...')
-	call Solve(tvis,phase,smooth,relax,noscale,refant,interval)
+	call Solve(tvis,phase,relax,noscale,
+     *	     refant,interval,nchan)
 c
 c  Close up.
 c
@@ -319,46 +285,60 @@ c
 	call uvclose(tvis)
 	end
 c************************************************************************
-	subroutine GetOpt(phase,amp,smooth,apriori,noscale,relax,
-     *						doPol,mfs,selradec)
+	subroutine Chkpolm(tmod)
 c
 	implicit none
-	logical phase,amp,smooth,apriori,noscale,relax,doPol,mfs,
-     *							    selradec
+	integer tmod
+c
+c  Check that the visibility is a total intensity type.
+c------------------------------------------------------------------------
+        integer iax
+        double precision t
+c
+c  Externals.
+c
+	logical polspara
+c
+	call coInit(tmod)
+        call coFindAx(tmod,'stokes',iax)
+        if(iax.ne.0)then
+          call coCvt1(tmod,iax,'ap',1.d0,'aw',t)
+          if(.not.polspara(nint(t)))
+     *	    call bug('f','Model is not a total intenisty one')
+        endif
+	call coFin(tmod)
+	end
+c************************************************************************
+	subroutine GetOpt(phase,amp,noscale,relax,mfs,selradec)
+c
+	implicit none
+	logical phase,amp,noscale,relax,mfs,selradec
 c
 c  Determine extra processing options.
 c
 c  Output:
 c    phase	If true, do phase self-cal.
 c    amp	If true, do amplitude/phase self-cal.
-c    smooth	If true, do some extra time averaging.
-c    apriori	If true, model routine checks calibrator flux table
-c		for an estimate of the calibrator flux.
 c    noscale	Do not scale the model to conserve flux.
 c    relax	Relax convergence criteria.
-c    doPol	Source is polarized.
 c    mfs	Model is frequency independent, or has been derived
 c		from MFCLEAN.
 c    selradec	Input uv file contains multiple pointings or multiple
 c		sources.
 c------------------------------------------------------------------------
 	integer nopt
-	parameter(nopt=9)
+	parameter(nopt=6)
 	character opts(nopt)*9
 	logical present(nopt)
-	data opts/'amplitude','phase    ','smooth   ',
-     *		  'apriori  ','noscale  ','relax    ',
-     *		  'polarized','mfs      ','selradec '/
+	data opts/'amplitude','phase    ','noscale  ','relax    ',
+     *		  'mfs      ','mosaic   '/
 	call options('options',opts,present,nopt)
 	amp = present(1)
 	phase = present(2)
-	smooth = present(3)
-	apriori = present(4)
-	noscale = present(5)
-	relax = present(6)
-	doPol = present(7)
-	mfs = present(8)
-	selradec = present(9)
+	noscale = present(3)
+	relax = present(4)
+	mfs = present(5)
+	selradec = present(6)
 	if(amp.and.phase)
      *	  call bug('f','Cannot do both amp and phase self-cal')
 	if(.not.(amp.or.phase)) phase = .true.
@@ -371,7 +351,7 @@ c************************************************************************
 	complex data(nchan)
 	logical flags(nchan),accept
 	real Out(nhead)
-	double precision preamble(4)
+	double precision preamble(5)
 c
 c  This is a service routine called by the model subroutines. It is
 c  called every time a visibility is read from the data file.
@@ -385,7 +365,7 @@ c    data	A complex array of nchan elements, giving the correlation data.
 c		Not used.
 c    flags	The data flags. Not used.
 c  Output:
-c   out		The nhead values to save with the data. Three values are
+c   out 	The nhead values to save with the data. Three values are
 c		returned:
 c		  out(1) -- baseline number.
 c		  out(2) -- time (days) relative to time0.
@@ -394,8 +374,16 @@ c   accept	This determines whether the data is accepted or discarded.
 c		It is always accepted unless the baseline number looks bad.
 c------------------------------------------------------------------------
 	include 'selfcal.h'
-	integer i1,i2
+	integer PolI
+	parameter(PolI=1)
+c
+	integer i1,i2,polv
 	double precision rms
+	logical okpol,okbase
+c
+c  External.
+c
+	logical polspara
 c
 	if(first)then
 	  call uvrdvri(tvis,'nants',nants,0)
@@ -403,25 +391,32 @@ c
      *	    'The data file does not contain the number of antennae')
 	  if(nants.lt.MinAnts)call bug('f',
      *	    'Fewer than the minimum number of antennae are present')
-	  time0 = int(preamble(3)) + 0.5
+	  time0 = int(preamble(4)) + 0.5
+	  nbstok = 0
 	  nbad = 0
 	  first = .false.
 	endif
 c
-c  Determine antenna numbers, to make sure they are OK.
+c  Accept visibilities only if they are total intensities.
+c  and their antenna numbers are OK.
 c
-	call basant(preamble(4),i1,i2)
-	accept = i1.le.nants.and.i2.le.nants
+	call uvrdvri(tvis,'pol',polv,PolI)
+	call basant(preamble(5),i1,i2)
+	okpol = polspara(polv)
+	okbase = min(i1,i2).ge.1.and.max(i1,i2).le.nants.and.i1.ne.i2
+	accept = okpol.and.okbase
 c
 c  If all looks OK, then calculate the theoretical rms, and store away
 c  the information that we need.
 c
 	if(accept)then
-	  out(1) = preamble(4)
-	  out(2) = preamble(3) - time0
+	  out(1) = preamble(5)
+	  out(2) = preamble(4) - time0
 	  call uvinfo(tvis,'variance',rms)
 	  if(rms.le.0)rms=1
 	  out(3) = rms
+	else if(.not.okpol)then
+	  nbstok = nbstok + 1
 	else
 	  nbad = nbad + 1
 	endif
@@ -440,6 +435,7 @@ c------------------------------------------------------------------------
 c************************************************************************
 	subroutine SelfIni
 	implicit none
+c
 c------------------------------------------------------------------------
 	include 'selfcal.h'
 	integer i,SolSize
@@ -471,6 +467,8 @@ c
 	call MemAlloc(pCount,maxSol,'r')
 	call MemAlloc(pGains,maxSol*nants,'c')
 	call MemAlloc(prTime,maxSol,'r')
+	call MemAlloc(pStptim,maxSol,'r')
+	call MemAlloc(pStrtim,maxSol,'r')
 c
 	end
 c************************************************************************
@@ -482,6 +480,7 @@ c  Release allocated memory.
 c
 c------------------------------------------------------------------------
 	include 'selfcal.h'
+c
 	call MemFree(pSumVM,maxSol*nBl,'c')
 	call MemFree(pSumVV,maxSol*nBl,'r')
 	call MemFree(pSumMM,maxSol,'r')
@@ -489,6 +488,8 @@ c------------------------------------------------------------------------
 	call MemFree(pCount,maxSol,'r')
 	call MemFree(pGains,maxSol*nants,'c')
 	call MemFree(prTime,maxSol,'r')
+	call MemFree(pstpTim,maxSol,'r')
+	call MemFree(pstrTim,maxSol,'r')
 	end
 c************************************************************************
 	subroutine SelfAcc(tscr,nchan,nvis,interval)
@@ -506,30 +507,29 @@ c		and model information.
 c    nchan	The number of channels in the scratch file.
 c    nvis	The number of visbilities in the scratch file.
 c    Interval	The self-cal gain interval.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'selfcal.h'
 c
 	TotVis = TotVis + nVis
 	call SelfAcc1(tscr,nchan,nvis,nBl,maxSol,nSols,
-     *	  nhash,Hash,Indx,interval,Time,
+     *	  nhash,Hash,Indx,interval,
      *	  Memc(pSumVM),Memr(pSumVV),Memr(pSumMM),
-     *	  Memr(pWeight),Memr(pCount),Memr(prTime))
+     *	  Memr(pWeight),Memr(pCount),Memr(prTime),Memr(pstpTim),
+     *	  Memr(pstrTim))
 	end
 c************************************************************************
 	subroutine SelfAcc1(tscr,nchan,nvis,nBl,maxSol,nSols,
      *	  nHash,Hash,Indx,interval,
-     *	  Time,SumVM,SumVV,SumMM,Weight,Count,rTime)
+     *	  SumVM,SumVV,SumMM,Weight,Count,rTime,StpTime,StrTime)
 c
 	implicit none
 	integer tscr,nchan,nvis,nBl,maxSol,nSols
 	integer nHash,Hash(nHash+1),Indx(nHash)
-	integer Time(maxSol)
 	real interval
 	complex SumVM(nBl,maxSol)
 	real SumVV(nBl,maxSol),SumMM(maxSol),Weight(nBl,maxSol)
-	real Count(maxSol),rTime(maxSol)
-
-	include 'maxdim.h'
+	real Count(maxSol),rTime(maxSol),StpTime(maxSol)
+	real StrTime(maxSol)
 c
 c  This reads through the scratch file which contains the visibility
 c  and the model. It finds (via a hash table) the index of the slot
@@ -550,7 +550,7 @@ c    interval	Self-cal interval.
 c  Input/Output:
 c  In the following, t=time (within a solution interval), f=channels,
 c		b=baseline number, a = antenna number.
-c    Time	The integer time, nint((preamble(3)-time0)/interval).
+c    Time	The integer time, nint((preamble(4)-time0)/interval).
 c    Hash	Hash table, used to locate a solution interval.
 c    Indx	Index from hash table to solution interval.
 c    SumVM	Sum(over t,f)conjg(Model)*Vis/sigma**2. Varies with b.
@@ -577,6 +577,7 @@ c
 c    The last entry in the hash table (element nHash+1) is always zero, so the
 c    check for the end of the buffer can be placed outside the main loop.
 c------------------------------------------------------------------------
+	include 'maxdim.h'
 	integer maxlen,nhead
 	parameter(nhead=3,maxlen=5*maxchan+nhead)
 	integer i,j,k,ihash,itime,bl,i1,i2,length
@@ -611,7 +612,6 @@ c
 	    if(nSols.ge.maxSol) call bug('f','Hash table overflow')
 	    Hash(i) = ihash
 	    Indx(i) = nSols
-	    Time(nSols) = itime
 	    do k=1,nBl
 	      SumVM(k,nSols) = (0.,0.)
 	      SumVV(k,nSols) = 0.
@@ -620,7 +620,9 @@ c
 	    SumMM(nSols) = 0
 	    Count(nSols) = 0
 	    rTime(nSols) = 0
-	  endif
+	    StpTime(nSols) = Out(2)
+	    StrTime(nSols) = Out(2)
+	 endif
 c
 c  We have found the slot containing the info. Accumulate in the
 c  info about this visibility record.
@@ -629,6 +631,8 @@ c
 	  wt = 0.5/Out(3)
 	  call basant(dble(out(1)),i1,i2)
 	  bl = (i2-1)*(i2-2)/2 + i1
+	  StpTime(i) = min(StpTime(i),out(2))
+	  StrTime(i) = max(StrTime(i),out(2))
 	  do k=nhead+1,nhead+5*nchan,5
 	    if(out(k+4).gt.0)then
 	      SumVM(bl,i) = SumVM(bl,i) +
@@ -643,13 +647,13 @@ c
 	enddo
 	end
 c************************************************************************
-	subroutine Solve(tgains,phase,smooth,relax,noscale,refant,
-     *							    interval)
+	subroutine Solve(tgains,phase,relax,noscale,refant,
+     *					     interval,nchan)
 c
 	implicit none
 	integer tgains
-	logical phase,smooth,relax,noscale
-	integer refant
+	logical phase,relax,noscale
+	integer refant,nchan
 	real interval
 c
 c  We have previously accumulated all the statistics that we nee. Now we
@@ -664,8 +668,13 @@ c
 	character itoaf*8
 c
 	if(nbad.ne.0) call bug('w',
-     *	  'No. visibilities with bad baseline numbers = '//itoaf(nbad))
-	line = 'Total number of visibilities processed: '//itoaf(TotVis)
+     *	  'No. correlations with bad baseline numbers: '//
+     *	  itoaf(nbad*nchan))
+	if(nbstok.ne.0)call output(
+     *	  'Correlations with inappropriate Stokes type discarded: '//
+     *	  itoaf(nbstok*nchan))
+	line = 'Total number of correlations being used: '//
+     *	  itoaf(TotVis*nchan)
 	call HisWrite(tgains,'SELFCAL: '//line)
 	call output(line)
 	line = 'Total number of solution intervals: '//itoaf(nSols)
@@ -674,24 +683,28 @@ c
 c
 c  Determine all the gain solutions.
 c
-	call Solve1(tgains,nSols,nBl,nants,phase,smooth,relax,noscale,
-     *	  minants,refant, Time0,interval,Time,Indx,
+	call Solve1(tgains,nSols,nBl,nants,phase,relax,noscale,
+     *	  minants,refant,Time0,interval,Indx,
      *	  Memc(pSumVM),Memr(pSumVV),Memr(pSumMM),Memc(pGains),
-     *	  Memr(pWeight),Memr(pCount),memr(prTime))
+     *	  Memr(pWeight),Memr(pCount),memr(prTime),
+     *	  Memr(pStpTim),Memr(pStrTim))
+c
 	end
 c************************************************************************
-	subroutine Solve1(tgains,nSols,nBl,nants,phase,smooth,relax,
-     *	  noscale,minants,refant,Time0,interval,Time,TIndx,
-     *	  SumVM,SumVV,SumMM,Gains,Weight,Count,rTime)
+	subroutine Solve1(tgains,nSols,nBl,nants,phase,relax,
+     *	  noscale,minants,refant,Time0,interval,TIndx,
+     *	  SumVM,SumVV,SumMM,Gains,Weight,Count,rTime,
+     *	  StpTime,StrTime)
 c
 	implicit none
 	integer tgains
-	logical phase,smooth,relax,noscale
+	logical phase,relax,noscale
 	integer nSols,nBl,nants,minants,refant
-	integer Time(nSols),TIndx(nSols)
+	integer TIndx(nSols)
 	complex SumVM(nBl,nSols),Gains(nants,nSols)
 	real SumVV(nBl,nSols),SumMM(nSols),Weight(nBl,nSols)
-	real Count(nSols),rTime(nSols),interval
+	real Count(nSols),rTime(nSols),StpTime(nSols),StrTime(nSols)
+	real interval
 	double precision Time0
 c
 c  This runs through all the accumulated data, and calculates the
@@ -699,7 +712,6 @@ c  selfcal solutions.
 c
 c  Input:
 c    phase
-c    smooth
 c    relax
 c    nSols
 c    nBl
@@ -719,8 +731,8 @@ c    Gains
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	logical Convrg
-	integer k,k0,nbad,iostat,item,offset,header(2)
-	double precision dtime
+	integer i,k,k0,nbad,iostat,item,offset,header(2),nmerge
+	double precision dtime,dtemp
 c
 c  Externals.
 c
@@ -728,30 +740,39 @@ c
 c
 c  Sort the self-cal solutions into order of increasing time.
 c
-	call sortidxi(nSols,Time,TIndx)
+	call sortidxr(nSols,StpTime,TIndx)
 c
-c  Partially combine adjacent time slots, if desired.
+c  Merge together short, adjacent, solution intervals.
 c
-	if(smooth) call SmthData(nSols,nBl,Time,TIndx,
-     *	  SumVM,SumVV,SumMM,Weight,Count,rTime)
+	call Merger(nSols,nBl,TIndx,interval,StpTime,StrTime,
+     *	  SumVM,SumVV,SumMM,Weight,Count,rTime,nmerge)
+	if(nmerge.gt.0)call output(
+     *	  'Solution intervals merged together: '//itoaf(nmerge))
 c
 c  Now calculate the solutions.
 c
 	nbad = 0
 	do k=1,nSols
-	  call Solve2(nbl,nants,SumVM(1,k),SumVV(1,k),Weight(1,k),
-     *	    phase,relax,minants,refant,Gains(1,k),Convrg)
-	  if(.not.Convrg)then
-	    nbad = nbad + 1
-	    Count(k) = 0
+	  if(Count(k).gt.0)then
+	    call Solve2(nbl,nants,SumVM(1,k),SumVV(1,k),Weight(1,k),
+     *	      phase,relax,minants,refant,Gains(1,k),Convrg)
+	    if(.not.Convrg)then
+	      nbad = nbad + 1
+	      Count(k) = 0
+	    endif
+	  endif
+	  if(Count(k).eq.0)then
+	    do i=1,nants
+	      Gains(i,k) = 0
+	    enddo
 	  endif
 	enddo
 c
 c  Write out some info to wake the user up from his/her slumber.
 c
-	if(nbad.ne.0) call bug('w','Intervals with no solution: '//
+	if(nbad.ne.0)call bug('w','Intervals with no solution: '//
      *							itoaf(nbad))
-	if(nbad.eq.nsols) call bug('f','No solutions were found')
+	if(nbad+nmerge.eq.nsols) call bug('f','No solutions were found')
 c
 c  Scale the gains if needed.
 c
@@ -802,11 +823,87 @@ c
 c
 c  Write some extra information for the gains table.
 c
-	call wrhdd(tgains,'interval',dble(interval))
+	dtemp = interval
+	call wrhdd(tgains,'interval',dtemp)
 	call wrhdi(tgains,'ngains',nants)
-	call wrhdi(tgains,'nsols',nsols-nbad)
+	call wrhdi(tgains,'nsols',nsols-nbad-nmerge)
 	call wrhdi(tgains,'nfeeds',1)
 	call wrhdi(tgains,'ntau',0)
+c
+	end
+c************************************************************************
+	subroutine Merger(nSols,nBl,TIndx,interval,StpTime,StrTime,
+     *	  SumVM,SumVV,SumMM,Weight,Count,rTime,nmerge)
+c
+	implicit none
+	integer nSols,nBl,nmerge
+	integer tIndx(nSols)
+	real interval
+	real StpTime(nSols),StrTime(nSols),rTime(nSols)
+	complex SumVM(nBl,nSols)
+	real SumVV(nBl,nSols),SumMM(nSols),Weight(nBl,nSols)
+	real Count(nSols)
+c
+c  Merge together adjacent solution intervals if the total span of time is
+c  last than "interval".
+c
+c  Input:
+c    nSols
+c    nBl
+c    TIndx
+c    interval
+c  Input/Output:
+c    SumVM
+c    SumVV
+c    SumMM
+c    Weight
+c    Count
+c    rTime
+c    StpTime
+c    StrTime
+c  Output:
+c    nmerge	The number of mergers.
+c------------------------------------------------------------------------
+	integer k,k0,kp,i,k1st
+	logical more
+c
+	nmerge = 0
+c
+c  Find the first solution slot with some valid data.
+c
+	k1st = 0
+	more = .true.
+	dowhile(k1st.lt.nSols.and.more)
+	  k1st = k1st + 1
+	  kp = TIndx(k1st)
+	  if(Count(kp).le.0)then
+	    nmerge = nmerge + 1
+	  else
+	    more = .false.
+	  endif
+	enddo
+	if(nmerge.eq.nSols)call bug('f','No valid data')
+c
+	do k=k1st+1,nSols
+	  k0 = TIndx(k)
+	  if(Count(k0).le.0)then
+	    nmerge = nmerge + 1
+	  else if(StrTime(k0)-StpTime(kp).le.interval)then
+	    nmerge = nmerge + 1
+	    StrTime(kp) = StrTime(k0)
+	    Count(kp) = Count(kp) + Count(k0)
+	    Count(k0) = 0
+	    SumMM(kp) = SumMM(kp) + SumMM(k0)
+	    rTime(kp) = rTime(kp) + rTime(k0)
+	    do i=1,nBl
+	      SumVM(i,kp) = SumVM(i,kp) + SumVM(i,k0)
+	      SumVV(i,kp) = SumVV(i,kp) + SumVV(i,k0)
+	      Weight(i,kp) = Weight(i,kp) + Weight(i,k0)
+	    enddo
+	  else
+	    kp = k0
+	  endif
+	enddo
 c
 	end
 c************************************************************************
@@ -859,104 +956,6 @@ c
 	do i=1,nants
 	  if(abs(real(gains(i)))+abs(aimag(gains(i))).gt.0)
      *	    gains(i) = 1/gains(i)
-	enddo
-c
-	end
-c************************************************************************
-	subroutine SmthData(nSols,nBl,Time,TIndx,SumVM,SumVV,
-     *	  SumMM,Weight,Count,rTime)
-c
-	implicit none
-	integer nSols,nBl,Time(nSols),TIndx(nSols)
-	complex SumVM(nBl,nSols)
-	real SumVV(nBl,nSols),SumMM(nSols),Weight(nBl,nSols)
-	real Count(nSols),rTime(nSols)
-c
-c  This adds in a contribution, to the statistics (needed for determining
-c  self-cal solutions), from adjacent time intervals.
-c
-c  Input:
-c    nSols
-c    nBl
-c    Time
-c    TIndx
-c  Input/Output:
-c    SumVM
-c    SumVV
-c    SumMM
-c    Weight
-c    Count
-c    rTime
-c------------------------------------------------------------------------
-	include 'maxdim.h'
-	complex SaveVM(MAXBASE),ctemp
-	real SaveVV(MAXBASE),SaveMM,SaveWt(MAXBASE),SaveCnt,SaveTim,temp
-	logical saved,dosave
-	integer i,k,k0,k1
-c
-	saved = .false.
-	do k=1,nSols
-	  k0 = TIndx(k)
-	  dosave = k.lt.nSols
-	  if(dosave) dosave = Time(TIndx(k+1)).eq.Time(TIndx(k))+1
-	  if(dosave)then
-	    k1 = TIndx(k+1)
-c
-c  Do the case where we have to add in half the previous slot.
-c
-	    if(.not.saved)then
-	      do i=1,nBl
-		SaveVM(i) = SumVM(i,k0)
-		SaveVV(i) = SumVV(i,k0)
-		SaveWt(i) = Weight(i,k0)
-		SumVM(i,k0) = SumVM(i,k0) + 0.5*SumVM(i,k1)
-	        SumVV(i,k0) = SumVV(i,k0) + 0.5*SumVV(i,k1)
-		Weight(i,k0) = Weight(i,k0) + 0.5*Weight(i,k1)
-	      enddo
-	      SaveMM = SumMM(k0)
-	      SaveCnt = Count(k0)
-	      SaveTim = rTime(k0)
-	      SumMM(k0) = SumMM(k0) + 0.5*SumMM(k1)
-	      Count(k0) = Count(k0) + 0.5*Count(k1)
-	      rTime(k0) = rTime(k0) + 0.5*rTime(k1)
-	    else
-	      do i=1,nBl
-		ctemp = SumVM(i,k0)
-		SumVM(i,k0) = SumVM(i,k0) +
-     *				0.5 * ( SaveVM(i) + SumVM(i,k1) )
-		SaveVM(i) = ctemp
-		temp = SumVV(i,k0)
-	        SumVV(i,k0) = SumVV(i,k0) +
-     *				0.5 * ( SaveVV(i) + SumVV(i,k1) )
-		SaveVV(i) = temp
-		temp = Weight(i,k0)
-		Weight(i,k0) = Weight(i,k0) +
-     *				0.5 * ( SaveWt(i) + Weight(i,k1) )
-		SaveWt(i) = temp
-	      enddo
-	      temp = SumMM(k0)
-	      SumMM(k0) = SumMM(k0) + 0.5 * ( SaveMM + SumMM(k1) )
-	      SaveMM = temp
-	      temp = Count(k0)
-	      Count(k0) = Count(k0) + 0.5 * ( SaveCnt + Count(k1) )
-	      SaveCnt = temp
-	      temp = rTime(k0)
-	      rTime(k0) = rTime(k0) + 0.5 * ( SaveTim + rTime(k1) )
-	      SaveTim = temp
-	    endif
-	  else
-	    if(saved)then
-	      do i=1,nBl
-		SumVM(i,k0) = SumVM(i,k0) + 0.5 * SaveVM(i)
-	        SumVV(i,k0) = SumVV(i,k0) + 0.5 * SaveVV(i)
-		Weight(i,k0) = Weight(i,k0) + 0.5*SaveWt(i)
-	      enddo
-	      SumMM(k0) = SumMM(k0) + 0.5*SaveMM
-	      Count(k0) = Count(k0) + 0.5*SaveCnt
-	      rTime(k0) = rTime(k0) + 0.5*SaveTim
-	    endif
-	  endif
-	  saved = dosave
 	enddo
 c
 	end
@@ -1069,11 +1068,7 @@ c
 c  If it converged, unsqueeze the gains, and refer them to the reference
 c  antenna.
 c
-	if(.not.Convrg)then
-	  do i=1,nants
-	    GainOut(i) = 0
-	  enddo
-	else
+	if(Convrg)then
 	  do i=1,nants
 	    if(Indx(i).eq.0)then
 	      GainOut(i) = (0.,0.)
@@ -1096,7 +1091,7 @@ c
 	end
 c************************************************************************
 	subroutine CalcStat(tgains,nsols,nbl,nants,SumVM,SumMM,SumVV,
-     *	  Weight,Count,Gains)
+     *					Weight,Count,Gains)
 c
 	implicit none
 	integer tgains
@@ -1108,11 +1103,12 @@ c
 c  Accumulate the various statistics.
 c
 c------------------------------------------------------------------------
+	include 'maxdim.h'
 	real Resid,SumChi2,SumPhi,SumExp,SumWts,SumAmp,Phi,Amp,Sigma
 	real m1,m2,wt
 	complex g1,g2
 	integer i,j,k,sol
-	character line*64
+	character line*80
 c
 	SumChi2 = 0
 	SumPhi = 0
@@ -1143,7 +1139,7 @@ c
 		  call amphase(g1*g2,amp,phi)
 		  SumPhi = SumPhi + Wt*phi**2
 		  SumAmp = SumAmp + Wt*(1-amp)**2
-	        endif
+		endif
 	      enddo
 	    enddo
 	    SumChi2 = SumCHi2 + abs(Resid)
@@ -1221,7 +1217,7 @@ c  Sum the contributions over the baselines. Note that the following
 c  loop has a dependency.
 c
 	  do i=1,nblines
-	    Sum(b1(i)) = Sum(b1(i)) + Gain(b2(i)) *       SumVM(i)
+	    Sum(b1(i)) = Sum(b1(i)) + Gain(b2(i)) *	  SumVM(i)
 	    Sum(b2(i)) = Sum(b2(i)) + Gain(b1(i)) * conjg(SumVM(i))
 	  enddo
 c
@@ -1330,7 +1326,7 @@ c  Sum the contributions over the baselines. Note that the following
 c  loop has a dependency.
 c
 	  do i=1,nblines
-	    Sum(b1(i)) = Sum(b1(i)) + Gain(b2(i)) *       SumVM(i)
+	    Sum(b1(i)) = Sum(b1(i)) + Gain(b2(i)) *	  SumVM(i)
 	    Sum(b2(i)) = Sum(b2(i)) + Gain(b1(i)) * conjg(SumVM(i))
 	    Sum2(b1(i)) = Sum2(b1(i)) +
      *	     (real(Gain(b2(i)))**2 + aimag(Gain(b2(i)))**2) * SumVV(i)
