@@ -21,11 +21,11 @@ c@ model
 c	The model of the deconvolved cube. Usually this will be produced
 c	by CLEAN or MAXEN. The units of this image should be Jy/pixel. No
 c	default.
+c@ beam
+c	The input dirty beam. No default.
 c@ map
 c	The input dirty cube, which should have units of Jy/beam. This
 c	can be omitted when mode=convolve. Otherwise no default.
-c@ beam
-c	The input dirty beam. In some instances, this can be omitted.
 c@ mode
 c	This can be one of the values:
 c	  "clean"     This is the normal use, and the default, where the
@@ -36,8 +36,7 @@ c	              dirty beam.
 c	  "convolve"  The output is the model convolved by the gaussian. The
 c	              map parameter is ignored, and the beam is needed only if
 c	              the user does not give the gaussian fwhm and pa.
-c	  "add"       The output is the map plus the model. The beam parameter
-c	              is always ignored.
+c	  "dirty"     The output is the map convolved with the beam.
 c@ fwhm
 c	The size, in arcsec, of the gaussian beam to use in the
 c	restoration. This will normally be two numbers, giving the
@@ -81,27 +80,23 @@ c    rjs  26may92  Add btype and rms to list of variables to copy.
 c    rjs  25jun92  Use keymatch routine.
 c    rjs  17jan94  Make sure beam is writable before writing out
 c		   beam parameters.
+c    rjs  16nov94  Substantial rework. Use new "restore" routines.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Restor: version 1.2 17-Jan-94')
+	parameter(version='Restor: version 1.2 16-Nov-94')
 c
 	include 'maxdim.h'
-	real dat(MAXBUF)
-	common dat
+	include 'mem.h'
+	include 'mirconst.h'
 c
-	real pi
-	integer nP
-	parameter(pi=3.141592653589793,nP=11)
-	character map*64,beam*64,modl*64,out*64,mode*16
-	real fwhm1,fwhm2,pa
-	logical doGaus,doBeam,doMap,doAdd,NeedFwhm,mfs
-	integer nsize(4),xoff,yoff,zoff,i,x0,y0
-	integer mMap,nMap,oMap,mBeam,nBeam,oBeam,mModel,nModel,oModel
-	integer mOut,nOut,oOut,naxis,nPd
-	integer lMap,lBeam,lModel,lOut,xBeam,yBeam
-	integer Model,Data,handle
-	character line*72,iomode*8
-	real Patch(nP*nP),cdelt1,cdelt2
+	character map*64,beam*64,modl*64,out*64,mode*16,line*72,iomode*8
+	real fwhm1,fwhm2,pa,rms
+	logical dogaus,domap,dofit
+	integer naxis,nsize(4),xoff,yoff,zoff,i,x0,y0
+	integer mMap,nMap,oMap,mBeam,nBeam,mModel,nModel,oModel
+	integer mCnvl,nCnvl
+	integer lMap,lBeam,lModel,lOut
+	integer pOut
 c
 c  Externals.
 c
@@ -123,23 +118,22 @@ c
 c
 c  Check the reasonableness of the inputs.
 c
+	domap  = mode.eq.'clean'.or.mode.eq.'residual'
+	dogaus = mode.eq.'convolve'.or.mode.eq.'clean'
+	dofit  = dogaus.and.fwhm1*fwhm2.eq.0
+c
 	if(Modl.eq.' ')call bug('f','Input model name missing')
-	if(Out.eq.' ')  call bug('f','Output map name missing')
-c
-	doMap = mode.ne.'convolve'
-	doBeam = mode.eq.'residual'.or.mode.eq.'clean'
-	doGaus = mode.eq.'convolve'.or.mode.eq.'clean'
-	doAdd = mode.eq.'add'
-	NeedFwhm = doGaus.and.fwhm1*fwhm2.eq.0
-c
-	if(Map.eq.' '.and.doMap)
+	if(Out.eq.' ') call bug('f','Output map name missing')
+	if(Beam.eq.' ')call bug('f','Input beam name missing')
+	if(Map.eq.' '.and.domap)
      *	  call bug('f','Input map name missing')
-	if(Beam.eq.' '.and.doBeam)
-     *	  call bug('f','Input beam name missing')
-	if(Beam.eq.' '.and.NeedFwhm)
-     *	  call bug('f','Either beam or fwhm must be given')
 c
-c  Open the map (if present) and the model.
+c  Convert beam units.
+c
+	fwhm1 = pi/180/3600 * fwhm1
+	fwhm2 = pi/180/3600 * fwhm2
+c
+c  Open the model and the beam.
 c
 	call xyopen(lModel,Modl,'old',3,nsize)
 	mModel = nsize(1)
@@ -147,109 +141,33 @@ c
 	oModel = nsize(3)
 	call rdhdi(lModel,'naxis',naxis,3)
 	naxis = min(naxis,4)
-	call rdhdr(lModel,'cdelt1',cdelt1,0.)
-	call rdhdr(lModel,'cdelt2',cdelt2,0.)
-	if(cdelt1*cdelt2.eq.0)
-     *		call bug('f','Model pixel increment missing')
-	if(doMap)then
-	  call xyopen(lMap,Map,'old',3,nsize)
-	  mMap = nsize(1)
-	  nMap = nsize(2)
-	  oMap = nsize(3)
-	else
-	  mMap = mModel
-	  nMap = nModel
-	  oMap = oModel
+	call coInit(lModel)
+c
+	call xyopen(lBeam,Beam,'old',3,nsize)
+	mBeam = nsize(1)
+	nBeam = nsize(2)
+	if(dofit)then
+	  call rdhdr(lBeam,'bmaj',fwhm1,0.)
+	  call rdhdr(lBeam,'bmin',fwhm2,0.)
+	  call rdhdr(lBeam,'bpa',pa,0.)
+	  dofit = fwhm1*fwhm2.le.0
 	endif
 c
-c  If we need beam information, open it, determine the centre of the beam,
-c  and extract a patch of it.
+c  Fit the beam, if necessary.
 c
-	if(doBeam.or.NeedFwhm)then
-	  call xyopen(lBeam,Beam,'old',3,nsize)
-	  mBeam = nsize(1)
-	  nBeam = nsize(2)
-	  oBeam = nsize(3)
-	  if(NeedFwhm)then
-	    call rdhdr(lBeam,'bmaj',fwhm1,0.)
-	    call rdhdr(lBeam,'bmin',fwhm2,0.)
-	    call rdhdr(lBeam,'bpa',pa,0.)
-	    fwhm1 = 3600*180./pi * fwhm1
-	    fwhm2 = 3600*180./pi * fwhm2
-	    NeedFwhm = fwhm1*fwhm2.le.0
-	  endif
-	  if(max(mBeam,nBeam).gt.maxdim)
-     *	    call bug('f','Beam is too big for me to handle')
-	  nPd = min(nP,mBeam,nBeam)
-	  nPd = nPd - mod(nPd+1,2)
-	  call GetPatch(lBeam,mBeam,nBeam,Patch,nPd,xBeam,yBeam)
-	else
-	  xBeam = mModel/2+1
-	  yBeam = nModel/2+1
-	  mBeam = mModel
-	  nBeam = nModel
-	  oBeam = 1
-	endif
-c
-c  Determine the alignment between the map and the model.
-c  The conversion from Model grid units to Map grid units is to
-c  add (xoff,yoff,zoff) to the coordinate.
-c
-	if(doMap)then
-	  call align(lMap,lModel,mMap,nMap,oMap,xoff,yoff,zoff)
-	  mOut = mMap
-	  nOut = nMap
-	  oOut = oMap
-	else
-	  xoff = mBeam/2 - mModel/2
-	  yoff = nBeam/2 - nModel/2
-	  zoff = 0
-	  mOut = mBeam
-	  nOut = nBeam
-	  oOut = oModel
-	endif
-	x0 = xoff - (mBeam/2 - mModel/2)
-	y0 = yoff - (nBeam/2 - nModel/2)
-c
-c  Determine if we are restoring multi-frequency synthesis data.
-c  For the multi-freq option, we assert that doMap is true, doBeam is .true.
-c
-	mfs = oMap.eq.1.and.oBeam.gt.1.and.oModel.gt.1.and.
-     *	      zoff.eq.0.and.(mode.eq.'residual'.or.mode.eq.'clean')
-	if(.not.mfs.and.oBeam.gt.1)
-     *	  call bug('w','Beam contains more than one plane')
-c
-	if(mfs)then
-	  call output(
-     *	    'Assuming this is multi-frequency synthesis data')
-	  if(oModel.gt.oBeam) call bug('w',
-     *	    'Model contains more planes than the beam')
-	  if(.not.(doMap.and.doBeam))
-     *	    call bug('f','My multi-freq synthesis assertion failed')
-	  oModel = min(oModel,oBeam)
-	  oBeam = oModel
-	endif
-c
-c  Determine the fwhm (in radians) if the user has not specified them.
-c  If the user did give fwhm, convert them to radians.
-c
-	if(NeedFwhm)then
-	  call GetFwhm(Patch,nPd,xBeam-mBeam/2+nPd/2,
-     *	    yBeam-nBeam/2+nPd/2,cdelt1,cdelt2,Fwhm1,Fwhm2,Pa)
+	if(dofit)then
+	  call BeamFit(lBeam,mBeam,nBeam,fwhm1,fwhm2,pa)
 	  call hmode(lBeam,iomode)
 	  if(index(iomode,'w').ne.0)then
 	    call wrhdr(lBeam,'bmaj',fwhm1)
 	    call wrhdr(lBeam,'bmin',fwhm2)
 	    call wrhdr(lBeam,'bpa',pa)
 	  endif
-	else
-	  fwhm1 = fwhm1 * pi / 180 / 3600
-	  fwhm2 = fwhm2 * pi / 180 / 3600
 	endif
 c
 c  Keep the user awake with spurious information.
 c
-	if(doGaus)then
+	if(dogaus)then
 	  write(line,'(a,f6.2,a,f6.2,a)')
      *	   'Using gaussian beam fwhm of',(3600*180/pi)*fwhm1,' by',
      *	   (3600*180/pi)*fwhm2,' arcsec.'
@@ -258,71 +176,88 @@ c
 	  call output(line)
 	endif
 c
-c  Allocate needed memory.
+c  Reset the beam to a dummy size, if we are just convolving
+c  with a gaussian.
 c
-	if(doGaus.or.doBeam)
-     *	  call MemAlloc(Model,mBeam*nBeam,'r')
-	if(mfs)
-     *	  call MemAlloc(Data, mBeam*nBeam,'r')
-c
-c  Get the Fourier transform of the beam, in needed
-c
-	if(doGaus.or.doBeam)then
-	  call GetBeam(dat(Model),mBeam,nBeam,xBeam,yBeam,
-     *	    doBeam,lBeam,doGaus,cdelt1,cdelt2,fwhm1,fwhm2,pa)
-	  call CnvlIniA(handle,dat(Model),mBeam,nBeam,
-     *	    xBeam,yBeam,0.,'s')
+	if(mode.eq.'convolve')then
+	  mBeam = 1
+	  nBeam = 1
 	endif
+c
+c  Determine the alignment between the map and the model.
+c  The conversion from Model grid units to Map grid units is to
+c  add (xoff,yoff,zoff) to the coordinate.
+c
+	if(domap)then
+	  call xyopen(lMap,Map,'old',3,nsize)
+	  call rdhdr(lMap,'rms',rms,0.0)
+	  mMap = nsize(1)
+	  nMap = nsize(2)
+	  oMap = nsize(3)
+	  call align(lMap,lModel,mMap,nMap,oMap,xoff,yoff,zoff)
+	else
+	  rms = 0
+	  mMap = mModel + mBeam - 1
+	  nMap = nModel + nBeam - 1
+	  oMap = oModel
+	  xoff = mBeam/2
+	  yoff = nBeam/2
+	  zoff = 0
+	endif
+	mCnvl = mBeam
+	nCnvl = nBeam
+	if(mMap.gt.mBeam)mCnvl = min(mMap,mBeam+mModel-1)
+	if(nMap.gt.nBeam)nCnvl = min(nMap,nBeam+nModel-1)
+c
+	x0 = xoff - (mCnvl/2 - mModel/2)
+	y0 = yoff - (nCnvl/2 - nModel/2)
+c
+c  Initialise the convolution routines.
+c
+	if(mode.eq.'residual')mode = 'dirty'
+	call RestIni(lBeam,mCnvl,nCnvl,fwhm1,fwhm2,pi/180*pa,mode)
 c
 c  Open the output, and create its header.
 c
-	nsize(1) = mOut
-	nsize(2) = nOut
-	nsize(3) = oOut
+	nsize(1) = mMap
+	nsize(2) = nMap
+	nsize(3) = oMap
 	nsize(4) = 1
 	call xyopen(lOut,Out,'new',naxis,nsize)
 	call header(lModel,mModel,nModel,lOut,
-     *	  version,doGaus,fwhm1,fwhm2,pa,xoff,yoff,zoff)
+     *	  version,dogaus,fwhm1,fwhm2,pa,rms,xoff,yoff,zoff)
 c
 c  Loop over the third dimension.
 c
+	call memAlloc(pOut,mCnvl*nCnvl,'r')
 	do i=1,oMap
           if (mod(i,10).eq.0 .or. (i.eq.1.and.oMap.ge.10))
      *	    call output ('Beginning plane '//itoaf(i))
   	  call xysetpl(lOut,1,i)
-	  if(doMap)call xysetpl(lMap,1,i)
+	  if(domap)call xysetpl(lMap,1,i)
 	  if(i-zoff.ge.1.and.i-zoff.le.oModel)then
-	    call xysetpl(lModel,1,i-zoff)
-	    if(doAdd)then
-	      call AddModel(lMap,mMap,nMap,
-     *		lModel,mModel,nModel,lOut,x0,y0)
+	    call Restore(lModel,i-zoff,memr(pOut))
+	    if(domap)then
+	      call SubModel(lMap,mMap,nMap,
+     *		  memr(pOut),mCnvl,nCnvl,lOut,x0,y0)
 	    else
-	      call CnvlF(handle,lModel,mModel,nModel,dat(Model),' ')
-	      if(doMap)then
-		if(mfs)call AddMFS(lBeam,mBeam,nBeam,xBeam,yBeam,
-     *		  dat(Model),dat(Data),lModel,mModel,nModel,oModel)
-		call SubModel(lMap,mMap,nMap,
-     *		  dat(Model),mBeam,nBeam,lOut,x0,y0)
-	      else
-		call CpyModel(dat(Model),lOut,mBeam,nBeam)
-	      endif
+	      if(mMap.ne.mCnvl.or.nMap.ne.nCnvl)
+     *			call bug('f','Algorithmic failure')
+	      call WriteOut(lOut,memr(pOut),mMap,nMap)
 	    endif
 	  else
-	    call CpyMap(lMap,lOut,nMap)
+	    call CopyOut(lMap,lOut,mMap,nMap)
 	  endif
 	enddo
 c
 c  All said and done. Close up the files, and leave.
 c
-	if(doGaus.or.doBeam)then
-	  call MemFree(Model,mBeam*nBeam,'r')
-	  call CnvlFin(handle)
-	endif
-	if(mfs)call MemFree(Data,mBeam*nBeam,'r')
+	call memFree(pOut,mCnvl*nCnvl,'r')
+	call RestFin
 	call xyclose(lModel)
 	call xyclose(lOut)
 	if(doMap) call xyclose(lMap)
-	if(doBeam.or.NeedFwhm) call xyclose(lBeam)
+	call xyclose(lBeam)
 c
 	end
 c************************************************************************
@@ -339,7 +274,7 @@ c------------------------------------------------------------------------
 	integer nopt
 	parameter(nopt=4)
 	character opts(nopt)*8
-	data opts/'clean   ','residual','convolve','add     '/
+	data opts/'clean   ','residual','convolve','dirty   '/
 c
 	call keymatch('mode',nopt,opts,1,mode,nout)
 	if(nout.eq.0) mode = 'clean'
@@ -368,12 +303,16 @@ c------------------------------------------------------------------------
 	character num*1
 	real vM,dM,rM,vE,dE,rE,temp
 c
+c  Externals.
+c
+	character itoaf*2
+c
 	nsize(1) = mMap
 	nsize(2) = nMap
 	nsize(3) = oMap
 c
 	do i=1,3
-	  num = char(ichar('0') + i)
+	  num = itoaf(i)
 	  call rdhdr(lMap,'crval'//num,vM,0.)
 	  call rdhdr(lMap,'cdelt'//num,dM,1.)
 	  call rdhdr(lMap,'crpix'//num,rM,1.)
@@ -398,35 +337,36 @@ c
 	end
 c************************************************************************
 	subroutine Header(lModel,mModel,nModel,lOut,
-     *	  version,doGaus,fwhm1,fwhm2,pa,xoff,yoff,zoff)
+     *	  version,dogaus,fwhm1,fwhm2,pa,rms,xoff,yoff,zoff)
 c
 	implicit none
 	character version*(*)
 	integer mModel,nModel,lModel,lOut,xoff,yoff,zoff
-	real fwhm1,fwhm2,pa
-	logical doGaus
+	real fwhm1,fwhm2,pa,rms
+	logical dogaus
 c
 c  Output the map.
 c
 c  Inputs:
 c    fwhm1	Beam major axis width (radians).
 c    fwhm2	Beam minor axis width (radians).
+c    pa		Position angle of the gaussian beam (degrees).
+c    rms	Theoretical RMS noise in the image.
 c------------------------------------------------------------------------
-	real pi
-	parameter(pi=3.141592653589793)
+	include 'mirconst.h'
 	integer i
 	real crpix
 	character line*72
 	integer nkeys
-	parameter(nkeys=34)
+	parameter(nkeys=30)
 	character keyw(nkeys)*8
 	data keyw/   'cdelt1  ','cdelt2  ','cdelt3  ','cdelt4  ',
      *	  'crpix4  ','crval1  ','crval2  ','crval3  ','crval4  ',
      *	  'ctype1  ','ctype2  ','ctype3  ','ctype4  ','btype   ',
-     *	  'date-obs','epoch   ','instrume','niters  ','object  ',
+     *	  'obstime ','epoch   ','niters  ','object  ',
      *	  'ltype   ','lstart  ','lwidth  ','lstep   ','pbfwhm  ',
-     *	  'telescop','xshift  ','yshift  ','history ','restfreq',
-     *	  'vobs    ','observer','obsra   ','obsdec  ','rms     '/
+     *	  'telescop','history ','restfreq',
+     *	  'vobs    ','observer','obsra   ','obsdec  '/
 c
 c  Copy keywords across, which have not changed.
 c
@@ -459,7 +399,9 @@ c
 	call hiswrite(lOut,line)
 	call hisinput(lOut,'RESTOR')
 c
-	if(doGaus)then
+	if(rms.gt.0)call wrhdr(lOut,'rms',rms)
+c
+	if(dogaus)then
 	  call wrhdr(lOut,'bmaj', fwhm1)
 	  call wrhdr(lOut,'bmin', fwhm2)
 	  call wrhdr(lOut,'bpa',  pa)
@@ -475,54 +417,11 @@ c
 c
 	end
 c************************************************************************
-	subroutine AddMFS(lBeam,mBeam,nBeam,xBeam,yBeam,
-     *			Model,Data,lModel,mModel,nModel,nplanes)
+	subroutine WriteOut(lOut,Out,mOut,nOut)
 c
 	implicit none
-	integer lBeam,mBeam,nBeam,lModel,mModel,nModel,nplanes
-	integer xBeam,yBeam
-	real Model(mBeam,nBeam),Data(mBeam,nBeam)
-c
-c  Add the contributions of the spectral dirty beams to the convolved
-c  model.
-c
-c  Input:
-c    lBeam	Handle of the image file containing the beam.
-c    mBeam,nBeam Beam size.
-c    xBeam,yBeam Beam center pixel.
-c    lModel	Handle of the image file containing the model.
-c    mModel,nModel Model size. This is the size before convolution.
-c		After convolution, it is of size mBeam by nBeam.
-c    nplanes	Number of spectral dirty beam planes to process.
-c  Input/Output:
-c    Model	The convolved model. The output is the convolved model
-c		plus the contributions of the spectral dirty beams.
-c  Scratch:
-c    Data	Used to store the convolution of the spectral dirty
-c		beam and the model.
-c------------------------------------------------------------------------
-	integer i,j,k,handle
-c
-	do k=2,nplanes
-	  call xysetpl(lBeam,1,k)
-	  call xysetpl(lModel,1,k)
-	  call CnvlIniF(handle,lBeam,mBeam,nBeam,xBeam,yBeam,0.,'s')
-	  call CnvlF(handle,lModel,mModel,nModel,Data,' ')
-	  do j=1,nBeam
-	    do i=1,mBeam
-	      Model(i,j) = Model(i,j) + Data(i,j)
-	    enddo
-	  enddo
-	  call CnvlFin(handle)
-	enddo
-c
-	end
-c************************************************************************
-	subroutine CpyModel(Model,lOut,mModel,nModel)
-c
-	implicit none
-	integer lOut,mModel,nModel
-	real Model(mModel,nModel)
+	integer lOut,mOut,nOut
+	real Out(mOut,nOut)
 c
 c  Write out the convolved model to the output file.
 c
@@ -533,30 +432,32 @@ c    lOut	The handle of the output file.
 c------------------------------------------------------------------------
 	integer j
 c
-	do j=1,nModel
-	  call xywrite(lOut,j,Model(1,j))
+	do j=1,nOut
+	  call xywrite(lOut,j,Out(1,j))
 	enddo
 	end
 c************************************************************************
-	subroutine CpyMap(lMap,lOut,nMap)
+	subroutine CopyOut(lIn,lOut,mOut,nOut)
 c
 	implicit none
-	integer lMap,lOut,nMap
+	integer lIn,lOut,mOut,nOut
 c
 c  Copy a map from the input to the output.
 c
 c  Inputs:
-c    lMap	Handle of the input map file.
+c    lIn	Handle of the input map file.
 c    lOut	Handle of the output map file.
-c    mMap,nMap	Size of the map.
+c    mOut,nOut	Size of the map.
 c
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer j
-	real Data(maxdim)
+	real Data(MAXDIM)
 c
-	do j=1,nMap
-	  call xyread(lMap,j,Data)
+	if(mOut.gt.MAXDIM)call bug('f','Output too big')
+c
+	do j=1,nOut
+	  call xyread(lIn,j,Data)
 	  call xywrite(lOut,j,Data)
 	enddo
 c
@@ -603,112 +504,35 @@ c
 c
 	end
 c************************************************************************
-	subroutine AddModel(lMap,mMap,nMap,
-     *	  lModel,mModel,nModel,lOut,xoff,yoff)
+	subroutine BeamFit(lBeam,mBeam,nBeam,fwhm1,fwhm2,pa)
 c
 	implicit none
-	integer lMap,lModel,lOut
-	integer mMap,nMap,mModel,nModel,xoff,yoff
+	integer lBeam,mBeam,nBeam
+	real fwhm1,fwhm2,pa
 c
-c  This adds a sub-image into the map.
-c
-c  Inputs:
-c    lMap	 Lun of the map.
-c    mMap,nMap	 Dimensions of the map.
-c    lModel	 Lun of the model.
-c    mModel,nModel Dimensions of the model.
-c    lOut	 Handle of the output file.
-c    xoff,yoff	 Conversion from model to map grid units.
-c
-c------------------------------------------------------------------------
-	include 'maxdim.h'
-	integer i,j,ilo,ihi,jlo,jhi
-	real Model(maxdim),Map(maxdim)
-c
-c  Read the map in and add the model to it.
-c
-	jlo = max(1,yoff+1)
-	jhi = min(nMap,yoff+nModel)
-	ilo = max(1,xoff+1)
-	ihi = min(mMap,xoff+mModel)
-c
-	do j=1,nMap
-	  call xyread(lMap,j,Map)
-	  if(j.ge.jlo.and.j.le.jhi)then
-	    call xyread(lModel,j-jlo+1,Model)
-	    do i=ilo,ihi
-	      Map(i) = Map(i) + Model(i-ilo+1)
-	    enddo
-	  endif
-	  call xywrite(lOut,j,Map)
-	enddo
-c
-	end
-c************************************************************************
-	subroutine GetBeam(Beam,mBeam,nBeam,xBeam,yBeam,
-     *	  doBeam,lBeam,doGaus,cdelt1,cdelt2,fwhm1,fwhm2,pa)
-c
-	implicit none
-	integer mBeam,nBeam,xBeam,yBeam,lBeam
-	logical doBeam,doGaus
-	real Beam(mBeam,nBeam),cdelt1,cdelt2,fwhm1,fwhm2,pa
-c
-c  Get the effective beam, less any gaussian.
+c  Fit the beam parameters.
 c
 c  Input:
-c    mBeam,nBeam  Size of the beam.
-c    doBeam	  True if there is a input beam to process.
-c    doGaus	  True if we are to subtract a gaussian.
-c    lBeam	  Handle of the beam file.
-c    cdelt1,cdelt2,fwhm1,fwhm2,pa Gaussian parameters.
+c    lBeam	 Handle of the beam dataset.
+c    mBeam,nBeam Size of the beam.
 c  Output:
-c    Beam	  The output beam.
+c    fwhm1,fwhm2 Beam major and minor axes (radians).
+c    bpa	 Beam position angle (degrees).
 c------------------------------------------------------------------------
-	real pi
-	parameter(pi=3.141592653589793)
-	integer i,j
-	real theta,s2,c2,sxx,syy,sxy,a,b,t
+	integer nP
+	parameter(nP=11)
+	real Patch(nP*nP),cdelt1,cdelt2
+	integer nPd,xBeam,yBeam
 c
-c  Load the beam, if needed.
-c
-	if(doBeam)then
-	  do j=1,nBeam
-	    call xyread(lBeam,j,Beam(1,j))
-	  enddo
-	endif
-c
-c  Subtract off the gaussian, if needed.
-c
-	if(doGaus)then
-	  theta = pi/180. * pa
-	  s2 = -sin(2*theta)
-	  c2 = -cos(2*theta)
-	  a = 4*log(2.)/(fwhm1*fwhm1)
-	  b = 4*log(2.)/(fwhm2*fwhm2)
-	  sxx = -0.5*( a*(c2+1) + b*(1-c2) ) * cdelt1*cdelt1
-	  syy = -0.5*( b*(c2+1) + a*(1-c2) ) * cdelt2*cdelt2
-	  sxy = -(b-a)*s2 * cdelt1*cdelt2
-	  do j=1,nBeam
-	    if(doBeam)then
-	      do i=1,mBeam
-		t = sxx*(i-xBeam)*(i-xBeam) + sxy*(i-xBeam)*(j-yBeam) +
-     *		    syy*(j-yBeam)*(j-yBeam)
-		if(t.gt.-20)Beam(i,j) = Beam(i,j) - exp(t)
-	      enddo
-	    else
-	      do i=1,mBeam
-		t = sxx*(i-xBeam)*(i-xBeam) + sxy*(i-xBeam)*(j-yBeam) +
-     *		    syy*(j-yBeam)*(j-yBeam)
-		if(t.gt.-20)then
-		  Beam(i,j) = exp(t)
-		else
-		  Beam(i,j) = 0
-		endif
-	      enddo
-	    endif
-	  enddo
-	endif
-c
+	nPd = min(nP,mBeam,nBeam)
+	nPd = nPd - mod(nPd+1,2)
+	call GetPatch(lBeam,mBeam,nBeam,Patch,nPd,xBeam,yBeam)
+	call rdhdr(lBeam,'cdelt1',cdelt1,0.)
+	call rdhdr(lBeam,'cdelt2',cdelt2,0.)
+	if(cdelt1*cdelt2.eq.0)
+     *		call bug('f','Model pixel increment missing')
+	call GetFwhm(Patch,nPd,xBeam-mBeam/2+nPd/2,
+     *	    yBeam-nBeam/2+nPd/2,cdelt1,cdelt2,Fwhm1,Fwhm2,Pa)
 	end
 c************************************************************************
 	subroutine GetPatch(lBeam,n1,n2,Patch,nP,xBeam,yBeam)
@@ -794,9 +618,9 @@ c    Fwhm2	Fwhm, in degrees along the minor axis.
 c    Pa		Position angle, in degrees, measured east of north.
 c
 c------------------------------------------------------------------------
+	include 'mirconst.h'
 	integer MaxIter
-	real pi
-	parameter(MaxIter=100,pi=3.141592653589793)
+	parameter(MaxIter=100)
 	include 'restor.h'
 	real X(3),dx(3),aa(3*3),t1,t2
 	real f(nPM*nPM),fp(nPM*nPM),dfdx(3*nPM*nPM)
