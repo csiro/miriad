@@ -1,3 +1,9 @@
+From teuben@astro.umd.edu Sun Dec  4 05:33:54 1994
+Date: Sat, 3 Dec 1994 13:33:46 -0500
+From: teuben@astro.umd.edu (Peter Teuben)
+Subject: .invert.h.7
+
+
 c-----------------------------------------------------------------
 c	invert.h - include file for invert
 c-----------------------------------------------------------------
@@ -8,12 +14,12 @@ c-----------------------------------------------------------------
 	double precision crval1,crval2,crval3,cdelt1,cdelt2,cdelt3
 	double precision restfreq,obsra,obsdec
 	logical Vchang,Rchang,RAchang,DecChang,SrcChang,Vlin,Rconst
-	character observer*32,source*32,telescop*32
-	character ctype1*32,ctype2*32,ctype3*32,ltype*32
+	character instrume*32,observer*32,source*32,telescop*32
+	character ctype3*32,ltype*32
 	common/invertc1/crval1,crval2,crval3,cdelt1,cdelt2,cdelt3,
      *			restfreq,obsra,
      *			obsdec,epoch,vobs,pbfwhm,npols,pols,PolStat,
      *			Vchang,Rchang,RAchang,DecChang,SrcChang,
      *			Vlin,Rconst,lstart,lwidth,lstep
-	common/invertc2/observer,source,telescop,
-     *			ctype1,ctype2,ctype3,ltype
+	common/invertc2/instrume,observer,source,telescop,ctype3,ltype
+
