@@ -84,6 +84,11 @@ c	commas. Minimum match is used. Possible values are:
 c	  totflux  Interpret the "amp" values in the spar keyword as
 c	           total integrated flux densities (Normally the "amp"
 c	           parameters are interpretted as peak values).
+c@ seed
+c	Number used to initialise the random number generator. This is
+c	an integer. Invoking IMGEN with the same value of SEED will give you
+c	identical instance of the noise, whereas a different value will
+c	give you a different instance.
 c--
 c
 c  History:
@@ -128,14 +133,15 @@ c		    input image.
 c    rjs   19mar98  Copy across mosaic table.
 c    mchw  19mar99  Add model isothermal 2D projection for cluster gas.
 c    lss   07jul99  Add 3D gaussian model for cubes.
+c    rjs   10jan00  Added "seed" parameter.
 c  Bugs/Wishlist:
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Imgen: version 1.1 19-Mar-99' )
+	parameter(version='Imgen: version 1.1 10-Jan-00' )
 	include 'mirconst.h'
 	include 'maxdim.h'
 	include 'maxnax.h'
-	integer n1,n2,n3,i,j,k,lIn,lOut,nsize(MAXNAX),naxis
+	integer n1,n2,n3,i,j,k,lIn,lOut,nsize(MAXNAX),naxis,seed
 	double precision crpix1,crpix2,cdelt1,cdelt2,crval1,crval2
 	double precision x1(3),x2(3)
 	real factor,bmaj,bmin,bpa,fac,fac3
@@ -242,7 +248,11 @@ c
 c
 	call GetOpt(totflux)
 c
+	call keyi('seed',seed,0)
+c
 	call keyfin
+c
+	if(seed.ne.0)call randset(seed)
 c
 c  If there is an input file, open it and get parameters about it.
 c  Otherwise set the default parameters.
