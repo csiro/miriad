@@ -45,23 +45,19 @@ c@ out
 c	The name of the output cube. No default. The center and pixel size
 c	of the first input image is used as the grid system of the output.
 c@ rms
-c	The rms noise levels in the input cubes. Only the relative sizes are
-c	of importance. There should be as many values as there are input
-c	cubes. If no value is given, a value of 1 is used. If there are
-c	fewer than one value of `rms' for each input image, then the last
-c	value given is used for the remaining images.
-c@ signal
-c	An rms signal level. Only one value is required. Only the relative
-c	size of this to the "rms" parameters is used. The default value is
-c	infinity, which can allow the correction factor to become excessively
-c	large. By setting a finite signal/rms ratio, the correction factor
-c	tapers off, and thus prevents the output being swamped by noise
-c	amplification. By assigning a low signal/rms ratio for the first image,
-c	and a finite signal/rms ratio for the second image, LINMOS can be used
-c	to interpolate the second image, using the first image as a template.
+c	The rms noise levels in the input cubes. The default is determined
+c	from the input images. If this is not possible for an image,
+c	then the rms of the previous image is used. If no value could be
+c	determined for the first image, all images are given equal weight.
 c@ options
 c	Extra processing options. Several can be given, separated by
 c	commas. Minimum match is supported. Possible values are:
+c	  taper        By default, LINMOS fully corrects for primary
+c	               beam attenutation. This can cause excessive noise
+c	               amplification at the edge of the mosaiced field.
+c	               The `taper' option aims at achieving approximately
+c	               uniform noise across the image. This prevents full primary
+c	               beam correction at the edge of the mosaic.
 c	  sensitivity  Rather than a mosaiced image, produce an image
 c	               giving the rms noise across the field.
 c	  gain         Rather than a mosaiced image, produce an image
@@ -103,6 +99,7 @@ c    rjs  30nov94 Preserve the projection geometry when all the inputs
 c		  have the same geometry. Handle single-pointing
 c		  mosaic tables.
 c    rjs   3dec94 More lenient "exactness" algorithm in thingchk.
+c    rjs  30jan95 Taper option. Eliminate "signal" parameter.
 c
 c  Bugs:
 c    * Blanked images are not handled when interpolation is necessary.
@@ -118,7 +115,7 @@ c		by less than "tol", they are taken as being the same
 c		pixel (i.e. no interpolation done).
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Linmos: version 1.0 3-Dec-94')
+	parameter(version='Linmos: version 1.0 30-Jan-95')
 	include 'maxdim.h'
 c
 	real tol
@@ -130,19 +127,18 @@ c
 	integer offset,length
 	integer nsize(3,maxIn),nOut(4)
 	integer i,nOpen,naxis,itemp
-	real xoff,yoff
-	real rms(maxIn),signal,BlcTrc(4,maxIn)
+	real xoff,yoff,Sigt
+	real rms(maxIn),BlcTrc(4,maxIn)
 	real Extent(4)
 	double precision crval(3),cdelt(3),crpix(3)
 	character ctype(3)*16
-	logical defrms,init,dosen,dogain,docar,exact
+	logical defrms,init,dosen,dogain,docar,exact,taper
 c
 	integer pOut,pWts
 	include 'mem.h'
 c
 c  Externals.
 c
-	logical keyprsnt
 	integer len1
 c
 c  Get the input parameters, and do some checking.
@@ -168,32 +164,15 @@ c
 	call keya('out',out,' ')
 	if(out.eq.' ') call bug('f','No output name given')
 c
-	defrms = .not.keyprsnt('rms')
-	if(defrms)then
-	  do i=1,nIn
-	    rms(i) = 1.
-	  enddo
-	else
-	  do i=1,nIn
-	    if(i.eq.1)then
-	      call keyr('rms',rms(1),0.)
-	    else
-	      call keyr('rms',rms(i),rms(i-1))
-	    endif
-	    if(rms(i).le.0)
+	do i=1,nIn
+	  call keyr('rms',rms(i),0.)
+	  if(rms(i).lt.0)
      *	      call bug('f','Non-positive rms noise parameter.')
-	  enddo
-	endif
-c
-	call keyr('signal',signal,0.)
-	if(signal.gt.0.and.defrms)then
-          call bug('w','Giving signal but not rms noise is senseless')
-	  signal = 0
-	endif
+	enddo
 c
 c  Get processing options.
 c
-	call GetOpt(dosen,dogain)
+	call GetOpt(dosen,dogain,taper)
 	call keyfin
 c
 c  Open the files, determine the size of the output. Determine the grid
@@ -216,12 +195,21 @@ c
      *					blctrc(1,i),extent)
 	    call rdhdi(tin(i),'naxis',naxis,3)
 	    naxis = min(naxis,4)
+	    if(rms(i).eq.0)call rdhdr(tIn(i),'rms',rms(i),0.0)
+	    defrms = rms(i).le.0
+	    if(defrms)rms(i) = 1
 	  else
 	    call ThingChk(tIn(i),nsize(1,i),ctype,crpix,crval,cdelt,
      *				  exact,blctrc(1,i),extent)
 	    docar = docar.or..not.exact
 	    if(nsize(3,i).ne.nsize(3,1))
      *	      call bug('f','Different lengths for 3rd axis')
+	    if(defrms)then
+	      rms(i) = 1
+	    else
+	      if(rms(i).le.0)call rdhdr(tIn(i),'rms',rms(i),0.0)
+	      if(rms(i).le.0)rms(i) = rms(i-1)
+	    endif
 	  endif
 	  if(i.gt.nOpen) call xyclose(tIn(i))
 	enddo
@@ -282,10 +270,22 @@ c
 	enddo
 	if(.not.init) call bug('f','Something is screwy')
 c
+c  Determine the maximum noise to aim at.
+c
+	if(taper)then
+	  Sigt = Rms(1)
+	  do i=2,nIn
+	    Sigt = max(Sigt,Rms(i))
+	  enddo
+	  Sigt = Sigt*Sigt
+	else
+	  Sigt = 0
+	endif
+c
 c  Go through the scratch file one more time, correcting for the change
 c  in the weights, and writting out the final data.
 c
-	call LastPass(tOut,tScr,tWts,memR(pOut),memR(pWts),Signal,
+	call LastPass(tOut,tScr,tWts,memR(pOut),memR(pWts),Sigt,
      *				nOut(1),nOut(2),nOut(3),dosen)
 c
 c  Free up the memory.
@@ -300,27 +300,30 @@ c
 	call xyclose(tOut)
 	end
 c************************************************************************
-	subroutine GetOpt(dosen,dogain)
+	subroutine GetOpt(dosen,dogain,taper)
 c
 	implicit none
-	logical dosen,dogain
+	logical dosen,dogain,taper
 c
 c  Get extra processing options.
 c
 c  Output:
 c    dosen	True if we are to produce a sensitivity image.
 c    dogain	True if we are to produce an image of the effective gain.
+c    taper	True if the output is to be tapered to achieve quasi-uniform
+c		noise across the image.
 c------------------------------------------------------------------------
 	integer NOPTS
-	parameter(NOPTS=2)
+	parameter(NOPTS=3)
 	logical present(NOPTS)
 	character opts(NOPTS)*11
-	data opts/'sensitivity','gain       '/
+	data opts/'sensitivity','gain       ','taper      '/
 c
 	call options('options',opts,present,NOPTS)
 c
 	dosen  = present(1)
 	dogain = present(2)
+	taper  = present(3)
 c
 	if(dosen.and.dogain)call bug('f',
      *	  'Cannot do options=sensitivity,gains simultaneously')
@@ -629,12 +632,12 @@ c
 	endif
 	end    
 c************************************************************************
-	subroutine LastPass(tout,tScr,tWts,Out,Wts,Signal,n1,n2,n3,
+	subroutine LastPass(tout,tScr,tWts,Out,Wts,Sigt,n1,n2,n3,
      *								dosen)
 c
 	implicit none
 	integer tOut,tScr,tWts,n1,n2,n3
-	real Signal,Out(n1,n2),Wts(n1,n2)
+	real Sigt,Out(n1,n2),Wts(n1,n2)
 	logical dosen
 c
 c  Read in the data from the scratch file, multiply by the scale factor,
@@ -644,7 +647,7 @@ c  Inputs:
 c    tOut	Handle of the output image file.
 c    tScr	Handle of the input image file.
 c    tWts	Handle of the input weights file.
-c    Signal
+c    Sigt	Critical noise variance. 
 c    n1,n2,n3	Size of the output cube.
 c    dosen	Determine the sensitivity function.
 c  Scratch:
@@ -653,14 +656,8 @@ c    Out	Used to store a plane of the output image.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer i,j,k
-	real temp
 	logical doflag,doneflag,flags(MAXDIM)
-c
-	if(Signal.gt.0)then
-	  temp = 1/Signal**2
-	else
-	  temp = 0
-	endif
+	real scale
 c
 c  Loop over all planes. Get the image and weight planes.
 c
@@ -680,13 +677,17 @@ c  Determine the sensitivity function.
 c
 	    if(dosen)then
 	      do i=1,n1
-	        if(Wts(i,j).gt.0)then
-		  Out(i,j) = sqrt(Out(i,j))/(temp + Wts(i,j))
-		  flags(i) = .true.
-		else
+		flags(i) = Wts(i,j).gt.0
+		if(.not.flags(i))then
 		  Out(i,j) = 0
-		  flags(i) = .false.
 		  doflag = .true.
+		else
+		  scale = Sigt*Wts(i,j)
+		  if(scale.ge.1.or.scale.le.0)then
+		    Out(i,j) = sqrt(Out(i,j))/Wts(i,j)
+		  else
+		    Out(i,j) = sqrt(scale*Out(i,j))/Wts(i,j)
+		  endif
 		endif
 	      enddo
 c
@@ -694,13 +695,18 @@ c  Determine the gain function or the mosaic.
 c
 	    else
 	      do i=1,n1
-	        if(Wts(i,j).gt.0)then
-		  Out(i,j) = Out(i,j)/(temp + Wts(i,j))
-		  flags(i) = .true.
-		else
+		flags(i) = Wts(i,j).gt.0
+		if(.not.flags(i))then
 		  Out(i,j) = 0
-		  flags(i) = .false.
 		  doflag = .true.
+		else
+		  scale = Sigt*Wts(i,j)
+		  if(scale.ge.1.or.scale.le.0)then
+		    scale = 1/Wts(i,j)
+		  else
+		    scale = sqrt(scale)/Wts(i,j)
+		  endif
+		  Out(i,j) = scale*Out(i,j)
 		endif
 	      enddo
 	    endif
