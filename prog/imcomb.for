@@ -36,6 +36,7 @@ c	Extra processing options. Several values can be given, separated
 c	by a comma. Minimum match of names is used. Possible values are:
 c	  nonormalise  Do not renormalise the output. Normally the output
 c	               is normalised to account for overlap regions.
+c	  relax        Do not check that the coordinate systems are consistent.
 c--
 c  History:
 c    rjs  29nov94 Original version.
@@ -48,12 +49,13 @@ c		  incorrect flagging checks.
 c    rjs  23jul97 Added pbtype.
 c    rjs  13nov98 Increase MAXIN.
 c    rjs  03oct00 Output can be arbitrarily large.
+c    rjs  28jun02 Added options=relax, better error message.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'maxnax.h'
 	include 'mem.h'
 	character version*(*)
-	parameter(version='ImComb: version 1.0 27-Jun-02')
+	parameter(version='ImComb: version 1.0 28-Jun-02')
 	integer MAXIN,MAXOPEN
 	parameter(MAXIN=500,MAXOPEN=6)
 c
@@ -61,7 +63,7 @@ c
 	integer nrms,nin,tno(MAXIN),tOut,nsize(3,MAXIN),nOpen
 	integer nOut(MAXNAX),minpix,maxpix,k,i,naxis,off(3)
 	integer pData,pWts,pFlags
-	logical mosaic,nonorm,interp,equal
+	logical mosaic,nonorm,interp,equal,relax
 	real rms(MAXIN),rms0,blctrc(6,MAXIN)
 c
 c  Externals.
@@ -76,7 +78,7 @@ c
 	call keya('tin',tin,' ')
 	call keya('out',out,' ')
 	call mkeyr('rms',rms,MAXIN,nrms)
-	call GetOpt(mosaic,nonorm)
+	call GetOpt(mosaic,nonorm,relax)
 	call keyfin
 c
 c  Check the inputs.
@@ -105,7 +107,8 @@ c
 	    call rdhdi(tno(i),'naxis',naxis,3)
 	    naxis = min(naxis,MAXNAX)
 	  else
-	    call ThingChk(tno(1),tno(i),nsize(1,i),interp,blctrc(1,i))
+	    call ThingChk(tno(1),tno(i),nsize(1,i),relax,
+     *	      interp,blctrc(1,i))
 	    if(interp)then
 	      line = stcat('Geometry of '//in(1),
      *			   ' differs from '//in(i))
@@ -198,27 +201,29 @@ c
 	call xyclose(tOut)
 	end
 c************************************************************************
-	subroutine GetOpt(mosaic,nonorm)
+	subroutine GetOpt(mosaic,nonorm,relax)
 c
 	implicit none
-	logical mosaic,nonorm
+	logical mosaic,nonorm,relax
 c
 c  Determine processing options.
 c
 c  Output:
 c    mosaic
 c    nonorm
+c    relax
 c------------------------------------------------------------------------
 	integer NOPTS
-	parameter(NOPTS=2)
+	parameter(NOPTS=3)
 	logical present(NOPTS)
 	character opts(NOPTS)*12
-	data opts/'mosaic      ','nonormalise '/
+	data opts/'mosaic      ','nonormalise ','relax       '/
 c
 	call options('options',opts,present,NOPTS)
 c
 	mosaic = present(1)
 	nonorm = present(2)
+	relax  = present(3)
 c
 	end
 c************************************************************************
@@ -301,11 +306,11 @@ c------------------------------------------------------------------------
 c
 	end
 c************************************************************************
-	subroutine ThingChk(tIn,tOut,nsize,interp,blctrc)
+	subroutine ThingChk(tIn,tOut,nsize,relax,interp,blctrc)
 c
 	implicit none
 	integer tIn,tOut,nsize(3)
-	logical interp
+	logical interp,relax
 	real blctrc(6)
 c
 c------------------------------------------------------------------------
@@ -321,13 +326,19 @@ c
 	blctrc(2) = Out(2)
 	blctrc(3) = Out(3)
 c
-	In(1) = nsize(1)
-	In(2) = nsize(2)
-	In(3) = nsize(3)
-	call pcvt(In,Out,3)
-	blctrc(4) = Out(1)
-	blctrc(5) = Out(2)
-	blctrc(6) = Out(3)
+	if(relax)then
+	  blctrc(4) = blctrc(1) + nsize(1) - 1
+	  blctrc(5) = blctrc(2) + nsize(2) - 1
+	  blctrc(6) = blctrc(3) + nsize(3) - 1
+	else
+	  In(1) = nsize(1)
+	  In(2) = nsize(2)
+	  In(3) = nsize(3)
+	  call pcvt(In,Out,3)
+	  blctrc(4) = Out(1)
+	  blctrc(5) = Out(2)
+	  blctrc(6) = Out(3)
+	endif
 c
 	interp = .false.
 	do i=1,3
