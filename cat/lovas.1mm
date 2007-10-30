@@ -1,0 +1,1071 @@
+      Table 5: Recommended rest frequencies for observed interstellar molecular lines by Frank J. Lovas.
+                                                                                                       
+___________________________________________________________________________________________________________
+ Frequency   Unc. Formula      Quantum                      Tr(K)  Source          Telescope    Astr.  Lab.
+ (MHz)                                                      /Ta(K)                              ref.   ref.
+
+
+
+  220037.96 *( 1) HCOOH        10(0,10)-9(0,9)               0.3   OriMC-1         OVRO   10.4m Sut85
+  220078.6   ( 1) CH3OH        7(1)-8(0) E                   6.1   OriMC-1         OVRO   10.4m Sut85  Sas84
+  220166.85 *( 3) HCOOCH3      17(4,13)-16(4,12) E           1.3   OriMC-1         OVRO   10.4m Sut85  Plu86
+  220177.52 *(18) CH2CO        11(1,11)-10(1,10)             1.0   OriMC-1         OVRO   10.4m Sut85
+  220190.20 *(10) HCOOCH3      17(4,13)-16(4,12) A           1.3   OriMC-1         OVRO   10.4m Sut85  Plu84
+  220398.686*(23) 13CO         2-1                          17.    OriMC-1         NRAO     11m Phi77
+  220475.812*(10) CH3CN        12(8)-11(8)                   0.5   OriMC-1         OVRO   10.4m Sut85
+  220539.329*( 7) CH3CN        12(7)-11(7)                   0.10  OriMC-1         MMWO    4.9m Lor84
+  220561.33 *( 7) CH2CHCN      24(1,24)-23(1,23)             0.4   OriMC-1         OVRO   10.4m Sut85
+  220584.762*(12) HNCO         10(1,9)-9(1,8)                0.13  OriMC-1         MMWO    4.9m Lor84
+  220594.428*( 5) CH3CN        12(6)-11(6)                   0.23  OriMC-1         MMWO    4.9m Lor84
+  220599.94 *(14) CH313CN      12(3)-11(3)                    b    OriMC-1         OVRO   10.4m Sut85
+  220621.08 *(15) CH313CN      12(2)-11(2)                   0.5   OriMC-1         OVRO   10.4m Sut85
+  220633.77 *(16) CH313CN      12(1)-11(1)                   0.5b  OriMC-1         OVRO   10.4m Sut85
+  220641.089*( 4) CH3CN        12(5)-11(5)                   0.29  OriMC-1         MMWO    4.9m Lor84
+  220660.91 *( 2) CH3CH2CN     25(2,24)-24(2,23)             0.7   OriMC-1         OVRO   10.4m Sut85
+U 220664.5        unidentified                               0.14  OriMC-1         MMWO    4.9m Lor84
+  220679.296*( 4) CH3CN        12(4)-11(4)                   0.37  OriMC-1         MMWO    4.9m Lor84
+  220709.025*( 3) CH3CN        12(3)-11(3)                   0.80  OriMC-1         MMWO    4.9m Lor84
+  220730.268*( 3) CH3CN        12(2)-11(2)                   0.67  OriMC-1         MMWO    4.9m Lor84
+  220743.018*( 3) CH3CN        12(1)-11(1)                   0.84  OriMC-1         MMWO    4.9m Lor84
+  220747.268*( 3) CH3CN        12(0)-11(0)                   0.99  OriMC-1         MMWO    4.9m Lor84
+U 220792.5        unidentified                               0.17u OriMC-1         MMWO    4.9m Lor84
+  220811.69 *( 3) HCOOCH3      18(3,16)-17(2,15) E           0.4   OriMC-1         OVRO   10.4m Sut85  Plu86
+  220815.19 *(10) HCOOCH3      18(3,16)-17(2,15) A           0.4   OriMC-1         OVRO   10.4m Sut85  Plu84
+  220889.02 *(10) HCOOCH3      18(17,2)-17(17,1) A           0.4b  OriMC-1         OVRO   10.4m Sut85  Plu84
+  220889.02 *(10) HCOOCH3      18(17,1)-17(17,0) A            b    OriMC-1         OVRO   10.4m Sut85  Plu84
+  220926.20 *(10) HCOOCH3      18(16,3)-17(16,2) A           0.5b  OriMC-1         OVRO   10.4m Sut85  Plu84
+  220926.20 *(10) HCOOCH3      18(16,2)-17(16,1) A            b    OriMC-1         OVRO   10.4m Sut85  Plu84
+  220977.84 *(10) HCOOCH3      18(15,3)-17(15,2) A           0.5b  OriMC-1         OVRO   10.4m Sut85  Plu84
+  220977.84 *(10) HCOOCH3      18(15,4)-17(15,3) A            b    OriMC-1         OVRO   10.4m Sut85  Plu84
+  221047.67 *(10) HCOOCH3      18(14,4)-17(14,3) A           0.5b  OriMC-1         OVRO   10.4m Sut85  Plu84
+  221047.67 *(10) HCOOCH3      18(14,5)-17(14,4) A            b    OriMC-1         OVRO   10.4m Sut85  Plu84
+  221049.47 *( 6) HCOOCH3      18(14,4)-17(14,3) E            b    OriMC-1         OVRO   10.4m Sut85  Plu86
+  221067.34 *( 6) HCOOCH3      18(14,5)-17(14,4) E           0.3   OriMC-1         OVRO   10.4m Sut85  Plu86
+  221123.82 *( 4) CH2CHCN      23(1,22)-22(1,21)             0.4   OriMC-1         OVRO   10.4m Sut85
+  221139.35 *( 5) HCOOCH3      18(13,5)-17(13,4) E            b    OriMC-1         OVRO   10.4m Sut85  Plu86
+  221141.02 *(10) HCOOCH3      18(13,6)-17(13,5) A            b    OriMC-1         OVRO   10.4m Sut85  Plu84
+  221141.02 *(10) HCOOCH3      18(13,5)-17(13,4) A           0.7b  OriMC-1         OVRO   10.4m Sut85  Plu84
+  221158.84 *( 5) HCOOCH3      18(13,6)-17(13,5) E           0.2   OriMC-1         OVRO   10.4m Sut85  Plu86
+  221198.962*(90) CH3CN        12(1)-11(1) v8=1 l=1          0.7   OriMC-1         OVRO   10.4m Sut85
+  221252.388*(83) CH3CN        12(5)-11(5) v8=1 l=-1         0.3   OriMC-1         OVRO   10.4m Sut85
+  221260.50 *( 4) HCOOCH3      18(12,6)-17(12,5) E           0.4   OriMC-1         OVRO   10.4m Sut85  Plu86
+  221265.59 *(10) HCOOCH3      18(12,7)-17(12,6) A            b    OriMC-1         OVRO   10.4m Sut85  Plu84
+  221265.59 *(10) HCOOCH3      18(12,6)-17(12,5) A           0.6b  OriMC-1         OVRO   10.4m Sut85  Plu84
+  221281.09 *( 4) HCOOCH3      18(12,7)-17(12,6) E           0.4   OriMC-1         OVRO   10.4m Sut85  Plu86
+  221299.576*(80) CH3CN        12(4)-11(4) v8=1 l=-1         0.2   OriMC-1         OVRO   10.4m Sut85
+  221311.925*(78) CH3CN        12(6)-11(6) v8=1 l=1          0.2   OriMC-1         OVRO   10.4m Sut85
+  221338.038*(90) CH3CN        12(3)-11(3) v8=1 l=-1         0.3   OriMC-1         OVRO   10.4m Sut85
+  221350.329*(81) CH3CN        12(5)-11(5) v8=1 l=1          0.2   OriMC-1         OVRO   10.4m Sut85
+  221367.512*(90) CH3CN        12(2)-11(2) v8=1 l=-1         0.6   OriMC-1         OVRO   10.4m Sut85
+  221380.61 *(10) CH3CN        12(4)-11(4) v8=1 l=1          0.6   OriMC-1         OVRO   10.4m Sut85
+  221387.33 *(10) CH3CN        12(1)-11(1) v8=1 l=-1         0.4   OriMC-1         OVRO   10.4m Sut85
+  221394.13 *(15) CH3CN        12(0)-11(0) v8=1 l=1          0.5   OriMC-1         OVRO   10.4m Sut85
+  221403.51 *(11) CH3CN        12(3)-11(3) v8=1 l=1          0.3   OriMC-1         OVRO   10.4m Sut85
+  221422.34 *(16) CH3CN        12(2)-11(2) v8=1 l=1          0.3b  OriMC-1         OVRO   10.4m Sut85
+  221424.52 *( 4) HCOOCH3      18(11,7)-17(11,6) E           0.8   OriMC-1         OVRO   10.4m Sut85  Plu86
+  221432.95 *(10) HCOOCH3      18(11,8)-17(11,7) A            b    OriMC-1         OVRO   10.4m Sut85  Plu84
+  221432.95 *(10) HCOOCH3      18(11,7)-17(11,6) A           0.9b  OriMC-1         OVRO   10.4m Sut85  Plu84
+  221445.70 *( 4) HCOOCH3      18(11,8)-17(11,7) E           0.6   OriMC-1         OVRO   10.4m Sut85  Plu86
+  221626.04 *( 9) CH3CN        12(1)-11(1) v8=1 l=1          0.4   OriMC-1         OVRO   10.4m Sut85
+  221649.39 *( 4) HCOOCH3      18(10,8)-17(10,7) E           0.5   OriMC-1         OVRO   10.4m Sut85  Plu86
+  221660.46 *( 3) HCOOCH3      18(4,15)-17(4,14) E           1.5b  OriMC-1         OVRO   10.4m Sut85  Plu86
+  221661.06 *(10) HCOOCH3      18(10,8)-17(10,7) A            b    OriMC-1         OVRO   10.4m Sut85  Plu84
+  221661.06 *(10) HCOOCH3      18(10,9)-17(10,8) A            b    OriMC-1         OVRO   10.4m Sut85  Plu84
+  221670.71 *( 4) HCOOCH3      18(10,9)-17(10,8) E           0.4   OriMC-1         OVRO   10.4m Sut85  Plu86
+  221674.62 *(10) HCOOCH3      18(4,15)-17(4,14) A           0.8   OriMC-1         OVRO   10.4m Sut85  Plu84
+  221735.67 *(12) 34SO2        13(2,12)-13(1,13)             1.0   OriMC-1         OVRO   10.4m Sut85
+  221765.98 *( 6) CH2CHCN      24(0,24)-23(0,23)             0.4   OriMC-1         OVRO   10.4m Sut85
+  221965.21 *( 2) SO2          11(1,11)-10(0,10)            13.9   OriMC-1         OVRO   10.4m Sut85
+  222009.37 *( 5) SiC2         9(2,7)-8(2,6)                 n.r.  IRC+10216       IRAM     30m Cer91b Cer91b
+  222099.152*(10) CH3CCH       13(4)-12(4)                   0.2   OriMC-1         OVRO   10.4m Sut85
+  222128.814*( 6) CH3CCH       13(3)-12(3)                   0.13  OriMC-1         MMWO    4.9m Lor84d
+  222150.009*( 3) CH3CCH       13(2)-12(2)                   0.30  OriMC-1         MMWO    4.9m Lor84d
+  222153.45 *( 5) CH2CHCN      23(2,21)-22(2,20)             0.4   OriMC-1         OVRO   10.4m Sut85
+  222162.729*( 2) CH3CCH       13(1)-12(1)                   0.27  OriMC-1         MMWO    4.9m Lor84d
+  222166.970*( 2) CH3CCH       13(0)-12(0)                   0.41  OriMC-1         MMWO    4.9m Lor84d
+U 222177.         unidentified                               0.4   OriMC-1         OVRO   10.4m Sut85
+  222197.65 *(28) CH2CO        11(0,11)-10(0,10)             0.6   OriMC-1         OVRO   10.4m Sut85
+  222228.61 *(20) CH2CO        11(2,10)-10(2,9)              0.2   OriMC-1         OVRO   10.4m Sut85
+  222238.67 *(35) CH3OCH3      4(3,2)-3(2,1) EA              0.02  OriMC-1         OVRO   10.4m Sut85
+  222247.48 *(19) CH3OCH3      4(3,2)-3(2,1) AE              1.3b  OriMC-1         OVRO   10.4m Sut85
+  222247.60 *(21) CH3OCH3      4(3,2)-3(2,1) EE               b    OriMC-1         OVRO   10.4m Sut85
+  222254.74 *( 9) CH3OCH3      4(3,2)-3(2,1) AA              1.0   OriMC-1         OVRO   10.4m Sut85
+U 222259.         unidentified                               0.6   OriMC-1         OVRO   10.4m Sut85
+  222314.40 *(20) CH2CO        11(2,9)-10(2,8)               0.2   OriMC-1         OVRO   10.4m Sut85
+  222329.40  (18) HCNH+        2-1                           0.11  Sgr B2          MMWO    4.9m Ziu86a Bog85a
+  222421.46 *( 4) HCOOCH3      18(8,10)-17(8,9) E            1.0   OriMC-1         OVRO   10.4m Sut85  Plu86
+  222426.82 *(19) CH3OCH3      4(3,1)-3(2,2) AE              0.3   OriMC-1         OVRO   10.4m Sut85
+  222433.96 *(10) CH3OCH3      4(3,1)-3(2,2) EE              1.5b  OriMC-1         OVRO   10.4m Sut85
+  222434.08 *( 9) CH3OCH3      4(3,1)-3(2,2) AA               b    OriMC-1         OVRO   10.4m Sut85
+  222435.63 *(13) CH3OCH3      4(3,1)-3(2,2) EA               b    OriMC-1         OVRO   10.4m Sut85
+  222438.23 *(10) HCOOCH3      18(8,10)-17(8,9) A            1.2b  OriMC-1         OVRO   10.4m Sut85  Plu84
+  222440.34 *(10) HCOOCH3      18(8,11)-17(8,10) A            b    OriMC-1         OVRO   10.4m Sut85  Plu84
+  222442.01 *( 4) HCOOCH3      18(8,10)-17(8,9) E             b    OriMC-1         OVRO   10.4m Sut85  Plu86
+  222707.22 *( 2) CH3CH2CN     26(0,26)-25(1,25)             0.3   OriMC-1         OVRO   10.4m Sut85
+  222722.9   ( 1) CH3OH        16(2) - 15(1) A+              0.6   OriMC-1         OVRO   10.4m Sut85  Sut85
+  222918.17 *( 2) CH3CH2CN     25(1,24)-24(1,23)             0.9   OriMC-1         OVRO   10.4m Sut85
+  223037.92 *( 3) HCOOCH3      19(2,17)-18(3,16) E           0.3   OriMC-1         OVRO   10.4m Sut85  Plu86
+  223119.20 *(10) HCOOCH3      18(7,12)-17(7,11) A           1.1   OriMC-1         OVRO   10.4m Sut85  Plu84
+  223124.89 *( 3) HCOOCH3      18(7,12)-17(7,11) E           1.0   OriMC-1         OVRO   10.4m Sut85  Plu86
+  223135.13 *( 3) HCOOCH3      18(7,11)-17(7,10) E           1.0   OriMC-1         OVRO   10.4m Sut85  Plu86
+  223162.69 *(10) HCOOCH3      18(7,11)-17(7,10) A           0.8   OriMC-1         OVRO   10.4m Sut85  Plu84
+  223200.13 *(24) CH3OCH3      8(2,7)-7(1,6) EA               b    OriMC-1         OVRO   10.4m Sut85
+  223200.13 *(24) CH3OCH3      8(2,7)-7(1,6) AE               b    OriMC-1         OVRO   10.4m Sut85
+  223202.32 *(17) CH3OCH3      8(2,7)-7(1,6) EA              1.1b  OriMC-1         OVRO   10.4m Sut85
+  223204.51 *(11) CH3OCH3      8(2,7)-7(1,6) EA               b    OriMC-1         OVRO   10.4m Sut85
+  223385.32 *( 2) CH3CH2CN     26(1,26)-25(1,25)             0.9   OriMC-1         OVRO   10.4m Sut85
+  223434.43 *( 6) SO2          27(6,20)-28(7,21)             0.3   OriMC-1         OVRO   10.4m Sut85
+  223553.58 *( 2) CH3CH2CN     26(0,26)-25(0,25)             0.6   OriMC-1         OVRO   10.4m Sut85
+  223650.13 *(10) CH3CHO       12(1,12)-11(1,11) E           0.2   OriMC-1         OVRO   10.4m Sut85
+  223660.57 *(10) CH3CHO       12(1,12)-11(1,11) A           0.3   OriMC-1         OVRO   10.4m Sut85
+  223883.64 *( 2) SO2          6(4,2)-7(3,5)                 1.4   OriMC-1         OVRO   10.4m Sut85
+  223915.56 *( 1) HCOOH        10(2,9)-9(2,8)                0.3   OriMC-1         OVRO   10.4m Sut85
+  223933.73 *( 2) CH3CH2CN     25(3,23)-24(3,22)             0.6   OriMC-1         OVRO   10.4m Sut85
+  224002.12 *( 2) CH3CH2CN     25(10,16)-24(10,15)            b    OriMC-1         OVRO   10.4m Sut85
+  224002.12 *( 2) CH3CH2CN     25(10,15)-24(10,14)            b    OriMC-1         OVRO   10.4m Sut85
+  224003.44 *( 2) CH3CH2CN     25(9,16)-24(9,15)             0.9b  OriMC-1         OVRO   10.4m Sut85
+  224003.44 *( 2) CH3CH2CN     25(9,17)-24(9,16)              b    OriMC-1         OVRO   10.4m Sut85
+  224017.54 *( 2) CH3CH2CN     25(11,14)-24(11,13)            b    OriMC-1         OVRO   10.4m Sut85
+  224017.54 *( 2) CH3CH2CN     25(11,15)-24(11,14)           0.6b  OriMC-1         OVRO   10.4m Sut85
+  224021.4  *( 1) HCOOCH3      18(6,13)-17(6,12) E           1.0b  OriMC-1         OVRO   10.4m Sut85  Sut85
+  224024.05 *(10) HCOOCH3      18(6,13)-17(6,12) A            b    OriMC-1         OVRO   10.4m Sut85  Plu84
+  224028.14 *( 2) CH3CH2CN     25(6,17)-24(6,16)              b    OriMC-1         OVRO   10.4m Sut85
+  224028.14 *( 2) CH3CH2CN     25(6,18)-24(6,17)             0.8b  OriMC-1         OVRO   10.4m Sut85
+  224045.75 *( 2) CH3CH2CN     25(12,14)-24(12,13)            b    OriMC-1         OVRO   10.4m Sut85
+  224045.75 *( 2) CH3CH2CN     25(12,13)-24(12,12)           0.3b  OriMC-1         OVRO   10.4m Sut85
+  224084.28 *( 2) CH3CH2CN     25(13,13)-24(13,12)            b    OriMC-1         OVRO   10.4m Sut85
+  224084.28 *( 2) CH3CH2CN     25(13,12)-24(13,11)            b    OriMC-1         OVRO   10.4m Sut85
+  224088.19 *( 2) CH3CH2CN     25(7,19)-24(7,18)              b    OriMC-1         OVRO   10.4m Sut85
+  224088.23 *( 2) CH3CH2CN     25(7,18)-24(7,17)             0.8b  OriMC-1         OVRO   10.4m Sut85
+  224131.51 *( 2) CH3CH2CN     25(14,11)-24(14,10)            b    OriMC-1         OVRO   10.4m Sut85
+  224131.51 *( 2) CH3CH2CN     25(14,12)-24(14,11)           0.2b  OriMC-1         OVRO   10.4m Sut85
+  224186.35 *( 2) CH3CH2CN     25(15,10)-24(15,9)             b    OriMC-1         OVRO   10.4m Sut85
+  224186.35 *( 2) CH3CH2CN     25(15,11)-24(15,10)           0.2b  OriMC-1         OVRO   10.4m Sut85
+  224206.60 *( 2) CH3CH2CN     25(6,20)-24(6,19)             0.7b  OriMC-1         OVRO   10.4m Sut85
+  224208.08 *( 2) CH3CH2CN     25(6,19)-24(6,18)              b    OriMC-1         OVRO   10.4m Sut85
+  224264.90 *( 3) SO2          20(2,16)-19(3,17)             2.6   OriMC-1         OVRO   10.4m Sut85
+  224313.08 *( 3) HCOOCH3      18(5,14)-17(5,13) E           0.8   OriMC-1         OVRO   10.4m Sut85  Plu86
+  224327.21 *(18) CH2CO        11(1,10)-10(1,9)               b    OriMC-1         OVRO   10.4m Sut85
+  224328.25 *(10) HCOOCH3      18(5,14)-17(5,13) A           0.8b  OriMC-1         OVRO   10.4m Sut85  Plu84
+  224419.82 *( 2) CH3CH2CN     25(5,21)-24(5,20)             0.4   OriMC-1         OVRO   10.4m Sut85
+  224458.85 *( 2) CH3CH2CN     25(5,20)-24(5,19)             0.7   OriMC-1         OVRO   10.4m Sut85
+  224469.02 *( 3) CH3CH2CN     25(19,6)-24(19,5)              b    OriMC-1         OVRO   10.4m Sut85
+  224469.02 *( 3) CH3CH2CN     25(19,7)-24(19,6)             0.3b  OriMC-1         OVRO   10.4m Sut85
+U 224493.         unidentified                               0.5   OriMC-1         OVRO   10.4m Sut85
+  224582.45 *( 3) HCOOCH3      18(6,12)-17(6,11) E           0.8   OriMC-1         OVRO   10.4m Sut85  Plu86
+  224609.31 *(10) HCOOCH3      18(6,12)-17(6,11) A           0.8   OriMC-1         OVRO   10.4m Sut85  Plu84
+  224638.70 *( 2) CH3CH2CN     25(4,22)-24(4,21)             0.6b  OriMC-1         OVRO   10.4m Sut85
+  224643.26 *( 5) CH3CH2CN     25(21,4)-24(21,3)              b    OriMC-1         OVRO   10.4m Sut85
+  224643.26 *( 5) CH3CH2CN     25(21,5)-24(21,4)              b    OriMC-1         OVRO   10.4m Sut85
+  224699.4   ( 1) CH3OH        20(-2) - 19(-3) E             0.7   OriMC-1         OVRO   10.4m Sut85  Sut85
+  224714.368*(30) C17O         2-1                           1.5   OriMC-1         OVRO   10.4m Sut85
+U 224895.         unidentified                               0.7   OriMC-1         OVRO   10.4m Sut85
+  225153.69 *( 2) SO2          13(2,12)-13(1,13)             6.3   OriMC-1         OVRO   10.4m Sut85
+  225236.11 *( 2) CH3CH2CN     25(4,21)-24(4,20)             0.8   OriMC-1         OVRO   10.4m Sut85
+  225413.638 (30) OC34S        19-18                         0.7   OriMC-1         OVRO   10.4m Sut85  Dub80
+  225512.54 *( 1) HCOOH        10(3,7)-9(3,6)                0.4   OriMC-1         OVRO   10.4m Sut85
+  225599.14 *(15) CH3OCH3      12(1,12)-11(0,11) EE          0.7   OriMC-1         MMWO    4.9m Woo84
+  225608.78 *( 3) HCOOCH3      19(3,17)-18(3,16) E           1.1   OriMC-1         OVRO   10.4m Sut85  Plu86
+  225618.66 *(10) HCOOCH3      19(3,17)-18(3,16) A           1.3   OriMC-1         OVRO   10.4m Sut85  Plu84
+U 225625.         unidentified                               1.0   OriMC-1         OVRO   10.4m Sut85
+  225648.70 *(10) HCOOCH3      26(9,18)-26(8,19) A           2.3   OMC-IRc2        IRAM     30m Jac90  Plu84
+U 225660.6        unidentified                               1.6   OMC-IRc2        IRAM     30m Jac90
+  225697.772*( 9) H2CO         3(1,2)-2(1,1)                 5.0   OriMC-1         MMWO    4.9m Eva79
+U 225726.4        unidentified                               1.6   OMC-IRc2        IRAM     30m Jac90
+U 225744.8        unidentified                               1.9   OMC-IRc2        IRAM     30m Jac90
+U 225756.3        unidentified                               2.3   OMC-IRc2        IRAM     30m Jac90
+U 225767.4        unidentified                               0.8   OMC-IRc2        IRAM     30m Jac90
+U 225781.6        unidentified                               1.2   OMC-IRc2        IRAM     30m Jac90
+U 225784.6        unidentified                               0.6   OMC-IRc2        IRAM     30m Jac90
+U 225803.1        unidentified                               1.3   OMC-IRc2        IRAM     30m Jac90
+  225824.33 *( 6) HCOOH        31(3,28)-31(3,29)             1.8   OMC-IRc2        IRAM     30m Jac90
+U 225840.8        unidentified                               0.7   OMC-IRc2        IRAM     30m Jac90
+U 225850.8        unidentified                               1.4   OMC-IRc2        IRAM     30m Jac90
+  225853.841*( 1) D15NC        3-2                           1.9   OMC-IRc2        IRAM     30m Jac90
+  225896.720 (38) HDO          3(1,2)-2(2,1)                 2.3   OriMC-1         OVRO   10.4m Sut85  DeL71
+U 225915.8        unidentified                               0.7   OMC-IRc2        IRAM     30m Jac90
+  225928.56 *(10) HCOOCH3      6(6,1)-5(5,0) A               0.4b  OriMC-1         OVRO   10.4m Sut85  Plu84
+  225928.59 *(10) HCOOCH3      6(6,0)-5(5,1) A                b    OriMC-1         OVRO   10.4m Sut85  Plu84
+U 225934.6        unidentified                               0.9   OMC-IRc2        IRAM     30m Jac90
+U 225944.6        unidentified                               0.6   OMC-IRc2        IRAM     30m Jac90
+U 226035.6        unidentified                               1.0   OMC-IRc2        IRAM     30m Jac90
+U 226043.3        unidentified                               1.1   OMC-IRc2        IRAM     30m Jac90
+U 226058.4        unidentified                               0.7   OMC-IRc2        IRAM     30m Jac90
+U 226072.4        unidentified                               1.7   OMC-IRc2        IRAM     30m Jac90
+  226078.0  *( 6) HCOOCH3      10(3,7)-9(1,8) E              0.6   OMC-IRc2        IRAM     30m Jac90
+U 226090.2        unidentified                               2.0   OMC-IRc2        IRAM     30m Jac90
+  226094.6  *( 2) HCOOCH3      5(4,1)-4(2,2) A               0.9   OMC-IRc2        IRAM     30m Jac90
+  226125.6  *( 2) HCOOCH3      10(3,7)-9(1,8) A              0.9   OMC-IRc2        IRAM     30m Jac90
+  226256.83 *( 5) CH2CHCN      24(2,23)-23(2,22)             0.2   OriMC-1         OVRO   10.4m Sut85
+  226300.00 *( 4) SO2          14(3,11)-14(2,12)             5.8   OriMC-1         OVRO   10.4m Sut85
+  226332.519*(20) CN           2-1 J=3/2-3/2 F=3/2-5/2       0.3   OriMC-1         OVRO   10.4m Sut85  Woo82
+  226341.919*(20) CN           2-1 J=3/2-3/2 F=5/2-3/2       0.3   OriMC-1         OVRO   10.4m Sut85  Woo82
+  226346.00 *(13) CH3OCH3      14(1,13)-13(2,12) AA           b    OriMC-1         OVRO   10.4m Sut85
+  226346.89 *(25) CH3OCH3      14(1,13)-13(2,12) EE          1.6b  OriMC-1         OVRO   10.4m Sut85
+  226347.78 *(37) CH3OCH3      14(1,13)-13(2,12) AE           b    OriMC-1         OVRO   10.4m Sut85
+  226347.78 *(37) CH3OCH3      14(1,13)-13(2,12) EA           b    OriMC-1         OVRO   10.4m Sut85
+  226359.987*(20) CN           2-1 J=3/2-3/2 F=5/2-5/2       1.2   OriMC-1         OVRO   10.4m Sut85  Woo82
+U 226384.         unidentified                               0.5   OriMC-1         OVRO   10.4m Sut85
+U 226436.         unidentified                               0.4   OriMC-1         OVRO   10.4m Sut85
+  226538.674 (50) CH3OD        5(0)-4(0) A                   4.6f  OriMC-1         IRAM     30m Mau88  And88
+  226551.59  ( 5) CH3CHO       12(0,12)-11(0,11) E           0.3   OriMC-1         OVRO   10.4m Sut85  Lia86
+  226592.71  ( 5) CH3CHO       12(0,12)-11(0,11) A           0.2   OriMC-1         OVRO   10.4m Sut85  Lia86
+  226616.520*(20) CN           2-1 J=3/2-1/2 F=1/2-3/2       0.2   OriMC-1         OVRO   10.4m Sut85  Ska83
+  226632.176*(20) CN           2-1 J=3/2-1/2 F=3/2-3/2       1.4   OriMC-1         OVRO   10.4m Sut85  Ska83
+  226659.543*(20) CN           2-1 J=3/2-1/2 F=5/2-3/2       4.3   OriMC-1         OVRO   10.4m Sut85  Ska83
+  226663.685*(20) CN           2-1 J=3/2-1/2 F=1/2-1/2       1.5   OriMC-1         OVRO   10.4m Sut85  Ska83
+  226679.341*(20) CN           2-1 J=3/2-1/2 F=3/2-1/2       1.9   OriMC-1         OVRO   10.4m Sut85  Ska83
+  226706.601 (50) CH3OD        5(2)-4(2) A-                  3.7f  OriMC-1         IRAM     30m Mau88  And88
+  226713.04 *( 3) HCOOCH3      20(2,19)-19(2,18) E           0.9   OriMC-1         OVRO   10.4m Sut85  Plu86
+  226718.70 *( 5) HCOOCH3      20(2,19)-19(2,18) A           0.5   OriMC-1         OVRO   10.4m Sut85  Plu84
+  226738.864 (50) CH3OD        5(-4)-4(-4) E                 1.4f  OriMC-1         IRAM     30m Mau88  And88
+  226773.17 *( 3) HCOOCH3      20(1,19)-19(1,18) E           0.9   OriMC-1         OVRO   10.4m Sut85  Plu86
+  226778.70 *( 5) HCOOCH3      20(1,19)-19(1,18) A           1.0   OriMC-1         OVRO   10.4m Sut85  Plu84
+  226856.81 *( 3) HCOOCH3      20(2,19)-19(1,18) E           0.5   OriMC-1         OVRO   10.4m Sut85  Plu86
+  226862.19 *(10) HCOOCH3      20(2,19)-19(1,18) A           0.6   OriMC-1         OVRO   10.4m Sut85  Plu84
+  226874.183*(20) CN           2-1 J=5/2-3/2 F=5/2-3/2        b    OriMC-1         OVRO   10.4m Woo82  Ska83
+  226874.764*(20) CN           2-1 J=5/2-3/2 F=7/2-5/2       8.0b  OriMC-1         OVRO   10.4m Woo82  Ska83
+  226875.896*(20) CN           2-1 J=5/2-3/2 F=3/2-1/2        b    OriMC-1         OVRO   10.4m Woo82  Ska83
+  226887.399*(20) CN           2-1 J=5/2-3/2 F=3/2-3/2       1.0   OriMC-1         OVRO   10.4m Woo82  Ska83
+  226892.151*(20) CN           2-1 J=5/2-3/2 F=5/2-5/2       1.0   OriMC-1         OVRO   10.4m Woo82  Ska83
+  226922.584 (50) CH3OD        5(-2)-4(-2) E                 1.0f  OriMC-1         IRAM     30m Mau88  And88
+  226942.830 (50) CH3OD        5(3)-4(2) A+                  1.2f  OriMC-1         IRAM     30m Mau88  And88
+  227004.78 *(13) Si13CC       10(2,9)-9(2,8)                0.7f  IRC+10216       IRAM     30m Cer91b Cer91b
+  227019.49 *( 3) HCOOCH3      19(2,17)-18(2,16) E           1.0   OriMC-1         OVRO   10.4m Sut85  Plu86
+  227028.06 *(10) HCOOCH3      19(2,17)-18(2,16) A           1.2   OriMC-1         OVRO   10.4m Sut85  Plu84
+  227031.94 *(11) 34SO2        12(3,9)-12(2,10)              0.7   OriMC-1         OVRO   10.4m Sut85
+  227094.6   ( 1) CH3OH        21(1)-20(0) E                 0.9   OriMC-1         OVRO   10.4m Sut85  Sut85
+  227418.957*(46) HC3N         25-24                         3.5   OriMC-1         OVRO   10.4m Sut85
+  227560.95 *( 3) HCOOCH3      21(1,21)-20(1,20) E            b    OriMC-1         OVRO   10.4m Sut85  Plu86
+  227561.75 *( 3) HCOOCH3      21(0,21)-20(0,20) E            b    OriMC-1         OVRO   10.4m Sut85  Plu86
+  227561.95 *(10) HCOOCH3      21(1,21)-20(1,20) A           2.1b  OriMC-1         OVRO   10.4m Sut85  Plu84
+  227562.77 *(10) HCOOCH3      21(0,21)-20(0,20) A            b    OriMC-1         OVRO   10.4m Sut85  Plu84
+  227780.97 *( 2) CH3CH2CN     25(3,22)-24(3,21)             0.5   OriMC-1         OVRO   10.4m Sut85
+  227814.5   ( 1) CH3OH        16(1)-15(2) A+                1.4   OriMC-1         OVRO   10.4m Sut85  Sut85
+  227897.52 *(11) CH2CHCN      24(7,17)-23(7,16)              b    OriMC-1         OVRO   10.4m Sut85
+  227897.52 *(11) CH2CHCN      24(7,18)-23(7,17)             0.5b  OriMC-1         OVRO   10.4m Sut85
+  227906.61 *( 9) CH2CHCN      24(6,19)-23(6,18)             0.5b  OriMC-1         OVRO   10.4m Sut85
+  227906.64 *( 9) CH2CHCN      24(6,18)-23(6,17)              b    OriMC-1         OVRO   10.4m Sut85
+  227918.54 *(13) CH2CHCN      24(8,17)-23(8,16)              b    OriMC-1         OVRO   10.4m Sut85
+  227918.54 *(13) CH2CHCN      24(8,16)-23(8,15)             0.5b  OriMC-1         OVRO   10.4m Sut85
+  227960.07 *(15) CH2CHCN      24(9,15)-23(9,14)              b    OriMC-1         OVRO   10.4m Sut85
+  227960.07 *(15) CH2CHCN      24(9,16)-23(9,15)              b    OriMC-1         OVRO   10.4m Sut85
+  227965.97 *( 7) CH2CHCN      24(5,20)-23(5,19)              b    OriMC-1         OVRO   10.4m Sut85
+  227967.52 *( 7) CH2CHCN      24(5,19)-23(5,18)             0.5b  OriMC-1         OVRO   10.4m Sut85
+  227977.074*(68) HC3N         25-24 v7=1 l=1e               0.7   OriMC-1         OVRO   10.4m Sut85
+  228090.48 *( 5) CH2CHCN      24(3,22)-23(3,21)             0.4   OriMC-1         OVRO   10.4m Sut85
+  228104.55 *( 6) CH2CHCN      24(4,21)-23(4,20)             0.5   OriMC-1         OVRO   10.4m Sut85
+  228302.988*(68) HC3N         25-24 v7=1 l=1f               0.8   OriMC-1         OVRO   10.4m Sut85
+  228483.14 *( 2) CH3CH2CN     25(2,23)-24(2,22)             0.9   OriMC-1         OVRO   10.4m Sut85
+  228544.07 *( 1) HCOOH        10(2,8)-9(2,7)                0.4   OriMC-1         OVRO   10.4m Sut85
+  228628.82 *( 3) HCOOCH3      18(5,13)-17(5,12) E           1.2   OriMC-1         OVRO   10.4m Sut85  Plu86
+  228651.34 *(10) HCOOCH3      18(5,13)-17(5,12) A           1.2   OriMC-1         OVRO   10.4m Sut85  Plu84
+  228797.47 *( 4) CH3CH2CN     14(2,12)-13(1,13)             0.3   OriMC-1         OVRO   10.4m Sut85
+  228910.46 *(10) DNC          3-2                           0.23  OriMC-1         MMWO    4.9m Lor84b
+  228978.76 *(58) CH3OCH3      7(7,1)-8(6,2) EA              0.2   OriMC-1         OVRO   10.4m Sut85
+  228983.24 *(48) CH3OCH3      7(7,1)-8(6,2) EE              0.2b  OriMC-1         OVRO   10.4m Sut85
+  228984.83 *(48) CH3OCH3      7(7,1)-8(6,2) AE               b    OriMC-1         OVRO   10.4m Sut85
+  228984.83 *(48) CH3OCH3      7(7,0)-8(6,3) AE               b    OriMC-1         OVRO   10.4m Sut85
+  228987.74 *(37) CH3OCH3      7(7,1)-8(6,2) AA               b    OriMC-1         OVRO   10.4m Sut85
+  228987.74 *(37) CH3OCH3      7(7,0)-8(6,3) AA               b    OriMC-1         OVRO   10.4m Sut85
+  228989.33 *(40) CH3OCH3      7(7,0)-8(6,3) EE               b    OriMC-1         OVRO   10.4m Sut85
+  228990.91 *(44) CH3OCH3      7(7,0)-8(6,3) EA               b    OriMC-1         OVRO   10.4m Sut85
+  229086.99 *( 5) CH2CHCN      24(3,21)-23(3,20)             0.3   OriMC-1         OVRO   10.4m Sut85
+  229265.16 *( 2) CH3CH2CN     26(2,25)-25(2,24)             0.7   OriMC-1         OVRO   10.4m Sut85
+  229304.7   (10) 29SiC2       10(2,9)-9(2,8)                n.r.  IRC+10216       IRAM     30m Cer91b Cer91b
+  229347.73 *( 3) SO2          11(5,7)-12(4,8)               1.9   OriMC-1         OVRO   10.4m Sut85
+  229404.98 *( 3) HCOOCH3      18(3,15)-17(3,14) E           1.2   OriMC-1         OVRO   10.4m Sut85  Plu86
+  229420.30 *(10) HCOOCH3      18(3,15)-17(3,14) A           1.3   OriMC-1         OVRO   10.4m Sut85  Plu84
+  229474.17 *( 5) HCOOCH3      20(3,17)-19(4,16) E           0.3   OriMC-1         OVRO   10.4m Sut85  Plu86
+  229504.59 *(10) HCOOCH3      20(3,17)-19(4,16) A           0.3   OriMC-1         OVRO   10.4m Sut85  Plu84
+  229589.1   ( 1) CH3OH        15(4)-16(3) E                 1.3   OriMC-1         OVRO   10.4m Sut85  Sut85
+  229647.75 *( 9) CH2CHCN      25(1,25)-24(1,24)             0.2   OriMC-1         OVRO   10.4m Sut85
+  229758.76  ( 5) CH3OH        8(-1)-7(0) E                 10.6   OriMC-1         OVRO   10.4m Sut85  Sas84
+  229857.66 *(11) 34SO2        4(2,2)-3(1,3)                 1.1   OriMC-1         OVRO   10.4m Sut85
+  229864.19  ( 5) CH3OH        19(5)-20(4) A+                0.4   OriMC-1         OVRO   10.4m Sut85  Sas84
+  229939.18  ( 5) CH3OH        19(5)-20(4) A-                0.5   OriMC-1         OVRO   10.4m Sut85  Sas84
+  230027.06  ( 5) CH3OH        3(-2)-4(-1) E                 5.1   OriMC-1         OVRO   10.4m Sut85  Sas84
+U 230233.         unidentified                               0.6   OriMC-1         OVRO   10.4m Sut85
+  230317.527 (30) O13CS        19-18                         0.5   OriMC-1         OVRO   10.4m Sut85  Dub80
+  230368.69  ( 5) CH3OH        22(4)-21(5) E                 0.2   OriMC-1         OVRO   10.4m Sut85  Sas84
+  230465.75 *(71) CH3OCH3      10(8,3)-11(7,4) EA             b    OriMC-1         OVRO   10.4m Sut85
+  230467.78 *(64) CH3OCH3      10(8,3)-11(7,4) EE            0.4b  OriMC-1         OVRO   10.4m Sut85
+  230469.81 *(59) CH3OCH3      10(8,3)-11(7,4) AA             b    OriMC-1         OVRO   10.4m Sut85
+  230469.81 *(59) CH3OCH3      10(8,2)-11(7,5) AA             b    OriMC-1         OVRO   10.4m Sut85
+  230470.19 *(70) CH3OCH3      10(8,3)-11(7,4) AE             b    OriMC-1         OVRO   10.4m Sut85
+  230470.19 *(70) CH3OCH3      10(8,2)-11(7,5) AE             b    OriMC-1         OVRO   10.4m Sut85
+  230472.22 *(69) CH3OCH3      10(8,2)-11(7,5) EE             b    OriMC-1         OVRO   10.4m Sut85
+  230474.62 *(80) CH3OCH3      10(8,2)-11(7,5) EA             b    OriMC-1         OVRO   10.4m Sut85
+  230509.8   (15) 30SiC2       10(4,6)-9(4,5)                n.r.  IRC+10216       IRAM     30m Cer91b Cer91b
+  230538.000 ( 2) CO           2-1                          70.    OriMC-1         NRAO     11m Phi77  Bel92
+  230738.48 *( 8) CH2CHCN      25(0,25)-24(0,24)             0.4   OriMC-1         OVRO   10.4m Sut85
+  231060.991*( 2) OCS          19-18                         0.80  OriMC-1         FCRAO    14m Sch84
+  231199.27 *(10) HCOOCH3      21(9,12)-21(8,13) A           0.3   OriMC-1         OVRO   10.4m Sut85  Plu84
+  231220.768*(40) 13CS         5-4                           0.7   OriMC-1         MMWO    4.9m Mun84a
+  231239.06 *(10) HCOOCH3      21(9,13)-21(8,14) A           0.4   OriMC-1         OVRO   10.4m Sut85  Plu84
+  231281.10  ( 5) CH3OH        10(2)-9(3) A-                 0.4   OriMC-1         MMWO    4.9m Mun84a Sas84
+  231310.43 *( 2) CH3CH2CN     26(1,25)-25(1,24)              b    OriMC-1         OVRO   10.4m Sut85
+  231312.30 *( 2) CH3CH2CN     27(0,27)-26(1,26)             0.9b  OriMC-1         OVRO   10.4m Sut85
+  231313.23 *( 2) CH3CH2CN     24(2,23)-23(1,22)              b    OriMC-1         OVRO   10.4m Sut85
+  231321.635 (50) N2D+         3-2                           0.17  rho Oph B2      MMWO    4.9m Lor85  Sas81
+  231410.21 *(22) D2CO         4(0,4)-3(0,3)                 0.12  OriMC-1         NRAO     12m Tur90a
+  231505.59 *( 1) HCOOH        10(1,9)-9(1,8)                0.8   OriMC-1         OVRO   10.4m Sut85
+  231854.21 *( 2) CH3CH2CN     27(1,27)-26(1,26)             1.1   OriMC-1         OVRO   10.4m Sut85
+  231952.27 *( 5) CH2CHCN      24(2,22)-23(2,21)             0.3   OriMC-1         OVRO   10.4m Sut85
+  231966.91 *(10) HCOOCH3      20(9,11)-20(8,12) A           0.4b  OriMC-1         NRAO     12m Tur88b Plu84
+  231968.42  (10) CH3CHO       12(3,9)-11(3,8) A              b    OriMC-1         OVRO     12m Tur87b Lia86
+U 231975.         unidentified                               1.0   OriMC-1         NRAO     12m Tur87b
+  231987.79 *(13) CH3OCH3      13(0,13)-12(1,12) AA           b    OriMC-1         OVRO   10.4m Sut85
+  231987.87 *(15) CH3OCH3      13(0,13)-12(1,12) EE          3.2b  OriMC-1         OVRO   10.4m Sut85
+  231987.95 *(18) CH3OCH3      13(0,13)-12(1,12) AE           b    OriMC-1         OVRO   10.4m Sut85
+  231987.95 *(18) CH3OCH3      13(0,13)-12(1,12) EA           b    OriMC-1         OVRO   10.4m Sut85
+  231990.41 *( 2) CH3CH2CN     27(0,27)-26(0,26)             1.1   OriMC-1         OVRO   10.4m Sut85
+U 232008.         unidentified                               0.2   OriMC-1         NRAO     12m Tur87b
+U 232163.         unidentified                               0.8   OriMC-1         OVRO   10.4m Sut85
+  232194.64 *(18) 13CH3CN      13(3)-12(3)                   0.7   OriMC-1         OVRO   10.4m Sut85
+  232216.43 *(18) 13CH3CN      13(2)-12(2)                   0.5   OriMC-1         OVRO   10.4m Sut85
+  232229.51 *(18) 13CH3CN      13(1)-12(1)                   0.5   OriMC-1         OVRO   10.4m Sut85
+  232233.87 *(18) 13CH3CN      13(0)-12(0)                   0.6   OriMC-1         OVRO   10.4m Sut85
+  232265.878*(58) S18O         5(6)-4(5)                     0.3   OriMC-1         OVRO   10.4m Sut85
+  232418.59  ( 5) CH3OH        10(2)-9(3) A+                 3.9   OriMC-1         OVRO   10.4m Sut85  Sas84
+  232534.308*( 4) SiC2         10(2,9)-9(2,8)                n.r.  IRC+10216       IRAM     30m Cer91b Cer91b
+  232686.70  ( 5) H2O          5(5,0)-6(4,3) v2=1            2.8f  VY CMa          IRAM     30m Men89  Bel87a
+  232783.50  ( 5) CH3OH        18(3)-17(4) A+                1.4   OriMC-1         OVRO   10.4m Sut85  Sas84
+  232790.03 *( 2) CH3CH2CN     26(3,24)-25(3,23)             1.1   OriMC-1         OVRO   10.4m Sut85
+  232945.    ( 1) CH3OH        10(-3)-11(-2) E               3.0   OriMC-1         OVRO   10.4m Sut85  Sut85
+  232962.34 *( 2) CH3CH2CN     26(10,17)-25(10,16)            b    OriMC-1         OVRO   10.4m Sut85
+  232962.34 *( 2) CH3CH2CN     26(10,16)-25(10,15)            b    OriMC-1         OVRO   10.4m Sut85
+  232967.58 *( 2) CH3CH2CN     26(9,17)-25(9,16)             1.2b  OriMC-1         OVRO   10.4m Sut85
+  232967.58 *( 2) CH3CH2CN     26(9,18)-25(9,17)              b    OriMC-1         OVRO   10.4m Sut85
+  232975.52 *( 2) CH3CH2CN     26(11,15)-25(11,14)           0.8b  OriMC-1         OVRO   10.4m Sut85
+  232975.52 *( 2) CH3CH2CN     26(11,16)-25(11,15)            b    OriMC-1         OVRO   10.4m Sut85
+  232998.74 *( 2) CH3CH2CN     26(8,18)-25(8,17)              b    OriMC-1         OVRO   10.4m Sut85
+  232998.74 *( 2) CH3CH2CN     26(8,19)-25(8,18)             1.1b  OriMC-1         OVRO   10.4m Sut85
+  233002.70 *( 2) CH3CH2CN     26(12,14)-25(12,13)            b    OriMC-1         OVRO   10.4m Sut85
+  233002.70 *( 2) CH3CH2CN     26(12,15)-25(12,14)            b    OriMC-1         OVRO   10.4m Sut85
+  233041.09 *( 2) CH3CH2CN     26(13,14)-25(13,13)           0.4b  OriMC-1         OVRO   10.4m Sut85
+  233041.09 *( 2) CH3CH2CN     26(13,13)-25(13,12)            b    OriMC-1         OVRO   10.4m Sut85
+  233069.31 *( 2) CH3CH2CN     26(7,19)-25(7,18)              b    OriMC-1         OVRO   10.4m Sut85
+  233069.31 *( 2) CH3CH2CN     26(7,20)-25(7,19)             1.0b  OriMC-1         OVRO   10.4m Sut85
+  233088.07 *( 2) CH3CH2CN     26(14,12)-25(14,11)           0.5b  OriMC-1         OVRO   10.4m Sut85
+  233088.07 *( 2) CH3CH2CN     26(14,13)-25(14,12)            b    OriMC-1         OVRO   10.4m Sut85
+  233144.82 *( 2) CH3CH2CN     26(15,11)-25(15,10)           0.4b  OriMC-1         OVRO   10.4m Sut85
+  233144.82 *( 2) CH3CH2CN     26(15,12)-25(15,11)            b    OriMC-1         OVRO   10.4m Sut85
+  233205.05 *( 2) CH3CH2CN     26(6,21)-25(6,20)             1.5b  OriMC-1         OVRO   10.4m Sut85
+  233207.32 *( 2) CH3CH2CN     26(6,20)-25(6,19)              b    OriMC-1         OVRO   10.4m Sut85
+  233208.07 *( 2) CH3CH2CN     26(16,10)-25(16,9)             b    OriMC-1         OVRO   10.4m Sut85
+  233208.07 *( 2) CH3CH2CN     26(16,11)-25(16,10)            b    OriMC-1         OVRO   10.4m Sut85
+U 233213.         unidentified                               0.2   OriMC-1         MMWO    4.9m Eri81
+  233226.73 *(10) HCOOCH3      19(4,16)-18(4,15) A           1.1   OriMC-1         OVRO   10.4m Sut85  Plu84
+  233310.00 *(10) HCOOCH3      19(15,5)-18(15,4) A            b    OriMC-1         OVRO   10.4m Sut85  Plu84
+  233310.00 *(10) HCOOCH3      19(15,4)-18(15,3) A           0.4b  OriMC-1         OVRO   10.4m Sut85  Plu84
+  233394.55 *(10) HCOOCH3      19(14,6)-18(14,5) A            b    OriMC-1         OVRO   10.4m Sut85  Plu84
+  233394.55 *(10) HCOOCH3      19(14,5)-18(14,4) A           0.4b  OriMC-1         OVRO   10.4m Sut85  Plu84
+  233443.09 *( 2) CH3CH2CN     26(5,22)-25(5,21)             0.7   OriMC-1         OVRO   10.4m Sut85
+  233498.29 *( 2) CH3CH2CN     26(5,21)-25(5,20)             0.8   OriMC-1         OVRO   10.4m Sut85
+  233506.59 *(10) HCOOCH3      19(13,7)-18(13,6) A            b    OriMC-1         OVRO   10.4m Sut85  Plu84
+  233506.59 *(10) HCOOCH3      19(13,6)-18(13,5) A           0.8b  OriMC-1         OVRO   10.4m Sut85  Plu84
+  233523.54 *( 4) CH3CH2CN     26(20,7)-25(20,6)             0.5b  OriMC-1         OVRO   10.4m Sut85
+  233523.54 *( 4) CH3CH2CN     26(20,6)-25(20,5)              b    OriMC-1         OVRO   10.4m Sut85
+  233524.87 *( 5) HCOOCH3      19(13,6)-18(13,5) E           0.4   OriMC-1         OVRO   10.4m Sut85  Plu86
+  233627.06 *(10) HCOOCH3      17(9,8)-17(8,9) A             0.4b  OriMC-1         OVRO   10.4m Sut85  Plu84
+  233628.39 *(10) HCOOCH3      17(9,9)-17(8,10) A             b    OriMC-1         OVRO   10.4m Sut85  Plu84
+  233649.77 *( 4) HCOOCH3      19(12,7)-18(12,6) E           0.5   OriMC-1         OVRO   10.4m Sut85  Plu86
+  233654.07 *( 2) CH3CH2CN     26(4,23)-25(4,22)             1.1   OriMC-1         OVRO   10.4m Sut85
+  233655.27 *(10) HCOOCH3      19(12,8)-18(12,7) A            b    OriMC-1         OVRO   10.4m Sut85  Plu84
+  233655.27 *(10) HCOOCH3      19(12,7)-18(12,6) A           1.1b  OriMC-1         OVRO   10.4m Sut85  Plu84
+  233671.08 *( 4) HCOOCH3      19(12,6)-18(12,7) E           0.3   OriMC-1         OVRO   10.4m Sut85  Plu86
+  233753.95 *( 3) HCOOCH3      18(4,14)-17(4,13) E           0.8   OriMC-1         OVRO   10.4m Sut85  Plu86
+  233777.45 *(10) HCOOCH3      18(4,14)-17(4,13) A           0.8   OriMC-1         OVRO   10.4m Sut85  Plu84
+  233795.75  ( 5) CH3OH        18(3)-17(4) A-                1.0   OriMC-1         OVRO   10.4m Sut85  Sas84
+  233845.21 *( 4) HCOOCH3      19(11,8)-18(11,7) E           0.5   OriMC-1         OVRO   10.4m Sut85  Plu86
+  233854.23 *(10) HCOOCH3      19(11,9)-18(11,8) A            b    OriMC-1         OVRO   10.4m Sut85  Plu84
+  233854.23 *(10) HCOOCH3      19(11,8)-18(11,7) A           0.7b  OriMC-1         OVRO   10.4m Sut85  Plu84
+  233867.15 *( 4) HCOOCH3      19(11,9)-18(11,8) E           0.4   OriMC-1         OVRO   10.4m Sut85  Plu86
+  234011.34 *(10) HCOOCH3      16(9,7)-16(8,8) A              b    OriMC-1         OVRO   10.4m Sut85  Plu84
+  234011.58  ( 5) 13CH3OH      5(1)-4(1) A+                  0.76b OriMC-1         OVRO   10.4m Bla84  Bla84
+  234011.81 *(10) HCOOCH3      16(9,8)-16(8,9) A              b    OriMC-1         OVRO   10.4m Sut85  Plu84
+  234112.42 *( 4) HCOOCH3      19(10,9)-18(10,8) E           0.3   OriMC-1         OVRO   10.4m Sut85  Plu86
+  234124.84 *(10) HCOOCH3      19(10,9)-18(10,8) A           0.6b  OriMC-1         OVRO   10.4m Sut85  Plu84
+  234124.84 *(10) HCOOCH3      19(10,10)-18(10,9) A           b    OriMC-1         OVRO   10.4m Sut85  Plu84
+  234134.53 *( 4) HCOOCH3      19(10,10)-18(10,9) E          0.6   OriMC-1         OVRO   10.4m Sut85  Plu86
+  234187.12 *( 7) SO2          28(3,25)-28(2,26)             1.6   OriMC-1         OVRO   10.4m Sut85
+U 234291.         unidentified                               0.6   OriMC-1         OVRO   10.4m Sut85
+  234421.67 *( 4) SO2          16(6,10)-17(5,13)             1.5   OriMC-1         OVRO   10.4m Sut85
+  234423.95 *( 2) CH3CH2CN     26(4,22)-25(4,21)              b    OriMC-1         OVRO   10.4m Sut85
+  234486.57 *( 4) HCOOCH3      19(9,10)-18(9,9) E            0.6   OriMC-1         OVRO   10.4m Sut85  Plu86
+  234502.20 *(10) HCOOCH3      19(9,11)-18(9,10) A           1.1b  OriMC-1         OVRO   10.4m Sut85  Plu84
+  234502.42 *(10) HCOOCH3      19(9,10)-18(9,9) A             b    OriMC-1         OVRO   10.4m Sut85  Plu84
+  234508.47 *( 4) HCOOCH3      19(9,11)-18(9,10) E           0.6   OriMC-1         OVRO   10.4m Sut85  Plu86
+  234683.39  ( 5) CH3OH        4(2)-5(1) A-                  2.6   OriMC-1         OVRO   10.4m Sut85  Sas84
+  234698.45  ( 5) CH3OH        5(-4)-6(-3) E                 1.2   OriMC-1         OVRO   10.4m Sut85  Sas84
+  234739.03 *(10) HCOOCH3      20(2,18)-19(3,17) A           0.5   OriMC-1         OVRO   10.4m Sut85  Plu84
+  234758.750*(25) CH3CH2OH     6(3,4)-5(2,3)                 1.8   OriMC-1         NRAO     12m Tur87b
+  234781.60  (20) CH3CHO       8(3,6)-8(2,7) E               0.70b OriMC-1         NRAO     12m Tur87b Lia86
+  234783.22 *( 5) HCOOCH3      9(5,4)-8(4,4) E                b    OriMC-1         NRAO     12m Tur87b Plu87
+  234783.98 *( 5) HCOOCH3      9(5,5)-8(4,5) E                b    OriMC-1         NRAO     12m Tur87b Plu87
+  234795.46  (10) CH3CHO       12(2,10)-11(2,9) E             b    OriMC-1         NRAO     12m Tur87b Lia86
+  234797.09 *(10) HCOOCH3      13(9,4)-13(8,5) A             0.90b OriMC-1         NRAO     12m Tur87b Plu84
+  234797.09 *(10) HCOOCH3      13(9,5)-13(8,6) A              b    OriMC-1         NRAO     12m Tur87b Plu84
+  234812.61 *( 5) SiS          13-12 v=1                     0.060 IRC+10216       NRAO     12m Tur87a
+  234825.83  (10) CH3CHO       12(2,10)-11(2,9) A            0.2   OriMC-1         NRAO     12m Tur87b Lia86
+U 234831.         unidentified   (or U232041)                0.2   OriMC-1         NRAO     12m Tur87b
+  234842.89  (15) CH3CHO       6(3,3)-6(2,4) A               0.2   OriMC-1         NRAO     12m Tur87b Lia86
+  234852.99 *(39) CH3CH2OH     9(5,4)-8(4,5)                 0.7   OriMC-1         NRAO     12m Tur87b
+  234882.47 *( 3) CH3CH2CN     14(3,12)-13(2,11)             0.2   OriMC-1         NRAO     12m Tur87b
+  234916.78 *(10) HCOOCH3      9(5,4)-8(4,5) A               0.4   OriMC-1         NRAO     12m Tur87b Plu84
+  234935.69  (10) PN           5-4                           0.400 OriMC-1         NRAO     12m Tur87b Wys72
+  234955.295*(10) HNCS         20(1,19)-10(1,18)             0.3   OriMC-1         NRAO     12m Tur87b
+  234962.98 *( 5) HCOOCH3      12(9,3)-12(8,4) A              b    OriMC-1         NRAO     12m Tur87b Plu84
+  234962.98 *( 5) HCOOCH3      12(9,4)-12(8,5) A             0.3b  OriMC-1         NRAO     12m Tur87b Plu84
+  235029.95 *( 4) HCOOCH3      19(8,11)-18(8,10) E           1.2   OriMC-1         OVRO   10.4m Sut85  Plu86
+  235046.48 *(10) HCOOCH3      19(8,12)-18(8,11) A           0.6   OriMC-1         OVRO   10.4m Sut85  Plu84
+  235051.32 *( 1) HCOOCH3      19(8,12)-18(8,11) E            b    OriMC-1         OVRO   10.4m Sut85  Plu86
+  235051.37 *(10) HCOOCH3      19(8,11)-18(8,10) A           1.2   OriMC-1         OVRO   10.4m Sut85  Plu84
+  235151.719*(12) SO2          4(2,2)-3(1,3)                 1.0   OriMC-1         MMWO    4.9m Lor84a
+U 235261.         unidentified                               0.7   OriMC-1         OVRO   10.4m Sut85
+  235563.82 *( 6) CH2CHCN      25(2,24)-24(2,23)             0.3   OriMC-1         OVRO   10.4m Sut85
+  235844.50 *( 5) HCOOCH3      19(7,13)-18(7,12) A           0.54  OriMC-1         OVRO   10.4m Bla84  Plu84
+  235866.04 *( 3) HCOOCH3      19(7,13)-18(7,12) E           0.48  OriMC-1         OVRO   10.4m Bla84  Plu86
+  235881.17  ( 5) 13CH3OH      5(0)-4(0) E                   0.60  OriMC-1         OVRO   10.4m Bla84  Bla84
+  235886.96 *( 3) HCOOCH3      19(7,12)-18(7,11) E           0.54  OriMC-1         OVRO   10.4m Bla84  Plu86
+  235927.55 *(11) 34SO2        5(2,4)-4(1,3)                 0.59  OriMC-1         OVRO   10.4m Bla84
+  235932.34 *( 5) HCOOCH3      19(7,12)-18(7,11) A           0.47  OriMC-1         OVRO   10.4m Bla84  Plu84
+  235938.22  ( 5) 13CH3OH      5(-1)-4(-1) E                 0.68  OriMC-1         OVRO   10.4m Bla84  Bla84
+  235951.98 *(10) 34SO2        10(3,7)-10(2,8)               0.71  OriMC-1         OVRO   10.4m Bla84
+  235960.37  ( 5) 13CH3OH      5(0)-4(0) A+                  0.71  OriMC-1         OVRO   10.4m Bla84  Bla84
+  235960.94 *(59) SiS          13-12                         0.39  IRC+10216       MMWO    4.9m Sah84
+  235971.07  ( 5) 13CH3OH      5(4)-4(4) A+-                 0.25  OriMC-1         OVRO   10.4m Bla84  Bla84
+  235978.62  ( 5) 13CH3OH      5(-4)-4(-4) E                 0.12  OriMC-1         OVRO   10.4m Bla84  Bla84
+  235994.42  ( 5) 13CH3OH      5(4)-4(4) E                    b    OriMC-1         OVRO   10.4m Bla84  Bla84
+  235997.23  ( 5) 13CH3OH      5(3)-4(3) A+-                 0.72b OriMC-1         OVRO   10.4m Bla84  Bla84
+  236006.10  ( 5) 13CH3OH      5(3)-4(3) E                   0.35  OriMC-1         OVRO   10.4m Bla84  Bla84
+  236008.39  ( 5) 13CH3OH      5(2)-4(2) A-                  0.65  OriMC-1         OVRO   10.4m Bla84  Bla84
+  236016.55  ( 5) 13CH3OH      5(-3)-4(-3) E                 0.36  OriMC-1         OVRO   10.4m Bla84  Bla84
+  236041.40  ( 5) 13CH3OH      5(1)-4(1) E                   0.56  OriMC-1         OVRO   10.4m Bla84  Bla84
+  236042.2  *(10) 13CH3OH      5(1)-4(1) E                   0.3   OriMC-1         MMWO    4.9m Eri81  Lee84
+  236049.52  ( 5) 13CH3OH      5(2)-4(2) A+                  0.41  OriMC-1         OVRO   10.4m Bla84  Bla84
+  236062.00  ( 5) 13CH3OH      5(-2)-4(-2) E                  b    OriMC-1         OVRO   10.4m Bla84  Bla84
+  236062.85  ( 5) 13CH3OH      5(2)-4(2) E                   0.92b OriMC-1         OVRO   10.4m Bla84  Bla84
+  236216.724*(24) SO2          16(1,15)-15(2,14)             1.1   OriMC-1         MMWO    4.9m Lor81a
+  236287.610 ( 9) SiC          3P2 J=6-5 e,f                 0.18  IRC+10216       IRAM     30m Cer89  Cer89
+  236355.91 *( 3) HCOOCH3      20(3,18)-19(3,17) E           0.9   OriMC-1         OVRO   10.4m Sut85  Plu86
+  236365.52 *(10) HCOOCH3      20(3,18)-19(3,17) A           0.7   OriMC-1         OVRO   10.4m Sut85  Plu84
+  236452.304*(58) SO           1(2)-2(1)                     0.4   OriMC-1         OVRO   10.4m Sut85
+  236512.850*(61) HC3N         26-25                         0.8   OriMC-1         MMWO    4.9m Lor81
+  236717.20 *( 1) HCOOH        11(1,11)-10(1,10)             0.4   OriMC-1         OVRO   10.4m Sut85
+  236726.27 *(38) H2CS         7(1,7)-6(1,6)                 1.1   OriMC-1         MMWO    4.9m Lor84a
+  236743.63 *( 3) HCOOCH3      19(5,15)-18(5,14) E           0.6   OriMC-1         OVRO   10.4m Sut85  Plu86
+  236759.63 *(10) HCOOCH3      19(5,15)-18(5,14) A           0.6   OriMC-1         OVRO   10.4m Sut85  Plu84
+  236800.43 *( 3) HCOOCH3      19(6,14)-18(6,13) E           0.6   OriMC-1         OVRO   10.4m Sut85  Plu86
+  236810.28 *(10) HCOOCH3      19(6,14)-18(6,13) A           0.8   OriMC-1         OVRO   10.4m Sut85  Plu84
+  236936.13  ( 5) CH3OH        14(1)-13(2) A-                2.3   OriMC-1         OVRO   10.4m Sut85  Sas84
+U 236977.         unidentified                               0.9   OriMC-1         OVRO   10.4m Sut85
+  237046.34 *(21) CH3OCH3      7(2,5)-6(1,6) AE               b    OriMC-1         OVRO   10.4m Sut85
+  237046.34 *(21) CH3OCH3      7(2,5)-6(1,6) EA               b    OriMC-1         OVRO   10.4m Sut85
+  237049.03 *(15) CH3OCH3      7(2,5)-6(1,6) EE              1.5b  OriMC-1         OVRO   10.4m Sut85
+  237051.72 *( 9) CH3OCH3      7(2,5)-6(1,6) AA               b    OriMC-1         OVRO   10.4m Sut85
+  237068.826*(28) SO2          12(3,9)-12(2,10)              0.9   OriMC-1         MMWO    4.9m Lei84a
+  237093.183*(79) HC3N         26-25 v7=1 l=1e               0.8   OriMC-1         OVRO   10.4m Sut85
+  237129.4   ( 1) CH3OH        22(1)-22(0) E                 0.7   OriMC-1         OVRO   10.4m Sut85  Sut85
+  237150.058*( 3) SiC2         10(4,7)-9(4,6)                n.r.  IRC+10216       IRAM     30m Cer91b Cer91b
+  237170.44 *( 2) CH3CH2CN     26(3,23)-25(3,22)             0.9   OriMC-1         OVRO   10.4m Sut85
+  237266.91 *(10) HCOOCH3      21(1,20)-20(2,19) A           0.4   OriMC-1         OVRO   10.4m Sut85  Plu84
+  237273.635 (30) OC34S        20-19                         0.5   OriMC-1         OVRO   10.4m Sut85  Dub80
+  237297.46 *( 3) HCOOCH3      20(2,18)-19(2,17) E           0.8   OriMC-1         OVRO   10.4m Sut85  Plu86
+  237305.98 *( 5) HCOOCH3      20(2,18)-19(2,17) A           1.1b  OriMC-1         OVRO   10.4m Sut85  Plu84
+  237309.53 *( 3) HCOOCH3      21(2,20)-20(2,19) E            b    OriMC-1         OVRO   10.4m Sut85  Plu86
+  237315.09 *( 5) HCOOCH3      21(2,20)-20(2,19) A           1.1   OriMC-1         OVRO   10.4m Sut85  Plu84
+  237331.358*( 3) SiC2         10(4,7)-9(4,6)                n.r.  IRC+10216       IRAM     30m Cer91b Cer91b
+  237344.89 *( 3) HCOOCH3      21(1,20)-20(1,19) E           0.8   OriMC-1         OVRO   10.4m Sut85  Plu86
+  237350.33 *( 5) HCOOCH3      21(1,20)-20(1,19) A           0.7   OriMC-1         OVRO   10.4m Sut85  Plu84
+  237405.18 *( 2) CH3CH2CN     26(2,24)-25(2,23)             0.7   OriMC-1         OVRO   10.4m Sut85
+  237432.049*(79) HC3N         26-25 v7=1 l=1f               0.7   OriMC-1         OVRO   10.4m Sut85
+  237456.25 *(19) CH2CHCN      25(9,16)-24(9,15)              b    OriMC-1         OVRO   10.4m Sut85
+  237456.25 *(19) CH2CHCN      25(9,17)-24(9,16)             0.2b  OriMC-1         OVRO   10.4m Sut85
+  237482.77 *( 9) CH2CHCN      25(5,21)-24(5,20)             0.3b  OriMC-1         OVRO   10.4m Sut85
+  237485.01 *( 9) CH2CHCN      25(5,20)-24(5,19)              b    OriMC-1         OVRO   10.4m Sut85
+  237591.40 *( 6) CH2CHCN      25(3,23)-24(3,22)             0.4   OriMC-1         OVRO   10.4m Sut85
+  237618.87 *(27) CH3OCH3      9(2,8)-8(1,7) EA               b    OriMC-1         OVRO   10.4m Sut85
+  237618.87 *(27) CH3OCH3      9(2,8)-8(1,7) AE               b    OriMC-1         OVRO   10.4m Sut85
+  237620.96 *(20) CH3OCH3      9(2,8)-8(1,7) EE              0.9b  OriMC-1         OVRO   10.4m Sut85
+  237623.05 *(13) CH3OCH3      9(2,8)-8(1,7) AA               b    OriMC-1         OVRO   10.4m Sut85
+  237711.89 *( 7) CH2CHCN      25(4,21)-24(4,20)             0.3   OriMC-1         OVRO   10.4m Sut85
+  237807.69 *( 3) HCOOCH3      19(6,13)-18(6,12) E           0.5   OriMC-1         OVRO   10.4m Sut85  Plu86
+  237829.78 *(10) HCOOCH3      19(6,13)-18(6,12) A           0.6   OriMC-1         OVRO   10.4m Sut85  Plu84
+  237851.85 *( 2) CH3CH2CN     27(2,26)-26(2,25)             0.4   OriMC-1         OVRO   10.4m Sut85
+  237859.71 *( 7) C4H          25-24 J=51/2-49/2             0.053 IRC+10216       MMWO    4.9m Lor84a
+  237898.03 *( 7) C4H          25-24 J=49/2-47/2             0.055 IRC+10216       MMWO    4.9m Lor84a
+  237983.38  ( 5) 13CH3OH      5(1)-4(1) A-                  0.84  OriMC-1         OVRO   10.4m Bla84  Bla84
+U 238017.         unidentified                               0.4   OriMC-1         OVRO   10.4m Sut85
+  238155.90 *( 4) HCOOCH3      22(1,22)-21(1,21) E            b    OriMC-1         OVRO   10.4m Sut85  Plu86
+  238156.34 *( 4) HCOOCH3      22(0,22)-21(0,21) E           2.7b  OriMC-1         OVRO   10.4m Sut85  Plu86
+  238156.84 *(10) HCOOCH3      22(1,22)-21(1,21) A            b    OriMC-1         OVRO   10.4m Sut85  Plu84
+  238157.27 *(10) HCOOCH3      22(0,22)-21(0,21) A            b    OriMC-1         OVRO   10.4m Sut85  Plu84
+  238190.06 *(10) HCOOCH3      7(6,2)-6(5,1) A               0.2b  OriMC-1         OVRO   10.4m Sut85  Plu84
+  238190.23 *(10) HCOOCH3      7(6,1)-6(5,2) A                b    OriMC-1         OVRO   10.4m Sut85  Plu84
+  238726.70 *(12) CH2CHCN      26(1,26)-25(1,25)             0.2   OriMC-1         OVRO   10.4m Sut85
+  238766.052*(13) CH3CN        13(9)-12(9)                   0.4   OriMC-1         OVRO   10.4m Sut85
+  238796.22 *( 7) CH2CHCN      25(3,22)-24(3,21)             0.2   OriMC-1         OVRO   10.4m Sut85
+  238843.029*(10) CH3CN        13(8)-12(8)                   0.6   OriMC-1         OVRO   10.4m Sut85
+  238912.719*( 8) CH3CN        13(7)-12(7)                   0.7   OriMC-1         OVRO   10.4m Sut85
+  238926.78 *( 3) HCOOCH3      20(3,18)-19(2,17) E           0.3   OriMC-1         OVRO   10.4m Sut85  Plu86
+  238972.394*( 6) CH3CN        13(6)-12(6)                   0.31  OriMC-1         MMWO    4.9m Lor84
+  238992.562*(54) SO2          21(7,15)-22(6,16)            <0.12  OriMC-1         MMWO    4.9m Lor84
+  239001.21 *(21) CH313CN      12(2)-11(2)                   0.3   OriMC-1         OVRO   10.4m Sut85
+  239014.95 *(21) CH313CN      12(1)-11(1)                   0.5b  OriMC-1         OVRO   10.4m Sut85
+  239019.53 *(21) CH313CN      12(0)-11(0)                    b    OriMC-1         OVRO   10.4m Sut85
+  239022.928*( 4) CH3CN        13(5)-12(5)                   0.33  OriMC-1         MMWO    4.9m Lor84
+  239064.303*( 3) CH3CN        13(4)-12(4)                   0.39  OriMC-1         MMWO    4.9m Lor84
+  239096.500*( 3) CH3CN        13(3)-12(3)                   0.68  OriMC-1         MMWO    4.9m Lor84
+  239119.507*( 3) CH3CN        13(2)-12(2)                   0.54  OriMC-1         MMWO    4.9m Lor84
+  239133.316*( 3) CH3CN        13(1)-12(1)                   0.73  OriMC-1         MMWO    4.9m Lor84
+  239137.919*( 3) CH3CN        13(0)-12(0)                   0.83  OriMC-1         MMWO    4.9m Lor84
+  239179.284*(15) CH3CCH       14(4)-13(4)                   0.16  OriMC-1         MMWO    4.9m Lor84a
+  239211.218*( 4) CH3CCH       14(3)-13(3)                   0.24  OriMC-1         MMWO    4.9m Lor84a
+  239234.036*( 4) CH3CCH       14(2)-13(2)                   0.19  OriMC-1         MMWO    4.9m Lor84a
+  239247.731*( 4) CH3CCH       14(1)-13(1)                   0.36  OriMC-1         MMWO    4.9m Lor84a
+  239252.296*( 4) CH3CCH       14(0)-13(0)                   0.37  OriMC-1         MMWO    4.9m Lor84a
+  239609.95 *(10) HCOOCH3      32(5,28)-32(3,29) A           0.9   OMC-IRc2        IRAM     30m Jac90  Plu84
+  239627.16 *(12) CH3CN        13(1)-12(1) v8=1 l=1          0.4   OriMC-1         OVRO   10.4m Sut85
+  239639.45 *(10) CH3CN        13(8)-12(8) v8=1 l=1          0.8   OMC-IRc2        IRAM     30m Jac90
+U 239650.8        unidentified                               0.8   OMC-IRc2        IRAM     30m Jac90
+U 239674.0        unidentified                               0.6   OMC-IRc2        IRAM     30m Jac90
+  239682.80 *( 2) CH3CH2CN     27(1,26)-26(1,25)             0.7   OriMC-1         OVRO   10.4m Sut85
+  239684.57 *(10) CH3CN        13(5)-12(5) v8=1 l=-1         7.2   OMC-IRc2        IRAM     30m Jac90
+  239699.25 *(10) CH3CN        13(7)-12(7) v8=1 l=1          1.6   OMC-IRc2        IRAM     30m Jac90
+  239708.28 *(11) CH2CHCN      26(0,26)-25(0,25)             0.1   OriMC-1         OVRO   10.4m Sut85
+  239731.4   ( 1) CH3OH        16(7)-17(6) A+-               0.6   OriMC-1         OVRO   10.4m Sut85  Sut85
+  239735.65 *(10) CH3CN        13(4)-12(4) v8=1 l=1          2.2   OMC-IRc2        IRAM     30m Jac90
+  239746.253 (12) CH3OH        4(1)-4(1) A+                  7.4   OriMC-1         OVRO   10.4m Sut85  Pic81
+  239777.19 *(11) CH3CN        13(3)-12(3) v8=1 l=-1         0.3   OriMC-1         OVRO   10.4m Sut85
+  239791.76 *(11) CH3CN        13(5)-12(5) v8=1 l=1          0.2   OriMC-1         OVRO   10.4m Sut85
+  239802.5  *(  ) NH2CN        12(4,8)-11(4,7)               0.4b  OMC-IRc2        IRAM     30m Jac90
+  239802.5  *(  ) NH2CN        12(4,9)-11(4,8)                b    OMC-IRc2        IRAM     30m Jac90
+  239808.91 *(12) CH3CN        13(2)-12(2) v8=1 l=-1         0.6   OriMC-1         OVRO   10.4m Sut85
+  239816.08 *( 5) CH2CHCN      25(1,24)-24(1,23)             0.5   OriMC-1         OVRO   10.4m Sut85
+  239824.78 *(12) CH3CN        13(4)-12(4) v8=1 l=1          0.8   OriMC-1         OVRO   10.4m Sut85
+  239829.96 *(13) CH3CN        13(1)-12(1) v8=1 l=-1         0.5   OriMC-1         OVRO   10.4m Sut85
+  239836.06 *(18) CH3CN        13(0)-12(0) v8=1 l=1          0.5   OriMC-1         OVRO   10.4m Sut85
+  239850.01 *(14) CH3CN        13(3)-12(3) v8=1 l=1          0.7   OriMC-1         OVRO   10.4m Sut85
+  239871.67 *(29) CH3CN        13(2)-12(2) v8=1 l=1          0.4   OriMC-1         OVRO   10.4m Sut85
+  239887.27 *( 2) CH3CH2CN     28(0,28)-27(1,27)             1.8   OMC-IRc2        IRAM     30m Jac90
+  239904.   *(  ) NH2CN        12(2,10)-11(2,9)              0.16  OriMC-1         NRAO     12m Tur85
+U 239926.9        unidentified                               0.6   OMC-IRc2        IRAM     30m Jac90
+  239935.4  *( 4) HCOOCH3      39(8,32)-39(7,33) A           0.8   OMC-IRc2        IRAM     30m Jac90
+  239945.17 *(37) CH3CH2CN     23(4,20)-23(2,21)             0.6   OMC-IRc2        IRAM     30m Jac90
+  239951.81 *( 6) NH2CHO       11(1,11)-10(1,9)              2.1   OMC-IRc2        IRAM     30m Jac90
+U 239960.7        unidentified                               1.2   OMC-IRc2        IRAM     30m Jac90
+U 239971.0        unidentified                               0.4   OMC-IRc2        IRAM     30m Jac90
+U 239977.5        unidentified                               2.0   OMC-IRc2        IRAM     30m Jac90
+U 239985.6        unidentified                               0.9   OMC-IRc2        IRAM     30m Jac90
+U 239991.9        unidentified                               1.4   OMC-IRc2        IRAM     30m Jac90
+U 239998.0        unidentified                               0.5   OMC-IRc2        IRAM     30m Jac90
+U 240008.6        unidentified                               0.4   OMC-IRc2        IRAM     30m Jac90
+  240021.08 *( 3) HCOOCH3      19(3,16)-18(3,15) E           1.0   OriMC-1         OVRO   10.4m Sut85  Plu86
+U 240045.3        unidentified                               0.5   OMC-IRc2        IRAM     30m Jac90
+  240050.1   (15) 30SiC2       10(2,8)-9(2,7)                n.r.  IRC+10216       IRAM     30m Cer91b Cer91b
+  240057.4  *( 1) SO2          11(5,7)-12(4,8) v2=1          0.28  OriMC-1         NRAO     12m Tur85
+U 240079.1        unidentified                               0.5   OMC-IRc2        IRAM     30m Jac90
+  240089.83 *(12) CH3CN        13(1)-12(1) v8=1 l=1          0.6   OriMC-1         OVRO   10.4m Sut85
+  240185.77 *(26) CH2CO        12(1,12)-11(1,11)             0.5   OriMC-1         OVRO   10.4m Sut85
+  240241.50  ( 5) CH3OH        5(3)-6(2) E                   0.55  OriMC-1         MMWO    4.9m Lor84a Sas84
+  240266.16 *(40) H2CS         7(0,7)-6(0,6)                 0.55  OriMC-1         MMWO    4.9m Lor84a
+  240319.338*(21) CH3CH2CN     28(1,28)-27(1,27)             0.16  OriMC-1         MMWO    4.9m Lor84a
+  240331.44 *(26) H2CS         7(4,4)-6(4,3)                 0.07b OriMC-1         MMWO    4.9m Lor84a
+  240331.44 *(26) H2CS         7(4,3)-6(4,2)                  b    OriMC-1         MMWO    4.9m Lor84a
+  240381.27 *(33) H2CS         7(2,6)-6(2,5)                 0.16  OriMC-1         MMWO    4.9m Lor84a
+  240392.29 *(26) H2CS         7(3,5)-6(3,4)                 0.38b OriMC-1         MMWO    4.9m Lor84a
+  240392.96 *(26) H2CS         7(3,4)-6(3,3)                  b    OriMC-1         MMWO    4.9m Lor84a
+  240429.183*(21) CH3CH2CN     28(0,28)-27(0,27)             0.12  OriMC-1         MMWO    4.9m Lor84a
+U 240473.4        unidentified                               0.11  OriMC-1         MMWO    4.9m Lor84a
+  240548.29 *(33) H2CS         7(2,5)-6(2,4)                 0.16  OriMC-1         MMWO    4.9m Lor84a
+  240875.735*(16) HNCO         11(1,11)-10(1,10)             1.0   OriMC-1         OVRO   10.4m Sut85
+  240942.793*(37) SO2          18(1,17)-18(0,18)             0.8   OriMC-1         MMWO    4.9m Lei84
+  240960.56  ( 5) CH3OH        5(1)-4(2) A+ vt=1             0.9   OriMC-1         OVRO   10.4m Sut85  Sas84
+  240978.15 *(33) CH3OCH3      5(3,3)-4(2,2) EA              0.2   OriMC-1         OVRO   10.4m Sut85
+  240982.94 *(21) CH3OCH3      5(3,3)-4(2,2) AE               b    OriMC-1         OVRO   10.4m Sut85
+  240985.15 *(19) CH3OCH3      5(3,3)-4(2,2) EE              1.0b  OriMC-1         OVRO   10.4m Sut85
+  240990.14 *(10) CH3OCH3      5(3,3)-4(2,2) AA              0.7   OriMC-1         OVRO   10.4m Sut85
+  241016.176*(29) C34S         5-4                           0.83  OriMC-2         MMWO    4.9m Sne84
+  241146.20 *( 1) HCOOH        11(0,11)-10(0,10)             0.2   OriMC-1         OVRO   10.4m Sut85
+  241159.13  ( 5) CH3OH        5(4)-4(4) E vt=1              0.7   OriMC-1         OVRO   10.4m Sut85  Sas84
+  241166.53  ( 5) CH3OH        5(3)-4(3) E vt=1              0.8   OriMC-1         OVRO   10.4m Sut85  Sas84
+  241178.42  ( 5) CH3OH        5(4)-4(4) A+- vt=1            1.3b  OriMC-1         OVRO   10.4m Sut85  Sas84
+  241179.90  ( 5) CH3OH        5(-3)-4(-3) E vt=1             b    OriMC-1         OVRO   10.4m Sut85  Sas84
+  241184.08  ( 5) CH3OH        5(-4)-4(-4) E vt=1            1.1   OriMC-1         OVRO   10.4m Sut85  Sas84
+  241187.40  ( 5) CH3OH        5(-2)-4(-2) E vt=1            1.4   OriMC-1         OVRO   10.4m Sut85  Sas84
+  241192.81  ( 5) CH3OH        5(2)-4(2) A+ vt=1             1.9   OriMC-1         OVRO   10.4m Sut85  Sas84
+  241196.35  ( 5) CH3OH        5(2)-4(2) A- vt=1             2.1b  OriMC-1         OVRO   10.4m Sut85  Sas84
+  241198.29  ( 5) CH3OH        5(3)-4(3) A+- vt=1             b    OriMC-1         OVRO   10.4m Sut85  Sas84
+  241203.69  ( 5) CH3OH        5(1)-4(1) E vt=1               b    OriMC-1         OVRO   10.4m Sut85  Sas84
+  241205.99  ( 5) CH3OH        5(0)-4(0) E vt=1              2.8   OriMC-1         OVRO   10.4m Sut85  Sas84
+  241210.68  ( 5) CH3OH        5(2)-4(2) E vt=1              1.2b  OriMC-1         OVRO   10.4m Sut85  Sas84
+  241238.16  ( 5) CH3OH        5(-1)-4(-1) E vt=1            0.7   OriMC-1         OVRO   10.4m Sut85  Sas84
+  241267.88  ( 5) CH3OH        5(0)-4(0) A vt=1              0.4   OriMC-1         OVRO   10.4m Sut85  Sas84
+  241365.35 *( 6) CH2CHCN      19(3,17)-20(0,20)             2.1   OMC-IRc2        IRAM     30m Jac90
+  241420.880 (20) HCO          10(0,10)-9(1,9)               1.7   OMC-IRc2        IRAM     30m Jac90  Bla84a
+  241436.41 *(10) HCOOCH3      28(2,26)-28(2,27) A            b    OMC-IRc2        IRAM     30m Jac90  Plu84
+  241437.28 *(10) HCOOCH3      28(2,26)-28(1,27) A           2.6b  OMC-IRc2        IRAM     30m Jac90  Plu84
+  241441.24  ( 5) CH3OH        5(1)-4(1) A- vt=1             1.5   OriMC-1         OVRO   10.4m Sut85  Sas84
+  241464.25 *(10) HCOOCH3      28(3,26)-28(2,27) A           1.0b  OMC-IRc2        IRAM     30m Jac90  Plu84
+  241465.14 *(10) HCOOCH3      28(3,26)-28(1,27) A            b    OMC-IRc2        IRAM     30m Jac90  Plu84
+  241509.05 *(10) 34SO2        16(1,15)-15(2,14)             0.9   OriMC-1         OVRO   10.4m Sut85
+  241523.98 *(20) CH3OCH3      5(3,2)-4(2,3) AE              0.9   OriMC-1         OVRO   10.4m Sut85
+  241528.76 *(11) CH3OCH3      5(3,2)-4(2,3) EA               b    OriMC-1         OVRO   10.4m Sut85
+  241528.97 *(11) CH3OCH3      5(3,2)-4(2,3) EE              1.7b  OriMC-1         OVRO   10.4m Sut85
+  241531.18 *(10) CH3OCH3      5(3,2)-4(2,3) AA               b    OriMC-1         OVRO   10.4m Sut85
+U 241534.         unidentified                               0.4   OriMC-1         MMWO    4.9m Eri84b
+  241561.550 (37) HDO          2(1,1)-2(1,2)                 1.0   OriMC-1         MMWO    4.9m Bec82  DeL71
+U 241589.3        unidentified                               4.9   OMC-IRc2        IRAM     30m Jac90
+  241615.795*(13) SO2          5(2,4)-4(1,3)                 1.4   OriMC-1         MMWO    4.9m Lor84e
+  241700.219 (12) CH3OH        5(0)-4(0) E                   1.7   OriMC-1         MMWO    4.9m Lor84  Pic81
+U 241739.9        unidentified                               2.5   OMC-IRc2        IRAM     30m Jac90
+  241767.224 (12) CH3OH        5(-1)-4(-1) E                 1.8   OriMC-1         MMWO    4.9m Lor84  Pic81
+  241774.037*(10) HNCO         11(0,11)-10(0,10)             3.1   OriMC-1         OVRO   10.4m Sut85
+  241791.431 (12) CH3OH        5(0)-4(0) A+                  1.8   OriMC-1         MMWO    4.9m Lor84  Pic81
+  241806.507 (12) CH3OH        5(4)-4(4) A+                  0.8b  OriMC-1         MMWO    4.9m Lor84  Pic81
+  241806.508 (12) CH3OH        5(4)-4(4) A-                   b    OriMC-1         MMWO    4.9m Lor84  Pic81
+  241813.257 (12) CH3OH        5(-4)-4(-4) E                 0.7   OriMC-1         MMWO    4.9m Lor84  Pic81
+  241829.646 (12) CH3OH        5(4)-4(4) E                  <0.7   OriMC-1         MMWO    4.9m Lor84  Pic81
+  241832.951 (12) CH3OH        5(3)-4(3) A+,A-               1.6   OriMC-1         MMWO    4.9m Lor84  Pic81
+  241842.23  (12) CH3OH        5(2)-4(2) A-                   b    OriMC-1         MMWO    4.9m Lor84  Pic81
+  241843.646 (12) CH3OH        5(3)-4(3) E                   1.7b  OriMC-1         MMWO    4.9m Lor84  Pic81
+  241852.352 (12) CH3OH        5(-3)-4(-3) E                 0.9   OriMC-1         MMWO    4.9m Lor84  Pic81
+  241879.073 (12) CH3OH        5(1)-4(1) E                   1.4   OriMC-1         MMWO    4.9m Lor84  Pic81
+  241887.704 (12) CH3OH        5(2)-4(2) A+                  1.2   OriMC-1         MMWO    4.9m Lor84  Pic81
+  241904.119 (50) CH3OH        5(2)-4(2) E                   1.2b  OriMC-1         MMWO    4.9m Lor81a Pic81
+  241904.407 (50) CH3OH        5(-2)-4(-2) E                  b    OriMC-1         MMWO    4.9m Lor81a Pic81
+  241922.55 *( 2) CH3CH2CN     27(10,18)-26(10,17)           0.9b  OriMC-1         OVRO   10.4m Sut85
+  241922.55 *( 2) CH3CH2CN     27(10,17)-26(10,16)            b    OriMC-1         OVRO   10.4m Sut85
+  241932.18 *( 2) CH3CH2CN     27(9,19)-26(9,18)             1.3b  OriMC-1         OVRO   10.4m Sut85
+  241932.18 *( 2) CH3CH2CN     27(9,18)-26(9,17)              b    OriMC-1         OVRO   10.4m Sut85
+  241933.16 *( 2) CH3CH2CN     27(11,16)-26(11,15)            b    OriMC-1         OVRO   10.4m Sut85
+  241933.16 *( 2) CH3CH2CN     27(11,17)-26(11,16)            b    OriMC-1         OVRO   10.4m Sut85
+  241946.86 *(15) CH3OCH3      13(1,13)-12(0,12) EE          0.5   OriMC-1         MMWO    4.9m Lor81a
+  241959.06 *( 2) CH3CH2CN     27(12,15)-26(12,14)           0.7b  OriMC-1         OVRO   10.4m Sut85
+  241959.06 *( 2) CH3CH2CN     27(12,16)-26(12,15)            b    OriMC-1         OVRO   10.4m Sut85
+  241970.44 *( 2) CH3CH2CN     27(6,19)-26(6,18)              b    OriMC-1         OVRO   10.4m Sut85
+  241970.44 *( 2) CH3CH2CN     27(6,20)-26(6,19)             0.8b  OriMC-1         OVRO   10.4m Sut85
+  241985.51 *(10) 34SO2        8(3,5)-8(2,5)                 1.4   OriMC-1         OVRO   10.4m Sut85
+  241997.11 *( 2) CH3CH2CN     27(13,15)-26(13,14)           0.5b  OriMC-1         OVRO   10.4m Sut85
+  241997.11 *( 2) CH3CH2CN     27(13,14)-26(13,13)            b    OriMC-1         OVRO   10.4m Sut85
+  242045.30 *( 2) CH3CH2CN     27(14,14)-26(14,13)            b    OriMC-1         OVRO   10.4m Sut85
+  242045.30 *( 2) CH3CH2CN     27(14,13)-26(14,12)            b    OriMC-1         OVRO   10.4m Sut85
+  242052.48 *( 2) CH3CH2CN     27(7,21)-26(7,20)              b    OriMC-1         OVRO   10.4m Sut85
+  242052.58 *( 2) CH3CH2CN     27(7,20)-26(7,19)             0.8b  OriMC-1         OVRO   10.4m Sut85
+  242102.24 *( 2) CH3CH2CN     27(15,12)-26(15,11)            b    OriMC-1         OVRO   10.4m Sut85
+  242102.24 *( 2) CH3CH2CN     27(15,13)-26(15,12)           0.8b  OriMC-1         OVRO   10.4m Sut85
+  242166.96 *( 2) CH3CH2CN     27(16,11)-26(16,10)            b    OriMC-1         OVRO   10.4m Sut85
+  242166.96 *( 2) CH3CH2CN     27(16,12)-26(16,11)           0.2b  OriMC-1         OVRO   10.4m Sut85
+  242206.97 *( 2) CH3CH2CN     27(6,22)-26(6,21)             1.3b  OriMC-1         OVRO   10.4m Sut85
+  242210.41 *( 2) CH3CH2CN     27(6,21)-26(6,20)              b    OriMC-1         OVRO   10.4m Sut85
+  242375.82 *(38) CH2CO        12(0,12)-11(0,11)             0.5   OriMC-1         OVRO   10.4m Sut85
+  242398.66 *(23) CH2CO        12(3,10)-11(3,9)              0.6b  OriMC-1         OVRO   10.4m Sut85
+  242399.16 *(23) CH2CO        12(3,9)-11(3,8)                b    OriMC-1         OVRO   10.4m Sut85
+  242424.66 *(28) CH2CO        12(2,11)-11(2,10)             0.2   OriMC-1         OVRO   10.4m Sut85
+  242446.21  ( 5) CH3OH        13(-2)-14(-1) E               3.3   OriMC-1         OVRO   10.4m Sut85  Sas84
+  242470.39 *( 2) CH3CH2CN     27(5,23)-26(5,22)             0.9   OriMC-1         OVRO   10.4m Sut85
+  242490.3   ( 1) CH3OH        24(-3)-24(2) A                0.7   OriMC-1         OVRO   10.4m Sut85  Sut85
+  242536.16 *(28) CH2CO        12(2,10)-11(2,9)              0.4   OriMC-1         OVRO   10.4m Sut85
+  242547.32 *( 2) CH3CH2CN     27(5,22)-26(5,21)             0.7   OriMC-1         OVRO   10.4m Sut85
+  242639.717*(16) HNCO         11(1,10)-10(1,9)              1.1   OriMC-1         OVRO   10.4m Sut85
+  242664.68 *( 2) CH3CH2CN     27(4,24)-26(4,23)             1.0   OriMC-1         OVRO   10.4m Sut85
+  242871.52 *( 3) HCOOCH3      19(5,14)-18(5,13) E           1.1   OriMC-1         OVRO   10.4m Sut85  Plu86
+  242895.95 *(10) HCOOCH3      19(5,14)-18(5,13) A           1.1   OriMC-1         OVRO   10.4m Sut85  Plu84
+  242913.680*(26) C33S         5-4                           1.5   OriMC-1         OVRO   10.4m Sut85
+  243039.344*(54) S18O         7(5)-6(5)                     0.4   OriMC-1         OVRO   10.4m Sut85
+  243087.72 *( 3) SO2          5(4,2)-6(3,3)                 1.4   OriMC-1         OVRO   10.4m Sut85
+  243160.753*(25) CS           5-4 v=1                       0.067 IRC+10216       NRAO     12m Tur87
+  243218.034*( 2) OCS          20-19                         0.67  OriMC-1         MMWO    4.9m Lor84a
+  243397.53  ( 5) CH3OH        18(6)-19(5) A+                1.6   OriMC-1         OVRO   10.4m Sut85  Sas84
+  243412.6   ( 1) CH3OH        23(-3)-23(2) A                0.9   OriMC-1         OVRO   10.4m Sut85  Sut85
+  243522.64 *( 9) SO2          14(0,14)-13(1,13) v2=1        0.6   OriMC-1         OVRO   10.4m Sut85
+  243643.23 *( 2) CH3CH2CN     27(4,23)-26(4,22)             0.9   OriMC-1         OVRO   10.4m Sut85
+U 243740.         unidentified                               0.8   OriMC-1         OVRO   10.4m Sut85
+U 243747.         unidentified                               1.1   OriMC-1         OVRO   10.4m Sut85
+  243915.826 (12) CH3OH        5(1)-4(1) A-                  8.1   OriMC-1         OVRO   10.4m Sut85  Pic81
+  243935.88 *(21) 34SO2        18(1,17)-18(0,18)             0.4   OriMC-1         OVRO   10.4m Sut85
+  244047.75 *(48) H2CS         7(1,6)-6(1,5)                 0.91  OriMC-1         MMWO    4.9m Lor85
+  244254.228*(24) SO2          14(0,14)-13(1,13)             1.5   OriMC-1         MMWO    4.9m Lor85
+  244330.5   ( 1) CH3OH        22(-3)-22(2) A                1.1   OriMC-1         OVRO   10.4m Sut85  Sut85
+  244338.02  ( 5) CH3OH        9(1)-8(0) E vt=1              1.2   OriMC-1         OVRO   10.4m Sut85  Sas84
+  244481.54 *(11) 34SO2        14(0,14)-13(1,13)             1.4   OriMC-1         OVRO   10.4m Sut85
+  244580.31 *( 3) HCOOCH3      20(4,17)-19(4,16) E           1.3   OriMC-1         OVRO   10.4m Sut85  Plu86
+  244593.98 *(10) HCOOCH3      20(4,17)-19(4,16) A           1.1   OriMC-1         OVRO   10.4m Sut85  Plu84
+  244712.24 *(26) CH2CO        12(1,11)-11(1,10)             0.8   OriMC-1         OVRO   10.4m Sut85
+  244857.39 *( 7) CH2CHCN      26(2,25)-25(2,24)             0.5   OriMC-1         OVRO   10.4m Sut85
+  244935.606*(33) CS           5-4                           5.5   OriMC-2         MMWO    4.9m Sne84
+  245178.68 *(16) 34SO2        15(2,14)-15(1,15)             0.8   OriMC-1         OVRO   10.4m Sut85
+  245223.0   ( 1) CH3OH        21(-3)-21(2) A                1.3   OriMC-1         OVRO   10.4m Sut85  Sut85
+  245302.30 *(11) 34SO2        6(3,3)-6(2,4)                 0.9   OriMC-1         OVRO   10.4m Sut85
+  245339.40 *( 5) SO2          26(3,23)-25(4,22)             1.7   OriMC-1         OVRO   10.4m Sut85
+  245563.43 *( 2) SO2          10(3,7)-10(2,8)               7.8   OriMC-1         OVRO   10.4m Sut85
+  245606.406*(78) HC3N         27-26                         0.7   OriMC-1         MMWO    4.9m Lor81
+  245651.09 *(10) HCOOCH3      20(15,6)-19(15,5) A           0.6b  OriMC-1         OVRO   10.4m Sut85  Plu84
+  245651.09 *(10) HCOOCH3      20(15,5)-19(15,4) A            b    OriMC-1         OVRO   10.4m Sut85  Plu84
+  245752.17 *(10) HCOOCH3      20(14,6)-19(14,5) A           0.7b  OriMC-1         OVRO   10.4m Sut85  Plu84
+  245752.17 *(10) HCOOCH3      20(14,7)-19(14,6) A            b    OriMC-1         OVRO   10.4m Sut85  Plu84
+  245753.84 *( 5) HCOOCH3      20(14,6)-19(14,5) E            b    OriMC-1         OVRO   10.4m Sut85  Plu86
+  245772.81 *( 5) HCOOCH3      20(14,7)-19(14,6) E           0.5   OriMC-1         OVRO   10.4m Sut85  Plu86
+  245883.01 *( 5) HCOOCH3      20(13,8)-19(13,7) E           0.2   OriMC-1         OVRO   10.4m Sut85  Plu86
+  245885.14 *(10) HCOOCH3      20(13,8)-19(13,7) A            b    OriMC-1         OVRO   10.4m Sut85  Plu84
+  245885.14 *(10) HCOOCH3      20(13,7)-19(13,6) A           0.8b  OriMC-1         OVRO   10.4m Sut85  Plu84
+  245903.76 *( 5) HCOOCH3      20(13,7)-19(13,6) E           0.2   OriMC-1         OVRO   10.4m Sut85  Plu86
+  246054.84 *( 4) HCOOCH3      20(12,9)-19(12,8) E           0.5   OriMC-1         OVRO   10.4m Sut85  Plu86
+  246060.75 *(10) HCOOCH3      20(12,8)-19(12,7) A           0.8b  OriMC-1         OVRO   10.4m Sut85  Plu84
+  246060.75 *(10) HCOOCH3      20(12,9)-19(12,8) A            b    OriMC-1         OVRO   10.4m Sut85  Plu84
+  246074.65  ( 5) CH3OH        20(-3)-20(2) A                1.6   OriMC-1         OVRO   10.4m Sut85  Sas84
+  246268.73 *( 2) CH3CH2CN     27(2,25)-26(2,24)             0.9   OriMC-1         OVRO   10.4m Sut85
+  246285.47 *( 4) HCOOCH3      20(11,9)-19(11,8) E           0.4   OriMC-1         OVRO   10.4m Sut85  Plu86
+  246295.06 *(10) HCOOCH3      20(11,10)-19(11,9) A          1.3b  OriMC-1         OVRO   10.4m Sut85  Plu84
+  246295.06 *(10) HCOOCH3      20(11,9)-19(11,8) A            b    OriMC-1         OVRO   10.4m Sut85  Plu84
+  246308.10 *( 4) HCOOCH3      20(11,10)-19(11,9) E          0.4   OriMC-1         OVRO   10.4m Sut85  Plu86
+  246421.91 *( 2) CH3CH2CN     28(2,27)-27(2,26)             0.6   OriMC-1         OVRO   10.4m Sut85
+  246548.69 *( 2) CH3CH2CN     27(3,24)-26(3,23)             0.6   OriMC-1         OVRO   10.4m Sut85
+  246560.749*(91) HC3N         27-26 v7=1 l=1f               1.1   OriMC-1         OVRO   10.4m Sut85
+  246600.16 *( 4) HCOOCH3      20(10,11)-19(10,10) E         0.7   OriMC-1         OVRO   10.4m Sut85  Plu86
+  246613.34 *(10) HCOOCH3      20(10,11)-19(10,10) A         1.1b  OriMC-1         OVRO   10.4m Sut85  Plu84
+  246613.38 *(10) HCOOCH3      20(10,10)-19(10,9) A           b    OriMC-1         OVRO   10.4m Sut85  Plu84
+  246623.01 *( 4) HCOOCH3      20(10,10)-19(10,9) E          0.8   OriMC-1         OVRO   10.4m Sut85  Plu86
+  246663.390*(38) 34SO         5(6)-4(5)                     2.9   OriMC-1         OVRO   10.4m Sut85
+  246686.18 *(13) 34SO2        4(3,1)-4(2,2)                 0.3   OriMC-1         OVRO   10.4m Sut85
+  246873.34  ( 5) CH3OH        19(3)-19(2) A-+               0.30  OriMC-1         MMWO    4.9m Lor85  Sas84
+  246891.62 *( 3) HCOOCH3      19(4,15)-18(4,14) E           0.18  OriMC-1         MMWO    4.9m Lor85  Plu86
+  246896.87 *(16) CH2CHCN      26(7,20)-25(7,19)             0.1b  OriMC-1         MMWO    4.9m Lor85
+  246896.87 *(16) CH2CHCN      26(7,19)-25(7,18)              b    OriMC-1         OVRO   10.4m Lor85
+  246914.59 *(10) HCOOCH3      19(4,15)-18(4,14) A           1.2   OriMC-1         OVRO   10.4m Sut85  Plu84
+  246924.65 *(31) HDCO         4(1,4)-3(1,3)                 0.40  OriMC-1         MMWO    4.9m Lor85
+  246945.78 *( 5) HCOOCH3      10(5,6)-9(4,6) E              0.16  OriMC-1         MMWO    4.9m Lor85  Plu87
+  246952.14 *(23) CH2CHCN      26(9,18)-25(9,17)             0.6b  OriMC-1         OVRO   10.4m Sut85
+  246952.14 *(23) CH2CHCN      26(9,17)-25(9,16)              b    OriMC-1         OVRO   10.4m Sut85
+  247001.71 *(11) CH2CHCN      26(5,22)-25(5,21)             0.2b  OriMC-1         OVRO   10.4m Bla86
+  247004.92 *(11) CH2CHCN      26(5,21)-25(5,20)              b    OriMC-1         OVRO   10.4m Bla86
+  247040.77 *( 4) HCOOCH3      20(9,11)-19(9,10) E           0.6   OriMC-1         OVRO   10.4m Bla86  Plu86
+  247044.11 *( 3) HCOOCH3      20(3,19)-19(3,18) E           1.1   OriMC-1         OVRO   10.4m Bla86  Plu86
+  247053.45 *( 5) HCOOCH3      20(3,19)-19(3,18) A           1.2   OriMC-1         OVRO   10.4m Bla86  Plu84
+  247057.25 *(10) HCOOCH3      20(9,12)-19(9,11) A           1.2b  OriMC-1         OVRO   10.4m Bla86  Plu84
+  247057.70 *(10) HCOOCH3      20(9,11)-19(9,10) A            b    OriMC-1         OVRO   10.4m Bla86  Plu84
+  247063.46 *( 4) HCOOCH3      20(9,12)-19(9,11) E           0.5   OriMC-1         OVRO   10.4m Bla86  Plu86
+  247086.93 *( 8) CH2CHCN      26(3,24)-25(3,23)             0.2   OriMC-1         OVRO   10.4m Bla86
+  247162.1   ( 1) CH3OH        16(2)-15(3) E                 1.6   OriMC-1         OVRO   10.4m Bla86  Bla86
+  247228.693 (24) CH3OH        4( 2)-5(1) A+                 3.9   OriMC-1         OVRO   10.4m Bla86  Pic81
+  247270.64 *( 9) CH2CHCN      26(4,22)-25(4,21)             0.3   OriMC-1         OVRO   10.4m Bla86
+  247440.36 *(12) 34SO2        5(3,3)-5(2,4)                 0.7   OriMC-1         OVRO   10.4m Bla86
+U 247469.         unidentified                               0.6   OriMC-1         OVRO   10.4m Bla86
+  247610.96  ( 5) CH3OH        18( 3)-18( 2) A-+             1.1   OriMC-1         OVRO   10.4m Bla86  Sas84
+U 247630.         unidentified                               0.4   OriMC-1         OVRO   10.4m Bla86
+U 247636.         unidentified                               0.4   OriMC-1         OVRO   10.4m Bla86
+  247656.85 *( 3) HCOOCH3      20(2,19)-19(2,18) E           1.4   OriMC-1         OVRO   10.4m Bla86  Plu86
+  247665.34 *(10) HCOOCH3      20(2,19)-19(2,18) A           1.2   OriMC-1         OVRO   10.4m Bla86  Plu84
+  247682.65 *( 4) HCOOCH3      20(8,12)-19(8,11) E           0.2   OriMC-1         OVRO   10.4m Bla86  Plu86
+  247697.19 *(10) HCOOCH3      20(8,13)-19(8,12) A           0.7   OriMC-1         OVRO   10.4m Bla86  Plu84
+  247704.35 *( 4) HCOOCH3      20(8,13)-19(8,12) E           0.8   OriMC-1         OVRO   10.4m Bla86  Plu86
+  247707.95 *(10) HCOOCH3      20(8,12)-19(8,11) A           1.1   OriMC-1         OVRO   10.4m Bla86  Plu84
+  247798.55 *(15) CH2CHCN      27(1,27)-26(1,26)             0.3   OriMC-1         OVRO   10.4m Bla86
+  247840.2   ( 1) CH3OH        12(-2)-13(-3) E               1.0   OriMC-1         OVRO   10.4m Bla86  Bla86
+U 247875.         unidentified                               0.7   OriMC-1         OVRO   10.4m Bla86
+  247901.65 *( 3) HCOOCH3      22(8,21)-21(8,20) E           0.7   OriMC-1         OVRO   10.4m Bla86  Plu86
+  247907.12 *(10) HCOOCH3      22(2,21)-21(2,20) A           0.6   OriMC-1         OVRO   10.4m Bla86  Plu84
+U 247911.         unidentified                               0.5   OriMC-1         OVRO   10.4m Bla86
+  247922.26 *( 3) HCOOCH3      22(1,21)-21(1,20) E           0.6   OriMC-1         OVRO   10.4m Bla86  Plu86
+  247927.69 *(10) HCOOCH3      22(1,21)-21(1,20) A           0.5   OriMC-1         OVRO   10.4m Bla86  Plu84
+  248057.385*(31) SO2          15(2,14)-15(1,15)             6.1   OriMC-1         OVRO   10.4m Bla86
+  248242.5   ( 1) CH3OH        17( 3)-17( 2) A-+             2.2   OriMC-1         OVRO   10.4m Bla86  Bla86
+  248364.82 *(11) 34SO2        7(3,5)-7(2,6)                 0.9   OriMC-1         OVRO   10.4m Bla86
+  248436.900*(33) SO2          13(3,11)-14(0,14)             0.6   OriMC-1         OVRO   10.4m Bla86
+  248528.95 *(78) CH2CHCN      26(3,23)-25(3,22)             0.4   OriMC-1         OVRO   10.4m Bla86
+  248617.41 *(10) HCOOCH3      20(7,14)-19(7,13) A           1.0   OriMC-1         OVRO   10.4m Bla86  Plu84
+  248633.58 *( 4) HCOOCH3      20(7,14)-19(7,13) E           1.0   OriMC-1         OVRO   10.4m Bla86  Plu86
+  249887.47  ( 5) CH3OH        14( 3)-14( 2) A-+             3.6   OriMC-1         OVRO   10.4m Bla86  Sas84
+  249924.31 *(28) CH3OCH3      15(1,14)-14(2,13) EE          1.1   OriMC-1         OVRO   10.4m Bla86
+  250050.21 *(24) 13CH3CN      14( 3)-13( 3)                 0.6   OriMC-1         OVRO   10.4m Bla86  Bou80
+  250073.68 *(24) 13CH3CN      14( 2)-13( 2)                 0.5   OriMC-1         OVRO   10.4m Bla86  Bou80
+  250087.76 *(25) 13CH3CN      14( 1)-13( 1)                 0.3   OriMC-1         OVRO   10.4m Bla86  Bou80
+  250092.46 *(25) 13CH3CN      14( 0)-13( 0)                 0.4   OriMC-1         OVRO   10.4m Bla86  Bou80
+  250246.46 *( 3) HCOOCH3      20(3,17)-19(3,16) E           1.0   OriMC-1         OVRO   10.4m Bla86  Plu86
+  250258.34 *(10) HCOOCH3      20(3,17)-19(3,16) A           0.9   OriMC-1         OVRO   10.4m Bla86  Plu84
+  250291.18  ( 5) CH3OH        13( 3)-13( 2) A-+             4.2   OriMC-1         OVRO   10.4m Bla86  Sas84
+  250358.42 *(10) 34SO2        9(3,7)-9(2,8)                 0.9   OriMC-1         OVRO   10.4m Bla86
+  250440.328*(20) CH3CH2CN     28(3,26)-27(3,25)             1.7w  OriMC-1         OVRO   10.4m Bla86
+  250482.94  ( 2) NO           2P1/2 J,F=5/2,5/2-3/2,3/2 e   0.3   OriMC-1         OVRO   10.4m Bla86  Poy80
+  250506.98  ( 5) CH3OH        11( 0)-10( 1) A+              5.8   OriMC-1         OVRO   10.4m Bla86  Sas84
+  250635.207 (12) CH3OH        12( 3)-12( 2) A-+             5.9   OriMC-1         OVRO   10.4m Bla86  Pic81
+  251738.520 (12) CH3OH        6(3)-6(2) A-+                 2.0   OriMC-1         MMWO    4.9m Cle84  Pic81
+  251811.882 (12) CH3OH        5(3)-5(2) A-+                 1.2   OriMC-1         MMWO    4.9m Cle84  Pic81
+  251825.762*(39) SO           5(6)-4(5)                     3.3   OriMC-1         MMWO    4.9m Cle84
+  251866.579 (12) CH3OH        4(3)-4(2) A-+                 1.5   OriMC-1         MMWO    4.9m Cle84  Pic81
+  251890.901 (12) CH3OH        5(3)-5(2) A+-                 1.8   OriMC-1         MMWO    4.9m Cle84  Pic81
+  251895.728 (12) CH3OH        6(3)-6(2) A+-                 2.1   OriMC-1         MMWO    4.9m Cle84  Pic81
+  251900.495 (12) CH3OH        4(3)-4(2) A+-                 1.7   OriMC-1         MMWO    4.9m Cle84  Pic81
+  251905.812 (12) CH3OH        3(3)-3(2) A-+                 1.0   OriMC-1         MMWO    4.9m Cle84  Pic81
+  251917.042 (12) CH3OH        3(3)-3(2) A+-                 1.1   OriMC-1         MMWO    4.9m Cle84  Pic81
+  251923.631 (12) CH3OH        7(3)-7(2) A+-                 1.8   OriMC-1         MMWO    4.9m Cle84  Pic81
+U 251953.         unidentified                               1.2   OriMC-1         MMWO    4.9m Cle84
+  252803.377 (24) CH3OH        12( 3)-12( 2) A+-             4.1   OriMC-1         OVRO   10.4m Bla86  Pic81
+  252896.045*(20) CH3CH2CN     28(4,24)-27(4,23)             0.7   OriMC-1         OVRO   10.4m Bla86
+  253207.011*(32) 34SO         6(6)-5(5)                     3.0   OriMC-1         OVRO   10.4m Bla86
+  253221.39  ( 5) CH3OH        13( 3)-13( 2) A+-             3.1   OriMC-1         OVRO   10.4m Bla86  Sas84
+  253755.85  ( 5) CH3OH        14(3)-14(-2) A+-              0.73  OriMC-1         MMWO    4.9m Lor84b Sas84
+  254015.34  ( 5) CH3OH        2(0)-1(-1) E                  0.95  OriMC-1         MMWO    4.9m Lor84  Sas84
+  254102.68 *(74) SiS          14-13                         0.85  IRC+10216       MMWO    4.9m Sah84
+  254216.241*(67) 30SiO        6-5                           0.6   OriMC-1         MMWO    4.9m Lor84b
+  254423.58  ( 5) CH3OH        15( 3)-15( 2) A+-             3.0b  OriMC-1         OVRO   10.4m Bla86  Sas84
+  254423.58  ( 5) CH3OH        11( 5)-11( 4) E                b    OriMC-1         OVRO   10.4m Bla86  Sas84
+  254573.657*(10) SO           8(9)-8(8)                     0.39  OriMC-1         MMWO    4.9m Lor84
+  254699.62 *(10) HC3N         28-27                         5.0   OriMC-1         OVRO   10.4m Bla86
+  254841.818 (30) 13CH3OH      8(3)-8(2) A-A+                0.7   OriMC-1         OVRO   10.4m Sut88  And87
+  254959.398 (30) 13CH3OH      7(3)-7(2) A-A+                1.2   OriMC-1         OVRO   10.4m Bla86  And87
+  254959.5   ( 1) CH3OH        unassigned                    1.2   OriMC-1         OVRO   10.4m Bla86  Bla86
+  254976.344*(20) CH3CH2CN     29(2,28)-28(2,27)             1.5   OriMC-1         OVRO   10.4m Bla86
+  255050.260 (59) HDO          5(2,3)-4(3,2)                 2.1   OriMC-1         OVRO   10.4m Bla86  Del71
+  255050.965 (30) 13CH3OH      6(3)-6(2) A-A+                n.r.  OriMC-1         OVRO   10.4m Bla86d And87
+  255120.837 (30) 13CH3OH      5(3)-5(2) A-A+                1.7   OriMC-1         OVRO   10.4m Bla86  And87
+  255173.019 (30) 13CH3OH      4(3)-4(2) A-A+                1.2   OriMC-1         OVRO   10.4m Bla86  And87
+  255193.329 (30) 13CH3OH      5(3)-5(2) A+A-                 b    OriMC-1         OVRO   10.4m Bla86  And87
+  255193.329 (30) 13CH3OH      6(3)-6(2) A+A-                1.8b  OriMC-1         OVRO   10.4m Bla86  And87
+  255203.728 (30) 13CH3OH      4(3)-4(2) A+A-                1.3   OriMC-1         OVRO   10.4m Bla86  And87
+  255210.605 (30) 13CH3OH      3(3)-3(2) A-A+                0.6   OriMC-1         OVRO   10.4m Sut88  And87
+  255214.891 (30) 13CH3OH      7(3)-7(2) A+A-                1.0   OriMC-1         OVRO   10.4m Bla86  And87
+  255220.865 (30) 13CH3OH      3(3)-3(2) A+A-                0.9   OriMC-1         OVRO   10.4m Bla86  And87
+  255241.97  ( 5) CH3OH        16( 3)-16( 2) A+-             3.8   OriMC-1         OVRO   10.4m Bla86  Sas84
+  255265.637 (30) 13CH3OH      8(3)-8(2) A+A-                1.4   OriMC-1         OVRO   10.4m Bla86  And87
+  255324.34 *(11) HC3N         28-27 v7=1 l=1e               1.0   OriMC-1         OVRO   10.4m Bla86
+  255357.    ( 1) 13CH3OH      9(3)-9(2) A+A-                1.0   OriMC-1         OVRO   10.4m Bla86  Sut88
+  255374.453*( 2) OCS          21-20                         6.5   OriMC-1         OVRO   10.4m Bla86
+  255479.39 *( 8) HC18O+       3-2                           1.0   OriMC-1         OVRO   10.4m Bla86
+  255498.    ( 1) 13CH3OH      10(3)-10(2) A+A-              0.8   OriMC-1         OVRO   10.4m Bla86  Sut88
+  255553.328*(14) SO2          4(3,1)-4(2,2)                 7.4   OriMC-1         OVRO   10.4m Bla86
+  255595.35 *(13) SO2          51(7,45)-50(8,42)             0.4v  OriMC-1         OVRO   10.4m Bla86
+U 255651.         unidentified                               1.2   OriMC-1         OVRO   10.4m Bla86
+  255689.08 *(11) HC3N         28-27 v7=1 l=1f               1.1   OriMC-1         OVRO   10.4m Bla86
+  255776.13 *( 3) HCOOCH3      21(4,18)-20(4,17) E           1.0   OriMC-1         OVRO   10.4m Bla86  Plu86
+  255789.41 *(10) HCOOCH3      21(4,18)-20(4,17) A           1.0   OriMC-1         OVRO   10.4m Bla86  Plu84
+  255906.469*(20) CH3CH2CN     28(3,25)-27(3,24)             0.9   OriMC-1         OVRO   10.4m Bla86
+  255958.073*(15) SO2          3(3,1)-3(2,2)                >3.    OriMC-1         BTL       7m Tha81
+  255980.    ( 1) 13CH3OH      12(3)-12(2) A+A-              0.5   OriMC-1         OVRO   10.4m Bla86  Sut88
+  256027.12  ( 8) HCS+         6-5                          <1.    OriMC-1         BTL       7m Tha81  Bog84
+  256228.80  ( 5) CH3OH        17( 3)-17( 2) A+-             1.7   OriMC-1         OVRO   10.4m Bla86  Sas84
+  256246.969*(14) SO2          5(3,3)-5(2,4)                 1.2   OriMC-1         MMWO    4.9m Lor84b
+  256292.639*(13) CH3CCH       15(3)-14(3)                   0.3   OriMC-1         MMWO    4.9m Lor84b
+  256317.079*( 8) CH3CCH       15(2)-14(2)                   0.3   OriMC-1         MMWO    4.9m Lor84b
+  256331.746*( 6) CH3CCH       15(1)-14(1)                   0.4   OriMC-1         MMWO    4.9m Lor84b
+  256336.637*( 6) CH3CCH       15(0)-14(0)                   0.4   OriMC-1         MMWO    4.9m Lor84b
+  256395.926*(22) CH3CH2CN     29(1,28)-28(1,27)             1.0   OriMC-1         OVRO   10.4m Bla86
+  256409.07 *(29) CH2CHCN      27(8,19)-26(8,18)              b    OriMC-1         OVRO   10.4m Bla86
+  256409.07 *(29) CH2CHCN      27(8,20)-26(8,19)             0.7b  OriMC-1         OVRO   10.4m Bla86
+  256425.85 *(16) CH2CHCN      27(6,22)-26(6,21)             0.7b  OriMC-1         OVRO   10.4m Bla86
+  256425.95 *(16) CH2CHCN      27(6,21)-26(6,20)              b    OriMC-1         OVRO   10.4m Bla86
+  256447.75 *(28) CH2CHCN      27(9,18)-26(9,17)              b    OriMC-1         OVRO   10.4m Bla86
+  256447.75 *(28) CH2CHCN      27(9,19)-26(9,18)             0.4b  OriMC-1         OVRO   10.4m Bla86
+  256522.86 *(13) CH2CHCN      27(5,23)-26(5,22)             0.8   OriMC-1         OVRO   10.4m Bla86
+  256527.36 *(13) CH2CHCN      27(5,22)-26(5,21)             0.5   OriMC-1         OVRO   10.4m Bla86
+  256585.34 *(33) HDCO         4(0,4)-3(0,3)                 0.54  OriMC-1         MMWO    4.9m Lor85
+  256671.817 (30) 13CH3OH      9(0)-8(1) E                   0.5   OriMC-1         OVRO   10.4m Bla86  And87
+  256711.75 *(11) CH2CHCN      27(4,24)-26(4,23)             0.3   OriMC-1         OVRO   10.4m Bla86
+  256837.22 *(11) CH2CHCN      27(4,23)-26(4,22)             0.3   OriMC-1         OVRO   10.4m Bla86
+  256877.802*(32) 34SO         7(6)-6(5)                     0.79  OriMC-1         MMWO    4.9m Lor84
+  256966.885*(25) CH3CH2CN     30(0,30)-29(1,29)             0.2   OriMC-1         OVRO   10.4m Bla86
+  257033.444*(18) CH3CN        14(10)-13(10)                 0.3   OriMC-1         OVRO   10.4m Bla86
+  257099.982*(14) SO2          7(3,5)-7(2,6)                 7.9   OriMC-1         OVRO   10.4m Bla86
+  257127.036*(14) CH3CN        14( 9)-13( 9)                 0.6   OriMC-1         OVRO   10.4m Bla86
+  257210.879*(11) CH3CN        14( 8)-13( 8)                 0.6   OriMC-1         OVRO   10.4m Bla86
+  257226.56 *( 3) HCOOCH3      20(5,15)-19(5,14) E           0.8   OriMC-1         OVRO   10.4m Bla86  Plu86
+  257239.855*(25) CH3CH2CN     30(1,30)-29(1,29)             0.4   OriMC-1         OVRO   10.4m Bla86
+  257252.59 *(10) HCOOCH3      20(5,15)-19(5,14) A           0.9   OriMC-1         OVRO   10.4m Bla86  Plu84
+  257255.002*(67) 29SiO        6-5                           1.6   OriMC-1         OVRO   10.4m Bla86
+  257284.937*( 8) CH3CN        14( 7)-13( 7)                 1.0   OriMC-1         OVRO   10.4m Bla86
+  257310.641*(25) CH3CH2CN     30(0,30)-29(0,29)             0.8   OriMC-1         OVRO   10.4m Bla86
+  257349.182*( 6) CH3CN        14( 6)-13( 6)                 1.8   OriMC-1         OVRO   10.4m Bla86
+  257380.15 *(27) CH313CN      14( 2)-13( 2)                 0.3   OriMC-1         OVRO   10.4m Bla86  Bou80
+  257402.19  ( 5) CH3OH        18( 3)-18( 2) A+-             2.8b  OriMC-1         OVRO   10.4m Bla86  Sas84
+  257403.587*( 4) CH3CN        14(5)-13(5)                   0.5   OriMC-1         MMWO    4.9m Lor84
+  257420.24 *(14) SO2          24(2,22)-24(1,23) v2=1        0.4   OriMC-1         OVRO   10.4m Bla86
+  257448.131*( 3) CH3CN        14(4)-13(4)                   0.5   OriMC-1         MMWO    4.9m Lor84
+  257482.794*( 3) CH3CN        14(3)-13(3)                   1.1   OriMC-1         MMWO    4.9m Lor84
+  257507.564*( 3) CH3CN        14(2)-13(2)                   0.85  OriMC-1         MMWO    4.9m Lor84
+  257522.429*( 3) CH3CN        14(1)-13(1)                   1.15  OriMC-1         MMWO    4.9m Lor84
+  257527.385*( 3) CH3CN        14(0)-13(0)                   1.2   OriMC-1         MMWO    4.9m Lor84
+  257583.611*(25) CH3CH2CN     30(1,30)-29(0,29)             0.3   OriMC-1         OVRO   10.4m Bla86
+  257646.01 *(19) CH2CHCN      28(0,28)-27(0,27)             0.5   OriMC-1         OVRO   10.4m Bla86
+  257690.32 *( 3) HCOOCH3      22(3,20)-21(3,19) E           1.4   OriMC-1         OVRO   10.4m Bla86  Plu86
+  257699.44 *(10) HCOOCH3      22(3,20)-21(3,19) A           0.9   OriMC-1         OVRO   10.4m Bla86  Plu84
+  257747.05  ( 3) HDCO         4(2,3)-3(2,2)                 0.6   OriMC-1         OVRO   10.4m Bla86  Dan78
+U 257912.         unidentified                               1.0   OriMC-1         OVRO   10.4m Bla86
+  257975.01 *( 1) HCOOH        12(1,12)-11(1,11)             0.3   OriMC-1         OVRO   10.4m Bla86
+  258054.14 *(15) CH3CN        14( 1)-13( 1) v8=1 l=1        1.1   OriMC-1         OVRO   10.4m Bla86  Bou80
+  258070.96  ( 6) HDCO         4(3,2)-3(3,1)                 0.3   OriMC-1         OVRO   10.4m Bla86  Dan78
+  258081.01 *( 3) HCOOCH3      22(2,20)-21(2,19) E           1.2   OriMC-1         OVRO   10.4m Bla86  Plu86
+  258089.50 *(10) HCOOCH3      22(2,20)-21(2,19) A           1.1   OriMC-1         OVRO   10.4m Bla86  Plu84
+  258121.06 *(10) HCOOCH3      21(14,7)-20(14,6) A            b    OriMC-1         OVRO   10.4m Bla86  Plu84
+  258121.06 *(10) HCOOCH3      21(14,8)-20(14,7) A           1.0b  OriMC-1         OVRO   10.4m Bla86  Plu84
+  258122.69 *( 5) HCOOCH3      21(14,7)-20(14,6) E            b    OriMC-1         OVRO   10.4m Bla86  Plu86
+  258157.02 *(47) HC15N        3-2                           5.2   OriMC-1         OVRO   10.4m Bla86
+  258186.99 *(13) CH3CN        14( 6)-13( 5) v8=1 l=1        0.3   OriMC-1         OVRO   10.4m Bla86  Bou80
+  258255.828*(32) SO           6(6)-5(5)                     4.0   OriMC-1         MMWO    4.9m Cle84
+  258295.60 *(18) CH3CN        14( 3)-13( 3) v8=1 l=1        1.1   OriMC-1         OVRO   10.4m Bla86  Bou80
+  258320.39 *(25) CH3CN        14( 2)-13( 2) v8=1 l=1        0.7   OriMC-1         OVRO   10.4m Bla86  Bou80
+  258360.05 *( 7) CH2CHCN      27(1,26)-26(1,25)             0.6   OriMC-1         OVRO   10.4m Bla86
+  258388.81 *(12) SO2          32(4,28)-32(3,29)             1.5   OriMC-1         OVRO   10.4m Bla86
+  258476.61 *( 5) HCOOCH3      21(12,9)-20(12,8) E           0.9   OriMC-1         OVRO   10.4m Bla86  Plu86
+  258482.92 *(10) HCOOCH3      21(12,10)-20(12,9) A          1.0   OriMC-1         OVRO   10.4m Bla86  Plu84
+  258490.87 *( 4) HCOOCH3      23(2,22)-22(2,21) E           1.0   OriMC-1         OVRO   10.4m Bla86  Plu86
+  258496.27 *(10) HCOOCH3      23(2,23)-22(2,21) A           1.1   OriMC-1         OVRO   10.4m Bla86  Plu84
+  258499.11 *( 5) HCOOCH3      21(12,10)-20(12,9) E          0.8   OriMC-1         OVRO   10.4m Bla86  Plu86
+  258502.78 *( 4) HCOOCH3      23(1,22)-22(1,21) E           1.0   OriMC-1         OVRO   10.4m Bla86  Plu86
+  258508.14 *(10) HCOOCH3      23(1,22)-22(1,21) A           1.0   OriMC-1         OVRO   10.4m Bla86  Plu84
+  258549.04 *(20) CH3OCH3      14(1,14)-13(0,13) EE          3.2b  OriMC-1         OVRO   10.4m Bla86
+  258549.30 *(19) CH3OCH3      14(1,14)-13(0,13) AA           b    OriMC-1         OVRO   10.4m Bla86
+  258552.40 *(15) CH3CN        14( 1)-13( 1) v8=1 l=1        0.6b  OriMC-1         OVRO   10.4m Bla86  Bou80
+  258667.002*(61) SO2          20(7,13)-21(6,16)             0.7   OriMC-1         OVRO   10.4m Bla86
+  258707.351*(65) SiO          6-5 v=1                      41.7Jy R Leo           OVRO     12m Jew87
+  258746.44 *( 5) HCOOCH3      21(11,10)-20(11,9) E          0.5   OriMC-1         OVRO   10.4m Bla86  Plu86
+  258756.63 *(10) HCOOCH3      21(11,10)-20(11,9) A          0.7b  OriMC-1         OVRO   10.4m Bla86  Plu84
+  258756.63 *(10) HCOOCH3      21(11,11)-20(11,10) A          b    OriMC-1         OVRO   10.4m Bla86  Plu84
+  258769.68 *( 5) HCOOCH3      21(11,11)-20(11,10) E         0.4   OriMC-1         OVRO   10.4m Bla86  Plu86
+  258780.38  ( 5) CH3OH        19( 3)-19( 2) A+-             1.8   OriMC-1         OVRO   10.4m Bla86  Sas84
+  258942.207*(18) SO2          9(3,7)-9(2,8)                 0.9   OriMC-1         MMWO    4.9m Lor84b
+  259011.79 *(55) H13CN        3-2                           2.3   OriMC-1         MMWO    4.9m Lor84b
+  259035.13 *(33) HDCO         4(2,2)-3(2,1)                 0.18  OriMC-1         MMWO    4.9m Lor84b
+  259114.18 *( 4) HCOOCH3      21(10,11)-20(10,10) E         0.6   OriMC-1         OVRO   10.4m Bla86  Plu86
+  259128.13 *(10) HCOOCH3      21(10,12)-20(10,11) A          b    OriMC-1         OVRO   10.4m Bla86  Plu84
+  259128.17 *(10) HCOOCH3      21(10,11)-20(10,10) A         1.1b  OriMC-1         OVRO   10.4m Bla86  Plu84
+  259137.69 *( 4) HCOOCH3      21(10,12)-20(10,11) E         0.3   OriMC-1         OVRO   10.4m Bla86  Plu86
+  259232.721*(21) CH3CH2CN     29(3,27)-28(3,26)             0.7   OriMC-1         OVRO   10.4m Bla86
+  259273.7   ( 1) CH3OH        17(2)-16(1) A-                1.0   OriMC-1         OVRO   10.4m Bla86  Bla86
+U 259285.         unidentified                               0.8   OriMC-1         OVRO   10.4m Bla86
+U 259311.         unidentified                               0.6   OriMC-1         OVRO   10.4m Bla86
+  259341.93 *( 5) HCOOCH3      24(1,24)-23(1,23) E           2.0b  OriMC-1         OVRO   10.4m Bla86  Plu86
+  259342.07 *( 5) HCOOCH3      24(0,24)-23(0,23) E            b    OriMC-1         OVRO   10.4m Bla86  Plu86
+  259342.84 *(10) HCOOCH3      24(1,24)-23(1,23) A            b    OriMC-1         OVRO   10.4m Bla86  Plu84
+  259342.95 *(10) HCOOCH3      24(0,24)-23(0,23) A            b    OriMC-1         OVRO   10.4m Bla86  Plu84
+  259484.90 *(28) CH3OCH3      6(3,4)-5(2,3) EA              0.7b  OriMC-1         OVRO   10.4m Bla86
+  259486.79 *(22) CH3OCH3      6(3,4)-5(2,3) AE               b    OriMC-1         OVRO   10.4m Bla86
+  259488.87 *(17) CH3OCH3      6(3,4)-5(2,3) EE              1.3   OriMC-1         OVRO   10.4m Bla86
+  259493.92 *(10) CH3OCH3      6(3,4)-5(2,3) AA              0.6   OriMC-1         OVRO   10.4m Bla86
+  259499.92 *( 3) HCOOCH3      20(4,16)-19(4,15) E           0.8   OriMC-1         OVRO   10.4m Bla86  Plu86
+  259521.70 *(10) HCOOCH3      20(4,16)-19(4,15) A           1.0   OriMC-1         OVRO   10.4m Bla86  Plu84
+  259599.48 *(11) SO2          30(4,26)-30(3,27)             1.5   OriMC-1         OVRO   10.4m Bla86
+  259617.23 *(10) 34SO2        13(3,11)-13(2,12)             1.0   OriMC-1         OVRO   10.4m Bla86
+  259629.42 *( 4) HCOOCH3      21(9,12)-20(9,11) E           0.6   OriMC-1         OVRO   10.4m Bla86  Plu86
+  259646.55 *(10) HCOOCH3      21(9,13)-20(9,12) A           0.8b  OriMC-1         OVRO   10.4m Bla86  Plu84
+  259646.67 *(10) HCOOCH3      21(9,12)-20(9,11) A            b    OriMC-1         OVRO   10.4m Bla86  Plu84
+  259652.84 *( 4) HCOOCH3      21(9,13)-20(9,12) E           0.5   OriMC-1         OVRO   10.4m Bla86  Plu86
+U 259690.         unidentified                               0.5   OriMC-1         OVRO   10.4m Bla86
+U 259733.         unidentified                               0.7   OriMC-1         OVRO   10.4m Bla86
+  259842.936*(23) CH3CH2CN     29(10,19)-28(10,18)           1.0b  OriMC-1         OVRO   10.4m Bla86
+  259842.936*(23) CH3CH2CN     29(10,20)-28(10,19)            b    OriMC-1         OVRO   10.4m Bla86
+  259847.373*(24) CH3CH2CN     29(11,19)-28(11,18)           0.9b  OriMC-1         OVRO   10.4m Bla86
+  259847.373*(24) CH3CH2CN     29(11,18)-28(11,17)            b    OriMC-1         OVRO   10.4m Bla86
+  259862.754*(22) CH3CH2CN     29(9,21)-28(9,20)             0.9b  OriMC-1         OVRO   10.4m Bla86
+  259862.754*(22) CH3CH2CN     29(9,20)-28(9,19)              b    OriMC-1         OVRO   10.4m Bla86
+  259869.904*(25) CH3CH2CN     29(12,18)-28(12,17)           0.6b  OriMC-1         OVRO   10.4m Bla86
+  259869.904*(25) CH3CH2CN     29(12,17)-28(12,16)            b    OriMC-1         OVRO   10.4m Bla86
+  259906.678*(27) CH3CH2CN     29(13,17)-28(13,16)           0.5b  OriMC-1         OVRO   10.4m Bla86
+  259906.678*(27) CH3CH2CN     29(13,16)-28(13,15)            b    OriMC-1         OVRO   10.4m Bla86
+  259917.265*(25) CH3CH2CN     29(8,22)-28(8,21)             1.0b  OriMC-1         OVRO   10.4m Bla86
+  259917.265*(25) CH3CH2CN     29(8,21)-28(8,20)              b    OriMC-1         OVRO   10.4m Bla86
+  259955.178*(28) CH3CH2CN     29(14,16)-28(14,15)           0.4b  OriMC-1         OVRO   10.4m Bla86
+  259955.178*(28) CH3CH2CN     29(14,15)-28(14,14)            b    OriMC-1         OVRO   10.4m Bla86
+U 259986.         unidentified                               0.8   OriMC-1         OVRO   10.4m Bla86
+  259986.530 (30) 13CH3OH      2(1)-1(0) E                   0.8   OriMC-1         OVRO   10.4m Bla86  And87
+  260013.701*(30) CH3CH2CN     29(15,14)-28(15,13)            b    OriMC-1         OVRO   10.4m Bla86
+  260013.701*(30) CH3CH2CN     29(15,15)-28(15,14)           0.5b  OriMC-1         OVRO   10.4m Bla86
+  260025.312*(21) CH3CH2CN     29(7,23)-28(7,22)             0.8b  OriMC-1         OVRO   10.4m Bla86
+  260025.566*(21) CH3CH2CN     29(7,23)-28(7,22)              b    OriMC-1         OVRO   10.4m Bla86
+  260060.33  (10) HCO          3(0,3)-2(0,2) 7/2-5/2 F=4-3   0.09  OriMC-2         MMWO    4.9m Sny85a Bla84a
+  260081.055*(33) CH3CH2CN     29(16,14)-28(16,13)           0.3b  OriMC-1         OVRO   10.4m Bla86
+  260081.055*(33) CH3CH2CN     29(16,13)-28(16,12)            b    OriMC-1         OVRO   10.4m Bla86
+  260156.377*(37) CH3CH2CN     29(17,13)-28(17,12)           0.4b  OriMC-1         OVRO   10.4m Bla86
+  260156.377*(37) CH3CH2CN     29(17,12)-28(17,11)            b    OriMC-1         OVRO   10.4m Bla86
+  260191.99 *(36) CH2CO        13(1,13)-12(1,12)             0.6   OriMC-1         OVRO   10.4m Bla86
+  260221.648*(21) CH3CH2CN     29(6,24)-28(6,23)             0.9b  OriMC-1         OVRO   10.4m Bla86
+  260229.152*(21) CH3CH2CN     29(6,23)-28(6,22)              b    OriMC-1         OVRO   10.4m Bla86
+  260244.42 *( 4) HCOOCH3      21(3,18)-20(3,17) E           0.8   OriMC-1         OVRO   10.4m Bla86  Plu86
+  260255.06 *( 5) HCOOCH3      21(3,18)-20(3,17) A           2.1b  OriMC-1         OVRO   10.4m Bla86  Plu84
+  260255.48 *(20) H13CO+       3-2                           0.95  OriMC-1         MMWO    4.9m Woo84a
+  260327.00 *(22) 34SO2        24(2,22)-24(1,23)             1.0   OriMC-1         OVRO   10.4m Bla86
+  260381.56  ( 5) CH3OH        20( 3)-20( 2) A+-             1.8b  OriMC-1         OVRO   10.4m Bla86  Sas84
+  260384.19 *( 4) HCOOCH3      21(8,13)-20(8,12) E           1.6b  OriMC-1         OVRO   10.4m Bla86  Plu86
+  260392.73 *(10) HCOOCH3      21(8,14)-20(8,13) A           1.0   OriMC-1         OVRO   10.4m Bla86  Plu84
+  260404.09 *( 4) HCOOCH3      21(8,14)-20(8,13) E           1.8   OriMC-1         OVRO   10.4m Bla86  Plu86
+  260415.31 *(10) HCOOCH3      21(8,13)-20(8,12) A           0.7   OriMC-1         OVRO   10.4m Bla86  Plu84
+U 260440.         unidentified                               1.2   OriMC-1         OVRO   10.4m Bla86
+  260518.027*(67) SiO          6-5 v=0                       2.9   OriMC-1         MMWO    4.9m Lor84b
+  260664.770*(21) CH3CH2CN     29(4,26)-28(4,25)             0.9b  OriMC-1         OVRO   10.4m Bla86
+  260667.111*(30) CH3CH2CN     11(4,7)-10(3,6)                b    OriMC-1         OVRO   10.4m Bla86
+  260679.039*(21) CH3CH2CN     29(5,24)-28(5,23)             0.8   OriMC-1         OVRO   10.4m Bla86
+U 260726.         unidentified                               1.2   OriMC-1         OVRO   10.4m Bla86
+  260758.61 *(14) CH3OCH3      6(3,3)-5(2,4) EE              1.9   OriMC-1         OVRO   10.4m Bla86
+  260761.70 *(10) CH3OCH3      6(3,3)-5(2,4) AA              1.5   OriMC-1         OVRO   10.4m Bla86
+  261061.36  ( 5) CH3OH        21(-4)-20(-5) E               0.5   OriMC-1         OVRO   10.4m Bla86  Sas84
+  261148.87 *( 3) HCOOCH3      21(5,17)-20(5,16) E           1.4   OriMC-1         OVRO   10.4m Bla86  Plu86
+  261165.41 *(10) HCOOCH3      21(5,17)-20(5,16) A           1.2   OriMC-1         OVRO   10.4m Bla86  Plu84
+  261247.64 *(56) CH3OCH3      15(5,10)-15(4,11) EE          1.5   OriMC-1         OVRO   10.4m Bla86
+  261250.17 *(46) CH3OCH3      15(5,10)-15(4,11) AA          0.8   OriMC-1         OVRO   10.4m Bla86
+  261263.39 *(10) HN13C        3-2                           0.2   OriMC-1         MMWO    4.9m Lor84b
+  261433.75 *(10) HCOOCH3      21(7,15)-20(7,14) A           0.9   OriMC-1         OVRO   10.4m Bla86  Plu84
+  261436.51 *( 4) HCOOCH3      21(7,15)-20(7,14) E           1.3   OriMC-1         OVRO   10.4m Bla86  Plu86
+U 261564.         unidentified                               1.1   OriMC-1         OVRO   10.4m Bla86
+  261704.44  ( 5) CH3OH        12( 6)-11( 5) E               0.9   OriMC-1         OVRO   10.4m Bla86  Sas84
+  261715.68 *( 4) HCOOCH3      21(7,14)-20(7,13) E           1.1   OriMC-1         OVRO   10.4m Bla86  Plu86
+  261746.56 *(10) HCOOCH3      21(7,14)-20(7,13) A           1.1   OriMC-1         OVRO   10.4m Bla86  Plu84
+  261805.71  ( 5) CH3OH        2(1)-1(0) E                   1.0   OriMC-1         MMWO    4.9m Lor85  Sas84
+  261843.715*(36) SO           7(6)-6(5)                     4.2   OriMC-1         MMWO    4.9m Lor85
+  261897.33 *( 6) CH3OCH3      14(5,9)-14(4,10) EE           0.23  OriMC-1         MMWO    4.9m Lor85
+  261955.99 *(14) CH3OCH3      15(5,11)-15(4,12) EE          0.28  OriMC-1         MMWO    4.9m Lor85
+  261959.30 *(45) CH3OCH3      15(5,11)-15(4,12) AA          1.1   OriMC-1         OVRO   10.4m Bla86
+  262004.26  ( 5) C2H          3-2 J=7/2-5/2 F=4-3           3.5   OriMC-1         MMWO    4.9m Ziu82  Ziu82
+  262006.48  ( 5) C2H          3-2 J=7/2-5/2 F=3-2           3.0   OriMC-1         MMWO    4.9m Ziu82  Ziu82
+  262064.99  ( 5) C2H          3-2 J=5/2-3/2 F=3-2           2.8   OriMC-1         MMWO    4.9m Ziu82  Ziu82
+  262067.46  ( 5) C2H          3-2 J=5/2-3/2 F=2-1           2.4   OriMC-1         MMWO    4.9m Ziu82  Ziu82
+  262078.89 *(30) C2H          3-2 J=5/2-3/2 F=2-2           0.8   OriMC-1         OVRO   10.4m Bla86
+  262103.48 *( 1) HCOOH        12(0,12)-11(0,11)             0.4   OriMC-1         OVRO   10.4m Bla86
+  262183.742*(22) CH3CH2CN     29(4,25)-28(4,24)             0.7   OriMC-1         OVRO   10.4m Bla86
+  262208.61 *(30) C2H          3-2 J=5/2-3/2 F=3-3          <0.8   OriMC-1         OVRO   10.4m Bla86
+  262224.2   ( 1) CH3OH        21( 3)-21( 2) A+-             1.3   OriMC-1         OVRO   10.4m Bla86  Bla86
+  262256.904*(25) SO2          11(3,9)-11(2,10)              1.7   OriMC-1         MMWO    4.9m Eri84a
+  262307.30 *(81) CH3OCH3      14(5,10)-14(4,11) EA          0.8b  OriMC-1         OVRO   10.4m Bla86
+  262310.27 *(63) CH3OCH3      14(5,10)-14(4,11) AE           b    OriMC-1         OVRO   10.4m Bla86
+  262312.45 *(56) CH3OCH3      14(5,10)-14(4,11) EE          1.0   OriMC-1         OVRO   10.4m Bla86
+  262316.39 *(39) CH3OCH3      14(5,10)-14(4,11) AA          0.9   OriMC-1         OVRO   10.4m Bla86
+  262324.81 *( 3) HCOOCH3      21(6,16)-20(6,15) E           1.2   OriMC-1         OVRO   10.4m Bla86  Plu86
+  262340.53 *(10) HCOOCH3      21(6,16)-20(6,15) A           1.0   OriMC-1         OVRO   10.4m Bla86  Plu84
+  262393.39 *(36) CH3OCH3      13(5,8)-13(4,9) EE            1.3b  OriMC-1         OVRO   10.4m Bla86
+  262394.92 *(33) CH3OCH3      13(5,8)-13(4,9) AA             b    OriMC-1         OVRO   10.4m Bla86
+  262548.36 *(51) CH2CO        13(0,13)-12(0,12)             0.5   OriMC-1         OVRO   10.4m Bla86
+  262624.70 *(51) CH3OCH3      13(5,9)-13(4,10) EE           1.6   OriMC-1         OVRO   10.4m Bla86
+  262629.54 *(33) CH3OCH3      13(5,9)-13(4,10) AA           0.6   OriMC-1         OVRO   10.4m Bla86
+  262768.94 *(29) CH3OCH3      12(5,7)-12,4,6) EE            1.3b  OriMC-1         OVRO   10.4m Bla86
+  262769.484*(20) HNCO         12(1,12)-11(1,11)             1.3b  OriMC-1         OVRO   10.4m Bla86
+  262769.72 *(28) CH3OCH3      12(5,7)-12,4,6) AA             b    OriMC-1         OVRO   10.4m Bla86
+  262774.25 *(18) CH3OCH3      8(2,6)-7(1,7) EE              0.7   OriMC-1         OVRO   10.4m Bla86
+  262889.46 *(47) CH3OCH3      12(5,8)-11(4,9) EE            0.5   OriMC-1         OVRO   10.4m Bla86
+  262895.29 *(28) CH3OCH3      12(5,8)-11(4,9) AA            0.5   OriMC-1         OVRO   10.4m Bla86
+  263050.03 *(24) CH3OCH3      11(5,6)-11(4,7) EE            1.1b  OriMC-1         OVRO   10.4m Bla86
+  263050.33 *(23) CH3OCH3      11(5,6)-11(4,7) AA             b    OriMC-1         OVRO   10.4m Bla86
+U 263065.         unidentified                               0.9   OriMC-1         OVRO   10.4m Bla86
+  263107.25 *(39) CH3OCH3      11(5,7)-11(4,8) EE            0.3   OriMC-1         OVRO   10.4m Bla86
+  263113.70 *(23) CH3OCH3      11(5,7)-11(4,8) AA            1.2   OriMC-1         OVRO   10.4m Bla86
+  263748.630*(13) HNCO         12(0,12)-11(0,11)             0.3   OriMC-1         MMWO    4.9m Arm84
+  263792.47 *(12) HC3N         29-28                         0.6   OriMC-1         MMWO    4.9m Arm84
+  264270.05 *( 6) H2CO         10(1,9)-10(1,10)              1.0   OriMC-1         NRAO     12m Ziu86
+U 264330.         unidentified                               1.0   OriMC-1         NRAO     12m Ziu86
+U 265698.         unidentified                               0.16  OriMC-1         MMWO    4.9m Lor84a
+U 265700.         unidentified                               0.8   OriMC-1         NRAO     12m Ziu86
+  265759.45 *( 9) C3H2         4(4,1)-3(3,0)                 0.21  OriMC-1         MMWO    4.9m Lor84a Vrt87
+U 265760.         unidentified                               0.8   OriMC-1         NRAO     12m Ziu86
+  265852.68  ( 5) HCN          3-2 v2=1 l=1c                 1.5   OriMC-1         NRAO     12m Ziu86  DeL77
+  265886.432*(10) HCN          3-2                          20.    OriMC-1         Hale      5m Hug79
+  266838.13  ( 5) CH3OH        5(2)-4(1) E                   1.7   OriMC-1         MMWO    4.9m Joh84  Sas84
+  266943.5  *( 8) SO2          30(9,21)-31(8,24)             0.20  OriMC-1         NRAO     12m Tur90
+  267109.37  (10) HCN          3-2 v2=2 l=2c                 0.2   IRC+10216       IRAM     30m Luc89  Del77
+  267120.02  (10) HCN          3-2 v2=2 l=2d                 0.5   IRC+10216       IRAM     30m Luc89  Del77
+  267199.37  ( 5) HCN          3-2 v2=1 l=1d                 1.5   OriMC-1         NRAO     12m Ziu86  DeL77
+  267241.5  *( 9) 29SiS        15-14                         0.1b  IRC+10216       NRAO     12m Ziu86
+  267243.15  (10) HCN          3-2 v2=2 l=0                  0.17b OriMC-1         NRAO     12m Tur87
+  267403.44  ( 5) CH3OH        9(0)-8(1) E                   1.8   OriMC-1         UKIRT   3.8m Den84  Sas84
+  267530.218 (20) OCS          22-21                          r    OriMC-1         MMWO    4.9m Lor84b Sch83a
+  267537.440*(33) SO2          13(3,11)-13(2,12)              r    OriMC-1         MMWO    4.9m Lor84b
+  267557.625*(17) HCO+         3-2                          12.    OriMC-1         Hale      5m Hug79
+  268745.769*(12) H2C18O       4(1,4)-3(1,3)                 0.64  OriMC-1         MMWO    4.9m Man90

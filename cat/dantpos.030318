@@ -1,0 +1,6 @@
+# 12/3mm baseline correction for EW352 starting 19/03/2003 (dd/mm/yyyy)
+
+# Solution provided by Tony Wong
+
+4,-0.015,0.001,-0.003
+5,0.009,0.007,-0.006

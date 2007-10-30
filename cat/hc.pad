@@ -1,0 +1,46 @@
+# Antennae pad positions, needed by the DESIGN program 
+# Only the first two columns are currently used, and give
+# the antennae positions (currently fixed in ft) w.r.t.
+# the array center. First column is the EW (E>0), second
+# the NS (N>0)
+#
+# standard Hat Creek pads; as found in the 'yellow book'
+-500    0   500W
+-440    0   440W
+-380    0   380W
+-240    0   240W
+-100    0   100W
+-40     0    40W
+-15     0    15W
+0       0     0N
+15      0    15E
+40      0    40E
+80      0    80E
+180     0   180E
+320     0   320E
+400     0   400E
+475     0   475E
+500     0   500E
+0       20   20N
+0       40   40N
+0       60   60N
+0       100 100N
+0       140 140N
+0       200 200N
+0       260 260N
+0       320 320N
+0       380 380N
+0       440 440N
+0       500 500N
+0       560 560N
+0       580 580N
+# outriggers - See Arie Grossman's 1991 memo
+480     1440 o3 - W of road 400 meters from lab 
+600     1470 o4 - E of road 400 meters from lab 
+340     1570 o5 - W of road near utility pole 
+450     1700 o6 - E of road across from o5 
+320     1880 o7 - E of road 
+100     2100 o8 - W of road 
+-220    2340 o9 - W of road near gas pump 
+0       2800 o10 - E of road and south of shop on Bidwell's land
+#

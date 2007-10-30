@@ -1,0 +1,18 @@
+# Array configuration: H214
+
+# At about UT=12:00 on 15-OCT-04, the 12mm baseline solution
+# was installed into the ATCA on-line system. After this time,
+# the solution was that appropriate for 12mm observations.
+# Hence this file indicates that a correction of 0 is needed
+# for millimetre data.
+
+# Note: 3/6cm observations by C767 and C1357 after this time should
+# be corrected to use the cm baseline solution.
+
+# Ant  dx (ns)  dy (ns)  dz (ns)
+# ---  -------  -------  -------
+   1    0.       0.       0.
+   2    0.       0.       0.
+   3    0.       0.       0.
+   4    0.       0.       0.
+   5    0.       0.       0.

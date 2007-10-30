@@ -1,0 +1,59 @@
+        INTERFEROMETER ANTENNA POSITIONS FOR 1985
+File: mircat/stations.1985
+
+Dates are dates when antennas were moved to new stations.
+T/F indicates baselines in this table are good/bad.
+Columns 3,4,5 give antenna positions relative to station 9; these
+	antenna positions are listed in the data header.  To
+	view them, use 'HEADER' option in program LIST.
+Columns 7,8,9 give baseline vectors from antenna i to antenna j
+	(baseline ij = antenna j - antenna i); these numbers are
+	typed out by BEE when data is read in or edited.
+
+If the baseline vectors in your data do not agree with those in the
+table, then edit the baseline in BEE before fitting a phase correction
+file to your calibrator data points.  Program REDUCE will then make
+these baseline corrections to your data.
+
+
+ -------------- 18-JUL-85 ------------- 
+
+ 180E  T    -0.0948  182.9886    0.1236     12:  -26.5344 -182.9085   30.7032
+ 40N   T   -26.6292    0.0801   30.8268     23: -106.3194   -0.1116  123.0941
+ 200N  T  -132.9486   -0.0315  153.9209     31:  132.8538  183.0201 -153.7973
+
+
+ -------------- 01-AUG-85 ------------- 
+
+ 180E  F    -0.0875  182.9912    0.1227     12:  -26.5417 -182.9111   30.7041
+ 40N   F   -26.6292    0.0801   30.8268     23: -106.3155   -0.1096  123.0911
+ 200N  F  -132.9447   -0.0295  153.9179     31:  132.8572  183.0207 -153.7952
+
+
+ -------------- 10-AUG-85 ------------- 
+
+ 100W  F    -0.0658 -101.6557    0.0683     12:  -66.4539  101.6907   76.9397
+ 100N  F   -66.5197    0.0350   77.0080     23:  -66.4314   -0.0651   76.9128
+ 200N  F  -132.9511   -0.0301  153.9208     31:  132.8853 -101.6256 -153.8525
+
+
+ -------------- 23-AUG-85 ------------- 
+
+ 40E   T    -0.0630   40.5915    0.0859     12:    0.0326  -40.5316   -0.0456
+ 0     T    -0.0304    0.0599    0.0403     23:  -26.5841   -0.0739   30.7839
+ 40N   T   -26.6145   -0.0140   30.8242     31:   26.5515   40.6055  -30.7383
+
+
+ -------------- 13-DEC-85 ------------- 
+
+ 40E   T    -0.0684   40.5974    0.0843     12:   -0.0049 -142.2087   -0.0125
+ 100W  T    -0.0733 -101.6113    0.0718     23: -212.6237  101.5741  246.1960
+ 320N  T  -212.6970   -0.0372  246.2678     31:  212.6286   40.6346 -246.1835
+
+
+ -------------- 22-DEC-85 ------------- 
+
+ 0     T    -0.0637   -0.0074    0.0626     12:   -0.0246 -101.6063    0.0091
+ 100W  T    -0.0883 -101.6137    0.0717     23: -132.8760  101.5599  153.8548
+ 200N  T  -132.9643   -0.0538  153.9265     31:  132.9006    0.0464 -153.8639
+

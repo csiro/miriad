@@ -1,0 +1,113 @@
+                    ---------------------------------
+                      HERMES: Model Map of Mercury
+                    ---------------------------------
+                    D.L. Mitchell  11 March 1991  UCB
+
+
+	HERMES models the diurnal temperature variations in the subsurface
+layers of Mercury.  For each element of a Hermographic longitude-latitude grid,
+HERMES solves for the physical temperature of the crust as a function of depth
+and time during the course of a Hermean solar day.  Next, the radiative
+transfer equation is integrated and Fresnel coefficients are applied at the
+crust-vacuum interface to obtain the brightness temperature of each element
+as seen from Earth.  Finally, the Hermographic grid is converted to a
+geocentric RA-Dec grid via coordinate rotations and a pixel image is generated
+for use with the MIRIAD software. 
+
+	The calculation of the physical temperature structure is controlled by
+an input file called 'hermes.in' (the format of this input file is very
+specific -- see example at end).  By editing this file, one can change the
+position of Mercury in its orbit, the viewing geometry, and the observing
+wavelength to handle any situation.  It is also possible to vary the physical
+parameters of the crust: thermal inertia, electrical and thermal skin depths,
+Bond albedo, infrared emissivity, and refractive index, in order to cover the
+spectrum from a fine powder to solid rock.  The model includes temperature
+dependent thermal conductivity and heat capacity -- the amount of radiative
+heat conduction is adjustable, corresponding to varying degrees of porosity.
+Finally, a constant heat flux may be included at the base of the thermal wave
+to account for heat generated from core-mantle differentiation and radioactive
+decay. 
+
+	The depth and time resolution are adjustable up to 50 depth steps and
+1000 time steps, which is more than sufficient to handle the most extreme
+physical parameters.  The maximum resolutions in Hermographic longitude and
+latitude are 3.6 and 9 degrees, respectively.  Generally, higher longitude
+resolution is needed for short wavelength observations, which are sensitive to
+the large day-night temperature contrast near the surface.  For example, a
+resolution of about 6 degrees is adequate to model resolved 3mm observations. 
+
+	HERMES creates two output files.  A log file ('hermes.log') contains 
+a record of the input parameters and diagnostics of the numerical solution.  
+The interpretation of
+
+   CRANKN: cerr[ 6.5] =  -0.080    ferr[ 8.1] =   0.187    rerr =   0.004
+
+is as follows:  subroutine CRANKN reports that the maximum convergence error
+in the physical temperature structure is -0.080 K and occurs at a depth of 6.5
+thermal skin depths.  "Convergence" is defined to be how well the solution
+repeats from (Hermean solar) day to day.  The maximum deviation from thermal
+equilibrium (i.e. constant net heat flux) is 0.187 K and occurs at a depth of
+8.1 thermal skin depths.  Note that ferr > cerr in this case.  After only a few
+solar days of calculation, the convergence accuracy is usually better than the
+thermal equilibrium accuracy.  The best estimate of the "modeling error" is the
+larger of cerr and ferr.  Finally, the imbalance between insolation and re-
+radiation, averaged over a solar day at the surface, is 0.004 K.  One should
+keep rerr as small as possible by adjusting the depth and time grid spacings. 
+
+The interpretation of
+
+	RADIATE: lon = 12.00  lat = 24.00   Tb = 412.31
+
+is as follows:  subroutine RADIATE reports that the brightness temperature
+(not including Fresnel limb darkening) at 12.00 degrees longitude and 24.00
+degrees latitude (Hermographic coordinates) is 412.31 K, as seen from Earth.  
+If Tb = 0, then the element is not visible from Earth.  There are four calls to 
+RADIATE for each call to CRANKN due to north-south and mirror symmetries in the 
+insolation pattern.
+
+	The second output file is the pixel image which can be convolved with
+an arbitrary beam for comparison with a BIMA image.  One can also Fourier
+transform the model image to compare directly with visibility data.
+
+	For additional information about the physics involved, the numerical
+solution, and a general idea of how the thermal parameters vary with surface
+composition, see "Thermal Microwave Emission from Mercury".
+
+	The input file 'hermes.in' should look like this (the first line of
+the file should start with 'Geometry ...'):
+
+Geometry (18 May 1991):
+------------------------------------------------------------------------------
+229.13        | longitude of sub-earth point  (degrees)
+1.11          | latitude  "      "       "    (degrees)
+333.16        | position angle of N-pole  (degrees E from N)
+3.685         | radius of Mercury's disk  (arc seconds)
+319.16        | longitude of sub-solar point  (degrees)
+20.04         | approximate time  (Mercury Hours)  exact if time < 0
+------------------------------------------------------------------------------
+
+Physical Parameters:
+------------------------------------------------------------------------------
+0.119         | bolometric (Bond) albedo  0.119
+0.90          | infrared surface emissivity  0.90
+0.0020        | thermal inertia (cal-cgs units @ 350K)  0.0020
+1.0           | ratio of radiative to contact conductivity @ 350K
+-60.0         | heat flux at base of thermal wave (cgs)  -60.0
+1.80          | dielectric constant (real part)
+0.8           | ratio of electrical to thermal skin depth (@ 350K)
+89.21382      | observing frequency (GHz)
+------------------------------------------------------------------------------
+
+Grid Parameters:
+------------------------------------------------------------------------------
+15.0          | maximum depth (thermal skin depths)  15.0
+1.11          | depth increment multiplier  1.11
+30            | number of depth steps (max 50)  30
+800           | number "  time    "   (max 1000)  800
+25            | number of Hermographic longitude elements (max 50)  25
+16            | number "       "       latitude     "     (max 20)  16
+0.15          | cell size for 64 X 64 geocentric map  (arc seconds)
+12            | maximum heat bomb iteration  in CRANKN  12
+12            | maximum number of iterations in CRANKN  12
+0.2           | maximum error in the temperature structure (K)  0.2 to 0.5
+------------------------------------------------------------------------------

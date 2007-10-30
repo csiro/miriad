@@ -1,0 +1,12 @@
+source=$MIRCAT/point.source
+jyperk=8
+systemp=50
+radec=0,50
+stokes=rr,ll,rl,lr
+freq=1.4
+telescop=other
+corr=$MIRCAT/at.corr.1
+lat=34
+ant=$MIRCAT/vla_d.ant
+leakage=4
+baseunit=1

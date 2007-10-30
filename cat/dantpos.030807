@@ -1,0 +1,14 @@
+# Array configuration: EW367
+
+# Baseline solution taken on 7-AUG-03
+# Number of sources: 22
+# RMS phase error of solution: 13.50454 degrees
+
+# Ant  dx (ns)  dy (ns)  dz (ns)
+# ---  -------  -------  -------
+   1   -0.0033  -0.0035   0.0003
+   2    0.0023  -0.0006  -0.0053
+   3   -0.0000   0.0000  -0.0000
+   4   -0.0103  -0.0022   0.0023
+   5   -0.0010  -0.0029   0.0010
+   6    0.0060   0.0016  -0.0037

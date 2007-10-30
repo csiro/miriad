@@ -1,0 +1,12 @@
+# Array configuration: EW214
+
+# Baseline solution taken on 2-JUL-03
+# Number of sources: 18
+# RMS phase error of solution: 24.07033 degrees
+
+ 1 -0.0004  0.0040  0.0073
+ 2  0.0032  0.0019  0.0007
+ 3  0.0004  0.0026  0.0017
+ 4 -0.0025  0.0055  0.0153
+ 5 -0.0000  0.0000 -0.0000
+ 6  0.0193  0.0106 -0.0080

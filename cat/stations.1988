@@ -1,0 +1,445 @@
+        INTERFEROMETER ANTENNA POSITIONS FOR 1988
+
+File: mircat/stations.1988
+
+The date indicates when the last update for each antenna configuration,
+and should correspond to date when antennas were moved to new stations.
+T/F indicates baselines in this table are good/bad.
+Columns 3,4,5 give antenna positions relative to station 9. The
+	antenna positions are also in the uvdata and can be listed
+	with the Miriad task uvlist options=var
+Columns 7,8,9 give baseline vectors from antenna i to antenna j
+	(baseline ij = antenna j - antenna i); these numbers are
+	typed out by CBEE when data is read in or edited.
+
+If the antenna positions in your uvdata do not agree with those in the table
+you may need to edit the uvdata before fitting a phase correction file to your
+calibrator data points. 
+
+This can be done with the Miriad tasks UVEDIT, CALFLAG, CALFIT and CALAPPLY, or
+using the Ralint task CBEE and CALIBRATE. Reading in the file CBEE.date for the
+baseline fit will automatically edit calibrator data in CBEE before the fits
+are done. CALIBRATE will then make these baseline corrections to your data. 
+
+*****************************************************************************
+
+NOTES:
+
+In February 1988 we became aware that there was an elevation-dependent phase
+difference between the upper and lower sidebands from receiver 1.  The
+difference in phase between the two sidebands varies by as much as 2 radians
+between 20 degrees elevation and zenith.  This problem appears to have 
+developed in Nov or Dec 1987, and was fixed fall 1988.
+
+One consequence of this problem is that the B1 and B3 components of baselines
+12 and 31 appear to differ slightly between the upper and lower sidebands.
+This is a consequence of the fact that sources observed at low elevation 
+typically are at large hour angles, or have low declinations.  To get the 
+best possible phase calibration, it is therefore desirable to change the
+baseline slightly when reducing upper or lower sideband data.  
+
+I will try to note, in the table below, which sideband was used in fitting
+the baseline, and what corrections are applicable to the other sideband.
+
+					-- Dick Plambeck,  8 Mar 88
+
+On 19 Aug, Jack and Doug worked on receiver 1, replacing 20/40/80 box, 
+modifying LO terminator box, etc; on 01 Sep, they worked on receivers 2
+and 3.  In data taken since 02 Sep, we are not aware of any significant
+(greater than 0.5 radian) discrepancies between USB and LSB baselines.
+
+					-- Dick Plambeck   20 Oct 88
+
+*****************************************************************************
+
+
+ -------------- 18-DEC-87 ------------- 
+
+ 100W  T    -0.0628 -101.6530    0.0657     12:  -93.0296  101.6911  107.7117
+ 140N  T   -93.0924    0.0381  107.7774     23:  -39.8434   -0.0882   46.1293
+ 200N  T  -132.9358   -0.0501  153.9067     31:  132.8730 -101.6029 -153.8410
+!
+!	fit to USB of BASELINESIO.19DEC
+!
+!	LSB corrections, stored in file PHLFIX.19DEC87
+!		12:	 .0030	-.0005	 .0015
+!		23:	-.0007	-.0001	-.0004
+!		31	-.0023	 .0006  -.0011
+
+
+ --------------  7-JAN-88 ------------- 
+
+ 240W  T    -0.0568 -243.9904    0.0571     12:  -26.5809  244.0377   30.7775
+ 40N   T   -26.6377    0.0473   30.8346     23:  -66.4149   -0.0585   76.9038
+ 140N  T   -93.0526   -0.0112  107.7384     31:   92.9958 -243.9792 -107.6813
+!
+!	baseline corrections for LSB from BASELINESIO.07JAN 
+!		and checked on BASELINEPNT.08JAN   
+
+!		LSB corrections are in [RALINT.CAL]PHLFIX.07JAN	(JC-17APR88)
+!		12:	 .0035	   0	 .0020
+!		23:	-.0015	   0	    0
+!		31:	-.0020	   0	-.0020
+!
+!		checked BASELINESIO.17JAN	(JC-17APR88)
+!	USB	12:	 .0009	-.0010	-.0015
+!		23:	 .0001	   0	 .0017
+!		31:	-.0022	 .0005	-.0018
+!
+!	LSB	12:	 .0049	-.0006	 .0012
+!		23:	-.0016	-.0001	 .0011
+!		31:	-.0030	 .0007	-.0018
+!
+!
+! 	baseline corrections for USB on 20 Jan: (is this a DSB fit?)
+!		12:	 .0011	-.0005	-.0008
+!		23:	    0	    0	 .0023
+!		31	-.0011	 .0005	-.0014
+
+
+
+ -------------- 22-JAN-88 ------------- 
+
+ 80E   T    -0.0791   81.3609    0.0950     12:  -26.5586  -81.3136   30.7396
+ 40N   T   -26.6377    0.0473   30.8346     23:  -66.4171   -0.0587   76.9054
+ 140N  T   -93.0548   -0.0114  107.7400     31:   92.9757   81.3723 -107.6450
+
+ -------------- 25-JAN-88 ------------- 
+
+ 80E   T    -0.0808   81.3633    0.0997     12: -252.4092  -81.3620  292.2275
+ 380N  T  -252.4900    0.0013  292.3272     23: -132.8941    0.0480  153.8645
+ 580N  T  -385.3841    0.0493  446.1917     31:  385.3033   81.3140 -446.0920
+
+
+ -------------- 27-JAN-88 ------------- 
+
+ 400E  T    -0.1495  406.6169    0.1590     12:    0.1308 -889.4597   -0.1587
+ 475W  T    -0.0187 -482.8428    0.0003     23:   -0.0548  482.8676    0.0774
+ 0     T    -0.0735    0.0248    0.0777     31:   -0.0760  406.5921    0.0813
+
+
+ --------------  1-FEB-88 ------------- 
+
+ 400E  T    -0.1509  406.6161    0.1580     12:    0.1322 -889.4589   -0.1577
+ 475W  T    -0.0187 -482.8428    0.0003     23: -385.3611  482.8519  446.1744
+ 580N  T  -385.3798    0.0091  446.1747     31:  385.2289  406.6070 -446.0167
+!
+!	baseline fit to LSB for SiO maser position measurements
+!
+!	corrections for USB, based on fit to BASELINEWWPO.09FEB:
+!		12: 	-.0021	 .0017	-.0012
+!		23:	-.0001	-.0005	-.0006
+!		31:	 .0022	-.0012	 .0018	
+	
+
+ -------------- 18-FEB-88 ------------- 
+
+ 180E  T    -0.0999  182.9765    0.1227     12:    0.0529 -284.5679   -0.0857
+ 100W  T    -0.0470 -101.5914    0.0370     23:   -0.0107  101.5929    0.0291
+ 0     T    -0.0577    0.0015    0.0661     31:   -0.0422  182.9750    0.0566
+
+!	checked fit to BASELINEPNT.18FEB   JC-17APR88
+!	
+!	LSB	12:	 .0013	-.0008	-.0005	in [RALINT.CAL]PHLFIX.18FEB
+!		23:	 .0007	  0	 .0001
+!		31:	-.0020	 .0008	-.0006
+!
+!	USB 	12:	-.0001	-.0008	-.0017 	in [RALINT.CAL]PHUFIX.18FEB
+!		23:	 .0009	-.0002	 .0010
+!		31:	-.0008	 .0010	 .0007
+
+ --------------  3-MAR-88 ------------- 
+
+ 400E  T    -0.1461  406.5807    0.1537     12:    0.0836 -650.5328   -0.1018
+ 240W  T    -0.0625 -243.9521    0.0519     23:    0.0041  243.9509    0.0122
+ 0     T    -0.0584   -0.0012    0.0641     31:   -0.0877  406.5819    0.0896
+!
+!	fit to LSB of file BASELINEPNT.04MAR
+!	
+!	corrections for USB, based on fit to BASELINEPNT.04MAR:
+!		12:	-.0015	-.0003	-.0016
+!		23:	 .0000   .0000   .0000
+!		31	 .0015	 .0003	 .0016
+	
+
+ -------------- 14-MAR-88 ------------- 
+
+ 40E   T    -0.0875   40.5928    0.1057     12:    0.0239  -40.5502   -0.0412
+ 0     T    -0.0636    0.0426    0.0645     23:  -39.9208   -0.0275   46.2231
+ 60N   T   -39.9844    0.0151   46.2876     31:   39.8969   40.5777  -46.1819
+!
+!	fit to USB for mm VLBI
+!
+!	corrections for LSB, based on fit to FLUX.21MAR
+!		12: 	 .0048	 .0006	 .0040
+!		23:	-.0028	 .0006	-.0026	
+!		31:	-.0020	-.0012	-.0014
+
+
+ -------------- 23-MAR-88 ------------- 
+
+ 40E   T    -0.0882   40.5888    0.1084     12: -332.1202  -40.5283  384.5057
+ 500N  T  -332.2084    0.0605  384.6141     23:  -53.1779   -0.0156   61.5727
+ 580N  T  -385.3863    0.0449  446.1868     31:  385.2981   40.5439 -446.0784
+!
+!	fit to USB of BASELINEPNT.24MAR
+!
+!	corrections for LSB, based on fit to BASELINEPNT.24MAR:
+!		12:	 .0035	 .0000	 .0038
+!		23:	 .0000	 .0000	-.0007
+!		31:	-.0035	 .0000	-.0031
+
+
+ --------------  4-APR-88 ------------- 
+
+ 475W  T     0.0048 -482.8632   -0.0142     12:  -66.5127  482.8908   77.0079
+ 100N  T   -66.5079    0.0276   76.9937     23: -146.1819   -0.0616  169.2613
+ 320N  T  -212.6898   -0.0340  246.2550     31:  212.6946 -482.8292 -246.2692
+!
+! 	fit to USB of BASELINEPNT.05APR
+!
+!	corrections for LSB, stored in file HAT$CAL:PHLFIX.05APR
+!		12:	 .0035	 .0001	 .0033
+!		23:	-.0002	 .0002	-.0006
+!		31:	-.0033	-.0003	-.0027
+
+
+ -------------- 12-APR-88 ------------- 
+
+ 400E  T    -0.1408  406.6142    0.1509     12: -132.8157 -406.6575  153.7690
+ 200N  T  -132.9565   -0.0433  153.9199     23: -119.5236    0.0405  138.4021
+ 380N  T  -252.4801   -0.0028  292.3220     31:  252.3393  406.6170 -292.1711
+!
+!	fit to USB of BASELINESIO.13APR
+!
+!	corrections for LSB, stored in file HAT$CAL:PHLFIX.13APR
+!		12:	 .0027	-.0001	 .0026
+!		23:	-.0002	-.0002	-.0005
+!		31	-.0025	 .0003	-.0021
+!
+!	looked at BASELINESIO.13APR reduced to above baseline. The data
+!	are noisy but DSB phase difference seemed to exist. I got
+!		LSB	12:	 .0023	 0	 .0027
+!			23:	 0	 0	 0
+!			31:	-.0030	 0	-.0021
+!		USB	12:	-.0015	 0	-.0010	(v. noisy)
+!			23:	 0 	 0	 0
+!			31:	 .0010	 0	 0	(v. noisy)
+!	looked at baselinewcs.26apr, better data but shorter set
+!		LSB	12/23/31 all OK
+!		USB	12:  	-.0019	 0	-.0023
+!			23:	 0	 0	 0
+!			31:	 .0018	 0	 .0020
+!	finally, looked at baselinewcs.02may, good data but v.short
+!		LSB	12/23/31 all OK
+!		USB	12:	 .0008	-.0005	-.0003
+!			23:	 0	 0	 0
+!			31:	-.0010	 0	-.0008
+!	Conclusion: if your calibrators' phases line up - leave it alone.
+!
+
+ --------------  2-MAY-88 ------------- 
+
+ 240W  T    -0.0465 -243.9773    0.0460     12: -172.7618  243.9429  200.0409
+ 260N  T  -172.8083   -0.0344  200.0869     23:  -79.6719    0.0292   92.2355
+ 380N  T  -252.4802   -0.0052  292.3224     31:  252.4337 -243.9721 -292.2764
+!
+!	fit to USB of baselinepnt.07may
+!
+!	corrections for LSB, stored in file HAT$CAL:PHLFIX.07MAY:
+!		12:	 .0030	 .0000	 .0016
+!		23:	-.0004	-.0001	-.0003
+!		31:	-.0026	 .0001	-.0013
+!
+!	data sets taken between 2 May and 7 May may be corrected using
+!	files HAT$CAL:PHUPNT.07MAY AND HAT$CAL:PHLPNT.07MAY; the largest
+!	change in PHUPNT.07MAY is .0016
+
+
+ -------------- 12-MAY-88 ------------- 
+
+ 40E   T    -0.0781   40.5929    0.0903     12: -172.7302  -40.6273  199.9966
+ 260N  T  -172.8083   -0.0344  200.0869     23:  -39.8346    0.0020   46.1140
+ 320N  T  -212.6429   -0.0324  246.2009     31:  212.5648   40.6253 -246.1106
+
+
+ -------------- 24-MAY-88 ------------- 
+
+ 180E  T    -0.1082  182.9791    0.1355     12:  -66.4103 -182.9277   76.8706
+ 100N  T   -66.5185    0.0514   77.0061     23:  -66.4358   -0.1056   76.9246
+ 200N  T  -132.9543   -0.0542  153.9307     31:  132.8461  183.0333 -153.7952
+
+	Fits from 12JUN for both usb and lsb corrections can be found in
+	phlfix.12jun88 and phufix.12jun88 in HAT$CAL
+	Baselinehcn.12jun data is very good		-JC
+
+
+ -------------- 13-JUN-88 ------------- 
+
+ 100W  T    -0.0477 -101.6271    0.0480     12:  -93.0428  101.6519  107.7267
+ 140N  T   -93.0905    0.0248  107.7747     23:  -39.8659   -0.0793   46.1572
+ 200N  T  -132.9564   -0.0545  153.9319     31:  132.9087 -101.5726 -153.8839
+
+	Fit to baselinepnt.14jun gave above baseline for USB
+	LSB corrections are 12:  .0022	-.0006	 .0033
+			    23:	-.0009	 .0001	-.0008
+			    31: -.0013	 .0005	-.0025
+	corrections are in HAT$CAL:phlfix.14jun88	-JC
+
+ -------------- 20-JUN-88 ------------- 
+
+ 240W  T    -0.0392 -243.9674    0.0415     12:  -26.6072  244.0173   30.8031
+ 40N   T   -26.6464    0.0499   30.8446     23:  -66.4313   -0.0370   76.9258
+ 140N  T   -93.0777    0.0129  107.7704     31:   93.0385 -243.9803 -107.7289
+
+ baselinehcop.22jun baseline fit - not the best data - mchw - 16 aug 1988
+ usb:	 .0021	 .0001	 .0013		lsb:	 .0060	-.003	 .0028
+ 	 .0006	-.0009	 .0004			 .0003	-.0005	 .0007
+ 	-.0026	 .0008	-.0017			-.0050	-.0017	-.0028
+
+ Corrections based on Baselinehco.27jun ~4.5 hours of usable data
+
+ 	LSB	12:	 .0028	 .0019	 .0046 (from closure)
+ 		23:	-.0007	-.0013	-.0016
+ 		31:	-.0021	-.0006	-.0030
+
+ 	USB	12:	 .0014	 .0011	 .0034 (from closure)
+ 		23:	-.0004	-.0008	-.0016
+ 		31:	-.0010	-.0003	-.0018
+
+ 	All fits looked good; see PHLFIX.27JUN88 and PHUFIX.22JUN88
+			      in HAT$CAL     - JC
+
+ -------------- 28-JUN-88 ------------- 
+
+ 100W  T    -0.0622 -101.6778    0.0638     12:   -0.0385  284.6796    0.0508
+ 180E  T    -0.1007  183.0018    0.1146     23:    0.0279 -182.9993   -0.0311
+ 0     T    -0.0728    0.0025    0.0835     31:    0.0106 -101.6803   -0.0197
+
+ 	Fit to baselintpnt.29jun gave corrections to LSB
+ 		12:	 .0020	 .0004	 .0014
+ 		23:	-.0004	-.0005	 .0000
+ 		31:	-.0016	 .0001	-.0014
+ 	fit can be found in HAT$CAL:PHLFIX.29JUN88	-JC
+
+
+ -------------- 13-JUL-88 ------------- 
+
+ 15W   T    -0.0480  -15.2705    0.0344     12:   -0.0191   30.5383    0.0341
+ 15E   T    -0.0671   15.2678    0.0685     23:  -13.2861  -15.2076   15.3493
+ 20N   T   -13.3532    0.0602   15.4178     31:   13.3052  -15.3307  -15.3834
+
+
+ -------------- 20-JUL-88 ------------- 
+
+ 100N  T   -66.5257   -0.0009   77.0199     12:   66.4478   40.6685  -76.9369
+ 40E   T    -0.0779   40.6676    0.0830     23:  -93.0028  -40.6855  107.6850
+ 140N  T   -93.0807   -0.0179  107.7680     31:   26.5550    0.0170  -30.7481
+
+ USB is OK, for LSB use: 			->	12: .0020 0 .0024
+	HAT$CAL:phlfix.21jul88 	for BEE			23:     0 0	0
+	HAT$CAL:CBEELSB.30JUL 	for CEE			23:     0 0	0
+							31:-.0020 0-.0024
+
+ --------------  8-AUG-88 ------------- 
+
+ 0     T    -0.0622   -0.0089    0.0727     12:    0.0122 -101.6179   -0.0321
+ 100W  T    -0.0500 -101.6268    0.0406     23:  -39.9580  101.6821   46.2754
+ 60N   T   -40.0080    0.0553   46.3160     31:   39.9458   -0.0642  -46.2433
+
+ baseline fit to USB of baselinepnt.09aug, copied to this directory.
+ CBEE fit to LSB is in lsbcbee.09aug
+
+ 	Fit LSB with BEE 	12:	 .0032	-.0003	 .0033
+ 				23:	-.0016	 .0000	-.0002 (closure)
+ 				31:	-.0017	 .0003	-.0032
+
+	fit is in HAT$CAL:PHLFIX.09AUG88 - JC
+
+
+ -------------- 14-SEP-88 ------------- 
+
+ 40E   T    -0.0805   40.6204    0.0977     12:    0.0305 -142.2472   -0.0571
+ 100W  T    -0.0500 -101.6268    0.0406     23:   -0.0035  101.6912    0.0174
+ 0     T    -0.0535    0.0644    0.0580     31:   -0.0270   40.5560    0.0397
+
+
+ -------------- 22-SEP-88 ------------- 
+
+ 400E  T    -0.1414  406.6208    0.1518     12:    0.0914 -508.2476   -0.1112
+ 100W  T    -0.0500 -101.6268    0.0406     23:   -0.0047  101.6909    0.0174
+ 0     T    -0.0547    0.0641    0.0580     31:   -0.0867  406.5567    0.0938
+
+
+ -------------- 28-SEP-88 ------------- 
+
+ 400E  T    -0.1414  406.6200    0.1499     12: -132.8186 -406.6418  153.7745
+ 200N  T  -132.9600   -0.0218  153.9244     23: -119.5046   -0.0329  138.3798
+ 380N  T  -252.4646   -0.0547  292.3042     31:  252.3232  406.6747 -292.1543
+
+
+ --------------  3-OCT-88 ------------- 
+
+ 240W  T    -0.0321 -243.9473    0.0258     12: -172.7739  243.9184  200.0584
+ 260N  T  -172.8060   -0.0289  200.0842     23:  -79.6583   -0.0266   92.2203
+ 380N  T  -252.4643   -0.0555  292.3045     31:  252.4322 -243.8918 -292.2787
+
+
+ -------------- 10-OCT-88 ------------- 
+
+ 475W  T    -0.0187 -482.8867    0.0112     12:  -66.4945  482.9464   76.9882
+ 100N  T   -66.5132    0.0597   76.9994     23: -146.1663   -0.0942  169.2471
+ 320N  T  -212.6795   -0.0345  246.2465     31:  212.6608 -482.8522 -246.2353
+
+
+ -------------- 17-OCT-88 ------------- 
+
+ 40E   T    -0.0911   40.6117    0.1056     12: -332.1319  -40.5475  384.5249
+ 500N  T  -332.2230    0.0642  384.6305     23:  -39.8327   -0.0342   46.1210
+ 560N  T  -372.0557    0.0300  430.7515     31:  371.9646   40.5817 -430.6459
+
+
+ -------------- 20-OCT-88 ------------- 
+
+ 15E   T    -0.0672   15.2416    0.1098     12:    0.0121  -30.4778   -0.0419
+ 15W   T    -0.0551  -15.2362    0.0679     23:  -13.3142   15.3114   15.4053
+ 20N   T   -13.3693    0.0752   15.4732     31:   13.3021   15.1664  -15.3634
+
+
+ --------------  2-NOV-88 ------------- 
+
+ 80E   T    -0.0835   81.3448    0.0930     12:  -26.5595  -81.3228   30.7471
+ 40N   F   -26.6430    0.0220   30.8401     23:  -39.8851   -0.0157   46.1815
+ 100N  T   -66.5281    0.0063   77.0216     31:   66.4446   81.3385  -76.9286
+
+
+ -------------- 16-NOV-88 ------------- 
+
+ 40W   T    -0.0868  -40.6373    0.0961     12:  -39.9256   40.6693   46.2176
+ 60N   T   -40.0124    0.0320   46.3137     23:  -26.5172   -0.0260   30.7087
+ 100N  T   -66.5296    0.0060   77.0224     31:   66.4428  -40.6433  -76.9263
+
+  Write baseline fit into file :cbee.19NOV - UPDATED AT HAT CREEK 23 NOV - MCHW
+					 12: -39.9257  40.6693  46.2176
+					 23: -26.5172  -0.0260  30.7087
+					 31:  66.4428 -40.6433 -76.9263
+
+ -------------- 28-NOV-88 ------------- 
+
+ 40W   T    -0.0868  -40.6373    0.0961     12: -172.7161   40.6074  199.9845
+ 260N  F  -172.8029   -0.0299  200.0806     23:  106.2733    0.0359 -123.0582
+ 100N  T   -66.5296    0.0060   77.0224     31:   66.4428  -40.6433  -76.9263
+
+
+ -------------- 28-NOV-88 ------------- 
+
+ 40W   T    -0.0857  -40.6367    0.0994     12: -172.7172   40.6068  199.9812
+ 260N  F  -172.8029   -0.0299  200.0806     23:  -39.8888   -0.0181   46.1778
+ 320N  T  -212.6917   -0.0480  246.2584     31:  212.6060  -40.5887 -246.1590
+
+
+ -------------- 14-DEC-88 ------------- 
+
+ 100W  T    -0.0625 -101.6624    0.0670     12:  -93.0102  101.6953  107.6861
+ 140N  F   -93.0727    0.0329  107.7531     23:  -39.8662   -0.1093   46.1559
+ 200N  T  -132.9389   -0.0764  153.9090     31:  132.8764 -101.5860 -153.8420

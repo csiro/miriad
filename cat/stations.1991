@@ -1,0 +1,111 @@
+        INTERFEROMETER ANTENNA POSITIONS FOR 1991
+
+File: mircat/stations.1991
+
+The date indicates when the last update for each antenna configuration,
+and should correspond to date when antennas were moved to new stations.
+T/F indicates baselines in this table are good/bad.
+Columns 3,4,5 give antenna positions relative to station 9. The
+	antenna positions are also in the uvdata and can be listed
+	with the Miriad task uvlist options=var
+Columns 7,8,9 give baseline vectors from antenna i to antenna j
+	(baseline ij = antenna j - antenna i); these numbers are
+	typed out by CBEE when data is read in or edited.
+
+If the antenna positions in your uvdata do not agree with those in the table
+you may need to edit the uvdata before fitting a phase correction file to your
+calibrator data points.
+
+This can be done with the Miriad tasks UVEDIT, CALFLAG, CALFIT and CALAPPLY, or
+using the Ralint task CBEE and CALIBRATE. Reading in the file CBEE.date for the
+baseline fit will automatically edit calibrator data in CBEE before the fits
+are done. CALIBRATE will then make these baseline corrections to your data. 
+
+*****************************************************************************
+
+NOTES:
+Subj:	BASELINE CHANGE
+File:	[wright.bima]baseline.09jan91
+From:	MCHW
+
+Summary
+
+During the B-array we noticed significant changes in the pointing and 
+interferometer baseline. This is a new problem and may be related to
+interaction between the antenna stations and the new concrete roadway during
+the cold weather. This is a problem we have to fix. The data should be 
+inspected carefully and the corrections given below may help.
+
+Baselines for B-array
+
+We obtain baseline data and fit the baseline before starting to
+observe, so that the uvdata should have the correct baseline, and there
+should not be phase jumps between calibrators. If there are phase jumps
+between calibrators, then there may also be phase jumps between the
+calibrator and the source and one can not reliably remove the instrumental
+phase by fitting the calibrator phase. One must first edit the data to the
+correct baseline, which should remove phase jumps between calibrators, unless
+there is a focus change or another instrumental problem.
+
+BASELINE.09JAN 11Jan, 16jan
+We saw large pointing and baseline changes during this configuration. Up to
+and including 06jan the original baseline seems adequate.
+Specifically from the observers notes we have:
+
+05jan:
+n628co	- jump due to focus change
+n2903	- not too bad.
+sgrb2sc18oi - trends on baseline 2 3. Phase jump between 3c273 and nra530 not
+removed by baseline change.
+
+06jan
+s98w58 not bad; cbee.09jan does not improve it.
+irc10216cn - not too bad
+ic443hcop - OK, cals close to source.
+
+data on 08 09 jan are correctable with baseline from 09jan.
+
+09jan
+obar13co - still have 1 radian jump on baseline 12 23 ok on 31
+l1287hcom - OK
+n3627 - ok
+omnmc0 - good new baseline removes phase jump on baseline 31 between
+3c84 an pk0420
+
+10jan is already corrected.
+
+11jan should use baseline.11jan
+
+12-16 jan were a washout.
+
+on 16jan the antenna were reshimmed and a new baseline installed. Data should
+be OK.
+
+How to apply the corrections.
+
+a) Using CBEE, the CBEE.date files may be copied directly from HAT::du:[
+data.baseline] and will edit the data to the new baseline before you fit
+instrumental phase. The new baseline and phase fit w.r.t that baseline are
+automatically applied to the data when you calibrate the data.
+
+b) Using UVEDIT. One must first edit the calibrator to the new baseline,
+then fit the phase to the edited file using CALMAKE, CALFLAG, and CALFIT.
+Run CALAPPLY to see if worked.
+Then UVEDIT the source data.
+Then run CALAPPLY on the edited source data.
+
+Conclusion.
+
+Care will be needed to calibrate during this period. If you have comments
+or data which will help other observers, please send me a copy.
+
+	Also look at the observing logs for further information. 
+*****************************************************************************
+
+
+ -------------- 18-JAN-91 ------------- 
+
+ 20N   T   -13.3863    0.0364   15.4946     12:   13.2789  182.9876  -15.3728
+ 180E  T    -0.1074  183.0240    0.1218     23: -172.6837 -183.1164  199.9462
+ 260N  T  -172.7911   -0.0924  200.0680     31:  159.4048    0.1288 -184.5734
+

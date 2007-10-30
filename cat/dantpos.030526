@@ -1,0 +1,13 @@
+# Array configuration: H75 starting 26/05/2003 (dd/mm/yyyy)
+
+# Baseline solution taken on 11-JUN-03
+# Number of sources: 20
+# RMS phase error of solution: 17.58396 degrees
+# Phase error in solution is dominated by long baseline to CA06
+
+ 1  0.0084 -0.0129  0.0040
+ 2  0.0098 -0.0128 -0.0017
+ 3  0.0079 -0.0135  0.0023
+ 4 -0.0000  0.0000 -0.0000
+ 5  0.0015 -0.0111  0.0030
+ 6  0.0160 -0.0127  0.0033

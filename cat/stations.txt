@@ -1,0 +1,14 @@
+        INTERFEROMETER ANTENNA POSITIONS
+
+File: mircat/stations.txt
+
+Lists of antenna positions and interferometer baselines can be found
+in the mirth account in files:
+
+mircat:stations.1989 etc. on the VMS accounts, and in
+$MIRCAT/stations.1990 etc. on the unix machines.
+
+These files are generated from the UPDATE procedure at Hat Creek.
+More notes are to be found in the above files.
+
+						- Mel.

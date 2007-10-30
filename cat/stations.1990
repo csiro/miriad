@@ -1,0 +1,230 @@
+        INTERFEROMETER ANTENNA POSITIONS FOR 1990
+
+File: mircat/stations.1990
+
+The date indicates when the last update for each antenna configuration,
+and should correspond to date when antennas were moved to new stations.
+T/F indicates baselines in this table are good/bad.
+Columns 3,4,5 give antenna positions relative to station 9. The
+	antenna positions are also in the uvdata and can be listed
+	with the Miriad task uvlist options=var
+Columns 7,8,9 give baseline vectors from antenna i to antenna j
+	(baseline ij = antenna j - antenna i); these numbers are
+	typed out by CBEE when data is read in or edited.
+
+If the antenna positions in your uvdata do not agree with those in the table
+you may need to edit the uvdata before fitting a phase correction file to your
+calibrator data points.
+
+This can be done with the Miriad tasks UVEDIT, CALFLAG, CALFIT and CALAPPLY, or
+using the Ralint task CBEE and CALIBRATE. Reading in the file CBEE.date for the
+baseline fit will automatically edit calibrator data in CBEE before the fits
+are done. CALIBRATE will then make these baseline corrections to your data. 
+
+*****************************************************************************
+
+NOTES:
+
+1)	During Sept there were cable update problems which could give delay
+errors and appear as differences between the upper and lower sideband, and as
+phase slopes across the passband.
+
+2) 
+Subj:	BASELINE CHANGE
+File:	baseline.20oct
+From:	MCHW
+
+Sometime after 06oct90 antenna 1 position changed by 0.004 ns.
+i.e. about 0.4 wavelengths. This is a significant change and the data
+should be corrected before fitting the gain and phase to the calibrator.
+If this is not done then the phase error will be 2pi * (s-s0).dB, where
+s and s0 are unit vectors in the direction of the source and calibrator,
+and dB is the baseline error. E.g. if the calibrator is 60 degrees away from
+the source, then the phase error is 144 degrees !
+
+The baseline was updated at Hat Creek on 20 October from: -
+
+BASELINEBASE.18OCT  source =   option = HEADER  23-OCT-90  14:58:00
+
+ bx  -0.071-172.795-212.689
+ by  40.604  -0.017  -0.049
+ bz   0.087 200.071 246.255
+
+to:-
+
+ BASELINEBASE.21OCT  source =   option = HEADER  23-OCT-90  15:22:03
+
+ bx  -0.072-172.795-212.689
+ by  40.600  -0.017  -0.049
+ bz   0.086 200.071 246.255
+
+
+The data is easily corrected with CBEE:
+If you have more than one calibrator and the phase jumps between them, then
+the baseline is probably wrong. The baseline can be changed in CBEE before
+fitting the phase curve to the calibrators. This is most easily done by
+reading into CBEE the file containing the updated baseline, so that CBEE edits
+the data to the new baseline before you fit phase curves in the usual way. The
+file which CBEE then writes out contains the updated baseline, and the fitted
+phase w.r.t that baseline. The CALIBRATE program edits the data to the new
+baseline and the fitted instrumental phase. 
+
+E.g. suppose you have data on 18oct.
+
+i) $COPY bkyast$dua0:[bima.baseline]cbee.21oct cbee.18oct
+cbee.18oct now contains the new baseline.
+
+ii) Run CBEE on your calibrators and fit gains and phase in the usual way.
+Phase jumps between different calibrators should now go away.
+When you exit from CBEE,the file  cbee.18oct will contain the new baseline, and
+the fitted phases.
+
+3)
+Subj:	BASELINE CHANGE
+File:	baseline.29nov
+From:	MCHW
+
+We have again noticed a significant change in the baseline during the
+configuration. The main change is 0.0017 in the bz component for antenna 3 and
+has been fitted using the files baselinebase.29nov and .30nov. 
+delta bz for baseline 23 = -.0017
+delta bz for baseline 31 = +.0017
+
+The phase error is
+60 degrees * (sin(declination of source) - sin(declination of calibrator) )
+
+
+The baseline was NOT updated at Hat Creek. The change seems to have occured
+between 16Nov and 29nov.
+
+
+There should not be phase jumps between different calibrators unless there was
+a focus change. If you have more than one calibrator with significant
+declination difference and the phase jumps between them, then the baseline is
+probably wrong. If your source declination is more than about 20 degrees from
+your calibrator, then you need to correct the baseline.
+
+The data is easily corrected with CBEE:  Edit the baseline in CBEE BEFORE you
+fit phase curves in the usual way. If the phase jumps were due to the baseline
+error, then they will go away. The file which CBEE then writes out contains the
+updated baseline, and the fitted phase w.r.t that baseline. The CALIBRATE
+program edits the data to the new baseline and the fitted instrumental phase. 
+
+If you have questions, please contact Mel. 
+
+						- Mel.
+
+	Also look at the observing logs for further information. 
+*****************************************************************************
+
+
+ -------------- 17-JAN-90 ------------- 
+
+ 400E  T    -0.1100  406.5979    0.1144     12:    0.1008 -914.7961   -0.1267
+ 500W  T    -0.0092 -508.1982   -0.0123     23: -385.3821  508.2091  446.2016
+ 580N  T  -385.3913    0.0109  446.1893     31:  385.2813  406.5870 -446.0749
+
+
+ --------------  9-FEB-90 ------------- 
+
+ 400E  T    -0.1108  406.6031    0.1156     12:    0.0656 -650.5055   -0.0821
+ 240W  T    -0.0452 -243.9024    0.0335     23:   -0.0225  243.9128    0.0421
+ 0     T    -0.0677    0.0104    0.0756     31:   -0.0431  406.5927    0.0400
+
+
+ --------------  1-MAR-90 ------------- 
+
+ 400E  T    -0.1094  406.6045    0.1143     12: -132.8460 -406.6101  153.8048
+ 200N  T  -132.9554   -0.0056  153.9191     23: -119.5309   -0.0075  138.4086
+ 380N  T  -252.4863   -0.0131  292.3277     31:  252.3769  406.6176 -292.2134
+
+
+ -------------- 19-MAR-90 ------------- 
+
+ 240W  T    -0.0419 -243.9791    0.0357     12: -172.7654  243.9420  200.0500
+ 260N  T  -172.8073   -0.0371  200.0857     23:  -79.6828    0.0207   92.2459
+ 380N  T  -252.4901   -0.0164  292.3316     31:  252.4482 -243.9627 -292.2959
+
+
+ --------------  2-APR-90 ------------- 
+
+ 500W  T    -0.0171 -508.2324    0.0054     12:  -66.5140  508.2507   77.0147
+ 100N  T   -66.5311    0.0183   77.0201     23: -146.1326   -0.0553  169.2019
+ 320N  T  -212.6637   -0.0370  246.2220     31:  212.6466 -508.1954 -246.2166
+
+
+ -------------- 18-APR-90 ------------- 
+
+ 80E   T    -0.0868   81.3425    0.0936     12:    0.0185  -81.2841   -0.0237
+ 0     T    -0.0683    0.0584    0.0699     23:  -39.9491   -0.0274   46.2532
+ 60N   T   -40.0174    0.0310   46.3231     31:   39.9306   81.3115  -46.2295
+
+
+ -------------- 22-MAY-90 ------------- 
+
+ 80E   T    -0.0843   81.3443    0.0927     12:   -0.0002 -121.9354   -0.0066
+ 40W   T    -0.0845  -40.5911    0.0861     23:  -13.2953   40.6401   15.3893
+ 20N   T   -13.3798    0.0490   15.4754     31:   13.2955   81.2953  -15.3827
+
+
+ -------------- 27-JUN-90 ------------- 
+
+ 15E   T    -0.0461   15.2230    0.0836     12:   -0.0280  -30.4431    0.0063
+ 15W   T    -0.0741  -15.2201    0.0899     23:  -13.3049   15.2658   15.3940
+ 20N   T   -13.3790    0.0457   15.4839     31:   13.3329   15.1773  -15.4003
+
+
+ --------------  7-AUG-90 ------------- 
+
+ 40E   T    -0.0801   40.6016    0.0944     12:    0.0060  -55.8217   -0.0045
+ 15W   T    -0.0741  -15.2201    0.0899     23:  -26.5519   15.2151   30.7384
+ 40N   T   -26.6260   -0.0050   30.8283     31:   26.5459   40.6066  -30.7339
+
+
+ -------------- 18-SEP-90 ------------- 
+
+ 40E   T    -0.0716   40.6003    0.0858     12: -172.7232  -40.6171  199.9854
+ 260N  T  -172.7948   -0.0168  200.0712     23:  -39.8942   -0.0325   46.1839
+ 320N  T  -212.6890   -0.0493  246.2551     31:  212.6174   40.6496 -246.1693
+
+
+ -------------- 22-OCT-90 ------------- 
+
+ 180E  F    -0.1157  182.9847    0.1405     12:  -66.4001 -182.9508   76.8619
+ 100N  T   -66.5158    0.0339   77.0024     23: -146.1732   -0.0832  169.2527
+ 320N  T  -212.6890   -0.0493  246.2551     31:  212.5733  183.0340 -246.1146
+
+
+ -------------- 24-OCT-90 ------------- 
+
+ 180E  T    -0.1142  182.9842    0.1434     12:  -66.4016 -182.9503   76.8590
+ 100N  T   -66.5158    0.0339   77.0024     23:  -66.4282   -0.0908   76.9150
+ 200N  T  -132.9440   -0.0569  153.9174     31:  132.8298  183.0411 -153.7740
+
+
+ -------------- 15-NOV-90 ------------- 
+
+ 100W  T    -0.0558 -101.6631    0.0546     12:  -93.0071  101.6613  107.6872
+ 140N  T   -93.0629   -0.0018  107.7418     23:  -39.8808   -0.0555   46.1715
+ 200N  T  -132.9437   -0.0573  153.9133     31:  132.8879 -101.6058 -153.8587
+
+
+ --------------  3-DEC-90 ------------- 
+
+ 240W  T    -0.0412 -243.9611    0.0395     12:  -26.6040  243.9654   30.8032
+ 40N   T   -26.6452    0.0043   30.8427     23:  -66.4425   -0.0213   76.9348
+ 140N  T   -93.0877   -0.0170  107.7775     31:   93.0465 -243.9441 -107.7380
+
+
+ -------------- 27-DEC-90 ------------- 
+
+ 100W  F    -0.0694 -101.6714    0.0722     12:  -26.5758  101.6757   30.7705
+ 40N   T   -26.6452    0.0043   30.8427     23:  -66.4425   -0.0213   76.9348
+ 140N  T   -93.0877   -0.0170  107.7775     31:   93.0183 -101.6544 -107.7053
+
+
+ -------------- 28-DEC-90 ------------- 
+
+ 100W  T    -0.0661 -101.6774    0.0704     12:   -0.0413  284.7014    0.0514
+ 180E  T    -0.1074  183.0240    0.1218     23:    0.0520 -183.0135   -0.0608
+ 0     T    -0.0554    0.0105    0.0610     31:   -0.0107 -101.6879    0.0094

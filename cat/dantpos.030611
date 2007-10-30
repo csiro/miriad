@@ -1,0 +1,11 @@
+# Array configuration: 750C starting on 11/06/2003 (dd/mm/yyyy)
+
+# Baseline solution taken on 12-JUN-03
+# Number of sources: 20
+# RMS phase error of solution: 9.815032 degrees
+
+ 1  0.0065  0.0027 -0.0073
+ 2 -0.0042  0.0052  0.0027
+ 3  0.0007  0.0001 -0.0017
+ 4 -0.0109  0.0021  0.0053
+ 5 -0.0000  0.0000 -0.0000

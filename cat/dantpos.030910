@@ -1,0 +1,14 @@
+# Array configuration: 750B
+
+# Baseline solution taken on 10-SEP-03
+# Number of sources: 25
+# RMS phase error of solution: 20.89111 degrees
+
+# Ant  dx (ns)  dy (ns)  dz (ns)
+# ---  -------  -------  -------
+   1   -0.0259  -0.0079   0.0120
+   2   -0.0217  -0.0058   0.0180
+   3   -0.0286  -0.0087   0.0103
+   4   -0.0253  -0.0037  -0.0040
+   5   -0.0233  -0.0044   0.0110
+   6   -0.0000   0.0000  -0.0000

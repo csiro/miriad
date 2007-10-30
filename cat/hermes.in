@@ -1,0 +1,35 @@
+Geometry (26 January 1988):
+------------------------------------------------------------------------------
+85.65         | longitude of sub-earth point  (degrees)
+-7.04         | latitude  "      "       "    (degrees)
+339.77        | position angle of N-pole  (degrees E from N)
+3.505         | radius of Mercury's disk  (arc seconds)
+0.50          | longitude of sub-solar point  (degrees)
+23.31         | approximate time  (Mercury Hours)  exact if time < 0
+------------------------------------------------------------------------------
+
+Physical Parameters:
+------------------------------------------------------------------------------
+0.119         | bolometric (Bond) albedo  0.119
+0.90          | infrared surface emissivity  0.90
+0.0020        | thermal inertia (cal-cgs units @ 350K)  0.0020
+1.0           | ratio of radiative to contact conductivity @ 350K
+-60.0         | heat flux at base of thermal wave (cgs)  -60.0
+1.80          | dielectric constant (real part)
+0.6           | ratio of electrical to thermal skin depth (@ 350K)
+89.21382      | observing frequency (GHz)
+------------------------------------------------------------------------------
+
+Grid Parameters:
+------------------------------------------------------------------------------
+15.0          | maximum depth (thermal skin depths)  15.0
+1.11          | depth increment multiplier  1.11
+30            | number of depth steps (max 50)  30
+800           | number "  time    "   (max 1000)  800
+25            | number of Hermographic longitude elements (max 50)  25
+16            | number "       "       latitude     "     (max 20)  16
+0.15          | cell size for 64 X 64 geocentric map  (arc seconds)
+12            | maximum heat bomb iteration  in CRANKN  12
+12            | maximum number of iterations in CRANKN  12
+0.2           | maximum error in the temperature structure (K)  0.2 to 0.5
+------------------------------------------------------------------------------

@@ -1,0 +1,19 @@
+
+Overview of the ARY files.... meant for UVTRACK
+
+1st column: file name 
+2nd column: number of configurations
+3rd column: number of antennas
+
+
+
+a++.ary   7  3
+a+.ary    6  3
+a.ary     5  3
+ab.ary    6  3
+b.ary     5  3
+bew.ary   2  3
+c.ary     4  3
+cew.ary   3  3 
+ew.ary    6  3
+c1.ary    1  6

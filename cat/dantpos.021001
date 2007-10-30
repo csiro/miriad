@@ -1,0 +1,6 @@
+# This contains baseline corrections for 3mm observatins
+# for the array H168 scheduled from 01/10/2002 (dd/mm/yyyy)
+
+2  0.0067  0.0020 -0.0037
+4 -0.0094  0.0061  0.0002
+

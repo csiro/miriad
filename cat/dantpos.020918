@@ -1,0 +1,6 @@
+# This contains baseline corrections for 3mm observatins
+# for the array EW367 scheduled from 18/09/2002 (dd/mm/yyyy)
+
+2 -0.0013  0.0037  0.0021
+4  0.0402  0.0082 -0.0371
+

@@ -1,0 +1,6 @@
+# This contains baseline corrections for 3mm observatins
+# for the array H75 scheduled from 12/08/2002 (dd/mm/yyyy)
+
+2 -0.0061 -0.0132  0.0091
+4 -0.0286 -0.0346  0.0211
+

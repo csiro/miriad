@@ -1,0 +1,6 @@
+# This contains baseline corrections for 3mm observatins
+# for the array 750A scheduled from 14/10/2002 (dd/mm/yyyy)
+
+2  0.0032  0.0012  0.0001
+4 -0.0033 -0.0020  0.0038
+

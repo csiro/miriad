@@ -1,0 +1,1778 @@
+      Table 2. Recommended Rest Frequencies for Observed Interstellar Molecular Lines. 
+                                                                                                       
+___________________________________________________________________________________________________________
+ Frequency   Unc. Formula      Quantum                      Tr(K)  Source          Telescope    Astr.  Lab.
+ (MHz)                                                      /Ta(K)                              ref.   ref.
+
+
+
+   68972.154*( 4) SO2          6(1,5)-6(0,6)                 0.8   OriMC-1         NRAO     11m Joh76
+U  69460.         unidentified                               0.18  OriMC-1         NRAO     11m Tur89
+   69464.094*( 9) SO2          14(4,10)-15(3,13)             0.70  OriMC-1         OSO      20m Sch83
+   69534.310*(12) CH3CH2CN     8(1,8)-7(1,7)                 0.20  OriMC-1         OSO      20m Joh84
+   69575.927*( 3) SO2          1(1,1)-0(0,0)                 0.6   OriMC-1         NRAO     11m Joh76
+U  69591.         unidentified                               n.r.  OriMC-1         NRAO     11m Tur89
+   69607.15  (10) CH3OH        9(1)-10(2) A+ vt=1            0.30  OriMC-1         OSO      20m Joh84
+   69653.586*( 5) SO2          3(2,2)-4(1,3)                 0.60  OriMC-1         OSO      20m Sch83
+   70260.197*(28) SiC2         3(0,3)-2(0,2)                 0.08  Sgr B2          NRAO     11m Tur89
+U  70525.         unidentified                               0.10  Sgr B2          NRAO     11m Tur89
+   70534.033*( 9) H13CCCN      9-8                           0.24  Sgr B2          NRAO     11m Tur89
+U  70540.         unidentified                               0.13  Sgr B2          NRAO     11m Tur89
+U  70592.         unidentified                               0.05  Sgr B2          NRAO     11m Tur89
+   70680.720*(38) CH2          4(0,4)-3(1,3) J=4-3 F=5-4     0.028 OriMC-1         NRAO     12m Hol89  Lov82b
+   70733.213*(52) D13CO+       1-0                           0.079 TMC-1           BTL       7m Gue82b
+   70762.542*(22) SiC2         3(2,2)-2(2,1)                 0.10  IRC+10216       NRAO     12m Hol89
+   70844.421*(44) CH3OCH3      3(3,0)-4(2,3) AA               b    Sgr B2          NRAO     11m Tur89
+   70845.85 *( 7) CH3OCH3      3(3,0)-4(2,3) EE              0.06b Sgr B2          NRAO     11m Tur89
+   70847.65 *(10) CH3OCH3      3(3,0)-4(2,3) AE               b    Sgr B2          NRAO     11m Tur89
+   70926.03 *(14) 33SO2        23(3,21)-22(4,18)             0.05  OriMC-1         NRAO     11m Tur89
+   70976.810*( 9) CH3CH2OH     5(2,3)-5(1,4)                 0.06b Sgr B2          NRAO     11m Tur89
+   70979.630*(11) CH3CH2CN     8(0,8)-7(0,7)                  b    Sgr B2          NRAO     11m Tur89
+   71024.781*( 4) H213CO       1(0,1)-0(0,0)                 0.06  OriMC-1         BTL       7m Kah84
+U  71055.         unidentified                               0.02  OriMC-1         NRAO     11m Tur89
+U  71067.         unidentified                               0.08  OriMC-1         NRAO     11m Tur89
+U  71208.         unidentified                               0.08  OriMC-1         NRAO     11m Tur89
+U  71228.         unidentified                               0.05  OriMC-1         NRAO     11m Tur89
+   71324.72 *( 5) HCOOCH3      17(4,13)-17(3,14) A            b    OriMC-1         NRAO     11m Tur89  Plu84
+   71324.81 *( 1) HCOOH        3(1,2)-3(0,3)                 0.04b OriMC-1         NRAO     11m Tur89
+U  71362.         unidentified                               0.10  OriMC-1         NRAO     11m Tur89
+U  71406.         unidentified                               0.02  OriMC-1         NRAO     11m Tur89
+U  71414.         unidentified                               0.3   Sgr B2          NRAO     11m Tur89
+   71464.138*(33) 13CH3CN      4(1)-3(1)                      b    Sgr B2          NRAO     11m Tur91
+   71465.497*(34) 13CH3CN      4(0)-3(0)                     0.03 bSgr B2          NRAO     11m Tur91
+   71500.531*(11) CH3CH2CN     8(2,7)-7(2,6)                 0.11  OriMC-1         NRAO     11m Tur89
+   71514.65 *(18) 33SO2        27(4,24)-26(5,21)             0.15  OriMC-1         NRAO     11m Tur89
+U  71617.         unidentified                               0.05  OriMC-1         NRAO     11m Tur89
+   71627.848*(37) SO2          6(0,6)-5(1,5) v2=1            0.03  OriMC-1         NRAO     11m Tur89
+   71643.170*(11) CH3CH2CN     8(5)-7(5)                     0.09b OriMC-1         NRAO     11m Tur89
+   71643.197*(11) CH3CH2CN     8(6)-7(6)                      b    OriMC-1         NRAO     11m Tur89
+   71674.927*(11) CH3CH2CN     8(3,6)-7(3,5)                 0.10  OriMC-1         NRAO     11m Tur89
+   71692.942*(11) CH3CH2CN     8(3,5)-7(3,4)                 0.06  OriMC-1         NRAO     11m Tur89
+   71703.65 *(13) HCOOCH3      6(3,4)-6(2,5) E               0.05  OriMC-1         NRAO     11m Tur89
+U  71732.         unidentified                               0.03  OriMC-1         NRAO     11m Tur89
+   71743.90 *( 5) HCOOCH3      6(3,4)-6(2,5) A               0.12  Sgr B2          NRAO     11m Tur89
+   71889.596*( 4) HC5N         27-26                         0.15  Sgr B2          NRAO     11m Tur89
+   71971.61 *(14) CH3CH2OH     10(1,9)-10(0,10)              0.05  Sgr B2          BTL       7m Cum86
+   72039.331*(13) DCO+         1-0                           0.87  L134            NRAO     11m Hol76
+U  72075.         unidentified                               0.03  OriMC-1         NRAO     11m Tur89
+   72108.609*(11) CH3CH2CN     8(2,6)-7(2,5)                 0.07  Sgr B2          BTL       7m Cum86
+   72298.70 *(25) CH3OCH3      10(1,9)-10(0,10) AE+EA         b    OriMC-1         NRAO     11m Tur89
+   72300.12 *(13) CH3OCH3      10(1,9)-10(0,10) EE           0.05b OriMC-1         NRAO     11m Tur89
+   72301.53 *( 7) CH3OCH3      10(1,9)-10(0,10) AA            b    OriMC-1         NRAO     11m Tur89
+U  72403.         unidentified                               0.03  OriMC-1         NRAO     11m Tur89
+   72409.092*(12) H2CO         5(1,4)-5(1,5)                 0.1   OriMC-1         NRAO     11m Wil73
+   72413.4843(10) DCN          1-0 F'=1-1 F=1-0,1,2           b    OriMC-1         NRAO     11m Wil73  DeL69
+   72413.5143(10) DCN          1-0 F'=1-1 F=2-1,2            0.2b  OriMC-1         NRAO     11m Wil73  DeL69
+   72413.5584(10) DCN          1-0 F'=1-1 F=0-0,1             b    OriMC-1         NRAO     11m Wil73  DeL69
+   72414.9054(10) DCN          1-0 F'=2-1 F=1-0,1,2           b    OriMC-1         NRAO     11m Wil73  DeL69
+   72414.9270(10) DCN          1-0 F'=2-1 F=2-1,2            0.25b OriMC-1         NRAO     11m Wil73  DeL69
+   72414.9732(10) DCN          1-0 F'=2-1 F=3-2               b    OriMC-1         NRAO     11m Wil73  Del69
+   72417.0297(10) DCN          1-0 F'=0-1 F=1-0,1,2          0.2   OriMC-1         NRAO     11m Wil73  Del69
+U  72420.         unidentified                               0.08  OriMC-1         NRAO     11m Tur89
+U  72426.         unidentified                               0.05  OriMC-1         NRAO     11m Tur89
+   72475.074*(11) HC13CCN      8-7                           0.08  IRC+10216       OSO      20m Joh84
+   72482.056*( 5) HCC13CN      8-7                           0.08  IRC+10216       OSO      20m Joh84
+U  72500.         unidentified                               0.02  OriMC-1         NRAO     11m Tur89
+   72568.90  (10) CH3NH2       6(1,6)-6(0,6)                 0.08  Sgr B2          NRAO     11m Tur89  Tak71
+U  72578.         unidentified                               0.13  OriMC-1         NRAO     11m Tur89
+   72618.102*(10) SiS          4-3                           0.77  IRC+10216       OSO      20m Joh84
+   72668.123*(24) SO2          26(4,22)-25(5,21)             0.30  OriMC-1         OSO      20m Sch83
+   72680.83 *( 2) HCOOCH3      6(2,5)-5(2,4) E               0.18  OriMC-1         OSO      20m Joh84  Plu86
+   72685.56 *(10) HCOOCH3      6(2,5)-5(2,4) A               0.18  OriMC-1         OSO      20m Joh84  Plu84
+U  72707.         unidentified                               0.10  OriMC-1         NRAO     11m Tur89
+U  72721.         unidentified                               0.15  OriMC-1         OSO      20m Joh84
+   72758.242*( 2) SO2          6(0,6)-5(1,5)                 0.8   OriMC-1         NRAO     11m Joh76
+   72783.824*( 2) HC3N         8-7                           2.29  Sgr B2          NRAO     11m Mor76
+U  72823.         unidentified                               0.15  Sgr B2          NRAO     11m Tur89
+   72837.950*( 5) H2CO         1(0,1)-0(0,0)                 0.5   OriMC-1         TAO       6m Aka74
+U  72942.         unidentified                               0.20  OriMC-1         NRAO     11m Tur89
+   72962.731*(23) HC3N         8-7 v7=1 l=1e                 0.15  OriMC-1         OSO      20m Joh84
+   72976.7794(10) OCS          6-5                           0.25  Sgr B2          TAO       6m Aka74  Dub80
+   73001.940*(12) CH3CH2OH     14(3,11)-13(4,10)             0.08  OriMC-1         NRAO     11m Tur89
+U  73013.         unidentified                               0.05  OriMC-1         NRAO     11m Tur89
+   73044.01  (10) CH3NH2       5(1,5)-5(0,5) F=4-4            b    Sgr B2          TAO       6m Kai74  Kai74
+   73044.20  (10) CH3NH2       5(1,5)-5(0,5) F=6-6           0.5b  Sgr B2          TAO       6m Kai74  Kai74
+   73045.15  (10) CH3NH2       5(1,5)-5(0,5) F=5-5            b    Sgr B2          TAO       6m Kai74  Kai74
+   73081.190*( 8) CH3CH2OH     4(2,2)-4(1,3)                 0.11  Sgr B2          BTL       7m Cum86
+U  73101.         unidentified    (real?)                    0.08  Sgr B2          NRAO     11m Tur89
+U  73152.         unidentified                               0.03  Sgr B2          NRAO     11m Tur91
+   73161.972*(39) SO2          3(2,2)-4(1,3) v2=1            0.04  OriMC-1         NRAO     11m Tur89
+U  73178.         unidentified                               0.03  OriMC-1         NRAO     11m Tur89
+   73245.034*(38) HC3N         8-7 v7=2 l=0                  0.03b Sgr B2          NRAO     11m Tur91
+   73245.435*(42) HC3N         8-7 v7=2 l=2e                  b    Sgr B2          NRAO     11m Tur91
+   73246.708*(40) HC3N         8-7 v7=2 l=2f                  b    Sgr B2          NRAO     11m Tur91
+   73315.91 *(19) HC7N         65-64                         0.05  OriMC-1         NRAO     11m Tur89
+U  73338.         unidentified    (real?)                    0.03  Sgr B2          NRAO     11m Tur89
+   73346.31 *(11) CH3CH2CN     8(1,7)-7(1,6)                 0.03  OriMC-1         NRAO     11m Tur89
+   73460.7   (10) C6H          2P3/2 J=53/2-51/2 f           0.04  IRC+10216       IRAM     30m Gue87  Cer87a
+U  73462.         unidentified                               0.08  Sgr B2          NRAO     11m Tur89
+   73466.93 *(10) CH3OCH3      10(2,8)-10(1,9) EA+AE          b    OriMC-1         OSO      20m Joh84
+   73468.71 *( 5) CH3OCH3      10(2,8)-10(1,9) EE            0.20b OriMC-1         OSO      20m Joh84
+   73470.49 *( 5) CH3OCH3      10(2,8)-10(1,9) AA             b    OriMC-1         OSO      20m Joh84
+   73481.2   (10) C6H          2P3/2 J=53/2-51/2 e           0.03  IRC+10216       IRAM     30m Gue87  Cer87a
+   73552.419*( 5) CH313CN      4(1)-3(1)                      b    Sgr B2          NRAO     11m Tur89
+   73553.828*( 5) CH313CN      4(0)-3(0)                     0.06b Sgr B2          NRAO     11m Tur89
+   73577.454*( 1) CH3CN        4(3)-3(3)                     0.83  OriMC-1         OSO      20m Joh84
+   73584.546*( 1) CH3CN        4(2)-3(2)                     1.00  OriMC-1         OSO      20m Joh84
+   73588.802*( 1) CH3CN        4(1)-3(1)                     2.20b OriMC-1         OSO      20m Joh84
+   73590.221*( 1) CH3CN        4(0)-3(0)                      b    OriMC-1         OSO      20m Joh84
+   73605.385*(26) CH2CHCN      14(1,13)-14(0,14)             0.14  OriMC-1         NRAO     12m Hol89
+   73612.1  *( 2) 33SO2        6(0,6)-5(1,5)                 0.06  OriMC-1         NRAO     12m Hol89
+   73658.27 *( 2) HCOOCH3      6(5,1)-5(5,0) E               0.04  OriMC-1         NRAO     12m Hol89  Plu86
+   73663.99 *( 2) HCOOCH3      6(5,2)-5(5,1) E                b    OriMC-1         OSO      20m Joh84  Plu86
+   73665.59 *(10) HCOOCH3      6(5,2)-5(5,1) A               0.15b OriMC-1         OSO      20m Joh84  Plu84
+   73665.73 *(10) HCOOCH3      6(5,1)-5(5,0) A                b    OriMC-1         OSO      20m Joh84  Plu84
+U  73699.         unidentified                               0.03  OriMC-1         NRAO     12m Hol89
+   73720.51 *(15) CH3OCH3      9(2,7)-9(1,8) AE+EA            b    OriMC-1         OSO      20m Joh84
+   73722.40 *( 5) CH3OCH3      9(2,7)-9(1,8) EE              0.25b OriMC-1         OSO      20m Joh84
+   73724.28 *( 4) CH3OCH3      9(2,7)-9(1,8) AA               b    OriMC-1         OSO      20m Joh84
+U  73766.         unidentified                               0.03  Sgr B2          NRAO     11m Tur89
+   73783.00 *( 2) HCOOCH3      6(4,2)-5(4,1) E                b    OriMC-1         OSO      20m Joh84  Plu86
+   73784.51 *(10) HCOOCH3      6(4,3)-5(4,2) A               0.15b OriMC-1         OSO      20m Joh84  Plu84
+   73787.60 *( 2) HCOOCH3      6(4,3)-5(4,2) E                b    OriMC-1         OSO      20m Joh84  Plu86
+   73796.78 *(10) HCOOCH3      6(4,2)-5(4,1) A               0.10  OriMC-1         OSO      20m Joh84  Plu84
+   73810.008*( 7) CH3CN        4(0)-3(0) v8=1 l=1            0.03b OriMC-1         NRAO     11m Tur91
+   73811.589*( 8) CH3CN        4(2)-3(2) v8=1 l=1             b    OriMC-1         NRAO     11m Tur91
+   73842.    ( 1) CH3OH        9(1)-10(2) A- vt=1            0.30  OriMC-1         OSO      20m Joh84
+   73883.939*(33) SO2          4(2,2)-5(1,5) v2=1             b    OriMC-1         NRAO     11m Tur89
+   73885.032*(34) HCOOCH3      6(3,4)-5(3,3) A               0.12b OriMC-1         NRAO     11m Tur89
+   73905.90 *( 3) HCOOCH3      6(3,4)-5(3,3) E               0.12  OriMC-1         NRAO     11m Tur89  Plu86
+   73967.7   ( 3) C6H          2P1/2 J=53/2-51/2 f           1.3 f IRC+10216       IRAM     30m Cer86  Cer87a
+   73981.562*(18) CH2CHCN      8(1,8)-7(1,7)                 0.04  Sgr B2          NRAO     11m Tur89
+   73993.8   ( 3) C5H          2P1/2 J=31/2-29/2 a           2.0 f IRC+10216       IRAM     30m Cer86  Cer86
+   73998.9   ( 4) C5H          2P1/2 J=31/2-29/2 b           1.9 f IRC+10216       IRAM     30m Cer86  Cer86
+   74008.5   ( 3) C6H          2P1/2 J=53/2-51/2 e           1.3 f IRC+10216       IRAM     30m Cer86  Cer87a
+U  74034.         unidentified                               0.02  OriMC-1         NRAO     11m Tur89
+U  74040.         unidentified                               0.05  OriMC-1         NRAO     11m Tur89
+   74111.31 *( 6) HCNH+        1-0                           0.10  Sgr B2          NRAO     12m Ziu86a Bog85a
+   74141.7   ( 3) C4H          2P1/2 J=15/2-13/2 v7=1e       1.38f IRC+10216       IRAM     30m Yam87b Yam87b
+   74149.26 *(14) CH3OCH3      11(2,9)-11(1,10) EA+AE         b    OriMC-1         OSO      20m Joh84
+   74150.95 *( 9) CH3OCH3      11(2,9)-11(1,10) EE           0.30b OriMC-1         OSO      20m Joh84
+   74152.64 *( 5) CH3OCH3      11(2,9)-11(1,10) AA            b    OriMC-1         OSO      20m Joh84
+   74155.73  (10) NH2D         2(1,2)-2(0,2) U               0.04  OriMC-1         NRAO     11m Tur89  Del75
+   74263.48 *( 3) HCOOCH3      6(3,3)-5(3,2) E               0.15  OriMC-1         OSO      20m Joh84  Plu86
+   74296.74 *(10) HCOOCH3      6(3,3)-5(3,2) A               0.20  OriMC-1         OSO      20m Joh84  Plu84
+U  74395.         unidentified                               0.02  OriMC-1         NRAO     11m Tur89
+   74404.579*(39) 34SO2        6(0,6)-5(1,5)                 0.30  OriMC-1         OSO      20m Sch83
+   74497.18 *( 5) C5H          2P3/2 J=31/2-29/2 a           5.2fb IRC+10216       IRAM     30m Cer86a Got86
+   74498.62 *( 5) C5H          2P3/2 J=31/2-29/2 b            b    IRC+10216       IRAM     30m Cer86a Got86
+   74551.989*( 4) HC5N         28-27                         0.30  IRC+10216       OSO      20m Joh84
+U  74655.         unidentified                               0.05  OriMC-1         NRAO     11m Tur89
+U  74661.         unidentified                               0.06  Sgr B2          NRAO     11m Tur89
+   74747.51 *(16) CH3OCH3      8(2,6)-8(1,7) AE+EA            b    OriMC-1         OSO      20m Joh84
+   74749.50 *(10) CH3OCH3      8(2,6)-8(1,7) EE              0.20b OriMC-1         OSO      20m Joh84
+   74751.49 *( 4) CH3OCH3      8(2,6)-8(1,7) AA               b    OriMC-1         OSO      20m Joh84
+   74866.514*(16) SO2          24(6,18)-25(5,21)             0.20  OriMC-1         OSO      20m Sch83
+   74891.65 *( 5) CH3CHO       4(1,4)-3(1,3) A               0.13  Sgr B2          BTL       7m Cum86  Kle91
+   74924.61 *( 5) CH3CHO       4(1,4)-3(1,3) E               0.07  Sgr B2          BTL       7m Cum86  Kle91
+   74970.62 *(28) CH3OCH3      12(4,7)-13(5,8) AE            0.05b OriMC-1         NRAO     11m Tur89
+   74975.87 *(17) CH3OCH3      12(4,7)-13(5,8) AA             b    OriMC-1         NRAO     11m Tur89
+   74976.040*( 8) CH3CH2OH     3(1,3)-2(0,2)                 0.23  Sgr B2          BTL       7m Cum86
+U  75052.         unidentified                               0.05  OriMC-1         NRAO     11m Tur89
+   75147.927 (20) C3S          13-12                         2.3 f IRC+10216       IRAM     30m Cer87b Yam87
+   75159.94 *( 5) CH3CHO       6(0,6)-5(1,5) A               0.08  OriMC-1         NRAO     11m Tur89  Kle91
+U  75200.         unidentified                               0.24  OriMC-1         NRAO     11m Tur89
+U  75235.         unidentified                               0.20  OriMC-1         NRAO     11m Tur89
+U  75406.         unidentified                               0.04  Sgr B2          NRAO     11m Wil81
+U  75428.         unidentified                               0.08  OriMC-1         NRAO     11m Tur89
+U  75451.         unidentified                               0.12  OriMC-1         NRAO     11m Tur91
+   75515.35  (10) CH3OH        13(-5)-14(-4) E               0.37  OriMC-1         OSO      20m Joh84  Sas84
+   75528.7  *( 8) HC9N         130-129                       0.06  Sgr B2          NRAO     11m Tur89
+   75571.51 *(21) HC7N         67-66                         0.05  OriMC-1         NRAO     11m Tur89
+   75585.695*(12) CH2CHCN      8(0,8)-7(0,7)                 0.10  Sgr B2          BTL       7m Cum86
+U  75595.         unidentified                               0.05  Sgr B2          NRAO     11m Tur89
+U  75656.         unidentified                               0.12  OriMC-1         OSO      20m Joh84
+U  75717.   ?     unidentified                               0.20  OriMC-1         NRAO     11m Tur89
+   75816.45  ( 5) CH3SH        3(-1)-2(-1) E                <0.05  Sgr B2          BTL       7m Lin79  Lee80
+   75838.867*(10) CH2CHCN      8(2,7)-7(2,6)                 0.06  Sgr B2          BTL       7m Cum86
+   75862.92  ( 7) CH3SH        3(0)-2(0) A+                  0.19  Sgr B2          BTL       7m Lin79  Koj80
+   75864.43  ( 5) CH3SH        3(0)-2(0) E                   0.12  Sgr B2          BTL       7m Lin79  Lee80
+   75869.454*(44) HCOOCH3      3(2,2)-2(1,1) A                b    Sgr B2          NRAO     11m Tur89
+   75880.49  ( 5) CH3SH        3(2)-2(2) A+                  0.07  Sgr B2          NRAO     11m Tur89  Lee80
+   75906.42 *(14) CH3OCH3      12(2,10)-12(1,11) AE+EA        b    OriMC-1         OSO      20m Joh84
+   75908.03 *(10) CH3OCH3      12(2,10)-12(1,11) EE          0.30b OriMC-1         OSO      20m Joh84
+   75909.65 *( 7) CH3OCH3      12(2,10)-12(1,11) AA           b    OriMC-1         OSO      20m Joh84
+   75921.979*(10) CH2CHCN      8(4,5)-7(4,4)                  b    Sgr B2          BTL       7m Cum86
+   75922.001*(10) CH2CHCN      8(4,4)-7(4,3)                  b    Sgr B2          BTL       7m Cum86
+   75926.796*(12) CH2CHCN      8(5)-7(5)                      b    Sgr B2          BTL       7m Cum86
+   75927.706*(10) CH2CHCN      8(3,6)-7(3,5)                 0.06b Sgr B2          BTL       7m Cum86
+   75931.858*(10) CH2CHCN      8(3,5)-7(3,4)                  b    Sgr B2          BTL       7m Cum86
+   75937.823*(14) CH2CHCN      8(6)-7(6)                     0.13  Sgr B2          BTL       7m Cum86
+U  75979.         unidentified                               0.03  Sgr B2          NRAO     11m Tur89
+   75987.149*( 4) DC3N         9-8                           0.11  TMC-1           FCRAO    14m Sch81
+U  76090.         unidentified                               0.10  OriMC-1         OSO      20m Joh84
+   76117.43 *( 1) C4H          8-7 J=17/2-15/2               0.17  IRC+10216       OSO      20m Joh84  Got83
+   76128.890*(10) CH2CHCN      8(2,6)-7(2,5)                 0.10  OriMC-1         OSO      20m Joh84
+U  76152.         unidentified                               0.10  OriMC-1         OSO      20m Joh84
+   76156.02 *( 1) C4H          8-7 J=15/2-13/2               0.17  IRC+10216       OSO      20m Joh84  Got83
+U  76162.         unidentified                               0.20  OriMC-1         NRAO     11m Tur89
+U  76168.         unidentified                               0.12  OriMC-1         OSO      20m Joh84
+   76199.199 (60) l-C3H        2P1/2 J=7/2-5/2b              0.12  IRC+10216       OSO      20m Tha85  Tha85
+   76204.501 (60) l-C3H        2P1/2 J=7/2-5/2a              0.12  IRC+10216       OSO      20m Tha85  Tha85
+   76247.27  (19) CH3OH        11(1)-10(2) A-                0.6   OriMC-1         NRAO     11m Jen79  Sas84
+   76305.727 (50) DNC          1-0                           0.34  NGC2264         NRAO     11m God77  Cre76
+   76362.17 *(16) CH3OCH3      7(2,5)-7(1,6) AE+EA            b    OriMC-1         OSO      20m Joh84
+   76364.26 *(10) CH3OCH3      7(2,5)-7(1,6) EE              0.30b OriMC-1         OSO      20m Joh84
+   76366.35 *( 4) CH3OCH3      7(2,5)-7(1,6) AA               b    OriMC-1         OSO      20m Joh84
+U  76379.         unidentified                               0.10  OriMC-1         NRAO     11m Tur89
+   76383.84 *( 4) HCOOD        6(1,5)-6(0,6)                 0.03  Sgr B2          NRAO     11m Tur89
+   76405.14  (10) CH3OH        13(2)-12(1) vt=1              0.10  OriMC-1         NRAO     11m Tur89  Sas84
+   76412.170*( 5) SO2          10(1,9)-9(2,8)                2.5   OriMC-1         OSO      20m Sch83
+U  76415.         unidentified                               0.12  SGR B2          NRAO     11m Tur91
+U  76491.         unidentified                               0.20  OriMC-1         NRAO     11m Tur89
+U  76499.         unidentified                               0.10  OriMC-1         NRAO     11m Tur91
+   76509.67  (10) CH3OH        5(0)-4(1) E                   0.6   OriMC-1         NRAO     11m Jen79  Sas84
+   76539.02  (10) CH3SH        7(0)-6(1) A+                  0.07  Sgr B2          NRAO     11m Tur89  Lee80
+U  76648.6   (15) unidentified                               0.09  Sgr B2          BTL       7m Cum86
+   76662.440*( 7) CH3CH2OH     2(2,0)-2(1,1)                 0.07  Sgr B2          NRAO     11m Tur89
+   76699.30 *(22) HC7N         68-67                         0.05b OriMC-1         NRAO     11m Tur91
+   76701.82 *( 2) HCOOCH3      6(2,4)-5(2,3) E               0.25b OriMC-1         OSO      20m Ell80  Plu86
+   76711.14 *(10) HCOOCH3      6(2,4)-5(2,3) A               0.22  OriMC-1         OSO      20m Ell80  Plu84
+   76796.09 *( 2) HCOOCH3      6(1,5)-5(1,4) E               0.22  OriMC-1         OSO      20m Joh84  Plu86
+   76803.99 *(10) HCOOCH3      6(1,5)-5(1,4) A               0.23  OriMC-1         OSO      20m Joh84  Plu84
+   76838.70  (10) CH3NH2       3(1,3)-3(0,3) Aa              0.05  OriMC-1         NRAO     11m Tur89  Tak73
+   76866.43 *( 5) CH3CHO       4(0,4)-3(0,3) E               0.13b Sgr B2          BTL       7m Cum86  Kle91
+   76868.83  ( 5) CH3OD        6(1)-5(2) E                    b    Sgr B2          NRAO     11m Tur89  Kau80
+   76878.91 *( 5) CH3CHO       4(0,4)-3(0,3) A               0.10  Sgr B2          BTL       7m Cum86  Kle91
+U  76966.         unidentified                               0.02  Sgr B2          NRAO     11m Tur89
+   76972.590*( 7) C3O          8-7                           0.059 TMC-1           NRAO     12m Bro85
+   77038.59 *( 5) CH3CHO       4(2,3)-3(2,2) A               0.04  Sgr B2          NRAO     11m Tur89  Kle91
+U  77071.         unidentified                               0.10  OriMC-1         NRAO     11m Tur89
+   77107.86  ( 9) N2D+         1-0 F1=1-1                    0.25  L134N           NRAO     11m Sny77  And77
+   77109.61  ( 8) N2D+         1-0 F1=2-1                    0.30  L134N           NRAO     11m Sny77  And77
+   77112.2   ( 1) N2D+         1-0 F1=0-1                    0.15  L134N           NRAO     11m Sny77  And77
+   77125.69 *( 5) CH3CHO       4(2,2)-3(2,1) E               0.05b OriMC-1         NRAO     11m Tur89  Kle91
+   77126.35 *( 5) CH3CHO       4(2,3)-3(2,2) E                b    OriMC-1         NRAO     11m Tur89  Kle91
+   77214.361*( 4) HC5N         29-28                         0.25  IRC+10216       OSO      20m Joh84
+   77214.361*( 4) HC5N         29-28                          b    Sgr B2          NRAO     11m Tur89
+   77218.28 *( 5) CH3CHO       4(2,2)-3(2,1) A               0.17b Sgr B2          NRAO     11m Tur89  Kle91
+   77231.41 *( 6) 34SO2        20(3,17)-19(4,16)             0.04b OriMC-1         NRAO     11m Tur89
+   77235.170 (13) CH3CH2OH     8(5,3)-9(4,6)                 0.03b OriMC-1         NRAO     11m Tur89
+   77271.4  *( 8) HC9N         133-132                       0.12  Sgr B2          NRAO     11m Tur89
+U  77290.         unidentified                               0.12  Sgr B2          NRAO     11m Tur89
+U  77445.         unidentified                               0.05  Sgr B2          NRAO     11m Tur89
+U  77458.         unidentified                               0.04  Sgr B2          NRAO     11m Tur89
+U  77498.         unidentified                               0.05  OriMC-1         NRAO     11m Tur89
+U  77511.         unidentified                               0.05  OriMC-1         NRAO     11m Tur89
+   77633.828*(12) CH2CHCN      8(1,7)-7(1,6)                 0.12  Sgr B2          BTL       7m Cum86
+U  77687.         unidentified                               0.10  Sgr B2          NRAO     11m Tur89
+   77731.727*( 6) C2S          6(6)-5(5)                     0.07  Sgr B2          NRAO     11m Tur91  Yam90
+U  77736.         unidentified                               0.20  Sgr B2          NRAO     11m Tur89
+U  77744.         unidentified                               0.14  Sgr B2          NRAO     11m Tur89
+   77827.09 *(24) HC7N         69-68                         0.05  Sgr B2          NRAO     11m Tur91
+U  77976.         unidentified                               0.10  Sgr B2          NRAO     11m Tur89
+U  77978.5   (13) unidentified                               0.13  Sgr B2          BTL       7m Cum86
+U  77983.         unidentified                               0.20  OriMC-1         OSO      20m Joh84
+U  77988.         unidentified                               0.06  OriMC-1         NRAO     11m Tur89
+U  78063.         unidentified                               0.06  OriMC-1         NRAO     11m Tur89
+   78068.36 *(53) 13CH3OH      8(2)-9(1) A+                  0.04  OriMC-1         NRAO     11m Tur89  And87
+   78183.631*(12) CH3CH2CN     9(1,9)-8(1,8)                 0.25  OriMC-1         OSO      20m Joh84
+U  78262.         unidentified                               0.05  OriMC-1         NRAO     11m Tur89
+   78361.41 *(15) CH3OCH3      6(2,4)-6(1,5) AE+EA            b    OriMC-1         OSO      20m Joh84
+   78363.59 *( 9) CH3OCH3      6(2,4)-6(1,5) EE              0.25b OriMC-1         OSO      20m Joh84
+   78365.77 *( 4) CH3OCH3      6(2,4)-6(1,5) AA               b    OriMC-1         OSO      20m Joh84
+   78397.033*(50) 34SO2        8(3,5)-9(2.8)                 0.05  OriMC-1         NRAO     11m Tur91
+U  78437.         unidentified                               0.05  Sgr B2          NRAO     11m Tur91
+   78479.38 *( 3) HCOOCH3      7(1,7)-6(1,6) E               0.75b OriMC-1         OSO      20m Joh84  Plu86
+   78481.39 *( 3) HCOOCH3      7(1,7)-6(1,6) A               0.65b OriMC-1         OSO      20m Joh84  Plu84
+   78517.42 *(16) HCOOCH3      10(1,9)-10(0,10) E            0.09  OriMC-1         NRAO     11m Tur89
+   78633.507*(33) NH2CHO       16(2,14)-15(3,13)             0.04  OriMC-1         NRAO     11m Tur89
+U  78640.         unidentified                               0.05  OriMC-1         NRAO     11m Tur89
+   78711.366*(49) SO2          19(5,15)-20(4,16) v2=1        0.05  OriMC-1         NRAO     11m Tur89
+U  78752.         unidentified                               0.05  OriMC-1         NRAO     11m Tur89
+   78856.40 *(10) CH3OCH3      13(2,11)-13(1,12) AE+EA        b    OriMC-1         OSO      20m Joh84
+   78857.91 *( 8) CH3OCH3      13(2,11)-13(1,12) EE          0.38b OriMC-1         OSO      20m Joh84
+   78859.43 *( 6) CH3OCH3      13(2,11)-13(1,12) AA           b    OriMC-1         OSO      20m Joh84
+U  78867.         unidentified                               0.04  OriMC-1         NRAO     11m Tur91
+   78912.323*( 5) C3HD         2(1,2)-1(0,1)                 0.34  TMC-1           NRAO     12m Ger87  Bog87
+   78954.87 *(25) HC7N         70-69                         0.03  Sgr B2          NRAO     11m Tur91
+   79007.11  (10) CH3NH2       1(1,1)--1(0,1) Aa F=0-1        b    Sgr B2          NRAO     11m Tur89
+   79008.70  (10) CH3NH2       1(1,1)--1(0,1) Aa F=2-2       0.08b Sgr B2          NRAO     11m Tur89
+   79010.36  (10) CH3NH2       1(1,1)--1(0,1) Aa F=1-0        b    Sgr B2          NRAO     11m Tur89
+   79014.0  *( 9) HC9N         136-135                        b    Sgr B2          NRAO     11m Tur89
+U  79055.         unidentified                               0.03  Sgr B2          NRAO     11m Tur91
+   79099.28 *( 5) CH3CHO       4(1,3)-3(1,2) E               0.15  Sgr B2          BTL       7m Cum86  Kle91
+   79150.13 *( 5) CH3CHO       4(1,3)-3(1,2) A               0.3   Sgr B2          NRAO     11m Lis78  Kle91
+   79151.01 *( 2) C3N          8-7 J=17/2-15/2               0.27  IRC+10216       OSO      20m Joh84  Got83
+   79169.77 *( 2) C3N          8-7 J=15/2-13/2               0.27  IRC+10216       OSO      20m Joh84  Got83
+U  79221.9   (50) unidentified                               0.05  Sgr B2          BTL       7m Cum86
+U  79289.         unidentified                               0.05  Sgr B2          NRAO     11m Tur89
+U  79334.         unidentified                               0.05  Sgr B2          NRAO     11m Tur89
+   79350.476*( 8) H13CCCN      9-8                           0.56  Sgr B2          BTL       7m Wan78
+   79432.75 *( 5) HCOOCH3      9(3,7)-9(2,8) A               0.06  Sgr B2          NRAO     11m Tur89  Plu84
+U  79438.         unidentified                               0.06  Sgr B2          NRAO     11m Tur89
+   79449.73  ( 9) NH2CN        4(1,4)-3(1,3)                 0.27  Sgr B2          BTL       7m Wan78  Joh76a
+U  79465.         unidentified                               0.08  Sgr B2          NRAO     11m Tur89
+   79580.70 *(25) 13CH3OH      5(-1)-4(0) E                  0.15  OriMC-1         OSO      20m Joh84  And87
+   79677.507*( 7) CH3CH2CN     9(0,9)-8(0,8)                 0.25  OriMC-1         OSO      20m Joh84
+U  79699.         unidentified                               0.06  OriMC-1         NRAO     11m Tur89
+   79753.49 *( 7) CH3OCH3      15(3,13)-14(4,10) AA           b    OriMC-1         OSO      20m Joh84
+   79756.55 *(20) CH3OCH3      15(3,13)-14(4,10) EE          0.06b OriMC-1         OSO      20m Joh84
+   79759.52 *(34) CH3OCH3      15(3,13)-14(4,10) EA           b    OriMC-1         OSO      20m Joh84
+   79759.68 *(34) CH3OCH3      15(3,13)-14(4,10) AE           b    OriMC-1         OSO      20m Joh84
+   79781.68 *( 3) HCOOCH3      7(0,7)-6(0,6) E               0.30b OriMC-1         OSO      20m Joh84  Plu86
+   79783.89 *( 3) HCOOCH3      7(0,7)-6(0,6) A                b    OriMC-1         OSO      20m Joh84  Plu84
+U  79813.         unidentified                               0.05  Sgr B2          NRAO     11m Tur89
+U  79870.         unidentified                               0.05  Sgr B2          NRAO     11m Tur89
+   79876.712*( 5) HC5N         30-29                         0.25  IRC+10216       OSO      20m Joh84
+   79963.619 (10) NH2CN        4(2,2)-3(2,1)                 0.07b Sgr B2          NRAO     11m Tur89  Joh76a
+   79963.619 (10) NH2CN        4(2,3)-3(2,2)                  b    Sgr B2          NRAO     11m Tur89  Joh76a
+   79979.596 (90) NH2CN        4(0,4)-3(0,3)                 0.07  Sgr B2          NRAO     11m Tur77  Joh76a
+   80076.606*(48) CH2CO        4(1,4)-3(1,3)                 0.1b  Sgr B2          NRAO     11m Tur77
+   80082.64 *(26) HC7N         71-70                          b    Sgr B2          NRAO     11m Tur91
+U  80160.         unidentified                               0.03  OriMC-1         NRAO     11m Tur89
+   80266.200*( 7) CH3CH2OH     2(2,1)-2(1,2)                 0.07  Sgr B2          NRAO     11m Tur89
+U  80319.         unidentified                               0.02  OriMC-1         NRAO     11m Tur89
+   80383.96 *( 1) H2CCCC       9(0,9)-8(0,8)                 0.10  IRC+10216       IRAM     30m Cer91a Kil90
+   80395.14 *(13) HCOOCH3      9(2,8)-9(0,9) E               0.03  OriMC-1         NRAO     11m Tur89
+   80404.898*(12) CH3CH2CN     9(2,8)-8(2,7)                 0.25  OriMC-1         OSO      20m Joh84
+   80421.883*( 5) CH3NC        4-3                           2.7   Sgr B2          IRAM     30m Cer88
+U  80479.         unidentified                               0.04  OriMC-1         NRAO     11m Tur89
+   80480.25       CH2CN        4(0,4)-3(0,3) F1=11/2-9/2     0.12  Sgr B2          FCRAO    14m Irv88a Irv88a
+   80484.5        CH2CN        4(0,4)-3(0,3) F1=9/2-7/2      0.12  Sgr B2          FCRAO    14m Irv88a Irv88a
+   80504.60  (10) NH2CN        4(1,3)-3(1,2)                 0.36g Sgr B2          NRAO     11m Tur75a Joh76a
+   80536.24  (10) CH3OCH3      5(2,3)-5(1,4) AE+EA            b    Sgr B2          NRAO     11m Tur75a Lov79
+   80538.54  (10) CH3OCH3      5(2,3)-5(1,4) EE              0.2bg Sgr B2          NRAO     11m Tur75a Lov79
+   80540.88  (10) CH3OCH3      5(2,3)-5(1,4) AA               b    Sgr B2          NRAO     11m Tur75a Lov79
+U  80547.         unidentified                               0.03  Sgr B2          NRAO     11m Tur89
+U  80553.   ?     unidentified                               0.02  OriMC-1         NRAO     11m Tur89
+   80578.283*(53) HDO          1(1,0)-1(1,1)                <0.4g  OriMC-1         NRAO     11m Tur75b
+   80602.135*(11) CH3CH2CN     9(6,3)-8(6,2)                 0.3b  OriMC-1         OSO      20m Olo84
+   80602.135*(11) CH3CH2CN     9(6,4)-8(6,2)                  b    OriMC-1         OSO      20m Olo84
+   80604.58 *( 1) CH3CH2CN     9(5,5)-8(5,4)                 0.4b  OriMC-1         OSO      20m Olo84
+   80604.58 *( 1) CH3CH2CN     9(5,4)-8(5,3)                  b    OriMC-1         OSO      20m Olo84
+   80606.211*(12) CH3CH2CN     9(7,3)-8(7,2)                 0.2b  OriMC-1         OSO      20m Olo84
+   80606.211*(12) CH3CH2CN     9(7,2)-8(7,1)                  b    OriMC-1         OSO      20m Olo84
+   80619.233*(12) CH3CH2CN     9(4,6)-8(4,5)                 0.12b OriMC-1         NRAO     11m Hol80
+   80619.689*(12) CH3CH2CN     9(4,5)-8(4,4)                  b    OriMC-1         NRAO     11m Hol80
+   80649.873*(12) CH3CH2CN     9(3,7)-8(3,6)                 0.04  OriMC-1         NRAO     11m Hol80
+   80682.813*(12) CH3CH2CN     9(3,6)-8(3,5)                 0.05  OriMC-1         NRAO     11m Hol80
+   80723.194*( 6) C3H2         4(2,2)-4(1,3)                 0.05  Sgr B2          NRAO     11m Tur89
+U  80733.    ( 1) unidentified                               0.06  Sgr B2          NRAO     11m Hol80
+   80802.044*(43) CH2CO        4(3,2)-3(3,1)                 0.10b Sgr B2          NRAO     11m Tur89
+   80802.044*(43) CH2CO        4(3,1)-3(3,0)                  b    Sgr B2          NRAO     11m Tur89
+U  80808.         unidentified                               0.12  OriMC-1         NRAO     11m Tur89
+   80820.376*(41) CH2CO        4(2,3)-3(2,2)                  b    Sgr B2          NRAO     11m Tur89
+   80824.278*(41) CH2CO        4(2,2)-3(2,1)                 0.06b Sgr B2          NRAO     11m Tur89
+   80832.075*(51) CH2CO        4(0,4)-3(0,3)                 0.1   Sgr B2          NRAO     11m Tur77
+U  80876.         unidentified                               0.12  OriMC-1         NRAO     11m Tur89
+   80988.         SiC          3P1 2-1 e                     0.03  IRC+10216       IRAM     30m Cer89  Cer89
+   80993.16  (10) CH3OH        7(2)-8(1) A-                  1.50  OriMC-1         OSO      20m Joh84  Sas84
+U  81033.         unidentified                               0.14  OriMC-1         NRAO     11m Tur89
+   81062.         SiC          3P1 2-1 f                     0.03  IRC+10216       IRAM     30m Cer89  Cer89
+   81210.41 *(27) HC7N         72-71                         0.04  Sgr B2          NRAO     11m Tur91
+U  81230.         unidentified                               0.05  Sgr B2          NRAO     11m Tur89
+   81261.441*(12) CH3CH2CN     9(2,7)-8(2,6)                 0.40  OriMC-1         OSO      20m Joh84
+   81392.102*(42) HCOOCH3      3(2,1)-2(1,2) A               0.06  Sgr B2          NRAO     11m Tur89
+U  81398.         unidentified                               0.02  OriMC-1         NRAO     11m Tur89
+U  81469.         unidentified                               0.03  Sgr B2          NRAO     11m Tur91
+   81477.49  (10) HNO          1(0,1)-0(0,0)                 0.033 Sgr B2          NRAO     11m Uli77  Sai72
+   81505.211*( 6) C2S          7,6-6,5                       0.19  Sgr B2          BTL       7m Cum86  Yam90
+U  81518.         unidentified                               0.05  OriMC-1         NRAO     11m Tur89
+   81534.125*(11) HC13CCN      9-8                           0.050 Sgr B2          BTL       7m Wan78
+   81541.981*( 5) HCC13CN      9-8                           0.052 Sgr B2          BTL       7m Wan78
+U  81570.         unidentified                               0.02  OriMC-1         NRAO     11m Tur89
+   81586.188*(48) CH2CO        4(1,3)-3(1,2)                 0.15  Sgr B2          NRAO     11m Tur77
+   81653.08  (10) CH3OH        18(4)-19(3) E                 0.35  OriMC-1         OSO      20m Joh84  Sas84
+U  81674.         unidentified                               0.05  OriMC-1         NRAO     11m Tur89
+   81683.350*( 8) CH3CH2OH     8(1,7)-7(2,6)                 0.10  Sgr B2          NRAO     11m Tur89
+   81693.447*( 4) NH2CHO       4(1,4)-3(1,3)                 0.18  Sgr B2          BTL       7m Cum86
+U  81742.         unidentified                               0.04  OriMC-1         NRAO     11m Tur89
+   81778.1   ( 4) C6H          2P3/2 J=59/2-57/2 f           0.05  IRC+10216       IRAM     30m Gue87  Cer87a
+   81801.1   ( 4) C6H          2P3/2 J=59/2-57/2 e           0.04  IRC+10216       IRAM     30m Gue87  Cer87a
+   81881.468*( 1) HC3N         9-8                           2.51  Sgr B2          BTL       7m Wan78
+   82082.730*(26) HC3N         9-8 v7=1 l=1e                 0.30  OriMC-1         OSO      20m Joh84
+   82093.559*( 6) C3H2         2(0,2)-1(1,1)                 0.12  Sgr B2          BTL       7m Cum86  Vrt86a
+   82101.67 *( 5) HNCS         7(0,7)-6(0,6)                 0.05  Sgr B2          NRAO     11m Fre79
+   82115.660*( 7) CH3CH2OH     3(2,2)-3(1,3)                 0.05  Sgr B2          NRAO     11m Tur89
+   82124.322*(51) 34SO2        10(1,9)-9(2,8)                0.10  OriMC-1         OSO      20m Joh84
+   82200.372*(26) HC3N         9-8 v7=1 l=1f                 0.23  OriMC-1         OSO      20m Joh84
+   82242.89 *( 5) HCOOCH3      7(1,7)-6(0,6) E               0.03b Sgr B2(OH)      IRAM     30m Gom86  Plu86
+   82244.48 *( 5) HCOOCH3      7(1,7)-6(0,6) A                b    Sgr B2(OH)      IRAM     30m Gom86  Plu84
+   82303.7        HC13CCH      2(1,2)-1(0,1)                 0.035 Sgr B2(OH)      IRAM     30m Gom87  Bog86
+   82338.17 *(29) HC7N         73-72                         0.04  Sgr B2(OH)      IRAM     30m Gom86
+   82384.5   ( 5) C6H          2P1/2 J=59/2-57/2 e           1.10f IRC+10216       IRAM     30m Cer87a Cer87a
+   82399.91 *( 4) HC3N         9-8  v7=2 l=0                 0.04  OriMC-1         NRAO     11m Tur89
+   82457.25 *(30) CH3OCH3      11(1,10)-11(0,11) AE+EA        b    OriMC-1         NRAO     11m Tur89
+   82458.616*(12) CH3CH2CN     9(1,8)-8(1,7)                 0.45b OriMC-1         OSO      20m Joh84
+   82458.82 *(19) CH3OCH3      11(1,10)-11(0,11) EE           b    OriMC-1         NRAO     11m Tur89
+   82460.38 *( 8) CH3OCH3      11(1,10)-11(0,11) AA           b    OriMC-1         NRAO     11m Tur89
+U  82472.         unidentified                               0.02  OriMC-1         NRAO     11m Tur89
+U  82516.         unidentified                               0.04  OriMC-1         NRAO     11m Tur91
+   82539.041*( 5) HC5N         31-30                         0.13  OriMC-1         NRAO     11m Buj81
+   82539.375*(47) HC3N         9-8 v7=3 l=1e                 0.03b Sgr B2          NRAO     11m Tur89
+   82549.564*( 6) NH2CHO       1(1,1)-0(0,0)                 0.07b Sgr B2          NRAO     11m Tur89
+   82649.30  (10) CH3OCH3      3(1,3)-2(0,2) AE+EA            b    OriMC-1         NRAO     11m Cla79  Cla79
+   82650.150*(17) CH3CH2OH     11(1,10)-11(0,11)              b    OriMC-1         NRAO     11m Tur91
+   82650.18  (10) CH3OCH3      3(1,3)-2(0,2) EE              0.2b  OriMC-1         NRAO     11m Cla79  Cla79
+   82651.08  (10) CH3OCH3      3(1,3)-2(0,2) AA               b    OriMC-1         NRAO     11m Cla79  Cla79
+   82659.675*(35) HC3N         9-8 v7=3 l=3                  0.036 Sgr B2          NRAO     11m Tur89
+   82686.50  (10) CH3OCH3      4(2,2)-4(1,3) AE+EA           0.10  OriMC-1         NRAO     11m Cla79  Cla79
+   82688.77  (10) CH3OCH3      4(2,2)-4(1,3) EE              0.12  OriMC-1         NRAO     11m Cla79  Cla79
+   82691.14  (10) CH3OCH3      4(2,2)-4(1,3) AA              0.08  OriMC-1         NRAO     11m Cla79  Cla79
+U  82700.         unidentified                               0.02  OriMC-1         NRAO     11m Tur89
+U  82783.         unidentified                               0.03  Sgr B2          IRAM     30m Com87
+U  82870.         unidentified                               0.06  OriMC-1         NRAO     11m Tur89
+U  82889.         unidentified                               0.06  OriMC-1         NRAO     11m Tur89
+   82894.881*(19) CH3C13CH     5(2)-4(2)                     0.03  Sgr B2          IRAM     30m Com87
+   82897.08  (10) CH3OH        22(5)-23(4) A+                0.03  Sgr B2          IRAM     30m Com87  Sas84
+   82899.545*(19) CH3C13CH     5(1)-4(1)                     0.02  Sgr B2          IRAM     30m Com87
+   82901.100*(20) CH3C13CH     5(0)-4(0)                     0.01  Sgr B2          IRAM     30m Com87
+   82908.   *( 1) (CH3)2CO     8(0,8)-7(1,7) EA              0.02b Sgr B2          NRAO     43m Com87  Vac86
+   82908.   *( 1) (CH3)2CO     8(1,8)-7(0,7) EA               b    Sgr B2          NRAO     43m Com87  Vac86
+   82916.58 *( 5) (CH3)2CO     8(0,8)-7(1,7) EE              0.04b Sgr B2          IRAM     30m Com87  Vac86
+   82916.61 *( 5) (CH3)2CO     8(1,8)-7(0,7) EE               b    Sgr B2          IRAM     30m Com87  Vac86
+U  82917.         unidentified                               0.04  Sgr B2          NRAO     11m Tur89
+   82924.37 *( 5) (CH3)2CO     8(0,8)-7(1,7) AA              0.03b Sgr B2          IRAM     30m Com87  Vac86
+   82924.48 *( 5) (CH3)2CO     8(1,8)-7(0,7) AA               b    Sgr B2          IRAM     30m Com87  Vac86
+   82951.970*(10) SO2          13(4,10)-14(3,11)             1.10  OriMC-1         OSO      20m Sch83
+   82966.213 ( 7) C3H2         3(1,2)-3(0,3)                 0.16  Sgr B2          BTL       7m Cum86  Vrt86a
+   83043.782*(45) 34SO2        8(1,7)-8(0,8)                 0.50  OriMC-1         OSO      20m Sch83
+   83057.99 *(48) OC34S        7-6                           0.040 Sgr B2          BTL       7m Gol81
+   83097.53 *(11) CH3OCH3      14(2,12)-14(1,13) AE+EA        b    OriMC-1         OSO      20m Joh84
+   83099.00 *( 9) CH3OCH3      14(2,12)-14(1,13) EE          0.35b OriMC-1         OSO      20m Joh84
+   83100.47 *( 7) CH3OCH3      14(2,12)-14(1,13) AA           b    OriMC-1         OSO      20m Joh84
+   83123.4   ( 3) C4H          2P1/2 J=17/2-15/2 v7=1f       2.10f IRC+10216       IRAM     30m Yam87b Yam87b
+U  83163.         unidentified                               0.12  IRC+10216       OSO      20m Joh84
+   83207.510*(12) CH2CHCN      9(1,9)-8(1,8)                 0.20  OriMC-1         OSO      20m Joh84
+U  83215.         unidentified   (real?)                     0.02  Sgr B2          NRAO     11m Tur89
+   83319.56 *( 5) CH3OCH3      8(1,7)-7(2,6) AA               b    OriMC-1         OSO      20m Joh84
+   83321.43 *(14) CH3OCH3      8(1,7)-7(2,6) EE              0.17b OriMC-1         OSO      20m Joh84
+   83323.30 *(23) CH3OCH3      8(1,7)-7(2,6) AE+EA            b    OriMC-1         OSO      20m Joh84
+U  83336.         unidentified                               0.04  OriMC-1         NRAO     11m Tur89
+   83345.65 *(23) 33SO2        8(1,7)-8(0,8)                 0.04  OriMC-1         NRAO     11m Tur89
+   83465.93 *(30) HC7N         74-73                         0.04  Sgr B2          NRAO     11m Tur89
+   83522.9   ( 3) MgNC         7-6 L                         0.10  IRC+10216       IRAM     30m Cer86  Cer86
+   83538.0   ( 5) MgNC         7-6 U                         0.11  IRC+10216       IRAM     30m Cer86  Cer86
+   83540.28 *(41) 33SO2        18(5,13)-19(4,16)             0.02  OriMC-1         NRAO     11m Tur89
+   83541.5   ( 8) C5H          2P1/2 J=35/2-33/2 a           1.7 f IRC+10216       IRAM     30m Cer86  Cer86
+   83547.1   ( 6) C5H          2P1/2 J=35/2-33/2 b           2.2 f IRC+10216       IRAM     30m Cer86  Cer86
+   83584.26  (18) CH3CHO       2(1,2)-1(0,1) E               0.05  Sgr B2          NRAO     12m Ziu86a Bau76
+   83688.086*( 7) SO2          8(1,7)-8(0,8)                 0.86  OriMC-1         NRAO     11m Tur91
+U  83805.         unidentified                               0.02  OriMC-1         NRAO     11m Tur89
+   83842.         SiC          3P0 2-1 e                     0.02  IRC+10216       IRAM     30m Cer89  Cer89
+   83879.8   ( 4) C4H          2P1/2 J=17/2-15/2 v7=1e       1.52f IRC+10216       IRAM     30m Yam87b Yam87b
+   83903.30  (10) CH3OD        4(2)-5(1) A-                  0.12  Sgr B2          NRAO     11m Tur89  Kau80
+   83978.60  (10) CH3NH2       5(1,5)-5(0,5) As F=6-6        0.05b Sgr B2          BTL       7m Cum86  Tak73
+   83979.57  (10) CH3NH2       5(1,5)-5(0,5) As F=5-5         b    Sgr B2          BTL       7m Cum86  Tak73
+   84108.58 *( 5) C5H          2P3/2 J=35/2-33/2 a           4.7fb IRC+10216       IRAM     30m Cer86a Got86
+   84110.41 *( 5) C5H          2P3/2 J=35/2-33/2 b            b    IRC+10216       IRAM     30m Cer86a Got86
+   84151.854*(14) CH3CH2CN     11(0,11)-10(1,10)             0.10b Sgr B2(OH)      IRAM     30m Gom86
+U  84163.         unidentified                               0.06  OriMC-1         NRAO     11m Tur89
+   84185.629*( 7) H13CCCH      2(1,2)-1(0,1)                 0.13  TMC-1           NRAO     12m Ger87  Bog86
+U  84215.         unidentified   (CH3CH2OH? Tur91)           0.08  OriMC-1         NRAO     11m Tur89
+   84219.76  ( 5) CH3CHO       2(1,2)-1(0,1) A               0.05  Sgr B2          BTL       7m Cum86  Bau76
+   84233.36 *(10) HCOOCH3      11(4,7)-11(3,8) A             0.06  OriMC-1         NRAO     11m Tur89  Plu84
+U  84308.         unidentified                               0.10  OriMC-1         OSO      20m Joh84
+   84320.936*(32) SO2          32(5,27)-31(6,26)             0.10  OriMC-1         OSO      20m Joh84
+U  84356.         unidentified                               0.07  OriMC-1         NRAO     11m Tur89
+U  84385.         unidentified                               0.08  OriMC-1         NRAO     11m Tur91
+   84410.68 *(12) 34SO         2(2)-1(1)                     0.03  Sgr B2          BTL       7m Cum86
+   84423.81  (10) CH3OH        13(-3)-14(-2) E               0.80  OriMC-1         OSO      20m Joh84  Sas84
+   84449.17 *( 2) HCOOCH3      7(2,6)-6(2,5) E               0.45  OriMC-1         OSO      20m Joh84  Plu86
+   84454.75 *( 3) HCOOCH3      7(2,6)-6(2,5) A               0.45  OriMC-1         OSO      20m Joh84  Plu84
+U  84468.         unidentified                               0.18  OriMC-1         NRAO     11m Tur89
+U  84478.         unidentified                               0.18  OriMC-1         NRAO     11m Tur89
+U  84496.         unidentified                               0.10  OriMC-1         NRAO     11m Tur89
+U  84505.35       unidentified                               0.08  OriMC-1         NRAO     11m Kui77
+   84521.21  ( 8) CH3OH        5(-1)-4(0) E                  2.8   Sgr B2          NRAO     11m Zuc72  Zuc72
+   84542.331*( 3) NH2CHO       4(0,4)-3(0,3)                 0.21  Sgr B2          BTL       7m Cum86
+   84550.0   ( 4) C6H          2P3/2 J=61/2-59/2 f           0.04  IRC+10216       IRAM     30m Gue87  Cer87a
+   84574.7   ( 5) C6H          2P3/2 J=61/2-59/2 e           0.03  IRC+10216       IRAM     30m Gue87  Cer87a
+   84595.760*( 7) CH3CH2OH     4(2,3)-4(1,4)                 0.06b Sgr B2          BTL       7m Cum86
+   84597.64  (10) CH3NH2       2(1)-2(0) Ea F=2-2             b    Sgr B2          BTL       7m Cum86  Tak73
+   84598.54  (10) CH3NH2       2(1)-2(0) Ea F=3-3             b    Sgr B2          BTL       7m Cum86  Tak73
+U  84608.         unidentified                               0.12  OriMC-1         NRAO     11m Tur89
+U  84616.         unidentified                               0.10  OriMC-1         NRAO     11m Tur89
+U  84628.         unidentified                               0.08  OriMC-1         NRAO     11m Tur89
+   84632.02  (10) CH3OCH3      3(2,1)-3(1,2) AE+EA           0.14  OriMC-1         NRAO     11m Cla79  Cla79
+   84634.40  (10) CH3OCH3      3(2,1)-3(1,2) EE             <0.09b OriMC-1         NRAO     11m Cla79  Cla79
+   84636.80  (10) CH3OCH3      3(2,1)-3(1,2) AA               b    OriMC-1         NRAO     11m Cla79  Cla79
+   84727.696*( 6) C3H2         3(2,2)-3(1,3)                 0.04  Sgr B2          BTL       7m Cum86  Vrt86a
+U  84738.         unidentified                               0.02  Sgr B2          NRAO     11m Tur89
+   84744.17  (10) CH3OH        19(4)-18(5) E                 0.46b OriMC-1         OSO      20m Joh84  Sas84
+   84746.036*(20) 30SiO        2-1                           0.08b OriMC-1         NRAO     11m Cla77
+   84807.797*(10) NH2CHO       4(2,3)-3(2,2) n,t             0.18  Sgr B2          NRAO     11m Wil81
+   84865.166*( 9) O13CS        7-6                           0.032 Sgr B2          BTL       7m Gol81
+   84888.996*(18) NH2CHO       4(3,2)-3(3,1) n,t             0.08b Sgr B2          NRAO     11m Wil81
+   84890.989*(18) NH2CHO       4(3,1)-3(3,0) n,t              b    Sgr B2          NRAO     11m Wil81
+   84946.005*(12) CH2CHCN      9(0,9)-8(0,8)                 0.10  OriMC-1         OSO      20m Joh84
+   84970.22  ( 5) 13CH3OH      8(0)-7(1) A+                  0.20  OriMC-1         OSO      20m Joh84  Kur86
+U  85067.   ?     unidentified                               0.03  OriMC-1         NRAO     11m Tur89
+   85093.274*(10) NH2CHO       4(2,2)-3(2,1)                 0.12  Sgr B2          BTL       7m Cum86
+U  85102.   ?     unidentified                               0.10  OriMC-1         NRAO     11m Tur89
+   85131.1   ( 4) C6H          2P1/2 J=61/2-59/2 f           1.37f IRC+10216       IRAM     30m Cer87a Cer87a
+   85139.108*( 2) OCS          7-6                           0.7   Sgr B2          NRAO     11m Sol73
+   85162.256 (40) HC18O+       1-0                           0.1   L134N           BTL       7m Lan78  Gue82b
+   85176.0   ( 4) C6H          2P1/2 J=61/2-59/2 e           1.45f IRC+10216       IRAM     30m Cer87a Cer87a
+   85201.348*( 5) HC5N         32-31                         0.030 IRC+10216       BTL       7m Gol81
+U  85230.6   ( 6) unidentified                               0.07  Sgr B2          BTL       7m Cum86
+   85265.470*( 7) CH3CH2OH     6(0,6)-5(1,5)                 0.25  Sgr B2          NRAO     11m Zuc75
+   85302.655*(12) CH2CHCN      9(2,8)-8(2,7)                 0.12  Sgr B2          BTL       7m Cum86
+U  85315.   ?     unidentified                               0.03  OriMC-1         NRAO     11m Tur89
+U  85330.         unidentified                               0.03  OriMC-1         NRAO     11m Tur89
+   85338.905*( 6) C3H2         2(1,2)-1(0,1)                 3.1   TMC-1           NRAO     11m Tha81  Vrt87
+   85347.90  (30) HCS+         2-1                           0.4   OriMC-1         NRAO     11m Tha81  Gud81
+U  85370.   ?     unidentified                               0.02  OriMC-1         NRAO     11m Tur89
+U  85396.         unidentified                               0.05  Sgr B2          NRAO     11m Tur89
+   85416.763*(10) CH2CHCN      9(4,6)-8(4,5)                 0.12b OriMC-1         OSO      20m Joh84
+   85416.814*(10) CH2CHCN      9(4,5)-8(4,4)                  b    OriMC-1         OSO      20m Joh84
+   85426.933*(10) CH2CHCN      9(3,7)-8(3,6)                 0.10  OriMC-1         OSO      20m Joh84
+   85434.543*(15) CH2CHCN      9(3,6)-8(3,5)                 0.03  Sgr B2          NRAO     11m Tur91
+   85442.601*( 1) CH3CCH       5(3)-4(3)                     0.11  OriMC-1         NRAO     11m Chu83
+   85450.7660*(7) CH3CCH       5(2)-4(2)                     0.14  OriMC-1         NRAO     11m Chu83
+   85455.6665*(6) CH3CCH       5(1)-4(1)                     0.23  OriMC-1         NRAO     11m Chu83
+   85457.3002*(7) CH3CCH       5(0)-4(0)                     0.28  OriMC-1         NRAO     11m Chu83
+   85497.7  *( 6) CH3C4H       21(1)-20(1)                    b    Sgr B2          NRAO     11m Tur89
+   85498.5  *( 6) CH3C4H       21(0)-20(0)                   0.10b Sgr B2          NRAO     11m Tur89
+U  85506.         unidentified                               0.10  OriMC-1         OSO      20m Joh84
+   85531.48 *( 2) HOCO+        4(0,4)-3(0,3)                 0.5   Sgr B2          NRAO     11m Tha81
+U  85565.         unidentified                               0.05  IRC+10216       OSO      20m Joh84
+   85567.97  (10) CH3OH        6(-2)-7(-1) E                 0.3   OriMC-1         NRAO     11m Lov76a Sas84
+   85634.00 *( 1) C4H          9-8 J=19/2-17/2               0.08  IRC+10216       NRAO     11m Gue78  Got83
+   85638.44 *( 4) HCOOCH3      4(2,3)-3(1,2) E               0.09  OriMC-1         NRAO     11m Tur89
+   85640.456*(30) SiO          2-1 v=2                       0.11  R Cas           NRAO     11m Cla81
+   85655.63 *( 5) HCOOCH3      4(2,3)-3(1.2) A               0.09b OriMC-1         NRAO     11m Tur89
+   85656.422*( 5) C3H2         4(3,2)-4(2,3)                  b    OriMC-1         NRAO     11m Tur89
+   85672.57 *( 1) C4H          9-8 J=17/2-15/2               0.07  IRC+10216       NRAO     11m Gue78  Got83
+U  85705.         unidentified                               0.08  OriMC-1         NRAO     11m Tur89
+   85715.434*(12) CH2CHCN      9(2,7)-8(2,6)                 0.06  Sgr B2          BTL       7m Cum86
+   85759.132*(20) 29SiO        2-1                           0.13  OriMC-1         NRAO     11m Lov76a
+U  85781.         unidentified                               0.08  OriMC-1         NRAO     11m Tur89
+U  85808.         unidentified                               0.07  OriMC-1         NRAO     11m Tur89
+   85919.15 *( 3) HCOOCH3      7(6,1)-6(6,0) E               0.12  OriMC-1         OSO      20m Ell80  Plu86
+   85924.747 (20) NH2D         1(1,1)0+ -1(0,1)0- F=0-1      0.40  L183            OSO      20m Olb85  Bes83
+   85925.684 (20) NH2D         1(1,1)0+ -1(0,1)0- F=2-1      0.40  L183            OSO      20m Olb85  Bes83
+   85926.263 (10) NH2D         1(1,1)0+ -1(0,1)0-            0.14  OriMC-1         NRAO     11m Tur78  Bes83
+   85926.263 (10) NH2D         1(1,1)0+ -1(0,1)0- F=2-2      0.99b L183            OSO      20m Olb85  Bes83
+   85926.263 (10) NH2D         1(1,1)0+ -1(0,1)0- F=1-1       b    L183            OSO      20m Olb85  Bes83
+   85926.66 *( 3) HCOOCH3      7(6,2)-6(6,1) A+E             0.3b  OriMC-1         OSO      20m Ell80  Plu86
+   85926.858 (20) NH2D         1(1,1)0+ -1(0,1)0- F=1-2      0.40  L183            OSO      20m Olb85  Bes83
+   85927.23 *( 4) HCOOCH3      7(6,1)-6(6,0) A                b    OriMC-1         OSO      20m Ell80  Plu84
+   85927.721 (20) NH2D         1(1,1)0+ -1(0,1)0- F=1-0      0.40  L183            OSO      20m Olb85  Bes83
+U  85943.         unidentified                               0.04  Sgr B2          NRAO     11m Tur89
+   85973.13 *( 9) CH3OCH3      13(2,12)-12(3,9) AA            b    OriMC-1         OSO      20m Joh84
+   85976.04 *(17) CH3OCH3      13(2,12)-12(3,9) EE           0.06b OriMC-1         OSO      20m Joh84
+   85978.92 *(25) CH3OCH3      13(2,12)-12(3,9) EA+AE         b    OriMC-1         OSO      20m Joh84
+   86021.08 *( 3) HCOOCH3      7(5,2)-6(5,1) E               0.12  OriMC-1         OSO      20m Ell80  Plu86
+   86027.80 *( 3) HCOOCH3      7(5,3)-6(5,2) E                b    OriMC-1         OSO      20m Ell80  Plu86
+   86029.43 *(10) HCOOCH3      7(5,3)-6(5,2) A               0.20b OriMC-1         OSO      20m Ell80  Plu84
+   86030.20 *(10) HCOOCH3      7(5,2)-6(5,1) A               0.32  OriMC-1         OSO      20m Ell80  Plu84
+   86048.50  (25) C4H          2S J=9-8 v7=2 L               n.r.  IRC+10216       IRAM     30m Gue87a Gue87a
+   86054.961 (25) HC15N        1-0                           0.80g OriMC-1         NRAO     11m Lin77  Pea76
+   86074.20  (10) CH3NH2       4(1,4)-4(0,4) F=3-3            b    Sgr B2          NRAO     11m Kai74  Tak73
+   86074.44  (10) CH3NH2       4(1,4)-4(0,4) F=5-5           0.2b  Sgr B2          NRAO     11m Kai74  Tak73
+   86075.43  (10) CH3NH2       4(1,4)-4(0,4) F=4-4            b    Sgr B2          NRAO     11m Kai74  Tak73
+   86093.55 *(24) SO           2(2)-1(1)                    <1.7   OriMC-1         NRAO     11m Cla74
+   86104.44  (25) C4H          2S J=9-8 v7=2 U               n.r.  IRC+10216       IRAM     30m Gue87a Gue87a
+   86153.709*(25) SO2          39(9,31)-40(8,32)             0.07  OriMC-1         OSO      20m Joh84
+   86181.413*(10) C2S          6,7-5,6                       1.6f  IRC+10216       IRAM     30m Cer87b Yam90
+   86210.05 *( 3) HCOOCH3      7(4,4)-6(4,3) A               0.18  OriMC-1         OSO      20m Joh84  Plu84
+   86223.61 *( 3) HCOOCH3      7(4,3)-6(4,2) E               0.35b OriMC-1         OSO      20m Joh84  Plu86
+   86223.76  (10) CH3OCH3      2(2,0)-2(1,1) AE               b    OriMC-1         NRAO     11m Cla79  Cla79
+   86224.22 *( 3) HCOOCH3      7(4,4)-6(4,3) E                b    OriMC-1         OSO      20m Joh84  Plu86
+   86225.67  (12) CH3OCH3      2(2,0)-2(1,1) EA               b    OriMC-1         NRAO     11m Cla79  Cla79
+   86226.728 (96) CH3OCH3      2(2,0)-2(1,1) EE              0.28b OriMC-1         NRAO     11m Cla79  Cla79
+   86228.72  ( 2) CH3OCH3      2(2,0)-2(1,1) AA               b    OriMC-1         NRAO     11m Cla79  Cla79
+   86243.442*(24) SiO          2-1 v=1                      17.4i  OriMC-1         NRAO     11m Sny74a
+   86250.55 *( 4) HCOOCH3      7(4,3)-6(4,2) A               0.08  Sgr B2          NRAO     11m Tur89  Plu84
+   86265.79 *( 3) HCOOCH3      7(3,5)-6(3,4) A               0.15  OriMC-1         OSO      20m Joh84  Plu84
+   86268.73 *( 3) HCOOCH3      7(3,5)-6(3,4) E               0.20  OriMC-1         OSO      20m Joh84  Plu86
+U  86317.         unidentified                               0.07  OriMC-1         NRAO     11m Tur89
+   86338.767 (30) H13CN        1-0 F=1-1                      b    OriMC-1         NRAO     11m Sny71  Pea76
+   86340.184 (30) H13CN        1-0 F=2-1                    <2.b   OriMC-1         NRAO     11m Sny71  Pea76
+   86342.274 (30) H13CN        1-0 F=0-1                      b    OriMC-1         NRAO     11m Sny71  Pea76
+U  86360.         unidentified                               0.10  IRC+10216       OSO      20m Joh84
+U  86395.8   (15) unidentified                               0.06  Sgr B2          BTL       7m Cum86
+U  86401.   ?     unidentified                               0.07  OriMC-1         NRAO     11m Tur89
+U  86413.         unidentified                               0.15  OriMC-1         OSO      20m Joh84
+U  86416.9   (13) unidentified                               0.05  Sgr B2          BTL       7m Cum86
+U  86418.         unidentified                               0.20  OriMC-1         OSO      20m Joh84
+U  86427.   ?     unidentified                               0.03  OriMC-1         NRAO     11m Tur89
+U  86432.   ?     unidentified                               0.02  Sgr B2          NRAO     11m Tur89
+U  86473.         unidentified                               0.10  OriMC-1         NRAO     11m Tur91
+U  86481.         unidentified                               0.07  OriMC-1         NRAO     11m Tur91
+   86492.97 *( 2) HCOOD        4(0,4)-3(0,3)                  b    OMC-IRc2        SEST     15m Ger89
+   86546.18 *( 1) HCOOH        4(1,4)-3(1,3)                 0.07  Sgr B2          BTL       7m Cum86
+   86593.687*( 8) C3O          9-8                           0.028 TMC-1           FCRAO    14m Bro85
+   86615.76  (10) CH3OH        7(2)-6(3) A-                  0.6   OriMC-1         NRAO     11m Lov76a Sas84
+   86639.108*( 7) SO2          8(3,5)-9(2,8)                 0.2   OriMC-1         NRAO     11m Tur91
+   86670.82  ( 4) HCO          1(0,1)-0(0,0) 3/2-1/2 F=2-1   0.15  OriMC-2         NRAO     11m Sny76  Pic78
+   86708.35  ( 4) HCO          1(0,1)-0(0,0) 3/2-1/2 F=1-0   0.04  Sgr B2          BTL       7m Cum86  Pic78
+   86708.379 (20) C3S          15-14                         2.4f  IRC+10216       IRAM     30m Cer87b Yam87
+   86745.315*(15) CH3CH2CN     8(1,8)-7(0,7)                 0.02  Sgr B2          NRAO     11m Tur89
+   86754.294 (30) H13CO+       1-0                           0.6   OriMC-1         NRAO     11m Sny76a Gue82b
+   86777.43  ( 4) HCO          1(0,1)-0(0,0) 1/2-1/2 F=1-1   0.021 DR21            OSO      20m Sch86  Pic78
+   86805.75  ( 4) HCO          1(0,1)-0(0,0) 1/2-1/2 F=0-1   0.015 DR21            OSO      20m Sch86  Pic78
+   86819.851*(13) CH3CH2CN     10(1,10)-9(1,9)               0.50  OriMC-1         OSO      20m Joh84
+   86846.998*(20) SiO          2-1 v=0                       0.9   OriMC-1         NRAO     11m Dic72
+U  86864.         unidentified                               0.08  OriMC-1         OSO      20m Dow82
+U  86866.         unidentified                               0.05  IRC+10216       OSO      20m Joh84
+   86903.06  (10) CH3OH        7(2)-6(3) A+                  0.2   OriMC-1         NRAO     11m Lov76a Sas84
+U  86980.         unidentified                               0.10  OriMC-1         OSO      20m Joh84
+   87057.5   ( 5) HC17O+       1-0                           0.05  Sgr B2          BTL       7m Gue82  Gue82
+   87090.735 (46) HN13C        1-0 F=0-1                     0.08  L134N           BTL       7m Fre79a Fre79a
+   87090.859 (46) HN13C        1-0 F=2-1                     0.42  L134N           BTL       7m Fre79a Fre79a
+   87090.942 (46) HN13C        1-0 F=1-1                     0.25  L134N           BTL       7m Fre79a Fre79a
+U  87110.         unidentified                               0.04  OriMC-1         NRAO     11m Tur89
+U  87116.         unidentified                               0.03  Sgr B2          NRAO     11m Tur89
+   87142.3   ( 4) C4H          2P3/2 J=19/2-17/2 v7=1e       1.45f IRC+10216       IRAM     30m Yam87b Yam87b
+   87143.29 *( 3) HCOOCH3      7(3,4)-6(3,3) E               0.37  OriMC-1         OSO      20m Joh84  Plu86
+   87161.28 *( 3) HCOOCH3      7(3,4)-6(3,3) A               0.25  OriMC-1         OSO      20m Joh84  Plu84
+U  87215.         unidentified   (CH3CH2CN?)                 0.04  OriMC-1         NRAO     11m Tur89
+U  87260.         unidentified                               0.05  OriMC-1         NRAO     11m Tur89
+   87284.156 (30) C2H          1-0 3/2-1/2 F=1-1             0.53  OriMC-1         NRAO     11m Got83a Got83a
+U  87299.         unidentified                               0.05  OriMC-1         NRAO     11m Tur89
+   87312.827*(18) CH2CHCN      9(1,8)-8(1,7)                 0.18  OriMC-1         NRAO     11m Tur89
+   87316.925 ( 4) C2H          1-0 3/2-1/2 F=2-1             4.00  OriMC-1         NRAO     11m Got83a Got83a
+U  87323.         unidentified                               0.23  OriMC-1         NRAO     11m Tur89
+   87328.624 ( 6) C2H          1-0 3/2-1/2 F=1-0             2.27  OriMC-1         NRAO     11m Got83a Got83a
+   87348.3   ( 4) C6H          2P3/2 J=63/2-61/2 e           0.05  IRC+10216       IRAM     30m Gue87  Cer87a
+   87371.8   ( 4) C4H          2P3/2 J=19/2-17/2 v7=1f       2.40f IRC+10216       IRAM     30m Gue87  Yam87b
+   87402.004 ( 5) C2H          1-0 1/2-1/2 F=1-1             2.25  OriMC-1         NRAO     11m Got83a Got83a
+   87407.165 (11) C2H          1-0 1/2-1/2 F=0-1             1.02  OriMC-1         NRAO     11m Got83a Got83a
+   87446.512 (23) C2H          1-0 1/2-1/2 F=1-0             0.56  OriMC-1         NRAO     11m Tuc78  Got83a
+   87458.286*(42) AlCl         6-5                           0.73f IRC+10216       IRAM     30m Cer87c
+U  87479.         unidentified                               0.05  IRC+10216       OSO      20m Joh84
+U  87525.         unidentified   (CH3CH2OH? Tur90)           0.18  OriMC-1         NRAO     11m Tur89
+   87550.545*(28) 30SiS        5-4                           0.027 IRC+10216       FCRAO    14m Ziu84
+U  87580.         unidentified                               0.10  Sgr B2          NRAO     11m Tur89
+   87597.333*( 3) HNCO         4(1,4)-3(1,3)                 0.13  OriMC-1         OSO      20m Joh84
+   87715.980*( 9) CH3CH2OH     5(2,4)-5(1,5)                 0.06  Sgr B2          BTL       7m Cum86
+U  87726.         unidentified                               0.05  OriMC-1         NRAO     11m Tur89
+   87766.42 *( 3) HCOOCH3      8(0,8)-7(1,7) E               0.03b Sgr B2          BTL       7m Cum86  Plu86
+   87767.5   ( 2) HCCN         4,5-3,4                       0.85f IRC+10216       IRAM     30m Gue91  Gue91
+   87769.03 *( 3) HCOOCH3      8(0,8)-7(1,7) A                b    Sgr B2          BTL       7m Cum86  Plu84
+U  87777.         unidentified                               0.05  Sgr B2          NRAO     11m Tur89
+U  87779.         unidentified   (CH3NH2?)                   0.08  OriMC-1         NRAO     11m Tur89
+   87782.23  (10) CH3NH2       3(1,3)-3(0,3) As F=4-4        0.03b Sgr B2          BTL       7m Cum86  Tak73
+   87783.09  (10) CH3NH2       3(1,3)-3(0,3) As F=3-3         b    Sgr B2          BTL       7m Cum86  Tak73
+   87848.875*( 4) NH2CHO       4(1,3)-3(1,2)                 0.31  Sgr B2          BTL       7m Cum86
+   87863.632*( 5) HC5N         33-32                         0.23  IRC+10216       OSO      20m Joh84
+   87876.57 *( 6) S18O         4(5)-4(4)                     0.04  OriMC-1         NRAO     11m Tur89
+   87889.4   ( 4) HCCN         4,4-3,3                       0.72f IRC+10216       IRAM     30m Gue91  Gue91
+   87898.416*( 4) HNCO         4(2,3)-3(2,2)                 0.06b Sgr B2          BTL       7m Cum86
+   87898.620*( 4) HNCO         4(2,2)-3(2,1)                  b    Sgr B2          BTL       7m Cum86
+   87921.7   ( 3) C6H          2P1/2 J=63/2-61/2 f           1.19f IRC+10216       IRAM     30m Cer87a Cer87a
+   87925.238*( 4) HNCO         4(0,4)-3(0,3)                 3.7   Sgr B2          NRAO     11m Tur91
+   87967.7   ( 3) C6H          2P1/2 J=63/2-61/2 e           1.31f IRC+10216       IRAM     30m Cer87a Cer87a
+U  88018.    ( 1) unidentified                               0.10  IRC+10216       IRAM     30m Cer87a Cer87a
+   88085.86  ( 5) CH3SH        14(1)-13(2) A-                0.08  OriMC-1         NRAO     11m Tur89  Lee80
+U  88130.         unidentified                               0.03  OriMC-1         NRAO     11m Tur89
+   88166.808*( 8) H13CCCN      10-9                          0.15  IRC+10216       OSO      20m Joh84
+U  88204.         unidentified                               0.03  OriMC-1         NRAO     11m Tur89
+   88214.0   (10) HCCN         4,4-3,3                       0.9f  IRC+10216       IRAM     30m Gue91  Gue91
+   88239.027*( 3) HNCO         4(1,3)-3(1,2)                 0.09  Sgr B2          NRAO     11m Tur91
+   88285.809*(27) Si34S        5-4                           0.10  IRC+10216       OSO      20m Joh84
+U  88292.         unidentified                               0.03  OriMC-1         NRAO     11m Tur89
+   88315.2   ( 4) C5H          2P1/2 J=37/2-35/2 a           0.8f  IRC+10216       IRAM     30m Cer86  Cer86
+   88321.0   ( 4) C5H          2P1/2 J=37/2-35/2 b           1.1f  IRC+10216       IRAM     30m Cer86  Cer86
+   88323.757*(13) CH3CH2CN     10(0,10)-9(0,9)               0.12  OriMC-1         NRAO     11m Joh77
+U  88349.         unidentified                               0.03  OriMC-1         NRAO     11m Tur89
+   88358.53 *(10) HCOOCH3      22(5,17)-22(4,18) A           0.07  OriMC-1         NRAO     11m Tur89  Plu84
+U  88402.         unidentified                               0.04  Sgr B2          NRAO     11m Tur89
+U  88445.         unidentified                               0.03  OriMC-1         NRAO     11m Tur89
+U  88481.         unidentified                               0.05  OriMC-1         NRAO     11m Tur91
+   88594.96  (10) CH3OH        15(3)-14(4) A+                0.73  OriMC-1         OSO      20m Joh84  Sas84
+   88630.4157(10) HCN          1-0 F=1-1                     9.6   OriMC-1         NRAO     11m Uli76  DeL69
+   88631.8473(10) HCN          1-0 F=2-1                    17.2   OriMC-1         NRAO     11m Uli76  DeL69
+   88633.9360(10) HCN          1-0 F=0-1                     6.8   OriMC-1         NRAO     11m Uli76  DeL69
+   88668.06  (10) CH3NH2       2(0,2)-1(0,1) Aa               b    Sgr B2          NRAO     11m Kai75  Kai75
+   88668.62  (10) CH3NH2       2(0,2)-1(0,1) Es              0.15b Sgr B2          NRAO     11m Kai75  Kai75
+   88668.63  (10) CH3NH2       2(0,2)-1(0,1) A+E             0.04  Sgr B2          NRAO     11m Kut80  Joh72
+   88669.61  (10) CH3NH2       2(0,2)-1(0,1) As,Ea            b    Sgr B2          NRAO     11m Kai75  Kai75
+   88706.38 *(16) CH3OCH3      15(2,13)-15(1,14) EA+AE        b    OriMC-1         OSO      20m Joh84
+   88707.64  (10) CH3OCH3      15(2,13)-15(1,14) EE          0.05  OriMC-1         NRAO     11m Kut80
+   88707.78 *(12) CH3OCH3      15(2,13)-15(1,14) EE          0.27b OriMC-1         OSO      20m Joh84
+   88709.07  (10) CH3OCH3      15(2,13)-15(1,14) AA          0.06  OriMC-1         NRAO     11m Kut80
+   88709.19 *( 8) CH3OCH3      15(2,13)-15(1,14) AA           b    OriMC-1         OSO      20m Joh84
+   88720.604*(56) 34SO2        7(3,5)-8(2,6)                 0.10b OriMC-1         OSO      20m Sch83
+   88723.384*( 6) HCOOCH3      11(3,9)-11(2,10) A             b    OriMC-1         OSO      20m Sch83
+U  88741.8        unidentified                               0.03  OriMC-1         NRAO     11m Kut80
+U  88749.8        unidentified                               0.03  OriMC-1         NRAO     11m Kut80
+U  88758.         unidentified                               0.08  OriMC-1         NRAO     11m Tur89
+U  88770.8        unidentified                               0.03  OriMC-1         NRAO     11m Kut80
+   88843.24 *( 3) HCOOCH3      7(1,6)-6(1,5) E               0.09  OriMC-1         NRAO     11m Kut80  Plu86
+   88851.60 *( 3) HCOOCH3      7(1,6)-6(1,5) A               0.07  OriMC-1         NRAO     11m Kut80  Plu84
+U  88861.         unidentified                               0.15  OriMC-1         OSO      20m Gol81b
+   88865.692 (26) H15NC        1-0                           0.15  DR21(OH)        NRAO     11m Bro77  Say76
+   88914.14 *( 5) C5H          2P3/2 J=37/2-35/2 a           4.9fb IRC+10216       IRAM     30m Cer86a Got86
+U  88916.         unidentified                               0.16  OriMC-1         NRAO     11m Tur89
+   88916.19 *( 5) C5H          2P3/2 J=37/2-35/2 b            b    IRC+10216       IRAM     30m Cer86a Got86
+   88940.21 *( 1) H2CCCC       10(1,10)-9(1,9)               0.099 IRC+10216       IRAM     30m Cer91a Kil90
+   88940.09  (10) CH3OH        15(3)-14(4) A-                1.30  OriMC-1         OSO      20m Joh84  Sas84
+U  88957.         unidentified                               0.04  OriMC-1         NRAO     11m Tur89
+U  88977.         unidentified                               0.09  OriMC-1         NRAO     11m Tur89
+   89045.59 *( 2) C3N          9-8 J=19/2-17/2               0.13l IRC+10216       NRAO     11m Gue77  Got83
+   89060.930*(21) CH3CH2OH     18(4,14)-17(5,13) ?           0.08  OriMC-1         NRAO     11m Tur89
+   89064.36 *( 2) C3N          9-8 J=17/2-15/2               0.14l IRC+10216       NRAO     11m Gue77  Got83
+U  89084.         unidentified   (CH3NH2?)                   0.07  OriMC-1         NRAO     11m Tur89
+   89086.53  (15) HCN          1-0 l=0 F=1-1 v2=2             b    IRC+10216       IRAM     30m Luc88  Win71
+   89087.92  (10) HCN          1-0 l=0 F=2-1 v2=2            0.20b IRC+10216       IRAM     30m Luc88  Win71
+   89090.13  (15) HCN          1-0 l=0 F=0-1 v2=2             b    IRC+10216       IRAM     30m Luc88  Win71
+   89103.730*(26) 29SiS        5-4                           0.07  IRC+10216       OSO      20m Joh84
+   89104.60 *(37) HC7N         79-78                         0.03  OriMC-1         NRAO     11m Tur91
+   89188.518*( 9) HCO+         1-0                          10.8   OriMC-1         NRAO     11m Uli76
+U  89234.         unidentified                               0.15  OriMC-1         NRAO     11m Tur89
+   89297.651*(13) CH3CH2CN     10(2,9)-9(2,8)                0.32  OriMC-1         OSO      20m Joh84
+   89314.64 *( 3) HCOOCH3      8(1,8)-7(1,7) E               0.35b OriMC-1         OSO      20m Joh84  Plu86
+   89316.64 *( 4) HCOOCH3      8(1,8)-7(1,7) A                b    OriMC-1         OSO      20m Joh84  Plu84
+   89329.527*(33) 13CH3CN      5(1)-4(1)                      b    Sgr B2          BTL       7m Cum86
+   89331.203*(33) 13CH3CN      5(0)-4(0)                     0.22b Sgr B2          BTL       7m Cum86
+U  89411.         unidentified                               0.08  OriMC-1         NRAO     11m Tur89
+U  89419.         unidentified                               0.03  Sgr B2          FCRAO    14m Woo83
+   89487.415 (15) HOC+         1-0                           0.08  Sgr B2          FCRAO    14m Woo83  Gud82
+   89489.223*(26) Si33S        5-4                           0.022 IRC+10216       IRAM     30m Kah88
+   89505.86  ( 4) CH3OH        8(-4)-9(-3) E                 0.3   OriMC-1         NRAO     11m Lov76a Lov78
+   89562.317*(12) CH3CH2CN     10(6)-9(6)                    0.08b OriMC-1         NRAO     11m Joh77
+   89565.031*(12) CH3CH2CN     10(7)-9(7)                    0.05b OriMC-1         NRAO     11m Joh77
+   89568.105*(12) CH3CH2CN     10(5)-9(5)                    0.11b OriMC-1         NRAO     11m Joh77
+   89573.052*(13) CH3CH2CN     10(8)-9(8)                    0.03b OriMC-1         NRAO     11m Joh77
+   89579.17 *( 1) HCOOH        4(0,4)-3(0,3)                 0.05  Sgr B2          FCRAO    14m Woo83  Wil80
+   89590.035*(12) CH3CH2CN     10(4,7)-9(4,6)                0.05b OriMC-1         NRAO     11m Joh77
+   89591.019*(12) CH3CH2CN     10(4,6)-9(4,5)                0.05b OriMC-1         NRAO     11m Joh77
+   89628.451*(13) CH3CH2CN     10(3,8)-9(3,7)                0.13  OriMC-1         NRAO     11m Joh77
+U  89651.         unidentified                               0.06  Sgr B2          NRAO     11m Tur89
+   89684.718*(13) CH3CH2CN     10(3,7)-9(3,6)                0.22  OriMC-1         OSO      20m Joh84
+   89699.76 *( 8) CH3OCH3      2(2,1)-2(1,2) EE              0.06b OriMC-1         NRAO     11m Tur89
+   89702.76 *( 4) CH3OCH3      2(2,1)-2(1,2) AA               b    OriMC-1         NRAO     11m Tur89
+U  89726.         unidentified                               0.07  IRC+10216       OSO      20m Joh84
+   89745.55 *(23) CH3OCH3      11(1,10)-11(0,11) E           0.06  OriMC-1         NRAO     11m Tur89
+U  89823.         unidentified                               0.03  Sgr B2          NRAO     11m Tur89
+U  89834.         unidentified                               0.11  OriMC-1         NRAO     11m Tur89
+   89861.48 *( 1) HCOOH        4(2,3)-3(2,2)                 0.13  Sgr B2          BTL       7m Cum86
+U  89898.         unidentified                               0.05  OriMC-1         NRAO     11m Tur89
+   89927.70  (10) CH3SH        17(1)-16(2) A+ ?              0.07  OriMC-1         NRAO     11m Tur89  Lee80
+U  89936.         unidentified    (CH3SH?)                   0.20  OriMC-1         OSO      20m Joh84
+U  89952.         unidentified                               0.02  OriMC-1         NRAO     11m Tur89
+U  89960.         unidentified    (CH3OD?)                   0.20  OriMC-1         OSO      20m Joh84
+U  90038.         unidentified                               0.04  Sgr B2          NRAO     11m Tur89
+U  90051.         unidentified                               0.02  Sgr B2          NRAO     11m Tur89
+U  90061.         unidentified                               0.02  Sgr B2          NRAO     11m Tur89
+   90093.0   ( 3) C6H          2P3/2 J=65/2-63/2 f           0.05  IRC+10216       IRAM     30m Gue87  Cer87a
+   90117.600*( 9) CH3CH2OH     4(1,4)-3(0,3)                 0.25g Sgr B2          NRAO     11m Zuc75
+   90121.4   ( 3) C6H          2P3/2 J=65/2-63/2 e           0.06  IRC+10216       IRAM     30m Gue87  Cer87a
+   90145.72 *( 3) HCOOCH3      7(2,5)-6(2,4) E               0.32  OriMC-1         OSO      20m Joh83  Plu86
+   90156.46 *( 3) HCOOCH3      7(2,5)-6(2,4) A               0.25  OriMC-1         OSO      20m Joh83  Plu84
+U  90212.    ( 1) unidentified                               0.04  Sgr B2          NRAO     11m Hol80
+   90227.63 *( 3) HCOOCH3      8(0,8)-7(0,7) E               0.15  OriMC-1         NRAO     11m Hol80  Plu86
+   90229.63 *( 4) HCOOCH3      8(0,8)-7(0,7) A               0.15  OriMC-1         NRAO     11m Hol80  Plu84
+   90263.833 (30) 15NNH+       1-0                           0.035 DR21(OH)        BTL       7m Lin83  Gud82a
+U  90286.   ?     unidentified                               0.10  OriMC-1         NRAO     11m Tur89
+U  90355.   ?     unidentified                               0.08  OriMC-1         NRAO     11m Tur89
+   90453.358*(13) CH3CH2CN     10(2,8)-9(2,7)                0.35  OriMC-1         OSO      20m Joh84
+   90482.482*(28) CH3CH2CN     7(4,4)-8(3,5)                 0.02  Sgr B2(OH)      IRAM     30m Gom86
+U  90506.         unidentified                               0.12  Sgr B2          NRAO     11m Tur89
+   90515.644*(28) CH3CH2CN     7(4,3)-8(3,6)                 0.02  Sgr B2(OH)      IRAM     30m Gom86
+   90525.892*( 5) HC5N         34-33                         0.20  IRC+10216       OSO      20m Joh84
+   90530.93 *( 3) CH3CH2CN     23(3,20)-23(2,21)             0.015 OriMC-1         FCRAO    14m Ziu88
+   90548.251*(28) SO2          25(3,23)-24(4,20)             0.6   OriMC-1         OSO      20m Sch83
+   90562.1   ( 5) 30SiC2       4(0,4)-3(0,3)                 0.06  IRC+10216       IRAM     30m Cer86b Cer91b
+   90593.059*(11) HC13CCN      10-9                          0.35  Sgr B2          NRAO     11m Uli78
+   90601.791*( 5) HCC13CN      10-9                          0.18  Sgr B2          NRAO     11m Uli78
+U  90609.         unidentified                               0.015 OriMC-1         FCRAO    14m Ziu88
+U  90619.         unidentified                               0.008 OriMC-1         FCRAO    14m Ziu88
+U  90635.         unidentified                               0.015 OriMC-1         FCRAO    14m Ziu88
+   90663.450 (10) HNC          1-0 F=0-1                     n.r.  L134N           BTL       7m Fre79a Fre79a
+   90663.543 (40) HNC          1-0                           1.6   L134            NRAO     11m Sny77a Pea76
+   90663.574 (10) HNC          1-0 F=2-1                     n.r.  L134N           BTL       7m Fre79a Fre79a
+   90663.656 (10) HNC          1-0 F=1-1                     n.r.  L134N           BTL       7m Fre79a Fre79a
+   90686.385*( 8) C2S          7,7-6,6                       0.2   Sgr B2          NRAO     11m Sch85  Yam90
+U  90689.         unidentified                               0.025 OriMC-1         FCRAO    14m Ziu88
+U  90700.         unidentified                               0.010 OriMC-1         FCRAO    14m Ziu88
+   90703.78  ( 5) CH3OD        2(-1)-1(-1) E                 0.14b Sgr B2          NRAO     11m Got79  Lov78
+   90705.77  ( 5) CH3OD        2(0)-1(0) A                    b    Sgr B2          NRAO     11m Got79  Lov78
+   90712.2   ( 3) C6H          2P1/2 J=65/2-63/2 f           1.09f IRC+10216       IRAM     30m Cer87a Cer87a
+U  90727.         unidentified                               0.13  Sgr B2          NRAO     11m Tur89
+   90743.56  ( 5) CH3OD        2(1)-1(1) E                   0.09  Sgr B2          NRAO     11m Tur91  Kau80
+U  90757.         unidentified                               0.10  Sgr B2          NRAO     11m Tur89
+   90759.3   ( 3) C6H          2P1/2 J=65/2-63/2 e           1.21f IRC+10216       IRAM     30m Cer87a Cer87a
+U  90763.         unidentified                               0.20  OriMC-1         OSO      20m Joh84
+   90771.546*(26) SiS          5-4                           0.35  IRC+10216       NRAO     11m Mor75
+U  90809.         unidentified                               0.010 OriMC-1         FCRAO    14m Ziu88
+U  90814.         unidentified                               0.030 OriMC-1         FCRAO    14m Ziu88
+U  90820.         unidentified                               0.008 OriMC-1         FCRAO    14m Ziu88
+U  90838.         unidentified                               0.015 OriMC-1         FCRAO    14m Ziu88
+U  90841.    ( 3) unidentified                               0.08  Sgr B2          NRAO     11m Cla79
+U  90864.         unidentified                               0.18  Sgr B2          NRAO     11m Tur91
+   90889.20  (23) CH3OCH3      15(3,12)-14(4,11) AA           b    OriMC-1         FCRAO    14m Ziu88  Lov79
+   90892.26  (23) CH3OCH3      15(3,12)-14(4,11) EE          0.04b OriMC-1         FCRAO    14m Ziu88  Lov79
+   90895.32  (23) CH3OCH3      15(3,12)-14(4,11) AE+EA        b    OriMC-1         FCRAO    14m Ziu88  Lov79
+U  90908.    ( 3) unidentified                               0.05  Sgr B2          NRAO     11m Cla79
+U  90912.         unidentified                               0.05  Sgr B2          NRAO     11m Tur89
+   90926.039*(17) 13C34S       2-1                           0.10  OriMC-1         NRAO     11m Tur89
+U  90928.    ( 1) unidentified                               0.07  Sgr B2          NRAO     11m Cla79
+   90937.539 (40) CH3OCH3      6(0,6)-5(1,5) AA               b    OriMC-1         NRAO     11m Sny74  Cla79
+   90938.099 (30) CH3OCH3      6(0,6)-5(1,5) EE              0.17b OriMC-1         NRAO     11m Sny74  Cla79
+   90938.674 (50) CH3OCH3      6(0,6)-5(1,5) AE+EA            b    OriMC-1         NRAO     11m Sny74  Cla79
+U  90949.         unidentified                               0.01  OriMC-1         FCRAO    14m Ziu88
+U  90964.         unidentified                               0.04  OriMC-1         FCRAO    14m Ziu88
+   90978.993*( 2) HC3N         10-9                          1.77  OriMC-1         NRAO     11m Mor76
+U  91000.         unidentified                               0.01  OriMC-1         FCRAO    14m Ziu88
+   91008.20  (41) CH3CH2OH     14(2,13)-13(3,10) ?           0.015 OriMC-1         FCRAO    14m Ziu88
+U  91022.         unidentified                               0.008 OriMC-1         FCRAO    14m Ziu88
+U  91045.         unidentified                               0.10  Sgr B2          NRAO     11m Tur89
+U  91063.         unidentified                               0.09  OriMC-1         NRAO     11m Tur89
+U  91074.         unidentified                               0.02  Sgr B2          NRAO     11m Tur89
+U  91086.         unidentified                               0.06  Sgr B2          NRAO     11m Tur89
+U  91096.         unidentified                               0.10  Sgr B2          NRAO     11m Tur89
+U  91106.   ?     unidentified                               0.03  OriMC-1         NRAO     11m Tur89
+   91128.19 *( 3) HC3N         10-9 l=1e v6=1                0.10h Sgr B2          NRAO     11m Tur89
+U  91135.         unidentified                               0.10  Sgr B2          NRAO     11m Tur91
+   91169.93 *( 6) NaCl         7-6                           1.91f IRC+10216       IRAM     30m Cer87c
+   91175.25  (10) CH3OCH3      5(4,2)-6(3,3) EE              0.04  OriMC-1         NRAO     11m Tur89  Lov79
+   91202.607*(27) HC3N         10-9 v7=l l=1e                0.2   OriMC-1         NRAO     11m Cla76
+   91204.328 (30) N15NH+       1-0 F=1-1                     0.02  DR21(OH)        BTL       7m Lin83  Gud82a
+   91205.999 (30) N15NH+       1-0 F=2-1                     0.025 DR21(OH)        BTL       7m Lin83  Gud82a
+   91208.663 (70) N15NH+       1-0 F=0-1                     0.01  DR21(OH)        BTL       7m Lin83  Gud82a
+   91333.308*(27) HC3N         10-9 v7=1 l=1f                0.2   OriMC-1         NRAO     11m Cla76
+   91366.30 *( 5) HCOOCH3      9(4,5)-9(3,6) E               0.08  Sgr B2          NRAO     11m Tur89  Plu86
+   91476.59 *( 3) CH3OCH3      3(2,2)-3(1,3) EE              0.15b OriMC-1         NRAO     11m Tur89  Lov79
+   91479.21 *( 4) CH3OCH3      3(2,2)-3(1,3) AA               b    OriMC-1         NRAO     11m Tur89  Lov79
+   91485.030*(11) CH3CH2OH     6(2,5)-6(1,6)                 0.07  Sgr B2          NRAO     11m Tur89
+   91494.349 (30) c-C3H        2(1,2)-1(1,1)  5/2,3-3/2,2    0.19  TMC-1           NRO      45m Yam87a Yam87a
+   91497.608 (30) c-C3H        2(1,2)-1(1,1)  5/2,2-3/2,1    0.13  TMC-1           NRO      45m Yam87a Yam87a
+U  91520.         unidentified                               0.02  Sgr B2          NRAO     11m Tur89
+U  91541.         unidentified                               0.03  Sgr B2          NRAO     11m Tur89
+   91549.122*(13) CH3CH2CN     10(1,9)-9(1,8)                0.36b OriMC-1         NRAO     11m Tur89
+   91550.470*(13) SO2          18(5,13)-19(4,16)              b    OriMC-1         NRAO     11m Tur89
+   91554.521*(43) HC3N         10-9 v7=2 l=0                  b    OriMC-1         NRAO     11m Tur89
+   91555.932*(49) HC3N         10-9 v7=2 l=2e                 b    OriMC-1         NRAO     11m Tur89
+   91558.432*(44) HC3N         10-9 v7=2 l=2f                 b    OriMC-1         NRAO     11m Tur89
+   91572.54 *( 3) HCCCHO       10(1,10)-9(1,9)               0.02  Sgr B2          NRAO     11m Tur91
+U  91587.         unidentified                               0.02  Sgr B2          NRAO     11m Tur89
+U  91605.         unidentified                               0.03  OriMC-1         NRAO     11m Tur89
+   91608.9   ( 5) 30SiC2       4(2,3)-3(2,2)                 0.06  IRC+10216       IRAM     30m Cer86b Cer91b
+U  91636.         unidentified                               0.03  Sgr B2          NRAO     11m Tur89
+U  91654.         unidentified                               0.02  Sgr B2          NRAO     11m Tur89
+U  91662.         unidentified                               0.04  Sgr B2          NRAO     11m Tur89
+U  91665.         unidentified                               0.08  OriMC-1         NRAO     11m Tur89
+   91692.752 (30) c-C3H        2(1,2)-1(1,1) 3/2,1-1/2,0     0.10  TMC-1           NRO      45m Yam87a Yam87a
+   91699.471 (30) c-C3H        2(1,2)-1(1,1) 3/2,2-1/2,1     0.16  TMC-1           NRO      45m Yam87a Yam87a
+U  91703.         unidentified                               0.02  OriMC-1         NRAO     11m Tur89
+U  91749.         unidentified                               0.10  Sgr B2          NRAO     11m Tur89
+   91771.8   ( 3) 29SiC2       4(0,4)-3(0,3)                 0.08  IRC+10216       IRAM     30m Cer86b Cer91b
+U  91808.         unidentified                               0.05  OriMC-1         NRAO     11m Tur89
+U  91848.         unidentified                               0.15  Sgr B2          NRAO     11m Tur91
+U  91913.         unidentified   (NH2CHO?)                   0.06  OriMC-1         NRAO     11m Tur89
+   91925.741*(12) CH313CN      5(3)-4(3)                     0.03  Sgr B2          IRAM     30m Cer88
+   91934.549*( 7) CH313CN      5(2)-4(2)                      b    Sgr B2          IRAM     30m Cer88
+   91939.834*( 8) CH313CN      5(1)-4(1)                      b    Sgr B2          IRAM     30m Cer88
+   91941.596*( 9) CH313CN      5(0)-4(0)                     0.15b Sgr B2          IRAM     30m Cer88
+   91959.024*( 2) CH3CN        5(4)-4(4) F=6-5               0.08b OriMC-1         NRAO     11m Lov76a
+   91959.359*( 2) CH3CN        5(4)-4(4) F=4-3                b    OriMC-1         NRAO     11m Lov76a
+   91971.310*( 1) CH3CN        5(3)-4(3) F=6-5               0.20b OriMC-1         NRAO     11m Lov76a
+   91971.465*( 1) CH3CN        5(3)-4(3) F=4-3                b    OriMC-1         NRAO     11m Lov76a
+   91980.089*( 1) CH3CN        5(2)-4(2) F=6-5               0.16  OriMC-1         NRAO     11m Lov76a
+   91985.317*( 1) CH3CN        5(1)-4(1)                     0.28b OriMC-1         NRAO     11m Lov76a
+   91987.090*( 1) CH3CN        5(0)-4(0)                      b    OriMC-1         NRAO     11m Lov76a
+U  92002.         unidentified                               0.10  Sgr B2          NRAO     11m Tur89
+   92064.63 *( 6) Si13CC       4(2,3)-3(2,2)                 0.4f  IRC+10216       IRAM     30m Cer91b
+   92075.51  ( 5) CH3OD        2(1)-1(1) A-                  0.07  OriMC-1         NRAO     11m Tur89  Kau80
+   92261.440 (60) CH3CN        5(0)-4(0) v8=1 l=1            0.03? OriMC-1         NRAO     11m Tur91  Bou80
+   92262.992 (60) CH3CN        5(0)-4(0) v8=1 l=1            0.03? OriMC-1         NRAO     11m Tur91  Bou80
+U  92334.         unidentified                               0.03  OriMC-1         NRAO     11m Tur89
+U  92342.         unidentified                               0.02  OriMC-1         NRAO     11m Tur89
+   92353.43 *(10) CH3CN        5(1)-4(1) v8=1 l=1            0.035 OriMC-1         NRAO     11m Tur91
+   92426.260*(18) CH2CHCN      10(1,10)-9(1,9)               0.05  Sgr B2          NRAO     11m Tur89
+U  92456.   ?     unidentified                               0.03  Sgr B2          NRAO     11m Tur89
+   92488.490 (20) C3S          16-15                         2.2f  IRC+10216       IRAM     30m Cer87b Yam87
+   92494.299*(17) 13CS         2-1                           0.215 OriMC-1         NRAO     11m Tur73
+U  92715.         unidentified                               0.03  OriMC-1         NRAO     11m Tur89
+   92793.6   ( 5) 30SiC2       4(2,2)-3(2,1)                 0.03  IRC+10216       IRAM     30m Cer86b Cer91b
+   92865.2   ( 3) C6H          2P3/2 J=67/2-65/2 f           0.05  IRC+10216       IRAM     30m Gue87  Cer87a
+U  92877.         unidentified                               0.03  Sgr B2          NRAO     11m Tur89
+   92882.0   ( 3) 29SiC2       4(2,3)-3(2,2)                 0.06  IRC+10216       IRAM     30m Cer86b Cer91b
+   92894.9   ( 3) C6H          2P3/2 J=67/2-65/2 e           0.06  IRC+10216       IRAM     30m Gue87  Cer87a
+U  92916.         unidentified                               0.10  Sgr B2          NRAO     11m Tur89
+   93063.639 ( 9) SiC2         4(0,4)-3(0,3)                 0.11  IRC+10216       NRAO     11m Sny83  Got89
+   93089.0   ( 3) C5H          2P1/2 J=39/2-37/2 a           1.3f  IRC+10216       IRAM     30m Cer86  Cer86
+   93094.9   ( 4) C5H          2P1/2 J=39/2-37/2 b           1.5f  IRC+10216       IRAM     30m Cer86  Cer86
+   93098.35 *( 1) HCOOH        4(1,3)-3(1,2)                 0.12  Sgr B2          NRAO     11m Tur89
+   93171.619 (10) N2H+         1-0 F1=1-1 F=0-1              0.5   L134N           NRAO     11m Sny79  Caz86
+   93171.947 (10) N2H+         1-0 F1=1-1 F=2-2              0.7   L134N           NRAO     11m Sny77  Caz86
+   93172.098 (10) N2H+         1-0 F1=1-1 F=1-0              0.8   L134N           NRAO     11m Sny77  Caz86
+   93173.505 (10) N2H+         1-0 F1=2-1 F=2-1              0.9   L134N           NRAO     11m Sny77  Caz86
+   93173.809 (10) N2H+         1-0 F1=2-1 F=3-2              0.9   L134N           NRAO     11m Sny77  Caz86
+   93174.016 (10) N2H+         1-0 F1=2-1 F=1-1              0.6   L134N           NRAO     11m Sny77  Caz86
+   93176.310 (10) N2H+         1-0 F1=0-1 F=1-2              0.7   L134N           NRAO     11m Sny77  Caz86
+   93188.127*( 5) HC5N         35-34                         0.09  OriMC-1         NRAO     11m Lov82
+   93196.62  ( 1) CH3OH        1(0)-2(1) E vt=1              0.18  OriMC-1         NRAO     11m Lov82  Lov82
+   93213.030*(36) CH3CH2OH     16(8,9)-17(7,10) ?             b    OriMC-1         NRAO     11m Tur89
+   93213.150*(36) CH3CH2OH     16(8,8)-17(7,11) ?            0.06b OriMC-1         NRAO     11m Tur89
+U  93231.         unidentified                               0.01  Sgr B2          NRAO     11m Tur89
+   93261.70 *(10) HCOOCH3      14(2,12)-14(1,13) A           0.07  OriMC-1         NRAO     11m Tur89  Plu84
+U  93294.         unidentified                               0.06  OriMC-1         NRAO     11m Tur89
+U  93355.         unidentified                               0.1   Sgr B2          NRAO     11m Tur89
+U  93361.         unidentified                               0.10  Sgr B2          NRAO     11m Tur89
+   93502.2   (10) C6H          2P1/2 J=67/2-65/2 f           0.90f IRC+10216       IRAM     30m Cer87a Cer87a
+   93550.9   ( 5) C6H          2P1/2 J=67/2-65/2 e           1.20f IRC+10216       IRAM     30m Cer87a Cer87a
+U  93561.         unidentified   (HCOOCH3 ?)                 0.04  OriMC-1         NRAO     11m Tur89
+   93580.86  (10) CH3CHO       5(1,5)-4(1,4) A               0.17  Sgr B2          BTL       7m Cum86  Bau76
+   93586.5   ( 3) C4H          2P1/2 J=19/2-17/2 v7=1e       1.80f IRC+10216       IRAM     30m Yam87b Yam87b
+   93595.28  (10) CH3CHO       5(1,5)-4(1,4) E               0.17  Sgr B2          BTL       7m Cum86  Bau76
+   93619.46  ( 5) 13CH3OH      2(1)-1(1) A+                  0.12b OriMC-1         NRAO     11m Tur89  Kur86
+U  93628.   ?     unidentified                               0.04  OriMC-1         NRAO     11m Tur89
+U  93656.         unidentified                               0.07  OriMC-1         NRAO     11m Tur89
+   93660.00 *( 7) HCOOCH3      8(4,4)-8(3,5) A               0.09  OriMC-1         NRAO     11m Tur89
+   93666.65 *(12) CH3OCH3      12(1,11)-12(0,12) EE          0.10  OriMC-1         NRAO     11m Hol80
+   93692.448*( 2) HNCS         8(1,8)-7(1,7)                 0.03  OriMC-1         NRAO     11m Tur89
+U  93730.         unidentified                               0.03  Sgr B2          NRAO     11m Tur89
+   93812.630*(22) CH3CH2OH     13(7,7)-14(6,8) ?             0.03b OriMC-1         NRAO     11m Tur89
+   93813.150*(22) CH3CH2OH     13(7,6)-14(6,9) ?              b    OriMC-1         NRAO     11m Tur89
+   93830.050 (20) HNCS         8(0,8)-7(0,7)                 0.05  OriMC-1         BTL       7m Fre79  Yam79
+U  93839.         unidentified                               0.02  OriMC-1         NRAO     11m Tur89
+U  93844.    ( 2) unidentified                               0.06  Sgr B2          NRAO     11m Cla79
+   93854.44  (10) CH3OCH3      4(2,3)-4(1,4) AE+EA           0.14  OriMC-1         NRAO     11m Cla79  Cla79
+   93857.11  (10) CH3OCH3      4(2,3)-4(1,4) EE              0.20  OriMC-1         NRAO     11m Cla79  Cla79
+   93859.64  (10) CH3OCH3      4(2,3)-4(1,4) AA              0.03  OriMC-1         NRAO     11m Cla79  Cla79
+   93863.3   (10) C4H          2P1/2 J=19/2-17/2 v7=1f       2.4bf IRC+10216       IRAM     30m Yam87b Yam87b
+   93870.101*( 8) C2S          8,7-7,6                       0.2bs Sgr B2          NRAO     11m Cla79  Yam90
+   93871.70 *( 2) NH2CHO       3(2,2)-4(1,3)                  b    Sgr B2          NRAO     11m Tur91
+   93979.78  (10) PN           2-1                           0.023 OriMC-1         NRAO     12m Tur87b Wys72
+   93995.203*( 3) HNCS         8(1,7)-7(1,6)                 0.01  Sgr B2          NRAO     11m Tur89
+   94014.404 (50) 13CH3OH      2(1)-1(1) E                   0.008 Sgr B2          NRAO     11m Tur89  And87
+   94064.779*(19) SO2          23(6,18)-24(5,19)             0.13  OriMC-1         NRAO     11m Tur89
+U  94077.         unidentified                               0.03  OriMC-1         NRAO     11m Tur89
+   94137.3   ( 3) 29SiC2       4(2,2)-3(2,1)                 0.06  IRC+10216       IRAM     30m Cer86b Cer91b
+U  94175.         unidentified                               0.12  Sgr B2          NRAO     11m Tur89
+U  94195.         unidentified                               0.10  Sgr B2          NRAO     11m Tur89
+U  94200.         unidentified                               0.05  OriMC-1         NRAO     11m Tur89
+U  94237.         unidentified                               0.10  Sgr B2          NRAO     11m Tur89
+   94245.393 ( 9) SiC2         4(2,3)-3(2,2)                 0.10  IRC+10216       NRAO     11m Tha84  Got89
+   94247.473*(16) NH2CHO       8(1,7)-8(0,8)                 0.05  Sgr B2          NRAO     11m Tur89
+   94276.640*(12) CH2CHCN      10(0,10)-9(0,9)               0.08  Sgr B2          NRAO     11m Joh77
+U  94353.         unidentified   (CH2CHCN? Tur90)            0.12  OriMC-1         NRAO     11m Tur89
+   94405.42  ( 5) 13CH3OH      2(-1)-1(-1) E                  b    Sgr B2          NRAO     11m Got79  Kur86
+   94407.28  ( 5) 13CH3OH      2(0)-1(0) A+                  0.8b  Sgr B2          NRAO     11m Got79  Kur86
+   94411.26  ( 5) 13CH3OH      2(0)-1(0) E                    b    Sgr B2          NRAO     11m Got79  Kur86
+   94420.61  ( 5) 13CH3OH      2(1)-1(1) E                   1.0   OriMC-1         IRAM     30m Men88  Kur86
+U  94473.         unidentified                               0.09  OriMC-1         NRAO     11m Tur91
+U  94486.         unidentified                               0.12  OriMC-1         NRAO     11m Tur89
+U  94499.         unidentified                               0.17  OriMC-1         NRAO     11m Tur89
+   94541.81  (10) CH3OH        8(3)-9(2) E                   0.43  OriMC-1         NRAO     11m Hol83  Sas84
+   94632.80 *( 6) HCOOCH3      5(2,4)-4(1,3) E               0.16  OriMC-1         NRAO     11m Tur89
+U  94774.         unidentified                               0.16  OriMC-1         NRAO     11m Tur89
+U  94811.   ?     unidentified                               0.10  OriMC-1         NRAO     11m Tur89
+U  94832.   ?     unidentified                               0.02  OriMC-1         NRAO     11m Tur89
+U  94880.         unidentified                               0.02  OriMC-1         NRAO     11m Tur89
+U  94902.         unidentified   (CH3CH2OH? Tur91)           0.04  OriMC-1         NRAO     11m Tur89
+   94913.139*(14) CH2CHCN      10(4,7)-9(4,6)                 b    Sgr B2          NRAO     11m Tur89
+   94913.250*(14) CH2CHCN      10(4,6)-9(4,5)                0.04b Sgr B2          NRAO     11m Tur89
+U  95052.         unidentified                               0.03  OriMC-1         NRAO     11m Tur89
+U  95073.         unidentified                               0.05  OriMC-1         NRAO     11m Tur89
+U  95143.         unidentified                               0.03  OriMC-1         NRAO     11m Tur89
+U  95145.         unidentified                               0.24  Sgr B2          NRAO     11m Tur89
+   95150.32 *( 2) C4H          10-9 J=21/2-19/2              0.08  IRC+10216       NRAO     11m Gue78  Got83
+   95169.44  (10) CH3OH        8(0)-7(1) A+                  0.85  OriMC-1         NRAO     11m Lov76a Lee68
+U  95188.         unidentified                               0.06  Sgr B2          NRAO     11m Tur89
+   95188.94 *( 2) C4H          10-9 J=19/2-17/2              0.08  IRC+10216       NRAO     11m Gue78  Got83
+   95208.67  (10) 13CH3OH      2(1)-1(1) A-                  0.15  OriMC-1         NRAO     11m Tur89  Lee73
+U  95220.         unidentified                               0.03  Sgr B2          NRAO     11m Tur89
+   95247.1  *( 5) HCOOCH3      7(4,3)-7(3,4) E               0.11  OriMC-1         NRAO     11m Tur89
+U  95260.         unidentified                               0.08  OriMC-1         NRAO     11m Tur89
+U  95295.         unidentified                               0.03  Sgr B2          NRAO     11m Tur89
+   95325.490*(17) CH2CHCN      10(2,8)-9(2,7)                0.12  Sgr B2          NRAO     11m Tur89
+U  95339.         unidentified                               0.04  Sgr B2          NRAO     11m Tur89
+   95442.482*(14) CH3CH2CN     11(1,11)-10(1,10)             0.20b OriMC-1         NRAO     11m Joh77
+   95443.850*(33) CH3CH2OH     16(2,14)-16(1,13)              b    OriMC-1         NRAO     11m Tur89
+   95454.4   ( 3) MgNC         8-7 L                         0.09  IRC+10216       IRAM     30m Gue86  Gue86
+   95469.3   ( 2) MgNC         8-7 U                         0.11  IRC+10216       IRAM     30m Gue86  Gue86
+   95502.421*(21) CH3CH2CN     14(2,13)-(14(1,14)            0.07  OriMC-1         NRO      45m Sai89
+   95548.441*(43) CH3OCH3      14(7,8)-15(6,9) EE            0.16  OriMC-1         NRO      45m Sai89
+   95553.241*(39) CH3OCH3      14(7,7)-15(6,10) EE           0.13  OriMC-1         NRO      45m Sai89
+U  95570.         unidentified                               0.07  Sgr B2          NRAO     11m Tur89
+   95579.381 (15) SiC2         4(2,2)-3(2,1)                 0.10  IRC+10216       NRAO     11m Cum80  Got89
+U  95585.         unidentified                               0.06  OriMC-1         NRAO     11m Tur91
+   95611.13  (25) C4H          2S J=10-9 v7=2 L              n.r.  IRC+10216       IRAM     30m Gue87a Gue87a
+U  95613.0        unidentified                               0.18  OriMC-1         NRO      45m Sai89
+   95636.6   ( 4) C6H          2P3/2 J=69/2-67/2 f           0.05  IRC+10216       IRAM     30m Gue87  Cer87a
+   95667.89  (25) C4H          2S J=10-9 v7=2 U              n.r.  IRC+10216       IRAM     30m Gue87a Gue87a
+   95668.3   ( 6) C6H          2P3/2 J=69/2-67/2 e           0.09b IRC+10216       IRAM     30m Gue87  Gue87
+   95689.778*(17) CH3CH2CN     3(2,2)-2(1,1)                 0.34  OriMC-1         NRO      45m Sai89
+U  95710.7        unidentified                               0.05  OriMC-1         NRO      45m Sai89
+   95730.4        CH3OCH3      16(2,14)-16(1,15) EA+AE       0.58  OriMC-1         NRO      45m Sai89  Sai89
+   95731.8        CH3OCH3      16(2,14)-16(1,15) EE          1.14  OriMC-1         NRO      45m Sai89  Sai89
+   95732.68 *(11) CH3OCH3      16(2,14)-16(1,15) AA          0.53  OriMC-1         NRO      45m Sai89
+U  95741.3        unidentified                               0.09  OriMC-1         NRO      45m Sai89
+U  95747.2        unidentified                               0.08  OriMC-1         NRO      45m Sai89
+U  95783.         unidentified                               0.08  OriMC-1         NRAO     11m Tur89
+   95810.425*(56) 34SO2        2(2,0)-3(1,3)                 0.07  OriMC-1         NRAO     11m Tur89
+   95850.337*( 5) HC5N         36-35                        19.5f  IRC+10216       IRAM     30m Cer86a
+   95870.8  *( 5) HC7N         85-84                         0.06  Sgr B2          NRAO     11m Tur89
+U  95877.         unidentified                               0.06  OriMC-1         NRAO     11m Tur89
+   95914.29  (10) CH3OH        2(1)-1(1) A+                  0.81  OriMC-1         NRAO     11m Tur89  Lee68
+   95947.43 *( 5) CH3CHO       5(0,5)-4(0,4) E               0.35  Sgr B2          NRAO     11m Tur89  Kle91
+   95963.42 *( 5) CH3CHO       5(0,5)-4(0,4) A               0.30  Sgr B2          NRAO     11m Tur89  Kle91
+U  95989.         unidentified                               0.02  OriMC-1         NRAO     11m Tur89
+U  96033.         unidentified                               0.03  OriMC-1         NRAO     11m Tur89
+   96070.73 *( 3) HCOOCH3      8(2,7)-7(2,6) E               0.08  Sgr B2          NRAO     11m Tur89  Plu86
+   96076.84 *(10) HCOOCH3      8(2,7)-7(2,6) A               0.08  Sgr B2          NRAO     11m Tur89  Plu84
+   96086.51 *( 8) HCOOCH3      6(4,2)-6(3,3) A               0.03  Sgr B2          NRAO     11m Tur89
+   96166.9  *( 5) HCOOCH3      6(4,2)-6(3,3) E               0.03  Sgr B2          NRAO     11m Tur89
+U  96204.         unidentified                               0.11  Sgr B2          NRAO     11m Tur91
+U  96258.         unidentified                               0.02  Sgr B2          NRAO     11m Tur89
+   96261.16  (10) H2O          4(4,0)-5(3,3) v2=1            4.2f  VY CMa          IRAM     30m Men89  Kuz80
+   96274.24 *( 5) CH3CHO       5(2,4)-4(2,3) A               0.09  Sgr B2          NRAO     11m Tur89  Kle91
+   96293.3   ( 3) C6H          2P1/2 J=69/2-67/2 f           1.12f IRC+10216       IRAM     30m Sai87  Cer87a
+   96342.5   ( 3) C6H          2P1/2 J=69/2-67/2 e           1.28f IRC+10216       IRAM     30m Sai87  Cer87a
+   96367.85  (10) CH3CHO       5(3,2)-4(3,1) E                b    Sgr B2          NRAO     11m Got78a Kle91
+   96368.32  (10) CH3CHO       5(3,3)-4(3,2) A               0.07b Sgr B2          NRAO     11m Got78a Kle91
+   96371.718 (50) CH3CHO       5(3,2)-4(3,1) A                b    Sgr B2          NRAO     11m Got78a Kle91
+   96384.379 (50) CH3CHO       5(3,3)-4(3,2) E               0.1   Sgr B2          NRAO     11m Got78a Kle91
+   96396.01  (10) CH3OH        2(1)-1(1) A+ vt=1             0.09  OriMC-1         NRAO     11m Tur89  Lee68
+   96412.982*(13) C34S         2-1                           0.62  OriMC-1         NRAO     11m Tur73
+   96425.618 (50) CH3CHO       5(2,4)-4(2,3) E               0.10  Sgr B2          NRAO     11m Tur89  Kle91
+U  96437.         unidentified   (HCOOCH3?)                  0.05  OriMC-1         NRAO     11m Tur89
+   96475.536 (50) CH3CHO       5(2,3)-4(2,2) E               0.08  Sgr B2          NRAO     11m Got78a Kle91
+   96478.3   ( 3) C4H          2P3/2 J=21/2-19/2 v7=1e       2.85f IRC+10216       IRAM     30m Yam87b Yam87b
+   96492.13  ( 1) CH3OH        2( 1)-1( 1) E vt=1            0.13  OriMC-1         NRAO     11m Hol83  Lov82
+   96493.58  ( 1) CH3OH        2( 0)-1( 0) E vt=1            0.12  OriMC-1         NRAO     11m Hol83  Lov82
+   96501.66  ( 1) CH3OH        2(-1)-1(-1) E vt=1            0.06  OriMC-1         NRAO     11m Hol83  Lov82
+   96513.70  ( 1) CH3OH        2( 0)-1( 0) A+ vt=1           0.08  OriMC-1         NRAO     11m Hol83  Lov82
+U  96536.         unidentified                               0.1   OriMC-1         NRAO     11m Sny83
+   96588.60  (10) CH3OH        2(1)-1(1) A- vt=1             0.10  OriMC-1         NRAO     11m Tur89  Lee68
+   96613.44 *(44) HCOOCH3      8(4,5)-8(3,6) E               0.2   OMC-IRc2        IRAM     30m Ger89
+   96632.63  (10) CH3CHO       5(2,3)-4(2,2) A               0.12  OMC-IRc2        IRAM     30m Ger89  Kle91
+   96637.69 *( 7) HCOOCH3      7(4,4)-7(3,5) A               0.2   OMC-IRc2        IRAM     30m Ger89
+   96647.60 *(44) HCOOCH3      5(4,1)-5(3,2) E               n.r.  OMC-IRc2        IRAM     30m Ger89
+   96670.27 *(45) HCOOCH3      5(4,2)-5(3,3) E               0.05  OMC-IRc2        IRAM     30m Ger89
+   96693.37 *( 7) HCOOCH3      6(4,3)-6(3,4) A               0.1   OMC-IRc2        IRAM     30m Ger89
+   96709.20 *( 7) HCOOCH3      8(4,5)-8(3,6) A               0.2   OMC-IRc2        IRAM     30m Ger89
+U  96720.         unidentified                               0.10  OriMC-1         NRAO     11m Tur89
+   96739.39  (10) CH3OH        2(-1)-1(-1) E                 0.96  OriMC-1         NRAO     11m Hol83  Lee68
+   96741.42  (10) CH3OH        2(0)-1(0) A+                  1.13  OriMC-1         NRAO     11m Hol83  Lee68
+   96744.58  (10) CH3OH        2(0)-1(0) E                   0.88  OriMC-1         NRAO     11m Hol83  Lee68
+   96755.51  (10) CH3OH        2(1)-1(1) E                   0.54  OriMC-1         NRAO     11m Hol83  Lee68
+U  96775.         unidentified                               0.20  OriMC-1         NRAO     11m Tur89
+   96781.849*(60) 34SO         4(5)-4(4)                     0.04b OriMC-1         NRAO     11m Tur89
+U  96797.    ( 3) unidentified                               0.05  Sgr B2          NRAO     11m Cla79
+U  96822.         unidentified                               0.06  Sgr B2          NRAO     11m Tur89
+U  96841.   ?     unidentified                               0.06  Sgr B2          NRAO     11m Tur89
+   96847.25  (10) CH3OCH3      5(2,4)-5(1,5) AE+EA           0.11  OriMC-1         NRAO     11m Cla79  Cla79
+   96849.85  (10) CH3OCH3      5(2,4)-5(1,5) EE              0.14  OriMC-1         NRAO     11m Cla79  Cla79
+   96852.46  (10) CH3OCH3      5(2,4)-5(1,5) AA              0.13  OriMC-1         NRAO     11m Cla79  Cla79
+   96919.757*(14) CH3CH2CN     11(0,11)-10(0,10)             0.08  OriMC-1         NRAO     11m Joh77
+   96988.139*( 9) O13CS        8-7                           0.069 Sgr B2          BTL       7m Gol81
+U  97069.         unidentified                               0.12  OriMC-1         NRAO     11m Tur89
+   97172.086*(13) C33S         2-1                           0.17  Sgr B2          BTL       7m Cum86
+U  97263.         unidentified                               0.01  OriMC-1         NRAO     11m Tur89
+   97271.033*(12) CS           2-1 v=1                       0.007 IRC+10216       NRAO     12m Tur87
+U  97276.         unidentified                               0.02  OriMC-1         NRAO     11m Tur89
+U  97282.         unidentified                               0.01  OriMC-1         NRAO     11m Tur89
+   97286.836*(28) CH2CHCN      6(1,6)-5(0,5)                 0.02  OriMC-1         NRAO     11m Tur89
+U  97293.         unidentified                               0.03b Sgr B2          NRAO     11m Tur89
+   97295.48 *(14) Si13CC       4(1,3)-3(1,2)                 0.6f  IRC+10216       IRAM     30m Cer91b
+   97301.2085( 2) OCS          8-7                           0.85  Sgr B2          NRAO     11m Sol73  Dij71
+   97318.612*(45) HCOOCH3      4(2,2)-3(1,3) E               0.01  OriMC-1         NRAO     11m Tur89
+U  97536.9        unidentified                               0.08  OriMC-1         NRO      45m Ohi88
+U  97547.3        unidentified                               0.06  OriMC-1         NRO      45m Ohi88
+U  97550.1        unidentified                               0.05  OriMC-1         NRO      45m Ohi88
+U  97563.2        unidentified                               0.05  OriMC-1         NRO      45m Ohi88
+U  97569.0        unidentified                               0.04  OriMC-1         NRO      45m Ohi88
+U  97574.7        unidentified                               0.09  OriMC-1         NRO      45m Ohi88
+U  97577.9        unidentified                               0.14  OriMC-1         NRO      45m Ohi88
+   97582.83  ( 1) CH3OH        2( 1)-1( 1) A-               <2.5   OriMC-1         OSO      20m Fri84  Lee68
+U  97597.8        unidentified                               0.21  OriMC-1         NRO      45m Ohi88
+U  97603.         unidentified                               0.06  OriMC-1         NRAO     11m Tur89
+U  97618.7        unidentified                               0.05  OriMC-1         NRO      45m Ohi88
+   97632.218*(21) H213CS       3(1,3)-2(1,2)                 0.04  Sgr B2          BTL       7m Cum86
+U  97650.1        unidentified                               0.12  OriMC-1         NRO      45m Ohi88
+   97651.35 *( 3) HCOOCH3      10(4,7)-10(3,8) E             0.22  OriMC-1         NRO      45m Ohi88  Plu86
+U  97662.0        unidentified                               0.21  OriMC-1         NRO      45m Ohi88
+   97677.7        CH3OH        21(6)-22(5) A-                0.29  OriMC-1         NRO      45m Ohi88
+   97678.8        CH3OH        21(6)-22(5) A+                0.34  OriMC-1         NRO      45m Ohi88
+   97694.26 *(10) HCOOCH3      10(7,4)-10(8,3) A             0.2   OriMC-1         NRO      45m Ohi88  Plu84
+   97702.359*( 8) SO2          7(3,5)-8(2,6)                <0.3   OriMC-1         NRAO     11m Sny75a
+   97715.388*(38) 34SO         3(2)-2(1)                     0.14  OriMC-1         NRAO     11m Got78
+U  97729.4        unidentified                               0.06  OriMC-1         NRO      45m Ohi88
+U  97739.3        unidentified                               0.10  OriMC-1         NRO      45m Ohi88
+U  97753.4        unidentified                               0.19  OriMC-1         NRO      45m Ohi88
+U  97756.4        unidentified                               0.05  OriMC-1         NRO      45m Ohi88
+U  97774.9        unidentified                               0.07  OriMC-1         NRO      45m Ohi88
+U  97815.4        unidentified                               0.05  OriMC-1         NRO      45m Ohi88
+U  97816.8        unidentified                               0.05  OriMC-1         NRO      45m Ohi88
+   97833.60 *( 1) H2CCCC       11(1,11)-10(1,10)             0.106 IRC+10216       IRAM     30m Cer91a Kil90
+U  97846.3        unidentified                               0.12  OriMC-1         NRO      45m Ohi88
+   97862.6   ( 4) C5H          2P1/2 J=41/2-39/2 a           1.2f  IRC+10216       IRAM     30m Cer86  Cer86
+   97868.8   ( 4) C5H          2P1/2 J=41/2-39/2 b           1.1f  IRC+10216       IRAM     30m Cer86  Cer86
+U  97869.8        unidentified                               0.07  OriMC-1         NRO      45m Ohi88
+U  97874.0        unidentified                               0.07  OriMC-1         NRO      45m Ohi88
+U  97886.0        unidentified                               0.17  OriMC-1         NRO      45m Ohi88
+U  97897.5        unidentified                               0.22  OriMC-1         NRO      45m Ohi88
+U  97915.6        unidentified                               0.06  OriMC-1         NRO      45m Ohi88
+U  97926.         unidentified                               0.02b OriMC-1         NRAO     11m Tur89
+U  97931.2        unidentified                               0.06  OriMC-1         NRO      45m Ohi88
+U  97933.1        unidentified                               0.06  OriMC-1         NRO      45m Ohi88
+U  97957.2        unidentified                               0.04  OriMC-1         NRO      45m Ohi88
+U  97963.2        unidentified                               0.09  OriMC-1         NRO      45m Ohi88
+   97980.968*(17) CS           2-1                           6.94  OriMC-1         NRAO     11m Tur73
+U  97991.1        unidentified                               0.2   OriMC-1         NRO      45m Ohi88
+U  97993.8        unidentified                               0.3   OriMC-1         NRO      45m Ohi88
+   97995.166 (50) l-C3H        2P1/2 J=9/2-7/2 F=5-4         0.1   OriMC-1         NRO      45m Ohi88  Got85
+   97995.213 (50) l-C3H        2P1/2 J=9/2-7/2 F=4-3         0.2   OriMC-1         NRO      45m Ohi88  Got85
+   97995.450 (60) l-C3H        2P1/2 J=9/2-7/2b              0.116 IRC+10216       OSO      20m Tha85  Tha85
+   98012.064 (60) l-C3H        2P1/2 J=9/2-7/2a              0.089 IRC+10216       OSO      20m Tha85  Tha85
+   98177.581*(14) CH3CH2CN     11(2,10)-10(2,9)              0.15  OriMC-1         NRAO     11m Joh77
+   98182.25 *( 4) HCOOCH3      8(7,1)-7(7,0) E               0.07b OriMC-1         NRAO     11m Tur89  Plu86
+   98190.65 *( 4) HCOOCH3      8(7,2)-7(7,1) A                b    OriMC-1         NRAO     11m Tur89  Plu84
+   98190.65 *( 4) HCOOCH3      8(7,1)-7(7,0) A               0.08b OriMC-1         NRAO     11m Tur89  Plu84
+   98191.61 *( 4) HCOOCH3      8(7,2)-7(7,1) E                b    OriMC-1         NRAO     11m Tur89  Plu86
+U  98218.         unidentified                               0.08  IRC+10216       IRAM     30m Cer87b
+U  98230.2        unidentified                               0.02  OriMC-1         NRAO     11m Kut80
+U  98239.7        unidentified                               0.03  OriMC-1         NRAO     11m Kut80
+   98245.01 *( 1) H2CCCC       11(0,11)-10(0,10)             0.038 IRC+10216       IRAM     30m Cer91a Kil90
+U  98257.7        unidentified                               0.03  OriMC-1         NRAO     11m Kut80
+U  98265.9   ( 9) unidentified                               0.04  Sgr B2          BTL       7m Cum86
+   98268.516 (20) C3S          17-16                         2.2f  IRC+10216       IRAM     30m Cer87b Yam87
+   98270.44 *( 3) HCOOCH3      8(6,2)-7(6,1) E               0.06  OriMC-1         NRAO     11m Kut80  Plu86
+   98279.02 *( 3) HCOOCH3      8(6,3)-7(6,2) E                b    OriMC-1         NRAO     11m Kut80  Plu86
+   98279.74 *( 5) HCOOCH3      8(6,3)-7(6,2) A               0.12b OriMC-1         NRAO     11m Kut80  Plu84
+   98279.78 *( 5) HCOOCH3      8(6,2)-7(6,1) A                b    OriMC-1         NRAO     11m Kut80  Plu84
+U  98333.9        unidentified                               0.02  OriMC-1         NRAO     11m Kut80
+U  98351.9        unidentified                               0.02  OriMC-1         NRAO     11m Kut80
+   98408.9   ( 3) C6H          2P3/2 J=71/2-69/2 f           0.04  IRC+10216       IRAM     30m Gue87  Cer87a
+   98424.16 *( 3) HCOOCH3      8(5,3)-7(5,2) E               0.10  OriMC-1         NRAO     11m Tur89  Plu86
+   98431.88 *( 3) HCOOCH3      8(5,4)-7(5,3) E                b    Sgr B2          BTL       7m Cum86  Plu86
+   98432.75 *( 5) HCOOCH3      8(5,4)-7(5,3) A               0.04b Sgr B2          BTL       7m Cum86  Plu84
+   98435.80 *( 5) HCOOCH3      8(5,3)-7(5,2) A                b    Sgr B2          BTL       7m Cum86  Plu84
+   98441.7   ( 3) C6H          2P3/2 J=71/2-69/2 e           0.04  IRC+10216       IRAM     30m Gue87  Cer87a
+   98474.55 *(13) 33SO         3(2)-2(1) F=3/2-1/2            b    OriMC-1         NRAO     11m Tur89
+   98482.15 *( 8) 33SO         3(2)-2(1) F=5/2-3/2            b    OriMC-1         NRAO     11m Tur89
+   98489.08 *( 7) 33SO         3(2)-2(1) F=7/2-5/2           0.10b OriMC-1         NRAO     11m Tur89
+   98493.68 *(13) 33SO         3(2)-2(1) F=9/2-7/2            b    OriMC-1         NRAO     11m Tur89
+   98512.522*( 5) HC5N         37-36                         0.08  OriMC-1         NRAO     11m Buj81
+   98523.880*(13) CH3CH2CN     11(6)-10(6)                   0.13  OriMC-1         NRAO     11m Joh77
+   98524.661*(13) CH3CH2CN     11(7)-10(7)                   0.10  OriMC-1         NRAO     11m Joh77
+   98524.94 *( 5) C5H          2P3/2 J=41/2-39/2 a           4.5fb IRC+10216       IRAM     30m Cer86a Got86
+   98527.44 *( 5) C5H          2P3/2 J=41/2-39/2 b            b    IRC+10216       IRAM     30m Cer86a Got86
+   98532.070*(14) CH3CH2CN     11(8)-10(8)                   0.06  OriMC-1         NRAO     11m Joh77
+   98533.985*(26) CH3CH2CN     11(5)-10(5)                   0.17  OriMC-1         NRAO     11m Joh77
+   98544.145*(15) CH3CH2CN     11(9,3)-10(9,2)               0.08b OriMC-1         NRAO     11m Tur89
+   98544.145*(15) CH3CH2CN     11(9,2)-10(9,1)                b    OriMC-1         NRAO     11m Tur89
+   98564.834*(13) CH3CH2CN     11(4,8)-10(4,7)               0.09  OriMC-1         NRAO     11m Joh77
+   98566.799*(13) CH3CH2CN     11(4,7)-10(4,6)               0.09  OriMC-1         NRAO     11m Joh77
+   98606.85 *( 3) HCOOCH3      8(3,6)-7(3,5) E                b    Sgr B2          BTL       7m Cum86  Plu86
+   98610.108*(13) CH3CH2CN     11(3,9)-10(3,8)               0.14  OriMC-1         NRAO     11m Joh77
+   98611.15 *( 4) HCOOCH3      8(3,6)-7(3,5) A               0.08b Sgr B2          BTL       7m Cum86  Plu84
+U  98630.         unidentified                               0.10  Sgr B2          NRAO     11m Tur89
+   98655.07 *( 1) H2CCCC       11(1,10)-10(1,9)              0.124 IRC+10216       IRAM     30m Cer91a Kil90
+U  98663.         unidentified                               0.06  OriMC-1         NRAO     11m Tur89
+   98682.60 *( 4) HCOOCH3      8(4,5)-7(4,4) A               0.02  Sgr B2          BTL       7m Cum86  Plu84
+U  98696.         unidentified                               0.05  OriMC-1         NRAO     11m Tur89
+   98701.109*(13) CH3CH2CN     11(3,8)-10(3,7)               0.12  OriMC-1         NRAO     11m Joh77
+   98712.06 *( 3) HCOOCH3      8(4,5)-7(4,4) E               0.04  Sgr B2          BTL       7m Cum86  Plu86
+   98747.87 *( 3) HCOOCH3      8(4,4)-7(4,3) E               0.04  Sgr B2          BTL       7m Cum86  Plu86
+U  98771.         unidentified                               0.03  OriMC-1         NRAO     11m Tur89
+   98792.28 *( 4) HCOOCH3      8(4,4)-7(4,3) A               0.05  Sgr B2          BTL       7m Cum86  Plu84
+   98863.328 (50) CH3CHO       5(1,4)-4(1,3) E               0.23  Sgr B2          BTL       7m Cum86  Kle91
+   98900.948 (50) CH3CHO       5(1,4)-4(1,3) A               0.18  Sgr B2          BTL       7m Cum86  Kle91
+   98926.723*(17) AlF          3-2                           0.97f IRC+10216       IRAM     30m Cer87c
+   98940.02 *( 2) C3N          10-9 J=21/2-19/2              0.18  IRC+10216       NRAO     11m Gue77  Got83
+   98958.78 *( 2) C3N          10-9 J=19/2-17/2              0.13  IRC+10216       NRAO     11m Gue77  Got83
+   98976.284*(22) SO2          28(7,21)-29(6,24)             0.08  OriMC-1         NRAO     11m Tur91
+U  99011.         unidentified                               0.08  OriMC-1         NRAO     11m Tur89
+U  99068.         unidentified                               0.08  OriMC-1         NRAO     11m Tur91
+   99083.2   ( 5) C6H          2P1/2 J=71/2-69/2 f           0.97f IRC+10216       IRAM     30m Sai87  Cer87a
+U  99087.         unidentified                               0.12  OriMC-1         NRAO     11m Tur89
+   99118.6   ( 1) NH2D         5(2,4)-4(1,4)                 0.04  Sgr B2          BTL       7m Cum86  DeL75
+U  99120.         unidentified   (NH2D ?)                    0.15  OriMC-1         OSO      20m Fri84
+   99133.8   ( 5) C6H          2P1/2 J=71/2-69/2 e           1.05f IRC+10216       IRAM     30m Sai87  Cer87a
+U  99142.         unidentified                               0.10  OriMC-1         NRAO     11m Tur89
+   99203.46 *(10) CH3SH        2(1)-2(0) E                   0.10  Sgr B2          NRAO     11m Tur89  Lee80
+   99264.98  ( 5) CH3SH        3(1)-3(0) E                   0.08  OriMC-1         NRAO     11m Tur89  Lee80
+   99299.879*(38) SO           3(2)-2(1)                     1.59m OriMC-1         NRAO     11m Got78
+   99311.195 (75) NH2CN        5(1,5)-4(1,4)                 0.40  Sgr B2          BTL       7m Cum86  Joh76a
+   99325.25  (20) CH3OCH3      4(1,4)-3(0,3) EE              0.2   OriMC-1         NRAO     11m Cla79  Lov79
+U  99361.         unidentified                               0.03  Sgr B2          NRAO     11m Tur89
+U  99378.         unidentified                               0.03  Sgr B2          NRAO     11m Tur89
+   99392.645*(27) SO2          29(4,26)-28(5,23)            <0.50  OriMC-1         OSO      20m Fri84
+   99409.74  (10) CH3SH        4(1)-4(0) E                   0.05  Sgr B2          NRAO     11m Tur89  Lee80
+U  99586.         unidentified                               0.12  OriMC-1         NRAO     11m Tur89
+   99651.863*(11) HC13CCN      11-10                         0.13  Sgr B2          BTL       7m Cum86
+   99661.471*( 6) HCC13CN      11-10                         0.14  Sgr B2          BTL       7m Cum86
+   99681.516*(14) CH3CH2CN     11(2,9)-10(2,8)               0.05  Sgr B2          BTL       7m Cum86
+U  99698.   ?     unidentified                               0.03  OriMC-1         NRAO     11m Tur89
+U  99727.0   (16) unidentified                               0.04  Sgr B2          BTL       7m Cum86
+   99730.92  ( 1) CH3OH        6(1)-5(0) E vt=1              0.20  OriMC-1         NRAO     11m Chu80  Lov82
+   99774.15  ( 5) H2C34S       3(1,3)-2(1,2)                <0.2   OriMC-1         OSO      20m Gar85  Lov84
+   99866.510*(12) C2S          7,8-6,7                       0.08  Sgr B2          BTL       7m Cum86  Yam90
+U  99903.         unidentified                               0.15  Sgr B2          NRAO     11m Tur89
+   99929.54  (10) KCl          13-12                         0.43f IRC+10216       IRAM     30m Cer87c Clo64
+   99953.27  ( 6) NH2CN        5(2,4)-4(2,3)                 0.08b Sgr B2          BTL       7m Cum86  Joh76a
+   99956.60  ( 4) NH2CN        5(2,3)-4(2,2)                  b    Sgr B2          BTL       7m Cum86  Joh76a
+   99972.66  ( 8) NH2CN        5(0,5)-4(0,4)                 0.12  Sgr B2          BTL       7m Cum86  Joh76a
+  100029.569*(60) SO           4(5)-4(4)                     0.38m OriMC-1         NRAO     11m Got78
+  100076.389*( 2) HC3N         11-10                         1.28  OriMC-1         NRAO     11m Mor76
+  100094.461*(51) CH2CO        5(1,5)-4(1,4)                 0.17  Sgr B2          NRAO     11m Tur77
+  100110.27  (10) CH3SH        4(1)-3(1) A+                  0.06  Sgr B2          BTL       7m Lin79  Lee80
+U 100122.         unidentified                               0.10  OriMC-1         NRAO     11m Tur89
+U 100157.0        unidentified                               0.07  Sgr B2          NRAO     11m Tur77
+  100173.10  (10) CH3SH        7(2)-8(1) A+                  0.08  OriMC-1         NRAO     11m Tur89  Lee80
+U 100185.         unidentified                               0.05  OriMC-1         NRAO     11m Tur89
+U 100197.2   (8)  unidentified                               0.09  Sgr B2          BTL       7m Cum85
+U 100200.4        unidentified                               0.09  Sgr B2          NRAO     11m Tur77
+  100240.524*(31) HC3N         11-10 v6=1 l=1e               0.02  Sgr B2          NRAO     11m Tur91
+  100294.61 *( 3) HCOOCH3      8(3,5)-7(3,4) E               0.05  Sgr B2          BTL       7m Cum86  Plu86
+  100308.17 *( 5) HCOOCH3      8(3,5)-7(3,4) A               0.08  OriMC-1         BTL       7m Gol82  Plu84
+  100322.349*(29) HC3N         11-10 v7=1 l=1e               0.07  OriMC-1         BTL       7m Gol82
+U 100332.         unidentified                               0.06  Sgr B2          NRAO     11m Tur89
+U 100365.         unidentified                               0.18  OriMC-1         NRAO     11m Tur89
+U 100373.         unidentified                               0.10  OriMC-1         NRAO     11m Tur89
+U 100421.         unidentified                               0.06  OriMC-1         NRAO     11m Tur89
+U 100436.         unidentified                               0.06  OriMC-1         NRAO     11m Tur91
+U 100453.         unidentified                               0.08  Sgr B2          NRAO     11m Tur89
+  100463.11  ( 3) CH3OCH3      6(2,5)-6(1,6) EE              0.12  OriMC-1         NRAO     11m Wil81
+  100466.106*(29) HC3N         11-10 v7=1 l=1f               0.04  OriMC-1         NRAO     11m Tur91
+  100482.27 *( 3) HCOOCH3      8(1,7)-7(1,6) E               0.08  OriMC-1         BTL       7m Gol82  Plu86
+  100490.67 *( 5) HCOOCH3      8(1,7)-7(1,6) A               0.08  OriMC-1         BTL       7m Gol82  Plu84
+U 100498.5        unidentified                               0.05  OriMC-1         NRAO     11m Wil81
+  100526.506*( 8) CH3NC        5-4                           1.8f  Sgr B2          IRAM     30m Cer88
+  100598.34       CH2CN        5(0,5)-4(0,4) 11/2-9/2        0.55  Sgr B2          FCRAO    14m Irv88a Irv88a
+  100614.295*(14) CH3CH2CN     11(1,10)-10(1,9)              0.10  OriMC-1         NRAO     11m Joh77
+  100629.50  (12) NH2CN        5(1,4)-4(1,3)                 0.17  Sgr B2          NRAO     11m Tur75a Joh76a
+  100638.90  (10) CH3OH        13(2)-12(3) E1                0.35  OriMC-1         NRAO     11m Tur89  Sas84
+  100681.51 *( 3) HCOOCH3      9(0,9)-8(0,8) E               0.07b Sgr B2          NRAO     11m Chu80  Plu86
+  100683.36 *( 5) HCOOCH3      9(0,9)-8(0,8) A                b    Sgr B2          NRAO     11m Chu80  Plu84
+  100708.837*(44) HC3N         11-10 v7=2 l=0                0.05b Sgr B2          BTL       7m Cum86
+  100710.972*(52) HC3N         11-10 v7=2 l=2 e               b    Sgr B2          BTL       7m Cum86
+  100714.306*(46) HC3N         11-10 v7=2 l=2 f               b    Sgr B2          BTL       7m Cum86
+U 100765.   ?     unidentified                               0.05  OriMC-1         NRAO     11m Tur89
+  100878.113*( 6) SO2          2(2,0)-3(1,3)                 0.08  Sgr B2          BTL       7m Cum86
+  100989.940*(16) CH3CH2OH     8(2,7)-8(1,8)                 0.05  Sgr B2          BTL       7m Lin79
+  101002.34 *( 5) CH2CO        5(3,3)-4(3,2)                 0.06b Sgr B2          BTL       7m Cum86
+  101002.35 *( 5) CH2CO        5(3,2)-4(3,1)                  b    Sgr B2          BTL       7m Cum86
+  101024.401*(44) CH2CO        5(2,4)-4(2,3)                 0.05b Sgr B2          NRAO     11m Tur89
+  101029.75  ( 5) CH3SH        4(-1)-3(-1) E                  b    Sgr B2          BTL       7m Lin79  Lin79
+  101036.56 *( 6) CH2CO        5(0,5)-4(0,4)                 0.12b Sgr B2          NRAO     11m Tur77
+  101139.16  ( 5) CH3SH        4(0)-3(0) A                   0.27b Sgr B2          BTL       7m Lin79  Lin79
+  101139.65  ( 4) CH3SH        4(0)-3(0) E                    b    Sgr B2          BTL       7m Lin79  Lin79
+  101159.46  (10) CH3SH        4(2)-3(2) A-                  0.03  Sgr B2          BTL       7m Cum86  Lee80
+  101167.15  ( 4) CH3SH        4(-2)-3(-2) E                 0.13b Sgr B2          BTL       7m Cum86  Lin79
+  101168.34  ( 4) CH3SH        4(2)-3(2) E                    b    Sgr B2          BTL       7m Cum86  Lin79
+  101174.679*( 5) HC5N         38-37                         0.09b Sgr B2          BTL       7m Lin79
+  101179.76  (10) CH3SH        4(2)-3(2) A                    b    Sgr B2          BTL       7m Lin79  Lee80
+  101180.3   ( 3) C6H          2P3/2 J=73/2-71/2 f           1.20f IRC+10216       IRAM     30m Cer87a Cer87a
+  101215.0   (15) C6H          2P3/2 J=73/2-71/2 e           0.70f IRC+10216       IRAM     30m Cer87a Cer87a
+  101284.36  ( 4) CH3SH        4( 1)-3( 1) E                 0.09  Sgr B2          BTL       7m Lin79  Lin79
+  101332.984*(17) H2CO         6(1,5)-6(1,6)                <0.1   Sgr B2          BTL       7m Lin79
+  101343.41 *(10) CH3CHO       3(1,3)-2(0,2) E               0.08  Sgr B2          BTL       7m Cum86
+U 101371.         unidentified                               0.05  OriMC-1         NRAO     11m Tur89
+U 101384.         unidentified   (DNCO?)                     0.02  OriMC-1         NRAO     11m Tur89
+U 101461.   ?     unidentified                               0.02  OriMC-1         NRAO     11m Tur89
+  101469.70  (10) CH3OH        8(-2)-8(1) E2                 0.17  OriMC-1         NRAO     11m Tur89  Sas84
+  101477.753*(55) H2CS         3(1,3)-2(1,2)                 0.49  OriMC-1         BTL       7m Van84
+  101559.35  (10) CH3OCH3      12(2,10)-11(3,9) AA            b    OriMC-1         NRAO     11m Tur89
+  101562.17  (10) CH3OCH3      12(2,10)-11(3,9) EE           0.10b OriMC-1         NRAO     11m Tur89
+  101564.90  (10) CH3OCH3      12(2,10)-11(3,9) AE+EA         b    OriMC-1         NRAO     11m Tur89
+  101637.243*(18) CH2CHCN      11(1,11)-10(1,10)             0.05  OriMC-1         NRAO     11m Tur91
+U 101677.         unidentified                               0.02  Sgr B2          NRAO     11m Tur89
+  101688.5  *( 5) 33SO2        12(4,8)-12(3,11)              0.03  Sgr B2          NRAO     11m Tur89
+  101737.08  ( 5) CH3OH        9(-2)-9(1) E                  0.36  OriMC-1         OSO      20m Mil87  Sas84
+  101771.95 *(10) HCOOCH3      24(5,19)-24(4,20) A           0.06  OriMC-1         OSO      20m Mil87  Plu84
+  101873.6   (10) C6H          2P1/2 J=73/2-71/2 f           0.75f IRC+10216       IRAM     30m Cer87a Cer87a
+  101925.2   ( 7) C6H          2P1/2 J=73/2-71/2 e           0.78f IRC+10216       IRAM     30m Cer87a Cer87a
+  101961.53 *( 7) Na37Cl       8-7                           0.68f IRC+10216       IRAM     30m Cer87c
+U 101970.         unidentified                               0.05  Sgr B2          NRAO     11m Tur89
+  101981.383*(51) CH2CO        5(1,4)-4(1,3)                 0.22  Sgr B2          NRAO     11m Tur77
+  102031.906*(54) 34SO2        3(1,3)-2(0,2)                 0.05  OriMC-1         NRAO     11m Tur89
+  102031.94 *( 5) AlCl         7-6                           0.82f IRC+10216       IRAM     30m Cer87c
+U 102043.         unidentified                               0.03  OriMC-1         NRAO     11m Tur89
+  102064.268*( 8) NH2CHO       5(1,5)-4(1,4)                 0.2   Sgr B2          NRAO     11m Tur78a
+  102122.59  ( 5) CH3OH        10(-2)-10(1) E                0.41  OriMC-1         OSO      20m Mil87  Sas84
+  102202.49  ( 4) CH3SH        4( 1)-3( 1) A-                0.08  Sgr B2          BTL       7m Lin79  Lin79
+  102217.515*( 5) NH2CHO       2(1,2)-1(0,1)                 0.09  Sgr B2          NRAO     11m Tur89
+U 102274.         unidentified                               0.02  OriMC-1         NRAO     11m Tur89
+  102298.08 *( 3) HCCCHO       11(0,11)-10(0,10)             0.03  Sgr B2          NRAO     11m Tur89
+U 102319.         unidentified                               0.10  Sgr B2          NRAO     11m Tur89
+U 102375.         unidentified                               0.10  Sgr B2          NRAO     11m Tur89
+U 102399.         unidentified                               0.10  OriMC-1         NRAO     11m Tur89
+U 102407.         unidentified                               0.03  OriMC-1         NRAO     11m Tur89
+U 102423.         unidentified                               0.05  OriMC-1         NRAO     11m Tur89
+U 102432.         unidentified                               0.04  OriMC-1         NRAO     11m Tur89
+U 102490.         unidentified                               0.03  OriMC-1         NRAO     11m Tur89
+  102530.346*( 1) CH3CCH       6(3)-5(3)                     0.14  OriMC-1         NRAO     11m Chu83
+  102540.144*( 1) CH3CCH       6(2)-5(2)                     0.23  OriMC-1         NRAO     11m Chu83
+  102546.024*( 1) CH3CCH       6(1)-5(1)                     0.29  OriMC-1         NRAO     11m Chu83
+  102547.984*( 1) CH3CCH       6(0)-5(0)                     0.33  OriMC-1         NRAO     11m Chu83
+  102635.7   ( 7) C5H          2P1/2 J=43/2-41/2 a           1.1f  IRC+10216       IRAM     30m Cer86  Cer86
+U 102640.         unidentified                               0.08  OriMC-1         OSO      20m Mil87
+  102642.4   ( 7) C5H          2P1/2 J=43/2-41/2 b           1.0f  IRC+10216       IRAM     30m Cer86  Cer86
+U 102644.         unidentified                               0.05  OriMC-1         NRAO     11m Tur89
+U 102650.         unidentified                               0.07  OriMC-1         NRAO     11m Tur89
+  102658.04  (10) CH3OH        11(-2)-11(1) E                0.15  OriMC-1         NRAO     11m Lov82  Sas84
+  102690.022*(26) SO2          33(8,26)-34(7,27)             0.07  OriMC-1         OSO      20m Mil87
+  102736.91 *(10) HCOOCH3      16(5,11)-16(4,12) A           0.12  OriMC-1         OSO      20m Mil87  Plu84
+  102807.318*(53) H2C34S       3(1,2)-2(1,1)                 0.02  Sgr B2          NRAO     11m Tur89
+  102957.73  (10) CH3OH        unassigned                    0.12  OriMC-1         NRAO     11m Tur89  Lee68
+  102992.38 *( 1) H2CCC        5(1,5)-4(1,4)                 0.230 TMC-1           IRAM     30m Cer91  Vrt90
+U 103028.         unidentified                               0.03b Sgr B2          NRAO     11m Tur89
+  103040.399*(53) H2CS         3(0,3)-2(0,2)                 0.2   Sgr B2          NRAO     11m Got78a
+  103051.785*(58) H2CS         3(2,1)-2(2,0)                 0.13  Sgr B2          BTL       7m Van84
+U 103071.         unidentified                               0.02  Sgr B2          NRAO     11m Tur89
+U 103075.         unidentified                               0.02  OriMC-1         NRAO     11m Tur89
+  103114.897*(10) HCOOCH3      21(4,17)-21(3,18) A           0.05  OriMC-1         NRAO     11m Tur89  Plu84
+U 103133.         unidentified                               0.02  OriMC-1         NRAO     11m Tur89
+U 103151.         unidentified                               0.02  OriMC-1         NRAO     11m Tur89
+  103188.64 *(10) NH2D         8(3,6)-8(2,6) U               0.01  Sgr B2          NRAO     11m Tur89
+U 103196.         unidentified                               0.03  Sgr B2          NRAO     11m Tur89
+U 103216.6   (12) unidentified                               0.04  Sgr B2          BTL       7m Cum86
+U 103223.         unidentified                               0.03  OriMC-1         NRAO     11m Tur89
+U 103227.         unidentified                               0.03  OriMC-1         NRAO     11m Tur89
+  103266.0   ( 3) C4H          2P1/2 J=21/2-19/2 v7=1e       2.75f IRC+10216       IRAM     30m Yam87b Yam87b
+U 103270.         unidentified                               0.05  OriMC-1         NRAO     11m Tur89
+U 103297.         unidentified                               0.05  Sgr B2          NRAO     11m Tur89
+  103319.611 (60) l-C3H        2P3/2 J=9/2-7/2a              0.054 IRC+10216       FCRAO    14m Tha85  Tha85
+U 103328.         unidentified                               0.03  OriMC-1         NRAO     11m Tur89
+  103330.    ( 1) C5H          2P3/2 J=45/2-43/2             0.07  IRC+10216       IRAM     30m Yam87b Yam87b
+  103372.658 (60) l-C3H        2P3/2 J=9/2-7/2b              0.078 IRC+10216       FCRAO    14m Tha85  Tha85
+  103381.11  ( 5) CH3OH        12(-2)-12(1) E2               0.07  OriMC-1         NRAO     11m Tur89  Sas84
+U 103417.         unidentified                               0.04  OriMC-1         NRAO     11m Tur89
+U 103426.         unidentified                               0.05  OriMC-1         NRAO     11m Tur89
+U 103458.         unidentified   (CH3CH2OH? Tur90)           0.16  OriMC-1         NRAO     11m Tur89
+  103466.59 *( 3) HCOOCH3      8(2,6)-7(2,5) E               0.07  Sgr B2          BTL       7m Cum86  Plu86
+  103478.64 *( 4) HCOOCH3      8(2,6)-7(2,5) A               0.04  Sgr B2          BTL       7m Cum86  Plu84
+U 103517.         unidentified                               0.08  OriMC-1         NRAO     11m Tur89
+  103524.232*(20) NH2CHO       9(1,8)-9(0,9)                 0.08  OriMC-1         NRAO     11m Tur89
+U 103549.0   (19) unidentified                               0.04  Sgr B2          BTL       7m Cum86
+  103575.401*(14) CH2CHCN      11(0,11)-10(0,10)             0.07  Sgr B2          BTL       7m Cum86
+  103576.5   ( 3) C4H          2P1/2 J=21/2-19/2 v7=1f       0.10  IRC+10216       IRAM     30m Cer87b Yam87b
+  103640.754*( 8) C2S          8,8-7,7                       0.05  Sgr B2          BTL       7m Cum86  Yam90
+U 103680.         unidentified                               0.05  OriMC-1         NRAO     11m Tur89
+U 103689.         unidentified                               0.05  OriMC-1         NRAO     11m Tur89
+  103699.708*(48) SO2          7(3,5)-8(2,6) v2=1            0.04  OriMC-1         NRAO     11m Tur89
+  103702.810*(10) CH3CH2OH     9(1,8)-8(2,7)                 0.04  Sgr B2          BTL       7m Cum86
+U 103714.         unidentified                               0.10  Sgr B2          NRAO     11m Tur89
+U 103787.         unidentified                               0.04  OriMC-1         NRAO     11m Tur89
+U 103796.         unidentified                               0.02  OriMC-1         NRAO     11m Tur89
+  103836.809*( 5) HC5N         39-38                         0.05  Sgr B2          BTL       7m Cum86
+U 103868.         unidentified                               0.03  Sgr B2          NRAO     11m Tur89
+U 103915.         unidentified   (H56c?)                     0.1   OriMC-1         NRAO     11m Kui77
+U 103918.         unidentified                               0.10  OriMC-1         NRAO     11m Tur89
+U 103932.         unidentified                               0.01  OriMC-1         NRAO     11m Tur89
+  103951.9   ( 4) C6H          2P3/2 J=75/2-73/2 f           1.25f IRC+10216       IRAM     30m Cer87a Cer87a
+  103989.0   ( 4) C6H          2P3/2 J=75/2-73/2 e           0.90f IRC+10216       IRAM     30m Cer87a Cer87a
+  104029.416*( 5) SO2          3(1,3)-2(0,2)                 3.0   OriMC-1         NRAO     11m Hol76a
+  104048.455 (20) C3S          18-17                         2.1f  IRC+10216       IRAM     30m Cer87b Yam87
+  104051.281*(14) CH3CH2CN     12(1,12)-11(1,11)             0.08  OriMC-1         NRAO     11m Joh77
+  104060.76  (10) CH3OH        13(-4)-12(-3)                 0.2   OriMC-1         NRAO     11m Kui77  Lee68
+  104175.92  (20) CH3OCH3      17(2,15)-17(1,16) EA+AE        b    OriMC-1         NRAO     11m Tur89  Lov79
+  104177.37  (20) CH3OCH3      17(2,15)-17(1,16) EE          0.09b OriMC-1         NRAO     11m Tur89  Lov79
+  104178.80  (20) CH3OCH3      17(2,15)-17(1,16) AA           b    OriMC-1         NRAO     11m Tur89  Lov79
+  104187.115*( 6) C3HD         3(0,3)-2(1,2)                 0.39  TMC-1           NRAO     12m Ger87  Bog87
+  104189.74 *( 7) NaCl         8-7                           1.24f IRC+10216       IRAM     30m Cer87c
+U 104200.1   ( 8) unidentified                               0.07  Sgr B2          BTL       7m Cum86
+  104212.655*(12) CH2CHCN      11(2,10)-10(2,9)              0.06  Sgr B2          BTL       7m Cum86
+  104239.293*(10) SO2          10(1,9)-10(0,10)              0.29  Sgr B2          BTL       7m Cum86
+  104300.46  (10) CH3OH        11(-1)-10(-2) E               0.12  Sgr B2          BTL       7m Cum86  Lee73
+  104336.54  ( 5) CH3OH        13(-2)-13(1) E                0.03  Sgr B2          BTL       7m Cum86  Sas84
+  104354.85  (10) CH3OH        10(4)-11(3) A-                0.06  Sgr B2          BTL       7m Cum86  Lee68
+  104391.65 *( 6) 34SO2        10(1,9)-10(0,10)              0.04  Sgr B2          BTL       7m Cum86
+  104408.903*(13) CH2CHCN      11(5)-10(5)                   0.08b Sgr B2          BTL       7m Cum86
+  104410.48  (10) CH3OH        10(4)-11(3) A+                 b    Sgr B2          BTL       7m Cum86  Lee68
+  104411.262*(13) CH2CHCN      11(4,8)-10(4,7)                b    Sgr B2          BTL       7m Cum86
+  104411.485*(13) CH2CHCN      11(4,7)-10(4,6)                b    Sgr B2          BTL       7m Cum86
+  104419.308*(15) CH2CHCN      11(6)-10(6)                    b    Sgr B2          BTL       7m Cum86
+U 104425.         unidentified                               0.08  Sgr B2          NRAO     11m Tur89
+  104432.793*(15) CH2CHCN      11(3,9)-10(3,8)               0.04b Sgr B2          BTL       7m Cum86
+  104437.516*(17) CH2CHCN      11(7)-10(7)                    b    Sgr B2          BTL       7m Cum86
+  104453.927*(15) CH2CHCN      11(3,8)-10(3,7)               0.06  Sgr B2          BTL       7m Cum86
+  104477.51 *(30) CH3OD        4(2)-5(1) A+                  0.10  Sgr B2          NRAO     11m Tur89
+  104487.220*( 9) CH3CH2OH     7(0,7)-6(1,6)                 0.20  Sgr B2          BTL       7m Cum86
+U 104531.         unidentified                               0.05  Sgr B2          NRAO     11m Tur89
+U 104589.         unidentified                               0.15x Sgr B2          NRAO     11m Lis78
+  104616.975*(55) H2CS         3(1,2)-2(1,1)                 0.77  Sgr B2          NRAO     11m Lis78
+  104666.56 *( 2) C4H          11-10 J=23/2-21/2             0.10  IRC+10216       NRAO     11m Gue78  Got83
+U 104696.         unidentified                               0.04  Sgr B2          NRAO     11m Tur89
+  104703.33 *( 4) CH3OCH3      7(2,6)-7(1,7) EE              0.08b OriMC-1         NRAO     11m Tur89
+  104705.10 *( 2) C4H          11-10 J=21/2-19/2             0.10  IRC+10216       NRAO     11m Gue78  Got83
+  104705.95 *( 5) CH3OCH3      7(2,6)-7(1,7) AA               b    OriMC-1         NRAO     11m Tur89
+  104711.385*(20) 13C18O       1-0                           n.r.  OriMC-2         NRAO     11m Wan76
+U 104720.         unidentified                               0.07  Sgr B2          NRAO     11m Tur89
+U 104798.         unidentified                               0.05  Sgr B2          NRAO     11m Tur89
+  104808.620*(11) CH3CH2OH     5(1,5)-4(0,4)                 0.18  Sgr B2          NRAO     11m Zuc75
+U 104819.         unidentified                               0.02  Sgr B2          NRAO     11m Tur89
+U 104874.8   (10) unidentified                               0.12  Sgr B2          BTL       7m Cum86
+  104891.9  *( 6) HC7N         93-92                         0.09  Sgr B2          NRAO     11m Tur89
+  104915.58 *( 1) H2CCC        5(1,4)-4(1,3)                 0.257 TMC-1           IRAM     30m Cer91  Vrt90
+U 104941.   ?     unidentified                               0.15  Sgr B2          NRAO     11m Tur89
+  104960.550*(16) CH2CHCN      11(2,9)-10(2,8)               0.06  Sgr B2          BTL       7m Cum86
+U 105023.         unidentified   (CH3CH2OH? Tur90)           0.04  OriMC-1         NRAO     11m Tur89
+U 105027.         unidentified                               0.05  OriMC-1         NRAO     11m Tur89
+  105063.70  (10) CH3OH        13(1)-12(2)                   0.55  OriMC-1         FCRAO    14m Gol83  Lee68
+  105174.58  (20) C4H          2S J=11-10 v7=2 L             0.15  IRC+10216       IRAM     30m Gue87a Gue87a
+  105230.65  (20) C4H          2S J=11-10 v7=2 U             0.15  IRC+10216       IRAM     30m Gue87a Gue87a
+U 105278.         unidentified                               0.04  OriMC-1         NRAO     11m Tur89
+  105310.73 *(12) HCOOCH3      27(6,21)-27(5,22) A           0.10  OriMC-1         NRAO     11m Tur89
+  105355.40 *( 4) CH3CH2OH     17(2,15)-17(1,16)             0.04  Sgr B2          NRAO     11m Tur89
+U 105412.         unidentified                               0.05  OriMC-1         NRAO     11m Tur89
+  105464.221 ( 6) NH2CHO       5(0,5)-4(0,4)                 0.31  Sgr B2          BTL       7m Cum86
+  105469.303*(14) CH3CH2CN     12(0,12)-11(0,11)             0.2   OriMC-1         NRAO     11m Kui77
+U 105540.         unidentified                               0.05  OriMC-1         OSO      20m Joh84
+  105558.077*( 4) HNCS         9(0,9)-8(0,8)                 0.05  Sgr B2          BTL       7m Fre79
+  105576.35  (10) CH3OH        14(-2)-14(1) E                0.2n  OriMC-1         NRAO     11m Kui77  Lee68
+U 105590.         unidentified                               0.15  OriMC-1         OSO      20m Joh84
+U 105610.         unidentified                               0.05  Sgr B2          NRAO     11m Tur89
+U 105618.         unidentified                               0.03  Sgr B2          NRAO     11m Tur89
+U 105728.         unidentified                               0.02  OriMC-1         NRAO     11m Tur89
+U 105739.         unidentified                               0.05  OriMC-1         NRAO     11m Tur89
+  105743.859*( 3) HNCS         9(1,8)-8(1,7)                 0.13  OriMC-1         NRAO     11m Tur89
+  105768.60 *(43) CH3OCH3      13(1,12)-13(0,13) EA+AE        b    OriMC-1         OSO      20m Joh84
+  105770.50 *(26) CH3OCH3      13(1,12)-13(0,13) EE          0.20b OriMC-1         OSO      20m Joh84
+  105772.41 *(12) CH3OCH3      13(1,12)-13(0,13) AA           b    OriMC-1         OSO      20m Joh84
+U 105787.         unidentified                               0.02  OriMC-1         NRAO     11m Tur89
+  105794.057*(58) CH2NH        4(0,4)-3(1,3)                 0.27b Sgr B2          BTL       7m Cum86
+  105799.093*(10) H13CCCN      12-11                          b    Sgr B2          BTL       7m Cum86
+  105799.093*(10) H13CCCN      12-11                         0.10  OriMC-1         OSO      20m Joh84
+  105838.0   ( 3) C4H          2P3/2 J=23/2-21/2 v7=1e       3.50f IRC+10216       IRAM     30m Yam87b Yam87b
+  105972.601*(14) NH2CHO       5(2,4)-4(2,3)                 0.1o  Sgr B2          NRAO     11m Got78a
+  106132.8   ( 3) C4H          2P3/2 J=23/2-21/2 v7=1f       3.10f IRC+10216       IRAM     30m Yam87b Yam87b
+  106134.430*(25) NH2CHO       5(3,3)-4(3,2)                 0.10b Sgr B2          BTL       7m Cum86
+  106141.403*(25) NH2CHO       5(3,2)-4(3,1)                  b    Sgr B2          BTL       7m Cum86
+U 106156.         unidentified                               0.04  OriMC-1         NRAO     11m Tur89
+  106347.742*(10) C2S          9,8-8,7                       0.19  Sgr B2          BTL       7m Cum86  Yam90
+U 106367.         unidentified                               0.04  OriMC-1         NRAO     11m Tur89
+  106374.18 *(27) 34SO2        33(5,27)-32(6,26)             0.03b OMC-IRc2        SEST     15m Ger89
+  106375.003*(20) CH3CH2CN     15(3,12)-12(2,13)              b    OMC-IRc2        SEST     15m Ger89
+U 106386.         unidentified                               0.03  OriMC-1         NRAO     11m Tur89
+  106493.94 *( 4) HOCO+        5(1,5)-4(1,4)                  b    Sgr B2          NRAO     12m Tur87b
+  106498.911*( 5) HC5N         40-39                         0.04b Sgr B2          NRAO     12m Tur87b
+  106541.683*(14) NH2CHO       5(2,3)-4(2,2)                 0.15  Sgr B2          BTL       7m Cum86
+  106641.394*(17) CH2CHCN      11(1,10)-10(1,9)              0.05  Sgr B2          BTL       7m Cum86
+  106723.410*(18) CH3CH2OH     9(2,8)-9(1,9)                 0.06  Sgr B2          BTL       7m Cum86
+  106743.365*(36) 34SO         2(3)-1(2)                     0.16d OriMC-1         NRAO     11m Got78
+  106762.7   ( 3) C6H          2P3/2 J=77/2-75/2 e           1.00f IRC+10216       IRAM     30m Cer87a Cer87a
+  106777.52 *(15) CH3OCH3      9(1,8)-8(2,7) EE              0.05  Sgr B2          BTL       7m Cum86
+  106787.38 *( 4) OC34S        9-8                           0.089 Sgr B2          BTL       7m Gol81
+  106913.52 *( 3) HOCO+        5(0,5)-4(0,4)                 0.4   Sgr B2          BTL       7m Tha81
+  106922.945*(49) 29SiS        6-5                           0.012 IRC+10216       BTL       7m Hen85
+U 106942.         unidentified                               0.03  OriMC-1         NRAO     11m Tur89
+U 106963.         unidentified                               0.02  OriMC-1         NRAO     11m Tur89
+U 106981.         unidentified                               0.06  OriMC-1         NRAO     11m Tur89
+U 106995.         unidentified                               0.08  OriMC-1         NRAO     11m Tur89
+  107013.85  (10) CH3OH        3(1)-4(0) A+                  4.5   OriMC-1         FCRAO    14m Gol83  Lee68
+  107043.524*(14) CH3CH2CN     12(2,11)-11(2,10)             0.05  Sgr B2          BTL       7m Cum86
+  107060.323*(35) SO2          27(3,25)-26(4,22)             0.07  Sgr B2          BTL       7m Cum86
+  107159.79  ( 5) CH3OH        15(-2)-15(1) E2               0.31  OriMC-1         NRAO     11m Tur89  Sas84
+  107178.486*(31) 13CH3CN      6(3)-5(3)                     0.04b Sgr B2          BTL       7m Cum86
+  107188.545*(31) 13CH3CN      6(2)-5(2)                      b    Sgr B2          BTL       7m Cum86
+  107194.580*(32) 13CH3CN      6(1)-5(1)                      b    Sgr B2          BTL       7m Cum86
+  107196.592*(32) 13CH3CN      6(0)-5(0)                     0.07b Sgr B2          BTL       7m Cum86
+U 107207.         unidentified                               0.10  OriMC-1         NRAO     11m Tur89
+  107315.36 *( 2) HOCO+        5(1,4)-4(1,3)                  b    Sgr B2          NRAO     12m Tur87b
+  107316.46 *(10) CH3SH        3(-1)-3(0) A                  0.04b Sgr B2          BTL       7m Cum86
+  107384.6   ( 3) MgNC         9-8 L                         2.8   IRC+10216       IRAM     30m Gue93  Gue86
+  107399.8   ( 4) MgNC         9-8 U                         2.6   IRC+10216       IRAM     30m Gue93  Gue86
+  107423.658*( 6) C3HD         3(1,3)-2(0,2)                 0.5   TMC-1           IRAM     30m Ger87  Bog87
+U 107426.         unidentified                               0.02  OriMC-1         NRAO     11m Tur89
+  107453.2   ( 3) C6H          2P1/2 J=77/2-75/2 f           0.66f IRC+10216       IRAM     30m Cer87a Cer87a
+  107481.468*(23) CH3CH2CN     17(2,16)-17(1,17)             0.10b Sgr B2(OH)      IRAM     30m Gom86
+  107485.178*(13) CH3CH2CN     12(7,6)-11(7,5)               0.05b Sgr B2          BTL       7m Cum86
+  107485.178*(13) CH3CH2CN     12(7,5)-11(7,4)                b    Sgr B2          BTL       7m Cum86
+  107486.961*(13) CH3CH2CN     12(6,7)-11(6,6)                b    Sgr B2          BTL       7m Cum86
+  107486.961*(13) CH3CH2CN     12(6,6)-11(6,5)                b    Sgr B2          BTL       7m Cum86
+  107491.573*(14) CH3CH2CN     12(8,5)-11(8,4)                b    Sgr B2          BTL       7m Cum86
+  107491.573*(14) CH3CH2CN     12(8,4)-11(8,3)                b    Sgr B2          BTL       7m Cum86
+  107502.426*(13) CH3CH2CN     12(5,8)-11(5,7)               0.05b Sgr B2          BTL       7m Cum86
+  107502.474*(13) CH3CH2CN     12(5,7)-11(5,6)                b    Sgr B2          BTL       7m Cum86
+  107507.9   ( 4) C6H          2P1/2 J=77/2-75/2 e           0.58f IRC+10216       IRAM     30m Cer87a Cer87a
+U 107516.         unidentified                               0.03  Sgr B2          BTL       7m Cum86
+  107537.26 *( 3) HCOOCH3      9(2,8)-8(2,7) E                b    Sgr B2          BTL       7m Cum86  Plu86
+  107543.70 *( 7) HCOOCH3      9(2,8)-8(2,7) A               0.07b Sgr B2          BTL       7m Cum86  Plu86
+  107543.926*(13) CH3CH2CN     12(4,9)-11(4,8)                b    Sgr B2          BTL       7m Cum86
+  107547.601*(13) CH3CH2CN     12(4,8)-11(4,7)                b    Sgr B2          BTL       7m Cum86
+  107594.049*(14) CH3CH2CN     12(3,10)-11(3,9)              0.06  Sgr B2          BTL       7m Cum86
+U 107604.         unidentified                               0.02b Sgr B2          NRAO     11m Tur89
+  107611.54 *(14) KCl          14-13                         0.25f IRC+10216       IRAM     30m Cer87c
+  107622.92 *( 1) H2CCCC       12(1,11)-11(1,10)             0.103 IRC+10216       IRAM     30m Cer91a Kil90
+  107734.741*(14) CH3CH2CN     12(3,9)-11(3,8)               0.04  Sgr B2          BTL       7m Cum86
+U 107751.         unidentified                               0.02  OriMC-1         NRAO     11m Tur89
+  107843.508*(11) SO2          12(4,8)-13(3,11)              0.06  Sgr B2          BTL       7m Cum86
+  107971.65 *(20) Si13CC       5(1,4)-4(1,4)                 0.6f  IRC+10216       IRAM     30m Cer91b
+U 108024.         unidentified                               0.15  OriMC-1         NRAO     11m Tur89
+  108126.71 *( 1) HCOOH        5(1,5)-4(1,4)                 0.06  Sgr B2          BTL       7m Cum86
+U 108210.         unidentified                               0.08  Sgr B2          NRAO     11m Tur89
+U 108216.         unidentified                               0.07  OriMC-1         NRAO     11m Tur89
+U 108255.         unidentified                               0.07  OriMC-1         NRAO     11m Tur89
+U 108453.         unidentified                               0.03  Sgr B2          NRAO     11m Tur89
+  108651.297 (50) 13CN         1/2-1/2 F=2-1,F1=0,F2=1-0     0.07  Sgr B2          BTL       7m Ger84  Bog84a
+  108657.646 (50) 13CN         1/2-1/2 F=2-2,F1=1,F2=1-1     0.07b Sgr B2          BTL       7m Ger84  Bog84a
+  108658.948 (50) 13CN         1/2-1/2 F=1-2,F1=1,F2=1-1      b    Sgr B2          BTL       7m Ger84  Bog84a
+  108710.523*(11) HC13CCN      12-11                         0.15  Sgr B2          BTL       7m Cum86
+  108721.008*( 7) HCC13CN      12-11                         0.15  Sgr B2          BTL       7m Cum86
+  108777.58  (10) CH3OH        unassigned                    0.035 OriMC-1         FCRAO    14m Ziu88  Lee68
+  108780.201 (50) 13CN         3/2-1/2 F=3-2,F1=1,F2=2-1     0.13b Sgr B2          BTL       7m Ger84  Bog84a
+  108782.374 (50) 13CN         3/2-1/2 F=2-1,F1=1,F2=2-1      b    Sgr B2          BTL       7m Ger84  Bog84a
+  108786.982 (50) 13CN         3/2-1/2 F=1-0,F1=1,F2=2-1      b    Sgr B2          BTL       7m Ger84  Bog84a
+U 108796.         unidentified                               0.04  OriMC-1         FCRAO    14m Ziu88
+U 108802.         unidentified                               0.025 OriMC-1         FCRAO    14m Ziu88
+  108813.575*(52) CH2CHCN      20(1,19)-20(0,20)             0.02  OriMC-1         FCRAO    14m Ziu88
+  108834.27 *( 3) C3N          11-10 J=23/2-21/2             0.45  IRC+10216       OSO      20m Joh84  Got83
+  108853.02 *( 3) C3N          11-10 J=21/2-19/2             0.45  IRC+10216       OSO      20m Joh84  Got83
+  108883.55 *(10) HCOOCH3      14(3,12)-14(2,13) A           0.02  OriMC-1         FCRAO    14m Ziu88  Plu84
+  108893.94  (10) CH3OH        0(0)-1(-1) E                  0.98  Sgr B2          BTL       7m Cum86  Lee68
+  108924.267*(48) SiS          6-5                           0.28  IRC+10216       NRAO     11m Mor75
+  108940.601*(14) CH3CH2CN     12(2,10)-11(2,9)              0.24  OriMC-1         FCRAO    14m Ziu88
+U 108998.         unidentified                               0.02  OriMC-1         FCRAO    14m Ziu88
+  109008.67 *( 3) DCOOH ?      9(1,8)-9(0,9)                 0.04  OriMC-1         NRAO     11m Tur89
+U 109012.         unidentified                               0.02  OriMC-1         FCRAO    14m Ziu88
+U 109018.         unidentified                               0.15  Sgr B2          NRAO     11m Tur89
+U 109050.         unidentified                               0.05  OriMC-1         NRAO     11m Tur89
+U 109054.         unidentified                               0.05  OriMC-1         NRAO     11m Tur89
+U 109071.         unidentified                               0.02  OriMC-1         FCRAO    14m Ziu88
+U 109093.         unidentified                               0.02  OriMC-1         FCRAO    14m Ziu88
+  109110.844*( 4) O13CS        9-8                           0.08  Sgr B2          BTL       7m Cum86
+  109136.81  (10) CH3OH        unassigned or 14(5)-15(4) E   0.3   OriMC-1         FCRAO    14m Gol82  Lee68
+  109153.19  (10) CH3OH        16(-2)-16(1) E                0.3   OriMC-1         FCRAO    14m Gol82  Sas84
+  109160.984*( 5) HC5N         41-40                         0.018 IRC+10216       NRAO     11m Jew84
+  109173.634 ( 4) HC3N         12-11                         2.57  Sgr B2          NRAO     11m Mor76  deZ71
+  109252.184*(36) SO           2(3)-1(2)                     2.42m OriMC-1         MMWO    4.9m Got78
+  109292.39 *( 4) HCOOCH3      10(1,9)-9(2,8) E              0.1   OriMC-1         NRAO     11m Tur89  Plu86
+  109302.11 *( 5) HCOOCH3      10(1,9)-9(2,8) A              0.22  OriMC-1         NRAO     11m Tur89  Plu84
+  109352.726*(38) HC3N         12-11 v6=1 l=1e               0.02  OriMC-1         FCRAO    14m Gol85
+U 109387.         unidentified                               0.06  OriMC-1         NRAO     11m Tur89
+U 109414.         unidentified                               0.04  OriMC-1         NRAO     11m Tur89
+  109438.572*(49) HC3N         12-11 v6=1 l=1f               0.02b OriMC-1         FCRAO    14m Gol85
+  109441.944*(30) HC3N         12-11 v7=1 l=1e               0.13  OriMC-1         FCRAO    14m Gol82
+  109463.063*( 1) OCS          9-8                           0.70  Sgr B2          NRAO     11m Jef71
+  109496.007*( 4) HNCO         5(1,5)-4(1,4)                 0.16  OriMC-1         FCRAO    14m Gol82
+U 109525.         unidentified                               0.06  OriMC-1         NRAO     11m Tur89
+U 109530.         unidentified                               0.08  OriMC-1         NRAO     11m Tur89
+U 109538.         unidentified                               0.10  OriMC-1         NRAO     11m Tur89
+  109571.54  ( 9) CH3OCH3      8(2,7)-8(1,8) EA              0.10b OriMC-1         FCRAO    14m Gol85
+  109571.54  ( 9) CH3OCH3      8(2,7)-8(1,8) AE               b    OriMC-1         FCRAO    14m Gol85
+  109574.22  ( 4) CH3OCH3      8(2,7)-8(1,8) EE              0.16  OriMC-1         FCRAO    14m Gol85
+  109576.88  ( 6) CH3OCH3      8(2,7)-8(1,8) AA              0.12  OriMC-1         FCRAO    14m Gol85
+  109598.751*(30) HC3N         12-11 v7=1 l=1f               0.19  OriMC-1         FCRAO    14m Gol85
+U 109641.   ?     unidentified                               0.04  OriMC-1         NRAO     11m Tur89
+  109650.305*(14) CH3CH2CN     12(1,11)-11(1,10)             0.07  OriMC-1         NRAO     11m Joh77
+U 109720.         unidentified                               0.10  Sgr B2          NRAO     11m Tur89
+U 109738.5        unidentified                               0.02  OriMC-1         FCRAO    14m Gol83
+  109753.504*( 8) NH2CHO       5(1,4)-4(1,3)                 0.3   Sgr B2          BTL       7m Lin81
+  109757.633*(15) SO2          17(5,13)-18(4,14)             0.30  OriMC-1         FCRAO    14m Gol82
+U 109770.5        unidentified                               0.03  OriMC-1         FCRAO    14m Gol83
+  109771.8   ( 3) HCCN         5,6-4,5                       1.0f  IRC+10216       IRAM     30m Gue91  Gue91
+  109782.160*(20) C18O         1-0                           2.1   OriMC-1         NRAO     11m Uli76
+U 109820.   ?     unidentified                               0.25  Sgr B2          NRAO     11m Tur89
+  109828.290 (20) C3S          19-18                         2.7f  IRC+10216       IRAM     30m Cer87b Yam87
+  109833.489*( 6) HNCO         5(3,3)-4(3,2)                  b    OriMC-1         FCRAO    14m Gol82
+  109833.489*( 6) HNCO         5(3,2)-4(3,1)                 0.03b OriMC-1         FCRAO    14m Gol82
+  109862.5   ( 3) HCCN         5,5-4,4                       0.4f  IRC+10216       IRAM     30m Gue91  Gue91
+  109862.828*(46) HC3N         12-11 v7=2 l=0                0.02b OriMC-1         FCRAO    14m Gol83
+  109865.854*(55) HC3N         12-11 v7=2 l=2e                b    OriMC-1         FCRAO    14m Gol83
+  109870.188*(48) HC3N         12-11 v7=2 l=2f                b    Sgr B2          NRAO     11m Tur89
+  109872.366*( 5) HNCO         5(2,4)-4(2,3)                 0.09b OriMC-1         FCRAO    14m Gol82
+  109872.773*( 5) HNCO         5(2,3)-4(2,2)                  b    OriMC-1         FCRAO    14m Gol82
+  109905.753*( 5) HNCO         5(0,5)-4(0,4)                 1.1   Sgr B2          NRAO     11m Sol73
+  110044.2   (15) HCCN         5,4-4,3                       0.3f  IRC+10216       IRAM     30m Gue91  Gue91
+  110050.77 *( 9) HC3N         12-11 v7=3 l=1e               0.10h Sgr B2          NRAO     11m Tur89
+  110152.084 (20) NH2D         1(1,1)0- -1(0,1)0+ F=0-1       b    DR21(OH)        OSO      20m Olb85  Bes83
+  110152.995 (20) NH2D         1(1,1)0- -1(0,1)0+ F=2-1       b    DR21(OH)        OSO      20m Olb85  Bes83
+  110153.599 (10) NH2D         1(1,1)0- -1(0,1)0+ F=1-1       b    DR21(OH)        OSO      20m Olb85  Bes83
+  110153.599 (10) NH2D         1(1,1)0- -1(0,1)0+ F=2-2      0.11b DR21(OH)        OSO      20m Olb85  Bes83
+  110153.599 (10) NH2D         1(1,1)0- -1(0,1)0+            0.14  OriMC-1         NRAO     11m Kui78  Bes83
+  110154.222 (20) NH2D         1(1,1)0- -1(0,1)0+ F=1-2       b    DR21(OH)        OSO      20m Olb85  Bes83
+  110155.053 (20) NH2D         1(1,1)0- -1(0,1)0+ F=1-0       b    DR21(OH)        OSO      20m Olb85  Bes83
+  110188.860 (50) CH3OD        1(1)-1(0) E                   0.5f  OriMC-1         IRAM     30m Mau88  And88
+  110201.353*( 9) 13CO         1-0                           9.3   OriMC-1         NRAO     11m Uli76
+  110229.8   (10) C6H          2P1/2 J=79/2-77/2 e           0.74f IRC+10216       IRAM     30m Cer87a Cer87a
+U 110240.         unidentified                               0.12  OriMC-1         NRAO     11m Tur91
+  110243.4   (10) C6H          2P1/2 J=79/2-77/2 f           0.76f IRC+10216       IRAM     30m Cer87a Cer87a
+  110262.640 (50) CH3OD        2(1)-2(0) E                   2.0f  OriMC-1         IRAM     30m Mau88  And88
+  110298.098*( 4) HNCO         5(1,4)-4(1,3)                 0.23  Sgr B2          BTL       7m Cum86
+  110309.88 *( 2) CH313CN      6(3)-5(3)                     0.05  OriMC-1         NRAO     11m Tur89
+  110326.78 *( 3) CH313CN      6(1)-5(1)                      b    Sgr B2          BTL       7m Cum86
+  110328.89 *( 3) CH313CN      6(0)-5(0)                     0.14b Sgr B2          BTL       7m Cum86
+  110330.627*( 3) CH3CN        6(5)-5(5) F=7-6               0.2bk Sgr B2          NRAO     11m Sol71
+  110330.872*( 2) CH3CN        6(5)-5(5) F=5-4                b    Sgr B2          NRAO     11m Sol7l
+  110349.659*( 2) CH3CN        6(4)-5(4) F=7-6               0.45b Sgr B2          NRAO     11m Sol73
+  110349.797*( 2) CH3CN        6(4)-5(4) F=5-4                b    Sgr B2          NRAO     11m Sol73
+  110364.469*( 1) CH3CN        6(3)-5(3) F=7-6               0.31b Sgr B2          NRAO     11m Sol73
+  110364.524*( 1) CH3CN        6(3)-5(3) F=5-4                b    Sgr B2          NRAO     11m Sol73
+  110375.052*( 1) CH3CN        6(2)-5(2) F=7-6               0.81  Sgr B2          NRAO     11m Sol73
+  110381.404*( 1) CH3CN        6(1)-5(1) F=7-6               1.09b Sgr B2          NRAO     11m Sol73
+  110383.522*( 1) CH3CN        6(0)-5(0) F=7-6                b    Sgr B2          NRAO     11m Sol73
+  110413.59 *( 2) HCOOH        9(3,6)-10(2,9)                0.04  OriMC-1         NRAO     11m Tur89
+  110455.62 *( 5) HCOOCH3      9(8,2)-8(8,1) A                b    Sgr B2          NRAO     11m Tur89
+  110455.62 *( 5) HCOOCH3      9(8,1)-8(8,0) A               0.06b Sgr B2          NRAO     11m Tur89
+  110458.22 *( 4) HCOOCH3      9(8,2)-8(8,1) E                b    Sgr B2          NRAO     11m Tur89  Plu86
+  110475.76  (10) CH3OD        3(1)-3(0) E1                  0.10  Sgr B2          NRAO     11m Tur89  Kau80
+U 110486.         unidentified                               0.03  OriMC-1         NRAO     11m Tur89
+  110525.66 *( 4) HCOOCH3      9(7,2)-8(7,1) E               0.03  OriMC-1         NRAO     11m Tur89  Plu86
+  110535.18 *( 8) HCOOCH3      9(7,3)-8(7,2) A               0.03b Sgr B2          BTL       7m Cum86  Plu84
+  110535.18 *( 8) HCOOCH3      9(7,2)-8(7,1) A                b    Sgr B2          BTL       7m Cum86  Plu84
+  110536.15 *( 4) HCOOCH3      9(7,3)-8(7,2) E                b    Sgr B2          BTL       7m Cum86  Plu86
+  110550.22 *(40) HCOOCH3      7(2,6)-6(1,5) E               0.05  Sgr B2          NRAO     11m Tur89
+  110559.89 *(16) HCOOCH3      7(2,6)-6(1,5) A               0.05  Sgr B2          NRAO     11m Tur89
+U 110599.         unidentified                               0.05  Sgr B2          NRAO     11m Tur89
+  110609.554*(60) CH3CN        6(1)-5(1) v8=1 l=1            0.06  OriMC-1         FCRAO    14m Gol83
+  110652.76 *( 3) HCOOCH3      9(6,3)-8(6,2) E               0.10  OriMC-1         FCRAO    14m Gol83  Plu86
+  110662.41 *( 3) HCOOCH3      9(6,4)-8(6,3) E                b    OriMC-1         FCRAO    14m Gol83  Plu86
+  110663.25 *( 7) HCOOCH3      9(6,4)-8(6,3) A               0.23b OriMC-1         FCRAO    14m Gol83  Plu84
+  110663.44 *( 7) HCOOCH3      9(6,3)-8(6,2) A                b    OriMC-1         FCRAO    14m Gol83  Plu84
+  110680.35 *(10) CH3CN        6(3)-5(3) v8=1 l=-1           0.05b OriMC-1         FCRAO    14m Gol83
+  110683.96 *(10) CH3CN        6(5)-5(5) v8=1 l=1             b    OriMC-1         FCRAO    14m Gol83
+  110695.506*(10) CH3CN        6(2)-5(2) v8=1 l=-1           0.05b OriMC-1         FCRAO    14m Gol83
+  110698.701*(10) CH3CN        6(4)-5(4) v8=1 l=1             b    OriMC-1         FCRAO    14m Gol83
+  110706.251*(60) CH3CN        6(1)-5(1) v8=1 l=-+1           b    OriMC-1         FCRAO    14m Gol83
+  110709.313*(11) CH3CN        6(3)-5(3) v8=1 l=+1           0.05b OriMC-1         FCRAO    14m Gol83
+  110712.166*(11) CH3CN        6(0)-5(0) v8=1 l=1             b    OriMC-1         FCRAO    14m Gol83
+  110716.272*(17) CH3CN        6(2)-5(2) v8=1 l=+-1           b    OriMC-1         FCRAO    14m Gol83
+U 110770.5        unidentified                               0.04  OriMC-1         FCRAO    14m Gol83
+  110788.64 *( 3) HCOOCH3      10(1,10)-9(1,9) E             0.23b OriMC-1         FCRAO    14m Gol83  Plu86
+  110790.52 *( 5) HCOOCH3      10(1,10)-9(1,9) A              b    OriMC-1         FCRAO    14m Gol83  Plu84
+  110812.85  (10) NHD2         1(1,0)-1(0,1) O- (s)          0.025 OriMC-1         NRAO     12m Tur90a DeL75
+  110823.095*(60) CH3CN        6(1)-5(1) v8=1 l=+-1          0.05  OriMC-1         FCRAO    14m Gol83
+  110839.988*(18) CH2CHCN      12(1,12)-11(1,11)             0.06  OriMC-1         FCRAO    14m Gol83
+U 110845.         unidentified                               0.03b Sgr B2          NRAO     11m Tur89
+  110873.90 *( 3) HCOOCH3      9(5,4)-8(5,3) E               0.06b Sgr B2          BTL       7m Cum86  Plu86
+  110879.77 *( 3) HCOOCH3      9(3,7)-8(3,6) E                b    Sgr B2          BTL       7m Cum86  Plu86
+  110880.44 *( 7) HCOOCH3      9(5,5)-8(5,4) A                b    Sgr B2          BTL       7m Cum86  Plu84
+  110882.42 *( 3) HCOOCH3      9(5,5)-8(5,4) E                b    Sgr B2          BTL       7m Cum86  Plu86
+  110887.08 *( 7) HCOOCH3      9(3,7)-8(3,6) A                b    Sgr B2          BTL       7m Cum86  Plu84
+  110890.25 *( 7) HCOOCH3      9(5,4)-9(5,3) A                b    Sgr B2          BTL       7m Cum86  Plu84
+U 110906.         unidentified                               0.13  OriMC-1         NRAO     11m Tur89
+  110950.75  (10) CH3OD        4(1)-4(0) E1                  0.04  Sgr B2          NRAO     11m Tur89  Kau80
+  110962.18 *(10) HCOOCH3      15(4,12)-15(3,18) A           0.17b OriMC-1         NRAO     11m Tur89  Plu84
+U 110968.         unidentified                                b    OriMC-1         NRAO     11m Tur89
+U 111019.   ?     unidentified                               0.03  Sgr B2          NRAO     11m Tur89
+U 111038.         unidentified                               0.02  Sgr B2          NRAO     11m Tur89
+  111169.87 *( 3) HCOOCH3      10(0,10)-9(0,9) E              b    OriMC-1         NRAO     11m Tur89  Plu86
+  111171.63 *( 5) HCOOCH3      10(0,10)-9(0,9) A             0.09b OriMC-1         NRAO     11m Tur89  Plu84
+  111195.95 *( 5) HCOOCH3      9(4,6)-8(4,5) A               0.17  OriMC-1         NRAO     11m Tur89  Plu84
+U 111211.         unidentified                               0.03  Sgr B2          NRAO     11m Tur89
+  111223.49 *( 3) HCOOCH3      9(4,6)-8(4,5) E               0.11  OriMC-1         NRAO     11m Tur89  Plu86
+  111289.62  (10) CH3OH        7(2)-8(1) A+                  0.58  OriMC-1         NRAO     11m Tur89  Lee73
+U 111312.         unidentified                               0.05  OriMC-1         NRAO     11m Tur89
+  111408.43 *( 3) HCOOCH3      9(4,5)-8(4,4) E               0.10  OriMC-1         NRAO     11m Tur89  Plu86
+U 111432.         unidentified                               0.04  OriMC-1         NRAO     11m Tur89
+  111453.29 *( 5) HCOOCH3      9(4,5)-8(4,4) A               0.34  OriMC-1         NRAO     11m Tur89  Plu84
+  111492.27 *( 3) HCOOCH3      13(1,12)-13(0,13) A           0.02  OriMC-1         NRAO     11m Tur89
+  111538.210*(14) CH3CCCN      27(2)-26(2)                   0.02  OriMC-1         NRAO     11m Tur89
+  111542.501*(15) CH3CCCN      27(0)-26(0)                   0.05  OriMC-1         NRAO     11m Tur89
+U 111575.         unidentified                               0.05  OriMC-1         NRAO     11m Tur89
+U 111580.         unidentified                               0.04  OriMC-1         NRAO     11m Tur89
+U 111589.         unidentified                               0.02  Sgr B2          NRAO     11m Tur89
+  111626.53  ( 5) CH3OH        17(-2)-17(1) E2               0.22  OriMC-1         NRAO     11m Tur89  Sas84
+  111674.13 *( 3) HCOOCH3      9(1,8)-8(1,7) E               0.18  OriMC-1         NRAO     11m Tur89  Plu86
+U 111678.         unidentified                               0.14  OriMC-1         NRAO     11m Tur89
+  111682.18 *( 5) HCOOCH3      9(1,8)-8(1,7) A               0.18  OriMC-1         NRAO     11m Tur89  Plu84
+U 111726.   ?     unidentified                               0.03  OriMC-1         NRAO     11m Tur89
+  111733.94 *( 3) HCOOCH3      10(1,10)-9(0,9) E             0.05b OriMC-1         NRAO     11m Tur89  Plu86
+  111735.30 *( 5) HCOOCH3      10(1,10)-9(0,9) A              b    OriMC-1         NRAO     11m Tur89  Plu84
+  111746.78 *( 1) HCOOH        5(0,5)-4(0,4)                 0.10  Sgr B2          BTL       7m Cum86
+  111755.106*(46) SO2          31(3,29)-30(4,26)             0.06  Sgr B2          NRAO     11m Tur91
+  111783.26 *( 3) CH3OCH3      7(0,7)-6(1,6) EE              0.12  Sgr B2          BTL       7m Cum86
+  111813.16 *(18) CH3OCH3      7(5,2)-8(4,5) EE              0.12  OriMC-1         NRAO     11m Tur89
+  111823.027*( 5) HC5N         42-41                         0.08  Sgr B2          NRAO     11m Tur91
+U 111827.6        unidentified   (HC5N?)                     0.13  OriMC-1         FCRAO    14m Gol83
+U 111944.   ?     unidentified                               0.04  OriMC-1         NRAO     11m Tur89
+U 111967.         unidentified                               0.05  OriMC-1         NRAO     11m Tur89
+U 112006.         unidentified                               0.02  Sgr B2          NRAO     11m Tur89
+U 112114.         unidentified                               0.10  OriMC-1         NRAO     11m Tur89
+  112248.728 (50) CH3CHO       6(1,6)-5(1,5) A               0.25  Sgr B2          NRAO     11m Tur91  Kle91
+  112254.524 (50) CH3CHO       6(1,6)-5(1,5) E               0.24  Sgr B2          NRAO     11m Tur91  Kle91
+U 112348.         unidentified                               0.08  Sgr B2          IRAM     30m Com87
+  112354.9   ( 8) 30SiC2       5(0,5)-4(0,4)                 0.10b IRC+10216       IRAM     30m Cer87b Cer91b
+  112358.780 (15) C17O         1-0 F=3/2-5/2                 0.20  B335            BTL       7m Fre81  Fre81
+  112358.988 ( 8) C17O         1-0 F=7/2-5/2                 0.43  B335            BTL       7m Fre81  Fre81
+  112360.005 ( 8) C17O         1-0 F=5/2-5/2                 0.38  B335            BTL       7m Fre81  Fre81
+  112370.    ( 2) (CH3)2CO     11(1,11)-10(0,10) AA          0.03  TMC-1           IRAM     30m Com87  Vac86
+  112380.    ( 2) (CH3)2CO     11(0,11)-10(1,10) EE          0.04  TMC-1           IRAM     30m Com87  Vac86
+  112432.30 *( 1) HCOOH        5(4,2)-4(4,1)                 0.06b Sgr B2          NRAO     11m Tur89
+  112432.30 *( 1) HCOOH        5(4,1)-4(4,0)                  b    Sgr B2          NRAO     11m Tur89
+U 112445.         unidentified   (real?)                     0.2   Sgr B2          NRAO     11m Tur89
+  112459.61 *( 1) HCOOH        5(3,3)-4(3,2)                 0.06b Sgr B2          BTL       7m Cum86
+  112467.00 *( 1) HCOOH        5(3,2)-4(3,1)                  b    Sgr B2          BTL       7m Cum86
+U 112532.         unidentified                               0.05  Sgr B2          NRAO     11m Tur91
+U 112585.         unidentified                               0.02  Sgr B2          NRAO     11m Tur89
+  112593.44 *(10) Si13CC       5(0,5)-4(0,4)                 0.7f  IRC+10216       IRAM     30m Cer91b Cer91b
+  112646.236*(15) CH3CH2CN     13(1,13)-12(1,12)             0.10  Sgr B2          BTL       7m Cum86
+  112654.099*(35) NH2CHO       8(3,6)-9(2,7)                 0.07  OriMC-1         NRAO     11m Tur89
+  112807.100*(11) CH3CH2OH     2(2,1)-1(1,0)                 0.12  Sgr B2          NRAO     11m Kut80
+  112840.655*(18) CH2CHCN      12(0,12)-11(0,11)             0.06  Sgr B2          NRAO     11m Kut80
+  112869.45 *( 9) HCOOCH3      14(3,11)-13(4,10) A           0.07  OriMC-1         NRAO     11m Tur89
+U 112874.         unidentified                               0.08  OriMC-1         NRAO     11m Tur89
+  112891.43 *(11) HCOOH        5(2,3)-4(2,2) n,t             0.06  Sgr B2          NRAO     11m Kut80
+  112922.5   ( 4) C4H          2P1/2 J=23/2-21/2 v7=1e       3.01f IRC+10216       IRAM     30m Yam87b Yam87b
+U 112997.         unidentified                               0.10  OriMC-1         NRAO     11m Tur89
+U 113001.         unidentified                               0.11  OriMC-1         NRAO     11m Tur89
+  113032.124*(30) CH2CHCN      8(1,8)-7(0,7)                 0.09  Sgr B2          NRAO     11m Tur89
+U 113061.         unidentified                               0.11  OriMC-1         NRAO     11m Tur89
+  113136.20 *(10) N34S         2P1/2 J=5/2-3/2 F=3/2-3/2c    0.10  Sgr B2          NRAO     11m Tur89
+  113144.192 ( 9) CN           1-0 J=1/2-1/2 F=1/2-3/2       1.14  OriMC-1         NRAO     11m Tur75  Dix77
+U 113159.         unidentified                               0.10  Sgr B2          NRAO     11m Tur89
+  113170.528 (20) CN           1-0 J=1/2-1/2 F=3/2-1/2       0.97  OriMC-1         NRAO     11m Tur75  Dix77
+  113191.317 (40) CN           1-0 J=1/2-1/2 F=3/2-3/2       1.38  OriMC-1         NRAO     11m Tur75  Dix77
+U 113246.         unidentified                               0.20  Sgr B2          NRAO     11m Tur89
+U 113260.         unidentified                               0.22  Sgr B2          NRAO     11m Tur87b
+  113265.9   ( 3) C4H          2P1/2 J=23/2-21/2 v7=1f       3.67f IRC+10216       IRAM     30m Yam87b Yam87b
+  113266.74 *( 4) CH2CHCN      20(2,18)-20(1,19)             0.15  Sgr B2          NRAO     11m Tur89
+  113278.39 *(18) CH3OCH3      10(6,5)-11(5,6) AA             b    OriMC-1         NRAO     11m Tur89
+  113279.53 *(18) CH3OCH3      10(6,4)-11(5,7) AA            0.05b OriMC-1         NRAO     11m Tur89
+  113282.72 *(28) CH3OCH3      10(6,4)-11(5,7) EE             b    OriMC-1         NRAO     11m Tur89
+U 113314.         unidentified                               0.07  OriMC-1         NRAO     11m Tur89
+  113350.80  (10) CH3OD        6(1)-6(0) E1                  0.04  OriMC-1         NRAO     11m Tur89  Kau80
+  113410.207*(12) C2S          8,9-7,8                       2.1f  IRC+10216       IRAM     30m Cer87b Yam90
+  113488.140 ( 5) CN           1-0 J=3/2-1/2 F=3/2-1/2       1.04  OriMC-1         NRAO     11m Pen74  Dix77
+  113490.982 ( 3) CN           1-0 J=3/2-1/2 F=5/2-3/2       3.23  OriMC-1         NRAO     11m Jef70  Dix77
+  113499.639 ( 5) CN           1-0 J=3/2-1/2 F=1/2-1/2       0.79  OriMC-1         NRAO     11m Jef70  Dix77
+  113508.944 (13) CN           1-0 J=3/2-1/2 F=3/2-3/2       0.94  OriMC-1         NRAO     11m Tur75  Dix77
+  113520.414*(10) CN           1-0 J=3/2-1/2 F=1/2-3/2      <0.2   OriMC-1         NRAO     11m All78
+U 113523.         unidentified                               0.22  OriMC-1         NRAO     11m Tur89
+U 113544.         unidentified                               0.05  OriMC-1         NRAO     11m Tur89
+  113657.647*(17) CH2CHCN      12(2,11)-11(2,10)             0.12  OriMC-1         NRAO     11m Tur89
+U 113729.         unidentified                               0.04  OriMC-1         NRAO     11m Tur89
+  113743.10 *( 3) HCOOCH3      9(3,6)-8(3,5) E               0.13  OriMC-1         NRAO     11m Tur89  Plu86
+  113756.60 *( 5) HCOOCH3      9(3,6)-8(3,5) A               0.09  OriMC-1         NRAO     11m Tur89  Plu84
+  113766.42 *( 3) HCCCHO       12(1,11)-11(1,10)             0.04  Sgr B2          NRAO     11m Tur91
+U 113818.         unidentified                               0.20  Sgr B2          NRAO     11m Tur89
+  113820.15  (40) 29SiC2       5(0,5)-4(0,4)                 n.r.  IRC+10216       IRAM     30m Cer91b Cer91b
+  113831.197*(41) CH2CHCN      18(2,16)-18(1,17)             0.08  OriMC-1         NRAO     11m Tur89
+U 113844.         unidentified                               0.10  Sgr B2          NRAO     11m Tur89
+  113978.251*(15) CH3CH2CN     13(0,13)-12(0,12)             0.12  OriMC-1         NRAO     11m Joh77
+U 114005.         unidentified                               0.11  OriMC-1         NRAO     11m Tur89
+  114064.850*(11) CH3CH2OH     2(2,0)-1(1,1)                 0.12  Sgr B2          NRAO     11m Tur89
+U 114092.         unidentified                               0.07  OriMC-1         NRAO     11m Tur89
+U 114113.         unidentified                               0.07  OriMC-1         NRAO     11m Tur89
+  114182.51 *( 2) C4H          12-11 J=25/2-23/2             0.23  IRC+10216       NRAO     11m Sco78  Got83
+  114221.04 *( 2) C4H          12-11 J=23/2-21/2             0.40  IRC+10216       NRAO     11m Sco78  Got83
+U 114291.         unidentified                               0.09  OriMC-1         NRAO     11m Tur89
+U 114313.         unidentified                               0.05  OriMC-1         NRAO     11m Tur89
+U 114336.         unidentified                               0.05  OriMC-1         NRAO     11m Tur89
+  114361.9   (10) 30SiC2       5(2,4)-4(2,3)                 n.r.  IRC+10216       IRAM     30m Cer91b Cer91b
+  114445.02 *(16) CH3CH2OH     17(2,11)-16(3,13) ?           0.06  OriMC-1         NRAO     11m Tur89
+  114485.040*( 5) HC5N         43-42                         0.11  Sgr B2          BTL       7m Cum86
+  114531.0  *( 9) HOCS+        10(0,10)-9(0,9)               0.02  Sgr B2          NRAO     11m Tur89
+  114565.476*(41) SO2          29(3,27)-28(4,24)             0.17  OriMC-1         NRAO     11m Tur89
+  114574.468*(71) 34SO2        6(3,3)-7(2,6)                 0.05  OriMC-1         NRAO     11m Tur89
+  114615.021*(11) H13CCCN      13-12                         0.13b Sgr B2          BTL       7m Cum86
+  114621.577*(16) CH2CHCN      12(2,10)-11(2,9)               b    Sgr B2          BTL       7m Cum86
+  114650.99  ( 5) CH3OH        18(-2)-18(1) E2               0.35  OriMC-1         NRAO     11m Tur89  Sas84
+  114737.17  (20) C4H          2S J=12-11 v7=2 L             0.15  IRC+10216       IRAM     30m Gue87a Gue87a
+  114793.82  (20) C4H          2S J=12-11 v7=2 U             0.15  IRC+10216       IRAM     30m Gue87a Gue87a
+  114831.084*(11) HC315N       13-12                         0.03  Sgr B2          NRAO     11m Tur89
+U 114840.         unidentified                               0.06  OriMC-1         NRAO     11m Tur89
+U 114861.         unidentified                               0.03  Sgr B2          NRAO     11m Tur89
+  114887.16 *(13) HCOOCH3      23(6,18)-22(7,15) A           0.10  Sgr B2(OH)      IRAM     30m Gom86
+  114897.368*( 9) H13CCCH      3(0,3)-2(1,2)                 0.07  TMC-1           NRAO     12m Ger87  Bog86
+  114940.190 (50) CH3CHO       6(0,6)-5(0,5) E               0.15  Sgr B2          BTL       7m Cum86  Kle91
+  114959.911 (50) CH3CHO       6(0,6)-5(0,5) A               0.38  Sgr B2          BTL       7m Cum86  Kle91
+U 115021.         unidentified                               n.r.  OriMC-1         NRAO     11m Tur89
+  115038.4   ( 7) C6H          2P3/2 J=83/2-81/2 f           0.52f IRC+10216       IRAM     30m Cer87a Cer87a
+  115075.20 *(12) CH3OCH3      9(2,8)-9(1,9) EE              0.10b OriMC-1         NRAO     11m Tur89
+  115077.91 *( 7) CH3OCH3      9(2,8)-9(1,9) AA               b    OriMC-1         NRAO     11m Tur89
+  115084.0   ( 7) C6H          2P3/2 J=83/2-81/2 e           0.42f IRC+10216       IRAM     30m Cer87a Cer87a
+U 115141.         unidentified                               n.r.  OriMC-1         NRAO     11m Tur89
+  115153.835 (80) NS           2P1/2 J=5/2-3/2 F=7/2-5/2c   <0.3b  Sgr B2          MMWO    4.9m Got75  Lov82a
+  115156.799 (80) NS           2P1/2 J=5/2-3/2 F=5/2-3/2c     b    Sgr B2          MMWO    4.9m Got75  Lov82a
+  115185.33 *( 8) NS           2P1/2 J=5/2-3/2 F=3/2-3/2c    0.26  Sgr B2          BTL       7m Cum86
+U 115212.         unidentified                               n.r.  OriMC-1         NRAO     11m Tur89
+  115216.8   ( 3) C4H          2P3/2 J=25/2-23/2 v7=1f       3.05f IRC+10216       IRAM     30m Yam87b Yam87b
+  115247.025*(58) HCOOCH3      5(2,3)-4(1,4) A               n.r.  OriMC-1         NRAO     11m Tur89
+  115271.204 ( 5) CO           1-0                          60.0   OriMC-1         NRAO     11m Uli76  Ros58
+  115382.38 *( 6) SiC2         5(0,5)-4(0,4)                 0.22  IRC+10216       NRAO     11m Kui77
+  115556.312 (60) NS           2P1/2 J=5/2-3/2 F=7/2-5/2d    0.24  Sgr B2          NRAO     11m Got75  Lov82a
+  115570.762 (50) NS           2P1/2 J=5/2-3/2 F=5/2-3/2d    0.28b Sgr B2          NRAO     11m Got75  Lov82a
+  115571.93  ( 6) NS           2P1/2 J=5/2-3/2 F=3/2-1/2d     b    Sgr B2          NRAO     11m Got75  Lov82a
+  115894.368*(14) CH3CH2CN     12(2,12)-12(2,11)             0.09  OriMC-1         NRAO     11m Joh77

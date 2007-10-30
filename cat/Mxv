@@ -1,0 +1,47 @@
+!		Miriad Mxv.ad file
+!       For MXV V2.0 [04aug92]
+!
+*MXVform.foreground:         yellow
+*MXVform.background:         navyblue
+*MXVlabel.foreground:        yellow
+*MXVlabel.background:        navyblue
+*MXVtoggle.foreground:       navyblue
+*MXVtoggle.background:       lightblue
+*Quit.foreground:            red
+*Quit.background:            green
+*MXVbutton.foreground:       navyblue
+*MXVbutton.background:       yellow
+*MXVbox.borderColor:         red
+*MXVbulletin.borderColor:    green
+!
+*font:                       6x13
+!
+*MXV_Control.rows	     20
+*MXV_Control.Columns	     80
+*List.Columns	55
+*List.Rows:     16
+!
+*MXV_Palette*showPaletteBar:			TRUE
+*Palette.labels:	      			TRUE
+*MXV_Cartesian_Spread_Sheet.Palette.Annotate:	TRUE
+*MXV_Cartesian_Spread_Sheet.showPaletteBar:	TRUE
+*MXV_Frame.showPaletteBar:			FALSE
+*paletteName:					color.pal
+*paletteDir:				/applic/miriad/cat/palettes
+!
+*Scale:			     5
+*numFrames:		     2
+*Grid:			     FALSE
+!
+*showSpreadsheet:	     SOMETIMES
+!
+*FileWin.ignoreFileType:     TRUE
+*StringConversionWarnings:   on
+*SmeBSB.vertSpace:           50
+*plotMethod:                 WIPPLOT
+*fileFormat:          	     MIRIAD
+*debug:   	 	     FALSE
+!
+*CubeWin.PlaneID:	     15
+*wipCommand:	       /applic/miriad/bin/SUN4/wip
+*wipEnvironment:       PGPLOT_FONT=$PGPLOT_FONT
