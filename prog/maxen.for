@@ -102,9 +102,13 @@ c   rjs   5mar93 - History standardisation. Use cnvl routines. Add extra
 c	           options.
 c   rjs  27nov94 - Significant changes and bugfixes to make it more robust.
 c   rjs  10aug95 - New routine to change alpha and beta.
+c   rjs  120ct95 - Support model and default being different size to selected
+c		   region.
+c   rjs  18Oct05 - Handle higher axes somewhat better.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Maxen: version 1.0 10-Aug-95')
+	parameter(version='Maxen: version 1.0 18-Oct-95')
+	include 'maxnax.h'
 	include 'maxdim.h'
 	integer MaxRun,MaxBoxes
 	parameter(MaxRun=3*maxdim,MaxBoxes=1024)
@@ -118,7 +122,7 @@ c
 	character MapNam*32,BeamNam*32,ModelNam*32,OutNam*32,DefNam*32
 	character entropy*8,messlev*8,flags*8,line*72
 	integer lBeam,lMap,lModel,lOut,lDef
-	integer nMap(3),nModel(3),nOut(3),nBeam(2),nDef(3)
+	integer nMap(3),nModel(3),nOut(MAXNAX),nBeam(2),nDef(3),i
 	integer xmin,ymin,xmax,ymax,n1,n2,nx,ny,MaxMap
 	integer imin,imax,jmin,jmax,kmin,kmax,blc(3),trc(3),naxis,k
 	integer icentre,jcentre
@@ -130,6 +134,7 @@ c
 	real GradHH,GradJJ,Grad11,Immax,Immin,Flux,Rms,ClipLev
 	logical converge,positive,asym,pad,doflux
 	integer Run(3,MaxRun),nRun,Boxes(maxBoxes),nPoint
+	integer xmoff,ymoff,zmoff,xdoff,ydoff,zdoff
 c
 	integer pBem,pMap,pEst,pDef,pRes,pNewEst,pNewRes
 	real Data(MaxBuf)
@@ -213,7 +218,7 @@ c
 	call xyopen(lMap,MapNam,'old',3,nMap)
 	if(max(nMap(1),nMap(2)).gt.maxdim) call bug('f','Map too big')
 	call rdhdi(lMap,'naxis',naxis,3)
-	naxis = min(naxis,3)
+	naxis = min(naxis,MAXNAX)
 	call BoxMask(lMap,boxes,maxboxes)
 	call BoxSet(Boxes,3,nMap,'q')
 	call BoxInfo(Boxes,3,blc,trc)
@@ -226,6 +231,9 @@ c
 	nOut(1) = imax - imin + 1
 	nOut(2) = jmax - jmin + 1
 	nOut(3) = kmax - kmin + 1
+	do i=4,naxis
+	  nOut(i) = 1
+	enddo
 	if(nOut(1).gt.n1.or.nOut(2).gt.n2)
      *	  call bug('f','Region of map to deconvolve is too big')
 	if(2*nOut(1)-1.gt.n1.or.2*nOut(2)-1.gt.n2)
@@ -246,8 +254,8 @@ c  output.
 c
 	if(ModelNam.ne.' ')then
 	  call xyopen(lModel,ModelNam,'old',3,nModel)
-	  if(nModel(1).ne.nOut(1).or.nModel(2).ne.nOut(2)
-     *	    .or.nModel(3).ne.nOut(3)) call bug('f','Model size')
+	  call AlignIni(lModel,lMap,nModel(1),nModel(2),nModel(3),
+     *						xmoff,ymoff,zmoff)
 	endif
 c
 c  Initial values for alpha and beta.
@@ -260,8 +268,8 @@ c  output.
 c
 	if(DefNam.ne.' ')then
 	  call xyopen(lDef,DefNam,'old',3,nDef)
-	  if(nDef(1).ne.nOut(1).or.nDef(2).ne.nOut(2)
-     *	    .or.nDef(3).ne.nOut(3)) call bug('f','Default Image size')
+	  call AlignIni(lDef,lMap,nDef(1),nDef(2),nDef(3),
+     *						xdoff,ydoff,zdoff)
 	endif
 c
 c  Open up the output.
@@ -292,9 +300,9 @@ c
 	    ClipLev = 0.01 * TFlux/nPoint
 	    call Assign(TFlux/nPoint,Data(pDef),nPoint)
 	  else
-	    call xysetpl(lDef,1,k-kmin+1)
-	    call GetPlane(lDef,Run,nRun,xmin-imin,ymin-jmin,
-     *			nDef(1),nDef(2),Data(pDef),MaxMap,nPoint)
+	    call AlignGet(lDef,Run,nRun,k,xmin+xdoff-1,ymin+ydoff+1,
+     *		zdoff,nDef(1),nDef(2),nDef(3),
+     *		Data(pDef),MaxMap,nPoint)
 	    Imax = Ismax(npoint,Data(pDef),1)
 	    ClipLev = 0.01 * abs(Data(pDef+Imax-1))
 	    call ClipIt(0.1*ClipLev,Data(pDef),nPoint)
@@ -306,9 +314,9 @@ c
 	  if(ModelNam.eq.' ')then
 	    call Copy(nPoint,Data(pDef),Data(pEst))
 	  else
-	    call xysetpl(lModel,1,k-kmin+1)
-	    call GetPlane(lModel,Run,nRun,xmin-imin,ymin-jmin,
-     *			nModel(1),nModel(2),Data(pEst),MaxMap,nPoint)
+	    call AlignGet(lModel,Run,nRun,k,xmin+xmoff-1,ymin+ymoff+1,
+     *		zmoff,nModel(1),nModel(2),nModel(3),
+     *		Data(pEst),MaxMap,nPoint)
 	    if(ClipLev.gt.0) call ClipIt(ClipLev,Data(pEst),nPoint)
 	  endif
 c
