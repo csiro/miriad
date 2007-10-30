@@ -14,7 +14,7 @@ foreach in ($argv)
    set out = $file:t
    set out = $out:r
    ratty -s linux -b -I $MIRINC $in $tmp.f
-   f77 -c -O -o ${out}.o $file
+   f77 -ff90-intrinsics-hide -c -O -o ${out}.o $file
    ar r $MIRLIB/libmir.a ${out}.o
    rm -f $file ${out}.o
    breaksw
@@ -24,14 +24,14 @@ foreach in ($argv)
    set out=$file:t
    set out=$out:r
    intf2c -s linux $in $file;
-   cc -O -c -o ${out}.o -I$MIRINC -Dsun -Ddarwin $file
+   cc -O -c -o ${out}.o -I$MIRINC -I$MIR/subs -Dsun -Ddarwin $file
    ar r $MIRLIB/libmir.a ${out}.o
    rm -f ${out}.o $file
    breaksw
  case *.c:
    set out = $in:t
    set out = /tmp/$out:r
-   cc -O -c -o ${out}.o -I$MIRINC -Dsun -Ddarwin $in
+   cc -O -c -o ${out}.o -I$MIRINC -I$MIR/subs -Dsun -Ddarwin $in
    ar r $MIRLIB/libmir.a ${out}.o
    rm -f ${out}.o
    breaksw
