@@ -57,6 +57,7 @@ c	axis values are:
 c	  time         (the default for the X axis)
 c	  lst	       Local apparent sidereal time.
 c	  uvdistance   sqrt(u**2+v**2)
+c	  hangle       (hour angle)
 c	  amplitude    (the default for the Y axis)
 c	  phase
 c	  real
@@ -87,6 +88,7 @@ c     6may97 rjs  Better auto-range determination. Change zoom somewhat. Better
 c		  doc and help.
 c    12may97 rjs  Check that linetype is OK for flagging.
 c    09nov98 rjs  Added "hangle" axis type.
+c    12jan99 rjs  Doc change only.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
