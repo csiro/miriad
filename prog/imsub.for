@@ -37,9 +37,10 @@ c    rjs  17aug95  Copy mostable to output.
 c    rjs  21nov95  Use maxnax.h.
 c    nebk 10jan96  Change crpix and cdelt to double
 c    rjs  02jul97  cellscale change.
+c    rjs  18jul97  Correct handling of flags when incr != 1.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Imsub: version 1.0 17-Aug-95' )
+	parameter(version='Imsub: version 1.0 18-Jul-97' )
 c
 	integer maxboxes
 	parameter(maxboxes=2048)
@@ -185,7 +186,7 @@ c------------------------------------------------------------------------
 	integer maxRuns
 	parameter(maxRuns=8*maxdim)
 	integer xminv,xmaxv,yminv,ymaxv,nRuns,nRuns2,iRuns
-	integer x1,x2,y,xprev,yprev
+	integer x1,x2,y,xprev,yprev,t
 	integer Runs(3,maxRuns)
 c
 c  Get the information about what in the output is good.
@@ -210,8 +211,9 @@ c
 	      x2 = min(Runs(3,iRuns)-x0,(n1-1)*inc1)
 	      if(x1.le.x2)then
 	        y = y/inc2 + 1
-	        x1 = x1/inc1 + 1
-		x2 = x1 + (x2-x1+1)/inc1
+	        t = x1/inc1 + 1
+		x2 = t + (x2-x1+1)/inc1
+		x1 = t
 	        if(y.eq.yprev.and.x1.eq.xprev)then
 		  Runs(3,nRuns2) = x2
 	        else
