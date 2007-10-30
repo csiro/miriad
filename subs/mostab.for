@@ -20,6 +20,8 @@ c   subroutine MosMIni
 c   subroutine Mosaicer
 c   subroutine MosMFin
 c
+c   subroutine MosPsf
+c
 c  History:
 c    rjs  26oct94 Original version
 c************************************************************************
@@ -881,7 +883,8 @@ c************************************************************************
 	subroutine MosMIni(coObj,chan)
 c
 	implicit none
-	integer coObj,chan
+	integer coObj
+	real chan
 c
 c  Initialise ready for a mosaic operation.
 c------------------------------------------------------------------------
@@ -943,7 +946,7 @@ c
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer i,j,ic,jc,ioff,joff,imin,jmin,imax,jmax,k
-	real sigt,Pb(MAXDIM),scale
+	real Pb(MAXDIM),scale
 c
 c  Externals.
 c
@@ -988,6 +991,21 @@ c
 	  enddo
 	enddo
 c
+	call MosWt(Rms2,npnt,Out,Wts,mnx,mny)
+c
+	end
+c************************************************************************
+	subroutine MosWt(Rms2,npnt,Out,Wts,nx,ny)
+c
+	implicit none
+	integer npnt,nx,ny
+	real Rms2(npnt),Out(nx,ny),Wts(nx,ny)
+c
+c  Reweight the data according to some scheme.
+c------------------------------------------------------------------------
+	real Sigt,scale
+	integer i,j,k
+c
 c  Determine the maximum RMS.
 c
 	Sigt = Rms2(1)
@@ -998,8 +1016,8 @@ c
 c
 c  Now rescale to correct for the weights.
 c
-	do j=1,mny
-	  do i=1,mnx
+	do j=1,ny
+	  do i=1,nx
 	    scale = Sigt*Wts(i,j)
 	    if(scale.le.0)then
 	      scale = 0
@@ -1027,5 +1045,113 @@ c
 	do i=1,npnt
 	  call pbFin(pbObj(i))
 	enddo
+c
+	end
+c************************************************************************
+	subroutine MosPSF(coObj,in,x,beams,psf,nx,ny,npnt1)
+c
+	implicit none
+	integer nx,ny,npnt1,coObj
+	character in*(*)
+	double precision x(*)
+	real beams(nx,ny,npnt1),psf(nx,ny)
+c
+c  Determine the true point-spread function of a mosaiced image.
+c
+c  Input:
+c    coObj	Coordinate object.
+c    in,x	These are the normal arguments to coCvr, giving the
+c		location (in RA,DEC,freq) of interest.
+c    beams	The beam patterns for each pointing.
+c    nx,ny	The size of the individual beam patterns.
+c    npnt1	The number of pointings.
+c  Output:
+c    psf	The point-spread function.
+c------------------------------------------------------------------------
+	include 'maxdim.h'
+	include 'mem.h'
+	integer pWts
+	double precision xref(3)
+c
+c  Determine the location of the reference position, in grid units.
+c
+	call coCvt(coObj,in,x,'ap/ap/ap',xref)
+	call MosMini(coObj,real(xref(3)))
+c
+	call MemAlloc(pWts,nx*ny,'r')
+	call MosPSF1(beams,psf,memr(pWts),nx,ny,npnt1,
+     *				  real(xref(1)),real(xref(2)))
+	call MemFree(pWts,nx*ny,'r')
+c
+	call MosMFin
+	end
+c************************************************************************
+	subroutine MosPSF1(beams,psf,wts,nx,ny,npnt1,xr,yr)
+c
+	implicit none
+	integer nx,ny,npnt1
+	real beams(nx,ny,npnt1),psf(nx,ny),wts(nx,ny),xr,yr
+c
+c  Determine the true point-spread function of a mosaiced image.
+c
+c  Input:
+c    beams	The beam patterns for each pointing.
+c    nx,ny	The size of the individual beam patterns.
+c    npnt1	The number of pointings.
+c    xr,yr	Pixel location where we want to work out the PSF.
+c  Scratch:
+c    Wts	The weight array.
+c  Output:
+c    psf	The point-spread function.
+c------------------------------------------------------------------------
+	include 'maxdim.h'
+	include 'mostab.h'
+	integer i,j,k
+	real xoff,yoff,scal1,scal2,Pb(MAXDIM)
+c
+c  Externals.
+c
+	real pbGet
+c
+c  Check!
+c
+	if(npnt.ne.npnt1)
+     *	  call bug('f','Inconsistent number of pointings')
+c
+c  Initialise the output and weights array.
+c
+	do j=1,ny
+	  do i=1,nx
+	    PSF(i,j) = 0
+	    Wts(i,j) = 0
+	  enddo
+	enddo
+c
+	xoff = xr - nx/2 - 1
+	yoff = yr - ny/2 - 1
+c
+c  Loop over all the pointings.
+c
+	do k=1,npnt
+	  if(abs(x0(k)-xr).le.nx2.and.abs(y0(k)-yr).le.ny2)then
+	    scal2 = 1/(Rms2(k)*Rms2(k))
+	    scal1 = scal2 * pbGet(pbObj(k),xr,yr)
+	    if(scal1.gt.0)then
+	      do j=1,ny
+	        do i=1,nx
+	          Pb(i) = pbGet(pbObj(k),i+xoff,j+yoff)
+	        enddo
+	        do i=1,nx
+	          PSF(i,j) = PSF(i,j) + scal1*Pb(i)*Beams(i,j,k)
+	          Wts(i,j) = Wts(i,j) + scal2*Pb(i)*Pb(i)
+	        enddo
+	      enddo
+	    endif
+	  endif
+	enddo
+c
+c  Reweight the data.
+c
+	call MosWt(Rms2,npnt,PSF,Wts,nx,ny)
 c
 	end
