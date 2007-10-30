@@ -61,8 +61,9 @@ c	  relhumid  Measured relative humidity, as a percent.
 c@ mdata
 c	Input text file giving the ATCA meteorology data. No default.
 c@ mode
-c	This determines the calibration operations to perform. Possiblec
-c	values are ``opacity'', ``flux'' or ``both''.
+c	This determines the calibration operations to perform. Possible
+c	values are ``opacity'', ``flux'' or ``both''. The default is to
+c	perform opacity correciton only.
 c--
 c  History:
 c    02feb01 rjs  Original version.
@@ -90,7 +91,7 @@ c
 	real dfac(MAXPOL,MAXWIN,MAXANT),doff(MAXPOL,MAXWIN,MAXANT)
 c
 	integer NMODES
-	parameter(NMOEDS=3)
+	parameter(NMODES=3)
 	character modes(NMODES)*8,mode
 	integer nout
 c
@@ -692,21 +693,4 @@ c
 	  out(i) = in(1,i)
 	enddo
 c
-	end
-c************************************************************************
-	subroutine getopt(dodiode,dotrans)
-c
-	implicit none
-	logical dodiode,dotrans
-c
-c------------------------------------------------------------------------
-	integer NOPTS
-	parameter(NOPTS=2)
-	logical present(NOPTS)
-	character opts(NOPTS)*8
-	data opts/'dodiode ','dotrans '/
-c
-	call options('options',opts,present,NOPTS)
-	dodiode = present(1)
-	dotrans = present(2)
 	end
