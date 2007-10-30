@@ -20,6 +20,7 @@ c    01mar97 rjs  Added new leap second.
 c    21mar97 rjs  Added llh2xyz.
 c    07jul97 rjs  Included fk45z and fk54z (from slalib), as well as
 c		  making lmn2sph return RA in range 0 to 2*PI.
+c    16jul97 rjs  Added azel.
 c
 c  General Reference:
 c    Explanatory Supplement to the Astronomical Almanac. 1993.
@@ -146,6 +147,37 @@ c
 	ra2 = r0 + M + N*sin(rm)*tan(dm)
 	dec2 = d0 + N*cos(rm)
 c
+	end
+c************************************************************************
+c* azel -- Calculate azimuth and elevation from ra/dec.
+c& rjs
+c: utilities
+c+
+	subroutine azel(obsra,obsdec,lst,latitude,az,el)
+c
+	implicit none
+	double precision obsra,obsdec,lst,latitude
+	double precision az,el
+c
+c  This computes the azimuth and elevation.
+c
+c  Input:
+c    obsra )	Apparent RA and DEC of the source of interest (radians).
+c    obsdec)
+c    lst	Local sidereal time (radians).
+c    latitude	Observatory geodetic latitude (radians).
+c
+c  Output:
+c    az,el	Azimuth and elevation angle (radians).
+c--
+c------------------------------------------------------------------------
+	double precision ha
+c
+	ha = lst - obsra
+        el = asin(sin(latitude)*sin(obsdec) +
+     *	    cos(latitude)*cos(obsdec)*cos(ha))
+        az = atan2(-cos(obsdec)*sin(ha),
+     *      cos(latitude)*sin(obsdec)-sin(latitude)*cos(obsdec)*cos(ha))
 	end
 c************************************************************************
 c* Parang -- Calculate parallactic angle.
