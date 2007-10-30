@@ -89,11 +89,12 @@ c		  doc and help.
 c    12may97 rjs  Check that linetype is OK for flagging.
 c    09nov98 rjs  Added "hangle" axis type.
 c    12jan99 rjs  Doc change only.
+c    09apr99 rjs  Add an extra error check only.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
 	integer MAXDAT,MAXPLT,MAXEDIT
-	parameter(version='BlFlag: version 09-Nov-98')
+	parameter(version='BlFlag: version 09-Apr-99')
 	parameter(MAXDAT=500000,MAXPLT=20000,MAXEDIT=20000)
 c
 	logical present(MAXBASE),nobase,selgen,noapply,rms
@@ -722,6 +723,7 @@ c  Lets get going.
 c
 	call output('Reading the data ...')
 	call uvDatRd(preamble,data,flags,MAXCHAN,nchan)
+	if(nchan.eq.0)call bug('f','No visibility data found')
 	call flagchk(tno)
 	nants = 0
 	tprev = preamble(3)
