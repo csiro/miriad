@@ -2537,3 +2537,21 @@ c-----------------------------------------------------------------------
       call lcase (cch)
 c
       end
+c
+c
+      subroutine ofmfudge
+      implicit none
+      include 'ofm.h'
+      integer i 
+      do i = 1, na
+        ofms(i,1) = 1.0 - ofms(i,1)
+        ofms(i,2) = 1.0 - ofms(i,2)
+        ofms(i,3) = 1.0 - ofms(i,3)
+        ofma(i,1) = 1.0 - ofma(i,1)
+        ofma(i,2) = 1.0 - ofma(i,2)
+        ofma(i,3) = 1.0 - ofma(i,3)
+      end do
+      call ofmapp
+c
+      end
+
