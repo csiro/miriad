@@ -6,13 +6,18 @@ c   variable in a uv dataset.
 c
 c
 c  History:
-c      lgm  7-sep-90  take off from uvcat made for a quick fix
-c      lgm  5-feb-91  brought up to standard and submitted 
-c      pjt  2-jul-91  added notes on PUTHD in doc file and more witty comments
+c       lgm  7-sep-90  take off from uvcat made for a quick fix
+c       lgm  5-feb-91  brought up to standard and submitted 
+c       pjt  2-jul-91  added notes on PUTHD in doc file and more witty comments
 c                     also uses keyf() now.
-c      mjs  7-apr-92  elim unused var -> elim compiler warning.
-c      pjt  6-aug-92  fixed read(,*,) to read(,'(a)',) for avarnew (READVAL)
-c      pjt/sally 31-mar-97  defined MAXVAL and increased from 8 to 16
+c       mjs  7-apr-92  elim unused var -> elim compiler warning.
+c       pjt  6-aug-92  fixed read(,*,) to read(,'(a)',) for avarnew (READVAL)
+c pjt/sally 31-mar-97  defined MAXVAL and increased from 8 to 16
+c       pjt 17-aug-99  added tabular time dependant input, substantial rewrite
+c          
+c  unfinished:
+c       - array values for tables
+c       - ascii uv variables for tables
 c
 c------ Inline doc (retrieved with doc to a .doc file) --------------72]
 c
@@ -25,6 +30,7 @@ c    uv dataset. All occurances of the variable are changed to the
 c    new value. If the variable is an array, all new values must be
 c    entered in sequential order. If the user desires to set all members 
 c    of an array to a single value, only one value need be entered.
+c    Values can also be interpolated from a time ordered table.
 c    Note: PUTHD must be used to use the uv override principle, but
 c    can only be used for single items, i.e. uv variables which are
 c    not an array.
@@ -34,30 +40,55 @@ c    No default.
 c@ hdvar
 c    Name of header variable to be changed. Refer to user manual or
 c    run VARLIST to see the selection of allowed variable names.
+c    No default.
 c@ type
 c    Type of variable, either integer (i),real (r), double precision (d), 
 c    or ascii (a). Unused if variable already exists in the data file.
+c    CAVEAT: Tables do not support ascii types yet.
+c    No Default.
 c@ length
 c    Length of array of variable values. Unused if variable already 
-c    exists in data file.
-c@ nvals
-c    Number of new values for varibles that are being entered in varval.
+c    exists in data file, else set to 1 if not specified.
+c    CAVEAT: Tables do not support arrays yet.
 c@ varval
 c    New values of header variable - if the variable is an array
 c    all values must be specified or will assume one value for all.
+c    If the values are to be obtained from a time-sorting table,
+c    you must use the table= keyword instead.
+c    No default.
+c@ table
+c    Name of the table that lists time (fractional days since time0) in
+c    column 1, and the values of the array in columns 2 through LENGTH+1.
+c    Values are simply inserted as soon as the time has passed, no 
+c    interpolation is performed.
+c    CAVEAT: do not use array variables with tables, and type=ascii cannot
+c    be used either. 
+c    No default.
+c@ time0
+c    Offset time as applied to the times in column 1 of the table for
+c    tabular input. Legal formats as defined in subroutine DAYJUL, 
+c    of which the ISO standard "ccyy-mm-dd[Thh[:mm[:ss.s]]]" is to
+c    be preferred. 
+c    Default: not used, in which case the offset is 0, in which case 
+c    fractional days are really Julian Days.
 c@ out
 c    Name of the output dataset. No default.
+c@ nvals
+c    A number that used to designated the number of varval's. Is now
+c    deprecated, don't use it anymore. 
 c-----------------------------------------------------------------------
-        include 'maxdim.h'
-	INTEGER MAXVAL
-	PARAMETER (MAXVAL=16)
-	character version*(*),infile*50,varval(MAXVAL)*30,hdvar*10
-        character outfile*50,except(20)*10,newtype*1,line*80
-	parameter(version='(Version 31-mar-97)')
-	integer nread,inset,outset,nexcept,nwread,nvals,newlong,nval
-	double precision preamble(4)
+	include 'uvputhd.h'
+	character VERSION*(*)
+	parameter(VERSION='(Version 13-sep-99 PJT)')
+	character varval(MAXVAL)*30,hdvar*10,time0*32
+        character outfile*80,infile*80,tabfile*80
+        character except(20)*10,newtype*1,line*256
+	integer nread,inset,outset,nexcept,nwread,newlong,nval
+	double precision preamble(4), jd0, jd1
 	complex data(MAXCHAN),wdata(MAXCHAN)
 	logical flags(MAXCHAN),wflags(MAXCHAN),there,first
+	integer len1
+	logical keyprsnt
 c
 	call output('UVPUTHD: '//version)
 	call keyini
@@ -65,24 +96,33 @@ c
 	call keya('hdvar',hdvar,' ')
 	call keya('type',newtype,' ')
 	call keyi('length',newlong,1)
-	call keyi('nvals',nvals,1)
 	call mkeya('varval',varval,MAXVAL,nval)
+        call keyf('table',tabfile,' ')
+        call keya('time0',time0,' ')
 	call keya('out',outfile,' ')
+	if (keyprsnt('nvals')) call bug('i',
+     *       'keyword "nvals" has been deprecated in UVPUTHD')
 	call keyfin
 c-----------------------------------------------------------------------
 	if(infile.eq.' ') call bug('f'
      *                                  ,'Vis must be specified (vis=)')
 	if(hdvar.eq.' ') call bug('f',
      *                              'No uv variable specified (hdvar=)')
-	if(nvals .eq. 0) call bug('f',
-     *                                       'NVALS = 0 is not allowed')
-        if(varval(1).eq.' ') call bug('f',
-     *                          'No value given for variable (varval=)')
+        if(nval.le.0 .and. tabfile.eq.' ') call bug('f',
+     *                'No value given for variable (varval=) or table=')
 	if(outfile.eq.' ') call bug('f',
      *                             'No output dataset specified (out=)')
-	if (nval.NE.nvals) call bug('f','Wrong number of varval''s')
-
+	if (time0 .eq. ' ') then
+	   jd0 = 0.0d0
+	else
+	   call dayjul(time0,jd0)
+	endif
+        write(*,*) 'DEBUG: TIME0=',time0,' JD0 = ',jd0
 c-----------------------------------------------------------------------
+
+	if (tabfile .ne. ' ') then
+	   call rtable(tabfile,jd0)
+	endif
 c
 c  open input file
 c
@@ -97,13 +137,13 @@ c
  	call hdcheck(inset,hdvar,there)
 	if(there) then
 	   write(line,'('' Altering value of '',a,'' in data'')')
-     1		   hdvar
+     *		hdvar(1:len1(hdvar))
 	   call output(line)
 	else
 	   if(newtype(1:1) .eq. ' ') 
-     1	      call bug('f',' Type must be specified for a new variable')
+     *	      call bug('f',' Type must be specified for a new variable')
 	   write(line,'('' Entering Variable '',a,'' in data file'')')
-     1				hdvar
+     *		hdvar(1:len1(hdvar))
 	   call output(line)
 	   call addvar(hdvar,newtype,newlong)
 	endif
@@ -120,7 +160,7 @@ c
 c   read ascii input of user header variable values and stick them
 c   into the appropriate arrays
 c
-	call readval(hdvar,varval,nvals)
+	call readval(hdvar,varval,nval)
 c
 c  Read the first record
 c
@@ -135,43 +175,56 @@ c
 	write(line,'('' Writing data out to file: '',a)') outfile
 	call output(line)
 c
-c  Loop the loop.
+c  Loop the loop. 
 c
-  100 	continue
+	jd1 = 0.0d0
+	nmods = 0
+        DO WHILE (nread.GT.0)
+
+c           write(*,*) 'TimeJD = ',preamble(3),preamble(3)-jd0
+
 c
 c   Copy all unchanged variables to output data set
 c
-	call uvcopyvr(inset,outset)
+	    call uvcopyvr(inset,outset)
 c
 c  Copy the variable whose value we are changing to outset
 c
-	if(there) then
-           call varcop(inset,outset,there)
-	else
-	   if(first) call varcop(inset,outset,there)
-	endif
+	    if(tabfile.eq.' ')then
+	      if(there) then
+                call varcop(inset,outset,there)
+	      else
+	        if(first) call varcop(inset,outset,there)
+	      endif
+	    else
+	       if (preamble(3).ne.jd1) then
+		  jd1 = preamble(3)
+c		  WRITE(*,*) 'New time: ',jd1,' = ',jd1-jd0
+		  CALL itable(jd1)
+		  CALL varins(inset,outset,there)
+	       endif
+	    endif
 c
 c  write uv data record out to outset
 c
-	call uvwread(inset,wdata,wflags,maxchan,nwread)
-	if (nwread .gt. 0) then
-           call uvwwrite(outset,wdata,wflags,nwread)
-	else
-	   if(first)call output('No Wideband data')
-	endif
-	call uvwrite(outset,preamble,data,flags,nread)
+	    call uvwread(inset,wdata,wflags,maxchan,nwread)
+	    if (nwread .gt. 0) then
+                call uvwwrite(outset,wdata,wflags,nwread)
+	    else
+	        if(first)call output('No Wideband data')
+	    endif
+	    call uvwrite(outset,preamble,data,flags,nread)
+
 c
 c  read in next uv data record from inset
 c
-	first = .false.
-        call uvread(inset,preamble,data,flags,maxchan,nread)
-c
-c  if nread .gt. 0 loop to continue reading and writing
-c
-	if(nread .gt. 0) go to 100
+	    first = .false.
+            call uvread(inset,preamble,data,flags,maxchan,nread)
+        END DO
 c
 c  Finish up the history, and close up shop.
 c
+	write(*,*) 'DEBUG: Variable modified ',nmods,' times.'
         call hisopen(outset,'append')
         call hiswrite(outset,'UVPUTHD: Miriad UVPUTHD '//version)
 	call hisinput(outset,'UVPUTHD')
@@ -186,82 +239,76 @@ c
 c  Retrieves all variable names and types from file for future
 c  use. Results are stuffed into common block head.
 c
-        include 'maxdim.h'
+        include 'uvputhd.h'
  
-        integer ivar,inset,item,iostat,nread
+        integer i,inset,item,iostat,nread
         double precision preamble(4)
         complex data(MAXCHAN)
         logical flags(MAXCHAN)
-        character varname*11
-        logical eof,update
+        character vname*11
+        logical eof,upd
 c 
-        character hdvars(500)*10,type(500)*1,avarnew*20
-        real rvarnew(100) 
-        double precision dvarnew(100)    
-        integer nhdvars,length(500),yourvar,ivarnew(100)
-        common /head_c/ hdvars,type,avarnew   
-        common /head/ nhdvars,length,yourvar,ivarnew,rvarnew
-        common /head_d/ dvarnew
-c
- 
-        call uvread(inset,preamble,data,flags,MAXCHAN,nread)
-        call haccess(inset,item,'vartable','read',iostat)
-        do 100 ivar=1,500
-           call hreada(item,varname,eof)
-           if(eof) go to 125
-           if(varname(3:6).eq.'corr' .or.
-     1               varname(3:7).eq.'wcorr') goto 100
-           call uvprobvr(inset,varname(3:10),type(ivar),length(ivar),
-     *          update)
-           hdvars(ivar) = varname(3:10)
-           nhdvars = ivar
-  100   continue
-  125   continue
-        call hdaccess(item,iostat)
-        call uvrewind(inset)
-        return
-        end
+        CALL uvread(inset,preamble,data,flags,MAXCHAN,nread)
+        CALL haccess(inset,item,'vartable','read',iostat)
+        DO i=1,MAXVAR
+           CALL hreada(item,vname,eof)
+           IF(eof) THEN
+	      CALL hdaccess(item,iostat)
+	      CALL uvrewind(inset)
+	      RETURN
+	   ENDIF
+           IF(vname(3:6).ne.'corr' .and. vname(3:7).ne.'wcorr') then
+              CALL uvprobvr(inset,vname(3:10),type(i),length(i),upd)
+              hdvars(i) = vname(3:10)
+              nhdvars = i
+	   ENDIF
+	ENDDO
+        CALL bug('f',
+     *     'invars: Too many UV variables, increase MAXVAR')
+        END
 
 c************************************************************************
-        subroutine trackall(inset,except,nexcept)
+        SUBROUTINE trackall(inset,except,nexcept)
 c
 c   Marks all variable in input data set for copying to output
 c   data set. Assumes that the dataset is already open and at
 c   begining.
 c
-        include 'maxdim.h'
+        include 'uvputhd.h'
 
-        integer ivar,i,inset,item,iostat,nread,nexcept
-	double precision preamble(4)
-	complex data(MAXCHAN)
-	logical flags(MAXCHAN)
-        character varname*11,except(20)*10
-        logical eof,track
+        INTEGER ivar,i,inset,item,iostat,nread,nexcept
+	DOUBLE PRECISION preamble(4)
+	COMPLEX data(MAXCHAN)
+	LOGICAL flags(MAXCHAN)
+        CHARACTER vname*11,except(20)*10
+        LOGICAL eof,track
 
-        call uvread(inset,preamble,data,flags,MAXCHAN,nread)
-        call haccess(inset,item,'vartable','read',iostat)
+        CALL uvread(inset,preamble,data,flags,MAXCHAN,nread)
+        CALL haccess(inset,item,'vartable','read',iostat)
 
-        do 100 ivar=1,500
-           call hreada(item,varname,eof)
-           if(eof) go to 125
+        DO ivar=1,MAXVAR
+           CALL hreada(item,vname,eof)
+           IF(eof) THEN
+	      CALL hdaccess(item,iostat)
+	      CALL uvrewind(inset)
+	      RETURN
+	   ENDIF
 	   track = .true.
-	   do 50 i=1,nexcept
-	      if(varname(3:10) .eq. except(i)) track = .false.
-   50	   continue
-           if(track) then
- 		call uvtrack(inset,varname(3:10),'c')
+	   DO i=1,nexcept
+	      if(vname(3:10) .eq. except(i)) track = .false.
+   	   ENDDO
+           IF(track) THEN
+ 		CALL uvtrack(inset,vname(3:10),'c')
 C	   else
 C	   	write(text,'(''Autocopy not set for '',a)') 
-C     *                           varname(3:10)
+C     *                           vname(3:10)
 C	      	call output(text)
-	   endif
-  100   continue
-  125   continue
-        call hdaccess(item,iostat)
-        call uvrewind(inset)
-        return
-        end
-
+	   ENDIF
+	ENDDO
+        CALL bug('f',
+     *       'trackall: Too many UV variables, increase MAXVAR')
+        END
+c***********************************************************************
 	subroutine hdcheck(inset,hdvar,there)
 c
 c    Checks to see of the user input header variable name is in the
@@ -272,25 +319,19 @@ c
 	integer inset,i
 	logical there
 c
-        character hdvars(500)*10,type(500)*1,avarnew*20
-        real rvarnew(100)
-        double precision dvarnew(100)
-        integer nhdvars,length(500),yourvar,ivarnew(100)
-        common /head_c/ hdvars,type,avarnew
-        common /head/ nhdvars,length,yourvar,ivarnew,rvarnew
-        common /head_d/ dvarnew
+        include 'uvputhd.h'
+
 c
 	there =.false.
-	do 100 i=1,nhdvars
+	do i=1,nhdvars
 	   if(hdvar .eq. hdvars(i)) then
 	     there = .true.
 	     yourvar = i
              call uvtrack(inset,hdvar,'u')
 	   endif
-  100	continue
-	return
+	enddo
 	end
-
+c***********************************************************************
 	subroutine addvar(hdvar,newtype,newlong)
 c
 c   Add new variable name, type and length to list of known
@@ -299,14 +340,10 @@ c
 	character*10 hdvar,newtype*1
 	integer newlong
 c
-        character hdvars(500)*10,type(500)*1,avarnew*20
-        real rvarnew(100)
-        double precision dvarnew(100)
-        integer nhdvars,length(500),yourvar,ivarnew(100)
-        common /head_c/ hdvars,type,avarnew
-        common /head/ nhdvars,length,yourvar,ivarnew,rvarnew
-        common /head_d/ dvarnew
+        include 'uvputhd.h'
 c     
+	if (nhdvars.EQ.MAXVAR) call bug('f',
+     *           'addvar: Too many UV variables, increase MAXVAR')
 	nhdvars = nhdvars+1
 	hdvars(nhdvars) = hdvar
 	type(nhdvars)   = newtype(1:1)
@@ -314,23 +351,19 @@ c
 	yourvar         = nhdvars
 	return
 	end
-
+c***********************************************************************
 	subroutine varcop(inset,outset,there)
+	integer inset,outset
+        logical there
 c
 c   Change the user selected header variable to the new value if
 c   it was updated in data record being read
 c
-	integer inset,outset,nvals
+	integer nvals
 	character vtype*1,vname*10
-        logical update,there
+        logical update
 c 
-        character hdvars(500)*10,type(500)*1,avarnew*20
-        real rvarnew(100) 
-        double precision dvarnew(100) 
-        integer nhdvars,length(500),yourvar,ivarnew(100) 
-        common /head_c/ hdvars,type,avarnew
-        common /head/ nhdvars,length,yourvar,ivarnew,rvarnew
-        common /head_d/ dvarnew
+        include 'uvputhd.h'
 c
         vname = hdvars(yourvar)
 	vtype = type(yourvar)
@@ -338,12 +371,16 @@ c
 	if(there) then
 	   call uvprobvr(inset,vname,vtype,nvals,update)
 	   if(update) then
+	      nmods = nmods + 1
+c           write(*,*) 'Updating there ',vtype,nvals
 	   if(vtype .eq. 'i') call uvputvri(outset,vname,ivarnew,nvals)
 	   if(vtype .eq. 'r') call uvputvrr(outset,vname,rvarnew,nvals)
 	   if(vtype .eq. 'd') call uvputvrd(outset,vname,dvarnew,nvals)
 	   if(vtype .eq. 'a') call uvputvra(outset,vname,avarnew)
 	   endif
 	else
+c           write(*,*) 'Updating not there ',vtype,nvals
+	      nmods = nmods + 1
            if(vtype .eq. 'i') call uvputvri(outset,vname,ivarnew,nvals)
            if(vtype .eq. 'r') call uvputvrr(outset,vname,rvarnew,nvals)
            if(vtype .eq. 'd') call uvputvrd(outset,vname,dvarnew,nvals)
@@ -351,23 +388,64 @@ c
 	endif
 	return
 	end
+c***********************************************************************
+	SUBROUTINE varins(inset,outset,there)
+	INTEGER inset,outset
+        LOGICAL there
+c
+c   Change the user selected header variable to the new value if
+c   it was updated in data record being read, this time from the
+c   table where the index had been stored previously
+c
+	INTEGER nvals,i
+	CHARACTER vtype*1,vname*10
+        LOGICAL update
+c 
+        include 'uvputhd.h'
+c
+        vname = hdvars(yourvar)
+	vtype = type(yourvar)
+	nvals = length(yourvar)
+	if (nvals.NE.1) call bug('f','Arrays not supported for tables')
+c	write(*,*) 'varins: ',tidx,dvarnew(tidx)
+	DO i=1,nvals
+	   if(vtype .eq. 'i') ivarnew(i) = dvarnew(tidx)
+	   if(vtype .eq. 'r') rvarnew(i) = dvarnew(tidx)
+	   if(vtype .eq. 'd') dvarnew(i) = dvarnew(tidx)
+	   if(vtype .eq. 'a') call bug('f','No ascii from tables')
+	ENDDO
 
+	IF(there) THEN
+	   call uvprobvr(inset,vname,vtype,nvals,update)
+	   if(update) then
+	      nmods = nmods + 1
+c           write(*,*) 'Updating there ',vtype,nvals
+	   if(vtype .eq. 'i') call uvputvri(outset,vname,ivarnew,nvals)
+	   if(vtype .eq. 'r') call uvputvrr(outset,vname,rvarnew,nvals)
+	   if(vtype .eq. 'd') call uvputvrd(outset,vname,dvarnew,nvals)
+	   if(vtype .eq. 'a') call uvputvra(outset,vname,avarnew)
+	   endif
+	ELSE
+	      nmods = nmods + 1
+c           write(*,*) 'Updating not there ',vtype,nvals
+           if(vtype .eq. 'i') call uvputvri(outset,vname,ivarnew,nvals)
+           if(vtype .eq. 'r') call uvputvrr(outset,vname,rvarnew,nvals)
+           if(vtype .eq. 'd') call uvputvrd(outset,vname,dvarnew,nvals)
+           if(vtype .eq. 'a') call uvputvra(outset,vname,avarnew)
+	ENDIF
+	END
+c***********************************************************************
         subroutine readval(hdvar,varval,nvals)
 c
 c   read ascii input of user header variable values and stick them
 c   into the appropriate arrays
 c
-	character hdvar*(*),varval(8)*30
-	character vtype*1
-	integer nvals,i,varlen
+	integer nvals
+	character hdvar*(*),varval(nvals)*(*)
 c
-        character hdvars(500)*10,type(500)*1,avarnew*20
-        real rvarnew(100)
-        double precision dvarnew(100)
-        integer nhdvars,length(500),yourvar,ivarnew(100)
-        common /head_c/ hdvars,type,avarnew 
-        common /head/ nhdvars,length,yourvar,ivarnew,rvarnew
-        common /head_d/ dvarnew
+        include 'uvputhd.h'
+	character vtype*1
+	integer i,varlen
 c 
 	varlen   = length(yourvar)
 	vtype = type(yourvar)
@@ -410,4 +488,90 @@ c
   990	call bug('f','Error in reading new variable values')
 	return
 	end
+c***********************************************************************
+	SUBROUTINE rtable(fname,jd0)
+	CHARACTER fname*(*)
+	DOUBLE PRECISION jd0
+	include 'uvputhd.h'
+	INTEGER tno,iostat,len1,tlen
+	CHARACTER line*256
+	DOUBLE PRECISION dtime,dvar
 
+	WRITE(*,*) 'DEBUG: Opening TABLE ',fname(1:len1(fname))
+	CALL txtopen(tno,fname,'old',iostat)
+	IF (iostat.NE.0) CALL bug('f','Could not open table file')
+	tlen=1
+	nttable=0
+	DO WHILE(tlen.GT.0 .AND. iostat.EQ.0 .AND. nttable.LT.MAXVAL)
+	   CALL txtread(tno,line,tlen,iostat)
+	   IF(tlen.GT.0 .AND. iostat.EQ.0)THEN
+	      nttable = nttable + 1
+	      READ(line,*,err=990) dtime,dvar
+c	      WRITE(*,*) 'LINE: ',line(1:len1(line)),dtime,dvar
+	      IF (nttable.LE.MAXVAL) THEN
+		 atime(nttable) = dtime+jd0
+		 dvarnew(nttable) = dvar
+	      ENDIF
+	   ENDIF
+	ENDDO
+	WRITE(*,*) 'DEBUG: Read ',nttable,' values from table'
+	CALL txtclose(tno)
+	tidx=0
+	RETURN
+
+ 990	CALL bug('f','Error in reading new double value')
+
+	END
+c***********************************************************************
+	SUBROUTINE itable(jd1)
+	DOUBLE PRECISION jd1
+c
+c  Lookup at time 'jd1' into the array atime where (jd0 offsets had been 
+c  applied previously)
+c
+	include 'uvputhd.h'
+
+	LOGICAL done
+	INTEGER i
+
+	done = .FALSE.
+        i = 0
+
+	DO WHILE(.NOT.done)
+	   IF(tidx.GT.0)THEN
+	      IF(jd1.GE.atime(tidx+1))THEN
+c		 write(*,*) 'Updating to tidx=',tidx+1,' at ',jd1,
+c	1	      ' ',dvarnew(tidx+1)
+		 i = tidx
+		 tidx = 0
+	      ELSE IF(jd1.LT.atime(tidx+1)) THEN
+		 done = .TRUE.
+	      ELSE
+		 tidx = 0
+	      ENDIF
+	   ELSE
+	      IF(i.EQ.0) THEN
+	         WRITE(*,*)'JD range in table: ',atime(1),atime(nttable)
+		 i = 1
+              ENDIF
+	      IF(atime(1).GT.jd1) THEN
+		 WRITE(*,*) 1,atime(1)
+		 CALL bug('f','Table starts too late')
+	      ENDIF
+	      IF(atime(nttable).LT.jd1) THEN
+		 WRITE(*,*) nttable,atime(nttable),' (Change time0=)'
+		 CALL bug('f','Table ends too early')
+	      ENDIF
+	      DO WHILE(i.LT.nttable)
+		 IF(atime(i+1).GT.jd1) THEN
+c		    write(*,*) 'Found new index ',i,' ',dvarnew(i)
+		    tidx = i
+		    RETURN
+		  ENDIF
+		  i = i + 1
+	      ENDDO
+	      
+	   ENDIF
+	ENDDO
+
+	END
