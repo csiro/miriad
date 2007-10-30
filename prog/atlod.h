@@ -16,11 +16,11 @@ c
 	complex data(ATDATA)
 	integer pnt(ATIF,ATPOL,ATBASE,ATBIN),nbin(ATIF),edge(ATIF)
 	integer bchan(ATIF)
-	real inttime(ATBASE)
+	real inttime(ATBASE),inttim
 	logical flag(ATIF,ATPOL,ATBASE,ATBIN),dosw(ATBASE)
 	integer nused,tno,nants
 	logical dosam,dohann,birdie,doif,dobary,newfreq,newsc,newpnt
-	logical dowt,doxyp
+	logical dowt,doxyp,hires
 	real wts(2*ATCONT-2)
 	double precision obsra,obsdec,lat,long,ra,dec
 	character sname*64
@@ -30,8 +30,9 @@ c
      *	    ra,dec,
      *	  data,
      *	  xtsys,ytsys,chi,xyphase,xyamp,xsampler,ysampler,u,v,w,inttime,
-     *	    wts,
+     *	    inttim,wts,
      *	  pnt,nbin,nused,tno,nants,nifs,nfreq,nstoke,polcode,edge,
      *	    bchan,
      *	  flag,dosw,dosam,dohann,birdie,dowt,doxyp,doif,dobary,newfreq,
+     *	    hires,
      *	  newsc,newpnt
