@@ -32,9 +32,10 @@ c@ select
 c	Normal uv-selection parameter. This selects the gains in the
 c	``vis'' that are compared against the ``cal'' gains (note that
 c	all the ``cal'' gains are involved in the comparison). Currently
-c	ONLY time selection is permitted. You will use this parameter
-c	to select which time(s) the instrumental/atmospheric amplitude
-c	gains for ``vis'' are comparable to the observation in ``cal''.
+c	ONLY time and antenna selection are permitted. You will use
+c	this parameter to select which data the instrumental/atmospheric
+c	amplitude gains for ``vis'' are comparable to the observation in
+c	``cal''.
 c@ options
 c	This gives task enrichment parameters. Several can be given,
 c	separated by commas. Minimum match is used.
@@ -57,6 +58,7 @@ c    rjs      5nov93 Do not copy polarisation solutions.
 c    rjs     17aug95 Antenna selection.
 c    rjs     20may97 Print out the xy phasr that is being applied.
 c		     Get the wraps right.
+c    rjs      6feb98 Doc change oonly.
 c
 c  Bugs and Shortcomings:
 c    * The xy phase is not applied to the polarisation solution.
