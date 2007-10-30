@@ -64,6 +64,12 @@ c
 c 'subtr' - at each position, subtract the value in the dataset given
 c by cont= from the profile at the same position in the input dataset.
 c
+c@ options
+c Select which output to write with the cont keyword. By default the
+c continuum is written. If options=coeff,# one of the coefficients of
+c the polynomial fit is written instead. '#' gives the order for which
+c the coefficient is written (e.g. if cont=a+bx: 0='a', 1='b', etc).
+c
 c@ velaxis
 c For datacubes where the 'VELO' axis-identification does not occur in
 c the header, this can be used to indicate which direction is the
@@ -87,6 +93,7 @@ c    bpw  18oct91  Deleted superfluous test print and equivalence
 c    bpw  05nov91  Some changes in doc because users overlooked the obvious
 c    bpw  27mar91  Changed assert into assertl
 c    bpw  15dec92  Add default velaxis='z' after changing fndaxnum
+c    bpw  19dec94  Add options=coeff,#
 c
 c------------------------------------------------------------------------
 c
@@ -105,21 +112,22 @@ c contchan:    list of channel numbers to use to determine continuum
       program contsub
 
       character*50     version
-      parameter        ( version = 'contsub: version 2.0 18-oct-91' )
+      parameter        ( version = 'contsub: version 2.0 19-dec-94' )
 
       include          'maxdim.h'
 
       integer          unitinp, unitout, unitcon
       integer          nprofiles
       character*10     algorithm
+      integer          opts(2)
       integer          nchan
       integer          contchan(0:MAXCHAN)
 
       call output( version )
       call inputs( unitinp, unitout, unitcon,
-     *             nprofiles, nchan, algorithm, contchan )
+     *             nprofiles, nchan, algorithm, opts, contchan )
       call work(   unitinp, unitout, unitcon,
-     *             nprofiles, nchan, algorithm, contchan )
+     *             nprofiles, nchan, algorithm, opts, contchan )
       call finish( unitinp, unitout, unitcon, version,
      *             algorithm, contchan )
 
@@ -133,7 +141,7 @@ c Inputs reads all keyword values and transforms them to variables
 c usable in work.
 
       subroutine inputs( unitinp, unitout, unitcon,
-     *                   nprofiles, nchan, algorithm, contchan )
+     *                   nprofiles, nchan, algorithm,opts, contchan )
 
       include          'maxdim.h'
       include          'maxnax.h'
@@ -141,15 +149,17 @@ c usable in work.
       parameter        ( MAXBOXES = 1024 )
 
 c If MAXTERMS changes, MAXTERMS in polyfit must also change and
-c data opts must be adapted
-      integer          NALG, MAXTERMS, NOPT
-      parameter        ( NALG = 4, MAXTERMS = 9 )
-      parameter        ( NOPT =  NALG + MAXTERMS )
+c data algopts must be adapted
+      integer          NALG, MAXTERMS, NOPT, NOUT, NOPTO
+      parameter        ( NALG  = 4, MAXTERMS = 9, NOUT = 1 )
+      parameter        ( NOPT  =  NALG + MAXTERMS )
+      parameter        ( NOPTO =  NOUT + MAXTERMS )
 
       integer          unitinp, unitout, unitcon
       integer          nprofiles
       integer          nchan
       character*(*)    algorithm
+      integer          opts(*)
       integer          contchan(0:*)
 
       character*1024   inp, out, con
@@ -166,12 +176,15 @@ c data opts must be adapted
       integer          blc(MAXNAX),    trc(MAXNAX)
       integer          viraxlen(MAXNAX), vircubesize(MAXNAX)
 
-      character*10     opts(NOPT)
-      data             opts / 'poly', 'mean', 'avgs', 'subtr',
+      character*10     algopts(NOPT)
+      data             algopts / 'poly', 'mean', 'avgs', 'subtr',
      *                 '0','1','2','3','4','5','6','7','8' /
       logical          optprsnt(NOPT)
       data             optprsnt / NOPT*.FALSE. /
       integer          nterms
+      character*10     outopts(NOPTO)
+      data             outopts / 'coeff',
+     *                 '0','1','2','3','4','5','6','7','8' /
 
       integer          maxranges
       integer          i, n
@@ -182,14 +195,14 @@ c Initialize keyword routines.
 c Figure out which continuum-determination algorithm to use, and for
 c algorithm 'poly' also what the fit order must be.
 
-      call options( 'mode', opts, optprsnt, NOPT )
+      call options( 'mode', algopts, optprsnt, NOPT )
       algorithm = ' '
       do i = 1, NALG
          if( optprsnt(i) ) call assertl( algorithm.eq.' ',
      *                    'Only one algorithm should be selected' )
-         if( optprsnt(i) ) algorithm = opts(i)(1:4)
+         if( optprsnt(i) ) algorithm = algopts(i)(1:4)
       enddo
-      if( algorithm.eq.' ' ) algorithm = opts(1)(1:4)
+      if( algorithm.eq.' ' ) algorithm = algopts(1)(1:4)
 
       n=0
       nterms=0
@@ -212,6 +225,22 @@ c algorithm 'poly' also what the fit order must be.
           if( nterms.ne.0 ) call bug( 'w', 'Polynomial order ignored' )
       endif
 
+c Check the output option.
+      do i = 1, NOPTO
+         optprsnt(i) = .FALSE.
+      enddo
+      call options( 'options', outopts, optprsnt, NOPTO )
+      n=0
+      do i = 1, MAXTERMS
+         if( optprsnt(i+1) ) n=n+1
+         if( optprsnt(i+1) ) opts(1) = i-1
+      enddo
+      call assertl( n.eq.1,
+     *             'Only one value may be given after options=coeff' )
+      call assertl( opts(1) .lt. nterms,
+     *             'Coefficient chosen to write must be < poly order' )
+      if( n.eq.0 ) opts(1) = -1
+
 
 c Read names of input, output and continuum dataset.
       call keyf( 'in',   inp, ' ' )
@@ -222,6 +251,7 @@ c Read names of input, output and continuum dataset.
      *                         'You must specify either out= or cont=' )
       if( algorithm(1:4).eq.'subt' ) call assertl( con.ne.' ',
      *'To subtract an existing continuum set you must give its name' )
+
 
 c Open and get dimension of input dataset: naxis.
       naxis = MAXNAX
@@ -410,12 +440,13 @@ c Work loops over all profiles, reads each profile, applies the
 c continuum-determination algorithm, and writes the results.
 
       subroutine work( unitinp, unitout, unitcon,
-     *                 nprofiles, nchan, algorithm, contchan )
+     *                 nprofiles, nchan, algorithm, options, contchan )
 
       integer          unitinp, unitout, unitcon
       integer          nprofiles
       integer          nchan
       character*(*)    algorithm
+      integer          options(*)
       integer          contchan(0:*)
 
       integer          MAXDIM
@@ -432,7 +463,7 @@ c continuum-determination algorithm, and writes the results.
       do profilenr = 1, nprofiles
          call xyzprfrd( unitinp, profilenr, data, mask, nchan )
          if(     algorithm(1:4).eq.'poly' ) then 
-            call polyfit( contchan, nchan, nterms,
+            call polyfit( contchan, nchan, nterms, options,
      *                    data, linedata, mask, continuum, cmask )
          elseif( algorithm(1:4).eq.'mean' ) then
             call submean( contchan, nchan,
@@ -464,11 +495,12 @@ c constructed. Then linpack is used. Finally the fitvalue is subtracted
 c from all the channel data and the fitvalue in the center is used as
 c continuum.
 
-      subroutine polyfit( contchan, nchan, nterms,
+      subroutine polyfit( contchan, nchan, nterms, outopt,
      *                    data, linedata, mask, continuum, cmask )
 
       integer          contchan(0:*), nchan
       integer          nterms
+      integer          outopt(*)
       real             data(*), linedata(*), continuum
       logical          mask(*), cmask
 
@@ -537,7 +569,10 @@ c Subtract the continuum from the spectrum.
                xtothen = xtothen * k
             enddo
             linedata(k) = data(k) - cont
-            if( k.eq.nchan/2 ) continuum = cont
+            if( k.eq.nchan/2 ) then
+              if( outopt(1).eq.-1 ) continuum = cont
+              if( outopt(1).ge.0  ) continuum = sngl(rhs(outopt(1)+1))
+            endif
          enddo
          cmask = .TRUE.
    
@@ -712,15 +747,25 @@ c Finish up
 
       character*80  line
 
-      call hisopen(  unitout, 'append'  )
-      line = 'CONTSUB: ' // version
-      call hiswrite( unitout, line      )
-      call hisinput( unitout, 'contsub' )
-      call hisclose( unitout )
-
       call xyzclose( unitinp )
-      if( unitout.ne.0 ) call xyzclose( unitout )
-      if( unitcon.ne.0 ) call xyzclose( unitcon )
+
+      if( unitout.ne.0 ) then
+         call hisopen(  unitout, 'append'  )
+         line = 'CONTSUB: ' // version
+         call hiswrite( unitout, line      )
+         call hisinput( unitout, 'contsub' )
+         call hisclose( unitout )
+         call xyzclose( unitout )
+      endif
+
+      if( unitcon.ne.0 ) then
+         call hisopen(  unitcon, 'append'  )
+         line = 'CONTSUB: ' // version
+         call hiswrite( unitcon, line      )
+         call hisinput( unitcon, 'contsub' )
+         call hisclose( unitcon )
+         call xyzclose( unitcon )
+      endif
 
       return
       end
