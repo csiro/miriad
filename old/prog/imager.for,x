@@ -1245,6 +1245,7 @@ c
 	    else
 	      ChanWt(i) = SumWt / ChanWt(i)
 	    endif
+	write(*,*)ChanWt(i)
 	  enddo
 	  if(nzero.gt.0)call bug('w',
      *	    'Number of channels with no good data: '//itoaf(nzero))
