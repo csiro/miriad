@@ -36,6 +36,8 @@ c    rjs 20oct94  Increase max number of separate regions
 c    rjs 23nov94  Added BoxCount to count the pixels in a plane.
 c    rjs  6sep95  Check selected region really does fall within the image.
 c    rjs 13dec95  Increase MAXSHAPES in BoxRuns.
+c    rjs 29jan97  Added BoxDef -- to set the default region of interest,
+c		  and removed this capacity from BoxSet.
 c************************************************************************
 c* Boxes -- Summary of region of interest routines.
 c& mjs
@@ -49,6 +51,7 @@ c
 c	subroutine BoxInput(key,file,boxes,maxboxes)
 c	subroutine BoxMask(tno,boxes,maxboxes)
 c	subroutine BoxSet(boxes,naxis,nsize,flags)
+c	subroutine BoxDef(boxes,naxis,blc,trc)
 c	subroutine BoxInfo(boxes,naxis,blc,trc)
 c	subroutine BoxBound(boxes,shape,naxis,type,blx,trc)
 c	logical function BoxRect(boxes)
@@ -732,6 +735,80 @@ c
 c
 	end
 c************************************************************************
+c* BoxDef -- Set the default region of interest.
+c& mjs
+c: region-of-interest
+c+
+	subroutine BoxDef(boxes,naxis,blc,trc)
+c
+	implicit none
+	integer naxis,blc(naxis),trc(naxis),boxes(*)
+c
+c  Set the default region of interest.
+c
+c  Input:
+c    naxis	The dimension of blc and trc.
+c    blc
+c    trc
+c  Input/Output:
+c    boxes	This contains an intermediate form of the subregion
+c		specified by the user. On output, certain defaults are
+c		filled in.
+c--
+c------------------------------------------------------------------------
+	include 'boxes.h'
+	integer offset,i,xminv,xmaxv,yminv,ymaxv,zminv,zmaxv
+c
+	xminv = blc(1)
+	xmaxv = trc(1)
+	if(naxis.ge.2)then
+	  yminv = blc(2)
+	  ymaxv = trc(2)
+	else
+	  yminv = 0
+	  ymaxv = 0
+	endif
+c
+	if(naxis.ge.3)then
+	  zminv = blc(3)
+	  zmaxv = trc(3)
+	else
+	  zminv = 0
+	  zmaxv = 0
+	endif
+c
+	do i=4,naxis
+	  if(blc(i).ne.1.or.trc(i).ne.1)call bug('f',
+     *	      'Region of interest routines inadequate!')
+	enddo
+c
+	offset = OFFSET0
+	if(boxes(1).eq.0)then
+	  boxes(1) = 1
+	  boxes(offset+ITYPE) = IMAGE
+	  boxes(offset+SIZE) = 0
+	  boxes(offset+XMIN) = xminv
+	  boxes(offset+XMAX) = xmaxv
+	  boxes(offset+YMIN) = yminv
+	  boxes(offset+YMAX) = ymaxv
+	  boxes(offset+ZMIN) = zminv
+	  boxes(offset+ZMAX) = zmaxv
+	else
+	  do i=1,boxes(1)
+	    if(boxes(offset+ITYPE).ne.QUART)then
+	      if(boxes(offset+XMIN).eq.0) boxes(offset+XMIN) = xminv
+	      if(boxes(offset+XMAX).eq.0) boxes(offset+XMAX) = xmaxv
+	      if(boxes(offset+YMIN).eq.0) boxes(offset+YMIN) = yminv
+	      if(boxes(offset+YMAX).eq.0) boxes(offset+YMAX) = ymaxv
+	      if(boxes(offset+ZMIN).eq.0) boxes(offset+ZMIN) = zminv
+	      if(boxes(offset+ZMAX).eq.0) boxes(offset+ZMAX) = zmaxv
+	    endif
+	    offset = offset + HDR + boxes(offset+SIZE)
+	  enddo
+	endif
+c
+	end
+c************************************************************************
 c* BoxSet -- Set default region of interest.
 c& mjs
 c: region-of-interest
@@ -749,8 +826,6 @@ c  Input:
 c    naxis	The dimension of nsize, minv and maxv.
 c    nsize	The dimensions of the data set.
 c    flags	Character string giving some extra options. Flags are:
-c		  'q'	Default region is the inner quarter.
-c		  '1'	Default region is the first image.
 c		  's'	Give warning if region-of-interest is not a regular
 c			shape.
 c  Input/Output:
@@ -760,7 +835,7 @@ c		filled in.
 c--
 c------------------------------------------------------------------------
 	include 'boxes.h'
-	integer xmind,xmaxd,ymind,ymaxd,zmind,zmaxd,blc(3),trc(3)
+	integer blc(3),trc(3)
 	integer i,offset
 c
 	if(naxis.lt.1) call bug('f','Bad dimension')
@@ -781,26 +856,6 @@ c
 	  enddo
 	endif
 c
-c  Set the defaults.
-c
-	if(index(flags,'q').ne.0)then
-	  xmind = boxes(NX)/4 + 1
-	  xmaxd = max(1,boxes(NX)/4 + boxes(NX)/2)
-	  ymind = boxes(NY)/4 + 1
-	  ymaxd = max(1,boxes(NY)/4 + boxes(NY)/2)
-	else
-	  xmind = 1
-	  xmaxd = boxes(NX)
-	  ymind = 1
-	  ymaxd = boxes(NY)
-	endif
-	zmind = 1
-	if(index(flags,'1').ne.0)then
-	  zmaxd = 1
-	else
-	  zmaxd = boxes(NZ)
-	endif
-c
 c  If the user did not give any subregion spec, fill in the default box as
 c  the region.
 c
@@ -809,12 +864,12 @@ c
 	  boxes(1) = 1
 	  boxes(offset+ITYPE) = IMAGE
 	  boxes(offset+SIZE) = 0
-	  boxes(offset+XMIN) = xmind
-	  boxes(offset+XMAX) = xmaxd
-	  boxes(offset+YMIN) = ymind
-	  boxes(offset+YMAX) = ymaxd
-	  boxes(offset+ZMIN) = zmind
-	  boxes(offset+ZMAX) = zmaxd
+	  boxes(offset+XMIN) = 1
+	  boxes(offset+XMAX) = boxes(NX)
+	  boxes(offset+YMIN) = 1
+	  boxes(offset+YMAX) = boxes(NY)
+	  boxes(offset+ZMIN) = 1
+	  boxes(offset+ZMAX) = boxes(NZ)
 	else
 c
 	  do i=1,boxes(1)
@@ -826,12 +881,12 @@ c
 	      boxes(offset+YMAX) = max(1,boxes(NY)/4 + boxes(NY)/2)
 	    endif
 c
-	    if(boxes(offset+XMIN).eq.0) boxes(offset+XMIN) = xmind
-	    if(boxes(offset+XMAX).eq.0) boxes(offset+XMAX) = xmaxd
-	    if(boxes(offset+YMIN).eq.0) boxes(offset+YMIN) = ymind
-	    if(boxes(offset+YMAX).eq.0) boxes(offset+YMAX) = ymaxd
-	    if(boxes(offset+ZMIN).eq.0) boxes(offset+ZMIN) = zmind
-	    if(boxes(offset+ZMAX).eq.0) boxes(offset+ZMAX) = zmaxd
+	    if(boxes(offset+XMIN).eq.0) boxes(offset+XMIN) = 1
+	    if(boxes(offset+XMAX).eq.0) boxes(offset+XMAX) = boxes(NX)
+	    if(boxes(offset+YMIN).eq.0) boxes(offset+YMIN) = 1
+	    if(boxes(offset+YMAX).eq.0) boxes(offset+YMAX) = boxes(NY)
+	    if(boxes(offset+ZMIN).eq.0) boxes(offset+ZMIN) = 1
+	    if(boxes(offset+ZMAX).eq.0) boxes(offset+ZMAX) = boxes(NZ)
 c
 	    if( boxes(offset+XMIN).lt.1.or.
      *		boxes(offset+XMAX).gt.boxes(NX))
