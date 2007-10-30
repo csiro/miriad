@@ -62,10 +62,11 @@ c		   take double precision args.
 c    bpw  02mar93  Include maxnax.h
 c    bpw  03mar93  Include maxdim.h instead of own BUFSIZE parameter
 c    rjs  24mar93  Halve the size of the MAXBUF arrays.
+c    rjs  31aug98  Fix call to rdhdd and eliminate flint complaints.
 c------------------------------------------------------------------------
 
       character*80 version
-      parameter ( version = 'imframe version 1.1 3-mar-93' )
+      parameter ( version = 'imframe version 1.1 31-Aug-98' )
 
       include   'maxnax.h'
       include   'maxdim.h'
@@ -74,7 +75,7 @@ c------------------------------------------------------------------------
 
       integer   tinp, tout
       integer   naxis
-      integer   dim, looplen, buflen
+      integer   dims, looplen, buflen
       integer   axnum(MAXNAX)
       integer   inpblc(MAXNAX), inptrc(MAXNAX)
       real      data(MAXBUF2)
@@ -84,10 +85,10 @@ c------------------------------------------------------------------------
 c Give the identifying message
       call output( version )
 c Get inputs
-      call inputs(    tinp, tout, dim, looplen, buflen,
+      call inputs(    tinp, tout, dims, looplen, buflen,
      *                axnum, inpblc, inptrc, naxis )
 c Do the real work
-      call transpose( tinp, tout, dim, looplen, buflen,
+      call transpos( tinp, tout, dims, looplen, buflen,
      *                axnum, inpblc, inptrc, naxis, data, mask )
 c Finish off
       call finish( tinp, tout, version )
@@ -96,11 +97,11 @@ c Finish off
 
 c******************************************************************************
 c Get inputs
-      subroutine inputs( tinp, tout, dim, looplen, buflen,
+      subroutine inputs( tinp, tout, dims, looplen, buflen,
      *                   axnum, blc, trc, naxis )
 
       integer              tinp, tout
-      integer              dim, looplen, buflen
+      integer              dims, looplen, buflen
       integer              axnum(*)
       integer              blc(*), trc(*)
       integer              naxis
@@ -149,10 +150,9 @@ c Open input dataset to get axislengths and then get blc, trc
      *    call bug( 'f', 'region= and box= are mutually exclusive' )
       do i = 1, naxis
          keyw = 'crpix' // itoaf(i)
-         call rdhdd( tinp, keyw, crpix(i), 1 )
+         call rdhdd( tinp, keyw, crpix(i), 1.0d0 )
       enddo
-      if( keyprsnt('region') )
-     *then
+      if( keyprsnt('region') )then
          call boxinput( 'region', inp, inpboxes, maxboxes )
          call boxset(   inpboxes, naxis, axlen, ' ' )
          call boxinfo(  inpboxes, naxis, blc, trc )
@@ -160,8 +160,8 @@ c Open input dataset to get axislengths and then get blc, trc
          call itof( trc, inptrc, naxis )
       else
          do i = 1, naxis
-            call keyd( 'box', inpblc(i), 1.-crpix(i)          )
-            call keyd( 'box', inptrc(i), inpaxlen(i)-crpix(i) )
+            call keyd( 'box', inpblc(i), 1.-crpix(i))
+            call keyd( 'box', inptrc(i), inpaxlen(i)-crpix(i))
             inpblc(i) = inpblc(i) + crpix(i)
             inptrc(i) = inptrc(i) + crpix(i)
          enddo
@@ -206,24 +206,24 @@ c so that xyzsetup gets the proper area (i.e. relative to the output cube)
 c Set up subcubes: do planes or profiles for a little efficiency, so take
 c first axis or first two axes for input and make it 'x' axis or 'xy'
 c plane for output
-      if( int(outaxlen(1)*outaxlen(2)) .gt. buflen ) dim = 1
-      if( int(outaxlen(1)*outaxlen(2)) .le. buflen ) dim = 2
-      i=dim
+      if( int(outaxlen(1)*outaxlen(2)) .gt. buflen ) dims = 1
+      if( int(outaxlen(1)*outaxlen(2)) .le. buflen ) dims = 2
+      i=dims
       if(                axnum(1).lt.0 ) i = i+1
-      if( dim.eq.2 .and. axnum(2).lt.0 ) i = i+1
+      if( dims.eq.2 .and. axnum(2).lt.0 ) i = i+1
 
       call ftoi( outblc, blc, naxis )
       call ftoi( outtrc, trc, naxis )
-      if(dim.eq.1) call xyzsetup( tout,'x', blc,trc,viraxlen,vircubsz )
-      if(dim.eq.2) call xyzsetup( tout,'xy',blc,trc,viraxlen,vircubsz )
+      if(dims.eq.1) call xyzsetup( tout,'x', blc,trc,viraxlen,vircubsz )
+      if(dims.eq.2) call xyzsetup( tout,'xy',blc,trc,viraxlen,vircubsz )
 
       call ftoi( inpblc, blc, naxis )
       call ftoi( inptrc, trc, naxis )
       call xyzsetup( tinp, goal(1:i),       blc,trc,viraxlen,vircubsz )
 
 c Number of loops to be done and number of data points returned
-      looplen = vircubsz(naxis) / vircubsz(dim)
-      buflen  = vircubsz(dim)
+      looplen = vircubsz(naxis) / vircubsz(dims)
+      buflen  = vircubsz(dims)
 
       call keyfin
 
@@ -285,11 +285,11 @@ c Routine used to decode goal keyword
 c******************************************************************************
 c Do the work
 
-      subroutine transpose( tinp, tout, dim, looplen, buflen,
+      subroutine transpos( tinp, tout, dims, looplen, buflen,
      *                      axnum, inpblc, inptrc, naxis, data, mask )
 
       integer   tinp, tout
-      integer   dim, looplen, buflen
+      integer   dims, looplen, buflen
       integer   axnum(*)
       integer   inpblc(*), inptrc(*)
       integer   naxis
@@ -307,12 +307,12 @@ c Do the work
       do i = 1, naxis
          axlist(i) = i
       enddo
-      do j = 1, dim
+      do j = 1, dims
          do i = abs(axnum(j))+1, naxis
             axlist(i) = axlist(i) - 1
          enddo
       enddo
-      do i = dim+1, naxis
+      do i = dims+1, naxis
          k = abs(axnum(i))
          j = axlist(k)
          if( axnum(k).gt.0 ) inpcoo(j) = inpblc(k)
@@ -328,10 +328,10 @@ c by 1, etc.
       do prpl = 1, looplen
 
          call xyzread( tinp, inpcoo, data, mask, buflen )
-         if(dim.eq.1) call xyzprfwr( tout, prpl, data, mask, buflen )
-         if(dim.eq.2) call xyzplnwr( tout, prpl, data, mask, buflen )
+         if(dims.eq.1) call xyzprfwr( tout, prpl, data, mask, buflen )
+         if(dims.eq.2) call xyzplnwr( tout, prpl, data, mask, buflen )
 
-         i = dim + 1
+         i = dims + 1
          next = prpl.lt.looplen
          do while( i.le.naxis .and. next )
             k = abs(axnum(i))
@@ -380,7 +380,7 @@ c by 1, etc.
       double precision farr(*)
       integer          n,i
       do i = 1, n
-         farr(i) = float(iarr(i))
+         farr(i) = real(iarr(i))
       enddo
       return
       end
