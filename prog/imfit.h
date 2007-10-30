@@ -12,7 +12,9 @@
 	logical vfwhm1(MAXSRC),vfwhm2(MAXSRC),vpa(MAXSRC),circ(MAXSRC)
 	real    sflux(MAXSRC),sl0(MAXSRC),sm0(MAXSRC)
 	real    sfwhm1(MAXSRC),sfwhm2(MAXSRC),spa(MAXSRC)
+	real xoff,yoff
 c
 	common/JmFit/vflux,vl0,vm0,vfwhm1,vfwhm2,vpa,circ,
      *	  nsrc,srctype,ndata,x,y,l0,m0,fwhm1,fwhm2,pa,flux,Data,
-     *		     sflux,sl0,sm0,sfwhm1,sfwhm2,spa
+     *		     sflux,sl0,sm0,sfwhm1,sfwhm2,spa,
+     *		     xoff,yoff
