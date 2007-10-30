@@ -15,31 +15,22 @@ c	input cubes, to produce a single output cube. If only a single
 c	input cube is given, LINMOS essentially does primary beam correction
 c	on this input. When several, overlapping, inputs are given, then
 c	LINMOS combines the overlapping regions in such a way as to minimize
-c	the expected mean error in the output. LINMOS can also be used to
-c	interpolate an image onto another pixel size and center.
+c	the rms error in the output.
 c
 c	To determine the primary beam of the telescope, LINMOS first checks
-c	the map header for the presence of the "pbfwhm" parameter. If present,
-c	LINMOS assumes the primary beam is a Gaussian, whose FWHM (in arcsec)
-c	at the reference frequency, is given by the "pbfwhm" parameter. A
-c	single dish has a zero or negative value for pbfwhm. If
-c	the "pbfwhm" parameter is missing, LINMOS checks if the telescope
-c	is one that it knows. If so, then the best known form for the
-c	primary beam is used. Currently LINMOS knows about the VLA, the
-c	ATCA and the BIMA array.
-c
-c	If the map neither has a pbfwhm parameter nor is it from a known
-c	telescope, LINMOS will refuse to do anything! In this case, you
-c	should add the pbfwhm parameter to the map header, using puthd.
-c	For example:
-c	  % puthd in=mymap/pbfwhm value=120.0
-c	will set a primary beam FWHM of 120 arcsec at the reference frequency.
+c	the map header for the presence of the "pbtype" and then "pbfwhm"
+c	parameters. If present,	LINMOS assumes the primary beam is the
+c	given type. If these parameters are missing, LINMOS checks if the
+c	telescope is one that it knows. If so, then the known form for the
+c	primary beam is used. See task "pbplot" to check LINMOS's primary
+c	beam models.
 c@ in
 c	This gives the names of the input cubes. Many cubes can be given.
-c	There is no default. Inputs do not need to be on the same grid system
-c	on the x (RA) and y (DEC) dimensions. However, if they are not, linear
+c	There is no default. Inputs should generally be on the same grid
+c	system. However, if they are not, linear
 c	interpolation is performed to regrid using the first image as the
-c	template. The intensity units of all the inputs, and the pixel size 
+c	template. LINMOS's ability to do this is quite inferior to task REGRID.
+c	The intensity units of all the inputs, and the pixel size 
 c	and alignment of the third dimension are assumed to be the same.
 c@ out
 c	The name of the output cube. No default. The center and pixel size
@@ -61,9 +52,9 @@ c	               beam correction at the edge of the mosaic.
 c	  sensitivity  Rather than a mosaiced image, produce an image
 c	               giving the rms noise across the field.
 c	  gain         Rather than a mosaiced image, produce an image
-c	               giving the effective gain across the field. If the
-c	               "signal" parameter is allowed to default, the gain
-c	               function will be either 0 or 1 across the field.
+c	               giving the effective gain across the field. If
+c	               options=taper is used, this will be a smooth function.
+c	               Otherwise it will be 1 or 0 (blanked).
 c--
 c
 c  History:
@@ -104,11 +95,12 @@ c    mhw  13aug95 Clip input if output too big, instead of giving up.
 c    rjs  14aug95 Fix to the above.
 c    rjs  02jul97 cellscal change.
 c    rjs  23jul97 pbtype change.
+c    rjs  04aug97 Doc change only.
 c
 c  Bugs:
 c    * Blanked images are not handled when interpolation is necessary.
 c    * Alignment of images with frequency is not correct.
-c    * The handling of tangent point issues is abysmal.
+c    * The handling of geometry issues is abysmal.
 c
 c  Program parameters:
 c    maxIn	Maximum number of input files.
