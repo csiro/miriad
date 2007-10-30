@@ -149,6 +149,7 @@ c    29nov96  rjs  Change crpix from integer to double, and include mhw's
 c                  formatting changes.
 c     8jan99  rjs  Use co routines to return coordinates (which fixs a bug
 c		   in converting to RA).
+c    23mar99  rjs  Fix bug in determining region of interest.
 c------------------------------------------------------------------------
 
 c Main program of imstat and imspec. Puts out the identification, where
@@ -183,7 +184,7 @@ c the include file.
       program imstaspc
 
       character*21     version
-      parameter        ( version = 'version 2.2 8-Jan-99' )
+      parameter        ( version = 'version 2.2 23-Mar-99' )
       character*29     string
 
       include          'imstat.h'
@@ -1098,7 +1099,7 @@ c statistics for a subcube with one higher dimension, etc.
       
       logical          inbox, init(MAXNAX)
       double precision v
-      integer          npoints(MAXNAX)
+      integer          npoints(MAXNAX),crners(4)
       double precision maxval(MAXNAX), minval(MAXNAX)
       double precision sum(MAXNAX), sumpbc(MAXNAX), sumsq(MAXNAX)
 
@@ -1122,9 +1123,15 @@ c loop over all subcubes for which statistics are to be calculated.
 
          call xyzs2c( tinp, subcube, coo )
 
-         if( abs(dim).eq.2 )
-     *     call boxruns(  naxis,coo,'r',boxes,runs,MAXRUNS,nruns,
-     *                    corners(1),corners(2),corners(3),corners(4) )
+         if( abs(dim).eq.2 )then
+	   call boxruns(  naxis,coo,'r',boxes,runs,MAXRUNS,nruns,
+     *                    crners(1),crners(2),crners(3),crners(4) )
+	   do i=1,nruns
+	     runs(1,i) = runs(1,i) + crners(3) - corners(3)
+	     runs(2,i) = runs(2,i) + crners(1) - corners(1)
+	     runs(3,i) = runs(3,i) + crners(1) - corners(1)
+	   enddo
+	 endif
 
 c if init(i)=.true., the statistics for this level must be reinitialized.
          init(1) = .true.
