@@ -19,12 +19,11 @@ c
 	integer bchan(ATIF)
 	real inttime(ATBASE),inttim
 	logical flag(ATIF,ATPOL,ATBASE,ATBIN),dosw(ATBASE)
-	integer nused,tno,nants
+	integer nused,tno,nants,mcount
 	logical dosam,dohann,birdie,doif,dobary,newfreq,newsc,newpnt
 	logical dowt,dopmps,doxyp,opcorr,hires
 	real wts(2*ATCONT-2)
-	real axisrms(ATANT),axismax(ATANT),mdata(5)
-	logical mflag
+	real axisrms(ATANT),axismax(ATANT),mdata(9)
 	double precision obsra,obsdec,lat,long,ra,dec
 	character sname*64
 c
@@ -35,7 +34,7 @@ c
      *	  xtsys,ytsys,chi,xyphase,xyamp,xsampler,ysampler,u,v,w,inttime,
      *	    inttim,wts,mdata,axisrms,axismax,
      *	  pnt,nbin,nused,tno,nants,nifs,nfreq,nstoke,polcode,edge,
-     *	    bchan,tcorr,
+     *	    bchan,tcorr,mcount,
      *	  flag,dosw,dosam,dohann,birdie,dowt,dopmps,doxyp,opcorr,
-     *	    doif,dobary,newfreq,hires,mflag,
+     *	    doif,dobary,newfreq,hires,
      *	  newsc,newpnt
