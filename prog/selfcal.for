@@ -136,6 +136,7 @@ c    rjs  16apr96 Increase select routine arrays.
 c    rjs  28aug96 Minor change to get around gcc-related bug. Change care
 c                 Dave Rayner.
 c    rjs   1oct96 Major tidy up.
+c    rjs  19feb97 Better error messages.
 c
 c  Bugs/Shortcomings:
 c   * Selfcal should check that the user is not mixing different
@@ -144,7 +145,7 @@ c   * It would be desirable to apply bandpasses, and merge gain tables,
 c     apply polarisation calibration, etc.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Selfcal: version 1.0 1-Oct-96')
+	parameter(version='Selfcal: version 1.0 19-Feb-97')
 	integer MaxMod,maxsels,nhead
 	parameter(MaxMod=32,maxsels=1024,nhead=3)
 c
@@ -274,7 +275,7 @@ c  Calculate the self-cal gains.
 c
 	call output('Finding the selfcal solutions ...')
 	call Solve(tvis,phase,relax,noscale,
-     *	     refant,interval)
+     *	     refant,interval,nchan)
 c
 c  Close up.
 c
@@ -377,6 +378,7 @@ c------------------------------------------------------------------------
 c
 	integer i1,i2,polv
 	double precision rms
+	logical okpol,okbase
 c
 c  External.
 c
@@ -389,6 +391,7 @@ c
 	  if(nants.lt.MinAnts)call bug('f',
      *	    'Fewer than the minimum number of antennae are present')
 	  time0 = int(preamble(4)) + 0.5
+	  nbstok = 0
 	  nbad = 0
 	  first = .false.
 	endif
@@ -398,8 +401,9 @@ c  and their antenna numbers are OK.
 c
 	call uvrdvri(tvis,'pol',polv,PolI)
 	call basant(preamble(5),i1,i2)
-	accept = polspara(polv).and.min(i1,i2).ge.1.and.
-     *		max(i1,i2).le.nants.and.i1.ne.i2
+	okpol = polspara(polv)
+	okbase = min(i1,i2).ge.1.and.max(i1,i2).le.nants.and.i1.ne.i2
+	accept = okpol.and.okbase
 c
 c  If all looks OK, then calculate the theoretical rms, and store away
 c  the information that we need.
@@ -410,6 +414,8 @@ c
 	  call uvinfo(tvis,'variance',rms)
 	  if(rms.le.0)rms=1
 	  out(3) = rms
+	else if(.not.okpol)then
+	  nbstok = nbstok + 1
 	else
 	  nbad = nbad + 1
 	endif
@@ -641,12 +647,12 @@ c
 	end
 c************************************************************************
 	subroutine Solve(tgains,phase,relax,noscale,refant,
-     *					     interval)
+     *					     interval,nchan)
 c
 	implicit none
 	integer tgains
 	logical phase,relax,noscale
-	integer refant
+	integer refant,nchan
 	real interval
 c
 c  We have previously accumulated all the statistics that we nee. Now we
@@ -660,9 +666,14 @@ c  Externals.
 c
 	character itoaf*8
 c
+	if(nbstok.ne.0)call bug('w',
+     *	  'No. correlations with inappropriate Stokes type = '//
+     *	  itoaf(nbstok*nchan))
 	if(nbad.ne.0) call bug('w',
-     *	  'No. visibilities with bad baseline numbers = '//itoaf(nbad))
-	line = 'Total number of visibilities processed: '//itoaf(TotVis)
+     *	  'No. correlations with bad baseline numbers = '//
+     *	  itoaf(nbad*nchan))
+	line = 'Total number of correlations being used: '//
+     *	  itoaf(TotVis*nchan)
 	call HisWrite(tgains,'SELFCAL: '//line)
 	call output(line)
 	line = 'Total number of solution intervals: '//itoaf(nSols)
