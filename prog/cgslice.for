@@ -315,6 +315,8 @@ c    nebk 20feb95  Make sure PGIMAG writes black on white for hardcopy.
 c                  Ammend for new wedge call sequences.  Add lookuptable
 c                  to "range" keyword. Move to image type "pixel"
 c                  instead of "grey"
+c    nebk 28mar95  Remove annoying restriction that slices cannot
+c                  begin and end on blanked pixels
 c
 c Notes:
 c
@@ -381,7 +383,7 @@ c
       data dunsl /.false./
       data xdispls, ydispbs /3.5, 3.5/
 c-----------------------------------------------------------------------
-      call output ('CgSlice: version 20-Feb-95')
+      call output ('CgSlice: version 28-Mar-95')
       call output ('Keyword "range" can now be used to specify the')
       call output ('colour lookup table as well the transfer function')
       call output (' ')
@@ -662,8 +664,8 @@ c Define slice ends with cursor or read from file
 c
            redisp = .false.
            if (fslposi.eq.' ' .and. .not.noimage) then
-             call curpos (win(1), win(2), memi(ipnim), labtyp,
-     +         ibin, jbin, blc, naxis, cdelt, crpix, crval, ctype, 
+             call curpos (win(1), win(2), labtyp, ibin, jbin,
+     +         blc, naxis, cdelt, crpix, crval, ctype, 
      +         redisp, maxnsl, nslice, slpos)
 c
 c Erase subplot or write positions file if desired
@@ -839,8 +841,8 @@ c
       end
 c
 c
-      subroutine curget (ibin, jbin, blc, nx, ny, nimage, naxis, 
-     +   crval, cdelt, crpix, ctype, labtyp, ip, ipos, wpos, cch)
+      subroutine curget (ibin, jbin, blc, nx, ny, naxis, crval,
+     +   cdelt, crpix, ctype, labtyp, ip, ipos, wpos, cch)
 c-----------------------------------------------------------------------
 c     Get one end of slice
 c
@@ -848,7 +850,6 @@ c  Input
 c    i,jbin  Pixel increments
 c    blc     BLC of displayed image
 c    nx,ny   x and y sizes of displayed subimage
-c    nimage  Normalization image
 c    naxis   NUmber of axes in image
 c    cr*     Axis descriptors
 c    labtyp  Axis label types
@@ -860,7 +861,7 @@ c            under cursor
 c    cch     Character read by cursor. 
 c-----------------------------------------------------------------------
       implicit none
-      integer naxis, nx, ny, nimage(nx,ny), blc(2), ibin, jbin, ipos(2),
+      integer naxis, nx, ny, blc(2), ibin, jbin, ipos(2),
      +  ip
       double precision cdelt(naxis), crval(naxis), crpix(naxis)
       real wpos(2)
@@ -907,8 +908,6 @@ c
           if (ipos(1).lt.1 .or. ipos(1).gt.nx .or.
      +        ipos(2).lt.1 .or. ipos(2).gt.ny) then
             call bug ('w', 'Cursor off image, try again')
-          else if (nimage(ipos(1),ipos(2)).eq.0) then
-            call bug ('w', 'Pixel blanked, try again')
           else
             more = .false.
           end if
@@ -918,14 +917,13 @@ c
       end
 c
 c
-      subroutine curpos (nx, ny, nimage, labtyp, ibin, jbin, blc, naxis,
+      subroutine curpos (nx, ny, labtyp, ibin, jbin, blc, naxis,
      +  cdelt, crpix, crval, ctype, redisp, maxnsl, nslice, slpos)
 c-----------------------------------------------------------------------
 c     Define slice locations with cursor
 c
 c  Input:
 c     nx,ny   Size of image
-c     nimage  Normalization image
 c     i,jbin  PIxel increment sizes
 c     labtyp  axis label types
 c     blc     blc of window being displayed
@@ -944,7 +942,7 @@ c
 c-----------------------------------------------------------------------
       implicit none
 c
-      integer nx, ny, nimage(nx,ny), blc(2), naxis, maxnsl, nslice,
+      integer nx, ny, blc(2), naxis, maxnsl, nslice,
      +  slpos(6,maxnsl), ibin, jbin
       double precision cdelt(naxis), crval(naxis), crpix(naxis)
       character*(*) labtyp(2), ctype(naxis)
@@ -978,7 +976,7 @@ c
 c
 c Make cursor selection
 c
-        call curget (ibin, jbin, blc, nx, ny, nimage, naxis, crval, 
+        call curget (ibin, jbin, blc, nx, ny, naxis, crval, 
      +     cdelt, crpix, ctype, labtyp, ip, simpos, wldpos, cch)
         if (cch.eq.'A') then
           if (ip.eq.0) then
