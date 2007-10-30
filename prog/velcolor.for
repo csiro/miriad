@@ -136,7 +136,7 @@ c    pivot	Center channel for green image.
 c    axis	The axis for which the color is calculated.
 c------------------------------------------------------------------------
 	integer nkeys, nckeys,i,j,k
-	parameter (nkeys=23, nckeys=4)
+	parameter (nkeys=22, nckeys=4)
 	character keyw(nkeys)*9, ckeyw(nckeys)*5, itoaf*1, cin*1, cout*1
 	character atemp*9,ctype*10
 	real rtemp,cdelt,crval,crpix
@@ -145,10 +145,10 @@ c
 c  Be careful that nkeys and nckeys match the number of keywords.
 c
 	data keyw/   'bmaj    ','bmin    ','bpa     ','bunit   ',
-     *    'date-obs','epoch   ','history ','instrume',
+     *    'obstime ','epoch   ','history ','instrume',
      *	  'ltype   ','lstart  ','lwidth  ','lstep   ','niters  ',
      *	  'object  ','observer','obsra   ','obsdec  ','pbfwhm  ',
-     *    'restfreq','telescop','vobs    ','xshift  ','yshift  '/
+     *    'restfreq','telescop','vobs    ','cellscal'/
 c
 c  Keyword values which must be changed as they are passed from in to out.
 c
