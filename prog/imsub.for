@@ -36,6 +36,7 @@ c    rjs   8nov94  Get incr and blanking masks to work correctly.
 c    rjs  17aug95  Copy mostable to output.
 c    rjs  21nov95  Use maxnax.h.
 c    nebk 10jan96  Change crpix and cdelt to double
+c    rjs  02jul97  cellscale change.
 c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='Imsub: version 1.0 17-Aug-95' )
@@ -61,7 +62,7 @@ c
 c  Header keywords.
 c
 	integer nkeys
-	parameter(nkeys=34)
+	parameter(nkeys=35)
 	character keyw(nkeys)*8
 	data keyw/   'bmaj    ','bmin    ','bpa     ','bunit   ',
      *	  'crval1  ','crval2  ','crval3  ','crval4  ','crval5  ',
@@ -69,7 +70,8 @@ c
      *	  'obstime ','epoch   ','history ','instrume','niters  ',
      *	  'object  ','observer','obsra   ','obsdec  ','pbfwhm  ',
      *	  'restfreq','telescop','vobs    ','btype   ','rms     ',
-     *	  'ltype   ','lstart  ','lwidth  ','lstep   ','mostable'/
+     *	  'ltype   ','lstart  ','lwidth  ','lstep   ','mostable',
+     *	  'cellscal'/
 c
 c  Get the input parameters.
 c
