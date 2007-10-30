@@ -1,16 +1,19 @@
+	integer POLY,GAUS,COS6,SINGLE
+	parameter(POLY=1,GAUS=2,COS6=3,SINGLE=4)
+	integer MAXPB,MAXVAL,MAXOBJ
+	parameter(MAXPB=10,MAXVAL=50,MAXOBJ=1024)
 c
-c Include file for pb.for
+	character pb(MAXPB)*16
+	integer pbtype(MAXPB),npbvals,npb,indx(MAXPB),nvals(MAXPB)
+	real f1(MAXPB),f2(MAXPB),cutoff(MAXPB),pbfwhm(MAXPB)
+	real pbvals(MAXVAL),maxrad(MAXPB)
 c
-      include 'mirconst.h'
-      integer maxco
-      double precision rtmsq, atr
-      parameter (maxco = 5, atr = dpi / (180.0 * 3600.0),
-     +           rtmsq = 180.0 * 180.0 * 3600.0 / dpi / dpi)
+	integer pbhead
+	real xc(MAXOBJ),yc(MAXOBJ),x0(MAXOBJ),y0(MAXOBJ),fwhm(MAXOBJ)
+	real freq(MAXOBJ)
+	integer pnt(MAXOBJ)
 c
-      double precision pbcoeff(maxco), pbfreq
-      real pbcut, pbfac
-      character pbtype*10, pbdone*4
-c
-      common /pbdat1/ pbcoeff, pbfreq
-      common /pbdat2/ pbfac, pbcut
-      common /pbdat3/ pbtype, pbdone
+	common/pb1com/ f1,f2,cutoff,pbfwhm,pbvals,xc,yc,x0,y0,fwhm,freq,
+     *	    maxrad,
+     *	  pbtype,npbvals,npb,indx,nvals,pbHead,pnt
+	common/pb1comc/pb
