@@ -69,6 +69,10 @@ c	  mfs       This is used if there is a single plane in the input
 c	            model, which is assumed to represen t the data at all
 c	            frequencies. This should also be used if the model has
 c	            been derived using MFCLEAN.
+c         zero      Use the value zero for the model if it cannot be 
+c	            calculated. This can be used to avoid flagging the 
+c	            data in the outer parts of the u-v-plane when subtracting
+c	            a low resolution model.
 c	The operations add, subtract, multiply, divide, replace and flag are
 c	mutually exclusive. The operations flag and unflag are also mutually
 c	exclusive.
@@ -137,6 +141,7 @@ c    rjs  15feb93 Changes to make ra,dec variables double.
 c    rjs  29mar93 Fiddles with the sigma.
 c    rjs  23dec93 Minimum match of linetype name.
 c    rjs  31jan95 Changes to support w-axis.
+c    mhw  05jan96 Add zero option to avoid flagging outer uvplane
 c  Bugs:
 c    * Polarisation processing is pretty crude.
 c------------------------------------------------------------------------
@@ -149,7 +154,7 @@ c
 	character vis*64,modl*64,out*64,oper*8,ltype*32,type*1
 	character flag1*8,flag2*8
 	logical unflag,autoscal,apriori,updated,imhead,defline
-	logical mfs,doPol,selradec,doclip
+	logical mfs,doPol,selradec,doclip,zero
 	real sels(maxsels),offset(2),flux,clip,sigma,lstart,lstep,lwidth
 	integer nsize(3),nchan,nread,nvis,length,i
 	integer tvis,tmod,tscr,tout,vcopy,pol
@@ -173,7 +178,7 @@ c
 	call keya('vis',vis,' ')
 	call SelInput('select',sels,maxsels)
 	call GetOpt(oper,unflag,autoscal,apriori,imhead,mfs,doPol,
-     *		selradec)
+     *		selradec,zero)
 	call keya('model',modl,' ')
 	doclip = keyprsnt('clip')
 	call keyr('clip',clip,0.)
@@ -213,7 +218,8 @@ c
 	if(imhead)   flag2(3:3) = 'h'
 	if(mfs)	     flag2(4:4) = 'm'
 	if(doclip)   flag2(5:5) = 'l'
-c
+	if(zero)     flag2(6:6) = 'z'
+c       
 	calcrms = oper.eq.'flag'
 	dounflag = unflag
 	pol = 0
@@ -491,11 +497,11 @@ c
 	end
 c************************************************************************
 	subroutine GetOpt(oper,unflag,autoscal,apriori,imhead,mfs,doPol,
-     *	  selradec)
+     *	  selradec,zero)
 c
 	implicit none
 	character oper*(*)
-	logical unflag,autoscal,apriori,imhead,mfs,doPol,selradec
+	logical unflag,autoscal,apriori,imhead,mfs,doPol,selradec,zero
 c
 c  Get the various processing options.
 c
@@ -509,15 +515,17 @@ c		flux table, and data file planet info.
 c    imhead	Copy image header items to uvvariables.
 c    selradec	Input uv file contains multiple pointings or multiple
 c		sources.
+c    zero       Use zero if the model cannot be calculated (instead of 
+c               flagging the data)
 c------------------------------------------------------------------------
 	integer i,j
 	integer nopt
-	parameter(nopt=13)
+	parameter(nopt=14)
 	character opts(nopt)*9
 	logical present(nopt)
 	data opts/    'add      ','divide   ','flag     ','multiply ',
      *	  'replace  ','subtract ','autoscale','unflag   ','apriori  ',
-     *	  'imhead   ','mfs      ','polarized','selradec '/
+     *	  'imhead   ','mfs      ','polarized','selradec ','zero     '/
 	call options('options',opts,present,nopt)
 c
 	j = 0
@@ -539,6 +547,7 @@ c
 	mfs = present(11)
 	doPol = present(12)
 	selradec = present(13)
+	zero = present(14)
 	if(oper.eq.'flag'.and.unflag)
      *	  call bug('f','You cannot use options=flag,unflag')
 	if(selradec.and.imhead)then
