@@ -58,6 +58,7 @@ c    rjs  11oct93 Increase max file name length.
 c    rjs   8nov94 Minor header beautification.
 c    rjs  02dec96 Better header.
 c    rjs  02jul97 cellscal change.
+c    rjs  12aug97 Forget NCP projection geometry.
 c------------------------------------------------------------------------
 	include 'maxnax.h'
 	include 'maxdim.h'
@@ -429,12 +430,14 @@ c
 	    cdelt = 1./(n(i)*cdelt)
 	  else if(ctype(1:4).eq.'UU--')then
 	    ctype(1:2) = 'RA'
+	    if(ctype(6:8).eq.'NCP')ctype(6:8) = 'SIN'
 	    cdelt = 1./(n(i)*cdelt)
 	  else if(ctype(1:4).eq.'DEC-')then
 	    ctype(1:3) = 'VV-'
 	    cdelt = 1./(n(i)*cdelt)
 	  else if(ctype(1:4).eq.'VV--')then
 	    ctype(1:3) = 'DEC'
+	    if(ctype(6:8).eq.'NCP')ctype(6:8) = 'SIN'
 	    cdelt = 1./(n(i)*cdelt)
 	  else if(ctype(1:4).eq.'FREQ')then
 	    ctype = 'TIME'

@@ -19,6 +19,8 @@ c	                 print it out in various radix formats.
 c	                 The input integer can be in a radix format.
 c			 A %x introduces a hex number, %o an octal and
 c	                 %b a binary.
+c	  -c             Treat the input as a single constant, and print out
+c	                 information on it.
 c	  expression     A FORTRAN-like expression (except if the -r
 c	                 flag is given).
 c	                 NOTE: An asterisk and brackets are special
@@ -29,15 +31,19 @@ c--
 c  History:
 c    rjs  ??????? Original version.
 c    rjs  13sep95 Added -f flag.
+c    rjs  12aug97 Support constants.
 c------------------------------------------------------------------------
+	include 'calc.h'
+c
 	integer dim,scalar
 	parameter(dim=128,scalar=2)
 	integer buf(dim),index,type,rin
 	real rbuf(dim)
 	character in*80,out*80,line*128,dec*40,oct*40,hex*40
-	character format*32,form*32
+	character format*32,form*32,strval*32,def*32,unit*8
+	double precision value
 	integer lin,lout,lline,ldec,loct,lhex,narg,lform,i
-	logical doradix,doint
+	logical doradix,doint,doconst
 c
 c  Externals.
 c
@@ -51,8 +57,10 @@ c
 	i = 0
 	doradix = .false.
 	doint = .false.
+	doconst = .false.
 	format = ' '
 	out = ' '
+	nconst = 0
 c
 c  Perform a radix conversion operation.
 c
@@ -63,6 +71,8 @@ c
 	    doint = .true.
 	  else if(in.eq.'-r')then
 	    doradix = .true.
+	  else if(in.eq.'-c')then
+	    doconst = .true.
 	  else if(in.eq.'-f')then
 	    i = i + 1
 	    if(i.le.narg)call getarg(i,format)
@@ -73,10 +83,17 @@ c
 	enddo
 	lout = len1(out)
 	if(lout.eq.0)call bug('f','An expression must be given')
+	call lcase(out(1:lout))
 c
 c  Fill in output format.
 c
-	if(format.eq.' '.and..not.doint)format = '1pg14.7'
+	if(format.eq.' '.and..not.doint)then
+	  if(doconst)then
+	    format = '1pg20.13'
+	  else
+	    format = '1pg14.7'
+	  endif
+	endif
 	lform = len1(format)
 	form = ' '
 	if(lform.gt.0)form = '('//format(1:lform)//')'
@@ -105,8 +122,22 @@ c
 	  line = '  Result = '//dec(1:ldec)//'  Hex = '//hex(1:lhex)//
      *		 '  Octal = '//oct(1:loct)
 c
+	else if(doconst)then
+	  call cinit
+	  call cget(out(1:lout),value,unit,def)
+	  write(strval,form)value
+	  if(def.ne.' ')then
+	    line = out(1:lout)//': '//strval(1:len1(strval))//
+     *				' '//unit(1:len1(unit))//
+     *				' ('//def(1:len1(def))//')'
+	  else
+	    line = out(1:lout)//': '//strval(1:len1(strval))//
+     *				' '//unit(1:len1(unit))
+	  endif
+c
 c  Perform a real expression.
 c
+	
 	else
 	  type = 0
 	  call ariComp(out(1:lout),paction,type,Buf,dim,RBuf,dim)
@@ -136,8 +167,22 @@ c************************************************************************
 	call bug('f','I should never get here')
 	end
 c************************************************************************
-	subroutine Paction
-	call bug('f','No symbols are possible in the input expression')
+	subroutine Paction(symbol,type,indx,value)
+c
+	character symbol*(*)
+	integer type,indx
+	real value
+c------------------------------------------------------------------------
+	include 'calc.h'
+	double precision val
+	character unit*8,def*16
+c
+	if(nconst.eq.0)call cinit
+	type = 1
+	indx = 0
+	call cget(symbol,val,unit,def)
+	value = val
+c
 	end
 c************************************************************************
 	subroutine radix(in,lin,rin,out,lout,rout)
@@ -232,4 +277,63 @@ c
 	  m = dout(lout-n+1) + 1
 	  out(n:n) = digits(m:m)
 	enddo
+	end
+c************************************************************************
+	subroutine Cadd(name,value,unit,def)
+c
+	implicit none
+	character name*(*),unit*(*),def*(*)
+	double precision value
+c
+c------------------------------------------------------------------------
+	include 'calc.h'
+c
+	nconst = nconst + 1
+	if(nconst.gt.MAXCONST)call bug('f','Too many constants')
+	names(nconst)  = name
+	values(nconst) = value
+	units(nconst)  = unit
+	defs(nconst)   = def
+c
+	end
+c************************************************************************
+	subroutine Cget(name,value,unit,def)
+c
+	implicit none
+	character name*(*),unit*(*),def*(*)
+	double precision value
+c
+c------------------------------------------------------------------------
+	include 'calc.h'
+	integer i
+	character line*64
+c
+	do i=1,nconst
+	  if(name.eq.names(i))then
+	    value = values(i)
+	    unit  = units(i)
+	    def   = defs(i)
+	    return
+	  endif
+	enddo
+c
+	line = 'Constant '//name//' not found'
+	call bug('f',line)
+	end
+c************************************************************************
+	subroutine cinit
+c
+	implicit none
+	include 'mirconst.h'
+	double precision AU
+	parameter(AU=149.597870D9)
+c
+	call cadd('pi',DPI,' ',' ')
+	call cadd('c', DCMKS,'m/s','Speed of light')
+	call cadd('k',DKMKS, 'J/K','Boltzmans constant')
+	call cadd('h',DHMKS, 'J s','Plancks constant')
+	call cadd('r',8.314d0,'J/(mol K)','Universal gas constant')
+	call cadd('au',AU,'m','Astronomical unit')
+	call cadd('parsec',180*3600/DPI*AU,'m','Parsec')
+	call cadd('ly',DCMKS*86400*365.25,'m','Light-year')
 	end
