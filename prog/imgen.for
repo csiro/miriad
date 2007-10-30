@@ -137,7 +137,7 @@ c
 c  Source parameters.
 c
 	integer MAXOBJS
-	parameter(MAXOBJS=3000)
+	parameter(MAXOBJS=4000)
 	real fwhm1(MAXOBJS),fwhm2(MAXOBJS),posang(MAXOBJS)
 	real amp(MAXOBJS),x(MAXOBJS),y(MAXOBJS)
 	real fwhm1d(MAXOBJS),fwhm2d(MAXOBJS),posangd(MAXOBJS)
