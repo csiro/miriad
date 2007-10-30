@@ -55,21 +55,25 @@ c    rjs     24sep93 Handle case of different number of feeds between
 c		     primary and secondary.
 c    rjs      5nov93 Do not copy polarisation solutions.
 c    rjs     17aug95 Antenna selection.
+c    rjs     20may97 Print out the xy phasr that is being applied.
+c		     Get the wraps right.
 c
 c  Bugs and Shortcomings:
+c    * The xy phase is not applied to the polarisation solution.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
+	include 'mirconst.h'
 	character version*(*)
 	integer MAXSELS
-	parameter(version='GpBoot: version 17-Aug-95')
+	parameter(version='GpBoot: version 20-May-97')
 	parameter(MAXSELS=256)
 c
 	logical docal,doxy
-	character cal*64,vis*64,line*72
+	character cal*64,vis*64,line1*72,line2*72
 	real sels(MAXSELS)
-	real VAmp(2*MAXANT),CAmp(2*MAXANT),factor
+	real VAmp(2*MAXANT),CAmp(2*MAXANT),factor,theta
 	integer VCNT(2*MAXANT),CCnt(2*MAXANT)
-	complex Gains(3*MAXANT),xyp(MAXANT)
+	complex Gains(3*MAXANT),xyp
 	integer iostat,tVis,tCal,ngains,nants,nfeedc,nfeedv,ntau
 	integer temp,i,j
 c
@@ -137,7 +141,7 @@ c
 	do i=1,ngains,nfeedv+ntau
 	  Gains(i) = cmplx(factor,0.)
 	  if(doxy)then
-	    Gains(i+1) = factor*xyp(j)
+	    Gains(i+1) = factor*xyp
 	  else if(nfeedv.eq.2)then
 	    Gains(i+1) = cmplx(factor,0.)
 	  endif
@@ -152,9 +156,15 @@ c
 c  Inform user, not appeasing Bob, who would rather the user
 c  be kept bare foot and ignorant.
 c
-        write(line,'(a,f6.3)') 'Secondary flux density scaled by:',
+        write(line1,'(a,f6.3)') 'Secondary flux density scaled by:',
      *                         factor**2
-        call output(line)
+        call output(line1)
+	if(doxy)then
+	  theta = 180/PI*atan2(aimag(xyp),real(xyp))
+	  write(line2,100)theta
+  100	  format('Applying xyphase correction of',f6.1,' degrees')
+	  call output(line2)
+	endif
 c
 c  Write out some history now. Do not appease Neil -- just write it to
 c  the 'vis' file. Neil would want it written to the 'cal' file, as
@@ -163,7 +173,8 @@ c
 	call hisopen(tVis,'append')
 	call hiswrite(tVis,'GPBOOT: Miriad '//version)
 	call hisinput(tVis,'GPBOOT')
-        call hiswrite(tVis,'GPBOOT: '//line)
+        call hiswrite(tVis,'GPBOOT: '//line1)
+        if(doxy)call hiswrite(tVis,'GPBOOT: '//line2)
 	call hisclose(tVis)
 c
 c  Close up everything.
@@ -414,7 +425,7 @@ c************************************************************************
 c
 	implicit none
 	integer tVis,tCal,nants
-	complex xyp(nants)
+	complex xyp
 	logical ok
 c
 c  Determine the XYphase offsets to apply to each antenna in the
@@ -429,12 +440,14 @@ c    ok
 c    xyp
 c------------------------------------------------------------------------
 	include 'maxdim.h'
+	include 'mirconst.h'
 	real tol
 	parameter(tol = 0.075)
 	real Vphase(MAXANT),Vsd(MAXANT),Cphase(MAXANT),Csd(MAXANT)
 	integer Vcnt(MAXANT),Ccnt(MAXANT),Vnants,Cnants
-	real theta
+	real theta,offset,t
 	integer Count,n,i
+	logical first
 c
 c  Get the xyphases for the two files.
 c
@@ -446,23 +459,32 @@ c  If alls OK, average those XYphase errors where the XY phase appears
 c  to be constant (has a standard deviation of less than "tol" radians.
 c
 	ok = Vnants.eq.nants.and.Cnants.eq.nants
+	first = .true.
 	if(ok)then
 	  theta = 0
 	  Count = 0
 	  do i=1,nants
 	    n = min(Vcnt(i),Ccnt(i))
 	    if(Vsd(i).lt.tol.and.Csd(i).lt.tol.and.n.gt.0)then
-	      theta = theta + n*(Cphase(i)-Vphase(i))
+	      if(first)then
+		offset = Cphase(i) - Vphase(i)
+		offset = mod(offset,2*PI)
+		if(offset.lt.-PI)offset = offset + 2*PI
+		if(offset.gt.+PI)offset = offset - 2*PI
+	        first = .false.
+	      endif
+	      t = Cphase(i) - Vphase(i) - offset
+	      t = mod(t,2*PI)
+	      if(t.lt.-PI) t = t + 2*PI
+	      if(t.gt.+PI) t = t - 2*PI
+	      theta = theta + n*t
 	      Count = Count + n
 	    endif
 	  enddo
 	  ok = Count.gt.0
 	  if(ok)then
-	    theta = theta / Count
-	    xyp(1) = cmplx(cos(theta),-sin(theta))
-	    do i=2,nants
-	      xyp(i) = xyp(1)
-	    enddo
+	    theta = theta / Count + offset
+	    xyp = cmplx(cos(theta),-sin(theta))
 	  endif	
 	endif
 	if(.not.ok) call bug('w',
