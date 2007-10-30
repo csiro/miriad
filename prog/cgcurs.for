@@ -4,11 +4,15 @@ c= CGCURS - Read quantities with cursor from images on a PGPLOT device
 c& nebk
 c: plotting
 c+
-c	CGCURS displays an image via a contour plot or a grey scale
-c	on a PGPLOT device.  The cursor is then used to read image
-c	values, or to evaluate image statistics in a polygonal region,
-c	or to write a polygonal region definition to a text file.
-c	
+c	CGCURS displays an image via a contour plots or a pixel map
+c	representation (formerly called a "grey scale") on a PGPLOT 
+c	device. The cursor is then used to read image values, or to 
+c	evaluate image statistics in a polygonal region, or to write 
+c	a polygonal region definition to a text file.
+c
+c	Manipulation of the device colour lookup table is available
+c	when you display with a pixel map representation.
+c
 c	When using cursor options, generally, click the right button
 c	(enter X) to exit the function, click the left button (enter A)
 c	to add a location, and click the middle button (enter D) to
@@ -17,13 +21,14 @@ c
 c@ in
 c	The input image.
 c@ type
-c	Specifies the image type given in the IN keyword.  Minimum
-c	match is supported.  Choose from:
+c	Specifies the type of the image in the IN keyword. Minimum match 
+c	is supported (note that "pixel" was formerly "grey" which is 
+c	still supported).   Choose from:
 c
-c	"contour"  (contour)
-c	"grey"     (grey scale)
+c	"contour"   (contour plot)
+c	"pixel"     (pixel map)
 c
-c	Default is "contour"
+c	Default is "pixel"
 c@ region
 c	Region of interest.  Choose only one spatial region (bounding 
 c	box only supported), but as many spectral regions (i.e., 
@@ -62,7 +67,7 @@ c	Levels to contour for first image, are LEVS times SLEV
 c	(either percentage of the image peak or absolute).
 c	Defaults try to choose something sensible
 c@ range
-c	3 values. The grey scale range (background to foreground), and
+c	3 values. The pixel map range (background to foreground), and
 c	transfer function type.  The transfer function type can be one
 c	of "lin" (linear), "log" (logarithmic), "heq" (histogram equal-
 c	ization), and "sqr" (square root).  See also OPTIONS=FIDDLE which
@@ -107,9 +112,9 @@ c	  the display lookup table.  You can cycle through b&w and colour
 c	  displays, as well as alter the transfer function by the cursor 
 c	  location, or by selecting predefined transfer functions such as 
 c	  histogram equalization, logarithmic, & square root.
-c	"wedge" means that if you are drawing a grey scale, also draw
+c	"wedge" means that if you are drawing a pixel map, also draw
 c	  and label a wedge to the right of the plot, showing the map 
-c	  of intensity to grey level.  
+c	  of intensity to colour
 c
 c       "3value"  means label each sub-plot with the appropriate value
 c	  of the third axis (e.g. velocity or frequency for an xyv ordered 
@@ -254,6 +259,9 @@ c		   Also call new LAB3CG which labels plot with true
 c                  world coordinates for third axis
 c    nebk 23dec94  Make sure selected region no bigger than image
 c    nebk 05jan95  Use new PGIMAGE in favour of PGGRAY
+c    nebk 20feb95  Adjust new call sequence of wedge routines and call
+c		   ofmcol to ensure b&w table their by default. Move 
+c		   to image type "pixel" instead of "grey"
 c To do:
 c
 c-----------------------------------------------------------------------
@@ -286,23 +294,21 @@ c
      +  yopts*20, hard*20, xxopts*22, yyopts*22, trfun*3, levtyp*1
 c
       logical do3val, do3pix, eqscale, doblnk, cursor, stats, doreg,
-     +  mask, smore, rmore, cmore, dogrey, display, doabs, gaps, dolog,
+     +  mask, smore, rmore, cmore, dopixel, display, doabs, gaps, dolog,
      +  cgspec, cgdisp, mark, doerase, dobox, near, dowedge, dofid,
      +  first
 c
       data ipage, scale /0, 0.0, 0.0/
       data dmm /1.0e30, -1.0e30/
 c-----------------------------------------------------------------------
-      call output ('CgCurs: version 05-Jan-95')
-      call output ('Non-linear coordinates are now partially handled')
-      call output ('See "help cgcoords" for explanations')
+      call output ('CgCurs: version 20-Feb-95')
       call output (' ')
 c
 c Get user inputs
 c
       call inputs (maxlev, in, ibin, jbin, kbin, levtyp, slev, levs, 
      +   nlevs, pixr, trfun, pdev, labtyp, do3val, do3pix, eqscale, 
-     +   nx, ny, cs, dogrey, cursor, stats, doreg, doabs, dolog, 
+     +   nx, ny, cs, dopixel, cursor, stats, doreg, doabs, dolog, 
      +   cgspec, cgdisp, mark, doerase, dobox, near, dowedge, dofid)
 c
 c Open image
@@ -359,9 +365,9 @@ c
         call output (' ')
       end if
 c
-c Compute contour levels or check grey scale for log offset
+c Compute contour levels or check pixel map for log offset
 c
-      if (dogrey) then
+      if (dopixel) then
         call grfixcg (pixr, lin, naxis, size, trfun, pixr2,
      +                groff, blank)
       else
@@ -418,7 +424,7 @@ c
 c       
 c Init OFM routines
 c       
-      if (dofid) call ofmini
+      call ofmini
 c
 c Set label displacements from axes and set PGTBOX labelling
 c option strings
@@ -475,7 +481,7 @@ c
 c Apply transfer function
 c
          call pgsci (7)
-         if (dogrey) then
+         if (dopixel) then
            if (trfun.ne.'lin') call apptrfcg (pixr2, trfun, groff, 
      +        win(1)*win(2), memi(ipnim), memr(ipim), nbins,
      +        his, cumhis)
@@ -485,8 +491,8 @@ c and will not get erased
 c
            if (wedcod.eq.1 .or. wedcod.eq.2) then
             call pgsch (cs(1))
-            call wedgecg (wedcod, wedwid, jj, trfun, groff, nbins, 
-     +                    cumhis, wdgvp, pixr2(2), pixr2(1))
+            call wedgecg (.false., wedcod, wedwid, jj, trfun, groff, 
+     +                    nbins, cumhis, wdgvp, pixr2(2), pixr2(1))
            end if
          end if
 c
@@ -495,10 +501,11 @@ c
          display = .true.
          do while (display)
 c
-c Draw grey scale
+c Draw pixel map; set default b&w colour table first.
 c
            call pgsci (7)
-           if (dogrey) then
+           if (dopixel) then
+             call ofmcol (1, pixr2(1), pixr2(2))
              call pgimag (memr(ipim), win(1), win(2), 1, win(1), 1,
      +                    win(2), pixr2(1), pixr2(2), tr)
            else 
@@ -521,8 +528,8 @@ c Draw wedge inside subplots and overwrite label ticks
 c
            if (wedcod.eq.3) then
             call pgsch (cs(1))
-            call wedgecg (wedcod, wedwid, jj, trfun, groff, nbins, 
-     +                    cumhis, wdgvp, pixr2(2), pixr2(1))
+            call wedgecg (.false., wedcod, wedwid, jj, trfun, groff, 
+     +                    nbins, cumhis, wdgvp, pixr2(2), pixr2(1))
            end if
 c
 c Modify lookup table
@@ -1189,7 +1196,7 @@ c    lstat  Handle of output text file
 c  Output:
 c    redisp Redisplay the image
 c    smore  Do more statistics options
-c    trfun  Grey scale transfer function type
+c    trfun  pixel map transfer function type
 c    groff  Log offset
 c-----------------------------------------------------------------------
       implicit none
@@ -1542,8 +1549,8 @@ c     mark      Mark cursor location
 c     doerase   Erase rectangle behind "3-axis" strings
 c     dobox     List peak in 5x5 box under cursor
 c     near      Force cursor to neasrest pixel in options=cursor
-c     dowedge   Draw wedge on grey scale
-c     dofid     FIddle lookup table of grey scale
+c     dowedge   Draw wedge on pixel map
+c     dofid     FIddle lookup table of pixel map
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -1701,7 +1708,7 @@ c
 c
       subroutine inputs (maxlev, in, ibin, jbin, kbin, levtyp, slev,
      +   levs, nlevs, pixr, trfun, pdev, labtyp, do3val, do3pix, 
-     +   eqscale, nx, ny, cs, dogrey, cursor, stats, doreg, doabs, 
+     +   eqscale, nx, ny, cs, dopixel, cursor, stats, doreg, doabs, 
      +   dolog, cgspec, cgdisp, mark, doerase, dobox, near, 
      +   dowedge, dofid)
 c-----------------------------------------------------------------------
@@ -1717,8 +1724,8 @@ c              'p'(ercentage) or 'a'(bsolute)
 c   slev       Contour levels scale factors (absolute or percentage)
 c   levs       Contour levels.  Will be scaled by SLEV for contouring
 c   nlevs      Number of contour levels
-c   pixr       Greyscale intensity range
-c   trfun      Type of grey scale transfer function: 'log', 'lin', 
+c   pixr       Pixel map intensity range
+c   trfun      Type of pixel map transfer function: 'log', 'lin', 
 c	       'heq', or 'sqr'
 c   pdev       PGPLOT plot device/type
 c   labtyp     Type of labels for x and y axes
@@ -1728,7 +1735,7 @@ c   eqscale    True means plot with x and y scales
 c   nx,ny      Number of sub-plots per page
 c   cs         PGPLOT character sizes for the plot axis labels and
 c              velocity/channel label,
-c   dogrey     True for grey scale, false for contour plot
+c   dopixel    True for pixel map, false for contour plot
 c   cursor     True to enter cursor mode at end of each sub-plot.
 c   stats      True to enter cursor statistics mode at end of
 c              each sub-plot
@@ -1742,34 +1749,34 @@ c   mark       Mark cursor locations
 c   doerase    Erase rectangle behind "3-axis" value
 c   dobox      List peak in 5x5 box under cursor
 c   near       FOrce cursor to nearest pixel in options=cursor
-c   dofid      FIddle lookup tbale of grey scale
-c   dowedge    Draw wedge with grey scale
+c   dofid      FIddle lookup tbale of pixel map
+c   dowedge    Draw wedge with pixel map
 c-----------------------------------------------------------------------
       implicit none
 c
       integer maxlev, nx, ny, nlevs, ibin(2), jbin(2), kbin(2)
       real levs(maxlev), pixr(2), cs(2), slev
       character*(*) labtyp(2), in, pdev, trfun, levtyp
-      logical do3val, do3pix, eqscale, cursor, stats, doreg, dogrey,
+      logical do3val, do3pix, eqscale, cursor, stats, doreg, dopixel,
      +  doabs, dolog, cgspec, mark, cgdisp, doerase, dobox, near,
      +  dowedge, dofid
 cc
       integer ntype, nlab, ntype2, nimtype
-      parameter (ntype = 13, ntype2 = 2)
+      parameter (ntype = 13, ntype2 = 3)
       character type(ntype)*6, imtype*7, type2(ntype2)*7
       data type  /'hms   ', 'dms   ', 'abspix', 'relpix', 
      +            'arcsec', 'absghz', 'relghz', 'abskms', 
      +            'relkms', 'abslin', 'rellin', 'absdeg',
      +            'reldeg'/
-      data type2 /'contour', 'grey'/
+      data type2 /'contour', 'pixel', 'grey'/
 c-----------------------------------------------------------------------
       call keyini
       call keyf ('in', in, ' ')
       if (in.eq.' ') call bug ('f', 'No image specified')
       call keymatch ('type', ntype2, type2, 1, imtype, nimtype)
-      if (nimtype.eq.0) imtype = 'contour'
-      dogrey = .true.
-      if (imtype.eq.'contour') dogrey = .false.
+      if (nimtype.eq.0) imtype = 'pixel'
+      dopixel = .true.
+      if (imtype.eq.'contour') dopixel = .false.
 c
       call keyi ('xybin', ibin(1), 1)
       call keyi ('xybin', ibin(2), ibin(1))
@@ -1803,10 +1810,10 @@ c
       call keyr ('range', pixr(2), 0.0)
       call keya ('range', trfun, 'lin')
       call lcase (trfun)
-      if (dogrey) then
+      if (dopixel) then
         if (trfun.ne.'lin' .and. trfun.ne.'log' .and. trfun.ne.'heq' 
      +      .and. trfun.ne.'sqr') call bug ('f', 
-     +    'Unrecognized grey scale transfer function type')
+     +    'Unrecognized pixel map transfer function type')
       else
         trfun = ' '
       end if
@@ -1824,7 +1831,7 @@ c
       if (.not.cursor) dobox = .false.
       if (near .and. dobox) call bug ('f', 
      +  'You can''t have options=near and options=box')
-      if (.not.dogrey) then
+      if (.not.dopixel) then
         dofid = .false.
         dowedge = .false.
       end if
