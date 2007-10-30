@@ -182,6 +182,8 @@ c    14nov96  nebk Change crpix from integer to double precision as it was
 c                  messing up coordinate labelling
 c    29nov96  rjs  Change crpix from integer to double, and include mhw's
 c                  formatting changes.
+c     8jan99  rjs  Use co routines to get coordinates (which fixes bug in
+c		   converting RAs).
 c------------------------------------------------------------------------
 
 c Main program of imstat and imspec. Puts out the identification, where
@@ -216,7 +218,7 @@ c the include file.
       program imstaspc
 
       character*21     version
-      parameter        ( version = 'version 2.2 28-Nov-96' )
+      parameter        ( version = 'version 2.2 8-Jan-99' )
       character*29     string
 
       include          'imspec.h'
@@ -234,8 +236,11 @@ c the include file.
       call output( string )
       call inputs( tinp,naxis,dim,corners,boxes,cut,counts,
      *             beaminfo,axlabel,device, MAXBOXES )
+      cIn = tinp
+      call coInit(cIn)
       call stats(  tinp,naxis,dim,corners,boxes,cut,counts,
      *             beaminfo,axlabel,device )
+      call coFin(cIn)
       call xyzclose( tinp )
       call logclose
 
@@ -615,9 +620,7 @@ c The rest will be the other axes, with the lowest numbered first.
 c              Following is workaround HP compiler bug
                temp = ctype(n)
                call rdhda( tinp, keyw('ctype',i), ctype(n), temp      )
-               call rdhdd( tinp, keyw('crval',i), crval(n-dim), 1.d0  )
-               call rdhdd( tinp, keyw('crpix',i), crpix(n-dim), 1.d0  )
-               call rdhdd( tinp, keyw('cdelt',i), cdelt(n-dim), 0.d0  )
+	       cindex(n-dim) = i
             endif
          enddo
       endif
@@ -1330,7 +1333,7 @@ c For ra and dec axes special conversions are done.
       character*24     radec
 
       do i = 1, nlevels - 1
-         coords(i)  = crval(i) + (coo(i)-crpix(i))*cdelt(i)
+	 call coCvt1(cIn,cindex(i),'ap',dble(coo(i)),'aw',coords(i))
          cvalues(i) = ' '
          if(     axlabel(i)(:4).eq.'R.A.' ) then
              coords(i)  = 180./dpi * coords(i)
