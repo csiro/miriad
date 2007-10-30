@@ -1,0 +1,59 @@
+#!/bin/csh -f
+#--
+#
+#* mirinstall - Put Miriad source files in the right directories
+#& rjs
+#: user utility
+#+
+#  Usage: mirinstall [-l] dir files...
+#
+#  mirinstall is a utility to copy (source) files to the standard
+#  Miriad directories. A backup of any old version (with a time-stamp
+#  extension) is created in $MIR/old, and the file is also optionally
+#  copied to the $MIR/diffs/changes directory. File protection and
+#  update stamps are taklen care of.
+#
+#  Arguments:
+#    dir	This gives the Miriad directory to copy the files to
+#		For example: prog
+#    files...	This gives the list of files to process.
+#    -l		The local-only flag. Normally a copy of the file is also
+#		made if $MIR/diffs/changes. This prevents such a copy
+#		being made.
+#--
+
+set dir = ""
+set date = `date +%d%h%y`
+set dolocal = 0
+
+foreach arg ( $argv )
+  if ( $arg == "-l" ) then
+    set dolocal = 1
+  else if( "$dir" == "" ) then
+    set dir = $arg
+  else
+    set root = $arg:t
+
+# Save an old version of the file (if we have not updated it today
+# already!
+
+    if ( -e $MIR/$dir/$root && ! -e $MIR/old/$root.$date ) then
+      echo Copying \$MIR/$dir/$root to \$MIR/old/$root.$date ...
+      cp $MIR/$dir/$root $MIR/old/$root.$date
+    endif
+
+# Copy to the final resting place. Make sure protections are OK.
+
+    chmod u+rw,g+rw $arg
+    if ( $dolocal ) then
+      echo Moving $arg to \$MIR/$dir ...
+      mv $arg $MIR/$dir/$root
+      if ( $status == 0 ) touch $MIR/$dir/$root
+    else
+      echo Copying $arg to \$MIR/$dir ...
+      cp $arg $MIR/$dir
+      echo Moving $arg to \$MIR/diffs/changes ...
+      mv $arg $MIR/diffs/changes
+    endif
+  endif
+end
