@@ -110,9 +110,10 @@ c   rjs  18Oct05 - Handle higher axes somewhat better.
 c   rjs  27oct95 - Increased max length of filenames.
 c   rjs  18mar96 - Increase MAXBOXES.
 c   rjs  29jan97 - Change default region of interest.
+c   rjs  10mar97 - Default region is all channels.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Maxen: version 1.0 29-Jan-97')
+	parameter(version='Maxen: version 1.0 10-Mar-97')
 	include 'maxnax.h'
 	include 'maxdim.h'
 	integer MaxRun,MaxBoxes
@@ -1150,7 +1151,7 @@ c
 	trc(2) = min(nMap(2),blc(2)+width-1)
 c
 	blc(3) = 1
-	trc(3) = 1
+	trc(3) = nMap(3)
 c
 	call BoxDef(boxes,3,blc,trc)
 c
