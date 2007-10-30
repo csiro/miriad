@@ -170,6 +170,8 @@ c                  Also work arounds HP compiler bug as indicated by rjs
 c    17jun94  bpw  Finally add the real region keyword (i.e. boxruns),
 c                  because Doug needed it
 c    25oct94  bpw  introduce option 'eformat'
+c    22nov94  bpw  fixed non-plotting: forgot to change some values of plotvar
+c                  parameters (equivalent to a C 'enum').
 c
 c------------------------------------------------------------------------
 
@@ -205,7 +207,7 @@ c the include file.
       program imstaspc
 
       character*21     version
-      parameter        ( version = 'version 2.2 25-Oct-94' )
+      parameter        ( version = 'version 2.2 22-Nov-94' )
       character*29     string
 
       include          'imspec.h'
