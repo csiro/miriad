@@ -16,6 +16,7 @@ c    rjs  12jan95 Fixed bug dealing with the amount of memory to allocate.
 c    rjs  13jan95 Second try at the above.
 c    rjs  16jan93 A third try at the above.
 c    rjs   4aug95 Check that the beam is non-zero. Bug out if not.
+c    rjs  13dec95 Set minimum transform size to be 16 (FFT limitation).
 c************************************************************************
 	subroutine MapFin
 c
@@ -295,8 +296,8 @@ c
 c
 c  Determine the transform size.
 c
-	n1 = nextpow2(nxm)
-	n2 = nextpow2(nym)
+	n1 = max(nextpow2(nxm),16)
+	n2 = max(nextpow2(nym),16)
 c
 c  Get the convolutional gridding function.
 c
