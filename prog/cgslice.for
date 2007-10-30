@@ -317,6 +317,8 @@ c    nebk 05feb96  Make format of POSOUT file the same as that for POSIN
 c    nebk 28feb96  Was getting slice vectors wrong with keyword POSIN
 c		   when a subimage was displayed.
 c    nebk 24jun96  Set slice frame colour depening upon background colour
+c    nebk 01dec96  'absnat' and 'relnat' were given twice in allowed lists
+c                  of label types
 c
 c Notes:
 c
@@ -376,14 +378,14 @@ c
       data ltype  /'hms   ', 'dms   ', 'abspix', 'relpix', 
      +            'arcsec', 'arcmin', 'absghz', 'relghz', 
      +            'abskms', 'relkms', 'absnat', 'relnat', 
-     +            'absdeg', 'reldeg', 'none  ', 'absnat',
-     +            'relnat'/
+     +            'absdeg', 'reldeg', 'none  ', 'abslin',
+     +            'rellin'/
       data ipage, scale /0, 0.0, 0.0/
       data xrange, yrange /0.0, 0.0, 0.0, 0.0/
       data dmm, dunsl, gaps /1.0e30, -1.0e30, .false., .false./
       data xdispls, ydispbs /3.5, 3.5/
 c-----------------------------------------------------------------------
-      call output ('CgSlice: version 24-Jun-96')
+      call output ('CgSlice: version 01-Dec-96')
       call output (' ')
 c
 c Get user inputs
