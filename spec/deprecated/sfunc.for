@@ -7,22 +7,39 @@ c+
 c sfunc - Plot phase structure functions.
 c
 c@ vis
-c@ device
+c	Input visibility dataset. No default. Several files can be given.
+c	Wildcards are supported.
 c@ select
+c	Standard visibility data selection. The default is to select all
+c	data.
 c@ interval
+c	The interval over which to average to determine inidividual points
+c	in the structure function. The default is 30 min.
+c@ device
+c	Output PGPLOT plotting device of a structure function plot. The
+c	default is to not generate a plot.
 c@ range
+c	Minimum and maximum baseline ranges used in the fitting process.
+c	These are given in metres.
+c@ log
+c	Output log file. The default is to not generate log output.
 c@ options
-c	nocal
+c	Extra process options. Minimum match applies.
+c	  nocal      Do not apply any calibration.
+c--
+c  History:
+c    04oct97 rjs	Original version.
+c    21oct98 rjs	Significantly enhanced.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
 	character version*(*)
-	parameter(version='Sfunc: version 1.0 4-Oct-97')
+	parameter(version='Sfunc: version 1.0 21-Oct-98')
 	integer MAXPNT
 	parameter(MAXPNT=30000)
 	integer npnt,n,nfile,tno
 	double precision S(MAXBASE),S2(MAXBASE),am(MAXBASE)
-	double precision tmin(MAXBASE),tmax(MAXBASE),preamble(4)
+	double precision tmin,tmax,preamble(4)
 	integer ncount(MAXBASE)
 	real d(MAXBASE),dmin,dmax
 	real D2l(MAXPNT),b(MAXPNT),mass(MAXPNT)
@@ -30,8 +47,8 @@ c------------------------------------------------------------------------
 	real xmin,xmax,ymin,ymax,temp,lambda
 	integer file(MAXPNT),ngood,i1,i2,bl,i,j,k,nchan,vUpd
 	complex data(MAXCHAN),fac(MAXBASE),sum
-	logical flags(MAXCHAN),docal
-	character device*64,line*80
+	logical flags(MAXCHAN),docal,dolog,doplot
+	character device*64,logf*64,line*80
 	real massmin(4),massmax(4)
 	double precision interval
 c
@@ -52,22 +69,32 @@ c
 	else
 	  call uvDatInp('vis','dxef')
 	endif
-	call keyr('range',dmin,0.)
+	call keyr('range',dmin,1.)
 	call keyr('range',dmax,10000.)
-	call keya('device',device,'/xs')
+	dmin = log10(dmin)
+	dmax = log10(dmax)
+	call keya('device',device,' ')
 	call keyd('interval',interval,30.0d0)
 	interval = interval /60.0/24.0
+	call keya('log',logf,' ')
+c
+	dolog = logf.ne.' '
+	doplot = device.ne.' '
+	if(.not.dolog.and..not.doplot)call bug('f',
+     *	  'No operation to perform')
 	call keyfin
 c
 	call uvDatSet('stokes',1)
+c
+	if(dolog)call logOpen(logf,' ')
 c
 	nfile = 0
 	npnt = 0
 	dowhile(uvDatOpn(tno))
 	  nfile = nfile + 1
+	  tmin = 0
+	  tmax = 0
 	  do i=1,MAXBASE
-	    tmin(i) = 0
-	    tmax(i) = 0
 	    ncount(i) = 0
 	  enddo
 	  call uvVarini(tno,vupd)
@@ -78,10 +105,8 @@ c
 	  call uvDatRd(preamble,data,flags,MAXCHAN,nchan)
 	  dowhile(nchan.gt.0)
 	    if(uvvarUpd(vupd))then
-	      do i=1,MAXBASE
-	        if(ncount(i).gt.0)call flushit(ncount(i),S(i),S2(i),
-     *		d(i),am(i),nfile,D2l,b,mass,file,MAXPNT,npnt,docal)
-	      enddo
+	      call flushit(0.5d0*(tmin+tmax),MAXBASE,ncount,S,S2,
+     *		d,am,nfile,D2l,b,mass,file,w,MAXPNT,npnt,docal,dolog)
 	      call Setd(tno,d,MAXBASE)
 	    endif
 	    Sum = 0
@@ -97,16 +122,16 @@ c
 	      call basant(preamble(4),i1,i2)
 	      bl = (i2-1)*(i2-2)/2 + i1
 	      call getam(tno,temp,lambda)
-	      if(ncount(bl).gt.0.and.
-     *		max(preamble(3),tmax(bl))-
-     *		min(preamble(3),tmin(bl)).gt.interval)
-     *	    	call flushit(ncount(bl),S(bl),S2(bl),d(bl),
-     *		am(bl),nfile,D2l,b,mass,file,MAXPNT,npnt,docal)
+	      if(max(preamble(3),tmax)-min(preamble(3),tmin).gt.
+     *							interval)then
+     	    	call flushit(0.5d0*(tmin+tmax),MAXBASE,ncount,S,S2,d,
+     *		  am,nfile,D2l,b,mass,file,w,MAXPNT,npnt,docal,dolog)
+		tmin = preamble(3)
+		tmax = tmin
+	      endif
 	      if(ncount(bl).eq.0)then
 		S(bl) = 0
 		S2(bl) = 0
-		tmin(bl) = preamble(3)
-		tmax(bl) = tmin(bl)
 		am(bl) = 0
 		if(docal)then
 		  fac(bl) = 1
@@ -116,8 +141,8 @@ c
 	      endif
 	      ncount(bl) = ncount(bl) + 1
 	      am(bl) = am(bl) + temp
-	      tmin(bl) = min(tmin(bl),preamble(3))
-	      tmax(bl) = max(tmax(bl),preamble(3))
+	      tmin = min(tmin,preamble(3))
+	      tmax = max(tmax,preamble(3))
 	      Sum = Sum*fac(bl)
 	      temp = lambda/(2*PI)*atan2(aimag(Sum),real(Sum))
 	      S(bl) = S(bl) + temp
@@ -126,61 +151,51 @@ c
 	    call uvDatRd(preamble,data,flags,MAXCHAN,nchan)
 	  enddo
 	  call uvDatCls
-	  do i=1,MAXBASE
-	    if(ncount(i).gt.0)call flushit(ncount(i),S(i),S2(i),d(i),
-     *		am(i),nfile,D2l,b,mass,file,MAXPNT,npnt,docal)
-	  enddo
+     	  call flushit(0.5d0*(tmin+tmax),MAXBASE,ncount,S,S2,d,
+     *	    am,nfile,D2l,b,mass,file,w,MAXPNT,npnt,docal,dolog)
 	enddo
 c
 c  Do the plot.
 c
-	if(pgbeg(0,device,2,2).ne.1)
-     *	  call bug('f','Error opening PGPLOT device')
-	call pgscf(2)
-c	xmin = b(1)
-c	xmax = xmin
-c	ymin = D2l(1)
-c	ymax = ymin
-c	do i=2,npnt
-c	  xmin = min(xmin,b(i))
-c	  xmax = max(xmax,b(i))
-c	  ymin = min(ymin,D2l(i))
-c	  ymax = max(ymax,D2l(i))
-c	enddo
-c	xmin = log10(0.9*xmin)
-c	xmax = log10(1.1*xmax)
-c	ymin = log10(0.9*ymin)
-c	ymax = log10(1.1*ymax)
+	if(doplot)then
+	  if(pgbeg(0,device,2,2).ne.1)
+     *	    call bug('f','Error opening PGPLOT device')
+	  call pgscf(2)
 c
-	xmin = 1
-	xmax = 4
-	ymin = -3
-	ymax = 3
+	  xmin = 1
+	  xmax = 4
+	  ymin = -3
+	  ymax = 3
 c
-	do j=1,4
-	  call pgenv(xmin,xmax,ymin,ymax,0,30)
-	  do k=1,nfile
-	    n = 0
-	    do i=1,npnt
-	      if(massmin(j).le.mass(i).and.
-     *	         mass(i).le.massmax(j).and.file(i).eq.k)then
-	        n = n + 1
-	        x(n) = log10(b(i))
-	        y(n) = log10(D2l(i))
-	      endif
+	  do j=1,4
+	    call pgenv(xmin,xmax,ymin,ymax,0,30)
+	    do k=1,nfile
+	      n = 0
+	      do i=1,npnt
+	        if(massmin(j).le.mass(i).and.
+     *	           mass(i).le.massmax(j).and.file(i).eq.k)then
+	          n = n + 1
+	          x(n) = b(i)
+	          y(n) = D2l(i)
+	        endif
+	      enddo
+	      call pgsci(k)
+	      if(n.gt.0)call pgpt(n,x,y,17)
 	    enddo
-	    call pgsci(k)
-	    if(n.gt.0)call pgpt(n,x,y,17)
-	  enddo
-	  call pgsci(1)
-	  call fitit(massmin(j),massmax(j),dmin,dmax,
-     *		mass,b,D2l,npnt,x,y,w,line)
-	  call pglab('Baseline (m)',
+	    call pgsci(1)
+	    call fitit(massmin(j),massmax(j),dmin,dmax,
+     *		  mass,b,D2l,npnt,x,y,w,line)
+	    call pglab('Baseline (m)',
      *		'D\dL\b\u\u2\d(b) ( (mm)\u2\d)',
      *		line)
-	enddo
+	  enddo
 c
-	call pgend
+	  call pgend
+	endif
+c
+	if(dolog)call logClose
+c
+
 	end
 c************************************************************************
 	subroutine getopt(docal)
@@ -217,14 +232,15 @@ c
      *	     dmin.le.b(i).and.b(i).le.dmax)then
 	    nd = nd + 1
 	    w(nd) = 1
-	    x(nd) = log10(b(i))
-	    y(nd) = log10(d2l(i))
+	    x(nd) = b(i)
+	    y(nd) = d2l(i)
 	  endif
 	enddo
 c
 c  Fit with an line.
 c
-	if(nd.gt.2)then
+	line = ' '
+	if(nd.gt.8)then
 	  call lsf(.true.,nd,x,y,w,m,bb,sigm,sigb,chisq,q)
 	  xd(1) = 1
 	  yd(1) = m*xd(1) + bb
@@ -235,12 +251,12 @@ c
 	  sigb = 10**(0.5*sigb)
 	  if(sigb.lt.9.95)then
 	    write(line,'(a,f4.1,a,f4.1,a,f5.2,a,f4.2,a,f5.2,a,f3.1,a)')
-     *	    'Airmass',mass1,' to',mass2,' has beta',m,'(',sigm,
-     *	    ') and D_L(1km)',bb,'(',sigb,') mm'
+     *	    'Airmass',mass1,' to',mass2,' has \gb',m,'(',sigm,
+     *	    ') and D\dL\u(1km)',bb,'(',sigb,') mm'
 	  else
 	    write(line,'(a,f4.1,a,f4.1,a,f5.2,a,f4.2,a,f5.2,a,f4.1,a)')
-     *	    'Airmass',mass1,' to',mass2,' has beta',m,'(',sigm,
-     *	    ') and D_L(1km)',bb,'(',sigb,') mm'
+     *	    'Airmass',mass1,' to',mass2,' has \gb',m,'(',sigm,
+     *	    ') and D\dL\u(1km)',bb,'(',sigb,') mm'
 	  endif
 	  call output(line)
 	endif
@@ -305,27 +321,57 @@ c
 c
 	end
 c************************************************************************
-	subroutine flushit(ncount,S,S2,d,am,nfile,
-     *			D2l,b,mass,file,MAXPNT,npnt,docal)
+	subroutine flushit(time,MAXBASE,ncount,S,S2,d,am,nfile,
+     *			D2l,b,mass,file,w,MAXPNT,npnt,docal,dolog)
 c
 	implicit none
-	integer npnt,MAXPNT,nfile,file(MAXPNT),ncount
-	double precision S,S2,am
-	real d,D2l(MAXPNT),b(MAXPNT),mass(MAXPNT)
-	logical docal
+	integer MAXBASE,npnt,MAXPNT,nfile
+	integer file(MAXPNT),ncount(MAXBASE)
+	double precision S(MAXBASE),S2(MAXBASE),am(MAXBASE),time
+	real d(MAXBASE),D2l(MAXPNT),b(MAXPNT),mass(MAXPNT)
+	real w(MAXPNT)
+	logical docal,dolog
 c------------------------------------------------------------------------
-	if(ncount.gt.20)then
-	  npnt = npnt + 1
-	  if(npnt.gt.MAXPNT)call bug('f','Too many points')
-	  if(docal)then
-	    D2l(npnt) = S2/ncount
-	  else
-	    D2l(npnt) = S2/ncount - (S/ncount)*(S/ncount)
+	integer i,n0,ntmass,nd
+	real m,bb,sigm,sigb,chisq,q
+	character date*16,line*80
+	real tmass
+c
+	tmass = 0
+	ntmass = 0
+	n0 = npnt
+c
+	do i=1,MAXBASE
+	  if(ncount(i).gt.20)then
+	    npnt = npnt + 1
+	    if(npnt.gt.MAXPNT)call bug('f','Too many points')
+	    if(docal)then
+	      D2l(npnt) = log10(S2(i)/ncount(i))
+	    else
+	      D2l(npnt) = log10(S2(i)/ncount(i) - 
+     *				(S(i)/ncount(i))*(S(i)/ncount(i)))
+	    endif
+	    b(npnt) = log10(d(i))
+	    tmass = tmass + am(i)
+	    ntmass = ntmass + ncount(i)
+	    mass(npnt) = am(i)/ncount(i)
+	    file(npnt) = nfile
+	    w(npnt) = 1
 	  endif
-	  b(npnt) = d
-	  mass(npnt) = am/ncount
-	  file(npnt) = nfile
+	  ncount(i) = 0
+	enddo
+c
+	nd = npnt - n0
+	if(nd.gt.8.and.dolog)then
+	  tmass = tmass/ntmass
+	  call lsf(.true.,nd,b(n0+1),D2l(n0+1),w(n0+1),
+     *					m,bb,sigm,sigb,chisq,q)
+	  bb = 10**(0.5*(3*m + bb))
+	  sigb = 10**(0.5*sigb)
+	  call julday(time,'H',date)
+c				 time,mass,beta,sigbeta,D_L(1km),fac
+	  write(line,'(a,5f7.3)')date,tmass,m,sigm,bb,sigb
+	  call logwrit(line)
 	endif
-	ncount = 0
+c
 	end
-
