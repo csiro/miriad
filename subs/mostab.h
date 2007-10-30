@@ -9,9 +9,8 @@
 	double precision llmm(2,MAXPNT),radec(2,MAXPNT),radec0(2)
 	double precision cdelt1,cdelt2
 	character telescop(MAXPNT)*16
-	real pbfwhm(MAXPNT)
 	common/mostab1/	llmm,radec,radec0,cdelt1,cdelt2,
-     *	  ucoeff,vcoeff,pbfwhm,Rms2,SumWt,x0,y0,
+     *	  ucoeff,vcoeff,Rms2,SumWt,x0,y0,
      *	  pntno,npnt,nxy,pX,pY,vPntUpd,HashSize,Hash,nx2,ny2,coRef,
      *	  pbObj,
      *	  solar,doinit
