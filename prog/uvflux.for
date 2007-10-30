@@ -24,10 +24,9 @@ c	receiver thermal noise, that would be expected in the real or
 c	imaginary part of each visibility.
 c
 c	Vector Average -- This is simply the normal average (mean)
-c	of the real and imaginary parts of the visibility data (although it
-c	is printed out in amplitude and phase form). For a point source,
-c	the amplitude should give the point source flux density, and the
-c	phase should be zero (or perhaps 180 degrees, for Stokes Q,U,V).
+c	of the real and imaginary parts of the visibility data. For a
+c	point source, the real part should give the point source flux
+c	density, and the imaginary part should be noise.
 c
 c	RMS Scatter -- This is the RMS scatter of real and imaginary
 c	parts of the actual visibilities around their mean value. If the
@@ -88,6 +87,7 @@ c    rjs  16nov93 Do not do planet processing.
 c    rjs   4may94 Use double precision, better doc, print number visibs.
 c    rjs  17aug94 Handle offsets somewhat better.
 c    rjs  09mar97 CHange label "visibs" to "corrs" and change doc file.
+c    rjs  12oct98 Changed printing format.
 c  Bugs:
 c    ?? Perfect?
 c------------------------------------------------------------------------
@@ -96,11 +96,11 @@ c------------------------------------------------------------------------
 	integer MAXPOL,MAXSRC,PolMin,PolMax
 	character version*(*)
 	parameter(MAXPOL=4,MAXSRC=256,PolMin=-9,PolMax=4)
-	parameter(version='UvFlux: version 1.0 17-Aug-94')
+	parameter(version='UvFlux: version 1.0 12-Oct-98')
 c
 	character uvflags*16,polcode*2,line*132
 	logical docal,dopol,dopass,found,doshift
-	character sources(MAXSRC)*16,source*16
+	character sources(MAXSRC)*12,source*12
 	double precision fluxr(MAXPOL,MAXSRC),fluxi(MAXPOL,MAXSRC)
 	double precision amp(MAXPOL,MAXSRC),amp2(MAXPOL,MAXSRC)
 	double precision rms2(MAXPOL,MAXSRC)
@@ -272,12 +272,12 @@ c
 	nlines = 0
 	call output('---------------------------------------------'//
      *		'-----------------------------------')
-	call output('Source         Pol Theoretic Vector Average  '//
-     *		'  RMS      Average  RMS Amp  Number')
-	call output('                      RMS      (amp,phase)   '//
-     *		'Scatter      Amp    Scatter  Corrs')
-	call output('------         --- --------  -------------- '//
-     *		'--------  --------- --------  ------')
+	call output('Source     Pol Theoretic   Vector Average'//
+     *		'      RMS      Average  RMS Amp  Number')
+	call output('                  RMS        (real,imag) '//
+     *		'    Scatter      Amp    Scatter  Corrs')
+	call output('------     --- -------- -----------------'//
+     *		'--- -------  --------- --------  ------')
 
 c
 	do isrc=1,nsrc
@@ -300,9 +300,10 @@ c
 	      scalscat = sqrt(abs(scalscat))
 	      sig2 = sqrt(rms2(ipol,isrc)/ncnt(ipol,isrc))
 	      write(line,
-     *		'(a,a,1pe9.2,1pe11.3,i5,1pe9.2,1pe11.3,1pe9.2,i8)')
-     *		source,polcode,sig2,vecamp,nint(vecpha),vecscat,
-     *			       scalamp,scalscat,ncnt(ipol,isrc)
+     *		'(a,a,1pe8.1,1pe11.3,1pe11.3,1pe8.1,1pe11.3,1pe9.2,i8)')
+     *		source,polcode,sig2,fluxr(ipol,isrc),
+     *		fluxi(ipol,isrc),vecscat,
+     *		scalamp,scalscat,ncnt(ipol,isrc)
 	      call output(line)
 	      source = ' '
 	      nlines = nlines + 1
