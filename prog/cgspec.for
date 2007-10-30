@@ -78,8 +78,9 @@ c	"sqr" (square root), "log" (logarithmic), and "heq" (histogram
 c	equalization).  The colour lookup table is an integer from 1 to 8 
 c	specifying a lookup table. Valid values are 1 (b&w), 2 (rainbow), 
 c	3 (linear pseudo colour), 4 (floating zero colour contours), 5 (fixed 
-c	zero colour contours), 6 (rgb), 7 (background) and 8 (heat).  If you 
-c	enter a negative integer, then the reversed lookup table is displayed.
+c	zero colour contours), 6 (rgb), 7 (background), 8 (heat), and 9 
+c	(absolute b&w).  If you enter a negative integer, then the 
+c	reversed lookup table is displayed.
 c
 c       The transfer function changes available with OPTIONS=FIDDLE are in
 c       addition (on top of) to the selections here, but the colour lookup 
@@ -392,6 +393,7 @@ c    nebk 20feb95  Make sure PGIMAG writes black on white for hardcopy.
 c		   Ammend for new wedge call sequences.  Add lookuptable
 c	           to "grange" keyword. Move to image type "pixel"
 c		   instead of "grey"
+c    nebk 10apr95  Add doc for new absolute b&w lookup table
 c
 c Ideas:
 c  * Be cleverer for sub-cubes which have spectra partly all zero
@@ -474,7 +476,7 @@ c
       data txtfill, tflen /'spectrum', 'derivative spectrum', 
      +                     'derivative spectrum', 8, 19, 19/
 c-----------------------------------------------------------------------
-      call output ('CgSpec: version 20-Feb-95')
+      call output ('CgSpec: version 10-Apr-95')
       call output ('Keyword "grange" can now be used to specify the')
       call output ('colour lookup table as well the transfer function')
       call output (' ')
@@ -708,6 +710,7 @@ c
         if (hard.eq.'YES') then
           call ofminq (iofm)
           if (iofm.eq.1) reverse = .true.
+          if (iofm.eq.9) call ofmfudge
         end if
 c
         if (reverse) then
@@ -1827,10 +1830,6 @@ c
       if (gin.ne.' ' .and. trfun.ne.'lin' .and. trfun.ne.'log' .and.
      +    trfun.ne.'sqr' .and. trfun.ne.'heq') call bug ('f',
      +    'Unrecognized image transfer function type')
-      if (coltab.lt.-8 .or. coltab.gt.8 .or. coltab.eq.0) then
-        coltab = 1
-        call bug ('w', 'Unrecognized lookup table, setting b&w')
-      end if
 c
       call keyr ('spsize', vfrac(1), 0.1)
       call keyr ('spsize', vfrac(2), vfrac(1))
