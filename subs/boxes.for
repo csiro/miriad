@@ -32,7 +32,8 @@ c    rjs 09feb93  Accidently called the select routines!!
 c    rjs 24nov93  Increase string buffer to 512.
 c    rjs 25apr94  Corrected call sequence to hclose.
 c    rjs  2sep94  Changes to use the co.for routines.
-c    rjs 20oct94  Increase max number of separate regions.
+c    rjs 20oct94  Increase max number of separate regions
+c    rjs 23nov94  Added BoxCount to count the pixels in a plane.
 c************************************************************************
 c* Boxes -- Summary of region of interest routines.
 c& mjs
@@ -1070,6 +1071,34 @@ c
 	endif
 	end
 c************************************************************************
+c* BoxCount -- Count the pixels in the region-of-interest in a plane.
+c& mjs
+c: region-of-interest
+c+
+	subroutine BoxCount(Runs,nRuns,nPoint)
+c
+	implicit none
+	integer nRuns,Runs(3,nRuns+1),nPoint
+c
+c  Count the number of pixels in the region-of-interest in a given
+c  plane.
+c
+c  Input:
+c    runs	Runs specifications, as returned by BoxRuns.
+c    nruns	Number of runs.
+c  Output:
+c    nPoint	Number of pixels in the region of interest.
+c--
+c------------------------------------------------------------------------
+	integer i
+c
+	nPoint = 0
+	do i=1,nRuns
+	  nPoint = nPoint + Runs(3,i) - Runs(2,i) + 1
+	enddo
+c
+	end
+c************************************************************************
 c* BoxRuns -- Return region of interest in "runs" form.
 c& mjs
 c: region-of-interest
@@ -1573,3 +1602,4 @@ c
 	l = min(len(line),l + 2 + len(message))
 	call bug('f',line(1:l))
 	end
+
