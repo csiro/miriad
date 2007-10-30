@@ -8,6 +8,7 @@ c    25apr95 rjs  Write "object" rather than "source" item.
 c     1nov95 rjs  Added HdDefSiz
 c     1jul99 rjs  Create somewhat better headers.
 c    28jul99 rjs  Initialise pbtype.
+c    09may00 rjs  Do not allow default image size if pbtype=SINGLE.
 c************************************************************************
 	subroutine HdInit(mfs1,mosaic1)
 c
@@ -311,7 +312,7 @@ c------------------------------------------------------------------------
 c
 c  Determine the FWHM of the telescope.
 c
-	if(pbtype.eq.' ')then
+	if(pbtype.eq.' '.or.pbtype.eq.'SINGLE')then
 	  call bug('f',
      *	    'Unknown telescope -- cannot determine default image size')
 	else

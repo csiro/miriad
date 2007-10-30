@@ -29,6 +29,8 @@
        30-sep-97  rjs   Start ntree off at 1 (rather than 0).
        28-nov-97  rjs   Change to cope with text files which do not end with
 			a newline char.
+       09-may-00  rjs   Get rid of spurious error message in hrm_c. Why didn't
+		        I see this ages ago?
 */
 
 
@@ -404,6 +406,7 @@ int tno;
 /* Delete the directory itself. */
 
   t = hget_tree(tno);
+  t->flags &= ~TREE_CACHEMOD;
   drmdir_c(t->name,&iostat);
   hclose_c(tno);
 }

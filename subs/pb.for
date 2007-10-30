@@ -57,6 +57,7 @@ c		     datasets. Added pblist.
 c   26mar97   rjs    Less precision in pbencode.
 c   07jul97   rjs    Change call to coaxdesc to coaxget.
 c   05sep97   mchw   Change lower freq for HATCREEK to 24 GHz.
+c   09may00   rjs    Add extra check.
 c************************************************************************
 c* pbList -- List known primary beam types.
 c& rjs
@@ -618,6 +619,8 @@ c
 	x = x0(pbObj)
 	y = y0(pbObj)
 c
+	if(xc(pbObj).le.0.or.yc(pbObj).le.0)call bug('f',
+     *	  'Extent of primary beam could not be determined')
 	xext = sqrt(maxrad(k)/xc(pbObj))
 	yext = sqrt(maxrad(k)/yc(pbObj))
 c
