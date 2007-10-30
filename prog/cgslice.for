@@ -199,6 +199,12 @@ c	  complement of any like axis in the first 2. E.g., the cube is
 c	  in vxy order and LABTYP=abskms,arcsec the units for the "3VALUE" 
 c	  label will be arcsec.  If LABTYP=abskms,hms the "3VALUE" label 
 c	  will be DMS (if the third [y] axis is declination).
+c@ 3format
+c       If you ask for "3value" labelling, this keyword allows you
+c       specify the FORTRAN format of the labelling.  I have given
+c       up trying to invent a decent algorithm to choose this. Examples
+c       are "1pe12.6", or "f5.2" etc   If you leave this blank cgdisp 
+c       will try something that you probably won't like.
 c@ csize
 c	Three values.  Character sizes in units of the PGPLOT default
 c	(which is ~ 1/40 of the view surface height) for the plot axis
@@ -319,7 +325,7 @@ c		   when a subimage was displayed.
 c    nebk 24jun96  Set slice frame colour depening upon background colour
 c    nebk 01dec96  'absnat' and 'relnat' were given twice in allowed lists
 c                  of label types
-c
+c    nebk 13feb97  Add keyword "3format"
 c Notes:
 c
 c   SLice abcissa values are still in linear world coordiantes as
@@ -366,7 +372,7 @@ c
       character labtyp(2)*6, ltype(nltype)*6
       character in*64, pdev*64, xlabel*40, ylabel*40, xlabel2*40, 
      +  ylabel2*40, hard*20, trfun*3, levtyp*1, fslval*80, fslposo*80, 
-     +  fslposi*80, fslmod*80, units*8
+     +  fslposi*80, fslmod*80, units*8, val3form*20
 c
       logical do3val, do3pix, eqscale, doblnk, dopixel, doerase,
      +  redisp, accum, radians, none, noimage, dofit, dobord, dobase,
@@ -385,7 +391,7 @@ c
       data dmm, dunsl, gaps /1.0e30, -1.0e30, .false., .false./
       data xdispls, ydispbs /3.5, 3.5/
 c-----------------------------------------------------------------------
-      call output ('CgSlice: version 01-Dec-96')
+      call output ('CgSlice: version 13-Feb-97')
       call output (' ')
 c
 c Get user inputs
@@ -394,7 +400,8 @@ c
      +   levtyp, slev, levs, nlevs, pixr, trfun, coltab, pdev, labtyp,
      +   do3val, do3pix, eqscale, nx, ny, cs, dopixel, doerase, 
      +   accum, noimage, dofit, dobase, fslval, fslposi, fslposo, 
-     +   fslmod, xrange, yrange, doxrng, dofid, dowedge, dogrid)
+     +   fslmod, xrange, yrange, doxrng, dofid, dowedge, 
+     +   dogrid, val3form)
 c
 c Open image and see if axes in radians
 c
@@ -641,7 +648,7 @@ c
                call pgsch (cs(2))
                call pgsci (1)
                call lab3cg (lin, doerase, do3val, do3pix, labtyp,
-     +                      grpbeg(k), ngrp(k))
+     +                      grpbeg(k), ngrp(k), val3form)
              end if
              call pgupdt
 c
@@ -1801,7 +1808,7 @@ c
      +   levtyp, slev, levs, nlevs, pixr, trfun, coltab, pdev, labtyp,
      +   do3val, do3pix, eqscale, nx, ny, cs, dopixel, doerase, accum, 
      +   noimage,dofit, dobase, fslval, fslposi, fslposo, fslmod, 
-     +   xrange, yrange, doxrng, dofid, dowedge, grid)
+     +   xrange, yrange, doxrng, dofid, dowedge, grid, val3form)
 c-----------------------------------------------------------------------
 c     Get the unfortunate user's long list of inputs
 c
@@ -1845,6 +1852,7 @@ c   fslposo    File to put slice positions into
 c   fslmod     File to put the slice models into
 c   x,yrange   SLice display extrema
 c   grid       Overlay coordinate grid
+c   val3form   3value format
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -1852,7 +1860,7 @@ c
      +  coltab
       real levs(maxlev), pixr(2), cs(3), slev, xrange(2), yrange(2)
       character*(*) labtyp(2), in, pdev, trfun, levtyp, fslval, fslposi,
-     +  fslposo, fslmod, ltype(nltype)
+     +  fslposo, fslmod, ltype(nltype), val3form
       logical do3val, do3pix, eqscale, dopixel, doerase, accum, noimage,
      +  dofit, dobase, doxrng, dofid, dowedge, grid, dunw
 cc
@@ -1958,6 +1966,8 @@ c
         if (eqscale) call bug ('i', 
      +  'You might consider options=unequal with these axis types')
       end if
+c
+      call keyf ('3format', val3form, ' ')
 c
       call keyi ('nxy', nx, 0)
       call keyi ('nxy', ny, nx)
