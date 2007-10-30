@@ -7,6 +7,7 @@ c    rjs 28nov94  Miscellaneous enhancements.
 c    rjs  2dec94  Fix bug in mccnvl when convolving regions which are blanked.
 c    rjs 24nov95  Fix minor optimisation in mcCnvlr, and avoid aliasing
 c		  via changes in mcExtent.
+c    rjs 12oct99  Change in subroutine name only.
 c************************************************************************
 	subroutine mcInitFG(tno1,bmaj1,bmin1,bpa1)
 c
@@ -67,7 +68,7 @@ c
 c  Load the mosaic table.
 c
 	call mosLoad(tno,npnt1)
-	call mosInfo(nx2,ny2,npnt1)
+	call mosGetn(nx2,ny2,npnt1)
 	if(npnt1.ne.npnt)
      *	  call bug('f','Inconsistent number of pointings')
 c
