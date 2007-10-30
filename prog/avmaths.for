@@ -84,6 +84,7 @@ c    nebk 04jan96 With options=replace, make third axis descriptors
 c	          reflect size of the selected region on the third axis
 c    nebk 06may97 Comment out the "INcluding plane ..." message
 c    rjs  02jul97 cellscal change.
+c    rjs  23jul97 added pbtype.
 c------------------------------------------------------------------------
       implicit none
 c
@@ -92,7 +93,7 @@ c
       integer maxboxes, maxruns, maxplane
       character*20 version
       parameter (maxboxes = 1024, maxruns = 3*maxdim, maxplane = 1024)
-      parameter (version = '06-May-97')
+      parameter (version = '23-Jul-97')
 cc
       real buffer(maxbuf)
       integer avpnt, npnt
@@ -108,7 +109,7 @@ c
       logical more, flags(maxdim), dosub, dood, dorepl, dored, domul
 c
       integer nkeys
-      parameter (nkeys = 46)
+      parameter (nkeys = 47)
       character keyw(nkeys)*8
 c
       data keyw/     'cdelt1  ','cdelt2  ','cdelt3  ',
@@ -119,7 +120,7 @@ c
      +    'ctype4  ','ctype5  ','date-obs','epoch   ','history ',
      +    'instrume','niters  ','object  ','restfreq','telescop',
      +    'vobs    ','obsra   ','obsdec  ','observer','rms     ',
-     +    'bmaj    ','bmin    ','bpa     ','pbfwhm  ',
+     +    'bmaj    ','bmin    ','bpa     ','pbfwhm  ','pbtype  ',
      +    'btype   ','mostable','obstime ','cellscal'/
 c-------------------------------------------------------------------------
       call output ('AvMaths version '//version)
