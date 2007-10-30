@@ -61,7 +61,7 @@ c@ phirange
 c	Plot range for phase in the y-direction (in degrees).
 c	Default is (-180,180) degrees.
 c@ mode
-c	Mode can be 'inter' or 'batch'. Default is batch. In either mode,
+c	Mode can be 'inter' or 'batch'. Default is inter. In either mode,
 c	the user is prompted for options after each plot on a non-hardcopy
 c	device. The options are applied to the current spectrum, which can
 c	then be replotted. mode=inter displays the cursor. Type the first
@@ -115,6 +115,7 @@ c    16aug93 mchw   Change averaging to standard keyword "interval".
 c    13dec93 mchw   Added FFT option and worked on documentation.
 c    16dec93 mchw   Added option to switch x-axis to channel number.
 c    10apr94 mchw   Put MAXWIN into maxdim.h
+c    20oct94 mchw - Added colour. Changed default mode=inter.
 c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	integer maxsels
@@ -133,7 +134,7 @@ c-----------------------------------------------------------------------
 c
 c  Get the parameters given by the user.
 c
-        call output('Uvspect: version 1.0 10-Apr-94')
+        call output('UVSPECT: version 1.0 20-Oct-94')
 	call keyini
 	call keyf('vis',vis,' ')
 	call keya('line',line,'channel')
@@ -142,7 +143,7 @@ c
 	call keyr('line',width,1.)
 	call keyr('line',step,1.)
 	call keyr('interval',interval,0.001)
-        call keya('mode',mode,'batch')
+        call keya('mode',mode,'inter')
         call keya('fmode',fmode,'a')
         call keya('fft',fft,' ')
         call keyi('hann',hann,1)
@@ -394,7 +395,9 @@ c
             call pglab (xlabel, ylabel, title)
             call pgHline (npts, xaxis, amp, 2.)
             call pgswin (xlo, xhi, plo, phi)
+            call pgsci(7)
             call pgpt (npts, xaxis, arg, 1)
+            call pgsci(1)
             call output (' ')
 	  else
 	    call bug('f','Can not open plot device')
@@ -543,6 +546,7 @@ c
 	    replot = .true.
  	  else if(ans.eq.'Q') then
 	    call output('OK - I Quit')
+	    call pgend
 	    stop
  	  else
             loop = .false.
