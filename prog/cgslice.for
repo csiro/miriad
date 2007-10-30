@@ -264,12 +264,7 @@ c	to extract the slice from all channels.
 c
 c@ posout
 c	An ascii file into which the BLC and TRC for each slice are saved.
-c	The columns of the file are slice number, the slice BLC, TRC and
-c	the start and end channels from the image that this slice came
-c	from (you may have used the CHAN keyword).   The BLC and TRC are
-c	in arcseconds from the reference pixel if the axes have radian
-c	increments (RA/DEC etc).  Otherwise they are in offset pixels 
-c	from the reference pixel.
+c	The columns are in the same format as is needed for the POSIN keyword.
 c@ valout
 c	An ascii file into which the slices are saved.  If the file already
 c	exists, new slices are appended to it.  The columns of the file are
@@ -316,6 +311,9 @@ c    nebk 03sep95  Detect black/white background, add non-linear
 c		   ticks and grid
 c    nebk 12nov95  Change to deal internally in absolute pixels 
 c    nebk 29nov95  New call for CONTURCG
+c    nebk 30jan96  Remove restrictions on CHAN so groups of channels
+c		   can now overlap
+c    nebk 05feb96  Make format of POSOUT file the same as that for POSIN
 c
 c Notes:
 c
@@ -352,9 +350,9 @@ c
      +  vygap
 c
       integer blc(3), trc(3), size(maxnax), win(maxnax), 
-     +  grpbeg(maxchan), ngrp(maxchan), srtlev(maxlev),
-     +  nslice, nslp(maxnsl), slsize(maxnsl),  slpos(6,maxnsl),
-     +  seg(2,maxdim), nseg(maxnsl), his(nbins)
+     +  grpbeg(maxchan), ngrp(maxchan), srtlev(maxlev), nslice, 
+     +  nslp(maxnsl), slsize(maxnsl), slpos(6,maxnsl), seg(2,maxdim), 
+     +  nseg(maxnsl), his(nbins)
       integer nx, ny, nlevs, lin, naxis, ierr, pgbeg, iostat, ilen,
      +  nlast, ngrps, lval, lposi, lposo, lmod, i, j, k, jj, icol, 
      +  iax, ipage, wedcod, ibin(2), jbin(2), kbin(2), krng(2), 
@@ -382,7 +380,8 @@ c
       data dmm, dunsl, gaps /1.0e30, -1.0e30, .false., .false./
       data xdispls, ydispbs /3.5, 3.5/
 c-----------------------------------------------------------------------
-      call output ('CgSlice: version 29-Nov-95')
+      call output ('CgSlice: version 05-Feb-96')
+      call output ('Format of POSOUT file now the same as for POSIN')
       call output (' ')
 c
 c Get user inputs
@@ -405,7 +404,7 @@ c
 c Finish key inputs for region of interest now
 c
       call region (in, naxis, size, ibin, jbin, kbin, blc, trc,
-     +             win, maxchan, grpbeg, ngrp, ngrps)
+     +             win, ngrps, grpbeg, ngrp)
 c
 c Try to allocate memory for image
 c
@@ -1885,7 +1884,6 @@ c
       call keyi ('chan', kbin(2), 1) 
       kbin(1) = max(kbin(1), 1)
       kbin(2) = max(kbin(2), 1)
-      if (kbin(2).gt.kbin(1)) kbin(2) = kbin(1)
 c
       call keya ('slev', levtyp, 'a')
       call keyr ('slev', slev, 0.0)
@@ -2237,22 +2235,12 @@ c
 c Write header
 c
         if (.not.exist) then
-          aline = 'NSL     BLCX           BLCY         TRCX'
+          aline = '# XTYPE  YTYPE     BLCX           BLCY         TRCX'
      +       //'          TRCY       CHANNEL RANGE'
           call txtwrite (lposo, aline, len1(aline), iostat)
           if (iostat.ne.0) call bug ('f' ,
      +      'Error writing header to slice positions file')
 c
-          if (radians) then
-            aline = '       arcsec         arcsec       arcsec'
-     +       //'         arcsec'
-          else
-            aline = '      rel pix        rel pix      rel pix'
-     +       //'        rel pix'
-          end if
-          call txtwrite (lposo, aline, len1(aline), iostat)
-          if (iostat.ne.0) call bug ('f' ,
-     +      'Error writing header to slice positions file')
         end if
       end if
 c
@@ -2698,7 +2686,7 @@ c
 c
 c
       subroutine region (in, naxis, size, ibin, jbin, kbin, blc, trc,
-     +                   win, maxgrp, grpbeg, ngrp, ngrps)
+     +                   win, ngrps, grpbeg, ngrp)
 c----------------------------------------------------------------------
 c     Finish key routine inputs for region of interest now.
 c
@@ -2707,7 +2695,6 @@ c    in            Image file name
 c    naxis         Number of dimensions of image
 c    size          Dimensions of image
 c    i,j,kbin      Pixel increments and binning sizes
-c    maxgrp        Maximum nuber of groups of channels
 c  Output:
 c    grgbeg        List of start planes for each group of channels
 c                  that are to be avearged together for each sub-plot
@@ -2723,8 +2710,8 @@ c
 c----------------------------------------------------------------------
       implicit none
 c
-      integer naxis, size(naxis), blc(*), trc(*), win(*), maxgrp,
-     +  ngrp(maxgrp), grpbeg(maxgrp), ngrps, ibin(2), jbin(2), kbin(2)
+      integer naxis, size(naxis), blc(*), trc(*), win(*), 
+     +  ngrp(*), grpbeg(*), ngrps, ibin(2), jbin(2), kbin(2)
       character in*(*)
 cc
       include 'maxdim.h'
@@ -2750,14 +2737,11 @@ c find size of binned window
 c
       call winfidcg (size(1), 1, ibin, blc(1), trc(1), win(1))
       call winfidcg (size(2), 2, jbin, blc(2), trc(2), win(2))
-      if (win(1).le.1 .or. win(2).le.1) call bug ('f',
-     +   'Cannot display just one spatial pixel')
 c
 c Find list of start channels and number of channels for each group
 c of channels selected.
 c
-      call chnselcg (blc, trc, kbin,  maxbox, boxes, maxgrp,
-     +               grpbeg, ngrp, ngrps)
+      call chnselcg (blc, trc, kbin, maxbox, boxes, ngrps, grpbeg, ngrp)
 c
       end
 c
@@ -3077,7 +3061,7 @@ c-----------------------------------------------------------------------
 c
       do i = 1, nslice
 c
-c Convert absolute pixels to arcsecond offsets
+c Convert absolute pixels to output offset units (arcsec or pixels)
 c
         win(1) = slpos(1,i)
         call ppconcg (2, blc(1), ibin, win(1))
@@ -3095,9 +3079,9 @@ c
         trcx = wout(1)
         trcy = wout(2)
 c
-        write (aline,100) i, blcx, blcy, trcx, trcy, krng(1), 
-     +                    krng(1)+krng(2)-1
-100     format (i3, 1x, 4(1pe13.6, 1x), i4, 1x, i4)
+        write (aline,100) typeo(1), typeo(2), blcx, blcy, trcx, trcy, 
+     +    krng(1), krng(1)+krng(2)-1
+100     format (a6, 1x, a6, 1x, 4(1pe13.6, 1x), i4, 1x, i4)
         ilen = len1(aline)
         call txtwrite (lpos, aline, ilen, iostat)
         if (iostat.ne.0) call bug ('f', 
