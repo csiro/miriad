@@ -20,25 +20,29 @@ c	  derivative  Plot the derivative with frequency of the primary
 c	              beam (rather than the normal primary beam).
 c@ device
 c	PGPLOT device. Default is no plot.
+c@ log
+c	Log file for listing. Default is no log file.
 c--
 c  History:
 c    rjs  20oct94 Original version.
 c    rjs  21nov95 Added title.
 c    rjs  10jun97 Change pbtype to telescop.
+c    rjs  01apr98 April fools day. Added log option.
 c  Bugs:
 c
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	character version*(*)
 	integer npts,MAXTEL
-	parameter(version='PbPlot: version 1.0 10-Jun-97')
+	parameter(version='PbPlot: version 1.0 1-Apr-98')
 	parameter(npts=256,MAXTEL=8)
 c
 	character device*64,telescop(MAXTEL)*16,line*64,title*32
+	character logf*64
 	real freq,x(npts),y(npts,MAXTEL),maxrad,pbfwhm,cutoff
 	real xmin,xmax,ymin,ymax,xlo,xhi,ylo,yhi
 	integer i,j,ntel,pbObj(MAXTEL),coObj,length
-	logical doder
+	logical doder,more
 c
 c  Externals.
 c
@@ -53,6 +57,7 @@ c
 	call keyr('freq',freq,1.4)
 	if(freq.le.0)call bug('f','Invalid frequency')
 	call keya('device',device,' ')
+	call keya('log',logf,' ')
 	call GetOpt(doder)
 	call keyfin
 c
@@ -155,6 +160,16 @@ c
      *			'Primary Beam Response',title(1:length))
 	  endif
 	  call pgend
+	endif
+	if(logf.ne.' ')then
+	  call logopen(logf,' ')
+	  do j=1,ntel
+	    do i=1,npts
+	      write(line,'(1p2e15.8)')x(i),y(i,j)
+	      call logwrite(line,more)
+	    enddo
+	  enddo
+	  call logclose
 	endif
 	endif
 c
