@@ -27,6 +27,9 @@
                      (problems for 1-plane datasets)
      rjs   4-sep-94  Change "word" to "words" to satisfy Cray compiler.
      rjs   6-nov-94  Change item handle to an integer.
+     bpw   8-dec-94  Adapt two loop in bufferalloc for the fact that image
+                     handle are no longer in order but a hashtable.
+
 *******************************************************************************/
 
 /******************************************************************************/
@@ -168,6 +171,8 @@ used to define the dataset.
                    for 'new' datasets
 /*-- */
 
+int first=TRUE;
+
 void xyzopen_c( handle, name, status, naxis, axlen )
 int  *handle;
 char *name;
@@ -191,11 +196,13 @@ int  *naxis, axlen[];
     char *s[ITEM_HDR_SIZE];
     int  n_axis;
 
+    if(first) { for(tno=0;tno<MAXOPEN;tno++) imgs[tno].itno=0;  first=FALSE; }
+
     if(itest)printf("Open %s; %s; naxis %d\n",name,status,*naxis);
     n_axis = *naxis;
-    if(      !strcmp( "old",     status ) ) { access = OLD; mode = "read";    }
-    else if( !strcmp( "new",     status ) ) { access = NEW; mode = "write";   }
-    else bug_c( 'f', "xyzopen: Unrecognised status" );
+    if(      !strcmp( "old",     status ) ) { access = OLD; mode = "read";    printf("old\n");}
+    else if( !strcmp( "new",     status ) ) { access = NEW; mode = "write";  printf("new\n"); }
+    else { bug_c( 'f', "xyzopen: Unrecognised status" ); printf("bug\n"); }
 
     hopen_c(  &tno, name, status, &iostat );                   check(iostat);
     haccess_c( tno, &imgs[tno].itno, "image", mode, &iostat ); check(iostat);
@@ -450,7 +457,7 @@ int   viraxlen[], vircubesize[];
    pointers to window in file that is in buffer;
    variable indicating if write buffer was filled;
    variable indicating if any transposition must be done; */   
-    for( d=0; d<MAXOPEN; d++ ) { bufs[tno].filfir = -1; bufs[tno].fillas = -1; }
+    for( d=0; d<MAXOPEN; d++ ) { bufs[d].filfir = -1; bufs[d].fillas = -1; }
     written[tno] = FALSE;
     imgs[tno].nocopy = TRUE;
     for( dim=1; dim<=naxes; dim++ )
@@ -1360,9 +1367,11 @@ int get_buflen()
     if(itest)printf("# bytes per real %d\n",sizeof(float));
 
     maxsize = 0;
-    for( tno=1; tno<=ntno; tno++ ) {
+    for( tno=1; tno<=MAXOPEN; tno++ ) {
+      if( imgs[tno].itno != 0 ) {
         size    = bufs[tno].cubesize[bufs[tno].naxis];
         maxsize = ( (maxsize<size) ? size : maxsize );
+      }
     }
     try = (ntno+1) * maxsize;
 
@@ -1371,9 +1380,11 @@ int get_buflen()
 
     buffersize = try / (ntno+1);
 
-    for( tno=1; tno<=ntno; tno++ ) {
+    for( tno=0; tno<MAXOPEN; tno++ ) {
+      if( imgs[tno].itno != 0 ) {
         if( bufs[tno].cubesize[dimsub[tno]] > buffersize )
         bug_c( 'f', "xyzsetup: Requested subcube too big for buffer" );
+      }
     }
 
     /* set combined masking buffer to true, just in case no real mask
@@ -1392,7 +1403,7 @@ int n;
     if( mbuffr != NULL ) { free( mbuffr ); mbuffr = NULL; }
 
     n  = ( (n<MAXBUF) ? n : MAXBUF );
-    n *= 2.;
+    n *= 2;
     while( (buffer == NULL | mbuffr == NULL) & n>1 ) {
         n /= 2;
         if(itest)printf("try %d\n",n);
@@ -2047,4 +2058,5 @@ planes      0.960   0.990   0.997   0.999   1.000
 /******************************************************************************/
 /******************************************************************************/
 /******************************************************************************/
+
 
