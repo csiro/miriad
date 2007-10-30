@@ -16,10 +16,13 @@
 //		 cproto -I$MIRINC -p -fARGS hio.c headio.c uvio.c xyio.c xyzio.c bug.c
 // 07-feb-97 rjs Added "Const" to definitions, and eliminate some rubbish, as
 //		 suggested by Scott Gordon.
+// 19-Mar-97 rjs Check for definition of various thingos before doing them.
 */
 
 /* Define const and void if needed. */
 
+#ifndef MIRIAD_TYPES_DEFINED
+#define MIRIAD_TYPES_DEFINED 1
 #ifdef __STDC__
 #if (__STDC__ == 1)
 typedef void Void;
@@ -42,6 +45,7 @@ typedef char Void;
 #    define ARGS(s) ()
 #  endif
 #endif
+#endif
 
 #if defined(__cplusplus)
 extern  "C" {
@@ -63,7 +67,7 @@ extern  "C" {
 
 void hopen_c ARGS((int *tno, Const char *name, Const char *status, int *iostat));
 void hflush_c ARGS((int tno, int *iostat));
-void habort_c ARGS((Void));
+void habort_c();
 void hrm_c ARGS((int tno));
 void hclose_c ARGS((int tno));
 void hdelete_c ARGS((int tno, Const char *keyword, int *iostat));
