@@ -47,8 +47,11 @@ c	  taper        By default, LINMOS fully corrects for primary
 c	               beam attenutation. This can cause excessive noise
 c	               amplification at the edge of the mosaiced field.
 c	               The `taper' option aims at achieving approximately
-c	               uniform noise across the image. This prevents full primary
-c	               beam correction at the edge of the mosaic.
+c	               uniform noise across the image. This prevents full
+c	               primary beam correction at the edge of the mosaic.
+c	               See equation 2 in Sault, Staveley-Smith and Brouw, A&AS,
+c	               120, 376 (1996) or use "options=gains" to see the form
+c	               of the tapering.
 c	  sensitivity  Rather than a mosaiced image, produce an image
 c	               giving the rms noise across the field.
 c	  gain         Rather than a mosaiced image, produce an image
@@ -96,6 +99,7 @@ c    rjs  14aug95 Fix to the above.
 c    rjs  02jul97 cellscal change.
 c    rjs  23jul97 pbtype change.
 c    rjs  04aug97 Doc change only.
+c    rjs  25aug97 Doc change and an extra error message.
 c
 c  Bugs:
 c    * Blanked images are not handled when interpolation is necessary.
@@ -111,7 +115,7 @@ c		by less than "tol", they are taken as being the same
 c		pixel (i.e. no interpolation done).
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Linmos: version 1.0 14-Aug-95')
+	parameter(version='Linmos: version 1.0 25-Aug-97')
 	include 'maxdim.h'
 c
 	real tol
@@ -170,6 +174,9 @@ c  Get processing options.
 c
 	call GetOpt(dosen,dogain,taper)
 	call keyfin
+c
+	if(nIn.eq.1.and.taper)call bug('f',
+     *	  'options=taper reduces to no correction for single pointings')
 c
 c  Open the files, determine the size of the output. Determine the grid
 c  system from the first map.
