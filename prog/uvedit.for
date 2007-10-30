@@ -40,6 +40,7 @@ c    rjs   19nov93    Output correlations are in the same format as the
 c                     input.
 c    jm    03dec93    Only call uvset for corr format if corr exists!
 c   bpw/jm 17dec93    Added options=dra to correct for MINT problems.
+c    rjs   16dec95    Make phase shift calculation more accurate.
 c***********************************************************************
 c= Uvedit - Editing of the baseline of a UV data set.
 c& jm
@@ -196,7 +197,7 @@ c
       character PROG*(*)
       parameter (PROG = 'UVEDIT: ')
       character VERSION*(*)
-      parameter (VERSION = 'version 1.8 19-Aug-94')
+      parameter (VERSION = 'version 1.8 16-Dec-95')
 c
       real SECRAD, ASECRAD
 c  -------------(SECRAD = PI / (12.0 * 3600.0))
@@ -786,7 +787,6 @@ c
                     write (mesg, 10) PROG, 'Dec', dec, val1
                     call HisWrite(Lout, mesg)
                   endif
-                  if(dorad.and.(updra.or.upddec))call coInit(Lin)
 c
 c  Determine the phase increments for the various types of editing.
 c
@@ -1052,7 +1052,9 @@ c------------------------------------------------------------------------
 c
       x1(1) = RA
       x1(2) = dec
+      call coInit(Lin)
       call coCvt(Lin,'aw/aw',x1,'op/op',x2)
+      call coFin(Lin)
       radphz = (uu * x2(1)) + (vv * x2(2))
 c
       end
