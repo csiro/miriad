@@ -125,6 +125,7 @@ c   nebk 25nov92 - Copy btype to model from input
 c   mjs  17feb93 - minor doc mod only (RESTORE -> RESTOR).
 c   rjs  26feb93 - add positive option, and get negstop parameter via
 c		   an option.
+c   rjs  31jan95 - Copy across mosaic table. Eliminate scratch common.
 c
 c  Important Constants:
 c    MaxDim	The max linear dimension of an input (or output) image.
@@ -142,7 +143,7 @@ c		to write.
 c
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Clean: version 1.0 26-Feb-93')
+	parameter(version='Clean: version 1.0 31-Jan-95')
 	include 'maxdim.h'
 	integer MaxBeam,maxCmp1,maxCmp2,MaxBox,MaxRun,MaxP
 	parameter(maxCmp1=66000,MaxCmp2=32000,MaxP=257)
@@ -485,7 +486,6 @@ c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer imin,imax,jmin,jmax,i,j
 	real Data(maxdim)
-	common/CleanCom/Data
 c
 	imin = ic - maxPatch/2
 	imax = imin + maxPatch - 1
@@ -624,7 +624,7 @@ c------------------------------------------------------------------------
 	real crpix1,crpix2,crpix3
 	character line*72,txtblc*32,txttrc*32
 	integer nkeys
-	parameter(nkeys=32)
+	parameter(nkeys=33)
 	character keyw(nkeys)*8
 c
 c  Externals.
@@ -635,7 +635,7 @@ c
      *	  'crpix4  ','crval1  ','crval2  ','crval3  ','crval4  ',
      *		     'ctype1  ','ctype2  ','ctype3  ','ctype4  ',
      *    'date-obs','epoch   ','history ','instrume','lstart  ',
-     *	  'lstep   ','ltype   ','lwidth  ','object  ',
+     *	  'lstep   ','ltype   ','lwidth  ','object  ','mostab  ',
      *	  'observer','telescop','xshift  ','yshift  ','obsra   ',
      *	  'obsdec  ','restfreq','vobs    ','pbfwhm  ','btype   '/
 c
@@ -706,7 +706,6 @@ c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer i,j,k,imin,imax,jmin,jmax,nHisto
 	real Data(maxdim),bmax
-	common/CleanCom/Data
 c
 c  External.
 c
@@ -966,7 +965,6 @@ c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer i,j,Ncmpd,x0,y0,n0,itemp
 	integer YMap(maxdim+1)
-	common/CleanCom/YMap
 c
 c  Clear out YMap.
 c
@@ -1148,7 +1146,6 @@ c------------------------------------------------------------------------
 	real TermRes,ResMax,Wts,alpha
 	integer Temp(maxrun),Indx(maxrun)
 	logical more,ZeroCmp
-	common/CleanCom/Temp,Indx
 c
 c  Initialise.
 c
@@ -1376,7 +1373,6 @@ c------------------------------------------------------------------------
 	integer i,j,k,l,Ncmpd,x0,y0,n0,itemp
 	real Temp(maxdim)
 	integer Indx(maxdim)
-	common/CleanCom/Indx,Temp
 c
 c  Clear the mapping array.
 c
