@@ -262,6 +262,8 @@ c    nebk 05jan95  Use new PGIMAGE in favour of PGGRAY
 c    nebk 20feb95  Adjust new call sequence of wedge routines and call
 c		   ofmcol to ensure b&w table their by default. Move 
 c		   to image type "pixel" instead of "grey"
+c    nebk 14apr95  Make sure old lookup table not lost when stepping to
+c		   new subplot
 c To do:
 c
 c-----------------------------------------------------------------------
@@ -301,7 +303,7 @@ c
       data ipage, scale /0, 0.0, 0.0/
       data dmm /1.0e30, -1.0e30/
 c-----------------------------------------------------------------------
-      call output ('CgCurs: version 20-Feb-95')
+      call output ('CgCurs: version 14-Apr-95')
       call output (' ')
 c
 c Get user inputs
@@ -397,7 +399,7 @@ c
 c Work out if wedge outside or inside subplots. Also work out
 c if plotting one wedge per subplot or one wedge for all  
 c       
-      call wedgincg (dowedge, nx, ny, 1, trfun, wedcod)
+      call wedgincg ('NO', dofid, dowedge, nx, ny, 1, trfun, wedcod)
 c
 c Work out default character sizes for axis and channel labels
 c
@@ -424,7 +426,7 @@ c
 c       
 c Init OFM routines
 c       
-      call ofmini
+      if (dopixel) call ofmini
 c
 c Set label displacements from axes and set PGTBOX labelling
 c option strings
@@ -491,8 +493,8 @@ c and will not get erased
 c
            if (wedcod.eq.1 .or. wedcod.eq.2) then
             call pgsch (cs(1))
-            call wedgecg (.false., wedcod, wedwid, jj, trfun, groff, 
-     +                    nbins, cumhis, wdgvp, pixr2(1), pixr2(2))
+            call wedgecg (wedcod, wedwid, jj, trfun, groff, nbins,
+     +                    cumhis, wdgvp, pixr2(1), pixr2(2))
            end if
          end if
 c
@@ -505,7 +507,7 @@ c Draw pixel map; set default b&w colour table first.
 c
            call pgsci (7)
            if (dopixel) then
-             call ofmcol (1, pixr2(1), pixr2(2))
+             if (k.eq.1) call ofmcol (1, pixr2(1), pixr2(2))
              call pgimag (memr(ipim), win(1), win(2), 1, win(1), 1,
      +                    win(2), pixr2(1), pixr2(2), tr)
            else 
@@ -528,8 +530,8 @@ c Draw wedge inside subplots and overwrite label ticks
 c
            if (wedcod.eq.3) then
             call pgsch (cs(1))
-            call wedgecg (.false., wedcod, wedwid, jj, trfun, groff, 
-     +                    nbins, cumhis, wdgvp, pixr2(1), pixr2(2))
+            call wedgecg (wedcod, wedwid, jj, trfun, groff, nbins,
+     +                    cumhis, wdgvp, pixr2(1), pixr2(2))
            end if
 c
 c Modify lookup table
