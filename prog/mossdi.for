@@ -29,15 +29,6 @@ c	The default is conservative and image dependent.
 c@ region
 c	The standard region of interest keyword. See `help region' for more
 c	information. The default is the entire image.
-c@ options
-c	Task enrichment parameters. Several can be given, separated by
-c	commas. Minimum match is used. Possible values are:
-c	  asym       The beam for at least one pointing is asymmetric. By
-c	             default MOSSDI assumes the beam has 180 degree rotation
-c	             symmetry, which is the norm for beams in radio-astronomy.
-c	  pad        Double the beam size by padding it with zeros. This
-c	             will give better stability if you did not use the
-c	             `double' option in INVERT.
 c--
 c  History:
 c    rjs 31oct94 - Original version.
@@ -51,7 +42,6 @@ c------------------------------------------------------------------------
 	parameter(MAXRUN=3*maxdim,MAXBOXES=1024)
 c
 	character MapNam*64,BeamNam*64,ModelNam*64,OutNam*64,line*64
-	character flags*4
 	integer Boxes(MAXBOXES),Run(3,MAXRUN),nRun,blc(3),trc(3),maxMap
 	integer nPoint
 	integer lMap,lBeam,lModel,lOut
@@ -60,8 +50,7 @@ c
 	integer pStep,pStepR,pRes,pEst
 	integer maxniter,niter,ncomp
 	logical more
-	real dmin,dmax,drms,cutoff,clip,gain
-	logical asym,pad
+	real dmin,dmax,drms,cutoff,clip,gain,flux
 c
 c  Externals.
 c
@@ -80,7 +69,6 @@ c
 	call keyr('gain',gain,0.1)
 	call keyr('clip',clip,0.0)
 	call BoxInput('region',MapNam,Boxes,MaxBoxes)
-	call GetOpt(asym,pad)
 	call keyfin
 c
 c  Check everything makes sense.
@@ -135,12 +123,8 @@ c
 c
 c  Initialise the convolution routines.
 c
-	call output('Initialising the convolutioner ...')
 	call xyopen(lBeam,BeamNam,'old',3,nBeam)
-	flags = ' '
-	if(.not.asym) flags(1:1) = 's'
-	if(pad)       flags(2:2) = 'e'
-	call mosCnvlI(lBeam,flags)
+	call mcInitF(lBeam)
 c
 c  Loop.
 c
@@ -153,7 +137,7 @@ c
 c
 	  call BoxRuns(1,k,' ',boxes,Run,MaxRun,nRun,
      *					xmin,xmax,ymin,ymax)
-	  call mosCnvlS(lMap,k,Run,nRun)
+	  call mcPlaneR(lMap,k,Run,nRun)
 c
 c  Get the Map.
 c
@@ -180,13 +164,15 @@ c
 	  more = .true.
 	  dowhile(more)
 	    call Steer(memr(pEst),memr(pRes),memr(pStep),memr(pStepR),
-     *	      nPoint,Run,nRun,gain,clip,dmin,dmax,drms,ncomp)
-	    line = ' Components subtracted: '//itoaf(ncomp)
+     *	      nPoint,Run,nRun,gain,clip,dmin,dmax,drms,flux,ncomp)
+	    niter = niter + ncomp
+	    line = 'Steer Iterations: '//itoaf(niter)
 	    call output(line)
 	    write(line,'(a,1p3e12.3)')' Residual min,max,rms: ',
      *					dmin,dmax,drms
 	    call output(line)
-	    niter = niter + ncomp
+	    write(line,'(a,1pe12.3)') ' Total CLEANed flux: ',Flux
+	    call output(line)
 	    more = niter.lt.maxniter.and.
      *		   max(abs(dmax),abs(dmin)).gt.cutoff
 	  enddo
@@ -213,35 +199,12 @@ c  Thats all folks.
 c
 	end
 c************************************************************************
-	subroutine GetOpt(asym,pad)
-c
-	implicit none
-	logical asym,pad
-c
-c  Get extra processing options.
-c
-c  Output:
-c    asym	Beam is asymmetric.
-c    pad	Double beam size.
-c------------------------------------------------------------------------
-	integer NOPT
-	parameter(NOPT=2)
-	logical present(NOPT)
-	character opts(NOPT)*8
-	data opts/'asym    ','pad     '/
-c
-	call options('options',opts,present,NOPT)
-	asym = present(1)
-	pad  = present(2)
-c
-	end
-c************************************************************************
 	subroutine Steer(Est,Res,Step,StepR,nPoint,Run,nRun,
-     *	  gain,clip,dmin,dmax,drms,ncomp)
+     *	  gain,clip,dmin,dmax,drms,flux,ncomp)
 c
 	implicit none
 	integer nPoint,nRun,Run(3,nRun),ncomp
-	real gain,clip,dmin,dmax,drms
+	real gain,clip,dmin,dmax,drms,flux
 	real Est(nPoint),Res(nPoint),Step(nPoint),StepR(nPoint)
 c
 c  Perform a Steer iteration.
@@ -262,8 +225,8 @@ c    dmin,dmax,drms Min, max and rms residuals after this iteration.
 c    ncomp	Number of components subtracted off this time.
 c------------------------------------------------------------------------
 	integer i
-	real thresh,g
-	double precision RR,RS
+	real g,thresh
+	double precision SS,RS,RR
 c
 c  Externals.
 c
@@ -288,21 +251,18 @@ c
 c
 c  Convolve this step.
 c
-	call mosCnvlR(Step,Run,nRun,StepR)
+	call mcCnvlR(Step,Run,nRun,StepR)
 c
 c  Now determine the amount of this step to subtract which would
 c  minimise the residuals.
 c
-	RR = 0
+	SS = 0
 	RS = 0
-	thresh = 1e-4*thresh
 	do i=1,nPoint
-	  if(abs(StepR(i)).gt.thresh)then
-	    RR = RR + Res(i)*Res(i)
-	    RS = RS + Res(i)*StepR(i)
-	  endif
+	  SS = SS + StepR(i) * StepR(i)
+	  RS = RS + Res(i)*StepR(i)
 	enddo
-	g = RR / RS
+	g = RS / SS
 c
 c  Subtract off a fraction of this, and work out the new statistics.
 c
@@ -310,12 +270,14 @@ c
 	dmin = Res(1) - g*StepR(1)
 	dmax = dmin
 	RR = 0
+	flux = 0
 	do i=1,nPoint
 	  Res(i) = Res(i) - g * StepR(i)
 	  dmin = min(dmin,Res(i))
 	  dmax = max(dmax,Res(i))
 	  RR = RR + Res(i)*Res(i)
 	  Est(i) = Est(i) + g * Step(i)
+	  flux = flux + Est(i)
 	enddo
 c
 	drms = sqrt(RR/nPoint)
@@ -332,7 +294,7 @@ c  Determine the residuals for this model.
 c------------------------------------------------------------------------
 	integer i
 c
-	call mosCnvlR(Est,Run,nRun,Res)
+	call mcCnvlR(Est,Run,nRun,Res)
 c
 	do i=1,nPoint
 	  Res(i) = Map(i) - Res(i)
@@ -388,20 +350,19 @@ c    trc	Trc of the bounding region.
 c    niter	The maximum number of iterations performed.
 c
 c------------------------------------------------------------------------
+	include 'maxnax.h'
 	integer i,lblc,ltrc
 	real crpix1,crpix2,crpix3
-	character line*72,txtblc*32,txttrc*32
+	character line*72,txtblc*32,txttrc*32,num*2
 	integer nkeys
-	parameter(nkeys=23)
+	parameter(nkeys=14)
 	character keyw(nkeys)*8
 c
 c  Externals.
 c
 	character itoaf*8
 c
-	data keyw/   'cdelt1  ','cdelt2  ','cdelt3  ','crval1  ',
-     *	  'crval2  ','crval3  ','ctype1  ','ctype2  ','ctype3  ',
-     *    'obstime ','epoch   ','history ','lstart  ',
+	data keyw/   'obstime ','epoch   ','history ','lstart  ',
      *	  'lstep   ','ltype   ','lwidth  ','object  ','pbfwhm  ',
      *	  'observer','telescop','restfreq','vobs    ','btype   '/
 c
@@ -409,6 +370,8 @@ c  Fill in some parameters that will have changed between the input
 c  and output.
 c
 	call wrhda(lOut,'bunit','JY/PIXEL')
+	call wrhdi(lOut,'niters',Niter)
+c
 	call rdhdr(lMap,'crpix1',crpix1,1.)
 	call rdhdr(lMap,'crpix2',crpix2,1.)
 	call rdhdr(lMap,'crpix3',crpix3,1.)
@@ -418,7 +381,14 @@ c
 	call wrhdr(lOut,'crpix1',crpix1)
 	call wrhdr(lOut,'crpix2',crpix2)
 	call wrhdr(lOut,'crpix3',crpix3)
-	call wrhdi(lOut,'niters',Niter)
+c
+	do i=1,MAXNAX
+	  num = itoaf(i)
+	  if(i.gt.3)call hdcopy(lMap,lOut,'crpix'//num)
+	  call hdcopy(lMap,lOut,'cdelt'//num)
+	  call hdcopy(lMap,lOut,'crval'//num)
+	  call hdcopy(lMap,lOut,'ctype'//num)
+	enddo
 c
 c  Copy all the other keywords across, which have not changed and add history
 c
