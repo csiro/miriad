@@ -176,6 +176,8 @@ c    10jan96  rjs  Use MAXDIM to determine MAXRUNS parameter.
 c     9apr96  rjs  Changed dfloat to dble.
 c    08oct96  rjs  Fix call to inbox. Use Fortran-5 functions. Propogate
 c		   MAXBOXES.
+c    14nov96  nebk Change crpix from integer to double precision as it was
+c                  messing up coordinate labelling
 c------------------------------------------------------------------------
 
 c Main program of imstat and imspec. Puts out the identification, where
@@ -210,7 +212,7 @@ c the include file.
       program imstaspc
 
       character*21     version
-      parameter        ( version = 'version 2.2 22-Nov-94' )
+      parameter        ( version = 'version 2.2 14-Nov-96' )
       character*29     string
 
       include          'imspec.h'
@@ -610,7 +612,7 @@ c              Following is workaround HP compiler bug
                temp = ctype(n)
                call rdhda( tinp, keyw('ctype',i), ctype(n), temp      )
                call rdhdd( tinp, keyw('crval',i), crval(n-dim), 1.d0  )
-               call rdhdi( tinp, keyw('crpix',i), crpix(n-dim), 1     )
+               call rdhdd( tinp, keyw('crpix',i), crpix(n-dim), 1.d0  )
                call rdhdd( tinp, keyw('cdelt',i), cdelt(n-dim), 0.d0  )
             endif
          enddo
