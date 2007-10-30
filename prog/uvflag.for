@@ -960,13 +960,15 @@ c Entry antuse produces an output line with the result.
 
       subroutine antusage( antcode )
 
+      implicit none
       double precision antcode
 
       integer          ant1, ant2
       include          'maxdim.h'
       logical          antused ( MAXANT )
       save             antused
-      integer          i, j, k, n
+      integer          i, n
+      character        line*64
       character        outline*(*)
 c
 c  Externals.
@@ -1017,11 +1019,15 @@ c Type an overview and update history to finish off
       logical       apply
       character*(*) ropt
 
-      character*16  ltype
+      character     ltype*16
       integer       lt, lt1, lt2
       integer       reccount, treccnt
-      integer       totcount, totcnt(6), i
-      character*128 outline
+      integer       totcount, totcnt(6), i, l
+      character     outline*128
+c
+c  Externals.
+c
+      character     itoaf*8
       integer       len1
 
       if( ropt.eq.'none' ) return
@@ -1042,9 +1048,11 @@ c Type an overview and update history to finish off
 
       call nrecords( reccount, 1 )
       call nrecords( treccnt,  2 )
-      write( outline, '( ''Total number of records selected: '',i5,'//
-     *                   '''; out of '',i5, '' records'' )' )
-     *                     reccount, treccnt
+      outline = 'Total number of records selected: '//itoaf(reccount)
+      l = len1(outline)
+      outline(l+1:) = '; out of '//itoaf(treccnt)
+      l = len1(outline)
+      outline(l+1:) = ' records'
       call lhwr( outline, unit, apply )
 
       call antuse( outline )
@@ -1056,9 +1064,8 @@ c Type an overview and update history to finish off
       if( type.eq.'channel' ) lt2 = 1
       if( type.eq.'wide'    ) lt1 = 2
       if( type.eq.'wide'    ) lt2 = 2
-      write( outline, '('//
-     *     '''Counts of correlations within selected channels'' )' )
-      call lhwr( outline, unit, apply )
+      call lhwr('Counts of correlations within selected channels',
+     *	  unit,apply)
 
       do lt = lt1, lt2
 
