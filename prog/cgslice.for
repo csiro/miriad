@@ -147,11 +147,17 @@ c	  want to see the slice locations displayed on the image. The region
 c	  of the viewsurface used for the slice display is larger with 
 c	  this option active.
 c
-c	"fiddle" means enter a routine to allow you to interactively change
-c	  the display lookup table.  You can cycle through b&w and colour
-c	  displays, as well as alter the transfer function by the cursor 
-c	  location, or by selecting predefined transfer functions such as 
-c	  histogram equalization, logarithmic, & square root.
+c       "fiddle" means enter a routine to allow you to interactively change
+c         the display lookup table.  You can cycle through a variety of   
+c         colour lookup tables, as well as alter a linear transfer function
+c         by the cursor location, or by selecting predefined transfer
+c         functions (linear, square root, logarithmic, histogram equalization)
+c       
+c         For hard copy devices (e.g. postscript), a keyboard driven
+c         fiddle is offered; you can cycle through different colour tables
+c         and invoke the predefined transfer functions, but the linear
+c         fiddler is not available.   In this way you can make colour
+c         hardcopy plots.
 c
 c	"wedge" means that if you are drawing a grey scale, also draw
 c	  and label a wedge to the right of the plot, showing the map 
@@ -288,6 +294,10 @@ c                  of third axis.    LInearize axis descriptors at
 c                  centre of displayed region
 c    nebk 14oct94  Better cursor positioning in gaussian fitting
 c    nebk 23dec94  Make sure selected region no bigger than image
+c    nebk 05jan95  Use new PGIMAG in favour of PGGRAY adding support   
+c                  for fiddling of lookup table for hardcopy devices.
+c                  Make use of new PGBAND when defining slices.  Decouple
+c                  slice and image window label displacements
 c
 c Notes:
 c
@@ -319,9 +329,10 @@ c
       double precision cdelt(maxnax), crval(maxnax), crpix(maxnax)
       real levs(maxlev), pixr(2), tr(6), cs(3), pixr2(2), scale(2),
      +  bound(4,maxnsl), vblc(2,2), vtrc(2,2), xrange(2), yrange(2),
-     +  tfvp(4), wdgvp(4), cumhis(nbins)
+     +  tfvp(4), wdgvp(4), cumhis(nbins), dmm(2)
       real slev, xmin, xmax, ymin, ymax, vx, vy, vxsize, vysize, ydispb,
-     +  xdispl, groff, blank, epoch, sxmin, sxmax, symin, symax
+     +  ydispbs, xdispl, xdispls, groff, blank, epoch, sxmin, sxmax, 
+     +  symin, symax
 c
       integer blc(3), trc(3), size(maxnax), win(maxnax), 
      +  grpbeg(maxchan), ngrp(maxchan), srtlev(maxlev),
@@ -350,8 +361,12 @@ c
       data ipage, scale /0, 0.0, 0.0/
       data xrange, yrange /0.0, 0.0, 0.0, 0.0/
       data dunsl /.false./
+      data xdispls, ydispbs /3.5, 3.5/
 c-----------------------------------------------------------------------
-      call output ('CgSlice: version 23-Dec-94')
+      call output ('CgSlice: version 05-Jan-95')
+      call output ('Options=fiddle will now work partially for hard ')
+      call output ('copy devices -- see help options')
+      call output (' ')
       call output ('Non-linear coordinates are now partially handled')
       call output ('See "help cgcoords" for explanations')
       call output (' ')
@@ -451,7 +466,8 @@ c
         call bug ('f', 'Error opening plot device')
       endif
       call pgqinf ('hardcopy', hard, ilen)
-      if (hard.eq.'YES') dofid = .false.
+      if (hard.eq.'YES' .and. fslposi.eq.' ') call bug ('f',
+     +   'Must specify keyword "posin" for hardcopy device')
 c
 c Step to first sub-plot, set font and basic character size
 c
@@ -471,9 +487,9 @@ c Work out viewport encompassing all sub-plots and the viewport
 c that defines the slice plotting region.   Also return the
 c the viewport size of sub-plots, and the gap between sub-plots.
 c
-      call vpsiz (noimage, dofid, nx, ny, cs, xdispl, ydispb, wedcod, 
-     +  wedisp, wedwid, tfdisp, vblc, vtrc, vxsize, vysize, 
-     +  tfvp, wdgvp)
+      call vpsiz (noimage, dofid, nx, ny, cs, xdispl, ydispb, xdispls,
+     +  ydispbs, wedcod, wedisp, wedwid, tfdisp, vblc, vtrc, vxsize, 
+     +  vysize, tfvp, wdgvp)
 c
 c Adjust viewport increments and start locations if equal scales
 c requested or if scales provided by user
@@ -507,7 +523,7 @@ c
 c Read in image  
 c
          call readimcg (.true., mask, blank, lin, ibin, jbin, krng,
-     +         blc, trc, .true., memi(ipnim), memr(ipim), doblnk)
+     +         blc, trc, .true., memi(ipnim), memr(ipim), doblnk, dmm)
 c
 c Save image if necessary, apply transfer function and draw grey 
 c scale wedge outside of redisplay loop if wedge outside subplots
@@ -521,7 +537,8 @@ c
      +       cumhis)
 c
            if (wedcod.eq.1 .or. wedcod.eq.2) then
-             call pgsci (7)
+             call pgsci (1)
+             if (hard.eq.'NO') call pgsci (7)
              call pgsch (cs(1))
              call wedgecg (wedcod, wedwid, jj, trfun, groff, nbins, 
      +                     cumhis, wdgvp, pixr(2), pixr(1))
@@ -536,10 +553,17 @@ c
            if (.not.noimage) then
              if (dogrey) then
 c
+c Modify OFM for harcopy devices here; must be done before
+c PGIMAG called
+c 
+              if (hard.eq.'YES' .and. dofid)
+     +          call ofmmod (tfvp, win(1)*win(2), memr(ipim),
+     +                       memi(ipnim), pixr2(1), pixr2(2))
+c
 c Draw grey scale
 c
-               call pggray (memr(ipim), win(1), win(2), 1, win(1), 1,
-     +                      win(2), pixr2(2), pixr2(1), tr)
+               call pgimag (memr(ipim), win(1), win(2), 1, win(1), 1,
+     +                      win(2), pixr2(1), pixr2(2), tr)
              else 
 c
 c Draw contours
@@ -552,7 +576,8 @@ c
 c Label if first time through redisplay loop; axes not erased
 c
              call pgsch (cs(1))
-             call pgsci (7)
+             call pgsci (1)
+             if (hard.eq.'NO') call pgsci (7)
              if (first) call axlabcg (gaps, nx, ny, ngrps, nlast, k, 
      +         xopts, yopts, xdispl, ydispb, labtyp, xlabel, ylabel, 
      +         xxopts, yyopts)
@@ -565,7 +590,8 @@ c
 c Draw wedge if inside subplot
 c
              if (wedcod.eq.3) then
-               call pgsci (7)
+               call pgsci (1)
+               if (hard.eq.'NO') call pgsci (7)
                call pgsch (cs(1))
                call wedgecg (wedcod, wedwid, jj, trfun, groff, nbins, 
      +                       cumhis, wdgvp, pixr(2), pixr(1))
@@ -581,10 +607,9 @@ c
              end if
              call pgupdt
 c
-             if (dofid) then
+c Modify OFM for interactive devices here
 c
-c Modify lookup table
-c
+             if (dofid .and. hard.eq.'NO') then
                call pgsch (cs(1))
                call ofmmod (tfvp, win(1)*win(2), memr(ipim),
      +                      memi(ipnim), pixr2(1), pixr2(2))
@@ -705,11 +730,11 @@ c
                if (dofit) then
                  call drawbox (dobord, vblc, vtrc, xrange, yrange, 
      +              bound(1,i), bound(3,i), bound(2,i), bound(4,i),
-     +              ydispb, xdispl, xlabel2, ylabel2)
+     +              xlabel2, ylabel2, xdispls, ydispbs) 
                else
                  call drawbox (dobord, vblc, vtrc, xrange, yrange, 
-     +              sxmin, sxmax, symin, symax, ydispb, xdispl, 
-     +              xlabel2, ylabel2)
+     +              sxmin, sxmax, symin, symax, xlabel2, ylabel2, 
+     +              xdispls, ydispbs)
                end if
                dunsl = .true.
 c
@@ -730,7 +755,7 @@ c Do Gaussian fit if desired
 c
                  if (dofit) call gaufit (lmod, dobase, doxrng, i, 
      +             nslp(i), nseg(i),ipslx(i), ipsly(i),  ipsls(i), 
-     +             ipsle(i), xdispl, ydispb, xlabel2, ylabel2)
+     +             ipsle(i), xdispls, ydispbs, xlabel2, ylabel2)
                end if
              end do
            end if
@@ -773,7 +798,7 @@ c
 c
 c
       subroutine curget (ibin, jbin, blc, nx, ny, nimage, naxis, 
-     +   crval, cdelt, crpix, ctype, labtyp, ipos, wpos, cch)
+     +   crval, cdelt, crpix, ctype, labtyp, ip, ipos, wpos, cch)
 c-----------------------------------------------------------------------
 c     Get one end of slice
 c
@@ -785,6 +810,7 @@ c    nimage  Normalization image
 c    naxis   NUmber of axes in image
 c    cr*     Axis descriptors
 c    labtyp  Axis label types
+c    ip      Number of points accumulated so far.  SHould be 0 or 1
 c  Output
 c    wpos    Position in world coordinates for the point under cursor
 c    ipos    Position in absolute binned subimage pixels for the point 
@@ -792,20 +818,29 @@ c            under cursor
 c    cch     Character read by cursor. 
 c-----------------------------------------------------------------------
       implicit none
-      integer naxis, nx, ny, nimage(nx,ny), blc(2), ibin, jbin, ipos(2)
+      integer naxis, nx, ny, nimage(nx,ny), blc(2), ibin, jbin, ipos(2),
+     +  ip
       double precision cdelt(naxis), crval(naxis), crpix(naxis)
       real wpos(2)
       character cch*1, ctype(naxis)*(*), labtyp(2)*(*)
 cc
       integer k, ci
       double precision pix(2)
+      real wx, wy
       logical ok, more
 c-----------------------------------------------------------------------
       call pgqci (ci)
       more = .true.
+      wx = wpos(1)
+      wy = wpos(2)
 c
       do while (more)
-        call pgcurs (wpos(1), wpos(2), cch)
+        if (ip.eq.1) then
+          call pgband (1, 1, wx, wy, wpos(1), wpos(2), cch)
+        else
+          call pgcurs (wpos(1), wpos(2), cch)
+        end if
+c
         call ucase (cch)
         if (cch.eq.'X') then
           more = .false.
@@ -902,7 +937,7 @@ c
 c Make cursor selection
 c
         call curget (ibin, jbin, blc, nx, ny, nimage, naxis, crval, 
-     +               cdelt, crpix, ctype, labtyp, simpos, wldpos, cch)
+     +     cdelt, crpix, ctype, labtyp, ip, simpos, wldpos, cch)
         if (cch.eq.'A') then
           if (ip.eq.0) then
             ip = ip + 1 
@@ -955,6 +990,11 @@ c
             call pgpt (1, wpos(1,ip), wpos(2,ip), 17)
             call pgsci (ci)
             ip = ip - 1
+c
+c Recover world coordinates of first point in slice (may not exist)
+c
+            wldpos(1) = wpos(1,1)
+            wldpos(2) = wpos(2,1)
           end if
         else if (cch.eq.'X') then
 c
@@ -1048,8 +1088,8 @@ c
       end
 c
 c
-      subroutine drawbox (dobord, vblc, vtrc, xrange, yrange, 
-     +   sxmin, sxmax, symin, symax, ydispb, xdispl, xlabel, ylabel)
+      subroutine drawbox (dobord, vblc, vtrc, xrange, yrange, sxmin,
+     +   sxmax, symin, symax, xlabel, ylabel, xdispl, ydispb)
 c-----------------------------------------------------------------------
 c     Set the viewport and draw the box for the slice display
 c
@@ -1059,9 +1099,9 @@ c                viewport and window
 c   vblc,trc     Viewport
 c   x,yrange     User given plot extrema
 c   sx,ymin,max  Auto plot extrema
-c   ydispb       Displacement of x-axis label
-c   xdispl       Displacement of y-axis label
 c   x,ylabel     x- and y-axis labels
+c   xdispl,ydispb
+c                Y and x axis label offsets
 c
 c-----------------------------------------------------------------------
       implicit none
@@ -2123,8 +2163,10 @@ c-----------------------------------------------------------------------
       if (fslval.ne.' ') then
         inquire (file=fslval, exist=exist)
         call txtopen (lval, fslval, 'append', iostat)
-        if (iostat.ne.0) 
-     +    call bug ('f', 'Error opening output text file'//fslval)
+        if (iostat.ne.0) then
+          aline = 'Error opening output text file'//fslval
+          call bug ('f', aline)
+        end if
 c
 c Write header
 c
@@ -2149,8 +2191,10 @@ c
       if (fslposo.ne.' ') then
         inquire (file=fslposo, exist=exist)
         call txtopen (lposo, fslposo, 'append', iostat)
-        if (iostat.ne.0)
-     +    call bug ('f', 'Error opening output text file'//fslposo)
+        if (iostat.ne.0) then
+          aline = 'Error opening output text file'//fslposo
+          call bug ('f', aline)
+        end if
 c
 c Write header
 c
@@ -2178,8 +2222,10 @@ c
       if (fslmod.ne.' ') then
         inquire (file=fslmod, exist=exist)
         call txtopen (lmod, fslmod, 'append', iostat)
-        if (iostat.ne.0) 
-     +    call bug ('f', 'Error opening output text file'//fslmod)
+        if (iostat.ne.0) then
+          aline = 'Error opening output text file'//fslmod
+          call bug ('f', aline)
+        end if
 c
 c Write header
 c
@@ -2420,13 +2466,13 @@ c
                 noton = .false.
                 if (noimage) then
                   if (slpos(1,nslice).lt.1 .or.
-     +                slpos(2,nslice).gt.size(1) .or.
+     +                slpos(1,nslice).gt.size(1) .or.
      +                slpos(2,nslice).lt.1 .or.
      +                slpos(2,nslice).gt.size(2) .or.
-     +                slpos(3,nslice).lt.1 .or.
-     +                slpos(3,nslice).gt.size(1) .or.
      +                slpos(4,nslice).lt.1 .or.
-     +                slpos(4,nslice).gt.size(2)) noton = .true.
+     +                slpos(4,nslice).gt.size(1) .or.
+     +                slpos(5,nslice).lt.1 .or.
+     +                slpos(5,nslice).gt.size(2)) noton = .true.
                 else
                   if (slpos(1,nslice).lt.1.or.slpos(1,nslice).gt.nx.or.
      +                slpos(2,nslice).lt.1.or.slpos(2,nslice).gt.ny.or.
@@ -2737,8 +2783,8 @@ c
 c Redraw box and labels
 c
       call drawbox (.true., vblc, vtrc, xrange, yrange,
-     +   wblc(1), wtrc(1), ymin, ymax, ydispb, xdispl, 
-     +   xlabel, ylabel)
+     +   wblc(1), wtrc(1), ymin, ymax, xlabel, ylabel,
+     +   xdispl, ydispb)
 c
 c Plot slice
 c
@@ -3188,8 +3234,8 @@ c
 c
 c
       subroutine vpsiz (noimage, dofid, nx, ny, pcs, xdispl, ydispb, 
-     +  wedcod, wedisp, wedwid, tfdisp, vblc, vtrc, vxsize, vysize, 
-     +  tfvp, wdgvp)
+     +  xdispls, ydispbs, wedcod, wedisp, wedwid, tfdisp, vblc, vtrc, 
+     +  vxsize, vysize, tfvp, wdgvp)
 c---------------------------------------------------------------------------
 c     Work out viewports for image and slice display for unequal scales 
 c     in x and y here. If user wants equal scales, adjust later.
@@ -3200,7 +3246,13 @@ c     nx,ny       Number of sub-plots in x and y
 c     pcs         PGPLOT character sizes image labels, velocity labels
 c                 and slice labels
 c     xdispl      Displacement of y-axis label from axis in char hghts
+c                 for image display
 c     ydispb      Displacement of x-axis label from axis in char hghts
+c                 for image display
+c     xdispls     Displacement of y-axis label from axis in char hghts
+c                 for slice display
+c     ydispbs     Displacement of x-axis label from axis in char hghts
+c                 for slice display
 c     dofid       True for interactive fiddle
 c     wedcod      1 -> one wedge to right of all subplots
 c                 2 -> one wedge to right per subplot
@@ -3221,7 +3273,7 @@ c---------------------------------------------------------------------------
       implicit none
 c
       real vblc(2,2), vtrc(2,2), vxsize, vysize, pcs(3), ydispb, xdispl,
-     +  tfvp(4), wdgvp(4), wedisp, wedwid, tfdisp
+     +  tfvp(4), wdgvp(4), wedisp, wedwid, tfdisp, xdispls, ydispbs
       integer nx, ny, wedcod
       logical noimage, dofid
 cc
@@ -3258,7 +3310,7 @@ c
 c Use a big chunk of the viewsurface for the slice if not 
 c displaying the image
 c
-        vblc(1,1) = (xdispl + 1.2) * xhts
+        vblc(1,1) = (xdispls + 1.2) * xhts
         vblc(2,1) = 0.25
         vtrc(1,1) = 1.0 - xhts
         vtrc(2,1) = 0.75
@@ -3281,8 +3333,8 @@ c
 c
 c Set BLC of slice viewport
 c
-        vblc(1,1) = (xdispl + 1.2) * xhts
-        vblc(2,1) = (ydispb + 0.5) * yhts
+        vblc(1,1) = (xdispls + 1.2) * xhts
+        vblc(2,1) = (ydispbs + 0.5) * yhts
 c
 c Set x-TRC of slice viewport
 c
@@ -3290,7 +3342,7 @@ c
 c
 c Set x-BLC of image viewport
 c
-        vblc(1,2) = vblc(1,1)
+        vblc(1,2) = (xdispl + 1.2) * xhts
 c
 c Set y-TRC of image viewport
 c
@@ -3348,7 +3400,6 @@ c
         vtrc(1,2) = vtrc(1,1) - dvx
 c
 c Now deal with y displacement of transfer function fiddle plot.
-c y displacement of image x axis label
 c
         dvltot = ydispb*yhti
 c
