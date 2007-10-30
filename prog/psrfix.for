@@ -45,6 +45,7 @@ c--
 c  History:
 c    rjs  28may96 Original version.
 c    rjs  29jul96 Fix calibration options, and som FORTRAN standardisation.
+c    rjs  10dec96 Better error message when nbin is missing.
 c------------------------------------------------------------------------
 c
 c  Common block to communicate to the "process" routine.
@@ -58,7 +59,7 @@ c
 c
 	include 'maxdim.h'
 	character version*(*)
-	parameter(version='PsrFix: version 1.0 28-May-96')
+	parameter(version='PsrFix: version 1.0 10-Dec-96')
 	character uvflags*16,ltype*16,out*64,binsl(MAXBIN)*64
 	integer tIn,tOut,nchan
 	integer i,j,l,n,s
@@ -258,7 +259,9 @@ c
 	  time = preamble(4)
 	  nchans = nchan
 	  call uvinfo(tIn,'sfreq',sfreq)
-	  call uvrdvri(tIn,'nbin',nbins,1)
+	  call uvrdvri(tIn,'nbin',nbins,0)
+	  if(nbins.eq.0)call bug('f',
+     *	    'Variable "nbin" is missing from the vis. dataset')
 	  if(nbins.gt.MAXBINS)call bug('f','Too many pulsar bins')
 	endif
 c
