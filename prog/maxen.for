@@ -111,9 +111,10 @@ c   rjs  27oct95 - Increased max length of filenames.
 c   rjs  18mar96 - Increase MAXBOXES.
 c   rjs  29jan97 - Change default region of interest.
 c   rjs  10mar97 - Default region is all channels.
+c   rjs  25mar97 - Check whether data are selected for a given plane.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Maxen: version 1.0 10-Mar-97')
+	parameter(version='Maxen: version 1.0 25-Mar-97')
 	include 'maxnax.h'
 	include 'maxdim.h'
 	integer MaxRun,MaxBoxes
@@ -298,6 +299,7 @@ c
 	  call xysetpl(lMap,1,k)
 	  call GetPlane(lMap,Run,nRun,xmin-1,ymin-1,nMap(1),nMap(2),
      *				Data(pMap),MaxMap,nPoint)
+	  if(nPoint.gt.0)then
 c
 c  Get the Default map and Clip level.
 c
@@ -477,11 +479,14 @@ c
      *		    (abs(Flux-TFlux).lt.0.05*TFlux.or..not.doflux).and.
      *		     GradJJ/Grad11  .lt.Tol			  )
 	enddo
+	endif
 c------------------------------------------------------------------------
 c
 c  We have finished processing this plane. More info to the user!
 c
-	  if(converge)then
+	  if(nPoint.eq.0)then
+	    call output('No data selected for this plane')
+	  else if(converge)then
 	    call output('MAXEN has converged ... finishing up now')
 	  else
 	    call output('Failed to converge in NITERS iterations')
