@@ -65,6 +65,7 @@ c    rjs  29may96 Added nbin to uvvariables.
 c    rjs  05aug96 Increased maxfiles.
 c    rjs  23jul97 Added pbtype.
 c    rjs  16aug04 Added various variables to the list to be copied across.
+c    rjs  19sep04 Copy across sensitivity model and more variables.
 c  Bugs:
 c   Perfect?
 c------------------------------------------------------------------------
@@ -72,7 +73,7 @@ c------------------------------------------------------------------------
 	integer MAXSELS
 	parameter(MAXSELS=256)
 	character version*(*)
-	parameter(version='UvSplit: version 1.0 16-Aug-04')
+	parameter(version='UvSplit: version 1.0 19-Sep-04')
 c
 	character vis*64,dtype*1
 	integer tvis
@@ -689,7 +690,7 @@ c------------------------------------------------------------------------
 	character line*64
 c
 	integer NCOPY,NSCHECK,NWCHECK
-	parameter(NCOPY=81,NSCHECK=8,NWCHECK=3)
+	parameter(NCOPY=85,NSCHECK=8,NWCHECK=3)
 	character copy(NCOPY)*8,scheck(NSCHECK)*8,wcheck(NWCHECK)*8
         data copy/    'airtemp ','antdiam ','antpos  ','atten   ',
      *     'axisrms ','chi     ','corbit  ','corbw   ','corfin  ',
@@ -707,7 +708,8 @@ c
      *	   'nbin    ','pbtype  ','xtsys   ','ytsys   ','xsampler',
      *	   'ysampler','xyamp   ','antaz   ','antel   ','axismax ',
      *	   'calcode ','name    ','pntra   ','pntdec  ','pressmb ',
-     *	   'project ','wind    '/
+     *	   'project ','wind    ','rain    ','smonrms ','refpnt  ',
+     *	   'sctype  '/
 c
 	data SCheck/  'nspect  ','restfreq','ischan  ','nschan  ',
      *     'sfreq   ','sdf     ','systemp ','xyphase '/
@@ -790,11 +792,11 @@ c------------------------------------------------------------------------
 	include 'uvsplit.h'
 c
 	integer NTABLE
-	parameter(NTABLE=12)
+	parameter(NTABLE=13)
 	character tables(NTABLE)*8
 	data tables/'interval','nsols   ','ngains  ','nfeeds  ',
      *	 'ntau    ','gains   ','freq0   ','leakage ','bandpass',
-     *	 'freqs   ','nspect0 ','nchan0  '/
+     *	 'freqs   ','nspect0 ','nchan0  ','senmodel'/
 c
 	more = .false.
 	do i=1,nfiles
