@@ -9,7 +9,8 @@ c+
 c	UVFSTATS prints statistics about flagged visibilities.
 c
 c@ vis
-c	Input visibility file. No default.
+c	Input visibility file. Several can be given. Wildcards are
+c	supported. No default.
 c@ line
 c	Normal line parameter. The default is all channels.
 c@ select
@@ -20,6 +21,7 @@ c	This determines what the flagging statitics are determined as
 c	a function of. Possible values are:
 c	  stokes    Determine statistics by Stokes/pol'n parameter.
 c	  baseline  Determine statistics by baseline number.
+c	  antenna   Determine statistics by antenna number.
 c	  channel   Determine statistics by channel number.
 c@ options
 c	Task enrichment parameters. Possible values are
@@ -33,21 +35,21 @@ c	messages about the flagging statistics.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
-	integer MAXSELS,MAXPARM,POLMIN
+	integer MAXSELS,MAXPARM,POLMIN,MAXIN
 	parameter(version='Uvfstats: version 1.0 26-Sep-95')
-	parameter(MAXSELS=256,MAXPARM=MAXCHAN,POLMIN=-8)
+	parameter(MAXSELS=256,MAXPARM=MAXCHAN,POLMIN=-8,MAXIN=64)
 c
 	real lstart,lwidth,lstep,sels(MAXSELS)
 	integer tno,nchan,ngood(MAXPARM),nbad(MAXPARM),npnt,nout
-	integer pol,i1,i2,i,offset
+	integer pol,i1,i2,i,j,offset,nIn
 	double precision preamble(4)
 	real x(MAXPARM),y(MAXPARM)
 	complex data(MAXCHAN)
-	character line*32,vis*80,device*64,val1*5,val2*8
+	character line*32,vis(MAXIN)*80,device*64,val1*5,val2*8
 	logical doabs,flags(MAXCHAN)
 c
 	integer NMODES,NOPTS
-	parameter(NMODES=3,NOPTS=1)
+	parameter(NMODES=4,NOPTS=1)
 	logical present(NOPTS)
 	character modes(NMODES)*8,mode*8,opts(NOPTS)*8
 c
@@ -55,15 +57,15 @@ c  Externals.
 c
 	character PolsC2P*2,BlFmt*5
 c
-	data modes/'stokes  ','baseline','channel '/
+	data modes/'stokes  ','baseline','channel ','antenna '/
 	data opts /'absolute'/
 c
 c  Get input parameters.
 c
 	call output(version)
 	call keyini
-	call keyf('vis',vis,' ')
-	if(vis.eq.' ')call bug('f','Input dataset must be given')
+	call mkeyf('vis',vis,MAXIN,nIn)
+	if(nIn.eq.0)call bug('f','Input dataset must be given')
 	call keya('device',device,' ')
 	call keyline(line,nchan,lstart,lwidth,lstep)
 	call SelInput('select',sels,MAXSELS)
@@ -82,35 +84,42 @@ c
 c
 c  Open the input.
 c
-	call uvopen(tno,vis,'old')
-	if(line.ne.' ')call uvset(tno,'data',line,nchan,
+	do j=1,nIn
+	  call uvopen(tno,vis(j),'old')
+	  if(line.ne.' ')call uvset(tno,'data',line,nchan,
      *					lstart,lwidth,lstep)
-	call SelApply(tno,sels,.true.)
+	  call SelApply(tno,sels,.true.)
 c
 c  Accumulate the statistics.
 c
-	call uvread(tno,preamble,data,flags,MAXCHAN,nchan)
-	dowhile(nchan.gt.0)
-	  if(mode.eq.'stokes')then
-	    call uvrdvri(tno,'pol',pol,1)
-	    call SetPar(pol-PolMin+1,flags,nchan,ngood,nbad,MAXPARM)
-	  else if(mode.eq.'channel')then
-	    do i=1,nchan
-	      if(flags(i))then
-		ngood(i) = ngood(i) + 1
-	      else
-		nbad(i)  = nbad(i) + 1
-	      endif
-	    enddo
-	  else if(mode.eq.'baseline')then
-	    call basant(preamble(4),i1,i2)
-	    call SetPar((i2*(i2-1))/2+i1,flags,nchan,ngood,nbad,MAXPARM)
-	  else
-	    call bug('f','Im confused')
-	  endif
 	  call uvread(tno,preamble,data,flags,MAXCHAN,nchan)
+	  dowhile(nchan.gt.0)
+	    if(mode.eq.'stokes')then
+	      call uvrdvri(tno,'pol',pol,1)
+	      call SetPar(pol-PolMin+1,flags,nchan,ngood,nbad,MAXPARM)
+	    else if(mode.eq.'channel')then
+	      do i=1,nchan
+	        if(flags(i))then
+		  ngood(i) = ngood(i) + 1
+	        else
+		  nbad(i)  = nbad(i) + 1
+	        endif
+	      enddo
+	    else if(mode.eq.'antenna')then
+	      call basant(preamble(4),i1,i2)
+	      call SetPar(i1,flags,nchan,ngood,nbad,MAXPARM)
+	      call SetPar(i2,flags,nchan,ngood,nbad,MAXPARM)
+	    else if(mode.eq.'baseline')then
+	      call basant(preamble(4),i1,i2)
+	      call SetPar((i2*(i2-1))/2+i1,flags,nchan,
+     *					ngood,nbad,MAXPARM)
+	    else
+	      call bug('f','Im confused')
+	    endif
+	    call uvread(tno,preamble,data,flags,MAXCHAN,nchan)
+	  enddo
+	  call uvclose(tno)
 	enddo
-	call uvclose(tno)
 c
 	if(mode.eq.'stokes')then
 	  offset = PolMin - 1
@@ -137,15 +146,19 @@ c
 	if(device.eq.' ')then
 	  call output(' ')
 	  if(mode.eq.'stokes')then
-	    call output('Flagging by polarisation.')
+	    call output('Flagging statistics by polarisation.')
 	    call output('   Pol. Type     Flagged')
 	    call output('   ---------     -------')
 	  else if(mode.eq.'baseline')then
-	    call output('Flagging by baseline.')
+	    call output('Flagging statistics by baseline.')
 	    call output('   Baseline      Flagged')
 	    call output('   --------      -------')
+	  else if(mode.eq.'antenna')then
+	    call output('Flagging statistics by antenna.')
+	    call output('   Antenna       Flagged')
+	    call output('   -------       -------')
 	  else if(mode.eq.'channel')then
-	    call output('Flagging by channel number.')
+	    call output('Flagging statistics by channel number.')
 	    call output('   Channel       Flagged')
 	    call output('   -------       -------')
 	  endif
@@ -155,7 +168,7 @@ c
 	      val1 = ' '//PolsC2P(nint(x(i)))
 	    else if(mode.eq.'baseline')then
 	      val1 = BlFmt(nint(x(i)))
-	    else if(mode.eq.'channel')then
+	    else if(mode.eq.'channel'.or.mode.eq.'antenna')then
 	      write(val1,'(i4)')nint(x(i))
 	    endif
 	    if(doabs)then
