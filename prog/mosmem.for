@@ -63,7 +63,8 @@ c	will help MOSMEM find a good solution. On the other hand, giving
 c	a poor value may do harm. Normally MOSMEM will NOT constrain the
 c	total flux to be this value, but see the ``doflux'' option below.
 c	The default is image-dependent for measure=gull, and zero for
-c	measure=cornwell.
+c	measure=cornwell. A value can be given for each plane being
+c	deconvolved.
 c@ options
 c	Task enrichment parameters. Several can be given, separated by
 c	commas. Minimum match is used. Possible values are:
@@ -83,9 +84,11 @@ c		   the deconvolved region.
 c    rjs  27oct95  Increased max length of filenames.
 c    rjs  24nov95  Default default image is now proportional to the gain.
 c    rjs  29Feb96  Call xyflush after each plane.
+c    mwp  27May97  Allow flux estimates for each plane.
+c    rjs  21jun97  Tidies up above change.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='MosMem: version 1.0 29-Feb-96')
+	parameter(version='MosMem: version 1.0 21-Jun-97')
 	include 'maxdim.h'
 	include 'maxnax.h'
 	include 'mem.h'
@@ -109,6 +112,8 @@ c
 	real StLim,StLen1,StLen2,OStLen1,OStLen2,J0,J1
 	real GradEE,GradEF,GradEH,GradEJ,GradFF,GradFH,GradFJ
 	real GradHH,GradJJ,Grad11,Immax,Immin,Flux,Rms
+	real fluxlist(maxdim)
+	integer nfret
 	logical converge,positive,verbose,doflux
 	integer Run(3,MaxRun),nRun,Boxes(maxBoxes),nPoint,maxPoint
 	integer xmoff,ymoff,zmoff,xdoff,ydoff,zdoff
@@ -132,7 +137,7 @@ c
 	call keyi('niters',maxniter,30)
 	call keyr('q',Q,0.)
 	call keyr('rmsfac',rmsfac,1.)
-	call keyr('flux',TFlux,0.)
+	call mkeyr('flux',fluxlist,maxdim,nfret)
 	call BoxInput('region',MapNam,Boxes,MaxBoxes)
 	call GetOpt(verbose,doflux,entropy)
 	call keyfin
@@ -193,6 +198,18 @@ c
 	nOut(1) = imax - imin + 1
 	nOut(2) = jmax - jmin + 1
 	nOut(3) = kmax - kmin + 1
+
+	if(nfret.lt.nOut(3)) then
+	  TFlux = 0
+	  if(nfret.ge.1)TFlux = fluxlist(nfret)
+	  do i=nfret+1,nOut(3)
+	    fluxlist(i) = TFlux
+	  enddo
+	else if(nfret.gt.nOut(3)) then
+	  call bug('w','More flux estimates than planes...')
+	  call bug('w','ignoring extras.')
+	endif
+
 c
 c  Open the model if needed, and check that is is the same size as the
 c  output.
@@ -269,7 +286,8 @@ c
 c
 c  Get the Default map.
 c
-	  if(TFlux.eq.0.and.positive)then
+	  TFlux=fluxlist(k-kmin+1)
+	  if(TFlux.le.0.and.positive)then
 	    call GetRms(memr(pWt),nPoint,TFlux)
 	    TFlux = RmsFac*TFlux*nPoint/Q
 	  endif
