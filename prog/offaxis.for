@@ -28,7 +28,7 @@ c	The only other legitimate value is I.
 c@ model
 c	Input model of the total intensity image. No default. This should
 c	be the apparent total intensity (i.e. not corrected for primary
-c	beam attenuation).
+c	beam attenuation) in Jy/pixel
 c@ out
 c	The name of the output, corrected, visibility dataset. No default.
 c@ clip
@@ -56,6 +56,7 @@ c		  as well.
 c    rjs  03may00 Now supports C and X band.
 c    rjs  25jul00 Simple support for stokes keyword.
 c    rjs  11sep00 Correct bug in above.
+c    dpr  20mar01 Doc change only
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
