@@ -1,7 +1,7 @@
 #!/bin/csh -f
 #--
 #
-#* mirinstall - Put Miriad source files in the right directories
+##* mirinstall - Put Miriad source files in the right directories
 #& rjs
 #: user utility
 #+
@@ -10,7 +10,7 @@
 #  mirinstall is a utility to copy (source) files to the standard
 #  Miriad directories. A backup of any old version (with a time-stamp
 #  extension) is created in $MIR/old, and the file is also optionally
-#  copied to the $MIR/diffs/changes directory. File protection and
+#  copied to the $MIR/new directory. File protection and
 #  update stamps are taklen care of.
 #
 #  Arguments:
@@ -18,7 +18,7 @@
 #		For example: prog
 #    files...	This gives the list of files to process.
 #    -l		The local-only flag. Normally a copy of the file is also
-#		made if $MIR/diffs/changes. This prevents such a copy
+#		made if $MIR/new. This prevents such a copy
 #		being made.
 #--
 
@@ -50,6 +50,7 @@ foreach arg ( $argv )
       endif
       if ( ! -e $MIR/old/$root.$date ) then
         echo Moving \$MIR/$dir/$root to \$MIR/old/$root.$date ...
+	if ( ! -d $MIR/old ) mkdir $MIR/old
         mv $MIR/$dir/$root $MIR/old/$root.$date
       else
 	rm -f $MIR/$dir/$root
@@ -58,7 +59,7 @@ foreach arg ( $argv )
 
 # Copy to the final resting place. Make sure protections are OK.
 
-    chmod u+rw,g+rw $arg
+    chmod u+rw,g+rw,o+r $arg
     if ( $dolocal ) then
       echo Moving $arg to \$MIR/$dir ...
       mv $arg $MIR/$dir/$root
@@ -66,8 +67,9 @@ foreach arg ( $argv )
     else
       echo Copying $arg to \$MIR/$dir ...
       cp $arg $MIR/$dir
-      echo Moving $arg to \$MIR/diffs/changes ...
-      mv $arg $MIR/diffs/changes
+      echo Moving $arg to \$MIR/new ...
+      if ( ! -d $MIR/new ) mkdir $MIR/new
+      mv $arg $MIR/new
     endif
   endif
 end
