@@ -138,6 +138,8 @@ c                 Dave Rayner.
 c    rjs   1oct96 Major tidy up.
 c    rjs  19feb97 Better error messages.
 c    rjs  25aug97 Correct summing of weights in "merger"
+c    rjs  09nov98 Make rtime variable double precision to avoid loss
+c		  of timing precision.
 c
 c  Bugs/Shortcomings:
 c   * Selfcal should check that the user is not mixing different
@@ -146,7 +148,7 @@ c   * It would be desirable to apply bandpasses, and merge gain tables,
 c     apply polarisation calibration, etc.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Selfcal: version 1.0 25-Aug-97')
+	parameter(version='Selfcal: version 1.0 09-Nov-98')
 	integer MaxMod,maxsels,nhead
 	parameter(MaxMod=32,maxsels=1024,nhead=3)
 c
@@ -466,7 +468,7 @@ c
 	call MemAlloc(pWeight,maxSol*nBl,'r')
 	call MemAlloc(pCount,maxSol,'r')
 	call MemAlloc(pGains,maxSol*nants,'c')
-	call MemAlloc(prTime,maxSol,'r')
+	call MemAlloc(prTime,maxSol,'d')
 	call MemAlloc(pStptim,maxSol,'r')
 	call MemAlloc(pStrtim,maxSol,'r')
 c
@@ -487,7 +489,7 @@ c
 	call MemFree(pWeight,maxSol*nBl,'r')
 	call MemFree(pCount,maxSol,'r')
 	call MemFree(pGains,maxSol*nants,'c')
-	call MemFree(prTime,maxSol,'r')
+	call MemFree(prTime,maxSol,'d')
 	call MemFree(pstpTim,maxSol,'r')
 	call MemFree(pstrTim,maxSol,'r')
 	end
@@ -514,7 +516,7 @@ c
 	call SelfAcc1(tscr,nchan,nvis,nBl,maxSol,nSols,
      *	  nhash,Hash,Indx,interval,
      *	  Memc(pSumVM),Memr(pSumVV),Memr(pSumMM),
-     *	  Memr(pWeight),Memr(pCount),Memr(prTime),Memr(pstpTim),
+     *	  Memr(pWeight),Memr(pCount),Memd(prTime),Memr(pstpTim),
      *	  Memr(pstrTim))
 	end
 c************************************************************************
@@ -528,7 +530,8 @@ c
 	real interval
 	complex SumVM(nBl,maxSol)
 	real SumVV(nBl,maxSol),SumMM(maxSol),Weight(nBl,maxSol)
-	real Count(maxSol),rTime(maxSol),StpTime(maxSol)
+	real Count(maxSol),StpTime(maxSol)
+	double precision rTime(maxSol)
 	real StrTime(maxSol)
 c
 c  This reads through the scratch file which contains the visibility
@@ -686,7 +689,7 @@ c
 	call Solve1(tgains,nSols,nBl,nants,phase,relax,noscale,
      *	  minants,refant,Time0,interval,Indx,
      *	  Memc(pSumVM),Memr(pSumVV),Memr(pSumMM),Memc(pGains),
-     *	  Memr(pWeight),Memr(pCount),memr(prTime),
+     *	  Memr(pWeight),Memr(pCount),memD(prTime),
      *	  Memr(pStpTim),Memr(pStrTim))
 c
 	end
@@ -703,7 +706,8 @@ c
 	integer TIndx(nSols)
 	complex SumVM(nBl,nSols),Gains(nants,nSols)
 	real SumVV(nBl,nSols),SumMM(nSols),Weight(nBl,nSols)
-	real Count(nSols),rTime(nSols),StpTime(nSols),StrTime(nSols)
+	real Count(nSols),StpTime(nSols),StrTime(nSols)
+	double precision rTime(nSols)
 	real interval
 	double precision Time0
 c
@@ -839,7 +843,8 @@ c
 	integer nSols,nBl,nmerge
 	integer tIndx(nSols)
 	real interval
-	real StpTime(nSols),StrTime(nSols),rTime(nSols)
+	real StpTime(nSols),StrTime(nSols)
+	double precision rTime(nSols)
 	complex SumVM(nBl,nSols)
 	real SumVV(nBl,nSols),SumMM(nSols),Weight(nBl,nSols)
 	real Count(nSols)
