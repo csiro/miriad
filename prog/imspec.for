@@ -166,6 +166,8 @@ c    14jul93  bpw  Fix error in output if planes fully masked.
 c    30sep93   jm  Corrected the calling sequence of pgplot routines.
 c    26nov93  bpw  Fix to avoid array bounds violation pointed out by rjs.
 c                  Also work arounds HP compiler bug as indicated by rjs
+c    17jun94  bpw  Finally add the real region keyword (i.e. boxruns),
+c                  because Doug needed it
 c
 c------------------------------------------------------------------------
 
@@ -201,12 +203,14 @@ c the include file.
       program imstaspc
 
       character*21     version
-      parameter        ( version = 'version 2.2 30-sep-93' )
+      parameter        ( version = 'version 2.2 17-Jun-94' )
       character*29     string
 
       include          'imspec.h'
+
       integer          tinp
       integer          naxis, dim
+      integer          corners(4), boxes(MAXBOXES)
       real             cut(2)
       integer          counts(0:MAXNAX+2)
       double precision beaminfo(4)
@@ -215,8 +219,10 @@ c the include file.
 
       string = NAME // ': ' // version
       call output( string )
-      call inputs( tinp,naxis,dim,cut,counts,beaminfo,axlabel,device )
-      call stats(  tinp,naxis,dim,cut,counts,beaminfo,axlabel,device )
+      call inputs( tinp,naxis,dim,corners,boxes,cut,counts,
+     *             beaminfo,axlabel,device )
+      call stats(  tinp,naxis,dim,corners,boxes,cut,counts,
+     *             beaminfo,axlabel,device )
       call xyzclose( tinp )
       call logclose
 
@@ -242,11 +248,12 @@ c After all input are read labset makes the final nice labels to put along
 c the plot
 c header puts out some information about the dataset and units
 
-      subroutine inputs( tinp,naxis,dim, cut, counts, beaminfo,
-     *                   axlabel, device )
+      subroutine inputs( tinp,naxis,dim, corners, boxes, cut, counts,
+     *                   beaminfo, axlabel, device )
 
       integer            tinp
       integer            naxis, dim
+      integer            corners(*), boxes(*)
       real               cut(*)
       integer            counts(0:*)
       double precision   beaminfo(*)
@@ -256,12 +263,9 @@ c header puts out some information about the dataset and units
       include            'maxnax.h'
 
       integer            i, dimen
-      integer            MAXBOXES
-      parameter          ( MAXBOXES = 1024 )
 
       character*1024     file
       integer            axlen( MAXNAX )
-      integer            boxes( MAXBOXES )
       integer            blc(MAXNAX), trc(MAXNAX)
       integer            viraxlen( MAXNAX ), vircsz( MAXNAX )
       character*(MAXNAX) subcube
@@ -272,10 +276,14 @@ c header puts out some information about the dataset and units
       naxis = MAXNAX
       call xyzopen( tinp, file, 'old', naxis, axlen )
 
-      call boxinput( 'region', file, boxes, MAXBOXES )
+      call boxinput( 'region', file, boxes, 1024 )
       call boxset(   boxes, naxis, axlen, ' ' )
       call boxinfo(  boxes, naxis, blc, trc )
-
+      corners(1) = blc(1)
+      corners(2) = trc(1)
+      corners(3) = blc(2)
+      corners(4) = trc(2)
+                                                  
       call optinp
 
       call cutinp( cut )
@@ -1075,11 +1083,12 @@ c These are found for different 'levels'. level 1 corresponds to the
 c statistics of the selected averaging-axes. level 2 combines these
 c statistics for a subcube with one higher dimension, etc.
 
-      subroutine stats( tinp,naxis,dim, cut, counts, beaminfo,
-     *                  axlabel, device )
+      subroutine stats( tinp,naxis,dim, corners, boxes, cut, counts,
+     *                  beaminfo, axlabel, device )
 
       integer          tinp
       integer          naxis, dim
+      integer          corners(*), boxes(*)
       real             cut(*)
       integer          counts(0:*)
       double precision beaminfo(*)
@@ -1097,7 +1106,9 @@ c statistics for a subcube with one higher dimension, etc.
       real             data(MAXBUF/2)
       logical          mask(MAXBUF/2)
 
-      logical          unmasked, init(MAXNAX)
+      integer          runs(3,2048), nruns
+      
+      logical          inbox, init(MAXNAX)
       double precision v
       integer          npoints(MAXNAX)
       double precision maxval(MAXNAX), minval(MAXNAX)
@@ -1105,6 +1116,9 @@ c statistics for a subcube with one higher dimension, etc.
 
 
       nlevels = naxis - abs(dim) + 1
+      do i = 1, MAXNAX
+         coo(i) = 1
+      enddo
 
       doplot = device .ne. ' '
 c Open the plot device
@@ -1119,6 +1133,10 @@ c loop over all subcubes for which statistics are to be calculated.
       do subcube = 1, counts(nlevels)
 
          call xyzs2c( tinp, subcube, coo )
+
+         if( abs(dim).eq.2 )
+     *     call boxruns(  naxis,coo,'r',boxes,runs,2048,nruns,
+     *                    corners(1),corners(2),corners(3),corners(4) )
 
 c if init(i)=.true., the statistics for this level must be reinitialized.
          init(1) = .true.
@@ -1136,7 +1154,9 @@ c Unless dim was -2, in which case a plane is read profile by profile
 
          do i = 1, counts(0)
 c if datapoint falls within limits as defined by cutoff and masking, use it
-           if( unmasked( data(i), mask(i), cut ) ) then
+c          print*,i,data(i),mask(i)
+           if( inbox(dim,i,data(i),mask(i),runs,corners,cut) ) then
+c              print*,'    used'
 c convert to Kelvin if requested.
                if( plotvar(DUNIT).eq.KELVIN )
      *            data(i) = data(i) * sngl(beaminfo(KPERJY))
@@ -1736,20 +1756,56 @@ c include file.
 
 ************************************************************************
 
-c Test of data are within range of unmasked
+c Test if data are within unmasked, above the cut and inside the region
 
-      logical function unmasked( data, mask, cut )
-      real       data
-      logical    mask
-      real       cut(*)
-      if( cut(2).gt.0. ) then
-         unmasked =
-     *   ( ( cut(2).eq.1. .and.     data .ge.cut(1) ) .or.
-     *     ( cut(2).eq.2. .and. abs(data).ge.cut(1) )     )
-     *     .and. mask
-      else
-         unmasked = mask
+      logical function inbox( dim, i, data, mask, runs,corners, cut )
+      integer dim, i
+      real    data
+      logical mask
+      integer runs(3,2048)
+      integer corners(*)
+      real    cut(*)
+
+      integer runpnt, xlen, x,y
+      save    runpnt, xlen, x,y
+      logical unmasked
+
+      if( i.eq.1 ) then
+         runpnt = 1
+         x      = 0
+         y      = 1
+         xlen   = corners(2) - corners(1) + 1
       endif
+
+      if(      cut(2).eq.0. ) then
+         unmasked = mask
+      else if( cut(2).eq.1. ) then
+         unmasked = mask .and.     data .ge.cut(1)
+      else if( cut(2).eq.2. ) then
+         unmasked = mask .and. abs(data).ge.cut(1)
+      endif
+c     if( mask.eq..true. ) print*,'    mask'
+
+      if( abs(dim).eq.2 ) then
+         x = x + 1
+         if( x.gt.xlen ) then
+            x = 1
+            y = y + 1
+         endif
+         if( runs(1,runpnt).eq.y ) then
+            if( unmasked ) then
+               inbox = runs(2,runpnt).le.x .and. x.le.runs(3,runpnt)
+            else
+               inbox = .false.
+            endif
+            if( x.eq.runs(3,runpnt) ) runpnt = runpnt + 1
+         else
+            inbox = .false.
+         endif
+      else
+         inbox = unmasked
+      endif
+
       return
       end
 
