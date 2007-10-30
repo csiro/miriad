@@ -27,6 +27,7 @@ c--
 c  History:
 c    11-Feb-97 rjs  Preliminary version.
 c    14-Feb-97 rjs  Correct horrendous bug.
+c    07-jul-97 rjs  Change coaxdesc to coaxget, and arg of covelset.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
@@ -297,8 +298,8 @@ c
 	  sdf = 0.1
 	  f0 = sfreq
 	else
-	  call coVelSet(tIn,'frequency')
-	  call coAxDesc(tIn,iax,ctype,crpix,f0,sdf)
+	  call coVelSet(tIn,'freq')
+	  call coAxGet(tIn,iax,ctype,crpix,f0,sdf)
 	  call coCvt1(tIn,iax,'ap',1.d0,'aw',sfreq)
 	endif
 	call uvputvrr(tOut,'wfreq',real(sfreq),1)
@@ -319,7 +320,7 @@ c  RA and DEC info.
 c
 	call coFindAx(tIn,'ra',iax)
 	if(iax.ne.1)call bug('f','First axis is not an RA axis')
-	call coAxDesc(tIn,iax,ctype,crpix,ra,cdelt)
+	call coAxGet(tIn,iax,ctype,crpix,ra,cdelt)
 	call rdhdd(tIn,'obsra',obsra,ra)
 	dx = 1/(cdelt*f0)
 	xpix = crpix
@@ -328,7 +329,7 @@ c
 c
 	call coFindAx(tIn,'dec',iax)
 	if(iax.ne.2)call bug('f','Second axis is not a DEC axis')
-	call coAxDesc(tIn,iax,ctype,crpix,dec,cdelt)
+	call coAxGet(tIn,iax,ctype,crpix,dec,cdelt)
 	call rdhdd(tIn,'obsdec',obsdec,dec)
 	dy = 1/(cdelt*f0)
 	ypix = crpix
