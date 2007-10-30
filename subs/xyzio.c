@@ -31,6 +31,7 @@
                      6 nov image handles are no longer in sequence.
      rjs  10-jan-96  Correct comparision bug in bufferallocation routine.
 		     Also eliminate nested comments.
+     rjs  07-dec-03  Declare mkopen_c
 *******************************************************************************/
 
 /******************************************************************************/
@@ -44,6 +45,7 @@
 
 void    bug_c();
 #define check(x) if(x)bugno_c('f',x)
+char *mkopen_c();
 
 
 /* There is only one buffer array, of a length determined at run-time by

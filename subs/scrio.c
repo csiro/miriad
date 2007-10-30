@@ -5,6 +5,7 @@
 /*  History:								*/
 /*   rjs Dark-ages Original version.					*/
 /*   rjs   6nov94  Change item handle to an integer.			*/
+/*   rjs  26oct95  Better messages on errors.				*/
 /************************************************************************/
 
 #include "io.h"
@@ -33,7 +34,10 @@ int *handle;
 
   (void)sprintf(name,"scratch%d",number++);
   haccess_c(0,handle,name,"scratch",&iostat);
-  if(iostat) bugno_c('f',iostat);
+  if(iostat){
+    bug_c(  'w',"Error opening scratch file");
+    bugno_c('f',iostat);
+  }
 }
 /************************************************************************/
 void scrclose_c(handle)
@@ -55,7 +59,10 @@ int handle;
   int iostat;
 
   hdaccess_c(handle,&iostat);
-  if(iostat) bugno_c('f',iostat);
+  if(iostat){
+    bug_c(  'w',"Error closing scratch file");
+    bugno_c('f',iostat);
+  }
 }
 /************************************************************************/
 void scrread_c(handle,buffer,offset,length)
@@ -84,7 +91,10 @@ float *buffer;
 
   hreadb_c(handle,(char *)buffer,
     sizeof(float)*offset,sizeof(float)*length,&iostat);
-  if(iostat) bugno_c('f',iostat);
+  if(iostat){
+    bug_c(  'w',"Error reading from scratch file");
+    bugno_c('f',iostat);
+  }
 }
 /************************************************************************/
 void scrwrite_c(handle,buffer,offset,length)
@@ -112,5 +122,8 @@ float *buffer;
 
   hwriteb_c(handle,(char *)buffer,
     sizeof(float)*offset,sizeof(float)*length,&iostat);
-  if(iostat) bugno_c('f',iostat);
+  if(iostat){
+    bug_c(  'w',"Error writing to scratch file");
+    bugno_c('f',iostat);
+  }
 }

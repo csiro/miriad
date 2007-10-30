@@ -11,6 +11,7 @@
 /*    rjs   6nov94   Change item handle to an integer.			*/
 /*    rjs  27feb96   Added xyflush.					*/
 /*    rjs  15mar96   Inlcude an exrta include file.			*/
+/*    rjs  04mar03   Added "append" mode in xyopen.			*/
 /*----------------------------------------------------------------------*/
 
 #include <string.h>
@@ -57,7 +58,7 @@ char *name,*status;
 
   Input:
     name	The name of the file to be opened.
-    status	Either 'old' or 'new'.
+    status	Either 'old' or 'new' or 'append'.
     naxis	The maximum number of axes that the calling program can
 		handle. For an 'old' file, if the data file has fewer
 		than naxis axes, the higher dimensions are treated as having
@@ -72,16 +73,17 @@ char *name,*status;
 /*----------------------------------------------------------------------*/
 {
   int iostat,length,access,tno,i,ndim,npix,temp;
-  char *mode,naxes[16],s[ITEM_HDR_SIZE];
+  char *stat,*mode,naxes[16],s[ITEM_HDR_SIZE];
 
-  if(!strcmp("old",status))	   { access = OLD; mode = "read"; }
-  else if(!strcmp("new",status))   { access = NEW; mode = "write"; }
+  if(!strcmp("old",status))	   { access = OLD; mode = "read"; stat = "old";}
+  else if(!strcmp("append",status)){ access = OLD; mode = "append"; stat = "old";}
+  else if(!strcmp("new",status))   { access = NEW; mode = "write"; stat="new";}
   else
    ERROR('f',(message,"Unrecognised status when opening %s, in XYOPEN",name));
 
 /* Access the image data. */
 
-  hopen_c(&tno,name,status,&iostat);
+  hopen_c(&tno,name,stat,&iostat);
   CHECK(iostat,(message,"Error opening %s, in XYOPEN",name));
   haccess_c(tno,&(images[tno].image),"image",mode,&iostat);
   CHECK(iostat,(message,"Error accessing pixel data of %s, in XYOPEN",name));
