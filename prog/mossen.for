@@ -28,6 +28,7 @@ c  History:
 c    rjs   6nov94 Original version.
 c    rjs  13mar95 Add call to mosMFin
 c    rjs  23jul97 Add pbtype.
+c    rjs  24feb98 Write bunit keyword to output.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'maxnax.h'
@@ -86,8 +87,10 @@ c
 c
 c  Do the real work.
 c
-	if(dosen) call MakeIm(tIn,tSen,sen,naxis,nout,blc,version)
-	if(dogain)call MakeIm(tIn,tGain,gain,naxis,nout,blc,version)
+	if(dosen) call MakeIm(tIn,tSen,sen,naxis,nout,blc,version,
+     *								.true.)
+	if(dogain)call MakeIm(tIn,tGain,gain,naxis,nout,blc,version,
+     *								.false.)
 c
 	nBuff = 0
 	do k=blc(3),trc(3)
@@ -207,12 +210,13 @@ c
 c
 	end
 c************************************************************************
-	subroutine MakeIm(tIn,tOut,Out,naxis,nout,blc,version)
+	subroutine MakeIm(tIn,tOut,Out,naxis,nout,blc,version,dosen)
 c
 	implicit none
 	integer tIn,tOut
 	integer naxis,nout(naxis),blc(naxis)
 	character Out*(*),version*(*)
+	logical dosen
 c
 c  Create an output dataset.
 c------------------------------------------------------------------------
@@ -220,7 +224,7 @@ c------------------------------------------------------------------------
 	double precision crpix
 	character line*72,num*3
 	integer nkeys
-	parameter(nkeys=30)
+	parameter(nkeys=31)
 	character keyw(nkeys)*8
 c
 c  Externals.
@@ -233,7 +237,7 @@ c
      *	  'ctype5  ','obstime ','epoch   ','history ','lstart  ',
      *	  'lstep   ','ltype   ','lwidth  ','object  ','pbfwhm  ',
      *	  'observer','telescop','restfreq','vobs    ','btype   ',
-     *	  'pbtype  '/
+     *	  'pbtype  ','bunit   '/
 c
 c  Open the output.
 c
@@ -252,6 +256,7 @@ c
 	  call rdhdd(tIn,'crpix'//num,crpix,1.d0)
 	  call wrhdd(tOut,'crpix'//num,crpix-blc(i)+1)
 	enddo
+	if(.not.dosen)call wrhda(tOut,'bunit','GAIN')
 c
 c  Write crap to the history file.
 c
