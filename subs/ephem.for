@@ -23,6 +23,7 @@ c		  making lmn2sph return RA in range 0 to 2*PI.
 c    16jul97 rjs  Added azel.
 c    15jan99 rjs  Added new leap second.
 c    13sep99 rjs  Make jullst more robust.
+c    12may04 rjs  Make jullst more robust - again.
 c
 c  General Reference:
 c    Explanatory Supplement to the Astronomical Almanac. 1993.
@@ -794,10 +795,10 @@ c
 	dowhile(more)
 	  call jullst(myday,long,mylst)
 	  mylst = mylst + eqeq(myday)
-	  delta = - (mylst - lst1) * 365.25d0/366.25d0/(2*pi)
+	  delta = - (mylst - lst1) / (2*pi)
 	  if(delta.gt.0.5)delta = delta - 1
 	  if(delta.lt.-0.5) delta = delta + 1
-	  myday = myday + delta
+	  myday = myday + delta * 365.25d0/366.25d0
 	  more = abs(delta).gt.1/(24.*3600.)
 	enddo
 	LstJul = myday
