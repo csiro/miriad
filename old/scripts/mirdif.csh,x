@@ -1,0 +1,6 @@
+#!/bin/csh -f
+set dir = $1
+foreach file ( $argv[2-] )
+  set root = $file:t
+  diff $file $MIR/$dir/$root
+end

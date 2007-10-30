@@ -75,6 +75,7 @@ c    pjt  15mar95  fixed statement order for f2c (linux)
 c    rjs  02jul97  cellscal change.
 c    rjs  23jul97  added pbtype.
 c    rjs  20nov98  added llrot.
+c    bpw  05mar99  real->double for last argument fixed call to rdhdd
 c    rjs  17oct99  added mostable.
 c
 c***********************************************************************
@@ -108,10 +109,10 @@ c***********************************************************************
             if( axnum(n) .ne. 0 ) then
                c = keyw(k)(1:5) // itoaf( abs(axnum(n)) )
                if( hdprsnt( tnoinp, c ) ) then
-                  if( k.eq.1 ) call rdhdd( tnoinp, c, dvalue, 0. )
-                  if( k.eq.2 ) call rdhdd( tnoinp, c, dvalue, 0. )
-                  if( k.eq.3 ) call rdhdd( tnoinp, c, dvalue, 0. )
-                  if( k.eq.4 ) call rdhdd( tnoinp, c, dvalue, 0. )
+                  if( k.eq.1 ) call rdhdd( tnoinp, c, dvalue, 0.d0 )
+                  if( k.eq.2 ) call rdhdd( tnoinp, c, dvalue, 0.d0 )
+                  if( k.eq.3 ) call rdhdd( tnoinp, c, dvalue, 0.d0 )
+                  if( k.eq.4 ) call rdhdd( tnoinp, c, dvalue, 0.d0 )
                   if( k.eq.5 ) call rdhda( tnoinp, c, avalue, ' ' )
                   if( axnum(n).gt.0 ) then
                      if( k.eq.1 ) dvalue = dvalue - blc( axnum(n)) + 1

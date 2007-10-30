@@ -1,0 +1,21 @@
+#!/bin/csh -f
+if ( "$1" == "-l" ) then
+  echo /usr/lib /usr/local/gnu/lib /usr/local/lib /usr/local/X11/lib /lib /nfs/applic/miriad/lib/sgi
+  exit
+else if ( "$1" == "-i" ) then
+  foreach dir (/usr/lib /usr/local/gnu/lib /usr/local/lib /usr/local/X11/lib /lib /nfs/applic/miriad/lib/sgi /usr/include )
+    foreach t (include inc)
+      if ( -d $dir:h/$t/$2 ) then
+        echo $dir:h/$t/$2
+        exit
+      endif
+    end
+  end
+else
+  foreach dir (/usr/lib /usr/local/gnu/lib /usr/local/lib /usr/local/X11/lib /lib /nfs/applic/miriad/lib/sgi)
+    if(-e $dir/lib$1.a ) then
+      echo $dir
+      exit
+    endif
+  end
+endif

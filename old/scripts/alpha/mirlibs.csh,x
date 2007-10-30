@@ -1,0 +1,2 @@
+#!/bin/csh -f
+echo $MIRLIB/libmir.a /usr/local/lib/librpfits.a -lpgplot -lX11 -lm
