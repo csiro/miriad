@@ -82,12 +82,13 @@ c    30jul96 rjs  Correct labelling of uvdist plots.
 c    26feb97 rjs  Fix bug in the dimensioning of ltemp.
 c     6may97 rjs  Better auto-range determination. Change zoom somewhat. Better
 c		  doc and help.
+c    12may97 rjs  Check that linetype is OK for flagging.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
 	integer MAXDAT,MAXPLT,MAXEDIT
-	parameter(version='BlFlag: version 6-May-97')
-	parameter(MAXDAT=200000,MAXPLT=20000,MAXEDIT=20000)
+	parameter(version='BlFlag: version 12-May-97')
+	parameter(MAXDAT=500000,MAXPLT=20000,MAXEDIT=20000)
 c
 	logical present(MAXBASE),nobase,selgen,noapply
 	integer tno,i,j,k,length,npol
@@ -714,6 +715,7 @@ c  Lets get going.
 c
 	call output('Reading the data ...')
 	call uvDatRd(preamble,data,flags,MAXCHAN,nchan)
+	call flagchk(tno)
 	nants = 0
 	tprev = preamble(3)
 	time0 = int(tprev - 0.5d0) + 0.5d0
@@ -869,4 +871,25 @@ c
 	if(.not.present(2))uvflags(6:6) = 'c'
 	if(.not.present(3))uvflags(7:7) = 'f'
 	if(.not.present(4))uvflags(8:8) = 'e'
+	end
+c************************************************************************
+	subroutine flagchk(tno)
+c
+	implicit none
+	integer tno
+c
+c  Check that the user's linetype is not going to cause the flagging
+c  routine to vomit when the flagging is applied.
+c
+c------------------------------------------------------------------------
+	integer CHANNEL,WIDE
+	parameter(CHANNEL=1,WIDE=2)
+	double precision line(6)
+c
+	call uvinfo(tno,'line',line)
+	if(nint(line(1)).ne.CHANNEL.and.nint(line(1)).ne.WIDE)
+     *	  call bug('f','Can only flag "channel" or "wide" linetypes')
+	if(nint(line(4)).ne.1)
+     *	  call bug('f','Cannot flag when the linetype width is not 1')
+c
 	end
