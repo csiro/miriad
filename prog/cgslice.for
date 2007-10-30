@@ -326,6 +326,7 @@ c    nebk 24jun96  Set slice frame colour depening upon background colour
 c    nebk 01dec96  'absnat' and 'relnat' were given twice in allowed lists
 c                  of label types
 c    nebk 13feb97  Add keyword "3format"
+c    rjs  21jul97  Call initco earlier
 c Notes:
 c
 c   SLice abcissa values are still in linear world coordiantes as
@@ -406,6 +407,7 @@ c
 c Open image and see if axes in radians
 c
       call opimcg (maxnax, in, lin, size, naxis)
+      call initco (lin)
       call rdhda (lin, 'bunit', units, ' ')
       radians = .false.
       call axfndco (lin, 'RAD', 0, 1, iax)
@@ -835,6 +837,7 @@ c
       call memfree (ipnim, win(1)*win(2), 'i')
       if (.not.noimage .and. dopixel .and. trfun.ne.'lin')
      +   call memfree (ipims, win(1)*win(2), 'i')
+      call finco(lin)
       call xyclose(lin)
       if (fslval.ne.' ') call txtclose (lval)
       if (fslposo.ne.' ') call txtclose (lposo)
@@ -2456,7 +2459,6 @@ c
       nslice = 0
       iostat = 0
       pix3 = dble(2*krng(1)+krng(2)-1)/2.0
-      call initco (lun)
 c
       do while (iostat.ne.-1)
         aline = ' '
@@ -2540,7 +2542,6 @@ c
       end do
       if (nslice.eq.0) call bug ('f', 
      +  'The input slice positions file had no valid locations')
-      call finco (lun)
 c
       end
 c
@@ -3085,7 +3086,6 @@ c-----------------------------------------------------------------------
       win(3) = dble(2*krng(1)+krng(2)-1)/2.0 
       call rdhdi (lin, 'naxis', naxis, 0)
       naxis = min(3,naxis)
-      call initco (lin)
 c
       do i = 1, nslice
 c
@@ -3115,7 +3115,6 @@ c
         if (iostat.ne.0) call bug ('f', 
      +     'Error writing slice positions file')
       end do
-      call finco (lin)
 c
       end
 c
