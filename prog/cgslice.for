@@ -110,24 +110,24 @@ c@ labtyp
 c       Two values.  The spatial label type of the x and y axes.
 c       Minimum match is active.  Select from:
 c       
-c       "hms"       the label is in H M S (e.g. for RA)
+c	"hms"       the label is in H M S (e.g. for RA)
 c	"dms"       the label is in D M S (e.g. for DEC)
-c       "arcsec"    the label is in arcsecond offsets
+c	"arcsec"    the label is in arcsecond offsets
 c	"absdeg"    the label is in degrees
 c	"reldeg"    the label is in degree offsets
 c		    The above assume the  pixel increment is in radians.
-c       "abspix"    the label is in pixels
-c       "relpix"    the label is in pixel offsets
+c	"abspix"    the label is in pixels
+c	"relpix"    the label is in pixel offsets
 c	"abskms"    the label is in Km/s
 c	"relkms"    the label is in Km/s offsets
 c	"absghz"    the label is in GHz
 c	"relghz"    the label is in GHz offsets
-c       "abslin"    the label is in linear coordinates as defined by 
-c	            the header you might call this the natural axis label
-c       "rellin"    the label is in offset linear coordinates
+c	"abslin"    the label is in linear coordinates as defined by 
+c	 	    the header you might call this the natural axis label
+c	"rellin"    the label is in offset linear coordinates
 c	"none"      no labels or ticks on the axes
 c       
-c       All offsets are from the reference pixel.  
+c	All offsets are from the reference pixel.  
 c	Defaults are "abspix", LABTYP(1) unless LABTYP(1)="hms"
 c	whereupon LABTYP(2) defaults to "dms" (for RA and DEC).
 c@ options
@@ -169,11 +169,11 @@ c
 c	"unequal"  means display image with unequal scales in x and y. The
 c	  default is that the scales are equal.
 c
-c       "3value"   means label each sub-plot with the appropriate value
-c         of the third axis (e.g. velocity or frequency for an
+c	"3value"   means label each sub-plot with the appropriate value
+c	  of the third axis (e.g. velocity or frequency for an
 c	  xyv ordered cube, position for a vxy ordered cube).
-c       "3pixel"   means label each sub-plot with the pixel value of
-c         the third axis.
+c	"3pixel"   means label each sub-plot with the pixel value of
+c	  the third axis.
 c
 c         Both "3pixel" and "3value" can appear, and both will be written
 c         on the plot.  They are the average values when the third axis is 
@@ -280,9 +280,19 @@ c    nebk 02mar94  New call and location for SETLABCG
 c    nebk 11mar94  Add spatial binning
 c    nebk 03jun94  Clarify use of region keyword
 c    nebk 21jun94  Use OPIMCG to open files
+c    nebk 28aug94  Adapt to convert input true world coordinates (POSIN)
+c                  to linear world coordinates.  Convert output linear 
+c                  world coordinates (POSOUT) to true world coordinates.  
+c                  Also call new LAB3CG which now labels true world 
+c                  of third axis.    LInearize axis descriptors at 
+c                  centre of displayed region
+c    nebk 14oct94  Better cursor positioning in gaussian fitting
+c    nebk 23dec94  Make sure selected region no bigger than image
 c
 c Notes:
 c
+c   SLice abcissa values are still in linear world coordiantes as
+c   are gaussian fits.  Its all too hard.
 c To do:
 c
 c  * add XTYPE and YTYPE to posout file ??  Maybe options=cgslice
@@ -329,10 +339,9 @@ c
 c
       logical do3val, do3pix, eqscale, doblnk, mask, dogrey,  gaps,
      +  doerase, redisp, accum, radians, none, noimage, dofit,
-     +  dobord, want, dobase, doxrng, dofid, dowedge, first, dunsl
+     +  dobord, dobase, doxrng, dofid, dowedge, first, dunsl
 c
       integer len1
-      logical slwant
 c
       data ltype  /'hms   ', 'dms   ', 'abspix', 'relpix', 
      +            'arcsec', 'absghz', 'relghz', 'abskms', 
@@ -342,9 +351,9 @@ c
       data xrange, yrange /0.0, 0.0, 0.0, 0.0/
       data dunsl /.false./
 c-----------------------------------------------------------------------
-      call output ('CgSlice: version 21-Jun-94')
-      call bug ('i', 
-     +   'Spatial binning now available with keyword "xybin"')
+      call output ('CgSlice: version 23-Dec-94')
+      call output ('Non-linear coordinates are now partially handled')
+      call output ('See "help cgcoords" for explanations')
       call output (' ')
 c
 c Get user inputs
@@ -377,19 +386,6 @@ c
       if (.not.noimage .and. dogrey .and. trfun.ne.'lin') 
      +  call memalloc (ipims, win(1)*win(2), 'r')
 c
-c Open input text file and decode it
-c
-      if (fslposi.ne.' ') then
-        call txtopen (lposi, fslposi, 'old', iostat)
-        if (iostat.ne.0) 
-     +    call bug ('f', 'Error opening input text file'//fslposi)
-c
-        call posdec (noimage, lposi, win(1), win(2), blc, ibin, jbin,
-     +     nltype, ltype, maxnsl, naxis, size, crpix, crval, cdelt, 
-     +     ctype, nslice, slpos)
-        call txtclose (lposi)
-      end if
-c
 c Open output text files
 c
       call opento (units, radians, fslval, fslposo, fslmod, lval, 
@@ -405,6 +401,11 @@ c
      +                 slev, nlevs, levs, srtlev)
         blank = -99999999.0
       end if
+c
+c Linearize axis descriptors if non-pixel labels requested
+c
+      call linco (lin, labtyp, blc, trc, grpbeg, ngrp, ctype,
+     +            crval, crpix, cdelt)
 c
 c Work out array index limits, coordinate transformation array and
 c labels.   Also return header items.
@@ -531,68 +532,69 @@ c Loop over redisplay loop while user wants another go
 c
          redisp = .true.
          first = .true.
-         if (noimage) redisp = .false.
          do while (redisp)
-           if (dogrey) then
+           if (.not.noimage) then
+             if (dogrey) then
 c
 c Draw grey scale
 c
-             call pggray (memr(ipim), win(1), win(2), 1, win(1), 1,
-     +                    win(2), pixr2(2), pixr2(1), tr)
-           else 
+               call pggray (memr(ipim), win(1), win(2), 1, win(1), 1,
+     +                      win(2), pixr2(2), pixr2(1), tr)
+             else 
 c
 c Draw contours
 c
-             call pgsci (7)
-             call conturcg (blank, .false., win(1), win(2), doblnk,
-     +                      memr(ipim), nlevs, levs, tr, 0.0)
-           end if
+               call pgsci (7)
+               call conturcg (blank, .false., win(1), win(2), doblnk,
+     +                        memr(ipim), nlevs, levs, tr, 0.0)
+             end if
 c
 c Label if first time through redisplay loop; axes not erased
 c
-           call pgsch (cs(1))
-           call pgsci (7)
-           if (first) call axlabcg (gaps, nx, ny, ngrps, nlast, k, 
-     +       xopts, yopts, xdispl, ydispb, labtyp, xlabel, ylabel, 
-     +       xxopts, yyopts)
+             call pgsch (cs(1))
+             call pgsci (7)
+             if (first) call axlabcg (gaps, nx, ny, ngrps, nlast, k, 
+     +         xopts, yopts, xdispl, ydispb, labtyp, xlabel, ylabel, 
+     +         xxopts, yyopts)
 c
 c Draw axes
 c
-           call boxcg (first, xxopts, yyopts)
-           call pgupdt
+             call boxcg (first, xxopts, yyopts)
+             call pgupdt
 c
 c Draw wedge if inside subplot
 c
-           if (wedcod.eq.3) then
-             call pgsci (7)
-             call pgsch (cs(1))
-             call wedgecg (wedcod, wedwid, jj, trfun, groff, nbins, 
-     +                     cumhis, wdgvp, pixr(2), pixr(1))
-           end if
+             if (wedcod.eq.3) then
+               call pgsci (7)
+               call pgsch (cs(1))
+               call wedgecg (wedcod, wedwid, jj, trfun, groff, nbins, 
+     +                       cumhis, wdgvp, pixr(2), pixr(1))
+             end if
 c
 c Write velocity or channel label
 c
-           if (do3val .or. do3pix) then
-             call pgsch (cs(2))
-             call pgsci (1)
-             call lab3cg (doerase, do3val, do3pix, crpix, cdelt, crval,
-     +                    ctype, labtyp, grpbeg(k), ngrp(k))
-           end if
-           call pgupdt
+             if (do3val .or. do3pix) then
+               call pgsch (cs(2))
+               call pgsci (1)
+               call lab3cg (lin, doerase, do3val, do3pix, labtyp,
+     +                      grpbeg(k), ngrp(k))
+             end if
+             call pgupdt
 c
-           if (dofid) then
+             if (dofid) then
 c
 c Modify lookup table
 c
-             call pgsch (cs(1))
-             call ofmmod (tfvp, win(1)*win(2), memr(ipim),
-     +                    memi(ipnim), pixr2(1), pixr2(2))
+               call pgsch (cs(1))
+               call ofmmod (tfvp, win(1)*win(2), memr(ipim),
+     +                      memi(ipnim), pixr2(1), pixr2(2))
+             end if
            end if
 c
-c Define slice ends with cursor if requested 
+c Define slice ends with cursor or read from file
 c
            redisp = .false.
-           if (fslposi.eq.' ') then
+           if (fslposi.eq.' ' .and. .not.noimage) then
              call curpos (win(1), win(2), memi(ipnim), labtyp,
      +         ibin, jbin, blc, naxis, cdelt, crpix, crval, ctype, 
      +         redisp, maxnsl, nslice, slpos)
@@ -602,10 +604,18 @@ c
              if (redisp) then
                call erswincg (xmin, xmax, ymin, ymax)
              else
-               if (fslposo.ne.' ') call slposw (lposo, grpbeg(k), 
-     +           ngrp(k), radians, naxis, crpix, cdelt, blc, ibin,
-     +           jbin, maxnsl, nslice, slpos)
+               if (fslposo.ne.' ') call slposw (lin, lposo, krng,
+     +           radians, blc, ibin, jbin, maxnsl, nslice, slpos)
              end if
+           else
+             call txtopen (lposi, fslposi, 'old', iostat)
+             if (iostat.ne.0) 
+     +       call bug ('f', 'Error opening input text file'//fslposi)
+c
+             call posdec (lin, krng, noimage, lposi, win(1), win(2), 
+     +         blc, trc, ibin, jbin, nltype, ltype, maxnsl, size, 
+     +         nslice, slpos)
+             call txtclose (lposi)
            end if
          end do
 c
@@ -624,65 +634,53 @@ c
            none = .true.
            do i = 1, nslice
 c
-c See if this channel is wanted for this slice
-c
-             want = slwant (trc(3), grpbeg(k), ngrp(k), slpos(3,i), 
-     +                      slpos(6,i))
-             if (want) then
-c 
 c Mark slice on display if given by input text file
 c
-               if (fslposi.ne.' ' .and..not.noimage) then
-                 call setcolcg (i, icol)
-                 call pgsci (icol)
-                 call slmark (blc, ibin, jbin, labtyp, slpos(1,i), 
-     +                        naxis, crval, cdelt, crpix, ctype)
-               end if
+             if (fslposi.ne.' ' .and..not.noimage) then
+               call setcolcg (i, icol)
+               call pgsci (icol)
+               call slmark (blc, ibin, jbin, labtyp, slpos(1,i), 
+     +                      naxis, crval, cdelt, crpix, ctype)
+             end if
 c
 c Allocate memory for slice 
 c
-               call slsiz (slpos(1,i), grid, slsize(i))
-               call memalloc (ipslx(i), slsize(i), 'r')
-               call memalloc (ipsly(i), slsize(i), 'r')
+             call slsiz (slpos(1,i), grid, slsize(i))
+             call memalloc (ipslx(i), slsize(i), 'r')
+             call memalloc (ipsly(i), slsize(i), 'r')
 c
 c Generate slice. Use copy of image if transfer function applied.
 c
-               ipp = ipim
-               if (.not.noimage .and. dogrey .and. trfun.ne.'lin') 
-     +            ipp = ipims
-               call slice (ibin, jbin, slpos(1,i), grid, win(1), win(2),
-     +            memr(ipp), memi(ipnim), radians, naxis, cdelt, 
-     +            slsize(i), memr(ipslx(i)), memr(ipsly(i)), nslp(i), 
-     +            bound(1,i), nseg(i), seg)
+             ipp = ipim
+             if (.not.noimage .and. dogrey .and. trfun.ne.'lin') 
+     +          ipp = ipims
+             call slice (ibin, jbin, slpos(1,i), grid, win(1), win(2),
+     +          memr(ipp), memi(ipnim), radians, naxis, cdelt, 
+     +          slsize(i), memr(ipslx(i)), memr(ipsly(i)), nslp(i), 
+     +          bound(1,i), nseg(i), seg)
 c
 c Allocate memory for slice segment pointers and copy in
 c if slice not all blanked
 c
-               if (nslp(i).gt.0) then
-                 none = .false.
-                 call memalloc (ipsls(i), nseg(i), 'i')
-                 call memalloc (ipsle(i), nseg(i), 'i')
-                 do j = 1, nseg(i)
-                   memi(ipsls(i)+j-1) = seg(1,j)
-                   memi(ipsle(i)+j-1) = seg(2,j)
-                 end do
+             if (nslp(i).gt.0) then
+               none = .false.
+               call memalloc (ipsls(i), nseg(i), 'i')
+               call memalloc (ipsle(i), nseg(i), 'i')
+               do j = 1, nseg(i)
+                 memi(ipsls(i)+j-1) = seg(1,j)
+                 memi(ipsle(i)+j-1) = seg(2,j)
+               end do
 c
 c Update extrema
 c
-                 if (.not.dunsl .or. .not.accum) call exup 
-     +             (bound(1,i), sxmin, sxmax, symin, symax)
-               else
+               if (.not.dunsl .or. .not.accum) call exup 
+     +           (bound(1,i), sxmin, sxmax, symin, symax)
+             else
 c
 c If the slice was all blanked, free up its memory allocation now
 c
-                 call memfree (ipslx(i), slsize(i), 'r')
-                 call memfree (ipsly(i), slsize(i), 'r')
-               end if
-             else
-c
-c This slice was not wanted on this channel 
-c
-               nslp(i) = 0
+               call memfree (ipslx(i), slsize(i), 'r')
+               call memfree (ipsly(i), slsize(i), 'r')
              end if
            end do
 c
@@ -724,9 +722,9 @@ c
 c
 c Save the slice if desired
 c
-                 if (fslval.ne.' ') call slsave (lval, i, nseg(i),
-     +              memr(ipslx(i)), memr(ipsly(i)), memi(ipsls(i)), 
-     +              memi(ipsle(i)))
+                 if (fslval.ne.' ') 
+     +             call slsave (lval, i, nseg(i), memr(ipslx(i)), 
+     +               memr(ipsly(i)), memi(ipsls(i)), memi(ipsle(i)))
 c
 c Do Gaussian fit if desired
 c
@@ -844,7 +842,7 @@ c
 c
 c
       subroutine curpos (nx, ny, nimage, labtyp, ibin, jbin, blc, naxis,
-     +   cdelt, crpix, crval, ctype, redisp, maxnsl, nslice, slpos)
+     +  cdelt, crpix, crval, ctype, redisp, maxnsl, nslice, slpos)
 c-----------------------------------------------------------------------
 c     Define slice locations with cursor
 c
@@ -1316,7 +1314,7 @@ cc
       parameter (itmax = 100, eps1 = 0.0, eps2 = 0.001)
 c
       real wx1, wx2, wy1, wy2, xsol(5), h(5), dx(5), aa(25),
-     +  wy1s, wy2s
+     +  wy1s, wy2s, xc, yc
       integer ipf, ipfp, ipdfdx, ipxx, ipyy, ifail, iostat, is, n2
       character aline*132
       logical more
@@ -1328,6 +1326,7 @@ c Transfer X values of slice to EXTERNAL functions via common
 c
       common /trans/ ipxx, ipyy
       data h /5*0.1/
+      data xc, yc /0.0, 0.0/
 c-----------------------------------------------------------------------
       more = .true.
       do while (more)
@@ -1338,13 +1337,16 @@ c-----------------------------------------------------------------------
 c
 c Get initial guesses for peak, position and FWHM with cursor
 c
-        call getpeak (wx1, wx2, wy1, wy2, xsol)
-        call getfwhm (wx1, wx2, wy1, wy2, xsol)
+        call getpeak (wx1, wx2, wy1, wy2, xsol, xc, yc)
+        call getfwhm (wx1, wx2, wy1, wy2, xsol, xc, yc)
+        xsol(4) = 0.0
+        xsol(5) = 0.0
 c
 c Optionally get x range and set pointers passed out in common
 c
         if (doxrng) then
-          call getxrng (wx1, wx2, wy1, wy2, n, memr(ipslx), is, n2)
+          call getxrng (wx1, wx2, wy1, wy2, n, memr(ipslx), 
+     +                  is, n2, xc, yc)
           ipxx = ipslx + is - 1
           ipyy = ipsly + is - 1
 c          write (*,*) 'n2,is=', n2,is
@@ -1401,32 +1403,33 @@ c
         if (ifail.ne.1)
      +    call plotm (dobase, islice, n, nseg, ipslx, ipsly, ipsls, 
      +                ipsle, xsol, xdispl, ydispb, xlabel, ylabel)
-        call redo (more)
+c
+c Tell user result; inside redo loop because they may fit multiple
+c peaks in the one slice.
+c
+        call output (' ')
+        call output ('Model fit:')
+        if (dobase) then
+          call output ('   PEAK          POSITION         FWHM'//
+     +                 '         OFFSET          SLOPE')
+          write (aline, 50) xsol(1), xsol(2), xsol(3), 
+     +                      xsol(4), xsol(5)
+50        format (5(1pe13.6,2x))
+          call output (aline)
+        else
+          call output ('   PEAK           POSITION           FWHM')
+          write (aline, 70) xsol(1), xsol(2), xsol(3)
+70        format (3(1pe13.6,3x))
+          call output (aline)
+        end if
+        call output (' ')
 c
 c Redraw data if redo
 c
+        call redo (more)
         if (more) call slerdraw (ydispb, xdispl, xlabel, ylabel, islice,
      +    n, nseg, ipslx, ipsly, ipsls, ipsle, .true., wy1s, wy2s)
       end do
-c
-c Tell user result
-c
-      call output (' ')
-      call output ('Final model fit:')
-      if (dobase) then
-        call output ('   PEAK          POSITION         FWHM'//
-     +               '         OFFSET          SLOPE')
-        write (aline, 50) xsol(1), xsol(2), xsol(3), 
-     +                    xsol(4), xsol(5)
-50      format (5(1pe13.6,2x))
-        call output (aline)
-      else
-        call output ('   PEAK           POSITION           FWHM')
-        write (aline, 70) xsol(1), xsol(2), xsol(3)
-70      format (3(1pe13.6,3x))
-        call output (aline)
-      end if
-      call output (' ')
 c
 c Save model in text file
 c
@@ -1523,15 +1526,14 @@ c
       do i = 1, npts
         x = memr(ipx+i-1)        
         y(i) = memr(ipy+i-1) - 
-     +         (xsol(1) * 
-     +          dexpun(fac*dble((x-xsol(2))/xsol(3))**2)) -
+     +         (xsol(1) * dexpun(fac*dble((x-xsol(2))/xsol(3))**2)) -
      +          xsol(4) - x*xsol(5)
       end do
 c
       end
 c
 c
-      subroutine getfwhm (wx1, wx2, wy1, wy2, xsol)
+      subroutine getfwhm (wx1, wx2, wy1, wy2, xsol, xc, yc)
 c-----------------------------------------------------------------------
 c     Get estimate of Gaussian peak and position
 c
@@ -1539,10 +1541,11 @@ c  Input
 c    wx,y1,2    World coordinates of window
 c  Input/output
 c    xsol       Solution vector, peak, pos, fwhm, offset, slope
+c    xc,yc      ocation where cursor was last seen
 c
 c-----------------------------------------------------------------------
       implicit none
-      real xsol(5), wx1, wx2, wy1, wy2
+      real xsol(5), wx1, wx2, wy1, wy2, xc, yc
 cc 
       real x, y
       character cch*1
@@ -1553,6 +1556,8 @@ c-----------------------------------------------------------------------
         call output ('Mark Gaussian HWHM        by clicking '//
      +               'any button or entering "A"')
 c
+        x = xc
+        y = yc
         call pgcurs (x, y, cch)
         call lcase (cch)
 c
@@ -1575,18 +1580,19 @@ c
           call output ('Cursor off image, try again')
           call output (' ')
         end if
-     
+        xc = x
+        yc = y     
       end do
 c
       end
 c
 c
-      subroutine getlim (xc, wx1, wx2, wy1, wy2, x)
+      subroutine getlim (x1, wx1, wx2, wy1, wy2, x, xc, yc)
 c-----------------------------------------------------------------------
 c     Get an x limit with the cursor
 c-----------------------------------------------------------------------
       implicit none
-      real wx1, wx2, wy1, wy2, x, xc
+      real x1, wx1, wx2, wy1, wy2, x, xc, yc
 cc
       real xx(2), yy(2), y
       logical more, in
@@ -1594,13 +1600,15 @@ cc
 c-----------------------------------------------------------------------
       more = .true.
       do while (more)
+        x = xc
+        y = yc
         call pgcurs (x, y, cch)
         call lcase (cch)
 c
         call inrng (x, wx1, wx2, in)
         if (in) call inrng (y, wy1, wy2, in)
         if (in) then
-          if (x.eq.xc) then
+          if (x.eq.x1) then
             call output ('Degenerate x-range, try again')
           else
             xx(1) = x
@@ -1616,12 +1624,14 @@ c
           call output ('Cursor off image, try again')
           call output (' ')
         end if
+        xc = x
+        yc = y
       end do
 c
       end
 c
 c
-      subroutine getpeak (wx1, wx2, wy1, wy2, xsol)
+      subroutine getpeak (wx1, wx2, wy1, wy2, xsol, xc, yc)
 c-----------------------------------------------------------------------
 c     Get estimate of Gaussian peak and position
 c
@@ -1629,10 +1639,10 @@ c  Input
 c    wx,y1,2    World coordinates of window
 c  Input/output
 c    xsol       Solution vector, peak, pos, fwhm, offset, slope
-c
+c    xc,yc      Location where cursor was last seen
 c-----------------------------------------------------------------------
       implicit none
-      real xsol(5), wx1, wx2, wy1, wy2
+      real xsol(5), wx1, wx2, wy1, wy2, xc, yc
 cc 
       real x, y
       character cch*1
@@ -1643,6 +1653,8 @@ c-----------------------------------------------------------------------
         call output ('Mark Gaussian centre/peak by clicking '//
      +               'any button or entering "A"')
 c
+        x = xc
+        y = yc
         call pgcurs (x, y, cch)
         call lcase (cch)
 c
@@ -1659,12 +1671,14 @@ c
           call output ('Cursor off image, try again')
           call output (' ')
         end if
+        xc = x
+        yc = y
       end do        
 c
       end
 c
 c
-      subroutine getxrng (wx1, wx2, wy1, wy2, n, x, is, n2)
+      subroutine getxrng (wx1, wx2, wy1, wy2, n, x, is, n2, xc, yc)
 c-----------------------------------------------------------------------
 c     Get x range to fit with cursor
 c
@@ -1679,7 +1693,7 @@ c    n2         Number of points in selected x range
 c-----------------------------------------------------------------------
       implicit none
       integer is, n, n2
-      real wx1, wx2, wy1, wy2, x(n)
+      real wx1, wx2, wy1, wy2, x(n), xc, yc
 cc 
       real x1, x2, xt
       integer i, ie
@@ -1687,8 +1701,8 @@ c-----------------------------------------------------------------------
       call output 
      +   ('Mark x limits by clicking any button or entering "A"')
 c
-      call getlim (-1.0e32, wx1, wx2, wy1, wy2, x1)
-      call getlim (x1, wx1, wx2, wy1, wy2, x2)
+      call getlim (-1.0e32, wx1, wx2, wy1, wy2, x1, xc, yc)
+      call getlim (x1, wx1, wx2, wy1, wy2, x2, xc, yc)
 c      write (*,*) 'Enter x1,x2'
 c      read (*,*) x1,x2
 c
@@ -2067,9 +2081,8 @@ c
 c
       subroutine serase (vtrc)
 c-----------------------------------------------------------------------
-c     Erase the slice display region. An extra 1/2 character height
-c     is lopped off the top to account for numeric labels that
-c     protude
+c     Erase the slice display region. An extra character height
+c     to account for the labels on the top of teh slice window
 c
 c  Input:
 c   vtrc     y-axis TRC  of viewport of slice display region
@@ -2081,7 +2094,7 @@ cc
       real xht, yht
 c-----------------------------------------------------------------------
       call pgqcs (0, xht, yht)
-      call pgsvp (0.0, 1.0, 0.0, vtrc+yht/2.0)
+      call pgsvp (0.0, 1.0, 0.0, vtrc+yht)
       call pgswin (0.0, 1.0, 0.0, 1.0)       
       call pgsci (0)
       call pgsfs (1)
@@ -2311,27 +2324,23 @@ c
       end
 c
 c
-      subroutine posdec (noimage, lpos, nx, ny, blc, ibin, jbin, nltype,
-     +  ltype, maxnsl, naxis, size, crpix, crval, cdelt, ctype, 
-     +  nslice, slpos)
+      subroutine posdec (lun, krng, noimage, lpos, nx, ny, blc, trc,
+     +  ibin, jbin, nltype, ltype, maxnsl, size, nslice, slpos)
 c-----------------------------------------------------------------------
 c     Read slice positions list file and decode
 c
 c   Inputs:
+c     lun      Handle of image
+c     krng     STart plane and number of planes averaged for this subplot
 c     noimage  Image not displayed
 c     lpos     Handle for positions list file
 c     nx,ny    Size of subimage displayed
-c     blc      BLC of image displayed
+c     blc,trc  BLC and TRC of image displayed
 c     i,jbin   Pixel increment sizes to step through image
 c     nltype   Maximum number of label types
 c     ltype    Possible label types
 c     maxnsl   Maximum number of allowed slices
-c     naxis    Number of axes
 c     size     Size of image
-c     crpix    Array of reference pixels
-c     crval    Array of reference values
-c     cdelt    Array of increments
-c     ctype    Array of axis types
 c  Outputs
 c     nslice   Number of slices
 c     slpos    BLC (xyz) and  TRC (xyz) of slices in absolute subimage
@@ -2340,16 +2349,15 @@ c
 c------------------------------------------------------------------------
       implicit none
 c
-      integer lpos, maxnsl, nltype, nslice, naxis, blc(2), nx, ny,
-     +  size(naxis), slpos(6,maxnsl), ibin, jbin
-      double precision crval(naxis), cdelt(naxis), crpix(naxis)
-      character ltype(nltype)*(*), ctype(naxis)*(*)
+      integer lun, lpos, maxnsl, nltype, nslice, blc(3), trc(3), nx, ny,
+     +  size(*), slpos(6,maxnsl), ibin, jbin, krng(2)
+      character ltype(nltype)*(*)
       logical noimage
 cc
       integer iostat, ilen, iline
-      double precision pos(6)
+      double precision pos(6), pix3
       character aline*100
-      logical noton
+      logical noton, want, slwant
 c
       integer len1
       character itoaf*2
@@ -2360,6 +2368,8 @@ c
       iline = 0
       nslice = 0
       iostat = 0
+      pix3 = dble(2*krng(1)+krng(2)-1)/2.0
+      call initco (lun)
 c
       do while (iostat.ne.-1)
         aline = ' '
@@ -2377,8 +2387,8 @@ c
             else
               nslice = nslice + 1
               ilen = len1(aline)
-              call posdec2 (nltype, ltype, nslice, naxis, crpix,
-     +           crval, cdelt, ctype, aline(1:ilen), pos)
+              call posdec2 (lun, pix3, nltype, ltype, nslice, 
+     +                      aline(1:ilen), pos)
 c
 c Convert to binned subimage pixels in x and y
 c
@@ -2399,27 +2409,39 @@ c
               slpos(3,nslice) = nint(pos(5))
               slpos(6,nslice) = nint(pos(6))
 c 
-c Make sure on image or subimage
+c See if this one is on this subplot channel range
 c
-              noton = .false.
-              if (noimage) then
-                if (nint(pos(1)).lt.1 .or. nint(pos(2)).gt.size(1) .or.
-     +              nint(pos(2)).lt.1 .or. nint(pos(2)).gt.size(2) .or.
-     +              nint(pos(3)).lt.1 .or. nint(pos(3)).gt.size(1) .or.
-     +              nint(pos(4)).lt.1 .or. nint(pos(4)).gt.size(2)) 
-     +          noton = .true.
+              want = slwant (trc(3), krng(1), krng(2), slpos(3,nslice),
+     +                       slpos(6,nslice))
+c
+c If so, see if it fits spatially
+c
+              if (want) then
+                noton = .false.
+                if (noimage) then
+                  if (slpos(1,nslice).lt.1 .or.
+     +                slpos(2,nslice).gt.size(1) .or.
+     +                slpos(2,nslice).lt.1 .or.
+     +                slpos(2,nslice).gt.size(2) .or.
+     +                slpos(3,nslice).lt.1 .or.
+     +                slpos(3,nslice).gt.size(1) .or.
+     +                slpos(4,nslice).lt.1 .or.
+     +                slpos(4,nslice).gt.size(2)) noton = .true.
+                else
+                  if (slpos(1,nslice).lt.1.or.slpos(1,nslice).gt.nx.or.
+     +                slpos(2,nslice).lt.1.or.slpos(2,nslice).gt.ny.or.
+     +                slpos(4,nslice).lt.1.or.slpos(4,nslice).gt.nx.or.
+     +                slpos(5,nslice).lt.1.or.slpos(5,nslice).gt.ny)
+     +            noton = .true.
+                end if
+c
+                if (noton) then
+                  aline = 'Slice # '//itoaf(iline)//
+     +                    ' does not fit on the image'
+                  call bug ('w', aline)
+                  nslice = nslice - 1
+                end if
               else
-                if (slpos(1,nslice).lt.1 .or. slpos(1,nslice).gt.nx .or.
-     +              slpos(2,nslice).lt.1 .or. slpos(2,nslice).gt.ny .or.
-     +              slpos(4,nslice).lt.1 .or. slpos(4,nslice).gt.nx .or.
-     +              slpos(5,nslice).lt.1 .or. slpos(5,nslice).gt.ny)
-     +          noton = .true.
-              end if
-c
-              if (noton) then
-                aline = 'Slice # '//itoaf(iline)//
-     +                  ' does not fit on the image'
-                call bug ('w', aline)
                 nslice = nslice - 1
               end if
             end if
@@ -2431,24 +2453,21 @@ c
       end do
       if (nslice.eq.0) call bug ('f', 
      +  'The input slice positions file had no valid locations')
+      call finco (lun)
 c
       end
 c
 c
-      subroutine posdec2 (nltype, ltype, nslice, naxis, crpix, 
-     +                    crval, cdelt, ctype, aline, pos)
+      subroutine posdec2 (lun, pix3, nltype, ltype, nslice, aline, pos)
 c---------------------------------------------------------------------
 c     Decode string into positions list
 c
 c     Input:
+c       lun      Handle of image
+c       pix3     ABsolute pixel fo third axis for this subplot
 c       nltype   Maximum number of axis types
 c       ltype    possible label types
 c       nslice   Number of slice being decoded
-c       naxis    Number of axes
-c       crpix    Array of reference pixels
-c       crval    Array of reference values
-c       cdelt    Array of increments
-c       ctype    Array of axis types
 c       aline    Input string
 c     Output
 c       pos      X1 Y1 X2 Y2  CS CE    where the locations are in
@@ -2457,16 +2476,16 @@ c
 c---------------------------------------------------------------------
       implicit none
 c
-      integer nslice, naxis, nltype
-      double precision crval(naxis), cdelt(naxis), pos(6), crpix(naxis)
-      character*(*) aline, ctype(naxis), ltype(nltype)
+      integer nslice, nltype, lun
+      double precision pos(6), pix3
+      character*(*) aline, ltype(nltype)
 cc 
       integer maxnum
       parameter (maxnum = 20)
 c
-      double precision nums(maxnum)
-      integer j, slen, lena, inum, ipres, nextra, npt, opt,
-     +  emax, nuse, icomm(maxnum), dsign(2), spos
+      double precision nums(maxnum), off(2)
+      integer j, slen, lena, inum, ipres, nextra, npt, emax, nuse,
+     +  icomm(maxnum), dsign(2), spos
       logical ok
       character str*4, estr*80, otype(2)*6
 c
@@ -2538,19 +2557,17 @@ c
 c
 c Now convert the BLC and TRC in whatever units to image pixels
 c
-      npt = 1
-      opt = 1
-      do j = 1, 2
-        call otopixcg (otype(1), 1, dsign(1), naxis, crval, crpix,
-     +                 cdelt, ctype, nums(npt), 0.0d0, pos(opt), nuse)
-        npt = npt + nuse
-        opt = opt + 1
+c Now convert the overlay locations in whatever unit to pixels
 c
-        call otopixcg (otype(2), 2, dsign(2), naxis, crval, crpix,
-     +                 cdelt, ctype, nums(npt), 0.0d0, pos(opt), nuse)
-        npt = npt + nuse
-        opt = opt + 1
-      end do
+      off(1) = 0.0d0
+      off(2) = 0.0d0
+      npt = 1
+      call ol2pixcg (lun, pix3, ' ', otype, off, dsign, nums(npt),
+     +               pos, nuse)
+      npt = nuse + 1
+      call ol2pixcg (lun, pix3, ' ', otype, off, dsign, nums(npt), 
+     +               pos(3), nuse)
+      npt = npt + nuse
 c
 c We have done the mandatory columns, now deal with the optional CS and CE
 c
@@ -2628,7 +2645,7 @@ c
       character in*(*)
 cc
       include 'maxdim.h'
-      integer maxbox
+      integer maxbox, i
       parameter (maxbox = 1024)
 c
       integer boxes(maxbox)
@@ -2640,6 +2657,10 @@ c
 c Find hyper-rectangle surrounding region of interest
 c
       call boxinfo (boxes, 3, blc, trc)
+      do i = 1, naxis
+        blc(i) = max(1,blc(i))
+        trc(i) = min(size(i),trc(i))
+      end do
 c
 c Adjust spatial window to fit an integral number of bins and
 c find size of binned window
@@ -2959,64 +2980,67 @@ c
       end
 c
 c
-      subroutine slposw (lpos, ks, nk, radians, naxis, crpix, cdelt, 
-     +                   blc, ibin, jbin, maxnsl, nslice, slpos)
+      subroutine slposw (lin, lpos, krng, radians, blc, ibin, jbin, 
+     +                   maxnsl, nslice, slpos)
 c-----------------------------------------------------------------------
-c     Save the slice locations in a text file
+c     Save the slice locations in a text file.  Coordiantes
+c     are converted to true world coordinates
 c
 c-----------------------------------------------------------------------
       implicit none
-      integer lpos, ks, nk, naxis, blc(2), maxnsl, nslice, 
-     +  slpos(6,maxnsl), ibin, jbin
-      double precision cdelt(naxis), crpix(naxis)
+      integer lin, lpos, krng(2), blc(2), maxnsl, nslice, ibin, jbin,
+     +  slpos(6,maxnsl)
       logical radians
 cc
-      include 'mirconst.h'
-      double precision rtoa
-      parameter (rtoa = 3600.0 * 180.0 / dpi)
-c
       integer i, ilen, iostat
-      double precision pix
-      real facx, facy, blcx, blcy, trcx, trcy
-      character aline*130
+      double precision win(3), wout(3), blcx, blcy, trcx, trcy
+      character aline*130, typei(3)*6, typeo(3)*6
 c
       integer len1
 c-----------------------------------------------------------------------
+      typei(1) = 'abspix'
+      typei(2) = 'abspix'
+      typei(3) = 'abspix'
       if (radians) then
-        facx = cdelt(1) * rtoa
-        facy = cdelt(2) * rtoa
+        typeo(1) = 'arcsec'
+        typeo(2) = 'arcsec'
       else
-        facx = 1.0
-        facy = 1.0
+        typeo(1) = 'abspix'
+        typeo(2) = 'abspix'
       end if
+      typeo(3) = 'abspix'
+      win(3) = dble(2*krng(1)+krng(2)-1)/2.0
+      call initco (lin)
 c
       do i = 1, nslice
 c
-c Convert to unbinned full image arcsecond offsets
+c Convert absolute pixels to unbinned full image true arcsecond offsets
 c
-        pix = slpos(1,i)
-        call ppconcg (2, blc(1), ibin, pix)
-        blcx = (pix - crpix(1)) * facx
+        win(1) = slpos(1,i)
+        call ppconcg (2, blc(1), ibin, win(1))
+        win(2) = slpos(2,i)
+        call ppconcg (2, blc(2), jbin, win(2))
+        call w2wco (lin, 3, typei, ' ', win, typeo, ' ', wout)
+        blcx = wout(1)
+        blcy = wout(2)
 c
-        pix = slpos(2,i)
-        call ppconcg (2, blc(2), jbin, pix)
-        blcy = (pix - crpix(2)) * facy
+        win(1) = slpos(4,i)
+        call ppconcg (2, blc(1), ibin, win(1))
+        win(2) = slpos(5,i)
+        call ppconcg (2, blc(2), jbin, win(2))
+        call w2wco (lin, 3, typei, ' ', win, typeo, ' ', wout)
+        trcx = wout(1)
+        trcy = wout(2)
 c
-        pix = slpos(4,i)
-        call ppconcg (2, blc(1), ibin, pix)
-        trcx = (pix - crpix(1)) * facx
-c
-        pix = slpos(5,i)
-        call ppconcg (2, blc(2), jbin, pix)
-        trcy = (pix - crpix(2)) * facy
-c
-        write (aline,100) i, blcx, blcy, trcx, trcy, ks, ks+nk-1
+        write (aline,100) i, blcx, blcy, trcx, trcy, krng(1), 
+     +                    krng(1)+krng(2)-1
 100     format (i3, 1x, 4(1pe13.6, 1x), i4, 1x, i4)
         ilen = len1(aline)
         call txtwrite (lpos, aline, ilen, iostat)
         if (iostat.ne.0) call bug ('f', 
      +     'Error writing slice positions file')
       end do
+      call finco (lin)
 c
       end
 c
@@ -3050,7 +3074,8 @@ c
 c
       subroutine slsave (lval, islice, nseg, x, y, segs, sege)
 c-----------------------------------------------------------------------
-c     Save the segments of the slice that are unblanked
+c     Save the segments of the slice that are unblanked.  COnvert here
+c     from linear offsets to true offsets
 c
 c  Input
 c   lval       Handle for text file
@@ -3061,8 +3086,8 @@ c   segs,e     Segment start and end indices
 c
 c-----------------------------------------------------------------------
       implicit none
-      integer nseg, segs(nseg), sege(nseg), islice, lval
       real x(*), y(*)
+      integer nseg, segs(nseg), sege(nseg), islice, lval
 cc
       integer j, nsegp, ip
 c-----------------------------------------------------------------------
@@ -3081,7 +3106,7 @@ c
 c
 c Write the segments into a text file
 c
-        call slvalw (lval, islice, j, nsegp,  x(ip), y(ip))
+        call slvalw (lval, islice, j, nsegp, x(ip), y(ip))
       end do
 c
       end
