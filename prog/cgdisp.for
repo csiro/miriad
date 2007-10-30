@@ -111,8 +111,8 @@ c	(histogram equalization).  The colour lookup table is an integer
 c	from 1 to 8 specifying a lookup table. Valud values are 1 (b&w),
 c	2 (rainbow), 3 (linear pseudo colour), 4 (floating zero colour 
 c	contours), 5 (fixed zero colour contours), 6 (rgb), 7 (background)
-c	and 8 (heat).  If you enter a negative integer, then the reversed 
-c	lookup table is displayed.  
+c	8 (heat) and 9 (absolute b&w) .  If you enter a negative 
+c	integer, then the reversed lookup table is displayed.  
 c
 c	The transfer function changes available with OPTIONS=FIDDLE 
 c	are in addition (on top of) to the selections here, but the 
@@ -517,6 +517,7 @@ c                  original, not linearized version
 c    nebk 20feb95  Add colour table selection to keyword "range" and
 c		   get pgimag to make black on white for hard copy.
 c		   Move to image type "pixel" instead of "grey"
+c    nebk 10apr95  Add doc for absolute b&w lookup table
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -592,7 +593,7 @@ c
      +             'rellin', 'absdeg', 'reldeg', 'none'/
       data dmm /2*0.0/
 c-----------------------------------------------------------------------
-      call output ('CgDisp: version 20-Feb-95')
+      call output ('CgDisp: version 10-Apr-95')
       call output ('Keyword "range" can now be used to specify the')
       call output ('colour lookup table as well the transfer function')
       call output (' ')
@@ -2286,12 +2287,6 @@ c
           call lcase (trfun)
           call keyi ('range', coltab(i), 1)
 c
-          if (coltab(i).lt.-8 .or. coltab(i).gt.8 .or.
-     +        coltab(i).eq.0) then
-            coltab(i) = 1
-            call bug ('w',
-     +        'Unrecognized lookup table, setting b&w')
-          end if
           if (gin.ne.' ' .and. trfun(i).ne.'lin' .and. 
      +        trfun(i).ne.'log' .and. trfun(i).ne.'heq' .and.
      +        trfun(i).ne.'sqr') then
