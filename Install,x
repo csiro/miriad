@@ -143,8 +143,8 @@ l8:
 # Add the Miriad library to the places to look for libraries.
 
 	echo "Fiddling the library search list ..."
-	if ( -x $MIR/scripts/unix/$arch/mirfind.csh ) then
-	  set searchlist = ($searchlist $MIRLIB `$MIR/scripts/unix/$arch/mirfind.csh -l`)
+	if ( -x $MIRBIN/mirfind ) then
+	  set searchlist = ($searchlist $MIRLIB `$MIRBIN/mirfind -l`)
 	else
 	  set searchlist = ($searchlist $MIRLIB)
 	endif
@@ -166,7 +166,7 @@ l8:
 
 # Create the mirfind script.
 
-	if ( -e $MIR/scripts/unix/$arch/mirfind.csh ) then
+	if ( -e $MIRBIN/mirfind ) then
 l01:
 	  echo ""
 	  echo -n "Re-generate the mirfind script? [y/n] "
@@ -199,23 +199,23 @@ l01:
 	echo '  end'				>> mirfind.csh
 	echo 'endif'				>> mirfind.csh
 	chmod +x mirfind.csh
-	mv mirfind.csh $MIR/scripts/unix/$arch/mirfind.csh
+	mv mirfind.csh $MIRBIN/mirfind
 	if ( $status != 0) then
 	  echo "### Failed to move mirfind.csh to $MIR/scripts/unix/$arch"
 	  echo "### Aborting"
 	  exit
 	endif
 	echo "Libraries will be searched for in ..."
-	$MIR/scripts/unix/$arch/mirfind.csh -l
+	$MIRBIN/mirfind -l
 	
 # If $MIRBIN/mirlibs exists, ask if the generation of mirlibs should be
 # skipped.
 
 l02:
-	if ( -e $MIR/scripts/unix/$arch/mirlibs.csh ) then
+	if ( -e $MIRBIN/mirlibs ) then
 	  echo ""
 	  echo "The current link library list is:"
-	  sed -n 's/echo //p' $MIR/scripts/unix/$arch/mirlibs.csh
+	  sed -n 's/echo //p' $MIRBIN/mirlibs
 l1:
 	  echo ""
 	  echo -n "Re-generate the mirlibs script? [y/n] "
@@ -337,13 +337,13 @@ l6:
 	
 	if ( "$answer" == "n" ) then
 	  echo "You should edit the file mirlibs.csh in the current directory,"
-	  echo "then copy it to $MIR/scripts/unix/$arch, and re-run Install"
+	  echo "then copy it to $MIRBIN, and re-run Install"
 	  echo '(answering no to the "Re-generate the mirlibs script" question).'
 	  exit
 	else if ("$answer" == "y" ) then
-	  mv mirlibs.csh $MIR/scripts/unix/$arch/mirlibs.csh
+	  mv mirlibs.csh $MIRBIN/mirlibs
 	  if ( $status != 0) then
-	    echo "### Failed to move mirlibs.csh to $MIR/scripts/unix/$arch"
+	    echo "### Failed to move mirlibs.csh to $MIRBIn"
 	    echo "### Aborting"
 	    exit
 	  endif
