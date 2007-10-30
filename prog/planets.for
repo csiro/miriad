@@ -26,16 +26,21 @@ c    rjs  15dec95 Miscellaneous minor enhancements.
 c    rjs  18dec95 Sub-earth point uses right-handed coord system.
 c    rjs   7jun96 Include SysIII(1957) for Jupiter as well
 c    rjs  10jun97 Change observ to telescop
+c    rjs  07feb00 Added Jovian SysI and SysII longitudes.
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	character version*(*)
-	double precision AUKM
+	double precision AUKM,jy2k
 	integer EARTH,SUN,JUPITER
-	parameter(version='Planets: version 1.0 10-Jun-97')
+	parameter(version='Planets: version 1.0 7-Feb-99')
 	parameter(AUKM=149.597870D6,EARTH=3,SUN=0,JUPITER=5)
 c
+c  0 Jan 2000 (i.e. 31 Dec 1999).
+c
+	parameter(jy2k=2451543.5d0)
+c
 	character planet*8,observ*16
-	double precision jday,sub(3),dist,long,lat,ra,dec,w,r,f
+	double precision jday,sub(3),dist,long,long1,lat,ra,dec,w,r,f
 	integer np,nout,i
 	real bmaj,bmin,bpa
 	character line*64
@@ -89,26 +94,42 @@ c
 	  sub(2) = -sub(2)
 	  call lmn2sph(sub,long,lat)
 	  long = mod(long+2*dpi,2*dpi)
-	  write(line,'(a,f7.2)')'Longitude  (deg)   ',real(long*180/dpi)
+	  write(line,'(a,f7.2)')'Longitude    (deg)   ',
+     *					real(long*180/dpi)
 	  call output(line)
 	  if(np.eq.JUPITER)then
-	    long = long + dpi/180 * (0.0083169*(jday-2438761.5) - 0.007)
-	    long = mod(long,2*dpi) 
-	    if(long.lt.0)long = long + 2*dpi
+	    long1 = long + dpi/180*(0.0083169*(jday-2438761.5) - 0.007)
+	    long1 = mod(long1,2*dpi) 
+	    if(long1.lt.0)long1 = long1 + 2*dpi
 	    write(line,'(a,f7.2)')
-     *			'Long(1957) (deg)   ',real(long*180/dpi)
+     *			'Long(1957)   (deg)   ',real(long1*180/dpi)
+	    call output(line)
+	    long1 = long + dpi/180*((877.90-870.536)*(jday-jy2k)
+     *			-59.15+190.25)
+	    long1 = mod(long1,2*dpi) 
+	    if(long1.lt.0)long1 = long1 + 2*dpi
+	    write(line,'(a,f7.2)')
+     *			'Long(Sys I)  (deg)   ',real(long1*180/dpi)
+	    call output(line)
+	    long1 = long + dpi/180*((870.27-870.536)*(jday-jy2k)
+     *			-59.15+177.89)
+	    long1 = mod(long1,2*dpi) 
+	    if(long1.lt.0)long1 = long1 + 2*dpi
+	    write(line,'(a,f7.2)')
+     *			'Long(Sys II) (deg)   ',real(long1*180/dpi)
 	    call output(line)
 	  endif
-	  write(line,'(a,f7.2)')'Latitude   (deg)   ',
+	    
+	  write(line,'(a,f7.2)')'Latitude     (deg)   ',
      *					      real(lat*180/dpi)/(1-f)**2
 	  call output(line)
-	  write(line,'(a,f7.2)')'Distance   (au)    ',real(dist/AUKM)
+	  write(line,'(a,f7.2)')'Distance     (au)    ',real(dist/AUKM)
 	  call output(line)
-	  write(line,'(a,f7.2)')'Major axis (arcsec)',180/pi*3600*bmaj
+	  write(line,'(a,f7.2)')'Major axis   (arcsec)',180/pi*3600*bmaj
 	  call output(line)
-	  write(line,'(a,f7.2)')'Minor axis (arcsec)',180/pi*3600*bmin
+	  write(line,'(a,f7.2)')'Minor axis   (arcsec)',180/pi*3600*bmin
 	  call output(line)
-	  write(line,'(a,f7.2)')'PA of axis (deg)   ',180/pi*bpa
+	  write(line,'(a,f7.2)')'PA of axis   (deg)   ',180/pi*bpa
 	  call output(line)
 	endif
 c
