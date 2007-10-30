@@ -35,6 +35,10 @@ c	The antenna to process. Use either 3 or 4. The default is 3.
 c@ options
 c	Extra processing options.
 c	  onoff  Use this option if the antenna has a noise diode.
+c	  thin   Use the optically thin atmosphere approximation in
+c	         the solution. The default is to not assume this (which
+c	         mades is a non-linear problem). Note the plots never use
+c	         the optically thin approximation.
 c@ device
 c	PGPLOT device to plot the result. The data are plotted in black, and
 c	the "fit" in red. The default is to not plot the results.
@@ -43,29 +47,44 @@ c  History:
 c    27apr01 rjs   Original version.
 c    08aug01 rjs   Added model sky calculations and met info.
 c    17nov01 rjs   Handle "dsdn" format.
+c    02dec01 rjs   Get rid of the optically thin approximation.
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	character version*(*)
-	parameter(version='Sdip: version 17-Nov-01')
-	integer MAXT,MAXEQ,MAXFREQ
-	real Tcmb
-	parameter(MAXT=10,MAXEQ=2000,MAXFREQ=3,Tcmb=2.7)
+	parameter(version='Sdip: version 02-Dec-01')
+	integer MAXT,MAXFREQ
+	parameter(MAXT=10,MAXFREQ=3)
 c
-	logical onoff,ht,st,dotsky
+	integer ITMAX
+	real EPS1,EPS2
+	parameter(ITMAX=100,EPS1=0.05,EPS2=0.005)
+c
+c  Commons.
+c
+	integer MAXEQ
+	real Tcmb
+	parameter(MAXEQ=2000,Tcmb=2.72)
+	real t0,tant,eqs(3,MAXEQ,4),bs(MAXEQ,4)
+	integer neq,j0
+	common/sdipcom/T0,Tant,bs,eqs,neq,j0
+c
+	logical onoff,ht,st,dotsky,thin
 	character dsdlog*64,device*64,line*64,chan*5
 	double precision htime(2,MAXT),stime(2,MAXT),time,time0
-	integer neq,nht,nst,nhts,nsts,i,j,ifail,ant,offsets(4,6)
+	integer nht,nst,nhts,nsts,i,j,ifail,ant,offsets(4,6)
 	real dsdons(4),dsdoffs(4)
 	real times(MAXEQ),y1(MAXEQ),y2(MAXEQ)
-	real Thot,Tant,Trec,Tcal,Tsky,xlo,xhi,ylo,yhi,el,dsdon,dsdoff
-	real temp,press,humid,temp0,press0,humid0,fac,Tmod
+	real Thot,Trec,Tcal,Tsky,Tmod,Tatm
+	real press,humid,temp0,press0,humid0,fac,tau
+	real xlo,xhi,ylo,yhi,el,dsdon,dsdoff
 	integer nmet,nfreq,ntskys
 	real ymin,ymax,freqs(MAXFREQ)
-	real eqs(3,MAXEQ,4),eqs2(2,MAXEQ,4),bs(MAXEQ,4),bs2(MAXEQ,4)
+	real eqs2(2,MAXEQ,4),bs2(MAXEQ,4)
 	real temps(3),tskys(4)
 c
 c  Scratch arrays.
 c
+	real f(MAXEQ),fp(MAXEQ),dx(3),dfdx(3*MAXEQ),aa(9)
 	real rtmp(9)
 	integer itmp(3)
 c
@@ -74,6 +93,7 @@ c
 	character itoaf*4,stcat*64,streal*64
 	integer pgBeg,tinNext
 	logical gotData
+	external func,deriv
 c
 	data offsets/
      *       0,    0,    0,    0,
@@ -93,9 +113,6 @@ c
 	  do i=ntskys+1,4
 	    tskys(i) = tskys(i-1)
 	  enddo
-	  do i=1,4
-	    tskys(i) = tskys(i) - tcmb
-	  enddo
 	endif
 c
 	call keyr('thot',thot,300.0)
@@ -109,11 +126,11 @@ c
 	if(2*(nst/2).ne.nst)call bug('f','Odd no. of sky dip times')
 	if(nst.lt.2)call bug('f','Sky dip times must be given')
 	call mkeyr('freq',freqs,MAXFREQ,nfreq)
-	call getopt(onoff)
+	call getopt(onoff,thin)
 	call keyfin
 c
 	nmet = 0
-	temp = 0
+	Tatm = 0
 	press = 0
 	humid = 0
 c
@@ -163,17 +180,13 @@ c
 		  eqs(3,neq,j) = 0
 		  bs(neq,j) = -thot
 		else
-		  eqs2(1,neq,j) = 1
-		  eqs2(2,neq,j) = -dsdon
 		  eqs(1,neq,j) = 1
 		  eqs(2,neq,j) = -dsdon
 		  eqs(3,neq,j) = 1./sin(el)
 		  bs(neq,j) = - tant - tcmb
-		  if(dotsky)
-     *		    bs2(neq,j) = -tant -tcmb - tskys(j)/sin(el)
 		endif
 	      enddo
-	      temp = temp + temp0
+	      Tatm = Tatm + temp0
 	      press = press + press0
 	      humid = humid + humid0
 	      nmet = nmet + 1
@@ -189,40 +202,65 @@ c
 c  Check that we have some met data.
 c
 	if(nmet.le.0)call bug('f','No met data!')
-	if(nmet.gt.0)then
-	  temp = temp/nmet
-	  press = press/nmet
-	  humid = humid/nmet
-	  call output('-------------------------------------------')
-	  call output('Mean met parameters:')
-	  line = stcat('  T =',
-     *	       stcat(' '//streal(temp-273.15,'(f10.1)'),' Celsius'))
-	  call output(line)
-	  line = stcat('  P =',
+	Tatm = Tatm/nmet
+	press = press/nmet
+	humid = humid/nmet
+	call output('-------------------------------------------')
+	call output('Mean meteorological parameters:')
+	line = stcat('  T =',
+     *	       stcat(' '//streal(Tatm-273.15,'(f10.1)'),' Celsius'))
+	call output(line)
+	line = stcat('  P =',
      *	       stcat(' '//streal(press/100/0.975,'(f10.1)'),' hPa'))
-	  call output(line)
-	  line = stcat('  h =',
+	call output(line)
+	line = stcat('  h =',
      *		stcat(' '//streal(humid*100,'(f10.1)'),'%'))
-	  call output(line)
-	  call output('-------------------------------------------')
-	  do i=1,nfreq
-	    if(i.eq.1)call output('Model sky parameters:')
-	    if(freqs(i).lt.0.1.or.freqs(i).gt.200)
-     *		call bug('f','Invalid frequency')
-	    call opacGet(1,freqs(i)*1e9,0.5*PI,temp,press,humid,
+	call output(line)
+	call output('-------------------------------------------')
+c
+	T0 = Tatm
+	do i=1,nfreq
+	  if(i.eq.1)call output('Model sky parameters:')
+	  if(freqs(i).lt.0.1.or.freqs(i).gt.200)
+     *	    call bug('f','Invalid frequency')
+	  call opacGet(1,freqs(i)*1e9,0.5*PI,Tatm,press,humid,
      *							fac,Tmod)
-	    line = stcat('Observing frequency:  nu   =',
+	  line = stcat('Observing frequency:   nu   =',
      *		stcat(' '//streal(freqs(i),'(f10.4)'),' GHz'))
-	    call output(line)
-	    line = stcat('Model sky brightness: Tsky =',
+	  call output(line)
+	  line = stcat('Model sky brightness:  Tsky =',
      *		stcat(' '//streal(Tmod,'(f10.1)'),' Kelvin'))
-	    call output(line)
-	    line = stcat('Model sky opacity:    tau  =',
+	  call output(line)
+	  line = stcat('Model sky opacity:     tau  =',
      *		stcat(' '//streal(-log(fac),'(f10.3)'),' nepers'))
+	  call output(line)
+	  call output(' ')
+	  if(i.eq.1)then
+	    t0 = (tmod-tcmb*fac)/(1-fac)
+	    line = stcat('Effective temperature: T0   =',
+     *		stcat(' '//streal(T0,'(f10.1)'),' Kelvin'))
 	    call output(line)
-	    call output(' ')
-	    if(i.eq.nfreq)
+	  endif
+	  if(i.eq.nfreq)
      *	      call output('-------------------------------------------')
+	enddo
+c
+c  Fix up the equations.
+c
+	if(dotsky)then
+	  do j=1,4
+	    fac = (T0-Tskys(j))/(T0-Tcmb)
+	    tau = -log(fac)
+	    do i=1,neq
+	      eqs2(1,i,j) = eqs(1,i,j)
+	      eqs2(2,i,j) = eqs(2,i,j)
+	      if(eqs(3,i,j).eq.0)then
+		bs2(i,j) = 0
+	      else
+	        bs2(i,j) = -tant - tcmb - 
+     *				(t0-tcmb)*(1-exp(-tau*eqs(3,i,j)))
+	      endif
+	    enddo
 	  enddo
 	endif
 c
@@ -238,6 +276,7 @@ c
 	call output('------- ----   ----   ----')
 c
 	do j=1,4
+	  j0 = j
 	  chan = char(ichar('A')+j-1)//char(ichar('0')+ant)
 	  if(dotsky)then
 	    call llsqu(bs2(1,j),eqs2(1,1,j),2,neq,temps,
@@ -246,6 +285,16 @@ c
 	  else
 	    call llsqu(bs(1,j),eqs(1,1,j),3,neq,temps,
      *						ifail,rtmp,itmp)
+	    temps(3) = temps(3) + tcmb
+	    if(.not.thin.and.ifail.eq.0)then
+	      Tsky = temps(3)
+	      fac = (T0-Tsky)/(T0-Tcmb)
+	      temps(3) = -log(fac)
+	      call nllsqu(3,neq,temps,temps,ITMAX,EPS1,EPS2,.true.,
+     *		ifail,func,deriv,f,fp,dx,dfdx,aa)
+	      fac = exp(-temps(3))
+	      temps(3) = (T0-Tcmb)*(1-fac) +Tcmb
+	    endif
 	  endif
 	  if(ifail.ne.0)then
 	    call bug('w','Ifail = '//itoaf(ifail))
@@ -255,18 +304,20 @@ c
 	  else
 	    trec = temps(1)
 	    tcal = temps(2)
-	    tsky = temps(3) + tcmb
+	    tsky = temps(3)
 	  endif
 	  write(line,'(a,3f7.1)')chan,Trec,Tcal,Tsky
 	  call output(line)
 c
 	  if(device.ne.' ')then
+	    fac = (T0-Tsky)/(T0-Tcmb)
+	    tau = -log(fac)
 	    do i=1,neq
 	      y1(i) = -eqs(2,i,j)*Tcal
 	      if(eqs(1,i,j).eq.0)then
 		y2(i) = 0
 	      else if(eqs(3,i,j).gt.0)then
-	        y2(i) = (trec+tant+tcmb+(tsky-tcmb)*eqs(3,i,j))
+	        y2(i) = trec+tant+T0-(T0-tcmb)*exp(-tau*eqs(3,i,j))
 	      else
 	        y2(i) = (trec+thot)
 	      endif
@@ -301,18 +352,19 @@ c
 c
 	end
 c************************************************************************
-	subroutine getopt(onoff)
+	subroutine getopt(onoff,thin)
 c
 	implicit none
-	logical onoff
+	logical onoff,thin
 c------------------------------------------------------------------------
 	integer NOPTS
-	parameter(NOPTS=1)
+	parameter(NOPTS=2)
 	character opts(NOPTS)*8
 	logical present(NOPTS)
-	data opts/'onoff   '/
+	data opts/'onoff   ','thin    '/
 	call options('options',opts,present,NOPTS)
 	onoff = present(1)
+	thin  = present(2)
 	end
 c************************************************************************
 	logical function gotData(ant,time,el,dsdons,dsdoffs,
@@ -403,4 +455,72 @@ c
 	gotData = ok
 c
 	end
-
+c************************************************************************
+	subroutine func(temps,f,n,m)
+c
+	implicit none
+	integer n,m
+	real temps(n),f(m)
+c------------------------------------------------------------------------
+	real trec,tcal,tau
+	integer i
+c
+c  Commons.
+c
+	integer MAXEQ
+	real Tcmb
+	parameter(MAXEQ=2000,Tcmb=2.72)
+	real t0,tant,eqs(3,MAXEQ,4),bs(MAXEQ,4)
+	integer neq,j0
+	common/sdipcom/T0,Tant,bs,eqs,neq,j0
+c
+	if(neq.ne.m)call bug('f','Inconsistent number of equations')
+	if(n.ne.3)call bug('f','Inconsistent number of unknowns')
+c
+	trec = temps(1)
+	tcal = temps(2)
+	tau  = temps(3)
+c
+	do i=1,neq
+	  f(i) = trec + tcal*eqs(2,i,j0) - bs(i,j0)
+	  if(eqs(3,i,j0).ne.0)
+     *	    f(i) = f(i) + (t0-tcmb)*(1-exp(-tau*eqs(3,i,j0)))
+	enddo
+c
+	end
+c************************************************************************
+	subroutine deriv(temps,dfdx,n,m)
+c
+	implicit none
+	integer n,m
+	real temps(n),dfdx(n,m)
+c
+c------------------------------------------------------------------------
+	real tau
+	integer i
+c
+c  Commons.
+c
+	integer MAXEQ
+	real Tcmb
+	parameter(MAXEQ=2000,Tcmb=2.72)
+	real t0,tant,eqs(3,MAXEQ,4),bs(MAXEQ,4)
+	integer neq,j0
+	common/sdipcom/T0,Tant,bs,eqs,neq,j0
+c
+	if(neq.ne.m)call bug('f','Inconsistent number of equations')
+	if(n.ne.3)call bug('f','Inconsistent number of unknowns')
+c
+	tau  = temps(3)
+c
+	do i=1,neq
+	  dfdx(1,i) = 1
+	  dfdx(2,i) = eqs(2,i,j0)
+	  if(eqs(3,i,j0).eq.0)then
+	    dfdx(3,i) = 0
+	  else
+	    dfdx(3,i) = (t0-tcmb)*eqs(3,i,j0)*exp(-tau*eqs(3,i,j0))
+	  endif
+	enddo
+c
+	end
