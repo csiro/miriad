@@ -2,10 +2,6 @@ c************************************************************************
 	program  offpol
 	implicit none
 c
-c************************************************************************
-	program paraplot
-	implicit none
-c
 c= offpol -- Generate ATCA primary beam polarimetric response.
 c& rjs
 c: utility
@@ -46,6 +42,12 @@ c
 	complex xx,yy,xy,yx,jo(2,2),t,qq,uu
 	real qqr(MAXDIM),iir(MAXDIM),uur(MAXDIM),vvr(MAXDIM)
 	logical flag(MAXDIM)
+c
+c  Externals.
+c
+	integer len1
+c
+c  Get the inputs.
 c
 	call output(version)
 	call keyini
