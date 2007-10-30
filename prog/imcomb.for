@@ -45,6 +45,7 @@ c    rjs  15mar97 Handle processing multiple more than MAXOPEN files.
 c    rjs  02jul97 cellscal change.
 c    rjs  21jul97 Handle image alignment better. Fix bug related to
 c		  incorrect flagging checks.
+c    rjs  23jul97 Added pbtype.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'maxnax.h'
@@ -227,7 +228,7 @@ c------------------------------------------------------------------------
 	character line*80,num*2
 c
 	integer nkeys
-	parameter(nkeys=38)
+	parameter(nkeys=39)
 	character keyw(nkeys)*8
 c
 c  Externals.
@@ -242,7 +243,7 @@ c
      *	  'bpa     ','niters  ','object  ','telescop','observer',
      *	  'restfreq','vobs    ','obsra   ','obsdec  ','lstart  ',
      *	  'lstep   ','ltype   ','lwidth  ','btype   ','pbfwhm  ',
-     *	  'cellscal'/
+     *	  'cellscal','pbtype  '/
 c
 c  Write out coordinate information.
 c
