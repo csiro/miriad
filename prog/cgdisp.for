@@ -562,6 +562,7 @@ c		   Better job on overlays, add options=nodistort
 c                  '*lin' -> '*nat'
 c    nebk 22nov95  Add ellipse overlays
 c    nebk 29nov95  Add options=conlab
+c    nebk 04dec95  If > 1 contour image, their sizes were being lost
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -623,7 +624,7 @@ c
       data coltab /maxchan*0/
       data lwid /maxconp3*1/
 c-----------------------------------------------------------------------
-      call output ('CgDisp: version 29-Nov-95')
+      call output ('CgDisp: version 04-Dec-95')
       call output ('New options=conlabel to label contour values')
       call output ('New overlay types "ellipse" and "oellipse"')
       call output ('New options=nodist prevents overlay distortion'//
@@ -3025,7 +3026,8 @@ c
       if (ofig.eq.'circle' .or. ofig.eq.'ocircle' .or.
      +    ofig.eq.'ellipse' .or. ofig.eq.'oellipse') type(2) = type(1)
 c
-      call chkaxco (lun, type, 2, 0, ' ')
+      call chkaxco (lun, type(1), 1, ' ')
+      call chkaxco (lun, type(2), 2, ' ')
       off(1) = xoff
       off(2) = yoff
 c
