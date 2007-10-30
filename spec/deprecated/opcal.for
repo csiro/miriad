@@ -70,13 +70,14 @@ c--
 c  History:
 c    02feb01 rjs  Original version.
 c    07feb01 rjs  Write out elevation variable.
+c    02mar01 rjs  Label some output better.
 c------------------------------------------------------------------------
 	integer MAXPOL
 	parameter(MAXPOL=2)
 	include 'maxdim.h'
 	include 'mirconst.h'
 	character version*(*)
-	parameter(version='opcal: version 1.0 07-Feb-01')
+	parameter(version='opcal: version 1.0 02-Mar-01')
 	integer PolXX,PolYY,PolXY,PolYX
 	parameter(PolXX=-5,PolYY=-6,PolXY=-7,PolYX=-8)
 c
@@ -144,13 +145,17 @@ c
 	    enddo
 	    write(line,'(a,i2)')'Frequency',i
 	    call output(line)
-	    write(line,'(a,10f8.2)')'  Pol X: ',(dfac(1,i,j),j=1,nants)
+	    write(line,'(a,10f8.2)')'  Pol X: Scale Factor',
+     *		(dfac(1,i,j),j=1,nants)
 	    call output(line)
-	    write(line,'(a,10f8.2)')'         ',(doff(1,i,j),j=1,nants)
+	    write(line,'(a,10f8.2)')'         Trec (K)    ',
+     *		(doff(1,i,j),j=1,nants)
 	    call output(line)
-	    write(line,'(a,10f8.2)')'  Pol Y: ',(dfac(2,i,j),j=1,nants)
+	    write(line,'(a,10f8.2)')'  Pol Y: Scale Factor',
+     *		(dfac(2,i,j),j=1,nants)
 	    call output(line)
-	    write(line,'(a,10f8.2)')'         ',(doff(2,i,j),j=1,nants)
+	    write(line,'(a,10f8.2)')'         Trec (K)    ',
+     *		(doff(2,i,j),j=1,nants)
 	    call output(line)
 	  enddo
 	endif
