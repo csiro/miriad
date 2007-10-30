@@ -271,6 +271,7 @@ c    nebk 11aug95  Add arcmin labtyp
 c    rjs  30aug95  Add a comma to appease g77
 c    nebk 03sep95  Add options=grid, non-linear axis labels and
 c		   detect black/white background of device
+c    rjs  12oct95  Fix compacting algorithm for integers.
 c To do:
 c
 c-----------------------------------------------------------------------
@@ -646,40 +647,37 @@ c
       end
 c
 c
-      subroutine compact (str)
+      subroutine compact (str, trim0)
 c-----------------------------------------------------------------------
-c     COmpact string by removing trailing 0's 
+c     COmpact string by removing blanks, trailing 0's, decimal points. 
 c
 c-----------------------------------------------------------------------
       implicit none
 c
       character*(*) str
+      logical trim0
 cc
       integer il, len1, i, j
       character line*1000
 c-----------------------------------------------------------------------
       il = len1(str)
 c
-      if (str(il:il).eq.'0') str(il:il) = ' '
+      if ((str(il:il).eq.'0'.and.trim0).or.
+     *	   str(il:il).eq.'.') str(il:il) = ' '
       do i = il-1, 1, -1
-        if (str(i:i).eq.'0' .and. str(i+1:i+1).eq.' ') then
-          str(i:i) = ' '
-        else if (str(i:i).eq.'.' .and. str(i+1:i+1).eq.' ') then
-          str(i:i) = ' '
-        end if
+        if (((str(i:i).eq.'0'.and.trim0).or.str(i:i).eq.'.') .and.
+     *    str(i+1:i+1).eq.' ') str(i:i) = ' '
       end do
 c
-      line = ' '
-      j = 1
+      j = 0
       do i = 1, il
         if (str(i:i).ne.' ') then
-          line(j:j) = str(i:i)
           j = j + 1
+          line(j:j) = str(i:i)
         end if
       end do
 c
-      str = ' '
-      str = line(1:len1(line))
+      str = line(1:j)
 c
       end
 c
@@ -864,7 +862,7 @@ c
               call strfd (vert(2,i), '(f15.2)', str2, il2)
             end if
             str = str1(1:il1)//','//str2(1:il2)
-            call compact (str)
+            call compact (str, .not.doabs)
             il = len1(str) + 1
             str(il:il) = ','
             if (i.eq.nv) str(il:il) = ')'
