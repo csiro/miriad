@@ -181,7 +181,7 @@ c
 c  Get extra processing parameters.
 c------------------------------------------------------------------------
 	integer NOPTS
-	parameter(NOPTS=1)
+	parameter(NOPTS=2)
 	logical present(NOPTS)
 	character opts(NOPTS)*8
 	data opts/'vector  ','noapply '/
