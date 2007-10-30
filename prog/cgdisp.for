@@ -168,10 +168,16 @@ c	  more room for the plot is available.
 c	"noepoch" means don't write the epoch value into the axis labels
 c
 c	"fiddle" means enter a routine to allow you to interactively change
-c	  the display lookup table.  You can cycle through b&w and colour
-c	  displays, as well as alter the transfer function by the cursor 
-c	  location, or by selecting predefined transfer functions such as 
-c	  histogram equalization, logarithmic, & square root.
+c	  the display lookup table.  You can cycle through a variety of
+c	  colour lookup tables, as well as alter a linear transfer function
+c	  by the cursor location, or by selecting predefined transfer 
+c	  functions (linear, square root, logarithmic, histogram equalization)
+c	  
+c	  For hard copy devices (e.g. postscript), a keyboard driven
+c	  fiddle is offered; you can cycle through different colour tables
+c	  and invoke the predefined transfer functions, but the linear
+c	  fiddler is not available.   In this way you can make colour
+c	  hardcopy plots.
 c	"single" means that when you have selected OPTIONS=FIDDLE and you
 c	  you have more than one subplot per page, activate the fiddle
 c	  option after each subplot rather than the default, which is
@@ -482,6 +488,10 @@ c                  Linearize axis descriptors at the centre of the
 c                  displayed region.  Call new LAB3CG which labels with true 
 c                  world coords on third axis.
 c    nebk 23dec94  Make sure selected region no bigger than image
+c    nebk 05jan95  Use new PGIMAG in favour of PGGRAY adding support
+c                  for fiddling of lookup table for hardcopy devices
+c                  Make sure annotation writes reference location as 
+c                  original, not linearized version
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -503,17 +513,18 @@ c
      +  lv(2), lm, lb, lhead
       real cepoch(maxcon), gepoch, vepoch(2), mepoch, bepoch, epoch
       double precision cdelt(maxnax), crval(maxnax),
+     +  scdelt(maxnax), scrval(maxnax),
      +  ccdelt(maxnax,maxcon), ccrval(maxnax,maxcon), 
      +  gcdelt(maxnax), gcrval(maxnax), 
      +  vcdelt(maxnax,2), vcrval(maxnax,2), 
      +  mcdelt(maxnax), mcrval(maxnax),
      +  bcdelt(maxnax), bcrval(maxnax),
-     +  crpix(maxnax), ccrpix(maxnax,maxcon), 
+     +  crpix(maxnax), scrpix(maxnax), ccrpix(maxnax,maxcon), 
      +  gcrpix(maxnax), vcrpix(maxnax,2), mcrpix(maxnax),
      +  bcrpix(maxnax), opos(6,maxpos)
       logical maskc(maxcon), maskg, maskv(2), maskm, maskb
-      character*9 ctype(maxnax), cctype(maxnax,maxcon), gctype(maxnax),
-     +  vctype(maxnax,2), mctype(maxnax), bctype(maxnax)
+      character*9 ctype(maxnax), sctype(maxnax), cctype(maxnax,maxcon), 
+     +  gctype(maxnax), vctype(maxnax,2), mctype(maxnax), bctype(maxnax)
       character cin(maxcon)*64, gin*64, vin(2)*64, mskin*64, bin*64,
      +  ltypes(maxtyp)*6
 c
@@ -556,7 +567,10 @@ c
      +             'rellin', 'absdeg', 'reldeg', 'none'/
       data dmm /2*0.0/
 c-----------------------------------------------------------------------
-      call output ('CgDisp: version 23-Dec-94')
+      call output ('CgDisp: version 05-Jan-95')
+      call output ('Options=fiddle will now work partially for hard ')
+      call output ('copy devices -- see help options')
+      call output (' ')
       call output ('Non-linear coordinates are now partially handled')
       call output ('See "help cgcoords" for explanations')
       call output (' ')
@@ -611,8 +625,10 @@ c
         end do
       end if
 c
-c Linearize axis descriptors if non-pixel labels requested
+c Save and linearize axis descriptors if non-pixel labels requested
 c
+      call savdescg (naxis, ctype, crval, crpix, cdelt, sctype,
+     +               scrval, scrpix, scdelt)
       call linco (lhead, labtyp, blc, trc, grpbeg, ngrp, ctype,
      +            crval, crpix, cdelt)
 c
@@ -658,11 +674,14 @@ c
       call pgpage
       call pgscf(2)
       call pgqinf ('hardcopy', hard, ilen)
-      if (hard.eq.'YES') dofid = .false.
 c
 c Init OFM routines 
 c
       if (dofid) call ofmini
+c  
+c Generate and apply default greyscale lookup table
+c
+      if (gin.ne.' ') call setgrcg    
 c
 c Set label displacements from axes and set PGTBOX labelling 
 c option strings
@@ -764,19 +783,26 @@ c
      +       call apptrfcg (pixr2, trfun(igr), groff, win(1)*win(2),
      +          memi(ipnim), memr(ipim), nbins, his, cumhis)
 c
+c Modify OFM for harcopy devices here; must be done before
+c PGIMAG called
+c
+         if (hard.eq.'YES' .and. dofid .and. (jj.eq.1 .or. dosing))
+     +     call ofmmod (tfvp, win(1)*win(2), memr(ipim), 
+     +                  memi(ipnim), pixr2(1), pixr2(2))
+c
 c Draw grey scale 
 c
            call pgslw (1)
-           call pgsci (1)
-           call pggray (memr(ipim), win(1), win(2), 1, win(1), 1,
-     +                  win(2), pixr2(2), pixr2(1), tr)
+           call pgimag (memr(ipim), win(1), win(2), 1, win(1), 1,
+     +                  win(2), pixr2(1), pixr2(2), tr)
          end if
 c
 c Label and draw axes before fiddle else looks silly. Also forces
 c update of grey scale on screen.
 c
          call pgslw(lwid(1))
-         call pgsci (7)
+         call pgsci (1)
+         if (hard.eq.'NO') call pgsci (7)
          call axlabcg (gaps, nx, ny, ngrps, nlast, j, xopts, yopts,
      +      xdispl, ydispb, labtyp, xlabel, ylabel, xxopts, yyopts)
          call pgtbox (xxopts, 0.0, 0, yyopts, 0.0, 0)
@@ -787,9 +813,10 @@ c
          if (dowedge) call wedgecg (wedcod, wedwid, jj, trfun(igr), 
      +     groff, nbins, cumhis, wdgvp, pixr(2,igr), pixr(1,igr))
 c
-c Modify OFM
+c Modify OFM for interactive devices here
 c
-         if (dofid .and. ((jj.eq.nx*ny .or. j.eq.ngrps) .or. dosing))
+         if (hard.eq.'NO' .and. dofid .and. 
+     +       ((jj.eq.nx*ny .or. j.eq.ngrps) .or. dosing))
      +     call ofmmod (tfvp, win(1)*win(2), memr(ipim), 
      +                  memi(ipnim), pixr2(1), pixr2(2))
 c
@@ -912,10 +939,11 @@ c Plot annotation
 c
          if (dofull .and. (jj.eq.nx*ny .or. j.eq.ngrps)) then
            call pgslw (1)
-           call pgsci (7)
+           call pgsci (1)
+           if (hard.eq.'NO') call pgsci (7)
            call fullann (ncon, cin, gin, vin, bin, lc, lg, lv, lb,
      +        maxlev, nlevs, levs, srtlev, slev, npixr, trfun, pixr, 
-     +        vfac, bfac, naxis, size, crval, crpix, cdelt, ctype,
+     +        vfac, bfac, naxis, size, scrval, scrpix, scdelt, sctype,
      +        vymin, blc, trc, cs, ydispb, ibin, jbin, kbin, 
      +        labtyp, gmm, cmm)
            call pgsci (1)
@@ -989,6 +1017,7 @@ c
       character*(*) labtyp(2), ctype(naxis), in
       logical pres
 cc
+      character line*80
       integer il, len1, irad1, irad2
 c-----------------------------------------------------------------------
       call rdhdr (lin, 'bmin', bmin,  -1.0)
@@ -1012,8 +1041,9 @@ c
           pres = .true.
         else
           il = len1(in)
-          call bug ('w', 'Axes for image '//in(1:il)//
-     +              ' are not recognized as having')
+          line = 'Axes for image '//in(1:il)//
+     +           ' are not recognized as having'
+          call bug ('w', line)
           call bug ('w', 'increments in radians. Cannot plot beam')
         end if
       end if
@@ -1323,15 +1353,21 @@ c-----------------------------------------------------------------------
 c
 c Allow 2-D with 3-D, but two 3-D cubes must be the same size
 c
-      if (size1(1).ne.size2(1)) 
-     +   call bug ('f', 'Unequal dimensions for images '//
-     +             im1(1:l1)//' & '//im2(1:l2)//' on axis 1')
-      if (size1(2).ne.size2(2)) 
-     +   call bug ('f', 'Unequal dimensions for images '//
-     +             im1(1:l1)//' & '//im2(1:l2)//' on axis 2')
-      if (size1(3).gt.1.and.size2(3).gt.1.and.size1(3).ne.size2(3))
-     +   call bug ('f', 'Inconsistent dimensions for images '//
-     +             im1(1:l1)//' & '//im2(1:l2)//' on axis 3')
+      if (size1(1).ne.size2(1)) then
+        line = 'Unequal dimensions for images '//im1(1:l1)//
+     +         ' & '//im2(1:l2)//' on axis 1'
+        call bug ('f', line)
+      end if
+      if (size1(2).ne.size2(2)) then
+        line = 'Unequal dimensions for images '//im1(1:l1)//
+     +         ' & '//im2(1:l2)//' on axis 2'
+        call bug ('f', line)
+      end if
+      if (size1(3).gt.1.and.size2(3).gt.1.and.size1(3).ne.size2(3)) then
+        line = 'Inconsistent dimensions for images '//im1(1:l1)//
+     +         ' & '//im2(1:l2)//' on axis 3'
+        call bug ('f', line)
+      end if
 c
       if (epoch1.ne.epoch2) then
         line = 'Unequal epochs for images '//im1(1:l1)//' & '//im2(1:l2)
@@ -2043,7 +2079,7 @@ c   mirror     Multiply contours by -1 and add to list
 c   dowedge    Draw a wedge on the greyscale
 c   doepoch    Write epoch into axis labels
 c   dofid      Interactive fiddle
-c   dosing     FIddle after each subplot
+c   dosing     Fiddle after each subplot
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -2442,7 +2478,7 @@ c
 c------------------------------------------------------------------------
       implicit none
       integer lun
-      character*(*) otype(2)
+      character*6 otype(2)
       double precision pos(2), widthx, widthy, widthp(2)
 cc
       double precision win(2), wout(2), pixin(2)
