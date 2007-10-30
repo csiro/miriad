@@ -179,8 +179,8 @@ void uvinfo_c ARGS((int tno, Const char *object, double *data));
 #define uvputvrc_c(tno,name,value,n) \
         uvputvr_c(tno,H_CMPLX,name,(char *)(value),n)
 
-#define uvgetvra_c(tno,name,value)   \
-        uvputvr_c(tno,H_BYTE,name,value,strlen(value))
+#define uvgetvra_c(tno,name,value,n)   \
+        uvgetvr_c(tno,H_BYTE,name,value,n)
 #define uvgetvrj_c(tno,name,value,n) \
         uvgetvr_c(tno,H_INT2,name,(char *)(value),n)
 #define uvgetvri_c(tno,name,value,n) \
@@ -198,9 +198,9 @@ void uvinfo_c ARGS((int tno, Const char *object, double *data));
 	uvrdvr_c(tno,H_INT,name,(char *)(data),(char *)(def),1)
 #define uvrdvrr_c(tno,name,data,def) \
 	uvrdvr_c(tno,H_REAL,name,(char *)(data),(char *)(def),1)
-#define uvrdvri_c(tno,name,data,def) \
+#define uvrdvrd_c(tno,name,data,def) \
 	uvrdvr_c(tno,H_DBLE,name,(char *)(data),(char *)(def),1)
-#define uvrdvri_c(tno,name,data,def) \
+#define uvrdvrc_c(tno,name,data,def) \
 	uvrdvr_c(tno,H_CMPLX,name,(char *)(data),(char *)(def),1)
 /* xyio.c */
 
@@ -248,4 +248,3 @@ void scrwrite_c ARGS((int handle, Const float *buffer, int offset, int length));
 #if defined(__cplusplus)
 }
 #endif
-
