@@ -31,6 +31,11 @@ c		 to decreasing frequency, as actually happens in nature.
 c    rjs 28jul89 Added debiased least squares to Zed. 
 c    nebk15sep89 Added ZedVHat
 c    rjs 25jan90 Minor documentation improvement.
+c    rjs 10mar93 Use maxdim.h and MemAlloc/MemFree.
+c    rjs 25jun93 Fudges to ZedFudge to make it more robust (but still
+c		 give poor fudge factors).
+c    nebk01jul94 Prevent zedscale from working on cubes with optical
+c                velocity axes as it does the sums for a radio velocity
 c
 c  Routines:
 c    ZedScale Returns the conversion factor between channel increment and
@@ -105,17 +110,20 @@ c
 c Assume rest freq in GHz, cdelt in km/s.  Get the sign correct!!!
 c Increasing velocity => decreasing freq, hence "-" in "scale =" statement.
 c
-      else if (ctype(1:4).eq.'VELO' .or. ctype(1:4).eq.'FELO') then
+      else if (ctype(1:4).eq.'VELO') then
          call rdhdr(lunI,'restfreq',rfreq,0.0)
          if (rfreq.ne.0.0 .and. cdelt.ne.0.0) then
            scale = -rfreq * 1.0e9 * cdelt / light
          else
            umsg = 'Rest frequency or first axis increment '
-     &            //'not in header'
+     +            //'not in header'
 	   call bug('f',umsg )
          endif
+      else if (ctype(1:4).eq.'FELO') then
+         call bug ('f', 
+     +   'Cube must have radio, not optical velocity axis -- use VELSW')
       else
-         call bug('f','First axis must be FREQ, VELO, or FELO') 
+         call bug('f','First axis must be FREQ or VELO') 
       endif
 c
 c Now try to match the user given FREQ to those in the list.  If a match
@@ -344,8 +352,7 @@ c
 c  Output:
 c    ihat	An estimate of the true value of I.
 c------------------------------------------------------------------------
-	integer maxchan
-	parameter(maxchan=256)
+	include 'maxdim.h'
 	integer j,delta
 c
 	delta = 0
@@ -389,8 +396,7 @@ c    VHat	An estimate of the true value of V.  Note that the first
 c               and possibly last (depending on derivative type) is NOT 
 c               filled.
 c------------------------------------------------------------------------
-	integer maxchan
-	parameter(maxchan=256)
+	include 'maxdim.h'
 	integer i,j,delta
         real s,der
 c
@@ -441,8 +447,7 @@ c		sigi = \sqrt{\chi^2/((m-1)*n)}
 c		The expected value of this at the minimum is \sigma_I.
 c--
 c------------------------------------------------------------------------
-	integer maxchan
-	parameter(maxchan=256)
+	include 'maxdim.h'
 	integer i,j,delta
 	real i0(maxchan),ad,t
 c
@@ -567,9 +572,10 @@ c    sigi	Estimate of the rms noise in I and V.
 c    convrg	True if the procedure converged.
 c
 c------------------------------------------------------------------------
-	integer MaxNiter,maxchan
+	include 'maxdim.h'
+	integer MaxNiter
 	real epsi
-	parameter(MaxNiter=200,epsi=1e-4,maxchan=256)
+	parameter(MaxNiter=200,epsi=1e-4)
 c
 	integer i,j,niter
 	logical more
@@ -668,8 +674,7 @@ c
 c  Outputs:
 c    I0		The estimate of I0.
 c------------------------------------------------------------------------
-	integer maxchan
-	parameter(maxchan=256)
+	include 'maxdim.h'
 	real aa,ab,aab,aaab,beta
 	real gamma(maxchan)
 	integer i
@@ -716,8 +721,7 @@ c  This finds the maximum likelihood solution of I0, when a two sided
 c  derivative is used. It involves solving a pentadiagonal system of
 c  equations.
 c------------------------------------------------------------------------
-	integer maxchan
-	parameter(maxchan=256)
+	include 'maxdim.h'
 	real abd(3,maxchan),ad,bd
 	integer i,ifail
 c
@@ -805,15 +809,29 @@ c    fudge	Sigma fudge factor. Sigma estimates derived by ignoring the
 c		noise correlation should be multiplied by this fudge factor
 c		to get better error estimates.
 c--
+c
+c  NOTE: We set MAXXY statically. Allowing it to become arbitrarily big
+c  runs us into singular maxtrix problems. All this code is a fudge anyway
+c  and of limited use. The fudge factor is not reliable, and Monte Carlo
+c  simulations should be used in preference.
 c------------------------------------------------------------------------
-	integer maxxy,maxchan
-	parameter(maxxy=100,maxchan=128)
-	real ap(maxxy*(maxxy+1)/2),gamma(maxchan-1)
-	real di((maxchan-1)*maxxy),rdi((maxchan-1)*maxxy)
+	include 'maxdim.h'
+	integer MAXXY
+	parameter(MAXXY=100)
+c
+	integer pAP,pDI,pRDI
+	real gamma(MAXCHAN)
 c
 	logical spatial,spectral
-	integer delta,md,i,n1d,n2d,off
+	integer delta,md,n1d,n2d,off
 	real SumDD,SumDRD
+c
+	real ref(MAXBUF)
+	common ref
+c
+c  Externals.
+c
+	real sdot
 c
 c  Initialise.
 c
@@ -830,7 +848,7 @@ c
 	if(m.gt.maxchan)
      *	  call bug('f','Spectral dimension is too big')
 c
-c  If the spatial dimension is too bit, just handle a subwindow.
+c  If the spatial dimension is too big, just handle a subwindow.
 c  ZedWind determines a good subwindow.
 c
 	if(n1*n2.gt.maxxy)then
@@ -843,38 +861,45 @@ c
 	  n2d = n2
 	endif
 c
+c  Allocate memory.
+c
+	call MemAlloc(pDI,(m-1)*n1d*n2d,'r')
+	call MemAlloc(pRDI,(m-1)*n1d*n2d,'r')
+	call MemAlloc(pAP,n1d*n2d*(n1d*n2d+1)/2,'r')
+c
 c  Determine DI, and make a copy of it.
 c
-	call ZedDi(ispect(1,off),vspect(1,off),a,b,di,m,md,n1d,n2d,n1,
-     *								delta)
-	do i=1,md*n1d*n2d
-	  Rdi(i) = Di(i)
-	enddo
+	call ZedDi(ispect(1,off),vspect(1,off),a,b,ref(pDI),
+     *					m,md,n1d,n2d,n1,delta)
+	call scopy(md*n1d*n2d,ref(pDI),1,ref(pRDI),1)
 c
 c  Do RDi for the spectral portion.
 c
 	if(spectral)then
 	  call ZedFCov(gamma,md,rho)
-	  call ZedFApp(RDi,md,n1d*n2d,gamma,rho)
+	  call ZedFApp(ref(pRDI),md,n1d*n2d,gamma,rho)
 	endif
 c
 c  Do RDi for the spatial portion.
 c
 	if(spatial)then
-	  call ZedXYCov(ap,n1d,n2d,beam,nx,ny)
-	  call ZedXYApp(RDi,md,n1d*n2d,ap)
+	  call ZedXYCov(ref(pAP),n1d,n2d,beam,nx,ny)
+	  call ZedXYApp(ref(pRDI),md,n1d*n2d,ref(pAP))
 	endif
 c
 c  Determine the relevant inner product.
 c
-	SumDD = 0
-	SumDRD = 0
-	do i=1,md*n1d*n2d
-	  SumDD = SumDD + di(i)*di(i)
-	  SumDRD = SumDRD + di(i)*RDI(i)
-	enddo
+	SumDD = sdot(md*n1d*n2d,ref(pDI),1,ref(pDI),1)
+	SumDRD = sdot(md*n1d*n2d,ref(pDI),1,ref(pRDI),1)
 c
 	Fudge = sqrt(SumDD / SumDRD)
+c
+c  Free up memory.
+c
+	call MemFree(pDI,(m-1)*n1d*n2d,'r')
+	call MemFree(pRDI,(m-1)*n1d*n2d,'r')
+	call MemFree(pAP,n1d*n2d*(n1d*n2d+1)/2,'r')
+c
 	end
 c************************************************************************
 	subroutine ZedWind(ispect,m,n1,n2,maxxy,off,n1d,n2d)
@@ -936,8 +961,7 @@ c  Output:
 c    di		Derivative spectra.
 c
 c------------------------------------------------------------------------
-	integer maxchan
-	parameter(maxchan=128)
+	include 'maxdim.h'
 	real ihat(maxchan),s
 	integer i,j,k,j0
 c
@@ -1170,15 +1194,24 @@ c    it is faster and just as accurate (more accurate in siga) to call
 c    the combination of Zed and ZedFudge.
 c--
 c------------------------------------------------------------------------
-	integer maxchan,maxniter
+	include 'maxdim.h'
+	integer maxniter
 	real epsi
-	parameter(maxchan=128,maxniter=200,epsi=1.e-4)
-	real RDRD(maxchan*maxchan),RDRV(maxchan),Ihat(maxchan)
-	real A0(maxchan*maxchan),DI(maxchan),RDI(maxchan)
+	parameter(maxniter=200,epsi=1.e-4)
+	real RDRV(maxchan),Ihat(maxchan),DI(maxchan),RDI(maxchan)
 	integer pivot(maxchan)
 	integer i,j,niter,i0,ifail,delta
 	real t,SumVD,SumDD,OldA
 	logical more,leak
+	integer pA0,pRDRD
+c
+	real ref(MAXBUF)
+	common ref
+c
+c  Allocate memory.
+c
+	call MemAlloc(pRDRD,m*m,'r')
+	call MemAlloc(pA0,m*m,'r')
 c
 c  Check input parameters.
 c
@@ -1205,13 +1238,13 @@ c
 c  Calculate the matrix RD^TR^{-1}D.
 c
 	do j=1,m
-	  i0 = (j-1)*m
+	  i0 = (j-1)*m + pRDRD - 1
 	  do i=i0+1,i0+m-1
-	    RDRD(i) = 0
+	    ref(i) = 0
 	  enddo
-	  if(j.ne.m)RDRD(i0+j) = -1
-	  if(j.ne.1)RDRD(i0+j-1) = 1
-	  call ZedRDR(RDRD(i0+1),m,rho)
+	  if(j.ne.m)ref(i0+j) = -1
+	  if(j.ne.1)ref(i0+j-1) = 1
+	  call ZedRDR(ref(i0+1),m,rho)
 	enddo
 c
 c  Calculate the vector RD^TR^{-1}V.
@@ -1229,14 +1262,12 @@ c
 c
 c  Determine a new Ihat.
 c
-	  do j=1,m*m
-	    A0(j) = RDRD(j)
-	  enddo
+	  call scopy(m*m,ref(pRDRD),1,ref(pA0),1)
 	  t = 1/(a*a)
 	  do j=1,m*m,(m+1)
-	    A0(j) = A0(j) + t
+	    ref(pA0+j-1) = ref(pA0+j-1) + t
 	  enddo
-	  call sgefa(A0,m,m,pivot,ifail)
+	  call sgefa(ref(pA0),m,m,pivot,ifail)
 	  if(ifail.ne.0) call bug('f','Failed to invert a matrix')
 c
 c  Form the right hand side, and solve.
@@ -1244,7 +1275,7 @@ c
 	  do j=1,m
 	    Ihat(j) = Ispect(j)/(a*a) + RDRV(j)/a
 	  enddo
-	  call sgesl(A0,m,m,pivot,ihat,1)
+	  call sgesl(ref(pA0),m,m,pivot,ihat,1)
 c
 c  Calculate DI and R^{-1}DI.
 c
@@ -1281,6 +1312,11 @@ c
 	b = 0
 	sigb = 0
 c
+c  Free memory.
+c
+	call MemFree(pRDRD,m*m,'r')
+	call MemFree(pA0,m*m,'r')
+c
 	end
 c************************************************************************
 	subroutine ZedRDR(x,n,rho)
@@ -1299,8 +1335,7 @@ c  Input/Output:
 c    x		On input, there are N-1 elements in "data". On output
 c		there are the N elements.
 c------------------------------------------------------------------------
-	integer maxchan
-	parameter(maxchan=128)
+	include 'maxdim.h'
 	integer i
 	real y(maxchan)
 c
@@ -1344,8 +1379,7 @@ c
 c  In/Out:
 c    x
 c------------------------------------------------------------------------
-	integer maxchan
-	parameter(maxchan=128)
+	include 'maxdim.h'
 	real beta,gamma(maxchan)
 	integer i
 c
