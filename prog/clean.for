@@ -74,8 +74,8 @@ c	PHAT gives the value of this spike, with 0 to 0.5 being good
 c	values. Default is 0 (but use a non-zero value for extended
 c	sources). 
 c@ minpatch
-c	The minimum patch size when performing minor iterations. Default
-c	is 51, but make this larger if you are having problems with
+c	The minimum patch size when performing minor iterations, in pixels.
+c       Default is 51, but make this larger if you are having problems with
 c	corrugations. You can make it smaller when cleaning images which
 c	consist of a pretty good dirty beam. 
 c@ speed
@@ -142,6 +142,7 @@ c   rjs  02jul97 - cellscal change.
 c   rjs  23jul97 - added pbtype.
 c   rjs  22oct99 - doc change only.
 c   rjs  28aug00 - Increase max complexity of region-of-interest.
+c   dpr  06mar01 - Doc change only.
 c
 c  Important Constants:
 c    MaxDim	The max linear dimension of an input (or output) image.
