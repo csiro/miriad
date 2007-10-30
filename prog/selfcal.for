@@ -109,9 +109,11 @@ c    rjs  26nov90 Minor changes to the phase-solution routine, to make it
 c		  more persistent.
 c    mjs  25feb91 Changed references of itoa to itoaf.
 c    rjs  25mar91 Added `relax' option. Minor changes to appease flint.
+c    rjs   5apr91 Trivial change to get ModelIni to do some polarisation
+c		  handling.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='version 1.0 25-Mar-91')
+	parameter(version='version 1.0 5-Apr-91')
 	integer MaxMod,maxsels,nhead
 	parameter(MaxMod=32,maxsels=256,nhead=3)
 c
@@ -213,9 +215,9 @@ c
 	    call SelfSet(i.eq.1,MinAnts,.true.)
 	    call xyopen(tmod,Models(i),'old',3,nsize)
 	    if(doline)then
-	      call ModelIni(tmod,tvis,sels,'p')
+	      call ModelIni(tmod,tvis,sels,'ps')
 	    else
-	      call ModelIni(tmod,tvis,sels,'lp')
+	      call ModelIni(tmod,tvis,sels,'lps')
 	    endif
 	    call Model(flag,tvis,tmod,offset,Clip,tscr,
      *					nhead,header,nchan,nvis)
