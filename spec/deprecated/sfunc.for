@@ -72,6 +72,9 @@ c
 	  enddo
 	  call uvVarini(tno,vupd)
 	  call uvvarSet(vupd,'antpos')
+	  call uvvarSet(vupd,'ra')
+	  call uvvarSet(vupd,'dec')
+c
 	  call uvDatRd(preamble,data,flags,MAXCHAN,nchan)
 	  dowhile(nchan.gt.0)
 	    if(uvvarUpd(vupd))then
