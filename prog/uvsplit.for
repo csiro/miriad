@@ -64,6 +64,7 @@ c		  missing.
 c    rjs  29may96 Added nbin to uvvariables.
 c    rjs  05aug96 Increased maxfiles.
 c    rjs  23jul97 Added pbtype.
+c    rjs  16aug04 Added various variables to the list to be copied across.
 c  Bugs:
 c   Perfect?
 c------------------------------------------------------------------------
@@ -71,7 +72,7 @@ c------------------------------------------------------------------------
 	integer MAXSELS
 	parameter(MAXSELS=256)
 	character version*(*)
-	parameter(version='UvSplit: version 1.0 05-Oct-95')
+	parameter(version='UvSplit: version 1.0 16-Aug-04')
 c
 	character vis*64,dtype*1
 	integer tvis
@@ -688,7 +689,7 @@ c------------------------------------------------------------------------
 	character line*64
 c
 	integer NCOPY,NSCHECK,NWCHECK
-	parameter(NCOPY=71,NSCHECK=8,NWCHECK=3)
+	parameter(NCOPY=81,NSCHECK=8,NWCHECK=3)
 	character copy(NCOPY)*8,scheck(NSCHECK)*8,wcheck(NWCHECK)*8
         data copy/    'airtemp ','antdiam ','antpos  ','atten   ',
      *     'axisrms ','chi     ','corbit  ','corbw   ','corfin  ',
@@ -704,7 +705,9 @@ c
      *     'veldop  ','veltype ','version ','vsource ','winddir ',
      *     'windmph ','delay0  ','npol    ','pol     ','bin     ',
      *	   'nbin    ','pbtype  ','xtsys   ','ytsys   ','xsampler',
-     *	   'ysampler','xyamp   '/
+     *	   'ysampler','xyamp   ','antaz   ','antel   ','axismax ',
+     *	   'calcode ','name    ','pntra   ','pntdec  ','pressmb ',
+     *	   'project ','wind    '/
 c
 	data SCheck/  'nspect  ','restfreq','ischan  ','nschan  ',
      *     'sfreq   ','sdf     ','systemp ','xyphase '/

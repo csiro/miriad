@@ -34,23 +34,32 @@ c	the lag flagging process. Currently only "polarization", "antenna"
 c	and "time" selection is supported in this task. This should be
 c	sufficient to select a correlator product that is bad over a
 c	particular period.
+c@ options
+c	This gives extra processing options. Several options can be given,
+c	each separated by commas. They may be abbreviated to the minimum 
+c	needed to avoid ambiguity. Possible options are:
+c	  noflag    By default, "lagflg" zeros flagged data before it
+c	            transforms to the lag domain. At times this might
+c	            no be desirable - in which case use this option.
+c	
 c--
 c
 c  History:
 c    17-Mar-97 rjs  Original version.
 c    14-feb-01 rjs  Tidy up.
+c    25-oct-02 rjs  Added options=noflag
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
 	integer MAXSELS,MAXLAGS
-	parameter(version='Lagflg: version 1.0 21-Feb-01')
+	parameter(version='Lagflg: version 1.0 25-Oct-02')
 	parameter(MAXSELS=200,MAXLAGS=32)
 c
 	integer tIn,tOut,n,off,nvis,i,j,pol,npol,nchan
 	character vis*64,out*64
 	real rdata(2*MAXCHAN-2),sels(MAXSELS)
 	complex data(MAXCHAN)
-	logical flags(MAXCHAN)
+	logical flags(MAXCHAN),doflag
 	integer lags(2,MAXLAGS),nlags
 	double precision preamble(5)
 c
@@ -71,6 +80,8 @@ c
      *	  call bug('f','Odd number of values given for "lags"')
 	if(nlags.eq.0)call bug('f','No values were given for "lags"')
 	nlags = nlags / 2
+c
+	call getopt(doflag)
 	call keyfin
 c
 	call uvopen(tIn,vis,'old')
@@ -94,6 +105,11 @@ c
 	  if(selProbe(sels,'time',preamble(4)).and.
      *	     selProbe(sels,'antennae',preamble(5)).and.
      *	     selProbe(sels,'polarization',dble(pol)))then
+	    if(doflag)then
+	      do i=1,nchan
+	        if(.not.flags(i))data(i) = (0.,0.)
+	      enddo
+	    endif
 	    call fftcr(data,rdata,-1,n)
 	    call shifty(rdata,n)
 	    do j=1,nlags
@@ -129,6 +145,21 @@ c
 	call uvclose(tIn)
 	call uvclose(tOut)
 c
+	end
+c************************************************************************
+	subroutine getopt(doflag)
+c
+	implicit none
+	logical doflag
+c
+c------------------------------------------------------------------------
+	integer nopts
+	parameter(nopts=1)
+	character opts(nopts)*8
+	logical present(nopts)
+	data opts/'noflag  '/
+	call options('options',opts,present,nopts)
+	doflag = .not.present(1)
 	end
 c************************************************************************
 	subroutine calcopy(tIn,tOut)
