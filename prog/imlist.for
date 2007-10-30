@@ -63,14 +63,14 @@ c  mchw 28oct92  Added datamin, datamax to header.
 c  nebk 25nov92  Add btype to header
 c  nebk 18nov93  Allow semi-infinite sized regions in data listing
 c  rjs  18oct94  Print contents of mosaic tables.
-c  pjt   2jan94  Order of data statement for f2c
+c  pjt  15mar95  fixed declaration order for f2c (linux)
 c
 c  Bugs:
 c    Data format still needs work to prevent format overflow.
 c    Doesn't handle pixel blanking outside region of interest.
 c----------------------------------------------------------------------c
 	character version*(*)
-	parameter(version='version 2-jan-95')
+	parameter(version='version 15-mar-95')
 	include 'maxdim.h'
 	integer maxboxes,maxnax
 	parameter(maxboxes=2048,maxnax=3)
@@ -274,7 +274,6 @@ c
      *	  'bunit   ','niters  ','bmaj    ','bmin    ','bpa     ',
      *	  'xshift  ','yshift  ','pbfwhm  ','datamin ','datamax ',
      *    'btype   '/
-
 c
 c  Probe for each item and convert to user units.
 c
