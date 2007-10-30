@@ -73,7 +73,7 @@ c    mhw    2sep95    Add 'batch-mode': commands, notv option
 c    smw   15mar98    Converted TVCLIP to TVWCLIP by using wides not channels
 c    pjt   19aug99    Consolidated TVWCLIP into TVCLIP
 c    smw   30aug99    Submitted!
-
+c    rjs   21sep00    options=nosrc
 c***********************************************************************
 c= Tvclip - Interactive editing of a UV data set on a TV device.
 c& jm
@@ -243,9 +243,13 @@ c     keyboard if "commands" is set.
 c
 c
 c< select
-c
 c     NOTE: The default is to use all visibilities.
-c
+c@ options
+c     Extra processing options. Several can be given, separated by
+c     commas. Minimum match is used. Possible values are:
+c       nosrc   Do not cause a break in the display when the source
+c               changes. Normally TVFLAG puts a gap in the display
+c               whenever the source changes.
 c--
 c-----------------------------------------------------------------------
 c
@@ -277,6 +281,7 @@ c
       real clip
       real Sels(MAXSELS)
       logical center, Ctrl, nochan, notime, nopixel, notv, batch
+      logical nosrc
       integer nedit,edits(2,MAXBASE)
       real times(2,MAXEDIT)
       integer chans(2,MAXEDIT)
@@ -323,7 +328,7 @@ c - figure out 'channel' or 'wide' data
       call Keyr('taver', taver(1), 5.0)
       call Keyr('taver', taver(2), taver(1) )
       call Keyr('clip', clip, 5.0)
-      call GetOpt(nochan,notime,nopixel,notv)
+      call GetOpt(nochan,notime,nopixel,notv,nosrc)
       call mkeya('commands',Commands, MAXCMD, ncmd)
       batch=(ncmd.gt.0)
       if (batch) then
@@ -428,7 +433,7 @@ c
 c  Determine the flagging to be done.
 c
       call doEdit(Lin,apri,taver,center,jx0,jy0,channel,
-     *	  Ctrl,pmin,pmax,
+     *	  Ctrl,nosrc,pmin,pmax,
      *    edits,MAXBASE,day0,times,chans,flagval,MAXEDIT,nedit, clip,
      *    notime, nochan, nopixel, notv, batch, Commands, ncmd)
 c
@@ -455,10 +460,10 @@ c
       end
 c************************************************************************
 c************************************************************************
-        subroutine GetOpt(nochan,notime,nopixel,notv)
+        subroutine GetOpt(nochan,notime,nopixel,notv,nosrc)
 c
         implicit none
-        logical nochan,notime,nopixel,notv
+        logical nochan,notime,nopixel,notv,nosrc
 c
 c  Get extra processing options.
 c
@@ -467,12 +472,14 @@ c    nochan     True for no channel flagging by CLIP command
 c    notime     True for no time flagging by CLIP command
 c    nopixel    True for no single pixel flagging by CLIP command
 c    notv       True for no display on tv, only useful in 'batch' mode
+c    nosrc     
 c------------------------------------------------------------------------
         integer NOPTS
-        parameter(NOPTS=4)
+        parameter(NOPTS=5)
         logical present(NOPTS)
         character opts(NOPTS)*9
-        data opts/'nochannel','notime   ','nopixel  ','notv     '/
+        data opts/'nochannel','notime   ','nopixel  ','notv     ',
+     *		  'nosrc    '/
 c
         call options('options',opts,present,NOPTS)
 c
@@ -480,12 +487,13 @@ c
         notime  = present(2)
         nopixel = present(3)
         notv    = present(4)
+	nosrc   = present(5)
 c
         end
 
 c************************************************************************
 	subroutine doEdit(Lin,apri,taver,center,jx0,jy0,channel,
-     *	  Ctrl,pmin,pmax,
+     *	  Ctrl,nosrc,pmin,pmax,
      *    edits,nbase,day0,times,chans,flagval,MAXEDIT,nedit, clip,
      *    notime, nochan, nopixel, notv, batch, Commands, ncmd)
 c
@@ -495,6 +503,7 @@ c
 	integer Lin,channel,jx0,jy0,nbase,maxedit,nedit, ncmd
 	character apri*1, Commands(MAXCMD)*10
 	logical center,Ctrl, notime, nochan, nopixel, notv, batch
+        logical nosrc
 	real taver(2),pmin,pmax
 	double precision day0
 	real times(2,maxedit), clip
@@ -512,6 +521,7 @@ c    jx0,jy0	BLC of the region to display.
 c    channel	Channel to use for the display.
 c    Ctrl	Whether to use the panel server or not.
 c    pmin,pmax	Scaling parameters.
+c    nosrc
 c    clip,notime,nochan,nopixel - used by clip option
 c    notv, batch, iCmds - used in batch mode
 c  Output:
@@ -583,7 +593,7 @@ c  baselines and times are present.
 c
 	call Output('Loading the data ...')
 	call CopyDat(lIn,lScr,apri,nchan,t1,MAXTIME,ntime,day0,ttol,
-     *		blpres,nbased,nvis,chanoff)
+     *		blpres,nbased,nvis,chanoff,nosrc)
 c
 c  Determine the time ranges to average together.
 c
@@ -1103,14 +1113,14 @@ c
 	end
 c************************************************************************
 	subroutine CopyDat(lIn,lScr,apri,nchan,time,MAXTIME,ntime,
-     *		day0,ttol,blpres,nbase,nvis,chanoff)
+     *		day0,ttol,blpres,nbase,nvis,chanoff,nosrc)
 c
 	implicit none
 	integer lIn,lScr,nchan,maxtime,ntime,nbase,nvis,chanoff
 	character apri*1
 	real time(maxtime),ttol
 	double precision day0
-	logical blpres(nbase)
+	logical blpres(nbase),nosrc
 c
 c  Copy the data to a scratch file.
 c
@@ -1180,7 +1190,11 @@ c
 	  if(bl.gt.0.and.bl.lt.nbase)then
 	    if(abs(t-tprev).gt.ttol)then
 	      if(t.lt.tprev)torder = .false.
-	      newsrc = uvVarUpd(vsrc)
+	      if(nosrc)then
+	        newsrc = .false.
+	      else
+	        newsrc = uvVarUpd(vsrc)
+	      endif
 	      if(ntime.gt.0.and.
      *		(newsrc.or.t-tprev.gt.120*ttol.or.t.lt.tprev))then
 		if(ntime.ge.MAXTIME)
