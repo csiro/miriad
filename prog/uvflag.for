@@ -136,6 +136,7 @@ c	    rjs     16aug96 Eliminate MAXWIDE definition. Change NSELS,
 c			    standardise some FORTRAN.
 c           rjs     09dec97 Make antennas used message more robust.
 c           rjs     11mar98 Some FORTRAN standardisation, to appease g77.
+c           rjs     30aug99 Increase outline to 256 chars.
 c************************************************************************
 c uvflag works as follows:
 c It reads the name of the first visibility file.
@@ -1024,7 +1025,7 @@ c Type an overview and update history to finish off
       integer       lt, lt1, lt2
       integer       reccount, treccnt
       integer       totcount, totcnt(6), i, l
-      character     outline*128
+      character     outline*256
 c
 c  Externals.
 c
