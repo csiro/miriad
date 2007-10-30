@@ -1,19 +1,30 @@
       program cgdisp
 c-----------------------------------------------------------------------
 c
-c= CGDISP - Contour, grey scale & vector plots of images with PGPLOT
+c= CGDISP - displays and overlays images on a PGPLOT device
 c& nebk
 c: plotting
 c+
-c	CGDISP overlays contours, grey scales and vectors on a PGPLOT
-c	device.  Up to 3 contour plots, one grey scale and one vector
-c	plot may be overlaid in multi-panel plots of multi-channel 
+c	CGDISP displays/overlays images via contour plots, pixel map
+c	representations, vectors and scaled boxes on a PGPLOT device. 
+c	Upto 3 contour plots, one pixel map, one vector plot and one box 
+c	display may be overlaid in multi-panel plots of multi-channel 
 c	images.  In addition overlay locations (plotted as boxes, stars,
 c	lines or see-through) may be specified from an ascii text file.
+c
+c	Manipulation of the device colour lookup table is available
+c	when you display with a pixel map representation (formerly
+c	called a "grey scale")
+c
 c@ in
-c	You may input up to 7 images of which there can be up to 3 contour
-c	images, 1 grey scale, 1 vector amplitude, 1 vector position angle
-c	(degrees; positive N -> E) image, 1 box, and 1 mask image.  
+c	You may input up to 7 images.  Upto 3 of these can be displayed 
+c	via contour plots and 1 can be displayed via a colour pixel map 
+c	representation.  1 vector amplitude image and 1 vector position
+c	angle image (degrees; positive N -> E) can together be used to
+c	display a vector map (e.g. polarization vectors).  1 image can
+c	be displayed as small scaled boxes (see below) and 1 image may be
+c	used as a mask.  
+c
 c	The "box" image is displayed by drawing little boxes (solid and
 c	hollow for positive and negative pixels) at the location of each
 c	selected pixel.  The size of the box scales with the value of the
@@ -30,17 +41,18 @@ c	These images can be input in any order (see TYPE).
 c	Wild card expansion is supported.    No default.
 c@ type
 c	Specifies the type of each image listed in the IN keyword.
-c	Minimum match is supported.   Choose from:
+c	Minimum match is supported (note that "pixel" was formerly "grey"
+c	which is still supported).   Choose from:
 c
 c	"contour"   (contour;            up to 3 of these)
-c	"grey"      (grey scale;         up to 1 of these)
+c	"pixel"     (pixel map;          up to 1 of these)
 c	"amplitude" (vector amplitude;   up to 1 of these)
 c	"angle"     (vector pos'n angle; up to 1 of these)
 c	"box"       (box;                up to 1 of these)
-c	"mask"      (mask image;         up to 1 of these)
+c	"mask"      (mask;               up to 1 of these)
 c
 c	You can't give one of "amplitude" or "angle" without the other.
-c	Defaults are all contour.
+c	Default is "pixel" for one image, "contour" if more than one.
 c@ region
 c	Region of interest.  Choose only one spatial region (bounding box
 c	only supported), but as many spectral regions (i.e., multiple 
@@ -90,12 +102,21 @@ c	LEVS for the second contour image.
 c@ levs3
 c	LEVS for the third contour image.
 c@ range
-c	Upto 100 groups of 3 values (1 group per subplot). These are 
-c	the grey scale range (background to foreground), and transfer 
-c	function type for each subplot displayed.  The transfer function 
-c	type can be one of "lin" (linear), "sqr" (square root), "log" 
-c	(logarithmic), and "heq" (histogram equalization).  See also 
-c	OPTIONS=FIDDLE which is in addition to the selections here.
+c	Upto 100 groups of 4 values (1 group per subplot). These are 
+c	the image intensity range to display (min to max), the transfer 
+c	function type and the colour lookup table for each subplot 
+c	displayed.  The transfer function type can be one of "lin" 
+c	(linear), "sqr" (square root), "log" (logarithmic), and "heq" 
+c	(histogram equalization).  The colour lookup table is an integer 
+c	from 1 to 8 specifying a lookup table. Valud values are 1 (b&w),
+c	2 (rainbow), 3 (linear pseudo colour), 4 (floating zero colour 
+c	contours), 5 (fixed zero colour contours), 6 (rgb), 7 (background)
+c	and 8 (heat).  If you enter a negative integer, then the reversed 
+c	lookup table is displayed.  
+c
+c	The transfer function changes available with OPTIONS=FIDDLE 
+c	are in addition (on top of) to the selections here, but the 
+c	colour lookup table selections will replace those selected here.
 c
 c	All subplots following the last one with a specified "range"
 c	will use the "range" settings from the previous subplot. In
@@ -104,10 +125,9 @@ c	subplots if desired.  The multiple subplot capability is useful
 c	if you have used IMCAT to put unlike images into planes of
 c	a cube and you wish to display them together.
 c
-c	Default is linear between the image minimum and maximum
-c	If you wish to just give a transfer function type, set
-c	range=0,0,heq   say.
-c	
+c	Default is linear between the image minimum and maximum with
+c	a b&w lookup table.   You can default the intensity range with
+c	zeros, viz. "range=0,0,log,-2" say.
 c@ vecfac
 c	3 values.  A scale factor to multiply the vector image lengths
 c	(or box image widths) by, and the x and y increments (in pixels)
@@ -162,8 +182,8 @@ c	"relax" means issue warnings when image axis descriptors are
 c	  inconsistent (e.g. different pixel increments) instead
 c	  of a fatal error.  Use at your peril.
 c
-c	"full" means do full plot annotation with contour levels, grey
-c	  scale range, file names, reference values, etc.  Otherwise 
+c	"full" means do full plot annotation with contour levels, pixel
+c	  displa range, file names, reference values, etc.  Otherwise 
 c	  more room for the plot is available. 
 c	"noepoch" means don't write the epoch value into the axis labels
 c
@@ -176,17 +196,19 @@ c
 c	  For hard copy devices (e.g. postscript), a keyboard driven
 c	  fiddle is offered; you can cycle through different colour tables
 c	  and invoke the predefined transfer functions, but the linear
-c	  fiddler is not available.   In this way you can make colour
-c	  hardcopy plots.
+c	  fiddler is not available.   Note that if you are using "cgdisp"
+c	  from a script, so that interactive fiddling is not appropriate,
+c	  you can use the "range" keyword to specify the transfer
+c	  function and colour lookup tables.
 c	"single" means that when you have selected OPTIONS=FIDDLE and you
 c	  you have more than one subplot per page, activate the fiddle
 c	  option after each subplot rather than the default, which is
 c	  to fiddle only at the end.  In the latter case, the histogram
 c	  equalization, if invoked, will have been computed with the 
 c	  image in the last subplot only.
-c	"wedge" means that if you are drawing a grey scale, also draw
+c	"wedge" means that if you are drawing a pixel map, also draw
 c	  and label a wedge to the right of the plot, showing the map 
-c	  of intensity to grey level.  
+c	  of intensity to colour.
 c
 c	"3value" means label each sub-plot with the appropriate 
 c	  value of the third axis (e.g. velocity or frequency for an
@@ -210,7 +232,7 @@ c	"beamAB", where "A" is one of "b" or "t" and
 c	                "B" is one of "l" or "r"
 c	  means draw the beam FWHM on the plot in the corner indicated
 c	  by the "AB" location.  The beams for all images displayed
-c	  (contour and grey scale) will be drawn confocally.
+c	  (contour and pixel map) will be drawn confocally.
 c
 c	"solneg1" means make negative contours solid and positive 
 c	  contours dashed for the first contour image. The default, 
@@ -374,8 +396,8 @@ c	These offsets must be in the same units as the %OTYPE that the
 c	succeeding line(s) has(ve).  It is intended so that your overlay
 c	locations can be in, say, arcsec relative to some location which
 c	is not the reference pixel of the image (which is what CGDISP
-c	ultimately wants).   You then specify, with the OFFSET line,
-c	the offsets between the reference pixel of the contour/grey
+c	ultimately wants).   You then specify, with the OFFSET line, the
+c	offsets between the reference pixel of the contour/pixel map
 c	images and the actual reference location of your overlay locations.
 c
 c	You can have as many OFFSET lines as you like in the file.  All
@@ -492,6 +514,9 @@ c    nebk 05jan95  Use new PGIMAG in favour of PGGRAY adding support
 c                  for fiddling of lookup table for hardcopy devices
 c                  Make sure annotation writes reference location as 
 c                  original, not linearized version
+c    nebk 20feb95  Add colour table selection to keyword "range" and
+c		   get pgimag to make black on white for hard copy.
+c		   Move to image type "pixel" instead of "grey"
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -541,8 +566,8 @@ c
       integer blc(3), trc(3), win(2), lwid(maxcon+3), vecinc(2), 
      +  boxinc(2), srtlev(maxlev,maxcon), nlevs(maxcon), 
      +  grpbeg(maxchan), ngrp(maxchan), his(nbins), ibin(2), jbin(2), 
-     +  kbin(2), krng(2)
-      integer  nx, ny, lpos, npos, ierr, pgbeg, ilen, igr,
+     +  kbin(2), krng(2), coltab(maxgr)
+      integer  nx, ny, lpos, npos, ierr, pgbeg, ilen, igr, iofm,
      +  nlast, ngrps, ncon, i, j, nvec, ipage, jj, npixr, wedcod
 c
       character ofig(maxpos)*10, posid(maxpos)*20, labtyp(2)*6, 
@@ -554,7 +579,7 @@ c
       logical solneg(maxcon), doblv(2), bemprs(maxcon+4), owrite(maxpos)
       logical do3val, do3pix, dofull, gaps, eqscale, doblc, doblg,
      +  dobeam, beaml, beamb, relax, rot90, signs, mirror, dowedge, 
-     +  doerase, doepoch, bdone, doblb, doblm, dofid, dosing
+     +  doerase, doepoch, bdone, doblb, doblm, dofid, dosing, reverse
 c
       data blankc, blankv, blankb /-99999999.0, -99999999.0, 
      +                             -99999999.0/
@@ -567,23 +592,23 @@ c
      +             'rellin', 'absdeg', 'reldeg', 'none'/
       data dmm /2*0.0/
 c-----------------------------------------------------------------------
-      call output ('CgDisp: version 05-Jan-95')
-      call output ('Options=fiddle will now work partially for hard ')
-      call output ('copy devices -- see help options')
+      call output ('CgDisp: version 20-Feb-95')
+      call output ('Keyword "range" can now be used to specify the')
+      call output ('colour lookup table as well the transfer function')
       call output (' ')
-      call output ('Non-linear coordinates are now partially handled')
-      call output ('See "help cgcoords" for explanations')
+      call output ('Options=fiddle is now keyboard driven for '//
+     +             'hard-copy devices')
       call output (' ')
 c
 c Get user inputs
 c
       call inputs (maxgr, maxlev, maxcon, maxtyp, ltypes, ncon, cin, 
      +   gin, nvec, vin, bin, mskin, ibin, jbin, kbin, levtyp, slev, 
-     +   levs, nlevs, npixr, pixr, trfun, vecfac, vecinc, boxfac, 
-     +   boxinc, pdev, labtyp, dofull, do3val, do3pix, eqscale, gaps, 
-     +   solneg, nx, ny, lwid, break, cs, scale, ofile, dobeam, beaml,
-     +   beamb, relax, rot90, signs, mirror, dowedge, doerase, doepoch, 
-     +   dofid, dosing)
+     +   levs, nlevs, npixr, pixr, trfun, coltab, vecfac, vecinc, 
+     +   boxfac, boxinc, pdev, labtyp, dofull, do3val, do3pix, eqscale, 
+     +   gaps, solneg, nx, ny, lwid, break, cs, scale, ofile, dobeam, 
+     +   beaml, beamb, relax, rot90, signs, mirror, dowedge, doerase, 
+     +   doepoch, dofid, dosing)
 c
 c Open images as required
 c
@@ -677,12 +702,8 @@ c
 c
 c Init OFM routines 
 c
-      if (dofid) call ofmini
+      call ofmini
 c  
-c Generate and apply default greyscale lookup table
-c
-      if (gin.ne.' ') call setgrcg    
-c
 c Set label displacements from axes and set PGTBOX labelling 
 c option strings
 c
@@ -750,7 +771,7 @@ c
            end if
          end if
 c
-c Deal with grey scale image 
+c Deal with pixel map image 
 c
          if (gin.ne.' ') then
            if (gsize(3).gt.1) then
@@ -767,7 +788,7 @@ c
            call grfixcg (pixr(1,igr), lg, gnaxis, gsize, 
      +                   trfun(igr), pixr2, groff, blankg)
 c
-c Read grey scale image and apply mask
+c Read pixel map image and apply mask
 c
            call readimcg (.true., maskg, blankg, lg, ibin, jbin, krng,
      +         blc, trc, .true., memi(ipnim), memr(ipim), doblg, gmm)
@@ -777,43 +798,62 @@ c
              doblg = .true.
            end if
 c
-c Apply transfer function to image
+c Apply transfer function directly to image
 c
            if (trfun(igr).ne.'lin') 
      +       call apptrfcg (pixr2, trfun(igr), groff, win(1)*win(2),
      +          memi(ipnim), memr(ipim), nbins, his, cumhis)
 c
-c Modify OFM for harcopy devices here; must be done before
-c PGIMAG called
+c Apply user specified OFM to device.   Here a b&w ofm will be 
+c applied by default if user has not specified one with keyword "range".
 c
-         if (hard.eq.'YES' .and. dofid .and. (jj.eq.1 .or. dosing))
-     +     call ofmmod (tfvp, win(1)*win(2), memr(ipim), 
-     +                  memi(ipnim), pixr2(1), pixr2(2))
+           call ofmcol (coltab(igr), pixr2(1), pixr2(2))
 c
-c Draw grey scale 
+c Interactive modification of OFM for hardcopy devices here; must be 
+c done before PGIMAG called.  Any chnage of lookup table here will
+c overwrite that done with call to ofmcol above
 c
-           call pgslw (1)
-           call pgimag (memr(ipim), win(1), win(2), 1, win(1), 1,
-     +                  win(2), pixr2(1), pixr2(2), tr)
+           if (hard.eq.'YES' .and. dofid .and. (jj.eq.1 .or. dosing))
+     +       call ofmmod (tfvp, win(1)*win(2), memr(ipim), 
+     +                    memi(ipnim), pixr2(1), pixr2(2))
+c
+c Draw image.  Note that for hardcopy devices we generally want
+c black on white, not white on black.  So if no colour table has 
+c been applied, make it so.  Yes Captain.
+c
+           reverse = .false.
+           if (hard.eq.'YES') then
+             call ofminq (iofm)
+             if (iofm.eq.1) reverse = .true.
+           end if
+c
+           if (reverse) then
+             call pgimag (memr(ipim), win(1), win(2), 1, win(1), 
+     +                    1, win(2), pixr2(2), pixr2(1), tr)
+           else
+             call pgimag (memr(ipim), win(1), win(2), 1, win(1), 
+     +                    1, win(2), pixr2(1), pixr2(2), tr)
+           end if
          end if
 c
 c Label and draw axes before fiddle else looks silly. Also forces
-c update of grey scale on screen.
+c update of pixel map on screen.
 c
          call pgslw(lwid(1))
-         call pgsci (1)
-         if (hard.eq.'NO') call pgsci (7)
+         call pgsci (7)
+         if (hard.eq.'YES') call pgsci (2)
          call axlabcg (gaps, nx, ny, ngrps, nlast, j, xopts, yopts,
      +      xdispl, ydispb, labtyp, xlabel, ylabel, xxopts, yyopts)
          call pgtbox (xxopts, 0.0, 0, yyopts, 0.0, 0)
 c
-c Draw wedge so that it overwrites axis label ticks when wedge
+c Draw wedge now so that it overwrites axis label ticks when wedge
 c drawn inside subplot
 c
-         if (dowedge) call wedgecg (wedcod, wedwid, jj, trfun(igr), 
-     +     groff, nbins, cumhis, wdgvp, pixr(2,igr), pixr(1,igr))
+         if (dowedge) call wedgecg (reverse, wedcod, wedwid, jj, 
+     +                  trfun(igr), groff, nbins, cumhis, 
+     +                  wdgvp, pixr(1,igr), pixr(2,igr))
 c
-c Modify OFM for interactive devices here
+c Interactive modification of OFM for interactive devices here
 c
          if (hard.eq.'NO' .and. dofid .and. 
      +       ((jj.eq.nx*ny .or. j.eq.ngrps) .or. dosing))
@@ -1094,11 +1134,11 @@ c  Input
 c    maxcon          Maximum number of contour images
 c    beaml,beamb     True if the beam is to be drawn on the left
 c                    or at the bottom (else right and top)
-c    bmin,maj,pa     Beam FWHMin, FWHMax and p.a. for grey scale and
+c    bmin,maj,pa     Beam FWHMin, FWHMax and p.a. for pixel map and
 c                    contour 1 and 2 images (rad).
 c    bx,yfac         Factors converting radians to world coordinates 
 c                    on the x and y axes
-c    bemprs          True if beam present for maxcon contours, grey scale
+c    bemprs          True if beam present for maxcon contours, pixel map
 c                    and 2 vector images
 c
 c-----------------------------------------------------------------------   
@@ -1140,7 +1180,7 @@ c
 c  Input
 c    x,ycen          World coordinates of beam centre
 c                    or at the bottom (else right and top)
-c    bmin,maj,pa     Beam FWHMin, FWHMax and p.a. for grey scale and
+c    bmin,maj,pa     Beam FWHMin, FWHMax and p.a. for pixel map and
 c                    contour image (rad). 
 c    bx,yfac         Factors converting radians to world coordinates 
 c                    on the x and y axes
@@ -1197,8 +1237,8 @@ c  Input
 c    maxcon          Maximum number of contour images
 c    beaml,beamb     True if the beam is to be drawn on the left
 c                    or at the bottom (else right and top)
-c    bemprs          True if beam present for grey and contour images
-c    bmin,maj,pa     Beam FWHMin, FWHMax and p.a. for grey scale and
+c    bemprs          True if beam present for pixel map and contour images
+c    bmin,maj,pa     Beam FWHMin, FWHMax and p.a. for pixel map and
 c                    contour image (rad). 
 c    bx,yfac         Factors converting radians to world coordinates 
 c                    on the x and y axes
@@ -1493,7 +1533,7 @@ c
      +         cepoch, mepoch, cctype, mctype)
       end if
 c
-c Check grey scale images for consistency with other images
+c Check pixel map images for consistency with other images
 c
       if (gin.ne.' ') then
         if (vin(1).ne.' ') call chkdes (relax, gin, vin, gsize, vsize,
@@ -1553,7 +1593,7 @@ c     signs     WHen plotting vectors, assume N and E are in
 c               the direction of increasing X and Y, else N and E
 c               are to the top and left
 c     mirror    Multiply contours by -1 and add to list
-c     dowedge   Draw wedge on greyscale
+c     dowedge   Draw wedge on pixel map image
 c     doepoch   Write epoch into axis labels
 c     dofid     Interactive fiddle
 c     dosing    FIddle after every subplot
@@ -1840,9 +1880,9 @@ c       levs       Contour levels for each image
 c       srtlev     Index array gvbing order of increasing contour levels
 c       slev       Contour level scale factors for each image
 c       trfun      Transfer function applied to image
-c       npixr      Number of grey scale ranges
-c       pixr       Grey scale intensity range
-c       vfac     Maximum vector amplitude and scale in mm/amp
+c       npixr      Number of pixel map ranges
+c       pixr       pixel map intensity range
+c       vfac       Maximum vector amplitude and scale in mm/amp
 c       bfac       Maximum box width and scale in mm/width
 c       naxis      Number of axes 
 c       size       Size of axes
@@ -1885,7 +1925,7 @@ c
       call annwincg (blc, trc, ibin, jbin, kbin, naxis, size, cdelt,
      +               ctype, yinc, xpos, ypos)
 c
-c Write grey scale information
+c Write imaging information
 c
       if (gin.ne.' ') call anngrscg (lg, gin, npixr, pixr, trfun, gmm,
      +                               yinc, xpos, ypos)
@@ -1927,7 +1967,7 @@ c   naxis      NUmber of axes in image
 c   crval      Axis reference values
 c   cdelt      Axis increments
 c  Output
-c   bmin       FWHMin for maxcon contours, grey scale, two vectors
+c   bmin       FWHMin for maxcon contours, pixel map, two vectors
 c              and box images
 c   bmaj       FWHMax
 c   bpa        p.a. 
@@ -1965,7 +2005,7 @@ c
        end if
       end do
 c
-c Grey scale image
+c Pixel map image
 c
       i = maxcon + 1
       bemprs(i) = .false.
@@ -2008,19 +2048,19 @@ c
 c
       subroutine inputs (maxgr, maxlev, maxcon, maxtyp, ltypes, ncon, 
      +   cin, gin, nvec, vin, bin, mskin, ibin, jbin, kbin, levtyp, 
-     +   slev, levs, nlevs, npixr, pixr, trfun, vecfac, vecinc, boxfac,
-     +   boxinc, pdev, labtyp, dofull, do3val, do3pix, eqscale, gaps, 
-     +   solneg, nx, ny, lwid, break, cs, scale, ofile, dobeam, beaml, 
-     +   beamb, relax, rot90, signs, mirror, dowedge, doerase, doepoch, 
-     +   dofid, dosing)
+     +   slev, levs, nlevs, npixr, pixr, trfun, coltab, vecfac, vecinc, 
+     +   boxfac, boxinc, pdev, labtyp, dofull, do3val, do3pix, eqscale, 
+     +   gaps, solneg, nx, ny, lwid, break, cs, scale, ofile, dobeam, 
+     +   beaml, beamb, relax, rot90, signs, mirror, dowedge, doerase, 
+     +   doepoch, dofid, dosing)
 c-----------------------------------------------------------------------
 c     Get the unfortunate user's long list of inputs
 c
 c  Input:
-c   maxgr      Maximum number of greyscale intensity ranges and transfer
-c              functions allowed.  The user can input one group per 
-c              sub-plot up to this maximum so that differnt subplots can
-c              be displayed optimally.   If there are more subplots
+c   maxgr      Maximum number of pixel map scale intensity ranges and 
+c              transfer functions allowed.  The user can input one group 
+c              per sub-plot up to this maximum so that differnt subplots 
+c              can be displayed optimally.   If there are more subplots
 c              that intebsity ranegs given, the extra ones use the values
 c              for the previous subplot.
 c   maxlev     Maximum number of allowed contour levels
@@ -2031,7 +2071,7 @@ c  Output:
 c   ncon       Number of contour images
 c   nvec       Number of pairs of vector images, 0 or 1
 c   c,g,v,b,msk-in 
-c              Contour, grey, vector (amp & pa), box and mask image names
+c              Contour, pixel map, vector (amp & pa), box & mask image names
 c   i,j,kbin   X, y and z pixel increment and average
 c   levtyp     Type of contour levels scale factors for each contour
 c              image:  'p'(ercentage) or 'a'(bsolute)
@@ -2041,9 +2081,10 @@ c   levs       Contour levels for each contour image.   Will be scaled
 c              by SLEV for contouring
 c   nlevs      Number of contour levels for each contour image
 c   npixr      Number of pixr/trfun groups returned.
-c   pixr       Greyscale intensity range for each of the NPIXR subplot
-c   trfun      Type of grey scale transfer function: 'log', 'lin',
+c   pixr       Pixel map intensity range for each of the NPIXR subplot
+c   trfun      Type of pixel map transfer function: 'log', 'lin',
 c              'heq' or 'sqr' for each of the NPIXR subplots
+c   coltab     COlour lookup table (1 -> 8)
 c   vecfac     Vector amplitude scale factor and
 c   vecinc     Vector x,y pixel incrememts
 c   boxfac     Box width scale factor and
@@ -2076,7 +2117,7 @@ c   rot90      Rotate vectors by a further 90 degrees
 c   signs      WHen plotting vectors, assume N and E are in
 c              the direction of increasing X and Y
 c   mirror     Multiply contours by -1 and add to list
-c   dowedge    Draw a wedge on the greyscale
+c   dowedge    Draw a wedge on the pixel map
 c   doepoch    Write epoch into axis labels
 c   dofid      Interactive fiddle
 c   dosing     Fiddle after each subplot
@@ -2087,7 +2128,7 @@ c
       real levs(maxlev,maxcon), pixr(2,maxgr), scale(2), cs(3),
      +  slev(maxcon), break(maxcon), vecfac, boxfac
       integer nx, ny, nlevs(maxcon), lwid(maxcon+3), vecinc(2), 
-     +  boxinc(2), ibin(2), jbin(2), kbin(2)
+     +  boxinc(2), ibin(2), jbin(2), kbin(2), coltab(maxgr)
       character*(*) labtyp(2), cin(maxcon), gin, vin(2), bin, mskin,
      +  pdev, ofile, trfun(maxgr), levtyp(maxcon), ltypes(maxtyp)
       logical do3val, do3pix, dofull, gaps, eqscale, solneg(maxcon),
@@ -2103,10 +2144,10 @@ c
       logical beambl, beambr, beamtl, beamtr, present, keyprsnt
 c
       integer ntype
-      parameter (ntype = 6)
+      parameter (ntype = 7)
       character type(ntype)*9
-      data type  /'contour', 'grey', 'amplitude', 'angle', 
-     +            'box', 'mask'/
+      data type  /'contour', 'pixel', 'amplitude', 'angle', 
+     +            'box', 'mask', 'grey'/
 c-----------------------------------------------------------------------
       call keyini
 c
@@ -2119,7 +2160,19 @@ c
       ncon = 0
       nvec = 0
       do i = 1, nim
-        if (imtype(i).eq.' ') imtype(i) = 'contour'
+c
+c Default is "pixel" if one image, else "contour"
+c
+        if (imtype(i).eq.' ') then
+          if (nim.eq.1) then
+            imtype(i) = 'pixel'
+          else
+            imtype(i) = 'contour'
+          end if
+        end if
+c
+c Find user given type of image
+c
         if (imtype(i).eq.'contour') then
           if (ncon.ge.maxcon) then
             call bug ('f', 'Too many contour images given')
@@ -2127,9 +2180,9 @@ c
             ncon = ncon + 1
             cin(ncon) = images(i)
           end if
-        else if (imtype(i).eq.'grey') then
+        else if (imtype(i).eq.'pixel' .or. imtype(i).eq.'grey') then
           if (gin.ne.' ') then
-            call bug ('f', 'More than one grey scale image given')
+            call bug ('f', 'More than one pixel map image given')
           else
             gin = images(i)
           end if
@@ -2211,11 +2264,12 @@ c
         call mkeyr ('levs'//str,  levs(1,i), maxlev, nlevs(i))
       end do
 c
-c Get grey scale ranegs and transfer functions for each subplot
+c Get pixel map ranges and transfer functions for each subplot
 c
       pixr(1,1) = 0.0
       pixr(2,1) = 0.0
       trfun(1) = 'lin'
+      coltab(1) = 1
       present = keyprsnt ('range')
       i = 0
 c
@@ -2230,11 +2284,21 @@ c
           call keyr ('range', pixr(2,i), 0.0)
           call keya ('range', trfun(i), 'lin')
           call lcase (trfun)
+          call keyi ('range', coltab(i), 1)
 c
+          if (coltab(i).lt.-8 .or. coltab(i).gt.8 .or.
+     +        coltab(i).eq.0) then
+            coltab(i) = 1
+            call bug ('w',
+     +        'Unrecognized lookup table, setting b&w')
+          end if
           if (gin.ne.' ' .and. trfun(i).ne.'lin' .and. 
      +        trfun(i).ne.'log' .and. trfun(i).ne.'heq' .and.
-     +        trfun(i).ne.'sqr') call bug ('f', 
-     +        'Unrecognized grey scale transfer function type')
+     +        trfun(i).ne.'sqr') then
+            call bug ('w',
+     +        'Unrecognized image transfer function, setting linear')
+            trfun(i) = 'lin'
+          end if
         end if
       end do
       npixr = max(i,1)
@@ -3085,7 +3149,7 @@ c
      +   crval, cdelt, crpix, ctype, epoch, ibin, jbin, kbin, blc, trc,
      +   win, maxgrp, grpbeg, ngrp, ngrps, lhead)
 c----------------------------------------------------------------------
-c     Finish key routine inputs for region of interest now.  Have to 
+c     Finish key routie inputs for region of interest now.  Have to 
 c     delay until here because of complexity added by mixed 2-D/3-D
 c     capability.   The BOXINPUT routine must be associated with the 
 c     file that, if any, has three dimensions.    Return also the
@@ -3110,7 +3174,7 @@ c  Output:
 c                  The following axis descriptors are used for all 
 c                  subsequent axis information.  They come from whatever 
 c                  cube we encounter first or the first 2-D image in 
-c                  contour, grey, vector order.  
+c                  contour, pixel map, vector order.  
 c    naxis         Number of axes
 c    size          SIze of axes
 c    crpix         Array of image reference pixels
@@ -3336,7 +3400,7 @@ c
         end do
       end if
 c
-c Open grey scale image as required
+c Open pixel map image as required
 c
       if (gin.ne.' ') then
         call opimcg (maxdim, maxnax, gin, lg, gnaxis, gsize, gepoch,
