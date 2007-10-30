@@ -43,9 +43,10 @@ c                     common arrays by testing for source name changes
 c                     in the routine TabFlux.  Also eliminated redundant
 c                     file name changes in the same routine.
 c    jm    04oct95    Fixed long standing date>0 problem in tabflux.
+c    jm    21dec95    Fixed calget because fix above broke it.
 c
 c***********************************************************************
-c* CalGet -- Routine to retrieve an interpolated calibrator flux.
+c* calget -- Routine to retrieve an interpolated calibrator flux.
 c& jm
 c: calibration, flux
 c+
@@ -100,9 +101,10 @@ c            interpolation between two values.
 c   flux     The flux of the matched observation.
 c   iostat   An error integer.  Iostat = 0 means no error;
 c            -1 if there are no data found in the file FileName;
-c            -2 if an EOF; -3 if no source name match; -4 if no flux at
-c            desired frequency; and -5 if the date of the latest flux
-c            measurement is longer than 4 years.
+c            -2 if an EOF is reached before a match; -3 if no source
+c            name matchs; -4 if no match at desired characteristics;
+c            and -5 if the date of the latest flux measurement is
+c            offset by more than 4 years.
 c
 c--
 c-----------------------------------------------------------------------
@@ -115,7 +117,7 @@ c
       real oldfreq, ratio, diffday, diffreq
       real fluxes(2), freqlast(2)
       double precision date, dates(2), olddate
-      logical more, init
+      logical more, init, prior
 c
       save tmpsrc
       save outflux, oldfreq
@@ -135,15 +137,15 @@ c
       call Ucase(source)
       nlen = Len1(source)
       if (nlen .le. 0) call bug('f',
-     *  'GETFLUX: A source name must be provided.')
+     *  'CALGET: A source name must be provided.')
       if (freq .lt. 0.0) call bug('f',
-     *  'GETFLUX: Calibration frequency cannot be negative.')
+     *  'CALGET: Calibration frequency cannot be negative.')
       if (delfreq .lt. 0.0) call bug('f',
-     *  'GETFLUX: Frequency width cannot be negative.')
+     *  'CALGET: Frequency width cannot be negative.')
       if (day .lt. 0.0) call bug('f',
-     *  'GETFLUX: Date cannot be negative.')
+     *  'CALGET: Date cannot be negative.')
       if (deldate .lt. 0.0) call bug('f',
-     *  'GETFLUX: Date width cannot be negative.')
+     *  'CALGET: Date width cannot be negative.')
 c
       iostat = 0
       date = day
@@ -169,6 +171,7 @@ c
       Line = 1
       more = .TRUE.
       init = .TRUE.
+      prior = .TRUE.
       olddate = date
 c
 c  Search for all matches of wildcards or the particular source.
@@ -177,11 +180,13 @@ c
         tmpsrc = source
         freq = sfreq
         day = date
+        if (prior) day = -day
         flux = sflux
-        call TabFlux(filename, tmpsrc, freq, delfreq, day, deldate,
+        call tabflux(filename, tmpsrc, freq, delfreq, day, deldate,
      *    flux, rms, Line, iostat)
         if (iostat .lt. 0) then
-          more = .FALSE.
+          more = prior
+          prior = .NOT. prior
         else
           if (init) then
             dates(1) = day
@@ -192,11 +197,11 @@ c
             freqlast(1) = freq
             freqlast(2) = 0.0
             init = .FALSE.
-          elseif (dates(2) .eq. 0.0) then
+          else if (dates(2) .eq. 0.0) then
             dates(2) = day
             fluxes(2) = flux
             freqlast(2) = freq
-          elseif (day .gt. dates(2)) then
+          else if (day .gt. dates(2)) then
             dates(1) = dates(2)
             dates(2) = day
             fluxes(1) = fluxes(2)
@@ -216,17 +221,17 @@ c
       enddo
 c
       if (init) then
-        call bug('w', 'GETFLUX: No match for this source.')
+        call bug('w', 'CALGET: No match for this source.')
         return
-      elseif (dates(2) .eq. 0.0) then
+      else if (dates(2) .eq. 0.0) then
         outflux = fluxes(1)
         day = dates(1)
         freq = freqlast(1)
-      elseif (date .ge. dates(2)) then
+      else if (date .ge. dates(2)) then
         outflux = fluxes(2)
         day = dates(2)
         freq = freqlast(2)
-      elseif (date .le. dates(1)) then
+      else if (date .le. dates(1)) then
         outflux = fluxes(1)
         day = dates(1)
         freq = freqlast(1)
@@ -251,7 +256,7 @@ c
       end
 c
 c***********************************************************************
-c* TabFlux -- Return the flux of a calibrator source at an input freq.
+c* tabflux -- Return the flux of a calibrator source at an input freq.
 c& jm
 c: calibration, flux, frequency
 c+
@@ -389,8 +394,7 @@ c  into memory (and initialize the line number counter).
 c
       if (reset) then
         call TabLoad(newname, source, iostat)
-        if (iostat .ne. 0)
-     *    call bug('f', 'TABFLUX: Error loading file ' // newname)
+        if (iostat .ne. 0) return
         Line = 0
       endif
 c
@@ -399,7 +403,7 @@ c  The search method will return the next entry at the input frequency
 c  for the named source that fits within the date and flux constraints.
 c  The indexed (by source) file can be searched for source and then
 c  incremented to find last entry at proper frequency.  Iostat = -2
-c  when EOF is encountered (that is no more matching entries).
+c  when EOF is encountered (there are no more matching entries).
 c
       call TabFind(source, freq, deltnu, day, deltime, flux, rms, Line,
      *  iostat)
@@ -463,7 +467,7 @@ c
         if (length .gt. 0) then
           if (string(1:1) .ne. '!') then
             call TabParse(string, length, source, nentry)
-          elseif (string(1:2) .eq. '!!') then
+          else if (string(1:2) .eq. '!!') then
             call NamParse(string(3:), length-2)
           endif
         endif
@@ -474,16 +478,15 @@ c  If the last return code was not an EOF, then it was an error.
 c  Otherwise, simply close the file and return.
 c
       if (iostat .ne. -1) call bugno('f', iostat)
-      if (nentry .eq. 0) then
-        string =
-     *    'TABLOAD: No entries in this calibration file for source: ' //
-     *    source
-        call bug('f', string)
-      endif
-c
-      call TxtClose(lu)
 c
       iostat = 0
+      call TxtClose(lu)
+c
+      if (nentry .eq. 0) then
+        string = 'TABFLUX: No match of source name: ' // source
+        call bug('w', string)
+        iostat = -3
+      endif
       return
       end
 c***********************************************************************
@@ -526,10 +529,11 @@ c Output:
 c   flux     The flux (Jy) of the source at freq GHz.
 c   rms      The rms error on the flux measurement (Jy).
 c   iostat   The returned error code.  0 means a correct match;
-c            -1 if there are no values loaded into the arrays yet; -2 if
-c            an EOF; -3 if no source name match; -4 if no flux at
-c            desired frequency; and -5 if the date of the latest flux
-c            measurement is longer than TOOBIG days (4 years).
+c            -1 if there are no values loaded into the arrays yet; -2
+c            if an EOF before a match; -3 if no source name match; -4
+c            if no match with characteristics desired; and -5 if the
+c            date of the latest flux measurement is offset by more
+c            than TOOBIG days (4 years).
 c
 c-----------------------------------------------------------------------
 c  Internal variables.
@@ -544,13 +548,13 @@ c
       real testday, testfreq
       double precision date
       logical swild, fwild, dwild, vwild, more
-      logical justonce
-      save justonce
+      logical doonce
+      save doonce
 c
       integer Len1
       include 'tabflux.h'
 c
-      data justonce / .TRUE. /
+      data doonce / .TRUE. /
 c
 c  End declarations.
 c-----------------------------------------------------------------------
@@ -582,10 +586,10 @@ c
         call Ucase(source(1:nlen))
         call aliases(source, srcalias)
         if (Len1(srcalias) .gt. 0) then
-          if (justonce .and. (source .ne. srcalias)) then
-            errmsg = 'TABFLUX: Alias used for source ' // source
+          if (doonce .and. (source(1:nlen) .ne. srcalias(1:nlen))) then
+            errmsg = 'TABFLUX: Alias used for source ' // source(1:nlen)
             call bug('i', errmsg)
-            justonce = .FALSE.
+            doonce = .FALSE.
           endif
           source = srcalias
           nlen = Len1(source)
@@ -604,7 +608,7 @@ c
       if ((Line .gt. 1) .and. (j .eq. 0)) then
         iostat = -2
         return
-      elseif (j .eq. 0) then
+      else if (j .eq. 0) then
         errmsg = 'TABFLUX: No match of source name: ' // source
         call bug('w', errmsg)
         iostat = -3
@@ -619,8 +623,6 @@ c
       dwild = (day .eq. 0.0)
       nday = 1
       if (day .lt. 0.0) nday = -1
-      date = abs(day)
-      if ((dwild) .or. (date .eq. 1.0)) call TodayJul(date)
       more = .TRUE.
       match = 0
    20 continue
@@ -655,14 +657,18 @@ c
       if ((Line .gt. 1) .and. (match .eq. 0)) then
         iostat = -2
         return
-      elseif (match .eq. 0) then
-        call bug('w', 'TABFLUX: No match at the frequency desired.')
+      else if (match .eq. 0) then
+        call bug('w', 'TABFLUX: No match for characteristics desired.')
         iostat = -4
         return
       endif
 c
-c  Frequency match found.  Check how recent.  If the change in time
+c  A match has been found.  Check how recent.  If the change in time
 c  is too large, return a warning.  Otherwise, return no error.
+c
+      date = abs(day)
+      if ((dwild) .or. (date .eq. 1.0)) call TodayJul(date)
+      testday = abs(TDATE(match) - date)
 c
       Line = i
       source = TSOURCE(match)
@@ -672,8 +678,7 @@ c
       flux = TFLUX(match)
       rms = TRMS(match)
 c
-      testday = abs(day - date)
-      if (testday .gt. TOOBIG) then
+      if ((testday .gt. TOOBIG) .and. (TOOBIG .gt. deltime)) then
         call bug('w',
      *    'TABFLUX: Next calibration item is older than 4 years.')
         iostat = -5
@@ -715,9 +720,9 @@ c-----------------------------------------------------------------------
 c
       if (nentry .ge. NTABLE) then
         call bug('w',
-     *    'TABPARSE: Include file tabflux.h must be adjusted.')
+     *    'TABFLUX: Include file tabflux.h must be adjusted.')
         call bug('f',
-     *    'TABPARSE: Too many entries in the calibrator flux table.')
+     *    'TABFLUX: Too many entries in the calibrator flux table.')
       endif
 c
       k1 = 1
@@ -751,8 +756,8 @@ c
       call getfield(string, k1, k2, token, tlen)
       call atorf(token(1:tlen), TFREQ(NTAB), okay)
       if (.not. okay) then
-        call bug('w', 'TABPARSE: Trouble decoding the frequency term.')
-        errmsg = 'TABPARSE: ' // string
+        call bug('w', 'TABFLUX: Trouble decoding the frequency term.')
+        errmsg = 'TABFLUX: ' // string
         call bug('w', errmsg)
         TFREQ(NTAB) = 0.0
       endif
@@ -760,8 +765,8 @@ c
       call getfield(string, k1, k2, token, tlen)
       call atorf(token(1:tlen), TFLUX(NTAB), okay)
       if (.not. okay) then
-        call bug('w', 'TABPARSE: Trouble decoding the flux term.')
-        errmsg = 'TABPARSE: ' // string
+        call bug('w', 'TABFLUX: Trouble decoding the flux term.')
+        errmsg = 'TABFLUX: ' // string
         call bug('w', errmsg)
         TFLUX(NTAB) = 0.0
       endif
@@ -771,8 +776,8 @@ c
       if (tlen .gt. 0) then
         call atorf(token(1:tlen), TRMS(NTAB), okay)
         if (.not. okay) then
-          call bug('w', 'TABPARSE: Trouble decoding the rms term.')
-          errmsg = 'TABPARSE; ' // string
+          call bug('w', 'TABFLUX: Trouble decoding the rms term.')
+          errmsg = 'TABFLUX; ' // string
           call bug('w', errmsg)
           TFLUX(NTAB) = 0.0
         endif
@@ -855,9 +860,9 @@ c
 c
       if (NALIASES .ge. NTABLE) then
         call bug('w',
-     *    'TABPARSE: Include file tabflux.h must be adjusted.')
+     *    'TABFLUX: Include file tabflux.h must be adjusted.')
         call bug('f',
-     *    'TABPARSE: Too many entries in the alias name table.')
+     *    'TABFLUX: Too many entries in the alias name table.')
       endif
 c
       NALIASES = NALIASES + 1
@@ -910,3 +915,4 @@ c
       enddo
       return
       end
+
