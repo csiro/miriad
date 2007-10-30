@@ -111,6 +111,7 @@ c    mjs  25feb91 Changed references of itoa to itoaf.
 c    rjs  25mar91 Added `relax' option. Minor changes to appease flint.
 c    rjs   5apr91 Trivial change to get ModelIni to do some polarisation
 c		  handling.
+c    mjs  04aug91 Replaced local maxants/maxbl to use maxdim.h values
 c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='version 1.0 5-Apr-91')
@@ -642,12 +643,11 @@ c    SumVV
 c  Scratch:
 c    TIndx
 c------------------------------------------------------------------------
-	integer maxants
-	parameter(maxants=32)
+	include 'maxdim.h'
 	logical Convrg
 	integer k,k0,nbad,iostat,item,offset,header(2)
 	real SumWts,SumPhi,SumAmp,SumChi2,SumExp,Phi,Amp,Sigma
-	complex Gains(maxants)
+	complex Gains(MAXANT)
 	character line*64
 	double precision dtime
 c
@@ -767,10 +767,9 @@ c    SumMM
 c    Weight
 c    Count
 c------------------------------------------------------------------------
-	integer maxants,maxbl
-	parameter(maxants=32,maxbl=(maxants*(maxants-1))/2)
-	complex SaveVM(maxbl),ctemp
-	real SaveVV(maxbl),SaveMM,SaveWt(maxbl),SaveCnt,temp
+	include 'maxdim.h'
+	complex SaveVM(MAXBASE),ctemp
+	real SaveVV(MAXBASE),SaveMM,SaveWt(MAXBASE),SaveCnt,temp
 	logical saved,dosave
 	integer i,k,k0,k1
 c
@@ -870,13 +869,12 @@ c  Outputs:
 c    GainOut	The complex gains to apply to correct the data.
 c    Convrg	Whether it converged or not.
 c------------------------------------------------------------------------
-	integer maxants,maxbl
-	parameter(maxants=32,maxbl=(maxants*(maxants-1))/2)
-	integer b1(maxbl),b2(maxbl)
+	include 'maxdim.h'
+	integer b1(MAXBASE),b2(MAXBASE)
 	integer i,j,k,Nblines,nantenna,nref
-	complex Sum(maxants),Gain(maxants),Temp,g1,g2
-	real m1,m2,Sum2(maxants),Wts(maxants),amp,phi,resid,wt
-	integer Indx(maxants)
+	complex Sum(MAXANT),Gain(MAXANT),Temp,g1,g2
+	real m1,m2,Sum2(MAXANT),Wts(MAXANT),amp,phi,resid,wt
+	integer Indx(MAXANT)
 c
 c  Externals.
 c
@@ -886,7 +884,7 @@ c  Check.
 c
 	if(nbl.ne.nants*(nants-1)/2)
      *	  call bug('f','Number of antennae and baselines do not agree')
-	if(nants.gt.maxants)call bug('f','Too many antennas')
+	if(nants.gt.MAXANT)call bug('f','Too many antennas')
 c
 c  Some intialising.
 c
