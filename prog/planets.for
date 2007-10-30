@@ -15,7 +15,7 @@ c	No default.
 c@ epoch
 c	The time (UTC) for which information is required, in standard
 c	Miriad time format. No default.
-c@ observ
+c@ telescop
 c	The name of an observatory used in computing rise and set times.
 c	The default is not to compute these. See telepar for a list of
 c	observatories that Miriad knows about.
@@ -25,12 +25,13 @@ c    rjs  13dec95 Original version
 c    rjs  15dec95 Miscellaneous minor enhancements.
 c    rjs  18dec95 Sub-earth point uses right-handed coord system.
 c    rjs   7jun96 Include SysIII(1957) for Jupiter as well
+c    rjs  10jun97 Change observ to telescop
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	character version*(*)
 	double precision AUKM
 	integer EARTH,SUN,JUPITER
-	parameter(version='Planets: version 1.0 7-Jun-96')
+	parameter(version='Planets: version 1.0 10-Jun-97')
 	parameter(AUKM=149.597870D6,EARTH=3,SUN=0,JUPITER=5)
 c
 	character planet*8,observ*16
@@ -58,7 +59,7 @@ c
 	if(nout.eq.0)call bug('f','An object must be given')
 	call keyt('epoch',jday,'atime',0.d0)
 	if(jday.lt.1)call bug('f','An epoch must be given')
-	call keya('observ',observ,' ')
+	call keya('telescop',observ,' ')
 	call keyfin
 c
 c  Match the planet.
