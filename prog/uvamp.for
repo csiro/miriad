@@ -71,6 +71,7 @@ c       mjs 08apr92 Variable name mod so it compiles on Convex.
 c       mjs 13mar93 pgplot subr names have less than 7 chars.
 c	rjs 26aug94 Better coordinate handling. Fix a few problems.
 c       lgm 03mar97 Corrected standard deviation calculation
+c       pjt  3may99 proper logopen/close interface; better line= stmts
 c  Bugs:
 c------------------------------------------------------------------------
 	include 'maxdim.h'
@@ -82,7 +83,7 @@ c
 	parameter (maxbins = 200)
 c
 	character version*(*)
-	parameter(version='UvAmp: version 2.0 03-Mar-97')
+	parameter(version='UvAmp: version 2.0 3-may-99')
 	character uvflags*8,line*80,pldev*60,logfile*60
 	character bunit*10,type*5
 	integer tIn,i,nread,numdat(maxbins),numbins,ibin
@@ -119,8 +120,8 @@ c
           line = ' Using only the real components in calculations'
           call output(line)
         else
-          line(1:41) = ' Using the real and imaginary components '
-          line(42:57) = 'in calculations '
+          line = ' Using the real and imaginary components ' //
+     *           'in calculations '
           call output(line)
         endif
         call output('  ')
@@ -156,7 +157,7 @@ c
 c  Open the input uv file and output logfile.
 c
 	if(.not.uvDatOpn(tIn))call bug('f','Error opening input')
-	if(logfile .ne. ' ') call LogOpen(logfile,' ')
+	call LogOpen(logfile,' ')
 c
 c  Convert dra,ddec from true to grid offsets.
 c
@@ -194,8 +195,8 @@ c  Write out header stuff for log file
 c
 	line='                 Output Visibility Amplitudes'
         call LogWrite(line,more)
-	line(1:50)='     uv limits      amplitude   sigma      S/N   '
-        line(51:70)='expect      #pnts   '
+	line='     uv limits      amplitude   sigma      S/N   ' //
+     *       'expect      #pnts   '
 	call LogWrite(line,more)
 	if(klam) then
 	   call LogWrite('       (klam) ',more)

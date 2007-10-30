@@ -36,7 +36,6 @@ c    pjt  21jul91 make it work when cont= exists
 c    pjt  10mar92 consistent MAXRUNS length
 c    nebk 25nov92 Copy btype to output
 c    mjs  27feb93 use tmpdim.h instead of maxdim.h
-c    pjt  27apr99 declared bit more space of hdprobe char variables
 c
 c= pcsub - Subtract a plane (optional by polynomial fit) from a cube
 c& pjt
@@ -77,7 +76,7 @@ c------------------------------------------------------------------------
 c
       IMPLICIT none
       CHARACTER *(*) PVERSION
-      PARAMETER (PVERSION='Version 1.0 27-apr-99')
+      PARAMETER (PVERSION='Version 1.0 25-nov-92')
       INCLUDE 'tmpdim.h'
       INTEGER MAXBOXES, MAXNAX, MAXRUNS, MAXEXP
       INTEGER MAXPOWER, MPPLUS1
@@ -95,7 +94,7 @@ c
      *   isnext, nin1, nin2, nin3, nterms, b(MPPLUS1+MPPLUS1),
      *	 a(MAXPOWER+1), iostat, len1, n
       CHARACTER in*128, out*128, aline*72, cont*128, mesg*96,
-     *	 msg*96, type*20, descr*40, itemname*16
+     *	 msg*96, type*16, descr*16, itemname*16
       LOGICAL more, ccreate
 c
 c Announce:
