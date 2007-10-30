@@ -6,6 +6,7 @@ c    rjs  8aug89   - Improved comments.
 c    pjt  4dec89   - bug calls report routine name
 c    pjt  4mar91   - changed atod to atodf (new strings.for)
 c    pjt 30oct91   - added doc to ariInq
+c    rjs  2dec98   - Increased size of "dim" parameter.
 C************************************************************************
 c  ARI consists of a collection of routines to perform parsing and
 c  evaluation of expressions. The input is a character string, in a
@@ -547,7 +548,7 @@ c------------------------------------------------------------------------
 	parameter(LBracket=-3,Comma=-2,RBracket=-1)
 	integer ModVal,NTok,dim
 
-	parameter(ModVal=64,NTok=40,dim=64)
+	parameter(ModVal=64,NTok=40,dim=256)
 c
 	character TokNam(NTok)*8
 	integer Prec(NTok),Args(NTok)
