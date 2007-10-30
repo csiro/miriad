@@ -21,6 +21,7 @@
 			before the dataset is closed.
        27-dec-94  pjt   Fixed (?) bug in hexist for regular files
 			and documented this feature
+       13-mar-95  rjs   Increase max number of open items.
 */
 
 
@@ -70,7 +71,7 @@ typedef struct tree { char *name;
 		 int handle,flags,rdwr,wriostat;
 		 ITEM *itemlist; } TREE;
 
-#define MAXITEM 256
+#define MAXITEM 1024
 
 private int nitem,ntree;
 private TREE *tree_addr[MAXOPEN];
