@@ -77,6 +77,7 @@ c    22mar95 rjs  Added the undo (madness) and reweight options.
 c    21sep95 rjs  Readd pulsar binning mode.
 c    10oct95 rjs  Double number of solution intervals.
 c    29may96 rjs  Added "nbin" to uv variables.
+c    23jul97 rjs  Copy pbtype and other vars.
 c  Bugs:
 c    * Probably a more sophiticated fitting process (rather than just
 c      taking the medians) could be used.
@@ -344,7 +345,7 @@ c  Get the handle of the variables to be copied.
 c
 c------------------------------------------------------------------------
 	integer NCOPY
-	parameter(NCOPY=73)
+	parameter(NCOPY=79)
 	integer i
 	character copy(NCOPY)*8
         data copy/    'airtemp ','antdiam ','antpos  ','atten   ',
@@ -361,7 +362,8 @@ c------------------------------------------------------------------------
      *     'veldop  ','veltype ','version ','vsource ','winddir ',
      *     'windmph ','xyphase ','delay0  ','npol    ','pol     ',
      *	   'nspect  ','restfreq','ischan  ','nschan  ','sfreq   ',
-     *	   'sdf     ','systemp ','bin     ','nbin    '/
+     *	   'sdf     ','systemp ','bin     ','nbin    ','pbtype  ',
+     *	   'xsampler','ysampler','xtsys   ','ytsys   ','xyamp   '/
 c
 c  Determine the things to be checked and the things to be copied.
 c
