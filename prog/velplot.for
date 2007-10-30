@@ -740,7 +740,7 @@ c
           call LogWrit(line(1:len1(line)))
 	endif
 
-100	format(a,x,a,x,a,a,f8.3,a,f8.2,a,f8.2)
+100	format(a,1x,a,1x,a,a,f8.3,a,f8.2,a,f8.2)
 101  	format(a,a,a,3f6.2,' freq:',f9.5,' unit:',a)
 102  	format('beam:',3f6.1,' niters:',i7,' K/Jy:',f9.2,' cbof:',f7.2)
 
@@ -1038,7 +1038,7 @@ c
 	do k=1,nc
 	  call maxmap(ary(1,1,k),nx,ny,is,ie,ib,it,
      *			tmax,imax,jmax,tmin,imin,jmin,ave,arms,num)
-	  write(line,'(x,i4,x,6(x,f11.4))')
+	  write(line,'(1x,i4,1x,6(1x,f11.4))')
      *		k,vlsr(k),ave*num/cbof,tmax,tmin,ave,arms
 	  call output(line)
 	enddo
@@ -1060,7 +1060,7 @@ c	call prompt(line,k,'>Type <cr> to continue')
 	  do k=1,nc
 	    call maxmap(ary(1,1,k),nx,ny,is,ie,ib,it,
      *			tmax,imax,jmax,tmin,imin,jmin,ave,arms,num)
-	    write(line,'(x,i4,x,6(x,f11.4))')
+	    write(line,'(1x,i4,1x,6(1x,f11.4))')
      *		k,vlsr(k),ave*num/cbof,tmax,tmin,ave,arms
 	    call LogWrit(line)
 	  enddo
@@ -1445,7 +1445,7 @@ c  delv
 	write(line,'(''Width:    '',F10.3,'' km/s'')') abs(delv)
         call pgtext(0.0,0.58,line)
 c  file
-        write(line,'(''filename:'',x,A)') file
+        write(line,'(''filename:'',1x,A)') file
         call pgtext(0.0,0.54,line)
 c  beam
 	if(bmaj.gt.0.) then
@@ -1460,7 +1460,7 @@ c  convolving beam
           call pgtext(0.0,0.46,line)
         endif
 c  bunit
-        write(line,'(''Map Unit:'',x,a)') bunit
+        write(line,'(''Map Unit:'',1x,a)') bunit
         call pgtext(0.0,0.40,line)
 c  dperjy
 	write(line,'(''K/Jy ='',1pg10.3)') dperjy
@@ -1472,13 +1472,13 @@ c
          goto 202
         endif
 c  max
-	write(line,'(''Maximum:'',1pg10.3,X,A)') amax*cf,units
+	write(line,'(''Maximum:'',1pg10.3,1X,A)') amax*cf,units
         call pgtext(0.0,0.30,line)
 c  min
-	write(line,'(''Minimum:'',1pg10.3,x,a)') amin*cf,units
+	write(line,'(''Minimum:'',1pg10.3,1x,a)') amin*cf,units
         call pgtext(0.0,0.26,line)
 c  rms
-	write(line,'(''Rms:    '',1pg10.3,x,a)') arms*cf,units
+	write(line,'(''Rms:    '',1pg10.3,1x,a)') arms*cf,units
         call pgtext(0.0,0.22,line)
 c  contours
 	scale=1.
@@ -1487,7 +1487,7 @@ c  contours
 	  if(cneg.eq.'Y') absmax=(max(abs(amax),abs(amin)))
 	  scale=absmax*cf/100.
 	endif
-        write(line,'(''Contour Levels:'',x,A)') units
+        write(line,'(''Contour Levels:'',1x,A)') units
         call pgtext(0.0,0.18,line)
 c  levels
 	j=0
