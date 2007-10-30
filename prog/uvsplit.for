@@ -57,6 +57,7 @@ c    rjs  13oct93 Original version.
 c    rjs  29aug94 W-axis change.
 c    rjs   6sep94 Use MAXWIN in maxdim.h. Better treatment of xyphase.
 c    rjs  25jan95 Added options=mosaic.
+c    rjs  21feb95 Get select=win to work.
 c
 c  Bugs:
 c   Perfect?
@@ -65,15 +66,15 @@ c------------------------------------------------------------------------
 	integer MAXSELS
 	parameter(MAXSELS=256)
 	character version*(*)
-	parameter(version='UvSplit: version 1.0 25-Jan-95')
+	parameter(version='UvSplit: version 1.0 21-Feb-95')
 c
 	character vis*64,dtype*1
 	integer tvis
 	real sels(MAXSELS)
-	integer length
+	integer length,i
 	logical dosource,dofreq,dowin,updated,dowide,docomp,docopy
 	logical mosaic
-	logical more,first
+	logical more,first,winsel,selwins(MAXWIN)
 c
 c  Externals.
 c
@@ -101,8 +102,19 @@ c
      *	  call bug('f','UvSplit does not support select=vis')
 	if(SelProbe(sels,'polarization?',0.d0))
      *	  call bug('f','UvSplit does not support select=pol')
-	if(SelProbe(sels,'window?',0.d0))
-     *	  call bug('f','UvSplit does not support select=win')
+	winsel = SelProbe(sels,'window?',0.d0)
+	if(winsel.and..not.dowin)call bug('f',
+     *	  'UvSplit does not support select=win with options=nowin')
+c
+c  Determine the selected windows.
+c
+	do i=1,MAXWIN
+	  if(winsel)then
+	    selwins(i) = SelProbe(sels,'window',dble(i))
+	  else
+	    selwins(i) = .true.
+	  endif
+	enddo
 c
 c  Loop the loop.
 c
@@ -114,12 +126,14 @@ c  Open the input, and determine some things about it.
 c
 	  call uvopen(tVis,vis,'old')
 	  call uvset(tVis,'preamble','uvw/time/baseline',0,0.,0.,0.)
+	  call uvset(tVis,'selection','window',0,0.,0.,0.)
 	  call SelApply(tVis,sels,.true.)
 	  if(first)then
 	    call uvprobvr(tVis,'corr',dtype,length,updated)
 	    dowide = dtype.eq.' '
 	    docomp = dtype.eq.'j'
-	    call FileSup(tVis,dowide,docomp,dowin,version)
+	    call FileSup(tVis,dowide,docomp,dowin,
+     *				selwins,MAXWIN,version)
 	  endif
 c
 c  Read through the file.
@@ -397,18 +411,29 @@ c
 c
 	end
 c************************************************************************
-	subroutine FileSup(tVis,tdowide,tdocomp,tdoif,tvers)
+	subroutine FileSup(tVis,tdowide,tdocomp,tdoif,
+     *						wins1,nwins1,tvers)
 c
 	implicit none
-	integer tVis
-	logical tdowide,tdocomp,tdoif
+	integer tVis,nwins1
+	logical tdowide,tdocomp,tdoif,wins1(nwins1)
 	character tvers*(*)
 c
 c  Initialise the File* routines.
 c------------------------------------------------------------------------
 	include 'uvsplit.h'
+	integer i
 c
 	version = 'UVSPLIT: Miriad '//tvers
+c
+c  Copy the record of selected windows.
+c
+	nwins = nwins1
+	if(nwins.gt.MAXWIN)
+     *	  call bug('f','Window selection buffer overflow')
+	do i=1,nwins1
+	  wins(i) = wins1(i)
+	enddo
 c
 	lVis = tVis
 	call rdhdi(lVis,'npol',npol,0)
@@ -588,6 +613,7 @@ c
 c  Do we already have this file.
 c
 	tindx = 0
+	if(.not.wins(tifno))return
 	if(nfiles.gt.0)tindx = binsrcha(name,out,nfiles)
 	if(tindx.gt.0)tindx = indx(tindx)
 c
