@@ -77,6 +77,9 @@ c	  nopol    Do not apply polarisation leakage corrections. By default
 c	           these are applied if they exist.
 c	  nopass   Do not apply bandpass corrections. By default these
 c	           are applied if they exist.
+c         uvpol    Print out fractional linear polarisation and 
+c                  polarisation position angle (provided Stokes I,Q,U are
+c                  requested). 
 c--
 c  History:
 c    rjs   5mar93 Original version.
@@ -88,6 +91,7 @@ c    rjs   4may94 Use double precision, better doc, print number visibs.
 c    rjs  17aug94 Handle offsets somewhat better.
 c    rjs  09mar97 CHange label "visibs" to "corrs" and change doc file.
 c    rjs  12oct98 Changed printing format.
+c    heb/rjs 20nov98 Added options=uvpol to print out polarization params.
 c  Bugs:
 c    ?? Perfect?
 c------------------------------------------------------------------------
@@ -99,7 +103,7 @@ c------------------------------------------------------------------------
 	parameter(version='UvFlux: version 1.0 12-Oct-98')
 c
 	character uvflags*16,polcode*2,line*132
-	logical docal,dopol,dopass,found,doshift
+	logical docal,dopol,dopass,found,doshift,douvpol,ok
 	character sources(MAXSRC)*12,source*12
 	double precision fluxr(MAXPOL,MAXSRC),fluxi(MAXPOL,MAXSRC)
 	double precision amp(MAXPOL,MAXSRC),amp2(MAXPOL,MAXSRC)
@@ -111,6 +115,9 @@ c
 	integer ncnt(MAXPOL,MAXSRC)
 	integer PolIndx(PolMin:PolMax),p(MAXPOL),pp(MAXPOL)
 	integer nsrc,npol,isrc,ipol,vsource,tno
+c
+        real ml,mlpc,psi,psideg
+	integer vI,vQ,vU
 c
 	integer nchan
 	double precision preamble(4)
@@ -126,7 +133,7 @@ c  Get the user parameters.
 c
 	call output(version)
 	call keyini
-	call GetOpt(docal,dopol,dopass)
+	call GetOpt(docal,dopol,dopass,douvpol)
 c
 c  Determine the shift.
 c
@@ -309,6 +316,32 @@ c
 	      nlines = nlines + 1
 	    endif
 	  enddo
+	  if(douvpol)then
+	    vI = polIndx(1)
+	    vQ = polIndx(2)
+	    vU = polIndx(3)
+	    ok = vI.gt.0.and.vQ.gt.0.and.vU.gt.0
+	    if(ok)ok = ncnt(vI,isrc).gt.0.and.ncnt(vQ,isrc).gt.0.and.
+     *		       ncnt(vU,isrc).gt.0
+	    if(.not.ok)then
+              call bug('w','Require Stokes I,Q,U for option uvpol')
+            else
+              ml = sqrt(fluxr(vQ,isrc)**2 + fluxr(vU,isrc)**2) /
+     *			fluxr(vI,isrc)
+              mlpc = ml*100
+              psi = 0.5*atan2(fluxr(vU,isrc),fluxr(vQ,isrc))
+              psideg = psi*180/pi
+	      call output('-----------------------------------------'//
+     *		    '---------------------------------------')
+              call output('         % Linear Pol     '//
+     *              'Lin Pol PA (degrees)')
+              call output('         ------------     ----------')
+              write(line, '(2f17.3,2f35.3)') mlpc,psideg
+              call output(line)
+	      call output('-----------------------------------------'//
+     *		    '---------------------------------------')
+	    endif
+          endif 
 	enddo
 c
 	if(nlines.eq.0)call bug('f','No valid data found')
@@ -349,24 +382,26 @@ c
 c
 	end
 c************************************************************************
-	subroutine GetOpt(docal,dopol,dopass)
+	subroutine GetOpt(docal,dopol,dopass,douvpol)
 c
 	implicit none
-	logical docal,dopol,dopass
+	logical docal,dopol,dopass,douvpol
 c
 c  Outputs:
 c    docal	Apply calibration corrections.
 c    dopol	Apply polarisation leakage corrections.
 c    dopass	Apply bandpass corrections.
+c    douvpol    Print out additional polarisation parameters.
 c------------------------------------------------------------------------
 	integer NOPT
-	parameter(NOPT=3)
+	parameter(NOPT=4)
 	character opts(NOPT)*8
 	logical present(NOPT)
-	data opts/'nocal   ','nopol   ','nopass  '/
+	data opts/'nocal   ','nopol   ','nopass  ','uvpol   '/
 c
 	call options('options',opts,present,NOPT)
 	docal = .not.present(1)
 	dopol = .not.present(2)
 	dopass= .not.present(3)
+        douvpol= present(4)
 	end
