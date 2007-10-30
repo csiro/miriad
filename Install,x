@@ -92,10 +92,10 @@ l0:
 	sed 1,4d bin/MIRRC				>> MIRRC.tmp
 	mv MIRRC.tmp bin/MIRRC
 
-	echo "#\!/bin/ksh"				> MIRRC.tmp
-	echo "# Korn shell version of MIRRC by George Martin" >> MIRRC.tmp
+	echo "#\!/bin/sh"				> MIRRC.tmp
+	echo "# Korn/sh shell version of MIRRC by George Martin" >> MIRRC.tmp
 	echo "# The following must be the 4th line"	>> MIRRC.tmp
-	echo "export MIR=$root"				>> MIRRC.tmp
+	echo "MIR=$root;export MIR"			>> MIRRC.tmp
 	sed 1,4d bin/MIRRC.sh				>> MIRRC.tmp
 	mv MIRRC.tmp bin/MIRRC.sh
 
