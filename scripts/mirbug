@@ -211,6 +211,8 @@ END	{ for (i=0; i < nkeys; i++)
     cat $stderr							>> $template   
   endif
 
+  if ( -f $HOME/.signature )cat $HOME/.signature		>> $template
+
 #  Invoke the user's editor of choice.
 
   if ( $doedit ) then
