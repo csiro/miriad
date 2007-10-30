@@ -9,6 +9,7 @@ c		  fewer spaces.
 c    rjs  29sep93 Added 0823 and 0407.
 c    rjs  18jan94 Added new1934
 c    rjs   1aug94 Added really new 1934. Change source name matching criteria.
+c    rjs   3aug95 Added new 0823-500, care jer.
 c************************************************************************
 c* CalStoke -- Flux characteristics of selected calibrators.
 c& nebk, rjs
@@ -59,7 +60,7 @@ c       3C48,     Baars et al
 c       3C147,    Baars et al
 c       3C138,    Perley/Killeen, 1991
 c       1934-638, Reynolds, 1994
-c       0823-500  Bob Duncan's fit to Parkes data.
+c       0823-500  John Reynolds
 c       0407-658  ??
 c
       data ((coeffs(i,j,1),i=1,5),j=1,nsrc) /
@@ -68,7 +69,8 @@ c
      +      1.766,         0.447,    -0.184,       0.0,       0.0,
      +    178.2661,     -114.4718,   25.23650,    -1.905347,  0.0,
      +    -30.7667,       26.4908,   -7.0977,      0.605334,  0.0,
-     +      8.1685,       -1.3370,    6.4657e-2,   0.0,       0.0,
+     +    -51.0361,       41.4101,  -10.7771,	   0.90468,  0.0,
+c     +      8.1685,       -1.3370,    6.4657e-2,   0.0,       0.0,
      +      1.6863,        0.75933,  -0.29088,     0.0,       0.0,
      +    -23.839,        19.569,    -4.8168,      0.35836,   0.0/
 c     +	   -1.1472989,	  -9.9004221, 9.5516825,  -2.7583933, 0.2533961/
@@ -128,7 +130,7 @@ c
 c  What sort of fit is the polynomial (logarithmic? linear?).
 c
       data coeftype /
-     +  loglin,loglog,loglog,loglin,loglog,linlin,loglog,loglog,
+     +  loglin,loglog,loglog,loglin,loglog,loglog,loglog,loglog,
      +  loglin,linlin,linlin,loglin,linlin,linlin,linlin,linlin,
      +  loglin,linlin,linlin,loglin,linlin,linlin,linlin,linlin,
      +  linlin,linlin,linlin,linlin,linlin,linlin,linlin,linlin/
