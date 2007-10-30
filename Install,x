@@ -40,6 +40,19 @@
 	  echo "Change directory to the Miriad root directory"
 	  exit
 	endif
+
+# Give the legal stuff
+
+	if ( -f DISCLAIMER ) then
+	  echo " "
+	  echo "Legal Disclaimer (see file DISCLAIMER)"
+	  echo "================"
+	  echo " "
+	  cat DISCLAIMER
+	  echo " "
+	  echo "------------------------------------------------------------------------"
+	  echo " "
+	endif
 	  
 # Determine the name of the Miriad root directory.
 
