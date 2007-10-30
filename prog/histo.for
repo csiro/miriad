@@ -35,14 +35,15 @@ c    19nov93 rjs   Better summary of flux or sum.
 c    31jan96 nebk  More grace when no valid pixels in region.  
 c    08oct96 nebk  Make accumulation sums double precision
 c    28feb97 nebk  Add object to output
+c    14may99 rjs   Increase MAXRUNS.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'maxnax.h'
 	integer nbindef,nbinmax,maxboxes,maxruns
 	character version*(*)
 	parameter(nbindef=16,nbinmax=40,maxboxes=2048)
-	parameter(maxruns=80000)
-	parameter(version = 'version 08-Oct-96' )
+	parameter(maxruns=40*MAXDIM)
+	parameter(version = 'version 14-May-99' )
 c
 	character file*64,asterisk*30,line*72,coord*64,bunit*32,
      +   object*32

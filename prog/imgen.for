@@ -32,6 +32,7 @@ c	   disk       An elliptical or circular disk.
 c	   j1x        A J1(x)/x function
 c	   shell      2D projection of an optically-thin spherical shell
 c	   comet      2D projection of a parent molecule in comet.
+c	   cluster    standard isothermal 2D projection for cluster gas.
 c@ spar
 c	Parameters which give the characteristics of the object. The
 c	parameters are given as a sequence of values, with one to six
@@ -49,6 +50,8 @@ c	   disk                   amp,x,y,bmaj,bmin,pa
 c	   j1x                    amp,x,y,bmaj,bmin,pa
 c	   shell                  amp,x,y,bmaj
 c	   comet                  amp,x,y,scalelength
+c	   cluster                amp,x,y,core radius 
+c
 c	Here "offset" is the offset level, "rms" is the rms value of
 c	the noise, "amp" is the normally peak value of the object (but
 c	see options=totflux below), "x" and "y" are the offset positions (in
@@ -57,7 +60,8 @@ c	"bmin" are the major and minor axes FWHM (in arcsec), and "pa" is
 c	the position angle of an elliptical component (in degrees). The
 c	position angle is measured from north towards east.
 c	The default is an object of unit amplitude, at the reference pixel,
-c	with a FWHM of 5 arcsec.
+c	with a FWHM of 5 arcsec. Comet scalelength, and cluster core radius
+c	are in arcsec units.
 c@ imsize
 c	If not input image is given, then this determines the size, in
 c	pixels, of the output image. Either one or two numbers can be
@@ -119,10 +123,11 @@ c		    within the image.
 c    rjs   11dec97  Make total flux option consistent when there is an
 c		    input image.
 c    rjs   19mar98  Copy across mosaic table.
+c    mchw  19mar99  Add model isothermal 2D projection for cluster gas.
 c  Bugs/Wishlist:
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Imgen: version 1.1 19-Mar-98' )
+	parameter(version='Imgen: version 1.1 19-Mar-99' )
 	include 'mirconst.h'
 	include 'maxdim.h'
 	include 'maxnax.h'
@@ -137,7 +142,7 @@ c
 c  Source parameters.
 c
 	integer MAXOBJS
-	parameter(MAXOBJS=4000)
+	parameter(MAXOBJS=3000)
 	real fwhm1(MAXOBJS),fwhm2(MAXOBJS),posang(MAXOBJS)
 	real amp(MAXOBJS),x(MAXOBJS),y(MAXOBJS)
 	real fwhm1d(MAXOBJS),fwhm2d(MAXOBJS),posangd(MAXOBJS)
@@ -145,7 +150,7 @@ c
 	character objs(MAXOBJS)*8
 c
 	integer NOBJECTS
-	parameter(NOBJECTS=8)
+	parameter(NOBJECTS=9)
 	integer nobjs
 	character objects(NOBJECTS)*8
 c
@@ -155,7 +160,7 @@ c
 c
 	data objects/'level   ','noise   ','point   ',
      *		     'gaussian','disk    ','j1x     ',
-     *               'shell   ','comet   '/
+     *               'shell   ','comet   ','cluster '/
 c
 c  Get the parameters from the user.
 c
@@ -199,6 +204,11 @@ c
 	    fwhm1(i) = fwhm1(i) / 3600. * pi/180.
 	    if(fwhm1(i).le.0)
      *	      call bug('f','BMAJ and BMIN parameters must be positive')
+	    fwhm2(i) = fwhm1(i)
+	    posang(i) = 0
+	  elseif(objs(i).eq.'cluster') then
+	    call keyr('spar',fwhm1(i),50.)
+	    fwhm1(i) = fwhm1(i) / 3600. * pi/180.
 	    fwhm2(i) = fwhm1(i)
 	    posang(i) = 0
 	  else
@@ -544,6 +554,18 @@ c
 	      a = amp / p * sum 
 	      data(i) = data(i) + a
 	    endif
+	  enddo
+c
+c  Handle a cluster isothermal gas projection.
+c
+	else if(object.eq.'cluster')then
+	  yy = (j0-y)
+	  do i=1,n1
+	    xx = (i-x)
+	    p = (xx*xx+yy*yy)/(fwhm1*fwhm1)
+	    a = amp * (1. + p)**-0.5
+c	    a = amp * (1. + p)**(0.5-1.5*beta)
+	    data(i) = data(i) + a
 	  enddo
 c
 c  Handle a disk.
