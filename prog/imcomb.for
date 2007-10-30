@@ -46,6 +46,7 @@ c    rjs  02jul97 cellscal change.
 c    rjs  21jul97 Handle image alignment better. Fix bug related to
 c		  incorrect flagging checks.
 c    rjs  23jul97 Added pbtype.
+c    rjs  13nov98 Increase MAXIN.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'maxnax.h'
@@ -53,7 +54,7 @@ c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='ImComb: version 1.0 21-Jul-97')
 	integer MAXIN,MAXOPEN
-	parameter(MAXIN=350,MAXOPEN=6)
+	parameter(MAXIN=500,MAXOPEN=6)
 c
 	character in(MAXIN)*64,tin*64,out*64
 	integer nrms,nin,tno(MAXIN),tOut,nsize(3,MAXIN),nOpen
