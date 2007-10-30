@@ -73,6 +73,10 @@ c    rjs    2nov95    A "break" in CopyDat is dependent on inttime, as
 c		      suggested by jm.
 c    rjs   11jan96    options=nosrc.
 c    jm    19feb96    Added History entry for each (final) flag.
+c    jm    11apr96    Fixed 2nov95 change so getting the inttime takes
+c                     place after the first read on the data and
+c                     increased the default value.  Also added a check
+c                     to see if ANY valid data have been selected.
 c***********************************************************************
 c= TvFlag - Interactive editing of a UV data set on a TV device.
 c& jm
@@ -222,7 +226,7 @@ c
       character PROG*(*)
       parameter (PROG = 'TVFLAG: ')
       character VERSION*(*)
-      parameter (VERSION = PROG // 'version 2.3 11-Jan-96')
+      parameter (VERSION = PROG // 'version 2.3 11-Apr-96')
       integer NOPT,MAXSELS,MAXEDIT
       parameter (NOPT=4,MAXSELS=256,MAXEDIT=1024)
 c
@@ -1032,11 +1036,12 @@ c  Whenever the source changes, cause a break point.
 c
 	call uvVarini(lIn,vsrc)
 	call uvVarSet(vsrc,'source')
-	call uvrdvrr(lIn,'inttime',maxgap,10.0)
-	maxgap = 3.5*maxgap*ttol
 c
 	call uvread(lIn,preamble,data,flags,MAXCHAN,nchan)
+	if (nchan .eq. 0) call bug('f', 'No valid data found.')
 	call uvinfo(lIn,'line',line)
+	call uvrdvrr(lIn,'inttime',maxgap,35.0)
+	maxgap = 3.5*maxgap*ttol
 	chanoff = nint(line(3)) - 1
 	day0 = nint(preamble(3)-1) + 0.5d0
 	tprev = -1
@@ -1104,7 +1109,7 @@ c
 	if(.not.torder)
      *    call bug('w','Display will not be in strict time order')
 	if(nread.ne.0)call bug('f',
-     *	  'Number of chanels changed while reading the data')
+     *	  'Number of channels changed while reading the data')
 	if(ntime.eq.0)call bug('f','No data found')
 	if(time(ntime).lt.-1) ntime = ntime - 1
 	if(ntime.eq.0)call bug('f','No data found')
