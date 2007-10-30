@@ -60,7 +60,7 @@ c                  Remove keyword "typeo"
 c    nebk 14oct94  Fix problem when restfreq=0 
 c    nebk 27jan95  Remove *(*) concatenations
 c    nebk 13nov95  Better non-coordinate checking
-c    nebk 29nov95  Calls to CTYPECO were out of date.
+c    nebk 29nov95  New call for CTYPECO
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -89,7 +89,7 @@ c
       data typei /maxnax*' '/
       data nco, ipix /0, maxnax*1/
 c-----------------------------------------------------------------------
-      call output ('IMPOS: version 13-Nov-95')
+      call output ('IMPOS: version 29-Nov-95')
       call output (' ')
 c
 c  Get inputs
@@ -141,9 +141,9 @@ c
 c
 c Initialize coordinate transformation routines and fish out CTYPES
 c
-      call initco( lun)
+      call initco (lun)
       do i = 1, naxis
-        call ctypeco (lun, i, ctypes(i))
+        call ctypeco (lun, i, ctypes(i), il)
       end do
 c
 c Check spectral-axis type, set default value if needed and
