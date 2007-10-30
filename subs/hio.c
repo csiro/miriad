@@ -16,6 +16,8 @@
         7-sep-93  rjs   Bug fix in habort.
        23-dec-93  rjs   hexists did not handle tno==0 correctly.
         5-jan-93  rjs   Added hmode to check access mode of dataset.
+       15-nov-94  rjs   Fixed bug affecting rewriting of "small" items
+			after they have been closed.
 */
 
 #include "hio.h"
@@ -765,6 +767,9 @@ int *iostat;
 
   } else{
     item->flags &= ~ACCESS_MODE;
+    if(item->io[0].state == IO_MODIFIED)
+		trees[item->thandle].flags |= TREE_CACHEMOD;
+    item->io[0].state = IO_VALID;
   }
 }
 /************************************************************************/
@@ -924,6 +929,7 @@ char *buf;
 
     if(!WITHIN_BUF(b)){
       if(iob1->state == IO_MODIFIED){
+
 	next = iob1->offset + iob1->length;
         if(iob1->length%BUFALIGN && next < item->size)
 	  {hwrite_fill_c(item,iob1,next,iostat);	if(*iostat) return;}
@@ -987,6 +993,7 @@ char *buf;
       if(iob1->offset + iob1->length < offset &&
          iob1->offset + iob1->length < item->size)
 	  {hwrite_fill_c(item,iob1,offset,iostat);	if(*iostat) return;}
+
       iob1->state = IO_MODIFIED;
       iob1->length = max(iob1->length,
 			 min(length + offset - iob1->offset, item->bsize));
