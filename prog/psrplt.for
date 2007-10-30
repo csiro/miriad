@@ -69,7 +69,7 @@ c------------------------------------------------------------------------
 	parameter(MAXPOL=4,MAXBIN=32,PolMin=-9,PolMax=4)
 	parameter(version='PsrPlt: version 1.0 03-May-01')
 c
-	character uvflags*16,device*32,logfile*80,flux*9
+	character uvflags*16,device*80,logfile*80,flux*9
 	logical docal,dopol,dopass,doshift
 	logical dogrey,dochan
 c
