@@ -16,18 +16,12 @@ c	instrumental gain and atmospheric attenuation of the two data-sets
 c	were the same, and so the difference in gain is due to an
 c	arbitrary or incorrect flux being specified when initially
 c	determining the gains.
-c
-c	GpBoot will also correct for differences in the XY phase offsets
-c	between the two data-sets, and copy across the polarization
-c	leakage parameters.
 c@ vis
 c	The input visibility file, containing the gain file to correct.
-c	The gains and XY phases are assumed to be out by a constant
-c	factor.
+c	The gains are assumed to be out by a constant factor.
 c@ cal
 c	This is a visibility data-set, which is assumed to contain a
-c	gain table which scales the data to absolute flux units, and
-c	contains correct XY phases.
+c	gain table which scales the data to absolute flux units.
 c@ select
 c	Normal uv-selection parameter. This selects the gains in the
 c	``vis'' that are compared against the ``cal'' gains (note that
@@ -36,15 +30,6 @@ c	ONLY time and antenna selection are permitted. You will use
 c	this parameter to select which data the instrumental/atmospheric
 c	amplitude gains for ``vis'' are comparable to the observation in
 c	``cal''.
-c@ options
-c	This gives task enrichment parameters. Several can be given,
-c	separated by commas. Minimum match is used.
-c	  "noxy"      Do not correct for XY phase differences. The
-c	              default is to correct for this if the ``gains''
-c	              item is present in both data-sets.
-c	  "nocal"     Do not correct the flux scale. The default is to
-c	              correct the flux scale if the ``gains'' item is
-c	              present in both data-sets.
 c--
 c  History:
 c    rjs     24jul91 Original version.
@@ -59,7 +44,7 @@ c    rjs     17aug95 Antenna selection.
 c    rjs     20may97 Print out the xy phasr that is being applied.
 c		     Get the wraps right.
 c    rjs      6feb98 Doc change oonly.
-c
+c    rjs     12oct99 Get rid of options=noxy.
 c  Bugs and Shortcomings:
 c    * The xy phase is not applied to the polarisation solution.
 c------------------------------------------------------------------------
@@ -67,26 +52,25 @@ c------------------------------------------------------------------------
 	include 'mirconst.h'
 	character version*(*)
 	integer MAXSELS
-	parameter(version='GpBoot: version 20-May-97')
+	parameter(version='GpBoot: version 12-Oct-99')
 	parameter(MAXSELS=256)
 c
-	logical docal,doxy
-	character cal*64,vis*64,line1*72,line2*72
+	character cal*64,vis*64,line*72
 	real sels(MAXSELS)
-	real VAmp(2*MAXANT),CAmp(2*MAXANT),factor,theta
+	real VAmp(2*MAXANT),CAmp(2*MAXANT),factor
 	integer VCNT(2*MAXANT),CCnt(2*MAXANT)
-	complex Gains(3*MAXANT),xyp
+	complex Gains(3*MAXANT)
 	integer iostat,tVis,tCal,ngains,nants,nfeedc,nfeedv,ntau
 	integer temp,i,j
 c
 c  Get the input parameters.
 c
 	call output(version)
+	call bug('i','options=noxy and options=nocal have been removed')
 	call keyini
 	call keya('cal',cal,' ')
 	call keya('vis',vis,' ')
 	call SelInput('select',sels,MAXSELS)
-	call GetOpt(docal,doxy)
 	call keyfin
 	if(vis.eq.' '.or.cal.eq.' ')call bug('f',
      *	  'No calibrator or input vis file given')
@@ -108,8 +92,7 @@ c
      *	  .or.ntau.gt.1.or.ntau.lt.0)
      *	  call bug('f','Bad number of gains or feeds in '//cal)
 	nants = ngains / (nfeedc + ntau)
-	if(docal)call SumGains(tCal,nants,nfeedc,ntau,CAmp,CCnt,
-     *							sels,.false.)
+	call SumGains(tCal,nants,nfeedc,ntau,CAmp,CCnt,sels,.false.)
 c
 	call rdhdi(tVis,'nfeeds',nfeedv,1)
 	if(nfeedv.ne.nfeedc)
@@ -121,52 +104,33 @@ c
 	temp = ngains / (nfeedv + ntau)
 	if(temp.ne.nants)
      *	  call bug('f','Number of antennae differ for the two inputs')
-	if(docal)call SumGains(tVis,nants,nfeedv,ntau,VAmp,VCnt,
+	call SumGains(tVis,nants,nfeedv,ntau,VAmp,VCnt,
      *							sels,.true.)
 c
 c  Determine the scale factor to apply.
 c
-	if(docal)then
-	  call GetFac(nants,nfeedv,VAmp,VCnt,nfeedc,CAmp,CCnt,factor)
-	else
-	  factor = 1
-	endif
-c
-c  Get the xyphase offsets to apply, if appropriate.
-c
-	doxy = doxy.and.nfeedv.eq.2
-	if(doxy)call ProcXY(tVis,tCal,xyp,nants,doxy)
+	call GetFac(nants,nfeedv,VAmp,VCnt,nfeedc,CAmp,CCnt,factor)
 c
 c  Determine the gain to apply.
 c
 	j = 1
 	do i=1,ngains,nfeedv+ntau
-	  Gains(i) = cmplx(factor,0.)
-	  if(doxy)then
-	    Gains(i+1) = factor*xyp
-	  else if(nfeedv.eq.2)then
-	    Gains(i+1) = cmplx(factor,0.)
-	  endif
+	  Gains(i) = factor
+	  if(nfeedv.gt.1)Gains(i+1) = factor
 	  if(ntau.eq.1)Gains(i+nfeedv) = (1.,0.)
 	  j = j + 1
 	enddo
 c
 c  Now apply the correction.
 c
-	if(docal.or.doxy)call Correct(tVis,ngains,Gains)
+	call Correct(tVis,ngains,Gains)
 c
 c  Inform user, not appeasing Bob, who would rather the user
 c  be kept bare foot and ignorant.
 c
-        write(line1,'(a,f6.3)') 'Secondary flux density scaled by:',
+        write(line,'(a,f6.3)') 'Secondary flux density scaled by:',
      *                         factor**2
-        call output(line1)
-	if(doxy)then
-	  theta = 180/PI*atan2(aimag(xyp),real(xyp))
-	  write(line2,100)theta
-  100	  format('Applying xyphase correction of',f6.1,' degrees')
-	  call output(line2)
-	endif
+        call output(line)
 c
 c  Write out some history now. Do not appease Neil -- just write it to
 c  the 'vis' file. Neil would want it written to the 'cal' file, as
@@ -175,8 +139,7 @@ c
 	call hisopen(tVis,'append')
 	call hiswrite(tVis,'GPBOOT: Miriad '//version)
 	call hisinput(tVis,'GPBOOT')
-        call hiswrite(tVis,'GPBOOT: '//line1)
-        if(doxy)call hiswrite(tVis,'GPBOOT: '//line2)
+        call hiswrite(tVis,'GPBOOT: '//line)
 	call hisclose(tVis)
 c
 c  Close up everything.
@@ -422,100 +385,3 @@ c------------------------------------------------------------------------
 	call bug('w',message)
 	call bugno('f',iostat)
 	end
-c************************************************************************
-	subroutine ProcXY(tVis,tCal,xyp,nants,ok)
-c
-	implicit none
-	integer tVis,tCal,nants
-	complex xyp
-	logical ok
-c
-c  Determine the XYphase offsets to apply to each antenna in the
-c  output.
-c
-c  Input:
-c    tVis
-c    tCal
-c    nants
-c  Output:
-c    ok
-c    xyp
-c------------------------------------------------------------------------
-	include 'maxdim.h'
-	include 'mirconst.h'
-	real tol
-	parameter(tol = 0.075)
-	real Vphase(MAXANT),Vsd(MAXANT),Cphase(MAXANT),Csd(MAXANT)
-	integer Vcnt(MAXANT),Ccnt(MAXANT),Vnants,Cnants
-	real theta,offset,t
-	integer Count,n,i
-	logical first
-c
-c  Get the xyphases for the two files.
-c
-	call GetXY(tVis,Vphase,Vsd,Vcnt,MAXANT,Vnants)
-	call GetXY(tCal,Cphase,Csd,Ccnt,MAXANT,Cnants)
-c
-c
-c  If alls OK, average those XYphase errors where the XY phase appears
-c  to be constant (has a standard deviation of less than "tol" radians.
-c
-	ok = Vnants.eq.nants.and.Cnants.eq.nants
-	first = .true.
-	if(ok)then
-	  theta = 0
-	  Count = 0
-	  do i=1,nants
-	    n = min(Vcnt(i),Ccnt(i))
-	    if(Vsd(i).lt.tol.and.Csd(i).lt.tol.and.n.gt.0)then
-	      if(first)then
-		offset = Cphase(i) - Vphase(i)
-		offset = mod(offset,2*PI)
-		if(offset.lt.-PI)offset = offset + 2*PI
-		if(offset.gt.+PI)offset = offset - 2*PI
-	        first = .false.
-	      endif
-	      t = Cphase(i) - Vphase(i) - offset
-	      t = mod(t,2*PI)
-	      if(t.lt.-PI) t = t + 2*PI
-	      if(t.gt.+PI) t = t - 2*PI
-	      theta = theta + n*t
-	      Count = Count + n
-	    endif
-	  enddo
-	  ok = Count.gt.0
-	  if(ok)then
-	    theta = theta / Count + offset
-	    xyp = cmplx(cos(theta),-sin(theta))
-	  endif	
-	endif
-	if(.not.ok) call bug('w',
-     *	    'Unable to determine XY phases for vis and/or cal')
-c
-	end
-c************************************************************************
-	subroutine GetOpt(docal,doxy)
-c
-	implicit none
-	logical docal,doxy
-c
-c  Get "Task Enrichment Parameters".
-c
-c  Output:
-c    doxy	Do not correct XY phase.
-c    docal	Do not correct absolute flux levels.
-c------------------------------------------------------------------------
-	integer nopts
-	parameter(nopts=2)
-	logical present(nopts)
-	character opts(nopts)*8
-	data opts/'noxy    ','nocal   '/
-c
-	call options('options',opts,present,nopts)
-	doxy = .not.present(1)
-	docal = .not.present(2)
-c
-	if(.not.doxy.and..not.docal)call bug('f',
-     *	  'Options prevent anything being done')
-	end
-
