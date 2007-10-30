@@ -390,6 +390,7 @@ c    nebk 10apr95  Add doc for new absolute b&w lookup table
 c    nebk 03sep95  Add labtyp=arcmin, nonlinear ticks
 c    nebk 12nov95  Change to deal internally in absolute pixels
 c                  '*lin' -> '*nat'
+c    nebk 29nov95  New call for CONTURCG
 c
 c Ideas:
 c  * Be cleverer for sub-cubes which have spectra partly all zero
@@ -462,7 +463,7 @@ c
       data txtfill, tflen /'spectrum', 'derivative spectrum', 
      +                     'derivative spectrum', 8, 19, 19/
 c-----------------------------------------------------------------------
-      call output ('CgSpec: version 12-Nov-95')
+      call output ('CgSpec: version 29-Nov-95')
       call output (' ')
 c
 c Get user inputs
@@ -755,8 +756,8 @@ c
 c
           call pgslw (clines(i))
           call pgsci (7+i-1)
-          call conturcg (blankc, solneg(i), win(1), win(2), doblnkc,
-     +                   memr(ipim), nlevs(i), levs(1,i),
+          call conturcg (.false., blankc, solneg(i), win(1), win(2), 
+     +                   doblnkc, memr(ipim), nlevs(i), levs(1,i),
      +                   tr, break(i))
 c
 c Save normalization image if there are some blanks
@@ -937,9 +938,6 @@ c Locate desired sub-cube in spectrum cube
 c
           call specloc (lh, ls, snaxis, ssize, opos(1,j), vrange,
      +                  spax, sblc, strc, fits)
-          write (*,*) ' '
-          write (*,*) 'sblc=',sblc
-          write (*,*) 'strc=',strc
 c
 c Continue if requested spectrum can be extracted from the cube
 c
@@ -3101,7 +3099,7 @@ c
 cc
       double precision win(3), wout(3), wcen(3)
       real dv
-      integer i, j, pt(3), i1, i2
+      integer i, j, pt(3), i1, i2, naxis
       character tpi(2)*4, tsi(3)*4, typei(3)*6, typeo(3)*6
 c-----------------------------------------------------------------------
 c
@@ -3140,8 +3138,9 @@ c Now work out the centre of the spectrum in spectrum image
 c coordinates (linear for velocity, arcsec for spatial)
 c
       call initco (ls)
+      naxis = min(3,snaxis)
       j = 1
-      do i = 1, 3
+      do i = 1, naxis
         if (i.eq.velax) then
           win(i) = (vrange(1) + vrange(2)) / 2.0
           typei(i) = 'absnat'
@@ -3153,12 +3152,12 @@ c
           j = j + 1
         end if
       end do
-      call w2wco (ls, 3, typei, ' ', win, typeo, ' ', wcen)
+      call w2wco (ls, naxis, typei, ' ', win, typeo, ' ', wcen)
 c
 c Now offset to find the BLC of the subcube
 c
       dv = abs(vrange(2) - vrange(1)) / 2.0
-      do i = 1, 3
+      do i = 1, naxis
         if (i.eq.velax) then
           typei(i) = 'absnat'
           win(i) = wcen(i) - dv 
@@ -3168,14 +3167,14 @@ c
         end if
         typeo(i) = 'abspix'
       end do
-      call w2wco (ls, 3, typei, ' ', win, typeo, ' ', wout)
+      call w2wco (ls, naxis, typei, ' ', win, typeo, ' ', wout)
       do i = 1, 3
         sblc(i) = nint(wout(i))
       end do
 c
 c Now offset to find the TRC of the subcube
 c
-      do i = 1, 3
+      do i = 1, naxis
         if (i.eq.velax) then
           typei(i) = 'absnat'
           win(i) = wcen(i) + dv  
@@ -3185,8 +3184,8 @@ c
         end if
         typeo(i) = 'abspix'
       end do
-      call w2wco (ls, 3, typei, ' ', win, typeo, ' ', wout)
-      do i = 1, 3
+      call w2wco (ls, naxis, typei, ' ', win, typeo, ' ', wout)
+      do i = 1, naxis
         strc(i) = nint(wout(i))
       end do
       call finco (ls)
