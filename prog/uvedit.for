@@ -44,6 +44,7 @@ c    rjs   16dec95    Make phase shift calculation more accurate.
 c    jm    19feb96    Added warnings if no obvious changes are made or
 c                     if the requested source is not found.
 c    jm    06jun96    Correctly add dra/ddec to RA/Dec in Getrdphz.
+c    rjs   11oct96    Added delra,deldec,pntra,pntdec to the output.
 c***********************************************************************
 c= Uvedit - Editing of the baseline of a UV data set.
 c& jm
@@ -263,6 +264,7 @@ c
       logical suffix, allsrc, srcfound, changed
       logical raabs, decabs, antabs
       logical dotime, dorad, doants, dodelay, douv, dodra
+      logical dopntra, dopntdec, dodelra, dodeldec
       logical updUT, updLst, updodra, updora, updodec, updra, upddec
       logical dowide, docorr
       logical more, updated
@@ -590,7 +592,7 @@ c
           if (.not. dowide) then
             k = Len1(Vis(j))
             errmsg = PROG //
-     *             'No wide band data present in' // Vis(j)(1:k)
+     *             'No wide band data present in ' // Vis(j)(1:k)
             call Bug('w', errmsg)
           endif
           if ((.not. docorr) .and. (.not. dowide)) then
@@ -642,6 +644,17 @@ c
               call uvset(Lin, 'data','wide',0, 1.0, 1.0, 1.0)
               call uvset(Lout,'data','wide',0, 1.0, 1.0, 1.0)
             endif
+c
+c  See if the delay tracking or pointing center RA and DEC are present.
+c
+	    call UvProbvr(Lin, 'delra', type, k, updated)
+	    dodelra = type.eq.' '
+	    call UvProbvr(Lin, 'deldec',type, k, updated)
+	    dodeldec = type.eq.' '
+	    call UvProbvr(Lin, 'pntra', type, k, updated)
+	    dopntra = type.eq.' '
+	    call UvProbvr(Lin, 'pntdec',type, k, updated)
+	    dopntdec = type.eq.' '
 c
 c  Begin editing the input file.
 c
@@ -782,6 +795,8 @@ c
                     val1 = RA + raoff
                     if (raabs) val1 = raoff
                     call UvPutvrd(Lout, 'ra', val1, 1)
+                    if(dopntra)call UvPutvrd(lOut, 'pntra', RA, 1)
+                    if(dodelra)call UvPutvrd(lOut, 'delra', RA, 1)
                     write (mesg, 10) PROG, 'RA', RA, val1
                     call HisWrite(Lout, mesg)
                   endif
@@ -796,6 +811,8 @@ c
                     val1 = dec + decoff
                     if (decabs) val1 = decoff
                     call UvPutvrd(Lout, 'dec', val1, 1)
+                    if(dopntdec)call UvPutvrd(lOut, 'pntdec', dec, 1)
+                    if(dodeldec)call UvPutvrd(lOut, 'deldec', dec, 1)
                     write (mesg, 10) PROG, 'Dec', dec, val1
                     call HisWrite(Lout, mesg)
                   endif
