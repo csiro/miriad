@@ -20,6 +20,7 @@ c    pjt  10mar91 got rid of testing MIN() in PARAMETER: is not ANSI
 c    mjs  26may92 declared and initialized "zrow" variable that is used.
 c    nebk 26nov92 Add btype to output header
 c    mjs  17feb93 Elim unused vars to eliminate compiler warning messsges.
+c    rjs  02jul97 cellscal change.
 c------------------------------------------------------------------------
 c This program allocates:
 c   maths.h     3*MAXRUNS
@@ -483,7 +484,7 @@ c------------------------------------------------------------------------
 	integer i,lblc,ltrc
 	real def,crpix
 	integer nkeys
-	parameter(nkeys=27)
+	parameter(nkeys=26)
 	character keyw(nkeys)*8
 c
 c  Externals.
@@ -493,9 +494,9 @@ c
 	data keyw/   'bunit   ','cdelt1  ','cdelt2  ','cdelt3  ',
      *	  'crota1  ','crota2  ','crota3  ','crval1  ','crval2  ',
      *    'crval3  ','ctype1  ',
-     *	  'ctype2  ','ctype3  ','date-obs','epoch   ','history ',
-     *	  'instrume','niters  ','object  ','telescop','xshift  ',
-     *	  'yshift  ','restfreq','vobs    ','observer','obsra   ',
+     *	  'ctype2  ','ctype3  ','obstime ','epoch   ','history ',
+     *	  'instrume','niters  ','object  ','telescop','cellscal',
+     *	  'restfreq','vobs    ','observer','obsra   ',
      *	  'obsdec  '/
 C
 	do i=1,nkeys
