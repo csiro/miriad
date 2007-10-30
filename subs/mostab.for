@@ -1,17 +1,27 @@
-c  subroutine MosCini
-c  subroutine MosChk
-c  subroutine MosCDone
+c************************************************************************
 c
-c  subrouitne MosGeom
-c  subroutine MosGet
-c  subroutine MosSize
-c  subroutine MosGFin
+c  A set of routines to handle multi-pointing vis data sets, mosaic
+c  tables, and to mosaic images.
 c
-c  subroutine MosSave
-c  subroutine MosLoad
-c  subroutine MosPrint
+c   subroutine MosCini
+c   subroutine MosChk
+c   subroutine MosCDone
 c
-c  subroutine Mosaicer
+c   subrouitne MosGeom
+c   subroutine MosGet
+c   subroutine MosSize
+c   subroutine MosGFin
+c
+c   subroutine MosSave
+c   subroutine MosLoad
+c   subroutine MosPrint
+c
+c   subroutine MosMIni
+c   subroutine Mosaicer
+c   subroutine MosMFin
+c
+c  History:
+c    rjs  26oct94 Original version
 c************************************************************************
 	subroutine MosCIni
 c
@@ -289,11 +299,10 @@ c
 	call coFin(coRef)
 c
 c  Convert the telescop and pbfwhm into pseudo-telescopes.
-c  PROBABLY AT THIS TIME, CREATE PRIMARY BEAM OBJECTS!!!
 c
 	do i=1,npnt
 	  if(pbfwhm(i).gt.0)write(telescop(i),10)pbfwhm(i)
-  10	  format('GAUS-',1pe11.5)
+  10	  format('GAUS(',1pe10.4,')')
 	enddo
 c
 	end
@@ -828,7 +837,8 @@ c  Tidy up.
 c
 c------------------------------------------------------------------------
 	include 'mostab.h'
-	integer i
+	integer i,ngood
+	real Sig
 c
 	if(nxy.gt.0)then
 	  call MemFree(pX,nxy,'r')
@@ -836,20 +846,65 @@ c
 	  nxy = 0
 	endif
 c
+	ngood = 0
+	Sig = 0
 	do i=1,npnt
 	  if(SumWt(i).gt.0)then
-	    Rms2(i) = sqrt(Rms2(i) / (SumWt(i)*SumWt(i)) )
+	    Rms2(i) = Rms2(i) / (SumWt(i)*SumWt(i))
 	  else
 	    Rms2(i) = 0
 	  endif
+	  if(Rms2(i).gt.0)then
+	    ngood = ngood + 1
+	    Sig = Sig + Rms2(i)
+	    Rms2(i) = sqrt(Rms2(i))
+	  endif
 	enddo
 c
-	end	
+c  If some of the RMS values were zero, fill them in with an average
+c  value. If they are all bad, fill them all in with 1!
+c
+	if(ngood.eq.0)then
+	  Sig = 1
+	else
+	  Sig = sqrt(Sig/ngood)
+	endif
+c
+	if(ngood.lt.npnt)then
+	  do i=1,npnt
+	    if(Rms2(i).le.0)Rms2(i) = Sig
+	  enddo
+	endif
+c
+	end
 c************************************************************************
-	subroutine Mosaicer(chan,In,Out,nx,ny,npnt1,mnx,mny)
+	subroutine MosMIni(coObj,chan)
 c
 	implicit none
-	integer chan,nx,ny,npnt1,mnx,mny
+	integer coObj,chan
+c
+c  Initialise ready for a mosaic operation.
+c------------------------------------------------------------------------
+	include 'mostab.h'
+	double precision x1(3),x2(2)
+	integer i
+c
+	x1(3) = chan
+	do i=1,npnt
+	  x1(1) = radec(1,i)
+	  x1(2) = radec(2,i)
+	  call coCvt(coObj,'aw/aw/ap',x1,'ap/ap',x2)
+	  x0(i) = x2(1)
+	  y0(i) = x2(2)
+	  call pbInitc(pbObj(i),telescop(i),coObj,'ap/ap',x2)
+	enddo
+c
+	end
+c************************************************************************
+	subroutine Mosaicer(In,Out,nx,ny,npnt1,mnx,mny)
+c
+	implicit none
+	integer nx,ny,npnt1,mnx,mny
 	real In(nx,ny,npnt1),Out(mnx,mny)
 c
 c  Mosaic the different fields together.
@@ -859,30 +914,51 @@ c------------------------------------------------------------------------
 	include 'mem.h'
 	include 'mostab.h'
 c
+	integer pWts
+c
 	if(npnt1.ne.npnt)
      *	  call bug('f','Inconsistency in Mosaic')
 c
+	call MemAlloc(pWts,mnx*mny,'r')
+c
 c  Do the simple mosaicing.
 c
-	call Mosaic1(In,Out,nx,ny,npnt,mnx,mny,
-     *	  memr(pX+(chan-1)*npnt),memr(pY+(chan-1)*npnt),nx2,ny2)
+	call Mosaic1(In,Out,memr(pWts),nx,ny,npnt,mnx,mny,
+     *	  x0,y0,pbObj,Rms2,nx2,ny2)
 c
+	call memFree(pWts,mnx*mny,'r')
 	end
 c************************************************************************
-	subroutine Mosaic1(In,Out,nx,ny,npnt,mnx,mny,x,y,nx2,ny2)
+	subroutine Mosaic1(In,Out,Wts,nx,ny,npnt,mnx,mny,x,y,
+     *						pbObj,Rms2,nx2,ny2)
 c
 	implicit none
-	integer nx,ny,npnt,mnx,mny,nx2,ny2
-	real In(nx,ny,npnt),Out(mnx,mny),x(npnt),y(npnt)
+	integer nx,ny,npnt,mnx,mny,nx2,ny2,pbObj(npnt)
+	real In(nx,ny,npnt),Out(mnx,mny),Wts(mnx,mny)
+	real Rms2(npnt),x(npnt),y(npnt)
 c
-c  Do crude mosaicing.
+c  Do a linear mosaic of all the fields. Weight is so that the
+c  RMS never exceeds the max RMS in the input data.
+c
 c------------------------------------------------------------------------
+	include 'maxdim.h'
 	integer i,j,ic,jc,ioff,joff,imin,jmin,imax,jmax,k
-	REAL SCALE
+	real sigt,Pb(MAXDIM),scale
+c
+c  Externals.
+c
+	real pbGet
+c
+c  Check that we have enough space.
+c
+	if(mnx.gt.MAXDIM)call bug('f','Buffer overflow, in Mosaicer')
+c
+c  Initialise the output and weights arrays.
 c
 	do j=1,mny
 	  do i=1,mnx
 	    Out(i,j) = 0
+	    Wts(i,j) = 0
 	  enddo
 	enddo
 c
@@ -893,8 +969,7 @@ c
 	jc = ny/2 + 1
 c
 	do k=1,npnt
-	  scale = 1
-	  if(k.eq.1)scale = 1
+	  scale = 1/(Rms2(k)*Rms2(k))
 	  ioff = ic - nint(x(k))
 	  joff = jc - nint(y(k))
 	  imin = max(nint(x(k)-nx2+0.5),1)
@@ -904,9 +979,53 @@ c
 c
 	  do j=jmin,jmax
 	    do i=imin,imax
-	      Out(i,j) = Out(i,j) + scale*In(i+ioff,j+joff,k)
+	      Pb(i) = pbGet(pbObj(k),real(i),real(j))
+	    enddo
+	    do i=imin,imax
+	      Out(i,j) = Out(i,j) + scale*Pb(i)*In(i+ioff,j+joff,k)
+	      Wts(i,j) = Wts(i,j) + scale*Pb(i)*Pb(i)
 	    enddo
 	  enddo
+	enddo
+c
+c  Determine the maximum RMS.
+c
+	Sigt = Rms2(1)
+	do k=2,npnt
+	  Sigt = max(Sigt,Rms2(k))
+	enddo
+	Sigt = Sigt*Sigt
+c
+c  Now rescale to correct for the weights.
+c
+	do j=1,mny
+	  do i=1,mnx
+	    scale = Sigt*Wts(i,j)
+	    if(scale.le.0)then
+	      scale = 0
+	    else if(scale.lt.1)then
+	      scale = sqrt(scale)/Wts(i,j)
+	    else
+	      scale = 1/Wts(i,j)
+	    endif
+	    Out(i,j) = scale*Out(i,j)
+	  enddo
+	enddo
+c
+	end
+c************************************************************************
+	subroutine MosMFin
+c
+	implicit none
+c
+c  Tidy up after mosaicing.
+c
+c------------------------------------------------------------------------
+	include 'mostab.h'
+	integer i
+c
+	do i=1,npnt
+	  call pbFin(pbObj(i))
 	enddo
 c
 	end
