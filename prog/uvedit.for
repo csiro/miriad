@@ -50,6 +50,7 @@ c    rjs   12may97    Doc change only.
 c    rjs   14jul97    nspect etc was not getting read when the source
 c		      selected was not the first source in the file.
 c    rjs   08may00    Change incorrect call of keyf to keya.
+c    rjs   05sep00    Use double precision to avoid rounding of coords.
 c***********************************************************************
 c= Uvedit - Editing of the baseline of a UV data set.
 c& jm
@@ -215,13 +216,13 @@ c
       character PROG*(*)
       parameter (PROG = 'UVEDIT: ')
       character VERSION*(*)
-      parameter (VERSION = 'version 1.8 19-Feb-96')
+      parameter (VERSION = 'version 1.8 05-Sep-00')
 c
-      real SECRAD, ASECRAD
-c  -------------(SECRAD = PI / (12.0 * 3600.0))
-      parameter (SECRAD = PI / 43200.0)
-c  -------------(ASECRAD = PI / (180.0 * 3600.0))
-      parameter (ASECRAD = PI / 648000.0)
+      double precision SECRAD, ASECRAD
+c  -------------(SECRAD = DPI / (12.d0 * 3600.d0))
+      parameter (SECRAD = DPI / 43200.d0)
+c  -------------(ASECRAD = DPI / (180.d0 * 3600.d0))
+      parameter (ASECRAD = DPI / 648000.d0)
 c
       character ENDING*(*)
       parameter (ENDING = '_c')
