@@ -1,0 +1,31 @@
+#!/bin/csh -f
+
+# Some convenient aliases.
+
+alias dosubs    newer -x junk			-e mircadd $MIRLIB/Last_update
+alias doprog    newer -x junk 			-e mirclnk $MIRLIB/Last_update
+alias doscripts newer -x junk -x mirupdate -x mirclnk -e mirclnk $MIRLIB/Last_update
+alias dotools   newer -x junk -x newer 		-e mirclnk $MIRLIB/Last_update
+alias dodoc     newer -x junk 			-e mirclnk $MIRLIB/Last_update
+
+# Do the real work.
+
+doscripts $MIR/scripts/unix{/irix64,}
+dodoc     $MIR/specdoc
+dotools   $MIR/tools
+
+# !! If your system does not have the system library libcomp.sgimath, 
+# !! uncomment out the following line, and comment out the line that follows that!
+#dosubs    $MIR/subs{/unix,} $MIR/linpack
+dosubs    $MIR/subs{/unix/irix64,/unix,}
+
+doprog    $MIR/prog
+
+# Write out the update time.
+
+echo -n "Record the update time? [y/n] "
+set update = $<
+if ( "$update" == y ) then
+  echo Last updated at `date` by `whoami` >> $MIRLIB/Last_update
+  touch $MIRLIB/Last_update
+endif
