@@ -15,7 +15,7 @@ c	In the mosaic file, the cycles spent on each source is adjusted
 c	to account for the slew time needed to reach each source.
 c
 c	NOTE:
-c	* ATMOS assumes the ATCA does not have wrap limits. It is
+c	* ATMOS neglects the ATCA's wrap limits. It is
 c	conceivable that the antennas might have to do a pirouette in the
 c	middle of a mosaic block to move from north to south wrap (or visa
 c	versa). This will foul up all of ATMOS's calculations.
@@ -41,17 +41,12 @@ c	Note that, for calibrators in a mosaic file, the on-line imaging
 c	software (CASNAP and friends) require names of calibrators to be 10
 c	characters long and end in a "C".
 c
-c	Note that there must be at least two sources in the source list, and
-c	that the second source must not be a calibrator.
-c@ lst
-c	Start time, given either in the format hh:mm:ss or decimal
-c	hours. The default is 0:00
 c@ out
 c	Output mosaic text file. Default is mosaic.mos
 c@ cycles
 c	Number of cycles to spend on-source at each source. Default is 2.
 c@ interval
-c	Integration cycle time. Default is 15 seconds.
+c	Integration cycle time. Default is 10 seconds.
 c@ origin
 c	The output mosaic file stores positions as an offset from
 c	some position. You have to give this value in your sched file.
@@ -67,10 +62,19 @@ c	before the mosaic sequence is executed (the format for RA is
 c	hh:mm:ss, or decimal hours; and for declination is dd:mm:ss, or
 c	decimal degrees). The default is the RA and DEC of the first
 c	source to be observed (i.e. already on source).
+c@ lst
+c	Start time, given either in the format hh:mm:ss or decimal
+c	hours. The default is the reference RA.
+c@ options
+c	Extra processing options. Minimum match is supported. Possible
+c	options are:
+c	  fixed  Do not do the travelling salesmen problem, just output
+c	         the source list in the order given.
 c--
 c   History:
 c     rjs  31-dec-00 Get it to work for 1 source.
 c     rjs  20-dec-03 Get it to work for 2 sources!
+c     rjs  26-mar-05 options=fixed. More precision. Minor enhancements.
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	integer MAXSRC
@@ -83,7 +87,7 @@ c
 	double precision ra(MAXSRC),dec(MAXSRC),lst,long
 	double precision ra0,dec0,raprev,decprev,raref,decref
 	real interval,dt,dra,ddec
-	logical ok,doref
+	logical ok,doref,fixed,nolst
 c
 c  Externals.
 c
@@ -93,19 +97,21 @@ c
 c
 c  Get the input parameters.
 c
-	call output('Atmos: version 1.0 20-Dec-03')
+	call output('Atmos: version 1.0 26-Mar-05')
 	call keyini
 	call keya('source',sfile,' ')
-	call keyr('interval',interval,15.)
+	call keyr('interval',interval,10.)
 	call keyi('cycles',cycles,2)
 	call keya('out',out,'mosaic.mos')
-	call keyt('lst',lst,'hms',0.d0)
+	nolst = .not.keyprsnt('lst')
+	if(.not.nolst)call keyt('lst',lst,'hms',0.d0)
 	doref = keyprsnt('origin')
 	call keyt('origin',raref,'hms',0.d0)
 	call keyt('origin',decref,'dms',0.d0)
 	call keya('ref',ssource,' ')
 	call keyt('ref',ra0,'hms',0.d0)
 	call keyt('ref',dec0,'dms',0.d0)
+	call getopt(fixed)
 	call keyfin
 c
 c  Check inputs.
@@ -127,6 +133,7 @@ c
 	  ra0 = ra(1)
 	  dec0 = dec(1)
 	endif
+	if(nolst)lst = ra0
 c
 c  Give some messages.
 c
@@ -146,12 +153,12 @@ c
 c
 c  Sort the list into a travelling salesman order.
 c
-	call output('Optimising the slew time ...')
-	if(nsrc.le.2)then
+	if(nsrc.le.2.or.fixed)then
 	  do i=1,nsrc
 	   indx(i) = i
 	  enddo
 	else
+	  call output('Optimising the slew time ...')
 	  call sorter(source,ra,dec,nsrc,lst,interval,
      *					cycles,ra0,dec0,indx)
 	endif
@@ -183,10 +190,10 @@ c
 	    ncycles = ncycles - cycles
 	    line = '#'
 	  else if(i.eq.1)then
-	    write(line,'(f9.4,f10.4,i3,a,a)')dra,ddec,cycles,'  $',
+	    write(line,'(f11.6,f12.6,i3,a,a)')dra,ddec,cycles,'  $',
      *							    source(i0)
 	  else
-	    write(line,'(f9.4,f10.4,i3,a,a)')dra,ddec,ncycles,'  $',
+	    write(line,'(f11.6,f12.6,i3,a,a)')dra,ddec,ncycles,'  $',
      *							    source(i0)
 	  endif
 	  call txtwrite(lu,line,len1(line),iostat)
@@ -221,6 +228,23 @@ c
 	if(iostat.ne.0)call bugno('f',iostat)
 	call txtclose(lu)
 	call output('End source is '//line)	
+c
+	end
+c************************************************************************
+	subroutine getopt(fixed)
+c
+	implicit none
+	logical fixed
+c
+c------------------------------------------------------------------------
+	integer NOPTS
+	parameter(NOPTS=1)
+	character opts(NOPTS)*8
+	logical present(NOPTS)
+	data opts/'fixed   '/
+c
+	call options('options',opts,present,NOPTS)
+	fixed = present(1)
 c
 	end
 c************************************************************************

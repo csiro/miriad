@@ -116,6 +116,7 @@ c    rjs  16jul93   Doc changes.
 c    rjs  05aug93   Fix various formating botches. NEBK does a sloppy job.
 c    nebk 19sep94   Fix typo in options=expand in subroutien getopt
 c    rjs  07dec99   Fix writing of history for "adjust" image.
+c    rjs  18sep05   Fix type of boxes argument.
 c
 c  Bugs and Shortcomings:
 c   * This should really be part of "shifty".
@@ -138,7 +139,8 @@ c
 	real z(10),e(10),w(100),a,b,c,sigma,da,db,crpix
 	double precision sx,sy,sxx,syy,sxy
 	integer n,nvary
-	real Buff(maxdim),Boxes(maxboxes)
+	real Buff(maxdim)
+	integer Boxes(maxboxes)
 	character perr(4)*40,bunit*9
 c
 c  Externals.

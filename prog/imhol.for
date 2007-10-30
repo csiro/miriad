@@ -6,9 +6,16 @@ c: image analysis
 c+
 c	IMHOL computes amplitude and phase images from real and
 c	imaginary holographic images. The amplitude image can be debiased,
-c       and the phase image is computed as 0.5 * atan2(imaginary/real).
+c       and the phase image is computed as atan2(imaginary/real).
 c@ in
-c	Two values; the real and imaginary images, respectively. These
+c	Two values; the real and imaginary images, respectively. The
+c	imaginary image can be made using the INVERT task with options=imaginary
+c	If the (u,v) coordinates for the holography data are in arcsec units
+c	then the images have units of nanosec (The inverse of the usual
+c	situation for astronomical imaging).
+c     Alternatively, the real and imaginary images can be obtained from
+c     images of the beam pattern using the MIRIAD task FFT.
+c	The default units for the axes are in wavelengths.
 c	Wild card expansion is supported. 
 c@ mag
 c	Up to two values; the output intensity image and
@@ -75,12 +82,14 @@ c    mchw 09aug93 Renamed IMHOL to keep Neil happy.
 c    mchw 09nov93 Fixed a bug in bmproc for planet holography.
 c    rjs  11oct95 Rework.
 c    rjs  02jul97 cellscal change.
+c    mchw 15apr98 Re-use and fix both doc and code in a few places.
+c    mchw 05aug04 Change default image axes to wavelengths, and default antenna size 6.1m.
 c------------------------------------------------------------------------
       implicit none
       include 'maxdim.h'
       include 'maxnax.h'
       character version*40
-      parameter (version = 'ImHol : version 11-Oct-95')
+      parameter (version = 'ImHol : version 05-Aug-2004')
 c
       real qepoch, uepoch, qcrpix(maxnax),ucrpix(maxnax), sigma,
      *		snclip, paclip
@@ -313,6 +322,7 @@ c
       end
 c
 c
+c************************************************************************
       subroutine hedinf (lun, naxis, size, epoch, crpix, cdelt,
      +                   crval, ctype)
 c------------------------------------------------------------------------
@@ -353,6 +363,7 @@ c
       end 
 c
 c
+c************************************************************************
       subroutine chkdes (bflag, im1, im2, naxis1, naxis2, size1, size2,
      +   crpix1, crpix2, cdelt1, cdelt2, crval1, crval2, epoch1, 
      +   epoch2, ctype1, ctype2, stkax1, stkax2)
@@ -423,6 +434,7 @@ c
       end
 c
 c
+c************************************************************************
       subroutine chkds2 (bflag, type, iaxis, im1, im2, des1, des2)
 c-----------------------------------------------------------------------
 c     Compare an axis descriptor from two images
@@ -548,6 +560,7 @@ c
       call hisclose (lout)
 c
       end
+c************************************************************************
       subroutine allblnk (p, pf, ep, epf, pa, paf, epa, epaf)
       implicit none
       real p, ep, pa, epa
@@ -594,19 +607,20 @@ c
       double precision sum,sumxx,sumyy,sumr2,sumr4,sumz,sumzz,sumw,
      *	sumwz,sumwzz,sumzx,sumzy,sumzr2,det,x,y,r2,dd,a,b,c,d,fitph
 c
-c  Get dish and subreflector radius in meters for masking the images.
+c  Get dish and subreflector radius in nanosecs for masking the images.
 c
       call rdhda(lq,'telescop',telescop,' ')
       call obspar(telescop,'antdiam',antdiam,ok)
       if(ok)then
-        antdiam = antdiam / 2.
+        antdiam = antdiam / 2. / 0.3
       else
-        antdiam = 10000.
-        call output('Unknown antenna diameter; setting to 10000.')
+        antdiam = 6.1
+        call output('Unknown antenna diameter; setting to 6.1 m.')
+        antdiam = antdiam / 2. / 0.3
       endif
       call obspar(telescop,'subdiam',subdiam,ok)
       if(ok)then
-        subdiam = subdiam / 2.
+        subdiam = subdiam / 2. / 0.3
       else
         subdiam = 0.
         call output('Unknown subreflector diameter; setting to 0.')
@@ -633,16 +647,22 @@ c
         if (lpaout(1).ne.0) call xysetpl (lpaout(1), 1, k)
         if (lpaout(2).ne.0) call xysetpl (lpaout(2), 1, k)
 c
-	fac = 180/pi
+	fac = 180./pi
 	ustr = 'degrees'
 	if(radians)then
-	  fac = 1
+	  fac = 1.
 	  ustr = 'radians'
 	endif
-	if(microns.and.frqax.eq.3)then
-          freq = (k-crpix(3))*cdelt(3) + crval(3)
+c
+c Convert antdiam to wavelengths, and output phase image to microns
+c
+	if(frqax.eq.3)then
+		freq = (k-crpix(3))*cdelt(3) + crval(3)
+		antdiam = antdiam * freq
+		if(microns)then
           fac = 0.5 / (2*pi) * cmks/freq * 1e-3
           ustr = 'microns'
+		endif
 	endif
 	sigsq = sigma * sigma
 	snclipsq = snclip * snclip
@@ -700,7 +720,7 @@ c
               pflags(i) = .true.
               epflags(i) = .true.
 c
-              paline(i) = fac * (atan2(uline(i),qline(i))/2.0)
+              paline(i) = fac * atan2(uline(i),qline(i))
               epaline(i) = fac * sigma / sqrt(psq)
               paflags(i) = .true.
               epaflags(i) = .true.
@@ -860,7 +880,7 @@ c
 	endif
 c
 c  Convert the fits to sensible units.
-c  A and B have units of 1/fac radians per meter. Convert to arcsecs.
+c  B and C have units of 1/fac radians per wavelength. Convert to arcsecs.
 c
         if(frqax.eq.3)then
           freq = (real(k)-crpix(3))*cdelt(3) + crval(3)

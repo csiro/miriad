@@ -47,6 +47,7 @@ c    16jan97 rjs   Add "axis" keyword, and get it to work with an arbitrary
 c		   number of axis.
 c    12jun97 nebk  Copy header items for axes 6 and 7
 c    02jul97 rjs   cellscal change.
+c    23jul97 rjs   add pbtype.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'maxnax.h'
@@ -70,7 +71,7 @@ c
 c  Header keywords.
 c
 	integer nkeys
-	parameter(nkeys=50)
+	parameter(nkeys=51)
 	character keyw(nkeys)*8
 	data keyw/   'bmaj    ','bmin    ','bpa     ','bunit   ',
      *	  'cdelt1  ','cdelt2  ','cdelt3  ','cdelt4  ','cdelt5  ',
@@ -84,7 +85,7 @@ c
      *	  'epoch   ','history ','niters  ','obstime ','object  ',
      *	  'observer','pbfwhm  ','obsra   ','obsdec  ','restfreq',
      *	  'telescop','vobs    ','ltype   ','lstart  ','lwidth  ',
-     *	  'lstep   ','btype   ','cellscal'/
+     *	  'lstep   ','btype   ','cellscal','pbtype  '/
 c
 c  Get the input parameters.
 c

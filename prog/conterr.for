@@ -388,7 +388,7 @@ c
 c  Header keywords to be copied.
 c
         integer nkeys
-        parameter(nkeys=44)
+        parameter(nkeys=45)
         character keyw(nkeys)*8
         data keyw/   'bmaj    ','bmin    ','bpa     ','bunit   ',
      *	  'crpix1  ','crpix2  ','crpix4  ','crpix5  ',
@@ -399,7 +399,8 @@ c
      *    'obstime ','epoch   ','history ','instrume','niters  ',
      *    'object  ','observer','obsra   ','obsdec  ','pbfwhm  ',
      *    'restfreq','telescop','vobs    ','rms     ','cellscal',
-     *    'ltype   ','lstart  ','lwidth  ','lstep   ','btype   '/
+     *    'ltype   ','lstart  ','lwidth  ','lstep   ','btype   ',
+     *	  'pbtype  '/
 c
 	do i=1,nkeys
 	  call hdcopy(lIn,lOut,keyw(i))

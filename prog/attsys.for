@@ -8,8 +8,11 @@ c& rjs
 c: uv analysis
 c+
 c	ATTSYS either applies or removes the Tsys weighting from correlation
-c	data. NOTE: ATTSYS has no way of determining whether the data
-c	have Tsys already applied or not. You must know this a priori.
+c	data.
+c
+c	NOTE: If you are using two IF bands when observing, ATTSYS cannot
+c	be used after you have split or copied the file down to single-IF
+c	datasets.
 c@ vis
 c	The names of the input uv data sets. No default.
 c@ out
@@ -23,18 +26,25 @@ c	            default.
 c	  unapply   Undo the Tsys correction in the data. Note that you
 c	            cannot use the "apply" and "unapply" options
 c	            simultaneously.
+c	  auto      Use the "tcorr" variable to determine whether Tsys
+c	            has been applied or not.
+c	            NOTE: Information needed for options=auto is lost if you
+c	            copy or split a dataset. If you are going to use 
+c	            options=auto, you generally have to do it on the file
+c	            resulting from atlod.
 c--
 c  History:
 c    17jul00 rjs  Original version.
+c    25may02 rjs  Added options=auto
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
-	parameter(version='AtTsys: version 1.0 17-Jul-00')
+	parameter(version='AtTsys: version 1.0 25-May-02')
 c
 	integer lVis,lOut,vupd,pol,npol,i1,i2
-	logical updated,doapply
+	logical updated,doapply,auto
 	character vis*64,out*64,type*1
-	integer nschan(MAXWIN),nif,nchan,nants,length
+	integer nschan(MAXWIN),nif,nchan,nants,length,tcorr,na
 	real xtsys(MAXANT*MAXWIN),ytsys(MAXANT*MAXWIN)
 	complex data(MAXCHAN)
 	logical flags(MAXCHAN)
@@ -48,7 +58,7 @@ c
 	call keyini
 	call keya('vis',vis,' ')
 	call keya('out',out,' ')
-	call GetOpt(doapply)
+	call GetOpt(doapply,auto)
 	call keyfin
 c
 c  Check the inputs.
@@ -79,7 +89,20 @@ c
 	call hisinput(lOut,'ATTSYS')
 	call hisclose(lOut)
 c
+c  Get first record.
+c
 	call uvread(lVis,preamble,data,flags,MAXCHAN,nchan)
+c
+c  If auto mode has been requested, check that the "tcorr" variable
+c  is present.
+c
+	if(auto)then
+	  call uvprobvr(lVis,'tcorr',type,length,updated)
+	  if(length.ne.1)call bug('f',
+     *		'Required info for options=auto is missing')
+	endif
+	call uvrdvri(lVis,'nants',na,0)
+c
 	dowhile(nchan.gt.0)
 	  call uvrdvri(lVis,'pol',pol,0)
 	  call uvrdvri(lVis,'npol',npol,0)
@@ -94,7 +117,9 @@ c
 	    call uvprobvr(lVis,'xtsys',type,length,updated)
 	    nants = length/nif
 	    if(nants*nif.ne.length.or.nants.le.0.or.nants.gt.MAXANT
-     *	      .or.type.ne.'r')call bug('f','Invalid xtsys parameter')
+     *	      .or.type.ne.'r')call bug('f','Invalid tsys parameter')
+	    if(na.ne.nants)
+     *		call bug('f','Inconsistency in number of IFs')
 	    call uvgetvrr(lVis,'xtsys',xtsys,nants*nif)
 	    call uvprobvr(lVis,'ytsys',type,length,updated)
 	    if(nants*nif.ne.length.or.type.ne.'r')
@@ -103,8 +128,18 @@ c
 	  endif
 c
 	  call basant(preamble(5),i1,i2)
-	  call tsysap(data,nchan,nschan,xtsys,ytsys,nants,nif,
+	  if(auto)then
+	    if(doapply)then
+	      call uvrdvri(lVis,'tcorr',tcorr,0)
+	    else
+	      call uvrdvri(lVis,'tcorr',tcorr,1)
+	    endif
+	    if(doapply.eqv.(tcorr.eq.0))call tsysap(data,nchan,nschan,
+     *		xtsys,ytsys,nants,nif,doapply,i1,i2,pol)
+	  else
+	    call tsysap(data,nchan,nschan,xtsys,ytsys,nants,nif,
      *						doapply,i1,i2,pol)
+	  endif
 c
 	  call varCopy(lVis,lOut)
 	  if(npol.gt.0)then
@@ -161,21 +196,22 @@ c
 c
 	end
 c************************************************************************
-	subroutine getopt(doapply)
+	subroutine getopt(doapply,auto)
 c
 	implicit none
-	logical doapply
+	logical doapply,auto
 c------------------------------------------------------------------------
 	integer NOPTS
-	parameter(NOPTS=2)
-	character opts(NOPTS)*8
+	parameter(NOPTS=3)
+	character opts(NOPTS)*10
 	logical present(NOPTS)
 c
-	data opts/'apply   ','unapply '/
+	data opts/'apply     ','unapply   ','automatic '/
 c
 	call options('options',opts,present,NOPTS)
 	if(present(1).and.present(2))call bug('f',
      *	  'Cannot both apply and unapply Tsys correction')
 	doapply = .not.present(2)
+	auto    = present(3)
 c
 	end

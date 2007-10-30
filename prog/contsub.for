@@ -104,7 +104,7 @@ c    bpw  27jun97  add options=verbose
 c    pjt  22mar99  fixed treating options(2) as integer in boolean expr
 c    pjt  22oct99  fixed initialization of opts(2)
 c    rjs  08may00  Change incorrect keyf call to keya.
-c
+c    rjs  18sep05  Correct argument types in call to boxint.
 c------------------------------------------------------------------------
 c
 c************************************************************************
@@ -407,8 +407,8 @@ c must be 2.
       integer          k1, k2, n, i, len1
       integer          nchan
       integer          ch(2), nch
-      double precision coords(3,3)
-      data coords / 9*0.d0 /
+      integer coords(3)
+      data coords /3*0/
 
 c nranges counts number of ranges; nchan is total number of continuum
 c channels.
@@ -595,13 +595,13 @@ c Subtract the continuum from the spectrum.
             cont = 0.0
             xtothen = 1
             do i = 1, nterms
-               cont = cont + sngl(rhs(i)) * xtothen
+               cont = cont + rhs(i) * xtothen
                xtothen = xtothen * k
             enddo
             linedata(k) = data(k) - cont
             if( k.eq.nchan/2 ) then
               if( outopt(1).eq.-1 ) continuum = cont
-              if( outopt(1).ge.0  ) continuum = sngl(rhs(outopt(1)+1))
+              if( outopt(1).ge.0  ) continuum = rhs(outopt(1)+1)
             endif
          enddo
          cmask = .TRUE.

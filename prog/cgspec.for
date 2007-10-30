@@ -142,6 +142,8 @@ c	  labelling (frame or axes), only draw the frame or axes for
 c	  the spectrum in the bottom left hand corner of the plot
 c	"colour" means make the axes the same colour as the first
 c	  spectrum, else they are white.
+c       "blacklab" means that, if the device is white-background, draw
+c         the axis labels in black. Default is red. 
 c       "fiddle" means enter a routine to allow you to interactively change
 c         the display lookup table.  You can cycle through a variety of   
 c         colour lookup tables, as well as alter a linear transfer function
@@ -397,6 +399,7 @@ c                  to be ignored if there were blanks in spatial image
 c    nebk 30jan96  New call for CHNSELCG
 c    rjs  21jul97  Fiddles with calls to initco/finco.
 c   nebk  14nov01  Track change to readimcg interface
+c    pjt  13feb02  added blacklab option, like in cgdisp
 c
 c Ideas:
 c  * Be cleverer for sub-cubes which have spectra partly all zero
@@ -456,7 +459,7 @@ c
      +  doframe, fits(2), mark, spnorm, naked, number, mirror, init, 
      +  imnorm, colour, allzero, blconly, doerase, doepoch, igblank,
      +  allgood, allblnk, dofid, dowedge, hdprsnt, gaps, dotr, doaxlab,
-     +  doaylab, donxlab(2), donylab(2), miss, dogrid, doabut
+     +  doaylab, donxlab(2), donylab(2), miss, dogrid, doabut, blacklab
 c
       data blankc /-99999999.00/
       data cin, gin, bin /maxcon*' ', ' ', ' '/
@@ -470,7 +473,7 @@ c
       data txtfill, tflen /'spectrum', 'derivative spectrum', 
      +                     'derivative spectrum', 8, 19, 19/
 c-----------------------------------------------------------------------
-      call output ('CgSpec: version 14-Nov-2001')
+      call output ('CgSpec: version 13-Feb-2002')
       call output (' ')
 c
 c Get user inputs
@@ -481,7 +484,7 @@ c
      +   break, cs, ofile, nofile, relax, slines, vrange, vfrac, irange, 
      +   tick, doaxes, doframe, mark, iscale, spnorm, naked, blines, 
      +   number, mirror, colour, blconly, doerase, doepoch, igblank,
-     +   dofid, dowedge, dogrid, ibin, jbin)
+     +   dofid, dowedge, dogrid, blacklab, ibin, jbin)
 c
 c First verify the existence of wanted files and get some extrema
 c
@@ -589,7 +592,7 @@ c
       defwid = 1
       if (hard.eq.'YES') defwid = 2
       call bgcolcg (bgcol)
-      call setlgc (bgcol, labcol)
+      call setlgc (bgcol, labcol, blacklab)
 c
       do i = 1, ncon
         if (clines(i).eq.0) clines(i) = defwid
@@ -1294,7 +1297,7 @@ c
       subroutine decopt (dofull, eqscale, solneg, relax, doaxes, 
      +   doframe, mark, norm, naked, number, mirror, colour, 
      +   blconly, doerase, doepoch, igblank, dofid, dowedge, dotwo,
-     +   dogrid)
+     +   dogrid, blacklab)
 c----------------------------------------------------------------------
 c     Decode options array into named variables.
 c
@@ -1321,15 +1324,16 @@ c     dofid     Fiddle lookup table
 c     dowedge   Draw pixel map wedge
 c     dotwo     Two sided derivative for "dspectrum" else 1 sided
 c     dogrid    Draw coordinate grid
+c     blacklab  True if labels are black for white background devices
 c-----------------------------------------------------------------------
       implicit none
 c
       logical dofull, eqscale, solneg(*), relax, doaxes, doframe,
      +  mark, norm, naked, number, mirror, colour, blconly, doerase, 
-     +  doepoch, igblank, dofid, dowedge, dotwo, dogrid
+     +  doepoch, igblank, dofid, dowedge, dotwo, dogrid, blacklab
 cc
       integer maxopt
-      parameter (maxopt = 22)
+      parameter (maxopt = 23)
 c
       character opshuns(maxopt)*9
       logical present(maxopt)
@@ -1338,7 +1342,7 @@ c
      +              'mark     ', 'normalize', 'naked    ', 'number   ',
      +              'mirror   ', 'colour   ', 'blconly  ', 'noerase  ',
      +              'noepoch  ', 'noblank  ', 'fiddle   ', 'wedge    ',
-     +              '1sided   ', 'grid     '/
+     +              '1sided   ', 'grid     ', 'blacklab '/
 c-----------------------------------------------------------------------
       call optcg ('options', opshuns, present, maxopt)
 c
@@ -1364,6 +1368,7 @@ c
       dowedge   =      present(20)
       dotwo     = .not.present(21)
       dogrid    =      present(22)
+      blacklab  =      present(23)
 c
       end
 c
@@ -1602,7 +1607,7 @@ c
      +   clines, break, cs, ofile, nofile, relax, slines, vrange, vfrac, 
      +   irange, tick, doaxes, doframe, mark, scale, norm, naked, 
      +   blines, number, mirror, colour, blconly, doerase, doepoch, 
-     +   igblank, dofid, dowedge, dogrid, ibin, jbin)
+     +   igblank, dofid, dowedge, dogrid, blacklab, ibin, jbin)
 c-----------------------------------------------------------------------
 c     Get the unfortunate user's long list of inputs
 c
@@ -1666,6 +1671,7 @@ c   igblank    Ignore spatial blanks when drawing spectra
 c   dofid      Fiddle lookup table
 c   dowedge    Draw pixel map wedge
 c   dogrid     Draw overlay grid
+c   blacklab   True if labels are black for white background devices
 c   i,jbin     SPatial pixek increment and averaging in x and y directions
 c-----------------------------------------------------------------------
       implicit none
@@ -1681,7 +1687,7 @@ c
      +  pdev, ofile(maxspec), trfun, levtyp(maxcon), ltypes(maxtyp)
       logical dofull, eqscale, solneg(maxcon), relax, doframe, doaxes,
      +  mark, norm, naked, number, mirror, colour, blconly, doerase,
-     +  doepoch, igblank, dofid, dowedge, dogrid, dunw
+     +  doepoch, igblank, dofid, dowedge, dogrid, dunw, blacklab
 cc
       integer nmaxim
       parameter (nmaxim = 10)
@@ -1704,7 +1710,8 @@ c Get options first
 c
       call decopt (dofull, eqscale, solneg, relax, doaxes, doframe, 
      +   mark, norm, naked, number, mirror, colour, blconly,
-     +   doerase, doepoch, igblank, dofid, dowedge, dotwo, dogrid)
+     +   doerase, doepoch, igblank, dofid, dowedge, dotwo, dogrid,
+     +   blacklab)
 c
 c Sort out input images
 c
@@ -3282,7 +3289,7 @@ c
       end
 c
 c
-      subroutine setlgc (bgcol, labcol)
+      subroutine setlgc (bgcol, labcol, blacklab)
 c-----------------------------------------------------------------------
 c     Set line graphics colours
 c
@@ -3293,13 +3300,18 @@ c    colour indices to use
 c-----------------------------------------------------------------------
       implicit none
       integer labcol, bgcol
+      logical blacklab
 c-----------------------------------------------------------------------
       labcol = 7
       if (bgcol.eq.1) then
 c
 c White background
 c
-        labcol = 2
+         if (blacklab) then
+            labcol = 1
+         else
+            labcol = 2
+         endif
       else if (bgcol.eq.0) then
 c
 c Black background
@@ -3311,3 +3323,5 @@ c
       end if
 c
       end
+
+

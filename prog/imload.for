@@ -25,6 +25,7 @@ c                   made flint less verbose
 c    mjs   02jul93  remove unused format stmt to elim compiler warning.
 c    rjs   22oct93  Adapted from imwrite.
 c    nebk  15nov93  DOc change
+c    nebk  03jun04  CHange an IMWRITE to IMLOAD
 c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='ImLoad: version  15-Nov-93')
@@ -61,8 +62,8 @@ c
 c  Write the history file.
 c
 	call hisopen(lOut,'write')
-        call hiswrite(lOut,'IMWRITE: Miriad '//version)
-	call hisinput(lOut,'IMWRITE')
+        call hiswrite(lOut,'IMLOAD: Miriad '//version)
+	call hisinput(lOut,'IMLOAD')
 	call hisclose(lOut)
 c
 c  Close the files after writing history

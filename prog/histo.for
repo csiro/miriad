@@ -18,7 +18,8 @@ c	See the Users Manual for instructions on how to specify this.
 c	Pixel blanking is not supported; all pixels in the selected region
 c	are used.
 c@ range
-c	The range in pixel values over which the histogram is calculated.
+c	The range in pixel values over which the histogram is calculated.\
+c       The minmax, mean and dispersion are now also computed in this range. 
 c	The default is the image minima and maxima.
 c@ nbin
 c	The number of bins used in the histogram. Default is 16.
@@ -36,23 +37,26 @@ c    31jan96 nebk  More grace when no valid pixels in region.
 c    08oct96 nebk  Make accumulation sums double precision
 c    28feb97 nebk  Add object to output
 c    14may99 rjs   Increase MAXRUNS.
+c    15feb01 pjt   look within range to find min/max/mean/dispersion
+c    21oct03 pjt   check for JY/BEAM in the first 7 chars only
+c    02jan05 rjs   Changes to accomodate large files.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'maxnax.h'
-	integer nbindef,nbinmax,maxboxes,maxruns
+	integer NBINDEF,NBINMAX,MAXBOXES,MAXRUNS
 	character version*(*)
-	parameter(nbindef=16,nbinmax=40,maxboxes=2048)
-	parameter(maxruns=40*MAXDIM)
-	parameter(version = 'version 14-May-99' )
+	parameter(NBINDEF=16,NBINMAX=40,MAXBOXES=2048)
+	parameter(MAXRUNS=40*MAXDIM)
+	parameter(VERSION = 'version 02-Jan-05' )
 c
-	character file*64,asterisk*30,line*72,coord*64,bunit*32,
+	character file*128,asterisk*30,line*80,coord*64,bunit*32,
      +   object*32
 	integer nsize(MAXNAX),plane(MAXNAX),maxv(MAXNAX),minv(MAXNAX)
 	integer blc(MAXNAX),trc(MAXNAX)
-	integer i,j,k,under,over,bin(nbinmax),maxbin
+	integer i,j,k,under,over,bin(NBINMAX),maxbin
 	integer naxis,indx,lun,npoints,length,nbin
-	integer boxes(maxboxes),runs(3,maxruns),nruns
-	real dat(maxdim),rmax,rmin,blo,bhi,x,xinc,r
+	integer boxes(MAXBOXES),runs(3,MAXRUNS),nruns
+	real dat(MAXDIM),rmax,rmin,blo,bhi,x,xinc,r
 	real bscale,bmaj,bmin,barea,cdelt1,cdelt2
         double precision sum,sum2,av,rms
 	logical first, done, newmin, newmax, norange
@@ -69,19 +73,19 @@ c
 	call keyini
 	call keya('in',file,' ')
 	if(file.eq.' ')call bug('f','Input file must be given')
-	call BoxInput('region',file,boxes,maxboxes)
+	call BoxInput('region',file,boxes,MAXBOXES)
 	norange = .not.keyprsnt('range')
         call keyr('range',blo,0.0)
         call keyr('range',bhi,blo)
         call keyi('nbin',nbin,nbindef)
-        if(nbin.le.1 .or. nbin.gt.nbinmax)
+        if(nbin.le.1 .or. nbin.gt.NBINMAX)
      *	  call bug('f','Bad number of bins')
 	call keyfin
 c
 	call xyopen(lun,file,'old',MAXNAX,nsize)
 	call rdhdi(lun,'naxis',naxis,0)
 	naxis = min(naxis,MAXNAX)
-	if(nsize(1).gt.maxdim)call bug('f','Input file too big for me')
+	if(nsize(1).gt.MAXDIM)call bug('f','Input file too big for me')
         call rdhda(lun,'object',object,' ')
 
 c
@@ -99,7 +103,7 @@ c
 c
 c  Set up the region of interest.
 c
-	call BoxMask(lun,boxes,maxboxes)
+	call BoxMask(lun,boxes,MAXBOXES)
 	call BoxSet(boxes,MAXNAX,nsize,' ')
 	call BoxInfo(boxes,MAXNAX,blc,trc)
 c
@@ -160,19 +164,21 @@ c
 	        indx = max(min(nbin,indx),1)
 	        bin(indx) = bin(indx) + 1
 	      endif
-	      if(x.gt.rmax)then
-	        rmax = x
-	        maxv(1) = i
-		maxv(2) = j
-		newmax = .true.
-	      else if(x.lt.rmin)then
-	        rmin = x
-	        minv(1) = i
-	  	minv(2) = j
-		newmin = .true.
+	      if(x.ge.blo .and. x.le.bhi) then
+		if(x.gt.rmax) then
+		  rmax = x
+		  maxv(1) = i
+		  maxv(2) = j
+		  newmax = .true.
+	        else if(x.lt.rmin) then
+		  rmin = x
+		  minv(1) = i
+		  minv(2) = j
+		  newmin = .true.
+	        endif
+	        sum = sum + x
+	        sum2 = sum2 + x*x
 	      endif
-	      sum = sum + x
-	      sum2 = sum2 + x*x
 	    enddo
 	  enddo
 	  if(newmax)call copyindx(MAXNAX-2,plane(3),maxv(3))
@@ -203,7 +209,7 @@ c
           call output (line)
         end if
 
-        if (barea.gt.0.0 .and. bunit.eq.'JY/BEAM') then
+        if (barea.gt.0.0 .and. bunit(1:7).eq.'JY/BEAM') then
           write(line,100) av,rms,sum/barea
 	else if (bunit.eq.'JY/PIXEL') then
 	  write(line,100) av,rms,sum
@@ -230,7 +236,7 @@ c
 	call output(line)
 c
 	write(line,104)
- 104	format('  Bin    Value          Number')
+ 104	format('  Bin    Value            Number')
 	call output(' ')
 	call output(line)
 c
@@ -251,16 +257,16 @@ c
 c  Format histogram.
 c
 	asterisk = '******************************'
-	write(line,'(7x,a,3x,i8)')'Underflow',under
+	write(line,'(7x,a,3x,i10)')'Underflow',under
 	call output(line)
 	do i=1,nbin
 	  j = nint( r * bin(i) )+1
 	  write(line,200)i,x,bin(i),asterisk(1:j)
-  200	  format(i5,1x,1pe13.6,i8,1x,a)
+  200	  format(i5,1x,1pe13.6,i10,1x,a)
 	  call output(line)
 	  x = x + xinc
 	enddo
-	write(line,'(7x,a,4x,i8)')'Overflow',over
+	write(line,'(7x,a,4x,i10)')'Overflow',over
 	call output(line)
 c
 c  Thats all folks. Close up and go home.

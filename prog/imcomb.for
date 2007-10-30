@@ -50,12 +50,15 @@ c    rjs  23jul97 Added pbtype.
 c    rjs  13nov98 Increase MAXIN.
 c    rjs  03oct00 Output can be arbitrarily large.
 c    rjs  28jun02 Added options=relax, better error message.
+c    rjs  17may06 Changes to make it more robust with images that span
+c	          360 degrees.
+c    rjs  31may06 Changes to use new calling sequence of pcvt.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'maxnax.h'
 	include 'mem.h'
 	character version*(*)
-	parameter(version='ImComb: version 1.0 28-Jun-02')
+	parameter(version='ImComb: version 1.0 31-May-06')
 	integer MAXIN,MAXOPEN
 	parameter(MAXIN=500,MAXOPEN=6)
 c
@@ -316,28 +319,42 @@ c
 c------------------------------------------------------------------------
 	double precision In(3),Out(3)
 	integer i
+	logical valid
 c
-	call pcvtinit(tOut,tIn)
-	In(1) = 1
-	In(2) = 1
-	In(3) = 1
-	call pcvt(In,Out,3)
-	blctrc(1) = Out(1)
-	blctrc(2) = Out(2)
-	blctrc(3) = Out(3)
+	call pcvtinit(tIn,tOut)
 c
 	if(relax)then
+	  In(1) = nsize(1)/2 + 1
+	  In(2) = nsize(2)/2 + 1
+	  In(3) = nsize(3)/2 + 1
+	  call pcvt(In,Out,3,valid)
+	  if(.not.valid)call bug('f',
+     *	    'Invalid coordinates prevented aligning images')
+	  blctrc(1) = In(1) - Out(1) + 1
+	  blctrc(2) = In(2) - Out(2) + 1
+	  blctrc(3) = In(3) - Out(3) + 1
 	  blctrc(4) = blctrc(1) + nsize(1) - 1
 	  blctrc(5) = blctrc(2) + nsize(2) - 1
 	  blctrc(6) = blctrc(3) + nsize(3) - 1
 	else
+	  In(1) = 1
+	  In(2) = 1
+	  In(3) = 1
+	  call pcvt(In,Out,3,valid)
+	  if(.not.valid)call bug('f',
+     *	    'Invalid coordinates prevented aligning images')
+	  blctrc(1) = 2-Out(1)
+	  blctrc(2) = 2-Out(2)
+	  blctrc(3) = 2-Out(3)
 	  In(1) = nsize(1)
 	  In(2) = nsize(2)
 	  In(3) = nsize(3)
-	  call pcvt(In,Out,3)
-	  blctrc(4) = Out(1)
-	  blctrc(5) = Out(2)
-	  blctrc(6) = Out(3)
+	  call pcvt(In,Out,3,valid)
+	  if(.not.valid)call bug('f',
+     *	    'Invalid coordinates prevented aligning images')
+	  blctrc(4) = 2*nsize(1) - Out(1)
+	  blctrc(5) = 2*nsize(2) - Out(2)
+	  blctrc(6) = 2*nsize(3) - Out(3)
 	endif
 c
 	interp = .false.

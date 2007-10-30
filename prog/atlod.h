@@ -28,13 +28,14 @@ c
 	character sname*64
 	integer refnant
 	real refpnt(2,ATANT)
+	real stemp,spress,shumid
 c
 	common/atlodd/sname
 	common/atlodc/sfreq,sdf,restfreq,time,obsra,obsdec,lat,long,
      *	    ra,dec,
      *	  data,
      *	  xtsys,ytsys,chi,xyphase,xyamp,xsampler,ysampler,u,v,w,inttime,
-     *	    inttim,wts,mdata,axisrms,axismax,refpnt,
+     *	    inttim,wts,mdata,axisrms,axismax,refpnt,stemp,spress,shumid,
      *	  pnt,nbin,nused,tno,nants,nifs,nfreq,nstoke,polcode,edge,
      *	    bchan,tcorr,mcount,refnant,
      *	  flag,dosw,dosam,dohann,birdie,dowt,dopmps,doxyp,opcorr,

@@ -19,12 +19,15 @@ c@ options
 c	Extra processing options.
 c	  glitch  Only modify the phase to account for glitches (not
 c	          the gradual variation).
+c@ offset
+c	Offset, in seconds, between the recorded values and the data
 c--
 c  History:
 c    03jul04 rjs  Original version.
+c    25jul04 rjs  Adjust tolerance to determine glitches.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='AtRpFix: version 1.0 03-Jul-04')
+	parameter(version='AtRpFix: version 1.0 25-Jul-04')
 	include 'maxdim.h'
 	include 'mirconst.h'
 c
@@ -37,6 +40,7 @@ c
 	complex data(MAXCHAN)
 	double precision freq(MAXCHAN)
 	logical flags(MAXCHAN)
+	real offset
 c
 c  Externals.
 c
@@ -48,6 +52,7 @@ c
 	call keya('out',out,' ')
 	call keya('rtphase',rtphase,' ')
 	call getopt(glitch)
+	call keyr('offset',offset,0.0)
 	call keyfin
 c
 c  Open the phase file.
@@ -75,7 +80,7 @@ c
         call uvread(lVis,preamble,data,flags,MAXCHAN,nchan)
         if(nchan.eq.0)call bug('f','No data found')
 	dowhile(nchan.gt.0)
-	  phase = Phget(preamble(4),preamble(5))
+	  phase = Phget(preamble(4)-offset/86400.d0,preamble(5))
 	  call uvinfo(lVis,'sfreq',freq)
 c
 	  do i=1,nchan
@@ -153,7 +158,8 @@ c
 	enddo
 c
 	i = 1
-        if(abs(t-time(1)).gt.abs(t-time(2)))i = 2
+c        if(abs(t-time(1)).gt.abs(t-time(2)))i = 2
+        if(time(2).lt.time(1))i = 2
 	call basant(bl,i1,i2)
 	if(glitch)then
 	  phget = gphases(i1,i) - gphases(i2,i)
@@ -169,7 +175,7 @@ c
 c
 c------------------------------------------------------------------------
 	real THRESH
-	parameter(THRESH=1)
+	parameter(THRESH=0.5)
 	integer i
 c
 	do i=1,6

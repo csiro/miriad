@@ -200,7 +200,8 @@ c@ beamtyp
 c     Up to 6 values. Set if you want a small polygon to be drawn to
 c     represent the beam FWHM. Setting beamtyp to "b,l" is sufficient to
 c     draw a solid beam; "b,l,4" will result in a cross-hatched
-c     beam. The six parameters are:
+c     beam.  Use 'n' if you don't want a beam at all.
+c     The six parameters are:
 c
 c     - Beam vertical positioning: can be "t" (top), or "b" (bottom). No
 c       default.
@@ -278,6 +279,8 @@ c	"noerase" means don't erase a rectangle into which the "3-axis"
 c	  values and the overlay ID strings are written.
 c	"nofirst" means don't write the first x-axis label on any subplots
 c	  except for the left-most one. This may avoid label overwrite.
+c       "corner" means only write labels in the lower left corner of any
+c         subplot
 c	"relax" means issue warnings when image axis descriptors are
 c	  inconsistent (e.g. different pixel increments) instead
 c	  of a fatal error.  Use at your peril.
@@ -663,6 +666,8 @@ c    dpr  14feb01  Add beamtyp keyword
 c    dpr  27feb01  Added scale-bar
 c    dpr  18jun01  Add option blacklabel
 c    nebk 14nov01  For box type, make sure abs max comes from entire image
+c    pjt  19jan02  retrofitted options=corner introduced in 14feb01/BIMA version
+c    pjt  29jan02  documented beamtyp=n, worked around a miriadB bug 
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -710,7 +715,7 @@ c
      +  dobeam, candobeam, beaml, beamb, relax, rot90, signs, mirror,
      +  dowedge, doerase, doepoch, bdone, doblb, doblm, dofid, dosing,
      +  nofirst, grid, dotr, dodist, conlab, doabut, getvsc, noflab,
-     +  blacklab
+     +  blacklab, docorner, donum
 c
       data blankc, blankv, blankb /-99999999.0, -99999999.0, 
      +                             -99999999.0/
@@ -728,7 +733,7 @@ c
       data lwid /maxconp3*1/
       data getvsc /.true./
 c-----------------------------------------------------------------------
-      call output ('CgDisp: version 14-Nov-01')
+      call output ('CgDisp: version 29-Jan-02')
       call output (' ')
 c
 c Get user inputs
@@ -740,8 +745,8 @@ c
      +  eqscale, gaps, solneg, nx, ny, lwid, break, cs, scale,
      +  ofile, dobeam, beaml, beamb, relax, rot90, signs, mirror,
      +  dowedge, doerase, doepoch, dofid, dosing, nofirst, grid, dotr,
-     +  dodist, conlab, doabut, val3form, ncols1, cols1, fs, hs,
-     +  firstimage, blacklab)
+     +  dodist, conlab, doabut, docorner, val3form, ncols1, cols1, fs, 
+     +  hs, firstimage, blacklab)
 c
 c Open images as required
 c
@@ -984,7 +989,8 @@ c
 c
 c Write on ascii axis labels
 c
-         call aaxlabcg (doaxlab, doaylab, xdispl, ydispb, 
+         if (.not.docorner  .or.  jj.eq.(nx*ny-nx+1))
+     +    call aaxlabcg (doaxlab, doaylab, xdispl, ydispb, 
      +                  xlabel, ylabel)
 c
 c Draw frame, write numeric labels, ticks and optional grid
@@ -993,7 +999,8 @@ c
          krng(2) = ngrp(j)
          jplot = mod(j,nx*ny)
          noflab = nofirst .and. mod(jplot,nx).ne.1
-         call naxlabcg (lhead, .true., blc, trc, krng, labtyp, 
+         donum = .not.docorner  .or.  jj.eq.(nx*ny-nx+1)
+         call naxlabcg (lhead, donum, blc, trc, krng, labtyp, 
      +                  donxlab, donylab, noflab, grid)
 c
 c Draw wedge now so that it overwrites axis label ticks when wedge
@@ -1772,12 +1779,12 @@ c
       subroutine decopt  (dofull, do3val, do3pix, eqscale, gaps, solneg,
      +   beambl, beambr, beamtl, beamtr, relax, rot90, signs, 
      +   mirror, dowedge, doerase, doepoch, dofid, dosing, nofirst,
-     +   grid, dotr, dodist, conlab, doabut, blacklab)
+     +   grid, dotr, dodist, conlab, doabut, blacklab, docorner)
 c----------------------------------------------------------------------
 c     Decode options array into named variables.
 c
 c   Output:
-c     dofull    True means do full annotaiton of plot
+c     dofull    True means do full annotation of plot
 c     do3val    True means label sub-plots with value of third axis
 c     do3pix    True means label sub-plots with pixel of third axis
 c     doerase   True means erase rectangle into which 3-axis label written
@@ -1806,17 +1813,18 @@ c     dodist    Distort overlays with grid
 c     conlab    Label contours
 c     doabut    No white space between subplots
 c     blacklab  True if labels are black for white background devices
+c     docorner  Only lower left corner gets labels
 c-----------------------------------------------------------------------
       implicit none
 c
       logical dofull, do3val, do3pix, eqscale, gaps, solneg(*),
      +  beambl, beambr, beamtl, beamtr, relax, rot90, signs,
      +  mirror, dowedge, doerase, doepoch, dofid, dosing, nofirst,
-     +  grid, dotr, dodist, conlab, doabut, blacklab
+     +  grid, dotr, dodist, conlab, doabut, blacklab, docorner
 
 cc
       integer maxopt
-      parameter (maxopt = 28)
+      parameter (maxopt = 29)
 c
       character opshuns(maxopt)*9
       logical present(maxopt)
@@ -1826,7 +1834,8 @@ c
      +              'relax   ', 'rot90   ', 'signs   ', 'mirror',
      +              'wedge   ', 'noerase ', 'noepoch ', 'fiddle',
      +              'single  ', 'nofirst',  'grid    ', 'trlab',
-     +              'nodistort', 'conlabel','abut    ', 'blacklab'/
+     +              'nodistort', 'conlabel','abut    ', 'blacklab',
+     +              'corner'/
 c-----------------------------------------------------------------------
       call optcg ('options', opshuns, present, maxopt)
 c
@@ -1858,6 +1867,7 @@ c
       conlab    =      present(26)
       doabut    =      present(27)
       blacklab  =      present(28)
+      docorner  =      present(29)
 c
       end
 c
@@ -1915,6 +1925,14 @@ c
 c Find maximum selected pixel from first sub-plot
 c
       if (iplot.eq.1) then
+
+c        bfac(1) = -1.0e30
+c        do j = 1, npixy, boxinc(2)
+c          do i = 1, npixx, boxinc(1)
+c            if (nimage(i,j).gt.0) bfac(1) = max(bfac(1),abs(image(i,j)))
+c          end do
+c        end do
+
 c
 c Make maximum box width on the plot equal to 99% of the selected
 c pixel increment, multiplied by the users factor. 
@@ -2473,8 +2491,8 @@ c
      -     do3pix, eqscale, gaps, solneg, nx, ny, lwid, break, cs, scale
      -     , ofile, dobeam, beaml, beamb, relax, rot90, signs, mirror,
      -     dowedge, doerase, doepoch, dofid, dosing, nofirst, grid, dotr
-     -     , dodist, conlab, doabut, val3form, ncols1, cols1, fs, hs,
-     -     firstimage, blacklab)
+     -     , dodist, conlab, doabut, docorner, val3form, ncols1, cols1, 
+     -     fs, hs, firstimage, blacklab)
 c-----------------------------------------------------------------------
 c     Get the unfortunate user's long list of inputs
 c
@@ -2550,6 +2568,7 @@ c   dotr       Label top and right axes as well as bototm and left
 c   dodist     Distort overlays with grid
 c   conlab     Label contours
 c   doabut     No white space bewteen subplots
+c   docorner   Only draw labels with lower left subplot
 c   val3form   Format for options=3val labelling
 c   cols1      Colours for LEVS1 contours
 c   ncols1
@@ -2573,7 +2592,7 @@ c
       logical do3val, do3pix, dofull, gaps, eqscale, solneg(maxcon),
      +  dobeam, beaml, beamb, relax, rot90, signs, mirror, dowedge,
      +  doerase, doepoch, dofid, dosing, nofirst, grid, dotr, 
-     +  dodist, dunw, conlab, doabut, blacklab
+     +  dodist, dunw, conlab, doabut, blacklab, docorner
 cc
       integer nmaxim
       parameter (nmaxim = 8)
@@ -2581,7 +2600,7 @@ c
       integer nim, nimtype, i, j, nlab
       character images(nmaxim)*64, imtype(nmaxim)*9
       character*1 str, itoaf
-      character*1 newtb,newlr
+      character*2 newtb,newlr
       logical beambl, beambr, beamtl, beamtr, present, keyprsnt
 c
       integer ntype
@@ -2794,7 +2813,7 @@ c
       call decopt (dofull, do3val, do3pix, eqscale, gaps, solneg,
      +   beambl, beambr, beamtl, beamtr, relax, rot90, signs, 
      +   mirror, dowedge, doerase, doepoch, dofid, dosing, nofirst,
-     +   grid, dotr, dodist, conlab, doabut, blacklab)
+     +   grid, dotr, dodist, conlab, doabut, blacklab, docorner)
 c
       call keya ('3format', val3form, ' ')
 c

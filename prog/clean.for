@@ -143,6 +143,8 @@ c   rjs  23jul97 - added pbtype.
 c   rjs  22oct99 - doc change only.
 c   rjs  28aug00 - Increase max complexity of region-of-interest.
 c   dpr  06mar01 - Doc change only.
+c   gmx  07mar04 - Changed optimum gain determination to handle
+c                   negative components
 c
 c  Important Constants:
 c    MaxDim	The max linear dimension of an input (or output) image.
@@ -160,7 +162,7 @@ c		to write.
 c
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Clean: version 1.0 24-Jun-97')
+	parameter(version='Clean: version 1.0 07-Apr-04')
 	include 'maxdim.h'
 	integer MaxBeam,maxCmp1,maxCmp2,MaxBox,MaxRun,MaxP
 	parameter(maxCmp1=66000,MaxCmp2=32000,MaxP=257)
@@ -891,6 +893,7 @@ c************************************************************************
      *		Limit,Gain,Niter,Run,nrun)
 c
 	implicit none
+
 	integer Niter,nrun,Run(3,nrun),nPoint,nx,ny,pBem
 	real Gain,Limit
 	real Residual(nPoint),Temp(nPoint),Estimate(nPoint)
@@ -907,6 +910,8 @@ c  Input/Output:
 c    Niter	Number of Niter iterations.
 c
 c------------------------------------------------------------------------
+	real MinOptGain
+	parameter(MinOptGain=0.02)
 	integer i
 	real SumRE,SumEE,g
 c
@@ -935,7 +940,20 @@ c
 	  SumRE = SumRE + Residual(i)*Temp(i)
 	  SumEE = SumEE + Temp(i)*Temp(i)
 	enddo
-	g = Gain*SumRE/SumEE
+c
+c       SumRE can be negative, so it is better to take the 
+c       absolute value of it when determining the optimum
+c       gain (gmx - 07mar04)
+c
+c       abs(SumRE)/SumEE may be close to zero, in which case
+c       a semi-infinite loop can be the result. We apply a 
+c	lower limit to abs(SumRE)/SumEE. A good value for it 
+c       is empirically determined to be 0.02 (MinOptGain), 
+c       which may however not be the best choice in all cases. 
+c       In case of problems, you can try a lower value for the
+c       task option Gain before changing MinOptGain (gmx - 07mar04).
+c       
+	g = Gain*max(MinOptGain,abs(SumRE)/SumEE)
 c
 c  Now go through and update the estimate, using this gain. Also
 c  determine the new residuals.

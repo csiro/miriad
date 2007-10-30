@@ -339,6 +339,7 @@ c    rjs  21jul97  Call initco earlier
 c    rjs   7may98  Change the bunit variable to be 16 char (not 8 char).
 c    rjs  08may00  Change incorrect keyf call to keya.
 c    dpr  18jan01  Add third laptyp
+c   nebk  14nov01  Track change to readimcg interface
 c
 c Notes:
 c
@@ -369,7 +370,7 @@ c
 c
       real levs(maxlev), pixr(2), tr(6), cs(3), pixr2(2), scale(2),
      +  bound(4,maxnsl), vblc(2,2), vtrc(2,2), xrange(2), yrange(2),
-     +  tfvp(4), wdgvp(4), cumhis(nbins), dmm(2)
+     +  tfvp(4), wdgvp(4), cumhis(nbins), dmm(3)
       real slev, vx, vy, vxsize, vysize, ydispb, ydispbs, xdispl, 
      +  xdispls, groff, blank, sxmin, sxmax, symin, symax, vxgap, 
      +  vygap
@@ -402,10 +403,10 @@ c
      +            'rellin'/
       data ipage, scale /0, 0.0, 0.0/
       data xrange, yrange /0.0, 0.0, 0.0, 0.0/
-      data dmm, dunsl, gaps /1.0e30, -1.0e30, .false., .false./
+      data dmm, dunsl, gaps /1.0e30, -1.0e30, -1.0, .false., .false./
       data xdispls, ydispbs /3.5, 3.5/
 c-----------------------------------------------------------------------
-      call output ('CgSlice: version 1.0 18-JAN-2001')
+      call output ('CgSlice: version 14-Nov-2001')
       call output (' ')
 c
 c Get user inputs

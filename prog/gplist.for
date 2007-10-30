@@ -38,11 +38,12 @@ c	           for all antennas; lots of output, better than
 c	           options=complex if you want to grep one one antenna.)
 c	  replace  Replace the amplitude gains with the list supplied 
 c	           Unless OPTIONS=FORCE is also set, only antennas with 
-c                non-zero values in the list are affected
+c                  non-zero values in the list are affected
 c	           so if jyperk is not set, nothing happens. Phases are
 c	           preserved unless options=zerophas is also specified
-c       force    if set, then zero values in jyperk are enforced when
-c                doing a replace
+c	  force    if set, then all values in jyperk are enforced when
+c                  doing a replace, even if they (or the initial gains)
+c                  are zero
 c	  limit    impose an upper limit on the amplitude gains using the
 c	           list specified in jyperk
 c	  multiply Multiply existing sqrt(Jy/K) values in a gains table by
@@ -51,11 +52,11 @@ c	           corresponding to nonzero jyperk elements are changed.
 c	           No effect on phases.
 c	  zerophas Zero all phase corrections (no antenna selection method)
 c	  clip     Set to zero all gains outside range jyperk(1),jyperk(2)
-c                Useful for pseudo-flagging of bad data, e.g.,
-c                   gplist vis=dummy options=clip jyperk=0.5,2.0
-c                effectively flags data with gains outside 0.5-2 (default 
-c                range). However, data are not really flagged. The next
-c                option is an alternative "flagging" option.
+c                  Useful for pseudo-flagging of bad data, e.g.,
+c                  gplist vis=dummy options=clip jyperk=0.5,2.0
+c                  effectively flags data with gains outside 0.5-2 (default 
+c                  range). However, data are not really flagged. The next
+c                  option is an alternative "flagging" option.
 c	  sigclip  Set to zero all gains more than jyperk(1)*rms away from 
 c	           median on each antenna
 c       
@@ -97,6 +98,10 @@ c    smw     06aug99 Changed output format at Kartik's request
 c    smw     16aug99 Added "clip" option 
 c    smw     19aug99 Added "sigclip" option 
 c    smw     30aug99 Added "force" option 
+c    pjt     27jul00 Fixed bug in options=phase for 10th ant
+c    pjt      4aug00 smw generously allowed me to fix the write-history
+c   		     'bug' when nothing was modified
+c    smw     21nov03 Modified "force" option to enforce any value
 c
 c  Bugs and Shortcomings:
 c    Like gpaver, gplist is hardwired for 12 antennas!
@@ -104,11 +109,11 @@ c    This will have to be changed when expansion occurs
 c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
-	parameter(version='GpList: version 2.0 16-Aug-99')
+	parameter(version='GpList: version 2.0b 22-nov-03')
 	logical dovec,docomp,dophas,doall,dozero,domult,hexists,doamp
-      logical dolimit,doclip,dosigclip,doforce
+      logical dolimit,doclip,dosigclip,doforce,dohist
 	real jyperk(12) 
-	character vis*64,msg*80
+	character vis*80,msg*80
 	integer ngains,nfeeds,ntau,nants,iostat,njyperk
 	integer tVis
       data jyperk /0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0/
@@ -165,28 +170,30 @@ c
 c
 c  List/Replace the gains now.
 c
-	call 
-     *ReplGain(tVis,doamp,dovec,docomp,dophas,doall,dozero,domult,
-     *dolimit,doclip,dosigclip,doforce,nfeeds,ntau,nants,jyperk)
+	call ReplGain(tVis,dohist,
+     *        doamp,dovec,docomp,dophas,doall,dozero,domult,dolimit,
+     *        doclip,dosigclip,doforce,nfeeds,ntau,nants,jyperk)
 c
 c  Write out some history now.
 c
+      if(dohist) then
 	call hisopen(tVis,'append')
 	call hiswrite(tVis,'GPLIST: Miriad '//version)
 	call hisinput(tVis,'GPLIST')
 	call hisclose(tVis)
+      endif
 c
 c  Close up everything.
 c
 	call hclose(tVis)	
 	end
 c************************************************************************
-	subroutine GetOpt(doamp,dovec,docomp,dophas,doall,dozero,domult,
-     &                  dolimit,doclip,dosigclip,doforce)
+       subroutine GetOpt(doamp,dovec,docomp,dophas,doall,dozero,
+     &                   domult,dolimit,doclip,dosigclip,doforce)
 c
 	implicit none
-	logical doamp,dovec,docomp,dophas,doall,dozero,domult,dolimit,
-     &        doclip,dosigclip,doforce
+	logical doamp,dovec,docomp,dophas,doall,dozero,domult,
+     &        dolimit,doclip,dosigclip,doforce
 c
 c  Get "Task Enrichment Parameters".
 c
@@ -240,13 +247,14 @@ c------------------------------------------------------------------------
 	call bugno('f',iostat)
 	end
 c***********************************************************************
-	subroutine ReplGain(tVis,doamp,dovec,docomp,dophas,doall,dozero,
-     * domult,dolimit,doclip,dosigclip,doforce,nfeeds,ntau,nants,jyperk)
+      subroutine ReplGain(tVis,dohist,doamp,dovec,docomp,dophas,doall,
+     *              dozero,domult,dolimit,doclip,dosigclip,doforce,
+     *              nfeeds,ntau,nants,jyperk)
 c
-	implicit none
-	logical doamp,dovec,docomp,dophas,doall,dozero,domult,dolimit,
-     *        doclip,dosigclip,doforce
-	integer nfeeds,ntau,nants,tVis,j,jant(12),k,jind(3600)
+      implicit none
+      logical doamp,dovec,docomp,dophas,doall,dozero,domult,dolimit,
+     *        doclip,dosigclip,doforce,dohist
+      integer nfeeds,ntau,nants,tVis,j,jant(12),k,jind(3600)
       real jyperk(12),dbcor(12),MeanGain(12),radtodeg,GainArr(12,3600),
      *     MednGain(12), MedArr(3600), GainRms(12), mingain, maxgain
       logical doMed
@@ -272,6 +280,7 @@ c
 c
 c  Open the gains table and read them all in.
 c
+	dohist = .FALSE.
 	call haccess(tVis,tGains,'gains','read',iostat)
 	if(iostat.ne.0)call AverBug(iostat,'Error opening the gains')
 	nsols = (hsize(tGains)-8)/(8*nants*(nfeeds+ntau)+8)
@@ -352,15 +361,15 @@ c
      *        int(radtodeg*atan2(AImag(Gains(k+7)),Real(Gains(k+7)))),
      *        int(radtodeg*atan2(AImag(Gains(k+8)),Real(Gains(k+8)))),
      *        int(radtodeg*atan2(AImag(Gains(k+9)),Real(Gains(k+9)))),
-     *        int(radtodeg*atan2(AImag(Gains(k+9)),Real(Gains(k+10))))
+     *        int(radtodeg*atan2(AImag(Gains(k+10)),Real(Gains(k+10))))
             call output(msg)
          enddo
       else if (doamp) then
-      do j=1,nants
-         MeanGain(j)=0.0
-         GainRms(j)=0.0
-         jant(j)=0
-      enddo
+         do j=1,nants
+            MeanGain(j)=0.0
+            GainRms(j)=0.0
+            jant(j)=0
+         enddo
       call output('The amplitude gain values listed in the table are:')
          write(msg(1:35),94) '  Time     Ant 1 Ant 2 Ant 3 Ant 4 '
          write(msg(36:71),94) 'Ant 5 Ant 6 Ant 7 Ant 8 Ant 9 Ant 10'
@@ -428,8 +437,9 @@ c
 c  Do the replacement of current amp corrections with specified list
 c
       if (dovec) then
+         dohist = .TRUE.
          if (doforce) then
-         msg='Replacing amplitude gains with (zeroes enforced):'
+         msg='Replacing amplitude gains with (all values enforced):'
          call output(msg)
          else
          msg='Replacing amplitude gains with (0.0 means no change):'
@@ -441,10 +451,12 @@ c
          call output(msg)
          do i=1,nsols
             do j=1,nants
-        if (Gains((i-1)*nants+j).ne.cmplx(0.0,0.0).and.
-     *      ((jyperk(j).ne.0.0).or.(doforce)) )
-     *         Gains((i-1)*nants+j)=
-     *          jyperk(j)*Gains((i-1)*nants+j)/abs(Gains((i-1)*nants+j))
+        if (Gains((i-1)*nants+j).ne.cmplx(0.0,0.0)) then
+               Gains((i-1)*nants+j)=
+     *       jyperk(j)*Gains((i-1)*nants+j)/abs(Gains((i-1)*nants+j))
+          else if (doforce) then
+               Gains((i-1)*nants+j)=cmplx(jyperk(j),0.0)
+          end if
             enddo
          enddo
       endif
@@ -452,6 +464,7 @@ c
 c  Zero all phases
 c
       if (dozero) then
+         dohist = .TRUE.
          msg='Zeroing all phases: use options=complex to check.'
          call output(msg)
          do i=1,nsols
@@ -465,6 +478,7 @@ c
 c  Multiply amplitudes by arbitrary numbers supplied in jyperk
 c
       if (domult) then
+         dohist = .TRUE.
          msg='Multiplying sqrt(Jy/K) by (1 per antenna):'
          call output(msg)
          write(msg,99) 'sqrt(Jy/K) x ',jyperk(1),jyperk(2),jyperk(3),
@@ -482,6 +496,7 @@ c
 c  Impose upper limit on amp gains using numbers supplied in jyperk
 c
       if (dolimit) then
+         dohist = .TRUE.
          msg='Imposing upper limits on gains of:'
          call output(msg)
          write(msg,99) ' ',jyperk(1),jyperk(2),jyperk(3),
@@ -501,6 +516,7 @@ c
 c  "Clip": set gains to zero if outside "normal" range
 c
       if (doclip) then
+         dohist = .TRUE.
          k = 0
          if (jyperk(1).eq.0.0) jyperk(1)=0.5
          if (jyperk(2).eq.0.0) jyperk(2)=2.0
@@ -525,6 +541,7 @@ c  "SigClip": set gains to zero if outside relative "normal" range
 c             doamp must have already run to get Median and Rms
 c
       if (dosigclip) then
+         dohist = .TRUE.
          k = 0
          if (jyperk(1).eq.0.0) jyperk(1)=3.0
          write(msg,91) 'Clipping gains outside range:',jyperk(1),
@@ -546,6 +563,9 @@ c
          write(msg,92) 'Clipped ',k,' antenna-interval pairs.'
          call output(msg)
       endif
+
+
+      if (.NOT.dohist) return
 c
 c  Now write out the new gain solutions.
 c

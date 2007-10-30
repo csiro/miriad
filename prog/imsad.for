@@ -131,6 +131,7 @@ c		    a region specified. What did NEBK do?
 c     8may98   rjs  Do not call logclose if no log file open.
 c    18sep03   nebk Prevent buffer overflow if isalnd size too large
 c                   Parameter MAXSRC split out into imsad2.h
+c    18sep05   rjs  Correct type error.
 c-----------------------------------------------------------------------------
       include 'mirconst.h'
       include 'maxdim.h'
@@ -1945,7 +1946,8 @@ c
       double precision RADDEG, DEGRAD
       parameter (RADDEG = 180.0d0 / DPI, DEGRAD = DPI / 180.0d0)
 c
-      integer i, rc, fac, luo, lui, ip, len1, iostat
+      real fac
+      integer i, rc, luo, lui, ip, len1, iostat
       real ra0, de0, ra, de, dra, dde, bmaj, bmin, bpa, smaj, smin,
      + spa, dmaj, dmin, dpa, bvol, iflux, wgt, sumwgt, wra,
      + sumwra, wde, sumwde

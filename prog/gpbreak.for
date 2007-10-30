@@ -33,17 +33,18 @@ c    rjs     16sep93 Rename bsrch to binsrch.
 c    rjs     13oct93 Changed the keyword "times" to "break".
 c    rjs     25nov93 Use library version of mkeyt.
 c    rjs     31jan97 Fix "feeds" keyword, which could never have worked.
+c    rjs      5mar97 Check that there are no delays in the gain table.
 c  Bugs and Shortcomings:
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer MAXFEED,MAXTIME,MAXSOLN
 	character version*(*)
-	parameter(version='GpBreak: version 1.0 13-Oct-93')
+	parameter(version='GpBreak: version 1.0 05-Mar-97')
 	parameter(MAXFEED=2,MAXTIME=64,MAXSOLN=4096)
 c
 	character vis*64
 	integer iostat,tVis,itGain,nants,nfeeds,nsols,i
-	integer numtime,numant,numfeed
+	integer numtime,numant,numfeed,ntau
 	double precision btimes(MAXTIME),times(MAXSOLN)
 	integer ants(MAXANT),feeds(MAXFEED)
 	complex gains(2*MAXANT*MAXSOLN)
@@ -78,6 +79,9 @@ c
 	if(nfeeds.le.0.or.nfeeds.gt.2.or.nants.lt.nfeeds.or.
      *	    mod(nants,nfeeds).ne.0)
      *	  call bug('f','Bad number of gains or feeds in '//vis)
+	call rdhdi(tVis,'ntau',ntau,0)
+	if(ntau.ne.0)call bug('f',
+     *	  'Cannot deal with files with delays')
 	nants = nants / nfeeds
 	call rdhdi(tVis,'nsols',nsols,0)
 	if(nsols.le.0)

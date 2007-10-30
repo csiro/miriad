@@ -289,6 +289,7 @@ c    rjs  23apr98  Increase size of bunit variable.
 c    rjs  25nov98  Fix compacting algorithm again!
 c    nebk 11jun99  Some hacks to handle /BEAM or /B and following strings
 c    rjs  08may00  Change incorrect keyf call to keya.
+c   nebk  14nov01  Track change to readimcg interface
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -302,7 +303,7 @@ c
       integer ipim, ipnim, ipims
 c
       real levs(maxlev), pixr(2), tr(6), cs(2), pixr2(2), scale(2), 
-     +  tfvp(4), wdgvp(4), cumhis(nbins), dmm(2)
+     +  tfvp(4), wdgvp(4), cumhis(nbins), dmm(3)
       real slev, xmin, xmax, ymin, ymax, vxmin, vymin, vymax, vx, vy,
      +  vxsize, vysize, vxgap, vygap, ydispb, xdispl, groff, blank
 c
@@ -323,10 +324,10 @@ c
      +  doabut, intdev
 c
       data ipage, scale /0, 0.0, 0.0/
-      data dmm /1.0e30, -1.0e30/
+      data dmm /1.0e30, -1.0e30, -1.0/
       data gaps, doabut /.false., .false./
 c-----------------------------------------------------------------------
-      call output ('CgCurs: version 11-Jun-99')
+      call output ('CgCurs: version 14-Nov-01')
       call output (' ')
 c
 c Get user inputs

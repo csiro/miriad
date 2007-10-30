@@ -345,7 +345,7 @@ c  Get the handle of the variables to be copied.
 c
 c------------------------------------------------------------------------
 	integer NCOPY
-	parameter(NCOPY=79)
+	parameter(NCOPY=80)
 	integer i
 	character copy(NCOPY)*8
         data copy/    'airtemp ','antdiam ','antpos  ','atten   ',
@@ -363,7 +363,8 @@ c------------------------------------------------------------------------
      *     'windmph ','xyphase ','delay0  ','npol    ','pol     ',
      *	   'nspect  ','restfreq','ischan  ','nschan  ','sfreq   ',
      *	   'sdf     ','systemp ','bin     ','nbin    ','pbtype  ',
-     *	   'xsampler','ysampler','xtsys   ','ytsys   ','xyamp   '/
+     *	   'xsampler','ysampler','xtsys   ','ytsys   ','xyamp   ',
+     *	   'refpnt  '/
 c
 c  Determine the things to be checked and the things to be copied.
 c

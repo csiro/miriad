@@ -61,13 +61,14 @@ c    rjs   01aug97 Added options=zmean.
 c    mchw  18nov98 Added options=scale.
 c    rjs   01dec98 Added options=dup.
 c    tw    16aug03 Allow gain amplitude selection
+c    rjs   02jan05 Correct gain selection.
 c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
         include 'mirconst.h'
 	integer MAXFEED,MAXSELS
 	character version*(*)
-	parameter(version='Gpedit: version 1.0 16-Aug-03')
+	parameter(version='Gpedit: version 1.0 02-Jan-05')
 	parameter(MAXFEED=2,MAXSELS=300)
 c
 	character vis*64
@@ -375,7 +376,8 @@ c
 	  if(SelProbe(sels,'time',times(j)))then
 	    do i=1,nants
 	      if (mask(i)) then
-		 if (SelProbe(sels,'amplitude',abs(Gains(i,j)))) then
+		 if (SelProbe(sels,'amplitude',dble(abs(Gains(i,j)))))
+     *								   then
 		    call oper(Gains(i,j),gain)
 		 endif
 	      endif

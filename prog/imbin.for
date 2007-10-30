@@ -46,6 +46,7 @@ c    dpr  08nov00  make bin specs for 3rd axis redundant for 2-D
 c                  images.
 c    bmg  11may01  Added options=sum
 c   nebk  14nov01  Track change to readimcg interface
+c    rjs  19jan06  Fortran standardisation.
 c
 c-----------------------------------------------------------------------
       implicit none
@@ -55,15 +56,14 @@ c
       include 'mem.h'
 c
       character version*(*)
+      parameter (version = 'ImBin: version 14-Nov-2001')
       integer maxbox
       parameter (maxbox = 1024)
       integer NOPTS
       parameter(NOPTS=1) 
       character opts(NOPTS)*8 
       logical present(NOPTS)
-      data opts/'sum     '/
 
-      parameter (version = 'ImBin: version 14-Nov-2001')
 c
       integer sizin(maxnax), sizout(maxnax), blc(maxnax), trc(maxnax), 
      + bin(2,maxnax), nbin, boxes(maxbox), krng(2), lin, lout, ip, ipn, 
@@ -77,6 +77,8 @@ c
 c  Externals.
 c
       logical hdprsnt
+c
+      data opts/'sum     '/
 c
 c Get user inputs
 c
