@@ -391,6 +391,7 @@ c    nebk 03sep95  Add labtyp=arcmin, nonlinear ticks
 c    nebk 12nov95  Change to deal internally in absolute pixels
 c                  '*lin' -> '*nat'
 c    nebk 29nov95  New call for CONTURCG
+c    nebk 18dec95  New call for VPSIZCG (arg. DOABUT)
 c
 c Ideas:
 c  * Be cleverer for sub-cubes which have spectra partly all zero
@@ -449,12 +450,12 @@ c
      +  doframe, fits(2), mark, spnorm, naked, number, mirror, init, 
      +  imnorm, colour, allzero, blconly, doerase, doepoch, igblank,
      +  allgood, allblnk, dofid, dowedge, hdprsnt, gaps, dotr, doaxlab,
-     +  doaylab, donxlab(2), donylab(2), miss, dogrid
+     +  doaylab, donxlab(2), donylab(2), miss, dogrid, doabut
 c
       data blankc /-99999999.00/
       data cin, gin, bin /maxcon*' ', ' ', ' '/
       data nblnkcs /0/
-      data gaps, dotr, scale /.false., .false., 2*0.0/
+      data gaps, doabut, dotr, scale /.false., .false., .false., 2*0.0/
       data lgn, lcn /0, maxcon*0/
       data vmin, vmax, imin, imax /1.0e30, -1.0e30, 1.0e30, -1.0e30/
       data ltypes /'hms   ', 'dms   ', 'arcsec', 'arcmin', 'absdeg', 
@@ -463,7 +464,7 @@ c
       data txtfill, tflen /'spectrum', 'derivative spectrum', 
      +                     'derivative spectrum', 8, 19, 19/
 c-----------------------------------------------------------------------
-      call output ('CgSpec: version 29-Nov-95')
+      call output ('CgSpec: version 18-Dec-95')
       call output (' ')
 c
 c Get user inputs
@@ -603,8 +604,8 @@ c Work out view port sizes and increments.
 c   
       call vpsizcg (dofull, dofid, ncon, gin, ' ', nspec, ' ',
      +  maxlev, nlevs, srtlev, levs, slev, 1, 1, cs, xdispl, ydispb,
-     +  gaps, dotr, 1, wedwid, tfdisp, labtyp, vxmin, vymin, vymax, 
-     +  vxgap, vygap, vxsize, vysize, tfvp, wdgvp)
+     +  gaps, doabut, dotr, 1, wedwid, tfdisp, labtyp, vxmin, vymin, 
+     +  vymax, vxgap, vygap, vxsize, vysize, tfvp, wdgvp)
 c
 c Adjust viewport increments and start locations if equal scales 
 c requested or if scales provided by user
