@@ -46,6 +46,7 @@ c  History:
 c    rjs  28may96 Original version.
 c    rjs  29jul96 Fix calibration options, and som FORTRAN standardisation.
 c    rjs  10dec96 Better error message when nbin is missing.
+c    rjs  12dec96 Fix writing of variables to the right moment.
 c------------------------------------------------------------------------
 c
 c  Common block to communicate to the "process" routine.
@@ -183,17 +184,16 @@ c
 c  Flush if needed.
 c
 	    if(abs(preamble(4)-Tprev).gt.1d0/86400d0)then
-	      call VarCopy(tIn,tOut)
 	      call BufFlush(tOut,dm,pperiod,dfreq)
 	    endif
 	    call BufAcc(tIn,preamble,data,flags,nchan)
+	    call VarCopy(tIn,tOut)
 	    Tprev = preamble(4)
 	    call uvDatRd(preamble,data,flags,MAXCHAN,nchan)
 	  enddo
 c
 c  Flush out anything remaining.
 c
-	  call VarCopy(tIn,tOut)
 	  call BufFlush(tOut,dm,pperiod,dfreq)
 	  call uvDatCls
 	enddo
