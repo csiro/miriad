@@ -73,6 +73,7 @@ c    07feb01 rjs  Write out elevation variable.
 c    02mar01 rjs  Label some output better.
 c    24apr01 rjs  Change format (and allow multiple formats) of met data file.
 c		  Remove code for opacGet.
+c    05jul01 dpr  Re-allow default met data format.
 c------------------------------------------------------------------------
 	integer MAXPOL
 	parameter(MAXPOL=2)
@@ -322,6 +323,7 @@ c
 c------------------------------------------------------------------------
 	double precision dtime
 	character type*12
+	logical   ok
 c
 c  Externals.
 c
@@ -339,6 +341,18 @@ c
 	  call tinGett(time,0.d0,'atime')
           call tinGett(dtime,0.0d0,'dtime')
 	  time = time + dtime - 10.0d0/24.0d0
+	  call tinSkip(1)
+	  call tinGetr(t0,0.0)
+	  call tinSkip(2)
+	  call tinGetr(p0,0.0)
+	  call tinSkip(1)
+	  call tinGetr(h0,0.0)
+	else
+          call dectime(type,time,'atime',ok)
+	  if(.not.ok)
+     *    call tinbug('f','Error decoding time in met data')
+c	  call tinGett(time,0.d0,'atime')
+	  call tinGett(dtime,0.0d0,'dtime')
 	  call tinSkip(1)
 	  call tinGetr(t0,0.0)
 	  call tinSkip(2)
