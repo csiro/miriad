@@ -40,14 +40,15 @@ c    rjs 27feb97 - Fix glaring bug in the default value for "clip".
 c    rjs 28feb97 - Last day of summer. Add options=positive.
 c    rjs 02jul97 - cellscal change.
 c    rjs 23jul97 - add pbtype.
+c    rjs 28nov97 - Increase max number of boxes.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='MosSDI: version 1.0 28-Feb-97')
+	parameter(version='MosSDI: version 1.0 28-Nov-97')
 	include 'maxdim.h'
 	include 'maxnax.h'
 	include 'mem.h'
 	integer MAXRUN,MAXBOXES
-	parameter(MAXRUN=3*maxdim,MAXBOXES=1024)
+	parameter(MAXRUN=3*maxdim,MAXBOXES=3076)
 c
 	character MapNam*64,BeamNam*64,ModelNam*64,OutNam*64,line*64
 	integer Boxes(MAXBOXES),Run(3,MAXRUN),nRun,blc(3),trc(3),nAlloc
