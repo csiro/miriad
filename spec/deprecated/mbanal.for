@@ -6,16 +6,78 @@ c= mbanal -- Analyse multibeam data
 c& rjs
 c: uv-analysis
 c+
+c	MBANAL is a task to manipulate sets of visibility spectra.
+c	One or two spectra sets are read from a visibility dataset,
+c	and then these spectra sets can be manipulated interactively
+c	with a set of simple commands. These commands manipulate
+c	"spectra sets" or individual baselines. A spectra set is 
+c	the collection of baselines that are in some way similar.
+c	For example, the set
+c	of baselines of a particular source observed during some
+c	particular time interval would be an example of a spectra set.
+c	new spectra sets (or overwrite old ones). Alternately a
+c	spectra set could be an observation of a reference blank
+c	piece of sky. 
+c
+c	Spectra sets are named, much like variables. Two spectra
+c	set names can be defined at the Miriad command line:
+c	'ref' and 'src'. When MBANAL starts up, it loads data into
+c	these from a given visibility dataset. These spectra sets
+c	can then be manipulated with MBANAL's simple commands.
+c
+c	Commands include:
+c	  Command    Args
+c	  -------    ----
+c	  add        out  in1 in2
+c	  subtract   out  in1 in2
+c	  multliply  out  in1 in2
+c	  divide     out  in1 in2
+c	  conjugate  out  [in]
+c	  sqrt       out  [in]
+c	  plot       in   [amp|phase|real|imag] [PGPLOT device]
+c	  exit
+c
+c	Commands can take either spectra sets of the spectra
+c	of an individual baseline. An individual baseline is
+c	given in the form:
+c	  name[m,n]
+c	where 'name' is the name of the spectra set and m and n
+c	are indices of the elements involved. For example
+c	  ref[1,13]
+c	is the spectra of beams 1 correlated with 13 of the
+c	'ref' spectra set.
+c
+c	For example
+c	  mbanal vis=multi.uv ref=time(10:00,10:10)
+c	will start mbanal, and define the visibility set
+c	'ref'. Subsequent interactive commands could be:
+c
+c	  plot ref amp
+c	will plots the amplitude of the ref datasets.
+c
+c	  plot ref[1,13] phase
+c	will plot the phase of baseline 1-13 of ref.
+c
+c	  add sum ref src
+c	will add the ref and src spectra sets, and produce a
+c	new spectra set called 'sum'.
+c	
 c@ vis
 c	The name of the input visibility data-set. No default.
 c@ ref
-c	Reference signal.
+c	This selects the data to be used as a spectra set called
+c	'ref'. The default is not to select anything. See the help
+c	on "select" for more information.
 c@ src
-c	Source signal.
+c	This selects the data to be used as a spectra set called
+c	'src'. The default is not to select anything. See the help
+c	on "select" for more information.
 c@ line
-c	Standard line-type specification.
+c	Standard line-type specification. See the help on "line"
+c	for more information.
 c@ device
-c	Plotting device. Default is /xs.
+c	Plotting device. Default is /xs. The plotting device can
+c	be overridden on the MBANAL prompt.
 c--
 c------------------------------------------------------------------------
 	integer MAXSELS
