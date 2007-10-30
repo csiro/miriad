@@ -60,15 +60,11 @@ foreach file ( ${base}_*.tar.Z )
     echo "### Fatal: Failed to successfully untar - status=$stat1"
     exit 1
   endif
-  echo Untarred $file at `date` > ${file}.Done
-  ftp -in << END_OF_FILE
-open atnf.csiro.au
-user ftp rsault@atnf.csiro.au
-cd /pub/software/miriad/updates
-put ${file}.Done
-quit
-END_OF_FILE
-  rm -r $file ${file}.Done
+  set date = (`date`)
+  mail miriadsys@atnf.csiro.au << EOF
+Received $file at $date
+EOF
+  rm -r $file
 end
 
 if ( $noupdate ) exit
