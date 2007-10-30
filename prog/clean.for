@@ -141,6 +141,7 @@ c   rjs  24jun97 - Correct call to Alignini.
 c   rjs  02jul97 - cellscal change.
 c   rjs  23jul97 - added pbtype.
 c   rjs  22oct99 - doc change only.
+c   rjs  28aug00 - Increase max complexity of region-of-interest.
 c
 c  Important Constants:
 c    MaxDim	The max linear dimension of an input (or output) image.
@@ -162,7 +163,7 @@ c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer MaxBeam,maxCmp1,maxCmp2,MaxBox,MaxRun,MaxP
 	parameter(maxCmp1=66000,MaxCmp2=32000,MaxP=257)
-	parameter(MaxBeam=MaxP*MaxP,MaxBox=2048,MaxRun=3*maxdim)
+	parameter(MaxBeam=MaxP*MaxP,MaxBox=3*MAXDIM,MaxRun=3*maxdim)
 c
 	real Data(MaxBuf)
 	integer Boxes(MaxBox),Run(3,MaxRun),MaxMap
