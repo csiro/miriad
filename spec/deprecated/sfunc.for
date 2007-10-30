@@ -76,8 +76,8 @@ c
 	  dowhile(nchan.gt.0)
 	    if(uvvarUpd(vupd))then
 	      do i=1,MAXBASE
-	        if(ncount(i).gt.0)call flush(ncount(i),S(i),S2(i),d(i),
-     *		am(i),nfile,D2l,b,mass,file,MAXPNT,npnt,docal)
+	        if(ncount(i).gt.0)call flushit(ncount(i),S(i),S2(i),
+     *		d(i),am(i),nfile,D2l,b,mass,file,MAXPNT,npnt,docal)
 	      enddo
 	      call Setd(tno,d,MAXBASE)
 	    endif
@@ -97,7 +97,7 @@ c
 	      if(ncount(bl).gt.0.and.
      *		max(preamble(3),tmax(bl))-
      *		min(preamble(3),tmin(bl)).gt.interval)
-     *	    	call flush(ncount(bl),S(bl),S2(bl),d(bl),
+     *	    	call flushit(ncount(bl),S(bl),S2(bl),d(bl),
      *		am(bl),nfile,D2l,b,mass,file,MAXPNT,npnt,docal)
 	      if(ncount(bl).eq.0)then
 		S(bl) = 0
@@ -124,7 +124,7 @@ c
 	  enddo
 	  call uvDatCls
 	  do i=1,MAXBASE
-	    if(ncount(i).gt.0)call flush(ncount(i),S(i),S2(i),d(i),
+	    if(ncount(i).gt.0)call flushit(ncount(i),S(i),S2(i),d(i),
      *		am(i),nfile,D2l,b,mass,file,MAXPNT,npnt,docal)
 	  enddo
 	enddo
@@ -302,7 +302,7 @@ c
 c
 	end
 c************************************************************************
-	subroutine flush(ncount,S,S2,d,am,nfile,
+	subroutine flushit(ncount,S,S2,d,am,nfile,
      *			D2l,b,mass,file,MAXPNT,npnt,docal)
 c
 	implicit none
