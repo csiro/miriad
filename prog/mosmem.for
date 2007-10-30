@@ -9,6 +9,11 @@ c+
 c	MOSMEM is a MIRIAD task which performs a maximum entropy
 c	deconvolution of a mosaiced image. Optionally it can also perform
 c	a joint deconvolution of a mosaic and single dish image.
+c
+c	MOSMEM will also work correctly on a single-pointing observation
+c	interferometric observation. In this case, it will be less efficient
+c	than MAXEN, but it could be used when combining single dish data
+c	with a single pointing.
 c@ map
 c	One or perhaps two input dirty images (or cubes). These should have
 c	units of Jy/beam. The first should be produced by INVERTs mosaic mode.
@@ -134,9 +139,11 @@ c		   options=dofactor.
 c    rjs  19jan99  It was failing to access the correct single dish plane!!
 c		   Also some changes in some checks and guessing TFlux to
 c		   make it more robust.
+c    rjs  22jan99  Fudge to get the rms noise information to propogate
+c		   through correctly for single pointing work.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='MosMem: version 1.0 19-Jan-99')
+	parameter(version='MosMem: version 1.0 22-Jan-99')
 	include 'maxdim.h'
 	include 'maxnax.h'
 	include 'mem.h'
@@ -416,7 +423,22 @@ c
 c  Initialise the mosaic routines, get 1/sigma**2, and get the dirty image.
 c
 	  call mcPlaneR(lMapa,k,Run,nRun,nPoint)
-	  call mcSigma2(memr(pWta),nPoint,.false.)
+c
+c       
+c  FUDGE. The beam of single pointing observations does not
+c  contain the appropriate information to compute the rms
+c  noise -- only the dirty image does. So, if its a single
+c  pointing observation, then get the rms from the dirty
+c  image, and scale the Wta arrary appropriately.
+c       
+          if(.not.hdprsnt(lBeama,'mostable'))then
+            call rdhdr(lMapa,'rms',temp,1.)
+            if(temp.le.0)temp = 1
+	    call SPntFid(memr(pWta),nPoint,temp)
+	  else
+	    call mcSigma2(memr(pWta),nPoint,.false.)
+          endif
+c
 	  call mcGain(memr(pEst),nPoint)
 	  call xysetpl(lMapa,1,k)
 	  call GetPlane(lMapa,Run,nRun,0,0,nMap(1),nMap(2),
@@ -669,6 +691,20 @@ c
 c  Thats all folks.
 c
 	end
+c************************************************************************
+        subroutine SPntFid(Wta,nPoint,rms)
+c       
+        implicit none
+        integer nPoint
+        real Wta(nPoint),rms
+c------------------------------------------------------------------------
+        integer i
+c       
+        do i=1,nPoint
+          Wta(i) = 1.0/(rms*rms)
+        enddo
+c
+        end
 c************************************************************************
 	subroutine GetOpt(verbose,doflux,dofac,entropy)
 c
