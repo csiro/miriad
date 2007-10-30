@@ -24,6 +24,7 @@
        13-mar-95  rjs   Increase max number of open items.
        30-jun-95  rjs   Declaration to appease gcc.
        15-may-96  rjs	More fiddles with roundup macro.
+       18-mar-97  rjs   Remove alignment restriction on hio_c.
 */
 
 
@@ -80,7 +81,8 @@ private ITEM *item_addr[MAXITEM];
 #define hget_tree(tno) (tree_addr[tno])
 #define hget_item(tno) (item_addr[tno])
 
-private int header_ok,expansion[10];
+private int header_ok,expansion[10],align_size[10];
+private char *align_buf;
 private int first=TRUE;
 
 /* Macro to wait for I/O to complete. If its a synchronous i/o system,
@@ -201,8 +203,17 @@ private void hinit_c()
   expansion[H_DBLE] = sizeof(double)/H_DBLE_SIZE;
   expansion[H_CMPLX] = 2*sizeof(float)/H_CMPLX_SIZE;
   expansion[H_TXT]  = 1;
+
+  align_size[H_BYTE] = 1;
+  align_size[H_INT]  = H_INT_SIZE;
+  align_size[H_INT2] = H_INT2_SIZE;
+  align_size[H_REAL] = H_REAL_SIZE;
+  align_size[H_DBLE] = H_DBLE_SIZE;
+  align_size[H_CMPLX] =H_REAL_SIZE;
+  align_size[H_TXT]  = 1;
   first = FALSE;
   header_ok = FALSE;
+  align_buf = Malloc(BUFSIZE);
 }
 /************************************************************************/
 void hflush_c(tno,iostat)
@@ -902,11 +913,13 @@ char *buf;
 			(dowrite ? item->bsize : item->io[b].length)))
 
 {
-  int next,b,off,len;
+  char *s;
+  int next,b,off,len,size;
   IOB *iob1,*iob2;
   ITEM *item;
 
   item = hget_item(ihandle);
+  size = align_size[type];
 
 /* Check various end-of-file conditions and for adequate buffers. */
 
@@ -1024,44 +1037,54 @@ char *buf;
 
     off  = offset - iob1->offset;
     len = min(length, iob1->length - off);
-    if(dowrite)switch(type){
-      case H_BYTE: 	Memcpy(iob1->buf+off,buf,len);
+    s = ( ( off % size ) ? align_buf : iob1->buf + off );
+    if(dowrite){
+      switch(type){
+        case H_BYTE: 	Memcpy(s,buf,len);
 			break;
-      case H_INT:  	pack32_c((int *)buf,iob1->buf+off,len/H_INT_SIZE);
+        case H_INT:  	pack32_c((int *)buf, s,len/H_INT_SIZE);
 			break;
-      case H_INT2:	pack16_c((int2 *)buf,iob1->buf+off,len/H_INT2_SIZE);
+        case H_INT2:	pack16_c((int2 *)buf,s,len/H_INT2_SIZE);
 			break;
-      case H_REAL:	packr_c((float *)buf,iob1->buf+off,len/H_REAL_SIZE);
+        case H_REAL:	packr_c((float *)buf,s,len/H_REAL_SIZE);
 			break;
-      case H_DBLE:	packd_c((double *)buf,iob1->buf+off,len/H_DBLE_SIZE);
+        case H_DBLE:	packd_c((double *)buf,s,len/H_DBLE_SIZE);
 			break;
-      case H_CMPLX:	packr_c((float *)buf,iob1->buf+off,(2*len)/H_CMPLX_SIZE);
+        case H_CMPLX:	packr_c((float *)buf,s,(2*len)/H_CMPLX_SIZE);
 			break;
-      case H_TXT:	Memcpy(iob1->buf+off,buf,len);
+        case H_TXT:	Memcpy(s,buf,len);
 			if(*(buf+len-1) == 0)*(iob1->buf+off+len-1) = '\n';
 			break;
-      default:		bug_c('f',"hio_c: Unrecognised type");
-    } else      switch(type){
-      case H_BYTE: 	Memcpy(buf,iob1->buf+off,len);
+        default:	bug_c('f',"hio_c: Unrecognised type");
+      }
+      if(off % size) Memcpy(iob1->buf+off,align_buf,len);
+    } else {
+
+/* If the data are not aligned, copy to an alignment buffer for processing. */
+
+      if(off % size) Memcpy(align_buf,iob1->buf+off,len);
+      switch(type){
+        case H_BYTE: 	Memcpy(buf,s,len);
 			break;
-      case H_INT:  	unpack32_c(iob1->buf+off,(int *)buf,len/H_INT_SIZE);
+        case H_INT:  	unpack32_c(s,(int *)buf,len/H_INT_SIZE);
 			break;
-      case H_INT2:	unpack16_c(iob1->buf+off,(int2 *)buf,len/H_INT2_SIZE);
+        case H_INT2:	unpack16_c(s,(int2 *)buf,len/H_INT2_SIZE);
 			break;
-      case H_REAL:	unpackr_c(iob1->buf+off,(float *)buf,len/H_REAL_SIZE);
+        case H_REAL:	unpackr_c(s,(float *)buf,len/H_REAL_SIZE);
 			break;
-      case H_DBLE:	unpackd_c(iob1->buf+off,(double *)buf,len/H_DBLE_SIZE);
+        case H_DBLE:	unpackd_c(s,(double *)buf,len/H_DBLE_SIZE);
 			break;
-      case H_CMPLX:	unpackr_c(iob1->buf+off,(float *)buf,(2*len)/H_CMPLX_SIZE);
+        case H_CMPLX:	unpackr_c(s,(float *)buf,(2*len)/H_CMPLX_SIZE);
 			break;
-      case H_TXT:	len = hfind_nl(iob1->buf+off,len);
-			Memcpy(buf,iob1->buf+off,len);
-			if(*(iob1->buf+off+len-1) == '\n'){
+        case H_TXT:	len = hfind_nl(s,len);
+			Memcpy(buf,s,len);
+			if(*(s+len-1) == '\n'){
 			  length = len;
 			  *(buf+len-1) = 0;
 			}
 			break;
-      default:		bug_c('f',"hio_c: Unrecognised type");
+        default:	bug_c('f',"hio_c: Unrecognised type");
+      }
     }
     buf += expansion[type] * len;
     length -= len;
