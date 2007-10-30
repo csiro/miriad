@@ -2,40 +2,74 @@
 
 set path = ($MIRBIN $path)
 
-# Parse the input argument.
+# Get the name of the machine we are running on.
 
-set input = ( `echo $1|sed "s/:/ /"` )
-if ( $#input == 2 ) then
-  set rhost = $input[1]
-  set base  = $input[2]
-else
-  set rhost = ""
-  set base  = $input[1]
+set noupdate = 0
+set base = $1
+if ( "$1" == "-noupdate" ) then
+  set noupdate = 1
+  set base = $2
 endif
+  
+if ( "$base" == "") then
+  echo "  Usage:"
+  echo "    mirimport [-noupdate] site-name"
+  exit
+endif
+
+# Move to the import directory.
 
 if ( ! -e $MIR/import ) mkdir $MIR/import
-
-# If they are local files, just get a list of them. Otherwise
-# get them from the remote machine.
-
-if ( "$rhost" == "" ) then
-  set files = ( $base/*.tar.Z )
-else
-  cd $MIR/import
-  touch junk.tar.Z
-  rm -rf *.tar.Z
-  rcp ${rhost}:${base}/\*.tar.Z .
-  if ( $status ) exit
-  set files = ( *.tar.Z )
+cd $MIR/import
+if ( $status ) then
+  echo "### Fatal: Failed to cd to $MIR/import
+  exit 1
 endif
 
-# Process each file.
+# Get the updates.
 
-foreach file ( $files )
-  zcat $file | ( cd $MIR; tar -xmf - )
-  if ( "$rhost" != "" ) rsh $rhost rm $base/$file
-  rm -r $file
+echo -n "Starting to ftp ... "
+ftp -in << END_OF_FILE >& /dev/null
+open atnf.csiro.au
+user ftp rsault@atnf.csiro.au
+cd /pub/software/miriad/updates
+binary
+mget ${base}_\*.tar.Z
+quit
+END_OF_FILE
+if ( $status ) exit
+echo "done"
+
+# Check for files.
+
+  ls ${base}_*.tar.Z >& /dev/null
+  if ( $status ) then
+    echo "### Fatal: No updates found"
+    exit 1
+  endif
+
+# Process the updates.
+
+foreach file ( ${base}_*.tar.Z )
   echo Untarred $file at `date`
+  zcat $file | ( cd $MIR; tar -xvmf - )
+  set stat1 = $status
+  if ( $stat1 == 141 ) then
+    echo "### Warning: Untarring ended with status=$stat1"
+  else if ( $stat1 ) then
+    echo "### Fatal: Failed to successfully untar - status=$stat1
+    exit 1
+  endif
+  echo Untarred $file at `date` > ${file}.Done
+  ftp -in << END_OF_FILE
+open atnf.csiro.au
+user ftp rsault@atnf.csiro.au
+cd /pub/software/miriad/updates
+put ${file}.Done
+quit
+END_OF_FILE
+  rm -r $file ${file}.Done
 end
-yes | update
-echo Done ...
+
+if ( $noupdate ) exit
+echo y | mirupdate
