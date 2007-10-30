@@ -108,6 +108,8 @@ c    bmg   08may96  Added object=shell
 c    rjs   24sep96  Some corrections to object=shell.
 c    rjs   13dec96  Increase max number of objects.
 c    rjs   02jul97  cellscal change.
+c    rjs   14jul97  Check when there are too many objects and increase
+c		    max number of objects.
 c  Bugs/Wishlist:
 c------------------------------------------------------------------------
 	character version*(*)
