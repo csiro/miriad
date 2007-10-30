@@ -63,12 +63,15 @@ c	measure=cornwell.
 c@ options
 c	Task enrichment parameters. Several can be given, separated by
 c	commas. Minimum match is used. Possible values are:
-c	  doflux     Constraint the flux to be that given by
+c	  doflux     Constraint the flux to be that given by the "flux"
+c	             parameter. Normally the "flux" parameter value is only
+c	             used to determine the default image level.
 c	  verbose    Give lots of messages during the iterations. The default
 c	             is to give a one line message at each iteration.
 c--
 c  History:
 c    rjs  23nov94  Adapted from MAXEN.
+c    rjs   3dec94  Doc only.
 c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='MosMem: version 1.0 23-Nov-94')
@@ -263,7 +266,7 @@ c
 	    call Assign(TFlux/nPoint,memr(pDef),nPoint)
 	  else
 	    call xysetpl(lDef,1,k-kmin+1)
-	    call GetPlane(lDef,Run,nRun,0,0,
+	    call GetPlane(lDef,Run,nRun,1-imin,1-jmin,
      *			nDef(1),nDef(2),memr(pDef),maxPoint,nPoint)
 	    Imax = Ismax(npoint,memr(pDef),1)
 	    ClipLev = 0.01 * abs(memr(pDef+Imax-1))
@@ -277,7 +280,7 @@ c
 	    call Copy(nPoint,memr(pDef),memr(pEst))
 	  else
 	    call xysetpl(lModel,1,k-kmin+1)
-	    call GetPlane(lModel,Run,nRun,0,0,
+	    call GetPlane(lModel,Run,nRun,1-imin,1-jmin,
      *			nModel(1),nModel(2),memr(pEst),maxPoint,nPoint)
 	    if(positive) call ClipIt(ClipLev,memr(pEst),nPoint)
 	  endif
@@ -340,7 +343,7 @@ c  Work out what was really the best step length.
 c
 	  call ChekStep(nPoint,memr(pEst),memr(pNewEst),memr(pNewRes),
      *		memr(pDef),memr(pWt),measure,Alpha,Beta,Q,J1)
-	  if(J0-J1.gt.0)then
+	  if(J0-J1.ne.0)then
 	    StLen2 = J0/(J0-J1)
 	  else
 	    StLen2 = 1
