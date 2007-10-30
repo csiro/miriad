@@ -102,7 +102,8 @@ c	LEVS for the second contour image.
 c@ levs3
 c	LEVS for the third contour image.
 c@ range
-c	Upto 100 groups of 4 values (1 group per subplot). These are 
+c	N groups of 4 values (1 group per subplot and N is the maximum
+c	number of channels allowed by Miriad; typically 2048). These are 
 c	the image intensity range to display (min to max), the transfer 
 c	function type and the colour lookup table for each subplot 
 c	displayed.  The transfer function type can be one of "lin" 
@@ -532,6 +533,7 @@ c		   labtyp=arcmin options=nofirst
 c    nebk 03sep95  Options=grid,trlab. Nonlinear axis labels and detect
 c		   if display has black or white background
 c    nebk 09oct95  More care with overlay display channels
+c    nebk 19oct95  Eliminate MAXGR parameter in favour of MAXCHAN
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -540,9 +542,9 @@ c
       include 'mem.h'
       real wedwid, wedisp, tfdisp
       integer maxlev, maxpos, nxdef, nydef, maxcon, 
-     +        maxtyp, nbins, maxgr
+     +        maxtyp, nbins
       parameter (maxlev = 50, maxpos = 1000, nxdef = 4, maxtyp = 15,
-     +  nydef = 4, maxcon = 3, maxgr = 2048, wedwid = 0.05,
+     +  nydef = 4, maxcon = 3, wedwid = 0.05,
      +  wedisp = 1.0, tfdisp = 0.5, nbins = 128)
 c
       integer ipim, ipnim, ipim2, ipnim2, ipimm
@@ -569,7 +571,7 @@ c
       character cin(maxcon)*64, gin*64, vin(2)*64, mskin*64, bin*64,
      +  ltypes(maxtyp)*6
 c
-      real levs(maxlev,maxcon), pixr(2,maxgr), tr(6), bmin(maxcon+4), 
+      real levs(maxlev,maxcon), pixr(2,maxchan), tr(6), bmin(maxcon+4), 
      +  bmaj(maxcon+4), bpa(maxcon+4), bxfac(maxcon+4),
      +  byfac(maxcon+4), scale(2), cs(3), pixr2(2), slev(maxcon),
      +  break(maxcon), vfac(2), bfac(5), tfvp(4), wdgvp(4), 
@@ -582,14 +584,14 @@ c
       integer blc(3), trc(3), win(2), lwid(maxcon+3), 
      +  vecinc(2), boxinc(2), srtlev(maxlev,maxcon), nlevs(maxcon), 
      +  grpbeg(maxchan), ngrp(maxchan), his(nbins), ibin(2), jbin(2), 
-     +  kbin(2), krng(2), coltab(maxgr)
+     +  kbin(2), krng(2), coltab(maxchan)
       integer  nx, ny, lpos, npos, ierr, pgbeg, ilen, igr, nlast, 
      +  ngrps, ncon, i, j, nvec, ipage, jj, npixr, wedcod, bgcol
 c
       character ofig(maxpos)*10, posid(maxpos)*20, labtyp(2)*6, 
      +  levtyp(maxcon)*1
       character pdev*64, xlabel*40, ylabel*40, xopts*20, yopts*20,
-     +  hard*20, ofile*64, xxopts*22, yyopts*22, trfun(maxgr)*3,
+     +  hard*20, ofile*64, xxopts*22, yyopts*22, trfun(maxchan)*3,
      +  aline*72
 c
       logical solneg(maxcon), doblv(2), bemprs(maxcon+4), owrite(maxpos)
@@ -608,9 +610,9 @@ c
      +             'arcmin', 'absghz', 'relghz', 'abskms', 'relkms',
      +             'abslin', 'rellin', 'absdeg', 'reldeg', 'none'/
       data dmm /2*0.0/
-      data coltab /maxgr*0/
+      data coltab /maxchan*0/
 c-----------------------------------------------------------------------
-      call output ('CgDisp: version 09-Oct-95')
+      call output ('CgDisp: version 19-Oct-95')
       call output ('Non-linear coordinate labels now correctly handled')
       call output ('New options=grid to overlay coordinate grid')
       call output ('New options=trlab to label top&right axes as well')
@@ -618,7 +620,7 @@ c-----------------------------------------------------------------------
 c
 c Get user inputs
 c
-      call inputs (maxgr, maxlev, maxcon, maxtyp, ltypes, ncon, cin, 
+      call inputs (maxchan, maxlev, maxcon, maxtyp, ltypes, ncon, cin, 
      +   gin, nvec, vin, bin, mskin, ibin, jbin, kbin, levtyp, slev, 
      +   levs, nlevs, npixr, pixr, trfun, coltab, vecfac, vecinc, 
      +   boxfac, boxinc, pdev, labtyp, dofull, do3val, do3pix, eqscale, 
@@ -828,7 +830,7 @@ c
 c Apply transfer function directly to image
 c
            if (trfun(igr).ne.'lin') 
-     +       call apptrfcg (pixr2, trfun(igr), groff, win(1)*win(2),
+     +       call apptrfcg (pixr, trfun(igr), groff, win(1)*win(2), 
      +          memi(ipnim), memr(ipim), nbins, his, cumhis)
 c
 c Apply specified OFM or do interactive fiddle to hardcopy 
