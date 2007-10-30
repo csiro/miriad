@@ -24,7 +24,7 @@ c	or `nofreq' options. Several files can be given. Wildcards
 c	are supported.
 c@ select
 c	Normal visibility selection, which is applied to the template
-c	dataset. See the help on `select' for more information.
+c	dataset. See the help on "select" for more information.
 c@ options
 c	Extra processing options. Several can be given, separated by commas.
 c	Minimum match is supported. Possible values are:
