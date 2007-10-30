@@ -45,6 +45,7 @@ c		    which do not have this variable.
 c    mchw 10apr94   Put MAXWIN into maxdim.h
 c    rjs  27feb95   Fix options=unflagged for files with multiple
 c		    polarisations.
+c    rjs  12oct95   Copy xyphase variable.
 c  Bugs:
 c
 c= uvcat - Catenate and copy uv datasets; Apply gains file, Select windows.
@@ -70,14 +71,14 @@ c@ options
 c	This gives extra processing options. Several options can be given,
 c	each separated by commas. They may be abbreivated to the minimum
 c	needed to avoid ambiguity. Possible options are:
-c          'nocal'       Do not apply the gains file. By default, UVCAT
-c                        applies the gains file in copying the data.
+c	   'nocal'       Do not apply the gains file. By default, UVCAT
+c	                 applies the gains file in copying the data.
 c	   'nopass'      Do not apply bandpass corrections. By default, UVCAT
 c	                 applies bandpass corrections if possible.
 c	   'nopol'       Do not apply polarization correction. By
 c	                 default UVCAT corrects polarizations, if possible.
-c          'nowide'      Do not copy across wide-band channels.
-c          'nochannel'   Do not copy across spectral channels.
+c	   'nowide'      Do not copy across wide-band channels.
+c	   'nochannel'   Do not copy across spectral channels.
 c	   'unflagged'   Copy only those records where there are some
 c	                 unflagged visibilites.
 c@ out
@@ -86,7 +87,7 @@ c--
 c------------------------------------------------------------------------
         include 'maxdim.h'
 	character version*(*)
-	parameter(version='UvCat: version 1.0 27-Feb-95')
+	parameter(version='UvCat: version 1.0 12-Oct-95')
 c
 	integer nchan,vhand,lIn,lOut,i,j,nspect,nPol,Pol,SnPol,SPol
 	integer nschan(MAXWIN),ischan(MAXWIN),ioff,nwdata,length
@@ -354,11 +355,12 @@ c    window	This is false if all windows are selected.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer nschan(MAXWIN),ischan(MAXWIN),nants
-	integer length,nspect,offset,nout,i,j,nsystemp
+	integer length,nspect,offset,nout,i,j,nsystemp,nxyph
 	double precision sdf(MAXWIN),sfreq(MAXWIN),restfreq(MAXWIN)
-	real systemp(MAXANT*MAXWIN)
+	real systemp(MAXANT*MAXWIN),xyphase(MAXANT*MAXWIN)
 	character type*1
 	logical unspect,unschan,uischan,usdf,usfreq,urest,usyst,concat
+	logical uxyph
 c
 c  Get the dimensioning info.
 c
@@ -386,6 +388,10 @@ c
 	usyst = type.eq.'r'.and.nsystemp.le.MAXANT*MAXWIN.and.
      *				nsystemp.gt.0
 	if(usyst)call uvgetvrr(lIn,'systemp',systemp,nsystemp)
+	call uvprobvr(lIn,'xyphase',type,nxyph,uxyph)
+	uxyph = type.eq.'r'.and.nxyph.le.MAXANT*MAXWIN.and.
+     *				nxyph.gt.0
+	if(uxyph)call uvgetvrr(lIn,'xyphase',xyphase,nxyph)
 c
 c  Trim them down to size.
 c
@@ -400,9 +406,16 @@ c
 	    sdf(nout) = sdf(i)
 	    sfreq(nout) = sfreq(i)
 	    restfreq(nout) = restfreq(i)
+c
 	    if(usyst.and.nsystemp.ge.nspect*nants)then
 	      do j=1,nants
 	        systemp((nout-1)*nants+j) = systemp((i-1)*nants+j)
+	      enddo
+	    endif
+c
+	    if(uxyph.and.nxyph.ge.nspect*nants)then
+	      do j=1,nants
+	        xyphase((nout-1)*nants+j) = xyphase((i-1)*nants+j)
 	      enddo
 	    endif
 	  endif
@@ -419,6 +432,7 @@ c
 	call uvputvrd(lOut,'restfreq',restfreq,nout)
 	if(nsystemp.ge.nspect*nants)nsystemp = nout*nants
 	if(usyst)call uvputvrr(lOut,'systemp',systemp,nsystemp)
+	if(uxyph)call uvputvrr(lOut,'xyphase',xyphase,nxyph)
 c
 c  Determine the output parameters.
 c
