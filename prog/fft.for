@@ -459,7 +459,7 @@ c
 c
 c  Determine correct bunit.
 c
-	call rdhda(lin,bunit,' ')
+	call rdhda(lin,'bunit',bunit,' ')
 	if(bunit.eq.'JY/BEAM'.or.bunit.eq.'JY')then
 	  bunit = 'JY'
 	else

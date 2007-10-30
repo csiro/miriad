@@ -28,10 +28,8 @@ c         and a warning is printed.
 c
 c@ in
 c	Input image name. No default.
-c
 c@ options
 c	The following options can be given (minimum match applies):
-c
 c         skew 
 c           Compute the 'third moment'. Since the formal third moment
 c           has the rather useless dimensions of pixel**3, what
@@ -43,7 +41,6 @@ c           lower pixel number than mom1 are generally brighter than
 c           those at higher pixel number. A positive value
 c           means the pixels at higher pixel number than the first
 c           moment are brighter.
-c
 c         clipmean
 c           When you use this program to estimate the peak of a source,
 c           better accuracy can be had by ignoring low-intensity values.
@@ -51,13 +48,11 @@ c           Setting this option forms the moments using only pixels that
 c           are brighter than the (local) mean.
 c           If a min or max value is specified (see below), the mean is
 c           computed using only the values within the selected range.
-c
 c         clip1sigma
 c           Forms moments using just the pixels brighter than
 c           local_mean + local_rms.
 c           If a min or max value is specified, the mean and rms are computed
 c           using only the values within the selected range.
-c
 c@ region
 c	The region of interest. See the help on "region" for more
 c	information. This gives the region of pixels to calculate the
@@ -65,14 +60,12 @@ c       moments within. Only rectangular regions are supported.
 c       The default is the entire image.
 c       If a cube is given as the input image, the program computes
 c       moments for each plane along axis 3 (within the selected range).
-c
 c@ min
 c       The minimum pixel value for inclusion in the moment calculation.
 c       The default is the image minimum.
 c@ max
 c       The maximum pixel value for inclusion in the moment calculation
 c       The default is the image maximum.
-c
 c@ log
 c	The output log file. The default is the terminal. Output to
 c       the terminal is paged.
