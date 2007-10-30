@@ -40,9 +40,10 @@ c    rjs  02jul97  cellscale change.
 c    rjs  18jul97  Correct handling of flags when incr != 1.
 c    rjs  23jul97  added pbtype.
 c    rjs  25nov98  added llrot.
+c    rjs  23jul99  Correct copying of pbtype keyword.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Imsub: version 1.0 25-Nov-98' )
+	parameter(version='Imsub: version 1.0 23-Jul-99' )
 c
 	integer maxboxes
 	parameter(maxboxes=2048)
@@ -74,7 +75,7 @@ c
      *	  'object  ','observer','obsra   ','obsdec  ','pbfwhm  ',
      *	  'restfreq','telescop','vobs    ','btype   ','rms     ',
      *	  'ltype   ','lstart  ','lwidth  ','lstep   ','mostable',
-     *	  'cellscal','pbfwhm  ','llrot   '/
+     *	  'cellscal','pbtype  ','llrot   '/
 c
 c  Get the input parameters.
 c
