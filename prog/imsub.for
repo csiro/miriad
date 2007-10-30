@@ -33,9 +33,10 @@ c    nebk 26may92  Copy "btype" across
 c    pjt   9jul92  Length of filenames to be 80, not 24!!!!
 c    rjs  25jun93  Trivial change to a history message.
 c    rjs   8nov94  Get incr and blanking masks to work correctly.
+c    rjs  17aug95  Copy mostable to output.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Imsub: version 1.0 25-Jun-93' )
+	parameter(version='Imsub: version 1.0 17-Aug-95' )
 c
 	integer maxboxes
 	parameter(maxboxes=2048)
@@ -59,7 +60,7 @@ c
 c  Header keywords.
 c
 	integer nkeys
-	parameter(nkeys=33)
+	parameter(nkeys=34)
 	character keyw(nkeys)*8
 	data keyw/   'bmaj    ','bmin    ','bpa     ','bunit   ',
      *	  'crval1  ','crval2  ','crval3  ','crval4  ','crval5  ',
@@ -67,7 +68,7 @@ c
      *	  'obstime ','epoch   ','history ','instrume','niters  ',
      *	  'object  ','observer','obsra   ','obsdec  ','pbfwhm  ',
      *	  'restfreq','telescop','vobs    ','btype   ','rms     ',
-     *	  'ltype   ','lstart  ','lwidth  ','lstep   '/
+     *	  'ltype   ','lstart  ','lwidth  ','lstep   ','mostable'/
 c
 c  Get the input parameters.
 c
