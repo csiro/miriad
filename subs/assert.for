@@ -10,6 +10,7 @@ c    pjt  18-mar-92	renamed from assert to   assertl to avoid potential name
 c			pollution of needed C libraries
 c    rjs  13-jul-00	Replace "inquire" with "hexists" routine, to
 c			avoid a bug on some Digital UNIX systems.
+c    pjt  13-jul-00     Fixed a documentation bug
 c
 c************************************************************************
 c	SUBROUTINE assert(cond,mesg)
@@ -33,7 +34,7 @@ c   Although an IF-statement will often do just as well, this make
 c   the code a bit smaller and readable:
 c
 c   Example:
-c       CALL assertb(file.NE.' ','No filename specified')
+c       CALL assertl(file.NE.' ','No filename specified')
 c
 c   Input:
 c       cond    -- logical to test, if FALSE bail out
@@ -74,6 +75,9 @@ c
 c  Externals.
 c
       logical hexists
+c
+c     old technique:    INQUIRE(FILE=name(1:len1(name)),EXIST=fex)
+c                   [this seems to fail on Digital Unix for directories]
 c
       fex = hexists(0,name)
       IF (cond .AND. .NOT.fex  .OR.  .NOT.cond .AND. fex) THEN
@@ -116,6 +120,5 @@ c----------------------------------------------------------------------|
 
       RETURN
       END
-
 
 
