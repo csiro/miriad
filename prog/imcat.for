@@ -37,10 +37,11 @@ c    03nov91 rjs   Check buffer overflow and more standard history.
 c    04nov91 mchw  Restored inputs to history.
 c    08nov91 pjt   Increase MAXMAP to appease local maphogs
 c    13jul92 nebk  Add OPTIONS=RELAX and btype to keywords
+c    19jul94 nebk  Allow for roundoff in axis descriptor comparisons
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)	
-        parameter(version='IMCAT: version 13-jul-92')
+        parameter(version='IMCAT: version 19-jul-94')
 	integer maxmap,naxis
 	parameter(maxmap=64,naxis=3)
 	character in(maxmap)*80,out*80,file*80
@@ -48,7 +49,7 @@ c------------------------------------------------------------------------
 	integer lin,nplane(maxmap),lOut,size(naxis),nsize(naxis)
 	real Data(maxdim),cdelt(naxis),crval(naxis),crpix(naxis)
 	real cdelt1,crval1,crpix1,dmin,dmax
-	logical mask(maxdim),first,relax
+	logical mask(maxdim),first,relax,ok
 	character*1 caxis,wflag
 c
 c  Externals.
@@ -116,13 +117,19 @@ c
 	  do i=1,naxis
 	    caxis = itoaf(i)
 	    call rdhdr(lin,'cdelt'//caxis,cdelt1,1.0)
-	    if(cdelt1.ne.cdelt(i)) call bug(wflag,'cdelt not the same')
+            call descmp (cdelt1, cdelt(i), ok)
+	    if(.not.ok) call bug(wflag,'cdelt not the same on axis '//
+     *                           caxis)
+c
 	    call rdhdr(lin,'crpix'//caxis,crpix1,0.)
 	    call rdhdr(lin,'crval'//caxis,crval1,0.)
 	    if(i.le.(naxis-1)) then
-	      if((crval1+(1-crpix1)*cdelt1).ne.
-     *		(crval(i)+(1-crpix(i))*cdelt(i)))
-     *		   call bug(wflag,'reference positions not the same')
+              call descmp (crval1, crval(i), ok)
+   	      if(.not.ok) call bug(wflag,'crval not the same on axis '//
+     *                             caxis)
+              call descmp (crpix1, crpix(i), ok)
+	      if(.not.ok) call bug(wflag,'crpix not the same on axis '//
+     *                             caxis)
 	    else if(i.eq.naxis) then
 	      if((crval1+(1-crpix1)*cdelt1).ne.
      *		(crval(i)+(1-crpix(i))*cdelt(i) + size(i)*cdelt(i)))
@@ -219,4 +226,19 @@ c
       end
 c
 c
-
+      subroutine descmp (r1, r2, ok)
+c-----------------------------------------------------------------------
+c     Check axis descriptors agree allowing for roundoff
+c
+c     Output
+c       ok     True if axis descriptors agree.
+c-----------------------------------------------------------------------
+      real r1, r2
+      logical ok
+cc
+      real dmax
+c-----------------------------------------------------------------------
+      dmax = max(abs(r1),abs(r2))
+      ok = .not.(abs(r1-r2).gt.dmax*1e-6 .or. r1*r2.lt.0.0d0)
+c
+      end 
