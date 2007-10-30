@@ -41,6 +41,7 @@ c    rjs 28feb97 - Last day of summer. Add options=positive.
 c    rjs 02jul97 - cellscal change.
 c    rjs 23jul97 - add pbtype.
 c    rjs 28nov97 - Increase max number of boxes.
+c    rjs 29jan99 - Correct user message only.
 c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='MosSDI: version 1.0 28-Nov-97')
@@ -63,7 +64,7 @@ c
 c
 c  Externals.
 c
-	character itoaf*4
+	character itoaf*8
 c
 c  Get the input parameters.
 c
