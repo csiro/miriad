@@ -33,6 +33,7 @@ c    doleak			Check for polarisation leakage file, and
 c				apply the polarisation corrections.
 c    WillLeak			Set true if doleak is true and leakage files
 c				are present.
+c    dow			Return "w" in the preamble.
 c    nIn			The number of input files given.
 c    pnt			The number of the current input file being
 c				processed.
@@ -44,14 +45,17 @@ c				data.
 c    cross			If true, input data must be crosscorrelation
 c				data.
 c    dunrew                     If true, uvdatrew has been called
+c    npream			Number of elements in the preamble.
+c    idxT			Index of "time" in the preamble.
+c    idxBL			Index of "baseline" in the preamble.
 c
 	integer maxsels,maxNam,maxIn
-	parameter(maxsels=512,maxNam=1024,maxIn=64)
+	parameter(maxsels=512,maxNam=20000,maxIn=400)
 	real sels(maxsels),lstart,lwidth,lstep,rstart,rwidth,rstep
 	real plmaj,plmin,plangle
 	logical doplanet,dowave,doref,dodata,docal,dosels,doleak,dopass
-	logical PlInit,WillCal,WillLeak,auto,cross,dunrew
-	integer k1(maxIn),k2(maxIn),nchan
+	logical PlInit,WillCal,WillLeak,auto,cross,dunrew,dow
+	integer k1(maxIn),k2(maxIn),nchan,npream,idxT,idxBL
 	character line*32,ref*32,InBuf*(maxNam)
 	integer nIn,pnt,tno
 c
@@ -82,8 +86,8 @@ c  Leaks    Polarisation leakage parameters.
 c  nLeaks   Number of polarisation leakage parameters.
 c
 	include 'maxdim.h'
-	integer maxPol
-	parameter(maxPol=4)
+	integer MAXPOL,MAXPRE
+	parameter(MAXPOL=4,MAXPRE=8)
 c
 	integer PolII,PolI,PolQ,PolU,PolV,PolRR,PolLL,PolRL,PolLR
 	integer PolXX,PolYY,PolXY,PolYX,PolMin,PolMax
@@ -91,24 +95,24 @@ c
 	parameter(PolLL=-2,PolRL=-3,PolLR=-4,PolXX=-5,PolYY=-6)
 	parameter(PolXY=-7,PolYX=-8,PolMin=PolYX,PolMax=PolV)
 c
-	integer nPol,Pols(maxPol),iPol,nPolF
+	integer nPol,Pols(MAXPOL),iPol,nPolF
 	logical WillPol,SelPol,SelPol1,PolCpy
-	double precision Spreambl(4)
+	double precision Spreambl(MAXPRE)
 	integer Snread
-	complex SData(maxchan,maxPol)
-	integer ncoeff(maxPol),indices(maxPol,maxPol)
-	logical doaver(maxPol),Sflags(maxchan,maxPol)
-	complex coeffs(maxPol,maxPol)
-	real SumWts(maxPol)
+	complex SData(MAXCHAN,MAXPOL)
+	integer ncoeff(MAXPOL),indices(MAXPOL,MAXPOL)
+	logical doaver(MAXPOL),Sflags(MAXCHAN,MAXPOL)
+	complex coeffs(MAXPOL,MAXPOL)
+	real SumWts(MAXPOL)
 	integer nLeaks
 	complex Leaks(2,MAXANT)
 c
 c  The common blocks.
 c
 	common/UVDatCoA/sels,lstart,lwidth,lstep,rstart,rwidth,rstep,
-     *	 plmaj,plmin,plangle,doplanet,dowave,doref,dodata,dosels,
+     *	 plmaj,plmin,plangle,doplanet,dowave,doref,dodata,dosels,dow,
      *	 plinit,k1,k2,nchan,nIn,pnt,tno,auto,cross,docal,WillCal,doleak,
-     *	 WillLeak,dopass,dunrew
+     *	 WillLeak,dopass,dunrew,npream,idxT,idxBL
 c
 	common/UVDatCoB/line,ref,InBuf
 c
