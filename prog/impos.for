@@ -40,7 +40,7 @@ c	   "relkms"      km/s relative to the reference pixel
 c	   "abslin"      Linear coordinate 
 c	   "rellin"      Linear coordinate relative to the reference pixel
 c
-c	Default is "abspix", or value of previous coordinate.
+c	The default is "abspix".
 c@ stype
 c	'radio', 'optical', or 'frequency'.  If you specify a spectral axis
 c	coordinate, this indicates what convention it is in.  For example, 
@@ -64,6 +64,7 @@ c    nebk 27jan95  Remove *(*) concatenations
 c    nebk 13nov95  Better non-coordinate checking
 c    nebk 29nov95  New call for CTYPECO
 c    rjs  17jul97  Get it to work on uv datasets as well.
+c    rjs  19may00  Make the default "type" abspix.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -96,7 +97,7 @@ c
       data typei /maxnax*' '/
       data nco, ipix /0, maxnax*1/
 c-----------------------------------------------------------------------
-      call output ('IMPOS: version 17-Jul-97')
+      call output ('IMPOS: version 19-May-00')
       call output (' ')
 c
 c  Get inputs
@@ -110,13 +111,7 @@ c
 c
 c Set type defaults
 c
-        if (typei(i).eq.' ') then
-          if (i.eq.1) then
-            typei(i) = 'abspix'
-          else 
-            typei(i) = typei(i-1)
-          end if
-        end if
+        if (typei(i).eq.' ') typei(i) = 'abspix'
 c
 c Get coordinate
 c
