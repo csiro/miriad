@@ -47,6 +47,8 @@ c          amplitude     Perform amplitude and phase self-cal.
 c          phase                Perform phase only self-cal.
 c          smooth        Determine the solutions in such a way that they are
 c                        smooth with time.
+c	   relax         Relax the convergence criteria. This is useful when
+c	                 selfcal'ing with a very poor model.
 c          apriori       This is used if there is no input model, and the
 c                        source in the visibility data is either a planet,
 c                        or a standard calibrator. This causes the model data to
@@ -106,9 +108,10 @@ c   mchw  24nov90 Corrected comment and protected sqrt in solve1.
 c    rjs  26nov90 Minor changes to the phase-solution routine, to make it
 c		  more persistent.
 c    mjs  25feb91 Changed references of itoa to itoaf.
+c    rjs  25mar91 Added `relax' option. Minor changes to appease flint.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='(version 1.0 26-nov-90)')
+	parameter(version='version 1.0 25-Mar-91')
 	integer MaxMod,maxsels,nhead
 	parameter(MaxMod=32,maxsels=256,nhead=3)
 c
@@ -117,7 +120,7 @@ c
 	integer tvis,tmod,tscr,tgains
 	integer nModel,minants,refant,nsize(3),nchan,nvis,i,iostat
 	real sels(maxsels),clip,interval,offset(2),lstart,lwidth,lstep
-	logical phase,amp,smooth,doline,apriori,noscale
+	logical phase,amp,smooth,doline,apriori,noscale,relax
 c
 c  Externals.
 c
@@ -126,7 +129,7 @@ c
 c
 c  Get the input parameters.
 c
-	call output('Selfcal '//version)
+	call output('Selfcal: '//version)
 	call keyini
 	call keyf('vis',vis,' ')
 	call SelInput('select',sels,maxsels)
@@ -146,7 +149,7 @@ c
 	  call keyr('line',lwidth,1.)
 	  call keyr('line',lstep,lwidth)
 	endif
-	call GetOpt(phase,amp,smooth,apriori,noscale)
+	call GetOpt(phase,amp,smooth,apriori,noscale,relax)
 	call keyfin
 c
 c  Check that the inputs make sense.
@@ -241,7 +244,7 @@ c
 c
 c  Calculate the self-cal gains.
 c
-	call Solve(tgains,phase,smooth,refant,interval)
+	call Solve(tgains,phase,smooth,relax,refant,interval)
 c
 c  Close up.
 c
@@ -250,10 +253,10 @@ c
 	if(out.ne.' ') call hclose(tgains,iostat)
 	end
 c************************************************************************
-	subroutine GetOpt(phase,amp,smooth,apriori,noscale)
+	subroutine GetOpt(phase,amp,smooth,apriori,noscale,relax)
 c
 	implicit none
-	logical phase,amp,smooth,apriori,noscale
+	logical phase,amp,smooth,apriori,noscale,relax
 c
 c  Determine extra processing options.
 c
@@ -264,19 +267,21 @@ c    smooth	If true, do some extra time averaging.
 c    apriori	If true, model routine checks calibrator flux table
 c		for an estimate of the calibrator flux.
 c    noscale	Do not scale the model to conserve flux.
+c    relax	Relax convergence criteria.
 c------------------------------------------------------------------------
 	integer nopt
-	parameter(nopt=5)
+	parameter(nopt=6)
 	character opts(nopt)*9
 	logical present(nopt)
 	data opts/'amplitude','phase    ','smooth   ',
-     *		  'apriori  ','noscale  '/
+     *		  'apriori  ','noscale  ','relax    '/
 	call options('options',opts,present,nopt)
 	amp = present(1)
 	phase = present(2)
 	smooth = present(3)
 	apriori = present(4)
 	noscale = present(5)
+	relax = present(6)
 	if(amp.and.phase)
      *	  call bug('f','Cannot do both amp and phase self-cal')
 	if(.not.(amp.or.phase)) phase = .true.
@@ -564,10 +569,11 @@ c
 	enddo
 	end
 c************************************************************************
-	subroutine Solve(tgains,phase,smooth,refant,interval)
+	subroutine Solve(tgains,phase,smooth,relax,refant,interval)
+c
 	implicit none
 	integer tgains
-	logical phase,smooth
+	logical phase,smooth,relax
 	integer refant
 	real interval
 c
@@ -593,17 +599,18 @@ c
 c
 c  Determine all the gain solutions.
 c
-	call Solve1(tgains,nSols,nBl,nants,phase,smooth,minants,refant,
-     *	  Time0,interval,Time,Indx,
+	call Solve1(tgains,nSols,nBl,nants,phase,smooth,relax,minants,
+     *	  refant, Time0,interval,Time,Indx,
      *	  Buf(pSumVM),Buf(pSumVV),Buf(pSumMM),Buf(pWeight),Buf(pCount))
 	end
 c************************************************************************
-	subroutine Solve1(tgains,nSols,nBl,nants,phase,smooth,minants,
-     *	refant,Time0,interval,Time,TIndx,SumVM,SumVV,SumMM,Weight,Count)
+	subroutine Solve1(tgains,nSols,nBl,nants,phase,smooth,relax,
+     *	  minants,refant,Time0,interval,Time,TIndx,SumVM,SumVV,SumMM,
+     *	  Weight,Count)
 c
 	implicit none
 	integer tgains
-	logical phase,smooth
+	logical phase,smooth,relax
 	integer nSols,nBl,nants,minants,refant
 	integer Time(nSols),TIndx(nSols)
 	complex SumVM(nBl,nSols)
@@ -617,6 +624,7 @@ c
 c  Input:
 c    phase
 c    smooth
+c    relax
 c    nSols
 c    nBl
 c    nants
@@ -682,7 +690,7 @@ c
 	do k=1,NSols
 	  k0 = TIndx(k)
 	  call Solve2(nbl,nants,SumMM(k0),SumVM(1,k0),SumVV(1,k0),
-     *	    Weight(1,k0),Count(k0),phase,minants,refant,
+     *	    Weight(1,k0),Count(k0),phase,relax,minants,refant,
      *	    Gains,Convrg,SumWts,SumPhi,SumAmp,SumChi2,SumExp)
 	  if(.not.Convrg)then
 	    nbad = nbad + 1
@@ -826,7 +834,7 @@ c
 	end
 c************************************************************************
 	subroutine Solve2(nbl,nants,SumMM,SumVM,SumVV,Weight,Count,
-     *	    phase,MinAnts,Refant,GainOut,Convrg,
+     *	    phase,relax,MinAnts,Refant,GainOut,Convrg,
      *	    SumWts,SumPhi,SumAmp,SumChi2,SumExp)
 c
 	implicit none
@@ -834,7 +842,7 @@ c
 	real SumMM,SumVV(nbl),Weight(nBl),Count
 	real SumWts,SumPhi,SumAmp,SumChi2,SumExp
 	complex SumVM(nbl),GainOut(nants)
-	logical phase,Convrg
+	logical phase,relax,Convrg
 c
 c  Routine to do various fooling around before a routine is called to
 c  determine the gain solution. The fooling around makes the inner loop
@@ -866,7 +874,7 @@ c------------------------------------------------------------------------
 	integer i,j,k,Nblines,nantenna,nref
 	complex Sum(maxants),Gain(maxants),Temp,g1,g2
 	real m1,m2,Sum2(maxants),Wts(maxants),amp,phi,resid,wt
-	integer Index(maxants)
+	integer Indx(maxants)
 c
 c  Externals.
 c
@@ -881,7 +889,7 @@ c
 c  Some intialising.
 c
 	do k=1,nants
-	  Index(k) = 0
+	  Indx(k) = 0
 	  Wts(k) = 0
 	enddo
 c
@@ -889,10 +897,10 @@ c  Now find which baselines are there, and map the antenna numbers,
 c
 c  Squeeze out unnecessary baselines and antenna from this time slice.
 c  This also works out the map from baseline number to "notional antenna
-c  number" pairs, contained in B1 and B2. INDEX is set up to contain the
+c  number" pairs, contained in B1 and B2. INDX is set up to contain the
 c  map from notional antenna number to the FITS-file antenna number.
 c  Thus baseline i, corresponds to notional antenna nos. B1(i) and B2(i).
-c  If INDEX(k).eq.B1(i), then the real antenna no. is K.
+c  If INDX(k).eq.B1(i), then the real antenna no. is K.
 c
 c  This fancy compression is needed to give good clean inner loops
 c  (no IF statements) in the gain solution routines.
@@ -911,17 +919,17 @@ c
 	      SumVM(NBlines) = SumVM(k)
 	      SumVV(NBlines) = SumVV(k)
 c
-	      if(Index(i).eq.0)then
+	      if(Indx(i).eq.0)then
 		nantenna = nantenna + 1
-		Index(i) = nantenna
+		Indx(i) = nantenna
 	      endif
-	      B1(NBlines) = Index(i)
+	      B1(NBlines) = Indx(i)
 c
-	      if(Index(j).eq.0)then
+	      if(Indx(j).eq.0)then
 		nantenna = nantenna + 1
-		Index(j) = nantenna
+		Indx(j) = nantenna
 	      endif
-	      B2(NBlines) = Index(j)
+	      B2(NBlines) = Indx(j)
 	    endif
 	  enddo
 	enddo
@@ -933,9 +941,11 @@ c
 	  Convrg = .false.
 	else if(phase)then
 	  call phasol  (NBlines,nantenna,Sum,SumVM,b1,b2,gain,convrg)
+	  convrg = convrg.or.relax
 	else
 	  call amphasol(NBlines,nantenna,Sum,Sum2,SumVM,SumVV,
      *						   b1,b2,gain,convrg)
+	  convrg = convrg.or.relax
 	endif
 c
 c  If it converged, calculate the residual, unsqueeze the gains, and refer
@@ -959,10 +969,10 @@ c
 c  Unpack the gains.
 c
 	  do i=1,nants
-	    if(Index(i).eq.0)then
+	    if(Indx(i).eq.0)then
 	      GainOut(i) = (0.,0.)
 	    else
-	      GainOut(i) = Gain(Index(i))
+	      GainOut(i) = Gain(Indx(i))
 	    endif
 	  enddo
 c
