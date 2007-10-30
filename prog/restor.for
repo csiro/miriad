@@ -81,9 +81,10 @@ c    rjs  25jun92  Use keymatch routine.
 c    rjs  17jan94  Make sure beam is writable before writing out
 c		   beam parameters.
 c    rjs  16nov94  Substantial rework. Use new "restore" routines.
+c    rjs   3dec94  Copy mosaic table across, if it exists.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Restor: version 1.2 16-Nov-94')
+	parameter(version='Restor: version 1.2 3-Dec-94')
 c
 	include 'maxdim.h'
 	include 'mem.h'
@@ -224,8 +225,10 @@ c
 	nsize(3) = oMap
 	nsize(4) = 1
 	call xyopen(lOut,Out,'new',naxis,nsize)
+c
 	call header(lModel,mModel,nModel,lOut,
      *	  version,dogaus,fwhm1,fwhm2,pa,rms,xoff,yoff,zoff)
+	if(doMap) call hdcopy(lMap,lOut,'mostable')
 c
 c  Loop over the third dimension.
 c
