@@ -3,32 +3,29 @@ c**********************************************************************c
       implicit none
 c
 c= IMLIST - List items and pixel values from an image
-c& mchw
+c& rjs
 c: image analysis
 c+
-c       IMLIST lists a Miriad image. It will list the header, statistics,
-c       selected regions of the data, the mosaic table (if present) and the
-c	history.
+c       IMLIST lists a Miriad image. By default it lists the value of
+c	pixels. Alternatively, it can list an image's mosaic table, or
+c	some statistics about an image.
 c@ in
 c	Input image name. No default.
 c@ options
 c	Severval options can be given (separated by commas), and can be
 c	abbreviated to uniqueness. Possible options are:
-c	  header     Give a summary of all the items in the image. This is
-c	             the default if no other options are given.
 c	  data       List some data.
 c	  mosaic     List the mosaic table of an image (if present).
-c	  history    List the history item.
 c	  statistics List total flux, min and max and rms for each plane.
 c@ region
-c	Region of image to be listed. E.g.
-c	  % imlist  options=data region=relpix,box(-4,-4,5,5)(1,2)
-c	lists the center 10 x 10 pixels of image planes 1 and 2.
-c	Unmasked pixels within the bounding box are used.
+c	The region of interest. See the help on "region" for more
+c	information. This gives the region of pixels to be listed, or
+c	the region for which statistics are calculated. Only rectangular
+c	regions of interest are supported. The default is the entire image
+c	(which is usually too big for listing).
 c@ format
-c	Format for output, e.g., 1pe11.4, f5.2, 1pg12.5, default is 1pe10.3
-c	The size of region possible to list depends on the format. 10 columns
-c	of f5.1 fills an 80 character line.
+c	This gives the FORTRAN format for the listing of pixel values.
+c	For example: 1pe11.4, f5.2, 1pg12.5. The default is 1pe10.3
 c@ log
 c	The output log file. The default is the terminal.
 c--
@@ -64,33 +61,27 @@ c  nebk 18nov93  Allow semi-infinite sized regions in data listing
 c  rjs  18oct94  Print contents of mosaic tables.
 c  pjt  15mar95  fixed declaration order for f2c (linux)
 c  mchw 23may96  Convert cordinates to double; use rangleh and hangleh
+c  rjs  02apr97  Tidy.
 c
-c  Bugs:
-c    Data format still needs work to prevent format overflow.
-c    Doesn't handle pixel blanking outside region of interest.
 c----------------------------------------------------------------------c
 	character version*(*)
-	parameter(version='version 23-MAY-96')
+	parameter(version='Imlist: version 1.0 02-Apr-97')
 	include 'maxdim.h'
 	integer maxboxes,maxnax
 	parameter(maxboxes=2048,maxnax=3)
 	integer naxis,boxes(maxboxes),nsize(maxnax)
 	integer blc(maxnax),trc(maxnax)
-	integer lin,fldsize,length,lenin,npnt
-	character in*64,out*64,format*10,line*80
-	logical more,dohead,dodata,dohist,dostat,domos,eof
-c
-c  Externals.
-c
-	integer len1
+	integer lin,fldsize,npnt
+	character in*64,out*64,format*10
+	logical more,dodata,dostat,domos
 c
 c  Get the input parameters.
 c
-	call output('ImList: '//version)
+	call output(version)
 	call keyini
 	call keya ('in', In, ' ')
 	if (in.eq.' ') call bug ('f', 'Image name not specified')
-	call GetOpt(dohead,dodata,dohist,dostat,domos)
+	call GetOpt(dodata,dostat,domos)
 	call BoxInput('region',In,boxes,maxboxes)
 	call keya ('format', format, '1pe10.3')
 	call chform (format, fldsize)
@@ -116,18 +107,10 @@ c
 c
 c  Title line.
 c
-	lenin = len1(In)
-	line = ' ***** Listing for Image = '//In(1:lenin)//
-     *		' *****'
-	length = 27 + lenin + 6
-	call LogWrite(line(1:length),more)
-	call LogWrite(' ',more)
-	call LogWrite('------------------------------'//
-     *		      '------------------------------',more)
+	call LogWrite('Listing for image '//In,more)
 c
 c  List the required options.
 c
-	if(dohead) call ListHead(lIn)
 	if(dodata) call ListData(lIn,naxis,blc,trc,fldsize,format)
 	if(dostat) call ListStat(lIn,naxis,blc,trc)
 	if(domos)then
@@ -135,51 +118,33 @@ c
 	  call mosPrint
 	endif
 c
-c  Copy across the history file, if required.
-c
-	if(dohist) then
-	  call LogWrite(' ',more)
-	  call LogWrite(' ***** History of Image = '//In,more)
-	  call LogWrite(' ',more)
-	  call hisopen(lIn,'read')
-	  call hisread(lIn,line,eof)
-	  dowhile(.not.eof.and.more)
-	    call LogWrite(line,more)
-	    call hisread(lIn,line,eof)
-	  enddo
-	  call hisclose(lIn)
-	end if
-c
 c  All done.
 c
 	call xyclose(lIn)
 	call LogClose
-      end
+	end
 c**********************************************************************c
-	subroutine GetOpt(dohead,dodata,dohist,dostat,domos)
+	subroutine GetOpt(dodata,dostat,domos)
 c
 	implicit none
-	logical dohead,dodata,dohist,dostat,domos
+	logical dodata,dostat,domos
 c
-c  Determine which of the options is to be done. Default is dohead.
+c  Determine which of the options is to be done. Default is dodata.
 c
 c  Outputs:
-c    dohead,dodata,dohist,dostat	Things to be listed.
+c    dodata,dostat	Things to be listed.
 c----------------------------------------------------------------------c
 	integer NOPTS
-	parameter(NOPTS=5)
+	parameter(NOPTS=3)
 	character opts(NOPTS)*10
 	logical present(NOPTS)
-	data opts/'header    ','data      ','history   ',
-     *		  'statistics','mosaic    '/
+	data opts/'data      ','statistics','mosaic    '/
 c
 	call options('options',opts,present,NOPTS)
-	dohead = present(1)
-	dodata = present(2)
-	dohist = present(3)
-	dostat = present(4)
-	domos  = present(5)
-	dohead = dohead.or..not.(dodata.or.dohist.or.dostat.or.domos)
+	dodata = present(1)
+	dostat = present(2)
+	domos  = present(3)
+	dodata = dodata.or..not.(dostat.or.domos)
 	end
 c**********************************************************************c
       subroutine chform (format, size)
@@ -196,132 +161,42 @@ c    format	format specification
 c  Output:
 c    size	field size
 c----------------------------------------------------------------------c
-      integer ilen, len1, dot, i, j, is, num
+      integer ilen, len1, dot, i, j, is
       logical more
 c
       ilen = len1(format)
       dot = index(format(1:ilen), '.')
       if (dot.eq.0) call bug ('f', 'No ''.'' in format descriptor.')
 c
-      if (index('0123456789', format(dot-1:dot-1)).eq.0) then
-         call bug ('f', 
-     *   'Couldn''t extract field size from format descriptor')
-      else
-         i = dot - 2
-         more = .true.
+      if (index('0123456789', format(dot-1:dot-1)).eq.0)
+     *  call bug ('f', 
+     *   'Could not extract field size from format descriptor')
 c
-         do while (more)
-            if (index('0123456789', format(i:i)).eq.0) then
-               is = i + 1
-               more = .false.
-            else
-               i = i - 1
-               if (i.eq.0) call bug ('f', 'Invalid format descriptor')
-            end if
-         end do
-      end if
+c  Find the begining of the format description.
 c
-      j = 0
+      i = dot - 2
+      more = .true.
+c
+      dowhile(more)
+        if(index('0123456789', format(i:i)).eq.0)then
+          is = i + 1
+          more = .false.
+        else
+          i = i - 1
+          if (i.eq.0) call bug ('f', 'Invalid format descriptor')
+        endif
+      enddo
+c
+c  Decode the length.
+c
+      j = 1
       size = 0
       do i = dot-1, is, -1
-         read (format(i:i), '(i1)') num
-         size = size + num*10**j
-         j = j + 1
-      end do
+        size = size + (ichar(format(i:i))-ichar('0'))*j
+        j = 10*j
+      enddo
 c
       end
-c******************************************************************c
-	Subroutine ListHead(tno)
-	implicit none
-	integer tno
-c
-c  Read Image header variables.
-c  convert units and write in standard format into LogFile.
-c
-c  Input:
-c    tno	The handle of the Image.
-c-------------------------------------------------------------------c
-	double precision pi,ckms,rtos,rtoh,rtod
-	parameter(pi=3.141592654,ckms=299793.)
-	parameter(rtos=3600.d0*180.d0/pi,rtoh=12.d0/pi,rtod=180.d0/pi)
-	character descr*10,type*10,line*80,RA*1,DEC*1,axis*1
-	character xtype*12
-	integer i,n
-	double precision ddata
-	logical more
-
-c  Header keywords.
-c
-	integer nkeys
-	parameter(nkeys=49)
-	character keyw(nkeys)*8
-c
-c  Externals.
-c
-	character hangleh*13, rangleh*13
-	integer len1
-c
-c  Data
-c
-	data keyw/   'object  ','telescop','observer','date-obs',
-     *	  'restfreq','ltype   ','lstart  ','lwidth  ','lstep   ',
-     *	  'naxis   ','naxis1  ','naxis2  ','naxis3  ','naxis4  ',
-     *	  'crpix1  ','crpix2  ','crpix3  ','crpix4  ','crpix5  ',
-     *	  'ctype1  ','ctype2  ','ctype3  ','ctype4  ','ctype5  ',
-     *	  'crval1  ','crval2  ','crval3  ','crval4  ','crval5  ',
-     *	  'cdelt1  ','cdelt2  ','cdelt3  ','cdelt4  ','cdelt5  ',
-     *	  'epoch   ','obsra   ','obsdec  ','vobs    ',
-     *	  'bunit   ','niters  ','bmaj    ','bmin    ','bpa     ',
-     *	  'xshift  ','yshift  ','pbfwhm  ','datamin ','datamax ',
-     *    'btype   '/
-c
-c  Probe for each item and convert to user units.
-c
-	call LogWrite(' ',more)
-	do i=1,nkeys
-	  call hdprobe(tno,keyw(i),descr,xtype,n)
-	  type = xtype(1:10)
-	  if(n.ne.0) then
-	    axis = keyw(i)(6:6)
-	    if (keyw(i)(1:5).eq.'ctype'
-     *			.and.descr(1:8).eq.'RA---SIN') then
-		 RA = axis
-	    else if(keyw(i)(1:5).eq.'ctype'
-     *			.and.descr(1:8).eq.'DEC--SIN') then
-		 DEC = axis
-	    endif
-	    if (keyw(i)(1:5).eq.'crval'.and.axis.eq.RA) then
-	      call rdhdd(tno,'crval'//axis,ddata,0.)
-	      call writeit(keyw(i)//': '//hangleh(ddata),23)
-	    else if (keyw(i)(1:5).eq.'crval'.and.axis.eq.DEC) then
-	      call rdhdd(tno,'crval'//axis,ddata,0.)
-	      call writeit(keyw(i)//': '//rangleh(ddata),23)
-	    else if (keyw(i)(1:5).eq.'cdelt'
-     *				.and.(axis.eq.RA.or.axis.eq.DEC)) then
-	      call rdhdd(tno,'cdelt'//axis,ddata,0.)
-	      call writeit(keyw(i)//': '//rangleh(ddata),23)
-	    else if (keyw(i).eq.'obsra') then
-	      call rdhdd(tno,'obsra',ddata,0.)
-	      call writeit(keyw(i)//': '//hangleh(ddata),23)
-	    else if (keyw(i).eq.'obsdec') then
-	      call rdhdd(tno,'obsdec',ddata,0.)
-	      call writeit(keyw(i)//': '//rangleh(ddata),23)
-	    else if (keyw(i).eq.'bmaj'.or.keyw(i).eq.'bmin'
-     *		.or.keyw(i).eq.'xshift'.or.keyw(i).eq.'yshift') then
-	      call rdhdd(tno,keyw(i),ddata,0.)
-	      call writeit(keyw(i)//': '//rangleh(ddata),23)
-	    else
-	      call writeit(keyw(i)//': '//
-     *				descr(1:len1(descr)),10+len1(descr))
-	    endif
-	  endif
-	enddo
-c
-c  Flush buffer if needed.
-c
-	line = ' '
-	call writeit(line,80)
-	end
 c********1*********2*********3*********4*********5*********6*********7*c
 	Subroutine ListData(lIn,naxis,blc,trc,fldsize,format)
 	implicit none
@@ -337,83 +212,86 @@ c    blc,trc	Corners of region of interest.
 c    format	Format specification.
 c    fldsize	Field size.
 c----------------------------------------------------------------------c
-	double precision value
-	character line*80
-	character*9 ctype,ctype1,ctype2,bunit
-	character*13 label,units
-	integer axis,plane,length
+	character ctype1*16,ctype2*16,ctype*16,bunit*16,line*80,num*3
+	integer plane,l1,l2,i
 	logical more
+c
+c  Externals.
+c
+	integer len1
+	character itoaf*8
 c
 c  Title.
 c
-	call rdhda(lIn,'ctype1',ctype1,' ')
-	call rdhda(lIn,'ctype2',ctype2,' ')
-	call rdhda(lIn,'bunit',bunit,' ')
-	write(line,'(a,a,a,a,a,a)')
-     *     'Axes of plots: x= ',ctype1,'  y= ',ctype2,'  bunit= ',bunit
-	length = 18 + len(ctype1) + 5 + len(ctype2) + 9 + len(bunit)
 	call LogWrite(' ',more)
-	call LogWrite(line(1:length),more)
-	
+	call rdhda(lIn,'ctype1',ctype1,'unkown')
+	l1 = len1(ctype1)
+	call rdhda(lIn,'ctype2',ctype2,'unknown')
+	l2 = len1(ctype2)
+	call rdhda(lIn,'bunit',bunit,'unknown')
+	line = 'The axes of the data are: X is '//ctype1(1:l1)//
+     *	   ' and Y is '//ctype2(1:l2)//'.'
+	call LogWrite(line,more)
+	do i=3,naxis
+	  if(i.eq.3)then
+	    num = '3rd'
+	  else
+	    num = itoaf(i)
+	    num(2:3) = 'th'
+	  endif
+	  call rdhda(lIn,'ctype'//itoaf(i),ctype,'unknown')
+	  call LogWrite('                        '//
+     *			num//' is '//ctype,more)
+	enddo
+	call LogWrite('The pixel units are '//bunit,more)
+        call LogWrite(' ',more)
 c
-c  List each plane if 3 or more axes.
-c
-	if(naxis.ge.3) then
-	  axis = 3
-	  do while(axis.le.naxis.and.more)
-	    plane = blc(axis)
-	    do while(plane.le.trc(axis).and.more)
-	      call AxisType(lIn,axis,plane,ctype,label,value,units)
-	      call LogWrite(' ',more)
-	      write(line,'(a,i4,4x,a,a,i4,2x,a,a)')
-     *	      '  Axis: ',axis,ctype,'  Plane: ',plane,label,units
-	      length = 8+4+4+9+9+4+2+13+2+13
-	      call LogWrite(line(1:length),more)
-	      call xysetpl(lIn,1,plane)
-	      call list (lIn,naxis,blc,trc,fldsize,format)
-	      plane = plane + 1
-	    enddo
-	    axis = axis + 1
+	if(naxis.gt.2)then
+	  do plane=blc(3),trc(3)
+	    call LogWrite('--------------------------------'//
+     *			  '--------------------------------',more)
+	    call LogWrite('Plane '//itoaf(plane),more)
+	    call LogWrite(' ',more)
+	    call xysetpl(lIn,1,plane)
+	    call list(lIn,blc,trc,fldsize,format)
 	  enddo
 c
 c  Special case for 2 axes.
 c
 	else if(naxis.eq.2) then
-	  call list (lIn,naxis,blc,trc,fldsize,format)
+	  call list(lIn,blc,trc,fldsize,format)
 	endif
 	end
 c********1*********2*********3*********4*********5*********6*********7*c
-      subroutine list (lIn,naxis,blc,trc,fldsize,format)
+      subroutine list(lIn,blc,trc,fldsize,format)
 c
       implicit none
-      integer lIn,naxis,blc(naxis),trc(naxis),fldsize
-      character format*10
+      integer lIn,blc(2),trc(2),fldsize
+      character format*(*)
 c
 c     List requested section of image
 c
 c  Inputs:
 c    lIn	The handle of the image.
-c    naxis	Number of axes of the image.
 c    blc,trc	Corners of region of interest.
 c    fldsize	Size of format field.
 c    format	Format specification.
 c----------------------------------------------------------------------c
       include 'maxdim.h'
       real data(maxdim)
-      integer i, j, len1, ilen, flen, inc2, i1
+      integer i, j, len1, ilen, flen, i1
       character line*1000, form1*30, form2*30, form2f*30
       logical flags(maxdim),more
 c
-      if((trc(1)-blc(1))*fldsize.gt.1000)then 
+      if((trc(1)-blc(1)+1)*(fldsize+1)+5.gt.len(line))then 
 	call bug('f','Region too big to list with this format')
       endif
       call makf1 (fldsize,blc(1),trc(1),form1)
-      call LogWrit(' ')
       write (line, form1(1:len1(form1))) (i, i = blc(1),trc(1))
       call LogWrite(line(1:len1(line)),more)
       call LogWrite(' ',more)
 c
-      call makf2 (format, form2, form2f, inc2)
+      call makf2 (format, fldsize, form2, form2f)
       ilen = len1(form2)
       flen = len1(form2f)
       do j = trc(2),blc(2),-1
@@ -423,23 +301,24 @@ c
          i1 = 1
          do i = blc(1),trc(1)
            if (flags(i)) then
-             write(line(i1:), form2(1:ilen)) data(i)
+             write(line(i1:i1+fldsize),form2(1:ilen)) data(i)
            else
-             write(line(i1:), form2f(1:flen)) 
+             write(line(i1:i1+fldsize),form2f(1:flen)) 
            end if
-           i1 = i1 + inc2
+           i1 = i1 + fldsize + 1
          end do
-         write(line(i1:), '(i6)') j
-         call LogWrit(line(1:len1(line)))
+         write(line(i1:i1+4),'(i5)') j
+	 i1 = i1 + 4
+         call LogWrite(line(1:i1),more)
 	endif
       end do
-      call LogWrit(' ')
+      call LogWrite(' ',more)
       write (line, form1(1:len1(form1))) (i, i = blc(1),trc(1))
-      call LogWrit(line(1:len1(line)))
-      call LogWrit(' ')
+      call LogWrite(line(1:len1(line)),more)
+      call LogWrite(' ',more)
       end
 c************************************************************************
-      subroutine makf1 (fldsize, is, ie, form)
+      subroutine makf1(fldsize, is, ie, form)
 c
       implicit none
       integer fldsize, is, ie
@@ -460,83 +339,33 @@ c
       l3 = len1(str3)
 c
       write (form, 10) str3(1:l3), str1(1:l1), str2(1:l2)
-10    format ('(', a, '(', a, 'x, i4, ', a, 'x, 2x))')
+10    format ('(',a,'(',a,'x,i4,',a,'x,1x))')
 c
       end
 c************************************************************************
-      subroutine makf2 (format, form, formf, inc)
+      subroutine makf2(format,fldsize,form,formf)
 c
       implicit none
-      integer inc
+      integer fldsize
       character form*(*), formf*(*), format*(*)
 c
 c     Write second format characters
 c--------------------------------------------------------------------------
-      character temp*50,temp2*50
-      real x
-      integer l1, l2, len1, i1
+      integer l1,i1
+c
+c  Externals.
+c
+      integer len1
 c
       l1 = len1(format)
-      x = 1.12345e-10
-      temp2 = '('//format(1:l1)//')'
-      write (temp, temp2) x
-      l2 = len1(temp)
-      inc = l2 + 2
+      form = '('//format(1:l1)//',1x)'
 c
-      form = '('//format(1:l1)//', 2x)'
-c
-      formf = ' '
-      formf(1:2) = '('''
-      i1 = l2/2
+      formf = '('''
+      i1 = fldsize/2
       formf(i1+2:i1+4) = '...'
-      formf(l2+3:l2+7) = ''',2x)'
+      formf(fldsize+3:) = ''',1x)'
 c
       end
-c************************************************************************
-	subroutine writeit(partial,plen)
-	implicit none
-
-	integer plen
-	character partial*80
-c
-c  Stuff pieces of line into buffer and print them.
-c
-c  Input:
-c    partial	A piece of a line.
-c    plen	Length of partial.
-c------------------------------------------------------------------------
-	character line*80
-	integer i,j,jend
-	logical first
-	data first /.true./
-c
-	save line,i,j,first
-c
-	if (first) then
-	  first=.false.
-	  i=1
-	  j=1
-	  line=' '
-	end if
-c
-	if(plen+i.gt.len(line)) then
-	  call LogWrit(line)
-	  line=' '
-	  j=1
-	  dowhile (plen-j .gt.len(line))
-	    jend=j+79
-	    dowhile (partial(jend:jend).ne.' ')
-	      jend=jend-1
-	    enddo
-	    call LogWrit(partial(j:jend))
-	    j=jend+1
-	  enddo
-	  i=1
-	end if
-	line(i:i+plen-j) = partial(j:plen)
-	i = i+plen - 1
-	i = (i-1)/25*25 + 26
-	end
 c******************************************************************c
 	Subroutine ListStat(lIn,naxis,blc,trc)
 	implicit none
@@ -549,8 +378,7 @@ c    lIn	The handle of the Image.
 c    naxis	Number of axes of the Image.
 c    blc,trc	Corners of region of interest.
 c-------------------------------------------------------------------c
-	double precision pi,value
-	parameter(pi=3.141592654)
+	double precision value
 	integer axis,plane,length
 	character line*80,header*80,label*13,units*13,ctype*9
 	real sum,ave,rms,pmax,pmin,cbof
@@ -664,4 +492,3 @@ c
 	      rms = sqrt(sumsq/num - ave*ave)
 	    endif
 	    end
-c********1*********2*********3*********4*********5*********6*********7*c
