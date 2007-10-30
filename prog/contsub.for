@@ -70,6 +70,9 @@ c continuum is written. If options=coeff,# one of the coefficients of
 c the polynomial fit is written instead. '#' gives the order for which
 c the coefficient is written (e.g. if cont=a+bx: 0='a', 1='b', etc).
 c
+c@ verbose
+c verbose=true makes contsub print out some info every now and then.
+c
 c@ velaxis
 c For datacubes where the 'VELO' axis-identification does not occur in
 c the header, this can be used to indicate which direction is the
@@ -97,6 +100,8 @@ c    bpw  19dec94  Add options=coeff,#
 c    bpw  12jan95  Fixed bug introduced by introducing options=coeff,#
 c    pjt  15mar95  fixed declaration order for f2c (linux)
 c    rjs  30aug95  Minor change of usage of optprsnt, to appease g77.
+c    bpw  27jun97  add options=verbose
+c    pjt  22mar99  fixed treating options(2) as integer in boolean expr
 c
 c------------------------------------------------------------------------
 c
@@ -115,7 +120,7 @@ c contchan:    list of channel numbers to use to determine continuum
       program contsub
 
       character*50     version
-      parameter        ( version = 'contsub: version 2.0 15-mar-95' )
+      parameter        ( version = 'contsub: version 2.0 22-Mar-99' )
 
       include          'maxdim.h'
 
@@ -235,7 +240,7 @@ c Check the output option.
          optprsnt(i) = .FALSE.
       enddo
       call options( 'options', outopts, optprsnt, NOPTO )
-      if( optprsnt(1)) then
+      if( optprsnt(1) ) then
          n=0
          do i = 1, MAXTERMS
             if( optprsnt(i+1) ) n=n+1
@@ -248,6 +253,8 @@ c Check the output option.
          if( n.eq.0 ) opts(1) = -1
       endif
 
+c Check if verbose=true
+      call keyl( 'verbose', opts(2), .FALSE. )
 
 c Read names of input, output and continuum dataset.
       call keyf( 'in',   inp, ' ' )
@@ -463,11 +470,17 @@ c continuum-determination algorithm, and writes the results.
       integer          profilenr
       real             data(MAXDIM), linedata(MAXDIM), continuum
       logical          mask(MAXDIM), cmask
+      character*80     string
 
       if( algorithm(1:4).eq.'poly' ) then 
          call atoif( algorithm(5:), nterms, ok )
       endif
       do profilenr = 1, nprofiles
+         if( options(2).ne.0 .and. mod(profilenr,2500).eq.0 ) then
+           write(string,'(''Done with '',i6,'' profiles ['',i2,''%]'')')
+     *                     profilenr, 100*profilenr/nprofiles
+            call output(string)
+         endif
          call xyzprfrd( unitinp, profilenr, data, mask, nchan )
          if(     algorithm(1:4).eq.'poly' ) then 
             call polyfit( contchan, nchan, nterms, options,
