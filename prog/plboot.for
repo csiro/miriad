@@ -30,18 +30,22 @@ c	  vector  Use the real part (rather than amplitude) of the data and
 c	          model. This option should be used if the visibility data are
 c	          phase calibrated
 c	  noapply Do not apply the scale factor (just evaluate it).
+c         nofqav  When dealing with amplitude data, PLBOOT normally
+c                 averaging in frequency first, to avoid noise
+c	          biases. The nofqav disables this averaging.
 c--
 c  History:
 c    rjs     04feb01 Original version.
+c    rjs     19may03 Average in freq when dealing with amplitudes.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
-	parameter(version='Plboot: version 1.0 04-feb-01')
+	parameter(version='Plboot: version 1.0 19-May-03')
 	integer MAXVIS
 	parameter(MAXVIS=32)
 c
 	character vis(MAXVIS)*64,source*32,line*64
-	logical vector,planet,noapply
+	logical vector,planet,noapply,nofqav
 	integer nvis,lVis,vsource,nchan,iplanet,nants,i,iplanetp
 	real fac
 	double precision SumXX,SumXY,preamble(4),time
@@ -61,7 +65,7 @@ c
 	call keyini
 	call uvDatInp('vis','xcefd')
 	call uvDatSet('stokes',0)
-	call getopt(vector,noapply)
+	call getopt(vector,noapply,nofqav)
 	call keyfin
 c
 c  Process the data.
@@ -89,7 +93,7 @@ c
 	    endif
 	    if(planet)then
 	      call uvinfo(lVis,'sfreq',sfreq)
-	      call Acc(vector,preamble,preamble(3),iplanet,
+	      call Acc(nofqav,vector,preamble,preamble(3),iplanet,
      *				data,flags,sfreq,nchan,SumXX,SumXY)
 	    endif
 	    call uvDatRd(preamble,data,flags,MAXCHAN,nchan)
@@ -128,11 +132,11 @@ c
 c
 	end
 c************************************************************************
-	subroutine Acc(vector,uv,time,iplanet,data,flags,sfreq,nchan,
-     *							   SumXX,SumXY)
+	subroutine Acc(nofqav,vector,uv,time,iplanet,
+     *		data,flags,sfreq,nchan,SumXX,SumXY)
 c
 	implicit none
-	logical vector
+	logical vector,nofqav
 	integer nchan,iplanet
 	complex data(nchan)
 	logical flags(nchan)
@@ -141,8 +145,10 @@ c
 c  Accumulate info given the planetary data.
 c------------------------------------------------------------------------
         include 'mirconst.h'
-        integer i
+        integer i,n
         real a,b,cospa,sinpa,pltb,bmaj,bmin,bpa,model
+	real avmodel
+	complex avdata
         double precision sub(3),dist
 c
 c  Externals.
@@ -159,36 +165,56 @@ c
      *              + (bmin*(uv(1)*sinpa+uv(2)*cospa))**2)
         a = 2 * pltb * (KMKS*1e18)/(CMKS*CMKS*1e-26)
      *    * 2 * PI/4 * bmaj*bmin
-        do i=1,nchan
-	  if(flags(i))then
-	    model = a*sfreq(i)*sfreq(i)*j1xbyx(real(b*sfreq(i)))
-	    SumXX = SumXX + model*model
-	    if(vector)then
-	      SumXY = SumXY + model*data(i)
-	    else
-	      SumXY = SumXY + abs(model*data(i))
+c
+	if(nofqav)then
+          do i=1,nchan
+	    if(flags(i))then
+	      model = a*sfreq(i)*sfreq(i)*j1xbyx(real(b*sfreq(i)))
+	      SumXX = SumXX + model*model
+	      if(vector)then
+	        SumXY = SumXY + model*data(i)
+	      else
+	        SumXY = SumXY + abs(model*data(i))
+	      endif
 	    endif
+          enddo
+	else
+	  avdata = (0.,0.)
+	  avmodel = 0
+	  n = 0
+	  do i=1,nchan
+	    if(flags(i))then
+	      avdata = avdata + data(i)
+	      avmodel = avmodel + 
+     *		a*sfreq(i)*sfreq(i)*j1xbyx(real(b*sfreq(i)))
+	      n = n + 1
+	    endif
+	  enddo
+	  if(n.gt.0)then
+	    SumXX = SumXX + avmodel*avmodel/n
+	    SumXY = SumXY + abs(avmodel*avdata/n)
 	  endif
-        enddo
+	endif
 c
         end
 c************************************************************************
-	subroutine getopt(vector,noapply)
+	subroutine getopt(vector,noapply,nofqav)
 c
 	implicit none
-	logical vector,noapply
+	logical vector,noapply,nofqav
 c
 c  Get extra processing parameters.
 c------------------------------------------------------------------------
 	integer NOPTS
-	parameter(NOPTS=2)
+	parameter(NOPTS=3)
 	logical present(NOPTS)
 	character opts(NOPTS)*8
-	data opts/'vector  ','noapply '/
+	data opts/'vector  ','noapply ','nofqav  '/
 c
 	call options('options',opts,present,NOPTS)
-	vector = present(1)
+	vector =  present(1)
 	noapply = present(2)
+	nofqav =  present(3).or.vector
 	end
 c************************************************************************
 	subroutine gainSca(lVis,fac)
