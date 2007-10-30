@@ -24,37 +24,56 @@ c@ axis
 c	This determines what the labelling on the `velocity' axis will
 c	be changed to. Possible values are "frequency", "optical" (for
 c	velocity using the optical convention) or "radio" (for velocity
-c	using the radio convention). The default is "frequency" if the
-c	`velocity' axis is given as a velocity, and "radio" otherwise.
+c	using the radio convention). There is no default.
+c
+c	Optionally you can give a second value to define the  rest frame.
+c	This can be "barycentre" (solar system barycentre), "lsr" (Local
+c	Standard of Rest) or "observatory" (topocentric). The default is not
+c	to change this.
 c--
 c  History:
 c    rjs  31aug93 Original version.
 c    nebk 07oct93 Doc change
 c    nebk 01jul94 Replace guts by stripped out subroutine spaxsw
 c    nebk 20aug94 Scrap SPAXSW for new cocvt routines
+c    rjs  07jul97 Allow changing of rest frame, and changed call sequence
+c		  to covelset.
 c
 c  Bugs:
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'maxnax.h'
 	character version*(*)
-	parameter(version='VelSw: 20-Aug-1994')
+	parameter(version='VelSw: 07-Jul-97')
 c
 	character in*64
-	integer nout,nsize(MAXNAX),lIn
+	integer nsize(MAXNAX),lIn
 c
-	integer nswitch
-	parameter(nswitch=3)
-	character switches(nswitch)*9,switch*9
+	integer nswitch,nframe
+	parameter(nswitch=3,nframe=3)
+	character switches(nswitch)*12,switch*9,vtypes(nswitch)*4
+	character frames(nframe)*12,frame*12,ftypes(nframe)*3
+	character ctype*8
+	integer ns,nf,is,if
 c
-	data switches/'frequency','optical  ','radio    '/
+c  Externals.
+c
+	integer binsrcha
+c
+	data switches/'frequency   ','optical     ','radio       '/
+	data vtypes  /'FREQ',        'FELO',        'VELO'        /
+	data frames  /'barycentre  ','lsr         ','observatory '/
+	data ftypes  /'HEL',         'LSR',         'OBS'         /
 c
 c  Get the input parameters.
 c
 	call output(version)
 	call keyini
 	call keya('in',in,' ')
-	call keymatch('axis',nswitch,switches,1,switch,nout)
+	call keymatch('axis',nswitch,switches,1,switch,ns)
+	if(ns.eq.0)call bug('f','An axis type for the '//
+     *					'output must be given')
+	call keymatch('axis',nframe, frames,1,frame,nf)
 	call keyfin
 c
 c  Check the inputs.
@@ -65,10 +84,18 @@ c  Open the input, and find the velocity axis.
 c
 	call xyopen(lIn,in,'old',MAXNAX,nsize)
 c
+	is = binsrcha(switch,switches,nswitch)
+	if(nf.eq.1)then
+	  if = binsrcha(frame,frames,nframe)
+	  ctype = vtypes(is)//'-'//ftypes(if)
+	else
+	  ctype = vtypes(is)
+	endif
+c
 c  Perform the transformation
 c
         call coinit(lIn)
-        call covelset(lIn, switch)
+        call covelset(lIn,ctype)
         call cowrite(lIn,lIn)
         call cofin(lIn)
 c

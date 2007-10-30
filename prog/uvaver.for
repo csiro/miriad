@@ -93,6 +93,7 @@ c    rjs  10oct97 Eliminate incorrect call to uvvarcopy just before the
 c		  final buffer flush.
 c    rjs  23oct97 Do not average across changes in the "on" variable.
 c    mchw 02jan98 Increase buffer in averaging (MAXAVER=163840).
+c    jwr  20jul04 Initialize npol
 c    rjs  19sep04 Handle varying jyperk.
 c
 c  Bugs:
@@ -138,6 +139,7 @@ c
 c  Various initialisation.
 c
 	interval = interval/(24.*60.)
+	npol = 0
 	Snpol = 0
 	first = .true.
 	PolVary = .false.

@@ -113,7 +113,9 @@ c    25nov98 rjs   Better handling of sky rotation parameter.
 c    18may99 rjs   Handle wrap arounds in the offsets.
 c    10jul00 rjs   Add "rotate" keyword, and get rid of "norotate" option.
 c    27jun02 rjs   An arg to mkeyd was single precision.
-c
+c    31may06 rjs   Changes to use new calling sequence to pCvt. Generally
+c	           make more robust to regridding where a significant fraction
+c		   of the sky is involved.
 c To do:
 c----------------------------------------------------------------------
 	include 'maxdim.h'
@@ -122,7 +124,7 @@ c----------------------------------------------------------------------
 	include 'mirconst.h'
 c
 	character version*(*)
-	parameter(version='Regrid: version 1.0 27-Jun-02')
+	parameter(version='Regrid: version 1.0 31-May-06')
 c
 	character in*64,out*64,tin*64,ctype*16,cellscal*12,proj*3
 	character line*64
@@ -136,7 +138,7 @@ c
 	integer offset,nxy,nblank
 	real tol
 c
-	integer Xv,Yv,Zv
+	integer Xv,Yv,Zv,valid
 c
 	integer NPROJS
 	parameter(NPROJS=6)
@@ -164,7 +166,7 @@ c
      *	  call bug('f','Invalid number of desc descriptors')
 	ndesc = ndesc/4
 	call keyr('tol',tol,0.05)
-	if(tol.le.0.or.tol.ge.0.5)
+	if(tol.lt.0.or.tol.ge.0.5)
      *	  call bug('f','Invalid value for the tol parameter')
 	call getopt(noscale,dooff,doepo,dogaleq,nearest)
 	call keymatch('project',NPROJS,projs,1,proj,nproj)
@@ -297,7 +299,12 @@ c
 c
 c  Determine the size of the coordinate translation grid.
 c
-	  call GridEst(nOut(1),nOut(2),k,gnx,gny,tol)
+	  if(tol.eq.0)then
+	    gnx = nOut(1)
+	    gny = nOut(2)
+	  else
+	    call GridEst(nOut(1),nOut(2),k,gnx,gny,tol)
+	  endif
 c
 c  Allocate space used for the coordinate translation grid.
 c
@@ -306,20 +313,22 @@ c
 	      call memFree(Xv,GridSize,'r')
 	      call memFree(Yv,GridSize,'r')
 	      call memFree(Zv,GridSize,'r')
+	      call memFree(valid,GridSize,'l')
 	    endif
 	    GridSize = gnx*gny
 	    call memAlloc(Xv,GridSize,'r')
 	    call memAlloc(Yv,GridSize,'r')
 	    call memAlloc(Zv,GridSize,'r')
+	    call memAlloc(valid,GridSize,'l')
 	  endif
 c
 c  Calculate the coordinates translation grid, and work out some
 c  statistics about it.
 c
 	  call GridGen(nOut(1),nOut(2),k,
-     *		memr(Xv),memr(Yv),memr(Zv),gnx,gny)
-	  call GridStat(nearest,memr(Xv),memr(Yv),memr(Zv),gnx,gny,
-     *	    nin(1),nin(2),nin(3),tol,minv,maxv,order)
+     *		memr(Xv),memr(Yv),memr(Zv),meml(Valid),gnx,gny)
+	  call GridStat(nearest,memr(Xv),memr(Yv),memr(Zv),meml(valid),
+     *		gnx,gny,nin(1),nin(2),nin(3),tol,minv,maxv,order)
 c
 	  if(minv(1).gt.maxv(1).or.minv(2).gt.maxv(2).or.
      *				   minv(3).gt.maxv(3))then
@@ -340,7 +349,7 @@ c
      *	      memr(rBuf+offset*nxy),meml(lBuf+offset*nxy),
      *	      nBuf(1),nBuf(2),maxc(3)-minc(3)+1,
      *	      off(1),off(2),minc(3)-1,
-     *	      memr(Xv),memr(Yv),memr(Zv),gnx,gny,nblank)
+     *	      memr(Xv),memr(Yv),memr(Zv),meml(valid),gnx,gny,nblank)
 	  endif
 	enddo
 c
@@ -365,6 +374,7 @@ c
 	  call memFree(Xv,GridSize,'r')
 	  call memFree(Yv,GridSize,'r')
 	  call memFree(Zv,GridSize,'r')
+	  call memFree(valid,GridSize,'l')
 	endif
 c
 	call xyclose(lOut)
@@ -480,11 +490,12 @@ c
 c
 c------------------------------------------------------------------------
 	include 'maxdim.h'
+	integer NV
 	double precision tol
-	parameter(tol=0.49)
-	double precision In(3),Out(3,3,3,3),crpix
-	integer minv(3),maxv(3),i,j,k,l
-	logical weird(3),warned
+	parameter(tol=0.49,NV=10)
+	double precision In(3),Out(3,NV,NV,NV),crpix
+	integer minv(3),maxv(3),i,j,k,l,nv1,nv2,nv3
+	logical weird(3),warned,valid(NV,NV,NV),first
 c
 c  Externals.
 c
@@ -492,31 +503,42 @@ c
 c
 	call pcvtInit(lIn,lOut)
 c
-	do k=1,3
-	  do j=1,3
-	    do i=1,3
-	      In(1) = 1 + 0.5*(i-1)*(nIn(1)-1)
-	      In(2) = 1 + 0.5*(j-1)*(nIn(2)-1)
-	      In(3) = 1 + 0.5*(k-1)*(nIn(3)-1)
-	      call pcvt(in,out(1,i,j,k),3)
+	nv3 = min(max(3,nIn(3)),NV)
+	nv2 = min(max(3,nIn(2)),NV)
+	nv1 = min(max(3,nIn(1)),NV)
+c
+	first = .true.
+	do k=1,nv3
+	  do j=1,nv2
+	    do i=1,nv1
+	      In(1) = 1 + (i-1)*(nIn(1)-1)/real(nv1-1)
+	      In(2) = 1 + (j-1)*(nIn(2)-1)/real(nv2-1)
+	      In(3) = 1 + (k-1)*(nIn(3)-1)/real(nv3-1)
+	      call pcvt(in,out(1,i,j,k),3,valid(i,j,k))
+	      if(valid(i,j,k).and.first)then
+		first = .false.
+		do l=1,3
+		  weird(l) = .false.
+		  minv(l) = nint(Out(l,i,j,k)-0.49)
+		  maxv(l) = nint(Out(l,i,j,k)+0.49)
+		enddo
+	      endif
 	    enddo
 	  enddo
 	enddo
 c
-	do i=1,3
-	  weird(i) = .false.
-	  minv(i) = nint(Out(i,1,1,1)-0.49)
-	  maxv(i) = nint(Out(i,1,1,1)+0.49)
-	enddo
+	if(first)call bug('f','No valid pixels found')
 c
 c  Determine the min and max pixels that we are interested in.
 c
-	do k=1,3
-	  do j=1,3
-	    do i=1,3
+	do k=1,nv3
+	  do j=1,nv2
+	    do i=1,nv1
 	      do l=1,3
-		minv(l) = min(minv(l),nint(Out(l,i,j,k)-0.49))
-		maxv(l) = max(maxv(l),nint(Out(l,i,j,k)+0.49))
+		if(valid(i,j,k))then
+		  minv(l) = min(minv(l),nint(Out(l,i,j,k)-0.49))
+		  maxv(l) = max(maxv(l),nint(Out(l,i,j,k)+0.49))
+		endif
 	      enddo
 	    enddo
 	  enddo
@@ -524,18 +546,42 @@ c
 c
 c  Look for weird twists or wrap arounds.
 c
-	do j=1,3
-	 do i=1,3
-	   weird(1) = weird(1).or.
-     *	    (Out(1,3,i,j)-Out(1,2,i,j))*(Out(1,2,i,j)-Out(1,1,i,j)).lt.0
-	   weird(2) = weird(2).or.
-     *	    (Out(2,i,3,j)-Out(2,i,2,j))*(Out(2,i,2,j)-Out(2,i,1,j)).lt.0
-	   weird(3) = weird(3).or.
-     *	    (Out(3,i,j,3)-Out(3,i,j,2))*(Out(3,i,j,2)-Out(3,i,j,1)).lt.0
-	 enddo
+	do k=1,nv3
+	  do j=1,nv2
+	    do i=1,nv1-2
+	      if(valid(i+2,j,k).and.valid(i+1,j,k).and.valid(i,j,k))then
+		weird(1) = weird(1).or.
+     *		  (Out(1,i+2,j,k)-Out(1,i+1,j,k))*
+     *		  (Out(1,i+1,j,k)-Out(1,i,j,k)).lt.0
+	      endif
+	    enddo
+	  enddo
+	enddo
+	do k=1,nv3
+	  do j=1,nv2-2
+	    do i=1,nv1
+	      if(valid(i,j+2,k).and.valid(i,j+1,k).and.valid(i,j,k))then
+		weird(2) = weird(2).or.
+     *		  (Out(2,i,j+2,k)-Out(2,i,j+1,k))*
+     *		  (Out(2,i,j+1,k)-Out(2,i,j,k)).lt.0
+	      endif
+	    enddo
+	  enddo
+	enddo
+	do k=1,nv3-2
+	  do j=1,nv2
+	    do i=1,nv1
+	      if(valid(i,j,k+2).and.valid(i,j,k+1).and.valid(i,j,k))then
+		weird(3) = weird(3).or.
+     *		  (Out(3,i,j,k+2)-Out(3,i,j,k+1))*
+     *		  (Out(3,i,j,k+1)-Out(3,i,j,k)).lt.0
+	      endif
+	    enddo
+	  enddo
 	enddo
 c
-c  Set the template ranges. If its weird, just go with the template range.
+c  Set the template ranges. If its weird, just go with the template range
+c  and the max and min of mapped pixels.
 c
 	warned = .false.
 	do i=1,3
@@ -558,33 +604,44 @@ c
 c
 	end
 c************************************************************************
-	subroutine GridStat(nearest,Xv,Yv,Zv,gnx,gny,n1,n2,n3,
+	subroutine GridStat(nearest,Xv,Yv,Zv,valid,gnx,gny,n1,n2,n3,
      *	    tol,minv,maxv,order)
 c
 	implicit none
 	logical nearest
 	integer gnx,gny,n1,n2,n3,minv(3),maxv(3),order(3)
 	real Xv(gnx,gny),Yv(gnx,gny),Zv(gnx,gny),tol
+	logical valid(gnx,gny)
 c------------------------------------------------------------------------
 	integer i,j,n(3)
 	real minr(3),maxr(3),diff
+	logical first
 c
-	minr(1) = Xv(1,1)
-	maxr(1) = minr(1)
-	minr(2) = Yv(1,1)
-	maxr(2) = minr(2)
-	minr(3) = Zv(1,1)
-	maxr(3) = minr(3)
+	first = .true.
 	do j=1,gny
 	  do i=1,gnx
-	    minr(1) = min(Xv(i,j),minr(1))
-	    maxr(1) = max(Xv(i,j),maxr(1))
-	    minr(2) = min(Yv(i,j),minr(2))
-	    maxr(2) = max(Yv(i,j),maxr(2))
-	    minr(3) = min(Zv(i,j),minr(3))
-	    maxr(3) = max(Zv(i,j),maxr(3))
+	    if(valid(i,j))then
+	      if(first)then
+		first = .false.
+		minr(1) = Xv(i,j)
+		maxr(1) = minr(1)
+		minr(2) = Yv(i,j)
+		maxr(2) = minr(2)
+		minr(3) = Zv(i,j)
+		maxr(3) = minr(3)
+	      else
+		minr(1) = min(Xv(i,j),minr(1))
+		maxr(1) = max(Xv(i,j),maxr(1))
+		minr(2) = min(Yv(i,j),minr(2))
+	        maxr(2) = max(Yv(i,j),maxr(2))
+		minr(3) = min(Zv(i,j),minr(3))
+		maxr(3) = max(Zv(i,j),maxr(3))
+	      endif
+	    endif
 	  enddo
 	enddo
+c
+	if(first)call bug('f','No valid pixels found here')
 c
 c  Determine which are going to be done by nearest neighbour, and
 c  what are the min and max limits needed for interpolation.
@@ -642,13 +699,13 @@ c
 	end
 c************************************************************************
 	subroutine Intp(lOut,order,nx,ny,In,flagIn,nix,niy,niz,
-     *		xoff,yoff,zoff,Xv,Yv,Zv,gnx,gny,nblank)
+     *		xoff,yoff,zoff,Xv,Yv,Zv,valid,gnx,gny,nblank)
 c
 	implicit none
 	integer nx,ny,nix,niy,niz,gnx,gny,order(3),lOut,xoff,yoff,zoff
 	integer nblank
 	real In(nix,niy,niz),Xv(gnx,gny),Yv(gnx,gny),Zv(gnx,gny)
-	logical flagIn(nix,niy,niz)
+	logical flagIn(nix,niy,niz),valid(gnx,gny)
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	real WtTol
@@ -659,61 +716,82 @@ c
 	integer id,jd,kd,imin,imax,jmin,jmax,kmin,kmax
 	real Sum,SumWt,Wt,Wtx(4),Wty(4),Wtz(4)
 	real Out(MAXDIM)
-	logical flagOut(MAXDIM)
+	logical flagOut(MAXDIM),cok
 c
 	do j=1,ny
 	  y = dble((gny-1)*(j-1))/dble(ny-1) + 1
 	  jy = nint(y - 0.5d0)
 	  fy = y - jy
 	  do i=1,nx
+	    cok = .true.
 	    x = dble((gnx-1)*(i-1))/dble(nx-1) + 1
 	    jx = nint(x - 0.5d0)
 	    fx = x - jx
 	    if(fx.eq.0)then
 	      if(fy.eq.0)then
-		x = Xv(jx,jy)
-		y = Yv(jx,jy)
-		z = Zv(jx,jy)
+		if(valid(jx,jy))then
+		  x = Xv(jx,jy)
+		  y = Yv(jx,jy)
+		  z = Zv(jx,jy)
+		else
+		  cok = .false.
+		endif
 	      else
-		x = (1-fy) * Xv(jx,jy) + fy * Xv(jx,jy+1)
-		y = (1-fy) * Yv(jx,jy) + fy * Yv(jx,jy+1)
-		z = (1-fy) * Zv(jx,jy) + fy * Zv(jx,jy+1)
+		if(valid(jx,jy).and.valid(jx,jy+1))then
+		  x = (1-fy) * Xv(jx,jy) + fy * Xv(jx,jy+1)
+		  y = (1-fy) * Yv(jx,jy) + fy * Yv(jx,jy+1)
+		  z = (1-fy) * Zv(jx,jy) + fy * Zv(jx,jy+1)
+		else
+		  cok = .false.
+		endif
 	      endif
 	    else
 	      if(fy.eq.0)then
-	        x = (1-fx) * Xv(jx,jy) + fx * Xv(jx+1,jy)
-	        y = (1-fx) * Yv(jx,jy) + fx * Yv(jx+1,jy)
-	        z = (1-fx) * Zv(jx,jy) + fx * Zv(jx+1,jy)
+		if(valid(jx,jy).and.valid(jx+1,jy))then
+		  x = (1-fx) * Xv(jx,jy) + fx * Xv(jx+1,jy)
+	          y = (1-fx) * Yv(jx,jy) + fx * Yv(jx+1,jy)
+	          z = (1-fx) * Zv(jx,jy) + fx * Zv(jx+1,jy)
+		else
+		  cok = .false.
+		endif
 	      else
-	        x = (1-fy)*((1-fx)*Xv(jx,jy)  +fx*Xv(jx+1,jy)  )
-     *	             + fy *((1-fx)*Xv(jx,jy+1)+fx*Xv(jx+1,jy+1))
-	        y = (1-fy)*((1-fx)*Yv(jx,jy)  +fx*Yv(jx+1,jy)  )
-     *	             + fy *((1-fx)*Yv(jx,jy+1)+fx*Yv(jx+1,jy+1))
-	        z = (1-fy)*((1-fx)*Zv(jx,jy)  +fx*Zv(jx+1,jy)  )
-     *	             + fy *((1-fx)*Zv(jx,jy+1)+fx*Zv(jx+1,jy+1))
+		if(valid(jx,jy).and.valid(jx+1,jy).and.
+     *		   valid(jx,jy+1).and.valid(jx+1,jy+1))then
+	          x = (1-fy)*((1-fx)*Xv(jx,jy)  +fx*Xv(jx+1,jy)  )
+     *	              + fy *((1-fx)*Xv(jx,jy+1)+fx*Xv(jx+1,jy+1))
+	          y = (1-fy)*((1-fx)*Yv(jx,jy)  +fx*Yv(jx+1,jy)  )
+     *	               + fy *((1-fx)*Yv(jx,jy+1)+fx*Yv(jx+1,jy+1))
+	          z = (1-fy)*((1-fx)*Zv(jx,jy)  +fx*Zv(jx+1,jy)  )
+     *	               + fy *((1-fx)*Zv(jx,jy+1)+fx*Zv(jx+1,jy+1))
+		else
+		  cok = .false.
+		endif
 	      endif
 	    endif
 c
 c  We now have the coordinates of the point that we want in the output
 c  in terms of the input coordinate system. Interpolate this point.
 c
-	    call coeff(order(1),x-xoff,nix,imin,imax,Wtx)
-	    call coeff(order(2),y-yoff,niy,jmin,jmax,Wty)
-	    call coeff(order(3),z-zoff,niz,kmin,kmax,Wtz)
-c
 	    Sum = 0
 	    SumWt = 0
-	    do kd=kmin,kmax
-	      do jd=jmin,jmax
-		do id=imin,imax
-		  if(flagIn(id,jd,kd))then
-		    Wt = Wtx(id-imin+1)*Wty(jd-jmin+1)*Wtz(kd-kmin+1)
-		    Sum = Sum + Wt * In(id,jd,kd)
-		    SumWt = SumWt + Wt
-		  endif
-		enddo
+	    if(cok)then
+	      call coeff(order(1),x-xoff,nix,imin,imax,Wtx)
+	      call coeff(order(2),y-yoff,niy,jmin,jmax,Wty)
+	      call coeff(order(3),z-zoff,niz,kmin,kmax,Wtz)
+c
+	      do kd=kmin,kmax
+	        do jd=jmin,jmax
+		  do id=imin,imax
+		    if(flagIn(id,jd,kd))then
+		      Wt = Wtx(id-imin+1)*Wty(jd-jmin+1)*Wtz(kd-kmin+1)
+		      Sum = Sum + Wt * In(id,jd,kd)
+		      SumWt = SumWt + Wt
+		    endif
+		  enddo
+	        enddo
 	      enddo
-	    enddo
+	    endif
+	      
 c
 c  Determine whether the output is good or not.
 c
@@ -794,11 +872,12 @@ c
 c
 	end
 c************************************************************************
-	subroutine GridGen(nx,ny,plane,Xv,Yv,Zv,gnx,gny)
+	subroutine GridGen(nx,ny,plane,Xv,Yv,Zv,valid,gnx,gny)
 c
 	implicit none
 	integer nx,ny,plane,gnx,gny
 	real Xv(gnx,gny),Yv(gnx,gny),Zv(gnx,gny)
+	logical valid(gnx,gny)
 c
 c  Determine the translation between the output and input pixel coordinates
 c  on a grid.
@@ -808,7 +887,7 @@ c    nx,ny
 c    plane
 c    gnx,gny
 c  Output:
-c    Xv,Yv,Zv
+c    Xv,Yv,Zv,valid
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 c
@@ -821,10 +900,12 @@ c
 	  In(2) = dble(ny-1)/dble(gny-1) * (j-1) + 1
 	  do i=1,gnx
 	    In(1) = dble(nx-1)/dble(gnx-1) * (i-1) + 1
-	    call pCvt(In,Out,3)
-	    Xv(i,j) = Out(1)
-	    Yv(i,j) = Out(2)
-	    Zv(i,j) = Out(3)
+	    call pCvt(In,Out,3,valid(i,j))
+	    if(valid(i,j))then
+	      Xv(i,j) = Out(1)
+	      Yv(i,j) = Out(2)
+	      Zv(i,j) = Out(3)
+	    endif
 	  enddo
 	enddo
 c
@@ -850,7 +931,7 @@ c------------------------------------------------------------------------
 	double precision xmid(3,4),txmid(3,4)
 	integer n,i,j,k,kmax,k1,k2,k3
 	real err,errmax
-	logical more
+	logical more,valid
 c
 	n = 1
 	k = 0
@@ -860,13 +941,17 @@ c
 	    x(1,k) = (2-i) + (i-1)*nx
 	    x(2,k) = (2-j) + (j-1)*ny
 	    x(3,k) = plane
-	    call pcvt(x(1,k),tx(1,k),3)
+	    call pcvt(x(1,k),tx(1,k),3,valid)
+	    if(.not.valid)
+     *        call bug('f','Invalid coordinate: please use tol=0')
 	  enddo
 	enddo
 	mid(1) = 0.5*(nx+1)
 	mid(2) = 0.5*(ny+1)
 	mid(3) = plane
-	call pcvt(mid,tmid,3)
+	call pcvt(mid,tmid,3,valid)
+	if(.not.valid)
+     *    call bug('f','Invalid coordinate: please use tol=0')
 c
 	more = .true.
 	dowhile(more)
@@ -876,7 +961,9 @@ c
 	    xmid(1,k) = 0.5*(x(1,k) + mid(1))
 	    xmid(2,k) = 0.5*(x(2,k) + mid(2))
 	    xmid(3,k) = 0.5*(x(3,k) + mid(3))
-	    call pcvt(xmid(1,k),txmid(1,k),3)
+	    call pcvt(xmid(1,k),txmid(1,k),3,valid)
+	    if(.not.valid)
+     *        call bug('f','Invalid coordinate: please use tol=0')
 	    err = max( abs(0.5*(tx(1,k)+tmid(1)) - txmid(1,k)),
      *		       abs(0.5*(tx(2,k)+tmid(2)) - txmid(2,k)),
      *		       abs(0.5*(tx(3,k)+tmid(3)) - txmid(3,k)))
@@ -901,8 +988,12 @@ c
 	    call TripMv(tmid(1),  tmid(2),tmid(3),     tx(1,k1))
 	    call TripMv(x(1,kmax),mid(2), dble(plane), x(1,k2))
 	    call TripMv(mid(1),x(2,kmax), dble(plane), x(1,k3))
-	    call pcvt(x(1,k2),tx(1,k2),3)
-	    call pcvt(x(1,k3),tx(1,k3),3)
+	    call pcvt(x(1,k2),tx(1,k2),3,valid)
+	    if(.not.valid)
+     *        call bug('f','Invalid coordinate: please use tol=0')
+	    call pcvt(x(1,k3),tx(1,k3),3,valid)
+	    if(.not.valid)
+     *        call bug('f','Invalid coordinate: please use tol=0')
 	    call TripMv(xmid(1,kmax), xmid(2,kmax), xmid(3,kmax),mid)
 	    call TripMv(txmid(1,kmax),txmid(2,kmax),txmid(3,kmax),tmid)
 	  endif

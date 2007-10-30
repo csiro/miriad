@@ -14,6 +14,8 @@ c       mjs  7-apr-92  elim unused var -> elim compiler warning.
 c       pjt  6-aug-92  fixed read(,*,) to read(,'(a)',) for avarnew (READVAL)
 c pjt/sally 31-mar-97  defined MAXVAL and increased from 8 to 16
 c       pjt 17-aug-99  added tabular time dependant input, substantial rewrite
+c       tw   4-nov-02  table can now give non-ascii array values
+c       pjt 16-jan-03  fix array input from varval= keyword
 c          
 c  unfinished:
 c       - array values for tables
@@ -30,7 +32,7 @@ c    uv dataset. All occurances of the variable are changed to the
 c    new value. If the variable is an array, all new values must be
 c    entered in sequential order. If the user desires to set all members 
 c    of an array to a single value, only one value need be entered.
-c    Values can also be interpolated from a time ordered table.
+c    Values can also be inserted from a time ordered table.
 c    Note: PUTHD must be used to use the uv override principle, but
 c    can only be used for single items, i.e. uv variables which are
 c    not an array.
@@ -48,13 +50,12 @@ c    CAVEAT: Tables do not support ascii types yet.
 c    No Default.
 c@ length
 c    Length of array of variable values. Unused if variable already 
-c    exists in data file, else set to 1 if not specified.
-c    CAVEAT: Tables do not support arrays yet.
+c    exists in data file or table is specified, else set to 1.
 c@ varval
 c    New values of header variable - if the variable is an array
 c    all values must be specified or will assume one value for all.
-c    If the values are to be obtained from a time-sorting table,
-c    you must use the table= keyword instead.
+c    If you want values that change with time, you must use the 
+c    table= keyword instead.
 c    No default.
 c@ table
 c    Name of the table that lists time (fractional days since time0) in
@@ -73,13 +74,10 @@ c    Default: not used, in which case the offset is 0, in which case
 c    fractional days are really Julian Days.
 c@ out
 c    Name of the output dataset. No default.
-c@ nvals
-c    A number that used to designated the number of varval's. Is now
-c    deprecated, don't use it anymore. 
 c-----------------------------------------------------------------------
 	include 'uvputhd.h'
 	character VERSION*(*)
-	parameter(VERSION='(Version 13-sep-99 PJT)')
+	parameter(VERSION='(Version 16-jan-03 pjt)')
 	character varval(MAXVAL)*30,hdvar*10,time0*32
         character outfile*80,infile*80,tabfile*80
         character except(20)*10,newtype*1,line*256
@@ -87,7 +85,7 @@ c-----------------------------------------------------------------------
 	double precision preamble(4), jd0, jd1
 	complex data(MAXCHAN),wdata(MAXCHAN)
 	logical flags(MAXCHAN),wflags(MAXCHAN),there,first
-	integer len1
+	integer len1,ncols,i
 	logical keyprsnt
 c
 	call output('UVPUTHD: '//version)
@@ -120,11 +118,16 @@ c-----------------------------------------------------------------------
         write(*,*) 'DEBUG: TIME0=',time0,' JD0 = ',jd0
 c-----------------------------------------------------------------------
 
+c
+c  read in ascii table
+c
 	if (tabfile .ne. ' ') then
-	   call rtable(tabfile,jd0)
+	   call rtable(tabfile,jd0,ncols)
+	else
+	   ncols = nval
 	endif
 c
-c  open input file
+c  open input visfile
 c
 	call uvopen(inset,infile,'old')
 	write(line,'('' Reading data from file: '',a)') infile
@@ -138,12 +141,32 @@ c
 	if(there) then
 	   write(line,'('' Altering value of '',a,'' in data'')')
      *		hdvar(1:len1(hdvar))
-	   call output(line)
+	   call output(line)	
+	   write(line,'('' Expecting array of '',i2,'' values'')')
+     *		length(yourvar)
+	   call output(line)	
+	   if (length(yourvar).ne.ncols) then
+	      if (nval.eq.1 .and. ncols.eq.1) then
+		 do i=2,length(yourvar)
+		    varval(i) = varval(1)
+		 enddo
+		 write(line,'('' Replicating '',i2,'' value'')') ncols
+		 call output(line)	
+	      else
+		 write(line,'('' Found '',i2,'' values'')') ncols
+		 call output(line)	
+		 call bug('f',' Incorrect number of columns in table')
+	      endif
+	   endif
 	else
 	   if(newtype(1:1) .eq. ' ') 
      *	      call bug('f',' Type must be specified for a new variable')
 	   write(line,'('' Entering Variable '',a,'' in data file'')')
      *		hdvar(1:len1(hdvar))
+	   call output(line)
+	   if (tabfile .ne. ' ') newlong=ncols
+	   write(line,'('' Creating array of '',i2,'' values'')')
+     *		newlong
 	   call output(line)
 	   call addvar(hdvar,newtype,newlong)
 	endif
@@ -158,11 +181,13 @@ c
         call trackall(inset,except,nexcept)
 c
 c   read ascii input of user header variable values and stick them
-c   into the appropriate arrays
+c   into the appropriate arrays (non-table input)
 c
-	call readval(hdvar,varval,nval)
+	if (tabfile .eq. ' ') then
+	   call readval(hdvar,varval,nval)
+	endif
 c
-c  Read the first record
+c  Read the first record in visfile
 c
 	first = .true.
 	call uvread(inset,preamble,data,flags,maxchan,nread) 
@@ -397,7 +422,7 @@ c   Change the user selected header variable to the new value if
 c   it was updated in data record being read, this time from the
 c   table where the index had been stored previously
 c
-	INTEGER nvals,i
+	INTEGER nvals,i,idxtab
 	CHARACTER vtype*1,vname*10
         LOGICAL update
 c 
@@ -406,12 +431,12 @@ c
         vname = hdvars(yourvar)
 	vtype = type(yourvar)
 	nvals = length(yourvar)
-	if (nvals.NE.1) call bug('f','Arrays not supported for tables')
-c	write(*,*) 'varins: ',tidx,dvarnew(tidx)
+c	write(*,*) 'varins: ',tidx,dvarnew(tidx*nvals)
 	DO i=1,nvals
-	   if(vtype .eq. 'i') ivarnew(i) = dvarnew(tidx)
-	   if(vtype .eq. 'r') rvarnew(i) = dvarnew(tidx)
-	   if(vtype .eq. 'd') dvarnew(i) = dvarnew(tidx)
+	   idxtab=(tidx-1)*nvals+i
+	   if(vtype .eq. 'i') ivarnew(i) = dvarnew(idxtab)
+	   if(vtype .eq. 'r') rvarnew(i) = dvarnew(idxtab)
+	   if(vtype .eq. 'd') dvarnew(i) = dvarnew(idxtab)
 	   if(vtype .eq. 'a') call bug('f','No ascii from tables')
 	ENDDO
 
@@ -448,6 +473,7 @@ c
 	integer i,varlen
 c 
 	varlen   = length(yourvar)
+c	write (*,*) 'nvals is ',nvals, ' varlen is ', varlen
 	vtype = type(yourvar)
 	if(nvals .eq. 1) then
 	   if(vtype .eq. 'i')
@@ -489,37 +515,41 @@ c
 	return
 	end
 c***********************************************************************
-	SUBROUTINE rtable(fname,jd0)
+	SUBROUTINE rtable(fname,jd0,ncols)
 	CHARACTER fname*(*)
 	DOUBLE PRECISION jd0
 	include 'uvputhd.h'
-	INTEGER tno,iostat,len1,tlen
+	INTEGER tno,iostat,len1,tlen,i,ncols,MAXCOLS
+	PARAMETER (MAXCOLS=50)
 	CHARACTER line*256
-	DOUBLE PRECISION dtime,dvar
+	DOUBLE PRECISION dtime,dvar(MAXCOLS)
 
 	WRITE(*,*) 'DEBUG: Opening TABLE ',fname(1:len1(fname))
 	CALL txtopen(tno,fname,'old',iostat)
 	IF (iostat.NE.0) CALL bug('f','Could not open table file')
 	tlen=1
 	nttable=0
+	ncols=MAXCOLS
 	DO WHILE(tlen.GT.0 .AND. iostat.EQ.0 .AND. nttable.LT.MAXVAL)
 	   CALL txtread(tno,line,tlen,iostat)
 	   IF(tlen.GT.0 .AND. iostat.EQ.0)THEN
 	      nttable = nttable + 1
-	      READ(line,*,err=990) dtime,dvar
-c	      WRITE(*,*) 'LINE: ',line(1:len1(line)),dtime,dvar
+	      READ(line,*,err=990) dtime,(dvar(i),i=1,ncols)
+ 990	      ncols=i-1
+c	      WRITE(*,*) 'LINE: ',line(1:len1(line))
+c	      WRITE(*,*) 'INPUT: ',dtime,(dvar(i),i=1,ncols)
 	      IF (nttable.LE.MAXVAL) THEN
 		 atime(nttable) = dtime+jd0
-		 dvarnew(nttable) = dvar
+		 do i = 1,ncols
+		    dvarnew((nttable-1)*ncols+i) = dvar(i)
+		 enddo
 	      ENDIF
 	   ENDIF
 	ENDDO
-	WRITE(*,*) 'DEBUG: Read ',nttable,' values from table'
+	WRITE(*,*) 'DEBUG: Read ',nttable,' lines ',ncols,' cols'
 	CALL txtclose(tno)
 	tidx=0
 	RETURN
-
- 990	CALL bug('f','Error in reading new double value')
 
 	END
 c***********************************************************************
@@ -554,13 +584,18 @@ c	1	      ' ',dvarnew(tidx+1)
 	         WRITE(*,*)'JD range in table: ',atime(1),atime(nttable)
 		 i = 1
               ENDIF
-	      IF(atime(1).GT.jd1) THEN
+c Allow small amount (86 seconds) of extrapolation back in time
+	      IF(atime(1).GT.jd1+0.001) THEN
 		 WRITE(*,*) 1,atime(1)
 		 CALL bug('f','Table starts too late')
 	      ENDIF
+c Allow arbitrary amount of extrapolation forward in time
 	      IF(atime(nttable).LT.jd1) THEN
-		 WRITE(*,*) nttable,atime(nttable),' (Change time0=)'
-		 CALL bug('f','Table ends too early')
+		 tidx=nttable
+		 RETURN
+c                WRITE(*,*) nttable,atime(nttable),' (Change time0=)'
+c		 WRITE(*,*) jd1
+c		 CALL bug('f','Table ends too early')
 	      ENDIF
 	      DO WHILE(i.LT.nttable)
 		 IF(atime(i+1).GT.jd1) THEN

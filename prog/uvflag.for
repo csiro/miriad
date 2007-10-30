@@ -138,6 +138,7 @@ c	    rjs     09dec97 Make antennas used message more robust.
 c	    rjs     11mar98 Some FORTRAN standardisation, to appease g77.
 c	    rjs     30aug99 Increase outline to 256 chars.
 c	    tw	    26aug04 allow fractional edge flagging using edge<0
+c           rjs     26nov05 Change to avoid compiler bug.
 c************************************************************************
 c uvflag works as follows:
 c It reads the name of the first visibility file.
@@ -679,7 +680,7 @@ c counts(6,j) = number of flags changed from bad to good
 c j=1 for channel linetype, j=2 for wide linetype
 
       integer function counting( type, oldflags, newflags, nchan )
-      integer count, totcount, inittot
+      integer tcount, totcount, inittot
 
       character*(*)    type
       logical	       oldflags(*), newflags(*)
@@ -716,10 +717,10 @@ c
 c
       return
 
-      entry count(nr,type)
+      entry tcount(nr,type)
       if( type.eq.'channel' ) j = 1
       if( type.eq.'wide'    ) j = 2
-      count = counts(nr,j)
+      tcount = counts(nr,j)
       return
       entry totcount(nr,lt)
       totcount = totcnts(nr,lt)
@@ -865,7 +866,7 @@ c number of good, bad and changed flags.
       logical	       wrhead
       save	       wrhead
       character*79     outline
-      integer	       count, counts(4), i
+      integer	       tcount, counts(4), i
       data	       wrhead / .TRUE. /
 
 c Get identification number of this record
@@ -893,7 +894,7 @@ c coded as yymmmdd:hh:mm:ss; extract antennae from baselinenumber
 	 wrhead = ropt.eq.'full'
       endif
       do i = 1, 4
-	 counts(i) = count(i,type)
+	 counts(i) = tcount(i,type)
       enddo
       write( outline, '('//
      *	     'i4,1x,	  a1,1x,     f8.4,1x, f8.4,1x, a,1x,'//

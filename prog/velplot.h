@@ -32,7 +32,7 @@ c  niters - clean iterations.
 c---------------------------------------------------------------------c
 
 	character*9       object,bunit,ctype(3)
-	character*40 file
+	character*80 file
 	common/image/file,object,bunit,ctype
 c
 	character*1    units,cneg,alabel,write,abscoord,apint,percent,
@@ -41,7 +41,7 @@ c
 	common/plotpar/units,cneg,alabel,write,abscoord,apint,percent,
      *			maptype,pspec,gray,defgray,lgaufit,lgauplot 
 c
-	character device*64
+	character device*80
 	real    src,levels(10),fg,bg,cutoff
 	integer	nlevels,conlabel
 	common/args/src,levels,nlevels,conlabel,fg,bg,cutoff

@@ -20,6 +20,7 @@ c    rjs  21jun93   Really fix the confusion over ascii/character this time.
 c		    Varous checks for sensibility and min match.
 c    rjs  18aug93   Standardise history comments.
 c    rjs  04oct95   Support "units" of time,dms and hms.
+c    rjs  11jan96   Fix string truncation bug when writing vartable enry.
 c
 c= puthd - Change the value of or add a single header item
 c& pjt
@@ -51,7 +52,7 @@ c   allow you to do so.
 c--
 c-----------------------------------------------------------------------
 	character PVERSION*(*)
-	parameter(PVERSION='Version 1.0 04-Oct-95')
+	parameter(PVERSION='Version 1.0 11-Jan-96')
 	integer lin,iostat,l,n
 	character in*80,item*32,value*64,type*10,descr*32,rtype*16
         character mesg*120, unit*20
@@ -187,7 +188,7 @@ c
 	  call bug('w','Error opening vartable item')
 	  call bugno('f',iostat)
 	endif
-
+c
 c  Read through vartable, and check each line if it matches this
 c  item name.
 c
@@ -213,7 +214,7 @@ c
 	    call bug('w','Error opening vartable item')
 	    call bugno('f',iostat)
 	  endif
-	  line = type(1:1)//' '//item(1:length)
+	  line = type(1:1)//' '//item
 	  call hwritea(itno,line,iostat)
 	  if(iostat.ne.0)then
 	    call bug('w','Error appending to the vartable item')

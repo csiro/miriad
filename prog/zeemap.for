@@ -73,6 +73,7 @@ c			      sequence to Zed. Changed "freq" to a real.
 c                             Eliminated the F file and the fit output
 c  mjs        28-feb-1991     Calls to itoa now call itoaf.
 c  nebk       01-jul-1994     Check I and V axis types
+c  rjs        02-jul-1997     cellscal change
 c
 c------------------------------------------------------------------------------
       include 'tmpdim.h'
@@ -101,13 +102,13 @@ c     number of keywords depending on the op.   Must get the list in the
 c     right order here for this to work.
 c
       integer nkeys, nkeysmal, nkeylarg
-      parameter (nkeys=17, nkeysmal=8, nkeylarg=17)
+      parameter (nkeys=19, nkeysmal=8, nkeylarg=17)
       character keyw(nkeys)*9
 c
-      data keyw/        'date-obs ','epoch    ','history  ','instrume ',
+      data keyw/        'obstime  ','epoch    ','history  ','instrume ',
      *      'object   ','telescop ','observer ','restfreq ','cdelt1   ',
      *      'cdelt2   ','cdelt3   ','crval1   ','crval2   ','crval3   ',
-     *      'ctype1   ','ctype2   ','ctype3   '/
+     *      'ctype1   ','ctype2   ','ctype3   ','cellscal ','vobs     '/
 c------------------------------------------------------------------------
       call output( 'Zeemap: version 1.0 01-jul-94')
 c

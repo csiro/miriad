@@ -66,6 +66,7 @@ c    mchw  17apr94  Added power laws and fixed a bug at zero radius.
 c    mchw  21apr94  Added options=rms.
 c    mchw  27apr94  Cleaned up user inputs. Added options=sample.
 c    mchw  06may94  Use quadratic sum of vsys and integral for rms.
+c    rjs   10jan96  Change to stop g77 complaint.
 c----------------------------------------------------------------------c
 	include 'maxdim.h'
 	character*(*) version
@@ -235,7 +236,7 @@ c********1*********2*********3*********4*********5*********6*********7*c
       +				radius)
 	implicit none
 	integer nstep
-	real xt,yt,vrot(1),vrad(2),vr(nstep),rstep,vel,radius(1)
+	real xt,yt,vrot(2),vrad(2),vr(nstep),rstep,vel,radius(1)
 	logical dosamp
 c
 c compute line of sight velocity.

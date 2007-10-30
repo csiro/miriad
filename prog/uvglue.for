@@ -4,40 +4,50 @@ c= uvglue - glue channels together
 c& nebk
 c: calibration
 c+
-c     UVGLUE glues together individual channels residing
-c     in separate files into one multi-channel file
+c     UVGLUE glues together individual multi-channel files into
+c     one mega-multi-channel file.
 c
-c     It is ASSUMED that all of the individual channel file are IDENTICAL
-c     except for the values and flags of the correlations
+c     The individual multi-channel files must be IDENTICAL except for 
+c     the values and flags of the correlations.  I.e. they must have 
+c     the same number of channels and the same preambles.
 c
-c     The output contains only one spectral window with NCHAN channels
+c     For example, if we have 3 files names "vis_1", "vis_2" and 
+c     "vis_3", where each file contains N  channels, then the output
+c     file will contain 3*N channels glued together in the order
+c     vis_1(1:N), vis_2(1:N), vis_3(1:N)
+c
+c     The output contains only one spectral window with NFILES*N channels
 c
 c@ vis
-c	Root name of input visibility files. Files must be named
-c	vis_i for ith channel.  No default.
-c@ nchan
-c	Number of channels. 
+c	Root name of input visibility files.   Files must be named
+c	vis_i for the ith file.  No default. NOTE: any calibration
+c	tables present in the input datasets are NOT applied in
+c	forming the output.
+c@ nfiles
+c	Number of file to read.  
 c@ out
 c	Output file name. No default
 c
 c--
 c     nebk 04mar97 Original version
+c     nebk 10mar97 Handle multiple channels
 c---------------------------------------------------------------------------
       implicit none
 c
       include 'maxdim.h'
       character in*80, out*80, name*90, line*80
       double precision preamble(5)
-      integer nchan, lin, lins, lout, nread, irec, ichan,
-     +  offset, ioff, npol, pol
-      logical gflags(maxchan)
+      integer nchani, nchano, lin, lins, lout, nread, irec, ichan,
+     +  offset, ioff, npol, pol, nfiles, j, k, ifile
+      logical gflags(maxchan), first
       complex data(maxchan)
       real scratch(maxchan*3)
 
       character version*(*)
-      parameter (version='UvGlue: Version 04-Mar-97')
+      parameter (version='UvGlue: Version 10-Mar-97')
       integer len1
       character itoaf*3
+      data first /.true./
 c-----------------------------------------------------------------------
       call output(version)
 c
@@ -47,11 +57,16 @@ c
 c
       call keya ('vis', in, ' ')
       if (in.eq.' ') call bug ('f', 'Input root file name not given')
-      call keyi ('nchan', nchan, 0)
-      if (nchan.eq.0) call bug ('f', 'Number of channels not given')
+      call keyi ('nfiles', nfiles, 0)
+      if (nfiles.eq.0) call bug ('f', 'Number of files not given')
       call keya ('out', out, ' ')
       if (out.eq.' ') call bug ('f', 'Output file name not given')
       call keyfin
+c
+c Open output file now, rather than later, incase it already exists. We
+c don't want to waste hours writing a scratch file and then have it fail
+c
+      call uvopen(lout,out,'new')
 c
 c Open scratch file
 c
@@ -60,22 +75,52 @@ c
 c Loop over number of input files
 c
       irec = 0
-      do ichan = 1, nchan
-        name = in(1:len1(in))//'_'//itoaf(ichan)
+      do ifile= 1, nfiles
+        name = in(1:len1(in))//'_'//itoaf(ifile)
         call uvopen (lin, name, 'old')
-        call output ('Opened input file '//name)
+c
+c Read first record
 c
         call uvread (lin, preamble, data, gflags, maxchan, nread)
-        do while (nread.gt.0) 
-          if (nread.ne.1) call bug ('f', 
-     +      'Input files must only have one channel')
+        if (nread.eq.0) then
+          call bug ('f', 'No data in file '//name)
+        else
+          if (first) then
+            nchani = nread
+            nchano = nfiles * nchani
+c
+            write (line,'(a,i5)') 'Number of input  channels = ', nchani
+            call output (' ')
+            call output (line)
+            write (line,'(a,i5)') 'Number of output channels = ', nchano
+            call output (line)
+            call output (' ')
+            first = .false.
+          else
+            if (nchani.ne.nread) 
+     +         call bug ('f','Number of channels has changed')
+          end if
+        end if
+c
+        call output ('Processing input file '//name)
+        do while (nread.gt.0)
           irec = irec + 1
-          scratch(1) = real(data(1))
-          scratch(2) = aimag(data(1))
-          scratch(3) = -1
-          if (gflags(1)) scratch(3) = 1
-          offset = (irec-1)*nchan*3 + 3*(ichan-1)
-          call scrwrite (lins, scratch, offset, 3)
+c
+c Load visibility into scratch buffer
+c
+          k = 1
+          do j = 1, 3*nchani, 3
+            scratch(j) = real(data(k))
+            scratch(j+1) = aimag(data(k))
+            scratch(j+2) = -1
+            if (gflags(k)) scratch(j+2) = 1
+            k = k + 1
+          end do
+c
+c Write scratch file
+c
+          offset = (irec-1)*nchano*3 + (ifile-1)*nchani*3
+          call scrwrite (lins, scratch, offset, nchani*3)
 c
           call uvread (lin, preamble, data, gflags, maxchan, nread)
         end do
@@ -83,8 +128,7 @@ c
         call uvclose (lin)
         write (line, 100) irec
 100     format ('Read ', i8, ' records from this file')
-        call output (line)
-        call output (' ')
+c        call output (line)
         irec = 0
       end do
       call output (' ')
@@ -92,6 +136,7 @@ c
 c
 c OK the scratch file is written.  Now pass through the channel
 c 1 file again and use it as a template for the variables
+c whilst fishing out the glued data
 c
       call output ('Copy scratch file to output')
       name = in(1:len1(in))//'_1'
@@ -99,7 +144,8 @@ c
       call uvset(lin,'preamble','uvw/time/baseline',0,0.,0.,0.)
       call VarInit (lin, 'channel')
 c
-      call uvopen(lout,out,'new')
+c Set up output file (its already open)
+c
       call uvset(lout,'preamble','uvw/time/baseline',0,0.,0.,0.)
       call hdcopy(lin,lout,'history')
       call hisopen(lout,'append')
@@ -119,9 +165,9 @@ c
 c Fish out spectrum from scratch file
 c
         irec = irec + 1
-        offset = (irec-1)*nchan*3
-        call scrread (lins, scratch, offset, nchan*3)
-        do ichan = 1, nchan
+        offset = (irec-1)*nchano*3
+        call scrread (lins, scratch, offset, nchano*3)
+        do ichan = 1, nchano
           ioff = (ichan-1)*3
           data(ichan) = cmplx(scratch(ioff+1),scratch(ioff+2))
           gflags(ichan) = .true.
@@ -134,13 +180,13 @@ c
         call uvgetvri (lin, 'npol', npol, 1)
         call uvgetvri (lin, 'pol', pol, 1)
 
-        call uvputvri(lout,'nschan', nchan, 1)
+        call uvputvri(lout,'nschan', nchano, 1)
         call uvputvri (lout, 'npol', npol, 1)
         call uvputvri (lout, 'pol', pol, 1)
 c
 c Write data
 c
-        call uvwrite(lout,preamble,data,gflags,nchan)
+        call uvwrite(lout,preamble,data,gflags,nchano)
 c
 c Read next record
 c

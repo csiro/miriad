@@ -32,6 +32,8 @@ c  History:
 c    06aug92 mchw  Adapted from RALINT task.
 c    16sep92 mchw  Added pivot and cleaned up code. Stubs for other axes.
 c    27feb93 mjs   use tmpdim.h instead of maxdim.h
+c    02jul97 rjs   cellscal change.
+c    23jul97 rjs   added pbtype.
 c------------------------------------------------------------------------
 	include 'tmpdim.h'
  	character version*(*)
@@ -136,7 +138,7 @@ c    pivot	Center channel for green image.
 c    axis	The axis for which the color is calculated.
 c------------------------------------------------------------------------
 	integer nkeys, nckeys,i,j,k
-	parameter (nkeys=22, nckeys=4)
+	parameter (nkeys=23, nckeys=4)
 	character keyw(nkeys)*9, ckeyw(nckeys)*5, itoaf*1, cin*1, cout*1
 	character atemp*9,ctype*10
 	real rtemp,cdelt,crval,crpix
@@ -148,7 +150,7 @@ c
      *    'obstime ','epoch   ','history ','instrume',
      *	  'ltype   ','lstart  ','lwidth  ','lstep   ','niters  ',
      *	  'object  ','observer','obsra   ','obsdec  ','pbfwhm  ',
-     *    'restfreq','telescop','vobs    ','cellscal'/
+     *    'restfreq','telescop','vobs    ','cellscal','pbtype  '/
 c
 c  Keyword values which must be changed as they are passed from in to out.
 c

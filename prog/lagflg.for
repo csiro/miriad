@@ -48,11 +48,12 @@ c  History:
 c    17-Mar-97 rjs  Original version.
 c    14-feb-01 rjs  Tidy up.
 c    25-oct-02 rjs  Added options=noflag
+c    19-sep-04 rjs  Copy senmodel keyword.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
 	integer MAXSELS,MAXLAGS
-	parameter(version='Lagflg: version 1.0 25-Oct-02')
+	parameter(version='Lagflg: version 1.0 19-Sep-04')
 	parameter(MAXSELS=200,MAXLAGS=32)
 c
 	integer tIn,tOut,n,off,nvis,i,j,pol,npol,nchan
@@ -172,11 +173,11 @@ c
 c------------------------------------------------------------------------
 	integer i
         integer NTABLE
-        parameter(NTABLE=12)
+        parameter(NTABLE=13)
         character tables(NTABLE)*8
         data tables/'interval','nsols   ','ngains  ','nfeeds  ',
      *   'ntau    ','gains   ','freq0   ','leakage ','bandpass',
-     *   'freqs   ','nspect0 ','nchan0  '/
+     *   'freqs   ','nspect0 ','nchan0  ','senmodel'/
 c
 	do i=1,NTABLE
 	  call hdcopy(tIn,tOut,tables(i))

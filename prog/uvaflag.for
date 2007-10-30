@@ -20,13 +20,14 @@ c	The input visibility file to be flagged. No default.
 c@ tvis
 c	The template input visibility file. The default is the same
 c	as the `vis' dataset. This default makes no sense without the `nopol'
-c	or `nofreq' options.
+c	or `nofreq' options. Several files can be given. Wildcards
+c	are supported.
 c@ select
 c	Normal visibility selection, which is applied to the template
-c	dataset. See the help on `select' for more information.
+c	dataset. See the help on "select" for more information.
 c@ options
 c	Extra processing options. Several can be given, separated by commas.
-c	Minimum match is supposrted. Possible values are:
+c	Minimum match is supported. Possible values are:
 c	  nopol  The polarisation of the records in the template are
 c	         ignored. If any polarisation in the template is
 c	         flagged, then all polarisations in the input are flagged.
@@ -36,6 +37,8 @@ c	  nofreq The frequency of the correlations in the template are
 c	         ignored. If any channel in the template is flagged, then
 c	         all channels in the input are flagged. This can be useful
 c	         when applying flagging based on a `channel-0' dataset.
+c	  noapply Do not apply the flagging, just report the statistics
+c	         about what would be flagged.
 c--
 c  History:
 c     nebk 25may89 Original program
@@ -43,20 +46,23 @@ c     pjt   2may90 included maxchan through maxdim.h
 c     bpw  28jan91 include standard keyword vis
 c     rjs   8mar93 Standardise history writing.
 c     rjs   4oct97 Go back to the drawing board and rewrite program.
+c     rjs   7nov97 Handle multiple templates.
+c     rjs  22oct98 noapply option.
 c---------------------------------------------------------------------------
 	implicit none
 	include 'maxdim.h'
-	integer MAXSELS
+	integer MAXSELS,MAXFILES
 	character version*(*)
-	parameter(version='Uvaflag: version 1.0 4-Oct-97')
-	parameter(MAXSELS=512)
+	parameter(version='Uvaflag: version 1.0 22-Oct-98')
+	parameter(MAXSELS=512,MAXFILES=64)
 c
 	complex data(maxchan)
 	double precision ttbp(3),vtbp(3)
 	real sels(MAXSELS)
 	integer lVis,lTmp,vVis,vTmp,ntot,ngood,nflag,i,npol,nt,nv,offset
-	character in1*64,in2*64,line*64
-	logical vflags(MAXCHAN),tflags(MAXCHAN),nofreq,nopol,match
+	integer nfiles,k
+	character in1(MAXFILES)*64,in2*64,line*64
+	logical vflags(MAXCHAN),tflags(MAXCHAN),nofreq,nopol,match,doapp
 c
 c  Externals.
 c
@@ -65,103 +71,109 @@ c
 c Get inputs
 c
 	call output(version)
-	call bug('i','Polarisation flagging behaviour has changed')
 	call keyini
 	call keya('vis', in2, ' ')
 	if(in2.eq.' ')call bug('f','Visibility file name not given')
-	call keya('tvis',in1,in2)
-	if(in1.eq.' ')call bug('f','Template file name not given')
+	call mkeyf('tvis',in1,MAXFILES,nfiles)
+	if(nfiles.eq.0)then
+	  in1(1) = in2
+	  nfiles = 1
+	endif
 	call selInput('select',sels,MAXSELS)
-	call getopt(nofreq,nopol)
-	if(in1.eq.in2.and..not.nofreq.and..not.nopol)call bug('f',
-     *	  'Requested operation makes no sense')
+	call getopt(nofreq,nopol,doapp)
+	if(nfiles.eq.1.and.in1(1).eq.in2.and.
+     *	  .not.nofreq.and..not.nopol)
+     *	  call bug('f','Requested operation makes no sense')
 	call keyfin
 c
 c Open files
 c
-	call uvopen(lVis,in2,'old')
-	call uvset(lVis,'preamble','time/baseline/pol',0,0.,0.,0.)
-	call uvopen(lTmp,in1,'old')
-	call uvset(lTmp,'preamble','time/baseline/pol',0,0.,0.,0.)
-	call selApply(lTmp,sels,.true.)
-	if(nopol.and.selProbe(sels,'polarization?',0.d0))call bug('f',
-     *	  'Polarisation selection cannot be used with options=nopol')
-	call offIni(lVis,vVis,lTmp,vTmp,offset)
+	do k=1,nfiles
+	  call uvopen(lVis,in2,'old')
+	  call uvset(lVis,'preamble','time/baseline/pol',0,0.,0.,0.)
+	  call uvopen(lTmp,in1(k),'old')
+	  call uvset(lTmp,'preamble','time/baseline/pol',0,0.,0.,0.)
+	  call selApply(lTmp,sels,.true.)
+	  if(nopol.and.selProbe(sels,'polarization?',0.d0))call bug('f',
+     *	    'Polarisation selection cannot be used with options=nopol')
+	  call offIni(lVis,vVis,lTmp,vTmp,offset)
 c
-	ntot  = 0
-	ngood = 0
-	nflag = 0
+	  ntot  = 0
+	  ngood = 0
+	  nflag = 0
 c
 c Loop over visibilities and set flags
 c
-	call getrec(lTmp,nopol,nofreq,ttbp,tflags,MAXCHAN,nt)
-	dowhile(nt.gt.0)
-	  call uvread(lVis,vtbp,data,vflags,MAXCHAN,nv)
-	  match = .false.
-	  if(nv.eq.0)then
-	    call bug('w','Unexpected end of visibility dataset')
-	  else if(abs(vtbp(1)-ttbp(1)).lt.1./86400.0.and.
+	  call getrec(lTmp,nopol,nofreq,ttbp,tflags,MAXCHAN,nt)
+	  dowhile(nt.gt.0)
+	    call uvread(lVis,vtbp,data,vflags,MAXCHAN,nv)
+	    match = .false.
+	    if(nv.eq.0)then
+	      call bug('w','Unexpected end of visibility dataset')
+	    else if(abs(vtbp(1)-ttbp(1)).lt.1./86400.0.and.
      *	       nint(vtbp(2)-ttbp(2)).eq.0.and.
      *	       nopol)then
-	    match = .true.
-	    if(.not.nofreq)
+	      match = .true.
+	      if(.not.nofreq)
      *		call offGet(lVis,vVis,nv,lTmp,vTmp,nt,offset)
-	    call flagit(tflags,nt,vflags,nv,offset,
-     *				nofreq,ntot,ngood,nflag)
-	    call uvflgwr(lVis,vflags)
-	    call uvrdvri(lVis,'npol',npol,1)
-	    do i=2,npol
-	      call uvread(lVis,vtbp,data,vflags,MAXCHAN,nv)
 	      call flagit(tflags,nt,vflags,nv,offset,
      *				nofreq,ntot,ngood,nflag)
-	      call uvflgwr(lVis,vflags)
-	    enddo
-	  else if(abs(vtbp(1)-ttbp(1)).lt.1./86400.0.and.
+	      if(doapp)call uvflgwr(lVis,vflags)
+	      call uvrdvri(lVis,'npol',npol,1)
+	      do i=2,npol
+	        call uvread(lVis,vtbp,data,vflags,MAXCHAN,nv)
+	        call flagit(tflags,nt,vflags,nv,offset,
+     *				nofreq,ntot,ngood,nflag)
+	        if(doapp)call uvflgwr(lVis,vflags)
+	      enddo
+	    else if(abs(vtbp(1)-ttbp(1)).lt.1./86400.0.and.
      *		nint(vtbp(2)-ttbp(2)).eq.0.and.
      *		nint(vtbp(3)-ttbp(3)).eq.0)then
-	    match = .true.
-	    if(.not.nofreq)
+	      match = .true.
+	      if(.not.nofreq)
      *		call offGet(lVis,vVis,nv,lTmp,vTmp,nt,offset)
-	    call flagit(tflags,nt,vflags,nv,offset,
+	      call flagit(tflags,nt,vflags,nv,offset,
      *				nofreq,ntot,ngood,nflag)
-	    call uvflgwr(lVis,vflags)
-	  else
-	    call countit(vflags,nv,ntot,ngood)
-	  endif
+	      if(doapp)call uvflgwr(lVis,vflags)
+	    else
+	      call countit(vflags,nv,ntot,ngood)
+	    endif
 c
 c  Go back for more.
 c
-	  if(nv.eq.0)then
-	    nt = 0
-	  else if(match)then
-	    call getrec(lTmp,nopol,nofreq,ttbp,tflags,MAXCHAN,nt)
-	  endif
-	enddo
+	    if(nv.eq.0)then
+	      nt = 0
+	    else if(match)then
+	      call getrec(lTmp,nopol,nofreq,ttbp,tflags,MAXCHAN,nt)
+	    endif
+	  enddo
 c
 c  Finish counting the flags in the main visibility file.
 c
-	dowhile(nv.gt.0)
-	  call uvread(lVis,vtbp,data,vflags,MAXCHAN,nv)
-	  call countit(vflags,nv,ntot,ngood)
-	enddo
+	  dowhile(nv.gt.0)
+	    call uvread(lVis,vtbp,data,vflags,MAXCHAN,nv)
+	    call countit(vflags,nv,ntot,ngood)
+	  enddo
+	  call uvclose(lTmp)
+	  if(k.eq.nfiles)then
+	    call hisopen(lVis,'append')
+	    call hiswrite(lVis,'UVAFLAG: Miriad '//version)
+	    call hisinput(lVis,'UVAFLAG')
+	    call hisclose (lVis)
+	  endif
+	  call uvclose(lVis)
 c
 c  Give a summary about the flagging performed.
 c
-	call output('Correlations: Total   Good      Bad')
-	write(line,'(a,i8,i8,i8)')'Before:    ',ntot,ngood,ntot-ngood
-	call output(line)
-	write(line,'(a,i8,i8,i8)')'After:     ',
+	  if(nfiles.gt.1)call output('After processing '//in1(k))
+	  call output(' Correlations: Total   Good      Bad')
+	  write(line,'(a,i8,i8,i8)')' Before:    ',ntot,ngood,ntot-ngood
+	  call output(line)
+	  write(line,'(a,i8,i8,i8)')' After:     ',
      *				   ntot,ngood-nflag,ntot-ngood+nflag
-	call output(line)
+	  call output(line)
 c
-c Write history and close up
-c
-	call hisopen(lVis,'append')
-	call hiswrite(lVis,'UVAFLAG: Miriad '//version)
-	call hisinput(lVis,'UVAFLAG')
-	call hisclose (lVis)
-	call uvclose(lVis)
-	call uvclose(lTmp)
+	enddo
 c
 	end
 c************************************************************************
@@ -221,20 +233,21 @@ c
 c
 	end
 c************************************************************************
-	subroutine GetOpt(nofreq,nopol)
+	subroutine GetOpt(nofreq,nopol,doapp)
 c
 	implicit none
-	logical nofreq,nopol
+	logical nofreq,nopol,doapp
 c------------------------------------------------------------------------
 	integer NOPTS
-	parameter(NOPTS=2)
+	parameter(NOPTS=3)
 	character opts(NOPTS)*8
 	logical present(NOPTS)
-	data opts/'nofreq  ','nopol   '/
+	data opts/'nofreq  ','nopol   ','noapply '/
 c
 	call options('options',opts,present,NOPTS)
-	nofreq = present(1)
-	nopol  = present(2)
+	nofreq =      present(1)
+	nopol  =      present(2)
+	doapp  = .not.present(3)
 c
 	end
 c************************************************************************

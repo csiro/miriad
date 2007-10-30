@@ -134,6 +134,8 @@ c   rjs  12mar98   Allow for more complex expressions.
 c   rjs  30nov98   Added options=grow
 c   rjs  02dec98   Increased BUFLEN again.
 c   rjs  17oct00   Added options=unmask
+c   rjs  27may05   Eliminate a redundant statement which was confusing
+c		   the optimiser on Solaris.
 c------------------------------------------------------------------------
 	INCLUDE 'maths.h'
 	INTEGER ERROR,VECTOR,SCALAR,CONSTANT
@@ -141,7 +143,7 @@ c------------------------------------------------------------------------
 	INTEGER BUFLEN,MAXBOX
         PARAMETER(BufLen=256,MaxBox=2048)
 	CHARACTER VERSION*(*)
-	PARAMETER (VERSION='Maths: version 1.0 17-Oct-00')
+	PARAMETER (VERSION='Maths: version 1.0 27-May-05')
 c
 	CHARACTER expr*256,mask*256,out*64,template*64
 	INTEGER   rbuflen,pnt
@@ -608,7 +610,6 @@ c
 	  if(Indx.eq.0)then
 	    if(nfiles.ge.maxfiles)call bug('f','Too many open files')
 	    nfiles = nfiles + 1
-	    naxes(nfiles) = 0
 	    call xyopen(lIn(nfiles),Symbol,'old',maxnax,nin)
 	    naxes(nfiles) = 1
 	    if(nfiles.eq.1)then

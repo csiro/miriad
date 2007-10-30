@@ -69,6 +69,7 @@ c    nebk30mar92 Convert to memalloc/memfree
 c    nebk07sep93 Add keyword out and replace (*,*) outputs with a call
 c		 to OUTPUT
 c    nebk01jul94 Check I and V axis types the same
+c    rjs 18sep05 Cosmetic correction.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer nsamp,nBemMax
@@ -326,7 +327,7 @@ c
 	    call txtwrite(lLog,line,length,iostat)
 	    if(iostat.ne.0)call bugno('f',iostat)
 	  enddo
-	  call txtclose(lLog,iostat)
+	  call txtclose(lLog)
 	endif
 c
 	end

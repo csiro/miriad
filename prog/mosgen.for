@@ -38,7 +38,8 @@ c		    not the centre of the mosaic given by the user. The coordinate
 c		    of the reference pointing is given as a comment in the head
 c		    of the file. The reason for the use of the lower left is
 c		    to minimise drive times and to pixel the reference as the
-c		    first point in the mosaic that rises.
+c		    first point in the mosaic that rises. Note the ATCA on-line
+c		    system has a limit of 500 pointing centers.
 c	  uvgen     This is the format required for uvgen's "center" keyword.
 c@ telescop
 c	The primary beam type. The default is ATCA.
@@ -46,19 +47,22 @@ c@ name
 c	For mode=atmosaic, a name used to derive the pointing name. For
 c	example, using name=lmc, will generate pointing names of
 c	lmc_1, lmc_2, etc.
+c
 c@ cycles
 c	For mode=atmosaic, the number of cycles spent on each pointing.
 c
 c  History:
 c    ???????? rjs Original version.
-c    10maar05	rjs	Improve documentation. Improve behaviour when the
-c			offsets cross RA=0.
+c    10mar05  rjs  Improve documentation. Improve behaviour when the
+c		   offsets cross RA=0.
+c    24sep05  rjs Format up to 9999 pointings correctly
+c    
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Mosgen: version 1.0')
+	parameter(version='Mosgen: version 1.0 24-Sep-05')
 	include 'mirconst.h'
 	integer MAXPNT
-	parameter(MAXPNT=2048)
+	parameter(MAXPNT=9999)
 	character device*64,line*16,line1*80,name*12,logf*80,mode*8
 	character telescop*16
 	logical more,first
@@ -75,7 +79,7 @@ c
 c  Externals.
 c
 	integer pgbeg,len1
-	character itoaf*3,rangleh*32,hangleh*32,stcat*70
+	character itoaf*4,rangleh*32,hangleh*32,stcat*70
 c
 	data modes/'atmosaic','uvgen   '/
 c

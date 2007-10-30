@@ -72,6 +72,7 @@ c       mjs 13mar93 pgplot subr names have less than 7 chars.
 c	rjs 26aug94 Better coordinate handling. Fix a few problems.
 c       lgm 03mar97 Corrected standard deviation calculation
 c       pjt  3may99 proper logopen/close interface; better line= stmts
+c	mchw 16may02 format change on output listing.
 c  Bugs:
 c------------------------------------------------------------------------
 	include 'maxdim.h'
@@ -83,7 +84,7 @@ c
 	parameter (maxbins = 200)
 c
 	character version*(*)
-	parameter(version='UvAmp: version 2.0 3-may-99')
+	parameter(version='UvAmp: version 2.0 16-may-02')
 	character uvflags*8,line*80,pldev*60,logfile*60
 	character bunit*10,type*5
 	integer tIn,i,nread,numdat(maxbins),numbins,ibin
@@ -195,7 +196,7 @@ c  Write out header stuff for log file
 c
 	line='                 Output Visibility Amplitudes'
         call LogWrite(line,more)
-	line='     uv limits      amplitude   sigma      S/N   ' //
+	line='     uv limits        amplitude   sigma      S/N   ' //
      *       'expect      #pnts   '
 	call LogWrite(line,more)
 	if(klam) then
@@ -235,7 +236,7 @@ c
 	      expect(i)  = 0.0
 	   endif
 	   write(line,
-     0     '(f8.1,1x,f8.1,2x,1pe9.2,1x,e9.2,2x,0pf6.1,2x,1pe9.2,2x,i8)') 
+     0     '(f9.2,1x,f9.2,2x,1pe9.2,1x,e9.2,2x,0pf6.1,2x,1pe9.2,2x,i8)') 
      1          binsiz*(i-1),binsiz*i,uuvamp(i),
      2		sigmean(i),ratio(i),expect(i),numdat(i)
 	   call LogWrite(line,more)

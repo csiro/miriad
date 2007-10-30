@@ -51,6 +51,7 @@ c		   option.
 c           aug89  Add averaging option
 c    rjs  27oct89  Removed plotting option, because it uses non-standard
 c		   routines. Renamed it Zeeeta.
+c    rjs  02jul97  cellscal change.
 c               
 c------------------------------------------------------------------------
       include 'maxdim.h'
@@ -62,7 +63,7 @@ c------------------------------------------------------------------------
       logical dutput, flags(maxdim)
 c
       integer nkeys
-      parameter (nkeys = 41)
+      parameter (nkeys = 40)
       character keyw(nkeys)*8
 c
       data keyw/   'bunit   ','cdelt1  ','cdelt2  ','cdelt3  ',
@@ -70,9 +71,9 @@ c
      *  'crota4  ','crota5  ','crpix1  ','crpix2  ','crpix3  ',
      *  'crval1  ','crval2  ','crval3  ','crval4  ','crval5  ',
      *  'ctype1  ','ctype2  ','ctype3  ','ctype4  ','ctype5  ',
-     *  'date-obs','epoch   ','history ','instrume','niters  ',
+     *  'obstime ','epoch   ','history ','instrume','niters  ',
      *  'object  ','restfreq','telescop','vobs    ','obsra   ',
-     *  'obsdec  ','observer','xshift  ','yshift  ','bmaj    ',
+     *  'obsdec  ','observer','cellscal','bmaj    ',
      *  'bmin    ','bpa     '/
 c--------------------------------------------------------------------
 c

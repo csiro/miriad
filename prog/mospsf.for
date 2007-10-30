@@ -35,6 +35,7 @@ c  History:
 c    rjs  25oct93 Adapted from LINMOS.
 c    nebk 22aug94 Adapt to GETFREQ error status change
 c    rjs  26oct94 Complete rewrite to cope with the new INVERT.
+c    rjs  24oct95 MOSPSF should not copy bmaj,bmin and bpa.
 c
 c  Bugs:
 c
@@ -149,14 +150,13 @@ c
 	character itoaf*2
 c
 	integer nkeys
-	parameter(nkeys=27)
+	parameter(nkeys=24)
 	character keyw(nkeys)*8
 	data keyw/   'bunit   ','crval1  ','crval2  ','ctype1  ',
      *	  'ctype2  ','cdelt1  ','cdelt2  ','crpix1  ','crpix2  ',
-     *	  'obstime ','epoch   ','bmaj    ','bmin    ','bpa     ',
-     *	  'niters  ','object  ','telescop','observer','restfreq',
-     *	  'vobs    ','lstart  ','lstep   ','ltype   ','lwidth  ',
-     *    'btype   ','history ','mask    '/
+     *	  'obstime ','epoch   ','niters  ','object  ','telescop',
+     *	  'observer','restfreq','vobs    ','lstart  ','lstep   ',
+     *	  'ltype   ','lwidth  ','btype   ','history ','mask    '/
 c
 c  Copy other parameters.
 c

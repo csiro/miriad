@@ -231,7 +231,7 @@ c
       character VERSION*(*)
       parameter (VERSION = PROG // 'version 2.3 12-May-97')
       integer NOPT,MAXSELS,MAXEDIT
-      parameter (NOPT=4,MAXSELS=256,MAXEDIT=1024)
+      parameter (NOPT=4,MAXSELS=256,MAXEDIT=5000)
 c
 c  Internal variables.
 c

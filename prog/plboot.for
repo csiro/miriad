@@ -24,6 +24,9 @@ c	datasets to analyse. See the help on ``select'' for more information.
 c	plboot will use any data that has a source name which it recognises
 c	as a planet. You may wish to select just the shortest spacing, where
 c	the planet is strongest.
+c@ device
+c	PGPLOT device to plot the planet model data as well as the visibility
+c	data. The default is to not produce a plot.
 c@ options
 c	Extra processing options. Several can be given, separated by commas.
 c	  vector  Use the real part (rather than amplitude) of the data and
@@ -37,14 +40,15 @@ c--
 c  History:
 c    rjs     04feb01 Original version.
 c    rjs     19may03 Average in freq when dealing with amplitudes.
+c    rjs     05jun05 Added plotting option.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
-	parameter(version='Plboot: version 1.0 19-May-03')
-	integer MAXVIS
-	parameter(MAXVIS=32)
+	parameter(version='Plboot: version 1.0 05-Jun-05')
+	integer MAXVIS,MAXPNT
+	parameter(MAXVIS=32,MAXPNT=10000)
 c
-	character vis(MAXVIS)*64,source*32,line*64
+	character vis(MAXVIS)*64,source*32,line*64,device*64
 	logical vector,planet,noapply,nofqav
 	integer nvis,lVis,vsource,nchan,iplanet,nants,i,iplanetp
 	real fac
@@ -52,6 +56,8 @@ c
 	double precision sfreq(MAXCHAN)
 	complex data(MAXCHAN)
 	logical flags(MAXCHAN)
+	real xval(MAXPNT),ydval(MAXPNT),ymval(MAXPNT)
+	integer npnt
 c
 c  Externals.
 c
@@ -65,6 +71,7 @@ c
 	call keyini
 	call uvDatInp('vis','xcefd')
 	call uvDatSet('stokes',0)
+	call keya('device',device,' ')
 	call getopt(vector,noapply,nofqav)
 	call keyfin
 c
@@ -74,6 +81,7 @@ c
 	SumXX = 0
 	SumXY = 0
 	nvis = 0
+	npnt = 0
 	dowhile(uvDatOpn(lVis))
 	  nvis = nvis + 1
 	  if(nvis.gt.MAXVIS)call bug('f','Too many inputs for me!')
@@ -88,13 +96,14 @@ c
 	      iplanet = plLook(source)
 	      planet = iplanet.ge.1.and.iplanet.le.9.and.iplanet.ne.3
 	      if(planet.and.iplanet.ne.iplanetp)
-     *		call output('Found planet '//source)
+     *		call output('Found data for planet '//source)
 	      iplanetp = iplanet
 	    endif
 	    if(planet)then
 	      call uvinfo(lVis,'sfreq',sfreq)
 	      call Acc(nofqav,vector,preamble,preamble(3),iplanet,
-     *				data,flags,sfreq,nchan,SumXX,SumXY)
+     *				data,flags,sfreq,nchan,SumXX,SumXY,
+     *				MAXPNT,npnt,xval,ydval,ymval)
 	    endif
 	    call uvDatRd(preamble,data,flags,MAXCHAN,nchan)
 	  enddo
@@ -106,10 +115,18 @@ c
 	fac = SumXX/SumXY
 	line = 'Scaling the data by '//streal(fac,'(f13.3)')
 	call output(line)
-	fac = sqrt(fac)
+c
+c  Generate the plot, if needed.
+c
+	do i=1,npnt
+	  ydval(i) = fac*ydval(i)
+	enddo
+	if(npnt.gt.0.and.device.ne.' ')
+     *	  call plotit(xval,ydval,ymval,npnt,device)
 c
 c  Now apply the scale factor to all the input datasets.
 c
+	fac = sqrt(fac)
 	if(.not.noapply)then
 	  do i=1,nvis
 	    call uvopen(lVis,vis(i),'old')
@@ -132,8 +149,58 @@ c
 c
 	end
 c************************************************************************
+	subroutine plotit(xval,ydval,ymval,npnt,device)
+c
+	implicit none
+	integer npnt
+	character device*(*)
+	real xval(npnt),ydval(npnt),ymval(npnt)
+c
+c  Generate a plot.
+c
+c------------------------------------------------------------------------
+	integer i
+	real xmin,xmax,ymin,ymax,xlo,xhi,ylo,yhi
+c
+c  Externals.
+c
+	integer pgbeg
+c
+	xmin = xval(1)
+	xmax = xmin
+	ymin = ydval(1)
+	ymax = ymin
+c
+	do i=1,npnt
+	  xmin = min(xmin,xval(i))
+	  xmax = max(xmax,xval(i))
+	  ymin = min(ymin,ydval(i),ymval(i))
+	  ymax = max(ymax,ydval(i),ymval(i))
+	enddo
+c
+       if(pgbeg(0,device,1,1).ne.1)then
+          call pgldev
+          call bug('f','Error opeing graphics device')
+        endif
+        call pgscf(2)
+        call pgrnge(0.0,xmax,xlo,xhi)
+        call pgrnge(ymin,ymax,ylo,yhi)
+        call pgpage
+        call pgvstd
+        call pgswin(xlo,xhi,ylo,yhi)
+        call pgbox('BCNST',0.,0,'BCNST',0.,0)
+        call pgpt(npnt,xval,ydval,1)
+	call pgsci(2)
+	call pgpt(npnt,xval,ymval,1)
+	call pgsci(1)
+        call pglab('Baseline Length (metres)','Flux Density (Jy)',' ')
+        call pgend
+c
+	end
+c************************************************************************
 	subroutine Acc(nofqav,vector,uv,time,iplanet,
-     *		data,flags,sfreq,nchan,SumXX,SumXY)
+     *		data,flags,sfreq,nchan,SumXX,SumXY,
+     *		MAXPNT,npnt,xval,ydval,ymval)
 c
 	implicit none
 	logical vector,nofqav
@@ -141,6 +208,8 @@ c
 	complex data(nchan)
 	logical flags(nchan)
 	double precision uv(2),time,sfreq(nchan),SumXX,SumXY
+	integer MAXPNT,npnt
+	real xval(MAXPNT),ydval(MAXPNT),ymval(MAXPNT)
 c
 c  Accumulate info given the planetary data.
 c------------------------------------------------------------------------
@@ -166,10 +235,16 @@ c
         a = 2 * pltb * (KMKS*1e18)/(CMKS*CMKS*1e-26)
      *    * 2 * PI/4 * bmaj*bmin
 c
-	if(nofqav)then
-          do i=1,nchan
-	    if(flags(i))then
-	      model = a*sfreq(i)*sfreq(i)*j1xbyx(real(b*sfreq(i)))
+	avdata = (0.,0.)
+	avmodel = 0
+	n = 0
+        do i=1,nchan
+	  if(flags(i))then
+	    model = a*sfreq(i)*sfreq(i)*j1xbyx(real(b*sfreq(i)))
+	    avdata = avdata + data(i)
+	    avmodel = avmodel + model
+	    n = n + 1
+	    if(nofqav)then
 	      SumXX = SumXX + model*model
 	      if(vector)then
 	        SumXY = SumXY + model*data(i)
@@ -177,20 +252,15 @@ c
 	        SumXY = SumXY + abs(model*data(i))
 	      endif
 	    endif
-          enddo
-	else
-	  avdata = (0.,0.)
-	  avmodel = 0
-	  n = 0
-	  do i=1,nchan
-	    if(flags(i))then
-	      avdata = avdata + data(i)
-	      avmodel = avmodel + 
-     *		a*sfreq(i)*sfreq(i)*j1xbyx(real(b*sfreq(i)))
-	      n = n + 1
-	    endif
-	  enddo
-	  if(n.gt.0)then
+	  endif
+        enddo
+	if(n.gt.0)then
+	  npnt = npnt + 1
+	  if(npnt.gt.MAXPNT)call bug('f','Too many points')
+	  xval(npnt) = CMKS*1e-9*sqrt(uv(1)*uv(1) + uv(2)*uv(2))
+	  ydval(npnt) = abs(avdata/n)
+	  ymval(npnt) = abs(avmodel/n)
+	  if(.not.nofqav)then
 	    SumXX = SumXX + avmodel*avmodel/n
 	    SumXY = SumXY + abs(avmodel*avdata/n)
 	  endif

@@ -21,6 +21,7 @@ c	de-disperse to (in GHz). The default is a dispersion
 c	measure of 0, and to de-disperse to the average
 c	frequency of the first record. If de-dispersing, a pulsar period
 c	must be given.
+c       De-dispersion is done including fractional bin shifts.
 c@ binsl
 c	Bin selection input. It takes an input string of the form
 c                      (1,2,4),(4,5,-6),(7,8)
@@ -54,6 +55,9 @@ c    rjs  10dec96 Better error message when nbin is missing.
 c    rjs  12dec96 Fix writing of variables to the right moment.
 c    rjs  21apr99 Allow bin selection and de-dispersation in the one go.
 c    dpr  09nov00 Fix (+n,-n) bug in bin selection
+c    sj   15apr02 Allowed for fractional bin shifts.
+c                 This included fixing -ve signs in delay calc.
+c                 Flag is set if either bin flag is set
 c------------------------------------------------------------------------
 c
 c  Common block to communicate to the "process" routine.
@@ -67,7 +71,7 @@ c
 c
 	include 'maxdim.h'
 	character version*(*)
-	parameter(version='PsrFix: version 1.0 09-Nov-00')
+	parameter(version='PsrFix: 15-Apr-2002')
 	character uvflags*16,ltype*16,out*64,binsl(MAXBIN)*64
 	integer tIn,tOut,nchan
 	integer i,j,l,n,s
@@ -513,8 +517,9 @@ c------------------------------------------------------------------------
 	parameter(MAXBIN=32)
 	integer addarr(MAXBIN,MAXBIN),obins
 	common/pcom/addarr,obins
-	real dtcfreq,dt
-	integer i,j,k,mv
+	double precision dtcfreq,dt
+	real mv,fmv
+	integer i,j,k,imv,bb
 c
 c       Initializeing the Output arrays
 c
@@ -523,46 +528,53 @@ c
 	do i=1,nchan
 	   do j=1,nbins
 	      DatOut(i,j) = 0
-	      FlgOut(i,j) = .true.
+	      FlgOut(i,j) = .false.
 	   enddo
 	enddo
 c
 	if(dm.gt.0)then
 	   
-c       The delay relative to infinite frequency for the specified frequency (dfreq)
-
+c       The delay relative to infinite frequency for the 
+c       specified frequency (dfreq)
 c	1e3 factor for GHz->MHz
+c       SJ NOTE - delay should always be -ve.
 	   
-	   dtcfreq = 4.149383E3 * dm/(dfreq * 1e3)**2
+	   dtcfreq = -4.149383E3 * dm/(dfreq * 1e3)**2
 	   
 c       Calculate the delay for each of the channels relative to the above freq. 
 	   
 	   do i=1,nchan
 
 c dt in secs
-	      dt = (4.149383E3 * dm/(sfreq(i)*1e3)**2) - dtcfreq
-c move bins by mv                
-	      mv = nint(nbins*dt/pperiod)
-	      mv = mod(mv,nbins)
-	      if(mv.lt.0)mv = mv + nbins
-c move to right
-	      if(mv.gt.0)then
-		 do j=1,nbins
-		    if(j.gt.nbins-mv)then
-		       DatOut(i,j) = DatIn(i,(j+mv)-nbins)
-		       FlgOut(i,j) = FlgIn(i,(j+mv)-nbins)
-		    else
-		       DatOut(i,j) = DatIn(i,j+mv)
-		       FlgOut(i,j) = FlgIn(i,j+mv)
-		    endif
-		 enddo
-c leave where is
-	      elseif(mv.eq.0)then
-		 do j=1,nbins
-		    DatOut(i,j) = DatIn(i,j)
-		    FlgOut(i,j) = FlgIn(i,j)
-		 enddo
-	      endif
+c SJ NOTE - again the -ve sign
+	      dt = (-4.149383E3 * dm/(sfreq(i)*1e3)**2) - dtcfreq
+
+c work out mv in terms of bins and force it to lie between 0 and nbins
+	      mv = dt/pperiod * nbins
+	      dowhile (mv.gt.nbins)
+		mv = mv - nbins
+	      enddo
+	      dowhile (mv.lt.0.)
+		mv = mv + nbins
+	      enddo
+c imv is the integer part and fmv the fractional part
+	      imv= int(mv)
+	      fmv = mv - imv
+
+c move to right forced by above while loops
+	      do j=1,nbins
+	         bb=j+imv
+	         if(bb.gt.nbins)bb=bb-nbins
+		 if(j.eq.1)then
+		    DatOut(i,bb) = (1.-fmv) * DatIn(i,j) +
+     :                             fmv * DatIn(i,nbins)
+		    if(FlgIn(i,j).and.Flgin(i,nbins))FlgOut(i,bb)=.true.
+		 else
+		    DatOut(i,bb) = (1.-fmv)*DatIn(i,j)+fmv*DatIn(i,j-1)
+		    FlgOut(i,bb) = FlgIn(i,j)
+		    if(FlgIn(i,j) .and. Flgin(i,j-1))FlgOut(i,bb)=.true.
+		 endif
+	      enddo
 	   enddo
 	   obins1 = nbins
 	endif

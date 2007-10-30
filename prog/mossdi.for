@@ -42,9 +42,12 @@ c    rjs 02jul97 - cellscal change.
 c    rjs 23jul97 - add pbtype.
 c    rjs 28nov97 - Increase max number of boxes.
 c    rjs 29jan99 - Correct user message only.
+c    gmx 07mar04 - Changed optimum gain determination to handle
+c                   negative components
+c
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='MosSDI: version 1.0 28-Nov-97')
+	parameter(version='MosSDI: version 1.0 07-Apr-04')
 	include 'maxdim.h'
 	include 'maxnax.h'
 	include 'mem.h'
@@ -268,6 +271,8 @@ c  Output:
 c    dmin,dmax,drms Min, max and rms residuals after this iteration.
 c    ncomp	Number of components subtracted off this time.
 c------------------------------------------------------------------------
+	real MinOptGain
+	parameter(MinOptGain=0.02)
 	integer i
 	real g,thresh
 	logical ok
@@ -317,11 +322,23 @@ c
 	  SS = SS + Wt(i) * StepR(i) * StepR(i)
 	  RS = RS + Wt(i) * Res(i)   * StepR(i)
 	enddo
-	g = min(1., real(RS / SS) )
+c
+c       RS (and SS?) can be negative, so it is better to take the 
+c       absolute value of them when determining the optimum
+c       gain (gmx - 07mar04)
+c
+c       abs(RS/SS) may be close to zero, in which case
+c       a semi-infinite loop can be the result. We apply a 
+c	lower limit to abs(RS/SS). A good value for it 
+c       is empirically determined to be 0.02 (MinOptGain), 
+c       which may however not be the best choice in all cases. 
+c       In case of problems, you can try a lower value for the
+c       task option Gain before changing MinOptGain (gmx - 07mar04).
+c       
+	g = Gain * max( MinOptGain, min( 1.0, abs(real(RS/SS)) ) )
 c
 c  Subtract off a fraction of this, and work out the new statistics.
 c
-	g = gain * g
 	dmin = Res(1) - g*StepR(1)
 	dmax = dmin
 	RR = 0

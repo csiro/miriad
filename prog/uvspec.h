@@ -25,6 +25,6 @@ c
 	integer pnt(MAXPOL,MAXBASE),nchan(MAXPOL,MAXBASE),free,mbase
 	integer npols(MAXBASE),pols(MAXPOL,MAXBASE),cnt(MAXBASE)
 	integer cntp(MAXPOL,MAXBASE)
-	double precision preamble(5,MAXBASE)
+	double precision preamble(6,MAXBASE)
 	common/uvavcom/preamble,buf,bufr,buf2,count,pnt,nchan,npols,
      *    pols,cnt,cntp,free,mbase

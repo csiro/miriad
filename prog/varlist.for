@@ -27,22 +27,20 @@ c    rjs   7nov89    Some standardising and cosmetic changes.
 c    lgm  12nov89    Fix so printed variable lengths are non-zero
 c    pjt  30jun93    Wow, 2.5 years of bugfree riding, but now added MAXCHAN
 c    rjs  16sep93    Call logclose.
+c    rjs  27apr95    Distinguish between zero-length and unset 
 c  ToDo
 c    * fix questionable practice to find all uv vars (at most 300 now)
 c      (there is a subroutine for this...)
 c-----------------------------------------------------------------------
-	include 'maxdim.h'
+	integer MAXVAR
+	parameter(MAXVAR=300)
 	logical eof, more
-	character var(300)*11,dataset*40,outfile*40,option*8
+	character var(MAXVAR)*11,dataset*40,outfile*40,option*8
 	character line*80
-	integer iostat,tno,item,ivar,iv,jv,nvar
+	integer iostat,tno,item,ivar,iv,jv,nvar,l
 	logical update
-	character*1 type(300)
-	integer length(300)
-	integer nread
-	double precision preamble(4)
-	complex data(MAXCHAN)
-	logical flags(MAXCHAN)
+	character*1 type(MAXVAR)
+	character*4 length(MAXVAR)
         character*80 umsg
 C
 C  call key routines to get user inputs
@@ -61,16 +59,22 @@ C
 C  do the initial opens to read the variable table
 C
 	call uvopen(tno,dataset,'old')
-	call uvread(tno,preamble,data,flags,MAXCHAN,nread)
+	call uvnext(tno)
 	call haccess(tno,item,'vartable','read',iostat)
 C
 C  loop through and read the variable names (questionable practice)
 C
-	do ivar=1,300
+	eof = .false.
+	do ivar=1,MAXVAR
 	   call hreada(item,var(ivar),eof)
 	   if(eof) go to 105
-	   call uvprobvr(tno,var(ivar)(3:10),type(ivar),length(ivar),
+	   call uvprobvr(tno,var(ivar)(3:10),type(ivar),l,
      *		update)
+	   if(l.eq.0.and..not.update)then
+	     length(ivar) = '  ??'
+	   else
+	     write(length(ivar),'(i4)')l
+	   endif
 	enddo
   105	nvar = ivar-1
 C
@@ -98,7 +102,7 @@ C
 		call LogWrite(' ',more)
 		do iv=1,nvar,3
 		   jv = min(nvar,iv+2)
-		   write(line,'(5x,3(a8,'':'',a,'':'',i4,5x))')
+		   write(line,'(5x,3(a8,'':'',a,'':'',a,5x))')
      *		    (var(ivar)(3:10),type(ivar),length(ivar),ivar=iv,jv)
 		   call LogWrite(line,more)
 		enddo

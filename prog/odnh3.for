@@ -21,6 +21,7 @@ c    mjs  26may92 declared and initialized "zrow" variable that is used.
 c    nebk 26nov92 Add btype to output header
 c    mjs  17feb93 Elim unused vars to eliminate compiler warning messsges.
 c    rjs  02jul97 cellscal change.
+c    rjs  24aug05 Correct incorrect usage of MAXNAX
 c------------------------------------------------------------------------
 c This program allocates:
 c   maths.h     3*MAXRUNS
@@ -81,7 +82,7 @@ c------------------------------------------------------------------------
 	INTEGER BUFLEN,RBUFLEN,MAXBOX
         PARAMETER(BufLen=64,RBufLen=MaxBuf,MaxBox=2048)
 	CHARACTER PVERSION*(*)
-	PARAMETER (PVERSION='Version 26-Nov-92')
+	PARAMETER (PVERSION='Version 24-Aug-2005')
 c
 	CHARACTER map1*64,map2*64,mapt*64,out*64,mask*64,op*16
 	INTEGER	  LOWI,HIGHI
@@ -89,14 +90,15 @@ c
 	INTEGER   type,lout,index,i,j,n,low,high,counter
 	INTEGER	  run,runmin,runmax
 	INTEGER   maskbuf(BUFLEN),boxes(MAXBOX)
-	INTEGER   size1(3),size2(3),size3(3),naxis1,naxis2,naxis3 
+	INTEGER   size1(2),size2(2),size3(2),nout(2)
+C	INTEGER   naxis1,naxis2,naxis3 
 	REAL      rbuf(RBUFLEN),maskrbuf(BUFLEN)
 	REAL	  buf1(512),buf2(512),buf3(512)
 	REAL	  R(500),tau(500),Robs,tauobs,tempobs,tout
 	REAL	  frac,exptau,logterm1,logterm2,f
 	INTEGER   nMRB,nBuf,xblc,xtrc,yblc,ytrc,npixels,ZRow
 	LOGICAL   doMask,doRuns
-	INTEGER   scratch(3,MAXRUNS),nout(MAXNAX)
+	INTEGER   scratch(3,MAXRUNS)
 c
 c  Externals.
 c
@@ -131,33 +133,34 @@ c
 c
 c  Open the input files
 c
-	call xyopen(lIn(1),Map1,'old',maxnax,size1)
-	call xyopen(lIn(2),Map2,'old',maxnax,size2)
+	call xyopen(lIn(1),Map1,'old',2,size1)
+	call xyopen(lIn(2),Map2,'old',2,size2)
 	if((op.eq.'temp').and.(Mapt.ne.' ')) then
-	  call xyopen(lIn(3),Mapt,'old',maxnax,size3)
+	  call xyopen(lIn(3),Mapt,'old',2,size3)
 	else
- 	  do i=1,3
+ 	  do i=1,2
 	    size3(i) = size2(i)
 	  enddo
 	endif
-	do i=1,3
+	do i=1,2
 	  if(size1(i).ne.size2(i).or.size2(i).ne.size3(i)
      *					.or.size3(i).ne.size1(i))
      *      call bug('f','Input images must all be the same size')
 	enddo
-	call rdhdi(lIn(1),'naxis',naxis1,0)
-	call rdhdi(lIn(2),'naxis',naxis2,0)	
-	if((op.eq.'temp').and.(Mapt.ne.' ')) then
-	  call rdhdi(lIn(3),'naxis',naxis3,0)
-	else
-	  naxis3 = naxis2
-	endif
-  	if(naxis1.ne.naxis2.or.naxis2.ne.naxis3.or.naxis3.ne.naxis1)
-     *    call bug('f','Input images must have the same dimensionality')
-	if(naxis1.gt.2.or.naxis2.gt.2.or.naxis3.gt.2)
-     *    call bug('f','Odnh3 presently only supports '//
-     *					 'two-dimensional images')
-	naxis = naxis1
+c	call rdhdi(lIn(1),'naxis',naxis1,0)
+c	call rdhdi(lIn(2),'naxis',naxis2,0)	
+c	if((op.eq.'temp').and.(Mapt.ne.' ')) then
+c	  call rdhdi(lIn(3),'naxis',naxis3,0)
+c	else
+c	  naxis3 = naxis2
+c	endif
+c  	if(naxis1.ne.naxis2.or.naxis2.ne.naxis3.or.naxis3.ne.naxis1)
+c     *    call bug('f','Input images must have the same dimensionality')
+c	if(naxis1.gt.2.or.naxis2.gt.2.or.naxis3.gt.2)
+c     *    call bug('f','Odnh3 presently only supports '//
+c     *					 'two-dimensional images')
+c	naxis = naxis1
+	naxis = 2
 c
 c  Parse the mask.
 c
@@ -188,7 +191,7 @@ c
 	do i=1,naxis
 	  nOut(i) = trc(i) - blc(i) + 1
 	enddo
-	do i=naxis+1,maxnax
+	do i=naxis+1,2
 	  nOut(i) = 1
 	  blc(i) = 1
 	  trc(i) = 1
@@ -522,7 +525,7 @@ c
         end if
 c
 	call hisopen(lOut,'append')
-        call hiswrite(lOut,'ODNH3 (MIRIAD)')
+        call hiswrite(lOut,'ODNH3: Miriad ODNH3')
 	call mitoaf(blc,naxis,txtblc,lblc)
 	call mitoaf(trc,naxis,txttrc,ltrc)
 	card = 'ODNH3: Bounding region is Blc=('//txtblc(1:lblc)//
@@ -570,7 +573,7 @@ c------------------------------------------------------------------------
 	integer error,constant,scalar,vector
 	parameter(error=0,constant=1,scalar=2,vector=3)
 	integer i
-	integer nin(maxnax)
+	integer nin(3)
 c
 c  Externals.
 c
@@ -599,13 +602,13 @@ c
 	  if(Index.eq.0)then
 	    if(nfiles.ge.maxfiles)call bug('f','Too many open files')
 	    nfiles = nfiles + 1
-	    call xyopen(lIn(nfiles),Symbol,'old',maxnax,nin)
+	    call xyopen(lIn(nfiles),Symbol,'old',3,nin)
 	    if(nfiles.eq.1)then
-	      do i=1,maxnax
+	      do i=1,3
 	        nsize(i) = nin(i)
 	      enddo
 	      call rdhdi(lIn(1),'naxis',naxis,0)
-	      naxis = min(naxis, maxnax)
+	      naxis = min(naxis, 3)
 	      Offset(1) = 0
 	    else
 	      do i=1,naxis

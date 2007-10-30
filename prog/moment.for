@@ -3,7 +3,7 @@ c************************************************************************
 	implicit none
 c
 c= MOMENT -  Calculate moments of a Miriad image.
-c& rjs
+c& mchw
 c: image analysis
 c+
 c	MOMENT calculates the nth moment of a Miriad image. Currently only
@@ -18,6 +18,7 @@ c	on how to specify this. Only the bounding box is supported.
 c@ out
 c	The output image. No default.
 c@ mom
+c       -3      Velocity at peak, using a 3 point polynomial fit around the peak
 c       -2      Peak temperature (units are same as individual channels)
 c       -1      Average intensity. (units are same as individual channels)
 c        0      Integrated intensity. (e.g. units I x km/s)
@@ -26,17 +27,20 @@ c        2      dispersion = sqrt(sum(I*(v-M1)**2)/sum(I))
 c               The v(i) are the axis values (e.g. velocities).  M1 is the first
 c               moment. The moment is calculated independently for each pixel
 c               within the specified clip range. Default = 0.
+c               Note that mom=2 produces a map of sigma ('gaussian' dispersions), 
+c               with FWHM = 2*sqrt(2*ln(2)) = 2.355  * sigma if the profile was
+c               a true gaussian.
 c@ axis
 c	The axis for which the moment is calculated. Default = 3.
 c@ clip
 c	Two values. Exclude pixels with values in the range clip(1) to clip(2).
 c	If only one value is given, then exclude -abs(clip) to abs(clip).
 c@ rngmsk
-c       Rangemask. Mask pixels as bad when the 1st moment gives a 1st
-c       moment out of range of that of the axis. This option can only be
-c       activated for mom=1. Default: false
-c
-c-- Other things to be improved in this code:
+c       Mask pixels as bad when the 1st moment gives a 1st moment out of
+c       range of that of the axis. This option can only be activated for
+c       mom=1. Default: false
+c--
+c   Other things to be improved in this code:
 c	
 c	- when items such as cdeltX, crvalX are missing, assume reasonable
 c	  defaults. I recently fixed the ctypeX problem.
@@ -67,12 +71,15 @@ c    30jun97 rjs   Change units of 0th moment image to be jy/beam.km/s
 c    23jul97 rjs   Added pbtype.
 c    27feb98 mwp   Added mom=-2 for peak temperature
 c    13jul00 rjs   Copy across llrot keyword.
-c    12feb00 pjt   Mask pixels if their velocity is out of range
-c    15feb00 dpr   Truncate rangemask key to rngmsk - doh!
+c    12feb01 pjt   Mask pixels if their velocity is out of range
+c    15feb01 dpr   Truncate rangemask key to rngmsk - doh!
+c    16feb01 pjt   Added mom=-3 for velocity of peak fit to poly=2
+c    18jan02 pjt   Turned rngmask typo into rngmsk (duh)
+c     4mar02 pjt   documented FWHM/sigma, fixed units of mom=2 map
 c------------------------------------------------------------------------
 	include 'maxdim.h'
  	character version*(*)
-	parameter(version='version 1.0 12-feb-00')
+	parameter(version='version 1.0 4-nov-03')
 	integer maxnax,maxboxes,maxruns,naxis
 	parameter(maxnax=3,maxboxes=2048)
 	parameter(maxruns=3*maxdim)
@@ -93,7 +100,7 @@ c Get inputs.
 c
 	call output('Moment: '//version)
 	call bug('i','Units for the 0th order moment have been changed')
-	call bug('i','new mom=-2 option available for peak flux map')
+	call bug('i','new mom=-2,-3 option available for peak flux map')
 	call keyini
 	call keya('in',in,' ')
 	call BoxInput('region',in,boxes,maxboxes)
@@ -107,6 +114,7 @@ c
 	  clip(2) = abs(clip(1))
 	  clip(1) = -clip(2)
 	endif
+cpjt
 	call keyl('rngmsk',Qmask,.FALSE.)
 	call keyfin
 c
@@ -114,8 +122,8 @@ c Check inputs.
 c
 	if(in .eq. ' ') call bug('f','No input specified. (in=)')
 	if(out .eq. ' ') call bug('f','No output specified. (out=)')
-	if(mom.lt.-2 .or. mom.gt.2)
-     *	   call bug('f','moment must be between -2 and 2')
+	if(mom.lt.-3 .or. mom.gt.2)
+     *	   call bug('f','moment must be between -3 and 2')
 	if(clip(2).lt.clip(1)) call bug('f','clip range out of order')
 	call xyopen(lin,in,'old',maxnax,nsize)
 	call rdhdi(lin,'naxis',naxis,0)
@@ -261,7 +269,7 @@ c
           call wrhda(lout,'bunit','KM/S')
           call wrbtype(lout,'velocity')
 	else
-          call wrhda(lout,'bunit','KM/S**'//itoaf(mom))
+          call wrhda(lout,'bunit','KM/S')
           call wrbtype(lout,'velocity_dispersion')
 	endif
 c
@@ -391,12 +399,14 @@ c    qmask      Also set pixels flagged if mom=1 and outside axis range
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	real buf(maxdim),sum(maxdim),sum1(maxdim),sum2(maxdim)
-	real chan,chan2,flux,sigsq,vmin,vmax
-	integer i,j,k
+	real chan,chan2,flux,sigsq,vmin,vmax,vpeak,dpeak
+	integer i,j,k,ipeak
 	logical flags(maxdim), outflags(maxdim)
 c
 	vmin = (blc(1)-offset)*scale
 	vmax = (trc(1)-offset)*scale
+
+	write(*,*) 'Velocity range: ',vmin,vmax,scale
 c
 	do k = blc(3),trc(3)
 	  call xysetpl(lIn,1,k)
@@ -406,14 +416,22 @@ c
 	    sum(j) = 0.0
 	    sum1(j) = 0.0
 	    sum2(j) = 0.0
+
 c
 c  Loop through the velocity channels and accumulate the moments.
+c  (note tricky dpeak initialization)
 c
 	    do i = blc(1),trc(1)
 	      if(flags(i).and.
      *		 (buf(i).le.clip(1).or.buf(i).ge.clip(2)) ) then
 		chan = (i-offset)*scale
 		chan2 = chan*chan
+		if (mom.eq.-3 .and. 
+	1	             (sum(j).eq.0 .or. buf(i).GT.dpeak)) then
+		   dpeak = buf(i)
+		   vpeak = chan
+		   ipeak = i
+		endif
 			     sum(j) = sum(j) + buf(i)
 	        if(mom.ge.1) sum1(j) = sum1(j) + buf(i)*chan
 		if(mom.eq.2) sum2(j) = sum2(j) + buf(i)*chan2
@@ -447,7 +465,10 @@ c
 		    sum2(j) = 0.
 		 endif
 	      endif
-
+	      if (mom.eq.-3) then
+		 sum(j) = vpeak + 0.5*(buf(ipeak-1)-buf(ipeak+1))*
+	1	      scale/(buf(ipeak-1)+buf(ipeak+1)-2*buf(ipeak))
+	      endif
 	    else
 	      sum1(j) = 0.
 	      sum2(j) = 0.
@@ -501,6 +522,9 @@ c
 	if(trc(2)-blc(2)+1.ne.n2.or.
      *	   trc(1)-blc(1)+1.ne.n1)call bug('f',
      *	  'Dimension inconsistency in MOMENT3')
+	if (mom.eq.-3) call bug('f',
+     *    'mom=-3 not yet available for axis=3; ' //
+     *    'try: reorder in= out= mode=312')
 c
 c  intialize the max temperature array
 c	(should really use some kind of POSIX-type MINFLOAT here)

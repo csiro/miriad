@@ -21,6 +21,7 @@ c    rjs  21nov90 Original version.
 c    rjs  11apr91 Changed "mitoa" to "mitoaf".
 c    rjs  15dec92 Use memalloc.
 c    rjs   1may96 Fix coordinates for Brett.
+c    rjs  02jul97 cellscal change.
 c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='version 1.0 1-May-96')
@@ -32,14 +33,14 @@ c
 c  Header keywords.
 c
 	integer nkeys
-	parameter(nkeys=44)
+	parameter(nkeys=43)
 	character keyw(nkeys)*8
 	data keyw/   'bunit   ','crota1  ','crota2  ','crota3  ',
      *	  'crota4  ','crota5  ','crval1  ','crval2  ','crval3  ',
      *	  'crval4  ','crval5  ','ctype1  ','ctype2  ','ctype3  ',
-     *	  'ctype4  ','ctype5  ','date-obs','epoch   ','history ',
+     *	  'ctype4  ','ctype5  ','obstime ','epoch   ','history ',
      *	  'instrume','niters  ','object  ','telescop','observer',
-     *	  'restfreq','vobs    ','xshift  ','yshift  ','obsra   ',
+     *	  'restfreq','vobs    ','cellscal','obsra   ',
      *	  'obsdec  ','lstart  ','lstep   ','ltype   ','lwidth  ',
      *	  'cdelt1  ','cdelt2  ','cdelt3  ','cdelt4  ','cdelt5  ',
      *	  'crpix1  ','crpix2  ','crpix3  ','crpix4  ','crpix5  '/

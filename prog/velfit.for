@@ -26,15 +26,23 @@ c	The default region is the entire image.
 c@ center
 c	The center of the annuli in arcsec from the center pixel, measured
 c	in the directions of RA and DEC.
+c       Default: mapcenter as defined by crpix.
 c@ pa
-c	Position angle of ellipse major axis in degrees. Default is 0 (north).
+c	Position angle of ellipse major axis in degrees. 
+c       Default is 0 (north).
 c@ incline
-c	Inclination angle in degrees. Default=0. (face on)
+c	Inclination angle in degrees. 
+c       Default=0. (face on)
 c@ radius
 c	Inner and outer radii and step size along major axis in arcsecs.
 c	The default is the whole image in steps equal to the pixel size.
 c@ vsys
 c	Center value z-axis. E.g. systemic velocity for rotation curve.
+c       Default: 0
+c@ frang
+c       Free angle around the minor axis of points to ignore. The total angle will
+c       be 2*frang. (1/cos(theta) problem)
+c       Default: 0
 c@ log
 c	The output log file. The default is the terminal.
 c@ options
@@ -42,10 +50,12 @@ c	None yet. Reserved for alternative models.
 c--
 c  History:
 c    30sep92  mchw  New task for Miriad.
+c    29aug02  pjt   Added frang= to prevent large divisions for models
+c    31aug02  pjt   Ieck, rms calculation wrong, arrays not reset to 0
 c----------------------------------------------------------------------c
 	include 'maxdim.h'
 	character*(*) label,version
-	parameter(version='version 1.0 30-Sep-92')
+	parameter(version='version 1.0 31-aug-02')
 	double precision pi,rts
 	parameter(pi=3.141592654,rts=3600.d0*180.d0/pi)
 	parameter(label='Fit a rotation curve to elliptical annuli')
@@ -59,6 +69,7 @@ c----------------------------------------------------------------------c
 	real center(2),pa,incline,rmin,rmax,rstep,vsys,crval1,vr,tmp
 	real cospa,sinpa,cosi,sini,cost,wt,x,y,xt,yt,r,ave,rms,fsum
 	real pixe(maxdim),amp(maxdim),flux(maxdim),vel(maxdim)
+	real frang,costmin
 	real vsum(maxdim),vsqu(maxdim),wsum(maxdim),vrot(maxdim)
         logical mask(maxdim)
 	character*80 in(2),log,line
@@ -82,6 +93,7 @@ c
 	call keyr('radius',rmin,0.)
 	call keyr('radius',rmax,0.)
 	call keyr('radius',rstep,0.)
+	call keyr('frang',frang,0.)
 	call keyr('vsys',vsys,0.)
 	call keya('log',log,' ')
 	call keyfin
@@ -89,6 +101,7 @@ c
 c  Check inputs.
 c
 	if(nmap.lt.2) call bug('f','Must have two input maps')
+	costmin = sin(frang*pi/180.0)
 c
 c  Get center and pixel sizes from first image.
 c
@@ -142,7 +155,9 @@ c
 	write(line,'(a,2f7.1,a,f5.0,a,f4.0,a,f8.0)')
      *	  '  center: ',center,'  Ellipse pa: ',pa,
      *		'  inclination: ',incline,' Vsys: ',vsys
-	call LogWrit(line(1:len1(line)))
+	call LogWrit(line)
+	write(line,'(a,2f7.1)') '  free angle: ',frang
+	call LogWrit(line)
 c
 c  Convert the inputs to more useful numbers, and defaults.
 c
@@ -185,18 +200,20 @@ c
 	      cost = yt/r
 	      vr = (vel(i)-vsys)/cost/sini
 	      wt = amp(i)*abs(cost)
-	      pixe(ir) = pixe(ir) + 1.
-	      flux(ir) = flux(ir) + amp(i)
-	      vsum(ir) = vsum(ir) + wt*vr
-	      vsqu(ir) = vsqu(ir) + wt*vr*vr
-	      wsum(ir) = wsum(ir) + wt
-	      irmin = min(ir,irmin)
-	      irmax = max(ir,irmax)
+	      if (abs(cost).ge.costmin) then
+		 pixe(ir) = pixe(ir) + 1.
+		 flux(ir) = flux(ir) + amp(i)
+		 vsum(ir) = vsum(ir) + wt*vr
+		 vsqu(ir) = vsqu(ir) + wt*vr*vr
+		 wsum(ir) = wsum(ir) + wt
+		 irmin = min(ir,irmin)
+		 irmax = max(ir,irmax)
+	      endif
 	    endif
 	  enddo
 	enddo
 c
-c  Find the rotation curve.
+c  Find the rotation curve, and reset some arrays for rms calc
 c
 	do ir = irmin,irmax
 	  if(wsum(ir).ne.0.) then
@@ -204,6 +221,11 @@ c
 	  else
 	    vrot(ir) = 0.
 	  endif
+	enddo
+	do ir = 1,maxdim
+	  vsum(ir) = 0.
+	  vsqu(ir) = 0.
+	  wsum(ir) = 0.
 	enddo
 c
 c  Now find the rms residuals from the fitted rotation curve.
@@ -221,11 +243,13 @@ c
 	    if(r.ge.rmin .and. r.le.rmax .and. mask(i)) then
 	      ir = r/rstep+1.5
 	      cost = yt/r
-	      vr = vel(i)-vsys-vrot(ir)*cost*sini
-	      wt = amp(i)*abs(cost)
-	      vsum(ir) = vsum(ir) + wt*vr
-	      vsqu(ir) = vsqu(ir) + wt*vr*vr
-	      wsum(ir) = wsum(ir) + wt
+	      if (abs(cost).ge.costmin) then
+		 vr = vel(i)-vsys-vrot(ir)*cost*sini
+		 wt = amp(i)*abs(cost)
+		 vsum(ir) = vsum(ir) + wt*vr
+		 vsqu(ir) = vsqu(ir) + wt*vr*vr
+		 wsum(ir) = wsum(ir) + wt
+	      endif
 	    endif
 	  enddo
 	enddo
@@ -235,7 +259,7 @@ c
 	  call LogWrit(' ')
 	  write(line,'(a,a,a,a,a,a)') '  Radius(") ',' # Pixels   ',
      *	     '  intensity ','     fit    ','     rms    ','  total rms '
-	  call LogWrit(line(1:72))
+	  call LogWrit(line)
 c
 c  Find averages for each annulus.
 c
@@ -245,7 +269,9 @@ c
 	  if(wsum(ir).ne.0.) then
 	    tmp = flux(ir)/pixe(ir)
 	    ave = vsum(ir)/wsum(ir)
-	    rms = sqrt(vsqu(ir)/wsum(ir)-ave*ave)
+	    rms = vsqu(ir)/wsum(ir)-ave*ave
+	    if (rms.lt.0) rms=0.0
+	    rms = sqrt(rms)
 	  else
 	    tmp = 0.
 	    rms = 0.
@@ -253,7 +279,7 @@ c
 	  fsum = fsum + rms*rms
 	  write(line,'(6f12.4)')
      *		 r,pixe(ir),tmp,vrot(ir),rms,sqrt(fsum/(ir-irmin+1.))
-	  call LogWrit(line(1:72))
+	  call LogWrit(line)
 	enddo
 c
 c  All done.

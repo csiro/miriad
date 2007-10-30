@@ -39,6 +39,9 @@ c	            Where "a" is common to all field names (typically
 c	            a source) and "b" is a field-specific name (typically
 c	            a field number). For example field 123 of a mosaic
 c	            experiment of the LMC might be called "lmc_123"
+c	  clobber   If a dataset exists with the same name as one that
+c	            uvsplit would create, then delete that dataset before
+c	            creating uvsplit's output.
 c	The following three options determine which data-set characteristics
 c	result in UVSPLIT generating different output data-sets.
 c	  nosource  Do not produce new data-sets based on source name. That
@@ -66,6 +69,7 @@ c    rjs  05aug96 Increased maxfiles.
 c    rjs  23jul97 Added pbtype.
 c    rjs  16aug04 Added various variables to the list to be copied across.
 c    rjs  19sep04 Copy across sensitivity model and more variables.
+c    rjs  28jan05 Added clobber option.
 c  Bugs:
 c   Perfect?
 c------------------------------------------------------------------------
@@ -73,14 +77,14 @@ c------------------------------------------------------------------------
 	integer MAXSELS
 	parameter(MAXSELS=256)
 	character version*(*)
-	parameter(version='UvSplit: version 1.0 19-Sep-04')
+	parameter(version='UvSplit: version 1.0 28-Jan-05')
 c
 	character vis*64,dtype*1
 	integer tvis
 	real sels(MAXSELS)
 	integer length,i
 	logical dosource,dofreq,dowin,updated,dowide,docomp,docopy
-	logical mosaic
+	logical mosaic,clobber
 	logical more,first,winsel,selwins(MAXWIN)
 c
 c  Externals.
@@ -91,7 +95,7 @@ c  Get the input parameters.
 c
 	call output(version)
 	call keyini
-	call GetOpt(dosource,dofreq,dowin,docopy,mosaic)
+	call GetOpt(dosource,dofreq,dowin,docopy,mosaic,clobber)
 	call keyf('vis',vis,' ')
 	call SelInput('select',sels,MAXSELS)
 	call keyfin
@@ -145,7 +149,7 @@ c
 c
 c  Read through the file.
 c
-	  call Process(tVis,dosource,dofreq,dowin,dowide,mosaic)
+	  call Process(tVis,dosource,dofreq,dowin,dowide,mosaic,clobber)
 c
 	  first = .false.
 	  call FileFin(docopy,more)
@@ -154,11 +158,12 @@ c
 c
 	end
 c************************************************************************
-	subroutine Process(tVis,dosource,dofreq,dowin,dowide,mosaic)
+	subroutine Process(tVis,dosource,dofreq,dowin,dowide,mosaic,
+     *								clobber)
 c
 	implicit none
 	integer tVis
-	logical dosource,dofreq,dowin,dowide,mosaic
+	logical dosource,dofreq,dowin,dowide,mosaic,clobber
 c
 c  Do a pass through the data file.
 c
@@ -169,6 +174,7 @@ c    dofreq
 c    dowin
 c    dowide
 c    mosaic
+c    clobber
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer MAXINDX
@@ -199,7 +205,7 @@ c  Update the indices if necessary.
 c
 	  if(uvVarUpd(vCheck))then
 	    call GetIndx(tVis,dosource,dofreq,dowin,dowide,mosaic,
-     *	      indx,nschan,nIndx,MAXINDX)
+     *	      clobber,indx,nschan,nIndx,MAXINDX)
 	    skip = .true.
 	    do i=1,nIndx
 	      if(indx(i).ne.0)skip = .false.
@@ -227,11 +233,11 @@ c
 	end
 c************************************************************************
 	subroutine GetIndx(tVis,dosource,dofreq,dowin,dowide,mosaic,
-     *	  Indx,nschan,nIndx,MAXINDX)
+     *	  clobber,Indx,nschan,nIndx,MAXINDX)
 c
 	implicit none
 	integer tVis,nIndx,MAXINDX,nschan(MAXINDX),Indx(MAXINDX)
-	logical dosource,dofreq,dowin,dowide,mosaic
+	logical dosource,dofreq,dowin,dowide,mosaic,clobber
 c
 c  Determine the current indices of interest.
 c
@@ -297,7 +303,8 @@ c
 	    endif
 	    do i=1,nindx
 	      n = nint(1000*wfreq(i))
-	      call FileIndx(base(1:length)//'.'//itoaf(n),i,indx(i))
+	      call FileIndx(base(1:length)//'.'//itoaf(n),i,indx(i),
+     *		clobber)
 	      nschan(i) = 1
 	    enddo
 	    if(nindx.eq.1)nschan(1) = nwide
@@ -320,7 +327,8 @@ c
 	    endif
 	    do i=1,nindx
 	      n = nint(1000*(sfreq(i) + sdf(i) * (nschan(i)/2)))
-	      call FileIndx(base(1:length)//'.'//itoaf(n),i,indx(i))
+	      call FileIndx(base(1:length)//'.'//itoaf(n),i,indx(i),
+     *		clobber)
 	    enddo
 	    if(nindx.eq.1)nschan(1) = nchan
 	  endif
@@ -332,7 +340,8 @@ c
 	    call uvrdvri(tVis,'nwide',nindx,1)
 	    if(nindx.gt.maxi)call bug('f','Too many windows')
 	    do i=1,nindx
-	      call FileIndx(base(1:length)//'.'//itoaf(i),i,indx(i))
+	      call FileIndx(base(1:length)//'.'//itoaf(i),i,indx(i),
+     *		clobber)
 	      nschan(i) = 1
 	    enddo	      
 	  else
@@ -340,7 +349,8 @@ c
 	    if(nindx.gt.maxi)call bug('f','Too many windows')
 	    call uvgetvri(tVis,'nschan',nschan,nindx)
 	    do i=1,nindx
-	      call FileIndx(base(1:length)//'.'//itoaf(i),i,indx(i))
+	      call FileIndx(base(1:length)//'.'//itoaf(i),i,indx(i),
+     *		clobber)
 	    enddo
 	  endif
 c
@@ -352,7 +362,7 @@ c
 	  else
 	    call uvrdvri(tVis,'nchan',nchan,1)
 	  endif
-	  call FileIndx(base(1:length),0,indx)
+	  call FileIndx(base(1:length),0,indx,clobber)
 	  nindx = 1
 	  nschan(1) = nchan
 	endif
@@ -388,10 +398,10 @@ c------------------------------------------------------------------------
 c
 	end
 c************************************************************************
-	subroutine GetOpt(dosource,dofreq,dowin,docopy,mosaic)
+	subroutine GetOpt(dosource,dofreq,dowin,docopy,mosaic,clobber)
 c
 	implicit none
-	logical dosource,dofreq,dowin,docopy,mosaic
+	logical dosource,dofreq,dowin,docopy,mosaic,clobber
 c
 c  Determine extra processing options.
 c
@@ -403,11 +413,11 @@ c    docopy
 c    mosaic
 c------------------------------------------------------------------------
 	integer NOPTS
-	parameter(NOPTS=5)
+	parameter(NOPTS=6)
 	logical present(NOPTS)
 	character opts(NOPTS)*8
 	data opts/'nosource','nofreq  ','nowindow','nocopy  ',
-     *		  'mosaic  '/
+     *		  'mosaic  ','clobber '/
 c
 	call options('options',opts,present,NOPTS)
 	dosource = .not.present(1)
@@ -415,6 +425,7 @@ c
 	dowin    = .not.present(3)
 	docopy   = .not.present(4)
 	mosaic   =      present(5)
+	clobber  =      present(6)
 c
 	end
 c************************************************************************
@@ -600,11 +611,12 @@ c
 c
 	end
 c************************************************************************
-	subroutine FileIndx(name,tifno,tindx)
+	subroutine FileIndx(name,tifno,tindx,clobber)
 c
 	implicit none
 	character name*(*)
 	integer tifno,tindx
+	logical clobber
 c
 c  Get the index corresponding to a particular file.
 c------------------------------------------------------------------------
@@ -662,10 +674,11 @@ c  the file does not already exist.
 c
 	if(lOut(tindx).eq.0.and..not.done(tindx))then
 	  if(nopen.lt.MAXOPEN)then
-	    call FileOpen(lVis,lOut(tIndx),vCheck(tIndx),vCopy(tIndx),
+	    call FileOpen(lVis,lOut(tIndx),clobber,
+     *		vCheck(tIndx),vCopy(tIndx),
      *		name,dowide,docomp,doif,npol,version)
 	    nopen = nopen + 1
-	  else
+	  else if(.not.clobber)then
 	    line = 'File already exists: '//name
 	    call assertf(name,.false.,line)
 	  endif
@@ -675,18 +688,18 @@ c
 c
 	end
 c************************************************************************
-	subroutine FileOpen(lVis,lOut,vCheck,vCopy,
+	subroutine FileOpen(lVis,lOut,clobber,vCheck,vCopy,
      *			name,dowide,docomp,doif,npol,version)
 c
 	implicit none
 	integer lVis,lOut,vCheck,vCopy,npol
 	character name*(*),version*(*)
-	logical dowide,docomp,doif
+	logical dowide,docomp,doif,clobber
 c
 c  Open and initialise an output file.
 c
 c------------------------------------------------------------------------
-	integer i,vTemp
+	integer i,vTemp,tno,iostat
 	character line*64
 c
 	integer NCOPY,NSCHECK,NWCHECK
@@ -717,6 +730,14 @@ c
 c
 c  Open the file, and set the correlation type.
 c
+	if(clobber)then
+	  call hopen(tno,name,'old',iostat)
+	  if(iostat.eq.0)then
+	    line = 'Clobbering '//name
+	    call output(line)
+	    call hrm(tno)
+	  endif
+	endif
 	line = 'Creating '//name
 	call output(line)
 	call uvopen(lOut,name,'new')

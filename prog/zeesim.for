@@ -1,4 +1,6 @@
+c************************************************************************
       program zeesim
+c
 c= zeesim - Test reliability of Zeeman splitting errors
 c& nebk
 c: profile analysis
@@ -147,6 +149,7 @@ c     rjs  10nov93   Replace txtopena with txtopen.
 c     nebk 20nov93   Improve documentation
 c     nebk 09apr94   maxwin -> maxreg so maxwin can go in maxdim.h
 c     nebk 27jun94   Beam opened asking for 3 instead of 2 dimensions
+c     rjs  18sep05   Cosmetic correction.
 c-----------------------------------------------------------------------
       implicit none
       include 'maxdim.h'
@@ -412,9 +415,10 @@ c
       if (log2.ne.' ') then
         do h = 1, nwin
           call facs (nsum(h), suma(h), sumsqa(h), mean, var, sdev)
-          write (aline, '(i4, 1x, f5.2, 1x, 5(1pe10.3,1x), i4, 
-     +           1x, 0pf5.2)') iwin(h), sqrt(eta2(h)), a(h), 
-     +           siga(h), 2.0*scale, mean, sdev, nsum(h), sdev/siga(h)
+          write (aline, 
+     *      '(i4, 1x, f5.2, 1x, 5(1pe10.3,1x), i4, 1x, 0pf5.2)') 
+     *	    iwin(h), sqrt(eta2(h)), a(h), 
+     *      siga(h), 2.0*scale, mean, sdev, nsum(h), sdev/siga(h)
           call txtwrite (lfid, aline, len1(aline), iostat)
         end do
         call txtclose (lfid)

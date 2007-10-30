@@ -1,6 +1,6 @@
 	include 'maxdim.h'
 	integer MAXFILES,MAXOPEN
-	parameter(MAXFILES=1000,MAXOPEN=6)
+	parameter(MAXFILES=2000,MAXOPEN=6)
 c
 	integer npol,nopen,nfiles,ifno(MAXFILES),indx(MAXFILES),nwins
 	integer vCheck(MAXFILES),vCopy(MAXFILES),lOut(MAXFILES),lVis

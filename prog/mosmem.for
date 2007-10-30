@@ -14,6 +14,19 @@ c	MOSMEM will also work correctly on a single-pointing observation
 c	interferometric observation. In this case, it will be less efficient
 c	than MAXEN, but it could be used when combining single dish data
 c	with a single pointing.
+c
+c       MOSMEM spits out some information as it goes:
+c
+c       RMSFAC is the ratio   (actual rms)/(theoretical rms).  
+c       It measures the residuals (i.e. the 
+c       difference between the dirty image and the model modified by the point 
+c       spread function). RMSFAC should converge to 1.
+c
+c       NormGrd is normalised gradient in the maximisation process.
+c       Convergence requires this to be less than 0.05
+c
+c       Flux is the sum of all the pixel values in the model.
+c
 c@ map
 c	One or perhaps two input dirty images (or cubes). These should have
 c	units of Jy/beam. The first should be produced by INVERTs mosaic mode.
@@ -141,8 +154,10 @@ c		   Also some changes in some checks and guessing TFlux to
 c		   make it more robust.
 c    rjs  22jan99  Fudge to get the rms noise information to propogate
 c		   through correctly for single pointing work.
-c    rjs  10feb98  Get measure=cornwell to work by setting initial estimate
+c    rjs  10feb99  Get measure=cornwell to work by setting initial estimate
 c		   to zero.
+c    nebk 07sep04  Add some words about the output information mosmem 
+c                  spits out as it goes
 c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='MosMem: version 1.0 10-Feb-99')

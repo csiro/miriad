@@ -29,6 +29,8 @@ c@ options
 c	Task enrichment parameters. Possible values are
 c	  absolute  Give flagged correlations as an absolute number
 c	            rather than a percentage.
+c	  unflagged Give statistics about the unflagged (rather than
+c	            flagged) correlations.
 c--
 c@ device
 c	PGPLOT device on which the flagging statistics are plotted.
@@ -37,26 +39,27 @@ c	messages about the flagging statistics.
 c  History:
 c    rjs  26sep95 Original version.
 c    rjs   1may96 Added mode=overall.
+c    rjs  05dec96 Added options=unflagged.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
 	integer MAXSELS,MAXPARM,POLMIN,MAXIN
-	parameter(version='Uvfstats: version 1.0 1-May-96')
+	parameter(version='Uvfstats: version 1.0 05-Dec-96')
 	parameter(MAXSELS=256,MAXPARM=MAXCHAN,POLMIN=-8,MAXIN=64)
 c
 	real lstart,lwidth,lstep,sels(MAXSELS)
 	integer tno,nchan,ngood(MAXPARM),nbad(MAXPARM),npnt,nout
-	integer pol,i1,i2,i,j,offset,nIn
+	integer pol,i1,i2,i,j,offset,nIn,nval
 	double precision preamble(4)
 	real x(MAXPARM),y(MAXPARM)
 	complex data(MAXCHAN)
 	character line*32,vis(MAXIN)*80,device*64,val1*8,val2*8
-	logical doabs,flags(MAXCHAN)
+	logical dogood,doabs,flags(MAXCHAN)
 c
 	integer NMODES,NOPTS
-	parameter(NMODES=5,NOPTS=1)
+	parameter(NMODES=5,NOPTS=2)
 	logical present(NOPTS)
-	character modes(NMODES)*8,mode*8,opts(NOPTS)*8
+	character modes(NMODES)*8,mode*8,opts(NOPTS)*10
 c
 c  Externals.
 c
@@ -64,7 +67,7 @@ c
 c
 	data modes/'stokes  ','baseline','channel ','antenna ',
      *		   'overall '/
-	data opts /'absolute'/
+	data opts /'absolute  ','unflagged '/
 c
 c  Get input parameters.
 c
@@ -78,7 +81,8 @@ c
 	call keymatch('mode',NMODES,modes,1,mode,nout)
 	if(nout.eq.0) mode = modes(1)
 	call options('options',opts,present,NOPTS)
-	doabs = present(1)
+	doabs  = present(1)
+	dogood = present(2)
 	call keyfin
 c
 c  Zero the statistics arrays.
@@ -140,10 +144,15 @@ c
 	  if(ngood(i)+nbad(i).gt.0)then
 	    npnt = npnt + 1
 	    x(npnt) = i + offset
-	    if(doabs)then
-	      y(npnt) = nbad(i)
+	    if(dogood)then
+	      nval = ngood(i)
 	    else
-	      y(npnt) = real(100*nbad(i))/real(ngood(i)+nbad(i))
+	      nval = nbad(i)
+	    endif
+	    if(doabs)then
+	      y(npnt) = nval
+	    else
+	      y(npnt) = real(100*nval)/real(ngood(i)+nbad(i))
 	    endif
 	  endif
 	enddo
@@ -151,24 +160,21 @@ c
 c
 c  List if if desired.
 c
+	
 	if(device.eq.' ')then
 	  call output(' ')
 	  if(mode.eq.'stokes')then
 	    call output('Flagging statistics by polarisation.')
-	    call output('   Pol. Type     Flagged')
-	    call output('   ---------     -------')
+	    call TitOut('Pol. Type',dogood)
 	  else if(mode.eq.'baseline')then
 	    call output('Flagging statistics by baseline.')
-	    call output('   Baseline      Flagged')
-	    call output('   --------      -------')
+	    call TitOut('Baseline',dogood)
 	  else if(mode.eq.'antenna')then
 	    call output('Flagging statistics by antenna.')
-	    call output('   Antenna       Flagged')
-	    call output('   -------       -------')
+	    call TitOut('Antenna',dogood)
 	  else if(mode.eq.'channel')then
 	    call output('Flagging statistics by channel number.')
-	    call output('   Channel       Flagged')
-	    call output('   -------       -------')
+	    call TitOut('Channel',dogood)
 	  endif
 c
 	  do i=1,npnt
@@ -189,6 +195,36 @@ c
 	    call output('     '//val1//'  '//val2)
 	  enddo
 	endif
+c
+	end
+c************************************************************************
+	subroutine TitOut(title,dogood)
+c
+	implicit none
+	character title*(*)
+	logical dogood
+c------------------------------------------------------------------------
+	character line1*64,line2*64
+	integer l
+c
+c  Externals.
+c
+	integer len1
+c
+	line1 = '   '//title
+	l = len1(line1)
+	line2 = ' '
+	line2(4:l) = '--------------'
+c
+	if(dogood)then
+	  line1(18:) = 'Unflagged'
+	  line2(18:) = '---------'
+	else
+	  line1(18:) = 'Flagged'
+	  line2(18:) = '-------'
+	endif
+	call output(line1)
+	call output(line2)
 c
 	end
 c************************************************************************

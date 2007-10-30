@@ -74,6 +74,8 @@ c    smw   15mar98    Converted TVCLIP to TVWCLIP by using wides not channels
 c    pjt   19aug99    Consolidated TVWCLIP into TVCLIP
 c    smw   30aug99    Submitted!
 c    rjs   21sep00    options=nosrc
+c    jwr   16jun04    initialize nedit=0 in doEdit
+c    jwr   16jun04    increased MAXEDIT
 c***********************************************************************
 c= Tvclip - Interactive editing of a UV data set on a TV device.
 c& jm
@@ -258,7 +260,7 @@ c
       character VERSION*(*)
       parameter (VERSION = PROG // 'Version 30-aug-99')
       integer NMODE,MAXSELS,MAXEDIT,MAXCMD
-      parameter (NMODE=4,MAXCMD=10,MAXSELS=256,MAXEDIT=100000)
+      parameter (NMODE=4,MAXCMD=10,MAXSELS=256,MAXEDIT=1000000)
 c
 c  Internal variables.
 c
@@ -556,6 +558,7 @@ c
 c
 c  Initialise the index of the flagging instructions.
 c
+	nedit = 0
 	nbased = min(nbase,MAXBASE)
 	do i=1,nbase
 	  edits(1,i) = 0

@@ -38,21 +38,21 @@ c	              map parameter is ignored, and the beam is needed only if
 c	              the user does not give the gaussian fwhm and pa.
 c	  "dirty"     The output is the map convolved with the beam.
 c@ fwhm
-c	The size, in arcsec, of the gaussian beam to use in the
-c	restoration. This will normally be two numbers, giving the
-c	full-width at half-maximum of the major and minor axes of the
-c	gaussian. If only one number is given, the gaussian will have
-c	equal major and minor axes. If no values are given, they are
-c	either retrieved from the beam header, or computed by fitting a
-c	gaussian to the given dirty beam.
+c       The size, in arcsec, of the gaussian beam to use in the
+c       restoration. This will normally be two numbers, giving the
+c       full-width at half-maximum of the major and minor axes of the
+c       gaussian. If only one number is given, the gaussian will have
+c       equal major and minor axes. If no values are given, they are
+c       either retrieved from the beam header, or computed by fitting a
+c       gaussian to the given dirty beam.
 c
-c	Note that the model image is convolved with this gaussian beam, and 
-c	then added to the residuals. These residuals are not affected by the
-c	choice of this gaussian beam size. So if you want the residuals and
-c	convolved image to have approximately the same beam size, then
-c	the gaussian beam size chosen should be the same size as the dirty beam.
-c	If you want coarser resolution than that provided by this, you
-c	should use task CONVOL to smooth the restored image afterwards.
+c       Note that the model image is convolved with this gaussian beam, and
+c       then added to the residuals. These residuals are not affected by the
+c       choice of this gaussian beam size. So if you want the residuals and
+c       convolved image to have approximately the same beam size, then
+c       the gaussian beam size chosen should be the same size as the dirty beam.
+c       If you want coarser resolution than that provided by this, you
+c       should use task CONVOL to smooth the restored image afterwards.
 c@ pa
 c	The position angle, in degrees, of the gaussian restoring beam,
 c	measured east from north. The default is determined from the dirty
@@ -92,9 +92,10 @@ c    rjs  23jul97  Add pbtype.
 c    rjs  25feb98  Honour documentation so that a beam is not needed when
 c		   convolving.
 c    rjs  28jun01  Doc change only.
+c    mchw 07feb02  Change beamwidth format to handle ATA and ALMA.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Restor: version 1.2 25-Feb-98')
+	parameter(version='Restor: version 1.3 07- Feb-2002')
 c
 	include 'maxdim.h'
 	include 'mem.h'
@@ -183,7 +184,7 @@ c
 c  Keep the user awake with spurious information.
 c
 	if(dogaus)then
-	  write(line,'(a,f6.2,a,f6.2,a)')
+	  write(line,'(a,f9.3,a,f9.3,a)')
      *	   'Using gaussian beam fwhm of',(3600*180/pi)*fwhm1,' by',
      *	   (3600*180/pi)*fwhm2,' arcsec.'
 	  call output(line)
