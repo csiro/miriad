@@ -27,7 +27,7 @@ c	This gives extra processing options. Several values can be given,
 c	separated by commas. Option values can be abbreviated to uniqueness.
 c
 c	The following options operate on the gains:
-c	  replace   The existing gains are replaced by the gain
+c	  replace   The existing gains are replaced by the value
 c	            given by the `gain' keyword. NOTE: If no other
 c	            options are given, the replace option is performed.
 c	  multiply  The existing gains are multiplied by the gain
@@ -35,8 +35,10 @@ c	            given by the `gain' keyword.
 c	  flag      The existing gains are flagged as bad.
 c	  amplitude The phases of the existing gains are set to 0.
 c	  phase     The amplitudes of the existing gains are set 1.
-c	  scale	    Multiply the gain-phases by a factor 
-c			given by the `gain' keyword. 
+c	  scale     The phase of the gains is multiplied by the factor 
+c	            given by the `gain' keyword. 
+c	  dup       Convert a single-polarization gain table into a dual
+c	            polarization table.
 c
 c	The following option operates on the polarization leakages:
 c	  reflect   The existing leakages are made to possess a
@@ -55,18 +57,19 @@ c    rjs   26feb97 Fix feeds reading.
 c    rjs   24jun97 Add the reflect option.
 c    rjs   01aug97 Added options=zmean.
 c    mchw  18nov98 Added options=scale.
+c    rjs   01dec98 Added options=dup.
 c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
         include 'mirconst.h'
 	integer MAXFEED,MAXSELS
 	character version*(*)
-	parameter(version='Gpedit: version 1.0 18-Nov-98')
+	parameter(version='Gpedit: version 1.0 01-Dec-98')
 	parameter(MAXFEED=2,MAXSELS=300)
 c
 	character vis*64
 	logical domult,dorep,doflag,doamp,dophas,dorefl,dozm,doscal
-	logical dogain,doleak
+	logical dogain,doleak,dup
 	integer iostat,tVis,itGain,itLeak,nants,nfeeds,nsols,ntau,i
 	integer numfeed,feeds(MAXFEED),nleaks
 	complex gain,Leaks(2,MAXANT)
@@ -90,8 +93,10 @@ c
 	call keyr('gain',amp,1.)
 	call keyr('gain',phi,0.)
 	call mkeyfd('feeds',feeds,MAXFEED,numfeed)
-        call GetOpt(dorep,domult,doflag,doamp,dophas,dorefl,dozm,doscal)
-	dogain = dorep.or.domult.or.doflag.or.doamp.or.dophas.or.doscal
+        call GetOpt(dorep,domult,doflag,doamp,dophas,dorefl,dozm,
+     *	  doscal,dup)
+	dogain = dorep.or.domult.or.doflag.or.doamp.or.
+     *				    dophas.or.doscal.or.dup
 	doleak = dorefl.or.dozm
 	call keyfin
 c
@@ -110,13 +115,16 @@ c
 	if(dogain)then
 	  call rdhdi(tVis,'ntau',ntau,0)
 	  if(ntau.ne.0)call bug('f',
-     *	  'GPEDIT cannot copy with a gain table with delays')
+     *	  'GPEDIT cannot cope with a gain table with delays')
 	  call rdhdi(tVis,'ngains',nants,0)
 	  call rdhdi(tVis,'nfeeds',nfeeds,1)
 	  if(nfeeds.le.0.or.nfeeds.gt.2.or.nants.lt.nfeeds.or.
      *	    mod(nants,nfeeds).ne.0)
      *	    call bug('f','Bad number of gains or feeds in '//vis)
 	  nants = nants / nfeeds
+	  if(nfeeds.eq.2.and.dup)call bug('w',
+     *	    'Gain table is already a dual polarization table')
+	  dup = dup.and.nfeeds.eq.1
 	  call rdhdi(tVis,'nsols',nsols,0)
 c
 c  See if we have enough space.
@@ -176,11 +184,15 @@ c
 c
 c  Write out the gains.
 c
-	  call GainWr(itGain,nsols,nants,nfeeds,
+	  call GainWr(itGain,dup,nsols,nants,nfeeds,
      *				memd(pTimes),memc(pGains))
 	  call memFree(pTimes,nsols,'d')
 	  call memFree(pGains,nfeeds*nants*nsols,'c')
 	  call hdaccess(itGain,iostat)
+	  if(dup)then
+	    call wrhdi(tVis,'nfeeds',2)
+	    call wrhdi(tVis,'ngains',2*nants)
+	  endif
 	endif
 c
 c  Process the leakages if needed.
@@ -414,15 +426,16 @@ c
 c
 	complex expi
 	real phase
-	Gain = cabs(Gain)*expi(real(fac)*phase(Gain))
+	Gain = abs(Gain)*expi(real(fac)*phase(Gain))
 	end
 c********1*********2*********3*********4*********5*********6*********7*c
-	subroutine GainWr(itGain,nsols,nants,nfeeds,times,Gains)
+	subroutine GainWr(itGain,dup,nsols,nants,nfeeds,times,Gains)
 c
 	implicit none
 	integer itGain,nsols,nants,nfeeds
 	complex Gains(nfeeds*nants,nsols)
 	double precision times(nsols)
+	logical dup
 c
 c  Write the gains from the gains table.
 c
@@ -433,17 +446,34 @@ c    nants	Number of antennae
 c    nfeeds	Number of feeds.
 c    times	The read times.
 c    gains	The gains.
+c    dup	If true, convert a single into a dual polarization table.
 c-----------------------------------------------------------------------
-	integer offset,iostat,k
+	include 'maxdim.h'
 c
+	complex G(MAXANT)
+	integer offset,iostat,i,j,k
+c
+	if(nants.gt.MAXANT)call bug('f','Too many gains in GainWr')
 	offset = 8
 	do k=1,nsols
 	  call hwrited(itGain,times(k),offset,8,iostat)
 	  if(iostat.ne.0)call EditBug(iostat,'Error writing gain time')
 	  offset = offset + 8
-	  call hwriter(itGain,Gains(1,k),offset,8*nfeeds*nants,iostat)
+	  if(dup)then
+	    j = 1
+	    do i=1,nants
+	      G(j) = Gains(i,k)
+	      G(j+1) = G(j)
+	      j = j + 2
+	    enddo
+	    call hwriter(itGain,G,offset,8*2*nants,iostat)
+	    offset = offset + 8*2*nants
+	  else
+	    call hwriter(itGain,Gains(1,k),offset,8*nfeeds*nants,
+     *							    iostat)
+	    offset = offset + 8*nfeeds*nants
+	  endif
 	  if(iostat.ne.0)call EditBug(iostat,'Error writing gains')
-	  offset = offset + 8*nfeeds*nants
 	enddo
 	end
 c********1*********2*********3*********4*********5*********6*********7*c
@@ -510,21 +540,22 @@ c-----------------------------------------------------------------------
 	end
 c********1*********2*********3*********4*********5*********6*********7*c
         subroutine GetOpt(dorep,domult,doflag,doamp,dophas,dorefl,dozm,
-     *		doscal)
+     *		doscal,dup)
 c       
         implicit none
 	logical dorep,domult,doflag,doamp,dophas,dorefl,dozm,doscal
+	logical dup
 c
 c  Get the various processing options.
 c
 c-----------------------------------------------------------------------
         integer NOPTS
-        parameter(NOPTS=8)
+        parameter(NOPTS=9)
         character opts(NOPTS)*9
         logical present(NOPTS)
         data opts/'replace  ','multiply ','flag     ',
      *		  'amplitude','phase    ','reflect  ',
-     *		  'zmean    ','scale    '/
+     *		  'zmean    ','scale    ','dup      '/
 c
         call options('options',opts,present,NOPTS)
 c
@@ -536,7 +567,8 @@ c
 	dorefl = present(6)
 	dozm   = present(7)
 	doscal = present(8)
+	dup    = present(9)
 	if(.not.(domult.or.dorep.or.doflag.or.doamp.or.dophas.or.
-     *	  dorefl.or.dozm.or.doscal)) dorep = .true.
+     *	  dorefl.or.dozm.or.doscal.or.dup)) dorep = .true.
 c
 	end

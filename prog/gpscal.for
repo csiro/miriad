@@ -121,6 +121,7 @@ c    rjs  31jan95 Accomodate model.for changes.
 c    rjs   1oct96 Major tidy up.
 c    rjs  11nov98 Make "time" array double precision to avoid precision
 c		  problems.
+c    rjs  01dec98 More warning messages.
 c------------------------------------------------------------------------
 	include 'gpscal.h'
 	character version*(*)
@@ -139,7 +140,7 @@ c
 c
 c  Externals.
 c
-	logical keyprsnt
+	logical keyprsnt,hdprsnt
 	character PolsC2P*2
 	external Header
 c
@@ -204,6 +205,11 @@ c  Open the visibility file, check that it is interferometer data, and set
 c  the line type if necessary.
 c
 	call uvopen(tvis,vis,'old')
+	if(hdprsnt(tvis,'bandpass'))then
+	  call bug('w',
+     *	    'Gpscal does not apply pre-existing bandpass tables')
+	  call bug('w','Bandpass table ignored')
+	endif
 	if(doline)call uvset(tvis,'data',ltype,nchan,lstart,lwidth,
      *								lstep)
 c
