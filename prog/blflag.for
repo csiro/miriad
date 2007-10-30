@@ -71,6 +71,9 @@ c	  selgen  Generate a file appropriate for selecting the bad
 c	          data (via a "select" keyword). The output is a text
 c	          file called "blflag.select".
 c	  noapply Do not apply the flagging.
+c         rms     When processing spectra, blflag normally plots the
+c	          mean value of the spectra. Using options=rms causes
+c	          if to plot the rms value instead.
 c	The following options can be used to disable calibration.
 c	  nocal   Do not apply antenna gain calibration.
 c	  nopass  Do not apply bandpass correction.
@@ -90,7 +93,7 @@ c------------------------------------------------------------------------
 	parameter(version='BlFlag: version 12-May-97')
 	parameter(MAXDAT=500000,MAXPLT=20000,MAXEDIT=20000)
 c
-	logical present(MAXBASE),nobase,selgen,noapply
+	logical present(MAXBASE),nobase,selgen,noapply,rms
 	integer tno,i,j,k,length,npol
 	character xaxis*12,yaxis*12,title*32,device*64
 	character val*16,uvflags*12
@@ -126,7 +129,7 @@ c
 	call keya('device',device,' ')
 	if(device.eq.' ')call bug('f','A PGPLOT device must be given')
 	call GetAxis(xaxis,yaxis)
-	call GetOpt(nobase,selgen,noapply,uvflags)
+	call GetOpt(nobase,selgen,noapply,rms,uvflags)
 	call uvDatInp('vis',uvflags)
 	call keyfin
 c
@@ -151,7 +154,7 @@ c
 c
 c  Get the data.
 c
-	call GetDat(tno,xaxis,yaxis,present,MAXBASE,
+	call GetDat(tno,rms,xaxis,yaxis,present,MAXBASE,
      *		xdat,ydat,bldat,timedat,ndat,MAXDAT)
 	if(ndat.eq.0)call bug('f','No points to flag')
 c
@@ -676,13 +679,13 @@ c
 c
 	end	  
 c************************************************************************
-	subroutine GetDat(tno,xaxis,yaxis,present,maxbase1,
+	subroutine GetDat(tno,rms,xaxis,yaxis,present,maxbase1,
      *		xdat,ydat,bldat,timedat,ndat,MAXDAT)
 c
 	implicit none
 	integer tno,maxbase1,MAXDAT,ndat
 	integer bldat(MAXDAT)
-	logical present(maxbase1)
+	logical present(maxbase1),rms
 	double precision timedat(MAXDAT)
 	real xdat(MAXDAT),ydat(MAXDAT)
 	character xaxis*(*),yaxis*(*)
@@ -692,7 +695,7 @@ c------------------------------------------------------------------------
 	parameter(TTOL=1d0/86400d0)
 c
 	logical flags(MAXCHAN),ok
-	complex data(MAXCHAN),corr(MAXBASE)
+	complex data(MAXCHAN),corr(MAXBASE),corr2(MAXBASE)
 	double precision preamble(4),time,time0,tprev,lst
 	real uvdist2(MAXBASE)
 	integer i,n,bl,i1,i2,nants,npnt(MAXBASE),mbase,nchan
@@ -708,6 +711,7 @@ c
 	  npnt(i)    = 0
 	  uvdist2(i) = 0
 	  corr(i)    = 0
+	  corr2(i)   = 0
 	enddo
 	ndat = 0
 c
@@ -727,8 +731,8 @@ c
 	  if(ok)then
 	    time = preamble(3)
 	    if(abs(time-tprev).gt.TTOL)then
-	      if(nants.gt.0)call IntFlush(nants,lst,tprev,uvdist2,corr,
-     *		xaxis,yaxis,npnt,
+	      if(nants.gt.0)call IntFlush(nants,rms,lst,tprev,uvdist2,
+     *		corr,corr2,xaxis,yaxis,npnt,
      *		time0,present,mbase,xdat,ydat,timedat,bldat,ndat,MAXDAT)
 	      nants = 0
 	      tprev = time
@@ -740,6 +744,8 @@ c
 		n = n + 1
 	        npnt(bl) = npnt(bl) + 1
 		corr(bl) = corr(bl) + data(i)
+		corr2(bl) = corr2(bl) +
+     *			    cmplx(real(data(i))**2,aimag(data(i))**2)
 	      endif
 	    enddo
 	    if(n.gt.0)then
@@ -752,12 +758,13 @@ c
 	enddo
 c
 	if(nants.gt.0)
-     *      call IntFlush(nants,lst,time,uvdist2,corr,xaxis,yaxis,npnt,
+     *      call IntFlush(nants,rms,lst,time,uvdist2,corr,corr2,
+     *		xaxis,yaxis,npnt,
      *		time0,present,mbase,xdat,ydat,timedat,bldat,ndat,MAXDAT)
 c
 	end
 c************************************************************************
-	subroutine IntFlush(nants,lst,time,uvdist2,corr,
+	subroutine IntFlush(nants,rms,lst,time,uvdist2,corr,corr2,
      *	  xaxis,yaxis,npnt,
      *	  time0,present,MAXBASE,xdat,ydat,timedat,bldat,ndat,MAXDAT)
 c
@@ -765,8 +772,8 @@ c
 	integer MAXBASE,MAXDAT,nants,npnt(MAXBASE),bldat(MAXDAT),ndat
 	double precision lst,time,time0,timedat(MAXDAT)
 	real uvdist2(MAXBASE),xdat(MAXDAT),ydat(MAXDAT)
-	complex corr(MAXBASE)
-	logical present(MAXBASE)
+	complex corr(MAXBASE),corr2(MAXBASE)
+	logical present(MAXBASE),rms
 	character xaxis*(*),yaxis*(*)
 c
 c------------------------------------------------------------------------
@@ -783,40 +790,52 @@ c
 	    if(npnt(k).gt.0)then
 	      ndat = ndat + 1
 	      if(ndat.gt.MAXDAT)call bug('f','Too many points')
-	      xdat(ndat) = GetVal(xaxis,uvdist2(k),corr(k),npnt(k),
-     *		lst,time,time0)
-	      ydat(ndat) = GetVal(yaxis,uvdist2(k),corr(k),npnt(k),
-     *		lst,time,time0)
+	      xdat(ndat) = GetVal(xaxis,uvdist2(k),corr(k),corr2(k),
+     *		npnt(k),lst,time,time0,rms)
+	      ydat(ndat) = GetVal(yaxis,uvdist2(k),corr(k),corr2(k),
+     *		npnt(k),lst,time,time0,rms)
 	      bldat(ndat) = k
 	      timedat(ndat) = time
 	      present(k) = .true.
 	      npnt(k) = 0
 	      uvdist2(k) = 0
 	      corr(k) = 0
+	      corr2(k) = 0
 	    endif
 	  enddo
 	enddo
 c
 	end
 c************************************************************************
-	real function GetVal(axis,uvdist2,corr,npnt,lst,time,time0)
+	real function GetVal(axis,uvdist2,corr,corr2,npnt,lst,time,
+     *							  time0,rms)
 c
 	implicit none
 	character axis*(*)
 	real uvdist2
-	complex corr
+	complex corr,corr2
 	double precision time,time0,lst
 	integer npnt
+	logical rms
 c------------------------------------------------------------------------
 	include 'mirconst.h'
+	complex data
+c
+	if(rms)then
+	  data = cmplx(sqrt(real(corr2)/npnt),
+     *		       sqrt(aimag(corr2)/npnt))
+	else
+	  data = corr/npnt
+	endif
+c
 	if(axis.eq.'real')then
-	  GetVal = real(corr)/npnt
+	  GetVal = real(data)
 	else if(axis.eq.'imaginary')then
-	  GetVal = aimag(corr)/npnt
+	  GetVal = aimag(data)
 	else if(axis.eq.'amplitude')then
-	  GetVal = abs(corr)/npnt
+	  GetVal = abs(data)
 	else if(axis.eq.'phase')then
-	  GetVal = 180/pi * atan2(aimag(corr),real(corr))
+	  GetVal = 180/pi * atan2(aimag(data),real(data))
 	else if(axis.eq.'uvdistance')then
 	  GetVal = 0.001 * sqrt(uvdist2/npnt)
 	else if(axis.eq.'time')then
@@ -847,26 +866,27 @@ c------------------------------------------------------------------------
 	if(n.eq.0)yaxis = 'amplitude'
 	end
 c************************************************************************
-	subroutine GetOpt(nobase,selgen,noapply,uvflags)
+	subroutine GetOpt(nobase,selgen,noapply,rms,uvflags)
 c
 	implicit none
-	logical nobase,selgen,noapply
+	logical nobase,selgen,noapply,rms
 	character uvflags*(*)
 c
 c  Get extra processing options.
 c------------------------------------------------------------------------
 	integer NOPTS
-	parameter(NOPTS=6)
+	parameter(NOPTS=7)
 	logical present(NOPTS)
 	character opts(NOPTS)*8
 	data opts/'nobase  ','nocal   ','nopass  ','nopol   ',
-     *		  'selgen  ','noapply '/
+     *		  'selgen  ','noapply ','rms     '/
 c
 	call options('options',opts,present,NOPTS)
 c
 	nobase = present(1)
 	selgen = present(5)
 	noapply= present(6)
+	rms    = present(7)
 	uvflags = 'sdlwb'
 	if(.not.present(2))uvflags(6:6) = 'c'
 	if(.not.present(3))uvflags(7:7) = 'f'
