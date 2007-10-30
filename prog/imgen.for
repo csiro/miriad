@@ -105,6 +105,7 @@ c    rjs   19aug94  Major rework. Multiple objects. Position angle. Better
 c		    coords.
 c    rjs   12sep94  totflux option.
 c    bmg   08may96  Added object=shell
+c    rjs   24sep96  Some corrections to object=shell.
 c  Bugs/Wishlist:
 c------------------------------------------------------------------------
 	character version*(*)
@@ -179,6 +180,7 @@ c
 	    fwhm1(i) = fwhm1(i) / 3600. * pi/180.
 	    if(fwhm1(i).le.0)
      *	      call bug('f','BMAJ and BMIN parameters must be positive')
+	    fwhm2(i) = fwhm1(i)
 	    posang(i) = 0
 	  else
 	    fwhm1(i) = 0
