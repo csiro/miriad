@@ -360,6 +360,13 @@ c    nebk 02mar94  New call for SETLABCG.
 c    nebk 18mar94  Add "dspectrum" image type
 c    nebk 03jun94  Clarify use of region keyword
 c    nebk 21jun94  Open files with OPIMCG & check consistency with CHKIM
+c    nebk 28aug94  Adapt so that irregular overlay locations in true world
+c                  coordinates are converted to linear world coordinates
+c                  For grid locations, treat increments as linear world
+c                  coordinate increments.  Linearize axis descriptors
+c                  at the centre of the displayed region
+c    nebk 31oct94  Fix mix up with luns for scratch files
+c    nebk 23dec94  Make sure selected region no bigger than image
 c
 c Ideas:
 c  * Be cleverer for sub-cubes which have spectra partly all zero
@@ -387,7 +394,7 @@ c
      +  ssize(maxnax), size(maxnax), cnaxis(maxcon), gnaxis, bnaxis,
      +  snaxis, naxis, lc(maxcon), lg, lb, ls, sgrps(2,maxdim), 
      +  grpbeg(maxchan), ngrp(maxchan), ibin(2), jbin(2), krng(2), 
-     +  iside(maxspec)
+     +  iside(maxspec), lh, lgn, lcn(maxcon)
       double precision cdelt(maxnax), crval(maxnax), 
      +  ccdelt(maxnax,maxcon), ccrval(maxnax,maxcon), 
      +  gcdelt(maxnax), gcrval(maxnax), bcdelt(maxnax), 
@@ -401,12 +408,12 @@ c
       character*9 ctype(maxnax), cctype(maxnax,maxcon), gctype(maxnax),
      +  bctype(maxnax), sctype(maxnax)
       character*6 ltypes(maxtyp)
-      character*64 cin(maxcon), gin, bin, spin(maxspec)
+      character*64 cin(maxcon), gin, bin, spin(maxspec), hin
 c
       real levs(maxlev,maxcon), pixr(2), tr(6), cs(2), pixr2(2), 
      +  slev(maxcon), break(maxcon), vrange(2), irange(2), tfvp(4),
      +  iscale(maxspec), scale(2), vpn(4), vpw(4), vfrac(2), tick(2),
-     +  cumhis(nbins), wdgvp(4)
+     +  cumhis(nbins), wdgvp(4), gmm(2), cmm(2,maxcon)
       real xmin, xmax, ymin, ymax, vxmin, vymin, vymax, vx, vy,
      +  vxsize, vysize, ydispb, xdispl, groff, blankg, blankc, 
      +  vmin, vmax, vvmin, vvmax, imin, imax, vxgap, vygap
@@ -434,15 +441,16 @@ c
       data cin, gin, bin /maxcon*' ', ' ', ' '/
       data nblnkg, nblnkc, nblnkcs /0, maxcon*0, 0/
       data scale /2*0.0/
+      data lgn, lcn /0, maxcon*0/
       data vmin, vmax, imin, imax /1.0e30, -1.0e30, 1.0e30, -1.0e30/
       data ltypes /'hms   ', 'dms   ', 'arcsec', 'absdeg', 'reldeg',
      +             'abspix', 'relpix', 'abslin', 'rellin', 'none'/
       data txtfill, tflen /'spectrum', 'derivative spectrum', 
      +                     'derivative spectrum', 8, 19, 19/
 c-----------------------------------------------------------------------
-      call output ('CgSpec: version 21-Jun-94')
-      call bug ('i',
-     +   'Spatial binning now available with keyword "xybin"')
+      call output ('CgSpec: version 23-Dec-94')
+      call output ('Non-linear coordinates are now partially handled')
+      call output ('See "help cgcoords" for explanations')
       call output (' ')
 c
 c Get user inputs
@@ -468,12 +476,19 @@ c*************************************
 c
 c Open contour images as required 
 c
+      hin = ' '
       if (ncon.gt.0)  then
         do i = 1, ncon
           call opimcg (maxdim, maxnax, cin(i), lc(i), cnaxis(i), 
      +      csize(1,i), cepoch(i), maskc(i), ccrpix(1,i), ccdelt(1,i),
      +      ccrval(1,i), cctype(1,i))
+          cmm(1,i) =  1.0e30
+          cmm(2,i) = -1.0e30
           call chkax (.false., cin(i), cnaxis, cctype(1,i))
+          if (hin.eq.' ') then
+            hin = cin(i)
+            lh = lc(i)
+          end if
         end do
       end if
 c
@@ -482,7 +497,13 @@ c
       if (gin.ne.' ') then
         call opimcg (maxdim, maxnax, gin, lg, gnaxis, gsize, gepoch,
      +     maskg, gcrpix, gcdelt, gcrval, gctype)
+        gmm(1) =  1.0e30
+        gmm(2) = -1.0e30
         call chkax (.false., gin, gnaxis, gctype)
+        if (hin.eq.' ') then
+          hin = gin
+          lh = lg
+        end if
 c
 c Check grey scale range and deal with log transfer function
 c
@@ -531,6 +552,11 @@ c
      +      levtyp(i), slev(i), nlevs(i), levs(1,i), srtlev(1,i))
         end do
       end if
+c
+c Linearize axis descriptors if non-pixel labels requested
+c
+      call linco (lh, labtyp, blc, trc, grpbeg, ngrp, ctype,
+     +            crval, crpix, cdelt)
 c
 c Work out array index limits, coordinate transformation array & labels
 c
@@ -619,7 +645,7 @@ c
           krng(1) = grpbeg(i)
           krng(2) = ngrp(i)
           call readimcg (init, maskg, blankg, lg, ibin, jbin, krng,
-     +       blc, trc, imnorm, memi(ipnim), memr(ipim), doblnkg)
+     +       blc, trc, imnorm, memi(ipnim), memr(ipim), doblnkg, gmm)
 c
 c Apply mask image mask
 c
@@ -629,7 +655,6 @@ c
             doblnkg = .true.
           end if
         end do
-        call xyclose(lg)
 c
 c Apply transfer function to grey scale image if required
 c
@@ -648,10 +673,9 @@ c
 c
 c Save normalization image if there are some blanks
 c
-        lg = 0
         if (.not.igblank .and. doblnkg) then
-          call scropen (lg)
-          call mscwrit (lg, blc, trc, memi(ipnim), nblnkg)
+          call scropen (lgn)
+          call mscwrit (lgn, blc, trc, memi(ipnim), nblnkg)
         end if
       end if
 c
@@ -681,9 +705,9 @@ c
             krng(1) = grpbeg(j)
             krng(2) = ngrp(j)
             call readimcg (init, maskc(i), blankc, lc(i), ibin, jbin,
-     +         krng, blc, trc, imnorm, memi(ipnim), memr(ipim), doblnkc)
+     +         krng, blc, trc, imnorm, memi(ipnim), memr(ipim), 
+     +         doblnkc, cmm(1,i))
           end do
-          call xyclose (lc(i))
 c
 c Apply mask
 c
@@ -701,10 +725,9 @@ c
 c
 c Save normalization image if there are some blanks
 c
-          lc(i) = 0
           if (.not.igblank .and. doblnkc) then
-            call scropen (lc(i))
-            call mscwrit (lc(i), blc, trc, memi(ipnim), 
+            call scropen (lcn(i))
+            call mscwrit (lcn(i), blc, trc, memi(ipnim), 
      +                    nblnkc(i))
             nblnkcs = nblnkcs + nblnkc(i)
           end if
@@ -719,11 +742,17 @@ c
         call fullann (ncon, cin, gin, nspec, spin, lc, lg, maxlev,
      +       nlevs, levs, srtlev, slev, trfun, pixr, naxis, size, 
      +       crval, crpix, cdelt, ctype, vymin, blc, trc, cs, ydispb,
-     +       iscale, labtyp, ibin, jbin)
+     +       iscale, labtyp, ibin, jbin, gmm, cmm)
       end if
 c
-c Free up memory
+c Close files and free up memory
 c
+      if (gin.ne.' ') call xyclose(lg)
+      if (ncon.gt.0) then
+        do i = 1, ncon
+          call xyclose (lc(i))
+        end do
+      end if
       call memfree (ipim,  win(1)*win(2), 'r')
       call memfree (ipnim, win(1)*win(2), 'r')
       if (bin.ne.' ') call memfree (ipimb, win(1)*win(2), 'l')
@@ -736,14 +765,14 @@ c
         allgood = .true.
       else
         call memalloc (ipimb, win(1)*win(2), 'i')
-        call mergn (maxcon, ncon, gin, nblnkg, nblnkc, lg, lc, win(1),
+        call mergn (maxcon, ncon, gin, nblnkg, nblnkc, lgn, lcn, win(1),
      +              win(2), memi(ipimb), allgood)
         if (allgood) call memfree (ipimb, win(1)*win(2), 'i')
       end if
       if (.not.igblank) then
-        if (lg.ne.0) call scrclose (lg)
+        if (lgn.ne.0) call scrclose (lgn)
         do i = 1, maxcon
-          if (lc(i).ne.0) call scrclose (lc(i))
+          if (lcn(i).ne.0) call scrclose (lcn(i))
         end do
       end if
       call pgupdt
@@ -763,15 +792,19 @@ c
 c
 c Read overlay positions & decode positions into contour/grey pixels
 c or generate an automatic list.  If only one file, then it is common
-c to all spectrum images.
+c to all spectrum images.  Have to open/close file whose header we use
+c for coordinate transformations in OLAYDEC because xyz and xy can
+c cannot exist together
 c
       if (nofile.eq.1) then
         if (grid(1)) then
           call genpos (ofile(1), cdelt, blc, trc, maxpos, npos, opos)
           iblc = 1
         else
-          call olaydec (maxtyp, ltypes, naxis, crpix, crval, cdelt, 
-     +                  ctype, maxpos, ofile(1), npos, opos, iblc)
+          call xyopen (lh, hin, 'old', maxnax, size)
+          call olaydec (lh, krng(1), krng(2), maxtyp, ltypes, maxpos, 
+     +                  ofile(1), npos, opos, iblc)
+          call xyclose (lh)
         end if
         ofile2 = ofile(1)
       end if
@@ -836,15 +869,17 @@ c
             call genpos (ofile(i), cdelt, blc, trc, maxpos, npos, opos)
             iblc = 1
           else
-            call olaydec (maxtyp, ltypes, naxis, crpix, crval, cdelt,
-     +                    ctype, maxpos, ofile(i), npos, opos, iblc)
+            call xyopen (lh, hin, 'old', maxnax, size)
+            call olaydec (lh, krng(1), krng(2), maxtyp, ltypes, 
+     +        maxpos, ofile(i), npos, opos, iblc)
+            call xyclose (lh)
           end if
           ofile2 = ofile(i)
         end if
 c
 c Open image
 c
-        call opimcg (maxdim, maxnax, spin(i), ls, snaxis, ssize, 
+        call opimxyz (maxdim, maxnax, spin(i), ls, snaxis, ssize, 
      +               sepoch,  masks, scrpix, scdelt, scrval, sctype)
         call chkax (.true., spin(i), snaxis, sctype)
 c
@@ -1328,7 +1363,7 @@ c
       subroutine fullann (ncon, cin, gin, nspec, spin, lc, lg, maxlev,
      +   nlevs, levs, srtlev, slev, trfun, pixr, naxis, size, crval, 
      +   crpix, cdelt, ctype, vymin, blc, trc, pcs, ydispb, iscale, 
-     +   labtyp, ibin, jbin)
+     +   labtyp, ibin, jbin, gmm, cmm)
 c-----------------------------------------------------------------------
 c     Full annotation of plot with contour levels, RA and DEC etc.
 c
@@ -1358,6 +1393,7 @@ c       ydispb     Displacement of x-axis label in character heights
 c       iscale     Scale factors for each spectrum image
 c       labtyp     Axis label types
 c       i,jbin     Spatial inc/bin
+c       *mm        Displayed min/max
 c----------------------------------------------------------------------- 
       implicit none
 c
@@ -1365,7 +1401,7 @@ c
      +  nspec, srtlev(maxlev,*), naxis, size(naxis), ibin(2), jbin(2)
       double precision crval(naxis), cdelt(naxis), crpix(naxis)
       real levs(maxlev,*), vymin, slev(*), pixr(2), pcs, ydispb, 
-     +  iscale(nspec)
+     +  iscale(nspec), gmm(2), cmm(2,*)
       character*(*) cin(*), gin, ctype(naxis), trfun, spin(nspec),
      +  labtyp(2)
 cc
@@ -1386,15 +1422,15 @@ c
 c       
 c Write grey scale information
 c       
-      if (gin.ne.' ') call anngrscg (lg, gin, 1, pixr, trfun, yinc,
-     +                               xpos, ypos)
+      if (gin.ne.' ') call anngrscg (lg, gin, 1, pixr, trfun, gmm, 
+     +                               yinc, xpos, ypos)
 c       
 c Write contour image information
 c       
       if (ncon.gt.0) then
         do i = 1, ncon
           call annconcg (lc(i), cin(i), slev(i), nlevs(i), levs(1,i),
-     +       srtlev(1,i), yinc, xpos, ypos)
+     +       srtlev(1,i), cmm(1,i), yinc, xpos, ypos)
         end do
       end if
 c
@@ -1807,7 +1843,7 @@ c
       end
 c
 c
-      subroutine mergn (maxcon, ncon, gin, nblnkg, nblnkc, lg, lc, 
+      subroutine mergn (maxcon, ncon, gin, nblnkg, nblnkc, lgn, lcn, 
      +                  is, js, mask, allgood)
 c------------------------------------------------------------------------
 c     Merge the normalization images stored in scratch files
@@ -1834,7 +1870,7 @@ c            displayed images blanked.  So don't mess around with masks
 c            anymore.
 c------------------------------------------------------------------------
       implicit none
-      integer maxcon, ncon, nblnkc(*), nblnkg, lg, lc(*), is, js, 
+      integer maxcon, ncon, nblnkc(*), nblnkg, lgn, lcn(*), is, js, 
      +  mask(is,js)
       character*(*) gin
       logical allgood
@@ -1877,10 +1913,10 @@ c
 c
 c Read scratch files and populate
 c
-        if (lg.ne.0) then
+        if (lgn.ne.0) then
           off = 0
           do k = 1, nblnkg
-            call scrread (lg, data, off, 2)
+            call scrread (lgn, data, off, 2)
             off = off + 2
 c
             i = nint(data(1))
@@ -1890,10 +1926,10 @@ c
         end if
 c
         do l = 1, maxcon
-          if (lc(l).ne.0) then
+          if (lcn(l).ne.0) then
             off = 0
             do k = 1, nblnkc(l)
-              call scrread (lc(l), data, off, 2)
+              call scrread (lcn(l), data, off, 2)
               off = off + 2
 c
               i = nint(data(1))
@@ -2020,21 +2056,16 @@ c
       end
 c
 c
-      subroutine olaydec (maxtyp, ltypes, naxis, crpix, crval, cdelt, 
-     +                    ctype, maxpos, ofile, npos, opos, iblc)
+      subroutine olaydec (lun, pl1, npl, maxtyp, ltypes, maxpos, 
+     +                    ofile, npos, opos, iblc)
 c-----------------------------------------------------------------------
 c     Read overlay positions list file and decode
 c
 c   Inputs
+c     lun      Handele of grey/contour image
+c     pl1,npl  Start plane and number of planes displayed
 c     maxtyp   Maximum number of potential label types
 c     ltypes   Potential label types
-c   The following refer to the grey/contour attributes
-c     naxis    Number of axes
-c     crpix    Array of reference pixels
-c     crval    Array of reference values
-c     cdelt    Array of increments
-c     ctype    Array of axis types
-c
 c     maxpos   Maximum number of allowed overlays
 c     ofile    Overlay file name
 c  Outputs
@@ -2048,11 +2079,11 @@ c
 c------------------------------------------------------------------------
       implicit none
 c
-      integer maxpos, npos, naxis, iblc, maxtyp
-      double precision crval(naxis), cdelt(naxis), opos(4,maxpos), 
-     +  crpix(naxis)
-      character ofile*(*), ctype(naxis)*(*), ltypes(maxtyp)*6
+      integer maxpos, npos, iblc, maxtyp, lun, pl1, npl
+      double precision opos(4,maxpos)
+      character ofile*(*), ltypes(maxtyp)*6
 cc
+      double precision pix3
       integer iostat, ilen, lpos, lo, imin, jmin
       character aline*100
 c
@@ -2077,6 +2108,8 @@ c
       jmin = 1e5
       npos = 0
       iostat = 0
+      pix3 = dble(2*pl1+npl-1) / 2.0
+      call initco(lun)
 c
       do while (iostat.ne.-1)
         aline = ' '
@@ -2090,8 +2123,8 @@ c
             else
               npos = npos + 1
               ilen = len1(aline)
-              call posdec (maxtyp, ltypes, ofile(1:lo), npos, naxis, 
-     +          crpix, crval, cdelt, ctype, aline(1:ilen), opos(1,npos))
+              call posdec (lun, pix3, maxtyp, ltypes, ofile(1:lo), npos,
+     +                     aline(1:ilen), opos(1,npos))
 c
               if (opos(1,npos).lt.imin .and. opos(2,npos).lt.jmin) then
                 imin = opos(1,npos)
@@ -2106,6 +2139,7 @@ c
         end if
       end do
 c
+      call finco (lun)
       call txtclose (lpos)
       aline = 'There were no locations in overlay file '//ofile(1:lo)
       if (npos.eq.0) call bug ('f', aline)
@@ -2249,6 +2283,47 @@ c
       end
 c
 c
+      subroutine opimxyz (maxdim, maxnax, in, lin, naxis, size, epoch,
+     +                   mask, crpix, cdelt, crval, ctype)
+c-----------------------------------------------------------------------
+c     Open an image with XYZOPEN and return some header descriptors 
+c
+c   Input:
+c     maxdim     Maximum allowed size of first dimension of image
+c     maxnax     Maximum number of allowed dimenions for image
+c   Output:
+c     lin        Handle for image
+c     size       Size of each dimension of image 
+c     naxis      Number of dimensions of image
+c     epoch      Epoch of image
+c     mask       True if blanking mask present for image
+c     crpix      Reference pixels
+c     cdelt      Increments
+c     crval      Reference values
+c     ctype      Axis types
+c
+c-----------------------------------------------------------------------
+      implicit none
+      integer maxdim, maxnax, lin, size(maxnax), naxis
+      double precision crval(maxnax), cdelt(maxnax),
+     +  crpix(maxnax)
+      real epoch(*)
+      character*(*) in, ctype(maxnax)
+      logical mask
+cc
+      integer len1
+c-----------------------------------------------------------------------
+      naxis = maxnax
+      call xyzopen (lin, in, 'old', naxis, size)
+      if (naxis.eq.0) call bug ('f', in(1:len1(in))//
+     +    ' has zero dimensions !!')
+      call hedinfcg (lin, naxis, size, epoch, crpix, cdelt,
+     +               crval, ctype, mask)
+      call chkdimcg (maxnax, maxdim, naxis, size, in)
+c
+      end
+c
+c
       subroutine pltspec (ofile, ispec, ipos, maxgrp, sgrps, iside,
      +    blc, trc, naxis, crval, crpix, cdelt, ctype, labtyp, pos, 
      +    vfrac, npts, vrange, xspec, yspec, zspec, work, irange, vpn,
@@ -2369,6 +2444,7 @@ c Write overlay number if requested.
 c
       if (number .and. (nofile.gt.1 .or. 
      +    (nofile.eq.1 .and. ispec.eq.nspec)) ) then
+        call pgsci (ispec+1)
         call strfi (ipos, '(i6)', str, is)
 c
 c Find blc location of text
@@ -2404,7 +2480,7 @@ c
         if ((blconly .and. ipos.eq.iblc) .or. .not.blconly) then
           if (doframe) then
             if (naked) then
-              call pgbox ('BT', tick(1), 2, 'BT', tick(2), 2)
+              call pgbox ('BST', tick(1), 2, 'BST', tick(2), 2)
             else
               call pgbox ('BNST', tick(1), 2, 'BNST', tick(2), 2)
             end if
@@ -2415,20 +2491,20 @@ c Else, give them a DOFRAME like option
 c
             if (vrange(1)*vrange(2).le.0.0) then
               ystr = 'AST'
-              if (naked) ystr = 'AT'
+              if (naked) ystr = 'AST'
             else
               ystr = 'BNST'
-              if (naked) ystr = 'BT'
+              if (naked) ystr = 'BST'
             end if
 c
 c Similarly for the y=0 request.
 c
             if (irange(1)*irange(2).le.0.0) then
               xstr = 'AST'
-              if (naked) xstr = 'AT'
+              if (naked) xstr = 'AST'
             else
               xstr = 'BNST'
-              if (naked) xstr = 'BT'
+              if (naked) xstr = 'BST'
             end if
 c
 c Draw the axes and maybe label numerically
@@ -2505,23 +2581,21 @@ c
       end
 c
 c
-      subroutine posdec (maxtyp, ltypes, ofile, iline, naxis, crpix, 
-     +                   crval, cdelt, ctype, aline, opos)
+      subroutine posdec (lun, pix3, maxtyp, ltypes, ofile, iline, 
+     +                   aline, opos)
 c---------------------------------------------------------------------
 c     Decode string into positions list
 c
 c     Input
+c       lun      Handle of image for coordianet transforms
+c       pix3     Value of pixel on third axis appropriate
+c                for the displayed image
 c       maxtyp   Maximum number of potential label types
 c       ltypes   Potential label types
 c       ofile    Overlay file name
 c       tr       Transformation matrix
 c       blc      BLC of displayed window
 c       iline    Line number being decoded
-c       naxis    Number of axes
-c       crpix    List of reference pixels
-c       crval    List of reference values
-c       cdelt    List of increments
-c       ctype    List of axis types
 c       aline    Input string
 c     Output
 c       opos     Overlay location, list of: 
@@ -2531,10 +2605,11 @@ c
 c---------------------------------------------------------------------
       implicit none
 c
-      integer iline, naxis, maxtyp
-      double precision crval(naxis), cdelt(naxis), opos(4), crpix(naxis)
-      character*(*) aline, ctype(naxis), ofile, ltypes(maxtyp)
+      integer iline, maxtyp, lun
+      double precision opos(4), pix3
+      character*(*) aline, ofile, ltypes(maxtyp)
 cc 
+      double precision off(2)
       integer i, slen, lena, ipres, npt, nuse, dsign(2), spos
       logical ok
       character str*4, estr*80, otype(2)*6
@@ -2595,28 +2670,21 @@ c
         call bug ('f', estr)
       end if
 c
-c Convert the overlay locations in whatever unit to pixels
+c Convert the overlay locations in true coordinates to pixels
 c
+      off(1) = 0.0d0
+      off(2) = 0.0d0
       npt = 1
-      call otopixcg (otype(1), 1, dsign(1), naxis, crval, crpix, 
-     +               cdelt, ctype, nums(npt), 0.0d0, opos(1), nuse)
-      if (npt+nuse-1.gt.ipres-2) then
+      call ol2pixcg (lun, pix3, ' ', otype, off, dsign, nums(npt),
+     +               opos, nuse)
+      if (nuse.gt.ipres-2) then
         estr = 'Not enough fields for overlay # '//str(1:slen)//
      +         ' in file '//ofile
         call bug ('f', estr)
       end if
       npt = npt + nuse
 c
-      call otopixcg (otype(2), 2, dsign(2), naxis, crval, crpix, 
-     +               cdelt, ctype, nums(npt), 0.0d0, opos(2), nuse)
-      if (npt+nuse-1.gt.ipres-2) then
-        estr = 'Not enough fields for overlay # '//str(1:slen)//
-     +          ' in file '//ofile
-        call bug ('f', estr)
-      end if
-      npt = npt + nuse
-c
-c Do the binning half-sizes in arcseconds. No conversion in this case.
+c Do the binning half-sizes in arcseconds.  
 c
       if (npt.le.ipres-2) then
         opos(3) = nums(npt)
@@ -2773,6 +2841,10 @@ c Find hyper-rectangle surrounding region of interest from highest
 c dimension image involved (i.e., 2-D/3-D).
 c
       call boxinfo (boxes, 3, blc, trc)
+      do i = 1, naxis
+        blc(i) = max(1,blc(i))
+        trc(i) = min(size(i),trc(i))
+      end do        
 c
 c Adjust spatial window to fit an integral number of bins and
 c find size of binned window
@@ -2988,18 +3060,16 @@ c
      +  ctype, ssize, scrval, scrpix, scdelt, sctype, vrange, velax, 
      +  sblc, strc, fits)
 c-----------------------------------------------------------------------
-c     Convert the spectrum spatial location in world coordinates
-c     and spatial binning sizes in ARCSEC to a pixel blc and trc
-c     for the current spectrum image. Also detemine the desired
-c     spectral pixel range for the given velocity range.
+c     Work ou the bounding box in absolute pixels for the sub-cube to
+c     average for the current spectrum position. 
 c
 c Input:
 c   cgnaxis NUmber of axes in contour/grey images
 c   snaxis  Number of axes in spectrum image
 c   labtyp  Axis type of plot
 c   pos     Spectrum location, x, y (contour/grey spatial pixels) 
-c           xsize, ysize (arcsec)  x and y are full image pixels
-c           not just the displayed region pixels
+c           xsize, ysize (arcsec)  x and y are full image unbinned
+c           pixels not just the displayed region pixels
 c   cr*     Header attributes of grey/contour images
 c   ssize   Size of spectrum image
 c   scr*    Header attributes of spectrum image
@@ -3052,7 +3122,7 @@ c
      +                  scrpix, scdelt, sctype, pw, ok)
 c
 c Find BLC and TRC of spatial window in spectrum image. Axes
-c already checked to have radian increments in OPENS
+c already checked to have radian increments earlier
 c
           i1 = nint(ps - (pw-p0))
           i2 = nint(ps + (pw-p0))
@@ -3137,3 +3207,4 @@ c
       size = size + 2
 c
       end
+
