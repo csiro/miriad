@@ -59,17 +59,27 @@ foreach arg ( $argv )
 
 # Copy to the final resting place. Make sure protections are OK.
 
-    chmod u+rw,g+rw,o+r $arg
     if ( $dolocal ) then
-      echo Moving $arg to \$MIR/$dir ...
-      mv $arg $MIR/$dir/$root
-      if ( $status == 0 ) touch $MIR/$dir/$root
+      echo Copying $arg to \$MIR/$dir ...
+      \cp -f $arg $MIR/$dir
     else
       echo Copying $arg to \$MIR/$dir ...
-      cp $arg $MIR/$dir
-      echo Moving $arg to \$MIR/new ...
+      \cp -f $arg $MIR/$dir
+      echo Copying $arg to \$MIR/new ...
       if ( ! -d $MIR/new ) mkdir $MIR/new
-      mv $arg $MIR/new
+      \cp -f $arg $MIR/new
+      if ( -o $MIR/new/$root) then 
+        chmod u+rw,g+rw,o+r $MIR/new/$root
+      endif
+    endif
+
+    if ( -o $MIR/$dir/$root) then 
+      chmod u+rw,g+rw,o+r $MIR/$dir/$root
+    endif
+
+    if ( -w $arg ) then
+      echo Deleting $arg ...
+      \rm -f $arg
     endif
   endif
 end
