@@ -53,6 +53,7 @@ c    rjs  29jul96 Fix calibration options, and som FORTRAN standardisation.
 c    rjs  10dec96 Better error message when nbin is missing.
 c    rjs  12dec96 Fix writing of variables to the right moment.
 c    rjs  21apr99 Allow bin selection and de-dispersation in the one go.
+c    dpr  09nov00 Fix (+n,-n) bug in bin selection
 c------------------------------------------------------------------------
 c
 c  Common block to communicate to the "process" routine.
@@ -66,7 +67,7 @@ c
 c
 	include 'maxdim.h'
 	character version*(*)
-	parameter(version='PsrFix: version 1.0 21-Apr-99')
+	parameter(version='PsrFix: version 1.0 09-Nov-00')
 	character uvflags*16,ltype*16,out*64,binsl(MAXBIN)*64
 	integer tIn,tOut,nchan
 	integer i,j,l,n,s
@@ -123,8 +124,17 @@ c
 	  if(l.gt.3)ok = binsl(i)(1:1).eq.'('.and.
      *		         binsl(i)(l:l).eq.')'
 	  if(.not.ok)call bug('f','Invalid bin selection: '//binsl(i))
+c  dpr 09-11-00:
+c  n is the bin num we to add/subtract this time through
+c  for this output chan
 	  n = 0
+c  s is sign
 	  s = +1
+c  state is what to expect next:
+c  's' - start?
+c  'd' - integer
+c  ',' - comma
+c  c is the current character
 	  state ='s'
 	  do j=2,l-1
 	    c = binsl(i)(j:j)
@@ -137,7 +147,13 @@ c
 	    else if(state.eq.','.and.c.eq.',')then
 	      if(n.eq.0.or.n.gt.MAXBIN)
      *		call bug('f','Invalid bin selection: '//binsl(i))
-	      addarr(i,n) = s
+c  dpr 09-11-00 ->
+	      if (addarr(i,n)+s .eq. 0 ) then
+		addarr(i,n) = 0
+	      else
+		addarr(i,n) = s
+	      endif
+c <-
 	      n = 0
 	      s = +1
 	      state = 's'
@@ -150,7 +166,13 @@ c
 	  enddo
 	  if(state.ne.','.or.n.eq.0.or.n.gt.MAXBIN)
      *	    call bug('f','Invalid bin selection: '//binsl(i))
-	  addarr(i,n) = s
+c  dpr 09-11-00 ->
+	      if (addarr(i,n)+s .eq. 0 ) then
+		addarr(i,n) = 0
+	      else
+		addarr(i,n) = s
+	      endif
+c <-
 	enddo
 c
 c  Various initialisation.
