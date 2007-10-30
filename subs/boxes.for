@@ -41,6 +41,8 @@ c		  and removed this capacity from BoxSet.
 c    rjs 07jul97  Change argument to coVelSet and replace coAxDesc with coAxGet
 c    rjs 09jul97  Correctly handle ANDing with completely flagged plane.
 c    rjs 17may99  Increase size of a buffer.
+c    rjs 14sep00  Make sure that coordinate file can only be an image.
+c    rjs 10oct00  Fix bungle in the above.
 c************************************************************************
 c* Boxes -- Summary of region of interest routines.
 c& mjs
@@ -252,6 +254,7 @@ c
 	      if(file.eq.' ') call bug('f',
      *	        'Only absolute pixel region specification supported')
 	      call xyopen(lu,file,'old',MAXNAX,nsize)
+	      call coInit(lu)
 	      call rdhdi(lu,'naxis1',lu(2),1)
 	      call rdhdi(lu,'naxis2',lu(3),1)
 	      call xyclose(lu)
