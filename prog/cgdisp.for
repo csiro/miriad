@@ -188,6 +188,12 @@ c	  by the "AB" location.  The beams for all images displayed
 c	  (contour and pixel map) will be drawn confocally. If you want
 c	  to draw the beam somewhere else, you could use the "ellipse"
 c	  overlay type (see keyword OLAY).
+c	"conlabel" means label the contour values on the actual contours.
+c	  The PGPLOT routine that does this is not very bright. You will
+c	  probably get too many labels.  If you bin the image up with
+c	  keyword XYBIN, say, by a factor of 2, you will get about 1/2
+c	  as many labels.   If desperate use the overlay facility 
+c	  (keyword OLAY) to manually label contours.
 c	"fiddle" means enter a routine to allow you to interactively change
 c	  the display lookup table.  You can cycle through a variety of
 c	  colour lookup tables, as well as alter a linear transfer function
@@ -279,12 +285,13 @@ c	Up to 3 values. The intensity levels for the break between
 c	solid and dashed contours for each contour image. 
 c	Defaults are 0.0,0.0,0.0
 c@ csize
-c	Up to 3 values.  Character sizes in units of the PGPLOT default
+c	Up to 4 values.  Character sizes in units of the PGPLOT default
 c	(which is ~ 1/40 of the view surface height) for the plot axis
-c	labels, the velocity/channel label, and the overlay ID string
-c	(if option "write" in OLAY used) label.
-c	Defaults choose something sensible.  Use 0.0 to default the 
-c	first or second, but not the second or third, e.g., 0.0, 1.5
+c	labels, the velocity/channel label, the overlay ID string
+c	(if option "write" in OLAY used) label, and the contour
+c	value labels (see options=conlab). 
+c	Defaults try to choose something sensible.  Use 0.0 to default
+c	any particular value. E.g., 1.4, 0, 0, 0.5
 c@ scale
 c	Up to 2 values.  Scales in natural axis units/mm with which to plot
 c	in the 	x and y directions.  For example, if the increments 
@@ -554,6 +561,7 @@ c    nebk 12nov95  Change to deal internally only in absolute pixels
 c		   Better job on overlays, add options=nodistort
 c                  '*lin' -> '*nat'
 c    nebk 22nov95  Add ellipse overlays
+c    nebk 29nov95  Add options=conlab
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -576,7 +584,7 @@ c
      +  ltypes(maxtyp)*6
 c
       real levs(maxlev,maxcon), pixr(2,maxchan), tr(6), bmin(maxcon+4), 
-     +  bmaj(maxcon+4), bpa(maxcon+4), scale(2), cs(3), pixr2(2), 
+     +  bmaj(maxcon+4), bpa(maxcon+4), scale(2), cs(4), pixr2(2), 
      +  slev(maxcon), break(maxcon), vfac(2), bfac(5), tfvp(4), 
      +  wdgvp(4), cumhis(nbins), gmm(2), cmm(2,maxcon), dmm(2)
       real vxmin, vymin, vymax, vx, vy, vxsize, vysize, vxgap, vygap, 
@@ -599,7 +607,7 @@ c
       logical do3val, do3pix, dofull, gaps, eqscale, doblc, doblg,
      +  dobeam, beaml, beamb, relax, rot90, signs, mirror, dowedge, 
      +  doerase, doepoch, bdone, doblb, doblm, dofid, dosing, nofirst,
-     +  grid, dotr, dodist
+     +  grid, dotr, dodist, conlab
 c
       data blankc, blankv, blankb /-99999999.0, -99999999.0, 
      +                             -99999999.0/
@@ -615,7 +623,8 @@ c
       data coltab /maxchan*0/
       data lwid /maxconp3*1/
 c-----------------------------------------------------------------------
-      call output ('CgDisp: version 22-Nov-95')
+      call output ('CgDisp: version 29-Nov-95')
+      call output ('New options=conlabel to label contour values')
       call output ('New overlay types "ellipse" and "oellipse"')
       call output ('New options=nodist prevents overlay distortion'//
      +             ' with coordinate grid')
@@ -629,7 +638,7 @@ c
      +   boxfac, boxinc, pdev, labtyp, dofull, do3val, do3pix, eqscale, 
      +   gaps, solneg, nx, ny, lwid, break, cs, scale, ofile, dobeam, 
      +   beaml, beamb, relax, rot90, signs, mirror, dowedge, doerase, 
-     +   doepoch, dofid, dosing, nofirst, grid, dotr, dodist)
+     +   doepoch, dofid, dosing, nofirst, grid, dotr, dodist, conlab)
 c
 c Open images as required
 c
@@ -678,13 +687,15 @@ c
       call nxnycg (nxdef, nydef, ngrps, nx, ny, nlast)
       npixr = min(ngrps,npixr)
 c
-c Work out default character sizes for axis and channel labels
+c Work out default character sizes for axis, 3-value, and
+c contour labels
 c
       call defchrcg (nx, ny, cs(1))
       write (aline, 100) cs(1), cs(2)
 100   format ('Character sizes (axes & velocity) are: ', f3.1, ', ', 
      +         f3.1)
       call output (aline)
+      if (cs(4).eq.0.0) cs(4) = 1.0
 c
 c Open plot device 
 c
@@ -893,9 +904,9 @@ c
 c
              call pgslw (lwid(i+1))
              call pgsci (concol(i))
-             call conturcg (blankc, solneg(i), win(1), win(2), doblc,
-     +          memr(ipim), nlevs(i), levs(1,i), tr, break(i))
-             call pgupdt
+             call pgsch (cs(4))
+             call conturcg (conlab, blankc, solneg(i), win(1), win(2), 
+     +          doblc, memr(ipim), nlevs(i), levs(1,i), tr, break(i))
            end do
          end if
 c
@@ -1545,7 +1556,7 @@ c
       subroutine decopt  (dofull, do3val, do3pix, eqscale, gaps, solneg,
      +   beambl, beambr, beamtl, beamtr, relax, rot90, signs, 
      +   mirror, dowedge, doerase, doepoch, dofid, dosing, nofirst,
-     +   grid, dotr, dodist)
+     +   grid, dotr, dodist, conlab)
 c----------------------------------------------------------------------
 c     Decode options array into named variables.
 c
@@ -1576,16 +1587,17 @@ c		but the left most
 c     grid      Extend ticks to grid
 c     dotr      Label top and right as well as left and bottom axes
 c     dodist    Distort overlays with grid
+c     conlab    Label contours
 c-----------------------------------------------------------------------
       implicit none
 c
       logical dofull, do3val, do3pix, eqscale, gaps, solneg(*),
      +  beambl, beambr, beamtl, beamtr, relax, rot90, signs,
      +  mirror, dowedge, doerase, doepoch, dofid, dosing, nofirst,
-     +  grid, dotr, dodist
+     +  grid, dotr, dodist, conlab
 cc
       integer maxopt
-      parameter (maxopt = 25)
+      parameter (maxopt = 26)
 c
       character opshuns(maxopt)*9
       logical present(maxopt)
@@ -1595,7 +1607,7 @@ c
      +              'relax   ', 'rot90   ', 'signs   ', 'mirror',
      +              'wedge   ', 'noerase ', 'noepoch ', 'fiddle',
      +              'single  ', 'nofirst',  'grid    ', 'trlab',
-     +              'nodistort'/
+     +              'nodistort', 'conlabel'/
 c-----------------------------------------------------------------------
       call optcg ('options', opshuns, present, maxopt)
 c
@@ -1624,6 +1636,7 @@ c
       grid      =      present(23)
       dotr      =      present(24)
       dodist    = .not.present(25)
+      conlab    =      present(26)
 c
       end
 c
@@ -2192,7 +2205,7 @@ c
      +   boxfac, boxinc, pdev, labtyp, dofull, do3val, do3pix, eqscale, 
      +   gaps, solneg, nx, ny, lwid, break, cs, scale, ofile, dobeam, 
      +   beaml, beamb, relax, rot90, signs, mirror, dowedge, doerase, 
-     +   doepoch, dofid, dosing, nofirst, grid, dotr, dodist)
+     +   doepoch, dofid, dosing, nofirst, grid, dotr, dodist, conlab)
 c-----------------------------------------------------------------------
 c     Get the unfortunate user's long list of inputs
 c
@@ -2265,11 +2278,12 @@ c   nofirst    DOnt write first x-axis label on subplots except first
 c   grid       Extend ticks to grid
 c   dotr       Label top and right axes as well as bototm and left
 c   dodist     Distort overlays with grid
+c   conlab     Label contours
 c-----------------------------------------------------------------------
       implicit none
 c
       integer maxlev, maxcon, maxtyp, maxgr, ncon, nvec, npixr
-      real levs(maxlev,maxcon), pixr(2,maxgr), scale(2), cs(3),
+      real levs(maxlev,maxcon), pixr(2,maxgr), scale(2), cs(*),
      +  slev(maxcon), break(maxcon), vecfac, boxfac
       integer nx, ny, nlevs(maxcon), lwid(maxcon+3), vecinc(2), 
      +  boxinc(2), ibin(2), jbin(2), kbin(2), coltab(maxgr)
@@ -2278,7 +2292,7 @@ c
       logical do3val, do3pix, dofull, gaps, eqscale, solneg(maxcon),
      +  dobeam, beaml, beamb, relax, rot90, signs, mirror, dowedge,
      +  doerase, doepoch, dofid, dosing, nofirst, grid, dotr, 
-     +  dodist, dunw
+     +  dodist, dunw, conlab
 cc
       integer nmaxim
       parameter (nmaxim = 8)
@@ -2462,7 +2476,7 @@ c
       call decopt (dofull, do3val, do3pix, eqscale, gaps, solneg,
      +   beambl, beambr, beamtl, beamtr, relax, rot90, signs, 
      +   mirror, dowedge, doerase, doepoch, dofid, dosing, nofirst,
-     +   grid, dotr, dodist)
+     +   grid, dotr, dodist, conlab)
 c
       if (gin.eq.' ') then
         dowedge = .false.
@@ -2557,6 +2571,7 @@ c
       call keyr ('csize', cs(1), 0.0)
       call keyr ('csize', cs(2), 0.0)
       call keyr ('csize', cs(3), 0.0)
+      call keyr ('csize', cs(4), 0.0)
 c
       call keyr ('scale', scale(1), 0.0)
       call keyr ('scale', scale(2), scale(1))
@@ -2882,7 +2897,7 @@ c
      +  wout(3), off(2), rad, x1, x2, y1, y2, major, minor,
      +  pa, phi, cospa, sinpa, xx, yy, ocen2(2)
       integer i, j, slen, lena, inum, ipres, nextra, ipt, ifac,
-     +  icomm(maxnum), dsign(2), spos, nuse, il
+     +  icomm(maxnum), dsign(2), spos, nuse, il, naxis
       logical ok
       character str*4, estr*80, wover*3, otype(2)*6, type(3)*6,
      +  abspix(3)*6, type2(3)*6
@@ -3031,9 +3046,12 @@ c
 c
 c Convert centre back into units given by OTYPE
 c
+        call rdhdi (lun, 'naxis', naxis, 0)
+        naxis = min(3,naxis)
+c
         win(1) = ocen(1)
         win(2) = ocen(2)
-        call w2wco (lun, 3, abspix, ' ', win, type, ' ', wcen)
+        call w2wco (lun, naxis, abspix, ' ', win, type, ' ', wcen)
 c
 c Get half sizes from overlay line
 c
@@ -3059,49 +3077,49 @@ c
           if (ofig.eq.'box') then
             win(1) = wcen(1) - width(1)
             win(2) = wcen(2) + width(2)
-            call w2wco (lun, 3, type, ' ', win, abspix, ' ', wout)
+            call w2wco (lun, naxis, type, ' ', win, abspix, ' ', wout)
             ocorn(1,1) = wout(1)
             ocorn(2,1) = wout(2)
 c
             win(1) = wcen(1) + width(1)
             win(2) = wcen(2) + width(2)
-            call w2wco (lun, 3, type, ' ', win, abspix, ' ', wout)
+            call w2wco (lun, naxis, type, ' ', win, abspix, ' ', wout)
             ocorn(1,2) = wout(1)
             ocorn(2,2) = wout(2)
 c
             win(1) = wcen(1) + width(1)
             win(2) = wcen(2) - width(2)
-            call w2wco (lun, 3, type, ' ', win, abspix, ' ', wout)
+            call w2wco (lun, naxis, type, ' ', win, abspix, ' ', wout)
             ocorn(1,3) = wout(1)
             ocorn(2,3) = wout(2)
 c
             win(1) = wcen(1) - width(1)
             win(2) = wcen(2) - width(2)
-            call w2wco (lun, 3, type, ' ', win, abspix, ' ', wout)
+            call w2wco (lun, naxis, type, ' ', win, abspix, ' ', wout)
             ocorn(1,4) = wout(1)
             ocorn(2,4) = wout(2)
           else 
             win(1) = wcen(1) 
             win(2) = wcen(2) + width(2)
-            call w2wco (lun, 3, type, ' ', win, abspix, ' ', wout)
+            call w2wco (lun, naxis, type, ' ', win, abspix, ' ', wout)
             ocorn(1,1) = wout(1)
             ocorn(2,1) = wout(2)
 c
             win(1) = wcen(1) + width(1)
             win(2) = wcen(2) 
-            call w2wco (lun, 3, type, ' ', win, abspix, ' ', wout)
+            call w2wco (lun, naxis, type, ' ', win, abspix, ' ', wout)
             ocorn(1,2) = wout(1)
             ocorn(2,2) = wout(2)
 c
             win(1) = wcen(1)
             win(2) = wcen(2) - width(2)
-            call w2wco (lun, 3, type, ' ', win, abspix, ' ', wout)
+            call w2wco (lun, naxis, type, ' ', win, abspix, ' ', wout)
             ocorn(1,3) = wout(1)
             ocorn(2,3) = wout(2)
 c
             win(1) = wcen(1) - width(1)
             win(2) = wcen(2)
-            call w2wco (lun, 3, type, ' ', win, abspix, ' ', wout)
+            call w2wco (lun, naxis, type, ' ', win, abspix, ' ', wout)
             ocorn(1,4) = wout(1)
             ocorn(2,4) = wout(2)
           end if
@@ -3116,17 +3134,17 @@ c
           type2(1) = 'relpix'
           type2(2) = 'relpix'
           type2(3) = 'abspix'
-          call w2wco (lun, 3, type2, ' ', win, type, ' ', wcen)
+          call w2wco (lun, naxis, type2, ' ', win, type, ' ', wcen)
 c          
           win(1) = wcen(1) - width(1)
           win(2) = wcen(2) - width(2)
-          call w2wco (lun, 3, type, ' ', win, abspix, ' ', wout)
+          call w2wco (lun, naxis, type, ' ', win, abspix, ' ', wout)
           x1 = wout(1)
           y1 = wout(2)
 c
           win(1) = wcen(1) + width(1)
           win(2) = wcen(2) + width(2)
-          call w2wco (lun, 3, type, ' ', win, abspix, ' ', wout)
+          call w2wco (lun, naxis, type, ' ', win, abspix, ' ', wout)
           x2 = wout(1)
           y2 = wout(2)
 c
@@ -3251,7 +3269,7 @@ c Convert centre back into units given by OTYPE
 c
         win(1) = ocen(1)
         win(2) = ocen(2)
-        call w2wco (lun, 3, abspix, ' ', win, type, ' ', wcen)
+        call w2wco (lun, naxis, abspix, ' ', win, type, ' ', wcen)
 c
 c Generate poly-line coordinates for circle
 c
@@ -3268,7 +3286,7 @@ c
             win(1) = rad*cos(real(j)/rd) + wcen(1)
             win(2) = rad*sin(real(j)/rd) + wcen(2)
 c 
-            call w2wco (lun, 3, type, ' ', win, abspix, ' ', wout)
+            call w2wco (lun, naxis, type, ' ', win, abspix, ' ', wout)
             poly(i,1) = wout(1)
             poly(i,2) = wout(2)
 c
@@ -3290,14 +3308,14 @@ c
           type2(1) = 'relpix'
           type2(2) = 'relpix'
           type2(3) = type(3)
-          call w2wco (lun, 3, type2, ' ', win, type, ' ', wcen)
-          call w2wco (lun, 3, type2, ' ', win, abspix, ' ', ocen2)
+          call w2wco (lun, naxis, type2, ' ', win, type, ' ', wcen)
+          call w2wco (lun, naxis, type2, ' ', win, abspix, ' ', ocen2)
 c
           do j = 0, 360, 2
             win(1) = rad*cos(real(j)/rd) + wcen(1)
             win(2) = rad*sin(real(j)/rd) + wcen(2)
 c 
-            call w2wco (lun, 3, type, ' ', win, abspix, ' ', wout)
+            call w2wco (lun, naxis, type, ' ', win, abspix, ' ', wout)
             poly(i,1) = wout(1) + ocen(1) - ocen2(1)
             poly(i,2) = wout(2) + ocen(2) - ocen2(2)
 c
@@ -3346,7 +3364,7 @@ c Convert centre back into units given by OTYPE
 c
         win(1) = ocen(1)
         win(2) = ocen(2)
-        call w2wco (lun, 3, abspix, ' ', win, type, ' ', wcen)
+        call w2wco (lun, naxis, abspix, ' ', win, type, ' ', wcen)
 c
 c Generate poly-line coordinates for ellipse
 c
@@ -3366,7 +3384,7 @@ c
             win(1) = ( xx*cospa + yy*sinpa) + wcen(1)
             win(2) = (-xx*sinpa + yy*cospa) + wcen(2)
 c
-            call w2wco (lun, 3, type, ' ', win, abspix, ' ', wout)
+            call w2wco (lun, naxis, type, ' ', win, abspix, ' ', wout)
             poly(i,1) = wout(1)
             poly(i,2) = wout(2)
 c
@@ -3388,8 +3406,8 @@ c
           type2(1) = 'relpix'
           type2(2) = 'relpix'
           type2(3) = type(3)
-          call w2wco (lun, 3, type2, ' ', win, type, ' ', wcen)
-          call w2wco (lun, 3, type2, ' ', win, abspix, ' ', ocen2)
+          call w2wco (lun, naxis, type2, ' ', win, type, ' ', wcen)
+          call w2wco (lun, naxis, type2, ' ', win, abspix, ' ', ocen2)
 c
           do j = 0, 360, 2
             phi = dble(j) / rd
@@ -3398,7 +3416,7 @@ c
             win(1) = ( xx*cospa + yy*sinpa) + wcen(1)
             win(2) = (-xx*sinpa + yy*cospa) + wcen(2)
 c
-            call w2wco (lun, 3, type, ' ', win, abspix, ' ', wout)
+            call w2wco (lun, naxis, type, ' ', win, abspix, ' ', wout)
             poly(i,1) = wout(1) + ocen(1) - ocen2(1)
             poly(i,2) = wout(2) + ocen(2) - ocen2(2)
 c
@@ -3612,7 +3630,7 @@ c Open contour images as required
 c
       if (ncon.gt.0)  then
         do i = 1, ncon
-          call opimcg (maxnax, cin(i), lc(i), csize, cnaxis(i))
+          call opimcg (maxnax, cin(i), lc(i), csize(1,i), cnaxis(i))
           cmm(1,i) = 1e30
           cmm(2,i) = -1e30
         end do
