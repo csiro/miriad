@@ -95,11 +95,14 @@ c
 c  History:
 c    rjs  12jul97 Original version.
 c    rjs  16mar98 Added region parameter.
-c
+c    rjs  19aug98 Fix bug introduced on 16 March where the first plane
+c		  in the output was the last plane in the selected region
+c		  for factor determination.
+c		  
 c  Bugs:
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Immerge: version 1.0 16-Mar-98')
+	parameter(version='Immerge: version 1.0 19-Aug-98')
 	include 'maxdim.h'
 	include 'maxnax.h'
 	include 'mirconst.h'
@@ -686,6 +689,13 @@ c  Free the allocated memory.
 c
 	call memFree(pX,n,'r')
 	call memFree(pY,n,'r')
+c
+c  Reset to select the first plane.
+c
+	if(kmax.ne.1)then
+	  call xysetpl(lIn1,1,1)
+	  call xysetpl(lIn2,1,1)
+	endif
 c
 	end
 c************************************************************************
