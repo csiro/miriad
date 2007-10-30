@@ -100,9 +100,12 @@ Instructions for Installing Miriad
 
       PGPLOT may depend on other libraries (e.g. probably the X11 libraries).
 
-      PGPLOT is available from ftp://astro.caltech.edu/pub/pgplot in file
-      pgplot5.2.tar.gz -- which is a gzip'd tar file. Tim Pearson
-      (tjp@astro.caltech.edu) can give advice on PGPLOT.
+      PGPLOT is available from
+
+      ftp://astro.caltech.edu/pub/pgplot/pgplot5.2.tar.gz
+
+      which is a gzip'd tar file. Tim Pearson (tjp@astro.caltech.edu) ca
+      give advice on PGPLOT.
 
       The tar distribution for Miriad also comes with this distribution,
       (subdirectory pgplot). However if you already have an up-to-date copy,
@@ -139,10 +142,15 @@ Instructions for Installing Miriad
       will not have command-line editting. A binary copy of the readline library
       comes with this distribution. However, system incompatibilities
       may make this of little value. A copy of the readline source
-      is available as ftp://prep.ai.mit.edu/pub/gnu/readline-2.0.tar.gz.
-      (Rumour has it that the BASH shell comes with a version of the readline
+      is available as
+
+      ftp://prep.ai.mit.edu/pub/gnu/readline-4.0.tar.gz.
+
+      Rumour has it that the BASH shell comes with a version of the readline
       library that is different to the above. This version may require you
-      to link with both libreadline and libhistory. Be warned.)
+      to link with both libreadline and libhistory. Be warned. Also some
+      old versions of the readline library require the compiler switches
+      "cc -32 -D_BSD_SIGNALS" on irix64.
 
     If you lack some of the above libraries (rpfits, readline, Athena
     widgets) and are disinclined to install them, see Note 14 for a
@@ -577,6 +585,15 @@ Our experience with FORTRAN compilers based on "f2c" is not entirely
 positive. Tasks "atlod" is believed to fail to work
 properly when using f2c-based compilers. g77 seems more reliable,
 but still not perfect.
+
+LINUX
+-----
+See comments above. Additionally, the FORTRAN compiler can be known as 
+"f77", "g77" or "fort77", depending on the software you have. There are
+problems with what are believed to be compiler and library bugs on various
+variants of LINUX. There problems are rarely reproducable on other LINUX
+systems, so it appears that the compiler/library bugs are created and
+corrected quite rapidly.
 
 IRIX
 ----
