@@ -331,6 +331,38 @@ l2:
 	  set linklist = "$linklist -L$pgplotdir -lpgplot"
 	endif
 
+# Try to find the png library.
+
+l21:
+	echo ""
+	echo -n "Do PGPLOT tasks need the png library (likely yes)? [y/n] "
+	set answer = $<
+	if ( "$answer" != "y" && "$answer" != "n" ) goto l21
+	if ( "$answer" == "n" ) goto l3
+
+	set pngdir = ""
+	foreach dir ($searchlist)
+	  if ( -e $dir/libpng.a || -e $dir/libpng.so ) set pngdir = $dir
+	end
+l22:
+	if ( "$pngdir" == "" || ! ( -e $pngdir/libpng.a || -e $pngdir/libpng.so ) ) then
+	  echo "### Could not find png library"
+	  echo ""
+	  echo -n "Please enter the directory of the png library: "
+	  set pngdir = $<
+	  goto l22
+	endif
+	if ( "$pngdir" == "$MIRLIB" ) set pngdir = '$MIRLIB'
+	echo ""
+	echo "Using $pngdir for the png library directory ..."
+	if ( "$pngdir" == "/usr/lib" || "$pngdir" == "/lib" ) then
+	  set linklist = "$linklist -lpng -lz"
+	else if ( "$pngdir" == "$pgplotdir" ) then
+	  set linklist = "$linklist -lpng -lz" 
+        else
+	  set linklist = "$linklist -L$pngdir -lpng -lz"
+	endif
+
 # Try to find the X11 library.
 
 l3:
