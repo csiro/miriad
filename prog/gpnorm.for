@@ -39,6 +39,7 @@ c    rjs     4aug92 Handle new gains file possibility, and lack of xyphases
 c		    item.
 c    rjs    12oct93 noapply is now the default.
 c    rjs    13jul96 Added select keyword.
+c    rjs    28nov97 Added more decimal places to printout.
 c
 c  Bugs and Shortcomings:
 c   * If the number of leakages in the "vis" file is greater than the 
@@ -48,7 +49,7 @@ c------------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'maxdim.h'
 	character version*(*)
-	parameter(version='GpNorm: version 1.0 12-Oct-93')
+	parameter(version='GpNorm: version 1.0 28-Nov-97')
 	logical doxy,doapply,antflag(MAXANT)
 	integer tCal,tVis,iostat,nLeaks,itVis,itCal,itemp,i
 	character vis*64,cal*64,line*64
@@ -126,14 +127,14 @@ c
 c  Report on what we have found out, write it to the history.
 c
 	arg = atan2(aimag(xyphase),real(xyphase))
-	write(line,'(a,f6.1)')'Xyphase (degrees): ',180/pi*arg
+	write(line,'(a,f7.2)')'Xyphase (degrees): ',180/pi*arg
 	call output(line)
 	if(doapply)call hiswrite(tVis,'GPNORM: '//line)
-	write(line,'(a,f6.3,a,f6.3,a)')'Offset: (',real (offset),',',
+	write(line,'(a,f7.4,a,f7.4,a)')'Offset: (',real (offset),',',
      *						   aimag(offset),')'
 	call output(line)
 	if(doapply)call hiswrite(tVis,'GPNORM: '//line)
-	write(line,'(a,f7.4)')'Rms Error: ',error
+	write(line,'(a,f8.5)')'Rms Error: ',error
 	call output(line)
 	if(doapply)call hiswrite(tVis,'GPNORM: '//line)
 c
