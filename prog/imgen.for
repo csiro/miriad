@@ -110,10 +110,11 @@ c    rjs   13dec96  Increase max number of objects.
 c    rjs   02jul97  cellscal change.
 c    rjs   14jul97  Check when there are too many objects and increase
 c		    max number of objects.
+c    rjs   23jul97  added pbtype.
 c  Bugs/Wishlist:
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Imgen: version 1.1 14-Jul-97' )
+	parameter(version='Imgen: version 1.1 23-Jul-97' )
 	include 'mirconst.h'
 	include 'maxdim.h'
 	include 'maxnax.h'
@@ -374,7 +375,7 @@ c  Make a header for the output image.
 c
 c------------------------------------------------------------------------
 	integer nkeys
-	parameter(nkeys=43)
+	parameter(nkeys=44)
 	character line*64
 	integer i
 	character keyw(nkeys)*8
@@ -386,7 +387,8 @@ c------------------------------------------------------------------------
      *	  'epoch   ','ltype   ','lstart  ','lwidth  ',
      *	  'lstep   ','mask    ','niters  ','object  ','history ',
      *    'observer','obsra   ','obsdec  ','restfreq','telescop',
-     *	  'vobs    ','cellscal','obstime ','pbfwhm  ','btype   '/
+     *	  'vobs    ','cellscal','obstime ','pbfwhm  ','btype   ',
+     *	  'pbtype  '/
 c
 c  Either create a new header, or copy the old one.
 c
