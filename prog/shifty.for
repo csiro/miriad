@@ -20,9 +20,10 @@ c  History:
 c    rjs  21nov90 Original version.
 c    rjs  11apr91 Changed "mitoa" to "mitoaf".
 c    rjs  15dec92 Use memalloc.
+c    rjs   1may96 Fix coordinates for Brett.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='version 1.0 15-Dec-92')
+	parameter(version='version 1.0 1-May-96')
 	include 'maxdim.h'
 	character in1*64,in2*64,out*64,text*80
 	integer lIn1,lIn2,lOut,nsize1(3),nsize2(3),shift(2),length,i
@@ -84,7 +85,7 @@ c
 c  Make the header of the output. This is but a straight copy of the input.
 c
 	do i=1,nkeys
-	  call hdcopy(lIn2,lOut,keyw(i))
+	  call hdcopy(lIn1,lOut,keyw(i))
 	enddo
 	call hisopen(lOut,'append')
         call hiswrite (lOut, 'SHIFTY: Miriad Shifty '//version)
