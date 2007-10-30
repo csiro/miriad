@@ -88,13 +88,16 @@ c    24apr01 rjs  Change format (and allow multiple formats) of met data file.
 c		  Remove code for opacGet.
 c    05jul01 dpr  Re-allow default met data format.
 c    26may02 rjs  Added mode=neither!
+c    04may03 rjs  Looks like it has been flawed with default met file format
+c	          for 2 years!!
+c    04may03 rjs  getlst would return the wrong lst in some circumstances.
 c------------------------------------------------------------------------
 	integer MAXPOL,MAXSELS
 	parameter(MAXPOL=2,MAXSELS=1024)
 	include 'maxdim.h'
 	include 'mirconst.h'
 	character version*(*)
-	parameter(version='opcal: version 1.0 26-May-02')
+	parameter(version='opcal: version 1.0 04-May-03')
 	integer PolXX,PolYY,PolXY,PolYX
 	parameter(PolXX=-5,PolYY=-6,PolXY=-7,PolYX=-8)
 c
@@ -384,6 +387,7 @@ c
      *    call tinbug('f','Error decoding time in met data')
 c	  call tinGett(time,0.d0,'atime')
 	  call tinGett(dtime,0.0d0,'dtime')
+	  time = time + dtime - 10.0d0/24.0d0
 	  call tinSkip(1)
 	  call tinGetr(t0,0.0)
 	  call tinSkip(2)
@@ -466,6 +470,7 @@ c
 	call uvrdvrd (lin, 'ra', dtemp, 0.d0)
 	call uvrdvrd (lin, 'obsra', ra, dtemp)
 	call getlong(lin,long)
+	call uvrdvrd (lin, 'time', time, 0.d0)
         call jullst (time, long, lst)
 	lst = lst + eqeq(time)
       else
