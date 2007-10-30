@@ -26,6 +26,7 @@
      bpw  27-jul-93  Fixed allocation bug introduced in previous update
                      (problems for 1-plane datasets)
      rjs   4-sep-94  Change "word" to "words" to satisfy Cray compiler.
+     rjs   6-nov-94  Change item handle to an integer.
 *******************************************************************************/
 
 /******************************************************************************/
@@ -83,7 +84,7 @@ int     MODE;
    newbuffer: to allow a check if xyzsetup is called more often for a dataset
    ntno: number of datasets currently opened
 */
-static  struct { char *itno; char *mask; int number;
+static  struct { int itno; char *mask; int number;
                  int naxis, axlen[ARRSIZ], cubesize[ARRSIZ];
                  int blc[ARRSIZ], trc[ARRSIZ];
                  int lower[ARRSIZ], upper[ARRSIZ];
