@@ -89,6 +89,8 @@ c    rjs  21sep95 Really do it this time.
 c    rjs  14dec95 Increase buffer in averaging (MAXAVER).
 c    rjs  14jun96 Add warning about time averaging pulsar bin data.
 c    rjs  10feb97 Improve averaging in the face of bad, out-of-sequence, data.
+c    rjs  10oct97 Eliminate incorrect call to uvvarcopy just before the
+c		  final buffer flush.
 c
 c  Bugs:
 c    * The way of determining whether a source has changed is imperfect.
@@ -98,7 +100,7 @@ c    * Too much of this code worries about polarisations.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
-	parameter(version='UvAver: version 1.0 10-Feb-97')
+	parameter(version='UvAver: version 1.0 10-Oct-97')
 	character uvflags*12,ltype*16,out*64
 	integer npol,Snpol,pol,tIn,tOut,vupd,nread,nrec,i,nbin
 	real inttime
@@ -262,8 +264,6 @@ c
 c  Flush out anything remaining.
 c
 	  if(buffered)then
-	    call VarCopy(tIn,tOut)
-	    if(nbin.gt.1)call uvputvri(tOut,'nbin',1,1)
 	    call BufFlush(tOut,ampsc,vecamp,npol)
 	    PolVary = PolVary.or.npol.le.0.or.
      *	      (Snpol.ne.npol.and.Snpol.gt.0)
