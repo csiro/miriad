@@ -130,6 +130,8 @@ c	  E.g., the cube is in vxy order and LABTYP=ABSKMS,ARCSEC the units
 c	  for the "3VALUE" label will be arcsec.  If LABTYP=ABSKMS,HMS the 
 c	  "3VALUE" label will be DMS (if the third [y] axis is declination).
 c
+c	"grid" means draw a coordinate grid on the plot rather than just ticks
+c
 c	"noerase"  Don't erase a snugly fitting rectangle into which the 
 c	  "3-axis" value string is written.
 c      
@@ -267,6 +269,8 @@ c    nebk 14apr95  Make sure old lookup table not lost when stepping to
 c		   new subplot
 c    nebk 11aug95  Add arcmin labtyp
 c    rjs  30aug95  Add a comma to appease g77
+c    nebk 03sep95  Add options=grid, non-linear axis labels and
+c		   detect black/white background of device
 c To do:
 c
 c-----------------------------------------------------------------------
@@ -292,7 +296,7 @@ c
      +  grpbeg(maxchan), ngrp(maxchan), srtlev(maxlev), his(nbins)
       integer nx, ny, nlevs, lin, naxis, k, ierr, pgbeg, iostat, ipage,
      +  ilen, ibin(2), jbin(2), kbin(2), krng(2), nlast, ngrps, lstat, 
-     +  lreg, lcurs, jj, wedcod
+     +  lreg, lcurs, jj, wedcod, labcol, poscol, statcol, regcol
 c
       character ctype(maxnax)*9, labtyp(2)*6
       character in*64, pdev*64, xlabel*40, ylabel*40, xopts*20, 
@@ -301,12 +305,14 @@ c
       logical do3val, do3pix, eqscale, doblnk, cursor, stats, doreg,
      +  mask, smore, rmore, cmore, dopixel, display, doabs, gaps, dolog,
      +  cgspec, cgdisp, mark, doerase, dobox, near, dowedge, dofid,
-     +  first
+     +  first, grid
 c
       data ipage, scale /0, 0.0, 0.0/
       data dmm /1.0e30, -1.0e30/
 c-----------------------------------------------------------------------
-      call output ('CgCurs: version 11-Aug-95')
+      call output ('CgCurs: version 03-Sep-95')
+      call output ('Non-linear coordinate labels now correctly handled')
+      call output ('New options=grid to overlay coordinate grid')
       call output (' ')
 c
 c Get user inputs
@@ -314,7 +320,8 @@ c
       call inputs (maxlev, in, ibin, jbin, kbin, levtyp, slev, levs, 
      +   nlevs, pixr, trfun, pdev, labtyp, do3val, do3pix, eqscale, 
      +   nx, ny, cs, dopixel, cursor, stats, doreg, doabs, dolog, 
-     +   cgspec, cgdisp, mark, doerase, dobox, near, dowedge, dofid)
+     +   cgspec, cgdisp, mark, doerase, dobox, near, dowedge, 
+     +   dofid, grid)
 c
 c Open image
 c
@@ -416,16 +423,18 @@ c
         call bug ('f', 'Error opening plot device')
       endif
 c
+      call pgpage
+      call pgscf(1)
+c
 c Useless for harcopy device
 c
       call pgqinf ('hardcopy', hard, ilen)
       if (hard.eq.'YES')
      +   call bug ('f', 'This program not useful for hard copy devices')
 c
-c Step to first sub-plot, set font and basic character size
+c Set line graphics colour indices
 c
-      call pgpage
-      call pgscf(1)
+      call setlgc (labcol, poscol, statcol, regcol)
 c       
 c Init OFM routines
 c       
@@ -434,15 +443,16 @@ c
 c Set label displacements from axes and set PGTBOX labelling
 c option strings
 c
-      call setlabcg (labtyp, ymin, ymax, xdispl, ydispb, xopts, yopts)
+      call setlabcg (grid, labtyp, ymin, ymax, xdispl, ydispb, 
+     +               xopts, yopts)
 c
 c Work out view port encompassing all sub-plots. Also return 
 c the viewport size of sub-plots.
 c
       call vpsizcg (.false., dofid, 0, ' ', ' ', 0, ' ', maxlev,
      +   nlevs, srtlev, levs, slev, nx, ny, cs, xdispl, ydispb, 
-     +   .false., wedcod, wedwid, wedisp, tfdisp, labtyp, vxmin, 
-     +   vymin, vymax, vxgap, vygap, vxsize, vysize, tfvp, wdgvp)
+     +   .false., .false., wedcod, wedwid, wedisp, tfdisp, labtyp, 
+     +   vxmin, vymin, vymax, vxgap, vygap, vxsize, vysize, tfvp, wdgvp)
 c
 c Adjust viewport increments and start locations if equal scales
 c requested or if scales provided by user
@@ -485,7 +495,7 @@ c
 c
 c Apply transfer function
 c
-         call pgsci (7)
+         call pgsci (labcol)
          if (dopixel) then
            if (trfun.ne.'lin') call apptrfcg (pixr2, trfun, groff, 
      +        win(1)*win(2), memi(ipnim), memr(ipim), nbins,
@@ -508,7 +518,7 @@ c
 c
 c Draw pixel map; set default b&w colour table first.
 c
-           call pgsci (7)
+           call pgsci (labcol)
            if (dopixel) then
              if (k.eq.1) call ofmcol (1, pixr2(1), pixr2(2))
              call pgimag (memr(ipim), win(1), win(2), 1, win(1), 1,
@@ -524,10 +534,11 @@ c
 c Label and draw axes
 c
            call pgsch (cs(1))
-           if (first) call axlabcg (.false., gaps, nx, ny, ngrps, nlast, 
-     +       k, xopts, yopts,xdispl, ydispb, labtyp, xlabel, ylabel, 
-     +       xxopts, yyopts)
-           call boxcg (first, xxopts, yyopts)
+           if (first) call axlabcg (.false., gaps, .false., nx, ny, 
+     +        ngrps, nlast, k, xopts, yopts,xdispl, ydispb, labtyp, 
+     +        xlabel, ylabel, xxopts, yyopts)
+           call labaxcg (lin, first, blc, trc, krng, labtyp, 
+     +                   xxopts, yyopts)
 c
 c Draw wedge inside subplots and overwrite label ticks
 c
@@ -557,7 +568,7 @@ c
 c
 c Read value and location under cursor
 c
-             call pgsci (2)
+             call pgsci (poscol)
              call curpos (lin, win(1), win(2), memr(ipim), memr(ipims),
      +           memi(ipnim), labtyp, blc, naxis, cdelt, crpix, 
      +           crval, ctype, ibin, jbin, krng, dolog, lcurs, 
@@ -570,7 +581,7 @@ c
 c
 c Find image statistics in polygonal region defined by cursor
 c
-             call  pgsci (3)
+             call pgsci (statcol)
              call curstat (lin, blc, win(1), win(2), memr(ipim),
      +          memr(ipims), memi(ipnim), labtyp, naxis, crval, 
      +          cdelt, crpix, ctype, ibin, jbin, doreg, display, 
@@ -581,7 +592,7 @@ c
 c
 c Define polygonal region with cursor
 c
-             call pgsci (8)
+             call pgsci (regcol)
              call cureg (lin, blc, ibin, jbin, krng, near, doabs, size, 
      +         naxis, crval, crpix, cdelt, ctype, labtyp, display, lreg)
            end if
@@ -1533,7 +1544,7 @@ c
 c
       subroutine decopt  (do3val, do3pix, eqscale, cursor, stats, doreg,
      +                    doabs, dolog, cgspec, cgdisp, mark, doerase, 
-     +                    dobox, near, dowedge, dofid)
+     +                    dobox, near, dowedge, dofid, grid)
 c----------------------------------------------------------------------
 c     Decode options array into named variables.
 c
@@ -1556,22 +1567,24 @@ c     dobox     List peak in 5x5 box under cursor
 c     near      Force cursor to neasrest pixel in options=cursor
 c     dowedge   Draw wedge on pixel map
 c     dofid     FIddle lookup table of pixel map
+c     grid      Draw coordinate grid
 c-----------------------------------------------------------------------
       implicit none
 c
       logical do3val, do3pix, eqscale, cursor, stats, doreg, near,
      +  doabs, dolog, cgspec, cgdisp, mark, doerase, dobox, dofid,
-     +  dowedge
+     +  dowedge, grid
 cc
       integer maxopt
-      parameter (maxopt = 16)
+      parameter (maxopt = 17)
 c
       character opshuns(maxopt)*8
       logical present(maxopt)
       data opshuns /'3value  ', '3pixel  ', 'unequal ', 'stats   ',
      +              'cursor  ', 'region  ', 'abspixel', 'logfile ',
      +              'cgspec  ', 'cgdisp  ', 'mark    ', 'noerase ',
-     +              'box     ', 'nearest ', 'wedge   ', 'fiddle  '/
+     +              'box     ', 'nearest ', 'wedge   ', 'fiddle  ',
+     +              'grid    '/
 c-----------------------------------------------------------------------
       call optcg ('options', opshuns, present, maxopt)
 c
@@ -1591,6 +1604,7 @@ c
       near     =      present(14)
       dowedge  =      present(15)
       dofid    =      present(16)
+      grid     =      present(17)
 c
       end
         
@@ -1715,7 +1729,7 @@ c
      +   levs, nlevs, pixr, trfun, pdev, labtyp, do3val, do3pix, 
      +   eqscale, nx, ny, cs, dopixel, cursor, stats, doreg, doabs, 
      +   dolog, cgspec, cgdisp, mark, doerase, dobox, near, 
-     +   dowedge, dofid)
+     +   dowedge, dofid, grid)
 c-----------------------------------------------------------------------
 c     Get the unfortunate user's long list of inputs
 c
@@ -1756,6 +1770,7 @@ c   dobox      List peak in 5x5 box under cursor
 c   near       FOrce cursor to nearest pixel in options=cursor
 c   dofid      FIddle lookup tbale of pixel map
 c   dowedge    Draw wedge with pixel map
+c   gird       Draw coordinate grid
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -1764,7 +1779,7 @@ c
       character*(*) labtyp(2), in, pdev, trfun, levtyp
       logical do3val, do3pix, eqscale, cursor, stats, doreg, dopixel,
      +  doabs, dolog, cgspec, mark, cgdisp, doerase, dobox, near,
-     +  dowedge, dofid
+     +  dowedge, dofid, grid
 cc
       integer ntype, nlab, ntype2, nimtype
       parameter (ntype = 14, ntype2 = 3)
@@ -1831,7 +1846,7 @@ c
 c
       call decopt (do3val, do3pix, eqscale, cursor, stats, doreg, doabs,
      +             dolog, cgspec, cgdisp, mark, doerase, dobox, near, 
-     +             dowedge, dofid)
+     +             dowedge, dofid, grid)
       if (.not.cursor .or. .not.dolog) cgspec = .false.
       if (.not.cursor) dobox = .false.
       if (near .and. dobox) call bug ('f', 
@@ -2249,5 +2264,49 @@ c of channels selected.
 c
       call chnselcg (blc, trc, kbin, maxbox, boxes, maxgrp,
      +               grpbeg, ngrp, ngrps)
+c
+      end
+c
+c
+      subroutine setlgc (labcol, poscol, statcol, regcol)
+c-----------------------------------------------------------------------
+c     Set line graphics colours
+c
+c  OUtput
+c    colour indices to use
+c-----------------------------------------------------------------------
+      implicit none
+      integer labcol, poscol, statcol, regcol
+cc
+      integer bgcol
+c-----------------------------------------------------------------------
+c
+c See if black or white background
+c
+      call bgcolcg (bgcol)
+c
+c Labels first
+c
+      labcol = 7
+      if (bgcol.eq.1) then
+c
+c White background
+c
+        labcol = 2
+      else if (bgcol.eq.0) then
+c
+c Black background
+c
+        labcol = 7
+      else
+        call bug ('w', 'Non black/white background colour on device')
+        labcol = 7
+      end if
+c
+c Now cursor options
+c
+      poscol = 3
+      statcol = 4
+      regcol = 8
 c
       end
