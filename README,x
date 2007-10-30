@@ -161,6 +161,10 @@ Instructions for Installing Miriad
       old versions of the readline library require the compiler switches
       "cc -32 -D_BSD_SIGNALS" on the irix64 operating system.
 
+      Linking with the readline library also needs either the termcap or
+      ncurses library. Make sure that the Install script can find one of
+      these if you are going to use the readline library.
+
     If you lack some of the above libraries (rpfits, readline, Athena
     widgets) and are disinclined to install them, see Note 14 for a
     possible solution.
@@ -186,7 +190,7 @@ Instructions for Installing Miriad
     The questions are:
 
     - "Change MIRRC to use a different root directory". You will normally
-      say yes the first time (and not on any possible subsequent runs).
+      say yes the first time (and no on any possible subsequent runs).
 
     - "Give the root directory name". This defaults to the your current
       directory, but you might want to explicitly give the name of the
