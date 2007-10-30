@@ -355,6 +355,7 @@ c	 "box"     for boxes (give centre and half-sizes)
 c	 "line"    for line segments (give ends)
 c	 "clear"   for a see-through overlay -- thus you can write the
 c	           overlay ID string (see below) without the overlay
+c        "sym"     for pgplot symbol number (given centre and symbol)
 c
 c	XOTYPE and YOTYPE  give the units of the overlay location (and 
 c	overlay half-sizes) contained in the file for the x- and y-
@@ -387,6 +388,7 @@ c	 X1  Y1  X2  Y2  CS  CE       for OFIG="line"
 c	 X   Y   R   CS  CE           for "circle" and "ocircle"
 c	 X   Y   R1  R2  PA  CS  CE   for "ellipse" and "oellipse"
 c	 X   Y   CS  CE               for OFIG="clear"
+c	 X   Y   SY  SS  CS  CE       for OFIG="sym"
 c
 c	X,Y defines the center of the overlay in the nominated OTYPE
 c	coordinate system (X- and Y-OTYPE can be different).  
@@ -412,6 +414,11 @@ c	         "absdeg" and "reldeg" in degrees
 c	         "absghz" and "relghz" in GHz
 c	         "abskms" and "relkms" in km/s
 c	         "absnat" and "relnat" in natural coordinates
+c
+c	SY is the pgplot symbol to use for "sym"
+c
+c	SS is the pgplot character height to use for "sym". Default
+c       is character height used for overlay string
 c
 c	R is the radius of circle overlays.  It is in the units given
 c	in the above list according to XOTYPE only. 
@@ -603,6 +610,7 @@ c    rjs  31mar98  Get it to agree with documentation as far as cols1 parameter
 c		   goes.
 c    nebk 16jun98  FIx problem in posdec2 where ocen2 was of 
 c                  size 2 instead of 3.  Was stuffing up w2wco
+c    cjp  16jun98  Added "sym" overlay type
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -1980,7 +1988,7 @@ c       ofig     Overlay type
 c       ocen     Overlay centre in pixels
 c       ocorn    Overlay corners in pixels. Not used for 'ocircle', 
 c                'circle' 'ellipse', 'oellipse' and 'clear'
-c       opoly    181 pairs describing circle and eliipse overlays in pixels
+c       opoly    181 pairs describing circle and ellipse overlays in pixels
 c       oid      Overlay i.d.
 c       owrite   If true write overlay ID in corner of overlay
 c       ochan    Overlay channel range
@@ -1997,7 +2005,8 @@ c
 cc
       logical miss
       character line*80
-      integer cs, ce
+      integer cs, ce, isym
+      real ssize
 c----------------------------------------------------------------------
 c
 c Only draw on specified channels
@@ -2017,6 +2026,22 @@ c
           call pgdraw (real(ocorn(1,3)), real(ocorn(2,3)))
           call pgmove (real(ocorn(1,2)), real(ocorn(2,2)))
           call pgdraw (real(ocorn(1,4)), real(ocorn(2,4)))
+        else if (ofig.eq.'sym') then
+          ssize = ocorn(1,1)
+          isym = nint(ocorn(2,1))
+          if (ocen(1).ge.blc(1).and.ocen(1).le.trc(1).and.
+     +        ocen(2).ge.blc(2).and.ocen(2).le.trc(2)) miss = .false.
+
+          if (ssize.le.0.0) then 
+            if (csize.le.0.0) then
+              ssize = 2.0
+            else
+              ssize = csize
+            end if
+          end if
+          if (isym.lt.0) isym = 12
+          call pgsch (ssize)
+          call pgpt (1, real(ocen(1)), real(ocen(2)), isym)
         else if (ofig.eq.'box') then
           if (ocen(1).ge.blc(1).and.ocen(1).le.trc(1).and.
      +        ocen(2).ge.blc(2).and.ocen(2).le.trc(2)) miss = .false.
@@ -2879,7 +2904,8 @@ c
         mx = xr + dx
         my = yt - dy
         just = 0.0
-      else if (ofig.eq.'box' .or. ofig.eq.'star') then
+      else if (ofig.eq.'box' .or. ofig.eq.'star'
+     +       .or. ofig.eq.'sym') then
 c
 c Write ID in top right corner of overlay
 c
@@ -2961,12 +2987,14 @@ c       x,yoff   Offsets to add to decoded locations
 c       dodist   True to distort overlays with grid
 c       aline    Input string
 c     Output
-c       ofig     Overlay type (star, box, clear, line)
+c       ofig     Overlay type (star, box, clear, line etc)
 c       ocen     Centre of overlay in unbinned full image pixels
 c       ocorn    Corners of overlay for x and y in pixels
 c                For 'star'     middle-top, right-middle, middle-bottom, left-middle
 c                For 'box'      top-left, top-right, bottom-right, bottom-left
 c                For 'line'     left and right
+c                For 'sym'      (1,1) and (2,1) are the symbol number 
+c                               and symbol height (urk)
 c                For 'clear'    unused
 c		 For 'circle'   unused
 c		 For 'ocircle'  unused
@@ -2995,8 +3023,9 @@ c
       double precision nums(maxnum), width(2), wcen(3), win(3), 
      +  wout(3), off(2), rad, x1, x2, y1, y2, major, minor,
      +  pa, phi, cospa, sinpa, xx, yy, ocen2(3)
+      real ssize
       integer i, j, slen, lena, inum, ipres, nextra, ipt, ifac,
-     +  icomm(maxnum), dsign(2), spos, nuse, il, naxis
+     +  icomm(maxnum), dsign(2), spos, nuse, il, naxis, isym
       logical ok
       character str*4, estr*80, wover*3, otype(2)*6, type(3)*6,
      +  abspix(3)*6, type2(3)*6
@@ -3005,10 +3034,10 @@ c
       character itoaf*4
 c
       integer notype1, notype2
-      parameter (notype1 = 8, notype2 = 2)
+      parameter (notype1 = 9, notype2 = 2)
       character otype1(notype1)*8, otype2(notype2)*3
       data otype1 /'box', 'star', 'line', 'clear', 'circle', 
-     +             'ocircle', 'ellipse', 'oellipse'/
+     +             'ocircle', 'ellipse', 'oellipse', 'sym'/
       data otype2 /'yes', 'no'/
 c----------------------------------------------------------------------
       abspix(1) = 'abspix'
@@ -3052,7 +3081,7 @@ c
       ipres = ipres - 5
 c
 c Mandatory columns are
-c  X  Y          for 'box' and  'star'  
+c  X  Y          for 'box' and  'star' and 'sym'
 c  X1,Y1 X2,Y2   for 'line' 
 c  X  Y          for 'clear'
 c  X  Y R        for 'circle' and 'ocircle' 
@@ -3060,6 +3089,7 @@ c  X  Y R1 R2 PA for 'ellipse' and 'oellipse'
 c
 c The optional columns are
 c  XS YS CS CE   for 'box' and  'star'  
+c  SY SS CS CE   for 'sym'
 c  CS CE         for 'line'    
 c  CS CE         for 'clear'     
 c  CS CE         for 'circle' and 'ocircle'   
@@ -3271,7 +3301,6 @@ c
 c
             ocorn(1,3) = ocen(1) 
             ocorn(2,3) = ocen(2) - width(2)
-c
             ocorn(1,4) = ocen(1) - width(1)
             ocorn(2,4) = ocen(2)
           end if
@@ -3283,6 +3312,38 @@ c
         xr = max(ocorn(1,1), ocorn(1,2), ocorn(1,3), ocorn(1,4))
         yb = min(ocorn(2,1), ocorn(2,2), ocorn(2,3), ocorn(2,4))
         yt = max(ocorn(2,1), ocorn(2,2), ocorn(2,3), ocorn(2,4))
+      else if (ofig.eq.'sym') then
+        if (nextra.gt.4) call bug ('f', 
+     +       'Too many numbers for overlay # '//str(1:slen))
+c       
+c Get centre in absolute pixels
+c 
+        call ol2pixcg (lun, pix3, otype, off, dsign, nums(ipt),
+     +                 ocen, nuse)
+        ipt = ipt + nuse
+        
+        isym = -1
+        ssize = 0.0
+        if (nextra.ge.1) isym = nint(nums(ipt))
+        if (nextra.ge.2) ssize = real(nums(ipt+1))
+
+        if (nextra.ge.3) then
+          ochan(1) = nint(nums(ipt+2))
+          ochan(2) = ochan(1)
+        end if
+        if (nextra.ge.4) ochan(2) = nint(nums(ipt+3))
+c 
+c Put Symbol size and type in the ocorn holder
+c
+        ocorn(1,1) = ssize
+        ocorn(2,1) = real(isym)
+c
+c Extremities not used
+c
+        xl = 0.0
+        xr = 0.0
+        yb = 0.0
+        yt = 0.0
       else if (ofig.eq.'line') then
         if (nextra.gt.2) call bug ('f', 
      +     'Too many numbers for overlay # '//str(1:slen))
@@ -3946,4 +4007,3 @@ c     +                 intval, minint)
 c
       end
 c
-
