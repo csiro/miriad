@@ -10,6 +10,7 @@
 /*    27jul92 rjs  Significant changes, to support 'd','c' and 'l' data */
 /*		   types.						*/
 /*    23dec92 rjs  Use intf2c, to make it more system independent.	*/
+/*     5nov94 rjs  Try to be a bit more pedantic.			*/
 /*                                                                      */
 /************************************************************************/
 
@@ -39,21 +40,18 @@ c
 		  ichar('c')    Complex.
 
   Output:
-    mmsize	An integer giving the size in terms of ints.
+    mmsize	An integer giving the size in terms of ints.		*/
 
 /*--                                                                    */
 /*----------------------------------------------------------------------*/
 {
   int size;
-
-  size = sizeof(int);
-
   switch(type.val){
-    case 'i':	size = 1;		     break;
-    case 'r':	size = sizeof(float)/size;   break;
-    case 'd':	size = sizeof(double)/size;  break;
-    case 'l':	size = 1;		     break;
-    case 'c':	size = 2*sizeof(float)/size; break;
+    case 'i':	size = 1;					break;
+    case 'r':	size = (sizeof(float)-1)/sizeof(int) + 1;	break;
+    case 'd':	size = (sizeof(double)-1)/sizeof(int) + 1;	break;
+    case 'l':	size = 1;		     			break;
+    case 'c':	size = (2*sizeof(float)-1)/sizeof(int) + 1;	break;
     default:	bug_c('f',"Unrecognised data type, in mmSize");
   }
   return size;
@@ -83,21 +81,22 @@ c
 
   Output:
     mmAlloc	Index to the allocated data. If the allocation fails,
-		an index of zero is returned.
+		an index of zero is returned.				*/
 
 /*--                                                                    */
 /*----------------------------------------------------------------------*/
 {
-  int bytes,offset;
-  char *s;
+  ptrdiff_t offset;
+  int t;
+  int *s;
 
-  bytes = sizeof(int);
-  s = malloc(size.val * bytes);
-  if(s == NULL) return 0;
-  offset = s - (char *)(data.addr);
-  if(offset % bytes) bug_c('f',"Allocated memory was not aligned");
+  s = (int *)malloc( (size_t)(size.val * sizeof(int)) );
+  if(s == (int *)NULL) return 0;
+  offset = s - data.addr;
+  t = (int)offset;
+  if(t != offset)bug_c('f',"Some odd form of rounding problem, in mmAlloc");
 
-  return offset / bytes + 1;
+  return t + 1;
 }
 /************************************************************************/
 fortran subroutine mmfree(integer data)
@@ -112,7 +111,7 @@ fortran subroutine mmfree(integer data)
   This frees up a block of memory allocated with mmalloc.
 
   Input:
-    data	Pointer to the block of memory to free.
+    data	Pointer to the block of memory to free.			*/
 
 /*--                                                                    */
 /*----------------------------------------------------------------------*/
