@@ -29,6 +29,7 @@ c    bpw  27mar91  Changed assert into assertl
 c    bpw  15dec92  Adapt for changed fndaxnum
 c    bpw   2mar93  Masked data set to zero
 c    lss,vk 30mar00 Adapted from hanning to include boxcar
+c    rjs  08may00  Change key call for output file to keyf.
 c
 c------------------------------------------------------------------------
        program hanning
@@ -79,7 +80,7 @@ c------------------------------------------------------------------------
        call keyini
 
        call keyf( 'in',  inp, ' ' )
-       call keyf( 'out', out, ' ' )
+       call keya( 'out', out, ' ' )
        call assertl( inp.ne.' ', 'Input file name is missing' )
        call assertl( out.ne.' ', 'Output file name is missing' )
        call keya('object',object,'hanning')

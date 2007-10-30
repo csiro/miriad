@@ -89,6 +89,7 @@ c  History:
 c  28oct91  jt   Created by Jan Tauber.
 c  15dec92  nebk Write a blank "btype" to output, change "float
 c                to "real"
+c  08may00  rjs  Change incorrect keyf call to keya.
 c
       INCLUDE 'maxdim.h'
       CHARACTER PVERSION*(*)
@@ -124,7 +125,7 @@ c
       CALL keyini
       CALL keyi('method',method,1)
       CALL keyf('in1',in1,' ')
-      CALL keyf('out',out,' ')
+      CALL keya('out',out,' ')
       CALL keyi('j1',J,1)
       CALL keyr('b1',B1,57.6)
       hBkt=0.047995*B1

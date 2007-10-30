@@ -13,6 +13,7 @@ c       pjt      8-jun-94       region= clarification
 c       rjs     02-jul-97	cellscal change.
 c	rjs	10-nov-97	Correct handling of 3rd axis and minor
 c				improvement to the documentation.
+c       rjs     08-may-00       Change incorrect call to keyf to keya.
 c-----------------------------------------------------------------------
 c= impoly - Flat field subtraction using a 2D polynomial fit
 c& pjt
@@ -88,7 +89,7 @@ c
 	CALL keyf('in', in, ' ')
 	IF (in .EQ. ' ') CALL bug('f', 
      *			'You must specify an input file (in=)')
-	CALL keyf('out', out, ' ')
+	CALL keya('out', out, ' ')
 	IF (out .EQ. ' ') CALL bug('f',
      *			'You must name an output file (out=)')
 	CALL keyi('order', order, 0)

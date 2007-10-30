@@ -288,6 +288,7 @@ c    rjs  31jul97  Simplify calls to initco,finco.
 c    rjs  23apr98  Increase size of bunit variable.
 c    rjs  25nov98  Fix compacting algorithm again!
 c    nebk 11jun99  Some hacks to handle /BEAM or /B and following strings
+c    rjs  08may00  Change incorrect keyf call to keya.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -1907,7 +1908,7 @@ c
      +  'You might consider options=unequal with these axis types')
       end if
 c
-      call keyf ('3format', val3form, ' ')
+      call keya ('3format', val3form, ' ')
 c
       call keyi ('nxy', nx, 0)
       call keyi ('nxy', ny, nx)

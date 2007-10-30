@@ -103,6 +103,7 @@ c    rjs  30aug95  Minor change of usage of optprsnt, to appease g77.
 c    bpw  27jun97  add options=verbose
 c    pjt  22mar99  fixed treating options(2) as integer in boolean expr
 c    pjt  22oct99  fixed initialization of opts(2)
+c    rjs  08may00  Change incorrect keyf call to keya.
 c
 c------------------------------------------------------------------------
 c
@@ -267,8 +268,8 @@ c opts(2): Check if verbose=true
 
 c Read names of input, output and continuum dataset.
       call keyf( 'in',   inp, ' ' )
-      call keyf( 'out',  out, ' ' )
-      call keyf( 'cont', con, ' ' )
+      call keya( 'out',  out, ' ' )
+      call keya( 'cont', con, ' ' )
       call assertl( inp.ne.' ', 'You must specify an input file' )
       call assertl( out.ne.' ' .or. con.ne.' ',
      *                         'You must specify either out= or cont=' )

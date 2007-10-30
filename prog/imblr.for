@@ -21,6 +21,7 @@ c    nebk 27Nov95  Original version
 c    nebk 16aug96  Tell user some numbers
 c    nebk 13sep96  Tell them some more
 c    rjs  12oct99  Do not write out gflags.
+c    rjs  08may00  Change incorrect call to keyf to keya.
 c
 c-----------------------------------------------------------------------
       implicit none
@@ -42,7 +43,7 @@ c Get user inputs
 c
       call keyini
       call keyf ('in', in, ' ')
-      call keyf ('out', out, ' ')
+      call keya ('out', out, ' ')
       call keyr ('value', val, 0.0)
       call keyfin
 c
