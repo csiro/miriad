@@ -73,10 +73,12 @@ c         antel     Antenna elevation, in degrees.
 c	  airmass   Airmass - cosec(antel)
 c@ mdata
 c	Input text file giving the ATCA meteorology data. No default.
+c	For more help on getting the data appropriate to your
+c	observation, see the help on "weatherdata".
 c@ mode
 c	This determines the calibration operations to perform. Possible
-c	values are ``opacity'', ``flux'' or ``both''. The default is to
-c	perform opacity correciton only.
+c	values are ``opacity'', ``flux'' or ``both'' or "neither". The
+c	default is to perform opacity correciton only.
 c--
 c  History:
 c    02feb01 rjs  Original version.
@@ -85,13 +87,14 @@ c    02mar01 rjs  Label some output better.
 c    24apr01 rjs  Change format (and allow multiple formats) of met data file.
 c		  Remove code for opacGet.
 c    05jul01 dpr  Re-allow default met data format.
+c    26may02 rjs  Added mode=neither!
 c------------------------------------------------------------------------
 	integer MAXPOL,MAXSELS
 	parameter(MAXPOL=2,MAXSELS=1024)
 	include 'maxdim.h'
 	include 'mirconst.h'
 	character version*(*)
-	parameter(version='opcal: version 1.0 24-Apr-01')
+	parameter(version='opcal: version 1.0 26-May-02')
 	integer PolXX,PolYY,PolXY,PolYX
 	parameter(PolXX=-5,PolYY=-6,PolXY=-7,PolYX=-8)
 c
@@ -111,7 +114,7 @@ c
 	real sels(MAXSELS)
 c
 	integer NMODES
-	parameter(NMODES=3)
+	parameter(NMODES=4)
 	character modes(NMODES)*8,mode*8
 	integer nout
 c
@@ -119,7 +122,7 @@ c  Externals.
 c
 	logical uvvarUpd,hdprsnt
 c
-	data modes/'opacity ','flux    ','both    '/
+	data modes/'opacity ','flux    ','both    ','neither '/
 c
 	call output(version)
 	call keyini
