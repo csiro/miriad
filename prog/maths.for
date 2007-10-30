@@ -78,13 +78,16 @@ c	images (i.e. the expression consists of a function of ``x'' and
 c	``y'' only). No default.
 c@ xrange
 c	When ``x'' is present in the input expression, then the x variable
-c	is varied linearly between the two limits set by XRANGE.
+c	is varied linearly between the two limits set by XRANGE. The default
+c	is -0.5,0.5.
 c@ yrange
 c	When ``y'' is present in the input expression, then the y variable
-c	is varied linearly between the two limits set by YRANGE.
+c	is varied linearly between the two limits set by YRANGE. The default
+c	is -0.5,0.5
 c@ zrange
 c	When ``z'' is present in the input expression, then the z variable
-c	is varied linearly between the two limits set br ZRANGE.
+c	is varied linearly between the two limits set br ZRANGE. The default
+c	is 0,1.
 c--
 c
 c  History:
@@ -111,6 +114,7 @@ c		   there is a template to the Boxinp routine.
 c   pjt   8jun94 - clarified region=
 c   rjs   3dec94   Copy across mosaic table.
 c   rjs  26jan95   Eliminate non-standard string concatentation.
+c   rjs  10jan97   Handle 5th axis correctly.
 c------------------------------------------------------------------------
 	INCLUDE 'maths.h'
 	INTEGER ERROR,VECTOR,SCALAR,CONSTANT
@@ -118,7 +122,7 @@ c------------------------------------------------------------------------
 	INTEGER BUFLEN,MAXBOX
         PARAMETER(BufLen=64,MaxBox=2048)
 	CHARACTER VERSION*(*)
-	PARAMETER (VERSION='Maths: version 1.0 26-Jan-95')
+	PARAMETER (VERSION='Maths: version 1.0 10-Jan-97')
 c
 	CHARACTER expr*256,mask*256,out*64,template*64
 	INTEGER   rbuflen,pnt
@@ -233,6 +237,13 @@ c
 	  nOut(i) = 1
 	  blc(i) = 1
 	  trc(i) = 1
+	enddo
+c
+c  Handle naxis > 4.
+c
+	do l=5,naxis
+	  if(nsize(l).gt.1)call bug('f','Too many dimensions for me')
+	  plane(l) = 1
 	enddo
 c
 c  Allocate memory.
