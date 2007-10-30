@@ -46,7 +46,8 @@ c	  ra dec flux
 c	The RA and DEC are in normal Miriad format, and the flux is in Jy.
 c@ pmotion
 c	This parameter allows phase shifts to be applied to the data to
-c	make the phase centre track the object of interest. This can
+c	make the phase centre track the object of interest. Assuming that
+c	the object has significant proper motion, this can
 c	correct for phase tracking errors (e.g. wrong ephemeris) or perhaps 
 c	no tracking at all. One or two tracking files can be given. The first
 c	file gives the centre of the object (as a function of time). The second
