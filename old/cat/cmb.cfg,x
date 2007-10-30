@@ -1,0 +1,31 @@
+# amiba antenna configuration file
+#
+$platform 0.	0.	0.
+#	x	y	z (mm) in the observatory frame
+
+#	x	y	z (mm) in the platform frame
+$antenna  0.	0.	0.
+$antenna  300.	0.	0.
+$antenna  600.	0.	0.
+$antenna -300.	0.	0.
+$antenna -600.	0.	0.
+$antenna  150.	260.	0.
+$antenna  450.	260.	0.
+$antenna -450.	260.	0.
+$antenna -150.	260.	0.
+$antenna -150.	-260.	0.
+$antenna -450.	-260.	0.
+$antenna  150.	-260.	0.
+$antenna  450.	-260.	0.
+$antenna  0.	520.	0.
+$antenna  300.	520.	0.
+## antenna  600.	520.	0.
+$antenna -300.	520.	0.
+$antenna  0.	-520.	0.
+$antenna  300.	-520.	0.
+$antenna -300.	-520.	0.
+## antenna -600.	-520.	0.
+
+
+
+
