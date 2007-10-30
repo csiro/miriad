@@ -108,13 +108,14 @@ c   rjs  120ct95 - Support model and default being different size to selected
 c		   region.
 c   rjs  18Oct05 - Handle higher axes somewhat better.
 c   rjs  27oct95 - Increased max length of filenames.
+c   rjs  18mar96 - Increase MAXBOXES.
 c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='Maxen: version 1.0 27-Oct-95')
 	include 'maxnax.h'
 	include 'maxdim.h'
 	integer MaxRun,MaxBoxes
-	parameter(MaxRun=3*maxdim,MaxBoxes=1024)
+	parameter(MaxRun=3*maxdim,MaxBoxes=2048)
 c
 	integer quiet,normal,verbose
 	parameter(quiet=0,normal=1,verbose=2)
