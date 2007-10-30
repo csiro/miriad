@@ -20,7 +20,7 @@ c   subroutine MosMIni
 c   subroutine Mosaicer
 c   subroutine MosMFin
 c
-c   subroutine MosPsf
+c   subroutine MosPnt
 c
 c  History:
 c    rjs  26oct94 Original version
@@ -709,6 +709,7 @@ c
      *	    call bug('f','Bad size for mosaic table')
 	npnt = (size - offset)/48
 	npnt1 = npnt
+	if(npnt.gt.MAXPNT)call bug('f','Too many pointings, in mosLoad')
 	do i=1,npnt
 	  if(iostat.eq.0)call hreadi(item,ival,offset,8,iostat)
 	  nx2 = (ival(1)-1)/2
@@ -755,17 +756,17 @@ c
 c
 	call output('    Number of pointing centers: '//itoaf(npnt))
 	call output(' ')
-	call output('    Sub-Image    Pointing Center       Primary '//
+	call output('     Sub-Image    Pointing Center       Primary '//
      *		'Beam      Field')
-	call output('      Size       RA           DEC      Type    '//
+	call output('       Size       RA           DEC      Type    '//
      *		'           RMS')
-	call output('     ------- ------------------------  --------'//
+	call output('      ------- ------------------------  --------'//
      *		'----    --------')
 	do i=1,npnt
 	  ras = hangle(radec(1,i))
 	  decs = rangle(radec(2,i))
 	  write(line,10)i,2*nx2+1,2*ny2+1,ras,decs,telescop(i),rms2(i)
-  10	  format(i3,i5,i4,1x,3a,1pe8.2)
+  10	  format(i4,i5,i4,1x,3a,1pe8.2)
 	  call output(line)
 	enddo
 	end
@@ -927,8 +928,8 @@ c
 c
 c  Do the simple mosaicing.
 c
-	call Mosaic1(In,Out,memr(pWts),nx,ny,npnt,mnx,mny,
-     *	  x0,y0,pbObj,Rms2,nx2,ny2)
+	call Mosaic1(In,Out,memr(pWts),nx,ny,npnt,mnx,mny,pbObj,Rms2,
+     *	  nx2,ny2)
 c
 c  Determine what data are flagged.
 c
@@ -937,13 +938,12 @@ c
 	call memFree(pWts,mnx*mny,'r')
 	end
 c************************************************************************
-	subroutine Mosaic1(In,Out,Wts,nx,ny,npnt,mnx,mny,x,y,
-     *						pbObj,Rms2,nx2,ny2)
+	subroutine Mosaic1(In,Out,Wts,nx,ny,npnt,mnx,mny,pbObj,Rms2,
+     *	  nx2,ny2)
 c
 	implicit none
 	integer nx,ny,npnt,mnx,mny,nx2,ny2,pbObj(npnt)
-	real In(nx,ny,npnt),Out(mnx,mny),Wts(mnx,mny)
-	real Rms2(npnt),x(npnt),y(npnt)
+	real In(nx,ny,npnt),Out(mnx,mny),Wts(mnx,mny),Rms2(npnt)
 c
 c  Do a linear mosaic of all the fields. Weight is so that the
 c  RMS never exceeds the max RMS in the input data.
@@ -951,11 +951,11 @@ c
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer i,j,ic,jc,ioff,joff,imin,jmin,imax,jmax,k
-	real Pb(MAXDIM),scale
+	real Pb(MAXDIM),Wt3,x,y,xext,yext
 c
 c  Externals.
 c
-	real pbGet
+	real pbGet,mosWt3
 c
 c  Check that we have enough space.
 c
@@ -977,26 +977,27 @@ c
 	jc = ny/2 + 1
 c
 	do k=1,npnt
-	  scale = 1/(Rms2(k)*Rms2(k))
-	  ioff = ic - nint(x(k))
-	  joff = jc - nint(y(k))
-	  imin = max(nint(x(k)-nx2+0.5),1)
-	  imax = min(nint(x(k)+nx2-0.5),mnx)
-	  jmin = max(nint(y(k)-ny2+0.5),1)
-	  jmax = min(nint(y(k)+ny2-0.5),mny)
+	  Wt3 = mosWt3(k)
+	  call pbExtent(pbObj(k),x,y,xext,yext)
+	  ioff = ic - nint(x)
+	  joff = jc - nint(y)
+	  imin = max(nint(x-nx2+0.5),1)
+	  imax = min(nint(x+nx2-0.5),mnx)
+	  jmin = max(nint(y-ny2+0.5),1)
+	  jmax = min(nint(y+ny2-0.5),mny)
 c
 	  do j=jmin,jmax
 	    do i=imin,imax
 	      Pb(i) = pbGet(pbObj(k),real(i),real(j))
 	    enddo
 	    do i=imin,imax
-	      Out(i,j) = Out(i,j) + scale*Pb(i)*In(i+ioff,j+joff,k)
-	      Wts(i,j) = Wts(i,j) + scale*Pb(i)*Pb(i)
+	      Out(i,j) = Out(i,j) + Wt3*Pb(i)*In(i+ioff,j+joff,k)
+	      Wts(i,j) = Wts(i,j) + Wt3*Pb(i)*Pb(i)
 	    enddo
 	  enddo
 	enddo
 c
-	call MosWt(Rms2,npnt,Out,Wts,mnx,mny)
+	call MosWt(Rms2,npnt,Out,Wts,mnx*mny)
 c
 	end
 c************************************************************************
@@ -1039,16 +1040,16 @@ c
 c
 	end
 c************************************************************************
-	subroutine MosWt(Rms2,npnt,Out,Wts,nx,ny)
+	subroutine MosWt(Rms2,npnt,Out,Wts,n)
 c
 	implicit none
-	integer npnt,nx,ny
-	real Rms2(npnt),Out(nx,ny),Wts(nx,ny)
+	integer npnt,n
+	real Rms2(npnt),Out(n),Wts(n)
 c
 c  Reweight the data according to some scheme.
 c------------------------------------------------------------------------
 	real Sigt,scale
-	integer i,j,k
+	integer i,k
 c
 c  Determine the maximum RMS.
 c
@@ -1060,18 +1061,16 @@ c
 c
 c  Now rescale to correct for the weights.
 c
-	do j=1,ny
-	  do i=1,nx
-	    scale = Sigt*Wts(i,j)
-	    if(scale.le.0)then
-	      scale = 0
-	    else if(scale.lt.1)then
-	      scale = sqrt(scale)/Wts(i,j)
-	    else
-	      scale = 1/Wts(i,j)
-	    endif
-	    Out(i,j) = scale*Out(i,j)
-	  enddo
+	do i=1,n
+	  scale = Sigt*Wts(i)
+	  if(scale.le.0)then
+	    scale = 0
+	  else if(scale.lt.1)then
+	    scale = sqrt(scale)/Wts(i)
+	  else
+	    scale = 1/Wts(i)
+	  endif
+	  Out(i) = scale*Out(i)
 	enddo
 c
 	end
@@ -1092,7 +1091,7 @@ c
 c
 	end
 c************************************************************************
-	subroutine MosPSF(coObj,in,x,beams,psf,nx,ny,npnt1)
+	subroutine MosPnt(coObj,in,x,beams,psf,nx,ny,npnt1)
 c
 	implicit none
 	integer nx,ny,npnt1,coObj
@@ -1123,14 +1122,14 @@ c
 	call MosMini(coObj,real(xref(3)))
 c
 	call MemAlloc(pWts,nx*ny,'r')
-	call MosPSF1(beams,psf,memr(pWts),nx,ny,npnt1,
+	call MosPnt1(beams,psf,memr(pWts),nx,ny,npnt1,
      *				  real(xref(1)),real(xref(2)))
 	call MemFree(pWts,nx*ny,'r')
 c
 	call MosMFin
 	end
 c************************************************************************
-	subroutine MosPSF1(beams,psf,wts,nx,ny,npnt1,xr,yr)
+	subroutine MosPnt1(beams,psf,wts,nx,ny,npnt1,xr,yr)
 c
 	implicit none
 	integer nx,ny,npnt1
@@ -1150,7 +1149,7 @@ c    psf	The point-spread function.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mostab.h'
-	integer i,j,k
+	integer i,j,k,imin,imax,jmin,jmax
 	real xoff,yoff,scal1,scal2,Pb(MAXDIM)
 c
 c  Externals.
@@ -1177,15 +1176,19 @@ c
 c  Loop over all the pointings.
 c
 	do k=1,npnt
-	  if(abs(x0(k)-xr).le.nx2.and.abs(y0(k)-yr).le.ny2)then
+	  imin = max(nint(x0(k)-nx2+0.5-xoff),1)
+	  imax = min(nint(x0(k)+nx2-0.5-xoff),nx)
+	  jmin = max(nint(y0(k)-ny2+0.5-yoff),1)
+	  jmax = min(nint(y0(k)+ny2-0.5-yoff),ny)
+	  if(imin.le.imax.and.jmin.le.jmax)then
 	    scal2 = 1/(Rms2(k)*Rms2(k))
 	    scal1 = scal2 * pbGet(pbObj(k),xr,yr)
 	    if(scal1.gt.0)then
-	      do j=1,ny
-	        do i=1,nx
+	      do j=jmin,jmax
+	        do i=imin,imax
 	          Pb(i) = pbGet(pbObj(k),i+xoff,j+yoff)
 	        enddo
-	        do i=1,nx
+	        do i=imin,imax
 	          PSF(i,j) = PSF(i,j) + scal1*Pb(i)*Beams(i,j,k)
 	          Wts(i,j) = Wts(i,j) + scal2*Pb(i)*Pb(i)
 	        enddo
@@ -1196,6 +1199,122 @@ c
 c
 c  Reweight the data.
 c
-	call MosWt(Rms2,npnt,PSF,Wts,nx,ny)
+	call MosWt(Rms2,npnt,PSF,Wts,nx*ny)
 c
 	end
+c************************************************************************
+	subroutine mosInfo(nx2d,ny2d,npnt1)
+c
+	implicit none
+	integer nx2d,ny2d,npnt1
+c
+c  Return information about the mosaicing setup.
+c------------------------------------------------------------------------
+	include 'mostab.h'
+c
+	nx2d = nx2
+	ny2d = ny2
+	npnt1 = npnt
+	end
+c************************************************************************
+	real function mosWt3(k)
+c
+	implicit none
+	integer k
+c
+c  Return the field-dependent weight to be used in mosaicing.
+c
+c------------------------------------------------------------------------
+	include 'mostab.h'
+c
+	MosWt3 = 1/(Rms2(k)*Rms2(k))
+	end
+c************************************************************************
+	integer function mosPb(k)
+c
+	implicit none
+	integer k
+c
+c  Return the primary beam corresponding to a particular pointing.
+c------------------------------------------------------------------------
+	include 'mostab.h'
+	mosPb = pbObj(k)
+	end
+c************************************************************************
+	subroutine mosWtCom(Runs,nRuns,Wt1,Wt2,npix)
+c
+	implicit none
+	integer nRuns,Runs(3,nRuns),npix
+	real Wt1(npix),Wt2(npix)
+c
+c  Determine weights to apply to data during the mosaicing process.
+c
+c------------------------------------------------------------------------
+	include 'mostab.h'
+c
+	integer k,i,j,n,jmin,jmax,imin,imax,ilo,ihi,iRuns,nin
+	real Sigt,scale,Wt3,x,y,xext,yext
+c
+c  Externals.
+c
+	real mosWt3,pbGet
+c
+c  Initialise the weight array.
+c
+	do i=1,npix
+	  Wt1(i) = 0
+	enddo
+c
+	do k=1,npnt
+	  Wt3 = mosWt3(k)
+	  call pbExtent(pbObj(k),x,y,xext,yext)
+	  imin = nint(x-nx2+0.5)
+	  imax = nint(x+nx2-0.5)
+	  jmin = nint(y-ny2+0.5)
+	  jmax = nint(y+ny2-0.5)
+c
+	  n = 0
+	  do iRuns=1,nRuns
+	    if(Runs(1,iRuns).ge.jmin.and.Runs(1,iRuns).le.jmax.and.
+     *	       Runs(3,iRuns).ge.imin.and.Runs(2,iRuns).le.imax)then
+	      j = Runs(1,iRuns)
+	      ilo = max(Runs(2,iRuns),imin)
+	      ihi = min(Runs(3,iRuns),imax)
+	      nin = n + ilo - Runs(2,iRuns)
+	      do i=ilo,ihi
+		nin = nin + 1
+	        Wt1(nin) = Wt1(nin) +
+     *			   Wt3 * pbGet(pbObj(k),real(i),real(j))
+	      enddo
+	    endif
+	    n = n + Runs(3,iRuns) - Runs(2,iRuns) + 1
+	  enddo
+	enddo
+c
+c  Determine the maximum RMS.
+c
+	Sigt = Rms2(1)
+	do k=2,npnt
+	  Sigt = max(Sigt,Rms2(k))
+	enddo
+	Sigt = Sigt*Sigt
+c
+c  Now compute the weights for the data.
+c
+	do i=1,npix
+	  scale = Sigt*Wt1(i)
+	  if(scale.le.0)then
+	    Wt1(i) = 0
+	    Wt2(i) = 0
+	  else if(scale.lt.1)then
+	    scale = sqrt(scale)
+	    Wt2(i) = scale/Wt1(i)
+	    Wt1(i) = 1/scale
+	  else
+	    Wt2(i) = 1/Wt1(i)
+	    Wt1(i) = 1
+	  endif
+	enddo
+c
+	end
+
