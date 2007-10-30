@@ -570,6 +570,8 @@ c    nebk 29nov95  Add options=conlab
 c    nebk 04dec95  If > 1 contour image, their sizes were being lost
 c    nebk 18dec95  Add options=abut
 c    nebk 10jan96  NAXIS in POSDEC2 was not always beeing assigned to
+c    nebk 30jan96  Remove restictions on CHAN so that groups of channels
+c		   can now overlap
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -601,9 +603,9 @@ c
 c
       integer blc(3), trc(3), win(2), lwid(maxcon+3), 
      +  vecinc(2), boxinc(2), srtlev(maxlev,maxcon), nlevs(maxcon), 
-     +  grpbeg(maxchan), ngrp(maxchan), his(nbins), ibin(2), jbin(2), 
-     +  kbin(2), krng(2), coltab(maxchan), gnaxis, cnaxis(maxcon),
-     +  vnaxis(2), bnaxis, mnaxis
+     +  grpbeg(maxchan), ngrp(maxchan), his(nbins), ibin(2), 
+     +  jbin(2), kbin(2), krng(2), coltab(maxchan), gnaxis, 
+     +  cnaxis(maxcon), vnaxis(2), bnaxis, mnaxis
       integer  nx, ny, ierr, pgbeg, ilen, igr, nlast, ngrps,
      +  ncon, i, j, nvec, ipage, jj, npixr, wedcod, bgcol
 c
@@ -631,10 +633,7 @@ c
       data coltab /maxchan*0/
       data lwid /maxconp3*1/
 c-----------------------------------------------------------------------
-      call output ('CgDisp: version 10-Jan-96')
-      call output ('New options=abut to eliminate all white space '//
-     +             'between subplots')
-      call output ('New options=conlabel to label contour values')
+      call output ('CgDisp: version 30-Jan-96')
       call output (' ')
 c
 c Get user inputs
@@ -660,7 +659,7 @@ c
       call region (maxcon, maxnax, ncon, cin, gin, vin, bin, lc, lg,
      +   lv, lb, csize, gsize, vsize, bsize, cnaxis, gnaxis, vnaxis,
      +   bnaxis, lhead, ibin, jbin, kbin, blc, trc, win, 
-     +   maxchan, grpbeg, ngrp, ngrps)
+     +   ngrps, grpbeg, ngrp)
 c
 c Try to allocate memory for images
 c
@@ -2413,7 +2412,6 @@ c
       call keyi ('chan', kbin(2), 1) 
       kbin(1) = max(kbin(1), 1)
       kbin(2) = max(kbin(2), 1)
-      if (kbin(2).gt.kbin(1)) kbin(2) = kbin(1)
 c
       call keya ('slev', levtyp(1), 'a')
       call lcase (levtyp(1))
@@ -3451,7 +3449,7 @@ c
       subroutine region (maxcon, maxnax, ncon, cin, gin, vin, bin, 
      +   lc, lg, lv, lb, csize, gsize, vsize, bsize, cnaxis, gnaxis,
      +   vnaxis, bnaxis, lhead, ibin, jbin, kbin, blc, trc, 
-     +   win, maxgrp, grpbeg, ngrp, ngrps)
+     +   win, ngrps, grpbeg, ngrp)
 c----------------------------------------------------------------------
 c     Finish key routie inputs for region of interest now.  Have to 
 c     delay until here because of complexity added by mixed 2-D/3-D
@@ -3468,12 +3466,12 @@ c    l*            Handles
 c    *size         Sizes of images
 c    *naxis        Number of axes
 c    i,j,kbin      x,y, and z pixel increment and binning sizes
-c    maxgrp        Maximum number of allowed groups of channels in image
 c  Output:
 c    lhead         Handle of generic image
 c    blc,trc       3-D Hyper-rectangle surrounding region of interest
 c                  in unbinned pixels
 c    win           Size of BINNED region of interest for x and y directions
+c    ngrps         Number of groups of channels.
 c    grgbeg        List of start planes for each group of channels
 c                  that are to be avearged together for each sub-plot
 c                  A new group is begun at every interruption to the
@@ -3481,7 +3479,6 @@ c                  continuity of the selected channels, or if the
 c                  channel increment is reached.
 c    ngrp          Number of channels in each group of channel to
 c                  be averaged together for each sub-plot.
-c    ngrps         Number of groups of channels.
 c
 c----------------------------------------------------------------------
       implicit none
@@ -3489,8 +3486,8 @@ c
       integer maxcon, ncon, maxnax, csize(maxnax,maxcon), 
      +  gsize(maxnax), vsize(maxnax), bsize(maxnax), blc(*), 
      +  trc(*), cnaxis(maxcon), gnaxis, vnaxis(2), bnaxis,  
-     +  win(2), maxgrp, ngrp(maxgrp), grpbeg(maxgrp), ngrps, 
-     +  ibin(2), jbin(2), kbin(2), lhead, lc(maxcon), lg, lv, lb
+     +  win(2), ngrp(*), grpbeg(*), ngrps, ibin(2), jbin(2), kbin(2), 
+     +  lhead, lc(maxcon), lg, lv, lb
       character*(*) cin(maxcon), gin, vin, bin
 cc
       include 'maxdim.h'
@@ -3599,8 +3596,7 @@ c allow us to deal with multiple BOXes at once (say if there were
 c two differently masked cubes being plotted), so we don't AND
 c in the flagging mask.
 c
-      call chnselcg (blc, trc, kbin, maxbox, boxes, maxgrp,
-     +               grpbeg, ngrp, ngrps)
+      call chnselcg (blc, trc, kbin, maxbox, boxes, ngrps, grpbeg, ngrp)
 c
       end
 c
