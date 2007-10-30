@@ -18,7 +18,8 @@ c--
 c
 c  History:
 c    nebk 27Nov95  Original version
-c
+c    nebk 16aug96  Tell user some numbers
+c    nebk 13sep96  Tell them some more
 c  Notes:
 c    Uses cgsubs.for
 c
@@ -29,12 +30,12 @@ c
       include 'maxnax.h'
 c
       character version*20
-      parameter (version = 'Version 27-Nov-95')
+      parameter (version = 'Version 13-Sep-96')
 c
       integer size(maxnax), lin, lout, i, j, k, naxis
-      real dmm(2), val, data(maxdim)
+      real dmm(2), val, data(maxdim), npix, npix2
       logical gflags(maxdim), flags(maxdim)
-      character in*64, out*64
+      character in*64, out*64, line*132
       data gflags /maxdim*.true./
       data dmm /1.0e30, -1.0e30/
 c-----------------------------------------------------------------------
@@ -69,7 +70,9 @@ c
 c
 c Loop over input image
 c
+      npix2 = 0.0
       do k = 1, size(3)
+        npix = 0.0
         call xysetpl (lin, 1, k)
         call xysetpl (lout, 1, k)
 c
@@ -78,7 +81,10 @@ c
           call xyflgrd (lin, j, flags)
 c
           do i = 1, size(1)
-            if (.not.flags(i)) data(i) = val
+            if (.not.flags(i)) then
+              data(i) = val
+              npix = npix + 1
+            end if
             dmm(1) = min(dmm(1),data(i))
             dmm(2) = max(dmm(2),data(i))
           end do
@@ -86,8 +92,17 @@ c
           call xywrite (lout, j, data)
           call xyflgwr (lout, j, gflags)
         end do
+c
+        if (npix.gt.0.0) then
+          write (line, 10) k, npix
+10        format ('Plane ', i3, ' : replaced ', f8.0, ' blanks')
+          call output (line)  
+          npix2 = npix2 + npix
+        end if
       end do
 c      
+      if (npix2.le.0.0) call output ('There were no blanks')
+c   
       call wrhdr (lout, 'datamax', dmm(2))
       call wrhdr (lout, 'datamin', dmm(1))
 c
