@@ -7,20 +7,20 @@ c& mchw
 c: image analysis
 c+
 c       IMLIST lists a Miriad image. It will list the header, statistics,
-c       selected regions of the data, and the history. RA and DEC are converted
-c       to astronomical coordinates. The default output to the terminal can be
-c       terminated.
+c       selected regions of the data, the mosaic table (if present) and the
+c	history.
 c@ in
 c	Input image name. No default.
 c@ options
-c	The options are 'head' 'data' 'history' and 'stat'. Several options
-c	can be given, separated by commas. For example, the default is:
-c	  % imlist options=head
-c	which lists the image header.
-c	  % imlist options=head,data,history,stat
-c	lists the image header, the data, history, and image statistics.
-c	options=data lists the image with the specified format for each plane.
-c	options=stat lists the total flux, max, min, and rms for each plane.
+c	Severval options can be given (separated by commas), and can be
+c	abbreviated to uniqueness. Possible options are:
+c	  header     Give a summary of all the items in the image. This is
+c	             the default if no other options are given.
+c	  data       List some data.
+c	  mosaic     List the mosaic table of an image (if present).
+c	  history    List the history item.
+c	  statistics This lists the total flux, min and max values and
+c	             rms for each plane.
 c@ region
 c	Region of image to be listed. E.g.
 c	  % imlist  options=data region=relpix,box(-4,-4,5,5)(1,2)
@@ -62,24 +62,25 @@ c  rjs  07may92  Eliminate call to BoxMask -- not needed.
 c  mchw 28oct92  Added datamin, datamax to header.
 c  nebk 25nov92  Add btype to header
 c  nebk 18nov93  Allow semi-infinite sized regions in data listing
+c  rjs  18oct94  Print contents of mosaic tables.
+c
 c  Bugs:
 c    Data format still needs work to prevent format overflow.
 c    Doesn't handle pixel blanking outside region of interest.
 c----------------------------------------------------------------------c
 	character version*(*)
-	parameter(version='version 18-Nov-93')
+	parameter(version='version 18-Oct-94')
 	include 'maxdim.h'
 	integer maxboxes,maxnax
 	parameter(maxboxes=2048,maxnax=3)
 	integer naxis,boxes(maxboxes),nsize(maxnax)
 	integer blc(maxnax),trc(maxnax)
-	integer lin,fldsize,length,lenin
+	integer lin,fldsize,length,lenin,npnt
 	character in*64,out*64,format*10,line*80
-	logical rect,more,dohead,dodata,dohist,dostat,eof
+	logical more,dohead,dodata,dohist,dostat,domos,eof
 c
 c  Externals.
 c
-	logical BoxRect
 	integer len1
 c
 c  Get the input parameters.
@@ -88,7 +89,7 @@ c
 	call keyini
 	call keya ('in', In, ' ')
 	if (in.eq.' ') call bug ('f', 'Image name not specified')
-	call GetOpt(dohead,dodata,dohist,dostat)
+	call GetOpt(dohead,dodata,dohist,dostat,domos)
 	call BoxInput('region',In,boxes,maxboxes)
 	call keya ('format', format, '1pe10.3')
 	call chform (format, fldsize)
@@ -111,7 +112,6 @@ c  Determine portion of image to list.
 c
 	call BoxSet(boxes,maxnax,nsize,'s')
 	call BoxInfo(boxes,maxnax,blc,trc)
-	rect = BoxRect(boxes)
 c
 c  Title line.
 c
@@ -129,6 +129,10 @@ c
 	if(dohead) call ListHead(lIn)
 	if(dodata) call ListData(lIn,naxis,blc,trc,fldsize,format)
 	if(dostat) call ListStat(lIn,naxis,blc,trc)
+	if(domos)then
+	  call mosLoad(lIn,npnt)
+	  call mosPrint
+	endif
 c
 c  Copy across the history file, if required.
 c
@@ -151,46 +155,30 @@ c
 	call LogClose
       end
 c**********************************************************************c
-	subroutine GetOpt(dohead,dodata,dohist,dostat)
+	subroutine GetOpt(dohead,dodata,dohist,dostat,domos)
 c
 	implicit none
-	logical dohead,dodata,dohist,dostat
+	logical dohead,dodata,dohist,dostat,domos
 c
 c  Determine which of the options is to be done. Default is dohead.
 c
 c  Outputs:
 c    dohead,dodata,dohist,dostat	Things to be listed.
 c----------------------------------------------------------------------c
-	character value*12
-	integer l
+	integer NOPTS
+	parameter(NOPTS=5)
+	character opts(NOPTS)*10
+	logical present(NOPTS)
+	data opts/'header    ','data      ','history   ',
+     *		  'statistics','mosaic    '/
 c
-c  Externals.
-c
-	integer len1
-c
-	dohead = .false.
-	dodata = .false.
-	dohist = .false.
-	dostat = .false.
-c
-	call keya('options',value,' ')
-	dowhile(value.ne.' ')
-	  l = len1(value)
-	  if(index('head',value(1:l)).gt.0)then
-	    dohead = .true.
-	  else if(index('data',value(1:l)).gt.0)then
-	    dodata = .true.
-	  else if(index('history',value(1:l)).gt.0)then
-	    dohist = .true.
-	  else if(index('stat',value(1:l)).gt.0)then
-	    dostat = .true.
-	  else
-	    call bug('w','Unrecognised option ignored: '//value)
-	  endif
-	  call keya('options',value,' ')
-	enddo
-	if(.not.(dohead.or.dodata.or.dohist.or.dostat))
-     *	dohead = .true.
+	call options('options',opts,present,NOPTS)
+	dohead = present(1)
+	dodata = present(2)
+	dohist = present(3)
+	dostat = present(4)
+	domos  = present(5)
+	dohead = dohead.or..not.(dodata.or.dohist.or.dostat.or.domos)
 	end
 c**********************************************************************c
       subroutine chform (format, size)
@@ -599,7 +587,7 @@ c
 	    call xysetpl(lIn,1,plane)
 	    call AxisType(lIn,axis,plane,ctype,label,value,units)
 	    call stat(lin,naxis,blc,trc,sum,ave,rms,pmax,pmin)
-	    write(line,'(x,i4,x,a,5(x,e11.4))')
+	    write(line,'(i5,x,a,1p5e12.4)')
      *		plane,units,sum/cbof,pmax,pmin,ave,rms
 	    call LogWrit(line(1:79))
 	    plane = plane + 1
