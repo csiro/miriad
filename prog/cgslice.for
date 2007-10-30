@@ -121,8 +121,11 @@ c@ nxy
 c	Number of sub-plots in the x and y directions on the page.
 c	Defaults choose something sensible
 c@ labtyp
-c       Two values.  The spatial label type of the x and y axes.
-c       Minimum match is active.  Select from:
+c       Up to three values.  The first two are the spatial label types 
+c       of the x and y axes of the image. The third is the label type for
+c        the x-axis of the slice plot. Minimum match is active.  
+c
+c       Select from:
 c       
 c	"hms"       the label is in H M S (e.g. for RA)
 c	"dms"       the label is in D M S (e.g. for DEC)
@@ -145,6 +148,12 @@ c
 c	All offsets are from the reference pixel.  
 c	Defaults are "abspix", LABTYP(1) unless LABTYP(1)="hms"
 c	whereupon LABTYP(2) defaults to "dms" (for RA and DEC).
+c
+c       LABTYP(3) can only be "arcsec", "arcmin","reldeg" or
+c       "relpix". Default is "arcsec" for RA, DEC, LAT or LONG axes.
+c       
+c
+c
 c@ options
 c	Task enrichment options.  Minimum match is active.
 c
@@ -329,6 +338,7 @@ c    nebk 13feb97  Add keyword "3format"
 c    rjs  21jul97  Call initco earlier
 c    rjs   7may98  Change the bunit variable to be 16 char (not 8 char).
 c    rjs  08may00  Change incorrect keyf call to keya.
+c    dpr  18jan01  Add third laptyp
 c
 c Notes:
 c
@@ -373,7 +383,7 @@ c
      +  iax, ipage, wedcod, ibin(2), jbin(2), kbin(2), krng(2), 
      +  coltab, concol, labcol, slbcol, bgcol
 c
-      character labtyp(2)*6, ltype(nltype)*6
+      character labtyp(3)*6, ltype(nltype)*6
       character in*64, pdev*64, xlabel*40, ylabel*40, xlabel2*40, 
      +  ylabel2*40, hard*20, trfun*3, levtyp*1, fslval*80, fslposo*80, 
      +  fslposi*80, fslmod*80, units*16, val3form*20
@@ -395,7 +405,7 @@ c
       data dmm, dunsl, gaps /1.0e30, -1.0e30, .false., .false./
       data xdispls, ydispbs /3.5, 3.5/
 c-----------------------------------------------------------------------
-      call output ('CgSlice: version 1.0 7-May-98')
+      call output ('CgSlice: version 1.0 18-JAN-2001')
       call output (' ')
 c
 c Get user inputs
@@ -466,9 +476,25 @@ c
         ylabel2 = 'Intensity ('//units(1:len1(units))//')'
       end if
 c
+
+c
+c If user wants relpix, that's easy
+c
+      if (labtyp(3).eq.'relpix') radians=.false.
+
       if (radians) then
-        xlabel2 = 'offset (arcsec)'
+c Set default
+        if (labtyp(3).eq.'none') labtyp(3)='arcsec'
+        if (labtyp(3).eq.'arcsec')  xlabel2 = 'offset (arcsec)'
+        if (labtyp(3).eq.'arcmin')  xlabel2 = 'offset (arcmin)'
+        if (labtyp(3).eq.'reldeg')  xlabel2 = 'offset (degrees)'
       else
+        if ((labtyp(3).eq.'none').or.(labtyp(3).eq.'relpix')) then
+          labtyp(3)='relpix'
+        else 
+          call bug ('w', 'Cannot use labtyp(3) of '//labtyp(3))
+          call bug ('w', 'Non-radian axis type.')
+        end if
         xlabel2 = 'offset (pixels)'
       end if
 c
@@ -782,11 +808,13 @@ c
                if (dofit) then
                  call drawbox (dobord, slbcol, vblc, vtrc, xrange, 
      +              yrange, bound(1,i), bound(3,i), bound(2,i), 
-     +              bound(4,i), xlabel2, ylabel2, xdispls, ydispb)
+     +              bound(4,i), xlabel2, ylabel2, xdispls, ydispb,
+     +              labtyp(3))
                else
                  call drawbox (dobord, slbcol, vblc, vtrc, xrange, 
      +              yrange, sxmin, sxmax, symin, symax, xlabel2, 
-     +              ylabel2, xdispls, ydispbs)
+     +              ylabel2, xdispls, ydispbs,
+     +              labtyp(3))
                end if
                dunsl = .true.
 c
@@ -795,7 +823,8 @@ c
 c Plot the slice
 c
                  call slplot (i, nslp(i), nseg(i), memr(ipslx(i)), 
-     +              memr(ipsly(i)), memi(ipsls(i)), memi(ipsle(i)))
+     +              memr(ipsly(i)), memi(ipsls(i)), memi(ipsle(i)),
+     +              labtyp(3))
 c
 c Save the slice if desired
 c
@@ -807,7 +836,8 @@ c Do Gaussian fit if desired
 c
                  if (dofit) call gaufit (lmod, dobase, doxrng, i, 
      +             nslp(i), nseg(i),ipslx(i), ipsly(i),  ipsls(i), 
-     +             ipsle(i), xdispls, ydispbs, xlabel2, ylabel2, slbcol)
+     +             ipsle(i), xdispls, ydispbs, xlabel2, ylabel2, slbcol,
+     +             labtyp(3))
                end if
              end do
            end if
@@ -1123,7 +1153,8 @@ c
 c
 c
       subroutine drawbox (dobord, slbcol, vblc, vtrc, xrange, yrange, 
-     +   sxmin, sxmax, symin, symax, xlabel, ylabel, xdispl, ydispb)
+     +   sxmin, sxmax, symin, symax, xlabel, ylabel, xdispl, ydispb,
+     +     labtyp)
 c-----------------------------------------------------------------------
 c     Set the viewport and draw the box for the slice display
 c
@@ -1137,6 +1168,7 @@ c   sx,ymin,max  Auto plot extrema
 c   x,ylabel     x- and y-axis labels
 c   xdispl,ydispb
 c                Y and x axis label offsets
+c   labtyp       x-axis label type
 c
 c-----------------------------------------------------------------------
       implicit none
@@ -1144,13 +1176,24 @@ c-----------------------------------------------------------------------
      +  symax, ydispb, xdispl
       integer slbcol
       logical dobord
-      character*(*) xlabel, ylabel
+      character*(*) xlabel, ylabel,labtyp
 cc
       real lim(4)
 c-----------------------------------------------------------------------
       call pgsvp (vblc(1), vtrc(1), vblc(2), vtrc(2))
       call fixlim (.true., xrange, yrange, sxmin, sxmax, symin, 
      +             symax, lim)
+c
+c Scale x range accoring to labype
+c
+      if (index(labtyp,'arcmin').ne.0) then
+        lim(1)=lim(1)/60.0
+        lim(3)=lim(3)/60.0
+      else if (index(labtyp,'reldeg').ne.0) then
+        lim(1)=lim(1)/60.0/60.0
+        lim(3)=lim(3)/60.0/60.0
+      end if
+c
       call pgswin (lim(1), lim(3), lim(2), lim(4))
 c
       if (dobord) then
@@ -1276,6 +1319,7 @@ c
 c   Input in common
 c     ipx     The pointer to the MEMR memory buffer for the x values
 c             of the slice
+
 c   Input
 c     npar    The number of parameters we are solving for
 c     npts    The number of points in the slice
@@ -1355,7 +1399,8 @@ c
 c
 c
       subroutine gaufit (lmod, dobase, doxrng, islice, n, nseg, ipslx,
-     +   ipsly, ipsls, ipsle, xdispl, ydispb, xlabel, ylabel, slbcol)
+     +   ipsly, ipsls, ipsle, xdispl, ydispb, xlabel, ylabel, slbcol,
+     +   labtyp)
 c-----------------------------------------------------------------------
 c     Fit a Gaussian to the slice
 c
@@ -1377,11 +1422,12 @@ c          Label displacements from axes
 c   x,ylabel
 c          labels
 c   slbcol    Colour index for slice plot frame
+c   labtyp    x-axis label type for slice plot
 c-----------------------------------------------------------------------
       implicit none
       real xdispl, ydispb
       integer n, ipslx, ipsly, ipsls, ipsle, nseg, islice, lmod, slbcol
-      character*(*) xlabel, ylabel
+      character*(*) xlabel, ylabel,labtyp
       logical dobase, doxrng
 cc
       include 'maxdim.h'
@@ -1391,12 +1437,12 @@ cc
       parameter (itmax = 100, eps1 = 0.0, eps2 = 0.001)
 c
       real wx1, wx2, wy1, wy2, xsol(5), h(5), dx(5), aa(25),
-     +  wy1s, wy2s, xc, yc
+     +  wy1s, wy2s, xc, yc, scafac
       integer ipf, ipfp, ipdfdx, ipxx, ipyy, ifail, iostat, is, n2
       character aline*132
       logical more
 c
-      integer len1
+      integer len1,sctr
       external gaufun, gauder, gaufun2, gauder2
 c
 c Transfer X values of slice to EXTERNAL functions via common
@@ -1419,11 +1465,24 @@ c
         xsol(4) = 0.0
         xsol(5) = 0.0
 c
+c Scale x data accoring to labype
+c
+        scafac=1
+        if (index(labtyp,'arcmin').ne.0) scafac=60.0
+        if (index(labtyp,'reldeg').ne.0) scafac=60.0*60.0
+      
+        do sctr=2,4
+          xsol(sctr)=xsol(sctr)*scafac
+        end do
+        xsol(5)=xsol(5)/scafac
+
+
+c
 c Optionally get x range and set pointers passed out in common
 c
         if (doxrng) then
           call getxrng (wx1, wx2, wy1, wy2, n, memr(ipslx), 
-     +                  is, n2, xc, yc)
+     +                  is, n2, xc, yc,labtyp)
           ipxx = ipslx + is - 1
           ipyy = ipsly + is - 1
 c          write (*,*) 'n2,is=', n2,is
@@ -1479,7 +1538,7 @@ c Plot model and residual
 c
         if (ifail.ne.1)
      +    call plotm (dobase, islice, n, nseg, ipslx, ipsly, ipsls, 
-     +      ipsle, xsol, xdispl, ydispb, xlabel, ylabel, slbcol)
+     +      ipsle, xsol, xdispl, ydispb, xlabel, ylabel, slbcol,labtyp)
 c
 c Tell user result; inside redo loop because they may fit multiple
 c peaks in the one slice.
@@ -1506,7 +1565,7 @@ c
         call redo (more)
         if (more) call slerdraw (ydispb, xdispl, xlabel, ylabel, islice,
      +                           n, nseg, ipslx, ipsly, ipsls, ipsle, 
-     +                           .true., wy1s, wy2s, slbcol)
+     +                           .true., wy1s, wy2s, slbcol,labtyp)
       end do
 c
 c Save model in text file
@@ -1618,14 +1677,14 @@ c
 c  Input
 c    wx,y1,2    World coordinates of window
 c  Input/output
-c    xsol       Solution vector, peak, pos, fwhm, offset, slope
+c    xsol       Solution vector: peak, pos, fwhm, offset, slope
 c    xc,yc      ocation where cursor was last seen
 c
 c-----------------------------------------------------------------------
       implicit none
       real xsol(5), wx1, wx2, wy1, wy2, xc, yc
 cc 
-      real x, y
+      real x, y, wx
       character cch*1
       logical more, in
 c-----------------------------------------------------------------------
@@ -1642,14 +1701,17 @@ c
         call inrng (x, wx1, wx2, in)
         if (in) call inrng (y, wy1, wy2, in)
         if (in) then
+          wx=x
           if (x.eq.xsol(2)) then
             call output (' ')
             call output ('A HWHM of 0 is no good, try again')
             call output (' ')
           else
             xsol(3) = 2.0*abs(xsol(2)-x)
-            call pgpt (1, x, y, 17)
-            call pgpt (1, xsol(2)-x+xsol(2), y, 17)
+            call pgpt (1, wx, y, 17)
+            if (x.gt.xsol(2)) wx=xsol(2)-(xsol(3))/2.0
+            if (x.lt.xsol(2)) wx=xsol(2)+(xsol(3))/2.0
+            call pgpt (1, wx, y, 17)
             call pgupdt
             more = .false.
           end if
@@ -1756,7 +1818,8 @@ c
       end
 c
 c
-      subroutine getxrng (wx1, wx2, wy1, wy2, n, x, is, n2, xc, yc)
+      subroutine getxrng (wx1, wx2, wy1, wy2, n, x, is, n2, xc, yc,
+     -     labtyp)
 c-----------------------------------------------------------------------
 c     Get x range to fit with cursor
 c
@@ -1764,6 +1827,7 @@ c  Input
 c    wx,y1,2    World coordinates of window
 c    n          Number of points in slice
 c    x          Array of slice x values
+c    labtyp     Xaxis lable type
 c  Output
 c    is         Start index of first x value wanted in range 
 c               defined with cursor
@@ -1772,8 +1836,9 @@ c-----------------------------------------------------------------------
       implicit none
       integer is, n, n2
       real wx1, wx2, wy1, wy2, x(n), xc, yc
+      character*(*)  labtyp
 cc 
-      real x1, x2, xt
+      real x1, x2, xt, scafac
       integer i, ie
 c-----------------------------------------------------------------------
       call output 
@@ -1783,6 +1848,15 @@ c
       call getlim (x1, wx1, wx2, wy1, wy2, x2, xc, yc)
 c      write (*,*) 'Enter x1,x2'
 c      read (*,*) x1,x2
+c
+c Scale x data accoring to labype
+c
+        scafac=1
+        if (index(labtyp,'arcmin').ne.0) scafac=60.0
+        if (index(labtyp,'reldeg').ne.0) scafac=60.0*60.0
+c
+        x1=x1*scafac
+        x2=x2*scafac
 c
       xt = x2
       x2 = max(x1,x2)
@@ -1836,7 +1910,7 @@ c   pixr       Pixel map intensity range
 c   trfun      Type of grtey scale transfer function: 'log' or 'lin'
 c   coltab     User given colour table to apply to plot device
 c   pdev       PGPLOT plot device/type
-c   labtyp     Type of labels for x and y axes
+c   labtyp     Type of labels for x and y axes, and slice x axes
 c   do3val     True means label sub-plots with value of third axis
 c   do3pix     True means label sub-plots with pixel of third axis
 c   eqscale    True means plot with x and y scales
@@ -1865,7 +1939,7 @@ c
       integer maxlev, nx, ny, nlevs, ibin(2), jbin(2), kbin(2), nltype,
      +  coltab
       real levs(maxlev), pixr(2), cs(3), slev, xrange(2), yrange(2)
-      character*(*) labtyp(2), in, pdev, trfun, levtyp, fslval, fslposi,
+      character*(*) labtyp(3), in, pdev, trfun, levtyp, fslval, fslposi,
      +  fslposo, fslmod, ltype(nltype), val3form
       logical do3val, do3pix, eqscale, dopixel, doerase, accum, noimage,
      +  dofit, dobase, doxrng, dofid, dowedge, grid, dunw
@@ -1947,7 +2021,7 @@ c
         dowedge = .false.
       end if
 c
-      call keymatch ('labtyp', nltype, ltype, 2, labtyp, nlab)
+      call keymatch ('labtyp', nltype, ltype, 3, labtyp, nlab)
       if (nlab.eq.0) labtyp(1) = 'abspix'
       if (nlab.le.1) then
         labtyp(2) = labtyp(1)
@@ -1966,6 +2040,17 @@ c
           call bug ('w', 'deprecated in favour of absnat and relnat')
         end if
       end if  
+      if (nlab.le.2) then
+c Default is set later, depending
+c on whether the axis is radian type
+        labtyp(3) = 'none'    
+      else 
+        if ((labtyp(3).ne.'arcsec') .and. (labtyp(3).ne.'arcmin') .and. 
+     - (labtyp(3).ne.'reldeg') .and. (labtyp(3).ne.'relpix')) then
+          call bug ('w', 'LABTYP(3) not recognized')
+          labtyp(3) = 'none'
+        end if
+      end if
 c
       if ( (index(labtyp(1),'nat').ne.0  .and. 
      +      index(labtyp(2),'nat').eq.0)) then
@@ -2134,7 +2219,7 @@ c
       end
 c
 c
-      subroutine mrplot (nseg, n, x, y, segs, sege)
+      subroutine mrplot (nseg, n, x, y, segs, sege,labtyp)
 c-----------------------------------------------------------------------
 c     Plot the segments of the model or residual that were computed
 c     where the slice was unblanked
@@ -2145,14 +2230,28 @@ c   n          Number of points in slice
 c   x,y        SLice model or residual  x and y values
 c   segs       Start indices for segments
 c   sege       End indices for segments
+c   labtyp     Xaxis label type
 c
 c-----------------------------------------------------------------------
       implicit none
       integer n, nseg, segs(nseg), sege(nseg)
       real x(n), y(n)
+      character*(*) labtyp
 cc
-      integer j, nsegp, ip
+      integer j, nsegp, ip, sctr
 c-----------------------------------------------------------------------
+c
+c Scale x data accoring to labype
+c
+      if (index(labtyp,'arcmin').ne.0) then
+        do sctr=1,n
+          x(sctr)=x(sctr)/60.0
+        end do
+      else if (index(labtyp,'reldeg').ne.0) then
+        do sctr=1,n
+          x(sctr)=x(sctr)/60.0/60.0
+        end do
+      end if
 c
 c Loop over number of segments
 c
@@ -2171,6 +2270,18 @@ c
         call pgline (nsegp, x(ip), y(ip))
       end do
       call pgupdt
+c
+c Put them all back again! I hate fortran...
+c
+      if (index(labtyp,'arcmin').ne.0) then
+        do sctr=1,n
+          x(sctr)=x(sctr)*60.0
+        end do
+      else if (index(labtyp,'reldeg').ne.0) then
+        do sctr=1,n
+          x(sctr)=x(sctr)*60.0*60.0
+        end do
+      end if
 c
       end
 c
@@ -2297,7 +2408,7 @@ c
 c
 c
       subroutine plotm (dobase, islice, n, nseg, ipslx, ipsly, ipsls, 
-     +  ipsle, xsol, xdispl, ydispb, xlabel, ylabel, slbcol)
+     +  ipsle, xsol, xdispl, ydispb, xlabel, ylabel, slbcol,labtyp)
 c-----------------------------------------------------------------------
 c     Plot data, model and residual
 c
@@ -2316,12 +2427,12 @@ c   xsol       Solution vector: peak, pos, fwhm, offset, slope
 c   x,ydispl,b Label displacements
 c   x,ylabel   Labels
 c   slbcol     Colour index for slice plot frame
-c
+c   labtyp     x-axis label for slice plot
 c-----------------------------------------------------------------------
       implicit none
       real xdispl, ydispb, xsol(5)
       integer n, ipslx, ipsly, ipsls, ipsle, nseg, islice, slbcol
-      character*(*) xlabel, ylabel
+      character*(*) xlabel, ylabel,labtyp
       logical dobase
 cc
       include 'maxdim.h'
@@ -2360,7 +2471,7 @@ c
 c Erase slice display and redraw slice
 c
       call slerdraw (ydispb, xdispl, xlabel, ylabel, islice, n, nseg,
-     +  ipslx, ipsly, ipsls, ipsle, .true., ymin, ymax, slbcol)
+     +  ipslx, ipsly, ipsls, ipsle, .true., ymin, ymax, slbcol,labtyp)
 c
 c Write title
 c
@@ -2391,7 +2502,7 @@ c
       call pgsls (1)
       call pgsci (ic1)
       call mrplot (nseg, n, memr(ipslx), memr(ipmy), memi(ipsls),
-     +             memi(ipsle))
+     +             memi(ipsle),labtyp)
 c
       call pgmtxt ('T', 0.2, coord, 0.0, 'Model')
       call pglen (5, 'Model', xl, yl)
@@ -2403,7 +2514,7 @@ c
       call pgsls (3)
       call pgsci (ic2)
       call mrplot (nseg, n, memr(ipslx), memr(ipdy), memi(ipsls),
-     +             memi(ipsle))
+     +             memi(ipsle),labtyp)
 c
       call pgmtxt ('T', 0.2, coord, 0.0, 'Residual')
       call pgupdt
@@ -2766,7 +2877,7 @@ c
 c
       subroutine slerdraw (ydispb, xdispl, xlabel, ylabel, islice,
      +   n, nseg, ipslx, ipsly, ipsls, ipsle, usenew, ymin, ymax, 
-     +   slbcol)
+     +   slbcol,labtyp)
 c-----------------------------------------------------------------------
 c     Erase old slice display, redraw box and redraw slice
 c
@@ -2787,12 +2898,13 @@ c   usenew     Use the given ymin and ymax else use what it was before
 c              These will be stretched 5% as usual
 c   ymin,ymax  Optionally used Y extrema
 c   slbcol     COlour index for frame
+c   labtyp     x-axis label type for slice plot
 c-----------------------------------------------------------------------
       implicit none
       real ydispb, xdispl, ymin, ymax
       integer islice, nseg, ipslx, ipsly, ipsls, ipsle, n, slbcol
       logical usenew
-      character*(*) xlabel, ylabel
+      character*(*) xlabel, ylabel,labtyp
 cc
       include 'maxdim.h'
       include 'mem.h'
@@ -2802,6 +2914,17 @@ c
 c Get current plot window and viewport
 c
       call pgqwin (wblc(1), wtrc(1), wblc(2), wtrc(2))
+c
+c Scale xranges accoring to labype
+c
+      if (index(labtyp,'arcmin').ne.0) then
+        wblc(1)=wblc(1)*60.0
+        wtrc(1)=wtrc(1)*60.0
+      else if (index(labtyp,'reldeg').ne.0) then
+        wblc(1)=wblc(1)*60.0*60.0
+        wtrc(1)=wtrc(1)*60.0*60.0
+      end if
+
       call pgqvp (0, vblc(1), vtrc(1), vblc(2), vtrc(2))
 c
 c Erase old plots
@@ -2824,12 +2947,14 @@ c Redraw box and labels
 c
       call drawbox (.true., slbcol, vblc, vtrc, xrange, yrange,
      +   wblc(1), wtrc(1), ymin, ymax, xlabel, ylabel,
-     +   xdispl, ydispb)
+     +   xdispl, ydispb,
+     +              labtyp)
 c
 c Plot slice
 c
       call slplot (islice, n, nseg, memr(ipslx), memr(ipsly), 
-     +             memi(ipsls), memi(ipsle))
+     +             memi(ipsls), memi(ipsle),
+     +              labtyp)
 c
       end
 c
@@ -3008,7 +3133,7 @@ c
       end
 c
 c
-      subroutine slplot (islice, n, nseg, x, y, segs, sege)
+      subroutine slplot (islice, n, nseg, x, y, segs, sege,labtyp)
 c-----------------------------------------------------------------------
 c     Plot the segments of the slice that are unblanked
 c
@@ -3019,14 +3144,28 @@ c   nseg       Number of segments
 c   x,y        Slice x and y values
 c   segs       Segment start indices
 c   sege       Segment end indices
-c
+c   labtyp     x-axis label-type for plot
 c-----------------------------------------------------------------------
       implicit none
       integer n, nseg, segs(nseg), sege(nseg), islice
       real x(n), y(n)
+      character*(*) labtyp
 cc
       integer j, nsegp, icol, ip
+      integer sctr              ! loop variable
 c-----------------------------------------------------------------------
+c
+c Scale x data accoring to labype
+c
+      if (index(labtyp,'arcmin').ne.0) then
+        do sctr=1,n
+          x(sctr)=x(sctr)/60.0
+        end do
+      else if (index(labtyp,'reldeg').ne.0) then
+        do sctr=1,n
+          x(sctr)=x(sctr)/60.0/60.0
+        end do
+      end if
 c
 c Set colour index for this slice.  All blanked slices do not appear, but
 c their colour is lost because it was used to mark the slice on the image
@@ -3051,6 +3190,18 @@ c
         call pgline (nsegp, x(ip), y(ip))
       end do
       call pgupdt
+c
+c Put them all back again! I hate fortran...
+c
+      if (index(labtyp,'arcmin').ne.0) then
+        do sctr=1,n
+          x(sctr)=x(sctr)*60.0
+        end do
+      else if (index(labtyp,'reldeg').ne.0) then
+        do sctr=1,n
+          x(sctr)=x(sctr)*60.0*60.0
+        end do
+      end if
 c
       end
 c
