@@ -59,7 +59,8 @@ c    rjs   6sep94 Use MAXWIN in maxdim.h. Better treatment of xyphase.
 c    rjs  25jan95 Added options=mosaic.
 c    rjs  21feb95 Get select=win to work.
 c    rjs  22sep95 Re-added support for pulsar binning.
-c
+c    rjs  05oct95 Handle xyphase and systemp being temporarily
+c		  missing.
 c  Bugs:
 c   Perfect?
 c------------------------------------------------------------------------
@@ -67,7 +68,7 @@ c------------------------------------------------------------------------
 	integer MAXSELS
 	parameter(MAXSELS=256)
 	character version*(*)
-	parameter(version='UvSplit: version 1.0 21-Feb-95')
+	parameter(version='UvSplit: version 1.0 05-Oct-95')
 c
 	character vis*64,dtype*1
 	integer tvis
@@ -578,7 +579,7 @@ c------------------------------------------------------------------------
 	character type*1
 c
 	call uvprobvr(lVis,var,type,n,upd)
-	upd = type.eq.'r'.and.n.le.MAXANT*MAXWIN
+	upd = type.eq.'r'.and.n.le.MAXANT*MAXWIN.and.n.gt.0
 	if(upd)then
 	  call uvgetvrr(lVis,var,buf,n)
 	  call uvrdvri(lVis,'nants',nants,0)
