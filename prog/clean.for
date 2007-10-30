@@ -37,6 +37,12 @@ c	Extra processing options. Several can be given, separated
 c	by commas. Minimum match is used. Possible values are:
 c	  negstop   Stop when the first negative component is encounters.
 c	            This does not apply when using Steer iterations.
+c	  pad       Double the beam size by padding it with zeros. This
+c	            will give you better stability with Clark and Steer
+c	            modes if you are daring enough to CLEAN more than the
+c	            inner quarter of the dirty image.
+c
+c	Expert's options only, use with understanding only.
 c	  positive  Apply a positivity constraint. This constrains the
 c	            component image to be non-negative. A side-effect of this
 c	            is that CLEAN will stop iterating if it cannot continue
@@ -45,10 +51,6 @@ c	            iterations.
 c	  asym      The beam is asymmetric. By default CLEAN assumes the
 c	            beam has a 180 degree rotation symmetry, which is the
 c	            norm for beams in radio-astronomy.
-c	  pad       Double the beam size by padding it with zeros. This
-c	            will give you better stability with Clark and Steer
-c	            modes if you are daring enough to CLEAN more than the
-c	            inner quarter of the dirty image.
 c@ cutoff
 c	CLEAN finishes either when the absolute maximum residual falls
 c	below CUTOFF, or when the criteria described below is
@@ -126,6 +128,8 @@ c   mjs  17feb93 - minor doc mod only (RESTORE -> RESTOR).
 c   rjs  26feb93 - add positive option, and get negstop parameter via
 c		   an option.
 c   rjs  31jan95 - Copy across mosaic table. Eliminate scratch common.
+c   rjs  14feb95 - Changes to the area of the way "model" is handled.
+c   nebk 29apr95 - DOc change only
 c
 c  Important Constants:
 c    MaxDim	The max linear dimension of an input (or output) image.
@@ -143,7 +147,7 @@ c		to write.
 c
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Clean: version 1.0 31-Jan-95')
+	parameter(version='Clean: version 1.0 14-Feb-95')
 	include 'maxdim.h'
 	integer MaxBeam,maxCmp1,maxCmp2,MaxBox,MaxRun,MaxP
 	parameter(maxCmp1=66000,MaxCmp2=32000,MaxP=257)
@@ -162,7 +166,7 @@ c
 	integer MaxNiter,oNiter,Niter,totNiter,minPatch,maxPatch
 	integer naxis,n1,n2,icentre,jcentre,nx,ny
 	integer blc(3),trc(3),xmin,xmax,ymin,ymax
-	integer k,nRun,nPoint
+	integer k,nRun,nPoint,xoff,yoff,zoff
 	character MapNam*64,BeamNam*64,ModelNam*64,OutNam*64,line*72
 	integer lMap,lBeam,lModel,lOut
 	integer nMap(3),nBeam(3),nModel(3),nOut(4)
@@ -245,10 +249,9 @@ c  exactly in size with the output map (an unfortunate restriction.
 c
 	if(ModelNam.ne.' ')then
 	  call xyopen(lModel,ModelNam,'old',3,nModel)
-	  if(nOut(1).ne.nModel(1).or.nOut(2).ne.nModel(2).or.
-     *	     nout(3).ne.nModel(3))
-     *	     call bug('f','Model and output size do not agree')
 	  call rdhdi(lModel,'niters',totNiter,0)
+	  call align(lModel,lMap,nModel(1),nModel(2),nModel(3),
+     *						xoff,yoff,zoff)
 	else
 	  totNiter = 0
 	endif
@@ -307,9 +310,9 @@ c
 	    call NoModel(Data(pMap),Data(pEst),Data(pRes),nPoint)
 	  else
             call output ('Subtracting initial model ...')
-	    call xysetpl(lModel,1,k-blc(3)+1)
-	    call GetPlane(lModel,Run,nRun,xmin-blc(1),ymin-blc(2),
-     *		nModel(1),nModel(2),Data(pEst),MaxMap,nPoint)
+	    call GetPort(lModel,Run,nRun,k,xmin+xoff-1,ymin+yoff-1,
+     *		zoff,nModel(1),nModel(2),nModel(3),
+     *		Data(pEst),MaxMap,nPoint)
 	    call Diff(pBem,Data(pEst),Data(pMap),Data(pRes),
      *		nPoint,nx,ny,Run,nRun)
 	    call SumAbs(EstASum,Data(pEst),nPoint)
@@ -1482,4 +1485,122 @@ c
 	  Residual(i) = Map(i) - Residual(i)
 	enddo
 c
+	end
+c************************************************************************
+	subroutine align(lMap,lModel,mMap,nMap,oMap,xoff,yoff,zoff)
+c
+	implicit none
+	integer lMap,lModel
+	integer mMap,nMap,oMap,xoff,yoff,zoff
+c
+c  Determine the alignment parameters between the map and the model.
+c  This insists that they line up on pixels.
+c
+c  Input:
+c    lMap	Handle of the map file.
+c    lModel	Handle of the model file.
+c    mMap,nMap,oMap Map dimensions.
+c
+c  Output:
+c    xoff,yoff,zoff These values have to be added to the grid units of
+c		the model to convert them to grid units of the map.
+c
+c------------------------------------------------------------------------
+	integer i,offset(3),nsize(3)
+	character num*1
+	real vM,dM,rM,vE,dE,rE,temp
+c
+c  Externals.
+c
+	character itoaf*2
+c
+	nsize(1) = mMap
+	nsize(2) = nMap
+	nsize(3) = oMap
+c
+	do i=1,3
+	  num = itoaf(i)
+	  call rdhdr(lMap,'crval'//num,vM,0.)
+	  call rdhdr(lMap,'cdelt'//num,dM,1.)
+	  call rdhdr(lMap,'crpix'//num,rM,1.)
+	  call rdhdr(lModel,'crval'//num,vE,0.)
+	  call rdhdr(lModel,'cdelt'//num,dE,1.)
+	  call rdhdr(lModel,'crpix'//num,rE,1.)
+	  if(dE.eq.0)call bug('f','Increment on axis '//num//' is zero')
+	  temp = (vM-vE)/dE + (rM-rE)
+	  offset(i) = nint(temp)
+	  if(abs(offset(i)-temp).gt.0.05)
+     *	    call bug('f','Map and model do not align on pixels')
+	  if(abs(dM-dE).ge.0.001*abs(dM))
+     *	    call bug('f','Map and model increments are different')
+	  if(offset(i).lt.0.or.offset(i).ge.nsize(i))
+     *	    call bug('w','Map and model do not overlap well')
+	enddo
+c
+	xoff = offset(1)
+	yoff = offset(2)
+	zoff = offset(3)
+c
+	end
+c************************************************************************
+	subroutine GetPort(lModel,Runs,nRuns,k,ioff,joff,koff,
+     *	  n1,n2,n3,Data,MaxData,nData)
+c
+	implicit none
+	integer lModel,ioff,joff,koff,nRuns,Runs(3,nRuns),k,n1,n2,n3
+	integer nData,MaxData
+	real Data(MaxData)
+c
+c  Get the portion of a image that overlaps with the selected region.
+c
+c  Input:
+c  Output:
+c    Data	The image data.
+c    nData	Number of pixels.
+c------------------------------------------------------------------------
+	include 'maxdim.h'
+	integer i,i1,i2,j,jsave,ipnt,iRuns
+	real Buf(MAXDIM)
+c
+	call BoxCount(Runs,nRuns,nData)
+	if(nData.gt.MaxData)call bug('f','Buffer too small, in GetMod')
+c
+	if(k+koff.lt.1.or.k+koff.gt.n3)then
+	  do i=1,nData
+	    Data(i) = 0
+	  enddo
+	  ipnt = nData
+	else
+	  ipnt = 0
+	  jsave = 0
+	  call xysetpl(lModel,1,k+koff)
+	  do iRuns=1,nRuns
+	    j = Runs(1,iRuns) + joff
+	    i1 = Runs(2,iRuns) + ioff
+	    i2 = Runs(3,iRuns) + ioff
+	    if(j.lt.1.or.j.gt.n2.or.i1.gt.n1.or.i2.lt.1)then
+	      do i=i1,i2
+		ipnt = ipnt + 1
+		Data(ipnt) = 0
+	      enddo
+	    else
+	      if(j.ne.jsave)call xyread(lModel,j,Buf)
+	      jsave = j
+	      do i=i1,0
+		ipnt = ipnt + 1
+		Data(ipnt) = 0
+	      enddo
+	      do i=max(i1,1),min(i2,n1)
+		ipnt = ipnt + 1
+		Data(ipnt) = Buf(i)
+	      enddo
+	      do i=n1+1,i2
+		ipnt = ipnt + 1
+		Data(ipnt) = 0
+	      enddo
+	    endif
+	  enddo
+	endif
+c
+	if(ipnt.ne.nData)call bug('f','Algorithmic failure in GetMod')
 	end
