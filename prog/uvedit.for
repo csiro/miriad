@@ -51,6 +51,7 @@ c    rjs   14jul97    nspect etc was not getting read when the source
 c		      selected was not the first source in the file.
 c    rjs   08may00    Change incorrect call of keyf to keya.
 c    rjs   05sep00    Use double precision to avoid rounding of coords.
+c    rjs   19sep04    Copy across sensitivity model, if appropriate.
 c***********************************************************************
 c= Uvedit - Editing of the baseline of a UV data set.
 c& jm
@@ -216,7 +217,7 @@ c
       character PROG*(*)
       parameter (PROG = 'UVEDIT: ')
       character VERSION*(*)
-      parameter (VERSION = 'version 1.8 05-Sep-00')
+      parameter (VERSION = 'version 1.8 19-Sep-04')
 c
       double precision SECRAD, ASECRAD
 c  -------------(SECRAD = DPI / (12.d0 * 3600.d0))
@@ -1085,6 +1086,7 @@ c
           call hdcopy(Lin,Lout,'ntau')
           call hdcopy(Lin,Lout,'gains')
           call hdcopy(Lin,Lout,'freq0')
+	  call hdcopy(Lin,Lout,'senmodel')
 	endif
 c
 	if(hdprsnt(Lin,'bandpass'))then
