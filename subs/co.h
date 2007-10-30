@@ -1,0 +1,23 @@
+	include 'maxnax.h'
+c
+c  The various sorts of coordinates.
+c
+	integer LAT,LON,VELO,FELO,FREQ,LINEAR
+	parameter(LAT=1,LON=2,VELO=3,FELO=4,FREQ=5,LINEAR=6)
+c
+	integer MAXOPEN
+	parameter(MAXOPEN=4)
+c
+	integer Lus(MAXOPEN)
+	integer naxis(MAXOPEN)
+	integer ilong(MAXOPEN),ilat(MAXOPEN),ifreq(MAXOPEN)
+	double precision crval(MAXNAX,MAXOPEN)
+	double precision crpix(MAXNAX,MAXOPEN)
+	double precision cdelt(MAXNAX,MAXOPEN)
+	double precision restfreq(MAXOPEN),vobs(MAXOPEN)
+	character ctype(MAXNAX,MAXOPEN)*16,coproj(MAXOPEN)*3
+	integer cotype(MAXNAX,MAXOPEN)
+c
+	common/cocom/crval,crpix,cdelt,restfreq,vobs,lus,naxis,
+     *		cotype,ilong,ilat,ifreq
+	common/cocomc/ctype,coproj
