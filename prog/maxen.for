@@ -115,9 +115,10 @@ c   rjs  25mar97 - Check whether data are selected for a given plane.
 c   rjs  24jun97 - Correct check for alignment mismatch.
 c   rjs  02jul97 - cellscal change.
 c   rjs  23jul97 - Added pbtype.
+c   rjs  10feb99 - Zero initial estimate for measure=cornwell to 0.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Maxen: version 1.0 24-Jun-97')
+	parameter(version='Maxen: version 1.0 10-Feb-99')
 	include 'maxnax.h'
 	include 'maxdim.h'
 	integer MaxRun,MaxBoxes
@@ -324,7 +325,11 @@ c  Get the Estimate and Residual. Also get information about the
 c  current situation.
 c
 	  if(ModelNam.eq.' ')then
-	    call Copy(nPoint,Data(pDef),Data(pEst))
+	    if(positive)then
+	      call Copy(nPoint,Data(pDef),Data(pEst))
+	    else
+	      call Zeroit(nPoint,Data(pEst))
+	    endif
 	  else
 	    call AlignGet(lModel,Run,nRun,k,xmin+xmoff-1,ymin+ymoff+1,
      *		zmoff,nModel(1),nModel(2),nModel(3),
@@ -1163,5 +1168,20 @@ c
 	trc(3) = nMap(3)
 c
 	call BoxDef(boxes,3,blc,trc)
+c
+	end
+c************************************************************************
+	subroutine Zeroit(n,array)
+c
+	implicit none
+	integer n
+	real array(n)
+c
+c------------------------------------------------------------------------
+	integer i
+c
+	do i=1,n
+	  array(i) = 0
+	enddo
 c
 	end

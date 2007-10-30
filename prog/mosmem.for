@@ -141,9 +141,11 @@ c		   Also some changes in some checks and guessing TFlux to
 c		   make it more robust.
 c    rjs  22jan99  Fudge to get the rms noise information to propogate
 c		   through correctly for single pointing work.
+c    rjs  10feb98  Get measure=cornwell to work by setting initial estimate
+c		   to zero.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='MosMem: version 1.0 22-Jan-99')
+	parameter(version='MosMem: version 1.0 10-Feb-99')
 	include 'maxdim.h'
 	include 'maxnax.h'
 	include 'mem.h'
@@ -483,7 +485,11 @@ c
 c  Get the Estimate and Residual.
 c
 	  if(ModelNam.eq.' ')then
-	    call Copy(nPoint,memr(pDef),memr(pEst))
+	    if(positive)then
+	      call Copy(nPoint,memr(pDef),memr(pEst))
+	    else
+	      call Zeroit(nPoint,memr(pEst))
+	    endif
 	  else
 	    call AlignGet(lModel,Run,nRun,k,xmoff,ymoff,zmoff,
      *		nModel(1),nModel(2),nModel(3),memr(pEst),
@@ -1577,5 +1583,19 @@ c
 	enddo
 c
 	fac = nfac
+c
+	end
+c************************************************************************
+	subroutine Zeroit(n,array)
+c
+	implicit none
+	integer n
+	real array(n)
+c------------------------------------------------------------------------
+	integer i
+c
+	do i=1,n
+	  array(i) = 0
+	enddo
 c
 	end
