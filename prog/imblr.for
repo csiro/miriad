@@ -20,8 +20,7 @@ c  History:
 c    nebk 27Nov95  Original version
 c    nebk 16aug96  Tell user some numbers
 c    nebk 13sep96  Tell them some more
-c  Notes:
-c    Uses cgsubs.for
+c    rjs  12oct99  Do not write out gflags.
 c
 c-----------------------------------------------------------------------
       implicit none
@@ -30,14 +29,12 @@ c
       include 'maxnax.h'
 c
       character version*20
-      parameter (version = 'Version 13-Sep-96')
+      parameter (version = 'Version 12-Oct-99')
 c
       integer size(maxnax), lin, lout, i, j, k, naxis
       real dmm(2), val, data(maxdim), npix, npix2
-      logical gflags(maxdim), flags(maxdim)
+      logical flags(maxdim),first
       character in*64, out*64, line*132
-      data gflags /maxdim*.true./
-      data dmm /1.0e30, -1.0e30/
 c-----------------------------------------------------------------------
       call output ('ImBLR: '//version)
 c
@@ -70,6 +67,7 @@ c
 c
 c Loop over input image
 c
+      first = .true.
       npix2 = 0.0
       do k = 1, size(3)
         npix = 0.0
@@ -78,6 +76,11 @@ c
 c
         do j = 1, size(2)
           call xyread (lin, j, data)
+	  if(first)then
+	    dmm(1) = data(1)
+	    dmm(2) = dmm(1)
+	    first = .false.
+	  endif
           call xyflgrd (lin, j, flags)
 c
           do i = 1, size(1)
@@ -90,7 +93,6 @@ c
           end do
 c
           call xywrite (lout, j, data)
-          call xyflgwr (lout, j, gflags)
         end do
 c
         if (npix.gt.0.0) then
