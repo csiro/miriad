@@ -180,6 +180,8 @@ c
 	    enddo
 	    xlo = times(1)
 	    xhi = times(neq)
+	    xlo = xlo - 0.1*(xhi-xlo)
+	    xhi = xhi + 0.1*(xhi-xlo)
 	    ymin = min(y1(1),y2(1))
 	    ymax = max(y1(1),y2(1))
 	    do i=1,neq
@@ -187,8 +189,8 @@ c
 	      ymax = max(ymax,y1(i),y2(i))
 	    enddo
 	    call pgrnge(ymin,ymax,ylo,yhi)
-	    ylo = min(0.0,ylo)
-	    yhi = max(600.0,yhi)
+	    yhi = max(600.0,yhi+0.1*(yhi-ylo))
+	    ylo = min(0.0,ylo-0.1*(yhi-ylo))
 c
 	    call pgpage
 	    call pgvstd
