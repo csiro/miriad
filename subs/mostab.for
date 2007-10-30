@@ -8,10 +8,12 @@ c   subroutine MosChk
 c   subroutine MosCDone
 c
 c   subrouitne MosGeom
-c   subroutine MosGet
 c   subroutine MosSize
 c   subroutine MosGFin
 c
+c   subroutine MosInit
+c   subroutine MosSet
+c   subroutine MosGet
 c   subroutine MosSave
 c   subroutine MosLoad
 c   subroutine MosPrint
@@ -33,6 +35,7 @@ c    		  initialisation problem.
 c    rjs  13mar95 Add tolerance to checking for primary beam size.
 c    rjs  15oct96 Modify call sequence to coGeom.
 c    rjs  26mar97 Better support for "pbtype" parameter in vis datasets.
+c    rjs  30apr97 Comments only.
 c************************************************************************
 	subroutine MosCIni
 c
