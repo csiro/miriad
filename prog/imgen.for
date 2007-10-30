@@ -106,6 +106,7 @@ c		    coords.
 c    rjs   12sep94  totflux option.
 c    bmg   08may96  Added object=shell
 c    rjs   24sep96  Some corrections to object=shell.
+c    rjs   13dec96  Increase max number of objects.
 c  Bugs/Wishlist:
 c------------------------------------------------------------------------
 	character version*(*)
@@ -124,7 +125,7 @@ c
 c  Source parameters.
 c
 	integer MAXOBJS
-	parameter(MAXOBJS=32)
+	parameter(MAXOBJS=2048)
 	real fwhm1(MAXOBJS),fwhm2(MAXOBJS),posang(MAXOBJS)
 	real amp(MAXOBJS),x(MAXOBJS),y(MAXOBJS)
 	real fwhm1d(MAXOBJS),fwhm2d(MAXOBJS),posangd(MAXOBJS)
