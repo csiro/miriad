@@ -92,7 +92,7 @@ c
 c
 	integer NMODES
 	parameter(NMODES=3)
-	character modes(NMODES)*8,mode
+	character modes(NMODES)*8,mode*8
 	integer nout
 c
 c  Externals.
@@ -188,6 +188,7 @@ c
 	  call uvrdvri(lVis,'npol',npol,0)
 c
 	  if(uvvarUpd(vupd))then
+	    call uvrdvri(lVis,'nants',nants,0)
 	    call uvprobvr(lVis,'nschan',type,length,updated)
 	    nif = length
 	    if(type.ne.'i'.or.length.le.0.or.length.gt.MAXWIN)
@@ -578,7 +579,7 @@ c  Externals.
 c
 	integer uvscan
 c
-	call output('Getting data for diode calibration')
+	call output('Getting data for flux scale calibration')
 	npnts = 1
 	doinit = .true.
 	call metInit(mdata)
@@ -636,7 +637,7 @@ c
 c
 c  Now copy the data and fit it.
 c
-	call output('Doing the diode calibration step')
+	call output('Doing the flux scale calibration step')
 	n = npnts/(nifs*(1+2*nants))
 	do j=1,nifs
 	  k = nifs + 1 + (j-1)*nants
