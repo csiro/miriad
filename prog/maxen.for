@@ -112,9 +112,10 @@ c   rjs  18mar96 - Increase MAXBOXES.
 c   rjs  29jan97 - Change default region of interest.
 c   rjs  10mar97 - Default region is all channels.
 c   rjs  25mar97 - Check whether data are selected for a given plane.
+c   rjs  24jun97 - Correct check for alignment mismatch.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Maxen: version 1.0 25-Mar-97')
+	parameter(version='Maxen: version 1.0 24-Jun-97')
 	include 'maxnax.h'
 	include 'maxdim.h'
 	integer MaxRun,MaxBoxes
@@ -262,7 +263,7 @@ c  output.
 c
 	if(ModelNam.ne.' ')then
 	  call xyopen(lModel,ModelNam,'old',3,nModel)
-	  call AlignIni(lModel,lMap,nModel(1),nModel(2),nModel(3),
+	  call AlignIni(lModel,lMap,nMap(1),nMap(2),nMap(3),
      *						xmoff,ymoff,zmoff)
 	endif
 c
@@ -276,7 +277,7 @@ c  output.
 c
 	if(DefNam.ne.' ')then
 	  call xyopen(lDef,DefNam,'old',3,nDef)
-	  call AlignIni(lDef,lMap,nDef(1),nDef(2),nDef(3),
+	  call AlignIni(lDef,lMap,nMap(1),nMap(2),nMap(3),
      *						xdoff,ydoff,zdoff)
 	endif
 c
