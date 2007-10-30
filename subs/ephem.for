@@ -22,6 +22,7 @@ c    07jul97 rjs  Included fk45z and fk54z (from slalib), as well as
 c		  making lmn2sph return RA in range 0 to 2*PI.
 c    16jul97 rjs  Added azel.
 c    15jan99 rjs  Added new leap second.
+c    13sep99 rjs  Make jullst more robust.
 c
 c  General Reference:
 c    Explanatory Supplement to the Astronomical Almanac. 1993.
@@ -782,17 +783,18 @@ c  Convert an LST to a Julian day.
 c
 c------------------------------------------------------------------------
 	include 'mirconst.h'
-	double precision myday,mylst,delta
+	double precision myday,mylst,delta,lst1
 	logical more
 c
 	double precision eqeq
 c
+	lst1 = mod(lst,2*DPI)
 	myday = jday
 	more = .true.
 	dowhile(more)
 	  call jullst(myday,long,mylst)
 	  mylst = mylst + eqeq(myday)
-	  delta = - (mylst - lst) * 365.25d0/366.25d0/(2*pi)
+	  delta = - (mylst - lst1) * 365.25d0/366.25d0/(2*pi)
 	  if(delta.gt.0.5)delta = delta - 1
 	  if(delta.lt.-0.5) delta = delta + 1
 	  myday = myday + delta
