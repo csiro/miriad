@@ -7,7 +7,7 @@ c& rjs
 c: utility
 c+
 c	PBPLOT plots the primary beam function.
-c@ pbtype
+c@ telescop
 c	This is used to determine the type of the primary beam. Several
 c	values can be given. Normally this will simply be a telescope
 c	name.
@@ -24,13 +24,14 @@ c--
 c  History:
 c    rjs  20oct94 Original version.
 c    rjs  21nov95 Added title.
+c    rjs  10jun97 Change pbtype to telescop.
 c  Bugs:
 c
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	character version*(*)
 	integer npts,MAXTEL
-	parameter(version='PbPlot: version 1.0 21-Nov-95')
+	parameter(version='PbPlot: version 1.0 10-Jun-97')
 	parameter(npts=256,MAXTEL=8)
 c
 	character device*64,telescop(MAXTEL)*16,line*64,title*32
@@ -48,7 +49,7 @@ c  Get input parameters.
 c
 	call output(version)
 	call keyini
-	call mkeya('pbtype',telescop,MAXTEL,ntel)
+	call mkeya('telescop',telescop,MAXTEL,ntel)
 	call keyr('freq',freq,1.4)
 	if(freq.le.0)call bug('f','Invalid frequency')
 	call keya('device',device,' ')
