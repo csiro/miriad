@@ -91,6 +91,7 @@ c    rjs  14jun96 Add warning about time averaging pulsar bin data.
 c    rjs  10feb97 Improve averaging in the face of bad, out-of-sequence, data.
 c    rjs  10oct97 Eliminate incorrect call to uvvarcopy just before the
 c		  final buffer flush.
+c    rjs  23oct97 Do not average across changes in the "on" variable.
 c
 c  Bugs:
 c    * The way of determining whether a source has changed is imperfect.
@@ -164,6 +165,7 @@ c
 	  call uvVarSet(vupd,'dra')
 	  call uvVarSet(vupd,'ddec')
 	  call uvVarSet(vupd,'source')
+	  call uvVarSet(vupd,'on')
 c
 c Special processing the first time around.
 c
