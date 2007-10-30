@@ -67,6 +67,7 @@ c     1sep94 rjs  w-axis changes.
 c    21sep94 rjs  Vote on whether to use -1 or +1 for the default
 c		  correction.
 c     7sep94 rjs  Correct bug in deteriming time solution.
+c    19jan95 rjs  Copy pulsar bin variable across.
 c
 c  Bugs:
 c    * Probably a more sophiticated fitting process (rather than just
@@ -78,7 +79,7 @@ c------------------------------------------------------------------------
 	integer MAXBREAK,ATANT,ATIF
 	character version*(*)
 	parameter(MAXBREAK=128,ATANT=6,ATIF=2)
-	parameter(version='AtXY: version 1.0 7-Oct-94')
+	parameter(version='AtXY: version 1.0 19-Jan-95')
 c
 	integer lVis,lOut,vCopy,vFreq
 	character vis*64,out*64,txt*64,dtype*1
@@ -257,7 +258,7 @@ c  Get the handle of the variables to be copied.
 c
 c------------------------------------------------------------------------
 	integer NCOPY
-	parameter(NCOPY=71)
+	parameter(NCOPY=72)
 	integer i
 	character copy(NCOPY)*8
         data copy/    'airtemp ','antdiam ','antpos  ','atten   ',
@@ -274,7 +275,7 @@ c------------------------------------------------------------------------
      *     'veldop  ','veltype ','version ','vsource ','winddir ',
      *     'windmph ','xyphase ','delay0  ','npol    ','pol     ',
      *	   'nspect  ','restfreq','ischan  ','nschan  ','sfreq   ',
-     *	   'sdf     ','systemp '/
+     *	   'sdf     ','systemp ','bin     '/
 c
 c  Determine the things to be checked and the things to be copied.
 c
