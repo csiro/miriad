@@ -1,0 +1,7 @@
+#!/bin/csh -f
+
+source dqo.params
+
+if ( $hardcopy ) lwp -P$printer $1
+if ( $preview  ) gv $1
+if ( $delete   ) rm -f $1
