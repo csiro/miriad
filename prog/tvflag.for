@@ -78,6 +78,7 @@ c                     place after the first read on the data and
 c                     increased the default value.  Also added a check
 c                     to see if ANY valid data have been selected.
 c    rjs   20may96    Change way maxgap is determined.
+c    rjs   12may97    Check that linetype is compatible with flagging.
 c***********************************************************************
 c= TvFlag - Interactive editing of a UV data set on a TV device.
 c& jm
@@ -227,7 +228,7 @@ c
       character PROG*(*)
       parameter (PROG = 'TVFLAG: ')
       character VERSION*(*)
-      parameter (VERSION = PROG // 'version 2.3 11-Apr-96')
+      parameter (VERSION = PROG // 'version 2.3 12-May-97')
       integer NOPT,MAXSELS,MAXEDIT
       parameter (NOPT=4,MAXSELS=256,MAXEDIT=1024)
 c
@@ -1040,6 +1041,7 @@ c
 c
 	call uvread(lIn,preamble,data,flags,MAXCHAN,nchan)
 	if (nchan .eq. 0) call bug('f', 'No valid data found.')
+	call flagchk(lIn)
 	call uvinfo(lIn,'line',line)
 	call uvrdvrr(lIn,'inttime',maxgap,35.0)
 	maxgap = max(3.5*maxgap,50.0)*ttol
@@ -2907,3 +2909,24 @@ c
         call Output(inline)
       endif
       end
+c************************************************************************
+	subroutine flagchk(tno)
+c
+	implicit none
+	integer tno
+c
+c  Check that the user's linetype is not going to cause the flagging
+c  routine to vomit when the flagging is applied.
+c
+c------------------------------------------------------------------------
+	integer CHANNEL,WIDE
+	parameter(CHANNEL=1,WIDE=2)
+	double precision line(6)
+c
+	call uvinfo(tno,'line',line)
+	if(nint(line(1)).ne.CHANNEL.and.nint(line(1)).ne.WIDE)
+     *	  call bug('f','Can only flag "channel" or "wide" linetypes')
+	if(nint(line(4)).ne.1)
+     *	  call bug('f','Cannot flag when the linetype width is not 1')
+c
+	end
