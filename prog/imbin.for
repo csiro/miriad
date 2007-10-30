@@ -15,9 +15,10 @@ c	An output pixel is blanked only if there were no valid
 c	contributing input pixels.
 c
 c@ in
-c	Input image.  Wild card expansion supported.
+c	Input image.  Wild card expansion supported. No default.
 c@ region
-c	Region of interest.  Hypercube surrounding selected region used.
+c	Standard region of interest. See the help on "region" for
+c	more information. The default is the entire input.
 c@ bin
 c	A pair of values for each axis.  These give the spatial increment 
 c	and binning size in pixels for each axis to be applied to  the
@@ -34,9 +35,8 @@ c  History:
 c    nebk 11Jan95  Original version
 c    nebk 14nov95  New call for READIMCG
 c    nebk 25may96  Fix glaring error with 2-D images
-c
-c  Notes:
-c    Uses cgsubs.for
+c    rjs  12oct99  Correctly handle mosaic tables. Other cosmetic
+c		   improvements.
 c
 c-----------------------------------------------------------------------
       implicit none
@@ -45,41 +45,51 @@ c
       include 'maxnax.h'
       include 'mem.h'
 c
-      character version*20
-      integer maxnax2, maxbox
-      parameter (maxnax2 = maxnax*2, maxbox = 1024,
-     +           version = 'Version 25-May-96')
+      character version*(*)
+      integer maxbox
+      parameter (maxbox = 1024)
+      parameter (version = 'ImBin: version 1.0 12-Oct-99')
 c
       integer sizin(maxnax), sizout(maxnax), blc(maxnax), trc(maxnax), 
      + bin(2,maxnax), nbin, boxes(maxbox), krng(2), lin, lout, ip, ipn, 
-     + i, j, k, naxis, p, pn
+     + i, j, k, naxis, p, pn, nx, ny, npnt
       double precision cdelti(maxnax), crvali(maxnax), crpixi(maxnax),
      + cdelto(maxnax), crpixo(maxnax)
-      real dmm(2), mm(2), blank
+      real dmm(2), mm(2)
       logical flags(maxdim), blanks
       character in*64, out*64, itoaf*1, str*1, line*80
 c
-      data bin /maxnax2*1/
-      data blank /0.0/
-c-----------------------------------------------------------------------
-      call output ('ImBin: '//version)
+c  Externals.
+c
+      logical hdprsnt
 c
 c Get user inputs
 c
+      call output (version)
       call keyini
       call keyf ('in', in, ' ')
       if (in.eq.' ') call bug ('f', 'No input image given')
-      call keyf ('out', out, ' ')
+      call keya ('out', out, ' ')
       if (out.eq.' ') call bug ('f', 'No output image given')
       if (in.eq.out) call bug ('f', 
      +  'Input and output images must be different')
       call mkeyi ('bin', bin, maxnax*2, nbin)
       if (nbin.eq.0) call bug ('f', 'You must give some binning')
+      if (mod(nbin,2).ne.0)call bug('f','Invalid number of bins')
+      call boxinput ('region', in, boxes, maxbox)
+      call keyfin
 c
 c Open input image
 c
       call xyopen (lin, in, 'old', maxnax, sizin)
       call rdhdi (lin, 'naxis', naxis, 0)
+      naxis = min(naxis,maxnax)
+c
+      do i=nbin/2+1,naxis
+	bin(1,i) = 1
+	bin(2,i) = 1
+      enddo
+c
       call output (' ')
       call output (' Axis   inc    bin')
       call output ('------------------')
@@ -91,10 +101,8 @@ c
 c
 c Finish key inputs for region of interest 
 c
-      call boxinput ('region', in, boxes, maxbox)
-      call boxset (boxes, naxis, sizin, ' ')
+      call boxset (boxes, naxis, sizin, 's')
       call boxinfo (boxes, naxis, blc, trc)
-      call keyfin
 c
 c Read input image header items and adjust window sizes to fit 
 c binning factors integrally
@@ -156,7 +164,7 @@ c Bin up next subcube
 c
         mm(1) = 1.0e32
         mm(2) = -1.0e32
-        call readimcg (.true., blank, lin, bin(1,1), bin(1,2), krng,
+        call readimcg (.true., 0.0, lin, bin(1,1), bin(1,2), krng,
      +    blc, trc, .true., memi(ipn), memr(ip), blanks, mm)
         dmm(1) = min(dmm(1), mm(1))
         dmm(2) = max(dmm(2), mm(2))
@@ -180,6 +188,18 @@ c
       end do
       call wrhdr (lout, 'datamax', dmm(2))
       call wrhdr (lout, 'datamin', dmm(1))
+c
+c  If there is a mosaicing table in the input, and if there is
+c  some sort of decimation of the RA and DEC axes, then decimate
+c  the mostable.
+c
+      if(hdprsnt(lin,'mostable').and.
+     *	(bin(1,1).gt.1.or.bin(1,2).gt.1))then
+	call mosLoad(lin,npnt)
+	call mosGetn(nx,ny,npnt)
+	call mosSetn(nx/bin(1,1),ny/bin(1,2))
+	call mosSave(lout)
+      endif
 c
       call memfree (ip,  sizout(1)*sizout(2), 'r')
       call memfree (ipn, sizout(1)*sizout(2), 'i')
