@@ -106,7 +106,7 @@ Instructions for Installing Miriad
 
       PGPLOT is available from
 
-      ftp://astro.caltech.edu/pub/pgplot/pgplot5.2.tar.gz
+      ftp://ftp.astro.caltech.edu/pub/pgplot/pgplot5.2.tar.gz
 
       which is a gzip'd tar file. Tim Pearson (tjp@astro.caltech.edu) can
       give advice on PGPLOT.
