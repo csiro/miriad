@@ -43,9 +43,9 @@ c    rjs  17aug92   New call sequence to "var" routines.
 c    rjs   1oct92   Fiddles with copying of systemp, to handle datasets
 c		    which do not have this variable.
 c    mchw 10apr94   Put MAXWIN into maxdim.h
+c    rjs  27feb95   Fix options=unflagged for files with multiple
+c		    polarisations.
 c  Bugs:
-c    When polarisation processing is performed, the effective integration
-c      time may be doubted. This effect is not made apparent in the output.
 c
 c= uvcat - Catenate and copy uv datasets; Apply gains file, Select windows.
 c& rjs mchw
@@ -86,7 +86,7 @@ c--
 c------------------------------------------------------------------------
         include 'maxdim.h'
 	character version*(*)
-	parameter(version='UvCat: version 1.0 10-Apr-94')
+	parameter(version='UvCat: version 1.0 27-Feb-95')
 c
 	integer nchan,vhand,lIn,lOut,i,j,nspect,nPol,Pol,SnPol,SPol
 	integer nschan(MAXWIN),ischan(MAXWIN),ioff,nwdata,length
@@ -95,7 +95,7 @@ c
 	complex data(maxchan),wdata(maxchan)
 	logical flags(maxchan),wflags(maxchan)
 	logical nocal,nopol,window,wins(MAXWIN)
-	logical first,init,new,more,dopol,PolVary
+	logical first,init,new,more,dopol,PolVary,donenpol
 	logical nowide,nochan,dochan,dowide,docopy,doall,updated
 	logical nopass
 	character out*64,type*1,uvflags*8
@@ -157,6 +157,8 @@ c
 	    call SetUp(lIn,nochan,nowide,dochan,dowide,dopol,vhand)
 	    if(dowide.and..not.dochan)
      *	      call uvset(lOut,'data','wide',0,1.,1.,1.)
+	    npol = 0
+	    donenpol = .false.
 	    new = .false.
 	  endif
 c
@@ -188,23 +190,11 @@ c  Case of still more data. Copy across any variables that we want,
 c  eliminate undesired spectra, write out the data.
 c
 	  else
-c
-c  Determine the polarisation info, if needed.
-c
-	    if(dopol)then
-	      call uvDatGti('npol',nPol)
-	      if(nPol.le.0) call bug('f',
+	    if(npol.eq.0)then
+	      call uvDatGti('npol',npol)
+	      if(npol.le.0)call bug('f',
      *		'Could not determine number of polarizations present')
-	      if(nPol.ne.SnPol)then
-		call uvputvri(lOut,'npol',nPol,1)
-		PolVary = SnPol.ne.0
-		SnPol = nPol
-	      endif
-	      call uvDatGti('pol',Pol)
-	      if(Pol.ne.SPol)then
-		call uvputvri(lOut,'pol',Pol,1)
-		SPol = Pol
-	      endif
+	      donenpol = .false.
 	    endif
 c
 c  Update the window parameters if needed.
@@ -220,7 +210,7 @@ c
 c
 c  Check if this data is wanted.
 c
-	    docopy = doall
+	    docopy = doall.or.donenpol
 	    if(.not.docopy)then
 	      do i=ioff,ioff+nchan-1
 	        docopy = docopy .or. flags(i)
@@ -230,6 +220,19 @@ c
 c  Copy the variables we are interested in.
 c
 	    if(docopy)then
+	      if(.not.donenpol)then
+	        if(nPol.ne.SnPol)then
+		  call uvputvri(lOut,'npol',nPol,1)
+		  PolVary = SnPol.ne.0
+		  SnPol = nPol
+	        endif
+		donenpol = .true.
+	      endif
+	      call uvDatGti('pol',Pol)
+	      if(Pol.ne.SPol)then
+		call uvputvri(lOut,'pol',Pol,1)
+		SPol = Pol
+	      endif
 	      call VarCopy(lIn,lOut)
 	      if(dowide.and.dochan)then
 	        call uvDatWRd(wdata,wflags,maxchan,nwdata)
@@ -237,12 +240,13 @@ c
 	      endif
 	      call uvwrite(lOut,preamble,data(ioff),flags(ioff),nchan)
 	    endif
+	    npol = npol - 1
 	  endif
 	enddo
 c
 c  Write out the "npol" parameter, if it did not vary.
 c
-	if(.not.PolVary) call wrhdi(lOut,'npol',npol)
+	if(.not.PolVary) call wrhdi(lOut,'npol',Snpol)
 c
 c  Finish up the history, and close up shop.
 c
