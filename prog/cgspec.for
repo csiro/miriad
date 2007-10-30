@@ -396,6 +396,7 @@ c    nebk 18jan95  Fix silly problem in SPECBLNK causing overlays
 c                  to be ignored if there were blanks in spatial image
 c    nebk 30jan96  New call for CHNSELCG
 c    rjs  21jul97  Fiddles with calls to initco/finco.
+c   nebk  14nov01  Track change to readimcg interface
 c
 c Ideas:
 c  * Be cleverer for sub-cubes which have spectra partly all zero
@@ -433,7 +434,7 @@ c
       real levs(maxlev,maxcon), pixr(2), tr(6), cs(2), pixr2(2), 
      +  slev(maxcon), break(maxcon), vrange(2), irange(2), tfvp(4),
      +  iscale(maxspec), scale(2), vpn(4), vpw(4), vfrac(2), tick(2),
-     +  cumhis(nbins), wdgvp(4), gmm(2), cmm(2,maxcon)
+     +  cumhis(nbins), wdgvp(4), gmm(3), cmm(3,maxcon)
       real vxmin, vymin, vymax, vx, vy, vxsize, vysize, ydispb, 
      +  xdispl, groff, blankg, blankc, vmin, vmax, vvmin, vvmax, 
      +  imin, imax, vxgap, vygap
@@ -469,7 +470,7 @@ c
       data txtfill, tflen /'spectrum', 'derivative spectrum', 
      +                     'derivative spectrum', 8, 19, 19/
 c-----------------------------------------------------------------------
-      call output ('CgSpec: version 30-Jan-96')
+      call output ('CgSpec: version 14-Nov-2001')
       call output (' ')
 c
 c Get user inputs
@@ -502,6 +503,7 @@ c
 	  call initco(lc(i))
           cmm(1,i) =  1.0e30
           cmm(2,i) = -1.0e30
+          cmm(3,i) = -1.0
           call chkax (lc(i), .false., cin(i))
           if (hin.eq.' ') then
             hin = cin(i)
@@ -517,6 +519,7 @@ c
 	call initco(lg)
         gmm(1) =  1.0e30
         gmm(2) = -1.0e30
+        gmm(3) = -1.0
         call chkax (lg, .false., gin)
         if (hin.eq.' ') then
           hin = gin
@@ -1444,7 +1447,7 @@ c
       integer maxlev, ncon, nlevs(*), blc(*), trc(*), lc(*), lg, lh,
      +  nspec, srtlev(maxlev,*), ibin(2), jbin(2)
       real levs(maxlev,*), vymin, slev(*), pixr(2), pcs, ydispb, 
-     +  iscale(nspec), gmm(2), cmm(2,*)
+     +  iscale(nspec), gmm(*), cmm(3,*)
       character*(*) cin(*), gin, trfun, spin(nspec), labtyp(2)
 cc
       real xpos, ypos, yinc

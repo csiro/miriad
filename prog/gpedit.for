@@ -12,8 +12,10 @@ c	The input visibility file, containing the gain file to modify.
 c	No default.
 c@ select
 c	Normal uv data selection commands. See the help on "select" for
-c	more information. Currently only antenna and time selection is
-c	supported. The default is to select everything.
+c       more information. Currently only antenna, time, and amplitude
+c       selection is supported. The amplitude selection applies to the 
+c       gains, not the uv-data, and can be used to flag or replace bad 
+c       gain amplitudes. The default is to select everything.
 c@ feeds
 c	The polarisation feeds affected (e.g. R, L, X or Y). Default is
 c	all feeds.
@@ -34,7 +36,7 @@ c	  multiply  The existing gains are multiplied by the gain
 c	            given by the `gain' keyword.
 c	  flag      The existing gains are flagged as bad.
 c	  amplitude The phases of the existing gains are set to 0.
-c	  phase     The amplitudes of the existing gains are set 1.
+c	  phase     The amplitudes of the existing gains are set to 1.
 c	  scale     The phase of the gains is multiplied by the factor 
 c	            given by the `gain' keyword. 
 c	  dup       Convert a single-polarization gain table into a dual
@@ -58,13 +60,14 @@ c    rjs   24jun97 Add the reflect option.
 c    rjs   01aug97 Added options=zmean.
 c    mchw  18nov98 Added options=scale.
 c    rjs   01dec98 Added options=dup.
+c    tw    16aug03 Allow gain amplitude selection
 c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
         include 'mirconst.h'
 	integer MAXFEED,MAXSELS
 	character version*(*)
-	parameter(version='Gpedit: version 1.0 01-Dec-98')
+	parameter(version='Gpedit: version 1.0 16-Aug-03')
 	parameter(MAXFEED=2,MAXSELS=300)
 c
 	character vis*64
@@ -371,7 +374,11 @@ c
 	do j=1,nsols
 	  if(SelProbe(sels,'time',times(j)))then
 	    do i=1,nants
-	      if(mask(i))call oper(Gains(i,j),gain)
+	      if (mask(i)) then
+		 if (SelProbe(sels,'amplitude',abs(Gains(i,j)))) then
+		    call oper(Gains(i,j),gain)
+		 endif
+	      endif
 	    enddo
 	  endif
 	enddo

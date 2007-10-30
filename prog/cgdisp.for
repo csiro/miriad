@@ -234,8 +234,7 @@ c	  means draw the beam FWHM on the plot in the corner indicated
 c	  by the "AB" location. This option is deprecated: use the
 c         keyword "beamtyp" instead.
 c       "blacklab" means that, if the device is white-background, draw
-c         the axis labels in black. Default is red. Personally, I think
-c         blacklabel is better, but maybe I'm thinking of something else...
+c         the axis labels in black. Default is red. 
 c	"conlabel" means label the contour values on the actual contours.
 c	  The PGPLOT routine that does this is not very bright. You will
 c	  probably get too many labels.  If you bin the image up with
@@ -663,6 +662,7 @@ c		   between sky and pixel grid.
 c    dpr  14feb01  Add beamtyp keyword
 c    dpr  27feb01  Added scale-bar
 c    dpr  18jun01  Add option blacklabel
+c    nebk 14nov01  For box type, make sure abs max comes from entire image
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -687,7 +687,7 @@ c
       real levs(maxlev,maxcon), pixr(2,maxchan), tr(6), bmin(maxcon+4), 
      +  bmaj(maxcon+4), bpa(maxcon+4), scale(2), cs(4), pixr2(2), 
      +  slev(maxcon), break(maxcon), vfac(2), bfac(5), tfvp(4), 
-     +  wdgvp(4), cumhis(nbins), gmm(2), cmm(2,maxcon), dmm(2)
+     +  wdgvp(4), cumhis(nbins), gmm(3), cmm(3,maxcon), dmm(3), bmm(3)
       real vxmin, vymin, vymax, vx, vy, vxsize, vysize, vxgap, vygap, 
      +  ydispb, xdispl, groff, blankg, blankc, blankv, blankb, 
      +  vecfac, vecmax, vecmaxpix, boxfac, hs(3)
@@ -707,10 +707,10 @@ c
 c
       logical solneg(maxcon), doblv(2), bemprs(maxcon+4)
       logical do3val, do3pix, dofull, gaps, eqscale, doblc, doblg,
-     -     dobeam, candobeam, beaml, beamb, relax, rot90, signs, mirror,
-     -     dowedge, doerase, doepoch, bdone, doblb, doblm, dofid, dosing
-     -     , nofirst, grid, dotr, dodist, conlab, doabut, getvsc, noflab
-     -     , blacklab
+     +  dobeam, candobeam, beaml, beamb, relax, rot90, signs, mirror,
+     +  dowedge, doerase, doepoch, bdone, doblb, doblm, dofid, dosing,
+     +  nofirst, grid, dotr, dodist, conlab, doabut, getvsc, noflab,
+     +  blacklab
 c
       data blankc, blankv, blankb /-99999999.0, -99999999.0, 
      +                             -99999999.0/
@@ -722,25 +722,26 @@ c
      +             'arcmin', 'absghz', 'relghz', 'abskms', 'relkms',
      +             'absnat', 'relnat', 'absdeg', 'reldeg', 'none',
      +             'abslin', 'rellin'/
-      data dmm /2*0.0/
+      data dmm /1.0e30, -1.0e30, -1.0/
+      data bmm /1.0e30, -1.0e30, -1.0/
       data coltab /maxchan*0/
       data lwid /maxconp3*1/
       data getvsc /.true./
 c-----------------------------------------------------------------------
-      call output ('CgDisp: version 18-Jun-01')
+      call output ('CgDisp: version 14-Nov-01')
       call output (' ')
 c
 c Get user inputs
 c
       call inputs (maxchan, maxlev, maxcon, maxtyp, ltypes, ncon, cin,
-     -     gin, nvec, vin, bin, mskin, ibin, jbin, kbin, levtyp, slev,
-     -     levs, nlevs, npixr, pixr, trfun, coltab, vecfac, vecmax,
-     -     vecinc, boxfac, boxinc, pdev, labtyp, dofull, do3val, do3pix
-     -     , eqscale, gaps, solneg, nx, ny, lwid, break, cs, scale,
-     -     ofile, dobeam, beaml, beamb, relax, rot90, signs, mirror,
-     -     dowedge, doerase, doepoch, dofid, dosing, nofirst, grid, dotr
-     -     , dodist, conlab, doabut, val3form, ncols1, cols1, fs, hs,
-     -     firstimage, blacklab)
+     +  gin, nvec, vin, bin, mskin, ibin, jbin, kbin, levtyp, slev,
+     +  levs, nlevs, npixr, pixr, trfun, coltab, vecfac, vecmax,
+     +  vecinc, boxfac, boxinc, pdev, labtyp, dofull, do3val, do3pix,
+     +  eqscale, gaps, solneg, nx, ny, lwid, break, cs, scale,
+     +  ofile, dobeam, beaml, beamb, relax, rot90, signs, mirror,
+     +  dowedge, doerase, doepoch, dofid, dosing, nofirst, grid, dotr,
+     +  dodist, conlab, doabut, val3form, ncols1, cols1, fs, hs,
+     +  firstimage, blacklab)
 c
 c Open images as required
 c
@@ -856,6 +857,25 @@ c requested or if scales provided by user
 c
       call vpadjcg (lhead, hard, eqscale, scale, vxmin, vymin, vymax, 
      +   nx, ny, blc, trc, tfvp, wdgvp, vxsize, vysize)
+
+c
+c Find abs max of full image for box display
+c
+      if (bin.ne.' ') then
+         do j = 1, ngrps
+           if (bsize(3).gt.1) then
+             krng(1) = grpbeg(j)
+             krng(2) = ngrp(j)
+           else
+             krng(1) = 1
+             krng(2) = 1
+           end if
+c
+           call readimcg (.true., blankb, lb, ibin, jbin, krng, blc,
+     +       trc, .true., memi(ipnim), memr(ipim), doblb, bmm)
+         end do          
+         bfac(1) = bmm(3)
+       end if
 c
 c Set viewport location of first sub-plot
 c
@@ -1073,6 +1093,7 @@ c
              krng(1) = 1
              krng(2) = 1
            end if
+c
            call readimcg (.true., blankb, lb, ibin, jbin, krng, blc,
      +       trc, .true., memi(ipnim), memr(ipim), doblb, dmm)
            if (mskin.ne.' ' .and. doblm) then
@@ -1894,12 +1915,6 @@ c
 c Find maximum selected pixel from first sub-plot
 c
       if (iplot.eq.1) then
-        bfac(1) = -1.0e30
-        do j = 1, npixy, boxinc(2)
-          do i = 1, npixx, boxinc(1)
-            if (nimage(i,j).gt.0) bfac(1) = max(bfac(1),abs(image(i,j)))
-          end do
-        end do
 c
 c Make maximum box width on the plot equal to 99% of the selected
 c pixel increment, multiplied by the users factor. 

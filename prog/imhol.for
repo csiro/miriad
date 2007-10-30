@@ -74,6 +74,7 @@ c    mchw 09jul93 Added routine to make aperture E-field maps.
 c    mchw 09aug93 Renamed IMHOL to keep Neil happy.
 c    mchw 09nov93 Fixed a bug in bmproc for planet holography.
 c    rjs  11oct95 Rework.
+c    rjs  02jul97 cellscal change.
 c------------------------------------------------------------------------
       implicit none
       include 'maxdim.h'
@@ -95,12 +96,12 @@ c
       logical radians, microns, debias, relax, zero, bmfit
 c
       integer nkeys
-      parameter (nkeys = 23)
+      parameter (nkeys = 22)
       character keyw(nkeys)*8
 c
-      data keyw/     'date-obs','epoch   ','history ','instrume',
+      data keyw/     'obstime ','epoch   ','history ','instrume',
      +    'niters  ','object  ','restfreq','telescop','vobs    ',
-     +    'obsra   ','obsdec  ','observer','xshift  ','yshift  ',
+     +    'obsra   ','obsdec  ','observer','cellscal',
      +    'bmaj    ','bmin    ','bpa     ','pbfwhm  ','lstart  ',
      +    'lstep   ','ltype   ','lwidth  ','vobs    '/
 c-------------------------------------------------------------------------
