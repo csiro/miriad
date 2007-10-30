@@ -79,6 +79,8 @@ c    12mar93 mjs   Use maxnax.h file instead of its own set value.
 c    22jun93 nebk  Take cos(DEC) into account for RA/DEC axes
 c    15apr94 nebk  Keyword range input was failing.
 c    03jan95 nebk  REGZ was failing if output longer than input
+c    26jun95 nebk  Warning instead of fatal if ungridded axes
+c		   have silly axis descriptors.
 c
 c To do:
 c     add simple transformation option (scale,shift etc)
@@ -89,7 +91,7 @@ c-----------------------------------------------------------------------
       character version*30
       parameter (maxboxes = 2048)
       parameter (maxruns = 3*maxdim)
-      parameter (version = 'Version 05-Jan-95')
+      parameter (version = 'Version 26-Jun-95')
 c
       character filei*80, fileo*80, filet*80
       integer axes(maxnax), naxes
@@ -309,8 +311,15 @@ c
      +    'You specified a non-positive length for axis '//str)
         if (no(i).gt.maxdim) call bug ('f',
      +    'You specified too long an axis for axis '//str)
-        if (cdelto(i).eq.0.0d0) call bug ('f',
-     +    'You specified a zero pixel increment for axis '//str)
+c
+        if (cdelto(i).eq.0.0d0) then
+          if (do(i)) then 
+            call bug ('f',
+     +      'You specified a zero pixel increment for axis '//str)
+          else
+            call bug ('w', 'Axis '//str//' has a zero pixel increment')
+          end if
+        end if
       end do
 c
 c Open the output file 
@@ -1347,7 +1356,7 @@ c
           end if
           call genabv2 (ni(3), crpixi, cdelti, crvali, 
      +                  rbuf(im2d+ip), dbuf(iabi), rbuf(iv2d+ip), n)
-          if (n.ne.ni(3)) write (*,*) 'blanks'
+c          if (n.ne.ni(3)) write (*,*) 'blanks'
 c
 c Spline fit and regrid
 c
