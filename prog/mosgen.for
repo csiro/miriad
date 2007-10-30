@@ -21,7 +21,8 @@ c@ freq
 c	The observing frequency, in GHz. The default is 1.4 GHz.
 c@ device
 c	Standard PGPLOT plotting device, to display a diagram of the
-c	pointing centres. The default is to not produce a plot.
+c	pointing centres relative to the mosaic centre. The default
+c	is to not produce a plot.
 c@ log
 c	Output log file, giving the pointing centres. The default is
 c	the terminal.
@@ -30,6 +31,14 @@ c	The mode determines the format of the output log file. Possible
 c	values are:
 c	  atmosaic  This is the mosaic file format understood by the ATCA
 c	            on-line system.
+c		    NOTE: The ATCA mosaic files produced by mosgen have the
+c	            offsets referenced to the pointing in the lower left
+c	            corner (earliest RA, least DEC value). That is, it is
+c		    not the centre of the mosaic given by the user. The coordinate
+c		    of the reference pointing is given as a comment in the head
+c		    of the file. The reason for the use of the lower left is
+c		    to minimise drive times and to pixel the reference as the
+c		    first point in the mosaic that rises.
 c	  uvgen     This is the format required for uvgen's "center" keyword.
 c@ telescop
 c	The primary beam type. The default is ATCA.
@@ -39,7 +48,14 @@ c	example, using name=lmc, will generate pointing names of
 c	lmc_1, lmc_2, etc.
 c@ cycles
 c	For mode=atmosaic, the number of cycles spent on each pointing.
+c
+c  History:
+c    ???????? rjs Original version.
+c    10maar05	rjs	Improve documentation. Improve behaviour when the
+c			offsets cross RA=0.
 c------------------------------------------------------------------------
+	character version*(*)
+	parameter(version='Mosgen: version 1.0')
 	include 'mirconst.h'
 	integer MAXPNT
 	parameter(MAXPNT=2048)
@@ -63,6 +79,7 @@ c
 c
 	data modes/'atmosaic','uvgen   '/
 c
+	call output('Miriad '//version)
 	call keyini
 	call keya('device',device,' ')
 	call keyt('radec',ra,'hms',0.d0)
@@ -128,6 +145,8 @@ c
 	  x2(1) = x2(1) - ra
 	  x2(2) = x2(2) - dec
 	  if(mode.eq.'atmosaic')then
+	    if(x2(1).gt.PI) x2(1) = x2(1) - 2*PI
+	    if(x2(1).lt.-PI)x2(1) = x2(1) + 2*PI
 	    write(line,'(2f8.4)')180/PI*x2(1),180/PI*x2(2)
 	    line1 = line//' '//itoaf(cycles)//' $'//
      *					name(1:l)//'_'//itoaf(npnt)
