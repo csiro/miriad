@@ -57,7 +57,7 @@ foreach file ( ${base}_*.tar.Z )
   if ( $stat1 == 141 ) then
     echo "### Warning: Untarring ended with status=$stat1"
   else if ( $stat1 ) then
-    echo "### Fatal: Failed to successfully untar - status=$stat1
+    echo "### Fatal: Failed to successfully untar - status=$stat1"
     exit 1
   endif
   echo Untarred $file at `date` > ${file}.Done
