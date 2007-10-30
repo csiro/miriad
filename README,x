@@ -67,7 +67,12 @@ Instructions for Installing Miriad
     moderately likely that you will have to recompile anyway.
 
 1)  Untar the distribution in a target directory. This directory should be
-    the root directory where you want to install miriad. 
+    the root directory where you want to install miriad. e.g. if your root
+    directory for miriad is /usr/local/miriad, and miriad is on a tar
+    on device /dev/nrst0, use
+
+      cd /usr/local/miriad
+      tar -xvf /dev/nrst0
 
     The source, manuals, etc take up about 15 Mbytes. The executables and
     libraries take up about 50 Mbytes on a Sun4, and 90 Mbytes on a Convex C2
@@ -95,8 +100,8 @@ Instructions for Installing Miriad
     If you lack (and need!) any of the libraries mentioned below,
     install them before running the Install script! If you have to build
     them yourself, you will need to put the library in a directory where
-    the Install script can find them. The simplest place is the $MIRLIB
-    directory.
+    the Install script can find them. The simplest place is the miriad library
+    directory (pointed to by environment variable $MIRLIB).
 
     * The PGPLOT plotting library is used by a significant number of tasks.
       Miriad requires PGPLOT version 5.0 or later. See the installation
@@ -108,7 +113,7 @@ Instructions for Installing Miriad
 
       ftp://astro.caltech.edu/pub/pgplot/pgplot5.2.tar.gz
 
-      which is a gzip'd tar file. Tim Pearson (tjp@astro.caltech.edu) ca
+      which is a gzip'd tar file. Tim Pearson (tjp@astro.caltech.edu) can
       give advice on PGPLOT.
 
       The tar distribution for Miriad also comes with this distribution,
@@ -154,13 +159,13 @@ Instructions for Installing Miriad
       library that is different to the above. This version may require you
       to link with both libreadline and libhistory. Be warned. Also some
       old versions of the readline library require the compiler switches
-      "cc -32 -D_BSD_SIGNALS" on irix64.
+      "cc -32 -D_BSD_SIGNALS" on the irix64 operating system.
 
     If you lack some of the above libraries (rpfits, readline, Athena
     widgets) and are disinclined to install them, see Note 14 for a
     possible solution.
 
-3)  Well-supported machines include:
+3)  Well-supported machine architectures include:
 
 	SunOS 4.x, SunOS 5.x, Convex, IRIX, IRIX64, OFS1/Digital UNIX, Linux,
 	HPUX, UNICOS.
@@ -181,7 +186,7 @@ Instructions for Installing Miriad
     The questions are:
 
     - "Change MIRRC to use a different root directory". You will normally
-      say yes the first time (and no on any possible subsequent runs).
+      say yes the first time (and not on any possible subsequent runs).
 
     - "Give the root directory name". This defaults to the your current
       directory, but you might want to explicitly give the name of the
@@ -412,9 +417,9 @@ Instructions for Installing Miriad
     
 10) The MIRRC and Install scripts
 
-    $MIR/bin/MIRRC sets the root directory, determines the machine
-    architecture and sets various environment variables. It is a simple
-    script and easy to adapt.
+    $MIR/bin/MIRRC and $MIR/bin/MIRRC.sh sets the root directory, 
+    determines the machine architecture and sets various environment
+    variables. It is a simple script and easy to adapt.
 
     Apart from the automatic generation of the mirlibs scripts,
     Install is rather independent in the specific architecture.
@@ -571,19 +576,28 @@ Instructions for Installing Miriad
 System-Dependent Issues
 =======================
 
+NOTE: If you have to change any of Miriad's scripts, do so for those
+pieces of code in $MIR/scripts/unix of $MIR/scripts/unix/$arch. Note
+that changing scripts in the directory $MIRBIN will get overwritten
+by the Install and mirupdate scripts.
+
 GNU Compilers and f2c
 ---------------------
 Miriad has been successfully build using the gcc and g77 compilers.
 If "cc" and "f77" are not symbollicaly linked to these, you will
 need to change the mircadd and mirclnk scripts accordingly.
 
-If you are using g77, you will want to use the compiler switch
+If you are using g77, and depending on the particular version/variant of g77, 
+you may want to use the compiler switch
 
    -ff90-intrinsics-hide
 
 which turns off g77's knowledge of FORTRAN-90 intrinsic functions
 (g77 gets confused when some Miriad routines happen to have the same
-name as these intrinsics).
+name as these intrinsics). Some other f77/cc switchs may need to change
+as well. If modifying the sun4sol scripts to work with
+g77, you will want to remove the "-libmil" switch, and perhaps replace "-O2"
+with "-O".
 
 Our experience with FORTRAN compilers based on "f2c" is not entirely
 positive. Tasks "atlod" is believed to fail to work
