@@ -97,141 +97,6 @@ c  If specified, output is written to the file given by log= instead
 c  of to the terminal.
 c--
 c
-c
-c imspec - plots spectra from image data
-c& bpw
-c: map analysis
-c+
-c  Imspec plots spectra. The flux, primary-beam-corrected-flux, mean or
-c  sum of an area can be plotted. Data can be averaged/summed in ra-dec,
-c  ra-vel or dec-vel (etc) planes, to obtain profiles along the vel, dec
-c  or ra axes, respectively. See the description of the keyword axes.
-c  To get fluxes the sum of the beam in an area of the same size as the
-c  input region is calculated, using the beam keyword.
-c  The data can be converted to Kelvin, by using 'options=tb' and the
-c  beam keyword.
-c  Output can be written to the terminal, a log file, or a plot. The 
-c  options keyword gives control over the plot.
-c  To write the spectrum to an ASCII file use options=list,noheader and
-c  log=logfile.
-c  The plotheader can be suppressed by using options=noheader. An
-c  alternative title can be put on the plot by options=title. A useful
-c  combination is 'options=noh,ti,title', to get only the string 'title',
-c  instead of the full header.
-c
-c< in
-c< region
-c  For the moment imspec only recognizes rectangular boxes. It will use
-c  the mask associated with the input image.
-c
-c@ plot
-c  This selects what will be plotted as function of e.g. velocity.
-c  To convert data to fluxes the input of the beam keyword is used.
-c  Minimal matching is applied. The default is 'flux'.
-c
-c   'mean'        Plot the mean
-c   'sum'         Plot the sum
-c   'flux'        Plot the flux
-c   'pbcflux'     Plot the primary-beam-corrected flux
-c                 (not yet implemented)
-c
-c@ options
-c  The options control the characteristics of the plot.
-c  Possible options are (minimal matching is done):
-c
-c   'tb'          Convert the units of mean or sum to brightness
-c                 temperature, using the input for the beam keyword
-c
-c   'hanning,#'   Hanning smooth the data first over # pixels (must be
-c                 an odd number)
-c   'boxcar,#'    Boxcar smooth the data first over # pixels
-c   'deriv,#'     Take the derivative after smoothing. If #=1 a one-sided
-c                 derivative is taken, for #=2 a two-sided. Useful for
-c                 Zeeman work.
-c
-c   'noheader'    Do not write the header information, just the numbers,
-c                 producing an ASCII file for a plotting program
-c   'list'        Write the spectrum to the screen/logfile
-c   'eformat'     Always use format 'e' instead of 'g' to write results
-c
-c   'xmin,#'      Give lower x-value on axis
-c   'xmax,#'      Give upper x-value on axis
-c   'ymin,#'      Give lower y-value on axis
-c   'ymax,#'      Give upper y-value on axis
-c                 (for these four options the default is autoscaling)
-c   'title,#1,#2,#3' Put the string #1 at x-position #2 and y-position #3,
-c                 with positions measured in units of the coordinates
-c                 on the axes. If 'title' is the last option, the title
-c                 is put in the upper left hand corner.
-c   'style,#'     This selects the plot style.
-c                 #=connect means connect the datapoints
-c                 #=step means make one-bin wide connected horizontal
-c                 line segments
-c                 #=histo means bins are drawn as a horizontal line
-c                 surrounded by two vertical lines
-c
-c@ cutoff
-c  All datavalues below the cutoff are not used for the calculation of
-c  statistics. Give one real value, which may be followed by the string
-c  ',abs' to get a cutoff in the absolute value of the datavalues.
-c  Default is no cutoff.
-c
-c@ beam
-c  If plot=flux is used, imspec calculates the sum divided by the sum
-c  of the beam to get the flux in the selected area, if the units of the
-c  input data are 'per beam'.
-c  If the name of a dataset is given, it assumes this is a beampattern
-c  and sums the data in a region of the same size as the input region.
-c  Else, it assumes that 'beam' gives the major and minor axes of the
-c  beam in arcsec and it calculates the sum of a gaussian beam of that
-c  size.
-c  If 'beam' is omitted, but 'flux' was selected, the beam is found from
-c  the header (items bmaj and bmin). If neither is present, the sum is
-c  assumed to be 1.  
-c
-c@ axes
-c  This keyword gives the axis or axes along which data are averaged
-c  to obtain one datapoint on the profile. Combined with the region
-c  keyword, this can be used to get a profile as function of any
-c  coordinate. The specifications are admittedly complex, because data
-c  averaging is allowed.
-c
-c  - Example 1: to get a profile along the velocity axis (a spectrum) use
-c    axes=ra,dec, region=relpix,box(-31,-31,32,32)(10,40)
-c  to average in ra from -31 to 32, in dec from -31 to 32 and plot the
-c  average as function of velocity from channel 10 to 40.
-c  - Example 2: to get a profile along the ra axis (at a given
-c  declination) use
-c    axes=dec,vel, region=relpix,box(-31,0,32,0)(10)
-c  to plot a profile along ra from ra=-31 to ra=32, at dec 0 and in
-c  plane 10.
-c  - Example 3: to get a set of profiles along the ra axis (at a number
-c  of declinations) use
-c    axes=vel, region=relpix,box(-31,-31,32,32)(10)
-c  to plot a profile along ra, for plane 10, one for each declination
-c  between -31 and 32.
-c  - Example 4: to get a profile along the declination axis (at a given
-c  ra) use
-c    axes=ra,vel, region=relpix,box(-10,-31,10,32)(10)
-c  to plot a profile along declination, with ra averaged from ra=-10 to
-c  ra=10, and in plane 10.
-c
-c  The default is to make a spectrum in the velocity direction (example
-c  1).
-c  Possible values for axes are: 'rascension', 'declination',
-c  'longitude', 'latitude', 'glongitude', 'glatitude', 'velocity',
-c  'frequency', 'channel', 'stokes', 'x', 'y', 'z', 'a', 'b'. Upper
-c  case and capitalized versions and the string 'R.A.' are also
-c  recognized. Minimal matching is applied. One or two axes may be
-c  given.
-c
-c< device
-c@ log
-c  If specified, output is written to the file given by log= instead
-c  of to the terminal.
-c--
-c
-c
 c   History:
 c
 c    20jul91  bpw  Original version
@@ -272,6 +137,8 @@ c                  because Doug needed it
 c    25oct94  bpw  introduce option 'eformat'
 c    22nov94  bpw  fixed non-plotting: forgot to change some values of plotvar
 c                  parameters (equivalent to a C 'enum').
+c    28jun95  mhw  change printing formats: guarantee 1 space between fields
+c                  in eformat mode and add some decimal places to the freq
 c
 c------------------------------------------------------------------------
 
@@ -1433,7 +1300,7 @@ c For ra and dec axes special conversions are done.
              cvalues(i)(13-j:12) = radec(13:12+j)
              coords(i) = coords(i) * 3600.
          else
-             write( cvalues(i), '( f10.1, 2x )' ) coords(i)
+             write( cvalues(i), '( f10.3, 2x )' ) coords(i)
          endif
       enddo
 
@@ -1668,7 +1535,7 @@ c Construct the output line for the typed list
 c 13 is really len(axlabel)+1, but axlabel is an unknown variable here
 c and it would be messy to transfer just to get the length of it.
             if(plotvar(EFMT).eq.1) then
-	      write( fmt, '( ''( '',i1,''(1pe10.3),i8 )'' )' ) nstat-1
+	      write( fmt, '( ''( '',i1,''(1pe10.2),i8 )'' )' ) nstat-1
             else
               write( fmt, '( ''( '',i1,''(1pg10.3),i8 )'' )' ) nstat-1
             endif
