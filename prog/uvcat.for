@@ -47,6 +47,7 @@ c    rjs  27feb95   Fix options=unflagged for files with multiple
 c		    polarisations.
 c    rjs  12oct95   Copy xyphase variable.
 c    rjs  13jun96   Fix window selection.
+c    rjs  23sep99   Fix window selection again!!
 c  Bugs:
 c
 c= uvcat - Catenate and copy uv datasets; Apply gains file, Select windows.
@@ -88,7 +89,7 @@ c--
 c------------------------------------------------------------------------
         include 'maxdim.h'
 	character version*(*)
-	parameter(version='UvCat: version 1.0 13-Jun-96')
+	parameter(version='UvCat: version 1.0 23-Sep-99')
 c
 	integer nchan,vhand,lIn,lOut,i,j,nspect,nPol,Pol,SnPol,SPol
 	integer nschan(MAXWIN),ischan(MAXWIN),ioff,nwdata,length
@@ -443,7 +444,7 @@ c
 	if(window)then
 	  nspectd = 1
 	  do i=2,nout
-	    if(ischand(nspectd)+nschand(nspectd).eq.ischan(i))then
+	    if(ischand(nspectd)+nschand(nspectd).eq.ischand(i))then
 	      nschand(nspectd) = nschand(nspectd) + nschand(i)
 	    else
 	      nspectd = nspectd + 1
