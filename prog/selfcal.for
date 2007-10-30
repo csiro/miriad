@@ -80,6 +80,12 @@ c	             option should be used with at least the apriori option.
 c	             It must be used if selfcal is being used to determine
 c	             Jy/K, and should also be used if the model is believed
 c	             to have the correct scale.
+c	  selradec   This causes SELFCAL to select only those visibilities
+c	             whose observing center is within plus or minus three
+c	             pixels of the model reference pixel. This is needed
+c	             if there are multiple pointings or multiple sources in
+c	             the input uv file. By default no observing center
+c	             selection is performed.
 c	Note that "amplitude" and "phase" are mutually exclusive.
 c	The default is options=phase.
 c@ minants
@@ -90,6 +96,10 @@ c@ refant
 c	This sets the reference antenna, which is given a phase angle of zero.
 c	The default, for a given solution interval, is the antennae with the
 c	greatest weight.
+c@ flux
+c	If MODEL is blank, then the flux (Jy) of a point source model can
+c	be specified here. The default is 1 (assuming the model parameter
+c	is not given, and the apriori option is not selected).
 c@ offset
 c	This gives the offset in arcseconds of a point source model (the
 c	offset is positive to the north and to the east). This parameter is
@@ -135,9 +145,10 @@ c    rjs   1may92 Added nfeeds keyword to output gains header.
 c    rjs  17may92 More fiddles to the way clipping is handled.
 c    rjs  23jun92 Changes to doc and messages (centre=>center, etc).
 c    rjs  22nov92 Added ntau keyword to output gains header.
+c    mchw 20apr93 Added flux keyword and option selradec.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Selfcal: version 1.0 22-Nov-92')
+	parameter(version='Selfcal: version 1.0 20-Apr-93')
 	integer MaxMod,maxsels,nhead
 	parameter(MaxMod=32,maxsels=256,nhead=3)
 c
@@ -147,6 +158,8 @@ c
 	integer nModel,minants,refant,nsize(3),nchan,nvis,i
 	real sels(maxsels),clip,interval,offset(2),lstart,lwidth,lstep
 	logical phase,amp,smooth,doline,apriori,noscale,relax,doPol,mfs
+	real flux
+	logical selradec
 c
 c  Externals.
 c
@@ -164,6 +177,7 @@ c
 	call keyr('interval',interval,5.)
 	call keyi('minants',minants,0)
  	call keyi('refant',refant,0)
+	call keyr('flux',flux,1.)
 	call keyr('offset',offset(1),0.)
 	call keyr('offset',offset(2),0.)
 	doline = keyprsnt('line')
@@ -174,7 +188,8 @@ c
 	  call keyr('line',lwidth,1.)
 	  call keyr('line',lstep,lwidth)
 	endif
-	call GetOpt(phase,amp,smooth,apriori,noscale,relax,doPol,mfs)
+	call GetOpt(phase,amp,smooth,apriori,noscale,relax,doPol,mfs,
+     *		selradec)
 	call keyfin
 c
 c  Check that the inputs make sense.
@@ -223,7 +238,8 @@ c  s -- Perform polarisation selection.
 c  l -- Set up line type.
 c  t -- Source is polarised.
 c
-	flag1 = 'ps'
+	flag1 = 's'
+	if(selradec) flag1(2:2) = 'p'
 	if(.not.doline.and..not.mfs)flag1(3:3) = 'l'
 	if(doPol)		    flag1(4:4) = 't'
 c
@@ -244,7 +260,7 @@ c
 	  call output('Reading the visibility file ...')
 	  call SelfSet(.true.,MinAnts,.true.) 
 	  call SelApply(tvis,sels,.true.)
-	  call Model(flag2,tvis,0,offset,1.0,tscr,
+	  call Model(flag2,tvis,0,offset,flux,tscr,
      *				nhead,header,calget,nchan,nvis)
 	  call SelfIni
 	  call output('Accumulating statistics ...')
@@ -285,10 +301,11 @@ c
 	end
 c************************************************************************
 	subroutine GetOpt(phase,amp,smooth,apriori,noscale,relax,
-     *							  doPol,mfs)
+     *						doPol,mfs,selradec)
 c
 	implicit none
-	logical phase,amp,smooth,apriori,noscale,relax,doPol,mfs
+	logical phase,amp,smooth,apriori,noscale,relax,doPol,mfs,
+     *							    selradec
 c
 c  Determine extra processing options.
 c
@@ -303,14 +320,16 @@ c    relax	Relax convergence criteria.
 c    doPol	Source is polarized.
 c    mfs	Model is frequency independent, or has been derived
 c		from MFCLEAN.
+c    selradec	Input uv file contains multiple pointings or multiple
+c		sources.
 c------------------------------------------------------------------------
 	integer nopt
-	parameter(nopt=8)
+	parameter(nopt=9)
 	character opts(nopt)*9
 	logical present(nopt)
 	data opts/'amplitude','phase    ','smooth   ',
      *		  'apriori  ','noscale  ','relax    ',
-     *		  'polarized','mfs      '/
+     *		  'polarized','mfs      ','selradec '/
 	call options('options',opts,present,nopt)
 	amp = present(1)
 	phase = present(2)
@@ -320,6 +339,7 @@ c------------------------------------------------------------------------
 	relax = present(6)
 	doPol = present(7)
 	mfs = present(8)
+	selradec = present(9)
 	if(amp.and.phase)
      *	  call bug('f','Cannot do both amp and phase self-cal')
 	if(.not.(amp.or.phase)) phase = .true.
