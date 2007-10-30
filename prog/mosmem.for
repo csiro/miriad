@@ -74,6 +74,8 @@ c    rjs  23nov94  Adapted from MAXEN.
 c    rjs   3dec94  Doc only.
 c    rjs   6feb95  Copy mosaic table to output component file.
 c    rjs  10aug95  New routine to modify alpha and beta.
+c    rjs  12oct95  Support "default" and "model" being different sizes from
+c		   the deconvolved region.
 c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='MosMem: version 1.0 10-Aug-95')
@@ -102,6 +104,7 @@ c
 	real GradHH,GradJJ,Grad11,Immax,Immin,Flux,Rms,ClipLev
 	logical converge,positive,verbose,doflux
 	integer Run(3,MaxRun),nRun,Boxes(maxBoxes),nPoint,maxPoint
+	integer xmoff,ymoff,zmoff,xdoff,ydoff,zdoff
 c
 	integer pMap,pEst,pDef,pRes,pNewEst,pNewRes,pWt
 c
@@ -190,8 +193,8 @@ c  output.
 c
 	if(ModelNam.ne.' ')then
 	  call xyopen(lModel,ModelNam,'old',3,nModel)
-	  if(nModel(1).ne.nOut(1).or.nModel(2).ne.nOut(2)
-     *	    .or.nModel(3).ne.nOut(3)) call bug('f','Model size')
+	  call AlignIni(lModel,lMap,nModel(1),nModel(2),nModel(3),
+     *						xmoff,ymoff,zmoff)
 	endif
 c
 c  Initial values for alpha and beta.
@@ -204,8 +207,8 @@ c  output.
 c
 	if(DefNam.ne.' ')then
 	  call xyopen(lDef,DefNam,'old',3,nDef)
-	  if(nDef(1).ne.nOut(1).or.nDef(2).ne.nOut(2)
-     *	    .or.nDef(3).ne.nOut(3)) call bug('f','Default Image size')
+	  call AlignIni(lDef,lMap,nDef(1),nDef(2),nDef(3),
+     *						xdoff,ydoff,zdoff)
 	endif
 c
 c  Open up the output.
@@ -267,9 +270,8 @@ c
 	    ClipLev = 0.01 * TFlux/nPoint
 	    call Assign(TFlux/nPoint,memr(pDef),nPoint)
 	  else
-	    call xysetpl(lDef,1,k-kmin+1)
-	    call GetPlane(lDef,Run,nRun,1-imin,1-jmin,
-     *			nDef(1),nDef(2),memr(pDef),maxPoint,nPoint)
+	    call AlignGet(lDef,Run,nRun,k,xdoff,ydoff,zdoff,
+     *		nDef(1),nDef(2),nDef(3),memr(pDef),maxPoint,nPoint)
 	    Imax = Ismax(npoint,memr(pDef),1)
 	    ClipLev = 0.01 * abs(memr(pDef+Imax-1))
 	    if(positive) call ClipIt(0.1*ClipLev,memr(pDef),nPoint)
@@ -281,9 +283,9 @@ c
 	  if(ModelNam.eq.' ')then
 	    call Copy(nPoint,memr(pDef),memr(pEst))
 	  else
-	    call xysetpl(lModel,1,k-kmin+1)
-	    call GetPlane(lModel,Run,nRun,1-imin,1-jmin,
-     *			nModel(1),nModel(2),memr(pEst),maxPoint,nPoint)
+	    call AlignGet(lModel,Run,nRun,k,xmoff,ymoff,zmoff,
+     *		nModel(1),nModel(2),nModel(3),memr(pEst),
+     *		maxPoint,nPoint)
 	    if(positive) call ClipIt(ClipLev,memr(pEst),nPoint)
 	  endif
 c
