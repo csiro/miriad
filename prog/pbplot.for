@@ -6,15 +6,18 @@ c= pbplot -- Plot primary beam shapes.
 c& rjs
 c: utility
 c+
-c	PBPLOOT plots the primary beam function.
-c@ telescop
+c	PBPLOT plots the primary beam function.
+c@ pbtype
 c	This is used to determine the type of the primary beam. Several
-c	values can be given.
+c	values can be given. Normally this will simply be a telescope
+c	name.
 c@ freq
 c	The frequency, in GHz, at which to determine the primary beam. The
 c	default is 1.4 GHz.
 c@ options
 c	Extra processing options. There is only one possibility at the moment.
+c	  derivative  Plot the derivative with frequency of the primary
+c	              beam (rather than the normal primary beam).
 c@ device
 c	PGPLOT device. Default is no plot.
 c--
@@ -44,7 +47,7 @@ c  Get input parameters.
 c
 	call output(version)
 	call keyini
-	call mkeya('telescop',telescop,MAXTEL,ntel)
+	call mkeya('pbtype',telescop,MAXTEL,ntel)
 	if(ntel.eq.0)call bug('f','A telescope name must be given')
 	call keyr('freq',freq,1.4)
 	if(freq.le.0)call bug('f','Invalid frequency')
