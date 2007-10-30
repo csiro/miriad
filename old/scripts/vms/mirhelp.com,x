@@ -1,0 +1,87 @@
+$!! /bin/csh -f
+$!       Purpose: Online MIRTH/MIRIAD help
+$!       PR:           Peter Teuben
+$!
+$!       Last update:  23-feb-90	new dir structure
+$!                     26-mar-90 complete overhaul to be able to use DOC (BPW)
+$!
+$echo:=="write sys$output"
+$if(p1.nes."") then goto action
+$   echo "online help utility; prints tasks or routine documentation"
+$   echo ""
+$   echo "Usage: mirhelp topic [-s][-n]"
+$   echo " where topic is a task or routine name occuring in"
+$   echo " MIR:[.doc.prog], MIR:[.doc.subs] or MIR:[.src.subs]."
+$   echo " All tasks/routines are found whose name matches all or part of the"
+$   echo " input topic."
+$   echo " The use of existing preformatted files is given precedence over"
+$   echo " searching through the subroutine files."
+$   echo " Using the -s flag forces mirhelp to search through subroutine files"
+$   echo " instead of using preformatted documentation files."
+$   echo " Option -n makes mirhelp for the full name of the specified file."
+$   exit
+$action:
+$
+$if( p2 .eqs. "-N" ) then goto file_search
+$if( p2 .eqs. "-S" ) then goto subroutine_search
+$on controly then goto quit
+$directory/nohead/notrail/output=dummy.dum MIRPDOC:*'p1'*.doc,MIRSDOC:*'p1'*.sdoc
+$open dummy dummy.dum
+$n=0
+$setloop:
+$  read/end=endsetloop dummy filename
+$  n      = n + 1
+$  dn'n' := "''filename'"
+$  dn    := "''dn' ''filename'"
+$goto setloop
+$endsetloop:
+$close dummy
+$delete dummy.dum;*
+$doc := "$MIRBIN:doc"
+$
+$if( n .eq. 0 ) then goto subroutine_search
+$
+$loop:
+$   if( n .ne. 1 ) then goto else
+$      ans := "A"
+$      goto exec
+$   else:
+$      echo "Found the following files matching ''p1'"
+$      i=0
+$      foreachd:
+$         i  = i+1
+$         fn = dn'i'
+$         echo  "''i' ) ''fn'"
+$         if( i.lt.n ) then goto foreachd
+$      endforeachdloop:
+$      inquire/nopun ans "Select: [1..''n', a=all of the above, q=quit] >"
+$   endif:
+$
+$   exec:
+$   if (ans.eqs."Q" .or. ans.eqs."") then exit
+$   if (ans.eqs."A") then doc 'dn'
+$   if (ans.eqs."A") then exit
+$   fn = dn'ans'
+$   doc 'fn'
+$   inquire/nopun ans "Enter <RETURN> to continue; q to quit:"
+$   if( ans .eqs. "Q" ) then exit
+$   goto loop
+$
+$
+$subroutine_search:
+$   on controly then goto rmsubroutinefilelist
+$   echo "So, search through subroutine files. Wait..."
+$   directory/nohead/notrail [mirth.src.subs...]*.*/out=subroutinefiles.list
+$   doc -l subroutinefiles.list -r 'p1'*
+$   rmsubroutinefilelist:
+$   delete subroutinefiles.list;*
+$   exit
+$
+$file_search:
+$   directory/nohead/notrail [mirth.src...]*'p1'*.*
+$   exit
+$
+$quit:
+$close/nolog dummy
+$if( f$search("dummy.dum").nes."" ) then delete dummy.dum;*
+
