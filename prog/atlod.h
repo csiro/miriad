@@ -26,15 +26,17 @@ c
 	real axisrms(ATANT),axismax(ATANT),mdata(9)
 	double precision obsra,obsdec,lat,long,ra,dec
 	character sname*64
+	integer refnant
+	real refpnt(2,ATANT)
 c
 	common/atlodd/sname
 	common/atlodc/sfreq,sdf,restfreq,time,obsra,obsdec,lat,long,
      *	    ra,dec,
      *	  data,
      *	  xtsys,ytsys,chi,xyphase,xyamp,xsampler,ysampler,u,v,w,inttime,
-     *	    inttim,wts,mdata,axisrms,axismax,
+     *	    inttim,wts,mdata,axisrms,axismax,refpnt,
      *	  pnt,nbin,nused,tno,nants,nifs,nfreq,nstoke,polcode,edge,
-     *	    bchan,tcorr,mcount,
+     *	    bchan,tcorr,mcount,refnant,
      *	  flag,dosw,dosam,dohann,birdie,dowt,dopmps,doxyp,opcorr,
      *	    doif,dobary,newfreq,hires,
      *	  newsc,newpnt
