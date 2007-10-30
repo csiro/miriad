@@ -1,0 +1,95 @@
+#!/bin/csh -f
+#
+# Script to execute mira_rci on mira to checkin a program via rsh
+#   after copying it from here via rcp.  Multiple file names (no wild-
+#   card expansion) can be given -- the options will apply to all input
+#   files.  Username on command line (-U) supersedes the $mira_user
+#   variable set in script, which supersedes the $USER variable.
+#
+# Usage: rci [ci options] [-Uusername] filename(s)
+#
+# Example: rci -d -Udroberts regrid.for invert.for
+#   -d flag means checkin date.  See man ci for details.
+#
+# Note that because of the difficulty of passing strings with double
+#   quotes in csh, no strings can have any spaces (suggest
+#   underscores).
+#
+# You can determine which file have been checked out locked
+#   (read/write) by typing:
+#   rsh mira.astro.uiuc.edu ls /export/bimaprog/VersionControl/modified
+#
+# History:
+#   17jul95 dar   Created file and tested it out.
+#   11Aug95 dar   Added command line argument of username (-U), which
+#                 supersedes $mira_user in script, which supersedes $USER.
+#
+# Set mira_user to the login name on mira.  Put your remote login in
+#   your .rhosts file on mira and visa versa.  This supersedes $USER
+#   shell variable and is superseded by the command line argument (-U)
+#
+#set mira_user = "droberts"
+#
+# There must be at least one argument to rci, otherwise goto usage
+#
+if ( $#argv == 0 ) goto usage
+#
+# Set variables and distinguish filenames from ci flags and username
+#
+set i         = 1
+set flags     = ""
+set files     = ""
+while ( $i <= $#argv )
+  set temp     = `echo $argv[$i]`
+  if ( `echo $temp | egrep -e -U` != "" ) then
+    set mira user = `echo $temp | sed -e 's/-U//'`
+    goto mark
+  endif
+  set newflags = `echo $temp | grep "-"`
+  set newfile  = `echo $temp | grep -v "-"`
+  set flags    = "$flags $newflags"
+  set files    = "$files $newfile"
+  mark:
+  @ i=$i + 1
+end
+if ( ! $?mira_user ) set mira_user = $USER
+if ( $mira_user == rsault ) set mira_user = bobs
+echo "mira_user = " $mira_user
+#
+# Do remote copy and checkin
+#
+foreach file ( $files )
+  set file = `echo $file | sed -e 's/ //'`
+  if ( ! -e $file ) then
+    echo "File $file not found in this directory"
+  else
+    echo "begin transfer" $file
+    rcp -p $file $mira_user@mira.astro.uiuc.edu:/export/bimaprog/VersionControl/modified/$file
+    rsh -l $mira_user mira.astro.uiuc.edu /export/bimaprog/VersionControl/bin/mira_rci `eval echo $file $flags`
+    echo "end transfer" $file
+  endif
+end
+exit 0
+#
+# Usage
+#
+usage:
+  echo "Script to execute mira_rci on mira to check in a program via rsh"
+  echo "  after copying it from here via rcp.  Multiple file names (no wild-"
+  echo "  card expansion) can be given -- the options will apply to all input"
+  echo "  files.  Username on command line (-U) supersedes the" '$mira_user'
+  echo "  variable set in script, which supersedes the" '$USER' "variable."
+  echo ""
+  echo "Usage: rci [ci options] [-Uusername] filename(s)"
+  echo ""
+  echo "Example: rci -d regrid.for invert.for"
+  echo "  -d flag means checkin date.  See man ci for details."
+  echo ""
+  echo "Note that because of the difficulty of passing strings with double"
+  echo "  quotes in csh, strings cannot have any spaces (suggest using"
+  echo "  underscores)."
+  echo ""
+  echo "You can determine which file have been checked out locked"
+  echo "  (read/write) by typing:"
+  echo "  rsh mira.astro.uiuc.edu ls /export/bimaprog/VersionControl/modified"
+  exit 0
