@@ -86,11 +86,12 @@ c    26feb97 rjs  Fix bug in the dimensioning of ltemp.
 c     6may97 rjs  Better auto-range determination. Change zoom somewhat. Better
 c		  doc and help.
 c    12may97 rjs  Check that linetype is OK for flagging.
+c    09nov98 rjs  Added "hangle" axis type.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
 	integer MAXDAT,MAXPLT,MAXEDIT
-	parameter(version='BlFlag: version 12-May-97')
+	parameter(version='BlFlag: version 09-Nov-98')
 	parameter(MAXDAT=500000,MAXPLT=20000,MAXEDIT=20000)
 c
 	logical present(MAXBASE),nobase,selgen,noapply,rms
@@ -595,7 +596,7 @@ c
         lo = x1 - delta
         hi = x2 + delta
 c
-	if(axis.eq.'time'.or.axis.eq.'lst')then
+	if(axis.eq.'time'.or.axis.eq.'lst'.or.axis.eq.'hangle')then
 	  flags = 'BCNSTHZ0' 
 	else
 	  flags = 'BCNST'
@@ -696,7 +697,7 @@ c------------------------------------------------------------------------
 c
 	logical flags(MAXCHAN),ok
 	complex data(MAXCHAN),corr(MAXBASE),corr2(MAXBASE)
-	double precision preamble(4),time,time0,tprev,lst
+	double precision preamble(4),time,time0,tprev,lst,ra
 	real uvdist2(MAXBASE)
 	integer i,n,bl,i1,i2,nants,npnt(MAXBASE),mbase,nchan
 c
@@ -724,6 +725,7 @@ c
 	tprev = preamble(3)
 	time0 = int(tprev - 0.5d0) + 0.5d0
 	call uvrdvrd(tno,'lst',lst,0.d0)
+	call uvrdvrd(tno,'ra',ra,0.d0)
 	dowhile(nchan.gt.0)
 	  call BasAnt(preamble(4),i1,i2)
 	  bl = (i2*(i2-1))/2 + i1
@@ -731,8 +733,8 @@ c
 	  if(ok)then
 	    time = preamble(3)
 	    if(abs(time-tprev).gt.TTOL)then
-	      if(nants.gt.0)call IntFlush(nants,rms,lst,tprev,uvdist2,
-     *		corr,corr2,xaxis,yaxis,npnt,
+	      if(nants.gt.0)call IntFlush(nants,rms,ra,lst,tprev,
+     *		uvdist2,corr,corr2,xaxis,yaxis,npnt,
      *		time0,present,mbase,xdat,ydat,timedat,bldat,ndat,MAXDAT)
 	      nants = 0
 	      tprev = time
@@ -758,19 +760,19 @@ c
 	enddo
 c
 	if(nants.gt.0)
-     *      call IntFlush(nants,rms,lst,time,uvdist2,corr,corr2,
+     *      call IntFlush(nants,rms,ra,lst,time,uvdist2,corr,corr2,
      *		xaxis,yaxis,npnt,
      *		time0,present,mbase,xdat,ydat,timedat,bldat,ndat,MAXDAT)
 c
 	end
 c************************************************************************
-	subroutine IntFlush(nants,rms,lst,time,uvdist2,corr,corr2,
+	subroutine IntFlush(nants,rms,ra,lst,time,uvdist2,corr,corr2,
      *	  xaxis,yaxis,npnt,
      *	  time0,present,MAXBASE,xdat,ydat,timedat,bldat,ndat,MAXDAT)
 c
 	implicit none
 	integer MAXBASE,MAXDAT,nants,npnt(MAXBASE),bldat(MAXDAT),ndat
-	double precision lst,time,time0,timedat(MAXDAT)
+	double precision ra,lst,time,time0,timedat(MAXDAT)
 	real uvdist2(MAXBASE),xdat(MAXDAT),ydat(MAXDAT)
 	complex corr(MAXBASE),corr2(MAXBASE)
 	logical present(MAXBASE),rms
@@ -791,9 +793,9 @@ c
 	      ndat = ndat + 1
 	      if(ndat.gt.MAXDAT)call bug('f','Too many points')
 	      xdat(ndat) = GetVal(xaxis,uvdist2(k),corr(k),corr2(k),
-     *		npnt(k),lst,time,time0,rms)
+     *		npnt(k),lst,time,ra,time0,rms)
 	      ydat(ndat) = GetVal(yaxis,uvdist2(k),corr(k),corr2(k),
-     *		npnt(k),lst,time,time0,rms)
+     *		npnt(k),lst,time,ra,time0,rms)
 	      bldat(ndat) = k
 	      timedat(ndat) = time
 	      present(k) = .true.
@@ -807,19 +809,20 @@ c
 c
 	end
 c************************************************************************
-	real function GetVal(axis,uvdist2,corr,corr2,npnt,lst,time,
+	real function GetVal(axis,uvdist2,corr,corr2,npnt,lst,time,ra,
      *							  time0,rms)
 c
 	implicit none
 	character axis*(*)
 	real uvdist2
 	complex corr,corr2
-	double precision time,time0,lst
+	double precision time,time0,lst,ra
 	integer npnt
 	logical rms
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	complex data
+	double precision dtemp
 c
 	if(rms)then
 	  data = cmplx(sqrt(real(corr2)/npnt - real(corr/npnt)**2),
@@ -842,6 +845,14 @@ c
 	  GetVal = 86400*(time - time0)
 	else if(axis.eq.'lst')then
 	  GetVal = 86400*lst/(2*pi)
+	else if(axis.eq.'hangle')then
+	  dtemp = lst - ra
+	  if(dtemp.gt.DPI)then
+	    dtemp = dtemp - 2*DPI
+	  else if(dtemp.lt.-DPI)then
+	    dtemp = dtemp + 2*DPI
+	  endif
+	  GetVal = 86400d0*dtemp/(2*DPI)
 	else
 	  call bug('f','I should never get here')
 	endif
@@ -853,13 +864,13 @@ c
 	character xaxis*(*),yaxis*(*)
 c------------------------------------------------------------------------
 	integer NAX
-	parameter(NAX=7)
+	parameter(NAX=8)
 	integer n
 	character axes(NAX)*12
 	data axes/'amplitude   ','phase       ',
      *		  'real        ','imaginary   ',
      *		  'time        ','uvdistance  ',
-     *		  'lst         '/
+     *		  'lst         ','hangle      '/
 	call keymatch('axis',NAX,axes,1,xaxis,n)
 	if(n.eq.0)xaxis = 'time'
 	call keymatch('axis',NAX,axes,1,yaxis,n)
