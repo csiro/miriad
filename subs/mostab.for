@@ -24,6 +24,7 @@ c   subroutine MosPnt
 c
 c  History:
 c    rjs  26oct94 Original version
+c    rjs  16nov94 Added mosWt
 c************************************************************************
 	subroutine MosCIni
 c
@@ -928,8 +929,10 @@ c
 c
 c  Do the simple mosaicing.
 c
-	call Mosaic1(In,Out,memr(pWts),nx,ny,npnt,mnx,mny,pbObj,Rms2,
-     *	  nx2,ny2)
+	if(nx2.gt.(nx-1)/2.or.ny2.gt.(ny-1)/2)
+     *	  call bug('f','Inconsistency in Mosaicer')
+	call Mosaic1(In,Out,memr(pWts),nx,ny,npnt,mnx,mny,Rms2)
+
 c
 c  Determine what data are flagged.
 c
@@ -938,11 +941,10 @@ c
 	call memFree(pWts,mnx*mny,'r')
 	end
 c************************************************************************
-	subroutine Mosaic1(In,Out,Wts,nx,ny,npnt,mnx,mny,pbObj,Rms2,
-     *	  nx2,ny2)
+	subroutine Mosaic1(In,Out,Wts,nx,ny,npnt,mnx,mny,Rms2)
 c
 	implicit none
-	integer nx,ny,npnt,mnx,mny,nx2,ny2,pbObj(npnt)
+	integer nx,ny,npnt,mnx,mny
 	real In(nx,ny,npnt),Out(mnx,mny),Wts(mnx,mny),Rms2(npnt)
 c
 c  Do a linear mosaic of all the fields. Weight is so that the
@@ -950,12 +952,13 @@ c  RMS never exceeds the max RMS in the input data.
 c
 c------------------------------------------------------------------------
 	include 'maxdim.h'
-	integer i,j,ic,jc,ioff,joff,imin,jmin,imax,jmax,k
+	integer i,j,ic,jc,ioff,joff,imin,jmin,imax,jmax,k,pbObj
 	real Pb(MAXDIM),Wt3,x,y,xext,yext
 c
 c  Externals.
 c
 	real pbGet,mosWt3
+	integer mosPb
 c
 c  Check that we have enough space.
 c
@@ -970,25 +973,24 @@ c
 	  enddo
 	enddo
 c
-	if(nx2.gt.(nx-1)/2.or.ny2.gt.(ny-1)/2)
-     *	  call bug('f','Inconsistency in Mosaicer')
-c
 	ic = nx/2 + 1
 	jc = ny/2 + 1
 c
 	do k=1,npnt
 	  Wt3 = mosWt3(k)
-	  call pbExtent(pbObj(k),x,y,xext,yext)
+	  pbObj = mosPb(k)
+	  call mosExt(k,imin,imax,jmin,jmax)
+	  call pbExtent(pbObj,x,y,xext,yext)
 	  ioff = ic - nint(x)
 	  joff = jc - nint(y)
-	  imin = max(nint(x-nx2+0.5),1)
-	  imax = min(nint(x+nx2-0.5),mnx)
-	  jmin = max(nint(y-ny2+0.5),1)
-	  jmax = min(nint(y+ny2-0.5),mny)
+	  imin = max(imin,1)
+	  imax = min(imax,mnx)
+	  jmin = max(jmin,1)
+	  jmax = min(jmax,mny)
 c
 	  do j=jmin,jmax
 	    do i=imin,imax
-	      Pb(i) = pbGet(pbObj(k),real(i),real(j))
+	      Pb(i) = pbGet(pbObj,real(i),real(j))
 	    enddo
 	    do i=imin,imax
 	      Out(i,j) = Out(i,j) + Wt3*Pb(i)*In(i+ioff,j+joff,k)
@@ -1123,7 +1125,7 @@ c
 c
 	call MemAlloc(pWts,nx*ny,'r')
 	call MosPnt1(beams,psf,memr(pWts),nx,ny,npnt1,
-     *				  real(xref(1)),real(xref(2)))
+     *				  nint(xref(1)),nint(xref(2)))
 	call MemFree(pWts,nx*ny,'r')
 c
 	call MosMFin
@@ -1132,8 +1134,8 @@ c************************************************************************
 	subroutine MosPnt1(beams,psf,wts,nx,ny,npnt1,xr,yr)
 c
 	implicit none
-	integer nx,ny,npnt1
-	real beams(nx,ny,npnt1),psf(nx,ny),wts(nx,ny),xr,yr
+	integer nx,ny,npnt1,xr,yr
+	real beams(nx,ny,npnt1),psf(nx,ny),wts(nx,ny)
 c
 c  Determine the true point-spread function of a mosaiced image.
 c
@@ -1149,12 +1151,13 @@ c    psf	The point-spread function.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mostab.h'
-	integer i,j,k,imin,imax,jmin,jmax
-	real xoff,yoff,scal1,scal2,Pb(MAXDIM)
+	integer i,j,k,imin,imax,jmin,jmax,xoff,yoff
+	real Pb(MAXDIM),Wt3,scale
 c
 c  Externals.
 c
 	real pbGet
+	real mosWt3
 c
 c  Check!
 c
@@ -1176,21 +1179,22 @@ c
 c  Loop over all the pointings.
 c
 	do k=1,npnt
-	  imin = max(nint(x0(k)-nx2+0.5-xoff),1)
-	  imax = min(nint(x0(k)+nx2-0.5-xoff),nx)
-	  jmin = max(nint(y0(k)-ny2+0.5-yoff),1)
-	  jmax = min(nint(y0(k)+ny2-0.5-yoff),ny)
+	  call mosExt(k,imin,imax,jmin,jmax)
+	  imin = max(imin-xoff,1)
+	  imax = min(imax-xoff,nx)
+	  jmin = max(jmin-yoff,1)
+	  jmax = min(jmax-yoff,ny)
 	  if(imin.le.imax.and.jmin.le.jmax)then
-	    scal2 = 1/(Rms2(k)*Rms2(k))
-	    scal1 = scal2 * pbGet(pbObj(k),xr,yr)
-	    if(scal1.gt.0)then
+	    Wt3 = mosWt3(k)
+	    scale = Wt3 * pbGet(pbObj(k),real(xr),real(yr))
+	    if(scale.gt.0)then
 	      do j=jmin,jmax
 	        do i=imin,imax
-	          Pb(i) = pbGet(pbObj(k),i+xoff,j+yoff)
+	          Pb(i) = pbGet(pbObj(k),real(i+xoff),real(j+yoff))
 	        enddo
 	        do i=imin,imax
-	          PSF(i,j) = PSF(i,j) + scal1*Pb(i)*Beams(i,j,k)
-	          Wts(i,j) = Wts(i,j) + scal2*Pb(i)*Pb(i)
+	          PSF(i,j) = PSF(i,j) + scale*Pb(i)*Beams(i,j,k)
+	          Wts(i,j) = Wts(i,j) + Wt3*Pb(i)*Pb(i)
 	        enddo
 	      enddo
 	    endif
@@ -1241,23 +1245,104 @@ c------------------------------------------------------------------------
 	mosPb = pbObj(k)
 	end
 c************************************************************************
-	subroutine mosWtCom(Runs,nRuns,Wt1,Wt2,npix)
+	subroutine mosExt(k,imin,imax,jmin,jmax)
+c
+	implicit none
+	integer k,imin,imax,jmin,jmax
+c
+c  Determine the region that this pointing will add to.
+c  NOTE: We form "ceil" and "floor" functions from nint(x+0.5) and nint(x-0.5)
+c  respectively.
+c  Also note that we add then subtract an integer offset to make the arg
+c  of the nint function positive, because nint(-0.5) + 1 is not equal to
+c  nint(-0.5+1), and we need to be consistent (independent of any offset
+c  added to the pixel coordinates).
+c------------------------------------------------------------------------
+	include 'mostab.h'
+	integer offset
+c
+	offset = abs(x0(k)) + nx2 + 1
+	imin = nint(x0(k)-nx2+0.5 + offset) - offset
+	imax = nint(x0(k)+nx2-0.5 + offset) - offset
+	offset = abs(y0(k)) + ny2 + 1
+	jmin = nint(y0(k)-ny2+0.5 + offset) - offset
+	jmax = nint(y0(k)+ny2-0.5 + offset) - offset
+c
+	end
+c************************************************************************
+c************************************************************************
+	subroutine mosWts(Wt1,Wt2,nx,ny,xoff,yoff)
+c
+	implicit none
+	integer nx,ny,xoff,yoff
+	real Wt1(nx,ny),Wt2(nx,ny)
+c
+c  Determine the weights to apply to data during the mosaicing process.
+c  The region-of-interest is a rectangular one.
+c  Input:
+c    xoff,yoff	Add these to the pbObj coordinates to get the local
+c		pixel coordinates.
+c------------------------------------------------------------------------
+	integer nx2,ny2,npnt,imin,imax,jmin,jmax,i,j,k,pbObj
+	real Wt3,Pb
+c
+c  Externals.
+c
+	real mosWt3,pbGet
+	integer mosPb
+c
+c  Initialise the weight array.
+c
+	do j=1,ny
+	  do i=1,nx
+	    Wt1(i,j) = 0
+	  enddo
+	enddo
+c
+c  Deternime some things.
+c
+	call mosInfo(nx2,ny2,npnt)
+c
+	do k=1,npnt
+	  pbObj = mosPb(k)
+	  Wt3 = mosWt3(k)
+	  call mosExt(k,imin,imax,jmin,jmax)
+	  imin = max(imin+xoff,1)
+	  imax = min(imax+xoff,nx)
+	  jmin = max(jmin+yoff,1)
+	  jmax = min(jmax+yoff,ny)
+c
+	  do j=jmin,jmax
+	    do i=imin,imax
+	      Pb = pbGet(pbObj,real(i-xoff),real(j-yoff))
+	      Wt1(i,j) = Wt1(i,j) + Wt3 * Pb * Pb
+	    enddo
+	  enddo
+	enddo
+c
+c  Now normalise.
+c
+	call mosWtC(Wt1,Wt2,nx*ny)
+	end
+c************************************************************************
+	subroutine mosWtsR(Runs,nRuns,Wt1,Wt2,npix)
 c
 	implicit none
 	integer nRuns,Runs(3,nRuns),npix
 	real Wt1(npix),Wt2(npix)
 c
 c  Determine weights to apply to data during the mosaicing process.
+c  The region-of-interest is specified by the much unloved Runs format.
 c
 c------------------------------------------------------------------------
-	include 'mostab.h'
-c
 	integer k,i,j,n,jmin,jmax,imin,imax,ilo,ihi,iRuns,nin
-	real Sigt,scale,Wt3,x,y,xext,yext
+	integer nx2,ny2,npnt,pbObj
+	real Wt3,Pb
 c
 c  Externals.
 c
 	real mosWt3,pbGet
+	integer mosPb
 c
 c  Initialise the weight array.
 c
@@ -1265,13 +1350,14 @@ c
 	  Wt1(i) = 0
 	enddo
 c
+c  Deternime some things.
+c
+	call mosInfo(nx2,ny2,npnt)
+c
 	do k=1,npnt
+	  pbObj = mosPb(k)
 	  Wt3 = mosWt3(k)
-	  call pbExtent(pbObj(k),x,y,xext,yext)
-	  imin = nint(x-nx2+0.5)
-	  imax = nint(x+nx2-0.5)
-	  jmin = nint(y-ny2+0.5)
-	  jmax = nint(y+ny2-0.5)
+	  call mosExt(k,imin,imax,jmin,jmax)
 c
 	  n = 0
 	  do iRuns=1,nRuns
@@ -1283,13 +1369,28 @@ c
 	      nin = n + ilo - Runs(2,iRuns)
 	      do i=ilo,ihi
 		nin = nin + 1
-	        Wt1(nin) = Wt1(nin) +
-     *			   Wt3 * pbGet(pbObj(k),real(i),real(j))
+		Pb = pbGet(pbObj,real(i),real(j))
+	        Wt1(nin) = Wt1(nin) + Wt3 * Pb * Pb
 	      enddo
 	    endif
 	    n = n + Runs(3,iRuns) - Runs(2,iRuns) + 1
 	  enddo
 	enddo
+c
+c  Now normlise.
+c
+	call mosWtC(Wt1,Wt2,npix)
+	end
+c************************************************************************
+	subroutine mosWtC(Wt1,Wt2,npix)
+c
+	implicit none
+	integer npix
+	real Wt1(npix),Wt2(npix)
+c------------------------------------------------------------------------
+	include 'mostab.h'
+	integer i,k
+	real scale,Sigt
 c
 c  Determine the maximum RMS.
 c
@@ -1317,4 +1418,3 @@ c
 	enddo
 c
 	end
-
