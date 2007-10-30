@@ -11,6 +11,8 @@ c    rjs  18jan94 Added new1934
 c    rjs   1aug94 Added really new 1934. Change source name matching criteria.
 c    rjs   3aug95 Added new 0823-500, care jer.
 c    rjs  23aug96 Added polys from Ott et al, 1995.
+c    tao  26jul00 Changed values for 3C48 and 3C147 to those of
+c                 VLA database (to avoid extrapolation)
 c************************************************************************
 c* CalStoke -- Flux characteristics of selected calibrators.
 c& nebk, rjs
@@ -58,8 +60,8 @@ c
 c  All lists are in the order:
 c       3C286,    Ott et al, 1995 (total intensity)
 c		  Perley/Killeen, 1991 (unpublished -- polarised component)
-c       3C48,     Ott et al, 1995
-c       3C147,    Ott et al, 1995
+c       3C48,     VLA database   
+c       3C147,    VLA database   
 c       3C138,    Perley/Killeen, 1991 (unpublished)
 c       1934-638, Reynolds, 1994, ATNF Technical Memo 39.3040
 c       0823-500  John Reynolds (unpublished)
@@ -70,8 +72,8 @@ c
 c     +	    1.099506E2,  -44.80922,   4.618715,    0.0,       0.0,
       data ((coeffs(i,j,1),i=1,5),j=1,nsrc) /
      +	     0.956,        0.584,    -0.1644,      0.0,       0.0,
-     +      2.465,        -0.004,    -0.1251,      0.0,       0.0,
-     +      2.806,         0.140,    -0.1031,      0.0,       0.0,
+     +    1.16801,       1.07526,    -0.42254,  0.02699,      0.0,
+     +    0.05702,       2.09340,   -0.70760,   0.0547700,    0.0,
      +    178.2661,     -114.4718,   25.23650,    -1.905347,  0.0,
      +    -30.7667,       26.4908,   -7.0977,      0.605334,  0.0,
      +    -51.0361,       41.4101,  -10.7771,	   0.90468,   0.0,
@@ -154,10 +156,10 @@ c
 c
 c Frequency range polynomial fits done over (0.0 means don't know)
 c
-      data frange /0.3275,  14.9850,
-     +             1.408,   23.780,
-     +             1.408,   23.780,
-     +             0.3275,  14.985,
+      data frange /0.3000,  50.0000,
+     +             0.300,   50.000,
+     +             0.300,   50.000,
+     +             0.3000,  50.000,
      +             0.4080,   8.400,
      +             1.380,    8.640,
      +             0.408,    8.400,
