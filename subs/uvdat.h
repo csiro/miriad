@@ -46,7 +46,9 @@ c				data.
 c    cross			If true, input data must be crosscorrelation
 c				data.
 c    calmsg                     If true, calibration message already issued
-c			        for this file 
+c			        for this file.
+c    dogsv			Enable scaling of the variance by the
+c				gains.
 c    npream			Number of elements in the preamble.
 c    idxT			Index of "time" in the preamble.
 c    idxBL			Index of "baseline" in the preamble.
@@ -57,6 +59,7 @@ c
 	real plmaj,plmin,plangle
 	logical doplanet,dowave,doref,dodata,docal,dosels,doleak,dopass
 	logical PlInit,WillCal,WillLeak,auto,cross,calmsg(maxIn),dow
+	logical dogsv
 	integer k1(maxIn),k2(maxIn),nchan,npream,idxT,idxBL
 	character line*32,ref*32,InBuf*(maxNam)
 	integer nIn,pnt,tno
@@ -83,6 +86,7 @@ c  ncoeff ) These are used to convert from the polarisation present in the
 c  indices) file to the polarisation that the caller desires. See uvGetPol
 c  coeffs ) for more info.
 c  doaver )
+c  GWts     The gain weights to apply to the data.
 c  SumWts   Sum of the polarisation weights squared -- for noise calculations.
 c  Leaks    Polarisation leakage parameters.
 c  nLeaks   Number of polarisation leakage parameters.
@@ -106,7 +110,7 @@ c
 	integer ncoeff(MAXPOL),indices(MAXPOL,MAXPOL)
 	logical doaver(MAXPOL),Sflags(MAXCHAN,MAXPOL)
 	complex coeffs(MAXPOL,MAXPOL)
-	real SumWts(MAXPOL)
+	real SumWts(MAXPOL),GWt
 	integer nLeaks
 	complex Leaks(2,MAXANT)
 c
@@ -115,11 +119,12 @@ c
 	common/UVDatCoA/sels,lstart,lwidth,lstep,lflag,
      *	 rstart,rwidth,rstep,
      *	 plmaj,plmin,plangle,doplanet,dowave,doref,dodata,dosels,dow,
-     *	 plinit,k1,k2,nchan,nIn,pnt,tno,npream,idxT,idxBL,
+     *	 dogsv,plinit,k1,k2,nchan,nIn,pnt,tno,npream,idxT,idxBL,
      *	 auto,cross,docal,WillCal,doleak,WillLeak,dopass,calmsg
 c
 	common/UVDatCoB/line,ref,InBuf
 c
-	common/UvDatCoC/Spreambl,Leaks,coeffs,SumWts,WillPol,PolCpy,
+	common/UvDatCoC/Spreambl,Leaks,coeffs,SumWts,GWt,WillPol,
+     *	 PolCpy,
      *	 SelPol,SelPol1,nPol,nPolF,Pols,iPol,Snread,SData,ncoeff,doaver,
      *	 Sflags,indices,nLeaks
