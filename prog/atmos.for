@@ -70,6 +70,7 @@ c	source to be observed (i.e. already on source).
 c--
 c   History:
 c     rjs  31-dec-00 Get it to work for 1 source.
+c     rjs  20-dec-03 Get it to work for 2 sources!
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	integer MAXSRC
@@ -92,6 +93,7 @@ c
 c
 c  Get the input parameters.
 c
+	call output('Atmos: version 1.0 20-Dec-03')
 	call keyini
 	call keya('source',sfile,' ')
 	call keyr('interval',interval,15.)
@@ -145,8 +147,10 @@ c
 c  Sort the list into a travelling salesman order.
 c
 	call output('Optimising the slew time ...')
-	if(nsrc.eq.1)then
-	  indx(1) = 1
+	if(nsrc.le.2)then
+	  do i=1,nsrc
+	   indx(i) = i
+	  enddo
 	else
 	  call sorter(source,ra,dec,nsrc,lst,interval,
      *					cycles,ra0,dec0,indx)
