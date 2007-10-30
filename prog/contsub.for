@@ -95,6 +95,7 @@ c    bpw  27mar91  Changed assert into assertl
 c    bpw  15dec92  Add default velaxis='z' after changing fndaxnum
 c    bpw  19dec94  Add options=coeff,#
 c    bpw  12jan95  Fixed bug introduced by introducing options=coeff,#
+c    pjt  15mar95  fixed declaration order for f2c (linux)
 c
 c------------------------------------------------------------------------
 c
@@ -113,7 +114,7 @@ c contchan:    list of channel numbers to use to determine continuum
       program contsub
 
       character*50     version
-      parameter        ( version = 'contsub: version 2.0 12-jan-95' )
+      parameter        ( version = 'contsub: version 2.0 15-mar-95' )
 
       include          'maxdim.h'
 
@@ -178,17 +179,19 @@ c data algopts must be adapted
       integer          viraxlen(MAXNAX), vircubesize(MAXNAX)
 
       character*10     algopts(NOPT)
-      data             algopts / 'poly', 'mean', 'avgs', 'subtr',
-     *                 '0','1','2','3','4','5','6','7','8' /
       logical          optprsnt(NOPT)
-      data             optprsnt / NOPT*.FALSE. /
       integer          nterms
       character*10     outopts(NOPTO)
+      integer          maxranges
+      integer          i, n
+c data
+      data             algopts / 'poly', 'mean', 'avgs', 'subtr',
+     *                 '0','1','2','3','4','5','6','7','8' /
+      data             optprsnt / NOPT*.FALSE. /
       data             outopts / 'coeff',
      *                 '0','1','2','3','4','5','6','7','8' /
 
-      integer          maxranges
-      integer          i, n
+
 
 c Initialize keyword routines.
       call keyini
