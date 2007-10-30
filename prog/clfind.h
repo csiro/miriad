@@ -5,9 +5,9 @@ c---------------------------------------------------------------
 c Allow for a 128x128x128 cube
       integer maxbuf,maxdim
 c      parameter(maxbuf=128*128*128,maxdim=400)
-c      parameter(maxbuf=128*128*128,maxdim=400)
+      parameter(maxbuf=128*128*128,maxdim=400)
 c				takes up 80M on sun
-      parameter(maxbuf=256*256*256,maxdim=400)
+c      parameter(maxbuf=256*256*256,maxdim=400)
 
 c maxlvl = number of contour levels
 c maxreg = number of regions/level
@@ -53,17 +53,10 @@ c----------------------------------------------------------------
       integer nx,ny,nz
       real dx,dy,dv
       character*8 ctype(4)
-      common /headvar/ nx,ny,nz,dx,dy,dv,ctype
+      common /headvarn/ nx,ny,nz,dx,dy,dv
+      common /headvarc/ ctype
 
       double precision crpix(4),crval(4),cdelt(4),bmaj,bmin,bpa
       common /dheadvar/ crpix,crval,cdelt,bmaj,bmin,bpa
 
-      integer nkeys
-      parameter(nkeys=12)
-
-      character keyw(nkeys)*8
-      data keyw/   'cdelt1  ','cdelt2  ','cdelt3  ',
-     *    'crpix1  ','crpix2  ','crpix3  ',
-     *    'crval1  ','crval2  ','crval3  ',
-     *    'ctype1  ','ctype2  ','ctype3  '/
 c----------------------------------------------------------------

@@ -1,5 +1,5 @@
 c-------------------------------------------------------------
-c  clstats.h
+c  old name: clstats.h
 c  common stat variables
 c-------------------------------------------------------------
       integer maxbuf,maxdim,ncl
@@ -10,8 +10,9 @@ c-------------------------------------------------------------
       real dist,disterr,xfact,xfacterr
       real meanmol,kpjy,rms
       character*80 file
-      common /keyin/ nmin,dist,disterr,xfact,xfacterr,
-     *               meanmol,kpjy,rms,file
+      common /keyinn/ nmin,dist,disterr,xfact,xfacterr,
+     *               meanmol,kpjy,rms
+      common /keyinc/ file
 
       real x0,y0,delx,dely,delv
       real beamx,beamy
@@ -32,8 +33,9 @@ c-------------------------------------------------------------
       
 c-------------------------------------------------------------
 c-------------------------------------------------------------
-c  header.h
+c  old name: header.h
 c  common header variables for clumpstats
+c	19-may-98  pjt	removed never used keyw() array
 c-------------------------------------------------------------
       integer lin1,lin2,lout
       common /files/ lin1,lin2,lout
@@ -55,16 +57,4 @@ c-------------------------------------------------------------
       real datamax,datamin
       common /statis/ datamax,datamin
 
-      integer nkeys
-      parameter(nkeys=40)
-      character keyw(nkeys)*8
-      data keyw/   'bmaj    ','bmin    ','bpa     ','bunit   ',
-     *    'cdelt1  ','cdelt2  ','cdelt3  ','cdelt4  ',
-     *    'crpix1  ','crpix2  ','crpix3  ','crpix4  ',
-     *    'crval1  ','crval2  ','crval3  ','crval4  ',
-     *    'ctype1  ','ctype2  ','ctype3  ','ctype4  ',
-     *    'date-obs','epoch   ','history ','instrume','niters  ',
-     *    'object  ','observer','obsra   ','obsdec  ','pbfwhm  ',
-     *    'restfreq','telescop','vobs    ','xshift  ','yshift  ',
-     *    'ltype   ','lstart  ','lwidth  ','lstep   ','btype   '/
 c-------------------------------------------------------------
