@@ -124,12 +124,18 @@ c
 c@ options
 c	Task enrichment options. Minimum match of all keywords is active.
 c
-c	"fiddle" means enter a routine to allow you to interactively change
-c	  the display lookup table.  You can cycle through b&w and colour
-c	  displays, as well as alter the transfer function by the cursor 
-c	  location, or by selecting predefined transfer functions such as 
-c	  histogram equalization, logarithmic, & square root.  This is
-c	  done before the spectra are drawn.
+c       "fiddle" means enter a routine to allow you to interactively change
+c         the display lookup table.  You can cycle through a variety of   
+c         colour lookup tables, as well as alter a linear transfer function
+c         by the cursor location, or by selecting predefined transfer
+c         functions (linear, square root, logarithmic, histogram equalization)
+c       
+c         For hard copy devices (e.g. postscript), a keyboard driven
+c         fiddle is offered; you can cycle through different colour tables
+c         and invoke the predefined transfer functions, but the linear
+c         fiddler is not available.   In this way you can make colour
+c         hardcopy plots.
+c
 c	"wedge" means that if you are drawing a grey scale, also draw
 c	  and label a wedge to the right of the plot, showing the map 
 c	  of intensity to grey level. 
@@ -367,6 +373,10 @@ c                  coordinate increments.  Linearize axis descriptors
 c                  at the centre of the displayed region
 c    nebk 31oct94  Fix mix up with luns for scratch files
 c    nebk 23dec94  Make sure selected region no bigger than image
+c    nebk 05jan95  Use new PGIMAG in favour of PGGRAY adding support   
+c                  for fiddling of lookup table for hardcopy devices 
+c                  Use orginal not linearized axis descriptors for
+c                  full annotation
 c
 c Ideas:
 c  * Be cleverer for sub-cubes which have spectra partly all zero
@@ -395,18 +405,19 @@ c
      +  snaxis, naxis, lc(maxcon), lg, lb, ls, sgrps(2,maxdim), 
      +  grpbeg(maxchan), ngrp(maxchan), ibin(2), jbin(2), krng(2), 
      +  iside(maxspec), lh, lgn, lcn(maxcon)
-      double precision cdelt(maxnax), crval(maxnax), 
+      double precision cdelt(maxnax), crval(maxnax), crpix(maxnax),
      +  ccdelt(maxnax,maxcon), ccrval(maxnax,maxcon), 
-     +  gcdelt(maxnax), gcrval(maxnax), bcdelt(maxnax), 
-     +  bcrval(maxnax), scdelt(maxnax), scrval(maxnax),
-     +  ccrpix(maxnax,maxcon), gcrpix(maxnax), 
-     +  bcrpix(maxnax), scrpix(maxnax), crpix(maxnax),
+     +  ccrpix(maxnax,maxcon),
+     +  gcdelt(maxnax), gcrval(maxnax), gcrpix(maxnax), 
+     +  bcrval(maxnax), bcdelt(maxnax), bcrpix(maxnax),
+     +  scrval(maxnax), scdelt(maxnax), scrpix(maxnax), 
+     +  crval2(maxnax), cdelt2(maxnax), crpix2(maxnax),
      +  opos(4,maxpos)
       real cepoch(maxcon), gepoch, bepoch, sepoch, epoch
       logical maskc(maxcon), maskg, masks, maskb, solneg(maxcon),
      +  grid(maxspec)
       character*9 ctype(maxnax), cctype(maxnax,maxcon), gctype(maxnax),
-     +  bctype(maxnax), sctype(maxnax)
+     +  bctype(maxnax), sctype(maxnax), ctype2(maxnax)
       character*6 ltypes(maxtyp)
       character*64 cin(maxcon), gin, bin, spin(maxspec), hin
 c
@@ -448,7 +459,10 @@ c
       data txtfill, tflen /'spectrum', 'derivative spectrum', 
      +                     'derivative spectrum', 8, 19, 19/
 c-----------------------------------------------------------------------
-      call output ('CgSpec: version 23-Dec-94')
+      call output ('CgSpec: version 05-Jan-95')
+      call output ('Options=fiddle will now work partially for hard ')
+      call output ('copy devices -- see help options')
+      call output (' ')
       call output ('Non-linear coordinates are now partially handled')
       call output ('See "help cgcoords" for explanations')
       call output (' ')
@@ -553,8 +567,10 @@ c
         end do
       end if
 c
-c Linearize axis descriptors if non-pixel labels requested
+c Save and linearize axis descriptors if non-pixel labels requested
 c
+      call savdescg (naxis, ctype, crval, crpix, cdelt, ctype2,
+     +               crval2, crpix2, cdelt2)
       call linco (lh, labtyp, blc, trc, grpbeg, ngrp, ctype,
      +            crval, crpix, cdelt)
 c
@@ -576,10 +592,7 @@ c
       call pgscf (2)
       call pgqinf ('hardcopy', hard, ilen)
       defwid = 1
-      if (hard.eq.'YES') then
-        defwid = 2
-        dofid = .false.
-      end if
+      if (hard.eq.'YES') defwid = 2
 c
       do i = 1, ncon
         if (clines(i).eq.0) clines(i) = defwid
@@ -662,12 +675,18 @@ c
      +    win(1)*win(2), memi(ipnim), memr(ipim), nbins, 
      +    his, cumhis)
 c
+c Modify OFM for hard copy devices before calling PGIMAG
+c
+        if (dofid .and. hard.eq.'YES') 
+     +    call ofmmod (tfvp, win(1)*win(2), memr(ipim), 
+     +                 memi(ipnim), pixr2(1), pixr2(2))
+c
 c Draw grey scale and optional wedge
 c
         call pgslw (1)
         call pgsci (7)
-        call pggray (memr(ipim), win(1), win(2), 1, win(1), 1,
-     +               win(2), pixr2(2), pixr2(1), tr)
+        call pgimag (memr(ipim), win(1), win(2), 1, win(1), 1,
+     +               win(2), pixr2(1), pixr2(2), tr)
         if (dowedge) call wedgecg (1, wedwid, 1, trfun, groff, nbins, 
      +                             cumhis, wdgvp, pixr(2), pixr(1))
 c
@@ -683,15 +702,17 @@ c Label and draw axes.  Forces grey scale to update on /xd as well
 c
       call pgslw (blines(1))
       call pgsch (cs(1))
-      call pgsci (7)
+      call pgsci (1)
+      if (hard.eq.'NO') call pgsci (7)
       call axlabcg (.true., 1, 1, 1, 1, 1, xopts, yopts, xdispl,
      +               ydispb, labtyp, xlabel, ylabel, xxopts, yyopts)
       call pgtbox (xxopts, 0.0, 0, yyopts, 0.0, 0)
 c
-c Modify lookup table
+c Modify OFM for interactive devices here
 c
-      if (dofid) call ofmmod (tfvp, win(1)*win(2), memr(ipim), 
-     +                        memi(ipnim), pixr2(1), pixr2(2))
+      if (dofid .and. hard.eq.'NO') 
+     +  call ofmmod (tfvp, win(1)*win(2), memr(ipim), 
+     +               memi(ipnim), pixr2(1), pixr2(2))
 c
 c Draw contour plots
 c
@@ -738,11 +759,12 @@ c Plot annotation
 c
       if (dofull) then
         call pgslw (1)
-        call pgsci (7)
+        call pgsci (1)
+        if (hard.eq.'NO') call pgsci (7)
         call fullann (ncon, cin, gin, nspec, spin, lc, lg, maxlev,
      +       nlevs, levs, srtlev, slev, trfun, pixr, naxis, size, 
-     +       crval, crpix, cdelt, ctype, vymin, blc, trc, cs, ydispb,
-     +       iscale, labtyp, ibin, jbin, gmm, cmm)
+     +       crval2, crpix2, cdelt2, ctype2, vymin, blc, trc, cs, 
+     +       ydispb, iscale, labtyp, ibin, jbin, gmm, cmm)
       end if
 c
 c Close files and free up memory
@@ -1142,9 +1164,11 @@ c
       maxis = 3
       if (size1(3).le.1 .and. size2(3).le.1) maxis = 2
       do k = 1, maxis
-        if (size1(k).ne.size2(k)) 
-     +   call bug ('f', 'Unequal dimensions for images '//
-     +             im1(1:l1)//' & '//im2(1:l2)//' on axis '//itoaf(k))
+        if (size1(k).ne.size2(k)) then
+          line = 'Unequal dimensions for images '//im1(1:l1)//
+     +           ' & '//im2(1:l2)//' on axis '//itoaf(k)
+          call bug ('f', line)
+        end if
 c
         call chkdescg (relax, 'crpix', k, im1(1:l1), im2(1:l2), 
      +                 crpix1(k), crpix2(k))
@@ -2311,12 +2335,15 @@ c-----------------------------------------------------------------------
       character*(*) in, ctype(maxnax)
       logical mask
 cc
+      character line*130
       integer len1
 c-----------------------------------------------------------------------
       naxis = maxnax
       call xyzopen (lin, in, 'old', naxis, size)
-      if (naxis.eq.0) call bug ('f', in(1:len1(in))//
-     +    ' has zero dimensions !!')
+      if (naxis.eq.0) then
+        line = in(1:len1(in))//' has zero dimensions !!'
+        call bug ('f', line)
+      end if
       call hedinfcg (lin, naxis, size, epoch, crpix, cdelt,
      +               crval, ctype, mask)
       call chkdimcg (maxnax, maxdim, naxis, size, in)
