@@ -123,10 +123,11 @@ c    rjs  11nov98 Make "time" array double precision to avoid precision
 c		  problems.
 c    rjs  01dec98 More warning messages.
 c    rjs  22mar00 Relax implicit assumption that XX/YY much stronger than XY/YX.
+c    rjs   8jan01 Fix buggy error message
 c------------------------------------------------------------------------
 	include 'gpscal.h'
 	character version*(*)
-	parameter(version='GpsCal: version 1.0 22-Mar-00')
+	parameter(version='GpsCal: version 1.0 8-Jan-01')
 	integer MAXSELS,nhead
 	parameter(MAXSELS=256,nhead=5)
 c
@@ -498,7 +499,7 @@ c
 	if(nbad.gt.0)then
 	  line = 'Inappropriate visibilities rejected: '//
      *					     itoaf(nbad/nfiles)
-	  call bug('f',line)
+	  call bug('w',line)
 	endif
 	end
 c************************************************************************
