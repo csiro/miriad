@@ -598,6 +598,7 @@ c    nebk 16may97  Replciate one value for all contours for COLS1
 c    nebk 18jul97  Doc change (masks ANDed not ORed)
 c    rjs  21jul97  Call initco earlier.
 c    rjs  21aug97  Missed calling initco earlier for boxes.
+c    nebk 25mar98  Channel range was wrongly interpreted for line overlays
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -661,7 +662,7 @@ c
       data lwid /maxconp3*1/
       data getvsc /.true./
 c-----------------------------------------------------------------------
-      call output ('CgDisp: version 21-Aug-97')
+      call output ('CgDisp: version 25-Mar-98')
       call output (' ')
 c
 c Get user inputs
@@ -3296,10 +3297,10 @@ c
         ochan(1) = 0
         ochan(2) = 0
         if (nextra.ge.1) then
-          width(1) = nums(ipt)
-          width(2) = width(1)
+          ochan(1) = nums(ipt)
+          ochan(2) = ochan(1)
         end if
-        if (nextra.ge.2) width(2) = nums(ipt+1)
+        if (nextra.ge.2) ochan(2) = nums(ipt+1)
 c
 c Extremeties
 c
