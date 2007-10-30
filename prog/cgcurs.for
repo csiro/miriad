@@ -88,6 +88,7 @@ c
 c	"hms"       the label is in H M S (e.g. for RA)
 c	"dms"       the label is in D M S (e.g. for DEC)
 c	"arcsec"    the label is in arcsecond offsets
+c	"arcmin"    the label is in arcminute offsets
 c	"absdeg"    the label is in degrees
 c	"reldeg"    the label is in degree offsets
 c		    The above assume the  pixel increment is in radians.
@@ -264,6 +265,7 @@ c		   ofmcol to ensure b&w table their by default. Move
 c		   to image type "pixel" instead of "grey"
 c    nebk 14apr95  Make sure old lookup table not lost when stepping to
 c		   new subplot
+c    nebk 11aug95  Add arcmin labtyp
 c To do:
 c
 c-----------------------------------------------------------------------
@@ -303,7 +305,7 @@ c
       data ipage, scale /0, 0.0, 0.0/
       data dmm /1.0e30, -1.0e30/
 c-----------------------------------------------------------------------
-      call output ('CgCurs: version 14-Apr-95')
+      call output ('CgCurs: version 11-Aug-95')
       call output (' ')
 c
 c Get user inputs
@@ -521,8 +523,8 @@ c
 c Label and draw axes
 c
            call pgsch (cs(1))
-           if (first) call axlabcg (gaps, nx, ny, ngrps, nlast, k,
-     +       xopts, yopts,xdispl, ydispb, labtyp, xlabel, ylabel, 
+           if (first) call axlabcg (.false., gaps, nx, ny, ngrps, nlast, 
+     +       k, xopts, yopts,xdispl, ydispb, labtyp, xlabel, ylabel, 
      +       xxopts, yyopts)
            call boxcg (first, xxopts, yyopts)
 c
@@ -1764,12 +1766,12 @@ c
      +  dowedge, dofid
 cc
       integer ntype, nlab, ntype2, nimtype
-      parameter (ntype = 13, ntype2 = 3)
+      parameter (ntype = 14, ntype2 = 3)
       character type(ntype)*6, imtype*7, type2(ntype2)*7
       data type  /'hms   ', 'dms   ', 'abspix', 'relpix', 
-     +            'arcsec', 'absghz', 'relghz', 'abskms', 
-     +            'relkms', 'abslin', 'rellin', 'absdeg',
-     +            'reldeg'/
+     +            'arcsec', 'arcmin', 'absghz', 'relghz', 
+     +            'abskms', 'relkms', 'abslin', 'rellin', 
+     +            'absdeg', 'reldeg'/
       data type2 /'contour', 'pixel', 'grey'/
 c-----------------------------------------------------------------------
       call keyini
