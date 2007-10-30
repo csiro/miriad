@@ -31,14 +31,18 @@ c	This determines the x- and y-axes of the plot. At the moment, the
 c	only possibility for the x-axis is:
 c	  bin        Bin number.
 c	Whereas the y-axis can be
-c	  amplitude  Plot the amplitude. This is the default.
+c	  flux       Plot the flux value. This is the default.
 c	  frequency  Produce a bin vs frequency greyscale display.
 c	  channel    Produce a bin vs channel greyscale display.
+c@ mode
+c	This determines what `flux' quantity is plotted. Possible
+c	values are:
+c         real      Plot the real part of the data. This is the default.
+c	  imaginary Plot the imaginary part of the data.
+c         amplitude Plot the amplitude of the data.
 c@ options
 c	Extra processing options. Several can be given, separated by
 c	commas. Minimum match is supported.
-c	  imaginary Plot the imaginary part of the data. Normally the
-c	            real part is plotted.
 c	  nocal     This option suppresses antenna gain calibration. The
 c	            default behaviour is to apply antenna calibration.
 c	  nopol     This option suppresses polarisation calibration. The
@@ -53,16 +57,18 @@ c  History:
 c    rjs  03jun96 Original version.
 c    rjs  21aug97 Count the number of accepted correlations.
 c    bmg  26nov97 Added log keyword
+c    rjs  29feb00 mode keyword to allow plots of real/imag/amp.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
 	integer MAXPOL,MAXBIN,PolMin,PolMax
 	character version*(*)
 	parameter(MAXPOL=4,MAXBIN=32,PolMin=-9,PolMax=4)
-	parameter(version='PsrPlt: version 1.0 21-Aug-97')
+	parameter(version='PsrPlt: version 1.0 29-Feb-00')
 c
-	character uvflags*16,device*32,logfile*80
-	logical docal,dopol,dopass,doshift,doimag,dogrey,dochan
+	character uvflags*16,device*32,logfile*80,flux*9
+	logical docal,dopol,dopass,doshift
+	logical dogrey,dochan
 c
 	integer nchan,nread,nbin,npol,ipol,ibin,i,j,k,nout,tno,mpol
 	integer ngood,nbad,llog
@@ -74,9 +80,10 @@ c
 	real    wt(MAXCHAN,MAXBIN,MAXPOL),sig2,w
 	double precision sfreq(MAXCHAN)
 c
-	integer NXAXES,NYAXES
-	parameter(NXAXES=1,NYAXES=3)
+	integer NXAXES,NYAXES,NFLUX
+	parameter(NXAXES=1,NYAXES=3,NFLUX=3)
 	character xaxes(NXAXES)*9,yaxes(NYAXES)*9,xaxis*9,yaxis*9
+	character fluxes(NFLUX)*9
 c
 c  Externals.
 c
@@ -85,19 +92,22 @@ c
 	character itoaf*8
 c
 	data xaxes/'bin      '/
-	data yaxes/'amplitude','frequency','channel  '/
+	data yaxes/'flux     ','frequency','channel  '/
+	data fluxes/'real     ','imaginary','amplitude'/
 c
 c  Get the user parameters.
 c
 	call output(version)
 	call keyini
-	call GetOpt(docal,dopol,dopass,doimag)
+	call GetOpt(docal,dopol,dopass)
 	call keya('device',device,' ')
+	call keymatch('mode',NFLUX,fluxes,1,flux,nout)
+	if(nout.eq.0)flux = fluxes(1)
 	call keymatch('axis',NXAXES,xaxes,1,xaxis,nout)
  	if(nout.eq.0)xaxis = xaxes(1)
 	call keymatch('axis',NYAXES,yaxes,1,yaxis,nout)
 	if(nout.eq.0)yaxis = yaxes(1)
-	dogrey = yaxis.ne.'amplitude'
+	dogrey = yaxis.ne.'flux'
 	dochan = yaxis.eq.'channel'
 	dolog = (keyprsnt('log').and.(.not.dogrey))
 	if(dolog) call keyf('log',logfile,' ')
@@ -207,7 +217,11 @@ c
 	    w = 1/sig2
 	    do i=1,nchan
 	      if(flags(i))then
-		acc(i,ibin,ipol) = acc(i,ibin,ipol) + w*data(i)
+		if(flux.eq.'amplitude')then
+		  acc(i,ibin,ipol) = acc(i,ibin,ipol) + w*abs(data(i))
+		else
+		  acc(i,ibin,ipol) = acc(i,ibin,ipol) + w*data(i)
+		endif
 		wt (i,ibin,ipol) = wt (i,ibin,ipol) + w
 		ngood = ngood + 1
 	      else
@@ -230,10 +244,10 @@ c
 c
 	if(dogrey)then
 	  call FrPlot(sfreq,acc,wt,MAXCHAN,nchan,nbin,pols(1),
-     *							doimag,dochan)
+     *					flux,dochan)
 	else
 	  call PrPlot(acc,wt,MAXCHAN,MAXBIN,nchan,npol,nbin,
-     *	                 	pols,doimag,llog,dolog,logfile)
+     *	                 pols,flux,llog,dolog,logfile)
 	  continue
 	endif
 c
@@ -241,11 +255,12 @@ c
 	end
 c************************************************************************
 	subroutine FrPlot(sfreq,acc,wt,mchan,nchan,nbin,pol,
-     *						doimag,dochan)
+     *						flux,dochan)
 c
 	implicit none
 	integer mchan,nchan,nbin,pol
-	logical doimag,dochan
+	logical dochan
+	character flux*(*)
 	double precision sfreq(nchan)
 	complex acc(mchan,nbin)
 	real wt(mchan,nbin)
@@ -267,7 +282,7 @@ c
 c  Allocate some memory to contain the image.
 c
 	call memAlloc(pImage,nchan*nbin,'r')
-	call GetIm(memr(pImage),acc,wt,mchan,nchan,nbin,doimag,
+	call GetIm(memr(pImage),acc,wt,mchan,nchan,nbin,flux,
      *							zmin,zmax)
 c
 	if(dochan)then
@@ -290,10 +305,12 @@ c
 	call pgimag(memr(pImage),nbin,nchan,1,nbin,1,nchan,
      *				zmin,zmax,tr)
 	call pgbox('BCNST',0.,0,'BCNST',0.,0)
-	if(doimag)then
+	if(flux.eq.'imaginary')then
 	  title = 'Imaginary Part: Stokes = '//polsc2p(pol)
-	else
+	else if(flux.eq.'real')then
 	  title = 'Real Part: Stokes = '//polsc2p(pol)
+	else
+	  title = 'Ampltitude: Stokes = '//polsc2p(pol)
 	endif
 	l = len1(title)
 	if(dochan)then
@@ -307,11 +324,11 @@ c
 	call memFree(pImage,nchan*nbin,'r')
 	end
 c************************************************************************
-	subroutine GetIm(Image,Acc,Wt,mchan,nchan,nbin,doimag,zmin,zmax)
+	subroutine GetIm(Image,Acc,Wt,mchan,nchan,nbin,flux,zmin,zmax)
 c
 	implicit none
 	integer mchan,nbin,nchan
-	logical doimag
+	character flux*(*)
 	complex Acc(mchan,nbin)
 	real Image(nbin,nchan),Wt(mchan,nbin),zmin,zmax
 c------------------------------------------------------------------------
@@ -325,7 +342,7 @@ c
 	do j=1,nbin
 	  do i=1,nchan
 	    if(Wt(i,j).gt.0)then
-	      if(doimag)then
+	      if(flux.eq.'imaginary')then
 		temp = aimag(Acc(i,j))/Wt(i,j)
 	      else
 		temp = real(Acc(i,j))/Wt(i,j)
@@ -348,7 +365,7 @@ c
 	do j=1,nbin
 	  do i=1,nchan
 	    if(Wt(i,j).gt.0)then
-	      if(doimag)then
+	      if(flux.eq.'imaginary')then
 		temp = aimag(Acc(i,j))/Wt(i,j)
 	      else
 		temp = real(Acc(i,j))/Wt(i,j)
@@ -362,15 +379,14 @@ c
 c
 	end
 c************************************************************************
-	subroutine PrPlot(acc,wt,mchan,mbin,nchan,npol,nbin,pols,doimag,
+	subroutine PrPlot(acc,wt,mchan,mbin,nchan,npol,nbin,pols,flux,
      + 	 	llog,dolog,logfile)
 c
 	implicit none
-	character logfile*80,line*256
-	character polsc2p*2
+	character logfile*(*),flux*(*)
 	integer nchan,npol,nbin,mchan,mbin,llog
 	integer pols(npol)
-	logical doimag,dolog
+	logical dolog
 	complex acc(mchan,mbin,npol)
 	real    wt (mchan,mbin,npol)
 c------------------------------------------------------------------------
@@ -382,6 +398,11 @@ c------------------------------------------------------------------------
 	complex ctemp
 	real vtemp,wtemp
 	logical first
+	character line*256
+c
+c  Externals.
+c
+	character polsc2p*2
 c
 	if(npol.gt.MAXPOL.or.nbin.gt.MAXBIN)
      *	  call bug('f','Buffer overflow in PrPlot')
@@ -398,7 +419,7 @@ c
 	      ctemp = ctemp + Acc(i,j,k)
 	      wtemp = wtemp + Wt( i,j,k)
 	    enddo
-	    if(doimag)then
+	    if(flux.eq.'imaginary')then
 	      vtemp = aimag(ctemp)
 	    else
 	      vtemp = real(ctemp)
@@ -427,10 +448,12 @@ c
 	call pgvstd
 	call pgswin(xlo,xhi,ylo,yhi)
 	call pgbox('BCNST',0.,0,'BCNST',0.,0)
-	if(doimag)then
+	if(flux.eq.'real')then
+	  call Label('Bin Number','Real Part',pols,npol)
+	else if(flux.eq.'imaginary')then
 	  call Label('Bin Number','Imaginary Part',pols,npol)
 	else
-	  call Label('Bin Number','Real Part',pols,npol)
+	  call Label('Bin Number','Amplitude',pols,npol)
 	endif
 	do j=1,npol
 	  if(npnt(j).gt.0)then
@@ -549,26 +572,25 @@ c
 c
 	end
 c************************************************************************
-	subroutine GetOpt(docal,dopol,dopass,doimag)
+	subroutine GetOpt(docal,dopol,dopass)
 c
 	implicit none
-	logical docal,dopol,dopass,doimag
+	logical docal,dopol,dopass
 c
 c  Outputs:
 c    docal	Apply calibration corrections.
 c    dopol	Apply polarisation leakage corrections.
 c    dopass	Apply bandpass corrections.
-c    doimag	Do the imaginary part (not the real part).
 c------------------------------------------------------------------------
 	integer NOPT
-	parameter(NOPT=4)
+	parameter(NOPT=3)
 	character opts(NOPT)*9
 	logical present(NOPT)
-	data opts/'nocal    ','nopol    ','nopass   ','imaginary'/
+	data opts/'nocal    ','nopol    ','nopass   '/
 c
 	call options('options',opts,present,NOPT)
 	docal = .not.present(1)
 	dopol = .not.present(2)
 	dopass= .not.present(3)
-	doimag=      present(4)
+c
 	end
