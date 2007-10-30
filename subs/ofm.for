@@ -41,6 +41,7 @@ c    ofmrev      Reverse ACTIVE and SAVE ofms
 c    ofmrsf      Restore last fiddle to ACTIVE table
 c    ofmsel      Select with cursor an ofm type (b&w etc) and apply it
 c    ofmsqr      Apply square root transfer function
+c    ofmtabw     Tabulate absolute B&W ACTIVE and SAVE tables
 c    ofmtba      Tabulate an ACTIVE ofm for the PGPLOT device
 c    ofmtbb      Tabulate a BASIC ofm
 c    ofmtbw      Tabulate B&W ACTIVE and SAVE tables
@@ -109,6 +110,7 @@ c   nebk 05jan95  Replace PGQCOL with new PGQCIR and make some other minor
 c                 changes for the use of new PGIMAG instead of PGGRAY
 c                 Remove OFMRAP as no longer needed with PGIMAG
 c   nebk 10feb95  Add OFMCOL and OFMINQ
+c   nebk 10apr95  Add OFMTABW
 c***********************************************************************
 c
       subroutine ofmapp 
@@ -162,6 +164,7 @@ c               5 => RDE fixed zero colour contours
 c               6 => RGB
 c               7 => Background
 c               8 => Heat
+c	        9 => Absolute b&w
 c            If negative, then reverse
 c  Output in common
 c    iofm    Type of ofm
@@ -177,7 +180,7 @@ c
 c Is it possible to generate the fixed zero colour contour ofm ?
 c
       if (imin.lt.0.0 .and. imax.gt.0.0 .and.
-     +    abs(imax).gt.abs(imin)) dofcc = .true.
+     +    abs(imax).ge.abs(imin)) dofcc = .true.
       if (.not.dofcc .and. jofm.eq.5) then
         call bug ('w', 
      +    'Cannot generate fixed zero colour contours for this image')
@@ -630,7 +633,7 @@ c
 c
       subroutine ofmlog (imin, imax)
 c-----------------------------------------------------------------------
-c     DIstribute the ofm levels logarithmically and set the
+c     Distribute the ofm levels logarithmically and set the
 c     ACTIVE ofm
 c
 c  Input
@@ -1022,6 +1025,7 @@ c               5 => RDE fixed zero colour contours
 c               6 => RGB
 c               7 => Background
 c               8 => Heat
+c	        9 => Absolute b&w
 c-----------------------------------------------------------------------
       implicit none
       include 'ofm.h'
@@ -1064,7 +1068,7 @@ c Step to next ofm and tell user
 c
           iofm = iofm + 1   
           if (iofm.eq.5 .and. .not.dofcc) iofm = iofm + 1
-          if (iofm.gt.8) iofm = 1
+          if (iofm.gt.9) iofm = 1
 c
           if (iofm.eq.1) then
             call output ('Loading black and white')
@@ -1082,6 +1086,8 @@ c
             call output ('Loading background colours')
           else if (iofm.eq.8) then
             call output ('Loading heat colours')
+          else if (iofm.eq.9) then
+            call output ('Loading absolute black and white')
           end if
 c
 c Tabulate the new ACTIVE and SAVE ofms
@@ -1200,6 +1206,87 @@ c
       end
 c
 c
+      subroutine ofmtabw (imin, imax)
+c-----------------------------------------------------------------------
+c     Generate absolute black and white SAVE and BASIC tables
+c     Here absolute deviations from 0 are given a b&w ramp
+c
+c  Input
+c    imin    Displayed min and max
+c    imax
+c  Input in common
+c    na      Number of levels in ACTIVE ofm
+c  Output in common
+c    ofma    New ACTIVE ofm
+c    ofms    New SAVE ofm = ACTIVE ofm at this point
+c-----------------------------------------------------------------------
+      implicit none
+      include 'ofm.h'
+      real imin, imax
+cc
+      real dc, col, m
+      integer i, nl, iz
+c-----------------------------------------------------------------------
+c
+c For a linear transfer function, find the colour index (in the
+c range 1 -> na) that is equivalent to zero intensity
+c
+      m = (imax - imin) / real(na - 1)
+      iz = nint(1.0 - imin/m)
+c
+c Now each segment 1->iz and iz->na has a b&w ramp, the slope
+c of which is such that the maximum absolute value of the
+c displayed image has colour [R,G,B]=1.0 
+c 
+      nl = max(na-iz,iz-1)
+c      write (*,*) 'iz=', iz
+      dc = 1.0 / real(nl)
+c        
+c Set ACTIVE and SAVE table indices from the zero intensity colour 
+c index to the index for intensity IMIN
+c
+      if (iz.lt.1 .or. iz.gt.na) call bug ('f', 'Error in ofmtabw')
+      if (iz.ge.1) then
+        col = 0.0
+        do i = iz, 1, -1
+          col = min(1.0,max(0.0,col))
+          ofms(i,1) = col
+          ofms(i,2) = col
+          ofms(i,3) = col
+          ofma(i,1) = col
+          ofma(i,2) = col
+          ofma(i,3) = col
+c
+          col = col+dc
+        end do
+c        write (*,*) 'ci range=', iz, 1
+c        write (*,*) 'col range=', 0.0, col-dc
+      end if
+c
+c Set ACTIVE and SAVE table indices from the zero intensity colour 
+c index to the index for intensity IMAX
+
+c
+      if (iz+1.le.na) then
+        col = dc
+        do i = iz+1, na, 1
+          col = min(1.0,max(0.0,col))
+          ofms(i,1) = col
+          ofms(i,2) = col
+          ofms(i,3) = col
+          ofma(i,1) = col
+          ofma(i,2) = col
+          ofma(i,3) = col
+c
+          col = col+dc
+        end do
+c        write (*,*) 'ci range=', iz+1, na
+c        write (*,*) 'col range=', dc, col-dc
+      end if
+c
+      end 
+c
+c
       subroutine ofmtba (imin, imax)
 c-----------------------------------------------------------------------
 c     Tabulate the ACTIVE and SAVE ofms for the specified ofm type
@@ -1218,6 +1305,7 @@ c               5 => RDE fixed zero colour contours
 c               6 => RGB
 c               7 => Background
 c               8 => Heat
+c	        9 => Absolute b&w
 c
 c  Output in common
 c    na      Number of levels in ACTIVE table
@@ -1227,7 +1315,12 @@ c-----------------------------------------------------------------------
       include 'ofm.h'
       real imin, imax
 c-----------------------------------------------------------------------
-      if (iofm.eq.1 .or. iofm.eq.4 .or. iofm.eq.5) then
+      if (iofm.lt.1 .or .iofm.gt.9) then
+        iofm = 1
+        call bug ('w', 'Unrecognized lookup table, setting b&w')
+      end if
+c
+      if (iofm.eq.1 .or. iofm.eq.4 .or. iofm.eq.5 .or. iofm.eq.9) then
 c
 c Set ACTIVE and SAVE tables that are generated algorithmically
 c
@@ -1246,6 +1339,15 @@ c
 c Fixed zero colour contours if possible
 c
           if (dofcc) call ofmtcc (imin, imax)
+        else if (iofm.eq.9) then
+c
+c Absolute b&w; if no zero crossing, just generate normal b&w table
+c
+          if (imin*imax.gt.0.0) then
+            call ofmtbw
+          else
+            call ofmtabw (imin, imax)
+          end if
         end if
       else
 c
@@ -1280,6 +1382,8 @@ c               5 => RDE fixed zero colour contours (not done here)
 c               6 => RGB
 c               7 => Background
 c               8 => Heat
+c	        9 => Absolute b&w (not done here)
+c
 c  Output in common
 c    ofmb    BASIC ofm for Red [ofm(i,1)], Green [ofm(i,2)]
 c            and Blue [ofm(i,3)]  The 256 values range between 0 and 1
@@ -1854,14 +1958,14 @@ cc
       integer i
       real col
 c-----------------------------------------------------------------------
-      do i = 0, na-1
-        col = real(i) / real(na-1)
-        ofms(i+1,1) = col
-        ofms(i+1,2) = col
-        ofms(i+1,3) = col
-        ofma(i+1,1) = col
-        ofma(i+1,2) = col
-        ofma(i+1,3) = col
+      do i = 1, na
+        col = real(i-1) / real(na-1)
+        ofms(i,1) = col
+        ofms(i,2) = col
+        ofms(i,3) = col
+        ofma(i,1) = col
+        ofma(i,2) = col
+        ofma(i,3) = col
       end do
 c
       end
