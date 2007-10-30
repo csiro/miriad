@@ -4,6 +4,8 @@ set array = "??"
 set roffsets = (0 0 0 0)
 set doffsets = (0 0 0 0)
 set date = (unknown date)
+set refant = "unknown"
+set gpcaloptions = "unknown"
 source dqo.params
 
 echo "Summary of Data Quality Observations of $date"
@@ -25,6 +27,9 @@ echo "The offset calibrator field was offset in RA,DEC from $cal by"
 foreach n (1 2 3 4)
   echo "  $roffsets[$n],$doffsets[$n] arcsec at $flist[$n] MHz"
 end
+echo " "
+echo "Reference antenna: $refant"
+echo "Calibration options: $gpcaloptions"
 echo " "
 echo "See the end of this document for an explanation of terms and the"
 echo "filenaming convention."
