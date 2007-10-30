@@ -531,6 +531,7 @@ c    nebk 11aug95  Reversed lookup tables getting lost, add
 c		   labtyp=arcmin options=nofirst
 c    nebk 03sep95  Options=grid,trlab. Nonlinear axis labels and detect
 c		   if display has black or white background
+c    nebk 09oct95  More care with overlay display channels
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -541,7 +542,7 @@ c
       integer maxlev, maxpos, nxdef, nydef, maxcon, 
      +        maxtyp, nbins, maxgr
       parameter (maxlev = 50, maxpos = 1000, nxdef = 4, maxtyp = 15,
-     +  nydef = 4, maxcon = 3, maxgr = 100, wedwid = 0.05,
+     +  nydef = 4, maxcon = 3, maxgr = 2048, wedwid = 0.05,
      +  wedisp = 1.0, tfdisp = 0.5, nbins = 128)
 c
       integer ipim, ipnim, ipim2, ipnim2, ipimm
@@ -609,7 +610,7 @@ c
       data dmm /2*0.0/
       data coltab /maxgr*0/
 c-----------------------------------------------------------------------
-      call output ('CgDisp: version 03-Sep-95')
+      call output ('CgDisp: version 09-Oct-95')
       call output ('Non-linear coordinate labels now correctly handled')
       call output ('New options=grid to overlay coordinate grid')
       call output ('New options=trlab to label top&right axes as well')
@@ -988,8 +989,8 @@ c
            call pgsci (ovrcol)
            call pgslw (lwid(ncon+nvec+2))
            call overl (doerase, ofig, owrite, blc, trc, npos, opos, 
-     +        posid, grpbeg(j), cs(3), labtyp, naxis, crval, crpix, 
-     +        cdelt, ctype)
+     +        posid, grpbeg(j), ngrp(j), cs(3), labtyp, naxis, 
+     +        crval, crpix, cdelt, ctype)
          end if
 c
 c Draw beam(s)
@@ -2786,7 +2787,8 @@ c
 c
 c
       subroutine overl (doerase, ofig, ow, blc, trc, npos, opos, posid,
-     +   chan, csize, labtyp, naxis, crval, crpix, cdelt, ctype)
+     +   chs, nch, csize, labtyp, naxis, crval, crpix, cdelt, ctype)
+
 c--------------------------------------------------------------------------
 c     Draw overlays
 c
@@ -2808,7 +2810,8 @@ c		 full image pixels now except for circle overlays
 c		 where the half size (radius) is in pixels according
 c		 to the X axis increment.
 c       posid    List of overlay I.D.'s
-c       chan     Current plane being plotted
+c       chs,nch  Start channel, and number of channels averaged for
+c	         current subplot
 c       csize    Character size for overlay ID
 c       labtyp   Axis label types
 c       naxis    Number of axes
@@ -2816,7 +2819,7 @@ c       c*       Axis descriptors
 c----------------------------------------------------------------------
       implicit none
 c     
-      integer npos, chan, blc(*), trc(*), naxis
+      integer npos, chs, nch, blc(*), trc(*), naxis
       double precision opos(6,npos), crval(naxis), cdelt(naxis), 
      +  crpix(naxis)
       real csize
@@ -2832,7 +2835,7 @@ c
       character line*80
       integer i, j, k, cs, ce
       double precision x, y, xl, xr, yb, yt
-      real xcirc(0:360), ycirc(0:360), rat, radx, rady
+      real xcirc(0:360), ycirc(0:360), rat, radx, rady, chan
 c----------------------------------------------------------------------
 c
 c Loop over overlays
@@ -2842,6 +2845,7 @@ c
 c
 c Only draw on specified channels
 c
+        chan = (chs + (chs + nch - 1))/2.0
         cs = nint(opos(5,i))
         ce = nint(opos(6,i))
         if (cs.eq.0) ce = 0
