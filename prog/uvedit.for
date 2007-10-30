@@ -43,6 +43,7 @@ c   bpw/jm 17dec93    Added options=dra to correct for MINT problems.
 c    rjs   16dec95    Make phase shift calculation more accurate.
 c    jm    19feb96    Added warnings if no obvious changes are made or
 c                     if the requested source is not found.
+c    jm    06jun96    Correctly add dra/ddec to RA/Dec in Getrdphz.
 c***********************************************************************
 c= Uvedit - Editing of the baseline of a UV data set.
 c& jm
@@ -145,7 +146,9 @@ c     Otherwise, three values are expected and are to be entered in
 c     the following order:
 c          dec = DD,MM,SS.S
 c     The declination (offset) is relative to the epoch coordinates.
-c     The default value is 0 arcseconds offset (no change).
+c     The default value is 0 arcseconds offset (no change).  If the
+c     absolute declination is negative but the DD value is 0, then make
+c     the MM value negative.  If MM is also 0, then make SS.S negative.
 c
 c@ time
 c     Input is a time offset (in seconds) to be added to the clock time.
@@ -188,6 +191,9 @@ c                correction was not applied to the dra in the grid
 c                file, so that the pointing was incorrect (instead
 c                of dra arcseconds offsets, the offsets were
 c                dra*cos(obsdec) arcseconds).
+c                NOTE:  The obsdec used is the "old" obsdec.  If there
+c                is a correction in declination, this is NOT applied
+c                in computing the cos(obsdec).
 c
 c--
 c-----------------------------------------------------------------------
@@ -232,7 +238,7 @@ c
       integer ant1, ant2
       integer nschan(MAXCHAN), ischan(MAXCHAN)
       real timeoff
-      real olddra, dra
+      real dra
       real wt, wtup, wtdn
       real phase, timphz, radphz, antphz, tmphaz, tmpdelay
       real delay(MAXANT)
@@ -318,15 +324,17 @@ c
         Nflags = Nflags + 1
       endif
 c
-c Position.
+c Position.  Default these logicals here in case only an RA or Dec
+c correction (but not both) is specified.
 c
       raoff = 0
       decoff = 0
       dorad = .FALSE.
+      raabs = .FALSE.
+      decabs = .FALSE.
 c RA.
       if (KeyPrsnt('ra')) then
         call Keyd('ra', raoff, -100001.0)
-        raabs = .FALSE.
         if (KeyPrsnt('ra')) then
           call Keyd('ra', val1, -1.0)
           call Keyd('ra', val2, -1.0)
@@ -348,7 +356,6 @@ c RA.
 c Dec.
       if (KeyPrsnt('dec')) then
         call Keyd('dec', decoff, -100001.0)
-        decabs = .FALSE.
         if (KeyPrsnt('dec')) then
           call Keyd('dec', val1, -1.0)
           call Keyd('dec', val2, -1.0)
@@ -356,7 +363,13 @@ c Dec.
             errmsg = PROG // 'Incorrect DEC entered.'
             call Bug('f', errmsg)
           endif
-          if (decoff .ge. 0.0) then
+          if (decoff .eq. 0.0) then
+            if (val1 .ge. 0.0) then
+              decoff = (val1 * 60.0) + val2
+            else
+              decoff = (val1 * 60.0) - val2
+            endif
+          else if (decoff .gt. 0.0) then
             decoff = (decoff * 3600.0) + (val1 * 60.0) + val2
           else
             decoff = (decoff * 3600.0) - (val1 * 60.0) - val2
@@ -742,9 +755,9 @@ c
                   call GetUpd(Lin, 'lst', dotime, Lst, updLst)
                   call GetUpd(Lin, 'obsra', dorad, obsra, updora)
                   call GetUpd(Lin, 'obsdec', dorad, obsdec, updodec)
-                  call GetUpr(Lin, 'dra', dodra, olddra, updodra) 
                   call GetUpd(Lin, 'ra', dorad, RA, updra)
                   call GetUpd(Lin, 'dec', dorad, dec, upddec)
+                  call GetUpr(Lin, 'dra', dodra, dra, updodra) 
    10             format(A, A, ' changed from ', G17.9, ' to ', G17.9)
                   if (updUT) then
                     val1 = UT + timeoff
@@ -756,12 +769,6 @@ c
                     val1 = Lst + timeoff
                     call UvPutvrd(Lout, 'lst', val1, 1)
                     write (mesg, 10) PROG, 'LST', Lst, val1
-                    call HisWrite(Lout, mesg)
-                  endif
-                  if (updodra) then
-                    dra = olddra * cos(obsdec)
-                    call UvPutvrr(Lout, 'dra', dra, 1)
-                    write (mesg, 10) PROG, 'DRA', olddra, dra
                     call HisWrite(Lout, mesg)
                   endif
                   if (updora) then
@@ -790,6 +797,12 @@ c
                     if (decabs) val1 = decoff
                     call UvPutvrd(Lout, 'dec', val1, 1)
                     write (mesg, 10) PROG, 'Dec', dec, val1
+                    call HisWrite(Lout, mesg)
+                  endif
+                  if (updodra) then
+                    write (mesg, 10) PROG, 'DRA', dra, dra * cos(obsdec)
+                    dra = dra * cos(obsdec)
+                    call UvPutvrr(Lout, 'dra', dra, 1)
                     call HisWrite(Lout, mesg)
                   endif
 c
@@ -835,8 +848,8 @@ c
 c  Get new uv coordinates...
                   if (dotime) then
                     preamble(3) = preamble(3) + (timeoff / (2 * PI))
+                    HA = HA + timeoff
                   endif
-                  if (dotime) HA = HA + timeoff
                   if (dorad) HA = HA - delra
                   if (dotime .or. dorad) then
                     cosHA = cos(HA)
@@ -1073,10 +1086,16 @@ c    uu,vv  u-v coordinates.
 c  Output:
 c    radphz
 c------------------------------------------------------------------------
+      real dra, ddec
       double precision x1(2),x2(2)
 c
+      call uvrdvrr(Lin, 'dra', dra, 0.0)
+      call uvrdvrr(Lin, 'ddec', ddec, 0.0)
+
       x1(1) = RA
-      x1(2) = dec
+      if (dra .ne. 0.0) x1(1) = x1(1) + (dra / cos(dec))
+      x1(2) = dec + ddec
+c
       call coInit(Lin)
       call coCvt(Lin,'aw/aw',x1,'op/op',x2)
       call coFin(Lin)
