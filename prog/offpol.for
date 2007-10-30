@@ -40,7 +40,6 @@ c
 	real rad,psi,chi,x,y,pb
 	double precision sfreq,delta,dec
 	integer ic,jc,nx,ny,i,j,ifreq,tiir,tqqr,tuur,tvvr,lout
-	integer nx,ny
 	character c*1,out*64
 	complex xx,yy,xy,yx,jo(2,2),t,qq,uu
 	real qqr(MAXDIM),iir(MAXDIM),uur(MAXDIM),vvr(MAXDIM)
