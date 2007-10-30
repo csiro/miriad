@@ -34,19 +34,16 @@ c	arcseconds in the plane of the sky, in the directions of (ra,dec).
 c	A pair of values must be given for each pointing, giving the offset
 c	in x and y. If this is not given, the pointing centers are determined
 c	from the ``vis'' file. Either ``vis'' or ``center'' must be present.
-c@ pbfwhm
+c@ pbtype
 c	The demosaicing procedure requires you to apply a primary beam.
-c	Here, you can specify the FWHM (in arcseconds) of a Gaussian primary
-c	beam. If there is a spectral axis in the image, "pbfwhm" is assumed
-c	to be at the frequency of the spectral axis reference pixel.
-c	If there is no spectral axis, "pbfwhm" is used unscaled.  If "pbfwhm"
-c	is unset, DEMOS will construct the primary beam from the "pbfwhm"
-c	visibility variable or if that is missing, the telescope name (variable
-c	"telescop") in the template visibility file.   In the latter case, for
-c	the ATCA and VLA the primary beam is a polynomial which cuts off at 
-c	about the 2% level. For HatCreek, a Gaussian with no cutoff is used.
-c	If the primary is neither specified here nor can be worked out from 
-c	template file (if given), DEMOS will stop. 
+c	Normally DEMOS determines the primary beam type from the visibility
+c	dataset. To override this, or if you do not give a visibility
+c	dataset, you must specify the primary beam type.
+c	The primary beam type is normally just the name of a telescope whose
+c	primary beam is known (e.g. atca, hatcreek, vla). However to specify
+c	a gaussian primary beam of a particular size, use "gaus(xxx)", 
+c	where xxx is the primary beam FWHM in arcseconds. For example 
+c	"gaus(120)" corresponds to a primary beam with FWHM of 2 arcminute.
 c@ out
 c	This gives a template name for the output images. The actual output
 c	image names are formed by appending a number corresponding to each
@@ -58,11 +55,6 @@ c	If no value is given, then the outputs will be one primary beam
 c	width in size. If one value is given, then this is used for both
 c	x and y. Each output size might be smaller than this, to prevent
 c	each output from extending beyond the edges of the input image.
-c	If "imsize" & "pbfwhm" are unset, and the "pbfwhm" variable in 
-c	"vis" is missing, you MUST have a frequency axis in the "map" 
-c	input image so that the internal knowledge about primary beams
-c	(worked out from the "telescop" variable and stored in a frequency 
-c	independent way) can be accessed.
 c--
 c  History:
 c    rjs  25apr90 Original version.
@@ -77,9 +69,10 @@ c    nebk 17dec92 Adapt to new FNDAXNUM
 c    nebk 28jan93 New primary beam interface.
 c    mchw 12feb93 Convert uvvariables ra and dec to double precision.
 c    rjs  26aug94 Rework to use new co routines.
+c    rjs  24oct94 Use new pb routines.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='version 26-Aug-94')
+	parameter(version='version 24-Oct-94')
 	include 'maxdim.h'
         include 'mirconst.h'
 c
@@ -87,11 +80,8 @@ c
 	parameter(maxpnt=16)
 c
 	real pntoff(2,maxpnt)
-	double precision fval
-	real pbfwhm
-	character map*64,vis*64,out*64,name*64
+	character map*64,vis*64,out*64,name*64,pbtype*16
 	integer imsize(2),nsize(3),npnt,lout,i,tmap,iax,tvis
-        logical needf
 c
 c  Externals.
 c
@@ -106,7 +96,7 @@ c
 	call keya('vis',vis,' ')
 	call keya('out',out,' ')
 	call mkeyr('center',pntoff,2*maxpnt,npnt)
-        call keyr('pbfwhm',pbfwhm,-1.0)
+	call keya('pbtype',pbtype,' ')
 	call keyi('imsize',imsize(1),0)
 	call keyi('imsize',imsize(2),imsize(1))
 	call keyfin
@@ -124,6 +114,8 @@ c
      *	  call bug('f','No pointing centers were given')
 	if(vis.ne.' '.and.npnt.gt.0)
      *	  call bug('w','Values for center override vis file')
+	if(vis.eq.' '.and.pbtype.eq.' ')
+     *	  call bug('f','Primary beam type should be given')
 c
 c  Open the input map.
 c
@@ -142,9 +134,6 @@ c
 	if(iax.gt.0.and.iax.ne.3) call bug('f',
      *    'The spectral axis of this image must be number 3')
 c
-        if (pbfwhm.le.0.0 .and. vis.eq.' ') call bug ('f',
-     *  'No PBFWHM keyword or vis. file given; can''t set primary beam')
-        if (pbfwhm.gt.0.0) pbfwhm = pbfwhm * dpi / 180.0d0 / 3600.0d0
 c
 c  Do we need the frequency for primary beam correction ?
 c
@@ -152,30 +141,10 @@ c
           call uvopen (tvis, vis, 'old')
           call uvnext (tvis)
         end if
-        call pbcheck (pbfwhm, tvis, .false., .false., needf)
-        if (needf) then
-          if (iax.ne.3) then
-            call bug('w',
-     *         'The input image needs a spectral axis so that the')
-            call bug('f',
-     *         '... frequency can be found for primary beam purposes')
-            call bug ('f', ' ')
-          else
-	    call coVelSet(tmap,'frequency')
-	    call coCvt1(tmap,iax,'op',0.d0,'aw',fval)
-          endif
-        else
-          fval = -1.0d0
-        end if
 c
-c  Set primary beam.  Use reference frequency since pixel size is
-c  scaled to reference frequency.
+c  Get the primary beam type, if needed.
 c
-        call pbinit (pbfwhm, fval, tvis, .false.)
-c
-c  Determine the default pointings, if needed.
-c
-	if(npnt.eq.0) call Defaults(tmap,tvis,pntoff,maxpnt,npnt)
+	if(pbtype.eq.' ')call pbread(tvis,pbtype)
 c
 c  Convert from user-units to radians.
 c
@@ -184,13 +153,15 @@ c
 	  pntoff(2,i) = pntoff(2,i) / 3600 / 180 * dpi
 	enddo
 c
+c  Determine the default pointings, if needed.
+c
+	if(npnt.eq.0) call Defaults(tmap,tvis,pntoff,maxpnt,npnt)
+c
 c  If the image size was not given, determine this from the size of the
 c  primary beam.
-c
-	if(imsize(1).le.0) 
-     *    call defsiz(tmap,1,nsize(1),imsize(1))
-	if(imsize(2).le.0) 
-     *    call defsiz(tmap,2,nsize(2),imsize(2))
+c	
+	if(imsize(1).le.0.or.imsize(2).le.0)
+     *    call defsiz(tmap,pbtype,nsize,imsize)
 c
 	if(imsize(1).le.0)
      *	    call bug('f','Internal bug in DEMOS: bad imsize1')
@@ -204,7 +175,7 @@ c
 	do i=1,npnt
 	  name = out(1:lout)//itoaf(i)
 c
-	  call Process(tmap,name,nsize,imsize,
+	  call Process(tmap,pbtype,name,nsize,imsize,
      *				pntoff(1,i),pntoff(2,i),version)
 	enddo
 c
@@ -213,11 +184,11 @@ c
 c
 	end
 c********1*********2*********3*********4*********5*********6*********7*c
-	subroutine Process(tmap,name,insize,outsize,
+	subroutine Process(tmap,pbtype,name,insize,outsize,
      *				pntoffx,pntoffy,version)
 c
 	implicit none
-	character name*(*),version*(*)
+	character name*(*),version*(*),pbtype*(*)
 	integer tmap,insize(3),outsize(2)
 	real pntoffx,pntoffy
 c
@@ -238,22 +209,22 @@ c------------------------------------------------------------------------
 	include 'maxnax.h'
         include 'mirconst.h'
 c
-	integer tout,naxis
+	integer tout,naxis,pbObj
 	integer nsize(MAXNAX),i,j,k,n3,x1,x2,y1,y2
-	real x0,y0,x,y,data(MAXDIM)
+	real x0,y0,data(MAXDIM)
         logical flags(MAXDIM)
-	double precision cdelt1,cdelt2,crpix1,crpix2,xin(3),xout(3)
+	double precision crpix1,crpix2,xin(3),xout(3)
 	character line*64
+        real pbfac
 c
 c  Externals.
 c
-        real pbfac
         real pbget
 c
 c  Header keywords.
 c
 	integer nkeys
-	parameter(nkeys=39)
+	parameter(nkeys=38)
 	character keyw(nkeys)*8
 	data keyw/   'bunit   ','btype   ',
      *	  'cdelt1  ','cdelt2  ','cdelt3  ','cdelt4  ','cdelt5  ',
@@ -261,9 +232,9 @@ c
      *	  'crval1  ','crval2  ','crval3  ','crval4  ','crval5  ',
      *	  'ctype1  ','ctype2  ','ctype3  ','ctype4  ','ctype5  ',
      *	  'epoch   ','history ','niters  ','object  ','telescop',
-     *	  'observer','restfreq','vobs    ','xshift  ','yshift  ',
-     *	  'obsra   ','obsdec  ','lstart  ','lstep   ','ltype   ',
-     *	  'lwidth  ','bmaj    ','bmin    ','bpa     '/
+     *	  'observer','restfreq','vobs    ','obsra   ','obsdec  ',
+     *	  'obstime ','lstart  ','lstep   ','ltype   ','lwidth  ',
+     *	  'bmaj    ','bmin    ','bpa     '/
 c
 	n3 = insize(3)
 	nsize(3) = n3
@@ -301,10 +272,8 @@ c
 c
 c  Process its header.
 c
-	call rdhdd(tMap,'cdelt1',cdelt1,dpi/(3600*180))
-	call rdhdd(tMap,'crpix1',crpix1,1.0d0)
-	call rdhdd(tMap,'cdelt2',cdelt2,dpi/(3600*180))
-	call rdhdd(tMap,'crpix2',crpix2,1.0d0)
+	call coCvt1(tmap,1,'op',0.d0,'ap',crpix1)
+	call coCvt1(tmap,2,'op',0.d0,'ap',crpix2)
 c
 	crpix1 = crpix1 - x1 + 1
 	crpix2 = crpix2 - y1 + 1
@@ -312,12 +281,10 @@ c
 	call wrhdd(tOut,'crpix1',crpix1)
 	call wrhdd(tOut,'crpix2',crpix2)
 c
-c  Write primary beam into header in arcsec if Gaussian
-c
-        call gausspb (tout)
 	do i=1,nkeys
 	  call hdcopy(tMap,tOut,keyw(i))
 	enddo
+	call pbWrite(tOut,pbtype)
 c
 c  Write some history info.
 c
@@ -328,6 +295,8 @@ c
 	write(line,'(a,1p2g9.2)')'DEMOS: Pointing offsets(arcsec):',
      *		3600*180/pi * pntoffx, 3600*180/pi * pntoffy
 	call hiswrite(tOut,line)
+	line = 'DEMOS: Primary beam type used: '//pbtype
+	call hiswrite(tOut,line)
 	call hisclose(tOut)
 c
 c  Loop over all planes
@@ -336,28 +305,27 @@ c
 	  call xysetpl(tmap,1,k)
 	  call xysetpl(tOut,1,k)
 c
-c  Locate the pointing centre at this frequency, for this plane.
+c  Initialise the primary beam object.
 c
+	  xin(1) = pntoffx
+	  xin(2) = pntoffy
 	  xin(3) = k
-	  call coCvt(tmap,'ow/ow/ap',xin,'ap/ap/ap',xout)
-	  x0 = xout(1)
-	  y0 = xout(2)
+	  call pbInitc(pbObj,pbtype,tmap,'ow/ow/ap',xin)
 c
 c  Do the real work.
 c
 	  do j=y1,y2
 	    call xyread(tmap,j,data)
 	    call xyflgrd(tmap,j,flags)
-            y = ((j-y0)*cdelt2)**2
 	    do i=x1,x2
-              x = ((i-x0)*cdelt1)**2 
-              pbfac = pbget(x+y)
+              pbfac = pbget(pbObj,real(i),real(j))
               data(i) = pbfac*data(i)
-              flags(i) = pbfac.gt.0.0.and.flags(i)
+              flags(i) = pbfac.gt.0.and.flags(i)
 	    enddo
 	    call xywrite(tOut,j-y1+1,data(x1))
             call xyflgwr(tout,j-y1+1,flags(x1))
 	  enddo
+	  call pbFin(pbObj)
 	enddo
 c
 	call xyclose(tOut)
@@ -399,7 +367,7 @@ c  Get info about the map.
 c
 	call rdhdd(tmap,'cdelt1',cdelt1,dpi/(180*3600))
 	call rdhdd(tmap,'cdelt2',cdelt2,dpi/(180*3600))
-	tol = 3600*180/pi * max(abs(cdelt1),abs(cdelt2))
+	tol = max(abs(cdelt1),abs(cdelt2))
 c
 c  Rewind vis file, get the first record.
 c
@@ -424,8 +392,8 @@ c
 	  x1(1) = ra + dra/cos(dec)
 	  x1(2) = dec + ddec
 	  call coCvt(tmap,'aw/aw',x1,'ow/ow',x2)
-	  offra  = x2(1) * 3600*180/pi
-	  offdec = x2(2) * 3600*180/pi
+	  offra  = x2(1)
+	  offdec = x2(2)
 c
 	  found = .false.
 	  i = 1
@@ -459,7 +427,9 @@ c
 	call output(
      *	  'Number  xoff(arcsec)  yoff(arcsec)')
 	do i=1,npnt
-	  write(line,'(i4,f13.2,f14.2)')i,pntoff(1,i),pntoff(2,i)
+	  write(line,'(i4,f13.2,f14.2)')i,
+     *	    180*3600/pi * pntoff(1,i),
+     *	    180*3600/pi * pntoff(2,i)
 	  call output(line)
 	enddo
 c
@@ -468,60 +438,37 @@ c
         call uvrewind (tvis)
 	end
 c********1*********2*********3*********4*********5*********6*********7*c
-      subroutine defsiz(tmap,iax,nsize,size)
+      subroutine defsiz(tmap,pbtype,nsize,size)
 c
       implicit none
-      integer tmap,iax,nsize,size
+      integer tmap,nsize(2),size(2)
+      character pbtype*(*)
 c
 c  Set default size of image to one primary beam
 c
 c   Input
 c    tmap	Handle of the input dataset.
-c    iax	Axis we are intested in.
 c    nsize	Max size of the axis.
+c    pbtype	Primary beam type.
 c  Output
 c    size     Size of image
 c
 c-----------------------------------------------------------------------
-      double precision coeffs(5)
-      real pbfwhm, cut
-      double precision cdelt,crval,crpix
-      character type*16
+	double precision cdelt,crval,crpix
+	character ctype*16
+	real pbfwhm,cutoff,maxrad
+	integer pbObj,i
 c
-c Fish out Gaussian FWHM, and the increment along this axis.
+	call pbInit(pbObj,pbtype,tmap)
+	call pbInfo(pbObj,pbfwhm,cutoff,maxrad)
 c
-      call pbinfo (pbfwhm, coeffs, cut, type)
-      call coAxDesc(tmap,iax,type,crpix,crval,cdelt)
+	do i=1,2
+	  if(size(i).le.0)then
+	    call coAxDesc(tmap,i,ctype,crpix,crval,cdelt)
+	    size(i) = min(2 * nint(pbfwhm / abs(cdelt)), nsize(i))
+	  endif
+	enddo
 c
-c Set default size
+	call pbFin(pbObj)
 c
-      size = min(2 * nint(pbfwhm / abs(cdelt)), nsize)
-      end
-c********1*********2*********3*********4*********5*********6*********7*c
-      subroutine gausspb (tout)
-      implicit none
-      integer tout
-c
-c     Return FWHM of primary beam if Gaussian set.
-c
-c Input
-c   tout   Handle of output image
-c-----------------------------------------------------------------------
-      include 'mirconst.h'
-      double precision coeffs(5)
-      real cut, pbfwhm
-      character type*10
-c
-c Fish out Gaussian FWHM.  WIll be "pbfwhm" or internal FWHM value.
-c
-      call pbinfo (pbfwhm, coeffs, cut, type)
-c
-      if (type.eq.'SINGLE') then
-        call bug ('f', 
-     +  'The "pbfwhm" visibility variable indicates a single dish')
-      else if (type.eq.'GAUSS') then
-        pbfwhm = pbfwhm * 3600.0d0 * 180.0d0 / dpi
-        call wrhdr (tout, 'pbfwhm', pbfwhm)
-      end if
-      end
-c********1*********2*********3*********4*********5*********6*********7*c
+	end
