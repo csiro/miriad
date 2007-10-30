@@ -81,9 +81,10 @@ c    rjs  10aug95  New routine to modify alpha and beta.
 c    rjs  12oct95  Support "default" and "model" being different sizes from
 c		   the deconvolved region.
 c    rjs  27oct95  Increased max length of filenames.
+c    rjs  24nov95  Default default image is now proportional to the gain.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='MosMem: version 1.0 27-Oct-95')
+	parameter(version='MosMem: version 1.0 24-Nov-95')
 	include 'maxdim.h'
 	include 'maxnax.h'
 	include 'mem.h'
@@ -106,7 +107,7 @@ c
 	real Alpha,Beta,De,Df
 	real StLim,StLen1,StLen2,OStLen1,OStLen2,J0,J1
 	real GradEE,GradEF,GradEH,GradEJ,GradFF,GradFH,GradFJ
-	real GradHH,GradJJ,Grad11,Immax,Immin,Flux,Rms,ClipLev
+	real GradHH,GradJJ,Grad11,Immax,Immin,Flux,Rms
 	logical converge,positive,verbose,doflux
 	integer Run(3,MaxRun),nRun,Boxes(maxBoxes),nPoint,maxPoint
 	integer xmoff,ymoff,zmoff,xdoff,ydoff,zdoff
@@ -116,7 +117,6 @@ c
 c  Externals.
 c
 	character itoaf*4
-	integer ismax
 c
 c  Get the input parameters.
 c
@@ -264,7 +264,7 @@ c
 	  call GetPlane(lMap,Run,nRun,0,0,nMap(1),nMap(2),
      *				memr(pMap),maxPoint,nPoint)
 c
-c  Get the Default map and Clip level.
+c  Get the Default map.
 c
 	  if(TFlux.eq.0.and.positive)then
 	    call GetRms(memr(pWt),nPoint,TFlux)
@@ -272,14 +272,11 @@ c
 	  endif
 c
 	  if(DefNam.eq.' ')then
-	    ClipLev = 0.01 * TFlux/nPoint
-	    call Assign(TFlux/nPoint,memr(pDef),nPoint)
+	    call mcGain(memr(pDef),nPoint)
+	    call DefScal(memr(pDef),npoint,TFlux)
 	  else
 	    call AlignGet(lDef,Run,nRun,k,xdoff,ydoff,zdoff,
      *		nDef(1),nDef(2),nDef(3),memr(pDef),maxPoint,nPoint)
-	    Imax = Ismax(npoint,memr(pDef),1)
-	    ClipLev = 0.01 * abs(memr(pDef+Imax-1))
-	    if(positive) call ClipIt(0.1*ClipLev,memr(pDef),nPoint)
 	  endif
 c
 c  Get the Estimate and Residual. Also get information about the
@@ -291,7 +288,7 @@ c
 	    call AlignGet(lModel,Run,nRun,k,xmoff,ymoff,zmoff,
      *		nModel(1),nModel(2),nModel(3),memr(pEst),
      *		maxPoint,nPoint)
-	    if(positive) call ClipIt(ClipLev,memr(pEst),nPoint)
+	    if(positive) call ClipIt(memr(pDef),memr(pEst),nPoint)
 	  endif
 c
 	  call Diff(memr(pEst),memr(pMap),memr(pRes),nPoint,Run,nRun)
@@ -333,15 +330,10 @@ c
 	  OStLen1 = StLen1
 	  J0 = J0 * StLen1
 c
-c  Determine the correct Clip Level (to prevent the estimate going
-c  negative, if this is not allowed).
-c
-	  if(positive)ClipLev = min(ClipLev,max(0.1*Immin,1e-6*Immax))
-c
 c  Take the plunge.
 c
 	  call TakeStep(nPoint,memr(pEst),memr(pNewEst),
-     *					StLen1,ClipLev,StLim)
+     *					StLen1,positive,StLim)
 c
 c  Convolve the estimate with the beam and subtract the map.
 c
@@ -515,46 +507,53 @@ c------------------------------------------------------------------------
 	  To(i) = From(i)
 	enddo
 	end
-c***********************************************************************
-	subroutine Assign(def,Default,nPoint)
+c************************************************************************
+	subroutine DefScal(Def,npoint,TFlux)
 c
 	implicit none
-	integer nPoint
-	real def,Default(nPoint)
+	integer npoint
+	real Def(npoint),TFlux
 c
-c  Set up the default image.
+c  Scale the default so that it has the right total flux.
 c
-c  Input:
-c    def
-c    nPoint
-c  Output:
-c    Default	The default image.
 c------------------------------------------------------------------------
+	real sum,alpha,minlev
 	integer i
 c
-	do i=1,nPoint
-	  Default(i) = def
+	sum = 0
+	do i=1,npoint
+	  sum = sum + Def(i)
 	enddo
+c
+	if(Sum.le.0)call bug('f','Cannot scale default image')
+c
+	alpha = TFlux/Sum
+	minlev = 1e-6*TFlux/npoint
+	do i=1,npoint
+	  Def(i) = max(alpha*Def(i),minlev)
+	enddo
+c
 	end
 c***********************************************************************
-	subroutine ClipIt(clip,Default,nPoint)
+	subroutine ClipIt(Def,Est,nPoint)
 c
 	implicit none
 	integer nPoint
-	real clip,Default(nPoint)
+	real Def(nPoint),Est(nPoint)
 c
 c  Set up the minimum of the default image.
 c
 c  Input:
 c    clip
 c    nPoint
+c    Def	The default image.
 c  Input/Output:
-c    Default	The default image.
+c    Est	The estimate image, whixh is being clipped.
 c------------------------------------------------------------------------
 	integer i
 c
 	do i=1,nPoint
-	  Default(i) = max(clip,Default(i))
+	  Est(i) = max(Est(i),0.1*Def(i))
 	enddo
 	end
 c************************************************************************
@@ -700,12 +699,13 @@ c
 c
 	end
 c************************************************************************
-	subroutine TakeStep(nPoint,Est,NewEst,StLen,Clip,StLim)
+	subroutine TakeStep(nPoint,Est,NewEst,StLen,doClip,StLim)
 c
 	implicit none
 	integer nPoint
 	real Est(nPoint),NewEst(nPoint)
-	real StLen,Clip,StLim
+	real StLen,StLim
+	logical doClip
 c
 c  Take the final step!
 c
@@ -713,9 +713,9 @@ c------------------------------------------------------------------------
 	integer i
 	real Stepd
 c
-	if(Clip.gt.0)then
+	if(doClip)then
 	  do i=1,nPoint
-	    Stepd = StLen*max(NewEst(i),(Clip-Est(i))/StLim)
+	    Stepd = StLen*max(NewEst(i),-0.9*Est(i)/StLim)
 	    NewEst(i) = Est(i) + Stepd
 	  enddo
 	else
