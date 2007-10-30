@@ -240,6 +240,7 @@ c
 c
 c  Check that we can do this.
 c
+	if(nout(1).gt.MAXDIM)call bug('f','Output too big for me')
 	do k=4,naxis
 	  if(nOut(k).gt.1)call bug('f','Cannot handle hypercubes')
 	enddo
@@ -463,11 +464,12 @@ c
 	integer lIn,lOut,nIn(3),nOut(3)
 c
 c------------------------------------------------------------------------
+	include 'maxdim.h'
 	double precision tol
 	parameter(tol=0.49)
 	double precision In(3),Out(3,3,3,3),crpix
 	integer minv(3),maxv(3),i,j,k,l
-	logical weird(3)
+	logical weird(3),warned
 c
 c  Externals.
 c
@@ -520,12 +522,19 @@ c
 c
 c  Set the template ranges. If its weird, just go with the template range.
 c
+	warned = .false.
 	do i=1,3
 	  if(weird(i))then
 	    minv(i) = min(1,minv(i))
 	    maxv(i) = max(nOut(i),maxv(i))
 	  endif
 	  nOut(i) = maxv(i) - minv(i) + 1
+	  if(nout(i).gt.MAXDIM)then
+	    nout(i) = MAXDIM
+	    if(.not.warned)call bug('w',
+     *	      'Output image too large -- being truncated')
+	    warned = .true.
+	  endif
 	  call coGetd(lOut,'crpix'//itoaf(i),crpix)
 	  crpix = crpix - minv(i) + 1
 	  call coSetd(lOut,'crpix'//itoaf(i),crpix)
