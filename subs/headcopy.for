@@ -74,6 +74,13 @@ c    bpw   1feb93  Made crpix double precision too
 c
 c***********************************************************************
 
+      character*8      c
+      integer          n, k
+      character*1      itoaf
+      double precision dvalue
+      character*80     avalue
+      logical          hdprsnt
+
       integer          NKEYS
       parameter        ( NKEYS = 29 )
       character*8      keyw(NKEYS)
@@ -86,14 +93,6 @@ c***********************************************************************
      *    'niters  ','object  ','observer','obsdec  ','obsra   ',
      *    'pbfwhm  ','restfreq','telescop','vobs    ',
      *    'xshift  ','yshift  ','btype'/
-
-      character*8      c
-
-      integer          n, k
-      character*1      itoaf
-      double precision dvalue
-      character*80     avalue
-      logical          hdprsnt
 
       do k = 1, 5
          do n = 1, naxis
