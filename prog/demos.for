@@ -26,8 +26,8 @@ c	The input is primary beam corrected image, single dish image, or
 c	one that is partially primary beam corrected (e.g. the output
 c	of MOSMEM).
 c@ vis
-c	This is an input uv file. The pointing centres and primary beams
-c	corresponding to the selected  visibilities in this dataset are used
+c	This is one or more input visibility datasets. The pointing centres
+c	and primary beams corresponding to the selected visibilities are used
 c	in the de-mosaicing process.
 c@ select
 c	Normal uv selection. See `help select'. Generally you will select
@@ -47,7 +47,7 @@ c@ options
 c	Extra processing options. There is currently only one option.
 c	  detaper    This indicates that the input image is not fully
 c	             primary beam corrected. Such images are formed by
-c	             MOSMEM or LINMOS with options=taper.
+c	             LINMOS with options=taper or by MOSMEM.
 c--
 c  History:
 c    rjs  25apr90 Original version.
@@ -66,25 +66,27 @@ c    rjs  24oct94 Use new pb routines.
 c    rjs  30jan95 Write mosaic table with the output image.
 c    rjs   3feb95 options=detaper. Better uv handling. Get rid of pbtype
 c		  and center keywords.
-c    rjs  27feb95 Correct sign error in the sign of an offset.
+c    rjs  27feb95 Correct sign error in the sign of an offset. Allow multiple
+c		  input vis datasets.
 c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='version 27-Feb-95')
-	integer MAXSELS,MAXPNT
-	parameter(MAXSELS=256,MAXPNT=2048)
+	integer MAXSELS,MAXPNT,MAXVIS
+	parameter(MAXSELS=256,MAXPNT=2048,MAXVIS=128)
 	include 'maxdim.h'
         include 'mirconst.h'
 
 c
-	character map*64,vis*64,out*64,name*64,pbtype(MAXPNT)*16
-	integer imsize(2),nsize(3),npnt,lout,i,tmap,iax
+	character map*64,vis(MAXVIS)*64,out*64,name*64
+	character pbtype(MAXPNT)*16
+	integer imsize(2),nsize(3),npnt,lout,i,tmap,iax,nvis
 	logical detaper
 	real sels(MAXSELS)
 	double precision ra(MAXPNT),dec(MAXPNT)
 c
 c  Externals.
 c
-	character itoaf*2
+	character itoaf*3
 	integer len1
 c
 c  Get the input parameters.
@@ -92,7 +94,7 @@ c
 	call output('Demos: '//version)
 	call keyini
 	call keya('map',map,' ')
-	call keya('vis',vis,' ')
+	call mkeyf('vis',vis,MAXVIS,nvis)
 	call keya('out',out,' ')
 	call keyi('imsize',imsize(1),0)
 	call keyi('imsize',imsize(2),imsize(1))
@@ -106,7 +108,7 @@ c
      *	  call bug('f','An input map must be given')
 	if(out.eq.' ')
      *	  call bug('f','An output template name must be given')
-	if(vis.eq.' ')
+	if(nvis.eq.0)
      *	  call bug('f','A visibility dataset must be given')
 c
 c  Open the input map.
@@ -128,7 +130,8 @@ c
 c
 c  Get the pointing centres, etc, associated with the vis dataset.
 c
-	call GetPnt(vis,sels,MAXPNT,npnt,ra,dec,pbtype)
+	call GetPnt(vis,nvis,sels,MAXPNT,npnt,ra,dec,pbtype)
+	call output('Number of pointings: '//itoaf(npnt))
 c
 c  Process each of the pointings.
 c
@@ -143,19 +146,19 @@ c
 c
 	end
 c************************************************************************
-	subroutine GetPnt(vis,sels,MAXPNT,npnt,ra,dec,pbtype)
+	subroutine GetPnt(vis,nvis,sels,MAXPNT,npnt,ra,dec,pbtype)
 c
 	implicit none
-	character vis*(*)
+	integer npnt,MAXPNT,nvis
+	character vis(nvis)*(*)
 	real sels(*)
-	integer npnt,MAXPNT
 	double precision ra(MAXPNT),dec(MAXPNT)
 	character pbtype(MAXPNT)*(*)
 c
 c  Get the pointing centers and primary beam types. The "mos" routines
 c  do the real work.
 c------------------------------------------------------------------------
-	integer nread,ipnt,length,tvis
+	integer nread,ipnt,length,tvis,ivis
 	double precision preamble(4)
 	complex data
 	real rms
@@ -165,30 +168,33 @@ c
 c  Open the visibility dataset, select the appropriate data, and
 c  get it to return just the first channel.
 c
-	call uvopen(tvis,vis,'old')
-	call SelApply(tvis,sels,.true.)
 	call mosCIni
+	do ivis=1,nvis
+	  call uvopen(tvis,vis(ivis),'old')
+	  call SelApply(tvis,sels,.true.)
 c
 c  Just read the first channel, to avoid unecessary work.
 c
-	call uvprobvr(tvis,'corr',type,length,update)
-	if(type.ne.' ')then
-	  call uvset(tvis,'data','channel',1,1.,1.,1.)
-	else
-	  call uvset(tvis,'data','wide',   1,1.,1.,1.)
-	endif
+	  call uvprobvr(tvis,'corr',type,length,update)
+	  if(type.ne.' ')then
+	    call uvset(tvis,'data','channel',1,1.,1.,1.)
+	  else
+	    call uvset(tvis,'data','wide',   1,1.,1.,1.)
+	  endif
 c
-	npnt = 0
-	call uvread(tvis,preamble,data,flag,1,nread)
-	dowhile(nread.ne.0)
-	  call mosChk(tvis,ipnt)
-	  npnt = max(npnt,ipnt)
-	  if(npnt.gt.MAXPNT)
-     *		call bug('f','Too many pointings for me')
+	  npnt = 0
 	  call uvread(tvis,preamble,data,flag,1,nread)
-	enddo
+	  dowhile(nread.ne.0)
+	    call mosChk(tvis,ipnt)
+	    npnt = max(npnt,ipnt)
+	    if(npnt.gt.MAXPNT)
+     *		call bug('f','Too many pointings for me')
+	    call uvread(tvis,preamble,data,flag,1,nread)
+	  enddo
 c
-	call uvclose(tvis)
+	  call uvclose(tvis)
+	  call mosCDone(tvis)
+	enddo
 c
 c  Now get all the information from the pointing table.
 c
