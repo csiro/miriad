@@ -98,8 +98,9 @@ c       "sqr" (square root), "log" (logarithmic), and "heq" (histogram
 c       equalization).  The colour lookup table is an integer from 1 to 8
 c       specifying a lookup table. Valid values are 1 (b&w), 2 (rainbow),
 c       3 (linear pseudo colour), 4 (floating zero colour contours), 5 (fixed
-c       zero colour contours), 6 (rgb), 7 (background) and 8 (heat).  If you
-c       enter a negative integer, then the reversed lookup table is displayed.
+c       zero colour contours), 6 (rgb), 7 (background), 8 (heat) and 
+c	9 (absolute b&w).  If you enter a negative integer, then the 
+c	reversed lookup table is displayed.
 c
 c       The transfer function changes available with OPTIONS=FIDDLE are in
 c       addition (on top of) to the selections here, but the colour lookup
@@ -317,6 +318,7 @@ c                  to "range" keyword. Move to image type "pixel"
 c                  instead of "grey"
 c    nebk 28mar95  Remove annoying restriction that slices cannot
 c                  begin and end on blanked pixels
+c    nebk 10apr95  Add doc for absolute b&w lookup table
 c
 c Notes:
 c
@@ -383,7 +385,7 @@ c
       data dunsl /.false./
       data xdispls, ydispbs /3.5, 3.5/
 c-----------------------------------------------------------------------
-      call output ('CgSlice: version 28-Mar-95')
+      call output ('CgSlice: version 10-Apr-95')
       call output ('Keyword "range" can now be used to specify the')
       call output ('colour lookup table as well the transfer function')
       call output (' ')
@@ -571,6 +573,7 @@ c
            if (hard.eq.'YES') then
              call ofminq (iofm)
              if (iofm.eq.1) reverse = .true.
+             if (iofm.eq.9) call ofmfudge
            end if
 c
 c Draw wedge if needed
@@ -1922,10 +1925,6 @@ c
       if (dopixel .and. trfun.ne.'lin' .and. trfun.ne.'log' .and. 
      +    trfun.ne.'sqr' .and. trfun.ne.'heq') call bug ('f',
      +    'Unrecognized pixel map transfer function type')
-      if (coltab.lt.-8 .or. coltab.gt.8 .or. coltab.eq.0) then
-        coltab = 1
-        call bug ('w', 'Unrecognized lookup table, setting b&w')
-      end if
 c
       call mkeyr ('xrange', xrange, 2, nval)
       if (nval.ne.0 .and. nval.ne.2) call bug ('f',
