@@ -24,13 +24,14 @@ c  History
 c    rjs  13dec95 Original version
 c    rjs  15dec95 Miscellaneous minor enhancements.
 c    rjs  18dec95 Sub-earth point uses right-handed coord system.
+c    rjs   7jun96 Include SysIII(1957) for Jupiter as well
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	character version*(*)
 	double precision AUKM
-	integer EARTH,SUN
-	parameter(version='Solar: version 1.0 18-Dec-95')
-	parameter(AUKM=149.597870D6,EARTH=3,SUN=0)
+	integer EARTH,SUN,JUPITER
+	parameter(version='Planets: version 1.0 18-Dec-95')
+	parameter(AUKM=149.597870D6,EARTH=3,SUN=0,JUPITER=5)
 c
 	character planet*8,observ*16
 	double precision jday,sub(3),dist,long,lat,ra,dec,w,r,f
@@ -89,6 +90,14 @@ c
 	  long = mod(long+2*dpi,2*dpi)
 	  write(line,'(a,f7.2)')'Longitude  (deg)   ',real(long*180/dpi)
 	  call output(line)
+	  if(np.eq.JUPITER)then
+	    long = long + dpi/180 * (0.0083169*(jday-2438761.5) - 0.007)
+	    long = mod(long,2*dpi) 
+	    if(long.lt.0)long = long + 2*dpi
+	    write(line,'(a,f7.2)')
+     *			'Long(1957) (deg)   ',real(long*180/dpi)
+	    call output(line)
+	  endif
 	  write(line,'(a,f7.2)')'Latitude   (deg)   ',
      *					      real(lat*180/dpi)/(1-f)**2
 	  call output(line)
