@@ -158,6 +158,7 @@ c
 c	"hms"       the label is in H M S.S (e.g. for RA)
 c	"dms"       the label is in D M S.S (e.g. for DEC)
 c	"arcsec"    the label is in arcsecond offsets
+c	"arcmin"    the label is in arcminute offsets
 c	"absdeg"    the label is in degrees
 c	"reldeg"    the label is in degree offsets
 c		    The above assume the pixel increment is in radians.
@@ -254,6 +255,8 @@ c	  so that the plot surface is maximally filled.  The default
 c	  is for equal scales in x and y.
 c	"gaps" means leave gaps between sub-plots and label each 
 c	  sub-plot, otherwise they will abut each other.
+c	"nofirst" means don't write the first x-axis label on any subplots
+c	  except for the left-most one. This may avoid label overwrite.
 c@ lines
 c 	Up to 6 values.  The line widths for the axes, each contour 
 c       image (in the order of TYPE), the vector image, and any overlays.
@@ -270,8 +273,10 @@ c	Up to 3 values.  Character sizes in units of the PGPLOT default
 c	(which is ~ 1/40 of the view surface height) for the plot axis
 c	labels, the velocity/channel label, and the overlay ID string
 c	(if option "write" in OLAY used) label.
-c	Defaults choose something sensible.  Use 0.0 to default the 
-c	first or second, but not the second or third, e.g., 0.0, 1.5
+c	Defaults choose something sensible.  Use 0.0 to obtain the
+c	default value if you need to specify, say the second
+c	value, but want to get the default for the first value.
+c	E.g. csize=0.0, 1.5
 c@ scale
 c	Up to 2 values.  Scales in linear axis units/mm with which to plot
 c	in the 	x and y directions.  For example, if the increments 
@@ -282,8 +287,9 @@ c	assumptions about the axis type, so is more flexible.   If you
 c	also chose OPTIONS=EQUAL then one of your scales, if you set 
 c	both and differently, would be over-ruled.  If you give only 
 c	one value, the second defaults to that.  
-c	Defaults choose scales to fill the page optimally. To default 
-c	the first but the second, use 0.0,scale(2)
+c	Defaults choose scales to fill the page optimally.  If you
+c	wish to specify the y value but want to obtain the default on the
+c	x value use scale=0.0,scale(2)
 c@ olay
 c	The name of a file containing a list of overlay descriptions.
 c	Wild card expansion is active and the default is no overlays.
@@ -321,7 +327,7 @@ c
 c	XOTYPE and YOTYPE  give the units of the overlay location (and 
 c	overlay half-sizes) contained in the file for the x- and y-
 c	directions, respectively.  Choose from:
-c	 "hms", "dms", "arcsec", "absdeg", "reldeg", "abspix", 
+c	 "hms", "dms", "arcsec", "arcmin", "absdeg", "reldeg", "abspix",
 c	 "relpix", "abslin", "rellin", "absghz", "relghz", 
 c	 "abskms", & "relkms"  as described in the keyword LABTYP.  
 c	Note that OTYPE does not depend upon what you specified for LABTYP.
@@ -349,9 +355,9 @@ c	X,Y defines the center of the overlay in the nominated OTYPE
 c	coordinate system (X- and Y-OTYPE can be different).  
 c	(X1,Y1) & (X2,Y2) are the end points of the line segment in the
 c	nominated OTYPE (mixed OTYPEs are supported here too).
-c	For %OTYPE = "abspix ", "relpix", "arcsec", "absdeg", "reldeg",
-c		     "absghz", "relghz", "abskms", "relkms", "abslin"
-c		     and "rellin" X,Y,X1,Y1,X2,Y2 are single numbers.
+c	For %OTYPE = "abspix ", "relpix", "arcsec", "arcmin", "absdeg", 
+c		     "reldeg", "absghz", "relghz", "abskms", "relkms", 
+c		     "abslin" & "rellin" X,Y,X1,Y1,X2,Y2 are single numbers.
 c
 c	For %OTYPE = "hms" or "dms", the X and/or Y location is/are replaced
 c	by three numbers such as  HH MM SS.S or DD MM SS.S.  Thus if
@@ -364,6 +370,7 @@ c	XS, YS are the overlay half-sizes in the following units.
 c	%OTYPE = "abspix" and "relpix" in pixels
 c		 "hms"    and "dms"    in arcseconds
 c		 "arcsec"              in arcseconds
+c		 "arcmin"              in arcminutes
 c		 "absdeg" and "reldeg" in degrees
 c		 "absghz" and "relghz" in GHz
 c		 "abskms" and "relkms" in Km/s
@@ -518,7 +525,8 @@ c    nebk 20feb95  Add colour table selection to keyword "range" and
 c		   get pgimag to make black on white for hard copy.
 c		   Move to image type "pixel" instead of "grey"
 c    nebk 10apr95  Accomodate absolute b&w lookup table 
-c    nebk 11aug95  Reversed lookup tables getting lost
+c    nebk 11aug95  Reversed lookup tables getting lost, add 
+c		   labtyp=arcmin options=nofirst
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -528,7 +536,7 @@ c
       real wedwid, wedisp, tfdisp
       integer maxlev, maxpos, nxdef, nydef, maxcon, 
      +        maxtyp, nbins, maxgr
-      parameter (maxlev = 50, maxpos = 1000, nxdef = 4, maxtyp = 14,
+      parameter (maxlev = 50, maxpos = 1000, nxdef = 4, maxtyp = 15,
      +  nydef = 4, maxcon = 3, maxgr = 100, wedwid = 0.05,
      +  wedisp = 1.0, tfdisp = 0.5, nbins = 128)
 c
@@ -581,7 +589,7 @@ c
       logical solneg(maxcon), doblv(2), bemprs(maxcon+4), owrite(maxpos)
       logical do3val, do3pix, dofull, gaps, eqscale, doblc, doblg,
      +  dobeam, beaml, beamb, relax, rot90, signs, mirror, dowedge, 
-     +  doerase, doepoch, bdone, doblb, doblm, dofid, dosing
+     +  doerase, doepoch, bdone, doblb, doblm, dofid, dosing, nofirst
 c
       data blankc, blankv, blankb /-99999999.0, -99999999.0, 
      +                             -99999999.0/
@@ -590,16 +598,12 @@ c
       data bdone /.false./
       data ipage /0/
       data ltypes /'hms   ', 'dms   ', 'abspix', 'relpix', 'arcsec',
-     +             'absghz', 'relghz', 'abskms', 'relkms', 'abslin', 
-     +             'rellin', 'absdeg', 'reldeg', 'none'/
+     +             'arcmin', 'absghz', 'relghz', 'abskms', 'relkms',
+     +             'abslin', 'rellin', 'absdeg', 'reldeg', 'none'/
       data dmm /2*0.0/
       data coltab /maxgr*0/
 c-----------------------------------------------------------------------
       call output ('CgDisp: version 11-Aug-95')
-      call output ('New absolute b&w lookup table available')
-      call output (' ')
-      call output ('Keyword "range" can now be used to specify the')
-      call output ('colour lookup table as well the transfer function')
       call output (' ')
 c
 c Get user inputs
@@ -610,7 +614,7 @@ c
      +   boxfac, boxinc, pdev, labtyp, dofull, do3val, do3pix, eqscale, 
      +   gaps, solneg, nx, ny, lwid, break, cs, scale, ofile, dobeam, 
      +   beaml, beamb, relax, rot90, signs, mirror, dowedge, doerase, 
-     +   doepoch, dofid, dosing)
+     +   doepoch, dofid, dosing, nofirst)
 c
 c Open images as required
 c
@@ -829,8 +833,9 @@ c
          call pgslw(lwid(1))
          call pgsci (7)
          if (hard.eq.'YES') call pgsci (2)
-         call axlabcg (gaps, nx, ny, ngrps, nlast, j, xopts, yopts,
-     +      xdispl, ydispb, labtyp, xlabel, ylabel, xxopts, yyopts)
+         call axlabcg (nofirst, gaps, nx, ny, ngrps, nlast, j, xopts, 
+     +      yopts, xdispl, ydispb, labtyp, xlabel, ylabel, xxopts, 
+     +      yyopts)
          call pgtbox (xxopts, 0.0, 0, yyopts, 0.0, 0)
 c
 c Draw wedge now so that it overwrites axis label ticks when wedge
@@ -1561,7 +1566,7 @@ c
 c
       subroutine decopt  (dofull, do3val, do3pix, eqscale, gaps, solneg,
      +   beambl, beambr, beamtl, beamtr, relax, rot90, signs, 
-     +   mirror, dowedge, doerase, doepoch, dofid, dosing)
+     +   mirror, dowedge, doerase, doepoch, dofid, dosing, nofirst)
 c----------------------------------------------------------------------
 c     Decode options array into named variables.
 c
@@ -1587,15 +1592,17 @@ c     dowedge   Draw wedge on pixel map image
 c     doepoch   Write epoch into axis labels
 c     dofid     Interactive fiddle
 c     dosing    FIddle after every subplot
+c     nofirst   Don't put the first x-axis lable on any subplot
+c		but the left most
 c-----------------------------------------------------------------------
       implicit none
 c
       logical dofull, do3val, do3pix, eqscale, gaps, solneg(*),
      +  beambl, beambr, beamtl, beamtr, relax, rot90, signs,
-     +  mirror, dowedge, doerase, doepoch, dofid, dosing
+     +  mirror, dowedge, doerase, doepoch, dofid, dosing, nofirst
 cc
       integer maxopt
-      parameter (maxopt = 21)
+      parameter (maxopt = 22)
 c
       character opshuns(maxopt)*8
       logical present(maxopt)
@@ -1604,7 +1611,7 @@ c
      +              'beambl  ', 'beambr  ', 'beamtl  ', 'beamtr  ',
      +              'relax   ', 'rot90   ', 'signs   ', 'mirror',
      +              'wedge   ', 'noerase ', 'noepoch ', 'fiddle',
-     +              'single  '/
+     +              'single  ', 'nofirst'/
 c-----------------------------------------------------------------------
       call optcg ('options', opshuns, present, maxopt)
 c
@@ -1629,6 +1636,7 @@ c
       doepoch   = .not.present(19)
       dofid     =      present(20)
       dosing    =      present(21)
+      nofirst   =      present(22)
 c
       end
 c
@@ -2108,7 +2116,7 @@ c
      +   boxfac, boxinc, pdev, labtyp, dofull, do3val, do3pix, eqscale, 
      +   gaps, solneg, nx, ny, lwid, break, cs, scale, ofile, dobeam, 
      +   beaml, beamb, relax, rot90, signs, mirror, dowedge, doerase, 
-     +   doepoch, dofid, dosing)
+     +   doepoch, dofid, dosing, nofirst)
 c-----------------------------------------------------------------------
 c     Get the unfortunate user's long list of inputs
 c
@@ -2177,6 +2185,7 @@ c   dowedge    Draw a wedge on the pixel map
 c   doepoch    Write epoch into axis labels
 c   dofid      Interactive fiddle
 c   dosing     Fiddle after each subplot
+c   nofirst    DOnt write first x-axis label on subplots except first
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -2189,7 +2198,7 @@ c
      +  pdev, ofile, trfun(maxgr), levtyp(maxcon), ltypes(maxtyp)
       logical do3val, do3pix, dofull, gaps, eqscale, solneg(maxcon),
      +  dobeam, beaml, beamb, relax, rot90, signs, mirror, dowedge,
-     +  doerase, doepoch, dofid, dosing
+     +  doerase, doepoch, dofid, dosing, nofirst
 cc
       integer nmaxim
       parameter (nmaxim = 8)
@@ -2371,7 +2380,7 @@ c
 c
       call decopt (dofull, do3val, do3pix, eqscale, gaps, solneg,
      +   beambl, beambr, beamtl, beamtr, relax, rot90, signs, 
-     +   mirror, dowedge, doerase, doepoch, dofid, dosing)
+     +   mirror, dowedge, doerase, doepoch, dofid, dosing, nofirst)
 c
       if (gin.eq.' ') then
         dowedge = .false.
@@ -2611,6 +2620,8 @@ c
         if (otype(i).eq.'hms' .or. otype(i).eq.'dms' .or.
      +      otype(i).eq.'arcsec') then 
           typeo(i) = 'arcsec'
+        else if (otype(i).eq.'arcmin') then
+          typeo(i) = 'arcmin'
         else
           typeo(i) = 'rel'//otype(i)(4:6)
         end if
