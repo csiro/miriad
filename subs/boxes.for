@@ -35,6 +35,7 @@ c    rjs  2sep94  Changes to use the co.for routines.
 c    rjs 20oct94  Increase max number of separate regions
 c    rjs 23nov94  Added BoxCount to count the pixels in a plane.
 c    rjs  6sep95  Check selected region really does fall within the image.
+c    rjs 13dec95  Increase MAXSHAPES in BoxRuns.
 c************************************************************************
 c* Boxes -- Summary of region of interest routines.
 c& mjs
@@ -1138,7 +1139,7 @@ c--
 c------------------------------------------------------------------------
 	include 'boxes.h'
 	integer WORKSIZE,MAXSHAPE
-	parameter(WORKSIZE=512,MAXSHAPE=64)
+	parameter(WORKSIZE=512,MAXSHAPE=256)
 	integer n1,n2,n3,pnt1,pnt2,pnt3,i,j,k,boxtype
 	integer offset,jmin,jmax,nshapes,shapes(MAXSHAPE)
 	integer work(WORKSIZE,3)
