@@ -17,9 +17,13 @@ c	Time range of hot loads.
 c@ stime
 c	Time range of sky dips.
 c@ ant
-c	The antenna to process.
+c	The antenna to process. Use either 3 or 4. The default is 3.
 c@ options
-c	  onoff
+c	Extra processing options.
+c	  onoff  Use this option if the antenna has a noise diode.
+c@ device
+c	PGPLOT device to plot the result. The data are plotted in black, and
+c	the "fit" in red. The default is to not plot the results.
 c--
 c  History:
 c    27apr01 rjs   Original version.
