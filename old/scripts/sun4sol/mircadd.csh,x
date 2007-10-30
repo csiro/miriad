@@ -1,0 +1,43 @@
+#! /bin/csh -f
+setenv TMPDIR $MIR
+foreach in ($argv)
+ set dir = $in:h
+ if ( "$dir" == "$in" ) set dir = "."
+ cd $dir
+ echo Processing $in
+ switch ($in)
+   case *.for:
+   set tmp=$in:r
+   set file = $tmp.f
+   set out = $file:t
+   set out = $out:r
+   ratty -s sun -b -I $MIRINC -D sun4sol $in $tmp.f
+   f77 -c -O2 -libmil -o ${out}.o $file
+   ar r $MIRLIB/libmir.a ${out}.o
+   rm -f $file ${out}.o
+   breaksw
+ case *.f2c:
+   set tmp=$in:r
+   set file=${tmp}.c
+   set out=$file:t
+   set out=$out:r
+   intf2c -s sun $in $file;
+   cc -O -fsingle -c -o ${out}.o -I$MIRINC -Dsun $file
+   ar r $MIRLIB/libmir.a ${out}.o
+   rm -f ${out}.o $file
+   breaksw
+ case *.c:
+   set out = $in:t
+   set out = /tmp/$out:r
+   setenv TMPDIR $MIR
+   cc -O -fsingle -c -o ${out}.o -I$MIRINC -Dsun $in
+   ar r $MIRLIB/libmir.a ${out}.o
+   rm -f ${out}.o
+   breaksw
+ default:
+   echo Ignoring $in
+   breaksw
+ endsw
+end
+
+exit 0
