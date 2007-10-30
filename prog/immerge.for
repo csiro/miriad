@@ -54,6 +54,21 @@ c	is "klambda".
 c
 c	Values for "uvrange" must be given either if "options=feather"
 c	is used or if the flux calibration factor is being deduced.
+c@ region
+c	Region-of-interest parameter. See the help on ``region''
+c	for more information. NOTE: This parameter is ONLY used for
+c	determining the flux calibration factor. Only plane selection
+c	(e.g. via the ``image'' command) is allowed. Typically you would
+c	want to select a range of planes which contains significant signal
+c	in the overlap region.
+c@ device
+c	PGPLOT device for a plot. When determining the flux calibration
+c	factor, IMMERGE can produce a plot showing the correspondence
+c	between the high and low resolution data points in the annulus
+c	(after correcting for resolution effects and the deduced flux
+c	calibration factor). Ideally it will show a line with "y=x".
+c	The default is not to produce a plot. It also plots the
+c	difference from this "y=x" line as a function of spatial frequency.
 c@ guard
 c	Before Fourier transforming, the images are padded with a guard
 c	band. "guard" gives one or two values, being the minimum width of
@@ -75,31 +90,28 @@ c	             calibration scale factor.
 c	  feather    This merges the two images together in a fashion similar
 c	             to AIPS IMERG. This method is generally less desirable
 c	             than the default scheme used by IMMERGE.
-c@ device
-c	PGPLOT device for a plot. When determining the flux calibration
-c	factor, IMMERGE can produce a plot showing the correspondence
-c	between the high and low resolution data points in the annulus
-c	(after correcting for resolution effects and the deduced flux
-c	calibration factor). Ideally it will show a line with "y=x".
-c	The default is not to produce a plot.
 c--
 c
 c  History:
 c    rjs  12jul97 Original version.
+c    rjs  16mar98 Added region parameter.
 c
 c  Bugs:
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Immerge: version 1.0 12-Jul-97')
+	parameter(version='Immerge: version 1.0 16-Mar-98')
 	include 'maxdim.h'
 	include 'maxnax.h'
 	include 'mirconst.h'
 	include 'mem.h'
+	integer MAXBOX
+	parameter(MAXBOX=2048)
 c
 	integer pIn1,pIn2
 	logical domerge,dofac,doout,dozero,dofeath
 	integer n,ngx,ngy,lIn1,lIn2,lOut,iax,i,k,xoff,yoff,zoff
 	integer nin(3),nout(MAXNAX),ntemp(3),naxis,ifail
+	integer Box(MAXBOX)
 	character In1*80,In2*80,out*80,device*64,line*80
 	character mess1*64,mess2*64
 	double precision freq1,freq2,cdelt1,cdelt2
@@ -129,18 +141,26 @@ c
 	call keyf('in',in2,' ')
 	if(in1.eq.' '.or.in2.eq.' ')
      *	  call bug('f','Two input files must be given')
-	dofac = .not.keyprsnt('factor')
-	call keyr('factor',fac,1.0)
-	call keya('device',device,' ')
 	call keyi('guard',ngx,0)
 	call keyi('guard',ngy,ngx)
 	if(ngx.lt.0.or.ngy.lt.0)call bug('f','Invalid values for guard')
-	call keyr('uvrange',uvlo,0.)
-	call keyr('uvrange',uvhi,-1.)
-	call keymatch('uvrange',NUNITS,units,1,unit,n)
-	if(n.eq.0)unit = units(1)
-	if((dofeath.or.dofac).and.uvlo.ge.uvhi)
-     *	  call bug('f','Invalid uvrange value')
+	dofac = .not.keyprsnt('factor')
+	call keyr('factor',fac,1.0)
+	if(dofac)then
+	  call keya('device',device,' ')
+	  call BoxInput('region',in1,box,MAXBOX)
+	endif
+	if(dofac.or.dofeath)then
+	  call keyr('uvrange',uvlo,0.)
+	  call keyr('uvrange',uvhi,-1.)
+	  call keymatch('uvrange',NUNITS,units,1,unit,n)
+	  if(n.eq.0)unit = units(1)
+	  if(uvlo.ge.uvhi)
+     *	    call bug('f','Invalid uvrange value')
+	else
+	  uvlo = 0
+	  uvhi = -1
+	endif
 	call keya('out',out,' ')
 	doOut = out.ne.' '
 	if(.not.dofac.and..not.doout)
@@ -245,10 +265,10 @@ c
 c  Determine the scale factor.
 c
 	if(dofac)then
-	  call GetDat(lIn1,memr(pIn1),nIn(1),nIn(2),ngx,ngy,dozero)
-	  call GetDat(lIn2,memr(pIn2),nIn(1),nIn(2),ngx,ngy,dozero)
+	  call boxSet(box,3,nIn,' ')
 	  pfac = (4.0*log(2.0))/PI*abs(cdelt1*cdelt2)/(bmaj2*bmin2)
-	  call GetFac(device,memr(pIn1),memr(pIn2),ngx,ngy,
+	  call GetFac(lIn1,lIn2,box,memr(pIn1),memr(pIn2),
+     *	    nIn(1),nIn(2),ngx,ngy,dozero,device,
      *	      sfac,sxx,sxy,syy,uvlo,uvhi,du,dv,fac,pfac)
 	  write(line,'(a,1pe11.3)')'Flux calibration factor:',fac
 	  call trimout(line)
@@ -279,12 +299,10 @@ c
 	    endif
 c
 	    if(domerge)then
-	      if(.not.dofac.or.k.ne.1)then
-		call GetDat(lIn1,memr(pIn1),nIn(1),nIn(2),
+	      call GetDat(lIn1,memr(pIn1),nIn(1),nIn(2),
      *						ngx,ngy,dozero)
-		call GetDat(lIn2,memr(pIn2),nIn(1),nIn(2),
+	      call GetDat(lIn2,memr(pIn2),nIn(1),nIn(2),
      *						ngx,ngy,dozero)
-	      endif
 	      call Merge(dofeath,memr(pIn1),memr(pIn2),ngx,ngy,
      *		uvlo,uvhi,du,dv,fac/sfac,sxx,sxy,syy)
 	      call WriteOut(lOut,memr(pIn1),ngx,nOut(2))
@@ -564,7 +582,7 @@ c
 c
 	call trimout(line)
 	label = ' arcsec; pa='//itoaf(nint(bpa))
-	write(line,'(a,f7.2,a,f7.2,a)')' ... with beam fwhm:',
+	write(line,'(a,f8.2,a,f8.2,a)')' ... with beam fwhm:',
      *	  (3600*180/PI)*bmaj,' by',(3600*180/PI)*bmin,
      *	  label
 	call trimout(line)
@@ -572,11 +590,13 @@ c
 c
 	end
 c************************************************************************
-	subroutine GetFac(device,In1,In2,ngx,ngy,
-     *		sfac,sxx,sxy,syy,uvlo,uvhi,du,dv,fac,pfac)
+	subroutine GetFac(lIn1,lIn2,box,In1,In2,nx,ny,ngx,ngy,
+     *	  dozero,device,sfac,sxx,sxy,syy,uvlo,uvhi,du,dv,fac,pfac)
 c
 	implicit none
-	integer ngx,ngy
+	integer nx,ny,ngx,ngy,lIn1,lIn2
+	integer box(*)
+	logical dozero
 	complex In1(ngx/2+1,ngy),In2(ngx/2+1,ngy)
 	real sfac,sxx,sxy,syy,uvlo,uvhi,fac,du,dv,pfac
 	character device*(*)
@@ -598,11 +618,22 @@ c------------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'maxdim.h'
 	include 'mem.h'
-	integer nul,nuh,nvl,nvh,n,pX,pY,np
+	integer MAXRUNS
+	parameter(MAXRUNS=MAXDIM+1)
+	integer nul,nuh,nvl,nvh,n,pX,pY,pR,np,npd
+	integer imin,imax,jmin,jmax,kmin,kmax,k
+	integer nruns,runs(3,MAXRUNS)
+	integer blc(3),trc(3)
 c
 c  Externals.
 c
 	character itoaf*8
+c
+c  Determine the range of planes to process.
+c
+	call boxInfo(box,3,blc,trc)
+	kmin = blc(3)
+	kmax = trc(3)
 c
 c  Determine the number of pixels which are in the overlap annulus.
 c
@@ -610,12 +641,33 @@ c
 	nuh = nint(abs(uvhi/du)+0.5)
 	nvl = nint(abs(uvlo/dv)-0.5)
 	nvh = nint(abs(uvhi/dv)+0.5)
-	n = 2*nint(0.5*PI*(nuh*nvh - nul*nvl) + nuh - nul + 1.5)
+	n = 2*(kmax-kmin+1)*
+     *		nint(0.5*PI*(nuh*nvh - nul*nvl) + nuh - nul + 1.5)
 	call memAlloc(pX,n,'r')
 	call memAlloc(pY,n,'r')
+	call memAlloc(pR,n,'r')
 c
-	call AnnExt(In1,In2,ngx,ngy,memr(pX),memr(pY),n,np,
-     *	  sfac,sxx,sxy,syy,uvlo,uvhi,du,dv)
+c  Get all the data in the annuli.
+c
+	np = 0
+	do k=kmin,kmax
+	  call boxRuns(1,k,' ',box,runs,MAXRUNS,nruns,
+     *						imin,imax,jmin,jmax)
+	  if(imin.ne.1.or.imax.ne.nx.or.jmin.ne.1.or.jmax.ne.ny.or.
+     *	    (nruns.ne.ny.and.nruns.ne.0))call bug('f',
+     *	      'Only plane selection supported in region keyword')
+	  if(nruns.gt.0)then
+	    if(k.ne.1)then
+	      call xysetpl(lIn1,1,k)
+	      call xysetpl(lIn2,1,k)
+	    endif
+	    call GetDat(lIn1,In1,nx,ny,ngx,ngy,dozero)
+	    call GetDat(lIn2,In2,nx,ny,ngx,ngy,dozero)
+	    call AnnExt(In1,In2,ngx,ngy,memr(pX+np),memr(pY+np),
+     *		memr(pR+np),n-np,npd,sfac,sxx,sxy,syy,uvlo,uvhi,du,dv)
+	    np = np + npd
+	  endif
+	enddo
 c
 	call trimout('Number of data points in the annulus: '
      *						//itoaf(np/2))
@@ -627,8 +679,8 @@ c
 c
 c  Plot the scale factor, if the user wanted this.
 c
-	if(device.ne.' ')call PlotFac(device,memr(pX),memr(pY),np,
-     *							  fac,pfac)
+	if(device.ne.' ')call PlotFac(device,memr(pX),memr(pY),memr(pR),
+     *						np,fac,pfac)
 c
 c  Free the allocated memory.
 c
@@ -637,15 +689,15 @@ c
 c
 	end
 c************************************************************************
-	subroutine PlotFac(device,X,Y,n,a,pfac)
+	subroutine PlotFac(device,X,Y,R,n,a,pfac)
 c
 	implicit none
 	integer n
 	character device*(*)
-	real X(n),Y(n),a,pfac
+	real X(n),Y(n),R(n),a,pfac
 c
 c------------------------------------------------------------------------
-	real xmin,xmax,xlo,xhi,xp(2)
+	real xmin,xmax,xlo,xhi,xp(2),zmin,zmax,rmin,rmax,rhi,rlo,zhi,zlo
 	integer i
 c
 c  Externals.
@@ -656,11 +708,20 @@ c  Find the min and max.
 c
 	xmin = pfac*x(1)
 	xmax = xmin
+	rmin = 0.001*r(1)
+	rmax = rmin
+	zmin = 0
+	zmax = zmin
 	do i=1,n
+	  r(i) = 0.001 * r(i)
 	  x(i) = pfac*x(i)
 	  y(i) = pfac*a*y(i)
+	  rmin = min(rmin,r(i))
+	  rmax = max(rmax,r(i))
 	  xmin = min(xmin,x(i),y(i))
 	  xmax = max(xmax,x(i),y(i))
+	  zmin = min(zmin,x(i)-y(i))
+	  zmax = max(zmax,x(i)-y(i))
 	enddo
 c
 c  Create the plot of the normal data.
@@ -693,6 +754,25 @@ c
 	call pgsci(1)
 	call pglab('High Resolution Data (Jy)',
      *		   'Scaled Low Resolution Data (Jy)',
+     *		   'Plot of Data in Fourier Annulus')
+c
+	do i=1,n
+	  y(i) = x(i) - y(i)
+	enddo
+c
+	call pgpage
+	call pgrnge(zmin,zmax,zlo,zhi)
+	call pgrnge(rmin,rmax,rlo,rhi)
+	call pgvstd
+	call pgswin(rlo,rhi,zlo,zhi)
+	call pgbox('BCNST',0.,0,'BCNST',0.,0)
+	if(n.lt.100)then
+	  call pgpt(n,r,y,17)
+	else
+	  call pgpt(n,r,y,1)
+	endif
+	call pglab('Spatial Frequency (k\gl)',
+     *		   'Residual: High minus Scaled Low (Jy)',
      *		   'Plot of Data in Fourier Annulus')
 	call pgend
 c
@@ -784,12 +864,12 @@ c
 c
 	end
 c************************************************************************
-	subroutine AnnExt(In1,In2,ngx,ngy,X,Y,nmax,np,
+	subroutine AnnExt(In1,In2,ngx,ngy,X,Y,R,nmax,np,
      *	  sfac,sxx,sxy,syy,uvlo,uvhi,du,dv)
 c
 	implicit none
 	integer ngx,ngy,nmax,np
-	real X(nmax),Y(nmax)
+	real X(nmax),Y(nmax),R(nmax)
 	complex In1(ngx/2+1,ngy),In2(ngx/2+1,ngy)
 	real sfac,sxx,sxy,syy,uvlo,uvhi,du,dv
 c
@@ -799,6 +879,7 @@ c
 c  Output:
 c    X,Y	Pixels from the low and high resolution data, that we are
 c		scaling to equalize.
+c    R		Radius in wavelengths
 c    np		Number of pixels extracted.
 c
 c------------------------------------------------------------------------
@@ -823,6 +904,8 @@ c
 	      X(np+2) = t*aimag(In1(i,j))
 	      Y(np+1) =   real(In2(i,j))
 	      Y(np+2) =   aimag(In2(i,j))
+	      R(np+1) = sqrt(uv2)
+	      R(np+2) = R(np+1)
 	      np = np + 2
 	    endif
 	  enddo
@@ -844,6 +927,8 @@ c
 	      X(np+2) = t*aimag(In1(i,j))
 	      Y(np+1) =   real(In2(i,j))
 	      Y(np+2) =   aimag(In2(i,j))
+	      R(np+1) = sqrt(uv2)
+	      R(np+2) = R(np+1)
 	      np = np + 2
 	    endif
 	  enddo
