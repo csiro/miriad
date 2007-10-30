@@ -1,7 +1,11 @@
 Miriad is a radio-astronomy data reduction package. It was originally
 developed to meet the needs of the BIMA consortium, although ATNF is also
-developing it further. It is portable to a variety of UNIX machines
-as well as VMS. The notes below describe how to install it
+developing it further.
+
+Please read the file DISCLAIMER to see a legal disclaimer.
+
+Miriad is portable to a variety of UNIX machines as well as VMS.
+The notes below describe how to install it
 on a UNIX machine. The distribution contains installation scripts for
 SunOS 4.x and SunOS 5.x (also called Solaris 1 and Solaris 2 respectively),
 ConvexOS, IRIX and IRIX64, LINUX, OSF/1 or Digital UNIX, HPUX, and UNICOS.
