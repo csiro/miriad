@@ -140,6 +140,8 @@ c                  parameters (equivalent to a C 'enum').
 c    28jun95  mhw  change printing formats: guarantee 1 space between fields
 c                  in eformat mode and add some decimal places to the freq
 c    10jan96  rjs  Make MAXRUNS depend on MAXDIM. Also eliminate dfloat.
+c    08oct96  rjs  Fix call to inbox. Use Fortran-5 functions. Propogate
+c	           MAXBOXES.
 c------------------------------------------------------------------------
 
 c Main program of imstat and imspec. Puts out the identification, where
@@ -191,7 +193,7 @@ c the include file.
       string = NAME // ': ' // version
       call output( string )
       call inputs( tinp,naxis,dim,corners,boxes,cut,counts,
-     *             beaminfo,axlabel,device )
+     *             beaminfo,axlabel,device, MAXBOXES)
       call stats(  tinp,naxis,dim,corners,boxes,cut,counts,
      *             beaminfo,axlabel,device )
       call xyzclose( tinp )
@@ -220,10 +222,10 @@ c the plot
 c header puts out some information about the dataset and units
 
       subroutine inputs( tinp,naxis,dim, corners, boxes, cut, counts,
-     *                   beaminfo, axlabel, device )
+     *                   beaminfo, axlabel, device, MAXBOXES )
 
       integer            tinp
-      integer            naxis, dim
+      integer            naxis, dim, MAXBOXES
       integer            corners(*), boxes(*)
       real               cut(*)
       integer            counts(0:*)
@@ -247,7 +249,7 @@ c header puts out some information about the dataset and units
       naxis = MAXNAX
       call xyzopen( tinp, file, 'old', naxis, axlen )
 
-      call boxinput( 'region', file, boxes, 1024 )
+      call boxinput( 'region', file, boxes, MAXBOXES )
       call boxset(   boxes, naxis, axlen, ' ' )
       call boxinfo(  boxes, naxis, blc, trc )
       corners(1) = blc(1)
@@ -261,7 +263,7 @@ c header puts out some information about the dataset and units
 
       call axinp( tinp,naxis, dim,subcube,axlabel )
 
-      dimen = iabs( dim )
+      dimen = abs( dim )
       call xyzsetup( tinp, subcube(:dimen), blc,trc, viraxlen,vircsz )
       if( dim.gt. 0 ) counts(0)       = vircsz(dimen)
       if( dim.eq.-2 ) counts(0)       = viraxlen(1)
@@ -816,7 +818,7 @@ c Relate beam to gridspacing
 c If area large enough integral is simple formula, else calculate it.
 c For conversion to flux only sum in equivalent region, for conversion
 c to brightness temperature sum full beam always.
-            frln2 = 4.d0 * alog(2.)
+            frln2 = 4.d0 * log(2.)
             if( bmsiz(1).gt.8.*ratio(1) .and. bmsiz(2).gt.8.*ratio(2)
      *          .or. toKelvin )
      *      then
@@ -1133,11 +1135,12 @@ c Unless dim was -2, in which case a plane is read profile by profile
          do i = 1, counts(0)
 c if datapoint falls within limits as defined by cutoff and masking, use it
 c          print*,i,data(i),mask(i)
-           if( inbox(dim,i,data(i),mask(i),runs,corners,cut) ) then
+           if( inbox(dim,i.eq.1.and.iloop.eq.1,
+     *		data(i),mask(i),runs,corners,cut) ) then
 c              print*,'    used'
 c convert to Kelvin if requested.
                if( plotvar(DUNIT).eq.KELVIN )
-     *            data(i) = data(i) * sngl(beaminfo(KPERJY))
+     *            data(i) = data(i) * real(beaminfo(KPERJY))
                if( init(1)  ) then
                   npoints(1) = 0
                   maxval(1)  = data(i)
@@ -1149,8 +1152,8 @@ c convert to Kelvin if requested.
                endif
                npoints(1) = npoints(1) + 1
                v          = dble( data(i) )
-               maxval(1)  = dmax1( maxval(1), v )
-               minval(1)  = dmin1( minval(1), v )
+               maxval(1)  = max( maxval(1), v )
+               minval(1)  = min( minval(1), v )
                sum(1)     = sum(1)    + v
 c              sumpbc(1)  = sumpbc(1) + v*pbccorr(i,coo(1))
                sumsq(1)   = sumsq(1)  + v*v
@@ -1175,8 +1178,8 @@ c been handled.
                    init(level)    = .false.
                 endif
                 npoints(level) = npoints(level) + npoints(1)
-                maxval(level)  = dmax1( maxval(level), maxval(1) )
-                minval(level)  = dmin1( minval(level), minval(1) )
+                maxval(level)  = max( maxval(level), maxval(1) )
+                minval(level)  = min( minval(level), minval(1) )
                 sum(level)     = sum(level)    + sum(1)
                 sumpbc(level)  = sumpbc(level) + sumpbc(1)
                 sumsq(level)   = sumsq(level)  + sumsq(1)
@@ -1741,10 +1744,10 @@ c include file.
 
 c Test if data are within unmasked, above the cut and inside the region
 
-      logical function inbox( dim, i, data, mask, runs,corners, cut )
-      integer dim, i
+      logical function inbox( dim, init, data, mask, runs,corners, cut )
+      integer dim
       real    data
-      logical mask
+      logical mask, init
       integer runs(3,*)
       integer corners(*)
       real    cut(*)
@@ -1753,7 +1756,7 @@ c Test if data are within unmasked, above the cut and inside the region
       save    runpnt, xlen, x,y
       logical unmasked
 
-      if( i.eq.1 ) then
+      if( init ) then
          runpnt = 1
          x      = 0
          y      = 1
