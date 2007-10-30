@@ -71,11 +71,12 @@ c    mchw  29may92	Change g-format to f because Sun messes up.
 c    mchw  22sep92	Change keyword to inclination angle.
 c    nebk  28jan93      Adapt to new primary beam routines. Put pixels
 c                       exactly on outer ring edge into that ring.
+c    nebk  22aug94      Adapt to GETFREQ error status change
 c----------------------------------------------------------------------c
         include 'mirconst.h'
 	include 'maxdim.h'
 	character*(*) label,version
-	parameter(version='version 1.0 28-Jan-93')
+	parameter(version='version 1.0 22-Aug-94')
 	double precision rts,value,frqref,finc
 	parameter(rts=3600.d0*180.d0/dpi)
 	parameter(label='Integrate a Miriad image in elliptical annuli')
@@ -174,7 +175,7 @@ c
             if (ifax.eq.0) call bug ('f',
      *       'No spectral axis. Can''t get freq. for p.b. correction')
             call getfreq (lIn, crpix(ifax), ifax, frqref, finc, ierr)
-            if (ierr.gt.1) call bug ('f',
+            if (ierr.gt.0) call bug ('f',
      *        'Error finding frequency of spectral reference pixel')
           else
             frqref = -1.0d0
