@@ -125,6 +125,8 @@ c   rjs  13sep96 - Friday 13th! Improve check for negative components.
 c   rjs  29jan97 - Change default region of interest.
 c   rjs  10mar97 - Default region is all channels.
 c   rjs  24jun97 - Correct check for good alignment.
+c   rjs  02jul97 - Added cellscal.
+c   rjs  23jul97 - Added pbtype.
 c
 c  Bugs and Shortcomings:
 c     * The way it does convolutions is rather inefficent, partially
@@ -788,9 +790,9 @@ c
 	data keyw/   'cdelt1  ','cdelt2  ','cdelt3  ','cdelt4  ',
      *	  'crpix3  ','crpix4  ','crval1  ','crval2  ','crval3  ',
      *	  'crval4  ','ctype1  ','ctype2  ','ctype3  ','ctype4  ',
-     *    'date-obs','epoch   ','history ','instrume','lstart  ',
-     *	  'lstep   ','ltype   ','lwidth  ','object  ',
-     *	  'observer','telescop','xshift  ','yshift  ','obsra   ',
+     *    'epoch   ','history ','instrume','lstart  ','cellscal',
+     *	  'lstep   ','ltype   ','lwidth  ','object  ','obstime ',
+     *	  'observer','telescop','obsra   ','pbtype  ',
      *	  'obsdec  ','restfreq','vobs    ','pbfwhm  ','btype   '/
 c
 c  Fill in some parameters that will have changed between the input
