@@ -10,6 +10,9 @@ c    bpw  25may90  Add 'Q' flag and LogWrit
 c    mjs  10mar91  "system" call becomes "ishell" call on Cray
 c    rjs  10jan96  Changes to appease g77 on linux.
 c    rjs  03feb97  General improvements.
+c    pjt  26apr98  check if logopen was ever called
+c    pjt   1may98  more standard FORTRAN, using LogNOpen (courtesy RJS)
+c    rjs   7may98  Correction to change in logclose.
 c************************************************************************
 c* LogOpen -- Initialise the log file routines.
 c& rjs
@@ -38,9 +41,12 @@ c			LogWrit.
 c--
 c------------------------------------------------------------------------
 	include 'log.h'
-	integer iostat
+	integer iostat,lognopen
 
+	nopen = lognopen(1)
+	if (nopen.ne.1) call bug('f','LogOpen: had been opened before')
 	nlines = 0
+	nopen = 1
         printer = .false.
         query = .false.
 	domore = .true.
@@ -105,8 +111,10 @@ c--
 c------------------------------------------------------------------------
 	include 'log.h'
 	character ans*1
-	integer length,iostat
+	integer length,iostat,lognopen
 c
+	nopen = lognopen(0)
+	if(nopen.ne.1) call bug('f','LogWrite: LogOpen never called')
 	if(domore)then
 	  if(lu.ne.0)then
 	    call txtwrite(lu,line,len(line),iostat)
@@ -140,15 +148,43 @@ c------------------------------------------------------------------------
 	include 'log.h'
 c
 	character lpr
+	integer lognopen
 #ifdef vms
 	parameter(lpr='print')
 #else
 	parameter(lpr='lpr')
 #endif
+	nopen = lognopen(-1)
+	if(nopen.ne.0) call bug('f','LogClose: LogOpen never called')
 	if(lu.ne.0) call txtclose(lu)
 	if(printer)then
 	  call output('Queuing output to printer')
 	  call command(lpr//' printer')
 	endif
+	nopen = 0
 c
 	end
+c************************************************************************
+c* LogNOpen -- Helper function for logging usage in LogOpen
+c& rjs
+c: text-i/o,log-file
+c+
+        integer function lognopen(val)
+c
+        integer val
+	implicit none
+c
+c   This functions aids the logging usage of LogOpen/LogWrite/LogClose,
+c   since variables cannot appear in both a DATA and COMMON.
+
+c--
+c------------------------------------------------------------------------
+c
+        integer nopen
+        save nopen
+        data nopen/0/
+c
+        nopen = nopen + val
+        lognopen = nopen
+        end
+
