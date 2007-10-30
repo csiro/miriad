@@ -116,17 +116,19 @@ c    rjs   23jul97  added pbtype.
 c    mchw  23oct97  added comet model for parent molecule.
 c    rjs   29oct97  Check that the coordinates for a point source fall
 c		    within the image.
+c    rjs   11dec97  Make total flux option consistent when there is an
+c		    input image.
 c  Bugs/Wishlist:
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Imgen: version 1.1 29-Oct-97' )
+	parameter(version='Imgen: version 1.1 11-Dec-97' )
 	include 'mirconst.h'
 	include 'maxdim.h'
 	include 'maxnax.h'
 	integer n1,n2,n3,i,j,k,lIn,lOut,nsize(MAXNAX),naxis
 	double precision crpix1,crpix2,cdelt1,cdelt2,crval1,crval2
 	double precision x1(3),x2(3)
-	real factor,bmaj,bmin,bpa
+	real factor,bmaj,bmin,bpa,fac
 	character In*80,Out*80
 	logical totflux
 	real Buff(maxdim)
@@ -238,12 +240,20 @@ c
 	  do i=4,naxis
 	    nsize(i) = 1
 	  enddo
+	  call rdhdr(lIn,'bmaj',bmaj,0.)
+	  call rdhdr(lIn,'bmin',bmin,0.)
+	  call rdhdr(lIn,'bpa',bpa,0.)
+	  call rdhdd(lIn,'cdelt1',cdelt1,1d0*cdelt1)
+	  call rdhdd(lIn,'cdelt2',cdelt2,1d0*cdelt2)
 	else
 	  naxis = 2
 	  nsize(1) = n1
 	  nsize(2) = n2
 	  nsize(3) = n3
 	  lIn = 0
+	  bmaj = 0
+	  bmin = 0
+	  bpa = 0
 	  if(n1.le.0.or.n2.le.0)call bug('f','Image size error')
 	endif
 	if(n1.gt.MAXDIM)call bug('f','Image dimension too big')
@@ -251,7 +261,8 @@ c
 c  If we have a single gaussian object, use this as the beam
 c  parameters.
 c
-	if(nobjs.eq.1.and.objs(1).eq.'gaussian'.and..not.totflux)then
+	if(nobjs.eq.1.and.objs(1).eq.'gaussian'.and..not.
+     *		totflux.and.abs(bmaj*bmin).eq.0)then
 	  if(fwhm1(1).gt.fwhm2(1))then
 	    bmaj = fwhm1(1)
 	    bmin = fwhm2(1)
@@ -263,10 +274,6 @@ c
 	  endif
 	  if(bpa.lt.-90)bpa = bpa + 180
 	  if(bpa.gt. 90)bpa = bpa - 180
-	else
-	  bmaj = 0
-	  bmin = 0
-	  bpa = 0
 	endif
 c
 c  Now open the output, and add a header to it.
@@ -307,13 +314,25 @@ c
 	    endif
 	  enddo
 c
+c  Convert the flux units.
+c
+	  if(totflux)then
+	    if(abs(bmaj*bmin).gt.0)then
+	      fac = 0.25*PI/log(2.0)*abs(bmaj*bmin/(cdelt1*cdelt2))
+	    else
+	      fac = 1
+	    endif
+	  else
+	    fac = 0
+	  endif
+c
 c  Do the real work.
 c
 	  do j=1,n2
 	    call GetBuf(lIn,j,Buff,n1,factor)
 	    do i=1,nobjs
 	      call DoMod(j,objs(i),Buff,n1,amp(i),fwhm1d(i),fwhm2d(i),
-     *                    posangd(i),xd(i),yd(i),totflux)
+     *                    posangd(i),xd(i),yd(i),fac)
 	    enddo
 	    call xywrite(lOut,j,Buff)
 	  enddo
@@ -431,19 +450,18 @@ c
 	end
 c************************************************************************
 	subroutine DoMod(j0,object,Data,n1,amp,fwhm1,fwhm2,posang,x,y,
-     *								totflux)
+     *								fac)
 c
 	implicit none
 	integer n1,j0
 	character object*(*)
 	real Data(n1)
-        real amp,fwhm1,fwhm2,posang,x,y
-	logical totflux
+        real amp,fwhm1,fwhm2,posang,x,y,fac
 c
 c  Add the contribution of a particular component.
 c
 c  Input:
-c    totflux	The "amp" parameter is the total flux.
+c    fac	Flux adjustment.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
@@ -463,8 +481,8 @@ c  Note: pi/4/log(2) == 1.1331.
 c
 	if(object.eq.'gaussian')then
 	  log2 = log(2.0)
-	  if(totflux)then
-	    a = amp / (pi/4/log2 * fwhm1 * fwhm2)
+	  if(fac.ne.0)then
+	    a = fac * amp / (pi/4/log2 * fwhm1 * fwhm2)
 	  else
 	    a = amp
 	  endif
@@ -491,8 +509,8 @@ c  Handle a J1(x)/x function.
 c
 	else if(object.eq.'j1x')then
 	  scale = 3.83
-	  if(totflux)then
-	    a = amp / (4*pi/scale/scale * fwhm1 * fwhm2)
+	  if(fac.ne.0)then
+	    a = fac * amp / (4*pi/scale/scale * fwhm1 * fwhm2)
 	  else
 	    a = amp
 	  endif
@@ -530,8 +548,8 @@ c
 c  Handle a disk.
 c
 	else if(object.eq.'disk')then
-	  if(totflux)then
-	    a = amp / (pi/4 * fwhm1 * fwhm2)
+	  if(fac.ne.0)then
+	    a = fac * amp / (pi/4 * fwhm1 * fwhm2)
 	  else
 	    a = amp
 	  endif
@@ -556,8 +574,8 @@ c
 c  Handle a spherical shell.
 c
 	else if(object.eq.'shell')then
-	  if(totflux)then
-	    a = amp / (pi * sqrt(fwhm1 * fwhm1))
+	  if(fac.ne.0)then
+	    a = fac * amp / (pi * sqrt(fwhm1 * fwhm1))
 	  else
 	    a = amp
 	  endif
