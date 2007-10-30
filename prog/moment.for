@@ -19,7 +19,7 @@ c@ out
 c	The output image. No default.
 c@ mom
 c       -1      Average intensity. (units are same as individual channels)
-c        0      Integrated intensity. (e.g. units Jy x km/s)
+c        0      Integrated intensity. (e.g. units I x km/s)
 c        1      1st moment = sum(I*v)/sum(I)
 c        2      dispersion = sqrt(sum(I*(v-M1)**2)/sum(I))
 c               The v(i) are the axis values (e.g. velocities).  M1 is the first
@@ -81,6 +81,7 @@ c
 c Get inputs.
 c
 	call output('Moment: '//version)
+	call bug('i','Units for the 0th order moment have been changed')
 	call keyini
 	call keya('in',in,' ')
 	call BoxInput('region',in,boxes,maxboxes)
