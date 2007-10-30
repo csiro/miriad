@@ -100,6 +100,7 @@ c   mchw 07jan93 - Copy across crpix3.
 c   mjs  17feb93 - minor doc mod only (RESTORE -> RESTOR).
 c   rjs   5mar93 - History standardisation. Use cnvl routines. Add extra
 c	           options.
+c   rjs  27nov94 - Significant changes and bugfixes to make it more robust.
 c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='Maxen: version 1.0 05-Mar-93')
@@ -122,11 +123,11 @@ c
 	integer icentre,jcentre
 	integer maxniter,niter
 	integer measure,message
-	real Tol,TRms,TFlux,Qest,De,Df,Denom,Dalp,Dbet
-	real J0,J1,StLen1,StLen2,StLim,Length,Alpha,Beta,Q
+	real Tol,TRms,TFlux,Qest,De,Df,OStLen2,OStLen1
+	real J0,J1,StLen1,StLen2,StLim,Alpha,Beta,Q
 	real GradEE,GradEF,GradEH,GradEJ,GradFF,GradFH,GradFJ
-	real GradHH,GradJJ,NomGrd,Immax,Immin,Flux,Rms,ClipLev
-	logical converge,positive,asym,pad
+	real GradHH,GradJJ,Grad11,Immax,Immin,Flux,Rms,ClipLev
+	logical converge,positive,asym,pad,doflux
 	integer Run(3,MaxRun),nRun,Boxes(maxBoxes),nPoint
 c
 	integer pBem,pMap,pEst,pDef,pRes,pNewEst,pNewRes
@@ -159,6 +160,8 @@ c
 c
 c  Check everything makes sense.
 c
+	doflux = TFlux.gt.0
+	TFlux = abs(TFlux)
 	if(Trms.le.0.)call bug('f','RMS is not positive')
 	if(maxniter.lt.0)call bug('f','NITERS has bad value')
 	if(MapNam.eq.' '.or.BeamNam.eq.' '.or.OutNam.eq.' ')
@@ -282,11 +285,11 @@ c
 c
 c  Get the Default map and Clip level.
 c
-	  if(TFlux.eq.0)TFlux = -TRms*nPoint/Q
+	  if(TFlux.eq.0)TFlux = TRms*nPoint/Q
 c
 	  if(DefNam.eq.' ')then
-	    ClipLev = 0.01 * abs(TFlux)/nPoint
-	    call Assign(abs(TFlux)/nPoint,Data(pDef),nPoint)
+	    ClipLev = 0.01 * TFlux/nPoint
+	    call Assign(TFlux/nPoint,Data(pDef),nPoint)
 	  else
 	    call xysetpl(lDef,1,k-kmin+1)
 	    call GetPlane(lDef,Run,nRun,xmin-imin,ymin-jmin,
@@ -313,7 +316,7 @@ c
 c
 	  call GetInfo(nPoint,Data(pEst),Data(pRes),measure,Data(pDef),
      *	    Alpha,Beta,Q,GradEE,GradEF,GradEH,GradEJ,GradFF,GradFH,
-     *	    GradFJ,GradHH,GradJJ,NomGrd,Immax,Immin,Flux,Rms)
+     *	    GradFJ,GradHH,GradJJ,Grad11,Immax,Immin,Flux,Rms)
 c
 c  Put the user to sleep with lots of meaningful messages.
 c
@@ -326,7 +329,7 @@ c
 	    write(line,11)Immin,Immax
   11	    format('  Immin =',1pe12.3,' Immax =',1pe12.3)
 	    call output(line)
-	    write(line,12)Rms,Flux,NomGrd
+	    write(line,12)Rms,Flux,GradJJ/Grad11
   12	    format('  Rms   =',1pe12.3,' Flux  =',1pe12.3,
      *		' NormGrd =',1pe12.3)
 	    call output(line)
@@ -335,6 +338,8 @@ c
 c------------------------------------------------------------------------
 c  Now start to iterate at long last.
 c
+	OStLen2 = 0
+	OStLen1 = 0
 	Converge = .false.
 	Niter = 0
 	dowhile(.not.converge.and.Niter.lt.MaxNiter)
@@ -342,43 +347,35 @@ c
 c
 c  Update Alpha and Beta.
 c
-	  if(TFlux.gt.0.)then
-	    De = nx*ny*(Rms*Rms - TRms*TRms)
-	    Df = Flux - TFlux
-	    Denom = 1./(GradEE*GradFF - GradEF*GradEF)
-	    Dalp = ( GradFF*(De+GradEJ) - GradEF*(Df+GradFJ) ) * Denom
-	    Dbet =-( GradEF*(De+GradEJ) - GradEE*(Df+GradFJ) ) * Denom
-	  else
-	    De = nx*ny*(Rms*Rms - TRms*TRms)
-	    Denom = 1./GradEE
-	    Dalp = (De+GradEJ) * Denom
-	    Dbet = 0.
-	  endif
-	  if(Alpha.gt.0)Dalp = 0.5 * Dalp / (1 + abs(Dalp / Alpha))
-	  Alpha = max(Alpha+Dalp,0.)
-	  Beta  = Beta + 0.5*Dbet
+	  De = nPoint*(Rms*Rms - TRms*TRms)
+	  Df = Flux - TFlux
+	  call NewAlpB(Alpha,Beta,De,Df,doflux,GradEE,GradEF,
+     *		GradEJ,GradFF,GradFJ,GradJJ,Grad11,GradEH,GradFH)
 c
 c  Calculate the next step to take.
 c
 	  call CalStep(nPoint,Data(pEst),Data(pRes),Data(pNewEst),
-     *		measure,Data(pDef),Alpha,Beta,Q,Length,J0)
+     *		measure,Data(pDef),Alpha,Beta,Q,J0)
 c
 c  Determine the max step length, and the initial step length.
 c  Also correct the value of GradJ.Step for the shorter length
 c  step.
 c
-	  StLim = min(1.0,sqrt(0.15*abs(TFlux)/Length))
-	  StLen1 = min(1.,StLim)
+	  StLim = 1
+	  if(GradJJ.gt.0)StLim = min(1.4,0.15*Grad11/GradJJ)
+	  StLen1 = min(0.5*(1+OStLen1),StLim)
+	  OStLen1 = StLen1
 	  J0 = J0 * StLen1
 c
 c  Determine the correct Clip Level (to prevent the estimate going
 c  negative, if this is not allowed).
 c
-	  if(positive)ClipLev = 0.1 * Immin
+	  if(positive)ClipLev = min(ClipLev,max(0.1*Immin,1e-6*Immax))
 c
 c  Take the plunge.
 c
-	  call TakeStep(nPoint,Data(pEst),Data(pNewEst),StLen1,ClipLev)
+	  call TakeStep(nPoint,Data(pEst),Data(pNewEst),
+     *					StLen1,ClipLev,StLim)
 c
 c  Convolve the estimate with the beam and subtract the map.
 c
@@ -391,8 +388,14 @@ c  max length overall.
 c
 	  call ChekStep(nPoint,Data(pEst),Data(pNewEst),Data(pNewRes),
      *			measure,Data(pDef),Alpha,Beta,Q,J1)
-	  StLen2 = J0/(J0-J1)
+	  if(J0-J1.ne.0)then
+	    StLen2 = J0/(J0-J1)
+	  else
+	    StLen2 = 1
+	  endif
+	  StLen2 = 0.5*(StLen2 + OStLen2)
 	  StLen2 = min(StLen2,StLim/StLen1)
+	  OStLen2 = StLen2
 c
 c  Now interpolate between the actual step and the one we should
 c  have taken. Only interpolate if its absolutely necessary. That
@@ -402,9 +405,10 @@ c  anything else, determines the step length. If StLen2 is near 1,
 c  just swap the pointers around rather than do any real work.
 c
 	  if(abs(StLen2-1.).gt.0.05)then
-	    call IntStep(nPoint,Data(pEst),Data(pNewEst),StLen2,ClipLev)
-	    call IntStep(nPoint,Data(pRes),Data(pNewRes),StLen2,0.)
+	    call IntStep(nPoint,Data(pEst),Data(pNewEst),StLen2)
+	    call IntStep(nPoint,Data(pRes),Data(pNewRes),StLen2)
 	  else
+	    StLen2 = 1
 	    call Swap(pEst,pNewEst)
 	    call Swap(pRes,pNewRes)
 	  endif
@@ -413,14 +417,14 @@ c  Calculate a new estimate for Q using the magic formula which seems
 c  to work. Only recalculate when we did not clip back the step length
 c  excessively. That is recalculate if StLen1 is close to 1.
 c
-	if(abs(StLen1-1.).lt.Tol)
+	if(abs(StLen1-1.).lt.0.05)
      *	  Q = Q * sqrt((1./max(0.5,min(2.,StLen1*StLen2))+3.)/4.)
 c
 c  Get new info on the current state of play.
 c
 	  call GetInfo(nPoint,Data(pEst),Data(pRes),measure,Data(pDef),
      *	    Alpha,Beta,Q,GradEE,GradEF,GradEH,GradEJ,GradFF,GradFH,
-     *	    GradFJ,GradHH,GradJJ,NomGrd,Immax,Immin,Flux,Rms)
+     *	    GradFJ,GradHH,GradJJ,Grad11,Immax,Immin,Flux,Rms)
 c
 c  Reawaken the user with more crap to let him/her ponder over
 c  what could possibly be going wrong. Give him/her as much as
@@ -432,12 +436,12 @@ c
 	    call output(line)
 	    write(line,21)Immin,Immax
 	    call output(line)
-	    write(line,22)Rms,Flux,NomGrd
+	    write(line,22)Rms,Flux,GradJJ/Grad11
 	    call output(line)
 	    write(line,23)StLim,StLen1,StLen2
 	    call output(line)
 	  else if(message.eq.normal)then
-	    write(line,24)Niter,Rms,Flux,NomGrd
+	    write(line,24)Niter,Rms,Flux,GradJJ/Grad11
 	    call output(line)
 	  endif
 c
@@ -454,8 +458,8 @@ c
 c  Check for convergence.
 c
 	 converge = (Rms-TRms       .lt.0.05*TRms		  .and.
-     *		    (abs(Flux-TFlux).lt.0.05*TFlux .or.TFlux.lt.0.).and.
-     *		     NomGrd	    .lt.Tol			  )
+     *		    (abs(Flux-TFlux).lt.0.05*TFlux.or..not.doflux).and.
+     *		     GradJJ/Grad11  .lt.Tol			  )
 	enddo
 c------------------------------------------------------------------------
 c
@@ -477,7 +481,7 @@ c
 c  Construct a header for the output file, and give some history
 c  information.
 c
-	call Header(lMap,lOut,blc,trc,version,niter,q,trms,tflux)
+	call Header(lMap,lOut,blc,trc,version,niter)
 c
 c  Close up the files. Ready to go home.
 c
@@ -607,93 +611,6 @@ c
 	enddo
 	end
 c************************************************************************
-	subroutine Header(lMap,lOut,blc,trc,version,niter,q,trms,tflux)
-c
-	integer lMap,lOut
-	integer blc(3),trc(3)
-	character version*(*)
-	integer niter
-	real q,trms,tflux
-c
-c  Write a header for the output file.
-c
-c  Input:
-c    version	Program version ID.
-c    lMap	The handle of the input map.
-c    lOut	The handle of the output estimate.
-c    blc	Blc of the bounding region.
-c    trc	Trc of the bounding region.
-c    niter	The maximum number of iterations performed.
-c    q		Pixels per beam.
-c    trms	Target rms.
-c    tflux	Target flux.
-c
-c------------------------------------------------------------------------
-	integer i,lblc,ltrc
-	real crpix1,crpix2,crpix3
-	character line*72,txtblc*32,txttrc*32
-	integer nkeys
-	parameter(nkeys=28)
-	character keyw(nkeys)*8
-c
-c  Externals.
-c
-	character itoaf*8
-c
-	data keyw/   'cdelt1  ','cdelt2  ','cdelt3  ','crval1  ',
-     *	  'crval2  ','crval3  ','ctype1  ','ctype2  ','ctype3  ',
-     *    'date-obs','epoch   ','history ','instrume','lstart  ',
-     *	  'lstep   ','ltype   ','lwidth  ','object  ','pbfwhm  ',
-     *	  'observer','telescop','xshift  ','yshift  ','obsra   ',
-     *	  'obsdec  ','restfreq','vobs    ','btype   '/
-c
-c  Fill in some parameters that will have changed between the input
-c  and output.
-c
-	call wrhda(lOut,'bunit','JY/PIXEL')
-	call rdhdr(lMap,'crpix1',crpix1,1.)
-	call rdhdr(lMap,'crpix2',crpix2,1.)
-	call rdhdr(lMap,'crpix3',crpix3,1.)
-	crpix1 = crpix1 - blc(1) + 1
-	crpix2 = crpix2 - blc(2) + 1
-	crpix3 = crpix3 - blc(3) + 1
-	call wrhdr(lOut,'crpix1',crpix1)
-	call wrhdr(lOut,'crpix2',crpix2)
-	call wrhdr(lOut,'crpix3',crpix3)
-	call wrhdi(lOut,'niters',Niter)
-c
-c  Copy all the other keywords across, which have not changed and add history
-c
-	do i=1,nkeys
-	  call hdcopy(lMap, lOut, keyw(i))
-	enddo
-c
-c  Write crap to the history file, to attempt (ha!) to appease Neil.
-c  Neil is not easily appeased you know.  Just a little t.l.c. is all he needs.
-c  
-c
-	call hisopen(lOut,'append')
-        line = 'MAXEN: Miriad '//version
-	call hiswrite(lOut,line)
-	call hisinput(lOut,'MAXEN')
-c
-	call mitoaf(blc,3,txtblc,lblc)
-	call mitoaf(trc,3,txttrc,ltrc)
-	line = 'MAXEN: Bounding region is Blc=('//txtblc(1:lblc)//
-     *				       '),Trc=('//txttrc(1:ltrc)//')'
-	call hiswrite(lOut,line)
-c
-	write(line,'(a,1pg8.1)')'MAXEN: Pixels per beam =',q
-	call hiswrite(lOut,line)
-	write(line,'(a,1pg10.3,a,1pg10.3)')'MAXEN: Target rms =',trms,
-     *						 ' Target flux=',tflux
-	call hiswrite(lOut,line)
-c
-	call hiswrite(lOut,'MAXEN: Total Iterations = '//itoaf(Niter))
-	call hisclose(lOut)
-c
-	end
-c************************************************************************
 	subroutine BeamChar(lBeam,n1,n2,Qest,icentre,jcentre)
 c
 	implicit none
@@ -721,8 +638,6 @@ c------------------------------------------------------------------------
 c
 	integer ismax
 c
-	common/MaxEnCom/Data
-c
 	imin = max(n1/2+1-nP,1)
 	imax = min(n1/2+1+nP,n1)
 	jmin = max(n2/2+1-nP,1)
@@ -749,36 +664,23 @@ c
 	if(abs(1-bmax).gt.0.01) call bug('f','Beam peak is not 1')
 	end
 c************************************************************************
-	subroutine IntStep(nPoint,Old,New,StLen,Clip)
+	subroutine IntStep(nPoint,Old,New,FracNew)
 c
 	implicit none
 	integer nPoint
-	real StLen,Clip
+	real FracNew
 	real Old(nPoint),New(nPoint)
 c
 c  Update the current image by interpolating between two previous ones.
-c  Note that in Clip is positive, clipping is performed, otherwise
-c  clipping is not performed.  We could avoid the need to worry
-c  about clipping by making sure StLen is less than or equal to 1.
-c  When clipping does take place (i.e. clipping of the image estimate)
-c  this makes the residuals only approximately correct. However, as
-c  Cornwell states, clipping only occurs during the first few iterations
-c  and is unimportant in the latter, more critical iterations.
-c
 c------------------------------------------------------------------------
-	real Frac
+	real FracOld
 	integer i
 c
-	Frac = 1. - StLen
-	if(Clip.gt.0)then
-	  do i=1,nPoint
-	    Old(i) = max( Clip, Frac*Old(i) + StLen*New(i) )
-	  enddo
-	else
-	  do i=1,nPoint
-	    Old(i) = Frac*Old(i) + StLen*New(i)
-	  enddo
-	endif
+	FracOld = 1. - FracNew
+	do i=1,nPoint
+	  Old(i) = FracOld*Old(i) + FracNew*New(i)
+	enddo
+c
 	end
 c************************************************************************
 	subroutine ChekStep(nPoint,OldEst,Est,Res,
@@ -811,13 +713,12 @@ c------------------------------------------------------------------------
 	integer n,l,ltot
 	real GradJ,Step
 	real dH(run),d2H(run)
-	common/MaxEnCom/dH,d2H
 c
 	J0 = 0.
 	n = 0
 	do while(n.lt.nPoint)
 	  ltot = min(nPoint-n,run)
-	  call EntFunc(measure,ltot,Est(n+1),Default,dH,d2H)
+	  call EntFunc(measure,ltot,Est(n+1),Default(n+1),dH,d2H)
 	  do l=1,ltot
 	    GradJ = dH(l) - 2.*Alpha*Q*Res(n+l) - Beta
 	    Step = Est(n+l) - OldEst(n+l)
@@ -828,12 +729,83 @@ c
 c
 	end
 c************************************************************************
+	subroutine NewAlpB(Alpha,Beta,De,Df,doflux,GradEE,GradEF,
+     *		GradEJ,GradFF,GradFJ,GradJJ,Grad11,GradEH,GradFH)
+c
+	implicit none
+	real Alpha,Beta,De,Df,GradEE,GradEF
+	real GradEJ,GradFF,GradFJ,GradJJ,Grad11,GradEH,GradFH
+	logical doflux
+c
+c  Determine new values for alpha and beta.
+c------------------------------------------------------------------------
+	real Denom,Dalp,Dbet,l,Alpha1,Alpha2,Beta1,Beta2,b2m4ac
+c
+c  Check if things are doing poorly. If so, just aim at reducing the
+c  gradient.
+c
+	l = 10*abs(GradJJ/Grad11)
+c
+	if(doflux)then
+	  Denom = 1./(GradEE*GradFF - GradEF*GradEF)
+	  Alpha1 = (GradFF*GradEH - GradEF*GradFH) * Denom
+	  Beta1  = (GradEE*GradFH - GradEF*GradEH) * Denom
+	else
+	  Alpha1 = GradEH / GradEE
+	  Beta1  = 0
+	endif
+c
+	if(doflux)then
+	  Denom = 1./(GradEE*GradFF - GradEF*GradEF)
+	  Dalp = ( GradFF*(De+GradEJ) - GradEF*(Df+GradFJ) ) * Denom
+	  Dbet =-( GradEF*(De+GradEJ) - GradEE*(Df+GradFJ) ) * Denom
+	else
+	  Denom = 1./GradEE
+	  Dalp = (De+GradEJ) * Denom
+	  Dbet = 0.
+	endif
+c
+	b2m4ac = GradEJ*GradEJ - (GradJJ-0.3*Grad11)*GradEE
+        if(b2m4ac.gt.0.and.Alpha.eq.0)then
+          b2m4ac = sqrt(b2m4ac)
+	  Dalp = max((GradEJ - b2m4ac)/GradEE,
+     *		 min((GradEJ + b2m4ac)/GradEE,Dalp))
+        endif
+c
+        b2m4ac = GradFJ*GradFJ - (GradJJ-0.3*Grad11)*GradFF
+        if(b2m4ac.gt.0.and.Beta.eq.0)then
+          b2m4ac = sqrt(b2m4ac)
+	  Dbet = max((GradFJ - b2m4ac)/GradFF,
+     *		 min((GradFJ + b2m4ac)/GradFF,Dbet))
+        endif
+c
+	Alpha2 = Alpha+ Dalp
+	Beta2  = Beta + Dbet
+c
+	if(l.ge.1.or.Alpha2.le.0)then
+	  Alpha = max(Alpha1,0.)
+	else if(l.le.0.or.Alpha1.le.0)then
+	  Alpha = max(Alpha2,0.)
+	else
+	  Alpha = exp(l*log(Alpha1) + (1-l)*log(Alpha2))
+	endif
+c
+	if(l.ge.1.or.Beta2.le.0)then
+	  Beta = max(Beta1,0.)
+	else if(l.le.0.or.Beta1.le.0)then
+	  Beta = max(Beta2,0.)
+	else
+	  Beta = exp(l*log(Beta1) + (1-l)*log(Beta2))
+	endif
+c
+	end
+c************************************************************************
 	subroutine CalStep(nPoint,Estimate,Residual,Step,
-     *		measure,Default,Alpha,Beta,Q,Length,J0)
+     *		measure,Default,Alpha,Beta,Q,J0)
 c
 	implicit none
 	integer nPoint,measure
-	real Default(nPoint),Alpha,Beta,Q,Length,J0
+	real Default(nPoint),Alpha,Beta,Q,J0
 	real Estimate(nPoint),Residual(nPoint),Step(nPoint)
 c
 c  Calculate the step to take next.
@@ -847,7 +819,6 @@ c    measure	Determines the entropy measure used.
 c
 c  Output:
 c    Step	The step to take towards a better estimate.
-c    Length	A measure of the length of the step.
 c    J0		The current value for GradJJ.
 c
 c------------------------------------------------------------------------
@@ -856,54 +827,54 @@ c------------------------------------------------------------------------
 	integer n,l,ltot
 	real Temp, Diag, GradJ, Stepd
 	real dH(run),d2H(run)
-	common/MaxEnCom/dH,d2H
 c
 	Temp = 2.*Alpha*Q*Q
 	J0 = 0
-	Length = 0.
 c
 	n = 0
 	dowhile(n.lt.nPoint)
 	  ltot = min(nPoint-n,run)
-	  call EntFunc(measure,ltot,Estimate(n+1),Default,dH,d2H)
+	  call EntFunc(measure,ltot,Estimate(n+1),Default(n+1),dH,d2H)
 	  do l=1,ltot
 	    Diag = 1 / (Temp - d2H(l))
 	    GradJ = dH(l) - 2.*Q*Alpha*Residual(n+l) - Beta
 	    Stepd = Diag*GradJ
-	    Length = Length + Stepd*Stepd/abs(Estimate(n+l))
 	    J0 = J0 + GradJ*Stepd
 	    Step(n+l) = Stepd
 	  enddo
 	  n = n + ltot
 	enddo
+c
 	end
 c************************************************************************
-	subroutine TakeStep(nPoint,Estimate,NewEst,StLen,Clip)
+	subroutine TakeStep(nPoint,Est,NewEst,StLen,Clip,StLim)
 c
 	implicit none
 	integer nPoint
-	real Estimate(nPoint),NewEst(nPoint)
-	real StLen,Clip
+	real Est(nPoint),NewEst(nPoint)
+	real StLen,Clip,StLim
 c
 c  Take the final step!
 c
 c------------------------------------------------------------------------
 	integer i
+	real Stepd
 c
 	if(Clip.gt.0)then
 	  do i=1,nPoint
-	    NewEst(i) = max(Clip,Estimate(i) + StLen*NewEst(i))
+	    Stepd = StLen*max(NewEst(i),(Clip-Est(i))/StLim)
+	    NewEst(i) = Est(i) + Stepd
 	  enddo
 	else
 	  do i=1,nPoint
-	    NewEst(i) = Estimate(i) + StLen*Estimate(i)
+	    NewEst(i) = Est(i) + StLen*NewEst(i)
 	  enddo
 	endif
 	end
 c************************************************************************
 	subroutine GetInfo(nPoint,Est,Res,Measure,Default,Alpha,Beta,Q,
      *	  GradEE,GradEF,GradEH,GradEJ,GradFF,GradFH,GradFJ,
-     *    GradHH,GradJJ,NomGrd,Immax,Immin,Flux,Rms)
+     *    GradHH,GradJJ,Grad11,Immax,Immin,Flux,Rms)
 c
 	implicit none
 	integer nPoint
@@ -911,7 +882,7 @@ c
 	integer Measure
 	real Default(nPoint),Alpha,Beta,Q
 	real GradEE,GradEF,GradEH,GradEJ,GradFF,GradFH,GradFJ
-	real GradHH,GradJJ,NomGrd,Immax,Immin,Flux,Rms
+	real GradHH,GradJJ,Grad11,Immax,Immin,Flux,Rms
 c
 c  Get information on the current state of play.
 c
@@ -926,14 +897,13 @@ c    Q
 c
 c  Outputs:
 c    GradEE,GradEF,GradEH,GradEJ,GradFF,GradFH,GradFJ
-c    GradHH,GradJJ,NomGrd,Immax,Immin,Flux,Rms
+c    GradHH,GradJJ,Grad11,Immax,Immin,Flux,Rms
 c------------------------------------------------------------------------
 	integer Run
 	parameter(Run=1024)
 	integer n,l,ltot,Imax,Imin
-	real Diag,GradE,GradH,Length
+	real Diag,GradE,GradH
 	real dH(Run),d2H(Run)
-	common/MaxEnCom/dH,d2H
 c
 c  Externals to find min and max indices.
 c
@@ -951,7 +921,7 @@ c
 	Flux   = 0.
 	do while(n.lt.nPoint)
 	  ltot = min(Run,nPoint-n)
-	  call EntFunc(measure,ltot,Est(n+1),Default,dH,d2H)
+	  call EntFunc(measure,ltot,Est(n+1),Default(n+1),dH,d2H)
 	  do l=1,ltot
 	    GradE = 2. * Q * Res(n+l)
 	    GradH = dH(l)
@@ -984,10 +954,8 @@ c
 	GradJJ = GradHH + Alpha*Alpha*GradEE + Beta*Beta*GradFF
      *		- 2.*Alpha*GradEH - 2.*Beta*GradFH
      *		+ 2.*Alpha*Beta*GradEF
-	Length = GradHH + Alpha*Alpha*GradEE + Beta*Beta*GradFF
-	if(Length.le.0.)Length = GradFF
-	NomGrd = 0.
-	if(Length.gt.0.and.GradJJ.gt.0.)NomGrd = GradJJ/Length
+	Grad11 = GradHH + Alpha*Alpha*GradEE + Beta*Beta*GradFF
+	if(Grad11.le.0)Grad11 = GradFF
 c
 	end	
 c************************************************************************
@@ -1030,21 +998,17 @@ c  The Gull, Daniel and Skilling measure.
 c
 	if(measure.eq.gull)then
 	  do i=1,n
-	    if(Default(i).gt.0.)then
-	      dH(i) = -log(Est(i)/Default(i))
-	      d2H(i) = -1.0/Est(i)
-	    endif
+	    dH(i) = -log(Est(i)/Default(i))
+	    d2H(i) = -1.0/Est(i)
 	  enddo
 c
 c  Cornwells UTESS measure.
 c
 	else
 	  do i=1,n
-	    if(Default(i).gt.0.)then
-	      def = 1/Default(i)
-	      dH(i) = -def * tanh(Est(i)*def)
-	      d2H(i) = dH(i)*dH(i) - def*def
-	    endif
+	    def = 1/Default(i)
+	    dH(i) = -def * tanh(Est(i)*def)
+	    d2H(i) = dH(i)*dH(i) - def*def
 	  enddo
 	endif
 c
@@ -1065,5 +1029,85 @@ c
 	do i=1,nPoint
 	  Residual(i) = Residual(i) - Map(i)
 	enddo
+c
+	end
+c************************************************************************
+	subroutine Header(lMap,lOut,blc,trc,version,niter)
+c
+	integer lMap,lOut
+	integer blc(3),trc(3)
+	character version*(*)
+	integer niter
+c
+c  Write a header for the output file.
+c
+c  Input:
+c    version	Program version ID.
+c    lMap	The handle of the input map.
+c    lOut	The handle of the output estimate.
+c    blc	Blc of the bounding region.
+c    trc	Trc of the bounding region.
+c    niter	The maximum number of iterations performed.
+c
+c------------------------------------------------------------------------
+	include 'maxnax.h'
+	integer i,lblc,ltrc
+	real crpix
+	character line*72,txtblc*32,txttrc*32,num*2
+	integer nkeys
+	parameter(nkeys=14)
+	character keyw(nkeys)*8
+c
+c  Externals.
+c
+	character itoaf*8
+c
+	data keyw/   'obstime ','epoch   ','history ','lstart  ',
+     *	  'lstep   ','ltype   ','lwidth  ','object  ','pbfwhm  ',
+     *	  'observer','telescop','restfreq','vobs    ','btype   '/
+c
+c  Fill in some parameters that will have changed between the input
+c  and output.
+c
+	call wrhda(lOut,'bunit','JY/PIXEL')
+	call wrhdi(lOut,'niters',Niter)
+c
+	do i=1,MAXNAX
+	  num = itoaf(i)
+	  if(i.le.3)then
+	    call rdhdr(lMap,'crpix'//num,crpix,1.)
+	    crpix = crpix - blc(i) + 1
+	    call wrhdr(lOut,'crpix'//num,crpix)
+	  else
+	    call hdcopy(lMap,lOut,'crpix'//num)
+	  endif
+	  call hdcopy(lMap,lOut,'cdelt'//num)
+	  call hdcopy(lMap,lOut,'crval'//num)
+	  call hdcopy(lMap,lOut,'ctype'//num)
+	enddo
+c
+c  Copy all the other keywords across, which have not changed and add history
+c
+	do i=1,nkeys
+	  call hdcopy(lMap, lOut, keyw(i))
+	enddo
+c
+c  Write crap to the history file, to attempt (ha!) to appease Neil.
+c  Neil is not easily appeased you know.  Just a little t.l.c. is all he needs.
+c  
+c
+	call hisopen(lOut,'append')
+        line = 'MAXEN: Miriad '//version
+	call hiswrite(lOut,line)
+	call hisinput(lOut,'MAXEN')
+c
+	call mitoaf(blc,3,txtblc,lblc)
+	call mitoaf(trc,3,txttrc,ltrc)
+	line = 'MAXEN: Bounding region is Blc=('//txtblc(1:lblc)//
+     *				       '),Trc=('//txttrc(1:ltrc)//')'
+	call hiswrite(lOut,line)
+c
+	call hiswrite(lOut,'MAXEN: Total Iterations = '//itoaf(Niter))
+	call hisclose(lOut)
 c
 	end
