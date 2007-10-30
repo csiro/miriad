@@ -1,5 +1,5 @@
 	integer MAXPARMS
-	parameter(MAXPARMS=128)
+	parameter(MAXPARMS=256)
 	integer nparms
 	character parname(MAXPARMS)*24
 	double precision parvalue(MAXPARMS)
