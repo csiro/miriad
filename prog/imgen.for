@@ -111,10 +111,12 @@ c    rjs   02jul97  cellscal change.
 c    rjs   14jul97  Check when there are too many objects and increase
 c		    max number of objects.
 c    rjs   23jul97  added pbtype.
+c    rjs   29oct97  Check that the coords for a point source fall within
+c		    the image.
 c  Bugs/Wishlist:
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Imgen: version 1.1 23-Jul-97' )
+	parameter(version='Imgen: version 1.1 29-Oct-97' )
 	include 'mirconst.h'
 	include 'maxdim.h'
 	include 'maxnax.h'
@@ -575,7 +577,8 @@ c
 	else if(object.eq.'point')then
 	  i = nint(x)
 	  j = nint(y)
-	  if(j.eq.j0)Data(i) = Data(i) + Amp
+	  if(j.eq.j0.and.i.ge.1.and.i.le.n1)
+     *		Data(i) = Data(i) + Amp
 c
 c  Should never get here.
 c
