@@ -85,6 +85,7 @@ c	          reflect size of the selected region on the third axis
 c    nebk 06may97 Comment out the "INcluding plane ..." message
 c    rjs  02jul97 cellscal change.
 c    rjs  23jul97 added pbtype.
+c    rjs  02apr98 Increase maxruns.
 c------------------------------------------------------------------------
       implicit none
 c
@@ -92,8 +93,8 @@ c
       include 'maxnax.h'
       integer maxboxes, maxruns, maxplane
       character*20 version
-      parameter (maxboxes = 1024, maxruns = 3*maxdim, maxplane = 1024)
-      parameter (version = '23-Jul-97')
+      parameter (maxboxes = 1024, maxruns = 9*maxdim, maxplane = 1024)
+      parameter (version = '2-Apr-98')
 cc
       real buffer(maxbuf)
       integer avpnt, npnt
