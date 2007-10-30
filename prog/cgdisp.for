@@ -575,6 +575,8 @@ c		   can now overlap
 c    nebk 23may96  Bump up size of OLAY line
 c    nebk 04sep96  Remove spurious call to pgsci in subroutine DROVER
 c    nebk 24sep96  Remove another (!) spurious call to pgsci in DROVER
+c    nebk 31oct96  FIx problem with an incorrect krng sometimes being
+c                  fed to NAXLABCG
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -636,7 +638,7 @@ c
       data coltab /maxchan*0/
       data lwid /maxconp3*1/
 c-----------------------------------------------------------------------
-      call output ('CgDisp: version 24-Sep-96')
+      call output ('CgDisp: version 31-Oct-96')
       call output (' ')
 c
 c Get user inputs
@@ -781,32 +783,29 @@ c
 c Read in mask image as required
 c
          if (mskin.ne.' ') then
-           if (msize(3).gt.1) then
-             krng(1) = grpbeg(j)
-             krng(2) = ngrp(j)
-             call readbcg (.true., lm, ibin, jbin, krng, blc, trc, 
-     +                     meml(ipimm), doblm)
-           else
-             if (.not.bdone) then
+           if (msize(3).le.1) then
                krng(1) = 1
                krng(2) = 1
-               call readbcg (.true., lm, ibin, jbin, krng, blc, trc, 
-     +                       meml(ipimm), doblm)
-             else
-               bdone = .true.
-             end if
+           else
+              krng(1) = grpbeg(j)
+              krng(2) = ngrp(j)
+           end if
+           if (.not.bdone) then
+             call readbcg (.true., lm, ibin, jbin, krng, blc, trc, 
+     +                     meml(ipimm), doblm)
+             bdone = .true.
            end if
          end if
 c
 c Deal with pixel map image 
 c
          if (gin.ne.' ') then
-           if (gsize(3).gt.1) then
-             krng(1) = grpbeg(j)
-             krng(2) = ngrp(j)
-           else
+           if (gsize(3).le.1) then
              krng(1) = 1
              krng(2) = 1
+           else
+              krng(1) = grpbeg(j)
+              krng(2) = ngrp(j)
            end if
 c
 c Apply transfer function to pixel range. Apply the last
@@ -872,6 +871,8 @@ c
 c
 c Draw frame, write numeric labels, ticks and optional grid
 c
+         krng(1) = grpbeg(j)
+         krng(2) = ngrp(j)
          call naxlabcg (lhead, .true., blc, trc, krng, labtyp, 
      +                  donxlab, donylab, nofirst, grid)
 c
@@ -3580,9 +3581,9 @@ c dimension image involved (i.e., 2-D/3-D).
 c
       call boxinfo (boxes, 3, blc, trc)
       do i = 1, min(3,naxis)
-        call rdhdi (lhead, 'naxis'//itoaf(i), size(i), 0)
-        blc(i) = max(1,blc(i))
-        trc(i) = min(size(i),trc(i))
+         call rdhdi (lhead, 'naxis'//itoaf(i), size(i), 0)
+         blc(i) = max(1,blc(i))
+         trc(i) = min(size(i),trc(i))
       end do
 c
 c Adjust spatial window to fit an integral number of bins and
