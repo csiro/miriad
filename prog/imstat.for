@@ -37,6 +37,7 @@ c
 c   'noheader'    Do not write the header information, just the numbers,
 c                 producing an ASCII file for a plotting program
 c   'nolist'      Do not write the statistics to the screen/logfile
+c   'eformat'     Always use format 'e' instead of 'g' to write results
 c
 c   'xmin,#'      Give lower x-value on axis
 c   'xmax,#'      Give upper x-value on axis
@@ -96,6 +97,7 @@ c  If specified, output is written to the file given by log= instead
 c  of to the terminal.
 c--
 c
+c
 c   History:
 c
 c    20jul91  bpw  Original version
@@ -133,6 +135,7 @@ c    26nov93  bpw  Fix to avoid array bounds violation pointed out by rjs.
 c                  Also work arounds HP compiler bug as indicated by rjs
 c    17jun94  bpw  Finally add the real region keyword (i.e. boxruns),
 c                  because Doug needed it
+c    25oct94  bpw  introduce option 'eformat'
 c
 c------------------------------------------------------------------------
 
@@ -168,7 +171,7 @@ c the include file.
       program imstaspc
 
       character*21     version
-      parameter        ( version = 'version 2.2 17-Jun-94' )
+      parameter        ( version = 'version 2.2 25-Oct-94' )
       character*29     string
 
       include          'imstat.h'
@@ -337,6 +340,8 @@ c the default is to write a header
 c the default is to write out the spectrum for IMSTAT, not for IMSPEC
       if( NAME.eq.'IMSTAT' ) plotvar( LIST ) =  1
       if( NAME.eq.'IMSPEC' ) plotvar( LIST ) =  0
+c the default is 'g' format
+      plotvar( EFMT )     = 0
 c the default plot style is to connect the points
       plotvar( STYLE )    = matchnr( 'connect', styles )
 c the default is not to convert the data units
@@ -392,6 +397,8 @@ c with arguments, these are read and tested.
                plotvar(LIST) = 0
             elseif( i.eq.matchnr('list',commonop) ) then
                plotvar(LIST) = 1
+            elseif( i.eq.matchnr('eformat',commonop) ) then
+               plotvar(EFMT) = 1
             elseif( i.eq.matchnr('style',commonop) ) then
                call keya( 'options', option, ' ' )
                call assertl( match(option,styles,i), 'Illegal style' )
@@ -1522,7 +1529,11 @@ c Construct the output line for the typed list
      *          write( line, '( i6,1x, a )' ) nint(iarr(i)), carr(i)
 c 13 is really len(axlabel)+1, but axlabel is an unknown variable here
 c and it would be messy to transfer just to get the length of it.
-            write( fmt, '( ''( '',i1,''(1pg10.3),i8 )'' )' ) nstat-1
+            if(plotvar(EFMT).eq.1) then
+	      write( fmt, '( ''( '',i1,''(1pe10.3),i8 )'' )' ) nstat-1
+            else
+              write( fmt, '( ''( '',i1,''(1pg10.3),i8 )'' )' ) nstat-1
+            endif
             write( temp, fmt=fmt )
      *             ( statarr(j,i),j=1,nstat-1 ), nint(statarr(nstat,i))
 c           The following is workaround HP compiler bug
