@@ -14,6 +14,9 @@ c	the first three axes of an image is supported.
 c
 c@ in
 c	The input image name. No default.
+c	NOTE: REGRID can perform very poorly when the input image contains
+c	blanked pixels. Regridding of such images should be done with
+c	significant caution.
 c@ tin
 c	Input template image.  The axis descriptors of the regridded
 c	image, for those axes specified by keyword "axis", are those
@@ -82,6 +85,8 @@ c    03jan95 nebk  REGZ was failing if output longer than input
 c    26jun95 nebk  Warning instead of fatal if ungridded axes
 c		   have silly axis descriptors. options=quiet
 c    16nov96 nebk  AXFNDCG -> AXFNDCO and new call sequence
+c    24mar97 rjs   At least warn people when it may screw up because of
+c		   blanked pixels.
 c
 c To do:
 c     add simple transformation option (scale,shift etc)
@@ -1829,6 +1834,10 @@ cc
       integer i
       character itoaf*1, str*1
       logical dora
+c
+c  Externals.
+c
+      logical hdprsnt
 c-----------------------------------------------------------------------
 c
 c  Open file
@@ -1848,6 +1857,13 @@ c
         call rdhda (lun, 'ctype'//str, ctype(i), ' ')
       end do
       if (nsize(1).gt.maxdim) call bug('f','Input file too big for me')
+c
+c  If there is a blanking mask, give a warning.
+c
+      if(hdprsnt(lun,'mask'))then
+	call bug('w','The input image has an attached blanking mask')
+	call bug('w','REGRID can perform VERY poorly on blanked images')
+      endif
 c
 c  Look for RA and DEC axes 
 c
