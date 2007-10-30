@@ -10,6 +10,7 @@ c
 c  subroutine pbInit(pbObj,pbtype,coObj)
 c  subroutine pbInitc(pbObj,pbtype,coObj,in,x1)
 c  subroutine pbInfo(pbObj,pbfwhm,cutoff,maxrad)
+c  subroutine pbExtent(pbObj,x0,y0,xrad,yrad)
 c  real function pbGet(pbObj,x,y)
 c  real function pbDer(pbObj,x,y)
 c  subroutine pbFin(pbObj)
@@ -32,8 +33,19 @@ c  pbInfo returns information about the primary beam -- firstly its FWHM.
 c  A primary beam is also assumed to cut-off at some value. The minimum
 c  value and the radius at which it occurs are also give.
 c
+c  Similarly pbExtent returns information about a primary beam, such as
+c  its centre (x0,y0), and maximum extent in x and y (all in grid units).
+c
 c  Finally pbFin tidies up whatever it needs to.
 c
+c  History:
+c
+c   10nov92   nebk   Original version.
+c   24nov92   nebk   More header comments to appease pjt.
+c   07jan93   nebk   Rewrite calling interface again
+c   15feb93   nebk   pbfwhm=0 -> single dish, <0 -> unknown
+c   25oct93   rjs    Prevent floating underflow in exp function.
+c   25oct94   rjs    Complete rewrite.
 c************************************************************************
 c* pbRead -- Determine the primary beam type of a dataset.
 c& rjs
@@ -512,6 +524,42 @@ c
 	else
 	  maxradd = 0
 	endif
+c
+	end
+c************************************************************************
+c* pbExtent -- Return the extent of a primary beam.
+c& rjs
+c: image-data
+c+
+	subroutine pbExtent(pbObj,x,y,xext,yext)
+c
+	implicit none
+	integer pbObj
+	real x,y,xext,yext
+c
+c  This returns information about a primary beam.
+c
+c  Input:
+c    pbObj	Handle of the primary beam object.
+c  Output:
+c    x,y	The primary beam centre, in grid units.
+c    xext,yext	The distance to which the primary beam
+c		can be assumed to be non-zero.
+c    The primary beam will be non-zero only in the region
+c    [x0-xext,x0+xext] x [y0-yext,y0+yext].
+c--
+c------------------------------------------------------------------------
+	include 'mirconst.h'
+	include 'pb.h'
+	integer k
+c
+	k = pnt(pbObj)
+c
+	x = x0(pbObj)
+	y = y0(pbObj)
+c
+	xext = sqrt(maxrad(k)/xc(pbObj))
+	yext = sqrt(maxrad(k)/yc(pbObj))
 c
 	end
 c************************************************************************
