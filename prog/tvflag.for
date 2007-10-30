@@ -67,6 +67,7 @@ c    nebk  09mar94    Declare APRI long enough to avoid string truncation
 c                     warning on convex (does not affect run time performance)
 c    rjs   27jul94    Get rid of some debugging write statements.
 c    rjs   11nov94    Eliminate bounds violation for large numbers of times.
+c    rjs   20feb95    Grid multiple thingos in one pass.
 c***********************************************************************
 c= TvFlag - Interactive editing of a UV data set on a TV device.
 c& jm
@@ -494,8 +495,7 @@ c
 c  Enter the gridding loop.
 c  Determine the baselines to process on this pass.
 c
-	do k=1,nbl
-	  nstep = 1
+	do k=1,nbl,nstep
 	  nbld = 0
 	  do i=1,nbased
 	    if(blpres(i).and.nbld.lt.nstep)then
