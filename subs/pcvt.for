@@ -1,4 +1,12 @@
 c************************************************************************
+c
+c  Convert between pixel coordinates of two coordinate systems.
+c
+c  History:
+c    21jul97 rjs  Stripped out of regrid.
+c    22jul97 rjs  Support galactic/equatorial and epoch conversion
+c
+c************************************************************************
 	subroutine PcvtInit(coObj1d,coObj2d)
 c
 	implicit none
@@ -25,9 +33,9 @@ c
 	call coGetd(coObj2,'naxis',dtemp)
 	if(naxis.ne.nint(dtemp))call bug('f','Differing number of axes')
 c
-	nop = .true.
 	dofk45z = .false.
 	dofk54z = .false.
+	galeq = 0
 	ira = 0
 	idec = 0
 c
@@ -43,28 +51,30 @@ c
      *		  ctype1(1:4).ne.'FREQ')then
 	    call coVelSet(coObj1,'FREQ')
 c
-c  RA and DEC axes.
+c  RA axes.
 c
-	  else if((ctype2(1:4).eq.'RA--'.or.ctype2(1:4).eq.'DEC-')
-     *	     .and.(ctype1(1:4).eq.ctype2(1:4)))then
-	    if(ctype1(1:4).eq.'RA--')then
-	      ira = i
-	    else
-	      idec = i
+	  else if((ctype1(1:4).eq.'RA--'.or.ctype1(1:4).eq.'GLON').and.
+     *		  (ctype2(1:4).eq.'RA--'.or.ctype2(1:4).eq.'GLON'))then
+	    ira = i
+	    if(ctype1(1:4).eq.'RA--'.and.
+     *		ctype1(1:4).ne.ctype2(1:4))then
+	      galeq = -1
+	    else if(ctype1(1:4).eq.'GLON'.and.
+     *		ctype1(1:4).ne.ctype2(1:4))then
+	      galeq = 1
 	    endif
-	    call coGetd(coObj1,'epoch',epoch1)
-	    call coGetd(coObj2,'epoch',epoch2)
-	    if(epoch1.lt.1800)epoch1 = epoch2
-	    if(abs(epoch1-epoch2).gt.0.1)then
-	      if(abs(epoch1-1950).le.0.1.and.
-     *	         abs(epoch2-2000).le.0.1)then
-	        dofk45z = .true.
-	      else if(abs(epoch1-2000).le.0.1.and.
-     *		      abs(epoch2-1950).le.0.1)then
-		dofk54z = .true.
-	      else
-	        call bug('f','Unsupported epoch conversion requested')
-	      endif
+c
+c  DEC axes.
+c
+	  else if((ctype1(1:4).eq.'DEC-'.or.ctype1(1:4).eq.'GLAT').and.
+     *		  (ctype2(1:4).eq.'DEC-'.or.ctype2(1:4).eq.'GLAT'))then
+	    idec = i
+	    if(ctype1(1:4).eq.'DEC-'.and.
+     *		ctype1(1:4).ne.ctype2(1:4))then
+	      galeq = -1
+	    else if(ctype1(1:4).eq.'GLAT'.and.
+     *		ctype1(1:4).ne.ctype2(1:4))then
+	      galeq = 1
 	    endif
 c
 c  All other conversions.
@@ -83,6 +93,27 @@ c
 	    endif
 	  endif
 	enddo
+c
+c  Determine whether equinox conversion has to be done.
+c
+	if(ira.ne.0.and.idec.ne.0)then
+	  call coGetd(coObj1,'epoch',epoch1)
+	  if(epoch1.lt.1800)epoch1 = 1950
+	  call coGetd(coObj2,'epoch',epoch2)
+	  if(epoch2.lt.1800)epoch2 = 1950
+c
+	  if(abs(epoch1-epoch2).gt.0.1)then
+	    if(abs(epoch1-1950).le.0.1.and.
+     *	       abs(epoch2-2000).le.0.1)then
+	      dofk45z = .true.
+	    else if(abs(epoch1-2000).le.0.1.and.
+     *	       abs(epoch2-1950).le.0.1)then
+	      dofk54z = .true.
+	    else
+	      call bug('f','Unsupported epoch conversion requested')
+	    endif
+	  endif
+	endif
 c
 c  If we are to do epoch conversion, check that it makes sense.
 c
@@ -116,7 +147,10 @@ c
 	  call fk45z(xa(ira),xa(idec),obstime,ra2000,dec2000)
 	  xa(ira) = ra2000
 	  xa(idec) = dec2000
-	else if(dofk54z)then
+	endif
+	if(galeq.lt.0)call dsfetra(xa(ira),xa(idec),.false.,-galeq)
+	if(galeq.gt.0)call dsfetra(xa(ira),xa(idec),.true.,  galeq)
+	if(dofk54z)then
 	  call fk54z(xa(ira),xa(idec),obstime,ra1950,dec1950,dra,ddec)
 	  xa(ira) = ra1950
 	  xa(idec) = dec1950
