@@ -1099,16 +1099,16 @@ c
 	if(hdprsnt(Lin,'cgains'))then
 	  umsg = prog//'Copying cgains table'
 	  call output(umsg)
-          call hdcopy(tIn,tOut,'cgains')
-          call hdcopy(tIn,tOut,'ncbase')
-          call hdcopy(tIn,tOut,'ncgains')
+          call hdcopy(Lin,Lout,'cgains')
+          call hdcopy(Lin,Lout,'ncbase')
+          call hdcopy(Lin,Lout,'ncgains')
 	endif
 	if(hdprsnt(Lin,'wgains'))then
 	  umsg = prog//'Copying wgains table'
 	  call output(umsg)
-          call hdcopy(tIn,tOut,'wgains')
-          call hdcopy(tIn,tOut,'nwbase')
-          call hdcopy(tIn,tOut,'nwgains')
+          call hdcopy(Lin,Lout,'wgains')
+          call hdcopy(Lin,Lout,'nwbase')
+          call hdcopy(Lin,Lout,'nwgains')
 	endif
 c
 	if(hdprsnt(Lin,'leakage'))then
