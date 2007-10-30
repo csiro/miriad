@@ -32,6 +32,7 @@ c    rjs   2feb95 Change in mosHash to help avoid integer overflows. Avoid
 c    		  initialisation problem.
 c    rjs  13mar95 Add tolerance to checking for primary beam size.
 c    rjs  15oct96 Modify call sequence to coGeom.
+c    rjs  26mar97 Better support for "pbtype" parameter in vis datasets.
 c************************************************************************
 	subroutine MosCIni
 c
@@ -72,7 +73,6 @@ c------------------------------------------------------------------------
 	include 'mostab.h'
 	include 'mirconst.h'
 	character tel1*16
-	real pbfwhm1
 	double precision radec1(2),dra1,ddec1
 c
 c  Externals.
@@ -98,6 +98,7 @@ c
 	  if(.not.solar)call uvVarSet(vPntUpd,'dec')
 	  call uvVarSet(vPntUpd,'telescop')
 	  call uvVarSet(vPntUpd,'pbfwhm')
+	  call uvVarSet(vPntUpd,'pbtype')
 	  call uvVarSet(vPntUpd,'dra')
 	  call uvVarSet(vPntUpd,'ddec')
 	endif
@@ -106,7 +107,7 @@ c  Process a change in primary beam model.
 c
 	if(doinit.or.uvVarUpd(vPntUpd))then
 c
-c  Get the RA,DEC of this record.
+c  Get the RA,DEC and primary beam type for this record.
 c
 	  call uvrdvrd(lIn,'dra',dra1,0.d0)
 	  call uvrdvrd(lIn,'ddec',ddec1,0.d0)
@@ -122,21 +123,19 @@ c
 	    radec1(2) = radec1(2) + ddec1
 	  endif
 c
-	  call uvrdvra(lIn,'telescop',tel1,' ')
-	  call uvrdvrr(lIn,'pbfwhm',pbfwhm1,0.)
+	  call pbRead(lIn,tel1)
 c
-	  pntno = MosLoc(tel1,pbfwhm1,radec1)
+	  pntno = MosLoc(tel1,radec1)
 	endif
 	i = pntno
 	doinit = .false.
 c
 	end
 c************************************************************************
-	integer function MosLoc(tel1,pbfwhm1,radec1)
+	integer function MosLoc(tel1,radec1)
 c
 	implicit none
 	character tel1*(*)
-	real pbfwhm1
 	double precision radec1(2)
 c
 c  Locate a particular pointing in my table.
@@ -147,9 +146,7 @@ c
 c  Tolerances are 1 arcsec in pointing and in primary beam size.
 c
 	double precision tol
-	real pbtol
 	parameter(tol=dpi/180.d0/3600.d0)
-	parameter(pbtol=1.0)
 	logical found
 	integer indx,pnt
 	double precision lm(2),ll1,mm1
@@ -167,8 +164,7 @@ c
 	if(npnt.gt.0)then
 	  if(abs(ll1-llmm(1,pntno)).lt.tol.and.
      *	     abs(mm1-llmm(2,pntno)).lt.tol.and.
-     *	     tel1.eq.telescop(pntno).and.
-     *	     abs(pbfwhm1-pbfwhm(pntno)).lt.pbtol)then
+     *	     tel1.eq.telescop(pntno))then
 	    found = .true.
 	    pnt = pntno
 	  else
@@ -177,8 +173,7 @@ c
 	      pnt = Hash(indx)
 	      if(abs(ll1-llmm(1,pnt)).lt.tol.and.
      *		 abs(mm1-llmm(2,pnt)).lt.tol.and.
-     *		 tel1.eq.telescop(pnt).and.
-     *		 abs(pbfwhm1-pbfwhm(pnt)).lt.pbtol)then
+     *		 tel1.eq.telescop(pnt))then
 		found = .true.
 	      else
 		indx = indx + 1
@@ -195,7 +190,6 @@ c
 	  pnt = npnt
 	  if(npnt.gt.MAXPNT)call bug('f','Pointing table overflow')
 	  telescop(npnt) = tel1
-	  pbfwhm(npnt) = pbfwhm1
 	  llmm(1,npnt) = ll1
 	  llmm(2,npnt) = mm1
 	  radec(1,npnt) = radec1(1)
@@ -315,13 +309,6 @@ c
 	endif
 c
 	call coFin(coRef)
-c
-c  Convert the telescop and pbfwhm into pseudo-telescopes.
-c
-	do i=1,npnt
-	  if(pbfwhm(i).gt.0)
-     *	    call pbEncode(telescop(i),'gaus',pi/180/3600 * pbfwhm(i))
-	enddo
 c
 	end
 c************************************************************************
@@ -800,11 +787,7 @@ c
 	ra1 = radec(1,i)
 	dec1 = radec(2,i)
 	rms1 = rms2(i)
-	if(pbfwhm(i).gt.0)then
-	    call pbEncode(pbtype1,'gaus',pi/180/3600 * pbfwhm(i))
-	else
-	  pbtype1 = telescop(i)
-	endif
+	pbtype1 = telescop(i)
 	end
 c************************************************************************
 	subroutine mosSet(i,ra1,dec1,rms1,pbtype1)
