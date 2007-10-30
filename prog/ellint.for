@@ -88,12 +88,13 @@ c    nebk  27feb96      Add options=median, more doc.
 c    rjs   20nov96      Re-instate Wilfred's version, with some trivial
 c			intermediate changes. History is uncertain.
 c    rjs   06mar97	Added options=natural, and some other changes.
+c    mchw  29apr97	Fix bug if neither median nor mode. Again.
 c----------------------------------------------------------------------c
 	include 'mirconst.h'
 	include 'maxdim.h'
 	include 'mem.h'
         character*(*) label,version
-        parameter(version='version 1.0 06-Mar-97')
+        parameter(version='version 1.0 29-APR-97')
         double precision rts,value
         parameter(label='Integrate a Miriad image in elliptical annuli')
         integer maxnax,maxboxes,maxruns,naxis,axis,plane,maxring
@@ -360,6 +361,7 @@ c
 c   write out the results for mode
 c
 c
+	if(domode)then
           call logwrit(' ')
           if (domode) then
             write(line,'(a,a,a,a,a,a)') '   Radius(") ',
@@ -401,6 +403,7 @@ c
               call memfree (ipm(ir), nint(pixe(ir)), 'r')
             end do
           end if
+	endif
 c
 c  End our mode addition.
 c
