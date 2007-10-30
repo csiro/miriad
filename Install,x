@@ -17,7 +17,7 @@
 	 /usr/X11/lib   /usr/local/X11/lib   /usr/lib/X11   /usr/local/lib/X11 \
 	 /usr/X11R6/lib /usr/local/X11R6/lib /usr/lib/X11R6 /usr/local/lib/X11R6 \
 	 /usr/X11R5/lib /usr/local/X11R5/lib /usr/lib/X11R5 /usr/local/lib/X11R5 \
-	 /usr/openwin/lib )
+	 /usr/openwin/lib /usr/ucblib )
 
 # Add the OpenWin library directory, if it looks believable. On machines
 # without OpenWindows ... this addition to the search directory will be
@@ -32,6 +32,7 @@
 	if ( $?LD_LIBRARY_PATH ) then
 	  set searchlist = (`echo $LD_LIBRARY_PATH|sed 's/:/ /g'` $searchlist)
 	endif
+
 
 # Check for the standard Miriad structure.
 
@@ -55,6 +56,32 @@
 	  echo "------------------------------------------------------------------------"
 	  echo " "
 	endif
+
+# Check for availability of the standard tools.
+
+         echo "Checking for required UNIX tools ..."
+	 set myf77 = ""
+	 set mycc = ""
+         foreach l (ar ld f77 cc)
+          set t = ""
+          foreach p ($path)
+            if(-x $p/$l ) then
+              set t = $p/$l
+              break
+            endif
+          end
+          if($t == "" ) then
+            echo "### Failed to find tool $l"
+	    echo "You may continue if you know that this is not needed"
+            echo -n "Do you wish to continue? [y/n] "
+            set ok = $<
+            if( $ok != "y" && $ok != "Y" ) exit
+          else
+            echo "  Found $t"
+          endif
+          set my$l = $t
+        end
+        echo " "
 	  
 # Determine the name of the Miriad root directory.
 
@@ -119,6 +146,13 @@ l8:
 	  echo "The machine architecture is $arch"
 	endif
 	set path = ($MIRBIN $path)
+
+# On Sun's check that the compilers are OK.
+
+        if($arch == "sun4sol" && ( $myf77 == "/usr/ucb/f77" || $mycc == "/usr/ucb/cc" )) then
+          echo "### Compilers /usr/ucb/cc and/or /usr/ucb/f77 do not work ... Aborting"
+          exit
+        endif
 
 # Create the needed directories.
 
