@@ -17,5 +17,5 @@
     tvclip vis=$vis server=xmtv@junk taver=5 clip=6 \
       "select=pol($pol)" commands=clip options=notv
   end
-  uvpflag vis=$vis polt=xx,xy,yx,yy pols=xx,xy,yx,yy options=or
+  uvaflag vis=$vis options=nopol
 

@@ -1,8 +1,18 @@
 # Setup of parameters for the dqo scripts.
 
-# Set frequencies and source names
+
+# Set array name: Please use one of 6A, 6B, 6C, 6D, 1.5A, 1.5B, 1.5C, 1.5D,
+#				    0.75A, 0.75B, 0.75C, 0.75D, 0.375, 0.122
+# For special arrays, give the max baseline (in km) intended for imaging.
+
+set array = 6A
+
+# Set the observing date
 
 set date = 4/12/95		# Date of the DQO observation.
+
+# Set frequencies, source names and offset position.
+
 set flist=(1344 2368 4800 8640) # Frequencies.
 set cal	      = 0823-500 	# On-axis calibrator name.
 set offset1   = 0823_a		# Off-axis calibrator.
@@ -17,32 +27,13 @@ set doffsets = ( 420  420  120  120) # (dec of cal - dec of offset1) in arcsec,
 
 set refant=5
 
-# Set the options for gpcal: for 1934 and 0823 use xyvary, otherwise use
+# Set the options for gpcal: for 1934 use xyvary, otherwise use
 #  xyvary,qusolve
 
 #set gpcaloptions=xyvary 		# for 1934
-set gpcaloptions=xyvary,qusolve 	# for 0823 and other sources
+set gpcaloptions=xyvary,qusolve 	# for 0823 and other calibrators
 
 # Perform automated flagging of the data? 1=YES 0=NO
 set flag=1
 
-# Produce hardcopy? 1=YES 0=NO
-set hardcopy=0
-
-# Preview plots and textfiles on screen? 1=YES 0=NO
-set preview=0
-
-# Remove plot & text files? 1=YES 0=NO
-set delete=0
-
-# Set printer for plots.
-set printer=cascribe
-
-# Set xmtv server.
-set server=xmtv@corvus
-
-# Some other definitions.
-
-set sources = ( $cal $offset1 $offset2 )
-alias gv ghostview
 
