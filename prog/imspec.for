@@ -1,3 +1,111 @@
+c  imstat - calculate and plot map statistics
+c& bpw
+c: map analysis
+c+
+c  Imstat calculates statistics for images. These are the sum, mean,
+c  rms, maximum and minimum value of a region. Statistics can be found
+c  for profiles or planes, specified using the axes-keyword.
+c  The data can be converted to Kelvin, by using 'options=tb' and the
+c  beam keyword.
+c  Output can be written to the terminal, a log file, or a plot. The
+c  options keyword gives control over the plot.
+c  The plotheader can be suppressed by using options=noheader. An
+c  alternative title can be put on the plot by options=title. A useful
+c  combination is 'options=noh,ti,title', to get only the string 'title',
+c  instead of the full header.
+c
+c< in
+c< region
+c
+c@ plot
+c  This selects which statistic will be plotted as function of e.g.
+c  velocity. Minimal matching is applied. The default is 'rms'.
+c
+c   'sum'         Plot the sum
+c   'mean'        Plot the mean
+c   'rms'         Plot the rms
+c   'maximum'     Plot the maximum
+c   'minimum'     Plot the minimum
+c
+c@ options
+c  The options control the characteristics of the plot.
+c  Possible options are (minimal matching is done):
+c
+c   'tb'          Convert the units to brightness temperature, using
+c                 the input for the beam keyword
+c
+c   'hanning,#'   Hanning smooth the data first over # pixels (must be
+c                 an odd number)
+c   'boxcar,#'    Boxcar smooth the data first over # pixels
+c   'deriv,#'     Take the derivative after smoothing. If #=1 a one-sided
+c                 derivative is taken, for #=2 a two-sided. Useful for
+c                 Zeeman work.
+c
+c   'noheader'    Do not write the header information, just the numbers,
+c                 producing an ASCII file for a plotting program
+c   'nolist'      Do not write the statistics to the screen/logfile
+c   'eformat'     Always use format 'e' instead of 'g' to write results
+c   'guaranteespaces' Make sure there is always a space between columns
+c                 (at the cost of precision)
+c
+c   'xmin,#'      Give lower x-value on axis
+c   'xmax,#'      Give upper x-value on axis
+c   'ymin,#'      Give lower y-value on axis
+c   'ymax,#'      Give upper y-value on axis
+c                 (for these four options the default is autoscaling)
+c   'title,#1,#2,#3' Put the string #1 at x-position #2 and y-position #3,
+c                 with positions measured in units of the coordinates
+c                 on the axes. If 'title' is the last option, the title
+c                 is put in the upper left hand corner.
+c   'style,#'     This selects the plot style.
+c                 #=connect means connect the datapoints
+c                 #=step means make one-bin wide connected horizontal
+c                 line segments
+c                 #=histo means bins are drawn as a horizontal line
+c                 surrounded by two vertical lines
+c
+c@ cutoff
+c  All datavalues below the cutoff are not used for the calculation of
+c  statistics. Give one real value. This may be followed by the string
+c  ',abs' to get a cutoff in the absolute value of the datavalues, or
+c  ',lower' to exclude all values above the cutoff.
+c  Default is no cutoff.
+c
+c@ beam
+c  If options=tb is used, imstat calculates the sum divided by the sum
+c  of the beam to get the flux in the selected area, if the units of the
+c  input data are 'per beam'. This is then converted to Kelvin by
+c  dividing by 2k/lambda^2 * omega, where omega is found from the beam
+c  keyword.
+c  If the name of a dataset is given for 'beam', imstat assumes it
+c  contains a beampattern and sums the data in a region of the same
+c  size as the input region.
+c  Else, it assumes that 'beam' gives the major and minor axes of the
+c  beam in arcsec and it calculates the sum for a gaussian beam of that
+c  size.
+c  If 'beam' is omitted, but 'options=tb' was selected, the beam is
+c  found from the header (items bmaj and bmin). If neither is present,
+c  no conversion is done.
+c
+c@ axes
+c  This keyword gives the axis (for profiles) or axes (for planes) along
+c  which statistics are calculated. E.g. 'axes=ra,dec' means that
+c  statistics are found for ra-dec planes (irrespective of their
+c  orientation in the dataset). 'axes=vel' gives statistics of a velocity
+c  profile at each ra and dec position in the selected region.
+c  The default is to calculate statistics for each ra,dec plane as
+c  function of velocity.
+c  Possible values for are: 'rascension', 'declination', 'longitude',
+c  'latitude', 'glongitude', 'glatitude', 'velocity', 'frequency',
+c  'channel', 'stokes', 'x', 'y', 'z', 'a', 'b'. Upper case and
+c  capitalized versions and the string 'R.A.' are also recognized.
+c  Minimal matching is applied. One or two axes may be given.
+c
+c< device
+c@ log
+c  If specified, output is written to the file given by log= instead
+c  of to the terminal.
+c--
 c= imspec - plots spectra from image data
 c& bpw
 c: map analysis
@@ -53,6 +161,8 @@ c   'noheader'    Do not write the header information, just the numbers,
 c                 producing an ASCII file for a plotting program
 c   'list'        Write the spectrum to the screen/logfile
 c   'eformat'     Always use format 'e' instead of 'g' to write results
+c   'guaranteespaces' Make sure there is always a space between columns
+c                 (at the cost of precision)
 c
 c   'xmin,#'      Give lower x-value on axis
 c   'xmax,#'      Give upper x-value on axis
@@ -72,8 +182,9 @@ c                 surrounded by two vertical lines
 c
 c@ cutoff
 c  All datavalues below the cutoff are not used for the calculation of
-c  statistics. Give one real value, which may be followed by the string
-c  ',abs' to get a cutoff in the absolute value of the datavalues.
+c  statistics. Give one real value. This may be followed by the string
+c  ',abs' to get a cutoff in the absolute value of the datavalues, or
+c  ',lower' to exclude all values above the cutoff.
 c  Default is no cutoff.
 c
 c@ beam
@@ -131,7 +242,6 @@ c  If specified, output is written to the file given by log= instead
 c  of to the terminal.
 c--
 c
-c
 c   History:
 c
 c    20jul91  bpw  Original version
@@ -182,9 +292,13 @@ c    14nov96  nebk Change crpix from integer to double precision as it was
 c                  messing up coordinate labelling
 c    29nov96  rjs  Change crpix from integer to double, and include mhw's
 c                  formatting changes.
-c     8jan99  rjs  Use co routines to get coordinates (which fixes bug in
-c		   converting RAs).
-c    23mar99  rjs  Fix bug in determining region of interest.
+c    19dec97  bpw  Add cutoff,lower and options=guaranteespaces
+c    22dec97  bpw  Add options hanning,boxcar,deriv also to imstat
+c     8jan99  rjs  Use co routines to return coordinates (which fixes abug
+c                  in converting to RA)
+c    23mar99  bpw  Merged bpw updates and rjs updates
+c    23mar99  rjs  Fix bug in determining region of interest
+c    07apr99  rjs  Merge bpw and rjs versions.
 c------------------------------------------------------------------------
 
 c Main program of imstat and imspec. Puts out the identification, where
@@ -198,6 +312,7 @@ c   dim        dimension of subcube in which data are averaged
 c   cut        1st el: cutoff value
 c              2nd el: flag to indicate if cut was requested
 c                      0-> no cut, 1-> cut, 2-> cut in absolute value
+c                      3-> cut is lower bound
 c   counts     counts number of pixels/profiles/planes to handle
 c              el 0: # pixels
 c              el 1: 1
@@ -219,7 +334,7 @@ c the include file.
       program imstaspc
 
       character*21     version
-      parameter        ( version = 'version 2.2 23-Mar-99' )
+      parameter        ( version = 'version 2.2 07-Apr-99' )
       character*29     string
 
       include          'imspec.h'
@@ -237,12 +352,12 @@ c the include file.
       call output( string )
       call inputs( tinp,naxis,dim,corners,boxes,cut,counts,
      *             beaminfo,axlabel,device, MAXBOXES )
-      cIn = tinp
-      call coInit(cIn)
+      cin = tinp
+      call coInit( cin )
       call stats(  tinp,naxis,dim,corners,boxes,cut,counts,
      *             beaminfo,axlabel,device )
-      call coFin(cIn)
       call xyzclose( tinp )
+      call coFin( tinp )
       call logclose
 
       end
@@ -350,8 +465,9 @@ c was an absolute value cutoff.
       if( keyprsnt( 'cutoff' ) ) then
          call keyr( 'cutoff', cut(1),      0. )
          call keya( 'cutoff', string, 'noabs' )
-         if( string.ne.'abs') cut(2) = 1.
-         if( string.eq.'abs') cut(2) = 2.
+         if( string.ne.'abs'  ) cut(2) = 1.
+         if( string.eq.'abs'  ) cut(2) = 2.
+         if( string.eq.'lower') cut(2) = 3.
       else
          cut(2) = 0.
       endif
@@ -393,6 +509,8 @@ c the default is to write out the spectrum for IMSTAT, not for IMSPEC
       if( NAME.eq.'IMSPEC' ) plotvar( LIST ) =  0
 c the default is 'g' format
       plotvar( EFMT )     = 0
+c the default is to give as much precision as possible
+      plotvar( GSPAC )    = 0
 c the default plot style is to connect the points
       plotvar( STYLE )    = matchnr( 'connect', styles )
 c the default is not to convert the data units
@@ -450,6 +568,8 @@ c with arguments, these are read and tested.
                plotvar(LIST) = 1
             elseif( i.eq.matchnr('eformat',commonop) ) then
                plotvar(EFMT) = 1
+            elseif( i.eq.matchnr('guaranteespaces',commonop) ) then
+               plotvar(GSPAC) = 1
             elseif( i.eq.matchnr('style',commonop) ) then
                call keya( 'options', option, ' ' )
                call assertl( match(option,styles,i), 'Illegal style' )
@@ -621,7 +741,7 @@ c The rest will be the other axes, with the lowest numbered first.
 c              Following is workaround HP compiler bug
                temp = ctype(n)
                call rdhda( tinp, keyw('ctype',i), ctype(n), temp      )
-	       cindex(n-dim) = i
+               cindex(n-dim) = i
             endif
          enddo
       endif
@@ -1159,14 +1279,14 @@ c loop over all subcubes for which statistics are to be calculated.
          call xyzs2c( tinp, subcube, coo )
 
          if( abs(dim).eq.2 )then
-           call boxruns(  naxis,coo,'r',boxes,runs,MAXRUNS,nruns,
-     *                    crners(1),crners(2),crners(3),crners(4) )
-	   do i=1,nruns
-	     runs(1,i) = runs(1,i) + crners(3) - corners(3)
-	     runs(2,i) = runs(2,i) + crners(1) - corners(1)
-	     runs(3,i) = runs(3,i) + crners(1) - corners(1)
-	   enddo
-	 endif
+	   call boxruns(  naxis,coo,'r',boxes,runs,MAXRUNS,nruns,
+     *			crners(1),crners(2),crners(3),crners(4) )
+           do i=1,nruns
+             runs(1,i) = runs(1,i) + crners(3) - corners(3)
+             runs(2,i) = runs(2,i) + crners(1) - corners(1)
+             runs(3,i) = runs(3,i) + crners(1) - corners(1)
+           enddo
+         endif
 
 c if init(i)=.true., the statistics for this level must be reinitialized.
          init(1) = .true.
@@ -1340,7 +1460,7 @@ c For ra and dec axes special conversions are done.
       character*24     radec
 
       do i = 1, nlevels - 1
-	 call coCvt1(cIn,cindex(i),'ap',dble(coo(i)),'aw',coords(i))
+         call coCvt1(cin,cindex(i),'ap',dble(coo(i)),'aw',coords(i))
          cvalues(i) = ' '
          if(     axlabel(i)(:4).eq.'R.A.' ) then
              coords(i)  = 180./dpi * coords(i)
@@ -1523,7 +1643,8 @@ c Do possible smoothing and derivative-taking on the data,
       enddo
 
 c Write listed output
-      call wrnums( iarr,xarr,carr, statarr, n, dim,level,nlevels )
+      if( plotvar(HEAD).eq.1 .or. level.eq.1 )
+     *call wrnums( iarr,xarr,carr, statarr, n, dim,level,nlevels )
 
 c Copy array to be plotted to array yarr and make plot
       if( plotvar(SEL).eq.matchnr('flux',   plotopts) ) plt=1
@@ -1589,8 +1710,10 @@ c Construct the output line for the typed list
      *          write( line, '( i6,1x, a )' ) nint(iarr(i)), carr(i)
 c 13 is really len(axlabel)+1, but axlabel is an unknown variable here
 c and it would be messy to transfer just to get the length of it.
-            if(plotvar(EFMT).eq.1) then
+            if(     plotvar(EFMT).eq.1) then
               write( fmt, '( ''( '',i1,''(1pe10.3),i8 )'' )' ) nstat-1
+            else if(plotvar(GSPAC).eq.1) then
+              write( fmt, '( ''( '',i1,''(1pg10.2),i8 )'' )' ) nstat-1
             else
               write( fmt, '( ''( '',i1,''(1pg10.3),i8 )'' )' ) nstat-1
             endif
@@ -1820,6 +1943,8 @@ c Test if data are within unmasked, above the cut and inside the region
          unmasked = mask .and.     data .ge.cut(1)
       else if( cut(2).eq.2. ) then
          unmasked = mask .and. abs(data).ge.cut(1)
+      else if( cut(2).eq.3. ) then
+         unmasked = mask .and. abs(data).le.cut(1)
       endif
 c     if( mask.eq..true. ) print*,'    mask'
 
@@ -1865,7 +1990,7 @@ c Calculate the rms from the sum and sumsquared.
             ok = .true.
          else
             call bug( 'w', 'Rms^2 is negative!! Square root not taken' )
-            ok = .false.
+c           ok = .false.
          endif
       elseif( npoints.eq.1 ) then
          rms = 0.d0
@@ -1946,3 +2071,4 @@ c Write out an identifying message above the plot.
       endif
       return
       end
+
