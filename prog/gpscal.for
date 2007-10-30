@@ -119,10 +119,12 @@ c    rjs  23dec93 Minimum match for linetypes.
 c    rjs  13sep94 Improve an error message. FELO changes.
 c    rjs  31jan95 Accomodate model.for changes.
 c    rjs   1oct96 Major tidy up.
+c    rjs  11nov98 Make "time" array double precision to avoid precision
+c		  problems.
 c------------------------------------------------------------------------
 	include 'gpscal.h'
 	character version*(*)
-	parameter(version='GpsCal: version 1.0 1-Oct-96')
+	parameter(version='GpsCal: version 1.0 11-Nov-98')
 	integer MAXSELS,nhead
 	parameter(MAXSELS=256,nhead=5)
 c
@@ -542,7 +544,7 @@ c
 	maxSol = min(maxHash,max(minSol,MemBuf()/(2*SolSize)))
 	call MemAlloc(pSumVM,4*nbl*maxSol,'c')
 	call MemAlloc(pSumMM,4*nbl*maxSol,'r')
-	call MemAlloc(pTime,maxSol,'r')
+	call MemAlloc(pTime,maxSol,'d')
 	call MemAlloc(pCount,maxSol,'i')
 	call MemAlloc(pData,4*nchan,'c')
 	call MemAlloc(pModel,4*nchan,'c')
@@ -559,7 +561,7 @@ c
 	call Accum(tscr,nfiles,D,doleak,nchan,nvis,nants,nbl,
      *   maxSol,nSols,Hash,Indx,maxHash,interval,
      *	 memc(pData),memc(pModel),meml(pFlags),
-     *	 memr(pTime),memi(pCount),memc(pSumVM),memr(pSumMM))
+     *	 memd(pTime),memi(pCount),memc(pSumVM),memr(pSumMM))
 	call output('Number of solution intervals: '//itoaf(nSols))
 	if(nSols.eq.0)call bug('f','No data found')
 c
@@ -581,13 +583,13 @@ c
 	call GainFidd(memc(pGains),nants,nSols,refant,xyref,doref,
      *	  phase.or.noscale)
 	call GainSave(tvis,memc(pGains),nants,nSols,meml(pCount),
-     *	  memr(pTime),Time0,interval,Indx)
+     *	  memd(pTime),Time0,interval,Indx)
 c
 c  Free the memory.
 c
 	call MemFree(pSumVM,4*nbl*maxSol,'c')
 	call MemFree(pSumMM,4*nbl*maxSol,'r')
-	call MemFree(pTime,maxSol,'r')
+	call MemFree(pTime,maxSol,'d')
 	call MemFree(pCount,maxSol,'i')
 	call MemFree(pGains,2*nants*nSols,'c')
 	call MemFree(pData,4*nchan,'c')
@@ -799,7 +801,8 @@ c
 	integer tvis,nants,nSols,Indx(nSols)
 	complex Gains(2*nants,nSols)
 	logical Convrg(nSols)
-	real time(nSols),interval
+	double precision time(nSols)
+	real interval
 	double precision time0
 c
 c  Save the gains in the output file. This consists of:
@@ -823,7 +826,7 @@ c------------------------------------------------------------------------
 c
 c  Determine the time ordering of the gain table.
 c
-	call sortidxr(nSols,time,Indx)
+	call sortidxd(nSols,time,Indx)
 c
 c  Open the gains table.
 c
@@ -1212,7 +1215,8 @@ c
 c
 	integer nchan,nants,nbl,maxSol,nSols,nvis,nfiles,tscr(nfiles)
 	integer maxHash,Hash(maxHash),Indx(maxHash)
-	real interval,Time(maxSol),SumMM(4,nbl,maxSol)
+	real interval,SumMM(4,nbl,maxSol)
+	double precision Time(maxSol)
 	integer Count(maxSol)
 	complex SumVM(4,nbl,maxSol),D(2,nants)
 	complex Data(nchan,4),Model(nchan,4)
