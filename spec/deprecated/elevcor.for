@@ -20,9 +20,9 @@ c       pre-existing calibration (eg. bandpass), copy them after with
 c       gpcopy. Of course, existing amplitude gains won't be very
 c       useful.
 c
-c       Currenly, the only template available is for 3cm data, which was
-c       defined from observations at 8640GHz. For details of the gain
-c       elevation-dependence template, blame Hayley Bignall.
+c       Currently, the only templates available are for 3cm and 3mm data.
+c	For details of the gain elevation-dependence template, consult
+c	Hayley Bignall.
 c
 c@ vis
 c	The names of the input uv data set. No default.
@@ -30,30 +30,31 @@ c@ out
 c	The name of the output uv data set. No default.
 c@ options
 c       Extra processing options, minimum match allowed:
-c          simulate  Add a gain error to the data, rather
+c          simulate  Include a gain error to the data, rather
 c                    than applying the correction. This can be
 c                    used on data generated with uvgen to simulate
 c                    elevation-dependence in fake uvdata.
-c
+c	   replace   Replace the data with the gain function.
 c--
 c  History:
 c    20jun01 dpr  Original version.
+c     5jun02 rjs  Added 3mm gain/elevation curve, and options=replace
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
 	character version*(*)
-	parameter(version='elevcor: version 1.0 20-Jun-01')
+	parameter(version='elevcor: version 1.0 5-Jun-02')
 	integer PolXX,PolYY,PolXY,PolYX
 	parameter(PolXX=-5,PolYY=-6,PolXY=-7,PolYX=-8)
 c
 	integer lVis,lOut,vupd,pol,npol,i,j,k,nants
 	logical updated
-        logical dosim ! run in simulation mode
+        logical dosim,replace
 	character vis*256,out*256,type*1
 	integer nschan(MAXWIN),nif,nchan,length
 	complex data(MAXCHAN)
 	logical flags(MAXCHAN)
-	double precision preamble(5),ptime
+	double precision preamble(5)
 	double precision sfreq(MAXWIN),sdf(MAXWIN)
 	double precision lst,lat,az,el,ra,dec,dtemp
 	real freq0(MAXWIN)
@@ -66,7 +67,7 @@ c
 c
 	call output(version)
 	call keyini
-        call GetOpt(dosim)
+        call GetOpt(dosim,replace)
 	call keya('vis',vis,' ')
 	call keya('out',out,' ')
 	call keyfin
@@ -75,8 +76,6 @@ c  Check the inputs.
 c
 	if(vis.eq.' ')call bug('f','An input must be given')
 	if(out.eq.' ')call bug('f','An output must be given')
-c
-	call EleInit()
 c
 c  Get ready to copy the data.
 c
@@ -94,9 +93,6 @@ c
 	call uvvarSet(vupd,'obsdec')
 	call uvvarSet(vupd,'telescop')
 	call uvvarSet(vupd,'latitud')
-	call uvvarSet(vupd,'systemp')
-	call uvvarSet(vupd,'ytsys')
-	call uvvarSet(vupd,'xtsys')
 c
 	call uvopen(lOut,out,'new')
 	call varOnit(lVis,lOut,'channel')
@@ -111,7 +107,6 @@ c
 	call hisclose(lOut)
 c
 	call uvread(lVis,preamble,data,flags,MAXCHAN,nchan)
-	ptime = preamble(4) - 1
 	dowhile(nchan.gt.0)
 	  call uvrdvri(lVis,'pol',pol,0)
 	  call uvrdvri(lVis,'npol',npol,0)
@@ -139,8 +134,6 @@ c
 c
 	  call varCopy(lVis,lOut)
 c
-
-	  ptime = preamble(4)
 	  call getlst(lVis,lst)
 	  call azel(ra,dec,lst,lat,az,el)
 c
@@ -151,11 +144,18 @@ c
 	  endif
 c
 	  k = 0
-	  if (.not. dosim) then
+	  if (dosim) then
 	    do i=1,nif
 	      do j=1,nschan(i)
 		k = k + 1
 		data(k) = data(k) * EleScale(el,freq0(i),preamble(5))
+	      enddo
+	    enddo
+	  else if(replace)then
+	    do i=1,nif
+	      do j=1,nschan(i)
+		k = k + 1
+		data(k) = EleScale(el,freq0(i),preamble(5))
 	      enddo
 	    enddo
 	  else
@@ -291,30 +291,12 @@ c------------------------------------------------------------------------
 c
       end
 c************************************************************************
-	subroutine EleInit ()
-c
-c     Init polynomial coefficients, or whatever else you
-c     decide to parameterize your funtion as.
-c
-c-----------------------------------------------------------------------
-	implicit none
-c-----------------------------------------------------------------------
-	include 'maxdim.h'
-	include 'elevcor.h'
-c	
-	integer i,j
-c
-	data ((xpc(i,j),i=1,MAXANT),j=1,NPARAMS)/InIPARAMS*0./
-        data (xpc(1,j),j=1,3)/1.00000,  -2.81563e-04,   6.41390e-06/
-	data (xpc(2,j),j=1,3)/1.00000,  -2.89640e-04,   6.36535e-06/
-	data (xpc(3,j),j=1,3)/1.00000,  -5.85414e-04,   1.09251e-05/
-	data (xpc(4,j),j=1,3)/1.00000,  -1.61529e-04,   7.44309e-06/
-	data (xpc(5,j),j=1,3)/1.00000,  -1.81528e-05,   5.27955e-06/
-	data (xpc(6,j),j=1,3)/1.00000,  -1.02589e-03,   8.71686e-06/
-c	
-	end
-c************************************************************************
       real function EleScale (el,freq0,baseline)
+c
+	implicit none
+	double precision el
+	real freq0
+	double precision baseline
 c
 c     Get latitude from variable or obspar subroutine
 c
@@ -325,43 +307,79 @@ c     baseline  baseline number
 c  Output:
 c     EleScale  factor to multiply vis by
 c-----------------------------------------------------------------------
-	implicit none
-	double precision el
-	real freq0
-	double precision baseline
-c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
-	include 'elevcor.h'
-	integer ant1, ant2   ! antennas used in this baseline
-	real             za  ! zenith angle
-	real           g1,g2 ! gain factors for the two antennas
-        character*60   line
+	integer ATANT
+	parameter(ATANT=6)
 c
+	integer ant1, ant2
+	real elev,za
+	real g1,g2
+        character line*60
+c
+	integer j
+c
+c  3cm gain/elevation
+c
+	integer XPARAMS
+	parameter(XPARAMS=3)
+	real    xpc(ATANT,XPARAMS)
+c
+c  3mm gain/elevation
+c
+	integer WPARAMS
+	parameter(WPARAMS=3)
+	real wpc(ATANT,WPARAMS)
+c
+        data (xpc(1,j),j=1,3)/1.00000,  -2.81563e-04,   6.41390e-06/
+	data (xpc(2,j),j=1,3)/1.00000,  -2.89640e-04,   6.36535e-06/
+	data (xpc(3,j),j=1,3)/1.00000,  -5.85414e-04,   1.09251e-05/
+	data (xpc(4,j),j=1,3)/1.00000,  -1.61529e-04,   7.44309e-06/
+	data (xpc(5,j),j=1,3)/1.00000,  -1.81528e-05,   5.27955e-06/
+	data (xpc(6,j),j=1,3)/1.00000,  -1.02589e-03,   8.71686e-06/
+c
+	data (wpc(1,j),j=1,3)/1.0000, 0.0000,     0.0000/
+	data (wpc(2,j),j=1,3)/0.7441, 0.9221e-2, -0.8306e-4/
+	data (wpc(3,j),j=1,3)/0.4043, 1.6802e-2, -1.1847e-4/
+	data (wpc(4,j),j=1,3)/0.8405, 0.8094e-2, -1.0268e-4/
+	data (wpc(5,j),j=1,3)/1.0000, 0.0000,     0.0000/
+	data (wpc(6,j),j=1,3)/1.0000, 0.0000,     0.0000/
+
+
 	call basant(baseline, ant1, ant2)
-	za=90.0 - real(el*180.0/PI)
+	if(max(ant1,ant2).gt.ATANT.or.min(ant1,ant2).lt.1)
+     *	  call bug('f','Bad antenna numbers')
+c
+	elev = real(el*180.0/PI)
+	za=90.0 - elev
+c
+c  3cm correction.
 c
 	if ((8.0e+9 .le. freq0) .and. (freq0 .le. 9.2e+9)) then
-	  g1=xpc(ant1,1)*1.0 + xpc(ant1,2)*za + xpc(ant1,3)*za**2
-     -          + xpc(ant1,4)*za**3 + xpc(ant1,4)*za**4
-	  g2=xpc(ant2,1)*1.0 + xpc(ant2,2)*za + xpc(ant2,3)*za**2
-     -          + xpc(ant2,4)*za**3 + xpc(ant2,4)*za**4
+	  g1=1/(xpc(ant1,1) + za*(xpc(ant1,2) + za*xpc(ant1,3)))
+	  g2=1/(xpc(ant2,1) + za*(xpc(ant2,2) + za*xpc(ant2,3)))
+c
+c  3mm correction.
+c
+	else if(70e9.le.freq0 .and. freq0.le.120e9)then
+	  g1=wpc(ant1,1) + elev*(wpc(ant1,2)+elev*wpc(ant1,3))
+	  g2=wpc(ant2,1) + elev*(wpc(ant2,2)+elev*wpc(ant2,3))
 	else
 	  write(line,'(a,f6.3,a)')
      -     'Elevation corrections are unknown for freq ',
      -     freq0/1e+9,'GHz'
 	  call bug('f',line)
-	end if
+	endif
 c
 	EleScale=g1*g2
 c
 	end
 c
 c************************************************************************
-        subroutine GetOpt(dosim)
+        subroutine GetOpt(dosim,replace)
 c
         implicit none
-        logical dosim
+        logical dosim,replace
 c
 c  Determine the flags to pass to the uvdat routines.
 c
@@ -369,11 +387,14 @@ c  Output:
 c    dosim      Run in simulation mode
 c------------------------------------------------------------------------
         integer nopts
-        parameter(nopts=1)
+        parameter(nopts=2)
         character opts(nopts)*9
         logical present(nopts)
-        data opts/'simulate '/
+        data opts/'simulate ','replace  '/
 c
         call options('options',opts,present,nopts)
         dosim = present(1)
+	replace = present(2)
+	if(replace.and.dosim)
+     *	  call bug('f','Cannot use replace and simulate together')
 	end 
