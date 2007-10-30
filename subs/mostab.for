@@ -303,8 +303,8 @@ c
 c  Convert the telescop and pbfwhm into pseudo-telescopes.
 c
 	do i=1,npnt
-	  if(pbfwhm(i).gt.0)write(telescop(i),10)pbfwhm(i)
-  10	  format('GAUS(',1pe10.4,')')
+	  if(pbfwhm(i).gt.0)
+     *	    call pbEncode(telescop(i),'gaus',pi/180/3600 * pbfwhm(i))
 	enddo
 c
 	end
@@ -904,10 +904,11 @@ c
 c
 	end
 c************************************************************************
-	subroutine Mosaicer(In,Out,nx,ny,npnt1,mnx,mny)
+	subroutine Mosaicer(In,Out,nx,ny,npnt1,mnx,mny,
+     *					Runs,MAXRUNS,nRuns)
 c
 	implicit none
-	integer nx,ny,npnt1,mnx,mny
+	integer nx,ny,npnt1,mnx,mny,MAXRUNS,nRuns,Runs(3,MAXRUNS)
 	real In(nx,ny,npnt1),Out(mnx,mny)
 c
 c  Mosaic the different fields together.
@@ -928,6 +929,10 @@ c  Do the simple mosaicing.
 c
 	call Mosaic1(In,Out,memr(pWts),nx,ny,npnt,mnx,mny,
      *	  x0,y0,pbObj,Rms2,nx2,ny2)
+c
+c  Determine what data are flagged.
+c
+	call mosRuns(memr(pWts),mnx,mny,Runs,MAXRUNS,nRuns)
 c
 	call memFree(pWts,mnx*mny,'r')
 	end
@@ -992,6 +997,45 @@ c
 	enddo
 c
 	call MosWt(Rms2,npnt,Out,Wts,mnx,mny)
+c
+	end
+c************************************************************************
+	subroutine mosRuns(Wts,nx,ny,Runs,MAXRUNS,nRuns)
+c
+	implicit none
+	integer nx,ny,MAXRUNS,nRuns,Runs(3,MAXRUNS)
+	real Wts(nx,ny)
+c
+c  Make a Runs array to indicate which pixels are good.
+c------------------------------------------------------------------------
+	integer i,j,ngood
+c
+	nRuns = 0
+c
+	do j=1,ny
+	  ngood = 0
+	  do i=1,nx
+	    if(Wts(i,j).gt.0)then
+	      ngood = ngood + 1
+	    else if(ngood.gt.0)then
+	      nruns = nruns + 1
+	      if(nruns.ge.MAXRUNS)call bug('f','Runs buffer overflow')
+	      Runs(1,nRuns) = j
+	      Runs(2,nRuns) = i - ngood
+	      Runs(3,nRuns) = i - 1
+	      ngood = 0
+	    endif
+	  enddo
+	  if(ngood.gt.0)then
+	    nruns = nruns + 1
+	    if(nruns.ge.MAXRUNS)call bug('f','Runs buffer overflow')
+	    Runs(1,nRuns) = j
+	    Runs(2,nRuns) = nx - ngood + 1
+	    Runs(3,nRuns) = nx
+	  endif
+	enddo
+c
+	Runs(1,nRuns+1) = 0
 c
 	end
 c************************************************************************
