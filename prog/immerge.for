@@ -98,7 +98,7 @@ c    rjs  16mar98 Added region parameter.
 c    rjs  19aug98 Fix bug introduced on 16 March where the first plane
 c		  in the output was the last plane in the selected region
 c		  for factor determination.
-c		  
+c    rjs  02sep98 Subroutine name change only to avoid a LINUX conflict.
 c  Bugs:
 c------------------------------------------------------------------------
 	character version*(*)
@@ -306,7 +306,7 @@ c
      *						ngx,ngy,dozero)
 	      call GetDat(lIn2,memr(pIn2),nIn(1),nIn(2),
      *						ngx,ngy,dozero)
-	      call Merge(dofeath,memr(pIn1),memr(pIn2),ngx,ngy,
+	      call Mergeit(dofeath,memr(pIn1),memr(pIn2),ngx,ngy,
      *		uvlo,uvhi,du,dv,fac/sfac,sxx,sxy,syy)
 	      call WriteOut(lOut,memr(pIn1),ngx,nOut(2))
 	    else
@@ -946,7 +946,7 @@ c
 c
 	end
 c************************************************************************
-	subroutine Merge(dofeath,In1,In2,ngx,ngy,uvlo,uvhi,du,dv,
+	subroutine Mergeit(dofeath,In1,In2,ngx,ngy,uvlo,uvhi,du,dv,
      *						fac,sxx,sxy,syy)
 c
 	implicit none
