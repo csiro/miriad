@@ -139,7 +139,7 @@ c    22nov94  bpw  fixed non-plotting: forgot to change some values of plotvar
 c                  parameters (equivalent to a C 'enum').
 c    28jun95  mhw  change printing formats: guarantee 1 space between fields
 c                  in eformat mode and add some decimal places to the freq
-c
+c    10jan96  rjs  Make MAXRUNS depend on MAXDIM. Also eliminate dfloat.
 c------------------------------------------------------------------------
 
 c Main program of imstat and imspec. Puts out the identification, where
@@ -174,7 +174,7 @@ c the include file.
       program imstaspc
 
       character*21     version
-      parameter        ( version = 'version 2.2 22-Nov-94' )
+      parameter        ( version = 'version 2.2 10-Jan-96' )
       character*29     string
 
       include          'imstat.h'
@@ -1071,7 +1071,9 @@ c statistics for a subcube with one higher dimension, etc.
       character*(*)    axlabel(*)
       character*(*)    device
       include          'imstat.h'
-
+      integer          MAXRUNS
+      parameter(MAXRUNS=3*MAXDIM)
+c
       integer          subcube, i
       integer          iloop, nloop
       integer          coo(MAXNAX)
@@ -1082,7 +1084,7 @@ c statistics for a subcube with one higher dimension, etc.
       real             data(MAXBUF/2)
       logical          mask(MAXBUF/2)
 
-      integer          runs(3,2048), nruns
+      integer          runs(3,MAXRUNS), nruns
       
       logical          inbox, init(MAXNAX)
       double precision v
@@ -1111,7 +1113,7 @@ c loop over all subcubes for which statistics are to be calculated.
          call xyzs2c( tinp, subcube, coo )
 
          if( abs(dim).eq.2 )
-     *     call boxruns(  naxis,coo,'r',boxes,runs,2048,nruns,
+     *     call boxruns(  naxis,coo,'r',boxes,runs,MAXRUNS,nruns,
      *                    corners(1),corners(2),corners(3),corners(4) )
 
 c if init(i)=.true., the statistics for this level must be reinitialized.
@@ -1743,7 +1745,7 @@ c Test if data are within unmasked, above the cut and inside the region
       integer dim, i
       real    data
       logical mask
-      integer runs(3,2048)
+      integer runs(3,*)
       integer corners(*)
       real    cut(*)
 
@@ -1803,7 +1805,7 @@ c Calculate the rms from the sum and sumsquared.
       double precision rms
 
       if(     npoints.ge.2 ) then
-         rms = ( sumsq - sum**2/dfloat(npoints) ) / dfloat(npoints-1) 
+         rms = ( sumsq - sum**2/dble(npoints) ) / dble(npoints-1) 
          if( rms.ge.0.d0 ) then
             rms = sqrt(rms)
             ok = .true.
