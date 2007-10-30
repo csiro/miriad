@@ -94,6 +94,7 @@ c    bpw  05nov91  Some changes in doc because users overlooked the obvious
 c    bpw  27mar91  Changed assert into assertl
 c    bpw  15dec92  Add default velaxis='z' after changing fndaxnum
 c    bpw  19dec94  Add options=coeff,#
+c    bpw  12jan95  Fixed bug introduced by introducing options=coeff,#
 c
 c------------------------------------------------------------------------
 c
@@ -112,7 +113,7 @@ c contchan:    list of channel numbers to use to determine continuum
       program contsub
 
       character*50     version
-      parameter        ( version = 'contsub: version 2.0 19-dec-94' )
+      parameter        ( version = 'contsub: version 2.0 12-jan-95' )
 
       include          'maxdim.h'
 
@@ -230,16 +231,18 @@ c Check the output option.
          optprsnt(i) = .FALSE.
       enddo
       call options( 'options', outopts, optprsnt, NOPTO )
-      n=0
-      do i = 1, MAXTERMS
-         if( optprsnt(i+1) ) n=n+1
-         if( optprsnt(i+1) ) opts(1) = i-1
-      enddo
-      call assertl( n.eq.1,
+      if( optprsnt(1).eq..TRUE. ) then
+         n=0
+         do i = 1, MAXTERMS
+            if( optprsnt(i+1) ) n=n+1
+            if( optprsnt(i+1) ) opts(1) = i-1
+         enddo
+         call assertl( n.eq.1,
      *             'Only one value may be given after options=coeff' )
-      call assertl( opts(1) .lt. nterms,
+         call assertl( opts(1) .lt. nterms,
      *             'Coefficient chosen to write must be < poly order' )
-      if( n.eq.0 ) opts(1) = -1
+         if( n.eq.0 ) opts(1) = -1
+      endif
 
 
 c Read names of input, output and continuum dataset.
