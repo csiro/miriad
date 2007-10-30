@@ -80,12 +80,14 @@ c                       exactly on outer ring edge into that ring.
 c    nebk  22aug94      Adapt to GETFREQ error status change
 c    rjs   24oct94	Use new pb routines.
 c    nebk  27feb96      Add options=median, more doc.
+c    rjs   20nov96      Re-instate Wilfred's version, with some trivial
+c			intermediate changes. History is uncertain.
 c----------------------------------------------------------------------c
 	include 'mirconst.h'
 	include 'maxdim.h'
 	include 'mem.h'
         character*(*) label,version
-        parameter(version='version 1.0 27-Feb-96')
+        parameter(version='version 1.0 20-Nov-96')
         double precision rts,value
         parameter(rts=3600.d0*180.d0/dpi)
         parameter(label='Integrate a Miriad image in elliptical annuli')
@@ -442,10 +444,10 @@ c
 
 c our mode subroutine
 c************************************************************************
-c* Mode -- Find the mode of an array of data.
-c& vjm, wmw
-c: miscellaneous
-c+
+c Mode -- Find the mode of an array of data.
+c vjm, wmw
+c miscellaneous
+c
 	subroutine mode(x,n,xmode)
 c
 	implicit none
