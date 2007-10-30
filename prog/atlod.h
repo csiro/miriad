@@ -4,8 +4,8 @@ c
 	include 'maxdim.h'
 	integer ATIF,ATANT,ATPOL,ATDATA,ATBASE,ATBIN,ATCONT
 	parameter(ATIF=2,ATANT=6,ATPOL=4,ATBASE=((ATANT+1)*ATANT)/2)
-	parameter(ATBIN=16,ATCONT=33)
-	parameter(ATDATA=MAXCHAN*ATBASE)
+	parameter(ATBIN=32,ATCONT=33)
+	parameter(ATDATA=2*MAXCHAN*ATBASE)
 	integer nifs,nfreq(ATIF),nstoke(ATIF),polcode(ATIF,ATPOL)
 	double precision sfreq(ATIF),sdf(ATIF),restfreq(ATIF)
 	double precision time
@@ -23,7 +23,9 @@ c
 	logical dowt,doxyp
 	real wts(2*ATCONT-2)
 	double precision obsra,obsdec,lat,long,ra,dec
+	character sname*64
 c
+	common/atlodd/sname
 	common/atlodc/sfreq,sdf,restfreq,time,obsra,obsdec,lat,long,
      *	    ra,dec,
      *	  data,
