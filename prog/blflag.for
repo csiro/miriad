@@ -16,6 +16,7 @@ c	  Left-Button  Left mouse button flags the nearest visibility.
 c	  Right-Button Right mouse button causes BLFLAG to precede to the
 c	               next baseline.
 c	  <CR>         Carriage-return gives help.
+c	  ?            Help.
 c	  a	       Flag nearest visibility (same as left mouse button).
 c	  c            Clear the flagging for this baseline, and redraw plot.
 c	  h            Give help (same as carriage return).
@@ -28,7 +29,10 @@ c	               You can delete vertices with the middle mouse
 c	               button (or d).
 c	  q            Abort completely. This does not apply flagging.
 c	  r            Redraw plot.
+c	  u            Unzoom.
 c	  x            Move to next baseline (same as right mouse button).
+c	  z            Zoom in. You follow this by clicking the mouse on the
+c	               left and right limits to zoom.
 c@ vis
 c	Input visibility dataset to be flagged. No default.
 c@ line
@@ -76,11 +80,13 @@ c  History:
 c    26jun96 rjs  Original version.
 c    30jul96 rjs  Correct labelling of uvdist plots.
 c    26feb97 rjs  Fix bug in the dimensioning of ltemp.
+c     6may97 rjs  Better auto-range determination. Change zoom somewhat. Better
+c		  doc and help.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
 	integer MAXDAT,MAXPLT,MAXEDIT
-	parameter(version='BlFlag: version 26-Jun-96')
+	parameter(version='BlFlag: version 6-May-97')
 	parameter(MAXDAT=200000,MAXPLT=20000,MAXEDIT=20000)
 c
 	logical present(MAXBASE),nobase,selgen,noapply
@@ -383,11 +389,13 @@ c
 	  else if(mode.eq.'r')then
 	    call Draw(xmin,xmax,xplt,yplt,flag,nplt,
      *			xaxis,yaxis,title,xs,ys)
-	  else if(mode.eq.'h'.or.mode.le.' ')then
+	  else if(mode.eq.'h'.or.mode.le.' '.or.mode.eq.'?')then
 	    call output('-------------------------------------')
 	    call output('Single key commands are')
-	    call output(' Left-button Delete nearest point')
+	    call output(' Left-button  Delete nearest point')
+	    call output(' Right-button Next baseline')
 	    call output(' <CR>      Help')
+	    call output(' ?         Help')
 	    call output(' a         Delete nearest point')
 	    call output(' c         Clear flagging of this baseline')
 	    call output(' h         Help -- these messages')
@@ -406,9 +414,10 @@ c
 	  else if(mode.eq.'x')then
 	    more = .false.
 	  else if(mode.eq.'z')then
+	    call output('Click on left-hand edge of the zoomed region')
+	    call pgcurs(xmin,yv,mode)
+	    call output('Click on right-hand edge of the zoomed region')
 	    call pgcurs(xmax,yv,mode)
-	    xmin = min(xv,xmax)
-	    xmax = max(xv,xmax)
 	    call Draw(xmin,xmax,xplt,yplt,flag,nplt,
      *			xaxis,yaxis,title,xs,ys)
 	  else if(mode.eq.'a')then
@@ -559,7 +568,7 @@ c
 c------------------------------------------------------------------------
 	integer i
 	logical first
-	real x1,x2
+	real x1,x2,delta,absmax
 c
 	first = .true.
 	do i=1,nplt
@@ -575,7 +584,12 @@ c
 	  endif
 	enddo
 c
-	call pgrnge(x1,x2,lo,hi)
+	delta = 0.05*(x2-x1)   
+        absmax = max(abs(x2),abs(x1))
+        if(delta.le.1e-4*absmax) delta = 0.01*absmax
+        if(delta.eq.0) delta = 1
+        lo = x1 - delta
+        hi = x2 + delta
 c
 	if(axis.eq.'time'.or.axis.eq.'lst')then
 	  flags = 'BCNSTHZ0' 
