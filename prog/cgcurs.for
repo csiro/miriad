@@ -287,6 +287,7 @@ c    rjs  21jul97  Called initco earlier.
 c    rjs  31jul97  Simplify calls to initco,finco.
 c    rjs  23apr98  Increase size of bunit variable.
 c    rjs  25nov98  Fix compacting algorithm again!
+c    nebk 11jun99  Some hacks to handle /BEAM or /B and following strings
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -324,7 +325,7 @@ c
       data dmm /1.0e30, -1.0e30/
       data gaps, doabut /.false., .false./
 c-----------------------------------------------------------------------
-      call output ('CgCurs: version 25-Nov-98')
+      call output ('CgCurs: version 11-Jun-99')
       call output (' ')
 c
 c Get user inputs
@@ -1216,8 +1217,8 @@ c
       real vx(nvmax), vy(nvmax), sum, sumsq, mean, var, rms,
      +  dmin, dmax, bmin, bmaj, barea, ival
       character line*80, ans*1, bunit*16, typei(3)*6, typeo(3)*6,
-     +  wstr(3)*132
-      logical good, more
+     +  wstr(3)*132, bunit2*16, tmp*16
+      logical good, more, perbeam
 c------------------------------------------------------------------------
       call output (' ')
       call output ('**************************')
@@ -1423,10 +1424,12 @@ c Tell user
 c
               call output (' ')
               if (dolog) call txtwrite (lstat, ' ', 1, iostat)
-              if (barea.gt.0.0 .and. bunit.eq.'JY/BEAM') then
-                write (line, 10) sum, sum/barea
+              call unitdec(bunit, tmp, bunit2, perbeam)
+
+              if (barea.gt.0.0 .and. perbeam) then
+                write (line, 10) sum, sum/barea, bunit2
 10              format ('Sum = ', 1pe12.5, '   Flux density = ',
-     +                  1pe12.5, ' Jy')
+     +                  1pe12.5, ' ', a)
               else if (bunit.eq.'JY/PIXEL') then
                 write (line, 12) sum
 12              format ('Flux density  = ', 1pe12.5, ' Jy')
@@ -2306,3 +2309,40 @@ c
       regcol = 8
 c
       end
+
+
+      subroutine unitdec (in, tmp, out, perbeam)
+c-----------------------------------------------------------------------
+      implicit none
+      character*(*) in, out, tmp
+cc
+      integer idx, idx1, idx2, len1
+      logical perbeam
+c-----------------------------------------------------------------------
+      perbeam = .false.
+      out = in
+c
+      tmp = in
+      call ucase(tmp)
+      idx = index(tmp, '/BEAM')
+      if (idx.ne.0) then
+         idx1 = idx
+         idx2 = idx + 4
+      else
+         idx = index(tmp, '/B')
+         if (idx.ne.0) then
+            idx1 = idx
+            idx2 = idx + 1
+         end if
+      end if
+      if (idx.eq.0) return
+c
+      perbeam = .true.
+      out(1:) = in(1:idx1-1)
+      if (idx2+1.le.len1(in)) then
+         out(idx1:) = in(idx2+1:)
+      end if
+c
+      return
+      end
+
