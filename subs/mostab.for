@@ -25,6 +25,7 @@ c
 c  History:
 c    rjs  26oct94 Original version
 c    rjs  16nov94 Added mosWt
+c    rjs  26nov94 Fix bug which allocated too many coordinate objects.
 c************************************************************************
 	subroutine MosCIni
 c
@@ -80,12 +81,12 @@ c
 	  solar = MosSolar(lIn)
 	  call uvrdvrd(lIn,'ra',radec0(1),0.d0)
 	  call uvrdvrd(lIn,'dec',radec0(2),0.d0)
+	  call coRaDec(coRef,'SIN',radec0(1),radec0(2))
 	endif
 c
 c  Initialise the handle to track changes in the primary beam.
 c
 	if(doinit)then
-	  call coRaDec(coRef,'SIN',radec0(1),radec0(2))
 	  call uvVarIni(lIn,vPntUpd)
 	  if(.not.solar)call uvVarSet(vPntUpd,'ra')
 	  if(.not.solar)call uvVarSet(vPntUpd,'dec')
