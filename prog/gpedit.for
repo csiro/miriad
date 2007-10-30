@@ -3,7 +3,7 @@ c********1*********2*********3*********4*********5*********6*********7*c
 	implicit none
 c
 c= Gpedit -- Edit the gain table.
-c& rjs
+c& mchw
 c: calibration
 c+
 c	Gpedit is a MIRIAD task which modifies a gain table.
@@ -32,23 +32,24 @@ c	            options are given, the replace option is performed.
 c	  multiply  The existing gains are multiplied by the gain
 c	            given by the `gain' keyword.
 c	  flag      The existing gains are flagged as bad.
-c	  amplitude The phase of the existing gains are set to 0.
-c	  phase     The amplitude of the existing gains are set 1.
+c	  amplitude The phases of the existing gains are set to 0.
+c	  phase     The amplitudes of the existing gains are set 1.
 c
 c	Example:
-c	  gpedit vis=cyga gain=14.4,90 ants=1,2 feeds=X
+c	  gpedit vis=cyga gain=14.4,90 select=ant(1,2) feeds=X
 c--
 c  History:
 c    rjs    4sep91 gpbreak. gpedit code copied from gpbreak.
 c    mchw  23apr96 keyword driven task for the squeamish. Instead of BEE.
 c    rjs   25feb97 Tidy up and extend the possibilities.
+c    rjs   26feb97 Fix feeds reading.
 c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
         include 'mirconst.h'
 	integer MAXFEED,MAXSELS
 	character version*(*)
-	parameter(version='Gpedit: version 1.0 25-Feb-97')
+	parameter(version='Gpedit: version 1.0 26-Feb-97')
 	parameter(MAXFEED=2,MAXSELS=300)
 c
 	character vis*64
@@ -386,11 +387,13 @@ c
 c
 	nfeeds = 0
 	more = keyprsnt(keyw)
+	call keya(keyw,string,' ')
 	dowhile(nfeeds.lt.maxfeeds.and.more)
 	  i = binsrcha(string,allfds,nallfds)
 	  if(i.eq.0)call bug('f','Unrecognised feed mnemonic: '//string)
 	  nfeeds = nfeeds + 1
 	  feeds(nfeeds) = codes(i)
+	  call keya(keyw,string,' ')
 	  more = keyprsnt(keyw)
 	enddo
 c
