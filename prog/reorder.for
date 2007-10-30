@@ -35,6 +35,7 @@ c    rjs  02mar93 Break out "Inc" routines.
 c    rjs  06sep93 Change ownership. Fix bug which inverted (!) the masking
 c		  file.
 c    rjs  07feb96 Handle 4th, etc, dimension.
+c    rjs  02jul97 cellscal change.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'maxnax.h'
@@ -266,7 +267,7 @@ c
 c  Header keywords.
 c
 	integer nkeys
-	parameter(nkeys=23)
+	parameter(nkeys=22)
 	character keyw(nkeys)*8
 c
 c  Externals.
@@ -274,11 +275,10 @@ c
 	character itoaf*8
 c
 	data keyw/   'bmaj    ','bmin    ','bpa     ','bunit   ',
-     *    'date-obs','epoch   ','history ','instrume',
+     *    'obstime ','epoch   ','history ','instrume',
      *	  'ltype   ','lstart  ','lwidth  ','lstep   ',
      *	  'niters  ','object  ','observer','obsra   ','obsdec  ',
-     *	  'pbfwhm  ','restfreq','telescop','vobs    ','xshift  ',
-     *	  'yshift  '/
+     *	  'pbfwhm  ','restfreq','telescop','vobs    ','cellscal'/
 c
 c  Copy header keywords.
 c
