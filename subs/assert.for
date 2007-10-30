@@ -1,3 +1,17 @@
+c************************************************************************
+c
+c  Check that a collection of assertions are met.
+c
+c  History:
+c    pjt  16-may-90	Originally written
+c    pjt  18-mar-91	see if INQUIRE will do... since file != directory
+c			this may file on VMS??
+c    pjt  18-mar-92	renamed from assert to   assertl to avoid potential name
+c			pollution of needed C libraries
+c    rjs  13-jul-00	Replace "inquire" with "hexists" routine, to
+c			avoid a bug on some Digital UNIX systems.
+c
+c************************************************************************
 c	SUBROUTINE assert(cond,mesg)
 c	CHARACTER mesg*(*)
 c	LOGICAL   cond
@@ -25,16 +39,12 @@ c   Input:
 c       cond    -- logical to test, if FALSE bail out
 c       mesg    -- message passed to bug
 c----------------------------------------------------------------------|
-c   10-may-90   Peter Teuben - originally written
-c   18-mar-92   renamed from assert to   assertl to avoid potential name
-c		pollution of needed C libraries
-
       IF (cond) RETURN
 
       CALL bug('f',mesg)
       RETURN
       END
-
+c************************************************************************
 c* assertf -- Assert a file existence condition
 c& pjt
 c: error-handling, file i/o
@@ -59,19 +69,19 @@ c       name  -- name of file to test for
 c       cond  -- if TRUE file must exist, if FALSE file must not exist
 c       mesg  -- message passed to bug
 c----------------------------------------------------------------------|
-c   16-may-90   Peter Teuben - originally written
-c   18-mar-91   see if INQUIRE will do... since file != directory
-c		this may file on VMS??
       LOGICAL   fex
-      INTEGER   len1
-
-      INQUIRE(FILE=name(1:len1(name)),EXIST=fex)
+c
+c  Externals.
+c
+      logical hexists
+c
+      fex = hexists(0,name)
       IF (cond .AND. .NOT.fex  .OR.  .NOT.cond .AND. fex) THEN
          CALL bug('f',mesg)
       ENDIF
 
       END
-
+c************************************************************************
 c* asserti2 -- Assert a condition, otherwise bug out
 c& pjt 
 c: error-handling
@@ -95,7 +105,6 @@ c       i1      -- first integer, often an available size (of an array)
 c       i2      -- second integer, often size needed (for the array)
 c       mesg    -- message passed to bug
 c----------------------------------------------------------------------|
-c   10-may-90   Peter Teuben - originally written
 
       CHARACTER   line*80
 
