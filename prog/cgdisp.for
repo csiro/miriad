@@ -182,6 +182,31 @@ c
 c	All offsets are from the reference pixel.  
 c	Defaults are "relpix", LABTYP(1)   except if LABTYP(1)="hms" when
 c	LABTYP(2) defaults to "dms"  (to give RA and DEC)
+c@ beamtyp
+c     Up to 6 values. Set if you want a small polygon to be drawn to
+c     represent the beam FWHM. Setting beamtyp to "b,l" is sufficient to
+c     draw a solid beam; "b,l,4" will result in a cross-hatched
+c     beam. The six parameters are:
+c
+c     - Beam vertical positioning: can be "t" (top), or "b" (bottom). No
+c       default.
+c     - Beam horizontal positioning: can be "l" (left), or "r"
+c       (right). Default "l"
+c
+c     The next four parameters apply only to the first image specified
+c     with the "in" keyword.  If there are multiple, different beams to
+c     draw (for example, if different uv data were used to produce
+c     images with different beam shapes), all subsequent beams are drawn 
+c     as open polygons.
+c
+c     - Hatching style:
+c        1    solid (default)
+c        2    outline
+c        3    hatched
+c        4    cross-hatched
+c     - Hatching angle (default 45 degrees).
+c     - Hatching line separation (default 1).
+c     - Line-width for outlines, hatching and cross-hatching (default 1)
 c@ options
 c	Task enrichment options. Minimum match of all keywords is active.
 c
@@ -192,10 +217,8 @@ c	  separately.
 c	"beamAB", where "A" is one of "b" or "t" and 
 c	                "B" is one of "l" or "r"
 c	  means draw the beam FWHM on the plot in the corner indicated
-c	  by the "AB" location.  The beams for all images displayed
-c	  (contour and pixel map) will be drawn confocally. If you want
-c	  to draw the beam somewhere else, you could use the "ellipse"
-c	  overlay type (see keyword OLAY).
+c	  by the "AB" location. This option is deprecated: use the
+c         keyword "beamtyp" instead.
 c	"conlabel" means label the contour values on the actual contours.
 c	  The PGPLOT routine that does this is not very bright. You will
 c	  probably get too many labels.  If you bin the image up with
@@ -620,6 +643,7 @@ c    nebk 09apr99  fix problem with hard copy colour tbales and multipanel plots
 c    rjs  08may00  Change incorrect keyf call to keya.
 c    rjs  13jul00  Correct angle of beam plotting when there is a rotation
 c		   between sky and pixel grid.
+c    dpr  14feb01  Add beamtyp keyword
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -647,7 +671,7 @@ c
      +  wdgvp(4), cumhis(nbins), gmm(2), cmm(2,maxcon), dmm(2)
       real vxmin, vymin, vymax, vx, vy, vxsize, vysize, vxgap, vygap, 
      +  ydispb, xdispl, groff, blankg, blankc, blankv, blankb, 
-     +  vecfac, boxfac
+     +  vecfac, boxfac, hs(3)
 c
       integer blc(3), trc(3), win(2), lwid(maxcon+3), 
      +  vecinc(2), boxinc(2), srtlev(maxlev,maxcon), nlevs(maxcon), 
@@ -656,7 +680,7 @@ c
      +  cnaxis(maxcon), vnaxis(2), bnaxis, mnaxis, cols1(maxlev)
       integer  nx, ny, ierr, pgbeg, ilen, igr, nlast, ngrps,
      +  ncon, i, j, nvec, ipage, jj, npixr, wedcod, bgcol, ncols1,
-     +  jplot
+     +  jplot, fs, firstimage
 c
       character labtyp(2)*6, levtyp(maxcon)*1, trfun(maxchan)*3
       character pdev*132, xlabel*40, ylabel*40, hard*20, ofile*64, 
@@ -683,7 +707,7 @@ c
       data lwid /maxconp3*1/
       data getvsc /.true./
 c-----------------------------------------------------------------------
-      call output ('CgDisp: version 16-Jun-98')
+      call output ('CgDisp: version 14-Feb-01')
       call output (' ')
 c
 c Get user inputs
@@ -695,7 +719,7 @@ c
      +   gaps, solneg, nx, ny, lwid, break, cs, scale, ofile, dobeam, 
      +   beaml, beamb, relax, rot90, signs, mirror, dowedge, doerase, 
      +   doepoch, dofid, dosing, nofirst, grid, dotr, dodist, conlab,
-     +   doabut, val3form, ncols1, cols1)
+     +   doabut, val3form, ncols1, cols1, fs, hs, firstimage)
 c
 c Open images as required
 c
@@ -1056,7 +1080,7 @@ c
          if (dobeam) then
            call pgsci (bemcol)
            call beampl (maxcon, beaml, beamb, bmin, bmaj, bpa,
-     +                  bemprs, lc, lg, lv, lb)
+     +                  bemprs, lc, lg, lv, lb, fs, hs, firstimage)
          end if
 c
 c Plot annotation
@@ -1175,7 +1199,7 @@ c
 c
 c
       subroutine beampl (maxcon, beaml, beamb, bmin, bmaj, bpa, 
-     +                   bemprs, lc, lg, lv, lb)
+     +                   bemprs, lc, lg, lv, lb, fs, hs, firstimage)
 c-----------------------------------------------------------------------
 c     Draw one beam for each image being displayed.  They are drawn
 c     confocally with different line styles in the designated corner.
@@ -1189,12 +1213,18 @@ c                    contour 1 and 2 images (rad).
 c    bemprs          True if beam present for maxcon contours, pixel map
 c                    2 vector images and box image
 c    l*              Handles
+c    fs              PGPLOT fill style for first beam
+c    hs              PGPLOT hatching style for first beam
+c    firstimage      bemprs-style index of the beam with which to use
+c                    fs and hs
 c-----------------------------------------------------------------------   
       implicit none
 c
       integer maxcon, lc(maxcon), lg, lv(2), lb
       logical beaml, beamb, bemprs(maxcon+4)
       real bmin(maxcon+4), bmaj(maxcon+4), bpa(maxcon+4)
+      integer fs, firstimage
+      real hs(3)
 cc
       integer i, luns(20)
       logical fill
@@ -1219,15 +1249,21 @@ c Draw the beam(s)
 c
       do i = 1, maxcon+4
         if (bemprs(i)) then
-          call beampl2 (luns(i), xcen, ycen, bmin(i), bmaj(i), bpa(i),
-     +                  fill)
+          if (firstimage .eq. i) then
+            call beampl2 (luns(i), xcen, ycen, bmin(i), bmaj(i), 
+     +   bpa(i),.true.,fs,hs)
+          else
+            call beampl2 (luns(i), xcen, ycen, bmin(i), bmaj(i), 
+     +   bpa(i),.false.,fs,hs)
+          end if
         end if
       end do
 c
       end
 c
 c
-      subroutine beampl2 (lun, xcen, ycen, bmin, bmaj, bpa, fill)
+      subroutine beampl2 (lun, xcen, ycen, bmin, bmaj, bpa, fill,
+     + fs,hs)
 c-----------------------------------------------------------------------
 c     Draw one beam in the designated corner of the sub-plot.
 c
@@ -1237,12 +1273,16 @@ c    x,ycen          Coordinates of beam centre in absolute pixels
 c    bmin,maj,pa     Beam FWHMin, FWHMax and p.a. for pixel map and
 c                    contour image (rad). 
 c    fill            If true fill beam polygon in
+c    fs              PGPLOT fill style
+c    hs              PGPLOT hatching style
 c-----------------------------------------------------------------------   
       implicit none
 c
       integer lun
       real bmin, bmaj, bpa, xcen, ycen
       logical fill
+      integer fs
+      real    hs(3)
 cc
       include 'mirconst.h'
       double precision r2a
@@ -1251,7 +1291,7 @@ c
       double precision win(2), wout(2)
       real xs(0:360), ys(0:360), pa, xx, yy, cp, sp, bbmin, bbmaj, bbpa
       character*6 typei(2), typeo(2)
-      integer i
+      integer i,lw
 c-----------------------------------------------------------------------
       typei(1) = 'arcsec'
       typei(2) = 'arcsec'
@@ -1283,7 +1323,11 @@ c
 c  Draw the beam with the desired line style and fill style
 c
       if (fill) then
-        call pgsfs (1)
+        call pgsfs (fs)
+        call pgqlw(lw)
+        lw=int(lw*hs(3))
+        call pgslw(lw)
+        call pgshs(hs(1),hs(2),0)
       else
         call pgslw (2)
         call pgsfs (2)
@@ -1291,6 +1335,13 @@ c
 c
       call pgpoly (361, xs(0), ys(0))
 c
+c 
+c     Now, if we didn't do a filled poly, we'll want a border
+c
+      if (((fs .eq. 3) .or. (fs .eq. 4)) .and. fill) then
+          call pgsfs (2)
+          call pgpoly (361, xs(0), ys(0))
+        end if
       end
 c
 c
@@ -1673,6 +1724,7 @@ c
      +  beambl, beambr, beamtl, beamtr, relax, rot90, signs,
      +  mirror, dowedge, doerase, doepoch, dofid, dosing, nofirst,
      +  grid, dotr, dodist, conlab, doabut
+
 cc
       integer maxopt
       parameter (maxopt = 27)
@@ -2330,7 +2382,7 @@ c
      +   gaps, solneg, nx, ny, lwid, break, cs, scale, ofile, dobeam, 
      +   beaml, beamb, relax, rot90, signs, mirror, dowedge, doerase, 
      +   doepoch, dofid, dosing, nofirst, grid, dotr, dodist, conlab,
-     +   doabut, val3form, ncols1, cols1)
+     +   doabut, val3form, ncols1, cols1, fs, hs, firstimage)
 c-----------------------------------------------------------------------
 c     Get the unfortunate user's long list of inputs
 c
@@ -2408,15 +2460,19 @@ c   doabut     No white space bewteen subplots
 c   val3form   Format for options=3val labelling
 c   cols1      Colours for LEVS1 contours
 c   ncols1
+c   fs         PGPLOT fill style
+c   hs         PGPLOT hatching style
+c   firstimage first image specified (used for beam plotting). Given
+c              in bemprs format (see below)
 c-----------------------------------------------------------------------
       implicit none
 c
       integer maxlev, maxcon, maxtyp, maxgr, ncon, nvec, npixr
       real levs(maxlev,maxcon), pixr(2,maxgr), scale(2), cs(*),
-     +  slev(maxcon), break(maxcon), vecfac, boxfac
+     +  slev(maxcon), break(maxcon), vecfac, boxfac, hs(3)
       integer nx, ny, nlevs(maxcon), lwid(maxcon+3), vecinc(2), 
      +  boxinc(2), ibin(2), jbin(2), kbin(2), coltab(maxgr),
-     +  cols1(maxlev), ncols1
+     +  cols1(maxlev), ncols1, fs, firstimage
       character*(*) labtyp(2), cin(maxcon), gin, vin(2), bin, mskin,
      +  pdev, ofile, trfun(maxgr), levtyp(maxcon), ltypes(maxtyp),
      +  val3form
@@ -2431,6 +2487,7 @@ c
       integer nim, nimtype, i, j, nlab
       character images(nmaxim)*64, imtype(nmaxim)*9
       character*1 str, itoaf
+      character*1 newtb,newlr
       logical beambl, beambr, beamtl, beamtr, present, keyprsnt
 c
       integer ntype
@@ -2511,6 +2568,26 @@ c
       if ( (vin(1).ne.' ' .and. vin(2).eq.' ') .or.
      +     (vin(1).eq.' ' .and. vin(2).ne.' ') ) call bug ('f', 
      +   'You must give both vector amplitude & position angle images')
+c
+c Remember the first image given, in the bemprs numbering scheme: 
+c maxcon contours, pixel map, 2 vector images and box image
+c
+      if (imtype(1).eq.'contour') then
+        firstimage=1
+      else if (imtype(1).eq.'pixel' .or. imtype(1).eq.'grey') then
+        firstimage=maxcon+1
+      else if (imtype(1).eq.'amplitude') then
+        firstimage=maxcon+2
+      else if (imtype(1).eq.'angle') then
+        firstimage=maxcon+2
+      else if (imtype(1).eq.'box') then
+        firstimage=maxcon+4
+      else if (imtype(1).eq.'mask') then
+c       This will work at the moment, because I test if 
+c       index .eq. firstimage, then use index. But this is
+c       very slack programming. DPR.
+        firstimage=0
+      end if
 c
 c Get on with the rest
 c
@@ -2609,6 +2686,15 @@ c
       if (boxinc(2).eq.0) boxinc(2) = 2
 c
       call keya ('device', pdev, ' ')
+c     
+c     Get the beam parameters
+c
+      call keya ('beamtyp',newtb,'n')
+      call keya ('beamtyp',newlr,'l')
+      call keyi ('beamtyp',fs,1)
+      call keyr ('beamtyp',hs(1),45.0)
+      call keyr ('beamtyp',hs(2),1.0)
+      call keyr ('beamtyp',hs(3),1.0)
 c
       call decopt (dofull, do3val, do3pix, eqscale, gaps, solneg,
      +   beambl, beambr, beamtl, beamtr, relax, rot90, signs, 
@@ -2669,6 +2755,8 @@ c
         end if
       end if
 c
+c     Old style beam specification
+c
       dobeam = beambl .or. beambr .or. beamtl .or. beamtr
       if (beambl) then
         beamb = .true.
@@ -2684,6 +2772,14 @@ c
         beaml = .false.
       end if
 c
+c     New style beam specification
+c
+      if (newtb .ne. 'n') then
+        dobeam = .true.
+        beamb = (newtb .eq. 'b')
+        beaml = (newlr .eq. 'l')
+      end if  
+
       call keyf ('olay', ofile, ' ')
       if (ofile.ne.' ' .and. (labtyp(1).eq.'none' .or. 
      +    labtyp(2).eq.'none')) call bug ('f', 
@@ -2719,6 +2815,7 @@ c
       call keyr ('scale', scale(2), scale(1))
       if (scale(1).lt.0.0) scale(1) = 0.0
       if (scale(2).lt.0.0) scale(2) = 0.0
+c
 c
       end
 c
