@@ -63,13 +63,14 @@ c  mchw 28oct92  Added datamin, datamax to header.
 c  nebk 25nov92  Add btype to header
 c  nebk 18nov93  Allow semi-infinite sized regions in data listing
 c  rjs  18oct94  Print contents of mosaic tables.
+c  pjt   2jan94  Order of data statement for f2c
 c
 c  Bugs:
 c    Data format still needs work to prevent format overflow.
 c    Doesn't handle pixel blanking outside region of interest.
 c----------------------------------------------------------------------c
 	character version*(*)
-	parameter(version='version 18-Oct-94')
+	parameter(version='version 2-jan-95')
 	include 'maxdim.h'
 	integer maxboxes,maxnax
 	parameter(maxboxes=2048,maxnax=3)
@@ -254,6 +255,14 @@ c
 	integer nkeys
 	parameter(nkeys=49)
 	character keyw(nkeys)*8
+c
+c  Externals.
+c
+	character angles*13
+	integer len1
+c
+c  Data
+c
 	data keyw/   'object  ','telescop','observer','date-obs',
      *	  'restfreq','ltype   ','lstart  ','lwidth  ','lstep   ',
      *	  'naxis   ','naxis1  ','naxis2  ','naxis3  ','naxis4  ',
@@ -265,11 +274,7 @@ c
      *	  'bunit   ','niters  ','bmaj    ','bmin    ','bpa     ',
      *	  'xshift  ','yshift  ','pbfwhm  ','datamin ','datamax ',
      *    'btype   '/
-c
-c  Externals.
-c
-	character angles*13
-	integer len1
+
 c
 c  Probe for each item and convert to user units.
 c
