@@ -52,6 +52,15 @@ c@ cycles
 c	Number of cycles to spend on-source at each source. Default is 2.
 c@ interval
 c	Integration cycle time. Default is 15 seconds.
+c@ origin
+c	The output mosaic file stores positions as an offset from
+c	some position. You have to give this value in your sched file.
+c	The `origin' parameter is used to set this position in ATMOS.
+c	It is an RA and DEC, in the format hh:mm:ss,dd:mm:ss, or decimal hours
+c	and decimal degrees). The default is the position of the first
+c	source in the list. NOTE: The on-line system always slews to the
+c	origin before it starts executing a mosaic. Consequently you
+c	reduce slewing time by using the default.
 c@ ref
 c	This gives the name, RA and DEC where the antennas are pointing
 c	before the mosaic sequence is executed (the format for RA is
@@ -69,13 +78,14 @@ c
 	character source(MAXSRC)*16,out*64,line*80,sfile*64
 	character ssource*16
 	double precision ra(MAXSRC),dec(MAXSRC),lst,long
-	double precision ra0,dec0,raprev,decprev
+	double precision ra0,dec0,raprev,decprev,raref,decref
 	real interval,dt,dra,ddec
-	logical ok
+	logical ok,doref
 c
 c  Externals.
 c
 	integer len1
+	logical keyprsnt
 	character hangle*11,rangle*13
 c
 c  Get the input parameters.
@@ -86,6 +96,9 @@ c
 	call keyi('cycles',cycles,2)
 	call keya('out',out,'mosaic.mos')
 	call keyt('lst',lst,'hms',0.d0)
+	doref = keyprsnt('origin')
+	call keyt('origin',raref,'hms',0.d0)
+	call keyt('origin',decref,'dms',0.d0)
 	call keya('ref',ssource,' ')
 	call keyt('ref',ra0,'hms',0.d0)
 	call keyt('ref',dec0,'dms',0.d0)
@@ -99,7 +112,8 @@ c
 c
 c  Read the source file.
 c
-	call RdSource(sfile,source,ra,dec,MAXSRC,nsrc)
+	call RdSource(sfile,source,ra,dec,MAXSRC,nsrc,
+     *					raref,decref,doref)
 	if(nsrc.le.0)call bug('f','No sources given')
 c
 c  Fill in the place that we start from if necessary.
@@ -160,7 +174,10 @@ c
 	  dra = 180./pi * (ra(i0) - ra(1))
 	  ddec = 180./pi * (dec(i0) - dec(1))
 	  ncycles = nint(dt/interval + 0.7) + cycles
-	  if(i.eq.1)then
+	  if(i.eq.1.and.doref)then
+	    ncycles = ncycles - cycles
+	    line = '#'
+	  else if(i.eq.1)then
 	    write(line,'(f9.4,f10.4,i3,a,a)')dra,ddec,cycles,'  $',
      *							    source(i0)
 	  else
@@ -202,12 +219,14 @@ c
 c
 	end
 c************************************************************************
-	subroutine RdSource(sfile,source,ra,dec,MAXSRC,nsrc)
+	subroutine RdSource(sfile,source,ra,dec,MAXSRC,nsrc,
+     *						raref,decref,doref)
 c
 	implicit none
 	integer MAXSRC,nsrc
 	character sfile*(*),source(MAXSRC)*(*)
-	double precision ra(MAXSRC),dec(MAXSRC)
+	double precision ra(MAXSRC),dec(MAXSRC),raref,decref
+	logical doref
 c
 c  Read in all the sources.
 c------------------------------------------------------------------------
@@ -222,7 +241,14 @@ c
 c
 	call txtopen(lu,sfile,'old',iostat)
 	if(iostat.eq.0)call txtread(lu,line,length,iostat)
-	nsrc = 0
+	if(doref)then
+	  nsrc = 1
+	  source(1) = 'Mosaic Origin'
+	  ra(1) = raref
+	  dec(1) = decref
+	else
+	  nsrc = 0
+	endif
 	dowhile(iostat.eq.0)
 	  if(length.gt.0)length = len1(line(1:length))
 	  if(length.gt.0)then
