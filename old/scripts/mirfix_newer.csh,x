@@ -1,5 +1,8 @@
 #!/bin/csh -f
 
+unset noclobber
+unalias mv
+
 # Edit all the installation/update etc scripts.
 
 foreach in ( $MIR/bin/*/mir* $MIR/scripts/unix/*.csh $MIR/scripts/unix/*/*.csh )
