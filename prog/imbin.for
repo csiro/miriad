@@ -1,7 +1,7 @@
       program imbin
 c-----------------------------------------------------------------------
 c
-c= IMBIN - Bin up an image
+c= IMBIN - Bin up an image.
 c& nebk
 c: image analysis
 c+
@@ -26,7 +26,7 @@ c	selected region.  If the binning size is not unity, it must equal
 c	the increment.  For example, to bin up the image by 2 pixels
 c	in the x direction, and to pick out every third pixel in the 
 c	z direction, set BIN=2,2, 1,1, 3,1   
-c	Defaults are 1  
+c	Defaults are 1,1 for each axis.  
 c@ out
 c	Output image
 c--
@@ -37,6 +37,8 @@ c    nebk 14nov95  New call for READIMCG
 c    nebk 25may96  Fix glaring error with 2-D images
 c    rjs  12oct99  Correctly handle mosaic tables. Other cosmetic
 c		   improvements.
+c    dpr  08nov00  make bin specs for 3rd axis redundant for 2-D 
+c                  images.
 c
 c-----------------------------------------------------------------------
       implicit none
@@ -52,7 +54,7 @@ c
 c
       integer sizin(maxnax), sizout(maxnax), blc(maxnax), trc(maxnax), 
      + bin(2,maxnax), nbin, boxes(maxbox), krng(2), lin, lout, ip, ipn, 
-     + i, j, k, naxis, p, pn, nx, ny, npnt
+     + i, j, k,l, naxis, p, pn, nx, ny, npnt
       double precision cdelti(maxnax), crvali(maxnax), crpixi(maxnax),
      + cdelto(maxnax), crpixo(maxnax)
       real dmm(2), mm(2)
@@ -86,8 +88,8 @@ c
       naxis = min(naxis,maxnax)
 c
       do i=nbin/2+1,naxis
-	bin(1,i) = 1
-	bin(2,i) = 1
+        bin(1,i) = 1
+        bin(2,i) = 1
       enddo
 c
       call output (' ')
@@ -122,6 +124,14 @@ c
           sizout(i) = 1
           blc(i) = 1
           trc(i) = 1
+c no binning in the 3rd axis ->
+          if (nbin/2 .lt. 3) then
+            do l=nbin/2+1,3
+              bin(1,l) = 1
+              bin(2,l) = 1
+            enddo
+          endif
+c <- dpr 08-11-00
         end do
       end if        
 c
