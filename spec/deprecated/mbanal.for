@@ -19,15 +19,11 @@ c	new spectra sets (or overwrite old ones). Alternately a
 c	spectra set could be an observation of a reference blank
 c	piece of sky. 
 c
-c	Spectra sets are named, much like variables. Two spectra
-c	set names can be defined at the Miriad command line:
-c	'ref' and 'src'. When MBANAL starts up, it loads data into
-c	these from a given visibility dataset. These spectra sets
-c	can then be manipulated with MBANAL's simple commands.
-c
 c	Commands include:
 c	  Command    Args
 c	  -------    ----
+c	  load       var  select
+c	  save       var  dataset
 c	  add        out  in1 in2
 c	  subtract   out  in1 in2
 c	  multliply  out  in1 in2
@@ -61,17 +57,8 @@ c
 c	  add sum ref src
 c	will add the ref and src spectra sets, and produce a
 c	new spectra set called 'sum'.
-c	
 c@ vis
-c	The name of the input visibility data-set. No default.
-c@ ref
-c	This selects the data to be used as a spectra set called
-c	'ref'. The default is not to select anything. See the help
-c	on "select" for more information.
-c@ src
-c	This selects the data to be used as a spectra set called
-c	'src'. The default is not to select anything. See the help
-c	on "select" for more information.
+c	Name of the input visibility dataset. No default.
 c@ line
 c	Standard line-type specification. See the help on "line"
 c	for more information.
@@ -80,28 +67,21 @@ c	Plotting device. Default is /xs. The plotting device can
 c	be overridden on the MBANAL prompt.
 c--
 c------------------------------------------------------------------------
-	integer MAXSELS
 	character version*(*)
 	parameter(version='Mbanal: version 1.0 03-Feb-97')
-	parameter(MAXSELS=256)
-	character vis*64,device*64,ltype*16,string*128
-	character p1*32,p2*32,p3*32,p4*32,token*8
-	integer nchan,tIn,k1,k2,length,l
-	logical dosrc,doref
-	real src(MAXSELS),ref(MAXSELS),lstart,lwidth,lstep
+	character vis*64,device*64,ltype*16,string*128,type*1
+	character p1*32,p2*256,p3*32,p4*32,token*8
+	integer nchan,tIn,k1,k2,length,lt,lp1,lp2,lp3,lp4
+	logical update
+	real lstart,lwidth,lstep
 c
 	integer len1
-	logical keyprsnt
 	external add,sub,mul,div,realp,imagp,ampp,phasep,conjgp,sqrtp
 c
 	call output(version)
 	call keyini
 	call keya('vis',vis,' ')
 	if(vis.eq.' ')call bug('f','Input vis must be given')
-	dosrc = keyprsnt('src')
-	call SelInput('src',src,MAXSELS)
-	doref = keyprsnt('ref')
-	call SelInput('ref',ref,MAXSELS)
 	call keyline(ltype,nchan,lstart,lwidth,lstep)
 	call keya('device',device,'/xs')
 	call keyfin
@@ -111,20 +91,17 @@ c
 c  Open the vis dataset.
 c
 	call uvopen(tIn,vis,'old')
-	if(ltype.ne.' ')call uvset(tIn,'data',ltype,nchan,
-     *					lstart,lwidth,lstep)
-c
-c  Load the "src" and "ref" signals.
-c
-	if(dosrc)then
-	  call output('Loading the src signal')
-	  call uvLoad(tIn,'src',src)
+	if(ltype.ne.' ')then
+	  call uvset(tIn,'data',ltype,nchan,lstart,lwidth,lstep)
+	else
+	  call uvprobvr(tIn,'corr',type,length,update)
+	  if(type.eq.'j'.or.type.eq.'r'.or.type.eq.'c')then
+	    ltype = 'channel'
+	  else
+	    ltype = 'wide'
+	  endif
 	endif
-	if(doref)then
-	  call output('Loading the ref signal')
-	  call uvLoad(tIn,'ref',ref)
-	endif
-	call uvclose(tIn)
+	call varInit(tIn,ltype)
 c
 c  Now go into the interactive loop.
 c
@@ -138,45 +115,53 @@ c
 	p2 = ' '
 	p3 = ' '
 	p4 = ' '
-	call getfield(string,k1,k2,token,length)
-	call getfield(string,k1,k2,p1,length)
-	call getfield(string,k1,k2,p2,length)
-	call getfield(string,k1,k2,p3,length)
-	call getfield(string,k1,k2,p4,length)
-	l = len1(token)
+	call getfield(string,k1,k2,token,lt)
+	call getfield(string,k1,k2,p1,lp1)
+	call getfield(string,k1,k2,p2,lp2)
+	call getfield(string,k1,k2,p3,lp3)
+	call getfield(string,k1,k2,p4,lp4)
 	if(token.eq.' ')then
 	  continue
-	else if(index('conjugate',token(1:l)).eq.1)then
+	else if(index('load',token(1:lt)).eq.1)then
+	  call uvLoad(tIn,p1(1:lp1),p2(1:lp2))
+	else if(index('save',token(1:lt)).eq.1)then
+	  call uvsave(tIn,p1(1:lp1),p2(1:lp2),ltype)
+	else if(index('conjugate',token(1:lt)).eq.1)then
 	  if(p2.eq.' ')p2 = p1
 	  call doOne(p1,p2,Conjgp)
-	else if(index('sqrt',token(1:l)).eq.1)then
+	else if(index('sqrt',token(1:lt)).eq.1)then
 	  if(p2.eq.' ')p2 = p1
 	  call doOne(p1,p2,Sqrtp)
-	else if(index('exit',token(1:l)).eq.1)then
+	else if(index('exit',token(1:lt)).eq.1.or.
+     *		index('quit',token(1:lt)).eq.1)then
+	  call uvclose(tIn)
 	  call exit
-	else if(index('add',token(1:l)).eq.1)then
+	else if(index('add',token(1:lt)).eq.1)then
 	  call doTwo(p1,p2,p3,Add)
-	else if(index('subtract',token(1:l)).eq.1)then
+	else if(index('subtract',token(1:lt)).eq.1)then
 	  call doTwo(p1,p2,p3,Sub)
-	else if(index('multiply',token(1:l)).eq.1)then
+	else if(index('multiply',token(1:lt)).eq.1)then
 	  call doTwo(p1,p2,p3,Mul)
-	else if(index('divide',token(1:l)).eq.1)then
+	else if(index('divide',token(1:lt)).eq.1)then
 	  call doTwo(p1,p2,p3,Div)
-	else if(index('plot',token(1:l)).eq.1)then
-	  if(p2.eq.' ')p2 = 'amp'
-	  l = len1(p2)
-	  if(p3.eq.' ')p3 = device
-	  if(index('real',p2(1:l)).ne.0)then
+	else if(index('plot',token(1:lt)).eq.1)then
+	  if(p2.eq.' ')then
+	    p2 = 'amp'
+	    lp2 = 3
+	  endif
+	  if(p3.eq.' ')then
+	    p3 = device
+	    lp3 = len1(device)
+	  endif
+	  if(index('real',p2(1:lp2)).ne.0)then
 	    call plotit(p1,p3,realp)
-	  else if(index('imag',p2(1:l)).ne.0)then
+	  else if(index('imag',p2(1:lp2)).ne.0)then
 	    call plotit(p1,p3,imagp)
-	  else if(index('amplitude',p2(1:l)).ne.0)then
+	  else if(index('amplitude',p2(1:lp2)).ne.0)then
 	    call plotit(p1,p3,ampp)
-	  else if(index('phase',p2(1:l)).ne.0)then
+	  else if(index('phase',p2(1:lp2)).ne.0)then
 	    call plotit(p1,p3,phasep)
 	  endif
-	else if(index('calibrate',token).eq.1)then
-	  call bug('w','Calibrate not implemented')
 	else
 	  call bug('w','Unrecognised command')
 	endif
@@ -327,6 +312,70 @@ c
 	  endif
 	endif
 	end
+c************************************************************************
+	subroutine uvSave(tIn,name,dataset,ltype)
+c
+	implicit none
+	integer tIn
+	character name*(*),dataset*(*),ltype*(*)
+c------------------------------------------------------------------------
+	include 'mbanal.h'
+	logical ok
+	integer id0,idx0,i1,i2,tOut
+	double precision bl
+	double precision preamble(4)
+c
+	call deco(name,.true.,id0,idx0,ok)
+	if(.not.ok)return
+c
+	call uvopen(tOut,dataset,'new')
+	call varOnit(tIn,tOut,ltype)
+c
+	call uvrewind(tIn)
+	call uvNext(tIn)
+	preamble(1) = 0
+	preamble(2) = 0
+	call uvrdvrd(tIn,'time',preamble(3),0.d0)
+	call varCopy(tIn,tOut)
+c
+	if(idx0.eq.0)then
+	  do i2=1,MAXANT
+	  do i1=1,i2
+	    bl = 256*i1 + i2
+	    preamble(4) = bl
+	    call SlotGet(id0,bl,idx0)
+	    if(slotav(idx0).ne.0)
+     *	      call blSave(idx0,tOut,preamble)
+	  enddo
+	  enddo
+	else
+	  call bug('f','Cannot save a single spectrum')
+	endif
+c
+	call uvclose(tOut)
+	end
+c************************************************************************
+	subroutine blSave(idx,tOut,preamble)
+c
+	implicit none
+	integer idx,tOut
+	double precision preamble(4)
+c------------------------------------------------------------------------
+	include 'mbanal.h'
+	integer i,ic
+	complex data(MAXCHAN)
+	logical flags(MAXCHAN)
+c
+	ic = slotic(idx)
+c
+	do i=1,nchan
+	  data(i) = corr(i,ic)/slotav(idx)
+	  flags(i) = .true.
+	enddo
+c
+	call uvwrite(tOut,preamble,data,flags,nchan)
+c
+	end	
 c************************************************************************
 	subroutine Conjgp(idx0,idx1)
 c
@@ -568,22 +617,34 @@ c
 	endif
 	end
 c************************************************************************
-	subroutine uvLoad(tno,name,sels)
+	subroutine uvLoad(tno,name,select)
 c
 	implicit none
 	integer tno
-	character name*(*)
-	real sels(*)
+	character name*(*),select*(*)
 c
 c------------------------------------------------------------------------
+	integer MAXSELS
+	parameter(MAXSELS=256)
 	include 'mbanal.h'
+	
 	double precision preamble(4)
 	complex data(MAXCHAN)
 	logical flags(MAXCHAN)
+	character line*512
 	integer id,i,ic,idx,nspec,nread
+	real sels(MAXSELS)
+c
+c  Externals.
 c
 	character itoaf*8
+	integer len1
 c
+	call keyinic
+	line = 'select='//select
+	call keyputc(line(1:len1(line)))
+	call selInput('select',sels,MAXSELS)
+	call keyfin
 	call uvrewind(tno)
 	call uvselect(tno,'clear',0.d0,0.d0,.true.)
 	call SelApply(tno,sels,.true.)
