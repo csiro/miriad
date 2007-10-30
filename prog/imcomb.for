@@ -39,6 +39,7 @@ c	               is normalised to account for overlap regions.
 c--
 c  History:
 c    rjs  29nov94 Original version.
+c    rjs  12jan95 COrrect alignment code on axis 3. Write mask file.
 c
 c
 c	  mosaic       Weight the data to account for the primary beam
@@ -55,7 +56,7 @@ c------------------------------------------------------------------------
 	include 'maxnax.h'
 	include 'mem.h'
 	character version*(*)
-	parameter(version='ImComb: version 1.0 28-Nov-94')
+	parameter(version='ImComb: version 1.0 12-Jan-95')
 	integer MAXIN,MAXOPEN
 	parameter(MAXIN=350,MAXOPEN=6)
 c
@@ -408,13 +409,13 @@ c
 	joff = 1 - nint(blctrc(2))
 	koff = 1 - nint(blctrc(3))
 c
-	if(k.lt.1-koff.or.k.gt.nsize(3)-koff)return
+	if(k+koff.lt.1.or.k+koff.gt.nsize(3))return
 	jlo = max(1,1-joff)
 	jhi = min(ny,nsize(2)-joff)
 	ilo = max(1,1-ioff)
 	ihi = min(nx,nsize(1)-ioff)
 c
-	if(k-koff.gt.1)call xysetpl(tIn,1,k-koff)
+	if(k+koff.gt.1)call xysetpl(tIn,1,k+koff)
 	do j=jlo,jhi
 	  call xyread(tIn,j+joff,line)
 	  call xyflgrd(tIn,j+joff,flags)
@@ -437,7 +438,9 @@ c
 c
 c  Normalise and write out the images.
 c------------------------------------------------------------------------
+	include 'maxdim.h'
 	integer i,j
+	logical flags(MAXDIM)
 c
 	if(k.gt.1)call xysetpl(tOut,1,k)
 c
@@ -445,9 +448,11 @@ c
 	  if(.not.nonorm)then
 	    do i=1,nx
 	      if(Wts(i,j).gt.0)Data(i,j) = Data(i,j) / Wts(i,j)
+	      flags(i) = Wts(i,j).gt.0
 	    enddo
 	  endif
 	  call xywrite(tOut,j,Data(1,j))
+	  call xyflgwr(tOut,j,flags)
 	enddo
 c
 	end
