@@ -1,4 +1,4 @@
-       program cgdisp
+      program cgdisp
 c-----------------------------------------------------------------------
 c
 c= CGDISP - displays and overlays images on a PGPLOT device
@@ -257,6 +257,11 @@ c	"gaps" means leave gaps between sub-plots and label each
 c	  sub-plot, otherwise they will abut each other.
 c	"nofirst" means don't write the first x-axis label on any subplots
 c	  except for the left-most one. This may avoid label overwrite.
+c
+c	"grid" means draw a coordinate grid on the plot rather than just ticks
+c	"trlab" means label the top and right axes as well as the 
+c	  bottom and left ones.  This can be useful when non-linear coordinate
+c	  variation across the field makes the ticks misaligned
 c@ lines
 c 	Up to 6 values.  The line widths for the axes, each contour 
 c       image (in the order of TYPE), the vector image, and any overlays.
@@ -273,10 +278,8 @@ c	Up to 3 values.  Character sizes in units of the PGPLOT default
 c	(which is ~ 1/40 of the view surface height) for the plot axis
 c	labels, the velocity/channel label, and the overlay ID string
 c	(if option "write" in OLAY used) label.
-c	Defaults choose something sensible.  Use 0.0 to obtain the
-c	default value if you need to specify, say the second
-c	value, but want to get the default for the first value.
-c	E.g. csize=0.0, 1.5
+c	Defaults choose something sensible.  Use 0.0 to default the 
+c	first or second, but not the second or third, e.g., 0.0, 1.5
 c@ scale
 c	Up to 2 values.  Scales in linear axis units/mm with which to plot
 c	in the 	x and y directions.  For example, if the increments 
@@ -287,9 +290,8 @@ c	assumptions about the axis type, so is more flexible.   If you
 c	also chose OPTIONS=EQUAL then one of your scales, if you set 
 c	both and differently, would be over-ruled.  If you give only 
 c	one value, the second defaults to that.  
-c	Defaults choose scales to fill the page optimally.  If you
-c	wish to specify the y value but want to obtain the default on the
-c	x value use scale=0.0,scale(2)
+c	Defaults choose scales to fill the page optimally. To default 
+c	the first but the second, use 0.0,scale(2)
 c@ olay
 c	The name of a file containing a list of overlay descriptions.
 c	Wild card expansion is active and the default is no overlays.
@@ -527,6 +529,8 @@ c		   Move to image type "pixel" instead of "grey"
 c    nebk 10apr95  Accomodate absolute b&w lookup table 
 c    nebk 11aug95  Reversed lookup tables getting lost, add 
 c		   labtyp=arcmin options=nofirst
+c    nebk 03sep95  Options=grid,trlab. Nonlinear axis labels and detect
+c		   if display has black or white background
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -545,7 +549,8 @@ c
       integer csize(maxnax,maxcon), gsize(maxnax), vsize(maxnax,2),
      +  msize(maxnax), bsize(maxnax), size(maxnax), cnaxis(maxcon), 
      +  gnaxis, vnaxis(2), mnaxis, bnaxis, naxis, lc(maxcon), lg, 
-     +  lv(2), lm, lb, lhead
+     +  lv(2), lm, lb, lhead, concol(maxcon), veccol, boxcol, bemcol,
+     +  ovrcol, labcol
       real cepoch(maxcon), gepoch, vepoch(2), mepoch, bepoch, epoch
       double precision cdelt(maxnax), crval(maxnax),
      +  scdelt(maxnax), scrval(maxnax),
@@ -578,7 +583,7 @@ c
      +  grpbeg(maxchan), ngrp(maxchan), his(nbins), ibin(2), jbin(2), 
      +  kbin(2), krng(2), coltab(maxgr)
       integer  nx, ny, lpos, npos, ierr, pgbeg, ilen, igr, nlast, 
-     +  ngrps, ncon, i, j, nvec, ipage, jj, npixr, wedcod
+     +  ngrps, ncon, i, j, nvec, ipage, jj, npixr, wedcod, bgcol
 c
       character ofig(maxpos)*10, posid(maxpos)*20, labtyp(2)*6, 
      +  levtyp(maxcon)*1
@@ -589,7 +594,8 @@ c
       logical solneg(maxcon), doblv(2), bemprs(maxcon+4), owrite(maxpos)
       logical do3val, do3pix, dofull, gaps, eqscale, doblc, doblg,
      +  dobeam, beaml, beamb, relax, rot90, signs, mirror, dowedge, 
-     +  doerase, doepoch, bdone, doblb, doblm, dofid, dosing, nofirst
+     +  doerase, doepoch, bdone, doblb, doblm, dofid, dosing, nofirst,
+     +  grid, dotr
 c
       data blankc, blankv, blankb /-99999999.0, -99999999.0, 
      +                             -99999999.0/
@@ -603,7 +609,10 @@ c
       data dmm /2*0.0/
       data coltab /maxgr*0/
 c-----------------------------------------------------------------------
-      call output ('CgDisp: version 11-Aug-95')
+      call output ('CgDisp: version 03-Sep-95')
+      call output ('Non-linear coordinate labels now correctly handled')
+      call output ('New options=grid to overlay coordinate grid')
+      call output ('New options=trlab to label top&right axes as well')
       call output (' ')
 c
 c Get user inputs
@@ -614,7 +623,7 @@ c
      +   boxfac, boxinc, pdev, labtyp, dofull, do3val, do3pix, eqscale, 
      +   gaps, solneg, nx, ny, lwid, break, cs, scale, ofile, dobeam, 
      +   beaml, beamb, relax, rot90, signs, mirror, dowedge, doerase, 
-     +   doepoch, dofid, dosing, nofirst)
+     +   doepoch, dofid, dosing, nofirst, grid, dotr)
 c
 c Open images as required
 c
@@ -701,6 +710,15 @@ c
       call pgscf(2)
       call pgqinf ('hardcopy', hard, ilen)
 c
+c Find colour of background
+c
+      call bgcolcg (bgcol)
+c
+c Set colours for line graphics
+c
+      call setlgc (bgcol, labcol, concol, veccol, boxcol, 
+     +             ovrcol, bemcol)
+c
 c Init OFM routines 
 c
       if (gin.ne.' ') call ofmini
@@ -713,14 +731,15 @@ c
 c Set label displacements from axes and set PGTBOX labelling 
 c option strings
 c
-      call setlabcg (labtyp, ymin, ymax, xdispl, ydispb, xopts, yopts)
+      call setlabcg (grid, labtyp, ymin, ymax, xdispl, ydispb, 
+     +               xopts, yopts)
 c
 c Work out view port sizes and increments.
 c
       call vpsizcg (dofull, dofid, ncon, gin, vin, 0, bin, maxlev,
      +   nlevs, srtlev, levs, slev, nx, ny, cs, xdispl, ydispb, 
-     +   gaps, wedcod, wedwid, wedisp, tfdisp, labtyp, vxmin, vymin, 
-     +   vymax, vxgap, vygap, vxsize, vysize, tfvp, wdgvp)
+     +   gaps, dotr, wedcod, wedwid, wedisp, tfdisp, labtyp, vxmin, 
+     +   vymin, vymax, vxgap, vygap, vxsize, vysize, tfvp, wdgvp)
 c
 c Adjust viewport increments and start locations if equal scales 
 c requested or if scales provided by user
@@ -814,8 +833,16 @@ c
 c Apply specified OFM or do interactive fiddle to hardcopy 
 c PGPLOT devices here
 c
-           if (hard.eq.'YES') call hardofm (coltab(j), pixr2, dofid, j, 
-     +       jj, dosing, tfvp, win, memr(ipim), memi(ipnim))
+           if (hard.eq.'YES') then
+             call hardofm (coltab(j), pixr2, dofid, j, 
+     +         jj, dosing, tfvp, win, memr(ipim), memi(ipnim))
+c
+c If we are going to use a b&w transfer function we must account for the 
+c background colour of the device.  So make the OFM the complement of 
+c itself here if the background is going to be white.  Only works for b&w OFMs
+c
+             if (bgcol.eq.1) call ofmcmp
+           end if
 c
 c Draw image
 c
@@ -827,16 +854,19 @@ c
            if (hard.ne.'YES') call intofm (coltab(j), j, pixr)
          end if
 c
-c Label and draw axes before fiddle else looks silly. Also forces
-c update of pixel map on screen.
-c
          call pgslw(lwid(1))
-         call pgsci (7)
-         if (hard.eq.'YES') call pgsci (2)
-         call axlabcg (nofirst, gaps, nx, ny, ngrps, nlast, j, xopts, 
-     +      yopts, xdispl, ydispb, labtyp, xlabel, ylabel, xxopts, 
-     +      yyopts)
-         call pgtbox (xxopts, 0.0, 0, yyopts, 0.0, 0)
+         call pgsci (labcol)
+c
+c Prepare final PGTBOX options strings and put axis name labels on 
+c
+         call axlabcg (nofirst, gaps, dotr, nx, ny, ngrps, nlast, 
+     +      j, xopts, yopts, xdispl, ydispb, labtyp, xlabel, 
+     +      ylabel, xxopts, yyopts)
+c
+c Draw frame, write numeric labels, ticks and optional grid
+c
+         call labaxcg (lhead, .true., blc, trc, krng, labtyp, 
+     +                 xxopts, yyopts)
 c
 c Draw wedge now so that it overwrites axis label ticks when wedge
 c drawn inside subplot
@@ -844,9 +874,9 @@ c
          if (dowedge) call wedgecg (wedcod, wedwid, jj, trfun(igr),
      +     groff, nbins, cumhis, wdgvp, pixr(1,igr), pixr(2,igr))
 c
-c Retake complement of OFM if needed (hard copy devices only)
+c Retake complement of OFM if needed (hardcopy/white backgrounds)
 c
-         if (hard.eq.'YES') call ofmcmp
+         if (hard.eq.'YES' .and. bgcol.eq.1) call ofmcmp
 c
 c Interactive modification of OFM for interactive devices here
 c
@@ -876,7 +906,7 @@ c
              end if
 c
              call pgslw (lwid(i+1))
-             call pgsci (7+i-1)
+             call pgsci (concol(i))
              call conturcg (blankc, solneg(i), win(1), win(2), doblc,
      +          memr(ipim), nlevs(i), levs(1,i), tr, break(i))
              call pgupdt
@@ -911,7 +941,7 @@ c
            end if
 c
            call pgslw (lwid(ncon+2))
-           call pgsci (2)
+           call pgsci (veccol)
 c
            call drawvec (j, tr, vecfac, vecinc, win(1), win(2), 
      +        memr(ipim), memi(ipnim), memr(ipim2), memi(ipnim2),
@@ -937,7 +967,7 @@ c
              doblb = .true.
            end if
 c
-           call pgsci (6)
+           call pgsci (boxcol)
            call drawbox (j, tr, boxfac, boxinc, win(1), win(2), 
      +        memr(ipim), memi(ipnim), cdelt, scale, bfac)
          end if
@@ -955,7 +985,7 @@ c
 c Draw overlay(s)
 c
          if (npos.gt.0) then
-           call pgsci (3)
+           call pgsci (ovrcol)
            call pgslw (lwid(ncon+nvec+2))
            call overl (doerase, ofig, owrite, blc, trc, npos, opos, 
      +        posid, grpbeg(j), cs(3), labtyp, naxis, crval, crpix, 
@@ -965,7 +995,7 @@ c
 c Draw beam(s)
 c
          if (dobeam) then
-           call pgsci (4)
+           call pgsci (bemcol)
            call beampl (maxcon, beaml, beamb, bmin, bmaj, bpa,
      +                  bxfac, byfac, bemprs)
          end if
@@ -974,8 +1004,7 @@ c Plot annotation
 c
          if (dofull .and. (jj.eq.nx*ny .or. j.eq.ngrps)) then
            call pgslw (1)
-           call pgsci (1)
-           if (hard.eq.'NO') call pgsci (7)
+           call pgsci (labcol)
            call fullann (maxcon, ncon, cin, gin, vin, bin, lc, lg,
      +        lv, lb, maxlev, nlevs, levs, srtlev, slev, npixr,
      +        trfun, pixr, vfac, bfac, naxis, size, scrval, scrpix,
@@ -1566,7 +1595,8 @@ c
 c
       subroutine decopt  (dofull, do3val, do3pix, eqscale, gaps, solneg,
      +   beambl, beambr, beamtl, beamtr, relax, rot90, signs, 
-     +   mirror, dowedge, doerase, doepoch, dofid, dosing, nofirst)
+     +   mirror, dowedge, doerase, doepoch, dofid, dosing, nofirst,
+     +   grid, dotr)
 c----------------------------------------------------------------------
 c     Decode options array into named variables.
 c
@@ -1594,15 +1624,18 @@ c     dofid     Interactive fiddle
 c     dosing    FIddle after every subplot
 c     nofirst   Don't put the first x-axis lable on any subplot
 c		but the left most
+c     grid      Extend ticks to grid
+c     dotr      Label top and right as well as left and bottom axes
 c-----------------------------------------------------------------------
       implicit none
 c
       logical dofull, do3val, do3pix, eqscale, gaps, solneg(*),
      +  beambl, beambr, beamtl, beamtr, relax, rot90, signs,
-     +  mirror, dowedge, doerase, doepoch, dofid, dosing, nofirst
+     +  mirror, dowedge, doerase, doepoch, dofid, dosing, nofirst,
+     +  grid, dotr
 cc
       integer maxopt
-      parameter (maxopt = 22)
+      parameter (maxopt = 24)
 c
       character opshuns(maxopt)*8
       logical present(maxopt)
@@ -1611,7 +1644,7 @@ c
      +              'beambl  ', 'beambr  ', 'beamtl  ', 'beamtr  ',
      +              'relax   ', 'rot90   ', 'signs   ', 'mirror',
      +              'wedge   ', 'noerase ', 'noepoch ', 'fiddle',
-     +              'single  ', 'nofirst'/
+     +              'single  ', 'nofirst',  'grid    ', 'trlab'/
 c-----------------------------------------------------------------------
       call optcg ('options', opshuns, present, maxopt)
 c
@@ -1637,6 +1670,8 @@ c
       dofid     =      present(20)
       dosing    =      present(21)
       nofirst   =      present(22)
+      grid      =      present(23)
+      dotr      =      present(24)
 c
       end
 c
@@ -2077,13 +2112,6 @@ c
      +  call ofmmod (tfvp, win(1)*win(2), image, nimage, 
      +               pixr2(1), pixr2(2))
 c
-c If we are going to use either the b&w or the absolute b&w transfer function
-c we must account for the fact that the output will probably be printed
-c on paper, so we want black on white instead of white on black. So
-c make the OFM the complement of itself here.  Only works for b&w OFMs
-c
-      call ofmcmp
-c
       end
 c
 c
@@ -2116,7 +2144,7 @@ c
      +   boxfac, boxinc, pdev, labtyp, dofull, do3val, do3pix, eqscale, 
      +   gaps, solneg, nx, ny, lwid, break, cs, scale, ofile, dobeam, 
      +   beaml, beamb, relax, rot90, signs, mirror, dowedge, doerase, 
-     +   doepoch, dofid, dosing, nofirst)
+     +   doepoch, dofid, dosing, nofirst, grid, dotr)
 c-----------------------------------------------------------------------
 c     Get the unfortunate user's long list of inputs
 c
@@ -2186,6 +2214,8 @@ c   doepoch    Write epoch into axis labels
 c   dofid      Interactive fiddle
 c   dosing     Fiddle after each subplot
 c   nofirst    DOnt write first x-axis label on subplots except first
+c   grid       Extend ticks to grid
+c   dotr       Label top and right axes as well as bototm and left
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -2198,7 +2228,7 @@ c
      +  pdev, ofile, trfun(maxgr), levtyp(maxcon), ltypes(maxtyp)
       logical do3val, do3pix, dofull, gaps, eqscale, solneg(maxcon),
      +  dobeam, beaml, beamb, relax, rot90, signs, mirror, dowedge,
-     +  doerase, doepoch, dofid, dosing, nofirst
+     +  doerase, doepoch, dofid, dosing, nofirst, grid, dotr
 cc
       integer nmaxim
       parameter (nmaxim = 8)
@@ -2380,7 +2410,8 @@ c
 c
       call decopt (dofull, do3val, do3pix, eqscale, gaps, solneg,
      +   beambl, beambr, beamtl, beamtr, relax, rot90, signs, 
-     +   mirror, dowedge, doerase, doepoch, dofid, dosing, nofirst)
+     +   mirror, dowedge, doerase, doepoch, dofid, dosing, nofirst,
+     +   grid, dotr)
 c
       if (gin.eq.' ') then
         dowedge = .false.
@@ -3506,14 +3537,65 @@ c
      +   msize, mepoch, mcrpix, mcdelt, mcrval, mctype, relax)
 c
       end
-
-
-
-
-
-
-
-
-
-
-
+c
+c
+      subroutine setlgc (bgcol, labcol, concol, veccol, boxcol, 
+     +                   ovrcol, bemcol)
+c-----------------------------------------------------------------------
+c     Set line graphics colours
+c
+c  Inout
+c    bgcol 0 -> background is black
+c	   1 ->               white
+c         -1 ->               something else
+c
+c  OUtput
+c    colour indices to use
+c-----------------------------------------------------------------------
+      implicit none
+      integer bgcol, concol(*), veccol, boxcol, ovrcol, bemcol, labcol
+c-----------------------------------------------------------------------
+c
+c Labels first
+c
+      labcol = 7
+      if (bgcol.eq.1) then
+c
+c White background
+c
+        labcol = 2
+      else if (bgcol.eq.0) then
+c
+c Black background
+c
+        labcol = 7
+      else
+        call bug ('w', 'Non black/white background colour on device')
+        labcol = 7
+      end if
+c
+c Now contours
+c
+      concol(1) = 7
+      concol(2) = 5
+      concol(3) = 9
+      if (bgcol.eq.1) concol(1) = 2
+c
+c Now vectors 
+c
+      veccol = 2
+      if (bgcol.eq.1) veccol = 8
+c
+c Now boxes
+c
+      boxcol = 6
+c
+c Now overlays
+c
+      ovrcol = 9
+c
+c Now beams
+c
+      bemcol = 4
+c
+      end
