@@ -272,7 +272,7 @@ c    nebk 12nov95  Change to deal internally with absolute pixels only
 c                  '*lin' -> '*nat'
 c    nebk 29nov95  Add world coords to statistics output and new
 c                  call for CONTURCG
-c To do:
+c    nebk 18dec95  New call for VPSIZCG (arg. DOABUT)
 c
 c-----------------------------------------------------------------------
       include 'maxdim.h'
@@ -304,13 +304,14 @@ c
       logical do3val, do3pix, eqscale, doblnk, cursor, stats, doreg,
      +  smore, rmore, cmore, dopixel, display, doabs, gaps, dolog,
      +  cgspec, cgdisp, mark, doerase, dobox, near, dowedge, dofid,
-     +  first, grid, doaxlab, doaylab, donxlab(2), donylab(2), dotr
+     +  first, grid, doaxlab, doaylab, donxlab(2), donylab(2), dotr,
+     +  doabut
 c
       data ipage, scale /0, 0.0, 0.0/
       data dmm /1.0e30, -1.0e30/
-      data gaps /.false./
+      data gaps, doabut /.false., .false./
 c-----------------------------------------------------------------------
-      call output ('CgCurs: version 29-Nov-95')
+      call output ('CgCurs: version 18-Dec-95')
       call output (' ')
 c
 c Get user inputs
@@ -434,8 +435,8 @@ c the viewport size of sub-plots.
 c
       call vpsizcg (.false., dofid, 0, ' ', ' ', 0, ' ', maxlev,
      +   nlevs, srtlev, levs, slev, nx, ny, cs, xdispl, ydispb, 
-     +   gaps, dotr, wedcod, wedwid, tfdisp, labtyp, vxmin, vymin, 
-     +   vymax, vxgap, vygap, vxsize, vysize, tfvp, wdgvp)
+     +   gaps, doabut, dotr, wedcod, wedwid, tfdisp, labtyp, vxmin, 
+     +   vymin, vymax, vxgap, vygap, vxsize, vysize, tfvp, wdgvp)
 c
 c Adjust viewport increments and start locations if equal scales
 c requested or if scales provided by user
