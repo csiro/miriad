@@ -34,8 +34,8 @@ c    rjs 25jan90 Minor documentation improvement.
 c    rjs 10mar93 Use maxdim.h and MemAlloc/MemFree.
 c    rjs 25jun93 Fudges to ZedFudge to make it more robust (but still
 c		 give poor fudge factors).
-c    nebk01jul94 Prevent zedscale from working on cubes with optical
-c                velocity axes as it does the sums for a radio velocity
+c    nebk01jul94 Improve zedscale to correctly work out the frequency 
+c                increment from optical as well as radio velocity axes
 c
 c  Routines:
 c    ZedScale Returns the conversion factor between channel increment and
@@ -57,7 +57,7 @@ c+
 c
       implicit none
       integer lunI
-      real scale,freq
+      real scale, freq
       logical noline
 c
 c     Depending on the first axis type, set the scale to convert
@@ -69,9 +69,9 @@ c        lunI    i  Handle for I spectrum cube
 c        freq    r  Frequency (GHz) of line for matching with
 c                   Zeeman parameters stored internally   
 c     Output:
-c        scale   r  If noline=.false. scale converts delta_channel to
-c                   a magnetic field strength, else scale converts
-c                   only to a delta_freq (Hz)
+c        scale   r  If noline=.false. scale converts one channel
+c                   to a magnetic field strength (G), else scale 
+c                   converts one channel to Hz
 c        noline  l  If .false. the user specified FREQ was matched
 c--
 c----------------------------------------------------------------------
@@ -80,63 +80,51 @@ c----------------------------------------------------------------------
       integer nfreq
       parameter (nfreq = 4)
 c
-      real cdelt, rfreq
-      integer j,ifreq
+      double precision cdelt, crval
+      integer j, ifreq, imch
       character ctype*9
 c
       integer cfreq(nfreq)
       real zsplit(nfreq)
-      character*80 umsg
+c
+c Splitting in Hz/G for various lines
 c
       data cfreq  /1420,   1665,     1667,     1720  /
       data zsplit /2.80E6, 3.2787E6, 1.9608E6, 0.6536E6/
+c-----------------------------------------------------------------------
 c
-      ifreq = nint(1000*freq)
-c
-c First convert to a frequency increment from a channel increment
+c Convert channel increment in whatever spectral units to Hz
 c
       call rdhda (lunI, 'ctype1', ctype, ' ')
-      call rdhdr (lunI, 'cdelt1', cdelt, 0.0)
+      call rdhdd (lunI, 'cdelt1', cdelt, 0.0d0)
+      call rdhdd (lunI, 'crval1', crval, 0.0d0)
 c
-c Assume axis in GHz
+      call spaxsw (lunI, 'frequency', ctype, cdelt, crval)
+      cdelt = cdelt * 1.0e9
 c
-      if (ctype(1:4).eq.'FREQ') then
-         if (cdelt.ne.0.0) then
-           scale = 1.0E9 * cdelt
-         else
-           call bug('f','First axis increment not in header')
-         endif
+c Integer frequency in MHz; try and match it
 c
-c Assume rest freq in GHz, cdelt in km/s.  Get the sign correct!!!
-c Increasing velocity => decreasing freq, hence "-" in "scale =" statement.
-c
-      else if (ctype(1:4).eq.'VELO') then
-         call rdhdr(lunI,'restfreq',rfreq,0.0)
-         if (rfreq.ne.0.0 .and. cdelt.ne.0.0) then
-           scale = -rfreq * 1.0e9 * cdelt / light
-         else
-           umsg = 'Rest frequency or first axis increment '
-     +            //'not in header'
-	   call bug('f',umsg )
-         endif
-      else if (ctype(1:4).eq.'FELO') then
-         call bug ('f', 
-     +   'Cube must have radio, not optical velocity axis -- use VELSW')
-      else
-         call bug('f','First axis must be FREQ or VELO') 
-      endif
-c
-c Now try to match the user given FREQ to those in the list.  If a match
-c is found, scale will then convert to a magnetic field strength, else
-c the result will be in Hz
-c
+      ifreq = nint(1000*freq)
       noline = .true.
       do j = 1, nfreq
         if(ifreq.eq.cfreq(j)) then
-           scale = scale / zsplit(j)
-           noline = .false.
+          imch = j
+          noline = .false.
+          goto 10
         end if
       end do
+c
+10    if (noline) then 
+c
+c No match, scale just converts channels to Hz
+c
+        scale = cdelt
+      else
+c
+c Convert channels to Gauss
+c
+        scale = cdelt / zsplit(imch)
+      end if
 c
       end
 c************************************************************************
