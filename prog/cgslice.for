@@ -127,6 +127,7 @@ c
 c	"hms"       the label is in H M S (e.g. for RA)
 c	"dms"       the label is in D M S (e.g. for DEC)
 c	"arcsec"    the label is in arcsecond offsets
+c	"arcmin"    the label is in arcminute offsets
 c	"absdeg"    the label is in degrees
 c	"reldeg"    the label is in degree offsets
 c		    The above assume the  pixel increment is in radians.
@@ -241,7 +242,7 @@ c	XOTYPE and YOTYPE  give the coordinate types of the slice BLC and
 c	TRC in the file for the x- and y-directions, respectively.  
 c	Choose from:
 c
-c	 "hms", "dms", "arcsec", "absdeg", "reldeg", "abspix", 
+c	 "hms", "dms", "arcsec", "arcmin", "absdeg", "reldeg", "abspix", 
 c	 "relpix", "abslin", "rellin", "absghz", "relghz", 
 c	 "abskms", & "relkms"  as described in the keyword LABTYP.  
 c	Note that %OTYPE does not depend upon what you specified for LABTYP.
@@ -251,9 +252,10 @@ c	coordinate system (X- and Y-OTYPE can be different).
 c	X2,Y2 defines the TRC of the slice in the nominated OTYPE
 c	coordinate system (X- and Y-OTYPE can be different).  
 c
-c	  For %OTYPE = "abspix ", "relpix", "arcsec", "absdeg", "reldeg",
-c		       "absghz", "relghz", "abskms", "relkms", "abslin"
-c		   and "rellin"   X1,Y1 and X2,Y2 are all single numbers.
+c	  For %OTYPE = "abspix ", "relpix", "arcsec", "arcmin", "absdeg",
+c		       "reldeg", "absghz", "relghz", "abskms", "relkms", 
+c		       "abslin" and "rellin"   X1,Y1 and X2,Y2 are all 
+c		        single numbers.
 c
 c	  For %OTYPE = "hms" or "dms", the X and/or Y location is/are replaced
 c	  by three numbers such as  HH MM SS.S or DD MM SS.S.  Thus if
@@ -341,7 +343,7 @@ c
       integer maxlev, nxdef, nydef, maxnsl, nltype, nbins
       real grid, wedwid, wedisp, tfdisp
       parameter (maxlev = 50, nxdef = 4, nydef = 4, maxnsl = 20,
-     +   nbins = 128, grid = 0.25, nltype = 14, wedisp = 1.0, 
+     +   nbins = 128, grid = 0.25, nltype = 15, wedisp = 1.0, 
      +   wedwid = 0.05, tfdisp = 0.5)
 c
       integer ipim, ipp, ipims, ipnim, ipslx(maxnsl), ipsly(maxnsl),
@@ -377,15 +379,15 @@ c
       integer len1
 c
       data ltype  /'hms   ', 'dms   ', 'abspix', 'relpix', 
-     +            'arcsec', 'absghz', 'relghz', 'abskms', 
-     +            'relkms', 'abslin', 'rellin', 'absdeg',
-     +            'reldeg', 'none  '/
+     +            'arcsec', 'arcmin', 'absghz', 'relghz', 
+     +            'abskms', 'relkms', 'abslin', 'rellin', 
+     +            'absdeg', 'reldeg', 'none  '/
       data ipage, scale /0, 0.0, 0.0/
       data xrange, yrange /0.0, 0.0, 0.0, 0.0/
       data dunsl /.false./
       data xdispls, ydispbs /3.5, 3.5/
 c-----------------------------------------------------------------------
-      call output ('CgSlice: version 10-Apr-95')
+      call output ('CgSlice: version 11-Aug-95')
       call output ('Keyword "range" can now be used to specify the')
       call output ('colour lookup table as well the transfer function')
       call output (' ')
@@ -615,9 +617,9 @@ c
              call pgsch (cs(1))
              call pgsci (7)
              if (hard.eq.'YES') call pgsci (2)
-             if (first) call axlabcg (gaps, nx, ny, ngrps, nlast, k, 
-     +         xopts, yopts, xdispl, ydispb, labtyp, xlabel, ylabel, 
-     +         xxopts, yyopts)
+             if (first) call axlabcg (.false., gaps, nx, ny, ngrps, 
+     +         nlast, k, xopts, yopts, xdispl, ydispb, labtyp, xlabel, 
+     +         ylabel, xxopts, yyopts)
 c
 c Draw axes
 c
