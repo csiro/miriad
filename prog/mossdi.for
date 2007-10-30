@@ -25,7 +25,7 @@ c	Iterating stops if the maximum falls below this level. The
 c	default is 0.
 c@ clip
 c	This sets the relative clip level. Values are typically 0.75 to 0.9.
-c	The default is conservative and image dependent.
+c	The default is 0.9.
 c@ region
 c	The standard region of interest keyword. See the help on "region" for
 c	more information. The default is the entire image.
@@ -33,9 +33,10 @@ c--
 c  History:
 c    rjs 31oct94 - Original version.
 c    rjs  6feb95 - Copy mosaic table to output component table.
+c    rjs 27feb97 - Fix glaring bug in the default value for "clip".
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='MosSDI: version 1.0 6-Feb-95')
+	parameter(version='MosSDI: version 1.0 27-Feb-97')
 	include 'maxdim.h'
 	include 'maxnax.h'
 	include 'mem.h'
@@ -65,18 +66,17 @@ c
 	call keya('beam',BeamNam,' ')
 	call keya('model',ModelNam,' ')
 	call keya('out',OutNam,' ')
-	call keyi('niters',maxniter,100)
-	call keyr('cutoff',cutoff,0.0)
-	call keyr('gain',gain,0.1)
-	call keyr('clip',clip,0.0)
-	call BoxInput('region',MapNam,Boxes,MaxBoxes)
-	call keyfin
-c
-c  Check everything makes sense.
-c
-	if(maxniter.lt.0)call bug('f','NITERS has bad value')
 	if(MapNam.eq.' '.or.BeamNam.eq.' '.or.OutNam.eq.' ')
      *	  call bug('f','A file name was missing from the parameters')
+	call keyi('niters',maxniter,100)
+	if(maxniter.lt.0)call bug('f','NITERS has bad value')
+	call keyr('cutoff',cutoff,0.0)
+	call keyr('gain',gain,0.1)
+	if(gain.le.0.or.gain.gt.1)call bug('f','Invalid gain value')
+	call keyr('clip',clip,0.9)
+	if(clip.le.0)call bug('f','Invalid clip value')
+	call BoxInput('region',MapNam,Boxes,MaxBoxes)
+	call keyfin
 c
 c  Open the input map.
 c
@@ -268,7 +268,7 @@ c
 	do i=1,nPoint
 	  thresh = max(thresh,Res(i)*Res(i)*Wt(i))
 	enddo
-	thresh = clip * thresh
+	thresh = clip * clip * thresh
 c
 c  Get the step to try.
 c
