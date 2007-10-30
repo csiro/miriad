@@ -1,629 +1,682 @@
 c************************************************************************
-c     Some subroutines to get the primary beam function. 
 c
-c     PBCHECK tells the caller whether PBINIT is going to require the 
-c             frequency or not.  
-c     PBINIT  sets up primary beams with a user specified Gaussian, a
-c             Gaussian specified by the header, or from its knowledge
-c             of telescopes and the telecope name in the header.
-c     PBGET   returns the primary beam function at some radial distance.
+c  Some subroutines to get the primary beam function.
 c
-c     PBDER   returns the derivative of the primary beam with frequency
-c             at some radial distance
-c     PBINFO  returns some miscellaneous information about the primary beam
+c  User callable routines are:
 c
-c     These routines can access both images and visibility files.
+c  subroutine pbRead(tno,pbtype)
+c  subroutine pbWrite(tno,pbtype)
 c
-c     Following a call to PBINIT, many calls to PBGET and PBDER may 
-c     be made.  Each call to PBINIT overwrites the previous information
-c     stored in common.  
+c  subroutine pbInit(pbObj,pbtype,coObj)
+c  subroutine pbInitc(pbObj,pbtype,coObj,in,x1)
+c  subroutine pbInfo(pbObj,pbfwhm,cutoff,maxrad)
+c  real function pbGet(pbObj,x,y)
+c  real function pbDer(pbObj,x,y)
+c  subroutine pbFin(pbObj)
 c
+c  Basically, a "primary beam object" is created with either pbInit or
+c  pbInitc -- the latter is used if the pointing centre is somewhere
+c  other that the reference pixel. It also takes a primary beam type.
+c  Generally this will be just a telescope name (e.g. "atca" or "hatcreek"),
+c  but is can also be "gaus(xxxx)" where xxxx gives the FWHM (in arcsec) of
+c  a gaussian primary beam.
 c
-c  The following example shows how to use PBCHECK/PBINIT/PBGET to get the 
-c  primary beam correction for a continuum image.
+c  pbRead returns the primary beam type of a particular dataset.
+c  pbWrite writes a primary beam type to a dataset.
 c
+c  pbGet and pbDer return the value of the primary beam or its
+c  derivative, respectively. Inputs are grid coordinates in the coordinate
+c  system used when initialising the primary beam object.
 c
+c  pbInfo returns information about the primary beam -- firstly its FWHM.
+c  A primary beam is also assumed to cut-off at some value. The minimum
+c  value and the radius at which it occurs are also give.
 c
-c Do we need the frequency to p.b. correct this image ?
-c PBFWHMU is a user given Gaussian p.b.  It may be 0.0
+c  Finally pbFin tidies up whatever it needs to.
 c
-c     call pbcheck (pbfwhmu, tin, .true., needf)
-c
-c     if (needf) then
-c
-c Find spectral axis
-c
-c       axnam = ' '
-c       call fndaxnum (tin, 'freq', axnam, ifax)
-c       if (ifax.ne.3) call bug ('f', 'Spectral axis should be # 3')
-c
-c Get frequency at pixel 1.0 of spectral axis.
-c
-c       call getfreq (tin, 1.0, ifax, freq, finc, ierr)
-c       if (ierr.gt.1) call bug ('f', 'Could not get frequency')
-c     else
-c       freq = -1.0d0
-c     end if
-c
-c Set up primary beam for image, no derivative.
-c
-c     call pbinit (pbfwhmu, freq, tin, .true.)
-c
-c Loop over image
-c
-c     do j = 1, ny
-c       ysq = ((real(j) - crpix(2))*cdelt(2))**2
-c       do i = 1, nx
-c
-c Get radius squared in radians
-c
-c         xsq = ((real(i) - crpix(1))*cdelt(1))**2
-c         radsq = xsq + ysq
-c
-c Get primary beam
-c  
-c         pb = pbget(radsq)
-c         if (pb.eq.0.0) then
-c            
-c Primary beam not defined
-c
-c            blank_the_output
-c          else
-c
-c Primary beam defined
-c
-c            correct_the_output
-c          end if
-c       end do
-c     end do
-c
-c
-c
-c History:
-c
-c   10nov92   nebk   Original version.
-c   24nov92   nebk   More header comments to appease pjt.
-c   07jan93   nebk   Rewrite calling interface again
-c   15feb93   nebk   pbfwhm=0 -> single dish, <0 -> unknown
-c   25oct93   rjs    Prevent floating underflow in exp function.
-c***********************************************************************
-c
-c*pbinit -- Initialize for Primary Beam determination
-c:image-data
-c& nebk
+c************************************************************************
+c* pbRead -- Determine the primary beam type of a dataset.
+c& rjs
+c: image-data
 c+
-      subroutine pbinit (fwhm, freq, tin, image)
+	subroutine pbRead(tno,pbtype)
 c
-      implicit none
-      integer tin
-      double precision freq
-      real fwhm
-      logical image
+	implicit none
+	integer tno
+	character pbtype*(*)
 c
-c     Set up coefficients and cutoffs for primary beam correction.
-c     If necessary (see below), PBINIT will look at the header item
-c     (or visibility variable) "telescop" to work out which telescope
-c     is appropriate.  It has knowledge about HatCreek, the ATCA, and 
-c     the VLA. Polynomials are provided for the ATCA and the VLA.  
-c     For HatCreek only Gaussians are provided.   Polynomial fits are 
-c     cutoff below a certain level, but Gaussians have no cutoff.
-c
-c     The hierarchy is:  
-c       Input variable "fwhm" takes precedence over the header item or
-c       visibility variable "pbfwhm" which takes precedence over the
-c       header item or visibility variable "telescop".
-c
-c     The ATCA results come from the ATNF memo. by Wieringa & Kesteven.
-c     The VLA polynomial coefficients come from the AIPS task PBCOR.
-c     The HatCreek Gaussian FWHM comes from the Bima Users Guide 
-c     (Jan89), which claims this is the value corresponding to a 
-c     6 meter telescope. See caveats there.
-c
-c     The primary beam routines may, or may not, need a frequency
-c     with which to set the primary beam.   They will need
-c     the frequency if
-c
-c          1)  You are going to call PBDER 
-c                         or
-c          2)  You did not specify "FWHM" as an input to PBINIT and
-c              "pbfwhm" is not an item/variable in the data set but
-c              "telescop" is a recognized item/variable in the data set
-c  
-c     If you need to know whether PBINIT will need the frequency before
-c     before you call PBINIT, or not, you can call PBCHECK first.
-c     
+c  Determine the primary beam type associated with a dataset.
 c
 c  Input:
-c    fwhm   r    If this is positive, then a Gaussian primary beam
-c                of FWHM radians will be set.
-c    freq   d    If positive, this is the frequency (if it is needed) at 
-c                which to evaluate the primary beam function. 
-c    tin    i    Handle of open data set, from which the primary beam
-c                and/or frequency may be extracted.
-c    image  l    If .true. "tin" is the handle of an image, else its
-c                the handle of a visibility.  You should have already
-c                read a visibility for this to work (use UVNEXT say).
-c          
-c  Output in common:
-c    pbcoeff dp   The polynomial coefficients
-c    pbfac   r    The exponential factor for the Gaussian primary beam
-c                 pbfac = -4 * ln(2) / Phi(rad)**2.  This is set even
-c                 for POLY beams, so that the programmer can get a rough
-c                 primary beam width. 
-c    pbcut   r    Below this value, the correction function is
-c                 unsafe or inaccurate.
-c    pbtype  c    Type of correction; 'GAUSS', 'POLY' or 'SINGLE'
-c                 The latter means do no correction
-c    pbfreq  dp   Frequency in GHz
-c    pbdone  c    Set to 'done' so PBGET knows PBINIT has been called
+c    tno	Handle of the input dataset
+c  Output:
+c    pbtype	Primary beam type. Generally this will be just a telescope
+c		name (e.g. "atca" or "hatcreek"), but it could also be
+c		"gaus(xxx)", where xxx gives the FWHM of a gaussian
+c		primary beam in arcsec.
 c--
+c------------------------------------------------------------------------
+	include 'mirconst.h'
+	character telescop*16
+	real pbfwhm
 c
-c-----------------------------------------------------------------------
-      include 'pb.h'   
-      integer natfrq, nvlafrq, nhcfrq
-      parameter (natfrq = 4, nvlafrq = 7, nhcfrq = 1)
+c  Externals.
 c
-
-      double precision atc(maxco,4), vlac(maxco)
-      real hcfwhm, atcafwhm(natfrq), vlafwhm, atfrq(2,natfrq), 
-     +  vlafrq(2,nvlafrq), hcfrq(2,nhcfrq), hdrfwhm
-      character tel*20, aline*80, type*1
-      integer ic, i, length, itel, len1
-      logical hdprsnt, beam
+	logical hdprsnt
 c
-      save atfrq, vlafrq, hcfrq, atc, vlac, hcfwhm
+c  Get telescope and primary beam parameters.
 c
-c Specify Gaussian FWHM (arcsec) * FREQ (GHz)
+	if(hdprsnt(tno,'visdata'))then
+	  call uvrdvra(tno,'telescop',telescop,' ')
+	  call uvrdvrr(tno,'pbfwhm',pbfwhm,-1.0)
+	else
+	  call rdhda(tno,'telescop',telescop,' ')
+	  call rdhdr(tno,'pbfwhm',pbfwhm,-1.0)
+	endif
 c
-      data hcfwhm /11040.0/
-      data atcafwhm /2874.0, 2982.0, 2898.0, 3036.0/
-      data vlafwhm /2655.3/
+c  If the primary beam parameter is zero, treat it as a single dish.
 c
-c Specify frequency ranges in GHz for which the polynomial coefficients
-c and Gaussian FWHM are valid for each telescope. VLA coefficients
-c are surely wrong beyond 3-20 cm
+	if(pbfwhm.eq.0)then
+	  pbtype = 'SINGLE'
+	else if(pbfwhm.gt.0)then
+	  call pbEncode(pbtype,'gaus',pi/180/3600 * pbfwhm)
+	else
+	  pbtype = telescop
+	endif
 c
-      data atfrq  /1.15, 1.88, 
-     +             2.10, 2.60, 
-     +             4.30, 6.70,
-     +             7.90, 9.30/
+	end
+c************************************************************************
+c* pbWrite -- Write the primary beam type out to a dataset.
+c& rjs
+c: image-data
+c+
+	subroutine pbWrite(tno,pbtype)
 c
-      data vlafrq /0.071,  0.075,
-     +             0.297,  0.345,
-     +             1.240,  1.810,
-     +             4.240,  5.110,
-     +             7.540,  9.060,
-     +            14.240, 15.710,
-     +            21.690, 24.510/
+	implicit none
+	integer tno
+	character pbtype*(*)
 c
-      data hcfrq  /74.0, 116.0/
+c  Determine the primary beam type associated with a dataset.
+c
+c  Input:
+c    tno	Handle of the input dataset
+c    pbtype	Primary beam type. Generally this will be just a telescope
+c		name (e.g. "atca" or "hatcreek"), but it could also be
+c		"gaus(xxx)", where xxx gives the FWHM of a gaussian
+c		primary beam in arcsec.
+c--
+c------------------------------------------------------------------------
+	double precision dtemp
+	real pbfwhm
+	character telescop*16
+	logical dotel,ok
+	integer l
+c
+c  Externals.
+c
+	logical hdprsnt
+	integer len1
+c
+c  Determine the primary beam type.
+c
+	telescop = pbtype
+	call ucase(telescop)
+	dotel = telescop(1:5).ne.'GAUS('
+c
+	if(telescop.eq.'SINGLE')then
+	  pbfwhm = 0
+	  dotel = .false.
+	else if(.not.dotel)then
+	  l = len1(telescop)
+	  ok = l.gt.6.and.telescop(l:l).eq.')'
+	  if(ok)call atodf(telescop(6:l-1),dtemp,ok)
+	  if(.not.ok)
+     *	    call bug('f','Error with gaussian pb parameter: '//telescop)
+	  pbfwhm = dtemp
+	endif
+c
+c  Handle a visibility dataset.
+c
+	if(hdprsnt(tno,'visdata'))then
+	  if(dotel)then
+	    call uvputvra(tno,'telescop',telescop)
+	  else
+	    call uvputvrr(tno,'pbfwhm',pbfwhm,1)
+	  endif
+	else
+	  if(dotel)then
+	    call wrhda(tno,'telescop',telescop)
+	  else
+	    call wrhdr(tno,'pbfwhm',pbfwhm)
+	  endif
+	endif
+c
+	end
+c************************************************************************
+	subroutine pbEncode(pbtype,type,val)
+c
+	implicit none
+	character pbtype*(*),type*(*)
+	real val
+c------------------------------------------------------------------------
+	integer i1,i2
+	character string*10
+c
+c  Externals.
+c
+	integer len1
+c
+	if(type.eq.'gaus')then
+	  write(string,'(1pe10.4)')val
+	  i1 = 1
+	  i2 = len1(string)
+	  dowhile(i1.lt.i2.and.string(i1:i1).eq.' ')
+	    i1 = i1 + 1
+	  enddo
+	  pbtype = 'GAUS('//string(i1:i2)//')'
+	else if(type.eq.'single')then
+	  pbtype = 'SINGLE'
+	else
+	  call bug('f','Unrecognised primary beam type, in pbEncode')
+	endif
+c
+	end
+c************************************************************************
+c* pbInit -- Initialise a primary beam object.
+c& rjs
+c: image-data
+c+
+	subroutine pbInit(pbObj,pbtype,coObj)
+c
+	implicit none
+	integer pbObj,coObj
+	character pbtype*(*)
+c
+c  Initialise a primary beam object. The primary beam is assumed to
+c  be centred at the reference pixel of the coordinate system.
+c
+c  Input:
+c    pbtype	Primary beam type.
+c    coObj	The coordinate system used to form the primary beam object.
+c  Output:
+c    pbObj	The primary beam object.
+c--
+c------------------------------------------------------------------------
+	call pbInitc(pbObj,pbtype,coObj,'op',0.d0)
+	end
+c************************************************************************
+c* pbInitc -- Initialise a primary beam object.
+c& rjs
+c+ image-data
+c+
+	subroutine pbInitc(pbObj,type,coObj,in,x1)
+c
+	implicit none
+	character type*(*),in*(*)
+	integer pbObj,coObj
+	double precision x1(*)
+c
+c  Initialise a primary beam object. The primary beam is assumed to
+c  be centred at the location given by the coordinate system (coObj),
+c  the coordinate specification (in) and the coordinate (x1).
+c  
+c  Input:
+c    pbtype	Primary beam type.
+c    coObj	The coordinate system.
+c    in		Form of the input coordinate defining the reference
+c		location (passed to the co routines).
+c    x1		The reference location.
+c  Output:
+c    pbObj	The primary beam object.
+c--
+c------------------------------------------------------------------------
+	include 'mirconst.h'
+	include 'pb.h'
+c
+	logical init,more,ok
+	integer l1,l2,iax,k,kd
+	double precision f,dtemp,x2(2),antdiam
+	double precision crpix,crval,cdelt1,cdelt2
+	real error,t
+	character ctype*16,line*64
+c
+c  Externals.
+c
+	integer len1
+	data init/.false./
+c
+c  Initialise the PB routines first up.
+c
+	if(.not.init)call pbFirst
+	init = .true.
+c
+c  Get a PB object from the free list.
+c
+	pbObj = pbHead
+	if(pbObj.eq.0)call bug('f','Exhausted all primary beam objects')
+	pbHead = pnt(pbHead)
+c
+c  Determine the primary beam type.
+c
+	l2 = len1(type)
+	l1 = index(type,'(') - 1
+	if(l1.le.0)l1 = l2
+c
+c  Get information about this coordinate system.
+c
+	call coFindAx(coObj,'frequency',iax)
+	if(iax.ne.0)then
+	  call coFreq(coObj,'op',0.d0,f)
+	else
+	  f = 0
+	endif
+	call coCvt(coObj,in,x1,'ap/ap',x2)
+	call coAxDesc(coObj,1,ctype,crpix,crval,cdelt1)
+	call coAxDesc(coObj,2,ctype,crpix,crval,cdelt2)
+c
+c  Find a matching primary beam type. Also look for a near match.
+c
+	ctype = type
+	call ucase(ctype)
+	error = 0
+	kd = 0
+	k = 0
+	more = .true.
+	dowhile(more.and.k.lt.npb)
+	  k = k + 1
+	  more = pb(k).ne.ctype(1:l1).or.f.lt.f1(k).or.f.gt.f2(k)
+	  if(more.and.pb(k).eq.ctype(1:l1))then
+	    t = min(abs(f-f1(k)),abs(f-f2(k)))
+	    if(kd.eq.0.or.t.lt.error)then
+	      kd = k
+	      error = t
+	    endif
+	  endif
+	enddo
+c
+c  If we did not find anything, lets see if we know the diameter of
+c  the antenna, and use a gaussian approximation for this.
+c
+	if(more.and.kd.eq.0)then
+	  call obspar(ctype(1:l1),'antdiam',antdiam,ok)
+	  if(ok)then
+	    call pbAdd(ctype(1:l1),0.1,1e4,real(1100.d0/antdiam),
+     *							0.05,GAUS,0,0.)
+	    more = .false.
+	    k = npb
+	  endif
+	endif
+c
+c  Check that we have all the information we need.
+c
+	if(more)then
+	  if(f.le.0)
+     *	    call bug('f','Frequency could not be determined, in pbInit')
+	  line = 'Unrecognised primary beam type '//type
+	  if(kd.eq.0)call bug('f',line)
+	  k = kd
+	  line = 'Using nearest frequency band'//
+     *	    ' for primary beam type '//type
+	  call bug('w',line)
+	endif
+c
+c  Fill in the details.
+c
+	freq(pbObj) = f
+	pnt(pbObj) = k
+	if(ctype(1:l1).eq.'GAUS')then
+	  ok = l2-l1-2 .gt. 0
+	  if(ok)call atodf(ctype(l1+2:l2-1),dtemp,ok)
+	  if(.not.ok)call bug('f','Bad parameter for gaussian beam')
+	  fwhm(pbObj) = dtemp/60.d0
+	else if(ctype(1:l1).eq.'SINGLE')then
+	  fwhm(pbObj) = 0
+	else
+	  fwhm(pbObj) = pbfwhm(k) / f
+	endif
+c
+c  Now set the scaling parameters.
+c
+	x0(pbObj) = x2(1)
+	y0(pbObj) = x2(2)
+	if(pbtype(k).eq.POLY)then
+	  xc(pbObj) = (f*cdelt1*180*60/pi)**2
+	  yc(pbObj) = (f*cdelt2*180*60/pi)**2
+	else if(pbtype(k).eq.GAUS)then
+	  xc(pbObj) = 4*log(2.) * (cdelt1*180*60/pi/fwhm(pbObj))**2
+	  yc(pbObj) = 4*log(2.) * (cdelt2*180*60/pi/fwhm(pbObj))**2
+	else if(pbtype(k).eq.SINGLE)then
+	  xc(pbObj) = 0
+	  yc(pbObj) = 0
+	endif
+c
+	end
+c************************************************************************
+c* pbFin -- Delete a primary beam object and tidy up.
+c& rjs
+c: image-data
+c+
+	subroutine pbFin(pbObj)
+c
+	implicit none
+	integer pbObj
+c
+c  This deletes a primary beam object and tidies up.
+c
+c  Input:
+c    pbObj	Handle of the primary beam object.
+c--
+c------------------------------------------------------------------------
+	include 'pb.h'
+	pnt(pbObj) = pbHead
+	pbHead = pbObj
+	end
+c************************************************************************
+c* pbGet -- Get the value of a primary beam.
+c& rjs
+c: image-data
+c+
+	real function pbget(pbObj,x,y)
+c
+	implicit none
+	integer pbObj
+	real x,y
+c
+c  Determine the value of the primary beam at a given location.
+c
+c  Input:
+c    pbObj	Handle of the primary beam object.
+c    x,y	Grid location of the position of interest.
+c  Output:
+c    pbGet	Value of the primary beam.
+c--
+c------------------------------------------------------------------------
+	include 'pb.h'
+	real r2,P
+	integer k,off,i
+c
+	r2 = xc(pbObj)*(x-x0(pbObj))**2 + yc(pbObj)*(y-y0(pbObj))**2
+c
+	k = pnt(pbObj)
+c
+	if(r2.gt.maxrad(k))then
+	  pbGet = 0
+	else if(pbtype(k).eq.POLY.and.nvals(k).eq.5)then
+	  off = indx(k)
+	  pbGet = 1/(pbvals(off) + r2*( pbvals(off+1) +
+     *				    r2*( pbvals(off+2) +
+     *				    r2*( pbvals(off+3) +
+     *				    r2*( pbvals(off+4) ) ) ) ) )
+	else if(pbtype(k).eq.POLY)then
+	  off = indx(k)
+	  P = pbvals(off+nvals(k)-1)
+	  do i=off+nvals(k)-2,off,-1
+	    P = P*r2 + pbvals(i)
+	  enddo
+	  pbGet = 1/P
+	else if(pbtype(k).eq.GAUS)then
+	  pbGet = exp(-r2)
+	else if(pbtype(k).eq.SINGLE)then
+	  pbGet = 1
+	endif
+c
+	end
+c************************************************************************
+c* pbDer -- Get the value of the derivative of a primary beam.
+c& rjs
+c: image-data
+c+
+	real function pbder(pbObj,x,y)
+c
+	implicit none
+	integer pbObj
+	real x,y
+c
+c  Determine the derivative (w.r.t. frequency) of the primary beam
+c  at a particular location.
+c
+c  Input:
+c    pbObj	The primary beam object.
+c    x,y	Grid location of the position of interest.
+c  Output:
+c    pbDer	The primary beam derivative wrt frequency.
+c--
+c------------------------------------------------------------------------
+	include 'pb.h'
+	real r2,P,Pdash
+	integer k,off,n,i
+c
+c  Externals.
+c
+	if(freq(pbObj).le.0)
+     *	  call bug('f','Observing frequency is not known, in pbder')
+c
+	r2 = xc(pbObj)*(x-x0(pbObj))**2 + yc(pbObj)*(y-y0(pbObj))**2
+c
+	k = pnt(pbObj)
+c
+	if(r2.gt.maxrad(k))then
+	  pbDer = 0
+	else if(pbtype(k).eq.POLY)then
+	  off = indx(k)
+	  P = 0
+	  Pdash = 0
+	  n = 2*nvals(k)-2
+	  do i=off+nvals(k)-1,off,-1
+	    P     = P    *r2 +   pbvals(i)
+	    Pdash = Pdash*r2 + n*pbvals(i)
+	    n = n - 2
+	  enddo
+	  pbDer = -Pdash/(freq(pbObj)*P*P)
+	else if(pbtype(k).eq.GAUS)then
+	  pbDer = -2*r2*exp(-r2)/freq(pbObj)
+	else if(pbtype(k).eq.SINGLE)then
+	  pbDer = 0
+	endif
+c
+	end
+c************************************************************************
+c* pbInfo -- Return information about a primary beam.
+c& rjs
+c: image-data
+c+
+	subroutine pbinfo(pbObj,pbfwhmd,cutoffd,maxradd)
+c
+	implicit none
+	integer pbObj
+	real pbfwhmd,cutoffd,maxradd
+c
+c  This returns information about a primary beam.
+c
+c  Input:
+c    pbObj	Handle of the primary beam object.
+c  Output:
+c    pbfwhmd	Primary beam FWHM, in radians.
+c    cutoffd	Minimum non-zero value of the primary beam.
+c    maxradd	Maximum radious (in radians) where the primary beam
+c		model is non-zero.
+c--
+c------------------------------------------------------------------------
+	include 'mirconst.h'
+	include 'pb.h'
+	integer k
+c
+	k = pnt(pbObj)
+	pbfwhmd = pi/180/60 * fwhm(pbObj)
+	cutoffd = cutoff(k)
+	if(pbtype(k).eq.GAUS)then
+	  maxradd = pbfwhmd * sqrt( -log(cutoffd)/(4*log(2.)) )
+	else if(pbtype(k).eq.POLY)then
+	  maxradd = pi/180/60 * sqrt(maxrad(k))/freq(pbObj)
+	else
+	  maxradd = 0
+	endif
+c
+	end
+c************************************************************************
+	subroutine pbFirst
+c
+	implicit none
+c
+c  Store all the primary beams that I know about.
+c------------------------------------------------------------------------
+	include 'pb.h'
+	integer i
 c
 c Set coefficients for each telescope and frequency range
 c
-      data atc /1.0, 8.99e-4, 2.15e-6, -2.23e-9, 1.56e-12,
-     +          1.0, 1.02e-3, 9.48e-7, -3.68e-10, 4.88e-13,
-     +          1.0, 1.08e-3, 1.31e-6, -1.17e-9, 1.07e-12,
-     +          1.0, 1.04e-3, 8.36e-7, -4.68e-10, 5.50e-13/
+	integer NCOEFF
+	parameter(NCOEFF=5)
+	real atcal(NCOEFF),atcas(NCOEFF),atcac(NCOEFF),atcax(NCOEFF)
+	real vla(NCOEFF)
 c
-      data vlac /0.9920378, 0.9956885e-3, 0.3814573e-5, -0.5311695e-8,
-     +           0.3980963e-11/
-c-----------------------------------------------------------------------
-      pbfreq = freq
-      if (fwhm.gt.0.0) then
+	data atcal /1.0, 8.99e-4, 2.15e-6, -2.23e-9,  1.56e-12/
+	data atcas /1.0, 1.02e-3, 9.48e-7, -3.68e-10, 4.88e-13/
+	data atcac /1.0, 1.08e-3, 1.31e-6, -1.17e-9,  1.07e-12/
+	data atcax /1.0, 1.04e-3, 8.36e-7, -4.68e-10, 5.50e-13/
 c
-c Use user's value
+	data vla /0.9920378, 0.9956885e-3, 0.3814573e-5, -0.5311695e-8,
+     *		  0.3980963e-11/
 c
-        pbtype = 'GAUSS'
-        pbfac = -4.0 * log(2.0) / fwhm**2
-        pbcut = 0.0
-        do i = 1, maxco
-          pbcoeff(i) = 0.0
-        end do
-      else
-c 
-c See if header item/variable "pbfwhm" exists and get telescope type
-c
-        if (image) then
-          beam = hdprsnt(tin, 'pbfwhm')
-          if (beam) call rdhdr (tin, 'pbfwhm', hdrfwhm, 0.0)
-          call rdhda (tin, 'telescop', tel, 'none')
-        else 
-          call uvprobvr (tin, 'pbfwhm', type, length, beam)
-          if (beam) call uvrdvrr (tin, 'pbfwhm', hdrfwhm, 0.0)
-          call uvrdvra (tin, 'telescop', tel, 'none')
-        end if
-        itel = len1(tel)
-c      
-c Set coefficients or FWHM
-c
-        if (beam) then
-c
-c "pbfwhm" item in header, use it. 
-c
-          if (hdrfwhm.gt.0.0) then
-            pbfac = -4.0 * log(2.0) / (atr * hdrfwhm)**2
-            pbcut = 0.0
-            pbtype = 'GAUSS'
-          else if (hdrfwhm.lt.0.0) then
-            call bug ('f', 
-     +         'Unrecognized value for primary beam "pbfwhm" item')
-          else
+c  Initialise the common block. In particular, form a linked list
+c  of free PB objects.
 c  
-c Single dish
+	npb = 0
+	npbvals = 0
 c
-            pbfac = 0.0
-            pbcut = 0.0
-            pbtype = 'SINGLE'
-          end if
+	pbHead = 1
+	do i=1,MAXOBJ-1
+	  pnt(i) = i + 1
+	enddo
+	pnt(MAXOBJ) = 0
 c
-          do i = 1, maxco
-            pbcoeff(i) = 0.0
-          end do
-        else if (tel.eq.'ATCA') then
-          pbtype = 'POLY'
+c  Make the list of known primary beam objects.
 c
-c Find and match frequency
+	call pbAdd('ATCA',    1.15,1.88,    47.9, 0.03, POLY,
+     *							 NCOEFF,atcal)
+	call pbAdd('ATCA',    2.10,2.60,    49.7, 0.03, POLY,
+     *							 NCOEFF,atcas)
+	call pbAdd('ATCA',    4.30,6.70,    48.3, 0.03, POLY,
+     *							 NCOEFF,atcac)
+	call pbAdd('ATCA',    7.90,9.30,    50.6, 0.03, POLY,
+     *							 NCOEFF,atcax)
+	call pbAdd('VLA',     0.071,24.510, 44.3, 0.023,POLY,
+     *							 NCOEFF,vla)
+	call pbAdd('HATCREEK',74.0,116.0,   184., 0.05, GAUS,0,0.)
+	call pbAdd('FST',     1.00,2.00,    67.0, 0.05, GAUS,0,0.)
+	call pbAdd('GAUS',    0.0,1e4,	      1.0, 0.05, GAUS,0,0.)
+	call pbAdd('SINGLE',  0.0,1e4,	      0.0, 0.5,  SINGLE,0,0.)
 c
-          ic = 0
-          do i = 1, natfrq
-            if (pbfreq.ge.atfrq(1,i).and.pbfreq.le.atfrq(2,i)) ic = i
-          end do
-          if (ic.eq.0) then
-            write (aline, 100) pbfreq, 'the ATCA'
-100         format ('PBINIT: ', f8.4, 
-     +              ' GHz is an invalid frequency for ', a)
-            call bug ('f', aline)
-          end if
+	end
+c************************************************************************
+	subroutine pbAdd(tel,f1d,f2d,pbfwhmd,cutoffd,pbtyped,nval,vals)
 c
-c Set coefficients
+	implicit none
+	character tel*(*)
+	integer nval,pbtyped
+	real f1d,f2d,pbfwhmd,cutoffd,vals(nval)
 c
-          pbcut = 0.03
-          do i = 1, maxco
-            pbcoeff(i) = atc(i,ic)
-          end do
-c
-c Set Gaussian factor as well.  Useful with PBINFO to get a 
-c rough primary beam FWHM without fitting the polyomial
-c
-          pbfac = -4.0 * log(2.0) / (atr * atcafwhm(ic) / pbfreq)**2
-        else if (tel.eq.'VLA') then
-          pbtype = 'POLY'
-c
-c Find and match frequency
-c
-          ic = 0
-          do i = 1, nvlafrq
-            if (pbfreq.ge.vlafrq(1,i).and.pbfreq.le.vlafrq(2,i)) ic = i
-          end do
-          if (ic.eq.0) then
-            write (aline, 100) pbfreq, 'the VLA'
-            call bug ('f', aline)
-          end if
-c
-          pbcut = 0.023
-          do i = 1, maxco
-            pbcoeff(i) = vlac(i)
-          end do
-c
-c Set Gaussian factor as well.  Useful with PBINFO to get a 
-c rough primary beam FWHM without fitting the polyomial
-c
-          pbfac = -4.0 * log(2.0) / (atr * vlafwhm / pbfreq)**2
-        else if (tel.eq.'HATCREEK') then
-          pbtype = 'GAUSS'
-c
-c Find and match frequency
-c
-          ic = 0
-          do i = 1, nhcfrq
-            if (pbfreq.ge.hcfrq(1,i).and.pbfreq.le.hcfrq(2,i)) ic = i
-          end do
-          if (ic.eq.0) then
-            write (aline, 100) pbfreq, 'Hat Creek'
-            call bug ('f', aline)
-          end if
-c
-          pbcut = 0.0
-          pbfac = -4.0 * log(2.0) / (atr * hcfwhm / pbfreq)**2
-        else if (tel.eq.'none') then
-          if (image) then          
-            call bug ('f', 
-     +        'PBINIT: No header items "pbfwhm and "telescop"')
-          else
-            call bug ('f', 
-     +        'PBINIT: No variables "pbfwhm and "telescop"')
-          end if
-        else
-          if (image) then
-            call bug ('f', 'PBINIT: no header item "pbfwhm" & '
-     +        //tel(1:itel)//' is an unknown telescope')
-          else
-            call bug ('f', 'PBINIT: no variable "pbfwhm" & '
-     +        //tel(1:itel)//' is an unknown telescope')
-          end if
-        end if
-      end if
-c
-c Tell PBGET that PBINIT has been called
-c
-      pbdone = 'done'
-c
-      end
-c
-c
-c*pbget -- Get value of Primary Beam
-c:image-data
-c& nebk
-c+
-      real function pbget (rsq)
-c
-      implicit none
-      real rsq
-c
-c     Function to return the primary beam. Subroutine PBINIT must
-c     be used to set up the coefficients
-c
-c  Input
-c    rsq     r    Square of radial distance (radians) from pointing centre
-c
-c  Input in common:
-c    pbcoeff dp   The polynomial coefficients
-c    pbfac   r    The exponential factor for the Gaussian primary beam
-c                 pbfac = -4 * ln(2) / Phi(rad)**2
-c    pbcut   r    Below this value, the correction function is
-c                 unsafe or inaccurate; it will be set to zero.
-c    pbtype  c    Type of correction; 'GAUSS', 'POLY' or 'SINGLE'
-c    pbfreq  dp   Frequency in GHz needed for POLY beams
-c    pbdone  c    Set to 'done' if PBINIT or PBSET has been called
-c--
-c
-c-----------------------------------------------------------------------
-      include 'pb.h'
-c
-      real fac, x, t
-c-----------------------------------------------------------------------
-      if (pbdone.ne.'done') 
-     +  call bug ('f', 'PBGET: you must call PBINIT first')
-c
-      if (pbtype.eq.'POLY') then
-        x = rsq * rtmsq * pbfreq**2
-        fac = pbcoeff(1) + x*(pbcoeff(2) + x*(pbcoeff(3) + 
-     +                     x*(pbcoeff(4) + x*pbcoeff(5))))
-        if (fac.ne.0.0) then
-          pbget = 1.0 / fac
-        else
-          call bug ('f', 'PBGET: infinite primary beam value')
-        end if
-      else if (pbtype.eq.'GAUSS') then
-	t = pbfac * rsq
-	if(t.gt.-12)then
-          pbget = exp(pbfac * rsq)
-	else
-	  pbget = 0
-	endif
-      else if (pbtype.eq.'SINGLE') then
-        pbget = 1.0
-      else
-        call bug ('f', 'PBGET: unrecognized primary beam type')
-      end if
-      if (pbget.lt.pbcut) pbget = 0.0
-c
-      end 
-c
-c
-c*pbder -- Get derivative w.r. frequency of Primary Beam
-c:image-data
-c& nebk
-c+
-      real function pbder (rsq)
-c
-      implicit none
-      real rsq
-c
-c     Function to return the derivative of the primary beam function
-c     as a function of frequency.   Subroutine PBINIT must have already
-c     been used to set up the coefficients
-c
-c  Input
-c    rsq     r    Square of radial distance (radians) from pointing centre
-c  Input in common:
-c    pbcoeff dp   The polynomial coefficients
-c    pbfac   r    The exponential factor for the Gaussian primary beam
-c                 pbfac = -4 * ln(2) / Phi(rad)**2
-c    pbcut   r    Below this value, the correction function is
-c                 unsafe or inaccurate; it will be set to zero.
-c    pbtype  c    Type of correction; 'GAUSS', 'POLY' or 'SINGLE'
-c    pbdone  c    Set to 'done' if PBINIT or PBSET has been called
-c--
-c
-c-----------------------------------------------------------------------
-      include 'pb.h'
-c
-      real pbget, fac, x
-c-----------------------------------------------------------------------
-      if (pbdone.ne.'done') 
-     +  call bug ('f', 'PBDER: you must call PBINIT first')
-      if (pbfreq.le.0.0) call bug ('f','PBDER: Invalid frequency')
-c
-      if (pbtype.eq.'POLY') then
-        x = rsq * rtmsq * pbfreq * pbfreq
-        fac = rsq*rtmsq*pbfreq*(2.0*pbcoeff(2) + 
-     +        x*(4.0*pbcoeff(3) + x*(6.0*pbcoeff(4) + 
-     +        x*8.0*pbcoeff(5))))
-        pbder = -fac * pbget(rsq)**2
-      else if (pbtype.eq.'GAUSS') then
-        pbder = 2.0 * pbfac * rsq * pbget(rsq) / pbfreq
-      else if (pbtype.eq.'SINGLE') then
-        pbder = 0.0
-      else
-        call bug ('f', 'PBDER: unrecognized primary beam type')
-      end if
-      if (pbget(rsq).lt.pbcut) pbder = 0.0
-c
-      end 
-c
-c
-c*pbinfo -- Get information about primary beam
-c:image-data
-c& nebk
-c+
-      subroutine pbinfo (fwhm, coeffs, cut, type)
-c
-      implicit none
-      real fwhm, cut
-      double precision coeffs(5)
-      character*(*) type
-c
-c     Return information about the primary beam correction
-c
-c  Input in common:
-c    pbcoeff dp   The polynomial coefficients
-c    pbfac   r    The exponential factor for the Gaussian primary beam
-c                 pbfac = -4 * ln(2) / Phi(rad)**2
-c    pbcut   r    Below this value, the correction function is
-c                 unsafe or inaccurate; it will be set to zero.
-c    pbtype  c    Type of correction; 'GAUSS', 'POLY' or ' '
-c                 ' ' means do no correction.
-c    pbfreq  dp   Frequency in GHz
-c
-c  Output
-c    fwhm    r    Gaussian FWHM in radians.  This is set for both GAUSS 
-c                 and POLY primary beams.
-c    coeffs  dp   = pbcoeff
-c    cut     r    = pbcut
-c    type    c    = pbtype
-c
-c--
-c
-c-----------------------------------------------------------------------
-      include 'pb.h'
-      integer i
-c-----------------------------------------------------------------------
-      if (pbdone.ne.'done') call bug ('f',
-     +  'PBINFO: You must call PBINIT first')
-c
-      if (pbtype.eq.'POLY') then
-        do i = 1, maxco
-          coeffs(i) = pbcoeff(i)
-        end do
-      else
-        do i = 1, maxco
-          coeffs(i) = 0.0
-        end do
-      end if
-c
-c The FWHM is set for both GAUSS and POLY primary beams.
-c This allows you to get an approximate primary beam
-c without having to fit the polynomial.
-c
-      if (pbtype.eq.'GAUSS' .or. pbtype.eq.'POLY') then
-        fwhm = 2.0 * sqrt(log(2.0) / abs(pbfac))
-      else if (pbtype.eq.'SINGLE') then
-        fwhm = 0.0
-      else
-        call bug ('f', 'PBINFO: unrecognized primary beam type')
-      end if
-c
-      cut = pbcut
-      type = pbtype
-c
-      end
-c
-c
-c*pbcheck -- 
-c:image-data
-c& nebk
-c+
-      subroutine pbcheck (fwhm, tin, image, doder, needf)
-c
-      implicit none
-      integer tin
-      real fwhm
-      logical image, doder, needf
-c
-c     Find out if the primary beam routines are going to need
-c     to be able to work out the frequency.
+c  Add a primary beam to our list of known primary beams.
 c
 c  Input:
-c    fwhm   r    If this is positive, then a Gaussian primary beam
-c                of FWHM radians will be set.
-c    tin    i    Handle of data set
-c    image  l    If .true. "tin" is the handle of an image, else its
-c                the handle of a visibility.  You should already have
-c                read a visibility for this to work (use UVNEXT say).
-c    doder  l    If .true., then you plan to call PBDER
-c          
-c--
+c    tel	Primary beam name.
+c    f1,f2	Frequency range where valid (in GHz).
+c    pbfwhm	Approx primary beam FWHM, in arcsec, at 1 GHz.
+c    cutoff	Level below which primary beam is invalid.
+c    pbtype	Functional form used to represent the primary beam.
+c    nval	Number of values used to parameterize the functional form.
+c    vals	The parameterisation of the functional form.
+c------------------------------------------------------------------------
+	include 'pb.h'
+	integer i
 c
-c-----------------------------------------------------------------------
-      character tel*20, type*1
-      integer length, itel, len1
-      real hdrfwhm
-      logical hdprsnt, beam
-c-----------------------------------------------------------------------
-      if (doder) then
+	npb = npb + 1
+	if(npb.gt.MAXPB)call bug('f','Too many primary beams')
+	pb(npb) = tel
+	f1(npb) = f1d
+	f2(npb) = f2d
+	pbfwhm(npb) = pbfwhmd
+	cutoff(npb) = cutoffd
+	pbtype(npb) = pbtyped
+	nvals(npb) = nval
+	if(nval.gt.0)then
+	  if(npbvals+nval.gt.MAXVAL)
+     *	    call bug('f','Too many primary beam parameters')
+	  indx(npb) = npbvals + 1
+	  do i=1,nval
+	    pbvals(i+npbvals) = vals(i)
+	  enddo
+	  npbvals = npbvals + nval
+	else
+	  indx(npb) = 0
+	endif
 c
-c Always need frequency if calling PBDER
+c  Determine the maximum radius**2 that the function goes out to.
 c
-        needf = .true.
-        return
-      end if
+	if(pbtyped.eq.GAUS)then
+	  maxrad(npb) = -log(cutoff(npb))
+	else if(pbtyped.eq.SINGLE)then
+	  maxrad(npb) = 1
+	else if(pbtyped.eq.POLY)then
+	  call pbradp(cutoffd,vals,nval,pbfwhmd,maxrad(npb))
+	endif
+	end
+c************************************************************************
+	subroutine pbradp(cutoff,coeff,ncoeff,pbfwhm,maxrad)
 c
-      if (fwhm.gt.0.0) then
+	implicit none
+	integer ncoeff
+	real cutoff,coeff(ncoeff),pbfwhm,maxrad
 c
-c Just set user specified Gaussian
+c  Determine the maximum radius at which the primary beam is still
+c  non-zero.
 c
-        needf = .false.
-      else
+c  Input:
+c    cutoff
+c    ncoeff
+c    coeff
+c    pbfwhm
+c  Output:
+c    maxrad	Maximum radius**2, in (arcmin * GHz) ** 2
+c------------------------------------------------------------------------
+	integer MAXORDER
+	parameter(MAXORDER=8)
+	real a(MAXORDER)
+	complex roots(MAXORDER-1)
+	real fac
+	integer i,ifail,k
+	logical found
 c
-c May need frequency yet
+c  Put the poly coefficients in the form wanted by the solver.
 c
-        if (tin.le.0) then
-          call bug ('f', 'PBCHECK: input file not open')
-        else
-          if (image) then
-            beam = hdprsnt(tin, 'pbfwhm')
-            if (beam) call rdhdr (tin, 'pbfwhm', hdrfwhm, 0.0)
-            call rdhda (tin, 'telescop', tel, 'none')
-          else 
-            call uvprobvr (tin, 'pbfwhm', type, length, beam)
-            if (beam) call uvrdvrr (tin, 'pbfwhm', hdrfwhm, 0.0)
-            call uvrdvra (tin, 'telescop', tel, 'none')
-          end if
-          itel = len1(tel)
-c      
-          if (beam) then
+	fac = 1
+	if(ncoeff.gt.MAXORDER)call bug('f','Too high a poly for me')
+	do i=1,ncoeff
+	  a(ncoeff-i+1) = fac * coeff(i)
+	  fac = fac * pbfwhm * pbfwhm
+	enddo
+	a(ncoeff) = a(ncoeff) - 1/cutoff
 c
-c Header item/variable specifies Gaussian
+c  Now find the roots of the poly.
 c
-            needf = .false.
-          else
-            if (tel.eq.'ATCA' .or. tel.eq.'VLA' .or.
-     +          tel.eq.'HATCREEK') then
+	call rpolyzr(a,ncoeff-1,roots,ifail)
+	if(ifail.ne.0)call bug('f','Failed to find the poly roots')
 c
-c Internal representation needs frequency
+c  Look for the smallest positive root with no imaginary part.
 c
-              needf = .true.
-            else if (tel.eq.'none') then
-              if (image) then
-                call bug ('f', 
-     +            'PBCHECK: No header items "pbfwhm and "telescop"')
-              else
-                call bug ('f', 
-     +            'PBCHECK: No variables "pbfwhm and "telescop"')
-              end if
-            else
-              if (image) then
-                call bug ('f', 'PBCHECK: no header item "pbfwhm" & '
-     +            //tel(1:itel)//' is an unknown telescope')
-               else
-                call bug ('f', 'PBCHECK: no variable "pbfwhm" & '
-     +            //tel(1:itel)//' is an unknown telescope')
-               end if
-            end if
-          end if
-        end if
-      end if
+	found = .false.
+	do i=1,ncoeff-1
+	  if(aimag(roots(i)).eq.0.and.real(roots(i)).gt.0)then
+	    if(.not.found)then
+	      k = i
+	      found = .true.
+	    else
+	      if(real(roots(i)).lt.real(roots(k))) k = i
+	    endif
+	  endif
+	enddo
 c
-      end
-
+	if(.not.found)call bug('f','Primary beam does not die away')
+	maxrad = pbfwhm * pbfwhm * real(roots(k))
+c
+	end
