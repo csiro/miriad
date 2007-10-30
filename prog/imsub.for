@@ -34,6 +34,8 @@ c    pjt   9jul92  Length of filenames to be 80, not 24!!!!
 c    rjs  25jun93  Trivial change to a history message.
 c    rjs   8nov94  Get incr and blanking masks to work correctly.
 c    rjs  17aug95  Copy mostable to output.
+c    rjs  21nov95  Use maxnax.h.
+c    nebk 10jan96  Change crpix and cdelt to double
 c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='Imsub: version 1.0 17-Aug-95' )
@@ -41,8 +43,7 @@ c
 	integer maxboxes
 	parameter(maxboxes=2048)
 	include 'maxdim.h'
-	integer maxnax
-	parameter(maxnax=5)
+	include 'maxnax.h'
 	character in*80,out*80
 	integer Inplane(maxnax),Outplane(maxnax),one(maxnax)
 	integer blc(maxnax),trc(maxnax),Nin(maxnax),Nout(maxnax),i,j
@@ -50,7 +51,7 @@ c
 	integer naxis,boxes(maxboxes)
 	integer lIn,lOut
 	logical done,rect
-	real crpix,cdelt
+	double precision crpix,cdelt
 	real Data(maxdim),Data2(maxdim)
 c
 c  Externals.
@@ -107,12 +108,12 @@ c  Make the output file, and make its header.
 c
 	call xyopen(lOut,Out,'new',naxis,Nout)
 	do i=1,naxis
-	  call rdhdr(lIn, 'cdelt'//char(ichar('0')+i),cdelt,1.)
-	  call rdhdr(lIn, 'crpix'//char(ichar('0')+i),crpix,1.)
+	  call rdhdd(lIn, 'cdelt'//char(ichar('0')+i),cdelt,1.0d0)
+	  call rdhdd(lIn, 'crpix'//char(ichar('0')+i),crpix,1.0d0)
 	  cdelt = cdelt * incr(i)
 	  crpix = (crpix - blc(i))/incr(i) + 1
-	  call wrhdr(lOut,'cdelt'//char(ichar('0')+i),cdelt)
-	  call wrhdr(lOut,'crpix'//char(ichar('0')+i),crpix)
+	  call wrhdd(lOut,'cdelt'//char(ichar('0')+i),cdelt)
+	  call wrhdd(lOut,'crpix'//char(ichar('0')+i),crpix)
 	enddo
 	do i=1,nkeys
 	  call hdcopy(lIn,lOut,keyw(i))
