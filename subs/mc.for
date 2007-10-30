@@ -185,6 +185,8 @@ c
      *	      Out,memr(pWts1),nox,noy,
      *	      Wts3,xoff,yoff,xlo,ylo,xhi,yhi,xmin,ymin,xmax,ymax,
      *	      memr(pWrk1),memr(pWrk2),mnx,mny)
+	    if(cnvl(k).ne.0)call cnvlFin(cnvl(k))
+	    cnvl(k) = 0
 	  endif
 	enddo
 c
@@ -260,18 +262,16 @@ c
 c
 	end
 c************************************************************************
-	subroutine mcPlaneR(coObj,k,Runs,nRuns)
+	subroutine mcPlaneR(coObj,k,Runs,nRuns,nPoint)
 c
 	implicit none
-	integer coObj,k,nRuns,Runs(3,nRuns)
+	integer coObj,k,nRuns,Runs(3,nRuns),nPoint
 c
 c  Initialise the mosaic convolution routines for a particular plane.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
 	include 'mc.h'
-c
-	integer iRuns
 c
 c  Release any old primary beams, if needed.
 c
@@ -281,13 +281,7 @@ c  Initialise the mosaicing routines.
 c
 	call mosMini(coObj,real(k))
 	mosini = .true.
-c
-c  Count the number of pixels.
-c
-	npix = 0
-	do iRuns=1,nRuns
-	  npix = npix + Runs(3,iRuns) - Runs(2,iRuns) + 1
-	enddo
+	npix = nPoint
 c
 c  Do we have enough buffer space?
 c
@@ -301,6 +295,53 @@ c
 c  Compute the mosaicing weights.
 c
 	call mosWtsR(Runs,nRuns,memr(pWts1),memr(pWts2),npix)
+c
+	end
+c************************************************************************
+	subroutine mcSigma2(Sigma2,nPoint,noinvert)
+c
+	integer nPoint
+	real Sigma2(nPoint)
+	logical noinvert
+c
+c  Return the variance at each point in the region-of-interest.
+c------------------------------------------------------------------------
+	include 'maxdim.h'
+	include 'mem.h'
+	include 'mc.h'
+c
+	call mcSig(Sigma2,memr(pWts1),memr(pWts2),nPoint,noinvert)
+	end
+c************************************************************************
+	subroutine mcSig(Sigma2,Wt1,Wt2,nPoint,noinvert)
+c
+	implicit none
+	integer nPoint
+	real Sigma2(nPoint),Wt1(nPoint),Wt2(nPoint)
+	logical noinvert
+c
+c  Return the variance in each point of an image.
+c------------------------------------------------------------------------
+	integer i
+c
+	if(noinvert)then
+	  do i=1,nPoint
+	    if(Wt1(i).gt.0)then
+	      Sigma2(i) = Wt2(i)/Wt1(i)
+	    else
+	      Sigma2(i) = 0
+	    endif
+	  enddo
+c
+	else
+	  do i=1,nPoint
+	    if(Wt2(i).gt.0)then
+	      Sigma2(i) = Wt1(i)/Wt2(i)
+	    else
+	      Sigma2(i) = 0
+	    endif
+	  enddo
+	endif
 c
 	end
 c************************************************************************
@@ -630,8 +671,10 @@ c------------------------------------------------------------------------
 	integer k
 c
 	if(mosini)call mosMFin
+	mosini = .false.
 	do k=1,npnt
 	  if(cnvl(k).ne.0)call cnvlFin(cnvl(k))
+	  cnvl(k) = 0
 	enddo
 c
 	if(nWrk.gt.0)call memFree(pWrk1,2*nWrk,'r')
