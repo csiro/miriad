@@ -48,11 +48,12 @@ c	            apply these calibrations if they are available.
 c--
 c  History:
 c    rjs  02may96 Original version.
+c    rjs  12dec96 Improve checks on reasonableness and error messages.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
 	character version*(*)
-	parameter(version='Offaxis: version 1.0 2-May-96')
+	parameter(version='Offaxis: version 1.0 12-Dec-96')
 c
 	logical replace
 	integer nx,ny,nsize(2),tMod,tVis,tOut,nchan,i,j
@@ -134,6 +135,7 @@ c
 	  call VarOnit(tVis,tOut,ltype)
 c
 	  call uvDatRd(preamble,data(1,1),flags(1,1),MAXCHAN,nchan)
+	  if(nchan.eq.0)call bug('f','No appropriate data were found')
 	  dowhile(nchan.gt.0)
 	    call uvDatRd(preamble,data(1,2),flags(1,2),MAXCHAN,nchan)
 	    call uvDatRd(preamble,data(1,3),flags(1,3),MAXCHAN,nchan)
@@ -297,13 +299,29 @@ c
 c  Get all those components above a particular clip level.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
-	integer i,j
+	integer i,j,iax
 	real Data(MAXDIM)
-	double precision cdelt1,cdelt2,crpix1,crpix2
+	double precision cdelt1,cdelt2,crpix1,crpix2,t
 	logical flags(MAXDIM)
+	character bunit*16
 c
 	if(nx.gt.MAXDIM)call bug('f','Image too big for me')
 c
+	call rdhda(tMod,'bunit',bunit,'JY/PIXEL')
+	call lcase(bunit)
+	if(index(bunit,'/pixel').eq.0)then
+	  call bug('w','Input model is not in units of Jy/pixel')
+	  call bug('w',' ... this may be VERY unwise')
+	endif
+	call coInit(tMod)
+	call coFindAx(tMod,'stokes',iax)
+	if(iax.ne.0)then
+	  call coCvt1(tMod,iax,'ap',1.d0,'aw',t)
+	  if(nint(t).ne.1)then
+	    call bug('w','Input model is not a Stokes-I one')
+	    call bug('w',' ... this operation may make no sense')
+	  endif
+	endif
 	call rdhdd(tMod,'cdelt1',cdelt1,0.d0)
 	call rdhdd(tMod,'cdelt2',cdelt2,0.d0)
 	call rdhdd(tMod,'crpix1',crpix1,dble(nx/2+1))
