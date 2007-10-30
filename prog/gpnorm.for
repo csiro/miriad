@@ -23,6 +23,8 @@ c	is to be applied. No default.
 c@ cal
 c	The data-set containing the nominally correct leakage table. No
 c	default.
+c@ select
+c	Normal uv selection. Only antenna-based selection is supported.
 c@ options
 c	Task enrichment parameters. Several can be given, separated by commas.
 c	Minimum match is used.
@@ -36,6 +38,7 @@ c		    files.
 c    rjs     4aug92 Handle new gains file possibility, and lack of xyphases
 c		    item.
 c    rjs    12oct93 noapply is now the default.
+c    rjs    13jul96 Added select keyword.
 c
 c  Bugs and Shortcomings:
 c   * If the number of leakages in the "vis" file is greater than the 
@@ -46,15 +49,19 @@ c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
 	parameter(version='GpNorm: version 1.0 12-Oct-93')
-	logical doxy,doapply
-	integer tCal,tVis,iostat,nLeaks,itVis,itCal,itemp
+	logical doxy,doapply,antflag(MAXANT)
+	integer tCal,tVis,iostat,nLeaks,itVis,itCal,itemp,i
 	character vis*64,cal*64,line*64
 	complex CalLeak(2,MAXANT),VisLeak(2,MAXANT),xyphase,offset
 	real error,arg
+	integer MAXSELS
+	parameter(MAXSELS=100)
+	real sels(MAXSELS)
 c
 c  Externals.
 c
 	integer hsize
+	logical selProbe
 c
 c  Get the inputs and check them.
 c
@@ -63,6 +70,7 @@ c
 	call keya('vis',vis,' ')
 	call keya('cal',cal,' ')
 	call GetOpt(doxy,doapply)
+	call selInput('select',sels,MAXSELS)
 	call keyfin
 c
 	if(vis.eq.' ')call bug('f','Input vis file must be given')
@@ -91,6 +99,10 @@ c
      *	  call bug('w','Different number of leakage terms in the files')
 	nLeaks = min(nLeaks,itemp)
 c
+	do i=1,nLeaks
+	  antflag(i) = selProbe(sels,'antennae',dble(257*i))
+	enddo
+c
 c  Start history processing.
 c
 	if(doapply)then
@@ -109,7 +121,7 @@ c
 c  Do the fitting between the two.
 c
 	call PolComp(CalLeak,VisLeak,nLeaks,xyphase,offset,error,
-     *	  doxy,doapply)
+     *	  antflag,doxy,doapply)
 c
 c  Report on what we have found out, write it to the history.
 c
@@ -218,13 +230,13 @@ c------------------------------------------------------------------------
 	end
 c************************************************************************
 	subroutine PolComp(l1,l2,nants,xyphase,offset,error,
-     *	  doxy,doapply)
+     *	  antflag,doxy,doapply)
 c
 	implicit none
 	integer nants
 	complex xyphase,offset,l1(2,nants),l2(2,nants)
 	real error
-	logical doxy,doapply
+	logical doxy,doapply,antflag(nants)
 c
 c  Determine the best fit between two sets of polarisation leakage parameters,
 c  and their rms difference.
@@ -234,6 +246,7 @@ c    nants	Number of antennae.
 c    doxy	Do solve for xyphase error.
 c    doapply	Apply the corrections.
 c    l1		Reference set of polarisation leakage parameters.
+c    antflag	True if the antenna is to be used.
 c  Input/Possibly Output:
 c    l2		Set of leakage parameters to be adjusted.
 c  Output:
@@ -241,10 +254,7 @@ c    xyphase	XYphase offset between the two solutions.
 c    offset	Offset term between the two solutions.
 c    error	Rms difference between l1 and the corrected l2.
 c------------------------------------------------------------------------
-	real pi
-	parameter(pi=3.141592653589793)
-c
-	integer i
+	integer i,nantd
 	complex a,b,fg,f,g,temp
 	real gg
 c
@@ -252,41 +262,47 @@ c
 	f = 0
 	g = 0
 	gg = 0
+	nantd = 0
 c
 	do i=1,nants
-	  f = f + l1(1,i) - conjg(l1(2,i))
-	  g = g + l2(1,i) - conjg(l2(2,i))
-	  fg = fg   + l1(1,i)*conjg(l2(1,i))
-     *		    + conjg(l1(2,i))*l2(2,i)
-	  gg = gg   + l2(1,i)*conjg(l2(1,i))
-     *		    + l2(2,i)*conjg(l2(2,i))
+	  if(antflag(i))then
+	    f = f + l1(1,i) - conjg(l1(2,i))
+	    g = g + l2(1,i) - conjg(l2(2,i))
+	    fg = fg   + l1(1,i)*conjg(l2(1,i))
+     *		      + conjg(l1(2,i))*l2(2,i)
+	    gg = gg   + l2(1,i)*conjg(l2(1,i))
+     *		      + l2(2,i)*conjg(l2(2,i))
+	    nantd = nantd + 1
+	  endif
 	enddo
 c
+	if(nantd.le.1)call bug('f','Too few antennas selected')
+c
 	if(doxy)then
-	  a = (2*nants*fg - f*conjg(g)) /
-     *		 (2*nants*gg - real(g)**2 - aimag(g)**2)
+	  a = (2*nantd*fg - f*conjg(g)) /
+     *		 (2*nantd*gg - real(g)**2 - aimag(g)**2)
 	  a = a / abs(a)
 	  g = a * g
 	else
 	  a = 1
 	endif
-	b = (f - g)/2/nants
+	b = (f - g)/2/nantd
 c
 	error = 0
 	do i=1,nants
 	  temp = a*l2(1,i) + b
 	  if(doapply) l2(1,i) = temp
 	  temp = l1(1,i) - temp
-	  error = error + real(temp)**2 + aimag(temp)**2
+	  if(antflag(i))error = error + real(temp)**2 + aimag(temp)**2
 	  temp = conjg(a)*l2(2,i) - conjg(b)
 	  if(doapply) l2(2,i) = temp
 	  temp = l1(2,i) - temp
-	  error = error + real(temp)**2 + aimag(temp)**2
+	  if(antflag(i))error = error + real(temp)**2 + aimag(temp)**2
 	enddo
 c
 	xyphase = a
 	offset = b
-	error = sqrt(error/2/nants)
+	error = sqrt(error/2/nantd)
 	end
 c************************************************************************
 	subroutine GetOpt(doxy,doapply)
@@ -306,8 +322,6 @@ c------------------------------------------------------------------------
 	character opts(nopts)*8
 	data opts/'noxy    ','apply   '/
 c
-	call bug('w',
-     *	  'The noapply option has changed -- see the help file')
 	call options('options',opts,present,nopts)
 	doxy = .not.present(1)
 	doapply = present(2)
