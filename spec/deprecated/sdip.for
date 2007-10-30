@@ -237,13 +237,12 @@ c
 	  call output(' ')
 	  if(i.eq.1)then
 	    t0 = (tmod-tcmb*fac)/(1-fac)
-	    line = stcat('Effective temperature: T0   =',
-     *		stcat(' '//streal(T0,'(f10.1)'),' Kelvin'))
-	    call output(line)
 	  endif
-	  if(i.eq.nfreq)
-     *	      call output('-------------------------------------------')
 	enddo
+	line = stcat('Effective temperature: T0   =',
+     *	       stcat(' '//streal(T0,'(f10.1)'),' Kelvin'))
+	call output(line)
+	call output('-------------------------------------------')
 c
 c  Fix up the equations.
 c
@@ -272,8 +271,8 @@ c
 	  call pgscf(2)
 	  call pgsch(2.0)
 	endif
-	call output('Channel Trec   Tcal   Tsky')
-	call output('------- ----   ----   ----')
+	call output('Channel Trec    Tcal   Tsky')
+	call output('------- ----    ----   ----')
 c
 	do j=1,4
 	  j0 = j
@@ -306,7 +305,7 @@ c
 	    tcal = temps(2)
 	    tsky = temps(3)
 	  endif
-	  write(line,'(a,3f7.1)')chan,Trec,Tcal,Tsky
+	  write(line,'(a,f7.1,f8.2,f7.1)')chan,Trec,Tcal,Tsky
 	  call output(line)
 c
 	  if(device.ne.' ')then
