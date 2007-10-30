@@ -115,13 +115,14 @@ c    21jun99 rjs  Added options=replace.
 c    16jan01 rjs  Recompute uv coordinates and handle large shifts
 c	          correctly when shifting the source. Handle limb
 c		  darkening model.
+c    21jan01 rjs  Protect limb darkening calculation from the zero spacing.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
 	integer MAXSCAN,MAXSRC
 	parameter(MAXSCAN=1024,MAXSRC=200)
 	character version*(*)
-	parameter(version='uvPlanet: version 1.0 16-Jan-01')
+	parameter(version='uvPlanet: version 1.0 21-Jan-01')
 c
 	character out*64,ltype*16,uvflags*16
 	real pltb,limb
@@ -269,7 +270,7 @@ c------------------------------------------------------------------------
 	double precision preamble(5),sub(3)
 	double precision lamIII,latitude,utc,tdb,uu,vv
 	double precision tra,tdec,jra,jdec
-	real a,b,disk,bmaj,bmin,bpa,cospa,sinpa
+	real a,b,disk,bmaj,bmin,bpa,cospa,sinpa,temp
 	real z,q,y
 	logical flags(MAXCHAN)
 	double precision freq(MAXCHAN),dist
@@ -394,11 +395,12 @@ c
 	    a = 2 * pltb * (KMKS*1e18)/(CMKS*CMKS*1e-26)
      *	      * 2 * PI/4 * bmaj*bmin
 	    do i=1,nchan	
-	      if(limb.gt.0)then
+	      if(limb.gt.0.and.b.ge.0)then
                 z=real(b*freq(i))
                 q=1+(limb/2.0)
                 call besj(z,q,1,y,ifail)
-                disk = (a/2.0)*freq(i)*freq(i)*gamma(q+1.0)
+	        temp = gamma(q+1.0)
+                disk = (a/2.0)*freq(i)*freq(i)*temp
      *               * ((0.5*z)**(-1.0*q))*y
 	      else
 	        disk = a*freq(i)*freq(i)*j1xbyx(real(b*freq(i)))
