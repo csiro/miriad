@@ -76,7 +76,7 @@ c@ device
 c	PGPLOT plot device
 c@ out
 c	Dataset to write fitted source parameters.  Each line of this file
-c	summarises the result of the Gaussian fit for one islsnd.
+c	summarises the result of the Gaussian fit for one island.
 c	Each line contains:
 c
 c	Island name, island number, ra and dec of island centroid, 
@@ -122,7 +122,10 @@ c		    with it. Elimiate use of non-standard angle conversion
 c		    subroutines.
 c    17apr96   nebk/njt
 c		    Fiddle with formatting in ISBOX and fix typo dimax->djmax 
-c		    in wrtie with format 300.
+c		    in write with format 300.
+c    28jun96   nebk Fix some porblems with output flags (courtesy mark wieringa)
+c		    fix a problem with fit locations being plotted in wrong place when
+c		    a region specified.
 c-----------------------------------------------------------------------------
       include 'mirconst.h'
       include 'maxdim.h'
@@ -132,7 +135,7 @@ c-----------------------------------------------------------------------------
 c
       integer  MAXSRC, MAXBOX
       character*40   version
-      parameter     (version='version 17-Apr-96')
+      parameter     (version='version 28-Jun-96')
       parameter (MAXSRC=2048, MAXBOX=1024)
 c
       integer lui, luo, ip, ni, nj, iptr, mptr, ng, iwin(2,MAXSRC), 
@@ -646,9 +649,14 @@ c
 c Set bin width and limits; try to exclude distant outliers
 c
       drange = 2*min(abs(range(1)),abs(range(2)))
-      wmin = mom(1) - drange / 2.0
-      wmax = mom(1) + drange / 2.0
-      wid = (wmax - wmin) / nd
+      if (drange.gt.0.0) then
+        wmin = mom(1) - drange / 2.0
+        wmax = mom(1) + drange / 2.0
+      else
+        wmin = range(1)
+        wmax = range(2)
+      end if
+      wid = (wmax - wmin) / nd  
 c
 c Form histogram
 c
@@ -758,7 +766,7 @@ c
 c
 c Compute fitted image rms
 c
-      trms = pf(3,1) / sqrt(8.0 * log(2.0)) 
+      trms = abs(pf(3,1)) / sqrt(8.0 * log(2.0)) 
       clip = clip * trms
 c
 c Write to logfile (if required)
@@ -1685,7 +1693,7 @@ c
             if(ifail2.ne.ifail1) then
               call bug('w','Failed to determine covariance matrix'//
      +                 ' during Gaussian fit')
-              ctmp(2:2) = 'F'              
+              ctmp(1:1) = 'F'              
             else if(ifail2.eq.0) then
               call upackcov(covar,nvar)
             end if
@@ -1706,8 +1714,8 @@ c
         if(doplot) then
           call pgsci(10)
           do ic = 1, nc
-            px = pf(2,ic) - real(iwin(1,is)) + 1.0        
-            py = pf(3,ic) - real(jwin(1,is)) + 1.0
+            px = pf(2,ic) - real(iwin(1,is)) +  blc(1)
+            py = pf(3,ic) - real(jwin(1,is)) +  blc(2) 
             call pgpoint(1,px,py,2)
           end do
         end if
