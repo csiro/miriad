@@ -109,11 +109,11 @@ c
 	  if(nchan.gt.0)call VarOnit(lIn,lOut,ltype)
 c
 	  dowhile(nchan.gt.0)
-	    if(preamble(4).lt.tvary.or.preamble(4).gt.tvary+tdelt)then
-	      flux = 0
-	    else
+c	    if(preamble(4).lt.tvary.or.preamble(4).gt.tvary+tdelt)then
+c	      flux = 0
+c	    else
 	      flux = 1
-	    endif
+c	    endif
 	    call uvinfo(lIn,'sfreq',sfreq)
 	    call SrcGen(flux,preamble,preamble(4),data,sfreq,nchan,x)
 	    call varCopy(lIn,lOut)
@@ -136,8 +136,12 @@ c
 	real x(3),f
 	complex data(nchan)
 c------------------------------------------------------------------------
+	integer JUPITER
+	parameter(JUPITER=5)
 	include 'mirconst.h'
-	double precision uvw(3),theta0
+	double precision uvw(3),theta0,sub(3)
+	real bmaj,bmin,bpa
+	double precision dist,n0(3),cml,lat
 	real a,b,fac,theta,flux
 	logical shadowed
 	integer smatidx,i
@@ -145,8 +149,9 @@ c
 c  Externals.
 c
 	logical plShadow
+	double precision deltime
 c
-	call plUVW(uv,time,uvw,a,b,fac,smatidx,theta)
+	call plUVW(uv,time,uvw,a,b,fac,smatidx,theta,sub)
 c
 	theta0 = 2.d0*DPI*(x(1)*uvw(1) + x(2)*uvw(2) + x(3)*uvw(3))
 	flux = f/fac
@@ -157,6 +162,12 @@ c
 	    data(i) = 0
 	  enddo
 	else
+	  call plpar(time+deltime(time,'tdb'),JUPITER,n0,
+     *					dist,bmaj,bmin,bpa)
+c	  n0(2) = -n0(2)
+c	  call lmn2sph(n0,cml,lat)
+c
+c	  flux = flux*(1+0.2*sin(cml))
 	  do i=1,nchan
 	    theta = sfreq(i)*theta0
 	    data(i) = flux*cmplx(cos(theta),sin(theta))
