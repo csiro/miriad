@@ -22,14 +22,14 @@ foreach in ($argv)
    set out = $file:t
    set out = $out:r
    intf2c -s convex $in $file
-   cc -c -O -o ${out}.o -I$MIRINC -Dconvex $file
+   cc -c -O -o ${out}.o -I$MIRINC -I$MIR/subs -Dconvex $file
    ar rl $MIRLIB/libmir.a ${out}.o
    rm -f $file ${out}.o
    breaksw
  case *.c:
    set out = $in:t
    set out = /tmp/$out:r
-   cc -c -O -o ${out}.o -I$MIRINC -Dconvex $in
+   cc -c -O -o ${out}.o -I$MIRINC -I$MIR/subs -Dconvex $in
    ar rl $MIRLIB/libmir.a ${out}.o
    rm -f ${out}.o
    breaksw

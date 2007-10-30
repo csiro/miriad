@@ -22,14 +22,14 @@ foreach in ($argv)
    set out=$file:t
    set out=$out:r
    intf2c -s alpha $in $file;
-   cc -O -c -o ${out}.o -I$MIRINC -Dalpha $file
+   cc -O -c -o ${out}.o -I$MIRINC -I$MIR/subs -Dalpha $file
    ar rl $MIRLIB/libmir.a ${out}.o
    rm -f ${out}.o $file
    breaksw
  case *.c:
    set out = $in:t
    set out = /tmp/$out:r
-   cc -O -c -o ${out}.o -I$MIRINC -Dalpha $in
+   cc -O -c -o ${out}.o -I$MIRINC -I$MIR/subs -Dalpha $in
    ar rl $MIRLIB/libmir.a ${out}.o
    rm -f ${out}.o
    breaksw
