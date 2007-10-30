@@ -5,17 +5,19 @@ c= IMPOS - Converts image coordinates between different systems.
 c& nebk
 c: image analysis
 c+
-c	IMPOS takes an image coordinate in a specified system (such
+c	IMPOS takes a coordinate in a specified system (such
 c	as "abspix" or "arcsec") and converts it to all appropriate
 c	coordinate systems (absolute world, offset world, pixels, 
 c	offset pixels).   Spectral axes are converted to values in
-c	frequency, radio (VELO) and optical (FELO) velocities.
+c	frequency, radio and optical velocities.
 c
-c	If the specified coordinate represents a pixel actually on the
-c	image, its value is reported as well.
+c	If the input is an image and the specified coordinate represents
+c	a valid pixel, its value is reported as well.
 c
 c@ in
-c	The input image.
+c	The input image or visibility dataset. For a visibility dataset,
+c	the coordinate system is relative to the first visibility
+c	record.
 c@ coord
 c	Specify the coordinate for each axis that you are interested 
 c	in; you don't necessarily need one for every axis in the image.
@@ -61,6 +63,7 @@ c    nebk 14oct94  Fix problem when restfreq=0
 c    nebk 27jan95  Remove *(*) concatenations
 c    nebk 13nov95  Better non-coordinate checking
 c    nebk 29nov95  New call for CTYPECO
+c    rjs  17jul97  Get it to work on uv datasets as well.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -69,17 +72,21 @@ c
       integer maxtyp
       parameter (maxtyp = 13)
 c
-      double precision win(maxnax), pixel(maxnax), rfreq
+      double precision win(maxnax), pixel(maxnax), rfreq, dtemp
       real data(maxdim), value
       integer ntypei, lun, naxis, nsize(maxnax), i, ipix(maxnax), 
-     +  nco, il, nstypes, sax
+     +  nco, il, nstypes, sax, iostat
       character file*80, typei(maxnax)*6, typeo(maxnax)*6, 
      +  typeo2(maxnax)*6, typeo3(maxnax)*6, labtyp(maxtyp)*6, bunit*9, 
      +  ctypes(maxnax)*9, stypes(3)*9, sctypes(3)*4, stypei*9
       character*80 strout1(maxnax), strout2(maxnax), strout3(maxnax)
       character text*132, str1*132, trail*6
       integer strlen1(maxnax), strlen2(maxnax), strlen3(maxnax)
-      logical off, dospec
+      logical off, dospec, doim
+c
+c  Externals.
+c
+      logical hdprsnt
 c
       data labtyp /'hms   ', 'dms   ', 'abspix', 'relpix',
      +             'arcsec', 'absghz', 'relghz', 'abskms', 
@@ -89,7 +96,7 @@ c
       data typei /maxnax*' '/
       data nco, ipix /0, maxnax*1/
 c-----------------------------------------------------------------------
-      call output ('IMPOS: version 29-Nov-95')
+      call output ('IMPOS: version 17-Jul-97')
       call output (' ')
 c
 c  Get inputs
@@ -130,18 +137,27 @@ c
 c
 c  Open file
 c
-      call xyopen (lun, file, 'old', maxnax, nsize)
-      call rdhdi (lun, 'naxis', naxis, 0)
-      if (naxis.eq.0) call bug ('f', 'Zero dimensions in image')
-      naxis = min(naxis, maxnax)
-      if (nsize(1).gt.maxdim) call bug ('f',
-     +  'First axis of image too big for me')
-      call rdhda (lun, 'bunit', bunit, ' ')
-      call rdhdd (lun, 'restfreq', rfreq, 0.0d0)
+      call hopen( lun, file, 'old', iostat)
+      if(iostat.ne.0)then
+	call bug('w','Error opening input')
+	call bugno('f',iostat)
+      endif
+      doim = hdprsnt(lun,'image')
+      call hclose(lun)
+      if(doim)then
+        call xyopen (lun, file, 'old', maxnax, nsize)
+        call rdhda (lun, 'bunit', bunit, ' ')
+      else
+	call uvopen (lun, file, 'old')
+	call uvnext(lun)
+      endif
+      call initco (lun)
+      call cogetd(lun,'naxis',dtemp)
+      naxis = nint(dtemp)
+      call cogetd(lun,'restfreq',rfreq)
 c
 c Initialize coordinate transformation routines and fish out CTYPES
 c
-      call initco (lun)
       do i = 1, naxis
         call ctypeco (lun, i, ctypes(i), il)
       end do
@@ -268,67 +284,77 @@ c***********************************************************************
 c Absolute pixels 
 c***********************************************************************
 c
-      do i = 1, nco
-        typeo(i) = 'abspix'
-      end do
-      call w2wco  (lun, nco, typei, stypei, win, typeo, ' ', pixel)
-      call w2wfco (lun, nco, typei, stypei, win, typeo, stypes(1),
+      if(doim)then
+        do i = 1, nco
+          typeo(i) = 'abspix'
+        end do
+        call w2wco  (lun, nco, typei, stypei, win, typeo, ' ', pixel)
+        call w2wfco (lun, nco, typei, stypei, win, typeo, stypes(1),
      +             .true., strout1, strlen1)
 c
-      call output (' ')
-      call output ('Absolute pixels')
-      do i = 1, nco
-        write (text, 100) i, ctypes(i), strout1(i)(1:strlen1(i))
-        call output (text)
-      end do
+        call output (' ')
+        call output ('Absolute pixels')
+        do i = 1, nco
+          write (text, 100) i, ctypes(i), strout1(i)(1:strlen1(i))
+          call output (text)
+        end do
+      endif
 c
 c***********************************************************************
 c Offset pixels
 c***********************************************************************
 c
-      do i = 1, nco
-        typeo(i) = 'relpix'
-      end do
-      call w2wfco (lun, nco, typei, stypei, win, typeo, stypes(1),
+      if(doim)then
+        do i = 1, nco
+          typeo(i) = 'relpix'
+        end do
+        call w2wfco (lun, nco, typei, stypei, win, typeo, stypes(1),
      +             .true., strout1, strlen1)
 c
-      call output (' ')
-      call output ('Offset pixels')
-      do i = 1, nco
-        write (text, 100) i, ctypes(i), strout1(i)(1:strlen1(i))
-        call output (text)
-      end do
+        call output (' ')
+        call output ('Offset pixels')
+        do i = 1, nco
+          write (text, 100) i, ctypes(i), strout1(i)(1:strlen1(i))
+          call output (text)
+        end do
+      endif
+c
 c***********************************************************************
 c
 c Find nearest pixel to coordinate location
 c
-      off = .false.
-      do i = 1, nco
-        ipix(i) = nint(pixel(i))
-        if (ipix(i).lt.1 .or. ipix(i).gt.nsize(i)) off = .true.
-      end do
+      if(doim)then
+        off = .false.
+        do i = 1, nco
+          ipix(i) = nint(pixel(i))
+          if (ipix(i).lt.1 .or. ipix(i).gt.nsize(i)) off = .true.
+        end do
 c
 c Find value if on image
 c
-      if (.not.off) then
-        call xysetpl (lun, maxnax-2, ipix(3))
-        call xyread (lun, ipix(2), data)
-        value = data(ipix(1))
+        if (.not.off) then
+          call xysetpl (lun, maxnax-2, ipix(3))
+          call xyread (lun, ipix(2), data)
+          value = data(ipix(1))
 c
-        call output (' ')
-        call mitoaf (ipix, nco, str1, il)
-        write (text, 200) str1(1:il), value, bunit
-200     format ('Nearest pixel = ', a, '.  Value = ', 1pe13.6, ' ', a)
-        call output (text)
-      end if
+          call output (' ')
+          call mitoaf (ipix, nco, str1, il)
+          write (text, 200) str1(1:il), value, bunit
+200       format ('Nearest pixel = ', a, '.  Value = ', 1pe13.6, ' ', a)
+          call output (text)
+        end if
+      endif
 c
-c Close up
+c  All done.
 c
-      call xyclose (lun)
+      if(doim)then
+	call xyclose (lun)
+      else
+	call uvclose(lun)
+      endif
       call finco (lun)
       end
-c
-c
+c************************************************************************
       subroutine pader (type, str, ilen)
       implicit none
       character str*(*), str2*132, type*(*)
