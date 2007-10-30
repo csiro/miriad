@@ -147,8 +147,8 @@ Instructions for Installing Miriad
     * The "miriad" front-end can use the GNU READLINE library to allow
       command line editting. This is very useful. If you fail to have
       the readline libraries, the front-end will still work -- but it
-      will not have command-line editting. A binary copy of the readline library
-      comes with this distribution. However, system incompatibilities
+      will not have command-line editting. A binary copy of the readline 
+      library comes with this distribution. However, system incompatibilities
       may make this of little value. A copy of the readline source
       is available as
 
@@ -213,12 +213,29 @@ Instructions for Installing Miriad
     - "Rebuild the Miriad library/tasks from scratch". You will only
       get this question if you have a binary distribution or are
       rerunning Install. Answer no if you think that the binaries
-      are probably in good shape. If in doubt answer yes.
+      are probably in good shape. Also answer no, if you are re-running 
+      Install after the build failed mid-way through (eg during liking).
 
-    The script starts to build the bulk of Miriad at this stage. After a
-    long period ...
+    The script starts to build the bulk of Miriad at this stage. This
+    can take quite a while...
 
-    - "Record update time". If all has gone well, answer yes.
+    If all has gone well, you will eventually get the question:
+
+    - "Record update time". And you can answer yes.
+
+    If there has been a problem, the compilation will usually terminate
+    with a error such as:
+
+    Processing /applic/miriad/prog/cgdisp.for
+    Number of lines = 4496; number of routines = 25
+    /usr/bin/ld: cannot find -lpgplot
+    collect2: ld returned 1 exit status
+    ### /applic/miriad/bin/linux/mirclnk /applic/miriad/prog/cgdisp.for: returned with status=256
+
+    In this case, you should stop the install (answer no to the "Build
+    special tasks" question) and work out what the problem is. We really
+    should have a "Trouble shooting FAQ". We don't. But feel free to 
+    email mirmgr@atnf.csiro.au for help!! 
 
     - "Build special tasks". Generally answer yes to this.
 
@@ -231,7 +248,8 @@ Instructions for Installing Miriad
     automatically initialise the Miriad environment when you log in.
     In your .login file, add the lines
 
-        source  miriad-root-directory/bin/MIRRC
+        source  miriad-root-directory/bin/MIRRC 
+                                         (MIRRC.sh for Korn/sh/bash shells)
 	set path = ($MIRBIN $path)
 
     to make sure your get the appropriate Miriad definitions whenever
@@ -585,7 +603,8 @@ The Structure of Miriad
        % fortran -o $MIRBIN/prthd prthd.for `mirlibs`
 
      When you have sorted out the problem (perhaps mirlibs was inappropriate)
-     use the following commands to proceed without having to start from scratch:
+     use the following commands to proceed without having to start from 
+     scratch:
 
        % touch $MIRLIB/Last_update
        % touch $MIR/prog/*
