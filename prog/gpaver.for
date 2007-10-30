@@ -14,20 +14,22 @@ c@ interval
 c	The time averaging interval, in minutes. The default is 10 minutes.
 c@ options
 c	  vector  Do vector averaging of the gain amplitudes and
-c	          phases. This is the default.
+c		  phases. This is the default.
 c	  scalar  Do scalar averaging of the gain amplitudes and vector
-c	          averaging of the gain phases.
+c		  averaging of the gain phases
 c--
 c  History:
 c    rjs     12oct93 Original version.
 c    nebk    23nov93 Doc change to give rjs the grumps.
+c    mchw    04jan95 write out new interval.
+c    rjs     06jan95 Make interval the max of the old and new.
 c
 c  Bugs and Shortcomings:
 c    ? Perfect ?
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
-	parameter(version='GpAver: version 1.0 12-Oct-93')
+	parameter(version='GpAver: version 1.0 04-JAN-95')
 	logical dovec
 	double precision interval
 	character vis*64
@@ -128,7 +130,7 @@ c------------------------------------------------------------------------
 	integer MAXSOLS,MAXGAINS
 	parameter(MAXSOLS=10000,MAXGAINS=3*MAXSOLS*MAXANT)
 	complex Gains(MAXGAINS)
-	double precision time(MAXSOLS)
+	double precision time(MAXSOLS),int1
 	integer nsols,offset,pnt,i,tGains,iostat,nnsols,ngains
 c
 c  Externals.
@@ -169,6 +171,8 @@ c
 c  Now write out the new gain solutions.
 c
 	call wrhdi(tVis,'nsols',nnsols)
+	call rdhdd(tVis,'interval',int1)
+	call wrhdd(tVis,'interval',max(int1,interval))
 	call haccess(tVis,tGains,'gains','write',iostat)
 	if(iostat.ne.0)call AverBug(iostat,'Error reopening gain table')
 c
