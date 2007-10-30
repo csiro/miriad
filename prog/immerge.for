@@ -563,7 +563,7 @@ c
 	endif
 c
 	call trimout(line)
-	label = ' arcsec; p.a.='//itoaf(nint(bpa))
+	label = ' arcsec; pa='//itoaf(nint(bpa))
 	write(line,'(a,f7.2,a,f7.2,a)')' ... with beam fwhm:',
      *	  (3600*180/PI)*bmaj,' by',(3600*180/PI)*bmin,
      *	  label
@@ -732,6 +732,8 @@ c
 	  SumXY = SumXY + X(i)*Y(i)
 	enddo
 c
+	if(SumYY.eq.0)call bug('f','Low resolution image is zero')
+	if(SumXX.eq.0)call bug('f','High resolution image is zero')
 	a = SumXY/SumYY
 	rms = (SumXX + a*a*SumYY - 2*a*SumXY)/(n*SumYY)
 	rms = max(0.01*a,sqrt(max(0.,rms)))
