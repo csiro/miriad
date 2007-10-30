@@ -1020,6 +1020,7 @@ c the number after a piece of text starts in column 'align'.
       character*40     units
       character*80     rtfmt
       character*9      typ, cubetype
+      external rtfmt
 
       if( plotvar(HEAD).eq.0 ) return
 
@@ -1358,6 +1359,7 @@ c and a nice string for the x-axis.
       character*9        typ, cubetype
       character*256      rtfmt
       integer            n(4), nn
+      external rtfmt
 
       call logwrit( ' ' )
 
