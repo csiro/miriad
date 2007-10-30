@@ -23,6 +23,8 @@ c user to call.  You should always call OFMINI to begin with.
 c
 c *  ofmini      Initialize ofm routines
 c *  ofmmod      Interactively modify the ofm
+c *  ofmcol      Apply a specified colour ofm
+c *  ofminq      Inquire about applied ofm
 c
 c    ofmapp      Apply the ACTIVE ofm to the PGPLOT device
 c    ofmevl      Evaluate BASIC ofm spline coefficients and 
@@ -76,6 +78,16 @@ c            - ofmapp
 c            - ofmtfp - ofmtfe 
 c            - ofml1f
 c
+c  *** Call tree for OFMCOL ***
+c  
+c     ofmtba - ofmtbw
+c            - ofmtcc
+c            - ofmtbb
+c            - ofmfit
+c            - ofmevl
+c     ofmrev
+c     ofmapp
+c
 c
 c
 c Note that the colour postscript drivers do not have a lookup table 
@@ -96,6 +108,7 @@ c   nebk 03aug94  Add replication capability (ofmrep)
 c   nebk 05jan95  Replace PGQCOL with new PGQCIR and make some other minor
 c                 changes for the use of new PGIMAG instead of PGGRAY
 c                 Remove OFMRAP as no longer needed with PGIMAG
+c   nebk 10feb95  Add OFMCOL and OFMINQ
 c***********************************************************************
 c
       subroutine ofmapp 
@@ -121,6 +134,63 @@ c
 c Signify ACTIVE table applied to device
 c
       ofmdun = .true.
+c
+      end
+c
+c
+c* OfmCol -- Apply a colour OFM specified by the user
+c& nebk
+c: PGPLOT,display
+c+
+      subroutine ofmcol (jofm, imin, imax)
+c
+      implicit none
+      real imin, imax
+      integer jofm
+c
+c  Apply a colour lookup table as offered by the user
+c
+c  Input 
+c    imin,max   Image min and max that PGIMAG was called with. Only
+c		 used for iofm=5
+c    jofm    Type of ofm
+c               1 => B&W
+c               2 => RJS rainbow 
+c               3 => Tody linear pseudo colour
+c               4 => RDE floating zero colour contours
+c               5 => RDE fixed zero colour contours
+c               6 => RGB
+c               7 => Background
+c               8 => Heat
+c            If negative, then reverse
+c  Output in common
+c    iofm    Type of ofm
+c-
+c-----------------------------------------------------------------------
+      include 'ofm.h'
+c-----------------------------------------------------------------------
+c
+c Do we have enough colour indices to play with ?
+c
+      if (na.eq.0) return
+c
+c Is it possible to generate the fixed zero colour contour ofm ?
+c
+      if (imin.lt.0.0 .and. imax.gt.0.0 .and.
+     +    abs(imax).gt.abs(imin)) dofcc = .true.
+      if (.not.dofcc .and. jofm.eq.5) then
+        call bug ('w', 
+     +    'Cannot generate fixed zero colour contours for this image')
+        iofm = 1
+      else
+        iofm = abs(jofm)
+      end if
+c
+c Generate the table, reverse it if needed, and apply
+c
+      call ofmtba (imin, imax)
+      if (jofm.lt.0) call ofmrev
+      call ofmapp
 c
       end
 c
@@ -316,13 +386,57 @@ c
       implicit none
 c
 c  Initialize ofm routines.
+c
+c All output in common
+c   na    Number of available colour indices.  If 0, then
+c         ofmini has decided it cannot function on this device
+c         (too many or too few colour indices)
 c--
       include 'ofm.h'
+c
+c Set state switches
 c
       fidun = .false.
       ofmdun = .false.
       dofcc = .false.
       nocurs = .false.
+c
+c Get available colour indices on this device.  
+c
+      call pgqcir (ci1, ci2)
+      na = ci2 - ci1 + 1
+c      write (*,*) 'ci1,ci2=',ci1,ci2
+      if (na.gt.maxlev) then
+        call bug ('w',
+     +   'OFMINI: Too many colours on this device for internal storage')
+        na = 0
+      else if (na.lt.3) then
+        call bug ('w', 'OFMINI: Not enough colours on this device')
+        na = 0
+      end if
+c
+      end
+c
+c
+c
+c* OfmInq -- Inquire about OFM
+c& nebk
+c: PGPLOT,display
+c+
+      subroutine ofminq (jofm)
+c
+      implicit none
+      integer jofm
+c
+c  Inquire about OFM being applied
+c 
+c Output
+c  jofm    Number describing OFM (see ofmtab)
+c--
+c-----------------------------------------------------------------------
+      include 'ofm.h'
+c-----------------------------------------------------------------------
+      jofm = iofm
 c
       end
 c
@@ -641,6 +755,10 @@ c-----------------------------------------------------------------------
       logical hard
 c-----------------------------------------------------------------------
 c
+c Do we have enough colour indices to play with
+c
+      if (na.eq.0) return
+c
 c Does this device have a cursor ?
 c
       call pgqinf ('CURSOR', ans, il)
@@ -657,10 +775,10 @@ c
       if (imin.lt.0.0 .and. imax.gt.0.0 .and. 
      +    abs(imax).gt.abs(imin)) dofcc = .true.
 c
-c If no ofm has been applied, apply the greyscale ofm.  In reality, as
-c PGIMAG should have been called, an OFM should have been loaded via
-c PGSCR, but these routines don't know about it, so we will overwrite
-c it with our own greyscale.   Also initialize fiddle array.
+c If no ofm has been applied, apply the greyscale ofm.  With /ps
+c devices, the ofm must be loaded before calling PGIMAG. WIth
+c interactive devices, the ofm cam be loaded after PGIMAG.
+c Also initialize fiddle array.
 c
       if (.not.ofmdun) then
         iofm = 1
@@ -827,7 +945,7 @@ c-----------------------------------------------------------------------
 cc
       integer i
 c-----------------------------------------------------------------------
-      call output ('Reversing lookup table') 
+c      call output ('Reversing lookup table') 
 c
 c Save original ACTIVE and SAVE ofms
 c
@@ -1058,7 +1176,7 @@ c Loop over levels
 c
       do i = 1, na
 c
-c Log intensity in range sqrt(imin2) to sqrt(imax2)
+c Sqrt intensity in range sqrt(imin2) to sqrt(imax2)
 c
         ls = sqrt((i-1)*ds + imin2)
 c
@@ -1109,14 +1227,6 @@ c-----------------------------------------------------------------------
       include 'ofm.h'
       real imin, imax
 c-----------------------------------------------------------------------
-c
-c Get available colour indices on this device.  
-c
-      call pgqcir (ci1, ci2)
-      na = ci2 - ci1 + 1
-c      write (*,*) 'ci1,ci2=',ci1,ci2
-      if (na.gt.maxlev) call bug ('f','Too many colours on this device')
-c
       if (iofm.eq.1 .or. iofm.eq.4 .or. iofm.eq.5) then
 c
 c Set ACTIVE and SAVE tables that are generated algorithmically
