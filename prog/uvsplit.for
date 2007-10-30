@@ -1,0 +1,762 @@
+c************************************************************************
+	program uvsplit
+c
+	implicit none
+c
+c= uvsplit - Break a uv data-set into single source, single-band files.
+c& rjs
+c: uv analysis
+c+
+c	UVSPLIT breaks an input data-set into a number of output
+c	data-sets, each of which contains a single ``type'' of data.
+c	Generally this means single source and single frequency
+c	band, though this is controlled by some options.
+c
+c	UVSPLIT chooses its own names for the output data-sets. These
+c	are in the form
+c	    sourcename.frequency
+c	Where ``frequency'' is the center frequency of the band, in MHz,
+c	rounded to the nearest MHz.
+c@ vis
+c	The name if an input uv data-set. No default.
+c@ select
+c	The normal uv selection commands. The default is copy everything.
+c@ options
+c	This gives extra processing options. Several options can be given,
+c	each separated by commas. They may be abbreivated to the minimum
+c	needed to avoid ambiguity.
+c
+c	The following three options determine which data-set characteristics
+c	result in UVSPLIT generating different output data-sets.
+c	  nosource  Do not produce new data-sets based on source name. That
+c	            is each output data-set can contain multiple sources.
+c	            The default is for each output to contain only a single
+c	            source.
+c	  nofreq    Do not produce new output data-sets based on a switch
+c	            in frequency. That is each output data-set can contain
+c	            frequency switches.
+c	  nowindow  Do not generate a separate output data-set for each
+c	            spectral window. The default is to create a new
+c	            output for each spectral window.
+c	  nocopy    By default, uvsplit copies any calibration tables
+c	            present in the input to the output. The nocopy
+c	            option suppresses this.
+c--
+c  History:
+c    rjs  13oct93 Original version.
+c
+c  Bugs:
+c    * Not written yet.
+c------------------------------------------------------------------------
+	include 'maxdim.h'
+	integer MAXSELS
+	parameter(MAXSELS=256)
+	character version*(*)
+	parameter(version='UvSplit: version 1.0 13-Oct-93')
+c
+	character vis*64,dtype*1
+	integer tvis
+	real sels(MAXSELS)
+	integer length
+	logical dosource,dofreq,dowin,updated,dowide,docomp,docopy
+	logical more,first
+c
+c  Externals.
+c
+	logical SelProbe
+c
+c  Get the input parameters.
+c
+	call output(version)
+	call keyini
+	call GetOpt(dosource,dofreq,dowin,docopy)
+	call keyf('vis',vis,' ')
+	call SelInput('select',sels,MAXSELS)
+	call keyfin
+c
+	if(vis.eq.' ')call bug('f','A visibility input must be given')
+	if(.not.(dosource.or.dofreq.or.dowin))
+     *	  call bug('f','The output would contain all the input!')
+c
+c  This program cannot tolerate polarisation, visibility or increment
+c  selection (for obscure reasons to do with polarisation counting).
+c
+	if(SelProbe(sels,'increment?',0.d0))
+     *	  call bug('f','UvSplit does not support select=inc')
+	if(SelProbe(sels,'visibility?',0.d0))
+     *	  call bug('f','UvSplit does not support select=vis')
+	if(SelProbe(sels,'polarization?',0.d0))
+     *	  call bug('f','UvSplit does not support select=pol')
+	if(SelProbe(sels,'window?',0.d0))
+     *	  call bug('f','UvSplit does not support select=win')
+c
+c  Loop the loop.
+c
+	first = .true.
+	more = .true.
+	dowhile(more)
+c
+c  Open the input, and determine some things about it.
+c
+	  call uvopen(tVis,vis,'old')
+	  call SelApply(tVis,sels,.true.)
+	  if(first)then
+	    call uvprobvr(tVis,'corr',dtype,length,updated)
+	    dowide = dtype.eq.' '
+	    docomp = dtype.eq.'j'
+	    call FileSup(tVis,dowide,docomp,dowin,version)
+	  endif
+c
+c  Read through the file.
+c
+	  call Process(tVis,dosource,dofreq,dowin,dowide)
+c
+	  first = .false.
+	  call FileFin(docopy,more)
+	  call uvclose(tVis)
+	enddo
+c
+	end
+c************************************************************************
+	subroutine Process(tVis,dosource,dofreq,dowin,dowide)
+c
+	implicit none
+	integer tVis
+	logical dosource,dofreq,dowin,dowide
+c
+c  Do a pass through the data file.
+c
+c  Input:
+c    tVis
+c    dosource
+c    dofreq
+c    dowin
+c    dowide
+c------------------------------------------------------------------------
+	include 'maxdim.h'
+	integer MAXINDX
+	parameter(MAXINDX=16)
+c
+	complex data(MAXCHAN)
+	logical flags(MAXCHAN),skip
+	double precision preamble(4)
+	integer nchan,nindx,vCheck,indx(MAXINDX),nschan(MAXINDX)
+	integer i,offset
+c
+c  Externals.
+c
+	logical uvVarUpd
+c
+c  Create a handle to track those things that cause us to have to
+c  re-check the indices.
+c
+	call HanGen(tVis,vCheck,dosource,dofreq,dowin,dowide)
+c
+c  Loop the loop.
+c
+	skip = .true.
+	call uvread(tVis,preamble,data,flags,MAXCHAN,nchan)
+	dowhile(nchan.gt.0)
+c
+c  Update the indices if necessary.
+c
+	  if(uvVarUpd(vCheck))then
+	    call GetIndx(tVis,dosource,dofreq,dowin,dowide,
+     *	      indx,nschan,nIndx,MAXINDX)
+	    skip = .true.
+	    do i=1,nIndx
+	      if(indx(i).ne.0)skip = .false.
+	    enddo
+	  endif
+c
+c  Now write out the data.
+c
+	  if(.not.skip)then
+	    offset = 1
+	    do i=1,nindx
+	      if(indx(i).gt.0)call FileDat(indx(i),
+     *		preamble,data(offset),flags(offset),nschan(i))
+	      offset = offset + nschan(i)
+	    enddo
+	    if(offset.ne.nchan+1)
+     *		call bug('f','Consistency check failed')
+	  endif
+c
+c  Loop the loop.
+c
+	  call uvread(tVis,preamble,data,flags,MAXCHAN,nchan)
+	enddo
+c
+	end
+c************************************************************************
+	subroutine GetIndx(tVis,dosource,dofreq,dowin,dowide,
+     *	  Indx,nschan,nIndx,MAXINDX)
+c
+	implicit none
+	integer tVis,nIndx,MAXINDX,nschan(MAXINDX),Indx(MAXINDX)
+	logical dosource,dofreq,dowin,dowide
+c
+c  Determine the current indices of interest.
+c
+c------------------------------------------------------------------------
+	integer MAXSPECT
+	parameter(MAXSPECT=16)
+	character base*32,source*32,c*1
+	integer maxi,n,nchan,nwide,length,lenb,i
+	double precision sdf(MAXSPECT),sfreq(MAXSPECT)
+	real wfreq(MAXSPECT)
+c
+c  Externals.
+c
+	character itoaf*8
+	integer len1
+c
+c  Initialise.
+c
+	maxi = min(MAXINDX,MAXSPECT)
+c
+c  Generate the base name.
+c
+	length = 0
+	if(dosource)then
+	  call uvrdvra(tVis,'source',source,' ')
+	  length = min(len1(source),len(base))
+	  lenb = 0
+	  do i=1,length
+	    c = source(i:i)
+	    if((c.ge.'a'.and.c.le.'z').or.
+     *	       (c.ge.'A'.and.c.le.'Z').or.
+     *	       (c.ge.'0'.and.c.le.'9').or.
+     *	       c.eq.'-'.or.c.eq.'+'.or.c.eq.'_'.or.c.eq.'.')then
+	      lenb = lenb + 1
+	      base(lenb:lenb) = c
+	    endif
+	  enddo
+	  length = lenb
+	endif
+c
+	if(length.eq.0)then
+	  base = 'uvsplit'
+	  length = 7
+	endif
+c
+c  The split is based on frequency.
+c
+c  Wide band case.
+c
+	if(dofreq)then
+	  if(dowide)then
+	    call uvrdvri(tVis,'nwide',nwide,1)
+	    if(.not.dowin)then
+	      call uvrdvrr(tVis,'wfreq',wfreq,0.)
+	      nindx = 1
+	    else
+	      nindx = nwide
+	      if(nindx.gt.maxi)call bug('f','Too many wide channels')
+	      call uvgetvrr(tVis,'wfreq',wfreq,nindx)
+	    endif
+	    do i=1,nindx
+	      n = nint(1000*wfreq(i))
+	      call FileIndx(base(1:length)//'.'//itoaf(n),i,indx(i))
+	      nschan(i) = 1
+	    enddo
+	    if(nindx.eq.1)nschan(1) = nwide
+c
+c  Channel Case.
+c
+	  else
+	    call uvrdvri(tVis,'nchan',nchan,1)
+	    if(.not.dowin)then
+	      call uvrdvrd(tVis,'sfreq',sfreq,0.d0)
+	      call uvrdvrd(tVis,'sdf',sdf,0.d0)
+	      call uvrdvri(tVis,'nschan',nschan,1)
+	      nindx = 1
+	    else
+	      call uvrdvri(tVis,'nspect',nindx,1)
+	      if(nindx.gt.maxi)call bug('f','Too many spec windows')
+	      call uvgetvrd(tVis,'sdf',sdf,nindx)
+	      call uvgetvrd(tVis,'sfreq',sfreq,nindx)
+	      call uvgetvri(tVis,'nschan',nschan,nindx)
+	    endif
+	    do i=1,nindx
+	      n = nint(1000*(sfreq(i) + sdf(i) * (nschan(i)/2)))
+	      call FileIndx(base(1:length)//'.'//itoaf(n),i,indx(i))
+	    enddo
+	    if(nindx.eq.1)nschan(1) = nchan
+	  endif
+c
+c  The split is based on IF number.
+c
+	else if(dowin)then
+	  if(dowide)then
+	    call uvrdvri(tVis,'nwide',nindx,1)
+	    if(nindx.gt.maxi)call bug('f','Too many windows')
+	    do i=1,nindx
+	      call FileIndx(base(1:length)//'.'//itoaf(i),i,indx(i))
+	      nschan(i) = 1
+	    enddo	      
+	  else
+	    call uvrdvri(tVis,'nspect',nindx,1)
+	    if(nindx.gt.maxi)call bug('f','Too many windows')
+	    call uvgetvri(tVis,'nschan',nschan,nindx)
+	    do i=1,nindx
+	      call FileIndx(base(1:length)//'.'//itoaf(i),i,indx(i))
+	    enddo
+	  endif
+c
+c  The split is based purely on the source name.
+c
+	else
+	  if(dowide)then
+	    call uvrdvri(tVis,'nwide',nchan,1)
+	  else
+	    call uvrdvri(tVis,'nchan',nchan,1)
+	  endif
+	  call FileIndx(base(1:length),0,indx)
+	  nindx = 1
+	  nschan(1) = nchan
+	endif
+c
+	end
+c************************************************************************
+	subroutine HanGen(tVis,vCheck,dosource,dofreq,dowin,dowide)
+c
+	implicit none
+	integer tVis,vCheck
+	logical dosource,dofreq,dowin,dowide
+c
+c  Determine which variables we have to track changes.
+c
+c------------------------------------------------------------------------
+	call uvVarIni(tVis,vCheck)
+	if(dosource)call uvVarSet(vCheck,'source')
+	if(dofreq)then
+	  if(dowide)then
+	    call uvVarSet(vCheck,'wfreq')
+	  else
+	    call uvVarSet(vCheck,'sfreq')
+	    call uvVarSet(vCheck,'sdf')
+	    call uvVarSet(vCheck,'nschan')
+	  endif
+	else if(dowin)then
+	  if(dowide)then
+	    call uvVarSet(vCheck,'nwide')
+	  else
+	    call uvVarSet(vCheck,'nspect')
+	  endif
+	endif
+c
+	end
+c************************************************************************
+	subroutine GetOpt(dosource,dofreq,dowin,docopy)
+c
+	implicit none
+	logical dosource,dofreq,dowin,docopy
+c
+c  Determine extra processing options.
+c
+c  Output:
+c    dosource
+c    dofreq
+c    dowin
+c------------------------------------------------------------------------
+	integer NOPTS
+	parameter(NOPTS=4)
+	logical present(NOPTS)
+	character opts(NOPTS)*8
+	data opts/'nosource','nofreq  ','nowindow','nocopy  '/
+c
+	call options('options',opts,present,NOPTS)
+	dosource = .not.present(1)
+	dofreq   = .not.present(2)
+	dowin    = .not.present(3)
+	docopy   = .not.present(4)
+c
+	end
+c************************************************************************
+	subroutine FileSup(tVis,tdowide,tdocomp,tdoif,tvers)
+c
+	implicit none
+	integer tVis
+	logical tdowide,tdocomp,tdoif
+	character tvers*(*)
+c
+c  Initialise the File* routines.
+c------------------------------------------------------------------------
+	include 'uvsplit.h'
+c
+	version = 'UVSPLIT: Miriad '//tvers
+c
+	lVis = tVis
+	call rdhdi(lVis,'npol',npol,0)
+	dowide = tdowide
+	docomp = tdocomp
+	doif = tdoif
+c
+	nfiles = 0
+	nopen = 0
+	end
+c************************************************************************
+	subroutine FileDat(tindx,preamble,data,flags,nchan)
+c
+	implicit none
+	integer tindx,nchan
+	double precision preamble(4)
+	complex data(nchan)
+	logical flags(nchan)
+c
+c  Write data out to a file.
+c
+c  Input:
+c    tindx	Index into the file table.
+c    preamble,data,flags,nchan Normal uvwrite arguments.
+c
+c------------------------------------------------------------------------
+	include 'uvsplit.h'
+c
+c  Externals.
+c
+	logical uvVarUpd
+c
+c  Return straight away if there is nothing to do.
+c
+	if(tIndx.eq.0)return
+c
+c  Copy variables that have changed to the output.
+c
+	call uvvarcpy(vCopy(tIndx),lOut(tIndx))
+c
+c  Generate the appropriate frequency descriptors, if needed.
+c
+	if(doif)then
+	  if(uvVarUpd(vCheck(tIndx)))then
+	    if(dowide)then
+	      call FileWpec(lVis,lOut(tIndx),nchan,ifno(tIndx))
+	    else
+	      call FileCpec(lVis,lOut(tIndx),nchan,ifno(tIndx))
+	    endif
+	  endif
+	endif
+c
+c  Finally write the data.
+c
+	call uvwrite(lOut(tIndx),preamble,data,flags,nchan)
+	end
+c************************************************************************
+	subroutine FileWpec(lVis,lOut,nchan,ifno)
+c
+	implicit none
+	integer lVis,lOut,nchan,ifno
+c
+c  Pick out the wideband description of this wideband channel.
+c
+c  Input:
+c    lVis
+c    lOut
+c    nchan
+c    ifno
+c------------------------------------------------------------------------
+	integer MAXSPECT
+	parameter(MAXSPECT=16)
+	include 'maxdim.h'
+	integer nwide,off,nsystemp,nants
+	logical usyst
+	character type*1
+	real wfreq(MAXSPECT),wwidth(MAXSPECT),wsystemp(MAXANT*MAXSPECT)
+c
+	if(nchan.ne.1)call bug('f','Inconsistency!!')
+c
+	call uvrdvri(lVis,'nwide',nwide,1)
+	if(ifno.gt.nwide)call bug('f','Something is screwy')
+	call uvgetvrr(lVis,'wfreq',wfreq,nwide)
+	call uvgetvrr(lVis,'wwidth',wwidth,nwide)
+c
+	call uvputvrr(lOut,'wfreq',wfreq(ifno),1)
+	call uvputvrr(lOut,'wwidth',wwidth(ifno),1)
+c
+c  Now for (*&%** system temperatures -- the more troublesome one.
+c
+	call uvprobvr(lVis,'wsystemp',type,nsystemp,usyst)
+	usyst = type.eq.'r'.and.nsystemp.lt.MAXANT*MAXSPECT
+	if(usyst)then
+	  call uvgetvrr(lVis,'wsystemp',wsystemp,nsystemp)
+	  call uvrdvri(lVis,'nants',nants,0)
+	  if(nsystemp.lt.nants*nwide)then
+	    nsystemp = min(nsystemp,nants)
+	    off = 1
+	  else
+	    nsystemp = nants
+	    off = (ifno-1)*nants + 1
+	  endif
+	  call uvputvrr(lOut,'wsystemp',wsystemp(off),nsystemp)
+	endif
+c
+	end
+c************************************************************************
+	subroutine FileCpec(lVis,lOut,nchan,ifno)
+c
+	implicit none
+	integer lVis,lOut,nchan,ifno
+c
+c  Pick out the spectral description of this spectral window.
+c
+c  Input:
+c    lVis
+c    lOut
+c    nchan
+c    ifno
+c------------------------------------------------------------------------
+	integer MAXSPECT
+	parameter(MAXSPECT=16)
+	include 'maxdim.h'
+	integer nspect,off,nsystemp,nants
+	logical usyst
+	character type*1
+	double precision sdf(MAXSPECT),sfreq(MAXSPECT)
+	double precision restfreq(MAXSPECT)
+	real systemp(MAXANT*MAXSPECT)
+c
+	call uvrdvri(lVis,'nspect',nspect,1)
+	if(ifno.gt.nspect)call bug('f','Something is screwy')
+	call uvgetvrd(lVis,'sdf',sdf,nspect)
+	call uvgetvrd(lVis,'sfreq',sfreq,nspect)
+	call uvgetvrd(lVis,'restfreq',restfreq,nspect)
+c
+	call uvputvri(lOut,'nspect',1,1)
+	call uvputvri(lOut,'nschan',nchan,1)
+	call uvputvri(lOut,'ischan',1,1)
+	call uvputvrd(lOut,'sdf',sdf(ifno),1)
+	call uvputvrd(lOut,'sfreq',sfreq(ifno),1)
+	call uvputvrd(lOut,'restfreq',restfreq(ifno),1)
+c
+c  Now for (*&%** system temperatures -- the more troublesome one.
+c
+	call uvprobvr(lVis,'systemp',type,nsystemp,usyst)
+	usyst = type.eq.'r'.and.nsystemp.lt.MAXANT*MAXSPECT
+	if(usyst)then
+	  call uvgetvrr(lVis,'systemp',systemp,nsystemp)
+	  call uvrdvri(lVis,'nants',nants,0)
+	  if(nsystemp.lt.nants*nspect)then
+	    nsystemp = min(nsystemp,nants)
+	    off = 1
+	  else
+	    nsystemp = nants
+	    off = (ifno-1)*nants + 1
+	  endif
+	  call uvputvrr(lOut,'systemp',systemp(off),nsystemp)
+	endif
+c
+	end
+c************************************************************************
+	subroutine FileIndx(name,tifno,tindx)
+c
+	implicit none
+	character name*(*)
+	integer tifno,tindx
+c
+c  Get the index corresponding to a particular file.
+c------------------------------------------------------------------------
+	include 'uvsplit.h'
+	integer n
+	logical more
+	character line*64
+c
+c  Externals.
+c
+	integer binsrcha
+c
+c  Do we already have this file.
+c
+	tindx = 0
+	if(nfiles.gt.0)tindx = binsrcha(name,out,nfiles)
+	if(tindx.gt.0)tindx = indx(tindx)
+c
+c  We do not. Create a new slot for it.
+c
+	if(tindx.eq.0)then
+	  if(nfiles.eq.MAXFILES)call bug('f','Name buffer overflow')
+c
+c  Merge the name into our ordered list of known names.
+c
+	  n = nfiles
+	  more = .true.
+	  dowhile(n.gt.0.and.more)
+	    more = Out(n).gt.name
+	    if(more)then
+	      Out(n+1) = Out(n)
+	      Indx(n+1) = Indx(n)
+	      n = n - 1
+	    endif
+	  enddo
+c
+	  Out(n+1) = name
+	  Indx(n+1) = nfiles + 1
+c
+c  Fix up the description of this file.
+c
+	  nfiles = nfiles + 1
+	  tIndx = nfiles
+	  done(tIndx) = .false.
+	  lOut(tIndx) = 0
+	endif
+c
+c  Remember the current IF slot of this data.
+c
+	ifno(tIndx) = tifno
+c
+c  If we have space open, open this file up. Otherwise just check that
+c  the file does not already exist.
+c
+	if(lOut(tindx).eq.0.and..not.done(tindx))then
+	  if(nopen.lt.MAXOPEN)then
+	    call FileOpen(lVis,lOut(tIndx),vCheck(tIndx),vCopy(tIndx),
+     *		name,dowide,docomp,doif,npol,version)
+	    nopen = nopen + 1
+	  else
+	    line = 'File already exists: '//name
+	    call assertf(name,.false.,line)
+	  endif
+	endif
+c
+	if(lOut(tIndx).eq.0)tIndx = 0
+c
+	end
+c************************************************************************
+	subroutine FileOpen(lVis,lOut,vCheck,vCopy,
+     *			name,dowide,docomp,doif,npol,version)
+c
+	implicit none
+	integer lVis,lOut,vCheck,vCopy,npol
+	character name*(*),version*(*)
+	logical dowide,docomp,doif
+c
+c  Open and initialise an output file.
+c
+c------------------------------------------------------------------------
+	integer i,vTemp
+	character line*64
+c
+	integer NCOPY,NSCHECK,NWCHECK
+	parameter(NCOPY=64,NSCHECK=7,NWCHECK=3)
+	character copy(NCOPY)*8,scheck(NSCHECK)*8,wcheck(NWCHECK)*8
+        data copy/    'airtemp ','antdiam ','antpos  ','atten   ',
+     *     'axisrms ','chi     ','corbit  ','corbw   ','corfin  ',
+     *     'cormode ','coropt  ','cortaper','ddec    ','dec     ',
+     *     'dewpoint','dra     ','epoch   ','evector ','focus   ',
+     *     'freq    ','freqif  ','inttime ','ivalued ','jyperk  ',
+     *     'latitud ','longitu ','lo1     ','lo2     ','lst     ',
+     *     'mount   ','nants   ','ntemp   ','ntpower ','obsdec  ',
+     *     'observer','obsra   ','on      ','operator','pbfwhm  ',
+     *     'phaselo1','phaselo2','phasem1 ','plangle ','plmaj   ',
+     *     'plmin   ','pltb    ','precipmm','ra      ','relhumid',
+     *     'source  ','telescop','temp    ','tpower  ','ut      ',
+     *     'veldop  ','veltype ','version ','vsource ','winddir ',
+     *     'windmph ','xyphase ','delay0  ','npol    ','pol     '/
+c
+	data SCheck/  'nspect  ','restfreq','ischan  ','nschan  ',
+     *     'sfreq   ','sdf     ','systemp '/
+        data WCheck/  'wfreq   ','wwidth  ','wsystemp'/
+c
+c  Open the file, and set the correlation type.
+c
+	line = 'Creating '//name
+	call output(line)
+	call uvopen(lOut,name,'new')
+	if(dowide)then
+	  call uvset(lOut,'data','wide',0,0.,0.,0.)
+	else
+	  if(docomp)then
+	    call uvset(lOut,'corr','j',0,0.,0.,0.)
+	  else
+	    call uvset(lOut,'corr','r',0,0.,0.,0.)
+	  endif
+	endif
+c
+c  Write the number of polarisations.
+c
+	if(npol.gt.0)call wrhdi(lOut,'npol',npol)
+c
+c  Make the output history.
+c
+	call hdcopy(lVis,lOut,'history')
+	call hisopen(lOut,'append')
+	call hiswrite(lOut,version)
+	call hisinput(lOut,'UVSPLIT')
+	call hisclose(lOut)
+c
+c  Determine the things to be checked and the things to be copied.
+c
+	call uvVarIni(lVis,vCopy)
+	do i=1,NCOPY
+	  call uvVarSet(vCopy,Copy(i))
+	enddo
+c
+c  Determine whether we have to check ot copy the variables that describe
+c  the frequency setup.
+c
+	if(doif)then
+	  call uvVarIni(lVis,vCheck)
+	  vTemp = vCheck
+	else
+	  vCheck = 0
+	  vTemp = vCopy
+	endif
+c
+c  Remember the variables to check or copy.
+c
+	if(dowide)then
+	  do i=1,NWCHECK
+	    call uvVarSet(vTemp,WCheck(i))
+	  enddo
+	else
+	  do i=1,NSCHECK
+	    call uvVarSet(vTemp,SCheck(i))
+	  enddo
+	endif
+c
+	end
+c************************************************************************
+	subroutine FileFin(docopy,more)
+c
+	implicit none
+	logical more,docopy
+c
+c  Close up any open files, and see if there are any more to be done.
+c
+c  Input:
+c    docopy	Copy the calibration tables.
+c  Output:
+c    more	Is there more to be done?
+c
+c------------------------------------------------------------------------
+	integer i,j
+	include 'uvsplit.h'
+c
+	integer NTABLE
+	parameter(NTABLE=12)
+	character tables(NTABLE)*8
+	data tables/'interval','nsols   ','ngains  ','nfeeds  ',
+     *	 'ntau    ','gains   ','freq0   ','leakage ','bandpass',
+     *	 'freqs   ','nspect0 ','nchan0  '/
+c
+	more = .false.
+	do i=1,nfiles
+	  if(lOut(i).ne.0)then
+	    if(docopy)then
+	      do j=1,NTABLE
+		call hdcopy(lVis,lOut(i),tables(j))
+	      enddo
+	    endif
+	    call uvclose(lOut(i))
+	    lOut(i) = 0
+	    done(i) = .true.
+	    nopen = nopen - 1
+	  else
+	    more = more.or..not.done(i)
+	  endif
+	enddo
+c
+	if(nopen.ne.0)call bug('f','Consistency check failed')
+c
+	end
+
