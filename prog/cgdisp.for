@@ -135,14 +135,28 @@ c	Default is linear between the image minimum and maximum with
 c	a b&w lookup table.   You can default the intensity range with
 c	zeros, viz. "range=0,0,log,-2" say.
 c@ vecfac
-c	3 values.  A scale factor to multiply the vector image lengths
-c	(or box image widths) by, and the x and y increments (in pixels)
-c	across the image  at which to plot the vectors (or boxes).  If 
-c	you have set non unit values of XYBIN, the increments here refer 
-c	to the binned pixels.  When VECFAC(1)=1, the vectors (boxes) are 
-c	scaled so that the maximum amplitude (width) takes 1/20 of the 
-c	(sub)plot size.  
+c       3 or 4 values.  A scale factor to multiply the vector image
+c       lengths (or box image widths) by, the x and y increments (in
+c       pixels) across the image at which to plot the vectors (or boxes),
+c       and optionally the length of the scale-bar vector
+c       (unset for no scale-bar). If you have set non unit values of
+c       XYBIN, the increments here refer to the binned pixels.  When
+c       VECFAC(1)=1, the vectors (boxes) are scaled so that the maximum
+c       amplitude (width) takes 1/20 of the (sub)plot size. 
+c
+c       The scale-bar gives a graphical representation of the vector
+c       lengths, which makes vector plots easier to interpret.  The
+c       scale-bar is drawn in the corner specified by the BEAMTYP key
+c       (defaulting to bottom-left if BEAMTYP is not specified). If
+c       VECFAC(4)=0, the scale bar is drawn the length of the longest
+c       vector; you can find out what this is using OPTIONS=FULL. For a
+c       fractional polarization vector map, setting VECFAC(4)=1
+c       corresponds to 100 per cent polarization. If VECFAC(1) >> 1, this
+c       will give a very long vector. For polarization intensity images,
+c       VECFAC(4) is specified in flux density.
+c
 c	Defaults are 1.0, 2, VECFAC(2)
+c       Default is not to draw a scale-bar.
 c@ boxfac
 c	3 values.  A scale factor to multiply the box image widths by, 
 c	and the x and y increments (in pixels) across the image at which
@@ -644,6 +658,7 @@ c    rjs  08may00  Change incorrect keyf call to keya.
 c    rjs  13jul00  Correct angle of beam plotting when there is a rotation
 c		   between sky and pixel grid.
 c    dpr  14feb01  Add beamtyp keyword
+c    dpr  27feb01  Added scale-bar
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -671,9 +686,9 @@ c
      +  wdgvp(4), cumhis(nbins), gmm(2), cmm(2,maxcon), dmm(2)
       real vxmin, vymin, vymax, vx, vy, vxsize, vysize, vxgap, vygap, 
      +  ydispb, xdispl, groff, blankg, blankc, blankv, blankb, 
-     +  vecfac, boxfac, hs(3)
+     +  vecfac, vecmax, vecmaxpix, boxfac, hs(3)
 c
-      integer blc(3), trc(3), win(2), lwid(maxcon+3), 
+      integer blc(3), trc(3), win(2), lwid(maxcon+3), veclwid,
      +  vecinc(2), boxinc(2), srtlev(maxlev,maxcon), nlevs(maxcon), 
      +  grpbeg(maxchan), ngrp(maxchan), his(nbins), ibin(2), 
      +  jbin(2), kbin(2), krng(2), coltab(maxchan), gnaxis, 
@@ -688,9 +703,9 @@ c
 c
       logical solneg(maxcon), doblv(2), bemprs(maxcon+4)
       logical do3val, do3pix, dofull, gaps, eqscale, doblc, doblg,
-     +  dobeam, beaml, beamb, relax, rot90, signs, mirror, dowedge, 
-     +  doerase, doepoch, bdone, doblb, doblm, dofid, dosing, nofirst,
-     +  grid, dotr, dodist, conlab, doabut, getvsc, noflab
+     -     dobeam, candobeam, beaml, beamb, relax, rot90, signs, mirror,
+     -     dowedge, doerase, doepoch, bdone, doblb, doblm, dofid, dosing
+     -     , nofirst, grid, dotr, dodist, conlab, doabut, getvsc, noflab
 c
       data blankc, blankv, blankb /-99999999.0, -99999999.0, 
      +                             -99999999.0/
@@ -707,19 +722,20 @@ c
       data lwid /maxconp3*1/
       data getvsc /.true./
 c-----------------------------------------------------------------------
-      call output ('CgDisp: version 14-Feb-01')
+      call output ('CgDisp: version 27-Feb-01')
       call output (' ')
 c
 c Get user inputs
 c
-      call inputs (maxchan, maxlev, maxcon, maxtyp, ltypes, ncon, cin, 
-     +   gin, nvec, vin, bin, mskin, ibin, jbin, kbin, levtyp, slev, 
-     +   levs, nlevs, npixr, pixr, trfun, coltab, vecfac, vecinc, 
-     +   boxfac, boxinc, pdev, labtyp, dofull, do3val, do3pix, eqscale, 
-     +   gaps, solneg, nx, ny, lwid, break, cs, scale, ofile, dobeam, 
-     +   beaml, beamb, relax, rot90, signs, mirror, dowedge, doerase, 
-     +   doepoch, dofid, dosing, nofirst, grid, dotr, dodist, conlab,
-     +   doabut, val3form, ncols1, cols1, fs, hs, firstimage)
+      call inputs (maxchan, maxlev, maxcon, maxtyp, ltypes, ncon, cin,
+     -     gin, nvec, vin, bin, mskin, ibin, jbin, kbin, levtyp, slev,
+     -     levs, nlevs, npixr, pixr, trfun, coltab, vecfac, vecmax,
+     -     vecinc, boxfac, boxinc, pdev, labtyp, dofull, do3val, do3pix
+     -     , eqscale, gaps, solneg, nx, ny, lwid, break, cs, scale,
+     -     ofile, dobeam, beaml, beamb, relax, rot90, signs, mirror,
+     -     dowedge, doerase, doepoch, dofid, dosing, nofirst, grid, dotr
+     -     , dodist, conlab, doabut, val3form, ncols1, cols1, fs, hs,
+     -     firstimage)
 c
 c Open images as required
 c
@@ -760,8 +776,16 @@ c
 c
 c Get beam information
 c
-      if (dobeam) call getbeam (maxcon, cin, lc, gin, lg, vin, lv, 
-     +  bin, lb, bmin, bmaj, bpa, dobeam, bemprs)
+      if (dobeam .or. (vecmax .ge. 0.0)) then
+        call getbeam (maxcon, cin, lc, gin, lg, vin, lv, 
+     +       bin, lb, bmin, bmaj, bpa, candobeam, bemprs)
+c       User might just be setting beam parameters
+c       for the vector scale-bar
+        if (dobeam .and. .not. candobeam) then 
+          if (vecmax .lt. 0.0)  call bug ('w', 'No beam(s) to plot')
+          dobeam = .false. 
+        end if
+      end if
 c
 c Work out number of plots per page and number of plots
 c
@@ -1024,12 +1048,14 @@ c
              doblv(2) = .true.
            end if
 c
-           call pgslw (lwid(ncon+2))
+           veclwid=lwid(ncon+2)
+           call pgslw (veclwid)
            call pgsci (veccol)
 c
            call drawvec (lv, tr, vecfac, vecinc, win(1), win(2),
      +        memr(ipim), memi(ipnim), memr(ipim2), memi(ipnim2),
-     +        scale, signs, rot90, nx, ny, getvsc, vfac)
+     +        scale, signs, rot90, nx, ny, getvsc, vfac, vecmax, 
+     +        vecmaxpix)
          end if
 c
 c Draw box plots
@@ -1077,10 +1103,11 @@ c
 c
 c Draw beam(s)
 c
-         if (dobeam) then
+         if (dobeam .or. (vecmax .ge. 0.0)) then
            call pgsci (bemcol)
            call beampl (maxcon, beaml, beamb, bmin, bmaj, bpa,
-     +                  bemprs, lc, lg, lv, lb, fs, hs, firstimage)
+     +                  bemprs, lc, lg, lv, lb, fs, hs, firstimage,
+     +                  vecmax, vecmaxpix, dobeam)
          end if
 c
 c Plot annotation
@@ -1197,9 +1224,9 @@ c
 c
       end
 c
-c
       subroutine beampl (maxcon, beaml, beamb, bmin, bmaj, bpa, 
-     +                   bemprs, lc, lg, lv, lb, fs, hs, firstimage)
+     +                   bemprs, lc, lg, lv, lb, fs, hs, firstimage,
+     +                   vecmax, vecmaxpix, dobeam)
 c-----------------------------------------------------------------------
 c     Draw one beam for each image being displayed.  They are drawn
 c     confocally with different line styles in the designated corner.
@@ -1217,18 +1244,24 @@ c    fs              PGPLOT fill style for first beam
 c    hs              PGPLOT hatching style for first beam
 c    firstimage      bemprs-style index of the beam with which to use
 c                    fs and hs
+c    vecmax          Length of vector scale-bar, in world coords
+c                    (for annotation)
+c    vecmaxpix       Length of vector scale-bar, in pixels
+c    dobeam          We actually want to plot beams, not just
+c                    the scale-bar!
 c-----------------------------------------------------------------------   
       implicit none
 c
       integer maxcon, lc(maxcon), lg, lv(2), lb
-      logical beaml, beamb, bemprs(maxcon+4)
+      logical beaml, beamb, bemprs(maxcon+4), dobeam
       real bmin(maxcon+4), bmaj(maxcon+4), bpa(maxcon+4)
       integer fs, firstimage
-      real hs(3)
+      real hs(3), vecmax, vecmaxpix
 cc
       integer i, luns(20)
       logical fill
-      real xcen, ycen
+      real xcen, ycen, sbxcen, sbycen
+      real xv(2), yv(2), x, y
 c-----------------------------------------------------------------------
 c
 c Find location of centre of biggest beam.  They will be plotted
@@ -1243,21 +1276,38 @@ c
       luns(maxcon+4) = lb
 c
       call beamxy (luns, maxcon, beaml, beamb, bemprs, bmin, bmaj, 
-     +   bpa, xcen, ycen, fill)
+     +   bpa, xcen, ycen, fill, sbxcen, sbycen, vecmax, vecmaxpix)
 c
 c Draw the beam(s)
 c
-      do i = 1, maxcon+4
-        if (bemprs(i)) then
-          if (firstimage .eq. i) then
-            call beampl2 (luns(i), xcen, ycen, bmin(i), bmaj(i), 
-     +   bpa(i),.true.,fs,hs)
-          else
-            call beampl2 (luns(i), xcen, ycen, bmin(i), bmaj(i), 
-     +   bpa(i),.false.,fs,hs)
+      if (dobeam) then
+        do i = 1, maxcon+4
+          if (bemprs(i)) then
+            if (firstimage .eq. i) then
+              call beampl2 (luns(i), xcen, ycen, bmin(i), bmaj(i), 
+     +             bpa(i),.true.,fs,hs)
+            else
+              call beampl2 (luns(i), xcen, ycen, bmin(i), bmaj(i), 
+     +             bpa(i),.false.,fs,hs)
+            end if
           end if
-        end if
-      end do
+        end do
+      end if
+c       
+c Draw the vector scale-bar, if required
+c
+      if (vecmax .gt. 0.0) then
+        x = sbxcen
+        y = sbycen
+c
+c Draw it
+c 
+        xv(1) = x - vecmaxpix/2.0
+        xv(2) = x + vecmaxpix/2.0
+        yv(1) = y
+        yv(2) = y
+        call pgline (2, xv, yv) 
+      end if
 c
       end
 c
@@ -1346,7 +1396,8 @@ c
 c
 c
       subroutine beamxy (luns, maxcon, beaml, beamb, bemprs, bmin, 
-     +                   bmaj, bpa, xcen, ycen, fill)
+     +     bmaj, bpa, xcen, ycen, fill, sbxcen,
+     +     sbycen, vecmax, vecmaxpix)
 c-----------------------------------------------------------------------
 c     We want to draw the beams, if there are more than one, with
 c     the same centre.  Find the biggest x and y offsets from all
@@ -1360,8 +1411,12 @@ c                    or at the bottom (else right and top)
 c    bemprs          True if beam present for pixel map and contour images
 c    bmin,maj,pa     Beam FWHMin, FWHMax and p.a. for pixel map and
 c                    contour image (rad). 
+c    vecmax          Length of scale-bar in world coord: .gt. 0.0
+c                    if the bar is to be plotted
+c    vecmaxpix       Length of scale-bar vector in pixels
 c  Output
 c    x,ycen          Absolute pixels of beam centres
+c    sbxcen,sbycen   Absolute pixels of vector scale bar centre
 c    fill            If true fill in the beam patch, else just outline
 c-----------------------------------------------------------------------   
       implicit none
@@ -1369,6 +1424,7 @@ c
       integer maxcon, luns(*)
       logical beaml, beamb, bemprs(maxcon+4), fill
       real bmin(maxcon+4), bmaj(maxcon+4), bpa(maxcon+4),  xcen, ycen
+      real vecmax, vecmaxpix, sbxcen, sbycen
 cc
       include 'mirconst.h'
       double precision r2a
@@ -1481,14 +1537,20 @@ c
 c
       if (beaml) then
         xcen = xlo + sx*(xoff + xwmax/2.0)
+        sbxcen = xlo + sx*xoff + vecmaxpix/2.0
       else
         xcen = xhi - sx*(xoff + xwmax/2.0)
+        sbxcen = xhi - sx*xoff - vecmaxpix/2.0
       end if
 c
       if (beamb) then
         ycen = ylo + sy*(yoff + ywmax/2.0)
+        if (vecmax .gt. 0.0) ycen = ycen + sy*yoff
+        sbycen = ylo + sy*yoff
       else
         ycen = yhi - sy*(yoff + ywmax/2.0)
+        if (vecmax .gt. 0.0) ycen = ycen - sy*yoff
+        sbycen = yhi - sy*yoff
       end if
 c
       end
@@ -1890,11 +1952,9 @@ c
 c
       subroutine drawvec (lv, tr, vecfac, vecinc, npixx, npixy,
      +    amp, namp, pa, npa, scale, signs, rot90, nx, ny, 
-     +    getvsc, vfac)
+     +    getvsc, vfac, vecmax, vecmaxpix)
 c-----------------------------------------------------------------------
-c     Draw vectors.   The vector position angle must come out
-c     correctly on the plot regardless of the x and y scales,
-c     it is not tied to the world coordinate scales.
+c     Draw and label vector scale bar.   
 c
 c  Input
 c    lv       Handle of image
@@ -1910,14 +1970,19 @@ c    signs    True means increasing X and Y = E and N, else
 c             E and N to the left and top
 c    rot90    Add 90 if true to position angle
 c    nx,ny    Number of subplots in x and y directions
-c  Input/output:
 c    getvsc   If true, work out the automatic vector scaling factor
 c             from this image if possible.
 c    vfac     Maximum vector amplitude and the vector scale in
 c             pixel units per mm (e.g. Jy/beam per mm).  Set on first
 c             sub-plot
-c
-c
+c  Input/Output
+c    vecmax   Length of the scalebar vector. Input as:  
+c             -ve (no scale vector: output unchanged)
+c             0   (for default length: output in world coord)
+c             +ve (vector lenght specified by user: output unchanged)
+c  Output
+c    vecmaxpix  Length of the scalebar vector, in pixels
+c    
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -1925,7 +1990,7 @@ c
       integer vecinc(2), nx, ny, npixx, npixy, namp(npixx,npixy),
      +  npa(npixx,npixy), lv
       real vecfac, amp(npixx,npixy), pa(npixx,npixy), tr(6), scale(2), 
-     +  vfac(2)
+     +  vfac(2), vecmax, vecmaxpix
 cc
       include 'mirconst.h'
       double precision cdelt(2)
@@ -2034,6 +2099,11 @@ c
         end do
       end do
 c
+c Set defaults for vector scale bar
+c
+      if (vecmax .eq. 0.0) vecmax = vfac(1) 
+      vecmaxpix =  vecmax * sx / vfac(2)
+c      
       end
 c
 c
@@ -2309,7 +2379,6 @@ c
       do i = 1, maxcon+4
         if (bemprs(i)) dobeam = .true.
       end do
-      if (.not.dobeam) call bug ('w', 'No beam(s) to plot')
 c
       end
 c
@@ -2375,14 +2444,15 @@ c
       end
 c
 c
-      subroutine inputs (maxgr, maxlev, maxcon, maxtyp, ltypes, ncon, 
-     +   cin, gin, nvec, vin, bin, mskin, ibin, jbin, kbin, levtyp, 
-     +   slev, levs, nlevs, npixr, pixr, trfun, coltab, vecfac, vecinc, 
-     +   boxfac, boxinc, pdev, labtyp, dofull, do3val, do3pix, eqscale, 
-     +   gaps, solneg, nx, ny, lwid, break, cs, scale, ofile, dobeam, 
-     +   beaml, beamb, relax, rot90, signs, mirror, dowedge, doerase, 
-     +   doepoch, dofid, dosing, nofirst, grid, dotr, dodist, conlab,
-     +   doabut, val3form, ncols1, cols1, fs, hs, firstimage)
+      subroutine inputs (maxgr, maxlev, maxcon, maxtyp, ltypes, ncon,
+     -     cin, gin, nvec, vin, bin, mskin, ibin, jbin, kbin, levtyp,
+     -     slev, levs, nlevs, npixr, pixr, trfun, coltab, vecfac, vecmax
+     -     , vecinc, boxfac, boxinc, pdev, labtyp, dofull, do3val,
+     -     do3pix, eqscale, gaps, solneg, nx, ny, lwid, break, cs, scale
+     -     , ofile, dobeam, beaml, beamb, relax, rot90, signs, mirror,
+     -     dowedge, doerase, doepoch, dofid, dosing, nofirst, grid, dotr
+     -     , dodist, conlab, doabut, val3form, ncols1, cols1, fs, hs,
+     -     firstimage)
 c-----------------------------------------------------------------------
 c     Get the unfortunate user's long list of inputs
 c
@@ -2416,6 +2486,7 @@ c   trfun      Type of pixel map transfer function: 'log', 'lin',
 c              'heq' or 'sqr' for each of the NPIXR subplots
 c   coltab     COlour lookup table number
 c   vecfac     Vector amplitude scale factor and
+c   vecmax     Length of vector scale bar and 
 c   vecinc     Vector x,y pixel incrememts
 c   boxfac     Box width scale factor and
 c   boxinc     Box x,y pixel incrememts
@@ -2469,7 +2540,7 @@ c-----------------------------------------------------------------------
 c
       integer maxlev, maxcon, maxtyp, maxgr, ncon, nvec, npixr
       real levs(maxlev,maxcon), pixr(2,maxgr), scale(2), cs(*),
-     +  slev(maxcon), break(maxcon), vecfac, boxfac, hs(3)
+     +  slev(maxcon), break(maxcon), vecfac, vecmax, boxfac, hs(3)
       integer nx, ny, nlevs(maxcon), lwid(maxcon+3), vecinc(2), 
      +  boxinc(2), ibin(2), jbin(2), kbin(2), coltab(maxgr),
      +  cols1(maxlev), ncols1, fs, firstimage
@@ -2677,6 +2748,7 @@ c
       if (vecinc(1).le.0) vecinc(1) = 2
       call keyi ('vecfac', vecinc(2), vecinc(1))
       if (vecinc(2).le.0) vecinc(2) = 2
+      call keyr ('vecfac', vecmax, -1.0)
 c
       call keyr ('boxfac', boxfac, 1.0)
       if (boxfac.le.0.0) boxfac = 1.0
@@ -2778,6 +2850,14 @@ c
         dobeam = .true.
         beamb = (newtb .eq. 'b')
         beaml = (newlr .eq. 'l')
+      end if  
+c
+c If user wanted a scale-bar, but didn't give a beam, then
+c give them bl
+c
+      if ((vecmax .ge. 0) .and. (.not. dobeam)) then
+        beamb = .true.
+        beaml = .true.
       end if  
 
       call keyf ('olay', ofile, ' ')
