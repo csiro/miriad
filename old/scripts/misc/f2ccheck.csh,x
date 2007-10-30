@@ -1,0 +1,11 @@
+#!/bin/csh 
+
+foreach file ($argv)
+  echo "*********************** Processing $file"
+  set base = $file:t
+  set base = $base:r
+  ratty -s f2c -b -I $MIRINC $file $base.f
+  f2c $base.f |& error
+  mv $base.f $base.log
+  rm -rf $base.c
+end
