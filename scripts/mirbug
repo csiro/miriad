@@ -226,7 +226,7 @@ END	{ for (i=0; i < nkeys; i++)
 #  Send the mail
 
   onintr save
-  echo "OK to send? Hit CTRL-C within 5 seconds if not"
+  echo "To abort, hit CTRL-C within 5 seconds ..."
   sleep 5
 
   foreach addr ( $addresses )
