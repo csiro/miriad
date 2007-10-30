@@ -46,6 +46,7 @@ c--
 c
 c  History:
 c    nebk 27jan94  Original version
+c    rjs  02jul97  cellscal change.
 c------------------------------------------------------------------------
       character version*(*)
       parameter(version='ImHeq: version 27-Jan-94' )
@@ -67,7 +68,7 @@ c
 c  Header keywords.
 c
       integer nkeys
-      parameter(nkeys=49)
+      parameter(nkeys=48)
       character keyw(nkeys)*8
       data keyw/   'bmaj    ','bmin    ','bpa     ','bunit   ',
      *    'crota1  ','crota2  ','crota3  ','crota4  ','crota5  ',
@@ -75,9 +76,9 @@ c
      *        'crpix1  ','crpix2  ','crval3  ','crval4  ','crval5  ',
      *        'cdelt1  ','cdelt2  ','cdelt3  ','cdelt4  ','cdelt5  ',
      *        'ctype1  ','ctype2  ','ctype3  ','ctype4  ','ctype5  ',
-     *        'date-obs','epoch   ','history ','instrume','niters  ',
+     *        'obstime ','epoch   ','history ','instrume','niters  ',
      *        'object  ','observer','obsra   ','obsdec  ','pbfwhm  ',
-     *        'restfreq','telescop','vobs    ','xshift  ','yshift  ',
+     *        'restfreq','telescop','vobs    ','cellscal',
      *        'ltype   ','lstart  ','lwidth  ','lstep   ','btype   '/
       data bmin2, bmax2 /1.0e32, -1.0e32/
 c------------------------------------------------------------------------
@@ -114,8 +115,8 @@ c
         call hdcopy (lin, lout, keyw(k))
       end do
       call hisopen (lout, 'append')
-      call hiswrite (lout, 'IMTRANS: Miriad '//version)
-      call hisinput (lout, 'IMTRANS')
+      call hiswrite (lout, 'IMHEQ: Miriad '//version)
+      call hisinput (lout, 'IMHEQ')
       call hisclose (lout)
 c
 c Allocate memory

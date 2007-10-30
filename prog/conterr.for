@@ -54,6 +54,7 @@ c--
 c  History:
 c    rjs  28oct93 Original version.
 c    rjs  10jan94 Doc changes only.
+c    rjs  02jul97 cellscal change.
 c  Bugs:
 c------------------------------------------------------------------------
 	character version*(*)
@@ -395,9 +396,9 @@ c
      *    'crota1  ','crota2  ','crota4  ','crota5  ',
      *    'crval1  ','crval2  ','crval4  ','crval5  ',
      *    'ctype1  ','ctype2  ','ctype4  ','ctype5  ',
-     *    'date-obs','epoch   ','history ','instrume','niters  ',
+     *    'obstime ','epoch   ','history ','instrume','niters  ',
      *    'object  ','observer','obsra   ','obsdec  ','pbfwhm  ',
-     *    'restfreq','telescop','vobs    ','xshift  ','yshift  ',
+     *    'restfreq','telescop','vobs    ','rms     ','cellscal',
      *    'ltype   ','lstart  ','lwidth  ','lstep   ','btype   '/
 c
 	do i=1,nkeys
