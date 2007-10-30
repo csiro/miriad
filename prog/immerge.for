@@ -93,6 +93,9 @@ c	             than the default scheme used by IMMERGE.
 c	  shift      Determine the optimum shift to apply to the low
 c	             resolution image to make it align with the high
 c	             resolution one.
+c	  notaper    Normally the low-resolution image is tapered to match any
+c	             residual primary beam response in the high-resolution image.
+c	             This option causes this step to be skipped.
 c--
 c
 c  History:
@@ -104,10 +107,11 @@ c		  for factor determination.
 c    rjs  02sep98 Subroutine name change only to avoid a LINUX conflict.
 c    rjs  23jul99 Taper down the low resolution image to make it compatible
 c	          with the high resolution one. Added shift option.
+c    rjs  29mar00 Added options=notaper.
 c  Bugs:
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Immerge: version 1.0 23-Jul-99')
+	parameter(version='Immerge: version 1.0 29-Mar-00')
 	include 'maxdim.h'
 	include 'maxnax.h'
 	include 'mirconst.h'
@@ -116,7 +120,8 @@ c------------------------------------------------------------------------
 	parameter(MAXBOX=2048)
 c
 	integer pIn1,pIn2,pWt1,pWt2
-	logical domerge,dofac,doout,dozero,dofeath,dotaper,doshift
+	logical domerge,dofac,doout,dozero,dofeath,dotaper
+	logical doshift,notaper
 	integer n,ngx,ngy,lIn1,lIn2,lOut,iax,i,k,xoff,yoff,zoff
 	integer nin(3),nout(MAXNAX),ntemp(3),naxis,ifail,npnt
 	integer Box(MAXBOX)
@@ -144,7 +149,7 @@ c
 c
 	call output(version)
 	call keyini
-	call GetOpt(domerge,dozero,dofeath,doshift)
+	call GetOpt(domerge,dozero,dofeath,doshift,notaper)
 	call keyf('in',in1,' ')
 	call keyf('in',in2,' ')
 	if(in1.eq.' '.or.in2.eq.' ')
@@ -174,7 +179,7 @@ c
 	if(.not.dofac.and..not.doout)
      *	  call bug('f','Inputs do not require any work')
 	call keyfin
-	dotaper = domerge.or.dofac
+	dotaper = (domerge.or.dofac).and..not.notaper
 c
 c  Open the input datasets, and get their beam parameters.
 c
@@ -422,20 +427,20 @@ c
 	enddo
 	end
 c************************************************************************
-	subroutine GetOpt(domerge,dozero,dofeath,doshift)
+	subroutine GetOpt(domerge,dozero,dofeath,doshift,notaper)
 c
 	implicit none
-	logical domerge,dozero,dofeath,doshift
+	logical domerge,dozero,dofeath,doshift,notaper
 c
 c  Get extra processin parameters.
 c------------------------------------------------------------------------
 	integer NOPTS
-	parameter(NOPTS=4)
+	parameter(NOPTS=5)
 	character opts(NOPTS)*12
 	logical   present(NOPTS)
 c
 	data opts/'normalize   ','zero        ','feather     ',
-     *		  'shift       '/
+     *		  'shift       ','notaper     '/
 c
 	call options('options',opts,present,NOPTS)
 	domerge = .not.present(1)
@@ -444,6 +449,7 @@ c
 	if(dofeath.and..not.domerge)call bug('f',
      *	  'The feather and normalize options make no sense together')
 	doshift =      present(4)
+	notaper =      present(5)
 	end
 c************************************************************************
 	subroutine MkHead(lIn,lOut,version,fac,mess1,mess2)
@@ -504,12 +510,15 @@ c
 	real In(ngx+2,ngy),Wt1(nx,ny),Wt2(nx,ny)
 c------------------------------------------------------------------------
 	include 'maxdim.h'
-	integer i,j,length
-	real scale,x,fac
+	integer i,j,length,ntaper
+	real scale,x,fac,staper
 	logical flags(MAXDIM)
+	character ctaper*4
 c
 c  Get the weight image
 c
+	ntaper = 0
+	staper = 0
 	if(dotaper)call mosWts(Wt1,Wt2,nx,ny,0,0)
 c
 	do j=1,ny
@@ -524,8 +533,10 @@ c
 c
 	  if(dotaper)then
 	    do i=1,nx
+	      ntaper = ntaper + 1
 	      if(Wt1(i,j).gt.0)then
 	        In(i,j) = In(i,j)/Wt1(i,j)
+		staper = staper + 1/Wt1(i,j)
 	      else
 		In(i,j) = 0
 	      endif
@@ -584,6 +595,16 @@ c
 	      enddo
 	    enddo
 	  endif
+	endif
+c
+c  Report on the tapering.
+c
+	if(ntaper.gt.0)then
+	  staper = staper/ntaper
+	  write(ctaper,'(f4.2)')staper
+	  if(staper.lt.0.5)call bug('w','Taper correction for low '//
+     *	    'resolution image is small (mean='//ctaper//')')
+	  if(staper.lt.0.1)call bug('f','This is too small')
 	endif
 c
 c  Fourier transform the image.
