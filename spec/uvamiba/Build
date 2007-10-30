@@ -1,0 +1,9 @@
+#!/bin/csh -xef
+
+rm -f uvamiba uvamiba.doc
+fortran -o uvamiba uvamiba.for viscomp.for \
+	amgen.for matrixlib.f minmax.f `mirlibs`
+rm -f uvamiba.f viscomp.f amgen.f
+if ( -x uvamiba ) mv uvamiba $MIRBIN
+doc uvamiba.for
+if ( -e uvamiba.doc ) mv uvamiba.doc $MIRPDOC
