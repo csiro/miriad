@@ -11,11 +11,13 @@
 /*		   types.						*/
 /*    23dec92 rjs  Use intf2c, to make it more system independent.	*/
 /*     5nov94 rjs  Try to be a bit more pedantic.			*/
+/*    19jan06 rjs  Call mallopt on 64-bit address machines on Linux     */
 /*                                                                      */
 /************************************************************************/
 
 #include <stddef.h>
 #include <stdlib.h>
+#include <malloc.h>
 #include "miriad.h"
 
 /************************************************************************/
@@ -91,6 +93,9 @@ c
   int t;
   int *s;
 
+#if defined(linux)
+  if(sizeof(void *)>=8 && sizeof(int) < 8)mallopt(M_MMAP_MAX,0);
+#endif
   s = (int *)malloc( (size_t)(size.val * sizeof(int)) );
   if(s == (int *)NULL) return 0;
   offset = s - data.addr;
