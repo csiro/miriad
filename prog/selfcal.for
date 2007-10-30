@@ -142,6 +142,7 @@ c    rjs  09nov98 Make rtime variable double precision to avoid loss
 c		  of timing precision.
 c    rjs  01dec98 Added extra warning message.
 c    rjs  30aug99 Increase maxmod to 64
+c    rjs  14dec99 Ability to use model visibility datasets.
 c
 c  Bugs/Shortcomings:
 c   * Selfcal should check that the user is not mixing different
@@ -150,18 +151,18 @@ c   * It would be desirable to apply bandpasses, and merge gain tables,
 c     apply polarisation calibration, etc.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Selfcal: version 1.0 01-Dec-98')
+	parameter(version='Selfcal: version 1.0 14-Dec-99')
 	integer MaxMod,maxsels,nhead
 	parameter(MaxMod=64,maxsels=1024,nhead=3)
 c
 	character Models(MaxMod)*64,vis*64,ltype*32
 	character flag1*8,flag2*8,obstype*32
 	integer tvis,tmod,tscr
-	integer nModel,minants,refant,nsize(3),nchan,nvis,i
+	integer nModel,minants,refant,nchan,nvis,i
 	real sels(maxsels),clip,interval,offset(2),lstart,lwidth,lstep
 	logical phase,amp,doline,noscale,relax,mfs
 	real flux(2)
-	logical selradec
+	logical selradec,doim
 c
 c  Externals.
 c
@@ -267,11 +268,22 @@ c
 	  do i=1,nModel
 	    call output('Calculating the model for '//Models(i))
 	    call SelfSet(i.eq.1,MinAnts)
-	    call xyopen(tmod,Models(i),'old',3,nsize)
-	    call ModelIni(tmod,tvis,sels,flag1)
+	    call getopen(tmod,Models(i),doim)
+	    if(doim)then
+	      call ModelIni(tmod,tvis,sels,flag1)
+	    else
+	      call uvrewind(tvis)
+	      call uvselect(tvis,'clear',0.d0,0.d0,.true.)
+	      call SelApply(tvis,sels,.true.)
+	      call SelApply(tmod,sels,.true.)
+	    endif
 	    call Model(flag2,tvis,tmod,offset,Clip,tscr,
      *				nhead,header,nchan,nvis)
-	    call xyclose(tmod)
+	    if(doim)then
+	      call xyclose(tmod)
+	    else
+	      call uvclose(tmod)
+	    endif
 	    call output('Accumulating statistics ...')
 	    if(i.eq.1) call SelfIni
 	    call SelfAcc(tscr,nchan,nvis,interval)
@@ -296,6 +308,32 @@ c
 	call SelfFin
 	call HisClose(tvis)
 	call uvclose(tvis)
+	end
+c************************************************************************
+	subroutine getopen(tno,name,doim)
+c
+	implicit none
+	integer tno
+	character name*(*)
+	logical doim
+c
+c  Open either a model visibility dataset or model image.
+c------------------------------------------------------------------------
+	integer iostat,nsize(3)
+c
+c  Externals.
+c
+	logical hdprsnt
+c
+	call hopen(tno,name,'old',iostat)
+	if(iostat.ne.0)call bugno('f',iostat)
+	doim = hdprsnt(tno,'image')
+	call hclose(tno)
+	if(doim)then
+	  call xyopen(tno,name,'old',3,nsize)
+	else
+	  call uvopen(tno,name,'old')
+	endif
 	end
 c************************************************************************
 	subroutine Chkpolm(tmod)
