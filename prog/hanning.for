@@ -1,21 +1,24 @@
-c= hanning - hanning smoothing
+c= HANNING - Smooth a cube along the velocity axis
 c& bpw
 c: map combination
 c+
-c Hanning does a hanning smooth on the velocity axis of miriad
-c datasets. It figures out which axis this is from the header. If not
-c given in the header it assumes that it is the z-axis.
-c The width of the hanning smooth is determined by the keyword width.
-c If input data is masked, it is set to zero before smoothing is done.
-c
-c< in
-c< region
-c  NB the mask(file) option is not applied, set the mask of the input
-c  file.
-c< out
+c   Hanning does a hanning or boxcar smooth on the velocity axis of miriad
+c   datasets. It figures out which axis this is from the header. If not
+c   given in the header it assumes that it is the z-axis.
+c   The width of the smooth is determined by the keyword width.
+c   If input data is masked, it is set to zero before smoothing is done.
+c@ in
+c        The input image. vxy and xyv images are acceptable inputs. 
+c        No default.
+c@ region
+c        The region of the input image to examine.
+c@ object
+c        hanning or boxcar. Default is hanning.
 c@ width
-c The number of channels of the hanning smooth. Must be an odd number.
-c Default value is 3.
+c        The number of channels of the smooth. Must be an odd number.
+c        Default value is 3.
+c@ out
+c        The output image.
 c--
 c
 c   History:
@@ -25,6 +28,7 @@ c    bpw  04aug91  Add default to document
 c    bpw  27mar91  Changed assert into assertl
 c    bpw  15dec92  Adapt for changed fndaxnum
 c    bpw   2mar93  Masked data set to zero
+c    lss,vk 30mar00 Adapted from hanning to include boxcar
 c
 c------------------------------------------------------------------------
        program hanning
@@ -37,10 +41,11 @@ c------------------------------------------------------------------------
        integer      tinp, tout
        integer      nprofiles, nchan
        integer      width
+       character    object*8
 
        call output( version )
-       call inputs(  tinp, tout, nprofiles,nchan, width )
-       call hsmooth( tinp, tout, nprofiles,nchan, width )
+       call inputs(  tinp, tout, nprofiles,nchan, width, object )
+       call hsmooth( tinp, tout, nprofiles,nchan, width, object )
        call finish(  tinp, tout, version )
 
        end
@@ -48,7 +53,7 @@ c------------------------------------------------------------------------
 
 
 
-       subroutine inputs( tinp, tout, nprofiles, nchan, width )
+       subroutine inputs( tinp, tout, nprofiles, nchan, width, object)
 
        include      'maxnax.h'
 
@@ -68,7 +73,7 @@ c------------------------------------------------------------------------
        integer      viraxlen(MAXNAX), vircsz(MAXNAX)
        integer      i
 
-       character    velaxis
+       character    velaxis, object*8
        integer      velaxnr
 
        call keyini
@@ -77,7 +82,10 @@ c------------------------------------------------------------------------
        call keyf( 'out', out, ' ' )
        call assertl( inp.ne.' ', 'Input file name is missing' )
        call assertl( out.ne.' ', 'Output file name is missing' )
-
+       call keya('object',object,'hanning')
+       if( object.ne.'hanning'.and. object.ne.'boxcar') then
+         call bug ('f', 'Invalid object')
+       end if
        naxis = MAXNAX
        call xyzopen( tinp, inp, 'old', naxis, axlen )
 
@@ -114,7 +122,7 @@ c------------------------------------------------------------------------
 
 
 
-       subroutine hsmooth( tinp, tout, nprofiles, nchan, width )
+       subroutine hsmooth( tinp, tout, nprofiles, nchan, width, object )
 
        integer       tinp, tout
        integer       nprofiles, nchan
@@ -128,23 +136,29 @@ c------------------------------------------------------------------------
        parameter     ( MAXWIDTH = 7 )
        real          coeffs( MAXWIDTH*2+1 ), work( MAXWIDTH*2+1 )
        integer       i, j
+       character     object*8
 
-       call hcoeffs( width, coeffs )
+       if(object.eq.'hanning') then
+         call hcoeffs( width, coeffs )
+       else if(object.eq.'boxcar') then
+         call bcoeffs( width, coeffs )
+       end if
+
        do i = 1, nprofiles
           call xyzprfrd( tinp, i, data, mask, nchan )
           do j = 1, nchan
             if(.not.mask(j)) data(j)=0.
           enddo
-          call hannsm( width, coeffs, nchan, data, work )
+          if(object.eq.'hanning') then
+            call hannsm( width, coeffs, nchan, data, work )
+          else if(object.eq.'boxcar') then
+            call boxcarsm( width, coeffs, nchan, data, work )
+          end if
           call xyzprfwr( tout, i, data, mask, nchan )
        enddo
 
        return
        end
-
-
-
-
 
        subroutine finish( tinp, tout, version )
 
