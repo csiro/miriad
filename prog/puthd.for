@@ -19,6 +19,7 @@ c    rjs  11feb93   varcheck was not checking the entire variable name.
 c    rjs  21jun93   Really fix the confusion over ascii/character this time.
 c		    Varous checks for sensibility and min match.
 c    rjs  18aug93   Standardise history comments.
+c    rjs  04oct95   Support "units" of time,dms and hms.
 c
 c= puthd - Change the value of or add a single header item
 c& pjt
@@ -28,11 +29,6 @@ c   PUTHD is a MIRIAD task to add or modify an item in the ``header''
 c   of an image or uv dataset. The item CANNOT be an array or any other
 c   complex data structure, it must be a single entity. To modify
 c   such complex data structures, specialized programs are available.
-c
-c   NOTE: To change a uv variable, the program ``uvputhd'' must be used
-c         instead: a uv variable is not the same as a miriad dataset 
-c         item.
-c
 c@ in
 c   The name of an item within a data set. This is given in the
 c   form as in the example:
@@ -40,8 +36,11 @@ c          puthd in=dataset/item
 c@ value
 c   The value to be placed in the item. Note only single values can
 c   be given, no arrays. An optional second argument can be given to
-c   specify the units of the value. Angles default to radians,
-c   other options are arcmin, arcsec, and degrees.
+c   cause conversion of the value before the item is written. Possible
+c   values for the units are "time", "arcmin", "arcsec", "hours", "hms"
+c   and "dms". Times are given in the standard Miriad form and are
+c   converted to Julian dates. An angular unit causes conversion to
+c   radians.
 c@ type
 c   The data type of the argument. Values can be 'integer',
 c   'real', 'double' and 'ascii'. The default is determined from the
@@ -51,10 +50,8 @@ c   PUTHD will complain when you change the datatype, but otherwise
 c   allow you to do so.
 c--
 c-----------------------------------------------------------------------
-c
-c
 	character PVERSION*(*)
-	parameter(PVERSION='Version 1.0c 21-Jun-93')
+	parameter(PVERSION='Version 1.0 04-Oct-95')
 	integer lin,iostat,l,n
 	character in*80,item*32,value*64,type*10,descr*32,rtype*16
         character mesg*120, unit*20
@@ -83,45 +80,56 @@ c
 	   call bugno('f',iostat)
         endif
 c
+c  If the units are "time", "hms" or "dms", then set the type
+c  accordingly.
+c
+	if(type.eq.' '.and.
+     *	  (unit.eq.'time'.or.unit.eq.'dms'.or.unit.eq.'hms'))
+     *	  type = 'double'
+c
 c  Get info on the item to see if it is present already
 c  and check this with what the user has supplied. Catch
 c  possible mistakes and warn user 
 c
 	call hdprobe(lin,item,descr,rtype,n)
 	if(rtype.eq.'character')rtype = 'ascii'
+	if(type.eq.' ')then
+	  if(rtype.eq.'nonexistent')then
+	    call DetType(value,type)
+	  else
+	    type = rtype
+	  endif
+	endif
+c
         if(n.gt.1) then
           write(mesg,
      *        '(''Truncation number of items from '',I6,'' to 1.'')') n
           call bug('w',mesg)
         endif
 
-	if (rtype.eq.'nonexistent') then
-          if(type.eq.' ')call DetType(value,type)
+	if(rtype.eq.'nonexistent') then
           write(mesg,
      *          '(''New item '',a,'' created with datatype '',a)') 
      *          item(1:len1(item)),type(1:len1(type))
           call output(mesg)
-        else if (type.ne.' ' .and. type.ne.rtype) then
+        else if(type.ne.rtype) then
           write(mesg,
      *          '(''Changing type of '',a,'' from '',a,'' to '',a)' )
      *        item(1:len1(item)),rtype(1:len1(rtype)),type(1:len1(type))
           call bug('w',mesg)
-        else
-          call DetType(value,type)
-          if (type.ne.rtype) then
-            write(mesg,
-     *          '(''Type of '',a,'' looks like '',a,''; using '',a)' )
-     *        item(1:len1(item)),type(1:len1(type)),rtype(1:len1(rtype))
-            call bug('i',mesg)
-          endif
-          type = rtype
-	endif
-
+ 	endif
+c
 	if(type.eq.'integer'.or.type.eq.'real'.or.type.eq.'double')then
 	  l = len1(value)
-	  call atodf(value(1:l),d,ok)
+	  if(unit.eq.'time')then
+	    call dectime(value(1:l),d,'atime',ok)
+	  else if(unit.eq.'hms'.or.unit.eq.'dms')then
+	    call decangle(value(1:l),d,unit,ok)
+	  else
+	    call atodf(value(1:l),d,ok)
+ 	    if(ok.and.unit.ne.' ')call units(d,unit)
+	  endif
 	  if(.not.ok)call bug('f','Error decoding numeric value')
-          if(unit.ne.' ')call units(d,unit)
 	  if(type.eq.'integer')then
 	    call wrhdi(lIn,item,nint(d))
 	  else if(type.eq.'real')then
@@ -283,10 +291,11 @@ c  Check the user specified type.
 c------------------------------------------------------------------------
 	integer nout
 	integer nopt
-	parameter(nopt=5)
+	parameter(nopt=8)
 	character opts(nopt)*10
 	data opts/'arcseconds','arcminutes','radians   ',
-     *		  'degrees   ','hours     '/
+     *		  'degrees   ','hours     ','dms       ',
+     *		  'hms       ','time      '/
 c
 	call keya('value',value,' ')
 	if(value.eq.' ')call bug('f','A value must be given')
