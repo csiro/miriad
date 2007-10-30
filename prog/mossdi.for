@@ -29,14 +29,18 @@ c	The default is 0.9.
 c@ region
 c	The standard region of interest keyword. See the help on "region" for
 c	more information. The default is the entire image.
+c@ options
+c	Extra processing options. There is just one of these at the moment.
+c	  positive   Constrain the deconvolved image to be positive valued.
 c--
 c  History:
 c    rjs 31oct94 - Original version.
 c    rjs  6feb95 - Copy mosaic table to output component table.
 c    rjs 27feb97 - Fix glaring bug in the default value for "clip".
+c    rjs 28feb97 - Last day of summer. Add options=positive.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='MosSDI: version 1.0 27-Feb-97')
+	parameter(version='MosSDI: version 1.0 28-Feb-97')
 	include 'maxdim.h'
 	include 'maxnax.h'
 	include 'mem.h'
@@ -51,7 +55,7 @@ c
 	integer naxis,nMap(3),nbeam(3),nout(MAXNAX),nModel(3)
 	integer pStep,pStepR,pRes,pEst,pWt
 	integer maxniter,niter,ncomp
-	logical more
+	logical more,dopos
 	real dmin,dmax,drms,cutoff,clip,gain,flux
 c
 c  Externals.
@@ -76,6 +80,7 @@ c
 	call keyr('clip',clip,0.9)
 	if(clip.le.0)call bug('f','Invalid clip value')
 	call BoxInput('region',MapNam,Boxes,MaxBoxes)
+	call GetOpt(dopos)
 	call keyfin
 c
 c  Open the input map.
@@ -184,7 +189,7 @@ c
 	    dowhile(more)
 	      call Steer(memr(pEst),memr(pRes),memr(pStep),memr(pStepR),
      *	        memr(pWt),nPoint,Run,nRun,
-     *	        gain,clip,dmin,dmax,drms,flux,ncomp)
+     *	        gain,clip,dopos,dmin,dmax,drms,flux,ncomp)
 	      niter = niter + ncomp
 	      line = 'Steer Iterations: '//itoaf(niter)
 	      call output(line)
@@ -231,13 +236,14 @@ c
 	end
 c************************************************************************
 	subroutine Steer(Est,Res,Step,StepR,Wt,nPoint,Run,nRun,
-     *	  gain,clip,dmin,dmax,drms,flux,ncomp)
+     *	  gain,clip,dopos,dmin,dmax,drms,flux,ncomp)
 c
 	implicit none
 	integer nPoint,nRun,Run(3,nRun),ncomp
 	real gain,clip,dmin,dmax,drms,flux
 	real Est(nPoint),Res(nPoint),Step(nPoint),StepR(nPoint)
 	real Wt(nPoint)
+	logical dopos
 c
 c  Perform a Steer iteration.
 c
@@ -260,27 +266,39 @@ c    ncomp	Number of components subtracted off this time.
 c------------------------------------------------------------------------
 	integer i
 	real g,thresh
+	logical ok
 	double precision SS,RS,RR
 c
 c  Determine the threshold.
 c
 	thresh = 0
-	do i=1,nPoint
-	  thresh = max(thresh,Res(i)*Res(i)*Wt(i))
-	enddo
+	if(dopos)then
+	  do i=1,nPoint
+	    if(Est(i).gt.(-gain*Res(i)))
+     *	      thresh = max(thresh,Res(i)*Res(i)*Wt(i))
+	  enddo
+	else
+	  do i=1,nPoint
+	    thresh = max(thresh,Res(i)*Res(i)*Wt(i))
+	  enddo
+	endif
 	thresh = clip * clip * thresh
 c
 c  Get the step to try.
 c
 	ncomp = 0
 	do i=1,nPoint
-	  if(Res(i)*Res(i)*Wt(i).gt.thresh)then
+	  ok = Res(i)*Res(i)*Wt(i).gt.thresh
+	  if(dopos.and.ok) ok = Est(i).gt.(-gain*Res(i))
+	  if(ok)then
 	    Step(i) = Res(i)
 	    ncomp = ncomp + 1
 	  else
 	    Step(i) = 0
 	  endif
 	enddo
+c
+	if(ncomp.eq.0)call bug('f','Could not find components')
 c
 c  Convolve this step.
 c
@@ -295,7 +313,7 @@ c
 	  SS = SS + Wt(i) * StepR(i) * StepR(i)
 	  RS = RS + Wt(i) * Res(i)   * StepR(i)
 	enddo
-	g = RS / SS
+	g = min(1., real(RS / SS) )
 c
 c  Subtract off a fraction of this, and work out the new statistics.
 c
@@ -448,4 +466,22 @@ c
 	call hiswrite(lOut,'MOSSDI: Total Iterations = '//itoaf(Niter))
 	call hisclose(lOut)
 c
+	end
+c************************************************************************
+	subroutine GetOpt(dopos)
+c
+	implicit none
+	logical dopos
+c
+c  Output:
+c    dopos	Constrain the model to be positive valued.
+c------------------------------------------------------------------------
+	integer NOPTS
+	parameter(NOPTS=1)
+	logical present(NOPTS)
+	character opts(NOPTS)*8
+	data opts/'positive'/
+c
+	call options('options',opts,present,NOPTS)
+	dopos = present(1)
 	end
