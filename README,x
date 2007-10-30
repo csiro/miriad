@@ -4,7 +4,7 @@ developing it further. It is portable to a variety of UNIX machines
 as well as VMS. The notes below describe how to install it
 on a UNIX machine. The distribution contains installation scripts for
 SunOS 4.x and SunOS 5.x (also called Solaris 1 and Solaris 2 respectively),
-ConvexOS, SGI(IRIX), LINUX, OSF/1 or Digital UNIX, HPUX, and UNICOS.
+ConvexOS, IRIX and IRIX64, LINUX, OSF/1 or Digital UNIX, HPUX, and UNICOS.
 
 A tar distribution of Miriad is available via three paths
 
@@ -281,7 +281,8 @@ Instructions for Installing Miriad
 		     /sun4    Scripts specific to Sun machines running old SunOS
                      /sun4sol Scripts specific to Sun machines running solaris
 		     /convex  Scripts specific to Convex machines.
-		     /sgi     Scripts specific to Silicon Graphics/IRIX machines.
+		     /irix    Scripts specific to Silicon Graphics/IRIX machines.
+		     /irix64  Scripts specific to Silicon Graphics/IRIX 64 bit machines.
 		     /unicos  Scripts specific to Unicos Crays.
 		     /alpha   Scripts specific to DEC OSF/1 Alpha
 		     /hpux    Scripts specific to HP-UX machines
@@ -558,11 +559,22 @@ If "cc" and "f77" are not symbollicaly linked to these, you will
 need to change the mircadd and mirclnk scripts accordingly.
 
 Our experience with FORTRAN compilers based on "f2c" is not entirely
-positive. Tasks "atlod" and "uvplt" are believed to fail to work
+positive. Tasks "atlod" is believed to fail to work
 properly when using f2c-based compilers. g77 seems more reliable.
 
-IRIX64 (SGI)
-------------
+g77 issues a number of warnings like
+
+  Reference to unimplemented intrinsic .... (assumed EXTERNAL)
+
+This suggest a flaw in the g77 compiler (a violation of the FORTRAN standard),
+but can be safely ignored (at the moment!).
+
+IRIX
+----
+The compilers are buggy. Be on your guard.
+
+IRIX64
+------
 The FORTRAN optimiser is very buggy. I recommend that you do not use
 optimisation above -O0.
 
@@ -581,8 +593,8 @@ The /usr/ucb cc and f77 compilers should not be used. Sun's
 /opt/SUNWSpro/bin compilers should be used (make sure this is
 in the path ahead of /usr/ucb).
 
-DEC OSF/1
----------
+DEC OSF/1 or Digital UNIX
+-------------------------
 
 On some DEC OSF/1 systems, in linking some tasks, you can get
 messages like ...
@@ -606,4 +618,4 @@ The FORTRAN compiler has the option to use either 64-bit or 128-bit
 values for DOUBLE PRECISION numbers. The 64-bit option MUST be used
 as the C compiler only supports this mode.
 
-Currently atlod task do not work on UNICOS.
+Currently the atlod task does not work on UNICOS.
