@@ -1284,11 +1284,11 @@ c
       call keya('device',device,' ')
       doplot = device.ne.' '.and.doplot
       if(doplot) then
-        call pgask(.false.)
         if(pgbeg(0,device,0,0).ne.1) then
           call pgldev
           call bug('f','Error opening plot device')
         end if
+        call pgask(.false.)
       end if
       call keyfin
 c
