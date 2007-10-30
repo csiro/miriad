@@ -117,10 +117,11 @@ c    rjs   4nov93 options=noscale.
 c    rjs  13dec93 Sign convention of V change.
 c    rjs  23dec93 Minimum match for linetypes.
 c    rjs  13sep94 Improve an error message. FELO changes.
+c    rjs  31jan95 Accomodate model.for changes.
 c------------------------------------------------------------------------
 	include 'gpscal.h'
 	character version*(*)
-	parameter(version='GpsCal: version 1.0 23-Dec-93')
+	parameter(version='GpsCal: version 1.0 31-Jan-95')
 	integer MAXSELS,nhead
 	parameter(MAXSELS=256,nhead=0)
 c
@@ -206,7 +207,7 @@ c
 	flag1 = 'p'
 	if(.not.doline.and..not.mfs)flag1(2:2) = 'l'
 c
-	flag2 = 'l'
+	flag2 = ' '
 	if(mfs)    flag2(2:2) = 'm'
 c
 c  Loop over all the models.
@@ -258,6 +259,7 @@ c  What stage are we at? We have computed the model data for all the
 c  polarisations given.
 c
 	call uvrewind(tvis)
+	call uvset(tvis,'preamble','uvw/time/baseline',0,0.,0.,0.)
 	call AccSolve(tvis,tscr,minants,refant,phase,doxy,xyvary,
      *	  doref,noscale,nants,interval,nchan)
 c
@@ -386,7 +388,7 @@ c************************************************************************
 	complex data(nchan)
 	logical flags(nchan),accept
 	real Out
-	double precision preamble(4)
+	double precision preamble(5)
 c
 c  This is a service routine called by the model subroutines. It is
 c  called every time a visibility is read from the data file.
@@ -412,23 +414,23 @@ c
 	double precision time
 	common/GPSCALC/time,baseline,nants,first
 c
-	i2 = nint(Preamble(4))
+	i2 = nint(Preamble(5))
 	if(first)then
 	  call uvrdvri(tvis,'nants',nants,0)
 	  accept = .true.
 	else
 	  accept = i2.ne.baseline.or.
-     *			abs(time-Preamble(3)).gt.0.25/(24.*3600.)
+     *			abs(time-Preamble(4)).gt.0.25/(24.*3600.)
 	endif
 c
 	if(accept)then
-	  call basant(preamble(4),i1,i2)
+	  call basant(preamble(5),i1,i2)
 	  accept = i1.ne.i2
 	endif
 c
 	if(accept)then
-	  baseline = nint(Preamble(4))
-	  time = Preamble(3)
+	  baseline = nint(Preamble(5))
+	  time = Preamble(4)
 c
 	  do i=1,nchan
 	    flags(i) = .true.
@@ -520,7 +522,7 @@ c  Allocate memory.
 c
 	nbl = (nants*(nants-1))/2
 	SolSize = (4*2*nbl+4*nbl+2*nants+1+1)
-	maxSol = min(maxHash,max(minSol,MemBuf()/SolSize))
+	maxSol = min(maxHash,max(minSol,3*MemBuf()/SolSize))
 	call MemAlloc(pSumVM,4*nbl*maxSol,'c')
 	call MemAlloc(pSumMM,4*nbl*maxSol,'r')
 	call MemAlloc(pTime,maxSol,'r')
@@ -1418,7 +1420,7 @@ c
 	real Cos2Chi,Sin2Chi
 	save Modflags,baseline,time0,Cos2Chi,Sin2Chi,sigma2
 c
-	double precision preamble(4)
+	double precision preamble(5)
 	complex aI,aQ,aU,aV
 	logical more
 	integer i,j,i0,i1,i2
@@ -1430,11 +1432,11 @@ c
 	dowhile(more)
 	  call uvread(tvis,preamble,Data,flags,nchan,nread)
 	  if(nread.le.0)return
-	  call basant(preamble(4),i1,i2)
+	  call basant(preamble(5),i1,i2)
 	  more = i1.eq.i2
 	enddo
-	time = preamble(3)
-	bl = nint(preamble(4))
+	time = preamble(4)
+	bl = nint(preamble(5))
 c
 	if(nread.ne.nchan)
      *	  call bug('f','Software inconsistency, in Compute')
@@ -1485,7 +1487,7 @@ c  Update the description of these records.
 c
 	  visno = visno + 1
 	  time0 = time
-	  baseline = nint(preamble(4))
+	  baseline = nint(preamble(5))
 	endif
 c
 c  Return the variance and the polarisation type.
