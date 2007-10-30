@@ -120,6 +120,9 @@ c	Generally if there is an input model, this parameter defaults to the
 c	linetype parameters used to construct the map. If you wish to override
 c	this, or if the info is not in the header, or if you are using
 c	a point source model, this parameter can be useful.
+c@ out
+c	The output gains file.
+c	The default is to write the gains into the input uvdata file.
 c--
 c
 c  History:
@@ -161,6 +164,7 @@ c    rjs  31aug93 Better amplitude calibration with low S/N data.
 c    rjs  24sep93 Doc changes only.
 c    rjs   9nov93 Better recording of time of a particular solution interval.
 c    rjs  23dec93 Minimum match for linetypes.
+c    mchw 28oct94 restored output file to enable uv-data to be read-only.
 c  Bugs/Shortcomings:
 c   * Selfcal should check that the user is not mixing different
 c     polarisations and pointings.
@@ -168,13 +172,13 @@ c   * It would be desirable to apply bandpasses, and merge gain tables,
 c     apply polarisation calibration, etc.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Selfcal: version 1.0 23-Dec-93')
+	parameter(version='Selfcal: version 1.0 28-Oct-94')
 	integer MaxMod,maxsels,nhead
 	parameter(MaxMod=32,maxsels=256,nhead=3)
 c
-	character Models(MaxMod)*64,vis*64,ltype*32
+	character Models(MaxMod)*64,vis*64,ltype*32,out*80
 	character flag1*8,flag2*8,obstype*32
-	integer tvis,tmod,tscr
+	integer tvis,tmod,tscr,tgains,iostat
 	integer nModel,minants,refant,nsize(3),nchan,nvis,i
 	real sels(maxsels),clip,interval,offset(2),lstart,lwidth,lstep
 	logical phase,amp,smooth,doline,apriori,noscale,relax,doPol,mfs
@@ -203,6 +207,7 @@ c
 	doline = ltype.ne.' '
 	call GetOpt(phase,amp,smooth,apriori,noscale,relax,doPol,mfs,
      *		selradec)
+	call keya('out',out,' ')
 	call keyfin
 c
 c  Check that the inputs make sense.
@@ -297,22 +302,33 @@ c
 c
 c  Open the output file to contain the gain solutions.
 c
-	call HisOpen(tvis,'append')
-	call HisWrite(tvis,'SELFCAL: Miriad '//version)
-	call HisInput(tvis,'SELFCAL')
+	if(out.eq.' ')then
+	  tgains = tvis
+	  call HisOpen(tgains,'append')
+	else
+	  call hopen(tgains,out,'new',iostat)
+	  if(iostat.ne.0)then
+	    call bug('w','Error opening output gains file '//out)
+	    call bugno('f',iostat)
+	  endif
+	  call HisOpen(tgains,'write')
+	endif
+	call HisWrite(tgains,'SELFCAL: Miriad '//version)
+	call HisInput(tgains,'SELFCAL')
 c
 c  Calculate the self-cal gains.
 c
 	call output('Finding the selfcal solutions ...')
-	call Solve(tvis,phase,smooth,relax,noscale,refant,interval)
+	call Solve(tgains,phase,smooth,relax,noscale,refant,interval)
 c
 c  Close up.
 c
 	call SelfFin
-	call HisClose(tvis)
+	call HisClose(tgains)
 	call uvclose(tvis)
+	if(out.ne.' ') call hclose(tgains,iostat)
 	end
-c************************************************************************
+c********1*********2*********3*********4*********5*********6*********7*c
 	subroutine GetOpt(phase,amp,smooth,apriori,noscale,relax,
      *						doPol,mfs,selradec)
 c
