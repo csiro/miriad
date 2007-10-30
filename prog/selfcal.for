@@ -73,10 +73,9 @@ c	             option are being used. For a planet, this option
 c	             should also be used for a phase selfcal, to get the
 c	             correct weighting of the different baselines in the
 c	             solution.
-c	  noscale    Do not scale the model. Normally the model is scaled
-c	             so that the flux in the model visibilities and the
-c	             observed visibilities are the same. Generally this
-c	             option should be used with at least the apriori option.
+c	  noscale    Do not scale the gains. By default the gains are scaled
+c	             so that the rms gain amplitude is 1. Generally this
+c	             option should be used with the apriori option.
 c	             It must be used if selfcal is being used to determine
 c	             Jy/K, and should also be used if the model is believed
 c	             to have the correct scale.
@@ -150,9 +149,10 @@ c    rjs  29mar93 Fiddle noise calculation. BASANT changes.
 c    rjs  18may93 If rms=0, assume rms=1.
 c    rjs  19may93 Merge mchw and rjs versions of selfcal.
 c    rjs  28jun93 Iterate a bit longer. Better memory allocation.
+c    rjs  31aug93 Better amplitude calibration with low S/N data.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Selfcal: version 1.0 28-Jun-93')
+	parameter(version='Selfcal: version 1.0 31-Aug-93')
 	integer MaxMod,maxsels,nhead
 	parameter(MaxMod=32,maxsels=256,nhead=3)
 c
@@ -254,7 +254,7 @@ c  m - Model is a mfs one.
 c  c - Use calibration file to determine model characteristics.
 c
 	flag2 = 'l'
-	if(.not.noscale) flag2(2:2) = 'a'
+c	if(.not.noscale) flag2(2:2) = 'a'
 	if(mfs)          flag2(3:3) = 'm'
 	if(apriori)      flag2(4:4) = 'c'
 c
@@ -295,7 +295,7 @@ c
 c  Calculate the self-cal gains.
 c
 	call output('Finding the selfcal solutions ...')
-	call Solve(tvis,phase,smooth,relax,refant,interval)
+	call Solve(tvis,phase,smooth,relax,noscale,refant,interval)
 c
 c  Close up.
 c
@@ -440,20 +440,21 @@ c
 c
 c  Determine the indices into the buffer. These are offsets into the
 c  one scratch buffer. This scatch buffer is used as 5 arrays, namely
-c    complex SumVM(nBl,maxSol)
+c    complex SumVM(nBl,maxSol),Gains(nants,maxSol)
 c    real SumVV(nBl,maxSol),SumMM(maxSol),Weight(nBl,maxSol)
 c    real Count(maxSol)
 c
 	nBl = (nants*(nants-1))/2
-	SolSize = 2 + 4*nBl
+	SolSize = 2 + 4*nBl + 2*nants
 	maxSol = min(nHash,max(minSol,(MemBuf()-10)/SolSize))
 	nSols = 0
 	TotVis = 0
-	call MemAlloc(pSumVM,maxSol*2*nBl,'r')
+	call MemAlloc(pSumVM,maxSol*nBl,'c')
 	call MemAlloc(pSumVV,maxSol*nBl,'r')
 	call MemAlloc(pSumMM,maxSol,'r')
 	call MemAlloc(pWeight,maxSol*nBl,'r')
 	call MemAlloc(pCount,maxSol,'r')
+	call MemAlloc(pGains,maxSol*nants,'c')
 c
 	end
 c************************************************************************
@@ -465,11 +466,12 @@ c  Release allocated memory.
 c
 c------------------------------------------------------------------------
 	include 'selfcal.h'
-	call MemFree(pSumVM,maxSol*2*nBl,'r')
+	call MemFree(pSumVM,maxSol*nBl,'c')
 	call MemFree(pSumVV,maxSol*nBl,'r')
 	call MemFree(pSumMM,maxSol,'r')
 	call MemFree(pWeight,maxSol*nBl,'r')
 	call MemFree(pCount,maxSol,'r')
+	call MemFree(pGains,maxSol*nants,'c')
 	end
 c************************************************************************
 	subroutine SelfAcc(tscr,nchan,nvis,interval)
@@ -493,7 +495,8 @@ c
 	TotVis = TotVis + nVis
 	call SelfAcc1(tscr,nchan,nvis,nBl,maxSol,nSols,
      *	  nhash,Hash,Indx,interval,Time,
-     *	  Buf(pSumVM),Buf(pSumVV),Buf(pSumMM),Buf(pWeight),Buf(pCount))
+     *	  Memc(pSumVM),Memr(pSumVV),Memr(pSumMM),
+     *	  Memr(pWeight),Memr(pCount))
 	end
 c************************************************************************
 	subroutine SelfAcc1(tscr,nchan,nvis,nBl,maxSol,nSols,
@@ -533,9 +536,9 @@ c		b=baseline number, a = antenna number.
 c    Time	The integer time, nint((preamble(3)-time0)/interval).
 c    Hash	Hash table, used to locate a solution interval.
 c    Indx	Index from hash table to solution interval.
-c    SumVM	Sum(over t,f)Model*conjg(Vis)/sigma**2. Varies with b.
-c    SumVV	Sum(over t,f)|Vis|**2/sigma**2. Varies with b.
-c    SumMM	Sum(over t,f,b) |Model|**2/sigma**2.
+c    SumVM	Sum(over t,f)conjg(Model)*Vis/sigma**2. Varies with b.
+c    SumVV	Sum(over t,f)|Model|**2/sigma**2. Varies with b.
+c    SumMM	Sum(over t,f,b) |Vis|**2/sigma**2.
 c    Weight	Sum(over t,f) 1/sigma**2. Varies with b.
 c    Count	Sum(over t,f,b) 1.
 c
@@ -610,9 +613,9 @@ c
 	  do k=nhead+1,nhead+5*nchan,5
 	    if(out(k+4).gt.0)then
 	      SumVM(bl,i) = SumVM(bl,i) +
-     *		Wt*cmplx(Out(k),-Out(k+1))*cmplx(Out(k+2),Out(k+3))
-	      SumVV(bl,i) = SumVV(bl,i) + Wt * (Out(k)**2 + Out(k+1)**2)
-	      SumMM(i) = SumMM(i) + Wt * (Out(k+2)**2 + Out(k+3)**2)
+     *		Wt*cmplx(Out(k),Out(k+1))*cmplx(Out(k+2),-Out(k+3))
+	      SumVV(bl,i) = SumVV(bl,i) + Wt*(Out(k+2)**2 + Out(k+3)**2)
+	      SumMM(i) = SumMM(i) + Wt * (Out(k)**2 + Out(k+1)**2)
 	      Weight(bl,i) = Weight(bl,i) + Wt
 	      Count(i) = Count(i) + 1
 	    endif
@@ -620,11 +623,12 @@ c
 	enddo
 	end
 c************************************************************************
-	subroutine Solve(tgains,phase,smooth,relax,refant,interval)
+	subroutine Solve(tgains,phase,smooth,relax,noscale,refant,
+     *							    interval)
 c
 	implicit none
 	integer tgains
-	logical phase,smooth,relax
+	logical phase,smooth,relax,noscale
 	integer refant
 	real interval
 c
@@ -650,21 +654,22 @@ c
 c
 c  Determine all the gain solutions.
 c
-	call Solve1(tgains,nSols,nBl,nants,phase,smooth,relax,minants,
-     *	  refant, Time0,interval,Time,Indx,
-     *	  Buf(pSumVM),Buf(pSumVV),Buf(pSumMM),Buf(pWeight),Buf(pCount))
+	call Solve1(tgains,nSols,nBl,nants,phase,smooth,relax,noscale,
+     *	  minants,refant, Time0,interval,Time,Indx,
+     *	  Memc(pSumVM),Memr(pSumVV),Memr(pSumMM),Memc(pGains),
+     *	  Memr(pWeight),Memr(pCount))
 	end
 c************************************************************************
 	subroutine Solve1(tgains,nSols,nBl,nants,phase,smooth,relax,
-     *	  minants,refant,Time0,interval,Time,TIndx,SumVM,SumVV,SumMM,
-     *	  Weight,Count)
+     *	  noscale,minants,refant,Time0,interval,Time,TIndx,
+     *	  SumVM,SumVV,SumMM,Gains,Weight,Count)
 c
 	implicit none
 	integer tgains
-	logical phase,smooth,relax
+	logical phase,smooth,relax,noscale
 	integer nSols,nBl,nants,minants,refant
 	integer Time(nSols),TIndx(nSols)
-	complex SumVM(nBl,nSols)
+	complex SumVM(nBl,nSols),Gains(nants,nSols)
 	real SumVV(nBl,nSols),SumMM(nSols),Weight(nBl,nSols)
 	real Count(nSols),interval
 	double precision Time0
@@ -685,18 +690,15 @@ c    time
 c    Weight
 c    Count
 c    SumMM
-c  Input/Scratch:
 c    SumVM
 c    SumVV
 c  Scratch:
 c    TIndx
+c    Gains
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	logical Convrg
 	integer k,k0,nbad,iostat,item,offset,header(2)
-	real SumWts,SumPhi,SumAmp,SumChi2,SumExp,Phi,Amp,Sigma
-	complex Gains(MAXANT)
-	character line*64
 	double precision dtime
 c
 c  Externals.
@@ -712,7 +714,34 @@ c
 	if(smooth) call SmthData(nSols,nBl,Time,TIndx,
      *	  SumVM,SumVV,SumMM,Weight,Count)
 c
-c  Create a gains file.
+c  Now calculate the solutions.
+c
+	nbad = 0
+	do k=1,nSols
+	  call Solve2(nbl,nants,SumVM(1,k),SumVV(1,k),Weight(1,k),
+     *	    phase,relax,minants,refant,Gains(1,k),Convrg)
+	  if(.not.Convrg)then
+	    nbad = nbad + 1
+	    Count(k) = 0
+	  endif
+	enddo
+c
+c  Write out some info to wake the user up from his/her slumber.
+c
+	if(nbad.ne.0) call bug('w','Intervals with no solution: '//
+     *							itoaf(nbad))
+	if(nbad.eq.nsols) call bug('f','No solutions were found')
+c
+c  Scale the gains if needed.
+c
+	if(.not.(noscale.or.phase))call GainScal(Gains,nants,nSols)
+c
+c  Calculate statistics.
+c
+	call CalcStat(tgains,nsols,nbl,nants,SumVM,SumMM,SumVV,
+     *	  Weight,Count,Gains)
+c
+c  Write the gains out to a gains table.
 c
 	call haccess(tgains,item,'gains','write',iostat)
 	if(iostat.ne.0)then
@@ -728,68 +757,88 @@ c
 	  call bugno('f',iostat)
 	endif
 	offset = 8
-c
-c  Now calculate the solutions in time order.
-c
-	nbad = 0
-	SumWts = 0
-	SumPhi = 0
-	SumAmp = 0
-	SumChi2 = 0
-	SumExp = 0
-	do k=1,NSols
+	do k=1,nSols
 	  k0 = TIndx(k)
-	  call Solve2(nbl,nants,SumMM(k0),SumVM(1,k0),SumVV(1,k0),
-     *	    Weight(1,k0),Count(k0),phase,relax,minants,refant,
-     *	    Gains,Convrg,SumWts,SumPhi,SumAmp,SumChi2,SumExp)
-	  if(.not.Convrg)then
-	    nbad = nbad + 1
-	  else
+	  if(Count(k0).gt.0)then
 	    dtime = Time(k0)*interval + time0
 	    call hwrited(item,dtime,offset,8,iostat)
 	    offset = offset + 8
-	    if(iostat.eq.0)call hwriter(item,gains,offset,8*nants,
+	    call GFudge(gains(1,k0),nants)
+	    if(iostat.eq.0)call hwriter(item,gains(1,k0),offset,8*nants,
      *								iostat)
+	    offset = offset + 8*nants
 	    if(iostat.ne.0)then
 	      call bug('w','I/O error while writing to gains item')
 	      call bugno('f',iostat)
 	    endif
-	    offset = offset + 8*nants
 	  endif
 	enddo
-c
-c  Write some header information for the gains file.
-c
 	call hdaccess(item,iostat)
 	if(iostat.ne.0)then
 	  call bug('w','Error closing output gains item')
 	  call bugno('f',iostat)
 	endif
+c
+c  Write some extra information for the gains table.
+c
 	call wrhdd(tgains,'interval',dble(interval))
 	call wrhdi(tgains,'ngains',nants)
 	call wrhdi(tgains,'nsols',nsols-nbad)
 	call wrhdi(tgains,'nfeeds',1)
 	call wrhdi(tgains,'ntau',0)
 c
-c  Write out a summary to wake the user up from his/her slumber.
+	end
+c************************************************************************
+	subroutine GainScal(Gains,nants,nSols)
 c
-	call output('Number of solution intervals: '//itoaf(nSols))
-	if(nbad.eq.nsols) call bug('f','No solutions were found')
-	if(nbad.ne.0) call bug('w','Intervals with no solution: '//
-     *							itoaf(nbad))
-	Phi = sqrt(abs(SumPhi/SumWts))
-	Amp = sqrt(abs(SumAmp/SumWts))
-	Sigma = sqrt(abs(SumChi2/SumExp))
-	write(line,'(a,f6.1)')'Rms phase change (degrees):',phi
-	call output(line)
-	call HisWrite(tgains,'SELFCAL: '//line)
-	write(line,'(a,1pg10.3)')'Rms deviation of gain from 1:',amp
-	call output(line)
-	call HisWrite(tgains,'SELFCAL: '//line)
-	write(line,'(a,1pg10.3)')
-     *	  'Ratio of Observed to Theoretical noise:',Sigma
-	call output(line)
-	call HisWrite(tgains,'SELFCAL: '//line)
+	implicit none
+	integer nants,nSols
+	complex Gains(nants,nSols)
+c
+c  Scale the gains to have an rms value of 1.
+c
+c------------------------------------------------------------------------
+	integer i,j,N
+	real Sum,fac
+	complex g
+c
+	Sum = 0
+	N = 0
+	do j=1,nsols
+	  do i=1,nants
+	    g = Gains(i,j)
+	    if(abs(real(g))+abs(aimag(g)).gt.0)then
+	      N = N + 1
+	      Sum = Sum + real(g)**2 + aimag(g)**2
+	    endif
+	  enddo
+	enddo
+c
+	if(N.eq.0)return
+	fac = sqrt(N / Sum)
+c
+	do j=1,nSols
+	  do i=1,nants
+	    Gains(i,j) = fac * Gains(i,j)
+	  enddo
+	enddo
+c
+	end
+c************************************************************************
+	subroutine GFudge(gains,nants)
+c
+	implicit none
+	integer nants
+	complex gains(nants)
+c
+c  Get the reciprocal of the gains.
+c------------------------------------------------------------------------
+	integer i
+c
+	do i=1,nants
+	  if(abs(real(gains(i)))+abs(aimag(gains(i))).gt.0)
+     *	    gains(i) = 1/gains(i)
+	enddo
 c
 	end
 c************************************************************************
@@ -884,14 +933,12 @@ c
 c
 	end
 c************************************************************************
-	subroutine Solve2(nbl,nants,SumMM,SumVM,SumVV,Weight,Count,
-     *	    phase,relax,MinAnts,Refant,GainOut,Convrg,
-     *	    SumWts,SumPhi,SumAmp,SumChi2,SumExp)
+	subroutine Solve2(nbl,nants,SumVM,SumVV,Weight,
+     *	    phase,relax,MinAnts,Refant,GainOut,Convrg)
 c
 	implicit none
 	integer nbl,nants,MinAnts,RefAnt
-	real SumMM,SumVV(nbl),Weight(nBl),Count
-	real SumWts,SumPhi,SumAmp,SumChi2,SumExp
+	real SumVV(nbl),Weight(nBl)
 	complex SumVM(nbl),GainOut(nants)
 	logical phase,relax,Convrg
 c
@@ -904,14 +951,6 @@ c    nants	Number of antennae.
 c    nbl	Number of baselines, must equal nants*(nants-1)/2
 c    MinAnts	The minimum number of antenna that must be present.
 c    RefAnt	The antenna to refer solutions to.
-c    SumMM	The sum of the weights.
-c  Input/Output:
-c    SumWts
-c    SumPhi
-c    SumAmp
-c    SumChi2
-c    SumExp
-c  The following are destroyed by the processing.
 c    SumVM	The weighted sum of the visibilities.
 c    SumVV	The weighted sum of the visibilities moduli squared.
 c
@@ -922,8 +961,9 @@ c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer b1(MAXBASE),b2(MAXBASE)
 	integer i,j,k,Nblines,nantenna,nref
-	complex Sum(MAXANT),Gain(MAXANT),Temp,g1,g2
-	real m1,m2,Sum2(MAXANT),Wts(MAXANT),amp,phi,resid,wt
+	complex Sum(MAXANT),Gain(MAXANT),Temp,SVM(MAXBASE)
+	real Sum2(MAXANT),Wts(MAXANT)
+	real SVV(MAXBASE)
 	integer Indx(MAXANT)
 c
 c  Externals.
@@ -966,8 +1006,8 @@ c
 	      Wts(j) = Wts(j) + Weight(k)
 c
 	      NBlines = NBlines + 1
-	      SumVM(NBlines) = SumVM(k)
-	      SumVV(NBlines) = SumVV(k)
+	      SVM(NBlines) = SumVM(k)
+	      SVV(NBlines) = SumVV(k)
 c
 	      if(Indx(i).eq.0)then
 		nantenna = nantenna + 1
@@ -990,34 +1030,22 @@ c
 	if(MinAnts.gt.nantenna)then
 	  Convrg = .false.
 	else if(phase)then
-	  call phasol  (NBlines,nantenna,Sum,SumVM,b1,b2,gain,convrg)
+	  call phasol  (NBlines,nantenna,Sum,SVM,b1,b2,gain,convrg)
 	  convrg = convrg.or.relax
 	else
-	  call amphasol(NBlines,nantenna,Sum,Sum2,SumVM,SumVV,
+	  call amphasol(NBlines,nantenna,Sum,Sum2,SVM,SVV,
      *						   b1,b2,gain,convrg)
 	  convrg = convrg.or.relax
 	endif
 c
-c  If it converged, calculate the residual, unsqueeze the gains, and refer
-c  them to the reference antenna.
-c  Calculate residual. Note that if the residuals is so small that rounding
-c  error may be a problem (this will only happen with dummy data), then take
-c  its absolute value.
+c  If it converged, unsqueeze the gains, and refer them to the reference
+c  antenna.
 c
-	Resid = 0
-	if(Convrg)then
-	  Resid = SumMM
-	  do i=1,NBlines
-	    g1 = conjg(Gain(B1(i)))
-	    m1 = real(g1)**2 + aimag(g1)**2
-	    g2 = Gain(B2(i))
-	    m2 = real(g2)**2 + aimag(g2)**2
-	    Resid = Resid - 2*real(g1*g2*SumVM(i)) + m1*m2*SumVV(i)
+	if(.not.Convrg)then
+	  do i=1,nants
+	    GainOut(i) = 0
 	  enddo
-	  Resid = abs(Resid)
-c
-c  Unpack the gains.
-c
+	else
 	  do i=1,nants
 	    if(Indx(i).eq.0)then
 	      GainOut(i) = (0.,0.)
@@ -1025,8 +1053,6 @@ c
 	      GainOut(i) = Gain(Indx(i))
 	    endif
 	  enddo
-c
-c  Refer to the reference antennae.
 c
 	  nref = Refant
 	  if(nref.ne.0)then
@@ -1037,26 +1063,79 @@ c
 	  do i=1,nants
 	    GainOut(i) = Temp * GainOut(i)
 	  enddo
+	endif
+c
+	end
+c************************************************************************
+	subroutine CalcStat(tgains,nsols,nbl,nants,SumVM,SumMM,SumVV,
+     *	  Weight,Count,Gains)
+c
+	implicit none
+	integer tgains
+	integer nsols,nbl,nants
+	complex SumVM(nbl,nsols),Gains(nants,nsols)
+	real SumMM(nsols),SumVV(nbl,nsols),Weight(nbl,nsols)
+	real Count(nsols)
 c
 c  Accumulate the various statistics.
 c
-	  SumChi2 = SumChi2 + Resid
-	  SumExp  = SumExp + Count
-c	
-	  k = 0
-	  do j=2,nants
-	    do i=1,j-1
-	      k = k + 1
-	      Wt = Weight(k)
-	      if(Wt.gt.0)then
-	        SumWts = SumWts + Wt
-		call amphase(Gainout(i)*conjg(GainOut(j)),amp,phi)
-		SumPhi = SumPhi + Wt*phi**2
-		SumAmp = SumAmp + Wt*(1-amp)**2
-	      endif
+c------------------------------------------------------------------------
+	real Resid,SumChi2,SumPhi,SumExp,SumWts,SumAmp,Phi,Amp,Sigma
+	real m1,m2,wt
+	complex g1,g2
+	integer i,j,k,sol
+	character line*64
+c
+	SumChi2 = 0
+	SumPhi = 0
+	SumExp = 0
+	SumWts = 0
+	SumAmp = 0
+c
+c  Calculate residual. Note that if the residuals is so small that rounding
+c  error may be a problem (this will only happen with dummy data), then take
+c  its absolute value.
+c
+	do sol=1,nSols
+	  if(Count(sol).gt.0)then
+	    k = 0
+	    Resid = SumMM(sol)
+	    do j=2,nants
+	      do i=1,j-1
+		k = k + 1
+		Wt = Weight(k,sol)
+		g1 = conjg(Gains(i,sol))
+		g2 = Gains(j,sol)
+		m1 = real(g1)**2 + aimag(g1)**2
+		m2 = real(g2)**2 + aimag(g2)**2
+		if(Wt.gt.0.and.m1.gt.0.and.m2.gt.0)then
+		  Resid = Resid - 2*real(g1*g2*SumVM(k,sol)) +
+     *			m1*m2*SumVV(k,sol)
+		  SumWts = SumWts + Wt
+		  call amphase(g1*g2,amp,phi)
+		  SumPhi = SumPhi + Wt*phi**2
+		  SumAmp = SumAmp + Wt*(1-amp)**2
+	        endif
+	      enddo
 	    enddo
-	  enddo
-	endif
+	    SumChi2 = SumCHi2 + abs(Resid)
+	    SumExp = SumExp + Count(sol)
+	  endif
+	enddo
+c
+	Phi = sqrt(abs(SumPhi/(2*SumWts)))
+	Amp = sqrt(abs(SumAmp/(2*SumWts)))
+	Sigma = sqrt(abs(SumChi2/SumExp))
+	write(line,'(a,f6.1)')'Rms of the gain phases (degrees):',phi
+	call output(line)
+	call HisWrite(tgains,'SELFCAL: '//line)
+	write(line,'(a,1pg10.3)')'Rms deviation of gain from 1:',amp
+	call output(line)
+	call HisWrite(tgains,'SELFCAL: '//line)
+	write(line,'(a,1pg10.3)')
+     *	  'Ratio of Actual to Theoretical noise:',Sigma
+	call output(line)
+	call HisWrite(tgains,'SELFCAL: '//line)
 c
 	end
 c************************************************************************
