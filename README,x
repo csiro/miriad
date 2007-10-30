@@ -294,10 +294,10 @@ Getting Regular Updates
     Although the update process is conveniently down automatically, it can
     also be done by hand. The command
 
-      % mirexport UniMelb
+      % mirexport.pl UniMelb
 
-    on an ATNF machine will generate an update for the University of Melbourne,
-    and then
+    on a solaris ATNF machine (eg. venice) will generate an update for
+    the University of Melbourne, and then
 
       % mirimport UniMelb
 
