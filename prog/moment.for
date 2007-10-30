@@ -62,6 +62,7 @@ c    07mar97 rjs   Improve a message.
 c    30jun97 rjs   Change units of 0th moment image to be jy/beam.km/s
 c    23jul97 rjs   Added pbtype.
 c    27feb98 mwp   Added mom=-2 for peak temperature
+c    13jul00 rjs   Copy across llrot keyword.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
  	character version*(*)
@@ -188,11 +189,11 @@ c
 c  Be careful that nkeys and nckeys match the number of keywords.
 c
 	integer nkeys,nckeys
-	parameter (nkeys=22, nckeys=4)
+	parameter (nkeys=23, nckeys=4)
 	character keyw(nkeys)*8, ckeyw(nckeys)*5
 c
 	data keyw/   'bmaj    ','bmin    ','bpa     ',
-     *    'obstime ','epoch   ','history ',  
+     *    'obstime ','epoch   ','history ','llrot   ',
      *    'ltype   ','lstart  ','lstep   ','lwidth  ','pbfwhm  ',
      *    'instrume','niters  ','object  ','telescop','pbtype  ',
      *    'restfreq','vobs    ','observer','obsra   ',
