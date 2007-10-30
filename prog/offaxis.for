@@ -14,7 +14,8 @@ c	off-axis effects (given its internal models of the effects),
 c	subtracts this from the data, and produces an output (nominally)
 c	corrected dataset.
 c
-c	Currently this only handle 13-cm off-axis effects!!
+c	Currently this handles 13-cm and 20-cm off-axis effects only!!
+c	No check is made for this!
 c@ vis
 c	Input visibility dataset. No default.
 c@ select
@@ -22,7 +23,7 @@ c	Normal visibility selection parameter. The default is to
 c	select all data. See the help on "select" for more information.
 c@ line
 c	Normal line parameter with the normal defaults. See the help on
-c	"line" for more information.
+c	"line" for more information. 
 c@ model
 c	Input model of the total intensity image. No default. This should
 c	be the apparent total intensity (i.e. not corrected for primary
@@ -49,6 +50,8 @@ c--
 c  History:
 c    rjs  02may96 Original version.
 c    rjs  12dec96 Improve checks on reasonableness and error messages.
+c    rjs  07apr97 Include improved 13-cm fits, and make it work at L-band
+c		  as well.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
@@ -256,37 +259,68 @@ c
 c
 	integer i
 	real rdist,x(7),px,py
-	real coeff(2,7)
-	save coeff
-	data coeff/
-     *  1.39602,        0.000000,
-     *  6.87069E-02,    0.963600,
-     * -8.92810E-02,    5.82036E-02,
-     * -8.14360E-03,    5.98567E-03,
-     *  4.41056E-02,   -1.98040E-02,
-     *  5.25764E-02,   -3.98546E-02,
-     * -2.01919E-02,    1.48593E-02/
+	real coeffs(2,7),coeffl(2,5)
+	save coeffs,coeffl
+	data coeffs/
+     *  1.3992E+00,   0.0000E+00,
+     *  6.6962E-02,   9.2800E-01,
+     * -8.1047E-02,   4.6582E-02,
+     *  5.5058E-02,  -4.5728E-02,
+     *  4.2927E-02,  -1.5807E-02,
+     *  5.2665E-02,  -3.8708E-02,
+     * -1.8535E-02,   1.3006E-02/
+c
+	data coeffl/
+     *  1.3523E+00,   0.0000E+00,
+     * -8.9658E-02,   4.1000E+00,
+     * -1.2942E-02,   6.4604E-03,
+     *  1.5156E-02,  -1.0285E-02,
+     * -1.5113E-03,   5.0859E-03/
+
 c
 c  Compute the coefficients of the trig functions in the Jones
 c  matrix. Also compute the primary beam response.
 c
-	rdist =  rad / ( 2.368/freq * 20.9882*PI/180/60 )
-	x(1) = exp(-alpha2*(rdist/coeff(1,1))**2)
-	x(2) = coeff(1,2)*sin(0.5*PI*rdist/coeff(2,2))**2
-	pb = x(1)*x(1) + 0.5*x(2)*x(2)
-	do i=3,7
-	  x(i) = (coeff(2,i)*rdist + coeff(1,i))*rdist
-	  pb = pb + 0.5*x(i)*x(i)
-	enddo
+c  13-cm response.
 c
-c  Now compute the actual Jones matrix.
+	if(freq.gt.2)then
+	  rdist =  rad / ( 2.368/freq * 20.9882*PI/180/60 )
+	  x(1) = exp(-alpha2*(rdist/coeffs(1,1))**2)
+	  x(2) = coeffs(1,2)*sin(0.5*PI*rdist/coeffs(2,2))**2
+	  pb = x(1)*x(1) + 0.5*x(2)*x(2)
+	  do i=3,7
+	    x(i) = (coeffs(2,i)*rdist + coeffs(1,i))*rdist
+	    pb = pb + 0.5*x(i)*x(i)
+	  enddo
 c
-	px = psi
-	py = psi - 1.5*PI
-	Jo(1,1) = x(1) + x(2)*cos(2*px) + x(3)*cos(px) + x(4)*sin(px)
-	Jo(2,2) = x(1) + x(2)*cos(2*py) + x(3)*cos(py) + x(4)*sin(py)
-	Jo(1,2) =   cmplx(x(5),x(6))*sin(px) + cmplx(x(7),0.)*cos(px)
-        Jo(2,1) = -(cmplx(x(5),x(6))*sin(py) + cmplx(x(7),0.)*cos(py))
+	  px = psi
+	  py = -psi - 0.5*PI
+  	  Jo(1,1) = x(1) + x(2)*cos(2*px) + x(3)*cos(px) + x(4)*sin(px)
+	  Jo(2,2) = x(1) + x(2)*cos(2*py) + x(3)*cos(py) + x(4)*sin(py)
+	  py = -py
+	  Jo(1,2) =   cmplx(x(5),x(6))*sin(px) + cmplx(x(7),0.)*cos(px)
+	  Jo(2,1) = -(cmplx(x(5),x(6))*sin(py) + cmplx(x(7),0.)*cos(py))
+c
+c  20-cm response.
+c
+	else
+	  rdist =  rad / ( 1.384/freq * 34.61*PI/180/60 )
+	  x(1) = exp(-alpha2*(rdist/coeffl(1,1))**2)
+	  x(2) = coeffl(1,2)*sin(0.5*PI*rdist/coeffl(2,2))**2
+	  pb = x(1)*x(1) + 0.5*x(2)*x(2)
+	  do i=3,5
+	    x(i) = (coeffl(2,i)*rdist + coeffl(1,i))*rdist
+	    pb = pb + 0.5*x(i)*x(i)
+	  enddo
+c
+	  px = psi
+	  py = -psi - 0.5*PI
+  	  Jo(1,1) = x(1) + x(2)*cos(2*px) + x(3)*cos(px) + x(4)*sin(px)
+	  Jo(2,2) = x(1) + x(2)*cos(2*py) + x(3)*cos(py) + x(4)*sin(py)
+	  py = -py
+	  Jo(1,2) =  x(5)*sin(2*px)
+	  Jo(2,1) = -x(5)*sin(2*py)
+	endif	
 c
 	end
 c************************************************************************
