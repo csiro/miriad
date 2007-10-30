@@ -93,6 +93,7 @@ c    rjs  10oct97 Eliminate incorrect call to uvvarcopy just before the
 c		  final buffer flush.
 c    rjs  23oct97 Do not average across changes in the "on" variable.
 c    mchw 02jan98 Increase buffer in averaging (MAXAVER=163840).
+c    rjs  19sep04 Handle varying jyperk.
 c
 c  Bugs:
 c    * The way of determining whether a source has changed is imperfect.
@@ -102,10 +103,10 @@ c    * Too much of this code worries about polarisations.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
-	parameter(version='UvAver: version 1.0 02-jan-98')
+	parameter(version='UvAver: version 1.0 19-Sep-04')
 	character uvflags*12,ltype*16,out*64
 	integer npol,Snpol,pol,tIn,tOut,vupd,nread,nrec,i,nbin
-	real inttime
+	real inttime,jyperk
 	logical dotaver,doflush,buffered,PolVary,ampsc,vecamp,first
 	logical relax,ok,donenpol
 	double precision preamble(5),Tmin,Tmax,Tprev,interval
@@ -238,6 +239,8 @@ c
 		call uvDatGti('pol',pol)
 		call uvputvri(tOut,'pol',pol,1)
 		call VarCopy(tIn,tOut)
+		call uvDatGtr('jyperk',jyperk)
+		call uvputvrr(tOut,'jyperk',jyperk,1)
 		call uvwrite(tOut,preamble,data,flags,nread)
 		donenpol = npol.gt.1
 	      endif
