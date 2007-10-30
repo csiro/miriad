@@ -14,6 +14,7 @@ c	axes of an image is supported.
 c
 c	REGRID correctly handles conversion
 c	  * Between different projection geometries (e.g. SIN,NCP,TAN etc).
+c	  * Between equatorial and galactic coordinates.
 c	  * From a B1950 input to J2000 output and visa versa,
 c	    as well as B1950 to B1950, and J2000 to J2000.
 c	  * Between radio/optical velocity definitions and LSR/barycentric
@@ -33,7 +34,8 @@ c@ tin
 c	Input template image.  The axis descriptors of the regridded
 c	image, for those axes specified by keyword "axis", are those
 c	of the template image.
-c	Default is no template image.
+c	If neither a template nor a set of "descriptors" (see below) are
+c	given, the input is used as an initial template.
 c@ desc
 c	If "tin" is unset, then this gives the reference value, reference
 c	pixel, pixel increment, and number of pixels for the axes 
@@ -55,6 +57,16 @@ c	  offset    The coordinate system described by the template or
 c	            descriptors is modified (shift and expansion/contraction)
 c	            by an integral number of pixels so that it completely
 c	            encloses the input.
+c	  galeqsw   Switch the output coordinate system between equatorial
+c	            and galactic.
+c	  equisw    Switch the equinox of the output bwtween B1950 and J2000.
+c	            Note that REGRID always produces galactic coordinates in
+c	            the B1950 frame.
+c@ project
+c	This allows the projection of the output to be changed. Possible
+c	values are "sin", "tan", "arc", "ncp", "car" or "gls". Note that
+c	the NCP projection has a singularity at the equator. The default is
+c	to not change the output projection.
 c@ tol
 c	Interpolation tolerance. Tolerate an error of as much as "tol" in
 c	converting pixel locations in the input to the output. The default is
@@ -83,6 +95,9 @@ c    16nov96 nebk  AXFNDCG -> AXFNDCO and new call sequence
 c    24mar97 rjs   At least warn people when it may screw up because of
 c		   blanked pixels.
 c    07jul97 rjs   Gone back to the drawing board and rewrite program.
+c    22jul97 rjs   Fix bug when subimaging grossly.
+c    22jul97 rjs   Support epoch,projection and galactic/equatorial
+c		   axis conversion.
 c To do:
 c----------------------------------------------------------------------
 	include 'maxdim.h'
@@ -90,11 +105,11 @@ c----------------------------------------------------------------------
 	include 'mem.h'
 c
 	character version*(*)
-	parameter(version='Regrid: version 1.0 07-Jul-97')
+	parameter(version='Regrid: version 1.0 22-Jul-97')
 c
-	character in*64,out*64,tin*64,ctype*16,cellscal*12
+	character in*64,out*64,tin*64,ctype*16,cellscal*12,proj*3
 	double precision desc(4,MAXNAX),crpix,crval,cdelt,epoch
-	logical noscale,dooff
+	logical noscale,dooff,doepo,dogaleq
 	integer ndesc,nax,naxis,nin(MAXNAX),nout(MAXNAX),ntin(MAXNAX)
 	integer i,k,n,lIn,lOut,lTmp,cOut,axes(MAXNAX)
 	integer GridSize,gnx,gny,minv(3),maxv(3),order(3)
@@ -103,6 +118,12 @@ c
 	real tol
 c
 	integer Xv,Yv,Zv
+c
+	integer NPROJS
+	parameter(NPROJS=6)
+	integer nproj
+	character projs(NPROJS)*3
+	data projs/'sin','tan','arc','ncp','car','gls'/
 c
 c  Get the input parameters.
 c
@@ -120,14 +141,12 @@ c
 	if(mod(ndesc,4).ne.0)
      *	  call bug('f','Invalid number of desc descriptors')
 	ndesc = ndesc/4
-	if(tin.eq.' '.and.ndesc.eq.0)
-     *	  call bug('f','Either "tin" or "desc" keywords must be given')
-	if(tin.ne.' '.and.ndesc.ne.0)
-     *	  call bug('f','Only one of "tin" and "desc" should be set')
 	call keyr('tol',tol,0.05)
 	if(tol.le.0.or.tol.ge.0.5)
      *	  call bug('f','Invalid value for the tol parameter')
-	call getopt(noscale,dooff)
+	call getopt(noscale,dooff,doepo,dogaleq)
+	call keymatch('project',NPROJS,projs,1,proj,nproj)
+	if(nproj.eq.0)proj = ' '
 	call keyfin
 c
 c  Open the input dataset.
@@ -160,21 +179,9 @@ c
 	call coInit(lIn)
 	call coDup(lIn,cOut)
 c
-c  Set up the output size/coordinate system given descriptors.
+c  Set up the output size/coordinate system given template or descriptors.
 c
-	if(tin.eq.' ')then
-	  do i=1,nax
-	    nout(axes(i)) = nint(desc(4,i))
-	    if(nout(axes(i)).lt.1.or.nout(axes(i)).gt.MAXDIM)
-     *	      call bug('f','Invalid axis size in axis descriptor')
-	    call coAxGet(lIn,axes(i),ctype,crpix,crval,cdelt)
-	    call coAxSet(cOut,axes(i),ctype,desc(2,i),
-     *					desc(1,i),desc(3,i))
-	  enddo
-c
-c  Set up the output size/coordinate system given a template.
-c
-	else
+	if(tin.ne.' ')then
 	  call xyopen(lTmp,tin,'old',MAXNAX,ntin)
 	  call rdhdi(lTmp,'naxis',n,0)
 	  n = min(n,MAXNAX)
@@ -191,15 +198,29 @@ c
 	  call coGeta(lTmp,'cellscal',cellscal)
 	  call coSeta(cOut,'cellscal',cellscal)
 	  call xyclose(lTmp)
+	else if(ndesc.ne.0)then
+	  do i=1,nax
+	    nout(axes(i)) = nint(desc(4,i))
+	    if(nout(axes(i)).lt.1.or.nout(axes(i)).gt.MAXDIM)
+     *	      call bug('f','Invalid axis size in axis descriptor')
+	    call coAxGet(lIn,axes(i),ctype,crpix,crval,cdelt)
+	    call coAxSet(cOut,axes(i),ctype,desc(2,i),
+     *					desc(1,i),desc(3,i))
+	  enddo
+	else
+	  dooff = .true.
 	endif
 c
 c  Set that it does not scale, if requested.
 c
 	if(noscale)call coSeta(cOut,'cellscal','CONSTANT')
+	if(proj.ne.' ')call coPrjSet(cOut,proj)
 	call coReInit(cOut)
 c
+c  Perform epoch and galactic/equatorial switches.
 c  If the user wants to produce an offset one ... do that.
 c
+	if(doepo.or.dogaleq)call CoordSw(cOut,doepo,dogaleq)
 	if(dooff)call DoOffset(lIn,nIn,cOut,nOut)
 c
 c  Check that we can do this.
@@ -287,21 +308,99 @@ c
 c
 	end
 c************************************************************************
-	subroutine getopt(noscale,offset)
+	subroutine getopt(noscale,offset,doepo,dogaleq)
 c
 	implicit none
-	logical noscale,offset
+	logical noscale,offset,doepo,dogaleq
 c
 c------------------------------------------------------------------------
 	integer NOPTS
-	parameter(NOPTS=2)
+	parameter(NOPTS=4)
 	character opts(NOPTS)*8
 	logical present(NOPTS)
-	data opts/'noscale ','offset  '/
+	data opts/'noscale ','offset  ','equisw  ','galeqsw '/
 c
 	call options('options',opts,present,NOPTS)
 	noscale = present(1)
 	offset  = present(2)
+	doepo   = present(3)
+	dogaleq = present(4)
+	end
+c************************************************************************
+	subroutine CoordSw(lOut,doepo,dogaleq)
+c
+	implicit none
+	integer lOut
+	logical doepo,dogaleq
+c
+c  Switch the coordinate system of the output.
+c------------------------------------------------------------------------
+	double precision crpix1,crval1,cdelt1,crpix2,crval2,cdelt2
+	double precision epoch,obstime,ra,dec,dra,ddec
+	character ctype1*16,ctype2*16
+	integer ira,idec
+c
+c  Externals.
+c
+	double precision epo2jul
+c
+	call coFindAx(lOut,'latitude',idec)
+	call coFindAx(lOut,'longitude',ira)
+	if(ira.eq.0.or.idec.eq.0)
+     *	  call bug('f','Cannot find RA/DEC or GLON/GLAT axes')
+	call coAxGet(lOut,ira,ctype1,crpix1,crval1,cdelt1)
+	call coAxGet(lOut,idec,ctype2,crpix2,crval2,cdelt2)
+	call cogetd(lOut,'epoch',epoch)
+	if(epoch.eq.0)epoch = 1950
+	call cogetd(lOut,'obstime',obstime)
+	if(obstime.eq.0)obstime = epo2jul(1950.0d0,'B')
+c
+	if(ctype1(1:4).eq.'RA--'.and.ctype2(1:4).eq.'DEC-'.and.
+     *							 dogaleq)then
+	  if(abs(epoch-2000).lt.0.1)then
+	    call fk54z(crval1,crval2,obstime,ra,dec,dra,ddec)
+	    crval1 = ra
+	    crval2 = dec
+	    epoch = 1950.
+	  endif
+	  if(abs(epoch-1950).gt.0.1)call bug('f',
+     *		'I am unable to convert to B1950 coordinates')
+	  call dsfetra(crval1,crval2,.false.,1)
+	  ctype1(1:4) = 'GLON'
+	  ctype2(1:4) = 'GLAT'
+	else if(ctype1(1:4).eq.'GLON'.and.ctype2(1:4).eq.'GLAT'.and.
+     *							  dogaleq)then
+	  if(abs(epoch-1950.).gt.0.1)call bug('f',
+     *	  'Galactic coordinates in non-B1950 system are not understood')
+	  call dsfetra(crval1,crval2,.true.,1)
+	  ctype1(1:4) = 'RA--'
+	  ctype2(1:4) = 'DEC-'
+	endif
+c
+c  Convert the epoch, if needed.
+c
+	if(ctype1(1:4).eq.'RA--'.and.ctype2(1:4).eq.'DEC-'.and.
+     *							   doepo)then
+	  if(abs(epoch-1950).lt.0.1)then
+	    call fk45z(crval1,crval2,obstime,ra,dec)
+	    epoch = 2000
+	  else if(abs(epoch-2000).lt.0.1)then
+	    call fk54z(crval1,crval2,obstime,ra,dec,dra,ddec)
+	    epoch = 1950
+	  else
+	    call bug('f',
+     *		'Cannot convert other than B1950/J2000 equinoxs')
+	  endif	    
+	  crval1 = ra
+	  crval2 = dec
+	endif
+c
+	call coAxSet(lOut,ira,ctype1,crpix1,crval1,cdelt1)
+	call coAxSet(lOut,idec,ctype2,crpix2,crval2,cdelt2)
+	call cosetd(lOut,'epoch',epoch)
+c
+	call coReinit(lOut)
+c
 	end
 c************************************************************************
 	subroutine DoOffset(lIn,nIn,lOut,nOut)
@@ -846,14 +945,14 @@ c  Read in the extra planes.
 c
 	do k=minr(3),minc(3)-1
 	  call xysetpl(lIn,1,k)
-	  do j=1,ny
+	  do j=minc(2),maxc(2)
 	    call xyread(lIn,j,Dat(1,j-yoff,k-zoff))
 	    call xyflgrd(lIn,j,Flags(1,j-yoff,k-zoff))
 	  enddo
 	enddo
 	do k=maxc(3)+1,maxr(3)
 	  call xysetpl(lIn,1,k)
-	  do j=1,ny
+	  do j=minc(2),maxc(2)
 	    call xyread(lIn,j,Dat(1,j-yoff,k-zoff))
 	    call xyflgrd(lIn,j,Flags(1,j-yoff,k-zoff))
 	  enddo
