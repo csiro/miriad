@@ -45,11 +45,12 @@ c    20sep95 rjs   Really allow for roundoff in axis descriptor comparisons.
 c		   Increase number of maps.
 c    16jan97 rjs   Add "axis" keyword, and get it to work with an arbitrary
 c		   number of axis.
+c    12jun97 nebk  Copy header items for axes 6 and 7
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'maxnax.h'
 	character version*(*)	
-        parameter(version='IMCAT: version 16-Jan-97')
+        parameter(version='IMCAT: version 12-Jun-97')
 	integer MAXMAP
 	parameter(MAXMAP=300)
 	character in(MAXMAP)*80,out*80
@@ -68,13 +69,17 @@ c
 c  Header keywords.
 c
 	integer nkeys
-	parameter(nkeys=41)
+	parameter(nkeys=49)
 	character keyw(nkeys)*8
 	data keyw/   'bmaj    ','bmin    ','bpa     ','bunit   ',
      *	  'cdelt1  ','cdelt2  ','cdelt3  ','cdelt4  ','cdelt5  ',
+     *    'cdelt6  ','cdelt7  ',
      *	  'crpix1  ','crpix2  ','crpix3  ','crpix4  ','crpix5  ',
+     *    'crpix6  ','crpix7  ',
      *	  'crval1  ','crval2  ','crval3  ','crval4  ','crval5  ',
+     *    'crval6  ','crval7  ',
      *	  'ctype1  ','ctype2  ','ctype3  ','ctype4  ','ctype5  ',
+     *    'ctype6  ','ctype7  ',
      *	  'epoch   ','history ','niters  ','obstime ','object  ',
      *	  'observer','pbfwhm  ','obsra   ','obsdec  ','restfreq',
      *	  'telescop','vobs    ','ltype   ','lstart  ','lwidth  ',
