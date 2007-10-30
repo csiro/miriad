@@ -5,27 +5,30 @@ c= CGSPEC - Overlay spectra on images with PGPLOT.
 c& nebk
 c: plotting
 c+
-c	CGSPEC overlays spectra at spatial locations specified in a text 
-c	file on 2-D grey scale and/or contour plots of images on a 
-c	PGPLOT device.   
+c	CGSPEC overlays spectra at spatial locations (specified in a text 
+c	file) on images (displayed via a colour pixel map representation
+c	and/or contour plots) on a PGPLOT device.   
 c
 c@ in
-c	You may input up to 10 images.  Of these, there can be up to 3
-c 	contour images, 1 grey scale image, 5 spectrum images, and 1 
-c	mask image.  The grey scale, contour, and mask images must be 
-c	of identical dimensions and size. Each spectrum image can be 
-c	of any dimensions, size, and order. The mask image blanking mask 
-c	is logically ORed to the grey scale and contour image masks 
-c	before they are displayed. The mask image is not displayed.  
+c	You may input up to 10 images.  Some of these are used to make a
+c	2-D spatial display (up to 3 displayed via contours and 1 
+c	displayed via a colour pixel map representation).  Of the rest, 
+c	upto 5 may have spectra extracted from them, and 1 may be used 
+c	as a mask. The pixel map, contour, and mask images must be of 
+c	identical dimensions and size. Each spectrum image can be of any 
+c	dimensions, size, and order. The mask image blanking mask is 
+c	logically ORed to the pixel map and and contour plot image masks 
+c	before they are displayed. The mask image is not displayed.
 c
 c	These images can be input in any order (see TYPE).
 c	Wild card expansion is supported.    No default.
 c@ type
 c	Specifies the type of each image listed in the IN keyword.
-c	Minimum match is supported.   Choose from:
+c	Minimum match is supported (note that "pixel" was formerly "grey"
+c	which is still supported).   Choose from:
 c
 c	"contour"   (contour;     up to 3 of these)    xyv
-c	"grey"      (grey scale;  up to 1 of these)    xyv
+c	"pixel"     (pixel map;   up to 1 of these)    xyv
 c	"spectrum"  (spectrum;    up to 5 of these)    any order
 c	"dspectrum" (spectrum derivative          )    any order
 c	"mask"      (mask;        up to 1 of these)    xyv
@@ -39,8 +42,8 @@ c	is taken by CGSPEC before it is plotted.  This is useful for
 c	Zeeman enthusiasts.  You can have up to 5 "spectrum" and 
 c	"dspectrum" images in total.
 c@ region
-c	Region of interest.   This applies only to, and equally to, 
-c	the grey scale, contour and mask images.  All the image planes
+c	Region of interest.   This applies only to, and equally to,
+c	the pixel map, contour and mask images.  All the image planes
 c	you select will be averaged before display.    Only the bounding
 c	box of the selected region is supported.
 c@ xybin
@@ -68,15 +71,23 @@ c	LEVS for the second contour image.
 c@ levs3
 c	LEVS for the third contour image.
 c@ grange
-c	3 values. The grey scale range (background to foreground), and
-c	transfer function type.  The transfer function type can be one
-c	of "lin" (linear), "log" (logarithmic), "heq" (histogram equal-
-c	ization), and "sqr" (square root).  See also OPTIONS=FIDDLE which
-c	is in addition to the selections here.
+c       4 values. These are the image intensity range to display (min to max), 
+c	the transfer function type and the colour lookup table for the displayed
+c       pixel map image.  The transfer function type can be one of "lin" (linear), 
+c	"sqr" (square root), "log" (logarithmic), and "heq" (histogram 
+c	equalization).  The colour lookup table is an integer from 1 to 8 
+c	specifying a lookup table. Valid values are 1 (b&w), 2 (rainbow), 
+c	3 (linear pseudo colour), 4 (floating zero colour contours), 5 (fixed 
+c	zero colour contours), 6 (rgb), 7 (background) and 8 (heat).  If you 
+c	enter a negative integer, then the reversed lookup table is displayed.
 c
-c	Default is linear between the image minimum and maximum
-c	If you wish to just give a transfer function type, set
-c	range=0,0,heq   say.
+c       The transfer function changes available with OPTIONS=FIDDLE are in
+c       addition (on top of) to the selections here, but the colour lookup 
+c	table selections will replace those selected here.
+c
+c       Default is linear between the image minimum and maximum with
+c       a b&w lookup table.   You can default the intensity range with
+c       zeros, viz. "range=0,0,log,-2" say.
 c@ vrange
 c	2 values. The velocity range, in km/s, to plot.  If the first
 c	axis of the spectrum image(s) is not velocity (say Frequency), 
@@ -117,7 +128,7 @@ c	          the header. You might call this the natural axis label
 c	"rellin"  the label is in offset linear coordinates
 c	"none"      no label and no numbers or ticks on the axis
 c
-c	All offsets are from the reference pixel of the contour/grey images.
+c	All offsets are from the reference pixel of the contour/pixel map images.
 c	Defaults are "relpix", LABTYP(1)   except if LABTYP(1)="hms" when
 c	LABTYP(2) defaults to "dms"  (to give RA and DEC)
 c
@@ -136,9 +147,9 @@ c         and invoke the predefined transfer functions, but the linear
 c         fiddler is not available.   In this way you can make colour
 c         hardcopy plots.
 c
-c	"wedge" means that if you are drawing a grey scale, also draw
+c	"wedge" means that if you are making a pixel map display, also draw
 c	  and label a wedge to the right of the plot, showing the map 
-c	  of intensity to grey level. 
+c	  of intensity to colour
 c
 c	"frame" means draw a frame to the left and bottom of each spectrum
 c	  and put the numeric labels on that frame. The default is no 
@@ -178,12 +189,12 @@ c	  string is written.
 c
 c	"relax" means issue warnings when image axis descriptors are
 c	  inconsistent (e.g. different pixel increments) instead
-c	  of a fatal error.  Applies to grey scale, contour and
+c	  of a fatal error.  Applies to pixel map, contour and
 c	  mask images only.
 c
-c	"full" means do full plot annotation with contour levels, grey
-c	  scale range, image names, reference values, etc.  Otherwise 
-c	  more room for the plot is available. 
+c	"full" means do full plot annotation with contour levels, pixel
+c	  map intensity range, image names, reference values, etc.  
+c	  Otherwise more room for the plot is available. 
 c	"noepoch" means don't write the Epoch into the spatial axis
 c	  label strings
 c
@@ -219,7 +230,7 @@ c	Defaults are all 1 for interactive devices, and 2,1 for
 c	hard copy devices.
 c@ blines
 c	Up to 2 values.  These are the line widths to use for 1) the border
-c	and labels of the contour/grey scale display and 2) the border/axes
+c	and labels of the contour/pixel map display and 2) the border/axes
 c	for the spectra.  Widths are integer multiples of 1.
 c	Defaults are 1,1 for interactive devices, and 2,2 for
 c	hard copy devices.
@@ -230,7 +241,7 @@ c	Defaults are 0.0,0.0,0.0
 c@ csize
 c	Up to two values. Character sizes in units of the PGPLOT default 
 c	(1, which is ~ 1/40 of the view surface height) for the 
-c	contour/grey scale labels and the spectrum labels.
+c	contour/pixel map labels and the spectrum labels.
 c	Defaults try to do something useful.
 c@ olay
 c	You can either give one file name, or as many file names as there
@@ -270,7 +281,7 @@ c	There should be one further line in the file:
 c
 c	  XINC  YINC  XSIZ  YSIZ
 c
-c	XINC and YINC are the increments across the contour/grey image
+c	XINC and YINC are the increments across the contour/pixel map image
 c	in ARCSEC at which spectra are to be drawn starting from the
 c	bottom left corner of the display (defined by the REGION keyword)
 c
@@ -305,7 +316,7 @@ c
 c	X,Y defines the center of the overlay in the nominated OTYPE
 c	coordinate system (X and Y OTYPE can be different).  Note
 c	that for coordinate systems other than "hms" and "dms", the
-c	coordinates are with respect to the grey & contour images
+c	coordinates are with respect to the pixel map  & contour images
 c	axis descriptors,  not those from the spectrum images.
 c
 c	For %OTYPE = "abspix ", "relpix", "arcsec", "abslin", "rellin",
@@ -377,11 +388,15 @@ c    nebk 05jan95  Use new PGIMAG in favour of PGGRAY adding support
 c                  for fiddling of lookup table for hardcopy devices 
 c                  Use orginal not linearized axis descriptors for
 c                  full annotation
+c    nebk 20feb95  Make sure PGIMAG writes black on white for hardcopy.
+c		   Ammend for new wedge call sequences.  Add lookuptable
+c	           to "grange" keyword. Move to image type "pixel"
+c		   instead of "grey"
 c
 c Ideas:
 c  * Be cleverer for sub-cubes which have spectra partly all zero
 c  * Add interactive cgcurs like option if olay unset ??  
-c  * Remove need for equal sized contour/grey images if I can get
+c  * Remove need for equal sized contour/pixel map images if I can get
 c    Bob to play ball with BOXES code.
 c  * Try to swap line colour index to get white lines on black
 c    and vice versa.  Have this vary over the image as appropriate.
@@ -433,8 +448,8 @@ c
      +  slines(2,maxspec), blines(2), srtlev(maxlev,maxcon),
      +  nlevs(maxcon), sblc(maxnax), strc(maxnax), nblnkc(3), 
      +  his(nbins)
-      integer nofile, npos, ierr, pgbeg, ilen, ncon, i, j, nspec, 
-     +  sizespec, ngrps, defwid, npts, iblc, nblnkg, nblnkcs
+      integer nofile, npos, ierr, pgbeg, ilen, ncon, i, j, nspec, iofm,
+     +  sizespec, ngrps, defwid, npts, iblc, nblnkg, nblnkcs, coltab
       integer axisnum, virsiz(maxnax), vircsiz(maxnax)
       integer len1, tflen(0:2)
 c
@@ -446,7 +461,7 @@ c
       logical dofull, eqscale, doblnkc, doblnkg, doblnkb, relax, doaxes, 
      +  doframe, fits(2), mark, spnorm, naked, number, mirror, init, 
      +  imnorm, colour, skip, blconly, doerase, doepoch, igblank,
-     +  allgood, allblnk, dofid, dowedge
+     +  allgood, allblnk, dofid, dowedge, reverse
 c
       data blankc /-99999999.00/
       data cin, gin, bin /maxcon*' ', ' ', ' '/
@@ -459,23 +474,23 @@ c
       data txtfill, tflen /'spectrum', 'derivative spectrum', 
      +                     'derivative spectrum', 8, 19, 19/
 c-----------------------------------------------------------------------
-      call output ('CgSpec: version 05-Jan-95')
-      call output ('Options=fiddle will now work partially for hard ')
-      call output ('copy devices -- see help options')
+      call output ('CgSpec: version 20-Feb-95')
+      call output ('Keyword "grange" can now be used to specify the')
+      call output ('colour lookup table as well the transfer function')
       call output (' ')
-      call output ('Non-linear coordinates are now partially handled')
-      call output ('See "help cgcoords" for explanations')
+      call output ('Options=fiddle is now keyboard driven for '//
+     +             'hard-copy devices')
       call output (' ')
 c
 c Get user inputs
 c
       call inputs (maxlev, maxcon, maxspec, maxtyp, ltypes, ncon, nspec,
      +   cin, gin, bin, spin, iside, levtyp, slev, levs, nlevs, pixr, 
-     +   trfun, pdev, labtyp, dofull, eqscale, solneg, clines, break,
-     +   cs, ofile, nofile, relax, slines, vrange, vfrac, irange, tick,
-     +   doaxes, doframe, mark, iscale, spnorm, naked, blines, number,
-     +   mirror, colour, blconly, doerase, doepoch, igblank, dofid,
-     +   dowedge, ibin, jbin)
+     +   trfun, coltab, pdev, labtyp, dofull, eqscale, solneg, clines, 
+     +   break, cs, ofile, nofile, relax, slines, vrange, vfrac, irange, 
+     +   tick, doaxes, doframe, mark, iscale, spnorm, naked, blines, 
+     +   number, mirror, colour, blconly, doerase, doepoch, igblank, 
+     +   dofid, dowedge, ibin, jbin)
 c
 c First verify the existence of wanted files and get some extrema
 c
@@ -484,7 +499,7 @@ c
 c
 c*************************************
 c
-c Draw grey scale and contour images
+c Draw pixel map and contour images
 c
 c*************************************
 c
@@ -506,7 +521,7 @@ c
         end do
       end if
 c
-c Open grey scale image as required
+c Open pixel map image as required
 c
       if (gin.ne.' ') then
         call opimcg (maxdim, maxnax, gin, lg, gnaxis, gsize, gepoch,
@@ -519,7 +534,7 @@ c
           lh = lg
         end if
 c
-c Check grey scale range and deal with log transfer function
+c Check pixel map range and deal with log transfer function
 c
         call grfixcg (pixr, lg, gnaxis, gsize, trfun, pixr2, 
      +                groff, blankg)
@@ -552,7 +567,7 @@ c
      +  cepoch, gepoch, ibin, jbin, naxis, size, crval, cdelt, crpix, 
      +  ctype, epoch, blc, trc, win, maxchan, grpbeg, ngrp, ngrps)
 c
-c Allocate memory for grey/contour and mask images
+c Allocate memory for pixel map/contour and mask images
 c
       call memalloc (ipim,  win(1)*win(2), 'r')
       call memalloc (ipnim, win(1)*win(2), 'i')
@@ -605,7 +620,7 @@ c
 c       
 c Init OFM routines
 c       
-      if (dofid) call ofmini
+      call ofmini
 c
 c Set label displacements from axes and set PGTBOX labelling 
 c option strings
@@ -647,7 +662,7 @@ c
         call xyclose (lb)
       end if
 c
-c Read in grey scale image as required, averaging all selected planes.
+c Read in pixel map image as required, averaging all selected planes.
 c
       if (gin.ne.' ') then
         init = .true.
@@ -669,11 +684,15 @@ c
           end if
         end do
 c
-c Apply transfer function to grey scale image if required
+c Apply transfer function to pixel map image if required
 c
         if (trfun.ne.'lin') call apptrfcg (pixr2, trfun, groff, 
      +    win(1)*win(2), memi(ipnim), memr(ipim), nbins, 
      +    his, cumhis)
+c
+c Apply user specified OFM or b&w OFM as default
+c
+        call ofmcol (coltab, pixr2(1), pixr2(2))
 c
 c Modify OFM for hard copy devices before calling PGIMAG
 c
@@ -681,14 +700,31 @@ c
      +    call ofmmod (tfvp, win(1)*win(2), memr(ipim), 
      +                 memi(ipnim), pixr2(1), pixr2(2))
 c
-c Draw grey scale and optional wedge
+c Draw image.  Note that for hardcopy devices we generally want
+c black on white, not white on black.  So if no colour table has
+c been applied, make it so.  
+c
+        reverse = .false.
+        if (hard.eq.'YES') then
+          call ofminq (iofm)
+          if (iofm.eq.1) reverse = .true.
+        end if
+c
+        if (reverse) then
+          call pgimag (memr(ipim), win(1), win(2), 1, win(1),
+     +                 1, win(2), pixr2(2), pixr2(1), tr)
+        else
+          call pgimag (memr(ipim), win(1), win(2), 1, win(1),
+     +                 1, win(2), pixr2(1), pixr2(2), tr)
+        end if
+c
+c Draw optional wedge
 c
         call pgslw (1)
         call pgsci (7)
-        call pgimag (memr(ipim), win(1), win(2), 1, win(1), 1,
-     +               win(2), pixr2(1), pixr2(2), tr)
-        if (dowedge) call wedgecg (1, wedwid, 1, trfun, groff, nbins, 
-     +                             cumhis, wdgvp, pixr(2), pixr(1))
+        if (hard.eq.'YES') call pgsci (2)
+        if (dowedge) call wedgecg (reverse, 1, wedwid, 1, trfun, groff, 
+     +                  nbins, cumhis, wdgvp, pixr(1), pixr(2))
 c
 c Save normalization image if there are some blanks
 c
@@ -698,12 +734,12 @@ c
         end if
       end if
 c
-c Label and draw axes.  Forces grey scale to update on /xd as well
+c Label and draw axes.  Forces pixel map to update on /xd as well
 c
       call pgslw (blines(1))
       call pgsch (cs(1))
-      call pgsci (1)
-      if (hard.eq.'NO') call pgsci (7)
+      call pgsci (7)
+      if (hard.eq.'YES') call pgsci (2)
       call axlabcg (.true., 1, 1, 1, 1, 1, xopts, yopts, xdispl,
      +               ydispb, labtyp, xlabel, ylabel, xxopts, yyopts)
       call pgtbox (xxopts, 0.0, 0, yyopts, 0.0, 0)
@@ -812,7 +848,7 @@ c
 c**************************
 c
 c
-c Read overlay positions & decode positions into contour/grey pixels
+c Read overlay positions & decode positions into contour/pixel map pixels
 c or generate an automatic list.  If only one file, then it is common
 c to all spectrum images.  Have to open/close file whose header we use
 c for coordinate transformations in OLAYDEC because xyz and xy can
@@ -934,7 +970,7 @@ c Continue if requested spectrum can be extracted from the cube
 c
           if (fits(1) .and. fits(2)) then
 c
-c Is this spatial area blanked in grey and contour images ?
+c Is this spatial area blanked in pixel map and contour images ?
 c
             allblnk  = .false.
             if (.not.igblank .and. .not.allgood)
@@ -1253,7 +1289,7 @@ c
      +         cepoch, bepoch, cctype, bctype)
       end if
 c
-c Check grey scale images for consistency with other images
+c Check pixel map images for consistency with other images
 c
       if (gin.ne.' ') then
         if (bin.ne.' ') call chkdes (relax, gin, bin, gsize, bsize,
@@ -1290,7 +1326,7 @@ c     blconly   Only put frame or axes on spectrum in BLC of plot
 c     doepoch   Write epoch into axis labels
 c     igblank   Ignore spatial blanks when drawing spectra
 c     dofid     Fiddle lookup table
-c     dowedge   Draw greyscale wedge
+c     dowedge   Draw pixel map wedge
 c     dotwo     Two sided derivative for "dspectrum" else 1 sided
 c-----------------------------------------------------------------------
       implicit none
@@ -1402,7 +1438,7 @@ c       levs       Contour levels for each image
 c       srtlev     Indexing arrya to order contoures in increasing order
 c       slev       Contour level scale factors for each image
 c       trfun      'log' or 'lin' transfer function
-c       pixr       Grey scale intensity range
+c       pixr       pixel map intensity range
 c       naxis      Number of axes
 c       size       SIze of axes 
 c       crval      Array of image reference values
@@ -1444,7 +1480,7 @@ c
       call annwincg (blc, trc, ibin, jbin, kbin, 2, size, cdelt, ctype,
      +               yinc, xpos, ypos)
 c       
-c Write grey scale information
+c Write pixel map information
 c       
       if (gin.ne.' ') call anngrscg (lg, gin, 1, pixr, trfun, gmm, 
      +                               yinc, xpos, ypos)
@@ -1472,14 +1508,15 @@ c     on the image
 c
 c   Inputs
 c     ofile     Overlay file
-c     cdelt     COntour/grey pixel size
-c     blc,trc   COntour/grey window
+c     cdelt     COntour/pixel map pixel size
+c     blc,trc   COntour/pixel map window
 c     maxpos    Max number of positions allowed
 c   Output
 c     npos      Number of positions
 c     opos      Array containing overlay
 c                 X   Y   XSIZ   YSIZ    where X and Y are in
-c	       contour/grey spatial pixels & XSIZ and YSIZ are in ARCSEC
+c	       contour/pixel map spatial pixels & XSIZ and YSIZ 
+c	       are in ARCSEC
 c
 c------------------------------------------------------------------------
       implicit none
@@ -1575,8 +1612,8 @@ c
 c
       subroutine inputs (maxlev, maxcon, maxspec, maxtyp, ltypes, ncon,
      +   nspec, cin, gin, bin, spin, iside, levtyp, slev, levs, nlevs, 
-     +   pixr, trfun, pdev, labtyp, dofull, eqscale, solneg, clines, 
-     +   break, cs, ofile, nofile, relax, slines, vrange, vfrac, 
+     +   pixr, trfun, coltab, pdev, labtyp, dofull, eqscale, solneg, 
+     +   clines, break, cs, ofile, nofile, relax, slines, vrange, vfrac, 
      +   irange, tick, doaxes, doframe, mark, scale, norm, naked, 
      +   blines, number, mirror, colour, blconly, doerase, doepoch, 
      +   igblank, dofid, dowedge, ibin, jbin)
@@ -1592,7 +1629,7 @@ c   ltypes     Potential label types
 c  Output:
 c   ncon       Number of contour images
 c   nspec      Number of spectrum images
-c   c,g,b,spin Contour, grey, mask, and spectrum image names
+c   c,g,b,spin Contour, oixel map, mask, and spectrum image names
 c   iside      0 -> spectrum image, 1-> 1-sided derivative spectrum,
 c              2 -> 2-sided derivative spectrum image
 c   levtyp     Type of contour levels scale factors for each contour
@@ -1602,8 +1639,9 @@ c              for each contour image
 c   levs       Contour levels for each contour image.   Will be scaled 
 c              by SLEV for contouring
 c   nlevs      Number of contour levels for each contour image
-c   pixr       Greyscale intensity range
-c   trfun      Type of grey scale transfer function: log,lin,sqr,or heq
+c   pixr       Pixel map intensity range
+c   trfun      Type of pixel map transfer function: log,lin,sqr,or heq
+c   coltab     Colour table to apply to device.  1 -> 8 (negate to reverse)
 c   pdev       PGPLOT plot device/type
 c   labtyp     Type of labels for x and y axes
 c   dofull     True means do full annotaiton of plot
@@ -1640,12 +1678,13 @@ c   blconly    Only put frame or axes on spectrum in blc of plot
 c   doepoch    Write EPoch into axis labels
 c   igblank    Ignore spatial blanks when drawing spectra
 c   dofid      Fiddle lookup table
-c   dowedge    Draw greyscale wedge
+c   dowedge    Draw pixel map wedge
 c   i,jbin     SPatial pixek increment and averaging in x and y directions
 c-----------------------------------------------------------------------
       implicit none
 c
-      integer maxlev, maxcon, maxspec, maxtyp, ncon, nspec, nofile
+      integer maxlev, maxcon, maxspec, maxtyp, ncon, nspec, nofile, 
+     +coltab
       real levs(maxlev,maxcon), pixr(2), cs(2), slev(maxcon), 
      +  break(maxcon), vrange(2), vfrac(2), irange(2), tick(2),
      +  scale(maxspec)
@@ -1666,9 +1705,10 @@ c
       character*1 str, itoaf
 c
       integer ntype
-      parameter (ntype = 5)
+      parameter (ntype = 6)
       character type(ntype)*9
-      data type  /'contour', 'grey', 'spectrum', 'mask', 'dspectrum'/
+      data type  /'contour', 'pixel', 'spectrum', 'mask', 
+     +            'dspectrum', 'grey'/
 c-----------------------------------------------------------------------
       call keyini
 c
@@ -1701,9 +1741,9 @@ c
             ncon = ncon + 1
             cin(ncon) = images(i)
           end if
-        else if (imtype(i).eq.'grey') then
+        else if (imtype(i).eq.'pixel' .or. imtype(i).eq.'grey') then
           if (gin.ne.' ') then
-            call bug ('f', 'More than one grey scale image given')
+            call bug ('f', 'More than one pixel map image given')
           else
             gin = images(i)
           end if
@@ -1732,7 +1772,7 @@ c
       end do
       if (nspec.eq.0) call bug ('f', 'No spectrum images given')
       if (ncon.eq.0 .and. gin.eq.' ') call bug ('f',
-     +  'No grey scale or contour images given; can''t draw axes')
+     +  'No pixel map or contour images given; can''t draw axes')
 c
       do i = 1, nspec-1
         do j = i+1, nspec
@@ -1782,10 +1822,15 @@ c
       call keyr ('grange', pixr(1), 0.0)
       call keyr ('grange', pixr(2), 0.0)
       call keya ('grange', trfun, 'lin')
+      call keyi ('grange', coltab, 1)
       call lcase (trfun)
-        if (gin.ne.' ' .and. trfun.ne.'lin' .and. trfun.ne.'log' .and.
-     +      trfun.ne.'sqr' .and. trfun.ne.'heq') call bug ('f',
-     +    'Unrecognized grey scale transfer function type')
+      if (gin.ne.' ' .and. trfun.ne.'lin' .and. trfun.ne.'log' .and.
+     +    trfun.ne.'sqr' .and. trfun.ne.'heq') call bug ('f',
+     +    'Unrecognized image transfer function type')
+      if (coltab.lt.-8 .or. coltab.gt.8 .or. coltab.eq.0) then
+        coltab = 1
+        call bug ('w', 'Unrecognized lookup table, setting b&w')
+      end if
 c
       call keyr ('spsize', vfrac(1), 0.1)
       call keyr ('spsize', vfrac(2), vfrac(1))
@@ -1876,13 +1921,13 @@ c
 c  Input
 c    maxcon  Max. no. of contour images allowed
 c    ncon    Number of contour images displayed
-c    gin     Name of grey scale image
-c    nblnkg  Number of flagged pixels in the grey scale image in
+c    gin     Name of pixel map image
+c    nblnkg  Number of flagged pixels in the pixel map image in
 c            the displayed region
 c    nblnkc  Number of flagged pixels in each contour image in
 c            the displayed region
 c    lg,lc   Handles for scratch files containing the locations of
-c            flagged pixels in grey and contour images  If 0 then
+c            flagged pixels in pixel map  and contour images  If 0 then
 c            there is no scratch file open for that image
 c    is,js   Size of displayed region
 c Output
@@ -2086,7 +2131,7 @@ c-----------------------------------------------------------------------
 c     Read overlay positions list file and decode
 c
 c   Inputs
-c     lun      Handele of grey/contour image
+c     lun      Handele of pixel map/contour image
 c     pl1,npl  Start plane and number of planes displayed
 c     maxtyp   Maximum number of potential label types
 c     ltypes   Potential label types
@@ -2096,7 +2141,8 @@ c  Outputs
 c     npos     Number of overlays
 c     opos     Array containing overlay
 c                 X   Y   XSIZ   YSIZ    where X and Y are in
-c	       contour/grey spatial pixels & XSIZ and YSIZ are in ARCSEC
+c	       contour/pixel map spatial pixels & XSIZ and YSIZ 
+c	       are in ARCSEC
 c     iblc     Number of overlay which is the closest to the BLC 
 c              of the plot
 c
@@ -2185,7 +2231,7 @@ c   iside    0 -> spectrum 1-> 1-sided derivative spectrum,
 c            2-> 2-sided derivative spectrum
 c   ncon     No. contour images
 c   cin      Contour image
-c   gin      Grey scale image
+c   gin      pixel map image
 c   bin      Mask image
 c   nofile   No. overlay files
 c   ofile    Overlay files
@@ -2221,7 +2267,7 @@ c-----------------------------------------------------------------------
       end if
 c
       if (gin.ne.' ') then
-        line = ' Verifying grey scale image          : '//
+        line = ' Verifying pixel map image           : '//
      +         gin(1:len1(gin))
         call output (line)
         call xyopen (lh, gin, 'old', maxnax, size)
@@ -2367,10 +2413,10 @@ c             1-> 2-sided derivative spectrum
 c     ofile   Overlay file name
 c     ipos    Overlay number
 c     ispec   Spectrum image number
-c     blc,trc BLC,TRC of contour/grey window displayed
+c     blc,trc BLC,TRC of contour/pixel map window displayed
 c     naxis   Number of axes in spatial image
 c     c*      SPatial image axis descriptors
-c     pos     Location of spectrum in contour/grey pixels
+c     pos     Location of spectrum in contour/pixel map pixels
 c     vfrac   Width of spectrum as a fraction on the plot view-port
 c             in teh x and y directions
 c     npts    Number of points to plot in spectrum
@@ -2380,8 +2426,8 @@ c     x,yspec Spectrum
 c     zspec   Normalization spectrum.  If any element is 0, this means
 c             there is no valid value for that element (channel/velocity)
 c     work    Work array for taking of derivatives
-c     vpn     Corners of contour/grey view-port in ndc (x1,x2,y1,y2)
-c     vpw     Corners of contour/grey view-port in world coords
+c     vpn     Corners of contour/pixel map view-port in ndc (x1,x2,y1,y2)
+c     vpw     Corners of contour/pixel map view-port in world coords
 c     tick    Tick increments for spectra in x and y
 c     doaxes  Draw x=0=y and label
 c     doframe Draw frame around spectrum and label
@@ -2425,13 +2471,13 @@ c
         if ((nofile.eq.1 .and. ispec.eq.1) .or. nofile.gt.1) then
           write (text, 5) ipos, ofile(1:len1(ofile))
 5         format ('Overlay ', i4, ' from file ', a, ' is not on',
-     +            ' the grey/contour image')
+     +            ' the pixel map/contour image')
           call bug ('w', text)
         end if
         return
       end if
 c
-c Convert spectrum location from contour/grey pixels to world coordinates
+c Convert spectrum location from contour/pixel map pixels to world coordinates
 c The rectangular view-port surrounding the spectrum is centred at x,y
 c
       call pix2wcg (.true., dble(pos(1)), 1, labtyp(1), naxis, 
@@ -2793,7 +2839,7 @@ c----------------------------------------------------------------------
 c     Finish key routine inputs for region of interest now.    Also
 c     return the header items for all further use when computing
 c     axis value related quantities.  These are the first contour
-c     or grey scale axis descriptors encountered.
+c     or pixel map axis descriptors encountered.
 c
 c  Input:
 c    maxnax        Maximum number of allowed dimenions for image
@@ -2847,9 +2893,9 @@ c
       character line*80
 c----------------------------------------------------------------------
 c
-c The grey scale and contour images have all been checked to be 
+c The pixel map and contour images have all been checked to be 
 c of the same dimensions.  Use any for 'region' keyword. There
-c must be a grey scale or contour image.
+c must be a pixel map or contour image.
 c
       if (cin.ne.' ') then
         call boxinput ('region', cin, boxes, maxbox)
@@ -2893,7 +2939,7 @@ c Tell user
 c
       call output (' ')
       call output ('The following planes will be averaged for the '//
-     +             'contour/grey scale images')
+     +             'contour/pixel map images')
       do i = 1, ngrps
         write (line, 100) grpbeg(i), grpbeg(i)+ngrp(i)-1
 100     format ('Planes ', i4, ' to ', i4)
@@ -2910,11 +2956,11 @@ c     Find out if spatial pixels over which this spectrum is averaged
 c     are blanked or not
 c
 c Input:
-c   pos     Spectrum location, x, y (contour/grey spatial pixels) 
+c   pos     Spectrum location, x, y (contour/pixel map spatial pixels) 
 c           xsize, ysize (arcsec)
-c   cdelt   COntour/grey pixel increments
-c   blc     BLC of displayed region in contour/grey pixels
-c   trc     TRC of displayed region in contour/grey pixels
+c   cdelt   COntour/pixel map pixel increments
+c   blc     BLC of displayed region in contour/pixel map pixels
+c   trc     TRC of displayed region in contour/pixel map pixels
 c   nx,ny   SIze of mask image
 c   mask    Mask.  0 means blanked, 1 unblanked
 c Output:
@@ -2933,7 +2979,7 @@ c
       parameter (ator = dpi/(180.0d0*3600.0))
 c-----------------------------------------------------------------------
 c
-c Positions that are centred off the edge of the grey/contour
+c Positions that are centred off the edge of the pixel map/contour
 c image are not displayed.  PLTSPC tells you about this.
 c So we ignore any such overlays here.  Not very modular.
 c
@@ -2941,7 +2987,7 @@ c
       if (pos(1).lt.blc(1) .or. pos(1).gt.trc(1) .or. 
      +    pos(2).lt.trc(1) .or. pos(2).gt.trc(2)) return
 c
-c Find spatial averaging region for this spectrum on grey scale or
+c Find spatial averaging region for this spectrum on pixel map or
 c contour image.  Pixel increments checked to be in radians in
 c OPENG and OPENC.   Spatial pixel increment may be different from
 c spectrum image, so this blanking check is approximate only.
@@ -3091,13 +3137,13 @@ c     Work ou the bounding box in absolute pixels for the sub-cube to
 c     average for the current spectrum position. 
 c
 c Input:
-c   cgnaxis NUmber of axes in contour/grey images
+c   cgnaxis NUmber of axes in contour/pixel map images
 c   snaxis  Number of axes in spectrum image
 c   labtyp  Axis type of plot
-c   pos     Spectrum location, x, y (contour/grey spatial pixels) 
+c   pos     Spectrum location, x, y (contour/pixel map spatial pixels) 
 c           xsize, ysize (arcsec)  x and y are full image unbinned
 c           pixels not just the displayed region pixels
-c   cr*     Header attributes of grey/contour images
+c   cr*     Header attributes of pixel map/contour images
 c   ssize   Size of spectrum image
 c   scr*    Header attributes of spectrum image
 c   vrange  Velocity range of interest
