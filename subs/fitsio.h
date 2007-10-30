@@ -2,6 +2,7 @@
 	include 'maxnax.h'
 c
 c  Parameters setting internal buffers.
+c  NOTE: We should ensure that 13*MAXCHAN is greater than MAXDIM.
 c
 	integer MAXSIZE,MAXCARDS,MAXOPEN
 	parameter(MAXSIZE=13*MAXCHAN,MAXCARDS=16,MAXOPEN=2)
@@ -25,6 +26,7 @@ c
 	integer BypPix(MAXOPEN)
 	logical float(MAXOPEN)
 	real bscale(MAXOPEN),bzero(MAXOPEN)
+	integer BlankVal(MAXOPEN)
 c
 c  For Image files.
 c
@@ -59,11 +61,10 @@ c  The common block which contains this mess.
 c
 	common/fits/TimOff,curlu,curcard,item,bscale,bzero,
      *	  scales1,scales2,zeros,axes,DatOff,HdOff,DatSize,HdSize,
-     *	  DatBase,PixBase,BypPix,ncards,nRanFile,nRanProg,ncomplex,
-     *	  indices1,indices2,visibs,pols,freqs,WtScal,new,opened,
-     *	  float,array
+     *	  DatBase,PixBase,BypPix,BlankVal,ncards,nRanFile,nRanProg,
+     *	  ncomplex,indices1,indices2,visibs,pols,freqs,WtScal,
+     *	  new,opened,float,array,rarray
 	common/fitsc/carray
-	equivalence(array,rarray)
 c
 c  Info to help find an extension table that we are interested in.
 c
@@ -86,24 +87,24 @@ c  Variables for i/o on an "A3DTABLE"
 c
 c  MAXCOL	Max number of columns a table can have.
 c  rows		Number of rows in the table.
-c  cols		Number of columns in the table.
+c  cols		Number of columns in the table
 c  width	The width of a row of a table, in bytes.
 c  ColForm	Gives the data type of a column. Its value with be
 c		one of the "Form" parameter values.
-c  ColCnt	Size of the data in this column, for one row, in bytes.
+c  ColCnt	Size of the data in this column, for one row, in bits.
 c  ColOff	Offset, in bytes, to the start of the data in each row.
 c  ColType	The "TTYPE" value.
 c  ColUnits	The "TUNIT" value.
 c  
 	integer MAXCOL,NFORMS
-	parameter(MAXCOL=32,NFORMS=5)
+	parameter(MAXCOL=40,NFORMS=6)
 	integer rows(MAXOPEN),cols(MAXOPEN),width(MAXOPEN)
 	integer ColForm(MAXCOL,MAXOPEN),ColCnt(MAXCOL,MAXOPEN)
 	integer ColOff(MAXCOL,MAXOPEN)
 	character ColType(MAXCOL,MAXOPEN)*16
 	character ColUnits(MAXCOL,MAXOPEN)*16
 c
-	integer FormI,FormJ,FormA,FormE,FormD
-	parameter(FormJ=1,FormI=2,FormA=3,FormE=4,FormD=5)
+	integer FormI,FormJ,FormA,FormE,FormD,FormX
+	parameter(FormJ=1,FormI=2,FormA=3,FormE=4,FormD=5,FormX=6)
 	common/fitstab/rows,cols,width,ColForm,ColCnt,ColOff
 	common/fitstabc/ColType,ColUnits
