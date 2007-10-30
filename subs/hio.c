@@ -19,6 +19,8 @@
         4-nov-94  rjs	Changes to the way trees and items are stored.
        15-nov-94  rjs	Fixed bug affecting small items being rewritten
 			before the dataset is closed.
+       27-dec-94  pjt   Fixed (?) bug in hexist for regular files
+			and documented this feature
 */
 
 
@@ -682,10 +684,12 @@ char *keyword;
 	character keyword*(*)
 
   Check if a particular item exists in a Miriad data-set.
+  By setting the input 'tno' to 0, one can also check for
+  existence of any regular file.
 
   Input:
-    tno		The handle of the data set.
-    keyword	The name of the item.
+    tno		The handle of the data set. 0 also allowed.
+    keyword	The name of the item or filename to check.
   Output:
     hexists	True if the item exists.
 /*--									*/
@@ -702,18 +706,20 @@ char *keyword;
 
 /* Check if the item is aleady here abouts. */
 
-  t = hget_tree(tno);
-  if(tno != 0){
+  if(tno != 0){			/* miriad dataset */
     item = NULL;
+    t = hget_tree(tno);
     for(item = t->itemlist; item != NULL; item = item->fwd)
       if(!strcmp(keyword,item->name))return(TRUE);
+    Strcpy(path,t->name);
+    Strcat(path,keyword);
+  } else {
+    Strcpy(path,keyword);	/* regular filename */
   }
 
 /* It was not found in the items currently opened, nor the items that
    live in "header". Now try and open a file with this name. */
 
-  Strcpy(path,t->name);
-  Strcat(path,keyword);
 
   dopen_c(&fd,path,"read",&size,&iostat);
   if(iostat)return(FALSE);
