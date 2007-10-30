@@ -48,6 +48,7 @@ c   25oct93   rjs    Prevent floating underflow in exp function.
 c   25oct94   rjs    Complete rewrite.
 c   15mar95   rjs    Better model for Hat Ck and WSRT.
 c   27jul95   rjs    Initialise ifail before calling rpolyzr
+c   06nov95   rjs    Larger ATCA primary beam size.
 c************************************************************************
 c* pbRead -- Determine the primary beam type of a dataset.
 c& rjs
@@ -354,9 +355,13 @@ c  Now set the scaling parameters.
 c
 	x0(pbObj) = x2(1)
 	y0(pbObj) = x2(2)
-	if(pbtype(k).eq.POLY)then
+	if(pbtype(k).eq.IPOLY.or.pbtype(k).eq.POLY)then
 	  xc(pbObj) = (f*cdelt1*180*60/pi)**2
 	  yc(pbObj) = (f*cdelt2*180*60/pi)**2
+	else if(pbtype(k).eq.BLOCKED)then
+	  alpha = 2*0.514497 * pi
+	  xc(pbObj) = (alpha*cdelt1*180*60/pi/fwhm(pbObj))**2
+	  yc(pbObj) = (alpha*cdelt2*180*60/pi/fwhm(pbObj))**2
 	else if(pbtype(k).eq.COS6)then
 	  alpha = 2*acos(2**(-0.1666667))
 	  xc(pbObj) = (alpha*cdelt1*180*60/pi/fwhm(pbObj)) ** 2
@@ -411,28 +416,44 @@ c    pbGet	Value of the primary beam.
 c--
 c------------------------------------------------------------------------
 	include 'pb.h'
-	real r2,P
+	double precision r2,P
+	real ax,r,b
 	integer k,off,i
+c
+c  Externals.
+c
+	real j1xbyx
 c
 	r2 = xc(pbObj)*(x-x0(pbObj))**2 + yc(pbObj)*(y-y0(pbObj))**2
 c
 	k = pnt(pbObj)
+	off = indx(k)
 c
 	if(r2.gt.maxrad(k))then
 	  pbGet = 0
-	else if(pbtype(k).eq.POLY.and.nvals(k).eq.5)then
-	  off = indx(k)
+	else if(pbtype(k).eq.IPOLY.and.nvals(k).eq.5)then
 	  pbGet = 1/(pbvals(off) + r2*( pbvals(off+1) +
      *				    r2*( pbvals(off+2) +
      *				    r2*( pbvals(off+3) +
      *				    r2*( pbvals(off+4) ) ) ) ) )
-	else if(pbtype(k).eq.POLY)then
+	else if(pbtype(k).eq.IPOLY.or.pbtype(k).eq.POLY)then
 	  off = indx(k)
 	  P = pbvals(off+nvals(k)-1)
 	  do i=off+nvals(k)-2,off,-1
 	    P = P*r2 + pbvals(i)
 	  enddo
-	  pbGet = 1/P
+	  if(pbtype(k).eq.IPOLY)then
+	    pbGet = 1/P
+	  else
+	    pbGet = P
+	  endif
+	else if(pbtype(k).eq.BLOCKED)then
+	  ax = sqrt(r2)
+	  r = pbvals(off)
+	  b = pbvals(off+1)
+	  P = 2*j1xbyx(ax)
+	  if(r.gt.0)P = (P - 2*r*j1xbyx(b*ax))/(1-r)
+	  pbGet = P*P
 	else if(pbtype(k).eq.COS6)then
 	  pbGet = cos(sqrt(r2))**6
 	else if(pbtype(k).eq.GAUS)then
@@ -478,7 +499,7 @@ c
 c
 	if(r2.gt.maxrad(k))then
 	  pbDer = 0
-	else if(pbtype(k).eq.POLY)then
+	else if(pbtype(k).eq.IPOLY.or.pbtype(k).eq.POLY)then
 	  off = indx(k)
 	  P = 0
 	  Pdash = 0
@@ -488,12 +509,19 @@ c
 	    Pdash = Pdash*r2 + n*pbvals(i)
 	    n = n - 2
 	  enddo
-	  pbDer = -Pdash/(freq(pbObj)*P*P)
+	  Pdash = Pdash / freq(pbObj)
+	  if(pbtype(k).eq.IPOLY)then
+	    pbDer = -Pdash/(P*P)
+	  else
+	    pbDer = Pdash
+	  endif
 	else if(pbtype(k).eq.COS6)then
 	  P = sqrt(r2)
 	  pbDer = -6*P/freq(pbObj)*cos(P)**5*sin(P)
 	else if(pbtype(k).eq.GAUS)then
 	  pbDer = -2*r2*exp(-r2)/freq(pbObj)
+	else if(pbtype(k).eq.BLOCKED)then
+	  call bug('f','Derivative of J1(x)/x p.b. not supported')
 	else if(pbtype(k).eq.SINGLE)then
 	  pbDer = 0
 	endif
@@ -523,18 +551,21 @@ c--
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'pb.h'
-	integer k
+	integer k,off
 	real alpha
 c
 	k = pnt(pbObj)
+	off = indx(k)
 	pbfwhmd = pi/180/60 * fwhm(pbObj)
 	cutoffd = cutoff(k)
 	if(pbtype(k).eq.GAUS)then
 	  maxradd = pbfwhmd * sqrt( -log(cutoffd)/(4*log(2.)) )
+	else if(pbtype(k).eq.BLOCKED)then
+	  maxradd = pbvals(off+2)*pbfwhmd
 	else if(pbtype(k).eq.COS6)then
 	  alpha = 2*acos(2.0**(-0.1666667))
 	  maxradd = pbfwhmd*acos(cutoffd**(0.1666667))/alpha
-	else if(pbtype(k).eq.POLY)then
+	else if(pbtype(k).eq.POLY.or.pbtype(k).eq.IPOLY)then
 	  maxradd = pi/180/60 * sqrt(maxrad(k))/freq(pbObj)
 	else
 	  maxradd = 0
@@ -588,12 +619,20 @@ c------------------------------------------------------------------------
 c
 c Set coefficients for each telescope and frequency range
 c
-	integer NCOEFF
-	parameter(NCOEFF=5)
-	real atcal(NCOEFF),atcas(NCOEFF),atcac(NCOEFF),atcax(NCOEFF)
+	integer NCOEFF,NATCAL1,NATCAL2,NATCAL3
+	parameter(NCOEFF=5,NATCAL3=3,NATCAL1=5,NATCAL2=7)
+	real atcas(NCOEFF),atcac(NCOEFF),atcax(NCOEFF)
+	real atcal3(NATCAL3),atcal1(NATCAL1),atcal2(NATCAL2)
 	real vla(NCOEFF)
 c
-	data atcal /1.0, 8.99e-4, 2.15e-6, -2.23e-9,  1.56e-12/
+	data atcal1 /1.0, 8.99e-4, 2.15e-6, -2.23e-9,  1.56e-12/
+	data atcal2 /1.0,-1.0781341990755E-03,
+     *			 4.6179146405726E-07,
+     *		      	-1.0108079576125E-10,
+     *		      	 1.2073518438662E-14,
+     *			-7.5132629268134E-19,
+     *			 1.9083641820123E-23/
+	data atcal3/0.023, 0.631, 2.0/
 	data atcas /1.0, 1.02e-3, 9.48e-7, -3.68e-10, 4.88e-13/
 	data atcac /1.0, 1.08e-3, 1.31e-6, -1.17e-9,  1.07e-12/
 	data atcax /1.0, 1.04e-3, 8.36e-7, -4.68e-10, 5.50e-13/
@@ -616,18 +655,22 @@ c
 c  Make the list of known primary beam objects. The ATCA primary beams
 c  are taken from ATNF technical memo by Wieringa and Kesteven.
 c
-	call pbAdd('ATCA',    1.15,1.88,    47.9, 0.03, POLY,
-     *							 NCOEFF,atcal)
-	call pbAdd('ATCA',    2.10,2.60,    49.7, 0.03, POLY,
+	call pbAdd('ATCA',  1.15,1.88,    47.9, 0.03,  IPOLY,
+     *							 NATCAL1,atcal1)
+	call pbAdd('ATCAL2',  1.15,1.88,    47.9, 0.002, POLY,
+     *							 NATCAL2,atcal2)
+	call pbAdd('ATCAL3',    1.15,1.88,    58.713*2*0.514497/1.22, 
+     *					    0.0,BLOCKED, NATCAL3,atcal3)
+	call pbAdd('ATCA',    2.10,2.60,    49.7, 0.03,  IPOLY,
      *							 NCOEFF,atcas)
-	call pbAdd('ATCA',    4.30,6.70,    48.3, 0.03, POLY,
+	call pbAdd('ATCA',    4.30,6.70,    48.3, 0.03,  IPOLY,
      *							 NCOEFF,atcac)
-	call pbAdd('ATCA',    7.90,9.3,    50.6, 0.03, POLY,
+	call pbAdd('ATCA',    7.90,9.3,     50.6, 0.03,  IPOLY,
      *							 NCOEFF,atcax)
 c
 c  VLA primary beam is taken from AIPS code.
 c
-	call pbAdd('VLA',     0.071,24.510, 44.3, 0.023,POLY,
+	call pbAdd('VLA',     0.071,24.510, 44.3, 0.023,IPOLY,
      *							 NCOEFF,vla)
 c
 c  The Hat Ck primary beam is a gaussian of size is 191.67 arcmin.GHz
@@ -670,6 +713,7 @@ c    nval	Number of values used to parameterize the functional form.
 c    vals	The parameterisation of the functional form.
 c------------------------------------------------------------------------
 	include 'pb.h'
+	include 'mirconst.h'
 	integer i
 c
 	npb = npb + 1
@@ -699,23 +743,29 @@ c
 	  maxrad(npb) = -log(cutoff(npb))
 	else if(pbtyped.eq.SINGLE)then
 	  maxrad(npb) = 1
+	else if(pbtyped.eq.BLOCKED)then
+	  maxrad(npb) = (2*0.514497*pi*vals(3))**2
 	else if(pbtyped.eq.COS6)then
 	  maxrad(npb) = acos(cutoff(npb)**0.1666667)**2
 	else if(pbtyped.eq.POLY)then
-	  call pbradp(cutoffd,vals,nval,pbfwhmd,maxrad(npb))
+	  call pbradp(.false.,cutoffd,vals,nval,pbfwhmd,maxrad(npb))
+	else if(pbtyped.eq.IPOLY)then
+	  call pbradp(.true.,cutoffd,vals,nval,pbfwhmd,maxrad(npb))
 	endif
 	end
 c************************************************************************
-	subroutine pbradp(cutoff,coeff,ncoeff,pbfwhm,maxrad)
+	subroutine pbradp(doinv,cutoff,coeff,ncoeff,pbfwhm,maxrad)
 c
 	implicit none
 	integer ncoeff
 	real cutoff,coeff(ncoeff),pbfwhm,maxrad
+	logical doinv
 c
 c  Determine the maximum radius at which the primary beam is still
 c  non-zero.
 c
 c  Input:
+c    doinv	True if the primary beam is 1/P(x)
 c    cutoff
 c    ncoeff
 c    coeff
@@ -739,7 +789,11 @@ c
 	  a(ncoeff-i+1) = fac * coeff(i)
 	  fac = fac * pbfwhm * pbfwhm
 	enddo
-	a(ncoeff) = a(ncoeff) - 1/cutoff
+	if(doinv)then
+	  a(ncoeff) = a(ncoeff) - 1/cutoff
+	else
+	  a(ncoeff) = a(ncoeff) - cutoff
+	endif
 c
 c  Now find the roots of the poly.
 c
@@ -756,7 +810,7 @@ c
 	      k = i
 	      found = .true.
 	    else
-	      if(real(roots(i)).lt.real(roots(k))) k = i
+	      if(real(roots(i)).gt.real(roots(k))) k = i
 	    endif
 	  endif
 	enddo
