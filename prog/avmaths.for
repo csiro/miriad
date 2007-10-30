@@ -58,6 +58,8 @@ c	"noreduce" causes the output image to be of the same dimensions
 c	    as the input image when REPLACEMENT is invoked.  By default,
 c	    the REPLACED output image is reduced to two dimensions as
 c	    there is probably no point to replicating one plane N times.
+c	    In this case, the output third axis descriptors reflect the size
+c	    of the bounding box of the selected region on the third axis
 c
 c	Pixels are blanked if the input pixel is blanked, the averaged
 c	channel pixel is blanked, or the output is undefined.
@@ -78,6 +80,9 @@ c		  and add BTYPE
 c    mjs  12mar93 Use maxnax.h rather than setting maxnax=5
 c    nebk 03jun94 CLarify use of region keyword
 c    nebk 28jun94 Add multiply option
+c    nebk 04jan96 With options=replace, make third axis descriptors
+c	          reflect size of the selected region on the third axis
+c    nebk 06may97 Comment out the "INcluding plane ..." message
 c------------------------------------------------------------------------
       implicit none
 c
@@ -86,17 +91,18 @@ c
       integer maxboxes, maxruns, maxplane
       character*20 version
       parameter (maxboxes = 1024, maxruns = 3*maxdim, maxplane = 1024)
-      parameter (version = '28-Jun-94')
+      parameter (version = '06-May-97')
 cc
       real buffer(maxbuf)
       integer avpnt, npnt
       common buffer
 c
+      double precision cdelt3, zav
       real rline(maxdim)
       integer nruns, runs(3,maxruns), planes(maxplane), nplanes,
      +xblc, xtrc, yblc, ytrc, boxes(maxboxes), blc(maxnax), 
      +trc(maxnax), size(maxnax), i, k, naxis, lin, lout, isnext,
-     +istart(maxplane), iend(maxplane), nsect, size3 
+     +istart(maxplane), iend(maxplane), nsect, size3
       character in*80, out*80, aline*72, itoaf*1, str*1
       logical more, flags(maxdim), dosub, dood, dorepl, dored, domul
 c
@@ -162,8 +168,7 @@ c
         end if
       end do
 c
-c  Create the output image, copy the header keywords from the 
-c  input image and add the new history
+c  Create the output image
 c
       size3 = size(3)
       if (dored) then
@@ -176,11 +181,12 @@ c
         end do
       end if
 c
+c Open output image and copy header keywords
+c
       call xyopen (lout, out, 'new', naxis, size)
       do i = 1, nkeys
         call hdcopy (lin, lout, keyw(i))
       end do
-c
 c
 c  Write the history.
 c
@@ -207,7 +213,7 @@ c
 c Average the selected planes and hold in memory
 c
       call average (size(1), size(2), lin, nplanes, planes, rline, 
-     +              flags, buffer(avpnt), buffer(npnt))
+     +              flags, buffer(avpnt), buffer(npnt), zav)
 c
 c  Now compute and write out the output image 
 c
@@ -227,6 +233,17 @@ c
          call replace (lout, size(1), size(2), size(3), rline,
      +                 flags, buffer(avpnt), buffer(npnt))
          call hdcopy (lin, lout, 'bunit')
+c
+c Fix up header if reduced
+c
+         if (dored) then
+           call rdhdd (lin, 'cdelt3', cdelt3, 0.d0)
+           cdelt3 = cdelt3 * nplanes
+c
+           call wrhdd (lout, 'cdelt3', cdelt3)
+           call wrhdd (lout, 'crpix3', 1.0d0)
+           call wrhdd (lout, 'crval3', zav)
+         end if
       end if 
 c
 c  Close up
@@ -406,7 +423,7 @@ c
 c
 c
       subroutine average (nx, ny, lin, nplanes, planes, rline, flags,
-     +                    aver, norm)
+     +                    aver, norm, zav)
 c----------------------------------------------------------------------
 c     Average unblanked pixels from selected planes
 c
@@ -423,24 +440,36 @@ c     norm     The normalization image.  If 0, then there is no good
 c              point for the corresponding averaged image (i.e. all 
 c              the planes were blanked at that pixel) so the output
 c              should be blanked at that pixel
+c     zav      The average value of the third axis from the selected 
+c              planes
 c-----------------------------------------------------------------------
       implicit none
 c
       integer lin, nplanes, planes(nplanes), nx, ny
+      double precision zav
       real aver(nx,ny), norm(nx,ny), rline(*)
       logical flags(*)
 cc
+      double precision crpix3, crval3, cdelt3
       integer i, j, k
       character aline*72
 c-----------------------------------------------------------------------
 c
+c Get axis descriptors
+c
+      call rdhdd (lin, 'cdelt3', cdelt3, 0.d0)
+      call rdhdd (lin, 'crpix3', crpix3, 0.d0)
+      call rdhdd (lin, 'crval3', crval3, 0.d0)
+c
 c Accumulate desired planes
 c
+      zav = 0.0d0
       do k = 1, nplanes
         call xysetpl (lin, 1, planes(k))
         write (aline, 20) planes(k)
 20      format (' Including plane ', i4, ' in average')
-        call output(aline)
+c        call output(aline)
+        zav = zav + (dble(planes(k))-crpix3)*cdelt3+crval3
 c
         do j = 1, ny
            call xyread  (lin, j, rline)
@@ -454,6 +483,7 @@ c
            end do
         end do
       end do
+      zav = zav / dble(nplanes)
       call output (' ')
 c
 c Now normalize averaged image
