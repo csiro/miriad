@@ -591,6 +591,7 @@ c    nebk 23jan97  Was getting vector scales wrong if first subplot
 c                  all blank.
 c    nebk 13feb97  Add keyword "3form", finally admitting defeat
 c    nebk 24mar97  Add COLS1 keyword
+c    nebk 01apr97  Don't write overlat ID string if overlay off plot
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -653,7 +654,7 @@ c
       data lwid /maxconp3*1/
       data getvsc /.true./
 c-----------------------------------------------------------------------
-      call output ('CgDisp: version 24-Mar-97')
+      call output ('CgDisp: version 01-Apr-97')
       call output (' ')
 c
 c Get user inputs
@@ -2035,8 +2036,8 @@ c
 c
 c Write overlay identifying number
 c
-        if (owrite) call overid (doerase, ofig, real(ocen(1)), 
-     +                real(ocen(2)), xl, xr, yb, yt, oid, csize)
+        if (.not.miss .and. owrite) call overid (doerase, ofig, 
+     +     real(ocen(1)), real(ocen(2)), xl, xr, yb, yt, oid, csize)
       end if
 c
       end
