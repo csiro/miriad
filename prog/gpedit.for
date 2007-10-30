@@ -40,6 +40,7 @@ c	The following option operates on the polarization leakages:
 c	  reflect   The existing leakages are made to possess a
 c	            symmetry: For each antenna, we make
 c	            DX = -conjg(DY).
+c	  zmean     Subtract an offset, so that the mean leakage is 0.
 c
 c	Example:
 c	  gpedit vis=cyga gain=14.4,90 select=ant(1,2) feeds=X
@@ -50,6 +51,7 @@ c    mchw  23apr96 keyword driven task for the squeamish. Instead of BEE.
 c    rjs   25feb97 Tidy up and extend the possibilities.
 c    rjs   26feb97 Fix feeds reading.
 c    rjs   24jun97 Add the reflect option.
+c    rjs   01aug97 Added options=zmean.
 c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
@@ -60,7 +62,7 @@ c-----------------------------------------------------------------------
 	parameter(MAXFEED=2,MAXSELS=300)
 c
 	character vis*64
-	logical domult,dorep,doflag,doamp,dophas,dorefl
+	logical domult,dorep,doflag,doamp,dophas,dorefl,dozm
 	logical dogain,doleak
 	integer iostat,tVis,itGain,itLeak,nants,nfeeds,nsols,ntau,i
 	integer numfeed,feeds(MAXFEED),nleaks
@@ -85,9 +87,9 @@ c
 	call keyr('gain',amp,1.)
 	call keyr('gain',phi,0.)
 	call mkeyfd('feeds',feeds,MAXFEED,numfeed)
-        call GetOpt(dorep,domult,doflag,doamp,dophas,dorefl)
+        call GetOpt(dorep,domult,doflag,doamp,dophas,dorefl,dozm)
 	dogain = dorep.or.domult.or.doflag.or.doamp.or.dophas
-	doleak = dorefl
+	doleak = dorefl.or.dozm
 	call keyfin
 c
 c  Open the input file. Use the hio routines, as all we want to get
@@ -186,7 +188,7 @@ c
 	  call hreadr(itLeak,Leaks,8,16*nLeaks,iostat)
 	  if(iostat.ne.0)call EditBug(iostat,
      *				'Error reading leakage table')
-	  if(dorefl)call LeakRefl(Leaks,nLeaks,sels)
+	  if(dorefl.or.dozm)call LeakIt(Leaks,nLeaks,sels,dorefl,dozm)
 	  call hwriter(itLeak,Leaks,8,16*nLeaks,iostat)
 	  call hdaccess(itLeak,iostat)
 	endif
@@ -203,29 +205,50 @@ c
 	call hclose(tVis)	
 	end
 c************************************************************************
-	subroutine LeakRefl(Leaks,nants,sels)
+	subroutine Leakit(Leaks,nants,sels,dorefl,dozm)
 c
 	implicit none
 	integer nants
 	real sels(*)
 	complex Leaks(2,nants)
+	logical dorefl,dozm
 c
 c  Make the leakages have that funny symmetry.
 c------------------------------------------------------------------------
-	integer i
+	integer i,n
 	complex D
 c
 c  Externals.
 c
 	logical SelProbe
 c
-	do i=1,nants
-	  if(SelProbe(sels,'antennae',dble(257*i)))then
-	    D = 0.5*(Leaks(1,i) - conjg(Leaks(2,i)))
-	    Leaks(1,i) = D
-	    Leaks(2,i) = -conjg(D)
-	  endif
-	enddo
+	if(dorefl)then
+	  do i=1,nants
+	    if(SelProbe(sels,'antennae',dble(257*i)))then
+	      D = 0.5*(Leaks(1,i) - conjg(Leaks(2,i)))
+	      Leaks(1,i) = D
+	      Leaks(2,i) = -conjg(D)
+	    endif
+	  enddo
+	endif
+c
+	if(dozm)then
+	  D = 0
+	  n = 0
+	  do i=1,nants
+	    if(SelProbe(sels,'antennae',dble(257*i)))then
+	      D = D + Leaks(1,i) - conjg(Leaks(2,i))
+	      n = n + 2
+	    endif
+	  enddo
+	  D = D / n
+	  do i=1,nants
+	    if(SelProbe(sels,'antennae',dble(257*i)))then
+	      Leaks(1,i) = Leaks(1,i) - D
+	      Leaks(2,i) = Leaks(2,i) + conjg(D)
+	    endif
+	  enddo
+	endif
 c
 	end
 c********1*********2*********3*********4*********5*********6*********7*c
@@ -471,20 +494,21 @@ c-----------------------------------------------------------------------
 	call bugno('f',iostat)
 	end
 c********1*********2*********3*********4*********5*********6*********7*c
-        subroutine GetOpt(dorep,domult,doflag,doamp,dophas,dorefl)
+        subroutine GetOpt(dorep,domult,doflag,doamp,dophas,dorefl,dozm)
 c       
         implicit none
-	logical dorep,domult,doflag,doamp,dophas,dorefl
+	logical dorep,domult,doflag,doamp,dophas,dorefl,dozm
 c
 c  Get the various processing options.
 c
 c-----------------------------------------------------------------------
         integer NOPTS
-        parameter(NOPTS=6)
+        parameter(NOPTS=7)
         character opts(NOPTS)*9
         logical present(NOPTS)
         data opts/'replace  ','multiply ','flag     ',
-     *		  'amplitude','phase    ','reflect  '/
+     *		  'amplitude','phase    ','reflect  ',
+     *		  'zmean    '/
 c
         call options('options',opts,present,NOPTS)
 c
@@ -494,7 +518,8 @@ c
 	doamp  = present(4)
 	dophas = present(5)
 	dorefl = present(6)
+	dozm   = present(7)
 	if(.not.(domult.or.dorep.or.doflag.or.doamp.or.dophas.or.
-     *	  dorefl)) dorep = .true.
+     *	  dorefl.or.dozm)) dorep = .true.
 c
 	end
