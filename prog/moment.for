@@ -58,10 +58,11 @@ c		   indexor's (i0,j0) in moment3 wrong if blc,trc used
 c    04jan96 nebk  Write header descriptors as double precision
 c    26nov96 rjs   Increase length of input and output file names.
 c    07mar97 rjs   Improve a message.
+c    30jun97 rjs   Change units of 0th moment image to be jy/beam.km/s
 c------------------------------------------------------------------------
 	include 'maxdim.h'
  	character version*(*)
-	parameter(version='version 1.0 26-Nov-96')
+	parameter(version='version 1.0 30-Jun-97')
 	integer maxnax,maxboxes,maxruns,naxis
 	parameter(maxnax=3,maxboxes=2048)
 	parameter(maxruns=3*maxdim)
@@ -169,21 +170,28 @@ c    blc,trc	The corners of the input image.
 c    mom	The moment to be calculated.
 c    axis	The axis for which the moment is calculated.
 c------------------------------------------------------------------------
-	integer nkeys, nckeys,i,j,k
-	parameter (nkeys=22, nckeys=4)
-	character keyw(nkeys)*9, ckeyw(nckeys)*5, itoaf*1, cin*1, cout*1
-	character atemp*9,ctype*10
+	character atemp*16,ctype*10,cin*2,cout*2
 	double precision rtemp,cdelt,crval,crpix,idx
+	integer i,j,k,l
+c
+c  Externals.
+c
+	character itoaf*2
+	integer len1
 	logical hdprsnt
 c
 c  Be careful that nkeys and nckeys match the number of keywords.
-c	bunit is a special case for this task.
+c
+	integer nkeys,nckeys
+	parameter (nkeys=21, nckeys=4)
+	character keyw(nkeys)*8, ckeyw(nckeys)*5
 c
 	data keyw/   'bmaj    ','bmin    ','bpa     ',
-     *    'date-obs','epoch   ','history ','instrume',
-     *	  'ltype   ','lstart  ','lwidth  ','lstep   ','niters  ',
-     *	  'object  ','observer','obsra   ','obsdec  ','pbfwhm  ',
-     *    'restfreq','telescop','vobs    ','xshift  ','yshift  '/
+     *    'obstime ','epoch   ','history ',  
+     *    'ltype   ','lstart  ','lstep   ','lwidth  ','pbfwhm  ',
+     *    'instrume','niters  ','object  ','telescop',
+     *    'restfreq','vobs    ','observer','obsra   ',
+     *    'obsdec  ','mostable'/
 c
 c  Keyword values which must be changed as they are passed from in to out.
 c
@@ -204,10 +212,8 @@ c
 	    cin = itoaf(i)
 	    cout = itoaf(j)
 	    atemp = ckeyw(1)//cin
-	    if(hdprsnt(lin,atemp)) then
-	      call rdhda(lin,ckeyw(1)//cin,atemp,' ')
-	      call wrhda(lout,ckeyw(1)//cout,atemp)
-	    endif
+	    call rdhda(lin,ckeyw(1)//cin,atemp,' ')
+	    if(atemp.ne.' ')call wrhda(lout,ckeyw(1)//cout,atemp)
 	    do k = 2,nckeys
 	      atemp = ckeyw(k)//cin
 	      if(hdprsnt(lin,atemp)) then
@@ -228,23 +234,21 @@ c
 c
 c  bunit is usually a pain.  For this program it is relatively simple.
 c
-	if(mom.eq.-1 .or. mom.eq.0) then
-	  if(hdprsnt(lin,'bunit')) then
-            call rdhda(lin,'bunit',atemp,' ')
-            call wrhda(lout,'bunit',atemp)
+	if(mom.eq.-1)then
+	  call hdcopy(lin,lout,'bunit')
+	else if(mom.eq.0)then
+	  call rdhda(lin,'bunit',atemp,' ')
+	  l = len1(atemp)
+	  if(l.gt.0)then
+	    atemp(l+1:) = '.KM/S'
+	    call wrhda(lout,'bunit',atemp)
 	  endif
-          call wrbtype(lout,'intensity')
-	else 
-	  if(mom.eq.1.or.mom.eq.2) then
-            atemp = 'KM/S'
-            call wrhda(lout,'bunit',atemp)
-            call wrbtype(lout,'velocity')
-	  else
-            cin = itoaf(mom)
-            atemp = 'KM/S**'//cin
-            call wrhda(lout,'bunit',atemp)
-            call wrbtype(lout,'velocity_dispersion')
-	  endif
+	else if(mom.eq.1)then
+          call wrhda(lout,'bunit','KM/S')
+          call wrbtype(lout,'velocity')
+	else
+          call wrhda(lout,'bunit','KM/S**'//itoaf(mom))
+          call wrbtype(lout,'velocity_dispersion')
 	endif
 c
 c  Write out additional information about the ``third'' dummy axis.
@@ -281,17 +285,12 @@ c    axis	The axis for which the moment is calculated.
 c    clip	Pixel values in range clip(1) to clip(2) are excluded.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
+	include 'mirconst.h'
+	include 'mem.h'
 	real scale,restfreq,offset
 	real crpix,cdelt,crval
 	integer n1,n2,pSum,pFlags
 	character ctype*9,cin*1
-c
-c  Dynamic memory junk.
-c
-	real ref(MAXBUF)
-	logical lref(MAXBUF)
-	equivalence (ref,lref)
-	common ref
 c
 c  Externals.
 c
@@ -310,16 +309,15 @@ c
 c
 	if(mom .eq. -1) then
 	  scale = 1.0 / real(trc(axis)-blc(axis)+1)
-	else if(mom .eq. 0) then
-	  scale = 1.
 	else
 	  scale = cdelt
 	  if(ctype(1:4).eq.'FREQ') then
             call rdhdr(lin,'restfreq',restfreq,0.)
             if(restfreq .eq. 0.)
      *	      call bug('f','restfreq not present in header.')
-            scale = cdelt * 2.99793e5 / restfreq
-          endif
+            scale = cdelt * CMKS*1e-3 / restfreq
+	  endif
+	  if(mom.eq.0)scale = abs(scale)
 	endif
 c
 c  Get offset in channels.
@@ -345,7 +343,7 @@ c
 	  call memalloc(pSum,3*n1*n2,'r')
 	  call memalloc(pFlags,n1*n2,'l')
 	  call moment3(lIn,lOut,naxis,blc,trc,mom,scale,offset,clip,
-     *	    ref(pSum),lref(pFlags),n1,n2)
+     *	    memr(pSum),meml(pFlags),n1,n2)
 	  call memfree(pFlags,n1*n2,'l')
 	  call memfree(pSum,3*n1*n2,'r')
 	endif
@@ -400,7 +398,7 @@ c  Normalize and scale the moments.
 c
 	    flux = sum(j)
 	    if(flux.ne.0.) then
-	      if(mom.eq.-1) sum(j) = sum(j) * scale
+	      sum(j) = sum(j) * scale
 	      if(mom.ge.1) sum1(j) = sum1(j)/flux
 	      outflags(j) = .true.
 	      if(mom.eq.2) then
@@ -505,7 +503,7 @@ c
 	  do i = 1,n1
 	    flux = sum(i,j,1)
 	    if(flux.ne.0.) then
-	      if(mom.eq.-1) sum(i,j,1) = sum(i,j,1) * scale
+	      sum(i,j,1) = sum(i,j,1) * scale
 	      if(mom.ge.1) sum(i,j,2) = sum(i,j,2)/flux
 	      outflag(i,j) = .true.
 	      if(mom.eq.2) then
