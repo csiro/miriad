@@ -34,6 +34,7 @@ c    rjs 25apr94  Corrected call sequence to hclose.
 c    rjs  2sep94  Changes to use the co.for routines.
 c    rjs 20oct94  Increase max number of separate regions
 c    rjs 23nov94  Added BoxCount to count the pixels in a plane.
+c    rjs  6sep95  Check selected region really does fall within the image.
 c************************************************************************
 c* Boxes -- Summary of region of interest routines.
 c& mjs
@@ -831,12 +832,15 @@ c
 	    if(boxes(offset+ZMIN).eq.0) boxes(offset+ZMIN) = zmind
 	    if(boxes(offset+ZMAX).eq.0) boxes(offset+ZMAX) = zmaxd
 c
-	    if(boxes(offset+XMAX).gt.boxes(NX))
-     *	    call bug('f','Subregion naxis1 is larger than image naxis1')
-	    if(boxes(offset+YMAX).gt.boxes(NY))
-     *	    call bug('f','Subregion naxis2 is larger than image naxis2')
-	    if(boxes(offset+ZMAX).gt.boxes(NZ))
-     *	    call bug('f','Subregion naxis3 is larger than image naxis3')
+	    if( boxes(offset+XMIN).lt.1.or.
+     *		boxes(offset+XMAX).gt.boxes(NX))
+     *	    call bug('f','Subregion extends beyond image on axis 1')
+	    if( boxes(offset+YMIN).lt.1.or.
+     *		boxes(offset+YMAX).gt.boxes(NY))
+     *	    call bug('f','Subregion extends beyond image on axis 2')
+	    if( boxes(offset+ZMIN).lt.1.or.
+     *		boxes(offset+ZMAX).gt.boxes(NZ))
+     *	    call bug('f','Subregion extends beyond image on axis 3')
 	    offset = offset + HDR + boxes(offset+SIZE)
 	  enddo
 	endif
