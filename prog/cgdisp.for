@@ -10,7 +10,8 @@ c	representations, vectors and scaled boxes on a PGPLOT device.
 c	Upto 3 contour plots, one pixel map, one vector plot and one box 
 c	display may be overlaid in multi-panel plots of multi-channel 
 c	images.  In addition overlay locations (plotted as boxes, stars,
-c	lines or see-through) may be specified from an ascii text file.
+c	circles, lines or see-through) may be specified from an ascii 
+c	text file.
 c
 c	Manipulation of the device colour lookup table is available
 c	when you display with a pixel map representation (formerly
@@ -40,9 +41,9 @@ c	image) provided all the 3-D images have the same third dimension.
 c	These images can be input in any order (see TYPE).
 c	Wild card expansion is supported.    No default.
 c@ type
-c	Specifies the type of each image listed in the IN keyword.
-c	Minimum match is supported (note that "pixel" was formerly "grey"
-c	which is still supported).   Choose from:
+c	Specifies the type of each image, respectively, listed in the IN 
+c	keyword. Minimum match is supported (note that "pixel" was 
+c	formerly "grey" [which is still supported]).   Choose from:
 c
 c	"contour"   (contour;            up to 3 of these)
 c	"pixel"     (pixel map;          up to 1 of these)
@@ -169,9 +170,9 @@ c	"abskms"    the label is in Km/s
 c	"relkms"    the label is in Km/s offsets
 c	"absghz"    the label is in GHz
 c	"relghz"    the label is in GHz offsets
-c	"abslin"    the label is in linear coordinates as defined by 
-c	            the header. You might call this the natural axis label
-c	"rellin"    the label is in offset linear coordinates
+c	"absnat"    the label is in natural coordinates as defined by 
+c	            the header. 
+c	"relnat"    the label is in offset natural coordinates
 c	"none"      no label and no numbers or ticks on the axis
 c
 c	All offsets are from the reference pixel.  
@@ -180,15 +181,11 @@ c	LABTYP(2) defaults to "dms"  (to give RA and DEC)
 c@ options
 c	Task enrichment options. Minimum match of all keywords is active.
 c
-c	"relax" means issue warnings when image axis descriptors are
-c	  inconsistent (e.g. different pixel increments) instead
-c	  of a fatal error.  Use at your peril.
-c
-c	"full" means do full plot annotation with contour levels, pixel
-c	  displa range, file names, reference values, etc.  Otherwise 
-c	  more room for the plot is available. 
-c	"noepoch" means don't write the epoch value into the axis labels
-c
+c	"beamAB", where "A" is one of "b" or "t" and 
+c	                "B" is one of "l" or "r"
+c	  means draw the beam FWHM on the plot in the corner indicated
+c	  by the "AB" location.  The beams for all images displayed
+c	  (contour and pixel map) will be drawn confocally.
 c	"fiddle" means enter a routine to allow you to interactively change
 c	  the display lookup table.  You can cycle through a variety of
 c	  colour lookup tables, as well as alter a linear transfer function
@@ -202,16 +199,58 @@ c	  fiddler is not available.   Note that if you are using "cgdisp"
 c	  from a script, so that interactive fiddling is not appropriate,
 c	  you can use the "range" keyword to specify the transfer
 c	  function and colour lookup tables.
+c	"full" means do full plot annotation with contour levels, pixel
+c	  displa range, file names, reference values, etc.  Otherwise 
+c	  more room for the plot is available. 
+c	"gaps" means leave gaps between subplots and label each 
+c	  subplot, otherwise they will abut each other with just
+c	  a small amount of space between each subplot, and only
+c	  labelled around the borders of the full page
+c	"grid" means draw a coordinate grid on the plot rather than just ticks
+c	"mirror" causes all specified contour levels for all images
+c	  to be multiplied by -1 and added to the list of contours
+c	"nodistort" means that angularly-defined overlays do not distort 
+c	  with the coordinate grid.  If you are displaying a large area of 
+c	  the sky, such that the non-linearities in the coordinate system 
+c	  can be seen, then by default, the overlays (keyword OLAY) will 
+c	  distort with the coordinate grid if you are using angular units 
+c	  for the overlay locations and half sizes.  Thus star overlays
+c	  will rotate and stretch, circles will distort similarly. 
+c	  Overlays given in non-angular units will always be undistorted.
+c	"noepoch" means don't write the epoch value into the axis labels
+c	"noerase" means don't erase a rectangle into which the "3-axis"
+c	  values and the overlay ID strings are written.
+c	"nofirst" means don't write the first x-axis label on any subplots
+c	  except for the left-most one. This may avoid label overwrite.
+c	"relax" means issue warnings when image axis descriptors are
+c	  inconsistent (e.g. different pixel increments) instead
+c	  of a fatal error.  Use at your peril.
+c	"rot90" rotates vectors by an extra 90 degrees.  Useful
+c	  to convert E-vectors into B-vectors
+c	"signs"  Normally, when plotting vectors, CGDISP assumes that
+c	  North is up and East to the left.  If OPTIONS=SIGNS, then
+c	  it assumes that E and N are in the direction of increasing
+c	  X and Y.
 c	"single" means that when you have selected OPTIONS=FIDDLE and you
 c	  you have more than one subplot per page, activate the fiddle
 c	  option after each subplot rather than the default, which is
 c	  to fiddle only at the end.  In the latter case, the histogram
 c	  equalization, if invoked, will have been computed with the 
 c	  image in the last subplot only.
+c	"solneg1" means make negative contours solid and positive 
+c	  contours dashed for the first contour image. The default, 
+c	  and usual convention is the reverse.
+c	"solneg2" SOLNEG1 for the second contour image.
+c	"solneg3" SOLNEG1 for the third contour image.
+c	"trlab" means label the top and right axes as well as the 
+c	  bottom and left ones.  This can be useful when non-linear coordinate
+c	  variation across the field makes the ticks misaligned
+c	"unequal" means draw plots with unequal scales in x and y
+c	  so that the plot surface is maximally filled.  The default
+c	  is for equal scales in x and y.
 c	"wedge" means that if you are drawing a pixel map, also draw
 c	  and label a wedge to the right of the plot, showing the map 
 c	  of intensity to colour.
-c
 c	"3value" means label each sub-plot with the appropriate 
 c	  value of the third axis (e.g. velocity or frequency for an
 c	  xyv ordered cube, position for a vxy ordered cube).
@@ -226,43 +265,6 @@ c	  first 2. E.g., the cube is in vxy order and LABTYP=ABSKMS,ARCSEC
 c	  the units for the "3VALUE" label will be arcsec.  If 
 c	  LABTYP=ABSKMS,HMS the "3VALUE" label will be DMS (if the 
 c	  third [y] axis is declination).
-c	"noerase" means don't erase a rectangle into which the "3-axis"
-c	  values and the overlay ID strings are written.
-c	  
-c	  
-c	"beamAB", where "A" is one of "b" or "t" and 
-c	                "B" is one of "l" or "r"
-c	  means draw the beam FWHM on the plot in the corner indicated
-c	  by the "AB" location.  The beams for all images displayed
-c	  (contour and pixel map) will be drawn confocally.
-c
-c	"solneg1" means make negative contours solid and positive 
-c	  contours dashed for the first contour image. The default, 
-c	  and usual convention is the reverse.
-c	"solneg2" SOLNEG1 for the second contour image.
-c	"solneg3" SOLNEG1 for the third contour image.
-c	"mirror" causes all specified contour levels for all images
-c	  to be multiplied by -1 and added to the list of contours
-c
-c	"rot90" rotates vectors by an extra 90 degrees.  Useful
-c	  to convert E-vectors into B-vectors
-c	"signs"  Normally, when plotting vectors, CGDISP assumes that
-c	  North is up and East to the left.  If OPTIONS=SIGNS, then
-c	  it assumes that E and N are in the direction of increasing
-c	  X and Y.
-c
-c	"unequal" means draw plots with unequal scales in x and y
-c	  so that the plot surface is maximally filled.  The default
-c	  is for equal scales in x and y.
-c	"gaps" means leave gaps between sub-plots and label each 
-c	  sub-plot, otherwise they will abut each other.
-c	"nofirst" means don't write the first x-axis label on any subplots
-c	  except for the left-most one. This may avoid label overwrite.
-c
-c	"grid" means draw a coordinate grid on the plot rather than just ticks
-c	"trlab" means label the top and right axes as well as the 
-c	  bottom and left ones.  This can be useful when non-linear coordinate
-c	  variation across the field makes the ticks misaligned
 c@ lines
 c 	Up to 6 values.  The line widths for the axes, each contour 
 c       image (in the order of TYPE), the vector image, and any overlays.
@@ -282,7 +284,7 @@ c	(if option "write" in OLAY used) label.
 c	Defaults choose something sensible.  Use 0.0 to default the 
 c	first or second, but not the second or third, e.g., 0.0, 1.5
 c@ scale
-c	Up to 2 values.  Scales in linear axis units/mm with which to plot
+c	Up to 2 values.  Scales in natural axis units/mm with which to plot
 c	in the 	x and y directions.  For example, if the increments 
 c	per pixel are in radians, then this number would be radians/mm
 c	(note that for RA axes you give radians on the sky per mm).
@@ -320,8 +322,8 @@ c	OFIG  XOTYPE  YOTYPE  ID  WRITE      where
 c
 c	OFIG is the type of overlay; choose from
 c	 "star"    for stars (crosses; give centre and half-sizes)
-c	 "circle"  for a filled in circle (give centre)
-c	 "ocircle" for an open circle (give centre)
+c	 "circle"  for a filled in circle (give centre and radius)
+c	 "ocircle" for an open circle (give centre and radius)
 c	 "box"     for boxes (give centre and half-sizes)
 c	 "line"    for line segments (give blc and trc)
 c	 "clear"   for a see-through overlay -- thus you can write the
@@ -331,18 +333,22 @@ c	XOTYPE and YOTYPE  give the units of the overlay location (and
 c	overlay half-sizes) contained in the file for the x- and y-
 c	directions, respectively.  Choose from:
 c	 "hms", "dms", "arcsec", "arcmin", "absdeg", "reldeg", "abspix",
-c	 "relpix", "abslin", "rellin", "absghz", "relghz", 
+c	 "relpix", "absnat", "relnat", "absghz", "relghz", 
 c	 "abskms", & "relkms"  as described in the keyword LABTYP.  
 c	Note that OTYPE does not depend upon what you specified for LABTYP.
 c
 c	ID is an identifying overlay string which can be optionally
 c	written on the overlay; it MUST be in the overlay file whether
 c	you write it on the plot or not).  The ID string is written in the
-c	corner for "star" and "box", in the centre for "clear" and
-c	at the end for "line"
+c	corner for "star" and "box", in the centre for "clear", "circle"
+c	at the end for "line".  Note that the underscore character "_"
+c	is treated a special case and is replaced by a blank before plotting.
+c	In this way, you can write several words as the overlay ID; you
+c	connect them with underscores in the overlay file, and cgdisp
+c	strips them out before plotting.
 c
 c	WRITE is "yes" or "no" to specify if the overlay ID is to be 
-c	written in the corner of overlay figure or not.
+c	written in the overlay figure or not.
 c
 c
 c	 ##### Columns beyond number 5 depend upon OFIG, XOTYPE, and YOTYPE
@@ -360,13 +366,13 @@ c	(X1,Y1) & (X2,Y2) are the end points of the line segment in the
 c	nominated OTYPE (mixed OTYPEs are supported here too).
 c	For %OTYPE = "abspix ", "relpix", "arcsec", "arcmin", "absdeg", 
 c		     "reldeg", "absghz", "relghz", "abskms", "relkms", 
-c		     "abslin" & "rellin" X,Y,X1,Y1,X2,Y2 are single numbers.
+c		     "absnat" & "relnat" X,Y,X1,Y1,X2,Y2 are single numbers.
 c
 c	For %OTYPE = "hms" or "dms", the X and/or Y location is/are replaced
 c	by three numbers such as  HH MM SS.S or DD MM SS.S.  Thus if
 c	XOTYPE=hms & YOTYPE=dms then the file should have lines like
 c
-c	  HH MM SS.S   DD MM SS.S   XS   YS  CHAN    for OFIG="box"
+c	  HH MM SS.S   DD MM SS.S   XS   YS  CHAN    for OFIG="box", say
 c
 c
 c	XS, YS are the overlay half-sizes in the following units.
@@ -377,9 +383,12 @@ c		 "arcmin"              in arcminutes
 c		 "absdeg" and "reldeg" in degrees
 c		 "absghz" and "relghz" in GHz
 c		 "abskms" and "relkms" in Km/s
-c	 	 "abslin" and "rellin" in linear coordinates
+c	 	 "absnat" and "relnat" in natural coordinates
+c
 c	S is the radius of circle overlays.  It is in the units given
-c	in the above list according to XOTYPE only.
+c	in the above list according to XOTYPE only.  When using angular
+c	units, circles will only come out round if the X and Y axes
+c	are both angular and you plot with equal scales in X and Y
 c
 c	CS to CE is the channel range (image planes) on which to put the 
 c	overlays.  If you specify only CS than the overlay is put
@@ -534,6 +543,9 @@ c    nebk 03sep95  Options=grid,trlab. Nonlinear axis labels and detect
 c		   if display has black or white background
 c    nebk 09oct95  More care with overlay display channels
 c    nebk 19oct95  Eliminate MAXGR parameter in favour of MAXCHAN
+c    nebk 12nov95  Change to deal internally only in absolute pixels 
+c		   Better job on overlays, add options=nodistort
+c                  '*lin' -> '*nat'
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -541,64 +553,45 @@ c
       include 'maxnax.h'
       include 'mem.h'
       real wedwid, wedisp, tfdisp
-      integer maxlev, maxpos, nxdef, nydef, maxcon, 
-     +        maxtyp, nbins
-      parameter (maxlev = 50, maxpos = 1000, nxdef = 4, maxtyp = 15,
-     +  nydef = 4, maxcon = 3, wedwid = 0.05,
-     +  wedisp = 1.0, tfdisp = 0.5, nbins = 128)
+      integer maxlev, nxdef, nydef, maxcon, maxtyp, nbins, maxconp3
+      parameter (maxlev = 50, nxdef = 4, maxtyp = 17, nydef = 4, 
+     +  maxcon = 3, wedwid = 0.05, wedisp = 1.0, tfdisp = 0.5, 
+     +  nbins = 128, maxconp3 = maxcon + 3)
 c
       integer ipim, ipnim, ipim2, ipnim2, ipimm
 c
       integer csize(maxnax,maxcon), gsize(maxnax), vsize(maxnax,2),
-     +  msize(maxnax), bsize(maxnax), size(maxnax), cnaxis(maxcon), 
-     +  gnaxis, vnaxis(2), mnaxis, bnaxis, naxis, lc(maxcon), lg, 
-     +  lv(2), lm, lb, lhead, concol(maxcon), veccol, boxcol, bemcol,
-     +  ovrcol, labcol
-      real cepoch(maxcon), gepoch, vepoch(2), mepoch, bepoch, epoch
-      double precision cdelt(maxnax), crval(maxnax),
-     +  scdelt(maxnax), scrval(maxnax),
-     +  ccdelt(maxnax,maxcon), ccrval(maxnax,maxcon), 
-     +  gcdelt(maxnax), gcrval(maxnax), 
-     +  vcdelt(maxnax,2), vcrval(maxnax,2), 
-     +  mcdelt(maxnax), mcrval(maxnax),
-     +  bcdelt(maxnax), bcrval(maxnax),
-     +  crpix(maxnax), scrpix(maxnax), ccrpix(maxnax,maxcon), 
-     +  gcrpix(maxnax), vcrpix(maxnax,2), mcrpix(maxnax),
-     +  bcrpix(maxnax), opos(6,maxpos)
-      logical maskc(maxcon), maskg, maskv(2), maskm, maskb
-      character*9 ctype(maxnax), sctype(maxnax), cctype(maxnax,maxcon), 
-     +  gctype(maxnax), vctype(maxnax,2), mctype(maxnax), bctype(maxnax)
+     +  msize(maxnax), bsize(maxnax), lc(maxcon), lg, lv(2), lm, lb,
+     +  lhead, concol(maxcon), veccol, boxcol, bemcol, ovrcol, labcol
+      logical doaxlab, doaylab, donxlab(2), donylab(2)
       character cin(maxcon)*64, gin*64, vin(2)*64, mskin*64, bin*64,
      +  ltypes(maxtyp)*6
 c
       real levs(maxlev,maxcon), pixr(2,maxchan), tr(6), bmin(maxcon+4), 
-     +  bmaj(maxcon+4), bpa(maxcon+4), bxfac(maxcon+4),
-     +  byfac(maxcon+4), scale(2), cs(3), pixr2(2), slev(maxcon),
-     +  break(maxcon), vfac(2), bfac(5), tfvp(4), wdgvp(4), 
-     +  cumhis(nbins), gmm(2), cmm(2,maxcon), dmm(2)
-      real xmin, xmax, ymin, ymax, vxmin, vymin, vymax, vx, vy,
-     +  vxsize, vysize, vxgap, vygap, ydispb, xdispl, groff, blankg,
-     +  blankc, blankv, blankb, vecfac, boxfac
-      real x1, x2, y1, y2
+     +  bmaj(maxcon+4), bpa(maxcon+4), scale(2), cs(3), pixr2(2), 
+     +  slev(maxcon), break(maxcon), vfac(2), bfac(5), tfvp(4), 
+     +  wdgvp(4), cumhis(nbins), gmm(2), cmm(2,maxcon), dmm(2)
+      real vxmin, vymin, vymax, vx, vy, vxsize, vysize, vxgap, vygap, 
+     +  ydispb, xdispl, groff, blankg, blankc, blankv, blankb, 
+     +  vecfac, boxfac
 c
       integer blc(3), trc(3), win(2), lwid(maxcon+3), 
      +  vecinc(2), boxinc(2), srtlev(maxlev,maxcon), nlevs(maxcon), 
      +  grpbeg(maxchan), ngrp(maxchan), his(nbins), ibin(2), jbin(2), 
-     +  kbin(2), krng(2), coltab(maxchan)
-      integer  nx, ny, lpos, npos, ierr, pgbeg, ilen, igr, nlast, 
-     +  ngrps, ncon, i, j, nvec, ipage, jj, npixr, wedcod, bgcol
+     +  kbin(2), krng(2), coltab(maxchan), gnaxis, cnaxis(maxcon),
+     +  vnaxis(2), bnaxis, mnaxis
+      integer  nx, ny, ierr, pgbeg, ilen, igr, nlast, ngrps,
+     +  ncon, i, j, nvec, ipage, jj, npixr, wedcod, bgcol
 c
-      character ofig(maxpos)*10, posid(maxpos)*20, labtyp(2)*6, 
-     +  levtyp(maxcon)*1
-      character pdev*64, xlabel*40, ylabel*40, xopts*20, yopts*20,
-     +  hard*20, ofile*64, xxopts*22, yyopts*22, trfun(maxchan)*3,
+      character labtyp(2)*6, levtyp(maxcon)*1, trfun(maxchan)*3
+      character pdev*64, xlabel*40, ylabel*40, hard*20, ofile*64, 
      +  aline*72
 c
-      logical solneg(maxcon), doblv(2), bemprs(maxcon+4), owrite(maxpos)
+      logical solneg(maxcon), doblv(2), bemprs(maxcon+4)
       logical do3val, do3pix, dofull, gaps, eqscale, doblc, doblg,
      +  dobeam, beaml, beamb, relax, rot90, signs, mirror, dowedge, 
      +  doerase, doepoch, bdone, doblb, doblm, dofid, dosing, nofirst,
-     +  grid, dotr
+     +  grid, dotr, dodist
 c
       data blankc, blankv, blankb /-99999999.0, -99999999.0, 
      +                             -99999999.0/
@@ -608,14 +601,15 @@ c
       data ipage /0/
       data ltypes /'hms   ', 'dms   ', 'abspix', 'relpix', 'arcsec',
      +             'arcmin', 'absghz', 'relghz', 'abskms', 'relkms',
-     +             'abslin', 'rellin', 'absdeg', 'reldeg', 'none'/
+     +             'absnat', 'relnat', 'absdeg', 'reldeg', 'none',
+     +             'abslin', 'rellin'/
       data dmm /2*0.0/
       data coltab /maxchan*0/
+      data lwid /maxconp3*1/
 c-----------------------------------------------------------------------
-      call output ('CgDisp: version 19-Oct-95')
-      call output ('Non-linear coordinate labels now correctly handled')
-      call output ('New options=grid to overlay coordinate grid')
-      call output ('New options=trlab to label top&right axes as well')
+      call output ('CgDisp: version 12-Nov-95')
+      call output ('New options=nodist prevents overlay distortion'//
+     +             ' with coordinate grid')
       call output (' ')
 c
 c Get user inputs
@@ -626,28 +620,21 @@ c
      +   boxfac, boxinc, pdev, labtyp, dofull, do3val, do3pix, eqscale, 
      +   gaps, solneg, nx, ny, lwid, break, cs, scale, ofile, dobeam, 
      +   beaml, beamb, relax, rot90, signs, mirror, dowedge, doerase, 
-     +   doepoch, dofid, dosing, nofirst, grid, dotr)
+     +   doepoch, dofid, dosing, nofirst, grid, dotr, dodist)
 c
 c Open images as required
 c
-      call sesame (relax, maxdim, maxnax, maxcon, ncon, cin, lc, cnaxis, 
-     +  csize, cepoch, maskc, ccrpix, ccdelt, ccrval, cctype, gin, lg, 
-     +  gnaxis, gsize, gepoch, maskg, gcrpix, gcdelt, gcrval, gctype,
-     +  vin, lv, vnaxis, vsize, vepoch, maskv, vcrpix, vcdelt, vcrval,
-     +  vctype, bin, lb, bnaxis, bsize, bepoch, maskb, bcrpix, bcdelt,
-     +  bcrval, bctype, mskin, lm, mnaxis, msize, mepoch, maskm, mcrpix,
-     +  mcdelt, mcrval, mctype, gmm, cmm)
+      call sesame (relax, maxnax, maxcon, ncon, cin, lc, csize, cnaxis,
+     +  gin, lg, gsize, gnaxis, vin, lv, vsize, vnaxis, bin, lb, bsize, 
+     +  bnaxis, mskin, lm, msize, mnaxis, cmm, gmm)
 c
 c Finish key inputs for region of interest and return generic 
 c axis descriptors
 c
       call region (maxcon, maxnax, ncon, cin, gin, vin, bin, lc, lg,
-     +   lv, lb, cnaxis, gnaxis, vnaxis, bnaxis, csize, gsize, vsize, 
-     +   bsize, ccrval, gcrval, vcrval, bcrval, ccdelt, gcdelt, vcdelt,
-     +   bcdelt, ccrpix, gcrpix, vcrpix, bcrpix, cctype, gctype, vctype,
-     +   bctype, cepoch, gepoch, vepoch, bepoch, naxis, size, crval, 
-     +   cdelt, crpix, ctype, epoch, ibin, jbin, kbin, blc, trc, win, 
-     +   maxchan, grpbeg, ngrp, ngrps, lhead)
+     +   lv, lb, csize, gsize, vsize, bsize, cnaxis, gnaxis, vnaxis,
+     +   bnaxis, lhead, ibin, jbin, kbin, blc, trc, win, 
+     +   maxchan, grpbeg, ngrp, ngrps)
 c
 c Try to allocate memory for images
 c
@@ -663,35 +650,23 @@ c Compute contour levels for each contour image
 c
       if (ncon.gt.0) then
         do i = 1, ncon
-          call conlevcg (mirror, maxlev, lc(i), cnaxis(i), csize(1,i), 
-     +       levtyp(i), slev(i), nlevs(i), levs(1,i), srtlev(1,i))
+          call conlevcg (mirror, maxlev, lc(i), levtyp(i), slev(i), 
+     +                   nlevs(i), levs(1,i), srtlev(1,i))
         end do
       end if
 c
-c Save and linearize axis descriptors if non-pixel labels requested
+c Work out world coordinate limits and PGPLOT transformation matrix
 c
-      call savdescg (naxis, ctype, crval, crpix, cdelt, sctype,
-     +               scrval, scrpix, scdelt)
-      call linco (lhead, labtyp, blc, trc, grpbeg, ngrp, ctype,
-     +            crval, crpix, cdelt)
-c
-c Work out array index limits, coordinate transformation array & labels
-c
-      call limitscg (labtyp, blc, trc, naxis, epoch, crpix, cdelt,
-     +   crval, ctype, doepoch, xmin, xmax, ymin, ymax, ibin, jbin,
-     +   tr, xlabel, ylabel)
+      call limitscg (blc, ibin, jbin, tr)
 c
 c Get beam information
 c
-      if (dobeam) 
-     +   call getbeam (maxcon, cin, lc, gin, lg, vin, lv, bin, lb,
-     +      labtyp, naxis, crval, crpix, cdelt, ctype, bmin, bmaj, bpa,
-     +      bxfac, byfac, dobeam, bemprs)
+      if (dobeam) call getbeam (maxcon, cin, lc, gin, lg, vin, lv, 
+     +  bin, lb, bmin, bmaj, bpa, dobeam, bemprs)
 c
 c Work out number of plots per page and number of plots
 c
       call nxnycg (nxdef, nydef, ngrps, nx, ny, nlast)
-      if (ngrps.eq.1 .or. nx*ny.eq.1) gaps = .true.
       npixr = min(ngrps,npixr)
 c
 c Work out default character sizes for axis and channel labels
@@ -730,12 +705,14 @@ c Work out if wedge outside or inside subplots. Also work out
 c if plotting one wedge per subplot or one wedge for all
 c
       call wedgincg (hard, dofid, dowedge, nx, ny, npixr, trfun, wedcod)
-c  
-c Set label displacements from axes and set PGTBOX labelling 
-c option strings
 c
-      call setlabcg (grid, labtyp, ymin, ymax, xdispl, ydispb, 
-     +               xopts, yopts)
+c Set axis labels
+c
+      call setlabcg (lhead, labtyp, doepoch, xlabel, ylabel)
+c  
+c Set label displacements from axes 
+c
+      call setdspcg (lhead, labtyp, blc, trc, xdispl, ydispb)
 c
 c Work out view port sizes and increments.
 c
@@ -747,9 +724,8 @@ c
 c Adjust viewport increments and start locations if equal scales 
 c requested or if scales provided by user
 c
-      call vpadjcg (hard, eqscale, scale, vxmin, vymin, vymax, nx, ny,
-     +   blc, trc, naxis, crval, crpix, cdelt, ctype, tfvp, wdgvp, 
-     +   vxsize, vysize)
+      call vpadjcg (lhead, hard, eqscale, scale, vxmin, vymin, vymax, 
+     +   nx, ny, blc, trc, tfvp, wdgvp, vxsize, vysize)
 c
 c Set viewport location of first sub-plot
 c
@@ -766,17 +742,10 @@ c
             call output (aline)
          end if
 c
-c Read overlay positions list and decode positions into pixels appropriate
-c to the channel we are currently displaying
-c
-         call olaydec (lhead, grpbeg(j), ngrp(j),  maxtyp, ltypes, 
-     +     maxpos, lpos, ofile, ofig, npos, opos, posid, owrite)
-c
 c Set viewport and window for current sub-plot.  
 c
          call pgsvp (vx, vx+vxsize, vy, vy+vysize)
-         call pgswin (xmin, xmax, ymin, ymax)
-         call pgqvp (2, x1, x2, y1, y2)
+         call pgswin (blc(1)-0.5, trc(1)+0.5, blc(2)-0.5, trc(2)+0.5)
          call pgsch (cs(1))
 c
 c Read in mask image as required
@@ -814,12 +783,12 @@ c Apply transfer function to pixel range. Apply the last
 c transfer function given if there aren't enough.
 c
            igr = min(j,npixr)
-           call grfixcg (pixr(1,igr), lg, gnaxis, gsize, 
-     +                   trfun(igr), pixr2, groff, blankg)
+           call grfixcg (pixr(1,igr), lg, gnaxis, gsize, trfun(igr),
+     +                    pixr2, groff, blankg)
 c
 c Read pixel map image and apply mask
 c
-           call readimcg (.true., maskg, blankg, lg, ibin, jbin, krng,
+           call readimcg (.true., blankg, lg, ibin, jbin, krng,
      +         blc, trc, .true., memi(ipnim), memr(ipim), doblg, gmm)
            if (mskin.ne.' ' .and. doblm) then
              call maskorcg (blankg, win, meml(ipimm), memi(ipnim),
@@ -860,16 +829,21 @@ c
          call pgslw(lwid(1))
          call pgsci (labcol)
 c
-c Prepare final PGTBOX options strings and put axis name labels on 
+c Determine if the axes need ascii or numeric labelling
+c for this subplot
 c
-         call axlabcg (nofirst, gaps, dotr, nx, ny, ngrps, nlast, 
-     +      j, xopts, yopts, xdispl, ydispb, labtyp, xlabel, 
-     +      ylabel, xxopts, yyopts)
+         call dolabcg (gaps, dotr, nx, ny, ngrps, nlast, j, labtyp,
+     +                 doaxlab, doaylab, donxlab, donylab)
+c
+c Write on ascii axis labels
+c
+         call aaxlabcg (doaxlab, doaylab, xdispl, ydispb, 
+     +                  xlabel, ylabel)
 c
 c Draw frame, write numeric labels, ticks and optional grid
 c
-         call labaxcg (lhead, .true., blc, trc, krng, labtyp, 
-     +                 xxopts, yyopts)
+         call naxlabcg (lhead, .true., blc, trc, krng, labtyp, 
+     +                  donxlab, donylab, nofirst, grid)
 c
 c Draw wedge now so that it overwrites axis label ticks when wedge
 c drawn inside subplot
@@ -899,9 +873,9 @@ c
                krng(1) = 1
                krng(2) = 1
              end if
-             call readimcg (.true., maskc, blankc, lc(i), ibin, jbin, 
-     +         krng, blc, trc, .true., memi(ipnim), memr(ipim), doblc,
-     +         cmm(1,i))
+             call readimcg (.true., blankc, lc(i), ibin, jbin, krng, 
+     +         blc, trc, .true., memi(ipnim), memr(ipim), 
+     +         doblc, cmm(1,i))
              if (mskin.ne.' ' .and. doblm) then
                call maskorcg (blankc, win, meml(ipimm), memi(ipnim), 
      +                        memr(ipim))
@@ -926,15 +900,14 @@ c
              krng(1) = 1
              krng(2) = 1
            end if
-           call readimcg (.true., maskv(1), blankv, lv(1), ibin, jbin,
-     +                    krng, blc, trc, .true., memi(ipnim), 
-     +                    memr(ipim), doblv(1), dmm)
+           call readimcg (.true., blankv, lv(1), ibin, jbin, krng,
+     +        blc, trc, .true., memi(ipnim), memr(ipim), doblv(1), dmm)
            if (mskin.ne.' ' .and. doblm) then
              call maskorcg (blankv, win, meml(ipimm), memi(ipnim),
      +                      memr(ipim))
              doblv(1) = .true.
            end if
-           call readimcg (.true., maskv(2), blankv, lv(2), ibin, jbin,
+           call readimcg (.true., blankv, lv(2), ibin, jbin,
      +                    krng, blc, trc, .true., memi(ipnim2), 
      +                    memr(ipim2), doblv(2), dmm)
            if (mskin.ne.' ' .and. doblm) then
@@ -946,9 +919,9 @@ c
            call pgslw (lwid(ncon+2))
            call pgsci (veccol)
 c
-           call drawvec (j, tr, vecfac, vecinc, win(1), win(2), 
+           call drawvec (lv, j, tr, vecfac, vecinc, win(1), win(2),
      +        memr(ipim), memi(ipnim), memr(ipim2), memi(ipnim2),
-     +        cdelt, scale, signs, rot90, vfac, nx, ny)
+     +        scale, signs, rot90, vfac, nx, ny)
          end if
 c
 c Draw box plots
@@ -961,9 +934,8 @@ c
              krng(1) = 1
              krng(2) = 1
            end if
-           call readimcg (.true., maskb, blankb, lb, ibin, jbin,
-     +                    krng, blc, trc, .true., memi(ipnim), 
-     +                    memr(ipim), doblb, dmm)
+           call readimcg (.true., blankb, lb, ibin, jbin, krng, blc,
+     +       trc, .true., memi(ipnim), memr(ipim), doblb, dmm)
            if (mskin.ne.' ' .and. doblm) then
              call maskorcg (blankb, win, meml(ipimm), memi(ipnim),
      +                      memr(ipim))
@@ -971,8 +943,8 @@ c
            end if
 c
            call pgsci (boxcol)
-           call drawbox (j, tr, boxfac, boxinc, win(1), win(2), 
-     +        memr(ipim), memi(ipnim), cdelt, scale, bfac)
+           call drawbox (lb, j, tr, boxfac, boxinc, win(1), win(2), 
+     +        memr(ipim), memi(ipnim), scale, bfac)
          end if
 c
 c Write velocity or channel label
@@ -985,14 +957,14 @@ c
      +                  grpbeg(j), ngrp(j))
          end if
 c
-c Draw overlay(s)
+c Read overlay positions list and decode positions into pixels 
+c appropriate to the channel we are currently displaying
 c
-         if (npos.gt.0) then
+         if (ofile.ne.' ') then
            call pgsci (ovrcol)
            call pgslw (lwid(ncon+nvec+2))
-           call overl (doerase, ofig, owrite, blc, trc, npos, opos, 
-     +        posid, grpbeg(j), ngrp(j), cs(3), labtyp, naxis, 
-     +        crval, crpix, cdelt, ctype)
+           call olay (dodist, doerase, ofile, grpbeg(j), ngrp(j), 
+     +                lhead, blc, trc, maxtyp, ltypes, cs(3))
          end if
 c
 c Draw beam(s)
@@ -1000,7 +972,7 @@ c
          if (dobeam) then
            call pgsci (bemcol)
            call beampl (maxcon, beaml, beamb, bmin, bmaj, bpa,
-     +                  bxfac, byfac, bemprs)
+     +                  bemprs, lc, lg, lv, lb)
          end if
 c
 c Plot annotation
@@ -1008,16 +980,15 @@ c
          if (dofull .and. (jj.eq.nx*ny .or. j.eq.ngrps)) then
            call pgslw (1)
            call pgsci (labcol)
-           call fullann (maxcon, ncon, cin, gin, vin, bin, lc, lg,
-     +        lv, lb, maxlev, nlevs, levs, srtlev, slev, npixr,
-     +        trfun, pixr, vfac, bfac, naxis, size, scrval, scrpix,
-     +        scdelt, sctype, vymin, blc, trc, cs, ydispb, ibin, 
-     +        jbin, kbin, labtyp, gmm, cmm)
+           call fullann (maxcon, ncon, cin, gin, vin, bin, lhead,
+     +        lc, lg, lv, lb, maxlev, nlevs, levs, srtlev, slev, npixr,
+     +        trfun, pixr, vfac, bfac, vymin, blc, trc, cs, ydispb, 
+     +        ibin, jbin, kbin, labtyp, gmm, cmm)
            call pgsci (1)
          end if  
 c
 c Increment sub-plot viewport locations and row counter and
-c reinit data min and maxesc
+c reinit data min and maxes
 c
          call subinccg (j, nx, ny, vxmin, vymax, vxsize, vysize, 
      +                  vxgap, vygap, vx, vy)
@@ -1051,41 +1022,29 @@ c
       end
 c
 c  
-      subroutine beamfac (in, lin, labtyp, naxis, crval, crpix, cdelt,
-     +                    ctype, bmin, bmaj, bpa, bxfac, byfac, pres)
+      subroutine beamfac (in, lin, bmin, bmaj, bpa, pres)
 c-----------------------------------------------------------------------
-c     Work out factors to convert radians to world coordinates
-c     for each axis for plotting of beam.
+c     Drag the beam out of the header
 c
 c  Input
 c   in          Image name
 c   lin         Image handle
-c   labtyp      Label types
-c   naxis       Number of axes in image
-c   cdelt       Axis increments
-c   crval       Reference values
-c   ctype       Axis types
-c   crpix       Axis reference pixels
 c  Output
 c   bmin        FWHMin of beam in image 
 c   bmaj        FWHMax of beam
 c   bpa         p.a. of beam
 c               All in radians
-c   bx,yfac     Factors to scale the x and y axes of the beam so that it
-c               comes out plotted in world coordinates of the type
-c               labeling the plot
 c   pres        True if beam present in header
 c-----------------------------------------------------------------------
       implicit none
 c
-      integer lin, naxis
-      real bmin, bmaj, bpa, bxfac, byfac
-      double precision crval(naxis), cdelt(naxis), crpix(naxis)
-      character*(*) labtyp(2), ctype(naxis), in
+      integer lin
+      real bmin, bmaj, bpa
+      character*(*) in
       logical pres
 cc
-      character line*80
       integer il, len1, irad1, irad2
+      character line*80
 c-----------------------------------------------------------------------
       call rdhdr (lin, 'bmin', bmin,  -1.0)
       call rdhdr (lin, 'bmaj', bmaj,  -1.0)
@@ -1097,14 +1056,10 @@ c Find if axes are those that have radian pixel increments. These are
 c the only ones for which we can convert the beam size in radians 
 c to world coordinates
 c
-        call axfndcg ('RAD', 1, ctype(1), irad1)
-        call axfndcg ('RAD', 1, ctype(2), irad2)
+        call axfndco (lin, 'RAD', 0, 1, irad1)
+        call axfndco (lin, 'RAD', 0, 2, irad2)
 c
         if (irad1*irad2.ne.0) then
-          call beamfc2 (1, labtyp(1), naxis, ctype, cdelt, crval, 
-     +                  crpix, bxfac)
-          call beamfc2 (2, labtyp(2), naxis, ctype, cdelt, crval, 
-     +                  crpix, byfac)
           pres = .true.
         else
           il = len1(in)
@@ -1118,41 +1073,8 @@ c
       end
 c
 c
-      subroutine beamfc2 (iax, labtyp, naxis, ctype, cdelt, crval,
-     +                    crpix, fac)
-c-----------------------------------------------------------------------
-c  Find factor that converts radians to world coordinates
-c
-c  Input
-c    iax       Axis we are interested in
-c    labtyp    Axis label type for this axis
-c    naxis     Number of axes in image
-c    ctype     Axis types
-c    cdelt     Axis increment
-c    crval     Reference values for all axes
-c  Output
-c    fac       factor to convert from radians to world coords
-c
-c-----------------------------------------------------------------------
-      implicit none
-c
-      integer iax, naxis
-      character*(*) labtyp, ctype(naxis)
-      double precision cdelt(naxis), crval(naxis), crpix(naxis)
-      real fac
-cc
-      double precision delw
-      logical ok
-c-----------------------------------------------------------------------
-      call pixi2wcg (.false., iax, labtyp, naxis, crval, crpix,
-     +               cdelt, ctype, delw, ok)
-      fac = delw / cdelt(iax)
-c
-      end
-c
-c
-      subroutine beampl (maxcon, beaml, beamb, bmin, bmaj, bpa, bxfac,
-     +                   byfac, bemprs)
+      subroutine beampl (maxcon, beaml, beamb, bmin, bmaj, bpa, 
+     +                   bemprs, lc, lg, lv, lb)
 c-----------------------------------------------------------------------
 c     Draw one beam for each image being displayed.  They are drawn
 c     confocally with different line styles in the designated corner.
@@ -1163,20 +1085,17 @@ c    beaml,beamb     True if the beam is to be drawn on the left
 c                    or at the bottom (else right and top)
 c    bmin,maj,pa     Beam FWHMin, FWHMax and p.a. for pixel map and
 c                    contour 1 and 2 images (rad).
-c    bx,yfac         Factors converting radians to world coordinates 
-c                    on the x and y axes
 c    bemprs          True if beam present for maxcon contours, pixel map
-c                    and 2 vector images
-c
+c                    2 vector images and box image
+c    l*              Handles
 c-----------------------------------------------------------------------   
       implicit none
 c
-      integer maxcon
+      integer maxcon, lc(maxcon), lg, lv(2), lb
       logical beaml, beamb, bemprs(maxcon+4)
-      real bmin(maxcon+4), bmaj(maxcon+4), bpa(maxcon+4), 
-     +  bxfac(maxcon+4), byfac(maxcon+4)
+      real bmin(maxcon+4), bmaj(maxcon+4), bpa(maxcon+4)
 cc
-      integer i
+      integer i, luns(20)
       logical fill
       real xcen, ycen
 c-----------------------------------------------------------------------
@@ -1184,44 +1103,60 @@ c
 c Find location of centre of biggest beam.  They will be plotted
 c with the same centre.
 c
-      call beamxy (maxcon, beaml, beamb, bemprs, bmin, bmaj, bpa, bxfac,
-     +             byfac, xcen, ycen, fill)
+      do i = 1, maxcon
+        luns(i) = lc(i)
+      end do
+      luns(maxcon+1) = lg
+      luns(maxcon+2) = lv(1)
+      luns(maxcon+3) = lv(2)
+      luns(maxcon+4) = lb
+c
+      call beamxy (luns, maxcon, beaml, beamb, bemprs, bmin, bmaj, 
+     +   bpa, xcen, ycen, fill)
 c
 c Draw the beam(s)
 c
       do i = 1, maxcon+4
         if (bemprs(i)) then
-          call beampl2 (xcen, ycen, bmin(i), bmaj(i), bpa(i),
-     +                  bxfac(i), byfac(i), fill)
+          call beampl2 (luns(i), xcen, ycen, bmin(i), bmaj(i), bpa(i),
+     +                  fill)
         end if
       end do
 c
       end
 c
 c
-      subroutine beampl2 (xcen, ycen, bmin, bmaj, bpa, bxfac,
-     +                    byfac, fill)
+      subroutine beampl2 (lun, xcen, ycen, bmin, bmaj, bpa, fill)
 c-----------------------------------------------------------------------
 c     Draw one beam in the designated corner of the sub-plot.
 c
 c  Input
-c    x,ycen          World coordinates of beam centre
-c                    or at the bottom (else right and top)
+c    lun             Image handle
+c    x,ycen          Coordinates of beam centre in absolute pixels
 c    bmin,maj,pa     Beam FWHMin, FWHMax and p.a. for pixel map and
 c                    contour image (rad). 
-c    bx,yfac         Factors converting radians to world coordinates 
-c                    on the x and y axes
 c    fill            If true fill beam polygon in
 c-----------------------------------------------------------------------   
       implicit none
 c
+      integer lun
+      real bmin, bmaj, bpa, xcen, ycen
       logical fill
-      real bmin, bmaj, bpa, bxfac, byfac, xcen, ycen
 cc
       include 'mirconst.h'
+      double precision r2a
+      parameter (r2a = 180.0d0 / dpi * 3600.0d0)
+c
+      double precision win(2), wout(2)
       real xs(0:360), ys(0:360), pa, xx, yy, cp, sp, bbmin, bbmaj, bbpa
+      character*6 typei(2), typeo(2)
       integer i
 c-----------------------------------------------------------------------
+      typei(1) = 'arcsec'
+      typei(2) = 'arcsec'
+      typeo(1) = 'relpix'
+      typeo(2) = 'relpix'
+c
       bbmin = bmin / 2.0
       bbmaj = bmaj / 2.0
       bbpa = (90.0 + bpa) * dpi / 180.0
@@ -1230,14 +1165,21 @@ c-----------------------------------------------------------------------
 c
 c Work out the beam polygon
 c
+      call initco (lun)
       do i = 0, 360
         pa = i * dpi / 180.0 	  
         xx = bbmaj * cos(pa)
         yy = bbmin * sin(pa)
 c
-        xs(i) = xcen + ( xx*cp + yy*sp)*bxfac
-        ys(i) = ycen + (-xx*sp + yy*cp)*byfac
+        win(1) = ( xx*cp + yy*sp)*r2a
+        win(2) = (-xx*sp + yy*cp)*r2a
+c
+        call w2wco (lun, 2, typei, ' ', win, typeo, ' ', wout)
+c
+        xs(i) = wout(1) + xcen
+        ys(i) = wout(2) + ycen
       end do
+      call finco (lun)
 c
 c  Draw the beam with the desired line style and fill style
 c
@@ -1253,40 +1195,48 @@ c
       end
 c
 c
-      subroutine beamxy (maxcon, beaml, beamb, bemprs, bmin, bmaj, 
-     +                   bpa, bxfac, byfac, xcen, ycen, fill)
+      subroutine beamxy (luns, maxcon, beaml, beamb, bemprs, bmin, 
+     +                   bmaj, bpa, xcen, ycen, fill)
 c-----------------------------------------------------------------------
 c     We want to draw the beams, if there are more than one, with
 c     the same centre.  Find the biggest x and y offsets from all
 c     the beams and compute the centre with that.
 c
 c  Input
+c    luns            Handles of image (contours, pixel map, vectors, box)
 c    maxcon          Maximum number of contour images
 c    beaml,beamb     True if the beam is to be drawn on the left
 c                    or at the bottom (else right and top)
 c    bemprs          True if beam present for pixel map and contour images
 c    bmin,maj,pa     Beam FWHMin, FWHMax and p.a. for pixel map and
 c                    contour image (rad). 
-c    bx,yfac         Factors converting radians to world coordinates 
-c                    on the x and y axes
 c  Output
-c    x,ycen          World coordiate of beam centres
+c    x,ycen          Absolute pixels of beam centres
 c    fill            If true fill in the beam patch, else just outline
 c-----------------------------------------------------------------------   
       implicit none
 c
-      integer maxcon
+      integer maxcon, luns(*)
       logical beaml, beamb, bemprs(maxcon+4), fill
-      real bmin(maxcon+4), bmaj(maxcon+4), bpa(maxcon+4), 
-     +  bxfac(maxcon+4), byfac(maxcon+4), xcen, ycen
+      real bmin(maxcon+4), bmaj(maxcon+4), bpa(maxcon+4),  xcen, ycen
 cc
       include 'mirconst.h'
-      real  x, y, xmin, xmax, ymin, ymax, xoff, yoff, pa, xx, yy,
+      double precision r2a
+      parameter (r2a = 180.0d0 / dpi * 3600.0d0)
+c
+      double precision win(2), wout(2)
+      real xmin, xmax, ymin, ymax, xoff, yoff, pa, xx, yy,
      +  cp, sp, bbmin, bbmaj, bbpa, xlo, xhi, ylo, yhi, xwmax, ywmax,
      +  bmino, bmajo, bpao
+      character*6 typei(3), typeo(3)
       integer i, j, sx, sy
       logical const
 c-----------------------------------------------------------------------
+      typei(1) = 'arcsec'
+      typei(2) = 'arcsec'
+      typeo(1) = 'abspix'
+      typeo(2) = 'abspix'
+c
       xwmax = -1.0e30
       ywmax = -1.0e30
       const = .true.
@@ -1327,19 +1277,27 @@ c
           ymin = 1.0e30
           ymax = -1.e30
 c
+          call initco (luns(j))
           do i = 0, 360, 4
             pa = i * dpi / 180.0 	  
             xx = bbmaj * cos(pa)
             yy = bbmin * sin(pa)
 c
-            x = ( xx*cp + yy*sp)*bxfac(j)
-            y = (-xx*sp + yy*cp)*byfac(j)
+c x,y of ellipse locus in offset arcsec
+c
+            win(1) = ( xx*cp + yy*sp)*r2a
+            win(2) = (-xx*sp + yy*cp)*r2a
+c
+c Convert to absolute pixels
+c
+            call w2wco (luns(j), 2, typei, ' ', win, typeo, ' ', wout)
 c  
-            xmin = min(x,xmin)
-            xmax = max(x,xmax)
-            ymin = min(y,ymin)
-            ymax = max(y,ymax)
+            xmin = min(wout(1),dble(xmin))
+            xmax = max(wout(1),dble(xmax))
+            ymin = min(wout(2),dble(ymin))
+            ymax = max(wout(2),dble(ymax))
           end do
+          call finco (luns(j))
 c
 c  Work out biggest x,y sizes
 c
@@ -1359,7 +1317,7 @@ c
       fill = .false.
       if (const) fill = .true.
 c
-c  Find world coordinates of plotted window
+c  Find window (which is in absolute pixels)
 c
       call pgqwin (xlo, xhi, ylo, yhi)
       sx = 1
@@ -1388,32 +1346,27 @@ c
       end
 c
 c
-      subroutine chkdes (relax, im1, im2, size1, size2, crpix1, crpix2,
-     +   cdelt1, cdelt2, crval1, crval2, epoch1, epoch2, ctype1, ctype2)
+      subroutine chkdes (relax, im1, im2, size1, size2, lh1, lh2)
 c-----------------------------------------------------------------------
 c     Compare axis descriptors for the first three axes
 c
 c  Input:
+c   relax        True for warnings only instead of fatal
 c   im1,2        Images
 c   size1,2      Sizes of each dimension
-c   crpix1,2     Reference pixels
-c   cdelt1,2     Increments
-c   crval1,2     Refernce values
-c   ctype1,2     types of axes
-c   epoch1,2     Epochs
+c   lh1,2        Handles
 c-----------------------------------------------------------------------
       implicit none
 c
-      integer size1(3), size2(3)
-      character*(*) im1, im2, ctype1(3), ctype2(3)
-      double precision crval1(3), crval2(3), cdelt1(3), cdelt2(3),
-     +  crpix1(3), crpix2(3)
-      real epoch1, epoch2
+      integer size1(*), size2(*), lh1, lh2
+      character*(*) im1, im2
       logical relax
 cc
+      double precision desc1, desc2
+      real epoch1, epoch2
       integer k, l1, l2, len1, maxis
       logical got23
-      character line*130
+      character line*130, itoaf*1, ctype1*9, ctype2*9, ks*1
 c-----------------------------------------------------------------------
       l1 = len1(im1)
       l2 = len1(im2)
@@ -1436,6 +1389,8 @@ c
         call bug ('f', line)
       end if
 c
+      call rdhdr (lh1, 'epoch', epoch1, 0.0)
+      call rdhdr (lh2, 'epoch', epoch2, 0.0)
       if (epoch1.ne.epoch2) then
         line = 'Unequal epochs for images '//im1(1:l1)//' & '//im2(1:l2)
         if (relax) then
@@ -1458,14 +1413,25 @@ c
       if (size1(3).eq.1 .and. size2(3).eq.1) maxis = 2
       do k = 1, maxis
         if ( (k.eq.3 .and. .not.got23) .or. k.le.2) then
+          ks = itoaf(k)
+          call rdhdd (lh1, 'cdelt'//ks, desc1, 0.0d0)
+          call rdhdd (lh2, 'cdelt'//ks, desc2, 0.0d0)
           call chkdescg (relax, 'cdelt', k, im1(1:l1), im2(1:l2), 
-     +                   cdelt1(k), cdelt2(k))
-          call chkdescg (relax, 'crpix', k, im1(1:l1), im2(1:l2), 
-     +                   crpix1(k), crpix2(k))
-          call chkdescg (relax, 'crval', k, im1(1:l1), im2(1:l2), 
-     +                   crval1(k), crval2(k))
+     +                   desc1, desc2)
 c
-          if (ctype1(k).ne.ctype2(k)) then
+          call rdhdd (lh1, 'crpix'//ks, desc1, 0.0d0)
+          call rdhdd (lh2, 'crpix'//ks, desc2, 0.0d0)
+          call chkdescg (relax, 'crpix', k, im1(1:l1), im2(1:l2), 
+     +                   desc1, desc2)
+c
+          call rdhdd (lh1, 'crval'//ks, desc1, 0.0d0)
+          call rdhdd (lh2, 'crval'//ks, desc2, 0.0d0)
+          call chkdescg (relax, 'crval', k, im1(1:l1), im2(1:l2), 
+     +                   desc1, desc2)
+c
+          call rdhda (lh1, 'ctype'//ks, ctype1, ' ')
+          call rdhda (lh2, 'ctype'//ks, ctype2, ' ')
+          if (ctype1.ne.ctype2) then
             write (line, 10) im1(1:l1), im2(1:l2), k
 10          format ('Unequal ctype for images ', a, ' & ', a, 
      +              ' on axis ', i1)
@@ -1482,11 +1448,8 @@ c
       end
 c
 c
-      subroutine chkim (maxnax, ncon, cin, csize, cepoch, ccrpix, 
-     +   ccdelt, ccrval, cctype, gin, gsize, gepoch, gcrpix, gcdelt,
-     +   gcrval, gctype, vin, vsize, vepoch, vcrpix, vcdelt, vcrval,
-     +   vctype, bin, bsize, bepoch, bcrpix, bcdelt, bcrval, bctype, 
-     +   mskin, msize, mepoch, mcrpix, mcdelt, mcrval, mctype, relax)
+      subroutine chkim (maxnax, ncon, cin, lc, csize, gin, lg, gsize, 
+     +  vin, lv, vsize, bin, lb, bsize, mskin, lm, msize, relax)
 c-----------------------------------------------------------------------
 c     Check all the images for internal consistency
 c
@@ -1497,27 +1460,15 @@ c     relax      Only warnings instead of fatal errror for inconsistent
 c                axis descriptors
 c     *in        Input image names
 c     *size      Size of each dimensions of images
-c     *epoch     Epochs of images
-c     *crpix     Reference pixels
-c     *cdelt     Increments
-c     *crval     Reference values
-c     *ctype     Axis types
+c     l*         Image handles
 c
 c-----------------------------------------------------------------------
       implicit none
 c
       integer maxnax, ncon, csize(maxnax,*), gsize(maxnax), 
-     +  vsize(maxnax,2), bsize(maxnax), msize(maxnax)
-      double precision 
-     +  ccrval(maxnax,*), ccdelt(maxnax,*), ccrpix(maxnax,*),
-     +  gcrval(maxnax),   gcdelt(maxnax),   gcrpix(maxnax),
-     +  vcrval(maxnax,2), vcdelt(maxnax,2), vcrpix(maxnax,2),
-     +  bcrval(maxnax),   bcdelt(maxnax),   bcrpix(maxnax),
-     +  mcrval(maxnax),   mcdelt(maxnax),   mcrpix(maxnax,*)
-      real cepoch(*), gepoch, vepoch(2), bepoch, mepoch
-      character*(*) cin(*), gin, vin(2), bin, mskin, 
-     +  cctype(maxnax,*), gctype(maxnax), vctype(maxnax,2), 
-     +  bctype(maxnax), mctype(maxnax)
+     +  vsize(maxnax,2), bsize(maxnax), msize(maxnax), lc(*),
+     +  lg, lv(2), lb, lm
+      character*(*) cin(*), gin, vin(2), bin, mskin
       logical relax
 cc
       integer i, j
@@ -1529,9 +1480,7 @@ c
         do i = 1, ncon-1
           do j = i+1, ncon
             call chkdes (relax, cin(i), cin(j), csize(1,i), csize(1,j),
-     +         ccrpix(1,i), ccrpix(1,j), ccdelt(1,i), ccdelt(1,j), 
-     +         ccrval(1,i), ccrval(1,j), cepoch(i), cepoch(j), 
-     +         cctype(1,j), cctype(1,j))
+     +         lc(i), lc(j))
           end do
         end do
       end if
@@ -1539,58 +1488,46 @@ c
 c Check vector images for self consistency
 c
       if (vin(1).ne.' ') call chkdes (relax, vin(1), vin(2), vsize(1,1),
-     +   vsize(1,2), vcrpix(1,1), vcrpix(1,2), vcdelt(1,1), vcdelt(1,2),
-     +   vcrval(1,1), vcrval(1,2), vepoch(1), vepoch(2), vctype(1,1), 
-     +   vctype(1,2))
+     +   vsize(1,2), lv(1), lv(2))
 c
 c Check first contour image for consistency with other images
 c
       if (ncon.gt.0) then
         if (gin.ne.' ') call chkdes (relax, cin, gin, csize, gsize,
-     +         ccrpix, gcrpix, ccdelt, gcdelt, ccrval, gcrval, 
-     +         cepoch, gepoch, cctype, gctype)
+     +         lc, lg)
         if (vin(1).ne.' ') call chkdes (relax, cin, vin, csize, vsize,
-     +         ccrpix, vcrpix, ccdelt, vcdelt, ccrval, vcrval, 
-     +         cepoch, vepoch, cctype, vctype)
+     +         lc, lv)
         if (bin.ne.' ') call chkdes (relax, cin, bin, csize, bsize,
-     +         ccrpix, bcrpix, ccdelt, bcdelt, ccrval, bcrval, 
-     +         cepoch, bepoch, cctype, bctype)
+     +         lc, lb)
         if (mskin.ne.' ') call chkdes (relax, cin, mskin, csize, msize,
-     +         ccrpix, mcrpix, ccdelt, mcdelt, ccrval, mcrval, 
-     +         cepoch, mepoch, cctype, mctype)
+     +         lc, lm)
       end if
 c
 c Check pixel map images for consistency with other images
 c
       if (gin.ne.' ') then
         if (vin(1).ne.' ') call chkdes (relax, gin, vin, gsize, vsize,
-     +         gcrpix, vcrpix, gcdelt, vcdelt, gcrval, vcrval, 
-     +         gepoch, vepoch, gctype, vctype)
+     +         lg, lv)
         if (bin.ne.' ') call chkdes (relax, gin, bin, gsize, bsize,
-     +         gcrpix, bcrpix, gcdelt, bcdelt, gcrval, bcrval, 
-     +         gepoch, bepoch, gctype, bctype)
+     +         lg, lb)
         if (mskin.ne.' ') call chkdes (relax, gin, mskin, gsize, msize,
-     +         gcrpix, mcrpix, gcdelt, mcdelt, gcrval, mcrval, 
-     +         gepoch, mepoch, gctype, mctype)
+     +         lg, lm)
       end if
 c
 c Check vector images for consistency with other images
 c
       if (vin(1).ne.' ') then
         if (bin.ne.' ') call chkdes (relax, vin, bin, vsize, bsize,
-     +         vcrpix, bcrpix, vcdelt, bcdelt, vcrval, bcrval, 
-     +         vepoch, bepoch, vctype, bctype)
+     +         lv, lb)
         if (mskin.ne.' ') call chkdes (relax, vin, mskin, vsize, msize,
-     +         vcrpix, mcrpix, vcdelt, mcdelt, vcrval, mcrval, 
-     +         vepoch, mepoch, vctype, mctype)
+     +         lv, lm)
       end if
 c
 c Check box image for consistency with other images
 c
       if (bin.ne.' ') then
         if (mskin.ne.' ') call chkdes (relax, bin, mskin, bsize, msize,
-     +         bcrpix, mcrpix, bcdelt, mcdelt, bcrval, mcrval, 
-     +         bepoch, mepoch, bctype, mctype)
+     +         lb, lm)
       end if
 c
       end
@@ -1599,7 +1536,7 @@ c
       subroutine decopt  (dofull, do3val, do3pix, eqscale, gaps, solneg,
      +   beambl, beambr, beamtl, beamtr, relax, rot90, signs, 
      +   mirror, dowedge, doerase, doepoch, dofid, dosing, nofirst,
-     +   grid, dotr)
+     +   grid, dotr, dodist)
 c----------------------------------------------------------------------
 c     Decode options array into named variables.
 c
@@ -1629,25 +1566,27 @@ c     nofirst   Don't put the first x-axis lable on any subplot
 c		but the left most
 c     grid      Extend ticks to grid
 c     dotr      Label top and right as well as left and bottom axes
+c     dodist    Distort overlays with grid
 c-----------------------------------------------------------------------
       implicit none
 c
       logical dofull, do3val, do3pix, eqscale, gaps, solneg(*),
      +  beambl, beambr, beamtl, beamtr, relax, rot90, signs,
      +  mirror, dowedge, doerase, doepoch, dofid, dosing, nofirst,
-     +  grid, dotr
+     +  grid, dotr, dodist
 cc
       integer maxopt
-      parameter (maxopt = 24)
+      parameter (maxopt = 25)
 c
-      character opshuns(maxopt)*8
+      character opshuns(maxopt)*9
       logical present(maxopt)
       data opshuns /'full    ', '3value  ', '3pixel  ', 'unequal ', 
      +              'gaps    ', 'solneg1 ', 'solneg2 ', 'solneg3 ',
      +              'beambl  ', 'beambr  ', 'beamtl  ', 'beamtr  ',
      +              'relax   ', 'rot90   ', 'signs   ', 'mirror',
      +              'wedge   ', 'noerase ', 'noepoch ', 'fiddle',
-     +              'single  ', 'nofirst',  'grid    ', 'trlab'/
+     +              'single  ', 'nofirst',  'grid    ', 'trlab',
+     +              'nodistort'/
 c-----------------------------------------------------------------------
       call optcg ('options', opshuns, present, maxopt)
 c
@@ -1675,17 +1614,19 @@ c
       nofirst   =      present(22)
       grid      =      present(23)
       dotr      =      present(24)
+      dodist    = .not.present(25)
 c
       end
 c
 c
-      subroutine drawbox (iplot, tr, boxfac, boxinc, npixx, npixy, 
-     +   image, nimage, cdelt, scale, bfac)
+      subroutine drawbox (lh, iplot, tr, boxfac, boxinc, npixx, npixy,
+     +   image, nimage, scale, bfac)
 c-----------------------------------------------------------------------
 c     Draw boxes.  The boxes will come out square only if the pixel
 c     increment is the and the user has requested equal scales.
 c
 c  Input
+c    lh       Image handle
 c    iplot    sub-plot number.  Only work out vector length scale
 c             factors from first sub-plot so that the correct number
 c             get written into the plot annotation at the end
@@ -1696,11 +1637,10 @@ c    boxinc   Increment through image in these steps
 c    npixx,y  Size of images in pixles
 c    image    Image
 c    nimage   Normalization image
-c    cdelt    Array of pixel increments
-c    scale    Scale in linear coords per mm.  For RA axes radians on
+c    scale    Scale in natural coords per mm.  For RA axes radians on
 c             the sky per mm
 c  Input/output:
-c    bfac     (1)   Maximum value of pixles in region of first subplot
+c    bfac     (1)   Maximum value of pixels in region of first subplot
 c             (2:3) Scale factors, in x and y, to convert pixel value
 c                   into box width in world coordinates
 c             (4:5) Scale factors, in x and y, giving box widths per mm
@@ -1710,14 +1650,22 @@ c
 c-----------------------------------------------------------------------
       implicit none
 c
-      integer boxinc(2), iplot, npixx, npixy, nimage(npixx,npixy)
-      double precision cdelt(*)
+      integer boxinc(2), iplot, npixx, npixy, nimage(npixx,npixy), lh
       real boxfac, image(npixx,npixy), tr(6), scale(2), bfac(5)
 cc
+      double precision cdelt(2)
       real xb(4), yb(4), x, y, x1, x2, y1, y2, vx1, vx2, vy1, vy2
       integer i, j
       real delx, dely, s
 c-----------------------------------------------------------------------
+c
+c Get pixel increments
+c
+      call rdhdd (lh, 'cdelt1', cdelt(1), 0.0d0)
+      call rdhdd (lh, 'cdelt2', cdelt(2), 0.0d0)
+c
+c Get window and viewport
+c 
       call pgqwin (x1, x2, y1, y2)
       call pgqvp (2, vx1, vx2, vy1, vy2)
 c
@@ -1737,8 +1685,9 @@ c
          bfac(2) = boxfac * 0.99*boxinc(1) * abs(tr(2)/bfac(1))
          bfac(3) = boxfac * 0.99*boxinc(2) * abs(tr(6)/bfac(1))
 c
-c Find out the scale in world coordinates per mm in x and y and then
-c work out the scale of the boxes in image units per mm 
+c Find out the scale in world coordinates (really pixels per mm
+c now becase cgdisp works in pixels internally now) per mm in x and 
+c y and then work out the scale of the boxes in image units per mm 
 c (rad/m/m per mm) in x and y
 c
          s = tr(2) * scale(1) / cdelt(1)
@@ -1754,12 +1703,12 @@ c
         do i = 1, npixx, boxinc(1)
           if (nimage(i,j).gt.0) then
 c
-c World coordinates of pixel
+c Find unbinned pixel coordinates
 c
             x = tr(1) + tr(2)*i 
             y = tr(4) + tr(6)*j
 c
-c Find half width of box in world coordinates.
+c Find half width of box in pixel coordinates.
 c
             delx =  bfac(2) * image(i,j) / 2.0
             dely =  bfac(3) * image(i,j) / 2.0
@@ -1786,14 +1735,15 @@ c
       end
 c
 c
-      subroutine drawvec (iplot, tr, vecfac, vecinc, npixx, npixy, amp,
-     +   namp, pa, npa, cdelt, scale, signs, rot90, vfac, nx, ny)
+      subroutine drawvec (lv, iplot, tr, vecfac, vecinc, npixx, npixy,
+     +    amp, namp, pa, npa, scale, signs, rot90, vfac, nx, ny)
 c-----------------------------------------------------------------------
 c     Draw vectors.   The vector position angle must come out
 c     correctly on the plot regardless of the x and y scales,
 c     it is not tied to the world coordinate scales.
 c
 c  Input
+c    lv       Handle of image
 c    iplot    sub-plot number.  Only work out vector length scale
 c             factors from first sub-plot so that the correct number
 c             get written into the plot annotation at the end
@@ -1804,8 +1754,7 @@ c    vecinc   Increment through image in these steps
 c    npixx,y  Size of images in pixles
 c    amp,pa   Amplitude and position angle images
 c    namp,npa Normalization images
-c    cdelt    Array of pixel increments
-c    scale    Scale in linear coords per mm.  For RA axes radians on
+c    scale    Scale in natural coords per mm.  For RA axes radians on
 c             the sky per mm
 c    signs    True means increasing X and Y = E and N, else
 c             E and N to the left and top
@@ -1821,18 +1770,23 @@ c-----------------------------------------------------------------------
 c
       logical rot90, signs
       integer vecinc(2), nx, ny, iplot, npixx, npixy, namp(npixx,npixy),
-     +  npa(npixx,npixy)
-      double precision cdelt(*)
+     +  npa(npixx,npixy), lv
       real vecfac, amp(npixx,npixy), pa(npixx,npixy), tr(6), scale(2), 
      +  vfac(2)
 cc
       include 'mirconst.h'
+      double precision cdelt(2)
       real xv(2), yv(2), x, y
       integer i, j, pas
       real delx, dely, theta, sx, sy, x1, x2, y1, y2, vsizmax
       double precision dr
       parameter (dr = dpi / 180.0)
 c-----------------------------------------------------------------------
+c
+c Find pixel increments
+c
+      call rdhdd (lv, 'cdelt1', cdelt(1), 0.0d0)
+      call rdhdd (lv, 'cdelt2', cdelt(2), 0.0d0)
 c
 c Find maximum selected vector amplitude for first sub-plot
 c
@@ -1853,7 +1807,9 @@ c
         vfac(2) = abs(vfac(1) / vecfac / vsizmax)
       end if
 c
-c Convert scale in linear coords per mm to world coords per mm
+c Convert scale in natural coords per mm to world coords per mm
+c Because we now do everything internally in pixels, this is really
+c pixels per mm (tr(2) = ibin, tr(6) = jbin now)
 c
       sx = tr(2) * abs(scale(1) / cdelt(1)) 
       sy = tr(6) * abs(scale(2) / cdelt(2))
@@ -1871,7 +1827,7 @@ c
           if (namp(i,j).gt.0 .and. npa(i,j).gt.0 .and.
      +        amp(i,j).gt.0.0) then
 c
-c World coordinates of pixel
+c Find unbinned pixel coordinates
 c
             x = tr(1) + tr(2)*i 
             y = tr(4) + tr(6)*j
@@ -1881,7 +1837,7 @@ c
             theta = pas * pa(i,j) * dr
             if (rot90) theta = theta + pi/2.0
 c
-c Find half size of vectors in world coordinates.
+c Find half size of vectors in pixel coordinates
 c
             delx = -amp(i,j) * sin(theta) * sx / 2.0 / vfac(2)
             dely =  amp(i,j) * cos(theta) * sy / 2.0 / vfac(2)
@@ -1900,10 +1856,112 @@ c
       end
 c
 c
-      subroutine fullann (maxcon, ncon, cin, gin, vin, bin, lc, lg, lv,
-     +   lb, maxlev, nlevs, levs, srtlev, slev, npixr, trfun, pixr, 
-     +   vfac, bfac, naxis, size, crval, crpix, cdelt, ctype, vymin, 
-     +   blc, trc, pcs, ydispb, ibin, jbin, kbin, labtyp, gmm, cmm)
+      subroutine drover (blc, trc, doerase, csize, iover, pix3, ofig,
+     +  ocen, ocorn, opoly, oid, owrite, ochan, xl, xr, yb, yt)
+c--------------------------------------------------------------------------
+c     Draw overlays
+c
+c     Input
+c       blc      Blc of image being plotted in pixels
+c       trc      Trc of image being plotted in pixels
+c       doerase  Erase rectangle before writing overlay ID string
+c       csize    Character size for overlay ID
+c       pix3     Pixel value of third axis
+c       iover    Overlay number
+c       ofig     'star', 'box', 'clear, 'ocircle', 'circle', 'line'
+c       ocen     Overlay centre
+c       ocorn    Overlay corners
+c       opoly    Circle overlay 
+c       oid      Overlay i.d.
+c       owrite   If true write overlay ID in corner of overlay
+c       ochan    Overlay channel range
+c       xl,xr,yb,yt
+c		 Overlay extremeties
+c----------------------------------------------------------------------
+      implicit none
+c     
+      integer blc(*), trc(*), ochan(2), iover
+      double precision ocen(2), ocorn(2,4), pix3
+      real csize, opoly(0:180,2), xl, xr, yb, yt
+      character oid*(*), ofig*(*)
+      logical owrite, doerase
+cc
+      logical miss
+      character line*80
+      integer cs, ce
+c----------------------------------------------------------------------
+      call pgsci (3)
+c
+c Only draw on specified channels
+c
+      cs = ochan(1)
+      ce = ochan(2)
+      if (cs.eq.0) ce = 0
+      if (ce.eq.0) ce = cs
+c
+      if (cs.eq.0 .or. (pix3.ge.cs .and. pix3.le.ce)) then
+c
+        miss = .true.
+        if (ofig.eq.'star') then
+          if (ocen(1).ge.blc(1).and.ocen(1).le.trc(1).and.
+     +        ocen(2).ge.blc(2).and.ocen(2).le.trc(2)) miss = .false.
+          call pgmove (real(ocorn(1,1)), real(ocorn(2,1)))
+          call pgdraw (real(ocorn(1,3)), real(ocorn(2,3)))
+          call pgmove (real(ocorn(1,2)), real(ocorn(2,2)))
+          call pgdraw (real(ocorn(1,4)), real(ocorn(2,4)))
+        else if (ofig.eq.'box') then
+          if (ocen(1).ge.blc(1).and.ocen(1).le.trc(1).and.
+     +        ocen(2).ge.blc(2).and.ocen(2).le.trc(2)) miss = .false.
+          call pgmove (real(ocorn(1,1)), real(ocorn(2,1)))
+          call pgdraw (real(ocorn(1,2)), real(ocorn(2,2)))
+          call pgdraw (real(ocorn(1,3)), real(ocorn(2,3)))
+          call pgdraw (real(ocorn(1,4)), real(ocorn(2,4)))
+          call pgdraw (real(ocorn(1,1)), real(ocorn(2,1)))
+        else if (ofig.eq.'line') then
+            if ((ocorn(1,1).ge.blc(1).and.ocorn(1,1).le.trc(1).and.
+     +           ocorn(2,1).ge.blc(2).and.ocorn(2,1).le.trc(2)) .or.
+     +          (ocorn(1,2).ge.blc(1).and.ocorn(1,2).le.trc(1).and.
+     +           ocorn(2,2).ge.blc(2).and.ocorn(2,2).le.trc(2)))
+     +        miss = .false.
+          call pgmove (real(ocorn(1,1)), real(ocorn(2,1)))
+          call pgdraw (real(ocorn(1,2)), real(ocorn(2,2)))
+        else if (ofig.eq.'circle' .or. ofig.eq.'ocircle') then
+          if (ocen(1).ge.blc(1).and.ocen(1).le.trc(1).and.
+     +        ocen(2).ge.blc(2).and.ocen(2).le.trc(2)) miss = .false.
+c
+c Draw poly-line and fill if necessary
+c
+          call pgsfs (2)
+          if (ofig.eq.'circle') call pgsfs (1)
+          call pgpoly (181, opoly(0,1), opoly(0,2))
+          call pgsfs (2)
+        else if (ofig.eq.'clear') then
+c
+c Allow clear overlays anywhere
+c
+            miss = .false.
+        end if
+c
+        if (miss) then
+          write (line,100) iover
+100       format ('Overlay # ', i4, ' does not fully fit on the image')
+          call output (line)
+        end if
+c
+c Write overlay identifying number
+c
+        if (owrite) call overid (doerase, ofig, real(ocen(1)), 
+     +                real(ocen(2)), xl, xr, yb, yt, oid, csize)
+      end if
+      call pgsci (1)
+c
+      end
+c
+c
+      subroutine fullann (maxcon, ncon, cin, gin, vin, bin, lh, lc,
+     +   lg, lv, lb, maxlev, nlevs, levs, srtlev, slev, npixr, 
+     +   trfun, pixr, vfac, bfac, vymin, blc, trc, pcs, ydispb, 
+     +   ibin, jbin, kbin, labtyp, gmm, cmm)
 c-----------------------------------------------------------------------
 c     Full annotation of plot with contour levels, RA and DEC etc.
 c
@@ -1920,12 +1978,6 @@ c       npixr      Number of pixel map ranges
 c       pixr       pixel map intensity range
 c       vfac       Maximum vector amplitude and scale in mm/amp
 c       bfac       Maximum box width and scale in mm/width
-c       naxis      Number of axes 
-c       size       Size of axes
-c       crval      Array of image reference values
-c       crpix      Array of reference pixels
-c       cdelt      Array of pixel increments
-c       ctype      Array of axis types
 c       vymin      y viewsurface normalized device coordinate
 c                  at which the lowest sub-plot x-axis is drawn
 c       blc,trc    Image window in pixels
@@ -1940,12 +1992,10 @@ c-----------------------------------------------------------------------
 c
       integer maxcon, maxlev, ncon, nlevs(maxcon), blc(*), trc(*), 
      +  lc(maxcon), lg, lv(2), lb, srtlev(maxlev,maxcon), ibin(2), 
-     +  jbin(2), kbin(2), naxis, size(naxis), npixr
-      double precision cdelt(naxis), crval(naxis), crpix(naxis)
+     +  jbin(2), kbin(2), npixr, lh
       real levs(maxlev,maxcon), vymin, slev(maxcon), pixr(2), pcs, 
      +  ydispb, vfac(2), bfac(5), gmm(2), cmm(2,maxcon)
-      character*(*) cin(maxcon), gin, vin(2), bin, ctype(naxis), trfun, 
-     +  labtyp(2)
+      character*(*) cin(maxcon), gin, vin(2), bin, trfun, labtyp(2)
 cc
       real xpos, ypos, yinc
       integer i
@@ -1953,13 +2003,12 @@ c-----------------------------------------------------------------------
 c
 c Setup chores and and annotate with reference values
 c
-      call anninicg (.false., naxis, crpix, crval, cdelt, ctype, vymin,
-     +               pcs, ydispb, labtyp, xpos, ypos, yinc)
+      call anninicg (lh, .false., vymin, pcs, ydispb, labtyp, 
+     +               xpos, ypos, yinc)
 c
 c Write spatial window in pixels and channel inc. if possible
 c
-      call annwincg (blc, trc, ibin, jbin, kbin, naxis, size, cdelt,
-     +               ctype, yinc, xpos, ypos)
+      call annwincg (lh, blc, trc, ibin, jbin, kbin, yinc, xpos, ypos)
 c
 c Write imaging information
 c
@@ -1989,8 +2038,7 @@ c
 c
 c
       subroutine getbeam (maxcon, cin, lc, gin, lg, vin, lv, bin, lb,
-     +   labtyp, naxis, crval, crpix, cdelt, ctype, bmin, bmaj, bpa, 
-     +   bxfac, byfac, dobeam, bemprs)
+     +   bmin, bmaj, bpa, dobeam, bemprs)
 c-----------------------------------------------------------------------
 c     Get beam information from headers
 c
@@ -1998,33 +2046,24 @@ c  Input
 c   maxcon     Maximum number of allowed contour images
 c   *in        Image names
 c   l*         Image handles
-c   labtyp     Label types
-c   naxis      NUmber of axes in image
-c   crval      Axis reference values
-c   cdelt      Axis increments
 c  Output
 c   bmin       FWHMin for maxcon contours, pixel map, two vectors
 c              and box images
 c   bmaj       FWHMax
 c   bpa        p.a. 
 c              These are all in radians
-c   bx,yfac    Factors to scale the x and y axes so that the beam
-c              comes out plotted in world coordinates of the type
-c              labelling the plot
 c   bemprs     True if beam present for that image
 c Input/output:
 c  dobeam      If no beams to plot, this is set to false
+c              COntour images, pixel map image, vector image and box image
 c-----------------------------------------------------------------------
       implicit none
 c
-      integer maxcon, naxis
-      character*(*) labtyp(2), ctype(naxis), cin(maxcon), gin, vin(2), 
-     +  bin
+      integer maxcon
+      character*(*) cin(maxcon), gin, vin(2), bin
       logical dobeam, bemprs(maxcon+4)
       integer lc(maxcon), lg, lv(2), lb
-      double precision crval(naxis), cdelt(naxis), crpix(naxis)
-      real bmin(maxcon+4), bmaj(maxcon+4), bpa(maxcon+4), 
-     +  bxfac(maxcon+4), byfac(maxcon+4)
+      real bmin(maxcon+4), bmaj(maxcon+4), bpa(maxcon+4)
 cc
       integer i
 c-----------------------------------------------------------------------
@@ -2033,9 +2072,8 @@ c Contour images
 c
       do i = 1, maxcon
        if (lc(i).ne.0) then
-         call beamfac (cin(i), lc(i), labtyp, naxis, crval, crpix, 
-     +      cdelt, ctype, bmin(i), bmaj(i), bpa(i), bxfac(i), 
-     +      byfac(i), bemprs(i))
+         call beamfac (cin(i), lc(i), bmin(i), bmaj(i), bpa(i), 
+     +                 bemprs(i))
        else
          bemprs(i) = .false.
        end if
@@ -2045,9 +2083,8 @@ c Pixel map image
 c
       i = maxcon + 1
       bemprs(i) = .false.
-      if (lg.ne.0) call beamfac (gin, lg, labtyp, naxis, crval, crpix,
-     +  cdelt, ctype, bmin(i),  bmaj(i), bpa(i), bxfac(i), 
-     +  byfac(i), bemprs(i))
+      if (lg.ne.0) call beamfac (gin, lg, bmin(i),  bmaj(i), bpa(i),
+     +                           bemprs(i))
 c
 c Vector images
 c
@@ -2055,23 +2092,20 @@ c
       bemprs(i) = .false.
       bemprs(i+1) = .false.
       if (lv(1).ne.0 .and. lv(2).ne.0) then
-        call beamfac (vin(1), lv(1), labtyp, naxis, crval, crpix, 
-     +     cdelt, ctype, bmin(i), bmaj(i), bpa(i), bxfac(i), 
-     +     byfac(i), bemprs(i))
+        call beamfac (vin(1), lv(1), bmin(i), bmaj(i), bpa(i), 
+     +                bemprs(i))
 c
         i = i + 1
-        call beamfac (vin(2), lv(2), labtyp, naxis, crval, crpix, 
-     +     cdelt, ctype, bmin(i), bmaj(i), bpa(i), bxfac(i), 
-     +     byfac(i), bemprs(i))
+        call beamfac (vin(2), lv(2), bmin(i), bmaj(i), bpa(i), 
+     +                bemprs(i))
       end if
 c
 c Box image 
 c
       i = maxcon + 4
       bemprs(i) = .false.
-      if (lb.ne.0) call beamfac (bin, lb, labtyp, naxis, crval, crpix,
-     +  cdelt, ctype, bmin(i),  bmaj(i), bpa(i), bxfac(i), 
-     +  byfac(i), bemprs(i))
+      if (lb.ne.0) call beamfac (bin, lb, bmin(i),  bmaj(i), bpa(i),
+     +                           bemprs(i))
 c
       dobeam = .false.
       do i = 1, maxcon+4
@@ -2147,7 +2181,7 @@ c
      +   boxfac, boxinc, pdev, labtyp, dofull, do3val, do3pix, eqscale, 
      +   gaps, solneg, nx, ny, lwid, break, cs, scale, ofile, dobeam, 
      +   beaml, beamb, relax, rot90, signs, mirror, dowedge, doerase, 
-     +   doepoch, dofid, dosing, nofirst, grid, dotr)
+     +   doepoch, dofid, dosing, nofirst, grid, dotr, dodist)
 c-----------------------------------------------------------------------
 c     Get the unfortunate user's long list of inputs
 c
@@ -2219,6 +2253,7 @@ c   dosing     Fiddle after each subplot
 c   nofirst    DOnt write first x-axis label on subplots except first
 c   grid       Extend ticks to grid
 c   dotr       Label top and right axes as well as bototm and left
+c   dodist     Distort overlays with grid
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -2231,7 +2266,8 @@ c
      +  pdev, ofile, trfun(maxgr), levtyp(maxcon), ltypes(maxtyp)
       logical do3val, do3pix, dofull, gaps, eqscale, solneg(maxcon),
      +  dobeam, beaml, beamb, relax, rot90, signs, mirror, dowedge,
-     +  doerase, doepoch, dofid, dosing, nofirst, grid, dotr
+     +  doerase, doepoch, dofid, dosing, nofirst, grid, dotr, 
+     +  dodist, dunw
 cc
       integer nmaxim
       parameter (nmaxim = 8)
@@ -2246,6 +2282,7 @@ c
       character type(ntype)*9
       data type  /'contour', 'pixel', 'amplitude', 'angle', 
      +            'box', 'mask', 'grey'/
+      data dunw /.false./
 c-----------------------------------------------------------------------
       call keyini
 c
@@ -2414,7 +2451,7 @@ c
       call decopt (dofull, do3val, do3pix, eqscale, gaps, solneg,
      +   beambl, beambr, beamtl, beamtr, relax, rot90, signs, 
      +   mirror, dowedge, doerase, doepoch, dofid, dosing, nofirst,
-     +   grid, dotr)
+     +   grid, dotr, dodist)
 c
       if (gin.eq.' ') then
         dowedge = .false.
@@ -2432,10 +2469,22 @@ c
           labtyp(2) = labtyp(1)
         end if
       end if
-      if ( (index(labtyp(1),'lin').ne.0  .and. 
-     +      index(labtyp(2),'lin').eq.0) .or.
-     +     (index(labtyp(2),'lin').ne.0  .and. 
-     +      index(labtyp(1),'lin').eq.0) .or.
+      if (labtyp(1)(4:6).eq.'lin') then
+        labtyp(1)(4:6) = 'nat'
+        call bug ('w', 'Axis label types abslin and rellin are ')
+        call bug ('w', 'deprecated in favour of absnat and relnat')
+        dunw = .true.
+      end if
+      if (labtyp(2)(4:6).eq.'lin') then 
+        labtyp(2)(4:6) = 'nat'
+        if (.not.dunw) then
+          call bug ('w', 'Axis label types abslin and rellin are ')
+          call bug ('w', 'deprecated in favour of absnat and relnat')
+        end if
+      end if
+c
+      if ( (index(labtyp(1),'nat').ne.0  .and. 
+     +      index(labtyp(2),'nat').eq.0) .or.
      +     (index(labtyp(1),'kms').ne.0  .and. 
      +      index(labtyp(2),'kms').eq.0) .or.
      +     (index(labtyp(2),'ghz').ne.0  .and. 
@@ -2524,59 +2573,50 @@ c
       end
 c
 c
-      subroutine olaydec (lun, pl1, npl, maxtyp, ltypes, maxpos, lpos,
-     +                    ofile, ofig, npos, opos, posid, owrite)
+      subroutine olay (dodist, doerase, ofile, pl1, npl, lun, blc, trc, 
+     +                 maxtyp, ltypes, csize)
 c-----------------------------------------------------------------------
-c     Read overlay positions list file and decode.  The positions in
-c     true world coordinates are converted to absolute image pixels
-c     taking into account what value of the third axis we have. This
-c     is because cdelt is frequency dependent in Miriad so a source
-c     moves with frequency through a cube.
+c     Read overlay positions list file, decode and plot.  
 c
 c   Inputs
-c     lun      Handle of image
+c     blc,trc  BLC and TRC of displayed imgae
+c     doerase  If true erase background before writing overlay ID string
+c     csize    PGPLOT character size
+c     ofile    Overlay file name
 c     pl1,npl  Start chan & number of chans displayed for this subplot
+c     lun      Handle of image
 c     maxtyp   Maximum number of label types
 c     ltypes   Possible label types
-c     maxpos   Maximum number of allowed overlays
-c     lpos     Handle for overlay positions list file
-c     ofile    Overlay file name
-c  Outputs
-c     ofig     Overlay figure type for each overlay
-c     npos     Number of overlays
-c     opos     Array containing overlay locations
-c     posid    Array containing overlay I.D. strings
-c     owrite   Write overlay ID on overlay ?
+c
 c------------------------------------------------------------------------
       implicit none
 c
-      integer lpos, maxpos, maxtyp, npos, lun, pl1, npl
-      double precision opos(6,maxpos)
-      character ltypes(maxtyp)*(*), ofile*(*), posid(maxpos)*(*), 
-     +  ofig(maxpos)*(*)
-      logical owrite(maxpos)
+      real csize
+      integer maxtyp, lun, pl1, npl, blc(3), trc(3)
+      character ltypes(maxtyp)*(*), ofile*(*)
+      logical doerase, dodist
 cc
-      integer iostat, ilen
-      character aline*100
-c
-      integer len1
-      character itoaf*4
-      double precision xoff, yoff, pix3
+      double precision xoff, yoff, pix3, ocen(2), ocorn(2,4)
+      real opoly(0:180,2), xl, xr, yb, yt
+      integer iostat, ilen, len1, lpos, i, ochan(2)
+      character aline*100, oid*80, ofig*8
+      logical owrite
 c------------------------------------------------------------------------
-      if (ofile.eq.' ') then
-        npos = 0
-      else
+      if (ofile.ne.' ') then
         call txtopen (lpos, ofile, 'old', iostat)
-        if (iostat.ne.0) call bug ('f', 'Error opening positions file')
-        call initco (lun)
+        if (iostat.ne.0) call bug ('f', 'Error opening overlay file')
 c
-c Read and decode locations.  # means comment
+c Initialize coordinate routines
+c
+        call initco (lun)
 c
         xoff = 0.0
         yoff = 0.0
-        npos = 0
+        i = 0
         iostat = 0
         pix3 = dble(2*pl1+npl-1) / 2.0
+c
+c Loop over lines in file
 c
         do while (iostat.ne.-1)
           aline = ' '
@@ -2591,20 +2631,20 @@ c
                 call posdec1 (aline, xoff, yoff)
               else
 c
-c Fish out overlay location and type
+c Fish out overlay locations and convert to pixels
 c
-                if (npos.eq.maxpos) then
-                  call bug ('w', 'Reducing no. overlays to max. '//
-     +                           'allowed = '//itoaf(maxpos))
-                  iostat = -1
-                else
-                  npos = npos + 1
-                  ilen = len1(aline)
-                  call posdec2 (lun, pix3, maxtyp, ltypes, npos, 
-     +              xoff, yoff, aline(1:ilen), ofig(npos), 
-     +              opos(1,npos), posid(npos), owrite(npos))
-                end if
+                i = i + 1
+                ilen = len1(aline)
+                call posdec2 (lun, pix3, maxtyp, ltypes, i, xoff, yoff,
+     +            dodist, aline(1:ilen), ofig, ocen, ocorn, oid, 
+     +            owrite, ochan, opoly, xl, xr, yb, yt)
               end if
+c
+c Draw overlay
+c
+              call drover (blc, trc, doerase, csize, i, pix3, ofig, 
+     +                     ocen, ocorn, opoly, oid, owrite, ochan,
+     +                     xl, xr, yb, yt)
             end if
           else
             if (iostat.ne.-1) call bug ('f', 
@@ -2615,66 +2655,6 @@ c
         call finco (lun)
         call txtclose (lpos)
       end if
-c
-      end
-c
-c
-      subroutine ols2pix (lun, otype, widthx, widthy, pos, widthp)
-c-----------------------------------------------------------------------
-c     Convert overlay widths into pixels.
-c
-c  Input
-c   lun    Handle of image
-c   otype  The overlay units type for this axis
-c   widthx,y
-c          The overlay widths in units specified by OTYPE
-c   pos(1:)The centre of the overlay in absolute pixels
-c  Output
-c   widthp The overlay widths in pixels
-c
-c------------------------------------------------------------------------
-      implicit none
-      integer lun
-      character*6 otype(2)
-      double precision pos(2), widthx, widthy, widthp(2)
-cc
-      double precision win(2), wout(2), pixin(2)
-      integer i
-      character*6 typei(2), typeo(2)
-c------------------------------------------------------------------------
-c
-c Convert centre of overlay to true offset coordinates of
-c the type indicated by the OTYPE
-c
-      do i = 1, 2
-        typei(i) = 'abspix'
-        pixin(i) = pos(i)
-        win(i) = pixin(i)
-c
-        if (otype(i).eq.'hms' .or. otype(i).eq.'dms' .or.
-     +      otype(i).eq.'arcsec') then 
-          typeo(i) = 'arcsec'
-        else if (otype(i).eq.'arcmin') then
-          typeo(i) = 'arcmin'
-        else
-          typeo(i) = 'rel'//otype(i)(4:6)
-        end if
-      end do
-      call w2wco (lun, 2, typei, ' ', win, typeo, ' ', wout)
-c
-c Now add the overlay width to the offset coordinate and convert
-c to absolute pixels. For circles we just have a radius so we
-c only make the conversions for the x axis
-c
-      win(1) = wout(1) + widthx
-      win(2) = wout(2) + widthy
-      call w2wco (lun, 2, typeo, ' ', win, typei, ' ', wout)
-c
-c Subtract the centre of the overlay to get the overlay width in pixels.  
-c
-      do i = 1, 2
-        widthp(i) = abs(wout(i) - pixin(i))
-      end do
 c
       end
 c
@@ -2788,192 +2768,6 @@ c
       end
 c
 c
-      subroutine overl (doerase, ofig, ow, blc, trc, npos, opos, posid,
-     +   chs, nch, csize, labtyp, naxis, crval, crpix, cdelt, ctype)
-
-c--------------------------------------------------------------------------
-c     Draw overlays
-c
-c     Input
-c       doerase  Erase rectangle before writing overlay ID string
-c       ofig     'star', 'box', 'clear, 'circle', 'line'
-c       ow       If true write overlay ID in corner of overlay
-c       blc      Blc of image being plotted in pixels
-c       trc      Trc of image being plotted in pixels
-c       npos     Number of overlays
-c       opos     List of: 
-c                       X  Y  XS YS CS CE      'box', 'star'
-c                       X1 Y1 X2 Y2 CS CE      'line' 
-c                       X Y ... ... CS CE      'clear'  (3&4 unused)
-c                       X Y  S  ... CS CE      'circle', 'ocircle'
-c                                               (4 unused)
-c                All locations and half sizes are in unbinned
-c		 full image pixels now except for circle overlays
-c		 where the half size (radius) is in pixels according
-c		 to the X axis increment.
-c       posid    List of overlay I.D.'s
-c       chs,nch  Start channel, and number of channels averaged for
-c	         current subplot
-c       csize    Character size for overlay ID
-c       labtyp   Axis label types
-c       naxis    Number of axes
-c       c*       Axis descriptors
-c----------------------------------------------------------------------
-      implicit none
-c     
-      integer npos, chs, nch, blc(*), trc(*), naxis
-      double precision opos(6,npos), crval(naxis), cdelt(naxis), 
-     +  crpix(naxis)
-      real csize
-      character posid(npos)*(*), ofig(npos)*(*), ctype(naxis)*(*),
-     +  labtyp(2)*(*)
-      logical ow(npos), doerase
-cc
-      include 'mirconst.h'
-      double precision d2r
-      parameter (d2r = dpi/180.0)
-c
-      logical miss, ok
-      character line*80
-      integer i, j, k, cs, ce
-      double precision x, y, xl, xr, yb, yt
-      real xcirc(0:360), ycirc(0:360), rat, radx, rady, chan
-c----------------------------------------------------------------------
-c
-c Loop over overlays
-c
-      call pgsci (3)
-      do i = 1, npos
-c
-c Only draw on specified channels
-c
-        chan = (chs + (chs + nch - 1))/2.0
-        cs = nint(opos(5,i))
-        ce = nint(opos(6,i))
-        if (cs.eq.0) ce = 0
-        if (ce.eq.0) ce = cs
-c
-        if (cs.eq.0 .or. (chan.ge.cs .and. chan.le.ce)) then
-c
-c Extrema in world coordinates
-c 
-          if (ofig(i).eq.'line') then
-            call pix2wcg (.true.,  dble(opos(1,i)), 1, labtyp(1), naxis,
-     +                    crval, crpix, cdelt, ctype, xl, ok)
-            call pix2wcg (.true.,  dble(opos(2,i)), 2, labtyp(2), naxis, 
-     +                    crval, crpix, cdelt, ctype, yb, ok)
-            call pix2wcg (.true.,  dble(opos(3,i)), 1, labtyp(1), naxis, 
-     +                    crval, crpix, cdelt, ctype, xr, ok)
-            call pix2wcg (.true.,  dble(opos(4,i)), 2, labtyp(2), naxis, 
-     +                    crval, crpix, cdelt, ctype, yt, ok)
-          else if (ofig(i).eq.'star' .or. ofig(i).eq.'box') then
-            call pix2wcg (.true.,  dble(opos(1,i)-opos(3,i)), 1, 
-     +         labtyp(1), naxis, crval, crpix, cdelt, ctype, xl, ok)
-            call pix2wcg (.true.,  dble(opos(2,i)-opos(4,i)), 2, 
-     +         labtyp(2), naxis, crval, crpix, cdelt, ctype, yb, ok)
-            call pix2wcg (.true.,  dble(opos(1,i)+opos(3,i)), 1, 
-     +         labtyp(1), naxis, crval, crpix, cdelt, ctype, xr, ok)
-            call pix2wcg (.true.,  dble(opos(2,i)+opos(4,i)), 2, 
-     +         labtyp(2), naxis, crval, crpix, cdelt, ctype, yt, ok)
-          else if (ofig(i).eq.'circle' .or. ofig(i).eq.'ocircle') then
-c
-c Remember circle radius in x-axis pixels at this point
-c
-            rat = abs(cdelt(1) / cdelt(2))
-            call pix2wcg (.true.,  dble(opos(1,i)-opos(3,i)), 1, 
-     +         labtyp(1), naxis, crval, crpix, cdelt, ctype, xl, ok)
-            call pix2wcg (.true.,  dble(opos(2,i)-rat*opos(3,i)), 2,
-     +         labtyp(2), naxis, crval, crpix, cdelt, ctype, yb, ok)
-            call pix2wcg (.true.,  dble(opos(1,i)+opos(3,i)), 1, 
-     +         labtyp(1), naxis, crval, crpix, cdelt, ctype, xr, ok)
-            call pix2wcg (.true.,  dble(opos(2,i)+rat*opos(3,i)), 2, 
-     +         labtyp(2), naxis, crval, crpix, cdelt, ctype, yt, ok)
-c
-            radx = (xr - xl) / 2.0
-            rady = (yt - yb) / 2.0
-          end if
-c
-c Centre of overlay in world coordinates
-c
-          call pix2wcg (.true.,  dble(opos(1,i)), 1, labtyp(1), naxis,
-     +                  crval, crpix, cdelt, ctype, x, ok)
-          call pix2wcg (.true.,  dble(opos(2,i)), 2, labtyp(2), naxis,
-     +                  crval, crpix, cdelt, ctype, y, ok)
-c
-c Draw desired type of overlay
-c
-          miss = .true.
-          if (ofig(i).eq.'star') then
-            if (opos(1,i).ge.blc(1).and.opos(1,i).le.trc(1).and.
-     +          opos(2,i).ge.blc(2).and.opos(2,i).le.trc(2)) 
-     +          miss = .false.
-            call pgmove (real(x), real(yb))
-            call pgdraw (real(x), real(yt))
-            call pgmove (real(xl), real(y))
-            call pgdraw (real(xr), real(y))
-          else if (ofig(i).eq.'box') then
-            if (opos(1,i).ge.blc(1).and.opos(1,i).le.trc(1).and.
-     +          opos(2,i).ge.blc(2).and.opos(2,i).le.trc(2)) 
-     +          miss = .false.
-            call pgmove (real(xl), real(yb))
-            call pgdraw (real(xr), real(yb))
-            call pgdraw (real(xr), real(yt))
-            call pgdraw (real(xl), real(yt))
-            call pgdraw (real(xl), real(yb))
-          else if (ofig(i).eq.'line') then
-            if ((opos(1,i).ge.blc(1).and.opos(1,i).le.trc(1).and.
-     +            opos(2,i).ge.blc(2).and.opos(2,i).le.trc(2)) .or.
-     +           (opos(3,i).ge.blc(1).and.opos(3,i).le.trc(1).and.
-     +            opos(4,i).ge.blc(2).and.opos(4,i).le.trc(2)))
-     +          miss = .false.
-            call pgmove (real(xl), real(yb))
-            call pgdraw (real(xr), real(yt))
-          else if (ofig(i).eq.'circle' .or. ofig(i).eq.'ocircle') then
-            if (opos(1,i).ge.blc(1).and.opos(1,i).le.trc(1).and.
-     +          opos(2,i).ge.blc(2).and.opos(2,i).le.trc(2)) 
-     +          miss = .false.
-c
-c Generate poly-line coordinates
-c
-            k = 0
-            do j = 0, 360
-              xcirc(k) = radx*cos(real(j)*d2r) + x
-              ycirc(k) = rady*sin(real(j)*d2r) + y
-              k = k + 1
-            end do
-c
-c Draw poly-line and fill if necessary
-c
-            call pgsfs (2)
-            if (ofig(i).eq.'circle') call pgsfs (1)
-            call pgpoly (k-1, xcirc(0), ycirc(0))
-            call pgsfs (2)
-          else if (ofig(i).eq.'clear') then
-c
-c Allow clear overlays anywhere
-c
-            miss = .false.
-          end if
-c
-          if (miss) then
-            write (line,100) i
-100         format ('Overlay # ', i4, 
-     +              ' does not fully fit on the image')
-            call output (line)
-          end if
-c
-c Write overlay identifying number
-c
-          if (ow(i)) call overid (doerase, ofig(i), real(x), real(y), 
-     +                  real(xl), real(xr), real(yb), real(yt), 
-     +                  posid(i), csize)
-        end if
-      end do
-      call pgsci (1)
-c
-      end
-c
-c
       subroutine posdec1 (aline, xoff, yoff)
 c---------------------------------------------------------------------
 c     Decode OFFSET string into offsets
@@ -3024,7 +2818,8 @@ c
 c
 c
       subroutine posdec2 (lun, pix3, maxtyp, ltypes, iline, xoff, yoff,
-     +                    aline, ofig, opos, posid, owrite)
+     +  dodist, aline, ofig, ocen, ocorn, oid, owrite, ochan, poly,
+     +  xl, xr, yb, yt)
 c---------------------------------------------------------------------
 c     Decode string into positions list
 c
@@ -3036,51 +2831,58 @@ c       maxtyp   Maximum number of axis types
 c       ltypes   possible label types
 c       iline    Line number being decoded
 c       x,yoff   Offsets to add to decoded locations
+c       dodist   True to distort overlays with grid
 c       aline    Input string
 c     Output
 c       ofig     Overlay type (star, box, clear, line)
-c       opos     Overlay location, list of: 
-c                         1  2   3    4   5  6
-c			  --------------------
-c                         X  Y  XSIZ YSIZ CS CE   'box', 'star'
-c                         X1 Y1 X2   Y2   CS CE   'line'
-c                         X  Y  ...  ...  CS CE   'clear' (3&4 unused)
-c                         X  Y   S   ...  CS CE   'circle' and 'ocircle'
-c                                                  (4 unused)
-c                All locations and half sizes are in unbinned full
-c		 image pixels now except for circle overlays. In this
-c		 case, S is in pixels according to the X axis increment.
-c       posid    Overlay ID string
-c       owrite   True to write overlay ID on plot
-c
+c       ocen     Centre of overlay in unbinned full image pixels
+c       ocorn    Corners of overlay for x and y 
+c                For 'star'    middle-top, right-middle, middle-bottom, left-middle
+c                For 'box'     top-left, top-right, bottom-right, bottom-left
+c                For 'line'    left and right
+c                For 'clear'   unused
+c		 For 'circle'  its the radius in X-pixels
+c		 For 'ocircle' its the radius in X-pixels
+c       oid      The ID string to write
+c       owrite   True to write OID
+c       ochan    STart and end chans to display this overlay on
+c       poly     Circles reside here
+c       xl,xr,yb,yt
+c	         Extrema of overlay
 c---------------------------------------------------------------------
       implicit none
 c
-      integer iline, maxtyp, lun
-      double precision opos(6), xoff, yoff, pix3
-      character*(*) aline, posid, ofig, ltypes(maxtyp)
-      logical owrite
+      integer iline, maxtyp, lun, ochan(2)
+      double precision ocen(2), xoff, yoff, pix3, ocorn(2,4)
+      real poly(0:180,2), xl, xr, yb, yt
+      character*(*) aline, oid, ofig, ltypes(maxtyp)
+      logical owrite, dodist
 cc 
       include 'mirconst.h'
       double precision rd
       integer maxnum
       parameter (rd = 180.0/dpi, maxnum = 20)
 c
-      double precision nums(maxnum), off(2)
-      integer i, j, slen, lena, inum, ipres, nextra, npt, ifac, emax,
-     +  icomm(maxnum), dsign(2), spos, nuse
+      double precision nums(maxnum), width(2), wcen(3), win(3),
+     +  wout(3), off(2), rad, radx, rady, x1, x2, y1, y2
+      integer i, j, slen, lena, inum, ipres, nextra, ipt, ifac,
+     +  icomm(maxnum), dsign(2), spos, nuse, il
       logical ok
-      character str*4, estr*80, wover*3, otype(2)*6
+      character str*4, estr*80, wover*3, otype(2)*6, type(3)*6,
+     +  abspix(3)*6, type2(3)*6
 c
       integer len1
       character itoaf*4
 c
-      integer ntype1, ntype2
-      parameter (ntype1 = 6, ntype2 = 2)
-      character type1(ntype1)*7, type2(ntype2)*3
-      data type1 /'box', 'star', 'line', 'clear', 'circle', 'ocircle'/
-      data type2 /'yes', 'no'/
+      integer notype1, notype2
+      parameter (notype1 = 6, notype2 = 2)
+      character otype1(notype1)*7, otype2(notype2)*3
+      data otype1 /'box', 'star', 'line', 'clear', 'circle', 'ocircle'/
+      data otype2 /'yes', 'no'/
 c----------------------------------------------------------------------
+      abspix(1) = 'abspix'
+      abspix(2) = 'abspix'
+      abspix(3) = 'abspix'
 c
 c Prepare string for matodf
 c
@@ -3093,10 +2895,10 @@ c
         call bug ('f', estr)
       end if
 c
-c Fish out OFIG, XOTYPE, YOTYPE, ID, WRITE
+c Extract OFIG, XOTYPE, YOTYPE, ID, WRITE
 c
       ofig = aline(1:icomm(1)-1)
-      call matchcg (iline, 'OFIG', ofig, 'overlay', ntype1, type1)
+      call matchcg (iline, 'OFIG', ofig, 'overlay', notype1, otype1)
 c
       otype(1) = aline(icomm(1)+1:icomm(2)-1)
       call matchcg (iline, 'XOTYPE', otype(1), 'overlay', 
@@ -3105,20 +2907,30 @@ c
       call matchcg (iline, 'YOTYPE', otype(2), 'overlay', 
      +               maxtyp, ltypes)
 c
-      posid = aline(icomm(3)+1:icomm(4)-1)
+      oid = aline(icomm(3)+1:icomm(4)-1)
+      il = len1(oid)
+      do i = 1, il
+        if (oid(i:i).eq.'_') oid(i:i) = ' '
+      end do      
 c
       wover = aline(icomm(4)+1:icomm(5)-1)
-      call matchcg (iline, 'WRITE', wover, 'overlay', ntype2, type2)
+      call matchcg (iline, 'WRITE', wover, 'overlay', notype2, otype2)
       call ucase (wover)
       owrite = .true.
       if (wover.eq.'NO') owrite = .false.
       ipres = ipres - 5
 c
-c How many numbers do we expect in string.  Minimum is:
-c  X  Y          for 'box' and  'star'  XS YS CS CE optional
-c  X1,Y1 X2,Y2   for 'line' CS CE optional
-c  X  Y          for 'clear' CS CE optional
-c  X  Y S        for 'circle' and 'ocircle' CS CE optional
+c Mandatory columns are
+c  X  Y          for 'box' and  'star'  
+c  X1,Y1 X2,Y2   for 'line' 
+c  X  Y          for 'clear'
+c  X  Y S        for 'circle' and 'ocircle' 
+c
+c The optional columns are
+c  XS YS CS CE   for 'box' and  'star'  
+c  CS CE         for 'line'    
+c  CS CE         for 'clear'     
+c  CS CE         for 'circle' and 'ocircle'   
 c
       inum = 0
       if (ofig.eq.'circle' .or. ofig.eq.'ocircle') inum = 1
@@ -3162,90 +2974,350 @@ c
         call bug ('f', estr)
       end if
 c
-c Now convert the overlay locations in whatever unit to pixels
+c Check that we have consistent overlay types and axes.  For circles, we
+c must have angular units on both axes if radius given in angular units
 c
+      type(1) = otype(1)
+      type(2) = otype(2)
+      type(3) = 'abspix'
+      if (type(1).eq.'hms' .or. type(1).eq.'dms') type(1) = 'arcsec'
+      if (type(2).eq.'hms' .or. type(2).eq.'dms') type(2) = 'arcsec'
+      if (ofig.eq.'circle' .or. ofig.eq.'ocircle') type(2) = type(1)
+c
+      call chkaxco (lun, type(1), 2, 0, ' ')
+      win(3) = pix3
       off(1) = xoff
       off(2) = yoff
-      call ol2pixcg (lun, pix3, ofig, otype, off, dsign, nums, 
-     +               opos, nuse)
-      npt = nuse + 1
 c
-c For circles we must fish out the mandatory radius too; we convert 
-c it to X axis pixels
-c
-      if (ofig.eq.'circle' .or. ofig.eq.'ocircle') then
-        call ols2pix (lun, otype, nums(npt), 0.0d0, opos(1), opos(3))
-        opos(4) = 0.0
-        npt = npt + 1
-      end if
-c
-c We have done the mandatory columns, now deal with the optional
-c  for 'box' and  'star'  XS YS CS CE optional
-c  for 'line'                   CS CE optional
-c  for 'clear'                  CS CE optional
-c  for 'circle' and 'ocircle'   CS CE optional
-c
+c Now manipulate the desired fields depending upon the overlay type
+c 
+      ipt = 1
       nextra = ipres - inum
-      emax = 2
-      if (ofig.eq.'box' .or. ofig.eq.'star') emax = 4
-      if (nextra.gt.emax) call bug ('f', 
-     +   'Too many numbers for overlay # '//str(1:slen))
+      if (ofig.eq.'box' .or. ofig.eq.'star') then
+
+        if (nextra.gt.4) call bug ('f', 
+     +     'Too many numbers for overlay # '//str(1:slen))
 c
-      if (ofig.eq.'line' .or. ofig.eq.'clear') then
-        if (nextra.eq.0) then
-          opos(5) = 0.0
-          opos(6) = 0.0
-        else if (nextra.eq.1) then
-          opos(5) = nums(npt)
-          opos(6) = opos(5)
-        else if (nextra.eq.2) then
-          opos(5) = nums(npt)
-          opos(6) = nums(npt+1)
+c Get centre in absolute pixels
+c 
+        call ol2pixcg (lun, pix3, otype, off, dsign, nums(ipt),
+     +                 ocen, nuse)
+        ipt = ipt + nuse
+c
+c Convert centre back into units given by OTYPE
+c
+        win(1) = ocen(1)
+        win(2) = ocen(2)
+        call w2wco (lun, 3, abspix, ' ', win, type, ' ', wcen)
+c
+c Get half sizes from overlay line
+c
+        width(1) = 0.0
+        width(2) = 0.0
+        ochan(1) = 0
+        ochan(2) = 0
+        if (nextra.ge.1) then
+          width(1) = nums(ipt)
+          width(2) = width(1)
         end if
-      else if (ofig.eq.'box' .or. ofig.eq.'star') then
-        do i = 3, 6
-          opos(i) = 0.0
-        end do
-        if (nextra.eq.0) then
-          opos(3) = 2.0
-          opos(4) = 2.0
-        else if (nextra.eq.1) then
-          call ols2pix (lun, otype, nums(npt), 0.0d0, opos(1), opos(3))
-          opos(4) = opos(3)
+        if (nextra.ge.2) width(2) = nums(ipt+1)
+        if (nextra.ge.3) then
+          ochan(1) = nint(nums(ipt+2))
+          ochan(2) = ochan(1)
+        end if
+        if (nextra.ge.4) ochan(2) = nint(nums(ipt+3))
+c
+        if (dodist) then
+c
+c Overlays distort with grid
+c
+          if (ofig.eq.'box') then
+            win(1) = wcen(1) - width(1)
+            win(2) = wcen(2) + width(2)
+            call w2wco (lun, 3, type, ' ', win, abspix, ' ', wout)
+            ocorn(1,1) = wout(1)
+            ocorn(2,1) = wout(2)
+c
+            win(1) = wcen(1) + width(1)
+            win(2) = wcen(2) + width(2)
+            call w2wco (lun, 3, type, ' ', win, abspix, ' ', wout)
+            ocorn(1,2) = wout(1)
+            ocorn(2,2) = wout(2)
+c
+            win(1) = wcen(1) + width(1)
+            win(2) = wcen(2) - width(2)
+            call w2wco (lun, 3, type, ' ', win, abspix, ' ', wout)
+            ocorn(1,3) = wout(1)
+            ocorn(2,3) = wout(2)
+c
+            win(1) = wcen(1) - width(1)
+            win(2) = wcen(2) - width(2)
+            call w2wco (lun, 3, type, ' ', win, abspix, ' ', wout)
+            ocorn(1,4) = wout(1)
+            ocorn(2,4) = wout(2)
+          else 
+            win(1) = wcen(1) 
+            win(2) = wcen(2) + width(2)
+            call w2wco (lun, 3, type, ' ', win, abspix, ' ', wout)
+            ocorn(1,1) = wout(1)
+            ocorn(2,1) = wout(2)
+c
+            win(1) = wcen(1) + width(1)
+            win(2) = wcen(2) 
+            call w2wco (lun, 3, type, ' ', win, abspix, ' ', wout)
+            ocorn(1,2) = wout(1)
+            ocorn(2,2) = wout(2)
+c
+            win(1) = wcen(1)
+            win(2) = wcen(2) - width(2)
+            call w2wco (lun, 3, type, ' ', win, abspix, ' ', wout)
+            ocorn(1,3) = wout(1)
+            ocorn(2,3) = wout(2)
+c
+            win(1) = wcen(1) - width(1)
+            win(2) = wcen(2)
+            call w2wco (lun, 3, type, ' ', win, abspix, ' ', wout)
+            ocorn(1,4) = wout(1)
+            ocorn(2,4) = wout(2)
+          end if
         else
-          call ols2pix (lun, otype, nums(npt), nums(npt+1), 
-     +                  opos(1), opos(3))
-          if (nextra.eq.3) then
-            opos(5) = nums(npt+2)
-            opos(6) = opos(5)
-          else if (nextra.eq.4) then
-            opos(5) = nums(npt+2)
-            opos(6) = nums(npt+3)
+c
+c Overlay shape maintained independent of what the actual coordinate grid 
+c is doing.  Therefore, the sizes are worked out in pixels at the centre 
+c of the field and kept constant
+c          
+          win(1) = 0
+          win(2) = 0
+          win(3) = pix3
+          type2(1) = 'relpix'
+          type2(2) = 'relpix'
+          type2(3) = 'abspix'
+          call w2wco (lun, 3, type2, ' ', win, type, ' ', wcen)
+c          
+          win(1) = wcen(1) - width(1)
+          win(2) = wcen(2) - width(2)
+          call w2wco (lun, 3, type, ' ', win, abspix, ' ', wout)
+          x1 = wout(1)
+          y1 = wout(2)
+c
+          win(1) = wcen(1) + width(1)
+          win(2) = wcen(2) + width(2)
+          call w2wco (lun, 3, type, ' ', win, abspix, ' ', wout)
+          x2 = wout(1)
+          y2 = wout(2)
+c
+          width(1) = abs(x2 - x1) / 2.0
+          width(2) = abs(y2 - y1) / 2.0
+c
+          if (ofig.eq.'box') then
+            ocorn(1,1) = ocen(1) - width(1)
+            ocorn(2,1) = ocen(2) + width(2)
+c
+            ocorn(1,2) = ocen(1) + width(1)
+            ocorn(2,2) = ocen(2) + width(2)
+c
+            ocorn(1,3) = ocen(1) + width(1)
+            ocorn(2,3) = ocen(2) - width(2)
+c
+            ocorn(1,4) = ocen(1) - width(1)
+            ocorn(2,4) = ocen(2) - width(2)
+          else 
+            ocorn(1,1) = ocen(1)
+            ocorn(2,1) = ocen(2) + width(2)
+c
+            ocorn(1,2) = ocen(1) + width(1)
+            ocorn(2,2) = ocen(2)
+c
+            ocorn(1,3) = ocen(1) 
+            ocorn(2,3) = ocen(2) - width(2)
+c
+            ocorn(1,4) = ocen(1) - width(1)
+            ocorn(2,4) = ocen(2)
           end if
         end if
-      else if (ofig.eq.'circle' .or. ofig.eq.'ocircle') then
-        if (nextra.eq.0) then
-          opos(5) = 0.0
-          opos(6) = 0.0
-        else if (nextra.eq.1) then
-          opos(5) = nums(npt)
-          opos(6) = opos(5)
-        else if (nextra.eq.2) then
-          opos(5) = nums(npt)
-          opos(6) = nums(npt+1)
+c
+c Extremeties
+c
+        xl = min(ocorn(1,1), ocorn(1,2), ocorn(1,3), ocorn(1,4))
+        xr = max(ocorn(1,1), ocorn(1,2), ocorn(1,3), ocorn(1,4))
+        yb = min(ocorn(2,1), ocorn(2,2), ocorn(2,3), ocorn(2,4))
+        yt = max(ocorn(2,1), ocorn(2,2), ocorn(2,3), ocorn(2,4))
+      else if (ofig.eq.'line') then
+        if (nextra.gt.2) call bug ('f', 
+     +     'Too many numbers for overlay # '//str(1:slen))
+c
+c Get ends of line in absolute pixels
+c 
+        call ol2pixcg (lun, pix3, otype, off, dsign, nums(ipt),
+     +                 ocorn(1,1), nuse)
+        ipt = ipt + nuse
+        call ol2pixcg (lun, pix3, otype, off, dsign, nums(ipt),
+     +                 ocorn(1,2), nuse)
+        ipt = ipt + nuse
+c
+c Get channel ranges 
+c
+        ochan(1) = 0
+        ochan(2) = 0
+        if (nextra.ge.1) then
+          width(1) = nums(ipt)
+          width(2) = width(1)
+        end if
+        if (nextra.ge.2) width(2) = nums(ipt+1)
+c
+c Extremeties
+c
+        xl = min(ocorn(1,1), ocorn(1,2))
+        xr = max(ocorn(1,1), ocorn(1,2))
+        yb = min(ocorn(2,1), ocorn(2,2))
+        yt = max(ocorn(2,1), ocorn(2,2))
+      else if (ofig.eq.'clear') then
+        if (nextra.gt.2) call bug ('f', 
+     +     'Too many numbers for overlay # '//str(1:slen))
+c
+c Get centre in absolute pixels
+c 
+        call ol2pixcg (lun, pix3, otype, off, dsign, nums(ipt),
+     +                 ocen, nuse)
+        ipt = ipt + nuse
+c
+c Get channel range
+c
+        ochan(1) = 0
+        ochan(2) = 0
+        if (nextra.ge.1) then
+          width(1) = nums(ipt)
+          width(2) = width(1)
+        end if
+        if (nextra.ge.2) width(2) = nums(ipt+1)
+c
+c Extremeties not used
+c
+        xl = 0
+        xr = 0
+        yb = 0
+        yt = 0
+      else if (ofig.eq.'ocircle' .or. ofig.eq.'circle') then
+        if (nextra.gt.2) call bug ('f', 
+     +     'Too many numbers for overlay # '//str(1:slen))
+c
+c Get centre in absolute pixels
+c 
+        call ol2pixcg (lun, pix3, otype, off, dsign, nums(ipt),
+     +                 ocen, nuse)
+        ipt = ipt + nuse
+c
+c Get radius.  Remember that the radius is specified only in the 
+c OTYPE of the x axis
+c
+        rad = nums(ipt)
+        ipt = ipt + 1
+c
+c Get channel range
+c
+        ochan(1) = 0
+        ochan(2) = 0
+        if (nextra.ge.1) then
+          ochan(1) = nint(nums(ipt))
+          ochan(2) = ochan(1)
+        end if
+        if (nextra.ge.2) ochan(2) = nint(nums(ipt+1))	
+c
+c Convert centre back into units given by OTYPE
+c
+        win(1) = ocen(1)
+        win(2) = ocen(2)
+        type(2) = type(1)
+        call w2wco (lun, 3, abspix, ' ', win, type, ' ', wcen)
+c
+c Generate poly-line coordinates for circle
+c
+        if (dodist) then
+c
+c Circle distorts with coordinate grid
+c
+          xl = 1e30
+          xr = -1e30
+          yb = 1e30
+          yt = -1e30
+          i = 0
+          do j = 0, 360, 2
+            win(1) = rad*cos(real(j)/rd) + wcen(1)
+            win(2) = rad*sin(real(j)/rd) + wcen(2)
+c 
+            call w2wco (lun, 3, type, ' ', win, abspix, ' ', wout)
+            poly(i,1) = wout(1)
+            poly(i,2) = wout(2)
+c
+            xl = min(dble(xl),wout(1))
+            xr = max(dble(xr),wout(1))
+            yb = min(dble(yb),wout(2))
+            yt = max(dble(yt),wout(2))
+c
+            i = i + 1
+          end do
+        else
+c
+c Circle shape maintained independent of what the actual coordinate 
+c grid is doing.  Therefore, the radius is worked out in pixels at 
+c the centre of the field and kept constant. 
+c          
+          win(1) = 0
+          win(2) = 0
+          win(3) = pix3
+          type2(1) = 'relpix'
+          type2(2) = 'relpix'
+          type2(3) = 'abspix'
+          call w2wco (lun, 3, type2, ' ', win, type, ' ', wcen)
+c          
+          win(1) = wcen(1) - rad
+          win(2) = wcen(2) 
+          call w2wco (lun, 3, type, ' ', win, abspix, ' ', wout)
+          x1 = wout(1)
+c
+          win(1) = wcen(1) + rad
+          win(2) = wcen(2) 
+          call w2wco (lun, 3, type, ' ', win, abspix, ' ', wout)
+          x2 = wout(1)
+          radx = abs(x2 - x1) / 2.0
+c          
+          win(1) = wcen(1) 
+          win(2) = wcen(2) - rad
+          call w2wco (lun, 3, type, ' ', win, abspix, ' ', wout)
+          y1 = wout(2)
+c
+          win(1) = wcen(1)
+          win(2) = wcen(2) + rad 
+          call w2wco (lun, 3, type, ' ', win, abspix, ' ', wout)
+          y2 = wout(2)
+          rady = abs(y2 - y1) / 2.0
+c
+          xl = 1e30
+          xr = -1e30
+          yb = 1e30
+          yt = -1e30
+          i = 0
+          do j = 0, 360, 2
+            poly(i,1) = radx*cos(real(j)/rd) + ocen(1)
+            poly(i,2) = rady*sin(real(j)/rd) + ocen(2)
+c
+            xl = min(dble(xl),wout(1))
+            xr = max(dble(xr),wout(1))
+            yb = min(dble(yb),wout(2))
+            yt = max(dble(yt),wout(2))
+c
+            i = i + 1
+          end do
         end if
       end if
 c
       end
 c
-c
+c      
       subroutine region (maxcon, maxnax, ncon, cin, gin, vin, bin, 
-     +   lc, lg, lv, lb, cnaxis, gnaxis, vnaxis, bnaxis, csize, gsize, 
-     +   vsize, bsize, ccrval, gcrval, vcrval, bcrval, ccdelt, gcdelt, 
-     +   vcdelt, bcdelt, ccrpix, gcrpix, vcrpix, bcrpix, cctype, gctype,
-     +   vctype, bctype, cepoch, gepoch, vepoch, bepoch, naxis, size, 
-     +   crval, cdelt, crpix, ctype, epoch, ibin, jbin, kbin, blc, trc,
-     +   win, maxgrp, grpbeg, ngrp, ngrps, lhead)
+     +   lc, lg, lv, lb, csize, gsize, vsize, bsize, cnaxis, gnaxis,
+     +   vnaxis, bnaxis, lhead, ibin, jbin, kbin, blc, trc, 
+     +   win, maxgrp, grpbeg, ngrp, ngrps)
 c----------------------------------------------------------------------
 c     Finish key routie inputs for region of interest now.  Have to 
 c     delay until here because of complexity added by mixed 2-D/3-D
@@ -3259,27 +3331,12 @@ c    maxnax        Maximum number of allowed dimenions for image
 c    ncon          Number of contour images
 c    *in           Image names
 c    l*            Handles
-c    *naxis        Number of dimensions for images
 c    *size         Sizes of images
-c    *crpix        Array of image reference pixels
-c    *cdelt        Array of image increments 
-c    *crval        Array of image reference values 
-c    *ctype        Array of image axis types
-c    *epoch        Array of epochs
+c    *naxis        Number of axes
 c    i,j,kbin      x,y, and z pixel increment and binning sizes
-c    maxgrp        Maximum number of allowed groups
+c    maxgrp        Maximum number of allowed groups of channels in image
 c  Output:
-c                  The following axis descriptors are used for all 
-c                  subsequent axis information.  They come from whatever 
-c                  cube we encounter first or the first 2-D image in 
-c                  contour, pixel map, vector order.  
-c    naxis         Number of axes
-c    size          SIze of axes
-c    crpix         Array of image reference pixels
-c    cdelt         Array of image increments 
-c    crval         Array of image reference values 
-c    ctype         Array of image axis types
-c    epoch         EPoch
+c    lhead         Handle of generic image
 c    blc,trc       3-D Hyper-rectangle surrounding region of interest
 c                  in unbinned pixels
 c    win           Size of BINNED region of interest for x and y directions
@@ -3291,32 +3348,23 @@ c                  channel increment is reached.
 c    ngrp          Number of channels in each group of channel to
 c                  be averaged together for each sub-plot.
 c    ngrps         Number of groups of channels.
-c    lhead         This is a handle to be used by the COCVT coordinate 
-c                  conversion routines (via the COSUBS interface).
 c
 c----------------------------------------------------------------------
       implicit none
 c     
-      integer maxcon, ncon, maxnax, naxis, cnaxis(maxcon), gnaxis, 
-     +  vnaxis, bnaxis, size(maxnax), csize(maxnax,maxcon), 
-     +  gsize(maxnax), vsize(maxnax), bsize(maxnax), blc(*), trc(*), 
-     +  win(2), maxgrp, ngrp(maxgrp), grpbeg(maxgrp), ngrps, ibin(2), 
-     +  jbin(2), kbin(2), lhead, lc(maxcon), lg, lv, lb
-      double precision cdelt(maxnax), crval(maxnax), crpix(maxnax),
-     +  ccdelt(maxnax,*), ccrval(maxnax,*), ccrpix(maxnax,*),
-     +  gcdelt(maxnax),   gcrval(maxnax),   gcrpix(maxnax),
-     +  bcdelt(maxnax),   bcrval(maxnax),   bcrpix(maxnax),
-     +  vcdelt(maxnax),   vcrval(maxnax),   vcrpix(maxnax)
-      real epoch, cepoch(*), gepoch, vepoch, bepoch
-      character*(*) cin(maxcon), gin, vin, bin, ctype(maxnax),
-     +  cctype(maxnax,*), gctype(maxnax), vctype(maxnax),
-     +  bctype(maxnax)
+      integer maxcon, ncon, maxnax, csize(maxnax,maxcon), 
+     +  gsize(maxnax), vsize(maxnax), bsize(maxnax), blc(*), 
+     +  trc(*), cnaxis(maxcon), gnaxis, vnaxis(2), bnaxis,  
+     +  win(2), maxgrp, ngrp(maxgrp), grpbeg(maxgrp), ngrps, 
+     +  ibin(2), jbin(2), kbin(2), lhead, lc(maxcon), lg, lv, lb
+      character*(*) cin(maxcon), gin, vin, bin
 cc
       include 'maxdim.h'
       integer maxbox
       parameter (maxbox = 1024)
 c
-      integer boxes(maxbox), i
+      integer boxes(maxbox), i, naxis, size(3)
+      character itoaf*1
 c----------------------------------------------------------------------
 c
 c Use the first cube we find to set the rest of the box inputs.
@@ -3325,43 +3373,42 @@ c
       if (ncon.gt.0) then
         do i = 1, ncon
           if (csize(3,i).gt.1 .and. size(3).eq.0) then
+            naxis = cnaxis(i)
             call boxinput ('region', cin(i), boxes, maxbox)
             call boxset (boxes, cnaxis(i), csize(1,i), ' ')
-            call setdescg (cnaxis(i), csize(1,i), ccrval(1,i), 
-     +         ccdelt(1,i), ccrpix(1,i), cctype(1,i), cepoch(i),
-     +         naxis, size, crval, cdelt, crpix, ctype, epoch)
-            lhead = lc(i)
+            lhead = lc(i) 
+            size(3) = csize(3,i)
           end if
         end do
       end if
 c
       if (gin.ne.' ' .and. size(3).eq.0) then
         if (gsize(3).gt.1) then
+          naxis = gnaxis
           call boxinput ('region', gin, boxes, maxbox)
           call boxset (boxes, gnaxis, gsize, ' ')
-          call setdescg (gnaxis, gsize, gcrval, gcdelt, gcrpix, gctype,
-     +       gepoch, naxis, size, crval, cdelt, crpix, ctype, epoch)
           lhead = lg
+          size(3) = gsize(3)
         end if
       end if
 c
       if (vin.ne.' ' .and. size(3).eq.0) then
         if (vsize(3).gt.1) then
+          naxis = vnaxis(1)
           call boxinput ('region', vin, boxes, maxbox)
           call boxset (boxes, vnaxis, vsize, ' ')
-          call setdescg (vnaxis, vsize, vcrval, vcdelt, vcrpix, vctype,
-     +       vepoch, naxis, size, crval, cdelt, crpix, ctype, epoch)
           lhead = lv
+          size(3) = vsize(3)
         end if
       end if
 c
       if (bin.ne.' ' .and. size(3).eq.0) then
         if (bsize(3).gt.1) then
+          naxis = bnaxis
           call boxinput ('region', bin, boxes, maxbox)
           call boxset (boxes, bnaxis, bsize, ' ')
-          call setdescg (bnaxis, bsize, bcrval, bcdelt, bcrpix, bctype,
-     +       bepoch, naxis, size, crval, cdelt, crpix, ctype, epoch)
           lhead = lb
+          size(3) = bsize(3)
         end if
       end if
 c
@@ -3371,28 +3418,24 @@ c checked for identical first and second dimensions.
 c
       if (size(3).eq.0) then
         if (ncon.gt.0) then
+          naxis = cnaxis(1)
           call boxinput ('region', cin, boxes, maxbox)
-          call boxset (boxes, cnaxis, csize, ' ')
-          call setdescg (cnaxis, csize, ccrval, ccdelt, ccrpix, cctype, 
-     +       cepoch, naxis, size, crval, cdelt, crpix, ctype, epoch)
+          call boxset (boxes, naxis, csize, ' ')
           lhead = lc(1)
         else if (gin.ne.' ') then
+          naxis = gnaxis
           call boxinput ('region', gin, boxes, maxbox)
-          call boxset (boxes, gnaxis, gsize, ' ')
-          call setdescg (gnaxis, gsize, gcrval, gcdelt, gcrpix, gctype,
-     +       gepoch, naxis, size, crval, cdelt, crpix, ctype, epoch)
+          call boxset (boxes, naxis, gsize, ' ')
           lhead = lg
         else if (vin.ne.' ') then
+          naxis = vnaxis(1)
           call boxinput ('region', vin, boxes, maxbox)
-          call boxset (boxes, vnaxis, vsize, ' ')
-          call setdescg (vnaxis, vsize, vcrval, vcdelt, vcrpix, vctype, 
-     +       vepoch, naxis, size, crval, cdelt, crpix, ctype, epoch)
+          call boxset (boxes, naxis, vsize, ' ')
           lhead = lv
         else if (bin.ne.' ') then
+          naxis = bnaxis
           call boxinput ('region', bin, boxes, maxbox)
-          call boxset (boxes, bnaxis, bsize, ' ')
-          call setdescg (bnaxis, bsize, bcrval, bcdelt, bcrpix, bctype,
-     +       bepoch, naxis, size, crval, cdelt, crpix, ctype, epoch)
+          call boxset (boxes, naxis, bsize, ' ')
           lhead = lb
         else
           call bug ('f', 'Internal logic error in REGION')
@@ -3405,6 +3448,7 @@ c dimension image involved (i.e., 2-D/3-D).
 c
       call boxinfo (boxes, 3, blc, trc)
       do i = 1, min(3,naxis)
+        call rdhdi (lhead, 'naxis'//itoaf(i), size(i), 0)
         blc(i) = max(1,blc(i))
         trc(i) = min(size(i),trc(i))
       end do
@@ -3414,8 +3458,6 @@ c find size of binned window
 c
       call winfidcg (size(1), 1, ibin, blc(1), trc(1), win(1))
       call winfidcg (size(2), 2, jbin, blc(2), trc(2), win(2))
-c      if (win(1).le.1 .or. win(2).le.1) call bug ('f',
-c     +   'Cannot display just one spatial pixel')
 c
 c Find list of start channels and number of channels for each group
 c of channels selected.  The BOX routines do not easily, if at all,
@@ -3429,104 +3471,77 @@ c
       end
 c
 c
-      subroutine sesame (relax, maxdim, maxnax, maxcon, ncon, cin, lc,
-     +  cnaxis, csize, cepoch, maskc, ccrpix, ccdelt, ccrval, cctype, 
-     +  gin, lg, gnaxis, gsize, gepoch, maskg, gcrpix, gcdelt, gcrval, 
-     +  gctype, vin, lv, vnaxis, vsize, vepoch, maskv, vcrpix, vcdelt, 
-     +  vcrval, vctype, bin, lb, bnaxis, bsize, bepoch, maskb, bcrpix, 
-     +  bcdelt, bcrval, bctype, mskin, lm, mnaxis, msize, mepoch, maskm,
-     +  mcrpix, mcdelt, mcrval, mctype, gmm, cmm)
+      subroutine sesame (relax, maxnax, maxcon, ncon, cin, lc, csize,
+     +   cnaxis, gin, lg, gsize, gnaxis, vin, lv, vsize, vnaxis, bin, 
+     +   lb, bsize, bnaxis, mskin, lm, msize, mnaxis, cmm, gmm)
 c-----------------------------------------------------------------------
 c  Open all required images, check their self consistency and
-c  return their axis descriptors and handles
+c  return their sizes and handles
 c
 c  Input
 c   relax     Warning only on axis inconsistencies, else fatal
-c   maxdim    Max allowed size of axes
 c   maxnax    Max allowed number of dimensions
 c   maxcon    Max allowed number of contour images
 c   ncon      Number of contour images
 c   *in       Image names
 c  Output
 c   l*        Handles
-c   *naxis    Number of axes
-c   *size     Size of axes
-c   *epoch    Epochs
-c   mask*     Masks present ?
-c   *crpix    Reference pixels
-c   *crval    Reference values
-c   *cdelt    Axis increments
-c   *ctype    Axis types
-c   *mm       Data min and max for each image initialized to +/-1e30
+c   *size     Image sizes
+c   *naxis    Number of axes in images
+c   cmm       Data min and max for each contour image initialized 
+c             to +/-1e30
+c   gmm       Data min and max for pixel map image initialized 
+c             to +/-1e30
 c   
 c-----------------------------------------------------------------------
       implicit none
-      integer maxdim, maxnax, maxcon, ncon, csize(maxnax,maxcon), 
-     +  gsize(maxnax), vsize(maxnax,2), msize(maxnax), bsize(maxnax), 
-     +  cnaxis(maxcon), gnaxis, vnaxis(2), mnaxis, bnaxis, lc(maxcon), 
-     +  lg, lv(2), lm, lb
-      real cepoch(maxcon), gepoch, vepoch(2), mepoch, bepoch,
-     +  gmm(2), cmm(2,maxcon)
-      double precision 
-     +  ccdelt(maxnax,maxcon), ccrval(maxnax,maxcon), 
-     +  gcdelt(maxnax), gcrval(maxnax), 
-     +  vcdelt(maxnax,2), vcrval(maxnax,2),  
-     +  mcdelt(maxnax), mcrval(maxnax),
-     +  bcdelt(maxnax), bcrval(maxnax),
-     +  ccrpix(maxnax,maxcon), gcrpix(maxnax), 
-     +  vcrpix(maxnax,2), mcrpix(maxnax), bcrpix(maxnax)
-      logical maskc(maxcon), maskg, maskv(2), maskm, maskb, relax
+      integer maxnax, maxcon, ncon, csize(maxnax,maxcon), 
+     +  gsize(maxnax), vsize(maxnax,2), msize(maxnax), bsize(maxnax),
+     +  lc(maxcon), lg, lv(2), lm, lb, cnaxis(maxcon), gnaxis,
+     +  vnaxis(2), bnaxis, mnaxis
+      real cmm(2,maxcon), gmm(2)
+      logical maskm, relax
       character*(*) cin(maxcon), gin, vin(2), mskin, bin
-      character*9 cctype(maxnax,maxcon), gctype(maxnax),
-     +  vctype(maxnax,2), mctype(maxnax), bctype(maxnax)
 cc
+      logical hdprsnt
       integer i
 c-----------------------------------------------------------------------
-c
-c Initialize data min and max
-c
-      call mmini (maxcon, gmm, cmm)
-c
 c
 c Open contour images as required 
 c
       if (ncon.gt.0)  then
         do i = 1, ncon
-          call opimcg (maxdim, maxnax, cin(i), lc(i), cnaxis(i), 
-     +      csize(1,i), cepoch(i), maskc(i), ccrpix(1,i), ccdelt(1,i),
-     +      ccrval(1,i), cctype(1,i))
+          call opimcg (maxnax, cin(i), lc(i), csize, cnaxis(i))
+          cmm(1,i) = 1e30
+          cmm(2,i) = -1e30
         end do
       end if
 c
 c Open pixel map image as required
 c
       if (gin.ne.' ') then
-        call opimcg (maxdim, maxnax, gin, lg, gnaxis, gsize, gepoch,
-     +     maskg, gcrpix, gcdelt, gcrval, gctype)
+        call opimcg (maxnax, gin, lg, gsize, gnaxis)
+        gmm(1) = 1e30
+        gmm(2) = -1e30
       end if
 c
 c Open vector images as required
 c
       if (vin(1).ne.' ' .and. vin(2).ne.' ') then
         do i = 1, 2
-          call opimcg (maxdim, maxnax, vin(i), lv(i), vnaxis(i), 
-     +      vsize(1,i), vepoch(i), maskv(i), vcrpix(1,i), vcdelt(1,i),
-     +      vcrval(1,i), vctype(1,i))
+          call opimcg (maxnax, vin(i), lv(i), vsize(1,i), vnaxis(i))
         end do
       end if
 c
 c Open box image as required
 c
-      if (bin.ne.' ') then
-        call opimcg (maxdim, maxnax, bin, lb, bnaxis, bsize, bepoch,
-     +     maskb, bcrpix, bcdelt, bcrval, bctype)
-      end if
+      if (bin.ne.' ') call opimcg (maxnax, bin, lb, bsize, bnaxis)
 c
 c Open mask image as required
 c
       if (mskin.ne.' ') then
-        call opimcg (maxdim, maxnax, mskin, lm, mnaxis, msize, mepoch, 
-     +     maskm, mcrpix, mcdelt, mcrval, mctype)
+        call opimcg (maxnax, mskin, lm, msize, mnaxis)
+        maskm = hdprsnt (lm, 'mask')
         if (.not.maskm)  then
           call bug ('w', 'The mask image does not have a mask')
           call xyclose (lm)
@@ -3536,11 +3551,8 @@ c
 c
 c Check consistency of input images
 c
-      call chkim  (maxnax, ncon, cin, csize, cepoch, ccrpix, ccdelt, 
-     +   ccrval, cctype, gin, gsize, gepoch, gcrpix, gcdelt, gcrval, 
-     +   gctype, vin, vsize, vepoch, vcrpix, vcdelt, vcrval, vctype, 
-     +   bin, bsize, bepoch, bcrpix, bcdelt, bcrval, bctype, mskin, 
-     +   msize, mepoch, mcrpix, mcdelt, mcrval, mctype, relax)
+      call chkim  (maxnax, ncon, cin, lc, csize, gin, lg, gsize, vin, 
+     +             lv, vsize, bin, lb, bsize, mskin, lm, msize, relax)
 c
       end
 c
