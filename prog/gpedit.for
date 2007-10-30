@@ -35,6 +35,8 @@ c	            given by the `gain' keyword.
 c	  flag      The existing gains are flagged as bad.
 c	  amplitude The phases of the existing gains are set to 0.
 c	  phase     The amplitudes of the existing gains are set 1.
+c	  scale	    Multiply the gain-phases by a factor 
+c			given by the `gain' keyword. 
 c
 c	The following option operates on the polarization leakages:
 c	  reflect   The existing leakages are made to possess a
@@ -52,17 +54,18 @@ c    rjs   25feb97 Tidy up and extend the possibilities.
 c    rjs   26feb97 Fix feeds reading.
 c    rjs   24jun97 Add the reflect option.
 c    rjs   01aug97 Added options=zmean.
+c    mchw  18nov98 Added options=scale.
 c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
         include 'mirconst.h'
 	integer MAXFEED,MAXSELS
 	character version*(*)
-	parameter(version='Gpedit: version 1.0 24-Jun-97')
+	parameter(version='Gpedit: version 1.0 18-Nov-98')
 	parameter(MAXFEED=2,MAXSELS=300)
 c
 	character vis*64
-	logical domult,dorep,doflag,doamp,dophas,dorefl,dozm
+	logical domult,dorep,doflag,doamp,dophas,dorefl,dozm,doscal
 	logical dogain,doleak
 	integer iostat,tVis,itGain,itLeak,nants,nfeeds,nsols,ntau,i
 	integer numfeed,feeds(MAXFEED),nleaks
@@ -75,7 +78,7 @@ c  Externals.
 c
 	integer hsize
 	logical hdprsnt
-	external MultOp,RepOp,FlagOp,AmpOp,PhasOp
+	external MultOp,RepOp,FlagOp,AmpOp,PhasOp,ScalOp
 c
 c  Get the input parameters.
 c
@@ -87,8 +90,8 @@ c
 	call keyr('gain',amp,1.)
 	call keyr('gain',phi,0.)
 	call mkeyfd('feeds',feeds,MAXFEED,numfeed)
-        call GetOpt(dorep,domult,doflag,doamp,dophas,dorefl,dozm)
-	dogain = dorep.or.domult.or.doflag.or.doamp.or.dophas
+        call GetOpt(dorep,domult,doflag,doamp,dophas,dorefl,dozm,doscal)
+	dogain = dorep.or.domult.or.doflag.or.doamp.or.dophas.or.doscal
 	doleak = dorefl.or.dozm
 	call keyfin
 c
@@ -168,6 +171,8 @@ c
      *	    memd(pTimes),memc(pGains),mask,sels,gain,AmpOp)
 	  if(dophas)call GainEdt(nsols,nants*nfeeds,
      *	    memd(pTimes),memc(pGains),mask,sels,gain,PhasOp)
+	  if(doscal)call GainEdt(nsols,nants*nfeeds,
+     *	    memd(pTimes),memc(pGains),mask,sels,gain,ScalOp)
 c
 c  Write out the gains.
 c
@@ -401,6 +406,16 @@ c
 	t = abs(Gain)
 	if(t.gt.0)Gain = Gain / t
 	end
+c
+	subroutine ScalOp(Gain,fac)
+c
+	implicit none
+	complex Gain,fac
+c
+	complex expi
+	real phase
+	Gain = cabs(Gain)*expi(real(fac)*phase(Gain))
+	end
 c********1*********2*********3*********4*********5*********6*********7*c
 	subroutine GainWr(itGain,nsols,nants,nfeeds,times,Gains)
 c
@@ -494,21 +509,22 @@ c-----------------------------------------------------------------------
 	call bugno('f',iostat)
 	end
 c********1*********2*********3*********4*********5*********6*********7*c
-        subroutine GetOpt(dorep,domult,doflag,doamp,dophas,dorefl,dozm)
+        subroutine GetOpt(dorep,domult,doflag,doamp,dophas,dorefl,dozm,
+     *		doscal)
 c       
         implicit none
-	logical dorep,domult,doflag,doamp,dophas,dorefl,dozm
+	logical dorep,domult,doflag,doamp,dophas,dorefl,dozm,doscal
 c
 c  Get the various processing options.
 c
 c-----------------------------------------------------------------------
         integer NOPTS
-        parameter(NOPTS=7)
+        parameter(NOPTS=8)
         character opts(NOPTS)*9
         logical present(NOPTS)
         data opts/'replace  ','multiply ','flag     ',
      *		  'amplitude','phase    ','reflect  ',
-     *		  'zmean    '/
+     *		  'zmean    ','scale    '/
 c
         call options('options',opts,present,NOPTS)
 c
@@ -519,7 +535,8 @@ c
 	dophas = present(5)
 	dorefl = present(6)
 	dozm   = present(7)
+	doscal = present(8)
 	if(.not.(domult.or.dorep.or.doflag.or.doamp.or.dophas.or.
-     *	  dorefl.or.dozm)) dorep = .true.
+     *	  dorefl.or.dozm.or.doscal)) dorep = .true.
 c
 	end
