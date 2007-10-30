@@ -30,6 +30,11 @@ c       of 4 and 5 minus 6, and the last will contain the sum of
 c       7 and 8. It is possible to have any combinations of bins.
 c       However, the number of output bins must be less than or
 c       equal to the number of input bins.
+c
+c	NOTE: This simply adds and differences multiple bins. It does
+c	NOT perform any normalization of the result. For example, if
+c	you sum three bins of equal value, you will get three times the
+c	flux of each bin in the output
 c@ out
 c	The name of the output uv data set. No default.
 c@ options
@@ -43,10 +48,11 @@ c	  nopass  This option suppresses bandpass calibration. The
 c	          default behaviour is to apply bandpass calibration.
 c--
 c  History:
-c    rjs  28may96 Original version.
+c    bs,rjs 28may96 Original version.
 c    rjs  29jul96 Fix calibration options, and som FORTRAN standardisation.
 c    rjs  10dec96 Better error message when nbin is missing.
 c    rjs  12dec96 Fix writing of variables to the right moment.
+c    rjs  21apr99 Allow bin selection and de-dispersation in the one go.
 c------------------------------------------------------------------------
 c
 c  Common block to communicate to the "process" routine.
@@ -60,7 +66,7 @@ c
 c
 	include 'maxdim.h'
 	character version*(*)
-	parameter(version='PsrFix: version 1.0 10-Dec-96')
+	parameter(version='PsrFix: version 1.0 21-Apr-99')
 	character uvflags*16,ltype*16,out*64,binsl(MAXBIN)*64
 	integer tIn,tOut,nchan
 	integer i,j,l,n,s
@@ -490,6 +496,8 @@ c------------------------------------------------------------------------
 c
 c       Initializeing the Output arrays
 c
+	if(obins.gt.nbins)call bug('f','Too many output bins')
+
 	do i=1,nchan
 	   do j=1,nbins
 	      DatOut(i,j) = 0
@@ -537,6 +545,20 @@ c leave where is
 	   obins1 = nbins
 	endif
 
+c
+c	Copy back to the input, if needed.
+c
+
+	if(dm.gt.0.and.obins.gt.0)then
+	  do i=1,nchan
+	     do j=1,nbins
+		DatIn(i,j) = DatOut(i,j)
+		FlgIn(i,j) = FlgOut(i,j)
+	        DatOut(i,j) = 0
+	        FlgOut(i,j) = .true.
+	     enddo
+	  enddo
+	endif
 c
 c       The adding of the bins in groups as defined above by binsl.
 c	
