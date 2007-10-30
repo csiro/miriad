@@ -69,6 +69,8 @@ c    rjs   27jul94    Get rid of some debugging write statements.
 c    rjs   11nov94    Eliminate bounds violation for large numbers of times.
 c    rjs   20feb95    Grid multiple thingos in one pass.
 c    rjs   27feb95    Put phase in the range -180 to 180.
+c    rjs    2nov95    A "break" in CopyDat is dependent on inttime, as
+c		      suggested by jm.
 c***********************************************************************
 c= TvFlag - Interactive editing of a UV data set on a TV device.
 c& jm
@@ -979,7 +981,7 @@ c------------------------------------------------------------------------
 	logical flags(MAXCHAN),newsrc
 	complex data(MAXCHAN)
 	double precision preamble(4),line(6),day1
-	real buf(2*MAXCHAN+3),t,tprev
+	real buf(2*MAXCHAN+3),t,tprev,maxgap
 	logical torder
 	integer vsrc,nread,length,offset,ant1,ant2,i,bl,i0
 c
@@ -998,6 +1000,8 @@ c  Whenever the source changes, cause a break point.
 c
 	call uvVarini(lIn,vsrc)
 	call uvVarSet(vsrc,'source')
+	call uvrdvrr(lIn,'inttime',maxgap,10.0)
+	maxgap = 3.5*maxgap*ttol
 c
 	call uvread(lIn,preamble,data,flags,MAXCHAN,nchan)
 	call uvinfo(lIn,'line',line)
@@ -1027,7 +1031,7 @@ c
 	      if(t.lt.tprev)torder = .false.
 	      newsrc = uvVarUpd(vsrc)
 	      if(ntime.gt.0.and.
-     *		(newsrc.or.t-tprev.gt.120*ttol.or.t.lt.tprev))then
+     *		(newsrc.or.t-tprev.gt.maxgap.or.t.lt.tprev))then
 		if(ntime.ge.MAXTIME)
      *		  call bug('f','Too many times for me')
 		ntime = ntime + 1
