@@ -601,6 +601,8 @@ c    rjs  21aug97  Missed calling initco earlier for boxes.
 c    nebk 25mar98  Channel range was wrongly interpreted for line overlays
 c    rjs  31mar98  Get it to agree with documentation as far as cols1 parameter
 c		   goes.
+c    nebk 16jun98  FIx problem in posdec2 where ocen2 was of 
+c                  size 2 instead of 3.  Was stuffing up w2wco
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -664,7 +666,7 @@ c
       data lwid /maxconp3*1/
       data getvsc /.true./
 c-----------------------------------------------------------------------
-      call output ('CgDisp: version 31-Mar-98')
+      call output ('CgDisp: version 16-Jun-98')
       call output (' ')
 c
 c Get user inputs
@@ -2992,7 +2994,7 @@ cc
 c
       double precision nums(maxnum), width(2), wcen(3), win(3), 
      +  wout(3), off(2), rad, x1, x2, y1, y2, major, minor,
-     +  pa, phi, cospa, sinpa, xx, yy, ocen2(2)
+     +  pa, phi, cospa, sinpa, xx, yy, ocen2(3)
       integer i, j, slen, lena, inum, ipres, nextra, ipt, ifac,
      +  icomm(maxnum), dsign(2), spos, nuse, il, naxis
       logical ok
