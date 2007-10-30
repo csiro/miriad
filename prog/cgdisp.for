@@ -637,7 +637,7 @@ c
      +  jplot
 c
       character labtyp(2)*6, levtyp(maxcon)*1, trfun(maxchan)*3
-      character pdev*64, xlabel*40, ylabel*40, hard*20, ofile*64, 
+      character pdev*132, xlabel*40, ylabel*40, hard*20, ofile*64, 
      +  aline*72, val3form*20
 c
       logical solneg(maxcon), doblv(2), bemprs(maxcon+4)
