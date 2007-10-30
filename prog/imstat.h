@@ -25,7 +25,7 @@ c plot and options for IMSTAT
       parameter    ( defplt = 'rms', idstr = 'statistics' )
       character*80 commonop
       parameter    ( commonop =
-     *'tb,noheader,nolist,list,style,title,xmin,xmax,ymin,ymax' )
+     *'tb,noheader,nolist,list,eformat,style,title,xmin,xmax,ymin,ymax')
 
 c plot and options for IMSPEC
 c      parameter    ( NAME = 'IMSPEC' )
@@ -35,8 +35,8 @@ c      character    defplt*4, idstr*8
 c      parameter    ( defplt = 'flux', idstr = 'spectrum' )
 c      character*80 commonop
 c      parameter    ( commonop =
-c     *'tb,noheader,nolist,list,hanning,boxcar,deriv,style,title,xmin,xma
-c     *x,ymin,ymax' )
+c     *'tb,noheader,nolist,list,eformat,hanning,boxcar,deriv,style,title,
+c     *xmin,xmax,ymin,ymax' )
 
 c common variables for IMSTAT and IMSPEC
 
@@ -44,13 +44,13 @@ c common variables for IMSTAT and IMSPEC
       parameter    ( styles = 'connect,step,histo' )
 
       integer      NPLOTV, NPLOTR, NPLOTP
-      parameter    ( NPLOTV = 8, NPLOTR = 10, NPLOTP = 5 )
+      parameter    ( NPLOTV = 9, NPLOTR = 10, NPLOTP = 5 )
       integer      plotvar(  NPLOTV )
       real         plotrnge( NPLOTR )
       character*80 plotpar(  NPLOTP )
 
-      integer      SEL, HEAD, LIST, DUNIT, STYLE
-      parameter    ( SEL=1, HEAD=2, LIST=3, DUNIT=4, STYLE=5 )
+      integer      SEL, HEAD, LIST, EFMT, DUNIT, STYLE
+      parameter    ( SEL=1, HEAD=2, LIST=3, EFMT=4, DUNIT=5, STYLE=6 )
       integer      ORIG, JANSKY, KELVIN
       parameter    ( ORIG=1, JANSKY=2, KELVIN=3 )
       integer      DOSMOOTH, SMOWID, DERIV
