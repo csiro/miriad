@@ -39,11 +39,12 @@ c--
 c  History:
 c    20jun01 dpr  Original version.
 c     5jun02 rjs  Added 3mm gain/elevation curve, and options=replace
+c     7jun02 rjs  Added Tony Wong's version of the gain/elev curve.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
 	character version*(*)
-	parameter(version='elevcor: version 1.0 5-Jun-02')
+	parameter(version='elevcor: version 1.0 7-Jun-02')
 	integer PolXX,PolYY,PolXY,PolYX
 	parameter(PolXX=-5,PolYY=-6,PolXY=-7,PolYX=-8)
 c
@@ -338,10 +339,22 @@ c
 	data (xpc(5,j),j=1,3)/1.00000,  -1.81528e-05,   5.27955e-06/
 	data (xpc(6,j),j=1,3)/1.00000,  -1.02589e-03,   8.71686e-06/
 c
+c  The original gain/elevation curve, derived by a G/T vs elevation curve
+c  measured by Ravi and a Tsys curve measured by rjs on 03-jun-02.
+c
+c	data (wpc(1,j),j=1,3)/1.0000, 0.0000,     0.0000/
+c	data (wpc(2,j),j=1,3)/0.7441, 0.9221e-2, -0.8306e-4/
+c	data (wpc(3,j),j=1,3)/0.4043, 1.6802e-2, -1.1847e-4/
+c	data (wpc(4,j),j=1,3)/0.8405, 0.8094e-2, -1.0268e-4/
+c	data (wpc(5,j),j=1,3)/1.0000, 0.0000,     0.0000/
+c	data (wpc(6,j),j=1,3)/1.0000, 0.0000,     0.0000/
+c
+c  Gain curve deduced by Tony Wong on 04-Jun-02.
+c
 	data (wpc(1,j),j=1,3)/1.0000, 0.0000,     0.0000/
-	data (wpc(2,j),j=1,3)/0.7441, 0.9221e-2, -0.8306e-4/
-	data (wpc(3,j),j=1,3)/0.4043, 1.6802e-2, -1.1847e-4/
-	data (wpc(4,j),j=1,3)/0.8405, 0.8094e-2, -1.0268e-4/
+	data (wpc(2,j),j=1,3)/0.4927, 1.6729e-2, -1.3791e-4/
+	data (wpc(3,j),j=1,3)/0.2367, 2.0487e-2, -1.3748e-4/
+	data (wpc(4,j),j=1,3)/0.5405, 1.7040e-2, -1.5798e-4/
 	data (wpc(5,j),j=1,3)/1.0000, 0.0000,     0.0000/
 	data (wpc(6,j),j=1,3)/1.0000, 0.0000,     0.0000/
 
