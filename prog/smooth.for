@@ -58,6 +58,7 @@ c    nebk  10aug93   Replace manual history by hisinput and add boxcar.
 c    nebk  20nov93   Attempts to make units Jy/beam automatically.
 c    rjs   25nov93   Change "width" to "fwhm".
 c    rjs   02jul97   cellscale change.
+c    rjs   23jul97   Add pbtype.
 c------------------------------------------------------------------------
       implicit none
       include 'maxdim.h'
@@ -695,7 +696,7 @@ c------------------------------------------------------------------------
       integer lin, lout
 c
       integer nkeys, i
-      parameter(nkeys = 34)
+      parameter(nkeys = 35)
       character keyw(nkeys)*8
       data keyw/     'cdelt1  ','cdelt2  ','cdelt3  ','cdelt4  ',
      +    'crval1  ','crval2  ','crval3  ','crval4  ','crval5  ',
@@ -704,7 +705,7 @@ c
      +    'telescop','cellscal','history ','restfreq',
      +    'vobs    ','observer','obsra   ','obsdec  ','crpix1  ',
      +    'crpix2  ','crpix3  ','crpix4  ','crpix5  ','pbfwhm',
-     +    'btype'/
+     +    'btype   ','pbtype  '/
 c-----------------------------------------------------------------------
 c
 c  Copy keywords across 
