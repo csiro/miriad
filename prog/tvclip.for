@@ -70,6 +70,10 @@ c    rjs   11nov94    Eliminate bounds violation for large numbers of times.
 c    mhw&ip 22nov94   Add clip option
 c    mhw   13aug95    Make clip iterative and compile stats
 c    mhw    2sep95    Add 'batch-mode': commands, notv option
+c    smw   15mar98    Converted TVCLIP to TVWCLIP by using wides not channels
+c    pjt   19aug99    Consolidated TVWCLIP into TVCLIP
+c    smw   30aug99    Submitted!
+
 c***********************************************************************
 c= Tvclip - Interactive editing of a UV data set on a TV device.
 c& jm
@@ -188,8 +192,8 @@ c     value is input, the y coordinate value is set to the x value.
 c
 c< line
 c
-c     NOTE: Here ``type'' must be `channel' and the maximum of
-c     both ``width'' and ``step'' must be 1.  The default is
+c     NOTE: Here ``type'' must be `channel' or ``wide'' and the maximum 
+c     of  both ``width'' and ``step'' must be 1.  The default is
 c     to display all channels.
 c
 c@ mode
@@ -251,7 +255,7 @@ c
       character PROG*(*)
       parameter (PROG = 'TVCLIP: ')
       character VERSION*(*)
-      parameter (VERSION = PROG // 'version 2.3 9-Mar-94')
+      parameter (VERSION = PROG // 'Version 30-aug-99')
       integer NMODE,MAXSELS,MAXEDIT,MAXCMD
       parameter (NMODE=4,MAXCMD=10,MAXSELS=256,MAXEDIT=100000)
 c
@@ -261,6 +265,7 @@ c
       character Line*30, errmsg*80
       character apri*9
       character Modes(NMODE)*10
+      character Lines(2)*8
       character Commands(MAXCMD)*10
       integer Lin, nchan, MostChan, channel
       integer maxxpix, maxypix, levels, msglen
@@ -284,6 +289,7 @@ c
       logical KeyPrsnt
 c
       data Modes / 'amplitude', 'phase','real', 'imaginary'/
+      data Lines / 'channel', 'wide'/
 c
 c  End declarations.
 c-----------------------------------------------------------------------
@@ -302,8 +308,10 @@ c
       center = .not. KeyPrsnt('tvcorn')
       call Keyi('tvcorn', jx0, 0)
       call Keyi('tvcorn', jy0, jx0)
-c
-      call keymatch('line',1,'channel',1,Line,nout)
+
+c - figure out 'channel' or 'wide' data
+
+      call keymatch('line',2,Lines,1,Line,nout)
       if(nout.eq.0) Line = 'channel'
       call Keyi('line', nchan, 0)
       call Keyr('line', start, 1.0)
@@ -327,6 +335,10 @@ c
 c
 c  Check the input parameters.
 c
+
+      if (MAXWIDE .GT. MAXCHAN) then
+        call Bug('f','MAXWIDE not large enough - recompile')
+      endif
       if (Vis .eq. ' ') then
         errmsg = PROG // 'A Visibility file must be given.'
         msglen = Len1(errmsg)
@@ -344,11 +356,12 @@ c
         call Bug('f', errmsg(1:msglen))
       endif
 c
-      if (Line .ne. 'channel') then
-        errmsg = PROG // 'Line type must be channel.'
-        msglen = Len1(errmsg)
-        call Bug('f', errmsg(1:msglen))
-      endif
+c      if (Line .ne. 'channel') then
+c        errmsg = PROG // 'Line type must be channel.'
+c        msglen = Len1(errmsg)
+c        call Bug('f', errmsg(1:msglen))
+c      endif
+c
       if (width .le. 0.0) then
         errmsg = PROG // 'Negative width is useless.'
         msglen = Len1(errmsg)
