@@ -6,10 +6,10 @@ c= uvamp - Annular averages a uv dataset in bins. Prints and plots results.
 c& lgm
 c: uv analysis
 c+
-c       UVAMP reads a uv dataset, bins the data in annuli according to
-c       uv distance and prints/plots vector averaged amplitude versus 
-c       uvdist. Statistical error bars and the expected amplitude for 
-c       zero signal are calculated.
+c	UVAMP reads a uv dataset, bins the data in annuli according to
+c	uv distance and prints/plots vector averaged amplitude versus 
+c	uvdist. Statistical error bars and the expected amplitude for 
+c	zero signal are calculated.
 c@ vis
 c	The name of the input uv data set. No default.
 c@ select
@@ -29,30 +29,30 @@ c	The default is no reference line.
 c@ stokes
 c	If a value is given, uvamp will work with the specified 
 c	polarizations. Normally this should be set to stokes I if
-c       the data includes polarizations.
+c	the data includes polarizations.
 c@ options
-c       This gives extra processing options. Several options can be given,
-c       each separated by commas. They may be abbreviated to the minimum
-c       needed to avoid ambiguity. Possible options are:
-c          'nocal'       Do not apply the gains file. By default, UVAMP
-c                        applies the gains file in copying the data.
-c          'nopol'       Do not apply polarizatiopn corrections. By default
-c                        UVAMP corrects for polarization cross-talk.
+c	This gives extra processing options. Several options can be given,
+c	each separated by commas. They may be abbreviated to the minimum
+c	needed to avoid ambiguity. Possible options are:
+c	   'nocal'       Do not apply the gains file. By default, UVAMP
+c	                 applies the gains file in copying the data.
+c	   'nopol'       Do not apply polarizatiopn corrections. By default
+c	                 UVAMP corrects for polarization cross-talk.
 c	   'nopass'      DO not apply bandpass corrections. By default
 c	                 UVAMP corrects for the bandpass shape.
-c          'ampscalar'   Applies vector averaging to work out the
-c                        averaged visibility phase, but scalar averaging
-c                        to find the averaged visibility amplitude.
+c	   'ampscalar'   Applies vector averaging to work out the
+c	                 averaged visibility phase, but scalar averaging
+c	                 to find the averaged visibility amplitude.
 c@ bin
 c	Number of bins, width of bins, and units of bin width. Up to 200
-c       bins are allowed. The units for bin width may be either nsec or
-c       klam. The default unit for bin width is nsecs.
-c       Default values: 30,40,nsec
+c	bins are allowed. The units for bin width may be either nsec or
+c	klam. The default unit for bin width is nsecs.
+c	Default values: 30,40,nsec
 c@ offset
 c	RA-Dec offset of desired phase center relative to phase center
 c	of original uv dataset in arcseconds. Source of interest should be 
-c       at the phase center in the typical use of this program. 
-c       Default = 0.0,0.0.
+c	at the phase center in the typical use of this program. 
+c	Default = 0.0,0.0.
 c@ device
 c	Plot device name. If not specified, no plot is created.
 c@ log  
@@ -62,38 +62,38 @@ c  History:
 c	lgm 25mar92 Original version started as offshoot of uvaver.
 c       mjs 08apr92 Variable name mod so it compiles on Convex.
 c       mjs 13mar93 pgplot subr names have less than 7 chars.
-c
+c	rjs 26aug94 Better coordinate handling. Fix a few problems.
 c  Bugs:
-c	does not work yet
 c------------------------------------------------------------------------
 	include 'maxdim.h'
+	include 'mirconst.h'
+	real secrad
+	parameter(secrad=pi/180./3600.)
+c
 	integer maxbins
 	parameter (maxbins = 200)
 c
 	character version*(*)
-	parameter(version='UvAmp: version 1.0 26-Aug-92')
+	parameter(version='UvAmp: version 1.0 26-Aug-94')
 	character uvflags*8,line*80,pldev*60,logfile*60
-	character type*1,bunit*10
-	integer tIn,i,nread,numdat(maxbins),numbins
-	integer ibin,j,length,nspect,nschan(8),ischan(8),ifr
+	character bunit*10
+	integer tIn,i,nread,numdat(maxbins),numbins,ibin
 	real sdatr2(maxbins),sdati2(maxbins),uuvamp(maxbins)
         real sigmean(maxbins),top(maxbins)
 	real uvdist(maxbins),rdat,idat,sigr2,sigi2,binsiz,uvd
-	real dra,ddec,secrad,ratio(maxbins),phaz,bot(maxbins)
+	real dra,ddec,ratio(maxbins),phaz,bot(maxbins)
 	real xzero(2),yzero(2),maxamp,minamp,expect(maxbins)
 	logical ampsc,klam
-	double precision preamble(4),freq,fstep(8),pi
-	double precision fstart(8),chfreq(2048)
+	double precision preamble(4),freq
+	double precision chfreq(maxchan)
 	complex data(maxchan),sumdat(maxbins)
-	logical flags(maxchan),present
+	logical flags(maxchan)
 c
 c  Externals.
 c
 	logical uvDatOpn,more
 c
 	more   = .true.
-	secrad = 1.0/206265.0
-	pi     = 3.141592654
 c
 c  Get the input parameters.
 c
@@ -140,52 +140,24 @@ c
 	if(.not.uvDatOpn(tIn))call bug('f','Error opening input')
 	if(logfile .ne. ' ') call LogOpen(logfile,' ')
 c
-c  Get the first data record an other info that is needed to shift
-c  the phase center if requested.
+c  Convert dra,ddec from true to grid offsets.
 c
-	call uvDatRd(preamble,data,flags,maxchan,nread)
-c
-        call UvProbvr(tIn, 'nspect', type, length, present)
-        if (present) then
- 	   call UvGetvri(tIn, 'nspect', nspect, 1)
-	else
-	   nspect = 1
-	endif
-	call UvProbvr(tIn,'sfreq',type,length,present)
-	if(present) then
-	   call UvGetvri(tIn,'nschan', nschan, nspect)
-	   call UvGetvri(tIn, 'ischan', ischan, nspect)
-	   call UvGetvrd(tIn,'sfreq',fstart,nspect)
-	   call UvGetvrd(tIn,'sdf',fstep,nspect)
-	   do i=1,nread
-	      ifr = nspect
-	      do j=1,nspect-1
-		 if(i.ge.ischan(j) .and. i.lt.ischan(j+1))
-     1			ifr = j
-	      enddo
-	      chfreq(i) = fstart(ifr) + fstep(ifr)*(i-ischan(ifr))
-	   enddo
-	else
-	   call bug('w','Obs Frequency not found.')
-	   call bug('w','Shifting of phase center not possible')
-	endif
+	call OffCvt(tIn,dra,ddec)
 c
 c   Loop over data accumulating points in bins and squared quantities for
 c   calculations of formal error in result. The phaz rotates the phase 
 c   center of the data to the desired position.
 c
+	call uvDatRd(preamble,data,flags,maxchan,nread)
 	dowhile(nread.gt.0)
+	   call uvinfo(tIn,'sfreq',chfreq)
 	   uvd  = (preamble(1)*preamble(1) + preamble(2)*
      1				preamble(2))**0.5
            ibin = uvd/binsiz + 1
  	   do i=1,nread
-	      if(present) then
-	         freq = chfreq(i)
-		 if(klam) ibin = (freq*uvd/1000.0)/binsiz + 1
-	      else
-	         freq = 0.0
-	      endif
-	   if(flags(i)) then
+	      freq = chfreq(i)
+	      if(klam) ibin = (freq*uvd/1000.0)/binsiz + 1
+	      if(flags(i).and.ibin.le.numbins) then
 		 phaz = -((preamble(1) * dra) + (preamble(2) * ddec)) *
      1			2.0*pi*freq
 		 data(i) = data(i) * cmplx(cos(phaz),sin(phaz))
@@ -217,14 +189,18 @@ c  Now do the arithmetic on accumulated data to calculate mean, error
 c  in mean, singal-to-noise, and expectational value for zero signal
 c
 	do i=1,numbins
-	   if(numdat(i) .gt. 0) then
+	   if(numdat(i) .gt. 2) then
 	      rdat = real(sumdat(i))/numdat(i)
 	      idat = aimag(sumdat(i))/numdat(i)
 	      uuvamp(i) = (rdat*rdat + idat*idat)**0.5
 	      sigr2 = (sdatr2(i) - numdat(i)*rdat*rdat)/(numdat(i)-1)
 	      sigi2 = (sdati2(i) - numdat(i)*idat*idat)/(numdat(i)-1)
 	      sigmean(i) = ((sigr2 + sigi2)/(numdat(i)-2))**0.5
-	      ratio(i)   = uuvamp(i)/sigmean(i)
+	      if(sigmean(i).gt.0)then
+		ratio(i) = uuvamp(i)/sigmean(i)
+	      else
+		ratio(i) = 0
+	      endif
               expect(i) = ((pi/2.0)**0.5)*sigmean(i)
 	   else
 	      uuvamp(i)   = 0.0
@@ -286,7 +262,7 @@ c
 	endif
 	call LogClose
 	call uvDatCls
-	stop
+c
 	end
 c************************************************************************
         subroutine GetOpt(uvflags, ampsc)
@@ -329,3 +305,28 @@ c
 	endif
         end
 c************************************************************************
+	subroutine OffCvt(tIn,dra,ddec)
+c
+	implicit none
+	integer tIn
+	real dra,ddec
+c
+c  Convert a true offset RA/DEC to a "grid" offset. This avoids the
+c  small angle assumption that offsets are equivalent to direction
+c  cosines, and the fact that a 2D Fourier transform relationship is
+c  used is taken into account.
+c
+c------------------------------------------------------------------------
+	double precision x1(2),x2(2)
+c
+	call coInit(tIn)
+c
+	x1(1) = dra
+	x1(2) = ddec
+	call coCvt(tIn,'ow/ow',x1,'op/op',x2)
+	dra = x2(1)
+	ddec = x2(2)
+c
+	call coFin(tIn)
+c
+	end
