@@ -492,7 +492,7 @@ c
            if (wedcod.eq.1 .or. wedcod.eq.2) then
             call pgsch (cs(1))
             call wedgecg (.false., wedcod, wedwid, jj, trfun, groff, 
-     +                    nbins, cumhis, wdgvp, pixr2(2), pixr2(1))
+     +                    nbins, cumhis, wdgvp, pixr2(1), pixr2(2))
            end if
          end if
 c
@@ -529,7 +529,7 @@ c
            if (wedcod.eq.3) then
             call pgsch (cs(1))
             call wedgecg (.false., wedcod, wedwid, jj, trfun, groff, 
-     +                    nbins, cumhis, wdgvp, pixr2(2), pixr2(1))
+     +                    nbins, cumhis, wdgvp, pixr2(1), pixr2(2))
            end if
 c
 c Modify lookup table
@@ -2226,7 +2226,7 @@ c
 c Find hyper-rectangle surrounding region of interest
 c
       call boxinfo (boxes, 3, blc, trc)
-      do i = 1, naxis
+      do i = 1, min(3,naxis)
         blc(i) = max(1,blc(i))
         trc(i) = min(size(i),trc(i))
       end do
