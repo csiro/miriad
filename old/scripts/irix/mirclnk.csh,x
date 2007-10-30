@@ -10,8 +10,8 @@ foreach name ($*)
   echo Processing $name
   switch($name)
     case *.for
-      (cd $dir; ratty -s sun -b -I $MIRINC $name $tmp.f)
-      f77 -o $MIRBIN/$file $tmp.f `mirlibs`
+      (cd $dir; ratty -s sgi -I $MIRINC $name $tmp.f)
+      f77 -O0 -backslash -o $MIRBIN/$file $tmp.f `mirlibs`
       rm -f $tmp.f
       rm -f $doc
       doc -p $name
@@ -21,7 +21,7 @@ foreach name ($*)
       endif
       breaksw
     case *.c:
-      (cd $dir;cc -Dsun -I$MIRINC -o $MIRBIN/$file $name)
+      (cd $dir;cc -O0 -Dsgi -I$MIRINC -o $MIRBIN/$file $name)
       breaksw
     case *.csh:
       rm -f $MIRBIN/$file
