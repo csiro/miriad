@@ -68,9 +68,8 @@ c	maximum residual becomes negative valued, or if the cutoff level
 c	(as described above) is reached. 
 c@ region
 c	This specifies the region to be Cleaned. See the Users Manual for
-c	instructions on how to specify this. The default is the inner
-c	quarter. This default is generally inadequate, and a smaller
-c	region should be explicitly specified.
+c	instructions on how to specify this. The default is generally
+c	inadequate, and a smaller region should be explicitly specified.
 c@ minpatch
 c	The minimum patch size when performing minor iterations. Default
 c	is 51, but make this larger if you are having problems with
@@ -123,6 +122,7 @@ c		   component.
 c   rjs   4may95 - Doc change only.
 c   rjs  29nov95 - Better treatment of model.
 c   rjs  13sep96 - Friday 13th! Improve check for negative components.
+c   rjs  29jan97 - Change default region of interest.
 c
 c  Bugs and Shortcomings:
 c     * The way it does convolutions is rather inefficent, partially
@@ -144,7 +144,7 @@ c		to write.
 c
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='MfClean: version 1.0 27-Nov-93')
+	parameter(version='MfClean: version 1.0 29-Jan-97')
 	include 'maxdim.h'
 	integer maxBeam,maxCmp1,maxCmp2,maxBox,maxRun,maxP
 	parameter(maxCmp1=66000,maxCmp2=32000,maxP=257)
@@ -215,8 +215,9 @@ c
      *	  call bug('f','Input map is not a multi-freq synthesis map')
 	call rdhdi(lMap,'naxis',naxis,3)
 	naxis = max(min(naxis,4),3)
+	call defregio(boxes,nMap,nBeam,ic,jc)
 	call BoxMask(lMap,boxes,maxBox)
-	call BoxSet(boxes,3,nMap,'q')
+	call BoxSet(boxes,3,nMap,' ')
 	call BoxRuns(1,1,'r',boxes,Run,maxRun,nRun,
      *					xmin,xmax,ymin,ymax)
 	nx = xmax - xmin + 1
@@ -1510,5 +1511,30 @@ c
 	do i=1,nPoint
 	  Res1(i) = Map1(i) - Tmp(i) - Res1(i)
 	enddo
+c
+	end
+c************************************************************************
+	subroutine defregio(boxes,nMap,nBeam,icentre,jcentre)
+c
+	implicit none
+	integer boxes(*),nMap(3),nBeam(2),icentre,jcentre
+c
+c  Set the region of interest to the lastest area that can be safely
+c  deconvolved.
+c------------------------------------------------------------------------
+	integer blc(3),trc(3),width
+c
+	width = min(icentre-1,nBeam(1)-icentre) + 1
+	blc(1) = max(1,(nMap(1)-width)/2)
+	trc(1) = min(nMap(1),blc(1)+width-1)
+c
+	width = min(jcentre-1,nBeam(2)-jcentre) + 1
+	blc(2) = max(1,(nMap(2)-width)/2)
+	trc(2) = min(nMap(2),blc(2)+width-1)
+c
+	blc(3) = 1
+	trc(3) = 1
+c
+	call BoxDef(boxes,3,blc,trc)
 c
 	end
