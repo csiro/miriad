@@ -15,10 +15,11 @@ c
 	double precision crpix(MAXNAX,MAXOPEN)
 	double precision cdelt(MAXNAX,MAXOPEN)
 	double precision restfreq(MAXOPEN),vobs(MAXOPEN)
+	double precision epoch(MAXOPEN),obstime(MAXOPEN)
 	character ctype(MAXNAX,MAXOPEN)*16,coproj(MAXOPEN)*3
 	integer cotype(MAXNAX,MAXOPEN)
 	logical cellscal(MAXOPEN)
 c
-	common/cocom/crval,crpix,cdelt,restfreq,vobs,lus,nalloc,naxis,
-     *		cotype,ilong,ilat,ifreq,cellscal
+	common/cocom/crval,crpix,cdelt,restfreq,vobs,epoch,obstime,
+     *		lus,nalloc,naxis,cotype,ilong,ilat,ifreq,cellscal
 	common/cocomc/ctype,coproj
