@@ -553,15 +553,19 @@ System-Dependent Issues
 GNU Compilers
 -------------
 Miriad has been successfully build using the gcc and g77 compilers.
-To use these, you will need to change the mircadd and mirclnk scripts
-accordingly.
+If "cc" and "f77" are not symbollicaly linked to these, you will
+need to change the mircadd and mirclnk scripts accordingly.
+
+Our experience with FORTRAN compilers based on "f2c" is not entirely
+positive. Tasks "atlod" and "uvplt" are believed to fail to work
+properly when using f2c-based compilers. g77 seems more reliable.
 
 IRIX (SGI)
 ----------
 The FORTRAN optimiser is very buggy. I recommend that you do not use
 optimisation above -O0.
 
-On our SGI machine, the system library complib.sgimath contains BLAS,
+On our SGI machine (IRIX64), the system library complib.sgimath contains BLAS,
 LINPACK and FFT routines. If your machine does not have this library,
 you will need to modify the file $MIR/scripts/unix/sgi/mirupdate.csh.
 See the comments in that file (look for the double
