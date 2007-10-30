@@ -36,6 +36,7 @@ c    rjs  13mar95 Add tolerance to checking for primary beam size.
 c    rjs  15oct96 Modify call sequence to coGeom.
 c    rjs  26mar97 Better support for "pbtype" parameter in vis datasets.
 c    rjs  30apr97 Comments only.
+c    rjs  07jul97 Change coaxdesc to coaxget.
 c************************************************************************
 	subroutine MosCIni
 c
@@ -387,8 +388,8 @@ c
 c
 c  Get the cell increment -- for use later on.
 c
-	call coAxDesc(coObj,1,ctype,crpix1,radec0(1),cdelt1)
-	call coAxDesc(coObj,2,ctype,crpix2,radec0(2),cdelt2)
+	call coAxGet(coObj,1,ctype,crpix1,radec0(1),cdelt1)
+	call coAxGet(coObj,2,ctype,crpix2,radec0(2),cdelt2)
 c
 c  Do goemetry correction calculations.
 c
