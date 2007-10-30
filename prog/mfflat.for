@@ -26,10 +26,11 @@ c--
 c
 c  History:
 c    rjs   4aug93  Original version.
+c    rjs   8sep00  Write out "freq0".
 c------------------------------------------------------------------------
 	character version*(*)
 	integer MAXIN
-	parameter(version='MfFlat: version 1.0 4-Aug-93')
+	parameter(version='MfFlat: version 1.0 8-Sep-00')
 	parameter(MAXIN=32)
 	include 'maxdim.h'
 c
@@ -139,6 +140,7 @@ c
 c
 	call wrhdi(lVis,'ntau',1)
 	call wrhdi(lVis,'ngains',nants*(nfeeds+1))
+	call wrhdd(lVis,'freq0',freq)
 	call hdaccess(lGain,iostat)
 	if(iostat.ne.0)then
 	  call bug('w','Error closing gains table')
