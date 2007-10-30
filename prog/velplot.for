@@ -117,11 +117,13 @@ c    23may97 mchw  Cosmetics. More information for users.
 c    10jun97 rjs   Use memalloc to reduce memory usage.
 c    04sep97 mchw  Upgrading. Report absolute positions with cursor.
 c    10sep97 mchw  Fix new bug at exactly 45.0 position angle.
+c    08jul98 mchw  Improve code in spectra and Gaussian fits.
+c    16jul98 mchw  More robust interactive input; Elliminate ifdef's.
 c----------------------------------------------------------------------c
 	include 'velplot.h'
 	include 'mem.h'
 	character*(*) version
-	parameter(version='(version 3.0 10-SEP-97)')
+	parameter(version='(version 3.0 16-Jul-98)')
 	integer maxnax,maxboxes
 	parameter(maxnax=3,maxboxes=128)
 	integer boxes(maxboxes),nsize(maxnax),blc(maxnax),trc(maxnax)
@@ -269,7 +271,7 @@ c	integer i,ipr
 c
 	call output(' ')
 	call output('Header and velocity information')
-	call output('File : '//file)
+	call output('Image File : '//file)
 	call header(5)
 	write (msg, *) ' map pixels (L,R,B,T)=',1-midx,nx-midx,1-midy,
      *    ny-midy
@@ -282,7 +284,7 @@ c
 c	call prompt(ans,ipr,'Write into log ? (Y/[N]) :')
 c	call ucase(ans)
 c	if(ans.eq.'Y')then
-	  call LogWrit('File : '//file)
+	  call LogWrit('Image File : '//file)
 	  call header(6)
 c	endif
 	end
@@ -753,8 +755,10 @@ c
 c	Return number of plotting windows in x and y directions (windx,windy)
 c	imaps is the number of maps to be plotted
 c----------------------------------------------------------------------c
-	character msg*80, ans*80
+	character msg*80, line*80
 	integer uwindx, uwindy, length
+	double precision dval(2)
+	logical ok
 c
 	if (imaps .gt. 16) then
 	    windx=5
@@ -778,11 +782,13 @@ c
 	call output(' ')
 105	write(msg,'(a,i2,a,i2,a)')
      *   '>Enter number of windows in x and y: [',windx,',',windy,']:' 
-	call prompt(ans, length, msg)
+	call prompt(line, length, msg)
         if(length.ne.0)then
-          read(ans,'(i10.0,i10.0)') uwindx,uwindy
-	  if(uwindx.ne.0) windx=uwindx
-	  if(uwindy.ne.0) windy=uwindy
+          call matodf(line,dval,2,ok)
+          if(ok)then
+	    if(uwindx.ne.0) windx=dval(1)
+	    if(uwindy.ne.0) windy=dval(2)
+          endif
         endif
 	end
 c********1*********2*********3*********4*********5*********6*********7**
@@ -1086,20 +1092,24 @@ c----------------------------------------------------------------------c
 c
         write(line,'(a,4i6,a)') 'Integral and rms in box (',
      *				is-midx,ib-midy,ie-midx,it-midy, ')'
-	call output(line)
+	  call output(line)
+          call LogWrit(line)
 	write(line,'(a,a,a,a,a,a)') '  Velocity  ',
      *    ' Total Flux ','  Maximum   ','  Minimum   ','  Average   ',
      *	  '    rms     '
-	call output(line)
+	  call output(line)
+          call LogWrit(line)
 	call maxmap(ary,nx,ny,is,ie,ib,it,
      *			tmax,imax,jmax,tmin,imin,jmin,ave,arms,num)
 	call header(0)
 	write(line,'(6(x,f11.4),a)')
      *		vel, ave*num/cbof, tmax, tmin, ave, arms, ' Jy'
-	call output(line)
+	  call output(line)
+          call LogWrit(line)
 	write(line,'(24x,4(x,f11.4),a)')
      *		tmax*dperjy, tmin*dperjy, ave*dperjy, arms*dperjy, ' K'
-	call output(line)
+	  call output(line)
+          call LogWrit(line)
 	end
 c********1*********2*********3*********4*********5*********6*********7**
 	subroutine GetMom(nmom)
@@ -1333,43 +1343,47 @@ c    imaps	Number of velocity intervals.
 c    vmin,vmax  Array of velocity intervals.
 c-----------------------------------------------------------------------
 	real velmin,velmax,swap
-	integer i,k,length
-	character line*80
-#ifdef unicos
+	integer i,k,length,k1,k2,tlen
+	character line*80,string*80
+	double precision dval
+	logical ok
 c
-c  External
-c
-	character substr*80
-#endif
-c
-	  goto 9
-20	  continue
-	  call output(' ')
-	  write(line, *) 'Try again; map number must be in list,' //
+	goto 9
+20	continue
+	call output(' ')
+	write(line, *) 'Try again; map number must be in list,' //
      *	       'or increment list by one'
-	  call output(line)
-	  call ListMaps(imaps,vmin,vmax,vlsr,nc)
-9	  call output(' ')
-	  call output('---- Enter list of velocity intervals ---')
-	  call output('>Type -n to delete map n')
-          call output('      -99 to delete all')
-	  call output('       L to list')
-          call output('      <cr> to use the current list')
-10	  call prompt(line,length,
+	call output(line)
+	call ListMaps(imaps,vmin,vmax,vlsr,nc)
+9	call output(' ')
+	call output('---- Enter list of velocity intervals ---')
+	call output('>Type -n to delete map n')
+        call output('      -99 to delete all')
+	call output('       L to list')
+        call output('      <cr> to use the current list')
+10	call prompt(line,length,
      *      '>Enter map number and velocity interval (N,Vmin,Vmax): ')
-	  if(length.eq.0) return
-#ifdef unicos
-	  read(substr(line,1),101,err=20) i
-	  read(substr(line,2),103) velmin
-	  read(substr(line,3),103) velmax
-101	  format(i10.0)
-103	  format(f20.0)
-#else
-	  read(line(1:length),102,err=20) i,velmin,velmax
-102	  format(i10,2f20.0)
-#endif
+        if(length.ne.0)then
+          k1 = 1
+          k2 = length
+          k  = 0
+          do while (k1.le.k2.and.k.lt.3)
+            call getfield(line, k1, k2, string, tlen)
+            call atodf(string,dval,ok)
+            if(ok) then
+              k = k+1
+              if(k.eq.1) i = dval
+              if(k.eq.2) velmin = dval
+              if(k.eq.3) velmax = dval
+            else
+              goto 20
+            endif
+          enddo
+	else
+	  return
+        endif
 c
-c  end of list; plot maps
+c  end of list
 	  if(i.eq.0) goto 50
 c  swap
 	  if(velmin .gt. velmax) then
@@ -1757,8 +1771,6 @@ c    nx,ny,nc	Dimensions of image.
 c    vlsr	Array of velocities.
 c-------------------------------------------------------------------------c
 	include 'velplot.h'
-        character*10    ichar10
-        integer         len10,len10a,i10
 	real t(MAXDIM),tk(MAXDIM,49)
 	character*40 outfile
 	integer maxspec,ix,iy,lu,iostat
@@ -1766,11 +1778,13 @@ c-------------------------------------------------------------------------c
 	real x0,y0,vmin,vmax,x,y,wt,pa,step,sum,sumc
 	integer windx,windy,ncon,ns,nsmooth
 	integer spec,c,i,j,k,ig,nrows,ncols,length,ichannel,lwidth
-	character text*110
+	character text*310
 	character*80 oldevice,line
 	character*1 ans,fix,smooth,sym,noplot
 	character*28 label,xlabel,ylabel
 	character*8 xchar,ychar
+	double precision dval(5)
+	logical ok
 c  convolution array maximum size
 	real con(99,99,4,4)
 c
@@ -1783,13 +1797,6 @@ c
 	parameter(rts=3600.*180./3.141592654)
 c
 	data maxspec/49/
-c
-#ifdef unicos
-c
-c  External
-c
-	character substr*80
-#endif
 c
 c  Introduction.
 c
@@ -1818,9 +1825,6 @@ c
 c  List current selection of spectra.
 c
 	goto 9
-21	call output(' ')
-	call output('--- no spectra selected ---')
-	return
 11  	    call output(' ')
   	    call output(
      *		'Try again; spectrum number must edit or extend list')
@@ -1886,16 +1890,14 @@ c
 10	  call prompt(line,length,
      *		'>Enter spectrum number and position (n,X,Y): ')
 	  if(length.eq.0) goto 20
-#ifdef unicos
-	  read(substr(line,1),101,err=11) i
-	  read(substr(line,2),103) x
-	  read(substr(line,3),103) y
-101	  format(i10.0)
-103	  format(f20.0)
-#else
- 	  read(line(1:length),102,err=11,end=21) i, x, y
-102	  format(i10,2f20.0)
-#endif
+	  call matodf(line,dval,3,ok)
+	  if(ok)then
+	    i = dval(1)
+	    x = dval(2)
+	    y = dval(3)
+	  else
+	    goto 11
+	  endif
 	  if(i.eq.0) goto 20
 c  end of list; plot spectra
 	  if(i.ge.1 .and. i.le.min(nspec+1,maxspec)) then
@@ -2151,7 +2153,7 @@ c
 c  If this is the last window close the plot 
 c
 	if (spec.eq.nspec) then
-          call pgiden
+          if(alabel.eq.'Y')call pgiden
           call pgqinf('HARDCOPY',ans,length)
           call pgend
           if (ans(1:1).ne.'Y')then
@@ -2180,11 +2182,19 @@ c
 70	line='>Enter filename for spectra (<cr> to continue):'
 	call prompt(outfile,length,line)
 	if(length.gt.0) then
-	  ns = min(nspec,12)
-	  if (nspec .gt. 12) then
-	    call output('only first 12 spectra written to '//outfile)
+	  ns = min(nspec,30)
+	  if (nspec .gt. 30) then
+	    call output('only first 30 spectra written to '//outfile)
           endif
 	  call TxtOpen(lu,outfile,'new',iostat)
+	  if(iostat.eq.0) write(text,'(a,a)')
+     *	    'File: ',outfile
+	  length=6 + len(file)
+	  call TxtWrite(lu,text,length,iostat)
+	  if(iostat.eq.0) write(text,'(a,a)')
+     *	    'Image File: ',file
+	  length=12 + len(file)
+	  call TxtWrite(lu,text,length,iostat)
 	  if(iostat.eq.0) write(text,'(a,a,4x,f11.6,a)')
      *	    'Spectra for ',object,restfreq,' GHz'
 	  length=12 + len(object) + 15 + 4
@@ -2208,33 +2218,11 @@ c
 	    call TxtWrite(lu,text,length,iostat)
 	  enddo
 	  k=1
-#ifdef vms
 	  do while(iostat.eq.0 .and. k.le.nc)
-	    write(text,110) vlsr(k),(tk(k,i),i=1,ns)
+	    write(text,'(31(1x,f9.3))') vlsr(k),(tk(k,i),i=1,ns)
 	    call TxtWrite(lu,text,10+10*ns,iostat)
 	    k=k+1
 	  enddo
-110	  format(x,f9.3,<ns>(1x,f9.3))
-#else
-c
-c  This eliminate the need to use <ns> format, which works for f77 -g
-c  but not without, and not on cray.
-c
-          do while(iostat.eq.0 .and. k.le.nc)
-             write(ichar10,'(1x,f9.3)')vlsr(k)
-             text(1:10) = ichar10(1:10)
-             len10  = 11
-             len10a = 20
-             do i10=1,ns
-                write(ichar10,'(1x,f9.3)')tk(k,i10)
-                text(len10:len10a) = ichar10(1:10)
-                len10  = len10 + 10
-                len10a = len10 + 9
-             enddo
-            call TxtWrite(lu,text,10+10*ns,iostat)
-            k=k+1
-          enddo
-#endif
 	  call TxtClose(lu)
 	endif
 c
@@ -2507,7 +2495,7 @@ c
 c  Replotting options.
 c
   	if(write.ne.'Y' .and. apint.ne.'Y') then
-	  call pgiden
+	  if(alabel.eq.'Y')call pgiden
 	  call pgqinf('HARDCOPY',ans,length)
 	  call pgend
 	  if(ans.ne.'YES')then
@@ -2727,12 +2715,8 @@ c    ncon		Size of convolution array.
 c----------------------------------------------------------------------c
 	character*80 line
 	integer length
-#ifdef unicos
-c
-c  External
-c
-	character substr*80
-#endif
+	double precision dval(3)
+	logical ok
 c
 c  Initialize convolving beam.
 c
@@ -2743,16 +2727,14 @@ c
 10	call prompt(line,length,
      *	  '>Enter convolving beam (major("), minor("), pa(deg): ')
 	if(length.eq.0) goto 20
-#ifdef unicos
-	read(substr(line,1),102,err=10) cmaj
-	read(substr(line,2),102) cmin
-	read(substr(line,3),102) cpa
-102	format(f20.0)
-#else
-	read(line(1:length),103,err=10,end=20) cmaj,cmin,cpa
-103	format(3f20.0)
-#endif
-c
+          call matodf(line,dval,3,ok)
+          if(ok)then
+            cmaj = dval(1)
+            cmin = dval(2)
+            cpa  = dval(3)
+          else
+            goto 10
+          endif
 20	ncon = 2*cmaj/xy + 1
 	ncon = min(99,(max(ncon,3)))
 	call output('Gaussian falls to 6% at edge of array')
@@ -3230,11 +3212,13 @@ c
       dimension sig(MAXDIM),a(nma),lista(nma),
      *          covar(nma,nma),alpha(nma,nma)
       real alamda,chisq,ochisq
-      integer length
+      integer length,tlen,k1,k2
+	double precision dval
+	logical ok
       real value
       real rmsest
-      character*80 line,ans
-      real p1,p2,p3,amp,mom1,mom2
+      character*80 line,ans,string
+      real amp,mom1,mom2
 c
 c ask user to continue or not
       call output(' ')
@@ -3260,15 +3244,25 @@ c
 c********1*********2*********3*********4*********5*********6*********7*c
 107   format('>Gaussian no. ',i1,', Enter amp, vel, fwhm [',3f8.3,'] :')
         call prompt(ans,length,line)
+        gauss(spec,1,i)=amp
+        gauss(spec,2,i)=mom1
+        gauss(spec,3,i)=mom2
 	if(length.ne.0)then
-          read(ans(1:length),'(3f20.0)') p1,p2,p3
-	  gauss(spec,1,i)=p1
-	  gauss(spec,2,i)=p2
-	  gauss(spec,3,i)=p3/(2.*sqrt(log(2.)))
-	else
-	  gauss(spec,1,i)=amp
-	  gauss(spec,2,i)=mom1
-	  gauss(spec,3,i)=mom2
+	  k1 = 1
+          k2 = length
+	  k  = 0
+          do while (k1.le.k2.and.k.lt.3)
+            call getfield(ans, k1, k2, string, tlen)
+	    call atodf(string,dval,ok)
+	    if(ok) then
+	      k = k+1
+	      gauss(spec,k,i) = dval
+	    else
+		call bug('w', 'bad input in gaufit')
+		return 
+	    endif
+	  enddo
+	  gauss(spec,3,i)=gauss(spec,3,i)/(2.*sqrt(log(2.)))
 	endif  
       enddo
 
@@ -3782,16 +3776,12 @@ c  convolution array maximum size
         character*80 xlabel,ylabel,line
 	integer i,windx,windy,length,lwidth
 	integer ii,jj,jjj,nchan,ichan(10),ifix
+        double precision dval(4)
+        logical ok
 c
         integer ncut
 	real xcut(128),ycut(128),pa(128)
         common /cuts/ xcut,ycut,pa,ncut
-#ifdef unicos
-c
-c  External
-c
-	character substr*80
-#endif
 c
 c  Introduction.
 c
@@ -3851,17 +3841,15 @@ c
 10	  call prompt(line,length,
      *      '>Enter cut number, position and angle (n,x,y,pa): ')
 	  if(length.eq.0) goto 50
-#ifdef unicos
-	  read(substr(line,1),101,err=20) i
-	  read(substr(line,2),103) xin
-	  read(substr(line,3),103) yin
-	  read(substr(line,4),103) pain
-101	  format(i10.0)
-103	  format(f20.0)
-#else
-	  read(line(1:length),102,err=20,end=20) i,xin,yin,pain
-102	  format(i10,3f20.0)
-#endif
+          call matodf(line,dval,4,ok)
+          if(ok)then
+            i    = dval(1)
+            xin  = dval(2)
+            yin  = dval(3)
+            pain = dval(3)
+          else
+            goto 20
+          endif
 c
 c  End of list. Make plots.
 c
@@ -4107,7 +4095,7 @@ c
 c  Replotting options.
 c
         if(apint.ne.'Y'.and.write.ne.'Y')then
-	  call pgiden
+	  if(alabel.eq.'Y')call pgiden
 	  call pgqinf('HARDCOPY',ans,length)
 	  call pgend
 	  if(ans.ne.'YES')then
@@ -4269,6 +4257,8 @@ c********1*********2*********3*********4*********5*********6*********7**
       subroutine WrGauss(outfile,nc,vlsr,cmaj,cmin,cpa)
       implicit none
 c
+c  Write Gaussian fits to spectra into an ascii file.
+c
 c Inputs:
 c  outfile	filename for ascii fits
 c  nc		number of channels
@@ -4282,24 +4272,22 @@ c----------------------------------------------------------------------
       include 'velplot.h'
       integer nc
       real vlsr(nc)
-      real tmod(MAXDIM,12)
-      real vlsr2(5*MAXDIM),tmod2(5*MAXDIM,12),dv
+      real tmod(MAXDIM,30)
+      real vlsr2(5*MAXDIM),tmod2(5*MAXDIM,30),dv
       real arg1,term
-      character*10    ichar10
-      integer         len10,len10a,i10
       character*40 outfile
       integer lu,iostat
       real cmaj,cmin,cpa
       integer i,j,k,length,ns
-      character text*110
+      character text*310
 c
       integer nspec,ngauss(49)
       real xc(49),yc(49),gauss(49,3,10),gausserr(49,3,10)
       common /spectrae/ xc,yc,nspec,ngauss,gauss,gausserr
 c
-c loop through spectra to form gaussian models, max 12
+c loop through spectra to form gaussian models, max 30
 c
-      ns = min(nspec,12)
+      ns = min(nspec,30)
       do k=1,ns
 c
 c loop through channels
@@ -4340,10 +4328,19 @@ c
 c
 c  Write out gaussian fits to ASCII file.
 c
-	if (nspec .gt. 12) then
-	  call output('only first 12 fits written to '//outfile)
+	if (nspec .gt. 30) then
+	  call output('only first 30 fits written to '//outfile)
         endif
 	call TxtOpen(lu,outfile,'new',iostat)
+          call TxtOpen(lu,outfile,'new',iostat)
+          if(iostat.eq.0) write(text,'(a,a)')
+     *      'File: ',outfile
+          length=6 + len(file)
+          call TxtWrite(lu,text,length,iostat)
+          if(iostat.eq.0) write(text,'(a,a)')
+     *      'Image File: ',file
+          length=12 + len(file)
+          call TxtWrite(lu,text,length,iostat)
 	if(iostat.eq.0) write(text,'(a,a,4x,f11.6,a)')
      *	  'Gau fit for ',object,restfreq,' GHz'
 	length=12 + len(object) + 15 + 4
@@ -4367,38 +4364,11 @@ c
 	  call TxtWrite(lu,text,length,iostat)
 	enddo
 	k=1
-#ifdef vms
-	do while(iostat.eq.0 .and. k.le.nc)
-	  write(text,110) vlsr2(k),(tmod2(k,i),i=1,ns)
+        do while((iostat.eq.0) .and. (k.le.(5*nc)))
+	  write(text,'(31(1x,f9.3))') vlsr2(k),(tmod2(k,i),i=1,ns)
 	  call TxtWrite(lu,text,10+10*ns,iostat)
 	  k=k+1
 	enddo
-110	format(x,f9.3,<ns>(1x,f9.3))
-#else
-c
-c  This eliminate the need to use <ns> format, which works for f77 -g
-c  but not without, and not on cray.
-c
-c  Note that fits are written with 5x velocity oversampling
-c
-        do while((iostat.eq.0) .and. (k.le.(5*nc)))
-           write(ichar10,'(1x,f9.3)')vlsr2(k)
-           text(1:10) = ichar10(1:10)
-           len10  = 11
-           len10a = 20
-           do i10=1,ns
-              write(ichar10,'(1x,f9.3)')tmod2(k,i10)
-              text(len10:len10a) = ichar10(1:10)
-              len10  = len10 + 10
-              len10a = len10 + 9
-           enddo
-          call TxtWrite(lu,text,10+10*ns,iostat)
-          k=k+1
-        enddo
-#endif
 	call TxtClose(lu)
-
-c
       return
       end
-
