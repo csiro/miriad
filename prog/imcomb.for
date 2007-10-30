@@ -53,16 +53,20 @@ c------------------------------------------------------------------------
 	include 'maxnax.h'
 	include 'mem.h'
 	character version*(*)
-	parameter(version='ImComb: version 1.0 3-Oct-00')
+	parameter(version='ImComb: version 1.0 27-Jun-02')
 	integer MAXIN,MAXOPEN
 	parameter(MAXIN=500,MAXOPEN=6)
 c
-	character in(MAXIN)*64,tin*64,out*64
+	character in(MAXIN)*64,tin*64,out*64,line*80
 	integer nrms,nin,tno(MAXIN),tOut,nsize(3,MAXIN),nOpen
 	integer nOut(MAXNAX),minpix,maxpix,k,i,naxis,off(3)
 	integer pData,pWts,pFlags
 	logical mosaic,nonorm,interp,equal
 	real rms(MAXIN),rms0,blctrc(6,MAXIN)
+c
+c  Externals.
+c
+	character stcat*80
 c
 c  Get the inputs.
 c
@@ -102,7 +106,12 @@ c
 	    naxis = min(naxis,MAXNAX)
 	  else
 	    call ThingChk(tno(1),tno(i),nsize(1,i),interp,blctrc(1,i))
-	    if(interp)call bug('f','Cannot interpolate')
+	    if(interp)then
+	      line = stcat('Geometry of '//in(1),
+     *			   ' differs from '//in(i))
+	      call bug('w',line)
+	      call bug('f','Cannot interpolate')
+	    endif
 	  endif
 c
 c  Check the rms value.
