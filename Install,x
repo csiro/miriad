@@ -364,12 +364,12 @@ l7:
 	  chmod u+x $MIRBIN/$file
 	end
 
-# Compile the "newer" tool.
+# Compile the "mirnewer" tool.
 
-	echo "Compiling the newer tool ... (ignore posix redefined messages)"
-	cc -Dposix -o $MIRBIN/newer $MIR/tools/newer.c
-	if ( ! -x $MIRBIN/newer ) then
-	  echo "### Failed to build the newer tool"
+	echo "Compiling the mirnewer tool ... (ignore posix redefined messages)"
+	cc -Dposix -o $MIRBIN/mirnewer $MIR/tools/mirnewer.c
+	if ( ! -x $MIRBIN/mirnewer ) then
+	  echo "### Failed to build the mirnewer tool"
 	  echo "### Aborting"
 	  exit
 	endif
