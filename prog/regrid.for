@@ -112,6 +112,7 @@ c    20nov98 rjs   Handle and eliminate sky rotation.
 c    25nov98 rjs   Better handling of sky rotation parameter.
 c    18may99 rjs   Handle wrap arounds in the offsets.
 c    10jul00 rjs   Add "rotate" keyword, and get rid of "norotate" option.
+c    27jun02 rjs   An arg to mkeyd was single precision.
 c
 c To do:
 c----------------------------------------------------------------------
@@ -121,7 +122,7 @@ c----------------------------------------------------------------------
 	include 'mirconst.h'
 c
 	character version*(*)
-	parameter(version='Regrid: version 1.0 10-Jul-00')
+	parameter(version='Regrid: version 1.0 27-Jun-02')
 c
 	character in*64,out*64,tin*64,ctype*16,cellscal*12,proj*3
 	character line*64
@@ -169,7 +170,7 @@ c
 	call keymatch('project',NPROJS,projs,1,proj,nproj)
 	if(nproj.eq.0)proj = ' '
 	dorot = keyprsnt('rotate')
-	call keyd('rotate',rot,0.0)
+	call keyd('rotate',rot,0.0d0)
 	rot = DPI/180.0d0 * rot
 	call keyfin
 c
