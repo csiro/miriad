@@ -3846,7 +3846,7 @@ c
             i    = dval(1)
             xin  = dval(2)
             yin  = dval(3)
-            pain = dval(3)
+            pain = dval(4)
           else
             goto 20
           endif
