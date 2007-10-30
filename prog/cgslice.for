@@ -362,7 +362,7 @@ c
       integer nx, ny, nlevs, lin, naxis, ierr, pgbeg, iostat, ilen,
      +  nlast, ngrps, lval, lposi, lposo, lmod, i, j, k, jj, icol, 
      +  iax, ipage, wedcod, ibin(2), jbin(2), kbin(2), krng(2), 
-     +  coltab, iofm
+     +  coltab
 c
       character ctype(maxnax)*9, labtyp(2)*6, ltype(nltype)*6
       character in*64, pdev*64, xlabel*40, ylabel*40, xlabel2*40, 
@@ -372,7 +372,7 @@ c
 c
       logical do3val, do3pix, eqscale, doblnk, mask, dopixel,  gaps,
      +  doerase, redisp, accum, radians, none, noimage, dofit, dobord,
-     +  dobase, doxrng, dofid, dowedge, first, dunsl, reverse
+     +  dobase, doxrng, dofid, dowedge, first, dunsl
 c
       integer len1
 c
@@ -457,11 +457,6 @@ c
       gaps = .false.
       if (ngrps.eq.1 .or. nx*ny.eq.1) gaps = .true.
 c
-c Work out if wedge outside or inside subplots. Also work out
-c if plotting one wedge per subplot or one wedge for all
-c
-      call wedgincg (dowedge, nx, ny, 1, trfun, wedcod)
-c
 c Work out default character sizes for axis and channel labels
 c
       call defchrcg (nx, ny, cs)
@@ -490,15 +485,17 @@ c
       call pgqinf ('hardcopy', hard, ilen)
       if (hard.eq.'YES' .and. fslposi.eq.' ') call bug ('f',
      +   'Must specify keyword "posin" for hardcopy device')
-c
-c Step to first sub-plot, set font and basic character size
-c
       call pgpage
       call pgscf(1)
 c
 c Init OFM routines
 c       
-      call ofmini
+      if (dopixel) call ofmini
+c
+c Work out if wedge outside or inside subplots. Also work out
+c if plotting one wedge per subplot or one wedge for all
+c
+      call wedgincg (hard, dofid, dowedge, nx, ny, 1, trfun, wedcod)
 c
 c Set label displacements from axes and set PGTBOX labelling
 c option strings
@@ -562,19 +559,9 @@ c
      +       win(1)*win(2), memi(ipnim), memr(ipim), nbins, his,
      +       cumhis)
 c
-c Apply user specified OFM or b&w OFM as default to device
+c Apply user given OFM or b&w as default to hardcopy device
 c
-           call ofmcol (coltab, pixr2(1), pixr2(2))
-c
-c For hardcopy devices we generally want black on white, not white on 
-c black.  So if no colour table has been applied, make note of this.
-c
-           reverse = .false.
-           if (hard.eq.'YES') then
-             call ofminq (iofm)
-             if (iofm.eq.1) reverse = .true.
-             if (iofm.eq.9) call ofmfudge
-           end if
+           if (hard.eq.'YES') call ofmcol (coltab, pixr2(1), pixr2(2))
 c
 c Draw wedge if needed
 c
@@ -582,8 +569,8 @@ c
              call pgsci (7)
              if (hard.eq.'YES') call pgsci (2)
              call pgsch (cs(1))
-             call wedgecg (reverse, wedcod, wedwid, jj, trfun, groff, 
-     +                     nbins, cumhis, wdgvp, pixr(1), pixr(2))
+             call wedgecg (wedcod, wedwid, jj, trfun, groff, nbins,
+     +                     cumhis, wdgvp, pixr(1), pixr(2))
            end if
          end if
 c
@@ -598,19 +585,22 @@ c
 c Modify OFM for harcopy devices here; must be done before
 c PGIMAG called
 c 
-              if (hard.eq.'YES' .and. dofid)
-     +          call ofmmod (tfvp, win(1)*win(2), memr(ipim),
-     +                       memi(ipnim), pixr2(1), pixr2(2))
-c
-c Draw pixel map
-c
-               if (reverse) then
-                 call pgimag (memr(ipim), win(1), win(2), 1, win(1), 1,
-     +                        win(2), pixr2(2), pixr2(1), tr)
-               else
-                 call pgimag (memr(ipim), win(1), win(2), 1, win(1), 1,
-     +                        win(2), pixr2(1), pixr2(2), tr)
+               if (hard.eq.'YES') then
+                 if (dofid) call ofmmod (tfvp, win(1)*win(2), 
+     +             memr(ipim), memi(ipnim), pixr2(1), pixr2(2))
+                 call ofmcmp
                end if
+c
+c Draw pixel map and apply user given OFM
+c
+               call pgimag (memr(ipim), win(1), win(2), 1, win(1), 1,
+     +                      win(2), pixr2(1), pixr2(2), tr)
+               if (hard.eq.'NO') call ofmcol (coltab, pixr2(1), 
+     +                                        pixr2(2))
+c
+c Retake b&w complement for hardcopy devices
+c
+               if (hard.eq.'YES') call ofmcmp              
              else 
 c
 c Draw contours
@@ -640,8 +630,8 @@ c
                call pgsci (7)
                if (hard.eq.'YES') call pgsci (2)
                call pgsch (cs(1))
-               call wedgecg (reverse, wedcod, wedwid, jj, trfun, groff, 
-     +                       nbins, cumhis, wdgvp, pixr(1), pixr(2))
+               call wedgecg (wedcod, wedwid, jj, trfun, groff, nbins,
+     +                       cumhis, wdgvp, pixr(1), pixr(2))
              end if
 c
 c Write velocity or channel label
@@ -2753,7 +2743,7 @@ c
 c Find hyper-rectangle surrounding region of interest
 c
       call boxinfo (boxes, 3, blc, trc)
-      do i = 1, naxis
+      do i = 1, min(3,naxis)
         blc(i) = max(1,blc(i))
         trc(i) = min(size(i),trc(i))
       end do
