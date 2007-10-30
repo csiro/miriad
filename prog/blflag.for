@@ -822,8 +822,8 @@ c------------------------------------------------------------------------
 	complex data
 c
 	if(rms)then
-	  data = cmplx(sqrt(real(corr2)/npnt),
-     *		       sqrt(aimag(corr2)/npnt))
+	  data = cmplx(sqrt(real(corr2)/npnt - real(corr/npnt)**2),
+     *		       sqrt(aimag(corr2)/npnt- aimag(corr/npnt)**2))
 	else
 	  data = corr/npnt
 	endif
