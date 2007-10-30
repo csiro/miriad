@@ -41,6 +41,8 @@ c                     input.
 c    jm    03dec93    Only call uvset for corr format if corr exists!
 c   bpw/jm 17dec93    Added options=dra to correct for MINT problems.
 c    rjs   16dec95    Make phase shift calculation more accurate.
+c    jm    19feb96    Added warnings if no obvious changes are made or
+c                     if the requested source is not found.
 c***********************************************************************
 c= Uvedit - Editing of the baseline of a UV data set.
 c& jm
@@ -197,7 +199,7 @@ c
       character PROG*(*)
       parameter (PROG = 'UVEDIT: ')
       character VERSION*(*)
-      parameter (VERSION = 'version 1.8 16-Dec-95')
+      parameter (VERSION = 'version 1.8 19-Feb-96')
 c
       real SECRAD, ASECRAD
 c  -------------(SECRAD = PI / (12.0 * 3600.0))
@@ -252,7 +254,7 @@ c
       double precision epoch, jepoch, theta, costh, sinth
       complex delta
       complex data(MAXCHAN), wdata(MAXCHAN)
-      logical suffix, allsrc
+      logical suffix, allsrc, srcfound, changed
       logical raabs, decabs, antabs
       logical dotime, dorad, doants, dodelay, douv, dodra
       logical updUT, updLst, updodra, updora, updodec, updra, upddec
@@ -530,6 +532,8 @@ c
 c  Open the input visibility file.
 c
       do j = 1, Nfiles
+        srcfound = allsrc
+        changed = .FALSE.
         call UvOpen(Lin, Vis(j), 'old')
         call UvTrack(Lin, 'antpos', 'u')
         call TrackIt(Lin, except, Nexcept)
@@ -676,6 +680,7 @@ c
                 call UvProbvr(Lin, 'source', type, k, updated)
                 if (updated) call UvGetvra(Lin, 'source', source)
                 if ((allsrc) .or. (Selsrc .eq. source)) then
+                  srcfound = .TRUE.
 c
 c  Get the antenna positions for this particular baseline and then
 c  compute the baseline positions (in wavelength/GHz units).
@@ -865,6 +870,7 @@ c  Apply corrections...
 c
                   if(dowide .and. (.not. docorr)) then
                     if (phase .ne. 0.0) then
+                      changed = .TRUE.
                       do k = 1, nwide
                         tmphaz = phase * wfreq(k)
                         delta = cmplx(cos(tmphaz), sin(tmphaz))
@@ -876,6 +882,7 @@ c
                   tmphaz = phase
                   if (dodelay) tmphaz = tmphaz - tmpdelay
                   if ((docorr) .and. (tmphaz .ne. 0.0)) then
+                    changed = .TRUE.
                     do k = 1, nspect
                       LastChn = ischan(k) + nschan(k) - 1
                       do m = ischan(k), LastChn
@@ -985,6 +992,24 @@ c
 c  Close the old UV data set.
 c
         call UvClose(Lin)
+c
+c  Warn if source not found in a particular dataset.
+c
+        if (.not. srcfound) then
+          k = Len1(Vis(j))
+          m = Len1(Selsrc)
+          errmsg = PROG // 'Source [' // Selsrc(1:m) //
+     *      '] not found in ' // Vis(j)(1:k)
+          call bug('w', errmsg)
+        endif
+c
+c  Warn if no apparent changes have been made.
+c
+        if (.not. changed) then
+          k = Len1(Vis(j))
+          errmsg = PROG // 'No apparent changes made to ' // Vis(j)(1:k)
+          call bug('w', errmsg)
+        endif
 c
 c  End of Nfiles do loop.
 c
