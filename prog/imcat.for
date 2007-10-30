@@ -38,12 +38,14 @@ c    04nov91 mchw  Restored inputs to history.
 c    08nov91 pjt   Increase MAXMAP to appease local maphogs
 c    13jul92 nebk  Add OPTIONS=RELAX and btype to keywords
 c    19jul94 nebk  Allow for roundoff in axis descriptor comparisons
+c    20sep95 rjs   Really allow for roundoff in axis descriptor comparisons.
+c		   Increase number of maps.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)	
-        parameter(version='IMCAT: version 19-jul-94')
+        parameter(version='IMCAT: version 20-Sep-95')
 	integer maxmap,naxis
-	parameter(maxmap=64,naxis=3)
+	parameter(maxmap=300,naxis=3)
 	character in(maxmap)*80,out*80,file*80
 	integer Outplane,map,nmap,row,plane,i
 	integer lin,nplane(maxmap),lOut,size(naxis),nsize(naxis)
@@ -131,8 +133,9 @@ c
 	      if(.not.ok) call bug(wflag,'crpix not the same on axis '//
      *                             caxis)
 	    else if(i.eq.naxis) then
-	      if((crval1+(1-crpix1)*cdelt1).ne.
+	      if(abs((crval1+(1-crpix1)*cdelt1)-
      *		(crval(i)+(1-crpix(i))*cdelt(i) + size(i)*cdelt(i)))
+     *		.gt.0.01*abs(cdelt1))
      *			 call bug(wflag,'channels are not contiguous')
 	    endif
 	  enddo
