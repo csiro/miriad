@@ -27,6 +27,7 @@ c--
 c  History:
 c    rjs   6nov94 Original version.
 c    rjs  13mar95 Add call to mosMFin
+c    rjs  23jul97 Add pbtype.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'maxnax.h'
@@ -219,7 +220,7 @@ c------------------------------------------------------------------------
 	double precision crpix
 	character line*72,num*3
 	integer nkeys
-	parameter(nkeys=29)
+	parameter(nkeys=30)
 	character keyw(nkeys)*8
 c
 c  Externals.
@@ -231,7 +232,8 @@ c
      *	  'crval5  ','ctype1  ','ctype2  ','ctype3  ','ctype4  ',
      *	  'ctype5  ','obstime ','epoch   ','history ','lstart  ',
      *	  'lstep   ','ltype   ','lwidth  ','object  ','pbfwhm  ',
-     *	  'observer','telescop','restfreq','vobs    ','btype   '/
+     *	  'observer','telescop','restfreq','vobs    ','btype   ',
+     *	  'pbtype  '/
 c
 c  Open the output.
 c
