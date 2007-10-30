@@ -2,11 +2,6 @@ c************************************************************************
 	program demos
 	implicit none
 c
-c  This is a task to perform a de-mosaicing operation. The input is a
-c  primary beam corrected image, or single dish image. The output is a
-c  number of images, with different pointing centres, each with
-c  a primary beam applied.
-c
 c= demos - Inverse mosaicing operation
 c& mchw
 c: map manipulation
@@ -81,19 +76,21 @@ c    nebk 25nov92 Copy btype to output
 c    nebk 17dec92 Adapt to new FNDAXNUM
 c    nebk 28jan93 New primary beam interface.
 c    mchw 12feb93 Convert uvvariables ra and dec to double precision.
+c    rjs  26aug94 Rework to use new co routines.
 c------------------------------------------------------------------------
 	character version*(*)
-	integer maxpnt
-	parameter(version='version 12-feb-93',maxpnt=16)
+	parameter(version='version 26-Aug-94')
 	include 'maxdim.h'
         include 'mirconst.h'
+c
+	integer maxpnt
+	parameter(maxpnt=16)
+c
 	real pntoff(2,maxpnt)
-        double precision crpix1,crpix2,cdelt1,cdelt2,crpix3,frqref,finc
-	real x0,y0,pbfwhm
-	integer x1,x2,y1,y2
+	double precision fval
+	real pbfwhm
 	character map*64,vis*64,out*64,name*64
-	integer imsize(2),nsize(3),npnt,lout,i,tmap,ifax,tvis,ierr
-        character*80 umsg,strax
+	integer imsize(2),nsize(3),npnt,lout,i,tmap,iax,tvis
         logical needf
 c
 c  Externals.
@@ -103,8 +100,7 @@ c
 c
 c  Get the input parameters.
 c
-        umsg = 'Demos: '//version
-	call output( umsg )
+	call output('Demos: '//version)
 	call keyini
 	call keya('map',map,' ')
 	call keya('vis',vis,' ')
@@ -132,22 +128,18 @@ c
 c  Open the input map.
 c
 	call xyopen(tmap,map,'old',3,nsize)
+	call coInit(tmap)
 	if(max(nsize(1),nsize(2)).gt.maxdim)
      *	  call bug('f','Input map too big for me to handle')
-	call rdhdd(tmap,'crpix1',crpix1,dble(nsize(1)/2+1))
-	call rdhdd(tmap,'crpix2',crpix2,dble(nsize(2)/2+1))
-	call rdhdd(tmap,'cdelt1',cdelt1,0.0d0)
-	if(cdelt1.eq.0)
-     *	    call bug('f','Cdelt1 was not present in map header')
-	call rdhdd(tmap,'cdelt2',cdelt2,0.0d0)
-	if(cdelt2.eq.0)
-     *	    call bug('f','Cdelt2 was not present in map header')
 c
 c  Some checks for primary beam stuff; convert user value to radians
 c
-        strax = ' '
-        call fndaxnum(tmap,'freq',strax,ifax)
-        if (ifax.gt.0 .and. ifax.ne.3) call bug ('f',
+	call coFindAx(tmap,'longitude',iax)
+	if(iax.ne.1)call bug('f','RA axis must be the first axis')
+	call coFindAx(tmap,'latitude',iax)
+	if(iax.ne.2)call bug('f','DEC axis must be the second axis')
+	call coFindAx(tmap,'spectral',iax)
+	if(iax.gt.0.and.iax.ne.3) call bug('f',
      *    'The spectral axis of this image must be number 3')
 c
         if (pbfwhm.le.0.0 .and. vis.eq.' ') call bug ('f',
@@ -162,29 +154,24 @@ c
         end if
         call pbcheck (pbfwhm, tvis, .false., .false., needf)
         if (needf) then
-          if (ifax.ne.3) then
-            call output 
-     *         ('The input image needs a spectral axis (#3) so that')
-            call output 
-     *         ('the frequency can be found for primary beam purposes')
+          if (iax.ne.3) then
+            call bug('w',
+     *         'The input image needs a spectral axis so that the')
+            call bug('f',
+     *         '... frequency can be found for primary beam purposes')
             call bug ('f', ' ')
           else
-c
-c  Get frequency of reference pixel
-c
-            call rdhdd (tmap, 'crpix'//itoaf(ifax), crpix3, 1.0d0)
-            call getfreq (tmap, crpix3, ifax, frqref, finc, ierr)
-            if (ierr.gt.1) call bug ('f',
-     +        'Could not find frequency of spectral ref. pixel')
-          end if
+	    call coVelSet(tmap,'frequency')
+	    call coCvt1(tmap,iax,'op',0.d0,'aw',fval)
+          endif
         else
-          frqref = -1.0d0
+          fval = -1.0d0
         end if
 c
 c  Set primary beam.  Use reference frequency since pixel size is
 c  scaled to reference frequency.
 c
-        call pbinit (pbfwhm, frqref, tvis, .false.)
+        call pbinit (pbfwhm, fval, tvis, .false.)
 c
 c  Determine the default pointings, if needed.
 c
@@ -201,11 +188,9 @@ c  If the image size was not given, determine this from the size of the
 c  primary beam.
 c
 	if(imsize(1).le.0) 
-     *    call defsiz(cdelt1,imsize(1))
-	imsize(1) = min(imsize(1),nsize(1))
+     *    call defsiz(tmap,1,nsize(1),imsize(1))
 	if(imsize(2).le.0) 
-     *    call defsiz(cdelt2,imsize(2))
-        imsize(2) = min(imsize(2),nsize(2))
+     *    call defsiz(tmap,2,nsize(2),imsize(2))
 c
 	if(imsize(1).le.0)
      *	    call bug('f','Internal bug in DEMOS: bad imsize1')
@@ -218,20 +203,9 @@ c
 	lout = len1(out)
 	do i=1,npnt
 	  name = out(1:lout)//itoaf(i)
-	  x0 = crpix1 + pntoff(1,i)/cdelt1
-	  x1 = nint(x0 - 0.5*imsize(1))
-	  x2 = x1 + imsize(1) - 1
-	  x1 = max(x1,1)
-	  x2 = min(x2,nsize(1))
 c
-	  y0 = crpix2 + pntoff(2,i)/cdelt2
-	  y1 = nint(y0 - 0.5*imsize(2))
-	  y2 = y1 + imsize(2) - 1
-	  y1 = max(y1,1)
-	  y2 = min(y2,nsize(2))
-c
-	  call Process(tmap,name,x0,y0,x1,y1,x2,y2,nsize(3),
-     *		pntoff(1,i),pntoff(2,i),version)
+	  call Process(tmap,name,nsize,imsize,
+     *				pntoff(1,i),pntoff(2,i),version)
 	enddo
 c
 	call xyclose(tmap)
@@ -239,13 +213,12 @@ c
 c
 	end
 c********1*********2*********3*********4*********5*********6*********7*c
-	subroutine Process(tmap,name,x0,y0,x1,y1,x2,y2,n3,
-     *	  pntoffx,pntoffy,version)
+	subroutine Process(tmap,name,insize,outsize,
+     *				pntoffx,pntoffy,version)
 c
 	implicit none
 	character name*(*),version*(*)
-	integer tmap,x1,y1,x2,y2,n3
-	real x0,y0
+	integer tmap,insize(3),outsize(2)
 	real pntoffx,pntoffy
 c
 c  This is the main processing routine in DEMOS. It reads a part of the
@@ -255,66 +228,89 @@ c
 c  Inputs:
 c    tmap	Handle of the input cube.
 c    name	Name of the output cube.
-c    x1,y1,x2,y2 Subportion of the input to place in the output (grid units).
-c    x0,y0	Pointing center, in grid units.
+c    insize	Size of the input image.
+c    outsize	Max size of the output image.
 c    pntoffx	Offset pointing, in x, in radians.
 c    pntoffy	Offset pointing, in y, in radians.
-c    n3		Size of the cubes 3rd dimension.
 c    version	A version id, for the history file.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
+	include 'maxnax.h'
         include 'mirconst.h'
-	integer naxis
-	parameter(naxis=3)
-	integer tout
-	integer nsize(3),i,j,k
-	real x,y,data(maxdim)
-	double precision cdelt1,cdelt2,crpix1,crpix2,crval1,crval2
-        logical flags(maxdim)
+c
+	integer tout,naxis
+	integer nsize(MAXNAX),i,j,k,n3,x1,x2,y1,y2
+	real x0,y0,x,y,data(MAXDIM)
+        logical flags(MAXDIM)
+	double precision cdelt1,cdelt2,crpix1,crpix2,xin(3),xout(3)
 	character line*64
+c
+c  Externals.
+c
         real pbfac
         real pbget
 c
 c  Header keywords.
 c
 	integer nkeys
-	parameter(nkeys=29)
+	parameter(nkeys=39)
 	character keyw(nkeys)*8
-	data keyw/   'bunit   ','cdelt3  ','crpix3  ','crval3  ',
-     *	  'ctype1  ','ctype2  ','ctype3  ','date-obs',
-     *	  'epoch   ','history ','instrume','niters  ','object  ',
-     *	  'telescop','observer','restfreq','vobs    ','xshift  ',
-     *	  'yshift  ','obsra   ','obsdec  ','lstart  ','lstep   ',
-     *	  'ltype   ','lwidth  ','bmaj    ','bmin    ','bpa     ',
-     *    'btype   '/
+	data keyw/   'bunit   ','btype   ',
+     *	  'cdelt1  ','cdelt2  ','cdelt3  ','cdelt4  ','cdelt5  ',
+     *				'crpix3  ','crpix4  ','crpix5  ',
+     *	  'crval1  ','crval2  ','crval3  ','crval4  ','crval5  ',
+     *	  'ctype1  ','ctype2  ','ctype3  ','ctype4  ','ctype5  ',
+     *	  'epoch   ','history ','niters  ','object  ','telescop',
+     *	  'observer','restfreq','vobs    ','xshift  ','yshift  ',
+     *	  'obsra   ','obsdec  ','lstart  ','lstep   ','ltype   ',
+     *	  'lwidth  ','bmaj    ','bmin    ','bpa     '/
+c
+	n3 = insize(3)
+	nsize(3) = n3
+c
+c  Determine the field extent in pixels.
+c
+	xin(1) = pntoffx
+	xin(2) = pntoffy
+	xin(3) = 1
+	call coCvt(tmap,'ow/ow/ap',xin,'ap/ap/ap',xout)
+	x0 = xout(1)
+	y0 = xout(2)
+c
+	x1 = nint(x0 - 0.5*outsize(1))
+	x2 = x1 + outsize(1) - 1
+	x1 = max(x1,1)
+	x2 = min(x2,insize(1))
+c
+	y1 = nint(y0 - 0.5*outsize(2))
+	y2 = y1 + outsize(2) - 1
+	y1 = max(y1,1)
+	y2 = min(y2,insize(2))
 c
 c Open the output file.
 c
+	call rdhdi(tmap,'naxis',naxis,1)
+	naxis = min(naxis,MAXNAX)
 	nsize(1) = x2 - x1 + 1
 	nsize(2) = y2 - y1 + 1
 	nsize(3) = n3
+	do i=4,naxis
+	  nsize(i) = 1
+	enddo
 	call xyopen(tout,name,'new',naxis,nsize)
 c
 c  Process its header.
 c
 	call rdhdd(tMap,'cdelt1',cdelt1,dpi/(3600*180))
 	call rdhdd(tMap,'crpix1',crpix1,1.0d0)
-	call rdhdd(tMap,'crval1',crval1,0.0d0)
 	call rdhdd(tMap,'cdelt2',cdelt2,dpi/(3600*180))
 	call rdhdd(tMap,'crpix2',crpix2,1.0d0)
-	call rdhdd(tMap,'crval2',crval2,0.0d0)
 c
-	crval2 = crval2 + (y0-crpix2)*cdelt2
-	crpix2 = y0 - y1 + 1
-	crval1 = crval1 + (x0-crpix1)*cdelt1/cos(crval2)
-	crpix1 = x0 - x1 + 1
+	crpix1 = crpix1 - x1 + 1
+	crpix2 = crpix2 - y1 + 1
 c
-	call wrhdd(tOut,'cdelt1',cdelt1)
 	call wrhdd(tOut,'crpix1',crpix1)
-	call wrhdd(tOut,'crval1',crval1)
-	call wrhdd(tOut,'cdelt2',cdelt2)
 	call wrhdd(tOut,'crpix2',crpix2)
-	call wrhdd(tOut,'crval2',crval2)
 c
 c  Write primary beam into header in arcsec if Gaussian
 c
@@ -339,6 +335,16 @@ c
 	do k=1,n3
 	  call xysetpl(tmap,1,k)
 	  call xysetpl(tOut,1,k)
+c
+c  Locate the pointing centre at this frequency, for this plane.
+c
+	  xin(3) = k
+	  call coCvt(tmap,'ow/ow/ap',xin,'ap/ap/ap',xout)
+	  x0 = xout(1)
+	  y0 = xout(2)
+c
+c  Do the real work.
+c
 	  do j=y1,y2
 	    call xyread(tmap,j,data)
 	    call xyflgrd(tmap,j,flags)
@@ -347,7 +353,7 @@ c
               x = ((i-x0)*cdelt1)**2 
               pbfac = pbget(x+y)
               data(i) = pbfac*data(i)
-              flags(i) = pbfac.gt.0.0
+              flags(i) = pbfac.gt.0.0.and.flags(i)
 	    enddo
 	    call xywrite(tOut,j-y1+1,data(x1))
             call xyflgwr(tout,j-y1+1,flags(x1))
@@ -379,8 +385,8 @@ c    pntoff	Pointing offsets. This is output, if on entry npnt is 0.
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	integer i
-	double precision ra,dec,crval1,crval2,cdelt1,cdelt2
-	real tol,dra,ddec,cosdec,offra,offdec
+	double precision ra,dec,cdelt1,cdelt2,x1(2),x2(2)
+	real tol,dra,ddec,offra,offdec
 	character line*64
 	logical more,found
 c
@@ -391,11 +397,8 @@ c
 c
 c  Get info about the map.
 c
-	call rdhdd(tmap,'crval1',crval1,0.d0)
 	call rdhdd(tmap,'cdelt1',cdelt1,dpi/(180*3600))
-	call rdhdd(tmap,'crval2',crval2,0.d0)
 	call rdhdd(tmap,'cdelt2',cdelt2,dpi/(180*3600))
-	cosdec = cos(crval2)
 	tol = 3600*180/pi * max(abs(cdelt1),abs(cdelt2))
 c
 c  Rewind vis file, get the first record.
@@ -411,12 +414,19 @@ c  Loop through the file, getting the data.
 c
 	more = .true.
 	dowhile(more)
-	  call uvrdvrd(tvis,'ra',ra,crval1)
+	  call uvgetvrd(tvis,'ra',ra,1)
 	  call uvrdvrr(tvis,'dra',dra,0.)
-	  call uvrdvrd(tvis,'dec',dec,crval2)
+	  call uvgetvrd(tvis,'dec',dec,1)
 	  call uvrdvrr(tvis,'ddec',ddec,0.)
-	  offra =  ((ra - crval1)*cosdec + dra ) * 3600*180/pi
-	  offdec = ((dec - crval2)       + ddec) * 3600*180/pi
+c
+c  Convert to offset coordinates.
+c
+	  x1(1) = ra + dra/cos(dec)
+	  x1(2) = dec + ddec
+	  call coCvt(tmap,'aw/aw',x1,'ow/ow',x2)
+	  offra  = x2(1) * 3600*180/pi
+	  offdec = x2(2) * 3600*180/pi
+c
 	  found = .false.
 	  i = 1
 	  dowhile(.not.found.and.i.le.npnt)
@@ -458,31 +468,34 @@ c
         call uvrewind (tvis)
 	end
 c********1*********2*********3*********4*********5*********6*********7*c
-      subroutine defsiz (cdelt, size)
+      subroutine defsiz(tmap,iax,nsize,size)
 c
       implicit none
-      integer size
-      double precision cdelt
+      integer tmap,iax,nsize,size
 c
 c  Set default size of image to one primary beam
 c
 c   Input
-c    cdelt    Image pixel increment
+c    tmap	Handle of the input dataset.
+c    iax	Axis we are intested in.
+c    nsize	Max size of the axis.
 c  Output
 c    size     Size of image
 c
 c-----------------------------------------------------------------------
       double precision coeffs(5)
       real pbfwhm, cut
-      character type*6
+      double precision cdelt,crval,crpix
+      character type*16
 c
-c Fish out Gaussian FWHM.  WIll be "pbfwhm" or internal FWHM value.
+c Fish out Gaussian FWHM, and the increment along this axis.
 c
       call pbinfo (pbfwhm, coeffs, cut, type)
+      call coAxDesc(tmap,iax,type,crpix,crval,cdelt)
 c
 c Set default size
 c
-      size = 2 * nint(pbfwhm / abs(cdelt))
+      size = min(2 * nint(pbfwhm / abs(cdelt)), nsize)
       end
 c********1*********2*********3*********4*********5*********6*********7*c
       subroutine gausspb (tout)
