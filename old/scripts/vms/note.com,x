@@ -1,0 +1,19 @@
+$	verf = 'f$verify("NO")'
+$
+$! This adds a note to the updates.dat file.
+$
+$! Inputs:
+$!   p1	  Your comments.
+$
+$	if f$search("junk.txt").nes."" then delete junk.txt;*
+$	open/write junk junk.txt
+$	write junk "*** Note at ",f$time()
+$	if p1.nes."" then goto 10
+$	close junk
+$	define/user sys$input tt
+$	edit/edt junk.txt
+$	goto 20
+$10:	write junk f$time()," ",p1
+$	close junk
+$20:	append junk.txt mirupd:updates.dat
+$	if verf then set verify
