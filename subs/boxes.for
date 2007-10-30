@@ -135,14 +135,14 @@ c    ztype:  'abspix' or 'kms  '.
 c  The default is 'abspix'.
 c------------------------------------------------------------------------
 	include 'boxes.h'
+	include 'maxnax.h'
 c
 	integer ntypes
 	parameter(ntypes=10)
 	integer nshape,length,k1,k2,n,spare,offset,i,boxtype,lu(3)
-	integer iostat
 	character types(ntypes)*9,type*9,spec*512,xytype*6,ztype*6
 	character line*64
-	integer iax,iax1,iax2,tmp(4)
+	integer iax,iax1,iax2,tmp(4),nsize(MAXNAX)
 	double precision t1,t2,t3
 	logical more,coordini,units
 c
@@ -251,16 +251,10 @@ c
 	      coordini = .true.
 	      if(file.eq.' ') call bug('f',
      *	        'Only absolute pixel region specification supported')
-	      call hopen(lu,file,'old',iostat)
-	      if(iostat.ne.0)then
-	        line = 'Error opening coordinate info file: '//file
-	        call bug('w',line)
-	        call bugno('f',iostat)
-	      endif
-	      call coInit(lu)
+	      call xyopen(lu,file,'old',MAXNAX,nsize)
 	      call rdhdi(lu,'naxis1',lu(2),1)
 	      call rdhdi(lu,'naxis2',lu(3),1)
-	      call hclose(lu)
+	      call xyclose(lu)
 	    endif
 	    if(boxtype.eq.ARCSEC)then
 	      call coFindAx(lu,'longitude',iax1)
