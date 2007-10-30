@@ -32,9 +32,10 @@ c	information. The default is the entire image.
 c--
 c  History:
 c    rjs 31oct94 - Original version.
+c    rjs  6feb95 - Copy mosaic table to output component table.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='MosSDI: version 1.0 31-Oct-94')
+	parameter(version='MosSDI: version 1.0 6-Feb-95')
 	include 'maxdim.h'
 	include 'maxnax.h'
 	include 'mem.h'
@@ -387,7 +388,7 @@ c------------------------------------------------------------------------
 	real crpix1,crpix2,crpix3
 	character line*72,txtblc*32,txttrc*32,num*2
 	integer nkeys
-	parameter(nkeys=14)
+	parameter(nkeys=15)
 	character keyw(nkeys)*8
 c
 c  Externals.
@@ -396,7 +397,8 @@ c
 c
 	data keyw/   'obstime ','epoch   ','history ','lstart  ',
      *	  'lstep   ','ltype   ','lwidth  ','object  ','pbfwhm  ',
-     *	  'observer','telescop','restfreq','vobs    ','btype   '/
+     *	  'observer','telescop','restfreq','vobs    ','btype   ',
+     *	  'mostable'/
 c
 c  Fill in some parameters that will have changed between the input
 c  and output.
