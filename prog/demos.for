@@ -30,7 +30,7 @@ c	This is one or more input visibility datasets. The pointing centres
 c	and primary beams corresponding to the selected visibilities are used
 c	in the de-mosaicing process.
 c@ select
-c	Normal uv selection. See `help select'. Generally you will select
+c	Normal uv selection. See help on "select". Generally you will select
 c	only those pointings of interest.
 c@ out
 c	This gives a template name for the output images. The actual output
@@ -418,7 +418,6 @@ c
 c
 c  Get the de-tapering weights.
 c
-	write(*,*)xoff,yoff
 	call mosWts(Wts,Scr,nx,ny,-xoff,-yoff)
 c
 	do j=1,ny
