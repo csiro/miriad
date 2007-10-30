@@ -135,8 +135,7 @@ c	    rjs     10oct94 Eliminate spurious extra call to uvflgwr.
 c	    rjs     16aug96 Eliminate MAXWIDE definition. Change NSELS,
 c			    standardise some FORTRAN.
 c           rjs     09dec97 Make antennas used message more robust.
-c***********************************************************************
-c
+c           rjs     11mar98 Some FORTRAN standardisation, to appease g77.
 c************************************************************************
 c uvflag works as follows:
 c It reads the name of the first visibility file.
@@ -148,7 +147,7 @@ c Then it asks for the next visibility file and does the whole process
 c again until the list is exhausted.
 
       character*(*) version
-      parameter ( version = 'uvflag: version 2.5 10-Oct-94')
+      parameter ( version = 'uvflag: version 2.5 11-Mar-98')
 
       character*64     vis
 
@@ -579,16 +578,18 @@ c Do statistics and reporting.
       logical          oldflags(*), newflags(*)
       logical          usech(*)
       integer          nchan
-
+c------------------------------------------------------------------------
+      integer itemp
+c
+c  Externals.
+c
+      integer counting
+c
       call flgset( unit, flagval, data,oldflags,newflags, usech, nchan )
-      call counting( type, oldflags,newflags, nchan )
+      itemp = counting( type, oldflags,newflags, nchan )
       call report( ropt, unit,preamble,tformat,line,type,
      *             data,oldflags,newflags, usech, nchan )
-      return
       end
-
-
-
 c************************************************************************
 c Loop through all channels in the record and set the new flags.
 c Depending on the value of amprange(1) a check will be made whether the
