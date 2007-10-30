@@ -8,12 +8,7 @@
 /*    bpw  15jul93 Add xyzflush and xyzmkbuf                                  */
 /******************************************************************************/
 
-
-void xyzopen_c(),  xyzclose_c(), xyzflush_c();
-void xyzmkbuf_c(), xyzsetup_c();
-void xyzs2c_c(),   xyzc2s_c();
-void xyzread_c(),  xyzpixrd_c(), xyzprfrd_c(), xyzplnrd_c();
-void xyzwrite_c(), xyzpixwr_c(), xyzprfwr_c(), xyzplnwr_c();
+#include "miriad.h"
 
 /************************************************************************/
 fortran subroutine xyzopen(integer tno,character name,character status,
