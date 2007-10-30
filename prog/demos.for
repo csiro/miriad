@@ -69,6 +69,7 @@ c		  and center keywords.
 c    rjs  27feb95 Correct sign error in the sign of an offset. Allow multiple
 c		  input vis datasets.
 c    rjs  17may95 More messages.
+c    rjs  02jul97 cellscal change.
 c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='version 27-Feb-95')
@@ -259,7 +260,7 @@ c
 c  Header keywords.
 c
 	integer nkeys
-	parameter(nkeys=38)
+	parameter(nkeys=39)
 	character keyw(nkeys)*8
 c
 	data keyw/   'bunit   ','btype   ',
@@ -270,7 +271,7 @@ c
      *	  'epoch   ','history ','niters  ','object  ','telescop',
      *	  'observer','restfreq','vobs    ','obsra   ','obsdec  ',
      *	  'obstime ','lstart  ','lstep   ','ltype   ','lwidth  ',
-     *	  'bmaj    ','bmin    ','bpa     '/
+     *	  'bmaj    ','bmin    ','bpa     ','cellscal'/
 c
 	n3 = insize(3)
 	nsize(3) = n3
