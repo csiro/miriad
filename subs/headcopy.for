@@ -73,6 +73,7 @@ c    bpw  16dec92  No special copy for btype, per Neil's remark
 c    bpw   1feb93  Made crpix double precision too
 c    pjt  15mar95  fixed statement order for f2c (linux)
 c    rjs  02jul97  cellscal change.
+c    rjs  23jul97  added pbtype.
 c
 c***********************************************************************
 
@@ -84,7 +85,7 @@ c***********************************************************************
       logical          hdprsnt
 
       integer          NKEYS
-      parameter        ( NKEYS = 28 )
+      parameter        ( NKEYS = 29 )
       character*8      keyw(NKEYS)
       data keyw/
      *    'crpix   ','crval   ','cdelt   ','crota   ','ctype   ',
@@ -94,7 +95,7 @@ c***********************************************************************
      *	  'ltype   ','lstart  ','lwidth  ','lstep   ',
      *    'niters  ','object  ','observer','obsdec  ','obsra   ',
      *    'pbfwhm  ','restfreq','telescop','vobs    ',
-     *    'btype'/
+     *    'btype   ','pbtype  '/
 
       do k = 1, 5
          do n = 1, naxis
