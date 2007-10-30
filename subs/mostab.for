@@ -41,6 +41,8 @@ c    rjs  26mar97 Better support for "pbtype" parameter in vis datasets.
 c    rjs  30apr97 Comments only.
 c    rjs  07jul97 Change coaxdesc to coaxget.
 c    rjs  27oct98 Added mosval.
+c    rjs  12oct99 Added mosgetn and mossetn
+c    rjs  28oct99 Fix fractional pixel shift bug. 
 c************************************************************************
 	subroutine MosCIni
 c
@@ -438,7 +440,7 @@ c************************************************************************
 c
 	implicit none
 	integer coObj,npnt1,nchan
-	real x(npnt1,nchan),y(npnt1,nchan)
+	real x(nchan,npnt1),y(nchan,npnt1)
 c
 c  Determine the fractional pixel shifts and the resulting
 c  alignment between the different pointings.
@@ -459,11 +461,11 @@ c
 	if(npnt.ne.npnt1)
      *	  call bug('f','Inconsistent number of pointings')
 c
-	do j=1,nchan
-	  do i=1,npnt
-	    x1(1) = radec(1,i)
-	    x1(2) = radec(2,i)
-	    x1(3) = j
+	do j=1,npnt
+	  do i=1,nchan
+	    x1(1) = radec(1,j)
+	    x1(2) = radec(2,j)
+	    x1(3) = i
 	    call coCvt(coObj,'aw/aw/ap',x1,'op/op/ap',x2)
 	    x(i,j) = x2(1)
 	    y(i,j) = x2(2)
@@ -477,7 +479,7 @@ c************************************************************************
 c
 	implicit none
 	integer nx2,ny2,npnt,nchan,mnx,mny
-	real x(npnt,nchan),y(npnt,nchan)
+	real x(nchan,npnt),y(nchan,npnt)
 	double precision crpix1,crpix2
 c
 c  Determine the size of the output image.
@@ -503,8 +505,8 @@ c
 	ymin = y(1,1)
 	ymax = ymin
 c
-	do j=1,nchan
-	  do i=1,npnt
+	do j=1,npnt
+	  do i=1,nchan
 	    xmin = min(xmin,x(i,j))
 	    xmax = max(xmax,x(i,j))
 	    ymin = min(ymin,y(i,j))
@@ -521,8 +523,8 @@ c
 	crpix1 = 1 - imin
 	crpix2 = 1 - jmin
 c
-	do j=1,nchan
-	  do i=1,npnt
+	do j=1,npnt
+	  do i=1,nchan
 	    x(i,j) = x(i,j) + crpix1
 	    y(i,j) = y(i,j) + crpix2
 	  enddo
