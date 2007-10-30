@@ -31,6 +31,8 @@ c	values are:
 c	  atmosaic  This is the mosaic file format understood by the ATCA
 c	            on-line system.
 c	  uvgen     This is the format required for uvgen's "center" keyword.
+c@ telescop
+c	The primary beam type. The default is ATCA.
 c@ name
 c	For mode=atmosaic, a name used to derive the pointing name. For
 c	example, using name=lmc, will generate pointing names of
@@ -39,11 +41,16 @@ c@ cycles
 c	For mode=atmosaic, the number of cycles spent on each pointing.
 c------------------------------------------------------------------------
 	include 'mirconst.h'
+	integer MAXPNT
+	parameter(MAXPNT=2048)
 	character device*64,line*16,line1*80,name*12,logf*80,mode*8
-	logical more,doplot
+	character telescop*16
+	logical more
 	integer i,j,nx,ny,s,npnt,lu,cycles,l,nout
 	double precision ra,dec,x1(2),x2(2)
 	real h,v,widthx,widthy,freq
+	integer pbObj
+	real pbfwhm,cutoff,maxrad,x(MAXPNT),y(MAXPNT)
 c
 	integer NMODES
 	parameter(NMODES=2)
@@ -58,7 +65,6 @@ c
 c
 	call keyini
 	call keya('device',device,' ')
-	doplot = device.ne.' '
 	call keyt('radec',ra,'hms',0.d0)
 	call keyt('radec',dec,'dms',0.d0)
 	call keyr('width',widthx,0.1)
@@ -71,6 +77,7 @@ c
 	call keymatch('mode',NMODES,modes,1,mode,nout)
 	if(nout.eq.0)mode = modes(1)
 	call keya('log',logf,' ')
+	call keya('telescop',telescop,'atca')
 	call keyfin
 c
 	l = len1(name)
@@ -82,26 +89,17 @@ c
 	call logInput('mosgen')
 c
 	call coRaDec(lu,'SIN',ra,dec)
-	if(doplot)then
-	  if(pgbeg(0,device,1,1).ne.1)then
-	    call pgldev
-	    call bug('f','Error opening graphics device')
-	  endif
-	  call pgscf(2)
-	  call pgpage
-	  call pgvstd
-	  call setwidth(lu,widthx,widthy)
-	  call pgbox('BCNST',0.,0,'BCNST',0.,0)
-	  call pglab('RA offset (degrees)',
-     *		     'DEC offset (degrees)',
-     *		     ' ')
-	endif
-	h = PI/180*19.6*1.4/freq/60.*cos(PI/3.)
-	v = PI/180*19.6*1.4/freq/60.*sin(PI/3.)
+        call coAxSet(lu,3,'FREQ',1.d0,dble(freq),0.1d0*dble(freq))
+        call coReinit(lu)
+	call pbInit(pbObj,telescop,lu)  
+        call pbInfo(pbObj,pbfwhm,cutoff,maxrad)
+c
+	h = 0.566*pbfwhm*cos(PI/3.)
+	v = 0.566*pbfwhm*sin(PI/3.)
 	nx = widthx/h
-	nx = 2*(nx/2)
+c	nx = 2*(nx/2)
 	ny = widthy/v
-	ny = 2*(ny/2)
+c	ny = 2*(ny/2)
 c	h = PI/180*h
 c	v = PI/180*v
 	i = -nx
@@ -114,11 +112,13 @@ c	v = PI/180*v
 	  x1(2) = j*v
 	  call CoCvt(lu,'op/op',x1,'aw/aw',x2)
 	  call CoCvt(lu,'aw/aw',x2,'ow/ow',x1)
-	  if(doplot)call pgpt(1,real(180/PI*x1(1)),real(180/PI*x1(2)),1)
+	  npnt = npnt + 1
+	  if(npnt.gt.MAXPNT)call bug('f','Too many pointings')
+	  x(npnt) = 180/PI*x1(1)
+	  y(npnt) = 180/PI*x1(2)
 c
 	  x2(1) = x2(1) - ra
 	  x2(2) = x2(2) - dec
-	  npnt = npnt + 1
 	  if(mode.eq.'atmosaic')then
 	    write(line,'(2f8.4)')180/PI*x2(1),180/PI*x2(2)
 	    line1 = line//' '//itoaf(cycles)//' $'//
@@ -143,42 +143,45 @@ c
 	    endif
 	  endif
 	enddo
-	if(doplot)call pgend
+	if(device.ne.' ')then
+	  if(pgbeg(0,device,1,1).ne.1)then
+	    call pgldev
+	    call bug('f','Error opening graphics device')
+	  endif
+	  call pgscf(2)
+	  call pgpage
+	  call pgvstd
+	  call setwidth(x,y,npnt)
+	  call pgbox('BCNST',0.,0,'BCNST',0.,0)
+	  call pglab('RA offset (degrees)',
+     *		     'DEC offset (degrees)',
+     *		     ' ')
+	  call pgpt(npnt,x,y,1)
+	  call pgend
+	endif
 	call output('Total number of pointings: '//itoaf(npnt))
 	call logClose
 	end
 c************************************************************************
-	subroutine setwidth(lu,widthx,widthy)
+	subroutine setwidth(x,y,npnt)
 c
 	implicit none
-	integer lu
-	real widthx,widthy
+	integer npnt
+	real x(npnt),y(npnt)
 c------------------------------------------------------------------------
-	include 'mirconst.h'
-	double precision x1(2),x2(2)
-	logical first
-	real xmin,xmax,ymin,ymax
-	integer i,j
+	real xmin,xmax,ymin,ymax,del
+	integer i
 c
-	first = .true.
-	do j=-1,1
-	  do i=-1,1
-	    x1(1) = i*widthx
-	    x1(2) = j*widthy
-	    call coCvt(lu,'op/op',x1,'ow/ow',x2)
-	    if(first)then
-	      xmin = x2(1)
-	      xmax = xmin
-	      ymin = x2(2)
-	      ymax = ymin
-	      first = .false.
-	    else
-	      xmin = min(xmin,real(x2(1)))
-	      xmax = max(xmax,real(x2(1)))
-	      ymin = min(ymin,real(x2(2)))
-	      ymax = max(ymax,real(x2(2)))
-	    endif
-	  enddo
+	xmin = x(1)
+	xmax = xmin
+	ymin = y(1)
+	ymax = ymin
+	do i=2,npnt
+	  xmin = min(xmin,x(i))
+	  xmax = max(xmax,x(i))
+	  ymin = min(ymin,y(i))
+	  ymax = max(ymax,y(i))
 	enddo
-	call pgwnad(180/PI*xmin,180/PI*xmax,180/PI*ymin,180/PI*ymax)
+	del = 0.05*max(xmax-xmin,ymax-ymin)
+	call pgwnad(xmax+del,xmin-del,ymin-del,ymax+del)
 	end
