@@ -82,6 +82,10 @@ c	             model, which is assumed to represent the image at all
 c	             frequencies. This should also be used if the model has
 c	             been derived from MFCLEAN. You should specify the
 c		     LINE keyword if you use the mfs option.
+c	  noscale    Do not scale the gains. By default the gains are scaled
+c	             so that the rms gain amplitude is 1. Generally this
+c	             should be used if the model is believed to have the
+c	             correct flux density scale.
 c	Note that "amplitude" and "phase" are mutually exclusive.
 c	The default is options=phase.
 c@ minants
@@ -108,10 +112,15 @@ c		  antennae.
 c    rjs  04aug92 Eliminate the xyphases item.
 c    rjs  22nov92 Added ntau to output gains table.
 c    rjs  29mar93 Fiddle noise calculation.
+c    rjs  26oct93 Make counting of nants consistent with other progs.
+c    rjs   4nov93 options=noscale.
+c    rjs  13dec93 Sign convention of V change.
+c    rjs  23dec93 Minimum match for linetypes.
+c    rjs  13sep94 Improve an error message. FELO changes.
 c------------------------------------------------------------------------
 	include 'gpscal.h'
 	character version*(*)
-	parameter(version='GpsCal: version 1.0 22-Nov-92')
+	parameter(version='GpsCal: version 1.0 23-Dec-93')
 	integer MAXSELS,nhead
 	parameter(MAXSELS=256,nhead=0)
 c
@@ -122,12 +131,11 @@ c
 	real sels(MAXSELS),clip,interval,offset(2),lstart,lwidth,lstep
 	real flux(4)
 	double precision Saved(16)
-	logical phase,amp,doline,mfs,doxy,xyvary,doref
+	logical phase,amp,doline,mfs,doxy,xyvary,doref,noscale
 c
 c  Externals.
 c
 	character PolsC2P*2
-	logical keyprsnt
 	external Header,calget
 c
 c  Get the input parameters.
@@ -147,15 +155,9 @@ c
 	call keyr('flux',flux(PolQ),0.0)
 	call keyr('flux',flux(PolU),0.0)
 	call keyr('flux',flux(PolV),0.0)
-	doline = keyprsnt('line')
-	if(doline)then
-	  call keya('line',ltype,'channel')
-	  call keyi('line',nchan,1)
-	  call keyr('line',lstart,1.)
-	  call keyr('line',lwidth,1.)
-	  call keyr('line',lstep,lwidth)
-	endif
-	call GetOpt(phase,amp,doxy,xyvary,doref,mfs)
+	call keyline(ltype,nchan,lstart,lwidth,lstep)
+	doline = ltype.ne.' '
+	call GetOpt(phase,amp,doxy,xyvary,doref,mfs,noscale)
 	call keyfin
 c
 c  Check that the inputs make sense.
@@ -213,14 +215,14 @@ c
 	  tscr(i) = 0
 	enddo
 c
-	call HeadIni(.true.)
+	call HeadIni
 	if(nModel.eq.0)then
 	  call SelApply(tvis,sels,.true.)
 	  do i=1,4
 	    if(flux(i).ne.0)then
 	      call output('Doing model computation for '//PolsC2P(i))
 	      call uvrewind(tvis)
-	      call HeadIni(.false.)
+	      call HeadIni
 	      call Model(flag2,tvis,0,offset,flux(i),tscr(i),
      *				nhead,Header,calget,nchan,nvis)
 	    endif
@@ -229,7 +231,7 @@ c
 	  do i=1,nModel
 	    call output('Calculating the model for '//Models(i))
 	    call xyopen(tmod,Models(i),'old',3,nsize)
-	    call HeadIni(.false.)
+	    call HeadIni
 	    call ModelIni(tmod,tvis,sels,flag1)
 	    call Model(flag2,tvis,tmod,offset,clip,tno,
      *				nhead,Header,calget,nchan,nvis)
@@ -257,7 +259,7 @@ c  polarisations given.
 c
 	call uvrewind(tvis)
 	call AccSolve(tvis,tscr,minants,refant,phase,doxy,xyvary,
-     *	  doref,nants,interval,nchan)
+     *	  doref,noscale,nants,interval,nchan)
 c
 c  Close up.
 c
@@ -268,10 +270,10 @@ c
 	call uvclose(tvis)
 	end
 c************************************************************************
-	subroutine GetOpt(phase,amp,doxy,xyvary,doref,mfs)
+	subroutine GetOpt(phase,amp,doxy,xyvary,doref,mfs,noscale)
 c
 	implicit none
-	logical phase,amp,doxy,doref,mfs,xyvary
+	logical phase,amp,doxy,doref,mfs,xyvary,noscale
 c
 c  Determine extra processing options.
 c
@@ -283,13 +285,15 @@ c    xyvary	Allow the XY phase to vary from integration to integration.
 c    doref	Solve for XY phase difference on the reference antenna.
 c    mfs	Model is frequency independent, or has been derived
 c		from MFCLEAN.
+c    noscale	Do not scale the gains.
 c------------------------------------------------------------------------
 	integer nopt
-	parameter(nopt=6)
+	parameter(nopt=7)
 	character opts(nopt)*9
 	logical present(nopt)
 	data opts/'amplitude','phase    ','xyvary   ',
-     *		  'noxy     ','xyref    ','mfs      '/
+     *		  'noxy     ','xyref    ','mfs      ',
+     *		  'noscale  '/
 	call options('options',opts,present,nopt)
 	amp = present(1)
 	phase = present(2)
@@ -297,6 +301,7 @@ c------------------------------------------------------------------------
 	doxy = .not.present(4)
 	doref = present(5)
 	mfs = present(6)
+	noscale = present(7)
 	if(amp.and.phase)
      *	  call bug('f','Cannot do both amp and phase self-cal')
 	if(.not.(amp.or.phase)) phase = .true.
@@ -407,20 +412,21 @@ c
 	double precision time
 	common/GPSCALC/time,baseline,nants,first
 c
-	accept = first
-	first = .false.
 	i2 = nint(Preamble(4))
-	if(.not.accept)accept = i2.ne.baseline.or.
+	if(first)then
+	  call uvrdvri(tvis,'nants',nants,0)
+	  accept = .true.
+	else
+	  accept = i2.ne.baseline.or.
      *			abs(time-Preamble(3)).gt.0.25/(24.*3600.)
-c
-	if(accept)then
-	  i1 = i2 / 256
-	  i2 = i2 - 256 * i1
-	  accept = i1.ge.1.and.i2.ge.1.and.i1.ne.i2
 	endif
 c
 	if(accept)then
-	  nants = max(nants,i1,i2)
+	  call basant(preamble(4),i1,i2)
+	  accept = i1.ne.i2
+	endif
+c
+	if(accept)then
 	  baseline = nint(Preamble(4))
 	  time = Preamble(3)
 c
@@ -428,13 +434,13 @@ c
 	    flags(i) = .true.
 	  enddo
 	endif
+	first = .false.
 c
 	end
 c************************************************************************
-	subroutine HeadIni(doants)
+	subroutine HeadIni
 c
 	implicit none
-	logical doants
 c
 c  Initialise the header routines.
 c------------------------------------------------------------------------
@@ -444,7 +450,6 @@ c------------------------------------------------------------------------
 	common/GPSCALC/time,baseline,nants,first
 c
 	first = .true.
-	if(doants) nants = 0
 	end
 c************************************************************************
 	subroutine HeadAnts(nantsd)
@@ -463,13 +468,13 @@ c
 	end
 c************************************************************************
 	subroutine AccSolve(tvis,tscr,minants,refant,phase,doxy,xyvary,
-     *	  doref,nants,interval,nchan)
+     *	  doref,noscale,nants,interval,nchan)
 c
 	implicit none
 	integer tvis,tscr(4),refant,minants,nants
 	integer nchan
 	real interval
-	logical phase,doxy,xyvary,doref
+	logical phase,doxy,xyvary,doref,noscale
 c
 c  This accumulates statistics and finds the selfcal solutions.
 c
@@ -485,6 +490,7 @@ c    phase	Do phase solution only?
 c    doxy	Attempt to solve for the XY phase.
 c    xyvary	Allow the XY phase to vary from integration to integration.
 c    doref	Solve for XY phase of the reference antenna.
+c    noscale    Do not scale the gains.
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'gpscal.h'
@@ -550,7 +556,8 @@ c
 c  Fiddle the gains to put them into a standard form.
 c
 	call output('Fiddling and saving the gains ...')
-	call GainFidd(cref(pGains),nants,nSols,refant,xyref,doref)
+	call GainFidd(cref(pGains),nants,nSols,refant,xyref,doref,
+     *	  phase.or.noscale)
 	call GainSave(tvis,cref(pGains),nants,nSols,lref(pCount),
      *	  ref(pTime),Time0,interval,Indx)
 c
@@ -673,11 +680,12 @@ c
      *	  call bug('w','Failed to converge ... saving results anyway')
 	end
 c************************************************************************
-	subroutine GainFidd(Gains,nants,nSols,refant,xyref,doref)
+	subroutine GainFidd(Gains,nants,nSols,refant,xyref,doref,
+     *							    noscale)
 c
 	implicit none
 	integer nants,nSols,refant
-	logical doref
+	logical doref,noscale
 	complex Gains(2,nants,nSols),xyref
 c
 c  Fiddle the gains into the standard form. In particular, refer to
@@ -692,13 +700,39 @@ c    xyref	The required xyphase on the reference antenna. This is
 c		not meaningful if doref is true.
 c    doref	Do not adjust the phase of the Y feed of the reference
 c		antenna to zero.
+c    noscale	Do not scale the gains to have an rms value of 1.
 c  Input/Output:
 c    Gains	The antenna gains.
 c------------------------------------------------------------------------
 	include 'gpscal.h'
-	integer i,j,p
-	real t
+	integer i,j,p,n
+	real t,fac
 	complex temp,Ref(2)
+c
+c  Determine the appropriate scale factor if needed.
+c
+	n = 0
+	fac = 0
+	if(.not.noscale)then
+	  do j=1,nSols
+	    do p=1,2
+	      do i=1,nants
+		if(abs(real (Gains(p,i,j)))+
+     *	         abs(aimag(Gains(p,i,j))).gt.0)then
+		  n = n + 1
+		  fac = fac +  real(Gains(p,i,j))**2
+     *			    + aimag(Gains(p,i,j))**2
+		endif
+	      enddo
+	    enddo
+	  enddo
+	endif
+c
+	if(n.gt.0)then
+	  fac = sqrt(fac/n)
+	else
+	  fac = 1
+	endif
 c
 c  Invert and reference all the gains. The X gains are referred to the
 c  X feed of the reference antenna. The Y gains are referred to to
@@ -708,13 +742,14 @@ c
 c
 c  Determine the phase to subtract off.
 c
-	  Ref(X) = (1.,0.)
+	  Ref(X) = cmplx(fac,0.)
 	  t = abs(Gains(X,refant,j))
-	  if(t.gt.0) Ref(X) = Gains(X,refant,j) / t
+	  if(t.gt.0) Ref(X) = fac * Gains(X,refant,j) / t
 	  Ref(Y) = Ref(X)
 	  if(.not.doref)then
 	    t = abs(Gains(Y,refant,j))
-	    if(t.gt.0)Ref(Y) = Gains(Y,refant,j) * conjg(xyref) / t
+	    if(t.gt.0)Ref(Y) = fac * Gains(Y,refant,j) *
+     *						conjg(xyref) / t
 	  endif
 c
 	  do p=1,2
@@ -1249,7 +1284,7 @@ c  We have found the slot containing the info. Accumulate info into
 c  it about this visibility record.
 c
 	  i = Indx(i)
-	  wt = 1/sigma2
+	  wt = 0.5/sigma2
 	  do k=1,nchan
 	    if(flags(k))then
 	      SumVM(pol,bl,i) = SumVM(pol,bl,i) +
@@ -1308,28 +1343,28 @@ c
 	  do i=1,j-1
 	    k = k + 1
 	    a(1,XX,k) = 1
-	    a(2,XX,k) = (0.,-1.)*(D(X,i) - conjg(D(X,j)))
+	    a(2,XX,k) = (0., 1.)*(D(X,i) - conjg(D(X,j)))
 	    a(3,XX,k) = 1
 	    a(4,XX,k) = -(D(X,i) + conjg(D(X,j)))
 	    a(5,XX,k) =  (D(X,i) + conjg(D(X,j)))
 	    a(6,XX,k) = 1
 c
 	    a(1,YY,k) =  1
-	    a(2,YY,k) = (0.,1.)*(D(Y,i) - conjg(D(Y,j)))
+	    a(2,YY,k) = (0.,-1.)*(D(Y,i) - conjg(D(Y,j)))
 	    a(3,YY,k) = -1
 	    a(4,YY,k) = -(D(Y,i) + conjg(D(Y,j)))
 	    a(5,YY,k) =  (D(Y,i) + conjg(D(Y,j)))
 	    a(6,YY,k) = -1
 c
 	    a(1,XY,k) =  (D(X,i) + conjg(D(Y,j)))
-	    a(2,XY,k) =  (0.,1.)
+	    a(2,XY,k) =  (0.,-1.)
 	    a(3,XY,k) = -(D(X,i) - conjg(D(Y,j)))
 	    a(4,XY,k) = -1
 	    a(5,XY,k) =  1
 	    a(6,XY,k) = -(D(X,i) + conjg(D(Y,j)))
 c
 	    a(1,YX,k) =  (D(Y,i) + conjg(D(X,j)))
-	    a(2,YX,k) =  (0.,-1.)
+	    a(2,YX,k) =  (0., 1.)
 	    a(3,YX,k) =  (D(Y,i) - conjg(D(X,j)))
 	    a(4,YX,k) = -1
 	    a(5,YX,k) =  1
@@ -1364,6 +1399,7 @@ c		  (i2-1)*(i2-2)/2 + i1,
 c		where i1 is less than i2.
 c    pol	Data polarisation type. This takes values 1 to 4,
 c		corresponding to XX,YY,XY and YX respectively.
+c    wt		Variance of the data.
 c    Data	The raw visibilities.
 c    Model	The model visibilities.
 c    flags	Flags.
@@ -1378,15 +1414,15 @@ c
 c
 	integer baseline
 	logical Modflags(MAXCHAN)
-	double precision time0
-	real bw,jyperk,Cos2Chi,Sin2Chi,sigma2
-	save Modflags,baseline,time0,bw,jyperk,Cos2Chi,Sin2Chi,sigma2
+	double precision time0,sigma2
+	real Cos2Chi,Sin2Chi
+	save Modflags,baseline,time0,Cos2Chi,Sin2Chi,sigma2
 c
-	double precision preamble(4),dbw,epsi
+	double precision preamble(4)
 	complex aI,aQ,aU,aV
 	logical more
 	integer i,j,i0,i1,i2
-	real Out(5*MAXCHAN),chi,tsys,inttime,temp
+	real Out(5*MAXCHAN),chi
 c
 c  Read some good data.
 c
@@ -1394,17 +1430,14 @@ c
 	dowhile(more)
 	  call uvread(tvis,preamble,Data,flags,nchan,nread)
 	  if(nread.le.0)return
-	  bl = nint(preamble(4))
-	  i1 = bl / 256
-	  i2 = bl - 256 * i1
-	  more = i1.lt.1.or.i2.lt.1.or.i1.eq.i2
+	  call basant(preamble(4),i1,i2)
+	  more = i1.eq.i2
 	enddo
 	time = preamble(3)
+	bl = nint(preamble(4))
 c
 	if(nread.ne.nchan)
      *	  call bug('f','Software inconsistency, in Compute')
-c
-c  Calculate the scale factor to get noise variance. Do this only once.
 c
 	if(visno.eq.0)then
 	  baseline = 0
@@ -1416,12 +1449,6 @@ c
 	      enddo
 	    endif
 	  enddo
-	  call uvrdvrr(tvis,'jyperk',jyperk,0.)
-	  call uvfit1(tvis,'bandwidth',nchan,dbw,epsi)
-	  if(epsi.gt.0.1*dbw) call bug('w',
-     *	    'Channel bandwidths differ by greater than 10%')
-	  bw = 1e9 * dbw
-	  if(bw.le.0)call bug('f','Channels have zero bandwidth')
 	endif
 c
 c  See if we have the required data. Assume we have the required data if
@@ -1438,19 +1465,11 @@ c
 	    if(scr(j).ne.0)then
 	      call scrread(scr(j),Out,5*visno*nchan,5*nchan)
 	      i0 = 1
-	      if(i1.gt.i2)then
-		do i=1,nchan
-		  Models(i,j) = cmplx(Out(i0+2),-Out(i0+3))
-		  Modflags(i) = Modflags(i).and.(Out(i0+4).gt.0)
-	          i0 = i0 + 5
-		enddo
-	      else
-		do i=1,nchan
-		  Models(i,j) = cmplx(Out(i0+2),Out(i0+3))
-		  Modflags(i) = Modflags(i).and.(Out(i0+4).gt.0)
-	          i0 = i0 + 5
-		enddo
-	      endif
+	      do i=1,nchan
+	        Models(i,j) = cmplx(Out(i0+2),Out(i0+3))
+	        Modflags(i) = Modflags(i).and.(Out(i0+4).gt.0)
+	        i0 = i0 + 5
+	      enddo
 	    endif
 	  enddo
 c
@@ -1459,21 +1478,14 @@ c
 	  call uvrdvrr(tvis,'chi',chi,0.)
 	  Cos2Chi = cos(2*chi)
 	  Sin2Chi = sin(2*chi)
-	  call uvrdvrr(tvis,'inttime',inttime,1.)
-	  call uvrdvrr(tvis,'systemp',tsys,0.)
-	  temp = jyperk*tsys
-	  if(temp.le.0)then
-c	    sigma2 = 250000.0/(inttime*bw)
-	    sigma2 = 1
-	  else
-	    sigma2 = temp*temp/(inttime*bw)
-	  endif
+	  call uvinfo(tvis,'variance',sigma2)
+	  if(sigma2.le.0)sigma2 = 1
 c
 c  Update the description of these records.
 c
 	  visno = visno + 1
 	  time0 = time
-	  baseline = bl
+	  baseline = nint(preamble(4))
 	endif
 c
 c  Return the variance and the polarisation type.
@@ -1481,19 +1493,12 @@ c
 	wt = sigma2
 	call uvrdvri(tvis,'pol',pol,0)
 	pol = -pol - 4
-	if(pol.lt.XX.or.pol.gt.YX)
-     *	  call bug('f','Data has nsupported polarisation type')
-c
-c  Adjust the baseline number, and conjugate the data, if needed.
-c
-	if(i1.gt.i2)then
-	  do i=1,nchan
-	    Data(i) = conjg(Data(i))
-	  enddo
-	  bl = (i1-1)*(i1-2)/2 + i2
-	else
-	  bl = (i2-1)*(i2-2)/2 + i1
+	if(pol.lt.XX.or.pol.gt.YX)then
+	  call bug('w',
+     *		'Data contains an unsupported polarisation type')
+	  call bug('f','Data must be raw linear polarisations')
 	endif
+	bl = (i2-1)*(i2-2)/2 + i1
 c
 c  All appears to be well. Now compute the model.
 c
