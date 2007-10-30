@@ -225,11 +225,26 @@ l01:
 	echo '    end'				>> mirfind.csh
 	echo '  end'				>> mirfind.csh
 	echo 'else'				>> mirfind.csh
-	echo "  foreach dir ($searchlist)"	>> mirfind.csh
-	echo '    if(-e $dir/lib$1.a || -e $dir/lib$1.so ) then' >> mirfind.csh
-	echo '      echo $dir'			>> mirfind.csh
-	echo '      exit'			>> mirfind.csh
-	echo '    endif'			>> mirfind.csh
+        echo '  unset noglob'                   >> mirfind.csh
+        echo '  set nonomatch'                  >> mirfind.csh
+	echo "  foreach dir ( $searchlist )"	>> mirfind.csh
+        echo '#' >> mirfind.csh
+        echo '# Use a rougher pattern matching for speed' >> mirfind.csh
+        echo '#' >> mirfind.csh
+        echo '    foreach tmp (`\ls -1 $dir | awk "/lib$1\.so/"`)' >> mirfind.csh
+        echo '      echo $dir' >> mirfind.csh
+        echo '      exit' >> mirfind.csh
+        echo '    end' >> mirfind.csh
+        echo '    foreach tmp (`\ls -1 $dir | awk "/lib$1\.a/"`) ' >> mirfind.csh
+        echo '      echo $dir' >> mirfind.csh
+        echo '      exit' >> mirfind.csh
+        echo '    end' >> mirfind.csh
+        echo '#    foreach file ( $dir/lib$1.a $dir/lib$1.so $dir/lib$1.so.* )' >> mirfind.csh
+	echo '#      if ( -e $file ) then'       >> mirfind.csh
+	echo '#        echo $dir'		>> mirfind.csh
+	echo '#        exit'			>> mirfind.csh
+	echo '#      endif'			>> mirfind.csh
+        echo '#    end'                          >> mirfind.csh
 	echo '  end'				>> mirfind.csh
 	echo 'endif'				>> mirfind.csh
 	chmod +x mirfind.csh
@@ -264,10 +279,7 @@ l1:
 
 # Try to find the RPFITS library.
 
-	set rpfitsdir = ""
-	foreach dir ($searchlist)
-	  if ( -e $dir/librpfits.a ) set rpfitsdir = "$dir"
-	end
+	set rpfitsdir = `$MIRBIN/mirfind rpfits`
 	if ( "$rpfitsdir" == "" && -e bindir/$arch/librpfits.a ) then
 	  echo ""
 	  echo 'Copying the RPFITS library to $MIRLIB'
@@ -288,12 +300,9 @@ l1:
 
 # Try to find the PGPLOT library.
 
-	set pgplotdir = ""
-	foreach dir ($searchlist)
-	  if ( -e $dir/libpgplot.a || -e $dir/libpgplot.so ) set pgplotdir = $dir
-	end
+	set pgplotdir = `$MIRBIN/mirfind pgplot`
 l2:
-	if ( "$pgplotdir" == "" || ! ( -e $pgplotdir/libpgplot.a || -e $pgplotdir/libpgplot.so ) ) then
+	if ( "$pgplotdir" == "" ) then
 	  echo "### Could not find PGPLOT library. If PGPLOT has"
 	  echo "    not been installed already ... abort this and"
 	  echo "    install it now."
@@ -378,10 +387,10 @@ l6:
 	  echo "and then re-run Install"
 	  echo '(answering no to the "Re-generate the mirlibs script" question).'
 	  exit
-	else if ("$answer" == "y" ) then
+	else if ( "$answer" == "y" ) then
 	  mv mirlibs.csh $MIRBIN/mirlibs
-	  if ( $status != 0) then
-	    echo "### Failed to move mirlibs.csh to $MIRBIn"
+	  if ( $status != 0 ) then
+	    echo "### Failed to move mirlibs.csh to $MIRBIN"
 	    echo "### Aborting"
 	    exit
 	  endif
@@ -392,7 +401,7 @@ l6:
 # Copy the update scripts.
 
 l7:
-	foreach file (mircadd mirclnk mirupdate)
+	foreach file ( mircadd mirclnk mirupdate )
 	  if ( -e $MIR/scripts/unix/$arch/$file.csh ) then
 	    echo "Copying $file"
 	    cp $MIR/scripts/unix/$arch/$file.csh $MIRBIN/$file
