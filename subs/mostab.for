@@ -27,8 +27,9 @@ c    rjs  26oct94 Original version
 c    rjs  16nov94 Added mosWt
 c    rjs  26nov94 Fix bug which allocated too many coordinate objects.
 c    rjs   3dec94 Changes to the way a single pointing is mosaiced.
-c    rjs   2feb95 Fix initialisation and potential integer overflow
-c		  problems.
+c    rjs  31jan95 Added mosIni, mosAdd. Changes to mosGeom and its helpers.
+c    rjs   2feb95 Change in mosHash to help avoid integer overflows. Avoid
+c    		  initialisation problem.
 c************************************************************************
 	subroutine MosCIni
 c
@@ -184,6 +185,7 @@ c  This pointing was not found. Add it to our list.
 c
 	if(.not.found)then
 	  npnt = npnt + 1
+	  pnt = npnt
 	  if(npnt.gt.MAXPNT)call bug('f','Pointing table overflow')
 	  telescop(npnt) = tel1
 	  pbfwhm(npnt) = pbfwhm1
@@ -196,8 +198,7 @@ c
 	    indx = indx + 1
 	    if(indx.gt.HashSize) indx = 1
 	  enddo
-	  Hash(indx) = npnt
-	  pnt = npnt
+	  Hash(indx) = npnt	  
 	endif
 c
 	MosLoc = pnt
@@ -220,21 +221,20 @@ c------------------------------------------------------------------------
 c
 	i = nint(ll/tol)
 	j = nint(mm/tol)
-	n = max(abs(i),abs(j))
+	n = mod(2*max(abs(i),abs(j)) - 1,HashSize)
 c
-	if(n.eq.0)then
-	  indx = 1
+	if(n.lt.0)then
+	  indx = 0
 	else
-	  indx = (2*n-1)*(2*n-1) + 2*n + i + j + 1
-	  if(i.gt.j)indx = indx + 4*n
+	  indx = n*n + n + i + j + 2
+	  if(i.gt.j)indx = indx + 2*n + 2
 	  indx = mod(indx,HashSize)
 	  if(indx.lt.0)indx = indx + HashSize
-	  indx = indx + 1
 	endif
-	MosHash = indx
+	MosHash = indx + 1
 	end
 c************************************************************************
-	subroutine MosGet(ra1,dec1,npnt1,proj)
+	subroutine mosChar(ra1,dec1,npnt1,proj)
 c
 	implicit none
 	double precision ra1,dec1
@@ -384,20 +384,20 @@ c------------------------------------------------------------------------
 	include 'mem.h'
 	include 'mostab.h'
 c
-	logical doncp
 	integer i
 	double precision crpix1,crpix2
 	character ctype*16
 c
-c  Determine the projection geometry used by this coordinate object.
+c  Get the cell increment -- for use later on.
 c
 	call coAxDesc(coObj,1,ctype,crpix1,radec0(1),cdelt1)
 	call coAxDesc(coObj,2,ctype,crpix2,radec0(2),cdelt2)
-	doncp = ctype(6:8).eq.'NCP'
 c
 c  Do goemetry correction calculations.
 c
-	call MosGIni1(doncp)
+	do i=1,npnt
+	  call coGeom(coObj,'aw/aw',radec(1,i),ucoeff(1,i),vcoeff(1,i))
+	enddo
 c
 c  Allocate the arrays to determine shifts.
 c
@@ -427,61 +427,6 @@ c
 	do i=1,npnt
 	  Rms2(i) = 0
 	  SumWt(i) = 0
-	enddo
-c
-	end
-c************************************************************************
-	subroutine MosGIni1(doncp)
-c
-	implicit none
-	logical doncp
-c
-c  Determine the geometry correction coefficients.
-c  These coefficients are such that:
-c  u(corrected) = u(raw) * ucoeff(1) + v(raw) * ucoeff(2) + w(raw) * ucoeff(3)
-c  v(corrected) = u(raw) * vcoeff(1) + v(raw) * vcoeff(2) + w(raw) * vcoeff(3)
-c
-c  This routine determines these corrections dependent on whether the
-c  NCP or SIN geometry is going to be used for the output. NCP will
-c  be exact for east-west arrays, whereas SIN will be a "reasonable"
-c  approximation for all arrays.
-c
-c  Input:
-c    doncp	Use NCP geometry.
-c
-c  Output (in common):
-c    ucoeff )	Coefficients needed to correct geometry.
-c    vcoeff )
-c------------------------------------------------------------------------
-	include 'mostab.h'
-	integer i
-	double precision cosa,sina,cosd,sind,cosd0,sind0,ra0,fac
-c
-	ra0   = radec0(1)
-	cosd0 = cos(radec0(2))
-	sind0 = sin(radec0(2))
-c
-	do i=1,npnt
-	  cosa = cos(radec(1,i)-ra0)
-	  sina = sin(radec(1,i)-ra0)
-	  sind = sin(radec(2,i))
-	  cosd = cos(radec(2,i))
-	  if(doncp)then
-	    ucoeff(1,i) = cosa
-	    ucoeff(2,i) = -sina*sind
-	    ucoeff(3,i) = sina*cosd
-	    vcoeff(1,i) = sina*sind0
-	    vcoeff(2,i) = cosd0*cosd + cosa*sind0*sind
-	    vcoeff(3,i) = cosd0*sind - cosa*sind0*cosd
-	  else
-	    fac = 1/(sind0*sind + cosa*cosd*cosd0)
-	    ucoeff(1,i) =   fac * (cosd0*cosd + cosa*sind0*sind)
-	    ucoeff(2,i) = - fac * sina*sind0
-	    ucoeff(3,i) =   0
-	    vcoeff(1,i) =   fac * sina*sind
-	    vcoeff(2,i) =   fac * cosa
-	    vcoeff(3,i) =   0
-	  endif
 	enddo
 c
 	end
@@ -618,8 +563,8 @@ c
 	implicit none
 	integer size,n,nchan,npol,npnt
 	complex Vis(size,n)
-	real ucoeff(3,npnt),vcoeff(3,npnt),x(nchan,npnt),y(nchan,npnt)
-	real RMS2(npnt),SumWt(npnt),Wts(n)
+	double precision ucoeff(3,npnt),vcoeff(3,npnt)
+	real x(nchan,npnt),y(nchan,npnt),RMS2(npnt),SumWt(npnt),Wts(n)
 	double precision cdelt1,cdelt2
 c
 c  Apply all geometry and shift corrections for a mosaiced observation.
@@ -695,55 +640,89 @@ c  Output:
 c    npnt1	The number of pointings.
 c------------------------------------------------------------------------
 	include 'mostab.h'
-	integer i,item,iostat,offset,ival(2),size
+	integer i,item,iostat,offset,ival(2),size,n,iax
+	double precision crpix
 	real rval(2)
 c
 c  Externals.
 c
 	integer hsize
+	logical hdprsnt
+	character itoaf*2
 c
 c  Open the pointing table.
 c
-	call haccess(tno,item,'mostable','read',iostat)
-	if(iostat.ne.0)then
-	  call bug('w','Error opening input mosaic table')
-	  call bugno('f',iostat)
-	endif
+	if(hdprsnt(tno,'mostable'))then
+	  call haccess(tno,item,'mostable','read',iostat)
+	  if(iostat.ne.0)then
+	    call bug('w','Error opening input mosaic table')
+	    call bugno('f',iostat)
+	  endif
 c
 c  Write the main body of the pointing table.
 c
-	offset = 8
-	size = hsize(item)
-	if(mod(size-offset,48).ne.0)
+	  offset = 8
+	  size = hsize(item)
+	  if(mod(size-offset,48).ne.0)
      *	    call bug('f','Bad size for mosaic table')
-	npnt = (size - offset)/48
-	npnt1 = npnt
-	if(npnt.gt.MAXPNT)call bug('f','Too many pointings, in mosLoad')
-	do i=1,npnt
-	  if(iostat.eq.0)call hreadi(item,ival,offset,8,iostat)
-	  nx2 = (ival(1)-1)/2
-	  ny2 = (ival(2)-1)/2
-	  offset = offset + 8
-	  if(iostat.eq.0)call hreadd(item,radec(1,i),offset,16,iostat)
-	  offset = offset + 16
-	  if(iostat.eq.0)call hreadb(item,telescop(i),offset,16,iostat)
-	  offset = offset + 16
-	  if(iostat.eq.0)call hreadr(item,rval,offset,8,iostat)
-	  Rms2(i) = rval(1)
-	  offset = offset + 8
-	enddo
+	  npnt = (size - offset)/48
+	  if(npnt.gt.MAXPNT)
+     *		call bug('f','Too many pointings, in mosLoad')
+	  do i=1,npnt
+	    if(iostat.eq.0)call hreadi(item,ival,offset,8,iostat)
+	    nx2 = (ival(1)-1)/2
+	    ny2 = (ival(2)-1)/2
+	    offset = offset + 8
+	    if(iostat.eq.0)call hreadd(item,radec(1,i),offset,16,iostat)
+	    offset = offset + 16
+	    if(iostat.eq.0)
+     *		call hreadb(item,telescop(i),offset,16,iostat)
+	    offset = offset + 16
+	    if(iostat.eq.0)call hreadr(item,rval,offset,8,iostat)
+	    Rms2(i) = rval(1)
+	    offset = offset + 8
+	  enddo
 c
 c  Finish up. Check for errors and then close the dataset.
 c
-	if(iostat.ne.0)then
-	  call bug('w','Error reading from mosaic table')
-	  call bugno('f',iostat)
+	  if(iostat.ne.0)then
+	    call bug('w','Error reading from mosaic table')
+	    call bugno('f',iostat)
+	  endif
+	  call hdaccess(item,iostat)
+	  if(iostat.ne.0)then
+	    call bug('w','Error closing mosaic table')
+	    call bugno('f',iostat)
+	  endif
+c
+c  Handle the case of no mosaicing table -- treat it as if its
+c  just a single pointing.
+c
+	else
+	  npnt = 1
+	  call coInit(tno)
+	  call coFindAx(tno,'longitude',iax)
+	  if(iax.eq.0)call bug('f','Failed to find RA axis')
+	  call coCvt1(tno,iax,'op',0.d0,'aw',radec(1,1))
+	  call coCvt1(tno,iax,'op',0.d0,'ap',crpix)
+	  call rdhdi(tno,'naxis'//itoaf(iax),n,0)
+	  nx2 = max(crpix-1,n-crpix) + 1
+c
+	  call coFindAx(tno,'latitude',iax)
+	  if(iax.eq.0)call bug('f','Failed to find DEC axis')
+	  call coCvt1(tno,iax,'op',0.d0,'aw',radec(2,1))
+	  call coCvt1(tno,iax,'op',0.d0,'ap',crpix)
+	  call rdhdi(tno,'naxis'//itoaf(iax),n,0)
+	  ny2 = max(crpix-1,n-crpix) + 1
+c
+	  call rdhdr(tno,'rms',rms2(1),0.)
+	  if(rms2(1).le.0)rms2(1) = 1
+	  call pbRead(tno,telescop(1))
+c
+	  call coFin(tno)
 	endif
-	call hdaccess(item,iostat)
-	if(iostat.ne.0)then
-	  call bug('w','Error closing mosaic table')
-	  call bugno('f',iostat)
-	endif
+c
+	npnt1 = npnt
 c
 	end
 c************************************************************************
@@ -778,6 +757,70 @@ c
   10	  format(i4,i5,i4,1x,3a,1pe8.2)
 	  call output(line)
 	enddo
+	end
+c************************************************************************
+	subroutine mosInit(nx,ny)
+c
+	implicit none
+	integer nx,ny
+c
+c  Initialise a mosaic table.
+c------------------------------------------------------------------------
+	include 'mostab.h'
+c
+	npnt = 0
+	nx2 = (nx-1)/2 
+	ny2 = (ny-1)/2
+	end
+c************************************************************************
+	subroutine mosGet(i,ra1,dec1,rms1,pbtype1)
+c
+	implicit none
+	integer i
+	double precision ra1,dec1
+	real rms1
+	character pbtype1*(*)
+c
+c  Get information from the table.
+c------------------------------------------------------------------------
+	include 'mostab.h'
+	include 'mirconst.h'
+c
+	if(i.lt.1.or.i.gt.npnt)
+     *	  call bug('f','Invalid pointing number, in mosGet')
+c
+	ra1 = radec(1,i)
+	dec1 = radec(2,i)
+	rms1 = rms2(i)
+	if(pbfwhm(i).gt.0)then
+	    call pbEncode(pbtype1,'gaus',pi/180/3600 * pbfwhm(i))
+	else
+	  pbtype1 = telescop(i)
+	endif
+	end
+c************************************************************************
+	subroutine mosSet(i,ra1,dec1,rms1,pbtype1)
+c
+	implicit none
+	integer i
+	double precision ra1,dec1
+	real rms1
+	character pbtype1*(*)
+c
+c  Add an extry to the mosaic table.
+c
+c  Input:
+c    ra1,dec1	Pointing centre ra,dec.
+c    rms1	Nominal field rms noise.
+c    pbtype1	Primary beam type.
+c------------------------------------------------------------------------
+	include 'mostab.h'
+	npnt = max(npnt,i)
+	if(npnt.gt.MAXPNT)call bug('f','Mosaic table overflow')
+	radec(1,i) = ra1
+	radec(2,i) = dec1
+	rms2(i) = rms1
+	telescop(i) = pbtype1
 	end
 c************************************************************************
 	subroutine MosSave(tno)
@@ -1275,6 +1318,28 @@ c  Reweight the data.
 c
 	call MosWt(Rms2,npnt,PSF,Wts,nx*ny)
 c
+	end
+c************************************************************************
+	subroutine mosRaDec(k,ra,dec)
+c
+	implicit none
+	integer k
+	double precision ra,dec
+c
+c  Return the RA and DEC of the k'th pointing.
+c
+c  Input:
+c    k		Pointing number
+c  Output:
+c    ra,dec	RA and DEC (radians) of the pointing.
+c------------------------------------------------------------------------
+	include 'mostab.h'
+c
+	if(k.lt.1.or.k.gt.npnt)call bug('f',
+     *		'Invalid pointing number if mosRaDec')
+c
+	ra = radec(1,k)
+	dec = radec(2,k)
 	end
 c************************************************************************
 	subroutine mosInfo(nx2d,ny2d,npnt1)
