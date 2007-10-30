@@ -1,9 +1,9 @@
 #!/bin/csh -f
 if ( "$1" == "-l" ) then
-  echo /usr/local/lib /usr/openwin/lib /usr/local/X11/lib /usr/lib /usr/local/gnu/lib /nfs/applic/miriad/lib/linux
+  echo /usr/local/lib /lib /usr/local/X11/lib /usr/lib /usr/local/gnu/lib /nfs/applic/miriad/lib/linux
   exit
 else if ( "$1" == "-i" ) then
-  foreach dir (/usr/local/lib /usr/openwin/lib /usr/local/X11/lib /usr/lib /usr/local/gnu/lib /nfs/applic/miriad/lib/linux /usr/include )
+  foreach dir (/usr/local/lib /lib /usr/local/X11/lib /usr/lib /usr/local/gnu/lib /nfs/applic/miriad/lib/linux /usr/include )
     foreach t (include inc)
       if ( -d $dir:h/$t/$2 ) then
         echo $dir:h/$t
@@ -12,7 +12,7 @@ else if ( "$1" == "-i" ) then
     end
   end
 else
-  foreach dir (/usr/local/lib /usr/openwin/lib /usr/local/X11/lib /usr/lib /usr/local/gnu/lib /nfs/applic/miriad/lib/linux)
+  foreach dir (/usr/local/lib /lib /usr/local/X11/lib /usr/lib /usr/local/gnu/lib /nfs/applic/miriad/lib/linux)
     if(-e $dir/lib$1.a || -e $dir/lib$1.so ) then
       echo $dir
       exit
