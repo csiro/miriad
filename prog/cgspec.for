@@ -119,6 +119,7 @@ c
 c	"hms"     the label is in H M S.S (e.g. for RA)
 c	"dms"     the label is in D M S.S (e.g. for DEC)
 c	"arcsec"  the label is in arcsecond offsets
+c	"arcmin"  the label is in arcminute offsets
 c	"absdeg"  the label is in degrees
 c	"reldeg"  the label is in degree offsets
 c		  The above assume the pixel increment is in radians
@@ -309,8 +310,8 @@ c	contained in the file for the x- and y-directions, respectively.
 c	Choose from
 c
 c	 "hms", "dms", "hms", "dms", "abspix", "relpix", "arcsec", 
-c	 "absdeg", "reldeg", "abslin", and "rellin"  as described 
-c	  in the keyword LABTYP.  
+c	 "arcmin", "absdeg", "reldeg", "abslin", and "rellin"  as 
+c	  described in the keyword LABTYP.  
 c
 c	Note that %OTYPE does not depend upon what you specified for LABTYP.
 c
@@ -320,8 +321,8 @@ c	that for coordinate systems other than "hms" and "dms", the
 c	coordinates are with respect to the pixel map  & contour images
 c	axis descriptors,  not those from the spectrum images.
 c
-c	For %OTYPE = "abspix ", "relpix", "arcsec", "abslin", "rellin",
-c	             "absdeg", and "reldeg"  X & Y are single numbers.
+c	For %OTYPE = "abspix ", "relpix", "arcsec", "arcmin",  "abslin", 
+c	             "rellin", "absdeg", and "reldeg"  X & Y are single numbers.
 c
 c	For %OTYPE = "hms" or "dms", the X and/or Y location is/are replaced
 c	by three numbers such as  HH MM SS.S or DD MM SS.S.  Thus if
@@ -394,6 +395,7 @@ c		   Ammend for new wedge call sequences.  Add lookuptable
 c	           to "grange" keyword. Move to image type "pixel"
 c		   instead of "grey"
 c    nebk 10apr95  Add doc for new absolute b&w lookup table
+c    nebk 11aug95  Add labtyp=arcmin 
 c
 c Ideas:
 c  * Be cleverer for sub-cubes which have spectra partly all zero
@@ -411,7 +413,7 @@ c
       include 'mem.h'
       real wedisp, wedwid, tfdisp
       integer maxlev, maxpos, maxcon, maxspec, maxtyp, nbins
-      parameter (maxlev = 50, maxpos = 256*256, maxtyp = 10,
+      parameter (maxlev = 50, maxpos = 256*256, maxtyp = 11,
      +   maxcon = 3, maxspec = 5, wedisp = 1.0, 
      +   wedwid = 0.05, tfdisp = 0.5, nbins = 128)
 c
@@ -471,12 +473,13 @@ c
       data scale /2*0.0/
       data lgn, lcn /0, maxcon*0/
       data vmin, vmax, imin, imax /1.0e30, -1.0e30, 1.0e30, -1.0e30/
-      data ltypes /'hms   ', 'dms   ', 'arcsec', 'absdeg', 'reldeg',
-     +             'abspix', 'relpix', 'abslin', 'rellin', 'none'/
+      data ltypes /'hms   ', 'dms   ', 'arcsec', 'arcmin', 'absdeg', 
+     +             'reldeg', 'abspix', 'relpix', 'abslin', 'rellin',
+     +             'none'/
       data txtfill, tflen /'spectrum', 'derivative spectrum', 
      +                     'derivative spectrum', 8, 19, 19/
 c-----------------------------------------------------------------------
-      call output ('CgSpec: version 10-Apr-95')
+      call output ('CgSpec: version 11-Aug-95')
       call output ('Keyword "grange" can now be used to specify the')
       call output ('colour lookup table as well the transfer function')
       call output (' ')
@@ -739,8 +742,9 @@ c
       call pgsch (cs(1))
       call pgsci (7)
       if (hard.eq.'YES') call pgsci (2)
-      call axlabcg (.true., 1, 1, 1, 1, 1, xopts, yopts, xdispl,
-     +               ydispb, labtyp, xlabel, ylabel, xxopts, yyopts)
+      call axlabcg (.false., .true., 1, 1, 1, 1, 1, xopts, yopts, 
+     +              xdispl, ydispb, labtyp, xlabel, ylabel, 
+     +              xxopts, yyopts)
       call pgtbox (xxopts, 0.0, 0, yyopts, 0.0, 0)
 c
 c Modify OFM for interactive devices here
