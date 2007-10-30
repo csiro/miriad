@@ -362,7 +362,7 @@ Instructions for Installing Miriad
 
 7)  Adding a new architecture
 
-    Miriad is built and updated using one C program (newer - source in the
+    Miriad is built and updated using one C program (mirnewer - source in the
     directory $MIR/tools) and five C-shell scripts (mirupdate, mircadd, mirclnk,
     mirlibs, mirfind -- source in $MIR/scripts/unix/$arch, where $arch is
     a machine type name). The mirfind and mirlibs scripts are generated
@@ -373,7 +373,7 @@ Instructions for Installing Miriad
 8)  The mirupdate script.
 
     The "mirupdate" script looks for source files which are out of date
-    by using "newer". Newer, in turn, invokess "mircadd" and "mirclnk"
+    by using "mirnewer". Mirnewer, in turn, invokess "mircadd" and "mirclnk"
     when it finds a out-of-date file.
 
     The heart of "mirupdate" looks something like:
