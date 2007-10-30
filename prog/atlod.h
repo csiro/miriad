@@ -21,8 +21,10 @@ c
 	logical flag(ATIF,ATPOL,ATBASE,ATBIN),dosw(ATBASE)
 	integer nused,tno,nants
 	logical dosam,dohann,birdie,doif,dobary,newfreq,newsc,newpnt
-	logical dowt,dopmps,doxyp,hires
+	logical dowt,dopmps,doxyp,opcorr,hires
 	real wts(2*ATCONT-2)
+	real axisrms(ATANT),axismax(ATANT),mdata(5)
+	logical mflag
 	double precision obsra,obsdec,lat,long,ra,dec
 	character sname*64
 c
@@ -31,9 +33,9 @@ c
      *	    ra,dec,
      *	  data,
      *	  xtsys,ytsys,chi,xyphase,xyamp,xsampler,ysampler,u,v,w,inttime,
-     *	    inttim,wts,
+     *	    inttim,wts,mdata,axisrms,axismax,
      *	  pnt,nbin,nused,tno,nants,nifs,nfreq,nstoke,polcode,edge,
      *	    bchan,tcorr,
-     *	  flag,dosw,dosam,dohann,birdie,dowt,dopmps,doxyp,doif,dobary,
-     *	    newfreq,hires,
+     *	  flag,dosw,dosam,dohann,birdie,dowt,dopmps,doxyp,opcorr,
+     *	    doif,dobary,newfreq,hires,mflag,
      *	  newsc,newpnt
