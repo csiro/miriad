@@ -104,6 +104,7 @@ c    21sep93 mchw  Added nint to integer expressions using pixel size.
 c    25oct93 mchw  Added nint in subroutine readmap.
 c    01feb95 jm/mchw Elliminate some questions.	call pgask(.FALSE.)
 c    02feb95 jm    De-FLINT'd.
+c    10jan96 rjs   Changes to appease g77.
 c----------------------------------------------------------------------c
 	include 'tmpdim.h'
 	include 'velplot.h'
@@ -527,34 +528,34 @@ c
 	call output('Default plotting parameters:')
 	call output(' ')
 c units 
-        write(line,'(''Units for display [J/K].....'',x,A)') units 
+        write(line,'(''Units for display [J/K].....'',1x,A)') units 
         call output(line)
 c negative contours 
-        write(line,'(''Negative contours [Y/N].....'',x,A)') cneg 
+        write(line,'(''Negative contours [Y/N].....'',1x,A)') cneg 
         call output(line)
 c header
-        write(line,'(''Plot header [Y/N]...........'',x,A)') alabel 
+        write(line,'(''Plot header [Y/N]...........'',1x,A)') alabel 
         call output(line)
 c Write map to file 
-        write(line,'(''Write map to file [Y/N].....'',x,A)') write 
+        write(line,'(''Write map to file [Y/N].....'',1x,A)') write 
         call output(line)
 c Absolute coords
-        write(line,'(''Absolute coordinates [Y/N]..'',x,A)') abscoord 
+        write(line,'(''Absolute coordinates [Y/N]..'',1x,A)') abscoord 
         call output(line)
 c Integer plot
-        write(line,'(''Integer plot [Y/N]..........'',x,A)') apint 
+        write(line,'(''Integer plot [Y/N]..........'',1x,A)') apint 
         call output(line)
 c Spectra Positions
-        write(line,'(''Spectra positions [Y/N].....'',x,A)') pspec 
+        write(line,'(''Spectra positions [Y/N].....'',1x,A)') pspec 
         call output(line)
 c Gaussian Fits
-        write(line,'(''Fit Gaussians [Y/N].........'',x,A)') lgaufit 
+        write(line,'(''Fit Gaussians [Y/N].........'',1x,A)') lgaufit 
         call output(line)
 c Plot Gaussian Fits
-        write(line,'(''Overlay Gauss Fits [Y/N]....'',x,A)') lgauplot 
+        write(line,'(''Overlay Gauss Fits [Y/N]....'',1x,A)') lgauplot 
         call output(line)
 c Gray Scale
-        write(line,'(''Gray Scale [Y/N]............'',x,A)') gray
+        write(line,'(''Gray Scale [Y/N]............'',1x,A)') gray
         call output(line)
 c Exit
         call output('Exit default menu')
@@ -564,7 +565,7 @@ c Contour levels
         else
           tline='absolute'
         endif
-        write(line,'(''Current contours: '',x,A)') tline
+        write(line,'(''Current contours: '',1x,A)') tline
         call output(line)
         do i=1,nlevels
           write(line, 109) i,levels(i)
@@ -739,7 +740,7 @@ c
 	  call LogWrit(line(1:len1(line)))
 	endif
 
-100	format(a,x,2(f5.0,f3.0,f6.3),' xy:',f8.3,' vel:',f8.2,
+100	format(a,1x,2(f5.0,f3.0,f6.3),' xy:',f8.3,' vel:',f8.2,
      *	' delv:',f8.2)
 101  	format(a,a,a,3f6.2,' freq:',f9.5,' unit:',a)
 102  	format('beam:',3f6.1,' niters:',i7,' K/Jy:',f9.2,' cbof:',f7.2)
@@ -992,7 +993,7 @@ c define box and find integral and rms.
 	end if
   	go to 10
 113	format(' spectra(',i2,') x=',f8.3,'  y=',f8.3)
-114     format(' cut(',i2,') x='f8.3,' y=',f8.3,' pa=',f8.3)
+114     format(' cut(',i2,') x=',f8.3,' y=',f8.3,' pa=',f8.3)
 	end
 c********1*********2*********3*********4*********5*********6*********7**
 	subroutine Integral(ary,vlsr,nx,ny,nc)
@@ -1182,7 +1183,7 @@ c********1*********2*********3*********4*********5*********6*********7**
 	subroutine GetRange(imaps,vmin,vmax,vlsr,nc)
 	implicit none
 	integer imaps,nc
-	real vmin(1),vmax(1),vlsr(1)
+	real vmin(*),vmax(*),vlsr(nc)
 c
 c  Get range of velocities to plot.
 c
@@ -1241,7 +1242,7 @@ c********1*********2*********3*********4*********5*********6*********7**
 	subroutine ListMaps(imaps,vmin,vmax,vlsr,nc)
 	implicit none
 	integer imaps,nc
-	real vmin(1),vmax(1),vlsr(1)
+	real vmin(*),vmax(*),vlsr(nc)
 c
 c  List the maps available and current selection
 c
@@ -1686,7 +1687,7 @@ c
 	enddo
 	write(text, 103) -midy,(i-mid,i=1,iend)
 	call output(text)
-103	format(x,i4,x,24i3)
+103	format(1x,i4,1x,24i3)
 	end
 c********1*********2*********3*********4*********5*********6*********7**
 	subroutine spectra(ary,vlsr,nx,ny,nc)
@@ -3839,10 +3840,7 @@ c
 	else 
 	  goto 9
 	endif	    
-50	if(ncut.eq.0) then
-51	  call output('--- no current selection of cuts ---')
-	  return
-	endif
+50	if(ncut.eq.0) goto 51
 c
 c  Set up convolution function.
 c
@@ -4054,6 +4052,11 @@ c
 c  Restore original plot device.
 c
 	device = oldevice
+        return
+c
+c
+51	call output('--- no current selection of cuts ---')
+	return
 	end
 c********1*********2*********3*********4*********5*********6*********7**
 	subroutine intannot(nchan,ichan,vlsr,nc)
