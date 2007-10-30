@@ -84,7 +84,7 @@ c
      *	  'No operation to perform')
 	call keyfin
 c
-	call uvDatSet('stokes',1)
+	call uvDatSet('stokes',0)
 c
 	if(dolog)call logOpen(logf,' ')
 c
@@ -342,7 +342,7 @@ c
 	n0 = npnt
 c
 	do i=1,MAXBASE
-	  if(ncount(i).gt.20)then
+	  if(ncount(i).gt.10)then
 	    npnt = npnt + 1
 	    if(npnt.gt.MAXPNT)call bug('f','Too many points')
 	    if(docal)then
