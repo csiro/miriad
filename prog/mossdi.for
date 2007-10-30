@@ -27,8 +27,8 @@ c@ clip
 c	This sets the relative clip level. Values are typically 0.75 to 0.9.
 c	The default is conservative and image dependent.
 c@ region
-c	The standard region of interest keyword. See `help region' for more
-c	information. The default is the entire image.
+c	The standard region of interest keyword. See the help on "region" for
+c	more information. The default is the entire image.
 c--
 c  History:
 c    rjs 31oct94 - Original version.
