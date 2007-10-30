@@ -141,6 +141,7 @@ c    rjs  25aug97 Correct summing of weights in "merger"
 c    rjs  09nov98 Make rtime variable double precision to avoid loss
 c		  of timing precision.
 c    rjs  01dec98 Added extra warning message.
+c    rjs  30aug99 Increase maxmod to 64
 c
 c  Bugs/Shortcomings:
 c   * Selfcal should check that the user is not mixing different
@@ -151,7 +152,7 @@ c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='Selfcal: version 1.0 01-Dec-98')
 	integer MaxMod,maxsels,nhead
-	parameter(MaxMod=32,maxsels=1024,nhead=3)
+	parameter(MaxMod=64,maxsels=1024,nhead=3)
 c
 	character Models(MaxMod)*64,vis*64,ltype*32
 	character flag1*8,flag2*8,obstype*32
