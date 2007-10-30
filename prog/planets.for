@@ -30,7 +30,7 @@ c------------------------------------------------------------------------
 	character version*(*)
 	double precision AUKM
 	integer EARTH,SUN,JUPITER
-	parameter(version='Planets: version 1.0 18-Dec-95')
+	parameter(version='Planets: version 1.0 7-Jun-96')
 	parameter(AUKM=149.597870D6,EARTH=3,SUN=0,JUPITER=5)
 c
 	character planet*8,observ*16
@@ -42,7 +42,7 @@ c
 c
 c  Externals.
 c
-	character rangle*32,hangle*32
+	character rangle*32,hangleh*32
 	double precision deltime
 c
 	integer NPLANETS
@@ -76,14 +76,14 @@ c
 	call output('Information on '//plans(np+1))
 	if(np.eq.SUN)then
 	  call sunradec(jday,ra,dec)
-	  call output('Apparent RA:  '//hangle(ra))
+	  call output('Apparent RA:  '//hangleh(ra))
 	  call output('Apparent DEC: '//rangle(dec))
 	else
 	  call plphyeph(jday,np,ra,dec,w,r,f)
 	  call plpar(jday,np,sub,dist,bmaj,bmin,bpa)
 	  call plradec(jday,np,ra,dec)
 	  if(ra.lt.0)ra = ra + 2*pi
-	  call output('RA:  '//hangle(ra))
+	  call output('RA:  '//hangleh(ra))
 	  call output('DEC: '//rangle(dec))
 	  sub(2) = -sub(2)
 	  call lmn2sph(sub,long,lat)
