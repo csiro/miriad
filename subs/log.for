@@ -9,9 +9,10 @@ c    pjt  11dec89  Experimental '/printer' version (see also log.h)
 c    bpw  25may90  Add 'Q' flag and LogWrit
 c    mjs  10mar91  "system" call becomes "ishell" call on Cray
 c    rjs  10jan96  Changes to appease g77 on linux.
+c    rjs  03feb97  General improvements.
 c************************************************************************
 c* LogOpen -- Initialise the log file routines.
-c& bpw
+c& rjs
 c: text-i/o,log-file
 c+
 	subroutine LogOpen(name,flags)
@@ -34,10 +35,6 @@ c		 'q'	Query. If the output is a terminal, after every
 c			22 lines, the user is queried if he/she wants to
 c			continue. See also documentation of LogWrite and
 c			LogWrit.			
-c		 'p'	Pack. When many consecutive output lines are identical,
-c			the pack option replaces them with one output line
-c			followed by another line telling how many repetitions.
-c			Currently ignored.
 c--
 c------------------------------------------------------------------------
 	include 'log.h'
@@ -45,11 +42,10 @@ c------------------------------------------------------------------------
 
 	nlines = 0
         printer = .false.
-	query  = index(flags,'q').ne.0
-        if(name(1:8).eq.'/printer') then
-          call output('LogOpen: Printer output selected')
+        query = .false.
+	domore = .true.
+        if(name.eq.'/printer') then
           printer = .true. 
-          query = .false.
           call filedel('printer',iostat)
 	  call txtopen(lu,'printer','new',iostat)
 	  if(iostat.ne.0) call bugno('f',iostat)
@@ -58,16 +54,19 @@ c------------------------------------------------------------------------
 	  if(iostat.ne.0) call bugno('f',iostat)
 	else
 	  lu = 0
+	  query  = index(flags,'q').ne.0
 	endif
 	end
 c************************************************************************
 c* LogWrit -- Write a line to the log file.
-c& bpw
+c& rjs
 c: text-i/o,log-file
 c+
 	subroutine LogWrit(line)
 c
 	character line*(*)
+c
+c  THIS ROUTINE IS DEPRECATED
 c
 c  This writes a line to the log file or the users terminal.
 c  If LogOpen was called with option 'q', LogWrit stops the
@@ -81,15 +80,10 @@ c------------------------------------------------------------------------
 	include 'log.h'
 	logical more
 	call logwrite(line,more)
-	if( .not.more ) then
-	  call logclose
-	  stop
-	endif
-	return
 	end
 c************************************************************************
 c* LogWrite -- Write a line to the log file.
-c& bpw
+c& rjs
 c: text-i/o,log-file
 c+
 	subroutine LogWrite(line,more)
@@ -113,26 +107,26 @@ c------------------------------------------------------------------------
 	character ans*1
 	integer length,iostat
 c
-	if(lu.ne.0)then
-	  call txtwrite(lu,line,len(line),iostat)
-	  if(iostat.ne.0) call bugno('f',iostat)
-	  more = .true.
-	else
-	  if(query.and.nlines.eq.maxlines)then
-	    call prompt(ans,length,
-     *		'Hit RETURN to continue, q to quit: ')
-	    nlines = 0
-	    more = length.eq.0.or.(ans.ne.'q'.and.ans.ne.'Q')
+	if(domore)then
+	  if(lu.ne.0)then
+	    call txtwrite(lu,line,len(line),iostat)
+	    if(iostat.ne.0) call bugno('f',iostat)
 	  else
-	    more = .true.
+	    if(query.and.nlines.eq.maxlines)then
+	      call prompt(ans,length,
+     *		'Hit RETURN to continue, q to quit: ')
+	      nlines = 0
+	      domore = length.eq.0.or.(ans.ne.'q'.and.ans.ne.'Q')
+	    endif
+	    nlines = nlines + 1
+	    if(domore) call output(line)
 	  endif
-	  nlines = nlines + 1
-	  if(more) call output(line)
 	endif
+	more = domore
 	end
 c************************************************************************
 c* LogClose -- Finish up with the log file.
-c& bpw
+c& rjs
 c: text-i/o,log-file
 c+
 	subroutine LogClose
@@ -141,42 +135,20 @@ c
 c
 c  This completes access to the log file or terminal, and closes is it up.
 c  In case the logfile was '/printer', it sends that file to a printer
-c  (yet to be determined how and which one, in a system independand way)
-c  (environment variable??)
-c
 c--
 c------------------------------------------------------------------------
 	include 'log.h'
+c
+	character lpr
 #ifdef vms
-	integer  iostat
+	parameter(lpr='print')
 #else
-#ifdef cft
-	integer  iostat
-#else
-	integer  iostat, system
-        external system
+	parameter(lpr='lpr')
 #endif
-#endif
-
 	if(lu.ne.0) call txtclose(lu)
-
-	if (printer) then
-#ifdef vms
-            call output('** The file printer can be send to printer **')
-#else
-#ifdef cft
-            call output('File sent to printer')
-            iostat = ishell('lpr printer')
-	    if (iostat.ne.0) then
-                call bug('w','LogClose: printer command failed')
-            endif 
-#else
-            call output('File sent to printer')
-            iostat = system('lpr printer')
-	    if (iostat.ne.0) then
-                call bug('w','LogClose: printer command failed')
-            endif 
-#endif
-#endif
+	if(printer)then
+	  call output('Queuing output to printer')
+	  call command(lpr//' printer')
 	endif
+c
 	end
