@@ -63,6 +63,10 @@ c     9nov93 rjs  Flush out the last XY phase solution.
 c    20nov93 rjs  Read from the xyphase variable if available.
 c    25nov93 rjs  Doc change only.
 c     1sep94 rjs  First day of spring. Autobreak option.
+c     1sep94 rjs  w-axis changes.
+c    21sep94 rjs  Vote on whether to use -1 or +1 for the default
+c		  correction.
+c     7sep94 rjs  Correct bug in deteriming time solution.
 c
 c  Bugs:
 c    * Probably a more sophiticated fitting process (rather than just
@@ -74,7 +78,7 @@ c------------------------------------------------------------------------
 	integer MAXBREAK,ATANT,ATIF
 	character version*(*)
 	parameter(MAXBREAK=128,ATANT=6,ATIF=2)
-	parameter(version='AtXY: version 1.0 1-Sep-94')
+	parameter(version='AtXY: version 1.0 7-Oct-94')
 c
 	integer lVis,lOut,vCopy,vFreq
 	character vis*64,out*64,txt*64,dtype*1
@@ -85,7 +89,7 @@ c
 	logical dovar,doauto
 	real interval,gap
 	double precision break(MAXBREAK),freq(ATIF)
-	double precision preamble(4)
+	double precision preamble(5)
 	complex data(MAXCHAN)
 c
 c  Externals.
@@ -135,6 +139,7 @@ c
 c  Get ready to copy the data.
 c
 	call uvopen(lVis,vis,'old')
+	call uvset(lVis,'preamble','uvw/time/baseline',0,0.,0.,0.)
 	call uvprobvr(lVis,'xyphase',dtype,length,updated)
 	dovar = dtype.eq.'r'
 	if(.not.dovar.and.txt.eq.' ')then
@@ -144,6 +149,7 @@ c
 	endif
 	call uvprobvr(lVis,'corr',dtype,length,updated)
 	call uvopen(lOut,out,'new')
+	call uvset(lOut,'preamble','uvw/time/baseline',0,0.,0.,0.)
 	if(dtype.eq.' ')call bug('f','Did not find corr data in input')
 	call uvset(lOut,'corr',dtype,0,0.,0.,0.)
 	call InitCpy(lVis,vCopy)
@@ -168,8 +174,7 @@ c
 c
 c  Get the first time, determine the XY phases and generate the gains.
 c
-	call ReadXY(lVis,vFreq,dovar,txt,antmask,ATANT,
-     *				interval,gap,break,nbreak)
+	call ReadXY(lVis,vFreq,dovar,txt,interval,gap,break,nbreak)
 c
 c  Determine whether we have to correct this visibility. If so, correct it.
 c  First, though, check that our frequency information is up to date.
@@ -181,7 +186,7 @@ c
 	ngood = 0
 	nbad  = 0
 	dowhile(nchan.gt.0)
-	  call BasAnt(preamble(4),i1,i2)
+	  call BasAnt(preamble(5),i1,i2)
 	  doxy1 = i1.gt.0.and.i1.le.ATANT
 	  if(doxy1)doxy1 = antmask(i1)
 	  doxy2 = i2.gt.0.and.i2.le.ATANT
@@ -189,17 +194,17 @@ c
 	  call uvrdvri(lVis,'pol',pol,PolXX)
 c
 	  if(pol.eq.PolXX.or.(pol.eq.PolYY.and..not.(doxy1.or.doxy2)))
-     *								    then
+     *								   then
 	    ngood = ngood + nchan
 	  else
 	    if(doxy1.or.doxy2)
      *	      call FreqUpd(lVis,vFreq,freq,dside,nschan,nspect,ATIF)
 	    if(nside.ge.nspect)then
 	      call XYCorr(data,flags,nchan,freq,uside,nschan,nspect,
-     *		  dovar,preamble(3),i1,i2,doxy1,doxy2,pol,ngood,nbad)
+     *		  dovar,preamble(4),i1,i2,doxy1,doxy2,pol,ngood,nbad)
 	    else
 	      call XYCorr(data,flags,nchan,freq,dside,nschan,nspect,
-     *		  dovar,preamble(3),i1,i2,doxy1,doxy2,pol,ngood,nbad)
+     *		  dovar,preamble(4),i1,i2,doxy1,doxy2,pol,ngood,nbad)
 	    endif
 	  endif
 c
@@ -376,22 +381,27 @@ c------------------------------------------------------------------------
 	parameter(PolXX=-5,PolYY=-6,PolXY=-7,PolYX=-8)
 c
 	integer i,j,n
-	complex fac,xy1,xy2
+	complex fac,xy1,xy2,xy0
 	logical flag1,flag2,flag
+c
+	call XYdef(domir,xy0)
 c
 	n = 0
 	do j=1,nspect
 c
 c  Get the XY phase. The default XY phase is -1.
 c
-	  xy1 = -1
-	  xy2 = -1
 	  flag1 = .true.
-	  flag2 = .true.
+	  xy1 = xy0
 	  if(doxy1.and.(pol.eq.PolYX.or.pol.eq.PolYY))
-     *		call XYGet(domir,time,freq(j),side(j),i1,xy1,flag1)
+     *	      call XYGet(domir,time,freq(j),side(j),i1,xy1,flag1)
+c
+	  flag2 = .true.
+	  xy2 = xy0
 	  if(doxy2.and.(pol.eq.PolXY.or.pol.eq.PolYY))
-     *		call XYGet(domir,time,freq(j),side(j),i2,xy2,flag2)
+     *	      call XYGet(domir,time,freq(j),side(j),i2,xy2,flag2)
+c
+	  flag = flag1.and.flag2
 	  if(pol.eq.PolXX)then
 	    fac = 1
 	  else if(pol.eq.PolYY)then
@@ -401,7 +411,6 @@ c
 	  else if(pol.eq.PolYX)then
 	    fac = 1/xy1
 	  endif
-	  flag = flag1.and.flag2
 c
 c  Correct the data.
 c
@@ -469,13 +478,13 @@ c
 c
 	end
 c************************************************************************
-	subroutine ReadXY(lVis,vFreq,dovar,txt,antmask,nants,
+	subroutine ReadXY(lVis,vFreq,dovar,txt,
      *				interval,gap,break,nbreak)
 c
 	implicit none
-	integer nbreak,nants,vFreq,lVis
+	integer nbreak,vFreq,lVis
 	real interval,gap
-	logical antmask(nants),dovar
+	logical dovar
 	double precision break(*)
 	character txt*(*)
 c
@@ -569,7 +578,7 @@ c
 c  Add these XY phase points to the buffer.
 c
 	    do i=1,ATANT
-	      if(antmask(i).and.flag(i,ispect))then
+	      if(flag(i,ispect))then
 	        npnts = npnts + 1
 	        antfreq(npnts) = ATANT*freqid + i - 1
 	        phi(npnts) = xyp(i,ispect)
@@ -592,6 +601,8 @@ c
      *					SumT/npnts,freqs,nfreq)
 
 	if(.not.dovar)call txtclose(lu,iostat)
+c
+	call XYDone
 c
 	end
 c************************************************************************
@@ -764,6 +775,38 @@ c
 c
 	end
 c************************************************************************
+	subroutine XYDone
+c
+	implicit none
+c
+c  Determine an average XY phase solution.
+c
+c------------------------------------------------------------------------
+	include 'atxy.h'
+	include 'mirconst.h'
+c
+	integer i,j,pos,neg
+c
+	pos = 0
+	neg = 0
+	do j=1,nsol
+	  do i=1,ATANT
+	    if(real(xyphase(i,j)).gt.0)then
+	      pos = pos + 1
+	    else if(real(xyphase(i,j)).lt.0)then
+	      neg = neg + 1
+	    endif
+	  enddo
+	enddo
+c
+	if(pos.gt.neg)then
+	  axyphase = 1
+	else
+	  axyphase = -1
+	endif
+c
+	end
+c************************************************************************
 	subroutine XySol(antfreq,phi,buf,indx1,indx2,
      *				npnts,T,freqs,nfreqs)
 c
@@ -880,6 +923,26 @@ c
 c
 	end
 c************************************************************************
+	subroutine XYDef(domir,xyp)
+c
+	implicit none
+	logical domir
+	complex xyp
+c
+c  Return the default XY phase for a particular sideband.
+c------------------------------------------------------------------------
+	include 'atxy.h'
+c
+c  Convert from AIPS convention to Miriad convention.
+c
+	if(domir)then
+	  xyp = axyphase
+	else
+	  xyp = -axyphase
+	endif
+c
+	end
+c************************************************************************
 	subroutine XYGet(domir,t,f,side,ant,xyp,flag)
 c
 	implicit none
@@ -979,7 +1042,7 @@ c
 	  t2 = ntime
 	  dowhile(t1+1.lt.t2)
 	    j = (t1+t2)/2
-	    if(t.le.time(j))then
+	    if(t.ge.time(j))then
 	      t1 = j
 	    else
 	      t2 = j
