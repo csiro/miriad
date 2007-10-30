@@ -477,9 +477,9 @@ c
 	else if(ctype(1:4).eq.'FREQ') then
 	  xlabel = 'Frequency (GHz)'
 	else if (ctype(1:4).eq.'VELO') then
-	  xlabel = 'Velocity (Km/s)'
+	  xlabel = 'Velocity (km/s)'
 	else if (ctype(1:4).eq.'FELO') then
-	  xlabel = 'Felocity (Km/s)'
+	  xlabel = 'Felocity (km/s)'
 	else
 	  xlabel = ctype(1:len1(ctype))
 	end if
