@@ -17,6 +17,7 @@
 // 07-feb-97 rjs Added "Const" to definitions, and eliminate some rubbish, as
 //		 suggested by Scott Gordon.
 // 19-Mar-97 rjs Check for definition of various thingos before doing them.
+//  2-Sep-98 rjs Added macros for uvgetvr and uvrdvr routines.
 */
 
 /* Define const and void if needed. */
@@ -178,6 +179,29 @@ void uvinfo_c ARGS((int tno, Const char *object, double *data));
 #define uvputvrc_c(tno,name,value,n) \
         uvputvr_c(tno,H_CMPLX,name,(char *)(value),n)
 
+#define uvgetvra_c(tno,name,value)   \
+        uvputvr_c(tno,H_BYTE,name,value,strlen(value))
+#define uvgetvrj_c(tno,name,value,n) \
+        uvgetvr_c(tno,H_INT2,name,(char *)(value),n)
+#define uvgetvri_c(tno,name,value,n) \
+        uvgetvr_c(tno,H_INT,name,(char *)(value),n)
+#define uvgetvrr_c(tno,name,value,n) \
+        uvgetvr_c(tno,H_REAL,name,(char *)(value),n)
+#define uvgetvrd_c(tno,name,value,n) \
+        uvgetvr_c(tno,H_DBLE,name,(char *)(value),n)
+#define uvgetvrc_c(tno,name,value,n) \
+        uvgetvr_c(tno,H_CMPLX,name,(char *)(value),n)
+
+#define uvrdvra_c(tno,name,data,def,len) \
+	uvrdvr_c(tno,H_BYTE,name,data,def,len)
+#define uvrdvri_c(tno,name,data,def) \
+	uvrdvr_c(tno,H_INT,name,(char *)(data),(char *)(def),1)
+#define uvrdvrr_c(tno,name,data,def) \
+	uvrdvr_c(tno,H_REAL,name,(char *)(data),(char *)(def),1)
+#define uvrdvri_c(tno,name,data,def) \
+	uvrdvr_c(tno,H_DBLE,name,(char *)(data),(char *)(def),1)
+#define uvrdvri_c(tno,name,data,def) \
+	uvrdvr_c(tno,H_CMPLX,name,(char *)(data),(char *)(def),1)
 /* xyio.c */
 
 void xyopen_c ARGS((int *tno, Const char *name, Const char *status, int naxis, int axes[]));
