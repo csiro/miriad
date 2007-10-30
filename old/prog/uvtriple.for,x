@@ -3,7 +3,7 @@ c===============================================================================
 c= UVTRIPLE - Make phase or amplitude plots of the triple product from a
 c  UV-data base on a PGPLOT device.
 c	
-c& nag,nebk
+c& nebk nag
 c: uv analysis, plotting
 c+
 c  UVTRIPLE - Plot triple product phase or amplitude from visibility data
@@ -119,16 +119,22 @@ c--
 c  History
 c    nag  01-sep-93   Original version
 c    rjs  14-oct-93   Fixed inconsistent ordering of args to getopt.
-c	q	      Correct equation for calculating a triple.
-c
+c		      Correct equation for calculating a triple.
+c    rjs  22-oct-93   Check for buffer overflow in BufPut. Set ntrpl
+c		      equal to 1 if dotrip is false (save buffer space).
+c    nag  05-jan-94   Fix problem with antennas number. Add warnings for
+c                     user.
+c    rjs  25-jan-94   Change ownership.
+c    rjs   8-sep-94   Protect against too many polarisations in a integration.
+c		      Use tmpdim.h
 c-----------------------------------------------------------------------
       implicit none
 c
-      include 'maxdim.h'
+      include 'tmpdim.h'
 c
       integer maxbas, maxtrip, maxps, maxpol, maxfile, maxnant
       parameter (maxps=4, maxpol=12, maxfile=10)
-      parameter (maxnant = 6)
+      parameter (maxnant = 10)
       parameter (maxbas = maxnant*(maxnant-1)/2)
       parameter (maxtrip = maxnant*(maxnant-1)*(maxnant-2)/6)
 c
@@ -157,8 +163,8 @@ c
      +  out(2*maxps*maxtrip*maxchan)
       integer lin, tscr, ivis, nread, dayoff, j, fileno, xo, yo, 
      +  maxpts, nx, ny, maxsize, trlno, polno, inc, npol, ip,
-     +  tunit, nfiles, ifile, nplpl, ntrpl, numtr, maxtr, maxbl,
-     +  ntrip, nflpl, vupd, nants, nreadp
+     +  tunit, nfiles, ifile, nplpl, ntrpl, maxtr, maxbl, nflpl,
+     +  vupd, nants, nreadp
       character in*64, xaxis*10, yaxis*10, pdev*80, comment*80, 
      +  logf*80, str*2, title*100, tel*9, ins*9
       logical xrtest, yrtest, more, acc, doave, doall, doavall, 
@@ -175,21 +181,19 @@ c Initialize
 c
       integer ifc, ipol, k, mb, of, offs, offset, leng, cout
       integer pls(12), polm(12), polmp(12), o(3)
-      real r(3), a(3)
       character ststr(12)*2
       character stok(12)*2
       parameter (ifc = maxpol*maxtrip*maxfile) 
       data non /.true./, acc /.false./
-      data ivis / 0/
+      data ivis, ifile / 0, 0/
       data of, offs, offset / 0, 0, 0/
-      data ifile, ntrip / 0, 0/
       data npts, plpts/ifc*0, ifc*0/
       data polm/ 12*0/
       data polmp /-5,-6,-7,-8,-1,-2,-3,-4, 1, 2, 3, 4/
       data stok/'XX','YY','XY','YX','RR','LL','RL','LR',
      +		' I',' Q',' U',' V'/
 c-----------------------------------------------------------------------
-      call output ('Uvtriple: version 31-Aug-93')
+      call output ('Uvtriple: version 05-Jan-94')
       call output (' ')
 c
 c  Get the parameters given by the user and check them for blunders
@@ -232,20 +236,20 @@ c
 c  Plot each triple on separate plot
 c
 	  call uvrdvri(lin, 'nants', nants, 0)
-	  if (nants.gt.1) then
-	    maxbl = nants*(nants-1)/2
-	    maxtr = nants*(nants-1)*(nants-2)/6
-          else
-	    call bug ('w','There is no antenna variable in the data')
+	  if (nants.le.1) then
 	    maxbl = maxbas
 	    maxtr = maxtrip
+	    call bug ('w','There is no antenna variable in the data')
+          else
+	    maxbl = nants*(nants-1)/2
+	    maxtr = nants*(nants-1)*(nants-2)/6
+	    if(nants.gt.maxnant) then
+	    call bug ('w', 'There are more then MAXNANT antennas'
+     + 	              //'in the data, increase MAXNANT')
+	      maxbl = maxbas
+	      maxtr = maxtrip
+            endif
           endif
-c
-c  All triples on the one plot together
-c
-c         ntrpl = maxtr
-c         if (doavall .and. .not.dotrip) ntrpl = 1
-c         if (.not.dotrip) ntrpl = 1
 c
           call mtitle (lin, title, dayav, tunit, nfiles, tel, ins)
 	  call uvrdvrd(lin, 'time', baseday, 0.0d0)
@@ -286,11 +290,9 @@ c
      +                   offs, dat, fl, npols, pols, off, a1, a2)
 	    remn = .false.
 	  else
-	    numtr = ntrip
 	    call TrpCount( dat, fl, off, nread, npol, npols, mb,
-     +              doall, doflag, a1, a2, trpre, trpim, nchan, ntrip,
-     +              r, a, o, a123, maxtr, maxbl, maxchan)
-	    ntrip = max(numtr,ntrip)
+     +              doall, doflag, a1, a2, trpre, trpim, nchan, 
+     +              o, a123, maxtr, maxbl, maxchan)
 	    remn = .true.
 	    call DatIni(maxbl, maxps, mb, offs, off)
 c
@@ -346,11 +348,9 @@ c
 c  Write out anything remaining for all cases
 c
         if (.not.remn) then
-	  numtr = ntrip
 	  call TrpCount( dat, fl, off, nreadp, npol, npols, mb,
-     +            doall, doflag, a1, a2, trpre, trpim, nchan, ntrip,
-     +            r, a, o, a123, maxtr, maxbl, maxchan)
-	  ntrip = max (numtr,ntrip)
+     +            doall, doflag, a1, a2, trpre, trpim, nchan, 
+     +            o, a123, maxtr, maxbl, maxchan)
 	  call DatIni(maxbl, maxps, mb, offs, off)
           if (doave) then
      	    call TrpAcc (trpre, trpim, npol, pols, polm, polmp,
@@ -377,10 +377,21 @@ c
           endif
         enddo
 c
-        ntrpl = maxtr 
+c  All triples on the one plot together
+c
+	if (.not.dotrip) then
+	  ntrpl = 1
+	else
+c
+c  Or each triple on separate plot
+c
+	  ntrpl = maxtr
+        endif
+c
+c  In case of averaging - all polarizations together
+c
         if (doavall) then
 	  nplpl = 1
-	  if (.not.dotrip) ntrpl = 1
         else
           nplpl = max(nplpl,ipol)
         endif
@@ -483,7 +494,7 @@ c    doflag       Plot flagged visbiltites only else plot unflagged
 c    doall        Plot flagged and unflagged.  Overrides DOFLAG
 c    dointer      User gets to play interactively with the plot
 c    dolog        Write plot arrays into the log file
-c    dozero
+c    dozero       Plot x=0 and y=0
 c    dox,yind     When OPTIONS=NOBASE is not set, DOX,YIND are true for 
 c                 each sub-plot to have the x,y-plot range self-scale 
 c                 independently.
@@ -877,7 +888,7 @@ c
 	if(npols(bl).eq.0)then
 	  npols(bl) = 1
 	else
-	  npols(bl) = npols(bl) + 1
+	  npols(bl) = min(npol,npols(bl) + 1)
 	endif
 c
 	call uvdatgti('pol', pol)
@@ -895,11 +906,11 @@ c
       end
 c===============================================================================
       subroutine TrpCount( dat, fl, off, nread, npol, npols, mb,
-     +           doall, doflag, a1, a2, trpre, trpim, nchan, ntrip,
-     +           r, a, o, a123,	maxtr, maxbl, maxchan)
+     +           doall, doflag, a1, a2, trpre, trpim, nchan, 
+     +           o, a123, maxtr, maxbl, maxchan)
 c
       implicit none
-      integer mb, npol, nread, ntrip, maxtr, maxbl, maxchan
+      integer mb, npol, nread, maxtr, maxbl, maxchan
       integer off(npol,mb), a1(mb), a2(mb), a123(maxtr,3),
      +        npols(mb), nchan(npol,maxtr)
       real trpre(npol,maxtr,maxchan), trpim(npol,maxtr,maxchan)
@@ -921,19 +932,17 @@ c Output:
 c   trpre    Array of triples real parts    
 c   trpim    Array of triples imaginary parts
 c   nchan    Number of channels for each bl and pol
-c   ntrip    Number of triples
 c Scratch:
-c   r,a,o
+c   o, triple, v
 c-------------------------------------------------------------------------------
       integer i, ii, ip, j, j1, j2, j3, k, l, nt, ntr, nch, o(3)
-      real a(3), r(3)
-c
       complex v(3),triple
 c
       do i=1,mb
         if(npols(i).ne.0 .and. npols(i).ne.npol) call bug('f',
      +      'Number of pols varied  during integration, in TrpCount')
       enddo	
+c
       do ip=1,npol
 c
 	do i=1,maxtr
@@ -977,16 +986,10 @@ c
 		  else
 		    do ii=1,3
 		      v(ii) = dat(o(ii)+l)
-		      r(ii) = real( dat(o(ii)+l))
-		      a(ii) = aimag( dat(o(ii)+l))
 		    enddo
 		    triple = v(1) * conjg(v(2)) * v(3)
 		    trpre(ip,ntr,nch) = real(triple)
 		    trpim(ip,ntr,nch) = aimag(triple)
-c		    trpre(ip,ntr,nch) = r(1)*r(2)*r(3) - a(1)*a(2)*r(3)-
-c     +                                  a(1)*r(2)*a(3) - r(1)*a(2)*a(3)
-c		    trpim(ip,ntr,nch) = r(1)*r(2)*a(3) - a(1)*a(2)*a(3)+
-c     +                                  a(1)*r(2)*r(3) + r(1)*a(2)*r(3)
 		    l = l + 1
 		    nch = nch + 1
 		  endif
@@ -1001,7 +1004,6 @@ c
 	    enddo
 	  enddo
 	enddo
-	ntrip = nt
       enddo
       end
 c===============================================================================
@@ -1341,6 +1343,8 @@ c
           npts(trlno,polno,fileno) = npts(trlno,polno,fileno)+1
           n = npts(trlno,polno,fileno) 
 c
+	  if(max(xo,yo)+n.gt.maxsize)
+     *	    call bug('f','Buffer overflow in BufPut')
           buffer(xo+n,trlno,polno,fileno) = x
           buffer(yo+n,trlno,polno,fileno) = y
 c
@@ -1816,14 +1820,15 @@ c
       character title*(*)
       logical doavall
 c-------------------------------------------------------------------------------
-c  Write the plot title with polarizations in different colours reflecting
-c  the colours they are plotted in
+c    Write the plot title with polarizations in different colours
+c    reflecting the colours they are plotted in.
 c
-c
-c
-c
-c
-c
+c  Input:
+c    npol      Number of polarizations read
+c    ststr     What the polarizations are
+c    title     The rest of the title
+c    cols      Colours
+c    doavall   True if averaging everything on plot together
 c
 c-------------------------------------------------------------------------------
       integer i, i1, len1
