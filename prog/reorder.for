@@ -37,11 +37,12 @@ c		  file.
 c    rjs  07feb96 Handle 4th, etc, dimension.
 c    rjs  02jul97 cellscal change.
 c    rjs  23jul97 Add pbtype.
+c    rjs  14jun00 Copy across llrot keyword.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'maxnax.h'
 	character version*(*)
-	parameter(version='Reorder: version 1.0 06-Sep-93')
+	parameter(version='Reorder: version 1.0 14-Jun-00')
 	integer naxis,lu,pnt,n
 	integer nIn(MAXNAX),nOut(MAXNAX),sgn(MAXNAX),idx(MAXNAX)
 	integer lmode,i,size
@@ -268,7 +269,7 @@ c
 c  Header keywords.
 c
 	integer nkeys
-	parameter(nkeys=23)
+	parameter(nkeys=24)
 	character keyw(nkeys)*8
 c
 c  Externals.
@@ -276,7 +277,7 @@ c
 	character itoaf*8
 c
 	data keyw/   'bmaj    ','bmin    ','bpa     ','bunit   ',
-     *    'obstime ','epoch   ','history ','instrume',
+     *    'obstime ','epoch   ','history ','instrume','llrot   ',
      *	  'ltype   ','lstart  ','lwidth  ','lstep   ','pbtype  ',
      *	  'niters  ','object  ','observer','obsra   ','obsdec  ',
      *	  'pbfwhm  ','restfreq','telescop','vobs    ','cellscal'/
