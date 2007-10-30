@@ -284,6 +284,7 @@ c    nebk 24jun96  Add some commonsense for 2-d images in sub. curpos
 c    nebk 13aug96  Prevent some problems with non-interactive devices
 c    nebk 13feb97  Add keyrod "3format"
 c    rjs  21jul97  Called initco earlier.
+c    rjs  31jul97  Simplify calls to initco,finco.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -321,7 +322,7 @@ c
       data dmm /1.0e30, -1.0e30/
       data gaps, doabut /.false., .false./
 c-----------------------------------------------------------------------
-      call output ('CgCurs: version 13-Feb-97')
+      call output ('CgCurs: version 31-Jul-97')
       call output (' ')
 c
 c Get user inputs
@@ -635,6 +636,7 @@ c
         call memfree (ipims, 1, 'r')
       end if
 c
+      call finco(lin)
       call xyclose(lin)
       if (dolog) then
         if (cursor) call txtclose (lcurs)
@@ -923,7 +925,6 @@ c
           redisp = .false.
         end if
       end do
-      call finco (lin)
 c
       end
 c
@@ -974,7 +975,6 @@ c-----------------------------------------------------------------------
       call output ('Click right button (enter X) to exit')
       call output (' ')
 c
-      call initco (lin)
       typei(1) = 'abspix'
       typei(2) = 'abspix'
       typei(3) = 'abspix'
@@ -1161,8 +1161,6 @@ c
         end if
       end do
 c
-      call finco (lin)
-c
       end
 c
 c
@@ -1227,7 +1225,6 @@ c------------------------------------------------------------------------
 c
 c Get beam if present
 c
-      call initco (lin)
       call rdhdi (lin, 'naxis', naxis, 0)
       naxis = min(3,naxis)
       do i = 1, naxis
@@ -1560,7 +1557,6 @@ c
           redisp = .true.
         end if
       end do
-      call finco (lin)
 c
       end
 c
