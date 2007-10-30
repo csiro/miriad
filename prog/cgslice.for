@@ -327,6 +327,8 @@ c    nebk 01dec96  'absnat' and 'relnat' were given twice in allowed lists
 c                  of label types
 c    nebk 13feb97  Add keyword "3format"
 c    rjs  21jul97  Call initco earlier
+c    rjs   7may98  Change the bunit variable to be 16 char (not 8 char).
+c
 c Notes:
 c
 c   SLice abcissa values are still in linear world coordiantes as
@@ -373,7 +375,7 @@ c
       character labtyp(2)*6, ltype(nltype)*6
       character in*64, pdev*64, xlabel*40, ylabel*40, xlabel2*40, 
      +  ylabel2*40, hard*20, trfun*3, levtyp*1, fslval*80, fslposo*80, 
-     +  fslposi*80, fslmod*80, units*8, val3form*20
+     +  fslposi*80, fslmod*80, units*16, val3form*20
 c
       logical do3val, do3pix, eqscale, doblnk, dopixel, doerase,
      +  redisp, accum, radians, none, noimage, dofit, dobord, dobase,
@@ -392,7 +394,7 @@ c
       data dmm, dunsl, gaps /1.0e30, -1.0e30, .false., .false./
       data xdispls, ydispbs /3.5, 3.5/
 c-----------------------------------------------------------------------
-      call output ('CgSlice: version 13-Feb-97')
+      call output ('CgSlice: version 1.0 7-May-98')
       call output (' ')
 c
 c Get user inputs
