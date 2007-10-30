@@ -73,13 +73,13 @@ c plotpar(1-5)
       integer      XLABP, YLABP, INFOP, BOXP, TITLE
       parameter    ( XLABP=1, YLABP=2, INFOP=3, BOXP=4, TITLE=5 )
 
-      double precision crval(MAXNAX), cdelt(MAXNAX), crpix(MAXNAX)
+      integer      cindex(MAXNAX),cIn
       character*9  ctype(MAXNAX)
 
       integer      NSTATS
       parameter    ( NSTATS = 6 )
       common /VAR/ plotvar, plotrnge
-      common /CRD/ crval, cdelt, crpix
+      common /CRD/ cindex,cIn
       common /CHR/ plotpar, ctype
 
       integer      SUMBM, KPERJY, BEAMX, BEAMY
