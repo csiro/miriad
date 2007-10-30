@@ -80,9 +80,10 @@ c    rjs   6feb95  Copy mosaic table to output component file.
 c    rjs  10aug95  New routine to modify alpha and beta.
 c    rjs  12oct95  Support "default" and "model" being different sizes from
 c		   the deconvolved region.
+c    rjs  27oct95  Increased max length of filenames.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='MosMem: version 1.0 10-Aug-95')
+	parameter(version='MosMem: version 1.0 27-Oct-95')
 	include 'maxdim.h'
 	include 'maxnax.h'
 	include 'mem.h'
@@ -92,7 +93,7 @@ c
 	integer gull,cornwell
 	parameter(gull=1,cornwell=2)
 c
-	character MapNam*32,BeamNam*32,ModelNam*32,OutNam*32,DefNam*32
+	character MapNam*64,BeamNam*64,ModelNam*64,OutNam*64,DefNam*64
 	character entropy*8,line*72
 	integer lBeam,lMap,lModel,lOut,lDef
 	integer nMap(3),nModel(3),nOut(MAXNAX),nBeam(3),nDef(3)
