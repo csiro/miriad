@@ -20,6 +20,8 @@ c@ mode
 c	This determines what the flagging statitics are determined as
 c	a function of. Possible values are:
 c	  stokes    Determine statistics by Stokes/pol'n parameter.
+c	            This is the default.
+c	  overall   Give a single overall statistic.
 c	  baseline  Determine statistics by baseline number.
 c	  antenna   Determine statistics by antenna number.
 c	  channel   Determine statistics by channel number.
@@ -32,11 +34,14 @@ c@ device
 c	PGPLOT device on which the flagging statistics are plotted.
 c	The default is not to make a plot, but rather just to give
 c	messages about the flagging statistics.
+c  History:
+c    rjs  26sep95 Original version.
+c    rjs   1may96 Added mode=overall.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
 	integer MAXSELS,MAXPARM,POLMIN,MAXIN
-	parameter(version='Uvfstats: version 1.0 26-Sep-95')
+	parameter(version='Uvfstats: version 1.0 1-May-96')
 	parameter(MAXSELS=256,MAXPARM=MAXCHAN,POLMIN=-8,MAXIN=64)
 c
 	real lstart,lwidth,lstep,sels(MAXSELS)
@@ -45,11 +50,11 @@ c
 	double precision preamble(4)
 	real x(MAXPARM),y(MAXPARM)
 	complex data(MAXCHAN)
-	character line*32,vis(MAXIN)*80,device*64,val1*5,val2*8
+	character line*32,vis(MAXIN)*80,device*64,val1*8,val2*8
 	logical doabs,flags(MAXCHAN)
 c
 	integer NMODES,NOPTS
-	parameter(NMODES=4,NOPTS=1)
+	parameter(NMODES=5,NOPTS=1)
 	logical present(NOPTS)
 	character modes(NMODES)*8,mode*8,opts(NOPTS)*8
 c
@@ -57,7 +62,8 @@ c  Externals.
 c
 	character PolsC2P*2,BlFmt*5
 c
-	data modes/'stokes  ','baseline','channel ','antenna '/
+	data modes/'stokes  ','baseline','channel ','antenna ',
+     *		   'overall '/
 	data opts /'absolute'/
 c
 c  Get input parameters.
@@ -97,6 +103,8 @@ c
 	    if(mode.eq.'stokes')then
 	      call uvrdvri(tno,'pol',pol,1)
 	      call SetPar(pol-PolMin+1,flags,nchan,ngood,nbad,MAXPARM)
+	    else if(mode.eq.'overall')then
+	      call SetPar(1,flags,nchan,ngood,nbad,MAXPARM)
 	    else if(mode.eq.'channel')then
 	      do i=1,nchan
 	        if(flags(i))then
@@ -166,6 +174,8 @@ c
 	  do i=1,npnt
 	    if(mode.eq.'stokes')then
 	      val1 = ' '//PolsC2P(nint(x(i)))
+	    else if(mode.eq.'overall')then
+	      val1 = 'Overall'
 	    else if(mode.eq.'baseline')then
 	      val1 = BlFmt(nint(x(i)))
 	    else if(mode.eq.'channel'.or.mode.eq.'antenna')then
@@ -176,7 +186,7 @@ c
 	    else
 	      write(val2,'(f7.1,a)')y(i),'%'
 	    endif
-	    call output('     '//val1//'     '//val2)
+	    call output('     '//val1//'  '//val2)
 	  enddo
 	endif
 c
