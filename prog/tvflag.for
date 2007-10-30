@@ -77,6 +77,7 @@ c    jm    11apr96    Fixed 2nov95 change so getting the inttime takes
 c                     place after the first read on the data and
 c                     increased the default value.  Also added a check
 c                     to see if ANY valid data have been selected.
+c    rjs   20may96    Change way maxgap is determined.
 c***********************************************************************
 c= TvFlag - Interactive editing of a UV data set on a TV device.
 c& jm
@@ -1041,7 +1042,7 @@ c
 	if (nchan .eq. 0) call bug('f', 'No valid data found.')
 	call uvinfo(lIn,'line',line)
 	call uvrdvrr(lIn,'inttime',maxgap,35.0)
-	maxgap = 3.5*maxgap*ttol
+	maxgap = max(3.5*maxgap,50.0)*ttol
 	chanoff = nint(line(3)) - 1
 	day0 = nint(preamble(3)-1) + 0.5d0
 	tprev = -1
@@ -1282,7 +1283,7 @@ c
 	    t2 = times(2, j)
 	    call FmtCmd(string, isave, t, t2, 1, chanoff)
 	    i = Len1(string)
-	    if (i .gt. 0) call HisWrite(Lin, string(:i))
+	    if (i .gt. 0) call HisWrite(Lin, 'TVFLAG: '//string(:i))
 	  enddo
 	enddo
 c
