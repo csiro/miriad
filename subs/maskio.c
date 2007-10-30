@@ -13,6 +13,7 @@
 /*    rjs   6nov89   Does not abort if the mask file is missing.	*/
 /*    rjs   3mar93   Make mkflush a user-callable routine.		*/
 /*    rjs  23dec93   Do not open in read/write mode unless necessary.	*/
+/*    rjs   6nov94   Change item handle to an integer.			*/
 /************************************************************************/
 
 #define BUG(sev,a)   bug_c(sev,a)
@@ -57,7 +58,7 @@ char *malloc();
 #define MK_RUNS 2
 #define BUFFERSIZE 128
 #define OFFSET (((ITEM_HDR_SIZE-1)/H_INT_SIZE + 1)*BITS_PER_INT)
-typedef struct {char *item;
+typedef struct {int item;
 		int buf[BUFFERSIZE],offset,length,size,modified,rdonly,tno;
 		char name[32];
 		} MASK_INFO;
