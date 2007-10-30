@@ -70,6 +70,7 @@ c    rjs  27feb95 Correct sign error in the sign of an offset. Allow multiple
 c		  input vis datasets.
 c    rjs  17may95 More messages.
 c    rjs  02jul97 cellscal change.
+c    rjs  07jul97 Change coaxdesc to coaxget.
 c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='version 27-Feb-95')
@@ -502,9 +503,9 @@ c
 	call pbInit(pbObj,pbtype,tmap)
 	call pbInfo(pbObj,pbfwhm,cutoff,maxrad)
 c
-	call coAxDesc(tmap,1,ctype,crpix,crval,cdelt)
+	call coAxGet(tmap,1,ctype,crpix,crval,cdelt)
 	n1 = 2*nint(maxrad/abs(cdelt))
-	call coAxDesc(tmap,2,ctype,crpix,crval,cdelt)
+	call coAxGet(tmap,2,ctype,crpix,crval,cdelt)
 	n2 = 2*nint(maxrad/abs(cdelt))
 c
 	call pbFin(pbObj)
