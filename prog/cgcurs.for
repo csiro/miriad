@@ -270,7 +270,8 @@ c    rjs  12oct95  Fix compacting algorithm for integers.
 c    nebk 19oct95  Use image copy for all non-linear tranfer functions
 c    nebk 12nov95  Change to deal internally with absolute pixels only
 c                  '*lin' -> '*nat'
-c
+c    nebk 29nov95  Add world coords to statistics output and new
+c                  call for CONTURCG
 c To do:
 c
 c-----------------------------------------------------------------------
@@ -309,7 +310,7 @@ c
       data dmm /1.0e30, -1.0e30/
       data gaps /.false./
 c-----------------------------------------------------------------------
-      call output ('CgCurs: version 12-Nov-95')
+      call output ('CgCurs: version 29-Nov-95')
       call output (' ')
 c
 c Get user inputs
@@ -508,8 +509,8 @@ c
 c
 c Draw contours
 c
-             call conturcg (blank, .false., win(1), win(2), doblnk,
-     +                      memr(ipim), nlevs, levs, tr, 0.0)
+             call conturcg (.false., blank, .false., win(1), win(2), 
+     +                      doblnk, memr(ipim), nlevs, levs, tr, 0.0)
            end if
 c
 c Label and draw axes
@@ -574,8 +575,8 @@ c Find image statistics in polygonal region defined by cursor
 c
              call pgsci (statcol)
              call curstat (lin, blc, win(1), win(2), memr(ipims), 
-     +          memi(ipnim), ibin, jbin, doreg, display, smore, 
-     +          dolog, mark, near, lstat)
+     +          memi(ipnim), ibin, jbin, krng, doreg, display, 
+     +          smore, dolog, mark, near, lstat)
            end if
 c
            if (.not.display .and. rmore) then
@@ -703,12 +704,12 @@ c
       parameter (nvmax = 100, symb = 17)
 c
       double precision vert(2,nvmax),  pix(3), pixbs(2), 
-     +  win(3), wout(3), chan
+     +  win(3), wout(3)
       real vx(nvmax), vy(nvmax)
       character str1*30, str2*30, str*60, line*500, ans*1, typei(3)*6,
      +  typeo(3)*6
       integer il1, il2, i, ip, il, maxlen, nv, irad(2), iostat, bin(2),
-     +  naxis3
+     +  naxis3, naxis
       logical good, more, rads
 c
       integer len1, ci
@@ -732,6 +733,7 @@ c
       rads = .true.
       if (irad(1)*irad(2).eq.0) rads = .false.
       if (.not.rads) doabs = .true.
+c
       bin(1) = ibin
       bin(2) = jbin
       typei(1) = 'abspix'
@@ -739,9 +741,12 @@ c
       typei(3) = 'abspix'
       typeo(1) = 'arcsec'
       typeo(2) = 'arcsec'
-      typeo(3) = 'arcsec'
-      chan = (real(2*krng(1)+krng(2))-1.0)/2.0
+      typeo(3) = 'abspix'
+c
       call initco (lin)
+      win(3) = (real(2*krng(1)+krng(2))-1.0)/2.0
+      call rdhdi (lin, 'naxis', naxis, 0)
+      naxis = min(3,naxis)
 c
 c Get vertices with cursor and join up the dots
 c
@@ -811,8 +816,7 @@ c
             do i = 1, nv
               win(1) = vert(1,i)
               win(2) = vert(2,i)
-              win(3) = chan
-              call w2wco (lin, 2, typei, ' ', win, typeo, ' ', wout)
+              call w2wco (lin, naxis, typei, ' ', win, typeo, ' ', wout)
               vert(1,i) = wout(1)
               vert(2,i) = wout(2)
             end do
@@ -937,7 +941,7 @@ cc
       double precision pix(3), pixbs(2)
       real w(2), ival
       integer iostat, len1, iloc, ipl, wl(3), wwl(2), vl(3), k,
-     +  bin(2), ib, jb
+     +  bin(2), ib, jb, naxis
       character cch*1, line*132, plstr*20, vstr(3)*60, wstr(3)*60, 
      +  wwstr(3)*20, typei(3)*6, typeo(3)*6
 c-----------------------------------------------------------------------
@@ -949,11 +953,14 @@ c-----------------------------------------------------------------------
       call output ('Click left button  (enter A) for location')
       call output ('Click right button (enter X) to exit')
       call output (' ')
+c
       call initco (lin)
       typei(1) = 'abspix'
       typei(2) = 'abspix'
       typei(3) = 'abspix'
       pix(3) = (real(2*krng(1)+krng(2))-1.0)/2.0
+      call rdhdi (lin, 'naxis', naxis, 0)
+      naxis = min(3,naxis)
 c
 c Format channel range for CGDISP log files
 c
@@ -1024,10 +1031,10 @@ c
 c Convert absolute pixel to true world coordinate formatted strings
 c with and without units
 c
-            call setoaco (lin, 'abs', 3, 0, typeo)
-            call w2wfco (lin, 3, typei, ' ', pix,  typeo, ' ',
+            call setoaco (lin, 'abs', naxis, 0, typeo)
+            call w2wfco (lin, naxis, typei, ' ', pix,  typeo, ' ',
      +                   .true., wstr, wl)
-            call w2wfco (lin, 3, typei, ' ', pix, typeo, ' ',
+            call w2wfco (lin, naxis, typei, ' ', pix, typeo, ' ',
      +                   .false., vstr, vl)
 c       
             line = 'World coordinates x,y         : '//
@@ -1064,8 +1071,8 @@ c
 c
 c Convert absolute pixel to true offset world coordinate formatted strings 
 c
-            call setoaco (lin, 'off', 3, 0, typeo)
-            call w2wfco (lin, 3, typei, ' ', pix,  typeo, ' ',
+            call setoaco (lin, 'off', naxis, 0, typeo)
+            call w2wfco (lin, naxis, typei, ' ', pix,  typeo, ' ',
      +                   .false., wstr, wl)
             line = 'Offset world coordinates x,y  : '//
      +              wstr(1)(1:wl(1))//', '//wstr(2)(1:wl(2))
@@ -1078,7 +1085,7 @@ c
             typeo(1) = 'abspix'
             typeo(2) = 'abspix'
             typeo(3) = 'abspix'
-            call w2wfco (lin, 3, typei, ' ', pix, typeo, ' ',
+            call w2wfco (lin, naxis, typei, ' ', pix, typeo, ' ',
      +                   .true., wstr, wl)
             write (line, 10) wstr(1)(1:wl(1)), wstr(2)(1:wl(2)), 
      +                       wstr(3)(1:wl(3))
@@ -1120,8 +1127,8 @@ c
       end
 c
 c
-      subroutine curstat (lin, blc, nx, ny, image, nimage, ibin,
-     +    jbin, doreg, redisp, smore, dolog, mark, near, lstat)
+      subroutine curstat (lin, blc, nx, ny, image, nimage, ibin, jbin,
+     +    krng, doreg, redisp, smore, dolog, mark, near, lstat)
 c-----------------------------------------------------------------------
 c     Work out statistics from region marked with cursor.  If the
 c     delineated region is invalid, you exit from here, the sub-plot
@@ -1137,6 +1144,8 @@ c    nx,ny  Size of displayed sub-image
 c    image  Sub-image (values without transfer function applied)
 c    nimage Normalization sub-image
 c    i,jbin Spatial pixel increment
+c    krng   Start channel and number of channels averaged in
+c           current display
 c    doreg  True if going on to cursor region option next
 c    dolog  Write to log file as well
 c    mark   Mark min and max
@@ -1148,7 +1157,8 @@ c    smore  Do more statistics options
 c-----------------------------------------------------------------------
       implicit none
 c
-      integer nx, ny, nimage(nx,ny), blc(2), lin, lstat, ibin, jbin
+      integer nx, ny, nimage(nx,ny), blc(2), lin, lstat, ibin, jbin,
+     +  krng(2)
       real image(nx,ny)
       logical redisp, doreg, smore, dolog, mark, near
 cc
@@ -1156,12 +1166,13 @@ cc
       parameter (symb = 17, nvmax = 100, maxruns = 50)
 c
       integer vert(2,nvmax), runs(maxruns), nruns, nv, i, j, k, iostat,
-     +  npix, iymin, iymax, kd, t, len1, ci, bin(2)
+     +  npix, iymin, iymax, kd, t, len1, ci, bin(2), naxis, wl(3)
       double precision cdelt1, cdelt2, imin, jmin, imax, jmax, 
-     +  pix(2), pixbs(2)
+     +  pix(3), pixbs(2)
       real vx(nvmax), vy(nvmax), sum, sumsq, mean, var, rms,
      +  dmin, dmax, bmin, bmaj, barea, ival
-      character line*80, ans*1, bunit*8
+      character line*80, ans*1, bunit*8, typei(3)*6, typeo(3)*6,
+     +  wstr(3)*132
       logical good, more
 c------------------------------------------------------------------------
       call output (' ')
@@ -1176,6 +1187,14 @@ c------------------------------------------------------------------------
       call output (' ')
 c
 c Get beam if present
+c
+      call initco (lin)
+      call rdhdi (lin, 'naxis', naxis, 0)
+      naxis = min(3,naxis)
+      do i = 1, naxis
+        typei(i) = 'abspix'
+      end do
+      pix(3) = (real(2*krng(1)+krng(2))-1.0)/2.0
 c
       call rdhdr (lin, 'bmaj', bmaj, 0.0)
       call rdhdr (lin, 'bmin', bmin, 0.0)
@@ -1375,32 +1394,87 @@ c
               call output (line)
               if (dolog) call txtwrite (lstat, line, len1(line), iostat)
 c
+              write (line, 16) dmin, dmax, bunit
+16            format ('Minimum = ', 1pe12.5, '  Maximum = ', 
+     +                1pe12.5, 1x, a)
+              call output (line)
+              if (dolog) call txtwrite (lstat, line, len1(line), iostat)
+c
               write (line, 17) mean, rms, npix
 17            format ('Mean = ', 1pe12.5, '  sigma = ', 1pe12.5,
      +                ' from ', i8, ' valid pixels')
               call output (line)
               if (dolog) call txtwrite (lstat, line, len1(line), iostat)
 c
-c Give data min and max value locations in unbinned pixels. Centre
-c of a binned pixel may be a fractional unbinned pixel, so use
-c real unbinned pixels.
+c Give data min and max value locations in offset pixels and
+c in absolute world coordinates
 c
               call ppconcg (2, blc(1), ibin, imin)
               call ppconcg (2, blc(2), jbin, jmin)
-c
-              write (line, 20) dmin, imin, jmin
-20            format ('Data minimum ', 1pe12.5, ' at pixel i,j = ',
-     +                0pf7.2, ',', f7.2)
-              call output (line)
+              typeo(1) = 'abspix'
+              typeo(2) = 'abspix'
+              typeo(3) = 'abspix'
+              pix(1) = imin
+              pix(2) = jmin
+              call w2wfco (lin, naxis, typei, ' ', pix, typeo, ' ',
+     +                     .false., wstr, wl)
+              line = 'Data minimum at '//
+     +              wstr(1)(1:wl(1))//', '//wstr(2)(1:wl(2))
+              call output (line)    
               if (dolog) call txtwrite (lstat, line, len1(line), iostat)
 c
               call ppconcg (2, blc(1), ibin, imax)
               call ppconcg (2, blc(2), jbin, jmax)
-c
-              write (line, 30) dmax, imax, jmax
-30            format ('Data maximum ', 1pe12.5, ' at pixel i,j = ',
-     +                0pf7.2, ',', f7.2)
+              pix(1) = imax
+              pix(2) = jmax
+              call w2wfco (lin, naxis, typei, ' ', pix, typeo, ' ',
+     +                     .false., wstr, wl)
+              line = 'Data maximum at '//
+     +              wstr(1)(1:wl(1))//', '//wstr(2)(1:wl(2))
               call output (line)
+              if (dolog) call txtwrite (lstat, line, len1(line), iostat)
+c
+c Now give locations in offset world coordinates 
+c
+c              call setoaco (lin, 'off', naxis, 0, typeo)
+c              pix(1) = imin
+c              pix(2) = jmin
+c              call w2wfco (lin, naxis, typei, ' ', pix,  typeo, ' ',
+c     +                     .false., wstr, wl)
+c              line = 'Data minimum at '//
+c     +                wstr(1)(1:wl(1))//', '//wstr(2)(1:wl(2))
+c              call output (line)    
+c              if (dolog) call txtwrite (lstat, line, len1(line), iostat)
+c
+c              pix(1) = imax
+c              pix(2) = jmax
+c              call w2wfco (lin, naxis, typei, ' ', pix,  typeo, ' ',
+c     +                     .false., wstr, wl)
+c              line = 'Data maximum at '//
+c     +                wstr(1)(1:wl(1))//', '//wstr(2)(1:wl(2))
+c               call output (line)    
+c
+c              if (dolog) call txtwrite (lstat, line, len1(line), iostat)
+c
+c Now give location in absolute world coordinate too
+c
+              call setoaco (lin, 'abs', naxis, 0, typeo)
+              pix(1) = imin
+              pix(2) = jmin
+              call w2wfco (lin, naxis, typei, ' ', pix, typeo, ' ',
+     +                     .false., wstr, wl)
+              line = 'Data minimum at '//
+     +              wstr(1)(1:wl(1))//', '//wstr(2)(1:wl(2))
+              call output (line)    
+              if (dolog) call txtwrite (lstat, line, len1(line), iostat)
+c
+              pix(1) = imax
+              pix(2) = jmax
+              call w2wfco (lin, naxis, typei, ' ', pix, typeo, ' ',
+     +                     .false., wstr, wl)
+              line = 'Data maximum at '//
+     +              wstr(1)(1:wl(1))//', '//wstr(2)(1:wl(2))
+              call output (line)    
               if (dolog) call txtwrite (lstat, line, len1(line), iostat)
 c
 c Mark location of min and max on plot if desired
@@ -1447,6 +1521,7 @@ c
           redisp = .true.
         end if
       end do
+      call finco (lin)
 c
       end
 c
@@ -2186,7 +2261,7 @@ c
 c Now cursor options
 c
       poscol = 3
-      statcol = 4
+      statcol = labcol
       regcol = 8
 c
       end
