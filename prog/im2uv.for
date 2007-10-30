@@ -12,8 +12,9 @@ c	cartesian grid. Many of the uv variables are given reasonably
 c	arbitrary values to make the output dataset appear mildly
 c	sensible.
 c@ model
-c	Input image model. No default. Only a two-dimensional model
-c	is handled.
+c	Input image model. No default. The model should have units of 
+c       Jy/pixel. eg. a clean component model. Only a two-dimensional 
+c       model is handled.
 c@ out
 c	Output visibility dataset. No default.
 c@ region
@@ -28,6 +29,7 @@ c  History:
 c    11-Feb-97 rjs  Preliminary version.
 c    14-Feb-97 rjs  Correct horrendous bug.
 c    07-jul-97 rjs  Change coaxdesc to coaxget, and arg of covelset.
+c    10-may-01 dpr  Doc change only.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
