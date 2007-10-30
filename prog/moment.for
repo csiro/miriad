@@ -55,10 +55,11 @@ c     4jan93 pjt   Fixed rather serious flagging bug when axis=3
 c     5feb93 rjs   Use memalloc.
 c     5apr93 pjt   Since rjs is walkabouting, I had to fix that amazing bug:
 c		   indexor's (i0,j0) in moment3 wrong if blc,trc used
+c    04jan96 nebk  Write header descriptors as double precision
 c------------------------------------------------------------------------
 	include 'maxdim.h'
  	character version*(*)
-	parameter(version='version 1.0 5-Apr-93')
+	parameter(version='version 1.0 4-Jan-96')
 	integer maxnax,maxboxes,maxruns,naxis
 	parameter(maxnax=3,maxboxes=2048)
 	parameter(maxruns=3*maxdim)
@@ -170,7 +171,7 @@ c------------------------------------------------------------------------
 	parameter (nkeys=22, nckeys=4)
 	character keyw(nkeys)*9, ckeyw(nckeys)*5, itoaf*1, cin*1, cout*1
 	character atemp*9,ctype*10
-	real rtemp,cdelt,crval,crpix,idx
+	double precision rtemp,cdelt,crval,crpix,idx
 	logical hdprsnt
 c
 c  Be careful that nkeys and nckeys match the number of keywords.
@@ -208,17 +209,17 @@ c
 	    do k = 2,nckeys
 	      atemp = ckeyw(k)//cin
 	      if(hdprsnt(lin,atemp)) then
-	        call rdhdr(lin,ckeyw(k)//cin,rtemp,0.0)
-	        call wrhdr(lout,ckeyw(k)//cout,rtemp)
+	        call rdhdd(lin,ckeyw(k)//cin,rtemp,0.0d0)
+	        call wrhdd(lout,ckeyw(k)//cout,rtemp)
 	      endif
 	    enddo
 c
 c  Special cases: the crpixes will change if the user uses a subcube.
 c
 	    if(hdprsnt(lin,'crpix'//cin)) then
-	      call rdhdr(lin,'crpix'//cin,rtemp,0.)
-	      rtemp = rtemp - real(blc(i)) + 1
-	      call wrhdr(lout,'crpix'//cout,rtemp)
+	      call rdhdd(lin,'crpix'//cin,rtemp,0.0d0)
+	      rtemp = rtemp - dble(blc(i)) + 1
+	      call wrhdd(lout,'crpix'//cout,rtemp)
 	    endif
 	  endif
 	enddo
@@ -250,15 +251,15 @@ c  as much as possible from the input cube
 c
         cin = itoaf(axis)
         idx = (blc(axis)+trc(axis))/2.0
-	call rdhdr(lin,'crpix'//cin, crpix, 1.0)
-	call rdhdr(lin,'cdelt'//cin, cdelt, 1.0)
-	call rdhdr(lin,'crval'//cin, crval, 0.0)
+	call rdhdd(lin,'crpix'//cin, crpix, 1.0d0)
+	call rdhdd(lin,'cdelt'//cin, cdelt, 1.0d0)
+	call rdhdd(lin,'crval'//cin, crval, 0.0d0)
 	call rdhda(lin,'ctype'//cin, ctype, ' ')
 	crval = crval + (idx-crpix)*cdelt 
 	cdelt = cdelt * (trc(axis)-blc(axis)+1)
-	call wrhdr(lout,'crpix3', 1.)
-	call wrhdr(lout,'cdelt3', cdelt)
-	call wrhdr(lout,'crval3', crval)
+	call wrhdd(lout,'crpix3', 1.d0)
+	call wrhdd(lout,'cdelt3', cdelt)
+	call wrhdd(lout,'crval3', crval)
 	call wrhda(lout,'ctype3', ctype)
 	end
 c********1*********2*********3*********4*********5*********6*********7*c
