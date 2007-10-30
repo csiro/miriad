@@ -42,6 +42,7 @@ c    rjs  29nov94 Original version.
 c    rjs  12jan95 COrrect alignment code on axis 3. Write mask file.
 c    rjs   3aug95 Mask file was not correctly set for options=nonorm.
 c    rjs  15mar97 Handle processing multiple more than MAXOPEN files.
+c    rjs  02jul97 cellscal change.
 c
 c	  mosaic       Weight the data to account for the primary beam
 c	               of a synthesis telescope. This option causes
@@ -234,7 +235,7 @@ c------------------------------------------------------------------------
 	character line*80,num*2
 c
 	integer nkeys
-	parameter(nkeys=37)
+	parameter(nkeys=38)
 	character keyw(nkeys)*8
 c
 c  Externals.
@@ -248,7 +249,8 @@ c
      *	  'ctype5  ','obstime ','epoch   ','bmaj    ','bmin    ',
      *	  'bpa     ','niters  ','object  ','telescop','observer',
      *	  'restfreq','vobs    ','obsra   ','obsdec  ','lstart  ',
-     *	  'lstep   ','ltype   ','lwidth  ','btype   ','pbfwhm  '/
+     *	  'lstep   ','ltype   ','lwidth  ','btype   ','pbfwhm  ',
+     *	  'cellscal'/
 c
 c  Write out coordinate information.
 c
