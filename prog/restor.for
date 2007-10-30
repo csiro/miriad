@@ -84,9 +84,11 @@ c    rjs  16nov94  Substantial rework. Use new "restore" routines.
 c    rjs   3dec94  Copy mosaic table across, if it exists.
 c    rjs  02jul97  Cellscal change.
 c    rjs  23jul97  Add pbtype.
+c    rjs  25feb98  Honour documentation so that a beam is not needed when
+c		   convolving.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Restor: version 1.2 3-Dec-94')
+	parameter(version='Restor: version 1.2 25-Feb-98')
 c
 	include 'maxdim.h'
 	include 'mem.h'
@@ -94,7 +96,7 @@ c
 c
 	character map*64,beam*64,modl*64,out*64,mode*16,line*72,iomode*8
 	real fwhm1,fwhm2,pa,rms
-	logical dogaus,domap,dofit
+	logical dogaus,domap,dofit,dobeam
 	integer naxis,nsize(4),xoff,yoff,zoff,i,x0,y0
 	integer mMap,nMap,oMap,mBeam,nBeam,mModel,nModel,oModel
 	integer mCnvl,nCnvl
@@ -124,10 +126,12 @@ c
 	domap  = mode.eq.'clean'.or.mode.eq.'residual'
 	dogaus = mode.eq.'convolve'.or.mode.eq.'clean'
 	dofit  = dogaus.and.fwhm1*fwhm2.eq.0
+	dobeam = dofit.or.mode.ne.'convolve'
 c
 	if(Modl.eq.' ')call bug('f','Input model name missing')
 	if(Out.eq.' ') call bug('f','Output map name missing')
-	if(Beam.eq.' ')call bug('f','Input beam name missing')
+	if(Beam.eq.' '.and.dobeam)
+     *	  call bug('f','Input beam name missing')
 	if(Map.eq.' '.and.domap)
      *	  call bug('f','Input map name missing')
 c
@@ -146,14 +150,16 @@ c
 	naxis = min(naxis,4)
 	call coInit(lModel)
 c
-	call xyopen(lBeam,Beam,'old',3,nsize)
-	mBeam = nsize(1)
-	nBeam = nsize(2)
-	if(dofit)then
-	  call rdhdr(lBeam,'bmaj',fwhm1,0.)
-	  call rdhdr(lBeam,'bmin',fwhm2,0.)
-	  call rdhdr(lBeam,'bpa',pa,0.)
-	  dofit = fwhm1*fwhm2.le.0
+	if(dobeam)then
+	  call xyopen(lBeam,Beam,'old',3,nsize)
+	  mBeam = nsize(1)
+	  nBeam = nsize(2)
+	  if(dofit)then
+	    call rdhdr(lBeam,'bmaj',fwhm1,0.)
+	    call rdhdr(lBeam,'bmin',fwhm2,0.)
+	    call rdhdr(lBeam,'bpa',pa,0.)
+	    dofit = fwhm1*fwhm2.le.0
+	  endif
 	endif
 c
 c  Fit the beam, if necessary.
@@ -218,7 +224,11 @@ c
 c  Initialise the convolution routines.
 c
 	if(mode.eq.'residual')mode = 'dirty'
-	call RestIni(lBeam,mCnvl,nCnvl,fwhm1,fwhm2,pi/180*pa,mode)
+	if(mode.eq.'convolve')then
+	  call RestIni(lModel,mCnvl,nCnvl,fwhm1,fwhm2,pi/180*pa,mode)
+	else
+	  call RestIni(lBeam,mCnvl,nCnvl,fwhm1,fwhm2,pi/180*pa,mode)
+	endif
 c
 c  Open the output, and create its header.
 c
@@ -262,7 +272,7 @@ c
 	call xyclose(lModel)
 	call xyclose(lOut)
 	if(doMap) call xyclose(lMap)
-	call xyclose(lBeam)
+	if(dobeam)call xyclose(lBeam)
 c
 	end
 c************************************************************************
