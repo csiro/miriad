@@ -115,11 +115,13 @@ c    09nov96 mchw  Allow for FREQ axis.
 c    16may97 mchw  Increase array dimensions to MAXDIM.
 c    23may97 mchw  Cosmetics. More information for users.
 c    10jun97 rjs   Use memalloc to reduce memory usage.
+c    04sep97 mchw  Upgrading. Report absolute positions with cursor.
+c    10sep97 mchw  Fix new bug at exactly 45.0 position angle.
 c----------------------------------------------------------------------c
 	include 'velplot.h'
 	include 'mem.h'
 	character*(*) version
-	parameter(version='(version 3.0 10-Jun-97)')
+	parameter(version='(version 3.0 10-SEP-97)')
 	integer maxnax,maxboxes
 	parameter(maxnax=3,maxboxes=128)
 	integer boxes(maxboxes),nsize(maxnax),blc(maxnax),trc(maxnax)
@@ -269,7 +271,7 @@ c
 	call output('Header and velocity information')
 	call output('File : '//file)
 	call header(5)
-	write (msg, *) ' map pixels (L,R,B,T)=',1-mid,nx-mid,1-midy,
+	write (msg, *) ' map pixels (L,R,B,T)=',1-midx,nx-midx,1-midy,
      *    ny-midy
 	call output(msg)
 	write(msg, *) ' Array dimensions are :nx,ny,nc=',nx,ny,nc
@@ -323,8 +325,8 @@ c
 	endif
 	call rdhda(lIn,'ctype3',ctype(3),' ')
 	call rdhdr(lIn,'epoch',epoch,0.)
-	call rdhdr(lIn,'crval1',ras,0.)
-	call rdhdr(lIn,'crval2',decs,0.)
+	call rdhdr(lIn,'crval1',crval1,0.)
+	call rdhdr(lIn,'crval2',crval2,0.)
 	call rdhdr(lIn,'crpix1',crpix1,real(nx/2+1))
 	call rdhdr(lIn,'crpix2',crpix2,real(ny/2+1))
 	call rdhdr(lIn,'restfreq',restfreq,0.)
@@ -332,7 +334,7 @@ c
 	call rdhdr(lIn,'bmin',bmin,0.)
 	call rdhdr(lIn,'bpa',bpa,0.)
 	call rdhdi(lIn,'niters',niters,0)
-	mid = nint(crpix1-blc(1)+1)
+	midx = nint(crpix1-blc(1)+1)
 	midy = nint(crpix2-blc(2)+1)
 	call output('Reading Image')
 	ipt = 1
@@ -387,7 +389,7 @@ c
 	nsize(2) = ny
 	nsize(3) = nc
 	call xyopen(lOut,filename,'new',3,nsize)
-	crpix1 = mid
+	crpix1 = midx
 	crpix2 = midy
 	call wrhdr(lOut,'crpix1',crpix1)
 	call wrhdr(lOut,'crpix2',crpix2)
@@ -400,8 +402,8 @@ c
 	call wrhda(lOut,'ctype2',ctype(2))
 	call wrhda(lOut,'ctype3',ctype(3))
 	call wrhdr(lOut,'epoch',epoch)
-	call wrhdr(lOut,'crval1',ras)
-	call wrhdr(lOut,'crval2',decs)
+	call wrhdr(lOut,'crval1',crval1)
+	call wrhdr(lOut,'crval2',crval2)
 	call wrhdr(lOut,'crpix3',1.)
 	call wrhdr(lOut,'crval3',vel)
 	call wrhdr(lOut,'cdelt3',delv)
@@ -438,18 +440,18 @@ c
 	call xyclose(lOut)
 	end
 c********1*********2*********3*********4*********5*********6*********7**
-	subroutine wrposvel(ary,nx,ny,nc,crval1,crval2,crval3,
+	subroutine wrposvel(ary,nx,ny,nc,pval1,pval2,pval3,
      *		crpix1,crpix2,cdelt1,cdelt2)
 	implicit none
 	integer nx,ny,nc
-	real ary(1),crval1,crval2,crval3,crpix1,crpix2,cdelt1,cdelt2
+	real ary(1),pval1,pval2,pval3,crpix1,crpix2,cdelt1,cdelt2
 c
 c  Write out Miriad Image.
 c
 c  Inputs:
 c    ary(nx,ny,nc)	spectral line image
 c    nx ny nc	 	dimensions of image
-c    crval1,2,3
+c    pval1,2,3
 c    crpix1,2
 c    cdelt1,2
 c    common/head/ contains map header
@@ -469,9 +471,9 @@ c
 	call wrhda(lOut,'ctype1',ctype(3))
 	call wrhda(lOut,'ctype2','POSITION')
 	call wrhda(lOut,'ctype3','ANGLE')
-	call wrhdr(lOut,'crval1',crval1)
-	call wrhdr(lOut,'crval2',crval2)
-	call wrhdr(lOut,'crval3',crval3)
+	call wrhdr(lOut,'crval1',pval1)
+	call wrhdr(lOut,'crval2',pval2)
+	call wrhdr(lOut,'crval3',pval3)
 	call wrhdr(lOut,'crpix1',crpix1)
 	call wrhdr(lOut,'crpix2',crpix2)
 	call wrhdr(lOut,'crpix3',1.)
@@ -684,34 +686,22 @@ c********1*********2*********3*********4*********5*********6*********7**
 c  convert units and write out map header if ipr .ne. 0.
 c----------------------------------------------------------------------c
 	include 'velplot.h'
-	real rae(3),dece(3),ckms,rts,hours,degs,deg,freqs
+	real ckms,rts,freqs
 	real omega,pixel,pi
-	integer mins,len1
-	character*80 line
-	common/back/rae,dece
-	data  ckms/299793./,pi/3.141592654/
+	character line*120
+	character*13  ras, decs
+	parameter (ckms=299793.,pi=3.141592654)
 c
-c  radians to arcsecs
-	rts = 3600.*180./pi
+c  External
 c
-c ---- convert RA and DEC units ----
-c
-	if(ras.lt.0.) ras = ras + 2.*pi
-	hours = ras*12./pi
-	rae(1)=int(hours)
-	mins = 60.*(hours-int(hours))
-	rae(2)=mins
-	rae(3)=3600.*(hours-int(hours))-60.*mins
-c
-	degs=decs*180./pi
-	dece(1)=int(degs)
-	deg=abs(degs)
-	mins = 60.*(deg-int(deg))
-	dece(2)=mins
-	dece(3)=3600.*(deg-int(deg))-60.*mins
+	integer len1
+	character hangleh*13, rangleh*13
 c
 c --- convert units for maps ----
 c
+	ras = hangleh(dble(crval1))
+	decs = rangleh(dble(crval2))
+	rts = 3600.*180./pi
 	cbof = 1.
 	if(bmaj*bmin.ne.0.) then
 	  pixel = xy/rts
@@ -732,24 +722,25 @@ c --- write out map header information ---
 c
   	if(ipr.eq.0)then
 	   return
- 	else if(ipr.eq.5)then
-	  write(line,100) object,rae,dece,xy,vel,delv
+        else if(ipr.eq.5)then
+	  write(line,100) object,ras,decs,
+     *	    ' cell:',xy,' vel:',vel,' delv:',delv
 	  call output(line(1:len1(line)))
 	  write(line,101) ctype,posx,posy,pospa,restfreq,bunit
 	  call output(line(1:len1(line)))
 	  write(line,102) bmaj*rts, bmin*rts, bpa, niters,dperjy,cbof
 	  call output(line(1:len1(line)))
- 	else if(ipr.eq.6)then
-	  write(line,100) object,rae,dece,xy,vel,delv
-	  call LogWrit(line(1:len1(line)))
-	  write(line,101) ctype,posx,posy,pospa,restfreq,bunit
-	  call LogWrit(line(1:len1(line)))
-	  write(line,102) bmaj*rts, bmin*rts, bpa, niters,dperjy,cbof
-	  call LogWrit(line(1:len1(line)))
+        else if(ipr.eq.6)then
+	  write(line,100) object,ras,decs,
+     *	    ' cell:',xy,' vel:',vel,' delv:',delv
+          call LogWrit(line(1:len1(line)))
+          write(line,101) ctype,posx,posy,pospa,restfreq,bunit
+          call LogWrit(line(1:len1(line)))
+          write(line,102) bmaj*rts, bmin*rts, bpa, niters,dperjy,cbof
+          call LogWrit(line(1:len1(line)))
 	endif
 
-100	format(a,1x,2(f5.0,f3.0,f6.3),' xy:',f8.3,' vel:',f8.2,
-     *	' delv:',f8.2)
+100	format(a,x,a,x,a,a,f8.3,a,f8.2,a,f8.2)
 101  	format(a,a,a,3f6.2,' freq:',f9.5,' unit:',a)
 102  	format('beam:',3f6.1,' niters:',i7,' K/Jy:',f9.2,' cbof:',f7.2)
 
@@ -812,10 +803,15 @@ c----------------------------------------------------------------------c
 	real xx,yy  
         real xx1,yy1
         character*1 key2
-        character*80 msg
+        character msg*80, ras*13, decs*13
         integer sym
         real sx(2),sy(2),flux,pat,xpts(2),ypts(2)
-        real pi
+        real pi, rts
+        parameter (pi = 3.141592654, rts = 3600.*180./pi)
+c
+c  External
+c
+        character*13  hangleh, rangleh
 c
 	integer nspec,ngauss(49)
 	real xc(49),yc(49),gauss(49,3,10),gausserr(49,3,10)
@@ -825,8 +821,6 @@ c
 	real xcut(128),ycut(128),pa(128)
         common /cuts/ xcut,ycut,pa,ncut
 c
-        pi=3.141592654
-
 10	call output('>CURSOR OPTIONS: Type L to list options :')
 	xx = 0.
 	yy = 0.
@@ -920,11 +914,17 @@ c  Get position for spectra
 	  xc(nspec)=xx
 	  yc(nspec)=yy
 	  write(msg, 113) nspec,xx,yy
+113	  format(' spectra(',i2,') x=',f8.3,'  y=',f8.3)
 	  call output(msg)
           sx(1)=xc(nspec)
           sy(1)=yc(nspec)
           sym=nspec+64
           call pgpt(1,sx,sy,sym)
+c  ra and dec
+          ras = hangleh(dble(crval1-xx/rts/cos(crval2)))
+          decs = rangleh(dble(crval2+yy/rts))
+          write(msg,'(a,a)') ras, decs
+	  call output(msg)
 c  Get pos-vel cuts 
 	else if (key.eq.'P') then
 	  if(ncut.ge.25) then
@@ -943,6 +943,7 @@ c  Get pos-vel cuts
           xcut(ncut)=0.5*(xx1+xx)
           ycut(ncut)=0.5*(yy1+yy)
           write(msg, 114) ncut,xcut(ncut),ycut(ncut),pa(ncut)
+114       format(' cut(',i2,') x=',f8.3,' y=',f8.3,' pa=',f8.3)
           call output(msg)
           pat=-tan(pi/2.-pa(ncut)*pi/180.)
           xpts(1)=-1e4
@@ -974,8 +975,13 @@ c  write out map
           endif
 c  cursor position and value
 	else if (key.eq.'V') then
-	  flux = ary(nint(xx)+mid,nint(yy)+midy)
+	  flux = ary(nint(xx)+midx,nint(yy)+midy)
 	  write(msg, *) 'x=',xx, '  y=',yy, '  value=',flux
+	  call output(msg)
+c  ra and dec
+          ras = hangleh(dble(crval1-xx/rts/cos(crval2)))
+          decs = rangleh(dble(crval2+yy/rts))
+          write(msg,'(a,a)') ras, decs
 	  call output(msg)
 c clear spectrum pos-vel stacks
         else if (key.eq.'D') then
@@ -984,14 +990,14 @@ c clear spectrum pos-vel stacks
           ncut=0
 c define box and find integral and rms.
 	else if (key.eq.'B') then
-	  is = nint(xx/xy) + mid
+	  is = nint(xx/xy) + midx
 	  ib = nint(yy/xy) + midy
-	  write(msg, *) 'blc=(', is-mid, ',', ib-midy, ')'
+	  write(msg, *) 'blc=(', is-midx, ',', ib-midy, ')'
 	  call output(msg)
 	else if (key.eq.'T') then
-	  ie = nint(xx/xy) + mid
+	  ie = nint(xx/xy) + midx
 	  it = nint(yy/xy) + midy
-	  write(msg, *) 'trc=(', ie-mid, ',', it-midy, ')'
+	  write(msg, *) 'trc=(', ie-midx, ',', it-midy, ')'
 	  call output(msg)
 	else if (key.eq.'I') then
           call integrat(ary,nx,ny)
@@ -1001,8 +1007,6 @@ c define box and find integral and rms.
 	  go to 10
 	end if
   	go to 10
-113	format(' spectra(',i2,') x=',f8.3,'  y=',f8.3)
-114     format(' cut(',i2,') x=',f8.3,' y=',f8.3,' pa=',f8.3)
 	end
 c********1*********2*********3*********4*********5*********6*********7**
 	subroutine Integral(ary,vlsr,nx,ny,nc)
@@ -1025,7 +1029,7 @@ c-----------------------------------------------------------------------
 c
 	call header(0)
         write(line,'(a,4i6,a)') 'Integral and rms in box (',
-     *				is-mid,ib-midy,ie-mid,it-midy, ')'
+     *				is-midx,ib-midy,ie-midx,it-midy, ')'
 	call output(line)
 	write(line,'(a,a,a,a,a,a,a)') ' plane  ','  Velocity  ',
      *    ' Total Flux ','  Maximum   ','  Minimum   ','  Average   ',
@@ -1047,7 +1051,7 @@ c	call prompt(line,k,'>Type <cr> to continue')
 	if(ans.eq.'Y')then
 	  call header(0)
           write(line,'(a,4i6,a)') 'Integral and rms in box (',
-     *				is-mid,ib-midy,ie-mid,it-midy, ')'
+     *				is-midx,ib-midy,ie-midx,it-midy, ')'
 	  call LogWrit(line)
 	  write(line,'(a,a,a,a,a,a,a)') ' plane  ','  Velocity  ',
      *    ' Total Flux ','  Maximum   ','  Minimum   ','  Average   ',
@@ -1081,7 +1085,7 @@ c----------------------------------------------------------------------c
 	integer imin,jmin,imax,jmax,num
 c
         write(line,'(a,4i6,a)') 'Integral and rms in box (',
-     *				is-mid,ib-midy,ie-mid,it-midy, ')'
+     *				is-midx,ib-midy,ie-midx,it-midy, ')'
 	call output(line)
 	write(line,'(a,a,a,a,a,a)') '  Velocity  ',
      *    ' Total Flux ','  Maximum   ','  Minimum   ','  Average   ',
@@ -1404,27 +1408,29 @@ c
 c  Annotate plots.
 c----------------------------------------------------------------------c
 	include 'velplot.h'
-	real rae(3),dece(3),rts,pi,yloc
-	common/back/rae,dece
+	real rts,pi,yloc
 	character line*80
+        character*13  ras, decs
 	integer i,j
 	real scale,absmax
-	pi = 3.141592654
-	rts = 3600.*180./pi
+	parameter (pi = 3.141592654, rts = 3600.*180./pi)
+c
+c  External
+c
+        character*13  hangleh, rangleh
 c
 c  Set pg viewport to right side.
 c
         call pgswin(0.0,1.0,0.0,1.0)
-
-	call header(0)
 c  object
         call pgtext(0.,0.95,object)
 c  ra and dec
-	write(line,'(2i3,f6.2,x,2i3,f5.1)') int(rae(1)),
-     *    int(rae(2)),rae(3),int(dece(1)),int(dece(2)),dece(3)
+	ras = hangleh(dble(crval1))
+	decs = rangleh(dble(crval2))
+	write(line,'(a,a)') ras, decs
         call pgtext(0.,0.9,line)
 c  epoch
-	write(line,'   (''('',f5.0,'')'')') epoch
+	write(line,'(a,f5.0)') 'epoch: ', epoch
         call pgtext(0.0,0.86,line)
 c  pixel 
 	write(line,'(f9.2,''  x'',f9.2)') xy, xy
@@ -1454,7 +1460,7 @@ c  convolving beam
           call pgtext(0.0,0.46,line)
         endif
 c  bunit
-        write(line,'(''Map Unit:'',x,A)') bunit
+        write(line,'(''Map Unit:'',x,a)') bunit
         call pgtext(0.0,0.40,line)
 c  dperjy
 	write(line,'(''K/Jy ='',1pg10.3)') dperjy
@@ -1509,7 +1515,7 @@ c
 c  Inputs:
 c    iopt=0 for relative coords; iopt=1 for absolute coords
 c    nx,ny	Size of array.
-c    xy,ras,decs come from the map header
+c    xy,crval1,crval2 come from the map header
 c  Outputs:
 c    xmin,xmax,ymin,ymax	plot limits
 c----------------------------------------------------------------------c
@@ -1520,21 +1526,21 @@ c
 c  Relative coords.
 c
 	if(iopt .eq. 0) then
-	  xmin = -xy*(1-mid)
-	  xmax = -xy*(nx-mid)
+	  xmin = -xy*(1-midx)
+	  xmax = -xy*(nx-midx)
 	  ymin = xy*(1-midy)
 	  ymax = xy*(ny-midy)
 c
 c  Absolute coords.
 c
 	else if(iopt .eq. 1) then
-	  rasec = ras * 206264.806/15.
-	  decsec = decs * 206264.806
-	  xmin = rasec - xy*(1-mid)/cos(decs)/15.
-	  xmax = rasec - xy*(nx-mid)/cos(decs)/15.
+	  rasec = crval1 * 206264.806/15.
+	  decsec = crval2 * 206264.806
+	  xmin = rasec - xy*(1-midx)/cos(crval2)/15.
+	  xmax = rasec - xy*(nx-midx)/cos(crval2)/15.
 	  ymin = decsec + xy*(1-midy)
 	  ymax = decsec + xy*(ny-midy)
-          write(msg, *) cos(decs),cos(decs)/15.,rasec,decsec
+          write(msg, *) cos(crval2),cos(crval2)/15.,rasec,decsec
           call output(msg)
 	endif
 	end
@@ -1688,7 +1694,7 @@ c
 	call output('Image: '//file)
 	call output('source: '//object//'  map units: '//bunit)
 	write(text,'('' summary for box '',4i5)')
-     *			 1-mid, nx-mid, 1-midy, ny-midy
+     *			 1-midx, nx-midx, 1-midy, ny-midy
 	call output(text)
 c
 c  Find max,min,rms in selected region.
@@ -1697,10 +1703,10 @@ c
      *				imin,jmin,ave,arms,num)
 	call header(0)
 	write(text,'(''Maximum='',1pg10.3,''at '',2i5)')
-     *		tmax, imax-mid, jmax-midy
+     *		tmax, imax-midx, jmax-midy
 	call output(text)
 	write(text,'(''Minimum='',1pg10.3,''at '',2i5)')
-     *		tmin, imin-mid, jmin-midy
+     *		tmin, imin-midx, jmin-midy
 	call output(text)
 	write(text,'(''Average='',1pg10.3,''  rms='',1pg10.3)')ave,arms
 	call output(text)
@@ -1720,7 +1726,7 @@ c
 	write(text, *) 'units are: ',1./scale,' ',bunit
 	call output(text)
 	iend = min(nx,24)
-	write(text, 103) -midy,(i-mid,i=1,iend)
+	write(text, 103) -midy,(i-midx,i=1,iend)
 	call output(text)
 	do j=ny,1,-1
 	  do i=1,iend
@@ -1733,7 +1739,7 @@ c
 	  write(text, 103) j-midy,(line(i),i=1,iend)
 	  call output(text)
 	enddo
-	write(text, 103) -midy,(i-mid,i=1,iend)
+	write(text, 103) -midy,(i-midx,i=1,iend)
 	call output(text)
 103	format(1x,i4,1x,24i3)
 	end
@@ -2023,7 +2029,7 @@ c
 c
 c  Find position of spectra in the array.
 c
-	  x0 =  xc(spec)/xy + mid
+	  x0 =  xc(spec)/xy + midx
 	  y0 =  yc(spec)/xy + midy
 	  ix = nint(x0)
 	  iy = nint(y0)
@@ -2909,7 +2915,7 @@ c-----------------------------------------------------------------------
 	real ms,conary(MAXDIM),pi
 	pi = 3.141592654
 c
-	ix = nint(xc/xy) + mid
+	ix = nint(xc/xy) + midx
 	iy = nint(yc/xy) + midy
 	if(ix.lt.1 .or. ix.gt.nx .or. iy.lt.1 .or. iy.gt.ny) then
 	  call output('pos-vel requested center is outside array')
@@ -2924,12 +2930,13 @@ c
 c
 c  Find the points where this line goes outside the box 
 c
+	if (pa.eq.45.0) pa=44.999
 	if (pa.eq.90.0) then
-	  x1 = (is-mid)*xy
+	  x1 = (is-midx)*xy
 	  y1 = yc
 	  np = nx
 	  step = xy
-	  x0 = (nx - mid) * xy
+	  x0 = (nx - midx) * xy
 	  y0 = yc
 	else if (pa.eq.0.0) then
 	  x1 = xc
@@ -2943,10 +2950,10 @@ c  General case y = ms*x + c ;  yl is the intercept on the left edge,
 c    and xl is the intercept on the bottom.
 	  ms = -1./tan(pa*pi/180.)
 	  c = yc - (ms*xc)
-	  yl = (is-mid)*xy*ms + c
+	  yl = (is-midx)*xy*ms + c
 	  xl = ( (1-midy)*xy - c)/ms
 c  Test to see when line leaves box and set x1,y1 to this point
-	  x1 = (is-mid)*xy
+	  x1 = (is-midx)*xy
 	  y1 = (1-midy)*xy
  	  if(yl.gt.(1-midy)*xy .and. yl.le.(ny-midy)*xy) then 
 c  line intercepts left side of box
@@ -2965,9 +2972,9 @@ c  Now find the start of the line so that the length and step size
 c  can be found. xr and yr are the intercepts on the right and bottom. 
 c
 	  xr = ( (ny-midy)*xy - c)/ms
-	  yr = (nx-mid)*xy*ms + c
+	  yr = (nx-midx)*xy*ms + c
 c  Test to see when line enters box and set x0,y0 to this point
-	  x0 = (nx-mid)*xy
+	  x0 = (nx-midx)*xy
 	  y0 = (ny-midy)*xy
  	  if (yr.gt.(1-midy)*xy .and. yr.le.(ny-midy)*xy) then 
 c  line intercepts right side of box
@@ -3010,7 +3017,7 @@ c
 c
 c  Convert arcsec to pixel numbers
 c
-	  fi = (x0/xy) + mid
+	  fi = (x0/xy) + midx
 	  fj = (y0/xy) + midy
 c
 c  check that point is within the array
@@ -3891,7 +3898,7 @@ c
 	  ncut=ny
 	  do i=1,ncut
 	    xcut(i) = 0.0
-	    ycut(i) = (i-mid) * xy
+	    ycut(i) = (i-midx) * xy
 	    pa(i) = 90.0
 	  enddo
 c
@@ -3900,7 +3907,7 @@ c
 	else if (ans.eq.'Y') then
 	  ncut=nx
 	  do i=1,ncut
-	    xcut(i)=(i-mid) * xy
+	    xcut(i)=(i-midx) * xy
 	    ycut(i)=0.0
 	    pa(i)=0.0
 	  enddo
