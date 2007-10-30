@@ -233,6 +233,9 @@ c	                "B" is one of "l" or "r"
 c	  means draw the beam FWHM on the plot in the corner indicated
 c	  by the "AB" location. This option is deprecated: use the
 c         keyword "beamtyp" instead.
+c       "blacklab" means that, if the device is white-background, draw
+c         the axis labels in black. Default is red. Personally, I think
+c         blacklabel is better, but maybe I'm thinking of something else...
 c	"conlabel" means label the contour values on the actual contours.
 c	  The PGPLOT routine that does this is not very bright. You will
 c	  probably get too many labels.  If you bin the image up with
@@ -659,6 +662,7 @@ c    rjs  13jul00  Correct angle of beam plotting when there is a rotation
 c		   between sky and pixel grid.
 c    dpr  14feb01  Add beamtyp keyword
 c    dpr  27feb01  Added scale-bar
+c    dpr  18jun01  Add option blacklabel
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -706,6 +710,7 @@ c
      -     dobeam, candobeam, beaml, beamb, relax, rot90, signs, mirror,
      -     dowedge, doerase, doepoch, bdone, doblb, doblm, dofid, dosing
      -     , nofirst, grid, dotr, dodist, conlab, doabut, getvsc, noflab
+     -     , blacklab
 c
       data blankc, blankv, blankb /-99999999.0, -99999999.0, 
      +                             -99999999.0/
@@ -722,7 +727,7 @@ c
       data lwid /maxconp3*1/
       data getvsc /.true./
 c-----------------------------------------------------------------------
-      call output ('CgDisp: version 27-Feb-01')
+      call output ('CgDisp: version 18-Jun-01')
       call output (' ')
 c
 c Get user inputs
@@ -735,7 +740,7 @@ c
      -     ofile, dobeam, beaml, beamb, relax, rot90, signs, mirror,
      -     dowedge, doerase, doepoch, dofid, dosing, nofirst, grid, dotr
      -     , dodist, conlab, doabut, val3form, ncols1, cols1, fs, hs,
-     -     firstimage)
+     -     firstimage, blacklab)
 c
 c Open images as required
 c
@@ -820,7 +825,7 @@ c
 c Set colours for line graphics
 c
       call setlgc (bgcol, labcol, concol, veccol, boxcol, 
-     +             ovrcol, bemcol)
+     +             ovrcol, bemcol, blacklab)
 c
 c Init OFM routines 
 c
@@ -1746,7 +1751,7 @@ c
       subroutine decopt  (dofull, do3val, do3pix, eqscale, gaps, solneg,
      +   beambl, beambr, beamtl, beamtr, relax, rot90, signs, 
      +   mirror, dowedge, doerase, doepoch, dofid, dosing, nofirst,
-     +   grid, dotr, dodist, conlab, doabut)
+     +   grid, dotr, dodist, conlab, doabut, blacklab)
 c----------------------------------------------------------------------
 c     Decode options array into named variables.
 c
@@ -1779,17 +1784,18 @@ c     dotr      Label top and right as well as left and bottom axes
 c     dodist    Distort overlays with grid
 c     conlab    Label contours
 c     doabut    No white space between subplots
+c     blacklab  True if labels are black for white background devices
 c-----------------------------------------------------------------------
       implicit none
 c
       logical dofull, do3val, do3pix, eqscale, gaps, solneg(*),
      +  beambl, beambr, beamtl, beamtr, relax, rot90, signs,
      +  mirror, dowedge, doerase, doepoch, dofid, dosing, nofirst,
-     +  grid, dotr, dodist, conlab, doabut
+     +  grid, dotr, dodist, conlab, doabut, blacklab
 
 cc
       integer maxopt
-      parameter (maxopt = 27)
+      parameter (maxopt = 28)
 c
       character opshuns(maxopt)*9
       logical present(maxopt)
@@ -1799,7 +1805,7 @@ c
      +              'relax   ', 'rot90   ', 'signs   ', 'mirror',
      +              'wedge   ', 'noerase ', 'noepoch ', 'fiddle',
      +              'single  ', 'nofirst',  'grid    ', 'trlab',
-     +              'nodistort', 'conlabel','abut    '/
+     +              'nodistort', 'conlabel','abut    ', 'blacklab'/
 c-----------------------------------------------------------------------
       call optcg ('options', opshuns, present, maxopt)
 c
@@ -1830,6 +1836,7 @@ c
       dodist    = .not.present(25)
       conlab    =      present(26)
       doabut    =      present(27)
+      blacklab  =      present(28)
 c
       end
 c
@@ -2452,7 +2459,7 @@ c
      -     , ofile, dobeam, beaml, beamb, relax, rot90, signs, mirror,
      -     dowedge, doerase, doepoch, dofid, dosing, nofirst, grid, dotr
      -     , dodist, conlab, doabut, val3form, ncols1, cols1, fs, hs,
-     -     firstimage)
+     -     firstimage, blacklab)
 c-----------------------------------------------------------------------
 c     Get the unfortunate user's long list of inputs
 c
@@ -2535,6 +2542,7 @@ c   fs         PGPLOT fill style
 c   hs         PGPLOT hatching style
 c   firstimage first image specified (used for beam plotting). Given
 c              in bemprs format (see below)
+c   blacklab   True if labels are black for white background devices
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -2550,7 +2558,7 @@ c
       logical do3val, do3pix, dofull, gaps, eqscale, solneg(maxcon),
      +  dobeam, beaml, beamb, relax, rot90, signs, mirror, dowedge,
      +  doerase, doepoch, dofid, dosing, nofirst, grid, dotr, 
-     +  dodist, dunw, conlab, doabut
+     +  dodist, dunw, conlab, doabut, blacklab
 cc
       integer nmaxim
       parameter (nmaxim = 8)
@@ -2771,7 +2779,7 @@ c
       call decopt (dofull, do3val, do3pix, eqscale, gaps, solneg,
      +   beambl, beambr, beamtl, beamtr, relax, rot90, signs, 
      +   mirror, dowedge, doerase, doepoch, dofid, dosing, nofirst,
-     +   grid, dotr, dodist, conlab, doabut)
+     +   grid, dotr, dodist, conlab, doabut, blacklab)
 c
       call keya ('3format', val3form, ' ')
 c
@@ -4046,7 +4054,7 @@ c
 c
 c
       subroutine setlgc (bgcol, labcol, concol, veccol, boxcol, 
-     +                   ovrcol, bemcol)
+     +                   ovrcol, bemcol,blacklab)
 c-----------------------------------------------------------------------
 c     Set line graphics colours
 c
@@ -4055,11 +4063,14 @@ c    bgcol 0 -> background is black
 c	   1 ->               white
 c         -1 ->               something else
 c
+c    blacklab - true if labels are to be black for white background
+c               devices (default is red?!)
 c  OUtput
 c    colour indices to use
 c-----------------------------------------------------------------------
       implicit none
       integer bgcol, concol(*), veccol, boxcol, ovrcol, bemcol, labcol
+      logical blacklab
 c-----------------------------------------------------------------------
 c
 c Labels first
@@ -4069,7 +4080,12 @@ c
 c
 c White background
 c
-        labcol = 2
+        if (blacklab) then
+          labcol = 1
+        else 
+          labcol = 2
+        end if
+
       else if (bgcol.eq.0) then
 c
 c Black background
