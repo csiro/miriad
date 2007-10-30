@@ -67,6 +67,8 @@ c@ flux
 c	If MODEL is blank, then the flux (Jy) of a point source model should
 c	be specified here. Also used as the default flux in the apriori
 c	option. The default is 1 (assuming the model parameter is not given).
+c	The flux can optionally be followed by i,q,u,v or the other
+c	polarisation mnemonics to indicate the polarisation type.
 c@ offset
 c	The RA and DEC offsets (arcseconds) of the point source from the
 c	observing center. A point source to the north and east has positive
@@ -123,15 +125,16 @@ c    rjs  23dec93 Minimum match of linetype name.
 c    rjs  31jan95 Changes to support w-axis.
 c    mhw  05jan96 Add zero option to avoid flagging outer uvplane
 c    rjs  30sep96 Tidy up and improved polarisation handling.
+c    rjs  19jun97 Point source models can be different polarisations.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
-	parameter(version='version 1.0 30-Sep-96')
+	parameter(version='version 1.0 19-Jun-97')
 	integer maxsels,nhead,nbuf
 	parameter(maxsels=64,nhead=1,nbuf=5*maxchan+nhead)
 c
 	character vis*64,modl*64,out*64,oper*8,ltype*32,type*1
-	character flag1*8,flag2*8
+	character flag1*8,flag2*8,poltype*4
 	logical unflag,updated,defline
 	logical mfs,selradec,doclip
 	real sels(maxsels),offset(2),flux(2),clip,sigma
@@ -150,6 +153,7 @@ c  Externals.
 c
 	external header
 	logical keyprsnt
+	integer polsp2c
 c
 c  Get the input parameters.
 c
@@ -162,7 +166,8 @@ c
 	doclip = keyprsnt('clip')
 	call keyr('clip',clip,0.)
 	call keyr('flux',flux(1),1.)
-	flux(2) = 1
+	call keya('flux',poltype,'i')
+	flux(2) = polsp2c(poltype)
 	call keyr('sigma',sigma,100.)
 	call keyr('offset',offset(1),0.)
 	call keyr('offset',offset(2),0.)
