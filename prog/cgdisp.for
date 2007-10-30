@@ -517,7 +517,7 @@ c                  original, not linearized version
 c    nebk 20feb95  Add colour table selection to keyword "range" and
 c		   get pgimag to make black on white for hard copy.
 c		   Move to image type "pixel" instead of "grey"
-c    nebk 10apr95  Add doc for absolute b&w lookup table
+c    nebk 10apr95  Accomodate absolute b&w lookup table 
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -564,12 +564,12 @@ c
      +  blankc, blankv, blankb, vecfac, boxfac
       real x1, x2, y1, y2
 c
-      integer blc(3), trc(3), win(2), lwid(maxcon+3), vecinc(2), 
-     +  boxinc(2), srtlev(maxlev,maxcon), nlevs(maxcon), 
+      integer blc(3), trc(3), win(2), lwid(maxcon+3), 
+     +  vecinc(2), boxinc(2), srtlev(maxlev,maxcon), nlevs(maxcon), 
      +  grpbeg(maxchan), ngrp(maxchan), his(nbins), ibin(2), jbin(2), 
      +  kbin(2), krng(2), coltab(maxgr)
-      integer  nx, ny, lpos, npos, ierr, pgbeg, ilen, igr, iofm,
-     +  nlast, ngrps, ncon, i, j, nvec, ipage, jj, npixr, wedcod
+      integer  nx, ny, lpos, npos, ierr, pgbeg, ilen, igr, nlast, 
+     +  ngrps, ncon, i, j, nvec, ipage, jj, npixr, wedcod
 c
       character ofig(maxpos)*10, posid(maxpos)*20, labtyp(2)*6, 
      +  levtyp(maxcon)*1
@@ -580,7 +580,7 @@ c
       logical solneg(maxcon), doblv(2), bemprs(maxcon+4), owrite(maxpos)
       logical do3val, do3pix, dofull, gaps, eqscale, doblc, doblg,
      +  dobeam, beaml, beamb, relax, rot90, signs, mirror, dowedge, 
-     +  doerase, doepoch, bdone, doblb, doblm, dofid, dosing, reverse
+     +  doerase, doepoch, bdone, doblb, doblm, dofid, dosing
 c
       data blankc, blankv, blankb /-99999999.0, -99999999.0, 
      +                             -99999999.0/
@@ -592,13 +592,13 @@ c
      +             'absghz', 'relghz', 'abskms', 'relkms', 'abslin', 
      +             'rellin', 'absdeg', 'reldeg', 'none'/
       data dmm /2*0.0/
+      data coltab /maxgr*-1/
 c-----------------------------------------------------------------------
       call output ('CgDisp: version 10-Apr-95')
+      call output ('New absolute b&w lookup table available')
+      call output (' ')
       call output ('Keyword "range" can now be used to specify the')
       call output ('colour lookup table as well the transfer function')
-      call output (' ')
-      call output ('Options=fiddle is now keyboard driven for '//
-     +             'hard-copy devices')
       call output (' ')
 c
 c Get user inputs
@@ -677,11 +677,6 @@ c
       if (ngrps.eq.1 .or. nx*ny.eq.1) gaps = .true.
       npixr = min(ngrps,npixr)
 c
-c Work out if wedge outside or inside subplots. Also work out
-c if plotting one wedge per subplot or one wedge for all
-c
-      call wedgincg (dowedge, nx, ny, npixr, trfun, wedcod)
-c
 c Work out default character sizes for axis and channel labels
 c
       call defchrcg (nx, ny, cs(1))
@@ -703,7 +698,12 @@ c
 c
 c Init OFM routines 
 c
-      call ofmini
+      if (gin.ne.' ') call ofmini
+c
+c Work out if wedge outside or inside subplots. Also work out
+c if plotting one wedge per subplot or one wedge for all
+c
+      call wedgincg (hard, dofid, dowedge, nx, ny, npixr, trfun, wedcod)
 c  
 c Set label displacements from axes and set PGTBOX labelling 
 c option strings
@@ -783,7 +783,8 @@ c
              krng(2) = 1
            end if
 c
-c Apply transfer function to pixel range
+c Apply transfer function to pixel range. Apply the last
+c transfer function given if there aren't enough.
 c
            igr = min(j,npixr)
            call grfixcg (pixr(1,igr), lg, gnaxis, gsize, 
@@ -805,37 +806,20 @@ c
      +       call apptrfcg (pixr2, trfun(igr), groff, win(1)*win(2),
      +          memi(ipnim), memr(ipim), nbins, his, cumhis)
 c
-c Apply user specified OFM to device.   Here a b&w ofm will be 
-c applied by default if user has not specified one with keyword "range".
+c Apply specified OFM or do interactive fiddle to hardcopy 
+c PGPLOT devices here
 c
-           call ofmcol (coltab(igr), pixr2(1), pixr2(2))
+           if (hard.eq.'YES') call hardofm (coltab(j), pixr2, dofid, j, 
+     +       jj, dosing, tfvp, win, memr(ipim), memi(ipnim))
 c
-c Interactive modification of OFM for hardcopy devices here; must be 
-c done before PGIMAG called.  Any chnage of lookup table here will
-c overwrite that done with call to ofmcol above
+c Draw image
 c
-           if (hard.eq.'YES' .and. dofid .and. (jj.eq.1 .or. dosing))
-     +       call ofmmod (tfvp, win(1)*win(2), memr(ipim), 
-     +                    memi(ipnim), pixr2(1), pixr2(2))
+           call pgimag (memr(ipim), win(1), win(2), 1, win(1), 
+     +                  1, win(2), pixr2(1), pixr2(2), tr)
 c
-c Draw image.  Note that for hardcopy devices we generally want
-c black on white, not white on black.  So if no colour table has 
-c been applied, make it so.  Yes Captain.
+c Apply user specified OFM to PGPLOT device.   
 c
-           reverse = .false.
-           if (hard.eq.'YES') then
-             call ofminq (iofm)
-             if (iofm.eq.1) reverse = .true.
-             if (iofm.eq.9) call ofmfudge
-           end if
-c
-           if (reverse) then
-             call pgimag (memr(ipim), win(1), win(2), 1, win(1), 
-     +                    1, win(2), pixr2(2), pixr2(1), tr)
-           else
-             call pgimag (memr(ipim), win(1), win(2), 1, win(1), 
-     +                    1, win(2), pixr2(1), pixr2(2), tr)
-           end if
+           if (hard.ne.'YES') call intofm (coltab(j), j, pixr)
          end if
 c
 c Label and draw axes before fiddle else looks silly. Also forces
@@ -851,9 +835,12 @@ c
 c Draw wedge now so that it overwrites axis label ticks when wedge
 c drawn inside subplot
 c
-         if (dowedge) call wedgecg (reverse, wedcod, wedwid, jj, 
-     +                  trfun(igr), groff, nbins, cumhis, 
-     +                  wdgvp, pixr(1,igr), pixr(2,igr))
+         if (dowedge) call wedgecg (wedcod, wedwid, jj, trfun(igr),
+     +     groff, nbins, cumhis, wdgvp, pixr(1,igr), pixr(2,igr))
+c
+c Retake complement of OFM if needed (hard copy devices only)
+c
+         if (hard.eq.'YES') call ofmcmp
 c
 c Interactive modification of OFM for interactive devices here
 c
@@ -983,11 +970,11 @@ c
            call pgslw (1)
            call pgsci (1)
            if (hard.eq.'NO') call pgsci (7)
-           call fullann (ncon, cin, gin, vin, bin, lc, lg, lv, lb,
-     +        maxlev, nlevs, levs, srtlev, slev, npixr, trfun, pixr, 
-     +        vfac, bfac, naxis, size, scrval, scrpix, scdelt, sctype,
-     +        vymin, blc, trc, cs, ydispb, ibin, jbin, kbin, 
-     +        labtyp, gmm, cmm)
+           call fullann (maxcon, ncon, cin, gin, vin, bin, lc, lg,
+     +        lv, lb, maxlev, nlevs, levs, srtlev, slev, npixr,
+     +        trfun, pixr, vfac, bfac, naxis, size, scrval, scrpix,
+     +        scdelt, sctype, vymin, blc, trc, cs, ydispb, ibin, 
+     +        jbin, kbin, labtyp, gmm, cmm)
            call pgsci (1)
          end if  
 c
@@ -1866,10 +1853,10 @@ c
       end
 c
 c
-      subroutine fullann (ncon, cin, gin, vin, bin, lc, lg, lv, lb,
-     +   maxlev, nlevs, levs, srtlev, slev, npixr, trfun, pixr, vfac, 
-     +   bfac, naxis, size, crval, crpix, cdelt, ctype, vymin, blc, 
-     +   trc, pcs, ydispb, ibin, jbin, kbin, labtyp, gmm, cmm)
+      subroutine fullann (maxcon, ncon, cin, gin, vin, bin, lc, lg, lv,
+     +   lb, maxlev, nlevs, levs, srtlev, slev, npixr, trfun, pixr, 
+     +   vfac, bfac, naxis, size, crval, crpix, cdelt, ctype, vymin, 
+     +   blc, trc, pcs, ydispb, ibin, jbin, kbin, labtyp, gmm, cmm)
 c-----------------------------------------------------------------------
 c     Full annotation of plot with contour levels, RA and DEC etc.
 c
@@ -1904,13 +1891,13 @@ c       *mm        Image min and max
 c----------------------------------------------------------------------- 
       implicit none
 c
-      integer maxlev, ncon, nlevs(*), blc(*), trc(*), lc(*), lg, lv(2),
-     +  lb, srtlev(maxlev,*), ibin(2), jbin(2), kbin(2), naxis, 
-     +  size(naxis), npixr
+      integer maxcon, maxlev, ncon, nlevs(maxcon), blc(*), trc(*), 
+     +  lc(maxcon), lg, lv(2), lb, srtlev(maxlev,maxcon), ibin(2), 
+     +  jbin(2), kbin(2), naxis, size(naxis), npixr
       double precision cdelt(naxis), crval(naxis), crpix(naxis)
-      real levs(maxlev,*), vymin, slev(*), pixr(2), pcs, ydispb, 
-     +  vfac(2), bfac(5), gmm(2), cmm(2,*)
-      character*(*) cin(*), gin, vin(2), bin, ctype(naxis), trfun, 
+      real levs(maxlev,maxcon), vymin, slev(maxcon), pixr(2), pcs, 
+     +  ydispb, vfac(2), bfac(5), gmm(2), cmm(2,maxcon)
+      character*(*) cin(maxcon), gin, vin(2), bin, ctype(naxis), trfun, 
      +  labtyp(2)
 cc
       real xpos, ypos, yinc
@@ -2048,6 +2035,72 @@ c
       end
 c
 c
+      subroutine hardofm (coltab, pixr2, dofid, j, jj, dosing, tfvp, 
+     +                    win, image, nimage)
+c-----------------------------------------------------------------------
+      implicit none
+      integer coltab, j, jj, win(2), nimage(*)
+      real tfvp(4), image(*), pixr2(2)
+      logical dofid, dosing
+c-----------------------------------------------------------------------
+c
+c Apply user specified OFM to PGPLOT device.   
+c
+      if (coltab.ne.-1) then
+c
+c The user has given an OFM with the "range" keyword for this subplot.
+c
+        call ofmcol (coltab, pixr2(1), pixr2(2))
+      else if (coltab.eq.-1) then
+c
+c The user has not specified an OFM with the "range" keyword.  If first 
+c subplot on first page, apply b&w as default.  Otherwise, leave OFM at 
+c whatever it was last set to for the previous subplot.
+c
+        if (j.eq.1) call ofmcol (1, pixr2(1), pixr2(2))
+      end if
+c
+c Interactive modification of OFM for hardcopy devices here; must be 
+c done before PGIMAG called.  Any change of lookup table here will
+c overwrite that done with call to ofmcol above
+c
+      if (dofid .and. (jj.eq.1 .or. dosing))
+     +  call ofmmod (tfvp, win(1)*win(2), image, nimage, 
+     +               pixr2(1), pixr2(2))
+c
+c If we are going to use either the b&w or the absolute b&w transfer function
+c we must account for the fact that the output will probably be printed
+c on paper, so we want black on white instead of white on black. So
+c make the OFM the complement of itself here.  Only works for b&w OFMs
+c
+      call ofmcmp
+c
+      end
+c
+c
+      subroutine intofm (coltab, j, pixr2)
+c-----------------------------------------------------------------------
+      implicit none
+      integer coltab, j
+      real pixr2(2)
+c------------------------------------------------------------------------
+      if (coltab.ne.-1) then
+c
+c The user has given an OFM with the "range" keyword for this subplot.
+c
+        call ofmcol (coltab, pixr2(1), pixr2(2))
+      else if (coltab.eq.-1) then
+c
+c The user has not specified an OFM with the "range" keyword.  If first 
+c subplot on first page, apply b&w as default.  Otherwise, leave OFM at 
+c whatever it was last set to for the previous subplot.
+c
+        if (j.eq.1) call ofmcol (1, pixr2(1), pixr2(2))
+      end if
+c
+      end
+c
+c
       subroutine inputs (maxgr, maxlev, maxcon, maxtyp, ltypes, ncon, 
      +   cin, gin, nvec, vin, bin, mskin, ibin, jbin, kbin, levtyp, 
      +   slev, levs, nlevs, npixr, pixr, trfun, coltab, vecfac, vecinc, 
@@ -2086,7 +2139,7 @@ c   npixr      Number of pixr/trfun groups returned.
 c   pixr       Pixel map intensity range for each of the NPIXR subplot
 c   trfun      Type of pixel map transfer function: 'log', 'lin',
 c              'heq' or 'sqr' for each of the NPIXR subplots
-c   coltab     COlour lookup table (1 -> 8)
+c   coltab     COlour lookup table number
 c   vecfac     Vector amplitude scale factor and
 c   vecinc     Vector x,y pixel incrememts
 c   boxfac     Box width scale factor and
@@ -3441,3 +3494,14 @@ c
      +   msize, mepoch, mcrpix, mcdelt, mcrval, mctype, relax)
 c
       end
+
+
+
+
+
+
+
+
+
+
+
