@@ -104,6 +104,7 @@ c		   to tvcln.h.
 c   rjs  10sep96 - Get rid fo tvclncom common block.
 c   rjs  29jan97 - Change default region of interest.
 c   rjs  10mar97 - Default region is all channels.
+c   jm   16may97 - Modified interini() for server/panel changes.
 c
 c  Important Constants:
 c    MaxDim	The max linear dimension of an input (or output) image.
@@ -1406,9 +1407,8 @@ c
 	logical doCtrl,doInter
 c
 c------------------------------------------------------------------------
- 	integer length,i1,i2,status
+ 	integer length
 	character values(2)*5,lutval(3)*5,image(3)*5,fidpan(2)*5
-	character panel*24,tv*24
 c
 	integer len1
 c
@@ -1421,26 +1421,13 @@ c
 	dointer = .false.
 	length = len1(server)
 	if(length.eq.0)return
-	i1 = index(server,'@')
-	if(i1.le.1.or.i1.ge.length)
-     *	  call bug('f','TV device names must be of the form type@name')
-	i2 = index(server(i1+1:length),'/') + i1
-	if(i2.ne.i1.and.min(length-i2,i2-(i1+1)).le.0)
-     *	  call bug('f','Bad name for TV/panel server')
-	if(server(i2:i2).eq.'/')then
-	  tv = server(1:i2-1)
-	  panel = server(i2+1:length)
-	else
-	  tv = server(1:length)
-	  panel = server(i1+1:length)
-	endif
-	call tvopen(tv)
+c
+	call tvopen(server)
 	doInter = .true.
-	status = -1
-	if(panel.ne.'-')call CtrlInit(panel,status)
-	if(status.ne.0)then
+c
+	call ctrlopen(server, doctrl)
+	if(.not.doctrl)then
 	  call bug('w','Failed to connect to panel server')
-	  doCtrl = .false.
 	else
 	  call CtrlDef('pause','button',values,2)
 	  call CtrlDef('exit','button','EXIT ',1)
@@ -1452,7 +1439,6 @@ c
 	  call CtrlDef('reset','button','RESET',1)
 	  call CtrlDef('cursor','cursor','Pan',1)
 	  call CtrlView	  
-	  doCtrl = .true.
 	endif
 	end
 c************************************************************************
