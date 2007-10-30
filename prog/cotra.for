@@ -4,99 +4,101 @@ c History:
 c     30-may-91   Quick and dirty				     PJT
 c     20-jun-91   Correction due to dsfetr/dsfetra doc error         MJS
 c     24-sep-93   Implemented two-step using intermediate EQ         PJT
+c     23-jul-97   General tidy up.				     RJS
 c-----------------------------------------------------------------------
 c= cotra - coordinate transformations
 c& pjt
 c: utility
 c+
-c  COTRA is a MIRIAD task to transform between astronomical coordinate 
-c  systems. All calculations are done in double precision, and the
-c  equatorial system is used as a pitch between which an arbitrary 
-c  transformation is always done.
-c
-c  Valid coordinate systems must be one of:
-c  equatorial, galactic, ecliptic, super-galactic
-c  [see also subroutine (d)sfetra]
-c@lon
-c  Input longitude.
-c  Equatorial needs to be in decimal hours (0..24), the rest is in
-c  decimal degrees (0..360).
-c  Default: 0.0
-c@lat
-c  Input latitude (in decimal degrees, -90..90). 
-c  Default: 0.0
-c@sysin
-c  Input coordinate system. Valid systems are listed above.
-c  Default: galactic
-c@sysout
-c  Output coordinate system. Valid systems are listed above.
-c  Default: equatorial
-c@epoch
-c  Epoch of coordinate system. Not implemented yet.
-c  Default: 1950.00
+c	COTRA is a MIRIAD task to transform between astronomical coordinate 
+c	systems.  The coordinate systems must be one of:
+c	equatorial, galactic, ecliptic, super-galactic
+c@radec
+c	Input RA/DEC or longitude/latitude. RA is given in hours
+c	(or hh:mm:ss), whereas all the others are given in degrees
+c	(or dd:mm:ss). There is no default.
+c@type
+c	Input coordinate system. Possible values are
+c	"b1950" (the default), "j2000", "galactic", "ecliptic"
+c	and "super-galactic". b1950 and j2000 are equatorial coordinates
+c	in the B1950 and J2000 frames. All other coordinates are in the
+c	B1950 frames.
 c-----------------------------------------------------------------------
-c include file
-      INCLUDE 'mirconst.h'
-c parameters:
-      CHARACTER  VERSION*(*)
-      PARAMETER (VERSION='Version 1.0 24-sep-93')
-      DOUBLE PRECISION D2R
-      PARAMETER (D2R=DPI/180.0d0)
-c local variables:
-      CHARACTER sysname(2)*20, epoch*20, snames(3)*3, mesg*80
-      DOUBLE PRECISION dlon, dlat
-      LOGICAL inv
-      INTEGER i, sys, sysnum(2)
-      DATA snames/'GAL','ECL','SGL'/
-      
-c Announce presence
-      CALL output('COTRA: '//VERSION)
-c Get parameters from command lines
-      CALL keyini
-      CALL keyd('lon',dlon,0.0d0)
-      CALL keyd('lat',dlat,0.0d0)
-      CALL keya('sysin',sysname(1),'galactic')
-      CALL keya('sysout',sysname(2),'equatorial')
-      CALL keya('epoch',epoch,'1950.0')
-      CALL keyfin
-
-      IF (epoch(1:6).NE.'1950.0') CALL bug('i',
-     *      'Epochs other than 1950.0 not implemented yet')
-      DO i=1,2
-        sysnum(i) = -1
-        IF (sysname(i)(1:2).EQ.'eq') sysnum(i)=0
-        IF (sysname(i)(1:1).EQ.'g')  sysnum(i)=1
-        IF (sysname(i)(1:2).EQ.'ec') sysnum(i)=2
-        IF (sysname(i)(1:1).EQ.'s')  sysnum(i)=3
-      ENDDO
-      IF (sysnum(1).LT.0) CALL bug('f','Unknown sysin=')
-      IF (sysnum(2).LT.0) CALL bug('f','Unknown sysout=')
-
-      dlon = dlon*D2R
-      dlat = dlat*D2R
-      IF (sysnum(1).NE.0 .AND. sysnum(2).NE.0) THEN
-        CALL dsfetra(dlon,dlat,.TRUE., sysnum(1))
-        CALL dsfetra(dlon,dlat,.FALSE.,sysnum(2))
-      ELSE IF (sysnum(1).EQ.0) THEN
-        mesg = 'Transforming from EQ to '//snames(sysnum(2))
-        CALL output(mesg)
-        dlon = dlon*15.0d0
-        inv = .FALSE.
-        sys = sysnum(2)
-        CALL dsfetra(dlon,dlat,inv,sys)
-      ELSE IF (sysnum(2).EQ.0) THEN
-        mesg = 'Transforming from '//snames(sysnum(1))//' to EQ'
-        CALL output(mesg)
-        inv = .TRUE.
-        sys = sysnum(1)
-        CALL dsfetra(dlon,dlat,inv,sys)
-        dlon = dlon/15.0d0
-      ELSE
-        CALL bug('f','Impossible logic')
-      ENDIF
-      dlon = dlon/D2R
-      dlat = dlat/D2R
-      WRITE(mesg,'(2(F15.10,1X))') dlon,dlat
-      CALL output(mesg)
-
-      END
+	INCLUDE 'mirconst.h'
+	CHARACTER  VERSION*(*)
+	PARAMETER (VERSION='Version 1.0 23-Jul-97')
+c
+	double precision lon,lat,blon,blat,dra,ddec
+	character line*64
+c
+	integer NTYPES
+	parameter(NTYPES=5)
+	character type*16,types(NTYPES)*16
+	integer ntype
+c
+c  Externals.
+c
+	double precision epo2jul
+	character rangle*13,hangle*14
+c
+	data types/'b1950           ','j2000           ',
+     *		   'galactic        ',
+     *		   'ecliptic        ','super-galactic  '/
+c      
+	CALL output('COTRA: '//VERSION)
+	CALL keyini
+	call keymatch('type',NTYPES,types,1,type,ntype)
+	if(ntype.eq.0)type = types(1)
+	if(type.eq.'b1950'.or.type.eq.'j2000')then
+	  CALL keyt('radec',blon,'hms',0.0d0)
+	else
+	  CALL keyt('radec',blon,'dms',0.0d0)
+	endif
+	call keyt('radec',blat,'dms',0.d0)
+	CALL keyfin
+c
+c  Convert to b1950 coordinates.
+c
+	if(type.eq.'super-galactic')then
+	  call dsfetra(blon,blat,.true.,3)
+	else if(type.eq.'ecliptic')then
+	  call dsfetra(blon,blat,.true.,2)
+	else if(type.eq.'galactic')then
+	  call dsfetra(blon,blat,.true.,1)
+	else if(type.eq.'j2000')then
+	  lon = blon
+	  lat = blat
+	  call fk54z(lon,lat,epo2jul(1950.d0,'B'),
+     *				blon,blat,dra,ddec)
+	endif
+c
+c  Convert from B1950 to all the other coordinate types, and write them out.
+c
+	call fk45z(blon,blat,epo2jul(1950.d0,'B'),lon,lat)
+	line = 'J2000:            '//hangle(lon)//rangle(lat)
+	call output(line)
+c
+	line = 'B1950:            '//hangle(blon)//rangle(blat)
+	call output(line)
+c
+	lon = blon
+	lat = blat
+	call dsfetra(lon,lat,.false.,1)
+	write(line,'(a,2f14.6)')'Galactic:      ',
+     *					180/DPI*lon,180/DPI*lat
+	call output(line)
+c
+	lon = blon
+	lat = blat
+	call dsfetra(lon,lat,.false.,2)
+	write(line,'(a,2f14.6)')'Ecliptic:      ',
+     *					180/DPI*lon,180/DPI*lat
+	call output(line)
+c
+	lon = blon
+	lat = blat
+	call dsfetra(lon,lat,.false.,1)
+	write(line,'(a,2f14.6)')'Super-Galactic:',
+     *					180/DPI*lon,180/DPI*lat
+	call output(line)
+	END
