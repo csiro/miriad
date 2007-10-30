@@ -392,6 +392,8 @@ c    nebk 12nov95  Change to deal internally in absolute pixels
 c                  '*lin' -> '*nat'
 c    nebk 29nov95  New call for CONTURCG
 c    nebk 18dec95  New call for VPSIZCG (arg. DOABUT)
+c    nebk 18jan95  Fix silly problem in SPECBLNK causing overlays
+c                  to be ignored if there were blanks in spatial image
 c
 c Ideas:
 c  * Be cleverer for sub-cubes which have spectra partly all zero
@@ -464,7 +466,7 @@ c
       data txtfill, tflen /'spectrum', 'derivative spectrum', 
      +                     'derivative spectrum', 8, 19, 19/
 c-----------------------------------------------------------------------
-      call output ('CgSpec: version 18-Dec-95')
+      call output ('CgSpec: version 18-Jan-96')
       call output (' ')
 c
 c Get user inputs
@@ -474,7 +476,7 @@ c
      +   trfun, coltab, pdev, labtyp, dofull, eqscale, solneg, clines, 
      +   break, cs, ofile, nofile, relax, slines, vrange, vfrac, irange, 
      +   tick, doaxes, doframe, mark, iscale, spnorm, naked, blines, 
-     +   number, mirror, colour, blconly, doerase, doepoch, igblank, 
+     +   number, mirror, colour, blconly, doerase, doepoch, igblank,
      +   dofid, dowedge, dogrid, ibin, jbin)
 c
 c First verify the existence of wanted files and get some extrema
@@ -963,7 +965,7 @@ c
               if ((nofile.eq.1 .and. j.eq.1) .or. nofile.gt.1) then
                 write (aline, 140) j, ofile2(1:len1(ofile2))
 140             format ('Overlay # ', i4, ' from file ', a, 
-     +                  ' is not on the pxiel map/contour image(s)')
+     +                  ' is not on the pixel map/contour image(s)')
                 call bug ('w', aline)
               end if
             else
@@ -2902,7 +2904,7 @@ c Positions that are centred off the edge of the pixel map/contour
 c image are not displayed.  
 c
       if (pos(1).lt.blc(1) .or. pos(1).gt.trc(1) .or. 
-     +    pos(2).lt.trc(1) .or. pos(2).gt.trc(2)) then
+     +    pos(2).lt.blc(2) .or. pos(2).gt.trc(2)) then
         miss = .true.
         return
       end if
