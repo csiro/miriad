@@ -27,6 +27,8 @@
        18-mar-97  rjs   Remove alignment restriction on hio_c.
        21-mar-97  rjs   Make some previously dynamic allocations static.
        30-sep-97  rjs   Start ntree off at 1 (rather than 0).
+       28-nov-97  rjs   Change to cope with text files which do not end with
+			a newline char.
 */
 
 
@@ -930,7 +932,7 @@ char *buf;
 /* Check various end-of-file conditions and for adequate buffers. */
 
   next = offset + (!dowrite && type == H_TXT ? 1 : length );
-  if(!dowrite && type == H_TXT) length = min(length, item->size - offset);
+/*  if(!dowrite && type == H_TXT) length = min(length, item->size - offset); */
   *iostat = -1;
   if(!dowrite && next > item->size)return;
   *iostat = 0;
@@ -1086,6 +1088,9 @@ char *buf;
 			Memcpy(buf,s,len);
 			if(*(s+len-1) == '\n'){
 			  length = len;
+			  *(buf+len-1) = 0;
+			}else if(offset+len == item->size && len < length){
+			  length = ++len;
 			  *(buf+len-1) = 0;
 			}
 			break;
