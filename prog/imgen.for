@@ -31,6 +31,7 @@ c	   gaussian   An elliptical or circular gaussian.
 c	   disk       An elliptical or circular disk.
 c	   j1x        A J1(x)/x function
 c	   shell      2D projection of an optically-thin spherical shell
+c	   comet      2D projection of a parent molecule in comet.
 c@ spar
 c	Parameters which give the characteristics of the object. The
 c	parameters are given as a sequence of values, with one to six
@@ -47,6 +48,7 @@ c	   gaussian               amp,x,y,bmaj,bmin,pa
 c	   disk                   amp,x,y,bmaj,bmin,pa
 c	   j1x                    amp,x,y,bmaj,bmin,pa
 c	   shell                  amp,x,y,bmaj
+c	   comet                  amp,x,y,scalelength
 c	Here "offset" is the offset level, "rms" is the rms value of
 c	the noise, "amp" is the normally peak value of the object (but
 c	see options=totflux below), "x" and "y" are the offset positions (in
@@ -111,8 +113,9 @@ c    rjs   02jul97  cellscal change.
 c    rjs   14jul97  Check when there are too many objects and increase
 c		    max number of objects.
 c    rjs   23jul97  added pbtype.
-c    rjs   29oct97  Check that the coords for a point source fall within
-c		    the image.
+c    mchw  23oct97  added comet model for parent molecule.
+c    rjs   29oct97  Check that the coordinates for a point source fall
+c		    within the image.
 c  Bugs/Wishlist:
 c------------------------------------------------------------------------
 	character version*(*)
@@ -139,7 +142,7 @@ c
 	character objs(MAXOBJS)*8
 c
 	integer NOBJECTS
-	parameter(NOBJECTS=7)
+	parameter(NOBJECTS=8)
 	integer nobjs
 	character objects(NOBJECTS)*8
 c
@@ -149,7 +152,7 @@ c
 c
 	data objects/'level   ','noise   ','point   ',
      *		     'gaussian','disk    ','j1x     ',
-     *               'shell   '/
+     *               'shell   ','comet   '/
 c
 c  Get the parameters from the user.
 c
@@ -188,7 +191,7 @@ c
 	    if(min(fwhm1(i),fwhm2(i)).le.0)
      *	      call bug('f','BMAJ and BMIN parameters must be positive')
 	    posang(i) = posang(i) * pi/180.
-	  elseif(objs(i).eq.'shell') then
+	  elseif(objs(i).eq.'shell'.or.objs(i).eq.'comet') then
             call keyr('spar',fwhm1(i),5.)
 	    fwhm1(i) = fwhm1(i) / 3600. * pi/180.
 	    if(fwhm1(i).le.0)
@@ -444,8 +447,8 @@ c    totflux	The "amp" parameter is the total flux.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
-	integer i,j,ymin,ymax,xmin,xmax
-	real xx,yy,xp,yp,scale,cospa,sinpa,t,a,log2,limit
+	integer i,j,ymin,ymax,xmin,xmax,maxit,it
+	real xx,yy,xp,yp,scale,cospa,sinpa,t,a,log2,limit,p,theta,sum
 	real Buff(maxdim)
 c
 c  Externals.
@@ -502,6 +505,26 @@ c
             xp = -yy*sinpa + xx*cospa
             t = (xp*xp)/(fwhm2*fwhm2) + (yp*yp)/(fwhm1*fwhm1)
 	    data(i) = data(i) + 2 * a * j1xbyx(sqrt(t))
+	  enddo
+c
+c  Handle a comet.
+c
+	else if(object.eq.'comet')then
+	  maxit = 50
+	  yy = (j0-y)
+	  do i=1,n1
+	    xx = (i-x)
+	    p = sqrt(xx*xx+yy*yy)
+            sum = 0.
+            do it = -maxit+1,maxit-1
+              theta = it*pi/2./maxit
+              sum = sum +
+     *          exp(-p/fwhm1/(cos(theta)))*pi/2./(maxit-2)
+            enddo
+	    if(p.ne.0.)then
+	      a = amp / p * sum 
+	      data(i) = data(i) + a
+	    endif
 	  enddo
 c
 c  Handle a disk.
