@@ -314,7 +314,8 @@ c    nebk 29nov95  New call for CONTURCG
 c    nebk 30jan96  Remove restrictions on CHAN so groups of channels
 c		   can now overlap
 c    nebk 05feb96  Make format of POSOUT file the same as that for POSIN
-c
+c    nebk 28feb96  Was getting slice vectors wrong with keyword POSIN
+c		   when a subimage was displayed.
 c Notes:
 c
 c   SLice abcissa values are still in linear world coordiantes as
@@ -380,8 +381,7 @@ c
       data dmm, dunsl, gaps /1.0e30, -1.0e30, .false., .false./
       data xdispls, ydispbs /3.5, 3.5/
 c-----------------------------------------------------------------------
-      call output ('CgSlice: version 05-Feb-96')
-      call output ('Format of POSOUT file now the same as for POSIN')
+      call output ('CgSlice: version 28-Feb-96')
       call output (' ')
 c
 c Get user inputs
@@ -701,7 +701,7 @@ c
              if (fslposi.ne.' ' .and..not.noimage) then
                call setcolcg (i, icol)
                call pgsci (icol)
-               call slmark (slpos(1,i))
+               call slmark (blc, ibin, jbin, slpos(1,i))
              end if
 c
 c Allocate memory for slice 
@@ -2954,23 +2954,37 @@ c
       end
 c
 c
-      subroutine slmark (slpos)
+      subroutine slmark (blc, ibin, jbin, slpos)
 c-----------------------------------------------------------------------
 c     Mark slice in input text file on image
 c
 c  Input
-c    slpos    SLice ends in unbinned full image pixels
+c    slpos    SLice ends in absolute binned subimage pixels
 c-----------------------------------------------------------------------
       implicit none
-      integer slpos(6)
+      integer slpos(6), blc(2), ibin, jbin
 cc
+      double precision dp
       real wblc(2), wtrc(2)
 c-----------------------------------------------------------------------
+c
+c COnvert to unbinned full image pixels
+c
+      dp = slpos(1)
+      call ppconcg (2, blc(1), ibin, dp)
+      wblc(1) = dp
+      dp = slpos(2)
+      call ppconcg (2, blc(2), jbin, dp)
+      wblc(2) = dp
+c
+      dp = slpos(4)
+      call ppconcg (2, blc(1), ibin, dp)
+      wtrc(1) = dp
+      dp = slpos(5)
+      call ppconcg (2, blc(2), jbin, dp)
+      wtrc(2) = dp
+c
       call pgsch (0.7)
-      wblc(1) = slpos(1)
-      wblc(2) = slpos(2)
-      wtrc(1) = slpos(4)
-      wtrc(2) = slpos(5)
       call pgarro (wblc(1), wblc(2), wtrc(1), wtrc(2))
 c
       end
