@@ -166,6 +166,9 @@ c    mchw 28oct94 restored output file to enable uv-data to be read-only.
 c    rjs  30jan95 Change option "selradec" to "mosaic", and update doc
 c	          file somewhat. Change to helper routine.
 c    rjs  16apr96 Increase select routine arrays.
+c    rjs  28aug96 Minor change to get around gcc-related bug. Change care
+c		  Dave Rayner.
+c
 c  Bugs/Shortcomings:
 c   * Selfcal should check that the user is not mixing different
 c     polarisations and pointings.
@@ -173,7 +176,7 @@ c   * It would be desirable to apply bandpasses, and merge gain tables,
 c     apply polarisation calibration, etc.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Selfcal: version 1.0 30-Jan-95')
+	parameter(version='Selfcal: version 1.0 28-Aug-96')
 	integer MaxMod,maxsels,nhead
 	parameter(MaxMod=32,maxsels=1024,nhead=3)
 c
@@ -731,7 +734,7 @@ c------------------------------------------------------------------------
 	include 'maxdim.h'
 	logical Convrg
 	integer k,k0,nbad,iostat,item,offset,header(2)
-	double precision dtime
+	double precision dtime,dtemp
 c
 c  Externals.
 c
@@ -813,7 +816,8 @@ c
 c
 c  Write some extra information for the gains table.
 c
-	call wrhdd(tgains,'interval',dble(interval))
+	dtemp = interval
+	call wrhdd(tgains,'interval',dtemp)
 	call wrhdi(tgains,'ngains',nants)
 	call wrhdi(tgains,'nsols',nsols-nbad)
 	call wrhdi(tgains,'nfeeds',1)
