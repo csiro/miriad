@@ -11,6 +11,7 @@ c  History:
 c    rjs  25oct94 Original version.
 c    rjs  22nov94 Array bound vioolation in mapfft2, which affected images
 c		  that were larger than maxdim/2.
+c    rjs   8dec94 Check MAXDIM is big enough. Better messages.
 c************************************************************************
 	subroutine MapFin
 c
@@ -63,6 +64,14 @@ c  Define the size of a particular channel.
 c------------------------------------------------------------------------
 	include 'mapper.h'
 	logical merge
+c
+c  Externals.
+c
+	character itoaf*6
+c
+	if(max(nx1,ny1).gt.MAXDIM)
+     *	  call bug('f','MAXDIM value is too small, in mapper.for.'//
+     *	   ' Current max image size is '//itoaf(MAXDIM))
 c
 	merge = nt.gt.0
 	if(merge) merge = nx(nt).eq.nx1.and.ny(nt).eq.ny1
@@ -154,7 +163,7 @@ c  Do the DFT and Median processing modes (pretty slow ...).
 c
 	else
 	  if(npnt.gt.1)call bug('f',
-     *	    'Cannot handle multiple pointings for DFT or MEDIAN mode')
+     *	    'Cannot handle multiple pointings in DFT or MEDIAN mode')
 	  if(ichan.lt.chan1.or.ichan.gt.chan2)call MapBufS(ichan)
 	  call MapSlow(tscr,mode,nvis,offcorr+2*(ichan-1),
      *		offcorr+2*totchan-1,
@@ -168,7 +177,7 @@ c  Keep the user awake.
 c
 	if(ichan.eq.chan2.and.ichan.lt.totchan)then
 	  pcent = nint(100.0 * real(ichan) / real(totchan))
-	  write(line,'(a,i3,a)')'Completed',pcent,'% ...'
+	  write(line,'(a,i3,a)')'Finished gridding ',pcent,'% ...'
 	  call output(line)
 	endif
 c
