@@ -59,6 +59,7 @@ c   07jul97   rjs    Change call to coaxdesc to coaxget.
 c   05sep97   mchw   Change lower freq for HATCREEK to 24 GHz.
 c   09may00   rjs    Add extra check.
 c   10may02   rjs    Add model for OVRO.
+c   13oct03   rjs    Added Ravi's 12mm model.
 c************************************************************************
 c* pbList -- List known primary beam types.
 c& rjs
@@ -640,9 +641,11 @@ c------------------------------------------------------------------------
 c
 c Set coefficients for each telescope and frequency range
 c
-	integer NCOEFF,NATCAL1,NATCAL2,NATCAL3
+	integer NCOEFF,NATCAL1,NATCAL2,NATCAL3,NATCAK
 	parameter(NCOEFF=5,NATCAL3=3,NATCAL1=5,NATCAL2=7)
+	parameter(NATCAK=4)
 	real atcas(NCOEFF),atcac(NCOEFF),atcax(NCOEFF)
+	real atcak(NATCAK)
 	real atcal3(NATCAL3),atcal1(NATCAL1),atcal2(NATCAL2)
 	real vla(NCOEFF)
 c
@@ -658,6 +661,11 @@ c
 	data atcas /1.0, 1.02e-3, 9.48e-7, -3.68e-10, 4.88e-13/
 	data atcac /1.0, 1.08e-3, 1.31e-6, -1.17e-9,  1.07e-12/
 	data atcax /1.0, 1.04e-3, 8.36e-7, -4.68e-10, 5.50e-13/
+c
+c Model by Ravi at 22.235 GHz - 4th order poly.
+c
+	data atcak /1.0, -9.5793797E-04, 3.2279621E-07, 
+     *			 -3.8065801E-11/
 c
 	data vla /0.9920378, 0.9956885e-3, 0.3814573e-5, -0.5311695e-8,
      *		  0.3980963e-11/
@@ -694,6 +702,10 @@ c
 	call pbAdd('ATCA',    4.30,6.70,    48.3, 0.03,  IPOLY,
      *			NCOEFF,atcac,'Reciprocal 4th order poly')
 	call pbAdd('ATCA',    7.90,9.3,     50.6, 0.03,  IPOLY,
+     *			NCOEFF,atcax,'Reciprocal 4th order poly')
+	call pbAdd('ATCA',    15.5,25.5,    50.6, 0.10,  POLY,
+     *			NATCAK,atcak,'Fourth order poly')
+	call pbAdd('ATCA.2',  15.5,25.5,    50.6, 0.03,  IPOLY,
      *			NCOEFF,atcax,'Reciprocal 4th order poly')
 c
 c  VLA primary beam is taken from AIPS code.
