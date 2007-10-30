@@ -272,7 +272,7 @@ Instructions for Installing Miriad
 	/linpack	  LINPACK source code.
 	/bindir           Directory of some binaries.
 	/pgplot		  PGPLOT distribution.
-        /man		  Miriad manuals -- in LaTex and Postscript.
+        /guides		  Miriad manuals -- in LaTex and Postscript.
 	    /user	  Users guide.
 	    /prog	  Programmers guide.
 	/scripts	  General scripts.
@@ -341,7 +341,7 @@ Instructions for Installing Miriad
 
 7)  Adding a new architecture
 
-    Miriad is build and updated using one C program (newer - source in the
+    Miriad is built and updated using one C program (newer - source in the
     directory $MIR/tools) and five C-shell scripts (mirupdate, mircadd, mirclnk,
     mirlibs, mirfind -- source in $MIR/scripts/unix/$arch, where $arch is
     a machine type name). The mirfind and mirlibs scripts are generated
