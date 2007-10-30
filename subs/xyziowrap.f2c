@@ -1,0 +1,103 @@
+/******************************************************************************/
+/*                                                                            */
+/* Conversion for the xyzio routine from FORTRAN to C                         */
+/*                                                                            */
+/*  History:                                                                  */
+/*    bpw  ??????? Original version.                                          */
+/*    rjs  22dec92 Converted from xyziowrap.h                                 */
+/*    bpw  15jul93 Add xyzflush and xyzmkbuf                                  */
+/******************************************************************************/
+
+
+void xyzopen_c(),  xyzclose_c(), xyzflush_c();
+void xyzmkbuf_c(), xyzsetup_c();
+void xyzs2c_c(),   xyzc2s_c();
+void xyzread_c(),  xyzpixrd_c(), xyzprfrd_c(), xyzplnrd_c();
+void xyzwrite_c(), xyzpixwr_c(), xyzprfwr_c(), xyzplnwr_c();
+
+/************************************************************************/
+fortran subroutine xyzopen(integer tno,character name,character status,
+	integer naxis,integer axlen)
+{
+  xyzopen_c( tno.addr, name.zterm, status.zterm, naxis.addr, axlen.addr );
+}
+/************************************************************************/
+fortran subroutine xyzclose( integer tno )
+{
+  xyzclose_c(tno.val);
+}
+/************************************************************************/
+fortran subroutine xyzflush( integer tno )
+{
+  xyzflush_c(tno.val);
+}
+/************************************************************************/
+fortran subroutine xyzmkbuf( integer dummy )
+{
+  xyzmkbuf_c();
+}
+/************************************************************************/
+fortran subroutine xyzsetup(integer tno, character subcube,
+	integer blc, integer trc, integer viraxlen, integer vircubesize )
+{
+  xyzsetup_c(tno.val,subcube.zterm,blc.addr,trc.addr,
+	viraxlen.addr,vircubesize.addr);
+}
+/************************************************************************/
+fortran subroutine xyzs2c( integer tno, integer subcubenr, integer coords )
+{
+  xyzs2c_c( tno.val, subcubenr.val-1, coords.addr );
+}
+/************************************************************************/
+fortran subroutine xyzc2s( integer tno, integer coords, integer subcubenr )
+{
+  xyzc2s_c( tno.val, coords.addr, subcubenr.addr ); *(subcubenr.addr) += 1;
+}
+/************************************************************************/
+fortran subroutine xyzread( integer tno, integer coords, real data,
+	logical mask, integer ndata )
+{
+  xyzread_c(tno.val,coords.addr,data.addr,mask.addr,ndata.addr);
+}
+/************************************************************************/
+fortran subroutine xyzpixrd( integer tno, integer pixelnr,
+	real data, logical mask )
+{
+  xyzpixrd_c(tno.val,pixelnr.val,data.addr,mask.addr);
+}
+/************************************************************************/
+fortran subroutine xyzprfrd( integer tno, integer profilenr,
+	real data, logical mask, integer ndata )
+{
+  xyzprfrd_c(tno.val,profilenr.val,data.addr,mask.addr,ndata.addr);
+}
+/************************************************************************/
+fortran subroutine xyzplnrd( integer tno, integer planenr,
+	real data, logical mask, integer ndata )
+{
+  xyzplnrd_c(tno.val,planenr.val,data.addr,mask.addr,ndata.addr);
+}
+/************************************************************************/
+fortran subroutine xyzwrite( integer tno, integer coords,
+	real data, logical mask, integer ndata )
+{
+  xyzwrite_c(tno.val,coords.addr,data.addr,mask.addr,ndata.addr);
+}
+/************************************************************************/
+fortran subroutine xyzpixwr( integer tno, integer pixelnr,
+	real data, logical mask )
+{
+  xyzpixwr_c(tno.val,pixelnr.val,data.addr,mask.addr);
+}
+/************************************************************************/
+fortran subroutine xyzprfwr( integer tno, integer profilenr,
+	real data, logical mask, integer ndata )
+{
+  xyzprfwr_c(tno.val,profilenr.val,data.addr,mask.addr,ndata.addr);
+}
+/************************************************************************/
+fortran subroutine xyzplnwr( integer tno, integer planenr,
+	real data, logical mask, integer ndata )
+{
+  xyzplnwr_c(tno.val,planenr.val,data.addr,mask.addr,ndata.addr);
+}
