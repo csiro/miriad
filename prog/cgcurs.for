@@ -253,6 +253,7 @@ c                  plot now linearized at centre of displayed region.
 c		   Also call new LAB3CG which labels plot with true 
 c                  world coordinates for third axis
 c    nebk 23dec94  Make sure selected region no bigger than image
+c    nebk 05jan95  Use new PGIMAGE in favour of PGGRAY
 c To do:
 c
 c-----------------------------------------------------------------------
@@ -292,7 +293,7 @@ c
       data ipage, scale /0, 0.0, 0.0/
       data dmm /1.0e30, -1.0e30/
 c-----------------------------------------------------------------------
-      call output ('CgCurs: version 23-Dec-94')
+      call output ('CgCurs: version 05-Jan-95')
       call output ('Non-linear coordinates are now partially handled')
       call output ('See "help cgcoords" for explanations')
       call output (' ')
@@ -498,8 +499,8 @@ c Draw grey scale
 c
            call pgsci (7)
            if (dogrey) then
-             call pggray (memr(ipim), win(1), win(2), 1, win(1), 1,
-     +                    win(2), pixr2(2), pixr2(1), tr)
+             call pgimag (memr(ipim), win(1), win(2), 1, win(1), 1,
+     +                    win(2), pixr2(1), pixr2(2), tr)
            else 
 c
 c Draw contours
