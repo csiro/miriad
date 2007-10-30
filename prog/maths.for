@@ -88,6 +88,17 @@ c@ zrange
 c	When ``z'' is present in the input expression, then the z variable
 c	is varied linearly between the two limits set br ZRANGE. The default
 c	is 0,1.
+c@ options
+c	Extra processing options. Several can be given, separated by
+c	commas. Minimum match is used. Currently there is but one option:
+c	  grow    Allow inputs to ``grow'' extra axes, if needed, through
+c	          replication. For example, if the expression subtracts 
+c	          a single-plane image from a cube, options=grow allows
+c	          the operation to proceed by first growing the image into
+c	          a cube through replication the plane. Normally (i.e. 
+c	          without this option), MATHS insists that the inputs must
+c	          be identical in size.
+c	          
 c--
 c
 c  History:
@@ -119,6 +130,7 @@ c  nebk  05jun97   Handle 6th and 7th axes correctly in oldhdr !
 c   rjs  02jul97   cellscal change.
 c   rjs  23jul97   Added pbtype.
 c   rjs  12mar98   Allow for more complex expressions.
+c   rjs  30nov98   Added options=grow
 c------------------------------------------------------------------------
 	INCLUDE 'maths.h'
 	INTEGER ERROR,VECTOR,SCALAR,CONSTANT
@@ -126,7 +138,7 @@ c------------------------------------------------------------------------
 	INTEGER BUFLEN,MAXBOX
         PARAMETER(BufLen=64,MaxBox=2048)
 	CHARACTER VERSION*(*)
-	PARAMETER (VERSION='Maths: version 1.0 05-Jun-97')
+	PARAMETER (VERSION='Maths: version 1.0 30-Nov-98')
 c
 	CHARACTER expr*256,mask*256,out*64,template*64
 	INTEGER   rbuflen,pnt
@@ -141,7 +153,7 @@ c
 c
 c  Externals.
 c
-	logical BoxRect
+	logical BoxRect,hdprsnt
 	integer Fill
 	external paction,vaction
 c
@@ -150,6 +162,7 @@ c
 c  Get the input parameters.
 c
 	call keyini
+	call getopt(grow)
 	call keya('exp',Expr,' ')
 	call keya('mask',Mask,' ')
 	call keya('out',Out,' ')
@@ -230,6 +243,8 @@ c  If there are input files, "and" all there flagging masks into
 c  regions where the computation is to take place.
 c
 	do i=1,nfiles
+	  if(naxes(i).lt.naxes(ref).and.hdprsnt(lIn(i),'mask'))
+     *	    call bug('f','Cannot handle masks with options=grow')
 	  call BoxMask(lIn(i),boxes,maxBox)
 	enddo
 	doRuns = .not.BoxRect(boxes)
@@ -260,7 +275,7 @@ c  Open the output and create the header.
 c
 	call xyopen(lOut,Out,'new',naxis,nOut)
 	if(nfiles.gt.0)then
-	  call OldHdr(lIn(1),lOut,naxis,nsize,blc,trc,version)
+	  call OldHdr(lIn(ref),lOut,naxis,nsize,blc,trc,version)
 	else
 	  call NewHdr(lOut,naxis,Range,nsize,blc,version)
 	endif
@@ -275,7 +290,7 @@ c
 	do k=1,nOut(3)
 	  Plane(3) = k + blc(3) - 1
 	  do i=1,nfiles
-	    call xysetpl(lIn(i),max(naxis-2,1),Plane(3))
+	    if(naxes(i).gt.2)call xysetpl(lIn(i),naxes(i)-2,Plane(3))
 	  enddo
 	  call xysetpl(lOut,1,k)
 c
@@ -444,7 +459,7 @@ c------------------------------------------------------------------------
 	integer i,lblc,ltrc
 	real def,crpix
 	integer nkeys
-	parameter(nkeys=46)
+	parameter(nkeys=47)
 	character keyw(nkeys)*8
 c
 c  Externals.
@@ -458,7 +473,7 @@ c
      *    'crval6  ','crval7  ',
      *	  'ctype1  ','ctype2  ','ctype3  ','ctype4  ','ctype5  ',
      *    'ctype6  ','ctype7  ',
-     *	  'obstime ','epoch   ','history ',
+     *	  'obstime ','epoch   ','history ','llrot   ',
      *	  'ltype   ','lstart  ','lstep   ','lwidth  ','pbfwhm  ',
      *	  'instrume','niters  ','object  ','telescop','cellscal',
      *	  'restfreq','vobs    ','observer','obsra   ','pbtype  ',
@@ -559,6 +574,7 @@ c------------------------------------------------------------------------
 	integer i
 	integer nin(maxnax)
 	character umsg*64
+	logical dogrow
 c
 c  Externals.
 c
@@ -587,20 +603,36 @@ c
 	  if(Indx.eq.0)then
 	    if(nfiles.ge.maxfiles)call bug('f','Too many open files')
 	    nfiles = nfiles + 1
+	    naxes(nfiles) = 0
 	    call xyopen(lIn(nfiles),Symbol,'old',maxnax,nin)
+	    naxes(nfiles) = 1
 	    if(nfiles.eq.1)then
 	      do i=1,maxnax
 	        nsize(i) = nin(i)
+		if(nin(i).gt.1)naxes(nfiles) = i
 	      enddo
 	      call rdhdi(lIn(1),'naxis',naxis,0)
 	      naxis = min(naxis, maxnax)
 	      Offset(1) = 0
+	      ref = 1
 	    else
-	      do i=1,naxis
-	        if(nin(i).ne.nsize(i)) then
+	      do i=1,maxnax
+		if(nin(i).gt.1)then
+		  naxes(nfiles) = i
+		  dogrow = naxes(ref).lt.i
+		else
+		  dogrow = naxes(ref).ge.i
+		endif
+		if(nin(i).ne.nsize(i).and..not.(dogrow.and.grow))then
 		  umsg = 'Input images/mask have different sizes: ' // 
      *		    Symbol(1:len1(Symbol))
 		  call bug('f',umsg)
+		endif
+		if(nin(i).gt.1.and.naxes(ref).lt.i)then
+		  ref = nfiles
+		  nsize(i) = nin(i)
+		  call rdhdi(lIn(nfiles),'naxis',naxis,naxes(nfiles))
+		  naxis = min(naxis, maxnax)
 		endif
 	      enddo
 	    endif
@@ -675,4 +707,20 @@ c
      *						Data,N,npixel)
 	  if(N.ne.npixel) call bug('f','Something is screwy in VACTION')
 	endif
+	end
+c************************************************************************
+	subroutine getopt(grow)
+c
+	logical grow
+c
+c------------------------------------------------------------------------
+	integer NOPTS
+	parameter(NOPTS=1)
+	character opts(NOPTS)*8
+	logical present(NOPTS)
+	data opts/'grow    '/
+c
+	call options('options',opts,present,NOPTS)
+c
+	grow = present(1)
 	end
