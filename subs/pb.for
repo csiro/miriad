@@ -56,6 +56,7 @@ c   29nov95   rjs    Use "pbtype" to describe primary beam type in
 c		     datasets. Added pblist.
 c   26mar97   rjs    Less precision in pbencode.
 c   07jul97   rjs    Change call to coaxdesc to coaxget.
+c   05sep97   mchw   Change lower freq for HATCREEK to 24 GHz.
 c************************************************************************
 c* pbList -- List known primary beam types.
 c& rjs
@@ -699,7 +700,7 @@ c
 c  The Hat Ck primary beam is a gaussian of size is 191.67 arcmin.GHz
 c  according to "John L"
 c
-	call pbAdd('HATCREEK',74.0,116.0,   191.67, 0.05, GAUS,0,0.,
+	call pbAdd('HATCREEK',24.0,116.0,   191.67, 0.05, GAUS,0,0.,
      *				   'Truncated Gaussian')
 c
 c  The following values for the WSRT are derived from the NEWSTAR
