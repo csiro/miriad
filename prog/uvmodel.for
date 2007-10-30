@@ -3,7 +3,7 @@ c************************************************************************
 	implicit none
 
 c= uvmodel - Add, subtract, etc, a model from a uv data set.
-c& mchw
+c& rjs
 c: uv analysis
 c+
 c	UVMODEL is a MIRIAD task which modifies a visibility dataset by a model.
@@ -42,37 +42,17 @@ c	  replace   Form: out = model
 c	  flag      Form: out = vis, but flag data where the difference
 c	            between vis and model is greater than "sigma" sigmas.
 c	  unflag    Unflag any flagged data in the output.
-c	  autoscale Adjust the scale of the model to minimise the difference
-c	            between the model and the visibility.
-c	  apriori   Use flux from flux table or data file planet info.
-c	  imhead    Much ``header'' information in the uv file is ignored -- the
-c	            model information is used instead. In particular, the
-c	            observing center of the uv file is taken to be the reference
-c	            pixel of the model. By default, if the reference pixel
-c	            and the uv data observing center are different, a phase
-c	            shift is applied to the model visibilities to align them.
-c	            The ``imhead'' option prevents this shifting.
-c	  selradec  This causes UVMODEL to select only those visibilities
+c
+c	  mosaic    This causes UVMODEL to select only those visibilities
 c	            whose observing center is within plus or minus three
 c	            pixels of the model reference pixel. This is needed
 c	            if there are multiple pointings or multiple sources in
 c	            the input uv file. By default no observing center
 c	            selection is performed.
-c	  polarized The source is polarized. By default the source is
-c	            assumed to be unpolarized. For a polarized source,
-c	            UVMODEL cannot perform polarization conversion. That is,
-c	            if the model is of a particular polarization, then the
-c	            visibility file should contain that sort of polarization.
-c	            For example, if the model is Stokes-Q, then the visibility
-c	            file should contain Stokes-Q.
 c	  mfs       This is used if there is a single plane in the input
 c	            model, which is assumed to represen t the data at all
 c	            frequencies. This should also be used if the model has
 c	            been derived using MFCLEAN.
-c         zero      Use the value zero for the model if it cannot be 
-c	            calculated. This can be used to avoid flagging the 
-c	            data in the outer parts of the u-v-plane when subtracting
-c	            a low resolution model.
 c	The operations add, subtract, multiply, divide, replace and flag are
 c	mutually exclusive. The operations flag and unflag are also mutually
 c	exclusive.
@@ -142,22 +122,22 @@ c    rjs  29mar93 Fiddles with the sigma.
 c    rjs  23dec93 Minimum match of linetype name.
 c    rjs  31jan95 Changes to support w-axis.
 c    mhw  05jan96 Add zero option to avoid flagging outer uvplane
-c  Bugs:
-c    * Polarisation processing is pretty crude.
+c    rjs  30sep96 Tidy up and improved polarisation handling.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
-	parameter(version='version 1.0 31-Jan-95')
+	parameter(version='version 1.0 30-Sep-96')
 	integer maxsels,nhead,nbuf
 	parameter(maxsels=64,nhead=1,nbuf=5*maxchan+nhead)
 c
 	character vis*64,modl*64,out*64,oper*8,ltype*32,type*1
 	character flag1*8,flag2*8
-	logical unflag,autoscal,apriori,updated,imhead,defline
-	logical mfs,doPol,selradec,doclip,zero
-	real sels(maxsels),offset(2),flux,clip,sigma,lstart,lstep,lwidth
-	integer nsize(3),nchan,nread,nvis,length,i
-	integer tvis,tmod,tscr,tout,vcopy,pol
+	logical unflag,updated,defline
+	logical mfs,selradec,doclip
+	real sels(maxsels),offset(2),flux(2),clip,sigma
+	real lstart,lstep,lwidth
+	integer nsize(3),nchan,nread,nvis,length,i,npol,pol
+	integer tvis,tmod,tscr,tout
 	double precision preamble(5)
 	complex data(maxchan)
 	logical flags(maxchan)
@@ -168,7 +148,7 @@ c
 c
 c  Externals.
 c
-	external header,calget
+	external header
 	logical keyprsnt
 c
 c  Get the input parameters.
@@ -177,12 +157,12 @@ c
 	call keyini
 	call keya('vis',vis,' ')
 	call SelInput('select',sels,maxsels)
-	call GetOpt(oper,unflag,autoscal,apriori,imhead,mfs,doPol,
-     *		selradec,zero)
+	call GetOpt(oper,unflag,mfs,selradec)
 	call keya('model',modl,' ')
 	doclip = keyprsnt('clip')
 	call keyr('clip',clip,0.)
-	call keyr('flux',flux,1.)
+	call keyr('flux',flux(1),1.)
+	flux(2) = 1
 	call keyr('sigma',sigma,100.)
 	call keyr('offset',offset(1),0.)
 	call keyr('offset',offset(2),0.)
@@ -194,7 +174,7 @@ c  Check the input parameters.
 c
 	if(vis.eq.' ')
      *	  call bug('f','Input visibility file name must be given')
-	if(modl.eq.' '.and.(flux.eq.0.or.imhead))
+	if(modl.eq.' '.and.flux(1).eq.0.)
      *	  call bug('f','There was no input model')
 	if(out.eq.' ')
      *	  call bug('f','Output visibility file name must be given')
@@ -209,20 +189,14 @@ c
 c
 c  Determine the flags to the ModelIni and Model routines.
 c
-	flag1 = 's'
-	if(selradec) flag1(2:2) = 'p'
-	if(doPol)    flag1(3:3) = 't'
+	flag1 = ' '
+	if(selradec) flag1 = 'p'
 	flag2 = ' '
-	if(autoscal) flag2(1:1) = 'a'
-	if(apriori)  flag2(2:2) = 'c'
-	if(imhead)   flag2(3:3) = 'h'
-	if(mfs)	     flag2(4:4) = 'm'
-	if(doclip)   flag2(5:5) = 'l'
-	if(zero)     flag2(6:6) = 'z'
+	if(mfs)	     flag2(1:1) = 'm'
+	if(doclip)   flag2(2:2) = 'l'
 c       
 	calcrms = oper.eq.'flag'
 	dounflag = unflag
-	pol = 0
 c
 c  Determine the default linetype from the uvdata if needed.
 c
@@ -248,8 +222,8 @@ c
 	if(Modl.eq.' ')then
 	  call SelApply(tvis,sels,.true.)
 	  call uvset(tvis,'data',ltype,nchan,lstart,lwidth,lstep)
-	  call Model(flag2,tvis,0,offset,flux,tscr,
-     *		nhead,header,calget,nchan,nvis)
+	  call Model(flag2,tvis,0,offset,flux,tscr,nhead,header,
+     *							nchan,nvis)
 	else
 	  call xyopen(tmod,Modl,'old',3,nsize)
 	  if(Defline)then
@@ -261,9 +235,8 @@ c
 	  endif
 	  call uvset(tvis,'data',ltype,nchan,lstart,lwidth,lstep)
 	  call ModelIni(tmod,tvis,sels,flag1)
-	  call Model(flag2,tvis,tmod,offset,Clip,tscr,
-     *		nhead,header,calget,nchan,nvis)
-	  call GetPol(tmod,doPol,pol)
+	  call Model(flag2,tvis,tmod,offset,Clip,tscr,nhead,header,
+     *							nchan,nvis)
 	endif
 c
 c  We have computed the model. Reset the input file and ready ourselves for
@@ -275,18 +248,8 @@ c
 c
 	call uvopen(tout,out,'new')
 	call uvset(tout,'preamble','uvw/time/baseline',0,0.,0.,0.)
-	if(imhead)then
-	  call ImHedIni(tvis,vcopy)
-	else
-	  call VarInit(tvis,ltype)
-	endif
+	call VarInit(tvis,ltype)
 	call VarOnit(tvis,tout,ltype)
-	if(pol.ne.0)then
-	  call wrhdi(tout,'npol',1)
-	  call wrhdi(tout,'pol',pol)
-	  call uvputvri(tout,'npol',1,1)
-	  call uvputvri(tout,'pol',pol,1)
-	endif
 c
 c  Perform the copying.
 c
@@ -298,12 +261,19 @@ c
 	  call scrread(tscr,buffer,(i-1)*length,length)
 	  call process(oper,buffer(1)*sigma,
      *			buffer(nhead+1),data,flags,nchan)
-	  if(imhead)then
-	    if(i.eq.1) call ImHed1st(tmod,tout,nchan)
-	    call uvVarCpy(vcopy,tout)
-	  else
-	    call VarCopy(tvis,tout)
+c
+c  Copy polarisation info across.
+c
+	  call uvrdvri(tvis,'npol',npol,0)
+	  if(npol.gt.0)then
+	    call uvputvri(tout,'npol',npol,1)
+	    call uvrdvri(tvis,'pol',pol,1)
+	    call uvputvri(tout,'pol',pol,1)
 	  endif
+c
+c  Copy the variables and the data.
+c
+	  call VarCopy(tvis,tout)
 	  call uvwrite(tout,preamble,data,flags,nchan)
 	enddo
 	call scrclose(tscr)
@@ -318,49 +288,6 @@ c
 	if(Modl.ne.' ') call xyclose(tmod)
 	call uvClose(tvis)
 	call uvClose(tOut)
-	end
-c************************************************************************
-	subroutine GetPol(tmod,doPol,pol)
-c
-	implicit none
-	integer tmod,pol
-	logical doPol
-c
-c  Determine the polarisation type of the output.
-c
-c  Input:
-c    tmod	Handle of the input model.
-c    doPol	Is the source polarised?
-c  Output:
-c    pol	Polarisation of the output vis data.
-c------------------------------------------------------------------------
-	integer PolI
-	parameter(PolI=1)
-c
-	integer naxis,i
-	character ctype*16,num*2
-	real crval,crpix,cdelt
-c
-c  Externals.
-c
-	character itoaf*2
-c
-c  Determine the polarisation type of the model.
-c
-	pol = PolI
-	if(doPol)then
-	  call rdhdi(tmod,'naxis',naxis,0)
-	  do i=3,naxis
-	    num = itoaf(i)
-	    call rdhda(tmod,'ctype'//num,ctype,' ')
-	    if(ctype.eq.'STOKES')then
-	      call rdhdr(tmod,'crval'//num,crval,1.)
-	      call rdhdr(tmod,'crpix'//num,crpix,1.)
-	      call rdhdr(tmod,'cdelt'//num,cdelt,1.)
-	      pol = nint( crval + (1-crpix)*cdelt )
-	    endif
-	  enddo
-	endif
 	end
 c************************************************************************
 	subroutine header(tvis,preamble,data,flags,nchan,
@@ -496,12 +423,11 @@ c
 	endif
 	end
 c************************************************************************
-	subroutine GetOpt(oper,unflag,autoscal,apriori,imhead,mfs,doPol,
-     *	  selradec,zero)
+	subroutine GetOpt(oper,unflag,mfs,selradec)
 c
 	implicit none
 	character oper*(*)
-	logical unflag,autoscal,apriori,imhead,mfs,doPol,selradec,zero
+	logical unflag,mfs,selradec
 c
 c  Get the various processing options.
 c
@@ -509,23 +435,16 @@ c  Output:
 c    oper	One of 'add','subtract','multiply','divide','replace','flag'.
 c		The default is 'add'.
 c    unflag	Determine whether we are to unflag the data.
-c    autoscal	Determine whether we are to autoscale the model.
-c    apriori	Determine whether it is a a priori model, given by the
-c		flux table, and data file planet info.
-c    imhead	Copy image header items to uvvariables.
 c    selradec	Input uv file contains multiple pointings or multiple
 c		sources.
-c    zero       Use zero if the model cannot be calculated (instead of 
-c               flagging the data)
 c------------------------------------------------------------------------
 	integer i,j
 	integer nopt
-	parameter(nopt=14)
+	parameter(nopt=9)
 	character opts(nopt)*9
 	logical present(nopt)
 	data opts/    'add      ','divide   ','flag     ','multiply ',
-     *	  'replace  ','subtract ','autoscale','unflag   ','apriori  ',
-     *	  'imhead   ','mfs      ','polarized','selradec ','zero     '/
+     *	  'replace  ','subtract ','unflag   ','mfs      ','mosaic   '/
 	call options('options',opts,present,nopt)
 c
 	j = 0
@@ -539,143 +458,10 @@ c
 	enddo
 	if(j.eq.0) call bug ('f', 'You must specify an option')
 	oper = opts(j)
-c	
-	autoscal = present(7)
-	unflag = present(8)
-	apriori = present(9)
-	imhead = present(10)
-	mfs = present(11)
-	doPol = present(12)
-	selradec = present(13)
-	zero = present(14)
+c
+	unflag = present(7)
+	mfs = present(8)
+	selradec = present(9)
 	if(oper.eq.'flag'.and.unflag)
      *	  call bug('f','You cannot use options=flag,unflag')
-	if(selradec.and.imhead)then
-	  call bug('w','Giving options=selradec,imhead together?')
-	  call bug('w','Do you know what you are doing?')
-	endif
-	end
-c************************************************************************
-	subroutine ImHedIni(tIn,vcopy)
-c
-	implicit none
-	integer tIn,vcopy
-c
-c  Initialise the copying of variables which change when the imhead option
-c  is used.
-c
-c  Input:
-c    tIn	Handle of the input visibility file.
-c  Output:
-c    vcopy	Hanle of the uv variables to be copied across.
-c------------------------------------------------------------------------
-	integer i
-c
-	integer nvar
-	parameter(nvar=49)
-	character var(nvar)*8
-c
-c  Variables to copy whenever they change.
-c
-	data var/     'airtemp ','antdiam ','antpos  ','atten   ',
-     *	   'axisrms ','chi     ','corbit  ','corbw   ','corfin  ',
-     *	   'cormode ','coropt  ','cortaper','dewpoint','evector ',
-     *	   'focus   ','freq    ','freqif  ','inttime ','ivalued ',
-     *	   'jyperk  ','latitud ','longitu ','lo1     ','lo2     ',
-     *	   'lst     ','mount   ','nants   ','ntemp   ','ntpower ',
-     *	   'observer','on      ','operator','phaselo1','phaselo2',
-     *	   'phasem1 ','plangle ','plmaj   ','plmin   ','pltb    ',
-     *	   'precipmm','relhumid','temp    ','tpower  ','ut      ',
-     *	   'veltype ','version ','winddir ','windmph ','xyphase '/
-c------------------------------------------------------------------------
-c
-c  Copy the variables that have changed.
-c
-	call uvvarini(tIn,vcopy)
-	do i=1,nvar
-	  call uvvarset(vcopy,var(i))
-	enddo
-	end
-c************************************************************************
-	subroutine ImHed1st(tmod,tout,nchan)
-c
-	implicit none
-	integer tmod,tout,nchan
-c
-c  Copy image header items to output uvvariables.
-c
-c  Input:
-c    tmod	Handle of the input model.
-c    tout	Handle of the output file.
-c    nchan	Number of channels.
-c------------------------------------------------------------------------
-	double precision ckms
-	parameter(ckms=299792.458d0)
-	double precision restfreq,sdf,sfreq,ddata,crval,cdelt
-	real vobs,crpix,data,vstart
-	character*9 ctype,ascii
-c
-c  Get coordinates from the input model.
-c
-	call rdhda(tmod,'ctype1',ctype,' ')
-	if(ctype(1:2).ne.'RA') call bug('f','axis 1 must be RA')
-	call rdhdd(tmod,'crval1',ddata,0.d0)
-	call uvputvrd(tout,'ra',ddata,1)
-	call rdhdd(tmod,'obsra',ddata,ddata)
-	call uvputvrd(tout,'obsra',ddata,1)
-c
-	call rdhda(tmod,'ctype2',ctype,' ')
-	if(ctype(1:3).ne.'DEC') call bug('f','axis 2 must be DEC')
-	call rdhdd(tmod,'crval2',ddata,0.d0)
-	call uvputvrd(tout,'dec',ddata,1)
-	call rdhdd(tmod,'obsdec',ddata,ddata)
-	call uvputvrd(tout,'obsdec',ddata,1)
-c
-c  Get info from the input model to compute sfreq and sdf.
-c
-	call rdhda(tmod,'ctype3',ctype,' ')
-	if(ctype(1:4).ne.'VELO' .and. ctype(1:4).ne.'FELO' .and.
-     *						ctype(1:4).ne.'FREQ')
-     *        call bug('f','axis must be VELO, FELO, or FREQ.')
-	call rdhdd(tmod,'cdelt3',cdelt,0.d0)
-	if(cdelt.eq. 0.) call bug('f','cdelt is 0 or not present.')
-	call rdhdd(tmod,'restfreq',restfreq,0.d0)
-	call rdhdr(tmod,'vobs',vobs,0.)
-	call rdhdd(tmod,'crval3',crval,0.d0)
-	call rdhdr(tmod,'crpix3',crpix,1.)
-	if(ctype(1:4).eq.'FREQ')then
-	  sfreq = crval + cdelt*(1-crpix)
-	  sdf = cdelt
-	else
-	  if(restfreq.eq.0)call bug('f','Restfreq missing')
-	  vstart = crval + cdelt*(1-crpix)
-	  sfreq = restfreq*(1.d0-dble(vstart+vobs)/ckms)
-	  sdf = -restfreq*cdelt/ckms
-	endif
-c
-c  Write info to the output file.
-c
-	call uvputvri(tout,'nspect',1,1)
-	call uvputvri(tout,'ischan',1,1)
-	call uvputvri(tout,'nschan',nchan,1)
-	call uvputvrd(tout,'restfreq',restfreq,1)
-	call uvputvrr(tout,'vsource',0.,1)
-	call uvputvrr(tout,'veldop',vobs,1)
-	call uvputvrd(tout,'sdf',sdf,1)
-	call uvputvrd(tout,'sfreq',sfreq,1)
-c
-c  Copy miscelaneous stuff across.
-c
-	call rdhdr(tmod,'epoch',data,0.)
-	call uvputvrr(tout,'epoch',data,1)
-c
-	call rdhda(tmod,'instrume',ascii,' ')
-	if(ascii.ne.' ')call uvputvra(tout,'telescop',ascii)
-c
-	call rdhda(tmod,'object',ascii,' ')
-	call uvputvra(tout,'source',ascii)
-c
-	call rdhdr(tmod,'pbfwhm',data,0.)
-	call uvputvrr(tout,'pbfwhm',data,1)
-c
 	end
