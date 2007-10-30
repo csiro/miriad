@@ -5,7 +5,8 @@
 
 ; History:
 ;  rjs  Dark-ages Original version.
-;  rjs   2feb90   Fixed bug with double precision values equal to zero.
+;  rjs  02feb90   Fixed bug with double precision values equal to zero.
+;  rjs  02jan05   Added pack64/unpack64.
 
 	.psect	$code,rd,nowrt,pic,shr,long
 
@@ -136,6 +137,13 @@ n    = 12
 	movb	1(sp),(r2)+
 	movb	(sp),(r2)+
 	sobgtr	r0,10$
+	ret
+
+; pack64 and unpack64 not implemented on VMS.
+
+unpack64_c::
+	.entry	pack64_c,^m<>
+	halt
 	ret
 
 unpack32_c::
