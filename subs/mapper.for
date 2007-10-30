@@ -7,6 +7,8 @@ c    MapFin
 c    MapScale(ichan)
 c    Mapper(ichan,pMap)
 c
+c  History:
+c    rjs  25oct94 Original version.
 c************************************************************************
 	subroutine MapFin
 c
@@ -100,6 +102,8 @@ c
 	    Scale(i) = 0.5/Sum
 	  enddo
 	else
+	  if(npnt.gt.1)call bug('f',
+     *	    'Cannot handle multiple pointings for DFT or MEDIAN mode')
 	  call MapSlowS(tscr,nvis,offcorr+2*(ichan-1),
      *					offcorr+2*totchan-1,Sum)
 	  if(mode.eq.'median')then
@@ -149,18 +153,44 @@ c
 c  Do the DFT and Median processing modes (pretty slow ...).
 c
 	else
-	  if(nBuff.lt.nxc*nyc+5*nvis)then
-	    if(nBuff.gt.0)call MemFree(pBuff,nBuff,'r')
-	    nBuff = nxc*nyc + 5*nvis
-	    call MemAlloc(pBuff,nBuff,'r')
-	  endif
+	  if(npnt.gt.1)call bug('f',
+     *	    'Cannot handle multiple pointings for DFT or MEDIAN mode')
+	  if(ichan.lt.chan1.or.ichan.gt.chan2)call MapBufS(ichan)
 	  call MapSlow(tscr,mode,nvis,offcorr+2*(ichan-1),
      *		offcorr+2*totchan-1,
      *		memr(pBuff+nxc*nyc),
      *		memr(pBuff+nxc*nyc+4*nvis),
-     *		memr(pBuff),nxc,nyc,n1,n2,scale(i))
+     *		memr(pBuff),nxc,nyc,scale(1))
 	endif
 	pMap = pBuff
+c
+	end
+c************************************************************************
+	subroutine MapBufS(ichan)
+c
+	implicit none
+	integer ichan
+c
+c  Determine the size of the buffer, etc.
+c------------------------------------------------------------------------
+	include 'mapper.h'
+	integer it
+c
+	chan2 = 0
+	chan1 = ichan
+	it = 0
+	dowhile(chan2.lt.chan1)
+	  it = it + 1
+	  chan2 = chan2 + nchan(it)
+	enddo
+	nxc = nx(it)
+	nyc = ny(it)
+c
+	if(nBuff.lt.nxc*nyc+5*nvis)then
+	  if(nBuff.gt.0)call MemFree(pBuff,nBuff,'r')
+	  nBuff = nxc*nyc + 5*nvis
+	  call MemAlloc(pBuff,nBuff,'r')
+	endif
 c
 	end
 c************************************************************************
@@ -194,36 +224,22 @@ c  Perform a gridding pass ...
 c------------------------------------------------------------------------
 	include 'mapper.h'
 	include 'mem.h'
-	integer nplanes,it
 c
 c  Initialise the gridder, if needed.
 c
 	if(.not.ginit)call MapGinit
 	ginit = .true.
 c
-c  Determine which run of channels we want to grid.
-c
-	chan2 = 0
-	chan1 = ichan
-	it = 0
-	dowhile(chan2.lt.chan1)
-	  it = it + 1
-	  chan2 = chan2 + nchan(it)
-	enddo
-	nxc = nx(it)
-	nyc = ny(it)
-c
 c  Determine things about grid sizes, buffers, centres, etc.
 c
-	call mapBuf(chan2-chan1+1,nplanes)
-	chan2 = chan1 + nplanes - 1
+	call mapBuf(ichan)
 c
 c  Now actually do the work.
 c
 	call output('Starting gridding phase ...')
 	call MapVis(tscr,cgf,ncgf,width,nvis,offcorr+2*(chan1-1),
-     *	  nplanes,offcorr+2*totchan-1,memr(pBuff+nextra),nu,nv,npnt,
-     *	  u0,v0,n1,n2)
+     *	  chan2-chan1+1,offcorr+2*totchan-1,memr(pBuff+nextra),
+     *	  nu,nv,npnt,u0,v0,n1,n2)
 c
 	end
 c************************************************************************
@@ -270,19 +286,17 @@ c
 c
 	end
 c************************************************************************
-	subroutine mapBuf(maxplane,nplanes)
+	subroutine mapBuf(ichan)
 c
 	implicit none
-	integer maxplane,nplanes
+	integer ichan
 c
 c  Determine the gridding/mapping buffer size to be used, etc.
 
 c  Input:
-c    maxplane	The number of planes we really would like to grid at
-c		one time.
-c  Output:
-c    nplanes	The number of planes that we have buffer space for.
+c    ichan	Channel to grid.
 c  Output (in common):
+c    chan1,chan2 Range of channels to grid.
 c    nu,nv	Grid size (in complex elements).
 c    u0,v0	Pixel coordinate of the origin of the uv plane.
 c    nextra	Number of "extra" things to allocate (to hold a final
@@ -291,11 +305,24 @@ c    pBuff	Pointer to the buffer.
 c    nBuff	The number of elements allocated.
 c------------------------------------------------------------------------
 	include 'mapper.h'
-	integer plsize,npass
+	integer plsize,npass,it,maxplane,nplanes
 c
 c  Externals.
 c
 	integer memBuf
+c
+c  Determine the range of things to possibly grid.
+c
+	chan2 = 0
+	chan1 = ichan
+	it = 0
+	dowhile(chan2.lt.chan1)
+	  it = it + 1
+	  chan2 = chan2 + nchan(it)
+	enddo
+	maxplane = chan2 - chan1 + 1
+	nxc = nx(it)
+	nyc = ny(it)
 c
 	nu = 2*int(umax*n1 + 0.5*width) + 1
 	nv = 2*int(vmax*n2 + 0.5*width) + 1
@@ -332,8 +359,12 @@ c
 	  if(nBuff.gt.0)call memFree(pBuff,nBuff,'r')
 	  nBuff = nplanes * plsize + nextra
 	  call memAlloc(pBuff,nBuff,'r')
-	write(*,*)'Memory allocated: ',nBuff
 	endif
+c
+c  Set the channel range that we will grid.
+c
+	chan1 = ichan
+	chan2 = chan1 + nplanes - 1
 c
 	end
 c************************************************************************
@@ -434,7 +465,7 @@ c------------------------------------------------------------------------
 	parameter(InU=1,InV=2,InPnt=4)
 	integer i,j,k,l,uu,vv,p0,q0,g0,gg,pp,qq,Step,chan,pnt
 	complex Dat,Dat1
-	real Weight,u,v,hwd
+	real Weight,u,v,hwd,du,dv
 	logical ok
 c
 c  Initialise.
@@ -466,11 +497,14 @@ c
 c
 c  Determine where to grid it.
 c
-	  u = u + u0 - 1
-	  v = v + v0 - 1
 	  pnt = nint(Vis(InPnt,l))
-	  vv = nint(v - hwd)
+c
 	  uu = nint(u - hwd)
+	  du = u - uu
+	  uu = uu + u0 - 1
+	  vv = nint(v - hwd)
+	  dv = v - vv
+	  vv = vv + v0 - 1
 c
 c  Check if the data fits on the grid. If not, discard it. Otherwise
 c  grid it.
@@ -479,8 +513,8 @@ c
 	  if(ok)then
 	    g0 = uu + vv*nu
 c
-	    p0 = ncgf/2 - nint( Step * (u-uu) )
-	    q0 = ncgf/2 - nint( Step * (v-vv) )
+	    p0 = ncgf/2 - nint( Step * du )
+	    q0 = ncgf/2 - nint( Step * dv )
 c
 	    if(ncount.lt.width)then
 	      k = offset
@@ -525,11 +559,10 @@ c
 	        enddo
 	      enddo
 	    endif
-	  else
-	    write(*,*)'Discard',uu,vv
 	  endif
 c
 	enddo
+c
 	end
 c************************************************************************
 	subroutine MapIndx(ncgf,width,nu,poff,qoff,goff)
@@ -787,10 +820,10 @@ c
 	end	
 c************************************************************************
 	subroutine MapSlow(tscr,mode,nvis,offcorr,VisSize,
-     *				Dat,Wrk,Map,nx,ny,n1,n2,scale)
+     *				Dat,Wrk,Map,nx,ny,scale)
 c
 	implicit none
-	integer tscr,nvis,offcorr,VisSize,nx,ny,n1,n2
+	integer tscr,nvis,offcorr,VisSize,nx,ny
 	real Dat(4,nvis),Wrk(nvis),Map(nx,ny),scale
 	character mode*(*)
 c
@@ -822,8 +855,8 @@ c
 	  call scrread(tscr,Vis,offset,length)
 	  l0 = 0
 	  do l=1,ltot
-	    Dat(1,k+l) = Vis(l0+1) * n1 / real(nx)
-	    Dat(2,k+l) = Vis(l0+2) * n2 / real(ny)
+	    Dat(1,k+l) = Vis(l0+1)
+	    Dat(2,k+l) = Vis(l0+2)
 	    Dat(3,k+l) = Scale*Vis(l0+offcorr)
 	    Dat(4,k+l) = Scale*Vis(l0+offcorr+1)
 	    l0 = l0 + VisSize
