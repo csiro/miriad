@@ -46,17 +46,16 @@ c--
 c
 c  History:
 c    rjs  25oct93 Adapted from LINMOS.
-c    rjs  26aug94 Initialise Wts array.
+c    nebk 22aug94 Adapt to GETFREQ error status change
 c
 c  Bugs:
-c    Geometry is terrible.
 c
 c  Program parameters:
 c    maxIn	Maximum number of input files.
 c    maxlen	Size of buffer to hold all the input file names.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Psfmos: version 1.0 26-Aug-94')
+	parameter(version='Psfmos: version 1.0 22-Aug-94')
 	include 'maxdim.h'
 	include 'maxnax.h'
 c
@@ -123,7 +122,7 @@ c  Get the beam and initialise the weights arrays.
 c
 	call GetBeam(tBeam,memR(pBeam),nBeam(1),nBeam(2))
 	call Zeroit(memR(pWBeam),nBeam(1)*nBeam(2))
-	call Zeroit(memR(pWts),  nBeam(1)*nBeam(2))
+	call Zeroit(memR(pWBeam),nBeam(1)*nBeam(2))
 c
 c  Loop over all the input maps.
 c
@@ -182,7 +181,7 @@ c------------------------------------------------------------------------
 	  axnam = ' '
 	  call fndaxnum(tBeam,'freq',axnam,ifax)
 	  call getfreq(tBeam,1.0,ifax,freq,finc,ierr)
-	  if(ierr.gt.1) call bug('f','Could not get frequency')
+	  if(ierr.gt.0) call bug('f','Could not get frequency')
 	else
 	  freq = -1.d0
 	endif
