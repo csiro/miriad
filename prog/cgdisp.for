@@ -616,6 +616,7 @@ c    nebk 09sep98  "sym" overlay ID strings were not being written
 c 		   in the right place
 c    nebk 17sep98  hardcopy devices were over-riding too much colour
 c                  table control
+c    nebk 09apr99  fix problem with hard copy colour tbales and multipanel plots
 c-----------------------------------------------------------------------
       implicit none
 c
@@ -883,7 +884,7 @@ c If we are going to use a b&w transfer function we must account for the
 c background colour of the device.  So make the OFM the complement of 
 c itself here if the background is going to be white.  Only works for b&w OFMs
 c
-             if (bgcol.eq.1 .and. coltab(j).eq.0) call ofmcmp
+             if (bgcol.eq.1) call ofmcmp
            end if
 c
 c Draw image
@@ -927,8 +928,7 @@ c
 c
 c Retake complement of OFM if needed (hardcopy/white backgrounds)
 c
-         if (hard.eq.'YES' .and. bgcol.eq.1 .and. coltab(j).eq.0)
-     +       call ofmcmp
+         if (hard.eq.'YES' .and. bgcol.eq.1) call ofmcmp
 c
 c Interactive modification of OFM for interactive devices here
 c
@@ -2284,9 +2284,11 @@ c Interactive modification of OFM for hardcopy devices here; must be
 c done before PGIMAG called.  Any change of lookup table here will
 c overwrite that done with call to ofmcol above
 c
-      if (dofid .and. (jj.eq.1 .or. dosing))
-     +  call ofmmod (tfvp, win(1)*win(2), image, nimage, 
+      if (dofid .and. (jj.eq.1 .or. dosing)) then
+         write (*,*) 'fiddle on'
+         call ofmmod (tfvp, win(1)*win(2), image, nimage, 
      +               pixr2(1), pixr2(2))
+      end if
 c
       end
 c
