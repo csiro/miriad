@@ -23,13 +23,14 @@ c    rjs     12oct93 Original version.
 c    nebk    23nov93 Doc change to give rjs the grumps.
 c    mchw    04jan95 write out new interval.
 c    rjs     06jan95 Make interval the max of the old and new.
+c    rjs     10jan95 Fixed a serious bug I introduced on 6jan.
 c
 c  Bugs and Shortcomings:
 c    ? Perfect ?
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
-	parameter(version='GpAver: version 1.0 04-JAN-95')
+	parameter(version='GpAver: version 1.0 10-JAN-95')
 	logical dovec
 	double precision interval
 	character vis*64
@@ -171,7 +172,7 @@ c
 c  Now write out the new gain solutions.
 c
 	call wrhdi(tVis,'nsols',nnsols)
-	call rdhdd(tVis,'interval',int1)
+	call rdhdd(tVis,'interval',int1,0.d0)
 	call wrhdd(tVis,'interval',max(int1,interval))
 	call haccess(tVis,tGains,'gains','write',iostat)
 	if(iostat.ne.0)call AverBug(iostat,'Error reopening gain table')
