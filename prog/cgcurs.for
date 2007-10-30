@@ -1,4 +1,4 @@
-       program cgcurs
+      program cgcurs
 c-----------------------------------------------------------------------
 c= CGCURS - Read quantities with cursor from images on a PGPLOT device
 c& nebk
@@ -8,6 +8,11 @@ c	CGCURS displays an image via a contour plot or a grey scale
 c	on a PGPLOT device.  The cursor is then used to read image
 c	values, or to evaluate image statistics in a polygonal region,
 c	or to write a polygonal region definition to a text file.
+c	
+c	When using cursor options, generally, click the right button
+c	(enter X) to exit the function, click the left button (enter A)
+c	to add a location, and click the middle button (enter D) to
+c	delete a location.
 c
 c@ in
 c	The input image.
@@ -243,7 +248,11 @@ c    nebk 30jun94  New call to vpadjcg
 c    nebk 08aug94  Remove 's' from boxset which naughty robbie included
 c                  in 1991. This broke the ability to handle
 c                  discontinuous planes (for 3 years !)  
-
+c    nebk 25aug94  Adapt to write out true world coordinates.  Displayed
+c                  plot now linearized at centre of displayed region.
+c		   Also call new LAB3CG which labels plot with true 
+c                  world coordinates for third axis
+c    nebk 23dec94  Make sure selected region no bigger than image
 c To do:
 c
 c-----------------------------------------------------------------------
@@ -260,7 +269,7 @@ c
 c
       double precision cdelt(maxnax), crval(maxnax), crpix(maxnax)
       real levs(maxlev), pixr(2), tr(6), cs(2), pixr2(2), scale(2), 
-     +  tfvp(4), wdgvp(4), cumhis(nbins)
+     +  tfvp(4), wdgvp(4), cumhis(nbins), dmm(2)
       real slev, xmin, xmax, ymin, ymax, vxmin, vymin, vymax, vx, vy,
      +  vxsize, vysize, vxgap, vygap, ydispb, xdispl, groff, blank, 
      +  epoch
@@ -281,10 +290,11 @@ c
      +  first
 c
       data ipage, scale /0, 0.0, 0.0/
+      data dmm /1.0e30, -1.0e30/
 c-----------------------------------------------------------------------
-      call output ('CgCurs: version 08-Aug-94')
-      call bug ('i',
-     +   'Spatial binning now available with keyword "xybin"')
+      call output ('CgCurs: version 23-Dec-94')
+      call output ('Non-linear coordinates are now partially handled')
+      call output ('See "help cgcoords" for explanations')
       call output (' ')
 c
 c Get user inputs
@@ -358,6 +368,11 @@ c
      +                 slev, nlevs, levs, srtlev)
         blank = -99999999.0
       end if
+c
+c Linearize axis descriptors if non-pixel labels requested
+c
+      call linco (lin, labtyp, blc, trc, grpbeg, ngrp, ctype,
+     +            crval, crpix, cdelt)
 c
 c Work out array index limits, coordinate transformation array and
 c labels.   Also return header items.
@@ -452,7 +467,7 @@ c
 c Read in image and save it if necessary
 c
          call readimcg (.true., mask, blank, lin, ibin, jbin, krng,
-     +         blc, trc, .true., memi(ipnim), memr(ipim), doblnk)
+     +         blc, trc, .true., memi(ipnim), memr(ipim), doblnk, dmm)
          if (trfun.eq.'heq' .and. (cursor .or. stats)) 
      +     call copyimcg (win(1)*win(2), memr(ipim), memr(ipims))
 c
@@ -519,8 +534,8 @@ c
            if (do3val .or. do3pix) then
              call pgsch (cs(2))
              call pgsci (1)
-             call lab3cg (doerase, do3val, do3pix, crpix, cdelt, crval,
-     +                    ctype, labtyp, grpbeg(k), ngrp(k))
+             call lab3cg (lin, doerase, do3val, do3pix, labtyp,
+     +                    grpbeg(k), ngrp(k))
            end if
 c
 c Cursor options
@@ -530,7 +545,7 @@ c
 c Read value and location under cursor
 c
              call pgsci (2)
-             call curpos (win(1), win(2), memr(ipim), memr(ipims),
+             call curpos (lin, win(1), win(2), memr(ipim), memr(ipims),
      +           memi(ipnim), labtyp, blc, naxis, cdelt, crpix, 
      +           crval, ctype, ibin, jbin, krng, dolog, lcurs, 
      +           cgspec, cgdisp, mark, dobox, near, trfun, groff)
@@ -554,8 +569,8 @@ c
 c Define polygonal region with cursor
 c
              call pgsci (8)
-             call cureg (ibin, jbin, krng, near, doabs, size, naxis, 
-     +          crval, crpix, cdelt, ctype, labtyp, display, lreg)
+             call cureg (lin, blc, ibin, jbin, krng, near, doabs, size, 
+     +         naxis, crval, crpix, cdelt, ctype, labtyp, display, lreg)
            end if
 c
 c Erase subplot
@@ -607,19 +622,6 @@ c
       end
 c
 c
-      subroutine colstr (line)
-      implicit none
-      character line*(*)
-cc
-      integer i, len1
-c
-      do i = 1, len1(line)
-        if (line(i:i).eq.':') line(i:i) = ' '
-      end do
-c
-      end
-c
-c
       subroutine compact (str)
 c-----------------------------------------------------------------------
 c     COmpact string by removing trailing 0's 
@@ -658,12 +660,14 @@ c
       end
 c
 c
-      subroutine cureg (ibin, jbin, krng, near, doabs, size, naxis,
-     +   crval, crpix, cdelt, ctype, labtyp, redisp, lreg)
+      subroutine cureg (lin, blc, ibin, jbin, krng, near, doabs, 
+     +   size, naxis, crval, crpix, cdelt, ctype, labtyp, redisp, lreg)
 c-----------------------------------------------------------------------
 c     Define region of interest with cursor and write to log file.
 c
 c  Input:
+c    lin    Handle of image
+c    blc    BLC of image
 c    i,jbin Spatial pixel binning values
 c    krng   Start plane being displayed and number of planes 
 c           averaged in display
@@ -684,7 +688,7 @@ c
 c-----------------------------------------------------------------------
       implicit none
 c
-      integer lreg, ibin, jbin, krng(2), naxis, size(naxis)
+      integer lin, lreg, ibin, jbin, krng(2), naxis, size(naxis), blc(2)
       double precision cdelt(naxis), crval(naxis), crpix(naxis)
       character*(*) ctype(naxis), labtyp(2)
       logical redisp, doabs, near
@@ -696,10 +700,12 @@ c
       integer nvmax, symb
       parameter (nvmax = 100, symb = 17)
 c
-      double precision world, vert(2,nvmax)
+      double precision vert(2,nvmax), ww(2), pix(3), pixbs(2), 
+     +  win(3), wout(3), chan
       real vx(nvmax), vy(nvmax)
-      character str1*30, str2*30, str*60, line*500, ans*1
-      integer il1, il2, i, ip, il, maxlen, nv, irad(2), iostat
+      character str1*30, str2*30, str*60, line*500, ans*1, typei(3)*6,
+     +  typeo(3)*6
+      integer il1, il2, i, ip, il, maxlen, nv, irad(2), iostat, bin(2)
       logical good, more, rads, ok
 c
       integer len1, ci
@@ -708,6 +714,12 @@ c----------------------------------------------------------------------
       call output ('**********************************')
       call output ('Entering region of interest option')
       call output ('**********************************')
+      call output (' ')
+      call output ('Click left button   (enter A) to mark vertex')
+      call output 
+     +  ('Click middle button (enter D) to delete previous vertex')
+      call output ('Click right button  (enter X) to finish polygon')
+      call output (' ')
 c
 c Do we have an axes in radians, can't output locations
 c in arcsecond offsets otherwise.
@@ -717,6 +729,16 @@ c
       rads = .true.
       if (irad(1)*irad(2).eq.0) rads = .false.
       if (.not.rads) doabs = .true.
+      bin(1) = ibin
+      bin(2) = jbin
+      typei(1) = 'abspix'
+      typei(2) = 'abspix'
+      typei(3) = 'abspix'
+      typeo(1) = 'arcsec'
+      typeo(2) = 'arcsec'
+      typeo(3) = 'arcsec'
+      chan = (real(2*krng(1)+krng(2))-1.0)/2.0
+      call initco (lin)
 c
 c Get vertices with cursor and join up the dots
 c
@@ -747,8 +769,12 @@ c
             call pgsci (0)
             call pgpt (nv, vx, vy, symb)
             do i = 1, nv
+              ww(1) = vx(i)
+              ww(2) = vy(i)
               call nearcon (labtyp, naxis, crval, crpix, cdelt,
-     +                      ctype, ibin, jbin, vx(i), vy(i))
+     +                      ctype, bin, blc, ww, pix, pixbs)
+              vx(i) = ww(1)
+              vy(i) = ww(2)
             end do
 c
 c Draw new points
@@ -765,7 +791,7 @@ c
           call pgupdt
           call pgslw (1)
 c
-c Convert polygon vertices in world coordinates to unbinned
+c Convert polygon vertices in linear world coordinates to unbinned
 c full image pixels 
 c
           do i = 1, nv
@@ -779,17 +805,16 @@ c Eliminate redundant vertices
 c
           call elimrvd (nvmax, nv, vert) 
 c
-c Convert to arcsec if desired 
+c Convert unbinned full image pixels to true arcsec offsets if desired 
 c
           if (.not.doabs) then
             do i = 1, nv
-              call pix2wcg (.true., vert(1,i), 1, 'arcsec', naxis,
-     +                      crval, crpix, cdelt, ctype, world, ok)
-              vert(1,i) = world
-c
-              call pix2wcg (.true., vert(2,i), 2, 'arcsec', naxis,
-     +                      crval, crpix, cdelt, ctype, world, ok)
-              vert(2,i) = world
+              win(1) = vert(1,i)
+              win(2) = vert(2,i)
+              win(3) = chan
+              call w2wco (lin, 2, typei, ' ', win, typeo, ' ', wout)
+              vert(1,i) = wout(1)
+              vert(2,i) = wout(2)
             end do
           end if
 c
@@ -873,17 +898,19 @@ c
           redisp = .false.
         end if
       end do
+      call finco (lin)
 c
       end
 c
 c
-      subroutine curpos (nx, ny, image, images, nimage, labtyp, blc, 
-     +   naxis, cdelt, crpix, crval, ctype, ibin, jbin, krng, dolog,
-     +   lcurs, cgspec, cgdisp, mark, dobox, near, trfun, groff)
+      subroutine curpos (lin, nx, ny, image, images, nimage, labtyp, 
+     +   blc, naxis, cdelt, crpix, crval, ctype, ibin, jbin, krng, 
+     +   dolog, lcurs, cgspec, cgdisp, mark, dobox, near, trfun, groff)
 c-----------------------------------------------------------------------
 c     Return pixel location and value under cursor
 c
 c  Input:
+c     lin     Image handle
 c     nx,ny   Size of image
 c     image   Image
 c     images  A copy of image before the transfer function is applied
@@ -915,33 +942,41 @@ c-----------------------------------------------------------------------
       implicit none
 c
       integer nx, ny, nimage(nx,ny), blc(2), lcurs, naxis, 
-     +  ibin, jbin, krng(2)
+     +  ibin, jbin, krng(2), lin
       double precision cdelt(naxis), crval(naxis), crpix(naxis)
       real image(nx,ny), images(*), groff
       character*(*) labtyp(2), ctype(naxis), trfun
       logical dolog, cgspec, cgdisp, mark, dobox, near
 cc
-      double precision winc(2), pix(2), ww
+      double precision pix(3), pixbs(2), ww(2)
       real w(2), ival
-      integer iostat, len1, iloc, ipl, wl(3), wwl(2), vl(2), k,
+      integer iostat, len1, iloc, ipl, wl(3), wwl(2), vl(3), k,
      +  bin(2), ib, jb
-      character cch*1, line*132, plstr*20, vstr(2)*60, wstr(3)*60, 
-     +wwstr(2)*20, fmt*20
+      character cch*1, line*132, plstr*20, vstr(3)*60, wstr(3)*60, 
+     +  wwstr(3)*20, typei(3)*6, typeo(3)*6
       logical ok
 c-----------------------------------------------------------------------
       call output (' ')  
       call output ('****************************')
       call output ('Entering cursor value option')
       call output ('****************************')
+      call output (' ')
+      call output ('Click left button  (enter A) for location')
+      call output ('Click right button (enter X) to exit')
+      call output (' ')
+      call initco (lin)
+      typei(1) = 'abspix'
+      typei(2) = 'abspix'
+      typei(3) = 'abspix'
+      pix(3) = (real(2*krng(1)+krng(2))-1.0)/2.0
 c
 c Format channel value
 c
-      if (krng(2).eq.1) then
-        call strfi (krng(1), '(i4)', wstr(3), wl(3))
-      else
-        call strfr ((real(2*krng(1)+krng(2))-1.0)/2.0, '(f7.2)', 
-     +               wstr(3), wl(3))
-      end if
+c      if (krng(2).eq.1) then
+c        call strfi (krng(1), '(i4)', wstr(3), wl(3))
+c      else
+c        call strfr (real(pix(3)), '(f7.2)', wstr(3), wl(3))
+c      end if
 c
 c Format channel range for CGDISP log files
 c
@@ -958,52 +993,39 @@ c
       iloc = 0
       do while (cch.ne.'X')
 c
-c Read cursor in world coordinates and convert to pixels
+c Read cursor in linear world coordinates and convert to (nearest
+c or boxest) binned subimage pixels
 c
         call cgcur (w(1), w(2), cch)
+        ww(1) = w(1)
+        ww(2) = w(2)
+        if (near) then
+          call nearcon (labtyp, naxis, crval, crpix, cdelt,
+     +                  ctype, bin, blc, ww, pix, pixbs)
+        else if (dobox) then
+          call pkfind (labtyp, naxis, crval, crpix, cdelt, ctype, 
+     +      nx, ny, image, nimage, blc, bin, ww, pix, pixbs)
+        else
+          do k = 1, 2
+            call w2pixcg (ww(k), k, labtyp(k), naxis, crval, crpix,
+     +                    cdelt, ctype, pix(k), ok)
+            pixbs(k) = pix(k)
+            call ppconcg (1, blc(k), bin(k), pixbs(k))
+          end do
+        end if
+        w(1) = ww(1)
+        w(2) = ww(2)
 c
-c Convert world coordinate to world coordinate of nearest pixel
+c Keep an integer copy of binned subimage pixel
 c
-        if (near) call nearcon (labtyp, naxis, crval, crpix, cdelt,
-     +                          ctype, ibin, jbin, w(1), w(2))
-c
-c Convert world coordinate to unbinned full image pixels
-c
-        do k = 1, 2
-          call w2pixcg (dble(w(k)), k, labtyp(k), naxis, crval, crpix,
-     +                  cdelt, ctype, pix(k), ok)
-        end do
-c
-c Find subimage pixel and convert to binned pixel.  Keep an integer copy.
-c
-        call ppconcg (1, blc(1), ibin, pix(1))
-        call ppconcg (1, blc(2), jbin, pix(2))
-        ib = nint(pix(1))
-        jb = nint(pix(2))
+        ib = nint(pixbs(1))
+        jb = nint(pixbs(2))
 c
         if (ib.lt.1 .or. ib.gt.nx .or. jb.lt.1 .or. jb.gt.ny) then
           call bug ('w', 'Cursor off image')
         else
 c
-c Find peak in 5x5 box centred on cursor if desired and find
-c world coordinates of that pixel
-c
-          if (dobox) call pkfind (nx, ny, image, nimage, pix(1), pix(2))
-c
-c Convert back to unbinned full image pixels
-c
-          call ppconcg (2, blc(1), ibin, pix(1))
-          call ppconcg (2, blc(2), jbin, pix(2))
-c
-c Convert to world coordinate
-c
-          do k = 1, 2
-            call pix2wcg (.false., pix(k), k, labtyp(k), naxis,
-     +                    crval, crpix, cdelt, ctype, ww, ok)
-            w(k) = ww
-          end do
-c
-c Tell user
+c Mark on plot if desired
 c
           if (cch.ne.'X') then
             iloc = iloc + 1
@@ -1017,7 +1039,7 @@ c
 c
             if (dolog) then
 c
-c Write separator
+c Write separator to log file
 c
               if (cgspec .or. cgdisp) then
                 call txtwrite (lcurs, '#', 1, iostat)
@@ -1026,16 +1048,15 @@ c
               end if
             end if
 c
-c Convert to world coordinate formatted strings
+c Convert absolute pixel to true world coordinate formatted strings
+c with and without units
 c
-            do k = 1, 2
-              call pix2wfcg (labtyp(k), k, pix(k), naxis, crval, 
-     +           crpix, cdelt, ctype, .true., wstr(k), wl(k))
-c
-              call pix2wfcg (labtyp(k), k, pix(k), naxis, crval, 
-     +           crpix, cdelt, ctype, .false., vstr(k), vl(k))
-            end do
-c
+            call setoaco (lin, 'abs', 3, typeo)
+            call w2wfco (lin, 3, typei, ' ', pix,  typeo, ' ',
+     +                   .true., wstr, wl)
+            call w2wfco (lin, 3, typei, ' ', pix, typeo, ' ',
+     +                   .false., vstr, vl)
+c       
             line = 'World coordinates x,y         : '//
      +              vstr(1)(1:vl(1))//', '//vstr(2)(1:vl(2))
             call output (line)    
@@ -1047,76 +1068,54 @@ c
      +          call txtwrite (lcurs, line, len1(line), iostat)
 c
               if (cgspec) then
-                write (line, 5) labtyp(1)(1:len1(labtyp(1))), 
-     +                          labtyp(2)(1:len1(labtyp(2))),
+                write (line, 5) typeo(1)(1:len1(typeo(1))), 
+     +                          typeo(2)(1:len1(typeo(2))),
      +                          wstr(1)(1:wl(1)), wstr(2)(1:wl(2))
 5               format (a, 1x, a, 1x, a, 1x, a)
-                call colstr (line)
                 call txtwrite (lcurs, line, len1(line), iostat)
               end if
 c
               if (cgdisp) then
-                do k = 1, 2
-                  if (labtyp(k).eq.'hms' .or. labtyp(k).eq.'dms') then
-                    call strfi (2, '(i1)', wwstr(k), wwl(k))
-                  else 
+                call pixinc (lin, bin, wwstr, wwl)
 c
-c Need to find pixel increment in world coordinates. Allow for binning.
-c
-                    call pixi2wcg (.true., k, labtyp(k), naxis, crval, 
-     +                             crpix, cdelt, ctype, winc(k), ok)
-                    winc(k) = winc(k) * bin(k)
-c
-                    fmt = '(1pe13.6)'
-                    if (labtyp(k)(4:6).eq.'pix') fmt = '(f8.2)'
-                    call strfd (2*abs(winc(k)), fmt, wwstr(k), wwl(k))
-                  end if
-                end do
-c
-                write (line, 8) labtyp(1)(1:len1(labtyp(1))),
-     +            labtyp(2)(1:len1(labtyp(2))), iloc, 
+                write (line, 8) typeo(1)(1:len1(typeo(1))),
+     +            typeo(2)(1:len1(typeo(2))), iloc ,
      +            wstr(1)(1:wl(1)), wstr(2)(1:wl(2)),
      +            wwstr(1)(1:wwl(1)), wwstr(2)(1:wwl(2)),
      +            plstr(1:ipl)
 8               format ('star ', a, 1x, a, i4, ' no ' a, 1x,
      +                  a, 1x, a, 1x, a, 1x, a)
-                call colstr (line)
                 call txtwrite (lcurs, line, len1(line), iostat)
               end if
             end if 
 c
-c Absolute pixels.  These are unbinned pixels.
-c 
-            if (labtyp(1).ne.'abspix' .or. labtyp(2).ne.'abspix') then
-              do k = 1, 2
-                call pix2wfcg ('abspix', k, pix(k), naxis, crval,
-     +             crpix, cdelt, ctype, .true., wstr(k), wl(k))
-              end do
-              write (line, 10) wstr(1)(1:wl(1)), wstr(2)(1:wl(2)), 
-     +                         wstr(3)(1:wl(3))
-10            format ('Image pixel coordinates x,y,z : ', a, ', ', a, 
-     +                ', ', a)
-              call output (line)
-c 
-              if (dolog) then
-                if (.not.cgspec .and. .not.cgdisp) 
-     +            call txtwrite (lcurs, line, len1(line), iostat)
-                if (cgspec) then
-                  write (line, 15) wstr(1)(1:wl(1)), wstr(2)(1:wl(2))
-15                format ('# abspix abspix ', a, 1x, a)
-                  call txtwrite (lcurs, line, len1(line), iostat)
-                end if
-                if (cgdisp) then
-                  write (line, 20) iloc, wstr(1)(1:wl(1)), 
-     +                             wstr(2)(1:wl(2)), plstr
-20                format ('# star abspix abspix ', i4, 1x, ' no ',
-     +                     a, 1x, a, ' 2', ' 2', 1x, a)
-                  call txtwrite (lcurs, line, len1(line), iostat)
-                end if
-              end if
-            end if
+c Convert absolute pixel to true offset world coordinate formatted strings 
 c
-c Image intensity
+            call setoaco (lin, 'off', 3, typeo)
+            call w2wfco (lin, 3, typei, ' ', pix,  typeo, ' ',
+     +                   .false., wstr, wl)
+            line = 'Offset world coordinates x,y  : '//
+     +              wstr(1)(1:wl(1))//', '//wstr(2)(1:wl(2))
+            call output (line)    
+            if (dolog .and. (.not.cgspec .and. .not.cgdisp))
+     +          call txtwrite (lcurs, line, len1(line), iostat)
+c
+c Absolute pixels.  
+c
+            typeo(1) = 'abspix'
+            typeo(2) = 'abspix'
+            typeo(3) = 'abspix'
+            call w2wfco (lin, 3, typei, ' ', pix, typeo, ' ',
+     +                   .true., wstr, wl)
+            write (line, 10) wstr(1)(1:wl(1)), wstr(2)(1:wl(2)), 
+     +                       wstr(3)(1:wl(3))
+10          format ('Image pixel coordinates x,y,z : ', a, ', ', a, 
+     +              ', ', a)
+            call output (line)
+            if (dolog .and. (.not.cgspec .and. .not.cgdisp))
+     +          call txtwrite (lcurs, line, len1(line), iostat)
+c
+c Image intensity; allow for transfer function
 c  
             call strfi (nint(pix(1)), '(i4)', wstr(1), wl(1))
             call strfi (nint(pix(2)), '(i4)', wstr(2), wl(2))
@@ -1135,32 +1134,22 @@ c
 40            format ('Image intensity               :', 1pe12.4,
      +                ' at pixel (', a, ', ', a, ', ', a, ')')
               call output (line)
-              if (dolog) then
-                if (cgspec .or. cgdisp) then
-                  call txtwrite (lcurs, '# '//line, 2+len1(line), 
-     +                           iostat)
-                else
-                  call txtwrite (lcurs, line, len1(line), iostat)
-                end if
-              end if
+              if (dolog .and. (.not.cgspec .and. .not.cgdisp))
+     +          call txtwrite (lcurs, line, len1(line), iostat)
             else
               write (line, 50) wstr(1)(1:wl(1)), wstr(2)(1:wl(2)), 
      +                         wstr(3)(1:wl(3))
 50            format ('Image intensity(', a, ',', a, ',', a,
      +                ')     : blanked')
               call output (line)
-              if (dolog) then
-                if (cgspec .or. cgdisp) then
-                  call txtwrite (lcurs, '# '//line, 2+len1(line), 
-     +                           iostat)
-                else
-                  call txtwrite (lcurs, line, len1(line), iostat)
-                end if
-              end if
+              if (dolog .and. (.not.cgspec .and. .not.cgdisp))
+     +          call txtwrite (lcurs, line, len1(line), iostat)
             end if
           end if
         end if
       end do
+c
+      call finco (lin)
 c
       end
 c
@@ -1180,7 +1169,7 @@ c  Input:
 c    lin    Handle of image
 c    blc    Blc of sub-image displayed
 c    labtyp axis label types
-c    naxis  Numebr of axes in image
+c    naxis  Number of axes in image
 c    cdelt  Pixel increments
 c    crpix  Reference pixel
 c    crval  Reference value
@@ -1215,9 +1204,9 @@ cc
       parameter (symb = 17, nvmax = 100, maxruns = 50)
 c
       integer vert(2,nvmax), runs(maxruns), nruns, nv, i, j, k, iostat,
-     +  npix, iymin, iymax, kd, t, len1, ci
-      double precision cdelt1, cdelt2, pix, x, y, imin, jmin, 
-     +  imax, jmax
+     +  npix, iymin, iymax, kd, t, len1, ci, bin(2)
+      double precision cdelt1, cdelt2, x, y, imin, jmin, 
+     +  imax, jmax, ww(2), pix(2), pixbs(2)
       real vx(nvmax), vy(nvmax), sum, sumsq, mean, var, rms,
      +  dmin, dmax, bmin, bmaj, barea, ival
       character line*80, ans*1, bunit*8
@@ -1227,6 +1216,12 @@ c------------------------------------------------------------------------
       call output ('**************************')
       call output ('Entering statistics option')
       call output ('**************************')
+      call output (' ')
+      call output ('Click left button   (enter A) to mark vertex')
+      call output 
+     +  ('Click middle button (enter D) to delete previous vertex')
+      call output ('Click right button  (enter X) to finish polygon')
+      call output (' ')
 c
 c Get beam if present
 c
@@ -1236,6 +1231,8 @@ c
       call rdhdd (lin, 'cdelt2', cdelt2, 0.0d0)
       call rdhda (lin, 'bunit', bunit, ' ')
       barea = 1.1331 * bmaj * bmin / abs(cdelt1 * cdelt2)
+      bin(1) = ibin
+      bin(2) = jbin
 c
 c Open log file as required
 c
@@ -1263,11 +1260,15 @@ c
             call pgsci (0)
             call pgpt (nv, vx, vy, symb)
 c
-c Convert world coordinate to world coordinate of nearest pixel 
+c Convert linear world coordinate to linear world coordinate of nearest pixel 
 c
             do i = 1, nv
+              ww(1) = vx(i)
+              ww(2) = vy(i)
               call nearcon (labtyp, naxis, crval, crpix, cdelt,
-     +                      ctype, ibin, jbin, vx(i), vy(i))
+     +                      ctype, bin, blc, ww, pix, pixbs)
+              vx(i) = ww(1)
+              vy(i) = ww(2)
             end do
 c
 c Draw new points
@@ -1293,17 +1294,17 @@ c
 c
           do while (i.le.nv .and. good)
 c
-c Convert world coordinates to integer binned pixels in sub-image
+c Convert linear world coordinates to integer binned pixels in sub-image
 c
             call w2pixcg (dble(vx(i)), 1, labtyp(1), naxis, crval, 
      +                    crpix, cdelt, ctype, pix, ok)
             call ppconcg (1, blc(1), ibin, pix)
-            vert(1,i) = nint(pix)
+            vert(1,i) = nint(pix(1))
 c
             call w2pixcg (dble(vy(i)), 2, labtyp(2), naxis, crval, 
      +                    crpix, cdelt, ctype, pix, ok)
             call ppconcg (1, blc(2), jbin, pix)
-            vert(2,i) = nint(pix)
+            vert(2,i) = nint(pix(1))
 c
 c Update y pixel extrema
 c
@@ -1433,7 +1434,7 @@ c
               if (dolog) call txtwrite (lstat, line, len1(line), iostat)
 c
               write (line, 17) mean, rms, npix
-17            format ('Mean = ', 1pe12.5, '  rms = ', 1pe12.5,
+17            format ('Mean = ', 1pe12.5, '  sigma = ', 1pe12.5,
      +                ' from ', i8, ' valid pixels')
               call output (line)
               if (dolog) call txtwrite (lstat, line, len1(line), iostat)
@@ -1820,10 +1821,13 @@ c
      +             dowedge, dofid)
       if (.not.cursor .or. .not.dolog) cgspec = .false.
       if (.not.cursor) dobox = .false.
+      if (near .and. dobox) call bug ('f', 
+     +  'You can''t have options=near and options=box')
       if (.not.dogrey) then
         dofid = .false.
         dowedge = .false.
       end if
+      if (cgdisp .or. cgspec) dolog = .true.
 c
       call keymatch ('labtyp', ntype, type, 2, labtyp, nlab)
       if (nlab.eq.0) labtyp(1) = 'abspix'
@@ -1850,41 +1854,37 @@ c
 c
 c
       subroutine nearcon (labtyp, naxis, crval, crpix, cdelt, 
-     +                    ctype, ibin, jbin, wx, wy)
+     +                    ctype, bin, blc, w, pix, pixbs)
 c-----------------------------------------------------------------------
-c     Take a world coordinate and find its corresponding full
-c     image unbinned pixel.  The find the nearest pixel
-c     corresponding to that world coordinate, and then find the 
-c     world coordinate of that nearest pixel.
-c
-c     If the image has been binned, the nearest pixel is the nearest
-c     binned pixel.
+c     Take a world coordinate and find its corresponding binned
+c     pixel. Then take the nearest binned pixel, then find
+c     the world coordinate of that location and the unbinned
+c     full image pixel of that lcoation
 c
 c  Input
 c   near     If true, take nearest pixel
-c   i,jbin   Pixel binning factors in x and y
+c   bin      Pixel binning factors in x and y
+c   blc      BLC of image being displayed
 c  Input/output
-c   wx,wy    World coordinate
+c   w        World coordinate
+c  Output
+c   pix      Unbinned full image pixel
+c   pixbs    Binned subimage pixel
 c
 c-----------------------------------------------------------------------
       implicit none
 c
-      integer naxis, ibin, jbin
-      double precision crval(naxis), crpix(naxis), cdelt(naxis)
-      real wx, wy
+      integer naxis, bin(2), blc(2)
+      double precision crval(naxis), crpix(naxis), cdelt(naxis), w(2),
+     +  pix(2), pixbs(2)
       character*(*) ctype(naxis), labtyp(2)
 cc
-      double precision w(2), pix(2)
-      integer bin(2), k
+      integer k
       logical ok
 c-----------------------------------------------------------------------
 c
 c Loop over axes
 c
-      w(1) = wx
-      w(2) = wy
-      bin(1) = ibin
-      bin(2) = jbin
       do k = 1, 2
 c
 c Convert world coordinate to unbinned full image pixels
@@ -1892,17 +1892,18 @@ c
         call w2pixcg (w(k), k, labtyp(k), naxis, crval, crpix,
      +                cdelt, ctype, pix(k), ok)
 c
-c Convert to full image binned pixels. 
+c Convert to subimage binned pixels. 
 c
-        call ppconcg (1, 1, bin(k), pix(k))
+        call ppconcg (1, blc(k), bin(k), pix(k))
 c
-c Take nearest binned pixel
+c Take nearest subimage pixel and keep copy
 c
         pix(k) = dble(nint(pix(k)))
+        pixbs(k) = pix(k)
 c
 c Convert back to full image unbinned pixels
 c
-        call ppconcg (2, 1, bin(k), pix(k))
+        call ppconcg (2, blc(k), bin(k), pix(k))
 c
 c Convert back to to world coordinate
 c
@@ -1910,35 +1911,114 @@ c
      +                crval, crpix, cdelt, ctype, w(k), ok)
       end do
 c
-c Assign output
-c
-      wx = w(1)
-      wy = w(2)
-c
       end
 c
 c
-      subroutine pkfind (nx, ny, image, nimage, i, j)
+      subroutine pixinc (lin, bin, wwstr, wwl)
+c-----------------------------------------------------------------------
+c     Find pixel increments for each axis in appropriate units
+c     Work them out at the reference pixel of the image (all 
+c     axes).  Could in principle work them out at the exact
+c     coordinate (all axes) that user has generated, but it doesn't
+c     really matter for this applciation (writing the width of
+c     an overlay) as its arbitrary anyway
+c     
+c
+c  Input
+c   lin     Image handle
+c   bin     Spatial binning
+c  Output
+c   wwstr   Array of formatted pixel increments
+c   wwl     Length of strings
+c-----------------------------------------------------------------------
+      implicit none
+c       
+      integer lin, bin(2), wwl(2)
+      character*(*) wwstr(2)
+cc
+      double precision w1(2), w2(2), pix1(2), pix2(2), winc(2)
+      character*6 typei(2), typeo(2)
+      integer i
+c-----------------------------------------------------------------------
+c
+c Work out default offset units for axis
+c
+      call setoaco (lin, 'off', 2, typeo)
+c
+c Find increments
+c
+      do i = 1, 2
+       pix1(i) = 0.0d0
+       pix2(i) = 1.0d0
+       typei(i) = 'relpix'
+      end do
+c      
+      call w2wco (lin, 2, typei, ' ', pix1, typeo, ' ', w1)
+      call w2wco (lin, 2, typei, ' ', pix2, typeo, ' ', w2)
+      winc(1) = w2(1) - w1(1)
+      winc(2) = w2(2) - w1(2)
+c
+c Format
+c
+      do i = 1, 2
+        call strfd (2*bin(i)*abs(winc(i)), '(1pe13.6)', 
+     +              wwstr(i), wwl(i))
+      end do
+c
+      end
+c       
+c       
+      subroutine pkfind (labtyp, naxis, crval, crpix, cdelt, ctype,
+     +  nx, ny, image, nimage, blc, bin, w, pix, pixbs)
 c-----------------------------------------------------------------------
 c     Find peak pixel in a box centred on input pixel location
+c
+c  Input
+c    labtyp   Axis label types
+c    naxis    Number of axes
+c    c*       Axis descriptors
+c    nx,ny    SIze of binned subimage
+c    image    Binned subimage
+c    nimage   Binned sub-mask-image
+c    blc      BLC of full unbinned image
+c    bin      Pixel binning
+c  Input/output
+c    w        World coordinate
+c    pix      Full image unbinned pixel
+c    pixbs    Binned subimage pixel
 c
 c-----------------------------------------------------------------------
       implicit none
 c
-      integer nx, ny, nimage(nx,ny)
+      integer naxis, nx, ny, nimage(nx,ny), bin(2), blc(2)
       real image(nx,ny)
-      double precision i, j
+      double precision crval(naxis), crpix(naxis), cdelt(naxis),
+     +  pix(2), pixbs(2), w(2)
+      character*(*) ctype(naxis), labtyp(2)
 cc
       real dmax
-      integer is, ie, js, je, im, jm, ii, jj
+      integer k, is, ie, js, je, im, jm, ii, jj
+      logical ok
 c-----------------------------------------------------------------------
 c
-c Find pixel limits
+c Convert world coordinate to binned subimage pixel
 c
-      is = max(1,nint(i)-2)
-      ie = min(nx,nint(i)+2)
-      js = max(1,nint(j)-2)
-      je = min(ny,nint(j)+2)
+      do k = 1, 2
+c
+c Convert world coordinate to binned subimage pixels
+c
+        call w2pixcg (w(k), k, labtyp(k), naxis, crval, crpix,
+     +                cdelt, ctype, pix(k), ok)
+        pixbs(k) = pix(k)
+        call ppconcg (1, blc(k), bin(k), pixbs(k))
+      end do
+c
+c Find pixel limits for search
+c
+      is = max(1,nint(pixbs(1))-2)
+      ie = min(nx,nint(pixbs(1))+2)
+      js = max(1,nint(pixbs(2))-2)
+      je = min(ny,nint(pixbs(2))+2)
 c
 c Find peak
 c
@@ -1955,11 +2035,24 @@ c
         end do
       end do 
 c
-c If there is something unblanked return it
+c If there is something unblanked return it, else stick with where
+c we started
 c
       if (im.ne.-1 .and. jm.ne.-1) then
-        i = im
-        j = jm
+        pixbs(1) = im
+        pixbs(2) = jm
+c
+c Convert back to full image unbinned pixels and world coordinate
+c
+        do k = 1, 2
+          pix(k) = pixbs(k)
+          call ppconcg (2, blc(k), bin(k), pix(k))
+c
+c Convert back to to world coordinate
+c
+          call pix2wcg (.false., pix(k), k, labtyp(k), naxis,
+     +                  crval, crpix, cdelt, ctype, w(k), ok)
+        end do
       end if
 c
       end
@@ -2113,7 +2206,7 @@ c
       character in*(*)
 cc
       include 'maxdim.h'
-      integer maxbox
+      integer maxbox, i
       parameter (maxbox = 1024)
 c
       integer boxes(maxbox)
@@ -2125,6 +2218,10 @@ c
 c Find hyper-rectangle surrounding region of interest
 c
       call boxinfo (boxes, 3, blc, trc)
+      do i = 1, naxis
+        blc(i) = max(1,blc(i))
+        trc(i) = min(size(i),trc(i))
+      end do
 c
 c Adjust spatial window to fit an integral number of bins and
 c find size of binned window
