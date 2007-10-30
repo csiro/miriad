@@ -80,13 +80,14 @@ c                  of valid devices if input device name is incorrect.
 c    15jun93  bpw  Did paging with pgcurs to get back preferred situation before
 c                  pgplot changes, where clicking left resulted in paging
 c    30sep93   jm  Corrected pgplot calling sequence.
+c    12nov97  rjs  Added 's' flag to boxset call.
 c
 c------------------------------------------------------------------------
 
       program imhist
 
       character*40     version
-      parameter        ( version = 'version 2.1 30-sep-93' )
+      parameter        ( version = 'version 2.1 12-Nov-97' )
 
       integer          tinp
       real             cut(2)
@@ -129,7 +130,7 @@ c------------------------------------------------------------------------
       call xyzopen( tinp, file, 'old', naxis, axlen )
 
       call boxinput( 'region', file, boxes, MAXBOXES )
-      call boxset(   boxes, naxis, axlen, ' ' )
+      call boxset(   boxes, naxis, axlen, 's' )
       call boxinfo(  boxes, naxis, blc, trc )
 
       call optinp
