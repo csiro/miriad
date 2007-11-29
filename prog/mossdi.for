@@ -1,37 +1,39 @@
-c************************************************************************
+c***********************************************************************
 	program mossdi
-	implicit none
 c
 c= mossdi - Mosaic Steer CLEAN algorithm
 c& rjs
 c: deconvolution
 c+
-c	MOSSDI is a MIRIAD task which performs a Steer CLEAN on a mosaiced
-c	image or cube.
+c	MOSSDI is a MIRIAD task which performs a Steer CLEAN on a
+c	mosaiced image or cube.
 c@ map
-c	The input dirty map, which should have units of Jy/beam. No default.
+c	The input dirty map, which should have units of Jy/beam
+c	No default.
 c@ beam
 c	The input dirty beam. No default
 c@ model
 c	An initial model of the deconvolved image. The default is 0.
 c@ out
-c	The name of the output map. The units of the output will be Jy/pixel.
+c	The name of the output map.  The units of the output will be
+c	Jy/pixel.
 c@ gain
 c	CLEAN loop gain. The default is 0.1.
 c@ niters
 c	The maximum number of iterations. The default is 100.
 c@ cutoff
-c	Iterating stops if the maximum falls below this level. The
+c	Iterating stops if the maximum falls below this level.  The
 c	default is 0.
 c@ clip
-c	This sets the relative clip level. Values are typically 0.75 to 0.9.
-c	The default is 0.9.
+c	This sets the relative clip level. Values are typically 0.75 to
+c	0.9.  The default is 0.9.
 c@ region
-c	The standard region of interest keyword. See the help on "region" for
-c	more information. The default is the entire image.
+c	The standard region of interest keyword. See the help on "region"
+c	for more information. The default is the entire image.
 c@ options
-c	Extra processing options. There is just one of these at the moment.
-c	  positive   Constrain the deconvolved image to be positive valued.
+c	Extra processing options:
+c	  positive   Constrain the deconvolved image to be positive
+c	             valued.
 c--
 c  History:
 c    rjs 31oct94 - Original version.
@@ -45,16 +47,16 @@ c    rjs 29jan99 - Correct user message only.
 c    gmx 07mar04 - Changed optimum gain determination to handle
 c                   negative components
 c
-c------------------------------------------------------------------------
-	character version*(*)
-	parameter(version='MosSDI: version 1.0 07-Apr-04')
+c $Id: mossdi.for,v 1.2 2007/11/29 03:42:32 cal103 Exp $
+c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'maxnax.h'
 	include 'mem.h'
 	integer MAXRUN,MAXBOXES
-	parameter(MAXRUN=3*maxdim,MAXBOXES=3076)
+	parameter(MAXRUN=5*maxdim,MAXBOXES=(1024)*8+4)
 c
-	character MapNam*64,BeamNam*64,ModelNam*64,OutNam*64,line*64
+	character MapNam*64,BeamNam*64,ModelNam*64,OutNam*64,line*64,
+     *            version*80
 	integer Boxes(MAXBOXES),Run(3,MAXRUN),nRun,blc(3),trc(3),nAlloc
 	integer nPoint
 	integer lMap,lBeam,lModel,lOut
@@ -67,11 +69,13 @@ c
 c
 c  Externals.
 c
-	character itoaf*8
+	character itoaf*8, versan*80
+c-----------------------------------------------------------------------
+      version = versan('mossdi',
+     *  '$Id: mossdi.for,v 1.2 2007/11/29 03:42:32 cal103 Exp $')
 c
 c  Get the input parameters.
 c
-	call output(version)
 	call keyini
 	call keya('map',MapNam,' ')
 	call keya('beam',BeamNam,' ')
@@ -241,11 +245,10 @@ c
 c  Thats all folks.
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine Steer(Est,Res,Step,StepR,Wt,nPoint,Run,nRun,
      *	  gain,clip,dopos,dmin,dmax,drms,flux,ncomp)
 c
-	implicit none
 	integer nPoint,nRun,Run(3,nRun),ncomp
 	real gain,clip,dmin,dmax,drms,flux
 	real Est(nPoint),Res(nPoint),Step(nPoint),StepR(nPoint)
@@ -270,7 +273,7 @@ c		with the beam pattern.
 c  Output:
 c    dmin,dmax,drms Min, max and rms residuals after this iteration.
 c    ncomp	Number of components subtracted off this time.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	real MinOptGain
 	parameter(MinOptGain=0.02)
 	integer i
@@ -323,18 +326,18 @@ c
 	  RS = RS + Wt(i) * Res(i)   * StepR(i)
 	enddo
 c
-c       RS (and SS?) can be negative, so it is better to take the 
+c       RS (and SS?) can be negative, so it is better to take the
 c       absolute value of them when determining the optimum
 c       gain (gmx - 07mar04)
 c
 c       abs(RS/SS) may be close to zero, in which case
-c       a semi-infinite loop can be the result. We apply a 
-c	lower limit to abs(RS/SS). A good value for it 
-c       is empirically determined to be 0.02 (MinOptGain), 
-c       which may however not be the best choice in all cases. 
+c       a semi-infinite loop can be the result. We apply a
+c	lower limit to abs(RS/SS). A good value for it
+c       is empirically determined to be 0.02 (MinOptGain),
+c       which may however not be the best choice in all cases.
 c       In case of problems, you can try a lower value for the
 c       task option Gain before changing MinOptGain (gmx - 07mar04).
-c       
+c
 	g = Gain * max( MinOptGain, min( 1.0, abs(real(RS/SS)) ) )
 c
 c  Subtract off a fraction of this, and work out the new statistics.
@@ -355,15 +358,14 @@ c
 	drms = sqrt(RR/nPoint)
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine Diff(Est,Map,Res,nPoint,Run,nRun)
 c
-	implicit none
 	integer nPoint,nRun,Run(3,nRun)
 	real Est(nPoint),Map(nPoint),Res(nPoint)
 c
 c  Determine the residuals for this model.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer i
 c
 	call mcCnvlR(Est,Run,nRun,Res)
@@ -373,29 +375,27 @@ c
 	enddo
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine Swap(a,b)
 c
-	implicit none
 	integer a,b
 c
 c  Swap two integers about.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer t
 c
 	t = a
 	a = b
 	b = t
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine Zero(n,Out)
 c
-	implicit none
 	integer n
 	real Out(n)
 c
 c  Zero an array.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer i
 c
 	do i=1,n
@@ -403,7 +403,7 @@ c
 	enddo
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine Header(lMap,lOut,blc,trc,version,niter)
 c
 	integer lMap,lOut
@@ -421,7 +421,7 @@ c    blc	Blc of the bounding region.
 c    trc	Trc of the bounding region.
 c    niter	The maximum number of iterations performed.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'maxnax.h'
 	integer i,lblc,ltrc
 	real crpix1,crpix2,crpix3
@@ -463,15 +463,17 @@ c
 	  call hdcopy(lMap,lOut,'ctype'//num)
 	enddo
 c
-c  Copy all the other keywords across, which have not changed and add history
+c  Copy across all the other keywords that have not changed and add
+c  history.
 c
 	do i=1,nkeys
 	  call hdcopy(lMap, lOut, keyw(i))
 	enddo
 c
 c  Write crap to the history file, to attempt (ha!) to appease Neil.
-c  Neil is not easily appeased you know.  Just a little t.l.c. is all he needs.
-c  
+c  Neil is not easily appeased you know.  Just a little t.l.c. is all he
+c  needs.
+c
 c
 	call hisopen(lOut,'append')
         line = 'MOSSDI: Miriad '//version
@@ -488,15 +490,14 @@ c
 	call hisclose(lOut)
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine GetOpt(dopos)
 c
-	implicit none
 	logical dopos
 c
 c  Output:
 c    dopos	Constrain the model to be positive valued.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer NOPTS
 	parameter(NOPTS=1)
 	logical present(NOPTS)
