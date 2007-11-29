@@ -1,13 +1,14 @@
-c************************************************************************
+c***********************************************************************
 c  History:
 c    rjs   mar89  Created.
 c    rjs  9jun89  BoxRuns was not correctly calculating jmin and jmax
 c		  when shapes were being ANDed in.
 c    rjs 11sep89  Improved documentation.
-c    rjs 19oct89  @ files are now handled by the key routines, so the code
-c		  to handle these was removed.
+c    rjs 19oct89  @ files are now handled by the key routines, so the
+c		  code to handle these was removed.
 c    rjs  6nov89  BoxSet takes the 's' flag.
-c    rjs  1dec89  Fixed bug in BoxInput, which apparently crept in on 19oct.
+c    rjs  1dec89  Fixed bug in BoxInput, which apparently crept in on
+c                 19oct.
 c    rjs 25jan90  Minor documentation correction.
 c    rjs 27feb90  Added "no user input" option to BoxInput.
 c    rjs 30apr90  Specification of coordinates in units other than
@@ -34,26 +35,30 @@ c    rjs 25apr94  Corrected call sequence to hclose.
 c    rjs  2sep94  Changes to use the co.for routines.
 c    rjs 20oct94  Increase max number of separate regions
 c    rjs 23nov94  Added BoxCount to count the pixels in a plane.
-c    rjs  6sep95  Check selected region really does fall within the image.
+c    rjs  6sep95  Check selected region really does fall within the
+c                 image.
 c    rjs 13dec95  Increase MAXSHAPES in BoxRuns.
 c    rjs 29jan97  Added BoxDef -- to set the default region of interest,
 c		  and removed this capacity from BoxSet.
-c    rjs 07jul97  Change argument to coVelSet and replace coAxDesc with coAxGet
+c    rjs 07jul97  Change argument to coVelSet and replace coAxDesc with
+c                 coAxGet
 c    rjs 09jul97  Correctly handle ANDing with completely flagged plane.
 c    rjs 17may99  Increase size of a buffer.
 c    rjs 14sep00  Make sure that coordinate file can only be an image.
 c    rjs 10oct00  Fix bungle in the above.
 c    pjt  6mar01  increase string size for boxes to 2048 :-)
-c    mchw 14mar02 increase string size for boxes to 4096 :-)
-c************************************************************************
+c   mchw 14mar02  increase string size for boxes to 4096 :-)
+c
+c $Id: boxes.for,v 1.2 2007/11/29 03:20:46 cal103 Exp $
+c***********************************************************************
 c* Boxes -- Summary of region of interest routines.
 c& mjs
 c: region-of-interest
 c+
-c  These routines are a collection which allow the user to specify a
-c  fairly arbitrary region of interest, and for the programmer to retrieve
-c  these specifications in a reasonably convenient form. There are six
-c  programmer callable routines:
+c  This collection of routines allows the user to specify a fairly
+c  arbitrary region of interest, and for the programmer to retrieve
+c  these specifications in a reasonably convenient form.  There
+c  are six programmer callable routines:
 c
 c	subroutine BoxInput(key,file,boxes,maxboxes)
 c	subroutine BoxMask(tno,boxes,maxboxes)
@@ -65,38 +70,40 @@ c	logical function BoxRect(boxes)
 c	subroutine BoxRuns(naxis,plane,flags,boxes,
 c    *			runs,maxruns,nruns,xminv,xmaxv,yminv,ymaxv)
 c
-c  BoxInput	This reads the region of interest from the task parameters.
+c  BoxInput	This reads the region of interest from the task
+c		parameters.
 c  BoxMask	"AND" in a mask from a data file.
 c  BoxSet	The programmer calls this to indicate the size of the
 c		image of interest.
 c  BoxInfo	Returns information about the region currently selected.
 c  BoxRect	This returns .true. if the selected region is purely
 c		rectangular (i.e. describable by blc and trc).
-c  BoxRuns	The programmer calls this to retrieve the region-of-interest
-c		selected for a particular plane.
+c  BoxRuns	The programmer calls this to retrieve the region-of-
+c		interest selected for a particular plane.
 c
-c  The BOX routines work by reading the region sepcified on the command line
-c  and breaking it into an intermediate form, stored in the "boxes" array.
-c  This intermeidate form consists of a number of subregion specifications
-c  which are ANDed and ORed together to produce the output region. The
-c  subregions can consist of IMAGE (a rectangular subregion of a range of
-c  planes), BOX (a number of rectangular subregions of a range of planes),
-c  POLY (a polygonal region of a range of planes) and MASK (an arbitrary
-c  region, specified by a mask file). A positive value (the norm) indicates
-c  the subregion is "ORed", whereas a negative value (rare) indicates it
-c  is "ANDed". Each shape is described by XMIN,XMAX,YMIN,YMAX,ZMIN,ZMAX
-c  which gives the cube which bounds the shape. In some cases these are
-c  unknown, In this case, they are set to zero.
+c  The BOX routines work by reading the region specified on the command
+c  line and breaking it into an intermediate form, stored in the "boxes"
+c  array.  This intermeidate form consists of a number of subregion
+c  specifications which are ANDed and ORed together to produce the
+c  output region.  The subregions can consist of IMAGE (a rectangular
+c  subregion of a range of planes), BOX (a number of rectangular
+c  subregions of a range of planes), POLY (a polygonal region of a range
+c  of planes) and MASK (an arbitrary region, specified by a mask file).
+c  A positive value (the norm) indicates the subregion is "ORed",
+c  whereas a negative value (rare) indicates it is "ANDed".  Each shape
+c  is described by XMIN,XMAX,YMIN,YMAX,ZMIN,ZMAX which gives the cube
+c  which bounds the shape.  In some cases these are unknown, if so they
+c  are set to zero.
 c
 c  Some shapes require extra DATA (the size of which is given by SIZE):
 c    BOX  This requires the blc and trc for the corners of the boxes,
 c	  stored as (xmin,ymin),(xmax,ymax). For N boxes, SIZE=4*N.
 c	  The boxes are sorted in increasing order of xmin.
 c    POLY This also gives the (x1,y1),(x2,y2) coordinate pair of each of
-c	  the line segments which make the polygon (except horizontal segments
-c	  are discarded). For a poly made of N (non-horizontal) line segments,
-c	  SIZE=4*N. The line segments are sorted in increasing order of
-c	  min(x1,x2).
+c	  the line segments which make the polygon (except horizontal
+c	   segments are discarded).  For a poly made of N (non-
+c	   horizontal) line segments, SIZE=4*N.  The line segments are
+c	   sorted in increasing order of min(x1,x2).
 c    MASK Additional info is the handle of the mask file.
 c
 c  The routine BoxRuns returns the region of a particular plane that was
@@ -106,14 +113,13 @@ c  pixels (xmin,j) to (xmax,j) are selected. There may be multiple (or
 c  zero) entries for a particular value of j, though all entries are
 c  non-overlapping. The table is in increasing j and xmin.
 c--
-c************************************************************************
+c***********************************************************************
 c* BoxInput -- Read command line box specification.
 c& mjs
 c: region-of-interest
 c+
 	subroutine BoxInput(key,file,boxes,maxboxes)
 c
-	implicit none
 	character key*(*),file*(*)
 	integer maxboxes,boxes(maxboxes)
 c
@@ -137,7 +143,7 @@ c  values are
 c    xytype: 'abspix', 'relpix' or 'arcsec'.
 c    ztype:  'abspix' or 'kms  '.
 c  The default is 'abspix'.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'boxes.h'
 	include 'maxnax.h'
 c
@@ -312,10 +318,9 @@ c
 	Boxes(NY) = 0
 	Boxes(NZ) = 0
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine BoxZRnge(spec,k1,k2,zrange,ztype,lu)
 c
-	implicit none
 	character spec*(*),ztype*(*)
 	integer k1,k2,zrange(2),lu(3)
 c
@@ -330,7 +335,7 @@ c    k1,k2	The substring of spec still needing to be processed.
 c  Output:
 c    zrange	The output range in planes.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer n
 c
 	if(k1.gt.k2)then
@@ -348,10 +353,9 @@ c
 	endif
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine BoxInt(spec,k1,k2,boxes,n,modulo,nmax,type,lu)
 c
-	implicit none
 	character spec*(*),type*(*)
 	integer lu(3)
 	integer k1,k2,nmax,n,modulo,boxes(nmax)
@@ -367,15 +371,15 @@ c    nmax	The maximum number of integers to be returned.
 c    modulo	The number of integers returned must be some
 c		multiple of "modulo".
 c    type	One of 'abspix','relpix','arcsec','kms','relcen'.
-c    lu		Information used in converting between physical coordinates
-c		and grid units.
+c    lu		Information used in converting between physical
+c               coordinates and grid units.
 c  In/Out:
 c    k1,k2	This indicates the substring of spec left to process.
 c  Output:
 c    boxes	Array containing the integers found.
 c    n		The number of integers found.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'mirconst.h'
 	integer k0,i
 	logical more,ok
@@ -431,11 +435,10 @@ c
      *	  call BoxBug(spec,'Bad number of indices in subregion command')
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine BoxPoly(spec,k1,k2,verts,n,nmax,xyrange,
      *						xytype,lu)
 c
-	implicit none
 	character spec*(*),xytype*(*)
 	integer k1,k2,nmax,verts(2,nmax/2),n,xyrange(4),lu(3)
 c
@@ -454,15 +457,15 @@ c    verts	The poly vertices.
 c    n		The number of elements in the poly description.
 c    xyrange	The value of xmin,xmax,ymin,ymax (in that order).
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer k,kd,t
 c
 	call BoxInt(spec,k1,k2,verts,n,2,nmax-2,xytype,lu)
 	n = n /2
 c
 c  Eliminate redundant vertices -- i.e. those vertices that are colinear
-c  with the neighbouring vertices. Also add a vertex at the end to wrap it
-c  around
+c  with the neighbouring vertices. Also add a vertex at the end to wrap
+c  it around
 c
 	verts(1,n+1) = verts(1,1)
 	verts(2,n+1) = verts(2,1)
@@ -533,15 +536,15 @@ c  Return the goodies.
 c
 	n = n + n
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine BoxSort(boxes,n,xyrange)
 c
-	implicit none
 	integer n,boxes(n),xyrange(4)
 c
 c  The array "boxes" contains n/4 coordinate pairs (x1,y1),(x2,y2).
 c  Perhaps reverse these pairs, so that the coordinate with minimum
-c  x is first, and then sort all the pairs into order of increasing xmin.
+c  x is first, and then sort all the pairs into order of increasing
+c  xmin.
 c
 c  Input:
 c    n		Size of the box array. n/4 is the number of coordinate
@@ -551,14 +554,14 @@ c    boxes	Contains the coordinate pairs.
 c  Output:
 c    xyrange	The minimum and maximum values of x and y in the pairs.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer i,j,x1,y1,x2,y2
 c
 c
-c  Sort the box specifications into increasing order of xmin. This starts
-c  by possibly swapping the two coordinates around. Then a simple
-c  insert-sort is performed. As n is probably quite small, an insert-sort
-c  is quite adequate.
+c  Sort the box specifications into increasing order of xmin.  This
+c  starts by possibly swapping the two coordinates around.  Then a
+c  simple insert-sort is performed.  As n is probably quite small, an
+c  insert-sort is quite adequate.
 c
 	xyrange(1) = boxes(1)
 	xyrange(2) = xyrange(1)
@@ -601,10 +604,9 @@ c
 	enddo
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine BoxMsk(spec,k1,k2,tno,xyzrange)
 c
-	implicit none
 	character spec*(*)
 	integer k1,k2,tno,xyzrange(6)
 c
@@ -619,7 +621,7 @@ c  Output:
 c    tno	The handle of the mask file.
 c    xyzrange	The region of the mask file which is set.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer nsize(3)
 c
 c  Externals.
@@ -635,14 +637,13 @@ c
 c
 	k1 = k2 + 1
 	end
-c************************************************************************
+c***********************************************************************
 c* BoxMask -- AND in a mask to the region of interest.
 c& mjs
 c: region-of-interest
 c+
 	subroutine BoxMask(tno,boxes,maxboxes)
 c
-	implicit none
 	integer tno,maxboxes,boxes(maxboxes)
 c
 c  Indicate that a mask is to be applied to the data.
@@ -653,7 +654,7 @@ c    maxboxes	Size of the boxes array.
 c  Input/Output:
 c    boxes	The boxes specification.
 c--
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'boxes.h'
 	integer offset,i
 c
@@ -676,14 +677,13 @@ c
 	  boxes(1) = boxes(1) + 1
 	  boxes(offset+ITYPE) = -MASK
 	  boxes(offset+SIZE) = 1
-	  boxes(offset+DATA) = tno  
+	  boxes(offset+DATA) = tno
 	  call BoxMskPr(tno,boxes(offset+XMIN))
 	endif
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine BoxMskPr(tno,xyzrange)
 c
-	implicit none
 	integer tno,xyzrange(6)
 c
 c  Get information about the masking file that we are about to use.
@@ -694,7 +694,7 @@ c  Output:
 c    xyzrange	The values xmin,xmax,ymin,ymax,zmin,zmax, where the
 c		mask file indicates a good pixel.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	integer n,n1,n2,n3,j,k
 	integer mask(maxdim)
@@ -736,14 +736,13 @@ c
 	if(.not.found) call bug('f','Image is completely blanked')
 c
 	end
-c************************************************************************
+c***********************************************************************
 c* BoxDef -- Set the default region of interest.
 c& mjs
 c: region-of-interest
 c+
 	subroutine BoxDef(boxes,naxis,blc,trc)
 c
-	implicit none
 	integer naxis,blc(naxis),trc(naxis),boxes(*)
 c
 c  Set the default region of interest.
@@ -757,7 +756,7 @@ c    boxes	This contains an intermediate form of the subregion
 c		specified by the user. On output, certain defaults are
 c		filled in.
 c--
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'boxes.h'
 	integer offset,i,xminv,xmaxv,yminv,ymaxv,zminv,zmaxv
 c
@@ -810,14 +809,13 @@ c
 	endif
 c
 	end
-c************************************************************************
+c***********************************************************************
 c* BoxSet -- Set default region of interest.
 c& mjs
 c: region-of-interest
 c+
 	subroutine BoxSet(boxes,naxis,nsize,flags)
 c
-	implicit none
 	integer naxis,nsize(naxis),boxes(*)
 	character flags*(*)
 c
@@ -835,7 +833,7 @@ c    boxes	This contains an intermediate form of the subregion
 c		specified by the user. On output, certain defaults are
 c		filled in.
 c--
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'boxes.h'
 	integer blc(3),trc(3)
 	integer i,offset
@@ -858,8 +856,8 @@ c
 	  enddo
 	endif
 c
-c  If the user did not give any subregion spec, fill in the default box as
-c  the region.
+c  If the user did not give any subregion spec, fill in the default box
+c  as the region.
 c
 	offset = OFFSET0
 	if(boxes(1).eq.0)then
@@ -923,14 +921,13 @@ c
 	  endif
 	endif
 	end
-c************************************************************************
+c***********************************************************************
 c* BoxInfo -- Determine bounding box of the region of interest.
 c& mjs
 c: region-of-interest
 c+
 	subroutine BoxInfo(boxes,naxis,blc,trc)
 c
-	implicit none
 	integer boxes(*),naxis,blc(naxis),trc(naxis)
 c
 c  This returns the bounding box of the region of interest.
@@ -943,7 +940,7 @@ c  Output:
 c    blc,trc	Min and max values of the region selected along each axis.
 c
 c--
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'boxes.h'
 	integer xminv,xmaxv,yminv,ymaxv,zminv,zmaxv
 	integer i,offset
@@ -1015,18 +1012,17 @@ c
 	  trc(i) = 1
 	enddo
 	end
-c************************************************************************
+c***********************************************************************
 c* BoxRect -- Determine if a region-of-interest is rectangular.
 c& mjs
 c: region-of-interest
 c+
 	logical function BoxRect(boxes)
 c
-	implicit none
 	integer boxes(*)
 c
-c  This returns .true. if the region described by the boxes array is purely
-c  rectangular (i.e. describable by blc and trc).
+c  This returns .true. if the region described by the boxes array is
+c  purely rectangular (i.e. describable by blc and trc).
 c
 c  Input:
 c    boxes	Integer array describing intermediate form of the region
@@ -1034,7 +1030,7 @@ c		selected.
 c  Output:
 c    BoxRect	True if the region is rectangular.
 c--
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'boxes.h'
 	integer i,offset
 	logical first,rect
@@ -1059,14 +1055,13 @@ c
 c
 	BoxRect = rect
 	end
-c************************************************************************
+c***********************************************************************
 c* BoxBound -- Return bounding boxes for each "region" subcommand.
 c& mjs
 c: region-of-interest
 c+
 	subroutine BoxBound(boxes,subcmd,naxis,type,mode,blc,trc)
 c
-	implicit none
 	integer boxes(*),subcmd,naxis
 	character type*(*),mode*(*)
 	integer blc(naxis),trc(naxis)
@@ -1083,7 +1078,7 @@ c    mode	Either 'or' or 'and'.
 c    blc	Blc of the bounding box.
 c    trc	Trc of the bounding box.
 c--
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'boxes.h'
 	integer i,offset,btype
 c
@@ -1132,14 +1127,13 @@ c
 	  enddo
 	endif
 	end
-c************************************************************************
+c***********************************************************************
 c* BoxCount -- Count the pixels in the region-of-interest in a plane.
 c& mjs
 c: region-of-interest
 c+
 	subroutine BoxCount(Runs,nRuns,nPoint)
 c
-	implicit none
 	integer nRuns,Runs(3,nRuns+1),nPoint
 c
 c  Count the number of pixels in the region-of-interest in a given
@@ -1151,7 +1145,7 @@ c    nruns	Number of runs.
 c  Output:
 c    nPoint	Number of pixels in the region of interest.
 c--
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer i
 c
 	nPoint = 0
@@ -1160,7 +1154,7 @@ c
 	enddo
 c
 	end
-c************************************************************************
+c***********************************************************************
 c* BoxRuns -- Return region of interest in "runs" form.
 c& mjs
 c: region-of-interest
@@ -1168,7 +1162,6 @@ c+
 	subroutine BoxRuns(naxis,plane,flags,boxes,
      *			runs,maxruns,nruns,xminv,xmaxv,yminv,ymaxv)
 c
-	implicit none
 	character flags*(*)
 	integer naxis,plane(naxis)
 	integer boxes(*),maxruns,nruns,runs(3,maxruns)
@@ -1193,11 +1186,11 @@ c    nruns	Number of runs.
 c    xminv,yminv)	Minimum regions containing the area selected.
 c    xmaxv,ymaxv)
 c--
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'boxes.h'
 	include 'maxdim.h'
 	integer WORKSIZE,MAXSHAPE
-	parameter(WORKSIZE=MAXDIM,MAXSHAPE=256)
+	parameter(WORKSIZE=MAXDIM,MAXSHAPE=1024)
 	integer n1,n2,n3,pnt1,pnt2,pnt3,i,j,k,boxtype
 	integer offset,jmin,jmax,nshapes,shapes(MAXSHAPE)
 	integer work(WORKSIZE,3)
@@ -1211,8 +1204,8 @@ c
 	  enddo
 	endif
 c
-c  Determine the subcommands that are appropriate to this plane. If there
-c  are no commands, return straight away.
+c  Determine the subcommands that are appropriate to this plane.  If
+c  there are no commands, return straight away.
 c
 	nshapes = 0
 	offset = OFFSET0
@@ -1245,12 +1238,12 @@ c
 	runs(1,1) = 0
 	if(nshapes.eq.0)return
 c
-c  Determine the runs appropriate to this plane. This gets the runs from
-c  each relavant shape, then merges it with the runs from previous shapes.
-c  The previous runs are in one buffer (pointed to by pnt1), the current
-c  runs are written in another buffer (pointed to by pnt2), and the merged
-c  result is written to a third buffer (pointed to by pnt3). Pnt1 and pnt2
-c  vary cyclicly.
+c  Determine the runs appropriate to this plane.  This gets the runs
+c  from each relavant shape, then merges it with the runs from previous
+c  shapes.  The previous runs are in one buffer (pointed to by pnt1),
+c  the current runs are written in another buffer (pointed to by pnt2),
+c  and the merged result is written to a third buffer (pointed to by
+c  pnt3).  Pnt1 and pnt2 vary cyclicly.
 c
 	do j=jmin,jmax
 	  n1 = 0
@@ -1342,10 +1335,9 @@ c  Append a trailing "null".
 c
 	runs(1,nruns+1) = 0
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine BoxAnd(n1,in1,n2,in2,nout,out,maxout)
 c
-	implicit none
 	integer n1,n2,nout,maxout
 	integer in1(n1),in2(n2),out(maxout)
 c
@@ -1360,7 +1352,7 @@ c  Output:
 c    out	Output buffer to receive the runs.
 c    nout	The size of the output runs.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer i1,i2,io,t1,t2
 c
 	i1 = 1
@@ -1392,10 +1384,9 @@ c
 	nout = io - 1
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine BoxOr(n1,in1,n2,in2,nout,out,maxout)
 c
-	implicit none
 	integer n1,n2,nout,maxout
 	integer in1(n1),in2(n2),out(maxout)
 c
@@ -1410,7 +1401,7 @@ c  Output:
 c    out	Output buffer to receive the runs.
 c    nout	The size of the output runs.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer i1,i2,io,i,xmax
 c
 	i1 = 1
@@ -1484,20 +1475,18 @@ c
 	nout = io - 1
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine BoxMskX(buf,nbuf,y,z,tno,nout)
 c
-	implicit none
 	integer nbuf,buf(nbuf),y,z,tno,nout
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	call xysetpl(tno,1,z)
 	call xymkrd(tno,y,buf,nbuf,nout)
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine BoxBoxX(goes,maxgoes,j0,nbox,box,ngoes)
 c
-	implicit none
 	integer maxgoes,goes(maxgoes),j0,nbox,box(4,nbox),ngoes
 c
 c  This breaks up the specification of a number of boxes into runs for
@@ -1512,7 +1501,7 @@ c  Output:
 c    ngoes
 c    goes
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer k,xmax
 c
 	xmax = -1
@@ -1532,10 +1521,9 @@ c
 	  endif
 	enddo
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine BoxPolyX(goes,maxgoes,j0,nverts,verts,ngoes)
 c
-	implicit none
 	integer maxgoes,goes(maxgoes),j0,nverts,verts(2,nverts),ngoes
 c
 c  Calculate the runs which lie within a polygon. It does this by
@@ -1558,14 +1546,14 @@ c  Input:
 c    nverts	Number of veritces of the polygon.
 c    verts	The vertices of the polygon. The vertices are assumes to have
 c		no redundancies (i.e. all vertices are distinct), and to
-c		trace out a anti-clockwise path. 
+c		trace out a anti-clockwise path.
 c    j0		The value of y for which we want to determine the runs inside
 c		the polygon.
 c    maxgoes	Max number of runs is maxgoes/2.
 c  Output:
 c    goes	The runs for this value of y.
 c    ngoes	The number of runs is ngoes/2.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer k,kprev,l,t
 	logical more
 c
@@ -1608,9 +1596,10 @@ c
 	if(2*(ngoes/2).ne.ngoes)
      *	  call bug('f','Algorithmic failure in BoxRuns(polyx)')
 c
-c  The list of intersections are not in order. The number of intersections
-c  is also likely to be small (probably only two!). Sort the intersections,
-c  but use an insert-sort, because its probably ordered, and small.
+c  The list of intersections are not in order.  The number of
+c  intersections is also likely to be small (probably only two!).  Sort
+c  the intersections, but use an insert-sort, because its probably
+c  ordered, and small.
 c
 	do k=2,ngoes
 	  l = k
@@ -1640,10 +1629,9 @@ c
 	ngoes = l-1
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine BoxBug(spec,message)
 c
-	implicit none
 	character message*(*),spec*(*)
 c
 c  This generates an error message when a subregion command appears
@@ -1653,7 +1641,7 @@ c  Input:
 c    spec	The subregion command.
 c    message	The error message.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	character line*80
 	integer l
 c
