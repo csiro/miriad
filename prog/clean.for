@@ -1,29 +1,28 @@
-c************************************************************************
+c***********************************************************************
 	program clean
-	implicit none
 c
 c= clean - Apply Hogbom, Clark or Steer CLEAN algorithm to a map
 c& rjs mchw
 c: deconvolution
 c+
-c	CLEAN is a MIRIAD task, which performs a hybrid Hogbom/Clark/Steer Clean
-c	algorithm, which takes a dirty map and beam, and produces an output
-c	map which consists of the Clean components. This output can be
-c	input to SELFCAL to self-calibrate visibilities, or input to RESTOR
-c	to produce a "clean" image. Optionally CLEAN can take as one of
-c	its inputs a model of the deconvolved image. This model could be
+c	CLEAN is a MIRIAD task, that performs a hybrid Hogbom/Clark/Steer
+c	Clean algorithm, which takes a dirty map and beam, and produces an
+c	output map which consists of the Clean components.  This output can
+c	be input to SELFCAL to self-calibrate visibilities, or input to
+c	RESTOR to produce a "clean" image. Optionally CLEAN can take as one
+c	of its inputs a model of the deconvolved image. This model could be
 c	from a previous CLEAN run, or from other deconvolution tasks
-c       (e.g. MAXEN).
+c	(e.g. MAXEN).
 c@ map
 c	The input dirty map, which should have units of Jy/beam. No
-c	default. 
+c	default.
 c@ beam
 c	The input dirty beam. No default
 c@ model
 c	An initial model of the deconvolved image. This could be the
 c	output from a previous run of CLEAN, or the output of any of the
 c	deconvolution tasks (e.g. MAXEN). It must have flux units of
-c	Jy/pixel. The default is no model (i.e. a zero map). 
+c	Jy/pixel. The default is no model (i.e. a zero map).
 c@ out
 c	The name of the output map. The units of the output will be
 c	Jy/pixel. This file will contain the contribution of the input model.
@@ -53,7 +52,7 @@ c	            beam.
 c@ cutoff
 c	CLEAN finishes either when the absolute maximum residual falls
 c	below CUTOFF, or when the criteria described below is
-c	satisfied. The default CUTOFF is 0. 
+c	satisfied. The default CUTOFF is 0.
 c@ niters
 c	The maximum number of minor iterations. The default is 250, which
 c	is too small for all but the simplest of images. CLEAN will stop
@@ -72,12 +71,12 @@ c	to some extent by cleaning with a dirty beam which has had a spike
 c	added at its center (i.e. a beam that looks like a prussian hat).
 c	PHAT gives the value of this spike, with 0 to 0.5 being good
 c	values. Default is 0 (but use a non-zero value for extended
-c	sources). 
+c	sources).
 c@ minpatch
 c	The minimum patch size when performing minor iterations, in pixels.
-c       Default is 51, but make this larger if you are having problems with
+c	Default is 51, but make this larger if you are having problems with
 c	corrugations. You can make it smaller when cleaning images which
-c	consist of a pretty good dirty beam. 
+c	consist of a pretty good dirty beam.
 c@ speed
 c	This is the same as the speed-up factor in the AIPS APCLN.
 c	Negative values makes the rule used to end a major iteration more
@@ -85,12 +84,12 @@ c	conservative. This causes less components to be found during a
 c	major iteration, and so should improve the quality of the Clean
 c	algorithm. Usually this will not be needed unless you are having
 c	problems with corrugations. A positive value can be useful when
-c	cleaning simple point-like sources. Default is 0. 
+c	cleaning simple point-like sources. Default is 0.
 c@ mode
 c	This can be either "hogbom", "clark", "steer" or "any", and
 c	determines the Clean algorithm used. If the mode is "any", then
 c	CLEAN determines which is the best algorithm to use. The default
-c	is "any". 
+c	is "any".
 c@ clip
 c	This sets the relative clip level in Steer mode. Values are
 c	typically 0.75 to 0.9. The default is image dependent.
@@ -99,18 +98,21 @@ c
 c  History:
 c    rjs   Nov89 - Original version.
 c    rjs  9jun89 - Call sequences to GETPLANE and PUTPLANE has changed.
-c		   Subroutine DIFF included in this file. Headers improved.
-c    rjs 13mar90 - Copy across linetype parameters from input to output file.
-c		   Added version thingo.
-c    rjs 12mar90 - Fixed bug which caused the old history to be overwritten.
+c		   Subroutine DIFF included in this file.  Headers
+c                  improved.
+c    rjs 13mar90 - Copy across linetype parameters from input to output
+c                  file.  Added version thingo.
+c    rjs 12mar90 - Fixed bug which caused the old history to be
+c                  overwritten.
 c    rjs 30apr90 - Changed call sequence to BoxInput.
-c   mchw 11jul90 - Added header keywords and increased length of filenames.
+c   mchw 11jul90 - Added header keywords and increased length of
+c                  filenames.
 c   mchw 09nov90 - Added pbfwhm to map header.
 c   mjs  25feb91 - Changed references of itoa to itoaf, mitoa to mitoaf.
-c   rjs  20mar91 - Trivial change to tolerate multi-plane beams (for mfs).
-c		   Rearranged declarations and data statement, in header,
-c		   to standard order. Renamed "index" to "indx" in GetComp
-c		   to appease flint.
+c   rjs  20mar91 - Trivial change to tolerate multi-plane beams (for
+c                  mfs).  Rearranged declarations and data statement, in
+c                  header, to standard order.  Renamed "index" to "indx"
+c                  in GetComp to appease flint.
 c   rjs   8apr91 - Use Mem routines. Handle images with naxis4=1 better.
 c		   Some cosmetic changes.
 c   nebk 12oct91 - Fix indexing bug in subroutine NewEst affecting
@@ -160,7 +162,7 @@ c		Specifying boxes in this way is reasonably concise for the
 c		programmer, and yet makes vectorisable code straightforward
 c		to write.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	character version*(*)
 	parameter(version='Clean: version 1.0 07-Apr-04')
 	include 'maxdim.h'
@@ -260,8 +262,9 @@ c
 	call MemAlloc(pEst,MaxMap,'r')
 	call MemAlloc(pRes,MaxMap,'r')
 c
-c  Open the model if there is one. Note that currently the model must agree
-c  exactly in size with the output map (an unfortunate restriction.
+c  Open the model if there is one.  Note that currently the model
+c  must agree exactly in size with the output map (an unfortunate
+c  restriction).
 c
 	if(ModelNam.ne.' ')then
 	  call xyopen(lModel,ModelNam,'old',3,nModel)
@@ -383,7 +386,8 @@ c
      *							moded = 'steer'
 	    endif
 c
-c  Output some messages to assure the user that the computer has not crashed.
+c  Output some messages to assure the user that the computer has not
+c  crashed.
 c
 	    call output(Text//' Iterations: '//itoaf(Niter))
 	    call Stats(Data(pRes),nPoint,ResMin,ResMax,ResAMax,ResRms)
@@ -449,10 +453,9 @@ c
 c  Thats all folks.
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine Stats(Data,n,Dmin,Dmax,DAmax,Drms)
 c
-	implicit none
 	integer n
 	real Data(n)
 	real Dmin,Dmax,DAmax,Drms
@@ -469,7 +472,7 @@ c    Dmax	Data maxima.
 c    DAmax	Data absolute maxima.
 c    Drms	Rms value of the data.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer i
 c
 c  Externals.
@@ -493,10 +496,9 @@ c
 	Drms = sqrt(Drms/n)
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine GetPatch(lBeam,Patch,maxPatch,PHat,ic,jc)
 c
-	implicit none
 	integer lBeam,maxPatch,ic,jc
 	real Patch(maxPatch,maxPatch),PHat
 c
@@ -507,11 +509,11 @@ c    lBeam	Handle of the file containing the beam.
 c    maxPatch	The full width of the patch to be read in.
 c    ic,jc	Location of the centre pixel of the beam.
 c    PHat	Prussian hat.
-c 
+c
 c  Output:
 c    Patch	The read in central portion of the beam.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	integer imin,imax,jmin,jmax,i,j
 	real Data(maxdim)
@@ -531,11 +533,10 @@ c
 	Patch(ic-imin+1,jc-jmin+1) = Patch(ic-imin+1,jc-jmin+1) + PHat
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine inputs(map,beam,estimate,out,Niter,negStop,positive,
      *	  pad,asym,cutoff,box,maxbox,minpatch,gain,phat,speed,clip,mode)
 c
-	implicit none
 	integer Niter, minpatch, maxbox
 	integer box(maxbox)
 	real cutoff,gain,phat,speed,clip
@@ -552,15 +553,17 @@ c      Beam        Name of the input beam. No default.
 c      Estimate    Name of the input estimate of the deconvolved image.
 c	           Default is a estimate which is zero.
 c      Out         Name of the output deconvolved map. No default.
-c      Gain        Clean loop gain. Default 0.5 (a bit high).
-c      Cutoff)     The iterations stop when either the absolute max residual
-c      Niter )    remaining is less than Cutoff, of Niter minor iterations
-c                  have been performed (whichever comes first). The default
-c		   Cutoff is 0 (i.e. iterate forever), and the default number
-c	           of minor iterations is 250.  This is the total
-c                  number of iterations to do.
+c      Gain        Clean loop gain.  Default 0.5 (a bit high).
+c      Cutoff)     The iterations stop when either the absolute max
+c                  residual remaining is less than Cutoff, of Niter
+c      Niter )     minor iterations have been performed (whichever comes
+c                  first).  The default Cutoff is 0 (i.e. iterate
+c                  forever), and the default number of minor iterations
+c                  is 250.  This is the total number of iterations to
+c                  do.
 c      negStop	   Stop on first negative component.
-c      positive    Constrain the output components to be positive valued.
+c      positive    Constrain the output components to be positive
+c                  valued.
 c      pad	   Zero pad the beam to a bigger size.
 c      asym	   The beam is asymmetric.
 c      minpatch    The minimum beam patch width.
@@ -570,7 +573,7 @@ c      box	   The boxes specification.
 c      clip	   The Steer clip level.
 c      mode	   Either "clark" (default), "steer" or "any".
 c
-c-------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'maxdim.h'
 c
 	call keyini
@@ -602,10 +605,9 @@ c
 	call keyfin
 c
         end
-c************************************************************************
+c***********************************************************************
 	subroutine GetOpt(negstop,positive,pad,asym)
 c
-	implicit none
 	logical negstop,positive,pad,asym
 c
 c  Get extra processing options.
@@ -613,7 +615,7 @@ c
 c  Output:
 c    negstop
 c    positive
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer NOPTS
 	parameter(NOPTS=4)
 	character opts(NOPTS)*8
@@ -627,11 +629,10 @@ c
 	asym     = present(4)
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine Header(lIn,lOut,blc,trc,Niter,
      *	  clip,mode,minpatch,version)
 c
-	implicit none
 	integer lIn,lOut,Niter,minpatch,blc(3),trc(3)
 	real clip
 	character mode*(*),version*(*)
@@ -648,7 +649,7 @@ c    clip
 c    mode
 c    minPatch
 c    version
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer i,lblc,ltrc
 	real crpix1,crpix2,crpix3
 	character line*72,txtblc*32,txttrc*32
@@ -683,7 +684,8 @@ c
 	call wrhdr(lOut,'crpix3',crpix3)
 	call wrhdi(lOut,'niters',Niter)
 c
-c  Copy all the other keywords across, which have not changed and add history
+c  Copy all the other keywords across, which have not changed and add
+c  history.
 c
 	do i=1,nkeys
 	  call hdcopy(lIn, lOut, keyw(i))
@@ -705,16 +707,15 @@ c
 	if(mode.eq.'steer'.or.mode.eq.'any')then
 	  write(line,'(''CLEAN: Steer Clip Level ='',f6.3)')Clip
 	  call hiswrite(lOut,line)
-	endif	    
+	endif
 	call hiswrite(lOut,'CLEAN: Minpatch = '//itoaf(minpatch))
 	call hiswrite(lOut,'CLEAN: Total Iterations = '//itoaf(Niter))
 	call hisclose(lOut)
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine BeamChar(lBeam,n1,n2,ic,jc,Histo,maxPatch)
 c
-	implicit none
 	integer lBeam,n1,n2,ic,jc,maxPatch
 	real Histo(maxPatch/2+1)
 c
@@ -731,7 +732,7 @@ c    ic,jc	Pixel coordinate of the max pixel.
 c    Histo	Histo(i) is the absolute maximum outside the patch
 c		with width 2*i-1 around the beam maximum.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	integer i,j,k,imin,imax,jmin,jmax,nHisto
 	real Data(maxdim),bmax
@@ -819,10 +820,9 @@ c
 	endif
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine SumFlux(Flux,Estimate,nPoint)
 c
-	implicit none
 	integer nPoint
 	real Estimate(nPoint),Flux
 c
@@ -834,7 +834,7 @@ c    nPoint
 c    Estimate
 c  Output:
 c    Flux
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer i
 c
 	Flux = 0
@@ -842,10 +842,9 @@ c
 	  Flux = Flux + Estimate(i)
 	enddo
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine SumAbs(EstASum,Estimate,nPoint)
 c
-	implicit none
 	integer nPoint
 	real Estimate(nPoint),EstASum
 c
@@ -856,7 +855,7 @@ c    nPoint
 c    Estimate
 c  Output:
 c    EstASum
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer i
 c
 	EstASum = 0
@@ -864,10 +863,9 @@ c
 	  EstASum = EstASum + abs(Estimate(i))
 	enddo
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine NoModel(Map,Estimate,Residual,nPoint)
 c
-	implicit none
 	integer nPoint
 	real Map(nPoint),Estimate(nPoint),Residual(nPoint)
 c
@@ -880,7 +878,7 @@ c    Map	The original dirty map.
 c  Output:
 c    Residual	The residuals, which are the same as the dirty map.
 c    Estimate	The estimate, which are initially zero.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer i
 c
 	do i=1,nPoint
@@ -888,11 +886,10 @@ c
 	  Residual(i) = Map(i)
 	enddo
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine Steer(pBem,Residual,Estimate,Temp,nPoint,nx,ny,
      *		Limit,Gain,Niter,Run,nrun)
 c
-	implicit none
 
 	integer Niter,nrun,Run(3,nrun),nPoint,nx,ny,pBem
 	real Gain,Limit
@@ -909,7 +906,7 @@ c
 c  Input/Output:
 c    Niter	Number of Niter iterations.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	real MinOptGain
 	parameter(MinOptGain=0.02)
 	integer i
@@ -941,18 +938,18 @@ c
 	  SumEE = SumEE + Temp(i)*Temp(i)
 	enddo
 c
-c       SumRE can be negative, so it is better to take the 
+c       SumRE can be negative, so it is better to take the
 c       absolute value of it when determining the optimum
 c       gain (gmx - 07mar04)
 c
 c       abs(SumRE)/SumEE may be close to zero, in which case
-c       a semi-infinite loop can be the result. We apply a 
-c	lower limit to abs(SumRE)/SumEE. A good value for it 
-c       is empirically determined to be 0.02 (MinOptGain), 
-c       which may however not be the best choice in all cases. 
+c       a semi-infinite loop can be the result. We apply a
+c	lower limit to abs(SumRE)/SumEE. A good value for it
+c       is empirically determined to be 0.02 (MinOptGain),
+c       which may however not be the best choice in all cases.
 c       In case of problems, you can try a lower value for the
 c       task option Gain before changing MinOptGain (gmx - 07mar04).
-c       
+c
 	g = Gain*max(MinOptGain,abs(SumRE)/SumEE)
 c
 c  Now go through and update the estimate, using this gain. Also
@@ -965,12 +962,11 @@ c
 	enddo
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine Hogbom(n,Patch,nx,ny,RCmp,CCmp,ICmp,JCmp,nCmp,
      *	  Run,nRun,EstASum,Cutoff,Gain,negStop,positive,negFound,
      *	  MaxNiter,Niter)
 c
-	implicit none
 	integer nx,ny,nCmp,nRun,n
 	integer ICmp(nCmp),JCmp(nCmp),Run(3,nRun)
 	real RCmp(nCmp),CCmp(nCmp),Patch(n,n)
@@ -1004,11 +1000,11 @@ c  Scratch:
 c    ICmp	Coordinate in x of a pixel.
 c    JCmp	Coordinate in y of a pixel.
 c
-c  
+c
 c  Internal Crap:
 c    Ymap	See SubComp for an explanation.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	integer i,j,Ncmpd,x0,y0,n0,itemp
 	integer YMap(maxdim+1)
@@ -1036,9 +1032,9 @@ c
 	enddo
 	if(Ncmpd.ne.Ncmp) call bug('f','Internal bug in Hogbom - 1')
 c
-c  YMap currently contains the number of residuals found in a particular row.
-c  Convert this so that YMap(j) gives the total number of peak residuals in
-c  rows 1 to j-1.
+c  YMap currently contains the number of residuals found in a particular
+c  row.  Convert this so that YMap(j) gives the total number of peak
+c  residuals in rows 1 to j-1.
 c
 	Ncmpd = 0
 	do j=1,ny+1
@@ -1054,13 +1050,12 @@ c
      *	  positive,0.,0.,Cutoff,EstASum,Icmp,Jcmp,Rcmp,Ccmp,Ncmp,Niter,
      *	  negFound)
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine Clark(nx,ny,Residual,Estimate,nPoint,Run,nRun,
      *		Histo,Patch,minPatch,maxPatch,Cutoff,negStop,positive,
      *		MaxNiter,Gain,Speed,ResAMax,EstASum,Niter,Limit,
      *		negFound,RCmp,CCmp,ICmp,JCmp,maxCmp)
 c
-	implicit none
 	integer nx,ny,minPatch,maxPatch,maxNiter,Niter,nRun,nPoint
 	integer Run(3,nrun)
 	real Residual(nPoint),Estimate(nPoint)
@@ -1070,8 +1065,8 @@ c
 	integer maxCmp,ICmp(maxCmp),JCmp(maxCmp)
 	real CCmp(maxCmp),RCmp(maxCmp)
 c
-c  Perform the component gathering step of a major Clark Clean iteration.
-c  Determine the limiting residual, and store the components
+c  Perform the component gathering step of a major Clark Clean
+c  iteration.  Determine the limiting residual, and store the components
 c  greater than in the residual list. Perform the subtraction portion of
 c  a minor iteration, by Cleaning this list. Then add the newly found
 c  components to the estimate.
@@ -1081,7 +1076,7 @@ c    nx,ny	Image size.
 c    Residual	The residuals.
 c    Estimate	The estimate.
 c    nPoint	The number of points in the residual and estimate.
-c    Histo	
+c    Histo
 c    Patch	The beam patch.
 c    minPatch)	The min and max sizes that the beam patch can take.
 c    maxPatch)
@@ -1096,27 +1091,29 @@ c    ResAMax	Absolute maximum of the residuals.
 c    EstASum	Absolute sum of the estimates.
 c
 c  Input/Output:
-c    Niter	The actual number of minor iterations performed. Updated.
-c    negFound	True if a negative component was found (if negStop is true,
-c		then this will stop before the negative component is added
-c		to the component list).
+c    Niter	The actual number of minor iterations performed.
+c               Updated.
+c    negFound	True if a negative component was found (if negStop is
+c               true, then this will stop before the negative component
+c               is added to the component list).
 c
 c  Output:
 c    Limit	Max residual that went into the residual list.
 c
 c  Important or Odd Thingos:
-c    Ymap	When cleaning the table of residuals, we need to determine where
-c		residuals corresponding to a given range of j exist.
-c		Ymap(j) gives the index of the table entry before that
-c		contains, or would have contained, line j residuals.
+c    Ymap	When cleaning the table of residuals, we need to
+c               determine where residuals corresponding to a given range
+c               of j exist.  Ymap(j) gives the index of the table entry
+c               before that contains, or would have contained, line j
+c               residuals.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	integer Ymap(maxdim+1)
 	integer nPatch,nCmp
 c
-c  Find the limiting residual that we can fit into the residual list, then
-c  go and fill the residual and component list.
+c  Find the limiting residual that we can fit into the residual list,
+c  then go and fill the residual and component list.
 c
 	call GetLimit(Residual,nPoint,ResAMax,maxCmp,Histo,MaxPatch,
      *				nPatch,Limit)
@@ -1134,12 +1131,11 @@ c
 c
 	call NewEst(CCmp,ICmp,JCmp,nCmp,Estimate,nPoint,Run,nRun)
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine SubComp(nx,ny,Ymap,Patch,n,PWidth,Gain,MaxNiter,
      *		NegStop,positive,g,Speed,Limit,EstASum,Icmp,Jcmp,Rcmp,
      *		Ccmp,Ncmp,Niter,negFound)
 c
-	implicit none
 	integer nx,ny,n,Ncmp,Niter,MaxNiter,PWidth
 	real Limit,Gain,g,Speed,EstASum
 	integer Icmp(Ncmp),Jcmp(Ncmp),Ymap(ny+1)
@@ -1170,10 +1166,11 @@ c    n		Dimension of beam patch. This is an odd number. The patch
 c		is square. The peak is at n/2+1
 c    PWidth	Patch half width to be used.
 c    ny		Number of rows in the residuals.
-c    Ymap	When cleaning the table of residuals, we need to determine where
-c		residuals corresponding to a given range of j exist.
-c		Ymap(j) gives the index of the table entry before that
-c		contains, or would have contained, line j residuals.
+c    Ymap	When cleaning the table of residuals, we need to
+c               determine where residuals corresponding to a given range
+c               of j exist.  Ymap(j) gives the index of the table entry
+c               before that contains, or would have contained, line j
+c               residuals.
 c
 c  Input/Outputs:
 c    Rcmp	Flux at each residual peak.
@@ -1185,7 +1182,7 @@ c  Outputs:
 c    negFound	True if a negative component was found.
 c    zerocmp	True if the iterating was stopped by a zero component.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer maxrun
 	parameter(maxrun=4096)
 	integer i,i0,j0,k,ktot,ltot,NIndx
@@ -1227,10 +1224,10 @@ c
 	  i = min(ny,jpk+PWidth)
 	  ktot = Ymap(i+1)
 c
-c  Find the residuals which have suitable x values, then subtract. If the
-c  beam does not cover the extent of the subimage, we have to go through
-c  the process of determining which pixels are covered. This is done in a
-c  clunchy vectorised fashion.
+c  Find the residuals which have suitable x values, then subtract.  If
+c  the beam does not cover the extent of the subimage, we have to go
+c  through the process of determining which pixels are covered.  This
+c  is done in a clunchy vectorised fashion.
 c
 	  if(max(nx-ipk,ipk-1).gt.PWidth)then
 	    do while(k.lt.ktot)
@@ -1260,7 +1257,7 @@ c
 c  Ready for the next loop.
 c
 	  Niter = Niter + 1
-	  TermRes = TermRes + 
+	  TermRes = TermRes +
      *	   alpha * abs(Wts) / ( EstASum * abs(ResMax)**Speed )
 	  call GetPk(Ncmp,Rcmp,Ccmp,Gain,positive,Pk,Wts)
 	  ResMax = Rcmp(Pk)
@@ -1270,10 +1267,9 @@ c
      *		.not.(negStop.and.negFound).and..not.zeroCmp
 	enddo
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine GetPk(Ncmp,Rcmp,Ccmp,Gain,positive,Pk,Wts)
 c
-	implicit none
 	integer Ncmp,Pk
 	real Rcmp(Ncmp),Ccmp(Ncmp),Gain,Wts
 	logical positive
@@ -1289,7 +1285,7 @@ c    positive	True if the components must always be positive.
 c  Output:
 c    Pk		The index of the delta.
 c    Wts	Value of the delta.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer i
 	real temp,maxv
 c
@@ -1314,11 +1310,10 @@ c
 	endif
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine GetLimit(Residual,nPoint,ResAMax,maxCmp,
      *		Histo,MaxPatch,nPatch,Limit)
 c
-	implicit none
 	integer nPoint,maxPatch,nPatch,maxCmp
 	real Residual(nPoint),ResAMax,Histo(maxPatch/2+1),Limit
 c
@@ -1339,7 +1334,7 @@ c  Outputs:
 c    Limit	Threshold above which residual points are to be chosen.
 c    nPatch	Half width of beam patch.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer HistSize
 	parameter(HistSize=512)
 	integer i,m,Acc
@@ -1388,11 +1383,10 @@ c
 	enddo
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine GetComp(Residual,Estimate,nPoint,ny,Ymap,Limit,
      *		           Icmp,Jcmp,RCmp,CCmp,maxCmp,nCmp,Run,nRun)
 c
-	implicit none
 	integer nPoint,ny,maxCmp,nCmp,nRun,Run(3,nrun)
 	real Limit,Residual(nPoint),Estimate(nPoint)
 	real RCmp(maxCmp),CCmp(maxCmp)
@@ -1417,7 +1411,7 @@ c    Icmp,Jcmp	Array of the indices of the residual peaks.
 c    RCmp	Array of the residuals
 c    CCmp	Array of the estimated fluxes.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	integer i,j,k,l,Ncmpd,x0,y0,n0,itemp
 	real Temp(maxdim)
@@ -1458,8 +1452,8 @@ c
         enddo
 c
 c  Ymap currently contains the number of residuals found in a particular
-c  row. Convert this so that Ymap(j) gives the total number of peak residuals
-c  in rows 1 to j-1. This loop will probably not vectorise.
+c  row. Convert this so that Ymap(j) gives the total number of peak
+c  residuals in rows 1 to j-1. This loop will probably not vectorise.
 c
 	Ncmp = 0
 	do j=1,ny+1
@@ -1474,18 +1468,17 @@ c
 	if(Ncmp.eq.0)call bug('w','No peak residuals found in GETCOMP')
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine NewEst(CCmp,ICmp,JCmp,nCmp,Estimate,nPoint,Run,nRun)
 c
-	implicit none
 	integer nCmp,nPoint,nRun
 	integer ICmp(nCmp),JCmp(nCmp),Run(3,nRun)
 	real CCmp(nCmp),Estimate(nPoint)
 c
 c  This adds the components in CCmp to the components in Estimate.
 c  The components in the two arrays are, unfortunately, stored in very
-c  different ways, CCmp having associated arrays containing indices, while
-c  Estimate is described by run specifications.
+c  different ways, CCmp having associated arrays containing indices,
+c  while Estimate is described by run specifications.
 c
 c  Inputs:
 c    nCmp	Number of components.
@@ -1498,7 +1491,7 @@ c
 c  Input/Output:
 c    Estimate	All the components.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer i,j,k,l
 c
 c  Vectorise this if you can!
@@ -1514,15 +1507,14 @@ c
 	  Estimate(i) = CCmp(l)
 	enddo
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine Diff(pBem,Estimate,Map,Residual,nPoint,nx,ny,
      *	  Run,nRun)
 c
-	implicit none
 	integer nPoint,nx,ny,nRun,Run(3,nRun),pBem
 	real Estimate(nPoint),Map(nPoint),Residual(nPoint)
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer i
 c
 	call CnvlR(pBem,Estimate,nx,ny,Run,nRun,Residual,'c')
@@ -1532,15 +1524,14 @@ c
 	enddo
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine defregio(boxes,nMap,nBeam,icentre,jcentre)
 c
-	implicit none
 	integer boxes(*),nMap(3),nBeam(2),icentre,jcentre
 c
 c  Set the region of interest to the lastest area that can be safely
 c  deconvolved.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer blc(3),trc(3),width
 c
 	width = min(icentre-1,nBeam(1)-icentre) + 1
