@@ -1,5 +1,5 @@
 c***********************************************************************
-	program linmos
+      program linmos
 c
 c  LINMOS is a simple linear mosaicing task.  It takes cubes as its
 c  input, and produces a single cube as its output.  The correction
@@ -115,13 +115,11 @@ c    tol        Tolerance. When the grid locations of two pixels differ
 c               by less than "tol", they are taken as being the same
 c               pixel (i.e. no interpolation done).
 c-----------------------------------------------------------------------
-      character version*(*)
-      parameter(version='Linmos: version 1.0 25-Aug-97')
       include 'maxdim.h'
 c
       real tol
       integer maxIn,maxLen,maxOpen
-      parameter(maxIn=350,maxLen=17000,maxOpen=6,tol=0.01)
+      parameter(maxIn=1024,maxLen=maxIn*64,maxOpen=6,tol=0.01)
 c
       character inbuf*(maxlen),in*64,out*64
       integer tScr,tWts,tIn(maxIn),tOut,k1(maxIn),k2(maxIn),nIn
@@ -132,7 +130,7 @@ c
       real rms(maxIn),BlcTrc(4,maxIn)
       real Extent(4)
       double precision crval(3),cdelt(3),crpix(3)
-      character ctype(3)*16
+      character ctype(3)*16, version*80
       logical defrms,init,dosen,dogain,docar,exact,taper
 c
       integer pOut,pWts
@@ -141,11 +139,13 @@ c
 c  Externals.
 c
       integer len1
+      character versan*80
 c-----------------------------------------------------------------------
+      version = versan('linmos',
+     *  '$Id: linmos.for,v 1.4 2007/12/12 04:14:19 cal103 Exp $')
 c
 c  Get the input parameters, and do some checking.
 c
-      call output(version)
       call keyini
       nIn = 0
       offset = 0
@@ -189,7 +189,8 @@ c
         nOpen = maxOpen - 1
       endif
 c
-      docar = .false.
+      docar  = .false.
+      defrms = .false.
       do i=1,nIn
         call xyopen(tin(i),InBuf(k1(i):k2(i)),'old',3,nsize(1,i))
         if(max(nsize(1,i),nsize(2,i)).gt.maxdim)
