@@ -1,10 +1,9 @@
-c************************************************************************
+c***********************************************************************
 	program linmos
-	implicit none
 c
-c  LINMOS is a simple linear mosaicing task. It takes cubes as its
-c  input, and produces a single cube as its output. The correction weights
-c  used are optimum in a minimum mean square sense.
+c  LINMOS is a simple linear mosaicing task.  It takes cubes as its
+c  input, and produces a single cube as its output.  The correction
+c  weights used are optimum in a minimum-mean-square sense.
 c
 c= linmos - Linear mosaicing of datacubes
 c& rjs
@@ -25,12 +24,12 @@ c	telescope is one that it knows. If so, then the known form for the
 c	primary beam is used. See task "pbplot" to check LINMOS's primary
 c	beam models.
 c@ in
-c	This gives the names of the input cubes. Many cubes can be given.
-c	There is no default. Inputs should generally be on the same grid
-c	system. However, if they are not, linear
-c	interpolation is performed to regrid using the first image as the
-c	template. LINMOS's ability to do this is quite inferior to task REGRID.
-c	The intensity units of all the inputs, and the pixel size 
+c	This gives the names of the input cubes.  Many cubes may be given.
+c	There is no default.  Inputs should generally be on the same grid
+c	system.  However, if they are not, linear interpolation is
+c	performed to regrid using the first image as the template.
+c	LINMOS's ability to do this is quite inferior to task REGRID.
+c	The intensity units of all the inputs, and the pixel size
 c	and alignment of the third dimension are assumed to be the same.
 c@ out
 c	The name of the output cube. No default. The center and pixel size
@@ -49,9 +48,9 @@ c	               amplification at the edge of the mosaiced field.
 c	               The `taper' option aims at achieving approximately
 c	               uniform noise across the image. This prevents full
 c	               primary beam correction at the edge of the mosaic.
-c	               See equation 2 in Sault, Staveley-Smith and Brouw, A&AS,
-c	               120, 376 (1996) or use "options=gains" to see the form
-c	               of the tapering.
+c	               See equation 2 in Sault, Staveley-Smith and Brouw,
+c	               A&AS, 120, 376 (1996) or use "options=gains" to see
+c	               the form of the tapering.
 c	  sensitivity  Rather than a mosaiced image, produce an image
 c	               giving the rms noise across the field.
 c	  gain         Rather than a mosaiced image, produce an image
@@ -63,35 +62,37 @@ c
 c  History:
 c    rjs  27oct89 Original version.
 c    rjs   6nov89 Interpolation, better i/o, more error checks.
-c    rjs   8feb90 The routine to determine default primary beam size did the
-c		  calculation wrong!
+c    rjs   8feb90 The routine to determine default primary beam size did
+c                 the calculation wrong!
 c    rjs  18feb90 Added offseting of x0,y0. Corrected determination of
-c		  dra,ddec. Corrected bug in GetPB
+c                 dra,ddec. Corrected bug in GetPB
 c    rjs  14apr90 Fixed bug in the interpolation code.
 c    rjs  24apr90 Made GetPB into a separate file.
 c    rjs  26apr90 Copied linetype keywords to the output.
-c    mchw 09nov90 Get pbfwhm from map header and set pbfwhm=0 in output map.
+c    mchw 09nov90 Get pbfwhm from map header and set pbfwhm=0 in output
+c                 map.
 c    rjs   5nov91 Eliminated maxdim**2 arrays, and standardised history.
 c    rjs  20nov91 Replace keya('in'...) with keyf('in'...).
 c    mchw 19mar92 Check third axis alignment.
 c    rjs  20mar92 Added "save" statement to above code.
 c    rjs  12nov92 Significant mods, to use nebk's primary beam routines,
-c		  and to partially handle blanked images.
+c                 and to partially handle blanked images.
 c    nebk 25nov92 Copy btype to output
-c    rjs  10dec92 New CALL sequence for GETFREQ and handle zero frequency
+c    rjs  10dec92 New CALL sequence for GETFREQ and handle zero
+c                 frequency.
 c    nebk 28jan93 new P.B. interface
 c    rjs   4oct93 Increase number of cubes that can be handled.
 c    rjs  26oct93 Fixed geometry problem.
 c    rjs   6dec93 Improve some messages.
 c    mhw  13jan94 Relax alignment requirement on the third axis.
 c    rjs  22jul94 Added options=sensivitivy and options=gain. Use some
-c		  standard include files.
+c                 standard include files.
 c    rjs  26jul94 Doc changes only.
 c    rjs  17aug94 Change projection code to cartesian.
 c    rjs  24oct94 Use new pb routines.
 c    rjs  30nov94 Preserve the projection geometry when all the inputs
-c		  have the same geometry. Handle single-pointing
-c		  mosaic tables.
+c                 have the same geometry. Handle single-pointing
+c                 mosaic tables.
 c    rjs   3dec94 More lenient "exactness" algorithm in thingchk.
 c    rjs  30jan95 Taper option. Eliminate "signal" parameter.
 c    mhw  13aug95 Clip input if output too big, instead of giving up.
@@ -113,7 +114,7 @@ c    maxlen	Size of buffer to hold all the input file names.
 c    tol	Tolerance. When the grid locations of two pixels differ
 c		by less than "tol", they are taken as being the same
 c		pixel (i.e. no interpolation done).
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	character version*(*)
 	parameter(version='Linmos: version 1.0 25-Aug-97')
 	include 'maxdim.h'
@@ -140,6 +141,7 @@ c
 c  Externals.
 c
 	integer len1
+c-----------------------------------------------------------------------
 c
 c  Get the input parameters, and do some checking.
 c
@@ -313,10 +315,9 @@ c
 	call ScrClose(tWts)
 	call xyclose(tOut)
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine GetOpt(dosen,dogain,taper)
 c
-	implicit none
 	logical dosen,dogain,taper
 c
 c  Get extra processing options.
@@ -326,7 +327,7 @@ c    dosen	True if we are to produce a sensitivity image.
 c    dogain	True if we are to produce an image of the effective gain.
 c    taper	True if the output is to be tapered to achieve quasi-uniform
 c		noise across the image.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer NOPTS
 	parameter(NOPTS=3)
 	logical present(NOPTS)
@@ -342,11 +343,10 @@ c
 	if(dosen.and.dogain)call bug('f',
      *	  'Cannot do options=sensitivity,gains simultaneously')
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine Process(init,tScr,tWts,tIn,tOut,Out,Wts,
      *	  nx,ny,n1,n2,n3,dosen,BlcTrc,rms)
 c
-	implicit none
 	logical init
 	integer tScr,tWts,tIn,tOut
 	integer nx,ny,n1,n2,n3
@@ -354,10 +354,10 @@ c
 	real BlcTrc(4),rms
 	logical dosen
 c
-c  First determine the initial weight to apply to each pixel, and accumulate
-c  info so that we can determine the normalisation factor later on.
-c  Then successively read each plane, apply the weight, and accumulate
-c  the information in the scratch file.
+c  First determine the initial weight to apply to each pixel and
+c  accumulate info so that we can determine the normalisation factor
+c  later on.  Then successively read each plane, apply the weight, and
+c  accumulate the information in the scratch file.
 c
 c  Inputs:
 c    tScr	Handle of the image scratch file.
@@ -376,7 +376,7 @@ c  Scratch:
 c    In		Used for the interpolated version of the input.
 c    Out	Used for the output.
 c    Wts	Accumulation of the weights array.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	real tol
 	parameter(tol=0.01)
@@ -417,8 +417,8 @@ c
 	Sect(3) = min(real(n1),BlcTrc(3) - xinc)
 	Sect(4) = min(real(n2),BlcTrc(4) - yinc)
 c
-c  We have determined the section of the output we can calculate. Round this
-c  to integer values.
+c  Having determined the section of the output we can calculate, round
+c  it to integer values.
 c
 	xlo = nint( Sect(1) + 0.5 - tol )
 	ylo = nint( Sect(2) + 0.5 - tol )
@@ -523,16 +523,15 @@ c
 	init = .true.
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine GetDat(tIn,nx,xoff,yoff,xlo,xhi,j,pbObj,
      *						In,Pb,n1,interp,mask)
 c
-	implicit none
 	integer tIn,xoff,yoff,xlo,xhi,n1,j,pbObj,nx
 	logical interp,mask
 	real In(n1),Pb(n1)
 c
-c  Get a row of data (either from xyread, or the interpolation routines).
+c  Get a row of data (either from xyread or the interpolation routines).
 c
 c  Input:
 c    tIn
@@ -547,7 +546,7 @@ c  Output:
 c    In		Image data.
 c    Pb		Primary beam response (zeroed out where the data are
 c		blanked).
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	logical flags(MAXDIM)
 	real dat(MAXDIM)
@@ -584,10 +583,9 @@ c
 	  enddo
 	endif
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine GetSec(tScr,Out,k,n1,n2,xlo,xhi,ylo,yhi)
 c
-	implicit none
 	integer tScr,k,n1,n2,xlo,xhi,ylo,yhi
 	real Out(n1,n2)
 c
@@ -600,7 +598,7 @@ c    k		Plane number.
 c    n1,n2	Dimensions of the Out array.
 c    xlo,ylo	Blc of area to write.
 c    xhi,yhi	Trc of area to write.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer j,offset,length
 c
 c  If the section of the x dimension that we want to right is pretty
@@ -618,10 +616,9 @@ c
 	  enddo
 	endif
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine PutSec(tScr,Out,k,n1,n2,xlo,xhi,ylo,yhi)
 c
-	implicit none
 	integer tScr,k,n1,n2,xlo,xhi,ylo,yhi
 	real Out(n1,n2)
 c
@@ -634,7 +631,7 @@ c    k		Plane number.
 c    n1,n2	Dimensions of the Out array.
 c    xlo,ylo	Blc of area to write.
 c    xhi,yhi	Trc of area to write.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer j,offset,length
 c
 c  Try and block it into one call if that is possible.
@@ -650,12 +647,11 @@ c
 	    offset = offset + n1
 	  enddo
 	endif
-	end    
-c************************************************************************
+	end
+c***********************************************************************
 	subroutine LastPass(tout,tScr,tWts,Out,Wts,Sigt,n1,n2,n3,
      *								dosen)
 c
-	implicit none
 	integer tOut,tScr,tWts,n1,n2,n3
 	real Sigt,Out(n1,n2),Wts(n1,n2)
 	logical dosen
@@ -667,13 +663,13 @@ c  Inputs:
 c    tOut	Handle of the output image file.
 c    tScr	Handle of the input image file.
 c    tWts	Handle of the input weights file.
-c    Sigt	Critical noise variance. 
+c    Sigt	Critical noise variance.
 c    n1,n2,n3	Size of the output cube.
 c    dosen	Determine the sensitivity function.
 c  Scratch:
 c    Wts	Array containing the weights to be applied.
 c    Out	Used to store a plane of the output image.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	integer i,j,k
 	logical doflag,doneflag,flags(MAXDIM)
@@ -746,10 +742,9 @@ c
 	  enddo
 	enddo
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine CatchUp(tOut,j0,n1,n2,n3)
 c
-	implicit none
 	integer tOut,j0,n1,n2,n3
 c
 c  Write out a batch of "good" flags to the image mask file. This is
@@ -761,7 +756,7 @@ c    j0
 c    n1
 c    n2
 c    n3
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	integer i,j,k
 	logical flags(MAXDIM)
@@ -789,11 +784,10 @@ c
 	enddo
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine hdout(tin,tout,nsize,extent,version,
      *						dosen,dogain,docar)
 c
-	implicit none
 	integer tin,tout,nsize(3)
 	real extent(4)
 	character version*(*)
@@ -802,14 +796,15 @@ c
 c  Make up the header of the output file.
 c
 c  Input:
-c    tin	The handle of the input file, which is to be used as a template.
-c    tout	The handle of the output file.
-c    nsize	The size of the input image.
-c    extent	The expanded extent of the output.
+c    tin	Handle of the input file, which is to be used as a
+c		template.
+c    tout	Handle of the output file.
+c    nsize	Size of the input image.
+c    extent	Expanded extent of the output.
 c    dosen	True if the sensitivity function is being evaluated.
 c    dogain	True if the gain function is being evaluated.
 c    docar	True if we are to label with RA---CAR, DEC--CAR
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	real crpix1,crpix2
 	character ctype1*16,ctype2*16
 	integer i
@@ -840,11 +835,9 @@ c
 	  call hdcopy(tIn,tOut,'ctype1')
 	  call hdcopy(tIn,tOut,'ctype2')
 	endif
-	
 c
 c  Determine the location of the reference pixel in the output image.
 c
-
 	call rdhdr(tIn,'crpix1',crpix1,real(nsize(1)/2+1))
 	call rdhdr(tIn,'crpix2',crpix2,real(nsize(2)/2+1))
 	crpix1 = crpix1 - (extent(1)-1)
@@ -852,7 +845,7 @@ c
 	call wrhdr(tOut,'crpix1',crpix1)
 	call wrhdr(tOut,'crpix2',crpix2)
 c
-c  Set the primary beam size to indicate that it is primary beam corrected.
+c  Set primary beam size to indicate that it is primary-beam corrected.
 c
 	call wrhda(tOut,'pbtype','SINGLE')
 c
@@ -884,17 +877,16 @@ c
 	endif
 	call hisclose(tout)
 	end
-************************************************************************
+c***********************************************************************
 	subroutine ThingIni(tno,nsize,ctype,crpix,crval,cdelt,
      *		blctrc,extent)
 c
-	implicit none
 	integer tno,nsize(2)
 	character ctype(3)*(*)
 	double precision crpix(3),crval(3),cdelt(3)
 	real blctrc(4),extent(4)
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	character num*2
 	integer i
 c
@@ -922,18 +914,17 @@ c
 	enddo
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine ThingChk(tno,nsize,ctype,crpix,crval,cdelt,
      *		exact,blctrc,extent)
 c
-	implicit none
 	integer tno,nsize(3)
 	logical exact
 	character ctype(3)*(*)
 	double precision crpix(3),crval(3),cdelt(3)
 	real blctrc(4),extent(4)
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	double precision crvalx(3),crpixx(3),cdeltx(3)
 	double precision x1,x1x,y1,y1x,z1,z1x,dx,dy,cosdec,cosdecx
 	double precision cdelt1,cdelt1x
@@ -972,7 +963,7 @@ c
 	blctrc(3) = blctrc(1) + (nsize(1)-1) * dx
 	blctrc(4) = blctrc(2) + (nsize(2)-1) * dy
 	if(blctrc(3).lt.blctrc(1).or.blctrc(4).lt.blctrc(2))
-     *    call bug('f','Signs of cdelt of the inputs are not identical') 
+     *    call bug('f','Signs of cdelt of the inputs are not identical')
 c
 c  Update the extent.
 c
@@ -1000,10 +991,9 @@ c
      *	  call bug('w','Third axis of inputs do not align')
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine pntcent(tno,pbtype,pra,pdec)
 c
-	implicit none
 	integer tno
 	double precision pra,pdec
 	character pbtype*(*)
@@ -1019,7 +1009,7 @@ c		name of a telescope (e.g. 'HATCREEK' or 'ATCA'), but it
 c		can also be 'GAUS(xxx)', where xxx is a Gaussian primary
 c		beam size, with its FWHM given in arcseconds. For example
 c		'GAUS(120)' is a Gaussian primary beam with FWHM 120 arcsec.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer mit,size,iostat
 	character string*16
 c
