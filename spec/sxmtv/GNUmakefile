@@ -2,7 +2,7 @@
 # GNUmakefile for compiling Miriad utility sxmtv.
 #
 # Original: 2006/09/15, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.1 2006/09/15 07:40:07 cal103 Exp $
+# $Id: GNUmakefile,v 1.2 2008/02/01 05:50:58 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
@@ -22,7 +22,7 @@ show ::
 ifeq "$(MAKEMODE)" "system"
   # System-oriented rules.
   #-----------------------
-  CFLAGS   := $(CPPOPT) -I../xmtv -I$(X11INCD) $(CCOPT) $(LDOPT)
+  CFLAGS   := $(CPPOPT) -I. -I../xmtv -I$(X11INCD) $(CCOPT) $(LDOPT)
 
   # Static and static pattern rules.
   #---------------------------------
@@ -44,7 +44,8 @@ ifeq "$(MAKEMODE)" "system"
 else
   # Programmer-oriented rules.
   #---------------------------
-  CFLAGS   := $(CPPDBG) -I../xmtv -I$(CODEDIR)/../xmtv -I$(X11INCD) $(CCDBG)
+  CFLAGS   := $(CPPDBG) -I. -I../xmtv
+  CFLAGS   += -I$(CODEDIR) -I$(CODEDIR)/../xmtv -I$(X11INCD) $(CCDBG)
   CFLAGS   += $(LDDBG)
   VPATH    := .:$(CODEDIR)
 
@@ -53,7 +54,7 @@ else
   all :: $(PGMRBIND)/sxmtv.exe
 
   $(PGMRBIND)/sxmtv.exe : $(SXMTVSRCS) $(SXMTVINCS)
-	$(CC) $(CFLAGS) -o $@ $(SXMTVSRCS) $(X11LIB) $(XTRALIBS)
+	$(CC) $(CFLAGS) -o $@ $(filter %.c,$^) $(X11LIB) $(XTRALIBS)
 
   clean ::
 	$(RM) *.o
