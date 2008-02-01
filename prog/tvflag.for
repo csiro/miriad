@@ -224,7 +224,7 @@ c    rjs   12may97    Check that linetype is compatible with flagging.
 c    rjs    5oct97    Relax restriction that linetype width and step
 c                     must be 1.
 c
-c $Id: tvflag.for,v 1.2 2008/02/01 00:26:35 cal103 Exp $
+c $Id: tvflag.for,v 1.3 2008/02/01 03:14:54 cal103 Exp $
 c-----------------------------------------------------------------------
 c
 c  Internal parameters.
@@ -269,7 +269,7 @@ c-----------------------------------------------------------------------
 c  Announce program.
 c
       version = versan ('tvflag',
-     :  '$Id: tvflag.for,v 1.2 2008/02/01 00:26:35 cal103 Exp $')
+     :  '$Id: tvflag.for,v 1.3 2008/02/01 03:14:54 cal103 Exp $')
 c-----------------------------------------------------------------------
 c  Use the key routines to get the user input parameters.
 c
@@ -724,7 +724,6 @@ c  Start reading the data.
 c
 	offset = 0
 	length = 2*nchan + 3
-	pnt = 1
 	do k=1,nvis
 	  call scrread(lScr,buf,offset,length)
 	  offset = offset + length
@@ -732,25 +731,28 @@ c
 	  t = buf(2) + (dble(buf(3)) - day0)
 	  bl = bl2idx(bl)
 	  if(bl.gt.0)then
-	    dowhile(t1(pnt).lt.-1.or.t.lt.t1(pnt).or.t.gt.t2(pnt))
-	      pnt = pnt + 1
+	    do pnt = 1, ntime
+	      if (t1(pnt).gt.-1.0) then
+	        if (t1(pnt).le.t .and. t.le.t2(pnt)) goto 10
+	      endif
 	    enddo
-	    if(t1(pnt).gt.t.or.t.gt.t2(pnt))call bug('f','Inconsistent')
-	    i0 = 3
+ 	    call bug ('f', 'Time slot miscalculation')
+	
+ 10	    i0 = 3
 	    do i=1,nchan
 	      if(nint(buf(i0+2)).gt.0)then
-		if(iflag(i,pnt,bl).gt.0)then
-		  array(i,pnt,bl) = array(i,pnt,bl) + buf(i0+1)
-		  iflag(i,pnt,bl) = iflag(i,pnt,bl) + 1
-		else
-		  array(i,pnt,bl) = buf(i0+1)
-		  iflag(i,pnt,bl) = 1
-		endif
+	        if(iflag(i,pnt,bl).gt.0)then
+	          array(i,pnt,bl) = array(i,pnt,bl) + buf(i0+1)
+	          iflag(i,pnt,bl) = iflag(i,pnt,bl) + 1
+	        else
+	          array(i,pnt,bl) = buf(i0+1)
+	          iflag(i,pnt,bl) = 1
+	        endif
 	      else
-		if(iflag(i,pnt,bl).le.0)then
-		  array(i,pnt,bl) = array(i,pnt,bl) + buf(i0+1)
-		  iflag(i,pnt,bl) = iflag(i,pnt,bl) - 1
-		endif
+	        if(iflag(i,pnt,bl).le.0)then
+	          array(i,pnt,bl) = array(i,pnt,bl) + buf(i0+1)
+	          iflag(i,pnt,bl) = iflag(i,pnt,bl) - 1
+	        endif
 	      endif
 	      i0 = i0 + 2
 	    enddo
@@ -763,11 +765,11 @@ c
 	  do j=1,ntime
 	    do i=1,nchan
 	      if(iflag(i,j,k).gt.0)then
-		array(i,j,k) = array(i,j,k) / iflag(i,j,k)
-		iflag(i,j,k) = 1
+	        array(i,j,k) = array(i,j,k) / iflag(i,j,k)
+	        iflag(i,j,k) = 1
 	      else if(iflag(i,j,k).lt.0)then
-		array(i,j,k) = - array(i,j,k) / iflag(i,j,k)
-		iflag(i,j,k) = 0
+	        array(i,j,k) = - array(i,j,k) / iflag(i,j,k)
+	        iflag(i,j,k) = 0
 	      endif
 	    enddo
 	  enddo
@@ -1074,19 +1076,19 @@ c
 	    day0 = day1
 	  endif
 	  if(bl.gt.0.and.bl.lt.nbase)then
-	    if(abs(t-tprev).gt.ttol)then
+	    if(abs(t-tprev).gt.ttol/2.0)then
 	      if(t.lt.tprev)torder = .false.
 	      if(nosrc)then
-		newsrc = .false.
+	        newsrc = .false.
 	      else
-		newsrc = uvVarUpd(vsrc)
+	        newsrc = uvVarUpd(vsrc)
 	      endif
 	      if(ntime.gt.0.and.
-     *		(newsrc.or.t-tprev.gt.maxgap.or.t.lt.tprev))then
-		if(ntime.ge.MAXTIME)
-     *		  call bug('f','Too many times for me')
-		ntime = ntime + 1
-		time(ntime) = -2
+     *	        (newsrc.or.t-tprev.gt.maxgap.or.t.lt.tprev))then
+	        if(ntime.ge.MAXTIME)
+     *	          call bug('f','Too many times for me')
+	        ntime = ntime + 1
+	        time(ntime) = -2
 	      endif
 	      if(ntime.ge.MAXTIME)call bug('f','Too many times for me')
 	      ntime = ntime + 1
@@ -1103,10 +1105,10 @@ c
 	      buf(3) = day0
 	      i0 = 3
 	      do i=1,nchan
-		buf(i0+1) = ctoapri(data(i), apri)
-		buf(i0+2) = 0
-		if(flags(i))buf(i0+2) = 1
-		i0 = i0 + 2
+	        buf(i0+1) = ctoapri(data(i), apri)
+	        buf(i0+2) = 0
+	        if(flags(i))buf(i0+2) = 1
+	        i0 = i0 + 2
 	      enddo
 	      call scrwrite(lScr,buf,offset,length)
 	    endif
