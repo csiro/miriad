@@ -4,6 +4,7 @@
 
 #include "sxmtv.h"
 #include <math.h>
+#include <stdlib.h>
 
 static int cur_xcorn = -99999;        /* Current location of top-left */
 static int cur_ycorn = -99999;           /* corner of smaller window. */
@@ -14,7 +15,7 @@ static int cursor_shape;             /* Standard cursor shape number. */
 
 /*--------------------------------------------------------------------*/
 
-init()
+void init()
 {
     int i;
     union {
@@ -51,19 +52,18 @@ init()
       bufferop[i] = False;
 }
 
-SetupWindow (argc, argv)
-int argc;
-char *argv[];
+
+void SetupWindow (int argc, char*argv[])
 {
    int offset = 0;
    int x = 0, y = 0;              /* window position */
    unsigned int border_width = 2; /* border 2 pixels wide */
-   unsigned long GCmask = 0;      /* ignore XGCValues, use defaults */
    char *window_name = "Simple XMTV Screen-Server";
    char *icon_name = "Simple TV";
    char *display_name = NULL;
    char *ProgName;
    unsigned long event_mask, value_mask;
+   void user_options(int argc, char *argv[]);
 
    Pixmap icon_pixmap;
 #include "xmtv.icon"
@@ -71,7 +71,6 @@ char *argv[];
    XWMHints wm_hints;
    XSizeHints size_hints;
    XClassHint class_hints;
-   XGCValues values;
    XSetWindowAttributes WinAtt;
    double xx, yy, zz;
 
@@ -86,7 +85,7 @@ char *argv[];
    unsigned long plane_masks[15];       /* plane masks from XAlloc-   */
                                         /* Colorcells.                */
    register int i, j, k;
-   int icx, icy, imax;
+   int imax;
    unsigned long int izero;             /* Matches size of int2pix.   */
    char *t1, *t2;
    unsigned long curs_pixel[2];
@@ -117,7 +116,7 @@ char *argv[];
       fprintf (stderr, "*******************************************\n");
       fprintf (stderr, "**  depth = %d > 8!", depth);
       fprintf (stderr, "  Sorry, must limit to 8\n");
-      fprintf (stderr, "** due to 1-character limit of ZSSSX2.\n");  
+      fprintf (stderr, "** due to 1-character limit of ZSSSX2.\n");
       fprintf (stderr, "*******************************************\n");
       depth = 8;
       }
@@ -128,7 +127,7 @@ char *argv[];
 
    vislist = XGetVisualInfo (display, VisualScreenMask|VisualDepthMask|
       VisualClassMask, &template, &nvis);
- 
+
    if (nvis == 0) {
       perror ("No suitable visual");
       exit (1);
@@ -153,7 +152,7 @@ char *argv[];
 
                                         /* create opaque window       */
    value_mask = CWBorderPixel | CWBackPixel | CWBitGravity;
-   WinAtt.border_pixel = curs_pixel[0] = 
+   WinAtt.border_pixel = curs_pixel[0] =
       WhitePixel (display, screen_num);
    WinAtt.background_pixel = curs_pixel[1] =
       BlackPixel (display, screen_num);
@@ -172,7 +171,7 @@ char *argv[];
       (long)xmtv_width, (long)xmtv_height);
 /*   icon_pixmap = XCreateBitmapFromData (display, win, xlogo64_bits,
        xlogo64_width, xlogo64_height); */
-    
+
 
                                         /* set size, class, other     */
                                         /* hints for Window Manager   */
@@ -237,7 +236,7 @@ char *argv[];
 
                                         /* create all the images      */
     for (i = 0; i < NGREY; i++) {
-       plane_data[i] = (char*) malloc 
+       plane_data[i] = (char*) malloc
           (Screen_Width * Screen_Height * ((depth+1) / 8));
        plane[i] = XCreateImage (display, vislist->visual, depth, ZPixmap,
           offset, plane_data[i], Screen_Width, Screen_Height, 8, 0);
@@ -383,7 +382,7 @@ char *argv[];
       if (i < NColour) {
          rlut[0][i] = glut[0][i] = blut[0][i] =  i * zz;
          if (NGREY > 1) {
-            for (j = 1; j < NGREY; j++) 
+            for (j = 1; j < NGREY; j++)
                rlut[j][i] = glut[j][i] = blut[j][i] = rlut[0][i];
             }
          colour_table[i].red = colour_table[i].green =
@@ -400,21 +399,21 @@ char *argv[];
 
 } /* end SetupWindow */
 
-user_options (argc, argv)
-int argc;
-char *argv[];
+
+void user_options (int argc, char *argv[])
 /*--------------------------------------------------------------------*/
 /*   Set cursor, graphics colors reading user's .Xdefaults file       */
 /*   Also get the icon and window geometries from the command line or */
-/*   from the .Xdefaults file.					      */
+/*   from the .Xdefaults file.                                        */
 /*--------------------------------------------------------------------*/
 {
    char *option, *arg;
-   char *IG, *ig, *WG, *wg, *uwg, *uig, g;
+   char *IG, *ig, *WG, *wg, *uwg, *uig;
    char *BasicTV;
-   int i, j, xx, yy, wasi, wasw;
+   int i, xx, yy, wasi, wasw;
    unsigned int ww, hh;
    long flags;
+   void crscol(int *grfx, int *gcol);
 /*--------------------------------------------------------------------*/
 
    sc_width = sc_height = 0;
