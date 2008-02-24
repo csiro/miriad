@@ -1,88 +1,11 @@
 c***********************************************************************
 c  Allow interactive editing of UV data loaded onto a TV device.
-c
-c  History:
-c    jm    14feb90    Initial version.
-c    jm    26mar90    Changed flow to make use of SelProbe routine.
-c    jm    30apr90    Changed how the array is loaded (data and flag).
-c    jm    07may90    Changed Dispedit to include declared size of iflag.
-c    jm    16jun90    Added LdDisp and cleaned up code a bit.
-c    jm    14jul90    Increased the WIDTH of the strips.
-c    jm    22aug90    Added TV labeling and improved flag re-writing.
-c    jm    21sep90    Substantial change to include rubber banding.
-c    jm    24oct90    Corrected a few items.
-c    jm    20nov90    Major program control flow re-write.
-c    jm    22jan91    Expanded documentation and added source keyword
-c                     and folded subroutines into main program file.
-c    jm    22feb91    Added a check to avoid array size overflow in
-c                     UVread loop.  Also added a few more user comments.
-c    jm    22feb91    Added MAXDIM2 to allow a larger time range.
-c    jm    26feb91    Changed all occurrances of Itoa to Itoaf.
-c    jm    22mar91    Added a note to the user about min/max range
-c                     but only on the first pass through the data.
-c    rjs   19jun91    Fixed bugs in time messages and LUT selection.
-c    jm    21jun91    Added mode and started taver section.
-c    jm    12aug91    Added routine Report to use CtrlSeta function.
-c                     Also finished taver section.
-c    jm    21sep91    Corrected xypos in edflag routine and now do an
-c                     inquire as to whether a display can call tvselpt.
-c    rjs    1oct91    Fixed rounding problem with final time.
-c    jm     1oct91    Added additional counters to properly compute
-c                     the running averages and sum wedges.  Also, added
-c                     mod 360 for phase differences and summary wedges.
-c    jm     8oct91    Moved some data statements into code in edflag.
-c                     Also removed argument chan from call to getbox.
-c    jm    21apr92    Increased the declared size of the variable sEDIT
-c                     from 7 to 10.  This array is defined in tvclip.h.
-c    jm    06jul92    Added a check to see if data is present at all
-c                     so that a "Last time" message is not generated.
-c    jm    15jul92    Modified code to reflect changes to call structure
-c                     of tv.for subroutine TvSelpt.
-c    jm    18jul92    Modified EdFlag routine to query state from server
-c                     rather than rely on internal variables.  Also
-c                     added an initial (dumb) call to EdFlag from EdDisp
-c                     to initialize some (EdFlag) internal variables.
-c    jm    20oct92    Corrected command line syntax to allow single
-c                     character input (also command words).  The
-c                     documentation said it did, but it wasn't.
-c    mjs   17feb93    minor doc mod only; rm ref to MIRTOOL.
-c    mjs   27feb93    include tmpdim.h instead of maxdim.h
-c    rjs    8mar93    Standardise history comments. Eliminate some
-c		      non-standard FORTRAN.
-c    jm    14jun93    Modified getcmd() to handle single key commands
-c                     and command names correctly.  Also think I fixed
-c                     an empty string bug in report() which was causing
-c                     xpanel to bug out because of an insufficient
-c                     amount of data available to read.
-c    jm    17jun93    Changed amp-diff mode to use ABS(amp-diff).
-c    mjs   30sep93    call delay -> call delayf
-c    nebk  29oct93    Add mode=real,imag
-c    jm    29oct93    Made sure that amplitude was the default mode.
-c    rjs    7dec93    Major rework to do averaging and reduce
-c		      the number of passes through the
-c		      data.
-c    rjs   27jan94    Don't know how I ever believed it was working!!!
-c    rjs    4mar93    Fudges to get it to work on data out of time order.
-c    nebk  09mar94    Declare APRI long enough to avoid string truncation
-c                     warning on convex (does not affect run time performance)
-c    rjs   27jul94    Get rid of some debugging write statements.
-c    rjs   11nov94    Eliminate bounds violation for large numbers of times.
-c    mhw&ip 22nov94   Add clip option
-c    mhw   13aug95    Make clip iterative and compile stats
-c    mhw    2sep95    Add 'batch-mode': commands, notv option
-c    smw   15mar98    Converted TVCLIP to TVWCLIP by using wides not channels
-c    pjt   19aug99    Consolidated TVWCLIP into TVCLIP
-c    smw   30aug99    Submitted!
-c    rjs   21sep00    options=nosrc
-c    jwr   16jun04    initialize nedit=0 in doEdit
-c    jwr   16jun04    increased MAXEDIT
 c***********************************************************************
 c= Tvclip - Interactive editing of a UV data set on a TV device.
 c& jm
 c: calibration, uv-data, tv, plotting, display
 c+
       program tvclip
-      implicit none
 c
 c     TVCLIP is a MIRIAD task which allows interactive baseline
 c     editing of a UV data set.  The user should make sure,
@@ -164,12 +87,12 @@ c     time will perform the same operation as ``quit'', but
 c     will also terminate the program.
 c
 c     You can use the 'batch-mode' of tvclip if you have a lot of
-c     similar flagging to do. Use tvclip in interactive mode to 
-c     determine a good clip level and a sequence of DIFF and CLIP 
-c     commands that is appropriate for your data. Then set the 
-c     clip level and enter the commands in the 'commands' keyword. 
-c     You can then either watch the automatic flagging on the tv, 
-c     or switch off the display (options=notv) to speed things up. 
+c     similar flagging to do. Use tvclip in interactive mode to
+c     determine a good clip level and a sequence of DIFF and CLIP
+c     commands that is appropriate for your data. Then set the
+c     clip level and enter the commands in the 'commands' keyword.
+c     You can then either watch the automatic flagging on the tv,
+c     or switch off the display (options=notv) to speed things up.
 c
 c@ vis
 c     The name of the input UV data set.  A visibility file name
@@ -194,7 +117,7 @@ c     value is input, the y coordinate value is set to the x value.
 c
 c< line
 c
-c     NOTE: Here ``type'' must be `channel' or ``wide'' and the maximum 
+c     NOTE: Here ``type'' must be `channel' or ``wide'' and the maximum
 c     of  both ``width'' and ``step'' must be 1.  The default is
 c     to display all channels.
 c
@@ -216,25 +139,27 @@ c     average is started.  The default for TTOT is 5 minutes, whereas
 c     the default TGAP is the value of TTOT.
 c
 c@ clip
-c     The clip level (in average absolute deviations, a parameter 
+c     The clip level (in average absolute deviations, a parameter
 c     similar to rms, but less sensitive to outliers)
-c     This is used with the "CLIP" command. All data more than clip 
-c     times the av. abs. dev. from the median will be clipped. 
+c     This is used with the "CLIP" command. All data more than clip
+c     times the av. abs. dev. from the median will be clipped.
 c     This clip operation is repeated until no more points are clipped.
 c     Common values are 4,5,6. Flagging on stokes V data with clip=4
 c     usually gets rid of most interference. The default is 5.
 c
 c@ options
 c     Extra processing options. Several are possible:
-c       'nochannel', 'notime' and 'nopixel' are clip options. 
-c               By default the "CLIP" command will flag channels, times and 
-c               individual pixels with an rms that is too far from the median. 
-c               These options allow you to exclude some forms of clipping.
+c       'nochannel', 'notime' and 'nopixel' are clip options.
+c               By default the "CLIP" command will flag channels, times
+c               and individual pixels with an rms that is too far from
+c               the median.  These options allow you to exclude some
+c               forms of clipping.
 c       'notv'  display option, do not show anything on the tv.
-c               Speeds up non-interactive clipping. This can only be used if you 
-c               also fill in the commands keyword. Because with 'notv' the data 
-c               does not have to fit on the screen, less time averaging is needed. 
-c               Usually the data will be flagged at full time resolution.
+c               Speeds up non-interactive clipping.  This can only be
+c               used if you also fill in the commands keyword.  Because
+c               with 'notv' the data does not have to fit on the screen,
+c               less time averaging is needed.  Usually the data will be
+c               flagged at full time resolution.
 c       'nosrc' Do not cause a break in the display when the source
 c               changes. Normally TVFLAG puts a gap in the display
 c               whenever the source changes.
@@ -242,7 +167,7 @@ c
 c@ commands
 c     This allows non-interactive flagging using the "CLIP" command.
 c     Use this to specify a sequence of flagging commands to be applied
-c     for each baseline, e.g., commands=diff,clip. 
+c     for each baseline, e.g., commands=diff,clip.
 c     The "EXIT" command is implicitly added at the end of the list.
 c     You will not be able to interact with tvclip using mouse or
 c     keyboard if "commands" is set.
@@ -250,6 +175,89 @@ c
 c< select
 c     NOTE: The default is to use all visibilities.
 c--
+c
+c  History:
+c    jm    14feb90    Initial version.
+c    jm    26mar90    Changed flow to make use of SelProbe routine.
+c    jm    30apr90    Changed how the array is loaded (data and flag).
+c    jm    07may90    Changed Dispedit to include declared size of
+c                     iflag.
+c    jm    16jun90    Added LdDisp and cleaned up code a bit.
+c    jm    14jul90    Increased the WIDTH of the strips.
+c    jm    22aug90    Added TV labeling and improved flag re-writing.
+c    jm    21sep90    Substantial change to include rubber banding.
+c    jm    24oct90    Corrected a few items.
+c    jm    20nov90    Major program control flow re-write.
+c    jm    22jan91    Expanded documentation and added source keyword
+c                     and folded subroutines into main program file.
+c    jm    22feb91    Added a check to avoid array size overflow in
+c                     UVread loop.  Also added a few more user comments.
+c    jm    22feb91    Added MAXDIM2 to allow a larger time range.
+c    jm    26feb91    Changed all occurrances of Itoa to Itoaf.
+c    jm    22mar91    Added a note to the user about min/max range
+c                     but only on the first pass through the data.
+c    rjs   19jun91    Fixed bugs in time messages and LUT selection.
+c    jm    21jun91    Added mode and started taver section.
+c    jm    12aug91    Added routine Report to use CtrlSeta function.
+c                     Also finished taver section.
+c    jm    21sep91    Corrected xypos in edflag routine and now do an
+c                     inquire as to whether a display can call tvselpt.
+c    rjs    1oct91    Fixed rounding problem with final time.
+c    jm     1oct91    Added additional counters to properly compute
+c                     the running averages and sum wedges.  Also, added
+c                     mod 360 for phase differences and summary wedges.
+c    jm     8oct91    Moved some data statements into code in edflag.
+c                     Also removed argument chan from call to getbox.
+c    jm    21apr92    Increased the declared size of the variable sEDIT
+c                     from 7 to 10.  This array is defined in tvclip.h.
+c    jm    06jul92    Added a check to see if data is present at all
+c                     so that a "Last time" message is not generated.
+c    jm    15jul92    Modified code to reflect changes to call structure
+c                     of tv.for subroutine TvSelpt.
+c    jm    18jul92    Modified EdFlag routine to query state from server
+c                     rather than rely on internal variables.  Also
+c                     added an initial (dumb) call to EdFlag from EdDisp
+c                     to initialize some (EdFlag) internal variables.
+c    jm    20oct92    Corrected command line syntax to allow single
+c                     character input (also command words).  The
+c                     documentation said it did, but it wasn't.
+c    mjs   17feb93    minor doc mod only; rm ref to MIRTOOL.
+c    mjs   27feb93    include tmpdim.h instead of maxdim.h
+c    rjs    8mar93    Standardise history comments. Eliminate some
+c                     non-standard FORTRAN.
+c    jm    14jun93    Modified getcmd() to handle single key commands
+c                     and command names correctly.  Also think I fixed
+c                     an empty string bug in report() which was causing
+c                     xpanel to bug out because of an insufficient
+c                     amount of data available to read.
+c    jm    17jun93    Changed amp-diff mode to use ABS(amp-diff).
+c    mjs   30sep93    call delay -> call delayf
+c    nebk  29oct93    Add mode=real,imag
+c    jm    29oct93    Made sure that amplitude was the default mode.
+c    rjs    7dec93    Major rework to do averaging and reduce
+c                     the number of passes through the
+c                     data.
+c    rjs   27jan94    Don't know how I ever believed it was working!!!
+c    rjs    4mar93    Fudges to get it to work on data out of time
+c                     order.
+c    nebk  09mar94    Declare APRI long enough to avoid string
+c                     truncation warning on convex (does not affect run
+c                     time performance)
+c    rjs   27jul94    Get rid of some debugging write statements.
+c    rjs   11nov94    Eliminate bounds violation for large numbers of
+c                     times.
+c    mhw&ip 22nov94   Add clip option
+c    mhw   13aug95    Make clip iterative and compile stats
+c    mhw    2sep95    Add 'batch-mode': commands, notv option
+c    smw   15mar98    Converted TVCLIP to TVWCLIP by using wides not
+c                     channels
+c    pjt   19aug99    Consolidated TVWCLIP into TVCLIP
+c    smw   30aug99    Submitted!
+c    rjs   21sep00    options=nosrc
+c    jwr   16jun04    initialize nedit=0 in doEdit
+c    jwr   16jun04    increased MAXEDIT
+c
+c $Id: tvclip.for,v 1.2 2008/02/24 23:48:15 cal103 Exp $
 c-----------------------------------------------------------------------
 c
 c  Internal parameters.
@@ -257,8 +265,6 @@ c
       include 'maxdim.h'
       character PROG*(*)
       parameter (PROG = 'TVCLIP: ')
-      character VERSION*(*)
-      parameter (VERSION = PROG // 'Version 30-aug-99')
       integer NMODE,MAXSELS,MAXEDIT,MAXCMD
       parameter (NMODE=4,MAXCMD=10,MAXSELS=256,MAXEDIT=1000000)
 c
@@ -270,6 +276,7 @@ c
       character Modes(NMODE)*10
       character Lines(2)*8
       character Commands(MAXCMD)*10
+      character version*80
       integer Lin, nchan, MostChan, channel
       integer maxxpix, maxypix, levels, msglen
       integer jx0, jy0, nout, ncmd
@@ -291,6 +298,7 @@ c  Externals.
 c
       integer Len1
       logical KeyPrsnt
+      character versan*80
 c
       data Modes / 'amplitude', 'phase','real', 'imaginary'/
       data Lines / 'channel', 'wide'/
@@ -299,7 +307,8 @@ c  End declarations.
 c-----------------------------------------------------------------------
 c  Announce program.
 c
-      call Output(VERSION)
+      version = versan('tvclip',
+     :  '$Id: tvclip.for,v 1.2 2008/02/24 23:48:15 cal103 Exp $')
 c-----------------------------------------------------------------------
 c  Use the key routines to get the user input parameters.
 c
@@ -391,7 +400,7 @@ c
       if(clip.le. 0.0)
      *	  call bug('f','Invalid clip parameter')
 c
-      if(nochan.and.notime.and.nopixel) 
+      if(nochan.and.notime.and.nopixel)
      *    call bug('f','Choose upto 2 from: nochan, notime, nopixel')
 c
       if(notv.and..not.batch)
@@ -457,11 +466,10 @@ c
       if (.not.notv) call TvClose
       call UvClose(Lin)
       end
-c************************************************************************
-c************************************************************************
+c***********************************************************************
+c***********************************************************************
         subroutine GetOpt(nochan,notime,nopixel,notv,nosrc)
 c
-        implicit none
         logical nochan,notime,nopixel,notv,nosrc
 c
 c  Get extra processing options.
@@ -471,8 +479,8 @@ c    nochan     True for no channel flagging by CLIP command
 c    notime     True for no time flagging by CLIP command
 c    nopixel    True for no single pixel flagging by CLIP command
 c    notv       True for no display on tv, only useful in 'batch' mode
-c    nosrc     
-c------------------------------------------------------------------------
+c    nosrc
+c-----------------------------------------------------------------------
         integer NOPTS
         parameter(NOPTS=5)
         logical present(NOPTS)
@@ -490,13 +498,12 @@ c
 c
         end
 
-c************************************************************************
+c***********************************************************************
 	subroutine doEdit(Lin,apri,taver,center,jx0,jy0,channel,
      *	  Ctrl,nosrc,pmin,pmax,
      *    edits,nbase,day0,times,chans,flagval,MAXEDIT,nedit, clip,
      *    notime, nochan, nopixel, notv, batch, Commands, ncmd)
 c
-	implicit none
         integer MAXCMD
         parameter (MAXCMD=10)
 	integer Lin,channel,jx0,jy0,nbase,maxedit,nedit, ncmd
@@ -530,7 +537,7 @@ c    times
 c    edits
 c    chans
 c    day0	Base time.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
         include 'tvclip.h'
@@ -574,13 +581,13 @@ c  check command inputs and convert them to indices
         if (batch) then
            do i=1,ncmd
               iCmds(i)=cmdindx(Commands(i))
-              if (iCmds(i).eq.iEDIT(iNULL)) 
-     *             call bug('f', 
+              if (iCmds(i).eq.iEDIT(iNULL))
+     *             call bug('f',
      *             'Unrecognized value for command: '//Commands(i))
            enddo
         endif
 c
-c  
+c
 c  Write all the data out to the scratch file, and make a list of
 c  all the times that we have encountered. Also remember any baselines
 c  that we encounter.
@@ -727,10 +734,9 @@ c
 	call memfree(iDat,nstep*nchan*ntime,'r')
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine trev(t,idx1,idx2,n,tblk,MAXBLK)
 c
-	implicit none
 	integer n,maxblk,tblk(2,maxblk),idx1(n),idx2(n)
 	real t(n)
 c
@@ -746,7 +752,7 @@ c  Output:
 c    tblk	The indices of the time blocks.
 c  Scratch:
 c    idx1,idx2	Used for sorting the times.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer nblk,ipnt,i
 c
 c  Get a sorting of the times.
@@ -780,11 +786,10 @@ c
 	  endif
 	enddo
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine Gridit(iflag,array,nchan,ntime,nbl,
      *	    bl2idx,nbase,day0,lScr,nvis,t1,t2)
 c
-	implicit none
 	integer nchan,ntime,nbl,nbase,lScr,nvis
 	integer bl2idx(nbase),iflag(nchan,ntime,nbl)
 	real t1(ntime),t2(ntime),array(nchan,ntime,nbl)
@@ -806,7 +811,7 @@ c    nvis	Number of visibilities.
 c  Output:
 c    array	The gridded data.
 c    iflag	Flag for the gridded data.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	integer i,j,k,offset,length,pnt,bl,i0
 	real buf(2*MAXCHAN+3),t
@@ -876,12 +881,11 @@ c
 	enddo
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine EdDisp(iflag,array,Nx,Ny,t1,t2,taver,chanoff,
      *	      center,jx,jy,chan,pmin,pmax,Ctrl,bl,isave,iret, clip,
      *    notime, nochan, nopixel, notv, batch, iCmds)
 c
-	implicit none
 	integer Nx,Ny,jx,jy,chan,bl,iret,chanoff
 	logical center,Ctrl, notime, nochan, nopixel, notv, batch
 	integer iflag(Nx,Ny),isave(5,*), iCmds(*)
@@ -920,7 +924,7 @@ c                 without saving changes; iret = N (> 0) means save
 c                 the N changes; and iret = -1 means to QUIT and abort
 c                 the rest of the baselines.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'tvclip.h'
 	character antmsg*32
@@ -1002,7 +1006,7 @@ c
 c
 	if (First) call edflag(iflag, array, sumoverx, sumovery,
      *	  NoverX, NoverY, Nx, Nx, Ny, t1, t2, taver,chanoff,antmsg(1:l),
-     *    iINITALL,param, x0, y0, chan, bmin, bmax, isave, Ctrl, istate, 
+     *    iINITALL,param, x0, y0, chan, bmin, bmax, isave, Ctrl, istate,
      *    clip, notime, nochan, nopixel, notv, batch)
 c
 	First = .false.
@@ -1021,7 +1025,7 @@ c
         icommand = 0
 	do while (istate .eq. 0)
            if(batch) then
-              icommand = icommand + 1 ! last command is always EXIT 
+              icommand = icommand + 1 ! last command is always EXIT
               comm = iCmds(icommand)  ! so this can't fail... (flw)
               param(1) = 0
            else if (Ctrl) then
@@ -1031,7 +1035,7 @@ c
            endif
            call edflag(iflag, array, sumoverx, sumovery,
      *	    NoverX, NoverY, Nx, Nx, Ny, t1,t2,taver,chanoff,antmsg(1:l),
-     *      comm, param, x0, y0, chan, bmin, bmax, isave, Ctrl, istate, 
+     *      comm, param, x0, y0, chan, bmin, bmax, isave, Ctrl, istate,
      *      clip, notime, nochan, nopixel, notv, batch)
 	enddo
 c
@@ -1043,17 +1047,16 @@ c
 	if (istate .lt. -10) iret = -1
 	if (istate .gt. 0) iret = istate
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine GetScale(array,iflag,Mx,Nx,Ny,bmin,bmax)
 c
-	implicit none
 	integer Mx,Nx,Ny
 	integer iflag(Mx,Ny)
 	real array(Mx,Ny),bmin,bmax
 c
 c  Determine the maximum and minimum of the good data.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer i,j
 	logical first
 c
@@ -1077,17 +1080,16 @@ c
 	enddo
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine GetWedge(array,iflag,SumoverY,NoverY,SumoverX,NoverX,
      *	  Mx,Nx,Ny)
 c
-	implicit none
 	integer Mx,Nx,Ny
 	integer iflag(Mx,Ny),NoverY(Nx),NoverX(Ny)
 	real array(Mx,Ny),SumoverY(Nx),SumoverX(Ny)
 c
 c  Determine the wedges.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer i,j
 c
 	do i=1,Nx
@@ -1111,11 +1113,10 @@ c
 	enddo
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine CopyDat(lIn,lScr,apri,nchan,time,MAXTIME,ntime,
      *		day0,ttol,blpres,nbase,nvis,chanoff,nosrc)
 c
-	implicit none
 	integer lIn,lScr,nchan,maxtime,ntime,nbase,nvis,chanoff
 	character apri*1
 	real time(maxtime),ttol
@@ -1138,8 +1139,9 @@ c    time	The time of each integration.
 c    nvis	Number of visibilities.
 c    ntime	Number of times.
 c    nchan	Number of channels.
-c    chanoff	Offset to add to channel numbers to get true channel numbers.
-c------------------------------------------------------------------------
+c    chanoff	Offset to add to channel numbers to get true channel
+c               numbers.
+c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	logical flags(MAXCHAN),newsrc
 	complex data(MAXCHAN)
@@ -1241,10 +1243,9 @@ c
 	nvis = offset / length
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine TimeMap(t1,t2,ntime,ttol,nout,maxtime)
 c
-	implicit none
 	integer ntime,nout,maxtime
 	real t1(ntime),t2(ntime),ttol
 c
@@ -1261,8 +1262,8 @@ c		slot.
 c  Output:
 c    nout	The number of time slots after averaging.
 c    t2		The last time in a time slot.
-c    
-c------------------------------------------------------------------------
+c
+c-----------------------------------------------------------------------
 	integer i
 	real tprev,inttime
 c
@@ -1301,17 +1302,16 @@ c
 	t1(nout) = tprev
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine GetInt(time,temp,ntime,inttime,maxtime,ttol)
 c
-	implicit none
 	integer ntime,maxtime
 	real time(ntime),temp(ntime),inttime,ttol
 c
 c  Determine a integration period to use with the data which will make
 c  the data fit on the screen.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer i,n,nout
 	real delta,tprev
 	character line*80
@@ -1356,11 +1356,10 @@ c
 	call output(line)
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine doFlag(Lin,edits,nbase,day0,times,chans,flagval,
      *								  nedit)
 c
-	implicit none
 	integer Lin,nbase,nedit
 	integer edits(2,nbase)
 	double precision day0
@@ -1379,7 +1378,7 @@ c    times	Time range to flag/unflag.
 c    chans	Channel range to flag/unflag.
 c    flagval	The flagging value.
 c    nedit	Number of edit commands.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	integer nchan,ant1,ant2,bl,i,j
 	complex data(MAXCHAN)
@@ -1410,7 +1409,6 @@ c
 	end
 c***********************************************************************
       real function ctoapri(data, apri)
-      implicit none
       complex data
       character apri*(*)
 c
@@ -1418,7 +1416,7 @@ c     Input:
 c        data     The complex value.
 c        apri     'a', 'p', 'r', 'i'
 c     Output:
-c        ctoapri  Returns either amp, phase, real, imaginary based on 
+c        ctoapri  Returns either amp, phase, real, imaginary based on
 c                 value of ``apri''.  The phase is returned in units of
 c                 degrees and in the inclusive range of [0, 360].
 c
@@ -1448,7 +1446,6 @@ c  LdMenu -- Internal routine to load tvclip.h common block.
 c
       subroutine ldmenu(ctrl)
 c
-      implicit none
       logical ctrl
 c
 c  Input:
@@ -1598,10 +1595,9 @@ c
       end
 c***********************************************************************
 c EdMenu -- Present a menu from which to select edit functions.
-c 
+c
       subroutine edmenu(Ctrl)
 c
-      implicit none
       logical Ctrl
 c
 c  This routine is called only when an incorrect option or the HELP
@@ -1649,7 +1645,6 @@ c
 c***********************************************************************
       subroutine getbtn(cmd, param)
 c
-      implicit none
       integer cmd
       integer param(5)
 c
@@ -1712,7 +1707,6 @@ c
 c***********************************************************************
       subroutine getcmd(cmd, param)
 c
-      implicit none
       integer cmd
       integer param(5)
 c
@@ -1779,7 +1773,6 @@ c
 c***********************************************************************
       integer function cmdindx(command)
 c
-      implicit none
       character*(*) command
 c
 c
@@ -1810,7 +1803,7 @@ c     default (error) return is the NULL command
       k = 1
       string = command
       length = len1(string)
-      
+
       do while ((string(k:k) .le. ' ') .and. (k .le. length))
          k = k + 1
       enddo
@@ -1838,11 +1831,10 @@ c     default (error) return is the NULL command
 c***********************************************************************
       subroutine edflag(iflag, array, sumoverx, sumovery,
      *	NoverX, NoverY, Mx, Nx, Ny, t1, t2, taver, chanoff, bltext,
-     *  opt, param, x0, y0, chan, pmin, pmax, isave, Ctrl, status, 
+     *  opt, param, x0, y0, chan, pmin, pmax, isave, Ctrl, status,
      *  cliplev, notime, nochan, nopixel, notv, batch)
 
 c
-      implicit none
       integer Mx, Nx, Ny, opt
       integer x0, y0, chan, status
       integer iflag(Mx, Ny), param(5), isave(5, *), chanoff
@@ -1985,7 +1977,7 @@ c
         Bside = 0
 	if (tv) then
            call TvEras(chan)
-           call LdDisp('wit', array, iflag, sumoverx, sumovery, Mx, 
+           call LdDisp('wit', array, iflag, sumoverx, sumovery, Mx,
      *          Nx, Ny,
      *          NoverX, NoverY, chan, x0, y0, bmin, bmax, bltext)
         endif
@@ -2010,7 +2002,7 @@ c
       endif
 c
 c  Handle a command.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
 c  INIT -- we have already done it.
 c
@@ -2030,7 +2022,7 @@ c
 c  EXIT without any changes.
 c
       else if (opt .eq. iQUIT) then
-        if ((Nquit .eq. 0) .and. 
+        if ((Nquit .eq. 0) .and.
      *        (changes .gt. 0).and. .not. batch) then
           call Report(Ctrl, 'Are you sure you want to Quit?  Changes')
           call Report(Ctrl, 'made to this baseline will NOT be saved!')
@@ -2243,7 +2235,7 @@ c
 	write(line,'(a,1pe10.3,a,1pe10.3)')'Setting min and max to ',
      *		bmin,',',bmax
 	call output(line)
-	if (tv) call LdDisp('wi',array, iflag, sumoverx, sumovery, 
+	if (tv) call LdDisp('wi',array, iflag, sumoverx, sumovery,
      *       Mx, Nx, Ny,
      *       NoverX, NoverY, chan, x0, y0, bmin, bmax, bltext)
 c
@@ -2400,10 +2392,9 @@ c
       if (tv) call TvFlush
 c
       end
-c************************************************************************
+c***********************************************************************
 	subroutine Diff(iflag,array,t1,t2,tint,tgap,Mx,Nx,Ny)
 c
-	implicit none
 	integer Mx,Nx,Ny
 	integer iflag(Mx,Ny)
 	real array(Mx,Ny),tint,tgap,t1(Ny),t2(Ny)
@@ -2418,8 +2409,8 @@ c  Input/Output:
 c    array	On input, it contains the original values. On output,
 c		it contains the absolute value of the data with the
 c		running mean subtracted off.
-c  
-c------------------------------------------------------------------------
+c
+c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	real sum(MAXDIM),acc
 	integer cnt(MAXDIM),cstart(MAXDIM),cend(MAXDIM)
@@ -2490,10 +2481,9 @@ c
 	enddo
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine AvRange(Ny,t1,t2,tint,tgap,cstart,cend)
 c
-	implicit none
 	integer Ny
 	real t1(Ny),t2(Ny),tint,tgap
 	integer cstart(Ny),cend(Ny)
@@ -2508,7 +2498,7 @@ c    tint,tgap	Largest integration and gap time.
 c  Output:
 c    cstart	First time slot to use for the running mean.
 c    cend	Last time slot to use for the running mean.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer i
 	integer pstart,pend
 	logical more
@@ -2517,7 +2507,7 @@ c  Determine the channels to use in the running mean.
 c
 	pstart = 1
 	pend   = 0
-	do i=1,Ny	
+	do i=1,Ny
 c
 c  If this is a gap, reset the accumulators, and set the cstart and
 c  cend variables to minimise the work next time around.
@@ -2549,12 +2539,11 @@ c
 	enddo
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine Edit(array,iflag,Mx,Nx,Ny,SumoverX,SumoverY,
      *		NoverX,NoverY,isave,x0,y0,bmin,bmax,chan,
      *		t1,t2,chanoff,notv)
 c
-	implicit none
 	integer Mx, Nx, Ny
 	real array(Mx,Ny),SumoverX(Ny),SumoverY(Nx)
 	real bmin,bmax,t1(Ny), t2(Ny)
@@ -2565,7 +2554,7 @@ c
 c  Apply an editting operation to the data, recompute the wedges,
 c  and redisplay the necessary parts that need redisplaying.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer WIDTH
 	parameter(WIDTH=20)
 c
@@ -2578,7 +2567,7 @@ c
 	call output(string)
 c
 c  Apply the flagging operation to the iflag array, and recompute the
-c  wedge values. 
+c  wedge values.
 c
 	Bott = isave(1)
 	Left = isave(2)
@@ -2610,24 +2599,23 @@ c  Redisplay the image.
 c
         if (.not.notv) then
            call DispIm(array(Left,Bott),iflag(Left,Bott),
-     *          Mx, Rite-Left+1, Topp-Bott+1, chan, x0+Left-1, 
+     *          Mx, Rite-Left+1, Topp-Bott+1, chan, x0+Left-1,
      *          y0+Bott-1, bmin, bmax)
 c
 c  Redisplay the wedges.
 c
-           call DispWg(sumoverx(Bott), NoverX(Bott), Topp-Bott+1, 1, 
+           call DispWg(sumoverx(Bott), NoverX(Bott), Topp-Bott+1, 1,
      *		chan, x0, y0+Bott-1, Nx, bmin, bmax, WIDTH)
            call DispWg(sumovery(Left), NoverY(Left), Rite-Left+1, 0,
      *		chan, x0+Left-1, y0, Ny, bmin, bmax, WIDTH)
         endif
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine Clip(array,iflag,Mx,Nx,Ny,SumoverX,SumoverY,
      *		NoverX,NoverY,isave,changes,x0,y0,bmin,bmax,chan,
      *		t1,t2,chanoff,cliplev, notime, nochan, nopixel, notv)
 c
-	implicit none
 	integer Mx, Nx, Ny
 	real array(Mx,Ny),SumoverX(Ny),SumoverY(Nx)
 	real bmin,bmax,t1(Ny), t2(Ny), avdev, cliplev
@@ -2638,7 +2626,7 @@ c
 c  Apply a clip operation to the data, recompute the wedges,
 c  and redisplay the necessary parts that need redisplaying.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer WIDTH, MAXSAVE, MAXX, MAXY
 	parameter(WIDTH=20, MAXSAVE=100000, MAXX=8192, MAXY=8640)
         real omedian, chnmed(MAXX), timemed(MAXY), medchn,
@@ -2657,7 +2645,7 @@ c compile clipping stats
         nclippix = 0
         FLAGVAL = isave(5,changes)
 
-        ochanges = changes - 1 
+        ochanges = changes - 1
         do while (ochanges.lt.changes)
            ochanges = changes
 c
@@ -2672,11 +2660,11 @@ c
                     buf(chncount(i)) = array(i,j)
                  endif
               enddo
-              if (chncount(i).gt.0) 
+              if (chncount(i).gt.0)
      -             call median(buf, chncount(i), chnmed(i))
            enddo
-             
-c     
+
+c
 c  Calculate the time medians
 c
            do j=1, Ny
@@ -2688,10 +2676,10 @@ c
                     buf(timecnt(j)) = array(i,j)
                  endif
               enddo
-              if (timecnt(j).gt.0) 
+              if (timecnt(j).gt.0)
      -             call median(buf, timecnt(j), timemed(j))
            enddo
-             
+
 c
 c  Calculate the overall channel median
 c
@@ -2703,7 +2691,7 @@ c
               endif
            enddo
            call median(buf,count,medchn)
-             
+
 c
 c  Calculate the overall time median
 c
@@ -2715,11 +2703,11 @@ c
               endif
            enddo
            call median(buf,count,medtime)
-c     
+c
 c  Guess the overall median
 c
            omedian = min (medchn,medtime)
-             
+
 c
 c  Calculate the channel average deviation
 c
@@ -2751,7 +2739,7 @@ c
 c  Calculate the overall average deviation
 c
            avdev = 0.
-           count = 0 
+           count = 0
            do i=1, Nx
               do j=1, Ny
                  if (iflag(i,j).ne.FLAGVAL)then
@@ -2761,11 +2749,11 @@ c
               enddo
            enddo
            if (count.gt.0) avdev=avdev/count
-           
-           
+
+
 c
 c  Apply the flagging operation to the iflag array, and recompute the
-c  wedge values. 
+c  wedge values.
 c
 
 
@@ -2797,7 +2785,7 @@ c  First flag the bad channels
                  endif
               endif
            enddo
-           
+
 C  Now flag the bad times
 
  10        if (notime) goto 20
@@ -2860,9 +2848,9 @@ C Finally clip the bad points
               endif
            enddo
 
- 30        continue 
+ 30        continue
 
-        enddo 
+        enddo
 
 
 c
@@ -2882,7 +2870,7 @@ c
            endif
         endif
         if (.not.notime) then
-           write(string,'(A,I6,A,F9.5,A,F5.1,A,F9.5)') 
+           write(string,'(A,I6,A,F9.5,A,F5.1,A,F9.5)')
      *          'Flagged ',ncliptim,' times    with '//
      *          'abs(median - ',medtime,')>',
      *          cliplev,' * ',timedev
@@ -2903,16 +2891,16 @@ c
         endif
 
         if (.not.notv) then
-c     
+c
 c  Redisplay the image.
 c
            call DispIm(array(Left,Bott),iflag(Left,Bott),
-     *          Mx, Rite-Left+1, Topp-Bott+1, chan, x0+Left-1, 
+     *          Mx, Rite-Left+1, Topp-Bott+1, chan, x0+Left-1,
      *          y0+Bott-1, bmin, bmax)
 c
 c  Redisplay the wedges.
 c
-           call DispWg(sumoverx(Bott), NoverX(Bott), Topp-Bott+1, 1, 
+           call DispWg(sumoverx(Bott), NoverX(Bott), Topp-Bott+1, 1,
      *		chan, x0, y0+Bott-1, Nx, bmin, bmax, WIDTH)
            call DispWg(sumovery(Left), NoverY(Left), Rite-Left+1, 0,
      *		chan, x0+Left-1, y0, Ny, bmin, bmax, WIDTH)
@@ -2923,7 +2911,6 @@ c***********************************************************************
       subroutine LdDisp(things, array, iflag, sumoverx, sumovery,
      *	Mx, Nx, Ny, NoverX, NoverY, chan, jx0, jy0, pmin, pmax, string)
 c
-      implicit none
       integer Mx, Nx, Ny, chan, jx0, jy0
       real pmin, pmax
       real array(Mx, Ny), sumoverx(Ny), sumovery(Nx)
@@ -2981,7 +2968,7 @@ c
 c  Load Wedges if there is sufficient room.
 c
       if(index(things,'w').ne.0)then
-	call DispWg(sumoverx, NoverX, Ny, 1, 
+	call DispWg(sumoverx, NoverX, Ny, 1,
      *		chan, jx0, jy0, Nx, pmin, pmax, WIDTH)
 	call DispWg(sumovery, NoverY, Nx, 0,
      *		chan, jx0, jy0, Ny, pmin, pmax, WIDTH)
@@ -3031,7 +3018,6 @@ c
 c***********************************************************************
       subroutine DispIm(array,iflag,Mx,Nx,Ny,chan,x0,y0,pmin,pmax)
 c
-      implicit none
       integer Mx, Nx, Ny, chan, x0, y0
       real array(Mx, Ny), pmin, pmax
       integer iflag(Mx,Ny)
@@ -3096,11 +3082,10 @@ c
       enddo
 c
       end
-c************************************************************************
+c***********************************************************************
 	subroutine DispWg(Sum, NSum, n, dir, chan, x0, y0, Dn,
      *						pmin, pmax, width)
 c
-	implicit none
 	integer n,dir,chan,x0,y0,Dn,width
 	integer NSum(n)
 	real Sum(n),pmin,pmax
@@ -3111,7 +3096,7 @@ c  Input:
 c    x0,y0	Blc of the display.
 c    dir	Display direction. 0 -- horizontal wedge (sum over Y).
 c				   1 -- veritcal   wedge (sum over X).
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	integer data(MAXDIM)
 	integer maxxpix,maxypix,maxchn,nlev,jxw,jyw, i, j, ival
@@ -3170,16 +3155,15 @@ c
 	endif
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine FmtVal(string,x,y,val,iflag,t1,t2,ntime,chanoff)
 c
-	implicit none
 	character string*(*)
 	integer x,y,iflag,chanoff,ntime
 	real val,t1(ntime),t2(ntime)
 c
 c  Format the value of a pixel.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'mirconst.h'
 	double precision time
 	character pixval*10,flagval*5
@@ -3207,10 +3191,9 @@ c
      *		', channel '//itoaf(x+chanoff)
 	endif
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine FmtCmd(string,isave,t1,t2,ntime,chanoff)
 c
-	implicit none
 	character string*(*)
 	integer isave(5),ntime,chanoff
 	real t1(ntime),t2(ntime)
@@ -3220,7 +3203,7 @@ c
 c  Input:
 c  Output:
 c    string	The formatted command.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'mirconst.h'
 	integer i1,i2,chan1,chan2,l
 	double precision time1,time2
@@ -3256,10 +3239,9 @@ c
 c***********************************************************************
 c  GetBox - Get a boxed region from the TV display.
 c  image-data
-c 
+c
       subroutine getbox(Ctrl, x1, y1, x2, y2)
 c
-      implicit none
       integer x1, y1, x2, y2
       logical Ctrl
 c
@@ -3327,10 +3309,9 @@ c
 c***********************************************************************
 c  Report - Send a message to the user.
 c  text-i/o
-c 
+c
       subroutine report(Ctrl, inline)
 c
-      implicit none
       logical Ctrl
       character inline*(*)
 c
