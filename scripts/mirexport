@@ -4,7 +4,7 @@
 #-----------------------------------------------------------------------------
 # Generate Miriad update tar files for distribution from the ftp area.
 #
-# $Id: mirexport,v 1.7 2006/11/14 07:37:41 cal103 Exp $
+# $Id: mirexport,v 1.8 2008/02/25 00:25:18 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Initialize.
   cd $MIR
@@ -22,6 +22,7 @@
   set distcomm = (./DISCLAIMER ./INSTALL.html ./progguide* ./userguide* \
                   cat doc html man scripts specdoc)
 
+  rm -f $contents
   find $distcode $distcomm \
     \! -type d \
     \! -name RCS \
@@ -31,7 +32,7 @@
     \! -name '*.log' \
     \! -name '*.lot' \
     \! -name '*.toc' \
-    -newer $etc/Last_export -print > $contents
+    -newer $etc/Last_export -print | sort > $contents
 
   if (-z "$contents") goto l100
 
@@ -47,7 +48,7 @@
   date -u +'%Y%m%d' > VERSION
   chmod 444 VERSION
 
-  tar -cf $output VERSION `sort $contents`
+  tar -cf $output VERSION -I $contents
   rm -f VERSION
 
   gzip -f $output
