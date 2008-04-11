@@ -20,7 +20,7 @@
 *
 *  MAXBASE, MAXCHAN, and MAXWIDE are not used by anything.
 *
-* $Id: maxdimc.h,v 1.2 2007/06/05 01:44:02 cal103 Exp $
+* $Id: maxdimc.h,v 1.3 2008/04/11 03:30:45 cal103 Exp $
 *---------------------------------------------------------------------------*/
 /* Maximum buffer size for xyzio (N.B. see comment above). */
 #define MAXBUF  16777216
@@ -38,7 +38,7 @@
 #define MAXBASE ((MAXANT * (MAXANT + 1)) / 2)
 
 /* Maximum number of channels in spectral data. */
-#define MAXCHAN 4097
+#define MAXCHAN 16385
 
 /* Maximum number of windows in uv data. */
 #define MAXWIN  16
