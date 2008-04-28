@@ -2,7 +2,7 @@
 # GNUmakefile for compiling Miriad tasks.
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.10 2007/03/26 07:20:49 cal103 Exp $
+# $Id: GNUmakefile,v 1.11 2008/04/28 07:13:00 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
@@ -13,7 +13,8 @@ MIRINCS  += $(patsubst %,-I %, $(MIRINCOD))
 MIRINCS  += -I $(MIRINCD)
 MIRLIBR  := $(MIRLIBD)/libmir.a
 XTRNLIBS := $(RPFITSLIB) $(LINPACKLIB) $(PGPLOTLIB) $(X11LIB) $(XTRALIBS)
-MIREXES  := $(basename $(filter %.for,$(MIRSRCS)))
+ZEROFORS := $(notdir $(shell find . -maxdepth 1 -size 0))
+MIREXES  := $(basename $(filter-out $(ZEROFORS),$(filter %.for,$(MIRSRCS))))
 
 show ::
 	-@ echo ""
@@ -23,6 +24,7 @@ show ::
 	-@ echo "MIRINCS  = $(MIRINCS)"
 	-@ echo "MIRLIBR  = $(MIRLIBR)"
 	-@ echo "XTRNLIBS = $(XTRNLIBS)"
+	-@ echo "ZEROFORS = $(ZEROFORS)"
 	-@ echo "MIREXES  = $(MIREXES)"
 
 
