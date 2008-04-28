@@ -1,5 +1,5 @@
 c=======================================================================
-c $Id: maxdim.h,v 1.5 2008/04/11 03:30:45 cal103 Exp $
+c $Id: maxdim.h,v 1.6 2008/04/28 06:46:24 cal103 Exp $
 c-----------------------------------------------------------------------
 c     Size of an INTEGER array used to implement a memory heap.  This
 c     array is the sole variable in blank COMMON in Miriad.  Trial-and-
@@ -25,7 +25,7 @@ c     size that can be handled.
 
 c     Maximum number of antennae (HC=3/6/9/..., WSRT=14, VLA=27).
       INTEGER   MAXANT
-      PARAMETER(MAXANT=30)
+      PARAMETER(MAXANT=64)
 
 c     Maximum number of baselines.
       INTEGER   MAXBASE

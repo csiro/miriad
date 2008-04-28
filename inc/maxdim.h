@@ -9,7 +9,7 @@ c - MAXDIM is an often used parameter, to indicate maximum size of maps
 c-----------------------------------------------------------------------
 c		maximum number of antennae (HC=3/6/9/..., WSRT=14, VLA=27)
 	INTEGER   MAXANT
-	PARAMETER(MAXANT=30)
+	PARAMETER(MAXANT=64)
 
 c		maximum number of baselines
 	INTEGER   MAXBASE
