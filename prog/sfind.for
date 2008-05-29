@@ -531,6 +531,12 @@ c    pjt  20feb03  defined alpha (implicit undefined)
 c    amh  10jun04  Fixed bug which caused erroneously low rms's in rmsboxes
 c                  with blanked pixels at the bottom left, leading to many
 c                  spurious sources at the edges of non-square images.
+c    amh  28may08  Fixed bug in subroutine basecal which does the rms
+c                  background calculation. This bug resulted from the rms
+c                  estimates from the gaussian fitting process, on occasion,
+c                  being ridiculously high. Code now checks for this against
+c                  brute force rms, and adopts the brute force value if the
+c                  gaussian fitted estimate is well off.
 c
 c
 c To do:
@@ -548,7 +554,7 @@ c       cursor). This could be used as well as or instead of the current
 c       method. Think about two seperate options to indicate user's desire
 c       of which.
 c
-c  $Id: sfind.for,v 1.6 2007/08/14 05:41:16 cal103 Exp $
+c  $Id: sfind.for,v 1.7 2008/05/29 00:53:12 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -589,7 +595,7 @@ c-----------------------------------------------------------------------
       character versan*80, version*80
 c-----------------------------------------------------------------------
       version = versan('sfind',
-     +  '$Id: sfind.for,v 1.6 2007/08/14 05:41:16 cal103 Exp $')
+     +  '$Id: sfind.for,v 1.7 2008/05/29 00:53:12 cal103 Exp $')
 c
 c Get user inputs
 c
@@ -1905,7 +1911,7 @@ c-----------------------------------------------------------------------
       integer ii,jj,lmn,lmx,mmn,mmx,nx,ny,kk,l,m,rmsbox, half, ptr
       real base0, base1, base2, basen, sigma, rx, rr
       real image(nx,ny), boxsize, rng(2), image2((rmsbox+1)*(rmsbox+1))
-      real mean
+      real mean, sigmax
       integer nimage(nx,ny), blc(MAXNAX), trc(MAXNAX)
       logical ok,histok, mask((rmsbox+1)*(rmsbox+1)), auto
 c-----------------------------------------------------------------------
@@ -1938,77 +1944,78 @@ c for comparison with rms value calculated below.
         end if
        end do
       end do
-      sigma = 0.
-      base0 = 0.
-      call hist(blc,trc,image2,mask,rng,histok,sigma,mean,auto)
-      if (histok) then
-       base0 = mean
-      else
+c Before the real "hist" call do it the hard way as a sanity check.
 c
-c If the histogram fit didn't work then do it the hard way.
 c First estimate of sigma from all pixels
-       base0 = 0.
-       base1 = 0.0
-       base2 = 0.0
-       basen = 0
-       do jj = mmn, mmx
-        do ii = lmn, lmx
-          if (nimage(ii,jj).gt.0) then
-            basen = basen + 1.
-            base1 = base1 + image(ii,jj)
-            base2 = base2 + image(ii,jj)**2
-          end if
-        end do
+      base0 = 0.
+      base1 = 0.0
+      base2 = 0.0
+      basen = 0
+      do jj = mmn, mmx
+       do ii = lmn, lmx
+         if (nimage(ii,jj).gt.0) then
+           basen = basen + 1.
+           base1 = base1 + image(ii,jj)
+           base2 = base2 + image(ii,jj)**2
+         end if
        end do
-       if (basen.gt.0) then
-        base0 = base1/basen
-        if (base2/basen-base0**2.gt.0.0) then
-          sigma = sqrt(base2/basen - base0**2)
-        else
-          ok =.false.
-        end if
+      end do
+      if (basen.gt.0) then
+       base0 = base1/basen
+       if (base2/basen-base0**2.gt.0.0) then
+         sigma = sqrt(base2/basen - base0**2)
        else
-        ok = .false.
+         ok =.false.
        end if
-       if (.not.ok) return
+      else
+       ok = .false.
+      end if
+      if (.not.ok) return
 c
 c Now iterate 3 times from this starting point
 c
-       do kk = 1,3
-        base1 = 0.
-        base2 = 0.
-        basen = 0.
-        do ii = lmn, lmx
-          rx = (ii - l)**2
-          do jj = mmn, mmx
-            rr = rx + (jj-m)**2
-            if (nimage(ii,jj).gt.0 .and. rr.ge.(boxsize**2) .and.
+      do kk = 1,3
+       base1 = 0.
+       base2 = 0.
+       basen = 0.
+       do ii = lmn, lmx
+         rx = (ii - l)**2
+         do jj = mmn, mmx
+           rr = rx + (jj-m)**2
+           if (nimage(ii,jj).gt.0 .and. rr.ge.(boxsize**2) .and.
      +          abs(image(ii,jj)-base0).le.3*sigma) then
-              basen = basen + 1.
-              base1 = base1 + image(ii,jj)
-              base2 = base2 + image(ii,jj)**2
-            end if
-          end do
-        end do
+             basen = basen + 1.
+             base1 = base1 + image(ii,jj)
+             base2 = base2 + image(ii,jj)**2
+           end if
+         end do
+       end do
 c
 c Mean and sigma
 c
-        base0 = base1/basen
-        if (base2/basen-base0**2.gt.0.0) then
-          sigma = sqrt(base2/basen - base0**2)
-        else
-          ok =.false.
-          return
-        end if
-       end do
+       base0 = base1/basen
+       if (base2/basen-base0**2.gt.0.0) then
+         sigma = sqrt(base2/basen - base0**2)
+       else
+         ok =.false.
+         return
+       end if
+      end do
 c
 c If on last iteration, had less than 10 pixels,
 c set base level to zero and set ropy sigma
 c
-       if (basen.lt.10.0) then
-        base0 = 0.
-        sigma = sqrt(base2/basen)
-       end if
+      if (basen.lt.10.0) then
+       base0 = 0.
+       sigma = sqrt(base2/basen)
+      end if
+c
+c Now call hist, and use its output over the direct estimate if sane.
+      sigmax = 0.
+      call hist(blc,trc,image2,mask,rng,histok,sigmax,mean,auto)
+      if (histok.and.(sigmax.lt.(10*sigma))) then
+       base0 = mean
+       sigma = sigmax
       end if
       return
 c
