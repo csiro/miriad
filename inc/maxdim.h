@@ -5,7 +5,7 @@ c - MAXBUF tells us how many words of memory we can use for data
 c-----------------------------------------------------------------------
 c - MAXDIM is an often used parameter, to indicate maximum size of maps
 	INTEGER   MAXDIM
-	PARAMETER(MAXDIM=8192)
+	PARAMETER(MAXDIM=16384)
 c-----------------------------------------------------------------------
 c		maximum number of antennae (HC=3/6/9/..., WSRT=14, VLA=27)
 	INTEGER   MAXANT
