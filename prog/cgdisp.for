@@ -694,6 +694,8 @@ c                  image
 c    pjt  19jan02  retrofitted options=corner introduced in 14feb01/BIMA
 c                  version
 c    pjt  29jan02  documented beamtyp=n, worked around a miriadB bug
+c
+c $Id: cgdisp.for,v 1.5 2008/08/06 05:07:08 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -711,7 +713,7 @@ c
      +  lhead, concol(maxcon), veccol, boxcol, bemcol, ovrcol, labcol
       logical doaxlab, doaylab, donxlab(2), donylab(2)
       character cin(maxcon)*64, gin*64, vin(2)*64, mskin*64, bin*64,
-     +  ltypes(maxtyp)*6
+     +  ltypes(maxtyp)*6, versan*80, version*80
 c
       real levs(maxlev,maxcon), pixr(2,maxchan), tr(6), bmin(maxcon+4),
      +  bmaj(maxcon+4), bpa(maxcon+4), scale(2), cs(4), pixr2(2),
@@ -757,8 +759,8 @@ c
       data lwid /maxconp3*1/
       data getvsc /.true./
 c-----------------------------------------------------------------------
-      call output ('CgDisp: version 29-Jan-02')
-      call output (' ')
+      version = versan ('cgdisp',
+     :  '$Id: cgdisp.for,v 1.5 2008/08/06 05:07:08 cal103 Exp $')
 c
 c Get user inputs
 c

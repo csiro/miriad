@@ -363,6 +363,7 @@ c    cleverly
 c
 c  * Scale data before fitting
 c
+c $Id: cgslice.for,v 1.5 2008/08/06 05:07:08 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -393,7 +394,7 @@ c
      +  iax, ipage, wedcod, ibin(2), jbin(2), kbin(2), krng(2),
      +  coltab, concol, labcol, slbcol, bgcol
 c
-      character labtyp(3)*6, ltype(nltype)*6
+      character labtyp(3)*6, ltype(nltype)*6, versan*80, version*80
       character in*64, pdev*64, xlabel*40, ylabel*40, xlabel2*40,
      +  ylabel2*40, hard*20, trfun*3, levtyp*1, fslval*80, fslposo*80,
      +  fslposi*80, fslmod*80, units*16, val3form*20
@@ -415,8 +416,8 @@ c
       data dmm, dunsl, gaps /1.0e30, -1.0e30, -1.0, .false., .false./
       data xdispls, ydispbs /3.5, 3.5/
 c-----------------------------------------------------------------------
-      call output ('CgSlice: version 14-Nov-2001')
-      call output (' ')
+      version = versan ('cgslice',
+     :  '$Id: cgslice.for,v 1.5 2008/08/06 05:07:08 cal103 Exp $')
 c
 c Get user inputs
 c
