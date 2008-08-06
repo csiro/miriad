@@ -18,28 +18,28 @@ c       when you display with a pixel map representation (formerly
 c       called a "grey scale")
 c
 c@ in
-c       You may input up to 7 images.  Upto 3 of these can be displayed
+c       You may input up to 7 images.  Up to 3 of these can be displayed
 c       via contour plots and 1 can be displayed via a colour pixel map
 c       representation.  1 vector amplitude image and 1 vector position
 c       angle image (degrees; positive N -> E) can together be used to
 c       display a vector map (e.g. polarization vectors).  1 image can
-c       be displayed as small scaled boxes (see below) and 1 image may be
-c       used as a mask.
+c       be displayed as small scaled boxes (see below) and 1 image may
+c       be used as a mask.
 c
 c       The "box" image is displayed by drawing little boxes (solid and
 c       hollow for positive and negative pixels) at the location of each
-c       selected pixel.  The size of the box scales with the value of the
-c       pixel.  This is a useful way to display rotation measure images
-c       for example. The mask image blanking mask is logically ANDed to all
-c       the other image masks before they are displayed. The mask image
-c       is not displayed.
+c       selected pixel.  The size of the box scales with the value of
+c       the pixel.  This is a useful way to display rotation measure
+c       images for example. The mask image blanking mask is logically
+c       ANDed to all the other image masks before they are displayed.
+c       The mask image is not displayed.
 c
 c       If more than one image is specified, they must have identical
-c       first and second dimensions.  However, you can overlay combinations
-c       of 2-D with 3-D images (e.g. multi-channel images with a continuum
-c       image) provided all the 3-D images have the same third dimension.
-c       These images can be input in any order (see TYPE).
-c       Wild card expansion is supported.    No default.
+c       first and second dimensions.  However, you can overlay
+c       combinations of 2-D with 3-D images (e.g. multi-channel images
+c       with a continuum image) provided all the 3-D images have the
+c       same third dimension.  These images can be input in any order
+c       (see TYPE).  Wild card expansion is supported.  No default.
 c@ type
 c       Specifies the type of each image, respectively, listed in the IN
 c       keyword. Minimum match is supported (note that "pixel" was
@@ -55,8 +55,8 @@ c
 c       You can't give one of "amplitude" or "angle" without the other.
 c       Default is "pixel" for one image, "contour" if more than one.
 c@ region
-c       Region of interest.  Choose only one spatial region (bounding box
-c       only supported), but as many spectral regions (i.e., multiple
+c       Region of interest.  Choose only one spatial region (bounding
+c       box only supported), but as many spectral regions (i.e. multiple
 c       IMAGE specifications) as you like.   Each channel (or group of
 c       channels; see CHAN below) is drawn on a new sub-plot.
 c       NOTE: the region specification applies equally to all the
@@ -64,22 +64,22 @@ c       input images.
 c       Default is full image
 c@ xybin
 c       Upto 4 values.  These give the spatial increment and binning
-c       size in pixels for the x and y axes to be applied to the selected
-c       region.   If the binning size is not unity, it must equal the
-c       increment.  For example, to bin up the image by 4 pixels in
-c       the x direction and to pick out every third pixel in the y
-c       direction, set XYBIN=4,4,3,1
+c       size in pixels for the x and y axes to be applied to the
+c       selected region.  If the binning size is not unity, it must
+c       equal the increment.  For example, to bin up the image by 4
+c       pixels in the x direction and to pick out every third pixel in
+c       the y direction, set XYBIN=4,4,3,1
 c       Defaults are 1,XYBIN(1),XYBIN(1),XYBIN(3)
 c@ chan
 c       2 values. The first is the channel increment to step through the
 c       image in, the second is the number of channels to average, for
-c       each sub-plot.  Thus CHAN=5,3  would average groups of 3 channels
-c       together, starting 5 channels apart such as: 1:3, 6:8, 11:13 ...
-c       The channels available are those designated by the REGION keyword.
-c       A new group of channels (sub-plot) is started if there is a
-c       discontinuity in the REGION selected channels (such as
-c       IMAGE(10,20),IMAGE(22,30).  The combination of REGION and CHAN
-c       determines how many sub-plots there will be.
+c       each sub-plot.  Thus CHAN=5,3  would average groups of 3
+c       channels together, starting 5 channels apart such as: 1:3, 6:8,
+c       11:13 ...  The channels available are those designated by the
+c       REGION keyword.  A new group of channels (sub-plot) is started
+c       if there is a discontinuity in the REGION selected channels
+c       (such as IMAGE(10,20),IMAGE(22,30).  The combination of REGION
+c       and CHAN determines how many sub-plots there will be.
 c
 c       In the case that you have input some combination of 2-D and 3-D
 c       images, CHAN refers to the 3-D image(s). Note that a channel
@@ -96,7 +96,8 @@ c       at LEVS * 1.4E-2
 c       Default is no additional scaling of LEVS (i.e., "a",1.0)
 c@ levs1
 c       The levels to contour for the first specified contour image are
-c       LEVS1 times SLEV (either percentage of the image peak or absolute).
+c       LEVS1 times SLEV (either percentage of the image peak or
+c       absolute).
 c       Defaults try to choose something vaguely useful.
 c@ levs2
 c       LEVS for the second contour image.
@@ -116,9 +117,9 @@ c       (linear), "sqr" (square root), "log" (logarithmic), and "heq"
 c       (histogram equalization).  The colour lookup table is an integer
 c       from 1 to 8 specifying a lookup table. Valud values are 1 (b&w),
 c       2 (rainbow), 3 (linear pseudo colour), 4 (floating zero colour
-c       contours), 5 (fixed zero colour contours), 6 (rgb), 7 (background)
-c       8 (heat) and 9 (absolute b&w) .  If you enter a negative
-c       integer, then the reversed lookup table is displayed.
+c       contours), 5 (fixed zero colour contours), 6 (rgb),
+c       7 (background) 8 (heat) and 9 (absolute b&w) .  If you enter a
+c       negative integer, then the reversed lookup table is displayed.
 c
 c       The transfer function changes available with OPTIONS=FIDDLE
 c       are in addition (on top of) to the selections here, but the
@@ -137,8 +138,8 @@ c       zeros, viz. "range=0,0,log,-2" say.
 c@ vecfac
 c       3 or 4 values.  A scale factor to multiply the vector image
 c       lengths (or box image widths) by, the x and y increments (in
-c       pixels) across the image at which to plot the vectors (or boxes),
-c       and optionally the length of the scale-bar vector
+c       pixels) across the image at which to plot the vectors (or
+c       boxes), and optionally the length of the scale-bar vector
 c       (unset for no scale-bar). If you have set non unit values of
 c       XYBIN, the increments here refer to the binned pixels.  When
 c       VECFAC(1)=1, the vectors (boxes) are scaled so that the maximum
@@ -151,9 +152,9 @@ c       (defaulting to bottom-left if BEAMTYP is not specified). If
 c       VECFAC(4)=0, the scale bar is drawn the length of the longest
 c       vector; you can find out what this is using OPTIONS=FULL. For a
 c       fractional polarization vector map, setting VECFAC(4)=1
-c       corresponds to 100 per cent polarization. If VECFAC(1) >> 1, this
-c       will give a very long vector. For polarization intensity images,
-c       VECFAC(4) is specified in flux density.
+c       corresponds to 100 per cent polarization. If VECFAC(1) >> 1,
+c       this will give a very long vector. For polarization intensity
+c       images, VECFAC(4) is specified in flux density.
 c
 c       Defaults are 1.0, 2, VECFAC(2)
 c       Default is not to draw a scale-bar.
@@ -195,8 +196,8 @@ c        "relnat"    the label is in offset natural coordinates
 c        "none"      no label and no numbers or ticks on the axis
 c
 c       All offsets are from the reference pixel.
-c       Defaults are "relpix", LABTYP(1)   except if LABTYP(1)="hms" when
-c       LABTYP(2) defaults to "dms"  (to give RA and DEC)
+c       Defaults are "relpix", LABTYP(1)   except if LABTYP(1)="hms"
+c       when LABTYP(2) defaults to "dms" (to give RA and DEC)
 c@ beamtyp
 c     Up to 6 values. Set if you want a small polygon to be drawn to
 c     represent the beam FWHM. Setting beamtyp to "b,l" is sufficient to
@@ -224,7 +225,8 @@ c     - Hatching angle (default 45 degrees).
 c     - Hatching line separation (default 1).
 c     - Line-width for outlines, hatching and cross-hatching (default 1)
 c@ options
-c       Task enrichment options. Minimum match of all keywords is active.
+c       Task enrichment options. Minimum match of all keywords is
+c       active.
 c
 c       "abut" means don't leave any white space between subplots.  The
 c         default is to leave a little bit between subplots, and
@@ -237,49 +239,54 @@ c         by the "AB" location. This option is deprecated: use the
 c         keyword "beamtyp" instead.
 c       "blacklab" means that, if the device is white-background, draw
 c         the axis labels in black. Default is red.
-c       "conlabel" means label the contour values on the actual contours.
-c         The PGPLOT routine that does this is not very bright. You will
-c         probably get too many labels.  If you bin the image up with
-c         keyword XYBIN, say, by a factor of 2, you will get about 1/2
-c         as many labels.   If desperate use the overlay facility
-c         (keyword OLAY) to manually label contours.
-c       "fiddle" means enter a routine to allow you to interactively change
-c         the display lookup table.  You can cycle through a variety of
-c         colour lookup tables, as well as alter a linear transfer function
-c         by the cursor location, or by selecting predefined transfer
-c         functions (linear, square root, logarithmic, histogram equalization)
+c       "conlabel" means label the contour values on the actual
+c         contours.  The PGPLOT routine that does this is not very
+c         bright.  You will probably get too many labels.  If you bin
+c         the image up with keyword XYBIN, say, by a factor of 2, you
+c         will get about 1/2 as many labels.  If desperate use the
+c         overlay facility (keyword OLAY) to manually label contours.
+c       "fiddle" means enter a routine to allow you to interactively
+c         change the display lookup table.  You can cycle through a
+c         variety of colour lookup tables, as well as alter a linear
+c         transfer function by the cursor location, or by selecting
+c         predefined transfer functions (linear, square root,
+c         logarithmic, histogram equalization)
 c
 c         For hard copy devices (e.g. postscript), a keyboard driven
-c         fiddle is offered; you can cycle through different colour tables
-c         and invoke the predefined transfer functions, but the linear
-c         fiddler is not available.   Note that if you are using "cgdisp"
-c         from a script, so that interactive fiddling is not appropriate,
-c         you can use the "range" keyword to specify the transfer
-c         function and colour lookup tables.
+c         fiddle is offered; you can cycle through different colour
+c         tables and invoke the predefined transfer functions, but the
+c         linear fiddler is not available.   Note that if you are using
+c         "cgdisp" from a script, so that interactive fiddling is not
+c         appropriate, you can use the "range" keyword to specify the
+c         transfer function and colour lookup tables.
 c       "full" means do full plot annotation with contour levels, pixel
 c         displa range, file names, reference values, etc.  Otherwise
 c         more room for the plot is available.
 c       "gaps" means leave large gaps between subplots and individually
 c         label the axes of each subplot. By default, the subplots will
 c         have a small amount of white space between each subplot and
-c         they will only be labelled around the borders of the full page.
-c         See also OPTIONS=ABUT to eliminate the small amount of white space.
-c       "grid" means draw a coordinate grid on the plot rather than just ticks
+c         they will only be labelled around the borders of the full
+c         page.  See also OPTIONS=ABUT to eliminate the small amount of
+c         white space.
+c       "grid" means draw a coordinate grid on the plot rather than just
+c         ticks
 c       "mirror" causes all specified contour levels for all images
 c         to be multiplied by -1 and added to the list of contours
 c       "nodistort" means that angularly-defined overlays do not distort
-c         with the coordinate grid.  If you are displaying a large area of
-c         the sky, such that the non-linearities in the coordinate system
-c         can be seen, then by default, the overlays (keyword OLAY) will
-c         distort with the coordinate grid if you are using angular units
-c         for the overlay locations and half sizes.  Thus star overlays
-c         will rotate and stretch, circles will distort similarly.
-c         Overlays given in non-angular units will always be undistorted.
+c         with the coordinate grid.  If you are displaying a large area
+c         of the sky, such that the non-linearities in the coordinate
+c         system can be seen, then by default, the overlays (keyword
+c         OLAY) will distort with the coordinate grid if you are using
+c         angular units for the overlay locations and half sizes.  Thus
+c         star overlays will rotate and stretch, circles will distort
+c         similarly.  Overlays given in non-angular units will always be
+c         undistorted.
 c       "noepoch" means don't write the epoch value into the axis labels
 c       "noerase" means don't erase a rectangle into which the "3-axis"
 c         values and the overlay ID strings are written.
-c       "nofirst" means don't write the first x-axis label on any subplots
-c         except for the left-most one. This may avoid label overwrite.
+c       "nofirst" means don't write the first x-axis label on any
+c         subplots except for the left-most one. This may avoid label
+c         overwrite.
 c       "corner" means only write labels in the lower left corner of any
 c         subplot
 c       "relax" means issue warnings when image axis descriptors are
@@ -291,7 +298,7 @@ c       "signs"  Normally, when plotting vectors, CGDISP assumes that
 c         North is up and East to the left.  If OPTIONS=SIGNS, then
 c         it assumes that E and N are in the direction of increasing
 c         X and Y.
-c       "single" means that when you have selected OPTIONS=FIDDLE and you
+c       "single" means that when you have selected OPTIONS=FIDDLE and
 c         you have more than one subplot per page, activate the fiddle
 c         option after each subplot rather than the default, which is
 c         to fiddle only at the end.  In the latter case, the histogram
@@ -302,9 +309,9 @@ c         contours dashed for the first contour image. The default,
 c         and usual convention is the reverse.
 c       "solneg2" SOLNEG1 for the second contour image.
 c       "solneg3" SOLNEG1 for the third contour image.
-c       "trlab" means label the top and right axes as well as the
-c         bottom and left ones.  This can be useful when non-linear
-c         coordinate variation across the field makes the ticks misaligned
+c       "trlab" means label the top and right axes as well as the bottom
+c         and left ones.  This can be useful when non-linear coordinate
+c         variation across the field makes the ticks misaligned
 c       "unequal" means draw plots with unequal scales in x and y
 c         so that the plot surface is maximally filled.  The default
 c         is for equal scales in x and y.
@@ -321,11 +328,12 @@ c         written on the plot.  They are the average values when
 c         the third axis is binned up with CHAN.  If the third axis
 c         is not velocity or frequency, the units type for "3VALUE"
 c         will be chosen to be the complement of any like axis in the
-c         first 2. E.g., the cube is in vxy order and LABTYP=ABSKMS,ARCSEC
-c         the units for the "3VALUE" label will be arcsec.  If
-c         LABTYP=ABSKMS,HMS the "3VALUE" label will be DMS (if the
-c         third [y] axis is declination).  See also keyword "3format"
-c         where you can input the format for the "3value" labelling.
+c         first 2. E.g. the cube is in vxy order and
+c         LABTYP=ABSKMS,ARCSEC the units for the "3VALUE" label will be
+c         arcsec.  If LABTYP=ABSKMS,HMS the "3VALUE" label will be DMS
+c         (if the third [y] axis is declination).  See also keyword
+c         "3format" where you can input the format for the "3value"
+c         labelling.
 c@ 3format
 c       If you ask for "3value" labelling, this keyword allows you
 c       specify the FORTRAN format of the labelling.  I have given
@@ -334,8 +342,8 @@ c       are "1pe12.6", or "f5.2" etc   If you leave this blank cgdisp
 c       will try something that you probably won't like.
 c@ lines
 c       Up to 6 values.  The line widths for the axes, each contour
-c       image (in the order of TYPE), the vector image, and any overlays.
-c       If there are less than 3 contour images or no vector
+c       image (in the order of TYPE), the vector image, and any
+c       overlays.  If there are less than 3 contour images or no vector
 c       image, the vector image/overlay line widths shift left.
 c       Line widths must be integers.
 c       Defaults are 1,1,1,1,1,1
@@ -352,8 +360,8 @@ c       value labels (see options=conlab).
 c       Defaults try to choose something sensible.  Use 0.0 to default
 c       any particular value. E.g., 1.4, 0, 0, 0.5
 c@ scale
-c       Up to 2 values.  Scales in natural axis units/mm with which to plot
-c       in the x and y directions.  For example, if the increments
+c       Up to 2 values.  Scales in natural axis units/mm with which to
+c       plot in the x and y directions.  For example, if the increments
 c       per pixel are in radians, then this number would be radians/mm
 c       (note that for RA axes you give radians on the sky per mm).
 c       Although this choice of unit may be cumbersome, it makes no
@@ -392,7 +400,8 @@ c       OFIG is the type of overlay; choose from
 c        "star"    for stars (crosses; give centre and half-sizes)
 c        "circle"  for a filled in circle (give centre and radius)
 c        "ocircle" for an open circle (give centre and radius)
-c        "ellipse" for a filled in ellipse (give centre, half axes and p.a.)
+c        "ellipse" for a filled in ellipse (give centre, half axes and
+c                  p.a.)
 c        "oellipse for an open ellipse (give centre, half axes and p.a.)
 c        "box"     for boxes (give centre and half-sizes)
 c        "line"    for line segments (give ends)
@@ -406,26 +415,28 @@ c       directions, respectively.  Choose from:
 c        "hms", "dms", "arcsec", "arcmin", "absdeg", "reldeg", "abspix",
 c        "relpix", "absnat", "relnat", "absghz", "relghz",
 c        "abskms", & "relkms"  as described in the keyword LABTYP.
-c       Note that OTYPE does not depend upon what you specified for LABTYP.
+c       Note that OTYPE does not depend upon what you specified for
+c       LABTYP.
 c
 c       ID is an identifying overlay string which can be optionally
 c       written on the overlay; it MUST be in the overlay file whether
-c       you write it on the plot or not).  The ID string is written in the
-c       corner for "star" and "box", in the centre for "clear", "circle"
-c       at the end for "line".  Note that the underscore character "_"
-c       is treated a special case and is replaced by a blank before plotting.
-c       In this way, you can write several words as the overlay ID; you
-c       connect them with underscores in the overlay file, and cgdisp
-c       strips them out before plotting.
+c       you write it on the plot or not).  The ID string is written in
+c       the corner for "star" and "box", in the centre for "clear",
+c       "circle" at the end for "line".  Note that the underscore
+c       character "_" is treated a special case and is replaced by a
+c       blank before plotting.  In this way, you can write several words
+c       as the overlay ID; you connect them with underscores in the
+c       overlay file, and cgdisp strips them out before plotting.
 c
 c       WRITE is "yes" or "no" to specify if the overlay ID is to be
 c       written in the overlay figure or not.
 c
 c
-c        ##### Columns beyond number 5 depend upon OFIG, XOTYPE, and YOTYPE
+c        ##### Columns beyond number 5 depend upon OFIG, XOTYPE, and
+c        YOTYPE
 c
 c        6   7    8   9  10  11  12   Logical column
-c        ---------------------------
+c        --------------------------
 c        X   Y   XS  YS  CS  CE       for OFIG="box" and "star"
 c        X1  Y1  X2  Y2  CS  CE       for OFIG="line"
 c        X   Y   R   CS  CE           for "circle" and "ocircle"
@@ -439,11 +450,13 @@ c       (X1,Y1) & (X2,Y2) are the end points of the line segment in the
 c       nominated OTYPE (mixed OTYPEs are supported here too).
 c       For %OTYPE = "abspix ", "relpix", "arcsec", "arcmin", "absdeg",
 c                    "reldeg", "absghz", "relghz", "abskms", "relkms",
-c                    "absnat" & "relnat" X,Y,X1,Y1,X2,Y2 are single numbers.
+c                    "absnat" & "relnat" X,Y,X1,Y1,X2,Y2 are single
+c                    numbers.
 c
-c       For %OTYPE = "hms" or "dms", the X and/or Y location is/are replaced
-c       by three numbers such as  HH MM SS.S or DD MM SS.S.  Thus if
-c       XOTYPE=hms & YOTYPE=dms then the file should have lines like
+c       For %OTYPE = "hms" or "dms", the X and/or Y location is/are
+c       replaced by three numbers such as  HH MM SS.S or DD MM SS.S.
+c       Thus if XOTYPE=hms & YOTYPE=dms then the file should have lines
+c       like
 c
 c         HH MM SS.S   DD MM SS.S   XS   YS  CHAN    for OFIG="box", say
 c
@@ -497,16 +510,17 @@ c       locations can be in, say, arcsec relative to some location which
 c       is not the reference pixel of the image (which is what CGDISP
 c       ultimately wants).   You then specify, with the OFFSET line, the
 c       offsets between the reference pixel of the contour/pixel map
-c       images and the actual reference location of your overlay locations.
+c       images and the actual reference location of your overlay
+c       locations.
 c
 c       You can have as many OFFSET lines as you like in the file.  All
 c       succeeding lines will apply these offsets until new ones are
 c       defined.  If the line does not appear, naturally no additional
 c       offsets are added.
 c
-c       The OFFSET line is not applied to ANY position fields in succeeding
-c       lines that have %OTYPEs that are "hms" or "dms".    I am too lazy
-c       to code it.
+c       The OFFSET line is not applied to ANY position fields in
+c       succeeding lines that have %OTYPEs that are "hms" or "dms".
+c       I am too lazy to code it.
 c
 c--
 c
@@ -524,11 +538,13 @@ c    nebk 09jan91  Combine plev and alev into slev. Replace chan,blc,trc
 c                  by region and reduced chan. combine ofile and otype
 c                  into olay. Combine annot, aspect & part of lines into
 c                  options. Interpret returned pgbegin status correctly.
-c    nebk 14jan91  Deal with blanked pixels and redistribute top level code.
+c    nebk 14jan91  Deal with blanked pixels and redistribute top level
+c                  code.
 c    nebk 18jan91  Add second contour image
 c    nebk 22jan91  Change default plot device to "?"
-c    nebk 30jan91  Change data statement for contour blanking to a standard
-c                  F77 syntax and speed up contouring for an unblanked image
+c    nebk 30jan91  Change data statement for contour blanking to a
+c                  standard F77 syntax and speed up contouring for an
+c                  unblanked image
 c    nebk  5mar91  Change itoa to itoaf, atoi to atoif, atod to atodf
 c                  and add epoch to annotation of plot.
 c    mjs/nebk
@@ -542,18 +558,21 @@ c    nebk 10aug91  Was not recognizing "lo" type overlays.
 c    nebk 11aug91  Account for offset for log grey scales and cin=gin
 c    nebk 04sep91  Deal with discontinously selected groups of channels.
 c    nebk 11sep91  Add options=beam%% and rename from cgplot
-c    nebk 20sep91  Stripped subroutines common with pgcurs into subspg.for
+c    nebk 20sep91  Stripped subroutines common with pgcurs into
+c                  subspg.for
 c    nebk/mjs
 c         12nov91  Initialize ep2 if no second contour image
 c    nebk/mjs
 c         13mar92  Name change:  pgdisp -> cgdisp
-c    nebk 07apr92  Adapt to memalloc subs. & add source name to annotation
+c    nebk 07apr92  Adapt to memalloc subs. & add source name to
+c                  annotation
 c    nebk 29apr92  Fix problem with character size getting lost and
 c                  rename *pg subroutines to *cg
-c    nebk 05may92  Full annotation not showing for nxy=1 (introduced 29apr92)
+c    nebk 05may92  Full annotation not showing for nxy=1 (introduced
+c                  29apr92)
 c    nebk 18may92  Major road works to add extra contour & vector images
-c    nebk 02jun92  Allow contour images to be the same, bring olay in-line
-c                  with new labtyp & change call to chnselcg
+c    nebk 02jun92  Allow contour images to be the same, bring olay
+c                  in-line with new labtyp & change call to chnselcg
 c    nebk 06jun92  Combine overlay drawing into one subroutine and cause
 c                  all lines in olay file begining with # to be ignored
 c    nebk 22jun92  Put all overlay info into overlay file and impliment
@@ -562,7 +581,8 @@ c                  to unequal.
 c    nebk 04jul92  Strip otopix, settr, linelev, conwrite, contents of
 c                  fullann, vpchdef, chkds2 to cgsubs.for. add op=mirror
 c                  & replace readc/g/v with readimcg.  Use deghmscg
-c    nebk 10jul92  Go to optcg instead of options. Remove call to BOXMASK
+c    nebk 10jul92  Go to optcg instead of options. Remove call to
+c                  BOXMASK
 c    nebk 17jul92  Add the overlay  offset line facility.
 c    nebk 09aug92  Modify for new o2pixcg/w2pixcg code, strip code to
 c                  strprpcg and omatchcg
@@ -578,9 +598,9 @@ c    nebk 21apr93  Replace options=chan,vel by generic 3pix,3vel
 c    nebk 20may93  Tell user to use options=relax when appropriate
 c    nebk 29may93  Replace call to chtonvcg by new PG routine pgqcs
 c    nebk 02jun93  Replace calls to vssizecg by new PG routine pgqvsz
-c    nebk 23jun93  Add options=wedge. Use pgqcs to remove need for vpasp,
-c                  change for new call to vpadjcg, rework beam plotting.
-c                  Make "clear" overlays appear again !
+c    nebk 23jun93  Add options=wedge. Use pgqcs to remove need for
+c                  vpasp, change for new call to vpadjcg, rework beam
+c                  plotting.  Make "clear" overlays appear again!
 c    nebk 15jul93  Try and make beams come out right way around again
 c    nebk 24aug93  Convert overlay channel field to channel range. Add
 c                  LABTYPs "absdeg" and "reldeg".  Add options=noerase
@@ -606,8 +626,8 @@ c                  discontinuous planes (for 3 years !)
 c    nebk 26aug94  Change to convert overlay locations in true world
 c                  coordinates to linear world coordinates for plotting.
 c                  Linearize axis descriptors at the centre of the
-c                  displayed region.  Call new LAB3CG which labels with true
-c                  world coords on third axis.
+c                  displayed region.  Call new LAB3CG which labels with
+c                  true world coords on third axis.
 c    nebk 23dec94  Make sure selected region no bigger than image
 c    nebk 05jan95  Use new PGIMAG in favour of PGGRAY adding support
 c                  for fiddling of lookup table for hardcopy devices
@@ -648,30 +668,33 @@ c    nebk 16may97  Replciate one value for all contours for COLS1
 c    nebk 18jul97  Doc change (masks ANDed not ORed)
 c    rjs  21jul97  Call initco earlier.
 c    rjs  21aug97  Missed calling initco earlier for boxes.
-c    nebk 25mar98  Channel range was wrongly interpreted for line overlays
-c    rjs  31mar98  Get it to agree with documentation as far as cols1 parameter
-c                  goes.
+c    nebk 25mar98  Channel range was wrongly interpreted for line
+c                  overlays
+c    rjs  31mar98  Get it to agree with documentation as far as cols1
+c                  parameter goes.
 c    nebk 16jun98  FIx problem in posdec2 where ocen2 was of
 c                  size 2 instead of 3.  Was stuffing up w2wco
 c    cjp  16jun98  Added "sym" overlay type
-c    nebk 16jul98  Fix problem when region selected planes were not contiguious
+c    nebk 16jul98  Fix problem when region selected planes were not
+c                  contiguious
 c    nebk 09sep98  "sym" overlay ID strings were not being written
 c                  in the right place
 c    nebk 17sep98  hardcopy devices were over-riding too much colour
 c                  table control
-c    nebk 09apr99  fix problem with hard copy colour tbales and multipanel plots
+c    nebk 09apr99  fix problem with hard copy colour tbales and
+c                  multipanel plots
 c    rjs  08may00  Change incorrect keyf call to keya.
-c    rjs  13jul00  Correct angle of beam plotting when there is a rotation
-c                  between sky and pixel grid.
+c    rjs  13jul00  Correct angle of beam plotting when there is a
+c                  rotation between sky and pixel grid.
 c    dpr  14feb01  Add beamtyp keyword
 c    dpr  27feb01  Added scale-bar
 c    dpr  18jun01  Add option blacklabel
-c    nebk 14nov01  For box type, make sure abs max comes from entire image
-c    pjt  19jan02  retrofitted options=corner introduced in 14feb01/BIMA version
+c    nebk 14nov01  For box type, make sure abs max comes from entire
+c                  image
+c    pjt  19jan02  retrofitted options=corner introduced in 14feb01/BIMA
+c                  version
 c    pjt  29jan02  documented beamtyp=n, worked around a miriadB bug
 c-----------------------------------------------------------------------
-      implicit none
-c
       include 'maxdim.h'
       include 'maxnax.h'
       include 'mem.h'
@@ -964,7 +987,8 @@ c
 c
 c If we are going to use a b&w transfer function we must account for the
 c background colour of the device.  So make the OFM the complement of
-c itself here if the background is going to be white.  Only works for b&w OFMs
+c itself here if the background is going to be white.  Only works for
+c b&w OFMs.
 c
              if (bgcol.eq.1) call ofmcmp
            end if
@@ -1218,8 +1242,6 @@ c   bpa         p.a. of beam
 c               All in radians
 c   pres        True if beam present in header
 c-----------------------------------------------------------------------
-      implicit none
-c
       integer lin
       real bmin, bmaj, bpa
       character*(*) in
@@ -1284,8 +1306,6 @@ c    vecmaxpix       Length of vector scale-bar, in pixels
 c    dobeam          We actually want to plot beams, not just
 c                    the scale-bar!
 c-----------------------------------------------------------------------
-      implicit none
-c
       integer maxcon, lc(maxcon), lg, lv(2), lb
       logical beaml, beamb, bemprs(maxcon+4), dobeam
       real bmin(maxcon+4), bmaj(maxcon+4), bpa(maxcon+4)
@@ -1360,8 +1380,6 @@ c    fill            If true fill beam polygon in
 c    fs              PGPLOT fill style
 c    hs              PGPLOT hatching style
 c-----------------------------------------------------------------------
-      implicit none
-c
       integer lun
       real bmin, bmaj, bpa, xcen, ycen
       logical fill
@@ -1438,11 +1456,13 @@ c     the same centre.  Find the biggest x and y offsets from all
 c     the beams and compute the centre with that.
 c
 c  Input
-c    luns            Handles of image (contours, pixel map, vectors, box)
+c    luns            Handles of image (contours, pixel map, vectors,
+c                    box)
 c    maxcon          Maximum number of contour images
 c    beaml,beamb     True if the beam is to be drawn on the left
 c                    or at the bottom (else right and top)
-c    bemprs          True if beam present for pixel map and contour images
+c    bemprs          True if beam present for pixel map and contour
+c                    images
 c    bmin,maj,pa     Beam FWHMin, FWHMax and p.a. for pixel map and
 c                    contour image (rad).
 c    vecmax          Length of scale-bar in world coord: .gt. 0.0
@@ -1453,8 +1473,6 @@ c    x,ycen          Absolute pixels of beam centres
 c    sbxcen,sbycen   Absolute pixels of vector scale bar centre
 c    fill            If true fill in the beam patch, else just outline
 c-----------------------------------------------------------------------
-      implicit none
-c
       integer maxcon, luns(*)
       logical beaml, beamb, bemprs(maxcon+4), fill
       real bmin(maxcon+4), bmaj(maxcon+4), bpa(maxcon+4),  xcen, ycen
@@ -1600,8 +1618,6 @@ c   im1,2        Images
 c   size1,2      Sizes of each dimension
 c   lh1,2        Handles
 c-----------------------------------------------------------------------
-      implicit none
-c
       integer size1(*), size2(*), lh1, lh2
       character*(*) im1, im2
       logical relax
@@ -1707,8 +1723,6 @@ c     *size      Size of each dimensions of images
 c     l*         Image handles
 c
 c-----------------------------------------------------------------------
-      implicit none
-c
       integer maxnax, ncon, csize(maxnax,*), gsize(maxnax),
      +  vsize(maxnax,2), bsize(maxnax), msize(maxnax), lc(*),
      +  lg, lv(2), lb, lm
@@ -1781,14 +1795,15 @@ c
      +   beambl, beambr, beamtl, beamtr, relax, rot90, signs,
      +   mirror, dowedge, doerase, doepoch, dofid, dosing, nofirst,
      +   grid, dotr, dodist, conlab, doabut, blacklab, docorner)
-c----------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c     Decode options array into named variables.
 c
 c   Output:
 c     dofull    True means do full annotation of plot
 c     do3val    True means label sub-plots with value of third axis
 c     do3pix    True means label sub-plots with pixel of third axis
-c     doerase   True means erase rectangle into which 3-axis label written
+c     doerase   True means erase rectangle into which 3-axis label
+c               written
 c     eqscale   True means plot with x and y scales
 c     gaps      True menas put space bewteen adjacent sub-plots
 c     solneg    True means plot negative contours with solid line
@@ -1816,8 +1831,6 @@ c     doabut    No white space between subplots
 c     blacklab  True if labels are black for white background devices
 c     docorner  Only lower left corner gets labels
 c-----------------------------------------------------------------------
-      implicit none
-c
       logical dofull, do3val, do3pix, eqscale, gaps, solneg(*),
      +  beambl, beambr, beamtl, beamtr, relax, rot90, signs,
      +  mirror, dowedge, doerase, doepoch, dofid, dosing, nofirst,
@@ -1902,8 +1915,6 @@ c                   E.g. if pixel units are rad/m/m, then these scale
 c                   factors you have b(4) & b(5) rad/m/m per mm
 c
 c-----------------------------------------------------------------------
-      implicit none
-c
       integer boxinc(2), iplot, npixx, npixy, nimage(npixx,npixy), lh
       real boxfac, image(npixx,npixy), tr(6), scale(2), bfac(5)
 cc
@@ -1927,12 +1938,12 @@ c Find maximum selected pixel from first sub-plot
 c
       if (iplot.eq.1) then
 
-c        bfac(1) = -1.0e30
-c        do j = 1, npixy, boxinc(2)
-c          do i = 1, npixx, boxinc(1)
-c            if (nimage(i,j).gt.0) bfac(1) = max(bfac(1),abs(image(i,j)))
-c          end do
-c        end do
+c       bfac(1) = -1.0e30
+c       do j = 1, npixy, boxinc(2)
+c         do i = 1, npixx, boxinc(1)
+c           if (nimage(i,j).gt.0) bfac(1) = max(bfac(1),abs(image(i,j)))
+c         end do
+c       end do
 
 c
 c Make maximum box width on the plot equal to 99% of the selected
@@ -2025,8 +2036,6 @@ c  Output
 c    vecmaxpix  Length of the scalebar vector, in pixels
 c
 c-----------------------------------------------------------------------
-      implicit none
-c
       logical rot90, signs, getvsc
       integer vecinc(2), nx, ny, npixx, npixy, namp(npixx,npixy),
      +  npa(npixx,npixy), lv
@@ -2048,7 +2057,8 @@ c
       call rdhdd (lv, 'cdelt1', cdelt(1), 0.0d0)
       call rdhdd (lv, 'cdelt2', cdelt(2), 0.0d0)
 c
-c Find maximum selected vector amplitude for first partly unblanked sub-plot
+c Find maximum selected vector amplitude for first partly unblanked
+c sub-plot
 c
       if (getvsc) then
         allbl = .true.
@@ -2150,7 +2160,7 @@ c
 c
       subroutine drover (blc, trc, doerase, csize, iover, pix3, ofig,
      +  ocen, ocorn, opoly, oid, owrite, ochan, xl, xr, yb, yt)
-c--------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c     Draw overlays
 c
 c     Input
@@ -2164,15 +2174,14 @@ c       ofig     Overlay type
 c       ocen     Overlay centre in pixels
 c       ocorn    Overlay corners in pixels. Not used for 'ocircle',
 c                'circle' 'ellipse', 'oellipse' and 'clear'
-c       opoly    181 pairs describing circle and ellipse overlays in pixels
+c       opoly    181 pairs describing circle and ellipse overlays in
+c                pixels
 c       oid      Overlay i.d.
 c       owrite   If true write overlay ID in corner of overlay
 c       ochan    Overlay channel range
 c       xl,xr,yb,yt
 c                Overlay extremeties in pixels
-c----------------------------------------------------------------------
-      implicit none
-c
+c-----------------------------------------------------------------------
       integer blc(*), trc(*), ochan(2), iover
       double precision ocen(2), ocorn(2,4), pix3
       real csize, opoly(0:180,2), xl, xr, yb, yt
@@ -2183,7 +2192,7 @@ cc
       character line*80
       integer cs, ce, isym
       real ssize
-c----------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
 c Only draw on specified channels
 c
@@ -2297,8 +2306,6 @@ c       kbin       CHannel increments and average
 c       labtyp     Axis label types
 c       *mm        Image min and max
 c-----------------------------------------------------------------------
-      implicit none
-c
       integer maxcon, maxlev, ncon, nlevs(maxcon), blc(*), trc(*),
      +  lc(maxcon), lg, lv(2), lb, srtlev(maxlev,maxcon), ibin(2),
      +  jbin(2), kbin(2), npixr, lh
@@ -2363,11 +2370,10 @@ c   bpa        p.a.
 c              These are all in radians
 c   bemprs     True if beam present for that image
 c Input/output:
-c  dobeam      If no beams to plot, this is set to false
-c              COntour images, pixel map image, vector image and box image
+c   dobeam     If no beams to plot, this is set to false
+c              COntour images, pixel map image, vector image and box
+c              image
 c-----------------------------------------------------------------------
-      implicit none
-c
       integer maxcon
       character*(*) cin(maxcon), gin, vin(2), bin
       logical dobeam, bemprs(maxcon+4)
@@ -2427,7 +2433,6 @@ c
       subroutine hardofm (coltab, pixr2, dofid, j, jj, dosing, tfvp,
      +                    win, image, nimage)
 c-----------------------------------------------------------------------
-      implicit none
       integer coltab, j, jj, win(2), nimage(*)
       real tfvp(4), image(*), pixr2(2)
       logical dofid, dosing
@@ -2464,10 +2469,9 @@ c
 c
       subroutine intofm (coltab, j, pixr2)
 c-----------------------------------------------------------------------
-      implicit none
       integer coltab, j
       real pixr2(2)
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       if (coltab.eq.0) then
 c
 c The user has not specified an OFM with the "range" keyword.  If first
@@ -2501,9 +2505,9 @@ c  Input:
 c   maxgr      Maximum number of pixel map scale intensity ranges and
 c              transfer functions allowed.  The user can input one group
 c              per sub-plot up to this maximum so that differnt subplots
-c              can be displayed optimally.   If there are more subplots
-c              that intebsity ranegs given, the extra ones use the values
-c              for the previous subplot.
+c              can be displayed optimally.  If there are more subplots
+c              that intebsity ranegs given, the extra ones use the
+c              values for the previous subplot.
 c   maxlev     Maximum number of allowed contour levels
 c   maxcon     Maximum number of contour images
 c   maxtyp     Maximum number of label types
@@ -2512,7 +2516,8 @@ c  Output:
 c   ncon       Number of contour images
 c   nvec       Number of pairs of vector images, 0 or 1
 c   c,g,v,b,msk-in
-c              Contour, pixel map, vector (amp & pa), box & mask image names
+c              Contour, pixel map, vector (amp & pa), box & mask image
+c              names
 c   i,j,kbin   X, y and z pixel increment and average
 c   levtyp     Type of contour levels scale factors for each contour
 c              image:  'p'(ercentage) or 'a'(bsolute)
@@ -2579,8 +2584,6 @@ c   firstimage first image specified (used for beam plotting). Given
 c              in bemprs format (see below)
 c   blacklab   True if labels are black for white background devices
 c-----------------------------------------------------------------------
-      implicit none
-c
       integer maxlev, maxcon, maxtyp, maxgr, ncon, nvec, npixr
       real levs(maxlev,maxcon), pixr(2,maxgr), scale(2), cs(*),
      +  slev(maxcon), break(maxcon), vecfac, vecmax, boxfac, hs(3)
@@ -2945,7 +2948,6 @@ c
 c
       subroutine mmini (maxcon, gmm, cmm)
 c-----------------------------------------------------------------------
-      implicit none
       integer maxcon
       real gmm(2), cmm(2,maxcon)
 cc
@@ -2976,9 +2978,7 @@ c     lun      Handle of image
 c     maxtyp   Maximum number of label types
 c     ltypes   Possible label types
 c
-c------------------------------------------------------------------------
-      implicit none
-c
+c-----------------------------------------------------------------------
       real csize
       integer maxtyp, lun, pl1, npl, blc(3), trc(3)
       character ltypes(maxtyp)*(*), ofile*(*)
@@ -2989,7 +2989,7 @@ cc
       integer iostat, ilen, len1, lpos, i, ochan(2)
       character aline*300, oid*80, ofig*8
       logical owrite
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       if (ofile.ne.' ') then
         call txtopen (lpos, ofile, 'old', iostat)
         if (iostat.ne.0) call bug ('f', 'Error opening overlay file')
@@ -3046,7 +3046,7 @@ c
 c
       subroutine overid (doerase, ofig, x, y, xl, xr, yb, yt, str,
      +                   csize)
-c----------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c     Write the overlay identification string on the overlay
 c
 c   Input
@@ -3063,9 +3063,7 @@ c               These are not used for clear overlays
 c     str       Overlay identification string
 c     csize     User supplied character size
 c
-c----------------------------------------------------------------------
-      implicit none
-c
+c-----------------------------------------------------------------------
       real xl, xr, yb, yt, csize, x, y
       character*(*) str, ofig
       logical doerase
@@ -3076,7 +3074,7 @@ cc
       integer il
 c
       integer len1
-c----------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
 c Enquire about plot device characteristics; window in world
 c coordinates, view-port in ndcs and view-surface in ndcs
@@ -3168,7 +3166,7 @@ c
 c
 c
       subroutine posdec1 (aline, xoff, yoff)
-c---------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c     Decode OFFSET string into offsets
 c
 c     Input
@@ -3176,9 +3174,7 @@ c       aline    Input string
 c     Output
 c       x,yoff   Offsets
 c
-c---------------------------------------------------------------------
-      implicit none
-c
+c-----------------------------------------------------------------------
       double precision xoff, yoff
       character*(*) aline
 cc
@@ -3188,7 +3184,7 @@ c
       double precision nums(maxnum)
       integer lena, ipres, idx, icomm(maxnum)
       logical ok
-c--------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
 c Find end of OFFSET string and start of numbers
 c
@@ -3219,7 +3215,7 @@ c
       subroutine posdec2 (lun, pix3, maxtyp, ltypes, iline, xoff, yoff,
      +  dodist, aline, ofig, ocen, ocorn, oid, owrite, ochan, poly,
      +  xl, xr, yb, yt)
-c---------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c     Decode string into positions list
 c
 c     Input
@@ -3236,8 +3232,10 @@ c     Output
 c       ofig     Overlay type (star, box, clear, line etc)
 c       ocen     Centre of overlay in unbinned full image pixels
 c       ocorn    Corners of overlay for x and y in pixels
-c                For 'star'     middle-top, right-middle, middle-bottom, left-middle
-c                For 'box'      top-left, top-right, bottom-right, bottom-left
+c                For 'star'     middle-top, right-middle, middle-bottom,
+c                               left-middle
+c                For 'box'      top-left, top-right, bottom-right,
+c                               bottom-left
 c                For 'line'     left and right
 c                For 'sym'      (1,1) and (2,1) are the symbol number
 c                               and symbol height (urk)
@@ -3252,9 +3250,7 @@ c       ochan    STart and end chans to display this overlay on
 c       poly     181 points describing circles and ellipses (in pixels)
 c       xl,xr,yb,yt
 c                Extrema of overlay in pixels
-c---------------------------------------------------------------------
-      implicit none
-c
+c-----------------------------------------------------------------------
       integer iline, maxtyp, lun, ochan(2)
       double precision ocen(2), xoff, yoff, pix3, ocorn(2,4)
       real poly(0:180,2), xl, xr, yb, yt
@@ -3285,7 +3281,7 @@ c
       data otype1 /'box', 'star', 'line', 'clear', 'circle',
      +             'ocircle', 'ellipse', 'oellipse', 'sym'/
       data otype2 /'yes', 'no'/
-c----------------------------------------------------------------------
+c-----------------------------------------------------------------------
       abspix(1) = 'abspix'
       abspix(2) = 'abspix'
       abspix(3) = 'abspix'
@@ -3500,9 +3496,9 @@ c
           end if
         else
 c
-c Overlay shape maintained independent of what the actual coordinate grid
-c is doing.  Therefore, the sizes are worked out in pixels at the centre
-c of the field and then shifted to the appropriate centre
+c Overlay shape maintained independent of what the actual coordinate
+c grid is doing.  Therefore, the sizes are worked out in pixels at the
+c centre of the field and then shifted to the appropriate centre
 c
           win(1) = 0
           win(2) = 0
@@ -3843,7 +3839,7 @@ c
      +   lc, lg, lv, lb, csize, gsize, vsize, bsize, cnaxis, gnaxis,
      +   vnaxis, bnaxis, lhead, ibin, jbin, kbin, blc, trc,
      +   win, ngrps, grpbeg, ngrp)
-c----------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c     Finish key routie inputs for region of interest now.  Have to
 c     delay until here because of complexity added by mixed 2-D/3-D
 c     capability.   The BOXINPUT routine must be associated with the
@@ -3863,7 +3859,8 @@ c  Output:
 c    lhead         Handle of generic image
 c    blc,trc       3-D Hyper-rectangle surrounding region of interest
 c                  in unbinned pixels
-c    win           Size of BINNED region of interest for x and y directions
+c    win           Size of BINNED region of interest for x and y
+c                  directions
 c    ngrps         Number of groups of channels.
 c    grgbeg        List of start planes for each group of channels
 c                  that are to be avearged together for each sub-plot
@@ -3873,9 +3870,7 @@ c                  channel increment is reached.
 c    ngrp          Number of channels in each group of channel to
 c                  be averaged together for each sub-plot.
 c
-c----------------------------------------------------------------------
-      implicit none
-c
+c-----------------------------------------------------------------------
       integer maxcon, ncon, maxnax, csize(maxnax,maxcon),
      +  gsize(maxnax), vsize(maxnax), bsize(maxnax), blc(*),
      +  trc(*), cnaxis(maxcon), gnaxis, vnaxis(2), bnaxis,
@@ -3889,7 +3884,7 @@ cc
 c
       integer boxes(maxbox), i, naxis, size(3)
       character itoaf*1
-c----------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
 c Use the first cube we find to set the rest of the box inputs.
 c
@@ -4017,7 +4012,6 @@ c   gmm       Data min and max for pixel map image initialized
 c             to +/-1e30
 c
 c-----------------------------------------------------------------------
-      implicit none
       integer maxnax, maxcon, ncon, csize(maxnax,maxcon),
      +  gsize(maxnax), vsize(maxnax,2), msize(maxnax), bsize(maxnax),
      +  lc(maxcon), lg, lv(2), lm, lb, cnaxis(maxcon), gnaxis,
@@ -4103,7 +4097,6 @@ c               devices (default is red?!)
 c  OUtput
 c    colour indices to use
 c-----------------------------------------------------------------------
-      implicit none
       integer bgcol, concol(*), veccol, boxcol, ovrcol, bemcol, labcol
       logical blacklab
 c-----------------------------------------------------------------------
@@ -4161,7 +4154,6 @@ c
       subroutine contur (conlab, blank, solneg, win1, win2, dobl,
      +                   data, nlevs, levs, tr, sdbreak, ncols, cols)
 c
-      implicit none
       integer win1, win2, nlevs, ncols, cols(*)
       real data(win1,win2), levs(*), tr(6), sdbreak, blank
       logical solneg, dobl, conlab
