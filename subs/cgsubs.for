@@ -1701,6 +1701,7 @@ c
      +      labtyp(i).eq.'absghz' .or. labtyp(i).eq.'absnat') then
           ccstr(ip:ip+2) = 'aw/'
         else if (labtyp(i).eq.'arcsec' .or. labtyp(i).eq.'arcmin' .or.
+     +           labtyp(i).eq.'arcmas' .or.
      +           labtyp(i).eq.'reldeg' .or. labtyp(i).eq.'relkms' .or.
      +           labtyp(i).eq.'relghz' .or. labtyp(i).eq.'relnat') then
           ccstr(ip:ip+2) = 'ow/'
@@ -1820,6 +1821,9 @@ c
         else if (labtyp(iax).eq.'arcmin') then
           label = str(1:l2)//' offset (arcmin; '//estr//')'
           if (estr.eq.' ') label = str(1:l2)//' offset (arcmin)'
+        else if (labtyp(iax).eq.'arcmas') then
+          label = str(1:l2)//' offset (mas; '//estr//')'
+          if (estr.eq.' ') label = str(1:l2)//' offset (mas)'
         else if (labtyp(iax).eq.'absdeg') then
           label = str(1:l2)//' (degrees; '//estr//')'
           if (estr.eq.' ') label = str(1:l2)//' (degrees)'

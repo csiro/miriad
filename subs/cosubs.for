@@ -48,7 +48,7 @@ c    rjs    17jul97    Get rid of calls to rdhd, and just use coordinate
 c                      object as source of information.
 c    rjs    10nov97    Make ctypeco robust to a blank axis.
 c
-c $Id: cosubs.for,v 1.5 2007/08/13 09:20:51 cal103 Exp $
+c $Id: cosubs.for,v 1.6 2008/08/06 04:05:07 cal103 Exp $
 c******************************************************************************
 c
 c* axfndCO -- Find a specified generic axis in an image
@@ -324,7 +324,8 @@ c
       else if (ltype.eq.'dms') then
         if (gtype.ne.'DEC' .and. gtype.ne.'MM') bad = .true.
       else if (ltype.eq.'arcsec' .or. ltype.eq.'arcmin' .or.
-     +         ltype.eq.'absdeg' .or. ltype.eq.'reldeg') then
+     +         ltype.eq.'arcmas' .or.
+     +         ltype.eq.'absdeg' .or. ltype.eq.'reldeg') then         
         call axfndco (lun, 'RAD', 0, iax, jax)
         if (jax.eq.0) bad = .true.
       else if (ltype.eq.'abskms' .or. ltype.eq.'relkms') then
@@ -477,6 +478,9 @@ c
       else if (type.eq.'arcmin') then
         cti = 'ow'
         win = win * DAS2R * 60.0d0
+      else if (type.eq.'arcmas') then
+        cti = 'ow'
+        win = win * AS2R * 1.0d-3
       else if (type.eq.'absghz' .or. type.eq.'abskms' .or.
      +         type.eq.'absnat') then
         cti = 'aw'
@@ -524,6 +528,8 @@ c-----------------------------------------------------------------------
         wout = wout * DR2AS
       else if (type.eq.'arcmin') then
         wout = wout * DR2D * 60D0
+      else if (type.eq.'arcmas') then
+        wout = wout * DR2AS * 1.0d3
       else if (type.eq.'absdeg' .or. type.eq.'reldeg') then
         wout = wout * DR2D
       end if
@@ -689,6 +695,8 @@ c-----------------------------------------------------------------------
         units = 'arcsec'
       else if (type.eq.'arcmin') then
         units = 'arcmin'
+      else if (type.eq.'arcmas') then
+        units = 'mas'
       else if (type.eq.'absdeg') then
         units = 'degrees'
       else if (type.eq.'reldeg') then
@@ -1028,8 +1036,9 @@ c
         else if (typeo(i).eq.'absghz' .or. typeo(i).eq.'relghz') then
           call strfd (wout(i), '(1pe15.8)', strout(i), strlen(i))
         else if (typeo(i).eq.'absdeg' .or. typeo(i).eq.'reldeg') then
-          call strfd (wout(i), '(f8.3)', strout(i), strlen(i))
-        else if (typeo(i).eq.'arcsec' .or. typeo(i).eq.'arcmin') then
+          call strfd (wout(i), '(f8.3)', strout(i), strlen(i)) 
+        else if (typeo(i).eq.'arcsec' .or. typeo(i).eq.'arcmin'
+     +           .or. typeo(i).eq.'arcmas') then
           call strfd (wout(i), '(1pe15.8)', strout(i), strlen(i))
         else if (typeo(i).eq.'absnat' .or. typeo(i).eq.'relnat') then
           call strfd (wout(i), '(1pe15.8)', strout(i), strlen(i))

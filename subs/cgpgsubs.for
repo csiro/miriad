@@ -138,8 +138,9 @@ c     rjs    15apr97     Mr K was not checking for ANGL axis type in
 c			 LAB3CG -- and causing things to vomit.
 c     rjs    10nov97     Make more robust to things missing from headers.
 c     jwr    08jul04     Replaced MemAlloc where MemFree was meant
+c     rgd    01aug08     Added the arcmas call for milliarcs
 c
-c $Id: cgpgsubs.for,v 1.3 2007/08/13 09:20:51 cal103 Exp $
+c $Id: cgpgsubs.for,v 1.4 2008/08/06 04:05:07 cal103 Exp $
 c**********************************************************************
 c
 c* annboxCG -- Annotate plot with information from a box image 
@@ -1353,11 +1354,13 @@ c
           if (types(1).eq.'DEC' .or. types(1).eq.'LATI') then
             ltype = 'hms'
             if (labtyp(1).eq.'arcsec' .or. labtyp(1).eq.'arcmin' .or.
-     +          labtyp(1)(4:6).eq.'deg') ltype = labtyp(1)
+     +          labtyp(1).eq.'arcmas' .or. labtyp(1)(4:6).eq.'deg')
+     +          ltype = labtyp(1)
           else if (types(2).eq.'DEC' .or. types(2).eq.'LATI') then
             ltype = 'hms'
             if (labtyp(2).eq.'arcsec' .or. labtyp(2).eq.'arcmin' .or.
-     +          labtyp(2)(4:6).eq.'deg') ltype = labtyp(2)
+     +          labtyp(2).eq.'arcmas' .or. labtyp(2)(4:6).eq.'deg')
+     +          ltype = labtyp(2)
           end if
         else if (types(3).eq.'DEC' .or. types(3).eq.'LATI') then
 c  
@@ -1367,11 +1370,13 @@ c
           if (types(1).eq.'RA' .or. types(1).eq.'LONG') then
             ltype = 'dms'
             if (labtyp(1).eq.'arcsec' .or. labtyp(1).eq.'arcmin' .or.
-     +          labtyp(1)(4:6).eq.'deg') ltype = labtyp(1)
+     +          labtyp(1).eq.'arcmas' .or. labtyp(1)(4:6).eq.'deg')
+     +          ltype = labtyp(1)
           else if (types(2).eq.'RA' .or. types(2).eq.'LONG') then
             ltype = 'dms'
             if (labtyp(2).eq.'arcsec' .or. labtyp(2).eq.'arcmin' .or.
-     +          labtyp(2)(4:6).eq.'deg') ltype = labtyp(2)
+     +          labtyp(2).eq.'arcmas' .or. labtyp(2)(4:6).eq.'deg')
+     +          ltype = labtyp(2)
           end if
         end if
 c

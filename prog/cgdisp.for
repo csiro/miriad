@@ -179,6 +179,7 @@ c	 "hms"       the label is in H M S.S (e.g. for RA)
 c	 "dms"       the label is in D M S.S (e.g. for DEC)
 c	 "arcsec"    the label is in arcsecond offsets
 c	 "arcmin"    the label is in arcminute offsets
+c	 "arcmas"    the label is in milli-arcsec offsets
 c	 "absdeg"    the label is in degrees
 c	 "reldeg"    the label is in degree offsets
 c	             The above assume the pixel increment is in radians.
@@ -676,8 +677,8 @@ c
       include 'mem.h'
       real wedwid, tfdisp
       integer maxlev, nxdef, nydef, maxcon, maxtyp, nbins, maxconp3
-      parameter (maxlev = 50, nxdef = 4, maxtyp = 17, nydef = 4, 
-     +  maxcon = 3, wedwid = 0.05, tfdisp = 0.5, nbins = 128, 
+      parameter (maxlev = 50, nxdef = 4, maxtyp = 18, nydef = 4,
+     +  maxcon = 3, wedwid = 0.05, tfdisp = 0.5, nbins = 128,
      +  maxconp3 = maxcon + 3)
 c
       integer ipim, ipnim, ipim2, ipnim2, ipimm
@@ -724,9 +725,9 @@ c
       data bdone /.false./
       data ipage /0/
       data ltypes /'hms   ', 'dms   ', 'abspix', 'relpix', 'arcsec',
-     +             'arcmin', 'absghz', 'relghz', 'abskms', 'relkms',
-     +             'absnat', 'relnat', 'absdeg', 'reldeg', 'none',
-     +             'abslin', 'rellin'/
+     +             'arcmin', 'arcmas', 'absghz', 'relghz', 'abskms',
+     +             'relkms', 'absnat', 'relnat', 'absdeg', 'reldeg',
+     +              'none',  'abslin', 'rellin'/
       data dmm /1.0e30, -1.0e30, -1.0/
       data bmm /1.0e30, -1.0e30, -1.0/
       data coltab /maxchan*0/
