@@ -6,242 +6,252 @@ c& nebk
 c: uv analysis, plotting
 c+
 c  UVPLT - Plot a variety of quantities from visibility data bases.
-c	Options are available to time average data (plot with optional
-c	error bars) and to plot different baselines on separate
-c	sub-plots on each page plus many others.
+c       Options are available to time average data (plot with optional
+c       error bars) and to plot different baselines on separate
+c       sub-plots on each page plus many others.
 c@ vis
-c	The input visibility file(s). Multiple input files and wild card
-c	card expansion are supported.
-c	No default
+c       The input visibility file(s). Multiple input files and wild card
+c       card expansion are supported.
+c       No default
 c@ line
-c	This is the normal linetype specification. See the help on "line"
-c	for more information. The default is all channels.
+c       This is the normal linetype specification. See the help on
+c       "line" for more information.  The default is all channels.
 c@ select
-c	This selects which visibilities to be used. Default is all
-c	visibilities. See the Users Guide for information about how
-c	to specify uv data selection.
-c	Default is all data
+c       This selects which visibilities to be used. Default is all
+c       visibilities. See the Users Guide for information about how
+c       to specify uv data selection.
+c       Default is all data
 c@ stokes
-c	Select Stokes parameter(s) or polarization(s) from:
-c	  xx, yy, xy, yx,  i, q, u, v,
-c	  rr, ll, rl, lr
-c	Default is all polarizations or Stokes parameters present
+c       Select Stokes parameter(s) or polarization(s) from:
+c         xx, yy, xy, yx,  i, q, u, v,
+c         rr, ll, rl, lr
+c       Default is all polarizations or Stokes parameters present
 c@ axis
-c	Two values (minimum match active), one for each of the x
-c	and y axes chosen from:
-c	  time                     [time in DD HH MM SS.S format]
-c	  dtime                    [time in decimal days format]
-c	  ytime                    [time in decimal years format]
-c	  amplitude, real, imag    [natural units; Jy]
-c	  phase                    [degrees]
-c	  uu, vv                   [u & v in klambda]
-c	  uc, vc                   [u,& v, -u & -v in klambda]
-c	  uvdistance               [sqrt(u**2+v**2)]
-c	  uvangle                  [uv pos'n angle clockwise from v axis]
-c	  hangle                   [hour angle in HH MM SS.S]
-c	  dhangle                  [hour angle in decimal hours]
-c	  parang                   [parallactic angle in degrees]
-c         lst                      [local sidereal time in decimal hours]
+c       Two values (minimum match active), one for each of the x
+c       and y axes chosen from:
+c         time                     [time in DD HH MM SS.S format]
+c         dtime                    [time in decimal days format]
+c         ytime                    [time in decimal years format]
+c         amplitude, real, imag    [natural units; Jy]
+c         phase                    [degrees]
+c         uu, vv                   [u & v in klambda]
+c         uc, vc                   [u,& v, -u & -v in klambda]
+c         uvdistance               [sqrt(u**2+v**2)]
+c         uvangle                  [uv pos'n angle clockwise from v
+c                                   axis]
+c         hangle                   [hour angle in HH MM SS.S]
+c         dhangle                  [hour angle in decimal hours]
+c         parang                   [parallactic angle in degrees]
+c         lst                      [local sidereal time in decimal hr]
 c         az                       [azimuth in degrees]
 c         el                       [elevation in degrees]
 c         airmass                  [airmass=1/sin(el)]
 c         jyperk                   [system gain, in Jy/K]
-c         rms                      [theoretical visibility noise rms, in flux units]
-c	NOTE: parang is the true parallactic angle of the source, which can
-c	be quite different from the angle between source and antenna feed
-c	(Miriad variable chi).
+c         rms                      [theoretical visibility noise rms, in
+c                                   flux units]
+c       NOTE: parang is the true parallactic angle of the source, which
+c       can be quite different from the angle between source and antenna
+c       feed (Miriad variable chi).
 c
-c	Defaults are axis=time,amp  (x and y axes).
+c       Defaults are axis=time,amp  (x and y axes).
 c@ xrange
-c	Plot range in the x-direction
-c	  If axis = uu, vv, or uvdistance [kilo-lambda;   2 values]
-c	          unless OPTIONS=NANOSEC;     then   nanoseconds]
-c	  If axis = uvangle               [degrees;       2 values]
-c	  If axis = time                  [dd,hh,mm,ss.s; 8 values]
-c	  If axis = dtime                 [decimal days;  2 values]
-c	  If axis = amplitude, real, imag [natural units; 2 values]
-c	  If axis = phase                 [degrees;       2 values]
-c	  If axis = hangle                [hh,mm,ss.s;    6 values]
+c       Plot range in the x-direction
+c         If axis = uu, vv, or uvdistance [kilo-lambda;   2 values]
+c                 unless OPTIONS=NANOSEC;     then   nanoseconds]
+c         If axis = uvangle               [degrees;       2 values]
+c         If axis = time                  [dd,hh,mm,ss.s; 8 values]
+c         If axis = dtime                 [decimal days;  2 values]
+c         If axis = amplitude, real, imag [natural units; 2 values]
+c         If axis = phase                 [degrees;       2 values]
+c         If axis = hangle                [hh,mm,ss.s;    6 values]
 c         If axis = dhangle               [decimal hours; 2 values]
-c	  If axis = parang                [degrees;       2 values]
+c         If axis = parang                [degrees;       2 values]
 c         If axis = az or el              [degrees;       2 values]
 c         If axis = airmass               [natural units; 2 values]
 c         If axis = jyperk                [Jy/K;          2 values]
 c         If axis = rms                   [flux units;    2 values]
 c         If axis = lst                   [decimal hours; 2 values]
 c
-c	Default is to self-scale (see also OPTIONS=XIND).
+c       Default is to self-scale (see also OPTIONS=XIND).
 c@ yrange
-c	Plot range in the y-direction as for the x axis.  The
-c	default is to self-scale (see also OPTIONS=YIND).
+c       Plot range in the y-direction as for the x axis.  The
+c       default is to self-scale (see also OPTIONS=YIND).
 c@ average
-c	The averaging time in minutes (unless OPTIONS=DAYS,HOURS,SECONDS).
-c	Averaging is reset at frequency, source, or pointing centre
-c	changes.  Individual baselines and polarizations are averaged
-c	separately (unless OPTIONS=AVALL).  If you have selected multiple
-c	channels and you also ask for time averaging, then all the
-c	selected channels are averaged together in the time interval.
-c	If you wish to use OPTIONS=AVALL to average everything on
-c	the one subplot (e.g. polarizations) but don't want temporal
-c	averaging, set AVERAGE to less than one integration.
-c	Default is no averaging.
+c       The averaging time in min (unless OPTIONS=DAYS,HOURS,SECONDS).
+c       Averaging is reset at frequency, source, or pointing centre
+c       changes.  Individual baselines and polarizations are averaged
+c       separately (unless OPTIONS=AVALL).  If you have selected
+c       multiple channels and you also ask for time averaging, then all
+c       the selected channels are averaged together in the time
+c       interval.  If you wish to use OPTIONS=AVALL to average
+c       everything on the one subplot (e.g. polarizations) but don't
+c       want temporal averaging, set AVERAGE to less than one
+c       integration.
+c       Default is no averaging.
 c@ hann
-c	Hanning smoothing length (an odd integer < 15).   Is applied
-c	after any time averaging and INC selection. Useful for amplitude
-c	or phase, say, plotted against time.  Error bars remain unaffected
-c	by Hanning smoothing.  Currently, the Hanning smoothing is unaware
-c	of source or frequency changes. Use SELECT if you have boundary
-c	problems.
-c	Default is no smoothing (hann = 1).
+c       Hanning smoothing length (an odd integer < 15).   Is applied
+c       after any time averaging and INC selection. Useful for amplitude
+c       or phase, say, plotted against time.  Error bars remain
+c       unaffected by Hanning smoothing.  Currently, the Hanning
+c       smoothing is unaware of source or frequency changes.  Use SELECT
+c       if you have boundary problems.
+c       Default is no smoothing (hann = 1).
 c@ inc
-c	Plot every INCth point (on each sub-plot) that would normally
-c	have been selected.   Useful if you don't want to average, but
-c	want to cut down on the number of plotted points.  Beware of
-c	increments that divide exactly into the number of baselines
-c	in time ordered data.
-c	Default is 1.
+c       Plot every INCth point (on each sub-plot) that would normally
+c       have been selected.   Useful if you don't want to average, but
+c       want to cut down on the number of plotted points.  Beware of
+c       increments that divide exactly into the number of baselines
+c       in time ordered data.
+c       Default is 1.
 c@ options
-c	Task enrichment options. Minimum match is effective.
-c	 nocal   Do not apply the gain corrections
-c	 nopol   Do not apply the polarization leakage corrections
-c	 nopass  Do not apply the bandpass corrections
+c       Task enrichment options. Minimum match is effective.
+c        nocal   Do not apply the gain corrections
+c        nopol   Do not apply the polarization leakage corrections
+c        nopass  Do not apply the bandpass corrections
 c
-c	 nofqav  By default, uvplt averages together all channels from
-c	         a visibility record before plotting. The nofqav option
-c	         disables this, and causes individual channels to be
-c	         plotted.  Note that this option is not active when
-c		 time averaging is invoked (frequency averaging is always
-c		 done then).
+c        nofqav  By default, uvplt averages together all channels from
+c                a visibility record before plotting. The nofqav option
+c                disables this, and causes individual channels to be
+c                plotted.  Note that this option is not active when time
+c                averaging is invoked (frequency averaging is always
+c                done then).
 c
-c	 nobase  Plot all baselines on the same plot, otherwise
-c	         each baseline is plotted on a separate sub-plot.
+c        nobase  Plot all baselines on the same plot, otherwise
+c                each baseline is plotted on a separate sub-plot.
 c
-c        notitle Do not write any title on the plot.  Probably most useful
-c                if plotting all baselines on the same plot (using the
-c                "nobase" option).
+c        notitle Do not write any title on the plot.  Probably most
+c                useful if plotting all baselines on the same plot
+c                (using the "nobase" option).
 c
-c	 2pass   Normally uvplt makes assumptions about what it is
-c		 expecting to find in the data with regards polarizations
-c		 and baselines.   Under some conditions, uvplt may
-c		 report that it has not allocated sufficient buffer
-c		 space.  This option instructs uvplt to make two passes
-c		 through the data, the first to accumulate precise
-c		 information on the contents of the selected data so
-c		 that buffer space is optimally allocated.
+c        2pass   Normally uvplt makes assumptions about what it is
+c                expecting to find in the data regarding polarizations
+c                and baselines.   Under some conditions, uvplt may
+c                report that it has not allocated sufficient buffer
+c                space.  This option instructs uvplt to make two passes
+c                through the data, the first to accumulate precise
+c                information on the contents of the selected data so
+c                that buffer space is optimally allocated.
 c
-c	 scalar  Do scalar (average amplitudes or phases) rather than
-c	         vector (average real and imaginary) averaging.
-c	         This is useful if the visibilities are uncalibrated &
-c	         the phase is winding over the averaging interval & you
-c	         would like an averaged amplitude. Scalar averaged phase
-c	         is not very meaningful in general.
-c	 avall   If you are averaging in time, then average all data
-c		 selected on each sub-plot together.  E.g. all selected
-c		 polarizations, and, if OPTIONS=NOBASE, all baselines
-c		 as well.  If you wish to average all the things on
-c		 one subplot together but without temporal averaging,
-c		 just set the averaging time to less than one integration.
-c	 unwrap  When plotting phase, try to unwrap it so that
-c	         say, if one point is 179 deg and the next -179,
-c		 they will be plotted as 179 and 181 deg.  NOTE:
-c		 Unwrapping noise can be VERY misleading.
+c        scalar  Do scalar (average amplitudes or phases) rather than
+c                vector (average real and imaginary) averaging.
+c                This is useful if the visibilities are uncalibrated &
+c                the phase is winding over the averaging interval & you
+c                would like an averaged amplitude. Scalar averaged phase
+c                is not very meaningful in general.
+c        avall   If you are averaging in time, then average all data
+c                selected on each sub-plot together.  E.g. all selected
+c                polarizations, and, if OPTIONS=NOBASE, all baselines
+c                as well.  If you wish to average all the things on one
+c                subplot together but without temporal averaging, just
+c                set the averaging time to less than one integration.
+c        unwrap  When plotting phase, try to unwrap it so that
+c                say, if one point is 179 deg and the next -179,
+c                they will be plotted as 179 and 181 deg.  NOTE:
+c                Unwrapping noise can be VERY misleading.
 c
-c	 rms     Draw error bars (+/- 1 standard deviation) on the plot if
-c		 averaging is invoked.
-c	 mrms    Draw error bars (+/- 1 standard deviation in the mean)
-c		 on the plot if averaging is invoked.
-c	 noerr   The automatically worked out min and max plot limits
-c	         will NOT include the ends of the error bars.
+c        rms     Draw error bars (+/- 1 standard deviation) on the plot
+c                if averaging is invoked.
+c        mrms    Draw error bars (+/- 1 standard deviation in the mean)
+c                on the plot if averaging is invoked.
+c        noerr   The automatically worked out min and max plot limits
+c                will NOT include the ends of the error bars.
 c
-c	 all     Plot flagged and unflagged visibilties
-c	 flagged Plot only flagged visibilities
-c		 The default is to plot only unflagged (good) visibilities
-c	         ALL overrides  FLAGGED
+c        all     Plot flagged and unflagged visibilties
+c        flagged Plot only flagged visibilities.  The default is to plot
+c                only unflagged (good) visibilities.
+c                ALL overrides FLAGGED.
 c
-c	 nanosec u and v are plotted in nano-seconds rather than k-lambda
-c	 days    The averaging interval is in days rather than minutes
-c	 hours   The averaging interval is in hours rather than minutes
-c	 seconds The averaging time is in seconds rather than minutes
+c        nanosec u and v are plotted in nano-seconds rather than
+c                k-lambda
+c        days    The averaging interval is in days rather than minutes
+c        hours   The averaging interval is in hours rather than minutes
+c        seconds The averaging time is in seconds rather than minutes
 c
-c	 xind    If the x-axis is self-scaled, then unless OPTIONS=NOBASE,
-c	         setting XIND will cause each sub-plot to have the x-axis
-c		 self-scaled independently.  The default is that the x-range
-c		 used is that which encompasses the ranges from all sub-plots.
-c	 yind    The equivalent for the y-axis
+c        xind    If the x-axis is self-scaled, then unless
+c                OPTIONS=NOBASE, setting XIND will cause each sub-plot
+c                to have the x-axis self-scaled independently.  The
+c                default is that the x-range used is that which
+c                encompasses the ranges from all sub-plots.
+c        yind    The equivalent for the y-axis
 c
-c	 equal   Plot x and y with equal scales.  Useful only for plots
-c	         like AXIS=UU,VV.  Does not mean the plot will necessarily
-c	         be square
-c	 zero    Plot the x=0 and y=0 lines
+c        equal   Plot x and y with equal scales.  Useful only for plots
+c                like AXIS=UU,VV.  Does not mean the plot will
+c                necessarily be square
+c        zero    Plot the x=0 and y=0 lines
 c
-c	 symbols Each file is plotted with a different plot symbol
-c	 nocolour
-c	         Each file is plotted with the same colour (white). By
-c		 default and when there is only one polarization, each
-c		 file has a separate colour.
-c	 dots    If time averaging is invoked, plot the data with dots
-c	         rather than filled in circles.  These plot much faster
-c		 on hardcopy devices.
+c        symbols Each file is plotted with a different plot symbol
+c        nocolour
+c                Each file is plotted with the same colour (white). By
+c                default and when there is only one polarization, each
+c                file has a separate colour.
+c        dots    If time averaging is invoked, plot the data with dots
+c                rather than filled in circles.  These plot much faster
+c                on hardcopy devices.
 c
-c	 source  Put the source name rather than the file name in the
-c	         plot title
-c	 inter   After the plot is drawn, you get a chance to redraw
-c	         the plot with a different x- and y-range, and also
-c		 on a different device.  In this way you can make a
-c		 hard-copy without re-running the program. In this case,
-c	         points outside of the user specified x,y-range are
-c	         ARE included in the plot buffer, so that if you redefine
-c		 the ranges, those points are available for plotting.
+c        source  Put the source name rather than the file name in the
+c                plot title
+c        inter   After the plot is drawn, you get a chance to redraw
+c                the plot with a different x- and y-range, and also
+c                on a different device.  In this way you can make a
+c                hard-copy without re-running the program. In this case,
+c                points outside of the user specified x,y-range ARE
+c                included in the plot buffer, so that if you redefine
+c                the ranges, those points are available for plotting.
 c
-c	 log     Write the values and errors (if averaging) that are
-c		 plotted into the log file.  No attempt to separate
-c		 baselines is made, except that automatically obtained
-c		 by not setting OPTIONS=NOBASE
+c        log     Write the values and errors (if averaging) that are
+c                plotted into the log file.  No attempt to separate
+c                baselines is made, except that automatically obtained
+c                by not setting OPTIONS=NOBASE
 c@ device
-c	PGPLOT plot device/type. No default.
+c       PGPLOT plot device/type. No default.
 c@ nxy
-c	Number of plots in the x and y directions for when plotting
-c	each baseline separately. Defaults try to choose something
-c	sensible.
+c       Number of plots in the x and y directions for when plotting
+c       each baseline separately. Defaults try to choose something
+c       sensible.
 c@ size
-c	PGPLOT character sizes, in units of the default size (i.e., 1)
-c	First value is for the labels, the second is for the symbol size
-c	Defaults depend upon the number of sub-plots. The second value
-c	defaults to the first.
+c       PGPLOT character sizes, in units of the default size (i.e., 1)
+c       First value is for the labels, the second is for the symbol size
+c       Defaults depend upon the number of sub-plots. The second value
+c       defaults to the first.
 c@ log
-c	The output logfile name. The default is the terminal.
+c       The output logfile name. The default is the terminal.
 c@ comment
-c	A one line comment which is written into the logfile.
+c       A one line comment which is written into the logfile.
 c--
 c
 c  History:
 c    nebk 22May89  Original version.
-c    nebk 21Sep89  Change PGPAGE calls, replace READ by PROMPT and decoding
-c    rjs  18oct89  Changes to new calling sequence for planet scaling/rotation.
+c    nebk 21Sep89  Change PGPAGE calls, replace READ by PROMPT and
+c                  decoding
+c    rjs  18oct89  Changes to new calling sequence for planet
+c                  scaling/rotation.
 c    rjs  23oct89  Changed 'pdev' to 'device'.
 c    pjt   2may90  maxdim.h now gets maxants and maxchan
 c    mchw 28jun90  Updated to use uvdata selection criteria.
 c    mchw 05jul90  Made standard uvheader.
 c    rjs   2nov90  Corrected documentation.
 c    nebk 18feb91  Substantial changes to add 'time', 'dtime', 'u', 'v',
-c		   'uc', 'vc',  'real' and 'imag' plot options.  Add
-c		   Stokes (IQUV) selection and multiple input file ability
-c		   by invoking the UVDAT* layer of subroutines.
+c                  'uc', 'vc',  'real' and 'imag' plot options.  Add
+c                  Stokes (IQUV) selection and multiple input file
+c                  ability by invoking the UVDAT* layer of subroutines.
 c    nebk 20feb91  Even more substantial changes to add time averaging.
 c                  Move flagging options to OPTIONS
 c    nebk 26feb91  Add capability to plot different baselines separately
-c    nebk  5mar91  Change itoa to itoaf, atod to atodf.  Add OPTIONS=INTER
+c    nebk  5mar91  Change itoa to itoaf, atod to atodf.  Add
+c                  OPTIONS=INTER
 c    nebk 24mar91  Rework MAXBASE/MAXBASE2 to avoid conflict, add
 c                  OPTIONS=NOERR, and implement averaging of u and v.
 c    nebk 28mar91  Add OPTIONS=AUTO, NOCROSS, and LOG
-c    nebk 10apr91  Add OPTIONS=ZERO,NANOSECONDS, & EQUAL, XAXIS=UVPA, and
-c		   add HANN.  Fix bounds problem when no points to plot.
+c    nebk 10apr91  Add OPTIONS=ZERO,NANOSECONDS, & EQUAL, XAXIS=UVPA,
+c                  and add HANN.  Fix bounds problem when no points to
+c                  plot.
 c    nebk/mjs
 c         11apr91  Fix bug with time range and MKEYR.  Change default
 c                  xaxis to 'dtime' instead of 'time'
-c    nebk 06may91  Adjust for new pgtime routines and fix bug with getting
-c                  users comment.  CHange default axis back to 'time'
-c                  since revised PGTIME routines now have a day field.
+c    nebk 06may91  Adjust for new pgtime routines and fix bug with
+c                  getting users comment.  CHange default axis back to
+c                  'time' since revised PGTIME routines now have a day
+c                  field.
 c    nebk 21may91  Add OPTIONS=NOCAL, prevent PGPAGE call on last plot,
 c                  put Stokes selection on plot and use roman font
 c    nebk 31may91  Add OPTIONS=SOURCE
@@ -253,8 +263,8 @@ c    nebk 08aug91  Add DAY field to XRANGE.
 c    mchw 28aug91  Test for zero length comment in call to LogWrite
 c    nebk 04sep91  Fix logic error when dumping averaged buffers into
 c                  the plot buffer - was being done in the wrong place
-c    nebk 08sep91  Rearrange logic so that x-value gets tested for user's
-c                  plot range after averaging instead of before.
+c    nebk 08sep91  Rearrange logic so that x-value gets tested for
+c                  user's plot range after averaging instead of before.
 c                  Add OPTIONS=AVALL,DAYS,HOURS
 c    nebk 09sep91  Rewrite some code that could cause integer overflows
 c                  with very large averaging times.
@@ -262,46 +272,52 @@ c    nebk 04oct91  Plot baselines in increasing order (1-2,1-3 etc)
 c                  Add OPTIONS=XIND
 c    nebk 16jan92  CHange OPTION=BASE to OPTION=NOBASE
 c    nebk 17feb92  Don't open device when no points.  Add OPTIONS=WRAP.
-c		   Fix a bug that was preventing  memory allocation if the
-c		   first file in the VIS list had no selected data.
-c    nebk 26feb92  Add OPTIONS=SYMBOLS.  This required a lot of rewriting
+c                  Fix a bug that was preventing  memory allocation if
+c                  the first file in the VIS list had no selected data.
+c    nebk 26feb92  Add OPTIONS=SYMBOLS.  This required a lot of
+c                  rewriting
 c    nebk 07mar92  Add OPTIONS=YIND
 c    rjs  12mar92  When autoscaling, keep away from rounding problems.
-c    nebk 12apr92  Lengthen str2 by 2 for escaping of \ for SUNs in MTITLE
+c    nebk 12apr92  Lengthen str2 by 2 for escaping of \ for SUNs in
+c                  MTITLE
 c    nebk 28apr92  Finally implement the same axis types for both X
 c                  and Y so both X and Y depend on channel now. Merge
-c	           XAXIS and YAXIS into AXIS.  Reformat documentation.
+c                  XAXIS and YAXIS into AXIS.  Reformat documentation.
 c    nebk 24may92  Use my fabbo KEYMATCH for AXIS to shut Mr S up.
-c    rjs  27may92  Absolutely unbelievable mistake. Only Mr K could do it.
-c                  Failed to declare a string variable to be long enough.
+c    rjs  27may92  Absolutely unbelievable mistake. Only Mr K could do
+c                  it.  Failed to declare a string variable to be long
+c                  enough.
 c    nebk 08jun92  Interchange HatCreek NXY defaults and properly plot
 c                  flagged data for OPTIONS=ALL (bug inserted 28apr92)
 c    nebk 23jun92  Move final accumlator flush inside file do loop
 c                  CHange options=WRAP to UNWRAP.  Finish averaging
-c		   when RA or DEC change.
+c                  when RA or DEC change.
 c    nebk 07jul92  Fix problem with last point of file being plotted
-c		   as if it belonged to the next file when averaging
+c                  as if it belonged to the next file when averaging
 c    rjs  17aug92  Replace obsolete uvtrack with soon to be obsolete
-c		   uvvarini
+c                  uvvarini
 c    nebk 25sep92  Remove options AUTO and NOCROSS to SELECT and add
-c                  independent averaging of polarizations.  Better NFILES
-c		   memory management when DOSYMB is false.
-c    nebk 30sep92  Trap against not all pol'ns turning up in first record.
+c                  independent averaging of polarizations.  Better
+c                  NFILES memory management when DOSYMB is false.
+c    nebk 30sep92  Trap against not all pol'ns turning up in first
+c                  record.
 c    nebk 02oct92  Rearrange sequence of UVDATRD calls
 c    nebk 07oct92  Implement standard BASANT subroutine call.
 c    nebk 09dec92  Fix bounds bug in baspolid for options=nobase and
 c                  implement more flexible mixed polarization handling
 c    nebk 24dec92  When unwrapping phases, don't do any range testing.
-c    nebk 19jan93  Increment by 1 length of OPS in INPUTS (NOPASS did this)
+c    nebk 19jan93  Increment by 1 length of OPS in INPUTS (NOPASS did
+c                  this)
 c    nebk 09feb93  Use memalloc and overlay blank common with UVDAT
 c    nebk 16feb93  Change size (clever rjs algorithm),nx,ny defaults
-c    nebk 25feb93  Change to doc. Fiddle with size parameter defaults,
-c                  add axis=hangle,dhangle, rework interactive window stuff,
-c                  plot polarizations with different colours
+c    nebk 25feb93  Change to doc.  Fiddle with size parameter defaults,
+c                  add axis=hangle,dhangle, rework interactive window
+c                  stuff, plot polarizations with different colours
 c    mjs  15mar93  pgplot names have 6 or less chars.
 c    rjs  18mar93  Assume there is at least 1 polarisation in the data.
-c    nebk 27apr93  Following suggestion by pjt implement getting of longitude
-c                  through obspar as well as uv variable.  Fiddle HA -> +/- pi
+c    nebk 27apr93  Following suggestion by pjt implement getting of
+c                  longitude through obspar as well as uv variable.
+c                  Fiddle HA -> +/- pi
 c    nebk 18jun93  Add options=colour
 c    nebk 17mar94  Add OPTIONS=2PASS  and change to OPTIONS=NOCOLOUR
 c    nebk 15jan95  Be less restrictive on use of -u and -v
@@ -309,27 +325,31 @@ c    nebk 11mar95  No yellow for hardcopy devices
 c    nebk 22spe95  Add axis=parang
 c    nebk 03oct95  Fix calculation of hour angle.
 c    rjs  01dec95  Improve an error message.
-c    nebk 06dec95  Push MAXBASE2 upto 36 for Hat Creek.  Does not affect ATCA
-c    nebk 09jan95  Only work out longitude if really needed; some data sets
-c		   don't have it.
+c    nebk 06dec95  Push MAXBASE2 upto 36 for Hat Creek.  Does not affect
+c                  ATCA
+c    nebk 09jan95  Only work out longitude if really needed; some data
+c                  sets don't have it.
 c    nebk 22may96  Add options=mrms
-c    rjs  06jun96  Change frequency behaviour to default to all channels.
+c    rjs  06jun96  Change frequency behaviour to default to all
+c                  channels.
 c    rjs  30jul96  2pass tries to guess the number of points needed.
-c    rjs  14feb97  If the user sets nxy in options=nobase, then honour it.
+c    rjs  14feb97  If the user sets nxy in options=nobase, then honour
+c                  it.
 c    nebk 18jun98  Document nofqav options better
-c    rjs  19nov98  Minor correction to computation of LST, and recompute from
-c		   scratch the parallactic angle.
+c    rjs  19nov98  Minor correction to computation of LST, and recompute
+c                  from scratch the parallactic angle.
 c    swa  03sep99  Add options=notitle.
 c    rjs  10mar00  Set maxbase2=91.
 c    rjs  28mar00  Fix colour indices when there are more than NCOL
-c		   inputs.
+c                  inputs.
 c    rjs  04may00  Tidy up requirement for lat,long,lst and more.
 c    rjs  26sep00  Correct uvangle code.
 c    rjs  10jan01  Added az,el,lst to possible axes.
 c    rjs  20jan01  Change definition of nbases in uvfish to allow for
-c		   possible presence of autocorrelations.
+c                  possible presence of autocorrelations.
 c    rjs  02mar01  Added airmass to possible axes.
-c    rjs  04may03  getlst could return the wrong value in some circumstances.
+c    rjs  04may03  getlst could return the wrong value in some
+c                  circumstances.
 c    rjs  20sep04  Added jyperk and rms.
 c    rjs  09may06  Disable planet processing.
 c    rjs  07jun06  Neater messages.
@@ -349,8 +369,8 @@ c       maxbase    is the maximum number of baselines corresponding
 c                  to maxant.  Both are in MAXDIM.H
 c       maxbase2   is the potential number of baselines that can
 c                  be plotted singly unless options=2pass
-c       pl2dim     is the actual number of baselines to be plotted singly
-c                  and the size of the second dimension of BUFFER
+c       pl2dim     is the actual number of baselines to be plotted
+c                  singly and the size of the second dimension of BUFFER
 c
 c       Because MAXANT is generally 27, MAXBASE is a big number, and
 c       slicing up MAXBUF words using this is wasteful if you have far
@@ -380,16 +400,14 @@ c       There is a parameter called MAXFILE which is the maximum number
 c       of files to be read.  It is only used as an easy way to declare
 c       NPTS and PLPTS which are small arrays.   BUFFER is chopped up
 c       according to either the ACTUAL number of files that are read
-c	if different plot symbols for each are wanted, else all
+c       if different plot symbols for each are wanted, else all
 c       points are put in the same FILE lcoation in BUFFER.  In this
 c       way the available space is better used.  MAXFILE is set to
 c       be much bigger than any number of files the user is ever
-c	likely to input.
+c       likely to input.
 c
-c  $Id: uvplt.for,v 1.3 2006/10/13 05:26:00 cal103 Exp $
+c  $Id: uvplt.for,v 1.4 2008/08/11 01:40:32 cal103 Exp $
 c-----------------------------------------------------------------------
-      implicit none
-c
       include 'maxdim.h'
       include 'mirconst.h'
 c
@@ -449,7 +467,7 @@ c Externals
 c
       integer membuf
       logical uvdatopn
-      character itoaf*2
+      character itoaf*2, versan*80, version*80
 c
 c Initialize
 c
@@ -462,13 +480,9 @@ c
       data plfidx, ifile, ofile /0, 0, 0/
       data npts, plpts, basmsk /ifac1*0, ifac1*0, ifac2*0/
       data polmsk /13*0/
-
-      character rcsrev*32
-      data rcsrev /'$Date: 2006/10/13 05:26:00 $'/
 c-----------------------------------------------------------------------
-      call output (' ')
-      call output ('uvplt: Version' // rcsrev(7:26) // ' UTC')
-      call output (' ')
+      version = versan ('uvplt',
+     +  '$Id: uvplt.for,v 1.4 2008/08/11 01:40:32 cal103 Exp $')
 c
 c  Get the parameters given by the user and check them for blunders
 c
@@ -542,7 +556,7 @@ c
         call uvdatgta ('name', in)
         call logwrite (' ', more)
         str = itoaf (ifile)
-	call logwrite ('File # '//str//' = '//in, more)
+        call logwrite ('File # '//str//' = '//in, more)
 c
 c Read first visibility
 c
@@ -609,17 +623,17 @@ c
 c
 c Fish out the lst if required.
 c
-	  if (xaxis.eq.'lst'.or.yaxis.eq.'lst')then
-	    call getlst(lin,lst)
-	  endif
+          if (xaxis.eq.'lst'.or.yaxis.eq.'lst')then
+            call getlst(lin,lst)
+          endif
 c
 c Fish out hour angle if required.
 c
           if (xaxis.eq.'hangle' .or. xaxis.eq.'dhangle' .or.
      +        yaxis.eq.'hangle' .or. yaxis.eq.'dhangle') then
-	    call uvrdvrd(lin,'ra',dtemp,0.d0)
-	    call uvrdvrd(lin,'obsra',ra,dtemp)
-	    call getlst(lin,lst)
+            call uvrdvrd(lin,'ra',dtemp,0.d0)
+            call uvrdvrd(lin,'obsra',ra,dtemp)
+            call getlst(lin,lst)
             ha = (lst - ra)
             if (ha.gt.dpi) then
               ha = ha - 2.0d0*dpi
@@ -631,33 +645,33 @@ c
 c
 c  Fish out jyperk or rms if required.
 c
-	  if(xaxis.eq.'jyperk'.or.yaxis.eq.'jyperk')then
-	    call uvDatgtr('jyperk',jyperk)
-	  endif
-	  if(xaxis.eq.'rms'.or.yaxis.eq.'rms')then
-	    call uvDatgtr('variance',rms)
-	  endif
+          if(xaxis.eq.'jyperk'.or.yaxis.eq.'jyperk')then
+            call uvDatgtr('jyperk',jyperk)
+          endif
+          if(xaxis.eq.'rms'.or.yaxis.eq.'rms')then
+            call uvDatgtr('variance',rms)
+          endif
 c
 c  Fish out the parallactic angle,azimuth or elevation
 c  if required.
 c
-	  if(xaxis.eq.'parang'.or.yaxis.eq.'parang'.or.
+          if(xaxis.eq.'parang'.or.yaxis.eq.'parang'.or.
      +       xaxis.eq.'az'.or.yaxis.eq.'az'.or.
      +       xaxis.eq.'el'.or.yaxis.eq.'el'.or.
-     +	     xaxis.eq.'airmass'.or.yaxis.eq.'airmass')then
-	    call uvrdvrd(lin,'ra',dtemp,0.d0)
+     +       xaxis.eq.'airmass'.or.yaxis.eq.'airmass')then
+            call uvrdvrd(lin,'ra',dtemp,0.d0)
             call uvrdvrd (lin, 'obsra', ra, dtemp)
-	    call uvrdvrd(lin,'dec',dtemp,0.d0)
-	    call uvrdvrd(lin, 'obsdec',dec,dtemp)
-	    call getlst(lin, lst)
-	    call getlat(lin, lat)
-	    if(xaxis.eq.'parang'.or.yaxis.eq.'parang')
-     +	      call parang(ra,dec,lst,lat,paran)
-	    if(xaxis.eq.'az'.or.yaxis.eq.'az'.or.
-     +	       xaxis.eq.'el'.or.yaxis.eq.'el'.or.
-     +	       xaxis.eq.'airmass'.or.yaxis.eq.'airmass')
-     +	      call azel(ra,dec,lst,lat,az,el)
-	  endif
+            call uvrdvrd(lin,'dec',dtemp,0.d0)
+            call uvrdvrd(lin, 'obsdec',dec,dtemp)
+            call getlst(lin, lst)
+            call getlat(lin, lat)
+            if(xaxis.eq.'parang'.or.yaxis.eq.'parang')
+     +        call parang(ra,dec,lst,lat,paran)
+            if(xaxis.eq.'az'.or.yaxis.eq.'az'.or.
+     +         xaxis.eq.'el'.or.yaxis.eq.'el'.or.
+     +         xaxis.eq.'airmass'.or.yaxis.eq.'airmass')
+     +        call azel(ra,dec,lst,lat,az,el)
+          endif
 c
           fday = day - dayoff
 c
@@ -677,7 +691,7 @@ c Set x and y values
 c
               call setval (xaxis, ha, u, v, uvdist, uvpa, fday, fyear,
      +                     paran, lst, az, el, jyperk, rms,
-     +			   data(j), j, freq, xvalr, xgood)
+     +                     data(j), j, freq, xvalr, xgood)
               call setval (yaxis, ha, u, v, uvdist, uvpa, fday, fyear,
      +                     paran, lst, az, el, jyperk, rms,
      +                     data(j), j, freq, yvalr, ygood)
@@ -724,8 +738,9 @@ c
             end if
           end do
 c
-c See if we have filled up ALL of the allocated plot buffer for this file
-c and go on to the next file if plotting files with different symbols
+c See if we have filled up ALL of the allocated plot buffer for this
+c file and go on to the next file if plotting files with different
+c symbols
 c
 900       call fullup (maxbase, pl2dim, pl3dim, pl4dim, maxpnt, maxpol,
      +                 npts(1,1,plfidx), ifile, allfull)
@@ -823,8 +838,6 @@ c    x,ysum,sqi   Sum and sum of square of imaginary quantity
 c    nsum         Number of points accumulated so far this interval
 c
 c-----------------------------------------------------------------------
-      implicit none
-c
       logical dovec(2)
       integer nsum
       real xvalr, yvalr, xsumr, ysumr, xsumsqr, ysumsqr,
@@ -853,8 +866,6 @@ c    sumsqr    Sum of real squares (vector and imaginary)
 c    sumsqi    Imaginary sum of squares (vector)
 c
 c-----------------------------------------------------------------------
-      implicit none
-c
       logical dovec
       complex cval
       real rval, sumr, sumi, sumsqr, sumsqi
@@ -884,8 +895,6 @@ c     Output
 c       arr      Array of numbers
 c
 c-----------------------------------------------------------------------
-      implicit none
-c
       character*(*) aline
       integer ilen, n
       real arr(*)
@@ -923,8 +932,8 @@ c     the averaged qantities and dump them to the plot buffer.
 c
 c  Input:
 c    dorms         True to plot error bars when averaging; x and y
-c		   dorms(3) = false for standard deviation, true for
-c		   standard deviation of the mean
+c                  dorms(3) = false for standard deviation, true for
+c                  standard deviation of the mean
 c    dovec         If true using vector averaging; x and y
 c    dobase        If true each baseline on a separate sub-plot
 c    dodoub        If true plot -u and -v as well as u and v
@@ -965,11 +974,10 @@ c    buffer        Plot buffer
 c  Input/output (work space):
 c    x,yave        Averaged quantities to plot
 c    x,ysig        Standard deviation on averaged point
-c    plpts         Used in picking out every INCth point from plot arrays
+c    plpts         Used in picking out every INCth point from plot
+c                  arrays
 c
 c-----------------------------------------------------------------------
-      implicit none
-c
       logical doavall, dorms(3), dovec(2), dobase, dodoub, yrtest,
      +  xrtest
       integer pl1dim, pl2dim, pl3dim, pl4dim, maxbase, maxpol,
@@ -990,7 +998,7 @@ c
       character xaxis*(*), yaxis*(*)
 cc
       integer i, j, plbidx, nb, np
-c-------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
 c Average sums for all the baselines for each polarization
 c
@@ -1070,8 +1078,6 @@ c    ave       Averaged value to plot
 c    sig       Standard deviation associated with averaged quantity
 c
 c-----------------------------------------------------------------------
-      implicit none
-c
       logical dorms, errmean, dovec
       character axis*(*)
       integer nbasst, nsum(nbasst)
@@ -1154,9 +1160,9 @@ c             a unique index for this array.  The value of the
 c             array for the baseline gives its plot index.  If the
 c             array element is zero, this baseline has not yet been
 c             assigned a plot number so better give it one.
-c    polmsk   Map between polarization number (-8 -> +4) and polarization
-c             number (1 -> maxpol).  The value of the array is the
-c             number for that polarization.  Like basmsk
+c    polmsk   Map between polarization number (-8 -> +4) and
+c             polarization number (1 -> maxpol).  The value of the array
+c             is the number for that polarization.  Like basmsk
 c    nbases   Number of different baselines encountered so far
 c    npols    Number of different polarizations encountered so far
 c  Output:
@@ -1167,8 +1173,6 @@ c    a1a2     The two antennas for each baseline plot number
 c    skip     If true, then we ran out of room for more baselines
 c
 c-----------------------------------------------------------------------
-      implicit none
-c
       double precision baseln
       logical doave, doavall, dobase, skip, bwarn(2)
       integer maxbase, maxant, nbases, npols, plbidx, stbidx,
@@ -1221,7 +1225,7 @@ c
         end if
       end if
 c
-c Now assign indices into plotting and statistics arrays for this baseline
+c Assign indices into plotting and statistics arrays for this baseline.
 c
       if (dobase) then
 c
@@ -1336,12 +1340,11 @@ c    x,ysig        standard deviation on averaged x and y points
 c  Input/output
 c    npts          Number of points in each plot buffer
 c    buffer        Plot buffer
-c    plpts         Used in picking out every INCth point from plot arrays
+c    plpts         Used in picking out every INCth point from plot
+c                  arrays
 c    inc           Plot every INCth point after final data selection
 c
 c-----------------------------------------------------------------------
-      implicit none
-c
       logical xrtest, yrtest, dorms(2)
       integer pl1dim, pl2dim, pl3dim, pl4dim, maxbase, maxpol, maxfile,
      +  npts(maxbase,maxpol,maxfile), plpts(maxbase,maxpol,maxfile),
@@ -1398,12 +1401,13 @@ c     x,ymin,max  User specified data extrema for plots
 c     dayav       Length of averaging period in days
 c     dointer     True for interactive plotting
 c   Input/output:
-c     dovec       Vector averaging, else scalar averaging; x and y
+c     dovec       Vector averaging, else scalar averaging; x and y.
 c                 User just asks for vector averaging, and uvplt tries
-c                 to work out if it can do this on both axes or just one.
+c                 to work out if it can do this on both axes or just
+c                 one.
 c     dorms       True to plot error bars when averaging; x and y
-c		  dorms(3) = false for standard deviation, true for
-c		  standard deviation of the mean
+c                 dorms(3) = false for standard deviation, true for
+c                 standard deviation of the mean
 c     doperr      If true then the automatically determined Y window
 c                 includes the ends of the error bars
 c     dowrap      Do not unwrap phase
@@ -1412,16 +1416,14 @@ c     dodoub      PLot -u and/or -v on plot
 c     dowave      Either X axis or Y axis needs infor from preamble
 c     doave       Averaging requested
 c     hann        Apply hanning smoothing
-c     x,yrtest    If true, then only accumulate in the plot buffer's
-c                 X or Y points that are within the user specified ranges
+c     x,yrtest    If true, then only accumulate in the plot buffer's X
+c                 or Y points that are within the user specified ranges
 c                 This allows less wastage of space, as when interactive
 c                 mode is not selected and there is no plot window
 c                 redefinition, the points outside the given range
 c                 are never going to be looked at
 c
 c-----------------------------------------------------------------------
-      implicit none
-c
       integer hann
       character*(*) xaxis, yaxis
       double precision dayav
@@ -1555,20 +1557,19 @@ c    dorms     If true want error bars when averaging; x and y
 c
 c  Input/output
 c    npols     Number of polarizations selected by user from input files
-c	       (either specified by stokes/select or actual via 2PASS)
-c	       or value of 'npols' of first integration if no selections
-c	       Zero on output
+c              (either specified by stokes/select or actual via 2PASS)
+c              or value of 'npols' of first integration if no
+c              selections.  Zero on output.
 c    nbases    Number of baselines selected by user from input files
-c              (via 2PASS) or number of baselines corresponding to 'nants'
-c	       of first integration
-c              Zero on output
+c              (via 2PASS) or number of baselines corresponding to
+c              'nants' of first integration.  Zero on output.
 c
 c  Output:
 c               The plot buffer is dimensioned
 c                 buffer(pl1dim,pl2dim,pl3dim,pl4dim)
 c                        points  basel  pol    files
 c    maxpnt     Maximum number of points allowed to plot for each
-c		baseline, polarization and file
+c               baseline, polarization and file
 c    pl1dim     Dimensions of first index in BUFFER when passed to
 c               subroutines.  First dimension contains:
 c               X, Y, Xlo, Xhi, Ylo, Yhi (all vectors), where X and Y
@@ -1584,7 +1585,6 @@ c    elo,eho    Offsets in the first index of BUFFER for the
 c               Xlo, Xhi, Ylo and Yhi vectors
 c
 c-----------------------------------------------------------------------
-      implicit none
       integer maxbuf2, maxbase, maxbase2, maxpol, maxfile
       integer nfiles, npols, nbases, pl1dim, pl2dim, pl3dim, pl4dim,
      +maxpnt, xo, yo, elo(2), eho(2)
@@ -1708,8 +1708,6 @@ c  Output:
 c    reset      True when the end of the averaging interval reached
 c
 c-----------------------------------------------------------------------
-      implicit none
-c
       double precision day, baseday, dayav
       logical reset
       integer ivis, vupd
@@ -1747,7 +1745,6 @@ c     Input/output:
 c       dmin,max    Minimum and maximum
 c
 c-----------------------------------------------------------------------
-      implicit none
       real dmin, dmax
 c-----------------------------------------------------------------------
       if (dmin.eq.dmax) then
@@ -1781,8 +1778,6 @@ c  Output
 c    allfull       True if no space left for this file
 c
 c-----------------------------------------------------------------------
-      implicit none
-c
       integer maxpnt, maxpol, pl2dim, pl3dim, pl4dim, plfidx, maxbase,
      +  npts(maxbase,maxpol)
       logical allfull
@@ -1807,7 +1802,7 @@ c
 c
       if (pl4dim.gt.1) then
         call bug('w','Plot buffer allocation for file '//
-     *	  itoaf(plfidx)//' exhausted; some data lost')
+     *    itoaf(plfidx)//' exhausted; some data lost')
       else
         call bug('w','Plot buffer allocation exhausted; some data lost')
       end if
@@ -1821,18 +1816,18 @@ c-----------------------------------------------------------------------
 c  Get a visibility. If needed, perform channel averaging.
 c
 c  Input:
-c    maxchan	Maximum number of channels that can be read.
-c    dofqav	If true, average all good channels into a single channel.
-c    doflag	If true, treat the flagged data as the desirable ones.
-c    doall	If true, ignore the data flags completely.
+c    maxchan    Maximum number of channels that can be read.
+c    dofqav     If true, average all good channels into a single
+c               channel.
+c    doflag     If true, treat the flagged data as the desirable ones.
+c    doall      If true, ignore the data flags completely.
 c
 c  Output:
-c    preamble	Normal preamble.
-c    data	Correlation data.
-c    flags	Data flags.
-c    nread	Number of output channels (after freqency averaging).
-c------------------------------------------------------------------------
-      implicit none
+c    preamble   Normal preamble.
+c    data       Correlation data.
+c    flags      Data flags.
+c    nread      Number of output channels (after freqency averaging).
+c-----------------------------------------------------------------------
       integer maxchan,nread
       double precision preamble(4)
       complex data(maxchan)
@@ -1885,8 +1880,6 @@ c     pdev       Plot device/type
 c     il         Length of PDEV
 c
 c-----------------------------------------------------------------------
-      implicit none
-c
       integer il, len1
       character*(*) pdev, devdef
 cc
@@ -1911,10 +1904,9 @@ c
       end if
 c
       end
-c************************************************************************
+c***********************************************************************
       subroutine getlst (lin, lst)
 c
-      implicit none
       integer lin
       double precision lst
 c
@@ -1937,12 +1929,12 @@ c
       lst = 0.0d0
       call uvprobvr (lin, 'lst', type, length, ok)
       if (type(1:1).eq.' ') then
-	call uvrdvrd (lin, 'ra', dtemp, 0.d0)
-	call uvrdvrd (lin, 'obsra', ra, dtemp)
-	call getlong(lin,long)
-	call uvrdvrd(lin,'time',time,0.d0)
+        call uvrdvrd (lin, 'ra', dtemp, 0.d0)
+        call uvrdvrd (lin, 'obsra', ra, dtemp)
+        call getlong(lin,long)
+        call uvrdvrd(lin,'time',time,0.d0)
         call jullst (time, long, lst)
-	lst = lst + eqeq(time)
+        lst = lst + eqeq(time)
       else
          call uvrdvrd (lin, 'lst', lst, 0.0d0)
       end if
@@ -1969,13 +1961,13 @@ c
       logical ok, printed
       save printed
       data printed/.false./
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       long = 0.0d0
       call uvprobvr (lin, 'longitu', type, length, ok)
       if (type(1:1).eq.' ') then
          if(.not.printed)call bug ('w',
-     *		'No longitude variable; trying telescope')
-	 printed = .true.
+     *          'No longitude variable; trying telescope')
+         printed = .true.
          call uvprobvr (lin, 'telescop', type, length, ok)
          if (type(1:1).eq.' ') then
             call bug ('f',
@@ -2010,13 +2002,13 @@ c
       logical ok, printed
       save printed
       data printed/.false./
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       lat = 0.0d0
       call uvprobvr (lin, 'latitud', type, length, ok)
       if (type(1:1).eq.' ') then
          if(.not.printed)call bug ('w',
-     *		'No latitude variable; trying telescope')
-	 printed = .true.
+     *          'No latitude variable; trying telescope')
+         printed = .true.
          call uvprobvr (lin, 'telescop', type, length, ok)
          if (type(1:1).eq.' ') then
             call bug ('f',
@@ -2071,10 +2063,8 @@ c     dosymb    True if plot each file with differnet symbol
 c     dodots    Plot averaged data as dots instead of filled circles
 c     docol     Plot different files in differnet colours
 c     twopass   Make two passes through the data
-c     dofqav	Average channels before plotting.
+c     dofqav    Average channels before plotting.
 c-----------------------------------------------------------------------
-      implicit none
-c
       logical dorms(3), dovec(2), doall, doflag, dobase, dointer,
      +  doperr, dolog, dozero, doequal, donano, docal, dopol, dosrc,
      +  doday, dohour, dosec, doavall, doxind, doyind, dowrap,
@@ -2150,8 +2140,6 @@ c  Output
 c    rmin,max Range in appropriate units
 c
 c-----------------------------------------------------------------------
-      implicit none
-c-----------------------------------------------------------------------
       character*(*) axis, keyw
       real rmin, rmax
 cc
@@ -2223,8 +2211,6 @@ c    win      User's values
 c    ok       SUccess decoding of inputs
 c
 c-----------------------------------------------------------------------
-      implicit none
-c-----------------------------------------------------------------------
       character axis*1, type*(*)
       real rlo, rhi, win(2)
       logical ok
@@ -2268,7 +2254,7 @@ c
 c
 c
       subroutine getval (ilen, aline, ib, val, ok)
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c     Look for the next number in string, where the delimiters
 c     are any amount of white space.
 c
@@ -2282,8 +2268,6 @@ c    val     The number
 c    ok      If false, failed to get integer
 c
 c-----------------------------------------------------------------------
-      implicit none
-c
       double precision val
       integer ilen, ib
       logical ok
@@ -2323,7 +2307,6 @@ c  Input/output:
 c    x1,x2,y1,y2        Previous and new plot window.
 c
 c-----------------------------------------------------------------------
-      implicit none
       real xlo, xhi, ylo, yhi
       character*(*) xaxis, yaxis
 cc
@@ -2355,10 +2338,9 @@ c
 c
       end
 c
-c************************************************************************
+c***********************************************************************
       subroutine getwvl (donano, preamble, u, v, uvdist, uvpa)
 c
-      implicit none
       double precision preamble(2)
       real u, v, uvdist, uvpa
       logical donano
@@ -2396,7 +2378,7 @@ c
         uvpa = 999.0
       end if
       end
-c************************************************************************
+c***********************************************************************
       subroutine goodat ( n, flags, nkeep)
 c
 c     See if there is any wanted data in this visibility
@@ -2407,7 +2389,6 @@ c    flags     Channel flags, true if unflagged
 c  Output
 c    keep      Number of visibilities to keep.
 c-----------------------------------------------------------------------
-      implicit none
       integer n, nkeep
       logical flags(n)
 cc
@@ -2441,8 +2422,6 @@ c Input/output:
 c   buffer         Plot buffer
 c
 c-----------------------------------------------------------------------
-      implicit none
-c
       integer pl1dim, pl2dim, pl3dim, pl4dim, maxbase, maxpol,
      +  maxfile, npts(maxbase,maxpol,maxfile), yo, hann,
      +  nbases, npols
@@ -2450,7 +2429,7 @@ c
      +  work(hann)
 cc
       integer i, j, k, nb, np
-c----------------------------------------------------------------------
+c-----------------------------------------------------------------------
       call hcoeffs (hann, coeffs)
 c
 c
@@ -2478,8 +2457,6 @@ c
 c-----------------------------------------------------------------------
 c     Initialize accumulators
 c-----------------------------------------------------------------------
-      implicit none
-c
       integer maxbase, maxpol, nsum(maxbase,maxpol)
       real xsumr(maxbase,maxpol), ysumr(maxbase,maxpol),
      +  xsumsqr(maxbase,maxpol), ysumsqr(maxbase,maxpol),
@@ -2522,8 +2499,8 @@ c    x,ymin,max   User given extrema for plots.
 c    dayav        Averaging interval in days
 c    tunit        Converts averaging time in units given by user to days
 c    dorms        True to plot error bars when averaging; x and y
-c		  dorms(3) = false for standard deviation, true for
-c		  standard deviation of the mean
+c                 dorms(3) = false for standard deviation, true for
+c                 standard deviation of the mean
 c    dovec        True for vector averging, else scalar; x and y
 c    doflag       Plot flagged visbiltites only else plot unflagged
 c    doall        Plot flagged and unflagged.  Overrides DOFLAG
@@ -2557,8 +2534,6 @@ c    twopass      Make two passes through the data
 c    dofqav       Average frequency channels before plotting.
 c    dotitle      When false don't write plot title
 c-----------------------------------------------------------------------
-      implicit none
-c
       character*(*) xaxis, yaxis, pdev, logf, comment
       double precision dayav
       real xmin, xmax, ymin, ymax, size(2)
@@ -2716,7 +2691,6 @@ c     Input/output:
 c       dmin,max    Minimum and maximum
 c
 c-----------------------------------------------------------------------
-      implicit none
       real dmin, dmax
 cc
       real absmax, delta
@@ -2744,8 +2718,6 @@ c    doall    True if plotting flagged and unflagged points
 c    doflag   True if plotting only flagged points
 c
 c-----------------------------------------------------------------------
-      implicit none
-c
       character logf*(*), comment*(*)
       logical doave, dovec(2), doall, doflag
 cc
@@ -2800,8 +2772,6 @@ c   Output
 c     title   Title string
 c
 c-----------------------------------------------------------------------
-      implicit none
-c
       double precision dayav
       integer tunit, nfiles, nread, lin
       character*(*) title
@@ -2866,7 +2836,6 @@ c
 c-----------------------------------------------------------------------
 c     Set default number of sub-plots
 c-----------------------------------------------------------------------
-      implicit none
       integer nplot, nx, ny
 cc
       integer maxsub
@@ -2905,11 +2874,13 @@ c   doequal        Plot x and y with equal scales
 c   donano         u and v in nanoseconds, else k-lambda
 c   dox,yind       If true self-scaling is independent on the x,y-axis
 c                  for each sub-plot
-c   doperr         Include errors in automtaically determined plot limits
+c   doperr         Include errors in automtaically determined plot
+c                  limits
 c   dowrap         False to unwrap phases
 c   dosymb         Plot each file with a differnet symbol
 c   dodots         Plot averaged data as dots rather than filled circles
-c   docol          Plot differnt files in different colours if one polarization
+c   docol          Plot differnt files in different colours if one
+c                  polarization
 c   dotitle        False to not write plot title
 c   title          Title for plot
 c   x,yaxis        X and Y axis types
@@ -2936,8 +2907,6 @@ c Input/output
 c   xx,yymin,max   Work array (automatically determined plot extrema)
 c   order          Work array
 c-----------------------------------------------------------------------
-      implicit none
-c
       integer pl1dim, pl2dim, pl3dim, pl4dim, maxbase, maxpol, maxfile,
      +  xo, yo, elo(2), eho(2), a1a2(maxbase,2), order(maxbase),
      +  npts(maxbase,maxpol,maxfile), nx, ny, polmsk(-8:4),
@@ -2969,7 +2938,7 @@ c
       data fmt /'i1', 'i2'/
       data cols1 /1, 7, 2, 5, 3, 4, 6, 8, 9,  10, 11, 12/
       data cols2 /1, 2, 5, 3, 4, 6, 8, 9, 10, 11, 12, 13/
-c----------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
 c  Write plot labels; strings must be long enough to accomodate
 c  double backslashes caused by ratty for SUNs (\ has to be escaped)
@@ -3238,10 +3207,10 @@ c
 c  Plot points and errors
 c
               do lp = 1, np
-	        icol = mod(lp-1,NCOL)+1
+                icol = mod(lp-1,NCOL)+1
                 if (np.ne.1 .and. .not.doavall) call pgsci (cols(icol))
                 do jf = 1, pl4dim
-	          icol = mod(jf-1,NCOL)+1
+                  icol = mod(jf-1,NCOL)+1
                   if (np.eq.1 .and. docol) call pgsci (cols(icol))
                   if (dosymb) then
                     sym = jf
@@ -3409,8 +3378,6 @@ c    npts          Number of points found so far for each combinaiton
 c                  of baseline, polarization and file
 c
 c-----------------------------------------------------------------------
-      implicit none
-c
       integer pl2dim, pl3dim, pl4dim, maxfile, maxpnt, maxbase,
      +  maxpol, ifile, npts(maxbase,maxpol,maxfile), a1a2(maxbase,2),
      +  plfidx
@@ -3441,13 +3408,13 @@ c
      +            itoaf(a1a2(i,2))//', pol''n '//itoaf(j)//
      +            ' filled for file # '//itoaf(ifile))
                else
-		  aline = stcat(
-     *			stcat('Buffer for baseline '//itoaf(a1a2(i,1)),
-     *			      '-'//itoaf(a1a2(i,2))),
-     *			stcat(', pol''n '//itoaf(j),
-     *			      ' filled while reading file # '//
-     *				itoaf(ifile)))
-		  call bug('w',aline)
+                  aline = stcat(
+     *                  stcat('Buffer for baseline '//itoaf(a1a2(i,1)),
+     *                        '-'//itoaf(a1a2(i,2))),
+     *                  stcat(', pol''n '//itoaf(j),
+     *                        ' filled while reading file # '//
+     *                          itoaf(ifile)))
+                  call bug('w',aline)
                end if
             else
                if (pl4dim.gt.1) then
@@ -3456,7 +3423,7 @@ c
                else
                  call bug ('w', 'Plot buffer filled for polarization '//
      +                     itoaf(j)//' while reading file # '
-     *			   //itoaf(ifile))
+     *                     //itoaf(ifile))
                end if
             end if
           end if
@@ -3479,7 +3446,6 @@ c  Output:
 c    label    Label
 c    opt      Axis options string for pgplot
 c-----------------------------------------------------------------------
-      implicit none
       character*(*) axis, label, xory*1, units*10, opt*(*)
       logical dozero
 cc
@@ -3504,11 +3470,11 @@ c-----------------------------------------------------------------------
       else if (axis.eq.'el') then
         label = 'Elevation (degrees)'
       else if (axis.eq.'jyperk')then
-	label = 'System gain [Jy/K]'
+        label = 'System gain [Jy/K]'
       else if (axis.eq.'rms')then
-	label = 'Theoretical noise rms [Jy]'
+        label = 'Theoretical noise rms [Jy]'
       else if (axis.eq.'airmass')then
-	label = 'Airmass [1/sin(el)]'
+        label = 'Airmass [1/sin(el)]'
       else if (axis.eq.'uvdistance') then
         label = '(u\u2\d + v\u2\d)\u1/2\d'//units
       else if (axis.eq.'uu' .or. axis.eq.'uc') then
@@ -3541,12 +3507,11 @@ c
 c
       end
 c
-c************************************************************************
+c***********************************************************************
       subroutine setval (axis, ha, u, v, uvdist, uvpa, fday, fyear,
      +                   parang, lst, az, el, jyperk, rms,
-     +			 data, ichan, freq, val, ok)
+     +                   data, ichan, freq, val, ok)
 c
-      implicit none
       complex data
       double precision fday, fyear, freq(*), ha, lst, az, el
       real val, u, v, uvdist, uvpa, parang, jyperk, rms
@@ -3593,17 +3558,17 @@ c-----------------------------------------------------------------------
       else if (axis.eq.'parang') then
         val = 180./DPI * parang
       else if (axis.eq.'lst') then
-	val = 12/PI * lst
+        val = 12/PI * lst
       else if (axis.eq.'az') then
         val = 180./PI * az
       else if (axis.eq.'el') then
         val = 180./PI * el
       else if (axis.eq.'airmass') then
-	val = 1/sin(el)
+        val = 1/sin(el)
       else if (axis.eq.'jyperk') then
-	val = jyperk
+        val = jyperk
       else if (axis.eq.'rms') then
-	val = sqrt(rms)
+        val = sqrt(rms)
       else if (axis.eq.'ytime') then
 c
 c Fractional year
@@ -3647,8 +3612,6 @@ c  Output:
 c   val       axis value
 c
 c-----------------------------------------------------------------------
-      implicit none
-c
       character*(*) axis
       complex data
       real val, amp, phase
@@ -3667,19 +3630,17 @@ c
 c
 c
       subroutine shorng (axis, type, rlo, rhi)
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c     Write current axis range to screen for user's perusal
 c
-c------------------------------------------------------------------------
-      implicit none
-c
+c-----------------------------------------------------------------------
       character axis*1, type*(*)
       real rlo, rhi
 cc
       real rem, tss, tes
       integer tsd, tsh, tsm, ted, teh, tem, il, len1, i
       character ss*1, se*1, aline*132
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       if (type.eq.'time') then
         rem = rlo / 3600.0
         tsd = int(rem / 24.0)
@@ -3791,8 +3752,6 @@ c   pl3dim   size of polarization dimension of BUFFER
 c   pl4dim   size of file dimension of BUFFER
 c
 c-----------------------------------------------------------------------
-      implicit none
-c
       integer ivis, ifile, maxbase, maxpol, npts(maxbase,maxpol),
      +  a1a2(maxbase,2), pl2dim, pl3dim, pl4dim
       logical dobase, none
@@ -3803,15 +3762,15 @@ cc
 c
 c  Externals.
 c
-	character itoaf*8,stcat*80
+        character itoaf*8,stcat*80
 c
 c-----------------------------------------------------------------------
       if (pl4dim.gt.1) then
-	aline = stcat('Read '//itoaf(ivis),
-     *		      ' visibilities from file '//itoaf(ifile))
+        aline = stcat('Read '//itoaf(ivis),
+     *                ' visibilities from file '//itoaf(ifile))
       else
-	aline = stcat('Read '//itoaf(ivis),
-     *		      ' visibilities from all files')
+        aline = stcat('Read '//itoaf(ivis),
+     *                ' visibilities from all files')
       end if
       call logwrite (aline(1:len1(aline)), more)
       call logwrite (' ',more)
@@ -3825,10 +3784,10 @@ c
           end do
           if (nsum.gt.0) then
             nunloc = .false.
-	    aline = stcat(
-     *		      stcat('Baseline '//itoaf(a1a2(i,1)),
-     *			    '-'//itoaf(a1a2(i,2))),
-     *		      stcat(', plot '//itoaf(nsum),' points'))
+            aline = stcat(
+     *                stcat('Baseline '//itoaf(a1a2(i,1)),
+     *                      '-'//itoaf(a1a2(i,2))),
+     *                stcat(', plot '//itoaf(nsum),' points'))
             call logwrite (aline(1:len1(aline)), more)
           end if
         end do
@@ -3839,7 +3798,7 @@ c
         end do
         if (nsum.gt.0) then
           nunloc = .false.
-	  aline = stcat('Plot '//itoaf(nsum),' points')
+          aline = stcat('Plot '//itoaf(nsum),' points')
           call logwrite (aline(1:len1(aline)), more)
         end if
       end if
@@ -3861,7 +3820,7 @@ c
 c
 c
       subroutine timdc2 (aline, tlo, thi, ok)
-c----------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c     Decode HH MM S.S  HH MM SS.S string into two floating point
 c     numbers in seconds.  Probably won't deal with all stupid
 c     formats, but should be good enough.
@@ -3873,16 +3832,14 @@ c    tlo       Start time in seconds
 c    thi       End time in seconds
 c    ok        If false, decoding failed
 c
-c----------------------------------------------------------------------
-      implicit none
-c
+c-----------------------------------------------------------------------
       character*(*) aline
       real tlo, thi
       logical ok
 cc
       integer ilen, ib, i, s
       double precision t(6)
-c----------------------------------------------------------------------
+c-----------------------------------------------------------------------
       ilen = len(aline)
       if (ilen.eq.0) then
          ok = .false.
@@ -3913,7 +3870,7 @@ c
 c
 c
       subroutine timdec (aline, tlo, thi, ok)
-c----------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c     Decode DD HH MM S.S  DD HH MM SS.S string into two floating point
 c     numbers in seconds.  Probably won't deal with all stupid
 c     formats, but should be good enough.
@@ -3925,16 +3882,14 @@ c    tlo       Start time in seconds
 c    thi       End time in seconds
 c    ok        If false, decoding failed
 c
-c----------------------------------------------------------------------
-      implicit none
-c
+c-----------------------------------------------------------------------
       character*(*) aline
       real tlo, thi
       logical ok
 cc
       integer ilen, ib, i
       double precision t(8)
-c----------------------------------------------------------------------
+c-----------------------------------------------------------------------
       ilen = len(aline)
       if (ilen.eq.0) then
          ok = .false.
@@ -3961,7 +3916,7 @@ c
 c
 c
       subroutine track (lin, vupd)
-c-------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c     Track the change of some uv variables.  If they change, then
 c     we need to reset the averaging accumulators
 c
@@ -3970,11 +3925,9 @@ c    lin     Handle of file
 c  Output:
 c    vupd    "Variable handle" to track the needed variables.
 c
-c-------------------------------------------------------------------
-      implicit none
-c
+c-----------------------------------------------------------------------
       integer lin, vupd
-c--------------------------------------------------------------------
+c-----------------------------------------------------------------------
       call uvvarini (lIn, vupd)
       call uvvarset (vupd, 'source')
       call uvvarset (vupd, 'restfreq')
@@ -3990,13 +3943,13 @@ c
 c-----------------------------------------------------------------------
 c     Unwrap phases
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       integer n
       real phs(n)
 cc
       real theta0
       integer i
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       theta0 = phs(1)
       do i = 2, n
          phs(i) = phs(i) - 360*nint((phs(i)-theta0)/360.0)
@@ -4026,8 +3979,6 @@ c    baseday   Reference day from first file
 c    dayoff    Offset to subtract from day to make fractional days
 c    yearoff   Offset to subtract from day/365.25 to make years
 c-----------------------------------------------------------------------
-      implicit none
-c
       double precision baseday, yearoff
       integer maxchan, dayoff
       complex data(maxchan)
@@ -4051,12 +4002,12 @@ c Loop over files
 c
       call uvdatgti ('nfiles', nfiles)
       do i = 1, nfiles
-	if(.not.uvDatOpn(lin))call bug('f','Error opening inputs')
+        if(.not.uvDatOpn(lin))call bug('f','Error opening inputs')
 c
 c Read first visbility (making variables available)
 c
         call getdat (preamble, data, goodf, maxchan, nread,
-     *					dofqav, doflag, doall)
+     *                                  dofqav, doflag, doall)
 c
         if (i.eq.1) then
 c
@@ -4104,12 +4055,12 @@ c
             end if
           end if
 c
-	  npnts = npnts + nkeep
+          npnts = npnts + nkeep
 c
 c Read another visibility
 c
           call getdat (preamble, data, goodf, maxchan, nread,
-     *					dofqav, doflag, doall)
+     *                                  dofqav, doflag, doall)
         end do
         call uvdatcls
       end do
@@ -4145,8 +4096,6 @@ c    nbases    Number of baselines encountered
 c    baseday   Reference day from first file
 c    dayoff    Offset to subtract from day to make fractional days
 c-----------------------------------------------------------------------
-      implicit none
-c
       double precision baseday, yearoff
       integer nfiles, npols, nbases, dayoff
 cc
