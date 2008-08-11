@@ -202,8 +202,11 @@ c        log     Write the values and errors (if averaging) that are
 c                plotted into the log file.  No attempt to separate
 c                baselines is made, except that automatically obtained
 c                by not setting OPTIONS=NOBASE
+c@ subtitle
+c       Second line of title for plot (the first line is generated
+c       automatically).  Default is no sub-title.
 c@ device
-c       PGPLOT plot device/type. No default.
+c       PGPLOT plot device/type.  No default.
 c@ nxy
 c       Number of plots in the x and y directions for when plotting
 c       each baseline separately. Defaults try to choose something
@@ -406,7 +409,7 @@ c       way the available space is better used.  MAXFILE is set to
 c       be much bigger than any number of files the user is ever
 c       likely to input.
 c
-c  $Id: uvplt.for,v 1.4 2008/08/11 01:40:32 cal103 Exp $
+c  $Id: uvplt.for,v 1.5 2008/08/11 02:35:48 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
@@ -482,7 +485,7 @@ c
       data polmsk /13*0/
 c-----------------------------------------------------------------------
       version = versan ('uvplt',
-     +  '$Id: uvplt.for,v 1.4 2008/08/11 01:40:32 cal103 Exp $')
+     +  '$Id: uvplt.for,v 1.5 2008/08/11 02:35:48 cal103 Exp $')
 c
 c  Get the parameters given by the user and check them for blunders
 c
@@ -2040,7 +2043,7 @@ c     dovec     True if user wants vector averaging, else scalar
 c     doflag    Plot only flagged data else plot only unflagged data
 c     doall     PLot flagged and unflagged.
 c     doday     Averaging time in days if true, else minutes
-c     dohour    Averaging time in hours if true, esle minutes
+c     dohour    Averaging time in hours if true, else minutes
 c     dosec     Averaging time in seconds if true, else minutes
 c     dobase    True if user wants each baseline on a differnet plot
 c     dotitle   If false then don't write plot title
@@ -3321,6 +3324,7 @@ c-----------------------------------------------------------------------
 cc
       integer i, len1, i1
       real xlen, ylen, xloc, vlen
+      character title2*80
 c-----------------------------------------------------------------------
 c
 c Find total length that title string will be
@@ -3355,6 +3359,10 @@ c Write rest of title
 c
       call pgsci (1)
       call pgmtxt ('T', 2.0, xloc, 0.0, title)
+
+      call keya ('subtitle', title2, ' ')
+      if (title2.ne.' ') call pgmtxt ('T', 0.8, 0.5, 0.5, title2)
+
       end
 c
 c
