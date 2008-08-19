@@ -125,7 +125,8 @@ c
 	do i=1,obins
 	  l = len1(binsl(i))
 	  ok = .false.
-	  if(l.gt.3)ok = binsl(i)(1:1).eq.'('.and.
+c  Minimum length is 3: ([1-9].)
+	  if(l.ge.3)ok = binsl(i)(1:1).eq.'('.and.
      *		         binsl(i)(l:l).eq.')'
 	  if(.not.ok)call bug('f','Invalid bin selection: '//binsl(i))
 c  dpr 09-11-00:
