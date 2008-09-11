@@ -71,6 +71,7 @@ c    rjs  20sep05    Correct handling of degenerate extension tables.
 c    rjs  01jan07    Added routines fantbas and fbasant to convert baseline
 c		     numbering convension.
 c    pjt  08mar07    Added support for reading bitpix=-64 images
+c    rjs  11sep08    More robust to truncated files
 c
 c  Bugs and Shortcomings:
 c    * IF frequency axis is not handled on output of uv data.
@@ -2811,8 +2812,12 @@ c
 	    itemp = 1
 	  endif
 	  if(itemp.lt.gcount)then
-	    if(itemp.eq.0)
-     *		call bug('f','Serious inconsistency in file size')
+	    if(itemp.eq.0)then
+	      call bug('w','Serious inconsistency in file size')
+	      call bug('w',
+     *		'An extension file has been trimmed or discarded')
+	      return
+	    endif
 	    call bug('w','File size inconsistency: '//
      *			 'Some data may be lost')
 	    gcount = itemp
