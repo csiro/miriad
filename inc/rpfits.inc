@@ -9,7 +9,7 @@ C
 C     DOUBLE PRECISION variables were also segregated into a separate
 C     COMMON block for reasons long forgotten.
 C
-C $Id: rpfits.inc,v 1.1 2006/09/11 08:50:24 cal103 Exp $
+C $Id: rpfits.inc,v 1.2 2008/09/11 12:00:03 mirmgr Exp $
 C-----------------------------------------------------------------------
 
       INTEGER   ant_max, max_card, max_cu, max_fg, max_if, max_mt,
@@ -26,9 +26,10 @@ C-----------------------------------------------------------------------
      :           pol_max  = 8)
 
 
-C     Error status value from ATIO I/O operation.
-      INTEGER   rp_iostat
-      COMMON /iostat/ rp_iostat
+C     Error handling.
+      INTEGER   errlun, rp_iostat
+      CHARACTER errmsg*80
+      COMMON /iostat/ rp_iostat, errlun
 
 C     -------- Parameter values obtained from the RPFITS header --------
 C                (except intbase which is a random parameter)
@@ -133,7 +134,7 @@ C     CHARACTER variables (declared in context above).
       COMMON /names/ object, instrument, cal, rp_observer, datobs,
      :          datwrit, file, datsys, version, coord, sta, feed_type,
      :          card, if_cstok, su_name, su_cal, fg_reason, nx_source,
-     :          nx_date, rpfitsversion, bunit, obstype
+     :          nx_date, rpfitsversion, bunit, obstype, errmsg
 
 C     -------------- Values obtained from the RPFITS data --------------
 
