@@ -32,71 +32,75 @@ c@ options
 c	This gives extra processing options. Several can be given,
 c	separated by comas.
 c	  'birdie'  ATCA self-interference can corrupt channels at integral
-c	            multiples of 128 MHz. The birdie option flags these
-c	            channels. Additionally, in continuum (33 channels/128MHz)
-c	            mode, the birdie option dicards every second channel, plus
-c	            some edge channels. The channels discarded
-c	            are those most likely affected by the self-interference.
-c	            Discarding these channels does not have a
-c	            sensitivity penalty, because the effective channel
-c	            bandwidth is twice the channel separation.
+c		    multiples of 128 MHz. The birdie option flags these
+c		    channels. Additionally, in continuum (33 channels/128MHz)
+c		    mode, the birdie option dicards every second channel, plus
+c		    some edge channels. The channels discarded
+c		    are those most likely affected by the self-interference.
+c		    Discarding these channels does not have a
+c		    sensitivity penalty, because the effective channel
+c		    bandwidth is twice the channel separation.
 c	  'reweight' Re-weight the lag spectrum to eliminate the "Gibbs" phenomena.
 c	  'compress' Write output data in compressed format.
 c	  'noauto'  Discard autocorrelation data. The default is to
-c	            copy the autocorrelation data.
+c		    copy the autocorrelation data.
 c	  'nocross' Discard cross-correlation data. The default is to
-c	            copy the cross correlation data.
+c		    copy the cross correlation data.
 c	  'relax'   Do not flag visibilities based on SYSCAL information.
-c	            The default is to flag visibilities if they have
-c	            not been preceded by a valid SYSCAL record, or if the
-c	            the values in the SYSCAL record look bad. SYSCAL
-c	            values are checked for sampler statistics being within
-c	            3% of 17.3%, or 0.5% of 50.0%, that the XY phase
-c	            is within 10 degrees of its running median, and that
-c	            the XY amplitudes are within 1 Jy or 10% of its running
-c	            median. The tests for xy phase and amplitude are
-c	            skipped for 3mm data (as there is no noise calibration
-c	            signal).
-c         'mmrelax' This option is ignored, and is present for historical
-c	            reasons.
+c		    The default is to flag visibilities if they have
+c		    not been preceded by a valid SYSCAL record, or if the
+c		    the values in the SYSCAL record look bad. SYSCAL
+c		    values are checked for sampler statistics being within
+c		    3% of 17.3%, or 0.5% of 50.0%, that the XY phase
+c		    is within 10 degrees of its running median, and that
+c		    the XY amplitudes are within 1 Jy or 10% of its running
+c		    median. The tests for xy phase and amplitude are
+c		    skipped for 3mm data (as there is no noise calibration
+c		    signal).
+c	  'mmrelax' This option is ignored, and is present for historical
+c		    reasons.
 c	  'unflag'  Save any data that is flagged. By default ATLOD
-c	            discards most data that is flagged.
+c		    discards most data that is flagged.
 c	  'opcorr'  Correct for atmospheric opacity. This option is possible
-c	            for data measured after October 2003. It should not be
-c	            used for 3mm data. Generally it is only relevant for
-c	            12mm observations.
+c		    for data measured after October 2003. Because of the way
+c	            system temperature is measured at 3mm (an "above atmosphere"
+c		    measurement), it is not appropriate for 3mm data. This option
+c		    is silently ignored for 3mm data. Generally it is only relevant for
+c		    7mm and 12mm observations. It does no harm (and negligible
+c		    good) for longer wavelengths.
 c	  'samcorr' Correct the pre-Dec93 data for incorrect sampler
-c	            statistics. Since December 1993, sampler corrections
-c	            are performed online -- Miriad ignores the samcorr
-c	            option for this data.
-c	  'xycorr'  Apply the on-line measurement of the XY phase.
+c		    statistics. Since December 1993, sampler corrections
+c		    are performed online. This option is silently ignored for
+c		    data measured after December 1993.
+c	  'xycorr'  Apply the on-line measurements of the XY phase. This option
+c		    is silently ignored for 3mm data measured before October 2007.
 c	  'hanning' Hanning smooth spectra and drop every other channel
-c	            This option is ignored for 128-MHz, 33-channel data.
+c		    This option is ignored for 128-MHz, 33-channel data.
 c	  'bary'    Use the barycentre as the velocity rest frame. The
-c	            default is to use the LSR frame.
+c		    default is to use the LSR frame.
 c	  'noif'    Do not map the simultaneous IFs to the IF axis.
-c	            By default ATLOD attempts to map the simultaneous
-c	            frequencies to the IF axis. This will not be possible
-c	            if there are a different number of polarisations in
-c	            the different IFs.
+c		    By default ATLOD attempts to map the simultaneous
+c		    frequencies to the IF axis. This will not be possible
+c		    if there are a different number of polarisations in
+c		    the different IFs.
 c	  'nopflag' If at least one polarisation of a set of 2 or 4 polarimetric
-c	            spectra are bad, ATLOD normally flags all of the
-c	            polarisations. Option nopflag changes this so that only
-c	            the nominally bad spectrum is flagged.
+c		    spectra are bad, ATLOD normally flags all of the
+c		    polarisations. Option nopflag changes this so that only
+c		    the nominally bad spectrum is flagged.
 c	  'hires'   Treat bin data as measurements in the high time resolution
-c	            mode. The output dataset contains no bins, but instead
-c	            appears as data measured with small cycle times.
+c		    mode. The output dataset contains no bins, but instead
+c		    appears as data measured with small cycle times.
 c	  'pmps'    Undo `poor man's phase switching'. This is an obscure option
-c	            that you should not generally use.
+c		    that you should not generally use.
 c	  'single'  Assume input is a single dish RPFITS file (from Mopra or
-c	            Parkes). This is usually used together with option 'relax'.
+c		    Parkes). This is usually used together with option 'relax'.
 c	  'caldata' Save visibilities associated with certain system
-c	            calibrations. Currently this consists of reference pointing
-c	            calibration and "paddle" measurements.
-c	  'nocacal' Flag data that atlod suspects is taken during a CACAL scann.
+c		    calibrations. Currently this consists of reference pointing
+c		    calibration and "paddle" measurements.
+c	  'nocacal' Flag data that atlod suspects is taken during a CACAL scan.
 c		    There is potential for error in atlod determining which data
 c		    are and are not part of a cacal scan. Use this with caution.
-c         'nopol'   Discard data that is not "parallel hand" Stokes type.
+c	  'nopol'   Discard data that is not "parallel hand" Stokes type.
 c@ nfiles
 c	This gives one or two numbers, being the number of files to skip,
 c	followed by the number of files to process. This is only
@@ -109,7 +113,7 @@ c	When doing this, however, you should be aware is that every RPFITS files
 c	consists of 3 tape files. Thus you will want to skip three times as
 c	many tape files as RPFITS files. For example, in UNIX, to skip 10
 c	RPFITS files, use
-c	            mt -f /dev/nrst0 fsf 30
+c		    mt -f /dev/nrst0 fsf 30
 c@ nscans
 c	This gives one or two numbers, being the number of scans to skip,
 c	followed by the number of scans to process. NOTE: This applies to
@@ -155,7 +159,7 @@ c    rjs  13dec91 Deleted obstype processing (now done in uvio).
 c    rjs  22jul92 Implemented nfiles processing.
 c    rjs  28aug92 Doc changges only.
 c    nebk 07sep92 Incredibly stupid mistake.  Only Mr. S could do it.
-c                 VIS and WEIGHT were not dimensioned big enough.
+c		  VIS and WEIGHT were not dimensioned big enough.
 c		  Also include MIRCONST.H in ATLOD.H for pi
 c    rjs  11sep92 Add number of scans to skip.
 c    rjs  14sep92 Better messages. Write antenna coordinates and LST,
@@ -165,7 +169,7 @@ c    rjs  21sep92 Get XYPHASE right (I think!).
 c    rjs  28oct92 Sign of XY phase was wrong for 2nd IF in 2 IF system
 c		  when the 2 IFs had different sideband indicators.
 c    nebk 02feb93 Deal with all RPFITSIN error conditions explicitly
-c                 and look for next scan if I/O error occurs
+c		  and look for next scan if I/O error occurs
 c    rjs  16mar93 Better (?) AsciiCpy.
 c    rjs  29mar93 Change value of jyperk.
 c    rjs  27oct93 Change treatment of xy phases. Add sampler correction.
@@ -227,7 +231,7 @@ c    rjs  22may02 Added options=mmrelax
 c    rjs  25may02 Generate "tcorr" variable to keep track of whether
 c		  Tsys scaling has been performed or not.
 c    rjs  16jul03 Do not flip sign of XY and YX correlations for 12mm
-c                 package.
+c		  package.
 c    rjs  19jul03 Removed option=mmrelax, and made this automatic!
 c    rjs  06dec03 Write out met data, axisrms, axismax data. options=opcorr
 c    rjs  30dec03 Doc change only.
@@ -238,14 +242,15 @@ c    rjs  23oct04 Fix pntra and pntdec bug - always write them out.
 c    rjs  16jun05 Detect CACAL data. Better flagging stats messages.
 c    rjs  17sep05 Correct date for sampler correction code.
 c    rjs  15oct05 Check for buffer overflows. Increase buffer size. Better
-c	          flagging statistics.
+c		  flagging statistics.
 c    rjs  02jan06 Save reference pointing information. 8MHz debirdie algorithm.
 c		  Added nopol option.
 c    rjs  14jan06 Be relaxed about missing met data scans when applying
 c		  opacity correction.
 c    mhw  19oct07 Cope with new 3mm receiver on ca02 which has xyphase
+c    rjs  06nov08 Corrected CA02 xyphase handling and some minor tidying.
 c
-c $Id: atlod.for,v 1.6 2007/10/23 22:08:41 wie017 Exp $
+c $Id: atlod.for,v 1.7 2008/11/06 06:00:37 sau078 Exp $
 c-----------------------------------------------------------------------
 	integer MAXFILES,MAXTIMES
 	parameter(MAXFILES=128,MAXTIMES=32)
@@ -264,7 +269,7 @@ c
 	character itoaf*8, rperr*32, versan*80
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :  '$Id: atlod.for,v 1.6 2007/10/23 22:08:41 wie017 Exp $')
+     :	'$Id: atlod.for,v 1.7 2008/11/06 06:00:37 sau078 Exp $')
 c
 c  Get the input parameters.
 c
@@ -275,8 +280,8 @@ c
 	call keya('out',out,' ')
 	if(out.eq.' ')
      *	  call bug('f','Output name must be given')
-        call keyi('ifsel',ifsel,0)
-        call mkeyd('restfreq',rfreq,2,nfreq)
+	call keyi('ifsel',ifsel,0)
+	call mkeyd('restfreq',rfreq,2,nfreq)
 	call getopt(doauto,docross,docaldat,docomp,dosam,doxyp,doop,
      *	  relax,
      *	  sing,unflag,dohann,birdie,dobary,doif,dowt,dopmps,
@@ -431,7 +436,7 @@ c    docomp	Write compressed data.
 c    dosam	Correct for sampler statistics.
 c    doxyp	Correct the data with the measured xy phase.
 c    doop	Correct for opacity.
-c    dohann     Hanning smooth spectra
+c    dohann	Hanning smooth spectra
 c    birdie	Discard bad channels in continuum mode.
 c    doif	Map the simultaneous frequencies to the IF axis.
 c    relax
@@ -442,7 +447,7 @@ c    dowt	Reweight the lag spectrum.
 c    dopmps	Undo "poor man's phase switching"
 c    nopol	Select only parallel-hand polarisations.
 c    polflag	Flag all polarisations if any are bad.
-c    hires      Convert bin-mode to high time resolution data.
+c    hires	Convert bin-mode to high time resolution data.
 c    sing	Single dish mode.
 c------------------------------------------------------------------------
 	integer nopt
@@ -453,32 +458,32 @@ c------------------------------------------------------------------------
      *		  'unflag  ','samcorr ','hanning ','bary    ',
      *		  'noif    ','birdie  ','reweight','xycorr  ',
      *		  'opcorr  ',
-     *		  'nopflag ','hires   ','pmps    ','mmrelax ',
+     *		  'nopflag ','hires   ','pmps	 ','mmrelax ',
      *		  'single  ','caldata ','nocacal ','nopol   '/
 	call options('options',opts,present,nopt)
 	doauto = .not.present(1)
 	docross = .not.present(2)
-	docomp  = present(3)
-	relax   = present(4)
-	unflag  = present(5)
-	dosam   = present(6)
-        dohann  = present(7)
-	dobary  = present(8)
-	doif    = .not.present(9)
-	birdie  = present(10)
-	dowt    = present(11)
-	doxyp   = present(12)
-	doop    = present(13)
+	docomp	= present(3)
+	relax	= present(4)
+	unflag	= present(5)
+	dosam	= present(6)
+	dohann	= present(7)
+	dobary	= present(8)
+	doif	= .not.present(9)
+	birdie	= present(10)
+	dowt	= present(11)
+	doxyp	= present(12)
+	doop	= present(13)
 	polflag = .not.present(14)
-	hires   = present(15)
-	dopmps  = present(16)
+	hires	= present(15)
+	dopmps	= present(16)
 c
 c  Option mmrelax is now ignored (set automatically!).
 c	mmrelax = present(16)
-	sing    = present(18)
+	sing	= present(18)
 	docaldat= present(19)
 	nocacal = present(20)
-	nopol   = present(21)
+	nopol	= present(21)
 c
 	if((dosam.or.doxyp.or.doop).and.relax)call bug('f',
      *	  'You cannot use options samcorr, xycorr or opcorr with relax')
@@ -573,7 +578,7 @@ c
 	  do bl=1,ATBASE
 	    do p=1,ATPOL
 	      do if=1,ATIF
-	        pnt(if,p,bl,bin) = 0
+		pnt(if,p,bl,bin) = 0
 	      enddo
 	    enddo
 	  enddo
@@ -635,18 +640,18 @@ c
 	call output(' ')
 	if(fgoffsrc+fginvant+fgsysc+fgsam+fgcal.gt.0)then
 	  call liner('Summary of spectra flagged')
-	  call liner('Flagging Reason            Fraction')
-	  call liner('---------------            --------')
+	  call liner('Flagging Reason		 Fraction')
+	  call liner('---------------		 --------')
 	  if(fgoffsrc.gt.0)call liner(
      *		'Antenna off-source/off-line '//pcent(fgoffsrc,nrec))
 	  if(fginvant.gt.0)call liner(
-     *		'Antenna disabled            '//pcent(fginvant,nrec))
+     *		'Antenna disabled	     '//pcent(fginvant,nrec))
 	  if(fgsysc.gt.0)call liner(
-     *		'Missing SYSCAL record       '//pcent(fgsysc,nrec))
+     *		'Missing SYSCAL record	     '//pcent(fgsysc,nrec))
 	  if(fgsam.gt.0)call liner(
-     *		'Bad SYSCAL values           '//pcent(fgsam,nrec))
+     *		'Bad SYSCAL values	     '//pcent(fgsam,nrec))
 	  if(fgcal.gt.0)call liner(
-     *		'Discarded cal data          '//pcent(fgcal,nrec))
+     *		'Discarded cal data	     '//pcent(fgcal,nrec))
 	else
 	  call liner('There was no flagged data')
 	endif
@@ -663,7 +668,7 @@ c------------------------------------------------------------------------
 	include 'atlod.h'
 c
 	call output(string)
-	line = 'ATLOD:    '//string
+	line = 'ATLOD:	  '//string
 	call hiswrite(tno,line)
 	end
 c************************************************************************
@@ -675,7 +680,7 @@ c------------------------------------------------------------------------
 	character line*72
 	include 'atlod.h'
 c
-	line = 'ATLOD:     '//string
+	line = 'ATLOD:	   '//string
 	call hiswrite(tno,line)
 	end
 c************************************************************************
@@ -700,10 +705,10 @@ c
 c
 	do i=1,ncard
 c	  if(card(i)(1:8).eq.'OBSLOG' .or.card(i)(1:8).eq.'ATTEN'   .or.
-c     *	    card(i)(1:8).eq.'SUBREFL' .or.card(i)(1:8).eq.'CORR_CFG'.or.
-c     *	    card(i)(1:8).eq.'SCANTYPE'.or.card(i)(1:8).eq.'CACALCNT'.or.
-c     *	    card(i)(1:8).eq.'POINTCOR'.or.card(i)(1:8).eq.'POINTINF'
-c     *								)then
+c     *     card(i)(1:8).eq.'SUBREFL' .or.card(i)(1:8).eq.'CORR_CFG'.or.
+c     *     card(i)(1:8).eq.'SCANTYPE'.or.card(i)(1:8).eq.'CACALCNT'.or.
+c     *     card(i)(1:8).eq.'POINTCOR'.or.card(i)(1:8).eq.'POINTINF'
+c     * 							)then
 	  if(card(i)(1:8).eq.'OBSLOG')then
 	    call liners(card(i)(20:))
 	  else if(card(i)(1:8).eq.'POINTCOR')then
@@ -771,18 +776,18 @@ c------------------------------------------------------------------------
 	double precision out
 	logical ok
 c
-        i = index(card,'=') + 1
-        dowhile(card(i:i).eq.' '.and.i.le.len(card))
-          i = i + 1
-        enddo
-        j = i - 1
-        do while(card(j+1:j+1).ne.' '.and.card(j+1:j+1).ne.'/')
-          j = j + 1
-        enddo
-        ok = .false.
-        if(j.ge.i)call atodf(card(i:j),out,ok)
-        if(.not.ok)
-     *      call bug('f','Conversion error in decoding FITS card')
+	i = index(card,'=') + 1
+	dowhile(card(i:i).eq.' '.and.i.le.len(card))
+	  i = i + 1
+	enddo
+	j = i - 1
+	do while(card(j+1:j+1).ne.' '.and.card(j+1:j+1).ne.'/')
+	  j = j + 1
+	enddo
+	ok = .false.
+	if(j.ge.i)call atodf(card(i:j),out,ok)
+	if(.not.ok)
+     *	    call bug('f','Conversion error in decoding FITS card')
 	ival = nint(out)
 c
 	end
@@ -1105,7 +1110,7 @@ c
 c
 	do i=1,nants
 	  temp = x(i)*cost + y(i)*sint - r
-	  antpos(i)         = (1d9/DCMKS) * temp
+	  antpos(i)	    = (1d9/DCMKS) * temp
 	  temp = -x(i)*sint + y(i)*cost
 	  antpos(i+nants)   = (1d9/DCMKS) * temp
 	  antpos(i+2*nants) = (1d9/DCMKS) * (z(i)-z0)
@@ -1115,15 +1120,20 @@ c
 	end
 c************************************************************************
 	subroutine PokeData(u1,v1,w1,baseln,if,bin,vis,nfreq1,nstoke1,
-     *		flag1,inttime1,docon,doxyflip,doxy,wbandxy)
+     *		flag1,inttime1,docon,doxyflip,xymode)
 c
-	integer nfreq1,nstoke1,if,baseln,bin,wbandxy
+	integer nfreq1,nstoke1,if,baseln,bin,xymode
 	real u1,v1,w1,inttime1
-	logical flag1(nstoke1),docon,doxyflip,doxy
+	logical flag1(nstoke1),docon,doxyflip
 	complex vis(nfreq1*nstoke1)
 c
 c  Buffer up the data. Perform sampler correction and hanning smoothing
 c  if needed.
+c
+c  Inputs:
+c    xymode	If 0, then do not do any xy phase correction.
+c		If negative, do xy phase correction on all antennas.
+c		If positive, do xy phase correction for that antenna alone.
 c------------------------------------------------------------------------
 	integer PolXX,PolYY,PolXY,PolYX
 	parameter(PolXX=-5,PolYY=-6,PolXY=-7,PolYX=-8)
@@ -1204,7 +1214,7 @@ c
 c
 c  Do XY phase correction if needed.
 c
-	  if(doxyp.and.(doxy.or.wbandxy.gt.0))then
+	  if(doxyp.and.xymode.ne.0)then
 	    if(dosw(bl))then
 	      pol = polcode(if,p)
 	      if(pol.eq.PolXY)then
@@ -1213,10 +1223,10 @@ c
 		pol = PolXY
 	      endif
 	      call XypCorr(nfreq(if),data(ipnt),pol,
-     *		i1,i2,if,xyphase,ATIF,ATANT,wbandxy)
+     *		i1,i2,if,xyphase,ATIF,ATANT,xymode)
 	    else
 	      call XYpCorr(nfreq(if),data(ipnt),polcode(if,p),
-     *		i2,i1,if,xyphase,ATIF,ATANT,wbandxy)
+     *		i2,i1,if,xyphase,ATIF,ATANT,xymode)
 	    endif
 	  endif
 	enddo
@@ -1233,7 +1243,7 @@ c------------------------------------------------------------------------
 	double precision flo
 	integer chan,i,j,n
 	complex cbuff(MAXDIM+1),ctmp
-	real    rbuff(2*MAXDIM)
+	real	rbuff(2*MAXDIM)
 c
 	if(abs(sdf).eq.0)call bug('f',
      *	  'Cannot use options=birdie when channel width is unknown')
@@ -1280,17 +1290,17 @@ c------------------------------------------------------------------------
 	real s
 	double precision rinttime
 c
-        integer states(8,6)
-        data states/
-     *  +1,-1,+1,-1,+1,-1,+1,-1,
-     *  +1,+1,-1,-1,+1,+1,-1,-1,
-     *  +1,-1,-1,+1,+1,-1,-1,+1,
-     *  +1,+1,+1,+1,-1,-1,-1,-1,
-     *  +1,+1,-1,-1,-1,-1,+1,+1,
-     *  +1,+1,+1,+1,+1,+1,+1,+1/
+	integer states(8,6)
+	data states/
+     *	+1,-1,+1,-1,+1,-1,+1,-1,
+     *	+1,+1,-1,-1,+1,+1,-1,-1,
+     *	+1,-1,-1,+1,+1,-1,-1,+1,
+     *	+1,+1,+1,+1,-1,-1,-1,-1,
+     *	+1,+1,-1,-1,-1,-1,+1,+1,
+     *	+1,+1,+1,+1,+1,+1,+1,+1/
 c
 	rinttime = 5.d0 * nint(inttime/5.0) / 86400.d0
-        istate = mod(nint(mod(time,1.0d0)/rinttime),8) + 1
+	istate = mod(nint(mod(time,1.0d0)/rinttime),8) + 1
 c
 	s = 1
 	if(states(istate,i1).ne.states(istate,i2)) s = -1
@@ -1304,41 +1314,33 @@ c
 	end
 c************************************************************************
 	subroutine XypCorr(nfreq,vis,pol,i1,i2,if,xyphase,ATIF,ATANT,
-     *                     wbandxy)
+     *			   xymode)
 c
-	integer nfreq,pol,i1,i2,if,ATIF,ATANT,wbandxy
+	integer nfreq,pol,i1,i2,if,ATIF,ATANT,xymode
 	complex vis(nfreq)
 	real xyphase(ATIF,ATANT)
 c
 c  Correct the data with the measured XY phase.
-c  As of 18OCT07 antenna 2 has valid xyphase at 3mm, use wbandxy==2 to
-c  indicate this
+c
 c------------------------------------------------------------------------
 	integer PolXX,PolYY,PolXY,PolYX
 	parameter(PolXX=-5,PolYY=-6,PolXY=-7,PolYX=-8)
 	integer i
 	complex fac
-	real theta
+	real theta,theta1,theta2
 c
-        theta = 0
+	theta1 = 0
+	if(xymode.eq.i1.or.xymode.lt.0)theta1 = xyphase(if,i1)
+	theta2 = 0
+	if(xymode.eq.i2.or.xymode.lt.0)theta2 = xyphase(if,i2)
+c
+	theta = 0
 	if(pol.eq.PolYY)then
-          if (wbandxy.eq.0) then
-	    theta = xyphase(if,i1) - xyphase(if,i2)
-          endif
+	  theta = theta1 - theta2
 	else if(pol.eq.PolXY)then
-          if (wbandxy.eq.0) then
-             theta =                - xyphase(if,i2)
-          else
-             theta =                - xyphase(if,wbandxy)
-          endif
+	  theta =	 - theta2
 	else if(pol.eq.PolYX)then
-          if (wbandxy.eq.0) then
-	    theta = xyphase(if,i1)
-          else
-            theta = xyphase(if,wbandxy)
-          endif
-	else
-	  theta = 0
+	  theta = theta1
 	endif
 c
 	if(theta.ne.0)then
@@ -1415,7 +1417,7 @@ c------------------------------------------------------------------------
 	integer i1,i2,if,p,bl,nchan,npol,ipnt,ischan(ATIF)
 	integer tbinhi,tbin,binhi,binlo,bin
 	complex vis(NDATA)
-	logical flags(NDATA)
+	logical flags(NDATA),doopcorr,wband
 	double precision preamble(5),vel,lst,tdash,az,el
 	real buf(3*ATANT*ATIF),fac(ATIF),freq0(ATIF),Tb(ATIF),tfac
 	real jyperk
@@ -1432,21 +1434,21 @@ c
 	if(newfreq)then
 	  if(doif)then
 	    do if=2,nifs
-	      if(nbin(if).ne.nbin(1))    call bug('f',
+	      if(nbin(if).ne.nbin(1))	 call bug('f',
      *		'Number of bins differ between IFs. '//
      *		'Use options=noif.')
 	      if(nstoke(if).ne.nstoke(1))call bug('f',
      *		'Number of polarisations differ between IFs. '//
      *		'Use options=noif.')
 	      do p=1,nstoke(if)
-	        if(polcode(if,p).ne.polcode(1,p))call bug('f',
+		if(polcode(if,p).ne.polcode(1,p))call bug('f',
      *		'Polarisation types differ between IFs. '//
      *		'Use options=noif.')
 	      enddo
 	    enddo
 	  else if(hires)then
 	    do if=2,nifs
-	      if(nbin(if).ne.nbin(1))    call bug('f',
+	      if(nbin(if).ne.nbin(1))	 call bug('f',
      *		'Number of bins in different IFs must '//
      *				   'agree for options=hires')
 	    enddo
@@ -1502,19 +1504,28 @@ c  Get ready to apply opacity correction.
 c
 	  jyperk = getjpk(real(sfreq(1)))
 
-	  if(opcorr)then
-	    do if=1,nifs
-	      freq0(if) = (sfreq(if) + 0.5*(nfreq(if)-1)*sdf(if))*1e9
-	    enddo
+	  do if=1,nifs
+	    freq0(if) = (sfreq(if) + 0.5*(nfreq(if)-1)*sdf(if))*1e9
+	  enddo
+	  wband = freq0(1).gt.75e9
+	  doopcorr = .false.
+	  if(opcorr.and..not.wband)then
 	    if(mcount.lt.3)then
 	      call bug('w','No met data to compute opacity correction')
 	    else
+c
+c  Convert to standard units. Temperature is converted from Celsius
+c  to Kelvin. Pressure is converted from hPa at sea level to Pa at
+c  Narrabri's altitude (a factor of 97.5 rather than 100). Relative
+c  humidity is converted from percent to a fraction.
+c
 	      stemp = mdata(1) + 273.15
 	      spress = 97.5*mdata(2)
 	      shumid = 0.01*mdata(3)
 	    endif
 	    call opacGet(nifs,freq0,real(el),stemp,spress,shumid,
-     *					     		   fac,Tb)
+     *							   fac,Tb)
+	    doopcorr = .true.
 	    tfac = 1
 	    do if=1,nifs
 	      fac(if) = 1/fac(if)
@@ -1560,14 +1571,14 @@ c
 	      if(.not.hires)call uvputvri(tno,'nbin',nbin(if),1)
 	      bl = 0
 	      do i2=1,nants
-	        do i1=1,i2
-	          bl = bl + 1
-	          preamble(1) = u(bl)
-	          preamble(2) = v(bl)
+		do i1=1,i2
+		  bl = bl + 1
+		  preamble(1) = u(bl)
+		  preamble(2) = v(bl)
 		  preamble(3) = w(bl)
-	          preamble(4) = tdash
-	          preamble(5) = 256*i1 + i2
-	          do p=1,nstoke(if)
+		  preamble(4) = tdash
+		  preamble(5) = 256*i1 + i2
+		  do p=1,nstoke(if)
 		    ipnt = pnt(if,p,bl,bin)
 		    if(ipnt.gt.0)then
 		      call PolPut(tno,polcode(if,p),dosw(bl))
@@ -1575,14 +1586,14 @@ c
      *						  bchan(if),flags)
 		      if(.not.hires)call uvputvri(tno,'bin',bin,1)
 		      call uvputvrr(tno,'inttime',inttime(bl),1)
-		      if(opcorr)
+		      if(doopcorr)
      *			call opapply(data(ipnt),nfreq(if),fac(if))
 		      call uvwrite(tno,preamble,data(ipnt),flags,
      *							nfreq(if))
 
 		    endif
 		  enddo
-	        enddo
+		enddo
 	      enddo
 	    enddo
 	  enddo
@@ -1618,16 +1629,16 @@ c
 	    bl = 0
 	    do i2=1,nants
 	      do i1=1,i2
-	        bl = bl + 1
-	        preamble(1) = u(bl)
-	        preamble(2) = v(bl)
-	        preamble(3) = w(bl)
-	        preamble(4) = tdash
-	        preamble(5) = 256*i1 + i2
-	        call CntStok(npol,pnt(1,1,bl,bin),nifs,nstoke(1),ATIF)
-	        if(npol.gt.0)then
+		bl = bl + 1
+		preamble(1) = u(bl)
+		preamble(2) = v(bl)
+		preamble(3) = w(bl)
+		preamble(4) = tdash
+		preamble(5) = 256*i1 + i2
+		call CntStok(npol,pnt(1,1,bl,bin),nifs,nstoke(1),ATIF)
+		if(npol.gt.0)then
 		  call uvputvri(tno,'npol',npol,1)
-	          do p=1,nstoke(1)
+		  do p=1,nstoke(1)
 		    call GetDat(data,nused,pnt(1,p,bl,bin),
      *			flag(1,p,bl,bin),nfreq,fac,bchan,nifs,
      *			vis,flags,NDATA,nchan)
@@ -1637,8 +1648,8 @@ c
 		      call uvputvrr(tno,'inttime',inttime(bl),1)
 		      call uvwrite(tno,preamble,vis,flags,nchan)
 		    endif
-	          enddo
-	        endif
+		  enddo
+		endif
 	      enddo
 	    enddo
 	  enddo
@@ -1667,9 +1678,9 @@ c
 	mcount = 0
 	refnant = 0
 	nused = 0
-	newsc   = .false.
+	newsc	= .false.
 	newfreq = .false.
-	newpnt  = .false.
+	newpnt	= .false.
 	end
 c************************************************************************
 	subroutine opapply(data,nchan,fac)
@@ -1857,11 +1868,11 @@ c------------------------------------------------------------------------
 	call uvputvri(tno,'tcorr',tcorr,1)
 	call Sca(tno,'axisrms', axisrms, nants,buf)
 	call Sca(tno,'axismax', axismax, nants,buf)
-	call Sco(tno,'xtsys',   xtsys,   1,ATIF,ATANT,if1,if2,nants,buf)
-	call Sco(tno,'ytsys',   ytsys,   1,ATIF,ATANT,if1,if2,nants,buf)
+	call Sco(tno,'xtsys',	xtsys,	 1,ATIF,ATANT,if1,if2,nants,buf)
+	call Sco(tno,'ytsys',	ytsys,	 1,ATIF,ATANT,if1,if2,nants,buf)
 	call Sct(tno,'systemp',xtsys,ytsys,ATIF,ATANT,if1,if2,nants,buf)
 	call Sco(tno,'xyphase', xyphase, 1,ATIF,ATANT,if1,if2,nants,buf)
-	call Sco(tno,'xyamp',   xyamp,   1,ATIF,ATANT,if1,if2,nants,buf)
+	call Sco(tno,'xyamp',	xyamp,	 1,ATIF,ATANT,if1,if2,nants,buf)
 	call Sco(tno,'xsampler',xsampler,3,ATIF,ATANT,if1,if2,nants,buf)
 	call Sco(tno,'ysampler',ysampler,3,ATIF,ATANT,if1,if2,nants,buf)
 	end
@@ -2140,7 +2151,7 @@ c------------------------------------------------------------------------
 	double precision J01Jul04,J18Oct07
 	parameter(J01Jul04=2453187.5d0,J18Oct07=2454390.5d0)
 	include 'rpfits.inc'
-	integer scanno,i1,i2,baseln,i,id,j,wbandxy
+	integer scanno,i1,i2,baseln,i,id,j,xymode
 	logical NewScan,NewSrc,NewFreq,NewTime,Accum,ok,badbit
 	logical flags(MAXPOL),corrfud,kband,wband,flipper
 	integer jstat,flag,bin,ifno,srcno,simno,Ssrcno,Ssimno
@@ -2207,7 +2218,7 @@ c
 	if(jstat.ne.0)call bug('w','Error reading 1st RPFITS header')
 	if(jstat.ne.0)return
 c	if(card(1)(25:30).ne.'RPFITS')
-c     *		      call bug('f','Input file is not in RPFITS format')
+c     * 	      call bug('f','Input file is not in RPFITS format')
 	sctype = 'unknown'
 	okref = .false.
 	if(ncard.gt.0)call sortcds(ncard,card,sctype,
@@ -2230,11 +2241,11 @@ c
 	fgbad = 0
 	fgoffsrc = 0
 	fginvant = 0
-	fgsysc   = 0
-	fgsam    = 0
-	fgcal    = 0
+	fgsysc	 = 0
+	fgsam	 = 0
+	fgcal	 = 0
 c
-	utprev   = -1
+	utprev	 = -1
 	utprevsc = -1
 	Accum = .false.
 	NewScan = .true.
@@ -2271,7 +2282,7 @@ c  Flush the number of buffered samples.
 c
 	    do j=1,ANT_MAX
 	      do i=1,MAX_IF
-	        nxyp(i,j) = 0
+		nxyp(i,j) = 0
 	      enddo
 	    enddo
 c
@@ -2282,8 +2293,8 @@ c
 c
 c  Handle FG table encountered (ignore it)
 c
-          else if(jstat.eq.4)then
-            jstat = 0
+	  else if(jstat.eq.4)then
+	    jstat = 0
 c
 c  Handle some i/o error. First time tolerate it, but if it happens
 c  immediately again, skip to the next header.
@@ -2291,7 +2302,7 @@ c
 	  else if(jstat.eq.5)then
 	    if(badbit)then
 	      call bug('w',
-     *          'I/O error occurred with jstat=5. Look for next header')
+     *		'I/O error occurred with jstat=5. Look for next header')
 	      jstat = -1
 	      call rpfitsin(jstat,vis,weight,baseln,ut,u,v,w,flag,
      *						bin,ifno,srcno)
@@ -2304,7 +2315,7 @@ c
 c
 c  Other errors, including EOF.
 c
-          else if(jstat.ne.0)then
+	  else if(jstat.ne.0)then
 	    continue
 c
 c  Check if we have run out of records of interest. If so, skip to the
@@ -2357,9 +2368,9 @@ c
 		time = ut / (3600.d0*24.d0) + jday0
 		corrfud=.true.
 		call bug('w',
-     *          'Assuming first scan of integration')
+     *		'Assuming first scan of integration')
 		call bug('w',
-     *          'started before UT day rollover')
+     *		'started before UT day rollover')
 	      endif
 	      call SimMap(if_num,n_if,if_simul,if_chain,ifsel,
      *		  If2Sim,nifs,Sim2If,Sif,MAXSIM)
@@ -2384,20 +2395,20 @@ c
 	    i1 = baseln/256
 	    i2 = mod(baseln,256)
 	    if(ok) ok = (i1.eq.i2.and.doauto).or.(i1.ne.i2.and.docross)
-            if(ok)then
+	    if(ok)then
 	      ok = ifno.ge.1.and.ifno.le.n_if.and.
-     *	    	   min(i1,i2).ge.1.and.max(i1,i2).le.nant.and.
+     *		   min(i1,i2).ge.1.and.max(i1,i2).le.nant.and.
      *		   bin.ge.0
 	      if(.not.ok)fgbad = fgbad + 1
 	    endif
-            if(ok)ok = If2Sim(ifno).gt.0
+	    if(ok)ok = If2Sim(ifno).gt.0
 	    if(ok) then
 	      nspec = nstoke(ifno)
 	      nrec = nrec + nspec
 	      if((sctype.eq.'point'.or.sctype.eq.'paddle').and.
      *			.not.docaldat)then
-	        flag = 1
-	        fgcal = fgcal + nspec
+		flag = 1
+		fgcal = fgcal + nspec
 	      else if(flag.ne.0)then
 		fgoffsrc = fgoffsrc + nspec
 	      else if(.not.(antvalid(i1).and.antvalid(i2)))then
@@ -2418,12 +2429,12 @@ c
 c  Initialise the Poke routines with new info as required.
 c
 	      if(.not.Accum)then
-	        time = ut / (3600.d0*24.d0) + jday0
+		time = ut / (3600.d0*24.d0) + jday0
 		call Poke1st(time,nifs(simno),nant)
 		if(NewScan)call PokeMisc(instrument,rp_observer,
      *						version,sctype)
-	        if(an_found)call PokeAnt(nant,x,y,z,sing)
-	        if(NewScan.or.NewFreq)then
+		if(an_found)call PokeAnt(nant,x,y,z,sing)
+		if(NewScan.or.NewFreq)then
 		  kband = .false.
 		  wband = .false.
 		  do i=1,nifs(simno)
@@ -2443,7 +2454,7 @@ c
 		  call cacalTyp(calcode,time)
 		  call PokeInfo(scanno,time)
 		endif
-	 	pntra = su_pra(srcno)
+		pntra = su_pra(srcno)
 		pntdec = su_pdec(srcno)
 		if(pntra.eq.0.or.pntdec.eq.0)then
 		  pntra = su_ra(srcno)
@@ -2509,11 +2520,20 @@ c	      tint = 0
 	      if(tint.eq.0)tint = 15.0
 	      flipper = .not.kband.or.time.gt.J01Jul04
 c
-c  Only CA02 has XY noise cal at wband
+c  xymode sets the way xy phase correction is potentially done. If negative,
+c  then correctionis done on all data. If positive, then just that antenna
+c  is corrected. If 0, then no xy phase correction is applied.
 c
-              wbandxy=0
-              if (wband.and.time.gt.J18Oct07
-     *            .and.instrument(1:4).eq.'ATCA') wbandxy=2 
+c  As of 18OCT07, CA02 has valid xyphase at 3mm, so use xymode==2 to indicate this.
+c
+	      xymode = -1
+	      if(wband)then
+		if(time.gt.J18Oct07.and.instrument(1:4).eq.'ATCA')then
+		  xymode = 2
+		else
+		  xymode = 0
+		endif
+	      endif
 c
 c  It is pretty late to be checking for a buffer overflow, but RPFITSIN's
 c  interface does not guard against it at all! So at least we are checking!
@@ -2527,13 +2547,13 @@ c
 c
 	      call PokeData(u,v,w,baseln,Sif(ifno),bin,
      *		vis,if_nfreq(ifno),nstoke(ifno),flags,
-     *		tint,if_invert(ifno).lt.0,flipper,.not.wband,wbandxy)
+     *		tint,if_invert(ifno).lt.0,flipper,xymode)
 c
 c  Reinitialise things.
 c
 	      if (86400*(time-tprev).lt.-1) then
 		if (.not. corrfud) then
-                  call bug('w',
+		  call bug('w',
      *		   'Data are out of time order')
 		else
 		  corrfud = .false.
@@ -2600,12 +2620,12 @@ c
 	integer NMESS
 	parameter(NMESS=7)
 	character mess(NMESS)*32
-	data mess/'Operation unsuccessful          ',
-     *		  'Operation successful            ',
-     *            'Encountered header while reading',
-     *		  'Probably OK ... End of scan     ',
+	data mess/'Operation unsuccessful	   ',
+     *		  'Operation successful 	   ',
+     *		  'Encountered header while reading',
+     *		  'Probably OK ... End of scan	   ',
      *		  'Encountered end-of-file	   ',
-     *		  'Encountered FG table            ',
+     *		  'Encountered FG table 	   ',
      *		  'Illegal parameter encountered   '/
 c
 	if(jstat.ge.-1.and.jstat.le.5)then
@@ -2691,12 +2711,12 @@ c
 	      token = cstin(i,j)
 	      call ucase(token)
 	      if(token.eq.'XX'.or.token.eq.'YY'.or.
-     *	         token.eq.'RR'.or.token.eq.'LL'.or.token.eq.'I')then
-	        nstout(j) = nstout(j) + 1
-	        cstout(nstout(j),j) = cstin(i,j)
-	        pselect(i,j) = .true.
+     *		 token.eq.'RR'.or.token.eq.'LL'.or.token.eq.'I')then
+		nstout(j) = nstout(j) + 1
+		cstout(nstout(j),j) = cstin(i,j)
+		pselect(i,j) = .true.
 	      else
-	        pselect(i,j) = .false.
+		pselect(i,j) = .false.
 	      endif
 	    enddo
 	  enddo
@@ -3046,9 +3066,9 @@ c
 	do j=1,MAXANT
 	  do i=1,MAXIF
 	    scinit(i,j) = .false.
-	    scbuf(i,j)  = .false.
-	    xflag(i,j)  = .false.
-	    yflag(i,j)  = .false.
+	    scbuf(i,j)	= .false.
+	    xflag(i,j)	= .false.
+	    yflag(i,j)	= .false.
 	  enddo
 	enddo
 	tcorr = 0
@@ -3181,7 +3201,7 @@ c------------------------------------------------------------------------
 	common/cacalcom/times,stime,ntimes,scal,bcal
 c
 	bcal = count
- 	end
+	end
 c************************************************************************
 	subroutine cacalTyp(calcode,time)
 c
@@ -3250,7 +3270,7 @@ C      gain has been calculated on the assumption that the
 C      sampler statistics were either set on :
 C
 C      17.1, 50.0, 17.1 percent, for SSEXP = 17.1
-C                  --OR--
+C		   --OR--
 C      17.3, 50.0, 17.3 percent, for SSEXP = 17.3
 C
 C      whereas they were actually n1, z1, p1 and n2, z2, p2 percent
@@ -3262,14 +3282,14 @@ C
 C----------------------------------------------------------------------
 
 C PARAMETERS
-      REAL      N1, Z1, P1, N2, Z2, P2, SSEXP
+      REAL	N1, Z1, P1, N2, Z2, P2, SSEXP
 
 C EXTERNAL FUNCTIONS
-      REAL      GAIN_PARAM, TWOBIT_GAIN_R0
+      REAL	GAIN_PARAM, TWOBIT_GAIN_R0
 
 C LOCAL VARIABLES
-      REAL      QN1, QZ1, QP1, QN2, QZ2, QP2
-      REAL      A
+      REAL	QN1, QZ1, QP1, QN2, QZ2, QP2
+      REAL	A
 
 C BEGIN
 
@@ -3287,16 +3307,16 @@ C  a = average correlator count / digital correlator gain at
 C      zero correlation
 
       IF (SSEXP.GT.17.2) THEN
-C          5.444705 = 6.19 / 1.1368844
-         A = 5.444705
+C	   5.444705 = 6.19 / 1.1368844
+	 A = 5.444705
       ELSE IF (SSEXP.GT.17.0) THEN
-C          5.392175663 = 6.13 / 1.1368324
-         A = 5.392175663
+C	   5.392175663 = 6.13 / 1.1368324
+	 A = 5.392175663
       END IF
 
 C
       TWOBIT_GAIN_ADJUST = A /
-     *     TWOBIT_GAIN_R0( QN1, QZ1, QP1, QN2, QZ2, QP2 )
+     *	   TWOBIT_GAIN_R0( QN1, QZ1, QP1, QN2, QZ2, QP2 )
       END
 c************************************************************************
       REAL FUNCTION GAIN_PARAM( LEVEL_PERCENT )
@@ -3309,13 +3329,13 @@ C
 C----------------------------------------------------------------------
 
 C PARAMETERS
-      REAL      LEVEL_PERCENT
+      REAL	LEVEL_PERCENT
 
 C EXTERNAL FUNCTIONS
-      REAL      GAUSS_LEVEL
+      REAL	GAUSS_LEVEL
 
 C LOCAL VARIABLES
-      REAL      X
+      REAL	X
 
 C BEGIN
 
@@ -3330,18 +3350,18 @@ c************************************************************************
 C----------------------------------------------------------------------
 C
 C      Assuming Gaussian statistics, estimates the level given
-C       the probability of being above this level, i.e.
-C       the fraction of samples above this level.
+C	the probability of being above this level, i.e.
+C	the fraction of samples above this level.
 C
-C      Ref.      Approximation formulae - max. error 4.5E-04
+C      Ref.	 Approximation formulae - max. error 4.5E-04
 C
 C----------------------------------------------------------------------
 
 C PARAMETERS
-      REAL            FRACTION_ABOVE_LEVEL
+      REAL	      FRACTION_ABOVE_LEVEL
 
 C CONSTANTS
-      REAL            C0, C1, C2, D1, D2, D3
+      REAL	      C0, C1, C2, D1, D2, D3
 
       PARAMETER      ( C0 = 2.515517 )
       PARAMETER      ( C1 = 0.802853 )
@@ -3351,18 +3371,18 @@ C CONSTANTS
       PARAMETER      ( D3 = 0.001308 )
 
 C LOCAL VARIABLES
-      REAL            P, T, TT, TTT, A, B
-      LOGICAL            INVERT
+      REAL	      P, T, TT, TTT, A, B
+      LOGICAL		 INVERT
 
 C BEGIN
 
 C Algorithm works for ( 0.0 < p <= 0.5 )  hence
       IF (FRACTION_ABOVE_LEVEL .GT. 0.5 ) THEN
-         P = 1.0 - FRACTION_ABOVE_LEVEL
-         INVERT = .TRUE.
+	 P = 1.0 - FRACTION_ABOVE_LEVEL
+	 INVERT = .TRUE.
       ELSE
-         P = FRACTION_ABOVE_LEVEL
-         INVERT = .FALSE.
+	 P = FRACTION_ABOVE_LEVEL
+	 INVERT = .FALSE.
       END IF
 
       IF( P .LT. 1.0E-10 ) P = 1.0E-10
@@ -3394,22 +3414,22 @@ C
 C----------------------------------------------------------------------
 
 C PARAMETERS
-      REAL      QN1, QZ1, QP1, QN2, QZ2, QP2
+      REAL	QN1, QZ1, QP1, QN2, QZ2, QP2
 
 C EXTERNAL FUNCTIONS
-      REAL      G_QUAD
+      REAL	G_QUAD
 
 C BEGIN
 
       TWOBIT_GAIN_R0 = 0.159154943 *
-     *            ( G_QUAD( QZ1, QP1, QZ2, QP2 ) +
-     *                G_QUAD( QZ1, QN1, QZ2, QP2 ) +
-     *                  G_QUAD( QZ1, QP1, QZ2, QN2 ) +
-     *                    G_QUAD( QZ1, QN1, QZ2, QN2 ) )
+     *		  ( G_QUAD( QZ1, QP1, QZ2, QP2 ) +
+     *		      G_QUAD( QZ1, QN1, QZ2, QP2 ) +
+     *			G_QUAD( QZ1, QP1, QZ2, QN2 ) +
+     *			  G_QUAD( QZ1, QN1, QZ2, QN2 ) )
       END
 c************************************************************************
       REAL FUNCTION G_QUAD( QZ1, QP1, QZ2, QP2 )
       REAL QZ1, QP1, QZ2, QP2
       G_QUAD = 9 * QP1 * QP2 +
-     *         3 * ( QZ1 * QP2 + QP1 * QZ2 ) + QZ1 * QZ2
+     *	       3 * ( QZ1 * QP2 + QP1 * QZ2 ) + QZ1 * QZ2
       END
