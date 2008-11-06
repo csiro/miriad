@@ -16,7 +16,6 @@ At the ATNF it runs under
 <a href="http://en.wikipedia.org/wiki/SunOS">SunOS</a> 5.6 (aka
 <a href="http://en.wikipedia.org/wiki/Solaris_Operating_System">Solaris</a>
 2.6) and later; and
-<a href="http://en.wikipedia.org/wiki/Powerpc">PowerPC</a> and
 <a href="http://en.wikipedia.org/wiki/Intel">Intel</a>
 <a href="http://en.wikipedia.org/wiki/Macintosh">Macs</a> running
 <a href="http://en.wikipedia.org/wiki/Mac_OS_X">Mac&nbsp;OS&nbsp;X</a> 10.4.8
@@ -27,8 +26,10 @@ platforms.
 </p>
 
 <p>
-In the past (and present) <em>Miriad</em> has also run under SunOS 4.x,
-<a href="http://en.wikipedia.org/wiki/Convex_Computer">ConvexOS</a>,
+In the past (and present) <em>Miriad</em> has also run on
+<a href="http://en.wikipedia.org/wiki/Powerpc">PowerPC</a> Macs, in the
+<a href="http://en.wikipedia.org/wiki/Microsoft_Windows">Windows</a>
+<a href="http://en.wikipedia.org/wiki/Cygwin">Cygwin</a> environment, on
 <a href="http://en.wikipedia.org/wiki/Silicon_Graphics">
 SGI</a>/<a href="http://en.wikipedia.org/wiki/IRIX">IRIX</a> (32- and 64-bit),
 <a href="http://en.wikipedia.org/wiki/OSF/1">OSF/1</a> (aka Digital UNIX or
@@ -37,9 +38,8 @@ Tru64),
 HP</a>/<a href="http://en.wikipedia.org/wiki/HPUX">HPUX</a>,
 <a href="http://en.wikipedia.org/wiki/Cray_Inc.">
 Cray</a>/<a href="http://en.wikipedia.org/wiki/UNICOS">UNICOS</a>, and the
-<a href="http://en.wikipedia.org/wiki/Microsoft_Windows">Windows</a>
-<a href="http://en.wikipedia.org/wiki/Cygwin">Cygwin</a> environment
-(and it also originally ran on
+<a href="http://en.wikipedia.org/wiki/Convex_Computer">ConvexOS</a>, and
+SunOS 4.x operating systems, (and it also originally ran on
 <a href="http://en.wikipedia.org/wiki/VAX">
 VAX</a>/<a href="http://en.wikipedia.org/wiki/VAX/VMS">VMS</a>).  Although
 these platforms are not directly supported by ATNF a
@@ -123,7 +123,7 @@ libraries</a>:
 <li>
   <p>
   The <a href="http://www.atnf.csiro.au/computing/software/rpfits"><code>
-  RPFITS</code> library</a> (currently version 2.16) is used by
+  RPFITS</code> library</a> (currently version 2.19) is used by
   <a href="http://www.atnf.csiro.au/computing/software/miriad/doc/atlod.html">
   <code>atlod</code></a> and a number of other specialized tasks to read the
   ATNF data format.  It is provided in binary installations.
@@ -287,9 +287,10 @@ install them yourself.
 
 <p>
 Note that if you don't have an account at the ATNF that would allow you to run
-<code>mirsync</code> and intend to <a href="#updates">keep your installation
-up-to-date</a> by running <code>mirimport</code> then you will have to
-<a href="#source">install <em>Miriad</em> from source code</a>.
+<a href="#updates"><code>mirsync</code></a> and you intend to
+<a href="#updates">keep your installation up-to-date</a> by running
+<code>mirimport</code> then you will have to <a href="#source">install
+<em>Miriad</em> from source code</a>.
 </p>
 
 <ol>
@@ -314,9 +315,7 @@ up-to-date</a> by running <code>mirimport</code> then you will have to
   <a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-linux64.tar.gz">
   <code>linux64</code></a>,
   <a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-sun4sol.tar.gz">
-  <code>sun4sol</code></a>,
-  <a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-darwin_ppc.tar.gz">
-  <code>darwin_ppc</code></a>, and
+  <code>sun4sol</code></a>, and
   <a href="ftp://ftp.atnf.csiro.au/pub/software/miriad/miriad-darwin_x86.tar.gz">
   <code>darwin_x86</code></a>).
   </p>
@@ -824,7 +823,7 @@ A few more steps are required to finalize the installation:
   statically-linked, the executables may still require a small number of
   dynamically-linked system libraries that should be supplied by the operating
   system.  These include <code>readline</code>, <code>ncurses</code>, and
-  <code>X11</code>.
+  <code>X11</code>. Another is <code>libg2c0</code> (or <code>libg2c0-dev</code>).
   </p>
 
   <p>
@@ -871,9 +870,9 @@ A few more steps are required to finalize the installation:
   <code>g77</code> no longer exists in release 4.x of the GNU compiler suite,
   instead replaced by <code>gfortran</code> which is a Fortran 95 compiler.
   <em>Miriad</em> has been built successfully on Darwin systems using
-  <code>gfortran</code> 4.1.0 (<code>darwin_ppc</code>) and 4.2.0
-  (<code>darwin_x86</code>) in conjunction with <code>gcc</code> 4.x,
-  including all third-party Fortran libraries.
+  <code>gfortran</code> 4.2.0 for Intel Macs (and also 4.1.0 for PowerPC Macs)
+  in conjunction with <code>gcc</code> 4.x, including all third-party Fortran
+  libraries.
   </p>
 
   <p>
@@ -1014,11 +1013,11 @@ A few more steps are required to finalize the installation:
   </p>
 
   <p>
-  Also, while most Miriad i/o is done in C which does support 64-bit integer
+  Also, while most Miriad i/o is done in C, which does support 64-bit integer
   types, Miriad tasks are written in Fortran whose INTEGER data type on 32-bit
   machines is only 32-bits.  Thus, for example, the largest file that task
   <code>fits</code> can read or write is 2&sup3;&sup1;-1 bytes in this case.
-  If instructed to read a file larger than this <code>fits</code> essentially
+  If instructed to read a file larger than this, <code>fits</code> essentially
   only sees the first 2&sup3;&sup1;-1 bytes and generates error messages
   because of the subsequent inconsistencies.
   </p>
@@ -1085,15 +1084,15 @@ A few more steps are required to finalize the installation:
   </p>
 
   <p>
-  Fortunately, <code>g77</code> 3.4 is now available for PowerPC
-  (<code>darwin_ppc</code>) and Intel (<code>darwin_x86</code>) Macs from the
+  Fortunately, <code>g77</code> 3.4 is now available for Intel
+  (<code>darwin_x86</code>) and PowerPC Macs from the
   <a href="http://hpc.sourceforge.net">High Performance Computing</a> web
   site.  It is supplied as a <code>tar</code> file that installs without fuss
   directly into <code>/usr/local</code>.  Most importantly, this build of the
   GNU Fortran 77 compiler is compatible with the GNU C compilers provided
-  with Mac&nbsp;OS&nbsp;X as <code>/usr/bin/gcc-3.3</code> for PowerPC, and
-  <code>gcc-4.0</code> for Intel.  However, on PowerPC systems it may be
-  necessary to extract <code>darwin-fpsave.o</code> from
+  with Mac&nbsp;OS&nbsp;X as <code>gcc-4.0</code> for Intel, and
+  <code>/usr/bin/gcc-3.3</code> for PowerPC.  However, on PowerPC systems it
+  may be necessary to extract <code>darwin-fpsave.o</code> from
   <code>/usr/lib/gcc/darwin/3.3/libgcc.a</code> and insert it into
   <code>/usr/local/lib/gcc/powerpc-apple-darwin8.8.0/3.4.6/libgcc.a</code>;
   this module contains the symbols <code>saveFP</code> and
@@ -1518,5 +1517,5 @@ private version:
 <hr>
 
 <p>
-<small>$Id: INSTALL.html,v 1.13 2007/08/03 00:53:21 cal103 Exp $</small>
+<small>$Id: INSTALL.html,v 1.14 2008/11/06 00:36:01 cal103 Exp $</small>
 </p>
