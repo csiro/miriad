@@ -2,7 +2,7 @@
 # GNUmakefile used to compile Miriad.
 #
 # Original: 2006/08/28, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.28 2007/07/06 05:21:12 cal103 Exp $
+# $Id: GNUmakefile,v 1.29 2009/02/05 04:35:00 cal103 Exp $
 #-----------------------------------------------------------------------------
 ifeq "$(MIR)" ""
   # Try to deduce basic Miriad environment variables.  Obviously this only
@@ -39,6 +39,9 @@ ifeq "$(MAKEMODE)" "system"
 	-@ echo ""
 	-@ echo "Rebuilding/updating Miriad for $(MIRARCH) machines."
 	-@ $(TIMER)
+
+  cleansys ::
+	   $(RM) -r $(MIRTMPD)/*
 
   help ::
 	-@ echo ""
