@@ -25,7 +25,7 @@
 # target names by running 'gmake help'
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakedefs,v 1.29 2007/05/08 01:13:08 cal103 Exp $
+# $Id: GNUmakedefs,v 1.30 2009/02/05 04:34:06 cal103 Exp $
 #-----------------------------------------------------------------------------
 # We rely only on the MIR environment variable.
 MIRROOT  := $(MIR)
@@ -598,7 +598,6 @@ ifeq "$(MAKEMODE)" "system"
 
   # Rule for cleaning out system directories.
   cleansys ::
-	   $(RM) -r $(MIRTMPD)/*
 	-@ for i in $$SUBDIRS ; do \
            if [ "$Q" != "@" -o "$(MAKELEVEL)" = 0 ] ; then \
 	      echo "" ; \
