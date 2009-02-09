@@ -2,7 +2,7 @@
 # GNUmakefile for compiling Miriad utility xmtv.
 #
 # Original: 2006/09/15, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.1 2006/09/15 07:38:37 cal103 Exp $
+# $Id: GNUmakefile,v 1.2 2009/02/09 02:35:32 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
@@ -26,7 +26,7 @@ ifeq "$(MAKEMODE)" "system"
 
   # Static and static pattern rules.
   #---------------------------------
-  allsys :: $(MIRBIND)/xmtv.exe $(MIRBIND)/xmtv $(MIRCATD)/XMtv \
+  allsys :: $(MIRBIND)/xmtv.exe $(MIRBIND)/xmtv $(MIRLIBD)/XMtv \
     $(MIRDOCD)/xmtv.doc $(MIRSDOCD)/xmtv.doc
 
   $(MIRBIND)/xmtv.exe : $(XMTVSRCS) $(XMTVINCS)
@@ -41,7 +41,7 @@ ifeq "$(MAKEMODE)" "system"
 	   cp $< $@
 	-@ chmod 775 $@
 
-  $(MIRCATD)/XMtv : $(CODEDIR)/XMtv.ad
+  $(MIRLIBD)/XMtv : $(CODEDIR)/XMtv.ad
 	-@ $(RM) $@
 	   cp $< $@
 	-@ chmod 664 $@
