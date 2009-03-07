@@ -1,4 +1,4 @@
-c************************************************************************
+************************************************************************
 	program mfcal
 	implicit none
 c
@@ -105,6 +105,7 @@ c		  into bandpass, duplicate gains when bandpass dual polarisation
 c		  and gains is single polarisation.
 c    rjs  15jan06 Improve weighting.
 c    rjs  08jan07 Use MAXWIN more rigorously.
+c    jhz  16jan07 set external unpack, pack, scale
 c
 c  Problems:
 c    * Should do simple spectral index fit.
@@ -1161,6 +1162,7 @@ c
 	integer i,j,k,i1,i2,bl,spect,chan,off,nbl,p
 	complex SumVM(MAXBASE,MAXWIN,MAXPOL)
 	real SumMM(MAXBASE,MAXWIN,MAXPOL),epsi
+        external unpack
 c
 	nbl = nants*(nants-1)/2
 c
@@ -1215,6 +1217,7 @@ c
 	real Wt(maxvis)
 	integer VID(maxvis),PolMap(*)
 	character Source*(*)
+        external pack
 c
 c  Read the data, and return information on what we have read.
 c
@@ -2246,6 +2249,7 @@ c------------------------------------------------------------------------
 	integer b1(MAXBASE),b2(MAXBASE)
 	complex ref,G(MAXANT),SVM(MAXBASE)
 	real SMM(MAXBASE)
+        external scale 
 c
 	do i=1,nants
 	  Idx(i) = 0
@@ -2534,6 +2538,7 @@ c------------------------------------------------------------------------
 	integer i,j,bl,off,spect,chan,i1,i2,p
 	real theta,W
 	complex V,Model
+        external unpack
 c
 	do p=1,npol
 	  do j=1,nchan
@@ -2650,7 +2655,7 @@ c
 c  Externals.
 c
 	character itoaf*4
-	external FUNC,DERIVE
+	external FUNC,DERIVE,unpack
 c
 c  Check we have enough space.
 c
@@ -2891,6 +2896,7 @@ c
 	integer nbl,bl,p,i,i1,i2,spect,chan
 	real SumMM(MAXBASE,MAXPOL),epsi
 	complex SumVM(MAXBASE,MAXPOL),Model
+        external unpack
 c
 c  Initialise the accumulators.
 c
