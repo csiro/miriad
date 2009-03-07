@@ -6,6 +6,8 @@ c  History:
 c    rjs Dark-ages  Original version.
 c    rjs   8sep89   Improved documentation.
 c    rjs  03jul96   Guard against 0**0 in gcffun.
+c    rjs  07mar09   Corrrect error in one of the numbers. Found by
+c                   Tsuyoshi Sawada at Nobeyama.
 c************************************************************************
 c*CorrFun -- Generate the gridding convolution correction function.
 c: gridding,interpolation
@@ -253,7 +255,7 @@ c
 c  M=7, ALPHA=0,2,0.5, ETA > ETALIM.
 c
 	data ((p(i,j,7,2),i=1,7),j=0,4)/
-     *		 1.924318e-5,-5.044864e-3, 2.979803e-2,
+     *		 1.924318e-4,-5.044864e-3, 2.979803e-2,
      *		-6.660688e-2, 6.792268e-2, 2*0.0,
      *		 5.030909e-4,-8.639332e-3, 4.018472e-2,
      *		-7.595456e-2, 6.696215e-2, 2*0.0,
