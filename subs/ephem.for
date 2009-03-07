@@ -25,6 +25,9 @@ c    15jan99 rjs  Added new leap second.
 c    13sep99 rjs  Make jullst more robust.
 c    12may04 rjs  Make jullst more robust - again.
 c    26jul05 rjs  Added a new leap second.
+c    06mar08 rjs/dm David MacMahon noted that the number of days in a
+c		  Besselian century were given in single precision (rather
+c		  that double). Fix this.
 c
 c  General Reference:
 c    Explanatory Supplement to the Astronomical Almanac. 1993.
@@ -409,7 +412,7 @@ c
 	if(julian)then
 	  epo2jul = 365.25       *(epoch-2000) + 2451545d0
 	else
-	  epo2jul = 365.242198781*(epoch-1900) + 2415020.31352d0
+	  epo2jul = 365.242198781d0*(epoch-1900) + 2415020.31352d0
 	endif
 	end
 c************************************************************************
@@ -443,7 +446,7 @@ c
 	if(julian)then
 	  jul2epo = (jday-2451545d0)/365.25 + 2000
 	else
-	  jul2epo = (jday-2415020.31352d0)/365.242198781 + 1900
+	  jul2epo = (jday-2415020.31352d0)/365.242198781d0 + 1900
 	endif
 	end
 c************************************************************************
