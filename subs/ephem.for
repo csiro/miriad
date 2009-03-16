@@ -28,6 +28,8 @@ c    26jul05 rjs  Added a new leap second.
 c    06mar08 rjs/dm David MacMahon noted that the number of days in a
 c		  Besselian century were given in single precision (rather
 c		  that double). Fix this.
+c    13mar09 rjs/pjt Peter noted the ATNF version had not updated the leap
+c		  second table for the 1 Jan 2009 leap. Do this.
 c
 c  General Reference:
 c    Explanatory Supplement to the Astronomical Almanac. 1993.
@@ -482,7 +484,7 @@ c------------------------------------------------------------------------
 c
 	logical init
 	integer NLEAP
-	parameter(NLEAP=23)
+	parameter(NLEAP=24)
 	character leap(NLEAP)*7
 	double precision dtime(NLEAP)
 	save init,leap
@@ -495,7 +497,7 @@ c
      *		   '77JAN01','78JAN01','79JAN01','80JAN01','81JUL01',
      *		   '82JUL01','83JUL01','85JUL01','88JAN01','90JAN01',
      *		   '91JAN01','92JUL01','93JUL01','94JUL01','96JAN01',
-     *		   '97JUL01','99JAN01','06JAN01'/
+     *		   '97JUL01','99JAN01','06JAN01','09JAN01'/
 c
 c  Initialise the table of leap seconds.
 c
