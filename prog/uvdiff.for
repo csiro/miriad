@@ -59,7 +59,7 @@ c  Bugs/Shortcomings:
 c    * Should handle the conjugate symmetry property, and match data
 c      over a wider range of HA.
 c
-c $Id: uvdiff.for,v 1.3 2009/03/30 00:09:46 cal103 Exp $
+c $Id: uvdiff.for,v 1.4 2009/03/30 00:18:06 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
@@ -87,7 +87,7 @@ c     Externals.
      *           '-difference ','-one        ','-two        '/
 c-----------------------------------------------------------------------
       version = versan('uvdiff',
-     *  '$Id: uvdiff.for,v 1.3 2009/03/30 00:09:46 cal103 Exp $')
+     *  '$Id: uvdiff.for,v 1.4 2009/03/30 00:18:06 cal103 Exp $')
 
 c     Get the input parameters.
       call keyini
@@ -195,7 +195,7 @@ c     Determine the default line type.
 c-----------------------------------------------------------------------
       logical update
       integer length
-      character type*4
+      character type*1
 
       call uvprobvr(lIn,'corr',type,length,update)
       if(type.eq.'j'.or.type.eq.'r'.or.type.eq.'c')then
