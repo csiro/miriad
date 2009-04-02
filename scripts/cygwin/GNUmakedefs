@@ -8,11 +8,11 @@
 #
 # since changes will be lost if a newer version is installed.  Overriding
 # definitions should instead be made in the installation-specific makedefs
-# file, $MIR/alpha/GNUmakedefs, which is included by $MIR/GNUmakedefs after
-# this one.
+# file, $MIR/cygwin/GNUmakedefs, which is included by $MIR/GNUmakedefs
+# after this one.
 #
 # Original: 2006/09/13, Mark Calabretta, ATNF
-# $Id: GNUmakedefs,v 1.1 2006/09/15 08:07:23 cal103 Exp $
+# $Id: GNUmakedefs,v 1.2 2009/04/02 23:23:41 cal103 Exp $
 #=============================================================================
 # Cygwin is essentially linux.
 
