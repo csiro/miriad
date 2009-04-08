@@ -298,9 +298,10 @@ c    rjs   20jun97  Correct handling of multiple stokes in slopintp.
 c    rjs   07jul97  Change coaxdesc to coaxget.
 c    rjs   01jul99  CHanges in call sequence to hdfiddle.
 c    rjs   29jun05  Handle changes in calling sequence to mostab/hdtab routines.
+c    rjs   03apr09  Change way of accessing scrio to help access larger files.
 c  Bugs:
 c
-c $Id: invert.for,v 1.3 2007/04/03 00:01:00 cal103 Exp $
+c $Id: invert.for,v 1.4 2009/04/08 15:30:15 sau078 Exp $
 c-----------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'maxdim.h'
@@ -340,7 +341,7 @@ c
 	data slops/'zero        ','interpolate '/
 c-----------------------------------------------------------------------
         version = versan ('invert',
-     :    '$Id: invert.for,v 1.3 2007/04/03 00:01:00 cal103 Exp $')
+     :    '$Id: invert.for,v 1.4 2009/04/08 15:30:15 sau078 Exp $')
 c
 c  Get the input parameters. Convert all angular things into
 c  radians as soon as possible!!
@@ -833,18 +834,20 @@ c  Output:
 c    Wts	Array containing the visibility weights.
 c
 c-----------------------------------------------------------------------
+	include 'maxdim.h'
 	integer InU,InV,InW,InWt,InPnt,InRms2,InFreq,InData
 	parameter(InU=0,InV=1,InW=2,InPnt=3,InWt=6,InRms2=4)
 	parameter(InFreq=5,InData=8)
 	integer Maxrun
-	parameter(Maxrun=2048)
+	parameter(Maxrun=8*MAXCHAN+20)
 	integer i,id,j,VispBuf, VisSize,u,v,k,ktot,l,ltot,ipnt
 	real Visibs(Maxrun)
 c
 c  Determine the number of visibilities perr buffer.
 c
 	VisSize = InData + 2*nchan
-	VispBuf = (Maxrun-InData)/VisSize + 1
+	VispBuf = maxrun/VisSize
+	if(VispBuf.lt.1)call bug('f','Too many channels for me!')
 c
 c  Zero out the array.
 c
@@ -858,11 +861,12 @@ c
 c
 c  Accumulate the weight function.
 c
+	call scrrecsz(tVis,VisSize)
 	k = 0
 	ktot = nvis
 	dowhile(k.lt.ktot)
 	  ltot = min(VispBuf,ktot-k)
-	  call scrread(tvis,Visibs,k*VisSize,(ltot-1)*VisSize+InData)
+	  call scrread(tvis,Visibs,k,ltot)
 	  do l=1,ltot*VisSize,VisSize
 	    if(Visibs(l+InU).lt.0)then
 	      u = nint(-Visibs(l+InU)/wdu) + 1
@@ -1108,9 +1112,10 @@ c
 c
 c  Do the real work.
 c
+	call scrrecsz(tscr,size)
 	do l=1,nvis,step
 	  n = min(nvis-l+1,step)
-	  call scrread(tscr,Vis,(l-1)*size,n*size)
+	  call scrread(tscr,Vis,l-1,n)
 c
 c  Calculate the basic weight, either natural or pseudo-uniform.
 c
@@ -1239,7 +1244,7 @@ c
 c
 c  All done. Write out the results.
 c
-	  call scrwrite(tscr,Vis,(l-1)*size,n*size)
+	  call scrwrite(tscr,Vis,l-1,n)
 	enddo
 c
 c  Finish up the RMS noise estimates.
@@ -1386,7 +1391,7 @@ c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	integer MAXPOL,MAXLEN
 	parameter(MAXPOL=4,MAXLEN=4+MAXPOL*MAXCHAN)
-	integer tno,pnt,nzero,nread,i,j,offset,nbad,nrec,ncorr,nlen
+	integer tno,pnt,nzero,nread,i,j,offset,nbad,nrec,ncorr,VisSize
 	complex data(MAXCHAN,MAXPOL),out(MAXLEN),ctemp
 	logical flags(MAXCHAN,MAXPOL),more
 	real uumax,vvmax,rms2,Wt,SumWt
@@ -1404,14 +1409,19 @@ c
 	call GetRec(tno,uvw,data,flags,npol,MAXCHAN,nchan)
 c
 	if(mfs)then
+	  ncorr = npol
 	  call output('Making MFS images')
 	else if(nchan.eq.1)then
+	  ncorr = npol
 	  call output('Making single plane images')
 	else
+	  ncorr = npol*nchan
 	  num = itoaf(nchan)
 	  i = len1(num)
 	  call output('Making cubes with '//num(1:i)//' planes')
 	endif
+	VisSize = 2*(ncorr + 4)
+	call scrrecsz(tscr,VisSize)
 c
 	nread = nchan
 	more = nchan.gt.0
@@ -1497,9 +1507,8 @@ c
 	      enddo
 	    endif
 c
-	    nlen = 2*nrec * ( ncorr + 4)
-	    call scrwrite(tscr,Out,offset,nlen)
-	    offset = offset + nlen
+	    call scrwrite(tscr,Out,offset,nrec)
+	    offset = offset + nrec
 	  endif
 	  call GetRec(tno,uvw,data,flags,npol,MAXCHAN,nread)
 	  more = nread.eq.nchan.or.(mfs.and.nread.gt.0)
@@ -1558,6 +1567,7 @@ c    flags	Flags associated with the visibility data.
 c    Wt		Basic weight.
 c    rms2	Noise variance.
 c    uumax,vvmax u,v limits.
+c    ncorr	Number of correlations in each output record.
 c  Input/Output:
 c    SumWt	Sum of all the weights.
 c    umax,vmax	Max value for abs(u),abs(v).
@@ -1567,7 +1577,6 @@ c  Output:
 c    out	A record consisting of
 c		u,v,w,pointing,rms**2,log(freq),wt,0,r1,i1,r2,i2,...
 c    nrec	Number of records.
-c    ncorr	Number of correlations in each record.
 c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	integer i,j,nlen
@@ -1577,6 +1586,8 @@ c-----------------------------------------------------------------------
 c
 c  Check whether the weight is positive.
 c
+	if(ncorr.ne.npol)call bug('f','Something is screwy in ProcMFS')
+
 	ok = Wt.gt.0
 	nlen = 0
 c
@@ -1629,7 +1640,6 @@ c
 	  nbad = nbad + nchan
 	endif
 c
-	ncorr = npol
 	nrec = nlen / (4 + ncorr)
 c
 	end
@@ -1658,6 +1668,7 @@ c    slopmode	Slop mode.
 c    Wt		Basic weight.
 c    rms2	Noise variance.
 c    uumax,vvmax Max u,v value to map.
+c    ncorr	Number of correlations in the output record.
 c  Input/Output:
 c    ChanWt	Channel "slop" normalisation.
 c    SumWt	Sum of all the weights.
@@ -1668,13 +1679,15 @@ c  Output:
 c    out	A record consisting of
 c		u,v,w,pointing,rms**2,0,wt,0,r1,i1,r2,i2,...
 c-----------------------------------------------------------------------
-	integer i,j,badcorr,nlen,pnt
+	integer i,j,badcorr,pnt
 	real u,v
 	logical ok,somebad
 c
 c  Is the weight positive?
 c
 	ok = Wt.gt.0
+	if(ncorr.ne.npol*nchan)
+     *		call bug('f','Something screwy in ProcSpec')
 c
 c  Count the number of bad correlations.
 c
@@ -1700,9 +1713,8 @@ c
 	u = abs(uvw(1))
 	v = abs(uvw(2))
 	if(ok.and.u.lt.uumax.and.v.lt.vvmax)then
-	  nlen = 4 + npol*nchan
-	  if(nlen.gt.MAXLEN)call bug('f',
-     *					'Buffer overflow, in ProcSpec')
+	  if(ncorr+4.gt.MAXLEN)
+     *		call bug('f','Buffer overflow, in ProcSpec')
 	  out(1) = cmplx(real(uvw(1)),real(uvw(2)))
 	  out(2) = cmplx(real(uvw(3)),1.0)
 	  out(3) = rms2
@@ -1722,14 +1734,12 @@ c
 	      pnt = pnt + 1
 	    enddo
 	  enddo
+	  nrec = 1
 	  nvis = nvis + 1
 	else
-	  nlen = 0
+	  nrec = 0
 	  nbad = nbad + 1
 	endif
-c
-	ncorr = npol*nchan
-	nrec = nlen / (4 + ncorr)
 c
 	end
 c***********************************************************************
