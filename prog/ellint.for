@@ -122,13 +122,14 @@ c    snv   25nov03      Added radial profile smooth option
 c    pjt   13dec03      Documented the previous, add output history,
 c                       fixed residual map computation
 c    pjt   15dec03      make sure median .or. mode is selected, not both
+c    rjs   06apr09	Make sure do loop parameters are integer valued.
 c
 c----------------------------------------------------------------------c
         include 'mirconst.h'
 	include 'maxdim.h'
 	include 'mem.h'
         character*(*) label,version
-        parameter(version='version 14-dec-2003')
+        parameter(version='version 06-Apr-2009')
         double precision rts,value
         parameter(label='Integrate a Miriad image in elliptical annuli')
         integer maxnax,maxboxes,maxruns,naxis,axis,plane,maxring
@@ -491,7 +492,7 @@ c
                 do i=irmin,irmax
                    totalj = 0.
                    jcount = 0
-                   do jj = i-medsmooth,i+medsmooth
+                   do jj = nint(i-medsmooth),nint(i+medsmooth)
                       kk=jj
                       if (jj .lt. irmin) kk = irmin
                       if (jj .gt. irmax) kk = irmax

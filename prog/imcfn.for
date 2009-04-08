@@ -103,8 +103,9 @@ c  History:
 c    nebk 13sep95 Original version
 c    rjs   2jul98 Increase ize of pbtype variable.
 c    rjs  08may00 Change incorrect call to keyf to keya.
+c    rjs  06apr09 Make sure do loop parameters are integer valued.
 c
-c $Id: imcfn.for,v 1.2 2007/01/15 04:20:21 cal103 Exp $
+c $Id: imcfn.for,v 1.3 2009/04/08 15:21:08 sau078 Exp $
 c------------------------------------------------------------------------
       implicit none
 c
@@ -114,7 +115,7 @@ c
       include 'mem.h'
       character version*(*) 
       integer maxpc, maxpts
-      parameter (version = 'ImCFN: version 1.0 2-Jul-98', maxpc = 6,
+      parameter (version = 'ImCFN: version 1.0 06-Apr-2009', maxpc = 6,
      +           maxpts = 10000)
 cc
       real xx(maxpts), yy(maxpts), yy2(maxpts), ymin, ymax, xmin, xmax,
@@ -173,7 +174,8 @@ c
       sold = s1
       i = 1
 c
-      do s = s1+dlogs, s2, dlogs
+      s = s1 + dlogs
+      dowhile(s.le.s2)
         sjy = 10**s
 c
         if (s.le.s3) then
@@ -215,6 +217,7 @@ c
 c
         i = i + 1
         sold = sjy
+        s = s + dlogs
       end do
 c
       write (line,10) sum
