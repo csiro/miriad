@@ -18,6 +18,7 @@ c    rjs  16jan93 A third try at the above.
 c    rjs   4aug95 Check that the beam is non-zero. Bug out if not.
 c    rjs  13dec95 Set minimum transform size to be 16 (FFT limitation).
 c    rjs  07jan97 Fiddle memory conservation alogirthm yet again.
+c    rjs  03apr09 Change use of scratch file to help large file access.
 c************************************************************************
 	subroutine MapFin
 c
@@ -456,11 +457,12 @@ c
 c
 c  Loop through the visibilities, gridding the appropriate ones.
 c
+	call scrrecsz(tvis,VisSize)
 	k = 0
 	ktot = nvis
 	dowhile(k.lt.ktot)
 	  ltot = min(VispBuf,ktot-k)
-	  call scrread(tvis,Visibs,k*VisSize,ltot*VisSize)
+	  call scrread(tvis,Visibs,k,ltot)
 	  call Mapit(Visibs,ltot,nstart,ncount,npnt,VisSize,
      *	    Grd,nu,nv,u0,v0,n1,n2,Cgf,ncgf,width,poff,qoff,goff)
 	  k = k + ltot
@@ -815,30 +817,31 @@ c
 c
 c  Determine the sum of the visibilities.
 c------------------------------------------------------------------------
+	include 'maxdim.h'
 	integer MAXRUN
 	parameter(MAXRUN=1024)
 	real Vis(MAXRUN)
 	double precision temp
-	integer k,ktot,l,ltot,l0,offset,length,VispBuf
+	integer k,ktot,l,ltot,l0,VispBuf
 c
 c  Determine the number of visibilities we can fit into a buffer.
 c
-	VispBuf = (MAXRUN-1)/VisSize + 1
+	VispBuf = MAXRUN/VisSize
+	if(VispBuf.lt.1)
+     *		call bug('f','Buffer size too small in MapSlowS')
+	call scrrecsz(tscr,VisSize)
 c
-	offset = offcorr - 1
 	temp = 0
 	k = 0
 	ktot = nvis
 	dowhile(k.lt.ktot)
 	  ltot = min(VispBuf,ktot-k)
-	  length = VisSize*(ltot-1) + 1
-	  call scrread(tscr,Vis,offset,length)
-	  l0 = 1
+	  call scrread(tscr,Vis,k,ltot)
+	  l0 = offcorr
 	  do l=1,ltot
 	    temp = temp + Vis(l0)
 	    l0 = l0 + VisSize
 	  enddo
-	  offset = offset + VisSize*ltot
 	  k = k + ltot
 	enddo
 c
@@ -862,24 +865,22 @@ c------------------------------------------------------------------------
 	integer MAXRUN
 	parameter(MAXRUN=1024)
 	real Vis(MAXRUN),theta
-	integer offset,length,VispBuf,k,ktot,l,ltot,l0,i0,j0,i,j
+	integer VispBuf,k,ktot,l,ltot,l0,i0,j0,i,j
 	double precision dtemp
 c
 c  Determine the number of visibilities that we can fit in per
 c  record.
 c
-	if(MAXRUN.lt.offcorr+1)call bug('f','Too many channels for me!')
-	VispBuf = (MAXRUN-(offcorr+1))/VisSize + 1
+	VispBuf = MAXRUN/VisSize
+	if(VispBuf.lt.1)call bug('f','Too many channels for me')
 c
 c  Read in all the data.
 c
 	k = 0
 	ktot = nvis
-	offset = 0
 	dowhile(k.lt.ktot)
 	  ltot = min(VispBuf,ktot-k)
-	  length = VisSize*(ltot-1) + offcorr+1
-	  call scrread(tscr,Vis,offset,length)
+	  call scrread(tscr,Vis,k,ltot)
 	  l0 = 0
 	  do l=1,ltot
 	    Dat(1,k+l) = Vis(l0+1)
@@ -889,7 +890,6 @@ c
 	    l0 = l0 + VisSize
 	  enddo
 	  k = k + ltot
-	  offset = offset + VisSize*ltot
 	enddo
 c
 c  Now do the real work.
