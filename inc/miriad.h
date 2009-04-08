@@ -24,6 +24,7 @@
 // 23-jun-02 pjt define MIR4 here if you want to enable the LSF and MIR4
 // 30-aug-04 pjt removed deprecated ARGS() macro
 // 01-jan-04 rjs Eliminate MIR3/MIR4 stuff. Tidy up.
+// 01-apr-09 rjs Add additional interface to scrRecSz
 */
 
 
@@ -292,6 +293,7 @@ void scropen_c  (int *handle);
 void scrclose_c (int handle);
 void scrread_c  (int handle, float *buffer, off_t offset, size_t length);
 void scrwrite_c (int handle, Const float *buffer, off_t offset, size_t length);
+void scrrecsz_c (int handle, size_t recsize);
 
 /* key.c */
 
