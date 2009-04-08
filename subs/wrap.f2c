@@ -33,6 +33,7 @@
 /*    rjs  18sep05   Changes to handle FORTRAN and C ints differing.	*/
 /*    rjs  26nov05   Changes to handle FORTRAN and C logicals differing.*/
 /*    mrc  14jul06   Compile with 'gcc -Wall' without warnings.         */
+/*    rjs  01apr09   Add scrRecSz routine.				*/
 /************************************************************************/
 #include <limits.h>
 #include <unistd.h>
@@ -60,16 +61,21 @@ fortran subroutine scrclose(integer handle)
   scrclose_c(handle.val);
 }
 /************************************************************************/
+fortran subroutine scrrecsz(integer handle, integer recsize)
+{
+  scrrecsz_c(handle.val,recsize.val);
+}
+/************************************************************************/
 fortran subroutine scrread(integer handle,real buffer,
 	integer offset,integer length)
 {
-  scrread_c(handle.val,buffer.addr,(off_t)offset.val,length.val);
+  scrread_c(handle.val,buffer.addr,(off_t)offset.val,(size_t)length.val);
 }
 /************************************************************************/
 fortran subroutine scrwrite(integer handle,real buffer,
 	integer offset,integer length)
 {
-  scrwrite_c(handle.val,buffer.addr,(off_t)offset.val,length.val);
+  scrwrite_c(handle.val,buffer.addr,(off_t)offset.val,(size_t)length.val);
 }
 /************************************************************************/
 fortran subroutine uvopen(integer tno,character name,character status)
