@@ -132,10 +132,11 @@ c    rjs  30sep96 Tidy up and improved polarisation handling.
 c    rjs  19jun97 Point source models can be different polarisations.
 c    rjs  26sep97 Re-add mhw's zero option.
 c    rjs  01dec98 More warning messages.
+c    rjs  03apr09 Fix long standing bug in "options=flag"
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
-	parameter(version='version 1.0 26-Sep-97')
+	parameter(version='version 1.0 03-Apr-09')
 	integer maxsels,nhead,nbuf
 	parameter(maxsels=64,nhead=1,nbuf=5*maxchan+nhead)
 c
@@ -357,7 +358,7 @@ c  Determine the rms error, if needed.
 c
 	if(calcrms)then
 	  call uvinfo(tvis,'variance',sigma2)
-	  out(1) = sigma2
+	  out(1) = sqrt(abs(sigma2))
 	  accept = sigma2.gt.0
 	else
 	  Out(1) = 0.
