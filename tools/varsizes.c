@@ -2,12 +2,16 @@
 *  Simple program to return variable sizes used on your platform.
 *  To build: cc -o varsizes varsizes.c
 *
-*  Author: Chris.Phillips@csiro.au
-*  Date: 2005-03-31
-*  $Id: varsizes.c,v 1.2 2006/10/19 06:21:20 cal103 Exp $
+*  History 
+*   31mar05 Chris Phillips Original version.
+*   02apr09 rjs		   Added several additional data types.
+*
+*  $Id: varsizes.c,v 1.3 2009/04/08 15:22:42 sau078 Exp $
 *===========================================================================*/
 
-#include<stdio.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 int main (void)
 {
@@ -20,7 +24,11 @@ int main (void)
   printf(" Sizeof long = %d\n", sizeof(long));
   printf(" Sizeof long long = %d\n", sizeof(long long));
   printf(" Sizeof *void = %d\n", sizeof((void*) &i));
+  printf(" Sizeof off_t = %d\n", sizeof(off_t) );
+  printf(" Sizeof size_t = %d\n", sizeof(size_t) );
+  printf(" Sizeof ptrdiff_t = %d\n", sizeof(ptrdiff_t) );
   printf("\n");
+  printf(" Sizeof float = %d\n", sizeof(float));
   printf(" Sizeof double = %d\n", sizeof(double));
   printf(" Sizeof long double = %d\n", sizeof(long double));
   printf("\n");
