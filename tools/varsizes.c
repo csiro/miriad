@@ -6,12 +6,12 @@
 *   31mar05 Chris Phillips Original version.
 *   02apr09 rjs		   Added several additional data types.
 *
-*  $Id: varsizes.c,v 1.3 2009/04/08 15:22:42 sau078 Exp $
+*  $Id: varsizes.c,v 1.4 2009/04/14 03:59:45 cal103 Exp $
 *===========================================================================*/
 
 #include <stddef.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <sys/types.h>
 
 int main (void)
 {
