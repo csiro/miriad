@@ -2,7 +2,7 @@
 # GNUmakefile for compiling Miriad utility xmtv.
 #
 # Original: 2006/09/15, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.2 2009/02/09 02:35:32 cal103 Exp $
+# $Id: GNUmakefile,v 1.3 2009/04/14 02:29:44 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
@@ -10,19 +10,24 @@ include $(MIR)/GNUmakedefs
 XMTVSRCS := $(filter %.c, $(MIRSRCS))
 XMTVINCS := $(filter %.h %.icon, $(MIRSRCS))
 
+ifneq "$(X11INCD)" ""
+  X11INC := -I$(X11INCD)
+endif
+
 show ::
 	-@ echo ""
 	-@ echo ""
 	-@ echo "Variables defined in the xmtv GNUmakefile"
 	-@ echo "=========================================="
 	-@ echo ""
-	-@ echo "XMTVSRCS  = $(XMTVSRCS)"
-	-@ echo "XMTVINCS  = $(XMTVINCS)"
+	-@ echo "XMTVSRCS   = $(XMTVSRCS)"
+	-@ echo "XMTVINCS   = $(XMTVINCS)"
+	-@ echo "X11INC     = $(X11INC)"
 
 ifeq "$(MAKEMODE)" "system"
   # System-oriented rules.
   #-----------------------
-  CFLAGS   := $(CPPOPT) -I$(X11INCD) $(CCOPT) $(LDOPT)
+  CFLAGS   := $(CPPOPT) $(X11INC) $(CCOPT) $(LDOPT)
 
   # Static and static pattern rules.
   #---------------------------------
@@ -65,7 +70,7 @@ ifeq "$(MAKEMODE)" "system"
 else
   # Programmer-oriented rules.
   #---------------------------
-  CFLAGS   := $(CPPDBG) -I../xmtv -I$(X11INCD) $(CCDBG) $(LDDBG)
+  CFLAGS   := $(CPPDBG) -I../xmtv $(X11INC) $(CCDBG) $(LDDBG)
   VPATH    := .:$(CODEDIR)
 
   # Static and static pattern rules.
