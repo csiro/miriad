@@ -1,7 +1,7 @@
 #-----------------------------------------------------------------------------
 # GNUmakefile for bbcal.
 #
-# $Id: GNUmakefile,v 1.1 2009/04/22 12:14:05 wie017 Exp $
+# $Id: GNUmakefile,v 1.1.1.1 2009/04/22 13:10:24 wie017 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
