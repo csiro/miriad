@@ -1,539 +1,443 @@
 c************************************************************************
 c
-c  A simple set of routines to handle multiple precision integer arithmetic.
-c
-c  The routines all take a handle which contains an encoding of the integer.
+c  A set of routines to do extended precision integer arithmetic
+c  in standard FORTRAN. These routines approximately double the
+c  range of integers.
 c
 c  History:
 c    27mar09 rjs  Original version
+c    21apr09 rjs  Complete rewrite to use a simpler, more limited,
+c		  more efficient, representation.
 c
-c  Routines:
-c    integer function mpCvtim(int)         mp = int
-c    integer function mpCvtmi(mp)          i = mp
-c    double precision function mpCvtmd(mp) d = mp
-c    subroutine mpAddmm(mp1,mp2)           mp1 = mp1 + mp1
-c    subroutine mpSubmm(mp1,mp2)           mp1 = mp1 - mp2
-c    subroutine mpMulmi(mp,int)            mp = int*mp
-c    subroutine mpMulmm(mp1,mp2)           mp1 = mp1*mp2
-c    subroutine mpNegm(mp)		   mp = -mp
-c    subroutine mpAbsm(mp)		   mp = abs(mp)
-c    subroutine mpPowm(mp,n)		   mp = mp**n
-c    integer function mpCmpmm(mp1,mp2)     out = mp1 cmp mp2
-c    integer function mpCmpAbs(mp1,mp2)	   out = abs(mp1) cmp abs(mp2)
-c    integer function mpDup(mp)            Duplicate a handle.
-c    subroutine mpDel(mp)		   Free up a handle.
-c    subroutine mpFmt(string,mp)	   Convert to string.
+c  An integer is stored as a triple
+c
+c    value = v(1) + v(2)*v(3)
+c
+c  The set of routines manipulate these triples.
+c
+c  subroutine mpCvtim(v,int)
+c  integer function mpCvtmi(v)
+c  double precision function mpCvtmd(v)
+c  subroutine mpFmt(string,v)
+c  subroutine mpAddmi(v,int)
+c  subroutine mpAddmm(v1,v2)
+c  subroutine mpSubmi(v,int)
+c  subroutine mpSubmm(v1,v2)
+c  subroutine mpMulmi(v,int)
+c  subroutine mpMulmm(v1,v2)
+c  integer function mpCmp(v1,v2)
+c  subroutine mpNeg(v)
+c  subroutine mpAbs(v)
 c
 c************************************************************************
-	integer function mpDup(mp)
+	subroutine mpCvtim(v,k)
 c
 	implicit none
-	integer mp
-c
-c  Generate a duplicate of the handle.
-c
-c  Input:
-c    mp		The handle of the input integer.
-c  Output:
-c    mpDup	A handle of a duplicate.
+	integer v(3),k
 c
 c------------------------------------------------------------------------
 	include 'mp.h'
-	integer i,ret
+	logical first
+	save first
 c
-	ret = first
-	if(ret.eq.0)call bug('f','Not enough multiprecision integers')
-	first = vars(1,ret)
+	data first/.true./
 c
-	do i=1,abs(vars(1,mp))+1
-	  vars(i,ret) = vars(i,mp)
-	enddo
-c
-	mpDup = ret
-c
+	if(first)call mpInit
+	first = .false.
+	call mpStd2(k,0,mpBase2,v(1),v(2))
+	v(3) = mpBase2
 	end
 c************************************************************************
-	subroutine mpDel(mp)
+	subroutine mpStd2(v1,v2,v3,d1,d2)
 c
 	implicit none
-	integer mp
+	integer v1,v2,v3,d1,d2
 c
-c  Free up the handle.
-c
-c  Input:
-c    mp		The handle of the input integer.
-c--
+c  Convert an arbitrary triple, v1+v2*v3, into a "standard triple",
+c  d1+d2*mpBase2, where d1 and d2 have the same sign.
 c------------------------------------------------------------------------
 	include 'mp.h'
-	vars(1,mp) = first
-	first = mp
-	end
-c************************************************************************
-	integer function mpCvtim(in)
+	integer d1a,a(3),b(3),d(6),carry,i,j,k
 c
-	implicit none
-	integer in
-c
-c  Convert a normal FORTRAN integer into the format 
-c
-c  Input:
-c    in		Normal FORTRAN integer
-c  Output:
-c    mpCvtim	Handle of a multi-precision integer,
-c------------------------------------------------------------------------
-	include 'mp.h'
-c
-	integer mp,temp,nd
-	logical doinit
-	save doinit
-	data doinit/.true./
-c
-c  Initialise the first time through.
-c
-	if(doinit)call mpInit
-	doinit = .false.
-c
-c  Allocate a multi-precision integer slot.
-c
-	mp = first
-	if(mp.eq.0)call bug('f','Not enough multiprecision integers')
-	first = vars(1,mp)
-c
-	temp = abs(in)
-c
-	nd = 0
-	dowhile(temp.gt.0)
-	  nd = nd + 1
-	  if(nd.gt.maxdig)call bug('f','Integer too large in mp')
-	  vars(nd+1,mp) = mod(temp,base)
-	  temp = temp / base
-	enddo
-	if(in.lt.0)nd = -nd
-	vars(1,mp) = nd
-c
-	mpCvtim = mp
-c
-	end
-c************************************************************************
-	subroutine mpPowm(mp,n)
-c
-	implicit none
-	integer n,mp
-c
-c  Raise a multi-precision integer to a power.
-c
-c  Input:
-c    n		Integer to raise the number to. Must be non-negative.
-c  Input/Output:
-c    mp		Handle of the input multi-precision integer.
-c
-c------------------------------------------------------------------------
-	include 'mp.h'
-	integer MAXN
-	parameter(MAXN=32)
-	integer pows(MAXN),j,jd,logj,logjmax
-c
-c  Externals.
-c
-	integer mpDup
-c
-	if(n.eq.0)then
-	  vars(1,mp) = 1
-	  vars(2,mp) = 1
+	d1 = v1
+	d1a = 0
+	if(v3.eq.mpBase2)then
+	  d2 = v2
+	else if(v2.ne.0.and.v3.ne.0)then
+	  a(1) = v2
+	  a(2) = a(1)/mpBase
+	  a(1) = a(1) - a(2)*mpBase
+	  a(3) = a(2)/mpBase
+	  a(2) = a(2) - a(3)*mpBase
+	  b(1) = v3
+	  b(2) = b(1)/mpBase
+	  b(1) = b(1) - b(2)*mpBase
+	  b(3) = b(2)/mpBase
+	  b(2) = b(2) - b(3)*mpBase
+	  do k=1,6
+	    d(k) = 0
+	  enddo
+	  do j=1,3
+	    carry = 0
+	    do i=1,3
+	      k = i + j - 1
+	      d(k) = d(k) + a(i)*b(j) + carry
+	      carry = d(k)/mpBase
+	      d(k) = d(k) - carry*mpBase
+	    enddo
+	    d(j+3) = d(j+3) + carry
+	  enddo
+	  d1a = d(2)*mpBase + d(1)
+	  d2  = d(4)*mpBase + d(3)
+	  if(abs(d(5))+abs(d(6)).ne.0)
+     *		call bug('f','Integer overflow in mpStd2')
 	else
-	  j=1
-	  logj = 1
-	  pows(logj) = mp
-	  dowhile(j+j.le.n)
-	    logj = logj + 1
-	    j = j + j
-	    pows(logj) = pows(logj-1)
-	    pows(logj-1) = mpDup(pows(logj))
-	    call mpMulmm(pows(logj),pows(logj-1))
-	  enddo
+	  d2 = 0
+	endif
 c
-	  logjmax = logj
-	  jd = j
+c  Add in the different components with care to avoid overflow.
 c
-c  Note at this stage, pows(logjmax) == mp
+	carry = d1/mpBase2
+	d1 = d1 - carry*mpBase2
+	d2 = d2 + carry
 c
-	  dowhile(logj.gt.1)
-	    logj = logj - 1
-	    j = j / 2
-	    if(j+jd.le.n)then
-	      jd = jd + j
-	      call mpMulmm(mp,pows(logj))
-	    endif
-	    call mpDel(pows(logj))
-	  enddo
+	d1 = d1 + d1a
+	carry = d1/mpBase2
+	d1 = d1 - carry*mpBase2
+	d2 = d2 + carry
+c
+c  Make d1 and d2 have the same signs.
+c
+	if(d1.lt.0.and.d2.gt.0)then
+	  d1 = d1 + mpBase2
+	  d2 = d2 - 1
+	else if(d1.gt.0.and.d2.lt.0)then
+	  d1 = d1 - mpBase2
+	  d2 = d2 + 1
 	endif
 c
 	end
 c************************************************************************
-	double precision function mpCvtmd(mp)
+	double precision function mpCvtmd(v)
 c
 	implicit none
-	integer mp
-c
-c  Convert a multi-precision integer into a FORTRAN double precision.
-c
-c  Input:
-c    mp		Handle of the input multi-precision integer.
-c  Output:
-c    mpCvtmd	The output double precision number.
+	integer v(3)
 c------------------------------------------------------------------------
-	include 'mp.h'
-	integer i,nd
 	double precision temp
 c
-	temp = 0
-	nd = abs(vars(1,mp))
-	do i=nd,1,-1
-	  temp = temp*base + vars(i+1,mp)
-	enddo
-	if(vars(1,mp).lt.0)temp = -temp
+c  Order the operations to avoid the possibility of overflow.
 c
+	temp = v(3)
+	temp = temp*v(2) + v(1)
 	mpCvtmd = temp
+c
 	end
 c************************************************************************
-	integer function mpCvtmi(mp)
+	integer function mpCvtmi(v)
 c
 	implicit none
-	integer mp
-c
-c  Convert a multi-precision integer into a FORTRAN integer.
-c  An error is generated if an overflow would result.
-c
-c  Input:
-c    mp		Handle of the input multi-precision integer.
-c  Output:
-c    mpCvtmi	The output integer.
+	integer v(3)
 c------------------------------------------------------------------------
 	include 'mp.h'
-	integer ret,nd,i
-c
-	nd = abs(vars(1,mp))
-	ret = 0
-	do i=nd,1,-1
-	  if((maxint-vars(i+1,mp))/base.lt.ret)
-     *				call bug('f','Integer overflow')
-	  ret = base*ret + vars(i+1,mp)
-	enddo
-c
-	if(vars(1,mp).lt.0)ret = -ret
-c
-	mpCvtmi = ret
-	end
-c************************************************************************
-	subroutine mpNegm(mp)
-c
-	implicit none
-	integer mp
-c
-c  Negate a multi-precision integer. mp = -mp
-c
-c  Input/Output:
-c    mp		Handle of the integer being negated.
-c------------------------------------------------------------------------
-	include 'mp.h'
-	vars(1,mp) = -vars(1,mp)
-	end
-c************************************************************************
-	subroutine mpAbsm(mp)
-c
-	implicit none
-	integer mp
-c
-c  Take the absolute value of a multi-precision integer. mp = abs(mp)
-c
-c  Input/Output:
-c    mp		The handle of the integer affected.
-c------------------------------------------------------------------------
-	include 'mp.h'
-	vars(1,mp) = abs(vars(1,mp))
-	end
-c************************************************************************
-	subroutine mpAddSub(mp1,mp2,dosub)
-c
-	implicit none
-	integer mp1,mp2
-	logical dosub
-c
-c  Internal routine to do addition/subtraction.
-c
-c------------------------------------------------------------------------
-	include 'mp.h'
-	logical diff
-	integer tmp(maxdig),nd,nd1,nd2,carry,i,v1,v2,sgn,i1,i2,ndo
+	integer t(3)
 c
 c  Externals.
 c
-	integer mpCmpAbs
+	integer mpCmp
 c
-	diff = vars(1,mp1)*vars(1,mp2).lt.0
-	if(dosub) diff = .not.diff
-	sgn = 1
-	if(vars(1,mp1).lt.0)sgn = -1
+c  Check for overflow first.
 c
-	i1 = mp1
-	i2 = mp2
-	if(diff)then
-	  if(mpCmpAbs(mp1,mp2).lt.0)then
-	    i1 = mp2
-	    i2 = mp1
-	    sgn = -sgn
-	  endif
-	endif
-c
-	nd1 = abs(vars(1,i1))
-	nd2 = abs(vars(1,i2))
-	nd = max(nd1,nd2)
-	carry = 0
-	ndo = 0
-	do i=1,nd
-	  v1 = 0
-	  if(i.le.nd1)v1 = vars(i+1,i1)
-	  v2 = 0
-	  if(i.le.nd2)v2 = vars(i+1,i2)
-	  if(diff)v2 = -v2
-	  tmp(i) = v1 + v2 + carry
-	  carry = tmp(i)/base
-	  tmp(i) = tmp(i) - carry*base
-	  if(tmp(i).lt.0)then
-	    tmp(i) = tmp(i) + base
-	    carry = carry - 1
-	  endif
-	  if(tmp(i).ne.0)ndo = i
-	enddo
-	if(carry.gt.0)then
-	  nd = nd + 1
-	  ndo = nd
-	  if(nd.gt.maxdig)call bug('f','Integer overflow in mpAddSub')
-	  tmp(nd) = carry
-	else if(carry.lt.0)then
-	  call bug('f','Algorithmic failure in mpAddSub')
-	endif
-c
-c  Copy to the output.
-c
-	do i=1,ndo
-	  vars(i+1,mp1) = tmp(i)
-	enddo
-	vars(1,mp1) = sgn*ndo
-c
+	t(1) = v(1)
+	t(2) = v(2)
+	t(3) = v(3)
+	call mpAbs(t)
+	if(mpCmp(t,mpMAXInt).gt.0)
+     *		call bug('f','Integer overflow in mpCvtmi')
+	mpCvtmi = v(1) + v(2)*v(3)
 	end
 c************************************************************************
-	subroutine mpMulmi(mp1,in)
+	subroutine mpAddmi(v,d)
 c
 	implicit none
-	integer mp1,in
+	integer v(3),d
 c
-c  Multiply a multi-precision integer by a normal integer. mp1 = mp1*in
-c
-c  Input:
-c    in		The input FORTRAN integer.
-c  Input/Output:
-c    mp1	The handle of the input/output mutli-precision integer.
-c------------------------------------------------------------------------
-	integer mp2
-c
-c  Externals.
-c
-	integer mpCvtim
-c
-	mp2 = mpCvtim(in)
-	call mpMulmm(mp1,mp2)
-	call mpDel(mp2)
-	end
-c************************************************************************
-	subroutine mpMulmm(mp1,mp2)
-c
-	implicit none
-	integer mp1,mp2
-c
-c  Multiply two multi-precision integers. mp1 = mp1*mp2
-c
-c  Input:
-c    mp2	Handle of one of the multi-precision integers.
-c  Input/Output:
-c    mp1	Handle of the input/output multi-precision integer.
+c  Add two numbers.
 c------------------------------------------------------------------------
 	include 'mp.h'
-	integer nd,nd1,nd2,tmp(maxdig),i,j,k,carry
+	integer t(3),carry
+
 c
-	nd1 = abs(vars(1,mp1))
-	nd2 = abs(vars(1,mp2))
+c  If the triple is in standard format and the input integer is
+c  small, then do the operation quickly.
 c
-	do i=1,min(nd1+nd2-1,maxdig)
-	  tmp(i) = 0
-	enddo
+	if(v(3).eq.mpBase2.and.abs(d).lt.mpBase2
+     *			  .and.abs(v(1)).lt.mpBase2)then
+	  v(1) = v(1) + d
+	  carry = v(1)/mpBase2
+	  v(1) = v(1) - carry*mpBase2
+	  v(2) = v(2) + carry
+	else
+	  call mpCvtim(t,d)
+	  call mpAddmm(v,t)
+	endif
 c
-	nd = 0
-	do j=1,nd2
+	end
+c************************************************************************
+	subroutine mpAddmm(v1,v2)
+c
+	implicit none
+	integer v1(3),v2(3)
+c
+c------------------------------------------------------------------------
+	include 'mp.h'
+	integer d11,d12,d21,d22,carry
+c
+c  If the triple is in the standard form, then do the operation
+c  quickly. Otherwise convert to standard and do it.
+c
+	if(abs(v1(1)).lt.mpBase2.and.abs(v2(1)).lt.mpBase2.and.
+     *	       v1(3) .eq.mpBase2.and.    v2(3) .eq.mpBase2)then
+	  v1(1) = v1(1) + v2(1)
+	  v1(2) = v1(2) + v2(2)
+	else
+	  call mpStd2(v1(1),v1(2),v1(3),d11,d12)
+	  call mpStd2(v2(1),v2(2),v2(3),d21,d22)
+	  v1(1) = d11 + d21
+	  v1(2) = d12 + d22
+	  v1(3) = mpBase2
+	endif
+	carry = v1(1)/mpBase2
+	v1(1) = v1(1) - carry*mpBase2
+	v1(2) = v1(2) + carry
+	end
+c************************************************************************
+	subroutine mpSubmi(v,d)
+c
+	implicit none
+	integer v(3),d
+c
+c  Add two numbers.
+c------------------------------------------------------------------------
+	include 'mp.h'
+	integer t(3),carry
+
+c
+c  If the triple is in standard format and the integer is small, then do
+c  the operation quickly.
+c
+	if(v(3).eq.mpBase2.and.abs(d).lt.mpBase2
+     *			  .and.abs(v(1)).lt.mpBase2)then
+	  v(1) = v(1) - d
+	  carry = v(1)/mpBase2
+	  v(1) = v(1) - carry*mpBase2
+	  v(2) = v(2) + carry
+	else
+	  call mpCvtim(t,d)
+	  call mpSubmm(v,t)
+	endif
+c
+	end
+c************************************************************************
+	subroutine mpSubmm(v1,v2)
+c
+	implicit none
+	integer v1(3),v2(3)
+c
+c  Subtract two triples.
+c
+c------------------------------------------------------------------------
+	include 'mp.h'
+	integer carry,d11,d12,d21,d22
+c
+	if(abs(v1(1)).lt.mpBase2.and.abs(v2(1)).lt.mpBase2.and.
+     *	       v1(3) .eq.mpBase2.and.    v2(3) .eq.mpBase2)then
+	  v1(1) = v1(1) - v2(1)
+	  v1(2) = v1(2) - v2(2)
+	else
+	  call mpStd2(v1(1),v1(2),v1(3),d11,d12)
+	  call mpStd2(v2(1),v2(2),v2(3),d21,d22)
+	  v1(1) = d11 - d21
+	  v1(2) = d12 - d22
+	  v1(3) = mpBase2
+	endif
+	carry = v1(1)/mpBase2
+	v1(1) = v1(1) - carry*mpBase2
+	v1(2) = v1(2) + carry
+	end
+c************************************************************************
+	subroutine mpMulmi(v,d)
+c
+	implicit none
+	integer v(3),d
+c
+c  Multiply a triple with an integer.
+c
+c------------------------------------------------------------------------
+	include 'mp.h'
+	integer q(4),t(3),carry,i
+c
+	if(abs(d).lt.mpBase)then
+	  call mpStd4(v,q)
 	  carry = 0
-	  do i=1,nd1
-	    k = i+j-1
-	    nd = max(nd,k)
-	    tmp(k) = tmp(k) + vars(i+1,mp1)*vars(j+1,mp2) + carry
-	    carry = tmp(k)/base
-	    tmp(k) = tmp(k) - carry*base
+	  do i=1,4
+	    q(i) = q(i)*d + carry
+	    carry = q(i)/mpBase
+	    q(i) = q(i) - carry*mpBase
 	  enddo
-	  if(carry.gt.0)then
-	    nd = k+1
-	    if(nd.gt.maxdig)call bug('f','Integer overflow')
-	    tmp(k+1) = carry
-	  endif
-	enddo
-c
-c  Copy to the output.
-c
-	do i=1,nd
-	  vars(i+1,mp1) = tmp(i)
-	enddo
-c
-	if(vars(1,mp1)*vars(1,mp2).lt.0)then
-	  vars(1,mp1) = -nd
+	  if(carry.ne.0)call bug('f','Integer overflow in mpMulmi')
+	  v(1) = q(2)*mpBase + q(1)
+	  v(2) = q(4)*mpBase + q(3)
+	  v(3) = mpBase2
 	else
-	  vars(1,mp1) = nd
+	  call mpCvtim(t,d)
+	  call mpMulmm(v,t)
 	endif
-c
 	end
 c************************************************************************
-	subroutine mpAddmm(mp1,mp2)
+	subroutine mpMulmm(v1,v2)
 c
 	implicit none
-	integer mp1,mp2
+	integer v1(3),v2(3)
 c
-c  Add two multi-precision integers. mp1 = mp1 + mp2
-c
-c  Input:
-c    mp2	Handle of one of the multi-precision integers.
-c  Input/Output:
-c    mp1	Handle of the input/output multi-precision integer.
-c------------------------------------------------------------------------
-	call mpAddSub(mp1,mp2,.false.)
-	end
-c************************************************************************
-	subroutine mpSubmm(mp1,mp2)
-c
-	implicit none
-	integer mp1,mp2
-c
-c  Subtract two multi-precision integers. mp1 = mp1 - mp2
-c
-c  Input:
-c    mp2	Handle of one of the multi-precision integers.
-c  Input/Output:
-c    mp1	Handle of the input/output multi-precision integer.
-c------------------------------------------------------------------------
-	call mpAddSub(mp1,mp2,.true.)
-	end
-c************************************************************************
-	integer function mpCmpmm(mp1,mp2)
-c
-	implicit none
-	integer mp1,mp2
-c
-c  Compare two multi-precision integers.
-c
-c  Input:
-c    mp1,mp2	The handles of the multi-precision integers to compare.
-c
-c  Output:
-c    mpCmpmm	+1 if mp1 > mp2
-c		-1 if mp1 < mp2
-c		 0 if mp1 == mp2
-c------------------------------------------------------------------------
-	include 'mp.h'
-c
-c  Externals.
-c
-	integer mpCmpAbs
-c
-	if(vars(1,mp1).eq.vars(1,mp2))then
-	  mpCmpmm = mpCmpAbs(mp1,mp2)
-	  if(vars(1,mp1).lt.0)mpCmpmm = -mpCmpmm
-	else if(vars(1,mp1).gt.vars(1,mp2))then
-	  mpCmpmm = 1
-	else
-	  mpCmpmm = -1
-	endif
-c
-	end
-c************************************************************************
-	integer function mpCmpAbs(mp1,mp2)
-c
-	implicit none
-	integer mp1,mp2
-c
-c  Compare the absolute value of two multi-precision integers.
-c
-c  Input:
-c    mp1,mp2	The handles of the multi-precision integers to compare.
-c
-c  Output:
-c    mpCmpmm	+1 if abs(mp1) > abs(mp2)
-c		-1 if abs(mp1) < abs(mp2)
-c		 0 if abs(mp1) == abs(mp2)
+c  Multiply two triples.
 c
 c------------------------------------------------------------------------
 	include 'mp.h'
-	integer nd1,nd2
-	logical more
+	integer q1(4),q2(4),d(8),i,j,k,carry
 c
-	nd1 = abs(vars(1,mp1))
-	nd2 = abs(vars(1,mp2))
-	if(nd1.eq.nd2)then
-	  more = .true.
-	  dowhile(nd1.gt.0.and.more)
-	    more = vars(nd1+1,mp1).eq.vars(nd1+1,mp2)
-	    if(more)nd1 = nd1 - 1
+	call mpStd4(v1,q1)
+	call mpStd4(v2,q2)
+c
+	do k=1,8
+	  d(k) = 0
+	enddo
+c
+	do j=1,4
+	  carry = 0
+	  do i=1,4
+	    k = i + j - 1
+	    d(k) = d(k) + q1(i)*q2(j) + carry
+	    carry = d(k)/mpBase
+	    d(k) = d(k) - carry*mpBase
 	  enddo
-	  if(more)then
-	    mpCmpAbs = 0
-	  else if(vars(nd1+1,mp1).gt.vars(nd1+1,mp2))then
-	    mpCmpAbs = 1
-	  else
-	    mpCmpAbs = -1
-	  endif
-	else if(nd1.gt.nd2)then
-	  mpCmpAbs = 1
-	else
-	  mpCmpAbs = -1
+	  d(j+4) = d(j+4) + carry
+	enddo
+c
+	if(d(8).ne.0.or.d(7).ne.0.or.d(6).ne.0.or.d(5).ne.0)
+     *	  call bug('f','Integer overflow in mpMulmm')
+	v1(1) = d(2)*mpBase + d(1)
+	v1(2) = d(4)*mpBase + d(3)
+	v1(3) = mpBase2
+c
+	end
+c************************************************************************
+	subroutine mpStd4(v,q)
+c
+	implicit none
+	integer v(3),q(4)
+c
+c  Convert a triple into a standard "quad" representation.
+c
+c  v(1)+v(2)*v(3) = q(1) + q(2)*mpBase + q(3)*mpBase**2 + q(4)*mpBase**3
+c
+c------------------------------------------------------------------------
+	include 'mp.h'
+	integer d1,d2
+c
+	call mpStd2(v(1),v(2),v(3),d1,d2)
+	q(2) = d1/mpBase
+	q(1) = d1 - q(2)*mpBase
+	q(4) = d2/mpBase
+	q(3) = d2 - q(4)*mpBase
+	end
+c************************************************************************
+	integer function mpCmp(v1,v2)
+c
+	implicit none
+	integer v1(3),v2(3)
+c
+c  Compute v1-v2 and reutnr +1, 0 or -1 depending on whether the result
+c  is positive, zero or negative.
+c
+c------------------------------------------------------------------------
+	integer t(3),v
+c
+	t(1) = v1(1)
+	t(2) = v1(2)
+	t(3) = v1(3)
+	call mpSubmm(t,v2)
+c
+	if(t(3).le.0)call bug('f','Assertion in mpCmp failed')
+	v = t(2)
+	if(v.eq.0)v = t(1)
+	if(v.lt.0)then
+	  v = -1
+	else if(v.gt.0)then
+	  v = 1
 	endif
 c
+	mpCmp = v
+	end
+c************************************************************************
+	subroutine mpAbs(v)
+c
+	implicit none
+	integer v(3)
+c
+c  Take the absolute value of a triple.
+c
+c------------------------------------------------------------------------
+	include 'mp.h'
+	integer d1,d2
+c
+	if(((v(1).le.0.and.v(2).le.0).or.(v(1).ge.0.and.v(2).ge.0))
+     *	    .and.v(3).ge.0)then
+	  v(1) = abs(v(1))
+	  v(2) = abs(v(2))
+	else
+	  call mpStd2(v(1),v(2),v(3),d1,d2)
+	  v(1) = abs(d1)
+	  v(2) = abs(d2)
+	  v(3) = mpBase2
+	endif
+c
+	end
+c************************************************************************
+	subroutine mpNeg(v)
+c
+	implicit none
+	integer v(3)
+c
+c  Negate a triple.
+c
+c------------------------------------------------------------------------
+	v(1) = -v(1)
+	v(2) = -v(2)
 	end
 c************************************************************************
 	subroutine mpInit
 c
 	implicit none
 c
-c  Internal routine used to initialise the mp routines.
 c------------------------------------------------------------------------
+	integer k
 	include 'mp.h'
-	integer i
 c
 c  Externals.
 c
 	integer ipmpar
-c
-	do i=1,maxvar-1
-	  vars(1,i) = i+1
-	enddo
-	vars(1,maxvar) = 0
-	first = 1
-c
-	maxint = ipmpar(3)
-c
-	base = sqrt(real(maxint)) - 2
-	if(base.lt.10)call bug('f','Something screwy in mp routines')
+	k = ipmpar(3)
+	mpBase = sqrt(0.99*real(k/2))
+	mpBase2 = mpBase*mpBase
+	call mpStd2(k,0,mpBase2,mpMaxInt(1),mpMaxInt(2))
+	mpMaxInt(3) = mpBase2
 c
 	end
 c************************************************************************
-	subroutine mpFmt(out,mp)
+	subroutine mpFmt(out,v)
 c
 	implicit none
-	integer mp
+	integer v(3)
 	character out*(*)
 c
 c  Format a multi-precision integer as a string.
@@ -545,32 +449,42 @@ c    out	The string containing a representation (base 10) of the
 c		multi-precision integer.
 c------------------------------------------------------------------------
 	include 'mp.h'
-	integer maxtd
-	parameter(maxtd=9)
+	integer maxtd,maxdig
+	parameter(maxtd=9,maxdig=10)
 	character fmt*6
-	integer dout(2*maxdig),ndo,ndi,ntd,baseo,l1,l2,i
+	integer dout(2*maxdig),ndo,ndi,ntd,baseo,l1,l2,i,din(4)
+	logical neg
 c
 c  Externals.
 c
 	character itoaf*(maxtd)
 	integer len1
 c
-	if(vars(1,mp).eq.0)then
+	call mpStd4(v,din)
+	ndi = 0
+	do i=1,4
+	  if(din(i).ne.0)then
+	    ndi = i
+	    neg = din(i).lt.0
+	  endif
+	  din(i) = abs(din(i))
+	enddo
+c
+	if(ndi.eq.0)then
 	  out = '0'
 	else
 	  ntd = 1
 	  baseo = 10
-	  dowhile(10*baseo.lt.base.and.ntd.lt.maxtd)
+	  dowhile(10*baseo.lt.mpBase.and.ntd.lt.maxtd)
 	    ntd = ntd + 1
 	    baseo = 10*baseo
 	  enddo
 	  write(fmt,'(a,i1,a,i1,a)') '(i',ntd,'.',ntd,')'
 c
-	  ndi = abs(vars(1,mp))
-	  call mpNewBas(ndi,vars(2,mp),base,2*maxdig,ndo,dout,baseo)
+	  call mpNewBas(ndi,din,mpBase,2*maxdig,ndo,dout,baseo)
 c
 	  if(len(out).lt.ntd+1)call bug('f','Format overflow in mpFmt')
-	  if(vars(1,mp).lt.0)then
+	  if(neg)then
 	    out = '-'//itoaf(dout(ndo))
 	  else
 	    out = itoaf(dout(ndo))
@@ -583,7 +497,6 @@ c
 	    write(out(l1:l1+ntd-1),fmt)dout(i)
 	    l1 = l1 + ntd
 	  enddo
-c
 	endif
 c
 	end
