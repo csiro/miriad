@@ -72,6 +72,8 @@ c    rjs  01jan07    Added routines fantbas and fbasant to convert baseline
 c		     numbering convension.
 c    pjt  08mar07    Added support for reading bitpix=-64 images
 c    rjs  11sep08    More robust to truncated files
+c    rjs  09apr09    There was a bug handling a FITS real-valued image which
+c		     had bscale/bzero set but which used NaN blanking.
 c
 c  Bugs and Shortcomings:
 c    * IF frequency axis is not handled on output of uv data.
@@ -411,7 +413,6 @@ c------------------------------------------------------------------------
 	integer i,offset,length,iostat,blank
 	real bs,bz
 	include 'fitsio.h'
-        double precision data8(MAXDIM)
 c
 c  Check that it is the right sort of operation for this file.
 c
@@ -432,31 +433,26 @@ c  Do the floating point case. Blank the data if needed.
 c
 	if(float(lu))then
           if (BypPix(lu).eq.4) then
-             call hreadr(item(lu),data,offset,BypPix(lu)*length,iostat)
+            call hreadr(item(lu),data,offset,BypPix(lu)*length,iostat)
+	    if(iostat.ne.0)call bugno('f',iostat)
+	    call hreadi(item(lu),array,offset,BypPix(lu)*length,iostat)
+	    if(iostat.ne.0)call bugno('f',iostat)
+	    call fnanflag(data,array,length)
           else 
-             call hreadd(item(lu),data8,offset,BypPix(lu)*length,iostat)
-             do i=1,length
-                data(i) = data8(i)
-             enddo
+            call hreadd(item(lu),darray,offset,BypPix(lu)*length,iostat)
+	   if(iostat.ne.0)call bugno('f',iostat)
+            do i=1,length
+               data(i) = darray(i)
+            enddo
           endif
-	  if(iostat.ne.0)call bugno('f',iostat)
+c
+c  Scale if need be.
 c
 	  if(bs.ne.1.or.bz.ne.0)then
 	    do i=1,length
 	      data(i) = bs * data(i) + bz
 	    enddo
 	  endif
-c
-c  Handle FITS-style blanking.
-c
-	  call hreadi(item(lu),array,offset,BypPix(lu)*length,iostat)
-	  if(iostat.ne.0)call bugno('f',iostat)
-	  do i=1,length
-	    if((2139095040.le.array(i).and.
-     *	        array(i).le.2147483647).or.
-     *	       (-8388608.le.array(i).and.
-     *	        array(i).le.-1))data(i) = 0
-	  enddo
 c
 c
 c  Do the scaled integer case. Blank if needed.
@@ -3466,7 +3462,7 @@ c  Output:
 c    data	The data values.
 c--
 c------------------------------------------------------------------------
-	integer i,j,iostat,size,idx,offset,ifirst,ilast
+	integer i,j,iostat,size,idx,offset,ifirst,ilast,ncol
 	character umsg*64
 	include 'fitsio.h'
 c
@@ -3498,6 +3494,8 @@ c
 	endif
 c
 	size = ftabSize(ColForm(i,lu))
+	ncol = ColCnt(i,lu)/size
+	if(ncol.gt.MAXSIZE)call bug('f','Too many column values')
 c
 c  All it OK. So just read the data.
 c
@@ -3517,9 +3515,38 @@ c
 	    call bug('w','I/O error while reading FITS table')
 	    call bugno('f',iostat)
 	  endif
-	  idx = idx + ColCnt(i,lu)/size
+c
+	  call hreadi(item(lu),array,offset,ColCnt(i,lu)/8,iostat)
+	  if(iostat.ne.0)then
+	    call bug('w','I/O error while reading FITS table')
+	    call bugno('f',iostat)
+	  endif
+	  call fnanflag(data(idx),array,ncol)
+c
+	  idx = idx + ncol
 	  offset = offset + width(lu)
 	enddo
+	end
+c************************************************************************
+	subroutine fnanflag(data,flag,n)
+c
+	implicit none
+	integer n,flag(n)
+	real data(n)
+c
+c  Set a real value to zero if the value in flag represents the bit
+c  pattern of a NaN value.
+c
+c------------------------------------------------------------------------
+	integer i
+c
+	do i=1,n
+	  if(
+     *	     (2139095040.le.flag(i).and.flag(i).le.2147483647).or.
+     *	     (-8388608  .le.flag(i).and.flag(i).le.-1)
+     *	     )data(i) = 0
+	enddo
+c
 	end
 c************************************************************************
 c* ftabGetC -- Get complex data from the current FITS table.
