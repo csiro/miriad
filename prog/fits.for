@@ -62,6 +62,7 @@ c	           more normal right-handed system).
 c	  varwt    The visibility weight in the FITS file should
 c	           be interpretted as the reciprocal of the noise
 c	           variance on that visibility.
+c	  blcal    Apply AIPS baseline-dependent calibration to the data.
 c
 c	These options for op=uvout only.
 c	  nocal    Do not apply the gains table to the data.
@@ -350,9 +351,11 @@ c    rjs  24-jan-07  More robust to bad antenna tables.
 c    rjs  26-jan-07  Fix bug I introduced two days ago!
 c    jhz  09-feb-07  Set MAXFREQ=MAXWIN fits.h so that it
 c                    can read SMA FITS output data from IDL.
+c    rjs  09-apr-09  Apply AIPS baseline dependent calibration and various
+c		     cosmetic changes.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 09-Feb-07')
+	parameter(version='Fits: version 1.1 09-Apr-09')
 	integer maxboxes
 	parameter(maxboxes=2048)
 	character in*128,out*128,op*8,uvdatop*12
@@ -360,7 +363,7 @@ c------------------------------------------------------------------------
 	integer boxes(maxboxes)
 	real altrpix,altrval
 	logical altr,docal,dopol,dopass,dss,dochi,nod2,compress
-	logical lefty,varwt
+	logical lefty,varwt,dobl
 c
 c  Get the input parameters.
 c
@@ -378,7 +381,7 @@ c
 c  Get options.
 c
         call getopt(docal,dopol,dopass,dss,nod2,dochi,compress,
-     *							lefty,varwt)
+     *						lefty,varwt,dobl)
         if(op.eq.'uvout') then
           uvdatop = 'sdlb3'
 	  if(docal)uvdatop(7:7) = 'c'
@@ -397,7 +400,7 @@ c  Handle the five cases.
 c
 	if(op.eq.'uvin')then
 	  call uvin(in,out,velsys,altr,altrpix,altrval,dochi,
-     *				    compress,lefty,varwt,version)
+     *				  compress,lefty,varwt,dobl,version)
 	else if(op.eq.'uvout')then
 	  call uvout(out,version)
 	else if(op.eq.'xyin')then
@@ -482,10 +485,11 @@ c
 	end
 c************************************************************************
       subroutine getopt(docal,dopol,dopass,dss,nod2,dochi,
-     *						compress,lefty,varwt)
+     *					compress,lefty,varwt,dobl)
 c
       implicit none
       logical docal,dopol,dopass,dss,dochi,nod2,compress,lefty,varwt
+      logical dobl
 c
 c     Get a couple of the users options from the command line
 c
@@ -500,14 +504,15 @@ c    compress Store data in compressed format.
 c    lefty   Assume antenna table uses a left-handed system.
 c    varwt   Interpret the visibility weight as the reciprocal of the
 c	     noise variance.
+c    dobl    Apply AIPS baseline-dependent calibration.
 c------------------------------------------------------------------------
       integer nopt
-      parameter (nopt = 10)
+      parameter (nopt = 11)
       character opts(nopt)*8
       logical present(nopt),olddss
       data opts /'nocal   ','nopol   ','nopass  ','rawdss  ',
      *		 'nod2    ','nochi   ','compress','lefty   ',
-     *		 'varwt   ','dss     '/
+     *		 'varwt   ','dss     ','blcal   '/
 c
       call options ('options', opts, present, nopt)
       docal    = .not.present(1)
@@ -520,6 +525,7 @@ c
       lefty    =      present(8)
       varwt    =      present(9)
       olddss   =      present(10)
+      dobl     =      present(11)
 c
       if (olddss) then
 	call bug('w','Option DSS is deprecated. Please use RAWDSS')
@@ -562,12 +568,12 @@ c
 	end
 c************************************************************************
 	subroutine uvin(in,out,velsys,altr,altrpix,altrval,dochi,
-     *					compress,lefty,varwt,version)
+     *				compress,lefty,varwt,dobl,version)
 c
 	implicit none
 	character in*(*),out*(*)
 	integer velsys
-	logical altr,dochi,compress,lefty,varwt
+	logical altr,dochi,compress,lefty,varwt,dobl
 	real altrpix,altrval
 	character version*(*)
 c
@@ -585,6 +591,7 @@ c    compress   Store the data in compressed format.
 c    lefty      Assume the antenna table uses a left-handed system.
 c    varwt	Interpret the visibility weight as the reciprocal of the
 c		noise variance.
+c    dobl	Apply AIPS baseline-dependent calibration.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer PolXX,PolYY,PolXY,PolYX
@@ -596,7 +603,7 @@ c
 	integer ant1,ant2,nants,bl,nconfig,config,srcid,freqid
 	integer itemp,offset,P,Pol0,PolInc
 	logical flags(maxchan),zerowt,found,anfound
-	logical conj,sfudge
+	logical conj,sfudge,blfound
 	complex corr(maxchan)
 	real fac,swt
 	integer nwt
@@ -651,6 +658,15 @@ c  Load any FG tables.
 c
 	call FgLoad(lu,tno)
 c
+c  Load any BL tables.
+c
+	blfound = .false.
+	if(dobl)call BlInit(lu,nif,blfound)
+c
+c  Give a summary about various tables.
+c
+	call tabinfo(lu,blfound)
+c
 c  Rewind the header.
 c
 	call ftabLoc(lu,' ',found)
@@ -660,13 +676,15 @@ c  Messages about the polarisations present. Note that much ATCA
 c  data comes in being labelled as circulars. Tell the user there is
 c  a problem, and relabel it as linears.
 c
+	call output(' ')
+	call output('Handling the visibility data')
 	if(npol.gt.1)then
 	  if(Pol0.ge.1.and.Pol0.le.4)then
-	    call output('Data are Stokes correlations')
+	    call output('  Data are Stokes correlations')
 	  else if(Pol0.le.-1.and.Pol0.ge.-4)then
-	    call output('Data are circularly polarized')
+	    call output('  Data are circularly polarized')
 	  else if(Pol0.le.-5.and.Pol0.ge.-8)then
-	    call output('Data are linearly polarized')
+	    call output('  Data are linearly polarized')
 	  else
 	    call bug('w','Unrecognised polarization type')
 	  endif
@@ -727,7 +745,7 @@ c
 	freqid = 1
 	T0 = fuvGetT0(lu)
 c
-	call output('Reading the correlation data')
+	call output('  Reading the correlation data')
 	do i=1,nvis
 	  call fuvread(lu,visibs,i,1)
 c
@@ -744,6 +762,10 @@ c
 	  call fbasant(visibs(uvBl),ant1,ant2,config)
 	  if(uvSrcid.gt.0) srcid  = nint(visibs(uvSrcId))
 	  if(uvFreqid.gt.0)freqid = nint(visibs(uvFreqId))
+c
+c  Apply baseline calibration if required.
+c
+	  if(blfound)call blfix(ant1,ant2,visibs(uvData),npol,nfreq)
 c
 c  Convert baseline number to normal Miriad. Note the different conventions!
 c
@@ -768,9 +790,11 @@ c
 	    ant1 = ant2
 	    ant2 = itemp
 	  endif
-c  This is allows fits files with no AN table, but
-c  for those with an AN table, and antenna numbers which
-c  do not start at 1 it keeps the nants from the table
+c
+c  This allows for FITS files with no AN table, as well as
+c  those with an AN table. It allows antenna numbers which
+c  do not start at 1 it keeps the nants from the table. ???
+c
           if (anfound) then
 	    ant1=antloc(ant1)
 	    ant2=antloc(ant2)
@@ -848,20 +872,21 @@ c
 	call wrhdr(tno,'inttime',inttime)
 	itime = itoaf(nint(inttime))
 	litime = len1(itime)
-	call output('The estimated integration time of a sample is '//
+	call output('  The estimated integration time of a sample is '//
      *	  itime(1:litime)//' seconds')
 c
 c  Write out the number of antennas.
 c
 	if(.not.anfound)call wrhdi(tno,'nants',nants)
-	call output('Number of antennas: '//itoaf(nants))
-	call output('Number of antenna configurations: '//
+	call output('  Number of antennas: '//itoaf(nants))
+	call output('  Number of antenna configurations: '//
      *		itoaf(nconfig))
 c
 	if(zerowt)call bug('w','Some visibilities had zero weight')
 c
 c  Close up shop.
 c
+	if(blfound)call BlFin
 	call fuvclose(lu)
 	call hisclose(tno)
 	call uvclose(tno)
@@ -1038,6 +1063,204 @@ c
 c
 	end
 c************************************************************************
+	subroutine BlInit(lu,nif1,blfound)
+c
+	implicit none
+	integer lu,nif1
+	logical blfound
+c
+c  Load any AIPS BL tables.
+c------------------------------------------------------------------------
+	include 'maxdim.h'
+	include 'mem.h'
+	integer nants,nbl,ntab,npol,nif
+	integer pBlTab
+	common/blcomm/pBlTab,nants,nbl,ntab,npol,nif
+c
+c  Look for BL tables.
+c
+	ntab = 0
+	call ftabLoc(lu,'AIPS BL',blfound)
+	if(blfound)then
+	  call fitrdhdi(lu,'NO_ANT',nants,0)
+	  call fitrdhdi(lu,'NO_POL',npol,1)
+	  call fitrdhdi(lu,'NO_IF',nif,1)
+	  if(nif.ne.nif1)call bug('f',
+     *		'Inconsistent number of IF axes in AIPS BL table')
+	  blfound = npol.ge.1.and.nants.ge.1.and.nif.ge.1
+	  if(blfound)then
+	    call output(
+     *		'  Using baseline-dependent calibration factors')
+	    nbl = (nants*(nants+1))/2
+	    ntab = 2*nbl*npol*nif
+	    call memAlloc(pBlTab,ntab,'c')
+	    call bllod(lu,npol,nif,nbl,memc(pBlTab))
+	  else
+	    call bug('w',
+     *		'Ignoring badly formed baseline calibration table')
+	    blfound = .false.
+	  endif
+	endif
+c
+	end
+c************************************************************************
+	subroutine bllod(lIn,npol,nif,nbl,BlTab)
+c
+	implicit none
+	integer lIn,npol,nbl,nif
+	complex BlTab(2,npol,nif,nbl)
+c------------------------------------------------------------------------
+	include 'maxdim.h'
+	real rpm(MAXWIN),ipm(MAXWIN),rpa(MAXWIN),ipa(MAXWIN)
+	integer nrows,nval,i,p,ant1,ant2,bl,ifno
+	integer fid,sid,config
+	logical conj,warn
+	character type*1,units*16
+	character idx*9,c*1,line*80
+	save idx
+c
+c  Externals.
+c
+	character stcat*80,itoaf*12
+c
+	data idx/'123456789'/
+c
+	if(nif.gt.MAXWIN)call bug('f',
+     *		'Too many IF columns in AIPS BL table')
+	call ftabInfo(lIn,'TIME',type,units,nrows,nval)
+	if(nrows.le.0.or.nval.ne.1.or.type.ne.'R')
+     *	  call bug('f','Unrecognised AIPS BL table format')
+c
+c  Initialise the table.
+c
+	do bl=1,nbl
+	  do ifno=1,nif
+	    do p=1,npol
+	      BlTab(1,p,ifno,bl) = (1.0,0.0)
+	      BlTab(2,p,ifno,bl) = (0.0,0.0)
+	    enddo
+	  enddo
+	enddo
+c
+c  Loop over all the rows in the FITS table.
+c
+	warn = .false.
+	do i=1,nrows
+	  call ftabGeti(lIn,'ANTENNA1',i,ant1)
+	  call ftabGeti(lIn,'ANTENNA2',i,ant2)
+	  call ftabGeti(lIn,'FREQ ID',i,fid)
+	  call ftabGeti(lIn,'SOURCE ID',i,sid)
+	  call ftabGeti(lIn,'SUBARRAY',i,config)
+	  if(.not.warn.and.(fid.ne.1.or.sid.ne.1.or.config.ne.1))then
+	    warn = .true.
+	    call bug('i','Probable problem in handling AIPS BL table')
+	    line = stcat(     'Freq ID='//itoaf(fid),
+     *		   stcat(   ', Src ID='//itoaf(sid),
+     *			    ', Config='//itoaf(config)))
+	    call bug('i',line)
+	    call bug('i','Task does not know how to handle this')
+	  endif
+	  conj = ant1.gt.ant2
+	  if(conj)then
+	    bl = ant2 + (ant1*(ant1-1))/2
+	  else
+	    bl = ant1 + (ant2*(ant2-1))/2
+	  endif
+	  if(min(ant1,ant2).ge.1.and.bl.le.nbl)then
+	    do p=1,npol
+	      c = idx(p:p)
+	      call ftabGetr(lIn,'REAL M'//c,i,rpm)
+	      call ftabGetr(lIn,'IMAG M'//c,i,ipm)
+	      call ftabGetr(lIn,'REAL A'//c,i,rpa)
+	      call ftabGetr(lIn,'IMAG A'//c,i,ipa)
+	      do ifno=1,nif
+	      if(rpm(ifno).eq.0.0.and.ipm(ifno).eq.0.0)rpm(ifno) = 1.0
+	        if(conj)then
+ 	          bltab(1,p,ifno,bl) = cmplx(rpm(ifno),-ipm(ifno))
+	          bltab(2,p,ifno,bl) = cmplx(rpa(ifno),-ipa(ifno))
+	        else
+ 	          bltab(1,p,ifno,bl) = cmplx(rpm(ifno),ipm(ifno))
+	          bltab(2,p,ifno,bl) = cmplx(rpa(ifno),ipa(ifno))
+	        endif
+	      enddo
+	    enddo
+	  endif
+	enddo
+c
+	end
+c************************************************************************
+	subroutine blfix(ant1,ant2,Visibs,np,nfreq)
+c
+	implicit none
+	integer ant1,ant2,np,nfreq
+	real visibs(3,np,nfreq)
+c
+c  Apply baseline corrections to visibility data.
+c
+c------------------------------------------------------------------------
+	include 'maxdim.h'
+	include 'mem.h'
+	integer nants,nbl,ntab,npol,nif
+	integer pBlTab
+	common/blcomm/pBlTab,nants,nbl,ntab,npol,nif
+c
+	if(min(ant1,ant2).lt.1.or.max(ant1,ant2).gt.nants)return
+	call blfix2(ant1,ant2,visibs,np,nfreq/nif,nif,
+     *					memc(pBlTab),npol,nbl)
+	end
+c************************************************************************
+	subroutine blfix2(ant1,ant2,visibs,np,nchan,nif,BlTab,npol,nbl)
+c
+	implicit none
+	integer ant1,ant2,np,nchan,npol,nbl,nif
+	real visibs(3,np,nchan,nif)
+	complex BlTab(2,npol,nif,nbl)
+c------------------------------------------------------------------------
+	logical conj
+	integer bl,chan,p,ifno
+	complex temp
+c
+	conj = ant1.gt.ant2
+	if(conj)then
+	  bl = ant2 + (ant1*(ant1-1))/2
+	else
+	  bl = ant1 + (ant2*(ant2-1))/2
+	endif
+c
+	do ifno=1,nif
+	  do chan=1,nchan
+	    do p=1,min(np,npol)
+	      if(conj)then
+	        temp = cmplx(visibs(1,p,chan,ifno),
+     *					visibs(2,p,chan,ifno))*
+     *		       conjg(bltab(1,p,ifno,bl))
+     *					+ conjg(bltab(2,p,ifno,bl))
+	      else
+	        temp = cmplx(visibs(1,p,chan,ifno),
+     *					visibs(2,p,chan,ifno))*
+     *		 	     bltab(1,p,ifno,bl)
+     *					+       bltab(2,p,ifno,bl)
+	      endif
+	      visibs(1,p,chan,ifno) = real(temp)
+	      visibs(2,p,chan,ifno) = aimag(temp)
+	    enddo
+	  enddo
+	enddo
+c
+	end
+c************************************************************************
+	subroutine BlFin
+c
+	implicit none
+c------------------------------------------------------------------------
+	integer nants,nbl,ntab,npol,nif
+	integer pBlTab
+	common/blcomm/pBlTab,nants,nbl,ntab,npol,nif
+c
+	if(ntab.ne.0)call memFree(pBlTab,ntab,'c')
+	ntab = 0
+	end
+c************************************************************************
 	subroutine FgLoad(lu,tno)
 c
 	implicit none
@@ -1062,8 +1285,8 @@ c
 	ntab = 0
 	call ftabLoc(lu,'AIPS FG',more)
 	dowhile(more)
-	  call output('Reading AIPS FG table -- '//
-     *				'apply this with task fgflag')
+	  call output('  Saving off-line flagging table (AIPS FG): '//
+     *				'Apply this with task fgflag')
 	  ntab = ntab + 1
 	  call haccess(tno,lTab,'aipsfg'//itoaf(ntab),'write',iostat)
 	  if(iostat.ne.0)then
@@ -1073,7 +1296,7 @@ c
 c
 c  Process the AIPS FG table.
 c
-	  call aips2mir(lu,lTab,Time0)
+	  call fglod2(lu,lTab,Time0)
 c
 c  Close up this item.
 c
@@ -1087,7 +1310,7 @@ c
 c
 	end
 c************************************************************************
-	subroutine aips2mir(lIn,lTab,Time0)
+	subroutine fglod2(lIn,lTab,Time0)
 c
 	implicit none
 	integer lIn,lTab
@@ -1115,7 +1338,7 @@ c
 	  call FgGeti(lIn,pIfs,'IFS',2,nrows)
 	  call FgGeti(lIn,pChans,'CHANS',2,nrows)
 c
-	  call FgWrite(lTab,Time0,
+	  call Fglod3(lTab,Time0,
      *	    nrows,MemI(pSrc),MemI(pSub),MemI(pFreq),MemI(pAnts),
      *		  MemR(pTime),MemI(pIfs),MemI(pChans))
 c
@@ -1129,7 +1352,7 @@ c
 	endif
 	end
 c************************************************************************
-	subroutine FgWrite(lTab,Time0,nrows,
+	subroutine fglod3(lTab,Time0,nrows,
      *	  SrcId,SubArray,FreqId,Ants,Time,Ifs,Chans)
 c
 	implicit none
@@ -1249,7 +1472,7 @@ c
 	  enddo
 	else
 	  if(nx.ne.nval.or.ny.ne.nrow.or.type.ne.'I')
-     *	    call bug('f','FG table has an odd shape')
+     *	    call bug('f','AIPS table has an unexpectedly odd shape')
 	  call ftabGeti(lIn,name,0,MemI(pnt))
 	endif
 	end
@@ -1275,11 +1498,72 @@ c
 	  enddo
 	else
 	  if(nx.ne.nval.or.ny.ne.nrow.or.type.ne.'R')
-     *	    call bug('f','FG table has an odd shape')
+     *	    call bug('f','AIPS table has an unexpectly odd shape')
 	  call ftabGetr(lIn,name,0,MemR(pnt))
 	endif
 	end
 c************************************************************************
+c************************************************************************
+	subroutine TabInfo(lu,dobl)
+c
+	implicit none
+	integer lu
+	logical dobl
+c
+c  Give information on the tables in the file.
+c
+c------------------------------------------------------------------------
+	integer NTAB
+	parameter(NTAB=6)
+	character tabs(NTAB)*8
+	logical found,givecal
+	character ename*16
+c
+c  Externals.
+c
+	integer binsrcha
+c
+	data tabs/'AIPS AN ','AIPS CH ','AIPS FG ',
+     *		  'AIPS FQ ','AIPS OB ','AIPS SU '/
+c
+	call ftabloc(lu,' ',found)
+	if(.not.found)call bug('f','Something is screwy')
+	call ftabNxt(lu,' ',found)
+	givecal = .true.
+	dowhile(found)
+	  call fitrdhda(lu,'EXTNAME',ename,' ')
+c
+c  Ignore the tables that are handled elsewhere.
+c
+	  if(binsrcha(ename,tabs,NTAB).ne.0)then
+	    continue
+	  else if(ename.eq.'AIPS BL')then
+	    if(.not.dobl)then
+	      call output('  Baseline calibration table present')
+	      call output(
+     *		'   ... use options=blcal if you wish to apply this')
+	    endif
+	  else if(ename.eq.'AIPS CL'.or.ename.eq.'AIPS NX'.or.
+     *		  ename.eq.'AIPS SN')then
+	    if(givecal)call output('  Ignoring AIPS calibration tables')
+	    givecal = .false.
+	  else if(ename.eq.'AIPS OF')then
+	    call output('  Ignoring AIPS on-line flagging table')
+	    call output('   ... it is assumed FILLM applied these.')
+	  else if(ename.eq.'AIPS WX')then
+	    call output('  Ignoring AIPS weather table')
+	  else if(ename.eq.'AIPS TY')then
+	    call output('  Ignoring AIPS system flux cal table values')
+	    call output('   ... it is assumed FILLM applied these.')
+	  else if(ename.ne.' ')then
+	    call output('  Ignoring unrecognised table type: '//ename)
+	  else
+	    call output('  Ignoring unknown table type')
+	  endif
+	  call ftabNxt(lu,' ',found)
+	enddo
+c
+	end
 c************************************************************************
 	subroutine TabLoad(lu,dosu,dofq,tel,anfound,Pol0,PolInc,nif0,
      *	  dochi,lefty,numants,antloc)
@@ -1395,6 +1679,8 @@ c
      *		(1-Coord(uvCrpix,uvStokes))*Coord(uvCdelt,uvStokes) )
 	PolInc = nint(Coord(uvCdelt,uvStokes))
 c
+	call output('Determining various defaults ...')
+c
 c  Set default values for reference freq, lat, long, mount, evector.
 c  Also determine the only values for systemp and jyperk.
 c
@@ -1407,11 +1693,13 @@ c
 c
 c  Load the antenna table.
 c
+	call output(' ')
+	call output('Analysing the extension tables ...')
 	nconfig = 0
 	call ftabLoc(lu,'AIPS AN',found)
 	anfound = found
 	dowhile(found)
-	  call output('Reading AIPS AN table')
+	  call output('  Using antenna table (AIPS AN) information')
 	  nconfig = nconfig + 1
 	  call ftabInfo(lu,'STABXYZ',type,units,n,nxyz)
 c
@@ -1492,11 +1780,12 @@ c
 c  If no antenna table was found, try for an OB table!
 c
 	if(.not.anfound)then
-	found = .false.
+	  found = .false.
 	  call ftabLoc(lu,'AIPS OB',found)
 	  anfound = found
 	  if(found)then
-	    call output('Reading AIPS OB table')
+	    call output('Using orbit parameter table '//
+     *					'(AIPS OB) information')
 c
 	    nconfig = 1
 	    call ftabInfo(lu,'ORBXYZ',type,units,n,nxyz)
@@ -1558,7 +1847,7 @@ c
 	  call fitrdhdi(lu,'NO_IF',itemp,nif)
 	  if(itemp.ne.nif)
      *	    call bug('f','Inconsistent number of IFs')
-	  call output('Reading AIPS FQ table')
+	  call output('  Using frequency table (AIPS FQ) information')
 	  call ftabGeti(lu,'FRQSEL',0,freqids)
 	  if(.not.dofq)freqids(1) = 1
 	  call ftabGetd(lu,'IF FREQ',0,sfreq)
@@ -1582,7 +1871,7 @@ c
      *		call bug('f','Software bug IFNO.ne.IFNO')
 	    enddo
 c
-	    call output('Reading AIPS CH table')
+	    call output('  Using channel table (AIPS CH) information')
 	    nfreq = 1
 	    freqids(1) = 1
 	    call ftabGetd(lu,'FREQUENCY OFFSET',0,sfreq)
@@ -1645,7 +1934,7 @@ c
 	  if(nsrc.gt.MAXSRC)call bug('f','Too many sources in SU table')
 	  if(nval.ne.1.or.type.ne.'I')
      *	    call bug('f','Something screwy with SU table')
-	  call output('Reading AIPS SU table')
+	  call output('  Using source table (AIPS SU) information')
 	  call ftabGeti(lu,'ID. NO.',0,srcids)
 	  call ftabGeta(lu,'SOURCE',0,source)
 	  call ftabGetd(lu,'RAEPO',0,raepo)
@@ -1921,21 +2210,21 @@ c
      *		'-UTC is claimed to be 0.')
 	else if(datutc.ne.0)then
 	  write(line,'(a,i3,a,f5.1,a)')
-     *	    'Decrementing times for configuration',nconfig,' by',datutc,
-     *	    ' seconds ('//timsys(1:ltsys)//'-UTC).'
+     *	    '  Decrementing times for configuration',nconfig,' by',
+     *		datutc,' seconds ('//timsys(1:ltsys)//'-UTC).'
 	  call output(line)
 	endif
 c
 	if(ut1utc.ne.0)then
 	  write(line,'(a,i3,a,f6.2,a)')
-     *	    'Decrementing times for configration',nconfig,' by',-ut1utc,
-     *	    ' seconds (UTC-UT1).'
+     *	    '  Decrementing times for configration',nconfig,' by',
+     *		-ut1utc,' seconds (UTC-UT1).'
 	  call output(line)
 	endif
 c
 	if(nconfig.gt.1)then
 	  write(line,'(a,i3,a,i3,a)')
-     *	    'Fiddling times for configuration',nconfig,
+     *	    '  Fiddling times for configuration',nconfig,
      *	    ' to remove AIPS DBCON fudges.'
 	  call output(line)
 	endif
@@ -2119,7 +2408,7 @@ c  System temperature.
 c
 	  call obspar(telescop,'systemp',dtemp,systok)
 	  if(systok)then
-	    call output('Assuming systemp='//itoaf(int(dtemp)))
+	    call output('  Assuming systemp='//itoaf(int(dtemp)))
 	    systemp = dtemp
 	  else
 	    call bug('w','Unable to guess typical system temperature')
@@ -2129,7 +2418,7 @@ c  System gain.
 c
 	  call obspar(telescop,'jyperk',dtemp,jok)
 	  if(jok)then
-	    call output('Assuming jyperk='//itoaf(int(dtemp)))
+	    call output('  Assuming jyperk='//itoaf(int(dtemp)))
 	    jyperk = dtemp
 	  else
 	    call bug('w','Unable to guess typical system gain')
@@ -2148,7 +2437,7 @@ c
 	    chioff = dtemp
 	  else
 	    chioff = 0
-	    call output('Assuming feed angle is 0 degrees')
+	    call output('  Assuming feed angle is 0 degrees')
 	  endif
 	  call obspar(telescop,'mount',dtemp,polinfo)
 	  if(polinfo)mount = nint(dtemp)
