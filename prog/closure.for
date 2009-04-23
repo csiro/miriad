@@ -93,14 +93,15 @@ c    rjs  20oct00 Print out number of points when giving stats.
 c    rjs  31jan01 Support other stokes types.
 c    rjs  08apr02 Allow negative values when taking cube roots.
 c    rjs  18jul04 Check for division by zero in quad quantities.
+c    rjs  23apr09 Increase buffer dimension to allow it to work on bigger problems.
 c
-c $Id: closure.for,v 1.2 2007/02/22 23:41:13 cal103 Exp $
+c $Id: closure.for,v 1.3 2009/04/23 23:09:35 sau078 Exp $
 c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
 	integer MAXPNTS,MAXPLOTS,MAXTRIP
 	integer PolMin,PolMax,MAXPOL
-	parameter(MAXPNTS=5000,MAXPLOTS=120)
+	parameter(MAXPNTS=50000,MAXPLOTS=120)
 	parameter(MAXTRIP=(MAXANT*(MAXANT-1)*(MAXANT-2))/6)
 	parameter(PolMin=-8,PolMax=4,MAXPOL=2)
 c
@@ -141,7 +142,7 @@ c
 	character versan*80
 c-----------------------------------------------------------------------
 	version = versan ('closure',
-     :    '$Id: closure.for,v 1.2 2007/02/22 23:41:13 cal103 Exp $')
+     :    '$Id: closure.for,v 1.3 2009/04/23 23:09:35 sau078 Exp $')
 c
 c Lets go! Get user inputs.
 c
