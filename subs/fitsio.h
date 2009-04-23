@@ -57,10 +57,11 @@ c  Scratch arrays used by all and sundry.
 c
 	integer array(MAXSIZE),arrayd(MAXSIZE)
 	real rarray(MAXSIZE),rarrayd(MAXSIZE)
+	double precision darray(MAXDIM)
 c
 c  The common block which contains this mess.
 c
-	common/fitscom/TimOff,curlu,curcard,item,bscale,bzero,
+	common/fitscom/TimOff,darray,curlu,curcard,item,bscale,bzero,
      *	  scales1,scales2,zeros,axes,DatOff,HdOff,DatSize,HdSize,
      *	  DatBase,PixBase,BypPix,BlankVal,ncards,nRanFile,nRanProg,
      *	  ncomplex,indices1,indices2,visibs,nts1,nts2,nts3,pols,freqs,
