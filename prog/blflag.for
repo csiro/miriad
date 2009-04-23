@@ -95,12 +95,13 @@ c    09nov98 rjs  Added "hangle" axis type.
 c    12jan99 rjs  Doc change only.
 c    09apr99 rjs  Add an extra error check only.
 c    05oct99 rjs  Added options=scalar
+c    23apr09 rjs  Increase buffer sizes.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
 	integer MAXDAT,MAXPLT,MAXEDIT
-	parameter(version='BlFlag: version 05-Oct-99')
-	parameter(MAXDAT=500000,MAXPLT=20000,MAXEDIT=20000)
+	parameter(version='BlFlag: version 23-Apr-09')
+	parameter(MAXDAT=5000000,MAXPLT=2000000,MAXEDIT=20000)
 c
 	logical present(MAXBASE),nobase,selgen,noapply,rms,scalar
 	integer tno,i,j,k,length,npol

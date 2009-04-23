@@ -38,11 +38,12 @@ c
 c  History:
 c    27jul93 rjs   Original version.
 c    25nov93 rjs   Increase number of rows.
+c    23apr09 rjs   Increase buffer size to allow it to work on bigger problems.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='FgFlag: version 1.0 27-Jul-93')
+	parameter(version='FgFlag: version 1.0 23-Apr-09')
 	integer MAXROWS,MAXRCPNT,MAXSELS
-	parameter(MAXROWS=3000,MAXRCPNT=4096,MAXSELS=256)
+	parameter(MAXROWS=300000,MAXRCPNT=4096,MAXSELS=256)
 	integer nrange,nrcpnt,fgtable
 	integer indx(2*MAXROWS),pnt(2,MAXROWS+1),RcPnt(MAXRCPNT)
 	double precision time(2,MAXROWS)
