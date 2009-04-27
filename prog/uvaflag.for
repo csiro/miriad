@@ -48,12 +48,14 @@ c     rjs   8mar93 Standardise history writing.
 c     rjs   4oct97 Go back to the drawing board and rewrite program.
 c     rjs   7nov97 Handle multiple templates.
 c     rjs  22oct98 noapply option.
+c     rjs  27apr09 Fix spurious warning when using options=nofreq. Change
+c		   print output message format.
 c---------------------------------------------------------------------------
 	implicit none
 	include 'maxdim.h'
 	integer MAXSELS,MAXFILES
 	character version*(*)
-	parameter(version='Uvaflag: version 1.0 22-Oct-98')
+	parameter(version='Uvaflag: version 1.0 27-Apr-09')
 	parameter(MAXSELS=512,MAXFILES=64)
 c
 	complex data(maxchan)
@@ -155,7 +157,7 @@ c
 	    call countit(vflags,nv,ntot,ngood)
 	  enddo
 	  call uvclose(lTmp)
-	  if(k.eq.nfiles)then
+	  if(k.eq.nfiles.and.doapp)then
 	    call hisopen(lVis,'append')
 	    call hiswrite(lVis,'UVAFLAG: Miriad '//version)
 	    call hisinput(lVis,'UVAFLAG')
@@ -166,10 +168,11 @@ c
 c  Give a summary about the flagging performed.
 c
 	  if(nfiles.gt.1)call output('After processing '//in1(k))
-	  call output(' Correlations: Total   Good      Bad')
-	  write(line,'(a,i8,i8,i8)')' Before:    ',ntot,ngood,ntot-ngood
+	  call output(' Correlations: Total      Good         Bad')
+	  write(line,'(a,i11,i11,i11)')' Before:    ',
+     *				   ntot,ngood,ntot-ngood
 	  call output(line)
-	  write(line,'(a,i8,i8,i8)')' After:     ',
+	  write(line,'(a,i11,i11,i11)')' After:     ',
      *				   ntot,ngood-nflag,ntot-ngood+nflag
 	  call output(line)
 c
@@ -277,7 +280,9 @@ c
 	  enddo
 	endif
 c
-	if(nofreq)then
+	if(nchan.eq.0)then
+	  nt = 0
+	else if(nofreq)then
 	  f = flags(1)
 	  do i=2,nchan
 	    f = f.and.flags(i)
