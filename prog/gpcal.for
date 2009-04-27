@@ -201,6 +201,7 @@ c    rjs     19aug98 Changes in ampsolxy and ampsol to avoid an SGI compiler bug
 c    rjs     12oct99 Attempts to perform absolute flux calibration.
 c    rjs      7oct04 Set senmodel parameter.
 c    rjs     27nov06 Doc correction only.
+c    rjs     24apr09 xyphase array was being ignored in some instances.
 c
 c  Bugs:
 c    * Polarisation solutions when using noamp are wrong! The equations it
@@ -2327,7 +2328,7 @@ c
 	  count(i) = 0
 	enddo
 	do i=1,nants
-	  if(i.lt.nxyphase)then
+	  if(i.le.nxyphase)then
 	    theta = pi/180 * xyphase(i)
 	    xyp(i) = cmplx(cos(theta),sin(theta))
 	  else if(count(i).gt.0)then
