@@ -225,7 +225,7 @@ c  the line type if necessary.
 c
 	call uvopen(tvis,vis,'old')
 	call rdhda(tvis,'obstype',obstype,'crosscorrelation')
-	if(obstype(1:5).ne.'cross')
+	if(index(obstype,'cross')==0)
      *	  call bug('f','The vis file is not cross correlation data')
 	if(hdprsnt(tvis,'leakage').or.hdprsnt(tvis,'bandpass'))then
 	  call bug('w',

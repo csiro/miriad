@@ -54,6 +54,10 @@ c	            frequency switches.
 c	  nowindow  Do not generate a separate output data-set for each
 c	            spectral window. The default is to create a new
 c	            output for each spectral window.
+c@ maxwidth
+c        The maximum bandwidth (in GHz) for each output frequency band.
+c        Default is no subdivision of input bands. The maxwidth limit
+c        is only applied when splitting by frequency.
 c--
 c  History:
 c    rjs  13oct93 Original version.
@@ -70,18 +74,20 @@ c    rjs  23jul97 Added pbtype.
 c    rjs  16aug04 Added various variables to the list to be copied across.
 c    rjs  19sep04 Copy across sensitivity model and more variables.
 c    rjs  28jan05 Added clobber option.
+c    mhw  19may08 Added maxwidth parameter
 c  Bugs:
-c   Perfect?
+c   the full xtsys and ytsys variables are passed to split files,
+c   but for the systemp variable only the appropriate data (if) is copied
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer MAXSELS
 	parameter(MAXSELS=256)
 	character version*(*)
-	parameter(version='UvSplit: version 1.0 28-Jan-05')
+	parameter(version='UvSplit: version 1.0 19-May-08')
 c
 	character vis*64,dtype*1
 	integer tvis
-	real sels(MAXSELS)
+	real sels(MAXSELS),maxwidth
 	integer length,i
 	logical dosource,dofreq,dowin,updated,dowide,docomp,docopy
 	logical mosaic,clobber
@@ -97,6 +103,7 @@ c
 	call keyini
 	call GetOpt(dosource,dofreq,dowin,docopy,mosaic,clobber)
 	call keyf('vis',vis,' ')
+        call keyr('maxwidth',maxwidth,0.0)
 	call SelInput('select',sels,MAXSELS)
 	call keyfin
 c
@@ -149,7 +156,8 @@ c
 c
 c  Read through the file.
 c
-	  call Process(tVis,dosource,dofreq,dowin,dowide,mosaic,clobber)
+	  call Process(tVis,dosource,dofreq,dowin,mosaic,
+     *      maxwidth,clobber)
 c
 	  first = .false.
 	  call FileFin(docopy,more)
@@ -158,12 +166,13 @@ c
 c
 	end
 c************************************************************************
-	subroutine Process(tVis,dosource,dofreq,dowin,dowide,mosaic,
-     *								clobber)
+	subroutine Process(tVis,dosource,dofreq,dowin,mosaic,
+     *						maxwidth,clobber)
 c
 	implicit none
 	integer tVis
-	logical dosource,dofreq,dowin,dowide,mosaic,clobber
+	logical dosource,dofreq,dowin,mosaic,clobber
+        real maxwidth
 c
 c  Do a pass through the data file.
 c
@@ -174,17 +183,19 @@ c    dofreq
 c    dowin
 c    dowide
 c    mosaic
+c    maxwidth
 c    clobber
 c------------------------------------------------------------------------
-	include 'maxdim.h'
+	include 'uvsplit.h'
 	integer MAXINDX
-	parameter(MAXINDX=16)
+	parameter(MAXINDX=99)
 c
 	complex data(MAXCHAN)
 	logical flags(MAXCHAN),skip
 	double precision preamble(5)
-	integer nchan,nindx,vCheck,indx(MAXINDX),nschan(MAXINDX)
-	integer i,offset
+	integer nchan,nindx,tvCheck,ind(MAXINDX),nschan(MAXINDX)
+	integer onschan(MAXINDX),i,offset,chan
+        
 c
 c  Externals.
 c
@@ -193,7 +204,7 @@ c
 c  Create a handle to track those things that cause us to have to
 c  re-check the indices.
 c
-	call HanGen(tVis,vCheck,dosource,dofreq,dowin,dowide)
+	call HanGen(tVis,tvCheck,dosource,dofreq,dowin,dowide)
 c
 c  Loop the loop.
 c
@@ -203,9 +214,9 @@ c
 c
 c  Update the indices if necessary.
 c
-	  if(uvVarUpd(vCheck))then
+	  if(uvVarUpd(tvCheck))then
 	    call GetIndx(tVis,dosource,dofreq,dowin,dowide,mosaic,
-     *	      clobber,indx,nschan,nIndx,MAXINDX)
+     *	      maxwidth,clobber,ind,nschan,nIndx,onschan,MAXINDX)
 	    skip = .true.
 	    do i=1,nIndx
 	      if(indx(i).ne.0)skip = .false.
@@ -216,10 +227,15 @@ c  Now write out the data.
 c
 	  if(.not.skip)then
 	    offset = 1
+            chan=0
 	    do i=1,nindx
-	      if(indx(i).gt.0)call FileDat(indx(i),
-     *		preamble,data(offset),flags(offset),nschan(i))
-	      offset = offset + nschan(i)
+              if (i.gt.1) then
+                if (ifno(i).ne.ifno(i-1)) chan=0
+              endif
+	      if(ind(i).gt.0)call FileDat(ind(i),
+     *		preamble,data(offset),flags(offset),onschan(i),chan)
+              chan = chan + onschan(i)
+	      offset = offset + onschan(i)
 	    enddo
 	    if(offset.ne.nchan+1)
      *		call bug('f','Consistency check failed')
@@ -233,18 +249,20 @@ c
 	end
 c************************************************************************
 	subroutine GetIndx(tVis,dosource,dofreq,dowin,dowide,mosaic,
-     *	  clobber,Indx,nschan,nIndx,MAXINDX)
+     *	  maxwidth,clobber,Indx,nschan,nIndx,onschan,MAXINDX)
 c
 	implicit none
 	integer tVis,nIndx,MAXINDX,nschan(MAXINDX),Indx(MAXINDX)
+        integer onschan(MAXINDX)
 	logical dosource,dofreq,dowin,dowide,mosaic,clobber
+        real maxwidth
 c
 c  Determine the current indices of interest.
 c
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character base*32,source*32,c*1
-	integer maxi,n,nchan,nwide,length,lenb,i
+	integer maxi,n,nchan,ichan,nwide,length,lenb,i,ii,nsub,j,nindx1
 	double precision sdf(MAXWIN),sfreq(MAXWIN)
 	real wfreq(MAXWIN)
 	logical discard
@@ -325,11 +343,33 @@ c
 	      call uvgetvrd(tVis,'sfreq',sfreq,nindx)
 	      call uvgetvri(tVis,'nschan',nschan,nindx)
 	    endif
+            nindx1=nindx
+            ii=0
+c
+c Optional subdivision of spectra based on maxwidth
+c onschan = # output channels for each output spectrum
+c chan = channel offset in input spectrum for current output spectrum
+c
 	    do i=1,nindx
-	      n = nint(1000*(sfreq(i) + sdf(i) * (nschan(i)/2)))
-	      call FileIndx(base(1:length)//'.'//itoaf(n),i,indx(i),
-     *		clobber)
+              nsub=1
+              if (maxwidth.gt.0.0.and.
+     *            abs(sdf(i)*nschan(i))>maxwidth) then
+                nsub = max(1,nint(abs(sdf(i)*(nschan(i)+0.1)/maxwidth)))
+              endif
+              nindx1=nindx1+nsub-1
+	      if(nindx1.gt.MAXINDX)
+     *          call bug('f','Too many output windows')
+              do j=1,nsub
+                ii=ii+1
+                ichan = nschan(i)*(2*j-1)/2/nsub
+                onschan(ii) = nschan(i)/nsub
+                n = nint(1000*(sfreq(i) +  sdf(i) * ichan))
+	        call FileIndx(base(1:length)//'.'//itoaf(n),i,indx(ii),
+     *		  clobber)
+              enddo
+              onschan(ii)=nschan(i)-(nsub-1)*(nschan(i)/nsub)
 	    enddo
+            nindx=nindx1
 	    if(nindx.eq.1)nschan(1) = nchan
 	  endif
 c
@@ -463,10 +503,10 @@ c
 	nopen = 0
 	end
 c************************************************************************
-	subroutine FileDat(tindx,preamble,data,flags,nchan)
+	subroutine FileDat(tindx,preamble,data,flags,nchan,offset)
 c
 	implicit none
-	integer tindx,nchan
+	integer tindx,nchan,offset
 	double precision preamble(5)
 	complex data(nchan)
 	logical flags(nchan)
@@ -499,7 +539,7 @@ c
 	    if(dowide)then
 	      call FileWpec(lVis,lOut(tIndx),nchan,ifno(tIndx))
 	    else
-	      call FileCpec(lVis,lOut(tIndx),nchan,ifno(tIndx))
+	      call FileCpec(lVis,lOut(tIndx),nchan,ifno(tIndx),offset)
 	    endif
 	  endif
 	endif
@@ -542,10 +582,10 @@ c
 c
 	end
 c************************************************************************
-	subroutine FileCpec(lVis,lOut,nchan,ifno)
+	subroutine FileCpec(lVis,lOut,nchan,ifno,offset)
 c
 	implicit none
-	integer lVis,lOut,nchan,ifno
+	integer lVis,lOut,nchan,ifno,offset
 c
 c  Pick out the spectral description of this spectral window.
 c
@@ -570,7 +610,7 @@ c
 	call uvputvri(lOut,'nschan',nchan,1)
 	call uvputvri(lOut,'ischan',1,1)
 	call uvputvrd(lOut,'sdf',sdf(ifno),1)
-	call uvputvrd(lOut,'sfreq',sfreq(ifno),1)
+	call uvputvrd(lOut,'sfreq',sfreq(ifno)+offset*sdf(ifno),1)
 	call uvputvrd(lOut,'restfreq',restfreq(ifno),1)
 c
 c  Update the system temperature and the XY phase.
@@ -606,6 +646,7 @@ c
 	    n = nants
 	    off = (ifno-1)*nants + 1
 	  endif
+          
 	  call uvputvrr(lOut,var,buf(off),n)
 	endif
 c

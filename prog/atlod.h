@@ -3,7 +3,7 @@ c  The common block (yuk) used to buffer up an integration.
 c
 	include 'maxdim.h'
 	integer ATIF,ATANT,ATPOL,ATDATA,ATBASE,ATBIN,ATCONT
-	parameter(ATIF=2,ATANT=8,ATPOL=4,ATBASE=((ATANT+1)*ATANT)/2)
+	parameter(ATIF=16,ATANT=8,ATPOL=4,ATBASE=((ATANT+1)*ATANT)/2)
 	parameter(ATBIN=1024,ATCONT=33)
 	parameter(ATDATA=8*MAXCHAN*ATBASE)
 	integer nifs,nfreq(ATIF),nstoke(ATIF),polcode(ATIF,ATPOL)
@@ -11,6 +11,8 @@ c
 	double precision time
 	integer tcorr
 	real xtsys(ATIF,ATANT),ytsys(ATIF,ATANT),chi
+	real xgain(ATIF,ATANT),ygain(ATIF,ATANT)
+	real xcaljy(ATIF,ATANT),ycaljy(ATIF,ATANT)
 	real u(ATBASE),v(ATBASE),w(ATBASE)
 	real xyphase(ATIF,ATANT),xyamp(ATIF,ATANT)
 	real xsampler(3,ATIF,ATANT),ysampler(3,ATIF,ATANT)
@@ -21,7 +23,7 @@ c
 	logical flag(ATIF,ATPOL,ATBASE,ATBIN),dosw(ATBASE)
 	integer nused,tno,nants,mcount
 	logical dosam,dohann,birdie,doif,dobary,newfreq,newsc,newpnt
-	logical dowt,dopmps,doxyp,opcorr,hires
+	logical dowt,dopmps,doxyp,opcorr,hires,cabb
 	real wts(2*ATCONT-2)
 	real axisrms(ATANT),axismax(ATANT),mdata(9)
 	double precision obsra,obsdec,lat,long,ra,dec
@@ -34,10 +36,11 @@ c
 	common/atlodc/sfreq,sdf,restfreq,time,obsra,obsdec,lat,long,
      *	    ra,dec,
      *	  data,
-     *	  xtsys,ytsys,chi,xyphase,xyamp,xsampler,ysampler,u,v,w,inttime,
+     *	  xtsys,ytsys,xgain,ygain,xcaljy,ycaljy,chi,
+     *    xyphase,xyamp,xsampler,ysampler,u,v,w,inttime,
      *	    inttim,wts,mdata,axisrms,axismax,refpnt,stemp,spress,shumid,
      *	  pnt,nbin,nused,tno,nants,nifs,nfreq,nstoke,polcode,edge,
      *	    bchan,tcorr,mcount,refnant,
      *	  flag,dosw,dosam,dohann,birdie,dowt,dopmps,doxyp,opcorr,
-     *	    doif,dobary,newfreq,hires,
+     *	    doif,dobary,newfreq,hires,cabb,
      *	  newsc,newpnt

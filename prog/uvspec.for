@@ -496,7 +496,7 @@ c------------------------------------------------------------------------
 	integer PolMin,PolMax
 	parameter(PolMin=-8,PolMax=4)
 	integer MAXPLT,MAXPNT
-	parameter(MAXPNT=32168,MAXPLT=1024)
+	parameter(MAXPNT=100000,MAXPLT=1024)
 	real xp(MAXPNT),yp(MAXPNT),xrange(2),inttime
 	integer plot(MAXPLT+1)
 	double precision time

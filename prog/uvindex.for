@@ -58,7 +58,7 @@ c    rjs  08jan97  options=mosaic
 c    rjs  08jun97  Fix bug in error message
 c    rjs  15jun00  Simple handling of blank source name.
 c
-c $Id: uvindex.for,v 1.2 2006/08/09 04:35:22 cal103 Exp $
+c $Id: uvindex.for,v 1.3 2009/04/28 05:24:50 mirmgr Exp $
 c----------------------------------------------------------------------c
 	include 'mirconst.h'
 	include 'maxdim.h'
@@ -86,7 +86,8 @@ c
 	logical newsrc,solar(MAXSRC)
 	double precision ra0(MAXSRC),dec0(MAXSRC)
 	real pntoff(2,MAXSRC)
-	character sources(MAXSRC)*16,prevsrc*16
+	character sources(MAXSRC)*16,calcodes(MAXSRC)*16,prevsrc*16
+        character cal*1
 	integer indx(MAXSRC)
 c
 c  Externals
@@ -131,7 +132,7 @@ c
      *	  ' Antennas',' Spectral',' Wideband','  Freq ',' Record'
 	call LogWrit(line(1:len1(line)))
 	write(line,'(19x,a,7x,a,a,a,a,a)')		  ' Name ',
-     *	  '         ',' Channels',' Channels',' Config','   No. '
+     *	  'Calcode  ',' Channels',' Channels',' Config','   No. '
 	call LogWrit(line(1:len1(line)))
 	call LogWrit(' ')
 c
@@ -143,6 +144,7 @@ c
 	call uvvarset(vsource,'dec')
 	call uvvarset(vsource,'dra')
 	call uvvarset(vsource,'ddec')
+	call uvvarset(vsource,'calcode')
 c
 c  Set up a variable handle to track changes in the correlator/freq setup.
 c
@@ -186,7 +188,7 @@ c
 	  newsrc = .false.
 	  newfreq= .false.
 	  if(uvvarupd(vsource))call GetSrc(lIn,mosaic,newsrc,isrc,nsrc,
-     *		sources,ra0,dec0,pntoff,solar,MAXSRC)
+     *		sources,ra0,dec0,pntoff,solar,calcodes,MAXSRC)
 	  if(uvvarupd(vfreq))  call GetFreq(lIn,newfreq,ifreq,nfreq,
      *		nchan,nspect,nschan,sfreqs,nwide,wfreqs,
      *		MAXFREQ,MAXSPECT)
@@ -197,8 +199,11 @@ c
      *	     time.lt.tprev)then
 	    call JulDay(time,'H',date)
 	    call uvrdvri(lIn,'nants',nants,0)
-	    write(line,'(a,x,a,i3,i10,i9,i7,i8)')date,sources(isrc),
-     *		nants,nchan(ifreq),nwide(ifreq),ifreq,nvis
+            cal = calcodes(isrc)(1:1)
+            call lcase(cal)
+	    write(line,'(a,x,a,x,a1,i3,i10,i9,i7,i8)')date,
+     *		sources(isrc),cal,nants,nchan(ifreq),
+     *          nwide(ifreq),ifreq,nvis
 	    call LogWrit(line)
 	  endif
 c
@@ -216,7 +221,7 @@ c  Give a summary to the user.
 c
 	call uvrdvrd(lIn,'time',time,0.d0)
 	call JulDay(time,'H',date)
-	write(line,'(a,a,i30)') date,' Total number of records',nvis
+	write(line,'(a,a,i32)') date,' Total number of records',nvis
 	call LogWrit(line)
 c
 c  Frequency setup summary.
@@ -269,7 +274,7 @@ c
 	call LogWrit(
      *	  'The input data-set contains the following pointings:')
 	call LogWrit(
-     *	  ' Source                   RA            DEC        '//
+     *	  ' Source       CalCode     RA            DEC        '//
      *	  '     dra(arcsec) ddec(arcsec)')
 c
 c  Sort the sources.
@@ -282,8 +287,10 @@ c
 	    if(sources(j1).ne.prevsrc)then
 	      ras = hangle(ra0(j1))
 	      decs = rangle(dec0(j1))
-	      write(line,'(a,7x,a,a,2f13.2)')sources(j1),ras,decs,
-     *		180*3600/pi * pntoff(1,j1),
+              cal = calcodes(j1)(1:1)
+              call lcase(cal)
+	      write(line,'(a,x,a,5x,a,a,2f13.2)')sources(j1),cal,ras,
+     *		decs,180*3600/pi * pntoff(1,j1),
      *		180*3600/pi * pntoff(2,j1)
 	      call LogWrit(line)
 	    else
@@ -317,13 +324,13 @@ c
 	end
 c************************************************************************
 	subroutine GetSrc(lIn,mosaic,newsrc,isrc,nsrc,
-     *		sources,ra0,dec0,pntoff,solar,MAXSRC)
+     *		sources,ra0,dec0,pntoff,solar,calcodes,MAXSRC)
 c
 	implicit none
 	integer MAXSRC
 	integer lIn,isrc,nsrc
 	logical newsrc,solar(MAXSRC),mosaic
-	character sources(MAXSRC)*(*)
+	character sources(MAXSRC)*(*), calcodes(MAXSRC)*(*)
 	double precision ra0(MAXSRC),dec0(MAXSRC)
 	real pntoff(2,MAXSRC)
 c
@@ -340,7 +347,7 @@ c
 	include 'mirconst.h'
 	real tol
 	parameter(tol=pi/180.0/3600.0)
-	character source*16,osource*16
+	character source*16,osource*16, calcode*16
 	double precision ra,dec
 	real dra,ddec
 	logical more,refed,found
@@ -358,6 +365,7 @@ c
 	call uvrdvrd(lIn,'dec',dec,0.d0)
 	call uvrdvrr(lIn,'dra',dra,0.)
 	call uvrdvrr(lIn,'ddec',ddec,0.)
+	call uvrdvra(lIn,'calcode',calcode,'none')
 c
 c  Is it a new source?
 c
@@ -416,6 +424,7 @@ c
 	    solar(isrc) = DetSolar(lIn,source)
 	    pntoff(1,isrc) = dra
 	    pntoff(2,isrc) = ddec
+            calcodes(isrc) = calcode
 	  endif
 	endif
 c

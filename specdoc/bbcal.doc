@@ -1,0 +1,28 @@
+%N bbcal
+%D Calibrate a CABB data set in chunks of limited bandwidth
+%P mhw
+%: data calibration
+%B
+        bbcal is a MIRIAD script which calibrates a CABB dataset in chunks
+        of limited bandwidth to allow for frequency dependent leakage and 
+        complex gain variation. This script is aimed at relatively simple
+	observations at cm and 12 or 7mm. If you have multiple secondary
+	calibrators you'll need to run this more than once in separate
+	directories or copy the scripts and modify them. The output files
+	contain all fields that are not specified as 'pri', 'sec' or 'bp'.
+ 
+%A rpfits
+        Name of the input RPFITS file(s). Leave this empty if you've already
+	loaded the data and want to start from the visibility file. 
+%A vis
+        Name of the visibility file. No default. Note that this file will be 
+	overwritten if you've specified rpfits!
+%A pri
+        Name of the primary calibrator, used for fluxscale.
+%A sec
+        Name of the secondary calibrator. 
+%A bp
+        Name of the bandpass calibrator (defaults to primary)
+%A maxwidth
+        The maximum bandwidth of the output files in GHz
+        
