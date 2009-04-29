@@ -155,7 +155,7 @@ c    nebk 12nov03  in subroutine pfit, declare xmom and coord to be of
 c                  size maxnax, not of passed in naxis (illegal fortran)
 c    lss  28apr09  minicube option
 c
-c $Id: mbspect.for,v 1.4 2009/04/29 04:26:58 cal103 Exp $
+c $Id: mbspect.for,v 1.5 2009/04/29 04:30:25 cal103 Exp $
 c----------------------------------------------------------------------c
 	include 'maxdim.h'
 	integer maxco,maxnax,naxis,maxch
@@ -176,7 +176,7 @@ c
 	real xv(2), yv(2), xw(2), yw(2), epoch, serr
 	real bmaj,bmin,bpa,cdelt1,cdelt2,cdelt3,cdeltr,cdeltd
 	integer lIn,lOut,raxis,daxis,vaxis,i,nsmth,nchan,iostat
-	integer width(2),poly,nmask,imax,jmax, ierr
+	integer width(2),poly,nmask,imax,jmax, ierr, j, k
         logical none, deriv1, deriv2, histo, measure
 	logical pstyle1, pstyle2, posfit, subpoly, minicube
 	character*132 in,out,logf
@@ -196,7 +196,7 @@ c----------------------------------------------------------------------c
 c
 c  Don't report the program ID so that gif and ps output can be piped.
       version = versan ('-mbspect',
-     :  '$Id: mbspect.for,v 1.4 2009/04/29 04:26:58 cal103 Exp $')
+     :  '$Id: mbspect.for,v 1.5 2009/04/29 04:30:25 cal103 Exp $')
 c
 c  Get inputs
 c
