@@ -97,6 +97,12 @@ c               profile and clip parameters is made. However, more
 c               robust moment-like parameters are also calculated by using an
 c               algorithm which minimises the mean absolute deviation of
 c               the flux-weighted velocities
+c      minicube If an output file is selected (out parameter selected),
+c               a 3x3 mincube is produced. No extra spatial information is
+c               available; the extra spatial dimensions just duplicate
+c               spectral information in the central pixel. Useful for tasks
+c               such as regrid which only work with cubes whose dimensions are
+c               not unity.
 c@ clip
 c       Two values. Exclude pixels with values in the range clip(1) to clip(2).
 c       If only one value is given, then exclude -abs(clip) to abs(clip).
@@ -147,8 +153,9 @@ c                  replaced by vaxis13
 c    lss  14jun02  added a position-fitting option
 c    nebk 12nov03  in subroutine pfit, declare xmom and coord to be of
 c                  size maxnax, not of passed in naxis (illegal fortran)
+c    lss  28apr09  minicube option
 c
-c $Id: mbspect.for,v 1.3 2007/08/01 00:29:14 cal103 Exp $
+c $Id: mbspect.for,v 1.4 2009/04/29 04:26:58 cal103 Exp $
 c----------------------------------------------------------------------c
 	include 'maxdim.h'
 	integer maxco,maxnax,naxis,maxch
@@ -171,7 +178,7 @@ c
 	integer lIn,lOut,raxis,daxis,vaxis,i,nsmth,nchan,iostat
 	integer width(2),poly,nmask,imax,jmax, ierr
         logical none, deriv1, deriv2, histo, measure
-	logical pstyle1, pstyle2, posfit, subpoly
+	logical pstyle1, pstyle2, posfit, subpoly, minicube
 	character*132 in,out,logf
         character*64 xlabel,ylabel,device,xaxis,yaxis, cpoly
 	character title*130, line*72,comment*80, str*3, word*80
@@ -189,7 +196,7 @@ c----------------------------------------------------------------------c
 c
 c  Don't report the program ID so that gif and ps output can be piped.
       version = versan ('-mbspect',
-     :  '$Id: mbspect.for,v 1.3 2007/08/01 00:29:14 cal103 Exp $')
+     :  '$Id: mbspect.for,v 1.4 2009/04/29 04:26:58 cal103 Exp $')
 c
 c  Get inputs
 c
@@ -248,7 +255,7 @@ c     *    call bug ('f', 'No default permitted for coord')
 	   if(poly.gt.10) goto 100
         endif
         call getopt (deriv1, deriv2, histo, measure, pstyle1, pstyle2,
-     +               posfit)
+     +               posfit, minicube)
 	call keya('device',device,' ')
         call keyr('csize',csize(1),0.0)
         call keyr('csize',csize(2),csize(1))
@@ -753,11 +760,21 @@ c
 	if(out.ne.' ') then
 	  naxis=3
 	  nsize(1) = nchan
-	  nsize(2) = 1
-	  nsize(3) = 1
+	  if(minicube) then
+	    nsize(2) = 3
+	    nsize(3) = 3
+	  else
+	    nsize(2) = 1
+	    nsize(3) = 1
+	  end if
 	  call xyopen(lOut,out,'new',naxis,nsize)
 	  call mbheader(lIn,lOut,coord,raxis,daxis,vaxis,blc,unit0)
-	  call xywrite(lOut,1,spec)
+	  do i=1,nsize(2)
+	    do j=1,nsize(3)
+	      k=1+(j-1)+(i-1)*nsize(3)
+	      call xywrite(lOut,k,spec)
+	    end do
+	  end do
 c
 c  Update history and close files.
 c
@@ -1452,7 +1469,7 @@ c----------------------------------------------------------------------c
 c
 c
       subroutine getopt (deriv1, deriv2, histo, measure, pstyle1,
-     1                   pstyle2,posfit)
+     1                   pstyle2,posfit,minicube)
 c----------------------------------------------------------------------
 c     Decode options array into named variables.
 c
@@ -1464,19 +1481,20 @@ c     measure    True means measure spectral parameters
 c     pstyle1    True means use alternative plot style
 c     pstyle2    True means use alternative plot style 2
 c     posfit     True means fit for source position
+c     minicube   True means produce a 3x3 minicube
 c
 c-----------------------------------------------------------------------
 c
       logical deriv1, deriv2, histo, measure, pstyle1, pstyle2,
-     +        posfit
+     +        posfit, minicube
 cc
       integer maxopt
-      parameter (maxopt = 7)
+      parameter (maxopt = 8)
 c
-      character opshuns(maxopt)*7
+      character opshuns(maxopt)*8
       logical present(maxopt)
       data opshuns /'1deriv', '2deriv', 'histo', 'measure','pstyle1',
-     1              'pstyle2','posfit'/
+     1              'pstyle2','posfit','minicube'/
 c-----------------------------------------------------------------------
       call options ('options', opshuns, present, maxopt)
 c
@@ -1488,6 +1506,7 @@ c
       pstyle1= present(5)
       pstyle2= present(6)
       posfit=present(7)
+      minicube=present(8)
 c
       end
 c
