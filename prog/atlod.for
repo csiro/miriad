@@ -259,7 +259,7 @@ c    mhw  17jan08 Add options=rfiflag: flagging based on file with rfi ranges
 c    rjs  06nov08 Corrected CA02 xyphase handling and some minor tidying.
 c    mhw  09jan09 Add flagging of NaNs in CABB spectra 
 c
-c $Id: atlod.for,v 1.9 2009/04/28 05:24:50 mirmgr Exp $
+c $Id: atlod.for,v 1.10 2009/04/29 00:06:00 wie017 Exp $
 
 c-----------------------------------------------------------------------
         integer MAXFILES,MAXTIMES
@@ -279,7 +279,7 @@ c
         character itoaf*8, rperr*32, versan*80
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :  '$Id: atlod.for,v 1.9 2009/04/28 05:24:50 mirmgr Exp $')
+     :  '$Id: atlod.for,v 1.10 2009/04/29 00:06:00 wie017 Exp $')
 c
 c  Get the input parameters.
 c
@@ -2494,7 +2494,7 @@ c
 c            
 c  Always need to store auto corr bin 1 and 2 for cabb data
 c
-            if(ok) ok = (i1.eq.i2.and.(doauto.or.cabb)).or.
+            if(ok) ok = (i1.eq.i2.and.doauto).or.
      *                  (i1.ne.i2.and.docross)
             if(ok)then
               ok = ifno.ge.1.and.ifno.le.n_if.and.
