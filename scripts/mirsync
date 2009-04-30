@@ -48,7 +48,7 @@
 #   $MIR/specdoc/	...always updated.
 #
 # Original: 2006/11/28 Mark Calabretta, ATNF
-# $Id: mirsync,v 1.7 2007/03/20 03:32:13 cal103 Exp $
+# $Id: mirsync,v 1.8 2009/04/30 00:44:30 cal103 Exp $
 #-----------------------------------------------------------------------------
 
   trap 'exit 1' 1 2 3 15
@@ -156,7 +156,7 @@
   FILES="$FILES userguide.ps userguide_US.ps.gz"
 
   DIRS="config etc guides inc linpack prog scripts spec subs tests tools"
-  [ "$DOBIN" = 1 ] && DIRS="$DIRS darwin_ppc darwin_x86 linux linux64 sun4sol"
+  [ "$DOBIN" = 1 ] && DIRS="$DIRS darwin_x86 linux linux64 sun4sol"
 
 # Files that must be present.
   SRC="$ATMIR/DISCLAIMER"
