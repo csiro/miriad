@@ -353,7 +353,7 @@ c
 	    do i=1,nindx
               nsub=1
               if (maxwidth.gt.0.0.and.
-     *            abs(sdf(i)*nschan(i))>maxwidth) then
+     *            abs(sdf(i)*nschan(i)).gt.maxwidth) then
                 nsub = max(1,nint(abs(sdf(i)*(nschan(i)+0.1)/maxwidth)))
               endif
               nindx1=nindx1+nsub-1
