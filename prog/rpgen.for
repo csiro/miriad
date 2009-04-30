@@ -47,7 +47,7 @@ c--
 c The program rpgen is roughly based on uvgen but currently
 c dummy fills most of the data fields.
 c
-c $Id: rpgen.for,v 1.1 2009/04/28 05:24:50 mirmgr Exp $
+c $Id: rpgen.for,v 1.2 2009/04/30 05:04:31 cal103 Exp $
 c-----------------------------------------------------------------------
 	integer MAXSRC,MAXPOL,MAXWIN
 	parameter(MAXSRC=32,MAXPOL=4,MAXWIN=18)
@@ -67,7 +67,7 @@ c
 	character versan*80
 c-----------------------------------------------------------------------
       version = versan ('rpgen',
-     :  '$Id: rpgen.for,v 1.1 2009/04/28 05:24:50 mirmgr Exp $')
+     :  '$Id: rpgen.for,v 1.2 2009/04/30 05:04:31 cal103 Exp $')
 c
 c  Get the input parameters.
 c
@@ -374,9 +374,9 @@ c
                  do i=1,nchan(ifno)
                    do j=1,npol
                      if (j.le.2) then
-                       vis(k)=complex(1.0+srcno/100.0,0.0)
+                       vis(k)=cmplx(1.0+srcno/100.0,0.0)
                      else
-                       vis(k)=complex(0.001*j,1.e-7*i)
+                       vis(k)=cmplx(0.001*j,1.e-7*i)
                      endif
                      if (i.lt.dx)  vis(k)=vis(k)*sin(i/dx*PI_2)
                      if (nchan(ifno)-i.lt.dx) vis(k)=vis(k)*
