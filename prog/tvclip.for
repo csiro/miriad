@@ -257,7 +257,7 @@ c    rjs   21sep00    options=nosrc
 c    jwr   16jun04    initialize nedit=0 in doEdit
 c    jwr   16jun04    increased MAXEDIT
 c
-c $Id: tvclip.for,v 1.3 2008/02/24 23:49:51 cal103 Exp $
+c $Id: tvclip.for,v 1.4 2009/05/04 01:25:44 wie017 Exp $
 c-----------------------------------------------------------------------
 c
 c  Internal parameters.
@@ -308,7 +308,7 @@ c-----------------------------------------------------------------------
 c  Announce program.
 c
       version = versan('tvclip',
-     :  '$Id: tvclip.for,v 1.3 2008/02/24 23:49:51 cal103 Exp $')
+     :  '$Id: tvclip.for,v 1.4 2009/05/04 01:25:44 wie017 Exp $')
 c-----------------------------------------------------------------------
 c  Use the key routines to get the user input parameters.
 c
@@ -1215,7 +1215,7 @@ c
 c
 c  Write the data to a scratch file (if one exists).
 c
-	    if(lScr.ne.0)then
+	    if(lScr.ge.0)then
 	      buf(1) = bl
 	      buf(2) = t
 	      buf(3) = day0
