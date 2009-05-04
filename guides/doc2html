@@ -5,7 +5,7 @@
 # Convert a Miriad doc file to html.  The taskref file lists user guide
 # references to tasks.
 #
-# $Id: doc2html,v 1.5 2006/11/13 07:41:53 cal103 Exp $
+# $Id: doc2html,v 1.6 2009/05/04 05:05:10 cal103 Exp $
 #-----------------------------------------------------------------------------
 
 if ( $#argv < 2 ) then
@@ -77,7 +77,7 @@ set user = "miriad@atnf.csiro.au"
 set date = (`date +"%d %h %Y"`)
 
 # Finally generate the document.
-echo "<title>"  Documentation on $topic "</title>"
+echo "<title>"$topic"</title>"
 echo '<body bgcolor=white background=../hmiriad.gif>'
 echo '<a name="basic">'
 if ( $doref ) then
