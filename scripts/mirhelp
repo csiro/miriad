@@ -22,7 +22,7 @@
 #    28-jun-06 rjs  Added cygstart as a browser (standard web browser in the
 #                   cygwin environment).
 #
-# $Id: mirhelp,v 1.4 2009/05/04 05:13:23 cal103 Exp $
+# $Id: mirhelp,v 1.5 2009/05/04 05:57:26 cal103 Exp $
 #-----------------------------------------------------------------------------
 
 set webroot = "http://www.atnf.csiro.au/computing/software/miriad"
@@ -69,20 +69,13 @@ if ($doweb) then
 
   if (! $?MIRPAGER) set MIRPAGER = firefox
 
-  if ("$MIRPAGER" == firefox || \
-      "$MIRPAGER" == mozilla || \
-      "$MIRPAGER" == netscape) then
-    "$MIRPAGER" -remote "OpenURL($html,new-tab)"
-    if ($status) "$MIRPAGER" -install "$html" &
-  else if ("$MIRPAGER" == lynx) then
+  if ("$MIRPAGER" == lynx) then
     lynx -use_mouse "$html"
   else if ("$MIRPAGER" == cygstart) then
     cygstart "$html"
   else
-    firefox -remote "OpenURL($html,new-tab)"
-    if ($status) then
-      firefox -install "$html" &
-    endif
+    "$MIRPAGER" -remote "OpenURL($html,new-tab)"
+    if ($status) "$MIRPAGER" "$html" &
   endif
 
 else
@@ -150,8 +143,8 @@ echo "   -k   Give help on a specific keyword"
 echo " "
 echo "  Environment Variables:"
 echo "    MIRPAGER  Paging program to be used.  This can be either a text"
-echo "              paging task (e.g. more, less) or a web browser (firefox,"
-echo "              mozilla, netscape, lynx)."
+echo "              pager (e.g. more, less) or a web browser (firefox,"
+echo "              mozilla, iceape, netscape, lynx, etc.)."
 echo "    PAGER     A text paging program (e.g. more, less) used if MIRPAGER"
 echo "              is not set.  The default is 'more'."
 echo "    MIRPDOC   Colon-separated list of directories to search for doc"
