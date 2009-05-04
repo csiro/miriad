@@ -22,8 +22,10 @@
 #    28-jun-06 rjs  Added cygstart as a browser (standard web browser in the
 #                   cygwin environment).
 #
-# $Id: mirhelp,v 1.3 2007/06/12 04:47:12 cal103 Exp $
+# $Id: mirhelp,v 1.4 2009/05/04 05:13:23 cal103 Exp $
 #-----------------------------------------------------------------------------
+
+set webroot = "http://www.atnf.csiro.au/computing/software/miriad"
 
 set noglob
 
@@ -34,17 +36,17 @@ set keyw = 0
 set message = ""
 
 foreach arg ($argv)
-  set earg = ( `echo $arg | sed -e 's/./& /g'` )
-  if ( $keyw ) then
+  set earg = (`echo $arg | sed -e 's/./& /g'`)
+  if ($keyw) then
     set key = $arg
     set keyw = 0
-  else if ( $#earg > 1 && "$earg[1]" == "-" ) then
-    foreach s ( $earg[2-] )
-      if ( "$s" == "k" ) then
+  else if ($#earg > 1 && "$earg[1]" == "-") then
+    foreach s ($earg[2-])
+      if ("$s" == "k") then
         set keyw = 1
-      else if ( "$s" == "w" ) then
+      else if ("$s" == "w") then
         set doweb = 1
-      else if ( "$s" == "?" ) then
+      else if ("$s" == "?") then
         set message = ""
         goto usage
       else
@@ -54,43 +56,44 @@ foreach arg ($argv)
     end
   else
     set message = "Help on only one task can be given at a time: $arg"
-    if ( "$task" != "" ) goto usage
+    if ("$task" != "") goto usage
     set task = $arg
   endif
 end
 
-if ( "$task" == "" ) set task = "miriad"
+if ("$task" == "") set task = "miriad"
 
-# Determine the pager to use.
+if ($doweb) then
+  set html = "$webroot/doc/$task.html"
+  if  ("$key" != "") set html = "$html#$key"
 
-if ( $doweb ) then
-  set mypager = "mozilla"
-else if ( $?MIRPAGER ) then
-  set mypager = $MIRPAGER
-else if ( $?PAGER ) then
-  set mypager = $PAGER
-else
-  set mypager = "more"
-endif
+  if (! $?MIRPAGER) set MIRPAGER = firefox
 
-set web = "http://www.atnf.csiro.au/computing/software/miriad/$task.html"
-if  ( "$key" != "" ) set web = "$web#$key"
-
-if ( "$mypager" == "netscape" ) then
-  netscape -remote "OpenURL($web)"
-  if ( $status ) then
-    netscape -install "$web" &
+  if ("$MIRPAGER" == firefox || \
+      "$MIRPAGER" == mozilla || \
+      "$MIRPAGER" == netscape) then
+    "$MIRPAGER" -remote "OpenURL($html,new-tab)"
+    if ($status) "$MIRPAGER" -install "$html" &
+  else if ("$MIRPAGER" == lynx) then
+    lynx -use_mouse "$html"
+  else if ("$MIRPAGER" == cygstart) then
+    cygstart "$html"
+  else
+    firefox -remote "OpenURL($html,new-tab)"
+    if ($status) then
+      firefox -install "$html" &
+    endif
   endif
-else if ( "$mypager" == "cygstart" ) then
-  cygstart "$web"
-else if ( "$mypager" == "mozilla" ) then
-  mozilla -remote "OpenURL($web)"
-  if ( $status ) then
-    mozilla -install "$web" &
-  endif
-else if ( "$mypager" == "lynx" ) then
-  lynx -use_mouse "$web"
+
 else
+  if ($?MIRPAGER) then
+    set mypager = "$MIRPAGER"
+  else if ($?PAGER) then
+    set mypager = "$PAGER"
+  else
+    set mypager = more
+  endif
+
   if ($?MIRPDOC == 0) setenv MIRPDOC "$MIR/doc"
   setenv MIRPDOC ".:$HOME/miriad/doc:$MIRPDOC"
 
@@ -103,7 +106,7 @@ else
     endif
   end
 
-  if ( ! -f $file ) then
+  if (! -f "$file") then
     set matches = ()
     unset noglob
     set nonomatch
@@ -125,7 +128,7 @@ else
       echo "### Fatal: No task matching '$task' was found."
     endif
   else
-    if ( "$key" != "" ) set file = "$file -k $key"
+    if ("$key" != "") set file = "$file -k $key"
     if ($?dowarn) then
       (echo "WARNING: Reading $file" ; docfmt $file) | $mypager
     else
@@ -136,19 +139,20 @@ endif
 exit 0
 
 usage:
-if ( "$message" != "" ) echo "### Fatal: $message"
+if ("$message" != "") echo "### Fatal: $message"
 echo " "
 echo "  Usage:"
 echo "    mirhelp [-w] [-k keyword] task"
 echo " "
 echo "  Options:"
-echo "   -w   View help in a mozilla browser"
+echo "   -w   View help in a web browser (set by MIRPAGER)"
 echo "   -k   Give help on a specific keyword"
 echo " "
 echo "  Environment Variables:"
-echo "    MIRPAGER  Paging program to be used. This can be either"
-echo "              a text paging task (e.g. more) or netscape or lynx."
-echo "    PAGER     A text paging program (e.g. more) used if MIRPAGER"
+echo "    MIRPAGER  Paging program to be used.  This can be either a text"
+echo "              paging task (e.g. more, less) or a web browser (firefox,"
+echo "              mozilla, netscape, lynx)."
+echo "    PAGER     A text paging program (e.g. more, less) used if MIRPAGER"
 echo "              is not set.  The default is 'more'."
 echo "    MIRPDOC   Colon-separated list of directories to search for doc"
 echo "              files.  Default is .:$MIR/doc."
