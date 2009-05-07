@@ -259,7 +259,7 @@ c    mhw  17jan08 Add options=rfiflag: flagging based on file with rfi ranges
 c    rjs  06nov08 Corrected CA02 xyphase handling and some minor tidying.
 c    mhw  09jan09 Add flagging of NaNs in CABB spectra 
 c
-c $Id: atlod.for,v 1.10 2009/04/29 00:06:00 wie017 Exp $
+c $Id: atlod.for,v 1.11 2009/05/07 02:23:06 wie017 Exp $
 
 c-----------------------------------------------------------------------
         integer MAXFILES,MAXTIMES
@@ -279,7 +279,7 @@ c
         character itoaf*8, rperr*32, versan*80
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :  '$Id: atlod.for,v 1.10 2009/04/29 00:06:00 wie017 Exp $')
+     :  '$Id: atlod.for,v 1.11 2009/05/07 02:23:06 wie017 Exp $')
 c
 c  Get the input parameters.
 c
@@ -310,7 +310,7 @@ c
         call keyfin
 c
         call cacalIni
-	call cacalIni
+	call rfiIni(rfiflag)
 c
 c  Open the output and initialise it.
 c
