@@ -2,7 +2,7 @@
 # GNUmakefile used to compile Miriad.
 #
 # Original: 2006/08/28, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.29 2009/02/05 04:35:00 cal103 Exp $
+# $Id: GNUmakefile,v 1.30 2009/05/12 02:07:42 cal103 Exp $
 #-----------------------------------------------------------------------------
 ifeq "$(MIR)" ""
   # Try to deduce basic Miriad environment variables.  Obviously this only
@@ -213,7 +213,7 @@ ifeq "$(MAKEMODE)" "system"
 	-@ echo ""
 	-@ $(TIMER)
 	-@ echo "Checking for users needing help..."
-	 @ cd $(MIRROOT)/at_friends && ./CheckBookings.csh
+	 @ cd $(MIRROOT)/at_friends && ./CheckBookings
 
       updates :
 	-@ echo ""
