@@ -224,7 +224,7 @@ c    rjs   12may97    Check that linetype is compatible with flagging.
 c    rjs    5oct97    Relax restriction that linetype width and step
 c                     must be 1.
 c
-c $Id: tvflag.for,v 1.3 2008/02/01 03:14:54 cal103 Exp $
+c $Id: tvflag.for,v 1.4 2009/05/13 06:36:14 cal103 Exp $
 c-----------------------------------------------------------------------
 c
 c  Internal parameters.
@@ -269,7 +269,7 @@ c-----------------------------------------------------------------------
 c  Announce program.
 c
       version = versan ('tvflag',
-     :  '$Id: tvflag.for,v 1.3 2008/02/01 03:14:54 cal103 Exp $')
+     :  '$Id: tvflag.for,v 1.4 2009/05/13 06:36:14 cal103 Exp $')
 c-----------------------------------------------------------------------
 c  Use the key routines to get the user input parameters.
 c
@@ -457,9 +457,8 @@ c-----------------------------------------------------------------------
 	include 'mem.h'
 	integer MAXTIME,MAXTIME2,MAXSAVE,MAXTREV
 	real ttol
-	logical doScr
 	parameter(MAXTIME=10000,MAXTIME2=MAXDIM,MAXTREV=128,
-     *			MAXSAVE=1024,ttol=1./86400.,doScr=.true.)
+     *			MAXSAVE=1024,ttol=1.0/86400.0)
 	integer i,j,k,i1,i2,iblok
 	integer lScr
 	real t1(MAXTIME),t2(MAXTIME)
@@ -489,8 +488,7 @@ c  Write all the data out to the scratch file, and make a list of
 c  all the times that we have encountered. Also remember any baselines
 c  that we encounter.
 c
-	lScr = 0
-	if(doScr)call scropen(lScr)
+	call scropen(lScr)
 c
 c  Copy all the data to a scratch file, and determine which
 c  baselines and times are present.
@@ -622,7 +620,7 @@ c  We have finished the flagging. Release the scratch file and
 c  memory.
 c
   999	continue
-	if(doScr)call scrclose(lScr)
+	call scrclose(lScr)
 	call memfree(iFlg,nstep*nchan*ntime,'i')
 	call memfree(iDat,nstep*nchan*ntime,'r')
 c
@@ -1099,19 +1097,17 @@ c
 c
 c  Write the data to a scratch file (if one exists).
 c
-	    if(lScr.ne.0)then
-	      buf(1) = bl
-	      buf(2) = t
-	      buf(3) = day0
-	      i0 = 3
-	      do i=1,nchan
-	        buf(i0+1) = ctoapri(data(i), apri)
-	        buf(i0+2) = 0
-	        if(flags(i))buf(i0+2) = 1
-	        i0 = i0 + 2
-	      enddo
-	      call scrwrite(lScr,buf,offset,length)
-	    endif
+	    buf(1) = bl
+	    buf(2) = t
+	    buf(3) = day0
+	    i0 = 3
+	    do i=1,nchan
+	      buf(i0+1) = ctoapri(data(i), apri)
+	      buf(i0+2) = 0
+	      if(flags(i))buf(i0+2) = 1
+	      i0 = i0 + 2
+	    enddo
+	    call scrwrite(lScr,buf,offset,length)
 c
 	    offset = offset + length
 	  endif
