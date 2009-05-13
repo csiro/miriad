@@ -416,8 +416,8 @@ c    Bob to play ball with BOXES code.
 c  * Try to swap line colour index to get white lines on black
 c    and vice versa.  Have this vary over the image as appropriate.
 c
-c $Id: cgspec.for,v 1.2 2009/05/13 07:36:40 cal103 Exp $
-c--------------------------------------------------------------------
+c $Id: cgspec.for,v 1.3 2009/05/13 07:48:41 cal103 Exp $
+c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
       include 'mem.h'
@@ -471,7 +471,7 @@ c
       data cin, gin, bin /maxcon*' ', ' ', ' '/
       data nblnkcs /0/
       data gaps, doabut, dotr, scale /.false., .false., .false., 2*0.0/
-      data lgn, lcn /0, maxcon*0/
+      data lgn, lcn /-1, maxcon * -1/
       data vmin, vmax, imin, imax /1.0e30, -1.0e30, 1.0e30, -1.0e30/
       data ltypes /'hms   ', 'dms   ', 'arcsec', 'arcmin', 'absdeg',
      +             'reldeg', 'abspix', 'relpix', 'absnat', 'relnat',
@@ -480,7 +480,7 @@ c
      +                     'derivative spectrum', 8, 19, 19/
 c-----------------------------------------------------------------------
       version = versan('cgspec',
-     :  '$Id')
+     :  '$Id: cgspec.for,v 1.3 2009/05/13 07:48:41 cal103 Exp $')
 c
 c Get user inputs
 c
@@ -833,7 +833,7 @@ c
         if (allgood) call memfree (ipimb, win(1)*win(2), 'i')
       end if
       if (.not.igblank) then
-        if (lgn.ne.0) call scrclose (lgn)
+        if (lgn.ge.0) call scrclose (lgn)
         do i = 1, maxcon
           if (lcn(i).ne.0) call scrclose (lcn(i))
         end do
@@ -1296,7 +1296,7 @@ c
      +   doframe, mark, norm, naked, number, mirror, colour,
      +   blconly, doerase, doepoch, igblank, dofid, dowedge, dotwo,
      +   dogrid, blacklab)
-c----------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c     Decode options array into named variables.
 c
 c   Output:
@@ -1975,7 +1975,7 @@ c
 c
 c Read scratch files and populate
 c
-        if (lgn.ne.0) then
+        if (lgn.ge.0) then
           off = 0
           do k = 1, nblnkg
             call scrread (lgn, data, off, 2)
@@ -2598,7 +2598,7 @@ c
 c
       subroutine posdec (lun, pix3, maxtyp, ltypes, ofile, iline,
      +                   aline, opos)
-c---------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c     Decode string into positions list
 c
 c     Input
@@ -2617,7 +2617,7 @@ c       opos     Overlay location, list of:
 c                         X  Y     XSIZ YSIZ
 c                        PIXELS     ARCSEC
 c
-c---------------------------------------------------------------------
+c-----------------------------------------------------------------------
       integer iline, maxtyp, lun
       double precision opos(4), pix3
       character*(*) aline, ofile, ltypes(maxtyp)
@@ -2637,7 +2637,7 @@ c
       parameter (maxnum = 10, rd = 180.0/dpi)
       double precision nums(maxnum)
       integer icomm(maxnum)
-c--------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
 c Prepare string for matodf
 c
@@ -2715,7 +2715,7 @@ c
 c
 c
       subroutine posdec2 (aline, inc, bin)
-c---------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c     Decode string into positions information
 c
 c     Input
@@ -2724,7 +2724,7 @@ c     Output
 c       inc      Increment across image in arcsec in x and y
 c       bin      SPatial binning size for each spectrum in arcsec
 c                in x and y
-c---------------------------------------------------------------------
+c-----------------------------------------------------------------------
       real inc(2), bin(2)
       character*(*) aline
 cc
@@ -2736,7 +2736,7 @@ c
 c
       double precision nums(maxnum)
       integer icomm(maxnum)
-c--------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
 c Prepare string for matodf
 c
@@ -2771,7 +2771,7 @@ c
 c
       subroutine region (maxnax, cin, lc, csize, cnaxis, gin, lg, gsize,
      +  gnaxis, ibin, jbin, blc, trc, win, ngrps, grpbeg, ngrp)
-c----------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c     Finish key routine inputs for region of interest now.    Also
 c     return the header items for all further use when computing
 c     axis value related quantities.  These are the first contour
@@ -2797,7 +2797,7 @@ c                  channel increment is reached.
 c    ngrp          Number of channels in each group of channel to
 c                  be averaged together for each sub-plot.
 c
-c----------------------------------------------------------------------
+c-----------------------------------------------------------------------
       integer maxnax, cnaxis, gnaxis, csize(maxnax), gsize(maxnax),
      +  blc(*), trc(*), win(2), ngrp(*), grpbeg(*),
      +  ngrps, ibin(2), jbin(2), lc, lg
@@ -2809,7 +2809,7 @@ cc
 c
       integer boxes(maxbox), i, kbin(2), naxis, size(3), lh
       character line*80, itoaf*1
-c----------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
 c The pixel map and contour images have all been checked to be
 c of the same dimensions.  Use any for 'region' keyword. There
@@ -3229,7 +3229,7 @@ c
 c
 c
       subroutine specsiz (ls, vrange, iax, size)
-c---------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c     WOrk out how many pixels long the spectrum for this spectrum
 c     image for the desired velocity range so that we can allocate
 c     memory dynamically

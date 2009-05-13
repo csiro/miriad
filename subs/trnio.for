@@ -79,7 +79,7 @@ c
 	if(inmem(lu))then
 	  blk(lu) = 0
 	  memsize(lu) = totsize
-	  lScr(lu) = 0
+	  lScr(lu) = -1
 	else
 	  if(major(lu))then
 	    blk(lu) = blk1
@@ -305,8 +305,8 @@ c--
 c-----------------------------------------------------------------------
 	include 'trnio.h'
 	inuse(lu) = .false.
-	if(lScr(lu).ne.0)call ScrClose(lScr(lu))
-	if(memsize(lu).ne.0)call MemFree(buf(lu),memsize(lu),'r')
+	if (lScr(lu).ge.0) call ScrClose(lScr(lu))
+	if (memsize(lu).ne.0) call MemFree(buf(lu),memsize(lu),'r')
 	end
 c***********************************************************************
 	subroutine trnflpx(Data,n1,n2)
