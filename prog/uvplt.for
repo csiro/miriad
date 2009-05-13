@@ -41,7 +41,6 @@ c         uvangle                  [uv pos'n angle clockwise from v
 c                                   axis]
 c         hangle                   [hour angle in HH MM SS.S]
 c         dhangle                  [hour angle in decimal hours]
-c         parang                   [parallactic angle in degrees]
 c         lst                      [local sidereal time in decimal hr]
 c         az                       [azimuth in degrees]
 c         el                       [elevation in degrees]
@@ -49,6 +48,9 @@ c         airmass                  [airmass=1/sin(el)]
 c         jyperk                   [system gain, in Jy/K]
 c         rms                      [theoretical visibility noise rms, in
 c                                   flux units]
+c         freq			   [frequency, in GHz]
+c         parang                   [parallactic angle in degrees]
+c
 c       NOTE: parang is the true parallactic angle of the source, which
 c       can be quite different from the angle between source and antenna
 c       feed (Miriad variable chi).
@@ -71,6 +73,7 @@ c         If axis = airmass               [natural units; 2 values]
 c         If axis = jyperk                [Jy/K;          2 values]
 c         If axis = rms                   [flux units;    2 values]
 c         If axis = lst                   [decimal hours; 2 values]
+c	  If axis = freq                  [GHz;           2 values]
 c
 c       Default is to self-scale (see also OPTIONS=XIND).
 c@ yrange
@@ -356,6 +359,7 @@ c                  circumstances.
 c    rjs  20sep04  Added jyperk and rms.
 c    rjs  09may06  Disable planet processing.
 c    rjs  07jun06  Neater messages.
+c    rjs  28apr09  Added frequency as something that can be plotted.
 c
 c To do:
 c
@@ -409,7 +413,7 @@ c       way the available space is better used.  MAXFILE is set to
 c       be much bigger than any number of files the user is ever
 c       likely to input.
 c
-c  $Id: uvplt.for,v 1.5 2008/08/11 02:35:48 cal103 Exp $
+c  $Id: uvplt.for,v 1.6 2009/05/13 15:25:29 sau078 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
@@ -485,7 +489,7 @@ c
       data polmsk /13*0/
 c-----------------------------------------------------------------------
       version = versan ('uvplt',
-     +  '$Id: uvplt.for,v 1.5 2008/08/11 02:35:48 cal103 Exp $')
+     +  '$Id: uvplt.for,v 1.6 2009/05/13 15:25:29 sau078 Exp $')
 c
 c  Get the parameters given by the user and check them for blunders
 c
@@ -617,12 +621,14 @@ c
      +       npols, plbidx, stbidx, pidx, a1a2, skip)
           if (skip) goto 900
 c
-c Get info from preamble
+c Get info from preamble and frequency
 c
           if (dowave) then
             call getwvl (donano, preamble, u, v, uvdist, uvpa)
             call uvinfo (lin, 'sfreq', freq)
-          endif
+          else if(xaxis.eq.'freq'.or.yaxis.eq.'freq')then
+	    call uvinfo (lin, 'sfreq', freq)
+	  endif
 c
 c Fish out the lst if required.
 c
@@ -2556,13 +2562,13 @@ c
 c Types of axes allowed
 c
       integer naxmax, nax
-      parameter (naxmax = 22)
+      parameter (naxmax = 23)
       character axtyp(naxmax)*10
       data axtyp /  'time      ','dtime     ','uvdistance','uu        ',
      + 'vv        ','uc        ','vc        ','uvangle   ','amplitude ',
      + 'phase     ','real      ','imag      ','hangle    ','dhangle   ',
      + 'parang    ','lst       ','az        ','el        ','airmass   ',
-     + 'jyperk    ','rms       ','ytime     '/
+     + 'jyperk    ','rms       ','ytime     ','freq      '/
 c-----------------------------------------------------------------------
       call keyini
 c
@@ -3485,6 +3491,8 @@ c-----------------------------------------------------------------------
         label = 'Airmass [1/sin(el)]'
       else if (axis.eq.'uvdistance') then
         label = '(u\u2\d + v\u2\d)\u1/2\d'//units
+      else if (axis.eq.'freq')then
+	label = 'Frequency (GHz)'
       else if (axis.eq.'uu' .or. axis.eq.'uc') then
         label = 'u'//units
       else if (axis.eq.'vv' .or. axis.eq.'vc') then
@@ -3558,6 +3566,8 @@ c-----------------------------------------------------------------------
         val = uvdist * freq(ichan) / freq(1)
       else if (axis.eq.'uu' .or. axis.eq.'uc') then
         val = u * freq(ichan) / freq(1)
+      else if (axis.eq.'freq')then
+	val = freq(ichan)
       else if (axis.eq.'vv' .or. axis.eq.'vc') then
         val = v * freq(ichan) / freq(1)
       else if (axis.eq.'uvangle') then
