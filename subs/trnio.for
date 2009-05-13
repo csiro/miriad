@@ -1,4 +1,4 @@
-c************************************************************************
+c***********************************************************************
 c
 c  These routines are used to reorder the axes of a 3D image.
 c
@@ -10,14 +10,13 @@ c    rjs  19dec92 Near total rewrite, to appease nebk!
 c    rjs  22feb93 Include maxnax.h
 c    rjs  18sep05 Corrected declaration of the work array.
 c
-c************************************************************************
+c***********************************************************************
 c*TrnIni -- Initialise the transpose routines.
 c:transpose,reorder
 c& rjs
 c+
 	subroutine trnIni(lu,naxis,nsize,reorder)
 c
-	implicit none
 	integer lu,naxis,nsize(naxis)
 	character reorder*(*)
 c
@@ -31,7 +30,7 @@ c    reorder	String giving the reordering to be performed.
 c  Output:
 c    lu		Handle used internally.
 c--
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'trnio.h'
 	integer i,totsize,blk1
 	logical first
@@ -95,18 +94,18 @@ c
 	if(memsize(lu).gt.0)call memalloc(buf(lu),memsize(lu),'r')
 	p(lu) = 0
 	end
-c************************************************************************
+c***********************************************************************
 c*TrnWrite -- Write a plane pof the cube in its initial order.
 c:transpose,reorder
 c& rjs
 c+
 	subroutine trnwrite(lu,Data)
 c
-	implicit none
 	integer lu
 	real Data(*)
 c
-c  The caller passes TrnWrite a plane of the input (initial ordered) cube.
+c  The caller passes TrnWrite a plane of the input (initial ordered)
+c  cube.
 c
 c  Input:
 c    lu		Trnio handle.
@@ -114,7 +113,7 @@ c  Input/Output:
 c    Data	The pixel data of the plane. This should be a real array
 c		of size size(1,lu) by size(2,lu). This may be destroyed
 c		on output.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'trnio.h'
 	integer work(MAXDIM)
 	integer n1,n2,n3,pnt,k,j,i,offset,length,ifail
@@ -174,14 +173,13 @@ c
 	if(p(lu).eq.n3) p(lu) = 0
 c
  	end
-c************************************************************************
+c***********************************************************************
 c*TrnRead -- Read back a plane of the reordered cube.
 c:transpose,reorder
 c& rjs
 c+
 	subroutine trnread(lu,Data)
 c
-	implicit none
 	integer lu
 	real Data(*)
 c
@@ -192,7 +190,7 @@ c    lu
 c  Output:
 c    Data
 c--
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'trnio.h'
 	integer i,j,k,ktot,ltot,pnt,n1,n2,n3,ifail,offset,length,pd,n3d
 	integer work(MAXDIM)
@@ -290,14 +288,13 @@ c
 	if(p(lu).eq.n3) p(lu) = 0
 c
 	end
-c************************************************************************
+c***********************************************************************
 c*TrnFin -- Release the resources used by the trn routines.
 c:transpose,reorder
 c& rjs
 c+
 	subroutine trnfin(lu)
 c
-	implicit none
 	integer lu
 c
 c  Release the resources allocated by the trnio routines.
@@ -305,16 +302,15 @@ c
 c  Input:
 c    lu		Handle used by the trnio routines.
 c--
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'trnio.h'
 	inuse(lu) = .false.
 	if(lScr(lu).ne.0)call ScrClose(lScr(lu))
 	if(memsize(lu).ne.0)call MemFree(buf(lu),memsize(lu),'r')
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine trnflpx(Data,n1,n2)
 c
-	implicit none
 	integer n1,n2
 	real Data(n1,n2)
 c
@@ -324,7 +320,7 @@ c  Input:
 c    n1,n2	Image dimensions.
 c  Input/Output:
 c    Data	Image pixels.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer i,j
 	real tmp
 c
@@ -337,10 +333,9 @@ c
 	enddo
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine trnflpy(Data,n1,n2)
 c
-	implicit none
 	integer n1,n2
 	real Data(n1,n2)
 c
@@ -350,7 +345,7 @@ c  Input:
 c    n1,n2	Image dimensions.
 c  Input/Output:
 c    Data	Image pixels.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer i,j
 	real tmp
 c
@@ -363,10 +358,9 @@ c
 	enddo
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine trnswap(n1,n2)
 c
-	implicit none
 	integer n1,n2
 c
 c  Swap two integers.
@@ -374,17 +368,16 @@ c
 c  Input/Output:
 c    n1,n2	The integers to swap.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer tmp
 c
 	tmp = n1
 	n1 = n2
 	n2 = tmp
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine trnop(lu,naxis,nsize,reorder)
 c
-	implicit none
 	integer lu,naxis,nsize(naxis)
 	character reorder*(*)
 c
@@ -394,7 +387,7 @@ c  Input:
 c    lu		Handle used by trnio routines.
 c    naxis	Number of axes.
 c    reorder	The reordering, such as '123', '231', etc
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'trnio.h'
 	integer i,k,length,idx(MAXNAX),reverse(MAXNAX),xlate(MAXNAX)
 	logical flipper(MAXNAX),doflip
