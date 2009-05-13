@@ -12,6 +12,8 @@
 /*   pjt  16feb07  Minor doc improvements                               */
 /*   pjt  11dec07  More helpful message when scratch files fail         */
 /*   rjs  01apr09  Add scrRecSz routine and associated work.		*/
+/*   rjs  13may09  Make returned handle always positive (some tasks have*/
+/*		   relied on this).					*/
 /************************************************************************/
 
 #include <stdio.h>
@@ -59,7 +61,7 @@ void scropen_c(int *handle)
 /* Get a handle. */
 
   if(first < 0)bug_c('w',"Exhausted the number of open scratch files");
-  *handle = first;
+  *handle = first+1;
   first = items[first];
 
 /* Open the scratch file. */
@@ -70,8 +72,8 @@ void scropen_c(int *handle)
     bug_c(  'w',"Error opening scratch file; check your $TMPDIR");
     bugno_c('f',iostat);
   }
-  items[*handle] = temp;
-  recsiz[*handle] = sizeof(float);
+  items[*handle-1] = temp;
+  recsiz[*handle-1] = sizeof(float);
 }
 /************************************************************************/
 void scrclose_c(int handle)
@@ -90,7 +92,7 @@ void scrclose_c(int handle)
 /*----------------------------------------------------------------------*/
 {
   int iostat;
-
+  handle--;
   hdaccess_c(items[handle],&iostat);
   items[handle] = first;
   first = handle;
@@ -115,6 +117,7 @@ void scrrecsz_c(int handle,size_t recsize)
 /*--									*/
 /*----------------------------------------------------------------------*/
 {
+  handle--;
   if(recsize <= 0)bug_c('f',"Invalid record size, in scrrecsz");
   recsiz[handle] = recsize*sizeof(float);
 }
@@ -144,6 +147,7 @@ void scrread_c(int handle,float *buffer,off_t offset,size_t length)
   off_t myoff;
   size_t mylen;
 
+  handle--;
   myhandle = items[handle];
   mylen    = recsiz[handle]*length;
   myoff    = recsiz[handle]*offset;
@@ -179,6 +183,7 @@ void scrwrite_c(int handle,Const float *buffer,off_t offset,size_t length)
   off_t myoff;
   size_t mylen;
 
+  handle--;
   myhandle = items[handle];
   mylen    = recsiz[handle]*length;
   myoff    = recsiz[handle]*offset;
