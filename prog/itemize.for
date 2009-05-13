@@ -1,26 +1,6 @@
 c************************************************************************
 	program itemize
 c
-c History:
-c
-c  rjs        89
-c  nebk 5-may-89  change output text file name from OUT to LOG to avoid
-c                 conflicts with other tasks which use OUT
-c  rjs 27-apr-90  Better message for zero length items.
-c  ??? ??-???-??  inline doc - messed with un-necessary umsg's  (not PJT)
-c  pjt 26-nov-90  file scanner when multiple files used in 'in=', 
-c		  added scan= keyword
-c  rjs  4-mar-91  Corrected bug in handling "complex" items.
-c  pjt  4-mar-91  also used atoif instead of atoi
-c  pjt 10-mar-91  fixed empty strings bug (ANSI requires ' ', and not '')
-c		  and increase buffers for MAXFILES
-c  pjt  7-mar-92  deleted seemingly redundant code in info, doc repair
-c  mchw 29oct92	  If "scan=image" makes an index of image parameters.
-c  rjs  19mar93   Delete scanning mode.
-c  rjs  15aug94   Honour format if given, even if there is only 1 value.
-c  rjs  25jul97   Get rid of announcement header.
-c  rjs  01aug97   Support wildcards.
-c
 c= itemize - List information about MIRIAD dataset(s)
 c& pjt
 c: utility
@@ -57,13 +37,42 @@ c	When dumping an entire item, this gives the FORTRAN format specifier
 c	to be used. For example, when dumping a real item, you may set:
 c	  format=8e15.7
 c	The default varies according to the data type.
+c@ options
+c	Extra processing options. Several options can be given separated by
+c	commas. Minimum match is honoured.
+c	  nocompact  Normally itemize does not print blocks of identical lines.
+c	             Instead it gives a message indicating the number of repetitions
+c	             of a line. The "nocompact" option causes it to print the
+c	             repetitions. This is useful if the output is being parsed
+c	             by other software.
 c--
+c History:
+c
+c  rjs        89  Original version.
+c  nebk 5-may-89  change output text file name from OUT to LOG to avoid
+c                 conflicts with other tasks which use OUT
+c  rjs 27-apr-90  Better message for zero length items.
+c  ??? ??-???-??  inline doc - messed with un-necessary umsg's  (not PJT)
+c  pjt 26-nov-90  file scanner when multiple files used in 'in=', 
+c		  added scan= keyword
+c  rjs  4-mar-91  Corrected bug in handling "complex" items.
+c  pjt  4-mar-91  also used atoif instead of atoi
+c  pjt 10-mar-91  fixed empty strings bug (ANSI requires ' ', and not '')
+c		  and increase buffers for MAXFILES
+c  pjt  7-mar-92  deleted seemingly redundant code in info, doc repair
+c  mchw 29oct92	  If "scan=image" makes an index of image parameters.
+c  rjs  19mar93   Delete scanning mode.
+c  rjs  15aug94   Honour format if given, even if there is only 1 value.
+c  rjs  25jul97   Get rid of announcement header.
+c  rjs  01aug97   Support wildcards.
+c  rjs  29apr09   Added options=nocompact
 c------------------------------------------------------------------------
+	implicit none
 	integer MAXIN
 	parameter(MAXIN=128)
 	integer range1,range2,tno,iostat,i,nin,l
 	character in(MAXIN)*128,item*16,format*16,outlog*64
-	logical more
+	logical more,nocom
 c
 c  Externals.
 c
@@ -77,6 +86,7 @@ c
 	call keyi('index',range1,0)
 	call keyi('index',range2,range1)
 	call keya('format',format,' ')
+	call getopt(nocom)
 	call keyfin
 c
 c  Open the listing file, if one is required.
@@ -108,13 +118,31 @@ c
      *	    call logwrite('Items for dataset: '//in(i)(1:l),more)
 	  call ShowAll(in(i))
 	else
-	  call ShowItem(tno,item,range1,range2,format)
+	  call ShowItem(tno,item,range1,range2,format,.not.nocom)
 	  call hclose(tno)
 	endif
 c
 	enddo
 c
 	call logclose
+	end
+c************************************************************************
+	subroutine getopt(nocom)
+c
+	implicit none
+	logical nocom
+c
+c  Get extra processing options.
+c
+c------------------------------------------------------------------------
+	integer NOPTS
+	parameter(NOPTS=1)
+	logical present(NOPTS)
+	character opts(NOPTS)*10
+	data opts/'nocompact '/
+c
+	call options('options',opts,present,NOPTS)
+	nocom = present(1)
 	end
 c********1*********2*********3*********4*********5*********6*********7*c
 	subroutine GetItem(in,item)
@@ -272,11 +300,12 @@ c
 	depth = depth - 1
 	end
 c************************************************************************
-	subroutine ShowItem(tno,item,range1,range2,format)
+	subroutine ShowItem(tno,item,range1,range2,format,docomp)
 c
 	implicit none
 	integer tno,range1,range2
 	character item*(*),format*(*)
+	logical docomp
 c
 c  Print out some information about an item.
 c
@@ -287,6 +316,7 @@ c    range1,range2 The range of elements to print. if these are zero, then
 c		all the elements are printed.
 c    format	This gives the FORTRAN format to use in printing out the
 c		information.
+c    docomp	True if compacting of the output is to be attempted.
 c
 c------------------------------------------------------------------------
 	integer OFFI,OFFJ,OFFR,OFFD,OFFC,SIZEI,SIZEJ,SIZER,SIZED,SIZEC
@@ -382,7 +412,7 @@ c  line, just remember it.
 c
 	    more = errno.eq.0
 	    if(more)then
-	      if(line.eq.previous)then
+	      if(docomp.and.line.eq.previous)then
 	        count = count + 1
 	      else
 	        if(count.gt.0)call out(count,previous)
