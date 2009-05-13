@@ -28,8 +28,16 @@ c	Normal uv selection. Only antenna-based selection is supported.
 c@ options
 c	Task enrichment parameters. Several can be given, separated by commas.
 c	Minimum match is used.
-c	  "noxy"     Do not solve for, or apply, the XY phase offset.
-c	  "apply"    Apply the solved for corrections to the vis data-set.
+c	  noflag   Treat leakages that are identically 0 as good.
+c	  noxy     Do not solve for, or apply, the XY phase offset.
+c	  apply    Apply the solved for corrections to the vis data-set. The
+c	           default is to solve for them only.
+c	  xyleak   GPNORM can determine the xy phase differences from both the
+c	           gains table and polarisation leakages. By default, it assumes
+c	           the gains-derived value should take precedence. The xyleak
+c	           option causes GPNORM to take the leakage-derived value as the
+c	           preferred on. This only has an effect if options=apply is used
+c	           and options=noxy is not used.
 c--
 c  History:
 c    rjs    28nov91 Original version.
@@ -40,6 +48,9 @@ c		    item.
 c    rjs    12oct93 noapply is now the default.
 c    rjs    13jul96 Added select keyword.
 c    rjs    28nov97 Added more decimal places to printout.
+c    rjs    27apr09 Added option zeroflag.
+c    rjs    05may09 Deduced xyphase was being applied with the wrong sign!!!!
+c    rjs    07may09 Compare gain tables. xyleak option.
 c
 c  Bugs and Shortcomings:
 c   * If the number of leakages in the "vis" file is greater than the 
@@ -49,20 +60,26 @@ c------------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'maxdim.h'
 	character version*(*)
-	parameter(version='GpNorm: version 1.0 28-Nov-97')
-	logical doxy,doapply,antflag(MAXANT)
-	integer tCal,tVis,iostat,nLeaks,itVis,itCal,itemp,i
+	parameter(version='GpNorm: version 1.0 07-May-09')
+	logical doxy,doapply,antflag(MAXANT),zerofl,xyleak
+	integer tCal,tVis,iostat,nLeaks,itVis,itCal,itemp,i,ntot
 	character vis*64,cal*64,line*64
-	complex CalLeak(2,MAXANT),VisLeak(2,MAXANT),xyphase,offset
-	real error,arg
+	complex CalLeak(2,MAXANT),VisLeak(2,MAXANT)
+	complex xyphase,offset,xycorr
+	real error,arg,theta0,thetad,facvis,faccal
+	real xypvis(MAXANT),xypcal(MAXANT)
+	integer CntVis(MAXANT),CntCal(MAXANT),ncal,nvis,nants,n,n0
+c
 	integer MAXSELS
 	parameter(MAXSELS=100)
 	real sels(MAXSELS)
 c
 c  Externals.
 c
+	double precision antbas
 	integer hsize
-	logical selProbe
+	character itoaf*8
+	logical selProbe,hdprsnt
 c
 c  Get the inputs and check them.
 c
@@ -70,7 +87,7 @@ c
 	call keyini
 	call keya('vis',vis,' ')
 	call keya('cal',cal,' ')
-	call GetOpt(doxy,doapply)
+	call GetOpt(doxy,doapply,zerofl,xyleak)
 	call selInput('select',sels,MAXSELS)
 	call keyfin
 c
@@ -84,6 +101,54 @@ c
 	if(iostat.ne.0)call NormBug(iostat,'Error opening '//vis)
 	call hopen(tCal,cal,'old',iostat)
 	if(iostat.ne.0)call NormBug(iostat,'Error opening '//cal)
+c
+c  Start history processing.
+c
+	if(doapply)then
+	  call hisopen(tVis,'append')
+	  call hiswrite(tVis,'GPNORM: Miriad '//version)
+	  call hisinput(tVis,'GPNORM')
+	endif
+c
+c  Compare gains tables.
+c
+	ntot = 0
+	n0 = 0
+	if(hdprsnt(tVis,'gains').and.hdprsnt(tCal,'gains').and.doxy)then
+	  call getxy(tVis,facVis,xypVis,CntVis,MAXANT,nvis)
+	  call getxy(tCal,facCal,xypCal,CntCal,MAXANT,ncal)
+	  nants = min(nvis,ncal)
+c
+	  arg = 0
+	  do i=1,nants
+	    n = min(CntVis(i),CntCal(i))
+	    if(n.gt.0.and.selProbe(sels,'antennae',antbas(i,i)))then
+	      n0 = n0 + 1
+	      theta0 = 0
+	      if(ntot.gt.0)theta0 = arg/ntot
+	      thetad = xypCal(i)-xypVis(i)
+	      thetad = thetad + 2*PI*nint((theta0-thetad)/(2*PI))
+	      arg = arg + n*thetad
+	      ntot = ntot + n
+	    endif
+	  enddo
+	  if(ntot.gt.0)then
+	    if(doapply)
+     *		call hiswrite(tVis,'GPNORM: Gain table comparison:')
+	    call output('Gain table comparison:')
+	    call output('----------------------')
+	    call output('  Number of antennas selected: '//itoaf(n0))
+	    arg = arg/ntot
+	    write(line,'(a,f7.2)')'  Xyphase offset (degrees): ',
+     *							180/PI*arg
+	    call output(line)
+	    if(doapply)call hiswrite(tVis,'GPNORM: '//line)
+	    call output(' ')
+	    xycorr = cmplx(cos(arg),sin(arg))
+	  endif
+	endif
+c
+c  Compare leakage tables.
 c
 	call haccess(tVis,itVis,'leakage','append',iostat)
 	if(iostat.ne.0)call NormBug(iostat,'Error opening vis leakages')
@@ -101,16 +166,8 @@ c
 	nLeaks = min(nLeaks,itemp)
 c
 	do i=1,nLeaks
-	  antflag(i) = selProbe(sels,'antennae',dble(257*i))
+	  antflag(i) = selProbe(sels,'antennae',antbas(i,i))
 	enddo
-c
-c  Start history processing.
-c
-	if(doapply)then
-	  call hisopen(tVis,'append')
-	  call hiswrite(tVis,'GPNORM: Miriad '//version)
-	  call hisinput(tVis,'GPNORM')
-	endif
 c
 c  Read in the leakages.
 c
@@ -121,27 +178,37 @@ c
 c
 c  Do the fitting between the two.
 c
+	call output('Leakage table comparison:')
+	if(doapply)call hiswrite(tVis,
+     *			'GPNORM: Leakage table comparison')
+	call output('-------------------------')
 	call PolComp(CalLeak,VisLeak,nLeaks,xyphase,offset,error,
-     *	  antflag,doxy,doapply)
+     *	  antflag,doxy,zerofl)
 c
 c  Report on what we have found out, write it to the history.
 c
 	arg = atan2(aimag(xyphase),real(xyphase))
-	write(line,'(a,f7.2)')'Xyphase (degrees): ',180/pi*arg
+	write(line,'(a,f7.2)')'  Xyphase offset (degrees): ',
+     *						180/PI*arg
 	call output(line)
 	if(doapply)call hiswrite(tVis,'GPNORM: '//line)
-	write(line,'(a,f7.4,a,f7.4,a)')'Offset: (',real (offset),',',
+	write(line,'(a,f7.4,a,f7.4,a)')'  Offset: (',real (offset),',',
      *						   aimag(offset),')'
 	call output(line)
 	if(doapply)call hiswrite(tVis,'GPNORM: '//line)
-	write(line,'(a,f8.5)')'Rms Error: ',error
+	write(line,'(a,f8.5)')'  Rms Error: ',error
 	call output(line)
 	if(doapply)call hiswrite(tVis,'GPNORM: '//line)
 c
 c  Write out the leakages if needed.
 c
-	if(doapply)call hwriter(itVis,VisLeak,8,16*nLeaks,iostat)
-	if(iostat.ne.0)call NormBug(iostat,'Error writing vis leakages')
+	if(doapply)then
+	  if(ntot.eq.0.or.xyleak)xycorr = xyphase
+	  call LeakCorr(VisLeak,nLeaks,xycorr,offset,zerofl)
+	  call hwriter(itVis,VisLeak,8,16*nLeaks,iostat)
+	  if(iostat.ne.0)call NormBug(iostat,
+     *					'Error writing vis leakages')
+	endif
 c
 c  Close up the leakages.
 c
@@ -152,7 +219,7 @@ c
 c
 c  Bloody hell! Possibly we have to apply the XY phase to the gain solutions.
 c
-	if(doxy.and.doapply)call GainCorr(tVis,xyphase)
+	if(doxy.and.doapply)call GainCorr(tVis,xycorr)
 c
 c  Close up shop.
 c
@@ -185,7 +252,7 @@ c
 	call rdhdi(tVis,'ngains',ngains,0)
 	call rdhdi(tVis,'nfeeds',nfeeds,0)
 	call rdhdi(tVis,'ntau',ntau,0)
-	if(ngains.gt.3*MAXANT)call bug('f','Too many antennae')
+	if(ngains.gt.3*MAXANT)call bug('f','Too many antennas')
 c
 c  If the required gains are not present, just give a warning.
 c
@@ -205,7 +272,7 @@ c
 	    if(iostat.ne.0)
      *	      call NormBug(iostat,'Error reading gains item')
 	    do i=1,ngains,nfeeds+ntau
-	      Gains(i+1) = xyphase * Gains(i+1)
+	      Gains(i+1) = conjg(xyphase) * Gains(i+1)
 	    enddo
 	    call hwriter(itVis,Gains,offset,8*ngains,iostat)
 	    if(iostat.ne.0)
@@ -231,25 +298,25 @@ c------------------------------------------------------------------------
 	end
 c************************************************************************
 	subroutine PolComp(l1,l2,nants,xyphase,offset,error,
-     *	  antflag,doxy,doapply)
+     *	  antflag,doxy,zerofl)
 c
 	implicit none
 	integer nants
 	complex xyphase,offset,l1(2,nants),l2(2,nants)
 	real error
-	logical doxy,doapply,antflag(nants)
+	logical doxy,antflag(nants),zerofl
 c
 c  Determine the best fit between two sets of polarisation leakage parameters,
 c  and their rms difference.
 c
 c  Input:
-c    nants	Number of antennae.
+c    nants	Number of antennas.
 c    doxy	Do solve for xyphase error.
-c    doapply	Apply the corrections.
 c    l1		Reference set of polarisation leakage parameters.
-c    antflag	True if the antenna is to be used.
-c  Input/Possibly Output:
 c    l2		Set of leakage parameters to be adjusted.
+c    antflag	True if the antenna is to be used.
+c    zerofl     If true, then discard an antenna if the leakages in at
+c		least one of the tables is identically zero.
 c  Output:
 c    xyphase	XYphase offset between the two solutions.
 c    offset	Offset term between the two solutions.
@@ -257,7 +324,12 @@ c    error	Rms difference between l1 and the corrected l2.
 c------------------------------------------------------------------------
 	integer i,nantd
 	complex a,b,fg,f,g,temp
-	real gg
+	real gg,t1,t2
+	logical ok,ok2
+c
+c  Externals.
+c
+	character itoaf*9
 c
 	fg = 0
 	f = 0
@@ -266,7 +338,15 @@ c
 	nantd = 0
 c
 	do i=1,nants
-	  if(antflag(i))then
+	  ok = antflag(i)
+	  if(ok.and.zerofl)then
+	    t1 = real(l1(1,i))**2 + aimag(l1(1,i))**2 + 
+     *		 real(l1(2,i))**2 + aimag(l1(2,i))**2
+	    t2 = real(l2(1,i))**2 + aimag(l2(1,i))**2 + 
+     *		 real(l2(2,i))**2 + aimag(l2(2,i))**2
+	    ok = t1.ne.0.and.t2.ne.0
+	  endif
+	  if(ok)then
 	    f = f + l1(1,i) - conjg(l1(2,i))
 	    g = g + l2(1,i) - conjg(l2(2,i))
 	    fg = fg   + l1(1,i)*conjg(l2(1,i))
@@ -277,6 +357,7 @@ c
 	  endif
 	enddo
 c
+	call output('  Number of antennas selected: '//itoaf(nantd))
 	if(nantd.le.1)call bug('f','Too few antennas selected')
 c
 	if(doxy)then
@@ -291,14 +372,20 @@ c
 c
 	error = 0
 	do i=1,nants
+	  t1 = real(l1(1,i))**2 + aimag(l1(1,i))**2 + 
+     *	       real(l1(2,i))**2 + aimag(l1(2,i))**2
+	  t2 = real(l2(1,i))**2 + aimag(l2(1,i))**2 + 
+     *	       real(l2(2,i))**2 + aimag(l2(2,i))**2
+	  ok = (t2.ne.0).or..not.zerofl
+	  ok2 = (t1.ne.0.and.t2.ne.0).or..not.zerofl
 	  temp = a*l2(1,i) + b
-	  if(doapply) l2(1,i) = temp
 	  temp = l1(1,i) - temp
-	  if(antflag(i))error = error + real(temp)**2 + aimag(temp)**2
+	  if(antflag(i).and.ok2)error = error + real(temp)**2
+     *					      + aimag(temp)**2
 	  temp = conjg(a)*l2(2,i) - conjg(b)
-	  if(doapply) l2(2,i) = temp
 	  temp = l1(2,i) - temp
-	  if(antflag(i))error = error + real(temp)**2 + aimag(temp)**2
+	  if(antflag(i).and.ok2)error = error + real(temp)**2
+     *					      + aimag(temp)**2
 	enddo
 c
 	xyphase = a
@@ -306,10 +393,37 @@ c
 	error = sqrt(error/2/nantd)
 	end
 c************************************************************************
-	subroutine GetOpt(doxy,doapply)
+	subroutine LeakCorr(l2,nants,xyphase,offset,zerofl)
 c
 	implicit none
-	logical doxy,doapply
+	integer nants
+	logical zerofl
+	complex l2(2,nants),xyphase,offset
+c------------------------------------------------------------------------
+	integer i
+	real t2
+	complex a,b
+	logical ok
+c
+	a = xyphase
+	b = offset
+c
+	do i=1,nants
+	  t2 = real(l2(1,i))**2 + aimag(l2(1,i))**2 + 
+     *	       real(l2(2,i))**2 + aimag(l2(2,i))**2
+	  ok = (t2.ne.0).or..not.zerofl
+	  if(ok)then
+	    l2(1,i) = a*l2(1,i) + b
+	    l2(2,i) = conjg(a)*l2(2,i) - conjg(b)
+	  endif
+	enddo
+c
+	end
+c************************************************************************
+	subroutine GetOpt(doxy,doapply,zerofl,xyleak)
+c
+	implicit none
+	logical doxy,doapply,zerofl,xyleak
 c
 c  Get extra processing options.
 c
@@ -318,13 +432,19 @@ c    doxy	Calculate XY phase terms.
 c    doapply	Apply all corrections.
 c------------------------------------------------------------------------
 	integer nopts
-	parameter(nopts=2)
+	parameter(nopts=4)
 	logical present(nopts)
 	character opts(nopts)*8
-	data opts/'noxy    ','apply   '/
+	data opts/'noxy    ','apply   ','noflag  ','xyleak  '/
 c
 	call options('options',opts,present,nopts)
 	doxy = .not.present(1)
 	doapply = present(2)
+	zerofl  = .not.present(3)
+	xyleak  = present(4)
+	if(xyleak.and..not.doxy)call bug('w',
+     *	  'Using options=xyleak,noxy together makes no sense')
+	if(xyleak.and..not.doapply)call bug('w',
+     *	  'Using options=xyleak without options=apply makes no sense')
 c
 	end
