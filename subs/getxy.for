@@ -23,12 +23,25 @@ c    count	Number of gains used in the average. This can be 0!
 c    nants	Number of antenna found. This will be zero of the xyphase
 c		could not be determined at all.
 c--
+c  History:
+c    rjs  ???????	Original version
+c    rjs  01may09	Fix bug to return RMS gain amplitude. 	
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
 	integer item,iostat,ngains,nfeeds,ntau,nsols,i,j,k,off,ntot
-	real theta,rms
+	real theta,sumsq
 	complex gx,gy,gains(3*MAXANT)
+c
+c  Initialise the counters.
+c
+	fac = 0
+	sumsq = 0
+	ntot = 0
+	do i=1,mxant
+	  count(i) = 0
+	  xyphase(i) = 0
+	enddo
 c
 c  Determine the number of gains, antennae, etc.
 c
@@ -43,18 +56,9 @@ c
 c
 	nants = ngains / (nfeeds + ntau)
 	if(nants.le.0) call bug('f','Bad number of antennae gains')
-	if(nants.gt.min(MAXANT,mxant))
+	if(nants.gt.MAXANT)
      *	  call bug('f','Too many antennae to handle')
 	call rdhdi(tno,'nsols',nsols,0)
-c
-c  All looks OK. Initialise the counters.
-c
-	rms = 0
-	ntot = 0
-	do i=1,nants
-	  count(i) = 0
-	  xyphase(i) = 0
-	enddo
 c
 c  Read through the gains, compute the XY phase at each antenna, and
 c  accumulate it.
@@ -67,13 +71,13 @@ c
 	    call bugno('f',iostat)
 	  endif
 	  k = 1
-	  do i=1,nants
+	  do i=1,min(mxant,nants)
 	    gx = gains(k)
 	    gy = gains(k+1)
 	    if(abs(real(gx))+abs(aimag(gx)).gt.0.and.
      *	       abs(real(gy))+abs(aimag(gy)).gt.0)then
-	      rms = rms + real(gx)**2 + aimag(gx)**2 +
-     *			  real(gy)**2 + aimag(gy)**2
+	      sumsq = sumsq + real(gx)**2 + aimag(gx)**2 +
+     *			      real(gy)**2 + aimag(gy)**2
 	      ntot = ntot + 2
 	      gx = gx / gy
 	      theta = atan2(aimag(gx),real(gx))
@@ -90,13 +94,13 @@ c
 c
 c  We have the needed info. Now work out the mean and standard deviation.
 c
-	do i=1,nants
+	do i=1,mxant
 	  if(count(i).gt.0)then
 	    theta = xyphase(i) / count(i)
 	    xyphase(i) = theta
 	  endif
 	enddo
-	if(ntot.eq.0)fac = sqrt(rms/ntot)
+	if(sumsq.gt.0)fac = sqrt(ntot/sumsq)
 c
 	end
 	
