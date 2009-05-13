@@ -8,6 +8,7 @@ c  History:
 c    27mar09 rjs  Original version
 c    21apr09 rjs  Complete rewrite to use a simpler, more limited,
 c		  more efficient, representation.
+c    10may09 rjs  Added simple division
 c
 c  An integer is stored as a triple
 c
@@ -15,19 +16,21 @@ c    value = v(1) + v(2)*v(3)
 c
 c  The set of routines manipulate these triples.
 c
-c  subroutine mpCvtim(v,int)
-c  integer function mpCvtmi(v)
-c  double precision function mpCvtmd(v)
-c  subroutine mpFmt(string,v)
-c  subroutine mpAddmi(v,int)
-c  subroutine mpAddmm(v1,v2)
-c  subroutine mpSubmi(v,int)
-c  subroutine mpSubmm(v1,v2)
-c  subroutine mpMulmi(v,int)
-c  subroutine mpMulmm(v1,v2)
-c  integer function mpCmp(v1,v2)
-c  subroutine mpNeg(v)
-c  subroutine mpAbs(v)
+c  subroutine mpCvtim(v,int)             v = int
+c  integer function mpCvtmi(v)           mpCvtmi = v
+c  double precision function mpCvtmd(v)  mpCvtmd = v
+c  subroutine mpFmt(string,v)            
+c  subroutine mpAddmi(v,int)             v = v + int
+c  subroutine mpAddmm(v1,v2)             v1 = v1 + v2
+c  subroutine mpSubmi(v,int)             v  = v - int
+c  subroutine mpSubmm(v1,v2)             v1 = v1 - v2
+c  subroutine mpMulmi(v,int)             v  = v * int
+c  subroutine mpMulmm(v1,v2)             v1 = v1 * v2
+c  subroutine mpDivmi(v,int)             v  = v/int
+c  integer function mpCmp(v1,v2)         v1 cmp v2
+c  subroutine mpSet(v1,v2)               v1 = v2
+c  subroutine mpNeg(v)                   v = -v
+c  subroutine mpAbs(v)                   v = abs(v)
 c
 c************************************************************************
 	subroutine mpCvtim(v,k)
@@ -154,6 +157,17 @@ c
 	if(mpCmp(t,mpMAXInt).gt.0)
      *		call bug('f','Integer overflow in mpCvtmi')
 	mpCvtmi = v(1) + v(2)*v(3)
+	end
+c************************************************************************
+	subroutine mpSet(v1,v2)
+c
+	implicit none
+	integer v1(3),v2(3)
+c
+c------------------------------------------------------------------------
+	include 'mp.h'
+	call mpStd2(v2(1),v2(2),v2(3),v1(1),v1(2))
+	v1(3) = mpBase2
 	end
 c************************************************************************
 	subroutine mpAddmi(v,d)
@@ -329,6 +343,34 @@ c
 	v1(2) = d(4)*mpBase + d(3)
 	v1(3) = mpBase2
 c
+	end
+c************************************************************************
+	subroutine mpDivmi(v,k,rem)
+c
+	implicit none
+	integer v(3),k,rem
+c
+c  Divide a multi-precision integer by an integer, returning the
+c  quotient and remainder.
+c
+c  NOTE: The current version is a very simple one, which limits the
+c  maximum size of the divisor to mpBase.
+c
+c------------------------------------------------------------------------
+	include 'mp.h'
+	integer q(4),t,carry
+c
+	if(abs(k).gt.mpBase)
+     *	  call bug('f','Algorithmic failure in mpDivmi')
+	call mpStd4(v,q)
+	carry = q(4)*mpBase + q(3)
+	v(2) = carry/k
+	carry = (carry - v(2)*k)*mpBase + q(2)
+	v(1) = carry/k
+	carry = (carry - v(1)*k)*mpBase + q(1)
+	t = carry/k
+	v(1) = v(1)*mpBase + t
+	rem = (carry - t*k)
 	end
 c************************************************************************
 	subroutine mpStd4(v,q)
