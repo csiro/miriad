@@ -48,7 +48,7 @@ c         airmass                  [airmass=1/sin(el)]
 c         jyperk                   [system gain, in Jy/K]
 c         rms                      [theoretical visibility noise rms, in
 c                                   flux units]
-c         freq			   [frequency, in GHz]
+c         freq                     [frequency, in GHz]
 c         parang                   [parallactic angle in degrees]
 c
 c       NOTE: parang is the true parallactic angle of the source, which
@@ -73,12 +73,27 @@ c         If axis = airmass               [natural units; 2 values]
 c         If axis = jyperk                [Jy/K;          2 values]
 c         If axis = rms                   [flux units;    2 values]
 c         If axis = lst                   [decimal hours; 2 values]
-c	  If axis = freq                  [GHz;           2 values]
+c         If axis = freq                  [GHz;           2 values]
 c
-c       Default is to self-scale (see also OPTIONS=XIND).
+c       For axis types other than 'time' or 'hangle', one or other of
+c       the limits may be set with the other self-scaled by specifying
+c       the lower limit as 'min' and the upper as 'max' (or simply
+c       omitting it).  For example,
+c
+c         xrange=min,0
+c
+c       self-scales the lower limit while pinning the upper limit to
+c       zero, whereas either of the following
+c
+c         xrange=0,max
+c         xrange=0
+c
+c       set the lower limit to zero while self-scaling the upper limit.
+c
+c       Default is to self-scale both limits (see also OPTIONS=XIND).
 c@ yrange
-c       Plot range in the y-direction as for the x axis.  The
-c       default is to self-scale (see also OPTIONS=YIND).
+c       Plot range for the y-axis as for the x-axis.  The default is to
+c       self-scale (see also OPTIONS=YIND).
 c@ average
 c       The averaging time in min (unless OPTIONS=DAYS,HOURS,SECONDS).
 c       Averaging is reset at frequency, source, or pointing centre
@@ -413,7 +428,7 @@ c       way the available space is better used.  MAXFILE is set to
 c       be much bigger than any number of files the user is ever
 c       likely to input.
 c
-c  $Id: uvplt.for,v 1.6 2009/05/13 15:25:29 sau078 Exp $
+c  $Id: uvplt.for,v 1.7 2009/05/14 05:07:51 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
@@ -489,7 +504,7 @@ c
       data polmsk /13*0/
 c-----------------------------------------------------------------------
       version = versan ('uvplt',
-     +  '$Id: uvplt.for,v 1.6 2009/05/13 15:25:29 sau078 Exp $')
+     +  '$Id: uvplt.for,v 1.7 2009/05/14 05:07:51 cal103 Exp $')
 c
 c  Get the parameters given by the user and check them for blunders
 c
@@ -627,8 +642,8 @@ c
             call getwvl (donano, preamble, u, v, uvdist, uvpa)
             call uvinfo (lin, 'sfreq', freq)
           else if(xaxis.eq.'freq'.or.yaxis.eq.'freq')then
-	    call uvinfo (lin, 'sfreq', freq)
-	  endif
+            call uvinfo (lin, 'sfreq', freq)
+          endif
 c
 c Fish out the lst if required.
 c
@@ -965,8 +980,8 @@ c    el,ho         Offsets to the start locations for X_lo, X_hi, Y_lo,
 c                  and Y_hi errors in BUFFER.  These will have sensible
 c                  values only if DORMS is true, so WATCH OUT !
 c    x,yaxis       Axis types
-c    x,yrtest      True if user specifed x and y plot ranges
-c                  and interactive plot mode off.
+c    x,yrtest      True if the user specified X and Y plot ranges
+c                  and interactive plot mode is off.
 c    x,ymin,max    x and y plot extrema given by user
 c
 c    nsum          Number of points accumulated in the current interval
@@ -1342,7 +1357,8 @@ c    x,yo          Offsets to the start locations for X and Y in BUFFER
 c    el,ho         Offsets to the start locations for X_lo, X_hi, Y_lo
 c                  and Y_hi errors in BUFFER.  These will have sensible
 c                  values only if DORMS is true, so WATCH OUT !
-c    x,yrtest      True if user specified X and Y plot ranges
+c    x,yrtest      True if the user specified X and Y plot ranges
+c                  and interactive plot mode is off.
 c    x,ymin,max    x and y plot extrema given by user
 c    x,y           x and y values for this datum
 c    x,ysig        standard deviation on averaged x and y points
@@ -1363,38 +1379,51 @@ c-----------------------------------------------------------------------
 cc
       integer n
 c-----------------------------------------------------------------------
-c
-c Make sure point in wanted X and Y range
-c
-      if ( ((xrtest.and.x.ge.xmin.and.x.le.xmax).or..not.xrtest)
-     +                           .and.
-     +     ((yrtest.and.y.ge.ymin.and.y.le.ymax).or..not.yrtest))
-     + then
-c
-c Fill plot buffers, picking out every INCth point selected
-c
-        plpts(plbidx,plpidx,plfidx) = plpts(plbidx,plpidx,plfidx)+1
-        if (plpts(plbidx,plpidx,plfidx).eq.inc+1 .or. inc.eq.1)
-     +    plpts(plbidx,plpidx,plfidx) = 1
-c
-        if (plpts(plbidx,plpidx,plfidx).eq.1) then
-          npts(plbidx,plpidx,plfidx) = npts(plbidx,plpidx,plfidx)+1
-          n = npts(plbidx,plpidx,plfidx)
-c
-          buffer(xo+n,plbidx,plpidx,plfidx) = x
-          buffer(yo+n,plbidx,plpidx,plfidx) = y
-c
-          if (dorms(1)) then
-            buffer(elo(1)+n,plbidx,plpidx,plfidx) = x - xsig
-            buffer(eho(1)+n,plbidx,plpidx,plfidx) = x + xsig
-          end if
-          if (dorms(2)) then
-            buffer(elo(2)+n,plbidx,plpidx,plfidx) = y - ysig
-            buffer(eho(2)+n,plbidx,plpidx,plfidx) = y + ysig
-          end if
+c     Is the point in the selected X and Y range?
+      if (xrtest) then
+        if (x.lt.xmin) then
+          if (xmin.ne.-1.0e32) return
+        end if
+
+        if (x.gt.xmax) then
+          if (xmax.ne.+1.0e32) return
         end if
       end if
-c
+
+      if (yrtest) then
+        if (y.lt.ymin) then
+          if (ymin.ne.-1.0e32) return
+        end if
+
+        if (y.gt.xmax) then
+          if (ymax.ne.+1.0e32) return
+        end if
+      end if
+
+c     Fill plot buffer, picking out every INCth point selected.
+      plpts(plbidx,plpidx,plfidx) = plpts(plbidx,plpidx,plfidx) + 1
+      if (plpts(plbidx,plpidx,plfidx).eq.inc+1 .or. inc.eq.1) then
+        plpts(plbidx,plpidx,plfidx) = 1
+      end if
+
+      if (plpts(plbidx,plpidx,plfidx).eq.1) then
+        npts(plbidx,plpidx,plfidx) = npts(plbidx,plpidx,plfidx) + 1
+        n = npts(plbidx,plpidx,plfidx)
+
+        buffer(xo+n,plbidx,plpidx,plfidx) = x
+        buffer(yo+n,plbidx,plpidx,plfidx) = y
+
+        if (dorms(1)) then
+          buffer(elo(1)+n,plbidx,plpidx,plfidx) = x - xsig
+          buffer(eho(1)+n,plbidx,plpidx,plfidx) = x + xsig
+        end if
+
+        if (dorms(2)) then
+          buffer(elo(2)+n,plbidx,plpidx,plfidx) = y - ysig
+          buffer(eho(2)+n,plbidx,plpidx,plfidx) = y + ysig
+        end if
+      end if
+
       end
 c
 c
@@ -1425,12 +1454,12 @@ c     dodoub      PLot -u and/or -v on plot
 c     dowave      Either X axis or Y axis needs infor from preamble
 c     doave       Averaging requested
 c     hann        Apply hanning smoothing
-c     x,yrtest    If true, then only accumulate in the plot buffer's X
-c                 or Y points that are within the user specified ranges
-c                 This allows less wastage of space, as when interactive
-c                 mode is not selected and there is no plot window
-c                 redefinition, the points outside the given range
-c                 are never going to be looked at
+c     x,yrtest    True if the user specified X and Y plot ranges and
+c                 interactive plot mode is off.  Only X or Y points that
+c                 are within range are accumulated in the plot buffer.
+c                 This is to conserve buffer space; if interactive mode
+c                 is not selected there is no plot window redefinition,
+c                 so points outside the given range will never be used.
 c
 c-----------------------------------------------------------------------
       integer hann
@@ -1513,19 +1542,15 @@ c
 c  Set switches for case when interactive mode not selected so that
 c  the plot buffer will not be wasted with points outside of the
 c  plot x,y-ranges.
-c
-      xrtest = .false.
-      if (.not.dointer .and. (xmin.ne.0.0.or.xmax.ne.0.0))
-     +   xrtest = .true.
-      yrtest = .false.
-      if (.not.dointer .and. (ymin.ne.0.0.or.ymax.ne.0.0))
-     +   yrtest = .true.
-c
+
+      xrtest = .not.dointer .and. (xmin.ne.-1.0e32 .or. xmax.ne.1.0e32)
+      yrtest = .not.dointer .and. (ymin.ne.-1.0e32 .or. ymax.ne.1.0e32)
+
 c Do a fudge here.  Unwrapping is done in PLOTIT long after range
 c selection, so that points that might be selected if range selection
 c is applied after unwrapping may have been already rejected.  Just
 c prevent it from ditching points according to range selection if
-c unwrapping. All this means is that a but of buffer space is lost.
+c unwrapping. All this means is that a bit of buffer space is lost.
 c
       if (.not.dowrap) then
         xrtest = .false.
@@ -2152,8 +2177,10 @@ c-----------------------------------------------------------------------
       character*(*) axis, keyw
       real rmin, rmax
 cc
-      real trange(8)
+      logical ok
       integer il, len1, nt, s
+      real trange(8)
+      character cval*64
 c-----------------------------------------------------------------------
       il = len1(keyw)
       if (axis.eq.'time') then
@@ -2163,17 +2190,16 @@ c-----------------------------------------------------------------------
             call bug ('f',
      +        'You must specify 8 numbers for the time range')
           else
-c
-c Convert to seconds
-c
+
+c           Convert to seconds.
             rmin = 24.0*3600.0*trange(1) + 3600.0*trange(2) +
      +                    60.0*trange(3) + trange(4)
             rmax = 24.0*3600.0*trange(5) + 3600.0*trange(6) +
      +                    60.0*trange(7) + trange(8)
           end if
         else
-          rmin = 0.0
-          rmax = 0.0
+          rmin = -1.0e32
+          rmax =  1.0e32
         end if
       else if (axis.eq.'hangle') then
         call mkeyr (keyw(1:il), trange, 6, nt)
@@ -2182,31 +2208,61 @@ c
             call bug ('f',
      +        'You must specify 6 numbers for the hangle range')
           else
-c
-c Convert to seconds
-c
+
+c           Convert to seconds.
             s = 1
             if (trange(1).lt.0.0) s = -1
             rmin = 3600.0*abs(trange(1)) + 60.0*trange(2) + trange(3)
             rmin = s * rmin
-c
+
             s = 1
             if (trange(4).lt.0.0) s = -1
             rmax = 3600.0*abs(trange(4)) + 60.0*trange(5) + trange(6)
             rmax = s * rmax
           end if
         else
-          rmin = 0.0
-          rmax = 0.0
+          rmin = -1.0e32
+          rmax =  1.0e32
         end if
+
       else
-        call keyr (keyw(1:il), rmin, 0.0)
-        call keyr (keyw(1:il), rmax, 0.0)
+        call keya (keyw(:il), cval, 'min')
+        if (cval.eq.'min') then
+          rmin = -1.0e32
+        else
+          call atorf(cval, rmin, ok)
+          if (.not.ok) then
+            cval = 'Conversion error decoding parameter ' // keyw(:il)
+            call bug('f', cval)
+          end if
+        end if
+
+        call keya (keyw(:il), cval, 'max')
+        if (cval.eq.'max') then
+          rmax = 1.0e32
+        else
+          call atorf(cval, rmax, ok)
+          if (.not.ok) then
+            cval = 'Conversion error decoding parameter ' // keyw(:il)
+            call bug('f',cval)
+          end if
+        end if
+            
+
+c       Because atorf actually uses atodf and conversion between
+c       double and real may introduce rounding errors.
+        if (-1.000001e32.lt.rmin .and. rmin.lt.-0.999999e32) then
+          rmin = -1.0e32
+        end if
+
+        if ( 0.999999e32.lt.rmax .and. rmax.lt. 1.000001e32) then
+          rmax =  1.0e32
+        end if
       end if
-c
+
       end
-c
-c
+
+
       subroutine getrng2 (axis, type, rlo, rhi, win, ok)
 c-----------------------------------------------------------------------
 c     Get the axis ranges given by the user
@@ -2217,7 +2273,7 @@ c    type     Axis type
 c    rlo,rhi  Default values
 c  Output
 c    win      User's values
-c    ok       SUccess decoding of inputs
+c    ok       Success decoding of inputs
 c
 c-----------------------------------------------------------------------
       character axis*1, type*(*)
@@ -2611,12 +2667,13 @@ c Get axis ranges
 c
       call getrng ('xrange', xaxis, xmin, xmax)
       call getrng ('yrange', yaxis, ymin, ymax)
+      write(*,*) xmin, xmax, ymin, ymax
       if (.not.dobase) then
         doxind = .false.
         doyind = .false.
       end if
-      if (xmin.ne.0.0 .or. xmax.ne.0.0) doxind = .false.
-      if (ymin.ne.0.0 .or. ymax.ne.0.0) doyind = .false.
+      if (xmin.ne.-1.0e32 .or. xmax.ne.1.0e32) doxind = .false.
+      if (ymin.ne.-1.0e32 .or. ymax.ne.1.0e32) doyind = .false.
 c
       call keyd ('average', dayav, -1.0d0)
 c
@@ -3042,8 +3099,8 @@ c
               end if
             end if
 c
-            if ( (xmin.eq.0.0 .and. xmax.eq.0.0) .or.
-     +           (ymin.eq.0.0 .and. ymax.eq.0.0) ) then
+            if ( (xmin.eq.-1.0e32 .and. xmax.eq.1.0e32) .or.
+     +           (ymin.eq.-1.0e32 .and. ymax.eq.1.0e32) ) then
 c
 c  Get x,y auto-limits
 c
@@ -3086,15 +3143,11 @@ c
 c
 c  Assign user's limits if desired for this sub-plot
 c
-        if (xmin.ne.0.0 .or. xmax.ne.0.0) then
-          xxmin(ip) = xmin
-          xxmax(ip) = xmax
-        end if
-c
-        if (ymin.ne.0.0 .or. ymax.ne.0.0) then
-          yymin(ip) = ymin
-          yymax(ip) = ymax
-        end if
+        if (xmin.ne.-1.0e32) xxmin(ip) = xmin
+        if (xmax.ne.+1.0e32) xxmax(ip) = xmax
+
+        if (ymin.ne.-1.0e32) yymin(ip) = ymin
+        if (ymax.ne.+1.0e32) yymax(ip) = ymax
 c
 c  Fix up bodgy limits
 c
@@ -3107,14 +3160,14 @@ c
       call limstr (xmnall, xmxall)
       call limstr (ymnall, ymxall)
       do ip = 1, nb
-        if (.not.doxind .and. xmin.eq.0.0 .and. xmax.eq.0.0) then
-          xxmin(ip) = xmnall
-          xxmax(ip) = xmxall
+        if (.not.doxind) then
+          if (xmin.eq.-1.0e32) xxmin(ip) = xmnall
+          if (xmax.eq.+1.0e32) xxmax(ip) = xmxall
         end if
-c
-        if (.not.doyind .and. ymin.eq.0.0 .and. ymax.eq.0.0) then
-          yymin(ip) = ymnall
-          yymax(ip) = ymxall
+
+        if (.not.doyind) then
+          if (ymin.eq.-1.0e32) yymin(ip) = ymnall
+          if (ymax.eq.+1.0e32) yymax(ip) = ymxall
         end if
       end do
 c
@@ -3492,7 +3545,7 @@ c-----------------------------------------------------------------------
       else if (axis.eq.'uvdistance') then
         label = '(u\u2\d + v\u2\d)\u1/2\d'//units
       else if (axis.eq.'freq')then
-	label = 'Frequency (GHz)'
+        label = 'Frequency (GHz)'
       else if (axis.eq.'uu' .or. axis.eq.'uc') then
         label = 'u'//units
       else if (axis.eq.'vv' .or. axis.eq.'vc') then
@@ -3567,7 +3620,7 @@ c-----------------------------------------------------------------------
       else if (axis.eq.'uu' .or. axis.eq.'uc') then
         val = u * freq(ichan) / freq(1)
       else if (axis.eq.'freq')then
-	val = freq(ichan)
+        val = freq(ichan)
       else if (axis.eq.'vv' .or. axis.eq.'vc') then
         val = v * freq(ichan) / freq(1)
       else if (axis.eq.'uvangle') then
