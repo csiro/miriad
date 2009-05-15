@@ -428,7 +428,7 @@ c       way the available space is better used.  MAXFILE is set to
 c       be much bigger than any number of files the user is ever
 c       likely to input.
 c
-c  $Id: uvplt.for,v 1.7 2009/05/14 05:07:51 cal103 Exp $
+c  $Id: uvplt.for,v 1.8 2009/05/15 00:26:35 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
@@ -504,7 +504,7 @@ c
       data polmsk /13*0/
 c-----------------------------------------------------------------------
       version = versan ('uvplt',
-     +  '$Id: uvplt.for,v 1.7 2009/05/14 05:07:51 cal103 Exp $')
+     +  '$Id: uvplt.for,v 1.8 2009/05/15 00:26:35 cal103 Exp $')
 c
 c  Get the parameters given by the user and check them for blunders
 c
@@ -2247,7 +2247,6 @@ c           Convert to seconds.
             call bug('f',cval)
           end if
         end if
-            
 
 c       Because atorf actually uses atodf and conversion between
 c       double and real may introduce rounding errors.
@@ -2995,7 +2994,7 @@ cc
       character xlabel*100, ylabel*100, ans*1, devdef*80,
      +  str*80, units*10
       character*2 fmt(2), polstr(12)*2, hard*3
-      logical new, more, redef, none
+      logical new, more, redef, none, doauto
 c
       integer pgbeg, len1
       character polsc2p*2
@@ -3077,6 +3076,9 @@ c
 c
 c  Get plot extrema
 c
+      doauto = (xmin.eq.-1.0e32 .or. xmax.eq.1.0e32) .or.
+     +         (ymin.eq.-1.0e32 .or. ymax.eq.1.0e32)
+
       do ip = 1, pl2dim
 c
 c  Initialize extrema for each sub-plot
@@ -3098,12 +3100,9 @@ c
                 call unwrap (npts(ip,kp,jf), buffer(yo+1,ip,kp,jf))
               end if
             end if
-c
-            if ( (xmin.eq.-1.0e32 .and. xmax.eq.1.0e32) .or.
-     +           (ymin.eq.-1.0e32 .and. ymax.eq.1.0e32) ) then
-c
-c  Get x,y auto-limits
-c
+
+            if (doauto) then
+c             Get x,y auto-limits.
               do k = 1, npts(ip,kp,jf)
                 if (doperr .and. dorms(1)) then
                   xxmin(ip) = min(xxmin(ip),buffer(elo(1)+k,ip,kp,jf),
