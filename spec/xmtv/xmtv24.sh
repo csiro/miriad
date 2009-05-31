@@ -4,12 +4,11 @@
 # Get xmtv to display on a 24-bit display, via a VNC session.
 #
 # $Source: /var/tmp/RrsvEF/cvsroot/miriad-dist/RCS/spec/xmtv/xmtv24.sh,v $
-# $Id: xmtv24.sh,v 1.2 2009/05/31 07:39:42 mci156 Exp $
+# $Id: xmtv24.sh,v 1.3 2009/05/31 07:52:31 mci156 Exp $
 #
 # Config ------------------------------------------------------------------------
 GEOMETRY=1024x768
 PATH=/usr/local/bin:/usr/bin:/bin;
-XVNC_STARTUP=${HOME}/.vnc/xstartup
 XVNC_PASSWD=${HOME}/.vnc/passwd
 MIRIAD=/nfs/atapplic/miriad
 # Tell the 'Xrealvnc' X server to use a PseudoColor visual. This is crucial.
@@ -27,14 +26,7 @@ ExitTrap() {
             ;;
         esac
     fi
-    if test -h "$XVNC_STARTUP" ; then
-        # remove the symlink
-	rm "$XVNC_STARTUP"
-        if test -f "$BACKUP_XVNC_STARTUP" ; then
-            mv "$BACKUP_XVNC_STARTUP" "$XVNC_STARTUP" || \
-              echo "Whoops, something happened when restoring $XVNC_STARTUP"
-        fi
-    fi
+
     if test -h "$XVNC_PASSWD" ; then
         # remove the symlink
 	rm "$XVNC_PASSWD"
@@ -81,8 +73,16 @@ TMPDIR=`mktemp -d /tmp/XXXXXX`
 chmod 0700 "$TMPDIR"
 passwdfile="$TMPDIR/vncp"
 xstartupfile="$TMPDIR/xstartup"
+messagefile="$TMPDIR/message"
 
-echo "Please set your session password"
+cat >"$messagefile" <<EOF
+Welcome to your XMTV session.
+
+When you close the VNC window, the session will exit - 
+you will not be able to reconnect to it.
+EOF
+
+echo "Please set your session password - it will only apply to this session."
 vncpasswd  "$passwdfile"
 
 # Write the startup file
@@ -96,22 +96,15 @@ echo "xmtv -geom -10+10&"                                 >> "$xstartupfile"
 echo "xpanel&"                                            >> "$xstartupfile"
 # the xmessage window needs to be on top
 echo "sleep 1"                                            >> "$xstartupfile"
-echo "xmessage -center 'Welcome to your XMTV session' &"  >> "$xstartupfile"
+echo "xmessage -center -file $messagefile &"  >> "$xstartupfile"
 echo "twm&"                                               >> "$xstartupfile"
 
 chmod 0700 "$xstartupfile"
 
 
-# vncserver has the X startup file and password file locations hardwired.
-#   FIXME actually, it's just the passwd file.
-# Temporarily replace them with the ones we just wrote.
+# vncserver has the password file location hardwired.
+# Temporarily it with the ones we just wrote.
 idstr="xmtvsession.`date +%H%M%S`.$$"
-BACKUP_XVNC_STARTUP="${XVNC_STARTUP}.${idstr}"
-if test -f "$XVNC_STARTUP" ; then
-    mv "$XVNC_STARTUP" "$BACKUP_XVNC_STARTUP" || \
-        Fail "Unable to back up existing VNC session startup ($XVNC_STARTUP)"
-fi
-ln -s "$xstartupfile" "$XVNC_STARTUP"
 
 BACKUP_XVNC_PASSWD="${XVNC_PASSWD}.${idstr}"
 if test -f "$XVNC_PASSWD" ; then
@@ -123,7 +116,7 @@ ln -s "$passwdfile" "$XVNC_PASSWD"
 echo ""
 echo "Starting vnc server"
 out=`vncserver -depth 8 -geometry $GEOMETRY \
-               -name "$idstr" -startup "$XVNC_STARTUP" \
+               -name "$idstr" -startup "$xstartupfile" \
                $XVNC_OPTS 2>&1 | grep desktop` || \
     Fail "Failed. Quitting now."
 
@@ -133,7 +126,10 @@ test "X" = "X$sessionid" && \
     Fail "Unable to determine the session id number, quitting."
 
 echo ""
-echo "Starting vnc client (you will be prompted for your password again)"
+echo "Starting vnc client"
+echo ""
+echo "NB: *** This session will exit when you close the window ***"
+echo ""
 vncviewer -owncmap -passwd "$passwdfile" ":${sessionid}"
 
 # If xmtv dies with:
