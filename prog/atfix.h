@@ -10,7 +10,8 @@ c
 	
 	integer MAXTCAL,TMNONE,TMCONST,TMEXTRAP,TMINTERP
 	parameter(TMNONE=1,TMCONST=2,TMEXTRAP=3,TMINTERP=4)
-	parameter(MAXTCAL=1500)
+c       allow for 10 days worth of syscal records, at one every 10sec.
+	parameter(MAXTCAL=10*24*60*60/10)
 	double precision ttime(MAXTCAL)
 	integer tfreq(MAXTCAL),ntcal,vtcal1,vtcal2,nants,t1,t2,tmode
 	real xtrec(MAXANT,MAXWIN,MAXTCAL),ytrec(MAXANT,MAXWIN,MAXTCAL)

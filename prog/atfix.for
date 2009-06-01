@@ -239,7 +239,7 @@ c  Check and warn about calibration tables.
 c
         if(hdprsnt(lVis,'gains').or.hdprsnt(lVis,'leakage').or.
      *     hdprsnt(lVis,'bandpass'))
-     *     call bug('f','Calibration tables present: this looks bad')
+     *     call bug('f','Calibration tables present: please remove')
 c
 c  Get ready to handle the antenna location correction.
 c
@@ -1019,6 +1019,7 @@ c------------------------------------------------------------------------
 c
 	logical neednew,needupd
 	character type*1
+	character line*80
 	logical updated,doatm
 	integer length
 c
@@ -1054,7 +1055,11 @@ c
 	needupd = uvvarUpd(vtcal1)
 	if(neednew.or.needupd)then
 	  ntcal = ntcal + 1
-	  if(ntcal.gt.MAXTCAL)call bug('f','Too many Tsys scans')
+	  if(ntcal.gt.MAXTCAL)then
+	    write(line,'(A,i5,A,i5,A)') 'Too many Tsys scans (',ntcal,
+     *         ' > ',MAXTCAL,')'
+            call bug('f',line)
+          endif
 	  call uvrdvrd(lVis,'time',ttime(ntcal),0.d0)
 	  tfreq(ntcal) = ifreq1
 	endif
