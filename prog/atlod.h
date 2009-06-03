@@ -11,7 +11,8 @@ c
 	double precision time
 	integer tcorr
 	real xtsys(ATIF,ATANT),ytsys(ATIF,ATANT),chi
-	real xgain(ATIF,ATANT),ygain(ATIF,ATANT)
+	real xgtp(ATIF,ATANT),ygtp(ATIF,ATANT)
+	real xsdo(ATIF,ATANT),ysdo(ATIF,ATANT)
 	real xcaljy(ATIF,ATANT),ycaljy(ATIF,ATANT)
 	real u(ATBASE),v(ATBASE),w(ATBASE)
 	real xyphase(ATIF,ATANT),xyamp(ATIF,ATANT)
@@ -36,7 +37,7 @@ c
 	common/atlodc/sfreq,sdf,restfreq,time,obsra,obsdec,lat,long,
      *	    ra,dec,
      *	  data,
-     *	  xtsys,ytsys,xgain,ygain,xcaljy,ycaljy,chi,
+     *	  xtsys,ytsys,xgtp,ygtp,xsdo,ysdo,xcaljy,ycaljy,chi,
      *    xyphase,xyamp,xsampler,ysampler,u,v,w,inttime,
      *	    inttim,wts,mdata,axisrms,axismax,refpnt,stemp,spress,shumid,
      *	  pnt,nbin,nused,tno,nants,nifs,nfreq,nstoke,polcode,edge,

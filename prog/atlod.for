@@ -257,9 +257,10 @@ c    mhw  18dec07 Changes to read simulated CABB files with up to
 c                 16 IFs; avoid checking sampler stats for CABB files
 c    mhw  17jan08 Add options=rfiflag: flagging based on file with rfi ranges
 c    rjs  06nov08 Corrected CA02 xyphase handling and some minor tidying.
-c    mhw  09jan09 Add flagging of NaNs in CABB spectra 
+c    mhw  09jan09 Add flagging of NaNs in CABB spectra
+c    mhw  03jun09 Fix syscal handling for CABB gtp, sdo and caljy values 
 c
-c $Id: atlod.for,v 1.11 2009/05/07 02:23:06 wie017 Exp $
+c $Id: atlod.for,v 1.12 2009/06/03 04:29:44 wie017 Exp $
 
 c-----------------------------------------------------------------------
         integer MAXFILES,MAXTIMES
@@ -279,7 +280,7 @@ c
         character itoaf*8, rperr*32, versan*80
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :  '$Id: atlod.for,v 1.11 2009/05/07 02:23:06 wie017 Exp $')
+     :  '$Id: atlod.for,v 1.12 2009/06/03 04:29:44 wie017 Exp $')
 c
 c  Get the input parameters.
 c
@@ -963,11 +964,12 @@ c
 c************************************************************************
         subroutine PokeSC(ant,if,chi1,tcorr1,
      *          xtsys1,ytsys1,xyphase1,xyamp1,xsamp,ysamp,
-     *          xgain1,ygain1,xcaljy1,ycaljy1,pntrms,pntmax,cabb1)
+     *          xgtp1,ygtp1,xsdo1,ysdo1,xcaljy1,ycaljy1,
+     *          pntrms,pntmax,cabb1)
 c
         integer ant,if,tcorr1
-        real chi1,xtsys1,ytsys1,xyphase1,xyamp1,xgain1,ygain1
-        real xcaljy1,ycaljy1
+        real chi1,xtsys1,ytsys1,xyphase1,xyamp1
+        real xgtp1,ygtp1,xsdo1,ysdo1,xcaljy1,ycaljy1
         real xsamp(3),ysamp(3),pntrms,pntmax
         logical cabb1
 c
@@ -990,8 +992,10 @@ c
 c CABB
 c
         if (cabb) then
-          xgain(if,ant) = xgain1
-          ygain(if,ant) = ygain1
+          xgtp(if,ant) = xgtp1
+          ygtp(if,ant) = ygtp1
+          xsdo(if,ant) = xsdo1
+          ysdo(if,ant) = ysdo1
           xcaljy(if,ant) = xcaljy1
           ycaljy(if,ant) = ycaljy1
         else
@@ -1594,7 +1598,7 @@ c
             call uvputvrd(tno,'restfreq',restfreq(if),1)
             if(newsc)call ScOut(tno,chi,tcorr,
      *          xtsys,ytsys,xyphase,xyamp,
-     *          xsampler,ysampler,xgain,ygain,xcaljy,ycaljy,
+     *          xsampler,ysampler,xgtp,ygtp,xsdo,ysdo,xcaljy,ycaljy,
      *          axisrms,axismax,cabb,
      *          ATIF,ATANT,nants,if,if,buf)
             if(hires)then
@@ -1656,7 +1660,7 @@ c
           endif
           if(newsc.and.tbin.eq.1)call ScOut(tno,chi,tcorr,
      *          xtsys,ytsys,xyphase,xyamp,
-     *          xsampler,ysampler,xgain,ygain,xcaljy,ycaljy,
+     *          xsampler,ysampler,xgtp,ygtp,xsdo,ysdo,xcaljy,ycaljy,
      *          axisrms,axismax,cabb,ATIF,ATANT,nants,1,nifs,buf)
           if(hires)then
             binlo = tbin
@@ -1923,7 +1927,7 @@ c
         end
 c************************************************************************
         subroutine ScOut(tno,chi,tcorr,xtsys,ytsys,xyphase,xyamp,
-     *          xsampler,ysampler,xgain,ygain,xcaljy,ycaljy,
+     *          xsampler,ysampler,xgtp,ygtp,xsdo,ysdo,xcaljy,ycaljy,
      *          axisrms,axismax,cabb,
      *          ATIF,ATANT,nants,if1,if2,buf)
 c
@@ -1931,7 +1935,8 @@ c
         real chi,xtsys(ATIF,ATANT),ytsys(ATIF,ATANT)
         real xyphase(ATIF,ATANT),xyamp(ATIF,ATANT)
         real xsampler(3,ATIF,ATANT),ysampler(3,ATIF,ATANT)
-        real xgain(ATIF,ATANT),ygain(ATIF,ATANT)
+        real xgtp(ATIF,ATANT),ygtp(ATIF,ATANT)
+        real xsdo(ATIF,ATANT),ysdo(ATIF,ATANT)
         real xcaljy(ATIF,ATANT),ycaljy(ATIF,ATANT)
         real buf(3*ATIF*ATANT),axisrms(ATANT),axismax(ATANT)
         logical cabb
@@ -1954,8 +1959,10 @@ c------------------------------------------------------------------------
         call Sco(tno,'xyphase', xyphase, 1,ATIF,ATANT,if1,if2,nants,buf)
         call Sco(tno,'xyamp',   xyamp,   1,ATIF,ATANT,if1,if2,nants,buf)
         if (cabb) then
-          call Sco(tno,'xgain',xgain,1,ATIF,ATANT,if1,if2,nants,buf)
-          call Sco(tno,'ygain',ygain,1,ATIF,ATANT,if1,if2,nants,buf)
+          call Sco(tno,'xgtp',  xgtp,  1,ATIF,ATANT,if1,if2,nants,buf)
+          call Sco(tno,'ygtp',  ygtp,  1,ATIF,ATANT,if1,if2,nants,buf)
+          call Sco(tno,'xsdo',  xsdo,  1,ATIF,ATANT,if1,if2,nants,buf)
+          call Sco(tno,'ysdo',  ysdo,  1,ATIF,ATANT,if1,if2,nants,buf)
           call Sco(tno,'xcaljy',xcaljy,1,ATIF,ATANT,if1,if2,nants,buf)
           call Sco(tno,'ycaljy',ycaljy,1,ATIF,ATANT,if1,if2,nants,buf)
         else
@@ -2279,7 +2286,8 @@ c
         real pntrms(ANT_MAX),pntmax(ANT_MAX)
         real xsamp(3,MAX_IF,ANT_MAX),ysamp(3,MAX_IF,ANT_MAX)
         real xtsys(MAX_IF,ANT_MAX),ytsys(MAX_IF,ANT_MAX)
-        real xgain(MAX_IF,ANT_MAX),ygain(MAX_IF,ANT_MAX)
+        real xgtp(MAX_IF,ANT_MAX),ygtp(MAX_IF,ANT_MAX)
+        real xsdo(MAX_IF,ANT_MAX),ysdo(MAX_IF,ANT_MAX)
         real xcaljy(MAX_IF,ANT_MAX),ycaljy(MAX_IF,ANT_MAX)
         real chi,tint,mdata(9)
 c
@@ -2436,7 +2444,7 @@ c
             call SetSC(scinit,scbuf,MAX_IF,ANT_MAX,sc_q,sc_if,sc_ant,
      *          sc_cal,if_invert,polflag,
      *          xyphase,xyamp,xtsys,ytsys,xsamp,ysamp,
-     *          xgain,ygain,xcaljy,ycaljy,
+     *          xgtp,ygtp,xsdo,ysdo,xcaljy,ycaljy,
      *          chi,tcorr,pntrms,pntmax,
      *          nxyp,xyp,ptag,xya,atag,MAXXYP,xflag,yflag,wband,cabb,
      *          mdata,mcount)
@@ -2596,14 +2604,16 @@ c
      *          xtsys(ifno,i1),ytsys(ifno,i1),
      *          xyphase(ifno,i1),xyamp(ifno,i1),
      *          xsamp(1,ifno,i1),ysamp(1,ifno,i1),
-     *          xgain(ifno,i1),ygain(ifno,i1),
+     *          xgtp(ifno,i1),ygtp(ifno,i1),
+     *          xsdo(ifno,i1),ysdo(ifno,i1),
      *          xcaljy(ifno,i1),ycaljy(ifno,i1),
      *          pntrms(i1),pntmax(i1),cabb)
               if(scbuf(ifno,i2))call PokeSC(i2,Sif(ifno),chi,tcorr,
      *          xtsys(ifno,i2),ytsys(ifno,i2),
      *          xyphase(ifno,i2),xyamp(ifno,i2),
      *          xsamp(1,ifno,i2),ysamp(1,ifno,i2),
-     *          xgain(ifno,i1),ygain(ifno,i1),
+     *          xgtp(ifno,i1),ygtp(ifno,i1),
+     *          xsdo(ifno,i1),ysdo(ifno,i1),
      *          xcaljy(ifno,i1),ycaljy(ifno,i1),
      *          pntrms(i2),pntmax(i2),cabb)
 c
@@ -3079,7 +3089,7 @@ c************************************************************************
         subroutine SetSC(scinit,scbuf,MAXIF,MAXANT,nq,nif,nant,
      *          syscal,invert,polflag,
      *          xyphase,xyamp,xtsys,ytsys,xsamp,ysamp,
-     *          xgain,ygain,xcaljy,ycaljy,
+     *          xgtp,ygtp,xsdo,ysdo,xcaljy,ycaljy,
      *          chi,tcorr,pntrms,pntmax,nxyp,xyp,ptag,xya,atag,MAXXYP,
      *          xflag,yflag,mmrelax,cabb,mdata,mcount)
 c
@@ -3091,7 +3101,8 @@ c
         real xyphase(MAXIF,MAXANT),xyamp(MAXIF,MAXANT)
         real xtsys(MAXIF,MAXANT),ytsys(MAXIF,MAXANT)
         real xsamp(3,MAXIF,MAXANT),ysamp(3,MAXIF,MAXANT)
-        real xgain(MAXIF, MAXANT), ygain(MAXIF, MAXANT)
+        real xgtp(MAXIF, MAXANT), ygtp(MAXIF, MAXANT)
+        real xsdo(MAXIF, MAXANT), ysdo(MAXIF, MAXANT)
         real xcaljy(MAXIF, MAXANT), ycaljy(MAXIF, MAXANT)
         real pntrms(MAXANT),pntmax(MAXANT)
         real chi
@@ -3136,10 +3147,12 @@ c
                 ysamp(2,ij,ik) = syscal(10,j,k)
                 ysamp(3,ij,ik) = syscal(11,j,k)
               else
-                xgain(ij,ik) = syscal(6,j,k)
-                xcaljy(ij,ik)  = syscal(7,j,k)
-                ygain(ij,ik) = syscal(9,j,k)
-                ycaljy(ij,ik)   = syscal(10,j,k)
+                xgtp(ij,ik)    = syscal(6,j,k)
+                xsdo(ij,ik)    = syscal(7,j,k)
+                xcaljy(ij,ik)  = syscal(8,j,k)
+                ygtp(ij,ik)    = syscal(9,j,k)
+                ysdo(ij,ik)    = syscal(10,j,k)
+                ycaljy(ij,ik)  = syscal(11,j,k)
               endif
               call syscflag(polflag,xsamp(1,ij,ik),ysamp(1,ij,ik),
      *          xyphase(ij,ik),xyamp(ij,ik),nxyp(ij,ik),maxxyp,
