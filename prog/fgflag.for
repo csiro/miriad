@@ -43,7 +43,7 @@ c------------------------------------------------------------------------
 	character version*(*)
 	parameter(version='FgFlag: version 1.0 23-Apr-09')
 	integer MAXROWS,MAXRCPNT,MAXSELS
-	parameter(MAXROWS=300000,MAXRCPNT=4096,MAXSELS=256)
+	parameter(MAXROWS=300000,MAXRCPNT=50000,MAXSELS=256)
 	integer nrange,nrcpnt,fgtable
 	integer indx(2*MAXROWS),pnt(2,MAXROWS+1),RcPnt(MAXRCPNT)
 	double precision time(2,MAXROWS)
