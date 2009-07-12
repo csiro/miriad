@@ -39,10 +39,13 @@
 #    Note: there is a limit to how many entries can be stored in miriad as
 #    defined by MAXPARMS in obspar.h.
 #
-#    Extracted from obspar.for by Stuart Weston - Auckland University of
-#    Technology, July 2006
+#    History:
+#    ??-jul-06 Stuart Weston - Extracted from obspar.for (Auckland University of
+#		 Technology)
+#    09-jun-09 Bob Sault - Add askap and ata. Correct longitude of alma.
+#    18-jun-09 Bob Sault - Add EVLA.
 #
-# $Id: observatories.dat,v 1.5 2007/01/12 20:08:26 rsault Exp $
+# $Id: observatories.dat,v 1.6 2009/07/12 23:35:50 sau078 Exp $
 #-----------------------------------------------------------------------------
 
 # Atacama Large Millimeter Array - provisional.
@@ -79,10 +82,27 @@ alma		evector		   45.0
 alma		height		 5017.0
 alma		jyperk		   40.7
 alma		latitude	-1  23 01 22.42
-alma		longitude	+1 067 45 17.74
+alma		longitude	-1 067 45 17.74
 alma		mount		ALTAZ
 alma		nants		   64.0
 alma		systemp		   40.0
+
+# ASKAP
+askap		antdiam		   12.0
+askap		ew		    0.0
+askap		latitude	-1  26 42 15.00
+askap		longitude	+1 116 39 32.0 
+askap		nants		   36.0
+askap		systemp		   50.0
+
+# ATA at Hat Creek.
+ata		antdiam		    6.0
+ata		evector		   90.0
+ata		height		 1043.0
+ata		latitude	+1  40 49 02.50
+ata		longitude	-1 121 28 18.49
+ata		mount		ALTAZ
+ata		nants		   42.0
 
 # Australia Telescope Compact Array (ATNF).
 # Geodetic coordinates on WGS84 from John Reynolds refer to station 35.
@@ -131,6 +151,19 @@ cso		longitude	-1 155 28 46.4
 cso		mount		ALTAZ
 cso		nants		    2.0
 cso		systemp		  500.0
+
+# Expanded Very Large Array (NRAO).
+# Copied from VLA entry.
+# jyperk and Tsys values are from Rick Perley, and are appropriate for 4.8 GHz.
+evla		antdiam		   25.0
+evla		ellimit		    8.0
+evla		height		 2124.0
+evla		jyperk		    9.1
+evla		latitude	+1  34 04 43.497
+evla		longitude	-1 107 37 03.819
+evla		mount		ALTAZ
+evla		nants		   27.0
+evla		systemp		   37.5
 
 # GMRT.
 gmrt		antdiam		   45.0
