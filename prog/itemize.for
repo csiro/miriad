@@ -66,6 +66,7 @@ c  rjs  15aug94   Honour format if given, even if there is only 1 value.
 c  rjs  25jul97   Get rid of announcement header.
 c  rjs  01aug97   Support wildcards.
 c  rjs  29apr09   Added options=nocompact
+c  rjs  02jun09   Changed call to mkeyf to mkeya.
 c------------------------------------------------------------------------
 	implicit none
 	integer MAXIN
@@ -81,7 +82,7 @@ c
 c  Get the input parameters.
 c
 	call keyini
-	call mkeyf('in',in,MAXIN,nin)
+	call mkeya('in',in,MAXIN,nin)
 	call keya('log',outlog,' ')
 	call keyi('index',range1,0)
 	call keyi('index',range2,range1)
@@ -104,7 +105,7 @@ c
 	  call hopen(tno,in(i),'old',iostat)
 	endif
 	if(i.eq.1.and.item.eq.' ')
-     *	  call output( 'Itemize: Version 1.0 1-Aug-97' )
+     *	  call output( 'Itemize: Version 1.0 02-Jun-09' )
 	if(nin.gt.1)call logwrite(' ',more)
 c
 c  List the items.
