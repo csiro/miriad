@@ -94,8 +94,9 @@ c    rjs  31jan01 Support other stokes types.
 c    rjs  08apr02 Allow negative values when taking cube roots.
 c    rjs  18jul04 Check for division by zero in quad quantities.
 c    rjs  23apr09 Increase buffer dimension to allow it to work on bigger problems.
+c    rjs  23jun09 Longer plot labels.
 c
-c $Id: closure.for,v 1.3 2009/04/23 23:09:35 sau078 Exp $
+c $Id: closure.for,v 1.4 2009/07/12 23:33:23 sau078 Exp $
 c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
@@ -117,7 +118,7 @@ c
 c
 c  Plot buffers.
 c
-	character title(MAXPLOTS)*16
+	character title(MAXPLOTS)*20
 	real x(MAXPNTS*MAXPLOTS),y(MAXPNTS*MAXPLOTS)
 	real yerr(MAXPNTS*MAXPLOTS)
 	integer npnts(MAXPLOTS),nplots
@@ -142,7 +143,7 @@ c
 	character versan*80
 c-----------------------------------------------------------------------
 	version = versan ('closure',
-     :    '$Id: closure.for,v 1.3 2009/04/23 23:09:35 sau078 Exp $')
+     :    '$Id: closure.for,v 1.4 2009/07/12 23:33:23 sau078 Exp $')
 c
 c Lets go! Get user inputs.
 c
