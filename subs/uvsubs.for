@@ -10,6 +10,8 @@ c    mchw 06Jul90 corrected bug in oneamp and changed to degrees.
 c		  - worked on documentation.
 c    pjt  12may03 removed a remaining maxant=256 dependancy
 c    pjt  17oct03 another longforgotten 30 -> MAXANT
+c    rjs  10jun09 Fix DATA statement where a string was the wrong size.
+c		  Use mirconst.h.
 c********1*********2*********3*********4*********5*********6*********7*c
 c* Width - Calculate wideband channel width
 c& mchw
@@ -69,8 +71,9 @@ c    leng	length of token
 c--
 c----------------------------------------------------------------------c
 	integer i,j
-	character*7 delim
+	character*8 delim
 	data delim /'_ ()[]-,'/
+c                    12345678
 c
 c  space over blanks.
 c
@@ -213,8 +216,8 @@ c  Output:
 c   		The amplitude, phase(degrees), real, or imaginary part.
 c--
 c----------------------------------------------------------------------c
-	real pi,amp
-	parameter (pi = 3.141592653589793)
+	include 'mirconst.h'
+	real amp
 c
 	oneamp = 0.
 	amp = real(vis)**2 + aimag(vis)**2
