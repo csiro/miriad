@@ -115,10 +115,11 @@ c   11may97 rjs  - Better listing format for options=array
 c   19aug98 rjs  - Correct printing of longitude in options=array
 c   22may01 dpr  - XY-EW support
 c   01jan07 rjs  - Handle more than 100 antennas in a simple way.
+c   18jun09 rjs  - Number antennas in "array" printout.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
-	parameter(version='Uvlist: version 1.0 01-Jan-07')
+	parameter(version='Uvlist: version 1.0 18-Jun-09')
 c
 	character out*50,last*1,date*18,uvflags*8
 	complex data(MAXCHAN)
@@ -1167,12 +1168,12 @@ c
 	call logwrite(
      *	  'Antenna positions in local equatorial coordinates',more)
 	call logwrite(' ',more)
-	call logwrite('       X (meters)     Y (meters)     Z (meters)',
-     *		more)
-	call logwrite('       ----------     ----------     ----------',
-     *		more)
+	call logwrite(
+     *	  '        X (meters)     Y (meters)     Z (meters)',more)
+	call logwrite(
+     *	  '        ----------     ----------     ----------',more)
 	do i=1,nants
-	  write(line,'(2x,3f15.4)')
+	  write(line,'(i3,3f15.4)')i,
      *		FAC*xyz(i),FAC*xyz(i+nants),FAC*xyz(i+2*nants)
 	  call logwrite(line,more)
 	enddo
