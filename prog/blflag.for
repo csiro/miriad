@@ -62,6 +62,7 @@ c	  amplitude    (the default for the Y axis)
 c	  phase
 c	  real
 c	  imaginary
+c	  rms          Theoretical rms noise.
 c@ options
 c	Task enrichment parameters. Several can be given, separated by
 c	commas. Minimum match is used. Possible values are:
@@ -74,7 +75,7 @@ c	          file called "blflag.select".
 c	  noapply Do not apply the flagging.
 c         rms     When processing spectra, blflag normally plots the
 c	          mean value of the spectra. Using options=rms causes
-c	          if to plot the rms value instead.
+c	          it to plot the rms value instead.
 c	  scalar  When processing spectra, blflag normally forms an
 c	          average value by vector averaging. The "scalar" option
 c	          causes it to generate the scalar average. This option
@@ -96,6 +97,7 @@ c    12jan99 rjs  Doc change only.
 c    09apr99 rjs  Add an extra error check only.
 c    05oct99 rjs  Added options=scalar
 c    23apr09 rjs  Increase buffer sizes.
+c    02jun09 rjs  Flag by theoretical rms.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
@@ -615,6 +617,8 @@ c
 	  title = '(u\u2\d+v\u2\d)\u1/2\d (k\gl)'
 	else if(axis.eq.'phase')then
 	  title = 'Phase (degrees)'
+	else if(axis.eq.'rms')then
+	  title = 'Theoretical rms noise'
 	else
 	  title = axis
 	  call ucase(title(1:1))
@@ -708,7 +712,7 @@ c
 	complex data(MAXCHAN)
 	complex corr(MAXBASE),corr1(MAXBASE),corr2(MAXBASE)
 	double precision preamble(4),time,time0,tprev,lst,ra
-	real uvdist2(MAXBASE)
+	real uvdist2(MAXBASE),var(MAXBASE),temp
 	integer i,n,bl,i1,i2,nants,npnt(MAXBASE),mbase,nchan
 c
 c  Miscellaneous initialisation.
@@ -724,6 +728,7 @@ c
 	  corr(i)    = 0
 	  corr1(i)   = 0
 	  corr2(i)   = 0
+	  var(i) = 0
 	enddo
 	ndat = 0
 c
@@ -746,11 +751,12 @@ c
 	    time = preamble(3)
 	    if(abs(time-tprev).gt.TTOL)then
 	      if(nants.gt.0)call IntFlush(nants,rms,scalar,ra,lst,tprev,
-     *		uvdist2,corr,corr1,corr2,xaxis,yaxis,npnt,
+     *		uvdist2,var,corr,corr1,corr2,xaxis,yaxis,npnt,
      *		time0,present,mbase,xdat,ydat,timedat,bldat,ndat,MAXDAT)
 	      nants = 0
 	      tprev = time
 	      call uvrdvrd(tno,'lst',lst,0.d0)
+	      call uvrdvrd(tno,'ra',ra,0.d0)
 	    endif
 	    n = 0
 	    do i=1,nchan
@@ -764,6 +770,8 @@ c
 	      endif
 	    enddo
 	    if(n.gt.0)then
+	      call uvDatGtr('variance',temp)
+	      var(bl) = var(bl) + n*temp
 	      uvdist2(bl) = uvdist2(bl) +
      *	        n * (preamble(1)*preamble(1)+preamble(2)*preamble(2))
 	      nants = max(nants,i1,i2)
@@ -773,20 +781,20 @@ c
 	enddo
 c
 	if(nants.gt.0)
-     *      call IntFlush(nants,rms,scalar,ra,lst,time,uvdist2,
+     *      call IntFlush(nants,rms,scalar,ra,lst,time,uvdist2,var,
      *		corr,corr1,corr2,xaxis,yaxis,npnt,
      *		time0,present,mbase,xdat,ydat,timedat,bldat,ndat,MAXDAT)
 c
 	end
 c************************************************************************
-	subroutine IntFlush(nants,rms,scalar,ra,lst,time,uvdist2,
+	subroutine IntFlush(nants,rms,scalar,ra,lst,time,uvdist2,var,
      *	  corr,corr1,corr2,xaxis,yaxis,npnt,
      *	  time0,present,MAXBASE,xdat,ydat,timedat,bldat,ndat,MAXDAT)
 c
 	implicit none
 	integer MAXBASE,MAXDAT,nants,npnt(MAXBASE),bldat(MAXDAT),ndat
 	double precision ra,lst,time,time0,timedat(MAXDAT)
-	real uvdist2(MAXBASE),xdat(MAXDAT),ydat(MAXDAT)
+	real uvdist2(MAXBASE),var(MAXBASE),xdat(MAXDAT),ydat(MAXDAT)
 	complex corr(MAXBASE),corr1(MAXBASE),corr2(MAXBASE)
 	logical present(MAXBASE),rms,scalar
 	character xaxis*(*),yaxis*(*)
@@ -805,15 +813,16 @@ c
 	    if(npnt(k).gt.0)then
 	      ndat = ndat + 1
 	      if(ndat.gt.MAXDAT)call bug('f','Too many points')
-	      xdat(ndat) = GetVal(xaxis,uvdist2(k),corr(k),corr1(k),
-     *		corr2(k),npnt(k),lst,time,ra,time0,rms,scalar)
-	      ydat(ndat) = GetVal(yaxis,uvdist2(k),corr(k),corr1(k),
-     *		corr2(k),npnt(k),lst,time,ra,time0,rms,scalar)
+	      xdat(ndat) = GetVal(xaxis,uvdist2(k),var(k),corr(k),
+     *		corr1(k),corr2(k),npnt(k),lst,time,ra,time0,rms,scalar)
+	      ydat(ndat) = GetVal(yaxis,uvdist2(k),var(k),corr(k),
+     *		corr1(k),corr2(k),npnt(k),lst,time,ra,time0,rms,scalar)
 	      bldat(ndat) = k
 	      timedat(ndat) = time
 	      present(k) = .true.
 	      npnt(k) = 0
 	      uvdist2(k) = 0
+	      var(k) = 0
 	      corr(k) = 0
 	      corr1(k) = 0
 	      corr2(k) = 0
@@ -823,12 +832,12 @@ c
 c
 	end
 c************************************************************************
-	real function GetVal(axis,uvdist2,corr,corr1,corr2,npnt,
+	real function GetVal(axis,uvdist2,var,corr,corr1,corr2,npnt,
      *		lst,time,ra,time0,rms,scalar)
 c
 	implicit none
 	character axis*(*)
-	real uvdist2
+	real uvdist2,var
 	complex corr,corr1,corr2
 	double precision time,time0,lst,ra
 	integer npnt
@@ -857,6 +866,8 @@ c
 	  GetVal = 180/pi * atan2(aimag(data),real(data))
 	else if(axis.eq.'uvdistance')then
 	  GetVal = 0.001 * sqrt(uvdist2/npnt)
+	else if(axis.eq.'rms')then
+	  GetVal = sqrt(var/npnt)
 	else if(axis.eq.'time')then
 	  GetVal = 86400*(time - time0)
 	else if(axis.eq.'lst')then
@@ -880,13 +891,14 @@ c
 	character xaxis*(*),yaxis*(*)
 c------------------------------------------------------------------------
 	integer NAX
-	parameter(NAX=8)
+	parameter(NAX=9)
 	integer n
 	character axes(NAX)*12
 	data axes/'amplitude   ','phase       ',
      *		  'real        ','imaginary   ',
      *		  'time        ','uvdistance  ',
-     *		  'lst         ','hangle      '/
+     *		  'lst         ','hangle      ',
+     *		  'rms         '/
 	call keymatch('axis',NAX,axes,1,xaxis,n)
 	if(n.eq.0)xaxis = 'time'
 	call keymatch('axis',NAX,axes,1,yaxis,n)
