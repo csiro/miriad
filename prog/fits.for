@@ -1544,7 +1544,7 @@ c
      *		'   ... use options=blcal if you wish to apply this')
 	    endif
 	  else if(ename.eq.'AIPS CL'.or.ename.eq.'AIPS NX'.or.
-     *		  ename.eq.'AIPS SN')then
+     *		  ename.eq.'AIPS SN'.or.ename.eq.'AIPS BP')then
 	    if(givecal)call output('  Ignoring AIPS calibration tables')
 	    givecal = .false.
 	  else if(ename.eq.'AIPS OF')then
