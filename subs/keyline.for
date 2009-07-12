@@ -5,12 +5,7 @@ c  History:
 c    rjs  ??      Original version.
 c    rjs  16nov94 Fix reference line retrieval.
 c    rjs  06sep99 Added lflag parameter to keygline routine.
-c************************************************************************
-c  Get line and reference line parameters
-c
-c  History:
-c    rjs  ??      Original version.
-c    rjs  16nov94 Fix reference line retrieval.
+c    rjs  10jun09 Fix string too long in DATA statement.
 c************************************************************************
 c* KeygLine -- Get the linetype from the user interface.
 c& rjs
@@ -35,7 +30,8 @@ c------------------------------------------------------------------------
         parameter(ntypes=4)
         character ltypes(ntypes)*8
         integer nout
-        data ltypes/'channel  ','velocity','felocity','wide    '/
+        data ltypes/'channel ','velocity','felocity','wide    '/
+c                    12345678   12345678   12345678   12345678                                 
 c
         call keymatch('line',ntypes,ltypes,1,line,nout)
         if(nout.eq.0)line = ' '
@@ -80,7 +76,8 @@ c------------------------------------------------------------------------
 	parameter(NTYPES=4)
 	character ltypes(NTYPES)*8
 	integer nout
-	data ltypes/'channel  ','velocity','felocity','wide    '/
+	data ltypes/'channel ','velocity','felocity','wide    '/
+c                    12345678   12345678   12345678   12345678                                 
 c
 	call keymatch('line',NTYPES,ltypes,1,line,nout)
 	if(nout.eq.0)line = ' '
@@ -121,7 +118,8 @@ c------------------------------------------------------------------------
 	parameter(NTYPES=4)
 	character ltypes(NTYPES)*8
 	integer nout
-	data ltypes/'channel  ','velocity','felocity','wide    '/
+	data ltypes/'channel ','velocity','felocity','wide    '/
+c                    12345678   12345678   12345678   12345678                                 
 c
 	call keymatch('ref',NTYPES,ltypes,1,line,nout)
 	if(nout.eq.0)line = ' '
