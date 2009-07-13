@@ -706,9 +706,9 @@ c
      *			'Blocked aperture J1(x)/x form')
 	call pbAdd('ATCA',    2.10,2.60,    49.7, 0.03,  IPOLY,
      *			NCOEFF,atcas,'Reciprocal 4th order poly')
-	call pbAdd('ATCA',    4.30,6.70,    48.3, 0.03,  IPOLY,
+	call pbAdd('ATCA',    4.00,6.90,    48.3, 0.03,  IPOLY,
      *			NCOEFF,atcac,'Reciprocal 4th order poly')
-	call pbAdd('ATCA',    7.90,9.3,     50.6, 0.03,  IPOLY,
+	call pbAdd('ATCA',    7.90,9.90,    50.6, 0.03,  IPOLY,
      *			NCOEFF,atcax,'Reciprocal 4th order poly')
 	call pbAdd('ATCA.2',  15.5,25.5,    50.6, 0.10,  POLY,
      *			NATCAK,atcak2,'Fourth order poly')
