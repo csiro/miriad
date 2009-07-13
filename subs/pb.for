@@ -65,6 +65,8 @@ c   30jun04   gmx    Updated WSRT beam
 c   01jan05   rjs    Merge ATNF and BIMA versions.
 c   21may05   rjs    Improved beamshape at 12mm.
 c   23jun05   rjs    Add model for 3mm primary beam.
+c   18jun09   rjs    Recognise the EVLA.
+c   13jul09   mhw    Extend ATCA frequency range at 3 and 6 cm
 c************************************************************************
 c* pbList -- List known primary beam types.
 c& rjs
@@ -721,6 +723,12 @@ c  VLA primary beam is taken from AIPS code.
 c
 	call pbAdd('VLA',     0.071,24.510, 44.3, 0.023,IPOLY,
      *			NCOEFF,vla,'Reciprocal 4th order poly')
+c
+c  EVLA primary beam - assumed to be the same as the VLA.
+c
+	call pbAdd('EVLA',    0.071,24.510, 44.3, 0.023,IPOLY,
+     *			NCOEFF,vla,'Reciprocal 4th order poly')
+
 c
 c  The OVRO primary beam is a gaussian of size is 128.4 arcmin.GHz
 c  according to numbers from Shardha Jogee.
