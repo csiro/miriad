@@ -1,7 +1,7 @@
 	integer POLY,GAUS,COS6,SINGLE,IPOLY,BLOCKED
 	parameter(POLY=1,GAUS=2,COS6=3,IPOLY=4,BLOCKED=5,SINGLE=6)
 	integer MAXPB,MAXVAL,MAXOBJ
-	parameter(MAXPB=32,MAXVAL=64,MAXOBJ=2048)
+	parameter(MAXPB=32,MAXVAL=64,MAXOBJ=10000)
 c
 	character pb(MAXPB)*16,descrip(MAXPB)*32
 	integer pbtype(MAXPB),npbvals,npb,indx(MAXPB),nvals(MAXPB)
