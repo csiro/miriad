@@ -11,7 +11,7 @@ c    xcorr,ycorr Correction arrays.
 c
 	include 'maxdim.h'
 	integer MAXPNT,MAXCGF,MAXT
-	parameter(MAXPNT=2048,MAXCGF=2048,MAXT=5)
+	parameter(MAXPNT=10000,MAXCGF=2048,MAXT=5)
 c
 	real scale(MAXPNT)
 	real cgf(MAXCGF),xcorr(MAXDIM),ycorr(MAXDIM),umax,vmax

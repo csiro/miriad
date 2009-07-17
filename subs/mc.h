@@ -1,5 +1,5 @@
 	integer MAXPNT
-	parameter(MAXPNT=2048)
+	parameter(MAXPNT=10000)
 	integer cnvl(MAXPNT),npix,npnt,n1,n2,n1d,n2d,ic,jc
 	integer pWrk1,pWrk2,nWrk,pWts1,pWts2,nWts,tno
 	logical mosini,dogaus
