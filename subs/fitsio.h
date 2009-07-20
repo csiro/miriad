@@ -3,17 +3,18 @@
 c
 c  Parameters setting internal buffers.
 c  NOTE: We should ensure that 13*MAXCHAN is greater than MAXDIM.
+c  MAXCARDS would generally be set to a multiple of 36 (2880/80).
 c
 	integer MAXSIZE,MAXCARDS,MAXOPEN
-	parameter(MAXSIZE=13*MAXCHAN,MAXCARDS=16,MAXOPEN=4)
+	parameter(MAXSIZE=13*MAXCHAN,MAXCARDS=108,MAXOPEN=4)
 c
 c  Parameters associated with the FITS file as a whole.
 c  NOTE: DatOff,DatBase and new are used by higher level routines.
 c
 	integer curlu,curcard
-	integer DatSize(MAXOPEN),HdSize(MAXOPEN)
-	integer DatOff(MAXOPEN),HdOff(MAXOPEN)
-	integer DatBase(MAXOPEN)
+	integer DatSize3(3,MAXOPEN),HdSize3(3,MAXOPEN)
+	integer DatOff3(3,MAXOPEN),HdOff3(3,MAXOPEN)
+	integer DatBase3(3,MAXOPEN)
 	integer item(MAXOPEN)
 	integer ncards(MAXOPEN)
 	logical new(MAXOPEN),opened(MAXOPEN)
@@ -30,7 +31,7 @@ c
 c
 c  For Image files.
 c
-	integer axes(MAXNAX,MAXOPEN),PixBase(MAXOPEN)
+	integer axes(MAXNAX,MAXOPEN),PixBase3(3,MAXOPEN)
 c
 c  For Visibility files.
 c
@@ -62,8 +63,8 @@ c
 c  The common block which contains this mess.
 c
 	common/fitscom/TimOff,darray,curlu,curcard,item,bscale,bzero,
-     *	  scales1,scales2,zeros,axes,DatOff,HdOff,DatSize,HdSize,
-     *	  DatBase,PixBase,BypPix,BlankVal,ncards,nRanFile,nRanProg,
+     *	  scales1,scales2,zeros,axes,DatOff3,HdOff3,DatSize3,HdSize3,
+     *	  DatBase3,PixBase3,BypPix,BlankVal,ncards,nRanFile,nRanProg,
      *	  ncomplex,indices1,indices2,visibs,nts1,nts2,nts3,pols,freqs,
      *	  array,arrayd,WtScal,rarray,rarrayd,
      *	  new,opened,float
@@ -82,8 +83,9 @@ c
 	integer MAXIDX
 	parameter(MAXIDX=16)
 	character ExtName(MAXIDX,MAXOPEN)*8
-	integer ExtOff(MAXIDX,MAXOPEN),nExtOff(MAXOPEN),ExtNo(MAXOPEN)
-	common/fitsidx/ExtOff,nExtOff,ExtNo
+	integer ExtOff3(3,MAXIDX,MAXOPEN)
+	integer nExtOff(MAXOPEN),ExtNo(MAXOPEN)
+	common/fitsidx/ExtOff3,nExtOff,ExtNo
 	common/fitsidxc/ExtName
 c
 c  Variables for i/o on an "A3DTABLE"

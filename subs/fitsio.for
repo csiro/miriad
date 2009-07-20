@@ -74,6 +74,7 @@ c    pjt  08mar07    Added support for reading bitpix=-64 images
 c    rjs  11sep08    More robust to truncated files
 c    rjs  09apr09    There was a bug handling a FITS real-valued image which
 c		     had bscale/bzero set but which used NaN blanking.
+c    rjs  17jul09    Support for FITS files larger than 2 Gbytes.
 c
 c  Bugs and Shortcomings:
 c    * IF frequency axis is not handled on output of uv data.
@@ -232,7 +233,8 @@ c  Output:
 c    lu		File descriptor of the image opened.
 c--
 c------------------------------------------------------------------------
-	integer bitpix,i,temp,ndim,Bytes,size
+	integer bitpix,i,temp,ndim,Bytes
+	integer size3(3)
 	logical dofloat
 	include 'fitsio.h'
 c
@@ -275,7 +277,8 @@ c
 	      call bug('f','Too many dims for this application')
 	    endif
 	  enddo
-	  PixBase(lu) = DatBase(lu)
+	  call mpSet(PixBase3(1,lu),DatBase3(1,lu))
+c	  ... PixBase(lu) = DatBase(lu)
 	  call fitrdhdr(lu,'BSCALE', bscale(lu),1.)
 	  call fitrdhdr(lu,'BZERO',  bzero(lu), 0.)
 c
@@ -284,12 +287,14 @@ c
 	else
 	  ndim = naxis
 	  Bytes = abs(dBypPix)
-	  size = Bytes
+	  call mpCvtim(size3,Bytes)
+c	  ... size = Bytes
 	  do i=1,ndim
-	    size = size * nsize(i)
+	    call mpMulmi(size3,nsize(i))
+c	    ... size = size * nsize(i)
 	  enddo
 	  call fitopen(lu,name,status)
-	  call fitsize(lu,size)
+	  call fitsize(lu,size3)
 	  dofloat = dBypPix.lt.0
 	  call fitwrhdi(lu,'BITPIX',8*dBypPix)
 	  call fitwrhdi(lu,'NAXIS',naxis)
@@ -334,21 +339,31 @@ c    nsize	Array containing the index of the plane to be accessed.
 c		NSIZE(1) corresponds to the index into the third dimension.
 c--
 c------------------------------------------------------------------------
-	integer i,size
+	integer i
+	integer size3(3)
 	include 'fitsio.h'
+c
+c  Externals.
+c
+	integer mpSign
 c
 c  Finish the header of a new file.
 c
-	if(DatBase(lu).eq.0) call fithdfin(lu)
+	if(mpSign(DatBase3(1,lu)).eq.0) call fithdfin(lu)
 c
 	if(naxis+2.gt.maxnax)call bug('f','Too many dims in FXYSETPL')
-	size = 0
+	call mpCvtim(size3,0)
 	do i=naxis,1,-1
 	  if(nsize(i).lt.1.or.nsize(i).gt.axes(i+2,lu))
      *		call bug('f','Dimension error in FXYSETPL')
-	  size = ( size + nsize(i) - 1 ) * axes(i+1,lu)
+	  call mpAddmi(size3,nsize(i)-1)
+	  call mpMulmi(size3,axes(i+1,lu))
+c	  .. size = ( size + nsize(i) - 1 ) * axes(i+1,lu)
 	enddo
-	PixBase(lu) = BypPix(lu) * size * axes(1,lu) + DatBase(lu)
+	call mpMulmi(size3,axes(1,lu)*BypPix(lu))
+	call mpAddmm(size3,DatBase3(1,lu))
+	call mpSet(PixBase3(1,lu),size3)
+c	... PixBase(lu) = BypPix(lu) * size * axes(1,lu) + DatBase(lu)
 	end
 c************************************************************************
 c* FitBlank -- Set and check the FITS blank mode.
@@ -377,9 +392,6 @@ c  Input:
 c    mode
 c--
 c  NOTE: This assumes that floating point pixels are being written!!!
-c
-C  TODO: consider taking this out or writing a comment, since the BLANK
-c        keyword is not defined for BITPIX < 0 files
 c------------------------------------------------------------------------
 	include 'fitsio.h'
 c
@@ -410,7 +422,8 @@ c  Output:
 c    data	Array containing the pixel info.
 c--
 c------------------------------------------------------------------------
-	integer i,offset,length,iostat,blank
+	integer i,length,iostat,blank
+	integer offset3(3)
 	real bs,bz
 	include 'fitsio.h'
 c
@@ -424,7 +437,8 @@ c  Copy the data, doing the conversion on the way. Optimise for the case where
 c  BZERO is 0.
 c
 	length = axes(1,lu)
-	offset = PixBase(lu) + BypPix(lu)*(indx-1)*length
+	call mpSet(offset3,PixBase3(1,lu))
+	call mpAddmi(offset3,BypPix(lu)*(indx-1)*length)
 	bs = bscale(lu)
 	bz = bzero(lu)
 	blank = BlankVal(lu)
@@ -433,13 +447,15 @@ c  Do the floating point case. Blank the data if needed.
 c
 	if(float(lu))then
           if (BypPix(lu).eq.4) then
-            call hreadr(item(lu),data,offset,BypPix(lu)*length,iostat)
+            call hread3r(item(lu),data,offset3,BypPix(lu)*length,iostat)
 	    if(iostat.ne.0)call bugno('f',iostat)
-	    call hreadi(item(lu),array,offset,BypPix(lu)*length,iostat)
+	    call hread3i(item(lu), array,offset3,BypPix(lu)*length,
+     *							      iostat)
 	    if(iostat.ne.0)call bugno('f',iostat)
 	    call fnanflag(data,array,length)
-          else 
-            call hreadd(item(lu),darray,offset,BypPix(lu)*length,iostat)
+          else
+            call hread3d(item(lu),darray,offset3,BypPix(lu)*length,
+     *							      iostat)
 	   if(iostat.ne.0)call bugno('f',iostat)
             do i=1,length
                data(i) = darray(i)
@@ -453,15 +469,17 @@ c
 	      data(i) = bs * data(i) + bz
 	    enddo
 	  endif
-c
+c------------------------------------------------------------------------
 c
 c  Do the scaled integer case. Blank if needed.
 c
 	else
 	  if(BypPix(lu).eq.2)then
-	    call hreadj(item(lu),array,offset,BypPix(lu)*length,iostat)
+	    call hread3j(item(lu),array,offset3,BypPix(lu)*length,
+     *								iostat)
 	  else
-	    call hreadi(item(lu),array,offset,BypPix(lu)*length,iostat)
+	    call hread3i(item(lu),array,offset3,BypPix(lu)*length,
+     *								iostat)
 	  endif
 	  if(iostat.ne.0)call bugno('f',iostat)
 	  if(bz.eq.0)then
@@ -502,7 +520,8 @@ c  Output:
 c    flags	Output pixel flags.
 c--
 c------------------------------------------------------------------------
-	integer i,offset,length,iostat,blank
+	integer i,length,iostat,blank
+	integer offset3(3)
 	include 'fitsio.h'
 c
 c  Check that it is the right sort of operation for this file.
@@ -514,7 +533,8 @@ c
 c  Initialise.
 c
 	length = axes(1,lu)
-	offset = PixBase(lu) + BypPix(lu)*(indx-1)*length
+	call mpSet(offset3,PixBase3(1,lu))
+	call mpAddmi(offset3,BypPix(lu)*(indx-1)*length)
 	blank = BlankVal(lu)
 c
 c  If there was no BLANK keyword, assume all the data are good.
@@ -528,9 +548,11 @@ c  Otherwise reread the data, and determine the flagged values.
 c
 	else
 	  if(BypPix(lu).eq.2)then
-	    call hreadj(item(lu),array,offset,BypPix(lu)*length,iostat)
+	    call hread3j(item(lu),array,offset3,BypPix(lu)*length,
+     *								iostat)
 	  else
-	    call hreadi(item(lu),array,offset,BypPix(lu)*length,iostat)
+	    call hread3i(item(lu),array,offset3,BypPix(lu)*length,
+     *								iostat)
 	  endif
 	  if(iostat.ne.0)call bugno('f',iostat)
 	  if(float(lu))then
@@ -570,8 +592,13 @@ c  NOTE: This assumes that float(lu), bscale(lu) and bzero(lu) are
 c	 .true., 1.0 and 0.0 respectively! THIS ASSUMPTION depends on the
 c	 code in fxyopen!
 c------------------------------------------------------------------------
-	integer offset,iostat
+	integer iostat
+	integer offset3(3)
 	include 'fitsio.h'
+c
+c  Externals.
+c
+	integer mpSign
 c
 c  Check that it is the right sort of operation for this file.
 c
@@ -580,15 +607,17 @@ c
 c  If its a new file, and this is the first call to perform data i/o on it
 c  (not header i/o), handle the header properly.
 c
-	if(DatBase(lu).eq.0)then
+	if(mpSign(DatBase3(1,lu)).eq.0)then
 	  call fithdfin(lu)
-	  PixBase(lu) = DatBase(lu)
+	  call mpSet(PixBase3(1,lu),DatBase3(1,lu))
 	endif
 c
 c  This assumes that we have floating point pixels.
 c
-	offset = PixBase(lu) + BypPix(lu)*(indx-1)*axes(1,lu)
-	call hwriter(item(lu),data,offset,BypPix(lu)*axes(1,lu),iostat)
+	call mpSet(offset3,PixBase3(1,lu))
+	call mpAddmi(offset3,BypPix(lu)*(indx-1)*axes(1,lu))
+	call hwrite3r(item(lu),data,offset3,BypPix(lu)*axes(1,lu),
+     *								iostat)
 	if(iostat.ne.0)call bugno('f',iostat)
 	end
 c************************************************************************
@@ -613,12 +642,13 @@ c  NOTE: This assumes that float(lu), bscale(lu) and bzero(lu) are
 c	 .true., 1.0 and 0.0 respectively! THIS ASSUMPTION depends on the
 c	 code in fxyopen!
 c------------------------------------------------------------------------
-	integer offset,iostat,k,kmax,l,lmax,blank,i
+	integer iostat,k,kmax,l,lmax,blank,i
+	integer offset3(3),off3(3)
 	include 'fitsio.h'
 c
 c  Externals.
 c
-	integer isrchl
+	integer isrchl,mpSign
 c
 c  Check that it is the right sort of operation for this file.
 c
@@ -629,15 +659,16 @@ c
 c  If its a new file, and this is the first call to perform data i/o on it
 c  (not header i/o), handle the header properly.
 c
-	if(DatBase(lu).eq.0)then
+	if(mpSign(DatBase3(1,lu)).eq.0)then
 	  call fithdfin(lu)
-	  PixBase(lu) = DatBase(lu)
+	  call mpSet(PixBase3(1,lu),DatBase3(1,lu))
 	endif
 c
 c  This assumes that we have floating point pixels.
 c
 	Blank = BlankVal(lu)
-	offset = PixBase(lu) + BypPix(lu)*(indx-1)*axes(1,lu)
+	call mpSet(offset3,PixBase3(1,lu))
+	call mpAddmi(offset3,BypPix(lu)*(indx-1)*axes(1,lu))
 c
 c  Convert the flags into a run-length encoding, and then write out
 c  the magic value blanked version.
@@ -653,8 +684,9 @@ c
 	    enddo
 	    lmax = l
 	  endif
-	  call hwritei(item(lu),array,BypPix(lu)*(k-1)+offset,
-     *				      BypPix(lu)*l,iostat)
+	  call mpSet(off3,offset3)
+	  call mpAddmi(off3,BypPix(lu)*(k-1))
+	  call hwrite3i(item(lu),array,off3,BypPix(lu)*l,iostat)
 	  if(iostat.ne.0)call bugno('f',iostat)
 	  k = k + l
 	  if(k.le.kmax)k = isrchl(kmax-k+1,flags(k),.false.) + k - 1
@@ -720,9 +752,14 @@ c    lu		File descriptor.
 c--
 c------------------------------------------------------------------------
 	integer bitpix,naxis,n1,Bytes,nProgRan,nFileRan
-	integer ipol,ifreq,icmplx,iif,ncmplx,nif,nt1,nt2,nt3,itemp
+	integer ipol,ifreq,icmplx,iif,ncmplx,nif,nt1,nt2,nt3
+	integer itemp3(3)
 	logical groups,dofloat
 	include 'fitsio.h'
+c
+c  Externals.
+c
+	integer mpCmp
 c
 c  Handle the old file.
 c
@@ -793,10 +830,11 @@ c
 c
 c  Check that the file is not shorter than implied.
 c
-	  itemp = DatSize(lu)/(bytes*(nFileRan+ncmplx*npol*nfreq))
-	  if(itemp.lt.nvis)then
-	    nvis = itemp
-	    call bug('w','Some visibility records appear to be missing')
+	  call mpCvtim(itemp3,nvis)
+	  call mpMulmi(itemp3,bytes)
+	  call mpMulmi(itemp3,nFileRan+ncmplx*npol*nfreq)
+	  if(mpCmp(DatSize3(1,lu),itemp3).lt.0)then
+	    call bug('f','File size too small in fituvopen')
 	  endif
 c
 	  call fitrdhdr(lu,'BSCALE', bscale(lu),1.)
@@ -875,7 +913,7 @@ c    params	The names of the random parameters.
 c--
 c------------------------------------------------------------------------
 	include 'fitsio.h'
-	integer size
+	integer size3(3)
 c
 	integer snparam
 	parameter(snparam=5)
@@ -901,9 +939,13 @@ c
 	  else
 	    call fuvWrPa(lu,nRanFile(lu),params,TimOff(lu))
 	  endif
-	  size = BypPix(lu) * Visibs(lu) * 
-     *	    (nRanFile(lu) + ncomplex(lu)*pols(lu)*freqs(lu))
-	  call fitsize(lu,size)
+	  call mpCvtim(size3,visibs(lu))
+	  call mpMulmi(size3,BypPix(lu))
+	  call mpMulmi(size3,
+     *		nRanFile(lu)+ncomplex(lu)*pols(lu)*freqs(lu))
+c	  ... size = BypPix(lu) * Visibs(lu) * 
+c     *	  ... (nRanFile(lu) + ncomplex(lu)*pols(lu)*freqs(lu))
+	  call fitsize(lu,size3)
 	else
 	  if(nparam.le.0)then
 	    call fuvRdPa(lu,nRanFile(lu),nRanProg(lu),sparams,
@@ -1299,8 +1341,8 @@ c    PpVisf	Pixels per Visibility in the File.
 c    PpVisp	Pixels per Visibility in the Program.
 c
 c------------------------------------------------------------------------
-	integer k,ktot,PpVisf,PpVisp,VispBuf,n,ltot
-	integer offset,iostat,nts4
+	integer k,ktot,PpVisf,PpVisp,VispBuf,n,ltot,iostat,nts4
+	integer offset3(3)
 	logical dotran
 	include 'fitsio.h'
 c
@@ -1323,16 +1365,19 @@ c  points beyond the last.
 c
 	k = 0
 	ktot = count
-	offset = BypPix(lu) * (number-1) * PpVisf + DatBase(lu)
+	call mpCvtim(offset3,number-1)
+	call mpMulmi(offset3,BypPix(lu)*PpVisf)
+	call mpAddmm(offset3,DatBase3(1,lu))
+c	... offset = BypPix(lu) * (number-1) * PpVisf + DatBase(lu)
 	do while(k.lt.ktot)
 	  n = min( VispBuf, ktot-k )
 	  ltot = n * PpVisf
 	  if(float(lu))then
-	    call hreadr(item(lu),rarray,offset,4*ltot,iostat)
+	    call hread3r(item(lu),rarray,offset3,4*ltot,iostat)
 	    if(dotran)call fuvtranr(rarray,rarrayd,
      *		nts1(lu),nts2(lu),nts3(lu),nts4,ppvisf,n)
 	    if(BlankVal(lu).ne.0)then
-	      call hreadi(item(lu),array,offset,4*ltot,iostat)
+	      call hread3i(item(lu),array,offset3,4*ltot,iostat)
 	      if(dotran)call fuvtrani(array,arrayd,
      *		nts1(lu),nts2(lu),nts3(lu),nts4,ppvisf,n)
 	    endif
@@ -1340,9 +1385,9 @@ c
      *			PpVisf,visdat(k*PpVisp+1),PpVisp)
 	  else
 	    if(BypPix(lu).eq.2)then
-	      call hreadj(item(lu),array,offset,2*ltot,iostat)
+	      call hread3j(item(lu),array,offset3,2*ltot,iostat)
 	    else
-	      call hreadi(item(lu),array,offset,4*ltot,iostat)
+	      call hread3i(item(lu),array,offset3,4*ltot,iostat)
 	    endif
 	    if(dotran)call fuvtrani(array,arrayd,
      *		nts1(lu),nts2(lu),nts3(lu),nts4,ppvisf,n)
@@ -1352,7 +1397,7 @@ c
 c  Increment the number of visibilites read.
 c
 	  k = k + n
-	  offset = offset + BypPix(lu)*ltot
+	  call mpAddmi(offset3,BypPix(lu)*ltot)
 	enddo
 	end
 c************************************************************************
@@ -1387,8 +1432,13 @@ c    PpVisf	Pixels per Visibility in the File.
 c
 c------------------------------------------------------------------------
 	character line*32
-	integer PpVisf,offset,length,iostat
+	integer PpVisf,length,iostat
+	integer offset3(3)
 	include 'fitsio.h'
+c
+c  Externals.
+c
+	integer mpSign
 c
 	if(.not.new(lu))call bug('f','Cannot write to old FITS file')
 	if(nRanProg(lu).le.0)call fuvSetPa(lu,0,' ')
@@ -1396,7 +1446,7 @@ c
 c  If its a new file write out the card giving the visibility scaling parameter.
 c  Make sure that this is the last card in the header.
 c
-	if(DatBase(lu).eq.0)then
+	if(mpSign(DatBase3(1,lu)).eq.0)then
 	  write(line,'(a,1pe18.11)')'AIPS WTSCAL = ',WtScal(lu)
 	  call fitwrhdh(lu,'HISTORY',line)
 	  call fithdfin(lu)
@@ -1405,9 +1455,11 @@ c
 c  Perform Data I/O.
 c
 	PpVisf = nRanFile(lu) + ncomplex(lu)*pols(lu)*freqs(lu)
-	offset = BypPix(lu) * (number-1) * PpVisf + DatBase(lu)
+	call mpCvtim(offset3,number-1)
+	call mpMulmi(offset3,BypPix(lu)*PpVisf)
+	call mpAddmm(offset3,DatBase3(1,lu))
 	length = BypPix(lu) * count * PpVisf
-	call hwriter(item(lu),visdat,offset,length,iostat)
+	call hwrite3r(item(lu),visdat,offset3,length,iostat)
 	if(iostat.ne.0)call bugno('f',iostat)
 	end
 c************************************************************************
@@ -1978,7 +2030,8 @@ c
 	if(nRanFile(lu).gt.maxsize)
      *	  call bug('f','Cannot fit the random parameters into buffer')
 	if(float(lu))then
-	  call hreadr(item(lu),rarray,Datbase(lu),4*nRanFile(lu),iostat)
+	  call hread3r(item(lu),rarray,Datbase3(1,lu),4*nRanFile(lu),
+     *							      iostat)
 	  if(iostat.ne.0)then
 	    call bug('w','Error reading FITS file')
 	    call bugno('f',iostat)
@@ -1989,10 +2042,10 @@ c
      *	    dble(scales2(indx,lu))*rarray(indices2(indx,lu))
 	else
 	  if(BypPix(lu).eq.2)then
-	    call hreadj(item(lu),array,Datbase(lu),2*nRanFile(lu),
+	    call hread3j(item(lu),array,Datbase3(1,lu),2*nRanFile(lu),
      *								iostat)
 	  else
-	    call hreadi(item(lu),array,Datbase(lu),4*nRanFile(lu),
+	    call hread3i(item(lu),array,Datbase3(1,lu),4*nRanFile(lu),
      *								iostat)
 	  endif
 	  if(iostat.ne.0)then
@@ -2004,7 +2057,6 @@ c
 	  if(indices2(indx,lu).ne.0) rparam = rparam +
      *	    dble(scales2(indx,lu))*array(indices2(indx,lu))
 	endif
-c
 c
 	end
 c************************************************************************
@@ -2625,7 +2677,7 @@ c    lu		File handle.
 c
 c------------------------------------------------------------------------
 	include 'fitsio.h'
-	integer iostat,i,bitpix
+	integer iostat,i,bitpix,zero3(3)
 	logical ok
 	logical first
 c
@@ -2671,8 +2723,9 @@ c  the header.
 c
 	ExtNo(lu) = 0
 	nExtOff(lu) = 0
-	HdOff(lu) = -1
-	ok = fithdini(lu,0)
+	call mpCvtim(HdOff3(1,lu),-1)
+	call mpCvtim(zero3,0)
+	ok = fithdini(lu,zero3)
 	if(.not.ok)call bug('f','Input is not a FITS file')
 	if(new(lu))then
 	  call fitwrhdl(lu,'SIMPLE',.true.)
@@ -2688,22 +2741,22 @@ c
 c
 	end
 c************************************************************************
-	subroutine fitsize(lu,size)
+	subroutine fitsize(lu,size3)
 c
 	implicit none
-	integer lu,size
+	integer lu,size3(3)
 c
 c  Remember the size of the data region.
 c
 c------------------------------------------------------------------------
 	include 'fitsio.h'
-	DatSize(lu) = size
+	call mpSet(DatSize3(1,lu),size3)
 	end
 c************************************************************************
-	logical function fithdini(lu,off)
+	logical function fithdini(lu,off3)
 c
 	implicit none
-	integer lu,off
+	integer lu,off3(3)
 c
 c  Initialise the header of an old file.
 c
@@ -2715,51 +2768,65 @@ c  Input:
 c    lu		The handle of the FITS file.
 c    off	Offset of the header block.
 c------------------------------------------------------------------------
-	integer bitpix,gcount,pcount,naxis,offset,totsize,iostat,i,axis
-	integer size,itemp
+	integer offset3(3),totsize3(3),size3(3)
+	integer bitpix,gcount,pcount,naxis
+	integer iostat,i,axis,rem
 	character string*8
 	logical found
 	include 'fitsio.h'
 c
 c  Externals.
 c
-	integer hsize
 	character itoaf*2
+	integer mpCmp,mpSign
 c
 c  Determine the offset to the next header block. If this is already
 c  the one we are at, just return.
 c
-	if(off.lt.0)then
-	  offset = DatOff(lu) + 2880*((DatSize(lu) + 2879)/2880)
+	if(mpSign(off3).lt.0)then
+	  call mpSet(offset3,DatSize3(1,lu))
+	  call mpAddmi(offset3,2879)
+	  call mpDivmi(offset3,2880,rem)
+	  call mpMulmi(offset3,2880)
+	  call mpAddmm(offset3,DatOff3(1,lu))
+c	  ... offset = DatOff(lu) + 2880*((DatSize(lu) + 2879)/2880)
 	else
-	  offset = off
+	  call mpSet(offset3,off3)
+c	  ... offset = off
 	endif
 	fithdini = .true.
-	if(offset.eq.HdOff(lu)) return
+	if(mpCmp(offset3,HdOff3(1,lu)).eq.0)return
+c	... if(offset.eq.HdOff(lu))return
 c
 c  If its a new file, then set things to a null state.
 c
 	if(new(lu))then
 	  ncards(lu)  = 0
-	  HdOff(lu)   = offset
-	  HdSize(lu)  = 0
-	  DatSize(lu) = 0
-	  DatOff(lu)  = 0
-	  if(offset.eq.0) DatBase(lu) = 0
+	  call mpSet(HdOff3(1,lu),offset3)
+c	  ... HdOff(lu)   = offset
+	  call mpCvtim(HdSize3(1,lu),0)
+c	  ... HdSize(lu)  = 0
+	  call mpCvtim(DatSize3(1,lu),0)
+c	  ... DatSize(lu) = 0
+	  call mpCvtim(DatOff3(1,lu),0)
+c	  ... DatOff(lu)  = 0
+	  if(mpSign(offset3).eq.0)call mpCvtim(DatBase3(1,lu),0)
+c	  ... if(offset.eq.0) DatBase(lu) = 0
 c
 c  If its an old header, we have to work out a fair few things.
 c
 	else
 	  fithdini = .false.
-	  totsize = hsize(item(lu))
-	  if(offset.ge.totsize) return
+	  call hsize3(totsize3,item(lu))
+	  if(mpCmp(offset3,totsize3).ge.0) return
+c	  ... if(offset.ge.totsize) return
 c
 c  Check if it looks OK.
 c
-	  call hreadb(item(lu),string,offset,len(string),iostat)
+	  call hread3b(item(lu),string,offset3,len(string),iostat)
 	  if(iostat.ne.0) return
-	  if((offset.eq.0.and.string.ne.'SIMPLE').or.
-     *	    (offset.ne.0.and.string.ne.'XTENSION')) return
+	  if((mpSign(offset3).eq.0.and.string.ne.'SIMPLE').or.
+     *	    (mpSign(offset3).ne.0.and.string.ne.'XTENSION')) return
 c
 c  If cards for this file are in the card cache, invalidate it.
 c
@@ -2767,14 +2834,27 @@ c
 c
 c  It looks OK. Calculate the number of cards in the header.
 c
-	  HdOff(lu) = offset
-	  HdSize(lu) = 2880 * ( (totsize - offset) / 2880 )
+	  call mpSet(HdOff3(1,lu),offset3)
+c	  ... HdOff(lu) = offset
+	  call mpSet(HdSize3(1,lu),totsize3)
+	  call mpSubmm(HdSize3(1,lu),offset3)
+	  call mpDivmi(HdSize3(1,lu),2880,rem)
+	  call mpMulmi(HdSize3(1,lu),2880)
+c	  ... HdSize(lu) = 2880 * ( (totsize - offset) / 2880 )
 	  ncards(lu) = 0
 	  call fitsrch(lu,'END',found)
 	  if(.not.found)call bug('f','Did not find end of FITS header!')
-	  HdSize(lu) = 80*(ncards(lu)+1)
-	  DatOff(lu) = HdOff(lu) + 2880*((HdSize(lu) + 2879)/2880)
-	  if(HdOff(lu).eq.0) DatBase(lu) = DatOff(lu)
+	  call mpCvtim(HdSize3(1,lu),80*(ncards(lu)+1))
+c	  ... HdSize(lu) = 80*(ncards(lu)+1)
+	  call mpSet(DatOff3(1,lu),HdSize3(1,lu))
+	  call mpAddmi(DatOff3(1,lu),2879)
+	  call mpDivmi(DatOff3(1,lu),2880,rem)
+	  call mpMulmi(DatOff3(1,lu),2880)
+	  call mpAddmm(DatOff3(1,lu),HdOff3(1,lu))
+c	  ... DatOff(lu) = HdOff(lu) + 2880*((HdSize(lu) + 2879)/2880)
+	  if(mpSign(HdOff3(1,lu)).eq.0)
+     *			call mpSet(DatBase3(1,lu),DatOff3(1,lu))
+c	  if(HdOff(lu).eq.0) DatBase(lu) = DatOff(lu)
 c
 c  Determine the size of the data region.
 c
@@ -2787,38 +2867,27 @@ c
      *	    mod(bitpix,8).ne.0.or.bitpix.eq.0) call bug('f',
      *	    'Bad values in fundamental parameter in FITS file')
 c
-	  if ( naxis .eq. 0 ) then
-             size = 0
+	  if(naxis.eq.0)then
+	    call mpCvtim(size3,0)
           else
-             size = 1
-	     do i=1,naxis
-	       call fitrdhdi(lu,'NAXIS'//itoaf(i),axis,1)
-	       if(axis.lt.0)call bug('f',
+	    call mpCvtim(size3,1)
+	    do i=1,naxis
+	      call fitrdhdi(lu,'NAXIS'//itoaf(i),axis,1)
+	      if(axis.lt.0)call bug('f',
      *	         'Bad value in fundamental parameter in FITS file')
-	       if(i.eq.1)axis = max(axis,1)
-	       size = size * axis
-	     enddo
-          end if
+	      if(i.eq.1)axis = max(axis,1)
+	      call mpMulmi(size3,axis)
+	    enddo
+          endif
 c
 	  ncards(lu) = 0
-	  DatSize(lu) = abs(bitpix)/8 * (pcount + size)
-	  if(DatSize(lu).gt.0)then
-	    itemp = (totsize-DatOff(lu))/DatSize(lu)
-	  else
-	    itemp = 1
-	  endif
-	  if(itemp.lt.gcount)then
-	    if(itemp.eq.0)then
-	      call bug('w','Serious inconsistency in file size')
-	      call bug('w',
-     *		'An extension file has been trimmed or discarded')
-	      return
-	    endif
-	    call bug('w','File size inconsistency: '//
-     *			 'Some data may be lost')
-	    gcount = itemp
-	  endif
-	  DatSize(lu) = DatSize(lu)*gcount
+	  call mpAddmi(size3,pcount)
+	  call mpMulmi(size3,gcount*abs(bitpix)/8)
+	  call mpSet(DatSize3(1,lu),size3)
+c	  DatSize(lu) = gcount*abs(bitpix)/8 * (pcount + size)
+	  call mpSubmm(totsize3,DatOff3(1,lu))
+	  if(mpCmp(totsize3,DatSize3(1,lu)).lt.0)
+     *	    call bug('f','Serious inconsistency in file size')
 	endif
 c
 c  All said and done.
@@ -2838,8 +2907,13 @@ c    lu		File descriptor of an old file.
 c
 c------------------------------------------------------------------------
 	include 'fitsio.h'
-	integer k,ktot,l,ltot,iostat
+	integer l,ltot,iostat,ltotd,rem
 	character card*80
+	integer k3(3),ktot3(3)
+c
+c  External.
+c
+	integer mpSign,mpCvtmi
 c
 c  Check!
 c
@@ -2852,43 +2926,66 @@ c
 c
 c  Fix up some pointers.
 c
-	k = 80 * ncards(lu) + HdOff(lu)
-	ktot = ( ( k - 1 ) / 2880 + 1 ) * 2880
-	HdSize(lu) = k - HdOff(lu)
-	DatOff(lu) = ktot
-	if(HdOff(lu).eq.0)DatBase(lu) = DatOff(lu)
+	call mpSet(k3,HdOff3(1,lu))
+	call mpAddmi(k3,80*ncards(lu))
+c	... k = 80 * ncards(lu) + HdOff3(lu)
+	call mpSet(ktot3,k3)
+	call mpAddmi(ktot3,2879)
+	call mpDivmi(ktot3,2880,rem)
+	call mpMulmi(ktot3,2880)
+c	... ktot = ( ( k - 1 ) / 2880 + 1 ) * 2880
+	call mpSet(HdSize3(1,lu),k3)
+	call mpSubmm(HdSize3(1,lu),HdOff3(1,lu))
+c	... HdSize(lu) = k - HdOff(lu)
+	call mpSet(DatOff3(1,lu),ktot3)
+c	... DatOff(lu) = ktot
+	if(mpSign(HdOff3(1,lu)).eq.0)
+     *	    call mpSet(DatBase3(1,lu),DatOff3(1,lu))
+c	... if(HdOff(lu).eq.0)DatBase(lu) = DatOff(lu)
 c
 c  Blank fill the end of the header.
 c
-	if(k.lt.ktot)then
-	  ltot = min(ktot-k,80*maxcards)
-	  carray(1:ltot) = ' '
-	  dowhile(k.lt.ktot)
-	    ltot = min(ktot-k,80*maxcards)
-	    call hwriteb(item(lu),carray,k,ltot,iostat)
+	call mpSubmm(ktot3,k3)
+	ltot = mpCvtmi(ktot3)
+	if(ltot.gt.0)then
+	  ltotd = min(ltot,80*maxcards)
+	  carray(1:ltotd) = ' '
+	  dowhile(ltot.gt.0)
+	    ltotd = min(ltot,80*maxcards)
+	    call hwrite3b(item(lu),carray,k3,ltotd,iostat)
 	    if(iostat.ne.0)call bugno('f',iostat)
-	    k = k + ltot
+	    ltot = ltot - ltotd
+	    call mpAddmi(k3,ltotd)
 	  enddo
 	  curlu = -1
 	endif
 c
 c  Zero fill the end of the data area.
 c
-	k =  (DatOff(lu) + DatSize(lu))
-	if(2*(k/2).ne.k)
+	call mpSet(k3,DatOff3(1,lu))
+	call mpAddmm(k3,DatSize3(1,lu))
+c	... k =  DatOff(lu) + DatSize(lu)
+	call mpSet(ktot3,k3)
+	call mpAddmi(ktot3,2879)
+	call mpDivmi(ktot3,2880,rem)
+	call mpMulmi(ktot3,2880)
+c	... ktot = ( ( k - 1 ) / 2880 + 1 ) * 2880
+	call mpSubmm(ktot3,k3)
+	ltot = mpCvtmi(ktot3)
+	if(ltot.ne.2*(ltot/2))
      *	  call bug('f','Odd number of bytes in the data section')
-	k = k / 2
-	ktot = ( ( k - 1 ) / 1440 + 1 ) * 1440
 c
-	do l=1,min(ktot-k,maxsize)
+	ltot = ltot/2
+	do l=1,min(ltot,maxsize)
 	  array(l) = 0
 	enddo
 c
-	dowhile(k.lt.ktot)
-	  ltot = min(ktot-k,maxsize)
-	  call hwritej(item(lu),array,2*k,2*ltot,iostat)
+	dowhile(ltot.gt.0)
+	  ltotd = min(ltot,maxsize)
+	  call hwrite3j(item(lu),array,k3,2*ltotd,iostat)
 	  if(iostat.ne.0)call bugno('f',iostat)
-	  k = k + ltot
+	  ltot = ltot - ltotd
+	  call mpAddmi(k3,2*ltotd)
 	enddo
 c
 	end
@@ -2944,13 +3041,20 @@ c--
 c------------------------------------------------------------------------
 	integer iostat,i
 	include 'fitsio.h'
+	integer k3(3)
 c
-	if(DatOff(lu).ne.0.and.new(lu))
+c  Externals.
+c
+	integer mpSign
+c
+	if(mpSign(DatOff3(1,lu)).ne.0.and.new(lu))
      *		call bug('f','Cards written after i/o started')
 c
 c  Check if the thing we are interested in is in the cache (almost
 c  certainly it will be).
 c
+	call mpSet(k3,HdOff3(1,lu))
+	call mpAddmi(k3,80*ncards(lu))
 	if(.not.new(lu).and.lu.eq.curlu.and.
      *	  ncards(lu).ge.curcard.and.ncards(lu).lt.curcard+maxcards)then
 	  i = 80*(ncards(lu)-curcard)
@@ -2961,11 +3065,9 @@ c  Either a card cache miss, or a write operation. Do it the normal
 c  way.
 c
 	else if(new(lu))then
-	  call hwriteb(item(lu),value,HdOff(lu)+80*ncards(lu),
-     *							80,iostat)
+	  call hwrite3b(item(lu),value,k3,80,iostat)
 	else
-	  call hreadb(item(lu),value,HdOff(lu)+80*ncards(lu),
-     *							80,iostat)
+	  call hread3b(item(lu),value,k3,80,iostat)
 	endif
 	if(iostat.ne.0)call bugno('f',iostat)
 c
@@ -2996,7 +3098,12 @@ c    found	This will be true if the card was found.
 c--
 c------------------------------------------------------------------------
 	include 'fitsio.h'
-	integer i,cards,iostat,k,ktot
+	integer i,cards,iostat,k,ktot,rem
+	integer itemp3(3),k3(3)
+c
+c  Externals.
+c
+	integer mpCvtmi
 c
 c  Check.
 c
@@ -3007,17 +3114,21 @@ c
 	found = .false.
 	ncards(lu) = 0
 	k = 0
-	ktot = HdSize(lu)/80
-	iostat = 0
-c	
+	call mpSet(itemp3,HdSize3(1,lu))
+	call mpDivmi(itemp3,80,rem)
+	ktot = mpCvtmi(itemp3)
+c	... ktot = HdSize(lu)/80
+c
 	do while(k.lt.ktot.and..not.found)
 	  cards = min(ktot-k,maxcards)
-	  if(lu.ne.curlu.or.k.ne.curcard)
-     *	    call hreadb(item(lu),carray,HdOff(lu)+80*k,
-     *						80*cards,iostat)
-	  if(iostat.ne.0)call bugno('f',iostat)
-	  curlu = lu
-	  curcard = k
+	  if(lu.ne.curlu.or.k.ne.curcard)then
+	    call mpSet(k3,HdOff3(1,lu))
+	    call mpAddmi(k3,80*k)
+ 	    call hread3b(item(lu),carray,k3,80*cards,iostat)
+	    if(iostat.ne.0)call bugno('f',iostat)
+	    curlu = lu
+	    curcard = k
+	  endif
 c
 c  Search thru the cards read in.
 c
@@ -3061,6 +3172,7 @@ c    found	True if the table was sucessfully found.
 c--
 c------------------------------------------------------------------------
 	include 'fitsio.h'
+	integer zero3(3)
 c
 c  Externals.
 c
@@ -3070,7 +3182,8 @@ c  "Rewind" to the main header/data, and then find the next table of interest.
 c
 	ExtNo(lu) = 0
 	if(name.eq.' ')then
-	  found = fithdini(lu,0)
+	  call mpCvtim(zero3,0)
+	  found = fithdini(lu,zero3)
 	  if(.not.found)call bug('f','Error reading FITS header')
 	else
 	  call ftabNxt(lu,name,found)
@@ -3142,7 +3255,8 @@ c  Output:
 c    found	True if the table was sucessfully found.
 c--
 c------------------------------------------------------------------------
-	integer offset,indx
+	integer offset3(3),mone3(3)
+	integer indx
 	character ename*16
 	include 'fitsio.h'
 c
@@ -3162,7 +3276,7 @@ c
 c  If we found it, initialise this header.
 c
 	if(found)then
-	  if(.not.fithdini(lu,ExtOff(indx,lu)))
+	  if(.not.fithdini(lu,ExtOff3(1,indx,lu)))
      *	    call bug('f','Error reading FITS header')
 	  ExtNo(lu) = indx
 c
@@ -3173,27 +3287,28 @@ c  What is the offset of the last table that we know about.
 c
 	else
 	  if(indx.eq.0)then
-	    offset = 0
+	    call mpCvtim(offset3,0)
 	  else if(indx.le.nExtOff(lu))then
-	    offset = ExtOff(indx,lu)
+	    call mpSet(offset3,ExtOff3(1,indx,lu))
 	  else if(indx.eq.ExtNo(lu))then
-	    offset = HdOff(lu)
+	    call mpSet(offset3,HdOff3(1,lu))
 	  else
 	    call bug('f','Something screwy, in ftabNxt')
 	  endif
 c
 c  Move to the last table, and loop until we have found the right table.
 c
-	  if(.not.fithdini(lu,offset))
+	  if(.not.fithdini(lu,offset3))
      *	    call bug('f','Error reading FITS header')
+	  call mpCvtim(mone3,-1)
 	  dowhile(.not.found)
-	    if(.not.fithdini(lu,-1)) return
+	    if(.not.fithdini(lu,mone3)) return
 	    indx = indx + 1
 	    call fitrdhda(lu,'EXTNAME',ename,' ')
 	    ExtNo(lu) = indx
 	    if(indx.le.MAXIDX)then
 	      nExtOff(lu) = nExtOff(lu) + 1
-	      ExtOff(indx,lu) = HdOff(lu)
+	      call mpSet(ExtOff3(1,indx,lu),HdOff3(1,lu))
 	      ExtName(indx,lu) = ename
 	    endif
 	    found = name.eq.ename.or.name.eq.' '
@@ -3381,8 +3496,9 @@ c  Output:
 c    data	The data values.
 c--
 c------------------------------------------------------------------------
-	integer i,j,iostat,size,idx,offset,ifirst,ilast
+	integer i,j,iostat,size,idx,ifirst,ilast
 	character umsg*64
+	integer offset3(3)
 	include 'fitsio.h'
 c
 c  Externals.
@@ -3414,30 +3530,35 @@ c
 c
 	size = ftabSize(ColForm(i,lu))
 c
-c  All it OK. So just read the data.
+c  All is OK. So just read the data.
 c
   	idx = 1
-	offset = DatOff(lu) + ColOff(i,lu)
-        if (irow .lt .1) then
-           ifirst = 1
-           ilast = rows(lu)
+	call mpSet(offset3,DatOff3(1,lu))
+	call mpAddmi(offset3,ColOff(i,lu))
+c	... offset = DatOff(lu) + ColOff(i,lu)
+        if(irow.lt.1)then
+          ifirst = 1
+          ilast = rows(lu)
         else
-           ifirst = irow
-           ilast = irow
-           offset = offset + (irow-1)*width(lu)
+          ifirst = irow
+          ilast = irow
+	  call mpAddmi(offset3,(irow-1)*width(lu))
+c	  ... offset = offset + (irow-1)*width(lu)
         end if
 	do j=ifirst,ilast
 	  if(ColForm(i,lu).eq.FormJ)then
-	    call hreadj(item(lu),data(idx),offset,ColCnt(i,lu)/8,iostat)
+	    call hread3j(item(lu),data(idx),offset3,ColCnt(i,lu)/8,
+     *								iostat)
 	  else if(ColForm(i,lu).eq.FormI)then
-	    call hreadi(item(lu),data(idx),offset,ColCnt(i,lu)/8,iostat)
+	    call hread3i(item(lu),data(idx),offset3,ColCnt(i,lu)/8,
+     *								iostat)
 	  endif
 	  if(iostat.ne.0)then
 	    call bug('w','I/O error while reading FITS table')
 	    call bugno('f',iostat)
 	  endif
 	  idx = idx + ColCnt(i,lu)/size
-	  offset = offset + width(lu)
+	  call mpAddmi(offset3,width(lu))
 	enddo
 	end
 c************************************************************************
@@ -3462,8 +3583,9 @@ c  Output:
 c    data	The data values.
 c--
 c------------------------------------------------------------------------
-	integer i,j,iostat,size,idx,offset,ifirst,ilast,ncol
+	integer i,j,iostat,size,idx,ifirst,ilast,ncol
 	character umsg*64
+	integer offset3(3)
 	include 'fitsio.h'
 c
 c  Externals.
@@ -3497,26 +3619,30 @@ c
 	ncol = ColCnt(i,lu)/size
 	if(ncol.gt.MAXSIZE)call bug('f','Too many column values')
 c
-c  All it OK. So just read the data.
+c  All is OK. So just read the data.
 c
 	idx = 1
-	offset = DatOff(lu) + ColOff(i,lu)
-        if (irow .lt .1) then
-           ifirst = 1
-           ilast = rows(lu)
+	call mpSet(offset3,DatOff3(1,lu))
+	call mpAddmi(offset3,ColOff(i,lu))
+c	... offset = DatOff(lu) + ColOff(i,lu)
+        if(irow.lt.1)then
+          ifirst = 1
+          ilast = rows(lu)
         else
-           ifirst = irow
-           ilast = irow
-           offset = offset + (irow-1)*width(lu)
-        end if
-	do j=ifirst, ilast
-	  call hreadr(item(lu),data(idx),offset,ColCnt(i,lu)/8,iostat)
+          ifirst = irow
+          ilast = irow
+	  call mpAddmi(offset3,(irow-1)*width(lu)) 
+c	   ... offset = offset + (irow-1)*width(lu)
+        endif
+	do j=ifirst,ilast
+	  call hread3r(item(lu),data(idx),offset3,ColCnt(i,lu)/8,
+     *							    iostat)
 	  if(iostat.ne.0)then
 	    call bug('w','I/O error while reading FITS table')
 	    call bugno('f',iostat)
 	  endif
 c
-	  call hreadi(item(lu),array,offset,ColCnt(i,lu)/8,iostat)
+	  call hread3i(item(lu),array,offset3,ColCnt(i,lu)/8,iostat)
 	  if(iostat.ne.0)then
 	    call bug('w','I/O error while reading FITS table')
 	    call bugno('f',iostat)
@@ -3524,7 +3650,7 @@ c
 	  call fnanflag(data(idx),array,ncol)
 c
 	  idx = idx + ncol
-	  offset = offset + width(lu)
+	  call mpAddmi(offset3,width(lu))
 	enddo
 	end
 c************************************************************************
@@ -3570,8 +3696,9 @@ c  Output:
 c    data	The data values.
 c--
 c------------------------------------------------------------------------
-	integer i,j,iostat,size,idx,offset,ifirst,ilast
+	integer i,j,iostat,size,idx,ifirst,ilast
 	character umsg*64
+	integer offset3(3)
 	include 'fitsio.h'
 c
 c  Externals.
@@ -3603,23 +3730,26 @@ c
 c  All it OK. So just read the data.
 c
 	idx = 1
-	offset = DatOff(lu) + ColOff(i,lu)
-        if (irow .lt .1) then
-           ifirst = 1
-           ilast = rows(lu)
+	call mpSet(offset3,DatOff3(1,lu))
+	call mpAddmi(offset3,ColOff(i,lu))
+c	... offset = DatOff(lu) + ColOff(i,lu)
+        if(irow.lt.1)then
+	  ifirst = 1
+          ilast = rows(lu)
         else
-           ifirst = irow
-           ilast = irow
-           offset = offset + (irow-1)*width(lu)
-        end if
-	do j=ifirst, ilast
-	  call hreadr(item(lu),data(idx),offset,ColCnt(i,lu)/8,iostat)
+          ifirst = irow
+          ilast = irow
+	  call mpAddmi(offset3,(irow-1)*width(lu))
+c	  ... offset = offset + (irow-1)*width(lu)
+        endif
+	do j=ifirst,ilast
+	  call hread3r(item(lu),data(idx),offset3,ColCnt(i,lu)/8,iostat)
 	  if(iostat.ne.0)then
 	    call bug('w','I/O error while reading FITS table')
 	    call bugno('f',iostat)
 	  endif
 	  idx = idx + ColCnt(i,lu)/size
-	  offset = offset + width(lu)
+	  call mpAddmi(offset3,width(lu))
 	enddo
 	end
 c************************************************************************
@@ -3644,8 +3774,9 @@ c  Output:
 c    data	The data values.
 c--
 c------------------------------------------------------------------------
-	integer i,j,iostat,size,idx,offset,ifirst,ilast
+	integer i,j,iostat,size,idx,ifirst,ilast
 	character umsg*64
+	integer offset3(3)
 	include 'fitsio.h'
 c
 c  Externals.
@@ -3680,23 +3811,26 @@ c
 c  All it OK. So just read the data.
 c
 	idx = 1
-	offset = DatOff(lu) + ColOff(i,lu)
-        if (irow .lt .1) then
-           ifirst = 1
-           ilast = rows(lu)
+	call mpSet(offset3,DatOff3(1,lu))
+	call mpAddmi(offset3,ColOff(i,lu))
+c	... offset = DatOff(lu) + ColOff(i,lu)
+        if(irow.lt.1)then
+          ifirst = 1
+          ilast = rows(lu)
         else
-           ifirst = irow
-           ilast = irow
-           offset = offset + (irow-1)*width(lu)
-        end if
+          ifirst = irow
+          ilast = irow
+	  call mpAddmi(offset3,(irow-1)*width(lu))
+c	... offset = offset + (irow-1)*width(lu)
+        endif
 	do j=ifirst,ilast
-	  call hreadd(item(lu),data(idx),offset,ColCnt(i,lu)/8,iostat)
+	  call hread3d(item(lu),data(idx),offset3,ColCnt(i,lu)/8,iostat)
 	  if(iostat.ne.0)then
 	    call bug('w','I/O error while reading FITS table')
 	    call bugno('f',iostat)
 	  endif
 	  idx = idx + ColCnt(i,lu)/size
-	  offset = offset + width(lu)
+	  call mpAddmi(offset3,width(lu))
 	enddo
 	end
 c************************************************************************
@@ -3721,8 +3855,9 @@ c  Output:
 c    data	The data values.
 c--
 c------------------------------------------------------------------------
-	integer i,j,iostat,offset,length,ifirst,ilast
+	integer i,j,iostat,length,ifirst,ilast
 	character umsg*64
+	integer offset3(3)
 	include 'fitsio.h'
 c
 c  Externals.
@@ -3758,23 +3893,25 @@ c
 c
 c  All it OK. So just read the data.
 c
-	offset = DatOff(lu) + ColOff(i,lu)
-        if (irow .lt .1) then
-           ifirst = 1
-           ilast = rows(lu)
+	call mpSet(offset3,DatOff3(1,lu))
+	call mpAddmi(offset3,ColOff(i,lu))
+c	... offset = DatOff(lu) + ColOff(i,lu)
+        if(irow.lt.1)then
+	  ifirst = 1
+          ilast = rows(lu)
         else
-           ifirst = irow
-           ilast = irow
-           offset = offset + (irow-1)*width(lu)
+          ifirst = irow
+          ilast = irow
+          call mpAddmi(offset3,(irow-1)*width(lu))
         end if
 	do j=ifirst,ilast
 	  if(length.lt.len(data(j))) data(j-ifirst+1) = ' '
-	  call hreadb(item(lu),data(j-ifirst+1),offset,length,iostat)
+	  call hread3b(item(lu),data(j-ifirst+1),offset3,length,iostat)
 	  if(iostat.ne.0)then
 	    call bug('w','I/O error while reading FITS table')
 	    call bugno('f',iostat)
 	  endif
-	  offset = offset + width(lu)
+	  call mpAddmi(offset3,width(lu))
 	enddo
 	end
 c************************************************************************
@@ -3869,6 +4006,7 @@ c--
 c------------------------------------------------------------------------
 	include 'fitsio.h'
 	integer indx
+	integer mone3(3)
 c
 c  Externals.
 c
@@ -3876,13 +4014,14 @@ c
 c
 	if(.not.new(lu))
      *	  call bug('f','Cannot add a table to an old file')
-	if(.not.fithdini(lu,-1))
+	call mpCvtim(mone3,-1)
+	if(.not.fithdini(lu,mone3))
      *	  call bug('f','Something is very screwy in ftabdini')
 	nExtOff(lu) = 1
 	ExtNo(lu) = 1
 	indx = ExtNo(lu)
 c
-	ExtOff(indx,lu) = HdOff(lu)
+	call mpSet(ExtOff3(1,indx,lu),HdOff3(1,lu))
 	ExtName(indx,lu) = ename
 	rows(lu) = 0
 	width(lu) = 0
@@ -3908,6 +4047,7 @@ c------------------------------------------------------------------------
 	include 'fitsio.h'
 	integer j,l,indx,size
 	character string*8,num*8,types*10
+	integer size3(3)
 c
 c  Externals.
 c
@@ -3921,7 +4061,9 @@ c
 	if(cols(lu).le.0)
      *	  call bug('f','Invalid number of columns, in ftabdfin')
 	indx = ExtNo(lu)
-	call fitsize(lu,width(lu)*rows(lu))
+	call mpCvtim(size3,width(lu))
+	call mpMulmi(size3,rows(lu))
+	call fitsize(lu,size3)
 	call fitwrhda(lu,'XTENSION','BINTABLE')
 	call fitwrhdi(lu,'BITPIX',8)
 	call fitwrhdi(lu,'NAXIS',2)
@@ -4022,9 +4164,10 @@ c    data	The data values.
 c--
 c------------------------------------------------------------------------
 	include 'fitsio.h'
-	integer type,ifirst,ilast,offset,length,wide,inc,idx,iostat,i
+	integer type,ifirst,ilast,length,wide,inc,idx,iostat,i
+	integer offset3(3)
 c
-	call ftabput(lu,name,irow,type,ifirst,ilast,inc,offset,length,
+	call ftabput(lu,name,irow,type,ifirst,ilast,inc,offset3,length,
      *								  wide)
 c
 	if(type.ne.FormE)
@@ -4032,13 +4175,13 @@ c
 c
 	idx = 1
 	do i=ifirst,ilast
-	  call hwriter(item(lu),data(idx),offset,length,iostat)
+	  call hwrite3r(item(lu),data(idx),offset3,length,iostat)
 	  if(iostat.ne.0)then
 	    call bug('w','I/O error while reading FITS table')
 	    call bugno('f',iostat)
 	  endif
 	  idx = idx + inc
-	  offset = offset + wide
+	  call mpAddmi(offset3,wide)
 	enddo
 c
 	end
@@ -4064,9 +4207,10 @@ c    data	The data values.
 c--
 c------------------------------------------------------------------------
 	include 'fitsio.h'
-	integer type,ifirst,ilast,offset,length,wide,inc,idx,iostat,i
+	integer type,ifirst,ilast,length,wide,inc,idx,iostat,i
+	integer offset3(3)
 c
-	call ftabput(lu,name,irow,type,ifirst,ilast,inc,offset,length,
+	call ftabput(lu,name,irow,type,ifirst,ilast,inc,offset3,length,
      *								  wide)
 c
 	if(type.ne.FormD)
@@ -4074,13 +4218,13 @@ c
 c
 	idx = 1
 	do i=ifirst,ilast
-	  call hwrited(item(lu),data(idx),offset,length,iostat)
+	  call hwrite3d(item(lu),data(idx),offset3,length,iostat)
 	  if(iostat.ne.0)then
 	    call bug('w','I/O error while reading FITS table')
 	    call bugno('f',iostat)
 	  endif
 	  idx = idx + inc
-	  offset = offset + wide
+	  call mpAddmi(offset3,wide)
 	enddo
 c
 	end
@@ -4106,9 +4250,10 @@ c    data	The data values.
 c--
 c------------------------------------------------------------------------
 	include 'fitsio.h'
-	integer type,ifirst,ilast,offset,length,wide,inc,idx,iostat,i
+	integer type,ifirst,ilast,length,wide,inc,idx,iostat,i
+	integer offset3(3)
 c
-	call ftabput(lu,name,irow,type,ifirst,ilast,inc,offset,length,
+	call ftabput(lu,name,irow,type,ifirst,ilast,inc,offset3,length,
      *								  wide)
 c
 	if(type.ne.FormJ.and.type.ne.FormI)
@@ -4117,16 +4262,16 @@ c
 	idx = 1
 	do i=ifirst,ilast
 	  if(type.eq.FormJ)then
-	    call hwritej(item(lu),data(idx),offset,length,iostat)
+	    call hwrite3j(item(lu),data(idx),offset3,length,iostat)
 	  else
-	    call hwritei(item(lu),data(idx),offset,length,iostat)
+	    call hwrite3i(item(lu),data(idx),offset3,length,iostat)
 	  endif	    
 	  if(iostat.ne.0)then
 	    call bug('w','I/O error while reading FITS table')
 	    call bugno('f',iostat)
 	  endif
 	  idx = idx + inc
-	  offset = offset + wide
+	  call mpAddmi(offset3,wide)
 	enddo
 c
 	end
@@ -4152,9 +4297,10 @@ c    data	The data values.
 c--
 c------------------------------------------------------------------------
 	include 'fitsio.h'
-	integer type,ifirst,ilast,offset,length,wide,inc,idx,iostat,i
+	integer type,ifirst,ilast,length,wide,inc,idx,iostat,i
+	integer offset3(3)
 c
-	call ftabput(lu,name,irow,type,ifirst,ilast,inc,offset,length,
+	call ftabput(lu,name,irow,type,ifirst,ilast,inc,offset3,length,
      *								  wide)
 c
 	if(type.ne.FormA)
@@ -4164,22 +4310,23 @@ c
 c
 	idx = 1
 	do i=ifirst,ilast
-	  call hwriteb(item(lu),data(idx),offset,length,iostat)
+	  call hwrite3b(item(lu),data(idx),offset3,length,iostat)
 	  if(iostat.ne.0)then
 	    call bug('w','I/O error while reading FITS table')
 	    call bugno('f',iostat)
 	  endif
 	  idx = idx + 1
-	  offset = offset + wide
+	  call mpAddmi(offset3,wide)
 	enddo
 c
 	end
 c************************************************************************
 	subroutine ftabput(lu,name,irow,type,ifirst,ilast,inc,
-     *						offset,length,wide)
+     *						offset3,length,wide)
 c
 	implicit none
-	integer lu,irow,type,ifirst,ilast,inc,offset,length,wide
+	integer lu,irow,type,ifirst,ilast,inc,length,wide
+	integer offset3(3)
 	character name*(*)
 c
 c  Stuff common to the ftabput routines.
@@ -4190,7 +4337,7 @@ c------------------------------------------------------------------------
 c
 c  Externals.
 c
-	integer ftabsize,ftabcoln
+	integer ftabsize,ftabcoln,mpSign
 	
 c
 c  Check that it is the right sort of operation for this file.
@@ -4200,7 +4347,7 @@ c
 c  If its a new file, and this is the first call to perform data i/o on it
 c  (not header i/o), handle the header properly.
 c
-	if(DatOff(lu).eq.0)call fithdfin(lu)
+	if(mpSign(DatOff3(1,lu)).eq.0)call fithdfin(lu)
 c
 c  Find this parameter in the table.
 c
@@ -4223,15 +4370,17 @@ c
 c
 c  All it OK. So just read the data.
 c
-	offset = DatOff(lu) + ColOff(i,lu)
-        if (irow .lt .1) then
-           ifirst = 1
-           ilast = rows(lu)
+	call mpSet(offset3,DatOff3(1,lu))
+	call mpAddmi(offset3,ColOff(i,lu))
+c	... offset = DatOff(lu) + ColOff(i,lu)
+	if(irow.lt.1)then
+          ifirst = 1
+	  ilast = rows(lu)
         else
-           ifirst = irow
-           ilast = irow
-           offset = offset + (irow-1)*width(lu)
-        end if
+          ifirst = irow
+          ilast = irow
+          call mpAddmi(offset3,(irow-1)*width(lu))
+        endif
 	inc = ColCnt(i,lu)/size
 	length = ColCnt(i,lu)/8
 	wide = width(lu)
