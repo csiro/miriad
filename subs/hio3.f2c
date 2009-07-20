@@ -1,0 +1,204 @@
+/************************************************************************/
+/*									*/
+/*	This converts from a FORTRAN calling sequence into a C.		*/
+/*									*/
+/*  History:								*/
+/*    rjs  16jul09  Original version. Adapted from wrap.f2c.		*/
+/************************************************************************/
+
+#include <limits.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/types.h>
+#include "miriad.h"
+#include "sysdep.h"
+
+/************************************************************************/
+fortran subroutine hsize3(integer size1,integer item)
+{
+  off_t size;
+  fort_integer *s;
+  off_t a,b,x;
+
+  size = hsize_c(item.val);
+  x = (off_t)INT_MAX/2;
+  b = size/x;
+  a = size - b*x;
+  s = size1.addr;
+  *s++ = a; *s++ = b; *s++ = x;
+}
+/************************************************************************/
+fortran subroutine hread3b(integer item,character buffer,
+	integer offset,integer length,integer iostat)
+{
+  int temp;
+  fort_integer *s;
+  off_t a,b,x,off;
+
+  s = offset.addr;
+  a = *s++; b = *s++; x = *s++;
+  off = a + b*x;
+  hreadb_c(item.val,buffer.addr,off,length.val,&temp);
+  *(iostat.addr) = temp;
+}
+/************************************************************************/
+fortran subroutine hwrite3b(integer item,character buffer,
+	integer offset,integer length,integer iostat)
+{
+  int temp;
+  fort_integer *s;
+  off_t a,b,x,off;
+
+  s = offset.addr;
+  a = *s++; b = *s++; x = *s++;
+  off = a + b*x;
+  hwriteb_c(item.val,buffer.addr,off,length.val,&temp);
+  *(iostat.addr) = temp;
+}
+/************************************************************************/
+fortran subroutine hread3j(integer item,integer buffer,
+	integer offset,integer length,integer iostat)
+{
+#if FORTRAN_CVT_INT
+  int temp,*tbuffer;
+#endif
+  fort_integer *s;
+  off_t a,b,x,off;
+
+  s = offset.addr;
+  a = *s++; b = *s++; x = *s++;
+  off = a + b*x;
+#if FORTRAN_CVT_INT
+  tbuffer = iface_iarr(length.val);
+  hreadj_c(item.val,tbuffer,off,length.val,&temp);
+  iface_c2f_icvt(tbuffer,buffer.addr,length.val);
+  *(iostat.addr) = temp;
+#else
+  hreadj_c(item.val,buffer.addr,off,length.val,iostat.addr);
+#endif
+}
+/************************************************************************/
+fortran subroutine hwrite3j(integer item,integer buffer,
+	integer offset,integer length,integer iostat)
+{
+  int temp,*tbuffer;
+  fort_integer *s;
+  off_t a,b,x,off;
+
+  s = offset.addr;
+  a = *s++; b = *s++; x = *s++;
+  off = a + b*x;
+
+#if FORTRAN_CVT_INT
+  tbuffer = iface_iarr(length.val);
+  iface_f2c_icvt(buffer.addr,tbuffer,length.val);
+#else
+  tbuffer = buffer.addr;
+#endif
+  hwritej_c(item.val,tbuffer,off,length.val,&temp);
+  *(iostat.addr) = temp;
+}
+/************************************************************************/
+fortran subroutine hread3i(integer item,integer buffer,
+	integer offset,integer length,integer iostat)
+{
+#if FORTRAN_CVT_INT
+  int temp,*tbuffer;
+#endif
+  fort_integer *s;
+  off_t a,b,x,off;
+
+  s = offset.addr;
+  a = *s++; b = *s++; x = *s++;
+  off = a + b*x;
+
+#if FORTRAN_CVT_INT
+  tbuffer = iface_iarr(length.val);
+  hreadi_c(item.val,tbuffer,off,length.val,&temp);
+  iface_c2f_icvt(tbuffer,buffer.addr,length.val);
+  *(iostat.addr) = temp;
+#else
+  hreadi_c(item.val,buffer.addr,off,length.val,iostat.addr);
+#endif
+}
+/************************************************************************/
+fortran subroutine hwrite3i(integer item,integer buffer,
+	integer offset,integer length,integer iostat)
+{
+  int temp,*tbuffer;
+  fort_integer *s;
+  off_t a,b,x,off;
+
+  s = offset.addr;
+  a = *s++; b = *s++; x = *s++;
+  off = a + b*x;
+
+#if FORTRAN_CVT_INT
+  tbuffer = iface_iarr(length.val);
+  iface_f2c_icvt(buffer.addr,tbuffer,length.val);
+#else
+  tbuffer = buffer.addr;
+#endif
+  hwritei_c(item.val,tbuffer,off,length.val,&temp);
+  *(iostat.addr) = temp;
+}
+/************************************************************************/
+fortran subroutine hread3r(integer item,real buffer,
+	integer offset,integer length,integer iostat)
+{
+  int temp;
+  fort_integer *s;
+  off_t a,b,x,off;
+
+  s = offset.addr;
+  a = *s++; b = *s++; x = *s++;
+  off = a + b*x;
+
+  hreadr_c(item.val,buffer.addr,off,length.val,&temp);
+  *(iostat.addr) = temp;
+}
+/************************************************************************/
+fortran subroutine hwrite3r(integer item,real buffer,
+	integer offset,integer length,integer iostat)
+{
+  int temp;
+  fort_integer *s;
+  off_t a,b,x,off;
+
+  s = offset.addr;
+  a = *s++; b = *s++; x = *s++;
+  off = a + b*x;
+
+  hwriter_c(item.val,buffer.addr,off,length.val,&temp);
+  *(iostat.addr) = temp;
+}
+/************************************************************************/
+fortran subroutine hread3d(integer item,double buffer,
+	integer offset,integer length,integer iostat)
+{
+  int temp;
+  fort_integer *s;
+  off_t a,b,x,off;
+
+  s = offset.addr;
+  a = *s++; b = *s++; x = *s++;
+  off = a + b*x;
+
+  hreadd_c(item.val,buffer.addr,off,length.val,&temp);
+  *(iostat.addr) = temp;
+}
+/************************************************************************/
+fortran subroutine hwrite3d(integer item,double buffer,
+	integer offset,integer length,integer iostat)
+{
+  int temp;
+  fort_integer *s;
+  off_t a,b,x,off;
+
+  s = offset.addr;
+  a = *s++; b = *s++; x = *s++;
+  off = a + b*x;
+
+  hwrited_c(item.val,buffer.addr,off,length.val,&temp);
+  *(iostat.addr) = temp;
+}
