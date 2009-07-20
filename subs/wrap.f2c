@@ -34,6 +34,7 @@
 /*    rjs  26nov05   Changes to handle FORTRAN and C logicals differing.*/
 /*    mrc  14jul06   Compile with 'gcc -Wall' without warnings.         */
 /*    rjs  01apr09   Add scrRecSz routine.				*/
+/*    rjs  16jul09   Add a caste to the htell routine.			*/
 /************************************************************************/
 #include <limits.h>
 #include <unistd.h>
@@ -452,7 +453,7 @@ fortran integer function hsize(integer item)
 /************************************************************************/
 fortran integer function htell(integer item)
 {
-  return(htell_c(item.val));
+  return((fort_integer)htell_c(item.val));
 }
 /************************************************************************/
 fortran subroutine hseek(integer item,integer offset)
