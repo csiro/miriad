@@ -353,9 +353,10 @@ c    jhz  09-feb-07  Set MAXFREQ=MAXWIN fits.h so that it
 c                    can read SMA FITS output data from IDL.
 c    rjs  09-apr-09  Apply AIPS baseline dependent calibration and various
 c		     cosmetic changes.
+c    rjs  20-jul-09  Slight changes to messages about extension files.
 c------------------------------------------------------------------------
 	character version*(*)
-	parameter(version='Fits: version 1.1 09-Apr-09')
+	parameter(version='Fits: version 1.1 20-Jul-09')
 	integer maxboxes
 	parameter(maxboxes=2048)
 	character in*128,out*128,op*8,uvdatop*12
@@ -1285,7 +1286,7 @@ c
 	ntab = 0
 	call ftabLoc(lu,'AIPS FG',more)
 	dowhile(more)
-	  call output('  Saving off-line flagging table (AIPS FG): '//
+	  call output('  Saving off-line flagging table: '//
      *				'Apply this with task fgflag')
 	  ntab = ntab + 1
 	  call haccess(tno,lTab,'aipsfg'//itoaf(ntab),'write',iostat)
@@ -1550,6 +1551,8 @@ c
 	  else if(ename.eq.'AIPS OF')then
 	    call output('  Ignoring AIPS on-line flagging table')
 	    call output('   ... it is assumed FILLM applied these.')
+	  else if(ename.eq.'AIPS PO')then
+	    call output('  Ingoring AIPS planetary ephemeris table')
 	  else if(ename.eq.'AIPS WX')then
 	    call output('  Ignoring AIPS weather table')
 	  else if(ename.eq.'AIPS TY')then
@@ -1699,7 +1702,7 @@ c
 	call ftabLoc(lu,'AIPS AN',found)
 	anfound = found
 	dowhile(found)
-	  call output('  Using antenna table (AIPS AN) information')
+	  call output('  Using antenna table information')
 	  nconfig = nconfig + 1
 	  call ftabInfo(lu,'STABXYZ',type,units,n,nxyz)
 c
@@ -1785,7 +1788,7 @@ c
 	  anfound = found
 	  if(found)then
 	    call output('Using orbit parameter table '//
-     *					'(AIPS OB) information')
+     *					' information')
 c
 	    nconfig = 1
 	    call ftabInfo(lu,'ORBXYZ',type,units,n,nxyz)
@@ -1847,7 +1850,7 @@ c
 	  call fitrdhdi(lu,'NO_IF',itemp,nif)
 	  if(itemp.ne.nif)
      *	    call bug('f','Inconsistent number of IFs')
-	  call output('  Using frequency table (AIPS FQ) information')
+	  call output('  Using frequency table information')
 	  call ftabGeti(lu,'FRQSEL',0,freqids)
 	  if(.not.dofq)freqids(1) = 1
 	  call ftabGetd(lu,'IF FREQ',0,sfreq)
@@ -1871,7 +1874,7 @@ c
      *		call bug('f','Software bug IFNO.ne.IFNO')
 	    enddo
 c
-	    call output('  Using channel table (AIPS CH) information')
+	    call output('  Using channel table information')
 	    nfreq = 1
 	    freqids(1) = 1
 	    call ftabGetd(lu,'FREQUENCY OFFSET',0,sfreq)
@@ -1934,7 +1937,7 @@ c
 	  if(nsrc.gt.MAXSRC)call bug('f','Too many sources in SU table')
 	  if(nval.ne.1.or.type.ne.'I')
      *	    call bug('f','Something screwy with SU table')
-	  call output('  Using source table (AIPS SU) information')
+	  call output('  Using source table information')
 	  call ftabGeti(lu,'ID. NO.',0,srcids)
 	  call ftabGeta(lu,'SOURCE',0,source)
 	  call ftabGetd(lu,'RAEPO',0,raepo)
@@ -2175,13 +2178,14 @@ c  it to a true UT1 time (as best as we can). This involves both
 c  an offset between the time system and UT1, and offsets to remove
 c  fudges performed by AIPS DBCON.
 c------------------------------------------------------------------------
-	character timsys*16,line*80
+	character timsys*16,line*80,s*8
 	double precision jrdate,datutc,ut1utc
-	integer ltsys
+	integer ltsys,ls
 c
 c  Externals.
 c
 	integer len1
+	character itoaf*8
 	double precision deltime
 c
 c  Determine the offset times and the time system.
@@ -2209,15 +2213,19 @@ c
 	  call bug('w','The time offset '//timsys(1:ltsys)//
      *		'-UTC is claimed to be 0.')
 	else if(datutc.ne.0)then
-	  write(line,'(a,i3,a,f5.1,a)')
-     *	    '  Decrementing times for configuration',nconfig,' by',
+	  s = itoaf(nconfig)
+	  ls = len1(s)
+	  write(line,'(a,a,a,f5.1,a)')
+     *	    '  Decrementing times for configuration ',s(1:ls),' by',
      *		datutc,' seconds ('//timsys(1:ltsys)//'-UTC).'
 	  call output(line)
 	endif
 c
 	if(ut1utc.ne.0)then
-	  write(line,'(a,i3,a,f6.2,a)')
-     *	    '  Decrementing times for configration',nconfig,' by',
+	  s = itoaf(nconfig)
+	  ls = len1(s)
+	  write(line,'(a,a,a,f6.2,a)')
+     *	    '  Decrementing times for configration ',s(1:ls),' by',
      *		-ut1utc,' seconds (UTC-UT1).'
 	  call output(line)
 	endif
