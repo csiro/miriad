@@ -9,10 +9,7 @@ c    27mar09 rjs  Original version
 c    21apr09 rjs  Complete rewrite to use a simpler, more limited,
 c		  more efficient, representation.
 c    10may09 rjs  Added simple division
-c
-c  An integer is stored as a triple
-c
-c    value = v(1) + v(2)*v(3)
+c    17jul09 rjs  Added sign routine and corrected a documentation error.
 c
 c  The set of routines manipulate these triples.
 c
@@ -26,18 +23,37 @@ c  subroutine mpSubmi(v,int)             v  = v - int
 c  subroutine mpSubmm(v1,v2)             v1 = v1 - v2
 c  subroutine mpMulmi(v,int)             v  = v * int
 c  subroutine mpMulmm(v1,v2)             v1 = v1 * v2
-c  subroutine mpDivmi(v,int)             v  = v/int
+c  subroutine mpDivmi(v,int,rem)         v  = v/int, rem = v%int
 c  integer function mpCmp(v1,v2)         v1 cmp v2
+c  integer function mpSign(v)		 sign(v) [-1,0,+1]
 c  subroutine mpSet(v1,v2)               v1 = v2
 c  subroutine mpNeg(v)                   v = -v
 c  subroutine mpAbs(v)                   v = abs(v)
 c
+c  A multi-precision integer is stored as a triple
+c
+c    value = v(1) + v(2)*v(3)
+c
+c  The "standard" representation is to have v(3) be a number approximately
+c  a half the size of the maximum allowed integer and also a square.
+c
+c
 c************************************************************************
+c* mpCvtim -- Convert integer to multi-precision format.
+c& rjs
+c+
 	subroutine mpCvtim(v,k)
 c
 	implicit none
 	integer v(3),k
 c
+c  Convert an integer to multi-precision format.
+c
+c  Input:
+c    k		The integer to be converted.
+c  Output:
+c    v		The multi-precision representation of the integer.
+c--
 c------------------------------------------------------------------------
 	include 'mp.h'
 	logical first
@@ -121,10 +137,21 @@ c
 c
 	end
 c************************************************************************
+c* mpCvtmd -- Convert multi-precision integer to double precision.
+c& rjs
+c+
 	double precision function mpCvtmd(v)
 c
 	implicit none
 	integer v(3)
+c
+c  Convert multi-precision integer to double precision.
+c
+c  Input:
+c    v		The multi-precision integer.
+c  Output:
+c    mpCvtmd	The double precision representation.
+c--
 c------------------------------------------------------------------------
 	double precision temp
 c
@@ -136,10 +163,23 @@ c
 c
 	end
 c************************************************************************
+c* mpCvtmi -- Convert multi-precision integer to a standard integer.
+c& rjs
+c+
 	integer function mpCvtmi(v)
 c
 	implicit none
 	integer v(3)
+c
+c  Convert multi-precision integer to a standard integer.
+c  If the number exceeds the maximum allowed integer, the program
+c  is aborted.
+c
+c  Input:
+c    v		The multi-precision integer.
+c  Output:
+c    mpCvtmi	The standard integer representation.
+c--
 c------------------------------------------------------------------------
 	include 'mp.h'
 	integer t(3)
@@ -159,23 +199,43 @@ c
 	mpCvtmi = v(1) + v(2)*v(3)
 	end
 c************************************************************************
+c* mpSet -- Copy one multi-precision integer to another.
+c& rjs
+c+
 	subroutine mpSet(v1,v2)
 c
 	implicit none
 	integer v1(3),v2(3)
 c
+c  Copy one multi-precision integer to another.
+c
+c  Input:
+c    v1		The input multi-precision integer.
+c  Output:
+c    v2		The copy of the input multi-precision integer.
+c--
 c------------------------------------------------------------------------
 	include 'mp.h'
 	call mpStd2(v2(1),v2(2),v2(3),v1(1),v1(2))
 	v1(3) = mpBase2
 	end
 c************************************************************************
+c* mpAddmi -- Add an integer to a multi-precision integer.
+c& rjs
+c+
 	subroutine mpAddmi(v,d)
 c
 	implicit none
 	integer v(3),d
 c
-c  Add two numbers.
+c  Add an integer to a multi-precision integer.
+c    v = v + d
+c
+c  Input:
+c    d		The integer to be added.
+c  Input/Output:
+c    v		The multi-precision integer to be added to.
+c--
 c------------------------------------------------------------------------
 	include 'mp.h'
 	integer t(3),carry
@@ -197,11 +257,15 @@ c
 c
 	end
 c************************************************************************
+c* mpAddmm -- Add two multi-precision integers.
+c& rjs
+c+
 	subroutine mpAddmm(v1,v2)
 c
 	implicit none
 	integer v1(3),v2(3)
 c
+c--
 c------------------------------------------------------------------------
 	include 'mp.h'
 	integer d11,d12,d21,d22,carry
@@ -225,12 +289,16 @@ c
 	v1(2) = v1(2) + carry
 	end
 c************************************************************************
+c* mpSubmi -- Subtract an integer from a multi-precision integer.
+c& rjs
+c+
 	subroutine mpSubmi(v,d)
 c
 	implicit none
 	integer v(3),d
 c
-c  Add two numbers.
+c  Subtract two numbers.
+c--
 c------------------------------------------------------------------------
 	include 'mp.h'
 	integer t(3),carry
@@ -252,13 +320,21 @@ c
 c
 	end
 c************************************************************************
+c* mpSubmm -- Subtract two multi-precision integers.
+c& rjs
+c+
 	subroutine mpSubmm(v1,v2)
 c
 	implicit none
 	integer v1(3),v2(3)
 c
-c  Subtract two triples.
+c  Subtract two multi-precision integers.
 c
+c  Input:
+c    v2		Number to be subtracted.
+c  Input/Output:
+c    v1		On output, v1 = v1 - v2.
+c--
 c------------------------------------------------------------------------
 	include 'mp.h'
 	integer carry,d11,d12,d21,d22
@@ -279,13 +355,21 @@ c
 	v1(2) = v1(2) + carry
 	end
 c************************************************************************
+c* mpMulmi -- Multiply a multi-precision integer by an integer.
+c& rjs
+c+
 	subroutine mpMulmi(v,d)
 c
 	implicit none
 	integer v(3),d
 c
-c  Multiply a triple with an integer.
+c  Multiply a multi-precision integer by an integer.
 c
+c  Input:
+c    d		Integer to multiply by.
+c  Input/Output:
+c    v		On output, v = v * d.
+c--
 c------------------------------------------------------------------------
 	include 'mp.h'
 	integer q(4),t(3),carry,i
@@ -308,13 +392,21 @@ c
 	endif
 	end
 c************************************************************************
+c* mpMulmm -- Multiply two multi-precision integers.
+c& rjs
+c+
 	subroutine mpMulmm(v1,v2)
 c
 	implicit none
 	integer v1(3),v2(3)
 c
-c  Multiply two triples.
+c  Multiply two multi-precision integers.
 c
+c  Input:
+c    v2		The multi-precision integer to multiply by.
+c  Input/Output:
+c    v1		On output, v1 = v1 * v2.
+c--
 c------------------------------------------------------------------------
 	include 'mp.h'
 	integer q1(4),q2(4),d(8),i,j,k,carry
@@ -345,6 +437,9 @@ c
 c
 	end
 c************************************************************************
+c* mpDivmi -- Divide a multi-precision integer by an integer.
+c& rjs
+c+
 	subroutine mpDivmi(v,k,rem)
 c
 	implicit none
@@ -356,6 +451,14 @@ c
 c  NOTE: The current version is a very simple one, which limits the
 c  maximum size of the divisor to mpBase.
 c
+c  Input:
+c    k		The divisor
+c  Input/Output:
+c    v		On output v = v / k.
+c  Output:
+c    rem	The remainder. Specifically, rem = v % k.
+c    
+c--
 c------------------------------------------------------------------------
 	include 'mp.h'
 	integer q(4),t,carry
@@ -393,14 +496,56 @@ c
 	q(3) = d2 - q(4)*mpBase
 	end
 c************************************************************************
+c* mpSign -- Return the sign of a multi-precision integer.
+c& rjs
+c+
+	integer function mpSign(v)
+c
+	implicit none
+	integer v(3)
+c
+c  Return the sign of a multi-precision integer.
+c
+c  Input:
+c    v		Multi-precision integer to be considered.
+c  Output:
+c    mpSign	-1, 0 or +1 depending on whether v is negative, zero
+c		or positive respectively.
+c--
+c------------------------------------------------------------------------
+	integer d1,d2,s
+c
+	call mpStd2(v(1),v(2),v(3),d1,d2)
+	s = d2
+	if(s.eq.0)s = d1
+	if(s.lt.0)then
+	  s = -1
+	else if(s.gt.0)then
+	  s = 1
+	endif
+c
+	mpSign = s
+c
+	end
+c************************************************************************
+c* mpCmp -- Compare two multi-precision integers.
+c& rjs
+c+
 	integer function mpCmp(v1,v2)
 c
 	implicit none
 	integer v1(3),v2(3)
 c
-c  Compute v1-v2 and reutnr +1, 0 or -1 depending on whether the result
-c  is positive, zero or negative.
+c  Compute two multi-precision integers.
+c  Specifically this computes v1-v2 and return -1, 0 or +1 depending
+c  on whether the result is negative, zero or positive.
 c
+c  Input:
+c    v1,v2	The multi-precision integers to be compared.
+c  Output:
+c    mpCmp	-1,0 or +1 depending on whether v1 is less than, equal
+c		to or greater than v2 respectively.
+c--
 c------------------------------------------------------------------------
 	integer t(3),v
 c
@@ -421,13 +566,19 @@ c
 	mpCmp = v
 	end
 c************************************************************************
+c* mpAbs -- Take the absolute value of a multi-precision integer.
+c& rjs
+c+
 	subroutine mpAbs(v)
 c
 	implicit none
 	integer v(3)
 c
-c  Take the absolute value of a triple.
+c  Take the absolute value of a multi-precision integer.
 c
+c  Intput/Output:
+c    v		The output, v = abs(v).
+c--
 c------------------------------------------------------------------------
 	include 'mp.h'
 	integer d1,d2
@@ -445,13 +596,20 @@ c
 c
 	end
 c************************************************************************
+c* mpNeg -- Negate a multi-precision integer.
+c& rjs
+c+
 	subroutine mpNeg(v)
 c
 	implicit none
 	integer v(3)
 c
-c  Negate a triple.
+c  Negate a multi-precision integer.
 c
+c  Input/Output:
+c    v		The output, v = -v
+c
+c--
 c------------------------------------------------------------------------
 	v(1) = -v(1)
 	v(2) = -v(2)
@@ -476,6 +634,9 @@ c
 c
 	end
 c************************************************************************
+c* mpFmt -- Format a multi-precision integer as a string.
+c& rjs
+c+
 	subroutine mpFmt(out,v)
 c
 	implicit none
@@ -485,10 +646,11 @@ c
 c  Format a multi-precision integer as a string.
 c
 c  Input:
-c    mp		The handle of the input multi-precision integer.
+c    v		The multi-precision integer being formatted.
 c  Output:
 c    out	The string containing a representation (base 10) of the 
 c		multi-precision integer.
+c--
 c------------------------------------------------------------------------
 	include 'mp.h'
 	integer maxtd,maxdig
