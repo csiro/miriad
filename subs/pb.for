@@ -65,8 +65,13 @@ c   30jun04   gmx    Updated WSRT beam
 c   01jan05   rjs    Merge ATNF and BIMA versions.
 c   21may05   rjs    Improved beamshape at 12mm.
 c   23jun05   rjs    Add model for 3mm primary beam.
+c   03dec07   mchw   Add BIMA and ATA.
+c		     The old HATCREEK antennas are now the BIMA antennas at CARMA.
+c   30jan09   mchw   Change ATA to 222 arcmin  (3.70) deg at 1 GHz.
 c   18jun09   rjs    Recognise the EVLA.
 c   13jul09   mhw    Extend ATCA frequency range at 3 and 6 cm
+c   21jul09   rjs    Merge in mchw changes. Extend VLA/EVLA frequency
+c		     ranges. Add an entry for the ATCA at 7mm.
 c************************************************************************
 c* pbList -- List known primary beam types.
 c& rjs
@@ -87,15 +92,15 @@ c
 c
 	call pbFirst
 c
-c         12345678901234561234567890123456 xxx.xx xxx.xx 0.xxxx
+c	  12345678901234561234567890123456 xxx.xx xxx.xx 0.xxxx
 	call output(
-     *	 'Name            Description                     '//
-     *   '      Freq Range    Cutoff')
+     *	 'Name		  Description			  '//
+     *	 '	Freq Range    Cutoff')
 	call output(
-     *   '                                                '//
-     *   '         (GHz)')
+     *	 '						  '//
+     *	 '	   (GHz)')
 	call output(
-     *	 '----            -----------                     '//
+     *	 '----		  -----------			  '//
      *	 '    --------------  ------')
 	do i=1,npb
 	  write(line,'(2a,2f9.3,f8.4)')
@@ -261,13 +266,13 @@ c
 c  Initialise a primary beam object. The primary beam is assumed to
 c  be centred at the location given by the coordinate system (coObj),
 c  the coordinate specification (in) and the coordinate (x1).
-c  
+c
 c  Input:
 c    pbtype	Primary beam type.
 c    coObj	The coordinate system.
-c    in		Form of the input coordinate defining the reference
+c    in 	Form of the input coordinate defining the reference
 c		location (passed to the co routines).
-c    x1		The reference location.
+c    x1 	The reference location.
 c  Output:
 c    pbObj	The primary beam object.
 c--
@@ -530,7 +535,7 @@ c
 	  Pdash = 0
 	  n = 2*nvals(k)-2
 	  do i=off+nvals(k)-1,off,-1
-	    P     = P    *r2 +   pbvals(i)
+	    P	  = P	 *r2 +	 pbvals(i)
 	    Pdash = Pdash*r2 + n*pbvals(i)
 	    n = n - 2
 	  enddo
@@ -660,8 +665,8 @@ c
 	data atcal1 /1.0, 8.99e-4, 2.15e-6, -2.23e-9,  1.56e-12/
 	data atcal2 /1.0,-1.0781341990755E-03,
      *			 4.6179146405726E-07,
-     *		      	-1.0108079576125E-10,
-     *		      	 1.2073518438662E-14,
+     *			-1.0108079576125E-10,
+     *			 1.2073518438662E-14,
      *			-7.5132629268134E-19,
      *			 1.9083641820123E-23/
 	data atcal3/0.023, 0.631, 4.0/
@@ -673,7 +678,7 @@ c
 c
 c Model by Ravi at 22.235 GHz - 4th order poly.
 c
-	data atcak2/1.0, -9.5793797E-04, 3.2279621E-07, 
+	data atcak2/1.0, -9.5793797E-04, 3.2279621E-07,
      *			 -3.8065801E-11/
 c
 	data vla /0.9920378, 0.9956885e-3, 0.3814573e-5, -0.5311695e-8,
@@ -686,7 +691,7 @@ c
 c
 c  Initialise the common block. In particular, form a linked list
 c  of free PB objects.
-c  
+c
 	npb = 0
 	npbvals = 0
 c
@@ -703,7 +708,7 @@ c
      *			NATCAL1,atcal1,'Recipocal 4th order poly')
 	call pbAdd('ATCA.2',  1.15,1.88,    47.9, 0.002, POLY,
      *			NATCAL2,atcal2,'Sixth order poly')
-	call pbAdd('ATCA.3',  1.15,1.88,    58.713*2*0.514497/1.22, 
+	call pbAdd('ATCA.3',  1.15,1.88,    58.713*2*0.514497/1.22,
      *			1e-3,BLOCKED, NATCAL3,atcal3,
      *			'Blocked aperture J1(x)/x form')
 	call pbAdd('ATCA',    2.10,2.60,    49.7, 0.03,  IPOLY,
@@ -714,32 +719,48 @@ c
      *			NCOEFF,atcax,'Reciprocal 4th order poly')
 	call pbAdd('ATCA.2',  15.5,25.5,    50.6, 0.10,  POLY,
      *			NATCAK,atcak2,'Fourth order poly')
-	call pbAdd('ATCA',  15.5,25.5,    50.6, 0.03,  IPOLY,
+	call pbAdd('ATCA',  15.5,25.5,	  50.6, 0.03,  IPOLY,
+     *			NCOEFF,atcak,'Reciprocal 4th order poly')
+c
+c  Assume the ATCA 7mm response is the same as the 12mm response.
+c
+	call pbAdd('ATCA',  25.5,45.5,	  50.6, 0.03,  IPOLY,
      *			NCOEFF,atcak,'Reciprocal 4th order poly')
 	call pbAdd('ATCA',  80.0,120.0,   50.6, 0.03,  IPOLY,
      *			NATCAW,atcaw,'Reciprocal 3th order poly')
 c
 c  VLA primary beam is taken from AIPS code.
 c
-	call pbAdd('VLA',     0.071,24.510, 44.3, 0.023,IPOLY,
+	call pbAdd('VLA',     0.071,50.0, 44.3, 0.023,IPOLY,
      *			NCOEFF,vla,'Reciprocal 4th order poly')
 c
 c  EVLA primary beam - assumed to be the same as the VLA.
 c
-	call pbAdd('EVLA',    0.071,24.510, 44.3, 0.023,IPOLY,
+	call pbAdd('EVLA',    0.071,50.0, 44.3, 0.023,IPOLY,
      *			NCOEFF,vla,'Reciprocal 4th order poly')
 
 c
 c  The OVRO primary beam is a gaussian of size is 128.4 arcmin.GHz
 c  according to numbers from Shardha Jogee.
 c
-	call pbAdd('OVRO',24.0,350.0,   107.3, 0.05, GAUS,0,0.,
+	call pbAdd('OVRO',24.0,350.0,	107.3, 0.05, GAUS,0,0.,
      *				   'Truncated Gaussian')
 c
 c  The Hat Ck primary beam is a gaussian of size is 191.67 arcmin.GHz
 c  according to "John L"
 c
-	call pbAdd('HATCREEK',24.0,350.0,   191.67, 0.05, GAUS,0,0.,
+	call pbAdd('HATCREEK',24.0,270.0,   191.67, 0.05, GAUS,0,0.,
+     *				   'Truncated Gaussian')
+c
+c  Add BIMA and ATA. The old HATCREEK antennas are now the BIMA antennas at CARMA.
+c
+	call pbAdd('BIMA',24.0,270.0,	191.67, 0.05, GAUS,0,0.,
+     *				   'Truncated Gaussian')
+c
+c   ATA  FWHM = 3.70 degrees  = 222 arcmin at 1 GHz.
+c   ATA antenna pattern measurements (Gerry Harp 30 Jan 2009)
+c
+	call pbAdd('ATA',0.5,12.0,   222., 0.05, GAUS,0,0.,
      *				   'Truncated Gaussian')
 c
 c  The following values for the WSRT are derived from the NEWSTAR
@@ -748,8 +769,8 @@ c  where beta = 0.0629 for f < 500 MHz, and 0.065 for f > 500 MHz.
 c  These numbers look a bit large (WSRT under-illuminated?).
 c
 c  GMX (30Jun2004): added a factor 1.07 to the second line. This
-c  number came out of new measurements of the primary beam characteristics, 
-c  but is (as yet) not written in stone. Check with Rob Braun or 
+c  number came out of new measurements of the primary beam characteristics,
+c  but is (as yet) not written in stone. Check with Rob Braun or
 c  Tom Oosterloo for more info.
 
 c
@@ -762,15 +783,15 @@ c  Miscellaneous.
 c
 	call pbAdd('FST',     1.00,2.00,     67.00, 0.05, GAUS,0,0.,
      *				   'Truncated Gaussian')
-	call pbAdd('GAUS',    0.0,999.,	      1.00, 0.05, GAUS,0,0.,
+	call pbAdd('GAUS',    0.0,999.,       1.00, 0.05, GAUS,0,0.,
      *				   'Truncated Gaussian')
-	call pbAdd('SINGLE',  0.0,999.,	      0.00, 0.5,  SINGLE,0,0.,
+	call pbAdd('SINGLE',  0.0,999.,       0.00, 0.5,  SINGLE,0,0.,
      *				   'Single dish')
 c
 c  LOFAR - for simulations
 c
 	call pbAdd('LOFAR',    0.071,24.510, 44.3, 0.023,IPOLY,
-     *                        NCOEFF,vla,'Reciprocal 4th order poly')
+     *			      NCOEFF,vla,'Reciprocal 4th order poly')
 c
 	end
 c************************************************************************
