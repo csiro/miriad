@@ -1,4 +1,4 @@
-************************************************************************
+c************************************************************************
 	program mfcal
 	implicit none
 c
@@ -7,11 +7,10 @@ c& rjs
 c: calibration
 c+
 c	MfCal is a Miriad task which determines calibration corrections
-c	(antenna gains, delay terms and passband shapes) from a
+c	(antenna gains, delay terms and passband responses) from a
 c	multi-frequency observation.  The delays and passband are
 c	determined from an average of all the selected data.  The gains
-c	are worked out periodically depending upon the user 
-c	selected interval.
+c	are worked out periodically depending upon the user set interval. 
 c@ vis
 c	Input visibility data file. No default. This can (indeed should)
 c	contain multiple channels and spectral windows. The frequency
@@ -26,14 +25,15 @@ c	The number of channels, at the edges of each spectral window, that
 c	are to be dropped. Either one or two numbers can be given, being the
 c	number of channels at the start and end of each spectral window to be
 c	dropped. If only one number is given, then this number of channels
-c	is dropped from both the start and end. The default value is 0.
+c	is dropped from both the start and end of each window. The default
+c	value is 0.
 c@ select
-c	Standard uv selection. Default is all data.
+c	Standard uv selection. The default is to select all data.
 c@ flux
-c	Three numbers, giving the source flux, the reference frequency
+c	Three numbers, giving the source flux density, a reference frequency
 c	(in GHz) and the source spectral index. The flux and spectral index
-c	are at the reference frequency. If not values are given, then MFCAL
-c	checks whether the source is one of its known sources, and uses the
+c	are at the reference frequency. If no values are given, then MFCAL
+c	checks whether the source is one of a set of known sources, and uses the
 c	appropriate flux variation with frequency. Otherwise the default flux
 c	is determined so that the rms gain amplitude is 1, and the default
 c	spectral index is 0. The default reference frequency is the mean of
@@ -47,24 +47,27 @@ c	The minimum number of antennae that must be present before a
 c	solution is attempted. Default is 2.
 c@ interval
 c	This gives one or two numbers, both given in minutes, both being
-c	used to determine the extents of the gains calibration solution
-c	interval. The first gives the max length of a solution interval. The
-c	second gives the max gap size in a solution interval. A new solution
-c	interval is started when either the max times length is exceeded, or a
-c	gap larger than the max gap is encountered. The default max length is
-c	5 minutes, and the max gap size is the same as the max length.
+c	used to determine the extents of the antenna gain calibration solution
+c	interval. The first gives the maximum length of a solution interval. The
+c	second gives the maximum gap size in a solution interval. A new solution
+c	interval is started when either the max length is exceeded, or a
+c	gap larger than the max gap size is encountered. The default max length is
+c	5 minutes, and the default max gap size is the same as the max length.
 c@ options
 c	Extra processing options. Several values can be given, separated by
 c	commas. Minimum match is used. Possible values are:
 c	  delay     Attempt to solve for the delay parameters. This can
-c	            be a large sink of CPU time.
+c	            be a large sink of CPU time. This option rarely works and
+c	            should be used with caution.
 c	  nopassol  Do not solve for bandpass shape. In this case if a bandpass
 c	            table is present in the visibility data-set, then it will
 c	            be applied to the data.
 c	  interpolate Interpolate (and extrapolate) via a spline fit (to
 c	            the real and imaginary parts) bandpass values for
-c	            channels with no solution (because of flagging).  If 
-c	            less than 50% of the channels are unflagged, the 
+c	            channels with no solution. This is commonly used because
+c	            a set of channels are flagged, possibly because of RFI or
+c	            spectral features in the bandpass calibrator.  If 
+c	            less than 50% of the channels are good, the 
 c	            interpolation (extrapolation) is not done and those
 c	            channels will not have a bandpass solution
 c	  oldflux   This causes MFCAL to use a pre-August 1994 ATCA flux
@@ -106,6 +109,10 @@ c		  and gains is single polarisation.
 c    rjs  15jan06 Improve weighting.
 c    rjs  08jan07 Use MAXWIN more rigorously.
 c    jhz  16jan07 set external unpack, pack, scale
+c    rjs  14may09 Simple handling of Doppler tracking. Squeeze out spectral
+c		  window descriptions with no valid data and amalgemate spectral windows
+c	          that are essentially the same. Improve doc. Rename unpack/pack/scale
+c		  routines (potential f90 conflict).
 c
 c  Problems:
 c    * Should do simple spectral index fit.
@@ -118,13 +125,14 @@ c------------------------------------------------------------------------
 	parameter(MAXSOLN=1024,MAXPOL=2)
 c
 	character version*(*)
-	parameter(version='MfCal: version 1.0 08-Jan-07')
+	parameter(version='MfCal: version 1.0 14-May-09')
 c
 	integer tno
 	integer pWGains,pFreq,pSource,pPass,pGains,pTau
 	integer pOPass,pOGains,pOTau
 	integer nvis,VID(MAXVIS)
-	integer nspect,nschan(MAXSPECT),ischan(MAXSPECT)
+	integer nspect,nschan(MAXSPECT),ischan(MAXSPECT),nv(MAXSPECT)
+	integer spectn(MAXSPECT),chanoff(MAXSPECT),nvo,nso,nspectd
 	integer npol,nants,nsoln,Count(MAXSOLN),nchan,refant,minant
 	integer niter,edge(2),PolMap(MAXPOL),pee(MAXPOL)
 	real flux(3),tol,epsi
@@ -147,6 +155,7 @@ c
 c  Externals.
 c
 	logical uvDatOpn,keyprsnt
+	character itoaf*9
 c
 c  Get inputs and check them.
 c
@@ -208,9 +217,29 @@ c  Get the input data.
 c
 	call output('Reading the data ...')
 	call DatRead(tno,MAXVIS,nvis,npol,Vis,Wt,VID,
-     *		     MAXSPECT,nspect,sfreq,sdf,nschan,nants,
+     *		     MAXSPECT,nspect,sfreq,sdf,nschan,nv,nants,
      *		     MAXSOLN,nsoln,time,Count,minant,refant,interval,
      *		     edge,Source,PolMap)
+c
+c  Squeeze out spectral windows that have no data and amalgamate windows
+c  that differ insignificantly (probably because of Doppler tracking).
+c
+	call squeezed(nspect,sfreq,sdf,nschan,nv,
+     *					nspectd,spectn,chanoff)
+	if(nspectd.ne.nspect)then
+	  call output('Combining near duplicate windows ...')
+	  call squeeze(nspect,spectn,chanoff,
+     *	    Vis,Wt,VID,nvis,Count,time,nsoln,nvo,nso)
+	  nvis = nvo
+	  nsoln = nso
+	  nspect = nspectd 
+	endif
+	call output('Number of frequency bands/settings: '
+     *	  //itoaf(nspect))
+	call output('Number of polarisations selected: '
+     *	  //itoaf(npol))
+	call output('Number of solution intervals: '
+     *    //itoaf(nsoln))
 c
 c  Check that the polarisations present are commensurate.
 c
@@ -1162,7 +1191,6 @@ c
 	integer i,j,k,i1,i2,bl,spect,chan,off,nbl,p
 	complex SumVM(MAXBASE,MAXWIN,MAXPOL)
 	real SumMM(MAXBASE,MAXWIN,MAXPOL),epsi
-        external unpack
 c
 	nbl = nants*(nants-1)/2
 c
@@ -1181,7 +1209,7 @@ c  Accumulate the data for this solution interval.
 c
 	  do i=1,Count(k)
 	    off = off + 1
-	    call unpack(i1,i2,p,spect,chan,VID(off))
+	    call unpackit(i1,i2,p,spect,chan,VID(off))
 	    chan = chan + ischan(spect)
 	    bl = (i2-1)*(i2-2)/2 + i1
 	    SumVM(bl,spect,p) = SumVM(bl,spect,p) +
@@ -1203,7 +1231,7 @@ c
 	end
 c************************************************************************
 	subroutine DatRead(tno,maxvis,nvis,npol,Vis,Wt,VID,
-     *			maxspect,nspect,sfreq,sdf,nschan,nants,
+     *			maxspect,nspect,sfreq,sdf,nschan,nv,nants,
      *			maxsoln,nsoln,time,Count,minant,refant,interval,
      *			edge,Source,PolMap)
 c
@@ -1212,12 +1240,11 @@ c
 	integer minant,refant,npol
 	double precision time(maxsoln),interval(2)
 	double precision sfreq(maxspect),sdf(maxspect)
-	integer nschan(maxspect),Count(maxsoln),edge(2)
+	integer nschan(maxspect),nv(maxspect),Count(maxsoln),edge(2)
 	complex Vis(maxvis)
 	real Wt(maxvis)
 	integer VID(maxvis),PolMap(*)
 	character Source*(*)
-        external pack
 c
 c  Read the data, and return information on what we have read.
 c
@@ -1231,35 +1258,37 @@ c    refant
 c    interval
 c    edge
 c  Output:
-c    nvis
-c    nspect
-c    nants
-c    nsoln
 c    Source	The source name.
+c    nvis	Number of visibilities.
+c    nspect	Number of spectral windows.
+c    nants	Number of antennas.
+c    nsoln	Number of solution intervals.
 c    npol	Number of polarisations.
 c    PolMap	Map between internal polarisation number and external
 c		polarisation. Must be of dimension at least MAXPOL.
-c    time
-c    sfreq
-c    sdf
-c    nschan
-c    VID
-c    Wt
-c    Vis
-c    Count
+c    time	Midpoint of an antenna gain solution interval.
+c    Count	Number of visibilities in each antenna gain solution interval.
+c    sfreq	Start frequency of a spectral window.
+c    sdf	Frequency increment of a spectral window.
+c    nschan	Number of channels in a spectral window.
+c    nv		Number of visibilities of the reference antenna.
+c    VID	Visibility ID.
+c    Wt		Weight of a visibility.
+c    Vis	Visibility data.
 c------------------------------------------------------------------------
 	integer PolMin,PolMax
 	parameter(PolMin=-6,PolMax=1)
 	include 'maxdim.h'
-	integer MAXHASH,MAXPOL
-	parameter(MAXHASH=16*MAXANT*MAXCHAN,MAXPOL=2)
+	integer MAXPOL
+	parameter(MAXPOL=2)
 c
 	integer nchan,nbad,nauto,nreg,ngood,ninter,i1,i2,p,i,VisId
+	integer idx
 	double precision preamble(4),tfirst,tlast
 	complex Data(MAXCHAN)
-	logical flags(MAXCHAN),present(MAXANT,MAXPOL),updated,ok
-	integer chan(MAXCHAN),spect(MAXCHAN),state(MAXCHAN)
-	integer Hash(2,MAXHASH),vupd
+	logical flags(MAXCHAN),present(MAXANT,MAXPOL),updated,ok,new
+	integer chan(MAXCHAN),spect(MAXCHAN),state(MAXCHAN),pnspect
+	integer vupd
 	integer pols(PolMin:PolMax)
 	real w
 c
@@ -1290,6 +1319,7 @@ c
 c
 	nsoln = 0
 	nspect = 0
+	pnspect = 0
 	nvis = 0
 c
 	updated = .false.
@@ -1327,7 +1357,9 @@ c
 	  if(ok)then
 	    if(	nsoln.eq.0.or.
      *		preamble(3).gt.tfirst+interval(1).or.
-     *		preamble(3).gt.tlast+interval(2))then
+     *		preamble(3).gt.tlast+interval(2).or.
+     *		preamble(3).lt.tlast-interval(1).or.
+     *		preamble(3).lt.tfirst-interval(2))then
 	      if(nsoln.ne.0)then
 		time(nsoln) = (tfirst+tlast)/2
 		if(.not.accept(present,nants,npol,refant,minant,MAXANT)
@@ -1335,10 +1367,12 @@ c
 		  nvis = nvis - Count(nsoln)
 		  nreg = nreg + ninter
 		  nsoln = nsoln - 1
+		  nspect = pnspect
 		else
 		  ngood = ngood + ninter
 		endif
 	      endif
+	      pnspect = nspect
 	      nsoln = nsoln + 1
 	      if(nsoln.gt.maxsoln)
      *		call bug('f','Too many solution intervals')
@@ -1346,7 +1380,7 @@ c
 	      tlast  = tfirst
 	      ninter = 0
 	      Count(nsoln) = 0
-	      call AccumIni(Hash,MAXHASH)
+	      call HashIni
 	    else if(preamble(3).lt.tfirst)then
 	      call bug('f','Data does not appear to be in time order')
  	    endif
@@ -1365,20 +1399,31 @@ c
 	    if(nchan+nvis.gt.maxvis)
      *	      call bug('f','Buffer overflow: set interval larger')
 c
+	    tfirst = min(tfirst,preamble(3))
 	    tlast = max(tlast,preamble(3))
 c
 	    call despect(updated,tno,nchan,edge,chan,spect,
-     *		maxspect,nspect,sfreq,sdf,nschan,state)
+     *		maxspect,nspect,sfreq,sdf,nschan,nv,state)
 c
 	    do i=1,nchan
 	      if(flags(i).and.chan(i).gt.0)then
 	        present(i1,p) = .true.
 	        present(i2,p) = .true.
-	        call pack(i1,i2,p,spect(i),chan(i),VisId)
 		ninter = ninter + 1
 		w = abs(sdf(spect(i)))
-		call Accum(Hash,Data(i),w,VisId,
-     *			nsoln,nvis,Vis,Wt,VID,Count)
+	        call packit(i1,i2,p,spect(i),chan(i),VisId)
+		call hashIdx(VisId,nvis,idx,new)
+		if(new)then
+		  Count(nsoln) = Count(nsoln) + 1
+		  VID(idx) = VisId
+		  Vis(idx) = w*Data(i)
+		  Wt(idx) = w
+		else
+		  Vis(idx) = Vis(idx) + w*Data(i)
+		  Wt(idx) = Wt(idx) + w
+		endif
+		if(i1.eq.refant.or.i2.eq.refant)
+     *				nv(spect(i)) = nv(spect(i)) + 1
 	      else
 	        nbad = nbad + 1
 	      endif
@@ -1396,8 +1441,9 @@ c
 	  time(nsoln) = (tfirst+tlast)/2
 	  if(.not.accept(present,nants,npol,refant,minant,MAXANT))then
 	    nvis = nvis - Count(nsoln)
-	    nreg = nreg + ninter
 	    nsoln = nsoln - 1
+	    nspect = pnspect
+	    nreg = nreg + ninter
 	  else
 	    ngood = ngood + ninter
 	  endif
@@ -1405,8 +1451,6 @@ c
 c
 c  Tell the user whats what.
 c
-	call output('Number of solution intervals: '
-     *    //itoaf(nsoln))
 	if(nauto.ne.0)
      *	  call bug('w','Number of autocorrelations discarded: '
      *	  //itoaf(nauto))
@@ -1418,15 +1462,228 @@ c
      *	  //itoaf(nreg))
 	call output('Number correlations accepted: '
      *	  //itoaf(ngood))
-	call output('Number of frequency bands/settings: '
-     *	  //itoaf(nspect))
-	call output('Number of polarisations selected: '
-     *	  //itoaf(npol))
 	if(nsoln.eq.0.or.nvis.eq.0)
      *	  call bug('f','No data to process!')
 	end
 c************************************************************************
-	subroutine pack(i1,i2,p,spect,chan,VID)
+	subroutine hashIni
+c
+	implicit none
+c
+c  Initialise the hash table.
+c------------------------------------------------------------------------
+	include 'mfcal.h'
+c
+	integer i
+	logical first
+c
+c  Externals.
+c
+	integer prime
+c
+	save first
+	data first/.true./
+c
+	do i=1,MAXHASH
+	  hash(1,i) = 0
+	enddo
+c
+	if(first)nhash = prime(MAXHASH-1)
+	first = .false.
+c
+	end
+c************************************************************************
+	subroutine hashIdx(VisId,nslot,slot,new)
+c
+	implicit none
+	integer VisId,nslot,slot
+	logical new
+c
+c  This routine translates (via hash lookup) between a visibility ID to
+c  a slot number.
+c
+c  Inputs:
+c    VisId	A positive integer unique to a particular channel/polarisation/antenna pair
+c  Input/Output:
+c    nslot	The number of slots used so far. If the VisID does not have
+c		a slot already, this is incremented.
+c  Output:
+c    slot	The slot number associated with the VisID
+c    new	True if this slot is new and needs to be initialized.
+c------------------------------------------------------------------------
+	include 'mfcal.h'
+c
+	integer idx
+c
+c  Find this channel in the hash table.
+c
+	idx = mod(VisId,nHash) + 1
+	dowhile(Hash(1,idx).ne.0.and.Hash(1,idx).ne.VisId)
+	  idx = idx + 1
+	enddo
+	if(idx.eq.MAXHASH)then
+	  idx = 1
+	  dowhile(Hash(1,idx).ne.0.and.Hash(1,idx).ne.VisId)
+	    idx = idx + 1
+	  enddo
+	  if(idx.eq.MAXHASH)
+     *		call bug('f','Hash table overflow, in hashIdx')
+	endif
+	new = Hash(1,idx).eq.0
+	if(new)then
+	  nslot = nslot + 1
+	  hash(1,idx) = VisId
+	  hash(2,idx) = nslot
+	endif
+	slot = hash(2,idx)
+	end
+c************************************************************************
+	subroutine squeezed(nspect,sfreq,sdf,nschan,nv,
+     *					nspectd,spectn,chanoff)
+c
+	implicit none
+	integer nspect,nschan(nspect),nv(nspect)
+	double precision sfreq(nspect),sdf(nspect)
+	integer nspectd,spectn(nspect),chanoff(nspect)
+c
+c  Combine spectral descriptors that are almost identical (eg because
+c  of Doppler tracking) and squeeze out descriptors where there is
+c  insufficient data for a solution.
+c
+c  Input:
+c    nspect
+c    nv
+c  Input/Output:
+c    sfreq
+c    sdf
+c    nschan
+c  Output:
+c    nspectd
+c    spectn
+c    chanoff
+c------------------------------------------------------------------------
+	integer i,id,j,off
+c
+	nspectd = 0
+	do j=1,nspect
+c
+c  Look for a near match. This has the same channel increment
+c  and more than 95% overlap of channels.
+c
+	  id = 0
+	  do i=1,nspectd
+	    if(
+     *	      abs(sdf(i)-sdf(j)).lt.1e-3*min(abs(sdf(i)),abs(sdf(j)))
+     *		  .and.
+     *	      abs((sfreq(i)-sfreq(j))/sdf(i)).lt.
+     *				    0.05*min(nschan(i),nschan(j)))then
+	      id = i
+	    endif
+	  enddo
+c
+c  Case of combining where a match was found.
+c 
+	  if(id.gt.0)then
+	    spectn(j) = id
+	    off = nint((sfreq(j) - sfreq(id))/sdf(id))
+	    chanoff(j) = off
+	    nschan(id) = max(nschan(id),nschan(j)+off)
+	    if(off.lt.0)then
+	      nschan(id) = nschan(id) - off
+	      sfreq(id) = sfreq(id) + sdf(id)*off
+	      do i=1,j
+		if(spectn(i).eq.id)
+     *		  chanoff(i) = chanoff(i) - off
+	      enddo
+	    endif	    
+c
+c  Case of simply copying where no match was found but there is appropriate
+c  data.
+c
+	  else if(nv(j).gt.0)then
+	    nspectd = nspectd + 1
+	    sfreq(nspectd) = sfreq(j)
+	    sdf(nspectd) = sdf(j)
+	    nschan(nspectd) = nschan(j)
+	    chanoff(j) = 0
+	    spectn(j) = nspectd
+c
+c  Case of discarding because of no match and no appropriate data.
+c
+	  else
+	    chanoff(j) = 0
+	    spectn(j) = 0
+	  endif
+	enddo
+c
+	end
+c************************************************************************
+	subroutine squeeze(nspect,spectn,chanoff,vis,wts,vid,nvi,
+     *				Count,time,nsi,nvo,nso)
+c
+	implicit none
+	integer nspect,spectn(nspect),chanoff(nspect),nvi,nsi
+	integer Count(nsi),nvo,nso
+	complex vis(nvi)
+	real wts(nvi)
+	integer vid(nvi)
+	double precision time(nsi)
+c
+c  Combine and squeeze out data as needed.
+c
+c------------------------------------------------------------------------
+	integer i,j,k,nc,i1,i2,p,spect,chan,ndiscard,idx
+	logical new
+c
+	ndiscard = 0
+	nvo = 0
+	nso = 0
+	k = 0
+c
+	do j=1,nsi
+	  nc = 0
+	  call hashIni
+	  do i=1,Count(j)
+	    k = k + 1
+	    call unpackit(i1,i2,p,spect,chan,vid(k))
+	    chan  = chan + chanoff(spect)
+	    spect = spectn(spect)
+c
+c  Handle three cases: Data are copied across, data are combined together
+c  and data are discarded.
+c
+	    if(spect.gt.0)then
+	      call packit(i1,i2,p,spect,chan,vid(k))
+	      call hashIdx(vid(k),nvo,idx,new)
+	      if(new)then
+	        nc = nc + 1
+		vid(idx) = vid(k)
+		vis(idx) = vis(k)
+		wts(idx) = wts(k)
+	      else
+		vis(idx) = vis(idx) + vis(k)
+		wts(idx) = wts(idx) + wts(k)
+	      endif
+	    else
+	      ndiscard = ndiscard + 1
+	    endif
+	  enddo
+	  if(nc.gt.0)then
+	    nso = nso + 1
+	    Count(nso) = nc
+	    time(nso) = time(j)
+	  endif
+	enddo
+c
+c  Check!
+c
+	if(ndiscard.gt.0)call bug('w','Additional data were '//
+     *			'discarded where no solution was possible')
+	if(k.ne.nvi)call bug('f','Something screwy in Squeeze routine')
+c
+	end
+c************************************************************************
+	subroutine packit(i1,i2,p,spect,chan,VID)
 c
 	implicit none
 	integer i1,i2,p,spect,chan,VID
@@ -1434,25 +1691,25 @@ c
 c  Pack antenna and polarisation numbers into one number.
 c
 c  Input:
-c    i1
-c    i2
-c    p
-c    spect
-c    chan
+c    i1,i2	Antenna pair.
+c    p		Polarisation index.
+c    spect	Spectral window index.
+c    chan	Channel number.
 c  Output:
-c    VID
+c    VID	A positive integer used as a unique identifier for antenna pair,
+c		polarlisation, spectral window and channel.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer MAXPOL
 	parameter(MAXPOL=2)
 	VID = chan - 1
 	VID = MAXANT * VID + i1 - 1
-	VID = MAXANT  *VID + i2 - 1
-	VID = MAXPOL  *VID + p  - 1
-	VID = MAXWIN  *VID + spect - 1
+	VID = MAXANT * VID + i2 - 1
+	VID = MAXPOL * VID + p  - 1
+	VID = MAXWIN * VID + spect
 	end
 c************************************************************************
-	subroutine unpack(i1,i2,p,spect,chan,VID)
+	subroutine unpackit(i1,i2,p,spect,chan,VID)
 c
 	implicit none
 	integer i1,i2,p,spect,chan,VID
@@ -1460,20 +1717,20 @@ c
 c  Unpack antenna and polarisation number.
 c
 c  Input:
-c    VID
+c    VID	A positive integer used as a unique identifier for antenna pair,
+c		polarlisation, spectral window and channel.
 c  Output:
-c    i1
-c    i2
-c    p
-c    spect
-c    chan
+c    i1,i2	Antenna pair.
+c    p		Polarisation index.
+c    spect	Spectral window index.
+c    chan	Channel number.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer MAXPOL
 	parameter(MAXPOL=2)
 	integer VisId
 c
-	VisId = VID
+	VisId = VID - 1
 	spect = mod(VisId,MAXWIN)
 	VisId = VisId/MAXWIN
 	p     = mod(VisId,MAXPOL)
@@ -1488,77 +1745,6 @@ c
 	p = p + 1
 	spect = spect + 1
 	chan = chan + 1
-c
-	end
-c************************************************************************
-	subroutine AccumIni(Hash,maxhash)
-c
- 	implicit none
-	integer maxHash,Hash(2,MaxHash)
-c
-c  Initialise the hash table.
-c
-c------------------------------------------------------------------------
-	integer i
-c
-c  Externals.
-c
-	integer prime
-c
-	do i=1,maxHash
-	  Hash(1,i) = 0
-	enddo
-c
-	Hash(1,1) = prime(maxHash-2)
-	end
-c************************************************************************
-	subroutine Accum(Hash,Data,w,VisId,nsoln,nvis,Vis,Wt,
-     *						VID,Count)
-c
-	implicit none
-	integer VisId,nsoln,nvis,VID(*),Count(*)
-	real Wt(*),w
-	integer Hash(2,*)
-	complex Data,Vis(*)
-c
-c  Inputs:
-c    VisId	Identifier, giving channel, IF band, antennae and polarisation.
-c------------------------------------------------------------------------
-	integer nHash,iHash,indx,i
-c
-c  Find this channel in the hash table.
-c
-	nHash = Hash(1,1)
-	iHash = VisId + 1
-	indx = mod(iHash,nHash) + 2
-	dowhile(Hash(1,indx).ne.0.and.Hash(1,indx).ne.iHash)
-	  indx = indx + 1
-	enddo
-	if(indx.ge.nHash+2)then
-	  indx = 2
-	  dowhile(Hash(1,indx).ne.0.and.Hash(1,indx).ne.iHash)
-	    indx = indx + 1
-	  enddo
-	  if(indx.ge.nHash+2)
-     *		call bug('f','Hash table overflow, in Accum')
-	endif
-c
-c  Is it a new slot?
-c
-	if(Hash(1,indx).eq.0)then
-	  nvis = nvis + 1
-	  Hash(1,indx) = iHash
-	  Hash(2,indx) = nvis
-	  i = nvis
-	  Vis(i) = w*Data
-	  Wt(i) = w
-	  VID(i) = VisId
-	  Count(nsoln) = Count(nsoln) + 1
-	else
-	  i = Hash(2,indx)
-	  Vis(i) = Vis(i) + w*Data
-	  Wt(i) = Wt(i) + w
-	endif
 c
 	end
 c************************************************************************
@@ -1603,11 +1789,12 @@ c
 	end
 c************************************************************************
 	subroutine despect(updated,tno,nchan,edge,chan,spect,
-     *			maxspect,nspect,sfreq,sdf,nschan,state)
+     *			maxspect,nspect,sfreq,sdf,nschan,nv,state)
 c
 	implicit none
 	integer tno,nchan,chan(nchan),spect(nchan),edge(2)
 	integer nspect,maxspect,nschan(maxspect),state(3,maxspect+2)
+	integer nv(maxspect)
 	double precision sfreq(maxspect),sdf(maxspect)
 	logical updated
 c
@@ -1679,7 +1866,7 @@ c
 	      f = sfreq0(ispect) +
      *		  sdf0(ispect) * (start - 1 + 0.5*(nwidth-1))
 	      call SetState(state,f,nstep*sdf0(ispect),chans,
-     *		maxspect,nspect,sfreq,sdf,nschan,bdrop,edrop)
+     *		maxspect,nspect,sfreq,sdf,nschan,nv,bdrop,edrop)
 	      n = n - chans
 	      start = start + nstep * chans
 	    enddo
@@ -1696,7 +1883,7 @@ c
 	    call uvgetvrr(tno,'wwidth',wwidth,nwide)
 	    do j=start,start+nchan-1
 	      call SetState(state,dble(wfreq(j)),dble(wwidth(j)),1,
-     *		    maxspect,nspect,sfreq,sdf,nschan,0,0)
+     *		    maxspect,nspect,sfreq,sdf,nschan,nv,0,0)
 	    enddo
 	  else
 	    call bug('f','Unsupported linetype')
@@ -1729,11 +1916,11 @@ c
 	end
 c************************************************************************
 	subroutine SetState(state,f,df,nchan,
-     *		maxspect,nspect,sfreq,sdf,nschan,bdrop,edrop)
+     *		maxspect,nspect,sfreq,sdf,nschan,nv,bdrop,edrop)
 c
 	implicit none
 	integer maxspect,nspect,nchan,bdrop,edrop
-	integer state(3,maxspect+2),nschan(maxspect)
+	integer state(3,maxspect+2),nschan(maxspect),nv(maxspect)
 	double precision f,df,sfreq(maxspect),sdf(maxspect)
 c
 c  Find the current frequency setup in the list of previous setups.
@@ -1750,6 +1937,9 @@ c    sfreq
 c    sdf
 c    nschan
 c    state
+c  Output:
+c    nv		Number of good visibilities foir the reference antenna.
+c		Initialised to 0 if needed.
 c------------------------------------------------------------------------
 	logical more
 	integer ispect,i
@@ -1784,6 +1974,7 @@ c
 	  sdf(nspect) = df
 	  sfreq(nspect) = f0
 	  nschan(nspect) = nchan - bdrop - edrop
+	  nv(nspect) = 0
 	else
 	  nschan(ispect) = max(nschan(ispect),nchan - bdrop - edrop)
 	endif
@@ -2249,7 +2440,6 @@ c------------------------------------------------------------------------
 	integer b1(MAXBASE),b2(MAXBASE)
 	complex ref,G(MAXANT),SVM(MAXBASE)
 	real SMM(MAXBASE)
-        external scale 
 c
 	do i=1,nants
 	  Idx(i) = 0
@@ -2292,7 +2482,7 @@ c
 	if(nantsd.ge.minant)then
 	  if(init)then
 	    call Phasol(nantsd,nbld,SVM,b1,b2,G,tol)
-	    call Scale(nantsd,nbld,SVM,SMM,b1,b2,G)
+	    call Scaleit(nantsd,nbld,SVM,SMM,b1,b2,G)
 	  endif
 	  call Amphasol(nantsd,nbld,SVM,SMM,b1,b2,G,tol,epsi)
 c
@@ -2392,7 +2582,7 @@ c#maxloop 32
 	enddo
 	end
 c************************************************************************
-	subroutine Scale(nants,nbl,SumVM,SumMM,b1,b2,Gain)
+	subroutine Scaleit(nants,nbl,SumVM,SumMM,b1,b2,Gain)
 c
 	implicit none
 	integer nants,nbl
@@ -2538,7 +2728,6 @@ c------------------------------------------------------------------------
 	integer i,j,bl,off,spect,chan,i1,i2,p
 	real theta,W
 	complex V,Model
-        external unpack
 c
 	do p=1,npol
 	  do j=1,nchan
@@ -2556,7 +2745,7 @@ c
 	do j=1,nsoln
 	  do i=1,Count(j)
 	    off = off + 1
-	    call unpack(i1,i2,p,spect,chan,VID(off))
+	    call unpackit(i1,i2,p,spect,chan,VID(off))
 	    chan =  chan + ischan(spect)
 	    V = Vis(off)
 	    W = Wt(off)
@@ -2633,7 +2822,6 @@ c  Input/Output:
 c    Gains
 c    Tau
 c------------------------------------------------------------------------
-	include 'maxdim.h'
 	include 'mfcal.h'
 	integer MAXITER,MAXVAR
 	parameter(MAXITER=200,MAXVAR=(1+2*MAXPOL)*MAXANT)
@@ -2655,7 +2843,7 @@ c
 c  Externals.
 c
 	character itoaf*4
-	external FUNC,DERIVE,unpack
+	external FUNC,DERIVE
 c
 c  Check we have enough space.
 c
@@ -2674,7 +2862,7 @@ c  Copy the data across into common, determining the variable index as we go.
 c
 	nvar = 0
 	do i=1,n
-	  call unpack(i1,i2,p,spect,chan,VID(i))
+	  call unpackit(i1,i2,p,spect,chan,VID(i))
 	  chan = chan + ischan(spect)
 	  if(Idx(i1,p).eq.0)then
 	    Idx(i1,p) = nvar + 1
@@ -2896,7 +3084,6 @@ c
 	integer nbl,bl,p,i,i1,i2,spect,chan
 	real SumMM(MAXBASE,MAXPOL),epsi
 	complex SumVM(MAXBASE,MAXPOL),Model
-        external unpack
 c
 c  Initialise the accumulators.
 c
@@ -2911,7 +3098,7 @@ c
 c  Now accumulate all the rubbish.
 c
 	do i=1,n
-	  call unpack(i1,i2,p,spect,chan,VID(i))
+	  call unpackit(i1,i2,p,spect,chan,VID(i))
 	  chan = chan + ischan(spect)
 	  bl = (i2-1)*(i2-2)/2 + i1
 	  Model = Source(chan) *
