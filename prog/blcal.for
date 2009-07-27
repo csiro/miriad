@@ -38,7 +38,7 @@ c	Normal Stokes/polarisation processing. See the help on "stokes"
 c	for more information. The default is to use the Stokes/polarisations
 c	present in the dataset.
 c@ interval
-c	Solution time interval, in minutes. The default is 5 minutes.
+c	Solution time interval, in minutes. The default is a single solution.
 c@ out
 c	The name of the output uv data set. No default.
 c@ options
@@ -50,6 +50,9 @@ c	            with a parallel-hand gain. In particular XY and YX are
 c	            corrected with the mean of the XX and YY gains; RL and LR
 c	            are corrected with the mean of RR and LL gains; Q,U, and V
 c	            are corrected with the I gain.
+c	  replace   Rather than writing the corrected dataset, write out a
+c		    dataset where the data are replaced with the model of a
+c		    unit point source with baseline errors.
 c--
 c  History:
 c    rjs  14mar97 Original version.
@@ -61,16 +64,17 @@ c    rjs  12aug97 Correct scaling bug introduced above. Improve cross-hand
 c		  polarisation handling.
 c    rjs  14aug97 Handle caase of data beyond solutions.
 c    rjs  15mar00 Generalise options=nopol.
+c    rjs  24jul09 options=replace. Make the default "interval" to infinite time.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
-	parameter(version='BlCal: version 1.0 15-Mar-00')
+	parameter(version='BlCal: version 1.0 24-Jul-09')
 	character out*64,line*32
 	integer lVis,lRef,lOut
 	integer nchan,pol,npol,nfiles
 	double precision interval,preamble(6)
 	complex data(MAXCHAN)
-	logical flags(MAXCHAN),self,nopass,nopol
+	logical flags(MAXCHAN),self,nopass,nopol,replace
 	integer pols(-8:4)
 c
 c  Externals.
@@ -85,10 +89,9 @@ c  Get the inputs.
 c
 	call output(version)
 	call keyini
-	call GetOpt(nopass,nopol)
+	call GetOpt(nopass,nopol,replace)
 	call uvDatInp('vis','sdlcef3')
-	call keyd('interval',interval,5.d0)
-	if(interval.le.0)call bug('f','Invalid value for interval')
+	call keyd('interval',interval,0.d0)
 	interval = interval/(60.*24.)
 	call keya('out',out,' ')
 	if(out.eq.' ')call bug('f','An output must be given')
@@ -100,7 +103,8 @@ c
 	self = nfiles.eq.1
 	if(nfiles.ne.1.and.nfiles.ne.2)call bug('f',
      *	  'Either one or two input datasets must be given')
-	if(self)call bug('w','Baseline-based self-calibration '//
+	if(self.and..not.replace)
+     *	  call bug('w','Baseline-based self-calibration '//
      *	  'is a rather dangerous/dubious operation')
 c
 c  Open the reference, get the solution, and close.
@@ -135,7 +139,7 @@ c
 	  else
 	    preamble(6) = pol
 	  endif
-	  call DatCorr(preamble(4),data,flags,nchan)
+	  call DatCorr(preamble(4),data,flags,nchan,replace)
 	  call varCopy(lVis,lOut)
 	  if(pol.ne.0)then
 	    call uvputvri(lOut,'pol',pol,1)
@@ -155,31 +159,33 @@ c
 	call uvclose(lOut)
 	end
 c************************************************************************
-	subroutine GetOpt(nopass,nopol)
+	subroutine GetOpt(nopass,nopol,replace)
 c
 	implicit none
-	logical nopass,nopol
+	logical nopass,nopol,replace
 c------------------------------------------------------------------------
 	integer NOPTS
-	parameter(NOPTS=2)
+	parameter(NOPTS=3)
 	character opts(NOPTS)*8
 	logical present(NOPTS)
 c
-	data opts/'nopassol','nopolsol'/
+	data opts/'nopassol','nopolsol','replace '/
 c
 	call options('options',opts,present,NOPTS)
-	nopass = present(1)
-	nopol  = present(2)
+	nopass  = present(1)
+	nopol   = present(2)
+	replace = present(3)
 c
 	end
 c************************************************************************
-	subroutine datCorr(co,data,flags,nchan1)
+	subroutine datCorr(co,data,flags,nchan1,replace)
 c
 	implicit none
 	integer nchan1
 	double precision co(3)
 	complex data(nchan1)
 	logical flags(nchan1)
+	logical replace
 c------------------------------------------------------------------------
 	include 'blcal.h'
 	integer pol,bl,i0,i1,i2,i
@@ -214,11 +220,11 @@ c
 	if(.not.more)then
 	  call datApply(memc(gidx(i1)),memi(fidx(i1)),time(i1),
      *			memc(gidx(i2)),memi(fidx(i2)),time(i2),
-     *			data,flags,co(1),nchan)
+     *			data,flags,co(1),nchan,replace)
 	else if(i0.ne.0)then
 	  call datApply(memc(gidx(i0)),memi(fidx(i0)),co(1),
      *			memc(gidx(i0)),memi(fidx(i0)),co(1),
-     *			data,flags,co(1),nchan)
+     *			data,flags,co(1),nchan,replace)
 	else
 	  do i=1,nchan
 	    flags(i) = .false.
@@ -228,7 +234,7 @@ c
 	end
 c************************************************************************
 	subroutine datApply(vis1,cnt1,t1,vis2,cnt2,t2,
-     *			data,flags,time,nchan)
+     *			data,flags,time,nchan,replace)
 c
 	implicit none
 	integer nchan
@@ -236,6 +242,7 @@ c
 	complex vis1(nchan),vis2(nchan),data(nchan)
 	integer cnt1(nchan),cnt2(nchan)
 	logical flags(nchan)
+	logical replace
 c
 c------------------------------------------------------------------------
 	integer i
@@ -245,17 +252,27 @@ c
 	if(time.eq.t1)then
 	  do i=1,nchan
 	    if(cnt1(i).gt.0)then
-	      data(i) = data(i)/vis1(i)
+	      if(replace)then
+		data(i) = vis1(i)
+	      else
+	        data(i) = data(i)/vis1(i)
+	      endif
 	    else
 	      flags(i) = .false.
+	      if(replace)data(i) = 1
 	    endif
 	  enddo
 	else if(time.eq.t2)then
 	  do i=1,nchan
 	    if(cnt2(i).gt.0)then
-	      data(i) = data(i)/vis2(i)
+	      if(replace)then
+	        data(i) = vis2(i)
+	      else
+	        data(i) = data(i)/vis2(i)
+	      endif
 	    else
 	      flags(i) = .false.
+	      if(replace)data(i) = 1
 	    endif
 	  enddo
 	else
@@ -264,9 +281,14 @@ c
 	  do i=1,nchan
 	    if(cnt1(i)*cnt2(i).gt.0)then
 	      temp = a*vis1(i) + b*vis2(i)
-	      data(i) = data(i)/temp
+	      if(replace)then
+	        data(i) = temp
+	      else
+	        data(i) = data(i)/temp
+	      endif
 	    else
 	      flags(i) = .false.
+	      if(replace)data(i) = 1
 	    endif
 	  enddo
 	endif
@@ -329,8 +351,8 @@ c
 c
 c  Is this the end of an integration.
 c
-	    if(buffered.and.(t-tmin.gt.interval.or.
-     *			     tmax-t.gt.interval))then
+	    if(interval.gt.0.and.buffered.and.
+     *		(t-tmin.gt.interval.or.tmax-t.gt.interval))then
 	      call datFlush(Tail,MAXPOL,MAXBASE,pmin,pmax,bmin,bmax)
 	      buffered = .false.
 	    endif
