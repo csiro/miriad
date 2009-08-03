@@ -15,6 +15,7 @@
 /*    29jan06 rjs  Call mallopt on 64-bit address machines on Linux	*/
 /*    13mar06 rjs  Coditional include of malloc.h, which appears not    */
 /*		   to be part of MacOS dialect.				*/
+/*    22jul09 rjs  Support ptrdiff data type.				*/
 /*                                                                      */
 /************************************************************************/
 
@@ -72,21 +73,21 @@ c
   return size/base_unit;
 }
 /************************************************************************/
-fortran integer function mmalloc(integer data,integer size)
+fortran subroutine mmalloc(ptrdiff ptr,integer data,integer size)
 /**mmalloc -- Allocate a block of memory.				*/
 /*&rjs                                                                  */
 /*:miscellaneous                                                        */
 /*+ FORTRAN call sequence:
 
-        integer function mmalloc(data,size)
+        subroutine mmalloc(ptr,data,size)
 c
 	implicit none
+        ptrdiff ptr
         integer size
 	integer data(*)
 
   This allocates memory on the heap. This returns a FORTRAN index,
-  relative to data(1) of the allocated memory. The data type is
-  given by type.
+  relative to data(1) of the allocated memory.
 
   Input:
     data	The returned index is relative to data(1). That is, if
@@ -95,26 +96,28 @@ c
     size        Number of integers to allocate.
 
   Output:
-    mmAlloc	Index to the allocated data. If the allocation fails,
+    ptr		Index to the allocated data. If the allocation fails,
 		an index of zero is returned.				*/
 
 /*--                                                                    */
 /*----------------------------------------------------------------------*/
 {
   ptrdiff_t offset;
-  fort_integer t;
+  fort_ptrdiff t;
   fort_integer *s;
 
 #if defined(linux)
-  if(sizeof(void *)> sizeof(fort_integer))mallopt(M_MMAP_MAX,0);
+/*  if(sizeof(void *) > sizeof(fort_ptrdiff))mallopt(M_MMAP_MAX,0); */
+  if(sizeof(void *) > sizeof(int))mallopt(M_MMAP_MAX,0);
 #endif
-  s = (fort_integer *)malloc( (size_t)(size.val * base_unit) );
-  if(s == (fort_integer *)NULL) return 0;
-  offset = s - data.addr;
-  t = (fort_integer)offset;
-  if(t != offset)bug_c('f',"Some odd form of rounding problem, in mmAlloc");
 
-  return t + 1;
+  s = (fort_integer *)malloc( (size_t)(size.val) * (size_t)(base_unit) );
+  *(ptr.addr) = 0;
+  if(s == (fort_integer *)NULL) return;
+  offset = s - data.addr;
+  t = (fort_ptrdiff)offset;
+  if(t != offset)bug_c('f',"Some odd form of rounding problem, in mmAlloc");
+  *(ptr.addr) = t+1;
 }
 /************************************************************************/
 fortran subroutine mmfree(integer data)
