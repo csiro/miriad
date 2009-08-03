@@ -15,7 +15,7 @@ appear as in a C routine.
 
 Usage:
 
-  intf2c -s system [in] [out]
+  intf2c -s system [-i type] [-r type] [-d type] [-l type] [-p type] [in] [out]
 
     system: One of "vms","hpux","sun","bsd","trace","alliant","convex",
             "unicos","alpha", "sgi", "linux". No default.
@@ -23,9 +23,11 @@ Usage:
     in:     Input file. Default is standard input.
     out:    Output file. Default is standard output.
 
-    -x      Define a FORTRAN INTEGER as a long int
-    -y      Define a FORTRAN REAL    as a double
-    -c      Invoke code to convert between FORTRAN and C integers.
+    -i,-r,-d,-l,-p Define the C datatype corresponding to FORTRAN
+            INTEGER, REAL, DOUBLE PRECISION, LOGICAL and PTRDIFF
+            respectively. The default is "int", "float", "double", "int"
+            and "int" respectively.
+    -c      Invoke code to convert between FORTRAN and C integers and logicals.
 
 Intf2c and the C preprocessor:
 
@@ -103,9 +105,10 @@ fortran subroutine fstrcpy(character out,character in)
 /*    rjs  20nov94 Added Alphas.					*/
 /*    rjs  26jan95 Added f2c.						*/
 /*    mrc  14jul06 Get it to compile with 'gcc -Wall' without warnings. */
+/*    rjs  21jul09 Change in flags for types. Add FORTRAN PTRDIFF type. */
 /************************************************************************/
 
-#define VERSION_ID "version 1.0 26-Jan-95"
+#define VERSION_ID "version 1.0 21-Jul-09"
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -172,7 +175,8 @@ SYSTEM systems[] = {
 #define TYPE_LOGICAL	0x08
 #define TYPE_DOUBLE	0x10
 #define TYPE_CMPLX	0x20
-#define TYPE_VOID	0x40
+#define TYPE_PTRDIFF    0x40
+#define TYPE_VOID	0x80
 
 #define MAXHASH 257
 typedef struct arg { char *name;
@@ -186,8 +190,9 @@ char *type_label();
 SYSTEM *set_system_type();
 char *Get_Word(),*Get_Token(),*Lower_case();
 void process(),Handle_Arg(),Interface_Release(),usage();
+char *fortran_real,*fortran_integer,*fortran_logical,*fortran_double,*fortran_ptrdiff;
 
-int lineno,nesting,longint,longreal,longlog,cvtint,cvtlog;
+int lineno,nesting,cvtint,cvtlog;
 char last_char;
 /************************************************************************/
 int main(argc,argv)
@@ -202,8 +207,14 @@ char *argv[];
 
 /* Handle the command line. Determine input and output files and the system. */
 
+  fortran_real = "float";
+  fortran_integer = "int";
+  fortran_logical = "int";
+  fortran_ptrdiff = "int";
+  fortran_double  = "double";
+
   input = output = NULL; sys_type = NULL;
-  cvtint = longint = longreal = longlog = 0;
+  cvtint = 0;
   for(i=1; i < argc; i++){
     s = argv[i];
     if(*s == '-'){
@@ -213,9 +224,11 @@ char *argv[];
 	  if(++i < argc)
 	    sys_type = set_system_type(argv[i]);
 	  break;
-	case 'x': longint = 1; break;
-	case 'y': longreal = 1; break;
-	case 'z': longlog  = 1; break;
+	case 'i': if(++i < argc)fortran_integer = argv[i]; break;
+	case 'r': if(++i < argc)fortran_real    = argv[i]; break;
+	case 'd': if(++i < argc)fortran_double  = argv[i]; break;
+	case 'l': if(++i < argc)fortran_logical = argv[i]; break;
+	case 'p': if(++i < argc)fortran_ptrdiff = argv[i]; break;
 	case 'c': cvtint = 1; cvtlog = 1; break;
 	case '?':
 	  usage();
@@ -308,13 +321,11 @@ SYSTEM *sys_type;
   if(cvtlog)printf("#define FORTRAN_CVT_LOG 1\n");
   else printf("#define FORTRAN_CVT_LOG 0\n");
 
-  if(longint)printf("typedef long int fort_integer;\n");
-  else       printf("typedef int fort_integer;\n");
-  if(longlog)printf("typedef long int fort_logical;\n");
-  else       printf("typedef int fort_logical;\n");
-  if(longreal) printf("typedef double fort_real;\n");
-  else         printf("typedef float  fort_real;\n");
-  printf("typedef double fort_double;\n");
+  printf("typedef %s fort_integer;\n",fortran_integer);
+  printf("typedef %s fort_logical;\n",fortran_logical);
+  printf("typedef %s fort_ptrdiff;\n",fortran_ptrdiff);
+  printf("typedef %s fort_real;\n",fortran_real);
+  printf("typedef %s fort_double;\n",fortran_double);
 
   printf("char *zterm(char *string,int length);\n");
   printf("void pad(char *string,int length);\n");
@@ -410,6 +421,7 @@ INTERFACE *rout;
     else if(!strcmp("real",s))     type = TYPE_REAL;
     else if(!strcmp("double",s))   type = TYPE_DOUBLE;
     else if(!strcmp("complex",s))  type = TYPE_CMPLX;
+    else if(!strcmp("ptrdiff",s))  type = TYPE_PTRDIFF;
     else if(!strcmp("character",s))type = TYPE_CHAR;
     else break;
 
@@ -543,6 +555,7 @@ int type;
     case TYPE_CHAR:	s = "char";		break;
     case TYPE_DOUBLE:	s = "fort_double";	break;
     case TYPE_LOGICAL:	s = "fort_logical";	break;
+    case TYPE_PTRDIFF:  s = "fort_ptrdiff";	break;
     case TYPE_CMPLX:	s = "fort_real";	break;
     case TYPE_VOID:	s = "void";		break;
     default:
