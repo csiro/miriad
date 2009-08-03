@@ -9,7 +9,7 @@ for these machines.
 
 Usage:
 
- ratty [-h] [-s system] [-I incdir] [-D symbol] [-bglu [-n start inc] [in] [out]
+ ratty [-h] [-s system] [-I incdir] [-D symbol] [-bglu [-n start inc] [-p data-type] [in] [out]
 
     system:  One of "f77" (generic unix compiler), "unicos" (Cray FORTRAN
              compiler), "vms" (VMS FORTRAN), "alliant" (alliant unix
@@ -46,6 +46,8 @@ Usage:
     -u:      Convert all variables, etc, to upper case.
              (some of the system generated if/then/else/endif/continue
               are not converted to upper case)
+
+    -p:      Give the FORTRAN type to be used for "ptrdiff" data type.
 
     in:      Input file name. If omitted, standard input is assumed
              and output must be the standard output.
@@ -104,8 +106,9 @@ vector processing capacities (compilers "unicos", "alliant" and "convex"):
 /*    rjs  22may06 Change to appease cygwin.				*/
 /*    mrc  14jul06 Get it to compile with 'gcc -Wall' without warnings. */
 /*    pjt  12mar07 merged MIR4 and atnf versions; re-added -h           */
+/*    rjs  21jul09 Add translation of "ptrdiff" data type.		*/
 /*									*/
-/* $Id: ratty.c,v 1.5 2007/03/14 01:20:33 cal103 Exp $ */
+/* $Id: ratty.c,v 1.6 2009/08/03 00:31:03 sau078 Exp $ */
 /************************************************************************/
 /* ToDos/Shortcomings:                                                  */
 /*  The -u flag doesn't convert self-generated if/then/continue etc.    */
@@ -115,7 +118,7 @@ vector processing capacities (compilers "unicos", "alliant" and "convex"):
 /*      (uflag?textout("continue\n"):textout("CONTINUE\n"));            */
 /*  comment lines like "c#define foo bar" still define !!!              */
 /************************************************************************/
-#define VERSION_ID   "12-mar-07"
+#define VERSION_ID   "21-Jul-07"
 
 #define max(a,b) ((a) > (b) ? (a) : (b) )
 #define min(a,b) ((a) < (b) ? (a) : (b) )
@@ -203,6 +206,7 @@ static int dbslash,offlevel,level,sys,label,uselabel,depth,lines,routines,chars;
 static int comment,in_routine,gflag,lflag,uflag;
 static int loops[MAXDEPTH],dowhile[MAXDEPTH];
 struct link_list {char *name; struct link_list *fwd;} *defines,*incdir;
+static char *ptrdiff;
 
 private int continuation,quoted=FALSE;
 private int lower,increment;
@@ -220,6 +224,7 @@ int main(int argc,char *argv[])
   offlevel = level = uselabel = depth = lines = routines = chars= 0;
   lower = LOWER;
   increment = 1;
+  ptrdiff = "integer";
 
 /* Handle the command line. */
 
@@ -239,6 +244,8 @@ int main(int argc,char *argv[])
 	case 'n': if(i+2 < argc){ get_labelnos(argv[i+1],argv[i+2]); i += 2; }; break;
 	case 'i':
 	case 'I': if(++i < argc) incdir  = add_list(incdir,argv[i]);	break;
+	case 'p': 
+	case 'P': if(++i < argc) ptrdiff = argv[i];		break;
 	case 'g': gflag=TRUE; 					break;
         case 'l': lflag = TRUE;                                 break;
 	case 'u': uflag = TRUE;                                 break;
@@ -364,6 +371,11 @@ char *infile;
       if(!strcmp(token,"program") && systems[sys].prog){
 	blankout(indent); textout("program "); textout(s);
 	textout("(tty,input=tty,output=tty)\n");
+
+/* ptrdiff statement. */
+      } else if(!strcmp(token,"ptrdiff")){
+        blankout(indent); textout(ptrdiff); textout(" "); textout(s);
+        textout("\n");
 
 /* DO and DOWHILE loops. */
       } else if(!systems[sys].doloop &&
@@ -706,6 +718,13 @@ int *indent,*lineno,*bracketting;
   } else if(!strncmp(token,"program",7)){
     if(*s)*token = 0;
     else  token[7] = 0;
+
+/* Check for ptrdiff declaration */
+
+  } else if(!strncmp(token,"ptrdiff",7)){
+    if(*s == '(')s = skipexp(s,bracketting);
+    if(*s == ',' || *s == 0) token[7]=0;
+    else *token=0;
 
 /* Check for a DO or DOWHILE statement. */
 

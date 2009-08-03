@@ -55,9 +55,10 @@
 		 do-loop variables. Flag VMS record structures.
    rjs   22may06 Change to appease cygwin.
    mrc   14jul06 Get it to compile with 'gcc -Wall' without warnings.
+   rjs   21jul09 Add ptrdiff data type.
 ******************************************************************************/
 
-#define VERSION_ID "22-May-06"
+#define VERSION_ID "21-Jul-09"
 
 /*= flint - fortran source code verifier */
 /*& rjs pjt */
@@ -142,6 +143,7 @@
 
   Recognised FORTRAN extensions:
     * INTENT statement
+    * PTRDIFF data type.
     * DO/ENDDO, DOWHILE/ENDDO
     * # to start comments
     * tabs and full ascii character set.
@@ -251,7 +253,7 @@
 #define F_IN		0x0020
 #define F_ARG		0x0040		/* Variable or EXTERNAL is a dummy
 					   argument */
-#define F_SUBARG     0x1000000          /* Set if it appears as an actual
+#define F_SUBARG     0x8000000          /* Set if it appears as an actual
 					   subroutine argument. */
 #define F_CALLED     0x2000000		/* Set if this sub/func has been
 					   called. */
@@ -271,15 +273,16 @@
 #define F_COMPLEX      0x20000		/* Complex */
 #define F_CHAR	       0x40000		/* Character */
 #define F_LOGICAL      0x80000		/* Logical */
-#define F_VOID	      0x100000		/* SUBROUTINE */
-#define F_GENERIC     0x200000		/* Fortran generic function */
-#define F_STATEMENT   0x400000		/* Statement function. */
-#define F_EXTERNAL    0x800000		/* Appears in an EXTERNAL statement. */
+#define F_PTRDIFF     0x100000		/* Pointer difference */
+#define F_VOID	      0x200000		/* SUBROUTINE */
+#define F_GENERIC     0x400000		/* Fortran generic function */
+#define F_STATEMENT   0x800000		/* Statement function. */
+#define F_EXTERNAL   0x1000000		/* Appears in an EXTERNAL statement. */
 
 #define IO_MASK    (F_IN|F_OUT)
-#define TYPE_MASK  (F_LOGICAL|F_INTEGER|F_REAL|F_DOUBLE|F_COMPLEX|F_CHAR|\
+#define TYPE_MASK  (F_LOGICAL|F_PTRDIFF|F_INTEGER|F_REAL|F_DOUBLE|F_COMPLEX|F_CHAR|\
 					F_GENERIC|F_VOID)
-#define TYPES_MASK (F_LOGICAL|F_INTEGER|F_REAL|F_DOUBLE|F_COMPLEX|F_CHAR)
+#define TYPES_MASK (F_LOGICAL|F_PTRDIFF|F_INTEGER|F_REAL|F_DOUBLE|F_COMPLEX|F_CHAR)
 
 #define ROUTE_MASK (F_ROUTINE|F_STATEMENT|F_EXTERNAL)
 
@@ -644,12 +647,13 @@ SYMBOL *p;
 			{"complex ",  "",   F_COMPLEX,F_COMPLEX},
 			{"character ","",   F_CHAR,F_CHAR},
 			{"logical ",  "",   F_LOGICAL,F_LOGICAL},
+			{"ptrdiff ", "",    F_PTRDIFF,F_PTRDIFF},
 			{"external ", "",   F_EXTERNAL,F_EXTERNAL},
 			{"intent(out) ","", F_OUT,F_OUT},
 			{"intent(in) ","",  F_IN,F_IN},
 		        {"intent(unknown) ","",F_IN|F_OUT,0}};
 
-#define NSTATES 11
+#define NSTATES 12
 
   fprintf(fh,"c***************************************************************\n");
   sprintf(line,"%s %s(",usage(p->flags,temp),p->name);
@@ -940,6 +944,7 @@ private void define_statements()
     def_statement("open(",open_statement,0,STATE_EXEC),
     def_statement("parameter",parameter_statement,0,STATE_DECL),
     def_statement("program",prog_sub_func_statement,F_VOID,STATE_PROG_SUB_FUNC),
+    def_statement("ptrdiff",declaration_statement,F_PTRDIFF,STATE_DECL),
     def_statement("read(",read_write_statement,F_OUT,STATE_EXEC),
     def_statement("real",declaration_statement,F_REAL,STATE_DECL),
     def_statement("record/",vms_record_statement,0,STATE_DECL),
@@ -1189,12 +1194,12 @@ STATEMENT *f;
 	s = handle_indices(s,INDICE_WILD|INDICE_COLON);
       }
       if(!align_given && (flag0 & F_DOUBLE) &&
-	 (flags & (F_INTEGER|F_REAL|F_COMPLEX|F_LOGICAL))){
+	 (flags & (F_INTEGER|F_REAL|F_COMPLEX|F_LOGICAL|F_PTRDIFF))){
 	error("Possible COMMON block alignment problem.");
 	align_given = TRUE;
       }
       if(!mixed_given && (flags & F_CHAR) &&
-	 (flags & (F_INTEGER|F_REAL|F_DOUBLE|F_COMPLEX|F_LOGICAL))){
+	 (flags & (F_INTEGER|F_REAL|F_DOUBLE|F_COMPLEX|F_LOGICAL|F_PTRDIFF))){
 	error("COMMON block mixes character and numeric variables.");
 	mixed_given = TRUE;
       }
@@ -1573,9 +1578,10 @@ char *s;
     flags = set_variable(variable,F_OUT);
     switch(type){
      case F_REAL:
-     case F_INTEGER:
      case F_COMPLEX:
      case F_DOUBLE:	flags &= F_REAL|F_INTEGER|F_COMPLEX|F_DOUBLE; break;
+     case F_INTEGER:	flags &= F_REAL|F_INTEGER|F_COMPLEX|F_DOUBLE|F_PTRDIFF; break;
+     case F_PTRDIFF:    flags &= F_PTRDIFF;			      break;
      case F_LOGICAL:	flags &= F_LOGICAL;			      break;
      case F_CHAR:	flags &= F_CHAR;			      break;
     }
@@ -2380,6 +2386,7 @@ int *typed;
   else if(flags & F_COMPLEX)*typed = F_COMPLEX;
   else if(flags & F_DOUBLE) *typed = F_DOUBLE;
   else if(flags & F_REAL)   *typed = F_REAL;
+  else if(flags & F_PTRDIFF)*typed = F_PTRDIFF;
   else if(flags & F_INTEGER)*typed = F_INTEGER;
   else if(flags & F_CHAR)   *typed = F_CHAR;
   else *typed = 0;
@@ -2612,7 +2619,7 @@ int flags;
       s++;
     }else{
       s = handle_expression(s,&type);
-      if(type && type != F_INTEGER)
+      if(type && type != F_INTEGER && type != F_PTRDIFF)
 	error("Non-integer array or string subscript");
       if((type || (flags & INDICE_NULL)) && (flags & INDICE_COLON)
         && *s == ':'){
@@ -3060,6 +3067,7 @@ char *line;
     switch(flags & TYPE_MASK){
       case F_LOGICAL:	type = "logical function";	break;
       case F_INTEGER:	type = "integer function";	break;
+      case F_PTRDIFF:	type = "ptrdiff function";	break;
       case F_REAL:	type = "real function";		break;
       case F_DOUBLE:	type = "double function";	break;
       case F_COMPLEX:	type = "complex function";	break;
@@ -3072,6 +3080,7 @@ char *line;
     switch(flags & TYPE_MASK){
       case F_LOGICAL:	type = "logical";		break;
       case F_INTEGER:	type = "integer";		break;
+      case F_PTRDIFF:	type = "ptrdiff";		break;
       case F_REAL:	type = "real";			break;
       case F_DOUBLE:	type = "double";		break;
       case F_COMPLEX:	type = "complex";		break;
