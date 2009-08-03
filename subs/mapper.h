@@ -20,11 +20,12 @@ c
 	integer nchan(MAXT),nx(MAXT),ny(MAXT),nt
 	integer n1,n2,nu,nv,u0,v0,nextra,nxc,nyc
 	logical ginit
-	integer nBuff,pBuff
+	integer nBuff
+	ptrdiff pBuff
 	character mode*8
-	common/mapcom/scale,cgf,xcorr,ycorr,umax,vmax,
+	common/mapcom/pBuff,scale,cgf,xcorr,ycorr,umax,vmax,
      *	  tscr,nvis,width,ncgf,offcorr,chan1,chan2,npnt,totchan,
-     *	    nchan,nx,ny,nt,n1,n2,nu,nv,u0,v0,nextra,nxc,nyc,nBuff,pBuff,
+     *	    nchan,nx,ny,nt,n1,n2,nu,nv,u0,v0,nextra,nxc,nyc,nBuff,
      *	  ginit
 	common/mapcomc/mode
 c

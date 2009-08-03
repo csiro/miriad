@@ -301,7 +301,7 @@ c    rjs   29jun05  Handle changes in calling sequence to mostab/hdtab routines.
 c    rjs   03apr09  Change way of accessing scrio to help access larger files.
 c  Bugs:
 c
-c $Id: invert.for,v 1.4 2009/04/08 15:30:15 sau078 Exp $
+c $Id: invert.for,v 1.5 2009/08/03 00:34:18 sau078 Exp $
 c-----------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'maxdim.h'
@@ -324,7 +324,7 @@ c
 c
 	integer tno,tvis
 	integer nUWts,nMMap
-	integer UWts,Map,MMap
+	ptrdiff UWts,Map,MMap
 c
 	integer nRuns,Runs(3,MAXRUNS)
 c
@@ -341,7 +341,7 @@ c
 	data slops/'zero        ','interpolate '/
 c-----------------------------------------------------------------------
         version = versan ('invert',
-     :    '$Id: invert.for,v 1.4 2009/04/08 15:30:15 sau078 Exp $')
+     :    '$Id: invert.for,v 1.5 2009/08/03 00:34:18 sau078 Exp $')
 c
 c  Get the input parameters. Convert all angular things into
 c  radians as soon as possible!!
@@ -527,7 +527,7 @@ c
 	if(.not.Natural)then
 	  call output('Calculating the weights ...')
 	  nUWts = (wnu/2+1) * wnv * npnt
-	  call Memalloc(UWts,nUWts,'r')
+	  call Memallop(UWts,nUWts,'r')
 	  call WtCalc(tscr,memr(UWts),wdu,wdv,wnu,wnv,npnt,
      *						nvis,npol*nchan)
 	  if(robust.gt.-4)
@@ -549,7 +549,7 @@ c
      *	  nvis,npol,nchan,mosaic,idb,sdb,doamp,dophase,freq0,Rms,
      *	  ChanWt,lmn,umax,vmax,cellx,celly)
 c
-	if(nUWts.gt.0)call MemFree(UWts,nUWts,'r')
+	if(nUWts.gt.0)call MemFrep(UWts,nUWts,'r')
 	if(mosaic)call mosGFin
 c
 c  Tell the user about the noise level in the output images.
@@ -598,7 +598,7 @@ c  Create space for the mosaiced image, if needed.
 c
 	if(mosaic)then
 	  nMMap = mnx*mny
-	  call MemAlloc(MMap,nMMap,'r')
+	  call MemAllop(MMap,nMMap,'r')
 	else
 	  nMMap = 0
 	endif
@@ -655,7 +655,7 @@ c
 c
 c  All said and done. Tidy up and exit.
 c
-	if(nMMap.gt.0)call MemFree(MMap,nMMap,'r')
+	if(nMMap.gt.0)call MemFrep(MMap,nMMap,'r')
 	call MapFin
 	call uvclose(tvis)
 	call scrclose(tscr)

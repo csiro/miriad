@@ -27,7 +27,7 @@ c
 c  Finish and tidy up.
 c------------------------------------------------------------------------
 	include 'mapper.h'
-	if(nBuff.gt.0)call memFree(pBuff,nBuff,'r')
+	if(nBuff.gt.0)call memFrep(pBuff,nBuff,'r')
 	nBuff = 0
 	end
 c************************************************************************
@@ -106,7 +106,8 @@ c------------------------------------------------------------------------
 	include 'mapper.h'
 	include 'mem.h'
 c
-	integer i,pMap
+	integer i
+	ptrdiff pMap
 	real Sum
 c
 c  Do a gridding pass if necessary, and determine the offset of the
@@ -138,7 +139,8 @@ c************************************************************************
 	subroutine Mapper(ichan,pMap)
 c
 	implicit none
-	integer ichan,pMap
+	integer ichan
+	ptrdiff pMap
 c
 c  Get an image.
 c
@@ -213,9 +215,9 @@ c
 	nyc = ny(it)
 c
 	if(nBuff.lt.nxc*nyc+5*nvis)then
-	  if(nBuff.gt.0)call MemFree(pBuff,nBuff,'r')
+	  if(nBuff.gt.0)call MemFrep(pBuff,nBuff,'r')
 	  nBuff = nxc*nyc + 5*nvis
-	  call MemAlloc(pBuff,nBuff,'r')
+	  call MemAllop(pBuff,nBuff,'r')
 	endif
 c
 	end
@@ -382,9 +384,9 @@ c
 c  Is the current buffer big enough? If not, make it big enough.
 c
 	if(nplanes*plsize+nextra.gt.nBuff)then
-	  if(nBuff.gt.0)call memFree(pBuff,nBuff,'r')
+	  if(nBuff.gt.0)call memFrep(pBuff,nBuff,'r')
 	  nBuff = nplanes * plsize + nextra
-	  call memAlloc(pBuff,nBuff,'r')
+	  call memAllop(pBuff,nBuff,'r')
 	endif
 c
 c  Set the channel range that we will grid.
