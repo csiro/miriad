@@ -108,7 +108,7 @@ vector processing capacities (compilers "unicos", "alliant" and "convex"):
 /*    pjt  12mar07 merged MIR4 and atnf versions; re-added -h           */
 /*    rjs  21jul09 Add translation of "ptrdiff" data type.		*/
 /*									*/
-/* $Id: ratty.c,v 1.6 2009/08/03 00:31:03 sau078 Exp $ */
+/* $Id: ratty.c,v 1.7 2009/08/04 01:17:28 cal103 Exp $ */
 /************************************************************************/
 /* ToDos/Shortcomings:                                                  */
 /*  The -u flag doesn't convert self-generated if/then/continue etc.    */
@@ -118,7 +118,7 @@ vector processing capacities (compilers "unicos", "alliant" and "convex"):
 /*      (uflag?textout("continue\n"):textout("CONTINUE\n"));            */
 /*  comment lines like "c#define foo bar" still define !!!              */
 /************************************************************************/
-#define VERSION_ID   "21-Jul-07"
+#define VERSION_ID   "21-Jul-09"
 
 #define max(a,b) ((a) > (b) ? (a) : (b) )
 #define min(a,b) ((a) < (b) ? (a) : (b) )
