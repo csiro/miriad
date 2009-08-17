@@ -16,6 +16,8 @@ c		  VLA database (to avoid extrapolation)
 c    rjs  06dec03 Added fit to 1934-638 at 12mm. Because I did not
 c                 want to change the low frequency poly, this is implemented
 c	          as a second poly.
+c    mhw  17aug09 Updated fit to 1934-638 above 10 GHz to include 30-50GHz data.
+c                 New parabolic fit joins smoothly to low freq fit at 10.7 GHz.
 c************************************************************************
 c* CalStoke -- Flux characteristics of selected calibrators.
 c& nebk, rjs
@@ -84,7 +86,7 @@ c     +     1.099506E2,  -44.80922,   4.618715,    0.0,       0.0,
      +	  -23.839,	  19.569,    -4.8168,	   0.35836,   0.0,
      +	    1.250,	   0.726,    -0.2286,	   0.0,       0.0,
      +	    4.729,	  -1.025,     0.0130,	   0.0,       0.0,
-     +   -202.6259,     149.7321,   -36.4943,      2.9372,    0.0/
+     +  -1.237160,     2.005317,   -0.400622,      0.0,       0.0/
 c
 c  Q coefficients.
 c
@@ -167,13 +169,13 @@ c
      +		   0.300,   50.000,
      +		   0.300,   50.000,
      +		   0.3000,  50.000,
-     +		   0.4080,  10.000,
+     +		   0.4080,  10.700,
      +		   1.380,    8.640,
      +		   0.408,    8.400,
      +		   0.4080,   8.400,
      +		   1.408,   10.550,
      +		   1.408,   10.550,
-     +		  10.000,   25.000/
+     +		  10.700,   50.000/
 c-----------------------------------------------------------------------
       ierr = 2
       name = source
@@ -198,7 +200,7 @@ c
 c
 c Horrible fudge to allow 2 polynomial approximations for 1934-638
 c
-	  if(isrc.eq.5.and.x.ge.frange(1,11).and.x.le.frange(2,11))
+	  if(isrc.eq.5.and.x.ge.frange(1,11))
      +	    isrcd=11
 c
 	  if (frange(1,isrcd).ne.0.0 .and. frange(2,isrcd).ne.0.0 .and.
