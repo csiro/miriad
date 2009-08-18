@@ -252,7 +252,7 @@
 *  rjs  09jul06 uvread_updated_uvw checks no. of antennas.
 *  mhw  08oct07 add selection on seeing using variable smonrms.
 *
-* $Id: uvio.c,v 1.4 2008/02/15 06:03:37 cal103 Exp $
+* $Id: uvio.c,v 1.5 2009/08/18 08:23:36 cal103 Exp $
 *===========================================================================*/
 #define VERSION_ID "14-Feb-08 MRC"
 
@@ -3050,7 +3050,7 @@ private void uvread_updated_planet(UV *uv)
     plangle = *(float *)uv->plangle->buf;
     if(plmaj > 0.0 && plmin > 0.0){
       uv->plscale = (uv->ref_plmaj * uv->ref_plmaj) / (plmaj * plmaj ) ;
-      theta = PI/180 * (plangle - uv->ref_plangle);
+      theta = PI/180.0 * (plangle - uv->ref_plangle);
       uv->pluu =  cos(theta) * (plmaj / uv->ref_plmaj);
       uv->pluv = -sin(theta) * (plmaj / uv->ref_plmaj);
       uv->plvu = -uv->pluv;
@@ -3362,7 +3362,15 @@ private int uvread_select(UV *uv)
 
     if(op->type == SEL_HA){
       discard = !op->discard;
+
+      /* Hour angle normalized in the range -pi to +pi. */
       ha = *(double *)uv->lst->buf - *(double *)uv->obsra->buf;
+      if (ha < -PI) {
+        ha += 2.0 * PI;
+      } else if (ha > PI) {
+        ha -= 2.0 * PI;
+      }
+
       while(n < sel->noper && op->type == SEL_HA){
         if(op->loval <= ha && ha <= op->hival)
 	  discard = op->discard;
