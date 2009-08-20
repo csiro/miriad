@@ -36,30 +36,35 @@ C  History:
 C    		  Derived from code in the NSWC library, from code written
 C		  by A.H. Morris.
 C     5nov93 rjs  Adapted to Miriad's needs. Minimal changes.
+C
+C $Id: wpfit.for,v 1.2 2009/08/20 07:13:29 cal103 Exp $
 C------------------------------------------------------------------------
       REAL LAMBDA,C,TEMP,XMIN,XMAX,ZA,ZB,ALPHA
       DOUBLE PRECISION DALPHA,DSUM
       INTEGER NW,LA,LB,LS,M,MP1,K,ND1
-C  
+C
 C                      ERROR CHECKING
 C
-      IF (ND.LT.1.OR.NP.LT.2) GO TO 200
-      NW=0
-      DSUM=0.D0
-      DO 13 K=1,NP
-      IF (W(K)) 202,13,10
-   10 NW=NW+1
-      DSUM=DSUM+DBLE(W(K))
-      IF (NW.GT.1) GO TO 11
-      XMIN=X(K)
-      XMAX=X(K)
-      GO TO 13
-   11 IF (X(K).GE.XMIN) GO TO 12
-      XMIN=X(K)
-      GO TO 13
-   12 IF (X(K).GT.XMAX) XMAX=X(K)
-   13 CONTINUE
-      IF (ND.GE.NW) GO TO 200
+      IF (ND.LT.1 .OR. NP.LT.2) GO TO 998
+      NW = 0
+      DSUM = 0D0
+      DO 10 K = 1, NP
+        IF (W(K).LT.0.0) GO TO 999
+        IF (W(K).GT.0.0) THEN
+          NW = NW + 1
+          DSUM = DSUM + DBLE(W(K))
+
+          IF (NW.LE.1) THEN
+            XMIN = X(K)
+            XMAX = X(K)
+          ELSE IF (X(K).LT.XMIN) THEN
+            XMIN = X(K)
+          ELSE IF (X(K).GT.XMAX) THEN
+            XMAX = X(K)
+          END IF
+        END IF
+   10 CONTINUE
+      IF (ND.GE.NW) GO TO 998
 C
 C                      INITIALIZATION
 C
@@ -179,8 +184,8 @@ C
 C
 C                        ERROR RETURN
 C
-  200 IERR=1
+  998 IERR=1
       RETURN
-  202 IERR=3
+  999 IERR=3
       RETURN
       END

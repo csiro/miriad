@@ -2,8 +2,11 @@ c     nswc.for:   some math routines
 c
 c pre-1994			created
 c somewhere before 2001:	somebody added gamma etc.
-c 5-oct-2001			declared variables to make it compile with -u on solaris
+c 5-oct-2001			declared variables to make it compile
+c                               with -u on solaris
 c
+c $Id: nswc.for,v 1.3 2009/08/20 07:13:29 cal103 Exp $
+c-----------------------------------------------------------------------
       REAL FUNCTION ENORM(N,X)
       INTEGER N
       REAL X(N)
@@ -2122,95 +2125,92 @@ C--------------------------
 C--------------------------
       GAMMA = 0.0
       X = A
-      IF (ABS(A) .GE. 15.0) GO TO 60
-C-----------------------------------------------------------------------
-C            EVALUATION OF GAMMA(A) FOR ABS(A) .LT. 15
-C-----------------------------------------------------------------------
-      T = 1.0
-      M = INT(A) - 1
-C
-C     LET T BE THE PRODUCT OF A-J WHEN A .GE. 2
-C
-      IF (M) 20,12,10
-   10 DO 11 J = 1,M
-        X = X - 1.0
-   11   T = X*T
-   12 X = X - 1.0
-      GO TO 40
-C
-C     LET T BE THE PRODUCT OF A+J WHEN A .LT. 1
-C
-   20 T = A
-      IF (A .GT. 0.0) GO TO 30
-      M = - M - 1
-      IF (M .EQ. 0) GO TO 22
-         DO 21 J = 1,M
-         X = X + 1.0
-   21    T = X*T
-   22 X = (X + 0.5) + 0.5
-      T = X*T
-      IF (T .EQ. 0.0) RETURN
-C
-   30 CONTINUE
-C
-C     THE FOLLOWING CODE CHECKS IF 1/T CAN OVERFLOW. THIS
-C     CODE MAY BE OMITTED IF DESIRED.
-C
-      IF (ABS(T) .GE. 1.E-30) GO TO 40
-      IF (ABS(T)*SPMPAR(3) .LE. 1.0001) RETURN
-      GAMMA = 1.0/T
-      RETURN
-C
-C     COMPUTE GAMMA(1 + X) FOR  0 .LE. X .LT. 1
-C
-   40 TOP = P(1)
-      BOT = Q(1)
-      DO 41 I = 2,7
-         TOP = P(I) + X*TOP
-   41    BOT = Q(I) + X*BOT
-      GAMMA = TOP/BOT
-C
-C     TERMINATION
-C
-      IF (A .LT. 1.0) GO TO 50
-      GAMMA = GAMMA*T
-      RETURN
-   50 GAMMA = GAMMA/T
-      RETURN
-C-----------------------------------------------------------------------
-C            EVALUATION OF GAMMA(A) FOR ABS(A) .GE. 15
-C-----------------------------------------------------------------------
-   60 IF (ABS(A) .GE. 1.E3) RETURN
-      IF (A .GT. 0.0) GO TO 70
-      X = -A
-      N = X
-      T = X - N
-      IF (T .GT. 0.9) T = 1.0 - T
-      S = SIN(PI*T)/PI
-      IF (MOD(N,2) .EQ. 0) S = -S
-      IF (S .EQ. 0.0) RETURN
-C
-C     COMPUTE THE MODIFIED ASYMPTOTIC SUM
-C
-   70 T = 1.0/(X*X)
-      G = ((((R1*T + R2)*T + R3)*T + R4)*T + R5)/X
-C
-C     ONE MAY REPLACE THE NEXT STATEMENT WITH  LNX = ALOG(X)
-C     BUT LESS ACCURACY WILL NORMALLY BE OBTAINED.
-C
-      LNX = GLOG(X)
-C
-C     FINAL ASSEMBLY
-C
-      Z = X
-      G = (D + G) + (Z - 0.5D0)*(LNX - 1.D0)
-      W = G
-      T = G - DBLE(W)
-      IF (W .GT. 0.99999*EXPARG(0)) RETURN
-      GAMMA = EXP(W)*(1.0 + T)
-      IF (A .LT. 0.0) GAMMA = (1.0/(GAMMA*S))/X
+
+      IF (ABS(A).LT.15.0) THEN
+C       Evaluate Gamma(A) for |A| < 15.
+        T = 1.0
+        M = INT(A) - 1
+
+        IF (M.GE.0) THEN
+C         T is the product of A-J when A >= 1.
+          DO 10 J = 1, M
+            X = X - 1.0
+            T = X*T
+   10     CONTINUE
+          X = X - 1.0
+
+        ELSE IF (M.LT.0) THEN
+C         T is the product of A+J when A < 1.
+          T = A
+          IF (A.LE.0.0) THEN
+            M = -M - 1
+            DO 20 J = 1, M
+               X = X + 1.0
+               T = X*T
+   20       CONTINUE
+            X = X + 1.0
+            T = X*T
+            IF (T.EQ.0.0) RETURN
+          END IF
+
+C         Check if 1/T can overflow.
+          IF (ABS(T).LT.1E-30) THEN
+            IF (ABS(T)*SPMPAR(3).GT.1.0001) GAMMA = 1.0/T
+            RETURN
+          END IF
+        END IF
+
+C       Compute Gamma(1+X) for 0 <= X < 1.
+        TOP = P(1)
+        BOT = Q(1)
+        DO 30 I = 2,7
+           TOP = P(I) + X*TOP
+           BOT = Q(I) + X*BOT
+   30   CONTINUE
+        GAMMA = TOP/BOT
+
+        IF (A.LT.1.0) THEN
+          GAMMA = GAMMA/T
+        ELSE
+          GAMMA = GAMMA*T
+        END IF
+
+        RETURN
+
+      ELSE 
+C       Evaluate Gamma(A) for |A| >= 15.
+        IF (ABS(A).GE.1.E3) RETURN
+        IF (A.LE.0.0) THEN
+          X = -A
+          N = X
+          T = X - N
+          IF (T .GT. 0.9) T = 1.0 - T
+          S = SIN(PI*T)/PI
+          IF (MOD(N,2) .EQ. 0) S = -S
+          IF (S.EQ.0.0) RETURN
+        END IF
+
+C       Compute the modified asymptotic sum.
+        T = 1.0/(X*X)
+        G = ((((R1*T + R2)*T + R3)*T + R4)*T + R5)/X
+
+C       May be replaced with LNX = ALOG(X) but normally with less
+C       accuracy.
+        LNX = GLOG(X)
+
+        Z = X
+        G = (D + G) + (Z - 0.5D0)*(LNX - 1.D0)
+        W = G
+        T = G - DBLE(W)
+        IF (W .GT. 0.99999*EXPARG(0)) RETURN
+        GAMMA = EXP(W)*(1.0 + T)
+        IF (A .LT. 0.0) GAMMA = (1.0/(GAMMA*S))/X
+      END IF
+
       RETURN
       END
+
+
       SUBROUTINE BESJ(X, ALPHA, N, Y, NZ)
 C
 C     WRITTEN BY D.E. AMOS, S.L. DANIEL AND M.K. WESTON, JANUARY, 1975.
@@ -2321,22 +2321,28 @@ C
 C
       NZ = 0
       KT = 1
-      IF (N-1) 720, 10, 20
-   10 KT = 2
-   20 NN = N
-      IF (X) 730, 30, 80
-   30 IF (ALPHA) 710, 40, 50
-   40 Y(1) = 1.0E0
-      IF (N.EQ.1) RETURN
-      I1 = 2
-      GO TO 60
-   50 I1 = 1
-   60 DO 70 I=I1,N
-        Y(I) = 0.0E0
-   70 CONTINUE
-      RETURN
-   80 CONTINUE
-      IF (ALPHA.LT.0.0E0) GO TO 710
+      IF (N.LT.1) GO TO 998
+      IF (N.EQ.1) KT = 2
+      NN = N
+
+      IF (X.LT.0.0) GO TO 999
+      IF (X.EQ.0.0) THEN
+        IF (ALPHA.LT.0.0) GO TO 997
+        IF (ALPHA.EQ.0.0) THEN
+          Y(1) = 1.0E0
+          IF (N.EQ.1) RETURN
+          I1 = 2
+        ELSE
+          I1 = 1
+        END IF
+
+        DO 70 I = I1, N
+          Y(I) = 0.0E0
+   70   CONTINUE
+        RETURN
+      END IF
+
+      IF (ALPHA.LT.0.0E0) GO TO 997
 C
       IALP = INT(ALPHA)
       FNI = FLOAT(IALP+N-1)
@@ -2444,26 +2450,35 @@ C
       FNI = FNI - 1.0E0
       DFN = FNI + FNF
       FN = DFN
-      IF (NN-1) 440, 390, 130
-  390 KT = 2
-      IS = 2
+      IF (NN.LT.1) THEN
+        NZ = N - NN
+        RETURN
+      END IF
+      IF (NN.EQ.1) THEN
+        KT = 2
+        IS = 2
+      END IF
       GO TO 130
+
   400 Y(NN) = 0.0E0
       NN = NN - 1
       FNP1 = FN
       FNI = FNI - 1.0E0
       DFN = FNI + FNF
       FN = DFN
-      IF (NN-1) 440, 410, 420
-  410 KT = 2
-      IS = 2
-  420 IF (SXO2.LE.FNP1) GO TO 430
+      IF (NN.LT.1) THEN
+        NZ = N - NN
+        RETURN
+      END IF
+      IF (NN.EQ.1) THEN
+        KT = 2
+        IS = 2
+      END IF
+      IF (SXO2.LE.FNP1) GO TO 430
       GO TO 130
   430 ARG = ARG - XO2L + ALOG(FNP1)
       IF (ARG.LT.(-ELIM)) GO TO 400
       GO TO 330
-  440 NZ = N - NN
-      RETURN
 C
 C     BACKWARD RECURSION SECTION
 C
@@ -2669,13 +2684,13 @@ C
 C
 C
 C
-  710 CONTINUE
+  997 CONTINUE
       NZ = -2
       RETURN
-  720 CONTINUE
+  998 CONTINUE
       NZ = -3
       RETURN
-  730 CONTINUE
+  999 CONTINUE
       NZ = -1
       RETURN
       END
