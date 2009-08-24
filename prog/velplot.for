@@ -134,7 +134,7 @@ c    27jan01 pjt   fixed bug due to above
 c    22mar02 mchw  better logarithmic contour levels.
 c    26jun02 mchw  fixed bug due to longer filenames. (cf. 19sep00)
 c
-c $Id: velplot.for,v 1.2 2009/08/24 06:46:40 cal103 Exp $
+c $Id: velplot.for,v 1.3 2009/08/24 06:50:06 cal103 Exp $
 c-----------------------------------------------------------------------
 	include 'velplot.h'
 	include 'mem.h'
@@ -149,7 +149,7 @@ c-----------------------------------------------------------------------
 	character versan*80, version*80
 c-----------------------------------------------------------------------
       version = versan ('velplot',
-     :  '$Id: velplot.for,v 1.2 2009/08/24 06:46:40 cal103 Exp $')
+     :  '$Id: velplot.for,v 1.3 2009/08/24 06:50:06 cal103 Exp $')
 
 c set default plotting parameters
 c
@@ -224,7 +224,7 @@ c  Start the output log file.
 c
 	call LogOpen(logfile,'q')
 	call LogWrit('VELPLOT '//version)
-	call velohead(memr(ary),vlsr,nx,ny,nc)
+	call velohead(nx,ny,nc)
 c
 c  Prompt for interactive options:
 c
@@ -257,7 +257,7 @@ c
 	else if(ans.eq.'V') then
 	  call velmap(memr(ary),vlsr,nx,ny,nc,memr(v))
 	else if(ans.eq.'L') then
-	  call velohead(memr(ary),vlsr,nx,ny,nc)
+	  call velohead(nx,ny,nc)
 	else if(ans.eq.'I') then
 	  call Integral(memr(ary),vlsr,nx,ny,nc)
 	else if(ans.eq.'W') then
@@ -275,9 +275,8 @@ c
 	goto 10
 	end
 c********1*********2*********3*********4*********5*********6*********7**
-	subroutine velohead(ary,vlsr,nx,ny,nc)
+	subroutine velohead(nx,ny,nc)
 	integer nx,ny,nc
-	real ary(1), vlsr(nc)
 c
 c  Header and velocity information
 c		     mchw 9 nov 1987
@@ -296,15 +295,8 @@ c
 	call output(msg)
 	write(msg, *) ' Array dimensions are :nx,ny,nc=',nx,ny,nc
 	call output(msg)
-c	call output('Channel velocites :')
-c	print *, (vlsr(i),i=1,nc)
-c
-c	call prompt(ans,ipr,'Write into log ? (Y/[N]) :')
-c	call ucase(ans)
-c	if(ans.eq.'Y')then
-	  call LogWrit('Image File : '//file)
-	  call header(6)
-c	endif
+	call LogWrit('Image File : '//file)
+	call header(6)
 	end
 c********1*********2*********3*********4*********5*********6*********7**
 	subroutine readmap(lIn,blc,trc,ary,vlsr,nx,ny,nc)
@@ -792,7 +784,7 @@ c
 c  See if these defaults are ok with the user
 c
 	call output(' ')
-105	write(msg,'(a,i2,a,i2,a)')
+        write(msg,'(a,i2,a,i2,a)')
      *   '>Enter number of windows in x and y: [',windx,',',windy,']:'
 	call prompt(line, length, msg)
         if(length.ne.0)then
@@ -2178,7 +2170,9 @@ c
               endif
             endif
           endif
-30      enddo
+
+30        continue
+        enddo
 c
 c  Restore original plot device.
 c
