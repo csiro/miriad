@@ -1,71 +1,75 @@
 c********1*********2*********3*********4*********5*********6*********7**
-	program velplot
-	implicit none
+      program velplot
 c
-c= VELPLOT - Interactive task to plot spectra and slices from Miriad Images.
+c= VELPLOT - Interactively plot spectra and slices from Miriad Images.
 c& mchw
 c: image analysis
 c+
-c	VELPLOT is an interactive task to analyse spectra, position-velocity
-c	slices, and integrated velocity maps from Miriad Images.
-c	There are three basic display options:
+c       VELPLOT is an interactive task to analyse spectra, position-
+c       velocity slices, and integrated velocity maps from Miriad
+c       Images.  There are three basic display options:
 c
-c	 - Velocity-averaged x-y images over selected velocity intervals.
-c		Also makes velocity and velocity dispersion images.
-c	 - Spectra at selected x-y positions. The data can be convolved
-c		in x, y or velocity. Gaussian fitting routine.
-c	 - Position-velocity maps along user selected position angles,
-c		or plots of intensity versus position for selected velocity
-c		channels. The data can be convolved in the x-y plane.
+c        - Velocity-averaged x-y images over selected velocity
+c               intervals.  Also makes velocity and velocity dispersion
+c               images.
+c        - Spectra at selected x-y positions. The data can be convolved
+c               in x, y or velocity. Gaussian fitting routine.
+c        - Position-velocity maps along user selected position angles,
+c               or plots of intensity versus position for selected
+c               velocity channels. The data can be convolved in the x-y
+c               plane.
 c
-c	(x,y) positions are (HA,DEC) in arcsec relative to map center.
-c	Position angles are measured from the north towards the east.
+c       (x,y) positions are (HA,DEC) in arcsec relative to map center.
+c       Position angles are measured from the north towards the east.
 c
-c	The output from each option can be plotted, printed, or written out
-c	as Miriad images of velocity-averaged maps, position-velocity maps,
-c	or ascii spectra respectively. Gaussian fits are written into the log.
+c       The output from each option can be plotted, printed, or written
+c       out as Miriad images of velocity-averaged maps, position-
+c       velocity maps, or ascii spectra respectively. Gaussian fits are
+c       written into the log.
 c
-c	The task keeps user-defined lists of velocity-averaged maps, position-
-c	velocity cuts, and spectra positions. These lists can be created and 
-c	edited within the task, and can be passed between the three displays. 
-c	For example, a list of spectra or position-velocity cuts can be created 
-c	with the cursor whilst displaying a velocity-averaged map. The lists
-c	are used to display the spectra and position-velocity cuts, and can be
-c	written out and read in as ascii files.
+c       The task keeps user-defined lists of velocity-averaged maps,
+c       position-velocity cuts, and spectra positions. These lists can
+c       be created and edited within the task, and can be passed between
+c       the three displays.  For example, a list of spectra or position-
+c       velocity cuts can be created with the cursor whilst displaying a
+c       velocity-averaged map.  The lists are used to display the
+c       spectra and position-velocity cuts, and can be written out and
+c       read in as ascii files.
 c
-c	An options menu provides a choice of display style, contour levels,
-c	and units. Further interactive help is available within the task.
+c       An options menu provides a choice of display style, contour
+c       levels, and units.  Further interactive help is available
+c       within the task.
 c
 c       For an interactive X windows interface, see VELPLOTC
 c       (limited distribution)
 c@ in
-c	Input image name. No default.
+c       Input image name. No default.
 c@ device
-c	The PGPLOT plotting device. 
+c       The PGPLOT plotting device.
 c@ region
-c	Region of image to be plotted. E.g.
-c	  'region=relpix,box(-30,-30,20,90)(16,57)'
-c	reads in 50 x 120 pixels of image planes 16 to 57.
-c	See mirhelp region for more details on selecting image regions.
+c       Region of image to be plotted. E.g.
+c         'region=relpix,box(-30,-30,20,90)(16,57)'
+c       reads in 50 x 120 pixels of image planes 16 to 57.
+c       See mirhelp region for more details on selecting image regions.
 c
-c	The default is the whole Image. The maximum array size 
-c	is set by MAXDIM in 'velplot.h'
-c	If the array is larger than memory, then VELPLOT may run slowly.
+c       The default is the whole Image. The maximum array size
+c       is set by MAXDIM in 'velplot.h'
+c       If the array is larger than memory, then VELPLOT may run slowly.
 c@ log
-c	The output log file. The default filename is velplot.log
-c	Results from image analysis are written into the log file.
+c       The output log file. The default filename is velplot.log
+c       Results from image analysis are written into the log file.
 c--
 c  History:
-c	reads and writes 3D arrays of channel maps
-c	generates: 1) spectra
-c		   2) position-velocity plots
-c		   3) velocity-averaged x-y contour plots
-c			MCHW Jan 1986
-c	developed from Ralint's Velplot (Fuller, Vogel, Wright, 1970's)
+c       reads and writes 3D arrays of channel maps
+c       generates: 1) spectra
+c                  2) position-velocity plots
+c                  3) velocity-averaged x-y contour plots
+c                       MCHW Jan 1986
+c       developed from Ralint's Velplot (Fuller, Vogel, Wright, 1970's)
 c    Nov 1988 mchw Adjustable array dimensions.
-c    aug 1989	   Added subroutines to	read and write Miriad files.
+c    aug 1989      Added subroutines to read and write Miriad files.
 c    25may90 mchw  Major rebuild using Miriad user interface.
-c		   Removed Ralint subroutines, mapio etc.
+c                  Removed Ralint subroutines, mapio etc.
 c    15jan91 mchw  Added in-code doc and removed a couple of bugs.
 c    23jul91 dm/dw modified VMS version for UNIX
 c    25jul91 mchw  removed pi from velplot.h to avoid MONGO conflict.
@@ -77,15 +81,15 @@ c    07oct91 djw   Modified cursor options to draw specs and cuts.
 c    25oct91 mchw  More patches for cray.
 c    28oct91 djw   Grayscale
 c    31oct91 mchw  Changed grid of spectra to match plot on paper.
-c			Changed ifdef to cft, and improved user i/o.
-c			Added width to range of maps. More cleanup.
+c                       Changed ifdef to cft, and improved user i/o.
+c                       Added width to range of maps. More cleanup.
 c    10apr92 mjs   In sub velmap, "label" now char*30 to elim string
 c                       truncation in assignment.
 c    13apr92 mchw  Changed position-velocity plots to increment in
-c			direction of pa and fixed bug for unequal axes.
+c                       direction of pa and fixed bug for unequal axes.
 c    28may92 mchw  Convert frequency axis on input image to velocity.
 c    29may92 mchw  Changed to absolute cutoff level in moment maps.
-c		   Added integral and rms in cursor defined box.
+c                  Added integral and rms in cursor defined box.
 c    04jun92 mchw  Read and write ascii files of spectra & pos-vel cuts.
 c    09jun92 mchw  Added Gaussian Fits to spectra using nllsqu.
 c    10jun92 djw   Added Multiple Gaussian Fits to spectra.
@@ -108,10 +112,10 @@ c                  elim branches to labels from outside the block.
 c    08jul93 mjs   Merge 2 versions with minor differences.
 c    21sep93 mchw  Added nint to integer expressions using pixel size.
 c    25oct93 mchw  Added nint in subroutine readmap.
-c    01feb95 jm/mchw Elliminate some questions.	call pgask(.FALSE.)
+c    01feb95 jm/mchw Elliminate some questions. call pgask(.FALSE.)
 c    02feb95 jm    De-FLINT'd.
 c    16jun95 mchw  Change default: no Gaus fit. Trap typo. pgask(.TRUE.)
-c			swap P and V cursor options.
+c                       swap P and V cursor options.
 c    30jan96 mchw  Merge AT version with 16jun95 update.
 c    09feb96 mchw  Address some of complaints in AT Users Guide.
 c    09nov96 mchw  Allow for FREQ axis.
@@ -129,11 +133,11 @@ c    19sep00 pjt   increased filenames
 c    27jan01 pjt   fixed bug due to above
 c    22mar02 mchw  better logarithmic contour levels.
 c    26jun02 mchw  fixed bug due to longer filenames. (cf. 19sep00)
-c----------------------------------------------------------------------c
+c
+c $Id: velplot.for,v 1.2 2009/08/24 06:46:40 cal103 Exp $
+c-----------------------------------------------------------------------
 	include 'velplot.h'
 	include 'mem.h'
-	character*(*) version
-	parameter(version='(version 3.0 26-jun-2002)')
 	integer maxnax,maxboxes
 	parameter(maxnax=3,maxboxes=128)
 	integer boxes(maxboxes),nsize(maxnax),blc(maxnax),trc(maxnax)
@@ -141,6 +145,12 @@ c----------------------------------------------------------------------c
 	integer lIn,nx,ny,nc,length
 	real vlsr(MAXDIM)
 	integer ary,v
+
+	character versan*80, version*80
+c-----------------------------------------------------------------------
+      version = versan ('velplot',
+     :  '$Id: velplot.for,v 1.2 2009/08/24 06:46:40 cal103 Exp $')
+
 c set default plotting parameters
 c
 	units = 'J'
@@ -165,7 +175,6 @@ c
 c
 c  Get the input parameters.
 c
-	call output('VELPLOT '//version)
 	call keyini
 	call keya('in',file,' ')
 	if(file.eq.' ') call bug('f','Image Name missing')
@@ -267,13 +276,12 @@ c
 	end
 c********1*********2*********3*********4*********5*********6*********7**
 	subroutine velohead(ary,vlsr,nx,ny,nc)
-	implicit none
 	integer nx,ny,nc
 	real ary(1), vlsr(nc)
 c
 c  Header and velocity information
 c		     mchw 9 nov 1987
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	include 'velplot.h'
  	character msg*80
 c	character ans*1
@@ -289,7 +297,7 @@ c
 	write(msg, *) ' Array dimensions are :nx,ny,nc=',nx,ny,nc
 	call output(msg)
 c	call output('Channel velocites :')
-c	print *, (vlsr(i),i=1,nc) 
+c	print *, (vlsr(i),i=1,nc)
 c
 c	call prompt(ans,ipr,'Write into log ? (Y/[N]) :')
 c	call ucase(ans)
@@ -300,7 +308,6 @@ c	endif
 	end
 c********1*********2*********3*********4*********5*********6*********7**
 	subroutine readmap(lIn,blc,trc,ary,vlsr,nx,ny,nc)
-	implicit none
 	integer lIn,blc(3),trc(3),nx,ny,nc
 	real ary(1),vlsr(1)
 c
@@ -318,7 +325,7 @@ c
 c  	common/head/ contains map header
 c 	common/box/ contains data on the map array
 c
-c-------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	include 'velplot.h'
 	double precision ckms
 	parameter(ckms=299793.)
@@ -377,7 +384,6 @@ c
 	end
 c********1*********2*********3*********4*********5*********6*********7**
 	subroutine writemap(ary,nx,ny,nc)
-	implicit none
 	integer nx,ny,nc
 	real ary(1)
 c
@@ -387,7 +393,7 @@ c  Inputs:
 c    ary(nx,ny,nc)	spectral line image
 c    nx ny nc	 	dimensions of image
 c    common/head/ contains map header
-c------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	include 'velplot.h'
 	character*80 filename,text
 	integer lOut,nsize(3),j,k,ipt,length
@@ -454,7 +460,6 @@ c
 c********1*********2*********3*********4*********5*********6*********7**
 	subroutine wrposvel(ary,nx,ny,nc,pval1,pval2,pval3,
      *		crpix1,crpix2,cdelt1,cdelt2)
-	implicit none
 	integer nx,ny,nc
 	real ary(1),pval1,pval2,pval3,crpix1,crpix2,cdelt1,cdelt2
 c
@@ -467,7 +472,7 @@ c    pval1,2,3
 c    crpix1,2
 c    cdelt1,2
 c    common/head/ contains map header
-c------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	include 'velplot.h'
 	character*80 filename,text
 	integer lOut,nsize(3),j,k,ipt,length
@@ -530,16 +535,15 @@ c
 	end
 c********1*********2*********3*********4*********5*********6*********7**
 	subroutine options
-	implicit none
 c  Set plotting parameters
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	include 'velplot.h'
 	integer i,length
         character*80 line
         character*9 tline
 	character*80 ans
-        
-c 
+
+c
 c display current defaults
 c
 90      call output(' ')
@@ -547,32 +551,32 @@ c
 c********1*********2*********3*********4*********5*********6*********7**
        call output('Select alternative options [1/2] for the following')
 	call output(' ')
-c units 
-        write(line,'(''Units for display [J/K].....'',1x,A)') units 
+c units
+        write(line,'(''Units for display [J/K].....'',1x,A)') units
         call output(line)
-c negative contours 
-        write(line,'(''Negative contours [Y/N].....'',1x,A)') cneg 
+c negative contours
+        write(line,'(''Negative contours [Y/N].....'',1x,A)') cneg
         call output(line)
 c labels
-        write(line,'(''Plot labels [Y/N]...........'',1x,A)') alabel 
+        write(line,'(''Plot labels [Y/N]...........'',1x,A)') alabel
         call output(line)
-c Write map to file 
-        write(line,'(''Write map to file [Y/N].....'',1x,A)') write 
+c Write map to file
+        write(line,'(''Write map to file [Y/N].....'',1x,A)') write
         call output(line)
 c Absolute coords
-        write(line,'(''Absolute coordinates [Y/N]..'',1x,A)') abscoord 
+        write(line,'(''Absolute coordinates [Y/N]..'',1x,A)') abscoord
         call output(line)
 c Integer plot
-        write(line,'(''Integer plot [Y/N]..........'',1x,A)') apint 
+        write(line,'(''Integer plot [Y/N]..........'',1x,A)') apint
         call output(line)
 c Spectra Positions
-        write(line,'(''Spectra positions [Y/N].....'',1x,A)') pspec 
+        write(line,'(''Spectra positions [Y/N].....'',1x,A)') pspec
         call output(line)
 c Gaussian Fits
-        write(line,'(''Fit Gaussians [Y/N].........'',1x,A)') lgaufit 
+        write(line,'(''Fit Gaussians [Y/N].........'',1x,A)') lgaufit
         call output(line)
 c Plot Gaussian Fits
-        write(line,'(''Overlay Gauss Fits [Y/N]....'',1x,A)') lgauplot 
+        write(line,'(''Overlay Gauss Fits [Y/N]....'',1x,A)') lgauplot
         call output(line)
 c Gray Scale
         write(line,'(''Gray Scale [Y/N]............'',1x,A)') gray
@@ -580,7 +584,7 @@ c Gray Scale
 c Exit
         call output('Exit from options menu')
 c Contour levels
-        if(percent.eq.'Y')then 
+        if(percent.eq.'Y')then
           tline='percent'
         else
           tline='absolute'
@@ -593,14 +597,14 @@ c Contour levels
         enddo
 109     format(' level(',i2,') = ',f9.3)
 c
-c ask for input 
+c ask for input
 c
 199     call output(' ')
         call prompt(ans,length,
      *  'Select option (type 1st character, <cr> to list) :')
         call ucase(ans)
         if(ans(1:1).eq.'U')then
-          if(units.eq.'J')then 
+          if(units.eq.'J')then
             units='K'
             call output('-plot units are now Kelvin')
           else if(units.eq.'K')then
@@ -608,79 +612,79 @@ c
               call output('-plot units are now Janskys')
           else if(units.ne.'J' .and. units.ne.'K')then
               call output('-unrecognized map units')
-          endif   
+          endif
         else if(ans(1:1).eq.'N')then
-          if(cneg.eq.'Y')then 
+          if(cneg.eq.'Y')then
             cneg='N'
             call output('-negative contours will not be displayed')
           else
             cneg='Y'
             call output('-negative contours will be displayed')
-          endif   
+          endif
         else if(ans(1:1).eq.'P')then
-          if(alabel.eq.'Y')then 
+          if(alabel.eq.'Y')then
             alabel='N'
             call output('-plot will not be annotated')
           else
             alabel='Y'
             call output('-plot will be annotated')
-          endif   
+          endif
         else if(ans(1:1).eq.'W')then
-          if(write.eq.'Y')then 
+          if(write.eq.'Y')then
             write='N'
             call output('-will not write MIRIAD image to disk')
           else
             write='Y'
             call output('-will write MIRIAD image to disk')
-          endif   
+          endif
         else if(ans(1:1).eq.'A')then
-          if(abscoord.eq.'Y')then 
+          if(abscoord.eq.'Y')then
             abscoord='N'
           else
             abscoord='N'
-          endif   
+          endif
           call output('Sorry...option not yet implemented.')
         else if(ans(1:1).eq.'I')then
-          if(apint.eq.'Y')then 
+          if(apint.eq.'Y')then
             apint='N'
             call output('-plot will not be integer plot')
           else
             apint='Y'
             call output('-plot will be integer plot')
-          endif   
+          endif
         else if(ans(1:1).eq.'S')then
-          if(pspec.eq.'Y')then 
+          if(pspec.eq.'Y')then
             pspec='N'
-            call output('-plot will not indicate spectra positions') 
+            call output('-plot will not indicate spectra positions')
           else
             pspec='Y'
-            call output('-plot will indicate spectra positions') 
-          endif   
+            call output('-plot will indicate spectra positions')
+          endif
         else if(ans(1:1).eq.'F')then
-          if(lgaufit.eq.'Y')then 
+          if(lgaufit.eq.'Y')then
             lgaufit='N'
-            call output('-will not fit gaussians to spectra') 
+            call output('-will not fit gaussians to spectra')
           else
             lgaufit='Y'
-            call output('-will fit gaussians to spectra') 
-          endif   
+            call output('-will fit gaussians to spectra')
+          endif
         else if(ans(1:1).eq.'O')then
-          if(lgauplot.eq.'Y')then 
+          if(lgauplot.eq.'Y')then
             lgauplot='N'
-            call output('-will not overlay gaussian fits to spectra') 
+            call output('-will not overlay gaussian fits to spectra')
           else
             lgauplot='Y'
-            call output('-will overlay gaussian fits to spectra') 
-          endif   
+            call output('-will overlay gaussian fits to spectra')
+          endif
         else if(ans(1:1).eq.'G')then
-          if(gray.eq.'Y')then 
+          if(gray.eq.'Y')then
             gray='N'
-            call output('-plot will not include gray scale') 
+            call output('-plot will not include gray scale')
           else
             gray='Y'
-            call output('-plot will include gray scale') 
+            call output('-plot will include gray scale')
             call SetGray
-          endif   
+          endif
         else if(ans(1:1).eq.'C')then
           call SetCont
         else if(ans(1:1).eq.' ')then
@@ -693,10 +697,9 @@ c
         end
 c********1*********2*********3*********4*********5*********6*********7**
 	subroutine header(ipr)
-	implicit none
 	integer ipr
 c  convert units and write out map header if ipr .ne. 0.
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	include 'velplot.h'
 	real ckms,rts,freqs
 	real omega,pixel,pi
@@ -759,12 +762,11 @@ c
 	end
 c********1*********2*********3*********4*********5*********6*********7**
 	subroutine getpanel(imaps,windx,windy)
-	implicit none
 	integer imaps,windx,windy
 c
 c	Return number of plotting windows in x and y directions (windx,windy)
 c	imaps is the number of maps to be plotted
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	character msg*80, line*80
 	integer length
 	double precision dval(2)
@@ -791,7 +793,7 @@ c  See if these defaults are ok with the user
 c
 	call output(' ')
 105	write(msg,'(a,i2,a,i2,a)')
-     *   '>Enter number of windows in x and y: [',windx,',',windy,']:' 
+     *   '>Enter number of windows in x and y: [',windx,',',windy,']:'
 	call prompt(line, length, msg)
         if(length.ne.0)then
           call matodf(line,dval,2,ok)
@@ -803,7 +805,6 @@ c
 	end
 c********1*********2*********3*********4*********5*********6*********7**
 	subroutine cursor(ary,nx,ny,key)
-	implicit none
 	integer nx,ny
 	real ary(nx,ny)
 	character key*1
@@ -814,9 +815,9 @@ c  Inputs:
 c    ary(nx,ny)	The current array,
 c  Outputs:
 c    key	cursor option
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	include 'velplot.h'
-	real xx,yy  
+	real xx,yy
         real xx1,yy1
         character*1 key2
         character msg*80, ras*13, decs*13
@@ -906,7 +907,7 @@ c  Plot spectra positions
             pspec='Y'
             call output('-will indicate spec/pos-vel positions')
           endif
-c Change grayscale 
+c Change grayscale
         ELSE IF(KEY.EQ.'G') THEN
           if(gray.eq.'Y')then
             gray='N'
@@ -941,7 +942,7 @@ c  ra and dec
           decs = rangleh(dble(crval2+yy/rts))
           write(msg,'(a,a)') ras, decs
 	  call output(msg)
-c  Get pos-vel cuts 
+c  Get pos-vel cuts
 	else if (key.eq.'P') then
 	  if(ncut.ge.25) then
 	    call output('maximum 25 pos-vel cuts')
@@ -949,12 +950,12 @@ c  Get pos-vel cuts
 	  end if
 	  ncut=ncut+1
           call output('>position-velocity cut:')
-          call output('  define position angle with two points')       
+          call output('  define position angle with two points')
           call output('  move cursor and strike any key')
           xx1=xx
           yy1=yy
           call pgcurs(xx1,yy1,key2)
-          pa(ncut)=(180*atan((xx-xx1)/(yy1-yy)))/pi 
+          pa(ncut)=(180*atan((xx-xx1)/(yy1-yy)))/pi
           if(pa(ncut).lt.0)pa(ncut)=pa(ncut)+180.
           xcut(ncut)=0.5*(xx1+xx)
           ycut(ncut)=0.5*(yy1+yy)
@@ -963,7 +964,7 @@ c  Get pos-vel cuts
           call output(msg)
           pat=-tan(pi/2.-pa(ncut)*pi/180.)
           xpts(1)=-1e4
-          ypts(1)=-1e4*pat+(ycut(ncut)-xcut(ncut)*pat) 
+          ypts(1)=-1e4*pat+(ycut(ncut)-xcut(ncut)*pat)
           xpts(2)=1e4
           ypts(2)=1e4*pat+(ycut(ncut)-xcut(ncut)*pat)
           call pgline(2,xpts,ypts)
@@ -1026,7 +1027,6 @@ c define box and find integral and rms.
 	end
 c********1*********2*********3*********4*********5*********6*********7**
 	subroutine Integral(ary,vlsr,nx,ny,nc)
-	implicit none
 	integer nx,ny,nc
 	real ary(nx,ny,nc),vlsr(nc)
 c
@@ -1085,7 +1085,6 @@ c
 	end
 c********1*********2*********3*********4*********5*********6*********7**
 	subroutine integrat(ary,nx,ny)
-	implicit none
 	integer nx,ny
 	real ary(nx,ny)
 c
@@ -1094,7 +1093,7 @@ c
 c  Inputs:
 c    ary	The array.
 c    nx,ny	Dimensions of array.
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	include 'velplot.h'
 	character line*80
 	real tmax,tmin,ave
@@ -1123,7 +1122,6 @@ c
 	end
 c********1*********2*********3*********4*********5*********6*********7**
 	subroutine GetMom(nmom)
-	implicit none
 	integer nmom
 c
 c  Get moment to be plotted for velomap
@@ -1162,10 +1160,9 @@ c
 	end
 c********1*********2*********3*********4*********5*********6*********7**
 	subroutine SetCont
-	implicit none
 c
 c  Set contour levels and label interval
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	include 'velplot.h'
 	character*80 ans,line
 	real cmin,cmax,cint
@@ -1217,15 +1214,14 @@ c
 129     end
 c********1*********2*********3*********4*********5*********6*********7**
 	subroutine SetGray
-	implicit none
 c
-c  Set grayscale levels 
-c----------------------------------------------------------------------c
+c  Set grayscale levels
+c-----------------------------------------------------------------------
 	include 'velplot.h'
 	character msg*80
         integer l
 c
-c Grayscale default to map min/max or       
+c Grayscale default to map min/max or
 c enter values for bg and fg
 c
 	call output(' ')
@@ -1235,7 +1231,7 @@ c
 	if(defgray.eq.'Y') return
         call output(' pgplot grayscale shade is a number in the ')
         call output(' range 0 to 1 obtained by linear interpolation')
-        call output(' between the background and foreground level,') 
+        call output(' between the background and foreground level,')
         call output('e.g. shade=[A(i,j)-bg]/[fg-bg] ')
 	call output(' ')
 100	write(msg, '(a)') '>Enter grayscale background (bg) level:'
@@ -1249,7 +1245,6 @@ c
         end
 c********1*********2*********3*********4*********5*********6*********7**
 	subroutine GetRange(imaps,vmin,vmax,vlsr,nc)
-	implicit none
 	integer imaps,nc
 	real vmin(*),vmax(*),vlsr(nc)
 c
@@ -1308,7 +1303,6 @@ c
 	end
 c********1*********2*********3*********4*********5*********6*********7**
 	subroutine ListMaps(imaps,vmin,vmax,vlsr,nc)
-	implicit none
 	integer imaps,nc
 	real vmin(*),vmax(*),vlsr(nc)
 c
@@ -1349,7 +1343,6 @@ c
 	end
 c********1*********2*********3*********4*********5*********6*********7**
 	subroutine GetList(imaps,vmin,vmax,vlsr,nc)
-	implicit none
 	integer imaps,nc
 	real vmin(*),vmax(*),vlsr(nc)
 c
@@ -1436,11 +1429,10 @@ c  start new list
 	  end
 c********1*********2*********3*********4*********5*********6*********7**
 	subroutine plotanot(cf,cmaj,cmin,cpa)
-	implicit none
 	real cf,cmaj,cmin,cpa
 c
 c  Annotate plots.
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	include 'velplot.h'
 	real rts,pi,yloc
 	character line*80
@@ -1466,7 +1458,7 @@ c  ra and dec
 c  epoch
 	write(line,'(a,f5.0)') 'epoch: ', epoch
         call pgtext(0.0,0.86,line)
-c  pixel 
+c  pixel
 	write(line,'(f9.2,''  x'',f9.2)') xy, xy
         call pgtext(0.,0.82,line)
 c  freq
@@ -1540,7 +1532,6 @@ c
 	end
 c********1*********2*********3*********4*********5*********6*********7**
 	subroutine plotcord( iopt,nx,ny,xmin,xmax,ymin,ymax )
-	implicit none
 	integer iopt,nx,ny
 	real xmin,xmax,ymin,ymax
 c
@@ -1552,7 +1543,7 @@ c    nx,ny	Size of array.
 c    xy,crval1,crval2 come from the map header
 c  Outputs:
 c    xmin,xmax,ymin,ymax	plot limits
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	include 'velplot.h'
 	character msg*80
 	real rasec,decsec
@@ -1580,7 +1571,6 @@ c
 	end
 c********1*********2*********3*********4*********5*********6*********7**
 	subroutine plotcon(ary,nx,ny,cf,tr)
-	implicit none
 	integer nx,ny
 	real ary(nx,ny),cf,tr(6)
 c
@@ -1588,7 +1578,7 @@ c  Contour plots.
 c  Gray scale.
 c			MCHW Dec 1985
 c	cf is the conversion factor from map units - mchw 7Feb86
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	include 'velplot.h'
 	integer i,imin,imax,jmin,jmax,num,loop,nloop
 	real clevels(10),ave,scale,absmax
@@ -1651,7 +1641,6 @@ c
 c********1*********2*********3*********4*********5*********6*********7**
 	subroutine maxmap(ary,nx,ny,is,ie,js,je,
      *		amax,imax,jmax,amin,imin,jmin,ave,rms,num)
-	implicit none
 	integer nx,ny,is,ie,js,je,imax,jmax,imin,jmin,num
 	real ary(nx,ny),amax,amin,ave,rms
 c
@@ -1670,7 +1659,7 @@ c    imax,jmax	position of maximum.
 c    imin,jmin	position of minimum.
 c    ave,rms	average and rms in specified region.
 c    num	number of pixels greater than -99999
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	integer i,j
 	real a,sum,sumsq
 c
@@ -1706,7 +1695,6 @@ c
 	end
 c********1*********2*********3*********4*********5*********6*********7**
 	subroutine plotint(ary,nx,ny)
-	implicit none
 	integer nx,ny
 	real ary(nx,ny)
 c
@@ -1715,7 +1703,7 @@ c
 c  Inputs:
 c    ary	The array to print.
 c    nx,ny	Dimensions of array.
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	include 'velplot.h'
 	integer line(40)
 	character text*80
@@ -1779,7 +1767,6 @@ c
 	end
 c********1*********2*********3*********4*********5*********6*********7**
 	subroutine spectra(ary,vlsr,nx,ny,nc)
-	implicit none
 	integer nx,ny,nc
 	real ary(nx,ny,nc),vlsr(nc)
 c
@@ -1789,7 +1776,7 @@ c  Inputs:
 c    ary	The image.
 c    nx,ny,nc	Dimensions of image.
 c    vlsr	Array of velocities.
-c-------------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	include 'velplot.h'
 	real t(MAXDIM),tk(MAXDIM,49)
 	character*80 outfile
@@ -1898,7 +1885,7 @@ c
 	    if(ans.eq.'N') goto 9
 	    goto 20
 	  endif
-c	  
+c	
 c  Enter list of positions for spectra.
 c
 	  call output(' ')
@@ -2096,7 +2083,7 @@ c
  	    vmax = vlsr(1)
  	    ymin = t(1)*cf
 	    ymax = t(1)*cf
- 	  end if 
+ 	  end if
 
 	  do k=1,nc
 	    t(k) = t(k) * cf
@@ -2165,33 +2152,33 @@ c Otherwise, call routine to plot gaussians
           call pgqinf('HARDCOPY',ans,length)
           if (ans(1:1).eq.'N' .and. lgaufit.eq.'Y')then
             call gaufit(nc,vlsr,t,spec,arms)
-          endif 
-          if (lgauplot.eq.'Y') then  
+          endif
+          if (lgauplot.eq.'Y') then
             call gauplot(nc,vlsr,t,spec)
           endif
 c
-c  If this is the last window close the plot 
+c  If this is the last window close the plot
 c
-	if (spec.eq.nspec) then
-          if(alabel.eq.'Y')call pgiden
-          call pgqinf('HARDCOPY',ans,length)
-          call pgend
-          if (ans(1:1).ne.'Y')then
-            call output(' ')
-	    call prompt(ans,length,'Another PGPLOT device? (Y/[N])')
-	    call ucase(ans)
-	    if(ans(1:1).eq.'Y')then
-              call prompt(device,length,'>Enter new PGPLOT device: ')
-              call lcase(device)
-	      call prompt(ans,length,'>Enter line width [1]: ')
-	      if(length.ne.0)then
-		read(ans,'(i1)') lwidth
-	      endif
-	      goto 50
-	    endif
-	  endif
-	endif
-30	enddo
+          if (spec.eq.nspec) then
+            if(alabel.eq.'Y')call pgiden
+            call pgqinf('HARDCOPY',ans,length)
+            call pgend
+            if (ans(1:1).ne.'Y')then
+              call output(' ')
+              call prompt(ans,length,'Another PGPLOT device? (Y/[N])')
+              call ucase(ans)
+              if(ans(1:1).eq.'Y')then
+                call prompt(device,length,'>Enter new PGPLOT device: ')
+                call lcase(device)
+                call prompt(ans,length,'>Enter line width [1]: ')
+                if(length.ne.0)then
+                  read(ans,'(i1)') lwidth
+                endif
+                goto 50
+              endif
+            endif
+          endif
+30      enddo
 c
 c  Restore original plot device.
 c
@@ -2257,7 +2244,6 @@ c
 	end
 c********1*********2*********3*********4*********5*********6*********7**
 	subroutine velmap(ary,vlsr,nx,ny,nc,v)
-	implicit none
 	integer nx,ny,nc
 	real ary(nx,ny,nc),vlsr(nc),v(nx*ny)
 c
@@ -2268,7 +2254,7 @@ c    ary	The image.
 c    nx,ny,nc	Dimensions of image.
 c    vlsr	Array of velocities.
 c    v		velocity-averaged map.
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	include 'velplot.h'
 	include 'mem.h'
 	integer vmom1,vmom2,vmom3,vmom4
@@ -2353,7 +2339,7 @@ c
 	oldevice = device
 	lwidth = 1
 c
-c  Loop through list of maps. Reset image vel and width. 
+c  Loop through list of maps. Reset image vel and width.
 c
         key='L'
 
@@ -2372,7 +2358,7 @@ c
 	cf = 1.
 	if (units.eq.'K') cf=dperjy
 c
-c  Average the sets of maps  - nmaps is the number of maps in the 
+c  Average the sets of maps  - nmaps is the number of maps in the
 c	  average returned from velaver.
 c
 	do k=1,imaps
@@ -2402,7 +2388,7 @@ c
 c  Plot or write out maps.
 c
 	  if (nmaps .gt. 0) then
-	    if (write.eq.'Y') then 
+	    if (write.eq.'Y') then
 	      call writemap (v,nx,ny,1)
 	    else if (apint.eq.'Y') then
 	      call plotint (v,nx,ny)
@@ -2421,7 +2407,7 @@ c  Plot the box (with relative coords only)
 c
 c  Absloute coords are tricky since we want to keep the
 c  equal pixel sizes in x and y
-c              if(abscoord.eq.'Y')then 
+c              if(abscoord.eq.'Y')then
 c                call plotcord(0,nx,ny,xmin,xmax,ymin,ymax)
 c                call pgwnad(xmin,xmax,ymin,ymax)
 c                call pgtbox('BCNSTZ',0.0,0,'BCNSTZ',0.0,0)
@@ -2438,9 +2424,9 @@ c              else
 c              endif
 c
 c  Set up transformation array for contour routine
-c  PGPLOT instructions not intuitive.    
+c  PGPLOT instructions not intuitive.
               tr(2)=(xmax-xmin)/(nx-1)
-              tr(1)=xmin-tr(2) 
+              tr(1)=xmin-tr(2)
               tr(3)=0.
               tr(5)=0.
               tr(6)=(ymax-ymin)/(ny-1)
@@ -2454,7 +2440,7 @@ c
 130	      format(f9.3)
 	      label = '                         '
 	      label = c1//' - '//c2
-              call pglab(xlabel,ylabel,label) 
+              call pglab(xlabel,ylabel,label)
 c  Now plot the annotation
 c  (had to wait for plotcon to get the info)
 c  and have to set window back.
@@ -2485,7 +2471,7 @@ c  Plot pos-vel cuts, if any.
                 do j=1,ncut
                  pat=-tan(pi/2.-pa(j)*pi/180.)
                  xpts(1)=-1e4
-                 ypts(1)=-1e4*pat+(ycut(j)-xcut(j)*pat) 
+                 ypts(1)=-1e4*pat+(ycut(j)-xcut(j)*pat)
                  xpts(2)=1e4
                  ypts(2)=1e4*pat+(ycut(j)-xcut(j)*pat)
                  call pgline(2,xpts,ypts)
@@ -2499,7 +2485,7 @@ c  Plot pos-vel cuts, if any.
 c  If one map and not hardcopy then call for cursor.
 c
               call pgqinf('HARDCOPY',ans,length)
-              if(ans.ne.'YES' .and. windx*windy.eq.1)then 
+              if(ans.ne.'YES' .and. windx*windy.eq.1)then
                 call pgwnad(-xmin,-xmax,ymin,ymax)
                 call cursor(v,nx,ny,key)
                 call pgwnad(xmin,xmax,ymin,ymax)
@@ -2544,7 +2530,6 @@ c********1*********2*********3*********4*********5*********6*********7**
 	subroutine velaver(vmin,vmax,vlsr,ary,nx,ny,nc,
      *	                    nmom,v,nmaps,vmean,vwidth,
      *			    vmom1,vmom2,vmom3,vmom4)
-	implicit none
 	integer nx,ny,nc,nmom,nmaps
 	real vmin,vmax,vlsr(nc),ary(nx,ny,nc),v(nx*ny)
 	real vmom1(nx*ny),vmom2(nx*ny),vmom3(nx*ny),vmom4(nx*ny)
@@ -2562,7 +2547,7 @@ c  Outputs:
 c    v(nx*ny)		Averaged map.
 c    nmaps		Number of maps in the average.
 c    vmean,vwidth	The mean velocity and width of the averaged map.
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	include 'velplot.h'
 	character msg*80
 	real anorm,vcent,vcent2,sigma,sigma2,v2origin,v3origin,v3
@@ -2689,7 +2674,6 @@ c  coeff. of excess, or kurtosis
 	end
 c********1*********2*********3*********4*********5*********6*********7**
 	subroutine veloint(vmin,vmax,vel,velint,wt)
-	implicit none
 	real vmin,vmax,vel,velint,wt
 c
 c  Find weight wt of point with velocity vel in interval (vmin,vmax)
@@ -2698,7 +2682,7 @@ c    vmin,vmax,velint	Velocity range and sample interval
 c    vel		Requested velocity.
 c  Outputs:
 c    wt			Weight for velocity vel.
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	real vchn,vbot,vtop,vlo,vhi
 c
 	vchn = abs(velint)
@@ -2721,7 +2705,6 @@ c -- allow 5% capture range without interpolation
 	end
 c********1*********2*********3*********4*********5*********6*********7**
 	subroutine convsize(cmaj,cmin,cpa,xy,ncon)
-	implicit none
 	real cmaj,cmin,cpa,xy
 	integer ncon
 c
@@ -2732,7 +2715,7 @@ c    xy			Pixel size
 c  Outputs:
 c    cmaj,cmin,cpa	Convolving beam and position angle.
 c    ncon		Size of convolution array.
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	character*80 line
 	integer length
 	double precision dval(3)
@@ -2765,14 +2748,13 @@ c
 	end
 c********1*********2*********3*********4*********5*********6*********7**
 	subroutine convinit(cmaj,cmin,cpa,xy,ncon,con)
-	implicit none
 	integer ncon
 	real cmaj,cmin,cpa,xy
 	real con(ncon,ncon,4,4)
 c
 c  Set up 2-dimensional convolution function for CONV
 c	variable size array Oct 1987 MCHW
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	real pi,cma,cmi,sinpa,cospa,off
 	real xp,yp,sum,gaus,x,y
 	integer i,j,noff,ioff,joff,mid
@@ -2798,7 +2780,7 @@ c
 	  yp = real(joff - 1)/off
 	  sum = 0.
 	  do 10 i = 1, ncon
-	    x = real(i-mid) - xp 
+	    x = real(i-mid) - xp
 	    do 10 j = 1, ncon
 	      y = real(j-mid) - yp
 	      gaus = ((-x*sinpa+y*cospa)/cma)**2
@@ -2817,16 +2799,15 @@ c
 	end
 c********1*********2*********3*********4*********5*********6*********7**
 	subroutine conv(ary,nx,ny,nc,x0,y0,ncon,con,conary,wt)
-	implicit none
 	integer nx,ny,nc,ncon
 	real ary(nx,ny,nc), con(ncon,ncon,4,4), conary(nc)
 	real x0,y0
 c
-c	performs 2-dimensional convolution of ARY by Gaussian 
+c	performs 2-dimensional convolution of ARY by Gaussian
 c	centered at (X0,Y0); returns convolution in CONARY.
 c	changed to variable size array Oct 1987 MCHW
 c	Idiot proof loop for cray. 25oct91 mchw.
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	integer ix,iy,noff,ioff,joff,mid,ic,jc
 	integer i,j,k
 	real wt,gaus
@@ -2888,7 +2869,6 @@ c
 c********1*********2*********3*********4*********5*********6*********7**
 	subroutine veloline(ary,nx,ny,nc,xc,yc,pa,ncon,con,
      *						 v,np,xstart,xend)
-	implicit none
 	integer nx,ny,nc,ncon,np
 	real ary(nx,ny,nc)
 	real xc,yc,pa,xstart,xend
@@ -2930,7 +2910,7 @@ c
 	posy = yc
 	pospa = pa
 c
-c  Find the points where this line goes outside the box 
+c  Find the points where this line goes outside the box
 c
 	if (pa.eq.45.0) pa=44.999
 	if (pa.eq.90.0) then
@@ -2957,7 +2937,7 @@ c    and xl is the intercept on the bottom.
 c  Test to see when line leaves box and set x1,y1 to this point
 	  x1 = (is-midx)*xy
 	  y1 = (1-midy)*xy
- 	  if(yl.gt.(1-midy)*xy .and. yl.le.(ny-midy)*xy) then 
+ 	  if(yl.gt.(1-midy)*xy .and. yl.le.(ny-midy)*xy) then
 c  line intercepts left side of box
 	    y1 = yl
 	  else if(yl.lt.(1-midy)*xy) then
@@ -2970,15 +2950,15 @@ c  line intercepts top of box
 	  end if
 c
 c  x1,y1 is the end of the line in arcseconds
-c  Now find the start of the line so that the length and step size 
-c  can be found. xr and yr are the intercepts on the right and bottom. 
+c  Now find the start of the line so that the length and step size
+c  can be found. xr and yr are the intercepts on the right and bottom.
 c
 	  xr = ( (ny-midy)*xy - c)/ms
 	  yr = (nx-midx)*xy*ms + c
 c  Test to see when line enters box and set x0,y0 to this point
 	  x0 = (nx-midx)*xy
 	  y0 = (ny-midy)*xy
- 	  if (yr.gt.(1-midy)*xy .and. yr.le.(ny-midy)*xy) then 
+ 	  if (yr.gt.(1-midy)*xy .and. yr.le.(ny-midy)*xy) then
 c  line intercepts right side of box
 	    y0 = yr
 	  else if (yr.lt.(1-midy)*xy) then
@@ -3044,9 +3024,8 @@ c
 	end
 c********1*********2*********3*********4*********5*********6*********7**
 	subroutine wrary
-	implicit none
 c  Write file of spectra & position-velocity cuts.
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	integer lu,iostat,len1,n,length
 	character*80 file,line
 c
@@ -3113,9 +3092,8 @@ c
 	end
 c********1*********2*********3*********4*********5*********6*********7**
 	subroutine rdary
-	implicit none
 c  Read file of spectra & position-velocity cuts.
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	integer lu,iostat,len1,n,length
 	character*80 file,line
 c
@@ -3156,7 +3134,7 @@ c
 	    call txtread(lu,line,length,iostat)
 	    call output(line)
 	    read(line,'(2f20.4)') xc(n),yc(n)
-c zero number of gaussians in fit to spectrum 
+c zero number of gaussians in fit to spectrum
             ngauss(n)=0
 	  enddo
 	endif
@@ -3184,9 +3162,8 @@ c
 	end
 c********1*********2*********3*********4*********5*********6*********7**
       subroutine gaufit(nc,vlsr,t,spec,rms)
-      implicit none
 	real rms
-c 
+c
 c Subroutine fits multiple gaussians to spectrum using numerical
 c recipes routines FGAUSS and MRQMIN. Up to 30 (3x10) free parameters.
 c See Numerical Recipes pp. 521-528 for details.
@@ -3205,13 +3182,13 @@ c  t       amplitudes
 c  spec    spectrum index
 c  rms     current rms estimate
 c Ouputs
-c  ngauss  number of simultaneously fitted  gaussians 
+c  ngauss  number of simultaneously fitted  gaussians
 c  gauss   gaussian parameters
 c           gauss(1,i) amplitude of gaussian i
 c           gauss(2,i) center velocity of gaussian i
 c           gauss(3,i) sigma of gaussian i
 c  gausserr error estimates for gaussian parameters
-c---------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'velplot.h'
       integer nc,spec
       real vlsr,t
@@ -3220,7 +3197,7 @@ c
       real xc(49),yc(49),gauss(49,3,10),gausserr(49,3,10)
       common /spectrae/ xc,yc,nspec,ngauss,gauss,gausserr
 c
-c Gaussian fitting routine adapted from 
+c Gaussian fitting routine adapted from
 c Numerical Recipes driver for MRQMIN
 c
       external fgauss
@@ -3254,14 +3231,14 @@ c get number of simultaneous gaussians to fit
       ngauss(spec)=value
 c ma is the number of free parameters to be fit
       ma=ngauss(spec)*3
-c mfit must be fit if some parameters held fixed; for the future 
+c mfit must be fit if some parameters held fixed; for the future
       mfit=ngauss(spec)*3
 c get initial guesses for amp,center,width,rmsest
-c   
+c
 	call moment1(nc,vlsr,t,rms,amp,mom1,mom2)
       do i=1,ngauss(spec)
         write(line,107) i,amp,mom1,mom2*2.*sqrt(log(2.))
-c********1*********2*********3*********4*********5*********6*********7*c
+c********1*********2*********3*********4*********5*********6*********7**
 107   format('>Gaussian no. ',i1,', Enter amp, vel, fwhm [',3f8.3,'] :')
         call prompt(ans,length,line)
         gauss(spec,1,i)=amp
@@ -3279,11 +3256,11 @@ c********1*********2*********3*********4*********5*********6*********7*c
 	      gauss(spec,k,i) = dval
 	    else
 		call bug('w', 'bad input in gaufit')
-		return 
+		return
 	    endif
 	  enddo
 	  gauss(spec,3,i)=gauss(spec,3,i)/(2.*sqrt(log(2.)))
-	endif  
+	endif
       enddo
 
       call promptf(rmsest,'f10.4',
@@ -3305,7 +3282,7 @@ c
       do i=1,nc
         sig(i)=rmsest
       enddo
-c 
+c
 c first call to mrqmin uses initial guess and sets alamda to 0.001
 c
       alamda=-1.
@@ -3315,7 +3292,7 @@ c
 c
 c repeat calls to mrqmin until delta chisq is less than 0.01
 c (note that chisq is not divided by ndata in mrqcof)
-c 
+c
       k=1
       itst=0
 1	WRITE(*,'(/1X,A,I2,T18,A,F10.4,T43,A,E9.2)') 'Iteration #',K,
@@ -3372,7 +3349,7 @@ c error estimates
         gausserr(spec,2,i)=sqrt(covar(j+1,j+1))
         gausserr(spec,3,i)=sqrt(covar(j+2,j+2))
         j=j+3
-        write(line,157) 
+        write(line,157)
 157   format('  Estimated errors:')
         call output(line)
         call LogWrit(line)
@@ -3385,7 +3362,7 @@ c error estimates
 c
       return
       end
-c--------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       SUBROUTINE FGAUSS(X,A,Y,DYDA,NA)
       integer na
       real a,x,y,dyda
@@ -3404,7 +3381,7 @@ c--------------------------------------------------------------------------
 11    CONTINUE
       RETURN
       END
-c--------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       SUBROUTINE GAUSSJ(A,N,NP,B,M,MP)
       integer n,np,m,mp,nmax,ipiv,indxr,indxc,ll
       PARAMETER (NMAX=50)
@@ -3480,14 +3457,14 @@ c--------------------------------------------------------------------------
 24    CONTINUE
       RETURN
       END
-c--------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       SUBROUTINE MRQMIN(X,Y,SIG,NDATA,A,MA,LISTA,MFIT,
      *    COVAR,ALPHA,NCA,CHISQ,FUNCS,ALAMDA)
 c
 c Levenberg-Marquant method, attempting to reduce the value of chisq
 c of a fit between a set of NDATA points X(I),Y(I) with individual
 c standard deviations, SIG(I), and a nonlinear function dependent on MA
-c coeff A. 
+c coeff A.
 c The array LISTA numbers the parameters A such that the first MFIT
 c elements correspond to values actually being adjusted; the remaining
 c MA-MFIT parameters are held fixed at their input values. The routine
@@ -3497,10 +3474,10 @@ c are used as working space during most iterations. Supply a subroutine
 c FUNCS(X,A,YFIT,DYDA,MA) that evaluates the fitting function YFIT and
 c its derivatives DYDA with respect to the fitting parameters A at X.
 c On the first call provide an inital guess for the parameters A, and
-c set ALAMDA<0 for initialization (which then sets ALAMDA=0.001). If a step
-c succeeds CHISQ becomes smaller and ALAMDA decreases by a factor of 10.
-c If a step fails ALAMDA grows by a factor of 10. You must call this
-c routinerepeatedly until convergence is achieved.
+c set ALAMDA<0 for initialization (which then sets ALAMDA=0.001).  If a
+c step succeeds CHISQ becomes smaller and ALAMDA decreases by a factor
+c of 10.  If a step fails ALAMDA grows by a factor of 10.  You must call
+c this routine repeatedly until convergence is achieved.
 c Then make one final call with ALAMDA=0 so that COVAR(I,J) returns
 c the covariance matrix and ALPHA(I,J) he curvature matrix.
 c
@@ -3571,7 +3548,7 @@ c
       ENDIF
       RETURN
       END
-c--------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       SUBROUTINE MRQCOF(X,Y,SIG,NDATA,A,MA,LISTA,MFIT,ALPHA,BETA,NALP,
      *CHISQ,FUNCS)
       integer mmax
@@ -3610,7 +3587,7 @@ c--------------------------------------------------------------------------
 17    CONTINUE
       RETURN
       END
-c--------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       SUBROUTINE COVSRT(COVAR,NCVM,MA,LISTA,MFIT)
       integer ncvm,ma,lista,mfit,i,j
       real covar,swap
@@ -3648,19 +3625,18 @@ c--------------------------------------------------------------------------
 
 c********1*********2*********3*********4*********5*********6*********7**
       subroutine gauplot(nc,vlsr,t,spec)
-      implicit none
-c 
+c
 c Inputs:
 c  nc      number of channels
 c  vlsr    velocity array
 c  t       spectrum
 c  spec    spectrum index
-c  ngauss  number of simultaneously fitted  gaussians 
+c  ngauss  number of simultaneously fitted  gaussians
 c  gauss   gaussian parameters
 c           gauss(1,i) amplitude of gaussian i
 c           gauss(2,i) center velocity of gaussian i
 c           gauss(3,i) sigma of gaussian i
-c---------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'velplot.h'
       integer nc,spec
       real vlsr(nc),t(nc)
@@ -3678,13 +3654,13 @@ c
       if(ngauss(spec).eq.0)return
 c form gaussian model spectrum
       do i=1,nc
-        tmod(i) = 0.      
+        tmod(i) = 0.
         do j=1,ngauss(spec)
           arg1=(vlsr(i)-gauss(spec,2,j))/gauss(spec,3,j)
           if(abs(arg1).gt.4.)then
             term=0.0
           else
-            term=gauss(spec,1,j)*exp(-arg1*arg1) 
+            term=gauss(spec,1,j)*exp(-arg1*arg1)
           endif
           tmod(i) = tmod(i) + term
         enddo
@@ -3700,13 +3676,13 @@ c
       dv=(vlsr(2)-vlsr(1))/5.
       do i=1,nc*5
         vlsr2(i)=vlsr(1)+(real(i)*dv)
-        tmod2(i) = 0.      
+        tmod2(i) = 0.
         do j=1,ngauss(spec)
           arg1=(vlsr2(i)-gauss(spec,2,j))/gauss(spec,3,j)
           if(abs(arg1).gt.4.)then
             term=0.0
           else
-            term=gauss(spec,1,j)*exp(-arg1*arg1) 
+            term=gauss(spec,1,j)*exp(-arg1*arg1)
           endif
           tmod2(i) = tmod2(i) + term
         enddo
@@ -3722,7 +3698,6 @@ c      call pgHline(nc,vlsr,tres,2.)
       end
 c********1*********2*********3*********4*********5*********6*********7**
 	subroutine moment1(nc,vlsr,buf,clip,amp,mom1,mom2)
-	implicit none
 	integer nc
 	real vlsr(nc),buf(nc),amp,mom1,mom2,clip
 c
@@ -3737,7 +3712,7 @@ c  Output:
 c    amp	maximum amplitude
 c    mom1	1st moment
 c    mom2	2nd moment
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer i
 	real mom0
 c
@@ -3772,7 +3747,6 @@ c
 	end
 c********1*********2*********3*********4*********5*********6*********7**
 	subroutine PosVel(ary,vlsr,nx,ny,nc,v)
-	implicit none
 	integer nx,ny,nc
 	real ary(nx,ny,nc),vlsr(nc),v(*)
 c
@@ -3945,9 +3919,9 @@ c
 	    enddo
 	    ncut = i - 1
 	  endif
-	else 
+	else
 	  goto 9
-	endif	    
+	endif	
 50	if(ncut.eq.0) then
 	  call output('--- no current selection of cuts ---')
 	  return
@@ -3957,7 +3931,7 @@ c  Set up convolution function.
 c
 	call convsize(cmaj,cmin,cpa,xy,ncon)
 	call convinit(cmaj,cmin,cpa,xy,ncon,con)
-c  
+c
 c  Check whether it is contour or intensity plots
 c
 	nchan=0
@@ -4133,7 +4107,7 @@ c  (had to wait for plotcon to get values)
 c Write ASCII file of channel intensities along cut
 	   if(nchan.ne.0)then	
 	    call writeint(v,nc,np,xstart,xend,cf,nchan,ichan,
-     *        xcut(l),ycut(l),pa(l),vlsr) 
+     *        xcut(l),ycut(l),pa(l),vlsr)
            endif
           endif
 	enddo
@@ -4148,7 +4122,7 @@ c
 	    call output(' ')
 	    call prompt(ans,length,'Another PGPLOT device? (Y/[N])')
 	    call ucase(ans)
-	    if(ans(1:1).eq.'Y')then 
+	    if(ans(1:1).eq.'Y')then
 	      call prompt(device,length,'>Enter new PGPLOT device: ')
 	      call lcase(device)
 	      call prompt(ans,length,'>Enter line width [1]: ')
@@ -4156,8 +4130,8 @@ c
 		read(ans,'(i1)') lwidth
 	      endif
 	      goto 60
-	    endif 
-	  endif 
+	    endif
+	  endif
 	endif
 c
 c  Restore original plot device.
@@ -4166,12 +4140,11 @@ c
 	end
 c********1*********2*********3*********4*********5*********6*********7**
 	subroutine intannot(nchan,ichan,vlsr,nc)
-	implicit none
 	integer nchan,ichan(10),nc
 	real vlsr(nc),yloc
 c
 c  Annotate plots.
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	include 'velplot.h'
 	character line*80
 	integer i,j
@@ -4180,7 +4153,7 @@ c  Set pg viewport to right side.
 c
         call pgswin(0.0,1.0,0.0,1.0)
 
-        write(line,'(''Velocities (km/s): '')') 
+        write(line,'(''Velocities (km/s): '')')
         call pgtext(0.0,0.30,line)
 c  levels
 	j=0
@@ -4206,7 +4179,6 @@ c
 c********1*********2*********3*********4*********5*********6*********7**
 	subroutine writeint(v,nc,np,xstart,xend,cf,nchan,ichan,
      *       x0,y0,pa,vlsr)
-	implicit none
 	integer nc,np,nchan,ichan(10),ii,jj,jjj
 	integer lu,length,iostat
 	real v(nc*np),cf,xstart,xend,xdelta,x0,y0,pa,vlsr(nc)
@@ -4216,7 +4188,7 @@ c
 c  Inputs:
 c    v		The array to print.
 c    nc*np	Dimensions of array.
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	include 'velplot.h'
 	real xcoord,xval(MAXDIM)
 	character text*120,line*80
@@ -4274,7 +4246,7 @@ c
 		xval(ii)=v(jjj)/cf
               enddo
               xcoord=xstart+real(jj-1)*xdelta
-	      if(iostat.eq.0)write(text,'(1x,6(f9.3,1x))') 
+	      if(iostat.eq.0)write(text,'(1x,6(f9.3,1x))')
      *		     xcoord,(xval(ii),ii=1,nchan)
 	      length=61
 	      if(iostat.eq.0)call TxtWrite(lu,text,length,iostat)
@@ -4283,9 +4255,8 @@ c
 	endif
 	endif
 	end
-c********1*********2*********3*********4*********5*********6*********7*c
+c********1*********2*********3*********4*********5*********6*********7**
 	subroutine comment
-	implicit none
 c
 c  Enter comment into log
 c
@@ -4301,7 +4272,6 @@ c
 	end
 c********1*********2*********3*********4*********5*********6*********7**
       subroutine WrGauss(outfile,nc,vlsr,cmaj,cmin,cpa)
-      implicit none
 c
 c  Write Gaussian fits to spectra into an ascii file.
 c
@@ -4314,7 +4284,7 @@ c  gauss	gaussian parameters
 c		 gauss(i,1) amplitude of gaussian i
 c		 gauss(i,2) center velocity of gaussian i
 c		 gauss(i,3) sigma of gaussian i
-c----------------------------------------------------------------------
+c-----------------------------------------------------------------------
       include 'velplot.h'
       integer nc
       real vlsr(nc)
@@ -4339,13 +4309,13 @@ c
 c loop through channels
 c
         do i=1,nc
-          tmod(i,k) = 0.      
+          tmod(i,k) = 0.
           do j=1,ngauss(k)
             arg1=(vlsr(i)-gauss(k,2,j))/gauss(k,3,j)
             if(abs(arg1).gt.4.)then
               term=0.0
             else
-              term=gauss(k,1,j)*exp(-arg1*arg1) 
+              term=gauss(k,1,j)*exp(-arg1*arg1)
             endif
             tmod(i,k) = tmod(i,k) + term
           enddo
@@ -4356,13 +4326,13 @@ c
         dv=(vlsr(2)-vlsr(1))/5.
         do i=1,nc*5
           vlsr2(i)=vlsr(1)+(real(i)*dv)
-          tmod2(i,k) = 0.      
+          tmod2(i,k) = 0.
           do j=1,ngauss(k)
             arg1=(vlsr2(i)-gauss(k,2,j))/gauss(k,3,j)
             if(abs(arg1).gt.4.)then
               term=0.0
             else
-              term=gauss(k,1,j)*exp(-arg1*arg1) 
+              term=gauss(k,1,j)*exp(-arg1*arg1)
             endif
             tmod2(i,k) = tmod2(i,k) + term
           enddo
