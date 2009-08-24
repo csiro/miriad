@@ -1,6 +1,4 @@
-c************************************************************************
 	program hermes
-	implicit none
 c
 c= HERMES  Make model images for Mercury.
 c& mchw
@@ -31,15 +29,21 @@ c    D.Mitchell 01Jun89	 Initial version.
 c	        23sep90  Revised revision.
 c		10dec90	 Miriad version.
 c    nebk       26nov92  Add btype
-c------------------------------------------------------------------------
+c
+c $Id: hermes.for,v 1.2 2009/08/24 07:43:32 cal103 Exp $
+c-----------------------------------------------------------------------
 	include 'hermes.h'
 	include 'maxdim.h'
 	character in*64,out*64,log*64
 	integer lout,nsize(3),imsize
 	integer i,j,icrpix,jcrpix,iimin,iimax,jjmin,jjmax,ioff,joff
 	real row(maxdim),pixel
-c
+        character versan*80, version*80
+
 	data row/maxdim*0./
+c-----------------------------------------------------------------------
+      version = versan ('hermes',
+     :  '$Id: hermes.for,v 1.2 2009/08/24 07:43:32 cal103 Exp $')
 c
 c  Get the input parameters.
 c
@@ -129,10 +133,8 @@ c
 	call logclose
 c
 	end
-c------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	subroutine mercury(name)
-c
-	implicit none
 	character name*(*)
 c  Input:
 c    name	Parameter file name.
@@ -155,7 +157,7 @@ c	                 solution periodicity
 c	External checks: agreement with linear theory when chi = 0
 c	                 agreement between Schmidt and C-N methods
 c	                 agreement with other published results
-c------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
 	integer i,lu,iostat
 	character line*80
@@ -247,7 +249,7 @@ c
 			write(line,50)
 50			format(' HERMESN: cant get Mercury time ')
 			call LogWrit(line(1:32))
-			pause
+			stop
 		endif
 	else
 		time = -time
@@ -269,7 +271,7 @@ c
 	call interp
 c
 	end
-c--------------------------------------------------------------
+c-----------------------------------------------------------------------
 	subroutine rotate
 c
 c	From RA and DEC offsets from the sub-earth point in 
@@ -281,7 +283,7 @@ c	D. Mitchell   24 May       1989   UCB
 c	              27 September 1989   (latest revision)
 c
 c	tested OK on 27 September 1989
-c--------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
 	integer i,j,l,m
 	real lrot(3,3),xe(3),xh(3),xx
@@ -347,7 +349,7 @@ c
 c
 	return
 	end
-c------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	subroutine interp
 c
 c	Interpolates from the Hermographic brightness temperature
@@ -360,7 +362,7 @@ c	D. Mitchell    1 June      1989   UCB
 c	              28 January   1990   (latest revision)
 c
 c	tested OK on 28 January 1990
-c------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
 	integer i,j,m,n,midb
 	real dlon,dlat,midlat,reflect
@@ -381,7 +383,8 @@ c
 	common /map/ longr(64,64),latgr(64,64),tbgr(64,64),cell
 	real longr,latgr,tbgr,cell
 c
-c.......Initialize Hermographic longitude (x1a) and latitude (x2a) vectors
+c.......Initialize Hermographic longitude (x1a) and latitude (x2a)
+c       vectors.
 c
 	m = 2*nlon
 	n = nlat
@@ -399,7 +402,7 @@ c
 c
 c.......Compute auxiliary 2nd derivative table
 c
-	call splie2(x1a,x2a,tb,m,n,tb2)
+	call splie2(x2a,tb,m,n,tb2)
 c
 c.......Compute the geocentric brightness temperature map
 c
@@ -418,7 +421,7 @@ c
 c
 	return
 	end
-c----------------------------------------------------------------
+c-----------------------------------------------------------------------
       SUBROUTINE SPLINT(XA,YA,Y2A,N,X,Y)
       INTEGER N
       REAL XA,YA,Y2A,X,Y
@@ -429,7 +432,7 @@ c     (XA) given the second derivatives (Y2A) to estimate the
 c     function value (Y) at location (X).
 c
 c     Copied from BKYAST$DUA1:[USERLIB.RECIPES]
-c----------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
       INTEGER KLO,KHI,K
       REAL H,A,B
@@ -447,14 +450,14 @@ c
       GOTO 1
       ENDIF
       H=XA(KHI)-XA(KLO)
-      IF (H.EQ.0.) PAUSE 'Bad XA input.'
+      IF (H.EQ.0.) STOP 'Bad XA input.'
       A=(XA(KHI)-X)/H
       B=(X-XA(KLO))/H
       Y=A*YA(KLO)+B*YA(KHI)+
      *      ((A**3-A)*Y2A(KLO)+(B**3-B)*Y2A(KHI))*(H**2)/6.
       RETURN
       END
-c------------------------------------------------------------------
+c-----------------------------------------------------------------------
       SUBROUTINE SPLINE(X,Y,N,YP1,YPN,Y2)
       INTEGER N
       REAL X,Y,YP1,YPN,Y2
@@ -465,7 +468,7 @@ c     increasing points (X) given the first derivative at the end
 c     points (YP1, YPN).
 c
 c     Copied from BKYAST$DUA1:[USERLIB.RECIPES]
-c------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
       INTEGER NMAX,I,K
       REAL U,SIG,P,QN,UN
@@ -499,14 +502,14 @@ c
 12    CONTINUE
       RETURN
       END
-c-------------------------------------------------------------------
-      SUBROUTINE SPLIE2(X1A,X2A,YA,M,N,Y2A)
+c-----------------------------------------------------------------------
+      SUBROUTINE SPLIE2(X2A,YA,M,N,Y2A)
       INTEGER M,N
-      REAL X1A,X2A,YA,Y2A
+      REAL X2A,YA,Y2A
 c
 c     Computes the second derivative table (Y2A) for the Numerical
 c     Recipes bicubic spline routine given a 2-D grid of equally-
-c     spaced independent variables (X1A, X2A) and the corresponding
+c     spaced independent variables (X2A) and the corresponding
 c     function values (YA).
 c
 c     Modified on 15 October 1989: natural splines replaced by zero
@@ -515,13 +518,13 @@ c
 c     Modified on 26 January 1990: variable arrays up MMAX,NMAX
 c
 c     Copied from BKYAST$DUA1:[USERLIB.RECIPES]
-c-------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
       INTEGER NN,MMAX,NMAX,J,K
       REAL YTMP,Y2TMP
 c
       PARAMETER (NN=100, MMAX=100, NMAX=20)
-      DIMENSION X1A(M),X2A(N),YA(MMAX,NMAX),Y2A(MMAX,NMAX),
+      DIMENSION X2A(N),YA(MMAX,NMAX),Y2A(MMAX,NMAX),
      &          YTMP(NN),Y2TMP(NN)
       DO 13 J=1,M
         DO 11 K=1,N
@@ -534,7 +537,7 @@ c
 13    CONTINUE
       RETURN
       END
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       SUBROUTINE SPLIN2(X1A,X2A,YA,Y2A,M,N,X1,X2,Y)
       INTEGER M,N
       REAL X1A,X2A,YA,Y2A,X1,X2,Y
@@ -550,7 +553,7 @@ c
 c     Modified on 26 January 1990: variable arrays up to MMAX,NMAX
 c
 c     Copied from BKYAST$DUA1:[USERLIB.RECIPES]
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
       INTEGER NN,MMAX,NMAX,J,K
       REAL YTMP,Y2TMP,YYTMP
@@ -569,7 +572,7 @@ c
       CALL SPLINT(X1A,YYTMP,Y2TMP,M,X1,Y)
       RETURN
       END
-c------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	subroutine regoln
 c
 c	Calculates a brightness temperature map of the surface of
@@ -585,7 +588,7 @@ c	D. Mitchell   12 May     1989   UCB
 c	              28 January 1990   (latest revision)
 c
 c	tested OK on 28 January 1990
-c------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
 	integer l,b,midb
 	real x,t,lon,lat,dlon,dlat,midlat,bound,radiate
@@ -634,7 +637,7 @@ c
 c
 	return
 	end
-c-----------------------------------------------------------------
+c-----------------------------------------------------------------------
 	subroutine crankn(lon,lat)
 	real lon,lat
 c
@@ -653,7 +656,7 @@ c	                23 September 1990   (latest revision)
 c
 c	tested OK on 23 September 1990
 c	algebra checked OK on 8 June 1990
-c-----------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
 	integer i,j,k,l,lmax,zapflg
 	character line*80
@@ -796,7 +799,8 @@ c
 		b(imax) = f + g - a(imax) + q + 2.*c(imax)
 		r(imax) = rp(imax) + (f - g)*temp(imax,j)
 c
-c...............Improve the estimate of temp(0...imax,j+1) using corrector
+c...............Improve the estimate of temp(0...imax,j+1) using
+c               corrector.
 c
 		call tridagn(a,b,c,r,tem,imax)
 c
@@ -816,7 +820,7 @@ c
 			write(line,30)
 30			format(' CRANKN: P-C loop not converging ')
 			call LogWrit(line(1:33))
-			pause
+			stop
 		endif
 c
 		if(cerr*cerr .gt. tol2) then
@@ -928,14 +932,14 @@ c
 c
 	return
 	end
-c------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	real function zip(teq)
 	real teq
 c
 c	D. Mitchell    6 April 1990   UCB
 c
 c	tested OK on 6 April 1990
-c------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
 	real x,w,tav,f,g
 c
@@ -971,7 +975,7 @@ c
 c
 	return
 	end
-c----------------------------------------------------------------
+c-----------------------------------------------------------------------
       SUBROUTINE TRIDAGN(A,B,C,R,U,N)
       INTEGER N
       REAL A,B,C,R,U
@@ -983,20 +987,20 @@ c
 c	copied from BKYAST$DUA1:[USERLIB.RECIPES]
 c
 c	modified by D. Mitchell on 3 August 1989
-c----------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
       INTEGER NMAX,J
       REAL GAM,BET
 c
       PARAMETER (NMAX=50)
       DIMENSION GAM(0:NMAX),A(0:N),B(0:N),C(0:N),R(0:N),U(0:N)
-      IF(B(0).EQ.0.)PAUSE
+      IF(B(0).EQ.0.) STOP
       BET=B(0)
       U(0)=R(0)/BET
       DO 11 J=1,N
         GAM(J)=C(J-1)/BET
         BET=B(J)-A(J)*GAM(J)
-        IF(BET.EQ.0.)PAUSE
+        IF(BET.EQ.0.) STOP
         U(J)=(R(J)-A(J)*U(J-1))/BET
 11    CONTINUE
       DO 12 J=N-1,0,-1
@@ -1004,7 +1008,7 @@ c
 12    CONTINUE
       RETURN
       END
-c-----------------------------------------------------------
+c-----------------------------------------------------------------------
 	subroutine smooth
 c
 c	Smooths the temperature structure to get rid of
@@ -1017,7 +1021,7 @@ c	D. Mitchell   12 May 1989   UCB
 c	              29 May 1990   (latest revision)
 c
 c	tested OK on 29 May 1990
-c-----------------------------------------------------------
+c-----------------------------------------------------------------------
 c
 	integer i,j
 c
@@ -1048,7 +1052,7 @@ c
 c
 	return
 	end
-c-------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	real function flux(lon,lat,t)
 	real lon,lat,t
 c
@@ -1059,7 +1063,7 @@ c	D. Mitchell   12 April 1989   UCB
 c	              31 May   1989   (latest revision)
 c
 c	tested OK on 1 June 1990
-c-------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
 	real x,y,f,dist,thet,elev,eta
 c
@@ -1100,7 +1104,7 @@ c
 c
 	return
 	end
-c-------------------------------------------------------------
+c-----------------------------------------------------------------------
 	subroutine orbit(t,dist,thet)
 	real t,dist,thet
 c
@@ -1114,7 +1118,7 @@ c
 c	D.L. Mitchell    30 May 1990    UCB
 c
 c	tested OK on 31 May 1990
-c-------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
 	integer n
 	character line*80
@@ -1143,7 +1147,7 @@ c
 			write(line,20)
 20			format(' ORBIT: convergence error ')
 			call LogWrit(line(1:26))
-			pause
+			stop
 		endif
 		go to 10
 	endif
@@ -1153,7 +1157,7 @@ c
 c
 	return
 	end
-c---------------------------------------------------------------
+c-----------------------------------------------------------------------
       SUBROUTINE ZBRAC(X1,X2,SUCCES)
       LOGICAL SUCCES
       REAL X1,X2
@@ -1162,13 +1166,13 @@ c	Numerical Recipes routine to bracket a zero-crossing
 c	interval of the function defined by FUNC3
 c
 c	copied from bkyast$dua1:[userlib.recipes]
-c---------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
       INTEGER J,NTRY
       REAL FACTOR,F1,F2,FUNC3,ABS
 c
       PARAMETER (FACTOR=1.2,NTRY=6)
-      IF(X1.EQ.X2)PAUSE 'You have to guess an initial range'
+      IF(X1.EQ.X2) STOP 'You have to guess an initial range'
       F1=FUNC3(X1)
       F2=FUNC3(X2)
       SUCCES=.TRUE.
@@ -1185,7 +1189,7 @@ c
       SUCCES=.FALSE.
       RETURN
       END
-c----------------------------------------------------------------------
+c-----------------------------------------------------------------------
       REAL FUNCTION RTBIS(X1,X2,XACC)
       REAL X1,X2,XACC
 c
@@ -1194,7 +1198,7 @@ c	defined by FUNC3 between the limits X1 and X2 by the method of
 c	bisection.
 c
 c	copied from bkyast$dua1:[userlib.recipes]
-c----------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
       INTEGER JMAX,J
       REAL FMID,FUNC3,F,DX,ABS,XMID
@@ -1202,7 +1206,7 @@ c
       PARAMETER (JMAX=40)
       FMID=FUNC3(X2)
       F=FUNC3(X1)
-      IF(F*FMID.GE.0.) PAUSE 'Root must be bracketed for bisection.'
+      IF(F*FMID.GE.0.) STOP 'Root must be bracketed for bisection.'
       IF(F.LT.0.)THEN
         RTBIS=X1
         DX=X2-X1
@@ -1217,9 +1221,9 @@ c
         IF(FMID.LE.0.)RTBIS=XMID
         IF(ABS(DX).LT.XACC .OR. FMID.EQ.0.) RETURN
 11    CONTINUE
-      PAUSE 'too many bisections'
+      STOP 'too many bisections'
       END
-c---------------------------------------------------------------
+c-----------------------------------------------------------------------
 	real function func3(t)
 	real t
 c
@@ -1227,7 +1231,7 @@ c	Mercury time refinement by sub-solar longitude.
 c
 c	D.L. Mitchell  18 June 1990   UCB
 c
-c---------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
 	real x,y,lon
 c
@@ -1250,7 +1254,7 @@ c
 c
 	return
 	end
-c--------------------------------------------------------------
+c-----------------------------------------------------------------------
 	real function radiate(lon,lat,t)
 	real lon,lat,t
 c
@@ -1265,7 +1269,7 @@ c	D. Mitchell   16 April     1989   UCB
 c	              23 September 1990   (latest revision)
 c
 c	tested OK on 23 September 1990
-c--------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
 	integer i,j
 	character line*80
@@ -1348,7 +1352,7 @@ c
 c
 	return
 	end
-c-------------------------------------------------------------
+c-----------------------------------------------------------------------
       SUBROUTINE QROMB(A,B,SS)
       REAL A,B,SS
 c
@@ -1357,7 +1361,7 @@ c	integration of the function defined in FUNC.FOR
 c
 c	copied from BKYAST$DUA1:[USERLIB.RECIPES]
 c
-c-------------------------------------------------------------
+c-----------------------------------------------------------------------
       INTEGER JMAX,JMAXP,J,K,L,KM
       REAL EPS,S,H,DSS,ABS
 c
@@ -1374,9 +1378,9 @@ c
         S(J+1)=S(J)
         H(J+1)=0.25*H(J)
 11    CONTINUE
-      PAUSE 'Too many steps.'
+      STOP 'Too many steps.'
       END
-c---------------------------------------------------
+c-----------------------------------------------------------------------
       SUBROUTINE TRAPZD(A,B,S,N)
       INTEGER N
       REAL A,B,S
@@ -1386,7 +1390,7 @@ c	the trapezoidal rule to obtain successive
 c	approximations to an integral
 c
 c	copied from BKYAST$DUA1:[USERLIB.RECIPES]
-c---------------------------------------------------
+c-----------------------------------------------------------------------
 c
       INTEGER J,IT
       REAL X,TNM,SUM,DEL,FUNC
@@ -1408,7 +1412,7 @@ c
       ENDIF
       RETURN
       END
-c----------------------------------------------------
+c-----------------------------------------------------------------------
       SUBROUTINE POLINT(XA,YA,N,X,Y,DY)
       INTEGER N
       REAL XA,YA,X,Y,DY
@@ -1419,7 +1423,7 @@ c	QROMB to zero step size.
 c
 c	copied from BKYAST$DUA1:[USERLIB.RECIPES]
 c
-c----------------------------------------------------
+c-----------------------------------------------------------------------
 c
       INTEGER I,M,NMAX,NS
       REAL C,D,DIF,DIFT,HO,HP,W,DEN
@@ -1445,7 +1449,7 @@ c
           HP=XA(I+M)-X
           W=C(I+1)-D(I)
           DEN=HO-HP
-          IF(DEN.EQ.0.)PAUSE
+          IF(DEN.EQ.0.) STOP
           DEN=W/DEN
           D(I)=HP*DEN
           C(I)=HO*DEN
@@ -1460,7 +1464,7 @@ c
 13    CONTINUE
       RETURN
       END
-c--------------------------------------------------------------
+c-----------------------------------------------------------------------
 	real function func(x)
 	real x
 c
@@ -1472,7 +1476,7 @@ c	D. Mitchell   30 July      1989   UCB
 c	               7 June      1990   (latest revision)
 c
 c	tested OK on 7 June 1990
-c--------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
 	real y,zip
 c
@@ -1501,7 +1505,7 @@ c
 c
 	return
 	end
-c-----------------------------------------------------------
+c-----------------------------------------------------------------------
 	real function reflect(lon,lat)
 	real lon,lat
 c
@@ -1515,7 +1519,7 @@ c	D. Mitchell   17 April 1989   UCB
 c	               1 June  1989   (latest revision)
 c
 c	tested OK on 1 June 1989
-c-----------------------------------------------------------
+c-----------------------------------------------------------------------
 c
 	real perp,par,thi,thf,cthf
 c
@@ -1553,7 +1557,7 @@ c
 c
 	return
 	end
-c------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	real function bound(x)
 	real x
 c
@@ -1563,7 +1567,7 @@ c
 c	D.L. Mitchell   1 June 1989   UCB
 c
 c	tested OK on 1 June 1989
-c------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
 	integer n,int
 c
@@ -1577,7 +1581,7 @@ c
 c
 	return
 	end
-c------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	real function bound2(x)
 	real x
 c
@@ -1587,7 +1591,7 @@ c
 c	D.L. Mitchell   11 May 1991   UCB
 c
 c	tested OK on 11 May 1991
-c------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
 	if(x .lt. -1.) then
 		bound2 = -1.
@@ -1599,7 +1603,7 @@ c
 c
 	return
 	end
-c--------------------------------------------------------------
+c-----------------------------------------------------------------------
 	real function v(x)
 	real x
 c
@@ -1608,7 +1612,7 @@ c
 c	D. Mitchell   9 October 1989   UCB
 c
 c	tested OK on 13 October 1989
-c--------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
 	real y
 c
