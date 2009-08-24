@@ -1,57 +1,60 @@
-c**********************************************************************c
-	program clplot
+c********1*********2*********3*********4*********5*********6*********7**
+      program clplot
 c
-c= CLPLOT - Task to plot integrated maps, etc and clump assigment from clfind
+c= CLPLOT - Plot integrated maps, etc and clump assigment from clfind
 c& pjt
 c: image analysis
 c+
-c	CLPLOT is an interactive task to analyse spectra, position-velocity
-c	slices, and integrated velocity maps from Miriad Images.
-c	There are three basic display options:
+c     CLPLOT is an interactive task to analyse spectra, position-
+c     velocity slices, and integrated velocity maps from Miriad Images.
+c     There are three basic display options:
 c
-c	 - Velocity-averaged x-y images over selected velocity intervals.
-c		Also makes velocity and velocity dispersion images.
-c	 - Spectra at selected x-y positions. The data can be convolved
-c		in the x-y or velocity. Gaussian fitting routine.
-c	 - Position-velocity maps along user selected position angles,
-c		or plots of intensity versus position for selected velocity
-c		channels. The data can be convolved in the x-y plane.
+c      - Velocity-averaged x-y images over selected velocity intervals.
+c             Also makes velocity and velocity dispersion images.
+c      - Spectra at selected x-y positions. The data can be convolved
+c             in the x-y or velocity. Gaussian fitting routine.
+c      - Position-velocity maps along user selected position angles,
+c             or plots of intensity versus position for selected
+c             velocity channels.  The data can be convolved in the x-y
+c             plane.
 c
-c	(x,y) positions are (HA,DEC) in arcsec relative to map center.
-c	Position angles are measured from the north towards the east.
+c     (x,y) positions are (HA,DEC) in arcsec relative to map center.
+c     Position angles are measured from the north towards the east.
 c
-c	The output from each option can be plotted, printed, or written out
-c	as Miriad images of velocity-averaged maps, position-velocity maps,
-c	or ascii spectra respectively. Gaussian fits are written into the log.
+c     The output from each option can be plotted, printed, or written
+c     out as Miriad images of velocity-averaged maps, position-velocity
+c     maps, or ascii spectra respectively.  Gaussian fits are written
+c     into the log.
 c
-c	The task saves user-defined lists of velocity-averaged maps, position-
-c	velocity cuts, and spectra positions. These lists can be created and
-c	edited within the task, and can be passed between the three options.
-c	For example, a list of spectra or position-velocity cuts can be created
-c	with the cursor whilst displaying a velocity-averaged map. These lists
-c	are used to display the spectra and position-velocity cuts, and can be
-c	written out and read in as ascii files.
+c     The task saves user-defined lists of velocity-averaged maps,
+c     position-velocity cuts, and spectra positions.  These lists can be
+c     created and edited within the task, and can be passed between the
+c     three options.  For example, a list of spectra or position-
+c     velocity cuts can be created with the cursor whilst displaying a
+c     velocity-averaged map.  These lists are used to display the
+c     spectra and position-velocity cuts, and can be written out and
+c     read in as ascii files.
 c
-c	A menu option provides a choice of display style, contour levels,
-c	and units. Further interactive help is available within the task.
+c     A menu option provides a choice of display style, contour levels,
+c     and units. Further interactive help is available within the task.
 c@ in
-c	Input image name. No default.
+c     Input image name. No default.
 c@ device
-c	The PGPLOT plotting device.
+c     The PGPLOT plotting device.
 c@ region
-c	Region of image to be plotted. E.g.
-c	  % image region=relpix,box(-30,-30,20,90)(16,57)
-c	reads in 50 x 120 pixels of image planes 16 to 57.
-c	The default is the whole Image. The current size limit is 256 in
-c	any dimension. (see parameter maxdim in clplot.h)
+c     Region of image to be plotted. E.g.
+c       % image region=relpix,box(-30,-30,20,90)(16,57)
+c     reads in 50 x 120 pixels of image planes 16 to 57.
+c     The default is the whole Image. The current size limit is 256 in
+c     any dimension. (see parameter maxdim in clplot.h)
 c@ log
-c	The output log file. The default filename is clplot.log
-c	Results from image analysis are written into the log file.
+c     The output log file. The default filename is clplot.log
+c     Results from image analysis are written into the log file.
 c--
-c	reads and writes 3D arrays of channel maps
-c	generates: 1) spectra
-c		   2) position-velocity plots
-c		   3) velocity-averaged x-y contour plots
+c     reads and writes 3D arrays of channel maps
+c     generates: 1) spectra
+c                2) position-velocity plots
+c                3) velocity-averaged x-y contour plots
 c
 c  History:
 c    20jan94 jpw   Copied from MIRIAD program velplot
@@ -59,39 +62,38 @@ c    13jul98 pjt   linux/g77 cleanup
 c    26aug98 pjt   fixed bug with long words in history file of .cf file
 c    02jan05 rjs   fix misdeclaration.
 c
-c $Id: clplot.for,v 1.2 2007/03/15 01:25:24 cal103 Exp $
-c----------------------------------------------------------------------c
-	include 'clplot.h'
-c
-	integer maxnax,maxboxes
-	parameter(maxnax=3,maxboxes=maxdim)
-	integer boxes(maxboxes),nsize(maxnax),blc(maxnax),trc(maxnax)
-	character*80 ans,line,in,log
-	character words(80)*80
-	character*3 extension
-	integer lIn,lIn2,nx,ny,nc,idoc,iostat,length
-	integer nwords,len1
-	logical eof
-	real dt,ary(maxbuf)
-	real vlsr(maxdim),v(maxdim*maxdim)
-c
-c set default plotting parameters
-c
-	data units/'J'/,alabel/'Y'/,percent/'Y'/
-	data apint/'N'/,abscoord/'N'/,write/'N'/
-	data cneg/'Y'/,pspec/'Y'/
-	data gray/'N'/,defgray/'Y'/
-	data lgaufit/'N'/,lgauplot/'Y'/
-	data levels/15,30,45,60,75,90,0,0,0,0/,nlevels/6/
-	data nclumps/0/
-c
-	character versan*80, version*80
+c $Id: clplot.for,v 1.3 2009/08/24 07:24:11 cal103 Exp $
+c-----------------------------------------------------------------------
+      include 'clplot.h'
+
+      integer maxnax,maxboxes
+      parameter(maxnax=3,maxboxes=maxdim)
+      integer boxes(maxboxes),nsize(maxnax),blc(maxnax),trc(maxnax)
+      character*80 ans,line,in,log
+      character words(80)*80
+      character*3 extension
+      integer lIn,lIn2,nx,ny,nc,idoc,iostat,length
+      integer nwords,len1
+      logical eof
+      real dt,ary(maxbuf)
+      real vlsr(maxdim),v(maxdim*maxdim)
+
+c     Set default plotting parameters.
+      data units/'J'/,alabel/'Y'/,percent/'Y'/
+      data apint/'N'/,abscoord/'N'/,write/'N'/
+      data cneg/'Y'/,pspec/'Y'/
+      data gray/'N'/,defgray/'Y'/
+      data lgaufit/'N'/,lgauplot/'Y'/
+      data levels/15,30,45,60,75,90,0,0,0,0/,nlevels/6/
+      data nclumps/0/
+
+      character versan*80, version*80
 c
 c  real ary(128*128*64)=1048576 reals = 4 MBytes
 c  real ary(256*256*128)=8388608 reals = 32 MBytes
 c-----------------------------------------------------------------------
       version = versan('clplot',
-     +  '$Id: clplot.for,v 1.2 2007/03/15 01:25:24 cal103 Exp $')
+     +  '$Id: clplot.for,v 1.3 2009/08/24 07:24:11 cal103 Exp $')
 c
 c  Get the input parameters.
 c
@@ -152,7 +154,7 @@ c  Start the output log file.
 c
 	call LogOpen(log,'q')
 	call LogWrit(version)
-	call velohead(ary,vlsr,nx,ny,nc)
+	call velohead(vlsr,nx,ny,nc)
 c
 c  Prompt for interactive options:
 c
@@ -188,7 +190,7 @@ c
 	else if(ans(1:1).eq.'V') then
 	  call velmap(ary,vlsr,nx,ny,nc,v)
 	else if(ans(1:1).eq.'L') then
-	  call velohead(ary,vlsr,nx,ny,nc)
+	  call velohead(vlsr,nx,ny,nc)
 	else if(ans(1:1).eq.'I') then
 	  call Integral(ary,vlsr,nx,ny,nc)
 	else if(ans(1:1).eq.'W') then
@@ -528,7 +530,7 @@ c
 c  Specify List of cuts, or RA-vel or DEC-velocity.
 c
 	call output(' ')
-	call prompt(ans,length,
+11	call prompt(ans,length,
      *    '>List of cuts, RA-vel or DEC-vel ? ([L]/X/Y) :')
 	call ucase(ans)
 	if(ans.eq.' ') ans='L'
@@ -607,8 +609,9 @@ c
 	    pa(i)=0.0
 	  enddo
 	else
-	  goto 10
+	  goto 11
 	endif
+
 50	if(ncut.eq.0) then
   	  call output('--- no current selection of cuts ---')
 	  return
@@ -828,7 +831,7 @@ c
 	subroutine SetCont
 c
 c  Set contour levels and label interval
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	include 'clplot.h'
 	character*80 ans,line
 	real cmin,cmax,cint
@@ -873,7 +876,7 @@ c********1*********2*********3*********4*********5*********6*********7**
 	subroutine SetGray
 c
 c  Set grayscale levels
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	include 'clplot.h'
         integer l
 c
@@ -907,7 +910,7 @@ c  gauss	gaussian parameters
 c		 gauss(i,1) amplitude of gaussian i
 c		 gauss(i,2) center velocity of gaussian i
 c		 gauss(i,3) sigma of gaussian i
-c----------------------------------------------------------------------
+c-----------------------------------------------------------------------
       include 'clplot.h'
       common /spectrae/ xc,yc,nspec,ngauss,gauss,gausserr
       real xc(49),yc(49),gauss(49,3,10),gausserr(49,3,10)
@@ -1031,7 +1034,7 @@ c
       end
 	subroutine clumps(lIn,lIn2,blc,trc,ary,vlsr,nx,ny,nc)
 c  User enters which clumps to plot
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	include 'clplot.h'
 	integer i
 	real x
@@ -1078,7 +1081,7 @@ c	performs 2-dimensional convolution of ARY by Gaussian
 c	centered at (X0,Y0); returns convolution in CONARY.
 c	changed to variable size array Oct 1987 MCHW
 c	Idiot proof loop for cray. 25oct91 mchw.
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	integer ix,iy,noff,ioff,joff,mid,ic,jc
 	integer i,j,k
 	real wt,gaus
@@ -1144,7 +1147,7 @@ c
 c
 c  Set up 2-dimensional convolution function for CONV
 c	variable size array Oct 1987 MCHW
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	real pi,cma,cmi,sinpa,cospa,off
 	real xp,yp,sum,gaus,x,y
 	integer i,j,noff,ioff,joff,mid
@@ -1198,7 +1201,7 @@ c    xy			Pixel size
 c  Outputs:
 c    cmaj,cmin,cpa	Convolving beam and position angle.
 c    ncon		Size of convolution array.
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	character*80 line
 	integer length
 #ifdef cft
@@ -1245,7 +1248,7 @@ c  Inputs:
 c    ary(nx,ny)	The current array,
 c  Outputs:
 c    key	cursor option
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	include 'clplot.h'
 	real xx,yy
 	real xx1,yy1
@@ -1449,7 +1452,7 @@ c           gauss(1,i) amplitude of gaussian i
 c           gauss(2,i) center velocity of gaussian i
 c           gauss(3,i) sigma of gaussian i
 c  gausserr error estimates for gaussian parameters
-c---------------------------------------------------------------------
+c-----------------------------------------------------------------------
       common /spectrae/ xc,yc,nspec,ngauss,gauss,gausserr
       real xc(49),yc(49),gauss(49,3,10),gausserr(49,3,10)
       integer nc,nspec,spec,ngauss(49)
@@ -1493,7 +1496,7 @@ c
 	call moment1(nc,vlsr,t,rms,amp,mom1,mom2)
       do i=1,ngauss(spec)
         write(line,107) i,amp,mom1,mom2*2.*sqrt(alog(2.))
-c********1*********2*********3*********4*********5*********6*********7*c
+c********1*********2*********3*********4*********5*********6*********7**
 107   format('>Gaussian no. ',i1,', Enter amp, vel, fwhm [',3f8.3,'] :')
         call prompt(ans,length,line)
 	if(length.ne.0)then
@@ -1649,7 +1652,7 @@ c-----------------------------------------------------------------------
                   ICOL=K
                 ENDIF
               ELSE IF (IPIV(K).GT.1) THEN
-                PAUSE 'Singular matrix'
+                STOP 'Singular matrix'
               ENDIF
 12          CONTINUE
           ENDIF
@@ -1669,7 +1672,7 @@ c-----------------------------------------------------------------------
         ENDIF
         INDXR(I)=IROW
         INDXC(I)=ICOL
-        IF (A(ICOL,ICOL).EQ.0.) PAUSE 'Singular matrix.'
+        IF (A(ICOL,ICOL).EQ.0.) STOP 'Singular matrix.'
         PIVINV=1./A(ICOL,ICOL)
         A(ICOL,ICOL)=1.
         DO 16 L=1,N
@@ -1750,10 +1753,10 @@ c-----------------------------------------------------------------------
             LISTA(KK)=J
             KK=KK+1
           ELSE IF (IHIT.GT.1) THEN
-            PAUSE 'Improper permutation in LISTA'
+            STOP 'Improper permutation in LISTA'
           ENDIF
 12      CONTINUE
-        IF (KK.NE.(MA+1)) PAUSE 'Improper permutation in LISTA'
+        IF (KK.NE.(MA+1)) STOP 'Improper permutation in LISTA'
         ALAMDA=0.001
         CALL MRQCOF(X,Y,SIG,NDATA,A,MA,LISTA,MFIT,ALPHA,BETA,NCA,CHISQ,
      *       FUNCS)
@@ -1870,7 +1873,7 @@ c-----------------------------------------------------------------------
       RETURN
       END
 
-c---------------------------------------------------------------------
+c-----------------------------------------------------------------------
       subroutine gauplot(nc,vlsr,t,spec)
 c
 c Inputs:
@@ -1883,7 +1886,7 @@ c  gauss   gaussian parameters
 c           gauss(1,i) amplitude of gaussian i
 c           gauss(2,i) center velocity of gaussian i
 c           gauss(3,i) sigma of gaussian i
-c---------------------------------------------------------------------
+c-----------------------------------------------------------------------
       common /spectrae/ xc,yc,nspec,ngauss,gauss,gausserr
       real xc(49),yc(49),gauss(49,3,10),gausserr(49,3,10)
       integer nc,nspec,spec
@@ -1944,7 +1947,7 @@ c      call pgHline(nc,vlsr,tres,2.)
 	subroutine header(ipr)
 	integer ipr
 c  convert units and write out map header if ipr .ne. 0.
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	include 'clplot.h'
 	real rae(3),dece(3),ckms,rts,hours,degs,deg,freqs
 	real omega,pixel,pi
@@ -2019,7 +2022,7 @@ c
 	real vlsr(nc),yloc
 c
 c  Annotate plots.
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	include 'clplot.h'
 	character line*80
 	integer i,j
@@ -2060,7 +2063,7 @@ c
 c  Inputs:
 c    ary	The array.
 c    nx,ny	Dimensions of array.
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	include 'clplot.h'
 	character line*80
 	real tmax,tmin,ave,rts
@@ -2104,7 +2107,7 @@ c    imax,jmax	position of maximum.
 c    imin,jmin	position of minimum.
 c    ave,rms	average and rms in specified region.
 c    num	number of pixels greater than -99999
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	integer i,j
 	real a,sum,sumsq
 c
@@ -2140,7 +2143,7 @@ c
 	end
 	subroutine menu(dt)
 c  Set plotting parameters
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	include 'clplot.h'
 	integer i,length
 	real dt
@@ -2352,7 +2355,7 @@ c
 c
 c	Return number of plotting windows in x and y directions (windx,windy)
 c	imaps is the number of maps to be plotted
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	integer uwindx,uwindy
 c
 	if (imaps .gt. 16) then
@@ -2387,7 +2390,7 @@ c104	format (i,i)
 	real cf,cmaj,cmin,cpa
 c
 c  Annotate plots.
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	include 'clplot.h'
 	common/back/rae(3),dece(3)
 	real rae,dece,rts,pi,yloc
@@ -2491,7 +2494,7 @@ c  Contour plots.
 c  Gray scale.
 c			MCHW Dec 1985
 c	cf is the conversion factor from map units - mchw 7Feb86
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	include 'clplot.h'
 	integer i,imin,imax,jmin,jmax,num,loop,nloop
 	real clevels(10),ave,scale,absmax
@@ -2549,7 +2552,7 @@ c    nx,ny	Size of array.
 c    xy,ras,decs come from the map header
 c  Outputs:
 c    xmin,xmax,ymin,ymax	plot limits
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	include 'clplot.h'
 	real rasec,decsec
 c
@@ -2582,7 +2585,7 @@ c
 c  Inputs:
 c    ary	The array to print.
 c    nx,ny	Dimensions of array.
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	include 'clplot.h'
 	integer line(40)
 	character text*64
@@ -2639,7 +2642,7 @@ c
 	end
 	subroutine rdary
 c  Read file of spectra & position-velocity cuts.
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	include 'clplot.h'
 	common /spectrae/ xc,yc,nspec,ngauss,gauss,gausserr
 	real xc(49),yc(49),gauss(49,3,10),gausserr(49,3,10)
@@ -2726,7 +2729,7 @@ c
 c  	common/head/ contains map header
 c 	common/box/ contains data on the map array
 c
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	include 'clplot.h'
 c
 	double precision ckms
@@ -2795,10 +2798,10 @@ c
 	enddo
 	end
       SUBROUTINE SOPCHR(STRING,CCELL,NCELLS)
-C-----------------------------------------------------------------
+C-----------------------------------------------------------------------
 C     Interpretes a character string into a set of sub-strings.
 C     K. A. Marsh   1980.  Latest revision by LGM, 1985 March 5.
-C-----------------------------------------------------------------
+C-----------------------------------------------------------------------
       CHARACTER*(*) STRING,CCELL(80)
       INTEGER NCELLS
 
@@ -2806,13 +2809,13 @@ C-----------------------------------------------------------------
       INTEGER I1(80),I2(80),I,J,L,IMAX,JMAX
       DATA UPPER/'ABCDEFGHIJKLMNOPQRSTUVWXYZ  '/
       DATA LOWER/'abcdefghijklmnopqrstuvwxyz=,'/
-C-------------------------------------------------
+C-----------------------------------------------------------------------
 C     Initialize CCELL to blanks.
       JMAX=LEN(CCELL(1))
       DO 50 I=1,80
       DO 50 J=1,JMAX
    50    CCELL(I)(J:J)=' '
-C----------------------------------------------------------------------
+C-----------------------------------------------------------------------
 C     Convert letters to upper case and purge any = signs.
       IMAX=LEN(STRING)
       J=0
@@ -2820,7 +2823,7 @@ C     Convert letters to upper case and purge any = signs.
          L=INDEX(LOWER,STRING(I:I))
          IF(L.NE.0) STRING(I:I)=UPPER(L:L)
   100    CONTINUE
-C----------------------------------------------------------------------
+C-----------------------------------------------------------------------
 C Identify strings by the spaces ; ncells = the number of sub-strings
       DO 200 I=1,IMAX
       IF(STRING(I:I).EQ.' ') GO TO 200
@@ -2846,9 +2849,9 @@ C     Translate each sub-string into its own location in CHAR.
 C-----------------------------------------------------------------------
       RETURN
  5001 FORMAT(A)
-C*****************************************************************
-C************* END OF SOPCHAR ************************************
-C*****************************************************************
+C***********************************************************************
+C******************* END OF SOPCHAR ************************************
+C***********************************************************************
       END
 	subroutine spectra(ary,vlsr,nx,ny,nc)
 	integer nx,ny,nc
@@ -2860,7 +2863,7 @@ c  Inputs:
 c    ary	The image.
 c    nx,ny,nc	Dimensions of image.
 c    vlsr	Array of velocities.
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	include 'clplot.h'
         character*10    ichar10
         integer         len10,len10a,i10
@@ -3242,26 +3245,28 @@ c Otherwise, call routine to plot gaussians
 c
 c  If this is the last window close the plot
 c
-	if (spec.eq.nspec) then
-          call pgiden
-          call pgend
-          call pgqinf('HARDCOPY',ans,length)
-          if (ans(1:1).ne.'Y')then
-            call output(' ')
-	    call prompt(ans,length,'Another PGPLOT device? (Y/[N])')
-	    call ucase(ans)
-	    if(ans(1:1).eq.'Y')then
-              call prompt(device,length,'>Enter new PGPLOT device: ')
-              call lcase(device)
-	      call prompt(ans,length,'>Enter line width [1]: ')
-	      if(length.ne.0)then
-		read(ans,'(i1)') lwidth
-	      endif
-	      goto 50
-	    endif
-	  endif
-	endif
-30	enddo
+          if (spec.eq.nspec) then
+            call pgiden
+            call pgend
+            call pgqinf('HARDCOPY',ans,length)
+            if (ans(1:1).ne.'Y')then
+              call output(' ')
+              call prompt(ans,length,'Another PGPLOT device? (Y/[N])')
+              call ucase(ans)
+              if(ans(1:1).eq.'Y')then
+                call prompt(device,length,'>Enter new PGPLOT device: ')
+                call lcase(device)
+                call prompt(ans,length,'>Enter line width [1]: ')
+                if(length.ne.0)then
+                  read(ans,'(i1)') lwidth
+                endif
+                goto 50
+              endif
+            endif
+          endif
+
+30        continue
+        enddo
 c
 c  Restore original plot device.
 c
@@ -3357,7 +3362,7 @@ c  Outputs:
 c    v(nx*ny)		Averaged map.
 c    nmaps		Number of maps in the average.
 c    vmean,vwidth	The mean velocity and width of the averaged map.
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	include 'clplot.h'
 	real vmom1(maxdim*maxdim),vmom2(maxdim*maxdim)
 	real vmom3(maxdim*maxdim),vmom4(maxdim*maxdim)
@@ -3494,7 +3499,7 @@ c    ary	The image.
 c    nx,ny,nc	Dimensions of image.
 c    vlsr	Array of velocities.
 c    v		velocity-averaged map.
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	include 'clplot.h'
 	real vmax(maxdim),vmin(maxdim),xmin,xmax,ymin,ymax,vmean,vwidth
 	integer imaps,nmaps,i,j,k,nmom,length
@@ -3722,7 +3727,7 @@ c  Finished plotting maps.
 c
 c  Replotting options.
 c
-  	if(write.ne.'Y' .and. apint.ne.'Y') then
+	if(write.ne.'Y' .and. apint.ne.'Y') then
 	  call pgiden
 	  call pgend
 	  call pgqinf('HARDCOPY',ans,length)
@@ -3744,17 +3749,17 @@ c
 c
 c  Restore original plot device, and image vel and width.
 c
-  	device = old_device
+	device = old_device
 	vel = vlsr(1)
 	delv = vlsr(2) - vlsr(1)
 	end
-	subroutine velohead(ary,vlsr,nx,ny,nc)
+	subroutine velohead(vlsr,nx,ny,nc)
 	integer nx,ny,nc
-	real ary(1), vlsr(nc)
+	real vlsr(nc)
 c
 c  List Header and velocity information
 c		     mchw 9 nov 1987
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	include 'clplot.h'
 	character ans*1
 	integer i,ipr
@@ -3783,7 +3788,7 @@ c    vmin,vmax,velint	Velocity range and sample interval
 c    vel		Requested velocity.
 c  Outputs:
 c    wt			Weight for velocity vel.
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	real vchn,vbot,vtop,vlo,vhi
 c
 	vchn = abs(velint)
@@ -3957,7 +3962,7 @@ c
 	end
 	subroutine wrary
 c  Write file of spectra & position-velocity cuts.
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	include 'clplot.h'
 	common /spectrae/ xc,yc,nspec,ngauss,gauss,gausserr
 	real xc(49),yc(49),gauss(49,3,10),gausserr(49,3,10)
@@ -4032,7 +4037,7 @@ c
 c  Inputs:
 c    v		The array to print.
 c    nc*np	Dimensions of array.
-c----------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	include 'clplot.h'
 	real xval(maxdim)
 	character text*64,line*64
@@ -4106,7 +4111,7 @@ c  Inputs:
 c    ary(nx,ny,nc)	spectral line image
 c    nx ny nc	 	dimensions of image
 c    common/head/ contains map header
-c------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	include 'clplot.h'
 	character*80 filename,text
 	integer lOut,nsize(3),j,k,ipt,length
@@ -4184,7 +4189,7 @@ c    crval1,2,3
 c    crpix1,2
 c    cdelt1,2
 c    common/head/ contains map header
-c------------------------------------------------------------------c
+c-----------------------------------------------------------------------
 	include 'clplot.h'
 	character*80 filename,text
 	integer lOut,nsize(3),j,k,ipt,length
