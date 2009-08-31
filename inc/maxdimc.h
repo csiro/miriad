@@ -20,21 +20,21 @@
 *
 *  MAXBASE, MAXCHAN, and MAXWIDE are not used by anything.
 *
-* $Id: maxdimc.h,v 1.7 2009/04/28 05:21:03 mirmgr Exp $
+* $Id: maxdimc.h,v 1.8 2009/08/31 02:36:25 cal103 Exp $
 *---------------------------------------------------------------------------*/
 /* Maximum buffer size for xyzio (N.B. see comment above). */
 #define MAXBUF  16777216
 
 /* Maximum number of pixels on an image axis. */
-#define MAXDIM 16384 
+#define MAXDIM  16384
 
 /* Maximum number of image axes. */
 #define MAXNAX  7
 
 /* Maximum number of antennas. */
-#define MAXANT  64
+#define MAXANT  96
 
-/* Maximum number of baselines. */
+/* Maximum number of baselines, including autocorrelations. */
 #define MAXBASE ((MAXANT * (MAXANT + 1)) / 2)
 
 /* Maximum number of channels in spectral data. */
