@@ -25,7 +25,7 @@ c--
 c
 c     mhw  19nov07 Original version, adapted uvpflag into uvacflag
 c
-c $Id: uvacflag.for,v 1.2 2009/09/01 06:26:44 cal103 Exp $
+c $Id: uvacflag.for,v 1.3 2009/09/01 06:32:17 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       integer maxpol,maxbin,maxrec,maxtime,maxfreq,ntime,nfreq
@@ -51,7 +51,7 @@ c
 c
 c-----------------------------------------------------------------------
       version = versan('uvacflag',
-     +  '$Id: uvacflag.for,v 1.2 2009/09/01 06:26:44 cal103 Exp $')
+     +  '$Id: uvacflag.for,v 1.3 2009/09/01 06:32:17 cal103 Exp $')
 
       ntot=0
       ngood=0
@@ -144,9 +144,9 @@ c
           enddo
         endif
 
-        ant1=pream(2)/256
-        ant2=mod(pream(2),256)
-        pol= pream(3)
+        ant1=nint(pream(2))/256
+        ant2=mod(nint(pream(2)),256)
+        pol= nint(pream(3))
         ipol=0
         do i=1,npol
           if (pol.eq.polidx(i)) ipol=i
@@ -289,7 +289,6 @@ c
 c
 c Close up the files.
 c
- 400  continue
       call uvclose (lin)
       call scrclose (lins)
 c
