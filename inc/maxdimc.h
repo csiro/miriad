@@ -20,7 +20,7 @@
 *
 *  MAXBASE, MAXCHAN, and MAXWIDE are not used by anything.
 *
-* $Id: maxdimc.h,v 1.8 2009/08/31 02:36:25 cal103 Exp $
+* $Id: maxdimc.h,v 1.9 2009/09/01 06:45:53 cal103 Exp $
 *---------------------------------------------------------------------------*/
 /* Maximum buffer size for xyzio (N.B. see comment above). */
 #define MAXBUF  16777216
@@ -32,7 +32,7 @@
 #define MAXNAX  7
 
 /* Maximum number of antennas. */
-#define MAXANT  96
+#define MAXANT  64
 
 /* Maximum number of baselines, including autocorrelations. */
 #define MAXBASE ((MAXANT * (MAXANT + 1)) / 2)
