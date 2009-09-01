@@ -5,7 +5,7 @@ c somewhere before 2001:	somebody added gamma etc.
 c 5-oct-2001			declared variables to make it compile
 c                               with -u on solaris
 c
-c $Id: nswc.for,v 1.3 2009/08/20 07:13:29 cal103 Exp $
+c $Id: nswc.for,v 1.4 2009/09/01 07:26:04 cal103 Exp $
 c-----------------------------------------------------------------------
       REAL FUNCTION ENORM(N,X)
       INTEGER N
@@ -2558,7 +2558,7 @@ C
   530 CONTINUE
   540 TEMP(IS) = COEF*(S1*SB-S2*SA)
       IF(IS.EQ.2) GO TO 560
-  550 FIDAL = FIDAL + 1.0E0
+      FIDAL = FIDAL + 1.0E0
       DALPHA = FIDAL + FNF
       IS = 2
       TB = SA
