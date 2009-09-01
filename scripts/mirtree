@@ -5,7 +5,7 @@
 # Construct a workspace for Miriad software development.
 #
 # Original: 2007/03/06 Mark Calabretta, ATNF
-# $Id: mirtree,v 1.1 2007/03/06 01:48:34 cal103 Exp $
+# $Id: mirtree,v 1.2 2009/09/01 07:14:46 cal103 Exp $
 #-----------------------------------------------------------------------------
   trap 'exit 1' 1 2 3 15
 
@@ -24,9 +24,10 @@
   PGMRROOT=`echo "$MIR" | sed -e 's|.*/|./|'`
 
 # Create only relevant subdirectories.
-  SUBDIRS="cat etc guides guides/prog guides/user inc linpack prog scripts"
-  SUBDIRS="$SUBDIRS scripts/$MIRARCH spec spec/miriad spec/sxmtv spec/xmtv"
-  SUBDIRS="$SUBDIRS spec/xpanel subs subs/unix subs/unix/alpha_linux tools"
+  SUBDIRS="cat etc guides guides/prog guides/user inc inc/linux64 linpack "
+  SUBDIRS="$SUBDIRS prog scripts scripts/$MIRARCH
+  SUBDIRS="$SUBDIRS spec spec/miriad spec/sxmtv spec/xmtv spec/xpanel"
+  SUBDIRS="$SUBDIRS subs subs/unix subs/unix/alpha_linux tools"
 
   for SUBDIR in "" $SUBDIRS
   do
