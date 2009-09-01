@@ -103,7 +103,7 @@ c                   are and are not part of a cacal scan. Use this with caution.
 c         'nopol'   Discard data that is not "parallel hand" Stokes type.
 c         'rfiflag' Flag channels at frequencies that are known to be bad
 c                   This uses the file rfi.dat in the current directory or the
-c                   default version in MIRCAT. The file should contain 
+c                   default version in MIRCAT. The file should contain
 c                   2 frequencies per line, the lower and upper end of the rfi in
 c                   MHz.
 c@ nfiles
@@ -258,9 +258,9 @@ c                 16 IFs; avoid checking sampler stats for CABB files
 c    mhw  17jan08 Add options=rfiflag: flagging based on file with rfi ranges
 c    rjs  06nov08 Corrected CA02 xyphase handling and some minor tidying.
 c    mhw  09jan09 Add flagging of NaNs in CABB spectra
-c    mhw  03jun09 Fix syscal handling for CABB gtp, sdo and caljy values 
+c    mhw  03jun09 Fix syscal handling for CABB gtp, sdo and caljy values
 c
-c $Id: atlod.for,v 1.12 2009/06/03 04:29:44 wie017 Exp $
+c $Id: atlod.for,v 1.13 2009/09/01 06:32:17 cal103 Exp $
 
 c-----------------------------------------------------------------------
         integer MAXFILES,MAXTIMES
@@ -280,7 +280,7 @@ c
         character itoaf*8, rperr*32, versan*80
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :  '$Id: atlod.for,v 1.12 2009/06/03 04:29:44 wie017 Exp $')
+     :  '$Id: atlod.for,v 1.13 2009/09/01 06:32:17 cal103 Exp $')
 c
 c  Get the input parameters.
 c
@@ -311,7 +311,7 @@ c
         call keyfin
 c
         call cacalIni
-	call rfiIni(rfiflag)
+        call rfiIni(rfiflag)
 c
 c  Open the output and initialise it.
 c
@@ -460,7 +460,7 @@ c    dopmps     Undo "poor man's phase switching"
 c    nopol      Select only parallel-hand polarisations.
 c    polflag    Flag all polarisations if any are bad.
 c    hires      Convert bin-mode to high time resolution data.
-c    sing	Single dish mode.
+c    sing       Single dish mode.
 c    rfiflag    Flag known rfi sources
 c------------------------------------------------------------------------
         integer nopt
@@ -1422,7 +1422,7 @@ c
         if(length.gt.0)then
           if (atemp(1:length).eq.'ATCABB') then
             call uvputvra(tno,'telescop',atemp(1:length-2))
-            call uvputvra(tno,'instrume',atemp(3:length))          
+            call uvputvra(tno,'instrume',atemp(3:length))
           else
             call uvputvra(tno,'telescop',atemp(1:length))
             call uvputvra(tno,'instrume',atemp(1:length))
@@ -1578,8 +1578,8 @@ c
           call VelRad(.not.dobary,tdash,obsra,obsdec,ra,dec,lst,lat,vel)
           call uvputvrr(tno,'veldop',real(vel),1)
           call uvputvrr(tno,'jyperk',jyperk,1)
-          
-c          
+
+c
 c          (Re)calibrate CABB data using on/off autocorrelations
 c
 c        call cabbCalib(docabbcal,hires,tbin)
@@ -1751,7 +1751,7 @@ c
             flags(i)=.false.
             data(i)=0.
             cnt=cnt+1
-          
+
 c
 c         Also flag all data that is exactly zero
 c
@@ -2089,7 +2089,7 @@ c
             endif
 c
             do i=nchan+1,nchan+nfreq(n)
-            
+
               vis(i) = fac(n)*data(ipnt)
               flags(i) = flag(n)
               ipnt = ipnt + 1
@@ -2108,7 +2108,7 @@ c
           enddo
           nchan = nchand
         endif
-        
+
         call flagnan(vis,flags,nchan)
 c
         end
@@ -2499,7 +2499,7 @@ c
 c
             i1 = baseln/256
             i2 = mod(baseln,256)
-c            
+c
 c  Always need to store auto corr bin 1 and 2 for cabb data
 c
             if(ok) ok = (i1.eq.i2.and.doauto).or.
@@ -2623,7 +2623,7 @@ c
 c  Determine the flags for each polarisation based on the sampler
 c  statistics if the samplers have been initialised.
 c
-	      call GetFg(nstoke(ifno),cstoke(1,ifno),flag,
+              call GetFg(nstoke(ifno),cstoke(1,ifno),flag,
      *          xflag(ifno,i1).or.relax.or.cabb,
      *          yflag(ifno,i1).or.relax.or.cabb,
      *          xflag(ifno,i2).or.relax.or.cabb,
@@ -3393,22 +3393,22 @@ c
 c
         end
 c************************************************************************
-	subroutine rfiIni(rfiflag)
+        subroutine rfiIni(rfiflag)
 c
         logical rfiflag
 c------------------------------------------------------------------------
-	double precision f1,f2
+        double precision f1,f2
         character*80 filename,string,stcat
         integer lu,iostat,l
-	integer MAXRFI, nrfi
+        integer MAXRFI, nrfi
         parameter(MAXRFI=50)
-	double precision rfifreq(2,MAXRFI)
+        double precision rfifreq(2,MAXRFI)
         common/rficom/rfifreq,nrfi
         nrfi=0
         if (.not.rfiflag) return
 c
 c  Read rfi.dat file from current directory or $MIRCAT
-c        
+c
         filename='./rfi.dat'
         call txtopen(lu,filename,'old',iostat)
         if (iostat.ne.0) then
@@ -3422,7 +3422,7 @@ c
           nrfi=0
         else
           call txtread(lu,string,l,iostat)
-          do while (iostat.eq.0)           
+          do while (iostat.eq.0)
             read(string,*,iostat=iostat) f1,f2
             if (iostat.eq.0) then
               nrfi=nrfi+1
@@ -3438,19 +3438,19 @@ c
      *     ' frequency ranges'
           call output(string)
         endif
-        
-	end
+
+        end
 
 c************************************************************************
-	subroutine rfiFlag(flags,NDATA,nifs,nfreq,sfreq,sdf)
+        subroutine rfiFlag(flags,NDATA,nifs,nfreq,sfreq,sdf)
 c
 c------------------------------------------------------------------------
-	integer NDATA,nifs,nfreq(nifs)
+        integer NDATA,nifs,nfreq(nifs)
         logical flags(NDATA)
         double precision sfreq(nifs),sdf(nifs),c1,c2,tmp
-	integer MAXRFI, nrfi,ch1,ch2,i,j,k,offset
+        integer MAXRFI, nrfi,ch1,ch2,i,j,k,offset
         parameter(MAXRFI=50)
-	double precision rfifreq(2,MAXRFI)
+        double precision rfifreq(2,MAXRFI)
         common/rficom/rfifreq,nrfi
         if (nrfi.gt.0) then
           offset=1
@@ -3463,8 +3463,8 @@ c------------------------------------------------------------------------
                 c1=c2
                 c2=tmp
               endif
-              ch1=nint(min(nfreq(i),max(0.0,c1)))
-              ch2=nint(max(-1,min(nfreq(i)-1,c2)))
+              ch1 = min(nfreq(i), nint(max(0.0,c1)))
+              ch2 = max(-1, min(nfreq(i)-1, nint(c2)))
               do k=ch1,ch2
                 flags(offset+k)=.false.
               enddo
@@ -3473,7 +3473,7 @@ c------------------------------------------------------------------------
           enddo
         endif
         end
-        
+
 c************************************************************************
 c
 c  The following code was contributed by WEW via NEBK.
