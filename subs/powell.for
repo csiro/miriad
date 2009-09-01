@@ -114,7 +114,7 @@ c  History:
 c    rjs Dark-ages Stolen from somewhere.
 c    rjs  25jan90  Minor documentation improvement.
 c
-c $Id: powell.for,v 1.2 2009/08/20 07:10:19 cal103 Exp $
+c $Id: powell.for,v 1.3 2009/09/01 07:26:04 cal103 Exp $
 c----------------------------------------------------------------------
       integer nfcc,i,j,jj,jjj,k,ind,inn,iterc,isgrad,itone,ixp,idirn
       integer iline,is,jil
@@ -286,7 +286,7 @@ c       Maximum change does not alter function.
 49    continue
       w(iline)=w(iline)/dd
       iline=iline+1
-51    if (itone.eq.2) go to 38
+      if (itone.eq.2) go to 38
       if (fprev.ge.f+sum) then
         sum=fprev-f
         jil=iline
@@ -380,7 +380,7 @@ c  Max iterations performed
 c
       ifail = 3
       if (f.le.fkeep) return
-110   f=fkeep
+      f=fkeep
       do 111 i=1,n
         jjj=jjj+1
         x(i)=w(jjj)
@@ -412,7 +412,7 @@ c
       jil=2
       go to 92
 106   if (aaa.le.0.1) return
-107   inn=1
+      inn=1
       go to 35
 c
 c  Max function values evaluated in powell.
