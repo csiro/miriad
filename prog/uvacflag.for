@@ -1,40 +1,38 @@
       program uvacflag
-c--------------------------------------------------------------------------
-c     UVACFLAG will flag all cross correlations corresponding to flagged
-c     auto correlations.  
+c-----------------------------------------------------------------------
+c     UVACFLAG flags all cross-correlations with flagged auto-
+c     correlations.
 c
-c= uvacflag - Flag crosscorrelations when auto correlations are flagged.
+c= uvacflag - Flag cross-correlations with flagged auto-correlations.
 c
 c& mhw
 c: calibration
 c+
-c     UVACFLAG will flag all cross correlations corresponding to flagged
-c     auto correlations.  This can be useful, for example,
-c     if you run TVFLAG, and flag data based upon the auto correlations.
-c     You then use UVACFLAG and flag all other 
-c     correlations at the same time when the auto correlations 
-c     are flagged. 
+c     UVACFLAG will flag all cross-correlations corresponding to flagged
+c     auto-correlations.  This can be useful, for example, if you run
+c     TVFLAG, and flag data based upon the auto-correlations.  You then
+c     use UVACFLAG and flag all other correlations at the same time when
+c     the auto-correlations are flagged.
 c
 c@ vis
-c	Input visibility file. No default.
+c       Input visibility file. No default.
 c@ options
-c	Task enrichment options.  Minimum match is active.
+c       Task enrichment options.  Minimum match is active.
 c
-c	full    Instructs UVACFLAG to tell you about every record
-c	        it flags.  The default is a summary at the end.
+c       full    Instructs UVACFLAG to tell you about every record
+c               it flags.  The default is a summary at the end.
 c--
 c
 c     mhw  19nov07 Original version, adapted uvpflag into uvacflag
-c---------------------------------------------------------------------------
-      implicit none
 c
+c $Id: uvacflag.for,v 1.2 2009/09/01 06:26:44 cal103 Exp $
+c-----------------------------------------------------------------------
       include 'maxdim.h'
       integer maxpol,maxbin,maxrec,maxtime,maxfreq,ntime,nfreq
       integer match_time,match_freq
       parameter (maxpol = 4, maxbin=32, maxrec=10000000,
      +           maxtime=10000, maxfreq=100)
-      character version*(*)
-      parameter (version='UvACFlag: Version 19-Nov-07')
+      character versan*80, version*80
 c
       complex data(maxchan)
       double precision pream(4), freq,df, timelist(maxtime),
@@ -52,8 +50,9 @@ c
       integer ntot,ngood,ngood2,ngood3,nflag
 c
 c-----------------------------------------------------------------------
-      call output(version)
-      
+      version = versan('uvacflag',
+     +  '$Id: uvacflag.for,v 1.2 2009/09/01 06:26:44 cal103 Exp $')
+
       ntot=0
       ngood=0
       nflag=0
@@ -73,12 +72,12 @@ c
       call uvopen (lin, in, 'old')
       call scropen (lins)
 c
-c Loop over visibilities in time order, write a copy of the autocorr flags
-c to a scratch file and remember the file offsets. Also keep track of the
-c record number for each cross correlation.
-c After each time slot, figure out the corresponding autocorr flag offsets
-c for each cross correlation record. On a second pass through the data
-c flag the cross correlations using the info collected.
+c Loop over visibilities in time order, write a copy of the autocorr
+c flags to a scratch file and remember the file offsets. Also keep track
+c of the record number for each cross-correlation.
+c After each time slot, figure out the corresponding autocorr flag
+c offsets for each cross-correlation record. On a second pass through
+c the data flag the cross-correlations using the info collected.
 c
       call uvset(lin, 'preamble', 'time/baseline/pol',0,0.0,0.0,0.0)
       call uvread (lin, pream, data, flags, maxchan, nchan)
@@ -104,7 +103,7 @@ c
         it = match_time(pream(1),.true.,timelist,ntime,maxtime)
 c
 c New time slot encountered
-c        
+c
         if (it.ne.lastit) then
           lastit=it
           do ibin = 1,nbin
@@ -120,7 +119,7 @@ c
                       if (.not.brief.and.
      +                    (flagoff(1,r).ge.0.or.flagoff(2,r).ge.0)) then
    10                   format('Flagging record ',i9,' baseline ',
-     +                       i3,'-',i3)                
+     +                       i3,'-',i3)
                         write(aline,10) r,iant1,iant2
                         call output(aline)
                       endif
@@ -144,7 +143,7 @@ c
             polidx(i)=0
           enddo
         endif
-        
+
         ant1=pream(2)/256
         ant2=mod(pream(2),256)
         pol= pream(3)
@@ -166,10 +165,10 @@ c
         nif = max(nif,ifno)
         nant = max(nant,ant1)
         nant = max(nant,ant2)
-        
+
 c
-c  keep copy of auto correlation flags 
-c        
+c  keep copy of auto-correlation flags
+c
           if (ant1.eq.ant2) then
 
             call JulDay(pream(1),'H',ctime)
@@ -198,13 +197,13 @@ c 60           format(a,4i3,i6)
 c              call output(aline)
             end if
           else
-          
+
 c
-c Save record number of cross correlations
+c Save record number of cross-correlations
 c
             if (ant2.gt.ant1) then
               b=ant2*(ant2+1)/2+ant1-ant2
-            else 
+            else
               b=ant1*(ant1+1)/2+ant2-ant1
             endif
             recnum(b,ipol,ifno,bin)=irec
@@ -219,28 +218,28 @@ c
         flagoff(2,irec)=-1
         if (irec.gt.maxrec) call bug('f','Too many records in file')
       end do
-      if (nscr.eq.0) call bug ('f', 
-     +  'There were no flagged records in the auto correlations')
+      if (nscr.eq.0) call bug ('f',
+     +  'There were no flagged records in the auto-correlations')
 c
 c
 c+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 c
 c
-c Now read through data again, this time flagging  
-c cross correlations when there are flags stored in 
+c Now read through data again, this time flagging
+c cross-correlations when there are flags stored in
 c the scratch file
 c
       write(aline,70) ' Found ',nscr,
      + ' autocorrelation records with flags'
   70  format(a,i6,a)
       call output(aline)
-      call uvrewind (lin)      
+      call uvrewind (lin)
       call uvread (lin, pream, data, flags, maxchan, nchan)
       ngood2=0
       call countit(flags,nchan,i,ngood2)
       irec=1
       nflag=0
-      
+
       do while (nchan.gt.0)
         if (flagoff(1,irec).ge.0.or.flagoff(2,irec).ge.0) then
           if (flagoff(1,irec).ge.0) then
@@ -267,12 +266,12 @@ c          call output(aline)
         ngood2=0
         call countit(flags,nchan,i,ngood2)
         irec=irec+1
-      enddo 
-      
+      enddo
+
 c
 c Flagging summary
-c 
-      call output(' Overview of flagging on visibility file '//in)     
+c
+      call output(' Overview of flagging on visibility file '//in)
       call output(' Correlations: Total   Good      Bad')
       write(aline,'(a,i9,i9,i9)')' Before:    ',
      *      ntot,ngood,ntot-ngood
@@ -296,21 +295,20 @@ c
 c
       end
 c
-c************************************************************************
-	subroutine countit(flags,n,ntot,ngood)
+c***********************************************************************
+      subroutine countit(flags,n,ntot,ngood)
 c
-	implicit none
-	integer n,ntot,ngood
-	logical flags(n)
-c------------------------------------------------------------------------
-	integer i
+      integer n,ntot,ngood
+      logical flags(n)
+c-----------------------------------------------------------------------
+      integer i
 c
-	ntot = ntot + n
-	do i=1,n
-	  if(flags(i))ngood = ngood + 1
-	enddo
+      ntot = ntot + n
+      do i=1,n
+        if(flags(i))ngood = ngood + 1
+      enddo
 c
-	end
+      end
 
       integer function match_time(time,new,list,ntime,maxtime)
 c-----------------------------------------------------------------------
@@ -325,15 +323,13 @@ c       maxtime Max number of times in list
 c     Returned
 c        match_time index into list, or -1 if not found and new=false
 c-----------------------------------------------------------------------
-      implicit none
-c
       double precision time
       logical new
       integer ntime,maxtime
       double precision list(maxtime)
 c
       integer i
-      
+
       match_time=-1
       i=1
       do while(match_time.lt.0.and.i.le.ntime)
@@ -368,15 +364,13 @@ c       maxfreq Max number of freq setups in list
 c     Returned
 c        match_freq index into list, or -1 if not found and new=false
 c-----------------------------------------------------------------------
-      implicit none
-c
       integer nchan,nfreq,maxfreq,nchanlist(maxfreq)
       double precision freq,df,freqlist(maxfreq,2)
       logical new
 
 c
       integer i
-      
+
       match_freq=-1
       i=1
       do while(match_freq.lt.0.and.i.le.nfreq)
@@ -407,8 +401,6 @@ c
 c   Output:
 c      brief  SHort summary instead of all the juice
 c-----------------------------------------------------------------------
-      implicit none
-c
       logical brief
 cc
       integer nopt
