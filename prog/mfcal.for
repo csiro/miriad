@@ -113,6 +113,7 @@ c    rjs  14may09 Simple handling of Doppler tracking. Squeeze out spectral
 c		  window descriptions with no valid data and amalgemate spectral windows
 c	          that are essentially the same. Improve doc. Rename unpack/pack/scale
 c		  routines (potential f90 conflict).
+c    rjs  08sep09 Bug handling when first solution interval was completely flagged.
 c
 c  Problems:
 c    * Should do simple spectral index fit.
@@ -125,7 +126,7 @@ c------------------------------------------------------------------------
 	parameter(MAXSOLN=1024,MAXPOL=2)
 c
 	character version*(*)
-	parameter(version='MfCal: version 1.0 14-May-09')
+	parameter(version='MfCal: version 1.0 08-Sep-09')
 c
 	integer tno
 	integer pWGains,pFreq,pSource,pPass,pGains,pTau
@@ -1368,6 +1369,7 @@ c
 		  nreg = nreg + ninter
 		  nsoln = nsoln - 1
 		  nspect = pnspect
+		  updated = .true.
 		else
 		  ngood = ngood + ninter
 		endif
