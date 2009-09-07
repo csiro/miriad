@@ -42,8 +42,9 @@ c    rjs  04may04 Handle more antennas.
 c    rjs  08aug04 The algorithm to determine the confusion was
 c	          hopelessly flawed. Correct this.
 c    rjs  02jul05 Improved error estimates.
+c    mhw  07sep09 More digits for correlation count
 c
-c $Id: calred.for,v 1.2 2007/02/22 23:41:13 cal103 Exp $
+c $Id: calred.for,v 1.3 2009/09/07 04:20:03 wie017 Exp $
 c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
@@ -86,7 +87,7 @@ c
 	character versan*80
 c-----------------------------------------------------------------------
 	version = versan ('calred',
-     :    '$Id: calred.for,v 1.2 2007/02/22 23:41:13 cal103 Exp $')
+     :    '$Id: calred.for,v 1.3 2009/09/07 04:20:03 wie017 Exp $')
 c
 c Lets go! Get user inputs.
 c
@@ -289,7 +290,7 @@ c
      *			nint(1000*flux),con,
      *			nint(1000*SSms),nint(1000*scat2),
      *			ncorr
-  10	    format(a14,i7,i9,a6,i6,i6,i6)
+  10	    format(a14,i7,i9,a6,i6,i6,i9)
 	    call output(line)
 	  endif
 	enddo
