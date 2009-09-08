@@ -56,7 +56,7 @@ c 21jul06 - tw - fixed subtle error in cos(dc) correction
 c 16may07 - tw - detab; change label 900 from GOTO to CONTINUE
 c 29aug09 - tw - resample option; convert bunit to 'K'
 c
-c $Id: mopfix.for,v 1.6 2009/08/31 00:03:12 cal103 Exp $
+c $Id: mopfix.for,v 1.7 2009/09/08 02:12:20 cal103 Exp $
 c-----------------------------------------------------------------------
 
       program mopfix
@@ -98,7 +98,7 @@ c-----------------------------------------------------------------------
 
 *--------------------------------------------------------------
       versn = versan('mopfix',
-     :  '$Id: mopfix.for,v 1.6 2009/08/31 00:03:12 cal103 Exp $')
+     :  '$Id: mopfix.for,v 1.7 2009/09/08 02:12:20 cal103 Exp $')
 
 c Get input parameters
       call keyini ()
@@ -426,9 +426,9 @@ c             if (nhead.eq.1.and.nsp.eq.3) write(45,*)j,xsp(j),rspec(j)
               rval2 = seval(nch1,uval,xsp,rspec,bsp,csp,dsp)
               avg2 = avg2 + rval2
               if (if_nstok(if_no) .eq. 2) then
-                 vis(2*j-(2-i)) = complex(rval2,0.)
+                 vis(2*j-(2-i)) = cmplx(rval2, 0.0)
               else
-                 vis(j) = complex(rval2,0.)
+                 vis(j) = cmplx(rval2, 0.0)
               endif
 c             if (nhead.eq.1.and.nsp.eq.3) write(46,*)j,uval,rval2
             enddo
