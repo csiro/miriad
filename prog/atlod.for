@@ -31,7 +31,8 @@ c           restfreq=1.420405752,0
 c@ options
 c       This gives extra processing options. Several can be given,
 c       separated by comas.
-c         'birdie'  ATCA self-interference can corrupt channels at integral
+c         'birdie'  Use for pre-CABB data only.
+c                   ATCA self-interference can corrupt channels at integral
 c                   multiples of 128 MHz. The birdie option flags these
 c                   channels. Additionally, in continuum (33 channels/128MHz)
 c                   mode, the birdie option dicards every second channel, plus
@@ -40,7 +41,8 @@ c                   are those most likely affected by the self-interference.
 c                   Discarding these channels does not have a
 c                   sensitivity penalty, because the effective channel
 c                   bandwidth is twice the channel separation.
-c         'reweight' Re-weight the lag spectrum to eliminate the "Gibbs" phenomena.
+c         'reweight' For pre-CABB data: re-weight the lag spectrum to 
+c                   eliminate the "Gibbs" phenomena in continuum data (33 ch/128 MHz)
 c         'compress' Write output data in compressed format.
 c         'noauto'  Discard autocorrelation data. The default is to
 c                   copy the autocorrelation data.
@@ -259,8 +261,9 @@ c    mhw  17jan08 Add options=rfiflag: flagging based on file with rfi ranges
 c    rjs  06nov08 Corrected CA02 xyphase handling and some minor tidying.
 c    mhw  09jan09 Add flagging of NaNs in CABB spectra
 c    mhw  03jun09 Fix syscal handling for CABB gtp, sdo and caljy values
+c    mhw  14sep09 Make sure birdie is ignored for CABB data
 c
-c $Id: atlod.for,v 1.13 2009/09/01 06:32:17 cal103 Exp $
+c $Id: atlod.for,v 1.14 2009/09/14 01:15:06 wie017 Exp $
 
 c-----------------------------------------------------------------------
         integer MAXFILES,MAXTIMES
@@ -280,7 +283,7 @@ c
         character itoaf*8, rperr*32, versan*80
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :  '$Id: atlod.for,v 1.13 2009/09/01 06:32:17 cal103 Exp $')
+     :  '$Id: atlod.for,v 1.14 2009/09/14 01:15:06 wie017 Exp $')
 c
 c  Get the input parameters.
 c
@@ -827,10 +830,11 @@ c
         call uvputvra(tno,'name',in(i1:i2))
         end
 c************************************************************************
-        subroutine Poke1st(time1,nifs1,nants1)
+        subroutine Poke1st(time1,nifs1,nants1,cabb1)
 c
         double precision time1
         integer nifs1,nants1
+        logical cabb1
 c
 c  Set some fundamental parameters just before we start dumping other
 c  things.
@@ -840,6 +844,7 @@ c------------------------------------------------------------------------
         time = time1
         nifs = nifs1
         nants = nants1
+        cabb = cabb1
         if(nifs.le.0.or.nifs.gt.ATIF.or.nants.le.0.or.nants.gt.ATANT)
      *    call bug('f','Invalid nants or nifs in Poke1st')
         call uvputvri(tno,'nants',nants,1)
@@ -865,6 +870,10 @@ c
         if(if.gt.nifs)call bug('f','Invalid IF in PokeIF')
         if(nstok.gt.ATPOL)call bug('f',
      *          'Invalid number of polarisation parameters in PokeIF')
+        if (cabb.and.birdie) then
+          birdie=.false.
+          call output('Ignoring birdie option for CABB data')
+        endif
 c
         nfreq(if) = nfreq1
         if(nfreq(if).gt.1)then
@@ -965,13 +974,12 @@ c************************************************************************
         subroutine PokeSC(ant,if,chi1,tcorr1,
      *          xtsys1,ytsys1,xyphase1,xyamp1,xsamp,ysamp,
      *          xgtp1,ygtp1,xsdo1,ysdo1,xcaljy1,ycaljy1,
-     *          pntrms,pntmax,cabb1)
+     *          pntrms,pntmax)
 c
         integer ant,if,tcorr1
         real chi1,xtsys1,ytsys1,xyphase1,xyamp1
         real xgtp1,ygtp1,xsdo1,ysdo1,xcaljy1,ycaljy1
         real xsamp(3),ysamp(3),pntrms,pntmax
-        logical cabb1
 c
 c  Save the SYSCAL group info.
 c------------------------------------------------------------------------
@@ -979,7 +987,6 @@ c------------------------------------------------------------------------
         if(ant.gt.nants.or.if.gt.nifs)call bug('f',
      *                          'Invalid Ant or IF in PokeSC')
 c
-        cabb = cabb1
         tcorr = tcorr1
         chi = chi1
         axisrms(ant)=pntrms
@@ -2541,7 +2548,7 @@ c
 c              print *,i1,i2,bin,ut, vis(1), vis(1024)
               if(.not.Accum)then
                 time = ut / (3600.d0*24.d0) + jday0
-                call Poke1st(time,nifs(simno),nant)
+                call Poke1st(time,nifs(simno),nant,cabb)
                 if(NewScan)call PokeMisc(instrument,rp_observer,
      *                                          version,sctype)
                 if(an_found)call PokeAnt(nant,x,y,z,sing)
@@ -2607,7 +2614,7 @@ c
      *          xgtp(ifno,i1),ygtp(ifno,i1),
      *          xsdo(ifno,i1),ysdo(ifno,i1),
      *          xcaljy(ifno,i1),ycaljy(ifno,i1),
-     *          pntrms(i1),pntmax(i1),cabb)
+     *          pntrms(i1),pntmax(i1))
               if(scbuf(ifno,i2))call PokeSC(i2,Sif(ifno),chi,tcorr,
      *          xtsys(ifno,i2),ytsys(ifno,i2),
      *          xyphase(ifno,i2),xyamp(ifno,i2),
@@ -2615,7 +2622,7 @@ c
      *          xgtp(ifno,i1),ygtp(ifno,i1),
      *          xsdo(ifno,i1),ysdo(ifno,i1),
      *          xcaljy(ifno,i1),ycaljy(ifno,i1),
-     *          pntrms(i2),pntmax(i2),cabb)
+     *          pntrms(i2),pntmax(i2))
 c
               scbuf(ifno,i1) = .false.
               scbuf(ifno,i2) = .false.
@@ -3463,7 +3470,7 @@ c------------------------------------------------------------------------
                 c1=c2
                 c2=tmp
               endif
-              ch1 = min(nfreq(i), nint(max(0.0,c1)))
+              ch1 = min(nfreq(i), nint(max(0.0d0,c1)))
               ch2 = max(-1, min(nfreq(i)-1, nint(c2)))
               do k=ch1,ch2
                 flags(offset+k)=.false.
