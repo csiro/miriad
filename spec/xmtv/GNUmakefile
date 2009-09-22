@@ -2,7 +2,7 @@
 # GNUmakefile for compiling Miriad utility xmtv.
 #
 # Original: 2006/09/15, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.3 2009/04/14 02:29:44 cal103 Exp $
+# $Id: GNUmakefile,v 1.4 2009/09/22 22:54:14 mci156 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
@@ -42,6 +42,11 @@ ifeq "$(MAKEMODE)" "system"
 	-@ chmod 775 $@
 
   $(MIRBIND)/xmtv : $(CODEDIR)/xmtv.csh
+	-@ $(RM) $@
+	   cp $< $@
+	-@ chmod 775 $@
+
+  $(MIRBIND)/xmtv24 : $(CODEDIR)/xmtv24.sh
 	-@ $(RM) $@
 	   cp $< $@
 	-@ chmod 775 $@
