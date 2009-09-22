@@ -4,13 +4,13 @@
 # Get xmtv to display on a 24-bit display, via a VNC session.
 #
 # $Source: /var/tmp/RrsvEF/cvsroot/miriad-dist/RCS/spec/xmtv/xmtv24.sh,v $
-# $Id: xmtv24.sh,v 1.3 2009/05/31 07:52:31 mci156 Exp $
+# $Id: xmtv24.sh,v 1.4 2009/09/22 22:47:11 mci156 Exp $
 #
 # Config ------------------------------------------------------------------------
 GEOMETRY=1024x768
 PATH=/usr/local/bin:/usr/bin:/bin;
 XVNC_PASSWD=${HOME}/.vnc/passwd
-MIRIAD=/nfs/atapplic/miriad
+
 # Tell the 'Xrealvnc' X server to use a PseudoColor visual. This is crucial.
 # See Xrealvnc(1)
 XVNC_OPTS="-cc 3" 
@@ -47,7 +47,9 @@ ExitTrap() {
 #
 # Main -------------------------------------------------------------------------
 trap 'ExitTrap;' 0 1 2 3 15
+
 # sanity
+[ "X" = "X${MIR}" ] && Fail "No 'MIR' variable in your environment - do you have Miriad installed?"
 for v in vncviewer vncserver twm mktemp
 do
     x=`which $v 2>/dev/null`
@@ -63,10 +65,10 @@ do
     test -x "$x"       || Fail "$message"
 done
 
-if test -f "$MIRIAD/MIRRC.sh" ; then
-    . $MIRIAD/MIRRC.sh; PATH=${PATH}:${MIRBIN}; export PATH;
+if test -f "$MIR/MIRRC.sh" ; then
+    . $MIR/MIRRC.sh; PATH=${PATH}:${MIRBIN}; export PATH;
 else
-    Fail "Can't find miriad setup file, tried '$MIRIAD/MIRRC.sh'"
+    Fail "Can't find miriad setup file, tried '$MIR/MIRRC.sh'"
 fi
 
 TMPDIR=`mktemp -d /tmp/XXXXXX`
