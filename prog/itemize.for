@@ -24,6 +24,11 @@ c	When a dataset name is given, itemize summarizes the contents
 c	of the entire dataset. When an item name is also given, then
 c	itemize dumps the entire contents of the item (in accordance
 c	to the index and format keywords).
+c
+c       Note that in ITEMIZE an "item" is one of the files in a MIRIAD
+c       data set directory, for example the 'history' item, shown above.
+c       To access the values of individual header items, use 'gethd'.
+c
 c@ log
 c	The name of the output listing file. The default is the users
 c	terminal.
@@ -67,6 +72,7 @@ c  rjs  25jul97   Get rid of announcement header.
 c  rjs  01aug97   Support wildcards.
 c  rjs  29apr09   Added options=nocompact
 c  rjs  02jun09   Changed call to mkeyf to mkeya.
+c  vjm  23sep09   Explain the term "item"; mention gethd.
 c------------------------------------------------------------------------
 	implicit none
 	integer MAXIN
