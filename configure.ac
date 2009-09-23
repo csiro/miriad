@@ -2,12 +2,12 @@
 # Process this file with autoconf-2.53 or later to produce a configure script.
 #-----------------------------------------------------------------------------
 # Author: Mark Calabretta, Australia Telescope National Facility
-# $Id: configure.ac,v 1.7 2007/03/28 01:29:22 cal103 Exp $
+# $Id: configure.ac,v 1.8 2009/09/23 02:21:30 cal103 Exp $
 #-----------------------------------------------------------------------------
 
 AC_INIT([Miriad], [ATNF2.0], [miriad@atnf.csiro.au], [miriad-ATNF2.0])
 AC_PREREQ([2.53])
-AC_REVISION([$Revision: 1.7 $])
+AC_REVISION([$Revision: 1.8 $])
 
 AC_CONFIG_SRCDIR([tools/miriad.c])
 AC_CONFIG_AUX_DIR([config])
@@ -129,9 +129,25 @@ AC_MSG_NOTICE([
 
 Looking for directories where third-party libraries may be found...])
 
+EXTDIRS=
+
+AC_ARG_WITH([pgplot], [AS_HELP_STRING([--with-pgplot=DIR],
+            [directory containing pgplot library])], [])
+if test "x$with_pgplot" != x ; then
+  EXTDIRS="$EXTDIRS $with_pgplot"
+fi
+
+AC_ARG_WITH([rpfits], [AS_HELP_STRING([--with-rpfits=DIR],
+            [directory containing rpfits library])], [])
+if test "x$with_rpfits" != x ; then
+  EXTDIRS="$EXTDIRS $with_rpfits"
+fi
+
 AC_PATH_X
-EXTDIRS="$MIRROOT/$MIRARCH/lib \
+EXTDIRS="$EXTDIRS              \
+         $MIRROOT/$MIRARCH/lib \
          /usr/local/pgplot     \
+         /usr/local/rpfits     \
          /usr/local/gnu/lib    \
          /usr/local/lib        \
          /local/pgplot         \
