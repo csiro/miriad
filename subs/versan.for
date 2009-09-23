@@ -18,7 +18,7 @@ c               not be reported.
 c    rcsrev     RCS Revision string.
 c    rcsid      RCS Date string.
 c--
-c  $Id: versan.for,v 1.3 2009/09/23 00:58:51 cal103 Exp $
+c  $Id: versan.for,v 1.4 2009/09/23 01:12:36 cal103 Exp $
 c-----------------------------------------------------------------------
       logical   quiet
       integer   i0, i1, i2, l, len1
@@ -34,11 +34,11 @@ c     Quiet mode?
       call lcase (versan)
       i0 = len1(versan) + 1
 
-      versan(i0:) = ': Version'
-      i0 = i0 + 9
+      versan(i0:) = ': Version '
+      i0 = i0 + 10
 
 c     Parse the RCS revision information.
-      i1 = 11
+      i1 = 12
       l  = len1(rcsrev)
       if (rcsrev(:9).eq.'$Revision' .and. l.gt.i1) then
 c       Extract the revision number.
@@ -50,7 +50,7 @@ c       Extract the revision number.
         i0 = i0 + (i2 - i1 + 1)
 
 c       Extract the revision date and time.
-        i1 = 7
+        i1 = 8
         l  = len1(rcsdat)
         if (rcsdat(:5).eq.'$Date' .and. l.gt.i1) then
 c         Date.
@@ -61,7 +61,7 @@ c         Time.
           i2 = i2 + 1
           call scanchar (rcsdat, i2, l, ' ')
 
-          versan(i0:) = ',' // rcsdat(i1:i2) // 'UTC'
+          versan(i0:) = ', ' // rcsdat(i1:i2) // 'UTC'
         end if
 
       else
