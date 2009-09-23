@@ -3,21 +3,22 @@ c* versan - Announce task version information.
 c& mrc
 c: terminal-i/o
 c+
-        character*80 function versan (task, rcsid)
+        character*80 function versan (task, rcsrev, rcsdat)
 
-        character task*(*), rcsid*(*)
+        character task*(*), rcsrev*(*), rcsdat*(*)
 
-c  Construct task version information from the RCS Id string and
-c  announce it on standard output (usually the user's terminal).  The
-c  string is also returned as the value of the function, e.g. for use
-c  in the history log.
+c  Construct task version information from the RCS Revision and Date
+c  strings and announce it on standard output (usually the user's
+c  terminal).  The string is also returned as the value of the function,
+c  e.g. for use in the history log.
 c
 c  Input:
 c    task       The task name.  If prefixed with '-' the version will
 c               not be reported.
-c    rcsid      RCS version Id string.
+c    rcsrev     RCS Revision string.
+c    rcsid      RCS Date string.
 c--
-c  $Id: versan.for,v 1.2 2007/08/01 00:22:40 cal103 Exp $
+c  $Id: versan.for,v 1.3 2009/09/23 00:58:51 cal103 Exp $
 c-----------------------------------------------------------------------
       logical   quiet
       integer   i0, i1, i2, l, len1
@@ -36,25 +37,32 @@ c     Quiet mode?
       versan(i0:) = ': Version'
       i0 = i0 + 9
 
-      i1 = 7
-      l  = len1(rcsid)
-      if (rcsid(:3).eq.'$Id' .and. l.gt.i1) then
-        call scanchar (rcsid, i1, l, ' ')
-
-        i2 = i1 + 1
-        call scanchar (rcsid, i2, l, ' ')
+c     Parse the RCS revision information.
+      i1 = 11
+      l  = len1(rcsrev)
+      if (rcsrev(:9).eq.'$Revision' .and. l.gt.i1) then
+c       Extract the revision number.
+        i2 = i1
+        call scanchar (rcsrev, i2, l, ' ')
         i2 = i2 - 1
 
-        versan(i0:) = rcsid(i1:i2)
+        versan(i0:) = rcsrev(i1:i2)
         i0 = i0 + (i2 - i1 + 1)
 
-        i1 = i2 + 1
-        i2 = i1 + 1
-        call scanchar (rcsid, i2, l, ' ')
-        i2 = i2 + 1
-        call scanchar (rcsid, i2, l, ' ')
+c       Extract the revision date and time.
+        i1 = 7
+        l  = len1(rcsdat)
+        if (rcsdat(:5).eq.'$Date' .and. l.gt.i1) then
+c         Date.
+          i2 = i1
+          call scanchar (rcsdat, i2, l, ' ')
 
-        versan(i0:) = ',' // rcsid(i1:i2) // 'UTC'
+c         Time.
+          i2 = i2 + 1
+          call scanchar (rcsdat, i2, l, ' ')
+
+          versan(i0:) = ',' // rcsdat(i1:i2) // 'UTC'
+        end if
 
       else
         versan(i0:) = ' (not recorded)'
