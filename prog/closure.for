@@ -96,7 +96,7 @@ c    rjs  18jul04 Check for division by zero in quad quantities.
 c    rjs  23apr09 Increase buffer dimension to allow it to work on bigger problems.
 c    rjs  23jun09 Longer plot labels.
 c
-c $Id: closure.for,v 1.4 2009/07/12 23:33:23 sau078 Exp $
+c $Id: closure.for,v 1.5 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
@@ -142,8 +142,9 @@ c
 	logical uvDatOpn
 	character versan*80
 c-----------------------------------------------------------------------
-	version = versan ('closure',
-     :    '$Id: closure.for,v 1.4 2009/07/12 23:33:23 sau078 Exp $')
+      version = versan ('closure',
+     :                  '$Revision: 1.5 $',
+     :                  '$Date: 2009/09/23 01:00:20 $')
 c
 c Lets go! Get user inputs.
 c

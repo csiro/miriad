@@ -200,7 +200,7 @@ c    rjs  23jul97   added pbtype.
 c    nebk 25aug00   bump to 20 image.  subroutine chkdes should not
 c                   be checking cdelt/crpix on frequency axis
 c
-c $Id: imrm.for,v 1.2 2007/08/14 01:09:26 cal103 Exp $
+c $Id: imrm.for,v 1.3 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -252,8 +252,9 @@ c
       data nbl /6*0/
       data padummy /-100000.0/
 c-----------------------------------------------------------------------
-      version = versan('imrm',
-     + '$Id: imrm.for,v 1.2 2007/08/14 01:09:26 cal103 Exp $')
+      version = versan ('imrm',
+     :                  '$Revision: 1.3 $',
+     :                  '$Date: 2009/09/23 01:00:20 $')
 
       call output (version)
       call output (' ')

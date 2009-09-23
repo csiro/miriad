@@ -301,7 +301,7 @@ c    rjs   29jun05  Handle changes in calling sequence to mostab/hdtab routines.
 c    rjs   03apr09  Change way of accessing scrio to help access larger files.
 c  Bugs:
 c
-c $Id: invert.for,v 1.5 2009/08/03 00:34:18 sau078 Exp $
+c $Id: invert.for,v 1.6 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'maxdim.h'
@@ -340,8 +340,9 @@ c
 c
 	data slops/'zero        ','interpolate '/
 c-----------------------------------------------------------------------
-        version = versan ('invert',
-     :    '$Id: invert.for,v 1.5 2009/08/03 00:34:18 sau078 Exp $')
+      version = versan ('invert',
+     :                  '$Revision: 1.6 $',
+     :                  '$Date: 2009/09/23 01:00:20 $')
 c
 c  Get the input parameters. Convert all angular things into
 c  radians as soon as possible!!

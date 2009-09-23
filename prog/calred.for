@@ -44,7 +44,7 @@ c	          hopelessly flawed. Correct this.
 c    rjs  02jul05 Improved error estimates.
 c    mhw  07sep09 More digits for correlation count
 c
-c $Id: calred.for,v 1.3 2009/09/07 04:20:03 wie017 Exp $
+c $Id: calred.for,v 1.4 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
@@ -86,8 +86,9 @@ c
 	logical uvDatOpn,uvVarUpd
 	character versan*80
 c-----------------------------------------------------------------------
-	version = versan ('calred',
-     :    '$Id: calred.for,v 1.3 2009/09/07 04:20:03 wie017 Exp $')
+      version = versan ('calred',
+     :                  '$Revision: 1.4 $',
+     :                  '$Date: 2009/09/23 01:00:20 $')
 c
 c Lets go! Get user inputs.
 c

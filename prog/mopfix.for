@@ -56,7 +56,7 @@ c 21jul06 - tw - fixed subtle error in cos(dc) correction
 c 16may07 - tw - detab; change label 900 from GOTO to CONTINUE
 c 29aug09 - tw - resample option; convert bunit to 'K'
 c
-c $Id: mopfix.for,v 1.7 2009/09/08 02:12:20 cal103 Exp $
+c $Id: mopfix.for,v 1.8 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
 
       program mopfix
@@ -97,8 +97,9 @@ c-----------------------------------------------------------------------
       character hangle*12, rangle*12, versan*80
 
 *--------------------------------------------------------------
-      versn = versan('mopfix',
-     :  '$Id: mopfix.for,v 1.7 2009/09/08 02:12:20 cal103 Exp $')
+      versn = versan ('mopfix',
+     :                '$Revision: 1.8 $',
+     :                '$Date: 2009/09/23 01:00:20 $')
 
 c Get input parameters
       call keyini ()

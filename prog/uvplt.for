@@ -428,7 +428,7 @@ c       way the available space is better used.  MAXFILE is set to
 c       be much bigger than any number of files the user is ever
 c       likely to input.
 c
-c  $Id: uvplt.for,v 1.8 2009/05/15 00:26:35 cal103 Exp $
+c  $Id: uvplt.for,v 1.9 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
@@ -504,7 +504,8 @@ c
       data polmsk /13*0/
 c-----------------------------------------------------------------------
       version = versan ('uvplt',
-     +  '$Id: uvplt.for,v 1.8 2009/05/15 00:26:35 cal103 Exp $')
+     :                  '$Revision: 1.9 $',
+     :                  '$Date: 2009/09/23 01:00:20 $')
 c
 c  Get the parameters given by the user and check them for blunders
 c

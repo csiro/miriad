@@ -163,7 +163,7 @@ c               between runs).  Specifying boxes in this way is
 c               reasonably concise for the programmer, and yet makes
 c               vectorisable code straightforward to write.
 c
-c $Id: clean.for,v 1.4 2007/12/12 00:22:23 cal103 Exp $
+c $Id: clean.for,v 1.5 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       integer MaxBeam,maxCmp1,maxCmp2,MaxBox,MaxRun,MaxP
@@ -196,8 +196,9 @@ c  Externals.
 c
       character itoaf*8, versan*80
 c-----------------------------------------------------------------------
-      version = versan('clean',
-     *  '$Id: clean.for,v 1.4 2007/12/12 00:22:23 cal103 Exp $')
+      version = versan ('clean',
+     :                  '$Revision: 1.5 $',
+     :                  '$Date: 2009/09/23 01:00:20 $')
 c
 c  Get the input parameters.
 c

@@ -416,7 +416,7 @@ c    Bob to play ball with BOXES code.
 c  * Try to swap line colour index to get white lines on black
 c    and vice versa.  Have this vary over the image as appropriate.
 c
-c $Id: cgspec.for,v 1.3 2009/05/13 07:48:41 cal103 Exp $
+c $Id: cgspec.for,v 1.4 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -479,8 +479,9 @@ c
       data txtfill, tflen /'spectrum', 'derivative spectrum',
      +                     'derivative spectrum', 8, 19, 19/
 c-----------------------------------------------------------------------
-      version = versan('cgspec',
-     :  '$Id: cgspec.for,v 1.3 2009/05/13 07:48:41 cal103 Exp $')
+      version = versan ('cgspec',
+     :                  '$Revision: 1.4 $',
+     :                  '$Date: 2009/09/23 01:00:20 $')
 c
 c Get user inputs
 c

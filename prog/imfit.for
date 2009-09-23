@@ -120,7 +120,7 @@ c    rjs  27oct98 Improved format statements.
 c    rjs  30jun99 Ditto.
 c    paj  28Mar03 Fix bug in uncertainty estimates
 c
-c $Id: imfit.for,v 1.3 2007/04/16 02:52:20 cal103 Exp $
+c $Id: imfit.for,v 1.4 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'maxnax.h'
@@ -144,8 +144,9 @@ c
 	character itoaf*2, versan*80
 	external FUNCTION
 c-----------------------------------------------------------------------
-        version = versan ('imfit',
-     :    '$Id: imfit.for,v 1.3 2007/04/16 02:52:20 cal103 Exp $')
+      version = versan ('imfit',
+     :                  '$Revision: 1.4 $',
+     :                  '$Date: 2009/09/23 01:00:20 $')
 c
 c  Get the input parameters.
 c

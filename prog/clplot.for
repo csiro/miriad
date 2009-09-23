@@ -62,7 +62,7 @@ c    13jul98 pjt   linux/g77 cleanup
 c    26aug98 pjt   fixed bug with long words in history file of .cf file
 c    02jan05 rjs   fix misdeclaration.
 c
-c $Id: clplot.for,v 1.3 2009/08/24 07:24:11 cal103 Exp $
+c $Id: clplot.for,v 1.4 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'clplot.h'
 
@@ -92,8 +92,9 @@ c
 c  real ary(128*128*64)=1048576 reals = 4 MBytes
 c  real ary(256*256*128)=8388608 reals = 32 MBytes
 c-----------------------------------------------------------------------
-      version = versan('clplot',
-     +  '$Id: clplot.for,v 1.3 2009/08/24 07:24:11 cal103 Exp $')
+      version = versan ('clplot',
+     :                  '$Revision: 1.4 $',
+     :                  '$Date: 2009/09/23 01:00:20 $')
 c
 c  Get the input parameters.
 c

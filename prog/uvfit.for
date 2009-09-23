@@ -110,7 +110,7 @@ c                  spheres and thick shells, but they don't work yet!
 c    rjs  18mar97  Handle multiple files, autocorr data, better message.
 c    bmg  14jan05  Added 2 more significant figures to offset position
 c
-c $Id: uvfit.for,v 1.3 2007/04/16 02:52:20 cal103 Exp $
+c $Id: uvfit.for,v 1.4 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
 	integer MAXVAR
 	parameter(MAXVAR=20)
@@ -131,8 +131,9 @@ c
 	logical uvDatOpn
         external FUNCTION
 c-----------------------------------------------------------------------
-        version = versan ('uvfit',
-     :    '$Id: uvfit.for,v 1.3 2007/04/16 02:52:20 cal103 Exp $')
+      version = versan ('uvfit',
+     :                  '$Revision: 1.4 $',
+     :                  '$Date: 2009/09/23 01:00:20 $')
 c
 c  Get the inputs.
 c

@@ -56,7 +56,7 @@ c    rjs  23jul94  Major rewrite. No error estimates for the time
 c		   being.
 c    rjs  31aug94  Reborn as uvpit.
 c
-c $Id: uvpit.for,v 1.3 2007/04/16 02:52:20 cal103 Exp $
+c $Id: uvpit.for,v 1.4 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
 	integer PolXX,PolYY,PolXY,PolYX
 	parameter(PolXX=-5,PolYY=-6,PolXY=-7,PolYX=-8)
@@ -89,8 +89,9 @@ c  Dynamic memory commons.
 c
 	include 'mem.h'
 c-----------------------------------------------------------------------
-        version = versan ('uvpit',
-     :    '$Id: uvpit.for,v 1.3 2007/04/16 02:52:20 cal103 Exp $')
+      version = versan ('uvpit',
+     :                  '$Revision: 1.4 $',
+     :                  '$Date: 2009/09/23 01:00:20 $')
 c
 c  Get the inputs.
 c

@@ -48,7 +48,7 @@ c  History:
 c    rjs   06mar97	Adapted from ellint.
 c    rjs   18sep05      Corrected incorrect type.
 c
-c $Id: ellplt.for,v 1.2 2007/05/04 07:06:48 cal103 Exp $
+c $Id: ellplt.for,v 1.3 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'maxdim.h'
@@ -74,8 +74,9 @@ c
 	integer pgbeg
 	character itoaf*8, versan*80
 c-----------------------------------------------------------------------
-        version = versan('ellplt',
-     +    '$Id: ellplt.for,v 1.2 2007/05/04 07:06:48 cal103 Exp $')
+      version = versan ('ellplt',
+     :                  '$Revision: 1.3 $',
+     :                  '$Date: 2009/09/23 01:00:20 $')
 c
 c Get inputs.
 c

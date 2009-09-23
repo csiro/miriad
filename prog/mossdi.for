@@ -47,7 +47,7 @@ c    rjs 29jan99 - Correct user message only.
 c    gmx 07mar04 - Changed optimum gain determination to handle
 c                   negative components
 c
-c $Id: mossdi.for,v 1.2 2007/11/29 03:42:32 cal103 Exp $
+c $Id: mossdi.for,v 1.3 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'maxnax.h'
@@ -71,8 +71,9 @@ c  Externals.
 c
 	character itoaf*8, versan*80
 c-----------------------------------------------------------------------
-      version = versan('mossdi',
-     *  '$Id: mossdi.for,v 1.2 2007/11/29 03:42:32 cal103 Exp $')
+      version = versan ('mossdi',
+     :                  '$Revision: 1.3 $',
+     :                  '$Date: 2009/09/23 01:00:20 $')
 c
 c  Get the input parameters.
 c

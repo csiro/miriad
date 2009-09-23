@@ -554,7 +554,7 @@ c       cursor). This could be used as well as or instead of the current
 c       method. Think about two seperate options to indicate user's desire
 c       of which.
 c
-c  $Id: sfind.for,v 1.7 2008/05/29 00:53:12 cal103 Exp $
+c  $Id: sfind.for,v 1.8 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -594,8 +594,9 @@ c-----------------------------------------------------------------------
 
       character versan*80, version*80
 c-----------------------------------------------------------------------
-      version = versan('sfind',
-     +  '$Id: sfind.for,v 1.7 2008/05/29 00:53:12 cal103 Exp $')
+      version = versan( 'sfind',
+     :                  '$Revision: 1.8 $',
+     :                  '$Date: 2009/09/23 01:00:20 $')
 c
 c Get user inputs
 c

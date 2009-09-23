@@ -35,7 +35,7 @@ c
 c  History:
 c   09sep94 njt  - Created
 c
-c $Id: uvclip.for,v 1.2 2007/04/16 02:52:20 cal103 Exp $
+c $Id: uvclip.for,v 1.3 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
 
       include 'maxdim.h'
@@ -116,7 +116,8 @@ c     initialise some variables
      -            '  ', 'I ', 'Q ', 'U ', 'V ' /
 c-----------------------------------------------------------------------
       version = versan ('uvclip',
-     :  '$Id: uvclip.for,v 1.2 2007/04/16 02:52:20 cal103 Exp $')
+     :                  '$Revision: 1.3 $',
+     :                  '$Date: 2009/09/23 01:00:20 $')
 
 c     +++ read inputs
 

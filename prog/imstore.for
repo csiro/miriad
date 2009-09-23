@@ -65,7 +65,7 @@ c      9jun94 pjt   region= clarification + export bug fix 5apr94
 c     08may00 rjs   Change incorrect call of keyf to keya
 c     19jun00 rjs   Tidy up at add mode=dump.
 c
-c $Id: imstore.for,v 1.2 2007/05/03 05:43:51 cal103 Exp $
+c $Id: imstore.for,v 1.3 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
       INCLUDE 'mirconst.h'
       INCLUDE 'maxdim.h'
@@ -101,8 +101,9 @@ c
       data unitss/'relative','absolute'/
       data modes /'dump    ','uvgen   ','nemo    '/
 c-----------------------------------------------------------------------
-      version = versan('imstore',
-     +  '$Id: imstore.for,v 1.2 2007/05/03 05:43:51 cal103 Exp $')
+      version = versan ('imstore',
+     :                  '$Revision: 1.3 $',
+     :                  '$Date: 2009/09/23 01:00:20 $')
 c
 c  Get user inputs
 c

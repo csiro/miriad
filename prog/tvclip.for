@@ -257,7 +257,7 @@ c    rjs   21sep00    options=nosrc
 c    jwr   16jun04    initialize nedit=0 in doEdit
 c    jwr   16jun04    increased MAXEDIT
 c
-c $Id: tvclip.for,v 1.5 2009/05/13 06:44:07 cal103 Exp $
+c $Id: tvclip.for,v 1.6 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
 c
 c  Internal parameters.
@@ -307,8 +307,9 @@ c  End declarations.
 c-----------------------------------------------------------------------
 c  Announce program.
 c
-      version = versan('tvclip',
-     :  '$Id: tvclip.for,v 1.5 2009/05/13 06:44:07 cal103 Exp $')
+      version = versan ('tvclip',
+     :                  '$Revision: 1.6 $',
+     :                  '$Date: 2009/09/23 01:00:20 $')
 c-----------------------------------------------------------------------
 c  Use the key routines to get the user input parameters.
 c

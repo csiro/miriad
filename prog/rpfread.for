@@ -37,7 +37,7 @@ c 02aug06 - tw - accommodate Parkes MB data, report obstype
 c 25sep06 - tw - output az/el every cycle (Mopra)
 c 16may07 - tw - detab; change label 900 from GOTO to CONTINUE
 c
-c $Id: rpfread.for,v 1.8 2007/05/23 00:35:32 cal103 Exp $
+c $Id: rpfread.for,v 1.9 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
 
       program rpfread
@@ -87,8 +87,11 @@ c-----------------------------------------------------------------------
       brief = present(1)
       header = present(2)
 
-      if (.not.brief) versn = versan('rpfread',
-     :  '$Id: rpfread.for,v 1.8 2007/05/23 00:35:32 cal103 Exp $')
+      if (.not.brief) then
+        versn = versan ('rpfread',
+     :                  '$Revision: 1.9 $',
+     :                  '$Date: 2009/09/23 01:00:20 $')
+      end if
 
       if (fitsfile.eq.' ') then
          call bug('f','Input file must be given (in=)')

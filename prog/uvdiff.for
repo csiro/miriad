@@ -59,7 +59,7 @@ c  Bugs/Shortcomings:
 c    * Should handle the conjugate symmetry property, and match data
 c      over a wider range of HA.
 c
-c $Id: uvdiff.for,v 1.5 2009/03/31 05:40:27 cal103 Exp $
+c $Id: uvdiff.for,v 1.6 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
@@ -82,8 +82,9 @@ c     Externals.
       data modes/'difference  ','one         ','two         ',
      *           '-difference ','-one        ','-two        '/
 c-----------------------------------------------------------------------
-      version = versan('uvdiff',
-     *  '$Id: uvdiff.for,v 1.5 2009/03/31 05:40:27 cal103 Exp $')
+      version = versan ('uvdiff',
+     :                  '$Revision: 1.6 $',
+     :                  '$Date: 2009/09/23 01:00:20 $')
 
 c     Get the input parameters.
       call keyini

@@ -266,7 +266,7 @@ c     rjs 18sep05 Corrected type mismatch error.
 c     tw  21jun07 ngauss=1 default; fix seg fault when writing residual
 c                 cube; fix mask error on residual and model cubes
 c
-c $Id: gaufit.for,v 1.4 2007/06/25 01:32:14 cal103 Exp $
+c $Id: gaufit.for,v 1.5 2009/09/23 01:00:20 cal103 Exp $
 c***********************************************************************
 
 c The main program first gets all inputs and then calls the workhorse.
@@ -326,7 +326,8 @@ c              el 4=max # gaussians, used when sorting a range
       character versan*80, version*80
 c-----------------------------------------------------------------------
       version = versan ('gaufit',
-     :  '$Id: gaufit.for,v 1.4 2007/06/25 01:32:14 cal103 Exp $')
+     :                  '$Revision: 1.5 $',
+     :                  '$Date: 2009/09/23 01:00:20 $')
 
       call inputs(units,prfinfo,runs,ngauss,limlist,cmpsort,prnm)
       call work(  units,prfinfo,runs,ngauss,limlist,cmpsort,prnm)

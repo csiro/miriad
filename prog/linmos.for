@@ -141,8 +141,9 @@ c
       integer len1
       character versan*80
 c-----------------------------------------------------------------------
-      version = versan('linmos',
-     *  '$Id: linmos.for,v 1.4 2007/12/12 04:14:19 cal103 Exp $')
+      version = versan ('linmos',
+     :                  '$Revision: 1.5 $',
+     :                  '$Date: 2009/09/23 01:00:20 $')
 c
 c  Get the input parameters, and do some checking.
 c

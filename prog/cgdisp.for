@@ -695,7 +695,7 @@ c    pjt  19jan02  retrofitted options=corner introduced in 14feb01/BIMA
 c                  version
 c    pjt  29jan02  documented beamtyp=n, worked around a miriadB bug
 c
-c $Id: cgdisp.for,v 1.5 2008/08/06 05:07:08 cal103 Exp $
+c $Id: cgdisp.for,v 1.6 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -760,7 +760,8 @@ c
       data getvsc /.true./
 c-----------------------------------------------------------------------
       version = versan ('cgdisp',
-     :  '$Id: cgdisp.for,v 1.5 2008/08/06 05:07:08 cal103 Exp $')
+     :                  '$Revision: 1.6 $',
+     :                  '$Date: 2009/09/23 01:00:20 $')
 c
 c Get user inputs
 c

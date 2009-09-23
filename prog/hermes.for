@@ -30,7 +30,7 @@ c	        23sep90  Revised revision.
 c		10dec90	 Miriad version.
 c    nebk       26nov92  Add btype
 c
-c $Id: hermes.for,v 1.2 2009/08/24 07:43:32 cal103 Exp $
+c $Id: hermes.for,v 1.3 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
 	include 'hermes.h'
 	include 'maxdim.h'
@@ -43,7 +43,8 @@ c-----------------------------------------------------------------------
 	data row/maxdim*0./
 c-----------------------------------------------------------------------
       version = versan ('hermes',
-     :  '$Id: hermes.for,v 1.2 2009/08/24 07:43:32 cal103 Exp $')
+     :                  '$Revision: 1.3 $',
+     :                  '$Date: 2009/09/23 01:00:20 $')
 c
 c  Get the input parameters.
 c

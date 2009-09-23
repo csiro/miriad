@@ -224,7 +224,7 @@ c    rjs   12may97    Check that linetype is compatible with flagging.
 c    rjs    5oct97    Relax restriction that linetype width and step
 c                     must be 1.
 c
-c $Id: tvflag.for,v 1.4 2009/05/13 06:36:14 cal103 Exp $
+c $Id: tvflag.for,v 1.5 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
 c
 c  Internal parameters.
@@ -269,7 +269,8 @@ c-----------------------------------------------------------------------
 c  Announce program.
 c
       version = versan ('tvflag',
-     :  '$Id: tvflag.for,v 1.4 2009/05/13 06:36:14 cal103 Exp $')
+     :                  '$Revision: 1.5 $',
+     :                  '$Date: 2009/09/23 01:00:20 $')
 c-----------------------------------------------------------------------
 c  Use the key routines to get the user input parameters.
 c

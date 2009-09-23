@@ -263,7 +263,7 @@ c    mhw  09jan09 Add flagging of NaNs in CABB spectra
 c    mhw  03jun09 Fix syscal handling for CABB gtp, sdo and caljy values
 c    mhw  14sep09 Make sure birdie is ignored for CABB data
 c
-c $Id: atlod.for,v 1.14 2009/09/14 01:15:06 wie017 Exp $
+c $Id: atlod.for,v 1.15 2009/09/23 01:00:20 cal103 Exp $
 
 c-----------------------------------------------------------------------
         integer MAXFILES,MAXTIMES
@@ -283,7 +283,8 @@ c
         character itoaf*8, rperr*32, versan*80
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :  '$Id: atlod.for,v 1.14 2009/09/14 01:15:06 wie017 Exp $')
+     :                  '$Revision: 1.15 $',
+     :                  '$Date: 2009/09/23 01:00:20 $')
 c
 c  Get the input parameters.
 c

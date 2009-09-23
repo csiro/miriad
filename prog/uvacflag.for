@@ -25,7 +25,7 @@ c--
 c
 c     mhw  19nov07 Original version, adapted uvpflag into uvacflag
 c
-c $Id: uvacflag.for,v 1.3 2009/09/01 06:32:17 cal103 Exp $
+c $Id: uvacflag.for,v 1.4 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       integer maxpol,maxbin,maxrec,maxtime,maxfreq,ntime,nfreq
@@ -50,8 +50,9 @@ c
       integer ntot,ngood,ngood2,ngood3,nflag
 c
 c-----------------------------------------------------------------------
-      version = versan('uvacflag',
-     +  '$Id: uvacflag.for,v 1.3 2009/09/01 06:32:17 cal103 Exp $')
+      version = versan ('uvacflag',
+     :                  '$Revision: 1.4 $',
+     :                  '$Date: 2009/09/23 01:00:20 $')
 
       ntot=0
       ngood=0

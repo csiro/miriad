@@ -134,7 +134,7 @@ c    27jan01 pjt   fixed bug due to above
 c    22mar02 mchw  better logarithmic contour levels.
 c    26jun02 mchw  fixed bug due to longer filenames. (cf. 19sep00)
 c
-c $Id: velplot.for,v 1.3 2009/08/24 06:50:06 cal103 Exp $
+c $Id: velplot.for,v 1.4 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
 	include 'velplot.h'
 	include 'mem.h'
@@ -149,7 +149,8 @@ c-----------------------------------------------------------------------
 	character versan*80, version*80
 c-----------------------------------------------------------------------
       version = versan ('velplot',
-     :  '$Id: velplot.for,v 1.3 2009/08/24 06:50:06 cal103 Exp $')
+     :                  '$Revision: 1.4 $',
+     :                  '$Date: 2009/09/23 01:00:20 $')
 
 c set default plotting parameters
 c

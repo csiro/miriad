@@ -363,7 +363,7 @@ c    cleverly
 c
 c  * Scale data before fitting
 c
-c $Id: cgslice.for,v 1.5 2008/08/06 05:07:08 cal103 Exp $
+c $Id: cgslice.for,v 1.6 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -417,7 +417,8 @@ c
       data xdispls, ydispbs /3.5, 3.5/
 c-----------------------------------------------------------------------
       version = versan ('cgslice',
-     :  '$Id: cgslice.for,v 1.5 2008/08/06 05:07:08 cal103 Exp $')
+     :                  '$Revision: 1.6 $',
+     :                  '$Date: 2009/09/23 01:00:20 $')
 c
 c Get user inputs
 c
