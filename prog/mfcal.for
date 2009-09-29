@@ -46,13 +46,17 @@ c@ minants
 c	The minimum number of antennae that must be present before a
 c	solution is attempted. Default is 2.
 c@ interval
-c	This gives one or two numbers, both given in minutes, both being
-c	used to determine the extents of the antenna gain calibration solution
-c	interval. The first gives the maximum length of a solution interval. The
+c	This gives one, two or three numbers, all given in minutes, being
+c	used to determine the extents of the antenna gain and passband 
+c       calibration solution interval.
+c	The first gives the maximum length of a solution interval. The
 c	second gives the maximum gap size in a solution interval. A new solution
 c	interval is started when either the max length is exceeded, or a
 c	gap larger than the max gap size is encountered. The default max length is
 c	5 minutes, and the default max gap size is the same as the max length.
+c       The third number specifies the passband solution interval. The default is
+c       to use a single passband solution for the entire observation. Each passband
+c       solution interval will consist of one or more full gain solution intervals.
 c@ options
 c	Extra processing options. Several values can be given, separated by
 c	commas. Minimum match is used. Possible values are:
@@ -113,7 +117,9 @@ c    rjs  14may09 Simple handling of Doppler tracking. Squeeze out spectral
 c		  window descriptions with no valid data and amalgemate spectral windows
 c	          that are essentially the same. Improve doc. Rename unpack/pack/scale
 c		  routines (potential f90 conflict).
+c    mhw  07aug09 Add time variable passbands
 c    rjs  08sep09 Bug handling when first solution interval was completely flagged.
+c    mhw 29sep09  Time variable bandpass bug fixes
 c
 c  Problems:
 c    * Should do simple spectral index fit.
@@ -122,11 +128,11 @@ c------------------------------------------------------------------------
 	parameter(PolXX=-5,PolYY=-6,PolRR=-1,PolLL=-2,PolI=1)
 	include 'maxdim.h'
 	integer MAXSPECT,MAXVIS,MAXSOLN,MAXITER,MAXPOL
-	parameter(MAXSPECT=3*MAXWIN,MAXVIS=7000000,MAXITER=30)
+	parameter(MAXSPECT=3*MAXWIN,MAXVIS=50000000,MAXITER=30)
 	parameter(MAXSOLN=1024,MAXPOL=2)
 c
 	character version*(*)
-	parameter(version='MfCal: version 1.0 08-Sep-09')
+	parameter(version='MfCal: version 1.1 09-Sep-09')
 c
 	integer tno
 	integer pWGains,pFreq,pSource,pPass,pGains,pTau
@@ -135,11 +141,12 @@ c
 	integer nspect,nschan(MAXSPECT),ischan(MAXSPECT),nv(MAXSPECT)
 	integer spectn(MAXSPECT),chanoff(MAXSPECT),nvo,nso,nspectd
 	integer npol,nants,nsoln,Count(MAXSOLN),nchan,refant,minant
+        integer npsoln,Range(2,MAXSOLN)
 	integer niter,edge(2),PolMap(MAXPOL),pee(MAXPOL)
 	real flux(3),tol,epsi
 	double precision freq0,sfreq(MAXSPECT),sdf(MAXSPECT)
 	double precision freqc(MAXSPECT)
-	double precision interval(2),time(MAXSOLN)
+	double precision interval(3),time(MAXSOLN)
 	complex Vis(MAXVIS)
 	real Wt(MAXVIS)
 	character line*64,uvflags*16,Source*64
@@ -176,6 +183,7 @@ c
 	call keyi('edge',edge(2),edge(1))
 	call keyd('interval',interval(1),5.0d0)
 	call keyd('interval',interval(2),interval(1))
+        call keyd('interval',interval(3),0.d0)
 	call keyr('tol',tol,0.001)
 	call keyfin
 c
@@ -193,6 +201,7 @@ c
 	interval(2) = min(interval(1),interval(2))
 	interval(1) = interval(1) / (24*60)
 	interval(2) = interval(2) / (24*60)
+	interval(3) = interval(3) / (24*60)
 c
 	if(tol.le.0.or.tol.ge.1)
      *	  call bug('f','Bad value for the tol parameter')
@@ -219,8 +228,8 @@ c
 	call output('Reading the data ...')
 	call DatRead(tno,MAXVIS,nvis,npol,Vis,Wt,VID,
      *		     MAXSPECT,nspect,sfreq,sdf,nschan,nv,nants,
-     *		     MAXSOLN,nsoln,time,Count,minant,refant,interval,
-     *		     edge,Source,PolMap)
+     *		     MAXSOLN,nsoln,time,Count,minant,
+     *               refant,interval,edge,Source,PolMap)
 c
 c  Squeeze out spectral windows that have no data and amalgamate windows
 c  that differ insignificantly (probably because of Doppler tracking).
@@ -235,12 +244,18 @@ c
 	  nsoln = nso
 	  nspect = nspectd 
 	endif
+c
+c  Determine the passband solution intervals
+c        
+        call pbranges(MAXSOLN,nsoln,time,interval,npsoln,Range)        
 	call output('Number of frequency bands/settings: '
      *	  //itoaf(nspect))
 	call output('Number of polarisations selected: '
      *	  //itoaf(npol))
 	call output('Number of solution intervals: '
      *    //itoaf(nsoln))
+	call output('Number of passband solution intervals: '
+     *    //itoaf(npsoln))
 c
 c  Check that the polarisations present are commensurate.
 c
@@ -275,10 +290,10 @@ c
 c
 c  Allocate some extra memory.
 c
-	call MemAlloc(pPass,nants*nchan*npol,'c')
+	call MemAlloc(pPass,nants*npsoln*nchan*npol,'c')
 	call MemAlloc(pGains,nants*nsoln*npol,'c')
 	call MemAlloc(pTau,nants*nsoln,'r')
-	call MemAlloc(pOPass,nants*nchan*npol,'c')
+	call MemAlloc(pOPass,nants*npsoln*nchan*npol,'c')
 	call MemAlloc(pOGains,nants*nsoln*npol,'c')
 	call MemAlloc(pOTau,nants*nsoln,'r')
 c
@@ -289,17 +304,18 @@ c
 	call WGIni(Vis,Wt,VID,ischan,nvis,npol,Count,nsoln,nchan,
      *	  nants,nspect,ref(pSource),cref(pWGains),refant,minant)
 c
-	call BPIni(npol,nants,nchan,nsoln,nspect,nschan,cref(pWGains),
-     *	  freqc,cref(pPass),cref(pGains),ref(pTau),dodelay,dopass)
+	call BPIni(npol,nants,nchan,nsoln,npsoln,nspect,nschan,
+     *	  cref(pWGains),freqc,cref(pPass),cref(pGains),ref(pTau),
+     *    dodelay,dopass)
 	call MemFree(pWGains,nants*nspect*nsoln*npol,'c')
 c
 c  Normalise the gains, and make a copy for later comparison.
 c
-	if(dopass)call Norm(npol,nants,nchan,nsoln,cref(pPass),
-     *	  cref(pGains),ref(pTau),dref(pFreq))
+	if(dopass)call Norm(npol,nants,nchan,nsoln,npsoln,Range,
+     *	  cref(pPass),cref(pGains),ref(pTau),dref(pFreq))
 c
-	call GainCpy(npol,nants,nchan,nsoln,cref(pPass),cref(pGains),
-     *	  ref(pTau),cref(pOPass),cref(pOGains),ref(pOTau))
+	call GainCpy(npol,nants,nchan,nsoln,npsoln,cref(pPass),
+     *	  cref(pGains),ref(pTau),cref(pOPass),cref(pOGains),ref(pOTau))
 c
 c  We have estimates of the antenna gains (Gains), the delay term
 c  (Tau) and the passbands (Pass). Perform the main solver iterations.
@@ -312,28 +328,28 @@ c
 c
 c  Get the antenna gains and delay.
 c
-	  call SolveGT(refant,minant,nants,nspect,nchan,nsoln,
+	  call SolveGT(refant,minant,nants,nspect,nchan,nsoln,npsoln,
      *	    cref(pPass),ref(pSource),dref(pFreq),Vis,Wt,VID,ischan,
-     *	    Count,nvis,npol,cref(pGains),ref(pTau),
+     *	    Count,Range,nvis,npol,cref(pGains),ref(pTau),
      *	    dodelay.and.niter.ne.1,tol)
 c
 c  Get the passband.
 c
 	  if(dopass)call SolveBP(refant,minant,nants,nspect,nchan,nsoln,
-     *	    cref(pPass),ref(pSource),dref(pFreq),Vis,Wt,VID,ischan,
-     *	    Count,nvis,npol,cref(pGains),ref(pTau),tol)
+     *	    npsoln,cref(pPass),ref(pSource),dref(pFreq),Vis,Wt,VID,
+     *	    ischan,Count,Range,nvis,npol,cref(pGains),ref(pTau),tol)
 c
 c  Normalise the total gains so that the average delay is zero and
 c  the rms passband gain is 1.
 c
-	  if(dopass)call Norm(npol,nants,nchan,nsoln,cref(pPass),
-     *	    cref(pGains),ref(pTau),dref(pFreq))
+	  if(dopass)call Norm(npol,nants,nchan,nsoln,npsoln,Range,
+     *	    cref(pPass),cref(pGains),ref(pTau),dref(pFreq))
 c
 c  Compare the solution with previous solutions.
 c
-	  call GainCmp(npol,nants,nchan,nsoln,cref(pPass),cref(pGains),
-     *		ref(pTau),cref(pOPass),cref(pOGains),ref(pOTau),epsi)
-c
+	  call GainCmp(npol,nants,nchan,nsoln,npsoln,Range,cref(pPass),
+     *		cref(pGains),ref(pTau),cref(pOPass),cref(pOGains),
+     *          ref(pOTau),epsi)
 c  Keep the user awake.
 c
 	  write(line,'(a,i2,a,f7.3)')'Iter=',niter,
@@ -353,24 +369,25 @@ c
 	call output('Saving solution ...')
 c
 	if (dopass.and.interp) call intext(npol,nants,nchan,nspect,
-     *    nschan,cref(pPass))
+     *    nschan,npsoln,cref(pPass))
 	if(dopass.and.npol.eq.2)
-     *	  call pushxy(npol,nants,nsoln,cref(pGains),nchan,cref(pPass))
+     *	  call pushxy(npol,nants,nsoln,cref(pGains),nchan,npsoln,
+     *          cref(pPass))
 c
 	call GainTab(tno,time,cref(pGains),ref(pTau),npol,nants,nsoln,
      *	  freq0,dodelay,pee,dopass)
 c
-	if(dopass)call PassTab(tno,npol,nants,nchan,
-     *	  nspect,sfreq,sdf,nschan,cref(pPass),pee)
+	if(dopass)call PassTab(tno,npol,nants,nchan,nspect,sfreq,sdf,
+     *	  nschan,nsoln,time,Range,npsoln,cref(pPass),pee)
 c
 c  Free up all the memory, and close down shop.
 c
 	call MemFree(pOTau,nants*nsoln,'r')
 	call MemFree(pOGains,nants*nsoln*npol,'c')
-	call MemFree(pOPass,nants*nchan*npol,'c')
+	call MemFree(pOPass,nants*nchan*npol*npsoln,'c')
 	call MemFree(pTau,nants*nsoln,'r')
 	call MemFree(pGains,nants*nsoln*npol,'c')
-	call MemFree(pPass,nants*nchan*npol,'c')
+	call MemFree(pPass,nants*nchan*npol*npsoln,'c')
 	call MemFree(pSource,nchan,'r')
 	call MemFree(pFreq,nchan,'d')
 	call hisclose(tno)
@@ -378,11 +395,11 @@ c
 c
 	end
 c************************************************************************
-	subroutine pushxy(npol,nants,nsoln,Gains,nchan,Pass)
+	subroutine pushxy(npol,nants,nsoln,Gains,nchan,npsoln,Pass)
 c
 	implicit none
-	integer npol,nants,nsoln,nchan
-	complex Gains(nants,npol,nsoln),Pass(nants,nchan,npol)
+	integer npol,nants,nsoln,nchan,npsoln
+	complex Gains(nants,npol,nsoln),Pass(nants,nchan,npol,npsoln)
 c
 c  Input:
 c    npol	Number of polarisations. Must be 2.
@@ -397,7 +414,7 @@ c------------------------------------------------------------------------
 	include 'maxdim.h'
 	complex g(MAXANT),gx,gy
 	real xyphase(MAXANT),theta
-	integer count(MAXANT),i,j
+	integer count(MAXANT),i,j,k
 c
 	if(npol.ne.2)call bug('f','Poln inconsistency in pushxy')
 c
@@ -445,11 +462,13 @@ c
 	  g(i) = conjg(g(i))
 	enddo
 c
-	do j=1,nchan
-	  do i=1,nants
-	    Pass(i,j,2) = Pass(i,j,2)*g(i)
+        do k=1,npsoln
+  	  do j=1,nchan
+	    do i=1,nants
+	      Pass(i,j,2,k) = Pass(i,j,2,k)*g(i)
+	    enddo
 	  enddo
-	enddo
+        enddo
 c
 	end
 c************************************************************************
@@ -663,13 +682,14 @@ c
 c
 	end
 c************************************************************************
-	subroutine PassTab(tno,npol,nants,nchan,
-     *			nspect,sfreq,sdf,nschan,Pass,pee)
+	subroutine PassTab(tno,npol,nants,nchan,nspect,sfreq,sdf,nschan,
+     *			nsoln,time,Range,npsoln,Pass,pee)
 c
 	implicit none
 	integer tno,npol,nants,nchan,nspect,nschan(nspect),pee(npol)
-	complex Pass(nants,nchan,npol)
-	double precision sdf(nspect),sfreq(nspect)
+        integer nsoln,npsoln,Range(2,npsoln)
+	complex Pass(nants,nchan,npol,npsoln)
+	double precision sdf(nspect),sfreq(nspect),time(nsoln)
 c
 c  Write out the bandpass table and frequency description table (with a
 c  few other assorted parameters). This assumes that the parameters
@@ -689,6 +709,7 @@ c		NOTE: Here (as elsewhere in this task) "nchan" is the total
 c		number of channels (the sum of all the channels from all the
 c		bands observed).
 c		i.e. nchan = Sum nschan(i)
+c    npsoln     Number of bandpass solutions
 c    Pass	The bandpass function. This is of size nants * nchan * npol.
 c		The bandpass table that we have to write out is in the order
 c		nchan * npol * nants, so we have to do some reorganising
@@ -700,7 +721,7 @@ c    sdf	Frequency increment for each observing band.
 c    sfreq	Start frequency for each observing band.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
-	integer iostat,off,item,i,j,k,n,p,pd
+	integer iostat,off,item,i,j,k,l,n,p,pd
 	complex G(MAXCHAN),temp
 	double precision freqs(2)
 c
@@ -722,34 +743,43 @@ c  Because "nchan" is the sum of all the channels from the frequency
 c  bands observed, nchan may be larger than MAXCHAN. To cope with this,
 c  copy the output channels in a strip-mining approach.
 c
+        off=8
+        do l=1,npsoln
+c
 c  Loop over antenna, polarisation, strip, and channel within a strip.
 c
-	off = 8
-	do i=1,nants
-	  do p=1,npol
-	    pd = pee(p)
-	    do j=1,nchan,MAXCHAN
-	      n = min(MAXCHAN,nchan-j+1)
-	      do k=1,n
-	        temp = Pass(i,j+k-1,pd)
-	        if(abs(real(temp))+abs(aimag(temp)).ne.0)then
-		  G(k) = 1/temp
-	        else
-		  G(k) = 0
-		endif
+	  do i=1,nants
+	    do p=1,npol
+	      pd = pee(p)
+	      do j=1,nchan,MAXCHAN
+	        n = min(MAXCHAN,nchan-j+1)
+	        do k=1,n
+	          temp = Pass(i,j+k-1,pd,l)
+	          if(abs(real(temp))+abs(aimag(temp)).ne.0)then
+		    G(k) = 1/temp
+	          else
+		    G(k) = 0
+		  endif
+	        enddo
 	      enddo
-	    enddo
 c
 c  Write a strip, and check for errors.
 c
-	    call hwriter(item,G,off,8*n,iostat)
-	    off = off + 8*n
-	    if(iostat.ne.0)then
-	      call bug('w','Error writing gains to bandpass table')
-	      call bugno('f',iostat)
-	    endif
+	      call hwriter(item,G,off,8*n,iostat)
+	      off = off + 8*n
+	      if(iostat.ne.0)then
+	        call bug('w','Error writing gains to bandpass table')
+	        call bugno('f',iostat)
+	      endif
+	    enddo
 	  enddo
-	enddo
+c
+c  Write the solution time at the end
+c
+          call hwrited(item,(time(Range(1,l))+time(Range(2,l)))/2,
+     *                 off,8,iostat)
+          off=off+8
+        enddo
 c
 c  Finished writing the bandpass table.
 c
@@ -796,16 +826,18 @@ c
 c
 c  Now write out the other parameters that need to go along with this.
 c
+        call wrhdi(tno,'nbpsols',npsoln)
 	call wrhdi(tno,'nspect0',nspect)
 	call wrhdi(tno,'nchan0',nchan)
 c
 	end
 c************************************************************************
-	subroutine Norm(npol,nants,nchan,nsoln,Pass,Gains,Tau,freq)
+	subroutine Norm(npol,nants,nchan,nsoln,npsoln,Range,Pass,Gains,
+     *     Tau,freq)
 c
 	implicit none
-	integer npol,nants,nchan,nsoln
-	complex Pass(nants,nchan,npol),Gains(nants,npol,nsoln)
+	integer npol,nants,nchan,nsoln,npsoln,Range(2,npsoln)
+	complex Pass(nants,nchan,npol,npsoln),Gains(nants,npol,nsoln)
 	real Tau(nants,nsoln)
 	double precision freq(nchan)
 c
@@ -828,103 +860,109 @@ c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
 	real SumTau(MAXANT),RmsPass(MAXANT,MAXPOL),temp,theta
-	integer i,j,p,nPass(MAXANT,MAXPOL)
+	integer i,j,p,k,nPass(MAXANT,MAXPOL)
+c
+        do k=1,npsoln
 c
 c  Zero the accumulators.
 c
-	do p=1,npol
-	  do i=1,nants
-	    SumTau(i) = 0
-	    RmsPass(i,p) = 0
-	    nPass(i,p) = 0
+	  do p=1,npol
+	    do i=1,nants
+	      SumTau(i) = 0
+	      RmsPass(i,p) = 0
+	      nPass(i,p) = 0
+	    enddo
 	  enddo
-	enddo
 c
 c  Accumulate the average delay.
 c
-	do j=1,nsoln
-	  do i=1,nants
-	    SumTau(i) = SumTau(i) + Tau(i,j)
+	  do j=Range(1,k),Range(2,k)
+	    do i=1,nants
+	      SumTau(i) = SumTau(i) + Tau(i,j)
+	    enddo
 	  enddo
-	enddo
 c
 c  Accumulate the rms passband gain.
 c
-	do p=1,npol
-	  do j=1,nchan
-	    do i=1,nants
-	      temp = real(Pass(i,j,p))**2 + aimag(Pass(i,j,p))**2
-	      if(temp.gt.0)then
-	        nPass(i,p) = nPass(i,p) + 1
-	        RmsPass(i,p) = RmsPass(i,p) + temp
-	      endif
+	  do p=1,npol
+	    do j=1,nchan
+	      do i=1,nants
+	        temp = real(Pass(i,j,p,k))**2 + 
+     *                aimag(Pass(i,j,p,k))**2
+	        if(temp.gt.0)then
+	          nPass(i,p) = nPass(i,p) + 1
+	          RmsPass(i,p) = RmsPass(i,p) + temp
+	        endif
+	      enddo
 	    enddo
 	  enddo
-	enddo
 c
 c  Calculate the average delay and rms passband gain.
 c
-	do i=1,nants
-	  SumTau(i) = SumTau(i) / nsoln
-	  do p=1,npol
-	    if(nPass(i,p).gt.0)then
-	      RmsPass(i,p) = sqrt(RmsPass(i,p)/nPass(i,p))
-	    else
-	      RmsPass(i,p) = 1
-	    endif
+	  do i=1,nants
+	    SumTau(i) = SumTau(i) / nsoln
+	    do p=1,npol
+	      if(nPass(i,p).gt.0)then
+	        RmsPass(i,p) = sqrt(RmsPass(i,p)/nPass(i,p))
+	      else
+	        RmsPass(i,p) = 1
+	      endif
+	    enddo
 	  enddo
-	enddo
 c
 c  Correct the delay and antenna gains.
 c
-	do j=1,nsoln
-	  do i=1,nants
-	    Tau(i,j) = Tau(i,j) - SumTau(i)
-	  enddo
-	enddo
-c
-	do p=1,npol
-	  do j=1,nsoln
+	  do j=Range(1,k),Range(2,k)
 	    do i=1,nants
-	      Gains(i,p,j) = Gains(i,p,j) * RmsPass(i,p)
+	      Tau(i,j) = Tau(i,j) - SumTau(i)
 	    enddo
 	  enddo
-	enddo
+c
+	  do p=1,npol
+	    do j=Range(1,k),Range(2,k)
+	      do i=1,nants
+	        Gains(i,p,j) = Gains(i,p,j) * RmsPass(i,p)
+	      enddo
+	    enddo
+	  enddo
 c
 c  Correct the passband gains.
 c
-	do p=1,npol
-	  do j=1,nchan
-	    do i=1,nants
-	      theta = 2*pi * SumTau(i) * freq(j)
-	      Pass(i,j,p) = Pass(i,j,p) * cmplx(cos(theta),sin(theta))
-     *							/ RmsPass(i,p)
+	  do p=1,npol
+	    do j=1,nchan
+	      do i=1,nants
+	        theta = 2*pi * SumTau(i) * freq(j)
+	        Pass(i,j,p,k) = Pass(i,j,p,k) *
+     *			cmplx(cos(theta),sin(theta))/ RmsPass(i,p)
+	      enddo
 	    enddo
 	  enddo
-	enddo
+        enddo
 c
 	end
 c************************************************************************
-	subroutine GainCpy(npol,nants,nchan,nsoln,Pass,Gains,
+	subroutine GainCpy(npol,nants,nchan,nsoln,npsoln,Pass,Gains,
      *		Tau,OPass,OGains,OTau)
 c
 	implicit none
-	integer npol,nants,nchan,nsoln
-	complex Pass(nants,nchan,npol),Gains(nants,npol,nsoln)
-	complex OPass(nants,nchan,npol),OGains(nants,npol,nsoln)
+	integer npol,nants,nchan,nsoln,npsoln
+	complex Pass(nants,nchan,npol,npsoln),Gains(nants,npol,nsoln)
+	complex OPass(nants,nchan,npol,npsoln),OGains(nants,npol,nsoln)
 	real Tau(nants,nsoln),OTau(nants,nsoln)
 c
 c  Copy the current gains to the old gains.
 c------------------------------------------------------------------------
-	integer i,j,p
+	integer i,j,k,p
 c
-	do p=1,npol
-	  do j=1,nchan
-	    do i=1,nants
-	      OPass(i,j,p) = Pass(i,j,p)
+        do k=1,npsoln
+	  do p=1,npol
+	    do j=1,nchan
+	      do i=1,nants
+	        OPass(i,j,p,k) = Pass(i,j,p,k)
+	      enddo
 	    enddo
 	  enddo
-	enddo
+        enddo
 c
 	do p=1,npol
 	  do j=1,nsoln
@@ -942,65 +980,67 @@ c
 c
 	end
 c************************************************************************
-	subroutine GainCmp(npol,nants,nchan,nsoln,Pass,Gains,
-     *		Tau,OPass,OGains,OTau,epsi)
+	subroutine GainCmp(npol,nants,nchan,nsoln,npsoln,Range,Pass,
+     *		Gains,Tau,OPass,OGains,OTau,epsi)
 c
 	implicit none
-	integer npol,nants,nchan,nsoln
-	complex Pass(nants,nchan,npol),Gains(nants,npol,nsoln)
-	complex OPass(nants,nchan,npol),OGains(nants,npol,nsoln)
+	integer npol,nants,nchan,nsoln,npsoln,Range(2,npsoln)
+	complex Pass(nants,nchan,npol,npsoln),Gains(nants,npol,nsoln)
+	complex OPass(nants,nchan,npol,npsoln),OGains(nants,npol,nsoln)
 	real Tau(nants,nsoln),OTau(nants,nsoln),epsi
 c
 c  Copy and compare the current and old gains.
 c------------------------------------------------------------------------
-	integer i,j,p
+	integer i,j,p,k
 	real Change,Sum2,rtemp
 	complex temp
 c
 	epsi = 0
+        do k=1,npsoln
 c
-	Change = 0
-	Sum2 = 0
-	do p=1,npol
-	  do j=1,nchan
-	    do i=1,nants
-	      temp = Pass(i,j,p) - OPass(i,j,p)
-	      OPass(i,j,p) = Pass(i,j,p)
-	      Change = Change + real(temp)**2 + aimag(temp)**2
-	      Sum2 = Sum2 + real( Pass(i,j,p))**2
-     *			  + aimag(Pass(i,j,p))**2
+	  Change = 0
+	  Sum2 = 0
+	  do p=1,npol
+	    do j=1,nchan
+	      do i=1,nants
+	        temp = Pass(i,j,p,k) - OPass(i,j,p,k)
+	        OPass(i,j,p,k) = Pass(i,j,p,k)
+	        Change = Change + real(temp)**2 + aimag(temp)**2
+	        Sum2 = Sum2 + real( Pass(i,j,p,k))**2
+     *			  + aimag(Pass(i,j,p,k))**2
+	      enddo
 	    enddo
 	  enddo
-	enddo
-	if(Sum2.gt.0)epsi = max(epsi, Change / Sum2)
+	  if(Sum2.gt.0)epsi = max(epsi, Change / Sum2)
 c
-	Change = 0
-	Sum2 = 0
-	do p=1,npol
-	  do j=1,nsoln
-	    do i=1,nants
-	      temp = Gains(i,p,j) - OGains(i,p,j)
-	      OGains(i,p,j) = Gains(i,p,j)
-	      Change = Change + real(temp)**2 + aimag(temp)**2
-	      Sum2 = Sum2 + real( Gains(i,p,j))**2
+	  Change = 0
+	  Sum2 = 0
+	  do p=1,npol
+	    do j=Range(1,k),Range(2,k)
+	      do i=1,nants
+	        temp = Gains(i,p,j) - OGains(i,p,j)
+	        OGains(i,p,j) = Gains(i,p,j)
+	        Change = Change + real(temp)**2 + aimag(temp)**2
+	        Sum2 = Sum2 + real( Gains(i,p,j))**2
      *			  + aimag(Gains(i,p,j))**2
+	      enddo
 	    enddo
 	  enddo
-	enddo
-	if(Sum2.gt.0)epsi = max(epsi, Change / Sum2)
+	  if(Sum2.gt.0)epsi = max(epsi, Change / Sum2)
 c
-	Change = 0
-	Sum2 = 0
-	do j=1,nsoln
-	  do i=1,nants
-	    rtemp = Tau(i,j) - OTau(i,j)
-	    OTau(i,j) = Tau(i,j)
-	    Change = Change + rtemp*rtemp
-	    Sum2 = Sum2 + Tau(i,j)*Tau(i,j)
+	  Change = 0
+	  Sum2 = 0
+	  do j=Range(1,k),Range(2,k)
+	    do i=1,nants
+	      rtemp = Tau(i,j) - OTau(i,j)
+	      OTau(i,j) = Tau(i,j)
+	      Change = Change + rtemp*rtemp
+	      Sum2 = Sum2 + Tau(i,j)*Tau(i,j)
+	    enddo
 	  enddo
-	enddo
-	if(Sum2.gt.0)epsi = max(epsi, Change / Sum2)
+	  if(Sum2.gt.0)epsi = max(epsi, Change / Sum2)
 c
+        enddo
 	epsi = sqrt(epsi)
 c
 	end
@@ -1233,13 +1273,14 @@ c
 c************************************************************************
 	subroutine DatRead(tno,maxvis,nvis,npol,Vis,Wt,VID,
      *			maxspect,nspect,sfreq,sdf,nschan,nv,nants,
-     *			maxsoln,nsoln,time,Count,minant,refant,interval,
+     *			maxsoln,nsoln,time,Count, 
+     *                  minant,refant,interval,
      *			edge,Source,PolMap)
 c
 	implicit none
 	integer tno,maxvis,nvis,maxspect,nspect,nants,maxsoln,nsoln
 	integer minant,refant,npol
-	double precision time(maxsoln),interval(2)
+	double precision time(maxsoln),interval(3)
 	double precision sfreq(maxspect),sdf(maxspect)
 	integer nschan(maxspect),nv(maxspect),Count(maxsoln),edge(2)
 	complex Vis(maxvis)
@@ -1319,6 +1360,7 @@ c
 	npol = 0
 c
 	nsoln = 0
+        
 	nspect = 0
 	pnspect = 0
 	nvis = 0
@@ -1684,6 +1726,51 @@ c
 	if(k.ne.nvi)call bug('f','Something screwy in Squeeze routine')
 c
 	end
+        
+c************************************************************************
+	subroutine pbranges(maxsoln,nsoln,time,interval,npsoln,Range)
+c
+	implicit none
+	integer maxsoln,nsoln,npsoln,Range(2,maxsoln)
+        double precision time(maxsoln),interval(3)
+c
+c  Determine passband solution ranges
+c
+c  Input:
+c    maxsoln	Max number of solution intervals
+c    nsoln	Number of solution intervals in for gain solution
+c    time	Timestamp for gain solution interval
+c    interval	User input - gain soln interval, gap, passband soln interval
+c  Output:
+c    npsoln     Number of passband solution intervals
+c    Range      Range of gain solutions included in each passband solution
+c------------------------------------------------------------------------
+	include 'maxdim.h'
+        integer  ifirst,i
+        double precision tfirst
+c
+c  Now determine passband solution intervals
+c       
+        npsoln=1
+        if (interval(3).lt.interval(1)) then
+          Range(1,1)=1
+          Range(2,1)=nsoln
+        else
+          ifirst=1
+          tfirst=time(1)
+          do i=1,nsoln
+            if (time(i).gt.tfirst+interval(3)) then
+              Range(1,npsoln)=ifirst
+              Range(2,npsoln)=i-1
+              npsoln=npsoln+1
+              ifirst=i
+              tfirst = time(i)-interval(1)/2
+            endif
+          enddo
+          Range(1,npsoln)=ifirst
+          Range(2,npsoln)=nsoln
+        endif
+        end
 c************************************************************************
 	subroutine packit(i1,i2,p,spect,chan,VID)
 c
@@ -1699,7 +1786,7 @@ c    spect	Spectral window index.
 c    chan	Channel number.
 c  Output:
 c    VID	A positive integer used as a unique identifier for antenna pair,
-c		polarlisation, spectral window and channel.
+c		polarisation, spectral window and channel.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer MAXPOL
@@ -1720,7 +1807,7 @@ c  Unpack antenna and polarisation number.
 c
 c  Input:
 c    VID	A positive integer used as a unique identifier for antenna pair,
-c		polarlisation, spectral window and channel.
+c		polarisation, spectral window and channel.
 c  Output:
 c    i1,i2	Antenna pair.
 c    p		Polarisation index.
@@ -2020,15 +2107,15 @@ c
 c
 	end
 c************************************************************************
-	subroutine BPIni(npol,nants,nchan,nsoln,nspect,nschan,WGains,
-     *	  freq,Pass,Gains,Tau,dodelay,dopass)
+	subroutine BPIni(npol,nants,nchan,nsoln,npsoln,nspect,nschan,
+     *	  WGains,freq,Pass,Gains,Tau,dodelay,dopass)
 c
 	implicit none
-	integer npol,nants,nspect,nsoln,nchan,nschan(nspect)
+	integer npol,nants,nspect,nsoln,nchan,nschan(nspect),npsoln
 	real Tau(nants,nsoln)
 	double precision freq(nspect)
 	complex WGains(nants,nspect,npol,nsoln),Gains(nants,npol,nsoln)
-	complex Pass(nants,nchan,npol)
+	complex Pass(nants,nchan,npol,npsoln)
 	logical dodelay,dopass
 c
 c  Given the gains for each antenna for each band (WGains), estimate the
@@ -2106,15 +2193,16 @@ c
 c  OK, we now have estimates of everything that we want. Fill in the
 c  "Pass" array.
 c
-	call PassFill(nants,npol,nchan,nspect,nschan,WPass,Pass)
+	call PassFill(nants,npol,nchan,nspect,nschan,npsoln,WPass,Pass)
 c
 	end
 c************************************************************************
-	subroutine PassFill(nants,npol,nchan,nspect,nschan,WPass,Pass)
+	subroutine PassFill(nants,npol,nchan,nspect,nschan,
+     *                      npsoln,WPass,Pass)
 c
 	implicit none
-	integer nants,npol,nchan,nspect,nschan(nspect)
-	complex WPass(nants,nspect,npol),Pass(nants,nchan,npol)
+	integer nants,npol,nchan,nspect,nschan(nspect),npsoln
+	complex WPass(nants,nspect,npol),Pass(nants,nchan,npol,npsoln)
 c
 c  Fill in the passband estimate.
 c
@@ -2124,7 +2212,7 @@ c    WPass
 c  Output:
 c    Pass
 c------------------------------------------------------------------------
-	integer i,j,k,p,chan
+	integer i,j,k,l,p,chan
 	complex temp
 c
 	do p=1,npol
@@ -2133,7 +2221,9 @@ c
 	    do i=1,nants
 	      temp = WPass(i,k,p)
 	      do j=chan+1,chan+nschan(k)
-	        Pass(i,j,p) = temp
+                do l=1,npsoln
+	          Pass(i,j,p,l) = temp
+                enddo
 	      enddo
 	    enddo
 	    chan = chan + nschan(k)
@@ -2337,16 +2427,17 @@ c
 c
 	end
 c************************************************************************
-	subroutine SolveBP(refant,minant,nants,nspect,nchan,nsoln,Pass,
-     *	  Source,freq,Dat,Wt,VID,ischan,Count,n,npol,Gains,Tau,tol)
+	subroutine SolveBP(refant,minant,nants,nspect,nchan,nsoln,
+     *    npsoln,Pass,Source,freq,Dat,Wt,VID,ischan,Count,Range,n,npol,
+     *    Gains,Tau,tol)
 c
 	implicit none
-	integer nants,nchan,n,nsoln,refant,minant,nspect,npol
+	integer nants,nchan,n,nsoln,refant,minant,nspect,npol,npsoln
 	real Tau(nants,nsoln),Source(nchan),tol,Wt(n)
 	double precision freq(nchan)
-	complex Pass(nants,nchan,npol),Gains(nants,npol,nsoln)
+	complex Pass(nants,nchan,npol,npsoln),Gains(nants,npol,nsoln)
 	complex Dat(n)
-	integer VID(n),Count(nsoln),ischan(nspect)
+	integer VID(n),Count(nsoln),ischan(nspect),Range(2,npsoln)
 c
 c  Given the source, antenna gains and atmospheric delays, solve for
 c  the pass band.
@@ -2373,7 +2464,7 @@ c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer pSumVM,pSumMM
 	real epsi
-	integer nbl,off,i,p
+	integer nbl,off,i,p,k
 c
 	real ref(MAXBUF)
 	complex cref(MAXBUF/2)
@@ -2386,22 +2477,27 @@ c  Allocate memory.
 c
 	call MemAlloc(pSumVM,nbl*nchan*npol,'c')
 	call MemAlloc(pSumMM,nbl*nchan*npol,'r')
+
+        do k=1,npsoln
+
 c
 c  Accumulate statistics.
 c
-	call AccPB(nants,nspect,nbl,nchan,npol,nsoln,Source,freq,Dat,Wt,
-     *		VID,ischan,Count,n,Gains,Tau,cref(pSumVM),ref(pSumMM))
+ 	  call AccPB(k,nants,nspect,nbl,nchan,npol,nsoln,npsoln,
+     *          Source,freq,Dat,Wt,VID,ischan,Count,Range,n,Gains,Tau,
+     *          cref(pSumVM),ref(pSumMM))
 c
 c  Having accumulated the crap, go and get a solution.
 c
-	off = 0
-	do p=1,npol
-	  do i=1,nchan
-	    call Solve(nants,nbl,cref(pSumVM+off),ref(pSumMM+off),
-     *	      Pass(1,i,p),refant,minant,tol*tol,epsi,.false.)
-	    off = off + nbl
+	  off = 0
+	  do p=1,npol
+	    do i=1,nchan
+	      call Solve(nants,nbl,cref(pSumVM+off),ref(pSumMM+off),
+     *	        Pass(1,i,p,k),refant,minant,tol*tol,epsi,.false.)
+	      off = off + nbl
+	    enddo
 	  enddo
-	enddo
+        enddo
 c
 c  Free up the allocated memory.
 c
@@ -2712,15 +2808,16 @@ c#maxloop 32
 c
 	end
 c************************************************************************
-	subroutine AccPB(nants,nspect,nbl,nchan,npol,nsoln,Source,freq,
-     *	  Vis,Wt,VID,ischan,Count,nvis,Gains,Tau,SumVM,SumMM)
+	subroutine AccPB(k,nants,nspect,nbl,nchan,npol,nsoln,npsoln,
+     *    Source,freq,Vis,Wt,VID,ischan,Count,Range,nvis,Gains,Tau,
+     *    SumVM,SumMM)
 c
 	implicit none
-	integer nants,nbl,nchan,nsoln,nvis,nspect,npol
+	integer k,nants,nbl,nchan,nsoln,nvis,nspect,npol,npsoln
 	real Source(nchan),Tau(nants,nsoln),Wt(nvis)
 	double precision freq(nchan)
 	complex Vis(nvis),Gains(nants,npol,nsoln)
-	integer VID(nvis),Count(nsoln),ischan(nspect)
+	integer VID(nvis),Count(nsoln),ischan(nspect),Range(2,npsoln)
 	complex SumVM(nbl,nchan,npol)
 	real SumMM(nbl,nchan,npol)
 c
@@ -2744,7 +2841,17 @@ c  Go through things, accumulating all the rubbish we could possibly
 c  want.
 c
 	off = 0
-	do j=1,nsoln
+c
+c       count through previous bp solution intervals if needed
+c
+        if (k.gt.1) then
+          do j=Range(1,1),Range(2,k-1)
+            do i=1,Count(j)
+              off=off+1
+            enddo
+          enddo
+        endif
+	do j=Range(1,k),Range(2,k)
 	  do i=1,Count(j)
 	    off = off + 1
 	    call unpackit(i1,i2,p,spect,chan,VID(off))
@@ -2762,36 +2869,60 @@ c
 	enddo
 	end
 c************************************************************************
-	subroutine SolveGT(refant,minant,nants,nspect,nchan,nsoln,Pass,
-     *	  Source,Freq,Vis,Wt,VID,ischan,Count,nvis,npol,Gains,Tau,
-     *	  dodelay,tol)
+	subroutine SolveGT(refant,minant,nants,nspect,nchan,nsoln,
+     *	  npsoln,Pass,Source,Freq,Vis,Wt,VID,ischan,Count,Range,nvis,
+     *	  npol,Gains,Tau,dodelay,tol)
 c
 	implicit none
-	integer refant,minant,nants,nchan,nsoln,nvis,nspect,npol
-	integer VID(nvis),Count(nsoln),ischan(nspect)
-	complex Pass(nants,nchan,npol),Vis(nvis),Gains(nants,npol,nsoln)
+	integer refant,minant,nants,nchan,nsoln,nvis,nspect,npol,npsoln
+	integer VID(nvis),Count(nsoln),ischan(nspect),Range(2,npsoln)
+	complex Pass(nants,nchan,npol,npsoln),Vis(nvis)
+        complex Gains(nants,npol,nsoln)
 	real Source(nchan),Tau(nants,nsoln),tol,Wt(nvis)
 	double precision Freq(nchan)
 	logical dodelay
 c
 c  Driver for the routine to solve for the antenna gains and delays.
 c------------------------------------------------------------------------
-	integer i,off
+	integer i,off,k
+        integer findPass
 c
 	off = 1
 	do i=1,nsoln
+          k = findPass(i,npsoln,Range)
 	  if(dodelay)then
-	    call SolveGT1(refant,nants,nspect,nchan,npol,Pass,Source,
-     *		freq,Vis(off),Wt(off),VID(off),ischan,Count(i),
+	    call SolveGT1(refant,nants,nspect,nchan,npol,Pass(1,1,1,k),
+     *		Source,freq,Vis(off),Wt(off),VID(off),ischan,Count(i),
      *		Gains(1,1,i),Tau(1,i),tol)
 	  else
-	    call SolveGT2(refant,minant,nants,nspect,nchan,npol,Pass,
-     *		Source,Vis(off),Wt(off),VID(off),ischan,Count(i),
-     *		Gains(1,1,i),tol)
+	    call SolveGT2(refant,minant,nants,nspect,nchan,npol,
+     *		Pass(1,1,1,k),Source,Vis(off),Wt(off),VID(off),ischan,
+     *		Count(i),Gains(1,1,i),tol)
 	  endif
 	  off = off + Count(i)
 	enddo
 	end
+c************************************************************************
+        integer function findPass(i,npsoln,Range)
+c
+        implicit none
+        integer i,npsoln,Range(2,npsoln)
+c
+c  Find the passband solution index for the given gain solution index
+c
+        integer j
+c        
+        do j=1,npsoln
+          if (i.ge.Range(1,j).and.i.le.Range(2,j)) then
+            findPass = j
+            return
+          endif
+        enddo
+        findPass = 1
+        return
+        end
+        
+              
 c************************************************************************
 	subroutine SolveGT1(refant,nants,nspect,nchan,npol,
      *	  Pass,Source,freq,Dat,Wt,VID,ischan,n,Gains,Tau,tol)
@@ -3119,11 +3250,11 @@ c
 	
 	end
 c************************************************************************
-	subroutine intext(npol,nants,nchan,nspect,nschan, pass)
+	subroutine intext(npol,nants,nchan,nspect,nschan,npsoln,Pass)
 c
 	implicit none
-	integer npol, nants, nchan, nspect, nschan(nspect)
-	complex Pass(nants,nchan,npol)
+	integer npol, nants, nchan, nspect, nschan(nspect),npsoln
+	complex Pass(nants,nchan,npol,npsoln)
 c
 c  Spline fit the band pass table and evaluate the fit for channels
 c  that have no solutions.  Do this for real and imaginary separately.
@@ -3140,14 +3271,15 @@ c		NOTE: Here (as elsewhere in this task) "nchan" is the total
 c		number of channels (the sum of all the channels from all the
 c		bands observed).
 c		i.e. nchan = Sum nschan(i)
+c    npsoln     Number of bandpass solution intervals
 c    Pass	The bandpass function. This is of size nants * nchan * npol.
 c		The bandpass table that we have to write out is in the order
 c		nchan * npol * nants, so we have to do some reorganising
 c		before we write out.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
-	integer i,j,k,l,ngaps,ischan,ig,chanlo,chanhi,nwidth,npnt,order
-	integer ifail
+	integer i,j,k,l,m,ngaps,ischan,ig,chanlo,chanhi,nwidth,npnt
+	integer ifail,order
 	real rcoeff(3),icoeff(3),x
 	real wp(MAXCHAN),xp(MAXCHAN),rp(MAXCHAN),ip(MAXCHAN)
 	logical ok(MAXCHAN)
@@ -3156,84 +3288,86 @@ c------------------------------------------------------------------------
 	logical within
 	complex temp
 c
-	do l=1,npol
-	  do k=1,nants
-	    ischan = 0
-	    do j=1,nspect
-	      if(nschan(j).gt.MAXCHAN)
-     *		call bug('f','Too many channels')
+        do m=1,npsoln
+	  do l=1,npol
+	    do k=1,nants
+	      ischan = 0
+	       do j=1,nspect
+	        if(nschan(j).gt.MAXCHAN)
+     *		  call bug('f','Too many channels')
 c
 c  Find the gaps in this spectrum.
 c
-	      ngaps = 0
-	      within = .false.
+	        ngaps = 0
+	        within = .false.
 
-	      do i=1,nschan(j)
-		temp = Pass(k,i+ischan,l)
-		ok(i) = abs(real(temp))+abs(aimag(temp)).gt.0
-		if(ok(i))then
-		  if(within.and.ngaps.gt.0)then
-		    chan2(ngaps) = i-1
+	        do i=1,nschan(j)
+		  temp = Pass(k,i+ischan,l,m)
+		  ok(i) = abs(real(temp))+abs(aimag(temp)).gt.0
+		  if(ok(i))then
+		    if(within.and.ngaps.gt.0)then
+		      chan2(ngaps) = i-1
+		    endif
+		    within = .false.
+		  else
+		    if(.not.within.and.i.gt.1)then
+		      ngaps = ngaps + 1
+		      chan1(ngaps) = i
+		    endif
+		    within = .true.
 		  endif
-		  within = .false.
-		else
-		  if(.not.within.and.i.gt.1)then
-		    ngaps = ngaps + 1
-		    chan1(ngaps) = i
-		  endif
-		  within = .true.
-		endif
-	      enddo
+	        enddo
 c
-	      if(within)ngaps = max(ngaps - 1,0)
+	        if(within)ngaps = max(ngaps - 1,0)
 c
 c  We have a list of the gaps in the spectrum. For a gap width of "nwidth",
 c  fit a quadratic to the good channels on within "nwidth" channels of
 c  the band edge.
 c
-	      a = 2.0/real(nschan(j)-1)
-	      b = 0.5*(nschan(j)+1)
-	      do ig=1,ngaps
-		nwidth = chan2(ig) - chan1(ig) + 1
-		chanlo = max(chan1(ig) - nwidth,1)
-		chanhi = min(chan2(ig) + nwidth,nschan(j))
-		npnt = 0
-		do i=chanlo,chanhi
-		  temp = Pass(k,i+ischan,l)
-		  if(ok(i))then
-		    npnt = npnt + 1
-		    xp(npnt) = a*(i-b)
-		    rp(npnt) = real(temp)
-		    ip(npnt) = aimag(temp)
-		    wp(npnt) = 1
+	        a = 2.0/real(nschan(j)-1)
+	        b = 0.5*(nschan(j)+1)
+	        do ig=1,ngaps
+		  nwidth = chan2(ig) - chan1(ig) + 1
+		  chanlo = max(chan1(ig) - nwidth,1)
+		  chanhi = min(chan2(ig) + nwidth,nschan(j))
+		  npnt = 0
+		  do i=chanlo,chanhi
+		    temp = Pass(k,i+ischan,l,m)
+		    if(ok(i))then
+		      npnt = npnt + 1
+		      xp(npnt) = a*(i-b)
+		      rp(npnt) = real(temp)
+		      ip(npnt) = aimag(temp)
+		      wp(npnt) = 1
+		    endif
+		  enddo
+		  order = 2
+		  if(npnt.lt.5)then
+		    order = 1
+		    rcoeff(3) = 0
+		    icoeff(3) = 0
 		  endif
-		enddo
-		order = 2
-		if(npnt.lt.5)then
-		  order = 1
-		  rcoeff(3) = 0
-		  icoeff(3) = 0
-		endif
-		call wpfit(order,npnt,xp,rp,wp,rcoeff,
+		  call wpfit(order,npnt,xp,rp,wp,rcoeff,
      *					rnorm,wrk1,wrk2,ifail)
-		if(ifail.eq.0)
+	 	  if(ifail.eq.0)
      *		    call wpfit(order,npnt,xp,ip,wp,icoeff,
      *					rnorm,wrk1,wrk2,ifail)
-		if(ifail.ne.0)call bug('f','Poly fit failed')
+		  if(ifail.ne.0)call bug('f','Poly fit failed')
 c
 c  Interpolate the missing channels.
 c
-		do i=chan1(ig),chan2(ig)
-		  x = a*(i-b)
-		  Pass(k,i+ischan,l) = cmplx(
-     *		    rcoeff(1) + (rcoeff(2) + rcoeff(3)*x)*x ,
+		  do i=chan1(ig),chan2(ig)
+		    x = a*(i-b)
+		    Pass(k,i+ischan,l,m) = cmplx(
+     *		      rcoeff(1) + (rcoeff(2) + rcoeff(3)*x)*x ,
      *		    icoeff(1) + (icoeff(2) + icoeff(3)*x)*x )
-		enddo 
-	      enddo
+		  enddo 
+	        enddo
 c
-	      ischan = ischan + nschan(j)
+	        ischan = ischan + nschan(j)
+	      enddo
 	    enddo
 	  enddo
-	enddo
+        enddo
 c
 	end
