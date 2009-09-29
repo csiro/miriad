@@ -31,7 +31,15 @@ c           restfreq=1.420405752,0
 c@ options
 c       This gives extra processing options. Several can be given,
 c       separated by comas.
-c         'birdie'  Use for pre-CABB data only.
+c         'birdie'  For CABB data:
+c                   CABB generates self-interference in a number of channels
+c                   across the spectrum due to 640 MHz clock harmonics. 
+c                   These birdies are fixed in channel number for each CABB
+c                   configuration. The birdie option currently knows about 
+c                   the 2048x1MHz continuum mode and flags the affected
+c                   channels, 100 band edge channels on each side, and, at
+c                   20 and 13cm, the unusable parts of the spectrum. 
+c                   For pre-CABB data:
 c                   ATCA self-interference can corrupt channels at integral
 c                   multiples of 128 MHz. The birdie option flags these
 c                   channels. Additionally, in continuum (33 channels/128MHz)
@@ -42,7 +50,8 @@ c                   Discarding these channels does not have a
 c                   sensitivity penalty, because the effective channel
 c                   bandwidth is twice the channel separation.
 c         'reweight' For pre-CABB data: re-weight the lag spectrum to 
-c                   eliminate the "Gibbs" phenomena in continuum data (33 ch/128 MHz)
+c                   eliminate the "Gibbs" phenomena in continuum data
+c                   (33 ch/128 MHz); ignored for all other data.
 c         'compress' Write output data in compressed format.
 c         'noauto'  Discard autocorrelation data. The default is to
 c                   copy the autocorrelation data.
@@ -104,10 +113,10 @@ c                   There is potential for error in atlod determining which data
 c                   are and are not part of a cacal scan. Use this with caution.
 c         'nopol'   Discard data that is not "parallel hand" Stokes type.
 c         'rfiflag' Flag channels at frequencies that are known to be bad
-c                   This uses the file rfi.dat in the current directory or the
-c                   default version in MIRCAT. The file should contain
-c                   2 frequencies per line, the lower and upper end of the rfi in
-c                   MHz.
+c                   This uses the file rfiflag.txt in the current directory or
+c                   the default version in MIRCAT. The file should contain
+c                   2 frequencies per line, the lower and upper end of the
+c                   rfi in MHz. Precede comments with a '#'.
 c@ nfiles
 c       This gives one or two numbers, being the number of files to skip,
 c       followed by the number of files to process. This is only
@@ -262,8 +271,10 @@ c    rjs  06nov08 Corrected CA02 xyphase handling and some minor tidying.
 c    mhw  09jan09 Add flagging of NaNs in CABB spectra
 c    mhw  03jun09 Fix syscal handling for CABB gtp, sdo and caljy values
 c    mhw  14sep09 Make sure birdie is ignored for CABB data
+c    mhw  29sep08 Actually, make it do something useful instead, 
+c                 integrate with rfiflag option
 c
-c $Id: atlod.for,v 1.15 2009/09/23 01:00:20 cal103 Exp $
+c $Id: atlod.for,v 1.16 2009/09/29 05:04:21 wie017 Exp $
 
 c-----------------------------------------------------------------------
         integer MAXFILES,MAXTIMES
@@ -283,8 +294,8 @@ c
         character itoaf*8, rperr*32, versan*80
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :                  '$Revision: 1.15 $',
-     :                  '$Date: 2009/09/23 01:00:20 $')
+     :                  '$Revision: 1.16 $',
+     :                  '$Date: 2009/09/29 05:04:21 $')
 c
 c  Get the input parameters.
 c
@@ -871,10 +882,10 @@ c
         if(if.gt.nifs)call bug('f','Invalid IF in PokeIF')
         if(nstok.gt.ATPOL)call bug('f',
      *          'Invalid number of polarisation parameters in PokeIF')
-        if (cabb.and.birdie) then
-          birdie=.false.
-          call output('Ignoring birdie option for CABB data')
-        endif
+c        if (cabb.and.birdie) then
+c          birdie=.false.
+c          call output('Ignoring birdie option for CABB data')
+c        endif
 c
         nfreq(if) = nfreq1
         if(nfreq(if).gt.1)then
@@ -889,9 +900,9 @@ c
         bchan(if) = 0
 c
 c  If we are working in "birdie" mode, compute the channel with the
-c  128MHz LO signal in it.
+c  128MHz LO signal in it for pre-CABB data
 c
-        if(birdie.and.nfreq(if).eq.33)then
+        if(.not.cabb.and.birdie.and.nfreq(if).eq.33)then
           call birdchan(sfreq(if),sdf(if),nfreq(if),t)
 c
           edge(if) = 3 + mod(t,2)
@@ -909,7 +920,7 @@ c
 c
 c  If birdie mode, flag out the birdie channel.
 c
-        if(birdie)then
+        if(.not.cabb.and.birdie)then
           call birdchan(sfreq(if),sdf(if),nfreq(if),bchan(if))
         else
           bchan(if) = 0
@@ -1635,7 +1646,7 @@ c
      *                                            bchan(if),flags)
                       call FlagNaN(data(ipnt),flags,nfreq(if))
                       call rfiFlag(flags,NDATA,1,nfreq(if),
-     *                             sfreq(if),sdf(if))
+     *                             sfreq(if),sdf(if),birdie)
                       if(.not.hires)call uvputvri(tno,'bin',bin,1)
                       call uvputvrr(tno,'inttime',inttime(bl),1)
                       if(doopcorr)
@@ -1691,12 +1702,12 @@ c
                 if(npol.gt.0)then
                   call uvputvri(tno,'npol',npol,1)
                   do p=1,nstoke(1)
-c                    print *,'ant1=',i1,' ant2=',i2,' pol=',p,' bin=',bin
                     call GetDat(data,nused,pnt(1,p,bl,bin),
      *                  flag(1,p,bl,bin),nfreq,fac,bchan,nifs,
      *                  vis,flags,NDATA,nchan)
                     if(nchan.gt.0)then
-                      call rfiFlag(flags,NDATA,nifs,nfreq,sfreq,sdf)
+                      call rfiFlag(flags,NDATA,nifs,nfreq,sfreq,
+     *                             sdf,birdie)
                       if(.not.hires)call uvputvri(tno,'bin',bin,1)
                       call uvputvri(tno,'pol',polcode(1,p),1)
                       call uvputvrr(tno,'inttime',inttime(bl),1)
@@ -2546,7 +2557,6 @@ c
 c
 c  Initialise the Poke routines with new info as required.
 c
-c              print *,i1,i2,bin,ut, vis(1), vis(1024)
               if(.not.Accum)then
                 time = ut / (3600.d0*24.d0) + jday0
                 call Poke1st(time,nifs(simno),nant,cabb)
@@ -3409,33 +3419,40 @@ c------------------------------------------------------------------------
         character*80 filename,string,stcat
         integer lu,iostat,l
         integer MAXRFI, nrfi
-        parameter(MAXRFI=50)
+        parameter(MAXRFI=99)
         double precision rfifreq(2,MAXRFI)
         common/rficom/rfifreq,nrfi
         nrfi=0
         if (.not.rfiflag) return
 c
-c  Read rfi.dat file from current directory or $MIRCAT
+c  Read rfiflag.txt file from current directory or $MIRCAT
 c
-        filename='./rfi.dat'
+        filename='./rfiflag.txt'
         call txtopen(lu,filename,'old',iostat)
         if (iostat.ne.0) then
           call getenv('MIRCAT',filename)
-          filename = stcat(filename,'/rfi.dat')
+          filename = stcat(filename,'/rfiflag.txt')
           call txtopen(lu,filename,'old',iostat)
         endif
         if (iostat.ne.0) then
           call bug('w',
-     *      'File rfi.dat not found in current dir or $MIRCAT')
+     *      'File rfiflag.txt not found in current dir or $MIRCAT')
           nrfi=0
         else
           call txtread(lu,string,l,iostat)
           do while (iostat.eq.0)
             read(string,*,iostat=iostat) f1,f2
             if (iostat.eq.0) then
-              nrfi=nrfi+1
-              rfifreq(1,nrfi)=f1/1000
-              rfifreq(2,nrfi)=f2/1000
+              if (nrfi.lt.MAXRFI) then
+                nrfi=nrfi+1
+                rfifreq(1,nrfi)=f1/1000
+                rfifreq(2,nrfi)=f2/1000
+                call txtread(lu,string,l,iostat)
+              else
+                call bug('w','Too many freq ranges in rfiflag.txt')
+                iostat=1
+              endif
+            else 
               call txtread(lu,string,l,iostat)
             endif
           enddo
@@ -3450,16 +3467,24 @@ c
         end
 
 c************************************************************************
-        subroutine rfiFlag(flags,NDATA,nifs,nfreq,sfreq,sdf)
+        subroutine rfiFlag(flags,NDATA,nifs,nfreq,sfreq,sdf,birdie)
 c
 c------------------------------------------------------------------------
         integer NDATA,nifs,nfreq(nifs)
-        logical flags(NDATA)
-        double precision sfreq(nifs),sdf(nifs),c1,c2,tmp
-        integer MAXRFI, nrfi,ch1,ch2,i,j,k,offset
-        parameter(MAXRFI=50)
+        logical flags(NDATA),birdie
+        double precision sfreq(nifs),sdf(nifs)
+c
+        double precision c1,c2,tmp,cfreq
+        integer MAXRFI, NBIRDIE1, nrfi,ch1,ch2,i,j,k,offset
+        parameter(MAXRFI=99,NBIRDIE1=11)
         double precision rfifreq(2,MAXRFI)
         common/rficom/rfifreq,nrfi
+c
+c  CABB continuum mode birdies (2049*1 MHz)
+c        
+        integer b1(NBIRDIE1)
+        data b1/640,256,768,1408,1280,1920,1792,1176,156,128,1152/
+c        
         if (nrfi.gt.0) then
           offset=1
           do i=1,nifs
@@ -3477,6 +3502,44 @@ c------------------------------------------------------------------------
                 flags(offset+k)=.false.
               enddo
             enddo
+            offset=offset+nfreq(i)
+          enddo
+        endif
+        if (birdie) then
+          offset=1
+          do i=1,nifs
+c          
+c             CABB Mode 2048*1MHz
+c
+            if (nfreq(i).eq.2049.and.
+     *          abs(abs(sdf(i))-0.001).lt.1.e-4) then
+              do j=1,NBIRDIE1
+                flags(offset+b1(j))=.false.
+              enddo
+              ch1=99
+              ch2=nfreq(i)-100
+c
+c             20cm band range 1131-1875, 13cm band range 1975-2675
+c
+              cfreq=sfreq(i)+(nfreq(i)/2)*sdf(i)
+              if (cfreq.gt.1.d0.and.cfreq.lt.3.0d0) then
+                if (cfreq.lt.1.807d0) then
+                  c1=(1.131-sfreq(i))/sdf(i)
+                  c2=(1.875-sfreq(i))/sdf(i)
+                else
+                  c1=(1.975-sfreq(i))/sdf(i)
+                  c2=(2.675-sfreq(i))/sdf(i)
+                endif
+                ch1=min(nint(c1),nint(c2))
+                ch2=max(nint(c1),nint(c2))
+              endif
+              do j=0,ch1
+                flags(offset+j)=.false.
+              enddo
+              do j=ch2,nfreq(i)-1
+                  flags(offset+j)=.false.
+              enddo
+            endif
             offset=offset+nfreq(i)
           enddo
         endif
