@@ -229,8 +229,11 @@ c
 	    offset = 1
             chan=0
 	    do i=1,nindx
-              if (i.gt.1) then
-                if (ifno(i).ne.ifno(i-1)) chan=0
+              if (i.gt.1.and.ind(i).gt.0) then
+c
+c               Reset channel count for next IF to be split off
+c              
+                if (ifno(ind(i)).ne.ifno(ind(i-1))) chan=0
               endif
 	      if(ind(i).gt.0)call FileDat(ind(i),
      *		preamble,data(offset),flags(offset),onschan(i),chan)
