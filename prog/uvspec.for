@@ -496,7 +496,7 @@ c------------------------------------------------------------------------
 	integer PolMin,PolMax
 	parameter(PolMin=-8,PolMax=4)
 	integer MAXPLT,MAXPNT
-	parameter(MAXPNT=100000,MAXPLT=1024)
+	parameter(MAXPNT=1000000,MAXPLT=1024)
 	real xp(MAXPNT),yp(MAXPNT),xrange(2),inttime
 	integer plot(MAXPLT+1)
 	double precision time
@@ -636,6 +636,10 @@ c------------------------------------------------------------------------
 	real temp
 	complex ctemp
 c
+c  Externals
+c
+        character*8 itoaf
+c
 	do k=1,nchan
 	  if(count(k).gt.0)then
 	    if(doamp)then
@@ -658,7 +662,8 @@ c
 	    endif
 	    npnts = npnts + 1
 	    if(npnts.gt.MAXPNT)call bug('f',
-     *	      'Buffer overflow(points), when accumulating plots')
+     *	      'Buffer overflow ('//itoaf(npnts)//
+     *        '> MAXPNT), when accumulating plots')
 	    xp(npnts) = x(k)
 	    yp(npnts) = temp
 	  endif
