@@ -75,6 +75,7 @@ c    rjs  16aug04 Added various variables to the list to be copied across.
 c    rjs  19sep04 Copy across sensitivity model and more variables.
 c    rjs  28jan05 Added clobber option.
 c    mhw  19may08 Added maxwidth parameter
+c    mhw  29sep09 Fix freq axis mislabeling bug
 c  Bugs:
 c   the full xtsys and ytsys variables are passed to split files,
 c   but for the systemp variable only the appropriate data (if) is copied
