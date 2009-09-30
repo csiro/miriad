@@ -29,7 +29,7 @@ c@ options
 c	Task enrichment parameters. Several can be given, separated by commas.
 c	Minimum match is used.
 c	  noflag   Treat leakages that are identically 0 as good.
-c	  noxy     Do not solve for, or apply, the XY phase offset.
+c	  noxy     Do not compare the xy phase of the gains.
 c	  apply    Apply the solved for corrections to the vis data-set. The
 c	           default is to solve for them only.
 c	  xyleak   GPNORM can determine the xy phase differences from both the
@@ -51,6 +51,7 @@ c    rjs    28nov97 Added more decimal places to printout.
 c    rjs    27apr09 Added option zeroflag.
 c    rjs    05may09 Deduced xyphase was being applied with the wrong sign!!!!
 c    rjs    07may09 Compare gain tables. xyleak option.
+c    rjs    29sep09 Fail when bandpass tables are present.
 c
 c  Bugs and Shortcomings:
 c   * If the number of leakages in the "vis" file is greater than the 
@@ -60,7 +61,7 @@ c------------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'maxdim.h'
 	character version*(*)
-	parameter(version='GpNorm: version 1.0 07-May-09')
+	parameter(version='GpNorm: version 1.0 28-Sep-09')
 	logical doxy,doapply,antflag(MAXANT),zerofl,xyleak
 	integer tCal,tVis,iostat,nLeaks,itVis,itCal,itemp,i,ntot
 	character vis*64,cal*64,line*64
@@ -115,6 +116,10 @@ c
 	ntot = 0
 	n0 = 0
 	if(hdprsnt(tVis,'gains').and.hdprsnt(tCal,'gains').and.doxy)then
+	  if(hdprsnt(tVis,'bandpass').or.hdprsnt(tCal,'bandpass'))then
+	    call bug('i','Bandpass tables present')
+	    call bug('f','GPNORM does not work correctly in this case')
+	  endif
 	  call getxy(tVis,facVis,xypVis,CntVis,MAXANT,nvis)
 	  call getxy(tCal,facCal,xypCal,CntCal,MAXANT,ncal)
 	  nants = min(nvis,ncal)
