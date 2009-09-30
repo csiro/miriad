@@ -119,7 +119,8 @@ c	          that are essentially the same. Improve doc. Rename unpack/pack/scale
 c		  routines (potential f90 conflict).
 c    mhw  07aug09 Add time variable passbands
 c    rjs  08sep09 Bug handling when first solution interval was completely flagged.
-c    mhw 29sep09  Time variable bandpass bug fixes
+c    mhw  29sep09 Time variable bandpass bug fixes
+c    rjs  01oct09 Handle missing antennas slightly better.
 c
 c  Problems:
 c    * Should do simple spectral index fit.
@@ -132,7 +133,7 @@ c------------------------------------------------------------------------
 	parameter(MAXSOLN=1024,MAXPOL=2)
 c
 	character version*(*)
-	parameter(version='MfCal: version 1.1 09-Sep-09')
+	parameter(version='MfCal: version 1.1 01-Oct-09')
 c
 	integer tno
 	integer pWGains,pFreq,pSource,pPass,pGains,pTau
@@ -1853,10 +1854,10 @@ c
 c  If some data from a particular polarisation is present, then the
 c  reference antenna should also be present.
 c
-	accept = .false.
+	accept = .true.
 	do p=1,npol
 	  do i=1,nants
-	    if(present(i,p).and..not.present(refant,p))return
+	    if(present(i,p).and..not.present(refant,p))accept = .false.
 	  enddo
 	enddo
 c
@@ -1874,7 +1875,7 @@ c
 c
 c  Is the minants requirement satisfied?
 c
-	accept = n.ge.minant
+	accept = n.ge.minant.and.accept
 	end
 c************************************************************************
 	subroutine despect(updated,tno,nchan,edge,chan,spect,
@@ -1894,14 +1895,15 @@ c  Input:
 c    tno
 c    nchan
 c    maxspect
-c    updated
 c    edge	Number of channels to reject at band edges.
 c  Input/Output:
-c    nspect
-c    sfreq
-c    sdf
-c    nschan
+c    nspect	Number of window setups.
+c    sfreq	Start frequency of window setup.
+c    sdf	Frequency increment of window setup.
+c    nschan	Number of channels in window setup.
 c    state
+c    updated	True if need to re-determine window parameters. Always
+c		set to false on exit.
 c  Output:
 c    chan
 c    spect
