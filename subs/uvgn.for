@@ -27,6 +27,7 @@ c    24feb97 rjs  Make "bandpass calibration" work for wide-only files.
 c    01jan05 rjs  Double precision baselines and use basant.
 c    08jan07 rjs  Use MAXWIN more rigorously.
 c    08aug07 rjs  Correct bug in averaging wide channels.
+c    27aug09 mhw  Handle multiple bandpass solution intervals
 c************************************************************************
 	subroutine uvGnIni(tno1,dogains1,dopass1)
 	implicit none
@@ -153,11 +154,14 @@ c
 	nFreq(2)= 0
 c
 	aver = .false.
+	call rdhdi(tno,'nbpsols', nbpsols,0)
+        if (nbpsols.gt.MAXSOLN) call bug('f',
+     *     'Too many bandpass solutions for me too handle, in uvGn')
 c
-c  If the are to do bandpass correction, read the bandpass tables.
-c	
-	if(dopass)call uvGnPsLd(tno,MAXSPECT,nfeeds*nants,nchan,
-     *	  nspect,sfreq,sdf,nschan,pTab,nTab)
+c  If we are to do bandpass correction, read the bandpass table.
+c
+	if(dopass)call uvGnPsLd(tno,MAXSPECT,nbpsols,nfeeds*nants,nchan,
+     *	  nspect,sfreq,sdf,nschan,pTab,nTab,bptimes,maxsoln)
 c
 c  Get the reference frequency, in case we are doing the delay correction.
 c
@@ -476,7 +480,7 @@ c
 	    grms = abs(gain)
 	  endif
 	  if(dopass.or.dotau)
-     *	    call uvGnPsAp(dowide,ant1,ant2,p,tau,data,flags,nread)
+     *	    call uvGnPsAp(dowide,time,ant1,ant2,p,tau,data,flags,nread)
 	  if(docgains.or.dowgains)
      *	    call uvGnCWAp(dowide,ant1,ant2,data,flags,nread)
 	else
@@ -621,10 +625,12 @@ c
 	endif
 	end
 c************************************************************************
-	subroutine uvGnPsAp(dowide,ant1,ant2,p,tau,data,flags,nread)
+	subroutine uvGnPsAp(dowide,time,ant1,ant2,p,tau,data,flags,
+     *                      nread)
 c
 	implicit none
 	logical dowide
+        double precision time
 	integer ant1,ant2,p,nread
 	complex tau,data(nread)
 	logical flags(nread)
@@ -633,6 +639,7 @@ c  Apply bandpass and delay corrections.
 c
 c  Input:
 c    dowide	Do "wide" channels rather than the standard line.
+c    time       Julian date of the data
 c    ant1,ant2	Two antenna numbers.
 c    p		Polarisation code, in range 1 to 4.
 c    tau	Delay/attenuation term. data = data * exp(tau*(f-f0))
@@ -642,8 +649,9 @@ c    data	The correlation data. Corrected on output.
 c    flags	The data flags.
 c------------------------------------------------------------------------
 	include 'uvgn.h'
-	integer table
+	integer table,i
 	logical upd
+        real factor
 c
 c  Dynamic memory commons.
 c
@@ -658,21 +666,59 @@ c
 	logical uvvarupd
 c
 c  Determine which table we are to use, and whether the data has
-c  been updated recently.
+c  been updated recently. If we are interpolating between bandpass
+c  solutions we need to update every time.
 c
-	if(first)call uvGnPs1t(tno,vwide,vline)
+        upd = nbpsols.gt.1
+	if(first)then
+          call uvGnPs1t(tno,vwide,vline)
+          bpsolno=0
+          upd=.true.
+        endif
 	first = .false.
 	if(dowide)then
 	  table = 2
-	  upd = uvvarupd(vwide)
+	  upd = upd.or.uvvarupd(vwide)
 	else
 	  table = 1
-	  upd = uvvarupd(vline)
+	  upd = upd.or.uvvarupd(vline)
 	endif
 c
+c       find the correct time slot, simple linear search since we expect
+c       no more than a dozen bp solutions
+c
+        if (time.lt.bptimes(bpsolno+1).or.
+     *      time.ge.bptimes(bpsolno+2)) then
+          upd=.true.
+          i=0
+          bpsolno=-1
+          do while(i.le.nbpsols.and.bpsolno.lt.0)
+            if (time.ge.bptimes(i+1).and.time.lt.bptimes(i+2)) then
+              bpsolno=i
+            endif
+            i=i+1
+          enddo
+        endif
+        if (bpsolno.eq.-1) call bug('f','uvGn: corrupted bp table?')
+c
+c       compute the interpolation factor for the time direction
+c
+
+        if (bpsolno.eq.0) then
+          factor=0
+          bpsolno=1
+        else if (bpsolno.eq.nbpsols) then
+          factor=0
+        else
+          factor=(time-bptimes(bpsolno+1))/
+     *         (bptimes(bpsolno+2)-bptimes(bpsolno+1))  
+        endif
+          
+
 	if(upd)call uvGnPsRd(tno,dowide,nread,nchan,nfeeds,nants,
-     *	  aver,nspect,sfreq,sdf,nschan,pTab,pFlags(table),pDat(table),
-     *	  nDat(table),pFreq(table),nFreq(table),dotau,dopass)
+     *	  aver,nspect,sfreq,sdf,nschan,pTab,nbpsols,bpsolno,factor,
+     *    pFlags(table),pDat(table),nDat(table),pFreq(table),
+     *	  nFreq(table),dotau,dopass)
 c
 c  Having the up-to-date gains and frequencies, apply them.
 c
@@ -791,29 +837,32 @@ c
 c
 	end
 c************************************************************************
-	subroutine uvGnPsLd(tno,maxspect,ngains,nchan,
-     *	  nspect,sfreq,sdf,nschan,pGains,Size)
+	subroutine uvGnPsLd(tno,maxspect,nbpsols,ngains,nchan,
+     *	  nspect,sfreq,sdf,nschan,pGains,Size,bptimes,maxsoln)
 c
 	implicit none
-	integer tno,maxspect,ngains,nchan,nspect
+	integer tno,maxspect,nbpsols,ngains,nchan,nspect,maxsoln
 	integer nschan(maxspect),Size,pGains
 	double precision sfreq(maxspect),sdf(maxspect)
+        double precision bptimes(maxsoln)
 c
 c  Load in the bandpass gains.
 c
 c  Input:
 c    tno
-c    ngains
+c    nbpsols   Number of bandpass solution intervals (0: old format)
+c    ngains    Number of antennas*number of feeds
 c    maxspect
 c  Output:
 c    nchan	Total number of channels.
-c    nspect
+c    nspect     spectral info
 c    sfreq
 c    sdf
 c    nschan
-c    Gains
+c    pGains     All the bandpass gains
+c    Size       Size of pGains allocation
 c------------------------------------------------------------------------
-	integer item,iostat,i,off
+	integer item,iostat,i,off,offg,n
 	double precision freqs(2)
 c
 c  Dynamic memory rubbish.
@@ -824,11 +873,12 @@ c
 c
 c  Get the dimensionality numbers.
 c
+        n=max(1,nbpsols)
 	call rdhdi(tno,'nchan0',nchan,0)
 	call rdhdi(tno,'nspect0',nspect,0)
 	if(ngains.le.0.or.nchan.le.0.or.nspect.le.0) call bug('f',
      *	  'Invalid value for nchan, ngains or nspect, in uvDat')
-	Size = ngains*nchan
+	Size = ngains*nchan*n
 	call MemAlloc(pGains,Size,'c')
 	if(nspect.gt.maxspect)call bug('f',
      *	  'Too many spectral windows for me to handle, in uvDat')
@@ -856,22 +906,37 @@ c  Read in the gains themselves now.
 c
 	call haccess(tno,item,'bandpass','read',iostat)
 	if(iostat.ne.0)call uvGnBug(iostat,'accessing bandpass table')
-	call hreadr(item,cref(pGains),8,8*ngains*nchan,iostat)
-	if(iostat.ne.0)call uvGnBug(iostat,'reading bandpass table')
+        bptimes(1)=-1.e20
+        bptimes(nbpsols+2)=1.e20
+        off=8
+        offg=0
+        do i=1,n
+	  call hreadr(item,cref(pGains+offg),off,8*ngains*nchan,iostat)
+          off=off+8*ngains*nchan
+          offg=offg+ngains*nchan
+          if (nbpsols.gt.0) then
+            call hreadd(item,bptimes(i+1),off,8,iostat)
+            off=off+8
+          endif
+          if(iostat.ne.0)call uvGnBug(iostat,'reading bandpass table')
+        enddo
 	call hdaccess(item,iostat)
 	if(iostat.ne.0)call uvGnBug(iostat,'closing bandpass table')
+        nbpsols=n
 c
 	end
 c************************************************************************
 	subroutine uvGnPsRd(tno,dowide,nread,nchan,nfeeds,nants,aver,
-     *	  nspect,sfreq,sdf,nschan,pTab,pFlags,pDat,nDat,
-     *	  pFreq,nFreq,dotau,dopass)
+     *	  nspect,sfreq,sdf,nschan,pTab,nbpsols,bpsolno,factor,pFlags,
+     *	  pDat,nDat,pFreq,nFreq,dotau,dopass)
 c
 	implicit none
 	integer tno,nread,nchan,nfeeds,nants,nspect,nschan(nspect)
+        integer nbpsols
 	double precision sfreq(nspect),sdf(nspect)
+        real factor
 	logical dowide,dotau,dopass,aver
-	integer pTab,pFlags,pDat,nDat,pFreq,nFreq
+	integer pTab,pFlags,pDat,nDat,pFreq,nFreq,bpsolno
 c
 c  Match and compute the passband gains.
 c
@@ -934,9 +999,9 @@ c
 	    call MemAlloc(pFlags,nDat,'l')
 	  endif
 c
-	  call uvGnPsMa(nfeeds*nants,nchan,nspect,sfreq,sdf,nschan,
-     *	    cref(pTab),nread,nspect0,sfreq0,sdf0,swidth0,nschan0,
-     *	    cref(pDat),lref(pFlags))
+	  call uvGnPsMa(nbpsols,nfeeds*nants,nchan,nspect,sfreq,sdf,
+     *	    nschan,cref(pTab),bpsolno,factor,nread,nspect0,sfreq0,sdf0,
+     *	    swidth0,nschan0,cref(pDat),lref(pFlags))
 	endif
 c
 c  Check if we have enough space for the frequency table.
@@ -1105,15 +1170,17 @@ c
 	endif
 	end
 c************************************************************************
-	subroutine uvGnPsMa(ngains,nchan,nspect,sfreq,sdf,nschan,
-     *	  Tab,nread,nspect0,sfreq0,sdf0,swidth0,nschan0,Dat,flags)
+	subroutine uvGnPsMa(nbpsols,ngains,nchan,nspect,sfreq,sdf,
+     *	  nschan,Tab,bpsolno,factor,nread,nspect0,sfreq0,sdf0,swidth0,
+     *    nschan0,Dat,flags)
 c
 	implicit none
-	integer nchan,nread,nspect,nspect0,ngains
+	integer nbpsols,nchan,nread,nspect,nspect0,ngains,bpsolno
 	integer nschan(nspect),nschan0(nspect0)
 	double precision sfreq(nspect),sdf(nspect)
+        real factor
 	double precision sfreq0(nspect0),sdf0(nspect0),swidth0(nspect0)
-	complex Tab(nchan,ngains),Dat(nread,ngains)
+	complex Tab(nchan,ngains,nbpsols),Dat(nread,ngains)
 	logical flags(nread,ngains)
 c
 c  Match up the data with the measured bandpass functions.
@@ -1123,11 +1190,15 @@ c------------------------------------------------------------------------
 	integer MAXSPECT
 	parameter(MAXSPECT=MAXWIN)
 	integer i,j,k,l,ibeg,iend,n,win(MAXSPECT),ischan(MAXSPECT),off
-	integer i0
+	integer i0,ib
 	double precision startt,endt,startd,endd,width
-	real chan,inc,hwidth,goodness,good(MAXSPECT),epsi
+	real chan,inc,hwidth,goodness,good(MAXSPECT),epsi,fac
 	logical nearest
+        complex r11,r12,r21,r22
 c
+        ib=max(bpsolno,1)
+        r21=0
+        r22=0
 	ischan(1) = 1
 	do j=2,nspect
 	  ischan(j) = ischan(j-1) + nschan(j-1)
@@ -1189,7 +1260,8 @@ c
 	      enddo
 	    else
 c
-c  The case of one corresponding gain in the table for each channel of data.
+c  The case of one corresponding gain in the table for each channel 
+c   of data.
 c
 	      chan = (sfreq0(j) - sfreq(i0)) / sdf(i0)
 	      inc  = sdf0(j) / sdf(i0)
@@ -1199,23 +1271,40 @@ c
 	          l = nint(chan-0.5)
 		  nearest = l.lt.0.or.l.ge.nschan(i0)-1
 		  l = l + ischan(i0)
+                  r11=tab(l,k,ib)
+                  r12=tab(l+1,k,ib)
 		  if(.not.nearest)nearest =
-     *		      abs(real(tab(l,k)))+abs(aimag(tab(l,k))).eq.0.or.
-     *		      abs(real(tab(l+1,k)))+abs(aimag(tab(l+1,k))).eq.0
+     *		      abs(real(r11))+ abs(aimag(r11)).eq.0.or.
+     *		      abs(real(r12))+ abs(aimag(r12)).eq.0
 		  if(nearest)then
 		    l = nint(chan)
 		    flags(off,k) = l.ge.0.and.l.lt.nschan(i0)
 		    l = l + ischan(i0)
+                    r11=tab(l,k,ib)
+                    r12=tab(l+1,k,ib)
+                    if (ib.lt.nbpsols) then
+                     r21=tab(l,k,ib+1)
+                     r22=tab(l+1,k,ib+1)
+                    endif
 		    if(flags(off,k)) flags(off,k) =
-     *		      real(tab(l,k)).ne.0.or.aimag(tab(l,k)).ne.0
+     *		      real(r11).ne.0.or.aimag(r11).ne.0
 		    if(flags(off,k)) then
-		      dat(off,k) = tab(l,k)
+                      fac=factor
+                      if (abs(r21).eq.0) fac=0
+		      dat(off,k) = (1-fac)*r11+fac*r21
 		    else
 		      dat(off,k) = 0
 		    endif
-		  else
+		  else 
+                    if (ib.lt.nbpsols) then             
+                      r21=tab(l,k,ib+1)
+                      r22=tab(l+1,k,ib+1)
+                    endif
+                    fac=factor
+                    if (abs(r21).eq.0.or.abs(r22).eq.0) fac=0
 		    epsi = chan + ischan(i0) - l
-		    dat(off,k) = (1-epsi)*tab(l,k) + epsi*tab(l+1,k)
+		    dat(off,k) = ((1-epsi)*r11 + epsi*r12)*(1-fac)+
+     *                           ((1-epsi)*r21 + epsi*r22)*fac             
 		    flags(off,k) = .true.
 		  endif
 	          off = off + 1
@@ -1233,8 +1322,12 @@ c
 	          n = 0
 	          dat(off,k) = 0
 		  do l=ibeg,iend
-	            if(real(tab(l,k)).ne.0.or.aimag(tab(l,k)).ne.0)then
-	              dat(off,k) = dat(off,k) + tab(l,k)
+                    r11=tab(l,k,ib)
+                    if (ib.lt.nbpsols) r21=tab(l,k,ib+1)
+	            if(real(r11).ne.0.or.aimag(r11).ne.0)then
+                      fac=factor
+                      if (abs(r21).eq.0) fac=0
+	              dat(off,k) = dat(off,k) + (1-fac)*r11+fac*r21
 		      n = n + 1
 	            endif
 		  enddo

@@ -66,6 +66,7 @@ c		  prevent tables getting corrupted. Add check for
 c		  apparently corrupt gain table.
 c    rjs  19sep04 Copy across sensitivity model.
 c    rjs  23jan07 Correct some logical errors and also copy "leakage2" table.
+c    mhw  02sep09 Handle multiple bandpass solution intervals
 c  Bugs:
 c    None?
 c------------------------------------------------------------------------
@@ -171,6 +172,8 @@ c
 	      call hdcopy(tIn,tOut,'freqs')
 	      call hdcopy(tIn,tOut,'nspect0')
 	      call hdcopy(tIn,tOut,'nchan0')
+              if (hdprsnt(tIn,'nbpsols'))
+     *          call hdcopy(tIn,tOut,'nbpsols')
 	    endif
 	  else
 	    if(hdprsnt(tIn,'cgains'))then
@@ -278,7 +281,8 @@ c
 	complex Gains1(MAXPASS),Gains2(MAXPASS)
 	double precision freq1(2),freq2(2)
 	integer nants,nfeeds,nants2,nfeeds2,ntau,nspect,nspect2
-	integer item1,item2,nchan,off,nschan1,nschan2,iostat,i,j
+	integer item1,item2,nchan,off,nschan1,nschan2,iostat,i,j,k
+        integer nbpsols1,nbpsols2
 c
 c  Determine the number of antennas and feeds.
 c
@@ -332,6 +336,11 @@ c
 	call hdaccess(item1,iostat)
 	if(iostat.eq.0)call hdaccess(item2,iostat)
 	if(iostat.ne.0)call bugno('f',iostat)
+        
+        call rdhdi(tIn,'nbpsols',nbpsols1,0)
+        call rdhdi(tOut,'nbpsols',nbpsols2,0)
+        if (nbpsols1.ne.nbpsols2)
+     *    call bug('f', 'Number of bandpass solution intervals differs')
 c
 c  The bandpass tables for the two sets are identical in all respects.
 c  Apply the input bandpass to the output bandpass.
@@ -345,23 +354,28 @@ c
 	endif
 c
 	off = 8
-	do j=1,nants*nfeeds
-	  call hreadr(item1,Gains1,off,8*nchan,iostat)
-	  if(iostat.eq.0)call hreadr(item2,Gains2,off,8*nchan,iostat)
-	  if(iostat.ne.0)then
-	    call bug('w','Error reading bandpass table')
-	    call bugno('f',iostat)
-	  endif
-	  do i=1,nchan
-	    Gains2(i) = Gains1(i) * Gains2(i)
+        do k=1,max(1,nbpsols1)
+	  do j=1,nants*nfeeds
+	    call hreadr(item1,Gains1,off,8*nchan,iostat)
+	    if(iostat.eq.0)call hreadr(item2,Gains2,off,8*nchan,iostat)
+	    if(iostat.ne.0)then
+	      call bug('w','Error reading bandpass table')
+	      call bugno('f',iostat)
+	    endif
+	    do i=1,nchan
+	      Gains2(i) = Gains1(i) * Gains2(i)
+	    enddo
+	    call hwriter(item2,Gains2,off,8*nchan,iostat)
+	    if(iostat.ne.0)then
+	      call bug('w','Error writing bandpass table')
+	      call bugno('f',iostat)
+	    endif
+	    off = off + 8*nchan
 	  enddo
-	  call hwriter(item2,Gains2,off,8*nchan,iostat)
-	  if(iostat.ne.0)then
-	    call bug('w','Error writing bandpass table')
-	    call bugno('f',iostat)
-	  endif
-	  off = off + 8*nchan
-	enddo
+          if (nbpsols1.gt.0) then
+            off = off + 8
+          endif
+        enddo
 c
 c  Close up shop
 c
