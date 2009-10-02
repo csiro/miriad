@@ -1,135 +1,142 @@
-**********************************************************************c
+************************************************************************
         program ellint
-        implicit none
 c
 c= ELLINT - Integrate a Miriad image in elliptical annuli.
 c& mchw
 c: image analysis
 c+
-c	ELLINT integrates a Miriad image in elliptical annuli in the first
-c	two dimensions. E.g. to find the radial brightness distribution,
-c	or flux density as a function of distance in a galaxy. The
-c	integration is done separately for each image plane in the region
-c	included.
+c       ELLINT integrates a Miriad image in elliptical annuli in the
+c       first two dimensions.  E.g. to find the radial brightness
+c       distribution, or flux density as a function of distance in a
+c       galaxy.  The integration is done separately for each image plane
+c       in the region included.
 c
-c	The output consists of 6 columns. They are the
+c       The output consists of 6 columns. They are the
 c
-c	outer radius (arcsec) of the annulus;
-c	number of pixels in the annulus;
-c	the average (median) in the annulus;
-c	the rms of the annulus;
-c	the sum in the annulus normalized by the volume of the primary beam
-c	   (if there is one);
-c	the cumulative sum for all annuli so far.
+c       outer radius (arcsec) of the annulus;
+c       number of pixels in the annulus;
+c       the average (median) in the annulus;
+c       the rms of the annulus;
+c       the sum in the annulus normalized by the volume of the primary
+c          beam (if there is one);
+c       the cumulative sum for all annuli so far.
 c
 c@ in
-c	Input image name. xyz images only. No default.
+c       Input image name. xyz images only. No default.
 c@ out
-c       Optional output image containing the residuals from the average values
-c       in each annulus. By default this image is not created.
-c       See also options=spline to get better results for noise free images.
+c       Optional output image containing the residuals from the average
+c       values in each annulus. By default this image is not created.
+c       See also options=spline to get better results for noise free
+c       images.
 c@ region
-c	Region of image to be integrated. E.g.
-c	  % ellint region=relpix,box(-4,-4,5,5)(1,2)
-c	integrates the center 10 x 10 pixels for image planes 1 and 2.
-c	Unmasked pixels within the bounding box are selected.
-c	The default region is the entire image.
+c       Region of image to be integrated. E.g.
+c         % ellint region=relpix,box(-4,-4,5,5)(1,2)
+c       integrates the center 10 x 10 pixels for image planes 1 and 2.
+c       Unmasked pixels within the bounding box are selected.
+c       The default region is the entire image.
 c@ center
-c	The offset of the center of the annuli in arcsec from the
-c	reference pixel, measured in the directions of RA and DEC.
+c       The offset of the center of the annuli in arcsec from the
+c       reference pixel, measured in the directions of RA and DEC.
 c@ pa
-c	Position angle of ellipse major axis in degrees. Default is 0 (north).
-c       PA is measured in the usual sense, N through E (counter clockwise).
+c       Position angle of ellipse major axis in degrees. Default is 0
+c       (north).  PA is measured in the usual sense, N through E
+c       (counter clockwise).
 c@ incline
-c	The ellipse is assumed to be a circular structure that appears
-c	elliptical because it is viewed at some inclination. The "incline"
-c	parameter gives this inclination angle in degrees. Default=0. (face on)
+c       The ellipse is assumed to be a circular structure that appears
+c       elliptical because it is viewed at some inclination.  The
+c       "incline" parameter gives this inclination angle in degrees.
+c       Default=0. (face on)
 c@ radius
-c	Inner and outer radii and step size along major axis in arcsecs.
-c	The default is the whole image in steps equal to the pixel size.
+c       Inner and outer radii and step size along major axis in arcsecs.
+c       The default is the whole image in steps equal to the pixel size.
 c@ telescop
-c	If you request that the fluxes be corrected for the primary beam
-c	(see OPTIONS), ELLINT will normally construct a primary beam type
-c	using information from the dataset. However you can override this
-c	with a primary beam type of your own choosing. The primary beam
-c	type can either be a telescope name whose primary beam is known
-c	(e.g. hatcreek, vla, atca, etc) or you can select a Gaussian form
-c	with "gaus(xxx)". Here xxx is the primary beam FWHM in arcseconds.
-c	For example gaus(120) is a telescope with a 120 arcsec primary beam.
+c       If you request that the fluxes be corrected for the primary beam
+c       (see OPTIONS), ELLINT will normally construct a primary beam
+c       type using information from the dataset.  However you can
+c       override this with a primary beam type of your own choosing.
+c       The primary beam type can either be a telescope name whose
+c       primary beam is known (e.g. Hatcreek, VLA, ATCA, etc) or you can
+c       select a Gaussian form with "gaus(xxx)".  Here xxx is the
+c       primary beam FWHM in arcseconds.  For example gaus(120) is a
+c       telescope with a 120 arcsec primary beam.
 c@ scale
 c       Scale factor applied to the amplitudes before printing them.
 c       Default=1.
 c@ options
-c	Task enrichment options.  Minimum match is active.
-c	  pbcorr    This causes the images to be corrected for primary beam
-c	            attenutation before integrating.
-c	  median    Find the median of each annulus instead of the average.
-c	  mode      Find the mode of each annulus instead of the average.
-c	  natural   Assume keywords "center" and "radius" are in natural
-c	            units rather than arcsec.
-c         table     Output ring data in logfile. No fitting done. Logfile
-c                   now contains coordinates w.r.t. the reference pixel 
-c                   (in arcsec), the image value, and the radius in the disk
-c                   defined by PA and INCLINE.
-c         spline    use a spline fit unstead of a step function to estimate
-c                   the intensity at any radius for residual images
+c       Task enrichment options.  Minimum match is active.
+c         pbcorr    This causes the images to be corrected for primary
+c                   beam attenutation before integrating.
+c         median    Find the median of each annulus instead of the
+c                   average.
+c         mode      Find the mode of each annulus instead of the
+c                   average.
+c         natural   Assume keywords "center" and "radius" are in natural
+c                   units rather than arcsec.
+c         table     Output ring data in logfile. No fitting done.
+c                   Logfile now contains coordinates w.r.t. the
+c                   reference pixel (in arcsec), the image value, and
+c                   the radius in the disk defined by PA and INCLINE.
+c         spline    use a spline fit unstead of a step function to
+c                   estimate the intensity at any radius for residual
+c                   images
 c@ medsmooth
-c        Smoothing option of radial profile when option=median is used in
-c        residual map computation. Default: 0
-c     
+c        Smoothing option of radial profile when option=median is used
+c        in residual map computation. Default: 0
+c
 c@ log
-c	The output log file. The default is the terminal.
+c       The output log file. The default is the terminal.
 c--
 c  History:
-c    mchw  aug 1982	Original version.
-c    mchw  26jun90	Miriad version.
-c    mchw  15nov90	Use pbfwhm from image header if present.
-c			Omit checks on 3rd axis parameters.
+c    mchw  aug 1982     Original version.
+c    mchw  26jun90      Miriad version.
+c    mchw  15nov90      Use pbfwhm from image header if present.
+c                       Omit checks on 3rd axis parameters.
 c    mjs   16feb91      Delete internal subroutines which are now in
 c                       the subroutine library (with permission).
 c    mjs   25feb91      Changed references of itoa to itoaf.
-c    mchw  02apr91	Allow non RA/DEC axes. Change to LogWrit.
-c    mchw  03apr91	Write effective beam size in title lines.
-c    mchw  07may91	Fix bug in center for reversed axes.
+c    mchw  02apr91      Allow non RA/DEC axes. Change to LogWrit.
+c    mchw  03apr91      Write effective beam size in title lines.
+c    mchw  07may91      Fix bug in center for reversed axes.
 c    pjt   15may91      Fix bug in radius keyword (rstep->radius)
-c    mchw  17may91	Add more info' to output.
-c    mchw  05dec91	Default center pixel, improve doc.
-c    rjs   10mar92	Re-added 's' flag to BoxSet.
+c    mchw  17may91      Add more info' to output.
+c    mchw  05dec91      Default center pixel, improve doc.
+c    rjs   10mar92      Re-added 's' flag to BoxSet.
 c    pjt    4may92      read flags
-c    mchw  29may92	Change g-format to f because Sun messes up.
-c    mchw  22sep92	Change keyword to inclination angle.
+c    mchw  29may92      Change g-format to f because Sun messes up.
+c    mchw  22sep92      Change keyword to inclination angle.
 c    nebk  28jan93      Adapt to new primary beam routines. Put pixels
 c                       exactly on outer ring edge into that ring.
 c    nebk  22aug94      Adapt to GETFREQ error status change
-c    rjs   24oct94	Use new pb routines.
+c    rjs   24oct94      Use new pb routines.
 c    nebk  27feb96      Add options=median, more doc.
 c    rjs   20nov96      Re-instate Wilfred's version, with some trivial
-c			intermediate changes. History is uncertain.
-c    rjs   06mar97	Added options=natural, and some other changes.
-c    mchw  29apr97	Fix bug if neither median nor mode. Again.
+c                       intermediate changes. History is uncertain.
+c    rjs   06mar97      Added options=natural, and some other changes.
+c    mchw  29apr97      Fix bug if neither median nor mode. Again.
 c    rjs   10jun97      Change pbtype to telescop
 c    dpr   02jan01      Allow radii with non-integral number steps
-c    pjt   02may01      Optional table output (options=table), rearranged
-c                       some code (memfree)
-c    mchw  09nov01	Added intensity scale factor of convenience.
+c    pjt   02may01      Optional table output (options=table),
+c                       rearranged some code (memfree)
+c    mchw  09nov01      Added intensity scale factor of convenience.
 c    pjt   11aug02      added optional out= for residual map
 c          19sep02      fixed bug when no output given
-c    pjt   23oct02      add spline option 
+c    pjt   23oct02      add spline option
 c    pjt   24nov03      maxring was defined too short, didn't write out
 c                       rows before blc(2) and above trc(2)
-c    pjt   25nov03      fix problems in headcopy if blc/trc are sub-imaged
+c    pjt   25nov03      fix problems in headcopy if blc/trc are sub-
+c                       imaged
 c    snv   25nov03      Added radial profile smooth option
 c    pjt   13dec03      Documented the previous, add output history,
 c                       fixed residual map computation
 c    pjt   15dec03      make sure median .or. mode is selected, not both
-c    rjs   06apr09	Make sure do loop parameters are integer valued.
+c    rjs   06apr09      Make sure do loop parameters are integer valued.
 c
-c----------------------------------------------------------------------c
+c $Id: ellint.for,v 1.3 2009/10/02 08:04:43 cal103 Exp $
+c-----------------------------------------------------------------------
         include 'mirconst.h'
-	include 'maxdim.h'
-	include 'mem.h'
-        character*(*) label,version
-        parameter(version='version 06-Apr-2009')
+        include 'maxdim.h'
+        include 'mem.h'
+        character*(*) label
         double precision rts,value
         parameter(label='Integrate a Miriad image in elliptical annuli')
         integer maxnax,maxboxes,maxruns,naxis,axis,plane,maxring
@@ -148,22 +155,25 @@ c
         logical mask(maxdim),dopb,keep,domedian,domode,natural,dotab
         logical dout,dospline
         character in*80,logf*80,line*132,cin*1,ctype*9,caxis*13,units*13
-        character btype*25,pbtype*16,out*80
+        character btype*25,pbtype*16,out*80, version*80
 c
 c  Externals.
 c
         integer len1
-        character*1 itoaf
+        character itoaf*1, versan*80
         real pbget
         double precision seval
 
 
         integer jj, kk, jcount
         real totalj,medsmooth,fmed(maxdim),fmed1(maxdim)
+c-----------------------------------------------------------------------
+      version = versan('ellint',
+     +                 '$Revision: 1.3 $',
+     +                 '$Date: 2009/10/02 08:04:43 $')
 
 c Get inputs.
 c
-        call output( 'ELLINT: '//version )
         call keyini
         call keya('in',in,' ')
         if(in .eq. ' ') call bug('f','No input specified.')
@@ -179,7 +189,7 @@ c
         call keyr('radius',rstep,0.)
         call keyr('scale',scale,1.)
         call keya('telescop',pbtype,' ')
-        call keyr('medsmooth',medsmooth,0.)    
+        call keyr('medsmooth',medsmooth,0.)
         call getopt(dopb,domedian,domode,natural,dotab,dospline)
         call keya('log',logf,' ')
         call keyfin
@@ -199,7 +209,8 @@ c
         call boxinfo(boxes,maxnax,blc,trc)
 
 c
-c  Output (notice the cheat with blc,trc to avoid a wrong crpix in headcopy)
+c  Output (notice the cheat with blc,trc to avoid a wrong crpix in
+c  headcopy).
 c
         if (dout) then
            call xyopen(lout,out,'new',naxis,nsize)
@@ -349,17 +360,17 @@ c
             enddo
           enddo
 
-c     
-c     If we want the median or mode, make a second pass through the plane.
-c     We now know how big the arrays need to be for each annulus
-c     so allocate memory first for median/mode arrays
-c     
+c
+c     If we want the median or mode, make a second pass through the
+c     plane.  We now know how big the arrays need to be for each
+c     annulus so allocate memory first for median/mode arrays.
+c
           if (domedian.or.domode) then
              do ir = irmin, irmax
                 call memalloc (ipm(ir), nint(pixe(ir)), 'r')
                 pixe(ir) = 0.0
              enddo
-c     
+c
              do j = blc(2),trc(2)
                 call xyread(lin,j,buf)
                 call xyflgrd(lin,j,mask)
@@ -372,12 +383,12 @@ c
                       keep = pbfac.gt.0
                       if(keep) buf(i)=buf(i)/pbfac
                    endif
-c     
+c
                    r =
      *    sqrt((y*cospa-x*sinpa)**2+((y*sinpa+x*cospa)/cosi)**2)
                    if(r.ge.rmin .and. r.lt.rmax .and. keep)then
                       ir = (r-rmin)/rstep + 1
-c     
+c
                       pixe(ir) = pixe(ir) + 1.
                       memr(ipm(ir)+nint(pixe(ir))-1) = buf(i)
                    end if
@@ -387,7 +398,7 @@ c
 
 
 c     Write out the results (for mean and median only)
-c     
+c
           if (.not.dotab) then
              call logwrit(' ')
              if (domedian) then
@@ -400,7 +411,7 @@ c
      *               ' Ann. Sum  ',' Cum. Sum '
              endif
              call logwrit(line(1:72))
-c     
+c
              do ir = irmin,irmax
                 r = ir*rstep+rmin
                 if(pixe(ir).ne.0.) then
@@ -413,16 +424,16 @@ c
                    rms = 0.0
                 endif
                 fsum = fsum + flux(ir)
-c     
+c
 c     scale intensity values.
-c     
+c
                 if (scale.ne.1.) then
                    ave = ave * scale
                    rms = rms * scale
                    flux(ir) = flux(ir) * scale
                    fsum = fsum * scale
                 endif
-c     
+c
                 if (domedian) then
                    call median (memr(ipm(ir)), nint(pixe(ir)), med)
                    if(scale.ne.1.) med = med * scale
@@ -433,15 +444,15 @@ c
                    write(line,'(6f11.3,1x)') r,pixe(ir),ave,rms,
      *                  flux(ir)/cbof,fsum/cbof
                 endif
-c     
+c
                 call logwrit(line(1:72))
              enddo
-c     
+c
 c     write out the results for mode
-c     
+c
              if(domode)then
                 call logwrit(' ')
-                if (domode) then 
+                if (domode) then
                    write(line,'(a,a,a,a,a,a)') '   Radius(") ',
      *                  '   Pixels   ', '  Mode    ', '      rms  ',
      *                  ' Ann. Sum  ',' Cum. Sum '
@@ -451,7 +462,7 @@ c
      *                  ' Ann. Sum  ',' Cum. Sum '
                 endif
                 call logwrit(line(1:72))
-c     
+c
                 do ir = irmin,irmax
                    r = ir*rstep+rmin
                    if(pixe(ir).ne.0.) then
@@ -464,7 +475,7 @@ c
                       rms = 0.0
                    endif
                    fsum = fsum + flux(ir)
-c     
+c
                    if (domode) then
                       call mode (memr(ipm(ir)), nint(pixe(ir)), xmode)
                       write(line,'(6f11.3,1x)') r,pixe(ir),xmode,rms,
@@ -473,7 +484,7 @@ c
                       write(line,'(6f11.3,1x)') r,pixe(ir),ave,rms,
      *                     flux(ir)/cbof,fsum/cbof
                    endif
-c     
+c
                    call logwrit(line(1:72))
                 enddo
              endif
@@ -560,30 +571,30 @@ c
              enddo
              do j=1,blc(2)-1
                 call xywrite(lout,j,buf)
-                call xyflgwr(lout,j,mask)             
+                call xyflgwr(lout,j,mask)
              enddo
              do j=trc(2)+1,nsize(2)
                 call xywrite(lout,j,buf)
-                call xyflgwr(lout,j,mask)             
+                call xyflgwr(lout,j,mask)
              enddo
 
           endif
-c     
+c
 
              if (domedian.or.domode) then
                 do ir = irmin, irmax
                    call memfree (ipm(ir), nint(pixe(ir)), 'r')
                 enddo
              endif
-c     
+c
 c     End our mode addition.
-c     
+c
           endif
 c
 c  Increment plane.
 c
           plane = plane + 1
-      
+
       enddo
 c
 c  All done.
@@ -598,9 +609,9 @@ c
       endif
       call logclose
       end
+
 c********1*********2*********3*********4*********5*********6*********7*c
       subroutine getopt (dopb,median,mode,natural,dotab,dospline)
-      implicit none
 c
       logical dopb, median, mode, natural, dotab,dospline
 c
@@ -609,8 +620,8 @@ c
 c   Output:
 c     dopb       DO primary beam corection
 c     median     Use medians not means
-c     mode	 Use modes not means.
-c     natural	 Use natural units rather than arcsec.
+c     mode       Use modes not means.
+c     natural    Use natural units rather than arcsec.
 c     table      Output ring values in a table,no fitting done
 c     spline     Use a spline fit for interpolating
 c-----------------------------------------------------------------------
@@ -634,14 +645,13 @@ c
       if (median .and. mode) call bug('f','Cannot select median+mode')
 c
       end
-c************************************************************************
+c***********************************************************************
 c Mode -- Find the mode of an array of data.
 c vjm, wmw
 c miscellaneous
 c
         subroutine mode(x,n,xmode)
 c
-        implicit none
         integer n
         real    x(n)
         integer MAXBINS
@@ -652,14 +662,14 @@ c  Determine the mode (distribution peak) of an array of real numbers.
 c  On output, the input data array is sorted.
 c
 c  Input:
-c    n		Number of points.
+c    n          Number of points.
 c  Input/Output:
-c    x		Data to find the mode of. On output, it is sorted in
-c		ascending order.
+c    x          Data to find the mode of. On output, it is sorted in
+c               ascending order.
 c  Output:
-c    xmode	The mode of the data.
+c    xmode      The mode of the data.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         integer i,j,ilo,ihi,iter,maxcount
         real sum,sum2,av,rms,xi,xmed,xmode
         real xlo,xhi,dx,xnext,xcount(MAXBINS)
