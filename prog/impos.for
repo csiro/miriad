@@ -65,7 +65,7 @@ c    nebk 29nov95  New call for CTYPECO
 c    rjs  17jul97  Get it to work on uv datasets as well.
 c    rjs  19may00  Make the default "type" abspix.
 c
-c $Id: impos.for,v 1.2 2007/11/22 01:39:20 cal103 Exp $
+c $Id: impos.for,v 1.3 2009/10/02 07:28:35 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -100,7 +100,8 @@ c
       data nco, ipix /0, MAXNAX*1/
 c-----------------------------------------------------------------------
       version = versan ('impos',
-     +  '$Id: impos.for,v 1.2 2007/11/22 01:39:20 cal103 Exp $')
+     +                  '$Revision: 1.3 $',
+     +                  '$Date: 2009/10/02 07:28:35 $')
 c
 c  Get inputs
 c
