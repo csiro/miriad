@@ -274,7 +274,7 @@ c    mhw  14sep09 Make sure birdie is ignored for CABB data
 c    mhw  29sep08 Actually, make it do something useful instead, 
 c                 integrate with rfiflag option
 c
-c $Id: atlod.for,v 1.17 2009/10/01 23:51:32 wie017 Exp $
+c $Id: atlod.for,v 1.18 2009/10/11 23:41:34 wie017 Exp $
 c-----------------------------------------------------------------------
         integer MAXFILES,MAXTIMES
         parameter(MAXFILES=128,MAXTIMES=32)
@@ -293,8 +293,8 @@ c
         character itoaf*8, rperr*32, versan*80
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :                  '$Revision: 1.17 $',
-     :                  '$Date: 2009/10/01 23:51:32 $')
+     :                  '$Revision: 1.18 $',
+     :                  '$Date: 2009/10/11 23:41:34 $')
 c
 c  Get the input parameters.
 c
@@ -1473,7 +1473,7 @@ c------------------------------------------------------------------------
         logical flags(NDATA),doopcorr,wband
         double precision preamble(5),vel,lst,tdash,az,el
         real buf(3*ATANT*ATIF),fac(ATIF,2),freq0(ATIF,2),Tb(ATIF,2)
-        real jyperk(2),tfac
+        real jyperk,tfac
 c
 c  Externals.
 c
