@@ -287,6 +287,7 @@ c
       call output(line)
       line = 'Output units are '//bunit
       call output(line)
+
       end
 
 
@@ -314,15 +315,14 @@ c-----------------------------------------------------------------------
       include 'mirconst.h'
       real alpha,beta,gamma,theta1,theta2,s,t
 c-----------------------------------------------------------------------
-
-      theta1 = pi/180. * bpa1
-      theta2 = pi/180. * bpa2
+      theta1 = bpa1 * D2R
+      theta2 = bpa2 * D2R
       alpha  = (bmaj1*cos(theta1))**2 + (bmin1*sin(theta1))**2 +
      *         (bmaj2*cos(theta2))**2 + (bmin2*sin(theta2))**2
       beta   = (bmaj1*sin(theta1))**2 + (bmin1*cos(theta1))**2 +
      *         (bmaj2*sin(theta2))**2 + (bmin2*cos(theta2))**2
-      gamma  = 2 * ( (bmin1**2-bmaj1**2)*sin(theta1)*cos(theta1) +
-     *               (bmin2**2-bmaj2**2)*sin(theta2)*cos(theta2) )
+      gamma  = 2 * ((bmin1**2-bmaj1**2)*sin(theta1)*cos(theta1) +
+     *              (bmin2**2-bmaj2**2)*sin(theta2)*cos(theta2))
 
       s = alpha + beta
       t = sqrt((alpha-beta)**2 + gamma**2)
@@ -331,9 +331,9 @@ c-----------------------------------------------------------------------
       if(abs(gamma)+abs(alpha-beta).eq.0)then
         bpa = 0
       else
-        bpa = 180 / pi * 0.5*atan2(-gamma,alpha-beta)
+        bpa = 0.5 * atan2(-gamma,alpha-beta) * R2D
       endif
-      fac = pi / ( 4.*log(2.)) * bmaj1 * bmin1 * bmaj2 * bmin2 /
+      fac = pi / (4.0*log(2.0)) * bmaj1 * bmin1 * bmaj2 * bmin2 /
      *   sqrt(alpha*beta - 0.25 * gamma * gamma)
       ifail = 0
 
@@ -390,8 +390,8 @@ c-----------------------------------------------------------------------
       include 'mirconst.h'
       real alpha,beta,gamma,s,t,limit,theta1,theta2
 c-----------------------------------------------------------------------
-      theta1 = pi/180. * bpa1
-      theta2 = pi/180. * bpa2
+      theta1 = bpa1 * D2R
+      theta2 = bpa2 * D2R
 
       alpha  = (bmaj1*cos(theta1))**2 + (bmin1*sin(theta1))**2 -
      *         (bmaj2*cos(theta2))**2 - (bmin2*sin(theta2))**2
@@ -418,9 +418,9 @@ c-----------------------------------------------------------------------
         bmaj = sqrt(0.5*(s+t))
         bmin = sqrt(0.5*(s-t))
         if(abs(gamma)+abs(alpha-beta).eq.0)then
-          bpa = 0
+          bpa = 0.0
         else
-          bpa  = 180. / pi * 0.5 * atan2(-gamma,alpha-beta)
+          bpa = 0.5 * atan2(-gamma,alpha-beta) * R2D
         endif
         ifail = 0
       endif
