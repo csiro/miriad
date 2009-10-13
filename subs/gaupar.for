@@ -8,6 +8,7 @@ c    25feb98 rjs  Correct bunit shortcoming introduced above.
 c    26apr05 tw   Default is Kelvin-like scaling rather than no scaling
 c                 in gaupar.
 c
+c $Id: gaupar.for,v 1.4 2009/10/13 07:31:22 cal103 Exp $
 c***********************************************************************
 
 
@@ -241,8 +242,9 @@ c  effective beam and scale factor.
 c
       else if(pBem1.and.pBem2)then
         bunit(l+1:) = '/'//b1b
-        if(bmaj1*bmin1.ne.0.and.bmaj1*bmin1.ne.0.and.
-     *        dx1*dy1.ne.0)then
+        if (bmaj1*bmin1.ne.0.0 .and.
+     *      bmaj2*bmin2.ne.0.0 .and.
+     *      dx1*dy1.ne.0.0) then
           call Gaufac(bmaj1,bmin1,bpa1,bmaj2,bmin2,bpa2,
      *        fac,bmaj,bmin,bpa,ifail)
           fac = abs(dx1*dy1/fac)
@@ -253,8 +255,9 @@ c
 
       else if(pBem1.and.pKel2)then
         bunit = 'KELVIN'
-        if(bmaj1*bmin1.ne.0.and.bmaj1*bmin1.ne.0.and.
-     *        dx1*dy1.ne.0)then
+        if (bmaj1*bmin1.ne.0.0 .and.
+     *      bmaj2*bmin2.ne.0.0 .and.
+     *      dx1*dy1.ne.0.0) then
           call Gaufac(bmaj1,bmin1,bpa1,bmaj2,bmin2,bpa2,
      *        fac,bmaj,bmin,bpa,ifail)
           fac = abs(dx1*dy1/fac)*abs((bmaj2*bmin2)/(bmaj*bmin))
@@ -265,8 +268,9 @@ c
 
       else if(pKel1.and.pBem2)then
         bunit = bunit1x
-        if(bmaj1*bmin1.ne.0.and.bmaj1*bmin1.ne.0.and.
-     *        dx1*dy1.ne.0)then
+        if (bmaj1*bmin1.ne.0.0 .and.
+     *      bmaj2*bmin2.ne.0.0 .and.
+     *      dx1*dy1.ne.0.0) then
           call Gaufac(bmaj1,bmin1,bpa1,bmaj2,bmin2,bpa2,
      *        fac,bmaj,bmin,bpa,ifail)
           fac = abs(dx1*dy1/fac)*abs((bmaj1*bmin1)/(bmaj*bmin))
@@ -275,12 +279,11 @@ c
         else
           call bug('w','Bmaj or bmin missing ... no scaling')
         endif
-c
-c  Both are in Kelvin ... this makes no sense.
-c
+
       else if(pKel1.and.pKel2)then
+c       Both are in Kelvin ... this makes no sense.
         call bug('w',
-     *    'Map and beam are in units of Kelvin ... no scaling performed')
+     *    'Map and beam are in units of Kelvin ... no scaling')
       endif
 
       write(line,'(a,1pe10.3)')'Scaling the output by',fac
@@ -307,34 +310,39 @@ c    bpa1               Position angle of 1st gaussian, in degrees.
 c    bmaj2,bmin2        Major and minor FWHM of 2nd gaussian.
 c    bpa2               Position angle of 2nd gaussian, in degrees.
 c  Output:
-c    ifail              Always 0.
 c    fac                Amplitude of resultant gaussian.
 c    bmaj,bmin          Major and minor axes of resultant gaussian.
 c    bpa                Position angle of the result.
+c    ifail              Always 0.
 c-----------------------------------------------------------------------
       include 'mirconst.h'
-      real alpha,beta,gamma,theta1,theta2,s,t
+      real alpha, beta, cospa1, cospa2, gamma, s, sinpa1, sinpa2, t
 c-----------------------------------------------------------------------
-      theta1 = bpa1 * D2R
-      theta2 = bpa2 * D2R
-      alpha  = (bmaj1*cos(theta1))**2 + (bmin1*sin(theta1))**2 +
-     *         (bmaj2*cos(theta2))**2 + (bmin2*sin(theta2))**2
-      beta   = (bmaj1*sin(theta1))**2 + (bmin1*cos(theta1))**2 +
-     *         (bmaj2*sin(theta2))**2 + (bmin2*cos(theta2))**2
-      gamma  = 2 * ((bmin1**2-bmaj1**2)*sin(theta1)*cos(theta1) +
-     *              (bmin2**2-bmaj2**2)*sin(theta2)*cos(theta2))
+      cospa1 = cos(bpa1*D2R)
+      cospa2 = cos(bpa2*D2R)
+      sinpa1 = sin(bpa1*D2R)
+      sinpa2 = sin(bpa2*D2R)
+
+      alpha = (bmaj1*cospa1)**2 + (bmin1*sinpa1)**2 +
+     *        (bmaj2*cospa2)**2 + (bmin2*sinpa2)**2
+      beta  = (bmaj1*sinpa1)**2 + (bmin1*cospa1)**2 +
+     *        (bmaj2*sinpa2)**2 + (bmin2*cospa2)**2
+      gamma = 2 * ((bmin1**2-bmaj1**2)*sinpa1*cospa1 +
+     *             (bmin2**2-bmaj2**2)*sinpa2*cospa2)
 
       s = alpha + beta
       t = sqrt((alpha-beta)**2 + gamma**2)
       bmaj = sqrt(0.5*(s+t))
       bmin = sqrt(0.5*(s-t))
-      if(abs(gamma)+abs(alpha-beta).eq.0)then
-        bpa = 0
+      if (abs(gamma)+abs(alpha-beta).eq.0) then
+        bpa = 0.0
       else
         bpa = 0.5 * atan2(-gamma,alpha-beta) * R2D
       endif
-      fac = pi / (4.0*log(2.0)) * bmaj1 * bmin1 * bmaj2 * bmin2 /
-     *   sqrt(alpha*beta - 0.25 * gamma * gamma)
+
+      fac = pi / (4.0*log(2.0)) * bmaj1*bmin1 * bmaj2*bmin2 /
+     *          sqrt(alpha*beta - 0.25 * gamma*gamma)
+
       ifail = 0
 
       end
