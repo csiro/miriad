@@ -76,6 +76,7 @@ c    rjs  19sep04 Copy across sensitivity model and more variables.
 c    rjs  28jan05 Added clobber option.
 c    mhw  19may08 Added maxwidth parameter
 c    mhw  29sep09 Fix freq axis mislabeling bug
+c    mhw  14oct09 Separate out identical freqs on different IFs
 c  Bugs:
 c   the full xtsys and ytsys variables are passed to split files,
 c   but for the systemp variable only the appropriate data (if) is copied
@@ -269,11 +270,11 @@ c------------------------------------------------------------------------
 	integer maxi,n,nchan,ichan,nwide,length,lenb,i,ii,nsub,j,nindx1
 	double precision sdf(MAXWIN),sfreq(MAXWIN)
 	real wfreq(MAXWIN)
-	logical discard
+	logical discard,duplicate
 c
 c  Externals.
 c
-	character itoaf*8
+	character itoaf*8,stcat*16
 	integer len1
 c
 c  Initialise.
@@ -347,6 +348,16 @@ c
 	      call uvgetvrd(tVis,'sfreq',sfreq,nindx)
 	      call uvgetvri(tVis,'nschan',nschan,nindx)
 	    endif
+c            
+c Check for data with IFs at identical frequencies         
+c
+            duplicate=.false.
+            do i=1,nindx-1
+              do j=i+1,nindx
+                if (sfreq(i).eq.sfreq(j)) duplicate=.true.
+              enddo
+            enddo
+                  
             nindx1=nindx
             ii=0
 c
@@ -368,8 +379,13 @@ c
                 ichan = nschan(i)*(2*j-1)/2/nsub
                 onschan(ii) = nschan(i)/nsub
                 n = nint(1000*(sfreq(i) +  sdf(i) * ichan))
-	        call FileIndx(base(1:length)//'.'//itoaf(n),i,indx(ii),
-     *		  clobber)
+                if (duplicate) then
+                  call FileIndx(base(1:length)//'.'//
+     *              stcat(itoaf(n),'.'//itoaf(i)),i,indx(ii),clobber)
+                else
+                  call FileIndx(base(1:length)//'.'//itoaf(n),i,
+     *              indx(ii),clobber)
+                endif                
               enddo
               onschan(ii)=nschan(i)-(nsub-1)*(nschan(i)/nsub)
 	    enddo
