@@ -104,9 +104,15 @@ c       LEVS for the second contour image.
 c@ levs3
 c       LEVS for the third contour image.
 c@ cols1
-c       PGPLOT colours for LEVS1 contours. 0 is background colour, 1
-c       foreground, others are different colours. If you give one value
-c       it is used for all contours.
+c       PGPLOT colours for LEVS1 contours.  If one value is given it is
+c       used for all contours.  PGPLOT colour indices are
+c          0: background colour (black or white)
+c          1: foreground colour (white or black)
+c          2: red           3: green           4: blue
+c          5: cyan          6: magenta         7: yellow
+c          8: orange        9: lime           10: spring green
+c         11: azure        12: violet         13: rose
+c         14: dark grey    15: light grey
 c@ range
 c       N groups of 4 values (1 group per subplot and N is the maximum
 c       number of channels allowed by Miriad; typically 2048). These are
@@ -115,11 +121,11 @@ c       function type and the colour lookup table for each subplot
 c       displayed.  The transfer function type can be one of "lin"
 c       (linear), "sqr" (square root), "log" (logarithmic), and "heq"
 c       (histogram equalization).  The colour lookup table is an integer
-c       from 1 to 8 specifying a lookup table. Valud values are 1 (b&w),
+c       from 1 to 8 specifying a lookup table.  Valid values are 1 (b&w),
 c       2 (rainbow), 3 (linear pseudo colour), 4 (floating zero colour
 c       contours), 5 (fixed zero colour contours), 6 (rgb),
-c       7 (background) 8 (heat) and 9 (absolute b&w) .  If you enter a
-c       negative integer, then the reversed lookup table is displayed.
+c       7 (background) 8 (heat) and 9 (absolute b&w).  Enter a negative
+c       integer to reverse the lookup table.
 c
 c       The transfer function changes available with OPTIONS=FIDDLE
 c       are in addition (on top of) to the selections here, but the
@@ -409,6 +415,10 @@ c        "clear"   for a see-through overlay -- thus you can write the
 c                  overlay ID string (see below) without the overlay
 c        "sym"     for pgplot symbol number (given centre and symbol)
 c
+c       Also
+c        "colour"  See below.
+c        "offset"  See below.
+c
 c       XOTYPE and YOTYPE  give the units of the overlay location (and
 c       overlay half-sizes) contained in the file for the x- and y-
 c       directions, respectively.  Choose from:
@@ -493,17 +503,33 @@ c       are XS=2, YS=XS pixels.   In all cases, CS and CE  are optional
 c       and the default is 0 (all channels)
 c
 c
-c       #####  The OFFSET line
+c       ##### OFIG = COLOUR (or COLOR)
+c
+c
+c       At any point in the overlay file you can include a COLOUR
+c       directive in the format
+c
+c         COLOUR   INDEX
+c
+c       where the literal "COLOUR" or "COLOR" (without the quotes)
+c       starts in column 1, followed by the PGPLOT colour index.  This
+c       changes the graphics overlay colour until the next COLOUR
+c       directive is processed.  PGPLOT colour indices are listed above
+c       for the cols1 parameter.  The default colour index is 9.
+c
+c       ##### OFIG = OFFSET
 c
 c       At any point in the overlay file, you can include an OFFSET
 c       line in the format
 c
-c       "OFFSET"   XOFF   YOFF
+c         OFFSET   XOFF   YOFF
 c
-c       where the literal "OFFSET" (without the quotes) must appear
-c       as the first thing in the line, followed by X and Y offsets,
-c       which are applied to all succeeding overlay file locations.
+c       where the literal "OFFSET" (without the quotes) starts in
+c       column 1, followed by X and Y offsets which are applied to all
+c       succeeding overlay file locations.
+c
 c              X = X + XOFF;   Y = Y + YOFF
+c
 c       These offsets must be in the same units as the %OTYPE that the
 c       succeeding line(s) has(ve).  It is intended so that your overlay
 c       locations can be in, say, arcsec relative to some location which
@@ -695,7 +721,7 @@ c    pjt  19jan02  retrofitted options=corner introduced in 14feb01/BIMA
 c                  version
 c    pjt  29jan02  documented beamtyp=n, worked around a miriadB bug
 c
-c $Id: cgdisp.for,v 1.6 2009/09/23 01:00:20 cal103 Exp $
+c $Id: cgdisp.for,v 1.7 2009/10/20 04:15:05 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -760,8 +786,8 @@ c
       data getvsc /.true./
 c-----------------------------------------------------------------------
       version = versan ('cgdisp',
-     :                  '$Revision: 1.6 $',
-     :                  '$Date: 2009/09/23 01:00:20 $')
+     :                  '$Revision: 1.7 $',
+     :                  '$Date: 2009/10/20 04:15:05 $')
 c
 c Get user inputs
 c
@@ -2989,64 +3015,67 @@ c-----------------------------------------------------------------------
 cc
       double precision xoff, yoff, pix3, ocen(2), ocorn(2,4)
       real opoly(0:180,2), xl, xr, yb, yt
-      integer iostat, ilen, len1, lpos, i, ochan(2)
-      character aline*300, oid*80, ofig*8
-      logical owrite
+      integer i, icol, ilen, iostat, len1, lpos, ochan(2)
+      character aline*300, code*8, ofig*8, oid*80
+      logical ok, owrite
 c-----------------------------------------------------------------------
       if (ofile.ne.' ') then
         call txtopen (lpos, ofile, 'old', iostat)
         if (iostat.ne.0) call bug ('f', 'Error opening overlay file')
-c
-c Initialize coordinate routines
-c
+
+c       Initialize coordinate routines.
         xoff = 0.0
         yoff = 0.0
         i = 0
         iostat = 0
         pix3 = dble(2*pl1+npl-1) / 2.0
-c
-c Loop over lines in file
-c
+
+c       Loop over lines in file.
         do while (iostat.ne.-1)
           aline = ' '
           call txtread (lpos, aline, ilen, iostat)
           if (iostat.eq.0) then
             if (aline(1:1).ne.'#' .and. aline.ne.' ') then
-              if (index(aline,'OFFSET').ne.0 .or.
-     +            index(aline,'offset').ne.0) then
-c
-c Fish out offset to be applied to all succeeding overlay locations
-c
+              code = aline(:7)
+              call lcase (code)
+              if (code.eq.'colour' .or. code(:6).eq.'color') then
+c               Colour to be applied to succeeding overlays.
+                call atoif (aline(7:), icol, ok)
+                if (ok) then
+                  write(*,*) icol
+                  call pgsci (icol)
+                end if
+
+              else if (code.eq.'offset') then
+c               Offset to be applied to succeeding overlay locations.
                 call posdec1 (aline, xoff, yoff)
+
               else
-c
-c Fish out overlay locations and convert to pixels
-c
+c               Get overlay locations and convert to pixels.
                 i = i + 1
                 ilen = len1(aline)
                 call posdec2 (lun, pix3, maxtyp, ltypes, i, xoff, yoff,
-     +            dodist, aline(1:ilen), ofig, ocen, ocorn, oid,
-     +            owrite, ochan, opoly, xl, xr, yb, yt)
+     +            dodist, aline(1:ilen), ofig, ocen, ocorn, oid, owrite,
+     +            ochan, opoly, xl, xr, yb, yt)
+
+c               Draw overlay.
+                call drover (blc, trc, doerase, csize, i, pix3, ofig,
+     +            ocen, ocorn, opoly, oid, owrite, ochan, xl, xr, yb,
+     +            yt)
               end if
-c
-c Draw overlay
-c
-              call drover (blc, trc, doerase, csize, i, pix3, ofig,
-     +                     ocen, ocorn, opoly, oid, owrite, ochan,
-     +                     xl, xr, yb, yt)
             end if
           else
             if (iostat.ne.-1) call bug ('f',
      +         'Error reading from overlay file')
           end if
         end do
-c
+
         call txtclose (lpos)
       end if
-c
+
       end
-c
-c
+
+
       subroutine overid (doerase, ofig, x, y, xl, xr, yb, yt, str,
      +                   csize)
 c-----------------------------------------------------------------------
