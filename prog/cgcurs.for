@@ -19,16 +19,20 @@ c       to add a location, and click the middle button (enter D) to
 c       delete a location.
 c
 c@ in
-c       The input image.
+c       One or two input images may be specified.  If two, and
+c       TYPE=both, then the first is used as the background image, and
+c       the second for a contour overlay.  They must match in size.
 c@ type
-c       Specifies the type of the image in the IN keyword. Minimum match
-c       is supported (note that "pixel" was formerly "grey" which is
-c       still supported).   Choose from:
+c       Specifies the type of the image(s) in the IN keyword.  Minimum
+c       match is supported:
 c
-c       "contour"   (contour plot)
-c       "pixel"     (pixel map)
+c         "pixel": pixel map (formerly "grey" which is still supported),
+c       "contour": contour plot,
+c          "both": first input image is pixel map, the second is contour
+c                  overlay.  If only one input image was specified it is
+c                  used for both.
 c
-c       Default is "pixel"
+c       Default is "pixel" if one input image is specified, else "both".
 c@ region
 c       Region of interest.  Choose only one spatial region (bounding
 c       box only supported), but as many spectral regions (i.e.,
@@ -298,7 +302,7 @@ c                  strings
 c    rjs  08may00  Change incorrect keyf call to keya.
 c   nebk  14nov01  Track change to readimcg interface
 c
-c $Id: cgcurs.for,v 1.2 2009/10/26 06:05:35 cal103 Exp $
+c $Id: cgcurs.for,v 1.3 2009/10/26 07:44:10 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -309,28 +313,29 @@ c
       parameter (maxlev = 50, maxpos = 50, nxdef = 4, nydef = 4,
      +   tfdisp = 0.5, wedwid = 0.05, nbins = 128)
 c
-      integer ipim, ipnim, ipims
+      integer ipim, ipim2, ipnim, ipims
 c
       real levs(maxlev), pixr(2), tr(6), cs(2), pixr2(2), scale(2),
      +  tfvp(4), wdgvp(4), cumhis(nbins), dmm(3)
       real slev, xmin, xmax, ymin, ymax, vxmin, vymin, vymax, vx, vy,
      +  vxsize, vysize, vxgap, vygap, ydispb, xdispl, groff, blank
 c
-      integer blc(3), trc(3), size(maxnax), win(maxnax),
+      integer blc(3), trc(3), size(maxnax), size2(maxnax), win(maxnax),
      +  grpbeg(maxchan), ngrp(maxchan), srtlev(maxlev), his(nbins)
-      integer nx, ny, nlevs, lin, naxis, k, ierr, pgbeg, iostat, ipage,
-     +  ibin(2), jbin(2), kbin(2), krng(2), nlast, ngrps, lstat,
-     +  lreg, lcurs, jj, wedcod, labcol, poscol, statcol, regcol, ilen
+      integer ibin(2), ierr, ilen, img1, img2, iostat, ipage, jbin(2),
+     +        jj, k, kbin(2), krng(2), labcol, lcurs, lreg, lstat,
+     +        naxis, naxis2, ngrps, nlast, nlevs, nx, ny, pgbeg, poscol,
+     +        regcol, statcol, wedcod
 c
       character labtyp(2)*6
-      character in*64, pdev*64, xlabel*40, ylabel*40,
+      character img(2)*64, pdev*64, xlabel*40, ylabel*40,
      +  trfun*3, levtyp*1, result*3, val3form*20, versan*80, version*80
 c
-      logical do3val, do3pix, eqscale, doblnk, cursor, stats, doreg,
-     +  smore, rmore, cmore, dopixel, display, doabs, gaps, dolog,
-     +  cgspec, cgdisp, mark, doerase, dobox, near, dowedge, dofid,
-     +  first, grid, doaxlab, doaylab, donxlab(2), donylab(2), dotr,
-     +  doabut, intdev
+      logical cgdisp, cgspec, cmore, cursor, display, do3pix, do3val,
+     +        doabs, doabut, doaxlab, doaylab, doblnk, dobox, docont,
+     +        doerase, dofid, dolog, donxlab(2), donylab(2), dopixel,
+     +        doreg, dotr, dotwo, dowedge, eqscale, first, gaps, grid,
+     +        intdev, mark, near, rmore, smore, stats
 c
       data ipage, scale /0, 0.0, 0.0/
       data dmm /1.0e30, -1.0e30, -1.0/
@@ -339,41 +344,54 @@ c-----------------------------------------------------------------------
       version = versan ('cgcurs',
      +                  '$Revision',
      +                  '$Date')
-c
-c Get user inputs
-c
-      call inputs (maxlev, in, ibin, jbin, kbin, levtyp, slev, levs,
+
+c     Get user inputs.
+      call inputs (maxlev, img, ibin, jbin, kbin, levtyp, slev, levs,
      +   nlevs, pixr, trfun, pdev, labtyp, do3val, do3pix,
-     +   eqscale, nx, ny, cs, dopixel, cursor, stats, doreg,
+     +   eqscale, nx, ny, cs, dopixel, docont, cursor, stats, doreg,
      +   doabs, dolog, cgspec, cgdisp, mark, doerase, dobox, near,
      +   dowedge, dofid, dotr, grid, val3form)
-c
-c Open image
-c
-      call opimcg (maxnax, in, lin, size, naxis)
-      call initco (lin)
-c
-c Finish key inputs for region of interest now
-c
-      call region (in, naxis, size, ibin, jbin, kbin, blc, trc,
+
+c     Open image(s).
+      call opimcg (maxnax, img(1), img1, size, naxis)
+      call initco (img1)
+
+      img2  = img1
+      dotwo = .false.
+      if (dopixel.and.docont .and.  img(2).ne.img(1)) then
+        dotwo = .true.
+        call opimcg (maxnax, img(2), img2, size2, naxis2)
+        if (naxis2.ne.naxis .or.
+     +      size2(1).ne.size(1) .or.
+     +      size2(2).ne.size(2)) then
+          call bug ('f', 'Input images are not the same size.')
+        end if
+      end if
+
+c     Finish key inputs for region of interest now.
+      call region (img(1), naxis, size, ibin, jbin, kbin, blc, trc,
      +             win, ngrps, grpbeg, ngrp)
-c
-c Try to allocate memory for images.  Need a copy of the image
-c if we have histogram equalized it and want to use the
-c "cursor" or "stats" option to find out image values.
-c
+
+c     Try to allocate memory for images.
       call memalloc (ipim,  win(1)*win(2), 'r')
       call memalloc (ipnim, win(1)*win(2), 'i')
       if (cursor.or.stats) then
+c       Need a copy of the image if we have histogram equalized it and
+c       want to use the "cursor" or "stats" option to find out image
+c       values.
         call memalloc (ipims, win(1)*win(2), 'r')
       else
-c
-c If we don't need a copy of this image, we must still have
-c a pointer to pass down
-c
+c       If we don't need a copy of this image, we must still have
+c       a pointer to pass down.
         call memalloc (ipims, 1, 'r')
       end if
-c
+
+      ipim2 = ipim
+      if (dotwo) then
+c       Memory for the contour overlay.
+        call memalloc (ipim2,  win(1)*win(2), 'r')
+      end if
+
 c Open log files
 c
       if (cursor .and. dolog) then
@@ -401,14 +419,16 @@ c
         call output ('*** Region of interest output to cgcurs.region')
         call output (' ')
       end if
-c
-c Compute contour levels or check pixel map for log offset
-c
+
       if (dopixel) then
-        call grfixcg (pixr, lin, naxis, size, trfun, pixr2,
+c       Check pixel map for log offset.
+        call grfixcg (pixr, img1, naxis, size, trfun, pixr2,
      +                groff, blank)
-      else
-        call conlevcg (.false., maxlev, lin, levtyp, slev, nlevs,
+      end if
+
+      if (docont) then
+c       Compute contour levels.
+        call conlevcg (.false., maxlev, img2, levtyp, slev, nlevs,
      +                 levs, srtlev)
         blank = -99999999.0
       end if
@@ -460,11 +480,11 @@ c
 c
 c Set axis labels
 c
-      call setlabcg (lin, labtyp, .false., xlabel, ylabel)
+      call setlabcg (img1, labtyp, .false., xlabel, ylabel)
 c
 c Set label displacements from axes
 c
-      call setdspcg (lin, labtyp, blc, trc, xdispl, ydispb)
+      call setdspcg (img1, labtyp, blc, trc, xdispl, ydispb)
 c
 c Work out view port encompassing all sub-plots. Also return
 c the viewport size of sub-plots.
@@ -477,7 +497,7 @@ c
 c Adjust viewport increments and start locations if equal scales
 c requested or if scales provided by user
 c
-      call vpadjcg (lin, 'NO', eqscale, scale, vxmin, vymin, vymax,
+      call vpadjcg (img1, 'NO', eqscale, scale, vxmin, vymin, vymax,
      +   nx, ny, blc, trc, tfvp, wdgvp, vxsize, vysize)
 c
 c Set viewport location of first sub-plot
@@ -507,10 +527,17 @@ c
 c
 c Read in image and save it if necessary
 c
-         call readimcg (.true., blank, lin, ibin, jbin, krng,
-     +         blc, trc, .true., memi(ipnim), memr(ipim), doblnk, dmm)
-         if (cursor .or. stats)
-     +     call copyimcg (win(1)*win(2), memr(ipim), memr(ipims))
+         if (dotwo) then
+           call readimcg (.true., blank, img2, ibin, jbin, krng,
+     +       blc, trc, .true., memi(ipnim), memr(ipim2), doblnk, dmm)
+         end if
+
+         call readimcg (.true., blank, img1, ibin, jbin, krng,
+     +     blc, trc, .true., memi(ipnim), memr(ipim), doblnk, dmm)
+
+         if (cursor .or. stats) then
+           call copyimcg (win(1)*win(2), memr(ipim), memr(ipims))
+         end if
 c
 c Apply transfer function
 c
@@ -535,19 +562,18 @@ c
          display = .true.
          do while (display)
 c
-c Draw pixel map; set default b&w colour table first.
-c
            call pgsci (labcol)
            if (dopixel) then
+c            Render pixel map; set default b&w colour table first.
              if (k.eq.1) call ofmcol (1, pixr2(1), pixr2(2))
              call pgimag (memr(ipim), win(1), win(2), 1, win(1), 1,
      +                    win(2), pixr2(1), pixr2(2), tr)
-           else
-c
-c Draw contours
-c
+           end if
+
+           if (docont) then
+c            Draw contours.
              call conturcg (.false., blank, .false., win(1), win(2),
-     +                      doblnk, memr(ipim), nlevs, levs, tr, 0.0)
+     +                      doblnk, memr(ipim2), nlevs, levs, tr, 0.0)
            end if
 c
 c Label and draw axes
@@ -557,18 +583,18 @@ c
 c Determine if the axes need ascii or numeric labelling
 c for this subplot
 c
-         call dolabcg (gaps, dotr, nx, ny, ngrps, nlast, k,
-     +                 labtyp, doaxlab, doaylab, donxlab, donylab)
+           call dolabcg (gaps, dotr, nx, ny, ngrps, nlast, k,
+     +                   labtyp, doaxlab, doaylab, donxlab, donylab)
 c
 c Write on ascii axis labels
 c
-         if (first) call aaxlabcg (doaxlab, doaylab, xdispl, ydispb,
-     +                             xlabel, ylabel)
+           if (first) call aaxlabcg (doaxlab, doaylab, xdispl, ydispb,
+     +                               xlabel, ylabel)
 c
 c Draw frame, write numeric labels, ticks and optional grid
 c
-         call naxlabcg (lin, first, blc, trc, krng, labtyp,
-     +                  donxlab, donylab, .false., grid)
+           call naxlabcg (img1, first, blc, trc, krng, labtyp,
+     +                    donxlab, donylab, .false., grid)
 c
 c Draw wedge inside subplots and overwrite label ticks
 c
@@ -588,7 +614,7 @@ c
            if (do3val .or. do3pix) then
              call pgsch (cs(2))
              call pgsci (1)
-             call lab3cg (lin, doerase, do3val, do3pix, labtyp,
+             call lab3cg (img1, doerase, do3val, do3pix, labtyp,
      +                    grpbeg(k), ngrp(k), val3form)
            end if
 c
@@ -599,9 +625,9 @@ c
 c Read value and location under cursor
 c
              call pgsci (poscol)
-             call curpos (lin, win(1), win(2), memr(ipims), memi(ipnim),
-     +          blc, ibin, jbin, krng, dolog, lcurs, cgspec, cgdisp,
-     +          mark, dobox, near)
+             call curpos (img1, win(1), win(2), memr(ipims),
+     +         memi(ipnim), blc, ibin, jbin, krng, dolog, lcurs,
+     +         cgspec, cgdisp, mark, dobox, near)
              cmore = .false.
            end if
 c
@@ -611,7 +637,7 @@ c
 c Find image statistics in polygonal region defined by cursor
 c
              call pgsci (statcol)
-             call curstat (lin, blc, win(1), win(2), memr(ipims),
+             call curstat (img1, blc, win(1), win(2), memr(ipims),
      +          memi(ipnim), ibin, jbin, krng, doreg, display,
      +          smore, dolog, mark, near, lstat)
            end if
@@ -621,7 +647,7 @@ c
 c Define polygonal region with cursor
 c
              call pgsci (regcol)
-             call cureg (lin, blc, ibin, jbin, krng, near, doabs,
+             call cureg (img1, blc, ibin, jbin, krng, near, doabs,
      +         display, lreg)
            end if
 c
@@ -651,8 +677,9 @@ c
         call memfree (ipims, 1, 'r')
       end if
 c
-      call finco(lin)
-      call xyclose(lin)
+      call finco(img1)
+      call xyclose(img1)
+      if (dotwo) call xyclose(img2)
       if (dolog) then
         if (cursor) call txtclose (lcurs)
         if (stats)  call txtclose (lstat)
@@ -712,13 +739,13 @@ c
       end
 c
 c
-      subroutine cureg (lin, blc, ibin, jbin, krng, near, doabs,
+      subroutine cureg (img, blc, ibin, jbin, krng, near, doabs,
      +                  redisp, lreg)
 c-----------------------------------------------------------------------
 c     Define region of interest with cursor and write to log file.
 c
 c  Input:
-c    lin    Handle of image
+c    img    Handle of image
 c    blc    BLC of image
 c    i,jbin Spatial pixel binning values
 c    krng   Start plane being displayed and number of planes
@@ -731,7 +758,7 @@ c  Output
 c    redisp Have another go after redisplaying the image
 c
 c-----------------------------------------------------------------------
-      integer lin, lreg, ibin, jbin, krng(2), blc(2)
+      integer img, lreg, ibin, jbin, krng(2), blc(2)
       logical redisp, doabs, near
 cc
       include 'mirconst.h'
@@ -766,8 +793,8 @@ c
 c Do we have an axes in radians, can't output locations
 c in arcsecond offsets otherwise.
 c
-      call axfndco (lin, 'RAD', 0, 1, irad(1))
-      call axfndco (lin, 'RAD', 0, 2, irad(2))
+      call axfndco (img, 'RAD', 0, 1, irad(1))
+      call axfndco (img, 'RAD', 0, 2, irad(2))
       rads = .true.
       if (irad(1)*irad(2).eq.0) rads = .false.
       if (.not.rads) doabs = .true.
@@ -782,7 +809,7 @@ c
       typeo(3) = 'abspix'
 c
       win(3) = (real(2*krng(1)+krng(2))-1.0)/2.0
-      call rdhdi (lin, 'naxis', naxis, 0)
+      call rdhdi (img, 'naxis', naxis, 0)
       naxis = min(3,naxis)
 c
 c Get vertices with cursor and join up the dots
@@ -853,7 +880,7 @@ c
             do i = 1, nv
               win(1) = vert(1,i)
               win(2) = vert(2,i)
-              call w2wco (lin, naxis, typei, ' ', win, typeo, ' ', wout)
+              call w2wco (img, naxis, typei, ' ', win, typeo, ' ', wout)
               vert(1,i) = wout(1)
               vert(2,i) = wout(2)
             end do
@@ -900,7 +927,7 @@ c
 c
 c Add image plane
 c
-          call rdhdi (lin, 'naxis3', naxis3, 0)
+          call rdhdi (img, 'naxis3', naxis3, 0)
           if (naxis3.gt.1) then
             call strfi (krng(1), '(i6)', str, il)
             if (krng(2).ne.1) then
@@ -944,13 +971,13 @@ c
       end
 c
 c
-      subroutine curpos (lin, nx, ny, image, nimage, blc, ibin, jbin,
+      subroutine curpos (img, nx, ny, image, nimage, blc, ibin, jbin,
      +   krng, dolog, lcurs, cgspec, cgdisp, mark, dobox, near)
 c-----------------------------------------------------------------------
 c     Return pixel location and value under cursor
 c
 c  Input:
-c     lin     Image handle
+c     img     Image handle
 c     nx,ny   Size of image
 c     image   The image without the transfer function is applied
 c     blc     blc of window being displayed
@@ -968,7 +995,7 @@ c     plst,av STart plane and  number of planes averaged
 c
 c-----------------------------------------------------------------------
       integer nx, ny, nimage(nx,ny), blc(2), lcurs, ibin, jbin,
-     +  krng(2), lin
+     +  krng(2), img
       real image(nx,ny)
       logical dolog, cgspec, cgdisp, mark, dobox, near
 cc
@@ -992,7 +1019,7 @@ c
       typei(2) = 'abspix'
       typei(3) = 'abspix'
       pix(3) = (real(2*krng(1)+krng(2))-1.0)/2.0
-      call rdhdi (lin, 'naxis', naxis, 0)
+      call rdhdi (img, 'naxis', naxis, 0)
       naxis = min(3,naxis)
 c
 c Format channel range for CGDISP log files
@@ -1064,10 +1091,10 @@ c
 c Convert absolute pixel to true world coordinate formatted strings
 c with and without units
 c
-            call setoaco (lin, 'abs', naxis, 0, typeo)
-            call w2wfco (lin, naxis, typei, ' ', pix,  typeo, ' ',
+            call setoaco (img, 'abs', naxis, 0, typeo)
+            call w2wfco (img, naxis, typei, ' ', pix,  typeo, ' ',
      +                   .true., wstr, wl)
-            call w2wfco (lin, naxis, typei, ' ', pix, typeo, ' ',
+            call w2wfco (img, naxis, typei, ' ', pix, typeo, ' ',
      +                   .false., vstr, vl)
 c
             line = 'World coordinates x,y         : '//
@@ -1089,7 +1116,7 @@ c
               end if
 c
               if (cgdisp) then
-                call pixinc (lin, bin, wwstr, wwl)
+                call pixinc (img, bin, wwstr, wwl)
 c
                 write (line, 8) typeo(1)(1:len1(typeo(1))),
      +            typeo(2)(1:len1(typeo(2))), iloc ,
@@ -1105,8 +1132,8 @@ c
 c Convert absolute pixel to true offset world coordinate formatted
 c strings.
 c
-            call setoaco (lin, 'off', naxis, 0, typeo)
-            call w2wfco (lin, naxis, typei, ' ', pix,  typeo, ' ',
+            call setoaco (img, 'off', naxis, 0, typeo)
+            call w2wfco (img, naxis, typei, ' ', pix,  typeo, ' ',
      +                   .false., wstr, wl)
             line = 'Offset world coordinates x,y  : '//
      +              wstr(1)(1:wl(1))//', '//wstr(2)(1:wl(2))
@@ -1119,7 +1146,7 @@ c
             typeo(1) = 'abspix'
             typeo(2) = 'abspix'
             typeo(3) = 'abspix'
-            call w2wfco (lin, naxis, typei, ' ', pix, typeo, ' ',
+            call w2wfco (img, naxis, typei, ' ', pix, typeo, ' ',
      +                   .true., wstr, wl)
             if (naxis.gt.2) then
               write (line, 10) wstr(1)(1:wl(1)), wstr(2)(1:wl(2)),
@@ -1178,7 +1205,7 @@ c
       end
 c
 c
-      subroutine curstat (lin, blc, nx, ny, image, nimage, ibin, jbin,
+      subroutine curstat (img, blc, nx, ny, image, nimage, ibin, jbin,
      +    krng, doreg, redisp, smore, dolog, mark, near, lstat)
 c-----------------------------------------------------------------------
 c     Work out statistics from region marked with cursor.  If the
@@ -1189,7 +1216,7 @@ c     image.  You get three goes at drawing a decent polygon
 c     before it quits.
 c
 c  Input:
-c    lin    Handle of image
+c    img    Handle of image
 c    blc    Blc of sub-image displayed
 c    nx,ny  Size of displayed sub-image
 c    image  Sub-image (values without transfer function applied)
@@ -1206,7 +1233,7 @@ c  Output:
 c    redisp Redisplay the image
 c    smore  Do more statistics options
 c-----------------------------------------------------------------------
-      integer nx, ny, nimage(nx,ny), blc(2), lin, lstat, ibin, jbin,
+      integer nx, ny, nimage(nx,ny), blc(2), img, lstat, ibin, jbin,
      +  krng(2)
       real image(nx,ny)
       logical redisp, doreg, smore, dolog, mark, near
@@ -1237,18 +1264,18 @@ c-----------------------------------------------------------------------
 c
 c Get beam if present
 c
-      call rdhdi (lin, 'naxis', naxis, 0)
+      call rdhdi (img, 'naxis', naxis, 0)
       naxis = min(3,naxis)
       do i = 1, naxis
         typei(i) = 'abspix'
       end do
       pix(3) = (real(2*krng(1)+krng(2))-1.0)/2.0
 c
-      call rdhdr (lin, 'bmaj', bmaj, 0.0)
-      call rdhdr (lin, 'bmin', bmin, 0.0)
-      call rdhdd (lin, 'cdelt1', cdelt1, 0.0d0)
-      call rdhdd (lin, 'cdelt2', cdelt2, 0.0d0)
-      call rdhda (lin, 'bunit', bunit, ' ')
+      call rdhdr (img, 'bmaj', bmaj, 0.0)
+      call rdhdr (img, 'bmin', bmin, 0.0)
+      call rdhdd (img, 'cdelt1', cdelt1, 0.0d0)
+      call rdhdd (img, 'cdelt2', cdelt2, 0.0d0)
+      call rdhda (img, 'bunit', bunit, ' ')
       barea = 1.1331 * bmaj * bmin / abs(cdelt1 * cdelt2)
       bin(1) = ibin
       bin(2) = jbin
@@ -1466,7 +1493,7 @@ c
               typeo(3) = 'abspix'
               pix(1) = imin
               pix(2) = jmin
-              call w2wfco (lin, naxis, typei, ' ', pix, typeo, ' ',
+              call w2wfco (img, naxis, typei, ' ', pix, typeo, ' ',
      +                     .false., wstr, wl)
               line = 'Data minimum at '//
      +              wstr(1)(1:wl(1))//', '//wstr(2)(1:wl(2))
@@ -1477,7 +1504,7 @@ c
               call ppconcg (2, blc(2), jbin, jmax)
               pix(1) = imax
               pix(2) = jmax
-              call w2wfco (lin, naxis, typei, ' ', pix, typeo, ' ',
+              call w2wfco (img, naxis, typei, ' ', pix, typeo, ' ',
      +                     .false., wstr, wl)
               line = 'Data maximum at '//
      +              wstr(1)(1:wl(1))//', '//wstr(2)(1:wl(2))
@@ -1486,10 +1513,10 @@ c
 c
 c Now give location in absolute world coordinate
 c
-              call setoaco (lin, 'abs', naxis, 0, typeo)
+              call setoaco (img, 'abs', naxis, 0, typeo)
               pix(1) = imin
               pix(2) = jmin
-              call w2wfco (lin, naxis, typei, ' ', pix, typeo, ' ',
+              call w2wfco (img, naxis, typei, ' ', pix, typeo, ' ',
      +                     .false., wstr, wl)
               line = 'Data minimum at '//
      +              wstr(1)(1:wl(1))//', '//wstr(2)(1:wl(2))
@@ -1498,7 +1525,7 @@ c
 c
               pix(1) = imax
               pix(2) = jmax
-              call w2wfco (lin, naxis, typei, ' ', pix, typeo, ' ',
+              call w2wfco (img, naxis, typei, ' ', pix, typeo, ' ',
      +                     .false., wstr, wl)
               line = 'Data maximum at '//
      +              wstr(1)(1:wl(1))//', '//wstr(2)(1:wl(2))
@@ -1723,9 +1750,9 @@ c
       end
 c
 c
-      subroutine inputs (maxlev, in, ibin, jbin, kbin, levtyp, slev,
-     +   levs, nlevs, pixr, trfun, pdev, labtyp, do3val,
-     +   do3pix, eqscale, nx, ny, cs, dopixel, cursor, stats, doreg,
+      subroutine inputs (maxlev, img, ibin, jbin, kbin, levtyp, slev,
+     +   levs, nlevs, pixr, trfun, pdev, labtyp, do3val, do3pix,
+     c   eqscale, nx, ny, cs, dopixel, docont, cursor, stats, doreg,
      +   doabs, dolog, cgspec, cgdisp, mark, doerase, dobox, near,
      +   dowedge, dofid, dotr, grid, val3form)
 c-----------------------------------------------------------------------
@@ -1734,7 +1761,7 @@ c
 c  Input:
 c   maxlev     Maximum number of allowed contour levels
 c  Output:
-c   in         Image name.
+c   img        Image name(s).
 c   i,j,kbin   X, y and z pixel increment and average
 c   levtyp     Type of contour levels scale factor
 c              'p'(ercentage) or 'a'(bsolute)
@@ -1752,7 +1779,8 @@ c   eqscale    True means plot with x and y scales
 c   nx,ny      Number of sub-plots per page
 c   cs         PGPLOT character sizes for the plot axis labels and
 c              velocity/channel label,
-c   dopixel    True for pixel map, false for contour plot
+c   dopixel    If true do pixel map.
+c   docont     If true do contour overlay
 c   cursor     True to enter cursor mode at end of each sub-plot.
 c   stats      True to enter cursor statistics mode at end of
 c              each sub-plot
@@ -1770,32 +1798,46 @@ c   dofid      FIddle lookup tbale of pixel map
 c   dowedge    Draw wedge with pixel map
 c   dotr       Label top/right as well
 c   grid       Draw coordinate grid
-c   val3for    FOrmat for 3value labelling
+c   val3for    Format for 3value labelling
 c-----------------------------------------------------------------------
       integer maxlev, nx, ny, nlevs, ibin(2), jbin(2), kbin(2)
       real levs(maxlev), pixr(2), cs(2), slev
-      character*(*) labtyp(2), in, pdev, trfun, levtyp, val3form
+      character*(*) labtyp(2), img(2), pdev, trfun, levtyp, val3form
       logical do3val, do3pix, eqscale, cursor, stats, doreg, dopixel,
-     +  doabs, dolog, cgspec, mark, cgdisp, doerase, dobox, near,
-     +  dowedge, dofid, grid, dotr, dunw
+     +  docont, doabs, dolog, cgspec, mark, cgdisp, doerase, dobox,
+     +  near, dowedge, dofid, grid, dotr, dunw
 cc
-      integer ntype, nlab, ntype2, nimtype
-      parameter (ntype = 16, ntype2 = 3)
+      integer ntype, nlab, ntype2, nimg, nimtype
+      parameter (ntype = 16, ntype2 = 4)
       character type(ntype)*6, imtype*7, type2(ntype2)*7
       data type  /'hms   ', 'dms   ', 'abspix', 'relpix',
      +            'arcsec', 'arcmin', 'absghz', 'relghz',
      +            'abskms', 'relkms', 'absnat', 'relnat',
      +            'absdeg', 'reldeg', 'abslin', 'rellin'/
-      data type2 /'contour', 'pixel', 'grey'/
+      data type2 /'contour', 'pixel', 'grey', 'both'/
       data dunw /.false./
 c-----------------------------------------------------------------------
       call keyini
-      call keyf ('in', in, ' ')
-      if (in.eq.' ') call bug ('f', 'No image specified')
+      call mkeyf ('in', img, 2, nimg)
+      if (nimg.eq.0) call bug ('f', 'No image(s) specified.')
+
       call keymatch ('type', ntype2, type2, 1, imtype, nimtype)
-      if (nimtype.eq.0) imtype = 'pixel'
-      dopixel = .true.
-      if (imtype.eq.'contour') dopixel = .false.
+      dopixel = .false.
+      docont  = .false.
+      if (nimtype.eq.0) then
+        dopixel = .true.
+        if (nimg.eq.2) docont = .true.
+      else if (imtype.eq.'pixel' .or. imtype.eq.'grey') then
+        dopixel = .true.
+      else if (imtype.eq.'contour') then
+        docont  = .true.
+      else if (imtype.eq.'both') then
+        dopixel = .true.
+        docont = .true.
+        if (nimg.eq.1) img(2) = img(1)
+      else
+        call bug ('f', 'Unrecognized image type.')
+      end if
 c
       call keyi ('xybin', ibin(1), 1)
       call keyi ('xybin', ibin(2), ibin(1))
@@ -1936,7 +1978,7 @@ c
       end
 c
 c
-      subroutine pixinc (lin, bin, wwstr, wwl)
+      subroutine pixinc (img, bin, wwstr, wwl)
 c-----------------------------------------------------------------------
 c     Find pixel increments for each axis in appropriate units
 c     Work them out at the reference pixel of the image (all
@@ -1947,13 +1989,13 @@ c     an overlay) as its arbitrary anyway
 c
 c
 c  Input
-c   lin     Image handle
+c   img     Image handle
 c   bin     Spatial binning
 c  Output
 c   wwstr   Array of formatted pixel increments
 c   wwl     Length of strings
 c-----------------------------------------------------------------------
-      integer lin, bin(2), wwl(2)
+      integer img, bin(2), wwl(2)
       character*(*) wwstr(2)
 cc
       double precision w1(2), w2(2), pix1(2), pix2(2), winc(2)
@@ -1963,7 +2005,7 @@ c-----------------------------------------------------------------------
 c
 c Work out default offset units for axis
 c
-      call setoaco (lin, 'off', 2, 0, typeo)
+      call setoaco (img, 'off', 2, 0, typeo)
 c
 c Find increments
 c
@@ -1973,8 +2015,8 @@ c
        typei(i) = 'relpix'
       end do
 c
-      call w2wco (lin, 2, typei, ' ', pix1, typeo, ' ', w1)
-      call w2wco (lin, 2, typei, ' ', pix2, typeo, ' ', w2)
+      call w2wco (img, 2, typei, ' ', pix1, typeo, ' ', w1)
+      call w2wco (img, 2, typei, ' ', pix2, typeo, ' ', w2)
       winc(1) = w2(1) - w1(1)
       winc(2) = w2(2) - w1(2)
 c
