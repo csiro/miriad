@@ -46,23 +46,23 @@ c       Some extra processing options. Several can be given, separated
 c       by commas. Minimum match is used.
 c         "final"    When parameters are given by the FWHM and PA
 c                    keywords, the "final" option causes CONVOL to
-c                    interpret these as the resoultion required for the
+c                    interpret these as the resolution required for the
 c                    final output image.
-c         "divide"   Divide, rather than mulitple, the transform of the
-c                    map by the transform of the beam. That is, perform
+c         "divide"   Divide, rather than multiply, the transform of the
+c                    map by the transform of the beam.  That is, perform
 c                    deconvolution, rather than convolution.
 c         "asymmetric" Normally the beam is assumed to be symmetric (as
 c                    it normally is in radio astronomy).  This options
 c                    causes CONVOL to go through the extra steps to
 c                    handle a possibly asymmetric beam.  If the beam is
-c                    asymmetric, and you go not give this option, CONVOL
+c                    asymmetric, and you do not give this option, CONVOL
 c                    symmetrises the beam (i.e. discards the anti-
 c                    symmetric component).
 c         "correlate" Correlate rather than convolve with the beam.  The
 c                    difference between correlation and convolution are
 c                    only apparent for asymmetric beams.
 c@ scale
-c       The scale factor to multiply the output by. The default is for
+c       The scale factor to multiply the output by.  The default is for
 c       CONVOL to determine the appropriate scale factor to make the
 c       output in JY/BEAM.
 c       NOTE: If the input image is in units of JY/BEAM, then to
@@ -101,7 +101,7 @@ c                  directories.
 c    dpr   21jun01 Doc change only
 c  Bugs:
 c
-c $Id: convol.for,v 1.3 2009/10/13 07:48:19 cal103 Exp $
+c $Id: convol.for,v 1.4 2009/10/29 06:13:28 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -117,7 +117,7 @@ c-----------------------------------------------------------------------
       double precision cdelt1,cdelt2
       real crpix1,crpix2,bmaj,bmin,bpa,bmaj1,bmin1,bpa1,factor,sigma
       real temp
-      character bunit*32,flags*4, version*80
+      character bunit*32, flags*4, text*80, version*80
       logical divide,selfscal,rect,asym,corr,doscale,dogaus,final
 c
       integer handle,pDat
@@ -129,8 +129,8 @@ c
       character itoaf*8, versan*80
 c-----------------------------------------------------------------------
       version = versan('convol',
-     :                 '$Revision: 1.3 $',
-     :                 '$Date: 2009/10/13 07:48:19 $')
+     :                 '$Revision: 1.4 $',
+     :                 '$Date: 2009/10/29 06:13:28 $')
 c
 c  Get the input parameters.
 c
@@ -192,8 +192,8 @@ c
         n2 = ny
         iref = nx/2 + 1
         jref = ny/2 + 1
-        bmaj1 = pi/180./3600. * bmaj1
-        bmin1 = pi/180./3600. * bmin1
+        bmaj1 = (bmaj1/3600.0) * D2R
+        bmin1 = (bmin1/3600.0) * D2R
         if(bmaj1*bmin1.le.0)call bug('f',
      *    'Either a beam or gaussian must be given')
 c
@@ -226,11 +226,17 @@ c
      *    'The convolving beam is undefined for the final resolution')
         bmaj1 = bmaj
         bmin1 = bmin
-        bpa1 = bpa
+        bpa1  = bpa
+
+        bmaj = (bmaj*R2D) * 3600.0
+        bmin = (bmin*R2D) * 3600.0
+        write (text, 10) bmaj, bmin, bpa
+ 10     format ('Convolving Gaussian FWHM:',f5.1,' x',f5.1,
+     *          ' arcsec, PA',f6.1,' deg.')
+        call output(text)
       endif
 c
-c  Determine the units,etc, of the output, along with any scale
-c  factors.
+c  Determine the units,etc, of the output, along with any scale factors.
 c
       if(selfscal)then
         if(doGaus)then
@@ -263,13 +269,10 @@ c
         l = l + 1
         flags(l:l) = 'x'
       endif
-      if(doGaus)then
-        call memAlloc(pDat,n1*n2,'r')
-        call GauGen(memR(pDat),n1,n2,iref,jref,
-     *                bmaj1,bmin1,bpa1,cdelt1,cdelt2)
-        call CnvlIniA(handle,memR(pDat),n1,n2,iref,jref,
-     *                                             sigma,flags)
-        call memFree(pDat,n1*n2,'r')
+      if (doGaus) then
+        call CnvlIniG (handle, n1, n2, iref, jref,
+     *                 bmaj1, bmin1, bpa1, cdelt1, cdelt2,
+     *                 sigma, flags)
       else
         call CnvlIniF(handle,lBeam,n1,n2,iref,jref,sigma,flags)
         call xyclose(lBeam)
@@ -331,43 +334,6 @@ c  All said and done. Close up the files, and leave.
 c
       call xyclose(lOut)
       call xyclose(lMap)
-c
-      end
-c***********************************************************************
-      subroutine GauGen(Data,n1,n2,iref,jref,
-     *                bmaj,bmin,bpa,cdelt1,cdelt2)
-c
-      integer n1,n2,iref,jref
-      real Data(n1,n2),bmaj,bmin,bpa
-      double precision cdelt1,cdelt2
-c
-c  Generate a gaussian.
-c
-c-----------------------------------------------------------------------
-      include 'mirconst.h'
-      real theta,s2,c2,a,b,sxx,syy,sxy,t
-      integer i,j
-c
-      theta = pi/180. * bpa
-      s2 = -sin(2*theta)
-      c2 = -cos(2*theta)
-      a = 4*log(2.) / (bmaj*bmaj)
-      b = 4*log(2.) / (bmin*bmin)
-      sxx = -0.5*( a*(c2+1) + b*(1-c2) ) * cdelt1*cdelt1
-      syy = -0.5*( b*(c2+1) + a*(1-c2) ) * cdelt2*cdelt2
-      sxy = -(b-a)*s2 * cdelt1*cdelt2
-c
-      do j=1,n2
-        do i=1,n1
-          t = sxx*(i-iref)*(i-iref) + sxy*(i-iref)*(j-jref) +
-     *        syy*(j-jref)*(j-jref)
-          if(t.gt.-20)then
-            Data(i,j) = exp(t)
-          else
-            Data(i,j) = 0
-          endif
-        enddo
-      enddo
 c
       end
 c***********************************************************************
