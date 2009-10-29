@@ -5,6 +5,7 @@ c
 c  User callable routines are:
 c    CnvlIniF
 c    CnvlIniA
+c    CnvlIniG
 c    CnvlCopy
 c    CnvlCo
 c    CnvlA
@@ -20,7 +21,7 @@ c    rjs   1oct91 Changes to the CnvlCorr routine (renamed it CnvlCo
 c                 for a start.
 c    rjs  31oct94 Added CnvlExt, plus some comments.
 c
-c $Id: cnvl.for,v 1.2 2009/10/29 06:06:43 cal103 Exp $
+c $Id: cnvl.for,v 1.3 2009/10/29 06:09:34 cal103 Exp $
 
 c***********************************************************************
 c* CnvlIniF -- Ready a beam, from a file, for a convolution operation.
@@ -138,6 +139,98 @@ c
 c  All said and done. Release allocated memory, and return.
 c
       call MemFree(Trans,space,'r')
+      end
+
+c***********************************************************************
+c* CnvlIniG -- Construct a Gaussian beam for a convolution operation.
+c& mrc
+c: convolution,FFT
+c+
+      subroutine CnvlIniG (handle, n1, n2, ref1, ref2,
+     *                 bmaj, bmin, bpa, cdelt1, cdelt2)
+c
+      integer handle, n1, n2, ref1, ref2
+      real    bmaj, bmin, bpa
+      double precision cdelt1, cdelt2
+c
+c  This routine constructs the Fourier transform of a Gaussian beam
+c  pattern intended for use in convolution operations.  It computes the
+c  result directly, without doing an FFT, using the fact that the
+c  Fourier transform of a Gaussian is another Gaussian.  When the FWHM
+c  of the Gaussian convolution function is much less than the image cell
+c  spacing, it is important to do it this way rather than via CnvlIniA
+c  for which the beam may not be adequately sampled.  The result is
+c  stored in memory for which a handle is returned.
+c
+c  Input:
+c    n1,n2      Size of the beam.  Need not be powers of two.
+c    ref1,ref2  Central pixel of the beam.
+c    bmaj,bmin  Gaussian major and minor FWHM (radian).
+c    bpa        Gaussian position angle (deg).
+c    cdelt1     Map cell spacing (radian).
+c    cdelt2     Map cell spacing (radian).
+c  Output:
+c    handle     Handle to the transformed Gaussian.
+c--
+c-----------------------------------------------------------------------
+      include 'maxdim.h'
+      include 'mirconst.h'
+
+      integer CDat1, CDat2, i, i1, i2, k, n1d, n2d, space, Trans, xr, yr
+      real    amaj, amin, c2, dat(MAXBUF), fdelt1, fdelt2, fmaj, fmin,
+     *        r, s, s2, scl, sxx, syy, sxy, t
+
+      common dat
+c-----------------------------------------------------------------------
+c     Initalize.
+      call CnvlIn0(handle,n1,n2,n1d,n2d,space,
+     *    Trans,CDat1,CDat2,'s',ref1,ref2,xr,yr)
+      call MemFree (Trans, space, 'r')
+
+c     Parameters of the convolving Gaussian.
+      amaj = 4.0*log(2.0) / (bmaj*bmaj)
+      amin = 4.0*log(2.0) / (bmin*bmin)
+
+c     Parameters of the Fourier-transform of the convolving Gaussian.
+      fmaj = pi*pi / amaj
+      fmin = pi*pi / amin
+      scl  = pi / sqrt(amaj*amin)
+
+      c2  = cos(2.0*bpa*D2R)
+      s2  = sin(2.0*bpa*D2R)
+      sxx = 0.5 * (fmaj*(1.0 - c2) + fmin*(1.0 + c2))
+      syy = 0.5 * (fmin*(1.0 - c2) + fmaj*(1.0 + c2))
+      sxy = (fmaj-fmin)*s2
+
+c     Apply pixel spacing in the Fourier domain.
+      fdelt1 = 1.0 / (n1d * cdelt1)
+      fdelt2 = 1.0 / (n2d * cdelt2)
+      sxx = sxx * (fdelt1*fdelt1)
+      syy = syy * (fdelt2*fdelt2)
+      sxy = sxy * (fdelt1*fdelt2)
+      scl = scl * abs(fdelt1*fdelt2)
+
+c     Generate the Fourier transform of the convolving Gaussian noting
+c     that the array is transposed.
+      k = handle + 6
+      do i1 = 0, n1d/2
+        r = sxx*i1*i1
+        s = sxy*i1
+        do i2 = 0, n2d-1
+          i = i2
+          if (i.ge.n2d/2) i = i2 - n2d
+          t = r + (s + syy*i)*i
+
+          if (t.gt.20.0) then
+            dat(k) = 0.0
+          else
+            dat(k) = scl * exp(-t)
+          endif
+
+          k = k + 1
+        enddo
+      enddo
+
       end
 
 c***********************************************************************
