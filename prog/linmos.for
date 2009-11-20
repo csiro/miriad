@@ -9,54 +9,62 @@ c= linmos - Linear mosaicing of datacubes
 c& rjs
 c: map combination
 c+
-c	LINMOS is a MIRIAD task which performs a simple linear mosaicing of
-c	input cubes, to produce a single output cube. If only a single
-c	input cube is given, LINMOS essentially does primary beam correction
-c	on this input. When several, overlapping, inputs are given, then
-c	LINMOS combines the overlapping regions in such a way as to minimize
-c	the rms error in the output.
+c       LINMOS is a MIRIAD task which performs a simple linear mosaicing
+c       of input cubes, to produce a single output cube.  If only a
+c       single input cube is given, LINMOS essentially does primary beam
+c       correction on this input.  When several, overlapping, inputs are
+c       given, then LINMOS combines the overlapping regions in such a
+c       way as to minimize the rms error in the output.
 c
-c	To determine the primary beam of the telescope, LINMOS first checks
-c	the map header for the presence of the "pbtype" and then "pbfwhm"
-c	parameters. If present, LINMOS assumes the primary beam is the
-c	given type. If these parameters are missing, LINMOS checks if the
-c	telescope is one that it knows. If so, then the known form for the
-c	primary beam is used. See task "pbplot" to check LINMOS's primary
-c	beam models.
+c       To determine the primary beam of the telescope, LINMOS first
+c       checks the map header for the presence of the "pbtype" and then
+c       "pbfwhm" parameters.  If present, LINMOS assumes the primary
+c       beam is the given type.  If these parameters are missing, LINMOS
+c       checks if the telescope is one that it knows.  If so, then the
+c       known form for the primary beam is used. See task "pbplot" to
+c       check LINMOS's primary beam models.
 c@ in
-c	This gives the names of the input cubes.  Many cubes may be given.
-c	There is no default.  Inputs should generally be on the same grid
-c	system.  However, if they are not, linear interpolation is
-c	performed to regrid using the first image as the template.
-c	LINMOS's ability to do this is quite inferior to task REGRID.
-c	The intensity units of all the inputs, and the pixel size
-c	and alignment of the third dimension are assumed to be the same.
+c       This gives the names of the input cubes.  Many cubes may be
+c       given.  There is no default.  Inputs should generally be on the
+c       same grid system.  However, if they are not, linear
+c       interpolation is performed to regrid using the first image as
+c       the template.  LINMOS's ability to do this is quite inferior to
+c       task REGRID.  The intensity units of all the inputs, and the
+c       pixel size and alignment of the third dimension are assumed to
+c       be the same.
 c@ out
-c	The name of the output cube. No default. The center and pixel size
-c	of the first input image is used as the grid system of the output.
+c       The name of the output cube.  No default.  The center and pixel
+c       size of the first input image is used as the grid system of the
+c       output.
 c@ rms
-c	The rms noise levels in the input cubes. The default is determined
-c	from the input images. If this is not possible for an image,
-c	then the rms of the previous image is used. If no value could be
-c	determined for the first image, all images are given equal weight.
+c       RMS noise level in each of the input cubes.  If not specified,
+c       the value is taken from the 'rms' item in the input image header
+c       if that is available, and if not, then the rms of the previous
+c       image is used.  If no value could be determined for the first
+c       image, a warning is issued and ALL images are given equal weight
+c       by assigning an RMS of 1.0.
 c@ options
-c	Extra processing options. Several can be given, separated by
-c	commas. Minimum match is supported. Possible values are:
-c	  taper        By default, LINMOS fully corrects for primary
-c	               beam attenutation. This can cause excessive noise
-c	               amplification at the edge of the mosaiced field.
-c	               The `taper' option aims at achieving approximately
-c	               uniform noise across the image. This prevents full
-c	               primary beam correction at the edge of the mosaic.
-c	               See equation 2 in Sault, Staveley-Smith and Brouw,
-c	               A&AS, 120, 376 (1996) or use "options=gains" to see
-c	               the form of the tapering.
-c	  sensitivity  Rather than a mosaiced image, produce an image
-c	               giving the rms noise across the field.
-c	  gain         Rather than a mosaiced image, produce an image
-c	               giving the effective gain across the field. If
-c	               options=taper is used, this will be a smooth function.
-c	               Otherwise it will be 1 or 0 (blanked).
+c       Extra processing options.  Several can be given, separated by
+c       commas.  Minimum match is supported.  Possible values are:
+c         taper        By default, LINMOS fully corrects for primary
+c                      beam attenutation.  This can cause excessive
+c                      noise amplification at the edge of the mosaiced
+c                      field.  The `taper' option aims at achieving
+c                      approximately uniform noise across the image.
+c                      This prevents full primary beam correction at the
+c                      edge of the mosaic.  See equation 2 in Sault,
+c                      Staveley-Smith and Brouw, A&AS, 120, 376 (1996)
+c                      or use "options=gains" to see the form of the
+c                      tapering.
+c         sensitivity  Rather than a mosaiced image, produce an image
+c                      giving the RMS noise across the field.  This is
+c                      dependent on the RMS specified, either as an
+c                      input parameter or else as a header item (see
+c                      above).
+c         gain         Rather than a mosaiced image, produce an image
+c                      giving the effective gain across the field.  If
+c                      options=taper is used, this will be a smooth
+c                      function.  Otherwise it will be 1 or 0 (blanked).
 c--
 c
 c  History:
@@ -142,8 +150,8 @@ c
       character versan*80
 c-----------------------------------------------------------------------
       version = versan ('linmos',
-     :                  '$Revision: 1.5 $',
-     :                  '$Date: 2009/09/23 01:00:20 $')
+     :                  '$Revision: 1.6 $',
+     :                  '$Date: 2009/11/20 04:45:24 $')
 c
 c  Get the input parameters, and do some checking.
 c
@@ -198,13 +206,17 @@ c
      *    call bug('f','Input map is too big')
 
         if(i.eq.1)then
-          call ThingIni(tIn(i),nsize(1,i),ctype,crpix,crval,cdelt,
-     *                  blctrc(1,i),extent)
-          call rdhdi(tin(i),'naxis',naxis,3)
+          call ThingIni(tIn(1),nsize(1,1),ctype,crpix,crval,cdelt,
+     *                  blctrc(1,1),extent)
+          call rdhdi(tin(1),'naxis',naxis,3)
           naxis = min(naxis,4)
-          if(rms(i).eq.0)call rdhdr(tIn(i),'rms',rms(i),0.0)
-          defrms = rms(i).le.0
-          if(defrms)rms(i) = 1
+
+          if (rms(1).eq.0.0) call rdhdr(tIn(1),'rms',rms(1),0.0)
+          defrms = rms(1).le.0.0
+          if (defrms) then
+            call output('WARNING: Setting RMS to 1.0 for all images.')
+            rms(1) = 1.0
+          endif
         else
           call ThingChk(tIn(i),nsize(1,i),ctype,crpix,crval,cdelt,
      *                  exact,blctrc(1,i),extent)
