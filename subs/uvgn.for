@@ -871,6 +871,10 @@ c
 	complex cref(MAXBUF/2)
 	common cref
 c
+c  Externals.
+c
+	integer hsize
+c
 c  Get the dimensionality numbers.
 c
         n=max(1,nbpsols)
@@ -903,9 +907,13 @@ c
 	if(iostat.ne.0)call uvGnBug(iostat,'closing freqs table')
 c
 c  Read in the gains themselves now.
-c
+c 
 	call haccess(tno,item,'bandpass','read',iostat)
 	if(iostat.ne.0)call uvGnBug(iostat,'accessing bandpass table')
+        if (hsize(item).ne.8+n*ngains*nchan*8+nbpsols*8) 
+     *        call bug('f','Bandpass table size is incorrect. '//
+     *           'This happens when the inputs for mfcal and'//
+     *           ' gpcal are inconsistent')
         bptimes(1)=-1.e20
         bptimes(nbpsols+2)=1.e20
         off=8
