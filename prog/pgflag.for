@@ -274,6 +274,11 @@ c                 Added action on '?' to print out info about the number
 c                 of flagging actions made in total and on the current
 c                 baseline.
 c                 (version 1.4)
+c    vjm 09Dec09  Merge to mainline. Remove the eol characters. Add RCS tags.
+c
+c $Id: pgflag.for,v 1.3 2009/12/08 01:57:30 mci156 Exp $
+c
+c --------------------------------------------------------------------------
       implicit none
       include 'maxdim.h'
       include 'mirconst.h'
@@ -320,6 +325,10 @@ c Externals
 c
       integer pgopen
       logical uvDatOpn
+c      version = versan ('pgflag',
+c     :                  '$Revision: 1.3 $',
+c     :                  '$Date: 2009/12/08 01:57:30 $')
+
 c
 c Get user inputs
 c
