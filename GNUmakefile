@@ -2,7 +2,7 @@
 # GNUmakefile used to compile Miriad.
 #
 # Original: 2006/08/28, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.31 2009/09/23 02:32:25 cal103 Exp $
+# $Id: GNUmakefile,v 1.32 2009/12/10 23:22:21 cal103 Exp $
 #-----------------------------------------------------------------------------
 ifeq "$(MIR)" ""
   # Try to deduce basic Miriad environment variables.  Obviously this only
@@ -53,7 +53,7 @@ ifeq "$(MAKEMODE)" "system"
   # The following rules are for ATNF use only.
   ifdef MIRATNF
     # Files distributed separately.
-    MIRFTPS  := DISCLAIMER INSTALL.html README \
+    MIRFTPS  := DISCLAIMER INSTALL.html \
                 progguide.ps.gz progguide_US.ps.gz \
                 userguide.ps.gz userguide_US.ps.gz
 
