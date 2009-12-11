@@ -187,9 +187,11 @@ c       the beam size to prevent sources from artificially skewing the
 c       background estimates. This may require some experimentation,
 c       and 'options=normimg' may be useful in determining the
 c       effectiveness of a particular rmsbox size.
+c
 c       In the original implementation (options=oldsfind), it is the
-c       size (in pixels) of a box around each source within which the
-c       background rms is calculated.
+c       size (in pixels) of a box centred on each source within which
+c       the background rms is calculated.  Only pixels outside the "beam
+c       exclusion radius" (1.5 x BMAJ) are used in this calculation.
 c       Default is 20 pixels.
 c@ alpha
 c       This (real) number is the *percentage* of false *pixels* which can
@@ -554,7 +556,7 @@ c       cursor). This could be used as well as or instead of the current
 c       method. Think about two seperate options to indicate user's desire
 c       of which.
 c
-c  $Id: sfind.for,v 1.8 2009/09/23 01:00:20 cal103 Exp $
+c  $Id: sfind.for,v 1.9 2009/12/11 07:04:13 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -595,8 +597,8 @@ c-----------------------------------------------------------------------
       character versan*80, version*80
 c-----------------------------------------------------------------------
       version = versan( 'sfind',
-     :                  '$Revision: 1.8 $',
-     :                  '$Date: 2009/09/23 01:00:20 $')
+     :                  '$Revision: 1.9 $',
+     :                  '$Date: 2009/12/11 07:04:13 $')
 c
 c Get user inputs
 c
@@ -606,10 +608,6 @@ c
      +   grid, cut, rmsbox, alpha, xrms, nofit, asciiart, auto,
      +   negative, pbcor, oldsfind, sigmaimg, rmsimg, fdrimg, normimg,
      +   kvannot, fdrpeak, allpix, psfsize)
-      if (oldsfind) then
-        call output ('Running as Sfind: version 1.4, 09-Nov-98')
-        call output (' ')
-      end if
 c
 c Open log files
 c
@@ -1039,7 +1037,20 @@ c exist.
 c
       call BeamPar (lIn, k, bvol, bvolp, bmaj, bmin, bpa,
      +              bmajp, bminp, bpap, nobeam)
-c
+
+c Check that rmsbox is big enough.
+      write (line, '(a,f6.2,a)') 'Beam exclusion radius:', 1.5*bmajp,
+     +  ' pixels.'
+      call output (' ')
+      call output (line)
+
+      if (rmsbox/2.lt.(1.5*bmajp/sqrt(2.0))) then
+        call bug('f', 'rmsbox is contained within the beam ' //
+     +           'exclusion radius.')
+      else if (rmsbox/2.lt.(2.0*bmajp)) then
+        call bug('w', 'rmsbox is barely big enough.')
+      end if
+
 c Loop over all pixels, searching for bright pixels and moving the
 c cursor to that position.
 c
