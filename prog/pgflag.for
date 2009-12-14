@@ -151,8 +151,8 @@ c                        displayed points when deciding the colour
 c                        amplitude scale.
 c       ]                Set the colour amplitude scale from the current
 c                        selection region.
-c       ;                Lock the colour amplitude scale until it is reset
-c                        or fiddled.
+c       ;                Lock the colour amplitude scale until it is
+c                        reset or fiddled.
 c
 c     Displaying information:
 c       m                Display information about the sample
@@ -164,14 +164,15 @@ c                        is shown at the top left of the plot in the red
 c                        box.
 c       spacebar         Does the same thing as 'm', except it will show
 c                        the currently displayed value, which will be
-c                        different from the value displayed by 'm' if the
-c                        averages have been subtracted from the display.
+c                        different from the value displayed by 'm' if
+c                        the averages have been subtracted from the
+c                        display.
 c       M                Locate the sample with the maximum value on
 c                        the currently displayed baseline, and print
 c                        information about it into the controlling
 c                        terminal. Pressing it twice in succession will
-c                        make PGFLAG create a selection region of 20chans
-c                        and 20times centred on this sample.
+c                        make PGFLAG create a selection region of 20
+c                        chans and 20 times centred on this sample.
 c
 c@ vis
 c     Input visibility dataset to be flagged. No default.
@@ -196,14 +197,14 @@ c     is selected. For mode=``phase'', the phase is in degrees.
 c@ options
 c     Task enrichment parameters. Several can be given, separated by
 c     commas. Minimum match is used. Possible values are:
-c       selgen  Generate a file appropriate for selecting the bad
-c               data (via a ``select'' keyword). The output is two text
-c               files called ``blflag_flag.select'' (for flagging
-c               operations), and ``blflag_unflag.select'' (for unflagging
-c               operations). Unfortunately, since ``select'' does not
-c               support the use of a ``channel'' selection, this option
-c               is of limited use, but is supplied in case time-based
-c               selection is all that is required.
+c       selgen  Generate a file appropriate for selecting the bad data
+c               (via a 'select' keyword). The output is two text files
+c               called 'blflag_flag.select' (for flagging operations),
+c               and 'blflag_unflag.select' (for unflagging operations).
+c               Unfortunately, since 'select' does not support the use
+c               of a 'channel' selection, this option is of limited use,
+c               but is supplied in case time-based selection is all that
+c               is required.
 c       nosrc   Do not cause a break in the display when the source
 c               changes. Normally PGFLAG puts a gap in the display
 c               whenever the source changes.
@@ -274,12 +275,11 @@ c                 Added action on '?' to print out info about the number
 c                 of flagging actions made in total and on the current
 c                 baseline.
 c                 (version 1.4)
-c    vjm 09Dec09  Merge to mainline. Remove the eol characters. Add RCS tags.
+c    vjm 09Dec09  Merge to mainline. Remove the eol characters. Add RCS
+c                 tags.
 c
-c $Id: pgflag.for,v 1.3 2009/12/08 01:57:30 mci156 Exp $
-c
-c --------------------------------------------------------------------------
-      implicit none
+c $Id: pgflag.for,v 1.4 2009/12/14 23:50:36 cal103 Exp $
+c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
       include 'maxnax.h'
@@ -288,8 +288,7 @@ c
       integer MAXDAT,MAXTIME,MAXEDIT
       parameter(MAXDAT=5000000,MAXTIME=10000,MAXEDIT=5000)
 c
-      character version*(*)
-      parameter(version='PGFlag: version 1.4 09-Nov-09')
+      character versan*80, version*80
       character device*80,xaxis*12,yaxis*12,uvflags*12,val*16
       logical selgen,noapply
       integer npol,tno,i,j,length
@@ -325,9 +324,10 @@ c Externals
 c
       integer pgopen
       logical uvDatOpn
-c      version = versan ('pgflag',
-c     :                  '$Revision: 1.3 $',
-c     :                  '$Date: 2009/12/08 01:57:30 $')
+
+      version = versan ('pgflag',
+     :                  '$Revision: 1.4 $',
+     :                  '$Date: 2009/12/14 23:50:36 $')
 
 c
 c Get user inputs
@@ -344,13 +344,13 @@ c  Set the default polarisation type if needed.
 c
       call uvDatGti('npol',npol)
       if(npol.eq.0)call uvDatSet('stokes',0)
-c     
+c
 c     Open the input data.
-c     
+c
       if(.not.uvDatOpn(tno))call bug('f','Error opening input')
-c     
+c
 c     Open the plot device.
-c     
+c
       if(pgopen(device).ne.1)then
          call pgldev
          call bug('f','Unable to open PGPLOT device')
@@ -980,7 +980,7 @@ c
       else
          call output('PGFLAG aborted at user request.')
       endif
-c     
+c
 c Release the scratch file and memory.
 c
       call scrclose(lScr)
@@ -996,11 +996,10 @@ c
       call uvDatCls
 
       end
-c************************************************************************
+c***********************************************************************
       subroutine WriteFlags(bases,chans,times,flagval,nflags,tno,t1,
      *  day0,ntime,chanoff,chanw,selgen)
 c
-      implicit none
       include 'maxdim.h'
       integer nflags,ntime,tno,chanoff,chanw
       integer chans(2,nflags),times(2,nflags)
@@ -1235,14 +1234,13 @@ c     summary of flagging
       write(outline(len1(outline)+1:),
      * '(4x, ''Changed to good:'', I10 )') flags_badtogood
       call output(outline)
-      
+
 c
       end
-c************************************************************************
+c***********************************************************************
       subroutine LocateMax(iflag,nchan,ntime,valarray,chanoff,chanw,
      *     regwidth,makesel,points,day0,t1)
 c
-      implicit none
       integer nchan,ntime,chanoff,chanw,regwidth
       integer iflag(nchan,ntime,2),points(2,2)
       real valarray(nchan,ntime,2),t1(ntime)
@@ -1324,7 +1322,7 @@ c
 c      write(*,*) 'maximum value at',valarray(xloc,yloc,1),xloc,yloc
 c
       end
-c************************************************************************
+c***********************************************************************
       subroutine ApplyFlags(iflag,xdim,ydim,chans,times,bases,
      *  flagval,MAXEDIT,nflags,bl,some_unflagged)
 c
@@ -1355,7 +1353,6 @@ c  Output:
 c    some_unflagged  Status switch indicating whether there are
 c                    unflagged visibilites on this baseline.
 c-----------------------------------------------------------------------
-      implicit none
       integer i,j,k,aflags
 c
 c     Initialise the flags
@@ -1389,7 +1386,7 @@ c
       enddo
 c
       end
-c************************************************************************
+c***********************************************************************
       subroutine FlagData(points,a1,a2,mode,flag,
      *  unflag,undo,chans,times,bases,flagval,MAXEDIT,
      *  nflags,day0,t1,ntime,chanoff,chanw)
@@ -1443,7 +1440,6 @@ c             flagging action.
 c    nflags   The number of flagging edits now held in the chans,
 c             times, bases and flagval arrays.
 c-----------------------------------------------------------------------
-      implicit none
       integer minx,maxx,miny,maxy,i,j,tbl
       integer isave(5),time1,time2
       character flagstring*120,selectline*120
@@ -1546,7 +1542,7 @@ c     check that we have a full selection box
       endif
 c
       end
-c************************************************************************
+c***********************************************************************
       subroutine reset_points(points)
 c
       integer points(2,2)
@@ -1565,12 +1561,11 @@ c-----------------------------------------------------------------------
       points(2,2)=-1
 c
       end
-c************************************************************************
+c***********************************************************************
       subroutine MakeMeasurement(iflag,array,nchan,ntime,curs_x,curs_y,
      *  day0,t1,meas_channel,meas_frequency,meas_time,meas_amplitude,
      *  chanoff,chanw,cfreq,meastype)
 c
-      implicit none
       integer nchan,ntime,chanoff,chanw,meastype
       real curs_x,curs_y
       real t1(ntime),array(nchan,ntime,2),thist
@@ -1611,7 +1606,7 @@ c    meas_time       The real UT date and time of the sample.
 c    meas_amplitude  The amplitude (or phase) of the sample.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
-c     
+c
 c     check we have a valid time
       if ((t1(int(curs_y)).ge.0.0).and.(t1(int(curs_y)).le.1.0)) then
          meas_channel=chanoff+int(curs_x)*chanw
@@ -1640,14 +1635,13 @@ c     check we have a valid time
       endif
 c
       end
-c************************************************************************
+c***********************************************************************
       subroutine MakePlot(iflag,array,nchan,ntime,bl,curr_zooms,
      *  meas_channel,meas_frequency,meas_time,meas_amplitude,plot_top,
      *  plot_averages,plot_main,points,plot_points,yaxis,chanoff,chanw,
      *  subavgc,subavgt,minval,maxval,fiddle_min,fiddle_max,
      *  use_fiddle,colour_window,colour_region,fiddle_active)
 c
-      implicit none
       integer nchan,ntime,bl,chanoff,chanw
       integer iflag(nchan,ntime,2)
       real array(nchan,ntime,2)
@@ -1909,7 +1903,7 @@ c
      *  colour_region,xcolumnbuffer,ylinespacing,fiddle_active)
 c
       end
-c************************************************************************
+c***********************************************************************
       subroutine paint_plot(xleft,xright,ybot,ytop,ybuffer,xbuffer,
      *  xdim,ydim,minval,maxval,arrowbox_frac_x,arrowbox_frac_y,
      *  colpos,tr,titles,curr_zooms,valarray,n_columns,n_toplines,
@@ -1918,7 +1912,6 @@ c************************************************************************
      *  subavgt,fiddle_min,fiddle_max,use_fiddle,colour_window,
      *  colour_region,xcolumnbuffer,ylinespacing,fiddle_active)
 c
-      implicit none
       real xleft,xright,ybot,ytop,ybuffer,xbuffer
       integer xdim,ydim,n_columns,n_toplines,chanoff,chanw
       integer iflag(xdim,ydim,2)
@@ -2107,9 +2100,9 @@ c     can we move right?
       call compute_average_spectrum(valarray,xdim,ydim,xaverage,
      *     yaverage,average_box_width,iflag,dxaverage,dyaverage)
       if (plot_averages) then
-c     
+c
 c     Draw the average spectra - on the bottom first
-c     
+c
          call pgsci(1)
          call pgsvp(xleft,xright,0.0,ybot-arrowbox_frac_y)
          call pgswin(real(curr_zooms(1,1)),real(curr_zooms(1,2)),
@@ -2154,7 +2147,7 @@ c     and then on the right
       if (plot_main) then
 c
 c     Now the main plot
-c     
+c
          call pgsci(1)
          call pgswin(real(chanoff+curr_zooms(1,1)*chanw),
      *     real(chanoff+curr_zooms(1,2)*chanw),
@@ -2204,11 +2197,10 @@ c     connect with a box if we have both points
       endif
 c
       end
-c************************************************************************
+c***********************************************************************
       subroutine draw_waterfall(valarray,xdim,ydim,curr_zooms,maxval,
      *  minval,tr)
 c
-      implicit none
       integer xdim,ydim,curr_zooms(2,2)
       real maxval,minval,tr(6)
       real valarray(xdim,ydim,2)
@@ -2235,13 +2227,12 @@ c-----------------------------------------------------------------------
      *     minval,tr)
 c
       end
-c************************************************************************
+c***********************************************************************
       subroutine mask_and_range(iflag,valarray,xdim,ydim,subavgc,
      *     subavgt,minval,maxval,fiddle_min,fiddle_max,use_fiddle,
      *     curr_zooms,colour_window,xaverage,yaverage,abw,points,
      *     colour_region)
 c
-      implicit none
       integer xdim,ydim,curr_zooms(2,2),abw
       real minval,maxval,fiddle_min,fiddle_max
       logical subavgc,subavgt,use_fiddle,colour_window,colour_region
@@ -2381,10 +2372,9 @@ c     check that our min/max values are reasonable
       endif
 c
       end
-c************************************************************************
+c***********************************************************************
       subroutine set_plot_main(xleft,xright,ybot,ytop,curr_zooms)
 c
-      implicit none
       real xleft,xright,ybot,ytop
       integer curr_zooms(2,2)
 c
@@ -2393,12 +2383,11 @@ c
      *  real(curr_zooms(2,1)),real(curr_zooms(2,2)))
 c
       end
-c************************************************************************
+c***********************************************************************
       subroutine compute_average_spectrum(valarray,xdim,ydim,
      *  xaverage,yaverage,average_box_width,iflag,dxaverage,
      *  dyaverage)
 c
-      implicit none
       integer xdim,ydim,average_box_width
       real xaverage(xdim,average_box_width)
       real yaverage(average_box_width,ydim)
@@ -2421,7 +2410,7 @@ c    iflag              Array of flags for the currently displayed
 c                       baseline.
 c  Output:
 c    xaverage           The average channel values of the original
-c                       values in a format suitable for displaying as 
+c                       values in a format suitable for displaying as
 c                       a waterfall plot.
 c    yaverage           The average time values of the original values
 c                       in a format suitable for displaying as a
@@ -2491,10 +2480,9 @@ c     copy this value a few times
       enddo
 c
       end
-c************************************************************************
+c***********************************************************************
       subroutine set_plot_top_info(ytop,ybuffer,xrange,yrange,erase)
 c
-      implicit none
       real ytop,ybuffer
       real xrange,yrange
       logical erase
@@ -2515,11 +2503,10 @@ c
       call pgbox('BC',0.0,0,'BC',0.0,0)
 c
       end
-c************************************************************************
+c***********************************************************************
       subroutine Gridit(iflag,array,nchan,ntime,rqbl,day0,
      *                  lScr,nvis,t1,firstread,some_unflagged)
 c
-      implicit none
       integer nchan,ntime,lScr,nvis,rqbl
       logical firstread,some_unflagged
       integer iflag(nchan,ntime,2)
@@ -2575,54 +2562,51 @@ c
       enddo
 c
       end
-c************************************************************************
-	subroutine GetAxis(xaxis,yaxis)
+c***********************************************************************
+      subroutine GetAxis(xaxis,yaxis)
 c
-	implicit none
-	character xaxis*(*),yaxis*(*)
-c------------------------------------------------------------------------
-	integer NAX
-	parameter(NAX=2)
-	integer n
-	character axes(3)*12
-	data axes/'amplitude   ','phase       ',
-     *		  'time        '/
-c	call keymatch('axis',NAX,axes,1,xaxis,n)
-	xaxis = axes(3)
-	call keymatch('mode',NAX,axes,1,yaxis,n)
-	if(n.eq.0)yaxis = axes(1)
-	end
-c************************************************************************
-	subroutine GetOpt(selgen,noapply,nosrc,uvflags)
+      character xaxis*(*),yaxis*(*)
+c-----------------------------------------------------------------------
+      integer NAX
+      parameter(NAX=2)
+      integer n
+      character axes(3)*12
+      data axes/'amplitude   ','phase       ',
+     *          'time        '/
+c      call keymatch('axis',NAX,axes,1,xaxis,n)
+      xaxis = axes(3)
+      call keymatch('mode',NAX,axes,1,yaxis,n)
+      if(n.eq.0)yaxis = axes(1)
+      end
+c***********************************************************************
+      subroutine GetOpt(selgen,noapply,nosrc,uvflags)
 c
-	implicit none
-	logical selgen,noapply,nosrc
-	character uvflags*(*)
+      logical selgen,noapply,nosrc
+      character uvflags*(*)
 c
 c  Get extra processing options.
-c------------------------------------------------------------------------
-	integer NOPTS
-	parameter(NOPTS=6)
-	logical present(NOPTS)
-	character opts(NOPTS)*8
-	data opts/'nocal   ','nopass  ','nopol   ',
-     *		  'selgen  ','noapply ','nosrc   '/
+c-----------------------------------------------------------------------
+      integer NOPTS
+      parameter(NOPTS=6)
+      logical present(NOPTS)
+      character opts(NOPTS)*8
+      data opts/'nocal   ','nopass  ','nopol   ',
+     *          'selgen  ','noapply ','nosrc   '/
 c
-	call options('options',opts,present,NOPTS)
+      call options('options',opts,present,NOPTS)
 c
-	selgen = present(4)
-	noapply= present(5)
-        nosrc  = present(6)
-	uvflags = 'sdlwb'
-	if(.not.present(1))uvflags(6:6) = 'c'
-	if(.not.present(2))uvflags(7:7) = 'f'
-	if(.not.present(3))uvflags(8:8) = 'e'
-	end
-c************************************************************************
+      selgen = present(4)
+      noapply= present(5)
+      nosrc  = present(6)
+      uvflags = 'sdlwb'
+      if(.not.present(1))uvflags(6:6) = 'c'
+      if(.not.present(2))uvflags(7:7) = 'f'
+      if(.not.present(3))uvflags(8:8) = 'e'
+      end
+c***********************************************************************
       subroutine GetDat(tno,xaxis,yaxis,present,maxbase1,xdat,ydat,
      *                  bldat,timedat,ndat,MAXDAT,ant1,ant2)
 c
-      implicit none
       integer tno,maxbase1,MAXDAT,ndat,ant1,ant2
       integer bldat(MAXDAT)
       logical present(maxbase1)
@@ -2633,21 +2617,21 @@ c
       include 'maxdim.h'
       double precision TTOL
       parameter(TTOL=1d0/86400d0)
-c     
+c
       logical flags(MAXCHAN),ok
       complex data(MAXCHAN)
       complex corr(MAXBASE)
       double precision preamble(4),time,time0,tprev,lst,ra
       real uvdist2(MAXBASE),var(MAXBASE),temp
       integer i,n,bl,i1,i2,nants,npnt(MAXBASE),mbase,nchan
-c     
+c
 c     Miscellaneous initialisation.
-c     
+c
       mbase = min(MAXBASE,maxbase1)
       do i=1,MAXBASE
          present(i) = .false.
       enddo
-c     
+c
       do i=1,mbase
          npnt(i)    = 0
          uvdist2(i) = 0
@@ -2655,9 +2639,9 @@ c
          var(i) = 0
       enddo
       ndat = 0
-c     
+c
 c     Lets get going.
-c     
+c
       call output('Reading the data ...')
       call uvDatRd(preamble,data,flags,MAXCHAN,nchan)
       if(nchan.eq.0)call bug('f','No visibility data found')
@@ -2707,248 +2691,239 @@ c               call output(yaxis)
                nants = max(nants,i1,i2)
             endif
          endif
-         call uvDatRd(preamble,data,flags,MAXCHAN,nchan)	  
+         call uvDatRd(preamble,data,flags,MAXCHAN,nchan)
       enddo
-c     
+c
       if(nants.gt.0)
      *     call IntFlush(nants,time,uvdist2,var,
      *     corr,xaxis,yaxis,npnt,
      *     time0,present,mbase,xdat,ydat,timedat,bldat,ndat,MAXDAT)
-c     
+c
       end
-c************************************************************************
-	subroutine IntFlush(nants,time,uvdist2,var,
-     *	  corr,xaxis,yaxis,npnt,
-     *	  time0,present,MAXBASE,xdat,ydat,timedat,bldat,ndat,MAXDAT)
+c***********************************************************************
+      subroutine IntFlush(nants,time,uvdist2,var, corr,xaxis,yaxis,npnt,
+     *    time0,present,MAXBASE,xdat,ydat,timedat,bldat,ndat,MAXDAT)
 c
-	implicit none
-	integer MAXBASE,MAXDAT,nants,npnt(MAXBASE),bldat(MAXDAT),ndat
-	double precision time,time0,timedat(MAXDAT)
-	real uvdist2(MAXBASE),var(MAXBASE),xdat(MAXDAT),ydat(MAXDAT)
-	complex corr(MAXBASE)
-	logical present(MAXBASE)
-	character xaxis*(*),yaxis*(*)
+      integer MAXBASE,MAXDAT,nants,npnt(MAXBASE),bldat(MAXDAT),ndat
+      double precision time,time0,timedat(MAXDAT)
+      real uvdist2(MAXBASE),var(MAXBASE),xdat(MAXDAT),ydat(MAXDAT)
+      complex corr(MAXBASE)
+      logical present(MAXBASE)
+      character xaxis*(*),yaxis*(*)
 c
-c------------------------------------------------------------------------
-	integer i,j,k
+c-----------------------------------------------------------------------
+      integer i,j,k
 c
 c  Externals.
 c
-	real GetVal
+      real GetVal
 c
 c        call output(xaxis)
 c        call output(yaxis)
-	k = 0
-	do j=1,nants
-	  do i=1,j
-	    k = k + 1
-	    if(npnt(k).gt.0)then
-	      ndat = ndat + 1
-	      if(ndat.gt.MAXDAT)call bug('f','Too many points')
+      k = 0
+      do j=1,nants
+        do i=1,j
+          k = k + 1
+          if(npnt(k).gt.0)then
+            ndat = ndat + 1
+            if(ndat.gt.MAXDAT)call bug('f','Too many points')
 c              call output(xaxis)
-	      xdat(ndat) = GetVal(xaxis,corr(k),
-     *		npnt(k),time,time0)
+            xdat(ndat) = GetVal(xaxis,corr(k), npnt(k),time,time0)
 c              call output(yaxis)
-	      ydat(ndat) = GetVal(yaxis,corr(k),
-     *		npnt(k),time,time0)
-	      bldat(ndat) = k
-	      timedat(ndat) = time
-	      present(k) = .true.
-	      npnt(k) = 0
-	      uvdist2(k) = 0
-	      var(k) = 0
-	      corr(k) = 0
-	    endif
-	  enddo
-	enddo
+            ydat(ndat) = GetVal(yaxis,corr(k), npnt(k),time,time0)
+            bldat(ndat) = k
+            timedat(ndat) = time
+            present(k) = .true.
+            npnt(k) = 0
+            uvdist2(k) = 0
+            var(k) = 0
+            corr(k) = 0
+          endif
+        enddo
+      enddo
 c
-	end
-c************************************************************************
-	real function GetVal(axis,corr,npnt,
-     *		time,time0)
+      end
+c***********************************************************************
+      real function GetVal(axis,corr,npnt, time,time0)
 c
-	implicit none
-	character axis*(*)
-	complex corr
-	double precision time,time0
-	integer npnt
-c------------------------------------------------------------------------
-	include 'mirconst.h'
-	complex data
+      character axis*(*)
+      complex corr
+      double precision time,time0
+      integer npnt
+c-----------------------------------------------------------------------
+      include 'mirconst.h'
+      complex data
 c
-        data = corr/npnt
+      data = corr/npnt
 c
-c        call output(axis)
-	if(axis.eq.'amplitude')then
-	  GetVal = abs(data)
-	else if(axis.eq.'phase')then
-	  GetVal = 180/pi * atan2(aimag(data),real(data))
-	else if(axis.eq.'time')then
-	  GetVal = 86400*(time - time0)
-	else
-	  call bug('f','I should never get here')
-	endif
-	end
-c************************************************************************
-	subroutine flagchk(tno)
+c      call output(axis)
+      if(axis.eq.'amplitude')then
+        GetVal = abs(data)
+      else if(axis.eq.'phase')then
+        GetVal = 180/pi * atan2(aimag(data),real(data))
+      else if(axis.eq.'time')then
+        GetVal = 86400*(time - time0)
+      else
+        call bug('f','I should never get here')
+      endif
+      end
+c***********************************************************************
+      subroutine flagchk(tno)
 c
-	implicit none
-	integer tno
+      integer tno
 c
 c  Check that the user's linetype is not going to cause the flagging
 c  routine to vomit when the flagging is applied.
 c
-c------------------------------------------------------------------------
-	integer CHANNEL,WIDE
-	parameter(CHANNEL=1,WIDE=2)
-	double precision line(6)
+c-----------------------------------------------------------------------
+      integer CHANNEL,WIDE
+      parameter(CHANNEL=1,WIDE=2)
+      double precision line(6)
 c
-	call uvinfo(tno,'line',line)
-	if(nint(line(1)).ne.CHANNEL.and.nint(line(1)).ne.WIDE)
-     *	  call bug('f','Can only flag "channel" or "wide" linetypes')
-	if(nint(line(4)).ne.1)
-     *	  call bug('f','Cannot flag when the linetype width is not 1')
+      call uvinfo(tno,'line',line)
+      if(nint(line(1)).ne.CHANNEL.and.nint(line(1)).ne.WIDE)
+     *  call bug('f','Can only flag "channel" or "wide" linetypes')
+      if(nint(line(4)).ne.1)
+     *  call bug('f','Cannot flag when the linetype width is not 1')
 c
-	end
+      end
 c***********************************************************************
-	subroutine CopyDat(lIn,lScr,apri,nchan,time,MAXTIME,ntime,
-     *		day0,ttol,blpres,nbase,nvis,chanoff,chanw,nosrc)
+      subroutine CopyDat(lIn,lScr,apri,nchan,time,MAXTIME,ntime,
+     *  day0,ttol,blpres,nbase,nvis,chanoff,chanw,nosrc)
 c
-        implicit none
-	integer lIn,lScr,nchan,maxtime,ntime,nbase,nvis,chanoff,chanw
-	character apri*1
-	real time(maxtime),ttol
-	double precision day0
-	logical blpres(nbase),nosrc
+      integer lIn,lScr,nchan,maxtime,ntime,nbase,nvis,chanoff,chanw
+      character apri*1
+      real time(maxtime),ttol
+      double precision day0
+      logical blpres(nbase),nosrc
 c
 c  Copy the data to a scratch file.
 c
 c  Input:
-c    lIn	Handle of the input visibility dataset.
-c    lScr	Handle of the output scratch file.
-c    apri	Sort of quantity to display.
-c    maxtime	Dimension of time array.
-c    ttol	Time tolerance.
-c    nbase	Maximum number of baselines.
+c    lIn        Handle of the input visibility dataset.
+c    lScr       Handle of the output scratch file.
+c    apri       Sort of quantity to display.
+c    maxtime    Dimension of time array.
+c    ttol       Time tolerance.
+c    nbase      Maximum number of baselines.
 c    nosrc      Do not cause a gap when the source changes.
 c  Output:
-c    blpres	Indicates whether a particular baseline is present.
-c    day0	Base time.
-c    time	The time of each integration.
-c    nvis	Number of visibilities.
-c    ntime	Number of times.
-c    nchan	Number of channels.
-c    chanoff	Offset to add to channel numbers to get true channel
+c    blpres     Indicates whether a particular baseline is present.
+c    day0       Base time.
+c    time       The time of each integration.
+c    nvis       Number of visibilities.
+c    ntime      Number of times.
+c    nchan      Number of channels.
+c    chanoff    Offset to add to channel numbers to get true channel
 c               numbers.
-c    chanw	Width of channel specified in linetype
+c    chanw      Width of channel specified in linetype
 c-----------------------------------------------------------------------
-	include 'maxdim.h'
-	logical flags(MAXCHAN),newsrc
-	complex data(MAXCHAN)
-	double precision preamble(4),line(6),day1
-	real buf(2*MAXCHAN+3),t,tprev,maxgap
-	logical torder
-	integer vsrc,nread,length,offset,ant1,ant2,i,bl,i0
+      include 'maxdim.h'
+      logical flags(MAXCHAN),newsrc
+      complex data(MAXCHAN)
+      double precision preamble(4),line(6),day1
+      real buf(2*MAXCHAN+3),t,tprev,maxgap
+      logical torder
+      integer vsrc,nread,length,offset,ant1,ant2,i,bl,i0
 c
 c  Externals.
 c
-	logical uvvarupd
-	real ctoapri
+      logical uvvarupd
+      real ctoapri
 c
 c  Initialise the array to keep track of what baselines are present.
 c
-	do i=1,nbase
-	  blpres(i) = .false.
-	enddo
+      do i=1,nbase
+        blpres(i) = .false.
+      enddo
 c
 c  Whenever the source changes, cause a break point.
 c
-	call uvVarini(lIn,vsrc)
-	call uvVarSet(vsrc,'source')
+      call uvVarini(lIn,vsrc)
+      call uvVarSet(vsrc,'source')
 c
-	call uvread(lIn,preamble,data,flags,MAXCHAN,nchan)
-	if (nchan .eq. 0) call bug('f', 'No valid data found.')
-	call flagchk(lIn)
-	call uvinfo(lIn,'line',line)
-	call uvrdvrr(lIn,'inttime',maxgap,35.0)
-	maxgap = max(3.5*maxgap,50.0)*ttol
-	chanoff = nint(line(3)) - 1
-	chanw   = nint(line(4))
-	day0 = nint(preamble(3)-1) + 0.5d0
-	tprev = -1
-	length = 2*nchan + 3
-	offset = 0
-	ntime = 0
-	nread = nchan
-	torder = .true.
-	dowhile(nread.eq.nchan)
-	  call basant(preamble(4),ant1,ant2)
-	  bl = ((ant2-1)*ant2)/2 + ant1
-	  t = preamble(3) - day0
-	  if(t.lt.0)then
-	    day1 = nint(preamble(3)-1) + 0.5d0
-	    do i=1,ntime
-	      if(time(i).gt.-1)time(i) = time(i) + day0 - day1
-	    enddo
-	    tprev = tprev + day0 - day1
-	    t = t + day0 - day1
-	    day0 = day1
-	  endif
-	  if(bl.gt.0.and.bl.lt.nbase)then
-	    if(abs(t-tprev).gt.ttol/2.0)then
-	      if(t.lt.tprev)torder = .false.
-	      if(nosrc)then
-	        newsrc = .false.
-	      else
-	        newsrc = uvVarUpd(vsrc)
-	      endif
-	      if(ntime.gt.0.and.
-     *	        (newsrc.or.t-tprev.gt.maxgap.or.t.lt.tprev))then
-	        if(ntime.ge.MAXTIME)
-     *	          call bug('f','Too many times for me')
-	        ntime = ntime + 1
-	        time(ntime) = -2
-	      endif
-	      if(ntime.ge.MAXTIME)call bug('f','Too many times for me')
-	      ntime = ntime + 1
-	      time(ntime) = t
-	      tprev = t
-	    endif
-	    blpres(bl) = .true.
+      call uvread(lIn,preamble,data,flags,MAXCHAN,nchan)
+      if (nchan .eq. 0) call bug('f', 'No valid data found.')
+      call flagchk(lIn)
+      call uvinfo(lIn,'line',line)
+      call uvrdvrr(lIn,'inttime',maxgap,35.0)
+      maxgap = max(3.5*maxgap,50.0)*ttol
+      chanoff = nint(line(3)) - 1
+      chanw   = nint(line(4))
+      day0 = nint(preamble(3)-1) + 0.5d0
+      tprev = -1
+      length = 2*nchan + 3
+      offset = 0
+      ntime = 0
+      nread = nchan
+      torder = .true.
+      dowhile(nread.eq.nchan)
+        call basant(preamble(4),ant1,ant2)
+        bl = ((ant2-1)*ant2)/2 + ant1
+        t = preamble(3) - day0
+        if(t.lt.0)then
+          day1 = nint(preamble(3)-1) + 0.5d0
+          do i=1,ntime
+            if(time(i).gt.-1)time(i) = time(i) + day0 - day1
+          enddo
+          tprev = tprev + day0 - day1
+          t = t + day0 - day1
+          day0 = day1
+        endif
+        if(bl.gt.0.and.bl.lt.nbase)then
+          if(abs(t-tprev).gt.ttol/2.0)then
+            if(t.lt.tprev)torder = .false.
+            if(nosrc)then
+              newsrc = .false.
+            else
+              newsrc = uvVarUpd(vsrc)
+            endif
+            if(ntime.gt.0.and.
+     *        (newsrc.or.t-tprev.gt.maxgap.or.t.lt.tprev))then
+              if(ntime.ge.MAXTIME)
+     *            call bug('f','Too many times for me')
+              ntime = ntime + 1
+              time(ntime) = -2
+            endif
+            if(ntime.ge.MAXTIME)call bug('f','Too many times for me')
+            ntime = ntime + 1
+            time(ntime) = t
+            tprev = t
+          endif
+          blpres(bl) = .true.
 c
 c  Write the data to a scratch file (if one exists).
 c
-	    buf(1) = bl
-	    buf(2) = t
-	    buf(3) = day0
-	    i0 = 3
-	    do i=1,nchan
-	      buf(i0+1) = ctoapri(data(i), apri)
-	      buf(i0+2) = 0
-	      if(flags(i))buf(i0+2) = 1
-	      i0 = i0 + 2
-	    enddo
-	    call scrwrite(lScr,buf,offset,length)
+          buf(1) = bl
+          buf(2) = t
+          buf(3) = day0
+          i0 = 3
+          do i=1,nchan
+            buf(i0+1) = ctoapri(data(i), apri)
+            buf(i0+2) = 0
+            if(flags(i))buf(i0+2) = 1
+            i0 = i0 + 2
+          enddo
+          call scrwrite(lScr,buf,offset,length)
 c
-	    offset = offset + length
-	  endif
-	  call uvread(lIn,preamble,data,flags,MAXCHAN,nread)
-	enddo
+          offset = offset + length
+        endif
+        call uvread(lIn,preamble,data,flags,MAXCHAN,nread)
+      enddo
 c
-	if(.not.torder)
+      if(.not.torder)
      *    call bug('w','Display will not be in strict time order')
-	if(nread.ne.0)call bug('f',
-     *	  'Number of channels changed while reading the data')
-	if(ntime.eq.0)call bug('f','No data found')
-	if(time(ntime).lt.-1) ntime = ntime - 1
-	if(ntime.eq.0)call bug('f','No data found')
+      if(nread.ne.0)call bug('f',
+     *  'Number of channels changed while reading the data')
+      if(ntime.eq.0)call bug('f','No data found')
+      if(time(ntime).lt.-1) ntime = ntime - 1
+      if(ntime.eq.0)call bug('f','No data found')
 c
-	nvis = offset / length
+      nvis = offset / length
 c
-	end
+      end
 c***********************************************************************
       real function ctoapri(data, apri)
-      implicit none
       complex data
       character apri*(*)
 c
@@ -2984,7 +2959,6 @@ c
 c***********************************************************************
       subroutine julian_to_date(julian,day,month,year,ierr)
 c
-      implicit none
       integer igreg
       parameter(igreg=2299161)
       integer julian
@@ -3023,20 +2997,20 @@ c
       if (iyear.le.0) iyear = iyear - 1
 c
 c     Assign output values
-c     
+c
       year=iyear
       month=imonth
       day=iday
 
       end
 c***********************************************************************
-	subroutine FmtCmd(string,isave,t1,t2,chanoff,chanw,day0,
+      subroutine FmtCmd(string,isave,t1,t2,chanoff,chanw,day0,
      *    selectline)
 c
-	character string*(*),selectline*(*)
-	integer isave(5),chanoff,chanw
-	real t1,t2
-        double precision day0
+      character string*(*),selectline*(*)
+      integer isave(5),chanoff,chanw
+      real t1,t2
+      double precision day0
 c
 c  Nicely format an editting instruction.
 c
@@ -3053,107 +3027,107 @@ c     chanoff   the channel offset from the line command
 c     chanw     the channel width from the line command
 c     day0      the start of the day
 c  Output:
-c    string	The formatted command.
+c    string     The formatted command.
 c    selectline The formatted command in select keyword format
 c-----------------------------------------------------------------------
-	include 'mirconst.h'
-        include 'maxdim.h'
-	integer chan1,chan2,l,hour,minute,i,j,tbl,ls
-        integer day,month,year,ierr,startday
-        real second,tet
-	character time1*18,time2*18,mon*3
-	character flagval*4,baseflag*30,selectant*13
+      include 'mirconst.h'
+      include 'maxdim.h'
+      integer chan1,chan2,l,hour,minute,i,j,tbl,ls
+      integer day,month,year,ierr,startday
+      real second,tet
+      character time1*18,time2*18,mon*3
+      character flagval*4,baseflag*30,selectant*13
 c
 c  Externals.
 c
-	character itoaf*8
-	integer len1
+      character itoaf*8
+      integer len1
 c
-        if (isave(1).eq.1) then
-           do i=1,MAXANT
-              do j=i,MAXANT
-                 tbl=((j-1)*j)/2+i
-                 if (tbl.eq.isave(2)) then
-                    write(baseflag,'(A,I3,A,I3)') 'baseline',
-     *                   i,'-',j
-                    write(selectant,'(A,I3,A,I3,A)') 'ant(',i,')(',
-     *                   j,')'
-                    exit
-                 endif
-              enddo
-           enddo
-        elseif ((isave(1).eq.2).or.(isave(1).eq.3)) then
-           write(baseflag,'(A,I3)') 'all baselines with antenna',
-     *          isave(2)
-           write(selectant,'(A,I3,A)') 'ant(',isave(2),')'
-        elseif (isave(1).eq.4) then
-           baseflag='all baselines'
-           selectant=' '
-        endif
-        if (isave(5).eq.1) then
-           flagval='GOOD'
-        else
-           flagval='BAD'
-        endif
-        startday=int(day0+real(int(t1)))+1
-        call julian_to_date(startday,day,month,year,ierr)
-        year=year-1900
-        if (year.gt.100) then
-           year=year-100
-        endif
-        call monthstring(month,mon)
-        tet=t1*24.0
-        hour=int(tet)
-        tet=(tet-real(hour))*60.0
-        minute=int(tet)
-        tet=(tet-real(minute))*60.0
-        second=tet
-        write(time1,'(I2.2,A3,I2.2,A1,I2.2,A1,I2.2,A1,F4.1)')
-     *    year,mon,day,':',hour,':',minute,':',second
-        startday=int(day0+real(int(t1)))+1
-        call julian_to_date(startday,day,month,year,ierr)
-        year=year-1900
-        if (year.gt.100) then
-           year=year-100
-        endif
-        call monthstring(month,mon)
-        tet=t2*24.0
-        hour=int(tet)
-        tet=(tet-real(hour))*60.0
-        minute=int(tet)
-        tet=(tet-real(minute))*60.0
-        second=tet
-        write(time2,'(I2.2,A3,I2.2,A1,I2.2,A1,I2.2,A1,F4.1)') 
-     *    year,mon,day,':',hour,':',minute,':',second
-        if (time1(15:15).eq.' ') time1(15:15)='0'
-        if (time2(15:15).eq.' ') time2(15:15)='0'
-        selectline='time('//time1
-        ls=len1(selectline)
-        selectline(ls+1:)=','//time2
-        ls=len1(selectline)
-        selectline(ls+1:)=')'
-        ls=len1(selectline)
-        chan1=chanoff+isave(3)*chanw
-        chan2=chanoff+isave(4)*chanw
-        selectline(ls+1:)=',chan('//itoaf(chan1)
-        ls=len1(selectline)
-        selectline(ls+1:)=','//itoaf(chan2)
-        ls=len1(selectline)
-        selectline(ls+1:)=')'
-        ls=len1(selectline)
-        if (selectant.ne.' ') then
-           selectline(ls+1:)=','//selectant
-        endif
-        string='Changing times '//time1//' to '//time2//
-     *    ', channels '//itoaf(chan1)
-        l=len1(string)
-        string(l+1:)=' to '//itoaf(chan2)
-        l=len1(string)
-        string(l+1:)=' on '//baseflag
-        l=len1(string)
-        string(l+1:)=' to '//flagval
+      if (isave(1).eq.1) then
+         do i=1,MAXANT
+            do j=i,MAXANT
+               tbl=((j-1)*j)/2+i
+               if (tbl.eq.isave(2)) then
+                  write(baseflag,'(A,I3,A,I3)') 'baseline',
+     *                 i,'-',j
+                  write(selectant,'(A,I3,A,I3,A)') 'ant(',i,')(',
+     *                 j,')'
+                  exit
+               endif
+            enddo
+         enddo
+      elseif ((isave(1).eq.2).or.(isave(1).eq.3)) then
+         write(baseflag,'(A,I3)') 'all baselines with antenna',
+     *        isave(2)
+         write(selectant,'(A,I3,A)') 'ant(',isave(2),')'
+      elseif (isave(1).eq.4) then
+         baseflag='all baselines'
+         selectant=' '
+      endif
+      if (isave(5).eq.1) then
+         flagval='GOOD'
+      else
+         flagval='BAD'
+      endif
+      startday=int(day0+real(int(t1)))+1
+      call julian_to_date(startday,day,month,year,ierr)
+      year=year-1900
+      if (year.gt.100) then
+         year=year-100
+      endif
+      call monthstring(month,mon)
+      tet=t1*24.0
+      hour=int(tet)
+      tet=(tet-real(hour))*60.0
+      minute=int(tet)
+      tet=(tet-real(minute))*60.0
+      second=tet
+      write(time1,'(I2.2,A3,I2.2,A1,I2.2,A1,I2.2,A1,F4.1)')
+     *  year,mon,day,':',hour,':',minute,':',second
+      startday=int(day0+real(int(t1)))+1
+      call julian_to_date(startday,day,month,year,ierr)
+      year=year-1900
+      if (year.gt.100) then
+         year=year-100
+      endif
+      call monthstring(month,mon)
+      tet=t2*24.0
+      hour=int(tet)
+      tet=(tet-real(hour))*60.0
+      minute=int(tet)
+      tet=(tet-real(minute))*60.0
+      second=tet
+      write(time2,'(I2.2,A3,I2.2,A1,I2.2,A1,I2.2,A1,F4.1)')
+     *  year,mon,day,':',hour,':',minute,':',second
+      if (time1(15:15).eq.' ') time1(15:15)='0'
+      if (time2(15:15).eq.' ') time2(15:15)='0'
+      selectline='time('//time1
+      ls=len1(selectline)
+      selectline(ls+1:)=','//time2
+      ls=len1(selectline)
+      selectline(ls+1:)=')'
+      ls=len1(selectline)
+      chan1=chanoff+isave(3)*chanw
+      chan2=chanoff+isave(4)*chanw
+      selectline(ls+1:)=',chan('//itoaf(chan1)
+      ls=len1(selectline)
+      selectline(ls+1:)=','//itoaf(chan2)
+      ls=len1(selectline)
+      selectline(ls+1:)=')'
+      ls=len1(selectline)
+      if (selectant.ne.' ') then
+         selectline(ls+1:)=','//selectant
+      endif
+      string='Changing times '//time1//' to '//time2//
+     *  ', channels '//itoaf(chan1)
+      l=len1(string)
+      string(l+1:)=' to '//itoaf(chan2)
+      l=len1(string)
+      string(l+1:)=' on '//baseflag
+      l=len1(string)
+      string(l+1:)=' to '//flagval
 c
-	end
+      end
 c***********************************************************************
       subroutine monthstring(month,string)
 c
