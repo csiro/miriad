@@ -278,7 +278,7 @@ c                 (version 1.4)
 c    vjm 09Dec09  Merge to mainline. Remove the eol characters. Add RCS
 c                 tags.
 c
-c $Id: pgflag.for,v 1.4 2009/12/14 23:50:36 cal103 Exp $
+c $Id: pgflag.for,v 1.5 2009/12/15 00:07:37 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
@@ -326,8 +326,8 @@ c
       logical uvDatOpn
 
       version = versan ('pgflag',
-     :                  '$Revision: 1.4 $',
-     :                  '$Date: 2009/12/14 23:50:36 $')
+     :                  '$Revision: 1.5 $',
+     :                  '$Date: 2009/12/15 00:07:37 $')
 
 c
 c Get user inputs
@@ -390,10 +390,10 @@ c
       do i=1,MAXBASE
          if (blpres(i)) then
             cbl=i
-            exit
+            goto 10
          endif
       enddo
-      needread=.true.
+ 10   needread=.true.
       needplot=.true.
       meas_channel=9999
       meas_freq=999999.9999
@@ -430,10 +430,10 @@ c
                      do i=cbl+1,MAXBASE
                         if (blpres(i)) then
                            newbl=i
-                           exit
+                           goto 20
                         endif
                      enddo
-                     if (newbl.eq.cbl) then
+ 20                  if (newbl.eq.cbl) then
                         going_forward=.false.
                         going_backward=.true.
                      else
@@ -490,10 +490,10 @@ c     next baseline requested
                do i=cbl+1,MAXBASE
                   if (blpres(i)) then
                      newbl=i
-                     exit
+                     goto 30
                   endif
                enddo
-               if (newbl.ne.cbl) then
+ 30            if (newbl.ne.cbl) then
                   cbl=newbl
                   needread=.true.
                   needplot=.true.
@@ -736,10 +736,10 @@ c     flag the data in the selection box
                   if (cbl.eq.tbl) then
                      f_a1=i
                      f_a2=j
-                     exit
+                     goto 40
                   endif
                enddo
-            enddo
+ 40         enddo
             if ((pressed(1:1).eq.'f').or.(pressed(1:1).eq.'F')) then
                do_flag=.true.
                if (pressed(1:1).eq.'f') then
@@ -1788,10 +1788,10 @@ c     figure out what baseline it is
             tbl=((j-1)*j)/2+i
             if (tbl.eq.bl) then
                WRITE(meas_baseline,'(I2.2,A,I2.2)') i,'-',j
-               exit
+               goto 10
             endif
          enddo
-      enddo
+ 10   enddo
       titles(2,1)=meas_baseline
       WRITE(titles(2,2),'(I4.4)') meas_channel
       WRITE(titles(2,3),'(F12.4)') meas_frequency
@@ -3052,10 +3052,10 @@ c
      *                 i,'-',j
                   write(selectant,'(A,I3,A,I3,A)') 'ant(',i,')(',
      *                 j,')'
-                  exit
+                  goto 10
                endif
             enddo
-         enddo
+ 10      enddo
       elseif ((isave(1).eq.2).or.(isave(1).eq.3)) then
          write(baseflag,'(A,I3)') 'all baselines with antenna',
      *        isave(2)
