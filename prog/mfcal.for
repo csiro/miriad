@@ -121,6 +121,8 @@ c    mhw  07aug09 Add time variable passbands
 c    rjs  08sep09 Bug handling when first solution interval was completely flagged.
 c    mhw  29sep09 Time variable bandpass bug fixes
 c    rjs  01oct09 Handle missing antennas slightly better.
+c    rjs  17dec09 There was a bug in packit/unpackit where handling a dataset
+c		  with many windows or Doppler tracking.
 c
 c  Problems:
 c    * Should do simple spectral index fit.
@@ -133,7 +135,7 @@ c------------------------------------------------------------------------
 	parameter(MAXSOLN=1024,MAXPOL=2)
 c
 	character version*(*)
-	parameter(version='MfCal: version 1.1 01-Oct-09')
+	parameter(version='MfCal: version 1.1 17-Dec-09')
 c
 	integer tno
 	integer pWGains,pFreq,pSource,pPass,pGains,pTau
@@ -1792,11 +1794,13 @@ c------------------------------------------------------------------------
 	include 'maxdim.h'
 	integer MAXPOL
 	parameter(MAXPOL=2)
+	if(max(i1,i2).gt.MAXANT.or.p.gt.MAXPOL.or.spect.gt.3*MAXWIN)
+     *	  call bug('f','Illegal value is packit')
 	VID = chan - 1
-	VID = MAXANT * VID + i1 - 1
-	VID = MAXANT * VID + i2 - 1
-	VID = MAXPOL * VID + p  - 1
-	VID = MAXWIN * VID + spect
+	VID = MAXANT *   VID + i1 - 1
+	VID = MAXANT *   VID + i2 - 1
+	VID = MAXPOL *   VID + p  - 1
+	VID = 3*MAXWIN * VID + spect
 	end
 c************************************************************************
 	subroutine unpackit(i1,i2,p,spect,chan,VID)
@@ -1821,8 +1825,8 @@ c------------------------------------------------------------------------
 	integer VisId
 c
 	VisId = VID - 1
-	spect = mod(VisId,MAXWIN)
-	VisId = VisId/MAXWIN
+	spect = mod(VisId,3*MAXWIN)
+	VisId = VisId/(3*MAXWIN)
 	p     = mod(VisId,MAXPOL)
 	VisId = VisId/MAXPOL
 	i2    = mod(VisId,MAXANT)
