@@ -274,7 +274,7 @@ c    mhw  14sep09 Make sure birdie is ignored for CABB data
 c    mhw  29sep08 Actually, make it do something useful instead, 
 c                 integrate with rfiflag option
 c
-c $Id: atlod.for,v 1.18 2009/10/11 23:41:34 wie017 Exp $
+c $Id: atlod.for,v 1.19 2010/01/27 22:48:27 wie017 Exp $
 c-----------------------------------------------------------------------
         integer MAXFILES,MAXTIMES
         parameter(MAXFILES=128,MAXTIMES=32)
@@ -293,8 +293,8 @@ c
         character itoaf*8, rperr*32, versan*80
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :                  '$Revision: 1.18 $',
-     :                  '$Date: 2009/10/11 23:41:34 $')
+     :                  '$Revision: 1.19 $',
+     :                  '$Date: 2010/01/27 22:48:27 $')
 c
 c  Get the input parameters.
 c
@@ -3545,7 +3545,7 @@ c             20cm band range 1131-1875, 13cm band range 1975-2675
 c
               cfreq=sfreq(i)+(nfreq(i)/2)*sdf(i)
               if (cfreq.gt.1.d0.and.cfreq.lt.3.0d0) then
-                if (cfreq.lt.1.807d0) then
+                if (cfreq.lt.2.d0) then
                   c1=(1.131-sfreq(i))/sdf(i)
                   c2=(1.875-sfreq(i))/sdf(i)
                 else
