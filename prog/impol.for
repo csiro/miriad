@@ -123,7 +123,7 @@ c    nebk 13mar98 position angle error was factor of 2 too big
 c    nebk 27jul00 as above but in another location.  thanks Bryan
 c    mchw 14may02 added bunit to polarized intensity.
 c
-c $Id: impol.for,v 1.9 2009/09/23 01:00:20 cal103 Exp $
+c $Id: impol.for,v 1.10 2010/01/28 01:51:37 cal103 Exp $
 c------------------------------------------------------------------------
       implicit none
 c
@@ -166,8 +166,8 @@ c
       data li, lpout, lmout, lpaout /0, 2*0, 2*0, 2*0/
 c-----------------------------------------------------------------------
       version = versan ('impol',
-     :                  '$Revision: 1.9 $',
-     :                  '$Date: 2009/09/23 01:00:20 $')
+     :                  '$Revision: 1.10 $',
+     :                  '$Date: 2010/01/28 01:51:37 $')
 c
 c Get the inputs
 c
@@ -821,8 +821,7 @@ c           Output values are zeroed and flagged by default.
      +         paline(i), paflags(i), epaline(i), epaflags(i))
 
 c           See what we can validly work out.
-            if (qline(i).ne.0.0 .and. uline(i).ne.0.0 .and.
-     +          qflags(i) .and. uflags(i)) then
+            if (qflags(i) .and. uflags(i)) then
 c             Square of the polarized intensity.
               psq = qline(i)**2 + uline(i)**2
 
