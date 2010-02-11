@@ -136,7 +136,8 @@ c
 	  endif
 	enddo
 c
-c  Loop the loop.
+c  Loop: read the input file as many times as needed, creating MAXOPEN output
+c  files at a time
 c
 	first = .true.
 	more = .true.
@@ -158,7 +159,7 @@ c
 c
 c  Read through the file.
 c
-	  call Process(tVis,dosource,dofreq,dowin,mosaic,
+	  call Process(tVis,dosource,dofreq,dowin,dowide,mosaic,
      *      maxwidth,clobber)
 c
 	  first = .false.
@@ -168,12 +169,12 @@ c
 c
 	end
 c************************************************************************
-	subroutine Process(tVis,dosource,dofreq,dowin,mosaic,
+	subroutine Process(tVis,dosource,dofreq,dowin,dowide,mosaic,
      *						maxwidth,clobber)
 c
 	implicit none
 	integer tVis
-	logical dosource,dofreq,dowin,mosaic,clobber
+	logical dosource,dofreq,dowin,dowide,mosaic,clobber
         real maxwidth
 c
 c  Do a pass through the data file.
@@ -188,15 +189,15 @@ c    mosaic
 c    maxwidth
 c    clobber
 c------------------------------------------------------------------------
-	include 'uvsplit.h'
+	include 'maxdim.h'
 	integer MAXINDX
 	parameter(MAXINDX=99)
 c
 	complex data(MAXCHAN)
 	logical flags(MAXCHAN),skip
 	double precision preamble(5)
-	integer nchan,nindx,tvCheck,ind(MAXINDX),nschan(MAXINDX)
-	integer onschan(MAXINDX),i,offset,chan
+	integer nchan,nindx,vCheck,indx(MAXINDX),nschan(MAXINDX)
+	integer onchan(MAXINDX),oschan(MAXINDX),i,offset
         
 c
 c  Externals.
@@ -206,7 +207,7 @@ c
 c  Create a handle to track those things that cause us to have to
 c  re-check the indices.
 c
-	call HanGen(tVis,tvCheck,dosource,dofreq,dowin,dowide)
+	call HanGen(tVis,vCheck,dosource,dofreq,dowin,dowide)
 c
 c  Loop the loop.
 c
@@ -216,9 +217,10 @@ c
 c
 c  Update the indices if necessary.
 c
-	  if(uvVarUpd(tvCheck))then
+	  if(uvVarUpd(vCheck))then
 	    call GetIndx(tVis,dosource,dofreq,dowin,dowide,mosaic,
-     *	      maxwidth,clobber,ind,nschan,nIndx,onschan,MAXINDX)
+     *	      maxwidth,clobber,indx,nschan,onchan,oschan,
+     *        nIndx,MAXINDX)
 	    skip = .true.
 	    do i=1,nIndx
 	      if(indx(i).ne.0)skip = .false.
@@ -229,18 +231,10 @@ c  Now write out the data.
 c
 	  if(.not.skip)then
 	    offset = 1
-            chan=0
 	    do i=1,nindx
-              if (i.gt.1.and.ind(i).gt.0) then
-c
-c               Reset channel count for next IF to be split off
-c              
-                if (ifno(ind(i)).ne.ifno(ind(i-1))) chan=0
-              endif
-	      if(ind(i).gt.0)call FileDat(ind(i),
-     *		preamble,data(offset),flags(offset),onschan(i),chan)
-              chan = chan + onschan(i)
-	      offset = offset + onschan(i)
+	      if(indx(i).gt.0)call FileDat(indx(i),
+     *		preamble,data(offset),flags(offset),onchan(i),oschan(i))
+	      offset = offset + onchan(i)
 	    enddo
 	    if(offset.ne.nchan+1)
      *		call bug('f','Consistency check failed')
@@ -254,13 +248,28 @@ c
 	end
 c************************************************************************
 	subroutine GetIndx(tVis,dosource,dofreq,dowin,dowide,mosaic,
-     *	  maxwidth,clobber,Indx,nschan,nIndx,onschan,MAXINDX)
+     *	  maxwidth,clobber,Indx,nschan,onchan,oschan,nIndx,MAXINDX)
 c
 	implicit none
 	integer tVis,nIndx,MAXINDX,nschan(MAXINDX),Indx(MAXINDX)
-        integer onschan(MAXINDX)
+        integer onchan(MAXINDX),oschan(MAXINDX)
 	logical dosource,dofreq,dowin,dowide,mosaic,clobber
         real maxwidth
+c  Inputs:
+c       tVis - the handle to the visibility file
+c       dosource - split by source
+c       dofreq   - split by freq
+c       dowin    - split by spectral window
+c       dowide   - split by wide band
+c       mosaic   - don't split mosaic fields if splitting by source
+c       maxwidth - max bandwidth of the output files - further freq split
+c       clobber  - destroy existing files with same names
+c   Outputs:
+c       Indx     - index to translate from output name to file
+c       nschan   - number of channels in each input spectral window
+c       nIndx    - number of entries in indx table
+c       onchan   - number of channels in each output file
+c       oschan   - starting channel in input window for each output file
 c
 c  Determine the current indices of interest.
 c
@@ -374,10 +383,12 @@ c
               nindx1=nindx1+nsub-1
 	      if(nindx1.gt.MAXINDX)
      *          call bug('f','Too many output windows')
+              oschan(ii+1)=0
               do j=1,nsub
                 ii=ii+1
                 ichan = nschan(i)*(2*j-1)/2/nsub
-                onschan(ii) = nschan(i)/nsub
+                onchan(ii) = nschan(i)/nsub
+                if (j.gt.1) oschan(ii) = oschan(ii-1)+onchan(ii-1)
                 n = nint(1000*(sfreq(i) +  sdf(i) * ichan))
                 if (duplicate) then
                   call FileIndx(base(1:length)//'.'//
@@ -387,7 +398,7 @@ c
      *              indx(ii),clobber)
                 endif                
               enddo
-              onschan(ii)=nschan(i)-(nsub-1)*(nschan(i)/nsub)
+              onchan(ii)=nschan(i)-(nsub-1)*(nschan(i)/nsub)
 	    enddo
             nindx=nindx1
 	    if(nindx.eq.1)nschan(1) = nchan
