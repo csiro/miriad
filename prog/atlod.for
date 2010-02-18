@@ -274,7 +274,7 @@ c    mhw  14sep09 Make sure birdie is ignored for CABB data
 c    mhw  29sep08 Actually, make it do something useful instead, 
 c                 integrate with rfiflag option
 c
-c $Id: atlod.for,v 1.19 2010/01/27 22:48:27 wie017 Exp $
+c $Id: atlod.for,v 1.20 2010/02/18 01:59:30 wie017 Exp $
 c-----------------------------------------------------------------------
         integer MAXFILES,MAXTIMES
         parameter(MAXFILES=128,MAXTIMES=32)
@@ -293,8 +293,8 @@ c
         character itoaf*8, rperr*32, versan*80
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :                  '$Revision: 1.19 $',
-     :                  '$Date: 2010/01/27 22:48:27 $')
+     :                  '$Revision: 1.20 $',
+     :                  '$Date: 2010/02/18 01:59:30 $')
 c
 c  Get the input parameters.
 c
@@ -2292,7 +2292,7 @@ c------------------------------------------------------------------------
         include 'rpfits.inc'
         integer scanno,i1,i2,baseln,i,id,j,xymode
         logical NewScan,NewSrc,NewFreq,NewTime,Accum,ok,badbit
-        logical flags(MAXPOL),corrfud,kband,wband,flipper,cabb
+        logical flags(MAXPOL),corrfud,kband,qband,wband,flipper,cabb
         integer jstat,flag,bin,ifno,srcno,simno,Ssrcno,Ssimno
         integer If2Sim(MAX_IF),nifs(MAX_IF),Sim2If(MAXSIM,MAX_IF)
         integer Sif(MAX_IF)
@@ -2375,6 +2375,7 @@ c
         enddo
 c
         kband = .false.
+        qband = .false.
         wband = .false.
         cabb = instrument(1:6).eq.'ATCABB'
         if (cabb) call liner('CABB data detected')
@@ -2586,12 +2587,16 @@ c
                 if(an_found)call PokeAnt(nant,x,y,z,sing)
                 if(NewScan.or.NewFreq)then
                   kband = .false.
+                  qband = .false.
                   wband = .false.
                   do i=1,nifs(simno)
                     id = Sim2If(i,simno)
                     if(nuser.ge.i)rfreq = 1e9*userfreq(i)
                     kband = kband.or.
      *                     (if_freq(id).gt.13e9.and.if_freq(id).lt.28e9)
+                    qband = qband.or.
+     *                     (if_freq(id).gt.30e9.and.if_freq(id).lt.50e9)
+
                     wband = wband.or.if_freq(id).gt.75e9
                     call PokeIF(i,if_nfreq(id),if_invert(id)*if_bw(id),
      *                  if_freq(id),if_ref(id),rfreq,
@@ -2676,7 +2681,8 @@ c             tint = 0
               tint = intbase
               if(tint.eq.0)tint = intime
               if(tint.eq.0)tint = 15.0
-              flipper = .not.kband.or.time.gt.J01Jul04
+              flipper = .not.qband.and.
+     *                  (.not.kband.or.time.gt.J01Jul04)
 c
 c  xymode sets the way xy phase correction is potentially done. If negative,
 c  then correctionis done on all data. If positive, then just that antenna
