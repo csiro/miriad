@@ -142,7 +142,7 @@ c------------------------------------------------------------------------
 	character version*(*)
 	integer MILLION,MAXDAT,MAXPLT,MAXEDIT
 	parameter(version='BlFlag: version 23-Apr-09')
-	parameter(MILLION=1000000,MAXDAT=MAX(MAXBUF,5*MILLION),
+	parameter(MILLION=1000000,MAXDAT=(MAXBUF/MILLION+5)*MILLION,
      *            MAXPLT=4*MILLION,MAXEDIT=MILLION)
 c
 	logical present(MAXBASE),nobase,selgen,noapply,rms,scalar,
@@ -792,7 +792,7 @@ c
 	double precision preamble(4),time,time0,tprev,lst,ra
 	real uvdist2(MAXBASE),var(MAXBASE),temp
 	integer i,j,n,bl,i1,i2,nants,npnt(MAXBASE),
-     *    fnpnt(MAXBASE,MAXCHAN1),mbase,nchan
+     *    fnpnt(MAXBASE,MAXCHAN1),mbase,nchan,nchanprev
 c
 c  Miscellaneous initialisation.
 c
@@ -825,6 +825,7 @@ c
         if (nchan.eq.MAXCHAN1) call bug('f','Too many channels for me')
 	call flagchk(tno)
 	nants = 0
+        nchanprev = 0
 	tprev = preamble(3)
 	time0 = int(tprev - 0.5d0) + 0.5d0
 	call uvrdvrd(tno,'lst',lst,0.d0)
@@ -840,7 +841,7 @@ c
 	        if(nants.gt.0) call IntFlushF(nants,rms,scalar,ra,lst,
      *		  tprev,uvdist2,var,fcorr,fcorr1,fcorr2,xaxis,yaxis,
      *		  xmin,xmax,ymin,ymax,fnpnt,time0,present,mbase,
-     *            xdat,ydat,timedat,bldat,chdat,ndat,MAXDAT,nchan)
+     *            xdat,ydat,timedat,bldat,chdat,ndat,MAXDAT,nchanprev)
 	        nants = 0
 	        tprev = time
 	        call uvrdvrd(tno,'lst',lst,0.d0)
@@ -888,6 +889,7 @@ c
               nants = max(nants,i1,i2)
             endif
           endif
+          nchanprev = nchan
 	  call uvDatRd(preamble,data,flags,MAXCHAN,nchan)	  
 	enddo
 c
@@ -896,7 +898,7 @@ c
             call IntFlushF(nants,rms,scalar,ra,lst,time,uvdist2,var,
      *		fcorr,fcorr1,fcorr2,xaxis,yaxis,xmin,xmax,ymin,ymax,
      *		fnpnt,time0,present,mbase,xdat,ydat,timedat,bldat,
-     *          chdat,ndat,MAXDAT,nchan)
+     *          chdat,ndat,MAXDAT,nchanprev)
 	  else
             call IntFlush(nants,rms,scalar,ra,lst,time,uvdist2,var,
      *		corr,corr1,corr2,xaxis,yaxis,xmin,xmax,ymin,ymax,npnt,
@@ -937,13 +939,13 @@ c
 	    k = k + 1
 	    if(npnt(k).gt.0)then
               x = GetVal(xaxis,uvdist2(k),var(k),corr(k),
-     *		corr1(k),corr2(k),npnt(k),lst,time,ra,ic,time0,
+     *		corr1(k),corr2(k),npnt(k),lst,time,ic,ra,time0,
      *          rms,scalar)
               y = GetVal(yaxis,uvdist2(k),var(k),corr(k),
-     *		corr1(k),corr2(k),npnt(k),lst,time,ra,ic,time0,
+     *		corr1(k),corr2(k),npnt(k),lst,time,ic,ra,time0,
      *          rms,scalar)
-              if (x.ge.xmin.and.x.lt.xmax.and.y.gt.ymin.and.
-     *            y.lt.ymax) then
+              if (x.ge.xmin.and.x.le.xmax.and.y.ge.ymin.and.
+     *            y.le.ymax) then
                 ndat = ndat + 1
 	        if(ndat.gt.MAXDAT)call bug('f','Too many points.')
 	        xdat(ndat) = x
@@ -1004,8 +1006,8 @@ c
                 y = GetVal(yaxis,uvdist2(k),var(k),corr(k,ic),
      *		  corr1(k,ic),corr2(k,ic),npnt(k,ic),lst,time,ic,ra,
      *            time0,rms,scalar)
-                if (x.ge.xmin.and.x.lt.xmax.and.y.gt.ymin.and.
-     *              y.lt.ymax) then
+                if (x.ge.xmin.and.x.le.xmax.and.y.ge.ymin.and.
+     *              y.le.ymax) then
 	          ndat = ndat + 1
 	          if(ndat.gt.MAXDAT)call bug('f','Too many points!')
 	          xdat(ndat) = x
