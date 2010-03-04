@@ -274,7 +274,7 @@ c    mhw  14sep09 Make sure birdie is ignored for CABB data
 c    mhw  29sep08 Actually, make it do something useful instead, 
 c                 integrate with rfiflag option
 c
-c $Id: atlod.for,v 1.20 2010/02/18 01:59:30 wie017 Exp $
+c $Id: atlod.for,v 1.21 2010/03/04 22:13:51 wie017 Exp $
 c-----------------------------------------------------------------------
         integer MAXFILES,MAXTIMES
         parameter(MAXFILES=128,MAXTIMES=32)
@@ -293,8 +293,8 @@ c
         character itoaf*8, rperr*32, versan*80
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :                  '$Revision: 1.20 $',
-     :                  '$Date: 2010/02/18 01:59:30 $')
+     :                  '$Revision: 1.21 $',
+     :                  '$Date: 2010/03/04 22:13:51 $')
 c
 c  Get the input parameters.
 c
@@ -2488,7 +2488,7 @@ c
      *          xgtp,ygtp,xsdo,ysdo,xcaljy,ycaljy,
      *          chi,tcorr,pntrms,pntmax,
      *          nxyp,xyp,ptag,xya,atag,MAXXYP,xflag,yflag,wband,cabb,
-     *          mdata,mcount)
+     *          mdata,mcount,qband)
 c
 c  Data record. Check whether we want to accept it.
 c  If OK, and we have a new scan, calculate the new scan info.
@@ -2681,8 +2681,7 @@ c             tint = 0
               tint = intbase
               if(tint.eq.0)tint = intime
               if(tint.eq.0)tint = 15.0
-              flipper = .not.qband.and.
-     *                  (.not.kband.or.time.gt.J01Jul04)
+              flipper = .not.kband.or.time.gt.J01Jul04
 c
 c  xymode sets the way xy phase correction is potentially done. If negative,
 c  then correctionis done on all data. If positive, then just that antenna
@@ -3136,7 +3135,7 @@ c************************************************************************
      *          xyphase,xyamp,xtsys,ytsys,xsamp,ysamp,
      *          xgtp,ygtp,xsdo,ysdo,xcaljy,ycaljy,
      *          chi,tcorr,pntrms,pntmax,nxyp,xyp,ptag,xya,atag,MAXXYP,
-     *          xflag,yflag,mmrelax,cabb,mdata,mcount)
+     *          xflag,yflag,mmrelax,cabb,mdata,mcount,qband)
 c
         integer MAXIF,MAXANT,MAXXYP,nq,nif,nant,invert(MAXIF)
         integer tcorr,mcount
@@ -3156,6 +3155,7 @@ c
         integer atag(MAXXYP,MAXIF,MAXANT)
         integer nxyp(MAXIF,MAXANT)
         logical xflag(MAXIF,MAXANT),yflag(MAXIF,MAXANT),mmrelax,cabb
+        logical qband
 c
 c  Copy across SYSCAL records. Do any necessary fiddles on the way.
 c------------------------------------------------------------------------
@@ -3205,6 +3205,7 @@ c
      *          xflag(ij,ik),yflag(ij,ik),mmrelax,cabb)
               if(.not.done.and.syscal(12,j,k).ne.0)then
                 chi = pi/180 * syscal(12,j,k) + pi/4
+                if (qband) chi = chi + pi/2
                 done = .true.
               endif
 c
