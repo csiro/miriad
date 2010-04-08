@@ -33,14 +33,17 @@ c	a single planet or point source. See the help on ``select'' for more
 c	information. For planets, you may wish to select just the shortest
 c	spacing, where the planet is strongest.
 c@ flux
-c	This is used to specify the flux density, and will be used to either
-c	give the flux density of a point source that is not known to MFBOOT,
-c	or to override MFBOOT's built-in models. MFBOOT has built-in models
-c	for a few calibrators as well as the planets - see calplot and plplt.
+c       Three numbers, giving the source flux density, a reference frequency
+c       (in GHz) and the source spectral index. The flux and spectral index
+c       are at the reference frequency. If no values are given, then MFBOOT
+c       checks whether the source is one of a set of known sources or a planet, 
+c       and uses the appropriate flux variation with frequency. 
+c       MFBOOT has built-in models for a few calibrators as well as the
+c	planets - see calplot and plplt.
 c
 c	For a point source, this parameter gives the flux density of the
 c	calibrator in Janskys. For a planet, this parameter gives the
-c	brightness temperature of the planet in Kelvins.
+c	brightness temperature of the planet in Kelvin.
 c@ mode
 c	MFBOOT can process the data in one of three modes: "triple", "scalar"
 c	and "vector". The default is "triple" for point sources and "scalar"
@@ -75,14 +78,18 @@ c	in triple mode.
 c@ options
 c	Extra processing options. Several can be given, separated by commas.
 c	  noapply Do not apply the scale factor - just evaluate it.
+c         nospec Do not try to determine and correct the spectral index across
+c                the band
 c--
 c  History:
 c    rjs     15jan06 Original version adapted from plboot.
 c    rjs     19jan06 Fix call to subroutine with //char*(*) arg.
 c    rjs     09may06 Increase size of MAXPNT.
 c    rjs     07jul06 Increase size of MAXPNT again.
+c    mhw     07sep09 Use central frequency for planet parameters
+c    mhw     24mar10 Correct spectral index too
 c
-c  $Id: mfboot.for,v 1.3 2006/10/18 02:08:17 cal103 Exp $
+c  $Id: mfboot.for,v 1.4 2010/04/08 04:09:42 wie017 Exp $
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
@@ -92,18 +99,19 @@ c------------------------------------------------------------------------
 c
 	character vis(MAXVIS)*64,source*32,line*64,device*64,mode*8
 	character psource*32
-	logical noapply
-	integer nvis,lVis,vsource,nchan,iplanet,i,n,nants
-	real fac,m,s,uflux,clip
-	double precision SumXX,SumXY,preamble(4),time0
-	complex data(MAXCHAN),d
+	logical noapply,nospec
+	integer nvis,lVis,vsource,nchan,iplanet,i,n(2),nants
+	real fac,f(2),m(2),s,uflux(3),clip
+        real f0,f1,f2,fac1,fac2,alpha
+	double precision SumXX(2),SumXY(2),SumF(2),preamble(4),time0
+	complex data(MAXCHAN),d(2)
 	logical flags(MAXCHAN)
 	real xval(MAXPNT),ydval(MAXPNT),ymval(MAXPNT)
-	integer npnt
+	integer npnt,SumN(2)
 c
-	complex db(MAXBASE)
-	real sb(MAXBASE),mb(MAXBASE)
-	integer nb(MAXBASE),nbl
+	complex db(2,MAXBASE)
+	real sb(MAXBASE),mb(2,MAXBASE),fb(2,MAXBASE)
+	integer nb(2,MAXBASE),nbl
 c
 c  Externals.
 c
@@ -118,16 +126,22 @@ c
 	call uvDatInp('vis','xcefdwl')
 	call uvDatSet('stokes',0)
 	call keya('device',device,' ')
-	call keyr('flux',uflux,0.0)
+	call keyr('flux',uflux(1),0.0)
+	call keyr('flux',uflux(2),0.0)
+	call keyr('flux',uflux(3),0.0)
 	call keyr('clip',clip,0.0)
-	call getopt(mode,noapply)
+	call getopt(mode,noapply,nospec)
 	call keyfin
 c
 c  Process the data.
 c
 	psource = ' '
-	SumXX = 0
-	SumXY = 0
+        do i=1,2
+  	  SumXX(i) = 0
+	  SumXY(i) = 0
+          SumF(i) = 0
+          SumN(i) = 0
+        enddo
 	nvis = 0
 	npnt = 0
 c
@@ -145,7 +159,7 @@ c
 c
 	    if(abs(preamble(3)-time0).gt.2/86400.0)then
 	      if(nbl.gt.0)then
-	        call intFlush(db,mb,sb,nb,nbl,SumXX,SumXY)
+	        call intFlush(db,mb,fb,sb,nb,nbl,SumXX,SumXY,SumF,SumN)
 	        call intIni(nb,nbl)
 	      endif
 	      nbl = 0
@@ -161,6 +175,7 @@ c
 		call bug('w','Data also processed for '//source)
 	      else if(psource.eq.' ')then
 		call output('Found data for source '//source)
+                psource = source
 		if(mode.eq.' ')then
 		  mode = 'scalar'
 		  if(iplanet.eq.0)mode = 'triple'
@@ -169,25 +184,47 @@ c
 	    endif
 c
 	    call avdat(lVis,data,flags,nchan,source,
-     *		preamble(3),preamble,iplanet,clip,uflux,d,m,s,n)
+     *		preamble(3),preamble,iplanet,clip,uflux,d,m,f,s,n)
 	    if(mode.eq.'triple')then
-	      call intAcc(preamble(4),d,m,s,n,MAXBASE,db,mb,sb,nb,nbl)
+	      call intAcc(preamble(4),d,m,f,s,n,MAXBASE,
+     *         db,mb,fb,sb,nb,nbl)
 	    else
-	      call acc(mode.eq.'vector',preamble,d,m,s,n,
-     *			SumXX,SumXY,MAXPNT,npnt,xval,ydval,ymval)
+	      call acc(mode.eq.'vector',preamble,d,m,f,s,n,
+     *		SumXX,SumXY,SumF,SumN,MAXPNT,npnt,xval,ydval,ymval)
 	    endif
 	    call uvDatRd(preamble,data,flags,MAXCHAN,nchan)
 	  enddo
 	  call uvDatCls
 	enddo
-	if(nbl.gt.0)call intFlush(db,mb,sb,nb,nbl,SumXX,SumXY)
+	if(nbl.gt.0)call intFlush(db,mb,fb,sb,nb,nbl,SumXX,SumXY,
+     *                            SumF,SumN)
 c
-	if(SumXX.le.0)call bug('f','No good data found')
-	if(SumXY.le.0)call bug('f','Problem seems ill-conditioned')
-	fac = SumXX/SumXY
+	if(SumXX(1)+SumXX(2).le.0)call bug('f','No good data found')
+	if(SumXY(1)+SumXY(2).le.0)
+     *   call bug('f','Problem seems ill-conditioned')
+	fac = (SumXX(1)+SumXX(2))/(SumXY(1)+SumXY(2))
 	if(mode.eq.'triple')fac = fac ** (1.0/3.0)
 	line = 'Scaling the data by '//streal(fac,'(f13.3)')
 	call output(line)
+        if (.not.nospec) then
+          alpha = 0
+          if (SumXX(1).gt.0.and.SumXX(2).gt.0.and.SumXY(1).gt.0.and.
+     *        SumXY(2).gt.0.and.SumN(1).gt.0.and.SumN(2).gt.0) then
+            f0 = (sumF(1)+SumF(2))/(SumN(1)+SumN(2))
+            f1 = SumF(1)/SumN(1)
+            f2 = SumF(2)/SumN(2)
+            fac1 = SumXX(1)/SumXY(1)
+            fac2 = SumXX(2)/SumXY(2)
+            if (f2.eq.f1) 
+     *       call bug('f','Error in spectral index calculation')
+            alpha = log(fac2/fac1)/log(f2/f1)
+            line = 'Adjusting spectral slope by '//
+     *              streal(alpha,'(f8.3)')
+	    call output(line)
+          else
+            call bug('w','Cannot determine spectral index')
+          endif
+        endif
 c
 c  Generate the plot, if needed.
 c
@@ -211,6 +248,12 @@ c
 	      call uvrdvri(lVis,'nants',nants,0)
 	      call gainWri(lVis,fac,time0,nants)
 	    endif
+            if(hdPrsnt(lVis,'bandpass')) then
+              call bpSca(lVis,f0,alpha)
+	    else
+	      call bug('w','Cannot adjust spectral slope because'//
+     *                     ' there is no bandpass table')        
+	    endif         
 	    call hisopen(lVis,'append')
 	    call hiswrite(lVis,'MFBOOT: Miriad '//version)
 	    call hisinput(lVis,'MFBOOT')
@@ -225,52 +268,59 @@ c************************************************************************
 	subroutine intIni(nb,nbl)
 c
 	implicit none
-	integer nbl,nb(nbl)
+	integer nbl,nb(2,nbl)
 c------------------------------------------------------------------------
 	integer i
 c
 	do i=1,nbl
-	  nb(i) = 0
+	  nb(1,i) = 0
+	  nb(2,i) = 0
 	enddo
 	end
 c************************************************************************
-	subroutine intAcc(bl,d,m,s,n,MAXBASE,db,mb,sb,nb,nbl)
+	subroutine intAcc(bl,d,m,f,s,n,MAXBASE,db,mb,fb,sb,nb,nbl)
 c
 	implicit none
 	double precision bl
 	integer MAXBASE,nbl
-	complex d,db(MAXBASE)
-	real s,sb(MAXBASE),m,mb(MAXBASE)
-	integer n,nb(MAXBASE)
+	complex d(2),db(2,MAXBASE)
+	real s,sb(MAXBASE),m(2),mb(2,MAXBASE),f(2),fb(2,MAXBASE)
+	integer n(2),nb(2,MAXBASE)
 c------------------------------------------------------------------------
-	integer i1,i2,i
+	integer i1,i2,i,j
 c
 	call basant(bl,i1,i2)
 	i = ((i2-1)*(i2-2))/2 + i1
 	if(i.gt.MAXBASE)call bug('f','Buffer overflow in intAcc')
 	nbl = max(nbl,i)
-	if(nb(i).eq.0)then
-	  db(i) = 0
-	  mb(i) = 0
-	  nb(i) = 0
+	if(nb(1,i)+nb(2,i).eq.0)then
+          do j=1,2
+	    db(j,i) = 0
+	    mb(j,i) = 0
+            fb(j,i) = 0
+	    nb(j,i) = 0
+          enddo
 	  sb(i) = 0
 	endif
-	db(i) = db(i) + d
-	mb(i) = mb(i) + m
+        do j=1,2
+	  db(j,i) = db(j,i) + d(j)
+	  mb(j,i) = mb(j,i) + m(j)
+          fb(j,i) = fb(j,i) + f(j)
+	  nb(j,i) = nb(j,i) + n(j)
+        enddo
 	sb(i) = sb(i) + s
-	nb(i) = nb(i) + n
 	end
 c************************************************************************
-	subroutine intFlush(db,mb,sb,nb,nbl,SumXX,SumXY)
+	subroutine intFlush(db,mb,fb,sb,nb,nbl,SumXX,SumXY,SumF,SumN)
 c
 	implicit none
 	integer nbl
-	integer nb(nbl)
-	real mb(nbl),sb(nbl)
-	complex db(nbl)
-	double precision SumXX,SumXY
+	integer nb(2,nbl),SumN(2)
+	real mb(2,nbl),sb(nbl),fb(2,nbl)
+	complex db(2,nbl)
+	double precision SumXX(2),SumXY(2),SumF(2)
 c------------------------------------------------------------------------
-	integer b12,b23,b13,i1,i2,i3
+	integer b12,b23,b13,i1,i2,i3,j
 	logical more,ok
 	real tm,sigma2
 	complex td
@@ -285,17 +335,21 @@ c
               b23 = ((i3-1)*(i3-2))/2 + i2
 	      more = b23.le.nbl
 	      ok = more
-	      if(more)ok = nb(b12).gt.0.and.nb(b13).gt.0.and.
-     *			   nb(b23).gt.0
-	      if(ok)then
-		td =  db(b12)*db(b23)*conjg(db(b13))/
-     *		     (nb(b12)*nb(b23)*      nb(b13))
-		tm =  mb(b12)*mb(b23)*      mb(b13) /
-     *		     (nb(b12)*nb(b23)*      nb(b13))
-		sigma2 = 1
-	        SumXX = SumXX +     (tm*tm/sigma2)
-	        SumXY = SumXY + real(tm*td/sigma2)
-	      endif
+              do j=1,2
+  	        if(more)ok = nb(j,b12).gt.0.and.nb(j,b13).gt.0.and.
+     *		  	     nb(j,b23).gt.0
+	        if(ok)then
+		  td =  db(j,b12)*db(j,b23)*conjg(db(j,b13))/
+     *		       (nb(j,b12)*nb(j,b23)*      nb(j,b13))
+		  tm =  mb(j,b12)*mb(j,b23)*      mb(j,b13) /
+     *		       (nb(j,b12)*nb(j,b23)*      nb(j,b13))
+		  sigma2 = 1
+	          SumXX(j) = SumXX(j) +     (tm*tm/sigma2)
+	          SumXY(j) = SumXY(j) + real(tm*td/sigma2)
+                  SumF(j) = SumF(j) + fb(j,b23)+fb(j,b12)+fb(j,b13)
+                  SumN(j) = SumN(j) + nb(j,b23)+nb(j,b12)+nb(j,b13)
+	        endif
+              enddo
 	    enddo
 	  enddo
 	  i3 = i3 + 1
@@ -304,7 +358,7 @@ c
 	end
 c************************************************************************
 	subroutine avdat(lVis,data,flags,nchan,source,time,uv,iplanet,
-     *						clip,uflux,d,m,s,n)
+     *						clip,uflux,d,m,f,s,n)
 c
 	implicit none
 	integer lVis,nchan
@@ -313,18 +367,18 @@ c
 	character source*(*)
 	double precision time,uv(2)
 	integer iplanet
-	real uflux,clip
+	real uflux(3),clip
 c
-	complex d
-	real m,s
-	integer n
+	complex d(2)
+	real m(2),f(2),s
+	integer n(2)
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'maxdim.h'
-	double precision sfreq(MAXCHAN)
-	real model(MAXCHAN)
+	double precision sfreq(MAXCHAN),cfreq
+	real model(MAXCHAN),pltbv(MAXCHAN)
 	integer i,ierr
-	real a,b,cospa,sinpa,pltb,bmaj,bmin,bpa,rms2
+	real a,b,cospa,sinpa,bmaj,bmin,bpa,rms2
         double precision sub(3),dist
 	logical ok
 	character line*80
@@ -339,12 +393,22 @@ c
 c
 c  Work out the model of the visibility data.
 c
+c might work out flux vs freq for model  like in mfcal
+c
 	ok = .true.
+        cfreq = sfreq(nchan/2+1)
+        if (uflux(2).gt.0) then
+          cfreq = uflux(2)
+        endif       
 	if(iplanet.ne.0)then
-	  if(uflux.gt.0)then
-	    pltb = uflux
+	  if(uflux(1).gt.0)then
+            do i=1,nchan
+              pltbv(i) = uflux(1)*(sfreq(i)/cfreq)**uflux(3)
+            enddo
 	  else
-	    pltb = pltbs(iplanet,real(sfreq(1)))
+            do i=1,nchan
+	      pltbv(i) = pltbs(iplanet,real(sfreq(i)))
+            enddo
 	  endif
 c
 	  call plpar(time+deltime(time,'tdb'),iplanet,sub,
@@ -352,16 +416,17 @@ c
 	  cospa = cos(bpa)
 	  sinpa = sin(bpa)
 	  b = PI * sqrt((bmaj*(uv(1)*cospa-uv(2)*sinpa))**2
-     *              + (bmin*(uv(1)*sinpa+uv(2)*cospa))**2)/sfreq(1)
-          a = 2 * pltb * (KMKS*1e18)/(CMKS*CMKS*1e-26)
+     *              + (bmin*(uv(1)*sinpa+uv(2)*cospa))**2)/cfreq
+          a = 2 * (KMKS*1e18)/(CMKS*CMKS*1e-26)
      *          * 2 * PI/4 * bmaj*bmin
 	  do i=1,nchan
-	    model(i) = a*sfreq(i)*sfreq(i)*j1xbyx(real(b*sfreq(i)))
+	    model(i) = a*pltbv(i)*sfreq(i)*sfreq(i)
+     *                 *j1xbyx(real(b*sfreq(i)))
 	  enddo
 	  ok = abs(model(1)).ge.abs(clip*a*sfreq(1)*sfreq(1)*0.5)
-	else if(uflux.gt.0)then
+	else if(uflux(1).gt.0)then
 	  do i=1,nchan
-	    model(i) = uflux
+	    model(i) = uflux(1)*(sfreq(i)/cfreq)**uflux(3)
 	  enddo
 	else
 	  call calstoke(source,'i',sfreq,model,nchan,ierr)
@@ -371,18 +436,29 @@ c
 	  endif
 	endif
 c
-	d = 0
-	m = 0
+        do i=1,2
+	  d(i) = 0
+	  m(i) = 0
+          n(i) = 0
+          f(i) = 0
+        enddo
 	s = 0
-	n = 0
 	if(ok)then
 	  call uvdatGtr('variance',rms2)
 	  do i=1,nchan
 	    if(flags(i))then
-	      d = d + data(i)
-	      m = m + model(i)
+              if (i.lt.nchan/2) then
+                d(1) = d(1) + data(i)
+                m(1) = m(1) + model(i)
+                n(1) = n(1) + 1
+                f(1) = f(1) + sfreq(i)
+              else
+                d(2) = d(2) + data(i)
+                m(2) = m(2) + model(i)
+                n(2) = n(2) + 1
+                f(2) = f(2) + sfreq(i)
+              endif
 	      s = s + rms2
-	      n = n + 1
 	    endif
 	  enddo
 	endif
@@ -418,7 +494,7 @@ c
 	  ymax = max(ymax,ydval(i),ymval(i))
 	enddo
 c
-       if(pgbeg(0,device,1,1).ne.1)then
+        if(pgbeg(0,device,1,1).ne.1)then
           call pgldev
           call bug('f','Error opeing graphics device')
         endif
@@ -438,45 +514,53 @@ c
 c
 	end
 c************************************************************************
-	subroutine Acc(vector,uv,data,model,sigma2,n,SumXX,SumXY,
-     *		MAXPNT,npnt,xval,ydval,ymval)
+	subroutine Acc(vector,uv,data,model,f,sigma2,n,SumXX,SumXY,
+     *		SumF,SumN,MAXPNT,npnt,xval,ydval,ymval)
 c
 	implicit none
 	logical vector
-	complex data
-	real model,sigma2
-	integer n
-	double precision uv(2),SumXX,SumXY
-	integer MAXPNT,npnt
+	complex data(2)
+	real model(2),f(2),sigma2
+	integer n(2)
+	double precision uv(2),SumXX(2),SumXY(2),SumF(2)
+	integer MAXPNT,npnt,SumN(2),j
 	real xval(MAXPNT),ydval(MAXPNT),ymval(MAXPNT)
 c
 c  Accumulate info given the planetary data.
 c------------------------------------------------------------------------
         include 'mirconst.h'
 c
-	if(n.gt.0)then
+	if(n(1)+n(2).gt.0)then
 	  npnt = npnt + 1
 	  if(npnt.gt.MAXPNT)call bug('f','Too many points')
 	  xval(npnt) = 1e-3*sqrt(uv(1)*uv(1) + uv(2)*uv(2))
 	  if(vector)then
-	    ydval(npnt) = real(data/n)
-	    ymval(npnt) = real(model/n)
-	    SumXX = SumXX +     (model*model/sigma2)
-	    SumXY = SumXY + real(model*data/sigma2)
+	    ydval(npnt) = real((data(1)+data(2))/(n(1)+n(2)))
+	    ymval(npnt) = real((model(1)+model(2))/(n(1)+n(2)))
+            do j=1,2
+	      SumXX(j) = SumXX(j) +     (model(j)*model(j)/sigma2)
+	      SumXY(j) = SumXY(j) + real(model(j)*data(j)/sigma2)
+            enddo
 	  else
-	    ydval(npnt) = abs(data/n)
-	    ymval(npnt) = abs(model/n)
-	    SumXX = SumXX + abs(model*model/sigma2)
-	    SumXY = SumXY + abs(model*data/sigma2)
+	    ydval(npnt) = abs((data(1)+data(2))/(n(1)+n(2)))
+	    ymval(npnt) = abs((model(1)+model(2))/(n(1)+n(2)))
+            do j=1,2
+	      SumXX(j) = SumXX(j) + abs(model(j)*model(j)/sigma2)
+	      SumXY(j) = SumXY(j) + abs(model(j)*data(j)/sigma2)
+            enddo
 	  endif
+          do j=1,2
+            SumF(j) = SumF(j) + f(j)
+            SumN(j) = SumN(j) + n(j)
+          enddo
 	endif
 c
         end
 c************************************************************************
-	subroutine getopt(mode,noapply)
+	subroutine getopt(mode,noapply,nospec)
 c
 	implicit none
-	logical noapply
+	logical noapply,nospec
 	character mode*(*)
 c
 c  Get extra processing parameters.
@@ -487,15 +571,16 @@ c------------------------------------------------------------------------
 	integer nout
 c
 	integer NOPTS
-	parameter(NOPTS=1)
+	parameter(NOPTS=2)
 	logical present(NOPTS)
 	character opts(NOPTS)*8
 c
 	data modes/'triple  ','scalar  ','vector  '/
-	data opts/'noapply '/
+	data opts /'noapply ','nospec  '/
 c
 	call options('options',opts,present,NOPTS)
 	noapply = present(1)
+        nospec = present(2)
 c
 	call keymatch('mode',NMODES,modes,1,mode,nout)
 	if(nout.eq.0)mode = ' '
@@ -556,6 +641,105 @@ c
 	enddo
 c
 	call hdaccess(item,iostat)
+	end
+c************************************************************************
+	subroutine bpSca(lVis,f0,alpha)
+c
+	implicit none
+	integer lVis
+	real alpha,f0
+c
+c  Fix the slope of the bandpass table present in the data.
+c
+c------------------------------------------------------------------------
+	include 'maxdim.h'
+        integer MAXSOLN
+        parameter (MAXSOLN=1024)
+        integer nschan(MAXWIN)
+        double precision freqs(2),sfreq(MAXWIN),sdf(MAXWIN),f
+      
+	complex bpgains(2*MAXANT*MAXCHAN)
+	real scale(MAXCHAN)
+	integer item,iostat,nfeeds,ntau,nbpsols,ngains,i,j,k
+        integer ichan,nants,n,nchan,nspect,off,ioff
+c
+c  External
+c
+        integer hsize
+c
+c  Get the dimensionality numbers.
+c
+	call rdhdi(lVis,'ngains',ngains,0)
+	call rdhdi(lVis,'nfeeds',nfeeds,1)
+	call rdhdi(lVis,'ntau',  ntau,  0)
+	nants = ngains / (ntau + nfeeds)
+        ngains = nants * nfeeds
+	call rdhdi(lVis,'nbpsols', nbpsols,0)
+        n=max(1,nbpsols)
+	call rdhdi(lVis,'nchan0',nchan,0)
+	call rdhdi(lVis,'nspect0',nspect,0)
+	if(ngains.le.0.or.nchan.le.0.or.nspect.le.0) call bug('f',
+     *	  'Invalid value for nchan, ngains or nspect, in mfboot')
+	if(nspect.gt.MAXWIN)call bug('f',
+     *	  'Too many spectral windows for me to handle, in mfboot')
+c
+c  Load the frequency table.
+c
+	call haccess(lVis,item,'freqs','read',iostat)
+	if(iostat.ne.0)call uvGnBug(iostat,'accessing freqs table')
+	off = 8
+	do i=1,nspect
+	  call hreadi(item,nschan(i),off,4,iostat)
+	  if(iostat.ne.0)call uvGnBug(iostat,'reading freqs table')
+	  off = off + 8
+	  call hreadd(item,freqs,off,16,iostat)
+	  if(iostat.ne.0)call uvGnBug(iostat,'reading freqs table')
+	  off = off + 16
+	  sfreq(i) = freqs(1)
+	  sdf(i)   = freqs(2)
+	enddo
+c
+	call hdaccess(item,iostat)
+	if(iostat.ne.0)call uvGnBug(iostat,'closing freqs table')
+c
+c  Read in the bandpass gains and correct them
+c 
+	call haccess(lVis,item,'bandpass','append',iostat)
+	if(iostat.ne.0)call bug('f','Error accessing bandpass table')
+        if (hsize(item).ne.8+n*ngains*nchan*8+nbpsols*8) 
+     *        call bug('f','Bandpass table size is incorrect. '//
+     *           'This happens when the inputs for mfcal and'//
+     *           ' gpcal are inconsistent')
+        ichan=0
+        do i=1,nspect
+          do k=1,nschan(i)
+            ichan=ichan+1
+            if (ichan.gt.MAXCHAN) call bug('f','Too many channels')
+            f=sfreq(i)+(k-1)*sdf(i)
+            scale(ichan) = sqrt((f/f0)**alpha)
+          enddo
+        enddo
+c
+        off=8
+        do k=1,n
+	  call hreadr(item,bpgains,off,8*ngains*nchan,iostat)
+          do j=1,ngains
+            ioff=nchan*(j-1)
+            do i=1,nchan
+              bpgains(i+ioff) = bpgains(i+ioff)*scale(i)
+            enddo
+          enddo
+          call hwriter(item,bpgains,off,8*ngains*nchan,iostat)
+          off=off+8*ngains*nchan
+          if (nbpsols.gt.0) then
+            off=off+8
+          endif
+          if(iostat.ne.0)call bug('f','Error updating bandpass table')
+        enddo
+	call hdaccess(item,iostat)
+	if(iostat.ne.0)call bug('f','Error closing bandpass table')
+c
+
 	end
 c************************************************************************
 	subroutine gainWri(lVis,fac,time,nants)
