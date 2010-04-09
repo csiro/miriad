@@ -376,7 +376,7 @@ c    rjs  09-apr-09  Apply AIPS baseline dependent calibration and
 c                    various cosmetic changes.
 c    rjs  20-jul-09  Slight changes to messages about extension files.
 c
-c $Id: fits.for,v 1.10 2010/04/09 07:44:53 cal103 Exp $
+c $Id: fits.for,v 1.11 2010/04/09 07:56:47 cal103 Exp $
 c-----------------------------------------------------------------------
 	integer maxboxes
 	parameter(maxboxes=2048)
@@ -389,8 +389,8 @@ c-----------------------------------------------------------------------
 	character versan*80, version*80
 c-----------------------------------------------------------------------
       version = versan ('fits',
-     :                  '$Revision: 1.10 $',
-     :                  '$Date: 2010/04/09 07:44:53 $')
+     :                  '$Revision: 1.11 $',
+     :                  '$Date: 2010/04/09 07:56:47 $')
 c
 c  Get the input parameters.
 c
@@ -1652,7 +1652,8 @@ c
 c  Get velocity definition information, just in case this is a spectral
 c  line observation.
 c
-	call fitrdhdd(lu,'RESTFREQ',rfreq,0.d0)
+	call fitrdhdd(lu,'RESTFREQ',rfreq,0d0)
+	if (rfreq.eq.0d0) call fitrdhdd(lu,'RESTFRQ',rfreq,0d0)
 	call fitrdhdr(lu,'ALTRPIX',velref,real(Coord(uvCrpix,uvFreq)))
 	call fitrdhdi(lu,'VELREF',velsys,257)
 	freq = (velref-Coord(uvCrpix,uvFreq))*Coord(uvCdelt,uvFreq)
@@ -3979,8 +3980,9 @@ c
 	if(btype.ne.' ')call wrbtype(tno,btype)
 	call fitrdhdr(lu,'VOBS',vobs,0.)
 	if(vobs.ne.0)call wrhdr(tno,'vobs',vobs)
-	call fitrdhdd(lu,'RESTFREQ',restfreq,-1.d0)
-	if(restfreq.gt.0) call wrhdd(tno,'restfreq',1.0d-9*restfreq)
+	call fitrdhdd(lu,'RESTFREQ',restfreq,0d0)
+	if (restfreq.eq.0d0) call fitrdhdd(lu,'RESTFRQ',restfreq,0d0)
+	if (restfreq.gt.0d0) call wrhdd(tno,'restfreq',1d-9*restfreq)
 	call fitrdhda(lu,'CELLSCAL',cellscal,'CONSTANT')
 	if(cellscal.ne.' ')call wrhda(tno,'cellscal',cellscal)
 	call fitrdhdr(lu,'BMAJ',bmaj,0.)
@@ -4618,7 +4620,7 @@ c
 	  call fitwrhda(lu,'DATE-OBS',date)
 	endif
 	call coGetd(tno,'restfreq',restfreq)
-	if(restfreq.gt.0) call fitwrhdd(lu,'RESTFREQ',1.0d9*restfreq)
+	if(restfreq.gt.0d0) call fitwrhdd(lu,'RESTFREQ',1d9*restfreq)
 	call coGeta(tno,'cellscal',cellscal)
 	if(cellscal.ne.' ')call fitwrhda(lu,'CELLSCAL',cellscal)
 c
