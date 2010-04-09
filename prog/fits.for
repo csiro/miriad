@@ -1,139 +1,143 @@
-c************************************************************************
-	program fits
-	implicit none
+c***********************************************************************
+        program fits
 c= fits - Conversion between MIRIAD and FITS image and uv formats
 c& rjs
 c: data transfer
 c+
-c	FITS is a MIRIAD task, which converts image and uv files both from
-c	FITS to Miriad format, and from Miriad to FITS format. Note that
-c	because there is not a perfect correspondence between all information
-c	in a FITS and Miriad file, some information may be lost in the
-c	conversion step. This is particularly true for uv files.
+c       FITS is a MIRIAD task that converts image and uv files both
+c       from FITS to Miriad format, and from Miriad to FITS format.
+c       Note that because there is not a perfect correspondence between
+c       all information in a FITS and Miriad file, some information may
+c       be lost in the conversion step.  This is particularly true for
+c       uv files.
 c
-c	WARNING: When writing uv FITS files, fits can handle single
-c	frequency band, single array configuration only. Minimal
-c	checks are made to see that these restrictions are observed!
+c       WARNING: When writing uv FITS files, fits can handle single
+c       frequency band, single array configuration only. Minimal
+c       checks are made to see that these restrictions are observed!
 c
 c       References:
-c	  For a description of the standard, see
-c	    http://fits.gsfc.nasa.gov/fits_home.html
+c         For a description of the standard, see
+c           http://fits.gsfc.nasa.gov/fits_home.html
 c
 c@ in
-c	Name of the input file (either a FITS or MIRIAD file name, depending
-c	on OP). No default.
+c       Name of the input file (either a FITS or MIRIAD file name,
+c       depending on OP).  No default.
 c@ op
-c	This determines the operation to perform. Possible values are:
-c	  "uvin"    Convert FITS uv file to Miriad uv file.
-c	  "uvout"   Convert Miriad uv file to FITS uv file.
-c	  "xyin"    Convert FITS image file to Miriad image file.
-c	  "xyout"   Convert Miriad image file to FITS image file.
-c	  "print"   Print out a FITS header.
-c	There is no default.
+c       This determines the operation to perform. Possible values are:
+c         "uvin"    Convert FITS uv file to Miriad uv file.
+c         "uvout"   Convert Miriad uv file to FITS uv file.
+c         "xyin"    Convert FITS image file to Miriad image file.
+c         "xyout"   Convert Miriad image file to FITS image file.
+c         "print"   Print out a FITS header.
+c       There is no default.
 c@ out
-c	Name of the output file (either a MIRIAD or FITS file name, depending
-c	on OP). If op=print, then this parameter is not required. Otherwise
-c	there is no default.
+c       Name of the output file (either a MIRIAD or FITS file name,
+c       depending on OP).  If op=print, then this parameter is not
+c       required.  Otherwise there is no default.
 c@ line
-c	Line type of the output, when op=uvout. This is of the form:
+c       Line type of the output, when op=uvout. This is of the form:
 c
-c	  linetype,nchan,start,width,step
+c         linetype,nchan,start,width,step
 c
-c	"Linetype" is either "channel", "wide" or "velocity". "Nchan" is
-c	the number of channels in the output.
+c       "Linetype" is either "channel", "wide" or "velocity".  "Nchan"
+c       is the number of channels in the output.
 c@region
-c	The region of interest. The default is the entire input image.
-c	See the Users Manual for instructions on how to specify this.
+c       The region of interest. The default is the entire input image.
+c       See the Users Manual for instructions on how to specify this.
 c       Used when op=xyout
 c@ select
-c	Normal uv selection, used when op=uvout.
+c       Normal uv selection, used when op=uvout.
 c@ stokes
-c	Normal Stokes selection, used when op=uvout
+c       Normal Stokes selection, used when op=uvout
 c@ options
-c	These options applies for op=uvin only.
-c	  compress Store the data in compressed uv format.
-c	  nochi    Assume that the parallactic angle of the
-c	           telescope is a constant 0 (or that the data are
-c	           from circularly polarised feeds and have already
-c	           been corrected for parallactic angle).
-c	  lefty    Assume that the FITS antenna table uses a
-c	           left-handed coordinate system (rather than the
-c	           more normal right-handed system).
-c	  varwt    The visibility weight in the FITS file should
-c	           be interpretted as the reciprocal of the noise
-c	           variance on that visibility.
-c	  blcal    Apply AIPS baseline-dependent calibration to the data.
+c       These options applies for op=uvin only.
+c         compress Store the data in compressed uv format.
+c         nochi    Assume that the parallactic angle of the
+c                  telescope is a constant 0 (or that the data are
+c                  from circularly polarised feeds and have already
+c                  been corrected for parallactic angle).
+c         lefty    Assume that the FITS antenna table uses a
+c                  left-handed coordinate system (rather than the
+c                  more normal right-handed system).
+c         varwt    The visibility weight in the FITS file should
+c                  be interpretted as the reciprocal of the noise
+c                  variance on that visibility.
+c         blcal    Apply AIPS baseline-dependent calibration to the
+c                  data.
 c
-c	These options for op=uvout only.
-c	  nocal    Do not apply the gains table to the data.
-c	  nopol    Do not apply the polarization leakage table
-c	           to the data.
-c	  nopass   Do not apply the bandpass table correctsions
-c	           to the data.
+c       These options for op=uvout only.
+c         nocal    Do not apply the gains table to the data.
+c         nopol    Do not apply the polarization leakage table
+c                  to the data.
+c         nopass   Do not apply the bandpass table correctsions
+c                  to the data.
 c
-c	These options apply for op=xyin only.
-c	  rawdss   Use the conventions for raw Digital Sky Survey FITS
-c	           files, and convert (partially!) the header. A raw
+c       These options apply for op=xyin only.
+c         rawdss   Use the conventions for raw Digital Sky Survey FITS
+c                  files, and convert (partially!) the header. A raw
 c                  DSS FITS file has header items such as PLTSCALE,
 c                  XPIXELSZ, YPIXELSZ etc. If you are unsure if your DSS
 c                  image is raw or conventional FITS, run:
 c                    Task FITS:
 c                      in=mydss.fits
 c                      op=print
-c                  and look for those header items. Note that DSS images
-c                  retrieved using SkyView have a conventional fits header,
-c                  and do not require options=rawdss.
-c	  nod2     Use the conventions of NOD2 FITS files.
+c                  and look for those header items.  Note that DSS
+c                  images retrieved using SkyView have a conventional
+c                  FITS header, and do not require options=rawdss.
+c         nod2     Use the conventions of NOD2 FITS files.
 c@ velocity
-c	Velocity information. This is only used for op=uvin,
-c	and is only relevant for line observations. The default is
-c	to use the information present in the FITS header. The
-c	"velocity" parameter allows this information to be overriden or
-c	the velocity system to be changed.
+c       Velocity information. This is only used for op=uvin,
+c       and is only relevant for line observations. The default is
+c       to use the information present in the FITS header. The
+c       "velocity" parameter allows this information to be overriden or
+c       the velocity system to be changed.
 c
-c	Within each line visibility data-set, Miriad stores the velocity
-c	of the observatory wrt a rest frame. This allows account to be taken
-c	of this when determining channel velocities.
+c       Within each line visibility data-set, Miriad stores the velocity
+c       of the observatory wrt a rest frame. This allows account to be
+c       taken of this when determining channel velocities.
 c
-c	The fits task will determine the observatory velocity either by being
-c	given a velocity at a given channel (wrt a rest frame) or by using
-c	a model of Earth and solar system motion (accurate to 0.005km/s).
+c       The fits task will determine the observatory velocity either by
+c       being given a velocity at a given channel (wrt a rest frame) or
+c       by using a model of Earth and solar system motion (accurate to
+c       5 m/s).
 c
-c	The "velocity" parameter can be used to specify the velocity of
-c	a particular channel. The parameter consists of three values:
-c	the velocity system of the reference value, the reference value
-c	and the reference channel, viz:
-c	   velocity=velsys,refval,refchan
-c	Possible values for the velocity system are:
-c	  lsr     Velocity is the radio definition wrt the LSR frame.
-c	  bary    Velocity is the radio definition wrt the barycenter.
-c	  optlsr  Velocity is the optical definition wrt the LSR frame.
-c	  optbary Velocity is the optical definition wrt the barycenter.
-c	  obs     Velocity wrt the observatory.
-c	  
-c	The reference value gives the velocity, at the reference channel,
-c	in km/s. If the reference value and reference channel are
-c	omitted, a model of Earth and solar system motion is used to
-c	determine the appropriate information.
+c       The "velocity" parameter can be used to specify the velocity of
+c       a particular channel. The parameter consists of three values:
+c       the velocity system of the reference value, the reference value
+c       and the reference channel, viz:
+c          velocity=velsys,refval,refchan
+c       Possible values for the velocity system are:
+c         lsr     Velocity is the radio definition wrt the LSR frame.
+c         bary    Velocity is the radio definition wrt the barycenter.
+c         optlsr  Velocity is the optical definition wrt the LSR frame.
+c         optbary Velocity is the optical definition wrt the barycenter.
+c         obs     Velocity wrt the observatory.
 c
-c	For example:
-c	  velocity=lsr,30,1
-c	indicates that the first channel has radio LSR velocity of 30 km/s.
-c	The observatory velocity, relative to LSR, can then be computed.
+c       The reference value gives the velocity, at the reference
+c       channel, in km/s.  If the reference value and reference channel
+c       are omitted, a model of Earth and solar system motion is used to
+c       determine the appropriate information.
 c
-c	Alternately:
-c	  velocity=lsr
-c	indicates that fits is to determine the observatory velocity
-c	wrt the LSR frame using an appropriate model.
+c       For example:
+c         velocity=lsr,30,1
+c       indicates that the first channel has radio LSR velocity of
+c       30 km/s.  The observatory velocity, relative to LSR, can then
+c       be computed.
+c
+c       Alternately:
+c         velocity=lsr
+c       indicates that fits is to determine the observatory velocity
+c       wrt the LSR frame using an appropriate model.
 c--
 c
 c  Bugs:
-c    * uvin should check that the phase and pointing center are the same.
-c      xyin should generate the Miriad obsra and obsdec parameters.
+c    * uvin should check that the phase and pointing center are the
+c      same.  xyin should generate the Miriad obsra and obsdec
+c      parameters.
 c    * xyin should eliminate dummy Stokes axes in some cases.
 c      Percent polarisation not correctly handled.
-c    * SHould have a "ccin" option to read AIPS clean component tables and convert
-c      to Miriad images.
+c    * Should have a "ccin" option to read AIPS clean component tables
+c      and convert to Miriad images.
 c    * uvout could be infintely smarter (handle multiple windows, write
 c      FQ tables, etc).
 c    * In uvin 'RESTFREQ' from AIPS SU table is ignored. Also
@@ -144,71 +148,76 @@ c
 c  History:
 c    rjs         89
 c    nebk 05-may-89  Add new FITS history
-c    rjs  17-may-89  Improved header variables. uvin makes the output corr
-c		     format match the precision of the input. Added the
-c		     ability to specify altrpix and altrval for uvin.
+c    rjs  17-may-89  Improved header variables. uvin makes the output
+c                    corr format match the precision of the input.
+c                    Added the ability to specify altrpix and altrval
+c                    for uvin.
 c    rjs  18-jul-89  Made default ctype as RA---SIN and DEC--SIN for
-c		     naxis=1 or 2, for xyin.
+c                    naxis=1 or 2, for xyin.
 c    rjs  18-oct-89  Changes to accomodate changes to the interface to
-c		     get planet scaling/rotation.
+c                    get planet scaling/rotation.
 c    mchw 24-oct-89  Converted units of bmaj, bmin in xyin and xyout
 c    rjs   8-nov-89  Extracted the binary search routine.
 c    rjs  13-feb-90  Replaced velocalc with calls to uvfit. Handled some
-c		     FITS keywords for uvin somewhat better.
-c    rjs  21-feb-90  Did not write some uv variables if the corresponding
-c		     FITS keyword is blank!
+c                    FITS keywords for uvin somewhat better.
+c    rjs  21-feb-90  Did not write some uv variables if the
+c                    corresponding FITS keyword is blank!
 c    rjs   8-mar-89  Changed call to uvgetvrr to uvrdvrr. Calculated the
-c		     number of antenna on uvin.
-c    rjs   2-may-90  Changed call to uvsetcor to uvset. Added version id.
+c                    number of antenna on uvin.
+c    rjs   2-may-90  Changed call to uvsetcor to uvset.  Added version
+c                    id.
 c    pjt   3-may-90  maxdim.h now defines maxchan
 c    rjs  10-jan-91  Check for TELESCOP keyword for uv files in hdin.
-c		     More robust for ascii values containing rubbish.
-c		     Improved .doc comments.
+c                    More robust for ascii values containing rubbish.
+c                    Improved .doc comments.
 c    rjs  22-jan-91  Added op=print option.
-c    rjs  31-jan-91  Better Stokes handling, in both uvin and uvout. A
-c		     significant rework of these routines. Also got rid of
-c		     "umsg".
+c    rjs  31-jan-91  Better Stokes handling, in both uvin and uvout.  A
+c                    significant rework of these routines.  Also got rid
+c                    of "umsg".
 c    rjs  19-feb-91  Ability for uvin to redetermine parallactic angle.
-c		     Write out DATE-OBS for uvout (AIPS pretty well insists
-c		     on it!).
-c    rjs  25-feb-91  Changed declaration in hdout, to allow keywords to be
-c		     longer that 7 characters.
+c                    Write out DATE-OBS for uvout (AIPS pretty well
+c                    insists on it!).
+c    rjs  25-feb-91  Changed declaration in hdout, to allow keywords to
+c                    be longer that 7 characters.
 c    rjs   1-mar-91  In uvin, compute parallactic angle if there are 4
-c		     polarisations. Added lat/long for VLA. More robust
-c		     when FITS weight is zero.
+c                    polarisations. Added lat/long for VLA. More robust
+c                    when FITS weight is zero.
 c    rjs   8-mar-91  Bug in PolCheck, determining the max polarisation
-c		     to output.
-c    rjs   5-apr-91  Fixed bug created by the change on 25feb91, which gave
-c		     extra space between the keyword and the equals sign.
-c		     Changed itoa to itoaf.
-c    rjs   5-apr-91  Fixed AT lat/long bug. Added some AT-specific parameters.
-c    rjs   8-apr-91  Added ORIGIN to output FITS files, at pjt's request.
+c                    to output.
+c    rjs   5-apr-91  Fixed bug created by the change on 25feb91, which
+c                    gave extra space between the keyword and the equals
+c                    sign.  Changed itoa to itoaf.
+c    rjs   5-apr-91  Fixed AT lat/long bug. Added some AT-specific
+c                    parameters.
+c    rjs   8-apr-91  Added ORIGIN to output FITS files, at pjt's
+c                    request.
 c    rjs  11-apr-91  Changed "atod" into "atodf".
 c    rjs  18-apr-91  Increased size of a string buffer.
 c    rjs  11-jun-91  Fiddled uvin to add Hat Ck characteristics.
-c		     Calculate LST.D
+c                    Calculate LST.D
 c    rjs  13-jun-91  Changed 45 degrees fiddle of parallactic angle
-c		     for the AT.
+c                    for the AT.
 c    rjs  17-jun-91  Changed 45 degrees fiddle of parallactic angle
-c		     for the AT AGAIN!
+c                    for the AT AGAIN!
 c    nebk 06-aug-91  Implement UVDAT* routines for option 'uvout'.
 c                    Adds keywords STOKES and OPTIONS
 c    rjs  12-aug-91  Changed the latitude of the AT. What is the correct
-c		     latitude.
-c    nebk 16-aug-91  COnvert AT data with circular poln header to its 
-c                    true linear from (just a labelling change).  CHange
+c                    latitude.
+c    nebk 16-aug-91  COnvert AT data with circular poln header to its
+c                    true linear from (just a labelling change).  Change
 c                    AT's latitude to geodetic value !!
 c    rjs  19-sep-91  Changed Jy/K for the AT.
 c    rjs   1-oct-91  Calls JulFDate, rather than internal routine. Calls
-c		     obspar, rather than using its own tables.
+c                    obspar, rather than using its own tables.
 c    rjs  17-oct-91  Copy image parameters crval,crpix,cdelt, etc in
-c		     double precision.
+c                    double precision.
 c    rjs  17-oct-91  Changed default number of channels in uvout to all
-c		     channels.
+c                    channels.
 c    rjs  18-nov-91  Fiddles with the output header for uvout.
-c    mchw 26-nov-91  Check pointing offsets and add to output coordinates.
-c    rjs  12-dec-91  Deleted generation of obstype parameter in uvoin (this
-c		     is now done inside uvio).
+c    mchw 26-nov-91  Check pointing offsets and add to output
+c                    coordinates.
+c    rjs  12-dec-91  Deleted generation of obstype parameter in uvoin
+c                    (this is now done inside uvio).
 c    rjs  28-feb-92  Better handling of OBSRA and OBSDEC.
 c    rjs  11-mar-92  Increased the length of a string buffer.
 c    rjs   8-apr-92  Changes to accomodate new version of fitsio.for.
@@ -218,65 +227,70 @@ c    rjs  21-may-92  Protect against stupid AIPS Stokes values in xyin.
 c    rjs  26-may-92  Write btype header parameter.
 c    rjs  10-jun-92  Handle multisource file without FQ table.
 c    rjs  25-jun-92  More robust at handling duplicate visibilities,
-c		     in uvout (to cope with crazy data from jlim). Save
-c		     more info for op=uvin.
+c                    in uvout (to cope with crazy data from jlim). Save
+c                    more info for op=uvin.
 c    rjs  28-jun-92  Handle restfreq better.
 c    rjs  27-jul-92  Default restfreq is 0.
 c    rjs  19-aug-92  Fixed bug in conversion of antenna positions from
-c		     meters to nanosec.
+c                    meters to nanosec.
 c    rjs  26-aug-92  Added nopass options.
 c    rjs   4-sep-92  Increase a buffer in uvin.
-c    rjs   7-sep-92  Use the number of nants from AN table, where it exists.
-c    rjs   9-sep-92  Corrected calculation of Miriad-style antenna coordinates
-c		     and reversed antenna numbers.
-c    rjs  25-sep-92  Estimate the integration time for each visibility in
-c		     uvin.
+c    rjs   7-sep-92  Use the number of nants from AN table, where it
+c                    exists.
+c    rjs   9-sep-92  Corrected calculation of Miriad-style antenna
+c                    coordinates
+c                    and reversed antenna numbers.
+c    rjs  25-sep-92  Estimate the integration time for each visibility
+c                    in uvin.
 c    rjs  29-sep-92  Relabel RL as LR and visa versa, in uvin and uvout.
 c    rjs  24-dec-92  Fudges to get around AIPS FITLD bug.
 c    rjs  10-feb-93  Protect against NaN in uvin.
 c    rjs  15-feb-93  Variables ra and dec now double.
 c    rjs  02-mar-93  Better calculation of frequencies. Handle multiple
-c		     configurations. Use maxnax.h, use mirconst.h
+c                    configurations. Use maxnax.h, use mirconst.h
 c    rjs  18-mar-93  Better handling of extension tables in op=print.
 c    rjs  29-mar-93  Increase jyperk.
-c    rjs  30-mar-93  Fixed bug in handling of altrpix,altrval, in uvhdin,
-c		     apparently introduced on 02-mar-93.
+c    rjs  30-mar-93  Fixed bug in handling of altrpix, altrval, in
+c                    uvhdin, apparently introduced on 02-mar-93.
 c    rjs  28-jun-93  Use expanded obspar routines proper-like.
-c    rjs  06-jul-93  Depend more on the stuff in the AIPS AN table. Handle
-c		     pixel blanking. Another bug in calculation of veldop.
+c    rjs  06-jul-93  Depend more on the stuff in the AIPS AN table.
+c                    Handle pixel blanking.  Another bug in calculation
+c                    of veldop.
 c    rjs  08-jul-93  Better velocity computation for uvin.
 c    rjs  21-jul-93  Better velocity/freq handling for uvout.
 c    rjs  27-jul-93  Handle AIPS FG tables, and more multi-source/freq
-c		     tables.
-c    rjs  12-aug-93  Long time bug in hdin, which unnecessarily discarded
-c		     extra FITS info. Would not have caused anyone a problem
-c		     because the stuff was not the important header info.
-c    rjs  19-aug-93  Recognise galactic and ecliptic coordinates in xyin.
-c		     Fiddle times when reading in uv data. Include
-c		     nutation and aberration when determining apparent
-c		     coordinates.
+c                    tables.
+c    rjs  12-aug-93  Long time bug in hdin, which unnecessarily
+c                    discarded extra FITS info.  Would not have caused
+c                    anyone a problem because the stuff was not the
+c                    important header info.
+c    rjs  19-aug-93  Recognise galactic and ecliptic coordinates in
+c                    xyin.  Fiddle times when reading in uv data.
+c                    Include nutation and aberration when determining
+c                    apparent coordinates.
 c    rjs  16-sep-93  Rename bsrch to binsrch.
 c    rjs  22-oct-93  Did not write out the write freqid to the FG table.
-c    rjs  25-oct-93  Stokes axis in xyin was not being handled correctly.
+c    rjs  25-oct-93  Stokes axis in xyin was not being handled
+c                    correctly.
 c    rjs  28-nov-93  Correct calculation of parallactic angle for
-c		     multi-source files.
+c                    multi-source files.
 c    rjs  30-nov-93  Use ftabskip when listing files.
 c    rjs   9-dec-93  Really make sure the default velocity system is
-c		     VELO-OBS.
+c                    VELO-OBS.
 c    rjs  13-dec-93  Sign convention of U(circular), V(linear) change.
 c    rjs  21-jan-94  Ignore keywords in input FITS files which contain
-c		     special characters.
+c                    special characters.
 c    rjs  14-mar094  Correct misunderstanding about antenna coordinates
-c		     in AIPS AN file (affects VLA FITS files only).
+c                    in AIPS AN file (affects VLA FITS files only).
 c    rjs   6-apr-94  Check antenna table ref freq for validity, and use
-c		     header ref freq if it looks bad (as suggested by
-c		     Ray Plante).
+c                    header ref freq if it looks bad (as suggested by
+c                    Ray Plante).
 c    rjs   5-jun-94  Get BPA from fits header.
 c    rjs  19-jul-94  Fiddle WSRT sign convention to the "normal"
-c		     convention.
+c                    convention.
 c    rjs  29-jul-94  Better default integration time.
 c    rjs  17-aug-94  Label RA--- and DEC-- image axes from EW telescopes
-c		     as NCP.
+c                    as NCP.
 c    rjs  19-aug-94  Don't make character strings upper case, in hdout.
 c    rjs  29-aug-94  Handle w axis in uvin.
 c    rjs  13-sep-94  Recognise 'VELOCITY' and 'FELOCITY' axes.
@@ -284,47 +298,53 @@ c    rjs  23-sep-94  Handle w axis in uvout.
 c    rjs  26-sep-95  Somewhat better handling of odd input axes.
 c    rjs   7-nov-95  options=dss.
 c    rjs  05-dec-95  Negate the cdelt1 increment when options=dss.
-c    nebk 12-jan-96  Replace "percent_polarization" by "polarized_intensity"
-c		     in subroutine AXISIN (AIPS manuals say percent_pol
-c		     but my empirical evidence is contrary.  Recognize 
-c		     LL,MM as RA---SIN and DEC--SIN.
+c    nebk 12-jan-96  Replace "percent_polarization" by
+c                    "polarized_intensity" in subroutine AXISIN (AIPS
+c                    manuals say percent_pol but my empirical evidence
+c                    is contrary.  Recognize LL,MM as RA---SIN and
+c                    DEC--SIN.
 c    rjs  07-aug-96  Correct scaling of axis type.
 c    rjs  16-aug-96  Added options=nochi.
 c    rjs  17-oct-96  Make the visibility weight equal to 1/sigma**2.
-c		     Discard OBSRA and BLANK in reading in images.
+c                    Discard OBSRA and BLANK in reading in images.
 c    rjs  07-feb-97  Increase max string length.
 c    rjs  21-feb-97  Better treatment of missing evector. More messages.
 c    rjs  21-mar-97  Write antenna tables for options=uvout.
 c    rjs  06-may-97  Support apparent coordinates in SU table.
 c    rjs  08-may-97  Write all FITS keywords in standard format.
 c    rjs  02-jul-97  Handle cellscal keyword.
-c    rjs  07-jul-97  Improve handling of EPOCH/EQUINOX and pointing parameters.
+c    rjs  07-jul-97  Improve handling of EPOCH/EQUINOX and pointing
+c                    parameters.
 c    rjs  08-jul-97  Fix bug introduced yesterday.
 c    rjs  12-jul-97  Added options=nod2.
 c    rjs  16-jul-97  Added options=compress.
 c    rjs  01-aug-97  Made FITS date string variables longer, to
-c		     allow for new FITS standard.
+c                    allow for new FITS standard.
 c    rjs  05-aug-97  More robust in interpretation of epoch keyword.
 c    rjs  22-aug-97  More robust again. Also treat unrecognised keywords
-c		     as history comments.
+c                    as history comments.
 c    rjs  25-aug-97  Fix up bug I created on Friday.
-c    rjs  20-sep-97  Replace julfdate and fdatejul with julday and dayjul.
+c    rjs  20-sep-97  Replace julfdate and fdatejul with julday and
+c                    dayjul.
 c    rjs  21-apr-98  Increase max number of antenna configs.
-c    rjs  19-aug-98  Added options=lefty and made the uv writer check obspar
-c		     for observatory latitude/longitude if it was missing
-c		     from the vis dataset.
-c    pjt  15-sep-98  Recognise galactic and ecliptic coordinates the right way
+c    rjs  19-aug-98  Added options=lefty and made the uv writer check
+c                    obspar for observatory latitude/longitude if it was
+c                    missing from the vis dataset.
+c    pjt  15-sep-98  Recognise galactic and ecliptic coordinates the
+c                    right way
 c    rjs  25-sep-98  Correct handling of OBSRA and OBSDEC in op=xyin.
 c    rjs  27-oct-98  Check in CD keyword for image pixel increment.
 c    rjs  20-nov-98  Better handling of image projections and rotation.
-c    rjs  25-nov-98  More work on better handling of image projection and rotation.
+c    rjs  25-nov-98  More work on better handling of image projection
+c                    and rotation.
 c    rjs  07-jan-99  Write dates in new FITS format.
 c    rjs  26-feb-99  Used new subroutine "fitdate" to be more robust to
-c		     corrupted dates.
+c                    corrupted dates.
 c    rjs  20-jul-99  uvout writes AIPS SU tables.
 c    rjs  30-aug-99  Changed some "PI" to "DPI"
 c    rjs  11-nov-99  options=varwt
-c    rjs  11-apr-00  In uvout, multisource files were always being generated.
+c    rjs  11-apr-00  In uvout, multisource files were always being
+c                    generated.
 c    rjs  10-may-00  In xyout, increase size of descr buffer.
 c    rjs  04-Oct-00  Make xyout work for arbitrarily large images.
 c    rjs  10-oct-00  Really do the above this time!
@@ -337,26 +357,27 @@ c    dpr  26-jun-01  Relax antenna table format restrictions
 c    dpr  02-jul-01  Relax AN restrictions properly (I hope!!)
 c    rjs  04-oct-01  Get GLS history comment right.
 c    nebk 08-jan-02  In AntWrite, set POLAA and POLAB to 45/135 for ATCA
-c    rjs  29-dec-03  Be more robust to poorly formed CTYPE labels in 
-c		     inputs.
+c    rjs  29-dec-03  Be more robust to poorly formed CTYPE labels in
+c                    inputs.
 c    rjs  04-jul-05  More robust to some weirdo variants.
 c    rjs  19-sep-05  Better defaults for velocity info, and better
-c		     velocity formula. Handle AIPS OB tables.
+c                    velocity formula. Handle AIPS OB tables.
 c    rjs  24-sep-05  Increase max number of sources in op=uvout
-c    rjs  03-aug-06  In reading in images, llrot was sometimes not
-c                    correct. Also handle some rare keywords a little better.
-c    rjs  01-jan-07  Extended baseline numbering convention. Better handling
-c		     of SMA-style Nasmyth mounts.
+c    rjs  03-aug-06  In reading in images, llrot was sometimes
+c                    incorrect.  Also handle some rare keywords a little
+c                    better.
+c    rjs  01-jan-07  Extended baseline numbering convention.  Better
+c                    handling of SMA-style Nasmyth mounts.
 c    rjs  24-jan-07  More robust to bad antenna tables.
 c    rjs  26-jan-07  Fix bug I introduced two days ago!
 c    jhz  09-feb-07  Set MAXFREQ=MAXWIN fits.h so that it
 c                    can read SMA FITS output data from IDL.
-c    rjs  09-apr-09  Apply AIPS baseline dependent calibration and various
-c		     cosmetic changes.
+c    rjs  09-apr-09  Apply AIPS baseline dependent calibration and
+c                    various cosmetic changes.
 c    rjs  20-jul-09  Slight changes to messages about extension files.
-c------------------------------------------------------------------------
-	character version*(*)
-	parameter(version='Fits: version 1.1 20-Jul-09')
+c
+c $Id: fits.for,v 1.10 2010/04/09 07:44:53 cal103 Exp $
+c-----------------------------------------------------------------------
 	integer maxboxes
 	parameter(maxboxes=2048)
 	character in*128,out*128,op*8,uvdatop*12
@@ -365,10 +386,14 @@ c------------------------------------------------------------------------
 	real altrpix,altrval
 	logical altr,docal,dopol,dopass,dss,dochi,nod2,compress
 	logical lefty,varwt,dobl
+	character versan*80, version*80
+c-----------------------------------------------------------------------
+      version = versan ('fits',
+     :                  '$Revision: 1.10 $',
+     :                  '$Date: 2010/04/09 07:44:53 $')
 c
 c  Get the input parameters.
 c
-	call output( version )
 	call keyini
 	call GetOp(op)
 	in = ' '
@@ -412,17 +437,16 @@ c
 	  call prthd(in)
 	endif
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine GetOp(op)
 c
-	implicit none
 	character op*(*)
 c
 c  Determine the processing option.
 c
 c  Output:
 c    op		The processing option.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer nout
 c
 	integer nopts
@@ -433,10 +457,9 @@ c
 	call keymatch('op',nopts,opts,1,op,nout)
 	if(nout.eq.0)call bug('f','An op must be given')
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine GetVel(velsys,altr,altrval,altrpix)
 c
-	implicit none
 	integer velsys
 	logical altr
 	real altrval,altrpix
@@ -448,7 +471,7 @@ c    velsys	Velocity system desired.
 c    altr	True if altrval is set.
 c    altrval	Reference velocity.
 c    altrpix	Reference channel.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer OBSRADIO,OBSOPTIC,LSRRADIO,LSROPTIC,HELRADIO,HELOPTIC
 	parameter(OBSRADIO=259,OBSOPTIC=3,LSRRADIO=257,LSROPTIC=1)
 	parameter(HELRADIO=258,HELOPTIC=2)
@@ -484,11 +507,10 @@ c
 	  call keyr('velocity',altrpix,1.)
 	endif
 	end
-c************************************************************************
+c***********************************************************************
       subroutine getopt(docal,dopol,dopass,dss,nod2,dochi,
      *					compress,lefty,varwt,dobl)
 c
-      implicit none
       logical docal,dopol,dopass,dss,dochi,nod2,compress,lefty,varwt
       logical dobl
 c
@@ -506,7 +528,7 @@ c    lefty   Assume antenna table uses a left-handed system.
 c    varwt   Interpret the visibility weight as the reciprocal of the
 c	     noise variance.
 c    dobl    Apply AIPS baseline-dependent calibration.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       integer nopt
       parameter (nopt = 11)
       character opts(nopt)*8
@@ -534,10 +556,9 @@ c
       endif
 c
       end
-c************************************************************************
+c***********************************************************************
 	subroutine prthd(in)
 c
-	implicit none
 	character in*(*)
 c
 c  This prints the header of a FITS file.
@@ -545,7 +566,7 @@ c
 c  Input:
 c    in		Name of the FITS file.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer lu
 	logical more
 	character line*80
@@ -567,18 +588,17 @@ c
 	enddo
 	call fitclose(lu)
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine uvin(in,out,velsys,altr,altrpix,altrval,dochi,
      *				compress,lefty,varwt,dobl,version)
 c
-	implicit none
 	character in*(*),out*(*)
 	integer velsys
 	logical altr,dochi,compress,lefty,varwt,dobl
 	real altrpix,altrval
 	character version*(*)
 c
-c  Read in a UV FITS file. 
+c  Read in a UV FITS file.
 c
 c  Inputs:
 c    in		Name of the input uv FITS file.
@@ -593,7 +613,7 @@ c    lefty      Assume the antenna table uses a left-handed system.
 c    varwt	Interpret the visibility weight as the reciprocal of the
 c		noise variance.
 c    dobl	Apply AIPS baseline-dependent calibration.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	integer PolXX,PolYY,PolXY,PolYX
 	parameter(PolXX=-5,PolYY=-6,PolXY=-7,PolYX=-8)
@@ -630,7 +650,8 @@ c
 c
 c  Copy parameters to the output file, and do some general fiddling.
 c  If the data in the input FITS file is not 16 bit integers, set it so
-c  that the output MIRIAD file will contain the correlations in real format.
+c  that the output MIRIAD file will contain the correlations in real
+c  format.
 c
 	call uvopen(tno,out,'new')
 	call hisopen(tno,'append')
@@ -648,7 +669,8 @@ c
 	  call uvset(tno,'preamble','uvw/time/baseline',0,0.,0.,0.)
 	endif
 c
-c  Load antenna, source and frequency information. Set frequency information.
+c  Load antenna, source and frequency information.  Set frequency
+c  information.
 c
 	call TabLoad(lu,uvSrcId.ne.0,uvFreqId.ne.0,
      *		telescop,anfound,Pol0,PolInc,nif,dochi,lefty,
@@ -768,10 +790,10 @@ c  Apply baseline calibration if required.
 c
 	  if(blfound)call blfix(ant1,ant2,visibs(uvData),npol,nfreq)
 c
-c  Convert baseline number to normal Miriad. Note the different conventions!
-c
-c  Miriad convention is that bl = 256*ant1 + ant2, where the baseline is ant2 - ant1
-c  AIPS                      bl = 256*ant1 + ant2                        ant1 - ant2 !!
+c  Convert baseline number to normal Miriad.  Note the different
+c  conventions
+c    Miriad: bl = 256*ant1 + ant2, where the baseline is ant2 - ant1
+c      AIPS: bl = 256*ant1 + ant2                        ant1 - ant2!
 c
 c  In both cases, ant1 < ant2.
 c  the variables ant1,ant2 are Miriad antenna numbers.
@@ -799,7 +821,7 @@ c
           if (anfound) then
 	    ant1=antloc(ant1)
 	    ant2=antloc(ant2)
-          else 
+          else
 	    nants = max(nants,ant1,ant2)
 	  end if
 	  bl = nint(antbas(ant1,ant2))
@@ -892,22 +914,21 @@ c
 	call hisclose(tno)
 	call uvclose(tno)
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine DoTime(lu,nvis,uvT,uvBl,visibs,times,
      *						maxtimes,inttime)
 c
-	implicit none
 	integer lu,nvis,uvT,uvBl,maxtimes
 	real visibs(*),times(maxtimes),inttime
 c
 c  Guestimate the integration time of a sample.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer bl,refbl,i,ntimes
 c
 	i = 0
 	ntimes = 0
 	dowhile(ntimes.lt.MAXTIMES.and.i.lt.nvis)
-	  i = i + 1	  
+	  i = i + 1
 	  call fuvread(lu,visibs,i,1)
 	  bl = int(visibs(uvBl) + 0.01)
 	  if(i.eq.1)refbl = bl
@@ -920,13 +941,12 @@ c
 	call GetInt(times,ntimes,inttime)
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine Negate(nfreq,corr)
 c
-	implicit none
 	integer nfreq
 	complex corr(nfreq)
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer i
 c
 	do i=1,nfreq
@@ -934,11 +954,10 @@ c
 	enddo
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine Indices(lu,uvU,uvV,uvW,uvT,uvBl,uvSrcId,
      *							uvFreqid,uvData)
 c
-	implicit none
 	integer lu
 	integer uvU,uvV,uvW,uvT,uvBl,uvSrcid,uvFreqid,uvData
 c
@@ -948,7 +967,7 @@ c  Input:
 c    lu 	Handle of the FITS file.
 c  Output:
 c    uvU,uvV,uvW,uvT,uvBl,uvSrcid,uvFreqid,uvData
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer i,naxis,nrandom
 	character num*2,type*16
 	character random(7)*8
@@ -977,7 +996,8 @@ c
 	do i=1,naxis
 	  num = itoaf(i)
 	  call fitrdhda(lu,'PTYPE'//num,type,' ')
-	  if((type(1:3).eq.'WW'.or.type(1:3).eq.'WW-').and.uvW.eq.0)then
+	  if((type(1:3).eq.'WW' .or. type(1:3).eq.'WW-') .and.
+     *      uvW.eq.0)then
 	    nrandom = nrandom + 1
 	    uvW = nrandom
 	    random(nrandom) = 'WW'
@@ -998,10 +1018,9 @@ c
 	call fuvSetPa(lu,nrandom,random)
 c
 	end
-c************************************************************************
+c***********************************************************************
 	integer function PolCvt(P)
 c
-	implicit none
 	integer P
 c
 c  Fiddle the polarisation labelling around, because of the different
@@ -1009,7 +1028,7 @@ c  labelling conventions of Miriad and FITS.
 c
 c  Input:
 c    P		Polarisation code.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer PolYX,PolXY,PolYY,PolXX,PolLR,PolRL
 	integer PolMin,PolMax
 	parameter(PolYX=-8,PolXY=-7,PolYY=-6,PolXX=-5,PolLR=-4,PolRL=-3)
@@ -1022,10 +1041,9 @@ c
 	if(p.ge.PolMin.and.p.le.PolMax)PolCvt = pols(p)
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine GetInt(times,ntimes,inttime)
 c
-	implicit none
 	integer ntimes
 	real times(ntimes),inttime
 c
@@ -1039,11 +1057,11 @@ c    times	Some samples of the sampling time (in day fractions).
 c    ntimes	Number of samples of time.
 c  Output:
 c    inttime	Some estimate of the integration time (in seconds).
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer i
 	real delta
 c
-c  If there is only one value, assume the integration time is 10 seconds.
+c  If there is only one value, assume the integration time is 10 sec.
 c
 	inttime = 10
 	if(ntimes.eq.1)return
@@ -1063,15 +1081,14 @@ c
 	inttime = 24*3600*inttime
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine BlInit(lu,nif1,blfound)
 c
-	implicit none
 	integer lu,nif1
 	logical blfound
 c
 c  Load any AIPS BL tables.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
 	integer nants,nbl,ntab,npol,nif
@@ -1104,13 +1121,12 @@ c
 	endif
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine bllod(lIn,npol,nif,nbl,BlTab)
 c
-	implicit none
 	integer lIn,npol,nbl,nif
 	complex BlTab(2,npol,nif,nbl)
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	real rpm(MAXWIN),ipm(MAXWIN),rpa(MAXWIN),ipa(MAXWIN)
 	integer nrows,nval,i,p,ant1,ant2,bl,ifno
@@ -1189,16 +1205,15 @@ c
 	enddo
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine blfix(ant1,ant2,Visibs,np,nfreq)
 c
-	implicit none
 	integer ant1,ant2,np,nfreq
 	real visibs(3,np,nfreq)
 c
 c  Apply baseline corrections to visibility data.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
 	integer nants,nbl,ntab,npol,nif
@@ -1209,14 +1224,13 @@ c
 	call blfix2(ant1,ant2,visibs,np,nfreq/nif,nif,
      *					memc(pBlTab),npol,nbl)
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine blfix2(ant1,ant2,visibs,np,nchan,nif,BlTab,npol,nbl)
 c
-	implicit none
 	integer ant1,ant2,np,nchan,npol,nbl,nif
 	real visibs(3,np,nchan,nif)
 	complex BlTab(2,npol,nif,nbl)
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	logical conj
 	integer bl,chan,p,ifno
 	complex temp
@@ -1249,11 +1263,10 @@ c
 	enddo
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine BlFin
 c
-	implicit none
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer nants,nbl,ntab,npol,nif
 	integer pBlTab
 	common/blcomm/pBlTab,nants,nbl,ntab,npol,nif
@@ -1261,14 +1274,13 @@ c
 	if(ntab.ne.0)call memFree(pBlTab,ntab,'c')
 	ntab = 0
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine FgLoad(lu,tno)
 c
-	implicit none
 	integer lu,tno
 c
 c  Load any AIPS FG tables.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	double precision Time0
 	integer ntab,lTab,iostat
 	logical more
@@ -1310,13 +1322,12 @@ c
 	enddo
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine fglod2(lIn,lTab,Time0)
 c
-	implicit none
 	integer lIn,lTab
 	double precision Time0
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
 c
@@ -1352,17 +1363,16 @@ c
 	  call MemFree(pChans,2*nrows,'i')
 	endif
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine fglod3(lTab,Time0,nrows,
      *	  SrcId,SubArray,FreqId,Ants,Time,Ifs,Chans)
 c
-	implicit none
 	integer lTab,nrows
 	double precision Time0
 	integer SrcId(nrows),SubArray(nrows),Ants(2,nrows)
 	integer Ifs(2,nrows),Chans(2,nrows),FreqId(nrows)
 	real Time(2,nrows)
-c----------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer i,length,iostat
 	character line*132
 c
@@ -1391,13 +1401,12 @@ c
 	  endif
 	enddo
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine FgValOut(type,vals,nvals,line,length)
 c
-	implicit none
 	character type*(*),line*(*)
 	integer nvals,vals(nvals),length
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer k
 c
 	k = len(type)
@@ -1416,14 +1425,13 @@ c
      *	  call bug('f','Buffer overflow, in FgValOut')
 	line(length:length) = ')'
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine FgTimOut(t1,t2,line,length)
 c
-	implicit none
 	double precision t1,t2
 	character line*(*)
 	integer length
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer k1,k2
 	character time1*32,time2*32
 c
@@ -1450,15 +1458,15 @@ c
 	length = length + k1 + k2 + 7
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine FgGeti(lIn,pnt,name,nx,ny)
 c
 	integer pnt,nx,ny,lIn
 	character name*(*)
 c
-c  Check whether something is in the flagging table. If so get if. If not
-c  set default values to 0.
-c------------------------------------------------------------------------
+c  Check whether something is in the flagging table.  If so get it.  If
+c  not set default values to 0.
+c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
 c
@@ -1477,15 +1485,15 @@ c
 	  call ftabGeti(lIn,name,0,MemI(pnt))
 	endif
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine FgGetr(lIn,pnt,name,nx,ny)
 c
 	integer pnt,nx,ny,lIn
 	character name*(*)
 c
-c  Check whether something is in the flagging table. If so get if. If not
-c  set default values to 0.
-c------------------------------------------------------------------------
+c  Check whether something is in the flagging table.  If so get it.  If
+c  not set default values to 0.
+c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
 	integer nrow,nval,i
@@ -1503,17 +1511,16 @@ c
 	  call ftabGetr(lIn,name,0,MemR(pnt))
 	endif
 	end
-c************************************************************************
-c************************************************************************
+c***********************************************************************
+c***********************************************************************
 	subroutine TabInfo(lu,dobl)
 c
-	implicit none
 	integer lu
 	logical dobl
 c
 c  Give information on the tables in the file.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer NTAB
 	parameter(NTAB=6)
 	character tabs(NTAB)*8
@@ -1567,11 +1574,10 @@ c
 	enddo
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine TabLoad(lu,dosu,dofq,tel,anfound,Pol0,PolInc,nif0,
      *	  dochi,lefty,numants,antloc)
 c
-	implicit none
 	integer lu,Pol0,PolInc,nif0
 	logical dosu,dofq,anfound,dochi,lefty
 	character tel*(*)
@@ -1579,14 +1585,14 @@ c
 	integer antloc(*)
 c
 c  Determine some relevant parameters about the FITS file. Attempt to
-c  ferrit this information from all nooks and crannies. In general use
+c  ferret this information from all nooks and crannies. In general use
 c  the procedure of looking at known telescope parameters, the main
 c  FITS header, and then any extension tables. As particular information
 c  could be found at any level, use the higher level stuff as defaults
 c  for the lower level values.
 c
-c  AIPS tables read include AN, FQ, CH and SU tables. NOTE that CL tables
-c  are not read!
+c  AIPS tables read include AN, FQ, CH and SU tables.  NOTE that CL
+c  tables are not read!
 c
 c  Input:
 c    lu		Handle of the input FITS file.
@@ -1602,7 +1608,7 @@ c    PolInc	Increment between polarisations.
 c    numants    Total number of antennas in AN table
 c    antloc     AN table indices for antenna station numbers
 c               zero if station number not used.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'fits.h'
 c
@@ -1678,7 +1684,7 @@ c
 c
 c  Polarisation information.
 c
-	Pol0 = nint( Coord(uvCrval,uvStokes) + 
+	Pol0 = nint( Coord(uvCrval,uvStokes) +
      *		(1-Coord(uvCrpix,uvStokes))*Coord(uvCdelt,uvStokes) )
 	PolInc = nint(Coord(uvCdelt,uvStokes))
 c
@@ -1692,7 +1698,7 @@ c
 	if(.not.emok.and.dochi)call bug('w',
      *	  'Insufficient information to determine parallactic angle')
 	emok = emok.and.dochi
-	freqref(1) = 1e-9 * Coord(uvCrval,uvFreq)	  
+	freqref(1) = 1e-9 * Coord(uvCrval,uvFreq)
 c
 c  Load the antenna table.
 c
@@ -1767,8 +1773,9 @@ c
 	  emok = emok.and..not.badmnt
 c
 c  Get the antenna coordinates.
-c  Convert to earth-centered coordinates. The AIPS coordinates have X being in the
-c  direction from the earth center to the Grennwich meridian, and Z being towards the pole.
+c  Convert to earth-centered coordinates. The AIPS coordinates have X
+c  being in the direction from the earth center to the Grennwich
+c  meridian, and Z being towards the pole.
 c
 	  call fitrdhdd(lu,'ARRAYX',xc,0.d0)
 	  call fitrdhdd(lu,'ARRAYY',yc,0.d0)
@@ -1882,7 +1889,8 @@ c
 	      sdf(i) = Coord(uvCdelt,uvFreq)
 	    enddo
 c
-c  If neither a CH or FQ table were found, just use the info in the header.
+c  If neither a CH or FQ table were found, just use the info in the
+c  header.
 c
 	  else
 	    if(dofq)call bug('w',
@@ -1989,7 +1997,8 @@ c
 	if(badapp.and.dosu)call bug('w',
      *	  'Some apparent RA/DECs looked bad -- they were recomputed')
 c
-c  Scale the source-specific frequencies, rest frequencies and velocities.
+c  Scale the source-specific frequencies, rest frequencies and
+c  velocities.
 c
 	do i=1,nif*nsrc
 	  freqoff(i) = 1e-9*freqoff(i)
@@ -2026,10 +2035,9 @@ c
 	call Sortie(sindx,srcids,nsrc)
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine antproc(lefty,xc,yc,zc,xyz,n,antpos,lat,long,badan)
 c
-	implicit none
 	integer n
 	double precision xc,yc,zc,antpos(n,3),lat,long,xyz(3,n)
 	logical lefty,badan
@@ -2043,11 +2051,11 @@ c    xyz	Antenna positions relative to the array centre.
 c    n		Number of antennas.
 c
 c  Output:
-c    badan	The antenna coordinates were bad, and the remaining values
-c		are unset.
+c    badan	The antenna coordinates were bad, and the remaining
+c               values are unset.
 c    lat,long	The latitude and longitude of the observatory.
 c    antpos	Antenna positions, in Miriad format.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'mirconst.h'
 	double precision r,cost,sint,height,temp
 	integer i,idx
@@ -2056,8 +2064,8 @@ c  Determine the latitude, longitude and height of the first antenna
 c  (which is taken to be the observatory lat,long,height). Handle
 c  geocentric and local coordinates.
 c
-c  Convert them to the Miriad system: y is local East, z is parallel to pole
-c  Units are nanosecs.
+c  Convert them to the Miriad system: y is local East, z is parallel to
+c  pole Units are nanosecs.
 c
 	badan = .false.
 	if(abs(xc)+abs(yc)+abs(yc).eq.0)then
@@ -2096,7 +2104,7 @@ c
 	  enddo
 	endif
 c
-c  If the antenna table uses a left-handed system, convert it to a 
+c  If the antenna table uses a left-handed system, convert it to a
 c  right-handed system.
 c
 	if(lefty.and..not.badan)then
@@ -2107,10 +2115,9 @@ c
 	endif
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine goodxyz(idx,xyz,n)
 c
-	implicit none
 	integer idx,n
 	double precision xyz(3,n)
 c
@@ -2122,7 +2129,7 @@ c    xyz	Antenna coordinates.
 c    n		Number of antennas.
 c  Output:
 c    idx	Index of first good antenna.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	real r
 	integer i
 c
@@ -2135,17 +2142,16 @@ c
 	enddo
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine TabVar(tno,var,inttime)
 c
-	implicit none
 	integer tno
 	real var,inttime
 c
-c  Determine the Jyperk from variance, integration time, channel bandwidth
-c  and system temperature.
+c  Determine the Jyperk from variance, integration time, channel
+c  bandwidth and system temperature.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'fits.h'
 	real temp
 c
@@ -2154,22 +2160,20 @@ c
 c
 	call uvputvrr(tno,'jyperk',sqrt(abs(2*inttime*dnu*var))/temp,1)
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine TabRefT0(t)
 c
-	implicit none
 	double precision t
 c
 c  Return the reference time.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'fits.h'
 	t = timeref
 	if(nconfig.ge.1)t = t + timeoff(1)
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine TabTime(lu,nconfig,jdateobs,timeoff)
 c
-	implicit none
 	integer lu,nconfig
 	double precision jdateobs,timeoff
 c
@@ -2177,7 +2181,7 @@ c  Determine the time correction to add to the FITS time to convert
 c  it to a true UT1 time (as best as we can). This involves both
 c  an offset between the time system and UT1, and offsets to remove
 c  fudges performed by AIPS DBCON.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	character timsys*16,line*80,s*8
 	double precision jrdate,datutc,ut1utc
 	integer ltsys,ls
@@ -2237,18 +2241,17 @@ c
 	  call output(line)
 	endif
 c
-	timeoff = (ut1utc - datutc) / (24*3600) 
+	timeoff = (ut1utc - datutc) / (24*3600)
      *			- jdateobs + jrdate - 5*(nconfig-1)
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine TabVeloc(altsys,altr,altrval,altrpix)
 c
-	implicit none
 	integer altsys
 	logical altr
 	real altrpix,altrval
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'fits.h'
 	integer i,i0
 	integer OBSRADIO,OBSOPTIC
@@ -2290,10 +2293,9 @@ c
 	if(velsys.ge.1.and.velsys.le.256)velsys = velsys + 256
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine VelGetty(lu,velsys)
 c
-	implicit none
 	integer lu,velsys
 c
 c  Determine the velocity system.
@@ -2302,7 +2304,7 @@ c  Input:
 c    lu
 c  Output:
 c    velsys
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	character string*16
 	call fitrdhda(lu,'VELTYP',string,'OBS')
 	if(string.eq.' ')string = 'OBS'
@@ -2318,10 +2320,9 @@ c------------------------------------------------------------------------
 	if(string.eq.' ')string = 'RAD'
 	if(string(1:3).eq.'RAD')velsys = velsys + 256
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine VelCvt(velsys,velref,restfreq,f,df,veldop)
 c
-	implicit none
 	integer velsys
 	real velref,df
 	double precision restfreq,f,veldop
@@ -2330,7 +2331,8 @@ c  Convert a velocity from being the velocity of a channel to the
 c  radial velocity of the observatory.
 c
 c  Input:
-c    velsys	Velocity system (1=LSR, 2=HEL, 3=OBS, plus 256 for radio definition)
+c    velsys	Velocity system (1=LSR, 2=HEL, 3=OBS, plus 256 for radio
+c               definition)
 c    velref	Velocity (km/s) at reference pixel.
 c    restfreq	Rest frequency (GHz).
 c    f		Frequency (GHz) at channel 1.
@@ -2338,7 +2340,7 @@ c    df		Channel frequency (GHz) increment.
 c  Input/Output:
 c    veldop	On input, the velocity (km/s) at the reference pixel.
 c		On output, the radial velocity of the rest frame (km/s).
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'mirconst.h'
 	integer OBSRADIO,OBSOPTIC,LSRRADIO,LSROPTIC,HELRADIO,HELOPTIC
 	parameter(OBSRADIO=259,OBSOPTIC=3,LSRRADIO=257,LSROPTIC=1)
@@ -2362,13 +2364,12 @@ c
 	else
 	  call bug('f','Unrecognised velocity system, in VelCvt')
 	endif
-	
+
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine telpar(telescop,systemp,systok,jyperk,jok,
      *		latlong,latitude,longitud,polinfo,chioff,mount)
 c
-	implicit none
 	character telescop*(*)
 	integer mount
 	double precision latitude,longitud
@@ -2392,7 +2393,7 @@ c    polinfo	True if mount and chioff have been initialised.
 c    chioff	The position angle of the X feed with respect to the
 c		local vertical.
 c    mount	Antenna mount type.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	double precision dtemp
 	logical ok
 c
@@ -2452,10 +2453,9 @@ c
 	endif
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine Sortie(indx,id,n)
 c
-	implicit none
 	integer n,indx(n),id(n)
 c
 c  Sort the ids into increasing order, to make it easier to search for
@@ -2464,10 +2464,11 @@ c
 c  Input:
 c    n		Number of entries.
 c  Input/Output:
-c    id		On input, the list of ids. On output, the sorted list of ids.
+c    id		On input, the list of ids.  On output, the sorted list
+c               of ids.
 c  Output:
 c    indx	Index rubbish.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer j,k,tid,tindx
 	logical more
 c
@@ -2495,12 +2496,11 @@ c
 	enddo
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine TabInit(tno)
 c
-	implicit none
 	integer tno
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'fits.h'
 	integer i,nschan(MAXIF),ischan(MAXIF)
 	character veltype(3)*8
@@ -2510,7 +2510,7 @@ c
 	do i=1,nif
 	  ischan(i) = nchan*(i-1) + 1
 	  nschan(i) = nchan
-	enddo 
+	enddo
 	call uvputvri(tno,'ischan',ischan,nif)
 	call uvputvri(tno,'nschan',nschan,nif)
 c
@@ -2537,10 +2537,9 @@ c
 	inited = .true.
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine TabWrite(tno,sid,fid,confg,time)
 c
-	implicit none
 	integer tno,sid,fid,confg
 	double precision time
 c
@@ -2553,9 +2552,9 @@ c    sid	FITS source id number.
 c    fid	FITS frequency id number.
 c    confg	FITS configuration number.
 c  Input/Output:
-c    time	Observing time. Input is the nominal value. Output is the
-c		value corrected for clock differences.
-c------------------------------------------------------------------------
+c    time	Observing time.  Input is the nominal value.  Output is
+c               the value corrected for clock differences.
+c-----------------------------------------------------------------------
 	integer LSRRADIO
 	parameter(LSRRADIO=257)
 	include 'fits.h'
@@ -2601,7 +2600,8 @@ c
 	dT = time - tprev
 	tprev = time
 c
-c  Write out the antenna table and array latitude/longitude, evector, mount.
+c  Write out the antenna table and array latitude/longitude, evector,
+c  mount.
 c
 	if(newconfg)then
 	  if(config.le.nconfig)then
@@ -2670,7 +2670,8 @@ c
 	  call uvputvrd(tno,'lst',lst,1)
 	endif
 c
-c  Compute and save the parallactic angle. Recompute whenever LST changes.
+c  Compute and save the parallactic angle.  Recompute whenever LST
+c  changes.
 c
 	newchi = (newlst.or.newsrc.or.newconfg).and.llok.and.
      *		 emok.and.
@@ -2706,11 +2707,10 @@ c
 	endif
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine VelRad(dolsr,time,raapp,decapp,epoch,raepo,decepo,
      *	  lst,lat,vel)
 c
-	implicit none
 	logical dolsr
 	double precision time,raapp,decapp,epoch,raepo,decepo
 	double precision lst,lat,vel
@@ -2728,7 +2728,7 @@ c    lat	Observatory geodetic latitude (radians).
 c    lst	Local sideral time (radians).
 c  Output:
 c    vel	Radial velocity.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	double precision lmn2000(3),lmnapp(3),ra2000,dec2000
 	double precision velsite(3),posearth(3),velearth(3),velsun(3)
 	integer i
@@ -2747,9 +2747,10 @@ c
 	  vel = vel - (velsite(i) + velearth(i))*lmnapp(i)
 	enddo
 c
-c  To compute LSR velocity, we need the source position in J2000 coordinates.
-c  Precess, if necessary, to the J2000 frame. Vsun returns the Suns velocity
-c  in the J2000 frame. Add this contribution to the velocity we already have.
+c  To compute LSR velocity, we need the source position in J2000
+c  coordinates.  Precess, if necessary, to the J2000 frame.  Vsun
+c  returns the Sun's velocity in the J2000 frame.  Add this contribution
+c  to the velocity we already have.
 c
 	if(dolsr)then
 	  if(abs(epoch-2000).gt.0.001)then
@@ -2766,17 +2767,16 @@ c
 	endif
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine Extract(nfreq,npol,pol,visibs,corr,flags,zerowt)
 c
-	implicit none
 	integer nfreq,npol,pol
 	real visibs(3*nfreq*npol)
 	complex corr(nfreq)
 	logical flags(nfreq),zerowt
 c
-c  Extract the input visibilities into an output buffer. Only one polarisation
-c  is extracted at a time.
+c  Extract the input visibilities into an output buffer.  Only one
+c  polarisation is extracted at a time.
 c
 c  Input:
 c    nfreq	Number of frequency channels in the input.
@@ -2788,7 +2788,7 @@ c    zerowt	True if a zero weight was found somewhere.
 c  Output:
 c    corr	The correlation data of the desired polarisation.
 c    flags	Logical array, giving true if the correlation is good.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer i,j
 c
 	j = 3*(pol-1) + 1
@@ -2799,10 +2799,9 @@ c
 	  j = j + 3*npol
 	enddo
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine uvout(out,version)
 c
-	implicit none
 	character out*(*),version*(*)
 c
 c  Write out a UV FITS file.
@@ -2810,7 +2809,7 @@ c
 c  Inputs:
 c    out	Name of the output uv FITS file.
 c    version	Version of this program.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
 	integer uvCrval,uvCdelt,uvCrpix
@@ -2867,7 +2866,8 @@ c
 	data vtype/'FELO-LSR','FELO-HEL','FELO-OBS',
      *		   'VELO-LSR','VELO-HEL','VELO-OBS'/
 c
-c  Initialise the array to count the sorts of polarisations that we have.
+c  Initialise the array to count the sorts of polarisations that we
+c  have.
 c
 	do i=PolMin,PolMax
 	  pols(i) = 0
@@ -2974,10 +2974,10 @@ c
 	      wt = 1/wt
 	    endif
 c
-c  Convert baseline number to normal AIPS form. Note the different conventions!
-c
-c  Miriad convention is that bl = 256*ant1 + ant2, where the baseline is ant2 - ant1
-c  AIPS                      bl = 256*ant1 + ant2                        ant1 - ant2 !!
+c  Convert baseline number to normal AIPS form.  Note the different
+c  conventions
+c    Miriad: bl = 256*ant1 + ant2, where the baseline is ant2 - ant1
+c      AIPS: bl = 256*ant1 + ant2                        ant1 - ant2!
 c
 c  In both cases ant1 is normally less than ant2.
 c
@@ -3017,7 +3017,7 @@ c
 	if(badpol.gt.0) call bug('w',
      *	  'Visibilities with bad pol codes: '//itoaf(badpol))
 	if(nread.gt.0) call bug('f','Bad number of channels')
-	if(nvis.le.0)  call bug('f','No visibilities found')	
+	if(nvis.le.0)  call bug('f','No visibilities found')
 c
 c  Determine the polarisations that we are going to output.
 c
@@ -3116,7 +3116,7 @@ c
 	call fuvclose(tOut)
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine SrcUpd(tIn,vSrc,iSrc,ras,decs,aras,adecs,
      *						sources,nSrc,MAXSRC)
 c
@@ -3125,7 +3125,7 @@ c
 	double precision aras(MAXSRC),adecs(MAXSRC)
 	character sources(MAXSRC)*(*)
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	character source*32
 	integer i
 	double precision ra,dec,dra,ddec
@@ -3167,13 +3167,12 @@ c
 	endif
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine getarr(tIn,mount,lat,long,height)
 c
-	implicit none
 	integer tIn,mount
 	double precision lat,long,height
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	character telescop*32,type*1
 	double precision dval
 	integer n
@@ -3239,18 +3238,17 @@ c
 	if(.not.ok)height = 0.d0
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine SrcWrite(tOut,nSrc,sources,ras,decs,aras,adecs,epoch,
      *	  restfreq,df,v0)
 c
-	implicit none
 	integer tOut,nSrc
 	double precision ras(nSrc),decs(nSrc),aras(nSrc),adecs(nSrc)
 	double precision restfreq,df,v0
 	character sources(nSrc)*(*)
 	real epoch
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'mirconst.h'
 	integer i
 c
@@ -3267,7 +3265,7 @@ c
 	call ftabdef(tOut,'FREQOFF',  'D','HZ',     nSrc,1)
 	call ftabdef(tOut,'BANDWIDTH','D','HZ',     nSrc,1)
 	call ftabdef(tOut,'RAEPO',    'D','DEGREES',nSrc,1)
-	call ftabdef(tOut,'DECEPO',   'D','DEGREES',nSrc,1) 
+	call ftabdef(tOut,'DECEPO',   'D','DEGREES',nSrc,1)
 	call ftabdef(tOut,'EPOCH',    'D','YEARS',  nSrc,1)
 	call ftabdef(tOut,'RAAPP',    'D','DEGREES',nSrc,1)
 	call ftabdef(tOut,'DECAPP',   'D','DEGREES',nSrc,1)
@@ -3304,18 +3302,17 @@ c
 	enddo
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine AntWrite(tOut,rtime,rfreq,telescop,polty,mount,
      *			xyz,nants,lat,long,height)
 c
-	implicit none
 	integer tOut,nants,mount
 	double precision rtime,rfreq
 	double precision xyz(nants,3),lat,long,height
 	character telescop*(*),polty*(*)
 c
 c  Write an antenna table into the output.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'mirconst.h'
 c
 	real zero(3)
@@ -3398,7 +3395,7 @@ c
           if (telescop.eq.'ATCA') then
    	     call ftabputr(tOut,'POLAA',  i, 45.0)
 	     call ftabputr(tOut,'POLAB',  i, 135.0)
-          else 
+          else
    	     call ftabputr(tOut,'POLAA',  i, 0.0)
 	     call ftabputr(tOut,'POLAB',  i, 0.0)
           end if
@@ -3409,7 +3406,7 @@ c
 	enddo
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine uvoutWr(tScr,tOut,nvis,nVisRef,npol,nchan,Pol0,
      *							PolInc,doSrc)
 c
@@ -3425,18 +3422,18 @@ c  Inputs:
 c    tScr	Handle of the scratch file.
 c    tOut	Handle of the output FITS file.
 c    nvis	Number of visibilities in the scratch file.
-c    nVisRef	Number of visibilities that will be written to the output
-c		FITS file.
+c    nVisRef	Number of visibilities that will be written to the
+c               output FITS file.
 c    npol	The dimension of the Stokes axis in the output file.
 c    nchan	The number of frequency channels in the output file.
 c    Pol0	The code of the first polarisation.
 c    PolInc	The increment between polarisations.
 c    doSrc	True if we should write the source number.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c  Records are copied or discarded according to whether the reference
-c  polarisation is present or not. If not, the record is discarded. Currently
-c  the reference polarisation is always the first polarisation, but this may
-c  change in the future.
+c  polarisation is present or not.  If not, the record is discarded.
+c  Currently the reference polarisation is always the first
+c  polarisation, but this may change in the future.
 c
 	include 'maxdim.h'
 	integer maxPol,RefPol,PolMin,PolMax
@@ -3464,8 +3461,9 @@ c
      *	  call bug('f','Too many channels, or too many polarisations')
 c
 c  Form a table to help sort out which polarisations to keep, and where
-c  to put them in the output record. Also initialise an array of counters
-c  to determine the number of visibilities that are being discarded.
+c  to put them in the output record. Also initialise an array of
+c  counters to determine the number of visibilities that are being
+c  discarded.
 c
 	do i=PolMin,PolMax
 	  pols(i) = 0
@@ -3518,13 +3516,14 @@ c
 	    endif
 	  else
 c
-c  We have a good polarisation, and we are handling more than 1 polarisations.
-c  If it does not match with the pervious record, then we have to rid
-c  ourselves of the previous record.
+c  We have a good polarisation, and we are handling more than one
+c  polarisation.  If it does not match with the pervious record, then
+c  we have to rid ourselves of the previous record.
 c
-c  If the "reference" polarisation is not present, discard the previous record.
-c  If the "reference" polarisation is present, blnak out any channels which
-c  are missing data, and finally write out the previous good record.
+c  If the "reference" polarisation is not present, discard the previous
+c  record.  If the "reference" polarisation is present, blank out any
+c  channels which are missing data, and finally write out the previous
+c  good record.
 c
 	    if(nint(In(uvBl+1)).ne.Bl.or.In(uvT+1).ne.Time.or.
      *	       nint(In(uvSrc+1)).ne.iSrc.or.
@@ -3590,7 +3589,8 @@ c
 	    call fuvwrite(tOut,Out,jd,1)
 	  endif
 c
-c  Generate messages about the number of visibilities copied and not copied.
+c  Generate messages about the number of visibilities copied and not
+c  copied.
 c
 	if(jd.ne.nVisRef)
      *	  call bug('f','Internal inconsistency, in uvout(write)')
@@ -3611,10 +3611,9 @@ c
 	enddo
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine ZeroOut(copied,npol,nchan,out,wt)
 c
-	implicit none
 	integer npol,nchan
 	logical copied(npol)
 	real out(5+3*npol*nchan),wt
@@ -3624,15 +3623,15 @@ c  It does this by setting the correlation value to zero, and the weight
 c  to indicate bad data.
 c
 c  Inputs:
-c    copied	Logical array indicating if a particular polarisation has
-c		been copied.
+c    copied	Logical array indicating if a particular polarisation
+c               has been copied.
 c    wt		The weight to associate with the blanked out data.
 c    npol	Number of polarisations.
 c    nchan	Number of channels.
 c  Input/Output:
-c    out	The visibility record (FITS style). Missing polarisations
-c		are blanked out.
-c------------------------------------------------------------------------
+c    out	The visibility record (FITS style).  Missing
+c               polarisations are blanked out.
+c-----------------------------------------------------------------------
 	integer i,OutPnt,k
 c
 	do i=1,npol
@@ -3647,19 +3646,18 @@ c
 	  endif
 	enddo
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine PolCheck(pols,PolMin,PolMax,npol,Pol0,PolInc)
 c
-	implicit none
 	integer PolMin,PolMax,pols(PolMin:PolMax),npol,Pol0,PolInc
 c
-c  The "pols" array counts the polarisations that were found in the input
-c  data. Because FITS can only handle a regular Stokes axis, and because
-c  Miriad allows an arbitrary Stokes "dimension", we have to form a regular
-c  axis. The rule is to find the commonest polarisation, and then to copy
-c  "adjacent" polarisations that are at least 70% as common.
-c  When a required polarisation is missing, we give a dummy (but flagged)
-c  value.
+c  The "pols" array counts the polarisations that were found in the
+c  input data.  Because FITS can only handle a regular Stokes axis, and
+c  because Miriad allows an arbitrary Stokes "dimension", we have to
+c  form a regular axis.  The rule is to find the commonest polarisation,
+c  and then to copy "adjacent" polarisations that are at least 70% as
+c  common.  When a required polarisation is missing, we give a dummy
+c  (but flagged) value.
 c
 c  Input:
 c    pols	The counts of the polarisations encountered in the
@@ -3671,7 +3669,7 @@ c    npol	Number of polarisations to form in the output file.
 c    Pol0	The code for the first polarisation.
 c    PolInc	The code increment between different polarisations. This
 c		can be either +1 or -1, having the same sign as Pol0.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer imax,i,PolMn,PolMx,thresh,p,length
 	logical more
 	character line*32
@@ -3733,10 +3731,9 @@ c
 	call output('Polarisations copied: '//line(1:length))
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine xyin(in,out,version,dss,nod2)
 c
-	implicit none
 	character in*(*),out*(*),version*(*)
 	logical dss,nod2
 c
@@ -3753,7 +3750,7 @@ c    lu		Handle of the FITS file.
 c    tno	Handle of the MIRIAD file.
 c    array	Array to use as buffer.
 c    maxdim	Size of array.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'maxnax.h'
 	real array(MAXDIM)
@@ -3838,24 +3835,23 @@ c
 	endif
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine axisin(lu,tno,naxis)
 c
-	implicit none
 	integer lu,tno,naxis
 c
-c  This copies (performing any necessary scaling) the BMAJ,BMIN, CDELT, CROTA,
-c  CRVAL, CRPIX and CTYPE, RESTFREQ, XSHIFT and YSHIFT keywords
-c  to the output image file. This has to be handled separately as the MIRIAD
-c  standard units are radians, GHz and km/sec, whereas FITS uses degrees, Hz
-c  and m/sec.
+c  This copies (performing any necessary scaling) the BMAJ,BMIN, CDELT,
+c  CROTA, CRVAL, CRPIX and CTYPE, RESTFREQ, XSHIFT and YSHIFT keywords
+c  to the output image file. This has to be handled separately as the
+c  MIRIAD standard units are radians, GHz and km/sec, whereas FITS uses
+c  degrees, Hz and m/sec.
 c
 c  Inputs:
 c    lu		Handle of the input FITS image.
 c    tno	Handle of the output MIRIAD image.
 c    naxis	Number of dimensions of the image.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'maxnax.h'
 	integer i,polcode,nx,ny,ilong,ilat
@@ -3949,7 +3945,7 @@ c
 	    polcode = nint(crval(i)+(1-crpix(i))*cdelt(i))
 c  dpr 27-nov-00 ->
 	    if(polcode.lt.-8.or.polcode.gt.4.or.polcode.eq.0)then
-c  <- dpr 27-nov-00 
+c  <- dpr 27-nov-00
 	      ctype(i) = 'ASTOKES'
 	      if(polcode.ge.5.and.polcode.le.9)btype=types(polcode-4)
 	    endif
@@ -3995,18 +3991,17 @@ c
 	if(bmaj*bmin.ne.0)call wrhdr(tno,'bpa',bpa)
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine cord(lu,naxis,ctype,crval,crpix,cdelt,llrot,
      *							ilong,ilat)
 c
-	implicit none
 	integer lu,naxis,ilong,ilat
 	character ctype(naxis)*(*)
 	double precision crval(naxis),crpix(naxis),cdelt(naxis),llrot
 c
 c  Load in FITS coordinate system and fiddle it into a Miriad coordinate
 c  system.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'mirconst.h'
 	integer i,j,k,l,l1,l2
 	double precision dtemp,scale
@@ -4063,7 +4058,7 @@ c
 	  endif
 	  call fitrdhdd(lu,'CRPIX'//num,crpix(i),1.0d0)
 	  call fitrdhdd(lu,'CRVAL'//num,crval(i),0.0d0)
-	  
+
 c
 	  call fitrdhdd(lu,cd1(i,i),cdelt(i),1.d0)
 	  call fitrdhdd(lu,cd2(i,i),dtemp,cdelt(i))
@@ -4132,15 +4127,14 @@ c
 	endif
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine cdget(lu,ilong,ilat,cdelt1,cdelt2,llrot)
 c
-	implicit none
 	integer lu,ilong,ilat
 	double precision cdelt1,cdelt2,llrot
 c
 c  Get the longitude/latitude transformation matrix.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'mirconst.h'
 	double precision crota,pc11,pc12,pc21,pc22,cd11,cd12,cd21,cd22
 	double precision dtemp
@@ -4192,35 +4186,32 @@ c
 	cdelt2 = cd22/cos(llrot)
 c
 	end
-c************************************************************************
+c***********************************************************************
 	character*(*) function pc(i,j)
 c
-	implicit none
 	integer i,j
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	character keyw*8
 	write(keyw,'(a,i3.3,i3.3)')'PC',i,j
 	pc = keyw
 	end
-c************************************************************************
+c***********************************************************************
 	character*(*) function cd1(i,j)
 c
-	implicit none
 	integer i,j
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	character keyw*8
 	write(keyw,'(a,i3.3,i3.3)')'CD',i,j
 	cd1 = keyw
 	end
-c************************************************************************
+c***********************************************************************
 	character*(*) function cd2(i,j)
 c
-	implicit none
 	integer i,j
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	character keyw*8
 	integer l
 c
@@ -4234,14 +4225,13 @@ c
 	cd2 = keyw(1:l)//'_'//itoaf(j)
 	end
 
-c************************************************************************
+c***********************************************************************
 	subroutine geteqep(lu,key,value)
 c
-	implicit none
 	integer lu
 	character key*(*)
 	real value
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	character card*80,type*8
 	integer k1,k2
 	logical ok
@@ -4264,13 +4254,12 @@ c
 	endif
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine nodfudge(lu,tno)
 c
-	implicit none
 	integer lu,tno
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer itemp
 	double precision crval1,crval2,cdelt1,cdelt2,crpix1,crpix2
 c
@@ -4298,15 +4287,14 @@ c
 	call wrhdr(tno,'epoch',1950.0)
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine dssfudge(lu,tno)
 c
-	implicit none
 	integer lu,tno
 c
 c  Convert a DSS header into a normal Miriad one.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'mirconst.h'
 	real xpixelsz,ypixelsz,pltscale,objctx,objcty,cnpix1,cnpix2
 	double precision crval1,crval2,cdelt1,cdelt2,crpix1,crpix2
@@ -4343,14 +4331,13 @@ c
 	call wrhda(tno,'ctype1','RA---CAR')
 	call wrhda(tno,'ctype2','DEC--CAR')
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine decval(value,string)
 c
-	implicit none
 	double precision value
 	character string*(*)
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer k1,k2,length
 	character token*16
 	double precision v1,v2,v3
@@ -4386,10 +4373,9 @@ c
 	value = v1 + v2/60.d0 + v3/3600.d0
 	if(neg)value = -value
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine xyout(in,out,version,boxes)
 c
-	implicit none
 	character in*(*),out*(*),version*(*)
 	integer boxes(*)
 c
@@ -4401,7 +4387,7 @@ c    out	Name of the output FITS file.
 c    version	Version of this program.
 c    boxes      Region of interest specification
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'maxnax.h'
 	include 'mem.h'
@@ -4495,16 +4481,15 @@ c
 c
 	end
 
-c************************************************************************
+c***********************************************************************
 	subroutine planeinc(n,incr,blc,trc,plane,done)
 c
-	implicit none
 	integer n,blc(n),trc(n),plane(n),incr(n)
 	logical done
 c
 c  Move to the next plane.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer k
 c
 	k = 1
@@ -4520,13 +4505,12 @@ c
 	  k = k + 1
 	enddo
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine axisout(lu,tno,naxis,blc)
 c
-	implicit none
 	integer lu,tno,naxis,blc(naxis)
 c
-c  This copies (performing any necessary scaling) the BMAJ, BMIN, 
+c  This copies (performing any necessary scaling) the BMAJ, BMIN,
 c  CDELT, CROTA, CRVAL, CRPIX and CTYPE keywords
 c  from the MIRIAD input to the FITS output image.
 c  FITS uses degrees and m/sec. MIRIAD uses radians and km/sec.
@@ -4539,7 +4523,7 @@ c    blc        Bottom-left hand corner pixel value for axis
 c               used to determine crpix if a subregion was
 c               selected
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'mirconst.h'
 	integer i,npnt
 	character num*2,ctype*32,date*32,card*80
@@ -4644,13 +4628,12 @@ c
 	if(bmin.ne.0) call fitwrhdr(lu,'BMIN',(180/pi)*bmin)
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine striper(ctype)
 c
-	implicit none
 	character ctype*(*)
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer i
 	logical more
 c
@@ -4665,13 +4648,12 @@ c
 	enddo
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine getlat(tno,lat)
 c
-	implicit none
 	integer tno
 	double precision lat
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer iax
 c
 	character itoaf*2
@@ -4679,21 +4661,20 @@ c
 	call coFindAx(tno,'latitude',iax)
 	call coGetd(tno,'crval'//itoaf(iax),lat)
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine hdout(tno,lu,version)
 c
-	implicit none
 	integer lu,tno
 	character version*(*)
 c
-c  Convert the header of a FITS file into a MIRIAD data items and history
-c  files.
+c  Convert the header of a FITS file into a MIRIAD data items and
+c  history files.
 c
 c  Input:
 c    tno	Handle of the input MIRIAD file.
 c    lu		Handle of the output FITS file.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer nshort,nlong
 	parameter(nshort=6,nlong=11)
 	character short(nshort)*5,long(nlong)*8
@@ -4756,7 +4737,7 @@ c
 	  call copyHist(tno,lu,version)
 	end if
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine CopyHist(tIn,tOut,version)
 c
 	integer tin,tout
@@ -4768,7 +4749,7 @@ c  Input:
 c    tIn	The handle of the input MIRIAD file.
 c    tOut	The handle of the output FITS file.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	logical eof
 	character card*132,line*80,name*32
 	integer narg,i,l1,l2,length,lu,iostat
@@ -4835,15 +4816,14 @@ c
 	  endif
 	enddo
 c
-	line = 
+	line =
      *	 'HISTORY FITS: NOTE: Use options=varwt if loading into Miriad'
 	call fitcdio(tOut,line)
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine histin(lu,tno,version)
 c
-	implicit none
 	integer lu,tno
 	character version*(*)
 c
@@ -4852,9 +4832,9 @@ c
 c  Input:
 c    lu		Handle of the input FITS file.
 c    tno	Handle of the output MIRIAD file.
-c    version   
+c    version
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer nlong,nshort
 	parameter(nlong=50,nshort=9)
 	character card*80
@@ -4877,7 +4857,7 @@ c
      *	  'BMAJ    ', .false., 'BMIN    ', .false., 'BPA     ', .false.,
      *	  'BSCALE  ', .false., 'BTYPE   ', .false., 'BUNIT   ', .false.,
      *    'BZERO   ', .false., 'CELLSCAL', .false., 'COMMAND ', .true.,
-     *    'COMMENT ', .true.,  'DATAMAX ', .false., 'DATAMIN ', .false., 
+     *    'COMMENT ', .true.,  'DATAMAX ', .false., 'DATAMIN ', .false.,
      *	  'DATE    ', .false., 'DATE-MAP', .false., 'DATE-OBS', .false.,
      *	  'END     ', .false., 'EPOCH   ', .false., 'EQUINOX ', .false.,
      *	  'EXTEND  ', .false., 'GCOUNT  ', .false., 'GROUPS  ', .false.,
@@ -4930,23 +4910,22 @@ c
 	call hisinput (tno, 'FITS')
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine hiscard(tno,card)
 c
-	implicit none
 	integer tno
 	character card*(*)
 c
 c  Determine the portion of a history card to write out to the history
-c  file. This aims at cutting out as much of the extraneous crap that AIPS
-c  puts in history comments as possible, to attempt to improve the
+c  file. This aims at cutting out as much of the extraneous crap that
+c  AIPS puts in history comments as possible, to attempt to improve the
 c  appearance of the history file.
 c
 c  Input:
 c    tno	Handle of the output file.
 c    card	The card.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer k1,k2
 	logical more
 c
@@ -4967,10 +4946,9 @@ c
 	enddo
 	if(k1.le.k2) call hiswrite(tno,card(k1:k2))
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine GetValue(card,type,k1,k2)
 c
-	implicit none
 	character card*(*),type*(*)
 	integer k1,k2
 c
@@ -4985,10 +4963,12 @@ c  Input:
 c    card	The FITS card.
 c
 c  Output:
-c    type	Either 'integer', 'real', 'double', 'ascii' or 'unknown'.
-c    k1,k2	These delimit the value in CARD, for other than 'unknown'
+c    type	Data type: 'integer', 'real', 'double', 'ascii' or
+c               'unknown'.
+c    k1,k2	These delimit the value in CARD, for other than
+c               'unknown'.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	character c*1
 	integer l,i
 	logical more
@@ -5019,8 +4999,8 @@ c
 	call spanchar(card,k1,k2,' ')
 	if(k1.gt.k2)return
 c
-c  At this stage, we should have a quote, plus/minus sign, decimal point,
-c  or numeric digit.
+c  At this stage, we should have a quote, plus/minus sign, decimal
+c  point, or numeric digit.
 c
 	c = card(k1:k1)
 	if(c.eq.'''')then
