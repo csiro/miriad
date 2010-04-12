@@ -84,7 +84,7 @@ c    16feb01 pjt   Added mom=-3 for velocity of peak fit to poly=2
 c    18jan02 pjt   Turned rngmask typo into rngmsk (duh)
 c     4mar02 pjt   documented FWHM/sigma, fixed units of mom=2 map
 c
-c $Id: moment.for,v 1.3 2010/04/12 06:10:58 cal103 Exp $
+c $Id: moment.for,v 1.4 2010/04/12 06:12:04 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       integer maxnax,maxboxes,maxruns,naxis
@@ -103,8 +103,8 @@ c
       character versan*80
 c-----------------------------------------------------------------------
       version = versan ('moment',
-     :                  '$Revision: 1.3 $',
-     :                  '$Date: 2010/04/12 06:10:58 $')
+     :                  '$Revision: 1.4 $',
+     :                  '$Date: 2010/04/12 06:12:04 $')
 
 c
 c Get inputs.
@@ -360,8 +360,8 @@ c       Velocity needed.
             call bug('f','restfreq not present in header.')
           endif
 
-          offset = crpix - crval / cdelt
-          scale  = CMKS * (cdelt / restfreq) * 1e-3
+          offset = crpix - (crval - restfreq) / cdelt
+          scale  = -CMKS * (cdelt / restfreq) * 1e-3
         else
           scale  = cdelt
         endif
