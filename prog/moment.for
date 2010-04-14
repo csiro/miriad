@@ -87,7 +87,7 @@ c    16feb01 pjt   Added mom=-3 for velocity of peak fit to poly=2
 c    18jan02 pjt   Turned rngmask typo into rngmsk (duh)
 c     4mar02 pjt   documented FWHM/sigma, fixed units of mom=2 map
 c
-c $Id: moment.for,v 1.5 2010/04/14 05:25:08 cal103 Exp $
+c $Id: moment.for,v 1.6 2010/04/14 06:35:17 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
@@ -110,8 +110,8 @@ c     Externals.
       character itoaf*1, versan*80
 c-----------------------------------------------------------------------
       version = versan ('moment',
-     :                  '$Revision: 1.5 $',
-     :                  '$Date: 2010/04/14 05:25:08 $')
+     :                  '$Revision: 1.6 $',
+     :                  '$Date: 2010/04/14 06:35:17 $')
 
 c     Get inputs.
       call keyini
@@ -367,21 +367,25 @@ c         Special cases: the crpix change for a subcube.
         endif
       enddo
 
-      if (mom.le.-1) then
+      if (mom.eq.-3) then
+        call wrhda(lOut,'bunit','km/s')
+        call wrbtype(lOut,'velocity')
+      else if (mom.le.-1) then
         call hdcopy(lIn,lOut,'bunit')
       else if (mom.eq.0) then
         call rdhda(lIn,'bunit',atemp,' ')
         l = len1(atemp)
         if (l.gt.0) then
-          atemp(l+1:) = '.KM/S'
+          atemp(l+1:) = '.km/s'
           call wrhda(lOut,'bunit',atemp)
         endif
-      else if (mom.eq.1) then
-        call wrhda(lOut,'bunit','KM/S')
-        call wrbtype(lOut,'velocity')
       else
-        call wrhda(lOut,'bunit','KM/S')
-        call wrbtype(lOut,'velocity_dispersion')
+        call wrhda(lOut,'bunit','km/s')
+        if (mom.eq.1) then
+          call wrbtype(lOut,'velocity')
+        else
+          call wrbtype(lOut,'velocity_dispersion')
+        endif
       endif
 
 c     Record additional information about the ``third'' dummy axis.
