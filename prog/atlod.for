@@ -15,7 +15,7 @@ c       In this case, see the NFILES keyword below. There is no default.
 c@ out
 c       Name of the output Miriad uv data-set. No default.
 c@ ifsel
-c       IF number to select.  Default is all IFs.  For example,
+c       IF number(s) to select.  Default is all IFs.  For example,
 c       if you observed with 5 GHz (frequency 1) and 8 GHz (frequency 2)
 c       simultaneously, IF 1 would be the 5 GHz data and IF 2 would
 c       be the 8 GHz data. This now also lets you select zoom bands
@@ -273,17 +273,19 @@ c    rjs  06nov08 Corrected CA02 xyphase handling and some minor tidying.
 c    mhw  09jan09 Add flagging of NaNs in CABB spectra
 c    mhw  03jun09 Fix syscal handling for CABB gtp, sdo and caljy values
 c    mhw  14sep09 Make sure birdie is ignored for CABB data
-c    mhw  29sep08 Actually, make it do something useful instead, 
+c    mhw  29sep09 Actually, make it do something useful instead, 
 c                 integrate with rfiflag option
-c
-c $Id: atlod.for,v 1.22 2010/03/28 01:44:31 wie017 Exp $
+c    
+c    mhw  28mar10 Use IF number instead of IF chain for ifsel
+c    mhw  13apr10 Record ifchain in file, allow multiple values for ifsel
+c $Id: atlod.for,v 1.23 2010/04/15 03:06:48 wie017 Exp $
 c-----------------------------------------------------------------------
         integer MAXFILES,MAXTIMES
-        parameter(MAXFILES=128,MAXTIMES=32)
+        parameter(MAXFILES=128,MAXTIMES=32,MAXSIM=16)
 c
         character in(MAXFILES)*128,line*64,out*64,t1*18,t2*18,version*80
         integer tno,ntimes
-        integer ifile,ifsel,nfreq,iostat,nfiles,i
+        integer ifile,ifsel(MAXSIM),nsel,nfreq,iostat,nfiles,i
         double precision rfreq(2),times(2,MAXTIMES)
         logical doauto,docross,docomp,dosam,relax,unflag,dohann
         logical dobary,doif,birdie,dowt,dopmps,doxyp,doop
@@ -295,8 +297,8 @@ c
         character itoaf*8, rperr*32, versan*80
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :                  '$Revision: 1.22 $',
-     :                  '$Date: 2010/03/28 01:44:31 $')
+     :                  '$Revision: 1.23 $',
+     :                  '$Date: 2010/04/15 03:06:48 $')
 c
 c  Get the input parameters.
 c
@@ -307,7 +309,11 @@ c
         call keya('out',out,' ')
         if(out.eq.' ')
      *    call bug('f','Output name must be given')
-        call keyi('ifsel',ifsel,0)
+        call mkeyi('ifsel',ifsel,MAXSIM,nsel)
+        if (nsel.eq.0) then
+          nsel=1
+          ifsel(1)=0
+        endif
         call mkeyd('restfreq',rfreq,2,nfreq)
         call getopt(doauto,docross,docaldat,docomp,dosam,doxyp,doop,
      *    relax,
@@ -372,7 +378,7 @@ c
             endif
             call RPDisp(in(i),scanskip,scanproc,doauto,docross,
      *          docaldat,relax,sing,unflag,nopol,polflag,ifsel,
-     *          rfreq,nfreq,iostat)
+     *          nsel,rfreq,nfreq,iostat)
           endif
         enddo
 c
@@ -864,9 +870,9 @@ c------------------------------------------------------------------------
 c
         end
 c************************************************************************
-        subroutine PokeIF(if,nfreq1,bw,freq,ref,rfreq,nstok,cstok)
+        subroutine PokeIF(if,nfreq1,bw,freq,ref,rfreq,nstok,cstok,ifc)
 c
-        integer if,nfreq1,nstok
+        integer if,nfreq1,nstok,ifc
         character cstok(nstok)*(*)
         double precision freq,bw,ref,rfreq
 c
@@ -929,6 +935,7 @@ c
 c
         nstoke(if) = nstok
         restfreq(if) = 1e-9 * rfreq
+        ifchain(if) = ifc
 c
         do p=1,nstoke(if)
           polcode(if,p) = PolsP2C(cstok(p))
@@ -1621,6 +1628,7 @@ c
             call uvputvrd(tno,'sfreq', sfreq(if),1)
             call uvputvrd(tno,'sdf',   sdf(if),  1)
             call uvputvrd(tno,'restfreq',restfreq(if),1)
+            call uvputvri(tno,'ifchain',ifchain(if),1)
             if(newsc)call ScOut(tno,chi,tcorr,
      *          xtsys,ytsys,xyphase,xyamp,
      *          xsampler,ysampler,xgtp,ygtp,xsdo,ysdo,xcaljy,ycaljy,
@@ -1682,6 +1690,7 @@ c
             call uvputvrd(tno,'sfreq', sfreq,nifs)
             call uvputvrd(tno,'sdf',   sdf,nifs)
             call uvputvrd(tno,'restfreq',restfreq,nifs)
+            call uvputvri(tno,'ifchain',ifchain,nifs)
             if(.not.hires)call uvputvri(tno,'nbin',nbin(1),1)
           endif
           if(newsc.and.tbin.eq.1)call ScOut(tno,chi,tcorr,
@@ -2259,10 +2268,11 @@ c------------------------------------------------------------------------
         end
 c************************************************************************
         subroutine RPDisp(in,scanskip,scanproc,doauto,docross,docaldat,
-     *    relax,sing,unflag,nopol,polflag,ifsel,userfreq,nuser,iostat)
+     *    relax,sing,unflag,nopol,polflag,ifsel,nsel,userfreq,nuser,
+     *    iostat)
 c
         character in*(*)
-        integer scanskip,scanproc,ifsel,nuser,iostat
+        integer scanskip,scanproc,nsel,ifsel(nsel),nuser,iostat
         double precision userfreq(*)
         logical doauto,docross,relax,unflag,polflag,sing,docaldat,nopol
 c
@@ -2280,7 +2290,7 @@ c    sing
 c    nopol      Select only the parallel-hand polarisations.
 c    polflag    Flag all polarisations if any are bad.
 c    unflag     Save data even though it may appear flagged.
-c    ifsel      IF to select. 0 means select all IFs.
+c    ifsel      IFs to select. 0 means select all IFs.
 c    userfreq   User-given rest frequency to override the value in
 c               the RPFITS file.
 c    nuser      Number of user-specificed rest frequencies.
@@ -2520,7 +2530,7 @@ c
                 call bug('w',
      *          'started before UT day rollover')
               endif
-              call SimMap(if_num,n_if,if_simul,if_chain,ifsel,
+              call SimMap(if_num,n_if,if_simul,if_chain,ifsel,nsel,
      *            If2Sim,nifs,Sim2If,Sif,MAXSIM)
               call ChkAnt(x,y,z,antvalid,nant,sing)
               call PolMap(nopol,MPOL,n_if,if_nstok,if_cstok,
@@ -2602,7 +2612,7 @@ c
                     wband = wband.or.if_freq(id).gt.75e9
                     call PokeIF(i,if_nfreq(id),if_invert(id)*if_bw(id),
      *                  if_freq(id),if_ref(id),rfreq,
-     *                  nstoke(id),cstoke(1,id))
+     *                  nstoke(id),cstoke(1,id),if_chain(id))
                   enddo
                 endif
                 calcode = su_cal(srcno)
@@ -3261,10 +3271,11 @@ c
 c
         end
 c************************************************************************
-        subroutine SimMap(ifnum,nif,ifsimul,ifchain,ifsel,
+        subroutine SimMap(ifnum,nif,ifsimul,ifchain,ifsel,nsel,
      *            If2Sim,nifs,Sim2If,Sif,MAXSIM)
 c
-        integer nif,ifnum(nif),ifsimul(nif),ifchain(nif),ifsel,MAXSIM
+        integer nif,ifnum(nif),ifsimul(nif),ifchain(nif),MAXSIM
+        integer nsel,ifsel(nsel)
         integer If2Sim(nif),nifs(nif),Sim2IF(MAXSIM,nif),Sif(nif)
 c
 c  Using the RPFITS IF table, determine a map between RPFITS "ifno",
@@ -3281,7 +3292,7 @@ c  Input:
 c    nif        Total number of entries in the RPFITS IF table.
 c    ifnum      RPFITS IF_NUM column. Just check that IF_NUM(i)==i.
 c    ifsimul,ifchain RPFITS columns.
-c    ifsel      IF axis to select (user specified).
+c    ifsel      IF axes to select (user specified).
 c    MAXSIM     Maximum number of simultaneous frequencies.
 c  Output:
 c    If2Sim     Map from ifno to "simultaneous group number".
@@ -3290,8 +3301,8 @@ c               be up to MAXSIM entries per "sim. group no.".
 c    nifs       Number of simultaneous IFs in each sim. group.
 c    Sif        Maps from RPFITS ifno to the position on the Miriad IF axis.
 c------------------------------------------------------------------------
-        integer i,j,nsimgrp,s
-        logical more
+        integer i,j,k,nsimgrp,s
+        logical more,ok
 c
         do i=1,nif
           if(ifnum(i).ne.i)call bug('f',
@@ -3303,8 +3314,14 @@ c
         nsimgrp = 0
         do i=1,nif
           If2Sim(i) = 0
-c          if(ifsel.eq.0.or.ifsel.eq.ifchain(i))then
-          if(ifsel.eq.0.or.ifsel.eq.i) then
+c
+c  Has this IF been selected?
+c          
+          ok = ifsel(1).eq.0
+          do k=1,nsel
+            ok = ok.or.(ifsel(k).eq.i)
+          enddo
+          if(ok) then
             do j=1,i-1
               if(ifsimul(i).eq.ifsimul(j).and.If2Sim(j).gt.0)
      *          If2Sim(i) = If2Sim(j)
