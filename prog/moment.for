@@ -47,11 +47,11 @@ c       For mom > 0, mask pixels when the 1st moment lies outside the
 c       range of the spectral axis.  This can happen because sum(I)
 c       can be arbitrarily small in emission-free channels but with
 c       sum(I*v) non-vanishing.  Default: false.
-c@ mask0
-c       Two values.  For mom = -3, 1, and 2 (velocities) mask pixels for
-c       which the 0th moment lies within the range mask0(1) to mask0(2)
-c       inclusive.  If only one value is given, then exclude -abs(mask0)
-c       to +abs(mask0).  Default = 0.
+c@ pkmask
+c       Two values.  For mom = -3, 1, and 2 (velocities) mask pixels
+c       for which the peak intensity lies within the range pkmask(1) to
+c       pkmask(2) exclusive.  If only one value is given, then mask
+c       pixels with peak intensity less than pkmask.  Default = 0.
 c--
 c  History:
 c    26may89 Robert Loushin  original version - v-axis of vxy image
@@ -87,7 +87,7 @@ c    16feb01 pjt   Added mom=-3 for velocity of peak fit to poly=2
 c    18jan02 pjt   Turned rngmask typo into rngmsk (duh)
 c     4mar02 pjt   documented FWHM/sigma, fixed units of mom=2 map
 c
-c $Id: moment.for,v 1.7 2010/04/15 04:18:40 cal103 Exp $
+c $Id: moment.for,v 1.8 2010/04/15 05:54:47 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
@@ -101,7 +101,7 @@ c-----------------------------------------------------------------------
       integer axis, blc(maxnax), boxes(maxboxes), i, j, lIn, lOut,
      :        mom, n1, n2, n3, naxes, naxis(maxnax), nchan,
      :        oaxis(maxnax), pMasks, pSpecs, trc(maxnax)
-      real    blo, bhi, cdelt, clip(2), crpix, crval, mask0(2), offset,
+      real    blo, bhi, cdelt, clip(2), crpix, crval, pkmask(2), offset,
      :        restfreq, scl, tmp, vrange(2)
       character cin*1, ctype*9, in*64, text*72, out*64, version*80
 
@@ -110,8 +110,8 @@ c     Externals.
       character itoaf*1, versan*80
 c-----------------------------------------------------------------------
       version = versan ('moment',
-     :                  '$Revision: 1.7 $',
-     :                  '$Date: 2010/04/15 04:18:40 $')
+     :                  '$Revision: 1.8 $',
+     :                  '$Date: 2010/04/15 05:54:47 $')
 
 c     Get inputs.
       call keyini
@@ -127,12 +127,11 @@ c     Get inputs.
         clip(1) = -clip(2)
       endif
       call keyl('rngmsk',rngmsk,.FALSE.)
-      call keyr('mask0',mask0(1),0.0)
-      if (keyprsnt('mask0'))then
-        call keyr('mask0',mask0(2),0.0)
+      call keyr('pkmask',pkmask(2),-1e9)
+      if (keyprsnt('pkmask'))then
+        call keyr('pkmask',pkmask(1),-1e9)
       else
-        mask0(2) = abs(mask0(1))
-        mask0(1) = -mask0(2)
+        pkmask(1) = -1e9
       endif
       call keyfin
 
@@ -151,11 +150,11 @@ c     Check inputs.
         call bug('w', 'clip limits swapped.')
       endif
 
-      if (mask0(2).lt.mask0(1)) then
-        tmp = mask0(1)
-        mask0(1) = mask0(2)
-        mask0(2) = tmp
-        call bug('w', 'mask0 limits swapped.')
+      if (pkmask(2).lt.pkmask(1)) then
+        tmp = pkmask(1)
+        pkmask(1) = pkmask(2)
+        pkmask(2) = tmp
+        call bug('w', 'pkmask limits swapped.')
       endif
 
 
@@ -265,7 +264,7 @@ c     Open output image and write its header.
 c     Compute the moment.
       if (axis.eq.1) then
         call ax1mom(lIn,lOut,naxes,blc,trc,mom,offset,scl,clip,vrange,
-     :    mask0)
+     :    pkmask)
 
       else if (axis.eq.2) then
         n1 = trc(1) - blc(1) + 1
@@ -273,7 +272,7 @@ c     Compute the moment.
         call memalloc(pSpecs,n1*n2,'r')
         call memalloc(pMasks,n1*n2,'l')
         call ax2mom(lIn,lOut,naxes,blc,trc,mom,offset,scl,clip,vrange,
-     :    mask0,n1,n2,memr(pSpecs),meml(pMasks))
+     :    pkmask,n1,n2,memr(pSpecs),meml(pMasks))
         call memfree(pSpecs,n1*n2,'r')
         call memfree(pMasks,n1*n2,'l')
 
@@ -283,7 +282,7 @@ c     Compute the moment.
         call memalloc(pSpecs,n1*n3,'r')
         call memalloc(pMasks,n1*n3,'l')
         call ax3mom(lIn,lOut,naxes,blc,trc,mom,offset,scl,clip,vrange,
-     :    mask0,n1,n3,memr(pSpecs),meml(pMasks))
+     :    pkmask,n1,n3,memr(pSpecs),meml(pMasks))
         call memfree(pSpecs,n1*n3,'r')
         call memfree(pMasks,n1*n3,'l')
       endif
@@ -409,10 +408,10 @@ c     as much as possible from the input cube.
 c=======================================================================
 
       subroutine ax1mom(lIn,lOut,naxes,blc,trc,mom,offset,scl,clip,
-     :  vrange,mask0)
+     :  vrange,pkmask)
 
       integer lIn, lOut, naxes, blc(naxes), trc(naxes), mom
-      real    offset, scl, clip(2), vrange(2), mask0(2)
+      real    offset, scl, clip(2), vrange(2), pkmask(2)
 c
 c  Moment calculation for axis 1.
 c
@@ -427,8 +426,8 @@ c    clip       Exclude channels with intensity in range clip(1) to
 c               clip(2).
 c    vrange     For mom > 0, flag pixels if 1st moment is outside
 c               velocity range vrange(1) to vrange(2).
-c    mask0      For mom = -3, 1, and 2, mask pixels for which the 0th
-c               moment lies within the specified range.
+c    pkmask     For mom = -3, 1, and 2, mask pixels for which the peak
+c               intensity lies within the specified range.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
 
@@ -449,7 +448,7 @@ c-----------------------------------------------------------------------
           call xyread(lIn,j0,inbuf)
           call xyflgrd(lIn,j0,inmask)
 
-          call momcalc(mom, offset, scl, clip, vrange, mask0, n1,
+          call momcalc(mom, offset, scl, clip, vrange, pkmask, n1,
      :      inbuf(blc(1)), inmask(blc(1)), outbuf(j), outmsk(j))
 
           j0 = j0 + 1
@@ -467,10 +466,10 @@ c       Write out this row of the moment map.
 c=======================================================================
 
       subroutine ax2mom(lIn,lOut,naxes,blc,trc,mom,offset,scl,clip,
-     :  vrange,mask0,n1,n2,specs,masks)
+     :  vrange,pkmask,n1,n2,specs,masks)
 
       integer lIn, lOut, naxes, blc(naxes), trc(naxes), mom
-      real    offset, scl, clip(2), vrange(2), mask0(2)
+      real    offset, scl, clip(2), vrange(2), pkmask(2)
       integer n1, n2
       real    specs(n2,n1)
       logical masks(n2,n1)
@@ -488,8 +487,8 @@ c    clip       Exclude channels with intensity in range clip(1) to
 c               clip(2).
 c    vrange     For mom > 0, flag pixels if 1st moment is outside
 c               velocity range vrange(1) to vrange(2).
-c    mask0      For mom = -3, 1, and 2, mask pixels for which the 0th
-c               moment lies within the specified range.
+c    pkmask     For mom = -3, 1, and 2, mask pixels for which the peak
+c               intensity lies within the specified range.
 c  Scratch:
 c    specs      Storage for spectra.
 c    masks      Storage for flags.
@@ -526,7 +525,7 @@ c     Check consistency.
         enddo
 
         do i = 1, n1
-          call momcalc(mom, offset, scl, clip, vrange, mask0, n2,
+          call momcalc(mom, offset, scl, clip, vrange, pkmask, n2,
      :      specs(1,i), masks(1,i), outbuf(i), outmsk(i))
         enddo
 
@@ -541,10 +540,10 @@ c     Check consistency.
 c=======================================================================
 
       subroutine ax3mom(lIn,lOut,naxes,blc,trc,mom,offset,scl,clip,
-     :  vrange,mask0,n1,n3,specs,masks)
+     :  vrange,pkmask,n1,n3,specs,masks)
 
       integer lIn, lOut, naxes, blc(naxes), trc(naxes), mom
-      real    offset, scl, clip(2), vrange(2), mask0(2)
+      real    offset, scl, clip(2), vrange(2), pkmask(2)
       integer n1, n3
       real    specs(n3,n1)
       logical masks(n3,n1)
@@ -562,8 +561,8 @@ c    clip       Exclude channels with intensity in range clip(1) to
 c               clip(2).
 c    vrange     For mom > 0, flag pixels if 1st moment is outside
 c               velocity range vrange(1) to vrange(2).
-c    mask0      For mom = -3, 1, and 2, mask pixels for which the 0th
-c               moment lies within the specified range.
+c    pkmask     For mom = -3, 1, and 2, mask pixels for which the peak
+c               intensity lies within the specified range.
 c  Scratch:
 c    specs      Storage for spectra.
 c    masks      Storage for flags.
@@ -599,7 +598,7 @@ c     Check consistency.
         enddo
 
         do i = 1, n1
-          call momcalc(mom, offset, scl, clip, vrange, mask0, n3,
+          call momcalc(mom, offset, scl, clip, vrange, pkmask, n3,
      :      specs(1,i), masks(1,i), outbuf(i), outmsk(i))
         enddo
 
@@ -613,7 +612,7 @@ c     Check consistency.
 
 c=======================================================================
 
-      subroutine momcalc(mom, offset, scl, clip, vrange, mask0, nchan,
+      subroutine momcalc(mom, offset, scl, clip, vrange, pkmask, nchan,
      :  spec, mask, moment, flag)
 
 c  Calculate the required moment for a single spectrum.
@@ -626,8 +625,8 @@ c    clip       Exclude channels with intensity in range clip(1) to
 c               clip(2).
 c    vrange     For mom > 0, flag pixels if 1st moment is outside
 c               velocity range vrange(1) to vrange(2).
-c    mask0      For mom = -3, 1, and 2, mask pixels for which the 0th
-c               moment lies within the specified range.
+c    pkmask     For mom = -3, 1, and 2, mask pixels for which the peak
+c               intensity lies within the specified range.
 c    nchan      Number of channels in spectrum and mask.
 c    spec       Spectrum.
 c    mask       Input mask, false if data is rejected.
@@ -639,9 +638,9 @@ c-----------------------------------------------------------------------
       integer nchan
       logical dovflg, flag, mask(nchan)
       integer i, ipeak, mom
-      real    a, b, clip(2), mask0(2), mom0, mom1, mom2sq, moment,
-     :        offset, scl, spec(nchan), sum0, sum1, sum2, vel,
-     :        vrange(2), x
+      real    a, b, clip(2), pkmask(2), mom1, mom2sq, moment, offset,
+     :        peak, scl, spec(nchan), sum0, sum1, sum2, vel, vrange(2),
+     :        xpeak
 c-----------------------------------------------------------------------
 c     Accumulate data for this spectrum.
       sum0 = 0.0
@@ -653,47 +652,48 @@ c     Accumulate data for this spectrum.
         if (mask(i)) then
           sum0 = sum0 + spec(i)
 
-          if (mom.le.-2) then
-            if (spec(i).gt.spec(ipeak)) then
-              ipeak = i
-            endif
-          else if (spec(i).lt.clip(1) .or. clip(2).lt.spec(i)) then
-            if (mom.ge.1) then
+          if (spec(i).gt.spec(ipeak)) then
+            ipeak = i
+          endif
+
+          if (mom.ge.1) then
+            if (spec(i).lt.clip(1) .or. clip(2).lt.spec(i)) then
               vel = (i - offset)*scl
               sum1 = sum1 + spec(i)*vel
-              if (mom.eq.2) then
-                sum2 = sum2 + spec(i)*vel*vel
-              endif
+              sum2 = sum2 + spec(i)*vel*vel
             endif
           endif
         endif
       enddo
 
-      mom0 = sum0 * abs(scl)
+
+c     Do quadratic fit to peak position if needed.
+      dovflg = mom.eq.-3 .or. mom.ge.1
+      if (mom.le.-2 .or. dovflg) then
+        xpeak = 0.0
+        if (ipeak.gt.1 .and. ipeak.lt.nchan) then
+          a = 0.5*(spec(ipeak+1) + spec(ipeak-1)) - spec(ipeak)
+          b = 0.5*(spec(ipeak+1) - spec(ipeak-1))
+          if (a.ne.0.0) xpeak = -b / (2.0*a)
+        endif
+
+c       Peak intensity used for flagging.
+        peak = spec(ipeak) + xpeak*b/2.0
+      endif
 
 
 c     Calculate the required moment.
       moment = 0.0
       flag   = .false.
-      dovflg = .false.
       if (mom.le.-2) then
-        x = 0.0
-        if (ipeak.gt.1 .and. ipeak.lt.nchan) then
-c         Do quadratic fit to peak position.
-          a = 0.5*(spec(ipeak+1) + spec(ipeak-1)) - spec(ipeak)
-          b = 0.5*(spec(ipeak+1) - spec(ipeak-1))
-          if (a.ne.0.0) x = -b / (2.0*a)
-        endif
-
         if (mom.eq.-2) then
 c         Peak intensity.
-          moment = spec(ipeak) + x*b/2.0
+          moment = peak
           flag = .true.
         else if (mom.eq.-3) then
 c         Velocity of peak.
-          moment = ((ipeak + x) - offset)*scl
+          moment = ((ipeak + xpeak) - offset)*scl
           flag   = .true.
-          dovflg = .true.
           vel    = moment
         endif
 
@@ -704,33 +704,29 @@ c       Average line intensity.
 
       else if (mom.eq.0) then
 c       Integrated line intensity.
-        moment = mom0
+        moment = sum0 * abs(scl)
         flag = .true.
 
       else if (sum0.ne.0.0) then
 c       Velocity centroid or dispersion.
         mom1 = sum1 / sum0
+        vel  = mom1
 
         if (mom.eq.1) then
           moment = mom1
           flag   = .true.
-          dovflg = .true.
-          vel    = mom1
-
         else
           mom2sq = sum2/sum0 - mom1*mom1
           if (mom2sq.gt.0.0) then
             moment = sqrt(mom2sq)
             flag   = .true.
-            dovflg = .true.
-            vel    = mom1
           endif
         endif
       endif
 
 
 c     Do velocity flagging?
-      if (dovflg) then
+      if (dovflg .and. flag) then
 c       Flagging based on expected range.
         if (vrange(1).lt.vrange(2)) then
           if (vel.lt.vrange(1) .or. vrange(2).lt.vel) then
@@ -738,8 +734,8 @@ c       Flagging based on expected range.
           endif
         endif
 
-c       Flagging based on line strength.
-        if (mask0(1).lt.mom0 .and. mom0.lt.mask0(2)) then
+c       Flagging based on peak line strength.
+        if (pkmask(1).lt.peak .and. peak.lt.pkmask(2)) then
           flag = .false.
         endif
       endif
