@@ -7,6 +7,7 @@ c
 	parameter(ATBIN=1024,ATCONT=33)
 	parameter(ATDATA=8*MAXCHAN*ATBASE)
 	integer nifs,nfreq(ATIF),nstoke(ATIF),polcode(ATIF,ATPOL)
+        integer ifchain(ATIF)
 	double precision sfreq(ATIF),sdf(ATIF),restfreq(ATIF)
 	double precision time
 	integer tcorr
@@ -40,8 +41,8 @@ c
      *	  xtsys,ytsys,xgtp,ygtp,xsdo,ysdo,xcaljy,ycaljy,chi,
      *    xyphase,xyamp,xsampler,ysampler,u,v,w,inttime,
      *	    inttim,wts,mdata,axisrms,axismax,refpnt,stemp,spress,shumid,
-     *	  pnt,nbin,nused,tno,nants,nifs,nfreq,nstoke,polcode,edge,
-     *	    bchan,tcorr,mcount,refnant,
+     *	  pnt,nbin,nused,tno,nants,nifs,nfreq,nstoke,polcode,ifchain,
+     *	    edge,bchan,tcorr,mcount,refnant,
      *	  flag,dosw,dosam,dohann,birdie,dowt,dopmps,doxyp,opcorr,
      *	    doif,dobary,newfreq,hires,cabb,
      *	  newsc,newpnt
