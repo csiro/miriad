@@ -87,7 +87,7 @@ c    16feb01 pjt   Added mom=-3 for velocity of peak fit to poly=2
 c    18jan02 pjt   Turned rngmask typo into rngmsk (duh)
 c     4mar02 pjt   documented FWHM/sigma, fixed units of mom=2 map
 c
-c $Id: moment.for,v 1.6 2010/04/14 06:35:17 cal103 Exp $
+c $Id: moment.for,v 1.7 2010/04/15 04:18:40 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
@@ -99,8 +99,8 @@ c-----------------------------------------------------------------------
 
       logical rngmsk
       integer axis, blc(maxnax), boxes(maxboxes), i, j, lIn, lOut,
-     :        mom, n1, n2, n3, naxes, naxis(maxnax), pMasks, pSpecs,
-     :        oaxis(maxnax), trc(maxnax)
+     :        mom, n1, n2, n3, naxes, naxis(maxnax), nchan,
+     :        oaxis(maxnax), pMasks, pSpecs, trc(maxnax)
       real    blo, bhi, cdelt, clip(2), crpix, crval, mask0(2), offset,
      :        restfreq, scl, tmp, vrange(2)
       character cin*1, ctype*9, in*64, text*72, out*64, version*80
@@ -110,8 +110,8 @@ c     Externals.
       character itoaf*1, versan*80
 c-----------------------------------------------------------------------
       version = versan ('moment',
-     :                  '$Revision: 1.6 $',
-     :                  '$Date: 2010/04/14 06:35:17 $')
+     :                  '$Revision: 1.7 $',
+     :                  '$Date: 2010/04/15 04:18:40 $')
 
 c     Get inputs.
       call keyini
@@ -169,7 +169,8 @@ c     Determine the min and max value.
       call ImMinMax(lIn,naxes,naxis,blo,bhi)
       if (blo.eq.bhi)then
         call xyclose(lIn)
-        write(text,'(''All pixels are '',1pg10.3)')blo
+        write (text, 10) blo
+ 10     format ('All pixels are ',1pg10.3)
         call bug('f', text)
       endif
 
@@ -186,11 +187,11 @@ c     Locate the spectral axis.
      :      ctype(:4).eq.'FELO' .or.
      :      ctype(:4).eq.'FREQ') then
           axis = i
-          goto 10
+          goto 20
         endif
       enddo
 
- 10   if (axis.lt.1) then
+ 20   if (axis.lt.1) then
         call bug('f', 'Spectral axis not found.')
       else if (axis.gt.3) then
         call output('Reorder axes to take moment of axis 1, 2, or 3.')
@@ -209,42 +210,42 @@ c     Calculate offset and scale to convert from channels to km/s.
       call rdhdr(lIn, 'cdelt'//cin, cdelt, 0.0)
       if (cdelt.eq.0.0) call bug('f','cdelt is 0 or not present.')
 
-      offset = crpix - crval/cdelt
-      if (mom.eq.-2) then
-c       Peak channel value.
-        scl = 1.0
-      else if (mom.eq.-1) then
-c       Average channel value.
-        scl = 1.0 / real(trc(axis)-blc(axis)+1)
+c     Compute velocity parameters.
+      if (ctype(1:4).eq.'FREQ') then
+        call rdhdr(lIn, 'restfreq', restfreq, 0.0)
+        if (restfreq.eq.0.0) then
+          call bug('f','restfreq not present in header.')
+        endif
+
+        offset = crpix - (crval - restfreq) / cdelt
+        scl = -CMKS * (cdelt / restfreq) * 1e-3
       else
-c       Velocity needed.
-        if (ctype(1:4).eq.'FREQ') then
-          call rdhdr(lIn, 'restfreq', restfreq, 0.0)
-          if (restfreq.eq.0.0) then
-            call bug('f','restfreq not present in header.')
-          endif
+        offset = crpix - crval/cdelt
+        scl = cdelt
+      endif
 
-          offset = crpix - (crval - restfreq) / cdelt
-          scl = -CMKS * (cdelt / restfreq) * 1e-3
-        else
-          scl = cdelt
-        endif
+c     Transform to pixel coordinates of output axis.
+      offset = offset - blc(axis) + 1
 
-        if (mom.ge.1 .and. rngmsk) then
-          vrange(1) = (blc(axis) - offset)*scl
-          vrange(2) = (trc(axis) - offset)*scl
+c     Report the velocity range.
+      nchan = trc(axis) - blc(axis) + 1
+      vrange(1) = (    1 - offset)*scl
+      vrange(2) = (nchan - offset)*scl
 
-          if (vrange(2).lt.vrange(1)) then
-            tmp = vrange(1)
-            vrange(1) = vrange(2)
-            vrange(2) = tmp
-          endif
+      if (vrange(2).lt.vrange(1)) then
+        tmp = vrange(1)
+        vrange(1) = vrange(2)
+        vrange(2) = tmp
+      endif
 
-          write(*,*) 'Velocity range: ', vrange(1), vrange(2), scl
-        else
-          vrange(1) = 0.0
-          vrange(2) = 0.0
-        endif
+      write (text, 30) vrange(1), vrange(2), scl
+ 30   format ('Velocity range (km/s):',f10.2,' to',f10.2,' by',f8.2)
+      call output (text)
+
+      if (mom.lt.1 .or. .not.rngmsk) then
+c       Don't enforce velocity range for 2nd and 3rd moment.
+        vrange(1) = 0.0
+        vrange(2) = 0.0
       endif
 
 c     Open output image and write its header.
@@ -676,15 +677,12 @@ c     Calculate the required moment.
       flag   = .false.
       dovflg = .false.
       if (mom.le.-2) then
+        x = 0.0
         if (ipeak.gt.1 .and. ipeak.lt.nchan) then
 c         Do quadratic fit to peak position.
           a = 0.5*(spec(ipeak+1) + spec(ipeak-1)) - spec(ipeak)
           b = 0.5*(spec(ipeak+1) - spec(ipeak-1))
-          x = -b / (2.0*a)
-        else
-c         Use position of peak.
-          b = 0.0
-          x = 0.0
+          if (a.ne.0.0) x = -b / (2.0*a)
         endif
 
         if (mom.eq.-2) then
@@ -693,14 +691,19 @@ c         Peak intensity.
           flag = .true.
         else if (mom.eq.-3) then
 c         Velocity of peak.
-          moment = (ipeak - offset + x)*scl
+          moment = ((ipeak + x) - offset)*scl
           flag   = .true.
           dovflg = .true.
           vel    = moment
         endif
 
-      else if (mom.le.0) then
-c       Integrated or average line intensity.
+      else if (mom.eq.-1) then
+c       Average line intensity.
+        moment = sum0 / nchan
+        flag = .true.
+
+      else if (mom.eq.0) then
+c       Integrated line intensity.
         moment = mom0
         flag = .true.
 
