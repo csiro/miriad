@@ -278,9 +278,9 @@ c                 integrate with rfiflag option
 c    
 c    mhw  28mar10 Use IF number instead of IF chain for ifsel
 c    mhw  13apr10 Record ifchain in file, allow multiple values for ifsel
-c $Id: atlod.for,v 1.23 2010/04/15 03:06:48 wie017 Exp $
+c $Id: atlod.for,v 1.24 2010/04/16 00:33:26 cal103 Exp $
 c-----------------------------------------------------------------------
-        integer MAXFILES,MAXTIMES
+        integer MAXFILES,MAXTIMES,MAXSIM
         parameter(MAXFILES=128,MAXTIMES=32,MAXSIM=16)
 c
         character in(MAXFILES)*128,line*64,out*64,t1*18,t2*18,version*80
@@ -297,8 +297,8 @@ c
         character itoaf*8, rperr*32, versan*80
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :                  '$Revision: 1.23 $',
-     :                  '$Date: 2010/04/15 03:06:48 $')
+     :                  '$Revision: 1.24 $',
+     :                  '$Date: 2010/04/16 00:33:26 $')
 c
 c  Get the input parameters.
 c
