@@ -5,32 +5,32 @@ c= IMBIN - Bin up an image.
 c& nebk
 c: image analysis
 c+
-c	IMBIN bins up (averages) pixels, and/or picks out every Nth pixel, 
-c	in some combination of the first three dimensions of an image.
-c	If the selected binning size does not integrally fit into the
-c	size of the axis, the region is adjusted so that it does
-c	if possible.
+c       IMBIN bins up (averages) pixels, and/or picks out every Nth
+c       pixel, in some combination of the first three dimensions of an
+c       image.  If the selected binning size does not integrally fit
+c       into the size of the axis, the region is adjusted so that it
+c       does if possible.
 c
-c	An output pixel is blanked only if there were no valid
-c	contributing input pixels.
+c       An output pixel is blanked only if there were no valid
+c       contributing input pixels.
 c
 c@ in
-c	Input image.  Wild card expansion supported. No default.
+c       Input image.  Wild card expansion supported. No default.
 c@ region
-c	Standard region of interest. See the help on "region" for
-c	more information. The default is the entire input.
+c       Standard region of interest. See the help on "region" for
+c       more information. The default is the entire input.
 c@ bin
-c	A pair of values for each axis.  These give the spatial increment 
-c	and binning size in pixels for each axis to be applied to  the
-c	selected region.  If the binning size is not unity, it must equal
-c	the increment.  For example, to bin up the image by 2 pixels
-c	in the x direction, and to pick out every third pixel in the 
-c	z direction, set BIN=2,2, 1,1, 3,1   
-c	Defaults are 1,1 for each axis.  
+c       A pair of values for each axis.  These give the spatial
+c       increment and binning size in pixels for each axis to be applied
+c       to the selected region.  If the binning size is not unity, it
+c       must equal the increment.  For example, to bin up the image by 2
+c       pixels in the x direction, and to pick out every third pixel in
+c       the z direction, set BIN=2,2, 1,1, 3,1
+c       Defaults are 1,1 for each axis.
 c@ out
-c	Output image
+c       Output image
 c@ options
-c       Extra processing options. Only the minimum characters to avoid 
+c       Extra processing options. Only the minimum characters to avoid
 c       ambiguity is needed.
 c         sum       Produce sum rather than average of pixels in
 c                   each bin
@@ -41,170 +41,155 @@ c    nebk 11Jan95  Original version
 c    nebk 14nov95  New call for READIMCG
 c    nebk 25may96  Fix glaring error with 2-D images
 c    rjs  12oct99  Correctly handle mosaic tables. Other cosmetic
-c		   improvements.
-c    dpr  08nov00  make bin specs for 3rd axis redundant for 2-D 
+c                  improvements.
+c    dpr  08nov00  make bin specs for 3rd axis redundant for 2-D
 c                  images.
 c    bmg  11may01  Added options=sum
 c   nebk  14nov01  Track change to readimcg interface
 c    rjs  19jan06  Fortran standardisation.
 c
+c $Id: imbin.for,v 1.2 2010/04/16 05:55:56 cal103 Exp $
 c-----------------------------------------------------------------------
-      implicit none
-c
       include 'maxdim.h'
       include 'maxnax.h'
       include 'mem.h'
-c
-      character version*(*)
-      parameter (version = 'ImBin: version 14-Nov-2001')
-      integer maxbox
-      parameter (maxbox = 1024)
-      integer NOPTS
-      parameter(NOPTS=1) 
-      character opts(NOPTS)*8 
-      logical present(NOPTS)
 
-c
-      integer sizin(maxnax), sizout(maxnax), blc(maxnax), trc(maxnax), 
-     + bin(2,maxnax), nbin, boxes(maxbox), krng(2), lin, lout, ip, ipn, 
-     + i, j, k,l, naxis, p, pn, nx, ny, npnt
-      double precision cdelti(maxnax), crvali(maxnax), crpixi(maxnax),
-     + cdelto(maxnax), crpixo(maxnax)
-      real dmm(2), mm(3)
-      logical flags(maxdim), blanks, aver
-      character in*64, out*64, itoaf*1, str*1, line*80
-c
-c  Externals.
-c
+      integer MAXBOX, NOPTS
+      parameter (MAXBOX = 1024, NOPTS = 1)
+
+      logical aver, blanks, flags(MAXDIM), present(NOPTS)
+      integer bin(2,MAXNAX), blc(MAXNAX), boxes(MAXBOX), i, ip, ipn, j,
+     :        k, krng(2), l, lin, lout, naxis, nbin, npnt, nx, ny, p,
+     :        pn, sizin(MAXNAX), sizout(MAXNAX), trc(MAXNAX)
+      real    dmm(2), mm(3)
+      double precision cdelti(MAXNAX), cdelto(MAXNAX), crpixi(MAXNAX),
+     :        crpixo(MAXNAX), crvali(MAXNAX)
+      character in*64, itoaf*1, line*80, opts(NOPTS)*8, out*64, str*1,
+     :        version*80
+
+c     Externals.
       logical hdprsnt
-c
+      character versan*80
+
       data opts/'sum     '/
-c
-c Get user inputs
-c
-      call output (version)
+c-----------------------------------------------------------------------
+      version = versan ('imbin',
+     :                  '$Revision: 1.2 $',
+     :                  '$Date: 2010/04/16 05:55:56 $')
+
+c     Get user inputs.
       call keyini
       call keyf ('in', in, ' ')
       if (in.eq.' ') call bug ('f', 'No input image given')
       call keya ('out', out, ' ')
       if (out.eq.' ') call bug ('f', 'No output image given')
-      if (in.eq.out) call bug ('f', 
-     +  'Input and output images must be different')
-      call mkeyi ('bin', bin, maxnax*2, nbin)
+      if (in.eq.out) call bug ('f',
+     :  'Input and output images must be different')
+      call mkeyi ('bin', bin, MAXNAX*2, nbin)
       if (nbin.eq.0) call bug ('f', 'You must give some binning')
       if (mod(nbin,2).ne.0)call bug('f','Invalid number of bins')
-      call boxinput ('region', in, boxes, maxbox)
+      call boxinput ('region', in, boxes, MAXBOX)
       call options('options',opts,present,NOPTS)
       aver = .not.present(1)
       call keyfin
 
-c
-c Open input image
-c
-      call xyopen (lin, in, 'old', maxnax, sizin)
+c     Open input image.
+      call xyopen (lin, in, 'old', MAXNAX, sizin)
       call rdhdi (lin, 'naxis', naxis, 0)
-      naxis = min(naxis,maxnax)
-c
-      do i=nbin/2+1,naxis
+      naxis = min(naxis,MAXNAX)
+
+      do i = nbin/2+1, naxis
         bin(1,i) = 1
         bin(2,i) = 1
       enddo
-c
+
       call output (' ')
       call output (' Axis   inc    bin')
       call output ('------------------')
       do i = 1, naxis
         write (line, 100) i, bin(1,i), bin(2,i)
-100     format (2x, i2, 2x, i4, 3x, i4) 
+100     format (2x, i2, 2x, i4, 3x, i4)
         call output (line)
       end do
-c
-c Finish key inputs for region of interest 
-c
+
+c     Finish key inputs for region of interest.
       call boxset (boxes, naxis, sizin, 's')
       call boxinfo (boxes, naxis, blc, trc)
-c
-c Read input image header items and adjust window sizes to fit 
-c binning factors integrally
-c
+
+c     Read input image header items and adjust window sizes to fit
+c     binning factors integrally.
       do i = 1, naxis
         str = itoaf(i)
-        call rdhdd (lin, 'crpix'//str, crpixi(i), dble(sizin(i))/2.0)
-        call rdhdd (lin, 'cdelt'//str, cdelti(i), 1.0d0)
-        call rdhdd (lin, 'crval'//str, crvali(i), 0.0d0)
-c
+        call rdhdd (lin, 'crpix'//str, crpixi(i), dble(sizin(i))/2d0)
+        call rdhdd (lin, 'cdelt'//str, cdelti(i), 1d0)
+        call rdhdd (lin, 'crval'//str, crvali(i), 0d0)
+
         if (bin(2,i).ne.1 .and. bin(2,i).ne.bin(1,i)) call bug ('f',
-     +   'Image increment must equal bin size')
+     :    'Image increment must equal bin size')
         call winfidcg (sizin(i), i, bin(1,i), blc(i), trc(i), sizout(i))
       end do
+
       if (naxis.lt.3) then
         do i = naxis+1,3
           sizout(i) = 1
           blc(i) = 1
           trc(i) = 1
-c no binning in the 3rd axis ->
-          if (nbin/2 .lt. 3) then
-            do l=nbin/2+1,3
+
+c         No binning in the 3rd axis ->
+          if (nbin/2.lt.3) then
+            do l = nbin/2+1, 3
               bin(1,l) = 1
               bin(2,l) = 1
             enddo
           endif
-c <- dpr 08-11-00
         end do
-      end if        
-c
-c Open output image and copy header items to it
-c  
+      end if
+
+c     Open output image and copy header items to it.
       call xyopen (lout, out, 'new', naxis, sizout)
       call headcopy (lin, lout, 0, naxis, 0, 0)
       call hisopen (lout,'append')
       call hiswrite (lout, 'IMBIN: Miriad '//version)
       call hisinput (lout,'IMBIN')
       call hisclose (lout)
-c
-c Work out output image header items and write them out to the output 
-c
+
+c     Work out output image header items and write them out.
       do i = 1, naxis
         cdelto(i) = bin(1,i) * cdelti(i)
-        crpixo(i) = 0.5d0 - 
-     +     ((dble(blc(i)) - 0.5d0 - crpixi(i)) * cdelti(i) / cdelto(i))
-c
+        crpixo(i) = 0.5d0 -
+     :     ((dble(blc(i)) - 0.5d0 - crpixi(i)) * cdelti(i) / cdelto(i))
+
         str = itoaf(i)
         call wrhdd (lout, 'crpix'//str, crpixo(i))
         call wrhdd (lout, 'cdelt'//str, cdelto(i))
       end do
-c
-c Allocate memory for binned images
-c
+
+c     Allocate memory for binned images.
       call memalloc (ip,  sizout(1)*sizout(2), 'r')
       call memalloc (ipn, sizout(1)*sizout(2), 'i')
-c
-c Loop over input image
-c
-      dmm(1) =  1.0e32
-      dmm(2) = -1.0e32
+
+c     Loop over input image.
+      dmm(1) =  1e32
+      dmm(2) = -1e32
       krng(1) = blc(3)
       krng(2) = bin(2,3)
-c    
+
       do k = 1, sizout(3)
-c
-c Bin up next subcube
-c
-        mm(1) = 1.0e32
-        mm(2) = -1.0e32
+c       Bin up next subcube.
+        mm(1) =  1e32
+        mm(2) = -1e32
         call readimcg (.true., 0.0, lin, bin(1,1), bin(1,2), krng,
-     +    blc, trc, aver, memi(ipn), memr(ip), blanks, mm)
+     :    blc, trc, aver, memi(ipn), memr(ip), blanks, mm)
         dmm(1) = min(dmm(1), mm(1))
         dmm(2) = max(dmm(2), mm(2))
         krng(1) = krng(1) + bin(1,3)
-c
-c Write out plane of new image
-c
+
+c       Write out plane of new image.
         call xysetpl (lout, 1, k)
         do j = 1, sizout(2)
           p  = (j-1)*sizout(1) + ip
           pn = (j-1)*sizout(1) + ipn
-c
+
           call xywrite (lout, j, memr(p))
           if (blanks) then
             do i = 1, sizout(1)
@@ -216,22 +201,21 @@ c
       end do
       call wrhdr (lout, 'datamax', dmm(2))
       call wrhdr (lout, 'datamin', dmm(1))
-c
+
 c  If there is a mosaicing table in the input, and if there is
 c  some sort of decimation of the RA and DEC axes, then decimate
 c  the mostable.
-c
-      if(hdprsnt(lin,'mostable').and.
-     *	(bin(1,1).gt.1.or.bin(1,2).gt.1))then
-	call mosLoad(lin,npnt)
-	call mosGetn(nx,ny,npnt)
-	call mosSetn(nx/bin(1,1),ny/bin(1,2))
-	call mosSave(lout)
+      if (hdprsnt(lin,'mostable').and.
+     :   (bin(1,1).gt.1 .or. bin(1,2).gt.1)) then
+        call mosLoad(lin,npnt)
+        call mosGetn(nx,ny,npnt)
+        call mosSetn(nx/bin(1,1),ny/bin(1,2))
+        call mosSave(lout)
       endif
-c
+
       call memfree (ip,  sizout(1)*sizout(2), 'r')
       call memfree (ipn, sizout(1)*sizout(2), 'i')
       call xyclose (lin)
       call xyclose (lout)
-c
+
       end
