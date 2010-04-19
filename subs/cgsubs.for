@@ -49,18 +49,18 @@ c                        parameters to HEDINFCG
 c     nebk   18may92     Add AXFNDCG
 c     nebk   04jul92     Don't modify variable (PLAV) in READIMCG. Add
 c                        O2PIXCG, SETTRCG, CONLINCG, STRERSCG, DEGHSMCG,
-c			 ANN*CG, CHKDESCG, CHKDIMCG,  add argument
-c			 MIRROR to CONLEVCG
+c                        ANN*CG, CHKDESCG, CHKDIMCG,  add argument
+c                        MIRROR to CONLEVCG
 c     nebk   08jul82     Add OPTCG and INIT/NORM to READIMCG call. FIx
 c                        bug in CHNSELCG causing groups to be specified
 c                        redundantly under some circumstances
 c     nebk   14jul92     Add POSOFF to O2PIXCG. Type CDELT and CRVAL
-c			 as DOUBLE PRECISION
+c                        as DOUBLE PRECISION
 c     nebk   07aug92     Try to instill some more modularity into all
 c                        coordinate conversions with PIX2WCG and
 c                        W2PIXCG, removing SETTRCG along the way.
 c     nebk   22oct92     Add units to velocity and frequency axes
-c			 in LIMTRCG.  SETLABCG was not correctly
+c                        in LIMTRCG.  SETLABCG was not correctly
 c                        setting the dms,hms PGTBOX strings.
 c     nebk   28nov92     Add 'abs/relkms' and 'abs/relghz' label types
 c                        Change "linear" to "abslin"
@@ -76,11 +76,11 @@ c     nebk   29may93     Remove CHTONVCG as now there is PGQCS
 c     nebk   02jun93     Move ANNDEFCG, VPASPCG and VPADJCG to
 c                        CGPGSUBS.FOR as they now call PGQVSZ
 c     nebk   22jun93     Change PIX2WCG, W2PIXCG, LIMTRCG for RA axes to
-c			 return abslin/rellin in rads of polar rotation
+c                        return abslin/rellin in rads of polar rotation
 c                        Add COSDECCG and use it.
 c     nebk   05jul93     MAXDIM-> MAXNAX in W2PIXCG.  Whoops !
 c     nebk   25aug93     Remove DEGHMSCG in favour of new DANGLEH
-c			 Add "absdeg" and "reldeg" axis label types
+c                        Add "absdeg" and "reldeg" axis label types
 c                        Add PIXI2WCG.   Add DOEPOCH to LIMTRCG
 c     nebk   15sep93     Format change in OPTCG
 c     nebk   14nov93     Add 'O' to x-axis options for PGTBOX in SETLAB
@@ -90,12 +90,12 @@ c                        modify slightly blanking in READIMCG & TAKLOGCG
 c     nebk   10dec93     Add MASKORCG and READBCG
 c     nebk   14dec93     Add AXABSCG and LIMITSCG
 c     nebk   03jan94     Add new argument to OMATCHCG and rename MATCHCG
-c		         Add SETCOLCG
+c                        Add SETCOLCG
 c     nebk   09jan94     Convert CRPIX -> double precision.
-c			 Add W2WCG, W2WFCG
+c                        Add W2WCG, W2WFCG
 c     nebk   27jan94     Add square root transfer function to GRFIXCG
 c                        Rename TAKLOG to APPTRF and include h.e., log,
-c			 and square root transfer functions. Add HEQCG
+c                        and square root transfer functions. Add HEQCG
 c     nebk   15feb94     Add WEDGINCG and WEDGECG
 c     nebk   02mar94     SETLABCG -> cgpgsubs.for
 c     nebk   08mar94     Move WEDGECG to CGPGSUBS.FOR, add WINDFIDCG
@@ -113,19 +113,19 @@ c     nebk   11aug95     Add arcmin labels
 c     nebk   03sep95     Add STROPTCG, ANGCONCG, SETCCSCG
 c     rjs    26sep95     Always label epoch with 'B' or 'J'.
 c     nebk   19oct95     Bias images by pixr(1) rather than image min
-c			 when log or square root transfer function
+c                        when log or square root transfer function
 c     nebk   14nov95     Remove a number of subroutines whose use is
-c			 no longer required becuase of internal changes
+c                        no longer required becuase of internal changes
 c                        to the cg* programs and use of cosubs.for;
 c                        AXABSCG, AXFNDCG, AXTYPCG, COSDECCG, PIX2WCG,
 c                        PIX2WFCG, SAVDESCG, SETDESCG, SUNITCG, W2PIXCG,
 c                        W2WCG, W2WFCG
 c     nebk   29nov95     New call for CTYPECO, new ANGCONCG internals,
-c			 new routine RAZEROCG
+c                        new routine RAZEROCG
 c     nebk   04dec95     DOLABCG was forgetting some right hand labels
 c     nebk   30jan96     In CHNSELCG remove the restictions on channel
 c                        averaging and incrementing which previously
-c			 groups of channels could not overlap
+c                        groups of channels could not overlap
 c     rjs     8mar96     Change ctype*9 to ctype*32
 c     nebk   26apr96     Km -> km is setlabcg.  rats.
 c     nebk   02may96     COmments in ANGCONCG were no longer the truth
@@ -141,6 +141,8 @@ c     rjs    06jan99     Yet another go at a decent algorithm for
 c                        RAZEROCG
 c    nebk    14nov01     Add abs max to min/max vector returned by
 c                        readimcg
+c
+c $Id: cgsubs.for,v 1.6 2010/04/19 02:47:31 cal103 Exp $
 c***********************************************************************
 c
 c* angconCG -- Convert radians to and from seconds of time/arc
@@ -157,10 +159,10 @@ c  and radians.
 c
 c  Input
 c    id       1 -> convert from radians
-c	      2 -> convert to   radians
+c             2 -> convert to   radians
 c    labtyp   axis label type
-c	         hms    seconds of time
-c		 dms    arc seconds
+c                hms    seconds of time
+c                dms    arc seconds
 c  Input/Ouput
 c    w        world coordinate. SHould be radians (id=1), or
 c             (id=1) seconds of arc ('dms') or time ('hms')
@@ -248,7 +250,7 @@ c
       end
 c
 c
-c* chkdesCG -- Compare a double precision axis descriptor from two images
+c* chkdesCG -- Compare double precision axis descriptor from two images
 c& nebk
 c: plotting
 c+
@@ -708,7 +710,7 @@ c
 c
       end
 c
-c* grfixCG -- Fix up a grey scale range with optional bias for log taking
+c* grfixCG -- Fix grey scale range with optional bias for taking logs
 c& nebk
 c: plotting
 c+
@@ -719,9 +721,8 @@ c
       integer lgin, gnaxis, gsize(*)
       character trfun*(*)
 c
-c  Make sure the grey scale range is valid, and take logs if
-c  desired.  This may require a DC bias to avoid negative
-c  numbers in the image.
+c  Make sure the grey scale range is valid, and take logs if desired.
+c  This may require a DC bias to avoid negative numbers in the image.
 c
 c  Input:
 c    lgin     Handle for image
@@ -1303,7 +1304,7 @@ c
       end
 c
 c
-c* ppconCG -- Convert unbinned full image pixels to binned subimage pixels
+c* ppconCG -- Convert full image pixels to binned subimage pixels
 c& nebk
 c: plotting
 c+
@@ -1881,7 +1882,7 @@ c
 c
       end
 c
-c* strprpCG -- Prepare string; strip extra white space & delimiter with commas
+c* strprpCG -- Strip extra white space from string & delimit with commas
 c& nebk
 c: plotting
 c+
@@ -2087,78 +2088,74 @@ c-----------------------------------------------------------------------
       logical new, fail
       character aline*80
 c-----------------------------------------------------------------------
-c
-c Don't fiddle width if no binning, READIMCG and READBCG will cope
-c
-      if (bin(2).eq.1) then
-        win = ((trc-blc+1)-1)/bin(1) + 1
+c     Don't fiddle width if no binning, READIMCG and READBCG will cope.
+      bin2  = bin(2)
+      size2 = trc - blc + 1
+      if (bin2.eq.1) then
+        win = (size2 - 1) / bin(1) + 1
         return
       end if
-c
-c If the binning width is not unity, the increment must already
-c hae been set to the same number
-c
-      bin2 = bin(2)
+
+c     If the binning width is not unity, the increment must already have
+c     been set to the same number.
+      rem = mod(size2,bin2)
+
+c     Return early if no adjustement needed.
+      if (rem.eq.0) then
+        win = size2 / bin2
+        return
+      end if
+
+c     Adjust window to fit integral number of bins.  Increment TRC by 1
+c     and decrement BLC by 1 until ok.
       lo = blc
       hi = trc
-      new = .false.
       fail = .false.
-      size2 = hi - lo + 1
-      rem = mod(size2,bin2)
-c
-c If no adjustement needed, bug out now
-c
-      if (rem.eq.0) then
-        win = (trc-blc+1) / bin2
-        return
-      end if
-c
-c Adjust window to fit integral number of bins.  Decrement BLC by 1
-c and increment TRC by 1 until ok.
-c
+      new  = .false.
       do while (rem.ne.0 .and. .not.fail)
         if (blc.eq.1 .and. trc.eq.size) fail = .true.
-c
+
         if (.not.fail) then
-          blc = max(blc-1,1)
+          trc = min(trc+1,size)
           size2 = trc - blc + 1
           rem = mod(size2,bin2)
-c
-          if (rem.ne.0) trc = min(trc+1,size)
-          size2 = trc - blc + 1
-          rem = mod(size2,bin2)
-c
+
+          if (rem.ne.0) then
+            blc = max(blc-1,1)
+            size2 = trc - blc + 1
+            rem = mod(size2,bin2)
+          endif
+
           new = .true.
         end if
       end do
-c
+
       if (fail) then
-c
-c We failed by making the window smaller, try making it bigger
-c
+c       Failed in making the window bigger, try making it smaller.
         size2 = hi - lo + 1
         rem = mod(size2,bin2)
         new = .false.
         fail = .false.
         do while (rem.ne.0 .and. .not.fail)
           if (blc+bin2.gt.trc) fail = .true.
-c
+
           if (.not.fail) then
-            blc = blc + 1
+            trc = trc - 1
             size2 = trc - blc + 1
             rem = mod(size2,bin2)
-c
-            if (rem.ne.0) trc = trc - 1
-            size2 = trc - blc + 1
-            rem = mod(size2,bin2)
-c
+
+            if (rem.ne.0) then
+              blc = blc + 1
+              size2 = trc - blc + 1
+              rem = mod(size2,bin2)
+            endif
+
             new = .true.
           end if
         end do
       end if
-c
-c Tell user what happened
-c
+
+c     Report what happened.
       if (fail) then
         write (aline, 50) axis
 50      format ('Can''t adjust window to contain',
@@ -2170,9 +2167,8 @@ c
      +          ' to ', i4, ',', i4, ' to fit bin width ',i4)
         call output (aline)
       end if
-c
-c Size of binned window
-c
+
+c     Size of binned window.
       win = size2 / bin2
-c
+
       end
