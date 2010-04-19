@@ -63,31 +63,27 @@ c    rjs  29feb00 mode keyword to allow plots of real/imag/amp.
 c    rjs  08may00 Change incorrect call of keyf to keya.
 c    rjs  03may01 Added mode=phase.
 c
-c $Id: psrplt.for,v 1.2 2010/04/19 06:04:20 cal103 Exp $
+c $Id: psrplt.for,v 1.3 2010/04/19 06:14:26 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
-      integer MAXBIN,MAXPOL,PolMin,PolMax
-      parameter(MAXBIN=32,MAXPOL=4,PolMin=-9,PolMax=4)
+      integer MAXBIN, MAXPOL, POLMIN, POLMAX
+      parameter (MAXBIN=32, MAXPOL=4, POLMIN=-9, POLMAX=4)
 
-      character uvflags*16,device*80,logfile*80,flux*9
-      logical docal,dopol,dopass,doshift
-      logical dogrey,dochan
+      integer NXAXES, NYAXES, NFLUX
+      parameter (NXAXES=1, NYAXES=3, NFLUX=4)
 
-      integer nchan,nread,nbin,npol,ipol,ibin,i,j,k,nout,tno,mpol
-      integer ngood,nbad,llog
-      integer polIndx(PolMin:PolMax),pols(MAXPOL)
-      double precision preamble(4),offset(2),shift(2)
-      complex data(MAXCHAN)
-      logical flags(MAXCHAN),dolog
-      complex acc(MAXCHAN,MAXBIN,MAXPOL)
-      real    wt(MAXCHAN,MAXBIN,MAXPOL),sig2,w
-      double precision sfreq(MAXCHAN)
-
-      integer NXAXES,NYAXES,NFLUX
-      parameter(NXAXES=1,NYAXES=3,NFLUX=4)
-      character xaxes(NXAXES)*9,yaxes(NYAXES)*9,xaxis*9,yaxis*9
-      character fluxes(NFLUX)*9, version*80
+      logical docal, dochan, dogrey, dolog, dopass, dopol, doshift,
+     :        flags(MAXCHAN)
+      integer i, ibin, ijk, ipol, j, k, llog, mpol, nbad, nbin, nchan,
+     :        ngood, nout, npol, nread, polIndx(POLMIN:POLMAX),
+     :        pols(MAXPOL), tno
+      real    sig2,w,wt(MAXCHAN,MAXBIN,MAXPOL)
+      complex acc(MAXCHAN*MAXBIN*MAXPOL), data(MAXCHAN)
+      double precision offset(2), preamble(4), sfreq(MAXCHAN), shift(2)
+      character device*80, flux*9, fluxes(NFLUX)*9, logfile*80,
+     :        uvflags*16, version*80, xaxes(NXAXES)*9, xaxis*9,
+     :        yaxes(NYAXES)*9, yaxis*9
 
 c     Externals.
       logical uvDatOpn,keyprsnt
@@ -99,8 +95,8 @@ c     Externals.
       data fluxes/'real     ','imaginary','amplitude','phase    '/
 c-----------------------------------------------------------------------
       version = versan('psrplt',
-     :                 '$Revision: 1.2 $',
-     :                 '$Date: 2010/04/19 06:04:20 $')
+     :                 '$Revision: 1.3 $',
+     :                 '$Date: 2010/04/19 06:14:26 $')
 
 c     Get parameters.
       call output(version)
@@ -154,17 +150,19 @@ c  Initialise.
 c
       nbin = 0
       npol = 0
-      do i=PolMin,PolMax
+      do i=POLMIN,POLMAX
         PolIndx(i) = 0
       enddo
       mpol = MAXPOL
       if(dogrey)mpol = 1
 
+      ijk = 1
       do k=1,mpol
         do j=1,MAXBIN
           do i=1,MAXCHAN
-            acc(i,j,k) = 0
+            acc(ijk) = 0
             wt (i,j,k) = 0
+            ijk = ijk + 1
           enddo
         enddo
       enddo
@@ -222,11 +220,12 @@ c
           if(sig2.eq.0)call bug('f','Noise variance is zero!')
           w = 1/sig2
           do i=1,nchan
-            if(flags(i))then
+            if (flags(i)) then
+              ijk = ((ipol-1)*MAXPOL + (ibin-1))*MAXBIN + i
               if(flux.eq.'amplitude')then
-                acc(i,ibin,ipol) = acc(i,ibin,ipol) + w*abs(data(i))
+                acc(ijk) = acc(ijk) + w*abs(data(i))
               else
-                acc(i,ibin,ipol) = acc(i,ibin,ipol) + w*data(i)
+                acc(ijk) = acc(ijk) + w*data(i)
               endif
               wt (i,ibin,ipol) = wt (i,ibin,ipol) + w
               ngood = ngood + 1
