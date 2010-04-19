@@ -48,7 +48,7 @@ c    bmg  11may01  Added options=sum
 c   nebk  14nov01  Track change to readimcg interface
 c    rjs  19jan06  Fortran standardisation.
 c
-c $Id: imbin.for,v 1.3 2010/04/19 02:25:53 cal103 Exp $
+c $Id: imbin.for,v 1.4 2010/04/19 04:42:22 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -74,8 +74,8 @@ c     Externals.
       data opts /'sum     '/
 c-----------------------------------------------------------------------
       version = versan ('imbin',
-     :                  '$Revision: 1.3 $',
-     :                  '$Date: 2010/04/19 02:25:53 $')
+     :                  '$Revision: 1.4 $',
+     :                  '$Date: 2010/04/19 04:42:22 $')
 
       do i = 1, MAXNAX
         blc(i) = 1
@@ -175,8 +175,8 @@ c       Bin up next subcube.
         mm(2) = -1e32
         call readimcg (.true., 0.0, lin, bin(1,1), bin(1,2), krng,
      :    blc, trc, aver, memi(ipn), memr(ip), blanks, mm)
-        dmm(1) = min(dmm(1), mm(1))
-        dmm(2) = max(dmm(2), mm(2))
+        if (mm(1).lt.dmm(1)) dmm(1) = mm(1)
+        if (mm(2).gt.dmm(2)) dmm(2) = mm(2)
         krng(1) = krng(1) + bin(1,3)
 
 c       Write out plane of new image.
