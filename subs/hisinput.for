@@ -35,7 +35,7 @@ c--
 c-----------------------------------------------------------------------
 	integer narg,i,l1,l2,length,lu,iostat
 	logical dofile
-	character line*256,file*256
+	character line*1024,file*1024
 	double precision julian
 c
 c  Externals.
