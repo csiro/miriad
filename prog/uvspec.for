@@ -47,6 +47,9 @@ c	   'ampscalar'   When plotting amplitude, this causes it to perform
 c	                 scalar averaging. By default it does vector averaging.
 c	   'rms'         When plotting amplitude, this causes it to plot
 c		         the rms amplitude. by default it does vector averaging.
+c          'sdo'         Plot the difference between bin 2 and bin 1 (these
+c                        contain the CABB noise cal source on and off 
+c                        autocorrelations, giving the Synchr. Detected Ouput)
 c	   'nobase'      Plot all the baselines on one plot.
 c	   'avall'       Average all the baselines together before plotting.
 c	   'dots'        Plot phases with dots instead of filled circles.
@@ -111,6 +114,8 @@ c    rjs  13sep99 Added Doppler corrected freq to possibilities to plot.
 c    rjs  29jun05 Use 3D shift algorithm.
 c    rjs  26jan07 Adjust size of title to prevent overflow on multipanel
 c	          plot.
+c    mhw  02feb10 Add sdo option to look at CABB autocorrelation data bins
+c    mhw  20apr10 Fix axis label and plot accuracy issues for high res data
 c  Bugs:
 c------------------------------------------------------------------------
 	include 'mirconst.h'
@@ -119,11 +124,11 @@ c------------------------------------------------------------------------
         parameter (maxco=15)
 c
 	character version*(*)
-	parameter(version='UvSpec: version 1.0 26-Jan-07')
+	parameter(version='UvSpec: version 1.0 20-Apr-10')
 	character uvflags*8,device*64,xaxis*12,yaxis*12,logf*64
 	character xtitle*64,ytitle*64
 	logical ampsc,rms,nobase,avall,first,buffered,doflush,dodots
-	logical doshift,doflag,doall,dolag
+	logical doshift,doflag,doall,dolag,dosdo
 	double precision interval,T0,T1,preamble(5),shift(2),lmn(3)
 	integer tIn,vupd
 	integer nxy(2),nchan,nread,nplot
@@ -131,7 +136,7 @@ c
 	double precision x(2*MAXCHAN-2)
 	complex data(MAXCHAN)
 	logical flags(MAXCHAN)
-	integer hann
+	integer hann,ibin
 	real hc(maxco),hw(maxco)
 c
 c  Externals.
@@ -143,7 +148,8 @@ c  Get the input parameters.
 c
 	call output(version)
 	call keyini
-	call GetOpt(uvflags,ampsc,rms,nobase,avall,dodots,doflag,doall)
+	call GetOpt(uvflags,ampsc,rms,nobase,avall,dodots,
+     *    doflag,doall,dosdo)
 	call GetAxis(xaxis,yaxis)
 	dolag = xaxis.eq.'lag'
 	call uvDatInp('vis',uvflags)
@@ -180,11 +186,13 @@ c
 c  Various initialisation.
 c
 	ytitle = yaxis
+        if (dosdo) ytitle = yaxis//' SDO'
 	call ucase(ytitle(1:1))
 	interval = interval/(24.*60.)
 	doflush = .false.
 	buffered = .false.
 	first = .true.
+        ibin=0
 	call BufIni
         if(hann.gt.1) call HCoeffs(hann,hc)
         if(logf.ne.' ') call LogOpen(logf,' ')
@@ -221,6 +229,7 @@ c
 c
 c  Determine if we need to flush out the averaged data.
 c
+            if (dosdo )call uvrdvri(tIn,'bin',ibin,0)
 	    doflush = uvVarUpd(vupd)
 	    doflush = nread.ne.nchan
 	    T0 = min(preamble(4),T0)
@@ -243,7 +252,8 @@ c
 	    if(.not.buffered)call GetXAxis(tIn,xaxis,xtitle,x,nplot)
 	    if(avall)preamble(5) = 257
 	    call uvrdvrr(tIn,'inttime',inttime,0.)
-	    call BufAcc(doflag,doall,preamble,inttime,data,flags,nread)
+	    call BufAcc(doflag,doall,preamble,inttime,data,flags,
+     *        nread,ibin)
 	    buffered = .true.
 	    nchan = nread
 c
@@ -416,10 +426,10 @@ c
 	end
 c************************************************************************
 	subroutine GetOpt(uvflags,ampsc,rms,nobase,avall,dodots,
-     *		doflag,doall)
+     *		doflag,doall,dosdo)
 c
 	implicit none
-        logical ampsc,rms,nobase,avall,dodots,doflag,doall
+        logical ampsc,rms,nobase,avall,dodots,doflag,doall,dosdo
 	character uvflags*(*)
 c
 c  Determine the flags to pass to the uvdat routines.
@@ -435,12 +445,12 @@ c    doflag
 c    doall
 c------------------------------------------------------------------------
 	integer nopts
-	parameter(nopts=10)
+	parameter(nopts=11)
 	character opts(nopts)*9
 	logical present(nopts),docal,dopol,dopass
 	data opts/'nocal    ','nopol    ','ampscalar','nopass   ',
      *		  'nobase   ','avall    ','dots     ','rms      ',
-     *            'flagged  ','all      '/
+     *            'flagged  ','all      ','sdo      '/
 c
 	call options('options',opts,present,nopts)
 	docal = .not.present(1)
@@ -455,6 +465,7 @@ c
         dodots =   present(7)
         doflag =   present(9)
 	doall  =   present(10)
+        dosdo  =   present(11)
 	if(doflag.and.doall)call bug('f',
      *	  'The "flagged" and "all" options are mutually exclusive')
 c
@@ -497,26 +508,28 @@ c------------------------------------------------------------------------
 	parameter(PolMin=-8,PolMax=4)
 	integer MAXPLT,MAXPNT
 	parameter(MAXPNT=1000000,MAXPLT=1024)
-	real xp(MAXPNT),yp(MAXPNT),xrange(2),inttime
+        double precision xp(MAXPNT)
+	real xrange(2),inttime,yp(MAXPNT)
 	integer plot(MAXPLT+1)
 	double precision time
 	integer i,j,ngood,ng,ntime,npnts,nplts,nprev,p
 	logical doamp,doampsc,dorms,dophase,doreal,doimag,dopoint,dolag
-	logical Hit(PolMin:PolMax)
+	logical dosdo,Hit(PolMin:PolMax)
 	integer npol,pol(MAXPOL)
 c
 c  Determine the conversion of the data.
 c
-	doamp = ytitle.eq.'Amplitude'
+	doamp = ytitle(1:9).eq.'Amplitude'
 	dolag = xtitle.eq.'Lag Number'
 	doampsc = doamp.and.ampsc
 	dorms   = doamp.and.rms
 	if(doampsc)doamp = .false.
 	if(dorms)  doamp = .false.
-	dophase = ytitle.eq.'Phase'
+	dophase = ytitle(1:5).eq.'Phase'
 	dopoint = dophase
-	doreal  = ytitle.eq.'Real'
-	doimag  = ytitle.eq.'Imaginary'
+	doreal  = ytitle(1:4).eq.'Real'
+	doimag  = ytitle(1:9).eq.'Imaginary'
+        dosdo   = index(ytitle,'SDO').gt.0
 c
 c  Determine the number of good baselines.
 c
@@ -592,7 +605,7 @@ c
 	    if(.not.nobase.and.npnts.gt.0)then
 	      call Plotit(npnts,xp,yp,xrange,yrange,dodots,plot,nplts,
      *		xtitle,ytitle,j,time/ntime,inttime/nplts,pol,npol,
-     *		dopoint,hann,hc,hw,logf)
+     *		dopoint,hann,hc,hw,logf,MAXPNT)
 c
 	      npol = 0
 	      do i=PolMin,PolMax
@@ -611,7 +624,7 @@ c  Do the final plot.
 c
 	if(npnts.gt.0)call Plotit(npnts,xp,yp,xrange,yrange,dodots,
      *	  plot,nplts,xtitle,ytitle,0,time/ntime,inttime/nplts,
-     *	  pol,npol,dopoint,hann,hc,hw,logf)
+     *	  pol,npol,dopoint,hann,hc,hw,logf,MAXPNT)
 c
 c  Reset the counters.
 c
@@ -627,8 +640,8 @@ c
 	implicit none
 	integer nchan,npnts,MAXPNT,count(nchan)
 	logical doamp,doampsc,dorms,dophase,doreal,doimag
-	real buf2(nchan),bufr(nchan),xp(MAXPNT),yp(MAXPNT)
-	double precision x(nchan)
+	real buf2(nchan),bufr(nchan),yp(MAXPNT)
+	double precision x(nchan),xp(MAXPNT)
 	complex buf(nchan)
 c------------------------------------------------------------------------
 	include 'mirconst.h'
@@ -662,7 +675,7 @@ c
 	    endif
 	    npnts = npnts + 1
 	    if(npnts.gt.MAXPNT)call bug('f',
-     *	      'Buffer overflow ('//itoaf(npnts)//
+     *	      'Buffer overflow('//itoaf(npnts)//
      *        '> MAXPNT), when accumulating plots')
 	    xp(npnts) = x(k)
 	    yp(npnts) = temp
@@ -676,8 +689,8 @@ c************************************************************************
 c
 	implicit none
 	integer nchan,n,npnts,MAXPNT,count(nchan)
-	double precision x(n)
-	real xp(MAXPNT),yp(MAXPNT)
+	double precision x(n),xp(MAXPNT)
+        real yp(MAXPNT)
 	complex buf(nchan)
 c------------------------------------------------------------------------
 	include 'maxdim.h'
@@ -713,10 +726,11 @@ c
 c
 	end
 c************************************************************************
-	subroutine BufAcc(doflag,doall,preambl,inttime,data,flags,nread)
+	subroutine BufAcc(doflag,doall,preambl,inttime,data,flags,nread,
+     *     ibin)
 c
 	implicit none
-	integer nread
+	integer nread,ibin
 	double precision preambl(5)
 	real inttime
 	complex data(nread)
@@ -727,6 +741,7 @@ c  in common.
 c
 c  Input
 c    doflag     Plot flagged data instead of unflagged
+c    ibin       Bin number of current block of data (or 0)
 c  Input/Output:
 c    preambl	Preamble. Destroyed on output.
 c    data	The correlation data to be averaged. Destroyed on output.
@@ -809,8 +824,9 @@ c
 	  p = pnt(p,bl) - 1
 	  do i=1,nread
 	    if(doall.or.(doflag.neqv.flags(i)))then
-	      buf(i+p) = data(i)
-	      t = abs(data(i))
+	      if(ibin.eq.0.or.ibin.eq.2) buf(i+p) = data(i)
+	      if (ibin.eq.1) buf(i+p) = -data(i)
+              t = abs(data(i))
               bufr(i+p) = t
 	      buf2(i+p) = t*t
 	      count(i+p) = 1
@@ -832,7 +848,8 @@ c
 	  do i=1,nread
 	    if(doall.or.(doflag.neqv.flags(i)))then
 	      t = abs(data(i))
-	      buf(i+p) = buf(i+p) + data(i)
+              if (ibin.eq.1) buf(i+p) = buf(i+p) - data(i)
+              if (ibin.eq.0.or.ibin.eq.2) buf(i+p) = buf(i+p) + data(i)
               bufr(i+p) = bufr(i+p) + t
 	      buf2(i+p) = buf2(i+p) + t*t
 	      count(i+p) = count(i+p) + 1
@@ -942,12 +959,13 @@ c
 c************************************************************************
 	subroutine Plotit(npnts,xp,yp,xrange,yrange,dodots,
      *		  plot,nplts,xtitle,ytitle,bl,time,inttime,
-     *		  pol,npol,dopoint,hann,hc,hw,logf)
+     *		  pol,npol,dopoint,hann,hc,hw,logf,MAXPNT)
 c
 	implicit none
 	integer npnts,bl,nplts,plot(nplts+1),npol,pol(npol),hann
-	double precision time
-	real xp(npnts),yp(npnts),xrange(2),yrange(2),inttime,hc(*),hw(*)
+	double precision time,xp(npnts)
+        real x(MAXPNT),y(MAXPNT)
+	real inttime,hc(*),hw(*),xrange(2),yrange(2),yp(npnts)
 	logical dopoint,dodots
 	character xtitle*(*),ytitle*(*),logf*(*)
 c
@@ -955,11 +973,13 @@ c  Draw a plot
 c------------------------------------------------------------------------
 	integer NCOL
 	parameter(NCOL=12)
+        real TOL1,TOL2
+        parameter(TOL1=1.e-5,TOL2=5.e-7)
 	integer hr,mins,sec,b1,b2,l,i,j,xl,yl,symbol,lp,lt
 	character title*64,baseline*12,tau*16,line*80
-	character pollab*32
+	character pollab*32,xtitle2*80
 	double precision T0
-	real yranged(2)
+	real yranged(2),xoff,delta1,delta2
 	real xlen,ylen,xloc,size
 	integer k1,k2
 c
@@ -974,22 +994,38 @@ c
 c
 	call pgpage
 	call pgvstd
+c
+        xoff = 0
+        delta1 = abs((xrange(2)-xrange(1))/max(xrange(1),xrange(2)))
+        delta2 = delta1
+        if (npnts.gt.0) delta2=delta1/npnts*nplts
+c
+c  Check for potential axis labeling and plot accuracy issues, use offset 
+c
+        if (delta1.lt.TOL1.or.delta2.lt.TOL2) then
+          xoff=(xrange(1)+xrange(2))/2
+          xoff=int(xoff*1000)/1000.0
+          xrange(1)=xrange(1)-xoff
+          xrange(2)=xrange(2)-xoff
+        endif
+        do i=1,npnts
+          x(i)=xp(i)-xoff
+        enddo
 	if(yrange(2).le.yrange(1))then
 	  call SetAxisR(yp,npnts,yranged)
 	  call pgswin(xrange(1),xrange(2),yranged(1),yranged(2))
 	else
 	  call pgswin(xrange(1),xrange(2),yrange(1),yrange(2))
 	endif
-c
 	call pgbox('BCNST',0.,0.,'BCNST',0.,0.)
 	do i=1,nplts
 	  call pgsci(mod(i-1,NCOL)+1)
 	  if(dopoint)then
-	    call pgpt(plot(i+1)-plot(i),xp(plot(i)),yp(plot(i)),symbol)
+	    call pgpt(plot(i+1)-plot(i),x(plot(i)),yp(plot(i)),symbol)
 	  else
 	    if (hann.gt.1) call hannsm(hann,hc,plot(i+1)-plot(i),
      *                  yp(plot(i)),hw)
-	    call pghline(plot(i+1)-plot(i),xp(plot(i)),yp(plot(i)),2.0)
+	    call pghline(plot(i+1)-plot(i),x(plot(i)),yp(plot(i)),2.0)
 	  endif
           if (logf.ne.' ') then
   	    do j = 1, plot(i+1)-plot(i)
@@ -1058,7 +1094,16 @@ c
 	xl = len1(xtitle)
 	yl = len1(ytitle)
 c
-	call pglab(xtitle(1:xl),ytitle(1:yl),' ')
+        xtitle2=xtitle
+        if (xoff.gt.0) then
+          i=index(xtitle,' (')
+          if (i.gt.0) then
+            write(xtitle2(i+1:i+8),'(a,F7.3)') '-',xoff
+            xtitle2(i+9:xl+9)=xtitle(i:xl)
+            xl=xl+9
+          endif
+        endif
+	call pglab(xtitle2(1:xl),ytitle(1:yl),' ')
 	call pglen(5,title(1:l),xlen,ylen)
 	xloc = 0.5 - 0.5*xlen
 	call pgqch(size)
