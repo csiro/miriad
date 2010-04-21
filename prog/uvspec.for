@@ -115,7 +115,7 @@ c    rjs  29jun05 Use 3D shift algorithm.
 c    rjs  26jan07 Adjust size of title to prevent overflow on multipanel
 c	          plot.
 c    mhw  02feb10 Add sdo option to look at CABB autocorrelation data bins
-c    mhw  20apr10 Fix axis label and plot accuracy issues for high res data
+c    mhw  21apr10 Fix axis label and plot accuracy issues for high res data
 c  Bugs:
 c------------------------------------------------------------------------
 	include 'mirconst.h'
@@ -124,7 +124,7 @@ c------------------------------------------------------------------------
         parameter (maxco=15)
 c
 	character version*(*)
-	parameter(version='UvSpec: version 1.0 20-Apr-10')
+	parameter(version='UvSpec: version 1.0 21-Apr-10')
 	character uvflags*8,device*64,xaxis*12,yaxis*12,logf*64
 	character xtitle*64,ytitle*64
 	logical ampsc,rms,nobase,avall,first,buffered,doflush,dodots
@@ -979,7 +979,7 @@ c------------------------------------------------------------------------
 	character title*64,baseline*12,tau*16,line*80
 	character pollab*32,xtitle2*80
 	double precision T0
-	real yranged(2),xoff,delta1,delta2
+	real xranged(2),yranged(2),xoff,delta1,delta2
 	real xlen,ylen,xloc,size
 	integer k1,k2
 c
@@ -1003,19 +1003,22 @@ c
 c  Check for potential axis labeling and plot accuracy issues, use offset 
 c
         if (delta1.lt.TOL1.or.delta2.lt.TOL2) then
-          xoff=(xrange(1)+xrange(2))/2
+          xoff=min(xrange(1),xrange(2))
           xoff=int(xoff*1000)/1000.0
-          xrange(1)=xrange(1)-xoff
-          xrange(2)=xrange(2)-xoff
+          xranged(1)=xrange(1)-xoff
+          xranged(2)=xrange(2)-xoff
+        else
+          xranged(1)=xrange(1)
+          xranged(2)=xrange(2)
         endif
         do i=1,npnts
           x(i)=xp(i)-xoff
         enddo
 	if(yrange(2).le.yrange(1))then
 	  call SetAxisR(yp,npnts,yranged)
-	  call pgswin(xrange(1),xrange(2),yranged(1),yranged(2))
+	  call pgswin(xranged(1),xranged(2),yranged(1),yranged(2))
 	else
-	  call pgswin(xrange(1),xrange(2),yrange(1),yrange(2))
+	  call pgswin(xranged(1),xranged(2),yrange(1),yrange(2))
 	endif
 	call pgbox('BCNST',0.,0.,'BCNST',0.,0.)
 	do i=1,nplts
