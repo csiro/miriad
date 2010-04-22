@@ -117,6 +117,8 @@ c	          plot.
 c    mhw  02feb10 Add sdo option to look at CABB autocorrelation data bins
 c    mhw  21apr10 Fix axis label and plot accuracy issues for high res data
 c  Bugs:
+c
+c $Id: uvspec.for,v 1.7 2010/04/22 00:03:38 cal103 Exp $
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'maxdim.h'
@@ -962,9 +964,9 @@ c************************************************************************
      *		  pol,npol,dopoint,hann,hc,hw,logf,MAXPNT)
 c
 	implicit none
-	integer npnts,bl,nplts,plot(nplts+1),npol,pol(npol),hann
+	integer npnts,bl,nplts,plot(nplts+1),npol,pol(npol),hann,MAXPNT
 	double precision time,xp(npnts)
-        real x(MAXPNT),y(MAXPNT)
+        real x(MAXPNT)
 	real inttime,hc(*),hw(*),xrange(2),yrange(2),yp(npnts)
 	logical dopoint,dodots
 	character xtitle*(*),ytitle*(*),logf*(*)
