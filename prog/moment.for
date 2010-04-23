@@ -87,7 +87,7 @@ c    16feb01 pjt   Added mom=-3 for velocity of peak fit to poly=2
 c    18jan02 pjt   Turned rngmask typo into rngmsk (duh)
 c     4mar02 pjt   documented FWHM/sigma, fixed units of mom=2 map
 c
-c $Id: moment.for,v 1.8 2010/04/15 05:54:47 cal103 Exp $
+c $Id: moment.for,v 1.9 2010/04/23 02:15:52 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
@@ -110,8 +110,8 @@ c     Externals.
       character itoaf*1, versan*80
 c-----------------------------------------------------------------------
       version = versan ('moment',
-     :                  '$Revision: 1.8 $',
-     :                  '$Date: 2010/04/15 05:54:47 $')
+     :                  '$Revision: 1.9 $',
+     :                  '$Date: 2010/04/23 02:15:52 $')
 
 c     Get inputs.
       call keyini
@@ -637,12 +637,13 @@ c
 c-----------------------------------------------------------------------
       integer nchan
       logical dovflg, flag, mask(nchan)
-      integer i, ipeak, mom
+      integer i, ipeak, mom, n
       real    a, b, clip(2), pkmask(2), mom1, mom2sq, moment, offset,
      :        peak, scl, spec(nchan), sum0, sum1, sum2, vel, vrange(2),
      :        xpeak
 c-----------------------------------------------------------------------
 c     Accumulate data for this spectrum.
+      n = 0
       sum0 = 0.0
       sum1 = 0.0
       sum2 = 0.0
@@ -650,14 +651,15 @@ c     Accumulate data for this spectrum.
       ipeak = 1
       do i = 1, nchan
         if (mask(i)) then
-          sum0 = sum0 + spec(i)
-
           if (spec(i).gt.spec(ipeak)) then
             ipeak = i
           endif
 
-          if (mom.ge.1) then
-            if (spec(i).lt.clip(1) .or. clip(2).lt.spec(i)) then
+          if (spec(i).lt.clip(1) .or. clip(2).lt.spec(i)) then
+            n = n + 1
+            sum0 = sum0 + spec(i)
+
+            if (mom.ge.1) then
               vel = (i - offset)*scl
               sum1 = sum1 + spec(i)*vel
               sum2 = sum2 + spec(i)*vel*vel
@@ -665,6 +667,11 @@ c     Accumulate data for this spectrum.
           endif
         endif
       enddo
+
+c     Check that we got some valid data.
+      moment = 0.0
+      flag = .false.
+      if (n.eq.0) return
 
 
 c     Do quadratic fit to peak position if needed.
@@ -683,8 +690,6 @@ c       Peak intensity used for flagging.
 
 
 c     Calculate the required moment.
-      moment = 0.0
-      flag   = .false.
       if (mom.le.-2) then
         if (mom.eq.-2) then
 c         Peak intensity.
