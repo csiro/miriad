@@ -1,5 +1,5 @@
 c-----------------------------------------------------------------------
-c* versan - Announce task version information.
+c* versan - Announce task revision information.
 c& mrc
 c: terminal-i/o
 c+
@@ -7,18 +7,18 @@ c+
 
         character task*(*), rcsrev*(*), rcsdat*(*)
 
-c  Construct task version information from the RCS Revision and Date
+c  Construct task revision information from the RCS Revision and Date
 c  strings and announce it on standard output (usually the user's
 c  terminal).  The string is also returned as the value of the function,
 c  e.g. for use in the history log.
 c
 c  Input:
-c    task       The task name.  If prefixed with '-' the version will
+c    task       The task name.  If prefixed with '-' the revision will
 c               not be reported.
 c    rcsrev     RCS Revision string.
 c    rcsid      RCS Date string.
 c--
-c  $Id: versan.for,v 1.4 2009/09/23 01:12:36 cal103 Exp $
+c  $Id: versan.for,v 1.5 2010/04/27 07:04:36 cal103 Exp $
 c-----------------------------------------------------------------------
       logical   quiet
       integer   i0, i1, i2, l, len1
@@ -34,8 +34,8 @@ c     Quiet mode?
       call lcase (versan)
       i0 = len1(versan) + 1
 
-      versan(i0:) = ': Version '
-      i0 = i0 + 10
+      versan(i0:) = ': Revision '
+      i0 = i0 + 11
 
 c     Parse the RCS revision information.
       i1 = 12
