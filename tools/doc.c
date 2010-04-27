@@ -30,10 +30,10 @@
 *    22may06  rjs  Change to appear cygwin.
 *    14jul06  mrc  Get it to compile with 'gcc -Wall' without warnings.
 *
-* $Id: doc.c,v 1.3 2007/06/12 07:46:15 cal103 Exp $
+* $Id: doc.c,v 1.4 2010/04/27 07:58:01 cal103 Exp $
 *****************************************************************************/
 
-#define VERSION "Doc: version 1.3 2007/06/12"
+#define VERSION "Doc: version 1.4 2010/04/27"
 #define private static
 #include <ctype.h>
 #include <stdio.h>
@@ -232,7 +232,7 @@ private void process(FILE *fin, FILE *fout, char *infile, char *outdir,
 
   char author[MAXLINE], buf[MAXLINE], cat[MAXLINE], indent[MAXLINE],
        line[MAXLINE], one[MAXLINE], outname[MAXLINE], task[MAXLINE];
-  char *t, *u;
+  char *t, *u, *v;
   char c;
   int  dosub = 0, doslash, mode, s;
   FILE *foutd;
@@ -269,6 +269,7 @@ private void process(FILE *fin, FILE *fout, char *infile, char *outdir,
     switch(s) {
     case '=':
     case '*':
+      /* Start of metadata. */
       if (mode == EXCLUDE ) {
         mode = OUTSIDE;
       } else if (mode == OUTSIDE) {
@@ -285,13 +286,19 @@ private void process(FILE *fin, FILE *fout, char *infile, char *outdir,
         strcpy(one, t);
       }
       break;
+
     case '&':
+      /* Author. */
       if (mode == PREAMBLE) strcpy(author, t);
       break;
+
     case ':':
+      /* Category. */
       if (mode == PREAMBLE) strcpy(cat, t);
       break;
+
     case '+':
+      /* End of preamble. */
       if (mode == PREAMBLE) {
         if (fout != NULL ) {
           foutd = fout;
@@ -326,8 +333,10 @@ private void process(FILE *fin, FILE *fout, char *infile, char *outdir,
         mode = MAIN;
       }
       break;
+
     case '@':
     case '<':
+      /* Keyword. */
       if (mode == MAIN) {
         fprintf(foutd, "%%A %s\n", t);
         if (s == '<') {
@@ -336,15 +345,38 @@ private void process(FILE *fin, FILE *fout, char *infile, char *outdir,
         }
       }
       break;
+
+    case '$':
+      /* RCS revision information. */
+      if (mode == MAIN) {
+        t = index(t, ' ');
+        if (t) t = index(t+1, ' ');
+        u = t;
+        if (u) u = index(u+1, ' ');
+        if (u) {
+          *u = '\0';
+          u++;
+        }
+        v = u;
+        if (v) v = index(v+1, ' ');
+        if (v) v = index(v+1, ' ');
+        if (v) *(v++) = '\0';
+        fprintf(foutd, "%%R%s, %s UTC\n", t, u);
+      }
+      break;
+
     case '-':
     case 'X':
+      /* End. */
       if (foutd != NULL && fout == NULL) fclose(foutd);
       *task = *one = *cat = *author = 0;
       foutd = NULL;
       mode = OUTSIDE;
       if (s == 'X' && doex) mode = EXCLUDE;
       break;
+
     default:
+      /* Text. */
       if (mode == MAIN) {
         getindent(indent, line);
         fprintf(foutd, "%s\n", line);
