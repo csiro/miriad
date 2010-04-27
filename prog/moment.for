@@ -1,5 +1,5 @@
 c***********************************************************************
-        program Moment
+        program moment
 c
 c= MOMENT -  Calculate moments of a Miriad image.
 c& mchw
@@ -16,27 +16,33 @@ c       supported.  See documentation for region on how to specify this.
 c@ out
 c       The output image.  No default.
 c@ mom
-c       -3      Velocity at peak intensity using a three-point quadratic
-c               fit around the peak (km/s).
-c       -2      Peak intensity using a three-point quadratic fit (units
-c               same as individual channels).
-c       -1      Average intensity (units same as individual channels).
-c        0      0th moment = sum(I) (integrated intensity, I x km/s).
-c        1      1st moment = sum(I*v)/sum(I), (velocity centroid, km/s),
-c                            where v is the velocity.
-c        2      2nd moment = sqrt(sum(I*(v-M1)**2)/sum(I)), (velocity
-c                            dispersion, km/s), where M1 is the first
-c                            moment.  If the line profile is Gaussian,
-c                            this produces a map of Gaussian sigma, and
-c                            FWHM = 2*sqrt(2*ln(2))*sigma = 2.355*sigma.
+c       -3: Velocity at peak intensity using a three-point quadratic fit
+c           around the peak (km/s).
+c       -2: Peak intensity using a three-point quadratic fit (units same
+c           as individual channels).
+c       -1: Average intensity (units same as individual channels).
+c        0: 0th moment = sum(I) (integrated intensity, I x km/s).
+c        1: 1st moment = sum(I*v)/sum(I), (velocity centroid, km/s),
+c                        where v is the velocity.
+c        2: 2nd moment = sqrt(sum(I*(v-M1)**2)/sum(I)), (velocity
+c                        dispersion, km/s), where M1 is the first
+c                        moment.  If the line profile is Gaussian,
+c                        this produces a map of Gaussian sigma, and
+c                        FWHM = 2*sqrt(2*ln(2))*sigma = 2.355*sigma.
 c
-c               The moments are calculated independently for each pixel
-c               using spectral channels with intensity satisfying the
-c               specified clip range.
+c           The moments are calculated independently for each pixel
+c           using spectral channels with intensity satisfying the
+c           specified clip range.
 c
-c               For FREQ axes the radio velocity is computed from the
-c               line rest frequency recorded in the header.  For VELO
-c               and FELO axes the axis scale is used directly.
+c           For FREQ axes the radio velocity is computed from the line
+c           rest frequency recorded in the header.  For VELO and FELO
+c           axes the axis scale is used directly.
+c@ axis
+c       Axis for which the moment is calculated.  Moments may be
+c       computed for non-spectral axes though units recorded in the
+c       output image header will then be incorrect.  Defaults to the
+c       spectral axis (FREQ, VELO, or FELO) determined from the input
+c       image header.
 c@ clip
 c       Two values.  For mom >= -1, exclude spectral channels with
 c       intensity in the range clip(1) to clip(2) inclusive.  If only
@@ -52,6 +58,8 @@ c       Two values.  For mom = -3, 1, and 2 (velocities) mask pixels
 c       for which the peak intensity lies within the range pkmask(1) to
 c       pkmask(2) exclusive.  If only one value is given, then mask
 c       pixels with peak intensity less than pkmask.  Default = 0.
+c
+c$Id: moment.for,v 1.10 2010/04/27 06:54:52 cal103 Exp $
 c--
 c  History:
 c    26may89 Robert Loushin  original version - v-axis of vxy image
@@ -86,15 +94,13 @@ c    15feb01 dpr   Truncate rangemask key to rngmsk - doh!
 c    16feb01 pjt   Added mom=-3 for velocity of peak fit to poly=2
 c    18jan02 pjt   Turned rngmask typo into rngmsk (duh)
 c     4mar02 pjt   documented FWHM/sigma, fixed units of mom=2 map
-c
-c $Id: moment.for,v 1.9 2010/04/23 02:15:52 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
       include 'mem.h'
 
-      integer maxnax,maxboxes,maxruns
-      parameter(maxnax=3,maxboxes=2048)
+      integer maxnax, maxboxes, maxruns
+      parameter(maxnax=3, maxboxes=2048)
       parameter(maxruns=3*MAXDIM)
 
       logical rngmsk
@@ -110,8 +116,8 @@ c     Externals.
       character itoaf*1, versan*80
 c-----------------------------------------------------------------------
       version = versan ('moment',
-     :                  '$Revision: 1.9 $',
-     :                  '$Date: 2010/04/23 02:15:52 $')
+     :                  '$Revision: 1.10 $',
+     :                  '$Date: 2010/04/27 06:54:52 $')
 
 c     Get inputs.
       call keyini
@@ -119,8 +125,9 @@ c     Get inputs.
       call BoxInput('region',in,boxes,maxboxes)
       call keya('out',out,' ')
       call keyi('mom',mom,0)
+      call keyi('axis',axis,0)
       call keyr('clip',clip(1),0.0)
-      if (keyprsnt('clip'))then
+      if (keyprsnt('clip')) then
         call keyr('clip',clip(2),0.0)
       else
         clip(2) = abs(clip(1))
@@ -128,7 +135,7 @@ c     Get inputs.
       endif
       call keyl('rngmsk',rngmsk,.FALSE.)
       call keyr('pkmask',pkmask(2),-1e9)
-      if (keyprsnt('pkmask'))then
+      if (keyprsnt('pkmask')) then
         call keyr('pkmask',pkmask(1),-1e9)
       else
         pkmask(1) = -1e9
@@ -141,6 +148,12 @@ c     Check inputs.
 
       if (mom.lt.-3 .or. mom.gt.2) then
         call bug('f','moment must be between -3 and 2')
+      endif
+
+      if (axis.lt.0) then
+        write (text, 10) axis
+ 10     format ('Invalid axis number:',i5)
+        call bug('f', text)
       endif
 
       if (clip(2).lt.clip(1)) then
@@ -162,14 +175,24 @@ c     Open input cube and get parameters.
       call xyopen(lIn,in,'old',maxnax,naxis)
       call rdhdi(lIn,'naxis',naxes,0)
       naxes = min(naxes,maxnax)
-      if (naxis(1).gt.MAXDIM)call bug('f','Input file too big for me')
+
+c     Check the axis number.
+      if (axis.gt.naxes) then
+        write (text, 20) axis, naxes
+ 20     format ('Axis number:',i5,', exceeds image dimensions:',i5)
+        call bug('f', text)
+      endif
+
+      if (naxis(1).gt.MAXDIM) then
+        call bug('f', 'Input file too big for me')
+      endif
 
 c     Determine the min and max value.
       call ImMinMax(lIn,naxes,naxis,blo,bhi)
-      if (blo.eq.bhi)then
+      if (blo.eq.bhi) then
         call xyclose(lIn)
-        write (text, 10) blo
- 10     format ('All pixels are ',1pg10.3)
+        write (text, 30) blo
+ 30     format ('All pixels are ',1pg10.3)
         call bug('f', text)
       endif
 
@@ -177,20 +200,21 @@ c     Set up the region of interest.
       call BoxSet(boxes,maxnax,naxis,'s')
       call BoxInfo(boxes,maxnax,blc,trc)
 
-c     Locate the spectral axis.
-      axis = 0
-      do i = 1, naxes
-        cin = itoaf(i)
-        call rdhda(lIn, 'ctype'//cin, ctype, ' ')
-        if (ctype(:4).eq.'VELO' .or.
-     :      ctype(:4).eq.'FELO' .or.
-     :      ctype(:4).eq.'FREQ') then
-          axis = i
-          goto 20
-        endif
-      enddo
+c     Locate the spectral axis if need be.
+      if (axis.eq.0) then
+        do i = 1, naxes
+          cin = itoaf(i)
+          call rdhda(lIn, 'ctype'//cin, ctype, ' ')
+          if (ctype(:4).eq.'FREQ' .or.
+     :        ctype(:4).eq.'VELO' .or.
+     :        ctype(:4).eq.'FELO') then
+            axis = i
+            goto 40
+          endif
+        enddo
+      endif
 
- 20   if (axis.lt.1) then
+ 40   if (axis.lt.1) then
         call bug('f', 'Spectral axis not found.')
       else if (axis.gt.3) then
         call output('Reorder axes to take moment of axis 1, 2, or 3.')
@@ -198,6 +222,7 @@ c     Locate the spectral axis.
       endif
 
 c     Calculate offset and scale to convert from channels to km/s.
+      cin = itoaf(axis)
       if (hdprsnt(lIn, 'crpix'//cin) .and.
      :    hdprsnt(lIn, 'crval'//cin)) then
         call rdhdr(lIn,'crpix'//cin, crpix, 0.0)
@@ -237,12 +262,12 @@ c     Report the velocity range.
         vrange(2) = tmp
       endif
 
-      write (text, 30) vrange(1), vrange(2), scl
- 30   format ('Velocity range (km/s):',f10.2,' to',f10.2,' by',f8.2)
+      write (text, 50) vrange(1), vrange(2), scl
+ 50   format ('Velocity range (km/s):',f10.2,' to',f10.2,' by',f8.2)
       call output (text)
 
       if (mom.lt.1 .or. .not.rngmsk) then
-c       Don't enforce velocity range for 2nd and 3rd moment.
+c       Don't enforce velocity range for moment -2 or -3.
         vrange(1) = 0.0
         vrange(2) = 0.0
       endif
