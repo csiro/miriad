@@ -7,7 +7,10 @@ c: image analysis
 c+
 c       MOMENT calculates the nth moment of a Miriad image.  The
 c       spectral axis, which is determined automatically, must be on
-c       axis 1, 2, or 3.
+c       axis 1, 2, or 3.  Moments may be computed for other axis types
+c       by specifying the axis number, though the brightness units
+c       recorded in the output image header will likely not be correct.
+c       They can be fixed using PUTHD.
 c@ in
 c       The input image.  No default.
 c@ region
@@ -39,10 +42,10 @@ c           rest frequency recorded in the header.  For VELO and FELO
 c           axes the axis scale is used directly.
 c@ axis
 c       Axis for which the moment is calculated.  Moments may be
-c       computed for non-spectral axes though units recorded in the
-c       output image header will then be incorrect.  Defaults to the
-c       spectral axis (FREQ, VELO, or FELO) determined from the input
-c       image header.
+c       computed for non-spectral axes though brightness units recorded
+c       in the output image header will usually be incorrect.  Defaults
+c       to the spectral axis (FREQ, VELO, or FELO) determined from the
+c       input image header.
 c@ clip
 c       Two values.  For mom >= -1, exclude spectral channels with
 c       intensity in the range clip(1) to clip(2) inclusive.  If only
@@ -59,7 +62,7 @@ c       for which the peak intensity lies within the range pkmask(1) to
 c       pkmask(2) exclusive.  If only one value is given, then mask
 c       pixels with peak intensity less than pkmask.  Default = 0.
 c
-c$Id: moment.for,v 1.10 2010/04/27 06:54:52 cal103 Exp $
+c$Id: moment.for,v 1.11 2010/04/28 09:18:01 cal103 Exp $
 c--
 c  History:
 c    26may89 Robert Loushin  original version - v-axis of vxy image
@@ -116,8 +119,8 @@ c     Externals.
       character itoaf*1, versan*80
 c-----------------------------------------------------------------------
       version = versan ('moment',
-     :                  '$Revision: 1.10 $',
-     :                  '$Date: 2010/04/27 06:54:52 $')
+     :                  '$Revision: 1.11 $',
+     :                  '$Date: 2010/04/28 09:18:01 $')
 
 c     Get inputs.
       call keyini
@@ -235,6 +238,8 @@ c     Calculate offset and scale to convert from channels to km/s.
       if (cdelt.eq.0.0) call bug('f','cdelt is 0 or not present.')
 
 c     Compute velocity parameters.
+      cin = itoaf(axis)
+      call rdhda(lIn, 'ctype'//cin, ctype, ' ')
       if (ctype(1:4).eq.'FREQ') then
         call rdhdr(lIn, 'restfreq', restfreq, 0.0)
         if (restfreq.eq.0.0) then
@@ -251,7 +256,7 @@ c     Compute velocity parameters.
 c     Transform to pixel coordinates of output axis.
       offset = offset - blc(axis) + 1
 
-c     Report the velocity range.
+c     Report the axis range.
       nchan = trc(axis) - blc(axis) + 1
       vrange(1) = (    1 - offset)*scl
       vrange(2) = (nchan - offset)*scl
@@ -262,12 +267,19 @@ c     Report the velocity range.
         vrange(2) = tmp
       endif
 
-      write (text, 50) vrange(1), vrange(2), scl
- 50   format ('Velocity range (km/s):',f10.2,' to',f10.2,' by',f8.2)
+      if (ctype(:4).eq.'FREQ' .or.
+     :    ctype(:4).eq.'VELO' .or.
+     :    ctype(:4).eq.'FELO') then
+        write (text, 50) vrange(1), vrange(2), scl
+ 50     format ('Velocity range (km/s):',f10.2,' to',f10.2,' by',f8.2)
+      else
+        write (text, 60) vrange(1), vrange(2), scl
+ 60     format ('Axis range:',f10.2,' to',f10.2,' by',f8.2)
+      endif
       call output (text)
 
       if (mom.lt.1 .or. .not.rngmsk) then
-c       Don't enforce velocity range for moment -2 or -3.
+c       Don't enforce the range for moment -2 or -3.
         vrange(1) = 0.0
         vrange(2) = 0.0
       endif
@@ -392,27 +404,6 @@ c         Special cases: the crpix change for a subcube.
         endif
       enddo
 
-      if (mom.eq.-3) then
-        call wrhda(lOut,'bunit','km/s')
-        call wrbtype(lOut,'velocity')
-      else if (mom.le.-1) then
-        call hdcopy(lIn,lOut,'bunit')
-      else if (mom.eq.0) then
-        call rdhda(lIn,'bunit',atemp,' ')
-        l = len1(atemp)
-        if (l.gt.0) then
-          atemp(l+1:) = '.km/s'
-          call wrhda(lOut,'bunit',atemp)
-        endif
-      else
-        call wrhda(lOut,'bunit','km/s')
-        if (mom.eq.1) then
-          call wrbtype(lOut,'velocity')
-        else
-          call wrbtype(lOut,'velocity_dispersion')
-        endif
-      endif
-
 c     Record additional information about the ``third'' dummy axis.
 c     Also the third dimension is 1 (naxis3=1), the axes are labeled
 c     as much as possible from the input cube.
@@ -428,6 +419,38 @@ c     as much as possible from the input cube.
       call wrhdd(lOut,'cdelt3', cdelt)
       call wrhdd(lOut,'crval3', crval)
       call wrhda(lOut,'ctype3', ctype)
+
+c     Brightness units.
+      if (ctype(:4).eq.'FREQ' .or.
+     :    ctype(:4).eq.'VELO' .or.
+     :    ctype(:4).eq.'FELO') then
+        if (mom.eq.-3) then
+          call wrhda(lOut,'bunit','km/s')
+          call wrbtype(lOut,'velocity')
+        else if (mom.le.-1) then
+          call hdcopy(lIn,lOut,'bunit')
+        else if (mom.eq.0) then
+          call rdhda(lIn,'bunit',atemp,' ')
+          l = len1(atemp)
+          if (l.gt.0) then
+            atemp(l+1:) = '.km/s'
+            call wrhda(lOut,'bunit',atemp)
+          endif
+        else
+          call wrhda(lOut,'bunit','km/s')
+          if (mom.eq.1) then
+            call wrbtype(lOut,'velocity')
+          else
+            call wrbtype(lOut,'velocity_dispersion')
+          endif
+        endif
+      else
+c       Units are unknown for the most part.
+        if (mom.eq.-2 .or. mom.eq.-1) then
+          call hdcopy(lIn,lOut,'bunit')
+        endif
+      endif
+
       end
 
 c=======================================================================
@@ -738,7 +761,7 @@ c       Integrated line intensity.
         flag = .true.
 
       else if (sum0.ne.0.0) then
-c       Velocity centroid or dispersion.
+c       Centroid or dispersion.
         mom1 = sum1 / sum0
         vel  = mom1
 
@@ -755,7 +778,7 @@ c       Velocity centroid or dispersion.
       endif
 
 
-c     Do velocity flagging?
+c     Do flagging?
       if (dovflg .and. flag) then
 c       Flagging based on expected range.
         if (vrange(1).lt.vrange(2)) then
