@@ -30,15 +30,16 @@
 *    22may06  rjs  Change to appear cygwin.
 *    14jul06  mrc  Get it to compile with 'gcc -Wall' without warnings.
 *
-* $Id: doc.c,v 1.4 2010/04/27 07:58:01 cal103 Exp $
+* $Id: doc.c,v 1.5 2010/04/28 07:36:59 cal103 Exp $
 *****************************************************************************/
 
-#define VERSION "Doc: version 1.4 2010/04/27"
+#define VERSION "doc: Revision 1.5, 2010/04/28"
 #define private static
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 
 #define MAXLINE 128
 
