@@ -5,7 +5,7 @@
 /*+
   docfmt formats a Miriad .doc file into a more readable form.
                                                                       */
-/*$Id: docfmt.c,v 1.4 2010/04/28 07:18:15 cal103 Exp $ */
+/*$Id: docfmt.c,v 1.5 2010/04/30 01:22:38 cal103 Exp $ */
 /*--                                                                  */
 /*
   History:
@@ -18,6 +18,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define VERSION "docfmt: Revision 1.4, 2010/04/28"
 #define private static
