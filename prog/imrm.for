@@ -180,6 +180,8 @@ c	"yindependent"
 c		     By default, the sub-plots are all drawn with the same
 c		     Y-axis scale, that embraces all sub-plots.  This option
 c		     forces each sub-plot to be scaled independently.
+c
+c$Id: imrm.for,v 1.4 2010/04/30 08:23:28 cal103 Exp $
 c--
 c  History:
 c    nebk 22may92   Original version.
@@ -199,8 +201,6 @@ c    rjs  02jul97   cellscal change.
 c    rjs  23jul97   added pbtype.
 c    nebk 25aug00   bump to 20 image.  subroutine chkdes should not
 c                   be checking cdelt/crpix on frequency axis
-c
-c $Id: imrm.for,v 1.3 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -253,8 +253,8 @@ c
       data padummy /-100000.0/
 c-----------------------------------------------------------------------
       version = versan ('imrm',
-     :                  '$Revision: 1.3 $',
-     :                  '$Date: 2009/09/23 01:00:20 $')
+     :                  '$Revision: 1.4 $',
+     :                  '$Date: 2010/04/30 08:23:28 $')
 
       call output (version)
       call output (' ')

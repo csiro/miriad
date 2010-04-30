@@ -24,6 +24,8 @@ c	       pixel value rather than the default, which is just
 c	       the maximum pixel value.
 c@ log
 c	Write results to this log file as well as screen.
+c
+c$Id: maxfit.for,v 1.3 2010/04/30 08:23:28 cal103 Exp $
 c--
 c
 c  History:
@@ -46,8 +48,6 @@ c    nebk 29nov95  New call for CTYPECO
 c    rjs  03jul96  In "abs" mode, print out the value of the pixel (not
 c		   absolute value).
 c    rjs  23jul99  Break out "solve" routine to new subroutine pkfit.for
-c
-c  $Id: maxfit.for,v 1.2 2006/10/13 02:21:08 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'

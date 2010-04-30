@@ -47,6 +47,8 @@ c     If an axis is a known astronomical coordinate system, the units
 c     are displayed in arcsecs. The default is "relative".
 c@ log
 c     The output log file. The default is the terminal.
+c
+c$Id: imstore.for,v 1.4 2010/04/30 08:23:28 cal103 Exp $
 c--
 c  Bugs:
 c     * The uvgen and nemo modes should use the proper coordinate
@@ -64,8 +66,6 @@ c      5apr94 pjt   fixed units bug when 2nd axis is an angle
 c      9jun94 pjt   region= clarification + export bug fix 5apr94
 c     08may00 rjs   Change incorrect call of keyf to keya
 c     19jun00 rjs   Tidy up at add mode=dump.
-c
-c $Id: imstore.for,v 1.3 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
       INCLUDE 'mirconst.h'
       INCLUDE 'maxdim.h'
@@ -102,8 +102,8 @@ c
       data modes /'dump    ','uvgen   ','nemo    '/
 c-----------------------------------------------------------------------
       version = versan ('imstore',
-     :                  '$Revision: 1.3 $',
-     :                  '$Date: 2009/09/23 01:00:20 $')
+     :                  '$Revision: 1.4 $',
+     :                  '$Date: 2010/04/30 08:23:28 $')
 c
 c  Get user inputs
 c

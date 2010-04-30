@@ -89,6 +89,8 @@ c	Minimum match is used. Possible values are:
 c	  residual The output data-set is the residual visibilities.
 c	           If an output is being created, the default is to make
 c	           this the fitted model.
+c
+c$Id: uvfit.for,v 1.5 2010/04/30 08:23:28 cal103 Exp $
 c--
 c  History:
 c    rjs  13dec90  Original version.
@@ -109,8 +111,6 @@ c    bmg  29may96  Added fitting for a thin face-on ring. I have coded
 c                  spheres and thick shells, but they don't work yet!
 c    rjs  18mar97  Handle multiple files, autocorr data, better message.
 c    bmg  14jan05  Added 2 more significant figures to offset position
-c
-c $Id: uvfit.for,v 1.4 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
 	integer MAXVAR
 	parameter(MAXVAR=20)
@@ -132,8 +132,8 @@ c
         external FUNCTION
 c-----------------------------------------------------------------------
       version = versan ('uvfit',
-     :                  '$Revision: 1.4 $',
-     :                  '$Date: 2009/09/23 01:00:20 $')
+     :                  '$Revision: 1.5 $',
+     :                  '$Date: 2010/04/30 08:23:28 $')
 c
 c  Get the inputs.
 c

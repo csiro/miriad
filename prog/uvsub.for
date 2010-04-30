@@ -51,14 +51,14 @@ c
 c       Lines beginning with "#" are ignored.
 c@ out
 c       The name of the output visibility data set (no default).
+c
+c$Id: uvsub.for,v 1.5 2010/04/30 08:23:28 cal103 Exp $
 c--
 c  History:
 c    05jan94 nebk  Original version.
 c    12jan94 nebk  Convert to use velocity line type
 c    17aug94 rjs   Fiddle offsets to give better results.
 c    14nov95 nebk  Remove dependence on cgsubs.for
-c
-c $Id: uvsub.for,v 1.4 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
@@ -79,8 +79,8 @@ c-----------------------------------------------------------------------
       data ltypes /'channel ','velocity'/
 c-----------------------------------------------------------------------
       version = versan ('uvsub',
-     :                  '$Revision: 1.4 $',
-     :                  '$Date: 2009/09/23 01:00:20 $')
+     :                  '$Revision: 1.5 $',
+     :                  '$Date: 2010/04/30 08:23:28 $')
 
 c     Get the inputs
       call keyini

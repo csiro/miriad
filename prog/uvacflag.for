@@ -21,11 +21,11 @@ c       Task enrichment options.  Minimum match is active.
 c
 c       full    Instructs UVACFLAG to tell you about every record
 c               it flags.  The default is a summary at the end.
+c
+c$Id: uvacflag.for,v 1.5 2010/04/30 08:23:28 cal103 Exp $
 c--
 c
 c     mhw  19nov07 Original version, adapted uvpflag into uvacflag
-c
-c $Id: uvacflag.for,v 1.4 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       integer maxpol,maxbin,maxrec,maxtime,maxfreq,ntime,nfreq
@@ -51,8 +51,8 @@ c
 c
 c-----------------------------------------------------------------------
       version = versan ('uvacflag',
-     :                  '$Revision: 1.4 $',
-     :                  '$Date: 2009/09/23 01:00:20 $')
+     :                  '$Revision: 1.5 $',
+     :                  '$Date: 2010/04/30 08:23:28 $')
 
       ntot=0
       ngood=0

@@ -238,6 +238,8 @@ c@ log
 c       The output logfile name. The default is the terminal.
 c@ comment
 c       A one line comment which is written into the logfile.
+c
+c$Id: uvplt.for,v 1.10 2010/04/30 08:23:28 cal103 Exp $
 c--
 c
 c  History:
@@ -427,8 +429,6 @@ c       points are put in the same FILE lcoation in BUFFER.  In this
 c       way the available space is better used.  MAXFILE is set to
 c       be much bigger than any number of files the user is ever
 c       likely to input.
-c
-c  $Id: uvplt.for,v 1.9 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
@@ -504,8 +504,8 @@ c
       data polmsk /13*0/
 c-----------------------------------------------------------------------
       version = versan ('uvplt',
-     :                  '$Revision: 1.9 $',
-     :                  '$Date: 2009/09/23 01:00:20 $')
+     :                  '$Revision: 1.10 $',
+     :                  '$Date: 2010/04/30 08:23:28 $')
 c
 c  Get the parameters given by the user and check them for blunders
 c

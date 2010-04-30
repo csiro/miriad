@@ -174,6 +174,8 @@ c     keyboard if "commands" is set.
 c
 c< select
 c     NOTE: The default is to use all visibilities.
+c
+c$Id: tvclip.for,v 1.8 2010/04/30 08:23:28 cal103 Exp $
 c--
 c
 c  History:
@@ -256,8 +258,6 @@ c    smw   30aug99    Submitted!
 c    rjs   21sep00    options=nosrc
 c    jwr   16jun04    initialize nedit=0 in doEdit
 c    jwr   16jun04    increased MAXEDIT
-c
-c $Id: tvclip.for,v 1.7 2009/12/11 04:13:29 wie017 Exp $
 c-----------------------------------------------------------------------
 c
 c  Internal parameters.
@@ -308,8 +308,8 @@ c-----------------------------------------------------------------------
 c  Announce program.
 c
       version = versan ('tvclip',
-     :                  '$Revision: 1.7 $',
-     :                  '$Date: 2009/12/11 04:13:29 $')
+     :                  '$Revision: 1.8 $',
+     :                  '$Date: 2010/04/30 08:23:28 $')
 c-----------------------------------------------------------------------
 c  Use the key routines to get the user input parameters.
 c

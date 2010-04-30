@@ -300,6 +300,7 @@ c       already exists, new models are appended to it.  The columns of
 c       the file are the slice number, the model peak, centre, FWHM,
 c       baseline offset and baseline slope.
 c
+c$Id: cgslice.for,v 1.7 2010/04/30 08:23:28 cal103 Exp $
 c--
 c
 c  History:
@@ -362,8 +363,6 @@ c  * When slice horizontal or vertical can set abcissa units more
 c    cleverly
 c
 c  * Scale data before fitting
-c
-c $Id: cgslice.for,v 1.6 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -417,8 +416,8 @@ c
       data xdispls, ydispbs /3.5, 3.5/
 c-----------------------------------------------------------------------
       version = versan ('cgslice',
-     :                  '$Revision: 1.6 $',
-     :                  '$Date: 2009/09/23 01:00:20 $')
+     :                  '$Revision: 1.7 $',
+     :                  '$Date: 2010/04/30 08:23:28 $')
 c
 c Get user inputs
 c

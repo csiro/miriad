@@ -78,13 +78,13 @@ c       lagwt     For options=dofft or if calfile is set, this applies
 c                 a triangular weight function to the lag domain
 c       flag0     Filter on channel 0 for wbcorr data
 c       avall     Average all frequency channels
+c
+c$Id: wbplt.for,v 1.3 2010/04/30 08:23:28 cal103 Exp $
 c--
 c  History:
 c    lss  14sep02 Original version copied from calred.
 c    nebk 09sep04 Add format fix from Chris Phillips
 c    lss  17sep04 More formatting changes
-c
-c $Id: wbplt.for,v 1.2 2007/01/15 04:29:11 cal103 Exp $
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'

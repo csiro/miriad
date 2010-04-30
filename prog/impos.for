@@ -46,7 +46,8 @@ c	coordinate, this indicates what convention it is in.  For example,
 c	you might give an optical velocity with "type=abskms", but the header
 c	indicates a frequency axis.  If unset, it is assumed the coordinate
 c	is in the convention defined by the image header.
-c	
+c
+c$Id: impos.for,v 1.4 2010/04/30 08:23:28 cal103 Exp $
 c--
 c
 c  History:
@@ -64,8 +65,6 @@ c    nebk 13nov95  Better non-coordinate checking
 c    nebk 29nov95  New call for CTYPECO
 c    rjs  17jul97  Get it to work on uv datasets as well.
 c    rjs  19may00  Make the default "type" abspix.
-c
-c $Id: impos.for,v 1.3 2009/10/02 07:28:35 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -100,8 +99,8 @@ c
       data nco, ipix /0, MAXNAX*1/
 c-----------------------------------------------------------------------
       version = versan ('impos',
-     +                  '$Revision: 1.3 $',
-     +                  '$Date: 2009/10/02 07:28:35 $')
+     +                  '$Revision: 1.4 $',
+     +                  '$Date: 2010/04/30 08:23:28 $')
 c
 c  Get inputs
 c

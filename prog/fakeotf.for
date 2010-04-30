@@ -31,12 +31,12 @@ c       System temps for channels A and B respectively.  If only one
 c       value is given, this is used for both channels.  This is also
 c       used to determine the amount of noise in each spectrum.  Default
 c       is to use the original Tsys measurements from the input file.
+c
+c$Id: fakeotf.for,v 1.6 2010/04/30 08:23:28 cal103 Exp $
 c--
 c 21jun05 - tw - created
 c 20jul06 - tw - clean up for MOPS and miriad
 c 16may07 - tw - detab; change label 900 from GOTO to CONTINUE
-c
-c $Id: fakeotf.for,v 1.5 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
 
       program fakeotf
@@ -68,8 +68,8 @@ c-----------------------------------------------------------------------
 
 *--------------------------------------------------------------
       versn = versan ('fakeotf',
-     :                '$Revision: 1.5 $',
-     :                '$Date: 2009/09/23 01:00:20 $')
+     :                '$Revision: 1.6 $',
+     :                '$Date: 2010/04/30 08:23:28 $')
 
 c Get input parameters
       call keyini ()

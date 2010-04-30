@@ -34,6 +34,8 @@ c       Extra processing options.  Only the minimum characters to avoid
 c       ambiguity is needed.
 c         sum       Produce sum rather than average of pixels in
 c                   each bin
+c
+c$Id: imbin.for,v 1.5 2010/04/30 08:23:28 cal103 Exp $
 c--
 c
 c  History:
@@ -47,8 +49,6 @@ c                  images.
 c    bmg  11may01  Added options=sum
 c   nebk  14nov01  Track change to readimcg interface
 c    rjs  19jan06  Fortran standardisation.
-c
-c $Id: imbin.for,v 1.4 2010/04/19 04:42:22 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -74,8 +74,8 @@ c     Externals.
       data opts /'sum     '/
 c-----------------------------------------------------------------------
       version = versan ('imbin',
-     :                  '$Revision: 1.4 $',
-     :                  '$Date: 2010/04/19 04:42:22 $')
+     :                  '$Revision: 1.5 $',
+     :                  '$Date: 2010/04/30 08:23:28 $')
 
       do i = 1, MAXNAX
         blc(i) = 1

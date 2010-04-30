@@ -182,6 +182,8 @@ c	indicating that the bad channels are either to be replaced with
 c	0, or to be estimated by linear interpolation of two adjacent good
 c	channels. See the Users Guide for the merits and evils of the two
 c	approaches. The default is `zero'.
+c
+c$Id: invert.for,v 1.7 2010/04/30 08:23:28 cal103 Exp $
 c--
 c  History
 c    rjs        89  Initial version
@@ -300,8 +302,6 @@ c    rjs   01jul99  CHanges in call sequence to hdfiddle.
 c    rjs   29jun05  Handle changes in calling sequence to mostab/hdtab routines.
 c    rjs   03apr09  Change way of accessing scrio to help access larger files.
 c  Bugs:
-c
-c $Id: invert.for,v 1.6 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'maxdim.h'
@@ -341,8 +341,8 @@ c
 	data slops/'zero        ','interpolate '/
 c-----------------------------------------------------------------------
       version = versan ('invert',
-     :                  '$Revision: 1.6 $',
-     :                  '$Date: 2009/09/23 01:00:20 $')
+     :                  '$Revision: 1.7 $',
+     :                  '$Date: 2010/04/30 08:23:28 $')
 c
 c  Get the input parameters. Convert all angular things into
 c  radians as soon as possible!!

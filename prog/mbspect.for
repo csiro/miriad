@@ -137,6 +137,8 @@ c       Write spectrum to this ascii file. Spectral axis units are as
 c       specified by the xaxis keyword. Default is no output file.
 c@ comment
 c	A one-line comment which is written into the logfile and any plot.
+c
+c$Id: mbspect.for,v 1.7 2010/04/30 08:23:28 cal103 Exp $
 c--
 c
 c  History:
@@ -154,8 +156,6 @@ c    lss  14jun02  added a position-fitting option
 c    nebk 12nov03  in subroutine pfit, declare xmom and coord to be of
 c                  size maxnax, not of passed in naxis (illegal fortran)
 c    lss  28apr09  minicube option
-c
-c $Id: mbspect.for,v 1.6 2009/09/23 01:00:20 cal103 Exp $
 c----------------------------------------------------------------------c
 	include 'maxdim.h'
 	integer maxco,maxnax,naxis,maxch
@@ -196,8 +196,8 @@ c----------------------------------------------------------------------c
 c
 c  Don't report the program ID so that gif and ps output can be piped.
       version = versan ('-mbspect',
-     :                  '$Revision: 1.6 $',
-     :                  '$Date: 2009/09/23 01:00:20 $')
+     :                  '$Revision: 1.7 $',
+     :                  '$Date: 2010/04/30 08:23:28 $')
 c
 c  Get inputs
 c

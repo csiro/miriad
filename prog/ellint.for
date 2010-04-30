@@ -85,6 +85,8 @@ c        in residual map computation. Default: 0
 c
 c@ log
 c       The output log file. The default is the terminal.
+c
+c$Id: ellint.for,v 1.5 2010/04/30 08:23:28 cal103 Exp $
 c--
 c  History:
 c    mchw  aug 1982     Original version.
@@ -130,8 +132,6 @@ c    pjt   13dec03      Documented the previous, add output history,
 c                       fixed residual map computation
 c    pjt   15dec03      make sure median .or. mode is selected, not both
 c    rjs   06apr09      Make sure do loop parameters are integer valued.
-c
-c $Id: ellint.for,v 1.4 2009/10/02 08:25:45 cal103 Exp $
 c-----------------------------------------------------------------------
         include 'mirconst.h'
         include 'maxdim.h'
@@ -169,8 +169,8 @@ c
         real totalj,medsmooth,fmed(maxdim),fmed1(maxdim)
 c-----------------------------------------------------------------------
       version = versan('ellint',
-     +                 '$Revision: 1.4 $',
-     +                 '$Date: 2009/10/02 08:25:45 $')
+     +                 '$Revision: 1.5 $',
+     +                 '$Date: 2010/04/30 08:23:28 $')
 
 c Get inputs.
 c

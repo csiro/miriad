@@ -128,6 +128,8 @@ c       Alternately:
 c         velocity=lsr
 c       indicates that fits is to determine the observatory velocity
 c       wrt the LSR frame using an appropriate model.
+c
+c$Id: fits.for,v 1.12 2010/04/30 08:23:28 cal103 Exp $
 c--
 c
 c  Bugs:
@@ -375,8 +377,6 @@ c                    can read SMA FITS output data from IDL.
 c    rjs  09-apr-09  Apply AIPS baseline dependent calibration and
 c                    various cosmetic changes.
 c    rjs  20-jul-09  Slight changes to messages about extension files.
-c
-c $Id: fits.for,v 1.11 2010/04/09 07:56:47 cal103 Exp $
 c-----------------------------------------------------------------------
 	integer maxboxes
 	parameter(maxboxes=2048)
@@ -389,8 +389,8 @@ c-----------------------------------------------------------------------
 	character versan*80, version*80
 c-----------------------------------------------------------------------
       version = versan ('fits',
-     :                  '$Revision: 1.11 $',
-     :                  '$Date: 2010/04/09 07:56:47 $')
+     :                  '$Revision: 1.12 $',
+     :                  '$Date: 2010/04/30 08:23:28 $')
 c
 c  Get the input parameters.
 c

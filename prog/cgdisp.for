@@ -548,6 +548,7 @@ c       The OFFSET line is not applied to ANY position fields in
 c       succeeding lines that have %OTYPEs that are "hms" or "dms".
 c       I am too lazy to code it.
 c
+c$Id: cgdisp.for,v 1.8 2010/04/30 08:23:28 cal103 Exp $
 c--
 c
 c  History:
@@ -720,8 +721,6 @@ c                  image
 c    pjt  19jan02  retrofitted options=corner introduced in 14feb01/BIMA
 c                  version
 c    pjt  29jan02  documented beamtyp=n, worked around a miriadB bug
-c
-c $Id: cgdisp.for,v 1.7 2009/10/20 04:15:05 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -786,8 +785,8 @@ c
       data getvsc /.true./
 c-----------------------------------------------------------------------
       version = versan ('cgdisp',
-     :                  '$Revision: 1.7 $',
-     :                  '$Date: 2009/10/20 04:15:05 $')
+     :                  '$Revision: 1.8 $',
+     :                  '$Date: 2010/04/30 08:23:28 $')
 c
 c Get user inputs
 c

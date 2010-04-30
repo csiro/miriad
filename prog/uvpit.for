@@ -40,6 +40,8 @@ c	           to assume the source varies with time.
 c	  residual The output data-set is the residual visibilities.
 c	           If an output is being created, the default is to make
 c	           this the fitted model.
+c
+c$Id: uvpit.for,v 1.5 2010/04/30 08:23:28 cal103 Exp $
 c--
 c  History:
 c    rjs  13dec90  Original version.
@@ -55,8 +57,6 @@ c    rjs  24jan94  Change ownership
 c    rjs  23jul94  Major rewrite. No error estimates for the time
 c		   being.
 c    rjs  31aug94  Reborn as uvpit.
-c
-c $Id: uvpit.for,v 1.4 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
 	integer PolXX,PolYY,PolXY,PolYX
 	parameter(PolXX=-5,PolYY=-6,PolXY=-7,PolYX=-8)
@@ -90,8 +90,8 @@ c
 	include 'mem.h'
 c-----------------------------------------------------------------------
       version = versan ('uvpit',
-     :                  '$Revision: 1.4 $',
-     :                  '$Date: 2009/09/23 01:00:20 $')
+     :                  '$Revision: 1.5 $',
+     :                  '$Date: 2010/04/30 08:23:28 $')
 c
 c  Get the inputs.
 c

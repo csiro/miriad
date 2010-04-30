@@ -34,6 +34,8 @@ c@ options
 c	Extra processing options:
 c	  positive   Constrain the deconvolved image to be positive
 c	             valued.
+c
+c$Id: mossdi.for,v 1.4 2010/04/30 08:23:28 cal103 Exp $
 c--
 c  History:
 c    rjs 31oct94 - Original version.
@@ -46,8 +48,6 @@ c    rjs 28nov97 - Increase max number of boxes.
 c    rjs 29jan99 - Correct user message only.
 c    gmx 07mar04 - Changed optimum gain determination to handle
 c                   negative components
-c
-c $Id: mossdi.for,v 1.3 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'maxnax.h'
@@ -72,8 +72,8 @@ c
 	character itoaf*8, versan*80
 c-----------------------------------------------------------------------
       version = versan ('mossdi',
-     :                  '$Revision: 1.3 $',
-     :                  '$Date: 2009/09/23 01:00:20 $')
+     :                  '$Revision: 1.4 $',
+     :                  '$Date: 2010/04/30 08:23:28 $')
 c
 c  Get the input parameters.
 c

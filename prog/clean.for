@@ -93,6 +93,8 @@ c	is "any".
 c@ clip
 c	This sets the relative clip level in Steer mode. Values are
 c	typically 0.75 to 0.9. The default is image dependent.
+c
+c$Id: clean.for,v 1.6 2010/04/30 08:23:28 cal103 Exp $
 c--
 c
 c  History:
@@ -162,8 +164,6 @@ c               disconnected ranges of i to process (there is no overlap
 c               between runs).  Specifying boxes in this way is
 c               reasonably concise for the programmer, and yet makes
 c               vectorisable code straightforward to write.
-c
-c $Id: clean.for,v 1.5 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       integer MaxBeam,maxCmp1,maxCmp2,MaxBox,MaxRun,MaxP
@@ -197,8 +197,8 @@ c
       character itoaf*8, versan*80
 c-----------------------------------------------------------------------
       version = versan ('clean',
-     :                  '$Revision: 1.5 $',
-     :                  '$Date: 2009/09/23 01:00:20 $')
+     :                  '$Revision: 1.6 $',
+     :                  '$Date: 2010/04/30 08:23:28 $')
 c
 c  Get the input parameters.
 c

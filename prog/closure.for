@@ -78,6 +78,8 @@ c	phase!
 c	  nocal     Do not perform gain calibration.
 c	  nopol     Do not perform polarisation calibration on the data.
 c	  nopass    Do not perform bandpass calibration on the data.
+c
+c$Id: closure.for,v 1.6 2010/04/30 08:23:28 cal103 Exp $
 c--
 c  History:
 c    rjs   7sep94 Original version.
@@ -95,8 +97,6 @@ c    rjs  08apr02 Allow negative values when taking cube roots.
 c    rjs  18jul04 Check for division by zero in quad quantities.
 c    rjs  23apr09 Increase buffer dimension to allow it to work on bigger problems.
 c    rjs  23jun09 Longer plot labels.
-c
-c $Id: closure.for,v 1.5 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
@@ -143,8 +143,8 @@ c
 	character versan*80
 c-----------------------------------------------------------------------
       version = versan ('closure',
-     :                  '$Revision: 1.5 $',
-     :                  '$Date: 2009/09/23 01:00:20 $')
+     :                  '$Revision: 1.6 $',
+     :                  '$Date: 2010/04/30 08:23:28 $')
 c
 c Lets go! Get user inputs.
 c

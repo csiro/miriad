@@ -20,6 +20,8 @@ c@ options
 c       Extra processing options.
 c       'brief'  Output a one-line summary for each scan.
 c       'header' Output only the source/frequency header information.
+c
+c$Id: rpfread.for,v 1.10 2010/04/30 08:23:28 cal103 Exp $
 c--
 c History:
 c 19 Feb 2004 by tw.
@@ -36,8 +38,6 @@ c 27jul06 - tw - fix bug in output call
 c 02aug06 - tw - accommodate Parkes MB data, report obstype
 c 25sep06 - tw - output az/el every cycle (Mopra)
 c 16may07 - tw - detab; change label 900 from GOTO to CONTINUE
-c
-c $Id: rpfread.for,v 1.9 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
 
       program rpfread
@@ -89,8 +89,8 @@ c-----------------------------------------------------------------------
 
       if (.not.brief) then
         versn = versan ('rpfread',
-     :                  '$Revision: 1.9 $',
-     :                  '$Date: 2009/09/23 01:00:20 $')
+     :                  '$Revision: 1.10 $',
+     :                  '$Date: 2010/04/30 08:23:28 $')
       end if
 
       if (fitsfile.eq.' ') then

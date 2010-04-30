@@ -213,6 +213,8 @@ c     The following options can be used to disable calibration.
 c       nocal   Do not apply antenna gain calibration.
 c       nopass  Do not apply bandpass correction.
 c       nopol   Do not apply polarisation leakage correction.
+c
+c$Id: pgflag.for,v 1.6 2010/04/30 08:23:28 cal103 Exp $
 c--
 c
 c  History:
@@ -277,8 +279,6 @@ c                 baseline.
 c                 (version 1.4)
 c    vjm 09Dec09  Merge to mainline. Remove the eol characters. Add RCS
 c                 tags.
-c
-c $Id: pgflag.for,v 1.5 2009/12/15 00:07:37 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
@@ -326,8 +326,8 @@ c
       logical uvDatOpn
 
       version = versan ('pgflag',
-     :                  '$Revision: 1.5 $',
-     :                  '$Date: 2009/12/15 00:07:37 $')
+     :                  '$Revision: 1.6 $',
+     :                  '$Date: 2010/04/30 08:23:28 $')
 
 c
 c Get user inputs

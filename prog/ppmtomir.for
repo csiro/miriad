@@ -14,8 +14,8 @@ c@ in
 c	The input PPM file.
 c@ out
 c	The output Miriad file.
+c$Id: ppmtomir.for,v 1.3 2010/04/30 08:23:28 cal103 Exp $
 c--
-c $Id: ppmtomir.for,v 1.2 2007/01/15 04:24:49 cal103 Exp $
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)

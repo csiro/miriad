@@ -54,6 +54,8 @@ c                   default behaviour is to apply bandpass calibration.
 c@ log
 c       File in which to write the data, if y-axis is amplitude.
 c       The default is no logfile.
+c
+c$Id: psrplt.for,v 1.4 2010/04/30 08:23:28 cal103 Exp $
 c--
 c  History:
 c    rjs  03jun96 Original version.
@@ -62,8 +64,6 @@ c    bmg  26nov97 Added log keyword
 c    rjs  29feb00 mode keyword to allow plots of real/imag/amp.
 c    rjs  08may00 Change incorrect call of keyf to keya.
 c    rjs  03may01 Added mode=phase.
-c
-c $Id: psrplt.for,v 1.3 2010/04/19 06:14:26 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
@@ -95,8 +95,8 @@ c     Externals.
       data fluxes/'real     ','imaginary','amplitude','phase    '/
 c-----------------------------------------------------------------------
       version = versan('psrplt',
-     :                 '$Revision: 1.3 $',
-     :                 '$Date: 2010/04/19 06:14:26 $')
+     :                 '$Revision: 1.4 $',
+     :                 '$Date: 2010/04/30 08:23:28 $')
 
 c     Get parameters.
       call output(version)

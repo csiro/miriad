@@ -46,6 +46,8 @@ c@ tol
 c       Interpolation tolerance, in minutes.  This gives the maximum gap
 c       between two integrations to interpolate across.  The default is
 c       2 minutes.
+c
+c$Id: uvdiff.for,v 1.7 2010/04/30 08:23:28 cal103 Exp $
 c--
 c  History:
 c    04-jun-96 rjs  Preliminary version.
@@ -58,8 +60,6 @@ c
 c  Bugs/Shortcomings:
 c    * Should handle the conjugate symmetry property, and match data
 c      over a wider range of HA.
-c
-c $Id: uvdiff.for,v 1.6 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
@@ -83,8 +83,8 @@ c     Externals.
      *           '-difference ','-one        ','-two        '/
 c-----------------------------------------------------------------------
       version = versan ('uvdiff',
-     :                  '$Revision: 1.6 $',
-     :                  '$Date: 2009/09/23 01:00:20 $')
+     :                  '$Revision: 1.7 $',
+     :                  '$Date: 2010/04/30 08:23:28 $')
 
 c     Get the input parameters.
       call keyini

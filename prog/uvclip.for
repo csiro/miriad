@@ -30,12 +30,12 @@ c       Default is 3.
 c
 c@ log
 c	The list output file name. The default is the terminal.
+c
+c$Id: uvclip.for,v 1.4 2010/04/30 08:23:28 cal103 Exp $
 c--
 c
 c  History:
 c   09sep94 njt  - Created
-c
-c $Id: uvclip.for,v 1.3 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
 
       include 'maxdim.h'
@@ -116,8 +116,8 @@ c     initialise some variables
      -            '  ', 'I ', 'Q ', 'U ', 'V ' /
 c-----------------------------------------------------------------------
       version = versan ('uvclip',
-     :                  '$Revision: 1.3 $',
-     :                  '$Date: 2009/09/23 01:00:20 $')
+     :                  '$Revision: 1.4 $',
+     :                  '$Date: 2010/04/30 08:23:28 $')
 
 c     +++ read inputs
 

@@ -43,12 +43,12 @@ c@ options
 c	Task enrichment options.  Minimum match is active.
 c	  natural   Assume keywords "center" and "radius" are in natural
 c	            units rather than arcsec.
+c
+c$Id: ellplt.for,v 1.4 2010/04/30 08:23:28 cal103 Exp $
 c--
 c  History:
 c    rjs   06mar97	Adapted from ellint.
 c    rjs   18sep05      Corrected incorrect type.
-c
-c $Id: ellplt.for,v 1.3 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'maxdim.h'
@@ -75,8 +75,8 @@ c
 	character itoaf*8, versan*80
 c-----------------------------------------------------------------------
       version = versan ('ellplt',
-     :                  '$Revision: 1.3 $',
-     :                  '$Date: 2009/09/23 01:00:20 $')
+     :                  '$Revision: 1.4 $',
+     :                  '$Date: 2010/04/30 08:23:28 $')
 c
 c Get inputs.
 c

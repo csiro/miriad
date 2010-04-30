@@ -73,6 +73,8 @@ c       warning and uses a scale factor of 1.
 c@ sigma
 c       When doing devonvolution (options=divide), this gives a noise
 c       parameter. Default is 0.
+c
+c$Id: convol.for,v 1.5 2010/04/30 08:23:28 cal103 Exp $
 c--
 c  History:
 c    rjs,mchw 18aug89 Converted from RESTORE.
@@ -100,8 +102,6 @@ c    bpw   12mar99 Increase size of map/beam/out to 512 to allow
 c                  directories.
 c    dpr   21jun01 Doc change only
 c  Bugs:
-c
-c $Id: convol.for,v 1.4 2009/10/29 06:13:28 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
@@ -129,8 +129,8 @@ c
       character itoaf*8, versan*80
 c-----------------------------------------------------------------------
       version = versan('convol',
-     :                 '$Revision: 1.4 $',
-     :                 '$Date: 2009/10/29 06:13:28 $')
+     :                 '$Revision: 1.5 $',
+     :                 '$Date: 2010/04/30 08:23:28 $')
 c
 c  Get the input parameters.
 c

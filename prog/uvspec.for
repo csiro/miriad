@@ -83,6 +83,8 @@ c	determined from the number of antennae in the data-sets.
 c@ log
 c	Log file into which the spectra are dumped in the order in which
 c	they are plotted.  Really only useful if your plot is quite simple.
+c
+c$Id: uvspec.for,v 1.8 2010/04/30 08:23:28 cal103 Exp $
 c--
 c  History:
 c    rjs  18sep92 Derived from uvaver.
@@ -117,8 +119,6 @@ c	          plot.
 c    mhw  02feb10 Add sdo option to look at CABB autocorrelation data bins
 c    mhw  21apr10 Fix axis label and plot accuracy issues for high res data
 c  Bugs:
-c
-c $Id: uvspec.for,v 1.7 2010/04/22 00:03:38 cal103 Exp $
 c------------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'maxdim.h'

@@ -11,6 +11,8 @@ c	Its main use is to check that the characteristics are correct.
 c@ telescop
 c	Name of the observatory. Several can be given. If none are
 c	given, TELEPAR simply lists the known observatories.
+c
+c$Id: telepar.for,v 1.4 2010/04/30 08:23:28 cal103 Exp $
 c--
 c  History:
 c    rjs  20jun91 Original version.
@@ -23,8 +25,6 @@ c    mchw 26aug03 Add Nasmyth
 c    sdw  8jul06  Doesnt print all characteristics !
 c                 added subdiam,ew,nants,ellimt
 c                 also tried to improve formatting.
-c
-c $Id: telepar.for,v 1.3 2006/08/09 23:51:41 cal103 Exp $
 c------------------------------------------------------------------------
 	character version*(*)
 	integer MAXOBS
