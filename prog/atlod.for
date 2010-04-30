@@ -1,141 +1,157 @@
-c************************************************************************
+c***********************************************************************
         program atlod
 c
 c= atlod - Convert an RPFITS file into Miriad uv format.
 c& rjs
 c: data transfer
 c+
-c       ATLOD is a MIRIAD task, which converts a uv data-set from the RPFITS
-c       format to Miriad format.
+c       ATLOD is a MIRIAD task, which converts a uv data-set from the
+c       RPFITS format to Miriad format.
 c@ in
-c       Name of the input RPFITS files. Several names can be given -- wildcard
-c       expansion is supported. If a single name is given, this can be a raw
-c       tape device name (e.g. /dev/nrst0 in UNIX) containing several files.
-c       In this case, see the NFILES keyword below. There is no default.
+c       Name of the input RPFITS files.  Several names can be given --
+c       wildcard expansion is supported.  If a single name is given it
+c       can be a raw tape device name (e.g. /dev/nrst0 in UNIX)
+c       containing several files.  In this case, see the NFILES keyword
+c       below.  There is no default.
 c@ out
-c       Name of the output Miriad uv data-set. No default.
+c       Name of the output Miriad uv data-set.  No default.
 c@ ifsel
 c       IF number(s) to select.  Default is all IFs.  For example,
 c       if you observed with 5 GHz (frequency 1) and 8 GHz (frequency 2)
 c       simultaneously, IF 1 would be the 5 GHz data and IF 2 would
-c       be the 8 GHz data. This now also lets you select zoom bands
-c       using values greater than 2. The freq 1 zoom bands come before 
+c       be the 8 GHz data.  This now also lets you select zoom bands
+c       using values greater than 2.  The freq 1 zoom bands come before 
 c       the freq 2 ones.
 c@ restfreq
 c       The rest frequency, in GHz, for line observations.  By default,
 c       the value in the RPFITS file is used.  Giving a value for the
-c       "restfreq" parameter overrides the RPFITS file value. If you
-c       do set this parameter, you MUST give the same number of values as the
-c       number of IFs written out. A value of 0 is used for a continuum
-c       observation. For example, if you have two IFs, the first of
-c       which is HI, and the second is continuum, use
+c       "restfreq" parameter overrides the RPFITS file value.  If you do
+c       set this parameter, you MUST give the same number of values as
+c       the number of IFs written out.  A value of 0 is used for a
+c       continuum observation.  For example, if you have two IFs, the
+c       first of which is HI, and the second is continuum, use
 c           restfreq=1.420405752,0
 c@ options
-c       This gives extra processing options. Several can be given,
+c       This gives extra processing options.  Several can be given,
 c       separated by comas.
 c         'birdie'  For CABB data:
-c                   CABB generates self-interference in a number of channels
-c                   across the spectrum due to 640 MHz clock harmonics. 
-c                   These birdies are fixed in channel number for each CABB
-c                   configuration. The birdie option currently knows about 
-c                   the 2048x1MHz continuum mode and flags the affected
-c                   channels, 100 band edge channels on each side, and, at
-c                   20 and 13cm, the unusable parts of the spectrum. 
+c                   CABB generates self-interference in a number of
+c                   channels across the spectrum due to 640 MHz clock
+c                   harmonics.  These birdies are fixed in channel
+c                   number for each CABB configuration.  The birdie
+c                   option currently knows about the 2048x1MHz continuum
+c                   mode and flags the affected channels, 100 band edge
+c                   channels on each side, and, at 20 and 13cm, the
+c                   unusable parts of the spectrum. 
+c
 c                   For pre-CABB data:
-c                   ATCA self-interference can corrupt channels at integral
-c                   multiples of 128 MHz. The birdie option flags these
-c                   channels. Additionally, in continuum (33 channels/128MHz)
-c                   mode, the birdie option dicards every second channel, plus
-c                   some edge channels. The channels discarded
-c                   are those most likely affected by the self-interference.
-c                   Discarding these channels does not have a
-c                   sensitivity penalty, because the effective channel
-c                   bandwidth is twice the channel separation.
+c                   ATCA self-interference can corrupt channels at
+c                   integral multiples of 128 MHz.  The birdie option
+c                   flags these channels.  Additionally, in continuum
+c                   (33 channels/128MHz) mode, the birdie option dicards
+c                   every second channel, plus some edge channels.  The
+c                   channels discarded are those most likely affected by
+c                   the self-interference.  Discarding these channels
+c                   does not have a sensitivity penalty, because the
+c                   effective channel bandwidth is twice the channel
+c                   separation.
 c         'reweight' For pre-CABB data: re-weight the lag spectrum to 
 c                   eliminate the "Gibbs" phenomena in continuum data
 c                   (33 ch/128 MHz); ignored for all other data.
 c         'compress' Write output data in compressed format.
-c         'noauto'  Discard autocorrelation data. The default is to
+c         'noauto'  Discard autocorrelation data.  The default is to
 c                   copy the autocorrelation data.
-c         'nocross' Discard cross-correlation data. The default is to
+c         'nocross' Discard cross-correlation data.  The default is to
 c                   copy the cross correlation data.
-c         'relax'   Do not flag visibilities based on SYSCAL information.
-c                   The default is to flag visibilities if they have
-c                   not been preceded by a valid SYSCAL record, or if the
-c                   the values in the SYSCAL record look bad. SYSCAL
-c                   values are checked for sampler statistics being within
-c                   3% of 17.3%, or 0.5% of 50.0%, that the XY phase
-c                   is within 10 degrees of its running median, and that
-c                   the XY amplitudes are within 1 Jy or 10% of its running
-c                   median. The tests for xy phase and amplitude are
-c                   skipped for 3mm data (as there is no noise calibration
-c                   signal).
-c         'mmrelax' This option is ignored, and is present for historical
-c                   reasons.
-c         'unflag'  Save any data that is flagged. By default ATLOD
+c         'relax'   Do not flag visibilities based on SYSCAL
+c                   information.  The default is to flag visibilities if
+c                   they have not been preceded by a valid SYSCAL
+c                   record, or if the the values in the SYSCAL record
+c                   look bad.  SYSCAL values are checked for sampler
+c                   statistics being within 3% of 17.3%, or 0.5% of
+c                   50.0%, that the XY phase is within 10 degrees of its
+c                   running median, and that the XY amplitudes are
+c                   within 1 Jy or 10% of its running median.  The tests
+c                   for xy phase and amplitude are skipped for 3mm data
+c                   (as there is no noise calibration signal).
+c         'mmrelax' This option is ignored, it is only present for
+c                   historical reasons.
+c         'unflag'  Save any data that is flagged.  By default ATLOD
 c                   discards most data that is flagged.
-c         'opcorr'  Correct for atmospheric opacity. This option is possible
-c                   for data measured after October 2003. Because of the way
-c                   system temperature is measured at 3mm (an "above atmosphere"
-c                   measurement), it is not appropriate for 3mm data. This option
-c                   is silently ignored for 3mm data. Generally it is only relevant for
-c                   7mm and 12mm observations. It does no harm (and negligible
-c                   good) for longer wavelengths.
+c         'opcorr'  Correct for atmospheric opacity.  This option is
+c                   possible for data measured after October 2003.
+c                   Because of the way system temperature is measured at
+c                   3mm (an "above atmosphere" measurement), it is not
+c                   appropriate for 3mm data.  This option is silently
+c                   ignored for 3mm data.  Generally it is only relevant
+c                   for 7mm and 12mm observations.  It does no harm (and
+c                   negligible good) for longer wavelengths.
 c         'samcorr' Correct the pre-Dec93 data for incorrect sampler
-c                   statistics. Since December 1993, sampler corrections
-c                   are performed online. This option is silently ignored for
-c                   data measured after December 1993.
-c         'xycorr'  Apply the on-line measurements of the XY phase. This option
-c                   is silently ignored for 3mm data measured before October 2007.
+c                   statistics.  Since December 1993, sampler
+c                   corrections are performed online.  This option is
+c                   silently ignored for data measured after December
+c                   1993.
+c         'xycorr'  Apply the on-line measurements of the XY phase.
+c                   This option is silently ignored for 3mm data
+c                   measured before October 2007.
 c         'hanning' Hanning smooth spectra and drop every other channel
 c                   This option is ignored for 128-MHz, 33-channel data.
-c         'bary'    Use the barycentre as the velocity rest frame. The
+c         'bary'    Use the barycentre as the velocity rest frame.  The
 c                   default is to use the LSR frame.
 c         'noif'    Do not map the simultaneous IFs to the IF axis.
 c                   By default ATLOD attempts to map the simultaneous
-c                   frequencies to the IF axis. This will not be possible
-c                   if there are a different number of polarisations in
-c                   the different IFs.
-c         'nopflag' If at least one polarisation of a set of 2 or 4 polarimetric
-c                   spectra are bad, ATLOD normally flags all of the
-c                   polarisations. Option nopflag changes this so that only
-c                   the nominally bad spectrum is flagged.
-c         'hires'   Treat bin data as measurements in the high time resolution
-c                   mode. The output dataset contains no bins, but instead
-c                   appears as data measured with small cycle times.
-c         'pmps'    Undo `poor man's phase switching'. This is an obscure option
-c                   that you should not generally use.
-c         'single'  Assume input is a single dish RPFITS file (from Mopra or
-c                   Parkes). This is usually used together with option 'relax'.
+c                   frequencies to the IF axis.  This will not be
+c                   possible if there are a different number of
+c                   polarisations in the different IFs.
+c         'nopflag' If at least one polarisation of a set of 2 or 4
+c                   polarimetric spectra are bad, ATLOD normally flags
+c                   all of the polarisations.  Option nopflag changes
+c                   this so that only the nominally bad spectrum is
+c                   flagged.
+c         'hires'   Treat bin data as measurements in the high time
+c                   resolution mode.  The output dataset contains no
+c                   bins, but instead appears as data measured with
+c                   small cycle times.
+c         'pmps'    Undo `poor man's phase switching'.  This is an
+c                   obscure option that you should not generally use.
+c         'single'  Assume input is a single dish RPFITS file (from
+c                   Parkes or Mopra).  This is usually used together
+c                   with option 'relax'.
 c         'caldata' Save visibilities associated with certain system
-c                   calibrations. Currently this consists of reference pointing
-c                   calibration and "paddle" measurements.
-c         'nocacal' Flag data that atlod suspects is taken during a CACAL scan.
-c                   There is potential for error in atlod determining which data
-c                   are and are not part of a cacal scan. Use this with caution.
-c         'nopol'   Discard data that is not "parallel hand" Stokes type.
-c         'rfiflag' Flag channels at frequencies that are known to be bad
-c                   This uses the file rfiflag.txt in the current directory or
-c                   the default version in MIRCAT. The file should contain
-c                   2 frequencies per line, the lower and upper end of the
-c                   rfi in MHz. Precede comments with a '#'.
+c                   calibrations.  Currently this consists of reference
+c                   pointing calibration and "paddle" measurements.
+c         'nocacal' Flag data that atlod suspects is taken during a
+c                   CACAL scan.  There is potential for error in atlod
+c                   determining which data are and are not part of a
+c                   cacal scan.  Use this with caution.
+c         'nopol'   Discard data that is not "parallel hand" Stokes
+c                   type.
+c         'rfiflag' Flag channels at frequencies that are known to be
+c                   bad.  This uses the file rfiflag.txt in the current
+c                   directory or the default version in MIRCAT.  The
+c                   file should contain 2 frequencies per line, the
+c                   lower and upper end of the rfi in MHz.  Precede
+c                   comments with a '#'.
 c@ nfiles
-c       This gives one or two numbers, being the number of files to skip,
-c       followed by the number of files to process. This is only
-c       useful when the input is a tape device containing multiple files.
-c       The default is 0,1 (i.e. skip none, process 1 file).
+c       This gives one or two numbers, being the number of files to
+c       skip, followed by the number of files to process.  This is only
+c       useful when the input is a tape device containing multiple
+c       files.  The default is 0,1 (i.e. skip none, process 1 file).
 c
 c       NOTE: Using this feature to skip many files on a tape is VERY
-c       inefficient. It is far faster to skip using operating system commands.
-c       When doing this, however, you should be aware is that every RPFITS files
-c       consists of 3 tape files. Thus you will want to skip three times as
-c       many tape files as RPFITS files. For example, in UNIX, to skip 10
-c       RPFITS files, use
+c       inefficient.  It is far faster to skip using operating system
+c       commands.  When doing this, however, you should be aware is that
+c       every RPFITS files consists of 3 tape files.  Thus you will want
+c       to skip three times as many tape files as RPFITS files.  For
+c       example, in UNIX, to skip 10 RPFITS files, use
 c                   mt -f /dev/nrst0 fsf 30
 c@ nscans
-c       This gives one or two numbers, being the number of scans to skip,
-c       followed by the number of scans to process. NOTE: This applies to
-c       all files read. The default is to skip none and process all scans.
+c       This gives one or two numbers, being the number of scans to
+c       skip, followed by the number of scans to process.  NOTE: This
+c       applies to all files read.  The default is to skip none and
+c       process all scans.
+c
+c$Id: atlod.for,v 1.25 2010/04/30 08:10:47 cal103 Exp $
 c--
 c
 c  Program Structure:
@@ -143,9 +159,10 @@ c    Miriad atlod can be divided into three rough levels. The high level
 c    gets input parameters, opens the output, and tells the appropriate
 c    subroutines what to do.
 c
-c    The RP layer is the layer which interacts with RPFITSIN and the RPFITS
-c    common. It "dispatch" routine (RPDISP) waits for an integration to
-c    start, and then calls the Poke routines in the order:
+c    The RP layer is the layer which interacts with RPFITSIN and the
+c    RPFITS common.  Its "dispatch" routine (RPDISP) waits for an
+c    integration to start, and then calls the Poke routines in the
+c    order:
 c       Poke1st (start an integration)
 c       PokeMisc,PokeAnt,PokeIF,PokeSrc (if these have changed)
 c       PokeSC (syscal info), PokeData (corr data).
@@ -154,21 +171,22 @@ c    Prior to calling the Poke routines, RPDISP discards unneeded
 c    data and maps the selected frequencies notional IFs.
 c    The RP layer is in charge of data selection.
 c
-c    The Poke layer buffers up information about the current integration,
-c    and flushes it to the output file when all is ready. The Poke
-c    layer is in charge of any massaging that needs to be done to the
-c    data (e.g. hanning smoothing, sampler correction).
+c    The Poke layer buffers up information about the current
+c    integration, and flushes it to the output file when all is ready.
+c    The Poke layer is in charge of any massaging that needs to be done
+c    to the data (e.g. hanning smoothing, sampler correction).
 c
 c  History:
 c    rjs  12feb91 Original version.
-c    rjs  20feb91 Eliminated my confusion between "files" and "scans". Precessed
-c                 J2000 RA,DEC to get obsra,obsdec.
+c    rjs  20feb91 Eliminated my confusion between "files" and "scans".
+c                 Precessed J2000 RA,DEC to get obsra,obsdec.
 c    nebk 06mar91 Add XYPHASE array
 c    nebk 12may91 Broke it, to give rjs the shits.
 c    rjs  16may91 Fixed it, to spite nebk.
 c    rjs  17may91 Fixed the headache of the sign of the XY phase and the
 c                 if_invert switch.
-c    rjs  19may91 noapply option. Calculates and prints out average XY phase.
+c    rjs  19may91 noapply option. Calculates and prints out average XY
+c                 phase.
 c    rjs  12jun91 Make the default restfreq the value of if_freq.
 c    rjs  13jun91 Subtracted (rather than adding) 45 deg to chi.
 c    rjs  17jun91 Fiddled with XYPHASE and CHI some more.
@@ -180,8 +198,9 @@ c    nebk 07sep92 Incredibly stupid mistake.  Only Mr. S could do it.
 c                 VIS and WEIGHT were not dimensioned big enough.
 c                 Also include MIRCONST.H in ATLOD.H for pi
 c    rjs  11sep92 Add number of scans to skip.
-c    rjs  14sep92 Better messages. Write antenna coordinates and LST,
-c                 as well as jiggery pokery with antenna numbers and XY phase.
+c    rjs  14sep92 Better messages.  Write antenna coordinates and LST,
+c                 as well as jiggery pokery with antenna numbers and XY
+c                 phase.
 c    rjs  18sep92 Write out X and Y Tsys separately.
 c    rjs  21sep92 Get XYPHASE right (I think!).
 c    rjs  28oct92 Sign of XY phase was wrong for 2nd IF in 2 IF system
@@ -196,14 +215,14 @@ c    rjs  17nov93 Rewritten.
 c    rjs  25nov93 Eliminate spurious messages after the start of a scan.
 c    rjs  13dec93 Sign convention of V change.
 c    rjs  27jan94 Fix bug which mislabelled polarisations when
-c                 options=noif. Minor formating improvements. Robustness to
-c                 i/o errors.
+c                 options=noif.  Minor formating improvements.
+c                 Robustness to i/o errors.
 c    rjs  14mar94 INTBASE change.
-c    rjs   8apr94 Readd disabling of sampler correction after 11Dec93. Where did
-c                 this mod disappear to?
+c    rjs   8apr94 Readd disabling of sampler correction after 11Dec93.
+c                 Where did this mod disappear to?
 c    rjs  29aug94 w axis changes.
 c    rjs   2sep94 Read multiple files.
-c    rjs  21sep94 Change sign convention for XY and YX. Discard dettached
+c    rjs  21sep94 Change sign convention for XY and YX. Discard detached
 c                 antennas.
 c    rjs   3nov94 Eliminate spurious error message.
 c    rjs  28nov94 Be more strict about what sampler stats are OK.
@@ -211,7 +230,8 @@ c    rjs  13jan95 Friday 13th! Add pulsar bin no as uv variable.
 c    rjs  25jan95 Write the fudged source name (rather than just
 c                 discarding it!!).
 c    nebk 18feb95 Write out a correct fudged source name rather than
-c                 a totally scrambled one.  Mr. S must be on drugs again.
+c                 a totally scrambled one.  Mr. S must be on drugs
+c                 again.
 c    nebk 03mar95 Add options=birdie and record file names in history.
 c    rjs  14mar95 Discard channels for options=birdie.
 c    rjs  27mar95 Options=reweight.
@@ -227,9 +247,9 @@ c                 option.
 c    rjs  17jul96 Flag if there are glitches in the XY amplitude.
 c    rjs  22nov96 Reset median-based flaggers after a scan change.
 c    rjs  05dec96 Write pointing centre RA and DEC if needed.
-c    rjs  03feb97 Better error messages, and make it more robust to multibeam
-c                 datasets. NOTE: To change it so that multibeam datasets
-c                 can be read:
+c    rjs  03feb97 Better error messages, and make it more robust to
+c                 multibeam datasets.  NOTE: To change it so that
+c                 multibeam datasets can be read:
 c                 * Set ATANT to 15 in atlod.h
 c                 * Comment out checks for invalid antennas in antchk
 c                 * Get rid of skip when jstat.eq.5 in RPDISP.
@@ -239,10 +259,11 @@ c    rjs  06apr98 Increase the max size of an integration.
 c    rjs  07may98 Change in handling of jstat.eq.5 return value.
 c    rjs  14may98 Handle higher time resolution.
 c    rjs  04oct98 Extra check for validity of a record.
-c    rjs  12nov98 options=hires now supports high time resolution bin mode.
+c    rjs  12nov98 options=hires now supports high time resolution bin
+c                 mode.
 c    rjs  31aug99 Check for bad RPFITS value for sdf.
-c    rjs  11jun00 Include pmps switch. More robust to bad number of channels
-c                 etc in RPFITS file. Increase buffer space.
+c    rjs  11jun00 Include pmps switch.  More robust to bad number of
+c                 channels etc. in RPFITS file.  Increase buffer space.
 c    dpr  10apr01 Add cluge for correlator UT day rollover bug.
 c    dpr  11apr01 ATANT=8 in atlog.h
 c    rjs  22may02 Added options=mmrelax
@@ -251,7 +272,8 @@ c                 Tsys scaling has been performed or not.
 c    rjs  16jul03 Do not flip sign of XY and YX correlations for 12mm
 c                 package.
 c    rjs  19jul03 Removed option=mmrelax, and made this automatic!
-c    rjs  06dec03 Write out met data, axisrms, axismax data. options=opcorr
+c    rjs  06dec03 Write out met data, axisrms, axismax data.
+c                 options=opcorr
 c    rjs  30dec03 Doc change only.
 c    rjs  15feb04 Save input RPFITS name and calcode.
 c    rjs  10jun04 Handle change in xy correlation at 12mm.
@@ -259,17 +281,19 @@ c    rjs  11sep04 Add rain guage and seeing monitor data to output.
 c    rjs  23oct04 Fix pntra and pntdec bug - always write them out.
 c    rjs  16jun05 Detect CACAL data. Better flagging stats messages.
 c    rjs  17sep05 Correct date for sampler correction code.
-c    rjs  15oct05 Check for buffer overflows. Increase buffer size. Better
-c                 flagging statistics.
-c    rjs  02jan06 Save reference pointing information. 8MHz debirdie algorithm.
-c                 Added nopol option.
+c    rjs  15oct05 Check for buffer overflows. Increase buffer size.
+c                 Better flagging statistics.
+c    rjs  02jan06 Save reference pointing information.  8MHz debirdie
+c                 algorithm.  Added nopol option.
 c    rjs  14jan06 Be relaxed about missing met data scans when applying
 c                 opacity correction.
 c    mhw  19oct07 Cope with new 3mm receiver on ca02 which has xyphase
 c    mhw  18dec07 Changes to read simulated CABB files with up to
 c                 16 IFs; avoid checking sampler stats for CABB files
-c    mhw  17jan08 Add options=rfiflag: flagging based on file with rfi ranges
-c    rjs  06nov08 Corrected CA02 xyphase handling and some minor tidying.
+c    mhw  17jan08 Add options=rfiflag: flagging based on file with rfi
+c                 ranges.
+c    rjs  06nov08 Corrected CA02 xyphase handling and some minor
+c                 tidying.
 c    mhw  09jan09 Add flagging of NaNs in CABB spectra
 c    mhw  03jun09 Fix syscal handling for CABB gtp, sdo and caljy values
 c    mhw  14sep09 Make sure birdie is ignored for CABB data
@@ -277,8 +301,8 @@ c    mhw  29sep09 Actually, make it do something useful instead,
 c                 integrate with rfiflag option
 c    
 c    mhw  28mar10 Use IF number instead of IF chain for ifsel
-c    mhw  13apr10 Record ifchain in file, allow multiple values for ifsel
-c $Id: atlod.for,v 1.24 2010/04/16 00:33:26 cal103 Exp $
+c    mhw  13apr10 Record ifchain in file, allow multiple values for
+c                 ifsel
 c-----------------------------------------------------------------------
         integer MAXFILES,MAXTIMES,MAXSIM
         parameter(MAXFILES=128,MAXTIMES=32,MAXSIM=16)
@@ -297,8 +321,8 @@ c
         character itoaf*8, rperr*32, versan*80
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :                  '$Revision: 1.24 $',
-     :                  '$Date: 2010/04/16 00:33:26 $')
+     :                  '$Revision: 1.25 $',
+     :                  '$Date: 2010/04/30 08:10:47 $')
 c
 c  Get the input parameters.
 c
@@ -419,12 +443,12 @@ c
         endif
 c
         end
-c************************************************************************
+c***********************************************************************
         subroutine caflag(tno,times,ntimes)
 c
         integer tno,ntimes
         double precision times(2,ntimes)
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         include 'maxdim.h'
         complex data(MAXCHAN)
         logical flags(MAXCHAN),doflag
@@ -450,7 +474,7 @@ c
         enddo
 c
         end
-c************************************************************************
+c***********************************************************************
         subroutine GetOpt(doauto,docross,docaldat,docomp,dosam,doxyp,
      *    doop,relax,sing,
      *    unflag,dohann,birdie,dobary,doif,dowt,dopmps,
@@ -484,7 +508,7 @@ c    polflag    Flag all polarisations if any are bad.
 c    hires      Convert bin-mode to high time resolution data.
 c    sing       Single dish mode.
 c    rfiflag    Flag known rfi sources
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         integer nopt
         parameter(nopt=22)
         character opts(nopt)*8
@@ -524,7 +548,7 @@ c
         if((dosam.or.doxyp.or.doop).and.relax)call bug('f',
      *    'You cannot use options samcorr, xycorr or opcorr with relax')
         end
-c************************************************************************
+c***********************************************************************
         subroutine Fixed(tno,dobary)
 c
         integer tno
@@ -535,7 +559,7 @@ c
 c  Input:
 c    tno        Handle of the output uv data-set.
 c    dobary     Velocity restframe is the barycentre.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         double precision latitude,longitud,dtemp
         real chioff
         integer mount
@@ -564,8 +588,8 @@ c
           call uvputvra(tno,'veltype','VELO-LSR')
         endif
         end
-c************************************************************************
-c************************************************************************
+c***********************************************************************
+c***********************************************************************
         subroutine PokeIni(tno1,dosam1,doxyp1,doop1,
      *          dohann1,birdie1,dowt1,dopmps1,dobary1,doif1,hires1)
 c
@@ -574,7 +598,7 @@ c
         logical dopmps1,hires1,doop1
 c
 c  Initialise the Poke routines.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         include 'atlod.h'
         integer bl,p,if,bin
         logical ok
@@ -634,7 +658,7 @@ c
         if(.not.ok)call bug('f','Could not get ATCA longitude')
 c
         end
-c************************************************************************
+c***********************************************************************
         subroutine PokeInfo(scanno,time)
 c
         double precision time
@@ -642,7 +666,7 @@ c
 c
 c  Give some information about the current scan that has just
 c  started.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         character date*32,line*64
         integer length
 c
@@ -655,14 +679,14 @@ c
         line(length+1:) = ' started at '//date
         call output(line)
         end
-c************************************************************************
+c***********************************************************************
         subroutine PokeStat(nrec,fgbad,fgoffsrc,fginvant,fgsysc,fgsam,
      *                                                          fgcal)
 c
         integer nrec,fgbad,fgoffsrc,fginvant,fgsysc,fgsam,fgcal
 c
 c  Report statistics on this file.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
 c  Externals.
 c
@@ -694,12 +718,12 @@ c
         call liner('---------------------------------------')
 c
         end
-c************************************************************************
+c***********************************************************************
         subroutine liner(string)
 c
         character string*(*)
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         character line*72
         include 'atlod.h'
 c
@@ -707,19 +731,19 @@ c
         line = 'ATLOD:    '//string
         call hiswrite(tno,line)
         end
-c************************************************************************
+c***********************************************************************
         subroutine liners(string)
 c
         character string*(*)
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         character line*72
         include 'atlod.h'
 c
         line = 'ATLOD:     '//string
         call hiswrite(tno,line)
         end
-c************************************************************************
+c***********************************************************************
         subroutine sortcds(ncard,card,sctype,refpnt,nants,okref)
 c
         integer ncard,nants
@@ -729,7 +753,7 @@ c
 c
 c  Write out selected cards to the history file.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         integer i,cacalval
         logical ok
 c
@@ -764,7 +788,7 @@ c     *                                                         )then
         enddo
 c
         end
-c************************************************************************
+c***********************************************************************
         subroutine crackpnt(line,refpnt,nants,ok)
 c
         character line*(*)
@@ -772,7 +796,7 @@ c
         real refpnt(2,nants)
         logical ok
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         integer k1,k2,iant,length
         character token*8
 c
@@ -802,12 +826,12 @@ c
         if(.not.ok)return
         ok = .true.
         end
-c************************************************************************
+c***********************************************************************
         subroutine cardvali(card,ival)
 c
         integer ival
         character card*(*)
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         integer i,j
         double precision out
         logical ok
@@ -827,12 +851,12 @@ c
         ival = nint(out)
 c
         end
-c************************************************************************
+c***********************************************************************
         subroutine PokeName(in)
 c
         character in*(*)
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         include 'atlod.h'
         character c*1
         integer i1,i2,i
@@ -848,7 +872,7 @@ c
         if(i1.gt.i2)i1 = 1
         call uvputvra(tno,'name',in(i1:i2))
         end
-c************************************************************************
+c***********************************************************************
         subroutine Poke1st(time1,nifs1,nants1,cabb1)
 c
         double precision time1
@@ -858,7 +882,7 @@ c
 c  Set some fundamental parameters just before we start dumping other
 c  things.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         include 'atlod.h'
         time = time1
         nifs = nifs1
@@ -869,7 +893,7 @@ c------------------------------------------------------------------------
         call uvputvri(tno,'nants',nants,1)
 c
         end
-c************************************************************************
+c***********************************************************************
         subroutine PokeIF(if,nfreq1,bw,freq,ref,rfreq,nstok,cstok,ifc)
 c
         integer if,nfreq1,nstok,ifc
@@ -878,7 +902,7 @@ c
 c
 c  Save the frequency/IF information.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         include 'atlod.h'
         integer p,t
 c
@@ -944,12 +968,12 @@ c
         newfreq = .true.
 c
         end
-c************************************************************************
+c***********************************************************************
         subroutine birdchan(sfreq,sdf,nfreq,chan)
 c
         integer nfreq,chan
         double precision sfreq,sdf
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         double precision flo
 c
         if(abs(sdf).eq.0)call bug('f',
@@ -959,13 +983,13 @@ c
         chan = nint((flo - sfreq)/sdf) + 1
         if(chan.le.0) chan = chan + nint(0.128d0/abs(sdf))
         end
-c************************************************************************
+c***********************************************************************
         subroutine pokemet(mdata1,mcount1)
 c
         integer mcount1
         real mdata1(mcount1)
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         include 'atlod.h'
         integer i
 c
@@ -975,12 +999,12 @@ c
         mcount = mcount1
 c
         end
-c************************************************************************
+c***********************************************************************
         subroutine pokeref(refpnt1,nant1)
 c
         integer nant1
         real refpnt1(2,nant1)
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         include 'atlod.h'
         integer i
 c
@@ -990,7 +1014,7 @@ c
         enddo
         refnant = nant1
         end
-c************************************************************************
+c***********************************************************************
         subroutine PokeSC(ant,if,chi1,tcorr1,
      *          xtsys1,ytsys1,xyphase1,xyamp1,xsamp,ysamp,
      *          xgtp1,ygtp1,xsdo1,ysdo1,xcaljy1,ycaljy1,
@@ -1002,7 +1026,7 @@ c
         real xsamp(3),ysamp(3),pntrms,pntmax
 c
 c  Save the SYSCAL group info.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         include 'atlod.h'
         if(ant.gt.nants.or.if.gt.nifs)call bug('f',
      *                          'Invalid Ant or IF in PokeSC')
@@ -1038,7 +1062,7 @@ c
         newsc = .true.
 c
         end
-c************************************************************************
+c***********************************************************************
         subroutine PokeSrc(srcnam,ra1,dec1,obsra1,obsdec1,
      *                                  pntra1,pntdec1,calcode1)
 c
@@ -1047,7 +1071,7 @@ c
         character calcode1*(*)
 c
 c  Flush out source information.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         include 'atlod.h'
         double precision r1,d1,pntra,pntdec
         character line*80,sdash*80,calcode*16
@@ -1121,7 +1145,7 @@ c
 c
         newpnt = .true.
         end
-c************************************************************************
+c***********************************************************************
         subroutine PokeAnt(n,x,y,z,sing)
 c
         integer n
@@ -1130,7 +1154,7 @@ c
 c
 c  Set antenna coordinates.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         include 'atlod.h'
         include 'mirconst.h'
         double precision r,z0,cost,sint,temp,antpos(3*ATANT)
@@ -1142,8 +1166,8 @@ c
         if(n.ne.nants)call bug('f',
      *                  'Inconsistent no. antennas, in PokeAnt')
 c
-c  Convert them to the Miriad system: y is local East, z is parallel to pole
-c  Units are nanosecs.
+c  Convert them to the Miriad system: y is local East, z is parallel to
+c  pole.  Units are nanosecs.
 c
         i = 1
         more = .true.
@@ -1175,7 +1199,7 @@ c
         call uvputvrd(tno,'antpos',antpos,3*nants)
 c
         end
-c************************************************************************
+c***********************************************************************
         subroutine PokeData(u1,v1,w1,baseln,if,bin,vis,nfreq1,nstoke1,
      *          flag1,inttime1,docon,doxyflip,xymode)
 c
@@ -1190,8 +1214,9 @@ c
 c  Inputs:
 c    xymode     If 0, then do not do any xy phase correction.
 c               If negative, do xy phase correction on all antennas.
-c               If positive, do xy phase correction for that antenna alone.
-c------------------------------------------------------------------------
+c               If positive, do xy phase correction for that antenna
+c               alone.
+c-----------------------------------------------------------------------
         integer PolXX,PolYY,PolXY,PolYX
         parameter(PolXX=-5,PolYY=-6,PolXY=-7,PolYX=-8)
 c
@@ -1289,13 +1314,13 @@ c
         enddo
 c
         end
-c************************************************************************
+c***********************************************************************
         subroutine do8(vis,npol,nfreq,sfreq,sdf)
 c
         integer nfreq,npol
         complex vis(npol,nfreq)
         double precision sfreq,sdf
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         include 'maxdim.h'
         double precision flo
         integer chan,i,j,n
@@ -1332,7 +1357,7 @@ c
         endif
 c
         end
-c************************************************************************
+c***********************************************************************
         subroutine deswitch(vis,npol,nchan,time,inttime,i1,i2)
 c
         integer npol,nchan,i1,i2
@@ -1342,7 +1367,7 @@ c
 c
 c  Correct for on-line phase switching.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         integer i,j,istate
         real s
         double precision rinttime
@@ -1369,7 +1394,7 @@ c
         enddo
 c
         end
-c************************************************************************
+c***********************************************************************
         subroutine XypCorr(nfreq,vis,pol,i1,i2,if,xyphase,ATIF,ATANT,
      *                     xymode)
 c
@@ -1379,7 +1404,7 @@ c
 c
 c  Correct the data with the measured XY phase.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         integer PolXX,PolYY,PolXY,PolYX
         parameter(PolXX=-5,PolYY=-6,PolXY=-7,PolYX=-8)
         integer i
@@ -1408,7 +1433,7 @@ c
         endif
 c
         end
-c************************************************************************
+c***********************************************************************
         subroutine Reweight(vis,cscr,rscr,npol,nchan,wts)
 c
         integer npol,nchan
@@ -1416,7 +1441,7 @@ c
         real wts(2*nchan-2),rscr(2*nchan-2)
 c
 c  Reweight the lag spectrum.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         integer i,p
 c
         do p=1,npol
@@ -1434,13 +1459,13 @@ c
         enddo
 c
         end
-c************************************************************************
+c***********************************************************************
         subroutine PokeMisc(telescop,observer,version,sctype)
 c
         character telescop*(*),observer*(*),version*(*),sctype*(*)
 c
 c  Set various miscellaneous parameters.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         include 'atlod.h'
         character atemp*32
         integer length
@@ -1466,12 +1491,12 @@ c
         if(length.gt.0)call uvputvra(tno,'sctype',atemp(1:length))
 c
         end
-c************************************************************************
+c***********************************************************************
         subroutine PokeFlsh
 c
 c
 c  Flush out a saved integration.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         include 'atlod.h'
         include 'mirconst.h'
         integer NDATA
@@ -1676,7 +1701,8 @@ c
             enddo
           enddo
 c
-c  Handle the case were we are writing the multiple IFs out as a single record.
+c  Handle the case were we are writing the multiple IFs out as a single
+c  record.
 c
         else
           if(newfreq.and.tbin.eq.1)then
@@ -1763,13 +1789,13 @@ c
         newfreq = .false.
         newpnt  = .false.
         end
-c************************************************************************
+c***********************************************************************
         subroutine flagnan(data,flags,nchan)
 c
         integer nchan
         logical flags(nchan)
         complex data(nchan)
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         integer i,cnt
         complex tmp
         integer nantest(2)
@@ -1797,13 +1823,13 @@ c
         enddo
 c
         end
-c************************************************************************
+c***********************************************************************
         subroutine opapply(data,nchan,fac1,fac2)
 c
         integer nchan
         real fac1,fac2
         complex data(nchan)
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         integer i
 c
 c       do linear interpolation across spectrum
@@ -1818,7 +1844,7 @@ c
         endif
 c
         end
-c************************************************************************
+c***********************************************************************
         subroutine PolPut(tno,pol,dosw)
 c
         integer tno,pol
@@ -1827,7 +1853,7 @@ c
 c  Write out the polarisation flag. If "dosw" is true, switch
 c  PolXY to PolYX and visa versa.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         integer PolXX,PolYY,PolXY,PolYX
         parameter(PolXX=-5,PolYY=-6,PolXY=-7,PolYX=-8)
 c
@@ -1844,8 +1870,8 @@ c
         endif
 c
         end
-c************************************************************************
-c************************************************************************
+c***********************************************************************
+c***********************************************************************
         subroutine VelRad(dolsr,time,raapp,decapp,raepo,decepo,
      *    lst,lat,vel)
 c
@@ -1865,7 +1891,7 @@ c    lat        Observatory geodetic latitude (radians).
 c    lst        Local sideral time (radians).
 c  Output:
 c    vel        Radial velocity.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         double precision lmn2000(3),lmnapp(3)
         double precision velsite(3),posearth(3),velearth(3),velsun(3)
         integer i
@@ -1880,9 +1906,9 @@ c
           vel = vel - (velsite(i) + velearth(i))*lmnapp(i)
         enddo
 c
-c  To compute LSR velocity, we need the source position in J2000 coordinates.
-c  Vsun returns the Suns LSR velocity in the J2000 frame. Add this
-c  contribution to the velocity we already have.
+c  To compute LSR velocity, we need the source position in J2000
+c  coordinates.  Vsun returns the Suns LSR velocity in the J2000 frame.
+c  Add this contribution to the velocity we already have.
 c
         if(dolsr)then
           call sph2lmn(raepo,decepo,lmn2000)
@@ -1893,7 +1919,7 @@ c
         endif
 c
         end
-c************************************************************************
+c***********************************************************************
         subroutine DatCpy(nstoke,nfreq,nfreq1,dohann,skip,edge,
      *                                  doconj,doneg,in,out)
 c
@@ -1903,7 +1929,7 @@ c
 c
 c  Copy the data to an output buffer, conjugating and going
 c  Hanning smoothing (if necessary) as we go.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         integer i,id
 c
         if(dohann)then
@@ -1951,14 +1977,14 @@ c
         endif
 c
         end
-c************************************************************************
+c***********************************************************************
         subroutine GetFlag(flag,n,bchan,flags)
 c
         integer n,bchan
         logical flag,flags(n)
 c
 c  Set the flags.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         integer i
 c
         do i=1,n
@@ -1967,7 +1993,7 @@ c
         if(bchan.ge.1.and.bchan.le.n)flags(bchan) = .false.
 c
         end
-c************************************************************************
+c***********************************************************************
         subroutine ScOut(tno,chi,tcorr,xtsys,ytsys,xyphase,xyamp,
      *          xsampler,ysampler,xgtp,ygtp,xsdo,ysdo,xcaljy,ycaljy,
      *          axisrms,axismax,cabb,
@@ -1990,7 +2016,7 @@ c    n          IF number to write out. If this is zero, all IFs are
 c               written out.
 c  Scratch:
 c    buf        Used to buffer the data before writing.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         call uvputvrr(tno,'chi',chi,1)
         call uvputvri(tno,'tcorr',tcorr,1)
         call Sca(tno,'axisrms', axisrms, nants,buf)
@@ -2014,14 +2040,14 @@ c------------------------------------------------------------------------
      *             if1,if2,nants,buf)
         endif
         end
-c************************************************************************
+c***********************************************************************
         subroutine Sca(tno,var,axis,nants,buf)
 c
         integer tno,nants
         character var*(*)
         real axis(nants),buf(2*nants)
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         integer i,j
 c
         j = 1
@@ -2034,7 +2060,7 @@ c
         call uvputvrr(tno,var,buf,2*nants)
 c
         end
-c************************************************************************
+c***********************************************************************
         subroutine Sct(tno,var,xtsys,ytsys,ATIF,ATANT,if1,if2,nants,buf)
 c
         integer tno,ATIF,ATANT,if1,if2,nants
@@ -2043,7 +2069,7 @@ c
 c
 c  Write out the SYSTEMP variable, which we fudge to be the geometric
 c  mean of the xtsys and ytsys variables.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         integer ant,if,cnt
 c
         cnt = 0
@@ -2057,7 +2083,7 @@ c
         call uvputvrr(tno,var,buf,cnt)
 c
         end
-c************************************************************************
+c***********************************************************************
         subroutine Sco(tno,var,dat,ndim,ATIF,ATANT,if1,if2,nants,buf)
 c
         integer ATIF,ATANT,if1,if2,nants,tno,ndim
@@ -2065,7 +2091,7 @@ c
         real dat(ndim,ATIF,ATANT),buf(ndim*ATIF*ATANT)
 c
 c  Write out a syscal variable.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         integer ant,if,cnt,n
 c
         cnt = 0
@@ -2081,13 +2107,13 @@ c
         call uvputvrr(tno,var,buf,cnt)
 c
         end
-c************************************************************************
+c***********************************************************************
         subroutine CntStok(npol,pnt,nifs,nstoke,ATIF)
 c
         integer npol,nifs,nstoke,ATIF,pnt(ATIF,nstoke)
 c
 c  Determine the number of valid Stokes records in this record.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         logical valid
         integer p,if
 c
@@ -2101,7 +2127,7 @@ c
         enddo
 c
         end
-c************************************************************************
+c***********************************************************************
         subroutine GetDat(data,nvis,pnt,flag,nfreq,ATIF,fac,bchan,nifs,
      *                                  vis,flags,ndata,nchan)
 c
@@ -2112,7 +2138,7 @@ c
         real fac(ATIF,2)
 c
 c  Construct a visibility record constructed from multiple IFs.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         integer n,ipnt,i,nchand
 c
         nchan = 0
@@ -2163,13 +2189,13 @@ c
         call flagnan(vis,flags,nchan)
 c
         end
-c************************************************************************
+c***********************************************************************
         subroutine AsciiCpy(in,out,length)
 c
         character in*(*),out*(*)
         integer length
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         integer i
 c
 c  Externals.
@@ -2188,7 +2214,7 @@ c
         length = len1(out)
 c
         end
-c************************************************************************
+c***********************************************************************
         subroutine SamCorr(nfreq,vis,pol,i1,i2,if,time,
      *          xsampler,ysampler,ATIF,ATANT)
 c
@@ -2199,7 +2225,7 @@ c
 c
 c  Correct the data for the incorrect sampler statistics.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         double precision J20Jun91,J21Aug93,J11Dec93
         parameter(J20Jun91=2448427.5d0,J21Aug93=2449220.5d0)
         parameter(J11Dec93=2449332.5d0)
@@ -2253,20 +2279,20 @@ c
         enddo
 c
         end
-c************************************************************************
-c************************************************************************
+c***********************************************************************
+c***********************************************************************
         subroutine RPSkip(in,iostat)
 c
         character in*(*)
         integer iostat
 c
 c  Skip an RPFITS file.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         call RPOpen(in,iostat)
         if(iostat.eq.0)call RPEOF(iostat)
         if(iostat.eq.0)call RPClose(iostat)
         end
-c************************************************************************
+c***********************************************************************
         subroutine RPDisp(in,scanskip,scanproc,doauto,docross,docaldat,
      *    relax,sing,unflag,nopol,polflag,ifsel,nsel,userfreq,nuser,
      *    iostat)
@@ -2294,7 +2320,7 @@ c    ifsel      IFs to select. 0 means select all IFs.
 c    userfreq   User-given rest frequency to override the value in
 c               the RPFITS file.
 c    nuser      Number of user-specificed rest frequencies.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         include 'maxdim.h'
         include 'mirconst.h'
         integer MAXPOL,MAXSIM,MAXXYP,NDATA
@@ -2695,11 +2721,11 @@ c             tint = 0
               if(tint.eq.0)tint = 15.0
               flipper = .not.kband.or.time.gt.J01Jul04
 c
-c  xymode sets the way xy phase correction is potentially done. If negative,
-c  then correctionis done on all data. If positive, then just that antenna
-c  is corrected. If 0, then no xy phase correction is applied.
-c
-c  As of 18OCT07, CA02 has valid xyphase at 3mm, so use xymode==2 to indicate this.
+c  xymode sets the way xy phase correction is potentially done.  If
+c  negative, then correctionis done on all data.  If positive, then just
+c  that antenna is corrected. If 0, then no xy phase correction is
+c  applied.  As of 18OCT07, CA02 has valid xyphase at 3mm, so use
+c  xymode==2 to indicate this.
 c
               xymode = -1
               if(wband)then
@@ -2710,8 +2736,9 @@ c
                 endif
               endif
 c
-c  It is pretty late to be checking for a buffer overflow, but RPFITSIN's
-c  interface does not guard against it at all! So at least we are checking!
+c  It is pretty late to be checking for a buffer overflow, but
+c  RPFITSIN's interface does not guard against it at all!  So at least
+c  we are checking!
 c
               if(if_nfreq(ifno)*if_nstok(ifno).gt.NDATA)
      *          call bug('f','Buffer overflow within rpfitsin')
@@ -2761,14 +2788,14 @@ c
         if(iostat.eq.0.and.jstat.ne.3)iostat = jstat
 c
         end
-c************************************************************************
+c***********************************************************************
         subroutine RPEOF(jstat)
 c
         integer jstat
 c
 c  Skip to the EOF.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         integer flag,baseln,bin,ifno,srcno
         real ut,u,v,w,weight
         complex vis
@@ -2782,14 +2809,14 @@ c
         if(jstat.ne.0)call bug('w',
      *          'Error while skipping: '//rperr(jstat))
         end
-c************************************************************************
+c***********************************************************************
         character*(*) function RPErr(jstat)
 c
         integer jstat
 c
 c  Translate an RPFITSIN jstat value into something a bit more
 c  meaningful.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         character itoaf*8
 c
         integer NMESS
@@ -2810,11 +2837,11 @@ c
         endif
 c
         end
-c************************************************************************
+c***********************************************************************
         subroutine RPClose(jstat)
 c
         integer jstat
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         integer flag,baseln,bin,ifno,srcno
         real ut,u,v,w,weight
         complex vis
@@ -2827,14 +2854,14 @@ c
         if(jstat.ne.0)call bug('w',
      *          'Error closing file: '//rperr(jstat))
         end
-c************************************************************************
+c***********************************************************************
         subroutine RPOpen(in,jstat)
 c
         character in*(*)
         integer jstat
 c
 c  Open the RPFITS file.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         include 'rpfits.inc'
 c
         integer flag,baseln,bin,ifno,srcno
@@ -2855,7 +2882,7 @@ c
      *      'Error opening RPFITS file: '//rperr(jstat))
         if(jstat.ne.0)return
         end
-c************************************************************************
+c***********************************************************************
         subroutine PolMap(nopol,mpol,nif,nstin,cstin,nstout,cstout,
      *                                                          pselect)
 c
@@ -2875,7 +2902,7 @@ c  Output:
 c    nstout
 c    cstout
 c    pselect
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         integer i,j
         character token*4
 c
@@ -2906,13 +2933,13 @@ c
         endif
 c
         end
-c************************************************************************
+c***********************************************************************
         subroutine vissy(vis,nchan,nstin,pselect)
 c
         integer nchan,nstin
         complex vis(nstin*nchan)
         logical pselect(nstin)
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         integer ki,ko,i,j
 c
         ki = 0
@@ -2928,11 +2955,11 @@ c
         enddo
 c
         end
-c************************************************************************
+c***********************************************************************
         character*(*) function pcent(frac,total)
 c
         integer frac,total
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         character val*5
         real x
         x = real(100*frac)/real(total)
@@ -2943,7 +2970,7 @@ c------------------------------------------------------------------------
         endif
         pcent = val//'%'
         end
-c************************************************************************
+c***********************************************************************
         subroutine ChkAnt(x,y,z,antvalid,nant,sing)
 c
         integer nant
@@ -2951,7 +2978,7 @@ c
         logical antvalid(nant),sing
 c
 c  Check for a valid antenna position.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         integer i
 c
         do i=1,nant
@@ -2960,7 +2987,7 @@ c
         enddo
 c
         end
-c************************************************************************
+c***********************************************************************
         subroutine GetFg(nstok,cstok,flag,xflag1,yflag1,xflag2,yflag2,
      *          flags,fgsam)
 c
@@ -2970,7 +2997,7 @@ c
 c
 c  Flag a polarisation either if "flag" indicates that the entire record
 c  is bad, or if the syscal-based flags are bad.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         integer p
 
 c
@@ -2997,7 +3024,7 @@ c
         endif
 c
         end
-c************************************************************************
+c***********************************************************************
         subroutine syscflag(polflag,xsamp,ysamp,xyphase,xyamp,
      *          nxyp,maxxyp,xyp,ptag,xya,atag,xflag,yflag,mmrelax,cabb)
 c
@@ -3023,8 +3050,8 @@ c    xyamp      XY amplitude, in (pseudo)Jy.
 c    maxxyp     The max number of xy phase
 c  Input/Output:
 c    nxyp       Number of buffered xyphase measurements.
-c    tag        Tags for xyphase measurements. The oldest xyphase measurement
-c               has the smallest tag value.
+c    tag        Tags for xyphase measurements.  The oldest xyphase
+c               measurement has the smallest tag value.
 c    xyp        Buffered xyphase measurements. These are always
 c               sorted into ascending order. In radians.
 c    xya        Buffered xyamp measurements. These are always
@@ -3033,7 +3060,7 @@ c
 c  Output:
 c    xflag      Flag for the X channel.
 c    yflag      Flag for the y channel.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         include 'mirconst.h'
         real mxyp,mxya
         integer ntemp
@@ -3066,12 +3093,12 @@ c
         endif
 c
         end
-c************************************************************************
+c***********************************************************************
         subroutine MedMerge(nxyp,maxxyp,xyphase,xyp,tag,mxyp)
 c
         integer nxyp,maxxyp,tag(maxxyp)
         real xyphase,xyp(maxxyp),mxyp
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         integer tmin,tmax,i,nxyp2
         logical more
 c
@@ -3127,11 +3154,11 @@ c
         endif
 c
         end
-c************************************************************************
+c***********************************************************************
         real function getjpk(freq)
 c
         real freq
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         if(freq.lt.15)then
           getjpk = 13
         else if(freq.lt.30)then
@@ -3141,7 +3168,7 @@ c------------------------------------------------------------------------
         endif
 c
         end
-c************************************************************************
+c***********************************************************************
         subroutine SetSC(scinit,scbuf,MAXIF,MAXANT,nq,nif,nant,
      *          syscal,invert,polflag,
      *          xyphase,xyamp,xtsys,ytsys,xsamp,ysamp,
@@ -3170,7 +3197,7 @@ c
         logical qband
 c
 c  Copy across SYSCAL records. Do any necessary fiddles on the way.
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         include 'mirconst.h'
         integer j,k,ij,ik
         logical done,ok
@@ -3244,7 +3271,7 @@ c    5 Wind direction
         enddo
 c
         end
-c************************************************************************
+c***********************************************************************
         subroutine AtFlush(mcount,scinit,tcorr,scbuf,xflag,yflag,
      *                                                  MAXIF,MAXANT)
 c
@@ -3253,7 +3280,7 @@ c
         logical scinit(MAXIF,MAXANT),scbuf(MAXIF,MAXANT)
         logical xflag(MAXIF,MAXANT),yflag(MAXIF,MAXANT)
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         integer i,j
 c
         mcount = 0
@@ -3270,7 +3297,7 @@ c
         call PokeFlsh
 c
         end
-c************************************************************************
+c***********************************************************************
         subroutine SimMap(ifnum,nif,ifsimul,ifchain,ifsel,nsel,
      *            If2Sim,nifs,Sim2If,Sif,MAXSIM)
 c
@@ -3296,11 +3323,12 @@ c    ifsel      IF axes to select (user specified).
 c    MAXSIM     Maximum number of simultaneous frequencies.
 c  Output:
 c    If2Sim     Map from ifno to "simultaneous group number".
-c    Sim2If     Map from "simultaneous group number" to "ifno". There can
-c               be up to MAXSIM entries per "sim. group no.".
+c    Sim2If     Map from "simultaneous group number" to "ifno".  There
+c               can be up to MAXSIM entries per "sim. group no.".
 c    nifs       Number of simultaneous IFs in each sim. group.
-c    Sif        Maps from RPFITS ifno to the position on the Miriad IF axis.
-c------------------------------------------------------------------------
+c    Sif        Maps from RPFITS ifno to the position on the Miriad IF
+c               axis.
+c-----------------------------------------------------------------------
         integer i,j,k,nsimgrp,s
         logical more,ok
 c
@@ -3362,8 +3390,8 @@ c
           enddo
         enddo
 c
-c  Determine the map from the RPFITS ifno variable to the position on the
-c  Miriad IF axis.
+c  Determine the map from the RPFITS ifno variable to the position on
+c  the Miriad IF axis.
 c
         do i=1,nif
           Sif(i) = 0
@@ -3376,10 +3404,10 @@ c
         enddo
 c
         end
-c************************************************************************
+c***********************************************************************
         subroutine cacalIni
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         integer MAXTIMES
         parameter(MAXTIMES=32)
         integer bcal,scal,ntimes
@@ -3391,11 +3419,11 @@ c
         stime = 0
         ntimes = 0
         end
-c************************************************************************
+c***********************************************************************
         subroutine cacalCnt(count)
 c
         integer count
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         integer MAXTIMES
         parameter(MAXTIMES=32)
         integer bcal,scal,ntimes
@@ -3404,12 +3432,12 @@ c------------------------------------------------------------------------
 c
         bcal = count
         end
-c************************************************************************
+c***********************************************************************
         subroutine cacalTyp(calcode,time)
 c
         character calcode*(*)
         double precision time
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         integer MAXTIMES
         parameter(MAXTIMES=32)
         integer bcal,scal,ntimes
@@ -3435,12 +3463,12 @@ c
         endif
 c
         end
-c************************************************************************
+c***********************************************************************
         subroutine cacalFin(time1,MAXTIME1,ntime1)
 c
         integer MAXTIME1,ntime1
         double precision time1(2,MAXTIME1)
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         integer MAXTIMES
         parameter(MAXTIMES=32)
         integer bcal,scal,ntimes
@@ -3458,11 +3486,11 @@ c
         ntime1 = ntimes
 c
         end
-c************************************************************************
+c***********************************************************************
         subroutine rfiIni(rfiflag)
 c
         logical rfiflag
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         double precision f1,f2
         character*80 filename,string,stcat
         integer lu,iostat,l
@@ -3514,10 +3542,10 @@ c
 
         end
 
-c************************************************************************
+c***********************************************************************
         subroutine rfiFlag(flags,NDATA,nifs,nfreq,sfreq,sdf,birdie)
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
         integer NDATA,nifs,nfreq(nifs)
         logical flags(NDATA),birdie
         double precision sfreq(nifs),sdf(nifs)
@@ -3594,13 +3622,13 @@ c
         endif
         end
 
-c************************************************************************
+c***********************************************************************
 c
 c  The following code was contributed by WEW via NEBK.
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       REAL FUNCTION TWOBIT_GAIN_ADJUST(SSEXP, N1, Z1, P1, N2, Z2, P2)
-C----------------------------------------------------------------------
+C-----------------------------------------------------------------------
 C
 C      Finds gain correction factor to be applied to data whose
 C      gain has been calculated on the assumption that the
@@ -3616,7 +3644,7 @@ C
 C      The data should be multiplied by twobit_gain_adjust
 C      to obtain the corrected data.
 C
-C----------------------------------------------------------------------
+C-----------------------------------------------------------------------
 
 C PARAMETERS
       REAL      N1, Z1, P1, N2, Z2, P2, SSEXP
@@ -3655,15 +3683,15 @@ C
       TWOBIT_GAIN_ADJUST = A /
      *     TWOBIT_GAIN_R0( QN1, QZ1, QP1, QN2, QZ2, QP2 )
       END
-c************************************************************************
+c***********************************************************************
       REAL FUNCTION GAIN_PARAM( LEVEL_PERCENT )
-C----------------------------------------------------------------------
+C-----------------------------------------------------------------------
 C
 C      Gets "gain parameter" - i.e. parameter useful for calculating
 C      gain of 2-bit digital correlator for uncorrelated inputs
 C      where one of the sampler statistics is level_percent.
 C
-C----------------------------------------------------------------------
+C-----------------------------------------------------------------------
 
 C PARAMETERS
       REAL      LEVEL_PERCENT
@@ -3682,9 +3710,9 @@ C Find level ( RMS = 1.0 ) appropriate to this statistic
       GAIN_PARAM = EXP( -X * X / 2.0 )
 
       END
-c************************************************************************
+c***********************************************************************
       REAL FUNCTION GAUSS_LEVEL( FRACTION_ABOVE_LEVEL )
-C----------------------------------------------------------------------
+C-----------------------------------------------------------------------
 C
 C      Assuming Gaussian statistics, estimates the level given
 C       the probability of being above this level, i.e.
@@ -3692,7 +3720,7 @@ C       the fraction of samples above this level.
 C
 C      Ref.      Approximation formulae - max. error 4.5E-04
 C
-C----------------------------------------------------------------------
+C-----------------------------------------------------------------------
 
 C PARAMETERS
       REAL            FRACTION_ABOVE_LEVEL
@@ -3740,15 +3768,15 @@ C Algorithm works for ( 0.0 < p <= 0.5 )  hence
 
 
 
-c************************************************************************
+c***********************************************************************
       REAL FUNCTION TWOBIT_GAIN_R0( QN1, QZ1, QP1, QN2, QZ2, QP2 )
-C----------------------------------------------------------------------
+C-----------------------------------------------------------------------
 C
 C      Finds gain of digital correlator for uncorrelated inputs 1,2
 C      where the "gain paramaters" are ( qn1, qz1, qp1 ) and
 C      ( qn2, qz2, qp2 ).  n=neg, z=zero, p=pos
 C
-C----------------------------------------------------------------------
+C-----------------------------------------------------------------------
 
 C PARAMETERS
       REAL      QN1, QZ1, QP1, QN2, QZ2, QP2
@@ -3764,7 +3792,7 @@ C BEGIN
      *                  G_QUAD( QZ1, QP1, QZ2, QN2 ) +
      *                    G_QUAD( QZ1, QN1, QZ2, QN2 ) )
       END
-c************************************************************************
+c***********************************************************************
       REAL FUNCTION G_QUAD( QZ1, QP1, QZ2, QP2 )
       REAL QZ1, QP1, QZ2, QP2
       G_QUAD = 9 * QP1 * QP2 +

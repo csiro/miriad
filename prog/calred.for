@@ -30,6 +30,8 @@ c	  nopol     Do not perform polarisation calibration on the data.
 c	  nopass    Do not perform bandpass calibration on the data.
 c	  norm      Divide the noise estimates by the square root of the
 c	            number of points.
+c
+c$Id: calred.for,v 1.5 2010/04/30 08:12:27 cal103 Exp $
 c--
 c  History:
 c    rjs  23feb00 Original version.
@@ -43,8 +45,6 @@ c    rjs  08aug04 The algorithm to determine the confusion was
 c	          hopelessly flawed. Correct this.
 c    rjs  02jul05 Improved error estimates.
 c    mhw  07sep09 More digits for correlation count
-c
-c $Id: calred.for,v 1.4 2009/09/23 01:00:20 cal103 Exp $
 c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mem.h'
@@ -87,8 +87,8 @@ c
 	character versan*80
 c-----------------------------------------------------------------------
       version = versan ('calred',
-     :                  '$Revision: 1.4 $',
-     :                  '$Date: 2009/09/23 01:00:20 $')
+     :                  '$Revision: 1.5 $',
+     :                  '$Date: 2010/04/30 08:12:27 $')
 c
 c Lets go! Get user inputs.
 c
@@ -297,12 +297,12 @@ c
 	enddo
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine GetOpt(dotrip,donorm,uvflags)
 c
 	logical dotrip,donorm
 	character uvflags*(*)
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer NOPTS
 	parameter(NOPTS=5)
 	character opts(NOPTS)*9
@@ -323,14 +323,14 @@ c
 	if(.not.present(3))uvflags(6:6) = 'e'
 	if(.not.present(4))uvflags(7:7) = 'f'
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine PolIdx(p,npol,dopara,polcvt,PolMin,PolMax,MAXPOL,
      *								polp)
 c
 	integer p,PolMin,PolMax,npol,MAXPOL
 	integer polcvt(PolMin:PolMax)
 	logical polp,dopara
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer pol
 c
 c  Externals.
@@ -350,7 +350,7 @@ c
 	p = polcvt(pol)
 	polp = PolsPara(pol)
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine SetPl(tno,uv,time,iplanet,model,nchan)
 c
 	integer tno,iplanet,nchan
@@ -359,7 +359,7 @@ c
 c
 c  Determine the model visibility of a planet.c
 c
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	include 'maxdim.h'
 	include 'mirconst.h'
 	integer i
@@ -386,12 +386,12 @@ c
 	enddo
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine GetSrc(tno,sources,maxsrc,nsrc,isrc,iplanet)
 c
 	integer tno,maxsrc,nsrc,isrc,iplanet
 	character sources(MAXSRC)*(*)
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	logical found
 	character source*32
 	integer NPLANETS
@@ -427,7 +427,7 @@ c
 	enddo
 c
 	end
-c************************************************************************
+c***********************************************************************
 	subroutine IntFlush(nants,npol,dotrip,init,indx,sigma2,ndat,
      *	  Corrs,CorrPnt,Modl,ModPnt,Flags,FlagPnt,
      *	  nchan,maxbase,maxpol,maxdat,npnt,Smm,Sms,Sdd,Sdm)
@@ -444,7 +444,7 @@ c
 	integer npnt(maxdat)
 	real Smm(maxdat),Sms(maxdat),Sdd(maxdat)
 	complex Sdm(maxdat)
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 	integer p,i3,i2,i1,bl12,bl13,bl23,k,id,n,i,count
 	integer pflag12,pflag13,pflag23,pdata12,pdata23,pdata13
 	integer pmod12,pmod23,pmod13,pflag,pdata,pmod
