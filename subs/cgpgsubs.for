@@ -140,7 +140,7 @@ c     rjs    10nov97     Make more robust to things missing from headers.
 c     jwr    08jul04     Replaced MemAlloc where MemFree was meant
 c     rgd    01aug08     Added the arcmas call for milliarcs
 c
-c $Id: cgpgsubs.for,v 1.4 2008/08/06 04:05:07 cal103 Exp $
+c $Id: cgpgsubs.for,v 1.5 2010/05/07 05:22:23 cal103 Exp $
 c**********************************************************************
 c
 c* annboxCG -- Annotate plot with information from a box image 
@@ -960,109 +960,106 @@ c
       end do
 c
       end
-c
+
+
 c* conturCG -- Draw contour plot
 c& nebk
 c: plotting
 c+
-      subroutine conturcg (conlab, blank, solneg, win1, win2, dobl, 
-     +                     data, nlevs, levs, tr, sdbreak)
+      subroutine conturcg (conlab, blank, solneg, win1, win2, dobl,
+     +                     image, nlevs, levs, tr, sdbreak, ncols, cols)
 c
-      implicit none
-      integer win1, win2, nlevs
-      real data(win1,win2), levs(*), tr(6), sdbreak, blank
+      integer win1, win2, nlevs, ncols, cols(*)
+      real image(win1,win2), levs(*), tr(6), sdbreak, blank
       logical solneg, dobl, conlab
 c
 c  Draw contours
 c
 c  Input:
-c    conlab   Label contours ?
-c    blank    Vaue used for magic blanks
+c    conlab   Label contours?
+c    blank    Value used for magic blanks.
 c    solneg   False => Positive contours solid, negative dashed.
 c             True  => Positive contours dashed, negative solid.
-c             "Positive" above means values >= SDBREAK
-c    win1,2   Window sizes in x and y
-c    dobl     True if blanks present in image section to contour
-c    data     Image to contour
-c    nlevs    Number of contour levels
-c    levs     Contour levels
-c    tr       Transformation matrix between array inices and
-c             world coords
-c    sdbreak  Value for distinction between solid and dashed contours
+c             "Positive" above means values >= SDBREAK.
+c    win1,2   Window sizes in x and y.
+c    dobl     True if blanks present in image section to contour.
+c    image    Image to contour.
+c    nlevs    Number of contour levels.
+c    levs     Contour levels.
+c    tr       Transformation matrix between array indices and
+c             world coords.
+c    sdbreak  Value for distinction between solid and dashed contours.
+c    ncols    Number of contour colours.
+c    cols     Contour colours.
 c--
 c-----------------------------------------------------------------------
-      integer stylehi, stylelo, i, intval, minint, il, ns
+      integer   i, il, intval, minint, ns, stylehi, stylelo
       character label*20
 c-----------------------------------------------------------------------
-c
-c Set how often we label contours.  The PGPLOT routine is prett dumb.
-c Because contouring is done in quadrants, each quadrant is labelled
-c individually.  The size of the quadrants is 256 pixels (see
-c pgconx, pgcnxb).  MININT says draw first label after contours
-c cross this many cells, and every INTVAL thereafter. 
-c
+c     Set how often to label contours.  The PGPLOT routine is pretty
+c     dumb.  Because contouring is done in quadrants, each quadrant is
+c     labelled individually.  The size of the quadrants is 256 pixels
+c     (see pgconx, pgcnxb).  MININT says draw first label after contours
+c     cross this many cells, and every INTVAL thereafter.
       minint = 20
       intval = 40
-      if (conlab) then
-c        write (*,*) 'default minint, intval=', minint,intval
-c        write (*,*) 'enter minint, intval'
-c        read (*,*) minint,intval
-        if (dobl) then
-          call output ('Contour labelling is not yet implemented')
-          call output ('for images containing blanked pixels')
-        end if
+
+      if (conlab .and. dobl) then
+        call output ('Contour labelling is not implemented for images')
+        call output ('containing blanked pixels.')
       end if
-c
-      if (.not.solneg) then
-        stylehi = 1
-        stylelo = 2
-      else
+
+      if (solneg) then
         stylehi = 2
         stylelo = 1
+      else
+        stylehi = 1
+        stylelo = 2
       end if
-c
+
       do i = 1, nlevs
+c       Set colour.
+        if (i.le.ncols) then
+          call pgsci (cols(i))
+        end if
+
+c       Set dash style.
         if (levs(i).ge.sdbreak) then
           call pgsls (stylehi)
         else
           call pgsls (stylelo)
         end if
+
         if (dobl) then
-c
-c This PG contouring routine does not do a very good job on dashed
-c contours and is slower than PGCONT
-c
-          call pgconb (data, win1, win2, 1, win1, 1, win2, 
-     +                 levs(i), -1, tr, blank)
+c         This contouring routine handles blanks but doesn't do a very
+c         good job on dashed contours and is slower than PGCONT.
+          call pgconb (image, win1, win2, 1, win1, 1, win2, levs(i), -1,
+     +      tr, blank)
         else
-c
-c Run faster contouring routine if no blanks
-c
-          call pgcont (data, win1, win2, 1, win1, 1, win2, 
-     +                 levs(i), -1, tr)
+c         Use faster contouring routine if no blanks.
+          call pgcont (image, win1, win2, 1, win1, 1, win2, levs(i), -1,
+     +      tr)
         end if
-c
-c Label contour value
-c
+
         if (conlab) then
+c         Do contour labelling.
           ns = int(abs(log10(abs(levs(i))))) + 3
           call strfmtcg (real(levs(i)), ns, label, il)
           if (dobl) then
-c            call pgcnlb (data, win1, win2, 1, win1, 1, win2,
-c     +                 levs(i), tr, blank, label(1:il), 
-c     +                 intval, minint)
+c            call pgcnlb (image, win1, win2, 1, win1, 1, win2, levs(i),
+c     +        tr, blank, label(1:il), intval, minint)
           else
-            call pgconl (data, win1, win2, 1, win1, 1, win2,
-     +                 levs(i), tr, label(1:il), intval, minint)
+            call pgconl (image, win1, win2, 1, win1, 1, win2, levs(i),
+      +       tr, label(1:il), intval, minint)
           end if
         end if
       end do
       call pgupdt
       call pgsls (1)
-c
+
       end
-c
-c
+
+
       subroutine drwlincg (lun, axis, type, n, wc, zp, p1, p2,
      +                     xline, yline)
 c-----------------------------------------------------------------------
