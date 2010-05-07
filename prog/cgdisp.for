@@ -18,13 +18,13 @@ c       when you display with a pixel map representation (formerly
 c       called a "grey scale")
 c
 c@ in
-c       You may input up to 7 images.  Up to 3 of these can be displayed
-c       via contour plots and 1 can be displayed via a colour pixel map
-c       representation.  1 vector amplitude image and 1 vector position
-c       angle image (degrees; positive N -> E) can together be used to
-c       display a vector map (e.g. polarization vectors).  1 image can
-c       be displayed as small scaled boxes (see below) and 1 image may
-c       be used as a mask.
+c       You may input up to seven images.  Up to three of these can
+c       be displayed via contour plots and one can be displayed via a
+c       colour pixel map representation.  One vector amplitude image and
+c       one vector position angle image (degrees; positive N -> E) can
+c       together be used to display a vector map (e.g. polarization
+c       vectors).  One image can be displayed as small scaled boxes (see
+c       below) and one image may be used as a mask.
 c
 c       The "box" image is displayed by drawing little boxes (solid and
 c       hollow for positive and negative pixels) at the location of each
@@ -100,9 +100,9 @@ c       LEVS1 times SLEV (either percentage of the image peak or
 c       absolute).
 c       Defaults try to choose something vaguely useful.
 c@ levs2
-c       LEVS for the second contour image.
+c       Levels for the second contour image.
 c@ levs3
-c       LEVS for the third contour image.
+c       Levels for the third contour image.
 c@ cols1
 c       PGPLOT colours for LEVS1 contours.  If one value is given it is
 c       used for all contours.  PGPLOT colour indices are
@@ -113,6 +113,12 @@ c          5: cyan          6: magenta         7: yellow
 c          8: orange        9: lime           10: spring green
 c         11: azure        12: violet         13: rose
 c         14: dark grey    15: light grey
+c@ cols2
+c       Colours for the second contour image.  Defaults to those for the
+c       first image.
+c@ cols3
+c       Colours for the third contour image.  Defaults to those for the
+c       first image.
 c@ range
 c       N groups of 4 values (1 group per subplot and N is the maximum
 c       number of channels allowed by Miriad; typically 2048). These are
@@ -548,7 +554,7 @@ c       The OFFSET line is not applied to ANY position fields in
 c       succeeding lines that have %OTYPEs that are "hms" or "dms".
 c       I am too lazy to code it.
 c
-c$Id: cgdisp.for,v 1.8 2010/04/30 08:23:28 cal103 Exp $
+c$Id: cgdisp.for,v 1.9 2010/05/07 05:23:15 cal103 Exp $
 c--
 c
 c  History:
@@ -725,52 +731,55 @@ c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
       include 'mem.h'
-      real wedwid, tfdisp
-      integer maxlev, nxdef, nydef, maxcon, maxtyp, nbins, maxconp3
-      parameter (maxlev = 50, nxdef = 4, maxtyp = 18, nydef = 4,
-     +  maxcon = 3, wedwid = 0.05, tfdisp = 0.5, nbins = 128,
-     +  maxconp3 = maxcon + 3)
-c
+
+c     Array sizes.
+      integer MAXLEV, MAXCON, MAXTYP, NBINS
+      parameter (MAXLEV = 50, MAXCON = 3, MAXTYP = 18, NBINS = 128)
+
+c     Plotting parameters.
+      integer NXDEF, NYDEF
+      real    WEDWID, TFDISP
+      parameter (NXDEF = 4, NYDEF = 4, WEDWID = 0.05, TFDISP = 0.5)
+
       integer ipim, ipnim, ipim2, ipnim2, ipimm
-c
-      integer csize(maxnax,maxcon), gsize(maxnax), vsize(maxnax,2),
-     +  msize(maxnax), bsize(maxnax), lc(maxcon), lg, lv(2), lm, lb,
-     +  lhead, concol(maxcon), veccol, boxcol, bemcol, ovrcol, labcol
+      integer csize(maxnax,MAXCON), gsize(maxnax), vsize(maxnax,2),
+     +  msize(maxnax), bsize(maxnax), lc(MAXCON), lg, lv(2), lm, lb,
+     +  lhead, concol(MAXCON), veccol, boxcol, bemcol, ovrcol, labcol
       logical doaxlab, doaylab, donxlab(2), donylab(2)
-      character cin(maxcon)*64, gin*64, vin(2)*64, mskin*64, bin*64,
-     +  ltypes(maxtyp)*6, versan*80, version*80
-c
-      real levs(maxlev,maxcon), pixr(2,maxchan), tr(6), bmin(maxcon+4),
-     +  bmaj(maxcon+4), bpa(maxcon+4), scale(2), cs(4), pixr2(2),
-     +  slev(maxcon), break(maxcon), vfac(2), bfac(5), tfvp(4),
-     +  wdgvp(4), cumhis(nbins), gmm(3), cmm(3,maxcon), dmm(3), bmm(3)
+      character cin(MAXCON)*64, gin*64, vin(2)*64, mskin*64, bin*64,
+     +  ltypes(MAXTYP)*6, versan*80, version*80
+
+      real levs(MAXLEV,MAXCON), pixr(2,maxchan), tr(6), bmin(MAXCON+4),
+     +  bmaj(MAXCON+4), bpa(MAXCON+4), scale(2), cs(4), pixr2(2),
+     +  slev(MAXCON), break(MAXCON), vfac(2), bfac(5), tfvp(4),
+     +  wdgvp(4), cumhis(NBINS), gmm(3), cmm(3,MAXCON), dmm(3), bmm(3)
       real vxmin, vymin, vymax, vx, vy, vxsize, vysize, vxgap, vygap,
      +  ydispb, xdispl, groff, blankg, blankc, blankv, blankb,
      +  vecfac, vecmax, vecmaxpix, boxfac, hs(3)
-c
-      integer blc(3), trc(3), win(2), lwid(maxcon+3), veclwid,
-     +  vecinc(2), boxinc(2), srtlev(maxlev,maxcon), nlevs(maxcon),
-     +  grpbeg(maxchan), ngrp(maxchan), his(nbins), ibin(2),
+
+      integer blc(3), trc(3), win(2), lwid(MAXCON+3), veclwid,
+     +  vecinc(2), boxinc(2), srtlev(MAXLEV,MAXCON), nlevs(MAXCON),
+     +  grpbeg(maxchan), ngrp(maxchan), his(NBINS), ibin(2),
      +  jbin(2), kbin(2), krng(2), coltab(maxchan), gnaxis,
-     +  cnaxis(maxcon), vnaxis(2), bnaxis, mnaxis, cols1(maxlev)
+     +  cnaxis(MAXCON), vnaxis(2), bnaxis, mnaxis, cols(MAXLEV,MAXCON)
       integer  nx, ny, ierr, pgbeg, ilen, igr, nlast, ngrps,
-     +  ncon, i, j, nvec, ipage, jj, npixr, wedcod, bgcol, ncols1,
-     +  jplot, fs, firstimage
-c
-      character labtyp(2)*6, levtyp(maxcon)*1, trfun(maxchan)*3
+     +  ncon, i, j, nvec, ipage, jj, npixr, wedcod, bgcol,
+     +  ncols(MAXCON), jplot, fs, firstimage
+
+      character labtyp(2)*6, levtyp(MAXCON)*1, trfun(maxchan)*3
       character pdev*132, xlabel*40, ylabel*40, hard*20, ofile*64,
      +  aline*72, val3form*20
-c
-      logical solneg(maxcon), doblv(2), bemprs(maxcon+4)
+
+      logical solneg(MAXCON), doblv(2), bemprs(MAXCON+4)
       logical do3val, do3pix, dofull, gaps, eqscale, doblc, doblg,
      +  dobeam, candobeam, beaml, beamb, relax, rot90, signs, mirror,
      +  dowedge, doerase, doepoch, bdone, doblb, doblm, dofid, dosing,
      +  nofirst, grid, dotr, dodist, conlab, doabut, getvsc, noflab,
      +  blacklab, docorner, donum
-c
+
       data blankc, blankv, blankb /-99999999.0, -99999999.0,
      +                             -99999999.0/
-      data lc, lg, lv, lb, lm /maxcon*0, 0, 2*0, 0, 0/
+      data lc, lg, lv, lb, lm /MAXCON*0, 0, 2*0, 0, 0/
       data gin, vin, bin, mskin /' ', 2*' ', ' ', ' '/
       data bdone /.false./
       data ipage /0/
@@ -781,35 +790,35 @@ c
       data dmm /1.0e30, -1.0e30, -1.0/
       data bmm /1.0e30, -1.0e30, -1.0/
       data coltab /maxchan*0/
-      data lwid /maxconp3*1/
+      data lwid /1, MAXCON*1, 1, 1/
       data getvsc /.true./
 c-----------------------------------------------------------------------
       version = versan ('cgdisp',
-     :                  '$Revision: 1.8 $',
-     :                  '$Date: 2010/04/30 08:23:28 $')
+     :                  '$Revision: 1.9 $',
+     :                  '$Date: 2010/05/07 05:23:15 $')
 c
 c Get user inputs
 c
-      call inputs (maxchan, maxlev, maxcon, maxtyp, ltypes, ncon, cin,
+      call inputs (maxchan, MAXLEV, MAXCON, MAXTYP, ltypes, ncon, cin,
      +  gin, nvec, vin, bin, mskin, ibin, jbin, kbin, levtyp, slev,
      +  levs, nlevs, npixr, pixr, trfun, coltab, vecfac, vecmax,
      +  vecinc, boxfac, boxinc, pdev, labtyp, dofull, do3val, do3pix,
      +  eqscale, gaps, solneg, nx, ny, lwid, break, cs, scale,
      +  ofile, dobeam, beaml, beamb, relax, rot90, signs, mirror,
      +  dowedge, doerase, doepoch, dofid, dosing, nofirst, grid, dotr,
-     +  dodist, conlab, doabut, docorner, val3form, ncols1, cols1, fs,
+     +  dodist, conlab, doabut, docorner, val3form, ncols, cols, fs,
      +  hs, firstimage, blacklab)
 c
 c Open images as required
 c
-      call sesame (relax, maxnax, maxcon, ncon, cin, lc, csize, cnaxis,
+      call sesame (relax, maxnax, MAXCON, ncon, cin, lc, csize, cnaxis,
      +  gin, lg, gsize, gnaxis, vin, lv, vsize, vnaxis, bin, lb, bsize,
      +  bnaxis, mskin, lm, msize, mnaxis, cmm, gmm)
 c
 c Finish key inputs for region of interest and return generic
 c axis descriptors
 c
-      call region (maxcon, maxnax, ncon, cin, gin, vin, bin, lc, lg,
+      call region (MAXCON, maxnax, ncon, cin, gin, vin, bin, lc, lg,
      +   lv, lb, csize, gsize, vsize, bsize, cnaxis, gnaxis, vnaxis,
      +   bnaxis, lhead, ibin, jbin, kbin, blc, trc, win,
      +   ngrps, grpbeg, ngrp)
@@ -828,7 +837,7 @@ c Compute contour levels for each contour image
 c
       if (ncon.gt.0) then
         do i = 1, ncon
-          call conlevcg (mirror, maxlev, lc(i), levtyp(i), slev(i),
+          call conlevcg (mirror, MAXLEV, lc(i), levtyp(i), slev(i),
      +                   nlevs(i), levs(1,i), srtlev(1,i))
         end do
       end if
@@ -840,7 +849,7 @@ c
 c Get beam information
 c
       if (dobeam .or. (vecmax .ge. 0.0)) then
-        call getbeam (maxcon, cin, lc, gin, lg, vin, lv,
+        call getbeam (MAXCON, cin, lc, gin, lg, vin, lv,
      +       bin, lb, bmin, bmaj, bpa, candobeam, bemprs)
 c       User might just be setting beam parameters
 c       for the vector scale-bar
@@ -852,7 +861,7 @@ c       for the vector scale-bar
 c
 c Work out number of plots per page and number of plots
 c
-      call nxnycg (nxdef, nydef, ngrps, nx, ny, nlast)
+      call nxnycg (NXDEF, NYDEF, ngrps, nx, ny, nlast)
       npixr = min(ngrps,npixr)
 c
 c Work out default character sizes for axis, 3-value, and
@@ -904,9 +913,9 @@ c
 c
 c Work out view port sizes and increments.
 c
-      call vpsizcg (dofull, dofid, ncon, gin, vin, 0, bin, maxlev,
+      call vpsizcg (dofull, dofid, ncon, gin, vin, 0, bin, MAXLEV,
      +   nlevs, srtlev, levs, slev, nx, ny, cs, xdispl, ydispb,
-     +   gaps, doabut, dotr, wedcod, wedwid, tfdisp, labtyp, vxmin,
+     +   gaps, doabut, dotr, wedcod, WEDWID, TFDISP, labtyp, vxmin,
      +   vymin, vymax, vxgap, vygap, vxsize, vysize, tfvp, wdgvp)
 c
 c Adjust viewport increments and start locations if equal scales
@@ -1004,7 +1013,7 @@ c Apply transfer function directly to image
 c
            if (trfun(igr).ne.'lin')
      +       call apptrfcg (pixr, trfun(igr), groff, win(1)*win(2),
-     +          memi(ipnim), memr(ipim), nbins, his, cumhis)
+     +          memi(ipnim), memr(ipim), NBINS, his, cumhis)
 c
 c Apply specified OFM or do interactive fiddle to hardcopy
 c PGPLOT devices here
@@ -1059,8 +1068,8 @@ c
 c Draw wedge now so that it overwrites axis label ticks when wedge
 c drawn inside subplot
 c
-         if (dowedge) call wedgecg (wedcod, wedwid, jj, trfun(igr),
-     +     groff, nbins, cumhis, wdgvp, pixr(1,igr), pixr(2,igr))
+         if (dowedge) call wedgecg (wedcod, WEDWID, jj, trfun(igr),
+     +     groff, NBINS, cumhis, wdgvp, pixr(1,igr), pixr(2,igr))
 c
 c Retake complement of OFM if needed (hardcopy/white backgrounds)
 c
@@ -1096,14 +1105,9 @@ c
              call pgslw (lwid(i+1))
              call pgsci (concol(i))
              call pgsch (cs(4))
-             if (i.eq.1 .and. ncols1.gt.0) then
-               call contur (conlab, blankc, solneg(i), win(1), win(2),
-     +            doblc, memr(ipim), nlevs(i), levs(1,i), tr, break(i),
-     +            ncols1, cols1)
-             else
-               call conturcg (conlab, blankc, solneg(i), win(1), win(2),
-     +            doblc, memr(ipim), nlevs(i), levs(1,i), tr, break(i))
-             end if
+             call conturcg (conlab, blankc, solneg(i), win(1), win(2),
+     +         doblc, memr(ipim), nlevs(i), levs(1,i), tr, break(i),
+     +         ncols(i), cols(1,i))
            end do
          end if
 c
@@ -1184,14 +1188,14 @@ c
            call pgsci (ovrcol)
            call pgslw (lwid(ncon+nvec+2))
            call olay (dodist, doerase, ofile, grpbeg(j), ngrp(j),
-     +                lhead, blc, trc, maxtyp, ltypes, cs(3))
+     +                lhead, blc, trc, MAXTYP, ltypes, cs(3))
          end if
 c
 c Draw beam(s)
 c
          if (dobeam .or. (vecmax .ge. 0.0)) then
            call pgsci (bemcol)
-           call beampl (maxcon, beaml, beamb, bmin, bmaj, bpa,
+           call beampl (MAXCON, beaml, beamb, bmin, bmaj, bpa,
      +                  bemprs, lc, lg, lv, lb, fs, hs, firstimage,
      +                  vecmax, vecmaxpix, dobeam)
          end if
@@ -1201,8 +1205,8 @@ c
          if (dofull .and. (jj.eq.nx*ny .or. j.eq.ngrps)) then
            call pgslw (1)
            call pgsci (labcol)
-           call fullann (maxcon, ncon, cin, gin, vin, bin, lhead,
-     +        lc, lg, lv, lb, maxlev, nlevs, levs, srtlev, slev, npixr,
+           call fullann (MAXCON, ncon, cin, gin, vin, bin, lhead,
+     +        lc, lg, lv, lb, MAXLEV, nlevs, levs, srtlev, slev, npixr,
      +        trfun, pixr, vfac, bfac, vymin, blc, trc, cs, ydispb,
      +        ibin, jbin, kbin, labtyp, gmm, cmm)
            call pgsci (1)
@@ -1213,7 +1217,7 @@ c reinit data min and maxes
 c
          call subinccg (j, nx, ny, vxmin, vymax, vxsize, vysize,
      +                  vxgap, vygap, vx, vy)
-         call mmini (maxcon, gmm, cmm)
+         call mmini (MAXCON, gmm, cmm)
 c
 c Page plot device
 c
@@ -1841,14 +1845,14 @@ c     beam%%    Beam location
 c     relax     If true issue warnings about mismatched axis
 c               descriptors between images instead of fatal error
 c     rot90     Rotate vectors by 90 degrees
-c     signs     WHen plotting vectors, assume N and E are in
+c     signs     When plotting vectors, assume N and E are in
 c               the direction of increasing X and Y, else N and E
 c               are to the top and left
 c     mirror    Multiply contours by -1 and add to list
 c     dowedge   Draw wedge on pixel map image
 c     doepoch   Write epoch into axis labels
 c     dofid     Interactive fiddle
-c     dosing    FIddle after every subplot
+c     dosing    Fiddle after every subplot
 c     nofirst   Don't put the first x-axis lable on any subplot
 c               but the left most
 c     grid      Extend ticks to grid
@@ -2487,8 +2491,8 @@ c done before PGIMAG called.  Any change of lookup table here will
 c overwrite that done with call to ofmcol above
 c
       if (dofid .and. (jj.eq.1 .or. dosing)) then
-         write (*,*) 'fiddle on'
-         call ofmmod (tfvp, win(1)*win(2), image, nimage,
+        write (*,*) 'fiddle on'
+        call ofmmod (tfvp, win(1)*win(2), image, nimage,
      +               pixr2(1), pixr2(2))
       end if
 c
@@ -2518,14 +2522,14 @@ c
 c
 c
       subroutine inputs (maxgr, maxlev, maxcon, maxtyp, ltypes, ncon,
-     -     cin, gin, nvec, vin, bin, mskin, ibin, jbin, kbin, levtyp,
-     -     slev, levs, nlevs, npixr, pixr, trfun, coltab, vecfac, vecmax
-     -     , vecinc, boxfac, boxinc, pdev, labtyp, dofull, do3val,
-     -     do3pix, eqscale, gaps, solneg, nx, ny, lwid, break, cs, scale
-     -     , ofile, dobeam, beaml, beamb, relax, rot90, signs, mirror,
-     -     dowedge, doerase, doepoch, dofid, dosing, nofirst, grid, dotr
-     -     , dodist, conlab, doabut, docorner, val3form, ncols1, cols1,
-     -     fs, hs, firstimage, blacklab)
+     +     cin, gin, nvec, vin, bin, mskin, ibin, jbin, kbin, levtyp,
+     +     slev, levs, nlevs, npixr, pixr, trfun, coltab, vecfac,
+     +     vecmax, vecinc, boxfac, boxinc, pdev, labtyp, dofull, do3val,
+     +     do3pix, eqscale, gaps, solneg, nx, ny, lwid, break, cs,
+     +     scale, ofile, dobeam, beaml, beamb, relax, rot90, signs,
+     +     mirror, dowedge, doerase, doepoch, dofid, dosing, nofirst,
+     +     grid, dotr, dodist, conlab, doabut, docorner, val3form,
+     +     ncols, cols, fs, hs, firstimage, blacklab)
 c-----------------------------------------------------------------------
 c     Get the unfortunate user's long list of inputs
 c
@@ -2558,7 +2562,7 @@ c   npixr      Number of pixr/trfun groups returned.
 c   pixr       Pixel map intensity range for each of the NPIXR subplot
 c   trfun      Type of pixel map transfer function: 'log', 'lin',
 c              'heq' or 'sqr' for each of the NPIXR subplots
-c   coltab     COlour lookup table number
+c   coltab     Colour lookup table number
 c   vecfac     Vector amplitude scale factor and
 c   vecmax     Length of vector scale bar and
 c   vecinc     Vector x,y pixel incrememts
@@ -2589,14 +2593,14 @@ c   beamb      True if beam at bottom of sub-plot, else top
 c   relax      Only issue warnings instead of fatal eror when
 c              axis descriptors don;t agree between images
 c   rot90      Rotate vectors by a further 90 degrees
-c   signs      WHen plotting vectors, assume N and E are in
+c   signs      When plotting vectors, assume N and E are in
 c              the direction of increasing X and Y
 c   mirror     Multiply contours by -1 and add to list
 c   dowedge    Draw a wedge on the pixel map
 c   doepoch    Write epoch into axis labels
 c   dofid      Interactive fiddle
 c   dosing     Fiddle after each subplot
-c   nofirst    DOnt write first x-axis label on subplots except first
+c   nofirst    Dont write first x-axis label on subplots except first
 c   grid       Extend ticks to grid
 c   dotr       Label top and right axes as well as bototm and left
 c   dodist     Distort overlays with grid
@@ -2604,8 +2608,8 @@ c   conlab     Label contours
 c   doabut     No white space bewteen subplots
 c   docorner   Only draw labels with lower left subplot
 c   val3form   Format for options=3val labelling
-c   cols1      Colours for LEVS1 contours
-c   ncols1
+c   cols       Contour colours for each contour image.
+c   ncols      Number of colours for each contour image.
 c   fs         PGPLOT fill style
 c   hs         PGPLOT hatching style
 c   firstimage first image specified (used for beam plotting). Given
@@ -2617,7 +2621,7 @@ c-----------------------------------------------------------------------
      +  slev(maxcon), break(maxcon), vecfac, vecmax, boxfac, hs(3)
       integer nx, ny, nlevs(maxcon), lwid(maxcon+3), vecinc(2),
      +  boxinc(2), ibin(2), jbin(2), kbin(2), coltab(maxgr),
-     +  cols1(maxlev), ncols1, fs, firstimage
+     +  cols(maxlev,maxcon), ncols(maxcon), fs, firstimage
       character*(*) labtyp(2), cin(maxcon), gin, vin(2), bin, mskin,
      +  pdev, ofile, trfun(maxgr), levtyp(maxcon), ltypes(maxtyp),
      +  val3form
@@ -2771,17 +2775,25 @@ c
           call keyr ('slev', slev(i), 0.0)
         end do
       end if
+
       do i = 1, maxcon
         str = itoaf(i)
         call mkeyr ('levs'//str,  levs(1,i), maxlev, nlevs(i))
+
+        ncols(i) = 0
+        call mkeyi ('cols'//str, cols(1,i), maxlev, ncols(i))
+        if (ncols(i).gt.0 .and. ncols(i).lt.nlevs(i)) then
+c         Fill the colours array by replicating the last entry.
+          do j = ncols(i)+1, nlevs(i)
+            cols(j,i) = cols(ncols(i),i)
+          end do
+        else if (i.gt.1 .and. ncols(i).eq.0) then
+c         Replicate colours from the first contour map.
+          do j = 1, nlevs(i)
+            cols(j,i) = cols(j,1)
+          end do
+        end if
       end do
-      ncols1 = 0
-      call mkeyi ('cols1', cols1, maxlev, ncols1)
-      if (ncols1.gt.0 .and. ncols1.lt.nlevs(1)) then
-        do i = ncols1+1, nlevs(1)
-          cols1(i) = cols1(ncols1)
-        end do
-      end if
 c
 c Get pixel map ranges and transfer functions for each subplot
 c
@@ -3041,7 +3053,6 @@ c       Loop over lines in file.
 c               Colour to be applied to succeeding overlays.
                 call atoif (aline(7:), icol, ok)
                 if (ok) then
-                  write(*,*) icol
                   call pgsci (icol)
                 end if
 
@@ -4125,20 +4136,16 @@ c         -1 ->               something else
 c
 c    blacklab - true if labels are to be black for white background
 c               devices (default is red?!)
-c  OUtput
+c  Output
 c    colour indices to use
 c-----------------------------------------------------------------------
       integer bgcol, concol(*), veccol, boxcol, ovrcol, bemcol, labcol
       logical blacklab
 c-----------------------------------------------------------------------
-c
-c Labels first
-c
+c     Labels.
       labcol = 7
       if (bgcol.eq.1) then
-c
-c White background
-c
+c       White background.
         if (blacklab) then
           labcol = 1
         else
@@ -4146,141 +4153,30 @@ c
         end if
 
       else if (bgcol.eq.0) then
-c
-c Black background
-c
+c       Black background.
         labcol = 7
       else
         call bug ('w', 'Non black/white background colour on device')
         labcol = 7
       end if
-c
-c Now contours
-c
+
+c     Contours.
       concol(1) = 7
       concol(2) = 5
       concol(3) = 9
       if (bgcol.eq.1) concol(1) = 2
-c
-c Now vectors
-c
+
+c     Vectors.
       veccol = 2
       if (bgcol.eq.1) veccol = 8
-c
-c Now boxes
-c
+
+c     Boxes.
       boxcol = 6
-c
-c Now overlays
-c
+
+c     Overlays.
       ovrcol = 9
-c
-c Now beams
-c
+
+c     Beams.
       bemcol = 4
-c
+
       end
-c
-c
-      subroutine contur (conlab, blank, solneg, win1, win2, dobl,
-     +                   data, nlevs, levs, tr, sdbreak, ncols, cols)
-c
-      integer win1, win2, nlevs, ncols, cols(*)
-      real data(win1,win2), levs(*), tr(6), sdbreak, blank
-      logical solneg, dobl, conlab
-c
-c  Draw contours
-c
-c  Input:
-c    conlab   Label contours ?
-c    blank    Vaue used for magic blanks
-c    solneg   False => Positive contours solid, negative dashed.
-c             True  => Positive contours dashed, negative solid.
-c             "Positive" above means values >= SDBREAK
-c    win1,2   Window sizes in x and y
-c    dobl     True if blanks present in image section to contour
-c    data     Image to contour
-c    nlevs    Number of contour levels
-c    levs     Contour levels
-c    tr       Transformation matrix between array inices and
-c             world coords
-c    sdbreak  Value for distinction between solid and dashed contours
-c--
-c-----------------------------------------------------------------------
-      integer stylehi, stylelo, i, intval, minint, il, ns
-      character label*20
-c-----------------------------------------------------------------------
-c
-c Set how often we label contours.  The PGPLOT routine is prett dumb.
-c Because contouring is done in quadrants, each quadrant is labelled
-c individually.  The size of the quadrants is 256 pixels (see
-c pgconx, pgcnxb).  MININT says draw first label after contours
-c cross this many cells, and every INTVAL thereafter.
-c
-      minint = 20
-      intval = 40
-      if (conlab) then
-c        write (*,*) 'default minint, intval=', minint,intval
-c        write (*,*) 'enter minint, intval'
-c        read (*,*) minint,intval
-        if (dobl) then
-          call output ('Contour labelling is not yet implemented')
-          call output ('for images containing blanked pixels')
-        end if
-      end if
-c
-      if (.not.solneg) then
-        stylehi = 1
-        stylelo = 2
-      else
-        stylehi = 2
-        stylelo = 1
-      end if
-c
-      do i = 1, nlevs
-        if (ncols.eq.1) then
-          call pgsci(cols(1))
-        else
-          call pgsci (cols(i))
-        end if
-        if (levs(i).ge.sdbreak) then
-          call pgsls (stylehi)
-        else
-          call pgsls (stylelo)
-        end if
-        if (dobl) then
-c
-c
-c This PG contouring routine does not do a very good job on dashed
-c contours and is slower than PGCONT
-c
-          call pgconb (data, win1, win2, 1, win1, 1, win2,
-     +                 levs(i), -1, tr, blank)
-        else
-c
-c Run faster contouring routine if no blanks
-c
-          call pgcont (data, win1, win2, 1, win1, 1, win2,
-     +                 levs(i), -1, tr)
-        end if
-c
-c Label contour value
-c
-        if (conlab) then
-          ns = int(abs(log10(abs(levs(i))))) + 3
-          call strfmtcg (real(levs(i)), ns, label, il)
-          if (dobl) then
-c            call pgcnlb (data, win1, win2, 1, win1, 1, win2,
-c     +                 levs(i), tr, blank, label(1:il),
-c     +                 intval, minint)
-          else
-            call pgconl (data, win1, win2, 1, win1, 1, win2,
-     +                 levs(i), tr, label(1:il), intval, minint)
-          end if
-        end if
-      end do
-      call pgupdt
-      call pgsls (1)
-c
-      end
-c
