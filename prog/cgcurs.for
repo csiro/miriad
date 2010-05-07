@@ -195,7 +195,7 @@ c       (which is ~ 1/40 of the view surface height) for the plot axis
 c       labels and the velocity/channel labels.
 c       Defaults choose something sensible.
 c
-c$Id: cgcurs.for,v 1.4 2010/04/30 08:23:28 cal103 Exp $
+c$Id: cgcurs.for,v 1.5 2010/05/07 05:20:17 cal103 Exp $
 c--
 c
 c  History:
@@ -573,7 +573,7 @@ c            Render pixel map; set default b&w colour table first.
            if (docont) then
 c            Draw contours.
              call conturcg (.false., blank, .false., win(1), win(2),
-     +                      doblnk, memr(ipim2), nlevs, levs, tr, 0.0)
+     +         doblnk, memr(ipim2), nlevs, levs, tr, 0.0, 0, 0)
            end if
 c
 c Label and draw axes

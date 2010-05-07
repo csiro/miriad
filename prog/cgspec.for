@@ -333,7 +333,7 @@ c       XSIZ and YSIZ are the spatial half-sizes in ARCSEC over which
 c       each spectrum is spatially averaged.  These are optional and
 c       default to 0 (no binning, just a spectrum at each spatial pixel)
 c
-c$Id: cgspec.for,v 1.5 2010/04/30 08:23:28 cal103 Exp $
+c$Id: cgspec.for,v 1.6 2010/05/07 05:20:17 cal103 Exp $
 c--
 c
 c  History:
@@ -479,8 +479,8 @@ c
      +                     'derivative spectrum', 8, 19, 19/
 c-----------------------------------------------------------------------
       version = versan ('cgspec',
-     :                  '$Revision: 1.5 $',
-     :                  '$Date: 2010/04/30 08:23:28 $')
+     :                  '$Revision: 1.6 $',
+     :                  '$Date: 2010/05/07 05:20:17 $')
 c
 c Get user inputs
 c
@@ -780,8 +780,7 @@ c
           call pgslw (clines(i))
           call pgsci (7+i-1)
           call conturcg (.false., blankc, solneg(i), win(1), win(2),
-     +                   doblnkc, memr(ipim), nlevs(i), levs(1,i),
-     +                   tr, break(i))
+     +      doblnkc, memr(ipim), nlevs(i), levs(1,i), tr, break(i), 0,0)
 c
 c Save normalization image if there are some blanks
 c

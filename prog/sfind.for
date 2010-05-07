@@ -449,7 +449,7 @@ c       3) Check the rms of the background. If this is high then firstly
 c          the fit may not be good (as per 1), and secondly the source is in
 c          a noisy area and should be treated with caution anyway.
 c
-c$Id: sfind.for,v 1.10 2010/04/30 08:23:28 cal103 Exp $
+c$Id: sfind.for,v 1.11 2010/05/07 05:20:17 cal103 Exp $
 c--
 c
 c  History:
@@ -597,8 +597,8 @@ c-----------------------------------------------------------------------
       character versan*80, version*80
 c-----------------------------------------------------------------------
       version = versan( 'sfind',
-     :                  '$Revision: 1.10 $',
-     :                  '$Date: 2010/04/30 08:23:28 $')
+     :                  '$Revision: 1.11 $',
+     :                  '$Date: 2010/05/07 05:20:17 $')
 c
 c Get user inputs
 c
@@ -764,7 +764,7 @@ c
 c Draw contours
 c
            call conturcg (.false., blank, .false., win(1), win(2),
-     +                    doblnk, memr(ipim), nlevs, levs, tr, 0.0)
+     +       doblnk, memr(ipim), nlevs, levs, tr, 0.0, 0, 0)
          end if
 c
 c Determine if the axes need ascii or numeric labelling
@@ -774,9 +774,8 @@ c
          call dolabcg (gaps, dotr, nx, ny, ngrps, nlast, k,
      +                 labtyp, doaxlab, doaylab, donxlab, donylab)
 c
-c Write on ascii axis labels
+c Write ascii axis labels
 c
-
          call aaxlabcg (doaxlab, doaylab, xdispl, ydispb,
      +                             xlabel, ylabel)
 c

@@ -300,7 +300,7 @@ c       already exists, new models are appended to it.  The columns of
 c       the file are the slice number, the model peak, centre, FWHM,
 c       baseline offset and baseline slope.
 c
-c$Id: cgslice.for,v 1.7 2010/04/30 08:23:28 cal103 Exp $
+c$Id: cgslice.for,v 1.8 2010/05/07 05:20:17 cal103 Exp $
 c--
 c
 c  History:
@@ -416,8 +416,8 @@ c
       data xdispls, ydispbs /3.5, 3.5/
 c-----------------------------------------------------------------------
       version = versan ('cgslice',
-     :                  '$Revision: 1.7 $',
-     :                  '$Date: 2010/04/30 08:23:28 $')
+     :                  '$Revision: 1.8 $',
+     :                  '$Date: 2010/05/07 05:20:17 $')
 c
 c Get user inputs
 c
@@ -651,7 +651,7 @@ c Draw contours
 c
                call pgsci (concol)
                call conturcg (.false., blank, .false., win(1), win(2),
-     +                        doblnk, memr(ipim), nlevs, levs, tr, 0.0)
+     +           doblnk, memr(ipim), nlevs, levs, tr, 0.0, 0, 0)
              end if
 c
 c Label if first time through redisplay loop; axes not erased
