@@ -108,7 +108,7 @@ vector processing capacities (compilers "unicos", "alliant" and "convex"):
 /*    pjt  12mar07 merged MIR4 and atnf versions; re-added -h           */
 /*    rjs  21jul09 Add translation of "ptrdiff" data type.		*/
 /*									*/
-/* $Id: ratty.c,v 1.7 2009/08/04 01:17:28 cal103 Exp $ */
+/* $Id: ratty.c,v 1.8 2010/05/07 07:12:10 cal103 Exp $ */
 /************************************************************************/
 /* ToDos/Shortcomings:                                                  */
 /*  The -u flag doesn't convert self-generated if/then/continue etc.    */
@@ -920,21 +920,28 @@ char *name,*pathname;
   Attempt to open an include file.
 ------------------------------------------------------------------------*/
 {
-  FILE *fd;
-  char c,*s;
+  char c, *s;
+  int  i;
   struct link_list *t;
+  FILE *fd;
 
-/* Try the plain, unadulterated name. */
-
-  if((fd = fopen(name,"r")) != NULL) {
+  /* Try the plain, unadulterated name. */
+  if ((fd = fopen(name,"r")) != NULL) {
     getcwd(pathname,MAXLINE);
+    if (strncmp(pathname, "/private", 8) == 0) {
+      /* Strip off MacOSX automounter mount point. */
+      s = pathname;
+      for (i = 8; i < MAXLINE; i++, s++) {
+        *s = pathname[i];
+        if (*s == '\0') break;
+      }
+    }
     strcat(pathname,"/");
     strcat(pathname,name);
     return(fd);
   }
 
-/* Otherwise try appending it to the list of include file directories. */
-
+  /* Otherwise try appending it to the list of include directories. */
   for(t = incdir; t != NULL; t = t->fwd){
     s = t->name;
     Strcpy(pathname,s);
@@ -943,6 +950,7 @@ char *name,*pathname;
     strcat(pathname,name);
     if((fd = fopen(pathname,"r")) != NULL) break;
   }
+
   return(fd);
 }
 /************************************************************************/
