@@ -40,7 +40,7 @@ c                      regions.
 c         relax        Do not check that the coordinate systems are
 c                      consistent.
 c
-c$Id: imcomb.for,v 1.2 2010/05/09 23:43:22 cal103 Exp $
+c$Id: imcomb.for,v 1.3 2010/05/09 23:46:25 cal103 Exp $
 c--
 c  History:
 c    rjs  29nov94 Original version.
@@ -63,7 +63,7 @@ c-----------------------------------------------------------------------
       include 'mem.h'
 
       integer MAXIN, MAXOPEN
-      parameter(MAXIN=500, MAXOPEN=6)
+      parameter(MAXIN=1024, MAXOPEN=6)
 
       logical equal, interp, mosaic, nonorm, relax
       integer i, k, maxpix, minpix, nOpen, nOut(MAXNAX), naxis, nin,
@@ -76,8 +76,8 @@ c     Externals.
       character stcat*80, versan*80
 c-----------------------------------------------------------------------
       version = versan ('imcomb',
-     *                  '$Revision: 1.2 $',
-     *                  '$Date: 2010/05/09 23:43:22 $')
+     *                  '$Revision: 1.3 $',
+     *                  '$Date: 2010/05/09 23:46:25 $')
 c
 c  Get the inputs.
 c
