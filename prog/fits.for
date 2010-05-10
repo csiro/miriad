@@ -11,6 +11,7 @@ c       all information in a FITS and Miriad file, some information may
 c       be lost in the conversion step.  This is particularly true for
 c       uv files.
 c
+c
 c       WARNING: When writing uv FITS files, fits can handle single
 c       frequency band, single array configuration only. Minimal
 c       checks are made to see that these restrictions are observed!
@@ -128,8 +129,6 @@ c       Alternately:
 c         velocity=lsr
 c       indicates that fits is to determine the observatory velocity
 c       wrt the LSR frame using an appropriate model.
-c
-c$Id: fits.for,v 1.12 2010/04/30 08:23:28 cal103 Exp $
 c--
 c
 c  Bugs:
@@ -377,6 +376,12 @@ c                    can read SMA FITS output data from IDL.
 c    rjs  09-apr-09  Apply AIPS baseline dependent calibration and
 c                    various cosmetic changes.
 c    rjs  20-jul-09  Slight changes to messages about extension files.
+c    mrc? 09-apr-10  More robust way of getting rest frequency from cards.
+c    rjs  23-apr-10  Handle antenna tables with compacted entries in a fashion to
+c		     preserve antenna numbers (rather than re-numbering). Improve
+c		     frequency precision.
+c
+c $Id: fits.for,v 1.13 2010/05/10 18:24:39 sau078 Exp $
 c-----------------------------------------------------------------------
 	integer maxboxes
 	parameter(maxboxes=2048)
@@ -389,8 +394,8 @@ c-----------------------------------------------------------------------
 	character versan*80, version*80
 c-----------------------------------------------------------------------
       version = versan ('fits',
-     :                  '$Revision: 1.12 $',
-     :                  '$Date: 2010/04/30 08:23:28 $')
+     :                  '$Revision: 1.13 $',
+     :                  '$Date: 2010/05/10 18:24:39 $')
 c
 c  Get the input parameters.
 c
@@ -634,7 +639,6 @@ c
 	integer ntimes,refbase,litime
 	integer uvU,uvV,uvW,uvBl,uvT,uvSrcId,uvFreqId,uvData
 	character telescop*32,itime*8
-	integer antloc(MAXANT)
 c
 c  Externals.
 c
@@ -674,7 +678,7 @@ c  information.
 c
 	call TabLoad(lu,uvSrcId.ne.0,uvFreqId.ne.0,
      *		telescop,anfound,Pol0,PolInc,nif,dochi,lefty,
-     *          nants,antloc)
+     *          nants)
 	call TabVeloc(velsys,altr,altrval,altrpix)
 c
 c  Load any FG tables.
@@ -814,16 +818,7 @@ c
 	    ant2 = itemp
 	  endif
 c
-c  This allows for FITS files with no AN table, as well as
-c  those with an AN table. It allows antenna numbers which
-c  do not start at 1 it keeps the nants from the table. ???
-c
-          if (anfound) then
-	    ant1=antloc(ant1)
-	    ant2=antloc(ant2)
-          else
-	    nants = max(nants,ant1,ant2)
-	  end if
+	  nants = max(nants,ant1,ant2)
 	  bl = nint(antbas(ant1,ant2))
 	  nconfig = max(config,nconfig)
 c
@@ -1576,13 +1571,12 @@ c
 	end
 c***********************************************************************
 	subroutine TabLoad(lu,dosu,dofq,tel,anfound,Pol0,PolInc,nif0,
-     *	  dochi,lefty,numants,antloc)
+     *	  dochi,lefty,numants)
 c
 	integer lu,Pol0,PolInc,nif0
 	logical dosu,dofq,anfound,dochi,lefty
 	character tel*(*)
 	integer numants
-	integer antloc(*)
 c
 c  Determine some relevant parameters about the FITS file. Attempt to
 c  ferret this information from all nooks and crannies. In general use
@@ -1592,7 +1586,7 @@ c  could be found at any level, use the higher level stuff as defaults
 c  for the lower level values.
 c
 c  AIPS tables read include AN, FQ, CH and SU tables.  NOTE that CL
-c  tables are not read!
+c  tables are not handled.
 c
 c  Input:
 c    lu		Handle of the input FITS file.
@@ -1606,8 +1600,6 @@ c    nif0       Number of IFs
 c    Pol0	Code for first polarisation.
 c    PolInc	Increment between polarisations.
 c    numants    Total number of antennas in AN table
-c    antloc     AN table indices for antenna station numbers
-c               zero if station number not used.
 c-----------------------------------------------------------------------
 	include 'mirconst.h'
 	include 'fits.h'
@@ -1616,10 +1608,10 @@ c
 	double precision Coord(3,4),rfreq,freq
 	double precision veldef
 	character defsrc*16,num*2
-	real defepoch,diff
-	integer nval,i,j,t,nxyz,n,naxis,itemp
+	real defepoch,diff,rsdf(MAXFREQ*MAXIF)
+	integer nval,i,j,t,nxyz,n,naxis,itemp,nd
 	double precision xyz(3,MAXANT),xc,yc,zc,r0,d0
-	double precision temp,eporef,vddef
+	double precision eporef,vddef,dtemp
 	character type*1,units*16,ctype*8
 	integer sta(MAXANT)
 c
@@ -1699,7 +1691,7 @@ c
 	if(.not.emok.and.dochi)call bug('w',
      *	  'Insufficient information to determine parallactic angle')
 	emok = emok.and.dochi
-	freqref(1) = 1e-9 * Coord(uvCrval,uvFreq)
+	freqref(1) = 1d-9 * Coord(uvCrval,uvFreq)
 c
 c  Load the antenna table.
 c
@@ -1719,25 +1711,30 @@ c
      *	    call bug('f','Something is screwy with the antenna table')
 	  if(n.gt.MAXANT)call bug('f','Too many antennas for me')
 c
-c  Set up antloc to handle entries where table row and station
-c  number are different
-c
-	  do i=1,MAXANT
-	    antloc(i)=0
-	  end do
-c
 	  call ftabGeti(lu,'NOSTA',0,sta)
 c
+	  nd = 0
 	  do i=1,n
-	    antloc(sta(i))=i
+	    if(sta(i).le.0)call bug('f','Invalid antenna numbers')
+	    nd = max(nd,sta(i))
 	  enddo
+	  if(nd.gt.MAXANT)call bug('f','Too many antennas for me')
+	  if(nd.lt.n)call bug('f','Invalid antenna table')
+	  numants = max(numants,nd)
+	  nants(nconfig) = nd
 c
-	  if(sta(n).ne.n)then
-	    call bug('w',
-     *	      ' Some antennas were missing from the antenna table ')
-	  endif
-	  numants = numants + n
-	  nants(nconfig) = n
+c  Get the antenna coordinates.
+c  Convert to earth-centered coordinates. The AIPS coordinates have X
+c  being in the direction from the earth center to the Grennwich
+c  meridian, and Z being towards the pole.
+c
+	  call fitrdhdd(lu,'ARRAYX',xc,0.d0)
+	  call fitrdhdd(lu,'ARRAYY',yc,0.d0)
+	  call fitrdhdd(lu,'ARRAYZ',zc,0.d0)
+	  call ftabGetd(lu,'STABXYZ',0,xyz)
+	    call antproc(lefty,xc,yc,zc,xyz,n,sta,nd,antpos(1,nconfig),
+     *		lat(nconfig),long(nconfig),badan)
+	  llok = llok.or..not.badan
 c
 c  Get the reference freqeuncy. Note that multiple bugs in AIPS
 c  make the reference frequency (either in AN table or header)
@@ -1755,7 +1752,7 @@ c
      *	      'Header and antenna table reference frequency differ')
 	    call bug('w','Using antenna table reference frequency')
 	  endif
-	  freqref(nconfig) = 1e-9 * freqref(nconfig)
+	  freqref(nconfig) = 1d-9 * freqref(nconfig)
 c
 c  Determine times and offset times.
 c
@@ -1773,18 +1770,6 @@ c
      *	    'Mount types differed between antennas')
 	  emok = emok.and..not.badmnt
 c
-c  Get the antenna coordinates.
-c  Convert to earth-centered coordinates. The AIPS coordinates have X
-c  being in the direction from the earth center to the Grennwich
-c  meridian, and Z being towards the pole.
-c
-	  call fitrdhdd(lu,'ARRAYX',xc,0.d0)
-	  call fitrdhdd(lu,'ARRAYY',yc,0.d0)
-	  call fitrdhdd(lu,'ARRAYZ',zc,0.d0)
-	  call ftabGetd(lu,'STABXYZ',0,xyz)
-	  call antproc(lefty,xc,yc,zc,xyz,n,antpos(1,nconfig),
-     *		lat(nconfig),long(nconfig),badan)
-	  llok = llok.or..not.badan
 	  call ftabNxt(lu,'AIPS AN',found)
 	enddo
 c
@@ -1805,25 +1790,21 @@ c
      *	      call bug('f','Something is screwy with the OB table')
 	    if(n.gt.MAXANT)call bug('f','Too many antennas for me')
 c
-	    do i=1,MAXANT
-	      antloc(i)=0
-	    end do
-c
 	    call ftabGeti(lu,'ANTENNA_NO',0,sta)
 c
+	    nd = 0
 	    do i=1,n
-	      antloc(sta(i))=i
+	      if(sta(i).le.0)call bug('f','Invalid antenna numbers')
+	      nd = max(nd,sta(i))
 	    enddo
+	    if(nd.gt.MAXANT)call bug('f','Too many antennas for me')
 c
-	    if(sta(n).ne.n)call bug('w',
+	    if(nd.ne.n)call bug('w',
      *	      ' Some antennas were missing from the antenna table ')
-	    numants = numants + n
-	    nants(nconfig) = n
-	    freqref(nconfig) = 1e-9*Coord(uvCrval,uvFreq)
-	    timeoff(nconfig) = 0
-	    mount(nconfig) = 0
-	    emok = .false.
-	    badmnt = .true.
+	    if(nd.lt.n)call bug('f',
+     *	      'Invalid antenna table')
+	    numants = max(numants,nd)
+	    nants(nconfig) = nd
 c
 c  Get the antenna coordinates.
 c
@@ -1831,9 +1812,16 @@ c
 	    call fitrdhdd(lu,'ARRAYY',yc,0.d0)
 	    call fitrdhdd(lu,'ARRAYZ',zc,0.d0)
 	    call ftabGetd(lu,'ORBXYZ',0,xyz)
-	    call antproc(lefty,xc,yc,zc,xyz,n,antpos(1,nconfig),
+	    call antproc(lefty,xc,yc,zc,xyz,n,sta,nd,antpos(1,nconfig),
      *		lat(nconfig),long(nconfig),badan)
 	    llok = llok.or..not.badan
+c
+	    freqref(nconfig) = 1d-9*Coord(uvCrval,uvFreq)
+	    timeoff(nconfig) = 0
+	    mount(nconfig) = 0
+	    emok = .false.
+	    badmnt = .true.
+c
 	  endif
 	endif
 c
@@ -1862,7 +1850,10 @@ c
 	  call ftabGeti(lu,'FRQSEL',0,freqids)
 	  if(.not.dofq)freqids(1) = 1
 	  call ftabGetd(lu,'IF FREQ',0,sfreq)
-	  call ftabGetr(lu,'CH WIDTH',0,sdf)
+	  call ftabGetr(lu,'CH WIDTH',0,rsdf)
+	  do i=1,nif*nfreq
+	    sdf(i) = rsdf(i)
+	  enddo
 	else
 c
 c  Load a CH table, if its present.
@@ -1908,10 +1899,10 @@ c
 c  Convert the frequencies to the form that Miriad wants -- in GHz and
 c  relative to channel 1.
 c
-	temp = 1 - Coord(uvCrpix,uvFreq)
+	dtemp = 1 - Coord(uvCrpix,uvFreq)
 	do i=1,nif*nfreq
-	  sfreq(i) = 1e-9 * ( sfreq(i) + temp * sdf(i) )
-	  sdf(i)   = 1e-9 * sdf(i)
+	  sfreq(i) = 1d-9 * ( sfreq(i) + dtemp * sdf(i) )
+	  sdf(i)   = 1d-9 * sdf(i)
 	enddo
 c
 c  Sort the freqid table, to make it easier to find things in it.
@@ -2037,10 +2028,12 @@ c
 c
 	end
 c***********************************************************************
-	subroutine antproc(lefty,xc,yc,zc,xyz,n,antpos,lat,long,badan)
+	subroutine antproc(lefty,xc,yc,zc,xyz,n,sta,nd,antpos,
+     *							lat,long,badan)
 c
-	integer n
-	double precision xc,yc,zc,antpos(n,3),lat,long,xyz(3,n)
+	integer n,nd
+	integer sta(n)
+	double precision xc,yc,zc,antpos(nd,3),lat,long,xyz(3,n)
 	logical lefty,badan
 c
 c  Fiddle the antenna information.
@@ -2061,6 +2054,14 @@ c-----------------------------------------------------------------------
 	double precision r,cost,sint,height,temp
 	integer i,idx
 c
+c  Initialise the antenna table to zeros.
+c
+	do i=1,nd
+	  antpos(i,1) = 999999
+	  antpos(i,2) = 999999
+	  antpos(i,3) = 999999
+	enddo
+c
 c  Determine the latitude, longitude and height of the first antenna
 c  (which is taken to be the observatory lat,long,height). Handle
 c  geocentric and local coordinates.
@@ -2079,29 +2080,24 @@ c
 	    sint = xyz(2,idx) / r
 	    do i=1,n
 	      temp = xyz(1,i)*cost + xyz(2,i)*sint - r
-	      antpos(i,1) = (1d9/DCMKS) * temp
+	      antpos(sta(i),1) = (1d9/DCMKS) * temp
 	      temp = -xyz(1,i)*sint + xyz(2,i)*cost
-	      antpos(i,2) = (1d9/DCMKS) * temp
-	      antpos(i,3) = (1d9/DCMKS) * (xyz(3,i)-xyz(3,idx))
+	      antpos(sta(i),2) = (1d9/DCMKS) * temp
+	      antpos(sta(i),3) = (1d9/DCMKS) * (xyz(3,i)-xyz(3,idx))
 	    enddo
 	  else
 	    call bug('w','Bad antenna coordinates ignored')
 	    lat = 0
 	    long = 0
 	    height = 0
-	    do i=1,n
-	      antpos(i,1) = 0
-	      antpos(i,2) = 0
-	      antpos(i,3) = 0
-	    enddo
 	    badan = .true.
 	  endif
 	else
 	  call xyz2llh(xc,yc,zc,lat,long,height)
 	  do i=1,n
-	    antpos(i,1) = (1d9/DCMKS) * xyz(1,i)
- 	    antpos(i,2) = (1d9/DCMKS) * xyz(2,i)
-	    antpos(i,3) = (1d9/DCMKS) * xyz(3,i)
+	    antpos(sta(i),1) = (1d9/DCMKS) * xyz(1,i)
+ 	    antpos(sta(i),2) = (1d9/DCMKS) * xyz(2,i)
+	    antpos(sta(i),3) = (1d9/DCMKS) * xyz(3,i)
 	  enddo
 	endif
 c
@@ -2110,7 +2106,7 @@ c  right-handed system.
 c
 	if(lefty.and..not.badan)then
 	  long = -long
-	  do i=1,n
+	  do i=1,nd
 	    antpos(i,2) = -antpos(i,2)
 	  enddo
 	endif
@@ -2325,8 +2321,8 @@ c***********************************************************************
 	subroutine VelCvt(velsys,velref,restfreq,f,df,veldop)
 c
 	integer velsys
-	real velref,df
-	double precision restfreq,f,veldop
+	real velref
+	double precision restfreq,f,veldop,df
 c
 c  Convert a velocity from being the velocity of a channel to the
 c  radial velocity of the observatory.
@@ -2654,7 +2650,7 @@ c
 	  call uvputvrd(tno,'freq',sfreq0,1)
 	  call uvputvrd(tno,'sdf',sdf0,nif)
 	  call uvputvrd(tno,'restfreq',rfreq0,nif)
-	  dnu = sdf0(1)*1e9
+	  dnu = sdf0(1)*1d9
 	endif
 c
 c  Recompute the equation of the equinox every day.
