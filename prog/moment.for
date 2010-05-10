@@ -54,7 +54,11 @@ c       Default = 0 which excludes nothing.
 c@ span
 c       For mom >= -1, exclude channels further than the specified
 c       number of channels from the peak, hence using a total of
-c       2*range + 1 channels.  Default = 0 which means no restriction.
+c       2*span + 1 channels to compute the moment.  If the peak is too
+c       close to the first or last channel to allow the full span, then
+c       the pixel will be blanked in the output map.  Please bear this
+c       in mind when specifying the channel range (via 'region').
+c       Default = 0 which means no restriction.
 c@ rngmsk
 c       For mom > 0, mask pixels in the output map when the 1st moment
 c       lies outside the range of the spectral axis.  This can happen
@@ -67,7 +71,7 @@ c       range pkmask(1) to pkmask(2) exclusive.  If only one value is
 c       given, then mask pixels with peak intensity less than pkmask.
 c       Default = 0.
 c
-c$Id: moment.for,v 1.12 2010/05/05 06:15:25 cal103 Exp $
+c$Id: moment.for,v 1.13 2010/05/10 05:21:01 cal103 Exp $
 c--
 c  History:
 c    26may89 Robert Loushin  original version - v-axis of vxy image
@@ -124,8 +128,8 @@ c     Externals.
       character itoaf*1, versan*80
 c-----------------------------------------------------------------------
       version = versan ('moment',
-     :                  '$Revision: 1.12 $',
-     :                  '$Date: 2010/05/05 06:15:25 $')
+     :                  '$Revision: 1.13 $',
+     :                  '$Date: 2010/05/10 05:21:01 $')
 
 c     Get inputs.
       call keyini
@@ -276,6 +280,12 @@ c     Report the axis range.
         tmp = vrange(1)
         vrange(1) = vrange(2)
         vrange(2) = tmp
+      endif
+
+c     Check span.
+      if (2*span+1.gt.nchan) then
+        span = 0
+        call bug('w', 'Span exceeds channel range, ignored.')
       endif
 
       if (ctype(:4).eq.'FREQ' .or.
@@ -722,24 +732,32 @@ c-----------------------------------------------------------------------
       flag = .false.
 
 c     Find the peak.
-      ipeak = 0
-      do i = 1, nchan
+      ipeak = 1
+      n = 0
+      do i = 2, nchan
         if (mask(i)) then
+          n = n + 1
           if (spec(i).gt.spec(ipeak)) then
-            ipeak = i
+            ipeak  = i
           endif
         endif
       enddo
 
 c     Was there any valid data?
-      if (ipeak.eq.0) return
+      if (n.eq.0) then
+        return
+      endif
 
 c     Restrict channel range?
       i0 = 1
       i1 = nchan
       if (span.gt.0) then
-        i0 = max(1, ipeak-span)
-        i1 = min(ipeak+span, nchan)
+        i0 = ipeak - span
+        i1 = ipeak + span
+
+        if (i0.lt.1 .or. i1.gt.nchan) then
+          return
+        endif
       endif
 
 c     Accumulate data for this spectrum.
