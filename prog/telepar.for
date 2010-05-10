@@ -11,8 +11,6 @@ c	Its main use is to check that the characteristics are correct.
 c@ telescop
 c	Name of the observatory. Several can be given. If none are
 c	given, TELEPAR simply lists the known observatories.
-c
-c$Id: telepar.for,v 1.4 2010/04/30 08:23:28 cal103 Exp $
 c--
 c  History:
 c    rjs  20jun91 Original version.
@@ -25,13 +23,17 @@ c    mchw 26aug03 Add Nasmyth
 c    sdw  8jul06  Doesnt print all characteristics !
 c                 added subdiam,ew,nants,ellimt
 c                 also tried to improve formatting.
+c    rjs 23apr10  Reworked formatting was failing on some machines.
+c		  Rework the formatting again.
+c
+c $Id: telepar.for,v 1.5 2010/05/10 18:26:16 sau078 Exp $
 c------------------------------------------------------------------------
 	character version*(*)
 	integer MAXOBS
-	parameter(version='Telepar: version 3.1 8-JUL-06')
+	parameter(version='Telepar: version 3.1 23-Apr-10')
 	parameter(MAXOBS=16)
 	include 'mirconst.h'
-	character string*13,observs(MAXOBS)*12,observ*12
+	character string*20,observs(MAXOBS)*12,observ*12
 	logical ok
 	integer nobs,i,n
 	double precision value
@@ -76,7 +78,7 @@ c
 	  call obspar(observ,'height',value,ok)
 	  if(ok)then
 	    n = n + 1
-            write(string,*) value
+            write(string,'(f8.2)') value
 	    call output('Height:              '//string
      *                  //'   meters')	
 	  endif
@@ -85,7 +87,7 @@ c
 	  if(ok)then
 	    n = n + 1
             value=180/pi*value
-            write(string,*) value
+            write(string,'(f8.2)') value
 	    call output('Feed Offset angle:   '//string
      *                  //'   degrees')
 	  endif
@@ -103,7 +105,7 @@ c
 	  call obspar(observ,'antdiam',value,ok)
 	  if(ok)then
 	    n = n + 1
-            write(string,*) value
+            write(string,'(f8.2)') value
 	    call output('Antenna diameter:    '//string
      *                  //'   meters')
 	  endif
@@ -111,7 +113,7 @@ c
 	  call obspar(observ,'jyperk',value,ok)
 	  if(ok)then
 	    n = n + 1
-            write(string,*) value
+            write(string,'(f8.2)') value
 	    call output('System Gain:         '//string
      *                  //'   Jy/K')
 	  endif
@@ -119,7 +121,7 @@ c
 	  call obspar(observ,'subdiam',value,ok)
 	  if(ok)then
 	    n = n + 1
-            write(string,*) value
+            write(string,'(f8.2)') value
 	    call output('Subreflector diam:   '//string
      *                  //'   meters')
 	  endif
@@ -127,7 +129,7 @@ c
 	  call obspar(observ,'systemp',value,ok)
 	  if(ok)then
 	    n = n + 1
-            write(string,*) value
+            write(string,'(f8.2)') value
 	    call output('System Temp :        '//string
      *                  //'   K')
 	  endif
@@ -136,7 +138,7 @@ c
 	  if(ok)then
 	    n = n + 1
             value=180/pi*value
-            write(string,*) value
+            write(string,'(f8.2)') value
 	    call output('Elevation Limit:     '//string
      *                  //'   degrees')
 	  endif
@@ -144,14 +146,14 @@ c
 	  call obspar(observ,'nants',value,ok)
 	  if(ok)then
 	    n = n + 1
-            write(string,*) value
+            write(string,'(i4)') nint(value)
 	    call output('Number of Antennas:  '//string)
 	  endif
 c
 	  call obspar(observ,'ew',value,ok)
 	  if(ok)then
 	    n = n + 1
-            write(string,*) value
+            write(string,'(f6.2)') value
 	    call output('E-W Array:           '//string)
 	  endif
 c
