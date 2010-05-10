@@ -51,11 +51,12 @@ c    nebk  1dec95 Add keyword FORCE.  Will RJS talk to me again ?
 c    rjs  17dec97 Allow "interval" to be negative.
 c    rjs  06jan98 Make the above change work!
 c    rjs  07jan97 Added options=last, and two-value interval keyword.
+c    rjs  21apr10 Fix counting of number of correlations flagged.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
 	integer MAXSELS
-	parameter(version='Qvack: version 1.0 07-Jan-98')
+	parameter(version='Qvack: version 1.0 21-Apr-10')
 	parameter(MAXSELS=1024)
 c
 	character vis*64
@@ -156,6 +157,7 @@ c
 	      call uvread(tCopy,pCopy,data,cflags,maxchan,cnchan)
 	    enddo
 	    dowhile(pCopy(3).le.t2.and.cnchan.gt.0)
+	      n = 0
 	      do i=1,cnchan
 	        if(cflags(i))n = n + 1
 	        cflags(i) = .false.
