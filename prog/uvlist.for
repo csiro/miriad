@@ -116,10 +116,11 @@ c   19aug98 rjs  - Correct printing of longitude in options=array
 c   22may01 dpr  - XY-EW support
 c   01jan07 rjs  - Handle more than 100 antennas in a simple way.
 c   18jun09 rjs  - Number antennas in "array" printout.
+c   23apr10 rjs  - Recognised blanked antenna numbers in "array" printout.
 c------------------------------------------------------------------------
 	include 'maxdim.h'
 	character version*(*)
-	parameter(version='Uvlist: version 1.0 18-Jun-09')
+	parameter(version='Uvlist: version 1.0 23-Apr-10')
 c
 	character out*50,last*1,date*18,uvflags*8
 	complex data(MAXCHAN)
@@ -1173,8 +1174,14 @@ c
 	call logwrite(
      *	  '        ----------     ----------     ----------',more)
 	do i=1,nants
-	  write(line,'(i3,3f15.4)')i,
+	  if(nint(xyz(i)).eq.999999.and.
+     *	    nint(xyz(i+nants)).eq.999999.and.
+     *	    nint(xyz(i+2*nants)).eq.999999)then
+	    write(line,'(i3,11x,a,14x,a,14x,a)')i,'?','?','?'
+	  else
+	    write(line,'(i3,3f15.4)')i,
      *		FAC*xyz(i),FAC*xyz(i+nants),FAC*xyz(i+2*nants)
+	  endif
 	  call logwrite(line,more)
 	enddo
 	end
