@@ -25,7 +25,8 @@ c
 	real evec,systemp,jyperk,velref
 	logical llok,emok,systok,jok,mosaic,velcomp,inited
 c
-	real sdf(MAXIF*MAXFREQ),dnu
+	double precision sdf(MAXIF*MAXFREQ)
+	real dnu
 	integer nsrc,nif,nchan,nfreq,nconfig
 	integer srcids(MAXSRC),freqids(MAXFREQ),srcid,srcidx
 	integer freqid,freqidx
