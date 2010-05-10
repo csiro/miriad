@@ -26,8 +26,10 @@ c   rjs     06feb95 Fixed handling of quotes in getfield. What did bpw do?
 c   rjs     25jul97 Treat " and ' as quote characters.
 c   rjs     03aug98 Included updated version of matodf and matorf.
 c   rjs     05feb01 Added st routines.
+c   rjs     07may10 Increase precision in atodf - there was some real number
+c		    arithmetic being used.
 c
-c $Id: string.for,v 1.2 2007/03/12 06:12:34 cal103 Exp $
+c $Id: string.for,v 1.3 2010/05/10 18:27:24 sau078 Exp $
 c************************************************************************
 c* stcat - Concatenate two strings together (avoiding blank pads).
 c& rjs
@@ -244,9 +246,9 @@ c
 	  else if(string(l:l).eq.'.')then
 	    if(state.eq.whole)then
 	      state = frac
-	      wd = 1
-	      w0 = 0.1 * w0
-	      ww0 = 0.1
+	      wd = 1d0
+	      w0 = 0.1d0 * w0
+	      ww0 = 0.1d0
 	    else
 	      state = bad
 	    endif
