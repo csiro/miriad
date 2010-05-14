@@ -52,8 +52,8 @@ c                      noise amplification at the edge of the mosaiced
 c                      field.  The `taper' option aims at achieving
 c                      approximately uniform noise across the image.
 c                      This prevents full primary beam correction at the
-c                      edge of the mosaic.  See equation 2 in Sault,
-c                      Staveley-Smith and Brouw, A&AS, 120, 376 (1996)
+c                      edge of the mosaic.  See Eq. (2) in Sault,
+c                      Staveley-Smith and Brouw (1996), A&AS, 120, 375,
 c                      or use "options=gains" to see the form of the
 c                      tapering.
 c         sensitivity  Rather than a mosaiced image, produce an image
@@ -65,6 +65,8 @@ c         gain         Rather than a mosaiced image, produce an image
 c                      giving the effective gain across the field.  If
 c                      options=taper is used, this will be a smooth
 c                      function.  Otherwise it will be 1 or 0 (blanked).
+c
+c$Id: linmos.for,v 1.7 2010/05/14 06:26:09 cal103 Exp $
 c--
 c
 c  History:
@@ -134,12 +136,12 @@ c
       integer offset,length
       integer nsize(3,maxIn),nOut(4)
       integer i,nOpen,naxis,itemp
-      real xoff,yoff,Sigt
+      real xoff,yoff,sigt
       real rms(maxIn),BlcTrc(4,maxIn)
       real Extent(4)
       double precision crval(3),cdelt(3),crpix(3)
       character ctype(3)*16, version*80
-      logical defrms,init,dosen,dogain,docar,exact,taper
+      logical defrms,dosen,dogain,docar,exact,taper
 c
       integer pOut,pWts
       include 'mem.h'
@@ -150,8 +152,8 @@ c
       character versan*80
 c-----------------------------------------------------------------------
       version = versan ('linmos',
-     :                  '$Revision: 1.6 $',
-     :                  '$Date: 2009/11/20 04:45:24 $')
+     :                  '$Revision: 1.7 $',
+     :                  '$Date: 2010/05/14 06:26:09 $')
 c
 c  Get the input parameters, and do some checking.
 c
@@ -224,7 +226,7 @@ c
           if(nsize(3,i).ne.nsize(3,1))
      *      call bug('f','Different lengths for 3rd axis')
           if(defrms)then
-            rms(i) = 1
+            rms(i) = 1.0
           else
             if(rms(i).le.0)call rdhdr(tIn(i),'rms',rms(i),0.0)
             if(rms(i).le.0)rms(i) = rms(i-1)
@@ -288,34 +290,31 @@ c  Process each of the files.
 c
       call ScrOpen(tScr)
       call ScrOpen(tWts)
-      init = .false.
       do i=1,nIn
         call output ('Processing image '//inbuf(k1(i):k2(i)))
         if(i.gt.nOpen) call xyopen(tIn(i),InBuf(k1(i):k2(i)),
      *                             'old',3,nsize(1,i))
-        call Process(init,tScr,tWts,tIn(i),tout,memR(pOut),memR(pWts),
-     *    nsize(1,i),nsize(2,i),nOut(1),nOut(2),nOut(3),
-     *      dosen.or.dogain,BlcTrc(1,i),rms(i))
+        call Process(i,tScr,tWts,tIn(i),tout,memR(pOut),memR(pWts),
+     *    nsize(1,i),nsize(2,i),nOut(1),nOut(2),nOut(3),dogain,
+     *    BlcTrc(1,i),rms(i))
         call xyclose(tin(i))
       enddo
-      if(.not.init) call bug('f','Something is screwy')
 c
 c  Determine the maximum noise to aim at.
 c
       if(taper)then
-        Sigt = Rms(1)
-        do i=2,nIn
-          Sigt = max(Sigt,Rms(i))
+        sigt = Rms(1)
+        do i = 2, nIn
+          sigt = max(sigt, Rms(i))
         enddo
-        Sigt = Sigt*Sigt
       else
-        Sigt = 0
+        sigt = 0.0
       endif
 c
 c  Go through the scratch file one more time, correcting for the change
 c  in the weights, and writting out the final data.
 c
-      call LastPass(tOut,tScr,tWts,memR(pOut),memR(pWts),Sigt,
+      call LastPass(tOut,tScr,tWts,memR(pOut),memR(pWts),sigt,
      *              nOut(1),nOut(2),nOut(3),dosen)
 c
 c  Free up the memory.
@@ -359,15 +358,14 @@ c
      *  'Cannot do options=sensitivity,gains simultaneously')
       end
 c***********************************************************************
-      subroutine Process(init,tScr,tWts,tIn,tOut,Out,Wts,
-     *  nx,ny,n1,n2,n3,dosen,BlcTrc,rms)
+      subroutine Process(fileno,tScr,tWts,tIn,tOut,Out,Wts,
+     *  nx,ny,n1,n2,n3,dogain,BlcTrc,rms)
 c
-      logical init
-      integer tScr,tWts,tIn,tOut
+      integer fileno,tScr,tWts,tIn,tOut
       integer nx,ny,n1,n2,n3
       real Out(n1,n2),Wts(n1,n2)
       real BlcTrc(4),rms
-      logical dosen
+      logical dogain
 c
 c  First determine the initial weight to apply to each pixel and
 c  accumulate info so that we can determine the normalisation factor
@@ -375,6 +373,7 @@ c  later on.  Then successively read each plane, apply the weight, and
 c  accumulate the information in the scratch file.
 c
 c  Inputs:
+c    fileno     Input file number.
 c    tScr       Handle of the image scratch file.
 c    tWts       Handle of the weights scratch file.
 c    tIn        Handle of the input file.
@@ -383,38 +382,32 @@ c    nx,ny      Size of the image cube.
 c    n1,n2,n3   Size of the output cube.
 c    BlcTrc     Grid corrdinates, in the output, that the input maps to.
 c    rms        Rms noise parameter.
-c    dosen      True if we are to compute the sensitivity or gain
-c               function rather than the normal mosaic.
-c  Input/Output:
-c    init       True if things have been initialised.
+c    dogain     True if we are to compute the gain function rather than
+c               the normal mosaic or sensitivity function.
 c  Scratch:
 c    In         Used for the interpolated version of the input.
 c    Out        Used for the output.
 c    Wts        Accumulation of the weights array.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
-      real tol
-      parameter(tol=0.01)
-      real xinc,yinc,Sect(4),oneonsig
-      integer i,j,k,xlo,xhi,ylo,yhi,xoff,yoff,pbObj
+
+      real TOL
+      parameter(TOL=0.01)
+
+      logical interp, mask
+      integer i, j, k, pbObj, xhi, xlo, xoff, yhi, ylo, yoff
+      real    In(MAXDIM), pBeam(MAXDIM), Sect(4), sigma, xinc, yinc, wgt
       double precision x(3)
-      logical interp,mask
       character pbtype*16
-      real Pb(MAXDIM),In(MAXDIM)
-c
-c  Externals.
-c
+
+c     Externals.
       logical hdprsnt
-c
-c  Some useless constant.
-c
-      oneonsig = 1/(rms*rms)
-c
+c-----------------------------------------------------------------------
 c  Determine if we have to interpolate.
 c
       interp = .false.
       do i=1,4
-        interp = interp.or.abs(BlcTrc(i)-anint(BlcTrc(i))).gt.Tol
+        interp = interp.or.abs(BlcTrc(i)-anint(BlcTrc(i))).gt.TOL
       enddo
       interp = interp.or.nint(BlcTrc(3)-BlcTrc(1)+1).ne.nx
       interp = interp.or.nint(BlcTrc(4)-BlcTrc(2)+1).ne.ny
@@ -435,10 +428,10 @@ c
 c  Having determined the section of the output we can calculate, round
 c  it to integer values.
 c
-      xlo = nint( Sect(1) + 0.5 - tol )
-      ylo = nint( Sect(2) + 0.5 - tol )
-      xhi = nint( Sect(3) - 0.5 + tol )
-      yhi = nint( Sect(4) - 0.5 + tol )
+      xlo = nint( Sect(1) + 0.5 - TOL )
+      ylo = nint( Sect(2) + 0.5 - TOL )
+      xhi = nint( Sect(3) - 0.5 + TOL )
+      yhi = nint( Sect(4) - 0.5 + TOL )
       if(xlo.gt.xhi.or.ylo.gt.yhi) return
 c
 c  If we are interpolating, initialise the interpolation routine.
@@ -461,6 +454,7 @@ c  Ready to construct the primary beam object.
 c
       call pntcent(tIn,pbtype,x(1),x(2))
 c
+c
 c  Loop over all planes.
 c
       do k=1,n3
@@ -471,16 +465,16 @@ c
 c
 c  Get a plane from the scratch array.
 c
-        if(init)then
-          call GetSec(tScr,Out,k,n1,n2,xlo,xhi,ylo,yhi)
-          call GetSec(tWts,Wts,k,n1,n2,xlo,xhi,ylo,yhi)
-        else
-          do j=1,n2
-            do i=1,n1
+        if (fileno.eq.1) then
+          do j = 1, n2
+            do i = 1, n1
               Wts(i,j) = 0
               Out(i,j) = 0
             enddo
           enddo
+        else
+          call GetSec(tScr,Out,k,n1,n2,xlo,xhi,ylo,yhi)
+          call GetSec(tWts,Wts,k,n1,n2,xlo,xhi,ylo,yhi)
         endif
 c
 c  Determine the offsets to start reading.
@@ -492,51 +486,52 @@ c
           xoff = nint(BlcTrc(1))
           yoff = ylo - nint(BlcTrc(2)) + 1
         endif
-c
-c  Determine the weights, and add the contribution of the input plane.
-c
-        do j=ylo,yhi
+
+c       Process this plane.
+        do j = ylo, yhi
           call GetDat(tIn,nx,xoff,yoff,xlo,xhi,j,pbObj,
-     *                In,Pb,n1,interp,mask)
+     *                In,pBeam,n1,interp,mask)
           yoff = yoff + 1
-c
-c  Accumulate the sensitivity function.
-c
-          if(dosen)then
-            do i=xlo,xhi
-              Wts(i,j) = Wts(i,j) + Pb(i)*Pb(i)*oneonsig
-              Out(i,j) = Out(i,j) + Pb(i)*Pb(i)*oneonsig
-            enddo
-c
-c  Accumulate the mosaiced field.
-c
-          else
-            do i=xlo,xhi
-              Wts(i,j) = Wts(i,j) + Pb(i)*Pb(i)*oneonsig
-              Out(i,j) = Out(i,j) + In(i)*Pb(i)*oneonsig
-            enddo
-          endif
-        enddo
+
+          do i = xlo, xhi
+            if (pBeam(i).eq.0.0) then
+c             The weight is zero.
+              go to 10
+            endif
+
+            if (dogain) then
+c             Gain function.
+              In(i) = pBeam(i)
+            endif
+
+c           Apply primary beam normalization.
+            In(i) = In(i) / pBeam(i)
+            sigma =  rms  / pBeam(i)
+
+c           Weight by inverse variance.
+            wgt = 1.0 / (sigma*sigma)
+
+c           Accumulate data.
+            Out(i,j) = Out(i,j) + wgt*In(i)
+            Wts(i,j) = Wts(i,j) + wgt
+          enddo
+ 10     enddo
 c
 c  Save the output.
 c
-        if(init)then
-          call PutSec(tScr,Out,k,n1,n2,xlo,xhi,ylo,yhi)
-          call PutSec(tWts,Wts,k,n1,n2,xlo,xhi,ylo,yhi)
-        else
+        if (fileno.eq.1) then
           call PutSec(tScr,Out,k,n1,n2,1,n1,1,n2)
           call PutSec(tWts,Wts,k,n1,n2,1,n1,1,n2)
+        else
+          call PutSec(tScr,Out,k,n1,n2,xlo,xhi,ylo,yhi)
+          call PutSec(tWts,Wts,k,n1,n2,xlo,xhi,ylo,yhi)
         endif
 c
 c  Release the primary beam object.
 c
         call pbFin(pbObj)
       enddo
-c
-c  All done.
-c
-      init = .true.
-c
+
       end
 c***********************************************************************
       subroutine GetDat(tIn,nx,xoff,yoff,xlo,xhi,j,pbObj,
@@ -664,10 +659,10 @@ c
       endif
       end
 c***********************************************************************
-      subroutine LastPass(tout,tScr,tWts,Out,Wts,Sigt,n1,n2,n3,dosen)
+      subroutine LastPass(tout,tScr,tWts,Out,Wts,sigt,n1,n2,n3,dosen)
 c
       integer tOut,tScr,tWts,n1,n2,n3
-      real Sigt,Out(n1,n2),Wts(n1,n2)
+      real sigt,Out(n1,n2),Wts(n1,n2)
       logical dosen
 c
 c  Read in the data from the scratch file, multiply by the scale factor,
@@ -677,7 +672,7 @@ c  Inputs:
 c    tOut       Handle of the output image file.
 c    tScr       Handle of the input image file.
 c    tWts       Handle of the input weights file.
-c    Sigt       Critical noise variance.
+c    sigt       Critical noise sigma.  Zero for no taper.
 c    n1,n2,n3   Size of the output cube.
 c    dosen      Determine the sensitivity function.
 c  Scratch:
@@ -685,76 +680,59 @@ c    Wts        Array containing the weights to be applied.
 c    Out        Used to store a plane of the output image.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
-      integer i,j,k
-      logical doflag,doneflag,flags(MAXDIM)
-      real scale
-c
-c  Loop over all planes. Get the image and weight planes.
-c
-      doflag = .false.
+
+      logical doflag, doneflag, flags(MAXDIM)
+      integer i, j, k
+      real    scale
+c-----------------------------------------------------------------------
+      doflag   = .false.
       doneflag = .false.
-c
-      do k=1,n3
+
+c     Loop over all planes.
+      do k = 1, n3
+c       Get the image and weight planes.
         call GetSec(tScr,Out,k,n1,n2,1,n1,1,n2)
         call GetSec(tWts,Wts,k,n1,n2,1,n1,1,n2)
         call xysetpl(tOut,1,k)
-c
-c  Calculate and apply the weights.
-c
-        do j=1,n2
-c
-c  Determine the sensitivity function.
-c
-          if(dosen)then
-            do i=1,n1
-              flags(i) = Wts(i,j).gt.0
-              if(.not.flags(i))then
-                Out(i,j) = 0
-                doflag = .true.
+
+        do j = 1, n2
+          do i = 1, n1
+            flags(i) = Wts(i,j).gt.0
+            if (.not.flags(i)) then
+              Out(i,j) = 0
+              doflag = .true.
+            else
+              if (sigt.eq.0.0) then
+c               No taper.
+                scale = 1.0
               else
-                scale = Sigt*Wts(i,j)
-                if(scale.ge.1.or.scale.le.0)then
-                  Out(i,j) = sqrt(Out(i,j))/Wts(i,j)
-                else
-                  Out(i,j) = sqrt(scale*Out(i,j))/Wts(i,j)
-                endif
+c               Apply taper to suppress noise near the edges.
+                scale = min(1.0, sigt*sqrt(Wts(i,j)))
               endif
-            enddo
-c
-c  Determine the gain function or the mosaic.
-c
-          else
-            do i=1,n1
-              flags(i) = Wts(i,j).gt.0
-              if(.not.flags(i))then
-                Out(i,j) = 0
-                doflag = .true.
+
+              if (dosen) then
+c               Sensitivity function.
+                Out(i,j) = scale / sqrt(Wts(i,j))
               else
-                scale = Sigt*Wts(i,j)
-                if(scale.ge.1.or.scale.le.0)then
-                  scale = 1/Wts(i,j)
-                else
-                  scale = sqrt(scale)/Wts(i,j)
-                endif
-                Out(i,j) = scale*Out(i,j)
+c               Mosaic or gain function.
+                Out(i,j) = scale * Out(i,j) / Wts(i,j)
               endif
-            enddo
-          endif
-c
-c  Write out the flags. We do not write any flagging info
-c  until we have found a bad pixel.
-c
-          if(doflag.and..not.doneflag)then
+            endif
+          enddo
+
+c         Write flags if a bad pixel has been found.
+          if (doflag .and. .not.doneflag) then
             call CatchUp(tOut,j,n1,n2,k)
             doneflag = .true.
           endif
-          if(doflag)call xyflgwr(tOut,j,flags)
-c
-c  Write out the data.
-c
+
+          if (doflag) call xyflgwr(tOut,j,flags)
+
+c         Write out the data.
           call xywrite(tOut,j,Out(1,j))
         enddo
       enddo
+
       end
 c***********************************************************************
       subroutine CatchUp(tOut,j0,n1,n2,n3)
@@ -876,12 +854,7 @@ c
       line = 'LINMOS: Miriad '//version
       call hiswrite(tout,line)
       call hisinput(tout,'LINMOS')
-      if(dosen.and.dogain)then
-        call hiswrite(tout,
-     *    'LINMOS: First plane is the rms noise function')
-        call hiswrite(tout,
-     *    'LINMOS: Second plane is the gain function')
-      else if(dosen)then
+      if(dosen)then
         call hiswrite(tout,
      *    'LINMOS: The image is the rms noise function')
       else if(dogain)then
