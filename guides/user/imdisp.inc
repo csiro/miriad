@@ -3,12 +3,12 @@
 \section{Introduction}
 As discussed in Chapter~\ref{c:pltvcon}, there are two basic suites of
 display software for \miriad\ data.  One uses the ATNF Visualisation
-suite, and the other is PGPLOT-based
+suite, and the other is PGPLOT-based.
 
 The ATNF visualisation software, which lies outside the domain of
-\miriad, uses a X-windows based user interface, with pop up menus, etc.
-It is largely interactive, and tends to be poorer when quantitative
-information is needed. The PGPLOT-based software, uses the normal
+\miriad, uses an X-windows based user interface, with pop-up menus, etc.
+It is largely interactive, and tends to be less useful when quantitative
+information is needed. The PGPLOT-based software uses the normal
 \miriad\ user interface, tends to be better suited to hardcopy output,
 quantitative work, and for more specialised astronomical applications
 (e.g. plotting polarisation vectors).
@@ -18,26 +18,27 @@ The ATNF Visualisation software is a suite of tools (outside \miriad) designed
 to display images and data cubes (including \miriad\ images and cubes). See
 Chapter~\ref{c:pltvcon} for more information.
 
-The main visualisation tool of interest in image display is {\tt kvis}
+The main visualisation tool of interest in image display is {\tt kvis}.
 This tool allows you to inspect one or two 2- or
 3-dimensional datasets in several ways.  The simplest thing to use it
-for displaying a dataset.  {\tt kvis}
-gives flexible zooming, special colour
+for is displaying a dataset.  {\tt kvis}
+supports flexible zooming, special colour
 maps for velocity fields etc.  For 3-dimensional datasets one can play
-the channels, as well as the RA-VEL and DEC-VEL slices, of the data
+the channels -- as well as the RA-VEL and DEC-VEL slices -- of the data
 cube as a movie, in order to get an idea of the 3D structure of the
 emission in the data cube.
 
-Another application of {\tt kvis} is that one can load two datasets
--- one can then look at these two datasets simultaneously in several
-ways, like blinking or contour one data set on top of the other.  The
+{\tt kvis} can load two datasets, which can 
+then be viewed simultaneously in several
+ways, eg. blinking, or by displaying one data set as contour levels on top 
+of the other.  The
 advantage of {\tt kvis} is that one has interactive control over
 zooming, contour levels etc., so it gives more flexibility than
 e.g. \task{cgdisp}.  This mode of {\tt kvis} can be used for
 overlaying a radio-continuum map on an optical image, or the channels
 of an HI data cube on the continuum or an optical image and inspecting
 this interactively.  Note that for the contouring, the two datasets do
-not have to be on the same grid, they should have a proper coordinate
+not have to be on the same grid, although they should have a proper coordinate
 system defined.  Also note that the visualisation software can read
 data in {\tt FITS} format so one can load images from e.g. 
 \htmladdnormallink{{\tt skyview}}{http://skview.gsfc.nasa.gov/skyview.html}
@@ -78,8 +79,8 @@ describe briefly now some of the common keywords, although not all the
 tasks in the suite use them in all possible ways.  Refer to the
 individual help files to see what each task offers.  Specific uses by
 \task{cgspec} will be described in Chapter~\ref{c:spectra}.  Note that
-minimum match is usually accepted for the value of keywords.  The
-keywords usually default to the same value in each task, but you
+minimum match is usually accepted for the value of keywords.  Each
+keyword usually defaults to the same value in all tasks, but you
 should again refer to the help files for details. 
 
 \begin{itemize}
@@ -142,7 +143,7 @@ discontinuity in the {\tt region} selected channels (such as {\tt
 region=image(10,20),image(22,30)}.  The combination of the {\tt region}
 and {\tt chan} determines how many sub-plots there will be. 
 
-\item The keywords {\tt slev} and {\tt levs} (or {\tt lev1, lev2, levs3}
+\item The keywords {\tt slev} and {\tt levs} (or {\tt levs1, levs2, levs3}
 in \task{cgdisp} -- it can draw up to 3 contour maps at once) indicate at
 what values the contours should be drawn.  The first value of {\tt slev}
 can be {\tt p} or {\tt a}, indicating percentage or absolute levels. 
@@ -155,18 +156,18 @@ slev=a,0.001}, {\tt levs=3,5,10} would draw contours at values of
 
 \item The keyword {\tt range} is used to control the way in which pixel
 intensities are mapped onto the colour lookup table of the device for
-pixel map representations ({\tt type=pixel}.  Its use varies somewhat
+pixel map representations ({\tt type=pixel}).  Its use varies somewhat
 from task to task, but the basic functionality is the same; see the
 individual help files for details.   See also {\tt options=fiddle}
-which provides an interactive way to interact with the lookup tables.
+which provides an interactive way to alter the lookup tables.
 
 \medskip The first two values indicate the range of pixel values
 (intensities) to map onto the lookup table.  Pixels with values outside
 this range will be represented with the colour of the nearest extremum. 
 Thus, if the image was being displayed with a simple linear black and
 white transfer function on an interactive device, {\tt range=\MM{-0.2},
-2.0} would cause all pixels with values below \MM{-0.2} to come out
-black, all pixels with values greater than 2.0 to come out white, and
+\MM{2.0}} would cause all pixels with values below \MM{-0.2} to come out
+black, all pixels with values greater than \MM{2.0} to come out white, and
 all pixels in between that range to have shades of grey from black to
 white. 
 
@@ -174,8 +175,8 @@ white.
 transfer function so that the pixel values can be mapped onto the lookup
 table in some way other than linearly.  Allowed values are {\tt
 lin,sqr,log,heq} for linear, square root, logarithmic and histogram
-equalisation transfer functions.  Histogram equalisation can be very
-handy for images which have a lot of dynamic range.  What this does is
+equalisation transfer functions respectively.  Histogram equalisation can be very
+handy for images which have a large dynamic range.  What this does is
 use the device colour levels for pixel values which occur the most
 often. 
 
@@ -183,21 +184,21 @@ often.
 9 specifying the type of lookup table.  The available tables are 1
 (b\&w), 2 (spectrum colours), 3 (linear pseudo colour), 4 (floating zero
 colour contours), 5 (fixed zero colour contours), 6 (rgb), 7
-(background) 8 (heat) and 9 (absolute b\&w) .  If you enter a negative
+(background), 8 (heat) and 9 (absolute b\&w) .  If you enter a negative
 integer, then the reversed lookup table is displayed.   
 
 \medskip Fixed zero colour contours fix a colour boundary (blue-green)
 at 0 intensity, with 4 colour pairs ([light blue, light green], [dark
 blue, dark green], [purple,yellow], [black,orange]) distributed positive and
-negative of 0.  There are then two more colours (read and white) for the
+negative of 0.  There are then two more colours (red and white) for the
 remaining positive intensity values.  Once you have arranged the colour
 pairs so that they define the noise level, the red and white colours
 quickly show you the true signal.  You need to use {\tt options=fiddle}
 to get the scaling to the noise level right. 
 
 \medskip Note that in \task{cgdisp}, you can enter a group of 4 values
-for each subplot that is drawn.  This is useful for hardcopy output, in
-that you can have an individual scaling and lookup tables for each
+for each subplot that is drawn.  This is useful for hardcopy output, as
+you can have an individual scaling and lookup table for each
 subplot.  For example, you may have made a ``cube'' with unlike
 quantities in different planes (total intensity, polarised intensity,
 fractional polarisation, rotation measure etc) and it would be
@@ -293,7 +294,7 @@ drawn, showing the mapping between pixel intensity and colour.
 \item Option {\tt fiddle} invokes the interactive lookup table fiddler. 
 This is mouse (or keyboard) driven, and
 instructions are given the in the window from which you invoked the
-task.  basically, it is tree structured, with one branch to select
+task.  Basically, it is tree structured, with one branch to select
 different colour lookup tables, and one branch to modify the transfer
 function.  You can swap between these branches. 
 
@@ -326,8 +327,8 @@ diagram, as the efforts to make equal scales will go wrong here.
 
 \item Option {\tt relax} instructs these tasks not to be concerned
 if the axis descriptors for the input images are different.  The axis
-sizes still have to be the same though.  Use this one with great
-care, and its only useful if you are labelling the axes with
+sizes still have to be the same though.  Use this option with great
+care, and it's only useful if you are labelling the axes with
 {\tt abspix} or {\tt relpix} types.
 
 \item When you are displaying multiple subplots, with each
@@ -366,8 +367,8 @@ one box plot may be displayed in multi-panel plots of multi-channel
 images.  It also offers a ``mask'' image type, which is not displayed,
 but its blanking mask is applied to all the images that are. 
 \task{cgdisp} can also display labelled overlay locations (plotted as
-boxes, stars, circles, ellipses, lines or see-through) may be specified
-from an ascii text file. 
+boxes, stars, circles, ellipses, lines or see-through) which may be specified
+from an ASCII text file. 
 
 We will just give a few examples of some common things that you might
 like to do with it.
@@ -459,7 +460,7 @@ information that you give ({\it e.g.} {\tt region=image(10,120)})
 applies only to the 3-D images, and is ignored for the 2-D image. 
 Finally, if you ask for more sub-plots than can be fitted on the page,
 then the task will advance to a new page (you will be prompted to hit
-the carriage return key if your are plotting on an interactive device)
+the carriage return key if you are plotting on an interactive device)
 when needed. 
 
 \begin{center}

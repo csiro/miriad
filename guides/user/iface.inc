@@ -21,6 +21,11 @@ part (Chapters 7 to 22), which
 uses a cookbook approach, takes you through the steps of putting your data
 on the local disk and reducing them. 
 
+The cookbook will describe how to reduce data from both the CABB and pre-CABB
+correlator eras. By default, it should be assumed that the methods described
+in the cookbook apply equally well to data from both correlators. However,
+whenever data from CABB requires extra or different treatment, the manual
+will clearly present the information as such.
 
 If this is your first encounter
 with the \miriad\ package, we recommend that you read through Chapters
@@ -102,6 +107,7 @@ Keith Jones (\htmladdnormallink{jones@galaxy.physics.uq.oz.au}{mailto:jones@gala
  -- University of Queensland) and 
 Tom Oosterloo (\htmladdnormallink{oosterloo@nfra.nl}{mailto:oosterloo@nfra.nl} 
 -- Netherlands Foundation for Research in Astronomy).
+Jamie Stevens (\htmladdnormallink{Jamie.Stevens@csiro.au}{mailto:Jamie.Stevens@csiro.au})
 
 \newchapter
 \chapter{The User Interface}
@@ -251,7 +257,7 @@ about the current task. For example:
 \end{verbatim}
 will give you help information about the histogramming task, {\tt histo}.
 
-The \verb+-w+ flag causes output to be directed to the {\tt netscape}
+The \verb+-w+ flag causes output to be directed to the {\tt firefox}
 web browser.
 
 In addition to tasks, {\tt help} will give you information about a few
@@ -262,7 +268,7 @@ server, stokes}).
 
 By default, help information is sent to your terminal. However you can
 direct it to a web browser by setting the {\bf MIRPAGER} environment
-variable to either \verb+netscape+ or \verb+lynx+. You can also set
+variable to a browser of your choosing. You can also set
 {\bf MIRPAGER}
 (or environment variable {\bf PAGER})
 to your favourite text paging program (the default is
@@ -387,7 +393,7 @@ When you invoke a task, {\tt miriad} saves all the parameters associated
 with this task in a keyword file, in the directory given by the {\bf MIRDEF}
 environment variable (if {\bf MIRDEF} is not set, the current directory
 will be used). The parameters will be saved in a file with name
-{\it tasname}{\tt .def}. Additionally you can force parameters to
+{\it taskname}{\tt .def}. Additionally you can force parameters to
 be saved using `{\tt tput} {\it taskname}'. If the taskname is omitted,
 the parameters for the current task are saved. The {\tt tget} command is
 used to retrieve the parameters at a later stage. For example, to save and
@@ -419,7 +425,7 @@ cd      &  cd directory         & change directory \\
 er	&  er key		& command line editing of a parameter. \\
 exit    &  exit                 & exit {\tt miriad}, and save parameters in lastexit \\
 go      &  go [-b] [taskname]   & start up task \\
-help    &  help [taskname] [-k key]& on line help on task\\
+help    &  help [-w] [taskname] [-k key]& on line help on task\\
 inp     &  inp [taskname]       & overview inputs \\
 source  &  source cmdfile       & read commands from a command file\\
 load    &  load [keyfile]       & load task parameters from keyword file\\
@@ -502,7 +508,7 @@ values can be intermixed, separated by commas.
 The \verb+@+ file can contain many lines. An end-of-line is treated like
 a comma.  
 
-As mentioned before in Section~\ref{s:cmdline}, parameter input can
+As described in Section~\ref{s:cmdline}, parameter input can
 also be made easier by using the {\tt -f} flag when \miriad\ commands are
 given directly from the shell.
 
@@ -678,7 +684,7 @@ appropriate interpreter for the script (i.e. the C-shell).
 \item Line 5: Delete a \miriad\ dataset called \verb+multi.uv+. The
 \verb+r+ flag (recursive) is needed to delete a directory (which is
 how \miriad\ stores a dataset). The \verb+f+ (force) flags causes \verb+rm+ to
-not complain if it fails.
+work in non-interactive mode.
 \item Line 7: Execute the \miriad\ task \task{fits}. This reads a visibility
 FITS disk file (\verb+MULTI.UV+), and saves it as a \miriad\ dataset
 (\verb+multi.uv+).

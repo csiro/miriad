@@ -11,16 +11,39 @@ chapter will give an overview of using the PGPLOT software.
 
 Historically there is a third camp -- the  ``TV'' software. There is
 only one useful task left which uses this software, and so the ``TV''
-software will be describedwith that task.
+software will be described with that task. Unfortunately, the ``TV''
+software can only be used with 8-bit colour-depth displays, which limits its
+usage with modern computers which usually operate with far greater colour
+depths.
 
 \section{The ATNF Visualisation Suite}
-The ATNF Visualisation suite is a set of X-windows-based 
-interactive tools which can display a wide variety of images and
-cubes -- in particular \miriad's image format. You select images, display
+The KARMA visualisation suite is a set of X-windows-base interactive tools that 
+can display a wide variety of images and cubes -- in particular \miriad's image
+format. You select images, display
 options, etc, via pull-down menus (rather than setting parameter
 values). 
 \begin{latexonly}
 More details can be found in the on-line documentation available on the ATNF
+web pages \htmladdnormallink
+{(http://www.atnf.csiro.au/computing/software/karma/)}
+{http://www.atnf.csiro.au/computing/software/karma/}
+or in a gzipped \htmladdnormallink{postscript}
+{ftp://ftp.atnf.csiro.au/pub/software/karma/usermanual.ps.gz} document on the
+ATNF
+ftp server (usermanual.ps.gz under pub/software/karma, which is also available
+through the ATNF web pages).
+\end{latexonly}
+\begin{htmlonly}
+More details can be found in the on-line documentation available on the
+\htmladdnormallink{ATNF web pages}{http://www.atnf.csiro.au/computing/software/karma/}, or
+in a gzipped \htmladdnormallink{postscript}
+{ftp://ftp.atnf.csiro.au/pub/software/karma/usermanual.ps.gz} document on the ATNF
+ftp server.
+\end{htmlonly}
+
+KARMA replaces the ATNF Visualisation suite,
+\begin{latexonly}
+details of which can be found in the on-line documentation available on the ATNF
 web pages \htmladdnormallink
 {(http://www.atnf.csiro.au/computing/software/visualisation/)}
 {http://www.atnf.csiro.au/computing/software/visualisation/}
@@ -31,7 +54,7 @@ ftp server (vizdoc.ps.gz under pub/software/sutra, which is also available
 through the ATNF web pages).
 \end{latexonly}
 \begin{htmlonly}
-More details can be found in the on-line documentation available on the
+details of which can be found in the on-line documentation available on the
 \htmladdnormallink{ATNF web pages}{http://www.atnf.csiro.au/computing/software/visualisation/}, or
 in a gzipped \htmladdnormallink{postscript}
 {ftp://ftp.atnf.csiro.au/pub/software/sutra/vizdoc.ps.gz} document on the ATNF
@@ -58,13 +81,28 @@ In particular
 computer as the X-windows server.  However if you are running on a
 different machine, then you will need to tell the display software
 which machine is
-running your X server.  To do this, issue the command
+running your X server.  
+
+If you have connected through SSH, then the SSH client should have, or
+can be made to automatically configure X-windows forwarding to your local
+screen. To ensure that X-forwarding is enabled, use the SSH connection
+command:
+\begin{verse}
+{{\tt\%\ ssh -X user@}{\it remotehost}}
+\end{verse}
+
+Different SSH clients may use {\tt -Y} or {\tt -x} to enable X-forwarding;
+check your man page to determine which is appropriate for your installation.
+
+If you have connected in another way -- {\tt telnet} for example -- then you will
+need issue the command
 \begin{verse}
 {{\tt\%\ setenv DISPLAY }{\it localhost}{\tt:0}}
 \end{verse}
 to the machine you are running
 \miriad\ tasks on.  Here {\it localhost} is the name of the host machine
-running X windows.  Normally this will be you local workstation. 
+running X windows.  Normally this will be you local workstation. Do NOT just type
+{\tt localhost} as this will not work.
 
 \item X windows has a simple security feature to prevent arbitrary
 people drawing plots on your screen.  To authorise a particular machine
@@ -75,15 +113,15 @@ to send commands to your X server, you will need to issue the command
 to your local host.  Here
 {\it remotehost} is the name of the host machine that you want to grant
 permission to.  For \miriad\ applications, this will be the host you are
-running the plotting task on.  
+running the plotting task on.
 
 \end{itemize}
 
 
 \section{PGPLOT Plotting Devices}
-Tasks which use the PGPLOT software are always use the {\tt device}
-keyword allow you to select a plotting device. Only a brief review of PGPLOT, from a users
-prospective, is given here. A more complete description, both for users and
+Tasks which use the PGPLOT software always use the {\tt device}
+keyword to allow you to select a plotting device. Only a brief review of PGPLOT, from a users
+perspective, is given here. A more complete description, both for users and
 programmers, can be found in the
 \htmladdnormallink{PGPLOT manual}{http://astro.caltech.edu/\~{}tjp/pgplot/}.
 

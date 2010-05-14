@@ -194,7 +194,7 @@ constant in a dataset with only a single source.
 \miriad's suite of calibration tasks generally produce or use items
 which contain the relevant calibration tables and parameters.
 The tasks to manipulate these calibration tables generally
-have names start
+have names starting
 with \verb+gp+, though there are a few exceptions such as \task{selfcal} and
 \task{mfcal}.
 The calibration parameters are antenna-based ones, with
@@ -217,7 +217,8 @@ stored in the {\tt gains} item.
 
 \item Antenna bandpass functions.  These are complex-valued gains
 modelling the instrumental bandpass.  These vary with frequency but not
-with time. These are largely instrumental in origin.
+necessarily with time (recent MIRIAD additions have allowed the optional use
+of time-dependent bandpass solutions). These are largely instrumental in origin.
 These are stored in the {\tt bandpass} item (and some associated
 items).
 
@@ -233,7 +234,7 @@ Ignoring leakage (which is discussed in too much detail in
 Chapter~\ref{c:polarimetry}), we model the composite gain function of an
 antenna (representing both atmospheric and instrumental terms) as
 \[
-g(t)g_{P1}(\nu)	\exp(i2\pi\tau(t)(\nu-\nu_0))
+g(t)g_{P}(\nu)	\exp(i2\pi\tau(t)(\nu-\nu_0))
 \]
 Here \MM{g(t)} is the frequency-independent part of the antenna gain,
 $g_P(\nu)$ is the bandpass function,
@@ -304,7 +305,7 @@ averaging.
 
 \item The self-calibration tasks produce gain tables in the same format as
 the calibration tables derived from observations of calibrators. Thus if
-you self-calibrate a dataset containing you initial calibration, you
+you self-calibrate a dataset containing your initial calibration, you
 will overwrite your initial calibration -- a generally undesirable step.
 Additionally the self-calibration tasks do not apply some calibration
 corrections (e.g. bandpass and sometimes leakage corrections).
@@ -1107,8 +1108,10 @@ the process of determining the antenna-based gain function from the
 source itself.  For this to be possible, your signal needs to be about 5
 to 10 times stronger than the thermal noise when integrated over the
 self-calibration solution interval (typically 15 seconds to 5 minutes).
-For the ATCA in continuum mode, this means a source which contains at
-least 100 to 200 mJy in most baselines.  Self-calibration is discussed
+For the old ATCA correlator in continuum mode, this means a source which contains at
+least 100 to 200 mJy on most baselines. For the CABB correlator, self-calibration
+is possible with a 15 second solution interval using sources with as little as 10 mJy
+of flux density on most baselines.  Self-calibration is discussed
 in Chapter~\ref{c:selfcal}.
 
 \item {\em As I have a continuum experiment, do I want to use multi-frequency
@@ -1119,7 +1122,8 @@ you average all these channels into a single channel (the so-called
 `channel-0' dataset). The result will be
 poorer \MM{u-v} coverage and bandwidth smearing. If you are interested in
 high dynamic range imaging, or if a good beam is important, and you are
-observing at 21, 13 and possibly 6 cm,
+observing at 21, 13 and possibly 6 cm with the old correlator, or at any cm
+wavelength with CABB (and even at 12mm),
 then it is best {\em not} to average your data into a single
 channel. Rather you can calibrate and form a single image directly using the
 multichannel data. This practise is known as multi-frequency synthesis.
@@ -1133,7 +1137,7 @@ trade-off between tangential and radial \MM{u-v} gaps.
 %Various aspects of multi-frequency synthesis are covering in Chapter~\ref{c:mfs}.
 
 \item {\em Should I average my data in time or frequency?} The reason to
-average your data is to reduce you disk consumption and to increase the
+average your data is to reduce your disk consumption and to increase the
 speed of the various processing programs. If these practical considerations
 are important, you may consider averaging your data in time and frequency.
 In this case, you probably want to do this as early as possible in the
@@ -1206,7 +1210,8 @@ be less robust and more difficult to run correctly. A third alternative
 is \task{mfclean}. This is a derivative of the CLEAN algorithm, and
 simultaneously determines a flux density and spectral index image. It is
 only appropriate for multi-frequency synthesis experiments when more than
-one observing band has been used.
+one observing band has been used, or for CABB data that has a large fractional
+bandwidth.
 
 The deconvolution tasks are described in Chapter~\ref{c:decon}.
 
@@ -1237,29 +1242,34 @@ We will discuss the various input parameters to \miriad\ \task{atlod}.
 \item The {\tt in} parameter gives the name of the input UNIX file, or files,
 to load. Many files can be given, and wildcards are supported.
 
-RPFITS files are commonly archived on CDROMs: a CDROM appears much like
+Almost all ATCA RPFITS files can now be downloaded directly from the AT
+Online Archive (ATOA). Any requested RPFITS files can be saved onto your
+local disk, and \task{atlod} can be directed to load this data from there.
+
+RPFITS files from the old correlator are commonly archived on CDROM or DVD:
+a CDROM/DVD appears much like
 a disk to the operating system, and \task{atlod} can load RPFITS files
-directly off these. To use a CDROM drive,
-first check that the drive is not in use (an orange light flashing). On Solaris
-to load a CDROM, press the Open/Close on the front of the drive, place
-the CDROM in
+directly off these. To use a CDROM/DVD drive,
+first check that the drive is not in use (an orange light flashing).
+To load a disc, press the Open/Close on the front of the drive, place
+the disc in
 and again press the Open/Close button. After about 10 seconds, the operating
-system will mount the CDROM, and it can be accessed.
-CDROMs written at the ATCA will have the RPFITS data in the
+system will mount the CDROM/DVD, and it can be accessed.
+CDROM/DVDs written at the ATCA will have the RPFITS data in the
 directory
 \begin{verse}
-{\tt /cdrom/cdrom{\it x}/DATA}
+{\tt /media/cdrom/DATA}
 \end{verse}
-where {\it x} is 0 for the first drive of a machine, 1 for the second, etc
-(you can do a directory listing to see what you have -- its like a normal
-file system!).
+
+You can do a directory listing to see what you have -- its like a normal
+file system!
+
 You can set the {\tt in} parameter to the RPFITS files in this directory.
-For example, to select all files belonging to project C561 (assuming you are
-using the first CDROM drive), use
+For example, to select all files belonging to project C561, use
 \begin{verbatim}
-  in=/cdrom/cdrom0/DATA/*.C561
+  in=/media/cdrom/DATA/*.C561
 \end{verbatim}
-When you are done with a CDROM drive you eject it with the Solaris UNIX command
+When you are done with a CDROM/DVD drive you eject it with the command
 \begin{verbatim}
    eject cdrom
 \end{verbatim}
@@ -1285,31 +1295,64 @@ UNIX \unix{man} pages for more information.
 \item The {\tt out} parameter gives the name of the output \miriad\ visibility
 dataset. There is no default.
 
+\item The {\tt ifsel} parameter makes \task{atlod} extract only the IFs that are
+selected here from the RPFITS files. The IFs to extract should be specified as a comma-separated list.
+This can be very useful if you are interested
+only in a specific frequency, or if the data has two or more IFs with different
+numbers of channels that would normally need to be read in with {\tt options=noif}.
+
 \item The {\tt options} parameter gives miscellaneous processing options.
-thatfairly It is important to
 Several values can be given, separated by commas.
-As loading RPFITS data can be time-consuming (particularly when loading
-from exabyte), and as the right options for \task{atlod} can save
-considerable disk space, it is sensible to spend a few moments thinking
-about the correct options to use.
+
+Some of the options described below control on-the-fly corrections that
+\task{atlod} makes to the data, while others can reduce the amount of disk
+space that the dataset will consume. It is very important therefore to
+pass the correct options to \task{atlod}, to save yourself time later doing
+corrections that could have been done more easily right at the start.
+
+At frequencies above 10 GHz, the opacity of the atmosphere can be significant:
+in mediocre conditions, the signal loss can be 20\% at low elevations. With
+high-frequency data, an atmospheric opacity correction should be applied to
+the data; \task{atlod} will perform this correction if it is passed the 
+{\tt opcorr} option. This option can be safely included for data of any wavelength,
+as it does very little (and certainly does not harm the data) at low frequencies,
+and is completely ignored at 3mm wavelengths, where it is not appropriate.
+
+For high frequency data taken with the old ATCA correlator, it is also generally desirable to
+load both observing bands together, to allow joint calibration.
+A shortcoming of
+\miriad\ is that it is poor at handling multiple observing bands
+when the polarisation products differ between the bands. However
+the old ATCA correlator configurations that combined narrowband
+and wideband observations generally did measure different polarisation
+products in the two bands. As polarimetry
+with the ATCA 3-mm system was not possible until recently, the simplest approach
+to ensuring the polarisation products of the two bands are the same is by
+discarding polarisation products that are not needed. The
+\task{atlod} option \verb+nopol+ causes \task{atlod} to discard any XY and YX
+products.
+
 A few sets of permutations of the options will be appropriate with most
 observations. These include:
 \begin{itemize}
-\item For continuum: \verb+options=birdie,xycorr+ or
+\item For CABB data: \verb+options=birdie,rfiflag,xycorr,opcorr+
+\item For old-correlator continuum: \verb+options=birdie,xycorr+ or
 \verb+options=birdie,reweight,xycorr+. See below for a discussion on
 whether to use \verb+reweight+ or not.
-\item For non-polarimetric line: \verb+options=birdie+ or
+\item For old-correlator non-polarimetric line: \verb+options=birdie+ or
 \verb+options=birdie,compress+ or \verb+options=birdie,hanning+
 or \verb+options=birdie,compress,hanning+. See Section~\ref{s:specrpfits}
 for more on using \task{atlod} with spectral line data and
 Section~\ref{s:hires} for high time resolution bin-mode data.
+\item For old-correlator 3mm data: \verb+options=birdie,nopol,reweight+
 \end{itemize}
 
-Possibilities options are:
+Possible options are:
 
 \begin{description}
-\item[{\tt birdie}:] The ATCA suffers from self-interference at frequencies
-which are a multiple of 128 MHz. The birdie option flags out the channels
+\item[{\tt birdie}:] The old ATCA correlator suffered from self-interference at frequencies
+that were a multiple of 128 MHz, while the CABB correlator displays self-interference spikes
+at frequencies related to the 640 MHz sampler clock. The birdie option flags out the channels
 affected by this self-interference. This option is strongly recommended.
 
 Additionally, in the 33 channel/128 MHz mode, the birdie option
@@ -1317,6 +1360,9 @@ also discards some edge channels and every other channel. This operation
 does not incur a sensitivity penalty, as correlator channels are not
 independent in this mode. The net result is that
 the output consists of either 13 or 14 good channels.
+
+For CABB data, this option also flags 100 channels on each edge of the band, and any part
+of the 20cm or 13cm band that is not within the recognised frequency range of the receiver.
 \item[{\tt xycorr}:] In polarimetric correlator configurations, the
 ATCA makes an on-line measurement of the phase difference between the
 \MM{X} and \MM{Y} channels. Although it is generally only a few
@@ -1342,6 +1388,7 @@ option to reject self-interference. This can be a significant effect for
 the 1408 MHz birdie. Particularly at 20cm, the reweight option is {\em not
 recommended} where dynamic ranges of less than 500 are expected.
 
+This option is {\em not} required for CABB data.
 \item[{\tt compress}:] Normally the correlation data are stored as
 32-bit floating point numbers.
 Alternatively, the {\tt compress} switch can be used to instruct
@@ -1353,6 +1400,9 @@ advantageous for large spectral-line observations.
 discard every second
 channel. This can be useful for spectral line experiments. Task \task{atlod}
 will refuse to Hanning smooth data with 33 channels or less.
+
+This is unlikely to be beneficial for CABB data, as each CABB channel is
+independent, and boxcar smoothing (or channel binning) is preferred.
 \item[{\tt bary}:] Use the barycentre (often called heliocentre
 and usually used for extra-galactic work) as the rest frame when calculating
 velocity information. The default is to compute velocity information
@@ -1395,7 +1445,7 @@ be saved to disk, although flagged
 data is still marked as such. This option is generally not recommended,
 although the disk-space penalty for using it is often modest.
 \item[{\tt noauto}] and {\tt nocross} cause \task{atlod} to discard
-any autocorrelation or cross-correlation data respectively. Its
+any autocorrelation or cross-correlation data respectively. It's
 fairly unlikely that you will want to discard the cross-correlation data!
 \item[{\tt noif}:] When there are multiple frequency bands being
 observed simultaneously, \miriad\ normally maps the frequency bands
@@ -1405,11 +1455,22 @@ using the {\tt noif} switch causes \task{atlod} to write the
 simultaneous frequencies as sequential records, making it appear
 somewhat like a frequency-switch. You will need to use the \verb+noif+
 option if you have two spectral windows which sample different
-polarization parameters.
+polarization parameters, or that have different numbers of channels.
 \item[{\tt nopflag}:]If at least one polarization of a set of 2 or 4 polarimetric
 spectra are bad, \task{atlod} normally flags all of the
 polarizations. With this option only
 the nominally bad spectrum is flagged.
+\item[{\tt caldata}:] \task{atlod} will usually mark as bad any scans that are labelled
+as a reference pointing calibration or a paddle measurement. Normally, this data is of
+little use as corrections from these scans are applied on-line. However, occasionally,
+the data in these scans may be of use, and including this option causes \task{atlod} to
+keep this data instead of discarding it, although it will still be flagged as bad.
+\item[{\tt rfiflag}:] At low frequencies, the large bandwidth of the CABB correlator makes
+it impossible to avoid most of the known RFI. Including this option causes \task{atlod} to
+automatically flag regions of known interference as bad. It is also possible to specify
+flagging regions manually using the file {\tt rfiflag.txt} in the current directory, or the
+default version in the {\tt MIRCAT} directory. Each line in this file should have two numbers
+representing the lower and upper frequencies to flag in MHz.
 \end{description}
 
 \item {\tt nscans} gives two numbers which are the number of scans to skip
@@ -1444,11 +1505,12 @@ Typical inputs for \task{atlod} are given below.
 \multicolumn{2}{|c|}{{\bf ATLOD}} \\
 \hline
 in=/dev/nrst0               & Input is either exabyte name\\
-in=92-06-10\_2110.C159	    & or RPFIT file.\\
+in=2010-02-04_1844.C007	    & or RPFITS file.\\
 out=0823.uv                 & Output visibility data set.\\
-options=birdie,reweight,xycorr	    & Normal continuum mode options, or\\
-options=birdie,hanning,compress	    & possible spectral line options.\\
-nfiles=0,3		    & Skip 0, then read 3 files.\\
+options=birdie,rfiflag,xycorr,opcorr & Normal CABB data options, or\\
+options=birdie,reweight,xycorr	    & Normal old-correlator continuum mode options, or\\
+options=birdie,hanning,compress	    & possible old-correlator spectral line options.\\
+nfiles=0,3		    & Skip 0, then read 3 files (use only for tape reading).\\
 nscans			    & Unset to save all scans\\
 \hline
 \end{tabular}
@@ -1469,10 +1531,10 @@ It is important to examine this measurement if you are doing polarimetry.
 \MM{X} and \MM{Y} polarization channel of a given antenna.
 
 \item[{\tt xsampler, ysampler}:] These variables give the sampler statistics for
-the \\MM{X} and \MM{Y} polarization channels.  There are three numbers per
+the \MM{X} and \MM{Y} polarization channels.  There are three numbers per
 antenna per IF, which reflect the sampler levels.  They should have values of
 \MM{17.3}, \MM{50} and \MM{17.3}.  Thus for six antennas, the {\tt xsampler} variable
-will consist of 18 numbers per IF.
+will consist of 18 numbers per IF. These values are not available for CABB data.
 
 \item[{\tt xtsys, ytsys}:] These give the system temperature, in Kelvin, for the
 \MM{X} and \MM{Y} polarization channels. Unfortunately \miriad\ tasks were
@@ -1488,7 +1550,15 @@ system temperature value.
 errors in a particular cycle. The units are arcseconds.
 
 \item[{\tt airtemp,pressmb,relhumid,wind,winddir}:] These give various
-meterological measurements at the observatory as a function of time.
+meteorological measurements at the observatory as a function of time.
+
+\item[{\tt smonrms}:] This gives a measure indicative of the seeing conditions
+at mm wavelengths, and is obtained by a two-element interferometer observing a
+communications satellite at 30 GHz. This number is the RMS of the difference between
+the expected path length difference and that observed, and is due to the atmospheric
+conditions above the Narrabri site. It may not however directly represent the atmosphere
+along the line-of-sight to the object currently being observed. A smaller number here
+means a more stable atmosphere, and better conditions for mm observing.
 
 \end{description}
 
@@ -1498,7 +1568,7 @@ both visibility and image data. One significant shortcoming of \task{fits}
 is that it cannot work directly from a tape device -- the FITS file {\em must}
 be on disk. The \miriad\ utility, \task{tpcp}, is needed to copy FITS files
 between
-disk and tape, whereas the UNIX command \unix{mt} might been needed to position
+disk and tape, whereas the UNIX command \unix{mt} might be needed to position
 the tape. See the appropriate \miriad\ help or UNIX \unix{man} pages on these
 commands. However,
 to copy from tape to disk, one would use
@@ -1829,7 +1899,7 @@ op=uvout                   &Write out a visibility FITS file.\\
 out=0823.FITS              &Output FITS file -- probably upper case for AIPS.\\
 select			     &Select appropriate data.\\
 stokes=i,q,u,v		     &Select appropriate polarizations.\\
-option			     &Leave unset to apply calibration, \\
+options			     &Leave unset to apply calibration, \\
 options=nopol,nocal,nopass   &or turn off all calibration.\\
 \hline
 \end{tabular}
@@ -1919,7 +1989,7 @@ below. {\em Note that these are not the default values.}
 source=			&Source description file -- see help file.\\
 ant=			&Antenna location file -- see help file.\\
 baseunit=-51.02		&Basic antenna increment (15m) in nanosec,\\
-			&for coorinates in a topocentric system.\\
+			&for coordinates in a topocentric system.\\
 corr=0,1,0,104		&Correlator model -- see help file.\\
 spectra=		&Spectral line model -- see help file.\\
 ellim=12		&Telescope elevation limit. \\
@@ -2071,6 +2141,133 @@ select=			&Normal visibility selection. Only visibilities\\
 \chapter{Flagging, Manipulating and Examining Visibility Data}
 \label{c:edit}
 
+\section{Correcting Visibilites}\label{s:atfix}\index{visibility datasets, correcting}
+\index{atfix}
+
+\subsection{Initial ``fixes'' to millimetre data}\label{s:atfix} 
+There are a number of "fixes" that are important for short wavelength ATCA data,
+especially at the 3mm band.
+Note that there is no record in the data
+that these steps have been performed. In particular the software
+will allow you to apply the fixes twice, which would be just
+as bad as not applying them at all.
+The task to do these fixes, \task{atfix},
+performs the following functions:
+\begin{itemize}
+
+\item By default \task{atfix} applies the ``standard'' gain/elevation
+model for the antennas.  You can disable this by using
+\verb+options=nogainel+. 
+
+\item By default \task{atfix} corrects for a ``standard'' instrumental phase
+model.  You can disable this with \verb+options=noinst+.
+
+\item As mentioned in Section~\ref{s:atmosop}, the ATCA uses a paddle to
+measure an above atmosphere system temperature.  The nature of the
+hardware means the measurement is done only typically every 5 to
+30~minutes.  When observing, the ATCA on-line system can either 
+apply a nominal system
+temperature value to the visibility data, or it can apply the actual
+measured system temperature values. When applying these measured values, 
+the on-line system will apply the
+most recent measurement. 
+
+Task \task{atfix} includes an algorithm to interpolate measured
+system temperature values, between measurements, and to correct the 
+visibility data accordingly. In doing this it correctly handles whether
+a nominal temperature or the measured system temperature value was applied to the
+data on-line. The interpolation
+algorithm takes into account changes in elevation and meteorological
+conditions.
+
+The parameter \verb+tsyscal+ can be used to change this default behaviour.
+This parameter can take on values to revert the data back to the nominal
+system temperature value, to make no changes to the system temperature scaling,
+to use the most recent system temperature measurement, or to use an
+extrapolation (as distinct from interpolation) algorithm in estimating
+system temperatures.
+
+\item Often you will want to apply a correction to your data to
+better account for the exact locations of the antennas.
+
+On the night of an ATCA reconfiguration, a solution for the antenna
+positions is derived. The practise is to install this solution as
+the ``standard solution''. The on-line system will then use this solution in
+subsequent observations in that array configuration.
+The quality of this solution is important for the 
+ultimate phase calibration of all data.
+
+Experience has shown that often
+the position solution derived at the time of the reconfiguration is not
+necessarily the best possible. For example the solution will depend
+critically on the atmospheric phase stability at the time of the solution,
+and this might be less than ideal on the night of the reconfiguration.
+Consequently, improved solutions will often be derived at a later time. 
+If improved
+solutions become available, then high-frequency observers should correct their
+data accordingly.
+
+Updated solutions are sometimes stored in parameter files in the 
+\miriad\ system directory \verb+$MIRCAT+ (or otherwise can be obtained by
+request from ATCA observatory staff, or from
+\htmladdnormallink{http://www.narrabri.atnf.csiro.au/observing/antpos/}{this website}).
+These solutions
+are distributed via the \miriad\ update mechanism, and
+have file names of the form ``\verb+dantpos.+{\em yymmdd}''. Here
+where ``{\em yymmdd}'' is the date of the relevant array reconfiguration.
+
+Task \task{atfix} corrects the data for an improved antenna location
+solution via the {\tt dantpos} parameter.
+If an improved solution file is present, you can instruct \task{atfix}\
+to read this
+directly using the indirect parameter input mechanism 
+(see Section~\ref{s:atfile}). For example, to use the antenna location
+solution appropriate for a hypothetical array reconfiguration
+that happened on 16 October 2002, use
+\begin{verbatim}
+     dantpos=@$MIRCAT/dantpos.021016
+\end{verbatim}
+
+\item One of the flaws of the old ATCA  RPFITS files is that
+antenna locations were not saved when antennas were
+not in use (RPFITS files written by the CABB correlator no longer suffer
+from this flaw). While this might not seem a serious flaw (who cares about
+the antennas if they are not in use?), the unused antennas
+can still cause shadowing -- true antenna locations are needed
+for shadowing calculation. This was a particular issue with the interim
+3-antenna 3-mm system when observing in compact arrays. 
+
+By giving a value to the {\tt array} parameter, \task{atfix} will fill in any
+antenna locations that are missing in the input visibility file.
+{\em NOTE}: This just fills in missing antenna locations, it does not perform
+any flagging of shadowed data.
+
+The value given to this parameter is either an array configuration name
+(e.g. EW352 or 750A) or a list of six station names (``W106'' and ``N3''
+are examples of station names).
+When giving the station names, these must be in the order of the antennas
+(i.e. CA01, CA02, CA03 etc), regardless of any possible array shuffles.
+
+{\em NOTE}: When antennas are in a shuffled order, or for arrays using
+the north spur, you should generally give the list of station
+names, as the standard array configuration names assume an
+antenna order which is probably not correct.
+
+\end{itemize}
+
+Typical inputs to \task{atfix} are:
+
+\begin{center}
+\begin{tabular}{|l|l|}
+\hline
+\multicolumn{2}{|c|}{{\bf ATFIX}} \\
+\hline
+in=vela.uv		& Input visibility dataset.\\
+out=vela.fixed.uv	& Output corrected visibility dataset.\\  
+dantpos=@\$MIRCAT/dantpos.021016 & Antenna location correction.\\
+\hline
+\end{tabular}
+\end{center}
 
 \section{Flagging Visibilities}\index{visibility datasets, flagging}
 
@@ -2080,7 +2277,7 @@ When you list visibilities with \task{uvlist} (see below), flagged
 correlations
 are indicated by an asterisk to the right of the phase.
 
-There are three main flagging tasks in \miriad:
+There are four main flagging tasks in \miriad:
 \begin{itemize}
 \item \task{blflag} -- a plot-based interactive flagger. This normally plots
 one baseline at a time, with a variety of possible axes (e.g. time against
@@ -2090,6 +2287,12 @@ tha \aips\ {\tt IBLED} task.
 one baseline at a time on a ``TV'' display, with the axes of the display
 being channel number and time. You select regions of bad data in the display.
 This is similar to \aips\ task {\tt SPFLG}.
+\item \task{pgflag} -- a ``PGPLOT''-based, interactive flagger. This displays
+one baseline at a time on a ``PGPLOT'' display, with the axes of the display
+being channel number and time. You select regions of bad data in the display.
+This is very similar to the \task{tvflag} task, except it can be run on any
+X display with PGPLOT installed, whereas \task{tvflag} can only be run on displays
+with 8-bit colour depth.
 \item \task{uvflag} -- a non-interactive general flagger, where you
 specify the data to be flagged by the {\tt select} keyword. This is like
 the \aips\ task {\tt UVFLG}.
@@ -2101,19 +2304,18 @@ Although there is some personal taste involved, a recommended scheme for
 flagging is as follows:
 \begin{itemize}
 \item For 20 and 13~cm observations {\em it is strongly recommended}
-that you start the flagging process with \task{tvflag}. Narrowband
-interference is common at the wavelengths, and \task{tvflag} is a good
-tool at finding and flagging this interference. \task{tvflag} is conveniently
+that you start the flagging process with \task{pgflag}. Narrowband
+interference is common at these wavelengths, and \task{pgflag} is a good
+tool at finding and flagging this interference. \task{pgflag} is conveniently
 performed on a multi-source file, straight after the data are loaded into
-\miriad. NOTE: one shortcoming of \task{tvflag} is that it ignores any
-calibration tables that happen to be present in a dataset.
-\item Using \task{blflag} is generally quick compared to \task{tvflag},
+\miriad.
+\item Using \task{blflag} is generally quick compared to \task{blflag},
 and some forms of bad data are more apparent with \task{blflag}.
 However, bad data is not that apparent when attempting to use it
-with datasets containing multiple sources. So we recommend that you
+with datasets containing multiple sources. We recommend that you
 split the data into single source datasets (using \task{uvsplit})
 before using \task{blflag}. Using \task{blflag} is recommended
-even if you use have already use \task{tvflag} on you data, because
+even if you use have already used \task{pgflag} on your data, because
 \task{blflag} is relatively quick and painless.
 \item Normally \task{blflag} will apply any calibration tables
 to the data before generating its plot. Thus it is just as useful after
@@ -2147,7 +2349,7 @@ polygon by moving the cursor and then hitting the
 left mouse button (or \verb+a+). You finish defining the
 polygon by hitting the right mouse button (or \verb+x+).
 You can delete vertices with the middle mouse button (or \verb+d+).
-\item[{\tt q:}] Abort completely. This exist without apply the flagging.
+\item[{\tt q:}] Abort completely. This exits without apply the flagging.
 \item[{\tt r:}] Redraw plot.
 \item[{\tt x:}] Move to next baseline (same as right mouse button).
 \end{description}
@@ -2181,6 +2383,12 @@ sources or when the visibilities are purely noise-like.
 actually applied to the dataset.
 \item[{\tt selgen}] This option generates a text file, \verb+blflag.select+. This
 file contains visibility data selection commands to select the flagged data.
+\item[{\tt nofqaver}] Normally, \task{blflag} will plot only one point per spectrum,
+that being the average over frequency of the spectral data. For old-correlator data
+where the bandwidth is small, this is an adequate way to display the data, but for
+CABB data with large bandwidths, averaging the data often masks any problems. It is
+therefore recommended that for CABB data this option is used to make \task{blflag}
+display the unaveraged data.
 \end{description}
 \end{itemize}
 
@@ -2217,7 +2425,7 @@ device=/xs		& Specify an interactive PGPLOT device.\\
 stokes			& Defaults to `{\tt ii}'.\\
 line			& Defaults to all channels.\\
 axis=real,imag		& Plot real vs imaginary.\\
-opptions=nobase		& Plot all baselines simultaneously.\\
+options=nobase,nofqaver	& Plot all baselines simultaneously, and don't average over frequency\\
 \hline
 \end{tabular}
 \end{center}
@@ -2392,6 +2600,157 @@ it will fit on the
 display. Unfortunately full time resolution display cannot be recovered.  To
 display the data at full time resolution, you may need to select the
 data in chunks (with {\tt select=time()}).
+
+\subsection*{Interactive Channel/Baseline Flagging -- PGFLAG}\index{pgflag}
+
+The \task{pgflag} exists because \task{tvflag} can only reliably run on screens
+that have an 8-bit colour depth, which is a limitation few users are able to
+stomach. In almost all other respects, \task{pgflag} can do the same things that
+\task{tvflag} can do, and it adds further features as well.
+
+The \task{pgflag} display is that of a waterfall plot, with channel across the
+x-axis and time along the y-axis, and it uses greyscale colour to represent
+amplitude, with black being low amplitude, and white being high amplitude.
+
+The only requirement for running \task{pgflag} is that the machine you are running
+it from (either locally or remotely) has the PGPLOT libraries installed, and has an
+interactive PGPLOT device, such as {\tt /XSERVE}.
+
+The input parameters to \task{pgflag} are straightforward, and only the most useful
+ones are described here:
+
+\begin{itemize}
+\item {\tt vis:} The name of the visibility data-set to be flagged.
+\item {\tt device:} The PGPLOT device to use as the plot window. \task{pgflag} will
+complain and exit if the device supplied is not interactive.
+\item {\tt select:} The usual visibility data selection parameter.
+\item {\tt stokes:} The usual Stokes polarization selection parameter. Task \task{pgflag}
+can deal with only a single polarization per run, so if this polarization is not specified
+here it will average all available polarizations together before display. While
+unusual, this is moderately useful. Assuming the data-set contains all four linear
+polarizations,
+\begin{verbatim}
+	stokes=xx,yy
+\end{verbatim}
+will produce a Stokes-I display. On the other hand, no selection (i.e. allowing
+\task{pgflag} to average \MM{XX}, \MM{YY}, \MM{XY} and \MM{YX}) will produce a
+quantity which is not physically meaningful, but will still allow you to make a
+quick check for interference and outliers.
+\item{\tt line:} The normal visibility linetype parameter. Unlike \task{tvflag},
+\task{pgflag} does support spectral averaging.
+\item{\tt mode:} This determines the quantity to be displayed. Possibilities are
+{\tt amplitude} or {\tt phase}.
+\end{itemize}
+
+Typical inputs are:
+\begin{center}
+\begin{tabular}{|l||l|}
+\hline
+\multicolumn{2}{|c|}{{\bf PGFLAG}} \\
+\hline
+vis=vela.line & Specify visibility dataset \\
+device=/xs & Specify PGPLOT device \\
+mode=amp & Display amplitude \\
+stokes=xx & Select first linear polarisation, or\\
+stokes=yy & Select second linear polarisation\\
+line & Unset for all channels
+\hline
+\end{tabular}
+\end{center}
+
+After invoking \task{pgflag} a PGPLOT window will be created with the main screen.
+This screen has a title bar along the top with descriptions of some of the important
+keys, and an area that displays data information. In the centre is the main waterfall
+plot, that has channels along the x-direction and time along the y-direction. Gaps in
+time in the data are shown by dark gaps across this plot. A wedge is displayed both
+on the bottom of the plot and on the right edge, and these wedges show the data averaged
+over time (the bottom wedge) and over channels (the right wedge). A colour wedge is also
+displayed that shows the minimum and maximum values and how the colours represent the
+amplitudes.
+
+You now work with \task{pgflag} by selecting data with the mouse or keyboard, and then
+performing actions on the selection. These actions are all initiated by key presses, and
+these will be described here.
+
+Selection of data works as a two-corner model. The left mouse button controls the location
+of one corner of the selection box, and the right mouse button controls the location of the
+other corner. Once two corners have been defined, a green box will be shown that covers
+the data between those two corners. Further mouse clicks will move the appropriate corner
+and the box will be redrawn. The only other way to initially make a selection is to press
+{\tt M} twice in succession; this will select an area centred on the sample with the highest
+amplitude.
+
+Once a selection has been made, it can be manipulated using the keyboard. By pressing the
+{\tt c} key, the selection box will be extended to encompass all the channels currently being
+displayed on the screen; hitting the {\tt c} button again will extend the selection to
+encompass all channels present in the data - this is useful if you have zoomed in so not all
+channels are visible at once. Hitting the {\tt t} key extends the selection box to encompass
+all the visible times, and pressing {\tt t} again makes the box cover all available times.
+To clear the selection, press {\tt C}.
+
+Other keys act upon the display. The {\tt z} key zooms the main display in so that only the
+visibilities within the current selection are displayed, while {\tt Z} unzooms to display all
+available data. While zoomed in to a particular region, the visibilites shown can be changed
+by pressing {\tt h} which moves the zoom window left (to a lower channel range) by half the
+range shown on the plot, while {\tt H} moves the window left by the entire range. For example,
+if the x-axis is showing channels between 20 and 40, then pressing {\tt h} will make the
+window show channels between 10 and 30, whereas pressing {\tt H} will make the window show
+channels between 0 and 20. Similar functionality can be found by pressing the {\tt l} and
+{\tt L} keys to move the window right, the {\tt j} and {\tt J} keys to move the window down,
+and the {\tt k} and {\tt K} keys to move the window up. Old-school readers may recognise this
+as the cursor movement keys for the editor {\tt vi}. While zoomed in, the display will indicate
+if there is further data in a particular direction by displaying a green arrow next to the
+main plot area for each possible scrolling direction. The plot can also be unzoomed in a specific
+direction: pressing {\tt s} will unzoom to show all the available channels, and {\tt S} will
+show all the available times.
+
+The currently displayed baseline is changed with the {\tt n} key -- which displays the next
+available baseline -- and the {\tt p} key -- which displays the previous available baseline.
+The selection and zoom region is preserved while changing baselines.
+
+The display can also be changed to enable easier identification of bad data. Pressing the
+{\tt x} key will subtract the average channel values (which are shown in the bottom wedge)
+from each visibility in the main plot, essentially correcting for any bandpass effects. While
+this subtracting is in effect, the bottom wedge will be outlined in red. To reset this behaviour
+press {\tt x} again - the wedge will return to being outlined in white. The average time 
+values (shown in the right wedge) can be subtracted by pressing the {\tt d} key in the same manner.
+
+The colour scaling can be changed in various ways. To select for yourself the range to use,
+press the {\tt ,} (comma) key, then press the left mouse button within the colour wedge to
+set the value to be assigned as white (the maximum value), or the right mouse button to set the
+value to be assigned as black (the minimum value). Regardless of whether the displayed is zoomed
+or not, the same colour scale will be used, and it is determined from all the available unflagged
+data on the currently displayed baseline. To use only the currently displayed data to set the
+colour scale, press the {\tt [} key, or to use only the currently selected data, press the
+{\tt ]} key. Normally, changing baselines will cause the amplitude scale to be recomputed, however
+the current colour scaling can be locked by pressing the {\tt ;} key. To reset the colour scale
+and allow \task{pgflag} to determine it automatically, press the {\tt .} (full stop) key.
+
+There are many flexible ways of flagging the data with \task{pgflag}, the simplest of which is
+by pressing the {\tt f} key to flag as bad the visibilities within the current selection box on
+the current baseline only. Pressing the {\tt g} key will flag the selected visibilites as good.
+Almost any flagging operation can be reversed by pressing the {\tt u} key; no flagging is applied
+to the data itself until the task \task{pgflag} ends. Be aware though that \task{pgflag} only
+allows the very last flagging action to be undone with the {\tt u} key, so successive presses
+of {\tt u} will in fact undo the undo.
+
+Pressing the {\tt F} key will mark the selected visibilities as bad on all the baselines in the
+file, while {\tt G} will mark them as good on all baselines. The currently displayed baseline
+is shown at the top of the plot in the form {\tt A-B} where A and B are both antenna numbers.
+To flag the selected visibilities as bad for antenna {\tt A}, press the {\tt 1} key (the
+{\tt !} key marks the selection as good), while to do it for antenna {\tt B}, press the {\tt 2}
+key (or {\tt @} to mark as good).
+
+It is also possible to remove all flagging actions performed by this session of \task{pgflag}
+on the currently displayed baseline by pressing {\tt rr}. It is for safety that the {\tt r} key
+must be pressed twice successively, as this operation cannot be undone. Pressing {\tt RR} will
+remove all flagging actions on all baselines. Press {\tt ?} to make \task{pgflag} print
+some information about how many flagging operations have been made during this session.
+
+To exit \task{pgflag} and save all the flagging, press the {\tt q} key. If you want to exit
+\task{pgflag} without applying any of the flagging, press the {\tt a} key. You will be 
+prompted to ensure that you don't exit the task accidentally.
+
 
 \subsection*{General \miriad\ Flagging -- UVFLAG}\label{s:uvflag}\index{uvflag}\index{visibility datasets, flagging}
 
@@ -2583,7 +2942,7 @@ options=region		& Define a region of interest.\\
 \end{center}
 
 The width of the sector that \task{uvsector} flags
-is given as a angle (in degrees) via the {\tt width} parameter.
+is given as an angle (in degrees) via the {\tt width} parameter.
 Remember that 1 degree is equivalent to 4 minutes of observing time, so
 do not set it to any value larger than you need.
 Normally you would set this to a few degrees, based on your confidence in
@@ -2722,10 +3081,10 @@ bandpass functions and polarization leakage (see Section~\ref{s:onthefly}).
 There are also three options to determine the sort of averaging to be
 performed. Possible options are {\tt vector}, {\tt scalar} and {\tt scavec}.
 Note these options only affect the averaging in {\em time}. Vector averaging
-is always use when averaging in {\em frequency}.
+is always used when averaging in {\em frequency}.
 \begin{itemize}
 \item
-``Vector'' averaging is just a straightforward average of the complex-values
+``Vector'' averaging is just a straightforward average of the complex-valued
 visibility data. This is the optimum thing to do if the data are corrupted
 by just Gaussian noise. However it is common for the data to
 be affected by fast-varying phase fluctuations. While the amplitude of the
@@ -2740,7 +3099,7 @@ this regime.
 \item For cases where phase stability is poor, and the signal-to-noise
 ratio on the parallel-hand correlations (\MM{XX} and \MM{YY}) is good, but the
 signal-to-noise ratio on the cross-hand correlations (\MM{XY} and \MM{YX} is
-poor, \task{uvaver} provides the {\tt scavec} options. This performs
+poor, \task{uvaver} provides the {\tt scavec} option. This performs
 scalar averaging on the parallel-hand correlations, and vector
 averaging on the cross-hand correlations.
 \end{itemize}
@@ -2748,11 +3107,11 @@ averaging on the cross-hand correlations.
 \end{itemize}
 
 For example, the inputs below show how to form a channel 0 dataset from
-a data set with two spectral windows (IFs), each with 33 channels
+a dataset with two spectral windows (IFs), each with 33 channels
 (selecting the middle 25 channels from each window).  The two spectral
 windows are essentially treated as 66 contiguous channels.  Thus, we
 must use the {\tt line} keyword to select channels 4 to 28, and then
-channels 37 to 61.  \task{uvaver} will correclty maintain the dual
+channels 37 to 61.  \task{uvaver} will correctly maintain the dual
 window status (use \task{prthd} to verify this).
 
 \begin{center}
@@ -2785,12 +3144,8 @@ multiple dataset names, each separated by a comma, and wildcard
 expansion (via an asterisk) of file names is supported.
 
 \item {\tt line} and {\tt select} are the standard visibility selection
-keywords.  The default for the {\tt line} parameter is the first channel,
-so be careful if you are plotting a dataset with many channels; you would
-need to explicitly select the channels you require, especially as in
-multi-channel datasets the first few channels are either rubbish or
-flagged.  The default for {\tt select}
-is all the data.
+keywords. The default for {\tt select} and {\tt line}
+is all the data and all the channels.
 
 \item Select the desired polarization or Stokes parameter with {\tt stokes}.
 Conversions from linear (or circular) polarizations to Stokes parameters
@@ -2817,7 +3172,7 @@ times.
 average} in minutes (but see the {\tt options} keyword for exceptions to
 this unit).  Baselines and polarizations are averaged separately (unless
 {\tt options=avall}), but channels are not -- they are all lumped in
-together.
+together, unless {\tt options=nofqav} is specified.
 
 The complex visibilities are vector averaged by default, and the real
 quantities are scalar averaged by default.  For example, if you ask for
@@ -2866,6 +3221,12 @@ polarizations separately.  Setting {\tt options=avall} instructs
 \task{uvplt} to average together everything that is to be plotted on a separate
 sub-plot.
 
+\item On the other hand, you may not wish to have the channels averaged
+together at all. Setting {\tt options=nofqav} will make each channel a
+separate point; this vastly increases the number of points that will be
+plotted (making \task{uvplt} much slower and memory hungry, especially with
+CABB data), but may make certain problems with the data far more apparent.
+
 \item {\tt options=rms} instructs \task{uvplt} to plot error bars on
 any time-averaged quantities.  However, note that error bars are not yet
 implemented for vector averaging.
@@ -2880,7 +3241,7 @@ options=yind} (or both) scales that axis on each sub-plot independently.
 with different axis ranges, without having to read all the data in
 again.  This option also prompts you for a new plot device, so
 that following display and range refinement on your workstation,
-you can them make a hard copy without re-running \task{uvplt}.
+you can then make a hard copy without re-running \task{uvplt}.
 
 \end{description}
 
@@ -3048,6 +3409,19 @@ The task \task{varlist}\index{varlist} will tell you the names of the variables 
 dataset.  It will also tell you their data types (ascii, double
 precision, single precision and integer) and lengths.
 
+The following variables are particularly relevant for high-frequency data.
+\begin{center}
+\begin{tabular}{|l|l|}
+\hline
+smonrms		& ATCA seeing monitor rms (in microns) \\
+refpnt		& Reference pointing solution (in arcseconds). \\
+axisrms		& RMS tracking accuracy\\
+axismax		& Maximum tracking accuracy\\
+\hline
+\end{tabular}
+\end{center}
+
+
 After finding out the name of the variable of interest, you can plot it
 with \task{varplt}\index{varplt}.
 The following example plots the on-line \MM{XY} phase differences, stored
@@ -3114,7 +3488,7 @@ options                   & Do the works \\
 
 The task \task{uvredo}\index{uvredo} also `edits' a visibility dataset. Unlike
 \task{uvedit}, however, it only modifies ancillary data in the
-dataset that are derivate from other information. For example, it
+dataset that are derived from other information. For example, it
 can recompute the sky feed angle (``chi'') and velocity
 information.
 
@@ -3126,6 +3500,7 @@ information.
 \section{Some Theory}\index{calibration, polarimetric}\index{linear feeds}
 \index{Stokes parameters}
 
+\subsection{Polarisation}
 Much of the theory here has been borrowed from the memo
 \htmladdnormallink{`AT Polarisation Calibration'}
 {http://www.atnf.csiro.au/observers/memos/d97b7f\~{}1.pdf} (AT Memo 39.3/015).
@@ -3208,12 +3583,172 @@ and \htmladdnormallink{Sault, Hamaker \& Bregman (1996)}
 {http://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1996A\%26AS..117..149S}
 (A\&AS 117, 137 and A\&AS 117, 149) for more details.
 
+\subsection{Atmospheric opacity and system temperature}\label{s:atmosop}
+To provide correct flux density units for the visibilities, $V$, from an
+interferometer, the
+measured correlation coefficient at the correlator ($\rho$) needs to be
+scaled by a
+system temperature $T_{\rm sys}$ and a telescope sensitivity
+factor ($K$). The telescope sensitivity factor is determined by the
+overall antenna size and system efficiency.
+\[
+V = KT_{\rm sys}\rho
+\]
+
+At millimetre wavelengths, the atmosphere can no longer be approximated
+as perfectly transparent. It degrades overall sensitivity in two
+ways: the atmosphere emits radiation, and so raises the
+system temperature, and the atmosphere attenuates the astronomical signal.
+For a zenith opacity $\tau$, observing at an elevation of $e$, and
+if the atmosphere is approximated as having a uniform temperature
+$T_{\rm 0}$, then the atmospheric contribution to
+system temperature is
+\[
+T_{\rm sky} = T_{\rm 0}\left(1-\exp(-\tau/\sin e)\right)
+\]
+and the atmospheric transmissivity is $\exp(-\tau/\sin e)$.
+
+In converting correlation coefficients to visibility measurements, we
+can notionally include the effect of the atmospheric 
+attenuation either in the effective system efficiency
+factor, or in an effective system temperature.
+The approach used will depend on the calibration scheme
+implemented at the telescope.
+
+For the ATCA at 3-mm wavelength, it is most natural to include the effect of the
+opacity in an effective system temperature -- the so-called
+``above atmosphere'' system temperature.
+The above atmosphere system temperature is simply
+the physical system
+temperature divided by the atmospheric transmissivity. The
+widespread use of above atmosphere system temperatures in millimetre
+astronomy
+follows on because the above atmosphere system temperature can be measured 
+directly! It
+can be deduced
+by periodically flipping an absorber at atmospheric
+temperature in front of the feed system.
+The technique to do this is the so-called ``chopper wheel''
+method (e.g.
+\htmladdnormallink{Ulich 1980}
+{http://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1980ApL....21...21U}).
+The ATCA uses the chopper wheel method (also called paddle or vane calibration)
+in its 3-mm system
+to determine an above atmosphere
+system temperature.
+
+This measurement will only be done occasionally. That is, unlike the
+centimetre, 12-mm and 7-mm bands, continuous measurement of system temperature 
+is not available at 3-mm wavelengths. To partly remedy this, \miriad's \task{atfix}
+includes an algorithm to ``interpolate'' the above-atmosphere
+system temperature measurements
+based on changes in telescope elevation and weather.
+
+\subsection{Antenna gain considerations and flux calibration}
+One characteristic of the ATCA dishes is that they are big by 3-mm
+standards. Indeed \htmladdnormallink{van Hoerner (1967)}
+{http://adsabs.harvard.edu/cgi-bin/nph-bib_query?bibcode=1967AJ.....72...35V}
+has considered the limits to the size
+of an antenna before various effects become significant.
+For construction styles like the ATCA dishes, he suggests that 11m is the
+maximum dish size for 3-mm observations before thermal effects become
+significant.
+As the ATCA dishes are twice this, it is no surprise that the
+ATCA antenna gain and primary beam response varies as a result of thermal
+distortions. Changes in temperature, the position of the sun, cloudiness and
+shadows will all affect the gain of the ATCA antennas. Measurements to
+date
+tend to bear this out, with changes in antenna gain of 25\% noted that
+appear to be related to thermal effects.
+Distortion of the dishes by gravity is also significant
+(eg \htmladdnormallink{Subrahmanyan 2005}
+{http://ieeexplore.ieee.org/iel5/8/32084/01492610.pdf?tp=&arnumber=1492610&isnumber=32084}). 
+A gain/elevation
+correction will solve this - to first order at least.
+Because of the way the ATCA panels are set, the antenna gain peaks at
+about 60\degrees\ elevation. 
+
+Note that gravitational
+and thermal distortions are coupled - a perfect correction for these effects
+is never possible. 
+
+To first order, the gain change will be calibrated out provided the 
+phase calibrator is very close to the target source.
+Applying the standard gain/elevation curve to the data as the first step in
+the data reduction will also help.
+However these two steps will
+not account for the change in the beamshape. This might be an important
+effect for widefield imaging and mosaicing.
+
+The best way to avoid thermally-induced gain variations is by observing
+in the pre-dawn hours or on a calm cloudy day! The best way to avoid large
+elevation changes in a synthesis is to observe in a hybrid array -- hybrid arrays
+allow a synthesis to be performed without the need to track the source from
+horizon to horizon.
+
+The gain variations must be considered when attempting to correct the flux density 
+scale. The best approach to ensuring a good flux scale is to ensure that the
+phase and the flux density calibrators are observed nearly
+simultaneously and at the same elevation.
+Although this may at first sound difficult if not impossible, generally
+it is straightforward. Generally there should be a time when the phase
+and the flux
+density calibrators are at the same elevation. It may be that one is rising
+while the other is setting, and so they are at significantly different parts
+of the sky (ie significantly different azimuths). Unless the sky is
+cloudy, being at different azimuths is not important.
+
+\subsection{Instrumental phase}
+At the precision needed for 3-mm observing, the ATCA antennas are not identical
+in terms of their physical construction. In particular the offset
+between the elevation and azimuth axis will differ between antennas.
+VLBI astronomers, who have used heterogeneous arrays of antennas, have
+coped with this issue for years. For the ATCA at 3mm, what is presumed to
+be a difference in this offset introduces a instrumental phase error, that
+needs to be corrected.
+
+\subsection{Atmospheric phase and phase calibration considerations}\label{s:weakcal}
+With the old ATCA correlator, phase calibration at 3-mm wavelength is significantly more difficult than
+at the longer wavelengths. This is because the atmospheric phase errors are
+comparatively larger, the secondary calibrator grid is sparser and the
+system sensitivity is poorer. To use a tolerably nearby calibrator, you will
+need to use a calibrator that is weaker than you might wish - particularly if
+you wish to observe in a narrow bandwidth. Alternatively you
+might use a nearby strong SiO maser rather than continuum point source
+phase calibrator.
+
+These lead to a different approach to calibration compared to that
+at longer wavelengths.
+At 3-mm wavelengths, the dual frequency band capability of the old ATCA correlator could be used to
+good effect in the calibration process. When sensitivity to calibrators
+was an issue, one of the two bands could be specifically set aside
+for calibration purposes. The
+correlator configuration could be selected so that one of the bands
+was either 128 MHz wide (and so as sensitive as possible), or suitable for
+observing an SiO maser. This calibration band could also be used for
+reference pointing during the course of the observation.
+
+When using one of the bands for calibration purposes, the two
+bands need to be jointly calibrated.
+
+SiO masers should be used with caution: they are often
+strongly polarised, and they may be structurally complex. Note, also, that
+the old ATCA correlator limited the dual observing bands to be set within 2.7~GHz of each other.
+If you use an SiO source as a calibrator, the part of the 3-mm band that is
+accessible to the observation is limited.
+
+For data taken with the CABB correlator, the extra bandwidth provides a
+large increase in sensitivity. Also, since CABB provides continuum data at all
+times, regardless of whether spectral line data has been gathered as well,
+it is possible to do reference pointing and phase calibration in the same way for
+all observations at all wavelengths.
+
 \section{Calibration Methods}
 There are two distinct calibration situations with the ATCA, depending
 on whether the correlator configuration produced all four polarisation
 products (\MM{XX}, \MM{YY}, \MM{XY} and \MM{YX}) or just two (\MM{XX} and \MM{YY}). The former
-is done in continuum mode and in some spectral line modes, whereas the latter
-is true of other spectral line modes.
+is done for all CABB data, and for the old-correlator continuum mode and some spectral line modes, 
+whereas the latter is true of other old-correlator spectral line modes.
 
 \subsection*{Calibration of Data with \MM{XX}, \MM{YY}, \MM{XY} and \MM{YX}}
 If all four polarisation products are measured, a full polarimetric
@@ -3229,7 +3764,7 @@ minutes -- the calibrator scan.  On the other hand, the leakage terms
 are assumed to be steady over the entire length of the observation.  Our
 experience so far appears to support this. The bandpass function and
 the calibrator \MM{Q} and \MM{U} can also be assumed to remain unchanged during
-an observation.  It is not possible to solve for a calibrators
+an observation.  It is not possible to solve for a calibrator's
 \MM{V} (circularly polarised flux density)
 However, a calibrator's \MM{V} is unlikely to be significant ( $< 0.1$ \%).
 
@@ -3237,7 +3772,7 @@ If the calibrator is weakly polarised ( $< 5$\%), one quantity that it
 is difficult to solve for is the absolute \MM{XY} phase, absolute feed
 alignment and absolute feed ellipticity.
 Generally these quantities
-on the reference antenna has to be either assumed, or measured, or derived
+on the reference antenna have to be either assumed, or measured, or derived
 from observations of a strongly polarised calibrator.  Unfortunately most
 calibrators are only weakly polarised. Fortunately, however, the
 alignment and ellipticity errors are small (assuming Faraday rotation is
@@ -3250,10 +3785,10 @@ accurate, a ``polarisation position angle
 calibrator'' is not needed.
 
 The recommended strategy for calibrating ATCA data is thus to observe
-a primary flux density calibrator, normally 1934-638, as well as a secondary phase calibrator
+a flux density calibrator, normally 1934-638, as well as a phase calibrator
 close to the source. For polarimetric observations, as the polarisation of
 1934-638 is known (in fact it
-is $< 0.2\%$), and the flux density is strong,
+is $< 0.2\%$), and the flux density is strong (at least in cm bands),
 it is possible to derive polarisation leakages from it given only a short
 observation (5-10 minutes). If you have good parallactic angle coverage of
 the secondary, it is possible
@@ -3267,7 +3802,7 @@ derived from 1934-638 can be used, and the \MM{Q} and \MM{U} of the secondary
 can still be determined.
 
 The above strategy differs from that in the previous version of this guide.
-This is as prior to November 1992, the hardware to measure the \MM{XY} phase
+This is because prior to November 1992, the hardware to measure the \MM{XY} phase
 produced unreliable results, particularly at
 20 and 13~cm. Thus an observation of a strongly polarised calibrator was
 strongly advisable to determine \MM{XY} phase. The strategy used for calibrating
@@ -3339,7 +3874,7 @@ We will now discuss some of the inputs to \task{mfcal}.
 calibrator in this case.
 \item {\tt line:} The standard linetype parameter, used to select and
 average channels. See the discussion of this in Section~\ref{s:line}.
-Assuming the 128 MHz / 33 channel continuum system, you
+Assuming the old-correlator's 128 MHz / 33 channel continuum system, you
 will want to discard the first and last few channels, calibrating only
 the central 25 channels of so. Otherwise you
 will not normally want to perform any averaging.
@@ -3358,11 +3893,14 @@ Set it to a small value if phase stability is poor (e.g. 1 to 0.1 minutes).
 If you set it to a smaller value, however, the solution process becomes
 more sensitive to bad data -- make sure you flag it well. Additionally you
 might run into program memory limitations, where it aborts due to ``buffer
-overflows'' or the like.
+overflows'' or the like. However, it is generally advisable to set this as
+small as possible.
 \item {\tt select:} Normal data-selection.
 \item {\tt refant:} The reference antenna. Set this to the antenna
 which had the cleanest \MM{XY} phase.
-The default is 3 (which may not be very appropriate).
+The default is 3 (which may not be very appropriate). It should be noted also
+that the default antenna will not change from 3, even if antenna 3 is not present
+in the dataset.
 \item {\tt flux:} This gives the flux density and spectral index of the calibrator.
 \item {\tt options:} There are a few extra options, which are not of
 great use or interest.
@@ -3394,9 +3932,10 @@ a plethora of options to turn on and off various solvers. Most of these
 will be irrelevant to normal use -- particularly when calibrating a
 source, such as 1934-638, which is known to be unpolarised. However it
 does not determine a bandpass function. So, if you have not averaged
-you data into a channel-0 dataset, you should precede \task{gpcal} with
-\task{mfcal} -- \task{gpcal} will normally apply any bandpass function
-it finds with the dataset before it performs it real work.
+your data into a channel-0 dataset, you should precede \task{gpcal} with
+\task{mfcal}, or if you are using a separate bandpass calibrator, ensure that
+its bandpass solution is copied across using \task{gpcopy} -- \task{gpcal} will normally apply any bandpass function
+it finds with the dataset before it performs real work.
 
 Do not be intimidated by the number of options -- we
 give you advice on which ones to use in the following chapter. We now discuss
@@ -3420,7 +3959,7 @@ Make sure you get the
 signs of \MM{Q}, \MM{U} and \MM{V} right; these are real numbers, not visibility
 amplitudes.  Note that \task{gpcal} does recognise a small group of
 calibrators for which it knows the spectrum in \MM{I}, and sometimes \MM{Q}
-and \MM{U} -- see the help file for details. The primary calibrator
+and \MM{U} -- see the help file for details. The flux calibrator
 1934-638 is amongst these. If \task{gpcal} does not
 recognise the source, the default is an unpolarised source. This will
 be quite inappropriate if you have a polarised source and do not solve
@@ -3478,7 +4017,7 @@ flux scale. See Section~\ref{s:1934flux} for more information.
 taking the model you gave in {\tt flux} as a starting point.  You need
 many cuts of the calibrator with good parallactic angle coverage to do
 this successfully. You should not attempt to solve for \MM{Q} and \MM{U} of
-the primary, as you will invariably have too little data. Additionally
+the flux calibrator, as you will invariably have too little data. Additionally
 1934-638 is known to be unpolarised.
 
 \item[{\tt xyvary}:] If the telescope settings are not altered, the \MM{XY} phases
@@ -3661,7 +4200,56 @@ to load all of an observation into a single \miriad\ file (i.e. use
 
 \item You should now flag your data, and possibly convert to channel-0
 (using \task{uvaver}).
-Tasks for these operations are described in Chapter~\ref{c:edit}.
+Tasks for these operations are described in Chapter~\ref{c:edit}. For CABB data,
+you should not convert to channel-0.
+
+Things to look out for while flagging are:
+\begin{itemize}
+\item Shadowing: when in a short array, it is possible for one antenna to be
+partially blocked by another antenna. To flag based on this, use
+\verb+select=shadow(26)+ in your \task{uvflag} command.
+\item Seeing monitor measurements: the seeing monitor is an independent interferometer which constantly
+measures the atmospheric phase stability to a geostationary satellite.
+The baseline length is 220m, and the satellite elevation
+is 60\degrees. The measurement is expressed in microns of excess path, and
+is contained in the dataset variable {\tt smonrms}.
+For high frequency observations you may wish to discard data whose excess path
+length rms is greater than some threshold, and this can easily be achieved
+with the {\tt seeing} parameter that the {\tt select} keyword accepts.
+\item Tracking accuracy: the tracking accuracy of the ATCA antenna is usually
+adequate at low frequencies, but at higher frequencies (where the primary beam is
+smaller), tracking errors become more deleterious. These errors
+may occur during windy weather (gusts can blow
+the antennas off the directed tracking position). In addition,
+poor tuning of the antenna drive systems can sometimes cause poor tracking,
+particularly after a source change.
+
+Note that tracking errors should be distinguished from pointing errors.
+Tracking errors are the inability of the antenna drive system
+to follow the requested path. Pointing errors correspond 
+to the difference between the position that the astronomer
+requests and the actual position. Tracking errors are caused by
+flaws in the drive servo system, whereas pointing errors are a sum of
+tracking errors and errors in the antenna pointing model.
+
+Since October 2003, tracking errors have been saved in the \miriad\ dataset.
+The uv variables corresponding to the rms and 
+maximum tracking
+error in a cycle are \verb+axisrms+ and \verb+axismax+. 
+
+Both the maximum and rms give two tracking error values for each antenna, nominally corresponding
+to the tracking error in the azimuth and elevation axes. However the ATCA on-line
+system produces a single composite value, which is replicated for the two
+axes in the dataset.
+
+When the tracking error is less than $2'$, the ATCA on-line
+system believes that this error is sufficiently small, and thus considers
+the antenna to be tracking. However this tolerance is not
+generally good enough for 3-mm observations.
+To flag based on this criterion, use the
+{\tt pointing} parameter that the {\tt select} keyword accepts.
+
+\end{itemize}
 
 \item
 \index{uvsplit}
@@ -3675,7 +4263,7 @@ single-band datasets. The best task to do this is \task{uvsplit}.
 Task \task{uvsplit} generates the names of the output datasets itself,
 forming these from the source name and the central frequency (in MHz) of
 the data.
-It is rather unforgiving if you already have a files with one of the names
+It is rather unforgiving if you already have files with one of the names
 that it wants to use. Make sure your directory is free of files that may
 usurp \task{uvsplit}'s name choice. Task \task{uvsplit} allows you to
 perform extra selection if you wish, which may be convenient if you
@@ -3692,7 +4280,7 @@ select		   & Extra selection.\\
 \end{tabular}
 \end{center}
 
-For large spectral line data-sets, if disk space is low, it may be useful not
+For CABB data, or large spectral line data-sets, if disk space is low, it may be useful not
 to split off the program source. Rather you can split off the calibrators,
 determine the calibration tables from them, copy the calibration back to
 the multi-source file, and then image directly from the multi-source file.
@@ -3709,81 +4297,164 @@ select=-source(vela)	& Do not select {\tt vela} data.\\
 \end{tabular}
 \end{center}
 
+There are a few things to look out for when using \task{uvsplit}. If you don't care
+about the files already extant in the current directory, you may use
+{\tt options=clobber} to make \task{uvsplit} overwrite any files it wants to
+create.
+
+If the parent file contains more than one frequency band at the same frequency,
+then \task{uvsplit} will output two datasets in the normal way, but these will
+have {\tt .1} and {\tt .2} etc. appended to the end of their filenames, indicating
+which frequency band the data has come from.
+
+Further to that, sometimes it can be handy to operate on only one IF as an
+individual dataset, and this can be achieved by using {\tt options=nosource}. This
+creates a dataset for each IF in the parent file, but will not split out the
+individual sources. A similar thing can be done to keep all IFs in each source file
+({\tt options=nofreq}).
+
+\item
+Handling CABB's large fractional bandwidths can sometimes cause problems, and it
+may be preferable to split the band up into smaller bandwidth chunks. This can
+be done using the {\tt maxwidth} parameter. This parameter should be set to the
+largest bandwidth allowed in a single dataset, in GHz. For example, to split the
+2 GHz CABB continuum bands up into 128 MHz chunks, use
+\begin{center}
+\begin{tabular}{|l|l|}
+\hline
+\multicolumn{2}{|c|}{{\bf UVSPLIT}} \\
+\hline
+vis=multi.uv		& The input dataset.\\
+maxwidth=0.128          & The maximum bandwidth for each output dataset, in GHz.\\
+\hline
+\end{tabular}
+\end{center}
+
+Splitting the data into smaller bandwidth chunks in order to more accurately
+calibrate it has been dubbed "divide and conquer".
+
 \end{enumerate}
 
-\section{Calibration}
+
+\section{Calibration}\label{s:calibrationapproach}
 You are now ready to start the main calibration step. You
 should have a large number of \miriad\ datasets, each containing
 a single frequency band and source. The calibration process will
 determine bandpass functions (assuming you have not already averaged your
 data into a channel-0 dataset) and antenna gains as a function of time.
 If you have measured all four polarisation products, the process will also
-determine
-instrumental polarisation and the polarisation of the secondary calibrator.
-Assuming you have observations of
-the primary flux density calibrator, 1934-638, a secondary phase
-calibrator, and
-your program source, there are two avenues open to you. The first,
-sketched in Figure~\ref{fig:polcal2}, uses the secondary to determine
-all the calibration quantities except the absolute flux density scale. The
-primary is used to determine the absolute flux density scale, and is
-generally used to double check the other quantities. While this avenue is
-the preferred path, it requires good parallactic
-angle coverage of the secondary to disentangle the instrumental polarisation
-and the secondary calibrator polarisation. For typical secondary calibrator
-flux densities, it also requires a modest amount of integration time
-to determine the bandpass to good accuracy.
+determine instrumental polarisation and the polarisation of the phase calibrator.
 
-The second avenue is to rely on the observation of the primary
-calibrator, 1934-638, to determine instrumental polarisation and bandpass
-function. This is possible as 1934-638 is strong, and its polarisation
-is known (it is less than 0.2\%\ polarised). This approach is shown
-in Figure~\ref{fig:polcal3}. Note that this approach relies on knowing
-the polarisation of 1934-638. This approach cannot be used if an
-alternative primary calibrator is used.
+The calibration approach described here (and shown schematically in Figure~\ref{fig:polcalnew}
+is quite general, and will apply, perhaps with slight modifications, in almost all situations
+at all wavelengths. However, for high frequency observations made with the old correlator,
+you may wish to follow the calibration approach described in Section~\ref{s:alternativecalibration}.
+
+You should keep in mind the following points when considering how to calibrate
+your observations:
+\begin{itemize}
+\item
+The two most commonly used flux calibrators at the ATCA are 1934-638 and the
+planet Uranus. For frequencies between 1 GHz and 10 GHz, 1934-638 is the preferred
+flux calibrator; its cm model is described in the memo \htmladdnormallink{``A revised flux scale for the AT
+Compact Array''}{http://www.atnf.csiro.au/observers/memos/d96783\~{}1.pdf}
+(AT Memo 39.3/040). For frequencies above this, Uranus is the preferred flux
+calibrator, although until early 2010 the \miriad\ model did not correctly take
+into account how Uranus' brightness temperature changed with its orientiation to the
+Earth (a memo describing the new Uranus flux model is forthcoming). 
+Other planets can be used as flux calibrators, but Uranus is the
+best choice in most situations since it is small enough to remain mostly unresolved
+on the short arrays that are used for most mm observations, and bright enough to
+provide an accurate flux in a short observation.
+
+Since May 2010, the \miriad\ model of 1934-638 covers frequencies all the way up to
+the top of the 7mm band (50 GHz), so it can be used a flux calibrator now for all
+bands other than 3mm. The flux model in the 12mm band is described in the 
+\htmladdnormallink{memo by Bob Sault}
+{http://www.atnf.csiro.au/observers/memos/AT39.3_124.pdf}
+``ATCA flux density scale at 12mm'' (2003).
+The flux model for frequencies above 25 GHz will be described in a forthcoming memo.
+
+\item
+It is possible to use other sources to flux calibrate your observations, but it is
+inadvisable to do so. {\em If at all possible, make an observation of 1934-638 or
+Uranus.}
+
+To flux calibrate your observation with another source, you must use the
+"bootstrapping" technique. In essence, this requires that you find an observation
+of the source you will be using as a flux calibrator within a few days of your
+observations. Most, if not all of the sources in the AT calibrator database will
+have fluxes that vary on timescales of days to weeks. If you can find such an
+observation, and that observation also observed one of the recognised flux calibrators,
+then you may be able to use the flux density determined from those observations
+to calibrate yours. However, the longer the time between your observations and the
+observation you are bootstrapping to, the less accurate this technique is likely
+to be.
+
+\item
+You should classify the sources in your observations into four categories:
+bandpass calibrator, flux calibrator, phase calibrator and program source.
+
+The bandpass calibrator should ideally be the brightest source you observed, or
+if you want to make a time-dependent bandpass solution, it should be the
+strongest source that you observed most frequently.
+
+The flux calibrator selection should be fairly obvious by now; if it isn't,
+reread the start of this section.
+
+The program source should also be obvious.
+
+The phase calibrator should be the source that was observed almost
+contemporaneously with the program source. There should be as least as many
+"cuts" of the phase calibrator as there is of the program source, unless you
+will be relying heavily on self-calibration later in the process. The phase
+calibrator must also be a point source, with as little confusion and defect
+as possible.
+
+The same source can be used
+for more than one of these roles. For example, 1934-638 can be used as a flux
+calibrator in all wavelengths between 20-cm and 7-mm, but is bright enough to be
+used as a bandpass calibrator as well at cm wavelengths.
+\end{itemize}
 
 \begin{figure}
 \begin{center}
-\epsfxsize=14cm\leavevmode\epsffile{polcal2.ps}
+\epsfxsize=14cm\leavevmode\epsffile{polcalnew.ps}
 \end{center}
-\caption{Flow chart for polarisation calibration in \miriad\ when
-there is sufficient secondary calibrator data to determine all calibration
-parameters from the secondary.}
-\label{fig:polcal2}
-\end{figure}
-
-\begin{figure}
-\begin{center}
-\epsfxsize=14cm\leavevmode\epsffile{polcal3.ps}
-\end{center}
-\caption{Flow chart for polarisation calibration in \miriad\ when
-there is insufficient secondary calibrator data to determine some
-calibration parameters.}
-\label{fig:polcal3}
+\caption{Flow chart for calibration in \miriad\ for most situations.}
+\label{fig:polcalnew}
 \end{figure}
 
 \begin{enumerate}
-\item \label{step:mfcal}\index{mfcal}\index{calibration, bandpass}
-We start by calibrating 1934-638. Assuming that you have not
-averaged the data into a channel-0 dataset, we start with bandpass
-calibration. The task to perform this is \task{mfcal}. After having
-solved for the bandpass function, \task{mfcal} writes a bandpass
-table in the visibility dataset -- the data themselves are not
-modified. Although it
-is possible for \task{mfcal} to cope with datasets which contain
-multiple IF bands, and which frequency switch with time, we recommend
-that you {\em do not} use this feature. It is easier to stick with
-datasets with a single frequency band.
+\item \label{step:bandpass}\index{mfcal}\index{calibration, bandpass}
+We start by solving for the bandpass solution, using the bandpass calibrator,a
+ssuming that you have not averaged the data into a channel-0 dataset.
+To do this we use the task \task{mfcal}, which is described more
+completely in Section~\ref{s:mfcal}. After having solved for the bandpass
+function, \task{mfcal} writes a bandpass table in the visibility dataset --
+the data themselves are not modified. Although it is possible for \task{mfcal}
+to cope with datasets that contain multiple IF bands, and that frequency
+switch with time, we recommend the you {\em do not} use this feature; it is
+much easier to stick with datasets with a single frequency band.
+
+It is also possible for \task{mfcal} to determine a time-dependent bandpass
+solution, if you suspect that the instrumental response is changing significantly
+over the observation. For the CABB correlator's continuum IFs, the amount of
+bandpass variation observed is usually much less than the gain variations, making
+a time-dependent bandpass solution rather pointless for continuum observations
+where a moment map image will be created. However, for spectral line observations,
+using a time-dependent bandpass can halve the spectral rms noise. To make a time
+dependent bandpass solution, you will need to specify three numbers for the
+{\tt interval} parameter in \task{mfcal}; for a bright source,
+{\tt interval=1,1,1} should work well, and give a bandpass solution every minute.
+Of course, the bandpass calibrator would need to be visited often during your
+observations for this to be effective!
 
 As well as determining a bandpass function, \task{mfcal} determines
 antenna gains. These gains are based upon the assumption that
 the source is unpolarised (which happens to be true for 1934-638) and that
-the instrumental polarisation is zero (which is not true). While these
-assumptions do not affect the quality of the bandpass, and provided you
-have measured all four polarisation correlations, it is best to follow the
-run of \task{mfcal} with task \task{gpcal} to correctly determine
-instrumental polarisation. The task \task{mfcal} is described more
-completely in Section~\ref{s:mfcal}
+the instrumental polarisation is zero (which is not true). These
+assumptions do not affect the quality of the bandpass.
 
 If your data are to be combined (or compared) with pre-August 1994 ATCA data,
 you will probably also use the {\tt oldflux}
@@ -3794,25 +4465,51 @@ option (see Section~\ref{s:1934flux}).
 \hline
 \multicolumn{2}{|c|}{{\bf MFCAL}} \\
 \hline
-vis=1934-638.4800       & Specify primary calibrator. \\
+vis=1934-638.5500       & Specify bandpass calibrator. \\
 flux                    & Leave unset. \\
 line			& Select good channels.\\
-refant=3                & Specify the reference antenna. \\
-interval=5              & Solution interval for gain solutions (minutes). \\
+refant=2                & Specify the reference antenna. \\
+interval=1              & Solution interval for gain solutions (minutes), or \\
+interval=1,1,1          & Solution interval for gains, max interval, bandpass (minutes) \\
 options			& Normally leave  blank, but\\
 options=oldflux		& set to {\tt oldflux} to get the pre-August 1994 scale.\\
 \hline
 \end{tabular}
 \end{center}
 
+\item \index{calibration, copying}\index{gpcopy}
+The next step copies the bandpass solution you just made to the flux and
+phase calibrators, and for this you should use the task \task{gpcopy}.
+If your bandpass calibrator is the same as your flux or phase calibrator,
+then you won't need to copy the solution in that case.
+
+Although \task{gpcopy} can be instructed to copy only the bandpass solution,
+there is no harm in copying the gains and leakage tables too, as they will be
+overwritten when you run \task{gpcal} later.
+
+\begin{center}
+\begin{tabular}{|l|l|}
+\hline
+\multicolumn{2}{|c|}{{\bf GPCOPY}} \\
+\hline
+vis=1934-638.5500      & Specify bandpass calibrator.\\
+out=0220-349.5500      & Specify phase calibrator.\\
+options                & Normally leave blank, but\\
+options=nocal,nopol    & You may optionally copy only the bandpass table.\\
+\hline
+\end{tabular}
+\end{center}
+
 \item \index{calibration, polarimetric}\index{gpcal}
-Skip this step if you have measured only the \MM{XX} and \MM{YY} correlations.
 We now proceed
 to determine the antenna gains and instrumental
-polarisation from the primary calibrator. Task \task{gpcal} is used
+polarisation from the flux calibrator. Task \task{gpcal} is used
 for this (see Section~\ref{s:gpcal} for more information). Task \task{gpcal}
 will generally use the bandpass determined by \task{mfcal} to partially correct
-the data. When calibrating 1934-638, the only options that you
+the data. If you are using a planet as your flux calibrator, you must skip
+this step.
+
+When your flux calibrator is 1934-638, the only options that you
 will normally turn on is for the \MM{XY} phases to be solved for as a function
 of time; \verb+options=xyvary+.
 If your data are to be combined (or compared) with pre-August 1994 ATCA data,
@@ -3825,10 +4522,10 @@ Typical parameters for calibrating 1934-638 are thus
 \hline
 \multicolumn{2}{|c|}{{\bf GPCAL}} \\
 \hline
-vis=1934-638.4800       &Specify primary calibrator \\
+vis=1934-638.5500       &Specify flux calibrator \\
 flux                    &Leave unset \\
-refant=3                &Specify the reference antenna \\
-interval=5              &Solution interval for gain solutions (minutes) \\
+refant=2                &Specify the reference antenna \\
+interval=0.1            &Solution interval for gain solutions (minutes) \\
 options=xyvary		& Solve for \MM{XY} phase as a function of time, or\\
 options=xyvary,oldflux	& add {\tt oldflux} to get pre-August 1994 flux scale.\\
 \hline
@@ -3840,18 +4537,6 @@ Task \task{gpcal} will report the instrumental polarisation parameters
 although they can be 4\%\ under bad conditions. Typically these are quite
 constant with time, with similar values resulting from observations
 several months apart. However they are modestly frequency dependent.
-
-\item Calibration of 1934-638 is
-now complete. You should examine the calibration solutions for
-reasonableness.
-Generally the bandpass function will have an amplitude
-of 1, plus or minus 15\%, and phase of a few degrees. Provided you equalised
-the gains at the start of your observation, your antenna gains
-should have an amplitude close to 1, although the phases should reflect
-atmospheric phase stability. If you see glitches in the antenna gains
-in time, it
-is probably due to bad data. Go back and look at the data near this
-time, and perhaps do some more flagging -- see Section~\ref{s:uvflag}.
 
 Tasks appropriate to examine the effectiveness of the calibration are
 \task{uvplt} (to generate plots of the calibrated data -- remember that many
@@ -3865,11 +4550,11 @@ plot generated by \task{uvplt} with the following inputs
 \hline
 \multicolumn{2}{|c|}{{\bf UVPLT}} \\
 \hline
-vis=1934-638.4800          &Specify primary calibrator \\
+vis=1934-638.5500          &Specify flux calibrator \\
 stokes=i,q,u,v		   & Plot all Stokes parameters.\\
 axis=real,imag		   & Plot real vs imaginary\\
-options=equal,nobase	   & Equal X and Y axes. Plot all baselines\\
-			   & together.\\
+options=equal,nobase,nofqav	   & Equal X and Y axes. Plot all baselines, and don't average over\\
+			   & the bandwidth.\\
 device=/xs		   & Normal PGPLOT device -- Xwindows for example\\
 \hline
 \end{tabular}
@@ -3882,25 +4567,41 @@ near zero. If there are outliers, you probably need to do some more flagging.
 If you see arcs, the phase calibration is probably bad -- you might try
 decreasing the solution interval.
 
-\item
-We now come to calibrating the secondary calibrator, and there are
-three possible approaches to follow:
-\begin{itemize}
-\item If you have multi-channel data for the secondary (i.e. not channel-0),
-but you do not have sufficient observations on the secondary to determine a bandpass
-from it, you must use the second approach (Figure~\ref{fig:polcal3} and
-step 6 below).
-\item If you have measured all four polarisation correlations and if you
-have poor parallactic angle coverage of the secondary,
-you must use the second approach (Figure~\ref{fig:polcal3} and step 6).
-\item Otherwise you have sufficient data to use your secondary to
-determine the appropriate calibration parameters, and you can use the first
-approach (Figure~\ref{fig:polcal2} and step 5).
-\item There is a third, hybrid, approach, which determines the bandpass from
-the primary and the polarisation characteristics from the secondary. Although
-this approach is no more complicated than the other two, we leave it as
-an exercise for the reader to determine the correct sequence.
-\end{itemize}
+\item \index{calibration, polarimetric}\index{gpcal}
+Now we do the same for the phase calibrator using \task{gpcal} again. The
+primary difference is that we now wish to solve for the Stokes Q and U
+values for the source, which are not known a-priori. To do this we add
+the {\tt qusolve} option. Additionally, if your observations have measured
+only the \MM{XX} and \MM{YY} correlations, you must add the {\tt nopol}
+option, as there is not enough information to solve for antenna leakages.
+
+\begin{center}
+\begin{tabular}{|l|l|}
+\hline
+\multicolumn{2}{|c|}{{\bf GPCAL}} \\
+\hline
+vis=0220-349.5500      & Specify phase calibrator.\\
+flux                    &Leave unset \\
+refant=2                &Specify the reference antenna \\
+interval=0.1            &Solution interval for gain solutions (minutes) \\
+options=xyvary,qusolve	& Solve for Stokes Q and U, or\\
+options=xyvary,qusolve,nopol	& Do not attempt to solve for leakages.\\
+\hline
+\end{tabular}
+\end{center}
+
+In the unlikely event that your calibrator turns out to be more than
+about 5\%\ polarised, you may wish to run \task{gpcal} again, but this
+time you should add options \verb+xyref+ and \verb+polref+. This will solve
+for an \MM{XY} phase offset on the reference antenna, as well as an
+instrumental polarisation characteristic that cannot be determined from
+a weakly polarised source.
+
+If \task{gpcal} fails with an error stating that the "Solution for requested
+parameters is degenerate", then it is likely that you do not have enough
+parallactic angle coverage to solve for Stokes Q and U. In that case, you
+will have to omit the {\tt qusolve} option, and suffer the subsequent
+degradation of polarisation calibration.
 
 Good parallactic angle coverage enables you to disentangle the instrumental
 and secondary polarisations from each other. ``Good coverage'' generally means
@@ -3912,7 +4613,6 @@ You can plot your parallactic angle coverage using the
 task \task{varplt}. More strictly, it plots the angle between the
 sky and the feed (i.e. parallactic angle plus 45\degrees\ for the
 ATCA).
-
 
 \begin{center}
 \begin{tabular}{|l|l|}
@@ -3927,147 +4627,87 @@ device=/xs		   &PGPLOT device -- xwindows in this case\\
 \end{tabular}
 \end{center}
 
-\item%[\arabic{enumi}a.]
-{\em If you have sufficient secondary data:}
-If you have not already averaged
-the data into a channel-0 dataset, you should determine the bandpass
-calibration of the secondary. This is identical to the determining the bandpass
-calibration for the primary, except that the flux density, and its
-variation with frequency, will generally not be known for the secondary.
-In this case \task{mfcal} assumes a spectral index of 0 and a flux density to
-make the rms antenna gains equal to 1. Again, if the atmospheric phase stability
-is good, set the solution interval to the scan length. Otherwise, provided
-the source is moderately strong, set the
-solution interval to a small value. Typical input parameters are
+\item
+At this point, both your flux and phase calibrators will have the same
+bandpass solution, but different flux scalings. The following table should
+make it clear what the calibration has achieved to this point.
 
 \begin{center}
-\begin{tabular}{|l|l|}
+\begin{tabular}{|l|c|c|c|c|}
 \hline
-\multicolumn{2}{|c|}{{\bf MFCAL}} \\
+ & {\bf Bandpass} & {\bf Bandpass} & {\bf Flux}    & {\bf Phase}\\
+ & {\bf Shape}    & {\bf Slope}    & {\bf Scaling} & {\bf Solution}\\
 \hline
-vis=0823-500.4800          &Specify secondary calibrator \\
-flux                       &Leave unset \\
-refant=3                   &Specify the reference antenna \\
-interval=5                 &Solution interval for gain solutions (minutes) \\
+Bandpass calibrator (not flux) & Correct & Incorrect & Incorrect & No\\
+Bandpass calibrator (is flux)  & Correct & Correct & Correct & No\\
+Flux calibrator (not bandpass) & Correct & Incorrect & Correct & No\\
+Flux calibrator (planet)       & Correct & Incorrect & Incorrect & No\\
+Phase calibrator (not flux)    & Correct & Incorrect & Incorrect & Yes\\
+Phase calibrator (is flux)     & Correct & Correct & Correct & Yes\\
 \hline
 \end{tabular}
 \end{center}
 
-\index{calibration, polarimetric}
-Skip the remainder of this step if you have only measured \MM{XX} and \MM{YY}
-correlations, as the
-gains determined by \task{mfcal} are as good as you can do. Otherwise
-we now come to solving for instrumental polarisation and the polarisation
-of the secondary itself. Given good parallactic angle coverage, these
-can be disentangled. For a given correlation, the instrumental polarisation
-terms stay constant with time, whereas
-the polarisation due to the source vary as sinusoids of the parallactic angle.
-Inputs to \task{gpcal} are similar to the case of the primary, with
-the very significant exception that we must turn on the switch to solve for
-the secondary's polarisation. The appropriate
-options to do this are {\tt options=qusolve,xyvary}. As with \task{mfcal}, the
-flux density of the secondary will generally not be known, so \task{gpcal}
-determines a flux density so that the rms antenna gains are 1. Again
-the {\tt interval} parameter should be set to the calibrator scan length
-if the phase stability is good. If this is not so, then it should be set to
-a smaller value (1 to 0.1 minutes) with the caveats as noted in the
-Section~\ref{s:mfcal} above. If you do set it so a small value,
-there is an additional step (and decision) to be performed before you can
-interpolate the gain solutions onto your program source -- see
-Section~\ref{s:gpaver}.
+The goal is to get the phase calibrator calibrated such that it has the correct
+bandpass shape and slope, the correct flux scaling, and a useful phase solution.
+If you are lucky enough to have been observing 1934-638 as a phase calibrator,
+then congratulations, you have finished your calibration, and you can skip to 
+step~\ref{copyprogram}.
 
-Typical inputs for this case are
+Before we go any further, we should understand what exactly we mean by each
+calibration.
+\begin{itemize}
+\item Bandpass Shape: The bandpass shape is simply the instrumental response
+to the incoming spectrum. Given a flat spectrum (i.e. equal flux density at all
+frequencies), the ideal instrument would produce a flat bandpass shape. However,
+any real instrument will respond to different frequencies in an unequal way,
+and this gives rise to the bandpass shape which is solved for by \task{mfcal}.
 
-\begin{center}
-\begin{tabular}{|l|l|}
-\hline
-\multicolumn{2}{|c|}{{\bf GPCAL}} \\
-\hline
-vis=0823-500.4800          &Specify secondary calibrator \\
-flux                       &Leave unset \\
-refant=3                   &Specify the reference antenna \\
-interval=5                 &Solution interval for gain solutions (minutes) \\
-options=qusolve,xyvary	   & Solve for calibrator \MM{Q} and \MM{U}, and\\
-			   & allow \MM{XY} phase to vary with time.\\
-\hline
-\end{tabular}
-\end{center}
-In the unlikely chance that your calibrator turns out to be more than
-about 5\%\ polarised, you may wish to run \task{gpcal} again, but this
-time you should add options \verb+xyref+ and \verb+polref+. This will solve
-for an \MM{XY} phase offset on the reference antenna, as well as an
-instrumental polarisation characteristic that cannot be determined from
-a weakly polarised source.
+\item Bandpass Slope: As we said above, a flat spectrum should produce a flat
+bandpass shape, but what happens when the input spectrum is not flat, as will
+be the case for most real sources? Unless \task{mfcal} knows how the flux density
+of the source varies with frequency, it will have no way to determine whether a
+change in flux is due to instrumental response or a flux density change of the
+source. If you have used a source other than 1934-638 for your bandpass calibration,
+you should assume that \task{mfcal} has not properly accounted for the source's 
+flux behaviour when it has solved for the bandpass. In these cases, the bandpass
+slope will be incorrect.
 
-\item%[\arabic{enumi}b.]
- {\em If you have little secondary data:}
-If you have poor parallactic angle coverage of your secondary
-and/or there are insufficient observations of the
-secondary to determine a bandpass solution, then it is best to
-rely on the instrumental polarisation and bandpass calibration
-determined from 1934-638. The
-suggested approach, sketched in Figure~\ref{fig:polcal3}, is to copy the
-instrumental polarisation parameters (if present) and bandpass from 1934-648
-to your secondary, and then solve for the antenna gains. Additionally
-if all four polarisation correlations were measure, the polarisation of
-the secondary is also solved for.
+\item Flux Scaling: If the flux scaling is correct, then the flux density
+at the centre of the band is correct. When \task{gpcal} (or \task{mfcal}) solves
+for the amplitude of a source for which it does not have flux density information,
+it assumes that the rms gain amplitudes are 1, and determines the calibrator flux
+density accordingly. While this will be a decent assumption if during array calibration
+you set the amplitude calibration with 1934-638, it is not guaranteed to be
+correct.
 
-The task to copy the instrumental polarisation and bandpass function is
-\task{gpcopy}. The inputs are very simple for this situation -- you give it
-the names of the input and output datasets. For example
+\item Phase Solution: The phases (or more accurately, the complex gains) of the
+cross-correlations will change with time due to atmospheric conditions, system
+temperature variations, elevation of the antenna etc. To properly account for
+these effects, it is necessary to observe an unchanging point source throughout
+your observations. For this reason, calibration of a source that was observed
+once (or infrequently) during the alotted time will not result in an adequate
+phase solution, but by bookending each "cut" of the program source with a
+phase calibrator, you can solve for time-dependent antenna gains.
+\end{itemize}
 
-\begin{center}
-\begin{tabular}{|l|l|}
-\hline
-\multicolumn{2}{|c|}{{\bf GPCOPY}} \\
-\hline
-vis=1934-638.4800          &Specify 1934-638 dataset.\\
-out=0823-500.4800	   &Specify the output secondary calibrator \\
-options			   & Leave unset.\\
-mode			   & Leave unset.\\
-\hline
-\end{tabular}
-\end{center}
+\item \index{calibration, inspection}\index{uvplt}\index{gpplt}\label{i:inspection}
+You should examine the calibration solutions for reasonableness.
 
-This will also copy the antenna gains determined for 1934-638 -- this is
-unimportant as we will now overwrite them by rerunning \task{gpcal}. We
-want to solve for antenna gains and the \MM{XY} phases as a function of time.
-Additionally, if we have measured all four polarisation correlations, we want
-to solve for the polarisation of the secondary.
-We {\em do not} have enough data to solve for
-instrumental and secondary polarisation simultaneously, so we turn off
-the solver for instrumental polarisation.
-The relevant options are
-thus {\tt options=xyvary,qusolve,nopol} if all four polarisation correlations
-were measured, and {\tt options=xyvary,nopol} if only \MM{XX} and \MM{YY} were
-measured. Again the solution
-interval should be either the scan length (for observations with good
-phase stability) or set to a small value (if phase stability
-is poor). Typical inputs are
+%Generally the bandpass function will have an amplitude
+%of 1, plus or minus 15\%, and phase of a few degrees. Provided you equalised
+%the gains at the start of your observation, your antenna gains
+%should have an amplitude close to 1, although the phases should reflect
+%atmospheric phase stability. If you see glitches in the antenna gains
+%in time, it is probably due to bad data. Go back and look at the data near this
+%time, and perhaps do some more flagging -- see Section~\ref{s:uvflag}.
 
-\begin{center}
-\begin{tabular}{|l|l|}
-\hline
-\multicolumn{2}{|c|}{{\bf GPCAL}} \\
-\hline
-vis=0823-500.4800          &Specify secondary calibrator \\
-flux                       &Leave unset \\
-refant=3                   &Specify the reference antenna \\
-interval=5                 &Solution interval for gain solutions (minutes) \\
-options=xyvary,qusolve,nopol & If you measured \MM{XX},\MM{YY},\MM{XY} and \MM{YX}, or\\
-options=xyvary,nopol	   & if you have only \MM{XX} and \MM{YY} correlations.\\
-\hline
-\end{tabular}
-\end{center}
-
-\item \index{calibration, examining} The calibration of the secondary is almost complete. Before we
-complete it, though we should examine
-the quality of the solutions. Four tasks are recommended for this --
+Four tasks are recommended for this --
 \task{uvflux} (how well
-does the secondary data fit a point source model?),
-\task{uvplt} (plot the calibrated secondary data), \task{gpplt} (plot
-the gain solutions) and \task{gpnorm} (compare secondary solutions with those
-determined from the primary or elsewhere).
+does the phase calibrator data fit a point source model?),
+\task{uvplt} (plot the calibrated phase calibrator data), \task{gpplt} (plot
+the gain solutions) and \task{gpnorm} (compare phase calibrator solutions with those
+determined from the flux/bandpass calibrator or elsewhere).
 
 The first, and simplest, check of the calibration process is to use
 \index{uvflux}
@@ -4082,7 +4722,7 @@ any of the Stokes parameters. Typical inputs are
 \hline
 \multicolumn{2}{|c|}{{\bf UVFLUX}} \\
 \hline
-vis=0823-500.4800          & Specify secondary calibrator \\
+vis=0220-349.5500          & Specify phase calibrator \\
 stokes=i,q,u,v		   & Check all four Stokes parameters.\\
 options			   & Leave unset (apply calibration).\\
 \hline
@@ -4090,8 +4730,8 @@ options			   & Leave unset (apply calibration).\\
 \end{center}
 
 The first numeric column given for each Stokes parameter is the theoretical
-scatter. Note if you are using the 33 channel / 128 MHz system, and if
-no channel averaging has been performed, or the {\tt birdie} options
+scatter. Note if you are using the old correlator's 33 channel / 128 MHz system, and if
+no channel averaging has been performed, or the {\tt birdie} option
 has not been used with \task{atlod}, then the
 theoretical scatter printed by \task{uvflux} is a factor of $\sqrt{2}$
 higher than the true theoretical value. This is as, for this correlator
@@ -4099,7 +4739,7 @@ configuration (and not for others), individual channels are not independent --
 they overlap by a factor of exactly 2 (in noise bandwidth). Task \task{uvflux}
 fails to take account of this. The second and third numeric columns
 are the mean visibility
-amplitude and phase. The phase should be near 0 for \MM{I}, but could be either
+amplitude and phase respectively. The phase should be near 0 for \MM{I}, but could be either
 0 or 180 degrees for \MM{Q} and \MM{U} (assuming there is signal in these!).
 \MM{V} should be noise. The fourth
 column gives the actual scatter. This should be close to the theoretical
@@ -4108,13 +4748,13 @@ more than a factor of a few greater than the theoretical, you probably
 still have bad data or a bad gain solution.
 
 Using \task{uvplt} to plot the calibrated data is also recommended. As
-with the primary, a scatter diagram plot is quite useful and quick.
+with the flux calibrator, a scatter diagram plot is quite useful and quick.
 \begin{center}
 \begin{tabular}{|l|l|}
 \hline
 \multicolumn{2}{|c|}{{\bf UVPLT}} \\
 \hline
-vis=0823-500.4800          &Specify secondary calibrator. \\
+vis=0220-349.5500          &Specify phase calibrator. \\
 stokes=i,q,u,v		   & Plot all Stokes parameters.\\
 axis=real,imag		   & Plot real vs imaginary\\
 options=equal,nobase	   & Equal X and Y axes. Plot all baselines\\
@@ -4128,7 +4768,7 @@ Outliers in the scatter diagram probably indicate bad data -- you might
 want to go back and flag some more, and redo some calibration steps. Note,
 however, that the ultimate objective of the calibration process is to get
 good calibration solutions -- you are not attempting to produce perfect
-primary or secondary calibrator data. If you do not believe that outliers
+flux or phase calibrator data. If you do not believe that outliers
 affect the calibration solutions unduly, ignore them.
 
 Another check is to plot the gain solutions and inspect them for
@@ -4143,7 +4783,7 @@ These should be constant (within the noise) and no more than a few degrees.
 \hline
 \multicolumn{2}{|c|}{{\bf GPPLT}} \\
 \hline
-vis=0823.uv                &Specify secondary calibrator \\
+vis=0220-349.5500          &Specify phase calibrator \\
 device=/xs		   &PGPLOT device -- X windows in this case \\
 yaxis=phase		   &Plot the phase of the ratio \\
 options=xygains		   & of the \MM{X} and \MM{Y} gains \\
@@ -4151,8 +4791,8 @@ options=xygains		   & of the \MM{X} and \MM{Y} gains \\
 \end{tabular}
 \end{center}
 
-In addition to plotting these solved-for \MM{XY} phases, it is probably worth
-while plotting antenna and bandpass gains and phases. If you see glitches
+In addition to plotting these solved-for \MM{XY} phases, it is probably worthwhile 
+plotting antenna and bandpass gains and phases. If you see glitches
 in the solutions, check the data again. This might be due to bad data
 or interference. You might do some more flagging, and redo some of the
 calibration again.
@@ -4162,10 +4802,11 @@ A final check is to compare the instrumental polarisation solution
 derived set of these solutions. These solutions are moderately time
 independent (they are moderately consistent over months), although there
 is significant frequency variation. The independent set of solutions
-may have come from the primary (e.g. if you determined instrumental polarisation
-for the primary and secondary independently -- which was recommended if
-you had sufficient parallactic angle coverage), or from a previous
-configuration, or possibly other secondary calibrators from the same
+may have come from the flux calibrator (e.g. if you determined instrumental polarisation
+for the flux and phase calibrators independently -- which was recommended if
+you had sufficient parallactic angle coverage and your flux calibrator was not
+a planet), or from a previous
+configuration, or possibly other phase or bandpass calibrators from the same
 observing run. The task to compare the different solutions is \task{gpnorm}.
 Apart from just taking some sort of difference between two sets of parameters,
 it adjusts certain parameters to minimise the difference. The parameters
@@ -4197,60 +4838,176 @@ Typical inputs to \task{gpnorm} are
 \hline
 \multicolumn{2}{|c|}{{\bf GPNORM}} \\
 \hline
-vis=0823-500.4800          & The leakages to check. \\
-cal=1934-638.4800          & The `good' set of leakages. \\
+vis=0220-349.5500          & The leakages to check. \\
+cal=1934-638.5500          & The `good' set of leakages. \\
 options		           & Leave unset.\\
 \hline
 \end{tabular}
 \end{center}
 
-\item \index{calibration, flux bootstrapping}\index{gpboot}
-Having produced a good set of calibration tables for the secondary, all
-that remains is to correct for the flux density of the secondary calibrator.
-The task to do this is \task{gpboot}.
-Recall that the flux density of the secondary was determined by assuming that
-the rms gain amplitude was 1. This assumption will be in error, although if
-the gains were equalised before the observation (which is the normal practice),
-the error will typically be small. Only a small adjustment needs to be made.
-Given that we know the flux density of the primary, the correction for the
-secondary's flux density can be determined. Then the gains of the secondary
-can be corrected to reflect the true flux density of the secondary.
 
-In principle, you should use observations of the secondary and primary
-calibrators that were taken at the same time and elevation. For obvious
-reasons this is not possible. However, you can use the {\tt select} keyword
-to select data from the secondary when it was as close as possible to the
-primary's elevation when it was observed.
+\item
+What this step will accomplish will depend on whether your flux calibrator
+is a planet or not.
+
+If your flux calibrator is {\em not} a planet, then this step will correct
+the phase calibrator's flux scale. To do this we use the task \task{gpboot}.
+This task takes two inputs: {\tt vis}, which is a dataset with a flux scale
+that needs correcting, and {\tt cal}, which is a dataset with the reference
+-- or in this case, correct -- flux scale.
+
+In principle, you should use observations of the phase and flux
+calibrators that were taken at the same time and elevation, because atmospheric
+opacity affects the amplitude gain calibration. For obvious
+reasons this is not always possible, although the further apart the observations
+are in time and elevation, the less accurate the flux calibration will be,
+especially at high frequencies. However, you can use the {\tt select} keyword
+to select the data from the phase calibrator that will give you the best flux
+calibration. In stable weather conditions,
+it is probably best to select the time range of the phase calibration where its
+elevation corresponds most closely to the elevation during the flux calibrator's
+observation.  When the weather changes significantly during the
+observation, it is probably best to use a time range of the phase calibrator
+which is close to the flux calibrator's observation.  Tasks \task{uvplt} and
+\task{varplt} can plot source elevation as a function of time. 
+
 
 Task \task{gpboot} can optionally correct the \MM{XY} phases of the
-secondary, assuming that the \MM{XY} phases of the primary are correct,
+phase calibrator, assuming that the \MM{XY} phases of the primary are correct,
 and that the \MM{XY} phases are constant.  Given \MM{XY} phase strategy
 that you should have already followed, this is not recommended.
 
 \begin{center}
 \begin{tabular}{|l|l|}
 \hline
-\multicolumn{2}{|c|}{{\bf GPBOOT}} \\
+\multicolumn{2}{|c|}{{\bf GPBOOT}}\\
 \hline
-vis=0823-500.4800          & Specify secondary calibrator.\\
-cal=1934-638.4800	   & Specify the primary calibrator.\\
-select			   & Use this to select the time range of\\
-			   & the secondary.\\
-options=noxy               & Do not make XY phase corrections \\
+vis=0220-349.5500 & Specify phase calibrator.\\
+cal=1934-638.5500 & Specify flux calibrator.\\
+options=noxy      & Do not make XY phase corrections.\\
 \hline
 \end{tabular}
 \end{center}
 
-\item All that remains is to transfer the calibration tables to the program source.
-Again we use \task{gpcopy} to go this. Typical inputs are
+The output of \task{gpboot} will be a number indicating how large a scaling
+adjustment was made, with 1.000 being no adjustment at all.
+
+If your flux calibrator {\em is} a planet, then this step will transfer
+the gain scaling from the phase calibrator to the flux calibrator, again
+using \task{gpcal}. This time though, the reference flux scale will be
+that of the phase calibrator. This step is necessary because the task that
+adjusts the flux scales using a planet requires that all the input datasets
+(which will be the flux and phase calibrators) have the same flux scale
+to begin with. It is more than likely that at this point both the flux
+calibrator and phase calibrator will have the same (or very similar) flux
+scalings anyway, since the operation of \task{mfcal} on the bandpass calibrator
+and \task{gpcal} on the phase calibrator should be similar enough to produce
+consistent scalings. Therefore, you should expect that the scaling factor
+applied by \task{gpcal} should be very close to 1, otherwise there may be a
+problem with your data.
+
+\begin{center}
+\begin{tabular}{|l|l|}
+\hline
+\multicolumn{2}{|c|}{{\bf GPBOOT}}\\
+\hline
+vis=uranus.43000 & Specify flux calibrator.\\
+cal=0220-349.43000 & Specify phase calibrator.\\
+\hline
+\end{tabular}
+\end{center}
+
+The state of the calibration at this point is shown in the table below.
+Note that we are not attempting to further calibrate the bandpass
+calibrator. It is of course possible to calibrate the bandpass calibrator, in order
+to measure its flux (or something similar), but this is left as an
+exercise for the reader.
+
+\begin{center}
+\begin{tabular}{|l|c|c|c|c|}
+\hline
+ & {\bf Bandpass} & {\bf Bandpass} & {\bf Flux}    & {\bf Phase}\\
+ & {\bf Shape}    & {\bf Slope}    & {\bf Scaling} & {\bf Solution}\\
+\hline
+Flux calibrator (is bandpass)  & Correct & Correct   & Correct & No\\
+Flux calibrator (not bandpass) & Correct & Incorrect & Correct & No\\
+Flux calibrator (planet)       & Correct & Incorrect & Incorrect & No\\
+Phase calibrator (flux is a planet) & Correct & Incorrect & Incorrect & Yes\\
+Phase calibrator (flux is not a planet) & Correct & Incorrect & Correct & Yes\\
+\hline
+\end{tabular}
+\end{center}
+
+\item \index{calibration, bandpass slope}\index{mfboot}\index{calibration, planet flux}
+At this point in the calibration, we need to at least correct the bandpass slope
+of the phase calibrator, and if the flux calibrator is a planet, then
+we also need to correct the flux scaling. This step will accomplish both,
+using the task \task{mfboot}.
+
+For a known flux calibrator, be it a point source or a planet, \task{mfboot}
+constructs a model of what the flux should be on each baseline and for
+all frequencies across the band. It then determines by how much the gains
+must be scaled by to make the observed flux at the centre of the band
+match the model value. It then scales all the datasets it has been given by
+that factor.
+
+It also calculates the slope of the model between two points either side of
+the band centre, and then corrects the bandpass table to make the observed
+spectrum match that slope. Previous versions of \task{mfboot} did not perform
+this bandpass correction since spectral slopes were not as apparent across
+the narrow bands offered by the old correlator.
+
+The task operates a little differently to \task{gpboot}, which has separate
+inputs for the uncorrected dataset and the reference dataset. In contrast,
+\task{mfboot} has only one input type that takes a comma separated list of
+datasets, all of which are assumed to have the same bandpass and gain tables.
+The source to use as the flux calibrator is then selected using the standard
+{\tt select} parameter.
+
+\begin{center}
+\begin{tabular}{|l|l|}
+\hline
+\multicolumn{2}{|c|}{{\bf MFBOOT}}\\
+\hline
+vis=1934-368.5500,0220-349.5500 & Specify all the input datasets, or\\
+vis=uranus.43000,0220-349.43000 & Specify all the input datasets.\\
+select=source(1934-638) & Specify the flux calibration source, or\\
+select=source(uranus)   & Specify the flux calibration source\\
+options                 & Usually leave this unset, but\\
+options=noapply         & Useful if you want to see what scaling will result,\\
+                        & without applying it\\
+\hline
+\end{tabular}
+\end{center}
+
+This task will output the flux scaling and bandpass slope correction
+factors it applied to each of the datasets.
+
+The state of the calibration at this point is shown in the table below.
+
+\begin{center}
+\begin{tabular}{|l|c|c|c|c|}
+\hline
+ & {\bf Bandpass} & {\bf Bandpass} & {\bf Flux}    & {\bf Phase}\\
+ & {\bf Shape}    & {\bf Slope}    & {\bf Scaling} & {\bf Solution}\\
+\hline
+Flux calibrator & Correct & Correct & Correct & No\\
+Phase calibrator & Correct & Correct & Correct & Yes\\
+\hline
+\end{tabular}
+\end{center}
+
+\item \label{copyprogram}
+All that remains is to transfer the calibration tables to the program source.
+Again we use \task{gpcopy} to do this. Typical inputs are
 
 \begin{center}
 \begin{tabular}{|l|l|}
 \hline
 \multicolumn{2}{|c|}{{\bf GPCOPY}} \\
 \hline
-vis=0823-500.4800          &Specify secondary calibrator \\
-out=vela.4800		   & Specify the program source dataset\\
+vis=0220-349.5500          &Specify phase calibrator \\
+out=vela.5500		   & Specify the program source dataset\\
 options			   & Leave unset\\
 mode			   & Leave unset\\
 \hline
@@ -4259,20 +5016,177 @@ mode			   & Leave unset\\
 
 \end{enumerate}
 
+\subsection{An alternative approach to calibration}\label{s:alternativecalibration}
+This calibration approach is recommended when dealing with high frequency data
+from the old ATCA correlator, especially at 3mm wavelengths. The calibration at these
+wavelengths is more difficult because of weak calibrators, poorer system sensitivity and
+more challenging atmospheric conditions. The approach described here exploits the dual
+frequency bands that were available with the old correlator. The steps are as follows:
+
+\begin{enumerate}
+\item The first step is not a step at all! Unlike the conventional approach,
+the approach described here {\it does not} split the 
+data into separate single source, single frequency files before
+calibration. Rather the 
+current approach assumes that you have a single \miriad\ dataset containing
+bandpass calibrator, phase calibrator, flux density calibrator and 
+program source. We focus on data having two simultaneous frequency bands
+here, but the approach works equally well for one or many simultaneous
+frequency bands within the dataset.
+
+\item The first real step is akin to a bandpass calibration step. When
+dealing with two frequency bands, each with two polarisation products
+(XX and YY), it is
+generally appropriate to
+assume that the bandpasses of the bands and the phase offsets between
+bands and polarisations are constant with time. 
+
+To determine the bandpasses and the phase offsets, you need
+to use \task{mfcal} on an observation of a strong continuum source.
+Typically this would be 
+1253-055, 1921-293 or 0537-441. 
+Typical inputs are as follows:
+
+\begin{center}
+\begin{tabular}{|l|l|}
+\hline
+\multicolumn{2}{|c|}{{\bf MFCAL}} \\
+\hline
+in=vela.fixed.uv	& Input multi-source, dual-band dataset.\\
+select=source(1921-293)	& Select the strong continuum ``bandpass'' calibrator.\\  
+\hline
+\end{tabular}
+\end{center}
+
+The important output of this step is a bandpass calibration table which
+will contain the relevant phase offsets. The output also contains
+antenna gain calibration tables, but this will be overwritten below.
+
+In doing this step, you may well want to avoid using some edge
+channels in the bandpass calibration process. To achieve this, you
+can use the {\tt edge} parameter of \task{mfcal}. The {\tt edge} parameter
+sets the number of channels to drop for all bands equally. It does not
+allow you to set different number of channels to drop in the different bands.
+If the channels and bandwidth characteristics of the different bands differ
+significantly, the {\tt edge} parameter probably does not give you
+sufficient flexibility. In this case, you could use \task{uvflag} to
+explicitly flag edge channels.
+
+\item The next step is to determine the antenna gain calibration, again
+using \task{mfcal}. To do this,
+you will want to select those data for the phase calibrator which
+will give the best overall sensitivity appropriate to your observation.
+\begin{itemize}
+\item If the calibrator is a continuum source, you need only select this
+source and use both bands. Task \task{mfcal} will weight the two bands
+according to their relative bandwidth. Consequently if one of the bands
+is quite narrow relative to the other, then it will contribute little to
+the overall gain solution.
+\item If the calibrator is an SiO maser, you will want to select only those
+channels that contain strong SiO signal. 
+\item With either a continuum calibrator or an SiO maser, it is possible to
+either determine antenna gain calibrations for the two polarisation products 
+independently, or to determine a
+single joint solution for the two polarisations. The latter will give
+a $\sqrt{2}$ improvement in sensitivity in the solution process.
+The latter is also the
+desirable approach if the calibrator is strongly polarised (some SiO 
+masers are more than 50\% polarised). Doing a joint solution is
+generally a reasonable approximation given that the antenna gains
+are dominated by changes common to both polarisations: in amplitude, it is
+from the physical antenna 
+gain change, and in phase it is from the atmosphere and instrumental 
+contributions common to both polarisations.
+\end{itemize}
+
+Note in this calibration scheme, it is implicitly assumed that the antenna 
+gain changes are common to both frequency bands. This is a reasonable
+approximation given that the frequency separation between the bands is
+at most 2.7 GHz and potentially much less. Consequently the fractional
+frequency separation is at most a few percent, and so the calibration change
+between bands can be assumed to be minimal.
+\end{enumerate}
+
+Typical inputs for \task{mfcal} follow. This assumes a continuum
+source as the phase calibrator and does a joint solution for the
+two polarisations:
+\begin{center}
+\begin{tabular}{|l|l|}
+\hline
+\multicolumn{2}{|c|}{{\bf MFCAL}} \\
+\hline
+vis=vela.fixed.uv	& Input multi-source, dual-band dataset.\\
+select=source(1622-297)	& Select phase calibrator.\\  
+options=nopassol	& {\it Do not} solve for bandpass.\\
+stokes=i		& Do a joint solution for both polarisations.\\
+\hline
+\end{tabular}
+\end{center}
+To derive a separate solution for the two polarisation products, the
+{\tt stokes} keyword would be left unset. Note the use of \verb+options=nopassol+.
+This causes \task{mfcal} to not attempt to solve for the
+bandpass and phase offsets again, but rather to apply the previously 
+determined bandpass and phase offset solutions.
+
+Typical inputs when using an SiO maser would be as follows:
+Typical inputs to \task{mfcal} are as follows:
+\begin{center}
+\begin{tabular}{|l|l|}
+\hline
+\multicolumn{2}{|c|}{{\bf MFCAL}} \\
+\hline
+vis=vela.fixed.uv	& Input multi-source, dual-band dataset.\\
+select=source(oceti)	& Select SiO secondary calibrator.\\  
+options=nopassol	& {\it Do not} solve for bandpass.\\
+stokes=i		& Do a joint solution for both polarisations.\\
+line=chan,20,45		& Select the range of channels where the SiO\\
+			& signal is strong.\\
+\hline
+\end{tabular}
+\end{center}
+
+At this point, you have a dataset that has been bandpass calibrated, and
+whose complex gains are determined as a function of time. All the remaining
+steps can be completed the same way as in the conventional approach: continue
+on from step~\ref{i:inspection} in Section~\ref{s:calibrationapproach}.
+
+\subsection{Information on planets}
+Given the observing time and frequency, task \task{plplt} plots the
+expected visibility function for a planet.
+You will most likely want to check this visibility function
+before observing and discovering that the planet is resolved out!
+{\bf NOTE} that \task{mfboot} and \task{plplt} do not include the effect of the
+ATCA's primary beam -- the planet is implicitly (and silently) assumed to be
+small compared with the primary beam. This may not be the case at 3-mm. 
+If there is a significant change in the visibility function between baseline
+lengths of 0 and 22~metres,
+then primary beam effects are important, and you probably do not
+want to use the planet (most likely it would be resolved out anyway).
+
+Task \task{planets} can give you basic information about a planet, including
+rise and set times (but note these are quoted at the horizon, not the ATCA's
+elevation limit), the planet's angular size at a particular time, and its 
+RA and DEC (note that the
+ephemeris used for RA and DEC is not sufficiently accurate to point or
+phase track the telescope).
+
+Information on using the ATCA to observe a planet is available on-line at
+\htmladdnormallink{http://www.narrabri.atnf.csiro.au/observing/users_guide/html/new_atug_20.html#Scheduling-Strategy}.
+
 \section{The Interpolation Process}\index{calibration, interpolation}
 You should now have a program source dataset containing the
 appropriate calibration solutions.
 The antenna gain solutions have been derived
-from observations of a secondary
-calibrator, near the program source, taken typically for 5 minutes every
-hour or so.  The program source antenna gains are derived
+from observations of a phase
+calibrator, near the program source, taken typically for 2 minutes every
+fifteen minutes or so.  The program source antenna gains are derived
 by interpolating and extrapolating these gain solutions.
 Although these can often be skipped, there are a few steps
 that you might consider doing to improve the interpolation process.
 
 \subsection*{Interpolation/Extrapolation Tolerance}\index{calibration, interpolation tolerance}\label{s:inttol}
 Clearly there is some limit to the interval of time over which you can
-sensibly interpolate or extrapolate gains. If the gap between the secondary
+sensibly interpolate or extrapolate gains. If the gap between the phase calibrator
 observations is too large, then the interpolation of the gain solutions may
 have no resemblance to the true gains at a given time.
 The software that interpolates or extrapolates between the
@@ -4288,7 +5202,8 @@ corresponding program source data are marked as flagged.
 
 This interpolation tolerance is stored as the {\tt interval} item
 the visibility dataset. It is given as a double precision number with
-units of days. Task \task{gpcal} sets its value as half a day ({\tt interval=0.5}). Though this is excessively generous, this will not be a
+units of days. Task \task{gpcal} sets its value as half a day ({\tt interval=0.5}). 
+Although this is excessively generous, this will not be a
 problem unless there are large gaps between calibrator scans (perhaps because
 some calibrator scans had to be discarded). You can set the set the
 interpolation tolerance using \task{puthd}. For example
@@ -4298,8 +5213,8 @@ interpolation tolerance using \task{puthd}. For example
 \hline
 \multicolumn{2}{|c|}{{\bf PUTHD}} \\
 \hline
-in=vela.4800/interval & Set the interpolation tolerance of\\
-		       & dataset vela.4800. \\
+in=vela.5500/interval & Set the interpolation tolerance of\\
+		       & dataset vela.5500. \\
 value=0.1	       & Set the tolerance to 2.4 hours (0.1 days). \\
 \hline
 \end{tabular}
@@ -4374,8 +5289,8 @@ gains. Its pretty straightforward.Typical inputs are
 \hline
 \multicolumn{2}{|c|}{{\bf GPAVER}} \\
 \hline
-vis=vela.4800 & Average the gain table for the program source \\
-interval=10 & Averaging interval (calibrator scan length)\\
+vis=vela.5500 & Average the gain table for the program source \\
+interval=2 & Averaging interval (calibrator scan length)\\
 options=scalar& Scalar average if self-calibrating later,\\
 \ \ \ or&\\
 options=vector& vector average otherwise\\
@@ -4427,7 +5342,7 @@ example:
 \hline
 \multicolumn{2}{|c|}{{\bf GPBREAK}} \\
 \hline
-vis=vela.4800 & Insert break points into the program source.\\
+vis=vela.5500 & Insert break points into the program source.\\
 break=20:30:10,21:15:45& Give the times of the glitches.\\
 ants=1,2	 & Only antennas 1 and 2 were affected.\\
 feeds=x	 & Only the X feeds were affected.\\
@@ -4474,8 +5389,9 @@ given a collection of visibility datasets.
 
 Even if you are only interested in continuum imaging, your data may
 contain several frequencies. Unless you have averaged over frequency
-channels earlier, your data still contains the 33 frequency channels produced
-by the ATCA correlator. Additionally as
+channels earlier, your data still contains the 2048 channels produced by
+the CABB correlator, or 33 frequency channels produced
+by the old ATCA correlator. Additionally as
 the ATCA can observe two frequency windows simultaneously, and if these two
 windows are relatively close (within about 25\%\ of each other), then you
 can get extra sensitivity and improved \MM{u-v} coverage by combining the
@@ -4495,14 +5411,14 @@ UN-averaged data. By giving \task{invert} data that has not been averaged
 in frequency, it can grid the individual channels at their correct location
 in the \MM{u-v} plane (rather than some average location). In this way bandwidth
 smearing is reduced and the better
-\MM{u-v} coverage results in a better beam. The advantage of doing this
+\MM{u-v} coverage results in a better beam. The advantages of doing this
 decrease with
-the fractional bandwidth that your data occupies, and so the reasons for
-not averaging are less compelling when imaging using a single frequency band
-at 3 cm.
-In this case, the small disadvantages of not doing the frequency averaging
-(somewhat slower run time, and a larger scratch file) might
-outweigh the advantages.
+the fractional bandwidth that your data occupies. With CABB data, a 2 GHz band
+represents a large fractional bandwidth even at 20 GHz, so frequency averaging
+is not recommended for CABB data at all. In the past, averaging was useful as
+a computational time and disk space saver, but with modern processing speeds, it is hardly
+necessary even with CABB data, and certainly not for data from the old
+ATCA correlator.
 
 The technique of forming a single continuum image from a variety of
 frequencies is called ``multi-frequency synthesis'' (MFS). It produces an
@@ -4513,7 +5429,7 @@ all the time (interferometers are never monochromatic). The advantage of
 MFS is that it can take a greater fractional spread in frequencies before
 artifacts become a problem.
 
-Eventually MFS will break down because of the variation in the sources
+Eventually MFS will break down because of the variation in the source's
 flux density with frequency.
 If the fractional spread in frequencies is small ($<10\%$) or if
 high dynamic range imaging is not required (dynamic ranges less than a few
@@ -4523,9 +5439,12 @@ tasks (if deconvolution is required). Otherwise, spectral index effects are
 likely to be important, and you should use a
 special task (\task{mfclean}) for the deconvolution. Note that the decision
 to use MFS in the imaging {\em does not} require you to use \task{mfclean}
-in the deconvolution. While many ATCA continuum observations will benefit
-from using MFS in the imaging, a much more select set will benefit from
-accounting for spectral index effects in the deconvolution.
+in the deconvolution. While most ATCA continuum observations will benefit
+from using MFS in the imaging, not as many will benefit from
+accounting for spectral index effects in the deconvolution. However, at low
+frequencies, it is likely that a large fraction of sources will display some
+variation of flux density over the large CABB bandwidth, making \task{mfclean}
+an important step.
 
 \section{Spectral Line Imaging Considerations}
 Although you do not have to decide whether to use MFS or not for
@@ -4561,7 +5480,7 @@ weighting.
 sampling density function on a grid that is the same size as the
 gridded \MM{u-v} plane. This results in the synthesised beam sidelobes
 being minimised over the same field-of-view as the region being
-image. Surprisingly, making the field-of-view very large (bigger than
+imaged. Surprisingly, making the field-of-view very large (bigger than
 the primary beam size) or very small (comparable to the synthesised beam)
 both cause uniform weighting to reduce to natural weighting.
 Super- and sub-uniform weighting decouple the weighting from the field size
@@ -4570,7 +5489,7 @@ over some arbitrary field size, with this field being either smaller or
 larger than the field being imaged (for super- or sub-uniform weights
 respectively).
 \item[Robust weighting] Uniform weighting (including super- and sub-uniform
-weighting) minimising sidelobes, whereas natural weighting minimises
+weighting) minimises sidelobes, whereas natural weighting minimises
 the noise level. Robust weighting provides a compromise between the two,
 doing so in an optimal sense (similar to Wiener optimisation).
 See \htmladdnormallink{Dan Briggs' thesis}
@@ -4808,7 +5727,7 @@ sup=0			&Set \verb+sup+ to zero for natural weighting\\
 fwhm			&Specify desired resolution -- unset gives the max\\
 			&resolution\\
 options=mfs		& Use the MFS option for multi-frequency synthesis, or\\
-options=mfs,sdb		& use the sbd option as well if using \task{mfclean}.\\
+options=mfs,sdb		& use the sdb option as well if using \task{mfclean}.\\
 line			&Controls channel selection and averaging. Default\\
 			& is all channels when {\tt options=mfs}.\\
 \hline
@@ -4854,21 +5773,21 @@ compute the variance of a correlation) is based on values of system
 temperature, system gain, integration time and bandwidth stored in a dataset.
 Unfortunately data loaded into \miriad\ using \task{fits} will have only nominal
 system temperatures and system gains, and an educated guess is made for the
-integration time. Data loaded using \miriad\ \task{atlod}, the
+integration time. For data loaded using \miriad\ \task{atlod}, the
 system temperatures are those measured on-line, and the integration time
 will be correct.
-See Chapter~\ref{c:inout} for a discussion of setting you dataset
+See Chapter~\ref{c:inout} for a discussion of setting your dataset
 up so that noise estimates are correct. The system gain, however, is still
 a nominal figure. If system temperature, system gain or integration time
 are incorrect by some factor, then the
 theoretical rms noise will also be wrong by the same factor.
 
-In continuum mode (i.e.  the 33 channel/128 MHz mode), when all 33
+In the old correlator's continuum mode (i.e.  the 33 channel/128 MHz mode), when all 33
 channels are retained after \task{atlod} (i.e.  \verb+options=birdie+
 was not used) there is another effect which will cause \task{invert}'s
 noise estimate to be a factor of $\sqrt2$ too pessimistic (i.e.  the
 actual noise is a factor of $\sqrt2$ lower than the printed value).
-With the ATCA correlator in this mode mode, the channel bandwidth is
+With the old ATCA correlator in this mode, the channel bandwidth is
 twice as large as the separation between channels ({\it i.e.} the
 channels are oversampled).  Unfortunately \task{invert} assumes that the
 bandwidth is the same as the separation.  This will only affect you if
@@ -4925,7 +5844,7 @@ the simple convolution relationship no longer applies -- see Section~\ref{s:mfcl
 
 There are two techniques used commonly in radio astronomy; CLEAN and
 maximum entropy (MEM).  CLEAN is rarely used outside of radio astronomy,
-but MEM is more far reaching.  For detailed discussion on the `pros'
+but MEM is more far-reaching.  For detailed discussion on the `pros'
 and `cons' of these algorithms, see the NRAO imaging workshops and
 references therein.  Much blood has been spilt over their relative
 merits in the last decade or so.
@@ -5049,9 +5968,8 @@ successful.
 \subsection*{Region-of-Interest Considerations}
 Note that the H\"ogbom, Clark, and SDI versions of CLEAN can only
 properly deconvolve a region a quarter the area of your beam.
-If your
-the image and beam are the same size, which is the default behaviour of
-\task{invert}, you can deconvolve only a quarter of
+If the image and beam are the same size -- which is the default behaviour of
+\task{invert} -- you can deconvolve only a quarter of
 the image.  For example, consider images that
 are 256 pixels in size (one dimension will do), with a point source
 located at pixel 192.  A beam image centred on that point source will
@@ -5211,8 +6129,8 @@ The default is 0.
 
 \item {\tt minpatch}: For Clark CLEANs, the parameter \verb+minpatch+ is the
 minimum full width ({\em not} half-width, as it is in \aips) of the beam patch
-used in the minor cycle. The default is 51. However, for ATCA work, where
-the beam can often have large distant sidelobes, and so this value may be too
+used in the minor cycle. The default is 51 pixels. However, for ATCA work, where
+the beam can often have large distant sidelobes, this value may be too
 small.
 Setting \verb+minpatch+ to larger values will slow the
 algorithm, but may avoid CLEAN striping problems. The maximum value that
@@ -5255,7 +6173,7 @@ Typical inputs are given below:
 \multicolumn{2}{|c|}{{\bf CLEAN}} \\
 \hline
 map=vela.imap		& Dirty image\\
-beam=vela.ibem		& Dirty beam\\
+beam=vela.ibeam		& Dirty beam\\
 out=vela.icmp		& Output CLEAN component image\\
 mode			& Algorithm used -- let CLEAN decide\\
 region			& Defaults to max area safely CLEANed.\\
@@ -5435,9 +6353,7 @@ messages.
 degree rotational symmetry, which is the norm in radio interferometry.
 Making such an assumption allows some optimisations. You should instruct
 \task{clean} if this is not the case, by using the {\tt asym} switch.
-\item[{\tt pad:}] Double the beam size by padding it with zeros. This will
-give better stability with Clark and Steer modes if you are daring enough
-to CLEAN an area which is more than a quarter of the beam area.
+\item[{\tt pad:}] Double the beam size by padding it with zeros.
 \end{description}
 
 \end{itemize}
@@ -5448,7 +6364,7 @@ to CLEAN an area which is more than a quarter of the beam area.
 \multicolumn{2}{|c|}{{\bf MAXEN}} \\
 \hline
 map=vela.imap		& Dirty image \\
-beam=vela.ibem		& Dirty beam \\
+beam=vela.ibeam		& Dirty beam \\
 model			& An initial solution solution -- generally unset\\
 default			& The image that the solution should tend\\
 			& towards -- generally unset \\
@@ -5675,7 +6591,7 @@ Typical inputs are given below:
 \multicolumn{2}{|c|}{{\bf RESTOR}} \\
 \hline
 map=vela.imap		& Dirty image\\
-beam=vela.ibem		& Dirty beam\\
+beam=vela.ibeam		& Dirty beam\\
 model=vela.icmp		& Component image produced by CLEAN\\
 out=vela.icln		& Output restored image (or residuals)\\
 mode			& Leave unset to get restored image\\
@@ -5697,7 +6613,7 @@ used to make additional corrections to the antenna gains as a function of time.
 It is notionally very similar to the basic calibration. The main
 difference is than the model of the source is generally more complex
 than just
-assuming its a point source at the phase centre.
+assuming it's a point source at the phase centre.
 The self-calibration technique finds antenna gains, $g_i$, which minimise
 the difference between
 the measured visibilities, $V_{ij}$, and the model visibilities,
@@ -5758,8 +6674,10 @@ your image quality, then you will be unable to improve the image
 quality.  The time-scale on which you will often find it necessary to
 correct the gains is approximately one minute.  Thus, weak sources often
 cannot be self-calibrated. For a continuum observation (100 MHz bandwidth)
-with the ATCA, you will, typically, need a signal strength of 100 mJy
-before self-calibration is possible.
+with the old ATCA correlation, you will, typically, need a signal strength of 100 mJy
+before self-calibration is possible. For the CABB correlator, with its 2 GHz
+of bandwidth, you will typically be successful with sources with flux density
+of around 10-20 mJy or more.
 
 Note that it is not the receivers that cause the gains to be unsteady
 with time, but the atmosphere.  In a similar way to the degradation of
@@ -5805,8 +6723,8 @@ or significant amplitude gain mismatches (for \task{selfcal} only)
 then these corrections should be applied to the data before self-calibration.
 Consequently, {\em
 it is usually wise, before starting to perform self-calibration
-iterations, to form a calibrated dataset (apply bandpass
-corrections and primary antenna gains).} Additionally if you are going to
+iterations}, to form a calibrated dataset (apply bandpass
+corrections and primary antenna gains). Additionally if you are going to
 use \task{selfcal}, as discussed below, you should convert to Stokes
 parameters. The task used to apply calibration and convert to Stokes
 parameters is \task{uvaver}.
@@ -5969,8 +6887,8 @@ should set the {\tt line} parameter explicitly.
 \item \task{selfcal} can cope with the case of several models being
 derived from different channel ranges from one visibility dataset.
 This might occur, for example, if multiple lines were being observed
-simultaneously (as often happens at millimeter wavelengths, but rarely
-with the ATCA).  In this case, the different models were formed with
+simultaneously (as often happens at millimeter wavelengths).  
+In this case, the different models were formed with
 different {\tt line} parameters.  \task{selfcal} {\em must} rely on the
 record of the {\tt line} parameter stored in the model.
 
@@ -6040,7 +6958,7 @@ Section~\ref{s:line}. This parameter is described in some detail above.
 believable flux density in the model. For Stokes I or parallel-hand correlations, this
 is a maximum limit -- flux densities below this limit are assumed to be
 noise or error.
-For Stokes Q, U and V, this is an absolute limit -- flux densities less that
+For Stokes Q, U and V, this is an absolute limit -- flux densities less than
 $|\hbox{\tt clip}|$ are assumed to be noise or error.
 \item {\tt offset}: The self-calibration tasks can be run assuming a
 point-source model. A point-source model will be assumed if no {\tt model}
@@ -6110,7 +7028,7 @@ To use this option, the source should be strongly polarised
 (at least 5\%), and Stokes Q and/or Stokes U models should be given.
 \item[{\tt xyvary\rm:}] Solve for a variable \MM{XY} phase. It is
 recommended that you use this option, although this option does not
-work for phase-only self-calibration. If used with{\tt options=xyref}
+work for phase-only self-calibration. If used with {\tt options=xyref}
 then \task{gpscal} additionally solves for a variable \MM{XY} phase on
 the reference antenna.
 \end{description}
