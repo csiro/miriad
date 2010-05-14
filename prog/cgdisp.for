@@ -120,21 +120,30 @@ c@ cols3
 c       Colours for the third contour image.  Defaults to those for the
 c       first image.
 c@ range
-c       N groups of 4 values (1 group per subplot and N is the maximum
-c       number of channels allowed by Miriad; typically 2048). These are
-c       the image intensity range to display (min to max), the transfer
-c       function type and the colour lookup table for each subplot
-c       displayed.  The transfer function type can be one of "lin"
-c       (linear), "sqr" (square root), "log" (logarithmic), and "heq"
-c       (histogram equalization).  The colour lookup table is an integer
-c       from 1 to 8 specifying a lookup table.  Valid values are 1 (b&w),
-c       2 (rainbow), 3 (linear pseudo colour), 4 (floating zero colour
-c       contours), 5 (fixed zero colour contours), 6 (rgb),
-c       7 (background) 8 (heat) and 9 (absolute b&w).  Enter a negative
-c       integer to reverse the lookup table.
+c       Up to N groups of four values, one group per sub-plot, where N
+c       is the maximum number of channels allowed by Miriad (currently
+c       32768).  The four values are
+c         - MINimum image intensity to display
+c         - MAXimum image intensity to display
+c         - Transfer function type:
+c             lin: linear
+c             sqr: square root
+c             log: logarithmic
+c             heq: histogram equalization
+c         - Colour lookup table:
+c               1: b&w
+c               2: rainbow
+c               3: linear pseudo colour
+c               4: floating zero colour contours
+c               5: fixed zero colour contours
+c               6: rgb
+c               7: background
+c               8: heat
+c               9: absolute b&w
+c           Negate the table number to reverse the lookup table.
 c
 c       The transfer function changes available with OPTIONS=FIDDLE
-c       are in addition (on top of) to the selections here, but the
+c       are in addition to (on top of) the selections here, but the
 c       colour lookup table selections will replace those selected here.
 c
 c       All subplots following the last one with a specified "range"
@@ -423,6 +432,7 @@ c        "sym"     for pgplot symbol number (given centre and symbol)
 c
 c       Also
 c        "colour"  See below.
+c        "line"    See below.
 c        "offset"  See below.
 c
 c       XOTYPE and YOTYPE  give the units of the overlay location (and
@@ -511,9 +521,8 @@ c
 c
 c       ##### OFIG = COLOUR (or COLOR)
 c
-c
-c       At any point in the overlay file you can include a COLOUR
-c       directive in the format
+c       A COLOUR directive can be included at any point in the overlay
+c       file in the format
 c
 c         COLOUR   INDEX
 c
@@ -522,6 +531,19 @@ c       starts in column 1, followed by the PGPLOT colour index.  This
 c       changes the graphics overlay colour until the next COLOUR
 c       directive is processed.  PGPLOT colour indices are listed above
 c       for the cols1 parameter.  The default colour index is 9.
+c
+c       ##### OFIG = LINE
+c
+c       A LINE directive can be included at any point in the overlay
+c       file in the format
+c
+c         LINE   WIDTH
+c
+c       where the literal "LINE" (without the quotes) starts in column
+c       1, followed by the PGPLOT line width in units of 0.005 inch
+c       (about 0.13 mm) and must be an integer in the range 1-201.  This
+c       changes the graphics line width until the next LINE directive is
+c       processed.  The default width is 1.
 c
 c       ##### OFIG = OFFSET
 c
@@ -554,7 +576,7 @@ c       The OFFSET line is not applied to ANY position fields in
 c       succeeding lines that have %OTYPEs that are "hms" or "dms".
 c       I am too lazy to code it.
 c
-c$Id: cgdisp.for,v 1.9 2010/05/07 05:23:15 cal103 Exp $
+c$Id: cgdisp.for,v 1.10 2010/05/14 07:16:12 cal103 Exp $
 c--
 c
 c  History:
@@ -794,8 +816,8 @@ c     Plotting parameters.
       data getvsc /.true./
 c-----------------------------------------------------------------------
       version = versan ('cgdisp',
-     :                  '$Revision: 1.9 $',
-     :                  '$Date: 2010/05/07 05:23:15 $')
+     :                  '$Revision: 1.10 $',
+     :                  '$Date: 2010/05/14 07:16:12 $')
 c
 c Get user inputs
 c
@@ -2537,9 +2559,9 @@ c  Input:
 c   maxgr      Maximum number of pixel map scale intensity ranges and
 c              transfer functions allowed.  The user can input one group
 c              per sub-plot up to this maximum so that differnt subplots
-c              can be displayed optimally.  If there are more subplots
-c              that intebsity ranegs given, the extra ones use the
-c              values for the previous subplot.
+c              can be displayed optimally.  If there are more sub-plots
+c              than intensity ranges, the extras use the values for the
+c              previous sub-plot.
 c   maxlev     Maximum number of allowed contour levels
 c   maxcon     Maximum number of contour images
 c   maxtyp     Maximum number of label types
@@ -3026,7 +3048,7 @@ c-----------------------------------------------------------------------
 cc
       double precision xoff, yoff, pix3, ocen(2), ocorn(2,4)
       real opoly(0:180,2), xl, xr, yb, yt
-      integer i, icol, ilen, iostat, len1, lpos, ochan(2)
+      integer i, icol, ilen, iostat, len1, lpos, lw, ochan(2)
       character aline*300, code*8, ofig*8, oid*80
       logical ok, owrite
 c-----------------------------------------------------------------------
@@ -3054,6 +3076,13 @@ c               Colour to be applied to succeeding overlays.
                 call atoif (aline(7:), icol, ok)
                 if (ok) then
                   call pgsci (icol)
+                end if
+
+              else if (code.eq.'line') then
+c               Line thickness to be applied to succeeding overlays.
+                call atoif (aline(7:), lw, ok)
+                if (ok) then
+                  call pgslw (lw)
                 end if
 
               else if (code.eq.'offset') then
