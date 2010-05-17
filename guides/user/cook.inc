@@ -2309,7 +2309,7 @@ interference is common at these wavelengths, and \task{pgflag} is a good
 tool at finding and flagging this interference. \task{pgflag} is conveniently
 performed on a multi-source file, straight after the data are loaded into
 \miriad.
-\item Using \task{blflag} is generally quick compared to \task{blflag},
+\item Using \task{blflag} is generally quick compared to \task{pgflag},
 and some forms of bad data are more apparent with \task{blflag}.
 However, bad data is not that apparent when attempting to use it
 with datasets containing multiple sources. We recommend that you
