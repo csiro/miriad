@@ -12,7 +12,7 @@ c    09may00 rjs  Do not allow default image size if pbtype=SINGLE.
 c    28jun05 rjs  Check the u,v coordinates to see if NCP projection is
 c                 best.
 c
-c $Id: hdtab.for,v 1.2 2010/05/17 04:37:59 cal103 Exp $
+c $Id: hdtab.for,v 1.3 2010/05/17 06:27:16 cal103 Exp $
 c***********************************************************************
       subroutine HdInit(mfs1,mosaic1)
 c
@@ -35,12 +35,14 @@ c
 c
 c  Check that the header is the same.
 c-----------------------------------------------------------------------
-      include 'mirconst.h'
-      real tol
-      parameter(tol=pi/180./3600.)
       include 'hdtab.h'
-      double precision t1,dv,v0,epsi,r0,line(6),dtemp
+      include 'mirconst.h'
+
+      real TOL
+      parameter (TOL = (1.0/3600.0)*D2R)
+
       real t2,rtemp,vsource
+      double precision t1,dv,v0,epsi,r0,line(6),dtemp
       character s*16
 c-----------------------------------------------------------------------
 c
@@ -95,7 +97,7 @@ c
           t2 = t2 / cos(t1)
           call uvrdvrd(tno,'ra',t1,0.d0)
           t1 = t1 + t2
-          XChange = abs(crval1-t1).gt.tol
+          XChange = abs(crval1-t1).gt.TOL
         endif
 c
 c  Check for a change in DEC.
@@ -104,7 +106,7 @@ c
         call uvrdvrr(tno,'ddec',t2,0.0)
         t1 = t1 + t2
         if(.not.YChange.and..not.mosaic)then
-          YChange = abs(crval2-t1).gt.tol
+          YChange = abs(crval2-t1).gt.TOL
         endif
 c
 c  Accumulate info to determine whether its an e-w array.
@@ -235,45 +237,46 @@ c-----------------------------------------------------------------------
       mcount = 1
       end
 c***********************************************************************
-      subroutine HdSet(cellx,celly,ra0,dec0,freq0)
+      subroutine HdSet(dosin,cellx,celly,ra0,dec0,freq0)
 c
-      real cellx,celly,freq0
+      logical dosin
+      real    cellx,celly,freq0
       double precision ra0,dec0
 c
-c  Set some things that have not been set yet, and create a coordinate
-c  object.
+c  Set remaining hdtab variables and do some basic checks.
 c
 c  Input:
-c    cellx,celly cdelt1,cdelt2
-c    proj       Projection geometry code (mosaicing only).
+c    dosin      Force use of SIN projection.
+c    cellx      cdelt1
+c    celly      cdelt2
 c    ra0,dec0   crval1,crval2 (mosaicing only).
 c    freq0      Reference frequency (mfs only).
 c-----------------------------------------------------------------------
       include 'hdtab.h'
+      include 'mirconst.h'
 
-      real TOL
-      parameter (TOL = 0.01)
-
-      character proj*3
+      real DECLIM, TOL
+      parameter (DECLIM=3.0*D2R, TOL = 0.01)
 c-----------------------------------------------------------------------
-c
+
+      cdelt1 = cellx
+      cdelt2 = celly
+
       if (mosaic) then
         crval1 = ra0
         crval2 = dec0
       endif
       if (mfs) crval3 = freq0
 
-      if (sumlumv/sumuuvv.lt.tol) then
-        proj = 'NCP'
+      if (dosin .or.
+     *    abs(dec0).lt.DECLIM .or.
+     *    sumlumv/sumuuvv.gt.TOL) then
+        ctype1 = 'RA---SIN'
+        ctype2 = 'DEC--SIN'
       else
-        proj = 'SIN'
+        ctype1 = 'RA---NCP'
+        ctype2 = 'DEC--NCP'
       endif
-
-      ctype1 = 'RA---'//proj
-      ctype2 = 'DEC--'//proj
-
-      cdelt1 = cellx
-      cdelt2 = celly
 c
 c  Check for things that have changed.
 c
