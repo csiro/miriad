@@ -156,6 +156,10 @@ c         amplitude Produce a image using the data amplitudes only.  The
 c                   phases of the data are set to zero.
 c         phase     Produce an image using the data phase only.  The
 c                   amplitudes of the data are set to 1.
+c         sin       Force use of the SIN projection for the output map
+c                   and beam.  Default is NCP unless non-east-west
+c                   baselines are present or the field centre is within
+c                   3 deg of the celestial equator.
 c@ mode
 c       This determines the algorithm to be used in imaging.
 c       Possible values are:
@@ -191,7 +195,7 @@ c       replaced with 0, or to be estimated by linear interpolation of
 c       two adjacent good channels.  See the Users Guide for the merits
 c       and evils of the two approaches.  The default is 'zero'.
 c
-c$Id: invert.for,v 1.8 2010/05/17 04:36:18 cal103 Exp $
+c$Id: invert.for,v 1.9 2010/05/18 01:46:54 cal103 Exp $
 c--
 c  History
 c    rjs        89  Initial version
@@ -340,7 +344,7 @@ c
       integer nx,ny,bnx,bny,mnx,mny,wnu,wnv
       integer nbeam,nsave,ndiscard,offcorr,nout
       logical defWt,Natural,doset,systemp,mfs,doimag,mosaic,sdb,idb
-      logical double,doamp,dophase
+      logical double,doamp,dophase,dosin
 c
       integer tno,tvis
       integer nUWts,nMMap
@@ -361,8 +365,8 @@ c
       data slops/'zero        ','interpolate '/
 c-----------------------------------------------------------------------
       version = versan ('invert',
-     :                  '$Revision: 1.8 $',
-     :                  '$Date: 2010/05/17 04:36:18 $')
+     :                  '$Revision: 1.9 $',
+     :                  '$Date: 2010/05/18 01:46:54 $')
 c
 c  Get the input parameters. Convert all angular things into
 c  radians as soon as possible!!
@@ -371,9 +375,9 @@ c
       call keya('beam',beam,' ')
       call mkeya('map',maps,MAXPOL,nmap)
       if(nmap.eq.0)call bug('f','An output must be given')
-c
-      call GetOpt(uvflags,systemp,mfs,sdb,doimag,mosaic,double,
-     *        doamp,dophase,mode)
+
+      call GetOpt(uvflags,double,systemp,mfs,sdb,mosaic,doimag,
+     *        doamp,dophase,dosin,mode)
       idb = beam.ne.' '.and.doimag
       sdb = beam.ne.' '.and.sdb
       call uvDatInp('vis',uvflags)
@@ -488,7 +492,7 @@ c
       endif
       if(npnt.ne.1.and.mode.ne.'fft')
      *  call bug('f','Only mode=fft is supported with options=mosaic')
-      call HdSet(cellx,celly,ra0,dec0,freq0)
+      call HdSet(dosin,cellx,celly,ra0,dec0,freq0)
       call HdCoObj(coObj)
 c
 c  Determine the default image size, if needed.
@@ -1324,59 +1328,57 @@ c
 c
       end
 c***********************************************************************
-      subroutine GetOpt(uvflags,systemp,mfs,sdb,doimag,mosaic,double,
-     *                                        doamp,dophase,mode)
+      subroutine GetOpt(uvflags,double,systemp,mfs,sdb,mosaic,doimag,
+     *        doamp,dophase,dosin,mode)
 c
       character uvflags*(*),mode*(*)
-      logical systemp,mfs,sdb,doimag,mosaic,double,doamp,dophase
+      logical systemp,mfs,sdb,doimag,mosaic,double,doamp,dophase,dosin
 c
 c  Get extra processing options.
 c
 c-----------------------------------------------------------------------
-      integer NOPTS
-      parameter(NOPTS=11)
-      character opts(NOPTS)*9
-      logical present(NOPTS)
-c
-      integer NMODES
-      parameter(NMODES=3)
-      character modes(NMODES)*8
+      integer NOPTS, NMODES
+      parameter (NOPTS=12, NMODES=3)
+
       integer nmode
-c
+      logical present(NOPTS)
+      character modes(NMODES)*8, opts(NOPTS)*9
+
+      data opts/'nocal    ','nopol    ','nopass   ','double   ',
+     *          'systemp  ','mfs      ','sdb      ','mosaic   ',
+     *          'imaginary','amplitude','phase    ','sin      '/
       data modes/'fft     ','dft     ','median  '/
-      data opts/'nocal    ','nopol    ','nopass   ','mfs      ',
-     *          'systemp  ','imaginary','sdb      ','mosaic   ',
-     *          'double   ','amplitude','phase    '/
-c
-c  Get the imaging algorithm.
-c
-      call keymatch('mode',NMODES,modes,1,mode,nmode)
-      if(nmode.eq.0)mode = modes(1)
-c
-c  Get extra processing options.
-c
+c-----------------------------------------------------------------------
       call options('options',opts,present,NOPTS)
-      mfs     = present(4)
-      systemp = present(5)
-      doimag  = present(6)
-      sdb     = present(7)
-      mosaic  = present(8)
-      double  = present(9)
-      doamp   = present(10)
-      dophase = present(11)
-c
-      if(sdb.and..not.mfs)call bug('f',
-     *  'Option=sdb not meaningful without options=mfs')
-      if(doimag.and.sdb)call bug('f',
-     *  'I cannot cope with options=imaginary,sdb simultaneously')
-c
-c  Set the processing flags for the uvDat routines.
-c
+
+c     Processing flags for the uvDat routines.
       uvflags = 'xwplds3r'
       if(.not.present(1))uvflags(9:9)   = 'c'
       if(.not.present(2))uvflags(10:10) = 'e'
       if(.not.present(3))uvflags(11:11) = 'f'
-c       if(.not.mfs)       uvflags(12:12) = '1'
+
+c     Extra processing options.
+      double  = present(4)
+      systemp = present(5)
+      mfs     = present(6)
+      sdb     = present(7)
+      mosaic  = present(8)
+      doimag  = present(9)
+      doamp   = present(10)
+      dophase = present(11)
+      dosin   = present(12)
+
+c     Check options.
+      if(sdb.and..not.mfs)call bug('f',
+     *  'Option=sdb not meaningful without options=mfs')
+
+      if(doimag.and.sdb)call bug('f',
+     *  'I cannot cope with options=imaginary,sdb simultaneously')
+
+c     Imaging algorithm.
+      call keymatch('mode',NMODES,modes,1,mode,nmode)
+      if(nmode.eq.0)mode = modes(1)
+
       end
 c***********************************************************************
       subroutine GetVis(doimag,systemp,mosaic,mfs,npol,tscr,slop,
@@ -1387,8 +1389,7 @@ c
       real umax,vmax,freq0,slop,ChanWt(npol*mchan)
       character vis*(*),slopmode*(*)
 c
-c  Get the data to be processed imaged. This writes out a scratch file
-c  with records.
+c  Get the data to be imaged.  Writes out a scratch file with records
 c    u,v,w,pointing,rms**2,log(freq),wt,0,r1,i1,r2,i2,...
 c
 c
