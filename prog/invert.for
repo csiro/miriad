@@ -156,10 +156,18 @@ c         amplitude Produce a image using the data amplitudes only.  The
 c                   phases of the data are set to zero.
 c         phase     Produce an image using the data phase only.  The
 c                   amplitudes of the data are set to 1.
-c         sin       Force use of the SIN projection for the output map
-c                   and beam.  Default is NCP unless non-east-west
-c                   baselines are present or the field centre is within
-c                   3 deg of the celestial equator.
+c         sin       Label the output map and beam as a SIN projection.
+c                   Default is NCP unless non-east-west baselines are
+c                   present or the field centre is within 3 deg of the
+c                   celestial equator (because NCP blows up near the
+c                   equator).  Note that this option simply changes
+c                   ctype1 and ctype2 in the header, the translation
+c                   only being correct to first order about the field
+c                   centre.  A similar result could be obtained by
+c                   running 'puthd' on the output map, e.g.
+c                     puthd in=<map>/ctype1 value=RA---SIN
+c                     puthd in=<map>/ctype2 value=DEC--SIN
+c                   and likewise for the beam.
 c@ mode
 c       This determines the algorithm to be used in imaging.
 c       Possible values are:
@@ -195,7 +203,7 @@ c       replaced with 0, or to be estimated by linear interpolation of
 c       two adjacent good channels.  See the Users Guide for the merits
 c       and evils of the two approaches.  The default is 'zero'.
 c
-c$Id: invert.for,v 1.9 2010/05/18 01:46:54 cal103 Exp $
+c$Id: invert.for,v 1.10 2010/05/18 05:06:42 cal103 Exp $
 c--
 c  History
 c    rjs        89  Initial version
@@ -365,8 +373,8 @@ c
       data slops/'zero        ','interpolate '/
 c-----------------------------------------------------------------------
       version = versan ('invert',
-     :                  '$Revision: 1.9 $',
-     :                  '$Date: 2010/05/18 01:46:54 $')
+     :                  '$Revision: 1.10 $',
+     :                  '$Date: 2010/05/18 05:06:42 $')
 c
 c  Get the input parameters. Convert all angular things into
 c  radians as soon as possible!!
