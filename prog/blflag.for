@@ -781,8 +781,12 @@ c------------------------------------------------------------------------
 	include 'maxdim.h'
 	double precision TTOL
 	parameter(TTOL=1d0/86400d0)
+c
+c  The default MAXCHAN makes blflag fail to link, use one that will
+c  fit a single spectrum
+c
         integer maxchan1
-        parameter (MAXCHAN1=4098)
+        parameter (MAXCHAN1=5200)
 c
 	logical flags(MAXCHAN1),ok
 	complex data(MAXCHAN1)
