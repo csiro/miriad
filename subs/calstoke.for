@@ -18,6 +18,8 @@ c                 want to change the low frequency poly, this is implemented
 c	          as a second poly.
 c    mhw  17aug09 Updated fit to 1934-638 above 10 GHz to include 30-50GHz data.
 c                 New parabolic fit joins smoothly to low freq fit at 10.7 GHz.
+c    rjs  17may10 EVLA is using different names for calibrators than it used
+c		  to. Change to accommodate this/
 c************************************************************************
 c* CalStoke -- Flux characteristics of selected calibrators.
 c& nebk, rjs
@@ -50,13 +52,13 @@ c--
 c-----------------------------------------------------------------------
       integer nsrc, nnames
       integer loglog,loglin,linlin,linlog
-      parameter (nsrc = 11, nnames = 24)
+      parameter (nsrc = 11, nnames = 25)
       parameter (loglog=1,loglin=2,linlin=3,linlog=4)
 c
       character name*32
       double precision x
       real coeffs(5,nsrc,4), stmp, frange(2,nsrc)
-      character names(nnames)*8
+      character names(nnames)*10
       integer srcnum(nnames), isrc, isrcd, ipol, i, j
       integer coeftype(nsrc,4)
 c
@@ -135,20 +137,20 @@ c
 c
 c Recognized names
 c
-      data names /'3C286', '1328+307', '1331+305',
-     +		  '3C48',  '0134+329', '0137+331',
-     +		  '3C147', '0538+498', '0542+498',
-     +		  '3C138', '0518+165', '0521+166',
-     +		  '1934',  '1934-638', '1939-637',
-     +		  '0823',  '0823-500',
-     +		  '0407',  '0407-658',
-     +		  'OLD1934',
-     +		  '3C161', '0624-058',
-     +		  '3C218', '0915-119'/
+      data names /'3C286     ','1328+307  ','1331+305  ',
+     +		  '3C48      ','0134+329  ','0137+331  ','J0137+3309',
+     +		  '3C147     ','0538+498  ','0542+498  ',
+     +		  '3C138     ','0518+165  ','0521+166  ',
+     +		  '1934      ','1934-638  ','1939-637  ',
+     +		  '0823      ','0823-500  ',
+     +		  '0407      ','0407-658  ',
+     +		  'OLD1934   ',
+     +		  '3C161     ','0624-058  ',
+     +		  '3C218     ','0915-119  '/
 c
 c Source number in coef table
 c
-      data srcnum /1,1,1, 2,2,2, 3,3,3, 4,4,4, 5,5,5, 6,6, 7,7, 8,
+      data srcnum /1,1,1, 2,2,2,2, 3,3,3, 4,4,4, 5,5,5, 6,6, 7,7, 8,
      +		   9,9, 10,10/
 c
 c  What sort of fit is the polynomial (logarithmic? linear?).
