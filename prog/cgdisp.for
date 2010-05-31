@@ -432,7 +432,7 @@ c        "sym"     for pgplot symbol number (given centre and symbol)
 c
 c       Also
 c        "colour"  See below.
-c        "line"    See below.
+c        "lwid"    See below.
 c        "offset"  See below.
 c
 c       XOTYPE and YOTYPE  give the units of the overlay location (and
@@ -532,23 +532,23 @@ c       changes the graphics overlay colour until the next COLOUR
 c       directive is processed.  PGPLOT colour indices are listed above
 c       for the cols1 parameter.  The default colour index is 9.
 c
-c       ##### OFIG = LINE
+c       ##### OFIG = LWID
 c
-c       A LINE directive can be included at any point in the overlay
+c       An LWID directive can be included at any point in the overlay
 c       file in the format
 c
-c         LINE   WIDTH
+c         LWID   WIDTH
 c
-c       where the literal "LINE" (without the quotes) starts in column
+c       where the literal "LWID" (without the quotes) starts in column
 c       1, followed by the PGPLOT line width in units of 0.005 inch
 c       (about 0.13 mm) and must be an integer in the range 1-201.  This
-c       changes the graphics line width until the next LINE directive is
+c       changes the graphics line width until the next LWID directive is
 c       processed.  The default width is 1.
 c
 c       ##### OFIG = OFFSET
 c
-c       At any point in the overlay file, you can include an OFFSET
-c       line in the format
+c       An OFFSET directive can be included at any point in the overlay
+c       file in the format
 c
 c         OFFSET   XOFF   YOFF
 c
@@ -558,25 +558,25 @@ c       succeeding overlay file locations.
 c
 c              X = X + XOFF;   Y = Y + YOFF
 c
-c       These offsets must be in the same units as the %OTYPE that the
-c       succeeding line(s) has(ve).  It is intended so that your overlay
+c       These offsets must be in the same units as the %OTYPE of
+c       succeeding directives.  It is intended so that your overlay
 c       locations can be in, say, arcsec relative to some location which
 c       is not the reference pixel of the image (which is what CGDISP
-c       ultimately wants).   You then specify, with the OFFSET line, the
-c       offsets between the reference pixel of the contour/pixel map
-c       images and the actual reference location of your overlay
-c       locations.
+c       ultimately wants).   You then specify, with the OFFSET
+c       directive, the offsets between the reference pixel of the
+c       contour/pixel map images and the actual reference location of
+c       your overlay locations.
 c
-c       You can have as many OFFSET lines as you like in the file.  All
-c       succeeding lines will apply these offsets until new ones are
-c       defined.  If the line does not appear, naturally no additional
-c       offsets are added.
+c       You can have as many OFFSET directive as you like in the file.
+c       All succeeding directives will apply these offsets until new
+c       ones are defined.  If the directive does not appear, naturally
+c       no additional offsets are added.
 c
-c       The OFFSET line is not applied to ANY position fields in
-c       succeeding lines that have %OTYPEs that are "hms" or "dms".
+c       The OFFSET directive is not applied to ANY position fields in
+c       succeeding directives that have %OTYPEs that are "hms" or "dms".
 c       I am too lazy to code it.
 c
-c$Id: cgdisp.for,v 1.10 2010/05/14 07:16:12 cal103 Exp $
+c$Id: cgdisp.for,v 1.11 2010/05/31 02:34:12 cal103 Exp $
 c--
 c
 c  History:
@@ -816,8 +816,8 @@ c     Plotting parameters.
       data getvsc /.true./
 c-----------------------------------------------------------------------
       version = versan ('cgdisp',
-     :                  '$Revision: 1.10 $',
-     :                  '$Date: 2010/05/14 07:16:12 $')
+     :                  '$Revision: 1.11 $',
+     :                  '$Date: 2010/05/31 02:34:12 $')
 c
 c Get user inputs
 c
@@ -3041,16 +3041,16 @@ c     maxtyp   Maximum number of label types
 c     ltypes   Possible label types
 c
 c-----------------------------------------------------------------------
-      real csize
-      integer maxtyp, lun, pl1, npl, blc(3), trc(3)
-      character ltypes(maxtyp)*(*), ofile*(*)
       logical doerase, dodist
+      integer maxtyp, lun, pl1, npl, blc(3), trc(3)
+      real    csize
+      character ltypes(maxtyp)*(*), ofile*(*)
 cc
-      double precision xoff, yoff, pix3, ocen(2), ocorn(2,4)
-      real opoly(0:180,2), xl, xr, yb, yt
-      integer i, icol, ilen, iostat, len1, lpos, lw, ochan(2)
-      character aline*300, code*8, ofig*8, oid*80
       logical ok, owrite
+      integer i, icol, ilen, iostat, len1, lpos, lw, ochan(2)
+      real    opoly(0:180,2), xl, xr, yb, yt
+      double precision xoff, yoff, pix3, ocen(2), ocorn(2,4)
+      character aline*300, ofig*8, oid*80
 c-----------------------------------------------------------------------
       if (ofile.ne.' ') then
         call txtopen (lpos, ofile, 'old', iostat)
@@ -3069,23 +3069,22 @@ c       Loop over lines in file.
           call txtread (lpos, aline, ilen, iostat)
           if (iostat.eq.0) then
             if (aline(1:1).ne.'#' .and. aline.ne.' ') then
-              code = aline(:7)
-              call lcase (code)
-              if (code.eq.'colour' .or. code(:6).eq.'color') then
+              call lcase (aline(:6))
+              if (aline(:7).eq.'colour' .or. aline(:6).eq.'color') then
 c               Colour to be applied to succeeding overlays.
                 call atoif (aline(7:), icol, ok)
                 if (ok) then
                   call pgsci (icol)
                 end if
 
-              else if (code.eq.'line') then
+              else if (aline(:5).eq.'lwid') then
 c               Line thickness to be applied to succeeding overlays.
-                call atoif (aline(7:), lw, ok)
+                call atoif (aline(6:), lw, ok)
                 if (ok) then
                   call pgslw (lw)
                 end if
 
-              else if (code.eq.'offset') then
+              else if (aline(:7).eq.'offset') then
 c               Offset to be applied to succeeding overlay locations.
                 call posdec1 (aline, xoff, yoff)
 
