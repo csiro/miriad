@@ -58,7 +58,7 @@ c    rjs  08jan97  options=mosaic
 c    rjs  08jun97  Fix bug in error message
 c    rjs  15jun00  Simple handling of blank source name.
 c
-c $Id: uvindex.for,v 1.3 2009/04/28 05:24:50 mirmgr Exp $
+c $Id: uvindex.for,v 1.4 2010/06/05 03:04:25 wie017 Exp $
 c----------------------------------------------------------------------c
 	include 'mirconst.h'
 	include 'maxdim.h'
@@ -657,7 +657,7 @@ c
 	  else
 	    vary = ' '
 	  endif
-	  write(line,'(i17,f14.5,f13.6,a,a)')
+	  write(line,'(i17,f14.5,f13.7,a,a)')
      *		nschan(i),sfreqs(i,1),sfreqs(i,2),' GHz',vary
 	  call logwrit(line)
 	enddo
