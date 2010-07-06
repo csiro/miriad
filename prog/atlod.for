@@ -132,6 +132,21 @@ c                   directory or the default version in MIRCAT.  The
 c                   file should contain 2 frequencies per line, the
 c                   lower and upper end of the rfi in MHz.  Precede
 c                   comments with a '#'.
+c          'notsys' Undo the online Tsys correction. Useful if RFI in
+c                   the tvchannel range has caused the corrections
+c                   to be very noisy. The resulting data will be in raw
+c                   counts scaled down by 10^8. If you specify this
+c                   option, the xycorr option will be ignored as the
+c                   xyphase data will be affected too.
+c          'nopack' Don't pack the two CABB autocorrelation bins into
+c                   one bin. The autocorrelation bin 1 and 2 will  
+c                   contain noise cal OFF and ON data.
+c                   The default is to repack the info into bin 1:
+c                   XX and YY will contain GTP and SDO data in the real
+c                   and imaginary part; XY will contain the OFF data and
+c                   YX will contain the ON-OFF data (for XY). This will
+c                   allow recalculation of the Tsys and xyphase later.
+
 c@ nfiles
 c       This gives one or two numbers, being the number of files to
 c       skip, followed by the number of files to process.  This is only
@@ -151,7 +166,7 @@ c       skip, followed by the number of scans to process.  NOTE: This
 c       applies to all files read.  The default is to skip none and
 c       process all scans.
 c
-c$Id: atlod.for,v 1.26 2010/06/23 01:17:59 wie017 Exp $
+c$Id: atlod.for,v 1.27 2010/07/06 02:35:51 wie017 Exp $
 c--
 c
 c  Program Structure:
@@ -299,11 +314,14 @@ c    mhw  03jun09 Fix syscal handling for CABB gtp, sdo and caljy values
 c    mhw  14sep09 Make sure birdie is ignored for CABB data
 c    mhw  29sep09 Actually, make it do something useful instead, 
 c                 integrate with rfiflag option
-c    
 c    mhw  28mar10 Use IF number instead of IF chain for ifsel
 c    mhw  13apr10 Record ifchain in file, allow multiple values for
 c                 ifsel
+c    mhw  28jun10 Add options nopack, notsys, process auto corr bins
+c
+c $Id: atlod.for,v 1.27 2010/07/06 02:35:51 wie017 Exp $
 c-----------------------------------------------------------------------
+
         integer MAXFILES,MAXTIMES,MAXSIM
         parameter(MAXFILES=128,MAXTIMES=32,MAXSIM=16)
 c
@@ -312,7 +330,7 @@ c
         integer ifile,ifsel(MAXSIM),nsel,nfreq,iostat,nfiles,i
         double precision rfreq(2),times(2,MAXTIMES)
         logical doauto,docross,docomp,dosam,relax,unflag,dohann
-        logical dobary,doif,birdie,dowt,dopmps,doxyp,doop
+        logical dobary,doif,birdie,dowt,dopmps,doxyp,doop,dopack,dotsys
         logical polflag,hires,sing,docaldat,nocacal,nopol,rfiflag
         integer fileskip,fileproc,scanskip,scanproc
 c
@@ -321,8 +339,8 @@ c
         character itoaf*8, rperr*32, versan*80
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :                  '$Revision: 1.26 $',
-     :                  '$Date: 2010/06/23 01:17:59 $')
+     :                  '$Revision: 1.27 $',
+     :                  '$Date: 2010/07/06 02:35:51 $')
 c
 c  Get the input parameters.
 c
@@ -340,10 +358,8 @@ c
         endif
         call mkeyd('restfreq',rfreq,2,nfreq)
         call getopt(doauto,docross,docaldat,docomp,dosam,doxyp,doop,
-     *    relax,
-     *    sing,unflag,dohann,birdie,dobary,doif,dowt,dopmps,
-     *    nopol,polflag,
-     *    hires,nocacal,rfiflag)
+     *    relax,sing,unflag,dohann,birdie,dobary,doif,dowt,dopmps,
+     *    nopol,polflag,hires,nocacal,rfiflag,dopack,dotsys)
         call keyi('nfiles',fileskip,0)
         call keyi('nfiles',fileproc,nfiles-fileskip)
         if(nfiles.gt.1.and.fileproc+fileskip.gt.nfiles)
@@ -389,7 +405,7 @@ c
             if(iostat.ne.0)call bug('f','Error skipping RPFITS file')
           else
             call PokeIni(tno,dosam,doxyp,doop,dohann,birdie,dowt,
-     *          dopmps,dobary,doif,hires)
+     *          dopmps,dobary,doif,hires,dopack,dotsys)
             if(nfiles.eq.1)then
               i = 1
             else
@@ -401,8 +417,8 @@ c
               call liner('Processing file '//in(ifile))
             endif
             call RPDisp(in(i),scanskip,scanproc,doauto,docross,
-     *          docaldat,relax,sing,unflag,nopol,polflag,ifsel,
-     *          nsel,rfreq,nfreq,iostat)
+     *          docaldat,relax,sing,unflag,nopol,polflag,dopack,dotsys,
+     *          ifsel,nsel,rfreq,nfreq,iostat)
           endif
         enddo
 c
@@ -478,11 +494,11 @@ c***********************************************************************
         subroutine GetOpt(doauto,docross,docaldat,docomp,dosam,doxyp,
      *    doop,relax,sing,
      *    unflag,dohann,birdie,dobary,doif,dowt,dopmps,
-     *    nopol,polflag,hires,nocacal,rfiflag)
+     *    nopol,polflag,hires,nocacal,rfiflag,dopack,dotsys)
 c
         logical doauto,docross,dosam,relax,unflag,dohann,dobary,doop
         logical docomp,doif,birdie,dowt,dopmps,doxyp,polflag,hires,sing
-        logical docaldat,nocacal,nopol,rfiflag
+        logical docaldat,nocacal,nopol,rfiflag,dopack,dotsys
 c
 c  Get the user options.
 c
@@ -508,9 +524,11 @@ c    polflag    Flag all polarisations if any are bad.
 c    hires      Convert bin-mode to high time resolution data.
 c    sing       Single dish mode.
 c    rfiflag    Flag known rfi sources
+c    dopack     Pack bin 1 and 2 into 1, discard bin 2
+c    dotsys     Use online tsys correction
 c-----------------------------------------------------------------------
         integer nopt
-        parameter(nopt=22)
+        parameter(nopt=24)
         character opts(nopt)*8
         logical present(nopt)
         data opts/'noauto  ','nocross ','compress','relax   ',
@@ -518,7 +536,7 @@ c-----------------------------------------------------------------------
      *            'noif    ','birdie  ','reweight','xycorr  ',
      *            'opcorr  ','nopflag ','hires   ','pmps    ',
      *            'mmrelax ','single  ','caldata ','nocacal ',
-     *            'nopol   ','rfiflag '/
+     *            'nopol   ','rfiflag ','nopack  ','notsys  '/
         call options('options',opts,present,nopt)
         doauto = .not.present(1)
         docross = .not.present(2)
@@ -544,6 +562,10 @@ c       mmrelax = present(16)
         nocacal = present(20)
         nopol   = present(21)
         rfiflag = present(22)
+        dopack  = .not.present(23).and.doauto
+        dotsys  = .not.present(24)
+        if (.not.dotsys) doxyp=.false.
+        
 c
         if((dosam.or.doxyp.or.doop).and.relax)call bug('f',
      *    'You cannot use options samcorr, xycorr or opcorr with relax')
@@ -591,11 +613,12 @@ c
 c***********************************************************************
 c***********************************************************************
         subroutine PokeIni(tno1,dosam1,doxyp1,doop1,
-     *          dohann1,birdie1,dowt1,dopmps1,dobary1,doif1,hires1)
+     *          dohann1,birdie1,dowt1,dopmps1,dobary1,doif1,hires1,
+     *          dopack1,dotsys1)
 c
         integer tno1
         logical dosam1,doxyp1,dohann1,doif1,dobary1,birdie1,dowt1
-        logical dopmps1,hires1,doop1
+        logical dopmps1,hires1,doop1,dopack1,dotsys1
 c
 c  Initialise the Poke routines.
 c-----------------------------------------------------------------------
@@ -615,6 +638,8 @@ c
         dowt   = dowt1
         dopmps = dopmps1
         hires  = hires1
+        dopack = dopack1
+        dotsys = dotsys1
 c
         if(dowt)call LagWt(wts,2*ATCONT-2,0.04)
 c
@@ -913,10 +938,6 @@ c
         if(if.gt.nifs)call bug('f','Invalid IF in PokeIF')
         if(nstok.gt.ATPOL)call bug('f',
      *          'Invalid number of polarisation parameters in PokeIF')
-c        if (cabb.and.birdie) then
-c          birdie=.false.
-c          call output('Ignoring birdie option for CABB data')
-c        endif
 c
         nfreq(if) = nfreq1
         if(nfreq(if).gt.1)then
@@ -1222,15 +1243,15 @@ c-----------------------------------------------------------------------
 c
         include 'atlod.h'
         include 'mirconst.h'
-        integer ipnt,i1,i2,bl,p,pol
+        integer ipnt,i1,i2,bl,p,pol,iXX,iXY,iYX,iYY,i
         logical doconj,doneg
-        real rscr(2*ATCONT-2)
+        real rscr(2*ATCONT-2),gtp,sdo
         complex cscr(ATCONT)
 c
         if(if.gt.nifs)call bug('f',
      *          'Incorrect IF number')
         if(nstoke1.ne.nstoke(if))call bug('f',
-     *          'Inconsistent number of polarisastions')
+     *          'Inconsistent number of polarisations')
         i2 = baseln / 256
         i1 = mod(baseln,256)
         doconj = docon
@@ -1311,7 +1332,49 @@ c
      *          i2,i1,if,xyphase,ATIF,ATANT,xymode)
             endif
           endif
+          if (polcode(if,p).eq.polXX) iXX=p
+          if (polcode(if,p).eq.polXY) iXY=p
+          if (polcode(if,p).eq.polYX) iYX=p
+          if (polcode(if,p).eq.polYY) iYY=p
         enddo
+        
+c
+c  Undo online Tsys correction if needed
+c        
+        if (.not.dotsys) then
+          do i=1,nfreq(if)
+            data(pnt(if,iXX,bl,bin)+i-1)=data(pnt(if,iXX,bl,bin)+i-1)*
+     *         sqrt(xsdo(if,i1)*xsdo(if,i2))/1.e8
+            data(pnt(if,iXY,bl,bin)+i-1)=data(pnt(if,iXY,bl,bin)+i-1)*
+     *         sqrt(xsdo(if,i1)*ysdo(if,i2))/1.e8
+            data(pnt(if,iYX,bl,bin)+i-1)=data(pnt(if,iYX,bl,bin)+i-1)*
+     *         sqrt(ysdo(if,i1)*xsdo(if,i2))/1.e8
+            data(pnt(if,iYY,bl,bin)+i-1)=data(pnt(if,iYY,bl,bin)+i-1)*
+     *         sqrt(ysdo(if,i1)*ysdo(if,i2))/1.e8
+          enddo
+        endif
+c
+c       Process auto correlation bins and produce sdo, gtp and 
+c       xyphase spectra for the continuum bands. The first IF contains
+c       the first cont. band, the 2nd cont band comes after the zooms
+c       for band 1.
+c        
+        if(dopack.and.bin.eq.2.and.i1.eq.i2) then
+          do i=1,nfreq(if)
+            sdo=real(data(pnt(if,iXX,bl,2)+i-1) -
+     *               data(pnt(if,iXX,bl,1)+i-1))
+            gtp=real(data(pnt(if,iXX,bl,2)+i-1) +
+     *               data(pnt(if,iXX,bl,1)+i-1))/2
+            data(pnt(if,iXX,bl,1)+i-1)=complex(gtp,sdo)
+            sdo=real(data(pnt(if,iYY,bl,2)+i-1) -
+     *               data(pnt(if,iYY,bl,1)+i-1))
+            gtp=real(data(pnt(if,iYY,bl,2)+i-1) +
+     *               data(pnt(if,iYY,bl,1)+i-1))/2
+            data(pnt(if,iYY,bl,1)+i-1)=complex(gtp,sdo)
+            data(pnt(if,iYX,bl,1)+i-1)=data(pnt(if,iXY,bl,2)+i-1)-
+     *       data(pnt(if,iXY,bl,1)+i-1)
+          enddo
+        endif
 c
         end
 c***********************************************************************
@@ -1518,6 +1581,15 @@ c
 c
 c  Check that we can do what is asked.
 c
+
+c
+c  In the case where we've packed bin 2 into bin 1 (for tsys and xyphase
+c  calculations later) we discard bin 2 here.
+c
+        do if=1,nifs
+          if (nbin(if).eq.2.and.dopack) nbin(if)=1
+        enddo 
+
         if(newfreq)then
           if(doif)then
             do if=2,nifs
@@ -1637,37 +1709,100 @@ c
           call uvputvrr(tno,'jyperk',jyperk,1)
 
 c
-c          (Re)calibrate CABB data using on/off autocorrelations
-c
-c        call cabbCalib(docabbcal,hires,tbin)
+c         CABB data: mark packed on/off data in auto correlations
+          if (dopack) call uvputvri(tno,'packauto',1,1)
 c
 c  Handle the case that we are writing the multiple IFs out as multiple
 c  records.
 c
-        if(.not.doif.and.nifs.gt.1)then
-          do if=1,nifs
-            call uvputvri(tno,'nspect',1,1)
-            call uvputvri(tno,'npol',  nstoke(if),1)
-            call uvputvri(tno,'nschan',nfreq(if),1)
-            call uvputvri(tno,'ischan',1,1)
-            call uvputvrd(tno,'sfreq', sfreq(if),1)
-            call uvputvrd(tno,'sdf',   sdf(if),  1)
-            call uvputvrd(tno,'restfreq',restfreq(if),1)
-            call uvputvri(tno,'ifchain',ifchain(if),1)
-            if(newsc)call ScOut(tno,chi,tcorr,
+          if(.not.doif.and.nifs.gt.1)then
+            do if=1,nifs
+              call uvputvri(tno,'nspect',1,1)
+              call uvputvri(tno,'npol',  nstoke(if),1)
+              call uvputvri(tno,'nschan',nfreq(if),1)
+              call uvputvri(tno,'ischan',1,1)
+              call uvputvrd(tno,'sfreq', sfreq(if),1)
+              call uvputvrd(tno,'sdf',   sdf(if),  1)
+              call uvputvrd(tno,'restfreq',restfreq(if),1)
+              call uvputvri(tno,'ifchain',ifchain(if),1)
+              
+              if(newsc)call ScOut(tno,chi,tcorr,
+     *            xtsys,ytsys,xyphase,xyamp,
+     *            xsampler,ysampler,xgtp,ygtp,xsdo,ysdo,xcaljy,ycaljy,
+     *            axisrms,axismax,cabb,
+     *            ATIF,ATANT,nants,if,if,buf)
+              if(hires)then
+                binlo = tbin
+                binhi = tbin
+              else
+                binlo = 1
+                binhi = nbin(if)
+              endif
+              do bin=binlo,binhi
+                if(.not.hires)call uvputvri(tno,'nbin',nbin(if),1)
+                bl = 0
+                do i2=1,nants
+                  do i1=1,i2
+                    bl = bl + 1
+                    preamble(1) = u(bl)
+                    preamble(2) = v(bl)
+                    preamble(3) = w(bl)
+                    preamble(4) = tdash
+                    preamble(5) = 256*i1 + i2
+                    do p=1,nstoke(if)
+                      ipnt = pnt(if,p,bl,bin)
+                      if(ipnt.gt.0)then
+                        call PolPut(tno,polcode(if,p),dosw(bl))
+                        call GetFlag(flag(if,p,bl,bin),nfreq(if),
+     *                                            bchan(if),flags)
+                        call FlagNaN(data(ipnt),flags,nfreq(if))
+                        call rfiFlag(flags,NDATA,1,nfreq(if),
+     *                             sfreq(if),sdf(if),birdie)
+                        if(.not.hires)call uvputvri(tno,'bin',bin,1)
+                        call uvputvrr(tno,'inttime',inttime(bl),1)
+                        if(doopcorr)
+     *                    call opapply(data(ipnt),nfreq(if),fac(if,1),
+     *                               fac(if,2))
+                        call uvwrite(tno,preamble,data(ipnt),flags,
+     *                                                  nfreq(if))
+
+                      endif
+                    enddo
+                  enddo
+                enddo
+              enddo
+            enddo
+c
+c  Handle the case were we are writing the multiple IFs out as a single
+c  record.
+c
+          else
+            if(newfreq.and.tbin.eq.1)then
+              ischan(1) = 1
+              do if=2,nifs
+                ischan(if) = ischan(if-1) + nfreq(if)
+              enddo
+              call uvputvri(tno,'nspect',nifs,1)
+              call uvputvri(tno,'ischan',ischan,nifs)
+              call uvputvri(tno,'nschan',nfreq,nifs)
+              call uvputvrd(tno,'sfreq', sfreq,nifs)
+              call uvputvrd(tno,'sdf',   sdf,nifs)
+              call uvputvrd(tno,'restfreq',restfreq,nifs)
+              call uvputvri(tno,'ifchain',ifchain,nifs)
+              if(.not.hires)call uvputvri(tno,'nbin',nbin(1),1)
+            endif
+            if(newsc.and.tbin.eq.1)call ScOut(tno,chi,tcorr,
      *          xtsys,ytsys,xyphase,xyamp,
      *          xsampler,ysampler,xgtp,ygtp,xsdo,ysdo,xcaljy,ycaljy,
-     *          axisrms,axismax,cabb,
-     *          ATIF,ATANT,nants,if,if,buf)
+     *          axisrms,axismax,cabb,ATIF,ATANT,nants,1,nifs,buf)
             if(hires)then
               binlo = tbin
               binhi = tbin
             else
               binlo = 1
-              binhi = nbin(if)
+              binhi = nbin(1)
             endif
             do bin=binlo,binhi
-              if(.not.hires)call uvputvri(tno,'nbin',nbin(if),1)
               bl = 0
               do i2=1,nants
                 do i1=1,i2
@@ -1677,92 +1812,29 @@ c
                   preamble(3) = w(bl)
                   preamble(4) = tdash
                   preamble(5) = 256*i1 + i2
-                  do p=1,nstoke(if)
-                    ipnt = pnt(if,p,bl,bin)
-                    if(ipnt.gt.0)then
-                      call PolPut(tno,polcode(if,p),dosw(bl))
-                      call GetFlag(flag(if,p,bl,bin),nfreq(if),
-     *                                            bchan(if),flags)
-                      call FlagNaN(data(ipnt),flags,nfreq(if))
-                      call rfiFlag(flags,NDATA,1,nfreq(if),
-     *                             sfreq(if),sdf(if),birdie)
-                      if(.not.hires)call uvputvri(tno,'bin',bin,1)
-                      call uvputvrr(tno,'inttime',inttime(bl),1)
-                      if(doopcorr)
-     *                  call opapply(data(ipnt),nfreq(if),fac(if,1),
-     *                               fac(if,2))
-                      call uvwrite(tno,preamble,data(ipnt),flags,
-     *                                                  nfreq(if))
-
-                    endif
-                  enddo
+                  call CntStok(npol,pnt(1,1,bl,bin),nifs,nstoke(1),ATIF)
+                  if(npol.gt.0)then
+                    call uvputvri(tno,'npol',npol,1)
+                    do p=1,nstoke(1)
+                      call GetDat(data,nused,pnt(1,p,bl,bin),
+     *                  flag(1,p,bl,bin),nfreq,ATIF,fac,bchan,nifs,
+     *                  vis,flags,NDATA,nchan)
+                      if(nchan.gt.0)then
+                        call rfiFlag(flags,NDATA,nifs,nfreq,sfreq,
+     *                             sdf,birdie)
+                        if(.not.hires)call uvputvri(tno,'bin',bin,1)
+                        call uvputvri(tno,'pol',polcode(1,p),1)
+                        call uvputvrr(tno,'inttime',inttime(bl),1)
+                        call uvwrite(tno,preamble,vis,flags,nchan)
+                      endif
+                    enddo
+                  endif
                 enddo
               enddo
             enddo
-          enddo
-c
-c  Handle the case were we are writing the multiple IFs out as a single
-c  record.
-c
-        else
-          if(newfreq.and.tbin.eq.1)then
-            ischan(1) = 1
-            do if=2,nifs
-              ischan(if) = ischan(if-1) + nfreq(if)
-            enddo
-            call uvputvri(tno,'nspect',nifs,1)
-            call uvputvri(tno,'ischan',ischan,nifs)
-            call uvputvri(tno,'nschan',nfreq,nifs)
-            call uvputvrd(tno,'sfreq', sfreq,nifs)
-            call uvputvrd(tno,'sdf',   sdf,nifs)
-            call uvputvrd(tno,'restfreq',restfreq,nifs)
-            call uvputvri(tno,'ifchain',ifchain,nifs)
-            if(.not.hires)call uvputvri(tno,'nbin',nbin(1),1)
           endif
-          if(newsc.and.tbin.eq.1)call ScOut(tno,chi,tcorr,
-     *          xtsys,ytsys,xyphase,xyamp,
-     *          xsampler,ysampler,xgtp,ygtp,xsdo,ysdo,xcaljy,ycaljy,
-     *          axisrms,axismax,cabb,ATIF,ATANT,nants,1,nifs,buf)
-          if(hires)then
-            binlo = tbin
-            binhi = tbin
-          else
-            binlo = 1
-            binhi = nbin(1)
-          endif
-          do bin=binlo,binhi
-            bl = 0
-            do i2=1,nants
-              do i1=1,i2
-                bl = bl + 1
-                preamble(1) = u(bl)
-                preamble(2) = v(bl)
-                preamble(3) = w(bl)
-                preamble(4) = tdash
-                preamble(5) = 256*i1 + i2
-                call CntStok(npol,pnt(1,1,bl,bin),nifs,nstoke(1),ATIF)
-                if(npol.gt.0)then
-                  call uvputvri(tno,'npol',npol,1)
-                  do p=1,nstoke(1)
-                    call GetDat(data,nused,pnt(1,p,bl,bin),
-     *                  flag(1,p,bl,bin),nfreq,ATIF,fac,bchan,nifs,
-     *                  vis,flags,NDATA,nchan)
-                    if(nchan.gt.0)then
-                      call rfiFlag(flags,NDATA,nifs,nfreq,sfreq,
-     *                             sdf,birdie)
-                      if(.not.hires)call uvputvri(tno,'bin',bin,1)
-                      call uvputvri(tno,'pol',polcode(1,p),1)
-                      call uvputvrr(tno,'inttime',inttime(bl),1)
-                      call uvwrite(tno,preamble,vis,flags,nchan)
-                    endif
-                  enddo
-                endif
-              enddo
-            enddo
-          enddo
-        endif
 c
-        tdash = tdash + inttim/86400.0d0
+          tdash = tdash + inttim/86400.0d0
         enddo
 c
 c  Reset the counters, etc.
@@ -1789,7 +1861,9 @@ c
         newfreq = .false.
         newpnt  = .false.
         end
+c      
 c***********************************************************************
+
         subroutine flagnan(data,flags,nchan)
 c
         integer nchan
@@ -2294,13 +2368,14 @@ c-----------------------------------------------------------------------
         end
 c***********************************************************************
         subroutine RPDisp(in,scanskip,scanproc,doauto,docross,docaldat,
-     *    relax,sing,unflag,nopol,polflag,ifsel,nsel,userfreq,nuser,
-     *    iostat)
+     *    relax,sing,unflag,nopol,polflag,dopack,dotsys,ifsel,nsel,
+     *    userfreq,nuser,iostat)
 c
         character in*(*)
         integer scanskip,scanproc,nsel,ifsel(nsel),nuser,iostat
         double precision userfreq(*)
-        logical doauto,docross,relax,unflag,polflag,sing,docaldat,nopol
+        logical doauto,docross,relax,unflag,polflag,sing,docaldat,nopol,
+     *          dopack,dotsys
 c
 c  Process an RPFITS file. Dispatch information to the
 c  relevant Poke routine. Then eventually flush it out with PokeFlsh.
@@ -2316,6 +2391,8 @@ c    sing
 c    nopol      Select only the parallel-hand polarisations.
 c    polflag    Flag all polarisations if any are bad.
 c    unflag     Save data even though it may appear flagged.
+c    dopack     Pack 2 auto corr bins into 1
+c    dotsys     Use online Tsys calibration
 c    ifsel      IFs to select. 0 means select all IFs.
 c    userfreq   User-given rest frequency to override the value in
 c               the RPFITS file.
@@ -2417,6 +2494,7 @@ c
         wband = .false.
         cabb = instrument(1:6).eq.'ATCABB'
         if (cabb) call liner('CABB data detected')
+        dotsys = dotsys.or..not.cabb
 c
 c  Initialise flagging information.
 c
@@ -2579,8 +2657,6 @@ c
             i1 = baseln/256
             i2 = mod(baseln,256)
 c
-c  Always need to store auto corr bin 1 and 2 for cabb data
-c
             if(ok) ok = (i1.eq.i2.and.doauto).or.
      *                  (i1.ne.i2.and.docross)
             if(ok)then
@@ -2634,7 +2710,6 @@ c
      *                     (if_freq(id).gt.13e9.and.if_freq(id).lt.28e9)
                     qband = qband.or.
      *                     (if_freq(id).gt.30e9.and.if_freq(id).lt.50e9)
-
                     wband = wband.or.if_freq(id).gt.75e9
                     call PokeIF(i,if_nfreq(id),if_invert(id)*if_bw(id),
      *                  if_freq(id),if_ref(id),rfreq,
@@ -2694,9 +2769,9 @@ c
      *          xtsys(ifno,i2),ytsys(ifno,i2),
      *          xyphase(ifno,i2),xyamp(ifno,i2),
      *          xsamp(1,ifno,i2),ysamp(1,ifno,i2),
-     *          xgtp(ifno,i1),ygtp(ifno,i1),
-     *          xsdo(ifno,i1),ysdo(ifno,i1),
-     *          xcaljy(ifno,i1),ycaljy(ifno,i1),
+     *          xgtp(ifno,i2),ygtp(ifno,i2),
+     *          xsdo(ifno,i2),ysdo(ifno,i2),
+     *          xcaljy(ifno,i2),ycaljy(ifno,i2),
      *          pntrms(i2),pntmax(i2))
 c
               scbuf(ifno,i1) = .false.
@@ -2749,7 +2824,7 @@ c
 c
               call PokeData(u,v,w,baseln,Sif(ifno),bin,
      *          vis,if_nfreq(ifno),nstoke(ifno),flags,
-     *          tint,if_invert(ifno).lt.0,flipper,xymode)
+     *          tint,if_invert(ifno).lt.0,flipper,xymode,dopack,dotsys)
 c
 c  Reinitialise things.
 c
@@ -3254,8 +3329,15 @@ c    2 Pressure
 c    3 Humidity
 c    4 Wind speed
 c    5 Wind direction
+c    6 weather flag (1=no weather data)
+c    7 rain gauge
+c    8 seemon phase
+c    9 seemon rms
+c    10 seemon flag (1=no seemon data)
+c    11 Jy per K (IF 1) - not stored at present 
+c    12 Jy per K (IF 2) - needs a rethink of jyperk usage
             else if(ik.eq.0)then
-              mcount = 6
+              mcount = 7
               mdata(1) = syscal(2,j,k)
               mdata(2) = syscal(3,j,k)
               mdata(3) = syscal(4,j,k)
