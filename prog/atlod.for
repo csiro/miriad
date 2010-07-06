@@ -166,7 +166,7 @@ c       skip, followed by the number of scans to process.  NOTE: This
 c       applies to all files read.  The default is to skip none and
 c       process all scans.
 c
-c$Id: atlod.for,v 1.27 2010/07/06 02:35:51 wie017 Exp $
+c$Id: atlod.for,v 1.28 2010/07/06 02:56:50 wie017 Exp $
 c--
 c
 c  Program Structure:
@@ -319,7 +319,7 @@ c    mhw  13apr10 Record ifchain in file, allow multiple values for
 c                 ifsel
 c    mhw  28jun10 Add options nopack, notsys, process auto corr bins
 c
-c $Id: atlod.for,v 1.27 2010/07/06 02:35:51 wie017 Exp $
+c $Id: atlod.for,v 1.28 2010/07/06 02:56:50 wie017 Exp $
 c-----------------------------------------------------------------------
 
         integer MAXFILES,MAXTIMES,MAXSIM
@@ -339,8 +339,8 @@ c
         character itoaf*8, rperr*32, versan*80
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :                  '$Revision: 1.27 $',
-     :                  '$Date: 2010/07/06 02:35:51 $')
+     :                  '$Revision: 1.28 $',
+     :                  '$Date: 2010/07/06 02:56:50 $')
 c
 c  Get the input parameters.
 c
@@ -2824,7 +2824,7 @@ c
 c
               call PokeData(u,v,w,baseln,Sif(ifno),bin,
      *          vis,if_nfreq(ifno),nstoke(ifno),flags,
-     *          tint,if_invert(ifno).lt.0,flipper,xymode,dopack,dotsys)
+     *          tint,if_invert(ifno).lt.0,flipper,xymode)
 c
 c  Reinitialise things.
 c
