@@ -135,7 +135,7 @@ c                   comments with a '#'.
 c          'notsys' Undo the online Tsys correction. Useful if RFI in
 c                   the tvchannel range has caused the corrections
 c                   to be very noisy. The resulting data will be in raw
-c                   counts scaled down by 10^8. If you specify this
+c                   counts scaled down by 10^6. If you specify this
 c                   option, the xycorr option will be ignored as the
 c                   xyphase data will be affected too.
 c          'nopack' Don't pack the two CABB autocorrelation bins into
@@ -166,7 +166,7 @@ c       skip, followed by the number of scans to process.  NOTE: This
 c       applies to all files read.  The default is to skip none and
 c       process all scans.
 c
-c$Id: atlod.for,v 1.28 2010/07/06 02:56:50 wie017 Exp $
+c$Id: atlod.for,v 1.29 2010/07/07 03:58:06 wie017 Exp $
 c--
 c
 c  Program Structure:
@@ -319,7 +319,7 @@ c    mhw  13apr10 Record ifchain in file, allow multiple values for
 c                 ifsel
 c    mhw  28jun10 Add options nopack, notsys, process auto corr bins
 c
-c $Id: atlod.for,v 1.28 2010/07/06 02:56:50 wie017 Exp $
+c $Id: atlod.for,v 1.29 2010/07/07 03:58:06 wie017 Exp $
 c-----------------------------------------------------------------------
 
         integer MAXFILES,MAXTIMES,MAXSIM
@@ -339,8 +339,8 @@ c
         character itoaf*8, rperr*32, versan*80
 c-----------------------------------------------------------------------
       version = versan ('atlod',
-     :                  '$Revision: 1.28 $',
-     :                  '$Date: 2010/07/06 02:56:50 $')
+     :                  '$Revision: 1.29 $',
+     :                  '$Date: 2010/07/07 03:58:06 $')
 c
 c  Get the input parameters.
 c
@@ -417,7 +417,7 @@ c
               call liner('Processing file '//in(ifile))
             endif
             call RPDisp(in(i),scanskip,scanproc,doauto,docross,
-     *          docaldat,relax,sing,unflag,nopol,polflag,dopack,dotsys,
+     *          docaldat,relax,sing,unflag,nopol,polflag,dotsys,
      *          ifsel,nsel,rfreq,nfreq,iostat)
           endif
         enddo
@@ -1339,18 +1339,22 @@ c
         enddo
         
 c
-c  Undo online Tsys correction if needed
+c  Undo online Tsys correction/calibration if needed
 c        
         if (.not.dotsys) then
           do i=1,nfreq(if)
             data(pnt(if,iXX,bl,bin)+i-1)=data(pnt(if,iXX,bl,bin)+i-1)*
-     *         sqrt(xsdo(if,i1)*xsdo(if,i2))/1.e8
+     *         sqrt(xsdo(if,i1)*xsdo(if,i2)/
+     *              xcaljy(if,i1)/xcaljy(if,i2))/1.e6
             data(pnt(if,iXY,bl,bin)+i-1)=data(pnt(if,iXY,bl,bin)+i-1)*
-     *         sqrt(xsdo(if,i1)*ysdo(if,i2))/1.e8
+     *         sqrt(xsdo(if,i1)*ysdo(if,i2)/
+     *              xcaljy(if,i1)/ycaljy(if,i2))/1.e6
             data(pnt(if,iYX,bl,bin)+i-1)=data(pnt(if,iYX,bl,bin)+i-1)*
-     *         sqrt(ysdo(if,i1)*xsdo(if,i2))/1.e8
+     *         sqrt(ysdo(if,i1)*xsdo(if,i2)/
+     *              ycaljy(if,i1)/xcaljy(if,i2))/1.e6
             data(pnt(if,iYY,bl,bin)+i-1)=data(pnt(if,iYY,bl,bin)+i-1)*
-     *         sqrt(ysdo(if,i1)*ysdo(if,i2))/1.e8
+     *         sqrt(ysdo(if,i1)*ysdo(if,i2)/
+     *              ycaljy(if,i1)/ycaljy(if,i2))/1.e6
           enddo
         endif
 c
@@ -1365,12 +1369,12 @@ c
      *               data(pnt(if,iXX,bl,1)+i-1))
             gtp=real(data(pnt(if,iXX,bl,2)+i-1) +
      *               data(pnt(if,iXX,bl,1)+i-1))/2
-            data(pnt(if,iXX,bl,1)+i-1)=complex(gtp,sdo)
+            data(pnt(if,iXX,bl,1)+i-1)=cmplx(gtp,sdo)
             sdo=real(data(pnt(if,iYY,bl,2)+i-1) -
      *               data(pnt(if,iYY,bl,1)+i-1))
             gtp=real(data(pnt(if,iYY,bl,2)+i-1) +
      *               data(pnt(if,iYY,bl,1)+i-1))/2
-            data(pnt(if,iYY,bl,1)+i-1)=complex(gtp,sdo)
+            data(pnt(if,iYY,bl,1)+i-1)=cmplx(gtp,sdo)
             data(pnt(if,iYX,bl,1)+i-1)=data(pnt(if,iXY,bl,2)+i-1)-
      *       data(pnt(if,iXY,bl,1)+i-1)
           enddo
@@ -2368,14 +2372,14 @@ c-----------------------------------------------------------------------
         end
 c***********************************************************************
         subroutine RPDisp(in,scanskip,scanproc,doauto,docross,docaldat,
-     *    relax,sing,unflag,nopol,polflag,dopack,dotsys,ifsel,nsel,
+     *    relax,sing,unflag,nopol,polflag,dotsys,ifsel,nsel,
      *    userfreq,nuser,iostat)
 c
         character in*(*)
         integer scanskip,scanproc,nsel,ifsel(nsel),nuser,iostat
         double precision userfreq(*)
         logical doauto,docross,relax,unflag,polflag,sing,docaldat,nopol,
-     *          dopack,dotsys
+     *          dotsys
 c
 c  Process an RPFITS file. Dispatch information to the
 c  relevant Poke routine. Then eventually flush it out with PokeFlsh.
@@ -2391,7 +2395,6 @@ c    sing
 c    nopol      Select only the parallel-hand polarisations.
 c    polflag    Flag all polarisations if any are bad.
 c    unflag     Save data even though it may appear flagged.
-c    dopack     Pack 2 auto corr bins into 1
 c    dotsys     Use online Tsys calibration
 c    ifsel      IFs to select. 0 means select all IFs.
 c    userfreq   User-given rest frequency to override the value in
