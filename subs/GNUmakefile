@@ -3,7 +3,7 @@
 # dependency analysis for all source file types.
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.12 2007/03/26 07:18:15 cal103 Exp $
+# $Id: GNUmakefile,v 1.13 2010/07/07 06:23:26 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
@@ -184,9 +184,9 @@ ifeq "$(MAKEMODE)" "system"
   # itself.  An example of the type of output it produces is shown below.
   define f-filter
      @ sed -n -e 's#^c >>> $(MIRROOT)/##p' $(DPNDTMPD)/$*.f | $(backsl)
+         sort -u | $(backsl)
          sed -e 's#^inc#$$(MIRLIBR)($*.o) : $$(MIRINCD)#' $(backsl)
-             -e 's#^subs#$$(MIRLIBR)($*.o) : $$(MIRSUBSD)#' | $(backsl)
-         sort -u > $(DPNDINCD)/$*
+             -e 's#^subs#$$(MIRLIBR)($*.o) : $$(MIRSUBSD)#' > $(DPNDINCD)/$*
   endef
 
   # As above, this command sequence identifies include files in the cpp output
@@ -474,9 +474,10 @@ else
          sed -e 's#^\([^/]\)#$(THISDIR)/\1#' | $(backsl)
          cat - $(PGMRLIBD)/$*.f | $(backsl)
          sed -n -e '{1p;s#^c >>> ##p;}' | $(backsl)
+         sort -u | $(backsl)
          sed -e 's#^$(PGMRROOT)/#$$(PGMRLIBD)/$*.f : $$(PGMRROOT)/#' $(backsl)
-             -e 's#^$(MIRROOT)/.*/#$$(PGMRLIBD)/$*.f : #' | $(backsl)
-         sort -u > $(DPNDINCD)/$*
+             -e 's#^$(MIRROOT)/inc/#$$(PGMRLIBD)/$*.f : #' $(backsl)
+             -e 's#^$(MIRROOT)/.*/#$$(PGMRLIBD)/$*.f : #' > $(DPNDINCD)/$*
   endef
 
   # As above, this command sequence identifies include files in the cpp
