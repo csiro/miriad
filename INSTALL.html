@@ -122,11 +122,9 @@ libraries</a>:
 <ul>
 <li>
   <p>
-  The <a href="http://www.atnf.csiro.au/computing/software/rpfits"><code>
-  RPFITS</code> library</a> (currently version 2.19) is used by
-  <a href="http://www.atnf.csiro.au/computing/software/miriad/doc/atlod.html">
-  <code>atlod</code></a> and a number of other specialized tasks to read the
-  ATNF data format.  It is provided in binary installations.
+  <a href="http://en.wikipedia.org/wiki/LINPACK"><code>LINPACK</code></a> is
+  provided with <em>Miriad</em> and will be compiled (in a source-code
+  installation) and used unless you explicitly tell it not to.
   </p>
 </li>
 
@@ -152,10 +150,18 @@ libraries</a>:
 
 <li>
   <p>
-  <a href="http://en.wikipedia.org/wiki/LINPACK"><code>LINPACK</code></a> is
-  provided with <em>Miriad</em> and will be compiled (in a source-code
-  installation) and used unless you explicitly tell it not to.
+  The <a href="http://www.atnf.csiro.au/computing/software/rpfits"><code>
+  RPFITS</code> library</a> (currently version 2.20) is used by
+  <a href="http://www.atnf.csiro.au/computing/software/miriad/doc/atlod.html">
+  <code>atlod</code></a> and a number of other specialized tasks to read the
+  ATNF data format.  It is provided in binary installations.
   </p>
+</li>
+
+<li>
+  The <a href="http://www.atnf.csiro.au/people/mcalabre/WCS/index.html"><code>
+  WCSLIB</code> library</a> (currently version 4.4.4) is used by many tasks
+  for computing image coordinates.  It is provided in binary installations.
 </li>
 
 <li>
@@ -224,8 +230,13 @@ libraries</a>:
 </ul>
 
 Of these, most Linux distributions will contain packages for all but
-<code>RPFITS</code> which you will probably have to install from source code
-unless you can use one of the binary distribution kits.
+<code>RPFITS</code> and <code>WCSLIB</code>.  You will probably have to
+install <code>RPFITS</code> from source code unless you can use one of the
+binary distribution kits.  Installation of <code>WCSLIB</code> from its source
+code is straightforward, (<code>configure ; gmake</code>), or you may be able
+to find a
+<a href="http://www.atnf.csiro.au/~mcalabre/WCS/wcslib/software.html">
+pre-built package</a>.
 </p>
 
 <a name="customising"><h4>Customising array sizes</h4>
@@ -281,7 +292,7 @@ If a
 is available for your
 <a href="http://en.wikipedia.org/wiki/Platform_%28computing%29">platform</a>
 it is worth trying to install it first.  However, even though the
-<code>RPFITS</code> and <code>PGPLOT</code>
+<code>PGPLOT</code>, <code>RPFITS</code>, and <code>WCSLIB</code>
 <a href="http://en.wikipedia.org/wiki/Library_%28computer_science%29">
 libraries</a> are
 <a href="http://en.wikipedia.org/wiki/Static_Library">statically</a>
@@ -291,9 +302,9 @@ chance that the
 because of incompatibilities between versions of
 <a href="http://en.wikipedia.org/wiki/Dynamic_library">dynamic</a> (aka
 <a href="http://en.wikipedia.org/wiki/Shared_Library#Shared_library">
-shared</a>) system or compiler libraries.  Nevertheless <code>RPFITS</code>
-and <code>PGPLOT</code> are supplied and this may save you from having to
-install them yourself.
+shared</a>) system or compiler libraries.  Nevertheless <code>PGPLOT</code>,
+<code>RPFITS</code>, and <code>WCSLIB</code> are supplied and this may save
+you from having to install them yourself.
 </p>
 
 <p>
@@ -511,7 +522,9 @@ tweaking is likely to be required.
   third-party libraries listed above.  Most Linux systems provide
   <a href="http://en.wikipedia.org/wiki/Package_management">packages</a>
   for all but <a href="http://www.atnf.csiro.au/computing/software/rpfits">
-  <code>RPFITS</code></a> which you may need to install from source code.
+  <code>RPFITS</code></a> and possibly
+  <a href="http://www.atnf.csiro.au/people/mcalabre/WCS/index.html"><code>
+  WCSLIB</code></a> which you may need to install from source code.
   </p>
 </li>
 
@@ -673,8 +686,16 @@ tweaking is likely to be required.
   Check that <code>$MIR/inc/rpfits.inc</code>, delivered with the
   <em>Miriad</em> source code, matches the corresponding file that was (or
   should have been) installed with the <code>RPFITS</code> library.  If not,
-  it probably means that your version of <code>RPFITS</code> is stale and you
-  will need to update it.
+  it probably means that your version of <code>librpfits.a</code> is stale and
+  you will need to update it (this should never be a problem if it came from a
+  recent Miriad binary distribution).
+  </p>
+
+  <p>
+  Likewise, the version reported at the top of
+  <code>$MIR/inc/wcslib/CHANGES</code> should match that of the version of
+  <code>libwcs.a</code> that you have installed (as it should always do if it
+  came from a recent Miriad binary distribution).
   </p>
 
   <p>
@@ -1115,8 +1136,8 @@ A few more steps are required to finalize the installation:
   Previous versions of the Darwin binary distribution kits were built with
   the Fink Fortran and C compilers, including <code>gfortran</code> 4.1.0
   for the Intel Macs.  However, the HPC g77 Fortran compiler is now used
-  exclusively, including for the <code>RPFITS</code> and <code>PGPLOT</code>
-  libraries provided in the binary distribution kits.
+  exclusively, including for the <code>PGPLOT</code>, <code>RPFITS</code>, and
+  <code>WCSLIB</code> libraries provided in the binary distribution kits.
   </p>
 
   <p>
@@ -1528,5 +1549,5 @@ private version:
 <hr>
 
 <p>
-<small>$Id: INSTALL.html,v 1.16 2009/08/19 08:21:05 cal103 Exp $</small>
+<small>$Id: INSTALL.html,v 1.17 2010/07/07 02:19:22 cal103 Exp $</small>
 </p>

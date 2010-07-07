@@ -2,12 +2,12 @@
 # Process this file with autoconf-2.53 or later to produce a configure script.
 #-----------------------------------------------------------------------------
 # Author: Mark Calabretta, Australia Telescope National Facility
-# $Id: configure.ac,v 1.8 2009/09/23 02:21:30 cal103 Exp $
+# $Id: configure.ac,v 1.9 2010/07/07 02:19:22 cal103 Exp $
 #-----------------------------------------------------------------------------
 
 AC_INIT([Miriad], [ATNF2.0], [miriad@atnf.csiro.au], [miriad-ATNF2.0])
 AC_PREREQ([2.53])
-AC_REVISION([$Revision: 1.8 $])
+AC_REVISION([$Revision: 1.9 $])
 
 AC_CONFIG_SRCDIR([tools/miriad.c])
 AC_CONFIG_AUX_DIR([config])
@@ -143,11 +143,18 @@ if test "x$with_rpfits" != x ; then
   EXTDIRS="$EXTDIRS $with_rpfits"
 fi
 
+AC_ARG_WITH([wcslib], [AS_HELP_STRING([--with-wcslib=DIR],
+            [directory containing wcslib library])], [])
+if test "x$with_wcslib" != x ; then
+  EXTDIRS="$EXTDIRS $with_wcslib"
+fi
+
 AC_PATH_X
 EXTDIRS="$EXTDIRS              \
          $MIRROOT/$MIRARCH/lib \
          /usr/local/pgplot     \
          /usr/local/rpfits     \
+         /usr/local/wcslib     \
          /usr/local/gnu/lib    \
          /usr/local/lib        \
          /local/pgplot         \
@@ -269,6 +276,25 @@ else
 fi
 
 AC_SUBST([RPFITSLIB])
+
+
+# Search for WCSLIB, we need the full pathname.
+AC_MSG_NOTICE([
+
+Looking for the full pathname of the WCSLIB library...])
+
+for EXTDIR in $EXTDIRS ; do
+  AC_CHECK_FILES([$EXTDIR/libwcs.$SO $EXTDIR/libwcs.a],
+                 [WCSLIB="$EXTDIR/libwcs.a" ; break])
+done
+
+if test "x$WCSLIB" = x ; then
+  AC_MSG_WARN([WCSLIB not found.  Many tasks will fail to link.])
+else
+  AC_MSG_NOTICE([WCSLIB appears to be available.])
+fi
+
+AC_SUBST([WCSLIB])
 
 
 # Search for PGPLOT.  Other libraries may be required depending on what

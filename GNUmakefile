@@ -2,7 +2,7 @@
 # GNUmakefile used to compile Miriad.
 #
 # Original: 2006/08/28, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.32 2009/12/10 23:22:21 cal103 Exp $
+# $Id: GNUmakefile,v 1.33 2010/07/07 02:19:22 cal103 Exp $
 #-----------------------------------------------------------------------------
 ifeq "$(MIR)" ""
   # Try to deduce basic Miriad environment variables.  Obviously this only
@@ -81,8 +81,8 @@ ifeq "$(MAKEMODE)" "system"
     VPATH := $(MIRROOT):$(MIRGUIDD)/user:$(MIRGUIDD)/prog
 
     # For copying third-party libraries and associated utilities such as
-    # RPFITS & PGPLOT into the Miriad system directories for export.
-    # Darwin requires that the library be ranlib'd if moved.
+    # PGPLOT, RPFITS, and WCSLIB into the Miriad system directories for
+    # export.  Darwin requires that the library be ranlib'd if moved.
     define mir-copy
       -@ $(RM) $@
          cp $< $@
@@ -129,10 +129,10 @@ ifeq "$(MAKEMODE)" "system"
 
     # Static and static pattern rules.
     #---------------------------------
-    .PHONY : bookings dist pgplot rpfits updates
+    .PHONY : bookings dist pgplot rpfits updates wcslib
 
-    # Update the copy of the RPFITS library and include file via allsys.
-    initial :: rpfits pgplot
+    # Update the copy of external libraries and include files via allsys.
+    initial :: pgplot rpfits wcslib
       ifdef MIRRCS
         # Update local stuff and architecture-specific GNUmakedefs.
 	-@ echo ""
@@ -149,6 +149,10 @@ ifeq "$(MAKEMODE)" "system"
 	-@ $(MAKE) -C scripts chkout
       endif
 
+    pgplot : $(patsubst %,$(MIRLIBD)/lib%.a,pgplot png z) \
+      $(addprefix $(MIRLIBD)/,grfont.dat rgb.txt) \
+      $(addprefix $(MIRBIND)/,pgdisp pgxwin_server)
+
     rpfits : $(MIRINCD)/rpfits.inc $(MIRLIBD)/librpfits.a
 
     $(MIRINCD)/rpfits.inc : /usr/local/include/rpfits.inc
@@ -157,9 +161,11 @@ ifeq "$(MAKEMODE)" "system"
 	   cp $< $@
 	 @ ci -u -m"Updated from /usr/local/include/rpfits.inc." $@
 
-    pgplot : $(patsubst %,$(MIRLIBD)/lib%.a,pgplot png z) \
-      $(addprefix $(MIRLIBD)/,grfont.dat rgb.txt) \
-      $(addprefix $(MIRBIND)/,pgdisp pgxwin_server)
+    wcslib : $(MIRINCD)/wcslib $(MIRLIBD)/libwcs.a
+
+    $(MIRINCD)/wcslib : /usr/local/include/wcslib
+	-@ mkdir -m 2775 -p -v $@
+	   cd $< && rsync -v --recursive --perms --delete . $@
 
     ifeq "$(MIRARCH)" "sun4sol"
       # Regenerate the Miriad ftp distribution kits.  Requires the sun4sol

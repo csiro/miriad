@@ -25,7 +25,7 @@
 # target names by running 'gmake help'
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakedefs,v 1.31 2009/02/09 02:38:44 cal103 Exp $
+# $Id: GNUmakedefs,v 1.32 2010/07/07 02:19:22 cal103 Exp $
 #-----------------------------------------------------------------------------
 # We rely only on the MIR environment variable.
 MIRROOT  := $(MIR)
@@ -169,13 +169,6 @@ SUBSunicos     := unicos
 #-----------------------------------------------------------------------------
 # Linker options for external libraries.
 
-# RPFITS, required by a handful of tasks, primarily atlod, that read ATNF data
-# using subroutine RPFITSIN.  It is supplied with Miriad in the binary
-# distribution kit available for some platforms.  The full pathname must be
-# specified because this library is listed as an explicit prerequisite of some
-# tasks (i.e. they will be recompiled if it changes).
-RPFITSLIB  := $(MIRLIBD)/librpfits.a
-
 # LINPACK, a linear algebra package used by 17 numerically intensive programs.
 # Leave as is to use the version supplied with Miriad.
 LINPACKLIB := -L$(MIRLIBD) -llinpack
@@ -189,6 +182,20 @@ LINPACKLIB := -L$(MIRLIBD) -llinpack
 # (the zlib compression library).  You may also need to add -L options to tell
 # the linker where to find them.
 PGPLOTLIB  := -lpgplot -lpng -lz
+
+# RPFITS, required by a handful of tasks, primarily atlod, that read ATNF data
+# using subroutine RPFITSIN.  It is supplied with Miriad in the binary
+# distribution kit available for some platforms.  The full pathname must be
+# specified because this library is listed as an explicit prerequisite of some
+# tasks (i.e. they will be recompiled if it changes).
+RPFITSLIB  := $(MIRLIBD)/librpfits.a
+
+# WCSLIB, required by the many tasks (>90) that deal with image coordinates.
+# It is supplied with Miriad in the binary distribution kit available for some
+# platforms.  The full pathname must be specified because this library is
+# listed as an explicit prerequisite of some tasks (i.e. they will be
+# recompiled if it changes).
+WCSLIB     := $(MIRLIBD)/libwcs.a
 
 # X11, just the basic X11 library, needed to satisfy PGPLOT dependencies.
 # Also used to build sxmtv if xmtv fails to compile.
@@ -797,6 +804,7 @@ show ::
 	-@ echo "RPFITSLIB  = $(RPFITSLIB)"
 	-@ echo "LINPACKLIB = $(LINPACKLIB)"
 	-@ echo "PGPLOTLIB  = $(PGPLOTLIB)"
+	-@ echo "WCSLIB     = $(WCSLIB)"
 	-@ echo "X11LIB     = $(X11LIB)"
 	-@ echo "X11LIBS    = $(X11LIBS)"
 	-@ echo "XTRALIBS   = $(XTRALIBS)"
