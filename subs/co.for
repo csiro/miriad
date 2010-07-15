@@ -63,8 +63,10 @@ c    dpr  16feb01 Bump up MAXITERS to 1000 in coMixed to handle Erik
 c                 Muller data. Not a good solution.
 c    rjs  31may06 Develop coCvtv (validate coordinate), and check for
 c                 invalid coordinate conversions.
+c    rjs  15jul10 Correct recent bug introduced in coVelSet. Correct order
+c		  of "save" statement in coloc.
 c
-c $Id: co.for,v 1.5 2010/07/07 04:12:54 cal103 Exp $
+c $Id: co.for,v 1.6 2010/07/15 01:04:38 cal103 Exp $
 c***********************************************************************
 c* coInit -- Initialise coordinate conversion routines.
 c& rjs
@@ -1262,7 +1264,7 @@ c  Standardise. For compatibility with old interface, use
       ttype = type
       call ucase(ttype)
       if (ttype.eq.'RADIO') then
-        ttype = 'VELTYP'
+        ttype = 'VELO'
       else if (ttype.eq.'OPTICAL') then
         ttype = 'FELO'
       else if (ttype.eq.'FREQUENCY') then
@@ -2215,8 +2217,8 @@ c-----------------------------------------------------------------------
       logical first
       integer icrd, free
 
-      data first/.true./
       save first
+      data first/.true./
 c-----------------------------------------------------------------------
       if (first) then
         do icrd = 1, MAXCRD
