@@ -78,7 +78,7 @@ c       Interpolation tolerance.  Tolerate an error of as much as "tol"
 c       in converting pixel locations in the input to the output.  The
 c       default is 0.05.  It must be less that 0.5.
 c
-c$Id: regrid.for,v 1.2 2010/07/20 00:43:51 cal103 Exp $
+c$Id: regrid.for,v 1.3 2010/07/23 04:54:01 cal103 Exp $
 c--
 c
 c  History:
@@ -598,6 +598,175 @@ c
 
       end
 c***********************************************************************
+      subroutine MkHeader(lIn,lOut,cOut,version)
+
+      integer lIn,lOut,cOut
+      character version*(*)
+c-----------------------------------------------------------------------
+      integer i
+      character line*64
+
+      integer nkeys
+      parameter(nkeys=21)
+      character key(nkeys)*8
+      data key /   'bmaj    ','bmin    ','bpa     ','bunit   ',
+     *  'history ','instrume','niters  ',
+     *  'object  ','observer','obsra   ','obsdec  ','pbfwhm  ',
+     *  'telescop','btype   ','rms     ','pbtype  ',
+     *  'ltype   ','lstart  ','lwidth  ','lstep   ','mostable'/
+c-----------------------------------------------------------------------
+      do i=1,nkeys
+        call hdcopy(lIn,lOut,key(i))
+      enddo
+
+      call coWrite(cOut,lOut)
+      call hisOpen(lOut,'append')
+      line = 'REGRID: Miriad '//version
+      call hisWrite(lOut,line)
+      call hisInput(lOut,'REGRID')
+      call hisClose(lOut)
+
+      end
+c***********************************************************************
+      subroutine GridEst(nx,ny,plane,gnx,gny,tol)
+
+      integer nx,ny,plane,gnx,gny
+      real tol
+
+c  Compute the grid size needed to allow translation between the
+c  different pixel coordinate systems.
+c
+c  Input:
+c    nx,ny      Image size.
+c    plane      Plane of interest.
+c    tol        Pixel tolerance.
+c  Output:
+c    gnx,gny    Translation grid size.
+c-----------------------------------------------------------------------
+      double precision x(3,4),tx(3,4),mid(3),tmid(3)
+      double precision xmid(3,4),txmid(3,4)
+      integer n,i,j,k,kmax,k1,k2,k3
+      real err,errmax
+      logical more,valid
+c-----------------------------------------------------------------------
+      n = 1
+      k = 0
+      do j=1,2
+        do i=1,2
+          k = k + 1
+          x(1,k) = (2-i) + (i-1)*nx
+          x(2,k) = (2-j) + (j-1)*ny
+          x(3,k) = plane
+          call pcvt(x(1,k),tx(1,k),3,valid)
+          if(.not.valid)
+     *      call bug('f','Invalid coordinate: please use tol=0')
+        enddo
+      enddo
+      mid(1) = 0.5*(nx+1)
+      mid(2) = 0.5*(ny+1)
+      mid(3) = plane
+      call pcvt(mid,tmid,3,valid)
+      if(.not.valid)
+     *  call bug('f','Invalid coordinate: please use tol=0')
+
+      more = .true.
+      dowhile(more)
+        n = 2*n
+        errmax = -1
+        do k=1,4
+          xmid(1,k) = 0.5*(x(1,k) + mid(1))
+          xmid(2,k) = 0.5*(x(2,k) + mid(2))
+          xmid(3,k) = 0.5*(x(3,k) + mid(3))
+          call pcvt(xmid(1,k),txmid(1,k),3,valid)
+          if(.not.valid)
+     *      call bug('f','Invalid coordinate: please use tol=0')
+          err = max( abs(0.5*(tx(1,k)+tmid(1)) - txmid(1,k)),
+     *               abs(0.5*(tx(2,k)+tmid(2)) - txmid(2,k)),
+     *               abs(0.5*(tx(3,k)+tmid(3)) - txmid(3,k)))
+          if(err.gt.errmax)then
+            kmax = k
+            errmax = err
+          endif
+        enddo
+        more = errmax.gt.tol.and.max(nx,ny).gt.n+1
+c
+c  If the tolerance has not yet been reached, home in on the
+c  region where the fit was worst.
+c
+        if(more)then
+          k1 = 1
+          if(k1.eq.kmax)k1 = k1 + 1
+          k2 = k1 + 1
+          if(k2.eq.kmax)k2 = k2 + 1
+          k3 = k2 + 1
+          if(k3.eq.kmax)k3 = k3 + 1
+          call TripMv(mid(1),   mid(2), mid(3),      x(1,k1))
+          call TripMv(tmid(1),  tmid(2),tmid(3),     tx(1,k1))
+          call TripMv(x(1,kmax),mid(2), dble(plane), x(1,k2))
+          call TripMv(mid(1),x(2,kmax), dble(plane), x(1,k3))
+          call pcvt(x(1,k2),tx(1,k2),3,valid)
+          if(.not.valid)
+     *      call bug('f','Invalid coordinate: please use tol=0')
+          call pcvt(x(1,k3),tx(1,k3),3,valid)
+          if(.not.valid)
+     *      call bug('f','Invalid coordinate: please use tol=0')
+          call TripMv(xmid(1,kmax), xmid(2,kmax), xmid(3,kmax),mid)
+          call TripMv(txmid(1,kmax),txmid(2,kmax),txmid(3,kmax),tmid)
+        endif
+      enddo
+
+      gnx = min(nx,n+1)
+      gny = min(ny,n+1)
+
+      end
+c***********************************************************************
+      subroutine TripMv(a,b,c,x)
+c-----------------------------------------------------------------------
+      double precision a,b,c,x(3)
+c-----------------------------------------------------------------------
+      x(1) = a
+      x(2) = b
+      x(3) = c
+      end
+c***********************************************************************
+      subroutine GridGen(nx,ny,plane,Xv,Yv,Zv,valid,gnx,gny)
+
+      integer nx,ny,plane,gnx,gny
+      real Xv(gnx,gny),Yv(gnx,gny),Zv(gnx,gny)
+      logical valid(gnx,gny)
+
+c  Determine the translation between the output and input pixel
+c  coordinates on a grid.
+c
+c  Input:
+c    nx,ny
+c    plane
+c    gnx,gny
+c  Output:
+c    Xv,Yv,Zv,valid
+c-----------------------------------------------------------------------
+      include 'maxdim.h'
+
+      integer i,j
+      double precision In(3),Out(3)
+c-----------------------------------------------------------------------
+      In(3) = plane
+
+      do j=1,gny
+        In(2) = dble(ny-1)/dble(gny-1) * (j-1) + 1
+        do i=1,gnx
+          In(1) = dble(nx-1)/dble(gnx-1) * (i-1) + 1
+          call pCvt(In,Out,3,valid(i,j))
+          if(valid(i,j))then
+            Xv(i,j) = Out(1)
+            Yv(i,j) = Out(2)
+            Zv(i,j) = Out(3)
+          endif
+        enddo
+      enddo
+
+      end
+c***********************************************************************
       subroutine GridStat(nearest,Xv,Yv,Zv,valid,gnx,gny,n1,n2,n3,
      *    tol,minv,maxv,order)
 
@@ -659,33 +828,202 @@ c
 
       end
 c***********************************************************************
-      subroutine MkHeader(lIn,lOut,cOut,version)
+      subroutine BufIni(nBuf,off,minc,maxc,BufSize)
 
-      integer lIn,lOut,cOut
-      character version*(*)
+      integer nBuf(3),off(3),minc(3),maxc(3),BufSize
 c-----------------------------------------------------------------------
       integer i
-      character line*64
-
-      integer nkeys
-      parameter(nkeys=21)
-      character key(nkeys)*8
-      data key /   'bmaj    ','bmin    ','bpa     ','bunit   ',
-     *  'history ','instrume','niters  ',
-     *  'object  ','observer','obsra   ','obsdec  ','pbfwhm  ',
-     *  'telescop','btype   ','rms     ','pbtype  ',
-     *  'ltype   ','lstart  ','lwidth  ','lstep   ','mostable'/
 c-----------------------------------------------------------------------
-      do i=1,nkeys
-        call hdcopy(lIn,lOut,key(i))
+      do i=1,3
+        nBuf(i) = 0
+        off(i) = 0
+        minc(i) = 0
+        maxc(i) = 0
       enddo
 
-      call coWrite(cOut,lOut)
-      call hisOpen(lOut,'append')
-      line = 'REGRID: Miriad '//version
-      call hisWrite(lOut,line)
-      call hisInput(lOut,'REGRID')
-      call hisClose(lOut)
+      BufSize = 0
+
+      end
+c***********************************************************************
+      subroutine BufGet(lIn,minr,maxr,n,nBuf,off,minc,maxc,
+     *                                        rBuf,lBuf,BufSize)
+
+      integer lIn
+      integer minr(3),maxr(3),n(3)
+      integer nBuf(3),off(3),minc(3),maxc(3)
+      integer rBuf,lBuf,BufSize
+c-----------------------------------------------------------------------
+      include 'maxdim.h'
+      include 'mem.h'
+      integer i
+      logical redo
+
+c     Externals.
+      integer memBuf
+c-----------------------------------------------------------------------
+      redo = .false.
+      do i=1,2
+        redo = redo.or.minr(i).lt.minc(i)
+     *             .or.maxr(i).gt.maxc(i)
+      enddo
+      redo = redo.or.(maxr(3)-minr(3)+1).gt.nBuf(3).or.
+     *        maxr(3).lt.minc(3).or.minr(3).gt.maxc(3)
+c
+c  If it looks as if we cannot use the previous buffers, recalculate
+c  what currently looks best, and load the needed data.
+c
+      if(redo)then
+        nBuf(1) = n(1)
+        nBuf(2) = min(nint(1.2*(maxr(2)-minr(2)))+1,n(2))
+        nBuf(3) = min(max(max(memBuf()/2,BufSize)/(nBuf(1)*nBuf(2)),
+     *                    maxr(3)-minr(3)+1),n(3))
+        if(nBuf(1)*nBuf(2)*nBuf(3).gt.BufSize)then
+          if(BufSize.gt.0)then
+            call memFree(rBuf,BufSize,'r')
+            call memFree(lBuf,BufSize,'l')
+          endif
+          BufSize = nBuf(1)*nBuf(2)*nBuf(3)
+          call memAlloc(rBuf,BufSize,'r')
+          call memAlloc(lBuf,BufSize,'l')
+        endif
+        do i=1,3
+          off(i) = minr(i) - (nBuf(i) - (maxr(i)-minr(i)+1))/2 - 1
+          off(i) = max(0,min(off(i),n(i)-nBuf(i)))
+          if(minr(i).lt.off(i)+1.or.maxr(i).gt.off(i)+nBuf(i))
+     *      call bug('f','Algorithmic failure in BufGet')
+          if(i.ne.3)then
+            minc(i) = 1 + off(i)
+            maxc(i) = nBuf(i) + off(i)
+          else
+            minc(3) = minr(i)
+            maxc(3) = maxr(i)
+          endif
+        enddo
+        call BufLoad(lIn,minc,maxc,memr(rBuf),meml(lBuf),
+     *    nBuf(1),nBuf(2),nBuf(3),off(1),off(2),off(3))
+c
+c  Handle the case of there being useful data already in the buffers,
+c  and that the buffers are OK in size.
+c
+      else
+        call BufCycle(lIn,minc,maxc,minr,maxr,memr(rBuf),meml(lBuf),
+     *    nBuf(1),nBuf(2),nBuf(3),off(1),off(2),off(3))
+      endif
+      end
+c***********************************************************************
+      subroutine BufLoad(lIn,minc,maxc,Dat,Flags,
+     *                        nx,ny,nz,xoff,yoff,zoff)
+
+      integer lIn,minc(3),maxc(3),nx,ny,nz,xoff,yoff,zoff
+      real Dat(nx,ny,nz)
+      logical Flags(nx,ny,nz)
+
+c  Fill buffers up with the appropriate data.
+c-----------------------------------------------------------------------
+      integer j,k
+c-----------------------------------------------------------------------
+      if(xoff.ne.0)call bug('f','Load assertion failure')
+
+      do k=minc(3),maxc(3)
+        call xysetpl(lIn,1,k)
+        do j=minc(2),maxc(2)
+          call xyread(lIn,j,Dat(1,j-yoff,k-zoff))
+          call xyflgrd(lIn,j,Flags(1,j-yoff,k-zoff))
+        enddo
+      enddo
+
+      end
+c***********************************************************************
+      subroutine BadPlane(lOut,n1,n2)
+
+      integer n1,n2,lOut
+
+c  Blank out a completely bad plane.
+c-----------------------------------------------------------------------
+      include 'maxdim.h'
+      real data(MAXDIM)
+      logical flag(MAXDIM)
+      integer i,j
+c-----------------------------------------------------------------------
+      do i=1,n1
+        data(i) = 0
+        flag(i) = .false.
+      enddo
+
+      do j=1,n2
+        call xywrite(lOut,j,Data)
+        call xyflgwr(lOut,j,Flag)
+      enddo
+
+      end
+c***********************************************************************
+      subroutine BufCycle(lIn,minc,maxc,minr,maxr,Dat,Flags,
+     *                        nx,ny,nz,xoff,yoff,zoff)
+
+      integer lIn,minc(3),maxc(3),minr(3),maxr(3)
+      integer nx,ny,nz,xoff,yoff,zoff
+      real Dat(nx,ny,nz)
+      logical Flags(nx,ny,nz)
+c-----------------------------------------------------------------------
+      integer j,k,zoff1
+c-----------------------------------------------------------------------
+c
+c  Shuffle around planes that we already have in memory.
+c
+      if(minr(3).lt.1+zoff)then
+        zoff1 = max(0,maxr(3) - nz)
+        minc(3) = max(minc(3),minr(3))
+        maxc(3) = min(maxc(3),maxr(3))
+        do k=maxc(3),minc(3),-1
+          call scopy(nx*ny,Dat(1,1,k-zoff),1,Dat(1,1,k-zoff1),1)
+          call logcopy(nx*ny,Flags(1,1,k-zoff),Flags(1,1,k-zoff1))
+        enddo
+        zoff = zoff1
+      else if(maxr(3).gt.nz+zoff)then
+        zoff1 = minr(3) - 1
+        minc(3) = max(minc(3),minr(3))
+        maxc(3) = min(maxc(3),maxr(3))
+        do k=minc(3),maxc(3)
+          call scopy(nx*ny,Dat(1,1,k-zoff),1,Dat(1,1,k-zoff1),1)
+          call logcopy(nx*ny,Flags(1,1,k-zoff),Flags(1,1,k-zoff1))
+        enddo
+        zoff = zoff1
+      endif
+
+      if(xoff.ne.0)call bug('f','Cycle assertion failure')
+c
+c  Read in the extra planes.
+c
+      do k=minr(3),minc(3)-1
+        call xysetpl(lIn,1,k)
+        do j=minc(2),maxc(2)
+          call xyread(lIn,j,Dat(1,j-yoff,k-zoff))
+          call xyflgrd(lIn,j,Flags(1,j-yoff,k-zoff))
+        enddo
+      enddo
+      do k=maxc(3)+1,maxr(3)
+        call xysetpl(lIn,1,k)
+        do j=minc(2),maxc(2)
+          call xyread(lIn,j,Dat(1,j-yoff,k-zoff))
+          call xyflgrd(lIn,j,Flags(1,j-yoff,k-zoff))
+        enddo
+      enddo
+
+      minc(3) = min(minr(3),minc(3))
+      maxc(3) = max(maxr(3),maxc(3))
+
+      end
+c***********************************************************************
+      subroutine logcopy(n,In,Out)
+
+      integer n
+      logical In(n),Out(n)
+c-----------------------------------------------------------------------
+      integer i
+c-----------------------------------------------------------------------
+      do i=1,n
+        Out(i) = In(i)
+      enddo
 
       end
 c***********************************************************************
@@ -858,343 +1196,5 @@ c
           imax = 0
         endif
       endif
-
-      end
-c***********************************************************************
-      subroutine GridGen(nx,ny,plane,Xv,Yv,Zv,valid,gnx,gny)
-
-      integer nx,ny,plane,gnx,gny
-      real Xv(gnx,gny),Yv(gnx,gny),Zv(gnx,gny)
-      logical valid(gnx,gny)
-
-c  Determine the translation between the output and input pixel
-c  coordinates on a grid.
-c
-c  Input:
-c    nx,ny
-c    plane
-c    gnx,gny
-c  Output:
-c    Xv,Yv,Zv,valid
-c-----------------------------------------------------------------------
-      include 'maxdim.h'
-
-      integer i,j
-      double precision In(3),Out(3)
-c-----------------------------------------------------------------------
-      In(3) = plane
-
-      do j=1,gny
-        In(2) = dble(ny-1)/dble(gny-1) * (j-1) + 1
-        do i=1,gnx
-          In(1) = dble(nx-1)/dble(gnx-1) * (i-1) + 1
-          call pCvt(In,Out,3,valid(i,j))
-          if(valid(i,j))then
-            Xv(i,j) = Out(1)
-            Yv(i,j) = Out(2)
-            Zv(i,j) = Out(3)
-          endif
-        enddo
-      enddo
-
-      end
-c***********************************************************************
-      subroutine GridEst(nx,ny,plane,gnx,gny,tol)
-
-      integer nx,ny,plane,gnx,gny
-      real tol
-
-c  Compute the grid size needed to allow translation between the
-c  different pixel coordinate systems.
-c
-c  Input:
-c    nx,ny      Image size.
-c    plane      Plane of interest.
-c    tol        Pixel tolerance.
-c  Output:
-c    gnx,gny    Translation grid size.
-c-----------------------------------------------------------------------
-      double precision x(3,4),tx(3,4),mid(3),tmid(3)
-      double precision xmid(3,4),txmid(3,4)
-      integer n,i,j,k,kmax,k1,k2,k3
-      real err,errmax
-      logical more,valid
-c-----------------------------------------------------------------------
-      n = 1
-      k = 0
-      do j=1,2
-        do i=1,2
-          k = k + 1
-          x(1,k) = (2-i) + (i-1)*nx
-          x(2,k) = (2-j) + (j-1)*ny
-          x(3,k) = plane
-          call pcvt(x(1,k),tx(1,k),3,valid)
-          if(.not.valid)
-     *      call bug('f','Invalid coordinate: please use tol=0')
-        enddo
-      enddo
-      mid(1) = 0.5*(nx+1)
-      mid(2) = 0.5*(ny+1)
-      mid(3) = plane
-      call pcvt(mid,tmid,3,valid)
-      if(.not.valid)
-     *  call bug('f','Invalid coordinate: please use tol=0')
-
-      more = .true.
-      dowhile(more)
-        n = 2*n
-        errmax = -1
-        do k=1,4
-          xmid(1,k) = 0.5*(x(1,k) + mid(1))
-          xmid(2,k) = 0.5*(x(2,k) + mid(2))
-          xmid(3,k) = 0.5*(x(3,k) + mid(3))
-          call pcvt(xmid(1,k),txmid(1,k),3,valid)
-          if(.not.valid)
-     *      call bug('f','Invalid coordinate: please use tol=0')
-          err = max( abs(0.5*(tx(1,k)+tmid(1)) - txmid(1,k)),
-     *               abs(0.5*(tx(2,k)+tmid(2)) - txmid(2,k)),
-     *               abs(0.5*(tx(3,k)+tmid(3)) - txmid(3,k)))
-          if(err.gt.errmax)then
-            kmax = k
-            errmax = err
-          endif
-        enddo
-        more = errmax.gt.tol.and.max(nx,ny).gt.n+1
-c
-c  If the tolerance has not yet been reached, home in on the
-c  region where the fit was worst.
-c
-        if(more)then
-          k1 = 1
-          if(k1.eq.kmax)k1 = k1 + 1
-          k2 = k1 + 1
-          if(k2.eq.kmax)k2 = k2 + 1
-          k3 = k2 + 1
-          if(k3.eq.kmax)k3 = k3 + 1
-          call TripMv(mid(1),   mid(2), mid(3),      x(1,k1))
-          call TripMv(tmid(1),  tmid(2),tmid(3),     tx(1,k1))
-          call TripMv(x(1,kmax),mid(2), dble(plane), x(1,k2))
-          call TripMv(mid(1),x(2,kmax), dble(plane), x(1,k3))
-          call pcvt(x(1,k2),tx(1,k2),3,valid)
-          if(.not.valid)
-     *      call bug('f','Invalid coordinate: please use tol=0')
-          call pcvt(x(1,k3),tx(1,k3),3,valid)
-          if(.not.valid)
-     *      call bug('f','Invalid coordinate: please use tol=0')
-          call TripMv(xmid(1,kmax), xmid(2,kmax), xmid(3,kmax),mid)
-          call TripMv(txmid(1,kmax),txmid(2,kmax),txmid(3,kmax),tmid)
-        endif
-      enddo
-
-      gnx = min(nx,n+1)
-      gny = min(ny,n+1)
-
-      end
-c***********************************************************************
-      subroutine TripMv(a,b,c,x)
-c-----------------------------------------------------------------------
-      double precision a,b,c,x(3)
-c-----------------------------------------------------------------------
-      x(1) = a
-      x(2) = b
-      x(3) = c
-      end
-c***********************************************************************
-      subroutine BufIni(nBuf,off,minc,maxc,BufSize)
-
-      integer nBuf(3),off(3),minc(3),maxc(3),BufSize
-c-----------------------------------------------------------------------
-      integer i
-c-----------------------------------------------------------------------
-      do i=1,3
-        nBuf(i) = 0
-        off(i) = 0
-        minc(i) = 0
-        maxc(i) = 0
-      enddo
-
-      BufSize = 0
-
-      end
-c***********************************************************************
-      subroutine BufGet(lIn,minr,maxr,n,nBuf,off,minc,maxc,
-     *                                        rBuf,lBuf,BufSize)
-
-      integer lIn
-      integer minr(3),maxr(3),n(3)
-      integer nBuf(3),off(3),minc(3),maxc(3)
-      integer rBuf,lBuf,BufSize
-c-----------------------------------------------------------------------
-      include 'maxdim.h'
-      include 'mem.h'
-      integer i
-      logical redo
-
-c     Externals.
-      integer memBuf
-c-----------------------------------------------------------------------
-      redo = .false.
-      do i=1,2
-        redo = redo.or.minr(i).lt.minc(i)
-     *             .or.maxr(i).gt.maxc(i)
-      enddo
-      redo = redo.or.(maxr(3)-minr(3)+1).gt.nBuf(3).or.
-     *        maxr(3).lt.minc(3).or.minr(3).gt.maxc(3)
-c
-c  If it looks as if we cannot use the previous buffers, recalculate
-c  what currently looks best, and load the needed data.
-c
-      if(redo)then
-        nBuf(1) = n(1)
-        nBuf(2) = min(nint(1.2*(maxr(2)-minr(2)))+1,n(2))
-        nBuf(3) = min(max(max(memBuf()/2,BufSize)/(nBuf(1)*nBuf(2)),
-     *                    maxr(3)-minr(3)+1),n(3))
-        if(nBuf(1)*nBuf(2)*nBuf(3).gt.BufSize)then
-          if(BufSize.gt.0)then
-            call memFree(rBuf,BufSize,'r')
-            call memFree(lBuf,BufSize,'l')
-          endif
-          BufSize = nBuf(1)*nBuf(2)*nBuf(3)
-          call memAlloc(rBuf,BufSize,'r')
-          call memAlloc(lBuf,BufSize,'l')
-        endif
-        do i=1,3
-          off(i) = minr(i) - (nBuf(i) - (maxr(i)-minr(i)+1))/2 - 1
-          off(i) = max(0,min(off(i),n(i)-nBuf(i)))
-          if(minr(i).lt.off(i)+1.or.maxr(i).gt.off(i)+nBuf(i))
-     *      call bug('f','Algorithmic failure in BufGet')
-          if(i.ne.3)then
-            minc(i) = 1 + off(i)
-            maxc(i) = nBuf(i) + off(i)
-          else
-            minc(3) = minr(i)
-            maxc(3) = maxr(i)
-          endif
-        enddo
-        call BufLoad(lIn,minc,maxc,memr(rBuf),meml(lBuf),
-     *    nBuf(1),nBuf(2),nBuf(3),off(1),off(2),off(3))
-c
-c  Handle the case of there being useful data already in the buffers,
-c  and that the buffers are OK in size.
-c
-      else
-        call BufCycle(lIn,minc,maxc,minr,maxr,memr(rBuf),meml(lBuf),
-     *    nBuf(1),nBuf(2),nBuf(3),off(1),off(2),off(3))
-      endif
-      end
-c***********************************************************************
-      subroutine BufCycle(lIn,minc,maxc,minr,maxr,Dat,Flags,
-     *                        nx,ny,nz,xoff,yoff,zoff)
-
-      integer lIn,minc(3),maxc(3),minr(3),maxr(3)
-      integer nx,ny,nz,xoff,yoff,zoff
-      real Dat(nx,ny,nz)
-      logical Flags(nx,ny,nz)
-c-----------------------------------------------------------------------
-      integer j,k,zoff1
-c-----------------------------------------------------------------------
-c
-c  Shuffle around planes that we already have in memory.
-c
-      if(minr(3).lt.1+zoff)then
-        zoff1 = max(0,maxr(3) - nz)
-        minc(3) = max(minc(3),minr(3))
-        maxc(3) = min(maxc(3),maxr(3))
-        do k=maxc(3),minc(3),-1
-          call scopy(nx*ny,Dat(1,1,k-zoff),1,Dat(1,1,k-zoff1),1)
-          call logcopy(nx*ny,Flags(1,1,k-zoff),Flags(1,1,k-zoff1))
-        enddo
-        zoff = zoff1
-      else if(maxr(3).gt.nz+zoff)then
-        zoff1 = minr(3) - 1
-        minc(3) = max(minc(3),minr(3))
-        maxc(3) = min(maxc(3),maxr(3))
-        do k=minc(3),maxc(3)
-          call scopy(nx*ny,Dat(1,1,k-zoff),1,Dat(1,1,k-zoff1),1)
-          call logcopy(nx*ny,Flags(1,1,k-zoff),Flags(1,1,k-zoff1))
-        enddo
-        zoff = zoff1
-      endif
-
-      if(xoff.ne.0)call bug('f','Cycle assertion failure')
-c
-c  Read in the extra planes.
-c
-      do k=minr(3),minc(3)-1
-        call xysetpl(lIn,1,k)
-        do j=minc(2),maxc(2)
-          call xyread(lIn,j,Dat(1,j-yoff,k-zoff))
-          call xyflgrd(lIn,j,Flags(1,j-yoff,k-zoff))
-        enddo
-      enddo
-      do k=maxc(3)+1,maxr(3)
-        call xysetpl(lIn,1,k)
-        do j=minc(2),maxc(2)
-          call xyread(lIn,j,Dat(1,j-yoff,k-zoff))
-          call xyflgrd(lIn,j,Flags(1,j-yoff,k-zoff))
-        enddo
-      enddo
-
-      minc(3) = min(minr(3),minc(3))
-      maxc(3) = max(maxr(3),maxc(3))
-
-      end
-c***********************************************************************
-      subroutine logcopy(n,In,Out)
-
-      integer n
-      logical In(n),Out(n)
-c-----------------------------------------------------------------------
-      integer i
-c-----------------------------------------------------------------------
-      do i=1,n
-        Out(i) = In(i)
-      enddo
-
-      end
-c***********************************************************************
-      subroutine BufLoad(lIn,minc,maxc,Dat,Flags,
-     *                        nx,ny,nz,xoff,yoff,zoff)
-
-      integer lIn,minc(3),maxc(3),nx,ny,nz,xoff,yoff,zoff
-      real Dat(nx,ny,nz)
-      logical Flags(nx,ny,nz)
-
-c  Fill buffers up with the appropriate data.
-c-----------------------------------------------------------------------
-      integer j,k
-c-----------------------------------------------------------------------
-      if(xoff.ne.0)call bug('f','Load assertion failure')
-
-      do k=minc(3),maxc(3)
-        call xysetpl(lIn,1,k)
-        do j=minc(2),maxc(2)
-          call xyread(lIn,j,Dat(1,j-yoff,k-zoff))
-          call xyflgrd(lIn,j,Flags(1,j-yoff,k-zoff))
-        enddo
-      enddo
-
-      end
-c***********************************************************************
-      subroutine BadPlane(lOut,n1,n2)
-
-      integer n1,n2,lOut
-
-c  Blank out a completely bad plane.
-c-----------------------------------------------------------------------
-      include 'maxdim.h'
-      real data(MAXDIM)
-      logical flag(MAXDIM)
-      integer i,j
-c-----------------------------------------------------------------------
-      do i=1,n1
-        data(i) = 0
-        flag(i) = .false.
-      enddo
-
-      do j=1,n2
-        call xywrite(lOut,j,Data)
-        call xyflgwr(lOut,j,Flag)
-      enddo
 
       end
