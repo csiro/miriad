@@ -1,6 +1,6 @@
-c**********************************************************************
+c***********************************************************************
 c     A collection of subroutines shared by the programs CGDISP,
-c     CGSPEC, CGCURS, and CGSLICE. All these subroutines call PGPLOT. 
+c     CGSPEC, CGCURS, and CGSLICE. All these subroutines call PGPLOT.
 c
 c  annboxcg :  Annotate information from one box image
 c  annconcg :  Annotate information from one contour image
@@ -9,17 +9,19 @@ c  anngrscg :  Annotate informatiobn from one grey scale image
 c  anninicg :  Initialize plot annotation and write reference value
 c  annspccg :  Annotate information from all spectrum images
 c  annveccg :  Annotate information from one pair of vector images
-c  annwincg :  Annotate plot with window and channel info 
+c  annwincg :  Annotate plot with window and channel info
 c  aaxlabcg :  Write ascii axis labels
-c  bgcolcg  :  See if background colour of PGPLOT device is black or white
+c  bgcolcg  :  See if background colour of PGPLOT device is black or
+c              white
 c  confmtcg :  Format contour levels
 c  conturcg :  Draw contour plot
-c  drwlincg :  Draw vertical/horizontal line at constant x/y world coordinate
+c  drwlincg :  Draw vertical/horizontal line at constant x/y world
+c              coordinate
 c  drwtikcg :  Draw (nonlinear) ticks/grid
 c  erswincg :  Erase window
 c  lab3cg   :  Label sub-plot with value and/or pixel of third axis
 c  naxlabcg :  Draw frame, write numeric labels, ticks and grid
-c  setdspcg :  Set axis label displacements 
+c  setdspcg :  Set axis label displacements
 c  strerscg :  Erase rectangle on plot and write string into it
 c  strfmtcg :  Format a number into a string with PGNUMB
 c  vpadjcg  :  Adjust viewport if equal scales requested
@@ -41,26 +43,26 @@ c                       CHNSELPG, because they may get modified
 c                       if blanked pixels exist
 c     nebk   28apr92    "g" format seems to behave capriciously
 c                        Try to do something better in VCLABPG
-c                        Renamed subroutines to *cg from *pg 
+c                        Renamed subroutines to *cg from *pg
 c                        as pgdisp etc -> cgdisp etc
 c     nebk   12may92     Return actual scales in VPADJCG
 c     nebk   14may92     Add  LIMTRCG. Add a couple more
 c                        parameters to HEDINFCG
 c     nebk   18may92     Add AXFNDCG
 c     nebk   04jul92     Don't modify variable (PLAV) in READIMCG. Add
-c                        OTOPIXCG, SETTRCG, CONLINCG, STRERSCG, DEGHSMCG,
-c			 ANN*CG, CHKDESCG, CHKDIMCG,  add argument 
-c			 MIRROR to CONLEVCG 
-c     nebk   08jul82     Add OPTCG and INIT/NORM to READIMCG call. FIx 
-c                        bug in CHNSELCG causing groups to be redundantly
-c                        specified under some circumstances
+c                        OTOPIXCG, SETTRCG, CONLINCG, STRERSCG,
+c                        DEGHSMCG, ANN*CG, CHKDESCG, CHKDIMCG, add
+c                        argument MIRROR to CONLEVCG
+c     nebk   08jul82     Add OPTCG and INIT/NORM to READIMCG call.  Fix
+c                        bug in CHNSELCG causing groups to be
+c                        redundantly specified under some circumstances
 c     nebk   14jul92     Add POSOFF to OTOPIXCG. Type CDELT and CRVAL
-c			 as DOUBLE PRECISION
-c     nebk   07aug92     Try to instill some more modularity into all 
+c                        as DOUBLE PRECISION
+c     nebk   07aug92     Try to instill some more modularity into all
 c                        coordinate conversions with PIX2WCG and
 c                        W2PIXCG, removing SETTRCG along the way.
-c     nebk   22oct92     Add units to velocity and frequency axes 
-c			 in LIMTRCG.  SETLABCG was not correctly 
+c     nebk   22oct92     Add units to velocity and frequency axes
+c                        in LIMTRCG.  SETLABCG was not correctly
 c                        setting the dms,hms PGTBOX strings.
 c     nebk   28nov92     Add 'abs/relkms' and 'abs/relghz' label types
 c                        Change "linear" to "abslin"
@@ -75,14 +77,14 @@ c     nebk   27may93     Add YHTQCG and use it in a few places
 c     nebk   29may93     Replace CHTONVCG by new PGQCS
 c     nebk   02jun93     Replace VSSIZECG by new PGQVSZ
 c     nebk   02jun93     Move ANNDEFCG, VPADJCG, VPASPCG here from
-c			 CGSUBS.FOR as they now call PGPLOT
+c                        CGSUBS.FOR as they now call PGPLOT
 c     nebk   16jun93     Remove VPASPCG.  Its functions can now be done
 c                        with PGQCS
-c     nebk   23jun93     Rework VPADJCG because rellin/abslin for RA 
-c   			 axes now gives radians of polar rotation
+c     nebk   23jun93     Rework VPADJCG because rellin/abslin for RA
+c                        axes now gives radians of polar rotation
 c                        Correctly deal with user given scales
 c     nebk   25aug93     Add "absdeg" and "reldeg" axis types.
-c			 Scrap DEGHMSCG in favour of new DANGLEH
+c                        Scrap DEGHMSCG in favour of new DANGLEH
 c                        Add DOERASE to STRERSCG and LAB3CG
 c     nebk   13nov93     Minor change to AXLABCG with options strings
 c                        Better units for Amax in ANNVECCG
@@ -96,7 +98,7 @@ c                        calls PGQCS to be cleverer about displacements
 c     nebk   08mar94     Move WEDGECG here from CGSUBS.FOR. Variables
 c                        PLINC&PLAV -> KBIN(1:2)
 c     nebk   17mar94     Get rid of horrid hoop jumping in STRERSCG
-c			 with new PGSTBG routine
+c                        with new PGSTBG routine
 c     nebk   15jun94     Include spatial binning info in ANNWINCG
 c                        CHange LAB3CG positioning algorithm slightly
 c                        Add justification to STRERSCG
@@ -105,27 +107,30 @@ c                        CONLINCG.  Add box type images to VPSIZCG
 c     nebk   12jul94     Mess about with scale algorithm in VPADJCG
 c     nebk   02aug94     LAB3CG was getting value wrong when channels
 c                        averaged together
-c     nebk   24aug94     Change LAB3CG to use COSUBS coordinate conversion
-c                        routines to label with true world value of third
-c                        third axis
+c     nebk   24aug94     Change LAB3CG to use COSUBS coordinate
+c                        conversion routines to label with true world
+c                        value of third third axis
 c     nebk   23dec94     Strings (str1:4) not long enough in ANNWINCG
 c                        Increase length of STR1 in CONFMTCG
-c     nebk   05jan95     Replace PGGRAY by new PGIMAG. 
+c     nebk   05jan95     Replace PGGRAY by new PGIMAG.
 c     nebk   14apr95     Label grey scales as "pixel maps" in ANNGRSCG
-c     nebk   11aug95     Add arcmin labels and argument nofirst to AXLABCG
+c     nebk   11aug95     Add arcmin labels and argument nofirst to
+c                        AXLABCG
 c     nebk   24aug95     Add grid argument to SETLABCG
 c     nebk   02sep95     Add BGCOLCG, LABAXCG, DRHORICG, DRVERTCG.
-c			 Remove BOXCG.  Add dotr argument to VPSIZCG and
-c		         AXLABCG.  Add temporary tick enquiry fuges through 
-c		         QTIKCG, PGTBX1-3CG
+c                        Remove BOXCG.  Add dotr argument to VPSIZCG and
+c                        AXLABCG.  Add temporary tick enquiry fuges
+c                        through QTIKCG, PGTBX1-3CG
 c     nebk   19oct95     Bias wedges by pixr(1) rather than image min
 c                        when log or square root transfer function
-c     nebk   22nov95     Fix problem with top/right labelling of multi-panel
-c 	                 plots. Remove WEDISP from call sequence of VPSIZCG
-c     nebk   23nov95     Add argument CONLAB to CONTURCG to label contours
-c                        and new call for CTYPECO
-c     nebk   29nov95     Use only W2WCO routines in NAXLABCG and friends,
-c                        rather than directly using co.for routines
+c     nebk   22nov95     Fix problem with top/right labelling of multi-
+c                        panel plots.  Remove WEDISP from call sequence
+c                        of VPSIZCG
+c     nebk   23nov95     Add argument CONLAB to CONTURCG to label
+c                        contours and new call for CTYPECO
+c     nebk   29nov95     Use only W2WCO routines in NAXLABCG and
+c                        friends, rather than directly using co.for
+c                        routines
 c     nebk   18dec95     Add argument DOABUT to VPSIZCG. Fix truncated
 c                        strings in ANNINICG and ANNWINCG
 c     nebk   31jan96     More sig figs for pixel label in LAB3CG
@@ -135,21 +140,21 @@ c     nebk   31oct96     Make sure zp is correct if just one plane
 c                        in NAXLABCG
 c     nebk   14fen97     Add argumebnt val3form to LAB3CG
 c     rjs    15apr97     Mr K was not checking for ANGL axis type in
-c			 LAB3CG -- and causing things to vomit.
-c     rjs    10nov97     Make more robust to things missing from headers.
+c                        LAB3CG -- and causing things to vomit.
+c     rjs    10nov97     Make more robust to things missing from
+c                        headers.
 c     jwr    08jul04     Replaced MemAlloc where MemFree was meant
 c     rgd    01aug08     Added the arcmas call for milliarcs
 c
-c $Id: cgpgsubs.for,v 1.5 2010/05/07 05:22:23 cal103 Exp $
-c**********************************************************************
+c $Id: cgpgsubs.for,v 1.6 2010/07/27 05:46:55 cal103 Exp $
+c***********************************************************************
 c
-c* annboxCG -- Annotate plot with information from a box image 
+c* annboxCG -- Annotate plot with information from a box image
 c& nebk
 c: plotting
 c+
       subroutine annboxcg (lb, bin, bfac, yinc, xpos, ypos)
 c
-      implicit none
       integer lb
       real bfac(5), yinc, xpos, ypos
       character*(*) bin
@@ -162,7 +167,7 @@ c    bin     Box image
 c    bfac    (1)   Maximum value if pixel in region of first subplot
 c            (2-3) Scale factors, in x and y, to convert pixel value
 c                  into box width in world coordinates
-c            (4-5) Scale factors, in x and y, giving box widths per mm 
+c            (4-5) Scale factors, in x and y, giving box widths per mm
 c                  E.g. if pixel is 50 rad/m/m, then these scale factors
 c                  say you have bfac(4) and bfac(5) rad/m/m per mm
 c    yinc    World increment between text lines
@@ -182,7 +187,7 @@ c
       if (src.ne.' ') then
          str2 = ' ('//src(1:len1(src))//')'
          i2 = len1(str2)
-      else 
+      else
          str2 = ' '
          i2 = 1
       end if
@@ -230,7 +235,6 @@ c+
       subroutine annconcg (lc, cin, slev, nlevs, levs, srtlev, dmm,
      +                     yinc, xpos, ypos)
 c
-      implicit none
       integer nlevs, lc, srtlev(nlevs)
       real slev, xpos, ypos, yinc, levs(nlevs), dmm(2)
       character*(*) cin
@@ -296,7 +300,7 @@ c
 c
 c Write out contour levels
 c
-      call confmtcg (xpos, ypos, yinc, nlevs, srtlev, levs, slev, 
+      call confmtcg (xpos, ypos, yinc, nlevs, srtlev, levs, slev,
      +               .true., nlines)
 c
       end
@@ -308,24 +312,23 @@ c: plotting
 c+
       subroutine anndefcg (cs, yinc, ygap)
 c
-      implicit none
       real cs, yinc, ygap
 c
-c  Empirical definition of size of normalized y viewsurface per 
-c  character height for when doing full plot annotation. 
+c  Empirical definition of size of normalized y viewsurface per
+c  character height for when doing full plot annotation.
 c  One character is defined to be 0.14 inches tall.
 c
 c  Output:
 c    cs    The PGPLOT character size requred to make the required
 c          character height
-c    yinc  The distance between the bottoms of successive text 
+c    yinc  The distance between the bottoms of successive text
 c          lines in units of one character height
 c    ygap  Gap between x label and annotaiton text in annotation
 c          (CS) character heights
 c--
-c----------------------------------------------------------------------
+c-----------------------------------------------------------------------
       real xht, yht
-c----------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
 c Find height of one character in mm for text written
 c vertically and horizontally
@@ -333,7 +336,7 @@ c
       call pgsch (1.0)
       call pgqcs (2, xht, yht)
 c
-c Compute number of character heights in 3mm 
+c Compute number of character heights in 3mm
 c
       cs = 3.0 / yht
 c
@@ -355,7 +358,6 @@ c+
       subroutine anngrscg (lg, gin, npixr, pixr, trfun, dmm,
      +                     yinc, xpos, ypos)
 c
-      implicit none
       integer lg, npixr
       real pixr(2), yinc, xpos, ypos, dmm(2)
       character*(*) gin, trfun
@@ -375,7 +377,7 @@ c  Input/output
 c    ypos    World y coordinate for next text line
 c--
 c-----------------------------------------------------------------------
-      character src1*50, str1*132, str2*132, str3*132, 
+      character src1*50, str1*132, str2*132, str3*132,
      +  units*9, rtoaf*20
       integer len1, i1, i2, i3
 c-----------------------------------------------------------------------
@@ -434,10 +436,9 @@ c* anniniCG -- Init. plot annotation and write reference values to plot
 c& nebk
 c: plotting
 c+
-      subroutine anninicg (lh, no3, vymin, pcs, ydispb, labtyp, 
+      subroutine anninicg (lh, no3, vymin, pcs, ydispb, labtyp,
      +                     xpos, ypos, yinc)
 c
-      implicit none
       integer lh
       real xpos, ypos, yinc, pcs, ydispb, vymin
       character*(*) labtyp(2)
@@ -448,13 +449,13 @@ c  write the reference values to the plot.  The window is
 c  redefined to be the same as the available part of the
 c  view-surface in normalized device coords (0 -> 1) to make
 c  life easier.
-c    
+c
 c  Input
 c   lh       Image handle
 c   no3      DOn't write ref pix for third axis
 c   vymin    y viewsurface normalized device coordinate
 c            at which the lowest sub-plot x-axis is drawn
-c   pcs      PGPLOT character size parameters for plot labelling 
+c   pcs      PGPLOT character size parameters for plot labelling
 c            (not the annotation)
 c   ydispb   Displacement of x-axis label in character heights
 c   labtyp   Axis label types
@@ -470,8 +471,8 @@ c-----------------------------------------------------------------------
 c
       double precision win(maxnax)
       real xht, yht, xhta, yhta, acs, ychinc, yoff, ygap
-      character str1*132, str2*132, gentyp*4, typeo(maxnax)*6, 
-     +  typei(maxnax)*6, refstr(maxnax)*30, ctype*9, 
+      character str1*132, str2*132, gentyp*4, typeo(maxnax)*6,
+     +  typei(maxnax)*6, refstr(maxnax)*30, ctype*9,
      +  itoaf*1
       integer len1, naxis, maxis, ip, il1, i, ir(maxnax), il
 c-----------------------------------------------------------------------
@@ -528,7 +529,7 @@ c
           call ctypeco (lh, i, ctype, il)
           if (ctype(1:il).eq.'UU') then
             str1(ip:) = 'UU,'
-          else 
+          else
             str1(ip:) = 'VV,'
           end if
         else
@@ -547,7 +548,7 @@ c
       do i = 1, maxis
         ip = len1(str1) + 2
         write (str1(ip:),'(a)') refstr(i)(1:ir(i))//','
-      end do      
+      end do
 c
       ip = len1(str1)
       write (str1(ip:), '(a)') ' at pixel ('
@@ -574,7 +575,6 @@ c: plotting
 c+
       subroutine annspccg (nspec, spin, iscale, yinc, xpos, ypos)
 c
-      implicit none
       integer nspec
       real yinc, xpos, ypos, iscale(nspec)
       character*(*) spin(nspec)
@@ -629,7 +629,6 @@ c: plotting
 c+
       subroutine annveccg (lv, vin, vfac, yinc, xpos, ypos)
 c
-      implicit none
       integer lv(2)
       real vfac(2), yinc, xpos, ypos
       character*(*) vin(2)
@@ -638,16 +637,16 @@ c  Annotate plot with vector image information
 c
 c  Input:
 c    lv      Handles for vector images
-c    vin     Vector image 
+c    vin     Vector image
 c    vfac    Maximum vector amplitude and scale in pixel units
-c	     per mm (e.g. jy/beam per mm, or ratio per mm)
+c            per mm (e.g. jy/beam per mm, or ratio per mm)
 c    yinc    World increment between text lines
 c    xpos    World x coordinate for text lines
 c  Input/output
 c    ypos    World y coordinate for next text line
 c--
 c-----------------------------------------------------------------------
-      character src1*50, src2*50, str1*132, str2*132, str3*132, 
+      character src1*50, src2*50, str1*132, str2*132, str3*132,
      +  units*20, btype*30
       integer len1, i1, i2, i3, iu
 c-----------------------------------------------------------------------
@@ -658,7 +657,7 @@ c
       if (src1.ne.' ') then
          str3 = ' ('//src1(1:len1(src1))//')'
          i3 = len1(str3)
-      else 
+      else
          str3 = ' '
          i3 = 1
       end if
@@ -667,7 +666,7 @@ c
       if (src2.ne.' ') then
          str2 = ' ('//src2(1:len1(src2))//')'
          i2 = len1(str2)
-      else 
+      else
          str2 = ' '
          i2 = 1
       end if
@@ -710,10 +709,9 @@ c* annwinCG -- Annotate plot with spatial window
 c& nebk
 c: plotting
 c+
-      subroutine annwincg (lh, blc, trc, ibin, jbin, kbin, yinc, 
+      subroutine annwincg (lh, blc, trc, ibin, jbin, kbin, yinc,
      +                     xpos, ypos)
 c
-      implicit none
       integer blc(*), trc(*), ibin(2), jbin(2), kbin(2), lh
       real xpos, ypos, yinc
 c
@@ -771,7 +769,7 @@ c
 c Format spectral binning
 c
       call rdhdi (lh, 'naxis3', naxis3, 0)
-      if (naxis3.gt.1 .and. (kbin(1).gt.0 .and. kbin(2).gt.0)) then      
+      if (naxis3.gt.1 .and. (kbin(1).gt.0 .and. kbin(2).gt.0)) then
         call pgnumb (kbin(1), 0, 0, str1, i1)
         call pgnumb (kbin(2), 0, 0, str2, i2)
         strc = ' Spectral inc/bin : '//str1(1:i1)//'/'//str2(1:i2)
@@ -783,7 +781,7 @@ c
 c
         call sunitco (lh, 3, 'absnat', units)
         iu = len1(units)
-c  
+c
         if (units.eq.' ') then
           strd = '='//str1(1:i1)//'/'//str2(1:i2)
         else
@@ -812,7 +810,6 @@ c: plotting
 c+
       subroutine aaxlabcg (dox, doy, xdispl, ydispb, xlabel, ylabel)
 c
-      implicit none
       real xdispl, ydispb
       logical dox, doy
       character xlabel*(*), ylabel*(*)
@@ -838,7 +835,6 @@ c: plotting
 c+
       subroutine bgcolcg (bgcol)
 c
-      implicit none
       integer bgcol
 c
 c  Look at the RGB colours of colour index 0 to see whether the
@@ -847,17 +843,17 @@ c
 c  Output:
 c    bgcol      0 -> black
 c               1 -> white
-c	       -1 -> something else
+c              -1 -> something else
 c--
 c-----------------------------------------------------------------------
       real r, g, b
 c-----------------------------------------------------------------------
       call pgqcr (0, r, g, b)
-      if  (abs(r).lt.0.0001 .and. abs(g).lt.0.0001 .and. 
+      if  (abs(r).lt.0.0001 .and. abs(g).lt.0.0001 .and.
      +    abs(b).lt.0.0001) then
         bgcol = 0
 c        write (*,*) 'background is black'
-      else if (1.0-abs(r).lt.0.0001 .and. 1.0-abs(g).lt.0.0001 .and. 
+      else if (1.0-abs(r).lt.0.0001 .and. 1.0-abs(g).lt.0.0001 .and.
      +         1.0-abs(b).lt.0.0001) then
         bgcol = 1
 c        write (*,*) 'background is white'
@@ -872,10 +868,9 @@ c* confmtCG -- Format contour levels
 c& nebk
 c: plotting
 c+
-      subroutine confmtcg (xpos, ypos, yinc, nlevs, srtlev, levs, slev, 
+      subroutine confmtcg (xpos, ypos, yinc, nlevs, srtlev, levs, slev,
      +                     write, nlines)
 c
-      implicit none
       integer nlevs, nlines, srtlev(nlevs)
       real levs(nlevs), slev, xpos, ypos, yinc
       logical write
@@ -883,7 +878,7 @@ c
 c  Format contour levels and optionally write to viewport
 c
 c Input:
-c   xpos      c location to start writing contours levels 
+c   xpos      c location to start writing contours levels
 c             in world coordinates
 c   yinc      Increment in w.c. to step down image for each
 c             line of contours
@@ -906,7 +901,7 @@ c-----------------------------------------------------------------------
       integer i1, i2, len1, k
       character str1*1000, str2*30
 c-----------------------------------------------------------------------
-      call pgqwin (xw1, xw2, yw1, yw2)      
+      call pgqwin (xw1, xw2, yw1, yw2)
       dx = abs(xw2 - xw1)
 c
       nlines = 0
@@ -1077,7 +1072,6 @@ c  Scratch
 c    x,yline
 c          plot buffers
 c-----------------------------------------------------------------------
-      implicit none
       integer n, lun
       double precision wc, p1, p2, zp
       real xline(n), yline(n)
@@ -1128,7 +1122,7 @@ c
         yline(npt) = po(2)
 c
         if (axis.eq.'x') then
-          wi(2) = wi(2) + inc 
+          wi(2) = wi(2) + inc
         else
           wi(1) = wi(1) + inc
         end if
@@ -1146,10 +1140,10 @@ c     Write on the plot ticks or grid.  If a grid is requested,
 c     no minor ticks are drawn.  These ticks/grid are correct
 c     for a non-linear coordinate system too.
 c
-c  Input 
+c  Input
 c    axis      Indicate which axis we are ticking; 'x' or 'y'
 c    opts      Options string
-c    tickd     Major tick interval 
+c    tickd     Major tick interval
 c    nsub      Number of subintervals between major ticks
 c    ticklp    Length of tick in pixels
 c    typeo     Coordinate conversion types matching LABTYP
@@ -1158,7 +1152,6 @@ c    axmin,max Axis min and max in world according to LABTYP
 c    blc,trcd  Orthogonal axis min and max in absolute pixels
 c    zp        Absolute pixel of third axis appropriate to this image
 c-----------------------------------------------------------------------
-      implicit none
       integer lun, nsub
       character axis*1, opts*(*), typeo(3)*6
       double precision tickd, ticklp, axmin, axmax, blcd, trcd, zp
@@ -1223,7 +1216,7 @@ c
                 axxx = axxx + tinc
                 call drwlincg (lun, axis, typeo, 2, axxx, zp, blcd,
      +                         blcd+ticklp/2, xline, yline)
-                call drwlincg (lun, axis, typeo, 2, axxx, zp, 
+                call drwlincg (lun, axis, typeo, 2, axxx, zp,
      +                         trcd-ticklp/2, trcd, xline, yline)
                 call pgupdt
               end do
@@ -1234,7 +1227,7 @@ c
               axxx = axxx + tinc
               call drwlincg (lun, axis, typeo, 2, axxx, zp, blcd,
      +                       blcd+ticklp/2, xline, yline)
-              call drwlincg (lun, axis, typeo, 2, axxx, zp, 
+              call drwlincg (lun, axis, typeo, 2, axxx, zp,
      +                       trcd-ticklp/2, trcd, xline, yline)
               call pgupdt
             end do
@@ -1257,10 +1250,9 @@ c: plotting
 c+
       subroutine erswincg (xmin, xmax, ymin, ymax)
 c
-      implicit none
       real xmin, xmax, ymin, ymax
 c
-c  Erase the specified window from the PGPLOT device with 
+c  Erase the specified window from the PGPLOT device with
 c  rectangle fill
 c
 c  Input
@@ -1286,10 +1278,9 @@ c* lab3CG -- Label sub-plot with value and/or pixel of 3rd axis
 c& nebk
 c: plotting
 c+
-      subroutine lab3cg (lun, doerase, doval, dopix, labtyp, ipl, 
+      subroutine lab3cg (lun, doerase, doval, dopix, labtyp, ipl,
      +                   plav, val3form)
 c
-      implicit none
       integer ipl, plav, lun
       logical doval, dopix, doerase
       character*6  labtyp(2)
@@ -1307,7 +1298,7 @@ c    ipl        Start plane of image being plotted
 c    plav       Number of planes being averaged for current sub-plot
 c    val3form   Format for 3val label
 c--
-c----------------------------------------------------------------------
+c-----------------------------------------------------------------------
       double precision pix, val3
       real mx, my, x1, x2, y1, y2, xb(4), yb(4), dx, dy
       character str1*30, str2*30, str3*60, types(3)*4, ltype*6, form*30
@@ -1316,7 +1307,7 @@ c
       include 'maxnax.h'
       integer len1, naxis
       character*30 hangleh, rangle
-c------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       call rdhdi (lun, 'naxis', naxis, 0)
       if (naxis.lt.3) return
 c
@@ -1344,7 +1335,7 @@ c
      *           types(3).eq.'ANGL' ) then
           ltype = 'absnat'
         else if (types(3).eq.'RA' .or. types(3).eq.'LONG') then
-c  
+c
 c Look for DEC axis amongst first two and find label type to
 c set label type for 3rd axis value
 c
@@ -1360,7 +1351,7 @@ c
      +          ltype = labtyp(2)
           end if
         else if (types(3).eq.'DEC' .or. types(3).eq.'LATI') then
-c  
+c
 c Look for RA axis amongst first two and find label type to
 c set label type for 3rd axis value
 c
@@ -1379,7 +1370,7 @@ c
 c
 c Now compute the value of the third axis in the desired units
 c and format it
-c 
+c
         call w2wsco (lun, 3, 'abspix', ' ', pix, ltype, ' ', val3)
         call finco (lun)
 c
@@ -1389,7 +1380,7 @@ c
           str2 = hangleh(val3)
         else if (ltype.eq.'dms') then
           str2 = rangle(val3)
-        else 
+        else
             if (val3form.eq.' ') then
              if (val3.lt.100.0) then
                call strfmtcg (real(val3), 2, str2, ie2)
@@ -1402,7 +1393,7 @@ c
               form = '(' // val3form(1:len1(val3form)) // ')'
               call strfd (val3, form, str2, ie2)
            end if
-        end if  
+        end if
         ie2 = len1(str2)
         is2 = 1
         do while (str2(is2:is2).eq.' ' .and. is2.le.ie2)
@@ -1428,7 +1419,7 @@ c
       dx = (xb(4) - xb(1))
       call pgqtxt (0.0, 0.0, 0.0, 0.0, str3(1:i3), xb, yb)
       dy = (yb(2) - yb(1))
-c       
+c
       mx = x1 + dx
       my = y2 - 2.0*dy
 c
@@ -1442,9 +1433,8 @@ c* naxlabCG -- Draw frame, write numeric labels, ticks and grid
 c& nebk
 c: plotting
 c+
-      subroutine naxlabcg (lun, donum, blc, trc, krng, labtyp, 
+      subroutine naxlabcg (lun, donum, blc, trc, krng, labtyp,
      +                     donx, dony, nofirst, grid)
-      implicit none
 c
       character*(*) labtyp(2)
       integer lun, blc(3), trc(3)
@@ -1457,8 +1447,9 @@ c  Input
 c     lun       handle for coordinate conversions
 c     donum     If true, this is the first time we have displayed this
 c               image so we label with numbers frame and box.  Otherwise
-c               we have erased the display and all we want to do is redraw
-c               the frame and ticks.  The numbers will not have gone.
+c               we have erased the display and all we want to do is
+c               redraw the frame and ticks.  The numbers will not have
+c               gone.
 c     blc,trc   absolute pixels of blc and trc of selected hypercube
 c     krng      first plane and number of planes averaged in this image
 c     labtyp    axis label types
@@ -1476,7 +1467,7 @@ c
       parameter (st2r=dpi/3600.d0/12.0d0)
 c
       double precision wwi(3), wblc(3), wtrc(3), wbrc(3), wtlc(3),
-     + tickd(2), xmin, xmax, ymin, ymax, zp, ticklp(2), dp, dw, 
+     + tickd(2), xmin, xmax, ymin, ymax, zp, ticklp(2), dp, dw,
      + blcd(2), trcd(2), wrap
       real tick(2),  tickl(2), wpix(4)
       integer nxsub, nysub, i, j, krng(2), ip, naxis
@@ -1488,7 +1479,7 @@ c Save pixel window
 c
       call pgqwin (wpix(1), wpix(2), wpix(3), wpix(4))
 c
-c Work out if we have a RA=0 crossing axis 
+c Work out if we have a RA=0 crossing axis
 c
       call razerocg (lun, blc, trc, zero)
 c
@@ -1497,7 +1488,7 @@ c axis with hms or absdeg or absnat labels. All others will not cause
 c us to have to worry about a modulo something labelling need at RA=0
 c
       do i = 1, 2
-        if (labtyp(i).ne.'hms' .and. labtyp(i).ne.'absdeg' 
+        if (labtyp(i).ne.'hms' .and. labtyp(i).ne.'absdeg'
      +     .and. labtyp(i).ne.'absnat') zero(i) = .false.
       end do
 c
@@ -1541,8 +1532,9 @@ c
       wwi(2) = trcd(2)
       call w2wco (lun, naxis, typei, ' ', wwi, typeo, ' ', wtlc)
 c
-c Add 2pi to one end if we cross RA=0.  RA axis units are intrinsically radians
-c but we are concerned here if we are labelling them as hms or absdeg or absnat
+c Add 2pi to one end if we cross RA=0.  RA axis units are intrinsically
+c radians but we are concerned here if we are labelling them as hms or
+c absdeg or absnat.
 c
       if (zero(1)) then
         if (labtyp(1).eq.'hms' .or. labtyp(1).eq.'absnat') then
@@ -1553,12 +1545,12 @@ c
 c
         if (wblc(1).lt.wbrc(1)) then
           wblc(1) = wblc(1) + wrap
-        else 
+        else
           wbrc(1) = wbrc(1) + wrap
         end if
         if (wtlc(1).lt.wtrc(1)) then
           wtlc(1) = wtlc(1) + wrap
-        else 
+        else
           wtrc(1) = wtrc(1) + wrap
         end if
       end if
@@ -1571,20 +1563,20 @@ c
 c
         if (wblc(2).lt.wtlc(2)) then
           wblc(2) = wblc(2) + wrap
-        else 
+        else
           wtlc(2) = wtlc(2) + wrap
         end if
         if (wbrc(2).lt.wtrc(2)) then
           wbrc(2) = wbrc(2) + wrap
-        else 
+        else
           wtrc(2) = wtrc(2) + wrap
         end if
       end if
 c
-c Now convert any RA/DEC angular world coordinates (currently in radians)
-c to seconds of time or arc if desired for PGTBOX.  W2WCO will already 
-c have checked that the LABTYP is compatible with the CTYPE so no 
-c need to do it again
+c Convert any RA/DEC angular world coordinates (currently in radians) to
+c seconds of time or arc if desired for PGTBOX.  W2WCO will already have
+c checked that the LABTYP is compatible with the CTYPE so no need to do
+c it again.
 c
       do j = 1, 2
         call angconcg (1, labtyp(j), wblc(j))
@@ -1593,11 +1585,11 @@ c
         call angconcg (1, labtyp(j), wtrc(j))
       end do
 c
-c Set new PGPLOT window.  We only use this to work out the ticks so it 
+c Set new PGPLOT window.  We only use this to work out the ticks so it
 c doesn't matter much that it is still a linear axis. But it must be the
 c correct part of the frame to match where the labels will be written
 c
-      call pgswin (real(wblc(1)), real(wbrc(1)), 
+      call pgswin (real(wblc(1)), real(wbrc(1)),
      +             real(wblc(2)), real(wtlc(2)))
 c
 c Set PGPLOT PGTBOX options strings; we only do bottom/left
@@ -1623,7 +1615,7 @@ c
           xopt(ip:) = 'ZYHO'
         else if (labtyp(1).eq.'dms') then
           xopt(ip:) = 'ZYDO'
-         end if 
+         end if
       end if
 c
       yopt = 'BC'
@@ -1641,16 +1633,16 @@ c
           yopt(ip:) = 'ZYHV'
         else if (labtyp(2).eq.'dms') then
           yopt(ip:) = 'ZYDV'
-         end if 
+         end if
       end if
 c
-c Now draw frame and write only bottom/left numeric labels.  
+c Now draw frame and write only bottom/left numeric labels.
 c
       call pgtbox (xopt, 0.0, 0, yopt, 0.0, 0)
 c
 c Fish out the tick intervals and number of subintervals
 c that PGTBOX or PGBOX would be using if they were drawing
-c the ticks.  
+c the ticks.
 c
       nxsub = 0
       nysub = 0
@@ -1661,7 +1653,7 @@ c
       if (labtyp(1).eq.'hms' .or. labtyp(1).eq.'dms') dotime(1) = .true.
       if (labtyp(2).eq.'hms' .or. labtyp(2).eq.'dms') dotime(2) = .true.
 c
-      call qtikcg (dotime, tick(1), tick(2), nxsub, nysub, 
+      call qtikcg (dotime, tick(1), tick(2), nxsub, nysub,
      +             tickl(1), tickl(2))
       tickd(1) = abs(tick(1))
       tickd(2) = abs(tick(2))
@@ -1678,7 +1670,7 @@ c
 c
 c The experienced and bold user may also wish to label the top and
 c right axes as well.  So reset the world coordinate window to reflect
-c these axes (because the coordinate system may be nonlinear, these can 
+c these axes (because the coordinate system may be nonlinear, these can
 c differ) and label away.  Must use the ticking values already found.
 c
       xopt = ' '
@@ -1702,7 +1694,7 @@ c
           xopt(ip:) = 'ZYHO'
         else if (labtyp(1).eq.'dms') then
           xopt(ip:) = 'ZYDO'
-         end if 
+         end if
       end if
 c
       ip = 1
@@ -1719,11 +1711,11 @@ c
           yopt(ip:) = 'ZYHV'
         else if (labtyp(2).eq.'dms') then
           yopt(ip:) = 'ZYDV'
-         end if 
+         end if
       end if
 c
       if (index(xopt,'M').ne.0 .or. index(yopt,'M').ne.0) then
-        call pgswin (real(wtlc(1)), real(wtrc(1)), 
+        call pgswin (real(wtlc(1)), real(wtrc(1)),
      +               real(wbrc(2)), real(wtrc(2)))
         call pgtbox (xopt, tick(1), nxsub, yopt, tick(2), nysub)
       end if
@@ -1792,7 +1784,6 @@ c: plotting
 c+
       subroutine setdspcg (lh, labtyp, blc, trc, xdispl, ydispb)
 c
-      implicit none
       integer lh, blc(2), trc(2)
       character labtyp(*)*(*)
       real xdispl, ydispb
@@ -1805,12 +1796,12 @@ c    labtyp   Label type requested by user
 c    blc      blc in pixels
 c    trc      trc in pixels
 c  Output
-c    xdispl   Displacement in character heights from left y-axis 
+c    xdispl   Displacement in character heights from left y-axis
 c             for Y label
-c    ydispb   Displacement in character heights from bottom x-axis 
+c    ydispb   Displacement in character heights from bottom x-axis
 c             for X label
 c--
-c-------------------------------------------------------------------------------
+c-----------------------------------------------------------------------
       include 'mirconst.h'
       double precision ymin, ymax, win(2), wout1(2), wout2(2)
       real dely, xch, ych, xl, yl
@@ -1832,7 +1823,7 @@ c
       end if
 c
 c Y axis.  Have a stab at a correct axis label displacement when using
-c HMS or DMS; it depends upon the number of decimal places in the 
+c HMS or DMS; it depends upon the number of decimal places in the
 c labels and knowing about the PGTBOX algorithm.  Very modular.
 c Allow for space between numeric label and axis, and between
 c numeric label and axis label.
@@ -1844,7 +1835,7 @@ c
         stypeo = ' '
         typei(1) = 'abspix'
         typei(2) = 'abspix'
-c        
+c
         call initco (lh)
         win(1) = blc(1) - 0.5
         win(2) = blc(2) - 0.5
@@ -1884,7 +1875,7 @@ c
           end if
         else if (dely.le.5*3600) then
           str = '1O05\uh\d05\um\dO'
-        else 
+        else
           str = '1O05\uh\dO'
         end if
         il = len1(str)
@@ -1897,7 +1888,7 @@ c Find the length of this string in mm and convert to
 c displacement to left of axis for vertical axis label
 c
         call pglen (2, str(1:il), xl, yl)
-        call pgqcs (2, xch, ych) 
+        call pgqcs (2, xch, ych)
         xdispl = xl / xch
       else
         if (labtyp(2).eq.'none') then
@@ -1909,13 +1900,13 @@ c
 c
       end
 c
-c* strersCG -- Optionally erase a rectangle on the view-port & write a string in it
+c* strersCG -- Optionally erase a rectangle on the view-port & write a
+c              string in it
 c& nebk
 c: plotting
 c+
       subroutine strerscg (doerase, just, string, x, y)
 c
-      implicit none
       real x, y, just
       character string*(*)
       logical doerase
@@ -1925,7 +1916,7 @@ c  view-port into it
 c
 c  Input
 c    doerase     Erase rectangle behind string if true.
-c    just        Horizontal string justification.  
+c    just        Horizontal string justification.
 c                     0.0 -> left just
 c                     0.5 -> centred
 c                     1.0 -> right just
@@ -1948,12 +1939,11 @@ c: plotting
 c+
       subroutine strfmtcg (xnum, ns, str, is)
 c
-      implicit none
       real xnum
       integer ns, is
       character*(*) str
 c
-c  Format a number with a specified number of significant figures 
+c  Format a number with a specified number of significant figures
 c  with the PGPLOT routine pgnumb. It chooses automatically decimal
 c  or exponential notation.  Pgplot superscripting escape sequences
 c  may be embedded in the string in the latter case.
@@ -1987,7 +1977,6 @@ c+
       subroutine vpadjcg (lh, hard, eqscale, scale, vxmin, vymin, vymax,
      +   nx, ny, blc, trc, tfvp, wdgvp, vxsize, vysize)
 c
-      implicit none
       integer lh, nx, ny, blc(*), trc(*)
       real vxsize, vysize, vxmin, vymin, vymax, scale(2), tfvp(4),
      +  wdgvp(4)
@@ -2001,7 +1990,7 @@ c
 c  Inputs
 c    lh           Handle of image
 c    hard         YES for hardcopy device
-c    eqscale      True means equals scale requested, else different 
+c    eqscale      True means equals scale requested, else different
 c    nx,ny        Number of sub-plots in x and y
 c    blc,trc      Window in pixels
 c  Input/Output
@@ -2009,14 +1998,14 @@ c    scale        scales in x and y in linear axis units/mm
 c                 RA axes are radians on the sky per mm
 c    vxmin        Left hand side of encompassing view port
 c    vymin,vymax  Bottom and top of encompassing view port
-c    tfvp         Transfer function fiddle plot viewport. SHould be all zero
-c                 if no fiddling.
+c    tfvp         Transfer function fiddle plot viewport. SHould be all
+c                 zero if no fiddling.
 c    wdgvp        Wedge viewport.  All zero fo no wedge
-c    vxsize       Size of viewport for sub-plots in normalized device 
+c    vxsize       Size of viewport for sub-plots in normalized device
 c    vysize       coordinates
 c--
 c-----------------------------------------------------------------------
-      double precision delx, dely, xfac, yfac, xscale, yscale, 
+      double precision delx, dely, xfac, yfac, xscale, yscale,
      +  xscale0, yscale0, cdelt1, cdelt2
       real vx1, vx2, vy1, vy2, vxmore, vymore, vxsize2, vysize2
       character aline*72
@@ -2051,26 +2040,26 @@ c
 c Over-ride user given scales if too small to fit image on viewport
 c
         if (scale(1).gt.xscale0) then
-          xscale = scale(1) 
-        else 
+          xscale = scale(1)
+        else
           xscale = xscale0
-          if (scale(1).ne.0.0) call bug ('w', 
+          if (scale(1).ne.0.0) call bug ('w',
      +        'VPADJCG: User x-scale too small, will self-scale')
         end if
 c
         if (scale(2).gt.yscale0) then
           yscale = scale(2)
-        else 
+        else
           yscale = yscale0
-          if (scale(2).ne.0.0) 
-     +    call bug ('w', 
+          if (scale(2).ne.0.0)
+     +    call bug ('w',
      +              'VPADJCG: User y-scale too small, will self-scale')
         end if
 c
 c Adjust for equal scales if required
 c
         if (eqscale) then
-          if (xscale.ne.yscale) call bug ('w', 
+          if (xscale.ne.yscale) call bug ('w',
      +     'VPADJCG: Use options=unequal to honour different '//
      +     'values for keyword "scale"')
 c
@@ -2100,7 +2089,7 @@ c Tell user about scales, regardless of equality
 c
       if (hard.eq.'YES') then
          write (aline, 100) xscale, yscale
-100      format ('Linear x and y scales per mm = ', 
+100      format ('Linear x and y scales per mm = ',
      +           1pe12.6, ', ', 1pe12.6)
          call output (aline)
       end if
@@ -2110,13 +2099,13 @@ c
       if (eqscale .or. scale(1).ne.0.0 .or. scale(2).ne.0.0) then
 c
 c Set new sub-plot viewport sizes if required
-c    
+c
         vxsize2 = vxsize * xfac
         vysize2 = vysize * yfac
 c
-c Now because we may have made one or both of the subplot viewport 
-c dimensions smaller, adjust the encompassing viewport so that the 
-c sub-plots are still symmetrically placed on the viewsurface.  
+c Now because we may have made one or both of the subplot viewport
+c dimensions smaller, adjust the encompassing viewport so that the
+c sub-plots are still symmetrically placed on the viewsurface.
 c
         vxmore = nx * (vxsize - vxsize2)
         vxmin = vxmin + vxmore / 2.0
@@ -2130,7 +2119,7 @@ c
         vxsize = vxsize2
         vysize = vysize2
 c
-c Make sure we shift the transfer function fiddling plot 
+c Make sure we shift the transfer function fiddling plot
 c and wedge viewports too
 c
         dofid = .false.
@@ -2166,13 +2155,12 @@ c& nebk
 c: plotting
 c+
       subroutine vpsizcg (dofull, dofid, ncon, gin, vin, nspec, bin,
-     +  maxlev, nlevs, srtlev, levs, slev, nx, ny, pcs, xdispl, 
-     +  ydispb, gaps, doabut, dotr, wedcod, wedwid, tfdisp, labtyp, 
-     +  vxmin, vymin, vymax, vxgap, vygap, vxsize, vysize, 
+     +  maxlev, nlevs, srtlev, levs, slev, nx, ny, pcs, xdispl,
+     +  ydispb, gaps, doabut, dotr, wedcod, wedwid, tfdisp, labtyp,
+     +  vxmin, vymin, vymax, vxgap, vygap, vxsize, vysize,
      +  tfvp, wdgvp)
 c
-      implicit none
-      integer maxlev, nlevs(*), srtlev(maxlev,*), nx, ny, ncon, 
+      integer maxlev, nlevs(*), srtlev(maxlev,*), nx, ny, ncon,
      +  wedcod, nspec
       real vxmin, vymin, vymax, vxgap, vygap, vxsize, vysize, pcs,
      +  ydispb, xdispl,  wedwid, tfvp(4), tfdisp, wdgvp(4),
@@ -2181,7 +2169,7 @@ c
       character*(*) gin, vin, bin, labtyp(2)*(*)
 c
 c   Work out view port that encompasses all sub-plots and allows
-c   for all labelling outside of it.   Assume unequal scales in x 
+c   for all labelling outside of it.   Assume unequal scales in x
 c   and y here.  If user wants equal scales, adjust later in VPADJCG
 c
 c   Input
@@ -2196,20 +2184,22 @@ c     srtlev      Array to sort contours in increasing order
 c     levs        Contour levels for each image
 c     slev        Scale factor by which user given levels are scaled
 c                 resulting in the numbers stored in levs
-c     nx,ny       Number of sub-plots in x and y 
+c     nx,ny       Number of sub-plots in x and y
 c     pcs         PGPLOT character size for plot labels
-c     xdispl      Displacement of y-axis char. label from axis in char hghts
-c     ydispb      Displacement of x-axis char. label from axis in char hghts
+c     xdispl      Displacement of y-axis char. label from axis in char
+c                 hghts
+c     ydispb      Displacement of x-axis char. label from axis in char
+c                 hghts
 c     gaps        If true then don't leave gaps between sub-plots else
 c                 leave gaps between sub-plots & label each window
 c     doabut      No white space at all around subplots
-c     dotr        Means as well as labelling plot on left and bottom axes,
-c		  also label it at the top and right.
+c     dotr        Means as well as labelling plot on left and bottom
+c                 axes, also label it at the top and right.
 c     wedcod      1 -> one wedge to right of all subplots
 c                 2 -> one wedge to right per subplot
 c                 3 -> one wedge per subplot inside subplot
 c     wedwid      Fraction of full viewport for wedge width (wedcod=1)
-c     tfdisp      Displacement of transfer function plot from right 
+c     tfdisp      Displacement of transfer function plot from right
 c                 axis in char heights
 c     labtyp      Axis labels
 c   Output
@@ -2217,10 +2207,11 @@ c     vxmin       X-min of viewport window in normalized device coords
 c     vymin,vymax Y viewport range. Viewport encompasses all sub-plots
 c     vx,ygap     Leave a gap between sub-plots in ndc in x and y
 c     vx,ysize    Size of viewport of each sub-plot in ndcs in x & y
-c     tfvp        Viewport coords in which to draw interactive fiddle plot
-c     wdgvp       Viewport for wedge if wedcod = 1.  Other wedge type 
-c                 viewports are worked out when the wedge is drawn in 
-c---------------------------------------------------------------------------
+c     tfvp        Viewport coords in which to draw interactive fiddle
+c                 plot
+c     wdgvp       Viewport for wedge if wedcod = 1.  Other wedge type
+c                 viewports are worked out when the wedge is drawn in
+c-----------------------------------------------------------------------
 c
 c Fraction of viewsurface to use for interactive fiddle plot
 c
@@ -2228,11 +2219,11 @@ c
       parameter (tfvps = 0.1)
 c
       real xht, yht, xhta, yhta, acs, ychinc, annlines, vxmax, dvwx,
-     +  dvtx, dvwd, ygap, asp, dvtfx, dvtfy, dvtd, dvwl, xpos, ypos, 
+     +  dvtx, dvwd, ygap, asp, dvtfx, dvtfy, dvtd, dvwl, xpos, ypos,
      +  yinc
       integer nlines, i
       logical dowedge
-c---------------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c
 c Work out character height in n.d.c. for plot labels
 c
@@ -2257,7 +2248,7 @@ c
       dowedge = wedcod.eq.1 .or. wedcod.eq.2
       if (dowedge) then
 c
-c Width of wedge label area and displacement from right hand 
+c Width of wedge label area and displacement from right hand
 c edge of subplot in ndc
 c
         dvwl = 2.0 * xht
@@ -2280,7 +2271,7 @@ c
       dvtx = 0.0
       if (dofid) then
 c
-c We want the fiddle plot to be square on the screen so 
+c We want the fiddle plot to be square on the screen so
 c find the width and height in ndc accordingly
 c
         asp = yht / xht
@@ -2288,7 +2279,7 @@ c
           dvtfx = tfvps / asp
           dvtfy = tfvps
         else
-          dvtfx = tfvps 
+          dvtfx = tfvps
           dvtfy = tfvps * asp
         end if
 c
@@ -2304,8 +2295,8 @@ c
       vxmax = 1.0 - max(dvwx,dvtx) - xht
       if (dotr) vxmax = 1.0 - max(dvwx,dvtx,xdispl*xht)
 c
-c When doing full annotation need to make space at bottom of plot. Allow 
-c for x axis label, gap between it and start of text, lines of text, and 
+c When doing full annotation need to make space at bottom of plot. Allow
+c for x axis label, gap between it and start of text, lines of text, and
 c space between lines of text.
 c
       if (dofull) then
@@ -2315,7 +2306,7 @@ c
         if (bin.ne.' ')  annlines = annlines + 1.0
         if (nspec.gt.0)  annlines = annlines + 1.0
 c
-c Define annotation character size and set it 
+c Define annotation character size and set it
 c
         call anndefcg (acs, ychinc, ygap)
         call pgsch (acs)
@@ -2330,16 +2321,16 @@ c
           xpos = 0.0
           ypos = 0.0
           yinc = 0.0
-          do i = 1, ncon 
-            call confmtcg (xpos, ypos, yinc, nlevs(i), srtlev(1,i), 
+          do i = 1, ncon
+            call confmtcg (xpos, ypos, yinc, nlevs(i), srtlev(1,i),
      +                     levs(1,i), slev, .false., nlines)
             annlines = annlines + nlines + 1.0
           end do
         end if
 c
 c Need lines for reference values and window as well.  Window is written
-c last and has dangling letters in its line, so allow extra 0.5 character
-c heights for that too.
+c last and has dangling letters in its line, so allow extra 0.5
+c character heights for that too.
 c
         annlines = annlines + 2.5
 c
@@ -2358,7 +2349,7 @@ c
       end if
 c
 c Now allow for the transfer function fiddle plot if necessary.  It sits
-c below the viewport and to the right.  Any full plot annotation will 
+c below the viewport and to the right.  Any full plot annotation will
 c reuse its space.  Set transfer function plot viewport
 c
       if (dofid) then
@@ -2418,10 +2409,9 @@ c* wedgCG -- Draw pixel map wedge in specified viewport
 c& nebk
 c: plotting
 c+
-      subroutine wedgcg (label, trfun, groff, nbins, cumhis, wdgvp, 
+      subroutine wedgcg (label, trfun, groff, nbins, cumhis, wdgvp,
      +                   a1, a2)
 c
-      implicit none
       integer nbins
       real wdgvp(4), a1, a2, groff, cumhis(nbins)
       character trfun*3
@@ -2436,7 +2426,7 @@ c         'log', 'heq' or 'sqr'
 c  groff  Offset added to image for log and sqrt transfer functions
 c  nbins  Number of bins used in histogram equalization of image
 c  cumhis Cumulative histogram for histogram equalization
-c         Values for each bin are the intensities assigned to   
+c         Values for each bin are the intensities assigned to
 c         the image.  Thus if an image pixel ended up in
 c         cumhis bin idx, then its new value is cumhis(idx)
 c  wdgvp  Viewport to draw wedge in
@@ -2444,15 +2434,15 @@ c  a1     The value which is to appear with shade C1
 c  a2     The value which is to appear with shade C2
 c         Use the values of A1 and A2 that were sent to PGIMAG except
 c         that these values should be those appropriate to before any
-c         application of transfer functions (sqr, log, heq) and adding of
-c         offsets (GROFF)
+c         application of transfer functions (sqr, log, heq) and adding
+c         of offsets (GROFF)
 c
 c
 c--
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mem.h'
-      real wx1, wx2, wy1, wy2, vx1s, vx2s, vy1s, vy2s, wdginc, tr(6), 
+      real wx1, wx2, wy1, wy2, vx1s, vx2s, vy1s, vy2s, wdginc, tr(6),
      +  b1, b2
       integer i, ipw, nbins2
 c
@@ -2518,7 +2508,7 @@ c Draw the wedge and label
 c
       call pgsvp (wdgvp(1), wdgvp(3), wdgvp(2), wdgvp(4))
       call pgswin (0.9, 1.1, 1.0, real(nbins2))
-      call pgimag (memr(ipw), 1, nbins2, 1, 1, 1, nbins2, 
+      call pgimag (memr(ipw), 1, nbins2, 1, 1, 1, nbins2,
      +             b1, b2, tr)
       call pgswin (0.0, 1.0, a1, a2)
       if (label) then
@@ -2526,7 +2516,7 @@ c
 c Label box to right
 c
         call pgbox('BC', 0.0, 0, 'BCMST', 0.0, 0)
-      else 
+      else
 c
 c No labels.
 c
@@ -2552,21 +2542,20 @@ c+
       subroutine wedgecg (wedcod, wedwid, jj, trfun, groff, nbins,
      +                    cumhis, wdgvp, a1, a2)
 c
-      implicit none
       real groff, cumhis(*), wdgvp(4), a1, a2, wedwid
       integer wedcod, jj, nbins
       character trfun*3
 c
 c Work out whether the pixel map wedges are to be drawn inside
 c or outside the subplots, and whether there will be one or many
-c  
+c
 c Input
 c  wedcod 1 -> one wedge to right of all subplots
 c         2 -> one wedge to right per subplot
 c         3 -> one wedge per subplot inside subplot
 c  wedwid Fraction of subplot viewport for wedge (wedcod=2,3)
 c  jj     Number of subplot on this page
-c  trfun  Transfer function type applied to image.  
+c  trfun  Transfer function type applied to image.
 c  groff  Offset added to image for log and sqrt transfer functions
 c  nbins  Number of bins used in histogram equalization of image
 c  cumhis Cumulative histogram for histogram equalization returned
@@ -2574,8 +2563,8 @@ c         by HEQCG
 c  wdgvp  Viewport to draw wedge in (wedcod=1)
 c  a1,a2  pixel map max and min
 c         Use the values of A1 and A2 that were sent to PGGRAY.
-c         These values should be those appropriate to before 
-c         any application of transfer functions (log etc) and 
+c         These values should be those appropriate to before
+c         any application of transfer functions (log etc) and
 c         adding of offsets
 c  nx,ny  Number of subplots in x and y directions
 c  npixr  NUmber of pixel map "range" groups given by user
@@ -2590,7 +2579,7 @@ c-----------------------------------------------------------------------
 c
       if (wedcod.eq.1) then
         if (jj.eq.1) then
-          call wedgcg (.true., trfun, groff, nbins, cumhis, 
+          call wedgcg (.true., trfun, groff, nbins, cumhis,
      +                 wdgvp, a1, a2)
         end if
       else if (wedcod.eq.2) then
@@ -2598,14 +2587,14 @@ c
         wv(2) = vy1
         wv(3) = wv(1) + wedfrc
         wv(4) = vy2
-        call wedgcg (.true., trfun, groff, nbins, cumhis, 
+        call wedgcg (.true., trfun, groff, nbins, cumhis,
      +               wv, a1, a2)
       else
         wv(1) = vx2 - wedfrc
         wv(2) = vy1
         wv(3) = vx2
         wv(4) = vy2
-        call wedgcg (.false., trfun, groff, nbins, cumhis, 
+        call wedgcg (.false., trfun, groff, nbins, cumhis,
      +               wv, a1, a2)
       end if
 c
@@ -2617,7 +2606,6 @@ c: plotting
 c+
       subroutine yhtwcg (yht)
 c
-      implicit none
       real yht
 c
 c  Find the height, in world coordinates, of one character
@@ -2664,19 +2652,18 @@ c  xtick  The x-tick in seconds
 c  ytick  The y-tick in seconds
 c  nxsub  The number of minor x-tick intervals
 c  nysub  The number of minor y-tick intervals
-c	  These are unchanged if non-zero on input
+c         These are unchanged if non-zero on input
 c Outputs
 c  xtickl The length of x-major ticks
 c  ytickl The length of y-major ticks
 c
 c-----------------------------------------------------------------------
-      implicit none
       real xtick, ytick, xtickl, ytickl
       integer nxsub, nysub
       logical dotime(2)
 cc
       integer tscalex, tscaley, nsub
-      real xmin, xmax, ymin, ymax, vx1, vx2, vy1, vy2, xsp, ysp, 
+      real xmin, xmax, ymin, ymax, vx1, vx2, vy1, vy2, xsp, ysp,
      +  xlen, ylen
       real pgrnd
 c-----------------------------------------------------------------------
@@ -2733,7 +2720,7 @@ c
       if (dotime(2)) then
         call pgtbx1cg ('Y', .false., .false., ymin, ymax, ytick,
      +                 nysub, tscaley)
-      else 
+      else
         if (ytick.eq.0.0) then
           ytick = max(0.05, min(7.0*xsp/ylen, 0.20))*(ymax-ymin)
           ytick = pgrnd(ytick,nsub)
@@ -2747,33 +2734,32 @@ c
       end
 c
 c
-      subroutine pgtbx1cg (axis, doday, dopara, tmin, tmax, tick, 
+      subroutine pgtbx1cg (axis, doday, dopara, tmin, tmax, tick,
      +                     nsub, tscale)
 c
 c
 c Work out what the finest units the time labels will be in and
 c return the tick increments if the user does not set them.
 c
-c This is a support routine for PGTBOX and should not 
+c This is a support routine for PGTBOX and should not
 c be called by the user.
 c
 c Input:
 c  axis   :  'x' or 'y' for use in determining if labels overwrite
-c  tmin   :  Start time in seconds 
+c  tmin   :  Start time in seconds
 c  tmax   :  End   time in seconds
 c  doday  :  If True write day field DD HH MMSS
 c  dopara :  True if labels parallel to axis
 c Input/output:
-c  tick   :  Major tick interval in seconds.  If 0.0 on input, will 
+c  tick   :  Major tick interval in seconds.  If 0.0 on input, will
 c            be set here.
 c  nsub   :  Number of minor ticks between major ticks. If 0 on input
 c            will be set here.
 c Outputs:
-c  tscale :  Determines finest unit of labelling 
+c  tscale :  Determines finest unit of labelling
 c            (1 => ss, 60 => mm, 3600 => hh, 3600*24 => dd)
 c
 c-----------------------------------------------------------------------
-      implicit none
       real tmin, tmax, tick
       integer nsub, tscale
       logical doday, dopara
@@ -2783,9 +2769,9 @@ cc
       parameter (nlist1 = 19, nlist2 = 10, nlist3 = 6, nlist4 = 8,
      *           nticmx = 8)
 c
-      real ticks1(nlist1), ticks2(nlist2), ticks3(nlist3), 
+      real ticks1(nlist1), ticks2(nlist2), ticks3(nlist3),
      *ticks4(nlist4), tock, tock2, tint, tints, tmins, tmaxs
-      integer nsubs1(nlist1), nsubs2(nlist2), nsubs3(nlist3), 
+      integer nsubs1(nlist1), nsubs2(nlist2), nsubs3(nlist3),
      *nsubs4(nlist4), npl, ntick, itick, strlen
       character str*15
 c
@@ -2793,13 +2779,13 @@ c
       save nsubs1, nsubs2, nsubs3, nsubs4
 c
       data ticks1 /0.001,  0.002,                 0.005,
-     *             0.01,   0.02,                  0.05,  
-     *             0.1,    0.2,                   0.5,  
+     *             0.01,   0.02,                  0.05,
+     *             0.1,    0.2,                   0.5,
      *             1.0,    2.0,   3.0,    4.0,    5.0,
      *             6.0,   10.0,  15.0,   20.0,   30.0/
-      data nsubs1 / 4,      4,                     2,    
-     *              4,      4,                     2,    
-     *              4,      4,                     2,    
+      data nsubs1 / 4,      4,                     2,
+     *              4,      4,                     2,
+     *              4,      4,                     2,
      *              4,      4,     3,      4,      5,
      *              3,      2,     3,      2,      3/
 c
@@ -2813,7 +2799,7 @@ c
 c
       data ticks4 /1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 8.0, 9.0/
       data nsubs4 / 4,   4,   3,   4,   5,   3,   4,   3 /
-c----------------------------------------------------------------------
+c-----------------------------------------------------------------------
       tint = abs(tmax - tmin)
       tick = abs(tick)
 c
@@ -2832,30 +2818,30 @@ c
           if (mod(tick, 60.0) .ne. 0.0) then
             tscale = 1
           else if (mod(tick, 3600.0).ne.0.0) then
-            tscale = 60  
+            tscale = 60
           else if (.not.doday) then
-            tscale = 3600   
+            tscale = 3600
           else if (mod(tick,(24.0*3600.0)).ne.0.0) then
             tscale = 3600
           else
             tscale = 24 * 3600
           endif
-c 
+c
 c Make a simple default for the number of minor ticks and bug out
-c 
+c
           if (nsub.eq.0) nsub = 2
           return
         end if
       end if
 c
-c Work out label units depending on time interval if user 
+c Work out label units depending on time interval if user
 c wants auto-ticking
 c
       if (tint.le.5*60) then
         tscale = 1
       else if (tint.le.5*3600) then
         tscale = 60
-      else 
+      else
         if (.not.doday) then
           tscale = 3600
         else
@@ -2870,15 +2856,15 @@ c
 ccccc
 c Divide interval into ntick major ticks and nsub minor intervals
 c the tick choosing algorithm is not very robust, so watch out
-c if you fiddle anything. 
+c if you fiddle anything.
 ccccc
 c
       tints = tint / tscale
       if (tscale.eq.1) then
 c
-c Time in seconds.  if the time interval is very small, may need to 
+c Time in seconds.  if the time interval is very small, may need to
 c label with up to 3 decimal places.  have less ticks to help prevent
-c label overwrite. str is a dummy tick label to assess label 
+c label overwrite. str is a dummy tick label to assess label
 c overwrite potential
 c
         if (dopara) then
@@ -2917,7 +2903,7 @@ c
      *               tick, nsub)
       else if (tscale.eq.60) then
 c
-c Time in minutes 
+c Time in minutes
 c
         ntick = 6
         tock = tints / ntick
@@ -2938,17 +2924,17 @@ c
         call pgtbx3cg (doday, 0, tscale, tints, nticmx, nlist2, ticks2,
      *               nsubs2, itick, axis, dopara, str(1:strlen),
      *               tick, nsub)
-      else 
+      else
         if (tscale.eq.3600 .and. doday) then
 c
-c Time in hours with the day field 
+c Time in hours with the day field
 c
           ntick = 6
           tock = tints / ntick
 c
 c Select nearest tick from list
 c
-          call pgtbx2cg (tock, nlist3, ticks3, nsubs3, tick, 
+          call pgtbx2cg (tock, nlist3, ticks3, nsubs3, tick,
      +                   nsub, itick)
 c
 c Check label overwrite and/or too many ticks.
@@ -2960,8 +2946,8 @@ c
             str = ' '
             strlen = 1
           end if
-          call pgtbx3cg (doday, 0, tscale, tints, nticmx, nlist3, 
-     *                   ticks3, nsubs3, itick, axis, dopara, 
+          call pgtbx3cg (doday, 0, tscale, tints, nticmx, nlist3,
+     *                   ticks3, nsubs3, itick, axis, dopara,
      *                   str(1:strlen), tick, nsub)
         else
 c
@@ -2970,7 +2956,7 @@ c ticks for big numbers or the parallel labels will overwrite.
 c
           if (dopara) then
             tmins = abs(tmin) / tscale
-            tmaxs = abs(tmax) / tscale            
+            tmaxs = abs(tmax) / tscale
             call pgnpl (-1, nint(max(tints,tmins,tmaxs)), npl)
             if (npl.le.3) then
               ntick = 6
@@ -2989,19 +2975,19 @@ c
           end if
           tock = tints / ntick
 c
-c Select nearest tick from list; 1 choose nearest nice integer 
+c Select nearest tick from list; 1 choose nearest nice integer
 c scaled by the appropriate power of 10
 c
           call pgnpl (-1, nint(tock), npl)
           tock2 = tock / 10**(npl-1)
 c
-          call pgtbx2cg (tock2, nlist4, ticks4, nsubs4, tick, 
+          call pgtbx2cg (tock2, nlist4, ticks4, nsubs4, tick,
      +                   nsub, itick)
           tick = tick * 10**(npl-1)
 c
 c  check label overwrite and/or too many ticks.
 c
-          call pgtbx3cg (doday, npl, tscale, tints, nticmx, nlist4, 
+          call pgtbx3cg (doday, npl, tscale, tints, nticmx, nlist4,
      *                 ticks4, nsubs4, itick, axis, dopara,
      *                 str(1:strlen), tick, nsub)
         end if
@@ -3015,7 +3001,7 @@ c
       end
 c
 c
-      subroutine pgtbx2cg (tock, nticks, ticks, nsubs, tick, 
+      subroutine pgtbx2cg (tock, nticks, ticks, nsubs, tick,
      *                     nsub, itick)
 c-----------------------------------------------------------------------
 c Find the nearest tick in a list to a given value.
@@ -3027,7 +3013,8 @@ c Input:
 c  tock   :  Try to find the nearest tick in the list to TOCK
 c  nticks :  Number of ticks in list
 c  ticks  :  List of ticks
-c  nsubs  :  List of number of minor ticks between ticks to go with TICKS
+c  nsubs  :  List of number of minor ticks between ticks to go with
+c            TICKS
 c Output:
 c  tick   :  The selected tick
 c  itick  :  The index of the selected tick from the list TICKS
@@ -3036,13 +3023,12 @@ c  nsub   :  Number of minor ticks between major ticks. If 0 on input
 c            will be set here.
 c
 c-----------------------------------------------------------------------
-      implicit none
       integer nticks, nsubs(nticks), nsub, itick
       real tock, ticks(nticks), tick
 cc
       integer i, nsubd
       real dmin, diff
-c----------------------------------------------------------------------
+c-----------------------------------------------------------------------
       nsubd = nsub
       dmin = 1.0e30
       do 100 i = 1, nticks
@@ -3064,14 +3050,14 @@ c
      *                   ticks, nsubs, itick, axis, dopara, str,
      *                   tick, nsub)
 c-----------------------------------------------------------------------
-c Try to see if label overwrite is going to occur with this tick 
+c Try to see if label overwrite is going to occur with this tick
 c selection, or if there are going to be more than a reasonable
-c number of ticks in the displayed time range.  If so, choose, 
+c number of ticks in the displayed time range.  If so, choose,
 c if available, the next tick (bigger separation) up in the list.
 c If the overwrite requires that we would need to go up to the bext
 c TSCALE, give up.  They will need to choose a smaller character size
 c
-c This is a support routine for PGTBOX and should not 
+c This is a support routine for PGTBOX and should not
 c be called by the user.
 c
 c Input:
@@ -3083,18 +3069,18 @@ c  tints  :  Absolute time interval in units of TSCALE
 c  nticmx :  Max. reasonable number of ticks to allow in the time range
 c  nticks :  Number of ticks in list of ticks to choose from
 c  ticks  :  List of ticks from which the current tick was chosen
-c  nsubs  :  List of number of minor ticks/major tick to choose NSUB from
+c  nsubs  :  List of number of minor ticks/major tick to choose NSUB
+c            from
 c  itick  :  Index of chosen tick in list TICKS
 c  axis   :  'x' or 'y' axis
 c  dopara :  Labels parallel or perpendicualr to axis
 c  str    :  A typical formatted string used for checking overwrite
 c Input/output:
-c  tick   :  Current major tick interval in units of TSCALE. May be 
+c  tick   :  Current major tick interval in units of TSCALE. May be
 c            made larger if possible if overwrite likely.
-c  nsub   :  Number of minor ticks between major ticks. 
+c  nsub   :  Number of minor ticks between major ticks.
 c
 c-----------------------------------------------------------------------
-      implicit none
       integer tscale, nticmx, nticks, itick, nsub, nsubs(nticks), npl
       real tints, ticks(nticks), tick
       character axis*1, str*(*)
@@ -3102,7 +3088,7 @@ c-----------------------------------------------------------------------
 cc
       integer ntick
       real lens, lenx, leny
-c----------------------------------------------------------------------
+c-----------------------------------------------------------------------
       call pglen (4, str, lenx, leny)
       lens = lenx
       if ( (dopara .and. axis.eq.'Y') .or.
@@ -3114,8 +3100,8 @@ c
 c  time in seconds or minutes, or in hours with a day field
 c
         ntick = int(tints / tick)
-        if ( (itick.lt.nticks)  .and. 
-     *       ((dopara .and. (lens/tscale).gt.0.9*tick) .or. 
+        if ( (itick.lt.nticks)  .and.
+     *       ((dopara .and. (lens/tscale).gt.0.9*tick) .or.
      *       (ntick.gt.nticmx)) ) then
           if (ticks(itick+1).lt.tints) then
             nsub = nsubs(itick+1)
@@ -3127,7 +3113,7 @@ c
 c Time in hours and no day field or time in days
 c
         ntick = int(tints / tick)
-        if ( (dopara .and. (lens/tscale).gt.0.9*tick) .or. 
+        if ( (dopara .and. (lens/tscale).gt.0.9*tick) .or.
      *       (ntick.gt.nticmx) ) then
           if (itick.lt.nticks) then
             if (ticks(itick+1)*10**(npl-1).lt.tints) then
