@@ -1,12 +1,13 @@
-c***************************************************************************
+c***********************************************************************
 c  These subroutines provide an interface between NEBK style coordinate
 c  handling (the 'hms', 'dms', 'arcsec', 'arcmin', 'reldeg', 'abspix',
 c  'relpix', 'absghz', 'relghz', 'abskms', 'relkms', 'absnat',
 c  'relnat', 'none') and RJS' new coordinate routines (co.for).
 c
-c  Code that is known to use these routines is: cgdisp.for,
-c  cgcurs.for, cgslice.for, cgspec.for, maxfit.for, impos.for,
-c  regrid.for, cgsubs.for, cgpgsubs.for
+c  Code that is known to call these routines directly -
+c    subs: cgsubs.for, cgpgsubs.for
+c    prog: cgcurs.for, cgdisp.for, cgslice.for, cgspec.for, gpcomb.for,
+c          gpdof.for, impos.for, maxfit.for, sfind.for
 c
 c
 c  User callable routines are:
@@ -19,13 +20,16 @@ c   axtypco : Return generic axis type
 c   chkaxco : Check axis CTYPE and axis label type for consistency
 c   ctypeco : Get axis CTYPE
 c   setoaco : Set default absolute or offset coordinate conversion
-c               string depending upon the axis CTYPE
+c             string depending upon the axis CTYPE
 c   specco  : See if an axis is spectral and what type it is if so
-c
+c   sunitco : Set the units of a pixel based upon the requested type and
+c             the axis type.
 c   w2wco   : Convert coordinates between different world types
+c   w2wcov  : As for w2wco but with status return rather than fatal
+c             error.
 c   w2wfco  : As for w2wco but results formatted in a string
 c   w2wsco  : As for w2wco but just one axis, with the rest assumed
-c               to be at the reference pixel
+c             to be at the reference pixel
 c   w2wsfco : As for w2wsco but results formatted in a string
 c
 c
@@ -38,18 +42,21 @@ c                      some new ones which have migrated from CGSUB.FOR
 c                      These are AXFNDCO, AXTYPCO, SUNITCO
 c    nebk   29nov95    Eliminate indexed searching of axis types so that
 c                      e.g. if CTYPE=RADIUS it is not treated as RA.
-c                      Consolidate CTYPE searching into AXFNDCO and AXTYPCO
-c    nebk   03dec95    Declaration of TYPE in AXTYPCO was (n) not (*), and
-c                      removed useless access to multiple axes in CHKAXCO
+c                      Consolidate CTYPE searching into AXFNDCO and
+c                      AXTYPCO
+c    nebk   03dec95    Declaration of TYPE in AXTYPCO was (n) not (*),
+c                      and removed useless access to multiple axes in
+c                      CHKAXCO
 c    nebk   18dec95    Recognize new CTYPE "angle"
 c    rjs    06feb96    Increase ctype string in chkaxco.
-c    nebk   26apr96    Make AXTYPCO more flexible in recognizing velocity axes
+c    nebk   26apr96    Make AXTYPCO more flexible in recognizing
+c                      velocity axes
 c    rjs    17jul97    Get rid of calls to rdhd, and just use coordinate
 c                      object as source of information.
 c    rjs    10nov97    Make ctypeco robust to a blank axis.
 c
-c $Id: cosubs.for,v 1.6 2008/08/06 04:05:07 cal103 Exp $
-c******************************************************************************
+c $Id: cosubs.for,v 1.7 2010/07/27 05:48:19 cal103 Exp $
+c***********************************************************************
 c
 c* axfndCO -- Find a specified generic axis in an image
 c& nebk
@@ -57,7 +64,6 @@ c: coordinates
 c+
       subroutine axfndco (lun, type, n, iax, jax)
 c
-      implicit none
       integer n, iax, jax, lun
       character*(*) type
 c
@@ -85,10 +91,10 @@ c    iax    SPecific axis to match if N=0
 c  Output
 c    jax    Axis number that matches "type".  0 if not present
 c--
-c-----------------------------------------------------------------
+c-----------------------------------------------------------------------
       integer i, i1, i2, il
       character ltype*9, lctype*9
-c-----------------------------------------------------------------
+c-----------------------------------------------------------------------
       if (n.eq.0) then
         i1 = iax
         i2 = iax
@@ -192,7 +198,6 @@ c: coordinates
 c+
       subroutine axtypco (lun, n, iax, type)
 c
-      implicit none
       integer n, iax, lun
       character*4 type(*)
 c
@@ -219,10 +224,10 @@ c             ANGL means CTYPE was          ANGLE
 c             NONE means CTYPE was not recognized
 c
 c--
-c-----------------------------------------------------------------
+c-----------------------------------------------------------------------
       integer i, i1, i2, j, il
       character lctype*9
-c-----------------------------------------------------------------
+c-----------------------------------------------------------------------
       if (n.eq.0) then
         i1 = iax
         i2 = iax
@@ -279,7 +284,6 @@ c& nebk
 c: coordinates
 c+
       subroutine chkaxco (lun, ltype, iax, stype)
-      implicit none
       integer iax, lun
       character*(*) ltype, stype
 c
@@ -303,7 +307,7 @@ c-----------------------------------------------------------------------
       integer il, jax
       character ctype*32, str*132, gtype*4
       logical bad, bads
-c-----------------------------------------------------------------
+c-----------------------------------------------------------------------
       if (stype.ne.' ' .and. stype.ne.'frequency' .and.
      +    stype.ne.'optical' .and. stype.ne.'radio') then
         str = 'CHKAXCO: invalid spectral axis type ('//stype//') given'
@@ -365,7 +369,6 @@ c: coordinates
 c+
 c
       subroutine ctypeco (lun, iax, ctype, il)
-      implicit none
 c
       integer iax, lun, il
       character*(*) ctype
@@ -401,7 +404,6 @@ c& nebk
 c: coordinates
 c+
       subroutine finco (lun)
-      implicit none
 c
       integer lun
 c
@@ -420,7 +422,6 @@ c& nebk
 c: coordinates
 c+
       subroutine initco (lun)
-      implicit none
 c
       integer lun
 c
@@ -448,12 +449,11 @@ c               'hms',    'dms',    'arcsec', 'arcmin', 'absdeg',
 c               'reldeg', 'abspix', 'relpix', 'absghz', 'relghz',
 c               'abskms', 'relkms', 'absnat', 'relnat', none'
 c  Input/output
-c    win    Coordinate value.  Any coordinate of an angular type
-c           (hms, dms, *deg, arcsec, arcmin) will be in radians on output
+c    win    Coordinate value.  Any coordinate of an angular type (hms,
+c           dms, *deg, arcsec, arcmin) will be in radians on output
 c  Output
 c    cti    RJS style coordinate type ('ap', 'op', 'aw', 'ow')
 c-----------------------------------------------------------------------
-      implicit none
       character*(*) type, cti
       double precision win
 cc
@@ -518,7 +518,6 @@ c           in radians, on exit, 'arcsec' in arcsec, '*deg" in degrees
 c           'arcmin' in arcmin
 c
 c-----------------------------------------------------------------------
-      implicit none
       character*(*) type
       double precision wout
 cc
@@ -537,12 +536,11 @@ c
       end
 c
 c
-c* setoaCO -- Set default (abs or rel) coordinate type depending on CTYPE
+c* setoaCO -- Set default (abs or rel) coord type depending on CTYPE
 c& nebk
 c: coordinates
 c+
       subroutine setoaco (lun, absoff, n, iax, types)
-      implicit none
 c
       integer n, lun, iax
       character*(*) types(n), absoff*3
@@ -636,7 +634,6 @@ c& nebk
 c: coordinates
 c+
       subroutine specco (lun, iax, stype)
-      implicit none
 c
       integer lun, iax
       character*(*) stype
@@ -669,7 +666,7 @@ c
 c
 c
       subroutine sunitco (lun, iax, type, units)
-c----------------------------------------------------------------------
+c-----------------------------------------------------------------------
 c  Set the units of a pixel based upon the requested type and the
 c  axis type.  Used for ascii not graphical output so no PGPLOT escape
 c  sequences.
@@ -682,7 +679,6 @@ c  Output:
 c    units  Axis units
 c--
 c-----------------------------------------------------------------------
-      implicit none
       integer lun, iax
       character*(*) type, units
 cc
@@ -748,7 +744,6 @@ c& mrc
 c: coordinates
 c+
       subroutine w2wco (lun, n, typei, stypei, win, typeo, stypeo, wout)
-      implicit none
 c
       integer lun, n
       double precision win(n), wout(n)
@@ -776,7 +771,6 @@ c: coordinates
 c+
       subroutine w2wcov (lun, n, typei, stypei, win, typeo, stypeo,
      :  wout, valid)
-      implicit none
 c
       logical valid
       integer lun, n
@@ -966,7 +960,6 @@ c: coordinates
 c+
       subroutine w2wfco (lun, n, typei, stypei, win, typeo, stypeo,
      +                   nounit, strout, strlen)
-      implicit none
 c
       integer lun, n, strlen(n)
       double precision win(n)
@@ -1074,7 +1067,6 @@ c: coordinates
 c+
       subroutine w2wsco (lun, iax, typei, stypei, win, typeo, stypeo,
      +                   wout)
-      implicit none
 c
       integer lun, iax
       double precision win, wout
@@ -1163,7 +1155,6 @@ c: coordinates
 c+
       subroutine w2wsfco (lun, iax, typei, stypei, win, typeo, stypeo,
      +                    nounit, strout, strlen)
-      implicit none
 c
       integer lun, iax, strlen
       double precision win
@@ -1171,8 +1162,8 @@ c
       logical nounit
 c
 c  Convert one NEBK style coordinate with the COCVT routines and format
-c  into a string.  Coordinates for the other axes are assumed to be at the
-c  reference pixel
+c  into a string.  Coordinates for the other axes are assumed to be at
+c  the reference pixel
 c
 c  Input
 c    lun     Handle of open file
