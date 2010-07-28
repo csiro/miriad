@@ -25,7 +25,7 @@
 # target names by running 'gmake help'
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakedefs,v 1.32 2010/07/07 02:19:22 cal103 Exp $
+# $Id: GNUmakedefs,v 1.33 2010/07/28 07:54:50 cal103 Exp $
 #-----------------------------------------------------------------------------
 # We rely only on the MIR environment variable.
 MIRROOT  := $(MIR)
@@ -193,7 +193,7 @@ RPFITSLIB  := $(MIRLIBD)/librpfits.a
 # WCSLIB, required by the many tasks (>90) that deal with image coordinates.
 # It is supplied with Miriad in the binary distribution kit available for some
 # platforms.  The full pathname must be specified because this library is
-# listed as an explicit prerequisite of some tasks (i.e. they will be
+# listed as an explicit prerequisite of all tasks (i.e. they will be
 # recompiled if it changes).
 WCSLIB     := $(MIRLIBD)/libwcs.a
 
