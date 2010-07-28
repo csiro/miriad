@@ -5,80 +5,152 @@ c= regrid - regrid an image dataset
 c& rjs
 c: map analysis
 c+
-c       REGRID regrids an image by interpolating. The output coordinate
-c       system can be specified by a template image or by
-c       axis descriptors. Blanked input pixels are excluded from the
-c       interpolation. Regridding of any combination of the first three
-c       axes of an image is supported.
+c       REGRID any combination of the first three axes of an image using
+c       cubic interpolation, with exclusion of blanked input pixels.
+c       The output coordinate system may be specified via a template
+c       image or axis descriptors.
 c
-c       REGRID correctly handles conversion
-c         * Between different projection geometries (e.g. SIN, NCP, TAN,
-c           etc).
-c         * Between equatorial and galactic coordinates.
-c         * From a B1950 input to J2000 output and visa versa, as well
-c           as B1950 to B1950, and J2000 to J2000.
-c         * Between radio/optical velocity definitions and
-c           LSR/barycentric velocity rest frames.
+c       REGRID handles conversion
+c         - between different map projections,
+c         - between different map centres (reference points),
+c         - between B1950 and J2000 equatorial coordinates,
+c         - between equatorial and galactic coordinates,
+c         - between radio and optical velocity definitions,
+c         - between LSR and barycentric velocity frames.
 c
-c       Nearest neighbour `interpolation' is used for axes smaller in
-c       size that 5 pixels.  Otherwise an cubic interpolation is used.
+c       Nearest neighbour interpolation is used for axes smaller than
+c       five pixels in extent.
 c@ in
-c       The input image name. No default.
+c       The input image name.  If neither 'tin' nor 'desc' (see below)
+c       are given, coordinate descriptors for the axes of the regridded
+c       image, as selected by keyword 'axes', are copied initially from
+c       the input image.  They may then be modified by 'options',
+c       'project', and 'rotate'.  No default.
 c@ out
 c       The output image name.  No default.
 c@ axes
-c       Specify axes to regrid. For example, axes=1,2 will regrid
-c       axes 1 and 2, or axes=2,3 will regrid axes 2 and 3.
-c       The default is all axes.
+c       Specify the axes to regrid.  For example, axes=1,2 regrids axes
+c       1 and 2 and the output image will contain two axes.  Likewise,
+c       axes=2,3 regrids axes 2 and 3.  The default is all axes.
 c@ tin
-c       Input template image.  The axis descriptors of the regridded
-c       image, for those axes specified by keyword "axis", are those
-c       of the template image.  If neither a template nor a set of
-c       "descriptors" (see below) are given, the input is used as an
-c       initial template.
+c       Template image.  If present, coordinate descriptors for the axes
+c       of the regridded image, selected by keyword 'axes', are copied
+c       initially from the template image rather than the input image.
 c@ desc
-c       If "tin" is unset, this gives the reference value, reference
-c       pixel, pixel increment, and number of pixels for the axes
-c       selected by keyword "axes" of the output image, respectively.
+c       If 'tin' is unset, this optionally specifies the reference value
+c       (CRVAL), reference pixel (CRPIX), coordinate increment (CDELT),
+c       and number of pixels (respectively) for each and every axis of
+c       the output image selected by keyword 'axes'.  Thus, if there are
+c       any, then there should be 4 x NAXIS values, separated by commas.
+c       These values are not changed by any options other than 'offset'.
 c
-c       Note that for RA/DEC axes, the reference values are in radians,
-c       and the increments are in radians on the sky.  Thus,
-c       dRA = dX / cos(dec) and dDEC = dY where you specify dX and dY.
+c       The axis types themselves (CTYPE), including the equatorial
+c       coordinate system (B1950 or J2000), are copied initially from
+c       the input image, subject to modification by 'options' and
+c       'project'.
 c
-c       Defaults are no axis descriptors.
+c       Note that for celestial axes (RA/DEC, GLON/GLAT, etc.), the
+c       reference values (CRVAL) and increments (CDELT) are in degrees.
 c@ options
-c       Extra processing options. Several can be given, separated by
-c       commas.  Only the minimum characters to avoid ambiguity is
-c       needed.
+c       Extra processing options that alter the axis description defined
+c       by the template image, axis descriptors, or input image.
+c       Several can be given, separated by commas, with minimum-match.
+c         altprj    Interpret a CAR (plate carée) projection in the
+c                   input map as a simple linear coordinate system with
+c                   an additional 1/cos(lat0) scaling factor applied
+c                   when computing the longitude, e.g.
+c                      RA = (p1 - CRPIX1)*CDELT1/cos(CRVAL2).
+c                   This interpretation differs significantly from the
+c                   FITS standard when lat0 (i.e. CRVAL2) is non-zero.
 c         noscale   Produce a cube where the RA/DEC cell size does not
 c                   scale with frequency/velocity.
 c         offset    The coordinate system described by the template or
 c                   descriptors is modified (shift and expansion or
 c                   contraction) by an integral number of pixels so that
 c                   it completely encloses the input.
+c         equisw    Switch the output coordinate system between J2000
+c                   and B1950 equatorial.
+c         galeqsw   Switch the output coordinate system between galactic
+c                   and equatorial.  Galactic switches implicitly to
+c                   equatorial J2000.
 c         nearest   Use nearest neighbour interpolation rather than the
-c                   default higher order interpolation scheme.
-c         galeqsw   Switch the output coordinate system between
-c                   equatorial and galactic.
-c         equisw    Switch the equinox of the output between B1950 and
-c                   J2000.
+c                   default cubic interpolation.
+c       If the equatorial coordinate system is not specified in the
+c       header (via the 'epoch' item), then J2000 is assumed.
 c@ project
-c       Output map projection.  Possible values are "sin", "tan", "arc",
-c       "ncp", "car" or "gls".  Note that the NCP projection has a
-c       singularity at the equator.  The default is not to change the
-c       output projection.
+c       Three-letter code for the output map projection, unchanged by
+c       default.  Projection codes follow the FITS WCS standard.
+c         Zenithals:
+c           AZP  Zenithal/azimuthal perspective (2,C?,D?,d)
+c           SZP  Slant zenithal perspective (3,C?,D?,d)
+c           TAN  Gnomonic (0,D)
+c           STG  Stereographic (0,C,D)
+c           SIN  Orthographic/synthesis (2,d)
+c           NCP  North celestial pole (0,D,d) - an important special
+c                case of the SIN projection, divergent at the equator
+c           ARC  Zenithal/azimuthal equidistant (0,G)
+c           ZPN  Zenithal/azimuthal polynomial (30*,G|d)
+c           ZEA  Zenithal/azimuthal equal area (0,E,G)
+c           AIR  Airy (1,D)
+c         Cylindricals:
+c           CYP  Cylindrical perspective (2,G|D)
+c           CEA  Cylindrical equal area (1,E,G)
+c           CAR  Plate carrée (aka Cartesian) (0,G) - please note that
+c                this is NOT the same as the simple linear system used
+c                previously unless the reference coordinates (CRVAL)
+c                are (0,0)
+c           MER  Mercator (0,C,D) - note that the variant defined by
+c                AIPS memo 46 is not supported.
+c         Pseudo-cylindricals:
+c           SFL  Sanson-Flamsteed (0,E,G)
+c           GLS  Global sinusoid (0,E,G) - old implementation of Sanson-
+c                Flamsteed.  Do not use unless to match an existing map.
+c           PAR  Parabolic (0,E,G)
+c           MOL  Mollweide (0,E,G)
+c         Conventional:
+c           AIT  Hammer-Aitoff (0,E,G) - note that the variant defined
+c                by AIPS memo 46 is not supported.
+c         Conics:
+c           COP  Conic perspective  (2*,D)
+c           COE  Conic equal area   (2*,E,G)
+c           COD  Conic equidistant  (2*,G)
+c           COO  Conic orthomorphic (2*,C,D)
+c         Polyconics:
+c           BON  Bonne (1*,E,G)
+c           PCO  Polyconic (0,G)
+c         Quad-cubes:
+c           TSC  Tangential spherical cube (0,G)
+c           CSC  COBE spherical cube (0,G)
+c           QSC  Quadrilateralized spherical cube (0,E,G)
+c         Hybrid:
+c           HPX  HEALPix (2,E,G)
+c       The number of projection parameters is indicated in parentheses.
+c       An asterisk indicates that there is a non-defaulting parameter.
+c       NOTE: As yet, there is no way to specify projection parameters
+c       ~~~~  (thus ZPN, COP, COE, COD, COO, and BON cannot be used).
+c       The letters in parentheses are
+c         - C  conformal
+c         - C? conformal for particular projection parameters
+c         - D  divergent
+c         - D? divergent for particular projection parameters
+c         - d  degenerate (parts of the sphere overlap in the map plane)
+c         - E  equi-areal
+c         - G  global (capable of mapping the whole sphere)
+c       Some projections may be divergent, degenerate, or global
+c       depending on the projection parameters.  Refer to Calabretta &
+c       Greisen (2002), A&A 395, 1077.
 c@ rotate
 c       Set the rotation between the sky and the image to be this angle,
-c       in degrees. The positive value of the angle gives an eastward
-c       rotation of the sky grid relative to the pixel grid.
-c       The default is not to change the rotation from that of
-c       the template, or to have no rotation when there is no template.
+c       in degrees.  A positive value of the angle gives an eastward
+c       rotation of the sky grid relative to the pixel grid.  The
+c       default is not to change the rotation from that of the template,
+c       or to have no rotation when there is no template.
 c@ tol
-c       Interpolation tolerance.  Tolerate an error of as much as "tol"
-c       in converting pixel locations in the input to the output.  The
-c       default is 0.05.  It must be less that 0.5.
+c       Interpolation tolerance.  Tolerate an error of the specified
+c       amount in converting pixel locations in the input to the output.
+c       Must be less that 0.5.  The default is 0.05.
 c
-c$Id: regrid.for,v 1.3 2010/07/23 04:54:01 cal103 Exp $
+c$Id: regrid.for,v 1.4 2010/07/28 07:39:33 cal103 Exp $
 c--
 c
 c  History:
@@ -123,57 +195,60 @@ c-----------------------------------------------------------------------
       include 'mem.h'
       include 'mirconst.h'
 
-      character version*(*)
-      parameter(version='Regrid: version 1.0 31-May-06')
+      integer NPCODE
+      parameter (NPCODE = 29)
 
-      character in*64,out*64,tin*64,ctype*16,cellscal*12,proj*3
-      character line*64
-      double precision desc(4,MAXNAX),crpix,crval,cdelt,epoch1,epoch2
-      double precision llrot,rot
-      logical noscale,dooff,doepo,dogaleq,nearest,dorot
-      integer ndesc,nax,naxis,nin(MAXNAX),nout(MAXNAX),ntin(MAXNAX)
-      integer i,k,n,lIn,lOut,lTmp,cOut,axes(MAXNAX),ilat
-      integer GridSize,gnx,gny,minv(3),maxv(3),order(3)
-      integer nBuf(3),off(3),minc(3),maxc(3),BufSize,rBuf,lBuf
-      integer offset,nxy,nblank
-      real tol
-
-      integer Xv,Yv,Zv,valid
-
-      integer NPROJS
-      parameter(NPROJS=6)
-      integer nproj
-      character projs(NPROJS)*3
+      logical   altPrj, doDesc, doEqEq, doGalEq, doNear, doOff, doRot,
+     *          noScale
+      integer   axes(MAXNAX), BufSize, cOut, gnx, gny, GridSize, i,
+     *          ilat, k, lBuf, lIn, lOut, lTem, maxc(3), maxv(3),
+     *          minc(3), minv(3), n, nax, naxis, nblank, nBuf(3),
+     *          ndesc, nin(MAXNAX), nout(MAXNAX), ntin(MAXNAX), nxy,
+     *          off(3), offset, order(3), rBuf, valid, Xv, Yv, Zv
+      real      tol
+      double precision cdelt, crpix, crval, desc(4,MAXNAX), eqnox,
+     *          llrot, rot
+      character cellscal*12, ctype*16, in*64, line*64, out*64, pcode*3,
+     *          pcodes(NPCODE)*3, tin*64, version*80
 
 c     Externals.
       logical keyprsnt
+      character versan*80
 
-      data projs/'sin','tan','arc','ncp','car','gls'/
+c     Projection codes (those in upper-case require non-defaulting
+c     projection parameters and are not currently supported).
+      data pcodes /
+     *  'azp', 'szp', 'tan', 'stg', 'sin', 'ncp', 'arc', 'ZPN',
+     *  'zea', 'air', 'cyp', 'cea', 'car', 'mer', 'COP', 'COE',
+     *  'COD', 'COO', 'sfl', 'gls', 'par', 'mol', 'ait', 'BON',
+     *  'pco', 'tsc', 'csc', 'qsc', 'hpx'/
 c-----------------------------------------------------------------------
+      version = versan ('regrid',
+     *                  '$Revision: 1.4 $',
+     *                  '$Date: 2010/07/28 07:39:33 $')
 c
 c  Get the input parameters.
 c
-      call output(version)
       call keyini
       call keya('in',in,' ')
-      if(in.eq.' ')call bug('f','An input must be given')
+      if (in.eq.' ')call bug('f','An input must be given')
       call keya('out',out,' ')
-      if(out.eq.' ')call bug('f','An output must be given')
+      if (out.eq.' ')call bug('f','An output must be given')
       call mkeyi('axes',axes,MAXNAX,nax)
       call keya('tin',tin,' ')
       call mkeyd('desc',desc,4*MAXNAX,ndesc)
-      if(mod(ndesc,4).ne.0)
-     *  call bug('f','Invalid number of desc descriptors')
+      if (mod(ndesc,4).ne.0)
+     *  call bug('f','Invalid number of axis descriptors')
       ndesc = ndesc/4
       call keyr('tol',tol,0.05)
-      if(tol.lt.0.or.tol.ge.0.5)
+      if (tol.lt.0.or.tol.ge.0.5)
      *  call bug('f','Invalid value for the tol parameter')
-      call getopt(noscale,dooff,doepo,dogaleq,nearest)
-      call keymatch('project',NPROJS,projs,1,proj,nproj)
-      if(nproj.eq.0)proj = ' '
-      dorot = keyprsnt('rotate')
-      call keyd('rotate',rot,0.0d0)
-      rot = DPI/180.0d0 * rot
+      call getopt(altPrj,noScale,doOff,doEqEq,doGalEq,doNear)
+      call keymatch('project',NPCODE,pcodes,1,pcode,n)
+      if (n.eq.0) pcode = ' '
+      doRot = keyprsnt('rotate')
+      call keyd('rotate',rot,0d0)
+      rot = DPI/180d0 * rot
       call keyfin
 c
 c  Open the input dataset.
@@ -190,9 +265,9 @@ c
 c
 c  Check the users "axes" specification.
 c
-      if(nax.gt.0)then
+      if (nax.gt.0) then
         do i=1,nax
-          if(axes(i).lt.1.or.axes(i).gt.naxis)
+          if (axes(i).lt.1.or.axes(i).gt.naxis)
      *      call bug('f','Invalid "axes" value')
         enddo
       else
@@ -201,98 +276,92 @@ c
           axes(i) = i
         enddo
       endif
-      if(ndesc.ne.0.and.ndesc.ne.nax)call bug('f',
-     *  'Inconsistent number of axes descriptors given')
-      call coInit(lIn)
-      call coDup(lIn,cOut)
 c
 c  Set up the output size/coordinate system given template or
 c  descriptors.
 c
-      if(tin.ne.' ')then
-        call xyopen(lTmp,tin,'old',MAXNAX,ntin)
-        call rdhdi(lTmp,'naxis',n,0)
+      call coInit(lIn)
+      if (altPrj) call coAltPrj(lIn)
+      call coDup(lIn,cOut)
+
+      doDesc = .false.
+      if (tin.ne.' ') then
+        if (ndesc.ne.0) then
+          call bug('w','Using template, ignoring descriptors.')
+        endif
+
+        call xyopen(lTem,tin,'old',MAXNAX,ntin)
+        call rdhdi(lTem,'naxis',n,0)
         n = min(n,MAXNAX)
-        call coInit(lTmp)
-        call coFindAx(lTmp,'latitude',ilat)
+        call coInit(lTem)
+        call coFindAx(lTem,'latitude',ilat)
+
         do i=1,nax
-          if(axes(i).gt.n)call bug('f',
+          if (axes(i).gt.n)call bug('f',
      *        'Requested axis does not exist in the template')
           nout(axes(i)) = ntin(axes(i))
-          call coAxGet(lTmp,axes(i),ctype,crpix,crval,cdelt)
+          call coAxGet(lTem,axes(i),ctype,crpix,crval,cdelt)
           call coAxSet(cOut,axes(i),ctype,crpix,crval,cdelt)
-          if(axes(i).eq.ilat)then
-            call coGetd(lTmp,'llrot',llrot)
-            call coSetd(cOut,'llrot',llrot)
+          if (axes(i).eq.ilat) then
+            call coGetD(lTem,'llrot',llrot)
+            call coSetD(cOut,'llrot',llrot)
           endif
         enddo
-        call coGetd(lTmp,'epoch',epoch1)
-        call coSetd(cOut,'epoch',epoch1)
-        call coGeta(lTmp,'cellscal',cellscal)
-        call coSeta(cOut,'cellscal',cellscal)
-        call xyclose(lTmp)
-      else if(ndesc.ne.0)then
-        do i=1,nax
+
+        call coGetD(lTem,'epoch',eqnox)
+        call coSetD(cOut,'epoch',eqnox)
+        call coGetA(lTem,'cellscal',cellscal)
+        call coSetA(cOut,'cellscal',cellscal)
+        call xyclose(lTem)
+
+      else if (ndesc.ne.0) then
+        if (ndesc.ne.nax) call bug('f',
+     *    'Inconsistent number of axis descriptors given.')
+
+        do i = 1, nax
           nout(axes(i)) = nint(desc(4,i))
-          if(nout(axes(i)).lt.1.or.nout(axes(i)).gt.MAXDIM)
-     *      call bug('f','Invalid axis size in axis descriptor')
-          call coAxGet(lIn,axes(i),ctype,crpix,crval,cdelt)
-          call coAxSet(cOut,axes(i),ctype,desc(2,i),
-     *                                desc(1,i),desc(3,i))
+          if (nout(axes(i)).lt.1 .or. nout(axes(i)).gt.MAXDIM) then
+            call bug('f','Invalid axis size in axis descriptor')
+          endif
+
+          call coAxGet(lIn, axes(i),ctype,crpix,crval,cdelt)
+          call coAxSet(cOut,axes(i),ctype,desc(2,i),desc(1,i),desc(3,i))
         enddo
+
+        doDesc = .true.
+
       else
-        dooff = .true.
+        doOff = .true.
       endif
 c
-c  Set that it does not scale, if requested.
+c  Process options.
 c
-      if(noscale)call coSeta(cOut,'cellscal','CONSTANT')
-      if(dorot)  call coSetd(cOut,'llrot',rot)
-      if(proj.ne.' ')call coPrjSet(cOut,proj)
-      call coReInit(cOut)
-c
-c  Perform epoch and galactic/equatorial switches.
-c  If the user wants to produce an offset one ... do that.
-c
-      if(doepo.or.dogaleq)call CoordSw(cOut,doepo,dogaleq)
-      if(dooff)call DoOffset(lIn,nIn,cOut,nOut)
-c
-c  Check that we can do this.
-c
-      if(nout(1).gt.MAXDIM)call bug('f','Output too big for me')
-      do k=4,naxis
-        if(nOut(k).gt.1)call bug('f','Cannot handle hypercubes')
-      enddo
+      if (noScale) call coSetA(cOut,'cellscal','CONSTANT')
+      if (doRot)   call coSetD(cOut,'llrot',rot)
+      if (pcode.ne.' ') call coPrjSet(cOut,pcode)
+
+c     Set up output celestial coordinates.
+      call setCel(lIn, cOut, doDesc, doEqEq, doGalEq)
+
+c     Set up offset coordinates.
+      if (doOff) call doOffset(lIn,nIn,cOut,nOut)
 c
 c  Create the output.
 c
+c     Do basic checks.
+      if (nout(1).gt.MAXDIM) call bug('f','Output too big for me')
+      do k = 4, naxis
+        if (nOut(k).gt.1) call bug('f','Cannot handle hypercubes')
+      enddo
+
       call xyopen(lOut,out,'new',naxis,nout)
       call MkHeader(lIn,lOut,cOut,version)
 c
 c  Initialise things.
 c
       GridSize = 0
-      call pcvtInit(cOut,lIn)
+      call pCvtInit(cOut,lIn)
       call BufIni(nBuf,off,minc,maxc,BufSize)
-c
-c  Give a message about any epoch conversion that is going to happen.
-c
-      call coGetd(lIn,'epoch',epoch1)
-      call coGetd(cOut,'epoch',epoch2)
-      if(abs(epoch1-epoch2).gt.0.5)then
-        if(epoch1.eq.0)then
-          call bug('w','Assuming the equinox of the input is B1950')
-          epoch1 = 1950
-        else if(epoch2.eq.0)then
-          call bug('w','Assuming the equinox of the template is '
-     *                                                    //'B1950')
-          epoch2 = 1950
-        endif
-        write(line,'(a,i5,a,i5,a)')'Input equinox is',
-     *           nint(epoch1),'; Output equinox is',nint(epoch2),'.'
-        call output(line)
-      endif
-
 
       nblank = 0
       do k=1,nOut(3)
@@ -300,7 +369,7 @@ c
 c
 c  Determine the size of the coordinate translation grid.
 c
-        if(tol.eq.0)then
+        if (tol.eq.0) then
           gnx = nOut(1)
           gny = nOut(2)
         else
@@ -309,8 +378,8 @@ c
 c
 c  Allocate space used for the coordinate translation grid.
 c
-        if(gnx*gny.gt.GridSize)then
-          if(GridSize.gt.0)then
+        if (gnx*gny.gt.GridSize) then
+          if (GridSize.gt.0) then
             call memFree(Xv,GridSize,'r')
             call memFree(Yv,GridSize,'r')
             call memFree(Zv,GridSize,'r')
@@ -328,11 +397,12 @@ c  statistics about it.
 c
         call GridGen(nOut(1),nOut(2),k,
      *        memr(Xv),memr(Yv),memr(Zv),meml(Valid),gnx,gny)
-        call GridStat(nearest,memr(Xv),memr(Yv),memr(Zv),meml(valid),
+        call GridStat(doNear,memr(Xv),memr(Yv),memr(Zv),meml(valid),
      *        gnx,gny,nin(1),nin(2),nin(3),tol,minv,maxv,order)
 
-        if(minv(1).gt.maxv(1).or.minv(2).gt.maxv(2).or.
-     *                           minv(3).gt.maxv(3))then
+        if (minv(1).gt.maxv(1) .or.
+     *      minv(2).gt.maxv(2) .or.
+     *      minv(3).gt.maxv(3)) then
           nblank = nblank + nOut(1)*nOut(2)
           call BadPlane(lOut,nOut(1),nOut(2))
 c
@@ -359,19 +429,19 @@ c
       nblank = (100*nblank)/(nOut(1)*nOut(2)*nOut(3))
       write(line,'(a,i3,a)')
      *  'Overall fraction of blanked pixels: ',nblank,'%'
-      if(nblank.ge.50)then
+      if (nblank.ge.50) then
         call bug('w',line)
-      else if(nblank.ne.0)then
+      else if (nblank.ne.0) then
         call output(line)
       endif
 c
 c  All done. Tidy up.
 c
-      if(BufSize.gt.0)then
+      if (BufSize.gt.0) then
         call memFree(rBuf,BufSize,'r')
         call memFree(lBuf,BufSize,'l')
       endif
-      if(GridSize.gt.0)then
+      if (GridSize.gt.0) then
         call memFree(Xv,GridSize,'r')
         call memFree(Yv,GridSize,'r')
         call memFree(Zv,GridSize,'r')
@@ -383,104 +453,238 @@ c
 
       end
 c***********************************************************************
-      subroutine getopt(noscale,offset,doepo,dogaleq,nearest)
+      subroutine getopt(altPrj,noScale,offset,doEqEq,doGalEq,doNear)
 
-      logical noscale,offset,doepo,dogaleq,nearest
+      logical altPrj,noScale,offset,doEqEq,doGalEq,doNear
 c-----------------------------------------------------------------------
       integer NOPTS
-      parameter(NOPTS=5)
+      parameter(NOPTS=6)
       character opts(NOPTS)*8
       logical present(NOPTS)
-      data opts/'noscale ','offset  ','equisw  ','galeqsw ',
+      data opts/'altprj', 'noscale ','offset  ','equisw  ','galeqsw ',
      *          'nearest '/
 c-----------------------------------------------------------------------
       call options('options',opts,present,NOPTS)
-      noscale = present(1)
-      offset  = present(2)
-      doepo   = present(3)
-      dogaleq = present(4)
-      nearest = present(5)
+      altPrj  = present(1)
+      noScale = present(2)
+      offset  = present(3)
+      doEqEq  = present(4)
+      doGalEq = present(5)
+      doNear  = present(6)
       end
 c***********************************************************************
-      subroutine CoordSw(lOut,doepo,dogaleq)
+      subroutine setCel(lIn, lOut, doDesc, doEqEq, doGalEq)
 
-      integer lOut
-      logical doepo,dogaleq
+      integer lIn, lOut
+      logical doDesc, doEqEq, doGalEq
 
-c  Switch the coordinate system of the output.
+c  Set up output celestial coordinates.
 c-----------------------------------------------------------------------
-      double precision crpix1,crval1,cdelt1,crpix2,crval2,cdelt2
-      double precision epoch,obstime,ra,dec,dra,ddec
-      character ctype1*16,ctype2*16
-      integer ira,idec
+      include 'mirconst.h'
+
+      logical   doeqnx, gotone
+      integer   ilat, ilng
+      double precision cdelt1, cdelt2, crpix1, crpix2, crval1, crval2,
+     *          ddec, dec, dra, eqnox, obstime, ra
+      character ctype1*16, ctype2*16, type1*4, type2*4
 
 c     Externals.
       double precision epo2jul
 c-----------------------------------------------------------------------
-      call coFindAx(lOut,'latitude',idec)
-      call coFindAx(lOut,'longitude',ira)
-      if(ira.eq.0.or.idec.eq.0)
-     *  call bug('f','Cannot find RA/DEC or GLON/GLAT axes')
-      call coAxGet(lOut,ira,ctype1,crpix1,crval1,cdelt1)
-      call coAxGet(lOut,idec,ctype2,crpix2,crval2,cdelt2)
-      call cogetd(lOut,'epoch',epoch)
-      if(epoch.eq.0)then
-        call bug('w','Assuming the equinox of the template '//
-     *                                        'is B1950')
-        epoch = 1950
-      endif
-      call cogetd(lOut,'obstime',obstime)
-      if(obstime.eq.0)obstime = epo2jul(1950.0d0,'B')
+      call coReInit(lOut)
+      if (.not.(doDesc .or. doEqEq .or. doGalEq)) return
 
-      if(ctype1(1:4).eq.'RA--'.and.ctype2(1:4).eq.'DEC-'.and.
-     *                                                 dogaleq)then
-        if(abs(epoch-2000).lt.0.1)then
-          call fk54z(crval1,crval2,obstime,ra,dec,dra,ddec)
-          crval1 = ra
-          crval2 = dec
-          epoch = 1950.
+c     Look for a celestial axis pair.
+      call coFindAx(lOut,'longitude',ilng)
+      call coFindAx(lOut,'latitude',ilat)
+      if (ilng.eq.0 .or. ilat.eq.0)
+     *  call bug('f','Cannot find RA/DEC or GLON/GLAT axes')
+
+      call coAxGet(lOut,ilng,ctype1,crpix1,crval1,cdelt1)
+      call coAxGet(lOut,ilat,ctype2,crpix2,crval2,cdelt2)
+
+      if (doDesc) then
+c       Convert to radians.
+        crval1 = crval1 * DD2R
+        crval2 = crval2 * DD2R
+        cdelt1 = cdelt1 * DD2R
+        cdelt2 = cdelt2 * DD2R
+
+        if (.not.(doEqEq .or. doGalEq)) then
+          call coAxSet(lOut,ilng,ctype1,crpix1,crval1,cdelt1)
+          call coAxSet(lOut,ilat,ctype2,crpix2,crval2,cdelt2)
+          call coReInit(lOut)
+          return
         endif
-        if(abs(epoch-1950).gt.0.1)call bug('f',
-     *        'I am unable to convert to B1950 coordinates')
-        call dsfetra(crval1,crval2,.false.,1)
-        ctype1(1:4) = 'GLON'
-        ctype2(1:4) = 'GLAT'
-      else if(ctype1(1:4).eq.'GLON'.and.ctype2(1:4).eq.'GLAT'.and.
-     *                                                  dogaleq)then
-        if(abs(epoch-1950.).gt.0.1)call bug('f',
-     *  'Galactic coordinates in non-B1950 system are not understood')
-        call dsfetra(crval1,crval2,.true.,1)
-        ctype1(1:4) = 'RA--'
-        ctype2(1:4) = 'DEC-'
       endif
-c
-c  Convert the epoch, if needed.
-c
-      if(ctype1(1:4).eq.'RA--'.and.ctype2(1:4).eq.'DEC-'.and.
-     *                                                   doepo)then
-        if(abs(epoch-1950).lt.0.1)then
-          call fk45z(crval1,crval2,obstime,ra,dec)
-          epoch = 2000
-        else if(abs(epoch-2000).lt.0.1)then
-          call fk54z(crval1,crval2,obstime,ra,dec,dra,ddec)
-          epoch = 1950
+
+c     Extract the basic coordinate types, RA/DEC or GLON/GLAT.
+      type1 = ' '
+      type2 = ' '
+      if ((ctype1(5:5).eq.'-' .or. ctype1(5:).eq.' ') .and.
+     *    (ctype2(5:5).eq.'-' .or. ctype2(5:).eq.' ')) then
+        type1 = ctype1(1:4)
+        if (type1(4:4).eq.'-') then
+          type1(4:4) = ' '
+          if (type1(3:3).eq.'-') type1(3:3) = ' '
+        endif
+
+        type2 = ctype2(1:4)
+        if (type2(4:4).eq.'-') then
+          type2(4:4) = ' '
+          if (type2(3:3).eq.'-') type2(3:3) = ' '
+        endif
+      endif
+
+c     Get the equinox and the epoch of observation.
+      call coGetD(lOut,'epoch',eqnox)
+      call coGetD(lIn,'obstime',obstime)
+
+      doeqnx = doEqEq
+      gotone = .false.
+
+c     Switch between equatorial and galactic coordinates?
+      if (doGalEq) then
+c       The Galactic and B1950/FK4 equatorial coordinate systems are
+c       tied to the rotating Galaxy, whereas J2000/FK5 is tied to the
+c       distant universe.  Thus, Galactic coordinates rotate slowly with
+c       respect to J2000/FK5 (~250My period -> 0.5 arcsec/century).  For
+c       accuracy, the conversion is always via B1950/FK4.
+
+        if (type1.eq.'RA' .and. type2.eq.'DEC') then
+c         Convert equatorial to galactic.
+          if (eqnox.eq.0d0) then
+            eqnox = 2000d0
+            call bug('w','Assuming J2000 equatorial coordinates.')
+          endif
+
+          if (obstime.eq.0d0) then
+            obstime = epo2jul(2000d0,'J')
+            call bug('w','Assuming observation at epoch J2000.0.')
+          endif
+
+          if (abs(eqnox-2000d0).lt.0.1d0) then
+c           Convert J2000 to B1950.
+            if (.not.doDesc) then
+              call fk54z(crval1,crval2,obstime,ra,dec,dra,ddec)
+              crval1 = ra
+              crval2 = dec
+            endif
+            call output('Converting J2000 equatorial to Galactic.')
+
+          else if (abs(eqnox-1950d0).lt.0.1d0) then
+            call output('Converting B1950 equatorial to Galactic.')
+
+          else
+            call bug('f', 'Unable to convert to B1950 coordinates')
+          endif
+
+c         Convert B1950 equatorial to galactic.
+          if (.not.doDesc) then
+            call dsfetra(crval1,crval2,.false.,1)
+          endif
+
+          ctype1(1:4) = 'GLON'
+          ctype2(1:4) = 'GLAT'
+
+c         Equinox doesn't make sense for galactic coordinates.
+          type1 = 'GLON'
+          type2 = 'GLAT'
+          eqnox = 0d0
+
+          doeqnx = .false.
+          gotone = .true.
+
+        else if (type1.eq.'GLON' .and. type2.eq.'GLAT') then
+c         Convert galactic to B1950 equatorial.
+          if (.not.doDesc) then
+            call dsfetra(crval1,crval2,.true.,1)
+          endif
+
+          if (ctype1(5:).eq.' ' .and. ctype2(5:).eq.' ') then
+            ctype1 = 'RA'
+            ctype2 = 'DEC'
+          else
+            ctype1(1:4) = 'RA--'
+            ctype2(1:4) = 'DEC-'
+          endif
+
+          type1 = 'RA'
+          type2 = 'DEC'
+          eqnox = 1950d0
+
+c         We want J2000 by default.
+          doeqnx = .not.doeqnx
+          gotone = .true.
+
+          if (doeqnx) then
+            call output('Converting Galactic to J2000 equatorial.')
+          else
+            call output('Converting Galactic to B1950 equatorial.')
+          endif
+        endif
+      endif
+
+c     Switch equatorial coordinates?
+      if (doeqnx .and. type1.eq.'RA' .and. type2.eq.'DEC') then
+        if (eqnox.eq.0d0) then
+          eqnox = 2000d0
+          call bug('w','Assuming J2000 equatorial coordinates.')
+        endif
+
+        if (obstime.eq.0d0) then
+          obstime = epo2jul(2000d0,'J')
+          call bug('w','Assuming observation at epoch J2000.0.')
+        endif
+
+        if (abs(eqnox-1950d0).lt.0.1d0) then
+          if (.not.doDesc) then
+            call fk45z(crval1,crval2,obstime,ra,dec)
+            crval1 = ra
+            crval2 = dec
+          endif
+
+          eqnox = 2000d0
+
+          if (.not.doGalEq) then
+            call output('Converting B1950 to J2000 equatorial.')
+          endif
+
+        else if (abs(eqnox-2000d0).lt.0.1d0) then
+          if (.not.doDesc) then
+            call fk54z(crval1,crval2,obstime,ra,dec,dra,ddec)
+            crval1 = ra
+            crval2 = dec
+          endif
+
+          eqnox = 1950d0
+
+          if (.not.doGalEq) then
+            call output('Converting J2000 to B1950 equatorial.')
+          endif
+
         else
           call bug('f',
-     *        'Cannot convert other than B1950/J2000 equinoxs')
+     *        'Cannot convert other than B1950/J2000 equatorial')
         endif
-        crval1 = ra
-        crval2 = dec
+
+        gotone = .true.
       endif
 
-      call coAxSet(lOut,ira,ctype1,crpix1,crval1,cdelt1)
-      call coAxSet(lOut,idec,ctype2,crpix2,crval2,cdelt2)
-      call cosetd(lOut,'epoch',epoch)
+      if (gotone) then
+        call coSetD(lIn,'obstime',obstime)
 
-      call coReinit(lOut)
+        call coAxSet(lOut,ilng,ctype1,crpix1,crval1,cdelt1)
+        call coAxSet(lOut,ilat,ctype2,crpix2,crval2,cdelt2)
+        call coSetD(lOut,'epoch',eqnox)
+        call coSetD(lOut,'obstime',obstime)
+
+        call coReinit(lOut)
+      endif
 
       end
 c***********************************************************************
-      subroutine DoOffset(lIn,nIn,lOut,nOut)
+      subroutine doOffset(lIn,nIn,lOut,nOut)
 
       integer lIn,lOut,nIn(3),nOut(3)
 c-----------------------------------------------------------------------
@@ -495,7 +699,7 @@ c-----------------------------------------------------------------------
 c     Externals.
       character itoaf*2
 c-----------------------------------------------------------------------
-      call pcvtInit(lIn,lOut)
+      call pCvtInit(lIn,lOut)
 
       nv3 = min(max(3,nIn(3)),NV)
       nv2 = min(max(3,nIn(2)),NV)
@@ -508,8 +712,9 @@ c-----------------------------------------------------------------------
             In(1) = 1 + (i-1)*(nIn(1)-1)/real(nv1-1)
             In(2) = 1 + (j-1)*(nIn(2)-1)/real(nv2-1)
             In(3) = 1 + (k-1)*(nIn(3)-1)/real(nv3-1)
-            call pcvt(in,out(1,i,j,k),3,valid(i,j,k))
-            if(valid(i,j,k).and.first)then
+            call pCvt(in,out(1,i,j,k),3,valid(i,j,k))
+
+            if (valid(i,j,k).and.first) then
               first = .false.
               do l=1,3
                 weird(l) = .false.
@@ -521,7 +726,7 @@ c-----------------------------------------------------------------------
         enddo
       enddo
 
-      if(first)call bug('f','No valid pixels found')
+      if (first)call bug('f','No valid pixels found')
 c
 c  Determine the min and max pixels that we are interested in.
 c
@@ -529,7 +734,7 @@ c
         do j=1,nv2
           do i=1,nv1
             do l=1,3
-              if(valid(i,j,k))then
+              if (valid(i,j,k)) then
                 minv(l) = min(minv(l),nint(Out(l,i,j,k)-0.49))
                 maxv(l) = max(maxv(l),nint(Out(l,i,j,k)+0.49))
               endif
@@ -543,7 +748,7 @@ c
       do k=1,nv3
         do j=1,nv2
           do i=1,nv1-2
-            if(valid(i+2,j,k).and.valid(i+1,j,k).and.valid(i,j,k))then
+            if (valid(i+2,j,k).and.valid(i+1,j,k).and.valid(i,j,k)) then
               weird(1) = weird(1).or.
      *          (Out(1,i+2,j,k)-Out(1,i+1,j,k))*
      *          (Out(1,i+1,j,k)-Out(1,i,j,k)).lt.0
@@ -554,7 +759,7 @@ c
       do k=1,nv3
         do j=1,nv2-2
           do i=1,nv1
-            if(valid(i,j+2,k).and.valid(i,j+1,k).and.valid(i,j,k))then
+            if (valid(i,j+2,k).and.valid(i,j+1,k).and.valid(i,j,k)) then
               weird(2) = weird(2).or.
      *          (Out(2,i,j+2,k)-Out(2,i,j+1,k))*
      *          (Out(2,i,j+1,k)-Out(2,i,j,k)).lt.0
@@ -565,7 +770,7 @@ c
       do k=1,nv3-2
         do j=1,nv2
           do i=1,nv1
-            if(valid(i,j,k+2).and.valid(i,j,k+1).and.valid(i,j,k))then
+            if (valid(i,j,k+2).and.valid(i,j,k+1).and.valid(i,j,k)) then
               weird(3) = weird(3).or.
      *          (Out(3,i,j,k+2)-Out(3,i,j,k+1))*
      *          (Out(3,i,j,k+1)-Out(3,i,j,k)).lt.0
@@ -578,22 +783,25 @@ c  Set the template ranges. If its weird, just go with the template
 c  range and the max and min of mapped pixels.
 c
       warned = .false.
-      do i=1,3
-        if(weird(i))then
+      do i = 1, 3
+        if (weird(i)) then
           minv(i) = min(1,minv(i))
           maxv(i) = max(nOut(i),maxv(i))
         endif
+
         nOut(i) = maxv(i) - minv(i) + 1
-        if(nout(i).gt.MAXDIM)then
+        if (nout(i).gt.MAXDIM) then
           nout(i) = MAXDIM
-          if(.not.warned)call bug('w',
+          if (.not.warned) call bug('w',
      *      'Output image too large -- being truncated')
           warned = .true.
         endif
-        call coGetd(lOut,'crpix'//itoaf(i),crpix)
+
+        call coGetD(lOut,'crpix'//itoaf(i),crpix)
         crpix = crpix - minv(i) + 1
-        call coSetd(lOut,'crpix'//itoaf(i),crpix)
+        call coSetD(lOut,'crpix'//itoaf(i),crpix)
       enddo
+
       call coReinit(lOut)
 
       end
@@ -657,16 +865,16 @@ c-----------------------------------------------------------------------
           x(1,k) = (2-i) + (i-1)*nx
           x(2,k) = (2-j) + (j-1)*ny
           x(3,k) = plane
-          call pcvt(x(1,k),tx(1,k),3,valid)
-          if(.not.valid)
+          call pCvt(x(1,k),tx(1,k),3,valid)
+          if (.not.valid)
      *      call bug('f','Invalid coordinate: please use tol=0')
         enddo
       enddo
       mid(1) = 0.5*(nx+1)
       mid(2) = 0.5*(ny+1)
       mid(3) = plane
-      call pcvt(mid,tmid,3,valid)
-      if(.not.valid)
+      call pCvt(mid,tmid,3,valid)
+      if (.not.valid)
      *  call bug('f','Invalid coordinate: please use tol=0')
 
       more = .true.
@@ -677,13 +885,13 @@ c-----------------------------------------------------------------------
           xmid(1,k) = 0.5*(x(1,k) + mid(1))
           xmid(2,k) = 0.5*(x(2,k) + mid(2))
           xmid(3,k) = 0.5*(x(3,k) + mid(3))
-          call pcvt(xmid(1,k),txmid(1,k),3,valid)
-          if(.not.valid)
+          call pCvt(xmid(1,k),txmid(1,k),3,valid)
+          if (.not.valid)
      *      call bug('f','Invalid coordinate: please use tol=0')
           err = max( abs(0.5*(tx(1,k)+tmid(1)) - txmid(1,k)),
      *               abs(0.5*(tx(2,k)+tmid(2)) - txmid(2,k)),
      *               abs(0.5*(tx(3,k)+tmid(3)) - txmid(3,k)))
-          if(err.gt.errmax)then
+          if (err.gt.errmax) then
             kmax = k
             errmax = err
           endif
@@ -693,22 +901,22 @@ c
 c  If the tolerance has not yet been reached, home in on the
 c  region where the fit was worst.
 c
-        if(more)then
+        if (more) then
           k1 = 1
-          if(k1.eq.kmax)k1 = k1 + 1
+          if (k1.eq.kmax)k1 = k1 + 1
           k2 = k1 + 1
-          if(k2.eq.kmax)k2 = k2 + 1
+          if (k2.eq.kmax)k2 = k2 + 1
           k3 = k2 + 1
-          if(k3.eq.kmax)k3 = k3 + 1
+          if (k3.eq.kmax)k3 = k3 + 1
           call TripMv(mid(1),   mid(2), mid(3),      x(1,k1))
           call TripMv(tmid(1),  tmid(2),tmid(3),     tx(1,k1))
           call TripMv(x(1,kmax),mid(2), dble(plane), x(1,k2))
           call TripMv(mid(1),x(2,kmax), dble(plane), x(1,k3))
-          call pcvt(x(1,k2),tx(1,k2),3,valid)
-          if(.not.valid)
+          call pCvt(x(1,k2),tx(1,k2),3,valid)
+          if (.not.valid)
      *      call bug('f','Invalid coordinate: please use tol=0')
-          call pcvt(x(1,k3),tx(1,k3),3,valid)
-          if(.not.valid)
+          call pCvt(x(1,k3),tx(1,k3),3,valid)
+          if (.not.valid)
      *      call bug('f','Invalid coordinate: please use tol=0')
           call TripMv(xmid(1,kmax), xmid(2,kmax), xmid(3,kmax),mid)
           call TripMv(txmid(1,kmax),txmid(2,kmax),txmid(3,kmax),tmid)
@@ -757,7 +965,7 @@ c-----------------------------------------------------------------------
         do i=1,gnx
           In(1) = dble(nx-1)/dble(gnx-1) * (i-1) + 1
           call pCvt(In,Out,3,valid(i,j))
-          if(valid(i,j))then
+          if (valid(i,j)) then
             Xv(i,j) = Out(1)
             Yv(i,j) = Out(2)
             Zv(i,j) = Out(3)
@@ -767,10 +975,10 @@ c-----------------------------------------------------------------------
 
       end
 c***********************************************************************
-      subroutine GridStat(nearest,Xv,Yv,Zv,valid,gnx,gny,n1,n2,n3,
+      subroutine GridStat(doNear,Xv,Yv,Zv,valid,gnx,gny,n1,n2,n3,
      *    tol,minv,maxv,order)
 
-      logical nearest
+      logical doNear
       integer gnx,gny,n1,n2,n3,minv(3),maxv(3),order(3)
       real Xv(gnx,gny),Yv(gnx,gny),Zv(gnx,gny),tol
       logical valid(gnx,gny)
@@ -782,8 +990,8 @@ c-----------------------------------------------------------------------
       first = .true.
       do j=1,gny
         do i=1,gnx
-          if(valid(i,j))then
-            if(first)then
+          if (valid(i,j)) then
+            if (first) then
               first = .false.
               minr(1) = Xv(i,j)
               maxr(1) = minr(1)
@@ -803,7 +1011,7 @@ c-----------------------------------------------------------------------
         enddo
       enddo
 
-      if(first)call bug('f','No valid pixels found here')
+      if (first)call bug('f','No valid pixels found here')
 c
 c  Determine which are going to be done by nearest neighbour, and
 c  what are the min and max limits needed for interpolation.
@@ -815,7 +1023,7 @@ c
         minr(i) = max(minr(i),1.0)
         maxr(i) = min(maxr(i),real(n(i)))
         diff = max(maxr(i)-minr(i),abs(nint(minr(i))-minr(i)))
-        if(n(i).le.5.or.diff.lt.tol.or.nearest)then
+        if (n(i).le.5 .or. diff.lt.tol .or. doNear) then
           order(i) = 0
           minv(i) = max(1,   nint(minr(i)))
           maxv(i) = min(n(i),nint(maxr(i)))
@@ -872,13 +1080,13 @@ c
 c  If it looks as if we cannot use the previous buffers, recalculate
 c  what currently looks best, and load the needed data.
 c
-      if(redo)then
+      if (redo) then
         nBuf(1) = n(1)
         nBuf(2) = min(nint(1.2*(maxr(2)-minr(2)))+1,n(2))
         nBuf(3) = min(max(max(memBuf()/2,BufSize)/(nBuf(1)*nBuf(2)),
      *                    maxr(3)-minr(3)+1),n(3))
-        if(nBuf(1)*nBuf(2)*nBuf(3).gt.BufSize)then
-          if(BufSize.gt.0)then
+        if (nBuf(1)*nBuf(2)*nBuf(3).gt.BufSize) then
+          if (BufSize.gt.0) then
             call memFree(rBuf,BufSize,'r')
             call memFree(lBuf,BufSize,'l')
           endif
@@ -889,9 +1097,9 @@ c
         do i=1,3
           off(i) = minr(i) - (nBuf(i) - (maxr(i)-minr(i)+1))/2 - 1
           off(i) = max(0,min(off(i),n(i)-nBuf(i)))
-          if(minr(i).lt.off(i)+1.or.maxr(i).gt.off(i)+nBuf(i))
+          if (minr(i).lt.off(i)+1.or.maxr(i).gt.off(i)+nBuf(i))
      *      call bug('f','Algorithmic failure in BufGet')
-          if(i.ne.3)then
+          if (i.ne.3) then
             minc(i) = 1 + off(i)
             maxc(i) = nBuf(i) + off(i)
           else
@@ -922,7 +1130,7 @@ c  Fill buffers up with the appropriate data.
 c-----------------------------------------------------------------------
       integer j,k
 c-----------------------------------------------------------------------
-      if(xoff.ne.0)call bug('f','Load assertion failure')
+      if (xoff.ne.0)call bug('f','Load assertion failure')
 
       do k=minc(3),maxc(3)
         call xysetpl(lIn,1,k)
@@ -970,7 +1178,7 @@ c-----------------------------------------------------------------------
 c
 c  Shuffle around planes that we already have in memory.
 c
-      if(minr(3).lt.1+zoff)then
+      if (minr(3).lt.1+zoff) then
         zoff1 = max(0,maxr(3) - nz)
         minc(3) = max(minc(3),minr(3))
         maxc(3) = min(maxc(3),maxr(3))
@@ -979,7 +1187,7 @@ c
           call logcopy(nx*ny,Flags(1,1,k-zoff),Flags(1,1,k-zoff1))
         enddo
         zoff = zoff1
-      else if(maxr(3).gt.nz+zoff)then
+      else if (maxr(3).gt.nz+zoff) then
         zoff1 = minr(3) - 1
         minc(3) = max(minc(3),minr(3))
         maxc(3) = min(maxc(3),maxr(3))
@@ -990,7 +1198,7 @@ c
         zoff = zoff1
       endif
 
-      if(xoff.ne.0)call bug('f','Cycle assertion failure')
+      if (xoff.ne.0)call bug('f','Cycle assertion failure')
 c
 c  Read in the extra planes.
 c
@@ -1055,9 +1263,9 @@ c-----------------------------------------------------------------------
           x = dble((gnx-1)*(i-1))/dble(nx-1) + 1
           jx = nint(x - 0.5d0)
           fx = x - jx
-          if(fx.eq.0)then
-            if(fy.eq.0)then
-              if(valid(jx,jy))then
+          if (fx.eq.0) then
+            if (fy.eq.0) then
+              if (valid(jx,jy)) then
                 x = Xv(jx,jy)
                 y = Yv(jx,jy)
                 z = Zv(jx,jy)
@@ -1065,7 +1273,7 @@ c-----------------------------------------------------------------------
                 cok = .false.
               endif
             else
-              if(valid(jx,jy).and.valid(jx,jy+1))then
+              if (valid(jx,jy).and.valid(jx,jy+1)) then
                 x = (1-fy) * Xv(jx,jy) + fy * Xv(jx,jy+1)
                 y = (1-fy) * Yv(jx,jy) + fy * Yv(jx,jy+1)
                 z = (1-fy) * Zv(jx,jy) + fy * Zv(jx,jy+1)
@@ -1074,8 +1282,8 @@ c-----------------------------------------------------------------------
               endif
             endif
           else
-            if(fy.eq.0)then
-              if(valid(jx,jy).and.valid(jx+1,jy))then
+            if (fy.eq.0) then
+              if (valid(jx,jy).and.valid(jx+1,jy)) then
                 x = (1-fx) * Xv(jx,jy) + fx * Xv(jx+1,jy)
                 y = (1-fx) * Yv(jx,jy) + fx * Yv(jx+1,jy)
                 z = (1-fx) * Zv(jx,jy) + fx * Zv(jx+1,jy)
@@ -1083,8 +1291,8 @@ c-----------------------------------------------------------------------
                 cok = .false.
               endif
             else
-              if(valid(jx,jy).and.valid(jx+1,jy).and.
-     *           valid(jx,jy+1).and.valid(jx+1,jy+1))then
+              if (valid(jx,jy).and.valid(jx+1,jy).and.
+     *           valid(jx,jy+1).and.valid(jx+1,jy+1)) then
                 x = (1-fy)*((1-fx)*Xv(jx,jy)  +fx*Xv(jx+1,jy)  )
      *              + fy *((1-fx)*Xv(jx,jy+1)+fx*Xv(jx+1,jy+1))
                 y = (1-fy)*((1-fx)*Yv(jx,jy)  +fx*Yv(jx+1,jy)  )
@@ -1102,7 +1310,7 @@ c  in terms of the input coordinate system. Interpolate this point.
 c
           Sum = 0
           SumWt = 0
-          if(cok)then
+          if (cok) then
             call coeff(order(1),x-xoff,nix,imin,imax,Wtx)
             call coeff(order(2),y-yoff,niy,jmin,jmax,Wty)
             call coeff(order(3),z-zoff,niz,kmin,kmax,Wtz)
@@ -1110,7 +1318,7 @@ c
             do kd=kmin,kmax
               do jd=jmin,jmax
                 do id=imin,imax
-                  if(flagIn(id,jd,kd))then
+                  if (flagIn(id,jd,kd)) then
                     Wt = Wtx(id-imin+1)*Wty(jd-jmin+1)*Wtz(kd-kmin+1)
                     Sum = Sum + Wt * In(id,jd,kd)
                     SumWt = SumWt + Wt
@@ -1119,12 +1327,11 @@ c
               enddo
             enddo
           endif
-
 c
 c  Determine whether the output is good or not.
 c
           flagOut(i) = SumWt.gt.WtTol
-          if(flagOut(i))then
+          if (flagOut(i)) then
             Out(i) = Sum / SumWt
           else
             nblank = nblank + 1
@@ -1149,11 +1356,11 @@ c-----------------------------------------------------------------------
       integer jx,off,i
       logical clip
 c-----------------------------------------------------------------------
-      if(order.eq.0)then
+      if (order.eq.0) then
         imin = nint(x)
         imax = imin
         Wtx(1) = 1
-      else if(order.eq.3)then
+      else if (order.eq.3) then
         jx = nint(x - 0.5d0)
         imin = jx-1
         imax = jx+2
@@ -1170,11 +1377,11 @@ c
 c  Clip back anything that went outside the range of the valid pixels.
 c
       clip = .false.
-      if(imax.gt.nix)then
+      if (imax.gt.nix) then
         clip = .true.
         imax = nix
       endif
-      if(imin.lt.1)then
+      if (imin.lt.1) then
         clip = .true.
         off = 1 - imin
         imin = 1
@@ -1186,12 +1393,13 @@ c
 c  If the range had to be clipped back, check that there is still enough
 c  weighting to bother to interpolate.
 c
-      if(clip)then
+      if (clip) then
         SumWt = 0
         do i=1,imax-imin+1
           SumWt = SumWt + Wtx(i)
         enddo
-        if(SumWt.lt.WtTol)then
+
+        if (SumWt.lt.WtTol) then
           imin = nix + 1
           imax = 0
         endif
