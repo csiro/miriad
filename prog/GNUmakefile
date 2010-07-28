@@ -2,7 +2,7 @@
 # GNUmakefile for compiling Miriad tasks.
 #
 # Original: 2006/08/19, Mark Calabretta, ATNF
-# $Id: GNUmakefile,v 1.11 2008/04/28 07:13:00 cal103 Exp $
+# $Id: GNUmakefile,v 1.12 2010/07/28 07:55:42 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Get common makefile variables and rules.
 include $(MIR)/GNUmakedefs
@@ -12,7 +12,7 @@ MIRINCS  := -I $(MIRPROGD)
 MIRINCS  += $(patsubst %,-I %, $(MIRINCOD))
 MIRINCS  += -I $(MIRINCD)
 MIRLIBR  := $(MIRLIBD)/libmir.a
-XTRNLIBS := $(RPFITSLIB) $(LINPACKLIB) $(PGPLOTLIB) $(X11LIB) $(XTRALIBS)
+XTRNLIBS := $(RPFITSLIB) $(LINPACKLIB) $(PGPLOTLIB) $(WCSLIB) $(X11LIB) $(XTRALIBS)
 ZEROFORS := $(notdir $(shell find . -maxdepth 1 -size 0))
 MIREXES  := $(basename $(filter-out $(ZEROFORS),$(filter %.for,$(MIRSRCS))))
 
@@ -226,7 +226,7 @@ ifeq "$(MAKEMODE)" "system"
   # This is used to protect the dependency lists themselves.
   .PRECIOUS : $(DPNDINCD)/%
 
-  $(MIRBIND)/% : $(DPNDTMPD)/%.f $(DPNDINCD)/% $(DPNDLIBR)
+  $(MIRBIND)/% : $(DPNDTMPD)/%.f $(DPNDINCD)/% $(DPNDLIBR) $(WCSLIB)
 	   $(FC) $(FCOPT) $(LDOPT) -o $@ $< $(MIRLIBR) $(XTRNLIBS)
 	   $(depend-objs)
 	   $(wait-unlock)
@@ -387,7 +387,7 @@ else
 
   # Making the dependency list a prerequisite of the Fortran executable
   # ensures that it will be created if it doesn't already exist.
-  $(PGMRBIND)/% : $(PGMRBIND)/%.f $(DPNDINCD)/% $(PGMRLIBR) $(MIRLIBR)
+  $(PGMRBIND)/% : $(PGMRBIND)/%.f $(DPNDINCD)/% $(PGMRLIBR) $(MIRLIBR) $(WCSLIB)
 	   $(FC) $(FCDBG) $(LDDBG) -o $@ $< $(PGMRLIBR) $(MIRLIBR) $(XTRNLIBS)
 	   $(wait-unlock)
 	-@ chmod 775 $@
