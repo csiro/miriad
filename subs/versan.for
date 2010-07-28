@@ -18,7 +18,7 @@ c               not be reported.
 c    rcsrev     RCS Revision string.
 c    rcsid      RCS Date string.
 c--
-c  $Id: versan.for,v 1.5 2010/04/27 07:04:36 cal103 Exp $
+c  $Id: versan.for,v 1.6 2010/07/28 05:33:03 cal103 Exp $
 c-----------------------------------------------------------------------
       logical   quiet
       integer   i0, i1, i2, l, len1
@@ -65,7 +65,7 @@ c         Time.
         end if
 
       else
-        versan(i0:) = ' (not recorded)'
+        versan(i0:) = '(not recorded)'
       endif
 
       if (.not.quiet) then
