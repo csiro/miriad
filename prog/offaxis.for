@@ -1,4 +1,3 @@
-c***********************************************************************
       program  offaxis
 
 c= offaxis -- Remove (or simulate) ATCA off-axis polarisation effects
@@ -47,6 +46,8 @@ c         nopol     Do not apply any polarization leakage correction.
 c                   The default is to apply these if they are available.
 c         nopass    Do not apply bandpass calibration. The default is to
 c                   apply these calibrations if they are available.
+c
+c$Id: offaxis.for,v 1.3 2010/08/02 07:42:19 cal103 Exp $
 c--
 c  History:
 c    rjs  02may96 Original version.
@@ -60,41 +61,40 @@ c    dpr  20mar01 Doc change only
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mem.h'
-      character version*(*)
-      integer MAXPOL,PolXX,PolYY,PolXY,PolYX,PolI
-      parameter(version='Offaxis: version 1.0 11-Sep-00')
+
+      integer   MAXPOL, PolXX, PolYY, PolXY, PolYX, PolI
       parameter(MAXPOL=4)
       parameter(PolXX=-5,PolYY=-6,PolXY=-7,PolYX=-8,PolI=1)
 
-      logical replace
-      integer nx,ny,nsize(2),tMod,tVis,tOut,nchan,i,j
-      integer npol,pols(MAXPOL)
-      integer pFlux,pll,pmm,pRad,pPsi
-      integer nCmp
-      real clip,chi
-      character uvflags*16,model*64,ltype*16,out*64
-      complex data(MAXCHAN,4),sim(MAXCHAN,4)
-      logical flags(MAXCHAN,4),first
-      double precision sfreq(MAXCHAN),preamble(5)
+      logical   flags(MAXCHAN,4), first, replace
+
+      integer   i, j, nCmp, nchan, npol, nsize(2), nx, ny, pFlux, pPsi,
+     *          pRad, pll, pmm, pols(MAXPOL), tMod, tOut, tVis
+      real      chi, clip
+      double precision preamble(5), sfreq(MAXCHAN)
+      complex   data(MAXCHAN,4), sim(MAXCHAN,4)
+      character ltype*16, model*64, out*64, uvflags*16, version*80
 
 c     Externals.
-      character itoaf*8
-      logical uvDatOpn
+      logical   uvDatOpn
+      character itoaf*8, versan*80
 c-----------------------------------------------------------------------
+      version = versan('offaxis',
+     :                 '$Revision: 1.3 $',
+     :                 '$Date: 2010/08/02 07:42:19 $')
 c
 c  Get and check the inputs.
 c
-      call output(version)
       call keyini
       call GetOpt(replace,uvflags)
       call uvDatInp('vis',uvflags)
       call keya('model',model,' ')
       call keya('out',out,' ')
-      call keyr('clip',clip,0.)
+      call keyr('clip',clip,0.0)
       call keyfin
 
-      if(clip.lt.0)call bug('w','Clip level set to 0')
-      clip = max(clip,0.)
+      if(clip.lt.0.0)call bug('w','Clip level set to 0')
+      clip = max(clip,0.0)
       if(model.eq.' ')call bug('f','An input model must be given')
       if(out.eq.' ')call bug('f','An output dataset must be given')
 c
@@ -274,49 +274,93 @@ c***********************************************************************
       integer tMod,nx,ny,maxCmp,nCmp
       real clip,Flux(maxCmp),ll(maxCmp),mm(maxCmp)
 
-c  Get all those components above a particular clip level.
+c  Get components above a particular clip level.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
-      integer i,j,iax
-      real Data(MAXDIM)
-      double precision cdelt1,cdelt2,crpix1,crpix2,t
-      logical flags(MAXDIM)
-      character bunit*16
+
+      logical   flags(MAXDIM), valid
+      integer   i, iax, ih, iostat, j, mosize
+      real      map(MAXDIM)
+      double precision cdelt1, cdelt2, crpix1, crpix2, equ(2), pix(2), t
+      character bunit*16, text*80
+
+c     Externals.
+      logical hdprsnt
+      integer hsize
 c-----------------------------------------------------------------------
-      if(nx.gt.MAXDIM)call bug('f','Image too big for me')
+      if (nx.gt.MAXDIM) call bug('f','Image too big for me')
 
       call rdhda(tMod,'bunit',bunit,'JY/PIXEL')
       call lcase(bunit)
-      if(index(bunit,'/pixel').eq.0)then
+      if (index(bunit,'/pixel').eq.0) then
         call bug('w','Input model is not in units of Jy/pixel')
         call bug('w',' ... this may be VERY unwise')
       endif
+
       call coInit(tMod)
       call coFindAx(tMod,'stokes',iax)
-      if(iax.ne.0)then
-        call coCvt1(tMod,iax,'ap',1.d0,'aw',t)
-        if(nint(t).ne.1)then
+      if (iax.ne.0) then
+        call coCvt1(tMod,iax,'ap',1d0,'aw',t)
+        if (nint(t).ne.1) then
           call bug('w','Input model is not a Stokes-I one')
           call bug('w',' ... this operation may make no sense')
         endif
       endif
-      call rdhdd(tMod,'cdelt1',cdelt1,0.d0)
-      call rdhdd(tMod,'cdelt2',cdelt2,0.d0)
-      call rdhdd(tMod,'crpix1',crpix1,dble(nx/2+1))
-      call rdhdd(tMod,'crpix2',crpix2,dble(ny/2+1))
-      if(cdelt1.eq.0.or.cdelt2.eq.0)
+
+c     Find the pointing centre.
+      if (hdprsnt(tMod,'mostable')) then
+c       Read the pointing centre from the mosaic table.
+        call output('Reading pointing centre from mosaic table.')
+
+        call haccess(tMod, ih, 'mostable', 'read', iostat)
+        if (iostat.ne.0) call bugno('f', iostat)
+
+        mosize = hsize(ih)
+        if (mosize.ne.56) then
+          if (mosize.gt.56) then
+            call bug('f','Mosaic table contains multiple entries.')
+          else
+            call bug('f','Mosaic table appears to be corrupted.')
+          endif
+        endif
+
+        call hreadd(ih, equ(1), 16, 8, iostat)
+        if (iostat.ne.0) call bugno('f', iostat)
+        call hreadd(ih, equ(2), 24, 8, iostat)
+        if (iostat.ne.0) call bugno('f', iostat)
+        call hdaccess(ih, iostat)
+        if (iostat.ne.0) call bugno('f', iostat)
+
+        call coCvtv(tMod, 'aw/aw', equ, 'ap/ap', pix, valid)
+        crpix1 = pix(1)
+        crpix2 = pix(2)
+      else
+c       Regular synthesis image.
+        call output('Assuming pointing centre at the reference pixel.')
+        call rdhdd(tMod, 'crpix1', crpix1, dble(nx/2+1))
+        call rdhdd(tMod, 'crpix2', crpix2, dble(ny/2+1))
+      endif
+
+      write (text, 10) crpix1, crpix2
+ 10   format ('Pointing centre at pixel',f9.2,',',f9.2,'.')
+      call output(text)
+
+      call rdhdd(tMod, 'cdelt1', cdelt1, 0d0)
+      call rdhdd(tMod, 'cdelt2', cdelt2, 0d0)
+      if (cdelt1.eq.0d0 .or. cdelt2.eq.0d0)
      *  call bug('f','Pixel increments missing from the dataset')
 
+c     Load the model map.
       nCmp = 0
-      do j=1,ny
-        call xyread(tMod,j,data)
+      do j = 1, ny
+        call xyread(tMod,j,map)
         call xyflgrd(tMod,j,flags)
-        do i=1,nx
-          if(flags(i).and.abs(data(i)).gt.clip.and.
-     *      (nint(i-crpix1).ne.0.or.nint(j-crpix2).ne.0))then
+        do i = 1, nx
+          if (flags(i) .and. abs(map(i)).gt.clip. and.
+     *      (nint(i-crpix1).ne.0 .or. nint(j-crpix2).ne.0)) then
             nCmp = nCmp + 1
-            if(nCmp.gt.maxCmp)call bug('f','Too many components')
-            Flux(nCmp) = data(i)
+            if (nCmp.gt.maxCmp) call bug('f','Too many components')
+            flux(nCmp) = map(i)
             ll(nCmp) = cdelt1*(i-crpix1)
             mm(nCmp) = cdelt2*(j-crpix2)
           endif
