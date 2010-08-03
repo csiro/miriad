@@ -29,7 +29,7 @@ c                  rather than the Stokes responses.
 c         subtract Subtract off the circularly symmetric portion of the
 c                  primary beam response from I, XX and YY responses.
 c
-c$Id: offpol.for,v 1.2 2010/08/03 07:02:15 cal103 Exp $
+c$Id: offpol.for,v 1.3 2010/08/03 08:26:52 cal103 Exp $
 c--
 c  History:
 c    rjs  24apr97 Original version.
@@ -37,31 +37,32 @@ c    rjs   3may00 Stripped out code for Jones matrix computation.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
-      double precision lat
-      real chioff
-      logical rotate
-      character version*(*)
-      parameter(lat=-30.d0*DPI/180.d0,chioff=0.25*PI)
-      parameter(rotate=.true.)
-      parameter(version='Offpol: version 1.0 3-May-00')
-      integer iha,nha
-      double precision dha,ha0,ha1,ha
 
-      real rad,psi,chi,x,y,pb,pbfwhm,cutoff,maxrad
-      double precision delta,dec,freq
-      integer ic,jc,nx,ny,i,j,tiir,tqqr,tuur,tvvr,lout,pbObj,coObj
-      character out*64
-      complex xx,yy,xy,yx,jo(2,2),t,qq,uu
-      real iir(MAXDIM),qqr(MAXDIM),uur(MAXDIM),vvr(MAXDIM)
-      logical flag(MAXDIM),doraw,dosub
+      logical rotate
+      real    chioff
+      double precision lat
+      parameter (rotate = .true.)
+      parameter (chioff = 0.25*PI, lat = -30d0*DD2R)
+
+      logical doraw, dosub, flag(MAXDIM)
+      integer coObj, i, ic, iha, j, jc, lout, nha, nx, ny, pbObj, tiir,
+     *        tqqr, tuur, tvvr
+      real    chi, cutoff, iir(MAXDIM), jo(2,2), maxrad, pb, pbfwhm,
+     *        psi, qq, qqr(MAXDIM), rad, uu, uur(MAXDIM), vvr(MAXDIM),
+     *        x, xx, xy, y, yx, yy
+      double precision dec, delta, dha, freq, ha, ha0, ha1
+      character out*64, version*80
 
 c     Externals.
       integer len1
+      character versan*80
 c-----------------------------------------------------------------------
+      version = versan('offpol',
+     :                 '$Revision: 1.3 $',
+     :                 '$Date: 2010/08/03 08:26:52 $')
 c
 c  Get the inputs.
 c
-      call output(version)
       call keyini
       call keya('out',out,' ')
       lout = len1(out)
@@ -114,53 +115,51 @@ c
 
       do j=1,ny
         do i=1,nx
-          iir(i) = 0
-          qqr(i) = 0
-          uur(i) = 0
-          vvr(i) = 0
-          flag(i) = sqrt(real((i-ic)**2+(j-jc)**2)).lt.nx/2
+          iir(i) = 0.0
+          qqr(i) = 0.0
+          uur(i) = 0.0
+          vvr(i) = 0.0
+          flag(i) = sqrt(real((i-ic)**2 + (j-jc)**2)).lt.nx/2
         enddo
+
         do iha=1,nha
           ha = dha*(iha-1) + ha0
-          call parang(0.d0,dec,ha,lat,chi)
+          call parang(0d0,dec,ha,lat,chi)
           chi = chi + chioff
           do i=1,nx
             if(i.ne.ic.or.j.ne.jc)then
               x = -(i - ic)*delta
               y = (j - jc)*delta
-              rad = sqrt(x**2+y**2)
+              rad = sqrt(x**2 + y**2)
               psi = atan2(x,y)
               call atjones(rad,psi-chi,freq,Jo,pb)
-              XX = real(Jo(1,1))**2 + aimag(Jo(1,1))**2 +
-     *             real(Jo(1,2))**2 + aimag(Jo(1,2))**2
-              YY = real(Jo(2,2))**2 + aimag(Jo(2,2))**2 +
-     *             real(Jo(2,1))**2 + aimag(Jo(2,1))**2
-              t =  Jo(1,1)*conjg(Jo(2,1)) + conjg(Jo(2,2))*Jo(1,2)
-              XY = t
-              YX = conjg(t)
+              XX = Jo(1,1)*Jo(1,1) + Jo(1,2)*Jo(1,2)
+              XY = Jo(1,1)*Jo(2,1) + Jo(1,2)*Jo(2,2)
+              YX = XY
+              YY = Jo(2,1)*Jo(2,1) + Jo(2,2)*Jo(2,2)
             else
-              xx = 1
-              yy = 1
-              xy = 0
-              yx = 0
-              pb = 1
+              XX = 1.0
+              XY = 0.0
+              YX = 0.0
+              YY = 1.0
+              pb = 1.0
             endif
 
             if(doraw)then
               if(dosub)then
-                iir(i) = iir(i) + real(xx) - pb
-                qqr(i) = qqr(i) + real(yy) - pb
+                iir(i) = iir(i) + xx - pb
+                qqr(i) = qqr(i) + yy - pb
               else
-                iir(i) = iir(i) + real(xx)
-                qqr(i) = qqr(i) + real(yy)
+                iir(i) = iir(i) + xx
+                qqr(i) = qqr(i) + yy
               endif
-              uur(i) = uur(i) + real(xy)
-              vvr(i) = vvr(i) + real(yx)
+              uur(i) = uur(i) + xy
+              vvr(i) = vvr(i) + yx
             else
-              iir(i) = iir(i) + 0.5*real(xx+yy)
+              iir(i) = iir(i) + 0.5*(xx + yy)
               if(dosub)iir(i) = iir(i) - pb
-              qq = 0.5*real(xx-yy)
-              uu = 0.5*real(xy+yx)
+              qq = 0.5*(xx - yy)
+              uu = 0.5*(xy + yx)
               if(rotate)then
                 qqr(i) = qqr(i) + qq*cos(2*chi) - uu*sin(2*chi)
                 uur(i) = uur(i) + qq*sin(2*chi) + uu*cos(2*chi)
@@ -168,16 +167,18 @@ c
                 qqr(i) = qqr(i) + qq
                 uur(i) = uur(i) + uu
               endif
-              vvr(i) = vvr(i) + 0.5*real( (0.0,-1.0)*(xy-yx))
+              vvr(i) = vvr(i) + 0.5*real((0.0,-1.0)*(xy-yx))
             endif
           enddo
         enddo
+
         do i=1,nx
           iir(i) = iir(i) / nha
           qqr(i) = qqr(i) / nha
           uur(i) = uur(i) / nha
           vvr(i) = vvr(i) / nha
         enddo
+
         call xywrite(tiir,j,iir)
         call xyflgwr(tiir,j,flag)
         call xywrite(tqqr,j,qqr)

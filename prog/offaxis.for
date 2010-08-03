@@ -4,7 +4,7 @@ c= offaxis -- Remove (or simulate) ATCA off-axis polarisation effects
 c& rjs
 c: uv analysis
 c+
-c       OFFAXIS is a Miriad task which attempts to remove off-axis
+c       OFFAXIS is a Miriad task that attempts to remove off-axis
 c       instrumental polarisation from ATCA observations. As input,
 c       OFFAXIS takes a visibility dataset and a model of the source
 c       total intensity (Stokes I). Given this, it computes the expected
@@ -47,7 +47,7 @@ c                   The default is to apply these if they are available.
 c         nopass    Do not apply bandpass calibration. The default is to
 c                   apply these calibrations if they are available.
 c
-c$Id: offaxis.for,v 1.3 2010/08/02 07:42:19 cal103 Exp $
+c$Id: offaxis.for,v 1.4 2010/08/03 08:25:26 cal103 Exp $
 c--
 c  History:
 c    rjs  02may96 Original version.
@@ -62,9 +62,9 @@ c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mem.h'
 
-      integer   MAXPOL, PolXX, PolYY, PolXY, PolYX, PolI
+      integer   MAXPOL, PolI, PolXX, PolYY, PolXY, PolYX
       parameter(MAXPOL=4)
-      parameter(PolXX=-5,PolYY=-6,PolXY=-7,PolYX=-8,PolI=1)
+      parameter(PolI=1, PolXX=-5, PolYY=-6, PolXY=-7, PolYX=-8)
 
       logical   flags(MAXCHAN,4), first, replace
 
@@ -72,7 +72,7 @@ c-----------------------------------------------------------------------
      *          pRad, pll, pmm, pols(MAXPOL), tMod, tOut, tVis
       real      chi, clip
       double precision preamble(5), sfreq(MAXCHAN)
-      complex   data(MAXCHAN,4), sim(MAXCHAN,4)
+      complex   sim(MAXCHAN,4), uvdata(MAXCHAN,4)
       character ltype*16, model*64, out*64, uvflags*16, version*80
 
 c     Externals.
@@ -80,8 +80,8 @@ c     Externals.
       character itoaf*8, versan*80
 c-----------------------------------------------------------------------
       version = versan('offaxis',
-     :                 '$Revision: 1.3 $',
-     :                 '$Date: 2010/08/02 07:42:19 $')
+     :                 '$Revision: 1.4 $',
+     :                 '$Date: 2010/08/03 08:25:26 $')
 c
 c  Get and check the inputs.
 c
@@ -162,11 +162,11 @@ c
         endif
         call VarOnit(tVis,tOut,ltype)
 
-        call uvDatRd(preamble,data(1,1),flags(1,1),MAXCHAN,nchan)
+        call uvDatRd(preamble,uvdata(1,1),flags(1,1),MAXCHAN,nchan)
         if(nchan.eq.0)call bug('f','No appropriate data were found')
         dowhile(nchan.gt.0)
           do j=2,npol
-            call uvDatRd(preamble,data(1,j),flags(1,j),MAXCHAN,nchan)
+            call uvDatRd(preamble,uvdata(1,j),flags(1,j),MAXCHAN,nchan)
           enddo
           call uvinfo(tVis,'sfreq',sfreq)
 c
@@ -178,19 +178,20 @@ c
 c
 c  Difference or replace it now.
 c
-          if(npol.eq.1)then
+          if (npol.eq.1) then
             do i=1,nchan
-              sim(i,1) = 0.5*(sim(i,1)+sim(i,2))
+              sim(i,1) = 0.5*(sim(i,1) + sim(i,2))
             enddo
           endif
+
           do j=1,npol
-            if(replace)then
+            if (replace) then
               do i=1,nchan
-                data(i,j) = sim(i,j)
+                uvdata(i,j) = sim(i,j)
               enddo
             else
               do i=1,nchan
-                data(i,j) = data(i,j) - sim(i,j)
+                uvdata(i,j) = uvdata(i,j) - sim(i,j)
               enddo
             endif
           enddo
@@ -200,9 +201,9 @@ c
           call VarCopy(tVis,tOut)
           do i=1,4
             call uvputvri(tOut,'pol',-4-i,1)
-            call uvwrite(tOut,preamble,data(1,i),flags(1,i),nchan)
+            call uvwrite(tOut,preamble,uvdata(1,i),flags(1,i),nchan)
           enddo
-          call uvDatRd(preamble,data,flags,MAXCHAN,nchan)
+          call uvDatRd(preamble,uvdata,flags,MAXCHAN,nchan)
         enddo
         call uvDatCls
       enddo
@@ -218,12 +219,12 @@ c
       end
 c***********************************************************************
       subroutine Compute(sfreq,uv,sim,nchan,maxchan,chi,
-     *                                Flux,ll,mm,Rad,Psi,nCmp)
+     *                                flux,ll,mm,Rad,Psi,nCmp)
 
       integer nchan,maxchan,nCmp
       complex sim(maxchan,4)
       double precision sfreq(nchan),uv(2)
-      real Flux(nCmp),ll(nCmp),mm(nCmp),Rad(nCmp),Psi(nCmp),chi
+      real flux(nCmp),ll(nCmp),mm(nCmp),Rad(nCmp),Psi(nCmp),chi
 
 c  Compute the expected response for a particular component.
 c
@@ -232,35 +233,45 @@ c    sfreq      Sky frequency of each channel, in GHz.
 c    uv         UV coordinates, in nanosec.
 c    nchan      Number of channels.
 c    maxchan    Dimension of the sim array.
-c    Flux       Flux density of each component.
+c    flux       Flux density of each component.
 c    ll,mm      Cartesian coordinate of each component.
 c    rad,psi    Polar coordinate of the component (both radians).
-c    chi        Paralactic angle (radians).
+c    chi        Parallactic angle (radians).
 c  Output:
 c    sim        Expected response to the given field.
 c-----------------------------------------------------------------------
       include 'mirconst.h'
-      complex Jo(2,2),XX,YY,XY,YX,t,W
-      real theta,pb
-      integer i,j
+
+      integer   i, j
+      real      cxx, cxy, cyx, cyy, Jo(2,2), omega, pb, theta
+      complex   vis, XX, XY, YX, YY
 c-----------------------------------------------------------------------
-      do j=1,nchan
-        XX = 0
-        YY = 0
-        XY = 0
-        YX = 0
-        do i=1,nCmp
+      do j = 1, nchan
+        XX = (0.0,0.0)
+        YY = (0.0,0.0)
+        XY = (0.0,0.0)
+        YX = (0.0,0.0)
+
+        omega = TWOPI * sfreq(j)
+        do i = 1, nCmp
           call atJones(rad(i),psi(i)-chi,sfreq(j),Jo,pb)
-          theta = 2*PI*sfreq(j)*(uv(1)*ll(i) + uv(2)*mm(i))
-          W = Flux(i) / pb * cmplx(cos(theta),sin(theta))
-          XX = XX + W * ( real(Jo(1,1))**2 + aimag(Jo(1,1))**2 +
-     *                    real(Jo(1,2))**2 + aimag(Jo(1,2))**2 - pb)
-          YY = YY + W * ( real(Jo(2,2))**2 + aimag(Jo(2,2))**2 +
-     *                    real(Jo(2,1))**2 + aimag(Jo(2,1))**2 - pb)
-          t =  Jo(1,1)*conjg(Jo(2,1)) + conjg(Jo(2,2))*Jo(1,2)
-          XY = XY + W * t
-          YX = YX + W * conjg(t)
+
+c         Coherence matrix elements.
+          cxx = Jo(1,1)*Jo(1,1) + Jo(1,2)*Jo(1,2)
+          cxy = Jo(1,1)*Jo(2,1) + Jo(1,2)*Jo(2,2)
+          cyx = cxy
+          cyy = Jo(2,1)*Jo(2,1) + Jo(2,2)*Jo(2,2)
+
+c         Model Stokes I visibility.
+          theta = omega * (uv(1)*ll(i) + uv(2)*mm(i))
+          vis = (flux(i) / pb) * cmplx(cos(theta),sin(theta))
+
+          XX = XX + vis * (cxx - pb)
+          XY = XY + vis *  cxy
+          YX = YX + vis *  cyx
+          YY = YY + vis * (cyy - pb)
         enddo
+
         sim(j,1) = XX
         sim(j,2) = YY
         sim(j,3) = XY
@@ -269,10 +280,10 @@ c-----------------------------------------------------------------------
 
       end
 c***********************************************************************
-      subroutine GetMod(tMod,nx,ny,clip,maxCmp,nCmp,Flux,ll,mm)
+      subroutine GetMod(tMod,nx,ny,clip,maxCmp,nCmp,flux,ll,mm)
 
       integer tMod,nx,ny,maxCmp,nCmp
-      real clip,Flux(maxCmp),ll(maxCmp),mm(maxCmp)
+      real clip,flux(maxCmp),ll(maxCmp),mm(maxCmp)
 
 c  Get components above a particular clip level.
 c-----------------------------------------------------------------------
