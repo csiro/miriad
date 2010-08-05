@@ -1,11 +1,32 @@
       subroutine atJones(rad,psi,freq,Jo,pb)
 
-      real Jo(2,2), rad, psi, pb
+      real rad, psi, Jo(2,2), pb
       double precision freq
 
-c  Compute the Jones matrix of the ATCA antennas for a particular
-c  position in the primary beam.  Also compute the primary beam
-c  response.
+c  Compute the Jones matrix for the ATCA antennas for a particular
+c  frequency and position in the primary beam.  Also compute the primary
+c  beam response.
+c
+c  Accuracy of the Jones matrices appears to degrade significantly beyond
+c  a radius of approximately 2*HWHM of the primary beam.
+c
+c  In general, Jones matrices are complex-valued.  The coherence matrix
+c  is given by the product of J * transpose(conjugate(J)), i.e.
+c
+c    XX = J(1,1)*conjg(J(1,1)) + J(1,2)*conjg(J(1,2))
+c    YY = J(2,1)*conjg(J(2,1)) + J(2,2)*conjg(J(2,2))
+c    XY = J(1,1)*conjg(J(2,1)) + J(1,2)*conjg(J(2,2))
+c    YX = J(2,1)*conjg(J(1,1)) + J(2,2)*conjg(J(1,2))
+c       = conjg(XY)
+c
+c  The Jones matrix for the ATCA antennas is real-valued at all
+c  frequencies and is treated as such for efficiency.  The coherence
+c  matrix then reduces to
+c
+c    XX = J(1,1)*J(1,1) + J(1,2)*J(1,2)
+c    YY = J(2,1)*J(2,1) + J(2,2)*J(2,2)
+c    XY = J(1,1)*J(2,1) + J(1,2)*J(2,2)
+c    YX = XY
 c
 c  Inputs:
 c    rad  The distance of the point from the field centre, in radians.
@@ -16,7 +37,7 @@ c  Output:
 c    Jo   The 2x2 Jones matrix which is real-valued for the ATCA.
 c    pb   The mean total intensity primary beam response at this point.
 c
-c $Id: atjones.for,v 1.2 2010/08/03 08:20:55 cal103 Exp $
+c $Id: atjones.for,v 1.3 2010/08/05 01:08:46 cal103 Exp $
 c-----------------------------------------------------------------------
       include 'mirconst.h'
 
