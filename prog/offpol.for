@@ -29,7 +29,7 @@ c                  rather than the Stokes responses.
 c         subtract Subtract off the circularly symmetric portion of the
 c                  primary beam response from I, XX and YY responses.
 c
-c$Id: offpol.for,v 1.3 2010/08/03 08:26:52 cal103 Exp $
+c$Id: offpol.for,v 1.4 2010/08/05 00:07:54 cal103 Exp $
 c--
 c  History:
 c    rjs  24apr97 Original version.
@@ -40,42 +40,47 @@ c-----------------------------------------------------------------------
 
       logical rotate
       real    chioff
-      double precision lat
       parameter (rotate = .true.)
-      parameter (chioff = 0.25*PI, lat = -30d0*DD2R)
+      parameter (chioff = 0.25*PI)
+
+c     Observatory latitude.
+      double precision lat
+      parameter (lat = -30d0*DD2R)
 
       logical doraw, dosub, flag(MAXDIM)
-      integer coObj, i, ic, iha, j, jc, lout, nha, nx, ny, pbObj, tiir,
-     *        tqqr, tuur, tvvr
-      real    chi, cutoff, iir(MAXDIM), jo(2,2), maxrad, pb, pbfwhm,
-     *        psi, qq, qqr(MAXDIM), rad, uu, uur(MAXDIM), vvr(MAXDIM),
-     *        x, xx, xy, y, yx, yy
+      integer coObj, i, ic, iha, ipol, j, jc, lout, nha, nx, ny, pbObj,
+     *        stokes(8), toff(4)
+      real    c2chi, chi, cutoff, Jones(2,2), maxrad, off(MAXDIM,4), pb,
+     *        pbfwhm, psi, q, rad, s2chi, u, x, xx, xy, y, yx, yy
       double precision dec, delta, dha, freq, ha, ha0, ha1
-      character out*64, version*80
+      character stokId(8)*2, out*64, version*80
 
 c     Externals.
       integer len1
       character versan*80
+
+      data stokes / 1,   2,   3,   4,   -5,   -6,   -7,   -8 /
+      data stokId /'i', 'q', 'u', 'v', 'xx', 'yy', 'xy', 'yx'/
 c-----------------------------------------------------------------------
       version = versan('offpol',
-     :                 '$Revision: 1.3 $',
-     :                 '$Date: 2010/08/03 08:26:52 $')
+     :                 '$Revision: 1.4 $',
+     :                 '$Date: 2010/08/05 00:07:54 $')
 c
 c  Get the inputs.
 c
       call keyini
       call keya('out',out,' ')
       lout = len1(out)
-      if(lout.eq.0)call bug('f','An output must be given')
+      if (lout.eq.0) call bug('f','An output must be given')
       call keyd('freq',freq,1.384d0)
-      call keyt('harange',ha0,'hms',0.d0)
+      call keyt('harange',ha0,'hms',0d0)
       call keyt('harange',ha1,'hms',ha0)
       call keyt('harange',dha,'hms',0.1d0)
       nha = nint((ha1 - ha0)/dha) + 1
       call keyt('dec',dec,'dms',-0.25d0*DPI)
       call keyi('imsize',nx,255)
       call keyi('imsize',ny,nx)
-      if(nx.le.0.or.ny.le.0)call bug('f','Invalid image size')
+      if (nx.le.0 .or. ny.le.0) call bug('f','Invalid image size')
 
       call GetOpt(doraw,dosub)
       call keyfin
@@ -85,114 +90,111 @@ c
 c
 c Determine the FWHM of the primary beam at this frequency.
 c
-      call coRaDec(coObj,'SIN',0.d0,0.d0)
-      call coAxSet(coObj,3,'FREQ',0.d0,freq,0.1d0*freq)
+      call coRaDec(coObj,'SIN',0d0,0d0)
+      call coAxSet(coObj,3,'FREQ',0d0,freq,0.1d0*freq)
       call coReinit(coObj)
       call pbInit(pbObj,'atca',coObj)
       call pbInfo(pbObj,pbfwhm,cutoff,maxrad)
 
-      delta = 2 * pbfwhm / nx
+      delta = 2 * pbfwhm / real(nx)
 
-      if(doraw)then
-        call mkopen(tiir,out(1:lout)//'.xx',-5,freq,version,nx,ny,
-     *                                                delta,dec)
-        call mkopen(tqqr,out(1:lout)//'.yy',-6,freq,version,nx,ny,
-     *                                                delta,dec)
-        call mkopen(tuur,out(1:lout)//'.xy',-7,freq,version,nx,ny,
-     *                                                delta,dec)
-        call mkopen(tvvr,out(1:lout)//'.yx',-8,freq,version,nx,ny,
-     *                                                delta,dec)
-      else
-        call mkopen(tiir,out(1:lout)//'.i',1,freq,version,nx,ny,
-     *                                                delta,dec)
-        call mkopen(tqqr,out(1:lout)//'.q',2,freq,version,nx,ny,
-     *                                                delta,dec)
-        call mkopen(tuur,out(1:lout)//'.u',3,freq,version,nx,ny,
-     *                                                delta,dec)
-        call mkopen(tvvr,out(1:lout)//'.v',4,freq,version,nx,ny,
-     *                                                delta,dec)
-      endif
+c     Open an output map for each polarization.
+      do ipol = 1, 4
+        i = ipol
+        if (doraw) i = i + 4
 
-      do j=1,ny
-        do i=1,nx
-          iir(i) = 0.0
-          qqr(i) = 0.0
-          uur(i) = 0.0
-          vvr(i) = 0.0
-          flag(i) = sqrt(real((i-ic)**2 + (j-jc)**2)).lt.nx/2
+        call mkopen(toff(ipol), out(1:lout) // '.' // stokId(i),
+     *    stokes(i), freq, version, nx, ny, delta, dec)
+      enddo
+
+c     Loop over the map.
+      do j = 1, ny
+        do i = 1, nx
+          do ipol = 1, 4
+            off(i,ipol) = 0.0
+          enddo
+
+c         Blank the corners.
+          flag(i) = sqrt(real((i-ic)**2 + (j-jc)**2)).lt.real(nx/2)
         enddo
 
-        do iha=1,nha
+        do iha = 1, nha
           ha = dha*(iha-1) + ha0
           call parang(0d0,dec,ha,lat,chi)
           chi = chi + chioff
-          do i=1,nx
-            if(i.ne.ic.or.j.ne.jc)then
-              x = -(i - ic)*delta
-              y = (j - jc)*delta
-              rad = sqrt(x**2 + y**2)
-              psi = atan2(x,y)
-              call atjones(rad,psi-chi,freq,Jo,pb)
-              XX = Jo(1,1)*Jo(1,1) + Jo(1,2)*Jo(1,2)
-              XY = Jo(1,1)*Jo(2,1) + Jo(1,2)*Jo(2,2)
-              YX = XY
-              YY = Jo(2,1)*Jo(2,1) + Jo(2,2)*Jo(2,2)
-            else
-              XX = 1.0
-              XY = 0.0
-              YX = 0.0
-              YY = 1.0
+
+          if (rotate) then
+            c2chi = cos(2.0*chi)
+            s2chi = sin(2.0*chi)
+          else
+            c2chi = 1.0
+            s2chi = 0.0
+          endif
+
+          do i = 1, nx
+            if (i.eq.ic .and. j.eq.jc) then
+              xx = 1.0
+              yy = 1.0
+              xy = 0.0
+              yx = 0.0
               pb = 1.0
+            else
+c             Compute the Jones matrix at this point.
+              x = -(i - ic)*delta
+              y =  (j - jc)*delta
+              rad = sqrt(x*x + y*y)
+              psi = atan2(x,y)
+              call atjones(rad,psi-chi,freq,Jones,pb)
+
+c             Coherence matrix.
+              xx = Jones(1,1)*Jones(1,1) + Jones(1,2)*Jones(1,2)
+              yy = Jones(2,1)*Jones(2,1) + Jones(2,2)*Jones(2,2)
+              xy = Jones(1,1)*Jones(2,1) + Jones(1,2)*Jones(2,2)
+              yx = xy
             endif
 
-            if(doraw)then
-              if(dosub)then
-                iir(i) = iir(i) + xx - pb
-                qqr(i) = qqr(i) + yy - pb
-              else
-                iir(i) = iir(i) + xx
-                qqr(i) = qqr(i) + yy
-              endif
-              uur(i) = uur(i) + xy
-              vvr(i) = vvr(i) + yx
+c           Subtract the primary beam response?
+            if (dosub) then
+              xx = xx - pb
+              yy = yy - pb
+            endif
+
+            if (doraw) then
+c             Generate images of the XX, YY, XY, and YX responses.
+              off(i,1) = off(i,1) + xx
+              off(i,2) = off(i,2) + yy
+              off(i,3) = off(i,3) + xy
+              off(i,4) = off(i,4) + yx
+
             else
-              iir(i) = iir(i) + 0.5*(xx + yy)
-              if(dosub)iir(i) = iir(i) - pb
-              qq = 0.5*(xx - yy)
-              uu = 0.5*(xy + yx)
-              if(rotate)then
-                qqr(i) = qqr(i) + qq*cos(2*chi) - uu*sin(2*chi)
-                uur(i) = uur(i) + qq*sin(2*chi) + uu*cos(2*chi)
-              else
-                qqr(i) = qqr(i) + qq
-                uur(i) = uur(i) + uu
-              endif
-              vvr(i) = vvr(i) + 0.5*real((0.0,-1.0)*(xy-yx))
+c             Stokes-I.
+              off(i,1) = off(i,1) + 0.5*(xx + yy)
+
+c             Stokes-Q, and -U.
+              q = 0.5*(xx - yy)
+              u = 0.5*(xy + yx)
+              off(i,2) = off(i,2) + q*c2chi - u*s2chi
+              off(i,3) = off(i,3) + q*s2chi + u*c2chi
+
+c             Stokes-V (zero, because xy and yx are real).
+c             off(i,4) = off(i,4) + 0.5*real((0.0,-1.0)*(xy-yx))
             endif
           enddo
         enddo
 
-        do i=1,nx
-          iir(i) = iir(i) / nha
-          qqr(i) = qqr(i) / nha
-          uur(i) = uur(i) / nha
-          vvr(i) = vvr(i) / nha
-        enddo
+        do ipol = 1, 4
+          do i = 1, nx
+            off(i,ipol) = off(i,ipol) / real(nha)
+          enddo
 
-        call xywrite(tiir,j,iir)
-        call xyflgwr(tiir,j,flag)
-        call xywrite(tqqr,j,qqr)
-        call xyflgwr(tqqr,j,flag)
-        call xywrite(tuur,j,uur)
-        call xyflgwr(tuur,j,flag)
-        call xywrite(tvvr,j,vvr)
-        call xyflgwr(tvvr,j,flag)
+          call xywrite(toff(ipol), j, off(1,ipol))
+          call xyflgwr(toff(ipol), j, flag)
+        enddo
       enddo
 
-      call xyclose(tiir)
-      call xyclose(tqqr)
-      call xyclose(tuur)
-      call xyclose(tvvr)
+      do ipol = 1, 4
+        call xyclose(toff(ipol))
+      enddo
 
       end
 c***********************************************************************
@@ -223,10 +225,10 @@ c-----------------------------------------------------------------------
       character line*64
 c-----------------------------------------------------------------------
       call coCreate(coObj)
-      call coAxSet(coObj,1,'RA---SIN',dble(nx/2+1),0.d0,-delta)
+      call coAxSet(coObj,1,'RA---SIN',dble(nx/2+1),0d0,-delta)
       call coAxSet(coObj,2,'DEC--SIN',dble(ny/2+1),dec, delta)
-      call coAxSet(coObj,3,'FREQ',    1.d0,sfreq,0.1d0)
-      call coAxSet(coObj,4,'STOKES',  1.d0,dble(stokes),1.d0)
+      call coAxSet(coObj,3,'FREQ',    1d0,sfreq,0.1d0)
+      call coAxSet(coObj,4,'STOKES',  1d0,dble(stokes),1d0)
       call coReInit(coObj)
       nsize(1) = nx
       nsize(2) = ny
@@ -241,4 +243,5 @@ c-----------------------------------------------------------------------
       call coWrite(coObj,tno)
       call coFin(coObj)
       call wrhda(tno,'telescop','ATCA')
+
       end
