@@ -14,7 +14,7 @@
 # $MIR/scripts/@MIRARCH@/GNUmakedefs.
 #
 # Original: 2006/10/17, Mark Calabretta, ATNF
-# $Id: GNUmakedefs.in,v 1.3 2010/07/07 02:18:36 cal103 Exp $
+# $Id: GNUmakedefs.in,v 1.4 2010/08/18 02:11:00 cal103 Exp $
 #-----------------------------------------------------------------------------
 # Version.
 V := @PACKAGE_VERSION@
@@ -44,10 +44,10 @@ MANDB := @MANDB@
 # PGPLOT library.
 PGPLOTLIB := @PGPLOTLIB@
 
-# RPFITS library.
+# RPFITS library (full pathname required).
 RPFITSLIB := @RPFITSLIB@
 
-# WCSLIB library.
+# WCSLIB library (full pathname required).
 WCSLIB    := @WCSLIB@
 
 # X11 (just the basic X11 library, needed to satisfy PGPLOT dependencies).
