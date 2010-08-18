@@ -1,3 +1,7 @@
+c imhist.h: Include file for imhist.for.
+c
+c $Id: imhist.h,v 1.2 2010/08/18 07:29:19 cal103 Exp $
+c-----------------------------------------------------------------------
       character*80 plotopts
       parameter    ( plotopts =
      *'nbin,binsize,cumulative,logarithmic,nogauss' )
@@ -43,14 +47,12 @@
       real         histvar(NHVAR)
 
       include      'maxnax.h'
-      double precision crval(MAXNAX), cdelt(MAXNAX)
-      character*9  ctype(MAXNAX)
       integer      posmin(MAXNAX), posmax(MAXNAX)
 
       common /VAR/ plotvar, plotrnge
-      common /CHR/ plotpar, ctype
+      common /CHR/ plotpar
       common /HST/ histpar, histvar
-      common /CRD/ crval, cdelt, posmin, posmax
+      common /CRD/ posmin, posmax
 
       real         RIGHT, LEFT
       parameter    ( RIGHT=1.0, LEFT=0.0 )
