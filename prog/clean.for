@@ -97,7 +97,7 @@ c@ clip
 c       This sets the relative clip level in Steer mode. Values are
 c       typically 0.75 to 0.9. The default is image dependent.
 c
-c$Id: clean.for,v 1.7 2010/08/19 07:41:39 cal103 Exp $
+c$Id: clean.for,v 1.8 2010/08/19 08:37:44 cal103 Exp $
 c--
 c
 c  History:
@@ -201,8 +201,8 @@ c
       character itoaf*8, versan*80
 c-----------------------------------------------------------------------
       version = versan ('clean',
-     *                  '$Revision: 1.7 $',
-     *                  '$Date: 2010/08/19 07:41:39 $')
+     *                  '$Revision: 1.8 $',
+     *                  '$Date: 2010/08/19 08:37:44 $')
 c
 c  Get the input parameters.
 c
@@ -449,7 +449,7 @@ c
 c  Construct a header for the output file, and give some history
 c  information.
 c
-      call Header(lMap,lOut,blc,trc,totNiter,clip,mode,minpatch,
+      call Header(lMap,lOut,blc,trc,totNiter,minpatch,clip,mode,
      *                                                version)
 c
 c  Close up the files. Ready to go home.
@@ -641,88 +641,59 @@ c
 c
       end
 c***********************************************************************
-      subroutine Header(lIn,lOut,blc,trc,Niter,
-     *  clip,mode,minpatch,version)
+      subroutine Header (lIn, lOut, blc, trc, niters, minpatch, clip,
+     *  mode, version)
+
+      integer   lIn, lOut, blc(3), trc(3), niters, minpatch
+      real      clip
+      character mode*(*), version*(*)
 c
-      integer lIn,lOut,Niter,minpatch,blc(3),trc(3)
-      real clip
-      character mode*(*),version*(*)
+c Copy the header to the model.
 c
-c Copy across the header to the model.
-c
-c  Inputs:
-c    lIn
-c    lOut
-c    blc
-c    trc
-c    Niter
-c    clip
-c    mode
-c    minPatch
-c    version
 c-----------------------------------------------------------------------
-      integer i,lblc,ltrc
-      real crpix1,crpix2,crpix3
-      character line*72,txtblc*32,txttrc*32
-      integer nkeys
-      parameter (nkeys = 33)
-      character keyw(nkeys)*8
-c
-c  Externals.
-c
+      integer   lblc, ltrc
+      double precision crpix1, crpix2, crpix3
+      character line*72, txtblc*32, txttrc*32
+
       character itoaf*8
-c
-      data keyw/   'cdelt1  ','cdelt2  ','cdelt3  ','cdelt4  ',
-     *  'crpix4  ','crval1  ','crval2  ','crval3  ','crval4  ',
-     *             'ctype1  ','ctype2  ','ctype3  ','ctype4  ',
-     *  'obstime ','epoch   ','history ','instrume','lstart  ',
-     *  'lstep   ','ltype   ','lwidth  ','object  ','mostab  ',
-     *  'observer','telescop','obsra   ','cellscal','pbtype  ',
-     *  'obsdec  ','restfreq','vobs    ','pbfwhm  ','btype   '/
-c
-c  Fill in some parameters that will have changed between the input
-c  and output.
-c
-      call wrhda(lOut,'bunit','JY/PIXEL')
-      call rdhdr(lIn,'crpix1',crpix1,1.)
-      call rdhdr(lIn,'crpix2',crpix2,1.)
-      call rdhdr(lIn,'crpix3',crpix3,1.)
-      crpix1 = crpix1 - blc(1) + 1
-      crpix2 = crpix2 - blc(2) + 1
-      crpix3 = crpix3 - blc(3) + 1
-      call wrhdr(lOut,'crpix1',crpix1)
-      call wrhdr(lOut,'crpix2',crpix2)
-      call wrhdr(lOut,'crpix3',crpix3)
-      call wrhdi(lOut,'niters',Niter)
-c
-c  Copy all the other keywords across, which have not changed and add
-c  history.
-c
-      do i = 1, nkeys
-        call hdcopy(lIn, lOut, keyw(i))
-      enddo
-c
-c  Write crap to the history file, to attempt (ha!) to appease Neil.
-c
+      external  itoaf
+c-----------------------------------------------------------------------
+c     Copy all header keywords.
+      call headcopy(lIn, lOut, 0, 4, 0, 0)
+
+c     Update keywords that have changed.
+      call rdhdd(lIn,  'crpix1', crpix1, 1d0)
+      call rdhdd(lIn,  'crpix2', crpix2, 1d0)
+      call rdhdd(lIn,  'crpix3', crpix3, 1d0)
+      crpix1 = crpix1 - blc(1) + 1d0
+      crpix2 = crpix2 - blc(2) + 1d0
+      crpix3 = crpix3 - blc(3) + 1d0
+      call wrhdd(lOut, 'crpix1', crpix1)
+      call wrhdd(lOut, 'crpix2', crpix2)
+      call wrhdd(lOut, 'crpix3', crpix3)
+      call wrhda(lOut, 'bunit', 'JY/PIXEL')
+      call wrhdi(lOut, 'niters', niters)
+
+c     Write crap to the history file, to attempt (ha!) to appease Neil.
       call hisopen(lOut,'append')
-      line = 'CLEAN: Miriad '//version
+      line = 'CLEAN: Miriad ' // version
       call hiswrite(lOut,line)
       call hisinput(lOut,'CLEAN')
-c
+
       call mitoaf(blc,3,txtblc,lblc)
       call mitoaf(trc,3,txttrc,ltrc)
-      line = 'CLEAN: Bounding region is Blc = ('//txtblc(1:lblc)//
-     *                               '),Trc = ('//txttrc(1:ltrc)//')'
+      line = 'CLEAN: Bounding region is Blc = (' // txtblc(1:lblc) //
+     *       '), Trc = (' // txttrc(1:ltrc) // ')'
       call hiswrite(lOut,line)
-c
+
       if (mode.eq.'steer' .or. mode.eq.'any') then
         write(line,'(''CLEAN: Steer Clip Level = '',f6.3)')Clip
         call hiswrite(lOut,line)
       endif
-      call hiswrite(lOut,'CLEAN: Minpatch = '//itoaf(minpatch))
-      call hiswrite(lOut,'CLEAN: Total Iterations = '//itoaf(Niter))
+      call hiswrite(lOut,'CLEAN: Minpatch = ' // itoaf(minpatch))
+      call hiswrite(lOut,'CLEAN: Total Iterations = ' // itoaf(niters))
       call hisclose(lOut)
-c
+
       end
 c***********************************************************************
       subroutine BeamChar(lBeam,n1,n2,ic,jc,Histo,maxPatch)
