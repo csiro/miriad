@@ -1,40 +1,15 @@
       program avmaths
-c-----------------------------------------------------------------------
-c     AVMATHS averages designated planes from a cube, and then
-c     performs some mathematical operation on the cube with the
-c     averaged plane.
-c
-c       1) subtraction:
-c               OUT = IN - AVERAGE
-c
-c       2) optical depth
-c               TAU = LN (AVERAGE / IN)
-c
-c       3) replace
-c               OUT = AVERAGE
-c
-c       4) multiplication
-c               OUT = IN * AVERAGE
-c
-c       Limitations:
-c        1) the region input parameter should be specified only
-c           with the IMAGE command, e.g.,
-c
-c           region=image(1,5),image(125,128)
-c
-c           would average and subtract planes 1:5 and 125:128
-c           any specified x-y sub-regions will be ignored
-c
-c
-c= AVMATHS - Operate on cube with averaged plane from cube
+
+c= avmaths - Operate on cube with averaged plane from cube
 c& nebk
 c: analysis
 c+
 c       AVMATHS averages designated planes from a cube, and then
 c       performs some mathematical operation on the cube with the
-c       averaged plane. Currently subtraction, optical depth, and
-c       replacement operations have been coded.  Undefined output
-c       pixels are blanked.
+c       averaged plane.  Subtraction, optical depth, replacement,
+c       and multiplication operations have been coded.  Undefined
+c       output pixels are blanked.
+c
 c@ in
 c       The input image. Wild card expansion is supported. No default.
 c@ out
@@ -49,11 +24,10 @@ c       spatial sub-regions will be ignored.
 c@ options
 c       Task enrichment options.  Minimum match is active.
 c
-c       "subtract" for subtraction:   OUT(i,j,k) = IN(i,j,k) - AV(i,j)
-c       "odepth"   for optical depth: OUT(i,j,k) = LN (AV(i,j) /
-c                                                    IN(i,j,k))
-c       "replace"  for replacement:   OUT(i,j) = AV(i,j)
-c       "multiply" for multiplication OUT(i,j,k) = IN(i,j,k) * AV(i,j)
+c       "subtract"  OUT(i,j,k) = IN(i,j,k) - AV(i,j)
+c       "odepth"    OUT(i,j,k) = ln(AV(i,j) / IN(i,j,k))
+c       "replace"   OUT(i,j)   = AV(i,j)
+c       "multiply"  OUT(i,j,k) = IN(i,j,k) * AV(i,j)
 c
 c       "noreduce" causes the output image to be of the same dimensions
 c           as the input image when REPLACEMENT is invoked.  By default,
@@ -66,7 +40,7 @@ c
 c       Pixels are blanked if the input pixel is blanked, the averaged
 c       channel pixel is blanked, or the output is undefined.
 c
-c$Id: avmaths.for,v 1.2 2010/08/19 05:05:16 cal103 Exp $
+c$Id: avmaths.for,v 1.3 2010/08/19 06:37:10 cal103 Exp $
 c--
 c  History:
 c    nebk 26jul90 Original version.
@@ -93,43 +67,27 @@ c    rjs  02apr98 Increase maxruns.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
-      integer maxboxes, maxruns, maxplane
-      parameter (maxboxes = 1024, maxruns = 9*maxdim, maxplane = 1024)
-cc
-      real buffer(maxbuf)
-      integer avpnt, npnt
-      common buffer
 
+      integer MAXBOXES, MAXRUNS, MAXPLANE
+      parameter (MAXBOXES = 1024, MAXRUNS = 9*MAXDIM, MAXPLANE = 1024)
+
+      logical   domul, dood, dored, dorepl, dosub, flags(MAXDIM), more
+      integer   avpnt, blc(MAXNAX), boxes(MAXBOXES), i, iend(MAXPLANE),
+     *          isnext, istart(MAXPLANE), k, lin, lout, naxis, nplanes,
+     *          npnt, nruns, nsect, planes(MAXPLANE), runs(3,MAXRUNS),
+     *          size(MAXNAX), size3, trc(MAXNAX), xblc, xtrc, yblc, ytrc
+      real      buffer(MAXBUF), rline(MAXDIM)
       double precision cdelt3, zav
-      real rline(maxdim)
-      integer nruns, runs(3,maxruns), planes(maxplane), nplanes,
-     *xblc, xtrc, yblc, ytrc, boxes(maxboxes), blc(maxnax),
-     *trc(maxnax), size(maxnax), i, k, naxis, lin, lout, isnext,
-     *istart(maxplane), iend(maxplane), nsect, size3
-      character in*80, out*80, aline*72, itoaf*1, str*1
-      logical more, flags(maxdim), dosub, dood, dorepl, dored, domul
+      character aline*72, in*80, out*80, str*1, version*80
 
-      integer nkeys
-      parameter (nkeys = 47)
-      character keyw(nkeys)*8, version*80
+      character itoaf*1, versan*80
+      external  itoaf, versan
 
-      character versan*80
-      external  versan
-
-      data keyw/     'cdelt1  ','cdelt2  ','cdelt3  ',
-     *    'cdelt4  ','cdelt5  ','crota1  ','crota2  ','crota3  ',
-     *    'crota4  ','crota5  ','crpix1  ','crpix2  ','crpix3  ',
-     *    'crpix4  ','crpix5  ','crval1  ','crval2  ','crval3  ',
-     *    'crval4  ','crval5  ','ctype1  ','ctype2  ','ctype3  ',
-     *    'ctype4  ','ctype5  ','date-obs','epoch   ','history ',
-     *    'instrume','niters  ','object  ','restfreq','telescop',
-     *    'vobs    ','obsra   ','obsdec  ','observer','rms     ',
-     *    'bmaj    ','bmin    ','bpa     ','pbfwhm  ','pbtype  ',
-     *    'btype   ','mostable','obstime ','cellscal'/
+      common buffer
 c-----------------------------------------------------------------------
       version = versan('avmaths',
-     *                 '$Revision: 1.2 $',
-     *                 '$Date: 2010/08/19 05:05:16 $')
+     *                 '$Revision: 1.3 $',
+     *                 '$Date: 2010/08/19 06:37:10 $')
 c
 c  Get the input parameters.
 c
@@ -138,13 +96,13 @@ c
       call keya ('out', out, ' ')
       if (in.eq.' ' .or. out.eq.' ')
      *    call bug ('f', 'You must specify the input and output files')
-      call boxinput ('region', in, boxes, maxboxes)
+      call boxinput ('region', in, boxes, MAXBOXES)
       call getopt (dosub, dood, dorepl, dored, domul)
       call keyfin
 c
 c  Open the input image and pass some information to the box routines
 c
-      call xyopen (lin, in, 'old', maxnax, size)
+      call xyopen (lin, in, 'old', MAXNAX, size)
 c
 c Allocate memory for images
 c
@@ -155,22 +113,22 @@ c Deal partly with region
 c
       call rdhdi (lin, 'naxis', naxis, 0)
       if (naxis.lt.3) call bug ('f', 'Image only has 2 dimensions')
-      call boxmask (lin, boxes, maxboxes)
-      call boxset (boxes, maxnax, size,' ')
+      call boxmask (lin, boxes, MAXBOXES)
+      call boxset (boxes, MAXNAX, size,' ')
 c
 c  Find region of image which contains all channels to average
 c  and then work out which planes of those specified are not
 c  completely blank (pointless to include those).
 c
-      call boxinfo (boxes, maxnax, blc, trc)
+      call boxinfo (boxes, MAXNAX, blc, trc)
       nplanes = 0
       do k = blc(3), trc(3)
-        call boxruns (1, k, ' ', boxes, runs, maxruns,
+        call boxruns (1, k, ' ', boxes, runs, MAXRUNS,
      *                nruns, xblc, xtrc, yblc, ytrc)
 
         if (nruns.ne.0) then
            nplanes = nplanes + 1
-           if (nplanes.gt.maxplane)
+           if (nplanes.gt.MAXPLANE)
      *       call bug ('f', 'Too many channels to average')
            planes(nplanes) = k
         endif
@@ -180,7 +138,7 @@ c  Create the output image
 c
       size3 = size(3)
       if (dored) then
-        do i = 3, maxnax
+        do i = 3, MAXNAX
           if (size(i).gt.1) then
             str = itoaf(i)
             call output ('Reducing axis '//str//' size to 1')
@@ -189,12 +147,10 @@ c
         enddo
       endif
 c
-c Open output image and copy header keywords
+c Open output image and copy header keywords.
 c
       call xyopen (lout, out, 'new', naxis, size)
-      do i = 1, nkeys
-        call hdcopy (lin, lout, keyw(i))
-      enddo
+      call headcopy (lin, lout, 0, naxis, 0, 0)
 c
 c  Write the history.
 c
