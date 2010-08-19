@@ -1,141 +1,138 @@
 c************************************************************************
-c* headcopy - Copy the header of a dataset
+c* headcopy - Copy image header
 c& bpw
 c: utilities, image-i/o
 c+
-      subroutine headcopy( tnoinp, tnoout, axnum, naxis, blc, trc )
+      subroutine headcopy(tnoinp, tnoout, axnum, naxis, blc, trc)
 
-      integer tnoinp, tnoout
-      integer axnum(*)
-      integer naxis
-      integer blc(*), trc(*)
+      integer tnoinp, tnoout, axnum(*), naxis, blc(*), trc(*)
 
-c Headcopy copies all the small items (the header) of one dataset to
-c another. It's list supposedly contains all official header elements.
-c A few items must be treated in a special way, as described below.
+c Headcopy copies the small items (the header) from one image to
+c another.  Its list contains all official header elements except for
+c the four described below.
 c
-c - The following items are copied directly:
-c    'history ','bmaj    ','bmin    ','bpa     ','bunit   ',
-c    'obstime ','epoch   ','instrume','ltype   ','lstart  ',
-c    'lwidth  ','lstep   ','niters  ','object  ','observer',
-c    'obsdec  ','obsra   ','pbfwhm  ','restfreq','telescop',
-c    'vobs    ','cellscal','btype   ','llrot   ','mostable'
+c The items listed in the KEYW array (below) are copied verbatim except
+c for crpix, crval, cdelt, crota and ctype which may be deleted,
+c exchanged, or reversed depending on axis permutations.  The axnum
+c array defines the relation between old and new axes, e.g.
 c
-c - The datamin and datamax items are explicitly excluded. One should
-c recalculate the min and max of the output dataset and update these
-c two items separately with wrhdr.
+c                                     axnum
+c                        naxis  (1)  (2)  (3)  (4)
+c                        -----  ---  ---  ---  ---
+c           direct copy:   4     1    2    3    4
+c         delete z-axis:   2     1    2    0    0
+c         delete x-axis:   2     2    3    0    0
+c    output is zxy cube:   3     3    1    2    0
+c       x-axis reversed:   4    -1    2    3    4
+c         verbatim copy:  any    0    -    -    -
 c
-c - The naxis and naxis# items are not treated by headcopy, as
-c xy(z)open already must take care of them.
+c   The last entry shows the shorthand used in the common case where
+c   there are no axis permutations and the input and output images have
+c   the same dimensions (no sub-imaging).
 c
-c - crpix, crval, cdelt, crota and ctype are copied, but: axes can be
-c exchanged, deleted or reversed and then the order or values must be
-c changed. The array axnum gives the relation between old and new axes.
-c The following table gives a few examples.
-c                                    axnum(1) axnum(2) axnum(3) axnum(4)
-c direct copy                           1        2        3        4
-c delete z-axis (e.g. for contsub)      1        2        0        0
-c delete x-axis (contsub on cube with
-c                velocities on x-axis   2        3        0        0
-c output is zxy cube                    3        1        2        0
-c x-axis was reversed                  -1        2        3        4
+c   For reversed axes cdelt is multiplied by -1 and 180 added to crota.
 c
-c - For reversed axes cdelt is multiplied by -1 and 180 is added to
-c crota.
-c - For output datasets whose corners are different from the input
-c dataset, crpix may have to be corrected. This is done using the arrays
-c blc and trc, which give the corners of the output dataset relative to
-c the pixel numbers of the input dataset. blc is used for non-reversed
-c axes and trc for reversed axes. Often one can use the output of
-c subroutine boxinfo to get blc and trc.
+c   For output images whose corners differ from the input image, crpix
+c   may have to be corrected.  This is done using the arrays blc and trc
+c   which give the corners of the output image relative to the pixel
+c   numbers of the input image.  blc is used for non-reversed axes and
+c   trc for reversed axes.  Often one can use the output of subroutine
+c   boxinfo to get blc and trc.
 c
-c It is often the case that no axes are reversed and that the sizes of
-c the input and output datasets are the same. Then it suffices to set
-c axnum(1) to zero, i.e. headcopy( tnoinp, tnoout, 0, naxis, 0,0 ) will
-c do the trick.
+c As xyopen and xyzopen maintain the naxis and naxis# items, they are
+c not copied by headcopy.  datamin and datamax are also not copied.
+c They must be recalculated explicitly for the output image and updated
+c with wrhdr.
 c
 c   Input:
 c      tnoinp     handle of input image
 c      tnoout     handle of output image
 c      axnum      array giving relation betweem old and new axes
 c                 (negative values imply axis reversal)
-c      naxis      dimension of input dataset
-c      blc        list of bottom-left-corners of input dataset region
-c      trc        list of top-right-corners of input dataset region
-c--
-c History:
+c      naxis      dimension of input image
+c      blc        list of bottom-left-corners of input image region
+c      trc        list of top-right-corners of input image region
 c
-c    bpw  22jun91  Installed
-c    bpw  04aug91  More info in document
-c    bpw  05aug91  Add axnum(1)=0 possibility
-c    bpw  11dec92  Add btype
-c    bpw  16dec92  No special copy for btype, per Neil's remark
-c    bpw   1feb93  Made crpix double precision too
-c    pjt  15mar95  fixed statement order for f2c (linux)
-c    rjs  02jul97  cellscal change.
-c    rjs  23jul97  added pbtype.
-c    rjs  20nov98  added llrot.
-c    bpw  05mar99  real->double for last argument fixed call to rdhdd
-c    rjs  17oct99  added mostable.
-c
+c $Id: headcopy.for,v 1.2 2010/08/19 05:13:32 cal103 Exp $
 c***********************************************************************
+      integer   CRPIX, CDELT, CRVAL, CROTA, CTYPE
+      parameter (CRPIX = 1, CDELT = 2, CRVAL = 3, CROTA = 4, CTYPE = 5)
 
-      character*8      c
-      integer          n, k
-      character*1      itoaf
+      integer   NKEYS
+      parameter (NKEYS = 31)
+
+      logical   hdprsnt
+      integer   n, k
       double precision dvalue
-      character*80     avalue
-      logical          hdprsnt
+      character avalue*80, keyIn*8, keyOut*8, keyw(NKEYS)*8
 
-      integer          NKEYS
-      parameter        ( NKEYS = 31 )
-      character*8      keyw(NKEYS)
+      character itoaf*1
+      external  itoaf
+
       data keyw/
-     *    'crpix   ','crval   ','cdelt   ','crota   ','ctype   ',
-     *    'history ','cellscal',
-     *    'bmaj    ','bmin    ','bpa     ','bunit   ',
-     *    'obstime ','epoch   ','instrume','mostable',
-     *	  'ltype   ','lstart  ','lwidth  ','lstep   ',
-     *    'niters  ','object  ','observer','obsdec  ','obsra   ',
-     *    'pbfwhm  ','restfreq','telescop','vobs    ',
-     *    'btype   ','pbtype  ','llrot   '/
-
+     *    'crpix   ', 'cdelt   ', 'crval   ', 'crota   ', 'ctype   ',
+     *    'history ', 'cellscal',
+     *    'bmaj    ', 'bmin    ', 'bpa     ', 'bunit   ',
+     *    'obstime ', 'epoch   ', 'instrume', 'mostable',
+     *    'ltype   ', 'lstart  ', 'lwidth  ', 'lstep   ',
+     *    'niters  ', 'object  ', 'observer', 'obsdec  ', 'obsra   ',
+     *    'pbfwhm  ', 'restfreq', 'telescop', 'vobs    ',
+     *    'btype   ', 'pbtype  ', 'llrot   '/
+c-----------------------------------------------------------------------
+c     Handle crpix, crval, cdelt, crota, and ctype.
       do k = 1, 5
-         do n = 1, naxis
-            if( axnum(1) .eq. 0 ) then
-               c = keyw(k)(1:5) // itoaf( n )
-               call hdcopy( tnoinp, tnoout, c )
-            else
-            if( axnum(n) .ne. 0 ) then
-               c = keyw(k)(1:5) // itoaf( abs(axnum(n)) )
-               if( hdprsnt( tnoinp, c ) ) then
-                  if( k.eq.1 ) call rdhdd( tnoinp, c, dvalue, 0.d0 )
-                  if( k.eq.2 ) call rdhdd( tnoinp, c, dvalue, 0.d0 )
-                  if( k.eq.3 ) call rdhdd( tnoinp, c, dvalue, 0.d0 )
-                  if( k.eq.4 ) call rdhdd( tnoinp, c, dvalue, 0.d0 )
-                  if( k.eq.5 ) call rdhda( tnoinp, c, avalue, ' ' )
-                  if( axnum(n).gt.0 ) then
-                     if( k.eq.1 ) dvalue = dvalue - blc( axnum(n)) + 1
+        do n = 1, naxis
+          keyOut = keyw(k)(1:5) // itoaf(n)
+
+          if (axnum(1).eq.0) then
+c           Verbatim copy.
+            call hdcopy(tnoinp, tnoout, keyOut)
+          else
+c           Handle axis permutations.
+            if (axnum(n).ne.0) then
+              keyIn = keyw(k)(1:5) // itoaf(abs(axnum(n)))
+
+              if (hdprsnt(tnoinp, keyIn)) then
+c               Read it from the input image.
+                if (k.eq.CTYPE) then
+                  call rdhda(tnoinp, keyIn, avalue, ' ')
+                else
+                  call rdhdd(tnoinp, keyIn, dvalue, 0d0)
+                endif
+
+                if (axnum(n).gt.0) then
+                  if (k.eq.CRPIX) then
+c                   Sub-imaging.
+                    dvalue = dvalue - blc(axnum(n)) + 1d0
                   endif
-                  if( axnum(n).lt.0 ) then
-                     if( k.eq.1 ) dvalue = trc(-axnum(n)) - dvalue + 1
-                     if( k.eq.3 ) dvalue = -dvalue
-                     if( k.eq.4 ) dvalue = dvalue - 180.d0
+
+                else if (axnum(n).lt.0) then
+c                 Axis reversal.
+                  if (k.eq.CRPIX) then
+c                   Sub-imaging.
+                    dvalue = trc(-axnum(n)) - dvalue + 1d0
+                  else if (k.eq.CDELT) then
+                    dvalue = -dvalue
+                  else if (k.eq.CROTA) then
+                    dvalue = dvalue - 180d0
                   endif
-                  c = keyw(k)(1:5) // itoaf(       n  )
-                  if( k.eq.1 ) call wrhdd( tnoout, c, dvalue )
-                  if( k.eq.2 ) call wrhdd( tnoout, c, dvalue )
-                  if( k.eq.3 ) call wrhdd( tnoout, c, dvalue )
-                  if( k.eq.4 ) call wrhdd( tnoout, c, dvalue )
-                  if( k.eq.5 ) call wrhda( tnoout, c, avalue )
-               endif
+                endif
+
+c               Write it to the output image.
+                if (k.eq.CTYPE) then
+                  call wrhda(tnoout, keyOut, avalue)
+                else
+                  call wrhdd(tnoout, keyOut, dvalue)
+                endif
+              endif
             endif
-            endif
-         enddo
+          endif
+        enddo
       enddo
 
+c     Copy the remaining items verbatim.
       do k = 6, NKEYS
-         call hdcopy( tnoinp, tnoout, keyw(k) )
+         call hdcopy(tnoinp, tnoout, keyw(k))
       enddo
 
       return
