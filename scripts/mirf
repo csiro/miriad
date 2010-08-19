@@ -1,0 +1,98 @@
+#!/bin/sh
+#-----------------------------------------------------------------------------
+# Usage: mirf [-d] [file]
+#-----------------------------------------------------------------------------
+# sed script that does basic reformatting of Miriad Fortran source code,
+# trying to achieve some measure of consistency of style.
+#
+# *** WARNING: It may generate lines longer than 72 characters. ***
+#
+# If file is omitted input is taken from stdin.
+#
+# Options:
+#   -d     De-tabbify, shifting left by two spaces.  Where tabs have been used
+#          inconsistently in a source file, 'mirf -d' should be used within an
+#          editor to filter tabbed blocks of text as appropriate.  mirf uses
+#          the following sequence of operations:
+#            1. use the unix 'expand' utility to replace tabs with blanks,
+#            2. remove trailing blanks,
+#            3. remove the two blanks in columns 7 and 8 in non-comment
+#               lines.
+#
+# Notes:
+#    1) As at 2010/08/19, the following continuation characters have been used
+#       in Miriad:
+#
+#           *   7694
+#           +   2779
+#         0-9    494
+#           :    344
+#           -    135
+#           &     19
+#         A-E     14
+#           %     11
+#           .      2
+#           c      1
+#
+#       In view of its prevalance, we have settled on '*'.
+#
+# Original: 2010/08/19 MRC (from ancient lore).
+# $Id: mirf,v 1.1 2010/08/19 05:00:29 cal103 Exp $
+#-----------------------------------------------------------------------------
+  DETAB=
+  FILE="-"
+
+  while [ "$#" -gt 0 ]
+  do
+    case $1 in
+      -d)
+        DETAB=1
+        ;;
+      *)
+        FILE="$1"
+        break
+        ;;
+    esac
+
+    [ "$2" = "" ] && break
+
+    shift
+  done
+
+  if [ "$DETAB" ]
+  then
+    expand "$FILE" | sed -e '{s/  *$//;/^[ 1-9]/s/^\(......\)  /\1/;}'
+  else
+    expand "$FILE"
+  fi | sed -e 's|  *$||' \
+           -e 's|^     [^ ]|     *|'   \
+           -e 's|^  *implicit none$||' \
+           -e 's|( |(|g'  \
+           -e 's| )|)|g'  \
+           -e 's| \.eq\.|.eq.|g' \
+           -e 's| \.ne\.|.ne.|g' \
+           -e 's| \.ge\.|.ge.|g' \
+           -e 's| \.gt\.|.gt.|g' \
+           -e 's| \.le\.|.le.|g' \
+           -e 's| \.lt\.|.lt.|g' \
+           -e 's| \.eqv\.|.eqv.|g' \
+           -e 's| \.neqv\.|.neqv.|g' \
+           -e 's|\.eq\. |.eq.|g' \
+           -e 's|\.ne\. |.ne.|g' \
+           -e 's|\.ge\. |.ge.|g' \
+           -e 's|\.gt\. |.gt.|g' \
+           -e 's|\.le\. |.le.|g' \
+           -e 's|\.lt\. |.lt.|g' \
+           -e 's|\.not\. |.not.|g' \
+           -e 's|\.eqv\. |.eqv.|g' \
+           -e 's|\.neqv\. |.neqv.|g' \
+           -e 's|\([^ ]\)\.or\.|\1 .or.|g'   \
+           -e 's|\.or\.\([^ ]\)|.or. \1|g'   \
+           -e 's|\([^ ]\)\.and\.|\1 .and.|g' \
+           -e 's|\.and\.\([^ ]\)|.and. \1|g' \
+           -e 's| if(| if (|'   \
+           -e 's|)then|) then|' \
+           -e 's|end if|endif|' \
+           -e 's|end do|enddo|' \
+           -e 's| do \([^ =]*\)=| do \1 =|' \
+           -e 's| do \([^ =]*\)=\([^ ]\)| do \1= \2|'
