@@ -18,23 +18,21 @@ c       but see the "asymmetric" option if this is not so.  If this is
 c       not given, then a Gaussian beam must be specified by the fwhm
 c       and pa parameters.
 c@ fwhm
-c       This is used to specify the gaussian beam used when convolving.
-c       Normally it gives the size of the beam to convolve with, but
-c       using options=final causes CONVOL to interpret the parameters
-c       as the required resolution of the output image.
-c       The size, in arcsec, will normally be two numbers, giving the
-c       full-width at half-maximum of the major and minor axes of the
-c       gaussian. If only one number is given, the gaussian will have
-c       equal major and minor axes.
 c       This parameter is ignored if the "beam" keyword is given.
+c       Otherwise, it specifies the width of the Gaussian convolving
+c       function unless options=final, in which case it specifies the
+c       required resolution of the output image.  The size, in arcsec,
+c       will normally be two numbers giving the full-width at half-
+c       maximum of the major and minor axes of the Gaussian.  At least
+c       one number must be given.  If only one is given, the Gaussian
+c       will have equal axes.
 c@ pa
-c       The position angle, in degrees, of the gaussian beam.
-c       Normally this is the position angle of the beam that is used
-c       when convolving. However options=final causes this parameter to
-c       be interpreted as the required position angle in the effective
-c       beam of the output image.
-c       It is measured north through towards east, in degrees.
 c       This parameter is ignored if the "beam" keyword is given.
+c       Otherwise, it specifies the position angle of the Gaussian
+c       convolving function, unless options=final, in which case it
+c       specifies the required position angle of the effective beam of
+c       the output image.  It is measured north through towards east, in
+c       degrees.  Default 0.
 c@ region
 c       The region of the input map to convolve.  See the Users Manual
 c       for instructions on how to specify this.  The default is the
@@ -74,7 +72,7 @@ c@ sigma
 c       When doing devonvolution (options=divide), this gives a noise
 c       parameter. Default is 0.
 c
-c$Id: convol.for,v 1.6 2010/08/20 07:50:33 cal103 Exp $
+c$Id: convol.for,v 1.7 2010/08/20 08:40:04 cal103 Exp $
 c--
 c  History:
 c    rjs,mchw 18aug89 Converted from RESTORE.
@@ -106,32 +104,30 @@ c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
       include 'mirconst.h'
-
-      integer maxbox,maxruns
-      parameter (maxruns=3*maxdim)
-      parameter (maxbox=1024)
-
-      character map*512,beam*512,out*512
-      integer nsize(MAXNAX),naxis,ifail
-      integer lMap,lBeam,lOut,iref,jref,blc(3),trc(3)
-      integer xmin,xmax,ymin,ymax,nx,ny,n1,n2,xoff,yoff
-      integer nPoint,nRuns,k,l,Box(maxbox),Runs(3,maxRuns)
-      double precision cdelt1,cdelt2
-      real crpix1,crpix2,bmaj,bmin,bpa,bmaj1,bmin1,bpa1,factor,sigma
-      real temp
-      character bunit*32, flags*4, text*80, version*80
-      logical divide,selfscal,rect,asym,corr,doscale,dogaus,final
-
-      integer handle,pDat
       include 'mem.h'
+
+      integer    MAXBOX, MAXRUNS
+      parameter (MAXBOX  = 1024, MAXRUNS = 3*maxdim)
+
+      logical   asym, corr, divide, dogaus, doscale, final, rect,
+     *          selfscal
+      integer   Box(MAXBOX), Runs(3,MAXRUNS), blc(3), handle, ifail,
+     *          iref, jref, k, l, lBeam, lMap, lOut, n1, n2, nPoint,
+     *          nRuns, naxis, nsize(MAXNAX), nx, ny, pDat, trc(3), xmax,
+     *          xmin, xoff, ymax, ymin, yoff
+      real      bmaj, bmaj1, bmin, bmin1, bpa, bpa1, crpix1, crpix2,
+     *          factor, sigma, temp
+      double precision cdelt1, cdelt2
+      character beam*512, bunit*32, flags*4, map*512, out*512, text*80,
+     *          version*72
 
       logical   BoxRect,keyprsnt
       character itoaf*8, versan*80
       external  boxrect, itoaf, keyprsnt, versan
 c-----------------------------------------------------------------------
       version = versan('convol',
-     *                 '$Revision: 1.6 $',
-     *                 '$Date: 2010/08/20 07:50:33 $')
+     *                 '$Revision: 1.7 $',
+     *                 '$Date: 2010/08/20 08:40:04 $')
 c
 c  Get the input parameters.
 c
@@ -140,16 +136,16 @@ c
       call keya('beam',Beam,' ')
       doGaus = Beam.eq.' '
       if (doGaus) then
-        call keyr('fwhm',bmaj1,0.)
+        call keyr('fwhm',bmaj1,0.0)
         call keyr('fwhm',bmin1,bmaj1)
-        call keyr('pa',bpa1,0.)
+        call keyr('pa',bpa1,0.0)
       endif
       call keya('out',Out,' ')
-      call BoxInput('region',map,box,maxbox)
+      call BoxInput('region',map,box,MAXBOX)
       call GetOpt(final,divide,asym,corr)
       selfscal = .not.(divide .or. keyprsnt('scale'))
-      call keyr('scale',factor,1.)
-      call keyr('sigma',sigma,0.)
+      call keyr('scale',factor,1.0)
+      call keyr('sigma',sigma,0.0)
       call keyfin
 c
 c  Check the reasonableness of the inputs.
@@ -182,7 +178,7 @@ c
 
       call BoxSet(box,3,nsize,' ')
       call BoxInfo(box,3,blc,trc)
-      call BoxMask(lMap,box,maxbox)
+      call BoxMask(lMap,box,MAXBOX)
       rect = BoxRect(box)
 c
 c  Fiddle the gaussian parameters.
@@ -195,8 +191,8 @@ c
         jref = ny/2 + 1
         bmaj1 = (bmaj1/3600.0) * D2R
         bmin1 = (bmin1/3600.0) * D2R
-        if (bmaj1*bmin1.le.0) call bug('f',
-     *    'Either a beam or gaussian must be given')
+        if (bmaj1*bmin1.le.0.0) call bug('f',
+     *    'Either a beam or Gaussian must be given')
 c
 c  Open the beam.
 c
@@ -204,8 +200,8 @@ c
         call xyopen(lBeam,beam,'old',2,nsize)
         n1 = nsize(1)
         n2 = nsize(2)
-        call rdhdr(lBeam,'crpix1',crpix1,real(n1/2+1))
-        call rdhdr(lBeam,'crpix2',crpix2,real(n2/2+1))
+        call rdhdr(lBeam, 'crpix1', crpix1, real(n1/2+1))
+        call rdhdr(lBeam, 'crpix2', crpix2, real(n2/2+1))
         iref = nint(crpix1)
         jref = nint(crpix2)
       endif
@@ -300,7 +296,7 @@ c
 c
 c  Get the run spec. and read in the data.
 c
-        call BoxRuns(1,k,'r',box,Runs,MaxRuns,nRuns,
+        call BoxRuns(1,k,'r',box,Runs,MAXRUNS,nRuns,
      *                                xmin,xmax,ymin,ymax)
         nx = xmax - xmin + 1
         ny = ymax - ymin + 1
@@ -383,18 +379,18 @@ c-----------------------------------------------------------------------
       enddo
       end
 c***********************************************************************
-      subroutine Header(lMap,lOut,naxis,blc,
-     *  bunit,bmaj,bmin,bpa,version)
+      subroutine Header(lMap, lOut, naxis, blc, bunit, bmaj, bmin, bpa,
+     *  version)
 
-      character version*(*),bunit*(*)
-      integer lMap,lOut,naxis,blc(naxis)
-      real bmaj,bmin,bpa
+      integer   lMap, lOut, naxis, blc(naxis)
+      real      bmaj, bmin, bpa
+      character bunit*(*), version*72
 
-c  Output the map header.
+c  Write the output image header.
 c
 c  Inputs:
-c    lMap       Handle of the input map.
-c    lOut       Handle of the output map.
+c    lMap       Handle of the input image.
+c    lOut       Handle of the output image.
 c    naxis      Number of dimensions in the input.
 c    blc        Bottom left corner of the input which is going to
 c               (1,1,1) of the output.
@@ -402,56 +398,38 @@ c    bunit      Units of the output.
 c    bmaj,bmin,bpa Effective beam parameters of the output.
 c    version    Version of this program.
 c-----------------------------------------------------------------------
-      integer i
-      character line*72,num*1
-      real crpix
       integer nkeys
       parameter (nkeys=37)
-      character keyw(nkeys)*8
+
+      integer   iax
+      double precision crpix
+      character num*1
 
       character itoaf*2
       external  itoaf
-
-      data keyw/
-     *  'cdelt1  ','cdelt2  ','cdelt3  ','cdelt4  ','cdelt5  ',
-     *  'crval1  ','crval2  ','crval3  ','crval4  ','crval5  ',
-     *  'ctype1  ','ctype2  ','ctype3  ','ctype4  ','ctype5  ',
-     *                                   'crpix4  ','crpix5  ',
-     *  'epoch   ','niters  ','object  ','obstime ','cellscal',
-     *  'telescop','history ','restfreq','mostable','pbtype  ',
-     *  'vobs    ','observer','obsra   ','obsdec  ','pbfwhm  ',
-     *  'btype   ','ltype   ','lstart  ','lstep   ','lwidth  '/
 c-----------------------------------------------------------------------
-c
-c  Copy keywords across, which have not changed.
-c
-      do i = 1, nkeys
-        call hdcopy(lMap,lOut,keyw(i))
+c     Start by making a verbatim copy of the input image header.
+      call headcopy(lMap, lOut, 0, 0, 0, 0)
+
+c     Update the reference pixels.
+      do iax = 1, naxis
+        num = itoaf(iax)
+        call rdhdd(lMap, 'crpix'//num, crpix, 1d0)
+        call wrhdd(lOut, 'crpix'//num, crpix-blc(iax)+1d0)
       enddo
-c
-c  Handle the reference pixels.
-c
-      do i = 1, naxis
-        num = itoaf(i)
-        call rdhdr(lMap,'crpix'//num,crpix,1.)
-        call wrhdr(lOut,'crpix'//num,crpix-blc(i)+1)
-      enddo
-c
-c  Set the parameters to determine the units and effective beam.
-c
-      if (bunit.ne.' ') call wrhda(lOut,'bunit',bunit)
-      if (bmaj*bmin.ne.0) then
-        call wrhdr(lOut,'bmaj',bmaj)
-        call wrhdr(lOut,'bmin',bmin)
-        call wrhdr(lOut,'bpa',bpa)
+
+c     Write beam parameters.
+      if (bunit.ne.' ') call wrhda(lOut, 'bunit', bunit)
+      if (bmaj*bmin.ne.0.0) then
+        call wrhdr(lOut, 'bmaj', bmaj)
+        call wrhdr(lOut, 'bmin', bmin)
+        call wrhdr(lOut, 'bpa',  bpa)
       endif
-c
-c  Write the history file.
-c
-      call hisopen(lOut,'append')
-      line = 'CONVOL: Miriad '//version
-      call hiswrite(lOut,line)
-      call hisinput(lOut,'CONVOL')
+
+c     Write history.
+      call hisopen(lOut, 'append')
+      call hiswrite(lOut, 'CONVOL: Miriad '//version)
+      call hisinput(lOut, 'CONVOL')
       call hisclose(lOut)
 
       end
