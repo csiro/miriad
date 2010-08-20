@@ -65,29 +65,30 @@ c         that we are not supposed to use in miriad code, hence this
 c         code won't pass FLINT.
 c
 c-----------------------------------------------------------------------
-      character version*(*)
-      parameter (version='version 1.0 13-jul-98')
       include 'clfind.h'
 
-      character*40 filein,filecf
-      character*80 line1,line2
-      character xtension*3
-      integer len1
-      integer nclump,ncl,nstop
-      integer ngy,nmin
-      integer nlevs,npx1,npx2
-      integer nsize(3)
-      real beamx,beamy
+      integer   ncl, nclump, ngy, nlevs, nmin, npx1, npx2, nsize(3),
+     *          nstop
+      real      beamx, beamy
+      double precision bmaj, bmin, bpa, cdelt1, cdelt2
+      character filein*40, filecf*40, line1*80, line2*80, version*80,
+     *          xtension*3
 
-c.....dynamic memory allocations
-      integer It,Ia,Ipos,Ipos1,Ireg
-      integer assign(maxbuf)
-      integer pos1(maxbuf/10),pos(maxbuf),reg(maxbuf)
-      real data(maxbuf)
-      common assign
-      equivalence(assign,pos1,pos,reg,data)
+      integer   len1
+      character versan*80
+      external  len1, versan
+
+c     Dynamic memory allocations.
+      integer heap(maxbuf), Ia, Ipos, Ipos1, Ireg, It, pos(maxbuf),
+     *        pos1(maxbuf/10), reg(maxbuf)
+      real    data(maxbuf)
+      common heap
+
+      equivalence(heap,pos1,pos,reg,data)
 c-----------------------------------------------------------------------
-      call output('CLFIND '//version)
+      version = versan('clfind',
+     *                 '$Revision: 1.4 $',
+     *                 '$Date: 2010/08/20 06:32:43 $')
 
 c.....Get the parameters from the user.
       call keyini
@@ -114,7 +115,13 @@ c      call keyi('naxis',p3,3)
       if (ny.gt.maxdim) call bug('f','Image too big in y')
       if (nz.gt.maxdim) call bug('f','Image too big in v')
       if (nx*ny*nz.gt.maxbuf) call bug('f','Image too big')
-      call rdhd(lin)
+
+c     Read required header keywords.
+      call rdhdd(lin, 'cdelt1', cdelt1, 1d0)
+      call rdhdd(lin, 'cdelt2', cdelt2, 1d0)
+      call rdhdd(lin, 'bmaj', bmaj, 0d0)
+      call rdhdd(lin, 'bmin', bmin, 0d0)
+      call rdhdd(lin, 'bpa',  bpa,  0d0)
 
 c.....Calculate the beam size in x and y
       if (bmaj.lt.1e-7) then
@@ -123,15 +130,17 @@ c.....Calculate the beam size in x and y
         beamy = 1.0
       else
         if (bpa.lt.45.0 .or. bpa.gt.135.0) then
-          beamx = abs(real(bmin/cdelt(1)))
-          beamy = real(bmaj/cdelt(2))
+          beamx = abs(real(bmin/cdelt1))
+          beamy = real(bmaj/cdelt2)
         else
-            write (*,*) 'beam=', bmaj,bmin,cdelt(1),cdelt(2)
-              beamx = abs(real(bmaj/cdelt(1)))
-              beamy = real(bmin/cdelt(2))
+          write (*,*) 'beam=', bmaj,bmin,cdelt1,cdelt2
+          beamx = abs(real(bmaj/cdelt1))
+          beamy = real(bmin/cdelt2)
         endif
+
         print 1000, beamx,beamy
  1000   format('The beam size is: ',f4.2,' by ',f4.2,' pixels.')
+
 c.......But we use beam radius to connect up pixels
         dx=0.5*beamx
         dy=0.5*beamy
@@ -156,14 +165,14 @@ c.....Open the output, and add a header to it.
       filecf=filein(1:len1(filein))//xtension
       call output('Output clump assignment file: '//filecf)
       call xyopen(lout,filecf,'new',3,nsize)
-      call wrhd(version)
+      call wrhd(lin, lout, version)
 
 c.....space allocation for data and assign arrays
       call memalloc(Ia,nx*ny*nz,'i')
       call memalloc(It,nx*ny*nz,'r')
 
 c.....Start reading the input file
-      call rdgrdclf(data(It),assign(Ia))
+      call rdgrdclf(data(It),heap(Ia))
       call xyclose(lin)
 
       line1='------------------------------------------'
@@ -205,23 +214,23 @@ c.....Total number of clumps
       do ngy = nlevels,2,-1
 c........Number of clumps at level ngy
          ncl=0
-         call findclp(ngy,ncl,nclump,data(It),assign(Ia),
+         call findclp(ngy,ncl,nclump,data(It),heap(Ia),
      *                nlevs,npx2,pos(Ipos),reg(Ireg))
          print 1040, ngy+p1-1,ncl
          if (ngy.gt.2)
-     *   call xtendclp(ngy,nclump,data(It),assign(Ia),
+     *   call xtendclp(ngy,nclump,data(It),heap(Ia),
      *                  nlevs,npx2,pos(Ipos),reg(Ireg))
       enddo
  1040 format(' Level ',i2,':',i5,' new clumps')
 
       call output(' ')
       call output('Extending to level 1')
-      call xtendlow(nclump,assign(Ia),npx1,pos1(Ipos1))
+      call xtendlow(nclump,heap(Ia),npx1,pos1(Ipos1))
 
       call output('Testing clumps for badness')
       nstop=0
 c.....clumps must have greater than nmin pixels
-      call testbad(nmin,nstop,nclump,assign(Ia))
+      call testbad(nmin,nstop,nclump,heap(Ia))
 
       line2='=========================================='
       call output(line2)
@@ -235,7 +244,7 @@ c.....clumps must have greater than nmin pixels
       call output(line2)
 
       call output('Writing assignment file')
-      call wrgrdclf(assign(Ia))
+      call wrgrdclf(heap(Ia))
       call xyclose(lout)
 
       call memfree(Ia,nx*ny*nz,'i')
@@ -245,9 +254,9 @@ c.....clumps must have greater than nmin pixels
       call memfree(Ireg,nlevs*npx2,'i')
 
       end
-c-----------------------------------------------------------------------
-      subroutine CntLevs(t,nlevs,npx1,npx2)
 
+
+      subroutine CntLevs(t,nlevs,npx1,npx2)
 c-----------------------------------------------------------------------
 c counts the number of levels and pixels/level
 c (these numbers are used to assign appropriate
@@ -307,11 +316,10 @@ c 1011   format(' Number of pixels in level 1:                   ',i4)
 
       return
       end
-c-----------------------------------------------------------------------
-      subroutine xtendclp(ngy,nclump,t,a,n1,n2,npos,nreg)
 
+
+      subroutine xtendclp(ngy,nclump,t,a,n1,n2,npos,nreg)
 c-----------------------------------------------------------------------
-c     subroutine of clfind
 c     extends previously defined clumps
 c     at gray levels >= ngy to ngy-1
 c-----------------------------------------------------------------------
@@ -531,11 +539,10 @@ c.............with highest peak temperature.
 
       return
       end
-c-----------------------------------------------------------------------
-      subroutine xtendlow(nclump,a,n,npos1)
 
+
+      subroutine xtendlow(nclump,a,n,npos1)
 c-----------------------------------------------------------------------
-c     subroutine of clfind
 c     After all clumps defined to second from
 c     lowest level, extend pixel by pixel to
 c     the lowest level (p1, generally set to 1)
@@ -628,9 +635,9 @@ c.....Repeat process until there are no new assigned pixels
 
       return
       end
-c-----------------------------------------------------------------------
-      subroutine FillLevs(t,nlevs,npx1,npx2,npos1,npos,nreg)
 
+
+      subroutine FillLevs(t,nlevs,npx1,npx2,npos1,npos,nreg)
 c-----------------------------------------------------------------------
 c fills in the arrays nreg, npos, and npos1 with the
 c 1D pixel number of each contour level
@@ -679,11 +686,10 @@ c........Treat level 1 separately from the others
 
       return
       end
-c-----------------------------------------------------------------------
-      subroutine findclp(ngy,ncl,nclump,t,a,n1,n2,npos,nreg)
 
+
+      subroutine findclp(ngy,ncl,nclump,t,a,n1,n2,npos,nreg)
 c-----------------------------------------------------------------------
-c     subroutine of clfind
 c     finds and assigns new clumps at gray level ngy
 c-----------------------------------------------------------------------
       include 'clfind.h'
@@ -731,11 +737,10 @@ c                                               ..new clump
 
       return
       end
-c-----------------------------------------------------------------------
-      subroutine findreg(n1,n2,npos,nreg)
 
+
+      subroutine findreg(n1,n2,npos,nreg)
 c-----------------------------------------------------------------------
-c     subroutine of clfind
 c     finds connected regions at each gray level
 c-----------------------------------------------------------------------
       include 'clfind.h'
@@ -807,11 +812,10 @@ c..........all pixels in this region
 
       return
       end
-c-----------------------------------------------------------------------
-      subroutine gtindx(i,j,k,nps)
 
+
+      subroutine gtindx(i,j,k,nps)
 c-----------------------------------------------------------------------
-c     subroutine of clfind
 c     converts 3d position vector to 1d index
 c-----------------------------------------------------------------------
       include 'clfind.h'
@@ -821,11 +825,10 @@ c-----------------------------------------------------------------------
 
       return
       end
-c-----------------------------------------------------------------------
-      subroutine invindx(i,j,k,nps)
 
+
+      subroutine invindx(i,j,k,nps)
 c-----------------------------------------------------------------------
-c     subroutine of clfind
 c     converts 1d index back to 3d positional vector
 c-----------------------------------------------------------------------
       include 'clfind.h'
@@ -837,11 +840,10 @@ c-----------------------------------------------------------------------
 
       return
       end
-c-----------------------------------------------------------------------
-      subroutine rdgrdclf(t,a)
 
+
+      subroutine rdgrdclf(t,a)
 c-----------------------------------------------------------------------
-c     subroutine of clfind
 c     read in data array and mask
 c-----------------------------------------------------------------------
       include 'clfind.h'
@@ -871,51 +873,10 @@ c-----------------------------------------------------------------------
 
       return
       end
-c-----------------------------------------------------------------------
-      subroutine rdhd(in)
 
-c-----------------------------------------------------------------------
-c     subroutine of clfind
-c     reads the header of file with handle = in
-c-----------------------------------------------------------------------
-      include 'clfind.h'
 
-      integer in
-      double precision dummy
-c-----------------------------------------------------------------------
-      call rdhda(in,'ctype1',ctype(1),' ')
-      call rdhda(in,'ctype2',ctype(2),' ')
-      call rdhda(in,'ctype3',ctype(3),' ')
-      call rdhdd(in,'crpix1',dummy,0d0)
-      crpix(1) = dummy
-      call rdhdd(in,'crpix2',dummy,0d0)
-      crpix(2) = dummy
-      call rdhdd(in,'crpix3',dummy,0d0)
-      crpix(3) = dummy
-      call rdhdd(in,'cdelt1',dummy,0d0)
-      cdelt(1) = dummy
-      call rdhdd(in,'cdelt2',dummy,0d0)
-      cdelt(2) = dummy
-      call rdhdd(in,'cdelt3',dummy,0d0)
-      cdelt(3) = dummy
-      call rdhdd(in,'crval1',dummy,0d0)
-      crval(1) = dummy
-      call rdhdd(in,'crval2',dummy,0d0)
-      crval(2) = dummy
-      call rdhdd(in,'crval3',dummy,0d0)
-      crval(3) = dummy
-      call rdhdd(in,'bmaj',dummy,0d0)
-      bmaj = dummy
-      call rdhdd(in,'bmin',dummy,0d0)
-      bmin = dummy
-      call rdhdd(in,'bpa',dummy,0d0)
-      bpa = dummy
-
-      return
-      end
-c-----------------------------------------------------------------------
       subroutine printree(nclump,nmax,t)
-
+c-----------------------------------------------------------------------
 c.....Clump deconvolution is done - now print out the
 c.....tree structure (which clumps appear at which level
 c.....and how they merge together at lower levels)
@@ -991,10 +952,10 @@ c-----------------------------------------------------------------------
 
       return
       end
-      subroutine testbad(nmin,nstop,nclump,a)
 
+
+      subroutine testbad(nmin,nstop,nclump,a)
 c-----------------------------------------------------------------------
-c     subroutine of clfind
 c     checks for bad clumps and deassigns them
 c
 c     clumps must have at least nmin pixels
@@ -1016,25 +977,24 @@ c-----------------------------------------------------------------------
 
       return
       end
-c-----------------------------------------------------------------------
-      subroutine wrgrdclf(a)
 
+
+      subroutine wrgrdclf(heap)
+      integer heap(*)
 c-----------------------------------------------------------------------
-c     subroutine of clfind
-c     write out clump assignment array
+c     Write out clump assignment array.
 c-----------------------------------------------------------------------
       include 'clfind.h'
 
       integer i,j,k,nps
-      integer a(*)
       real buff(maxdim)
 c-----------------------------------------------------------------------
-      do k = 1,nz
+      do k = 1, nz
         call xysetpl(lout,1,k)
-        do j = 1,ny
-          do i = 1,nx
+        do j = 1, ny
+          do i = 1, nx
             call gtindx(i,j,k,nps)
-            buff(i)=real(a(nps))
+            buff(i) = real(heap(nps))
           enddo
           call xywrite(lout,j,buff)
         enddo
@@ -1042,35 +1002,24 @@ c-----------------------------------------------------------------------
 
       return
       end
+
+
+      subroutine wrhd(lIn, lOut, version)
+      integer  lIn, lOut
+      character version*(*)
 c-----------------------------------------------------------------------
-      subroutine wrhd(version)
-
+c     Write header for the output cube.
 c-----------------------------------------------------------------------
-c     subroutine of clfind
-c     writes header for image cube
+      character lversion*32
 c-----------------------------------------------------------------------
-      integer nkeys
-      parameter (nkeys=12)
-      include 'clfind.h'
+c     Copy the header.
+      call headcopy(lin, lout, 0, 3, 0, 0)
 
-      character version*(*), keyw(nkeys)*8, lversion*32
-      integer i
-
-      data keyw/   'cdelt1  ','cdelt2  ','cdelt3  ',
-     *    'crpix1  ','crpix2  ','crpix3  ',
-     *    'crval1  ','crval2  ','crval3  ',
-     *    'ctype1  ','ctype2  ','ctype3  '/
-
-c.....Copy the old header partially, and write some new parameters
-      do i = 1,nkeys
-        call hdcopy(lin,lout,keyw(i))
-      enddo
-
-c.....Update the history.
+c     Update history.
       call hdcopy(lin,lout,'history')
       call hisopen(lout,'append')
       lversion=version
-      call hiswrite(lout,'CLFIND: Miriad '//lversion)
+      call hiswrite(lout,'CLFIND: Miriad ' // lversion)
       call hisinput(lout,'CLFIND')
       call hisclose(lout)
 
