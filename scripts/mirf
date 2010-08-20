@@ -37,7 +37,7 @@
 #       In view of its prevalance, we have settled on '*'.
 #
 # Original: 2010/08/19 MRC (from ancient lore).
-# $Id: mirf,v 1.1 2010/08/19 05:00:29 cal103 Exp $
+# $Id: mirf,v 1.2 2010/08/20 07:38:28 cal103 Exp $
 #-----------------------------------------------------------------------------
   DETAB=
   FILE="-"
@@ -65,10 +65,15 @@
   else
     expand "$FILE"
   fi | sed -e 's|  *$||' \
-           -e 's|^     [^ ]|     *|'   \
+           -e 's|^[C*]|c|' \
+           -e '/^c/b' \
+           -e 's|^     [^ ]|     *|' \
            -e 's|^  *implicit none$||' \
-           -e 's|( |(|g'  \
-           -e 's| )|)|g'  \
+           -e 's|\([0-9]\)\.0*e\([-+0-9]\)|\1e\2|g' \
+           -e 's|\([0-9]\)\.0*d\([-+0-9]\)|\1d\2|g' \
+           -e 's|parameter(|parameter (|' \
+           -e 's|( |(|g' \
+           -e 's| )|)|g' \
            -e 's| \.eq\.|.eq.|g' \
            -e 's| \.ne\.|.ne.|g' \
            -e 's| \.ge\.|.ge.|g' \
@@ -93,6 +98,8 @@
            -e 's| if(| if (|'   \
            -e 's|)then|) then|' \
            -e 's|end if|endif|' \
-           -e 's|end do|enddo|' \
-           -e 's| do \([^ =]*\)=| do \1 =|' \
-           -e 's| do \([^ =]*\)=\([^ ]\)| do \1= \2|'
+           -e '/ do /s|\([^ ]\)=|\1 =|g' \
+           -e '/ do /s|=\([^ ]\)|= \1|g' \
+           -e 's| dowhile\([ (]\)| do while\1|' \
+           -e 's| do while(| do while (|' \
+           -e 's|end do|enddo|'
