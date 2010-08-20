@@ -47,7 +47,7 @@ c         shift  Determine an optimum shift of the phase centre to
 c                be applied before the error is evaluated. This
 c                shift will minimise the error in some sense.
 c
-c$Id: conterr.for,v 1.2 2010/08/20 07:09:20 cal103 Exp $
+c$Id: conterr.for,v 1.3 2010/08/20 07:30:03 cal103 Exp $
 c--
 c  History:
 c    rjs  28oct93 Original version.
@@ -75,8 +75,8 @@ c-----------------------------------------------------------------------
       external  hdprsnt, versan
 c-----------------------------------------------------------------------
       version = versan('conterr',
-     *                 '$Revision: 1.2 $',
-     *                 '$Date: 2010/08/20 07:09:20 $')
+     *                 '$Revision: 1.3 $',
+     *                 '$Date: 2010/08/20 07:30:03 $')
 c
 c  Get the input parameters.
 c
@@ -368,37 +368,18 @@ c-----------------------------------------------------------------------
 c***********************************************************************
       subroutine MkHed(lIn,lOut,order)
 
-      integer lIn,lOut,order
+      integer lIn, lOut, order
 
 c  Make the header for the output file.
 c-----------------------------------------------------------------------
-      integer i
-c
-c  Header keywords to be copied.
-c
-      integer nkeys
-      parameter (nkeys=45)
-      character keyw(nkeys)*8
-      data keyw/   'bmaj    ','bmin    ','bpa     ','bunit   ',
-     *  'crpix1  ','crpix2  ','crpix4  ','crpix5  ',
-     *  'cdelt1  ','cdelt2  ','cdelt4  ','cdelt5  ',
-     *  'crota1  ','crota2  ','crota4  ','crota5  ',
-     *  'crval1  ','crval2  ','crval4  ','crval5  ',
-     *  'ctype1  ','ctype2  ','ctype4  ','ctype5  ',
-     *  'obstime ','epoch   ','history ','instrume','niters  ',
-     *  'object  ','observer','obsra   ','obsdec  ','pbfwhm  ',
-     *  'restfreq','telescop','vobs    ','rms     ','cellscal',
-     *  'ltype   ','lstart  ','lwidth  ','lstep   ','btype   ',
-     *  'pbtype  '/
-c-----------------------------------------------------------------------
-      do i = 1,nkeys
-        call hdcopy(lIn,lOut,keyw(i))
-      enddo
-c
-      call wrhdi(lOut,'crpix3',1)
-      call wrhdi(lOut,'crval3',order)
-      call wrhdi(lOut,'cdelt3',1)
-      call wrhda(lOut,'ctype3','FIT-ORDER')
+      call headcopy(lIn, lOut, 0, 0, 0, 0)
+
+      call hdcopy(lIn,lOut,'rms')
+
+      call wrhdd(lOut, 'crpix3', 1d0)
+      call wrhdd(lOut, 'crval3', dble(order))
+      call wrhdd(lOut, 'cdelt3', 1d0)
+      call wrhda(lOut, 'ctype3', 'FIT-ORDER')
 
       end
 c***********************************************************************
