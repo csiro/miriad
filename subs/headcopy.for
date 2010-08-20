@@ -3,9 +3,9 @@ c* headcopy - Copy image header
 c& bpw
 c: utilities, image-i/o
 c+
-      subroutine headcopy(tnoinp, tnoout, axnum, naxis, blc, trc)
+      subroutine headcopy(tIn, tOut, axnum, naxnum, blc, trc)
 
-      integer tnoinp, tnoout, axnum(*), naxis, blc(*), trc(*)
+      integer tIn, tOut, axnum(*), naxnum, blc(*), trc(*)
 
 c Headcopy copies the small items (the header) from one image to
 c another.  Its list contains all official header elements except for
@@ -17,8 +17,8 @@ c exchanged, or reversed depending on axis permutations.  The axnum
 c array defines the relation between old and new axes, e.g.
 c
 c                                     axnum
-c                        naxis  (1)  (2)  (3)  (4)
-c                        -----  ---  ---  ---  ---
+c                       naxnum  (1)  (2)  (3)  (4)
+c                       ------  ---  ---  ---  ---
 c           direct copy:   4     1    2    3    4
 c         delete z-axis:   2     1    2    0    0
 c         delete x-axis:   2     2    3    0    0
@@ -45,15 +45,15 @@ c must be recalculated explicitly for the output image and updated with
 c wrhdr.
 c
 c   Input:
-c      tnoinp     handle of input image
-c      tnoout     handle of output image
-c      axnum      array giving relation betweem old and new axes
-c                 (negative values imply axis reversal)
-c      naxis      dimension of input image
-c      blc        list of bottom-left-corners of input image region
-c      trc        list of top-right-corners of input image region
+c      tIn        Handle of input image.
+c      tOut       Handle of output image.
+c      axnum      Array giving relation betweem old and new axes
+c                 (negative values imply axis reversal).
+c      naxnum     Dimension of axnum array - ignored if axnum(1) = 0.
+c      blc        List of bottom-left-corners of input image region.
+c      trc        List of top-right-corners   of input image region.
 c
-c $Id: headcopy.for,v 1.3 2010/08/19 08:33:58 cal103 Exp $
+c $Id: headcopy.for,v 1.4 2010/08/20 07:32:02 cal103 Exp $
 c***********************************************************************
       integer   CRPIX, CDELT, CRVAL, CROTA, CTYPE
       parameter (CRPIX = 1, CDELT = 2, CRVAL = 3, CROTA = 4, CTYPE = 5)
@@ -61,14 +61,16 @@ c***********************************************************************
       integer   NKEYS
       parameter (NKEYS = 32)
 
-      logical   hdprsnt
-      integer   n, k
-      double precision dvalue
+      logical   verbtm
+      integer   iAxIn, iAxOut, nAxOut, k
+      double precision defVal(5), dvalue
       character avalue*80, keyIn*8, keyOut*8, keyw(NKEYS)*8
 
+      logical   hdprsnt
       character itoaf*1
-      external  itoaf
+      external  hdprsnt, itoaf
 
+      data defVal /0d0, 1d0, 0d0, 0d0, 0d0/
       data keyw /
      *    'crpix   ', 'cdelt   ', 'crval   ', 'crota   ', 'ctype   ',
      *    'bmaj    ', 'bmin    ', 'bpa     ', 'btype   ', 'bunit   ',
@@ -78,52 +80,68 @@ c***********************************************************************
      *    'obstime ', 'pbfwhm  ', 'pbtype  ', 'restfreq', 'telescop',
      *    'vobs    ', 'history '/
 c-----------------------------------------------------------------------
-c     Handle crpix, crval, cdelt, crota, and ctype.
-      do k = 1, 5
-        do n = 1, naxis
-          keyOut = keyw(k)(1:5) // itoaf(n)
+c     All axes in the output image must have coordinate keywords.  
+      call rdhdi(tOut, 'naxis', nAxOut, 0)
 
-          if (axnum(1).eq.0) then
-c           Verbatim copy.
-            call hdcopy(tnoinp, tnoout, keyOut)
+c     Loop for crpix, crval, cdelt, crota, and ctype.  
+      verbtm = axnum(1).eq.0
+      do k = 1, 5
+c       Set default values.
+        avalue = ' '
+        dvalue = defVal(k)
+
+        do iAxOut = 1, nAxOut
+          keyOut = keyw(k)(1:5) // itoaf(iAxOut)
+
+          if (verbtm .and. hdprsnt(tIn, keyOut)) then
+c           Copy verbatim.
+            call hdcopy(tIn, tOut, keyOut)
+
           else
 c           Handle axis permutations.
-            if (axnum(n).ne.0) then
-              keyIn = keyw(k)(1:5) // itoaf(abs(axnum(n)))
+            if (.not.verbtm .and. iAxOut.le.naxnum) then
+              iAxIn = axnum(iAxOut)
+            else
+c             Use default values.
+              iAxIn = 0
+            endif
 
-              if (hdprsnt(tnoinp, keyIn)) then
+            if (iAxIn.ne.0) then
+              keyIn = keyw(k)(1:5) // itoaf(abs(iAxIn))
+
+              if (hdprsnt(tIn, keyIn)) then
 c               Read it from the input image.
                 if (k.eq.CTYPE) then
-                  call rdhda(tnoinp, keyIn, avalue, ' ')
+                  call rdhda(tIn, keyIn, avalue, ' ')
                 else
-                  call rdhdd(tnoinp, keyIn, dvalue, 0d0)
+                  call rdhdd(tIn, keyIn, dvalue, 0d0)
                 endif
 
-                if (axnum(n).gt.0) then
+                if (iAxIn.gt.0) then
                   if (k.eq.CRPIX) then
 c                   Sub-imaging.
-                    dvalue = dvalue - blc(axnum(n)) + 1d0
+                    dvalue = dvalue - blc(iAxIn) + 1d0
                   endif
 
-                else if (axnum(n).lt.0) then
+                else if (iAxIn.lt.0) then
 c                 Axis reversal.
                   if (k.eq.CRPIX) then
 c                   Sub-imaging.
-                    dvalue = trc(-axnum(n)) - dvalue + 1d0
+                    dvalue = trc(-iAxIn) - dvalue + 1d0
                   else if (k.eq.CDELT) then
                     dvalue = -dvalue
                   else if (k.eq.CROTA) then
                     dvalue = dvalue - 180d0
                   endif
                 endif
-
-c               Write it to the output image.
-                if (k.eq.CTYPE) then
-                  call wrhda(tnoout, keyOut, avalue)
-                else
-                  call wrhdd(tnoout, keyOut, dvalue)
-                endif
               endif
+            endif
+
+c           Write it to the output image.
+            if (k.eq.CTYPE) then
+              call wrhda(tOut, keyOut, avalue)
+            else
+              call wrhdd(tOut, keyOut, dvalue)
             endif
           endif
         enddo
@@ -131,7 +149,7 @@ c               Write it to the output image.
 
 c     Copy the remaining items verbatim.
       do k = 6, NKEYS
-         call hdcopy(tnoinp, tnoout, keyw(k))
+         call hdcopy(tIn, tOut, keyw(k))
       enddo
 
       return
