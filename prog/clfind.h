@@ -49,9 +49,4 @@ c-----------------------------------------------------------------------
 
       integer nx,ny,nz
       real dx,dy,dv
-      character*8 ctype(4)
       common /headvarn/ nx,ny,nz,dx,dy,dv
-      common /headvarc/ ctype
-
-      double precision crpix(4),crval(4),cdelt(4),bmaj,bmin,bpa
-      common /dheadvar/ crval,cdelt,bmaj,bmin,bpa
