@@ -74,7 +74,7 @@ c@ sigma
 c       When doing devonvolution (options=divide), this gives a noise
 c       parameter. Default is 0.
 c
-c$Id: convol.for,v 1.5 2010/04/30 08:23:28 cal103 Exp $
+c$Id: convol.for,v 1.6 2010/08/20 07:50:33 cal103 Exp $
 c--
 c  History:
 c    rjs,mchw 18aug89 Converted from RESTORE.
@@ -106,9 +106,11 @@ c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
       include 'mirconst.h'
+
       integer maxbox,maxruns
-      parameter(maxruns=3*maxdim)
-      parameter(maxbox=1024)
+      parameter (maxruns=3*maxdim)
+      parameter (maxbox=1024)
+
       character map*512,beam*512,out*512
       integer nsize(MAXNAX),naxis,ifail
       integer lMap,lBeam,lOut,iref,jref,blc(3),trc(3)
@@ -119,18 +121,17 @@ c-----------------------------------------------------------------------
       real temp
       character bunit*32, flags*4, text*80, version*80
       logical divide,selfscal,rect,asym,corr,doscale,dogaus,final
-c
+
       integer handle,pDat
       include 'mem.h'
-c
-c  Externals.
-c
-      logical BoxRect,keyprsnt
+
+      logical   BoxRect,keyprsnt
       character itoaf*8, versan*80
+      external  boxrect, itoaf, keyprsnt, versan
 c-----------------------------------------------------------------------
       version = versan('convol',
-     :                 '$Revision: 1.5 $',
-     :                 '$Date: 2010/04/30 08:23:28 $')
+     *                 '$Revision: 1.6 $',
+     *                 '$Date: 2010/08/20 07:50:33 $')
 c
 c  Get the input parameters.
 c
@@ -138,7 +139,7 @@ c
       call keya('map',Map,' ')
       call keya('beam',Beam,' ')
       doGaus = Beam.eq.' '
-      if(doGaus)then
+      if (doGaus) then
         call keyr('fwhm',bmaj1,0.)
         call keyr('fwhm',bmin1,bmaj1)
         call keyr('pa',bpa1,0.)
@@ -146,27 +147,27 @@ c
       call keya('out',Out,' ')
       call BoxInput('region',map,box,maxbox)
       call GetOpt(final,divide,asym,corr)
-      selfscal = .not.(divide.or.keyprsnt('scale'))
+      selfscal = .not.(divide .or. keyprsnt('scale'))
       call keyr('scale',factor,1.)
       call keyr('sigma',sigma,0.)
       call keyfin
 c
 c  Check the reasonableness of the inputs.
 c
-      if(map.eq.' ') call bug('f','Input map missing')
-      if(out.eq.' ') call bug('f','Output map missing')
-      if(.not.divide) sigma = 0
-      if(divide.and.sigma.eq.0)
+      if (map.eq.' ') call bug('f','Input map missing')
+      if (out.eq.' ') call bug('f','Output map missing')
+      if (.not.divide) sigma = 0
+      if (divide .and. sigma.eq.0)
      *  call bug('f','Sigma must be set, when using options=divide')
-      if(final.and..not.doGaus)call bug('f',
+      if (final .and. .not.doGaus) call bug('f',
      *  'You cannot set options=final and a beam parameter')
-      if(asym.and.doGaus)then
+      if (asym .and. doGaus) then
         call bug('w','Gaussians are always symmetric')
         asym = .false.
       endif
-      if(.not.asym.and.corr) call bug('w',
+      if (.not.asym .and. corr) call bug('w',
      *'Correlation and convolution do not differ for symmetric beams')
-      if(final.and.divide) call bug('f',
+      if (final .and. divide) call bug('f',
      *'Cannot use options=final and divide together')
 c
 c  Open the map and handle the boxes to be processed.
@@ -175,10 +176,10 @@ c
       nx = nsize(1)
       ny = nsize(2)
       call rdhdi(lMap,'naxis',naxis,MAXNAX)
-      call rdhdd(lMap,'cdelt1',cdelt1,1.d0)
-      call rdhdd(lMap,'cdelt2',cdelt2,1.d0)
+      call rdhdd(lMap,'cdelt1',cdelt1,1d0)
+      call rdhdd(lMap,'cdelt2',cdelt2,1d0)
       naxis = min(naxis,MAXNAX)
-c
+
       call BoxSet(box,3,nsize,' ')
       call BoxInfo(box,3,blc,trc)
       call BoxMask(lMap,box,maxbox)
@@ -187,14 +188,14 @@ c
 c  Fiddle the gaussian parameters.
 c
       doGaus = beam.eq.' '
-      if(doGaus)then
+      if (doGaus) then
         n1 = nx
         n2 = ny
         iref = nx/2 + 1
         jref = ny/2 + 1
         bmaj1 = (bmaj1/3600.0) * D2R
         bmin1 = (bmin1/3600.0) * D2R
-        if(bmaj1*bmin1.le.0)call bug('f',
+        if (bmaj1*bmin1.le.0) call bug('f',
      *    'Either a beam or gaussian must be given')
 c
 c  Open the beam.
@@ -211,18 +212,18 @@ c
 c
 c  Check that the map and beam sizes and deltas are the same.
 c
-      if(nx.gt.n1.or.ny.gt.n2)
+      if (nx.gt.n1 .or. ny.gt.n2)
      *  call bug('f','Map must be smaller than the beam')
 c
 c  If we are operating in "final" mode, determine the convolving
 c  beam.
 c
-      if(final)then
+      if (final) then
         call GauDPar1(lMap,bmaj1,bmin1,bpa1,
      *                                   bmaj,bmin,bpa,temp,ifail)
-        if(ifail.eq.1)call bug('f',
+        if (ifail.eq.1) call bug('f',
      *    'The input has the required final resolution')
-        if(ifail.ne.0)call bug('f',
+        if (ifail.ne.0) call bug('f',
      *    'The convolving beam is undefined for the final resolution')
         bmaj1 = bmaj
         bmin1 = bmin
@@ -238,8 +239,8 @@ c
 c
 c  Determine the units,etc, of the output, along with any scale factors.
 c
-      if(selfscal)then
-        if(doGaus)then
+      if (selfscal) then
+        if (doGaus) then
           call GauPar1(lMap,bmaj1,bmin1,bpa1,
      *                           bunit,bmaj,bmin,bpa,factor)
         else
@@ -257,15 +258,15 @@ c  Calculate the transform of the beam.
 c
       l = 0
       flags = ' '
-      if(.not.asym)then
+      if (.not.asym) then
         l = l + 1
         flags(l:l) = 's'
       endif
-      if(divide)then
+      if (divide) then
         l = l + 1
         flags(l:l) = 'd'
       endif
-      if(corr)then
+      if (corr) then
         l = l + 1
         flags(l:l) = 'x'
       endif
@@ -283,7 +284,7 @@ c
       nsize(1) = trc(1) - blc(1) + 1
       nsize(2) = trc(2) - blc(2) + 1
       nsize(3) = trc(3) - blc(3) + 1
-      do k=4,naxis
+      do k = 4, naxis
         nsize(k) = 1
       enddo
       call xyopen(lOut,Out,'new',naxis,nsize)
@@ -293,7 +294,7 @@ c
 c
 c  Loop over the third dimension.
 c
-      do k=blc(3),trc(3)
+      do k = blc(3), trc(3)
         if (mod(k-blc(3),10).eq.0 .and. blc(3).ne.trc(3))
      *    call output('Beginning plane '//itoaf(k))
 c
@@ -305,7 +306,7 @@ c
         ny = ymax - ymin + 1
         xoff = xmin - blc(1)
         yoff = ymin - blc(2)
-c
+
         call xysetpl(lMap,1,k)
         call GetPlane(lMap,Runs,nRuns,xmin-1,ymin-1,nx,ny,
      *                        memR(pDat),nsize(1)*nsize(2),nPoint)
@@ -316,7 +317,7 @@ c
 c
 c  Apply a scale factor, if needed.
 c
-        if(doscale)call Scale(memR(pDat),nPoint,factor)
+        if (doscale) call Scale(memR(pDat),nPoint,factor)
 c
 c  Write out this plane.
 c
@@ -326,7 +327,7 @@ c
 c
 c  Write out a blanking mask, if needed.
 c
-        if(.not.rect)
+        if (.not.rect)
      *    call PutRuns(lOut,Runs,nRuns,xoff,yoff,nsize(1),nsize(2))
       enddo
 c
@@ -334,13 +335,13 @@ c  All said and done. Close up the files, and leave.
 c
       call xyclose(lOut)
       call xyclose(lMap)
-c
+
       end
 c***********************************************************************
       subroutine GetOpt(final,divide,asym,corr)
-c
+
       logical divide,asym,corr,final
-c
+
 c  Get extra processing options.
 c
 c  Output:
@@ -350,11 +351,11 @@ c    divide     True if we are really deconvolving.
 c    asym       Is the beam asymmetric?
 c-----------------------------------------------------------------------
       integer nopts
-      parameter(nopts=4)
+      parameter (nopts=4)
       logical present(nopts)
       character opts(nopts)*10
       data opts/'divide    ','asymmetric','correlate ','final     '/
-c
+c-----------------------------------------------------------------------
       call options('options',opts,present,nopts)
       divide = present(1)
       asym    = present(2)
@@ -363,10 +364,10 @@ c
       end
 c***********************************************************************
       subroutine Scale(Data,n,factor)
-c
+
       integer n
       real Data(n),factor
-c
+
 c  Multiply by a scale factor.
 c
 c  Input:
@@ -376,19 +377,19 @@ c  In/Out:
 c    Data       The data to scale.
 c-----------------------------------------------------------------------
       integer i
-c
-      do i=1,n
+c-----------------------------------------------------------------------
+      do i = 1, n
         Data(i) = factor * Data(i)
       enddo
       end
 c***********************************************************************
       subroutine Header(lMap,lOut,naxis,blc,
      *  bunit,bmaj,bmin,bpa,version)
-c
+
       character version*(*),bunit*(*)
       integer lMap,lOut,naxis,blc(naxis)
       real bmaj,bmin,bpa
-c
+
 c  Output the map header.
 c
 c  Inputs:
@@ -405,13 +406,12 @@ c-----------------------------------------------------------------------
       character line*72,num*1
       real crpix
       integer nkeys
-      parameter(nkeys=37)
+      parameter (nkeys=37)
       character keyw(nkeys)*8
-c
-c  Externals.
-c
+
       character itoaf*2
-c
+      external  itoaf
+
       data keyw/
      *  'cdelt1  ','cdelt2  ','cdelt3  ','cdelt4  ','cdelt5  ',
      *  'crval1  ','crval2  ','crval3  ','crval4  ','crval5  ',
@@ -421,16 +421,17 @@ c
      *  'telescop','history ','restfreq','mostable','pbtype  ',
      *  'vobs    ','observer','obsra   ','obsdec  ','pbfwhm  ',
      *  'btype   ','ltype   ','lstart  ','lstep   ','lwidth  '/
+c-----------------------------------------------------------------------
 c
 c  Copy keywords across, which have not changed.
 c
-      do i=1,nkeys
+      do i = 1, nkeys
         call hdcopy(lMap,lOut,keyw(i))
       enddo
 c
 c  Handle the reference pixels.
 c
-      do i=1,naxis
+      do i = 1, naxis
         num = itoaf(i)
         call rdhdr(lMap,'crpix'//num,crpix,1.)
         call wrhdr(lOut,'crpix'//num,crpix-blc(i)+1)
@@ -438,8 +439,8 @@ c
 c
 c  Set the parameters to determine the units and effective beam.
 c
-      if(bunit.ne.' ')call wrhda(lOut,'bunit',bunit)
-      if(bmaj*bmin.ne.0)then
+      if (bunit.ne.' ') call wrhda(lOut,'bunit',bunit)
+      if (bmaj*bmin.ne.0) then
         call wrhdr(lOut,'bmaj',bmaj)
         call wrhdr(lOut,'bmin',bmin)
         call wrhdr(lOut,'bpa',bpa)
@@ -452,5 +453,5 @@ c
       call hiswrite(lOut,line)
       call hisinput(lOut,'CONVOL')
       call hisclose(lOut)
-c
+
       end
