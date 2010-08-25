@@ -1,4 +1,3 @@
-c***********************************************************************
       program imcomb
 
 c= imcomb - Combine images
@@ -40,7 +39,7 @@ c                      regions.
 c         relax        Do not check that the coordinate systems are
 c                      consistent.
 c
-c$Id: imcomb.for,v 1.4 2010/08/25 02:41:19 cal103 Exp $
+c$Id: imcomb.for,v 1.5 2010/08/25 02:46:49 cal103 Exp $
 c--
 c  History:
 c    rjs  29nov94 Original version.
@@ -72,12 +71,12 @@ c-----------------------------------------------------------------------
       real    blctrc(6,MAXIN), rms(MAXIN), rms0
       character in(MAXIN)*64, line*80, out*64, tin*64, version*80
 
-c     Externals.
       character stcat*80, versan*80
+      external  stcat, versan
 c-----------------------------------------------------------------------
       version = versan ('imcomb',
-     *                  '$Revision: 1.4 $',
-     *                  '$Date: 2010/08/25 02:41:19 $')
+     *                  '$Revision: 1.5 $',
+     *                  '$Date: 2010/08/25 02:46:49 $')
 c
 c  Get the inputs.
 c
@@ -238,7 +237,7 @@ c***********************************************************************
       integer tin,tout
       integer off(3)
       character version*(*)
-c
+
 c  Make up the header of the output file.
 c
 c  Input:
@@ -252,40 +251,21 @@ c-----------------------------------------------------------------------
       integer i
       character line*80,num*2
 
-      integer nkeys
-      parameter (nkeys=39)
-      character keyw(nkeys)*8
-
-c     Externals.
       character itoaf*2
-
-      data keyw/   'bunit   ',           'crpix4  ','crpix5  ',
-     *  'cdelt1  ','cdelt2  ','cdelt3  ','cdelt4  ','cdelt5  ',
-     *  'crval1  ','crval2  ','crval3  ','crval4  ','crval5  ',
-     *  'ctype1  ','ctype2  ','ctype3  ','ctype4  ','ctype5  ',
-     *  'obstime ','epoch   ','bmaj    ','bmin    ', 'bpa     ',
-     *  'niters  ','object  ','telescop','observer','restfreq',
-     *  'vobs    ','obsra   ','obsdec  ','lstart  ','lstep   ',
-     *  'ltype   ','lwidth  ','btype   ','pbfwhm  ','cellscal',
-     *  'pbtype  '/
+      external  itoaf
 c-----------------------------------------------------------------------
-c  Write out coordinate information.
-c
+c     Start with a verbatim copy of the header.
+      call headcopy(tIn, tOut, 0, 0, 0, 0)
+
+c     Update changed header items.
       do i = 1, 3
         num = itoaf(i)
-        call rdhdd(tIn,'crpix'//num,crpix,0d0)
+        call rdhdd(tIn, 'crpix'//num, crpix, 0d0)
         crpix = crpix + off(i)
-        call wrhdd(tOut,'crpix'//num,crpix)
+        call wrhdd(tOut, 'crpix'//num, crpix)
       enddo
-c
-c  Copy other parameters.
-c
-      do i = 1, nkeys
-        call hdcopy(tIn,tOut,keyw(i))
-      enddo
-c
-c  Create the output history.
-c
+
+c     Create history.
       call hdcopy(tin,tout,'history')
       call hisopen(tout,'append')
 
