@@ -87,8 +87,8 @@ c     Dynamic memory allocations.
       equivalence(heap,pos1,pos,reg,data)
 c-----------------------------------------------------------------------
       version = versan('clfind',
-     *                 '$Revision: 1.4 $',
-     *                 '$Date: 2010/08/20 06:32:43 $')
+     *                 '$Revision: 1.5 $',
+     *                 '$Date: 2010/08/25 05:24:09 $')
 
 c.....Get the parameters from the user.
       call keyini
@@ -1016,7 +1016,6 @@ c     Copy the header.
       call headcopy(lin, lout, 0, 3, 0, 0)
 
 c     Update history.
-      call hdcopy(lin,lout,'history')
       call hisopen(lout,'append')
       lversion=version
       call hiswrite(lout,'CLFIND: Miriad ' // lversion)
