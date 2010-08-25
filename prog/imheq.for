@@ -41,7 +41,7 @@ c       PGPLOT device to show plots of the histograms & discretized
 c       cumulative histogram. Will plot after each plane, so really
 c       of use only for single plane images
 c
-c$Id: imheq.for,v 1.2 2010/08/25 05:59:14 cal103 Exp $
+c$Id: imheq.for,v 1.3 2010/08/25 06:10:09 cal103 Exp $
 c--
 c
 c  History:
@@ -49,43 +49,30 @@ c    nebk 27jan94  Original version
 c    rjs  02jul97  cellscal change.
 c    rjs  23jul97  added pbtype.
 c-----------------------------------------------------------------------
-      character version*(*)
-      parameter (version='ImHeq: version 27-Jan-94')
-
       include 'maxnax.h'
       include 'maxdim.h'
       include 'mem.h'
 
-      integer maxbin
-      parameter (maxbin = 1000)
+      integer MAXBIN
+      parameter (MAXBIN = 1000)
 
-      character in*80, out*80, device*80
-      integer nin(maxnax), naxis, lin, lout, nbins, ipr, ipl,
-     *  ierr, pgbeg, k, his(maxbin)
-      real cumhis(maxbin), xp(maxbin), yp(maxbin,2)
-      real bmin, bmax, bming, bmaxg, bmin2, bmax2, ymax, bminu, bmaxu
-      logical global
-c
-c  Header keywords.
-c
-      integer nkeys
-      parameter (nkeys=49)
-      character keyw(nkeys)*8
-      data keyw/   'bmaj    ','bmin    ','bpa     ','bunit   ',
-     *    'crota1  ','crota2  ','crota3  ','crota4  ','crota5  ',
-     *        'crval1  ','crval2  ','crpix3  ','crpix4  ','crpix5  ',
-     *        'crpix1  ','crpix2  ','crval3  ','crval4  ','crval5  ',
-     *        'cdelt1  ','cdelt2  ','cdelt3  ','cdelt4  ','cdelt5  ',
-     *        'ctype1  ','ctype2  ','ctype3  ','ctype4  ','ctype5  ',
-     *        'obstime ','epoch   ','history ','instrume','niters  ',
-     *        'object  ','observer','obsra   ','obsdec  ','pbfwhm  ',
-     *        'restfreq','telescop','vobs    ','cellscal','pbtype  ',
-     *        'ltype   ','lstart  ','lwidth  ','lstep   ','btype   '/
+      logical   global
+      integer   his(MAXBIN), ierr, ipl, ipr, k, lin, lout, naxis, nbins,
+     *          nin(maxnax), pgbeg
+      real      bmax, bmax2, bmaxg, bmaxu, bmin, bmin2, bming, bminu,
+     *          cumhis(MAXBIN), xp(MAXBIN), ymax, yp(MAXBIN,2)
+      character device*80, in*80, out*80, version*72
+
+      character versan*80
+      external  versan
+
       data bmin2, bmax2 /1e32, -1e32/
 c-----------------------------------------------------------------------
-c
-c  Get the input parameters.
-c
+      version = versan('imheq',
+     *                 '$Revision: 1.3 $',
+     *                 '$Date: 2010/08/25 06:10:09 $')
+
+c     Get the input parameters.
       call output (version)
       call keyini
       call keya ('in', in, ' ')
@@ -93,40 +80,34 @@ c
       if (in.eq.' ' .or. out.eq.' ')
      *  call bug ('f', 'You must give an input and output file')
       call keyi ('nbins', nbins, 128)
-      nbins = min(maxbin,nbins)
+      nbins = min(MAXBIN,nbins)
       call keyr ('range', bminu, 0.0)
       call keyr ('range', bmaxu, 0.0)
       call keya ('device', device, ' ')
       call decopt (global)
       if (bminu.ne.0.0 .or. bmaxu.ne.0.0) global = .false.
       call keyfin
-c
-c  Open the input.
-c
+
+c     Open the input.
       call xyopen (lin, in, 'old', maxnax, nin)
       if (nin(1).gt.maxdim)
      *  call bug ('f', 'Image too big for me to handle')
       call rdhdi (lin, 'naxis', naxis, 0)
       call imminmax (lin, naxis, nin, bming, bmaxg)
-c
-c  Make the output file, and make its header.
-c
+
+c     Make the output file, and make its header.
       call xyopen (lout, out, 'new', naxis, nin)
-      do k = 1, nkeys
-        call hdcopy (lin, lout, keyw(k))
-      enddo
+      call headcopy(lIn, lOut, 0, 0, 0, 0)
       call hisopen (lout, 'append')
       call hiswrite (lout, 'IMHEQ: Miriad '//version)
       call hisinput (lout, 'IMHEQ')
       call hisclose (lout)
-c
-c Allocate memory
-c
+
+c     Allocate memory.
       call memalloc (ipr, nin(1)*nin(2), 'r')
       call memalloc (ipl, nin(1)*nin(2), 'l')
-c
-c Open PGPLOT device
-c
+
+c     Open PGPLOT device.
       if (device.ne.' ') then
         ierr = pgbeg (0, device, 1, 1)
         if (ierr.ne.1) then
@@ -136,15 +117,13 @@ c
         call pgsvp (0.2, 0.8, 0.2, 0.8)
         call pgpage
       endif
-c
-c Loop over planes
-c
+
+c     Loop over planes.
       do k = 1, nin(3)
         call xysetpl (lin,  1, k)
         call xysetpl (lout, 1, k)
-c
-c Read image
-c
+
+c       Read image.
         call readim (lin, nin(1), nin(2), memr(ipr), meml(ipl),
      *               bmin, bmax)
         if (global) then
@@ -154,19 +133,16 @@ c
           bmin = bminu
           bmax = bmaxu
         endif
-c
-c Apply histogram equalization
-c
+
+c       Apply histogram equalization.
         call equal (nin(1)*nin(2), memr(ipr), meml(ipl), bmin, bmax,
-     *              nbins, his, cumhis, bmin2, bmax2, maxbin, xp,
+     *              nbins, his, cumhis, bmin2, bmax2, MAXBIN, xp,
      *              yp, ymax)
-c
-c Write out image
-c
+
+c       Write out image.
         call writim (lout, nin(1), nin(2), memr(ipr), meml(ipl))
-c
-c Draw plot
-c
+
+c       Draw plot.
         if (device.ne.' ') then
           call pgswin (bmin, bmax, 0.0, ymax)
           call pgbox ('BCNST', 0.0, 0, 'BNST', 0.0, 0)
@@ -182,9 +158,8 @@ c
           call pgupdt
         endif
       enddo
-c
-c Close up
-c
+
+c     Close up.
       call wrhdr (lout, 'datamin', bmin2)
       call wrhdr (lout, 'datamax', bmax2)
 
@@ -203,7 +178,7 @@ c
       real    image(nx*ny), bmin, bmax
       logical mask(nx*ny)
 c-----------------------------------------------------------------------
-c     Read image
+c     Read image.
 c-----------------------------------------------------------------------
       integer i, j, k
 c-----------------------------------------------------------------------
@@ -230,7 +205,7 @@ c-----------------------------------------------------------------------
       real    image(nx*ny)
       logical mask(nx*ny)
 c-----------------------------------------------------------------------
-c     Write image
+c     Write image.
 c-----------------------------------------------------------------------
       integer j, k
 c-----------------------------------------------------------------------
@@ -255,41 +230,37 @@ c-----------------------------------------------------------------------
 c     Apply histogram equalization
 c
 c  Input
-c    n       Number of pixels in image
-c    image   Image
-c    mask    Image mask (.true. is good)
-c    bmin    Image minimum
-c    bmax    Image maximum
-c    nbins   Number of bins for histogram
-c    maxbin  Max number of bins
+c    n       Number of pixels in image.
+c    image   Image.
+c    mask    Image mask (.true. is good).
+c    bmin    Image minimum.
+c    bmax    Image maximum.
+c    nbins   Number of bins for histogram.
+c    maxbin  Max number of bins.
 c  Scratch
-c    his     Histogram
-c    cumhis  Cumulative histogram
+c    his     Histogram.
+c    cumhis  Cumulative histogram.
 c  Output
-c    bmin2   Output image minimum
-c    bmax2   Output image maximum
-c    xp      Intensity for plotting
+c    bmin2   Output image minimum.
+c    bmax2   Output image maximum.
+c    xp      Intensity for plotting.
 c    yp      Histogram and discretized cumulative histogram (same as
-c            transfer function apart from normalization) for plotting
+c            transfer function apart from normalization) for plotting.
 c
 c-----------------------------------------------------------------------
       integer   i, idx
       real      cum, fac
 c-----------------------------------------------------------------------
-c
-c Initialize histogram
-c
+c     Initialize histogram.
       do i = 1, nbins
         his(i) = 0
         cumhis(i) = 0.0
-c
-c Plotting array
-c
+
+c       Plotting array.
         xp(i) = (i-1)/real(nbins-1)*(bmax-bmin) + bmin
       enddo
-c
-c Generate image histogram
-c
+
+c     Generate image histogram.
       fac = real(nbins-1) / (bmax-bmin)
       do i = 1, n
         if (mask(i)) then
@@ -297,9 +268,8 @@ c
           his(idx) = his(idx) + 1
         endif
       enddo
-c
-c Generate cumulative histogram.
-c
+
+c     Generate cumulative histogram.
       cum  = 0.0
       ymax = -1e32
       do i = 1, nbins
@@ -309,38 +279,32 @@ c
 
         ymax = max(ymax,yp(i,1))
       enddo
-c
-c Now discretize the cumulative histogram values as well
-c
+
+c     Now discretize the cumulative histogram values as well.
       fac = real(nbins-1) / real(n)
       bmin2 =  1e32
       bmax2 = -1e32
       do i = 1, nbins
-c
-c This index converts the actual cumulative histogram
-c value to the nearest discrete bin
-c
+
+c       This index converts the actual cumulative histogram
+c       value to the nearest discrete bin.
         idx = max(1,min(nbins,nint(cumhis(i)*fac)+1))
-c
-c Convert this bin back to an intensity and reuse CUMHIS array
-c
+
+c       Convert this bin back to an intensity and reuse CUMHIS array.
         yp(i,2) = cumhis(i)
         cumhis(i) = real(idx)/real(nbins)*(bmax-bmin) + bmin
         bmin2 = min(bmin2,cumhis(i))
         bmax2 = max(bmax2,cumhis(i))
       enddo
-c
-c Now fix the image pixels (including masked ones)
-c
+
+c     Now fix the image pixels (including masked ones).
       fac = real(nbins-1) / (bmax-bmin)
       do i = 1, n
-c
-c Find cumulative histogram index of this pixel
-c
+
+c       Find cumulative histogram index of this pixel.
         idx = max(1,min(nbins,nint((image(i)-bmin)*fac)+1))
-c
-c Replace by discretized cumulative histogram intensity
-c
+
+c       Replace by discretized cumulative histogram intensity.
         image(i) = cumhis(idx)
       enddo
 
@@ -354,7 +318,7 @@ c-----------------------------------------------------------------------
 c     Decode options array into named variables.
 c
 c   Output:
-c     global    Use global image min and max
+c     global    Use global image min and max.
 c-----------------------------------------------------------------------
       integer MAXOPT
       parameter (MAXOPT = 1)
