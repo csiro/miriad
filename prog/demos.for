@@ -1,4 +1,3 @@
-c***********************************************************************
       program demos
 
 c= demos - Inverse mosaicing operation
@@ -49,7 +48,7 @@ c         detaper    This indicates that the input image is not fully
 c                    primary beam corrected. Such images are formed by
 c                    LINMOS with options=taper or by MOSMEM.
 c
-c$Id: demos.for,v 1.2 2010/08/25 02:17:21 cal103 Exp $
+c$Id: demos.for,v 1.3 2010/08/25 02:33:26 cal103 Exp $
 c--
 c  History:
 c    rjs  25apr90 Original version.
@@ -77,28 +76,29 @@ c    rjs  07jul97 Change coaxdesc to coaxget.
 c    rjs  17sep97 Doc change only.
 c    rjs  25sep98 Less fussy about freq axis for 1-plane files.
 c-----------------------------------------------------------------------
-      character version*(*)
-      parameter (version='version 25-Sep-98')
-      integer MAXSELS,MAXPNT,MAXVIS
-      parameter (MAXSELS=256,MAXPNT=2048,MAXVIS=128)
       include 'maxdim.h'
       include 'mirconst.h'
 
-      character map*64,vis(MAXVIS)*64,out*64,name*64
-      character pbtype(MAXPNT)*16
-      integer imsize(2),nsize(3),npnt,lout,i,tmap,iax,nvis
-      logical detaper
-      real sels(MAXSELS)
-      double precision ra(MAXPNT),dec(MAXPNT)
+      integer MAXSELS, MAXPNT, MAXVIS
+      parameter (MAXSELS=256, MAXPNT=2048, MAXVIS=128)
+
+      logical   detaper
+      integer   i, iax, imsize(2), lout, npnt, nsize(3), nvis, tmap
+      real      sels(MAXSELS)
+      double precision dec(MAXPNT), ra(MAXPNT)
+      character map*64, name*64, out*64, pbtype(MAXPNT)*16, version*72,
+     *          vis(MAXVIS)*64
 
       integer   len1
-      character itoaf*3
-      external  itoaf, len1
+      character itoaf*3, versan*80
+      external  itoaf, len1, versan
 c-----------------------------------------------------------------------
+      version = versan('demos',
+     *                 '$Revision: 1.3 $',
+     *                 '$Date: 2010/08/25 02:33:26 $')
 c
 c  Get the input parameters.
 c
-      call output('Demos: '//version)
       call keyini
       call keya('map',map,' ')
       call mkeyf('vis',vis,MAXVIS,nvis)
@@ -255,39 +255,21 @@ c-----------------------------------------------------------------------
       include 'mirconst.h'
       include 'mem.h'
 
-      integer tout,naxis,pbObj,pScr,pWts,npnt
-      integer nsize(MAXNAX),i,k,n1,n2,n3,x1,x2,y1,y2
-      real x0,y0,rms
-      double precision crpix1,crpix2,xin(3),xout(3)
+      integer   i, k, n1, n2, n3, naxis, npnt, nsize(MAXNAX), pScr,
+      *         pWts, pbObj, tout, x1, x2, y1, y2
+      real      rms, x0, y0
+      double precision crpix1, crpix2, xin(3), xout(3)
       character line*64
-c
-c  Header keywords.
-c
-      integer nkeys
-      parameter (nkeys=39)
-      character keyw(nkeys)*8
-
-      data keyw/   'bunit   ','btype   ',
-     *  'cdelt1  ','cdelt2  ','cdelt3  ','cdelt4  ','cdelt5  ',
-     *                        'crpix3  ','crpix4  ','crpix5  ',
-     *  'crval1  ','crval2  ','crval3  ','crval4  ','crval5  ',
-     *  'ctype1  ','ctype2  ','ctype3  ','ctype4  ','ctype5  ',
-     *  'epoch   ','history ','niters  ','object  ','telescop',
-     *  'observer','restfreq','vobs    ','obsra   ','obsdec  ',
-     *  'obstime ','lstart  ','lstep   ','ltype   ','lwidth  ',
-     *  'bmaj    ','bmin    ','bpa     ','cellscal'/
 c-----------------------------------------------------------------------
       n3 = insize(3)
       nsize(3) = n3
-c
-c  Determine the output map size.
-c
+
+c     Determine the output map size.
       n1 = outsize(1)
       n2 = outsize(2)
       if (n1.le.0 .or. n2.le.0)call defsiz(tmap,pbtype,n1,n2)
-c
-c  Determine the field extent in pixels.
-c
+
+c     Determine the field extent in pixels.
       xin(1) = ra
       xin(2) = dec
       xin(3) = 1
@@ -304,18 +286,16 @@ c
       y2 = y1 + n2 - 1
       y1 = max(y1,1)
       y2 = min(y2,insize(2))
-c
-c  Check if the output file is of some size!
-c
+
+c     Check if the output file is of some size!
       if (x2.lt.x1 .or. y2.lt.y1) then
         line = 'Unable to form output dataset '//name
         call bug('w',line)
         call bug('w','... pointing does not overlap with input image')
         return
       endif
-c
-c Open the output file.
-c
+
+c     Open the output file.
       call rdhdi(tmap,'naxis',naxis,1)
       naxis = min(naxis,MAXNAX)
       nsize(1) = x2 - x1 + 1
@@ -325,34 +305,30 @@ c
         nsize(i) = 1
       enddo
       call xyopen(tout,name,'new',naxis,nsize)
-c
-c  Process its header.
-c
+
+c     Process its header.
+      call headcopy(tMap, tOut, 0, 0, 0, 0)
+
       call coCvt1(tmap,1,'op',0d0,'ap',crpix1)
       call coCvt1(tmap,2,'op',0d0,'ap',crpix2)
 
-      crpix1 = crpix1 - x1 + 1
-      crpix2 = crpix2 - y1 + 1
+      crpix1 = crpix1 - x1 + 1d0
+      crpix2 = crpix2 - y1 + 1d0
 
       call wrhdd(tOut,'crpix1',crpix1)
       call wrhdd(tOut,'crpix2',crpix2)
 
-      do i = 1, nkeys
-        call hdcopy(tMap,tOut,keyw(i))
-      enddo
       call pbWrite(tOut,pbtype)
-c
-c  Create output mosaic table.
-c
-      call rdhdr(tMap,'rms',rms,0.)
-      if (rms.le.0)rms = 1
+
+c     Create output mosaic table.
+      call rdhdr(tMap,'rms',rms,0.0)
+      if (rms.le.0.0) rms = 1.0
 
       call mosInit(outsize(1),outsize(2))
       call mosSet(1,ra,dec,rms,pbtype)
       call mosSave(tOut)
-c
-c  Write some history info.
-c
+
+c     Write history info.
       call hisopen(tOut,'append')
       line = 'DEMOS: Miriad DeMos '//version
       call hiswrite(tOut, line)
@@ -360,23 +336,20 @@ c
       line = 'DEMOS: Primary beam used is '//pbtype
       call hiswrite(tOut,line)
       call hisclose(tOut)
-c
-c  Prepare to iterate.
-c
+
+c     Prepare to iterate.
       call memAlloc(pWts,nsize(1)*nsize(2),'r')
       if (detaper) then
         call memAlloc(pScr,nsize(1)*nsize(2),'r')
         call mosLoad(tMap,npnt)
       endif
-c
-c  Loop over all planes
-c
+
+c     Loop over all planes
       do k = 1, n3
         call xysetpl(tmap,1,k)
         call xysetpl(tOut,1,k)
-c
-c  Initialise the primary beam object.
-c
+
+c       Initialise the primary beam object.
         xin(1) = ra
         xin(2) = dec
         xin(3) = k
@@ -392,14 +365,12 @@ c
         endif
 
         call pbFin(pbObj)
-c
-c  Now write out the data.
-c
+
+c       Write out the data.
         call WrOut(tmap,tOut,memr(pWts),x1-1,y1-1,nsize(1),nsize(2))
       enddo
-c
-c  All said and done.
-c
+
+c     All said and done.
       call memFree(pWts,nsize(1)*nsize(2),'r')
       if (detaper)call memFree(pScr,nsize(1)*nsize(2),'r')
       call xyclose(tOut)
