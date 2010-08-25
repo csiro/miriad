@@ -97,6 +97,8 @@ c         notaper    Normally the low-resolution image is tapered to
 c                    match any residual primary beam response in the
 c                    high-resolution image.  This option causes this
 c                    step to be skipped.
+c
+c$Id: immerge.for,v 1.3 2010/08/25 06:47:06 cal103 Exp $
 c--
 c
 c  History:
@@ -112,41 +114,38 @@ c                 option.
 c    rjs  29mar00 Added options=notaper.
 c  Bugs:
 c-----------------------------------------------------------------------
-      character version*(*)
-      parameter (version='Immerge: version 1.0 29-Mar-00')
       include 'maxdim.h'
       include 'maxnax.h'
       include 'mirconst.h'
       include 'mem.h'
-      integer MAXBOX
-      parameter (MAXBOX=2048)
 
-      integer pIn1,pIn2,pWt1,pWt2
-      logical domerge,dofac,doout,dozero,dofeath,dotaper
-      logical doshift,notaper
-      integer n,ngx,ngy,lIn1,lIn2,lOut,iax,i,k,xoff,yoff,zoff
-      integer nin(3),nout(MAXNAX),ntemp(3),naxis,ifail,npnt
-      integer Box(MAXBOX)
-      character In1*80,In2*80,out*80,device*64,line*80
-      character mess1*64,mess2*64
-      double precision freq1,freq2,cdelt1,cdelt2,x1(2),x2(2)
-      real fac,uvlo,uvhi,freq,lambda,temp,du,dv,pfac
-      real bmaj1,bmin1,bpa1,bmaj2,bmin2,bpa2
-      real bmaj,bmin,bpa,bmajt,bmint,bpat,norm
-      real sfac,sxx,sxy,syy,xs,ys
+      integer MAXBOX, NUNITS
+      parameter (MAXBOX = 2048, NUNITS = 4)
 
-      integer NUNITS
-      parameter (NUNITS=4)
-      character units(NUNITS)*12,unit*12
+      logical   dofac, dofeath, domerge, doout, doshift, dotaper,
+     *          dozero, notaper
+      integer   box(MAXBOX), i, iax, ifail, k, lIn1, lIn2, lOut, n,
+     *          naxis, ngx, ngy, nin(3), nout(MAXNAX), npnt, ntemp(3),
+     *          pIn1, pIn2, pWt1, pWt2, xoff, yoff, zoff
+      real      bmaj, bmaj1, bmaj2, bmajt, bmin, bmin1, bmin2, bmint,
+     *          bpa, bpa1, bpa2, bpat, du, dv, fac, freq, lambda, norm,
+     *          pfac, sfac, sxx, sxy, syy, temp, uvhi, uvlo, xs, ys
+      double precision cdelt1, cdelt2, freq1, freq2, x1(2), x2(2)
+      character device*64, in1*80, in2*80, line*80, mess1*64, mess2*64,
+     *          out*80, unit*12, units(NUNITS)*12, version*72
 
-c     Externals.
-      logical keyprsnt
-      integer nextpow2
+      logical   keyprsnt
+      integer   nextpow2
+      character versan*80
+      external keyprsnt, nextpow2, versan
 
       data units/'klambda     ','meters      ','nanoseconds ',
      *           'feet        '/
 c-----------------------------------------------------------------------
-      call output(version)
+      version = versan('immerge',
+     *                 '$Revision: 1.3 $',
+     *                 '$Date: 2010/08/25 06:47:06 $')
+
       call keyini
       call GetOpt(domerge,dozero,dofeath,doshift,notaper)
       call keyf('in',in1,' ')
@@ -320,8 +319,8 @@ c
         if (domerge) then
           call MkHead(lIn1,lOut,version,fac,mess1,mess2)
         else
-          call hdcopy(lIn2,lOut,'mask')
           call MkHead(lIn2,lOut,version,fac,mess1,mess2)
+          call hdcopy(lIn2,lOut,'mask')
         endif
 
         do k = 1, nOut(3)
@@ -429,7 +428,7 @@ c***********************************************************************
 
       logical domerge,dozero,dofeath,doshift,notaper
 
-c  Get extra processin parameters.
+c  Get extra processing parameters.
 c-----------------------------------------------------------------------
       integer NOPTS
       parameter (NOPTS=5)
@@ -452,51 +451,36 @@ c-----------------------------------------------------------------------
 c***********************************************************************
       subroutine MkHead(lIn,lOut,version,fac,mess1,mess2)
 
-      integer lIn,lOut
-      character version*(*),mess1*(*),mess2*(*)
-      real fac
+      integer   lIn, lOut
+      character version*(*), mess1*(*), mess2*(*)
+      real      fac
 c
 c  Make the output dataset header.
 c-----------------------------------------------------------------------
       character line*64
-      integer i
-
-      integer nkeys
-      parameter (nkeys=41)
-      character keyw(nkeys)*8
-      data keyw/   'bunit   ','obstime ','epoch   ','cellscal',
-     *  'crval1  ','crval2  ','crval3  ','crval4  ','crval5  ',
-     *  'cdelt1  ','cdelt2  ','cdelt3  ','cdelt4  ','cdelt5  ',
-     *  'crpix1  ','crpix2  ','crpix3  ','crpix4  ','crpix5  ',
-     *  'ctype1  ','ctype2  ','ctype3  ','ctype4  ','ctype5  ',
-     *  'niters  ','object  ','telescop','observer','btype   ',
-     *  'restfreq','vobs    ','obsra   ','obsdec  ','lstart  ',
-     *  'lstep   ','ltype   ','lwidth  ','history ',
-     *  'bmaj    ','bmin    ','bpa     '/
 c-----------------------------------------------------------------------
-c
-c  Copy other parameters.
-c
-      do i = 1, nkeys
-        call hdcopy(lIn,lOut,keyw(i))
-      enddo
-c
-c  Create the output history.
-c
+c     Copy the header verbatim.
+      call headcopy(lIn, lOut, 0, 0, 0, 0)
+
+c     Create the output history.
       call hisopen(lOut,'append')
       line = 'IMMERGE: Miriad '//version
       call hiswrite(lOut,line)
       call hisinput(lOut,'IMMERGE')
+
       call hiswrite(lOut,
-     *  'IMMERGE: The inputs are assumed to have gaussian beams')
+     *  'IMMERGE: The inputs are assumed to have Gaussian beams')
+
       line = 'IMMERGE: '//mess1
       call hiswrite(lOut,line)
       line = 'IMMERGE: '//mess2
       call hiswrite(lOut,line)
+
       write(line,'(a,1pe13.5)')
      *  'IMMERGE: Using a flux calibration factor of',fac
       call hiswrite(lOut,line)
       call hisclose(lOut)
+
       end
 c***********************************************************************
       subroutine GetDat(lIn,In,nx,ny,ngx,ngy,dozero,
