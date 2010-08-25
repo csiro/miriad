@@ -39,7 +39,7 @@ c                      regions.
 c         relax        Do not check that the coordinate systems are
 c                      consistent.
 c
-c$Id: imcomb.for,v 1.5 2010/08/25 02:46:49 cal103 Exp $
+c$Id: imcomb.for,v 1.6 2010/08/25 05:39:30 cal103 Exp $
 c--
 c  History:
 c    rjs  29nov94 Original version.
@@ -75,8 +75,8 @@ c-----------------------------------------------------------------------
       external  stcat, versan
 c-----------------------------------------------------------------------
       version = versan ('imcomb',
-     *                  '$Revision: 1.5 $',
-     *                  '$Date: 2010/08/25 02:46:49 $')
+     *                  '$Revision: 1.6 $',
+     *                  '$Date: 2010/08/25 05:39:30 $')
 c
 c  Get the inputs.
 c
@@ -247,9 +247,9 @@ c    tout       The handle of the output file.
 c    off
 c    version
 c-----------------------------------------------------------------------
+      integer   i
       double precision crpix
-      integer i
-      character line*80,num*2
+      character line*80, num*2
 
       character itoaf*2
       external  itoaf
@@ -266,23 +266,22 @@ c     Update changed header items.
       enddo
 
 c     Create history.
-      call hdcopy(tin,tout,'history')
       call hisopen(tout,'append')
-
       line = 'IMCOMB: Miriad '//version
       call hiswrite(tout,line)
       call hisinput(tout,'IMCOMB')
       call hisclose(tout)
+
       end
 c***********************************************************************
       subroutine ThingIni(nsize,blctrc)
 
-      integer nsize(3)
-      real blctrc(6)
+      integer   nsize(3)
+      real      blctrc(6)
 c-----------------------------------------------------------------------
-      blctrc(1) = 1
-      blctrc(2) = 1
-      blctrc(3) = 1
+      blctrc(1) = 1.0
+      blctrc(2) = 1.0
+      blctrc(3) = 1.0
       blctrc(4) = nsize(1)
       blctrc(5) = nsize(2)
       blctrc(6) = nsize(3)
@@ -291,48 +290,52 @@ c-----------------------------------------------------------------------
 c***********************************************************************
       subroutine ThingChk(tIn,tOut,nsize,relax,interp,blctrc)
 
-      integer tIn,tOut,nsize(3)
-      logical interp,relax
-      real blctrc(6)
+      integer tIn, tOut, nsize(3)
+      logical relax, interp
+      real    blctrc(6)
 c-----------------------------------------------------------------------
-      double precision In(3),Out(3)
-      integer i
-      logical valid
+      logical   valid
+      integer   i
+      double precision in(3), out(3)
 c-----------------------------------------------------------------------
       call pcvtinit(tIn,tOut)
 
       if (relax) then
-        In(1) = nsize(1)/2 + 1
-        In(2) = nsize(2)/2 + 1
-        In(3) = nsize(3)/2 + 1
-        call pcvt(In,Out,3,valid)
+        in(1) = dble(nsize(1)/2 + 1)
+        in(2) = dble(nsize(2)/2 + 1)
+        in(3) = dble(nsize(3)/2 + 1)
+        call pcvt(in, out, 3, valid)
         if (.not.valid) call bug('f',
      *    'Invalid coordinates prevented aligning images')
-        blctrc(1) = In(1) - Out(1) + 1
-        blctrc(2) = In(2) - Out(2) + 1
-        blctrc(3) = In(3) - Out(3) + 1
+
+        blctrc(1) = in(1) - out(1) + 1d0
+        blctrc(2) = in(2) - out(2) + 1d0
+        blctrc(3) = in(3) - out(3) + 1d0
         blctrc(4) = blctrc(1) + nsize(1) - 1
         blctrc(5) = blctrc(2) + nsize(2) - 1
         blctrc(6) = blctrc(3) + nsize(3) - 1
+
       else
-        In(1) = 1
-        In(2) = 1
-        In(3) = 1
-        call pcvt(In,Out,3,valid)
+        in(1) = 1d0
+        in(2) = 1d0
+        in(3) = 1d0
+        call pcvt(in, out, 3, valid)
         if (.not.valid) call bug('f',
      *    'Invalid coordinates prevented aligning images')
-        blctrc(1) = 2-Out(1)
-        blctrc(2) = 2-Out(2)
-        blctrc(3) = 2-Out(3)
-        In(1) = nsize(1)
-        In(2) = nsize(2)
-        In(3) = nsize(3)
-        call pcvt(In,Out,3,valid)
+
+        blctrc(1) = 2d0 - out(1)
+        blctrc(2) = 2d0 - out(2)
+        blctrc(3) = 2d0 - out(3)
+        in(1) = nsize(1)
+        in(2) = nsize(2)
+        in(3) = nsize(3)
+        call pcvt(in, out, 3, valid)
         if (.not.valid) call bug('f',
      *    'Invalid coordinates prevented aligning images')
-        blctrc(4) = 2*nsize(1) - Out(1)
-        blctrc(5) = 2*nsize(2) - Out(2)
-        blctrc(6) = 2*nsize(3) - Out(3)
+
+        blctrc(4) = 2*nsize(1) - out(1)
+        blctrc(5) = 2*nsize(2) - out(2)
+        blctrc(6) = 2*nsize(3) - out(3)
       endif
 
       interp = .false.
