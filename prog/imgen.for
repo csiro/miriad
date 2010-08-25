@@ -96,6 +96,8 @@ c@ seed
 c       Integer used to initialise the random number generator.  The
 c       same value of SEED produces the same noise, different values
 c       produce different noise.
+c
+c$Id: imgen.for,v 1.3 2010/08/25 05:47:36 cal103 Exp $
 c--
 c
 c  History:
@@ -154,45 +156,41 @@ c---
 c ToDo:
 c    write good headers if 3D cubes written
 c-----------------------------------------------------------------------
-      character version*(*)
-      parameter (version='Imgen: version 23-feb-03')
       include 'mirconst.h'
       include 'maxdim.h'
       include 'maxnax.h'
-      integer n1,n2,n3,i,j,k,lIn,lOut,nsize(MAXNAX),naxis,seed
-      double precision crpix1,crpix2,cdelt1,cdelt2,crval1,crval2
-      double precision x1(3),x2(3)
-      real factor,bmaj,bmin,bpa,fac,fac3
-      character In*80,Out*80
-      logical totflux
-      real Buff(MAXDIM)
 
-c     Source parameters.
-      integer MAXOBJS
-      parameter (MAXOBJS=3000)
-      real fwhm1(MAXOBJS),fwhm2(MAXOBJS),posang(MAXOBJS)
-      real fwhm3(MAXOBJS)
-      real amp(MAXOBJS),x(MAXOBJS),y(MAXOBJS),z(MAXOBJS)
-      real fwhm1d(MAXOBJS),fwhm2d(MAXOBJS),posangd(MAXOBJS)
-      real xd(MAXOBJS),yd(MAXOBJS)
-      character objs(MAXOBJS)*8
+      integer MAXOBJS, NOBJECTS
+      parameter (NOBJECTS = 11, MAXOBJS = 3000)
 
-      integer NOBJECTS
-      parameter (NOBJECTS=11)
-      integer nobjs
-      character objects(NOBJECTS)*8
+      logical   totflux
+      integer   i, j, k, lIn, lOut, n1, n2, n3, naxis, nobjs,
+     *          nsize(MAXNAX), seed
+      real      amp(MAXOBJS), bmaj, bmin, bpa, buff(MAXDIM), fac, fac3,
+     *          factor, fwhm1(MAXOBJS), fwhm1d(MAXOBJS), fwhm2(MAXOBJS),
+     *          fwhm2d(MAXOBJS), fwhm3(MAXOBJS), posang(MAXOBJS),
+     *          posangd(MAXOBJS), x(MAXOBJS), xd(MAXOBJS), y(MAXOBJS),
+     *          yd(MAXOBJS), z(MAXOBJS)
+      double precision cdelt1, cdelt2, crpix1, crpix2, crval1, crval2,
+     *          x1(3), x2(3)
+      character in*80, out*80, objects(NOBJECTS)*8, objs(MAXOBJS)*8,
+     *          version*72
 
-c     Externals.
-      logical keyprsnt
+      logical   keyprsnt
+      character versan*80
+      external  keyprsnt, versan
 
       data objects/'level   ','noise   ','point   ',
      *             'gaussian','disk    ','j1x     ',
      *             'shell   ','comet   ','cluster ',
      *             'gauss3  ','jet     '/
+c-----------------------------------------------------------------------
+      version = versan('imgen',
+     *                 '$Revision: 1.3 $',
+     *                 '$Date: 2010/08/25 05:47:36 $')
 c
 c  Get the parameters from the user.
 c
-      call output(version)
       call keyini
       call keya('in',In,' ')
       call keya('out',Out,' ')
@@ -420,7 +418,7 @@ c-----------------------------------------------------------------------
       logical present(NOPTS)
 
       data opts/'totflux '/
-
+c-----------------------------------------------------------------------
       call options('options',opts,present,NOPTS)
       totflux = present(1)
       end
@@ -434,7 +432,7 @@ c  Initialise a row.
 c
 c-----------------------------------------------------------------------
       integer i
-
+c-----------------------------------------------------------------------
       if (lIn.eq.0 .or. factor.eq.0) then
         do i = 1, n1
           Buff(i) = 0
@@ -459,49 +457,34 @@ c***********************************************************************
 c  Make a header for the output image.
 c
 c-----------------------------------------------------------------------
-      integer nkeys
-      parameter (nkeys=45)
       character line*64
-      integer i
-      character keyw(nkeys)*8
-      data keyw/   'bmaj    ','bmin    ','bpa     ','bunit   ',
-     *  'cdelt1  ','cdelt2  ','cdelt3  ','cdelt4  ','cdelt5  ',
-     *  'crpix1  ','crpix2  ','crpix3  ','crpix4  ','crpix5  ',
-     *  'crval1  ','crval2  ','crval3  ','crval4  ','crval5  ',
-     *  'ctype1  ','ctype2  ','ctype3  ','ctype4  ','ctype5  ',
-     *  'epoch   ','ltype   ','lstart  ','lwidth  ','mostable',
-     *  'lstep   ','mask    ','niters  ','object  ','history ',
-     *  'observer','obsra   ','obsdec  ','restfreq','telescop',
-     *  'vobs    ','cellscal','obstime ','pbfwhm  ','btype   ',
-     *  'pbtype  '/
-c
-c  Either create a new header, or copy the old one.
-c
+c-----------------------------------------------------------------------
       if (lIn.eq.0) then
-        call wrhdd(lOut,'crpix1',crpix1)
-        call wrhdd(lOut,'crpix2',crpix2)
-        call wrhdd(lOut,'cdelt1',cdelt1)
-        call wrhdd(lOut,'cdelt2',cdelt2)
-        call wrhdd(lOut,'crval1',crval1)
-        call wrhdd(lOut,'crval2',crval2)
-        call wrhda(lOut,'ctype1','RA---SIN')
-        call wrhda(lOut,'ctype2','DEC--SIN')
+c       Create a new header.
+        call wrhdd(lOut, 'crpix1', crpix1)
+        call wrhdd(lOut, 'crpix2', crpix2)
+        call wrhdd(lOut, 'cdelt1', cdelt1)
+        call wrhdd(lOut, 'cdelt2', cdelt2)
+        call wrhdd(lOut, 'crval1', crval1)
+        call wrhdd(lOut, 'crval2', crval2)
+        call wrhda(lOut, 'ctype1', 'RA---SIN')
+        call wrhda(lOut, 'ctype2', 'DEC--SIN')
+
         if (bmaj*bmin.gt.0) then
-          call wrhda(lOut,'bunit','JY/BEAM')
-          call wrhdr(lOut,'bmaj',bmaj)
-          call wrhdr(lOut,'bmin',bmin)
-          call wrhdr(lOut,'bpa',bpa)
+          call wrhda(lOut, 'bunit', 'JY/BEAM')
+          call wrhdr(lOut, 'bmaj',  bmaj)
+          call wrhdr(lOut, 'bmin',  bmin)
+          call wrhdr(lOut, 'bpa',   bpa)
         else
-          call wrhda(lOut,'bunit','JY/PIXEL')
+          call wrhda(lOut, 'bunit', 'JY/PIXEL')
         endif
       else
-        do i = 1, nkeys
-          call hdcopy(lIn,lOut,keyw(i))
-        enddo
+c       Copy the old one.
+        call headcopy(lIn, lOut, 0, 0, 0, 0)
+        call hdcopy(lIn, lOut, 'mask')
       endif
-c
-c  Update the history.
-c
+
+c     Update the history.
       call hisopen(lOut,'append')
       line = 'IMGEN: Miriad '//version
       call hiswrite(lOut,line)
@@ -529,9 +512,9 @@ c-----------------------------------------------------------------------
       real xx,yy,xp,yp,scale,cospa,sinpa,t,a,log2,limit,p,theta,sum
       real Buff(MAXDIM)
 
-c     Externals.
-      real j1xbyx
-
+      real      j1xbyx
+      external  j1xbyx
+c-----------------------------------------------------------------------
 c  Add the new contribution.First the gaussian. Work out the region
 c  where the exponential greater than exp(-25), and don't bother
 c  processing those regions.
