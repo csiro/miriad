@@ -75,7 +75,7 @@ c                    This will give better stability if you are daring
 c                    enough to deconvolve more than the inner quarter of
 c                    the dirty image.
 c
-c$Id: maxen.for,v 1.2 2010/08/26 07:24:29 cal103 Exp $
+c$Id: maxen.for,v 1.3 2010/08/26 07:52:41 cal103 Exp $
 c--
 c  History:
 c    rjs   nov88 - Original version.
@@ -123,48 +123,48 @@ c   rjs  02jul97 - cellscal change.
 c   rjs  23jul97 - Added pbtype.
 c   rjs  10feb99 - Zero initial estimate for measure=cornwell to 0.
 c-----------------------------------------------------------------------
-      character version*(*)
-      parameter (version='Maxen: version 1.0 10-Feb-99')
       include 'maxnax.h'
       include 'maxdim.h'
-      integer MaxRun,MaxBoxes
-      parameter (MaxRun=3*maxdim,MaxBoxes=2048)
 
-      integer quiet,normal,verbose
-      parameter (quiet=0,normal=1,verbose=2)
+      integer    MAXRUN, MAXBOXES
+      parameter (MAXRUN=3*MAXDIM, MAXBOXES=2048)
 
-      integer gull,cornwell
-      parameter (gull=1,cornwell=2)
+      integer    QUIET, NORMAL, VERBOSE
+      parameter (QUIET=0, NORMAL=1, VERBOSE=2)
 
-      character MapNam*64,BeamNam*64,ModelNam*64,OutNam*64,DefNam*64
-      character entropy*8,messlev*8,flags*8,line*72
-      integer lBeam,lMap,lModel,lOut,lDef
-      integer nMap(3),nModel(3),nOut(MAXNAX),nBeam(2),nDef(3),i
-      integer xmin,ymin,xmax,ymax,n1,n2,nx,ny,MaxMap
-      integer imin,imax,jmin,jmax,kmin,kmax,blc(3),trc(3),naxis,k
-      integer icentre,jcentre
-      integer maxniter,niter
-      integer measure,message
-      real Tol,TRms,TFlux,Qest,De,Df,OStLen2,OStLen1
-      real J0,J1,StLen1,StLen2,StLim,Alpha,Beta,Q
-      real GradEE,GradEF,GradEH,GradEJ,GradFF,GradFH,GradFJ
-      real GradHH,GradJJ,Grad11,Immax,Immin,Flux,Rms,ClipLev
-      logical converge,positive,asym,pad,doflux
-      integer Run(3,MaxRun),nRun,Boxes(maxBoxes),nPoint
-      integer xmoff,ymoff,zmoff,xdoff,ydoff,zdoff
+      integer    GULL, CORNWELL
+      parameter (GULL=1, CORNWELL=2)
+
+      logical   asym, converge, doflux, pad, positive
+      integer   blc(3), boxes(MAXBOXES), i, icentre, imax, imin,
+     *          jcentre, jmax, jmin, k, kmax, kmin, lBeam, lDef, lMap,
+     *          lModel, lOut, maxMap, maxniter, measure, message, n1,
+     *          n2, nBeam(2), nDef(3), nMap(3), nModel(3), nOut(MAXNAX),
+     *          nPoint, nRun, naxis, niter, nx, ny, run(3,MAXRUN),
+     *          trc(3), xdoff, xmax, xmin, xmoff, ydoff, ymax, ymin,
+     *          ymoff, zdoff, zmoff
+      real      Alpha, Beta, ClipLev, De, Df, Flux, Grad11, GradEE,
+     *          GradEF, GradEH, GradEJ, GradFF, GradFH, GradFJ, GradHH,
+     *          GradJJ, Immax, Immin, J0, J1, OStLen1, OStLen2, Q, Qest,
+     *          Rms, StLen1, StLen2, StLim, TFlux, TRms, Tol
+
+      character BeamNam*64, DefNam*64, entropy*8, flags*8, line*72,
+     *          MapNam*64, messlev*8, ModelNam*64, OutNam*64, version*72
 
       integer pBem,pMap,pEst,pDef,pRes,pNewEst,pNewRes
       real Data(MaxBuf)
       common Data
 
-c     Externals.
-      character itoaf*4
-      integer ismax
+      integer   ismax
+      character itoaf*4, versan*80
+      external  ismax, itoaf, versan
 c-----------------------------------------------------------------------
+      version = versan('maxen',
+     *                 '$Revision: 1.3 $',
+     *                 '$Date: 2010/08/26 07:52:41 $')
 c
 c  Get the input parameters.
 c
-      call output(version)
       call keyini
       call keya('map',MapNam,' ')
       call keya('beam',BeamNam,' ')
@@ -176,7 +176,7 @@ c
       call keyr('q',Q,0.)
       call keyr('rms',TRms,0.)
       call keyr('flux',TFlux,0.)
-      call BoxInput('region',MapNam,Boxes,MaxBoxes)
+      call BoxInput('region',MapNam,Boxes,MAXBOXES)
       call GetMeas(entropy)
       call GetOpt(messlev,asym,pad)
       call keyfin
@@ -193,18 +193,18 @@ c
      *  call bug('f','The TOL parameter must be positive valued')
 
       if (messlev.eq.'quiet') then
-        message = quiet
+        message = QUIET
       else if (messlev.eq.'normal') then
-        message = normal
+        message = NORMAL
       else if (messlev.eq.'verbose') then
-        message = verbose
+        message = VERBOSE
       endif
 
       if (entropy.eq.'gull') then
-        measure = gull
+        measure = GULL
         positive = .true.
       else if (entropy.eq.'cornwell') then
-        measure = cornwell
+        measure = CORNWELL
         positive = .false.
       endif
 c
@@ -213,7 +213,7 @@ c
       call xyopen(lBeam,BeamNam,'old',2,nBeam)
       n1 = nBeam(1)
       n2 = nBeam(2)
-      if (max(n1,n2).gt.maxdim) call bug('f','Beam too big')
+      if (max(n1,n2).gt.MAXDIM) call bug('f','Beam too big')
       call BeamChar(lBeam,n1,n2,Qest,icentre,jcentre)
       write(line,'(a,1pg8.1)')'An estimate of Q is',Qest
       call output(line)
@@ -233,11 +233,11 @@ c
 c  Open the input map.
 c
       call xyopen(lMap,MapNam,'old',3,nMap)
-      if (max(nMap(1),nMap(2)).gt.maxdim) call bug('f','Map too big')
+      if (max(nMap(1),nMap(2)).gt.MAXDIM) call bug('f','Map too big')
       call rdhdi(lMap,'naxis',naxis,3)
       naxis = min(naxis,MAXNAX)
       call defregio(boxes,nMap,nBeam,icentre,jcentre)
-      call BoxMask(lMap,boxes,maxboxes)
+      call BoxMask(lMap,boxes,MAXBOXES)
       call BoxSet(Boxes,3,nMap,' ')
       call BoxInfo(Boxes,3,blc,trc)
       imin = blc(1)
@@ -299,7 +299,7 @@ c
       do k = kmin, kmax
         if (kmin.ne.kmax) call output('Plane: '//itoaf(k))
 
-        call BoxRuns(1,k,'r',boxes,Run,MaxRun,nRun,
+        call BoxRuns(1,k,'r',boxes,Run,MAXRUN,nRun,
      *                                xmin,xmax,ymin,ymax)
         nx = xmax - xmin + 1
         ny = ymax - ymin + 1
@@ -352,7 +352,7 @@ c
 c
 c  Put the user to sleep with lots of meaningful messages.
 c
-        if (message.eq.verbose) then
+        if (message.eq.VERBOSE) then
           call output('Initialising ...')
           write(line,10) Alpha,Beta,Q
   10      format('  Alpha =',1pe12.3,' Beta  =',1pe12.3,
@@ -462,7 +462,7 @@ c  Reawaken the user with more crap to let him/her ponder over what
 c  could possibly be going wrong. Give him/her as much as possible to
 c  ponder over.
 c
-            if (message.eq.verbose) then
+            if (message.eq.VERBOSE) then
               call output('Iteration '//itoaf(niter))
               write(line,20) Alpha,Beta,Q
               call output(line)
@@ -472,7 +472,7 @@ c
               call output(line)
               write(line,23) StLim,StLen1,StLen2
               call output(line)
-            else if (message.eq.normal) then
+            else if (message.eq.NORMAL) then
               write(line,24) Niter,Rms,Flux,GradJJ/Grad11
               call output(line)
             endif
@@ -680,7 +680,7 @@ c-----------------------------------------------------------------------
       integer nP
       parameter (nP=8)
       integer imin,imax,jmin,jmax,i,j
-      real Sum,bmax,Data(maxdim)
+      real Sum,bmax,Data(MAXDIM)
 
       integer ismax
 c-----------------------------------------------------------------------
@@ -1035,7 +1035,7 @@ c      d2H = -(sech(b/m)/m)**2
 c          = dH**2 - 1/m**2
 c
 c  Inputs:
-c    measure    The entropy measure desired, either gull or cornwell.
+c    measure    The entropy measure desired, either GULL or CORNWELL.
 c    n          Number of elements to find derivative info for.
 c    Est        Brightness estimate, b.
 c    Default    Default image.
@@ -1045,20 +1045,20 @@ c    dH         First derivative of the entropy function.
 c    d2H        Second derivative.
 c
 c-----------------------------------------------------------------------
-      integer gull,cornwell
-      parameter (gull=1,cornwell=2)
+      integer    GULL, CORNWELL
+      parameter (GULL=1, CORNWELL=2)
       integer i
       real def
 c-----------------------------------------------------------------------
 c  The Gull, Daniel and Skilling measure.
 c
-      if (measure.eq.gull) then
+      if (measure.eq.GULL) then
         do i = 1, n
           dH(i) = -log(Est(i)/Default(i))
           d2H(i) = -1.0/Est(i)
         enddo
 c
-c  Cornwells UTESS measure.
+c  Cornwell's UTESS measure.
 c
       else
         do i = 1, n
@@ -1091,73 +1091,48 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine Header(lMap,lOut,blc,trc,version,niter)
+      subroutine Header(lIn,lOut,blc,trc,version,niter)
 
-      integer lMap,lOut
-      integer blc(3),trc(3)
+      integer   lIn, lOut
+      integer   blc(3),trc(3)
       character version*(*)
-      integer niter
+      integer   niter
 
 c  Write a header for the output file.
 c
 c  Input:
 c    version    Program version ID.
-c    lMap       The handle of the input map.
-c    lOut       The handle of the output estimate.
-c    blc        Blc of the bounding region.
-c    trc        Trc of the bounding region.
-c    niter      The maximum number of iterations performed.
+c    lIn        Handle of the input map.
+c    lOut       Handle of the output estimate.
+c    blc        BLC of the bounding region.
+c    trc        TRC of the bounding region.
+c    niter      Maximum number of iterations performed.
 c
 c-----------------------------------------------------------------------
-      include 'maxnax.h'
-      integer i,lblc,ltrc
-      real crpix
-      character line*72,txtblc*32,txttrc*32,num*2
-      integer nkeys
-      parameter (nkeys=16)
-      character keyw(nkeys)*8
+      integer   i, lblc, ltrc
+      double precision crpix
+      character keyw*8, line*72, txtblc*32, txttrc*32
 
-c     Externals.
       character itoaf*8
-
-      data keyw/   'obstime ','epoch   ','history ','lstart  ',
-     *  'lstep   ','ltype   ','lwidth  ','object  ','pbfwhm  ',
-     *  'observer','telescop','restfreq','vobs    ','btype   ',
-     *  'cellscal','pbtype  '/
+      external  itoaf
 c-----------------------------------------------------------------------
-c  Fill in some parameters that will have changed between the input
-c  and output.
-c
-      call wrhda(lOut,'bunit','JY/PIXEL')
-      call wrhdi(lOut,'niters',Niter)
+c     Start by copying the header verbatim.
+      call headcopy(lIn, lOut, 0, 0, 0, 0)
 
-      do i = 1, MAXNAX
-        num = itoaf(i)
-        if (i.le.3) then
-          call rdhdr(lMap,'crpix'//num,crpix,1.)
-          crpix = crpix - blc(i) + 1
-          call wrhdr(lOut,'crpix'//num,crpix)
-        else
-          call hdcopy(lMap,lOut,'crpix'//num)
-        endif
-        call hdcopy(lMap,lOut,'cdelt'//num)
-        call hdcopy(lMap,lOut,'crval'//num)
-        call hdcopy(lMap,lOut,'ctype'//num)
+c     Update parameters that have changed.
+      do i = 1, 3
+        keyw = 'crpix' // itoaf(i)
+        call rdhdd(lIn, keyw, crpix, 1d0)
+        crpix = crpix - dble(blc(i) - 1)
+        call wrhdd(lOut, keyw, crpix)
       enddo
-c
-c  Copy all the other keywords across, which have not changed and add
-c  history
-c
-      do i = 1, nkeys
-        call hdcopy(lMap, lOut, keyw(i))
-      enddo
-c
-c  Write crap to the history file, to attempt (ha!) to appease Neil.
-c  Neil is not easily appeased you know.  Just a little t.l.c. is all he
-c  needs.
-c
+
+      call wrhda(lOut, 'bunit', 'JY/PIXEL')
+      call wrhdi(lOut, 'niters', niter)
+
+c     Write history.
       call hisopen(lOut,'append')
-      line = 'MAXEN: Miriad '//version
+      line = 'MAXEN: Miriad ' // version
       call hiswrite(lOut,line)
       call hisinput(lOut,'MAXEN')
 
