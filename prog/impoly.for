@@ -24,7 +24,7 @@ c@ region
 c       Full region specifications are supported.  Defaults to the
 c       entire image.
 c
-c$Id: impoly.for,v 1.2 2010/08/26 02:38:39 cal103 Exp $
+c$Id: impoly.for,v 1.3 2010/08/26 02:48:19 cal103 Exp $
 c--
 c
 c       maxorder        maximum order allowed for the polynomial fit
@@ -64,29 +64,28 @@ c-----------------------------------------------------------------------
       INCLUDE 'maxdim.h'
 
       INTEGER MAXBOXES, MAXNAX, MAXRUNS, MAXORDER, MAXLEN, MAXEXP
-      CHARACTER PVERSION*(*)
       PARAMETER (MAXBOXES=1024, MAXNAX=3, MAXRUNS=3*MAXDIM)
       PARAMETER (MAXORDER=10, MAXEXP=3)
       PARAMETER (MAXLEN=(((MAXORDER+1)*(MAXORDER+2))/2)+MAXORDER+1)
-      PARAMETER (PVERSION='Version 25-nov-92')
 
-      INTEGER boxes(MAXBOXES), xblc, xtrc, yblc, ytrc, runs(3,MAXRUNS)
-      INTEGER nruns, nin(3), order, nlen, idx, jread, info, runnum
-      INTEGER lin, lout, i, j, k, p, n, u, v, r, iwork(MAXLEN)
-      INTEGER naxis
-      REAL rline(MAXDIM), x, y, rms, nrms, x0, y0
-      DOUBLE PRECISION a(MAXLEN), sa(MAXLEN), expxy
-      DOUBLE PRECISION m(MAXLEN,MAXLEN), sm(MAXLEN)
-      CHARACTER in*80, out*80, mesg*80
-      CHARACTER msg*100
-      LOGICAL coeffs
+      LOGICAL   coeffs
+      INTEGER   boxes(MAXBOXES), i, idx, info, iwork(MAXLEN), j, jread,
+     *          k, lin, lout, n, naxis, nin(3), nlen, nruns, order, p,
+     *          r, runnum, runs(3,MAXRUNS), u, v, xblc, xtrc, yblc, ytrc
+      REAL      nrms, rline(MAXDIM), rms, x, x0, y, y0
+      DOUBLE PRECISION a(MAXLEN), expxy, m(MAXLEN,MAXLEN), sa(MAXLEN),
+     *          sm(MAXLEN)
+      CHARACTER in*80, mesg*80, msg*100, out*80, version*72
 
-      INTEGER  len1
-      EXTERNAL len1
+      INTEGER   len1
+      CHARACTER versan*80
+      EXTERNAL  len1, versan
 c-----------------------------------------------------------------------
-c     Get inputs.
-      CALL output('IMPOLY: '//PVERSION)
+      version = versan('impoly',
+     *                 '$Revision: 1.3 $',
+     *                 '$Date: 2010/08/26 02:48:19 $')
 
+c     Get inputs.
       CALL keyini
       CALL keyf('in', in, ' ')
       IF (in.EQ.' ') CALL bug('f',
@@ -106,7 +105,7 @@ c     Open files, copy relevant header items, and get the ref pixel.
       CALL rdhdi(lin, 'naxis', naxis, 1)
       naxis = min(naxis,MAXNAX)
       CALL xyopen(lout, out, 'new', naxis, nin)
-      CALL imhdcopy(lin, lout)
+      CALL headcopy(lin, lout, 0, 0, 0, 0)
       CALL boxmask(lin, boxes, MAXBOXES)
       CALL boxset(boxes, MAXNAX, nin, ' ')
       CALL rdhdr(lin,'crpix1',x0,1.0)
@@ -114,13 +113,13 @@ c     Open files, copy relevant header items, and get the ref pixel.
 
 c     Record the activities in a new history file for the output image.
       CALL hisopen(lout, 'append')
-      CALL hiswrite(lout, 'IMPOLY: '//PVERSION)
+      CALL hiswrite(lout, 'IMPOLY: ' // version)
       CALL hisinput(lout,'IMPOLY')
 
 c     By plane, create and subtract a background radiation polynomial
 c     fit.
       DO k = 1, nin(3)
-        if (k.gt.1) then
+        if (k.GT.1) then
           CALL xysetpl(lin,1,k)
           CALL xysetpl(lout,1,k)
         endif
@@ -193,9 +192,10 @@ c           Accumulate m and sm
           ENDDO
         ENDDO
 
-c       Call the outfit for the usage of and preparations toward
-c       the fit subroutines (dgefa, dgesl)
-        CALL outfit(MAXLEN, nlen, m, sm, iwork, info)
+c       Prepare the matrix and send to the fit subroutine.
+        CALL dgefa(m, maxlen, nlen, iwork, info)
+        IF (info.NE.0) CALL bug('f', 'Division by zero in DGEFA.')
+        CALL dgesl(m, maxlen, nlen, iwork, sm, 0)
 
 c       Output determined polynomial coefficients if necessary
         IF (coeffs) THEN
@@ -289,49 +289,5 @@ c         both initialization and reinitialization
 
       CALL xyclose(lin)
       CALL xyclose(lout)
-
-      END
-
-c***********************************************************************
-
-      SUBROUTINE outfit(maxlen,nlen,m,sm,iwork,info)
-
-      INTEGER maxlen, nlen, info, iwork(maxlen)
-      DOUBLE PRECISION m(maxlen,maxlen), sm(maxlen)
-c-----------------------------------------------------------------------
-c     Prepare the matrix and send to the fit subroutine.
-      CALL dgefa(m, maxlen, nlen, iwork, info)
-      IF (info.NE.0) CALL bug('f', 'Division by zero in DGEFA.')
-      CALL dgesl(m, maxlen, nlen, iwork, sm, 0)
-
-      END
-
-c***********************************************************************
-
-      SUBROUTINE imhdcopy (lin,lout)
-      INTEGER lin, lout
-
-c  Copy all official Image Header keywords, also the history
-c     lin   input file pointer
-c     lout  output file pointer
-c-----------------------------------------------------------------------
-      INTEGER NKEYS
-      PARAMETER (NKEYS=47)
-      CHARACTER keyw(NKEYS)*8
-      INTEGER   i
-      DATA keyw/   'bunit   ','crota1  ','crota2  ','crota3  ',
-     *  'crota4  ','crota5  ','crval1  ','crval2  ','crval3  ',
-     *  'crval4  ','crval5  ','ctype1  ','ctype2  ','ctype3  ',
-     *  'ctype4  ','ctype5  ','obstime ','epoch   ','history ',
-     *  'instrume','niters  ','object  ','telescop','observer',
-     *  'restfreq','vobs    ','cellscal','obsra   ',
-     *  'obsdec  ','cdelt1  ','cdelt2  ','cdelt3  ','cdelt4  ',
-     *  'cdelt5  ','crpix1  ','crpix2  ','crpix3  ','crpix4  ',
-     *  'crpix5  ','ltype   ','lstart  ','lwidth  ','lstep   ',
-     *  'bmaj    ','bmin    ','bpa     ','btype   '/
-c-----------------------------------------------------------------------
-      DO i = 1, NKEYS
-         CALL hdcopy(lin,lout,keyw(i))
-      ENDDO
 
       END
