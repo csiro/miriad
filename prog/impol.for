@@ -8,32 +8,31 @@ c       IMPOL computes the total linearly polarized intensity
 c       (optionally debiasing it) and position angle images from
 c       Stokes Q and U images.  Position angle is positive N -> E.
 c@ in
-c       Upto three values; the Q, U and I images, respectively.
-c       The I image is only needed if you want to compute the
-c       fractional polarization image as well or if you want to
-c       blank the output based upon an I S/N ratio.
-c       Wild card expansion is supported.
+c       Up to three values; the Q, U and I images, respectively.
+c       The I image is only needed if you want to compute the fractional
+c       polarization image as well or if you want to blank the output
+c       based upon an I S/N ratio.  Wild card expansion is supported.
 c@ poli
 c       Up to two values; the output polarized intensity image and
 c       optionally, its associated error image (which will be constant).
 c       Default is no output images.
 c@ polm
-c       Up to values; the output fractional polarization image
-c       and optionally, its associated error image.  You need
-c       to input an I image to keyword "in" for this.
+c       Up to two values; the output fractional polarization image and
+c       optionally, its associated error image.  You need to input an I
+c       image to keyword "in" for this.
 c@ pa
 c       Up to two values; the output position angle image and
 c       optionally, its associated error image (which will not be
 c       constant).  These will be in degrees (but see OPTIONS=RADIANS),
 c       Default is no output images.
 c@ sigma
-c       Up to 2 values; the mean standard deviation of the noise in
+c       Up to two values; the mean standard deviation of the noise in
 c       the Q & U images (i.e. one number for them both),  and the
 c       standard deviation of the I image.
 c
 c       These are required for debiasing (Q,U only), or for generating
-c       output error images, or for blanking the output. Try to make the
-c       Q,U value as accurate as possible for the debiasing.
+c       output error images, or for blanking the output.  Try to make
+c       the Q,U value as accurate as possible for the debiasing.
 c       Perhaps measure it from a V image
 c       No default for sigma_QU, sigma_I defaults to sigma_QU
 c@ sncut
@@ -104,7 +103,7 @@ c       make this bias plot without actually working on any data if you
 c       wish. See also VLA memo no. 161 by Patrick Leahy.
 c       Default is no plot.
 c
-c$Id: impol.for,v 1.12 2010/08/25 07:03:51 cal103 Exp $
+c$Id: impol.for,v 1.13 2010/08/26 02:05:16 cal103 Exp $
 c--
 c  History:
 c    nebk 21may92 Original version.
@@ -131,47 +130,37 @@ c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
 
-      real iline(maxdim), qline(maxdim), uline(maxdim), pline(maxdim),
-     *  mline(maxdim), paline(maxdim), epline(maxdim), emline(maxdim),
-     *  epaline(maxdim), iepoch, qepoch, uepoch, sigmaqu, sigmai,
-     *  rm, snclip(2), paclip
-      double precision icdelt(maxnax), qcdelt(maxnax), ucdelt(maxnax),
-     *  icrval(maxdim), qcrval(maxnax), ucrval(maxnax),
-     *  icrpix(maxnax), qcrpix(maxnax), ucrpix(maxnax)
+      integer   I, Q, U
+      parameter (Q = 1, U = 2, I = 3)
 
-      integer li, lq, lu, lpout(2), lpaout(2), lmout(2), isize(maxnax),
-     *  qsize(maxnax), usize(maxnax), inaxis, qnaxis, unaxis, istkax,
-     *  qstkax, ustkax, npout, npaout, nmout, nin
 
-      character bflag, blstr*7, device*80, ictype(maxnax)*9, iin*64,
+      logical   debias, doimage, emflags(MAXDIM), epaflags(MAXDIM),
+     *          epflags(MAXDIM), iflags(MAXDIM), mflags(MAXDIM),
+     *          paflags(MAXDIM), pflags(MAXDIM), qflags(MAXDIM),
+     *          radians, relax, uflags(MAXDIM), zero
+      integer   axmap(MAXNAX), naxes(3), naxis(MAXNAX,3), stkax(3),
+     *          lmout(2), lpaout(2), lpout(2), tIn(3), nin, nmout,
+     *          npaout, npout
+      real      emline(MAXDIM), epaline(MAXDIM), epline(MAXDIM),
+     *          epoch(3), iline(MAXDIM), mline(MAXDIM), paclip,
+     *          paline(MAXDIM), pline(MAXDIM), qline(MAXDIM),
+     *          rm, sigmai, sigmaqu, snclip(2), uline(MAXDIM)
+      double precision cdelt(MAXNAX,3), crpix(MAXNAX,3),
+     *          crval(MAXNAX,3)
+      character bflag, blstr*7, device*80, ctype(MAXNAX,3)*9, in(3)*64,
      *          ins(3)*64, line*80, mout(2)*64, paout(2)*64, pout(2)*64,
-     *          qctype(maxnax)*9, qin*64, uctype(maxnax)*9, uin*64,
      *          ustr*8, versan*80, version*80
 
-      logical radians, debias, iflags(maxdim), qflags(maxdim),
-     *  uflags(maxdim), pflags(maxdim), mflags(maxdim), epflags(maxdim),
-     *  emflags(maxdim), paflags(maxdim), epaflags(maxdim), relax,
-     *  zero, doimage
+      integer  len1
+      external len1
 
-      integer len1
-      integer nkeys
-      parameter (nkeys = 24)
-      character keyw(nkeys)*8
-
-      data keyw /'bmaj    ', 'bmin    ', 'bpa     ', 'cellscal',
-     *           'epoch   ', 'history ', 'instrume', 'lstart  ',
-     *           'lstep   ', 'ltype   ', 'lwidth  ', 'mostable',
-     *           'niters  ', 'object  ', 'obsdec  ', 'observer',
-     *           'obsra   ', 'obstime ', 'pbfwhm  ', 'pbtype  ',
-     *           'restfreq', 'telescop', 'vobs    ', 'vobs    '/
-      data li, lpout, lmout, lpaout /0, 2*0, 2*0, 2*0/
+      data tIn, lpout, lmout, lpaout /3*0, 2*0, 2*0, 2*0/
 c-----------------------------------------------------------------------
       version = versan ('impol',
-     *                  '$Revision: 1.12 $',
-     *                  '$Date: 2010/08/25 07:03:51 $')
-c
-c Get the inputs
-c
+     *                  '$Revision: 1.13 $',
+     *                  '$Date: 2010/08/26 02:05:16 $')
+
+c     Get user inputs.
       call keyini
       call mkeyf ('in', ins, 3, nin)
       call mkeya ('poli', pout, 2, npout)
@@ -186,9 +175,8 @@ c
       call keyr ('rm', rm, 0.0)
       call keya ('device', device, ' ')
       call keyfin
-c
-c Process the inputs
-c
+
+c     Process the inputs.
       doimage = .true.
       if (device.eq.' ') then
         if (nin.eq.0) call bug ('f', 'Nothing to do')
@@ -198,10 +186,10 @@ c
 
       if (doimage .and. nin.lt.2)
      *  call bug ('f', 'Not enough input images')
-      qin = ins(1)
-      uin = ins(2)
-      iin = ' '
-      if (nin.eq.3) iin = ins(3)
+      in(Q) = ins(1)
+      in(U) = ins(2)
+      in(I) = ' '
+      if (nin.eq.3) in(I) = ins(3)
 
       if (doimage .and. npout.eq.0 .and. npaout.eq.0 .and. nmout.eq.0)
      *  call bug ('f', 'You must specify an output image')
@@ -217,9 +205,8 @@ c
 
       sigmaqu = abs(sigmaqu)
       sigmai  = abs(sigmai)
-c
-c Issue some messages if producing an output image
-c
+
+c     Issue some messages if producing an output image.
       if (doimage) then
         write (line, 10) blstr, snclip(1)
 10      format ('Output ', a, ' when     P/sigma < ', f6.2)
@@ -254,133 +241,125 @@ c
           endif
         endif
       endif
-c
-c Open the input images
-c
+
+c     Open the input images.
       if (doimage) then
-c
-c Stokes I
-c
-        if (iin.ne.' ') then
-          call openin (bflag, maxdim, maxnax, iin, li, inaxis, isize,
-     *      iepoch, icrpix, icdelt, icrval, ictype, istkax)
-          if (istkax.ne.0) then
-            if (icrpix(istkax).ne.1) then
+c       Stokes I.
+        if (in(I).ne.' ') then
+          call openin (bflag, MAXDIM, MAXNAX, in(I), tIn(I), naxes(I),
+     *      naxis(1,I), epoch(I), crpix(1,I), cdelt(1,I), crval(1,I),
+     *      ctype(1,I), stkax(I))
+          if (stkax(I).ne.0) then
+            if (crpix(stkax(I),I).ne.1) then
 c             Shift the coordinate reference pixel.
-              icrval(istkax) = icrval(istkax) +
-     *          (1 - icrpix(istkax)) * icdelt(istkax)
-              icrpix(istkax) = 1
+              crval(stkax(I),I) = crval(stkax(I),I) +
+     *          (1d0 - crpix(stkax(I),I)) * cdelt(stkax(I),I)
+              crpix(stkax(I),I) = 1
             endif
 
-            if (icrval(istkax).ne.1) then
-              call bug (bflag,
-     *          iin(1:len1(iin)) // ' does not appear to be an I image')
+            if (crval(stkax(I),I).ne.1) then
+              call bug (bflag, in(I)(1:len1(in(I))) //
+     *          ' does not appear to be an I image')
             endif
           endif
         endif
-c
-c Stokes Q
-c
-        call openin (bflag, maxdim, maxnax, qin, lq, qnaxis, qsize,
-     *    qepoch, qcrpix, qcdelt, qcrval, qctype, qstkax)
-        if (qstkax.ne.0) then
-          if (qcrpix(qstkax).ne.1) then
+
+c       Stokes Q.
+        call openin (bflag, MAXDIM, MAXNAX, in(Q), tIn(Q), naxes(Q),
+     *    naxis(1,Q), epoch(Q), crpix(1,Q), cdelt(1,Q), crval(1,Q),
+     *    ctype(1,Q), stkax(Q))
+        if (stkax(Q).ne.0) then
+          if (crpix(stkax(Q),Q).ne.1) then
 c           Shift the coordinate reference pixel.
-            qcrval(qstkax) = qcrval(qstkax) +
-     *        (1 - qcrpix(qstkax)) * qcdelt(qstkax)
-            qcrpix(qstkax) = 1
+            crval(stkax(Q),Q) = crval(stkax(Q),Q) +
+     *        (1d0 - crpix(stkax(Q),Q)) * cdelt(stkax(Q),Q)
+            crpix(stkax(Q),Q) = 1
           endif
 
-          if (qcrval(qstkax).ne.2) then
-            call bug (bflag,
-     *        qin(1:len1(qin)) // ' does not appear to be a Q image')
+          if (crval(stkax(Q),Q).ne.2) then
+            call bug (bflag, in(Q)(1:len1(in(Q))) //
+     *        ' does not appear to be a Q image')
           endif
         endif
-c
-c Stokes U
-c
-        call openin (bflag, maxdim, maxnax, uin, lu, unaxis, usize,
-     *      uepoch, ucrpix, ucdelt, ucrval, uctype, ustkax)
-        if (ustkax.ne.0) then
-          if (ucrpix(ustkax).ne.1) then
+
+c       Stokes U.
+        call openin (bflag, MAXDIM, MAXNAX, in(U), tIn(U), naxes(U),
+     *      naxis(1,U), epoch(U), crpix(1,U), cdelt(1,U), crval(1,U),
+     *      ctype(1,U), stkax(U))
+        if (stkax(U).ne.0) then
+          if (crpix(stkax(U),U).ne.1) then
 c           Shift the coordinate reference pixel.
-            ucrval(ustkax) = ucrval(ustkax) +
-     *        (1 - ucrpix(ustkax)) * ucdelt(ustkax)
-            ucrpix(ustkax) = 1
+            crval(stkax(U),U) = crval(stkax(U),U) +
+     *        (1d0 - crpix(stkax(U),U)) * cdelt(stkax(U),U)
+            crpix(stkax(U),U) = 1
           endif
 
-          if (ucrval(ustkax).ne.3) then
-            call bug (bflag,
-     *        uin(1:len1(uin)) // ' does not appear to be a U image')
+          if (crval(stkax(U),U).ne.3) then
+            call bug (bflag, in(U)(1:len1(in(U))) //
+     *        ' does not appear to be a U image')
           endif
         endif
-c
-c Compare images for consistency
-c
-        call chkdes (bflag, qin, uin, qnaxis, unaxis, qsize, usize,
-     *     qcrpix, ucrpix, qcdelt, ucdelt, qcrval, ucrval, qepoch,
-     *     uepoch, qctype, uctype, qstkax, ustkax)
-        if (iin.ne.' ') call chkdes (bflag, qin, iin, qnaxis, inaxis,
-     *     qsize, isize, qcrpix, icrpix, qcdelt, icdelt, qcrval,
-     *     icrval, qepoch, iepoch, qctype, ictype, qstkax, istkax)
-c
-c Strip the Stokes axis from the input header (use the Q header
-c from now on as they are all consistent)
-c
-        call axstrip (qstkax, qnaxis, qsize, qcrval, qcrpix, qcdelt,
-     *                qctype)
-c
-c Open output images. Start with polarized intensity
-c
-        if (npout.gt.0) call openout (lq, qnaxis, qsize, nkeys, keyw,
-     *     qcrval, qcrpix, qcdelt, qctype, pout(1),
-     *     'polarized_intensity', version, lpout(1))
-        if (npout.eq.2) call openout (lq, qnaxis, qsize, nkeys, keyw,
-     *     qcrval, qcrpix, qcdelt, qctype, pout(2),
-     *     'polarized_intensity', version, lpout(2))
-c
-c Fractional polarization
-c
-        if (nmout.gt.0) call openout (lq, qnaxis, qsize, nkeys, keyw,
-     *     qcrval, qcrpix, qcdelt, qctype, mout(1),
-     *     'fractional_polarization', version, lmout(1))
-        if (nmout.eq.2) call openout (lq, qnaxis, qsize, nkeys, keyw,
-     *     qcrval, qcrpix, qcdelt, qctype, mout(2),
-     *     'fractional_polarization', version, lmout(2))
-c
-c Position angle
-c
-        if (npaout.gt.0) call openout (lq, qnaxis, qsize, nkeys, keyw,
-     *     qcrval, qcrpix, qcdelt, qctype, paout(1), 'position_angle',
-     *     version, lpaout(1))
-        if (npaout.eq.2) call openout (lq, qnaxis, qsize, nkeys, keyw,
-     *     qcrval, qcrpix, qcdelt, qctype, paout(2), 'position_angle',
-     *     version, lpaout(2))
-c
-c Now compute and write out the output image(s)
-c
-        call polout (lq, lu, li, lpout, lmout, lpaout, qnaxis, qsize,
-     *   qcrpix, qcrval, qcdelt, qctype, debias, radians, snclip,
-     *   paclip, sigmai, sigmaqu, rm, iline, qline, uline, pline,
-     *   mline, paline, epline, emline, epaline, iflags, qflags,
-     *   uflags, pflags, mflags, paflags, epflags, emflags,
-     *   epaflags, zero)
-c
-c Close up
-c
-        if (li.ne.0) call xyclose (li)
-        call xyclose (lq)
-        call xyclose (lu)
-        if (lpout(1).ne.0) call xyclose (lpout(1))
-        if (lpout(2).ne.0) call xyclose (lpout(2))
-        if (lmout(1).ne.0) call xyclose (lmout(1))
-        if (lmout(2).ne.0) call xyclose (lmout(2))
+
+c       Compare images for consistency.
+        call chkdes (bflag, MAXNAX, Q, U, in, naxes, naxis, epoch,
+     *     crpix, cdelt, crval, ctype, stkax)
+        if (in(I).ne.' ') call chkdes (bflag, MAXNAX, Q, I, in, naxes,
+     *     naxis, epoch, crpix, cdelt, crval, ctype, stkax)
+
+c       Strip the Stokes axis from the input header (use the Q header
+c       from now on as they are all consistent).
+        call axstrip (stkax, naxes, axmap, naxis, crval, crpix, cdelt,
+      *   ctype)
+
+c       Open output images starting with polarized intensity...
+        if (npout.gt.0) then
+          call openout (tIn, naxes, naxis, axmap, pout(1),
+     *      'polarized_intensity', version, lpout(1))
+        else if (npout.eq.2) then
+          call openout (tIn, naxes, naxis, axmap, pout(2),
+     *      'polarized_intensity', version, lpout(2))
+        endif
+
+c       ...fractional polarization...
+        if (nmout.gt.0) then
+          call openout (tIn, naxes, naxis, axmap, mout(1),
+     *      'fractional_polarization', version, lmout(1))
+        else if (nmout.eq.2) then
+          call openout (tIn, naxes, naxis, axmap, mout(2),
+     *      'fractional_polarization', version, lmout(2))
+        endif
+
+c       ...position angle.
+        if (npaout.gt.0) then
+          call openout (tIn, naxes, naxis, axmap, paout(1),
+     *      'position_angle', version, lpaout(1))
+        else if (npaout.eq.2) then
+          call openout (tIn, naxes, naxis, axmap, paout(2),
+     *      'position_angle', version, lpaout(2))
+        endif
+
+c       Compute and write out the output image(s).
+        call polout (tIn(Q), tIn(U), tIn(I), lpout, lmout, lpaout,
+     *   naxes, naxis, crpix, crval, cdelt, ctype, debias, radians,
+     *   snclip, paclip, sigmai, sigmaqu, rm, iline, qline, uline,
+     *   pline, mline, paline, epline, emline, epaline, iflags, qflags,
+     *   uflags, pflags, mflags, paflags, epflags, emflags, epaflags,
+     *   zero)
+
+c       Close down.
+        call xyclose (tIn(Q))
+        call xyclose (tIn(U))
+        if (tIn(I).ne.0) call xyclose (tIn(I))
+
+        if (lpout(1) .ne.0) call xyclose (lpout(1))
+        if (lpout(2) .ne.0) call xyclose (lpout(2))
+        if (lmout(1) .ne.0) call xyclose (lmout(1))
+        if (lmout(2) .ne.0) call xyclose (lmout(2))
         if (lpaout(1).ne.0) call xyclose (lpaout(1))
         if (lpaout(2).ne.0) call xyclose (lpaout(2))
       endif
-c
-c Draw plot
-c
+
+c     Draw plot
       if (device.ne.' ') call pltbias (device)
 
       end
@@ -415,25 +394,25 @@ c-----------------------------------------------------------------------
       end
 
 
-      subroutine openin (bflag, maxdim, maxnax, in, lun, naxis, size,
+      subroutine openin (bflag, maxdim, maxnax, in, lun, naxes, naxis,
      *                   epoch, crpix, cdelt, crval, ctype, stkax)
 
-      integer maxdim, maxnax, lun, naxis, size(maxnax), stkax
+      integer maxdim, maxnax, lun, naxes, naxis(maxnax), stkax
       double precision cdelt(maxnax), crval(maxnax), crpix(maxnax)
       real epoch
-      character*(*) ctype(maxnax), in, bflag*1
+      character*(*) ctype(maxnax), in, bflag
 c-----------------------------------------------------------------------
 c     Open an image and return some information about it
 c
 c  Input
 c    bflag      Bug flag
-c    maxdim     Maximum size a row can be
+c    maxdim     Maximum number of pixels on an axis.
 c    maxnax     Maximum number of axes image can have
 c    in         Image name
 c  Output
 c    lun        Handle
-c    naxis      Number of axes
-c    size       Size of each axis
+c    naxes      Number of axes
+c    naxis      Number of pixels on each axis.
 c    epoch      EPoch of image
 c    crpix      Refernce pixels
 c    cdelt      Increments
@@ -444,22 +423,22 @@ c-----------------------------------------------------------------------
       integer len1, i
       character*80 aline
 c-----------------------------------------------------------------------
-      call xyopen (lun, in, 'old', maxnax, size)
-      call rdhdi (lun, 'naxis', naxis, 0)
-      if (naxis.eq.0) then
+      call xyopen (lun, in, 'old', maxnax, naxis)
+      call rdhdi (lun, 'naxis', naxes, 0)
+      if (naxes.eq.0) then
         aline = in(1:len1(in))//' has zero dimensions !!'
         call bug ('f', aline)
       endif
 
-      if (size(1).gt.maxdim) then
-        aline = 'First dimension of '//in(1:len1(in))//
-     *             ' too large for storage'
+      if (naxis(1).gt.maxdim) then
+        aline = 'First dimension of ' // in(1:len1(in)) //
+     *          ' too large for storage'
         call bug ('f', aline)
       endif
-      call hedinf (lun, naxis, size, epoch, crpix, cdelt, crval, ctype)
+      call hedinf (lun, naxes, naxis, epoch, crpix, cdelt, crval, ctype)
 
       stkax = 0
-      do i = 1, naxis
+      do i = 1, naxes
         if (ctype(i).eq.'STOKES') stkax = i
       enddo
       if (stkax.eq.0) then
@@ -470,20 +449,20 @@ c-----------------------------------------------------------------------
       end
 
 
-      subroutine hedinf (lun, naxis, size, epoch, crpix, cdelt,
+      subroutine hedinf (lun, naxes, naxis, epoch, crpix, cdelt,
      *                   crval, ctype)
 
-      integer lun, naxis, size(naxis)
+      integer lun, naxes, naxis(naxes)
       real epoch
-      double precision cdelt(naxis), crval(naxis), crpix(naxis)
-      character*(*) ctype(naxis)
+      double precision cdelt(naxes), crval(naxes), crpix(naxes)
+      character*(*) ctype(naxes)
 c-----------------------------------------------------------------------
 c     Get some header keywords from the image associated with LUN
 c
 c     Input
 c       lun      Handle of image
-c       naxis    Number of dimensions in image
-c       size     Size of each axis
+c       naxes    Number of axes in image
+c       naxis    Number of pixels on each axis.
 c     Output
 c       epoch    Epoch of image
 c       crpix    Array of image reference pixels
@@ -495,83 +474,81 @@ c-----------------------------------------------------------------------
       integer i
       character str*1, itoaf*1
 c-----------------------------------------------------------------------
-      do i = 1, naxis
+      do i = 1, naxes
         str = itoaf(i)
-
-        call rdhdd (lun, 'crpix'//str, crpix(i), dble(size(i))/2d0)
+        call rdhdd (lun, 'crpix'//str, crpix(i), dble(naxis(i))/2d0)
         call rdhdd (lun, 'cdelt'//str, cdelt(i), 1d0)
-        call rdhda (lun, 'ctype'//str, ctype(i), ' ')
         call rdhdd (lun, 'crval'//str, crval(i), 0d0)
+        call rdhda (lun, 'ctype'//str, ctype(i), ' ')
       enddo
       call rdhdr (lun, 'epoch', epoch, 0.0)
 
       end
 
 
-      subroutine chkdes (bflag, im1, im2, naxis1, naxis2, size1, size2,
-     *   crpix1, crpix2, cdelt1, cdelt2, crval1, crval2, epoch1,
-     *   epoch2, ctype1, ctype2, stkax1, stkax2)
+      subroutine chkdes (bflag, maxnax, i1, i2, im, naxes, naxis,
+     *   epoch, crpix, cdelt, crval, ctype, stkax)
 
-      integer naxis1, naxis2, size1(*), size2(*), stkax1, stkax2
-      character*(*) im1, im2, ctype1(*), ctype2(*), bflag
-      real epoch1, epoch2
-      double precision crval1(*), crval2(*), cdelt1(*), cdelt2(*),
-     *  crpix1(*), crpix2(*)
+      integer   i1, i2, maxnax, naxes(3), naxis(maxnax,3), stkax(3)
+      real      epoch(3)
+      double precision cdelt(maxnax,3), crpix(maxnax,3), crval(maxnax,3)
+      character bflag, ctype(maxnax,3)*(*), im(3)*(*)
 c-----------------------------------------------------------------------
 c     Compare axis descriptors
 c
 c  Input:
-c   im1,2        Images
-c   naxis1,2     Number of axes
-c   size1,2      Sizes of each dimension
-c   crpix1,2     Reference pixels
-c   cdelt1,2     Increments
-c   crval1,2     Refernce values
-c   ctype1,2     types of axes
-c   epoch1,2     Epochs
-c   stkax1,2     Stokes axis
+c   im     Images
+c   naxes  Number of axes
+c   naxis  Number of pixels on each axis.
+c   crpix  Reference pixels
+c   cdelt  Increments
+c   crval  Refernce values
+c   ctype  types of axes
+c   epoch  Epochs
 c  Output
-c   stkax        Stokes axis
+c   stkax  Stokes axis
 c-----------------------------------------------------------------------
       integer k, l1, l2, len1
       character line*130
 c-----------------------------------------------------------------------
-      l1 = len1(im1)
-      l2 = len1(im2)
+      l1 = len1(im(i1))
+      l2 = len1(im(i2))
 
-      if (epoch1.ne.epoch2) then
-        line = 'Unequal epochs for images '//im1(1:l1)//' & '//im2(1:l2)
+      if (epoch(i1).ne.epoch(i2)) then
+        line = 'Unequal epochs for images ' // im(i1)(1:l1) // ' & '
+     *         //im(i2)(1:l2)
         call bug (bflag, line)
       endif
 
-      if (naxis1.ne.naxis2) then
+      if (naxes(i1).ne.naxes(i2)) then
         line = 'Unequal number dimensions for images '//
-     *         im1(1:l1)//' & '//im2(1:l2)
+     *         im(i1)(1:l1)//' & '//im(i2)(1:l2)
         call bug (bflag, line)
       endif
 
-      do k = 1, min(naxis1,naxis2)
-        if (size1(k).ne.size2(k)) then
-          write (line, 10) im1(1:l1), im2(1:l2), k
-10        format ('Unequal sizes for images ', a, ' & ', a,
+      do k = 1, min(naxes(i1),naxes(i2))
+        if (naxis(k,i1).ne.naxis(k,i2)) then
+          write (line, 10) im(i1)(1:l1), im(i2)(1:l2), k
+ 10       format ('Unequal dimensions for images ', a, ' & ', a,
      *            ' on axis ', i1)
           call bug (bflag, line)
         endif
 
-        if (ctype1(k).ne.ctype2(k)) then
-          write (line, 20) im1(1:l1), im2(1:l2), k
-20        format ('Unequal ctype for images ', a, ' & ', a,
+        if (ctype(k,i1).ne.ctype(k,i2)) then
+          write (line, 20) im(i1)(1:l1), im(i2)(1:l2), k
+ 20       format ('Unequal ctype for images ', a, ' & ', a,
      *            ' on axis ', i1)
           call bug (bflag, line)
         endif
 
-        call chkds2 (bflag, 'crpix', k, im1(1:l1), im2(1:l2),
-     *               crpix1(k), crpix2(k))
-        call chkds2 (bflag, 'cdelt', k, im1(1:l1), im2(1:l2),
-     *               cdelt1(k), cdelt2(k))
-        if (k.ne.stkax1 .or. k.ne.stkax2)
-     *    call chkds2 (bflag, 'crval', k, im1(1:l1), im2(1:l2),
-     *                 crval1(k), crval2(k))
+        call chkds2 (bflag, 'crpix', k, im(i1)(1:l1), im(i2)(1:l2),
+     *               crpix(k,i1), crpix(k,i2))
+        call chkds2 (bflag, 'cdelt', k, im(i1)(1:l1), im(i2)(1:l2),
+     *               cdelt(k,i1), cdelt(k,i2))
+        if (k.ne.stkax(i1) .or. k.ne.stkax(i2)) then
+          call chkds2 (bflag, 'crval', k, im(i1)(1:l1), im(i2)(1:l2),
+     *                 crval(k,i1), crval(k,i2))
+        endif
       enddo
 
       end
@@ -604,20 +581,20 @@ c-----------------------------------------------------------------------
       end
 
 
-      subroutine axstrip (iax, naxis, size, crval, crpix, cdelt,
+      subroutine axstrip (iax, naxes, naxis, axmap, crval, crpix, cdelt,
      *                    ctype)
 
-      integer iax, naxis, size(naxis)
-      double precision crval(naxis), cdelt(naxis), crpix(naxis)
-      character*(*) ctype(naxis)
+      integer iax, naxes, axmap(naxes), naxis(naxes)
+      double precision crval(naxes), cdelt(naxes), crpix(naxes)
+      character*(*) ctype(naxes)
 c-----------------------------------------------------------------------
 c     Strip an axis from the header items
 c
 c  Input:
 c   iax    Axis to strip
 c  Input/output
-c   naxis  Number of axes
-c   size   Size of axes
+c   naxes  Number of axes
+c   naxis  Number of pixels on each axis.
 c   crval  Ref. values
 c   crpix  Ref. pixels
 c   cdelt  Increments
@@ -628,14 +605,19 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
       if (iax.eq.0) return
 
-      if (naxis.eq.1) call bug ('f',
+      if (naxes.eq.1) call bug ('f',
      *   'This image has only one dimension; cannot strip it')
 
-      naxis = naxis - 1
-      if (iax.eq.naxis+1) return
+      naxes = naxes - 1
+      if (iax.eq.naxes+1) return
 
-      do i = iax, naxis
-        size(i) = size(i+1)
+      do i = 1, iax-1
+        axmap(i) = i
+      enddo
+
+      do i = iax, naxes
+        axmap(i) = i+1
+        naxis(i) = naxis(i+1)
         crval(i) = crval(i+1)
         crpix(i) = crpix(i+1)
         cdelt(i) = cdelt(i+1)
@@ -645,54 +627,37 @@ c-----------------------------------------------------------------------
       end
 
 
-      subroutine openout (lin, naxis, size, nkeys, keyw, crval, crpix,
-     *                    cdelt, ctype, out, btype, version, lout)
+      subroutine openout (lin, naxes, naxis, axmap, out, btype, version,
+     *  lout)
 
-      integer lin, lout, naxis, size(naxis), nkeys
-      double precision crval(naxis), cdelt(naxis), crpix(naxis)
-      character*(*) keyw(nkeys), out, version, ctype(naxis), btype*(*)
+      integer   lin, naxes, naxis(naxes), axmap(naxes), lout
+      character out*(*), btype*(*), version*(*)
 c-----------------------------------------------------------------------
-c     Open an output image, copy header keywords across and write
-c     the history
+c     Open an output image, copy header and write the history.
 c
 c  Input
-c   lin    Image to copy keywords from
-c   naxis  Number of axes
-c   size   Size of axes
-c   nkeys  Number of header keywords to copy
-c   keyw   Keywords
-c   crval  Refernce values
-c   crpix  Reference pixels
-c   cdelt  Increments
-c   ctype  Axis types
-c   out    Name of output image
-c   btype  The type of image being opened.
-c            'fractional_polarization'
-c            'polarized_intensity'
-c            'position_angle'
-c   versionVersion of this program
+c   lin      Image to copy keywords from.
+c   naxes    Number of axes.
+c   naxis    Number of pixels on each axis.
+c   out      Name of output image.
+c   btype    The type of image being opened.
+c              'fractional_polarization'
+c              'polarized_intensity'
+c              'position_angle'
+c   version  Version of this program.
 c  Output
-c   lout   Handle for output image
+c   lout     Handle for output image
 c
 c-----------------------------------------------------------------------
-      integer i, len1
-      character itoaf*1, istr*1, aline*80
+      character aline*80
+
+      integer   len1
+      character itoaf*1
+      external  itoaf, len1
 c-----------------------------------------------------------------------
-      call xyopen (lout, out, 'new', naxis, size)
-      do i = 1, nkeys
-        call hdcopy (lin, lout, keyw(i))
-      enddo
-c
-c Do these separately because we had to strip the Stokes
-c axis from the input image
-c
-      do i = 1, naxis
-        istr = itoaf(i)
-        call wrhdd (lout, 'crval'//istr, crval(i))
-        call wrhdd (lout, 'crpix'//istr, crpix(i))
-        call wrhdd (lout, 'cdelt'//istr, cdelt(i))
-        call wrhda (lout, 'ctype'//istr, ctype(i))
-      enddo
+c     Create the output image and copy header from input.
+      call xyopen (lout, out, 'new', naxes, naxis)
+      call headcopy (lin, lout, axmap, naxes, 0, 0)
       call wrbtype (lout, btype)
 
       call hisopen  (lout, 'append')
@@ -704,23 +669,23 @@ c
       end
 
 
-      subroutine polout (lq, lu, li, lpout, lmout, lpaout, naxis,
-     *   size, crpix, crval, cdelt, ctype, debias, radians, snclip,
+      subroutine polout (lq, lu, li, lpout, lmout, lpaout, naxes,
+     *   naxis, crpix, crval, cdelt, ctype, debias, radians, snclip,
      *   paclip, sigmai, sigmaqu, rm, iline, qline, uline, pline,
      *   mline, paline, epline, emline, epaline, iflags, qflags,
      *   uflags, pflags, mflags, paflags, epflags, emflags,
      *   epaflags, zero)
 
-      integer li, lq, lu, lpout(2), lmout(2), lpaout(2), naxis,
-     *  size(naxis)
+      integer li, lq, lu, lpout(2), lmout(2), lpaout(2), naxes,
+     *  naxis(naxes)
       real iline(*), qline(*), uline(*), pline(*), mline(*), paline(*),
      *  epline(*), emline(*), epaline(*), snclip(2), paclip, sigmai,
      *  sigmaqu, rm
-      double precision crval(naxis), cdelt(naxis), crpix(naxis)
+      double precision crval(naxes), cdelt(naxes), crpix(naxes)
       logical iflags(*), qflags(*), uflags(*), pflags(*), mflags(*),
      *  paflags(*), epflags(*), emflags(*), epaflags(*), radians,
      *  debias, zero
-      character*(*) ctype(naxis)
+      character*(*) ctype(naxes)
 c-----------------------------------------------------------------------
 c     Compute some combination of polarized intensity, position angle
 c     image and associated error images
@@ -743,7 +708,7 @@ c-----------------------------------------------------------------------
 c     Find frequency axis if rotating position angles back.
       if (rm.ne.0.0) then
         frqax = 0
-        do i = 1, naxis
+        do i = 1, naxes
           if (index(ctype(i),'FREQ').ne.0) frqax = i
         enddo
 
@@ -752,7 +717,7 @@ c     Find frequency axis if rotating position angles back.
         if (frqax.le.2) call bug ('f',
      *    'Frequency axis is either 1 or 2.  These should be spatial')
 
-        if (frqax.gt.3 .or. size(frqax).eq.1) then
+        if (frqax.gt.3 .or. naxis(frqax).eq.1) then
 c         Find frequency of pixel one.
           freq = (1.0 - crpix(frqax))*cdelt(frqax) + crval(frqax)
           freq = freq * 1e9
@@ -769,8 +734,8 @@ c         Find frequency of pixel one.
       snclipsq = snclip(1) * snclip(1)
 
 c     Loop over planes.
-      do k = 1, size(3)
-        if (rm.ne.0.0 .and. frqax.eq.3 .and. size(frqax).gt.1) then
+      do k = 1, naxis(3)
+        if (rm.ne.0.0 .and. frqax.eq.3 .and. naxis(frqax).gt.1) then
           freq = 1e9 * ((real(k)-crpix(3))*cdelt(3) + crval(3))
           parot = rm * (dcmks / freq)**2
         endif
@@ -787,7 +752,7 @@ c       Set planes.
         if (lpaout(2).ne.0) call xysetpl (lpaout(2), 1, k)
 
 c       Read lines of data.
-        do j = 1, size(2)
+        do j = 1, naxis(2)
           if (li.ne.0) then
             call xyread  (li, j, iline)
             call xyflgrd (li, j, iflags)
@@ -798,7 +763,7 @@ c       Read lines of data.
           call xyflgrd (lu, j, uflags)
 
 c         Work out everything possible for this row.
-          do i = 1, size(1)
+          do i = 1, naxis(1)
 c           Output values are zeroed and flagged by default.
             call allblnk (pline(i), pflags(i), epline(i), epflags(i),
      *         mline(i), mflags(i), emline(i), emflags(i),
