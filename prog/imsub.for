@@ -15,7 +15,7 @@ c       See the Users Manual for instructions on how to specify this.
 c@ incr
 c       Increment to be used along each axis. Default is 1.
 c
-c$Id: imsub.for,v 1.2 2010/08/26 05:26:11 cal103 Exp $
+c$Id: imsub.for,v 1.3 2010/08/26 05:50:58 cal103 Exp $
 c--
 c  History:
 c    rjs Dark-ages Original version.
@@ -48,129 +48,114 @@ c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'maxnax.h'
 
-      character version*(*)
-      parameter (version='Imsub: version 1.0 12-Oct-99')
-
       integer MAXBOXES
       parameter (MAXBOXES = 2048)
 
-      character in*80,out*80
-      integer Inplane(MAXNAX),Outplane(MAXNAX),one(MAXNAX)
-      integer blc(MAXNAX),trc(MAXNAX),Nin(MAXNAX),Nout(MAXNAX),i,j
-      integer i0,j0,incr(MAXNAX),nx,ny,npnt
-      integer naxis,boxes(MAXBOXES)
-      integer lIn,lOut
-      logical done,rect
-      double precision crpix,cdelt
-      real Data(maxdim),Data2(maxdim)
+      logical   done, rect
+      integer   blc(MAXNAX), boxes(MAXBOXES), i, i0, incr(MAXNAX),
+     *          inPlane(MAXNAX), j, j0, lIn, lOut, naxis, nIn(MAXNAX),
+     *          nOut(MAXNAX), npnt, nx, ny, one(MAXNAX),
+     *          outPlane(MAXNAX), trc(MAXNAX)
+      real      mapIn(MAXDIM), mapOut(MAXDIM)
+      double precision cdelt, crpix
+      character inName*80, keyw*8, outNam*80, version*90
 
-      logical  BoxRect, hdprsnt
-      external BoxRect, hdprsnt
-
-c     Header keywords.
-      integer nkeys
-      parameter (nkeys=36)
-      character keyw(nkeys)*8
-      data keyw/   'bmaj    ','bmin    ','bpa     ','bunit   ',
-     *  'crval1  ','crval2  ','crval3  ','crval4  ','crval5  ',
-     *  'ctype1  ','ctype2  ','ctype3  ','ctype4  ','ctype5  ',
-     *  'obstime ','epoch   ','history ','instrume','niters  ',
-     *  'object  ','observer','obsra   ','obsdec  ','pbfwhm  ',
-     *  'restfreq','telescop','vobs    ','btype   ','rms     ',
-     *  'ltype   ','lstart  ','lwidth  ','lstep   ',
-     *  'cellscal','pbtype  ','llrot   '/
+      logical   BoxRect, hdprsnt
+      character itoaf*1, versan*80
+      external  BoxRect, hdprsnt, itoaf, versan
 c-----------------------------------------------------------------------
-c
-c  Get the input parameters.
-c
-      call output(version)
-      call keyini
-      call keya('in',In,' ')
-      call keya('out',Out,' ')
+      version = versan('imsub',
+     *                 '$Revision: 1.3 $',
+     *                 '$Date: 2010/08/26 05:50:58 $')
 
-      if (In.eq.' ' .or. Out.eq.' ')
+c     Get the input parameters.
+      call keyini
+      call keya('in',inName,' ')
+      call keya('out',outNam,' ')
+
+      if (inName.eq.' ' .or. outNam.eq.' ')
      *  call bug('f','You must give an input and output file')
-      call BoxInput('region',in,boxes,MAXBOXES)
+      call BoxInput('region',inName,boxes,MAXBOXES)
       do i = 1, MAXNAX
         call keyi('incr',incr(i),1)
         if (incr(i).le.0) call bug('f','Bad increment')
       enddo
       call keyfin
-c
-c  Open the input.
-c
-      call xyopen(lIn,In,'old',MAXNAX,Nin)
-      if (Nin(1).gt.maxdim)
+
+c     Open the input.
+      call xyopen(lIn,inName,'old',MAXNAX,nIn)
+      if (nIn(1).gt.MAXDIM)
      *  call bug('f','Image too big for me to handle')
       call rdhdi(lIn,'naxis',naxis,0)
-      call BoxSet(boxes,MAXNAX,Nin,' ')
-c
-c  Determine portion of image to copy.
-c
+      call BoxSet(boxes,MAXNAX,nIn,' ')
+
+c     Determine portion of image to copy.
       call BoxInfo(boxes,MAXNAX,blc,trc)
       call BoxMask(lIn,boxes,MAXBOXES)
       rect = BoxRect(boxes)
       do i = 1, MAXNAX
-        Nout(i) = (trc(i) - blc(i) + incr(i))/incr(i)
+        nOut(i) = (trc(i) - blc(i) + incr(i))/incr(i)
       enddo
-c
-c  Make the output file, and make its header.
-c
-      call xyopen(lOut,Out,'new',naxis,Nout)
+
+c     Create the output image, and make its header.
+      call xyopen(lOut,outNam,'new',naxis,nOut)
       do i = 1, naxis
-        call rdhdd(lIn, 'cdelt'//char(ichar('0')+i),cdelt,1d0)
-        call rdhdd(lIn, 'crpix'//char(ichar('0')+i),crpix,1d0)
+        keyw = 'crpix' // itoaf(i)
+        call rdhdd(lIn, keyw, crpix, 1d0)
+        crpix = (crpix - blc(i))/incr(i) + 1d0
+        call wrhdd(lOut,keyw, crpix)
+
+        keyw = 'cdelt' // itoaf(i)
+        call rdhdd(lIn, keyw, cdelt, 1d0)
         cdelt = cdelt * incr(i)
-        crpix = (crpix - blc(i))/incr(i) + 1
-        call wrhdd(lOut,'cdelt'//char(ichar('0')+i),cdelt)
-        call wrhdd(lOut,'crpix'//char(ichar('0')+i),crpix)
+        call wrhdd(lOut,keyw, cdelt)
       enddo
-      do i = 1, nkeys
-        call hdcopy(lIn,lOut,keyw(i))
-      enddo
+
+      call headcopy(lIn, lOut, 0, 0, 0, 0)
+      call hdcopy(lIn, lOut, 'rms')
       call hisopen(lOut,'append')
-      call hiswrite (lOut, 'IMSUB: Miriad '//version)
+      call hiswrite (lOut, 'IMSUB: Miriad ' // version)
       call hisinput(lOut,'IMSUB')
       call hisclose(lOut)
-c
-c  Initialise the plane indices.
-c
+
+c     Initialise the plane indices.
       do i = 3, MAXNAX
         one(i-2) = 1
-        Inplane(i-2) = blc(i)
-        Outplane(i-2) = 1
+        inPlane(i-2) = blc(i)
+        outPlane(i-2) = 1
       enddo
-c
-c  Make a copy of the portion being copied.
-c
+
+c     Make a copy of the portion being copied.
       done = .false.
       do while (.not.done)
-        call xysetpl(lIn,MAXNAX-2,Inplane)
-        call xysetpl(lOut,MAXNAX-2,Outplane)
+        call xysetpl(lIn,MAXNAX-2,inPlane)
+        call xysetpl(lOut,MAXNAX-2,outPlane)
         j0 = blc(2)
-        do j = 1, Nout(2)
-          call xyread(lIn,j0,Data)
+        do j = 1, nOut(2)
+          call xyread(lIn,j0,mapIn)
           j0 = j0 + incr(2)
           if (incr(1).gt.1) then
             i0 = blc(1)
-            do i = 1, Nout(1)
-              Data2(i) = Data(i0)
+            do i = 1, nOut(1)
+              mapOut(i) = mapIn(i0)
               i0 = i0 + incr(1)
             enddo
-            call xywrite(lOut,j,Data2)
+            call xywrite(lOut,j,mapOut)
           else
-            call xywrite(lOut,j,Data(Blc(1)))
+            call xywrite(lOut,j,mapIn(Blc(1)))
           endif
         enddo
 
-        if (.not.rect) call MaskIt(lOut,MAXNAX-2,Inplane,boxes,
-     *                blc(1),blc(2),nOut(1),nOut(2),incr(1),incr(2))
-        call planeinc(MAXNAX-2,incr(3),blc(3),trc(3),Inplane,done)
-        call planeinc(MAXNAX-2,one,one,Nout(3),Outplane,done)
+        if (.not.rect) then
+          call MaskIt(lOut, MAXNAX-2, inPlane, boxes, blc(1), blc(2),
+     *                nOut(1), nOut(2), incr(1), incr(2))
+        endif
+
+        call planeinc(MAXNAX-2,incr(3),blc(3),trc(3),inPlane,done)
+        call planeinc(MAXNAX-2,one,one,nOut(3),outPlane,done)
       enddo
-c
-c  Copy the mosaic table if neccessary.
-c
+
+c     Copy the mosaic table if neccessary.
       if (hdprsnt(lIn,'mostable')) then
         if (incr(1).ne.1 .or. incr(2).ne.1) then
           call mosLoad(lIn,npnt)
@@ -207,20 +192,17 @@ c
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       integer maxRuns
-      parameter (maxRuns=8*maxdim)
+      parameter (maxRuns = 8*MAXDIM)
       integer xminv,xmaxv,yminv,ymaxv,nRuns,nRuns2,iRuns
       integer x1,x2,y,xprev,yprev,t
       integer Runs(3,maxRuns)
 c-----------------------------------------------------------------------
-c
-c  Get the information about what in the output is good.
-c
+c     Get the information about what in the output is good.
       call BoxRuns(ndim,plane,' ',boxes,
      *        Runs,maxRuns,nRuns,xminv,xmaxv,yminv,ymaxv)
-c
-c  If we don't need to decimate, write it straight out.
-c  Otherwise work out the new runs array.
-c
+
+c     If we don't need to decimate, write it straight out.
+c     Otherwise work out the new runs array.
       if (inc1.eq.1 .and. inc2.eq.1) then
         call PutRuns(tno,Runs,nRuns,1-x0,1-y0,n1,n2)
       else
