@@ -102,7 +102,7 @@ c                 plane.  Normally (i.e. without this option), MATHS
 c                 insists that the inputs must be identical in size.
 c         unmask  Treat all pixels as if they were valid.
 c
-c$Id: maths.for,v 1.2 2010/08/26 06:10:26 cal103 Exp $
+c$Id: maths.for,v 1.3 2010/08/26 06:58:23 cal103 Exp $
 c--
 c
 c  History:
@@ -143,30 +143,29 @@ c                  the optimiser on Solaris.
 c-----------------------------------------------------------------------
       include 'maths.h'
 
-      integer ERROR,VECTOR,SCALAR,CONSTANT
-      parameter(ERROR=0,VECTOR=3,SCALAR=2,CONSTANT=1)
-      integer BUFLEN,MAXBOX
-      parameter(BufLen=256,MaxBox=2048)
-      character VERSION*(*)
-      parameter (VERSION='Maths: version 1.0 27-May-05')
+      integer ERROR, CONSTANT, SCALAR, VECTOR
+      parameter (ERROR=0, CONSTANT=1, SCALAR=2, VECTOR=3)
+      integer BUFLEN, MAXBOX
+      parameter (BUFLEN=256, MAXBOX=2048)
 
-      character expr*256,mask*256,out*64,template*64
-      integer   rbuflen,pnt
-      integer   type,lout,indx,i,k,l
-      integer   maskbuf(BUFLEN),expbuf(BUFLEN),boxes(MAXBOX)
-      real      maskrbuf(BUFLEN),exprbuf(BUFLEN)
-      integer   nMRB,nERB,nBuf,xblc,xtrc,yblc,ytrc,npixels
-      logical   doMask,doExp,doRuns,unmask
-      integer   scratch(3,MAXRUNS),nout(MAXNAX)
-      real      RBUF(MAXBUF)
+      logical   doExp, doMask, doRuns, unmask
+      integer   boxes(MAXBOX), expbuf(BUFLEN), i, indx, k, l, lout,
+     *          maskbuf(BUFLEN), nBuf, nERB, nMRB, nout(MAXNAX),
+     *          npixels, pnt, rbuflen, scratch(3,MAXRUNS), type, xblc,
+     *          xtrc, yblc, ytrc
+      real      exprbuf(BUFLEN), maskrbuf(BUFLEN), RBUF(MAXBUF)
+      character expr*256, mask*256, outNam*64, template*64, version*72
 
       common    RBUF
 
-      logical  BoxRect, hdprsnt
-      integer  Fill
-      external boxrect, fill, hdprsnt, paction, vaction
+      logical   BoxRect, hdprsnt
+      integer   Fill
+      character versan*80
+      external  boxrect, fill, hdprsnt, paction, vaction, versan
 c-----------------------------------------------------------------------
-      call output(VERSION)
+      version = versan('maths',
+     *                 '$Revision: 1.3 $',
+     *                 '$Date: 2010/08/26 06:58:23 $')
 c
 c  Get the input parameters.
 c
@@ -174,9 +173,9 @@ c
       call getopt(grow,unmask)
       call keya('exp',Expr,' ')
       call keya('mask',Mask,' ')
-      call keya('out',Out,' ')
+      call keya('out',outNam,' ')
       call keyi('imsize',nsize(1),0)
-      do i = 2,MAXNAX
+      do i = 2, MAXNAX
         call keyi('imsize',nsize(i),1)
       enddo
       call keyr('xrange',Range(1,1),-0.5)
@@ -190,7 +189,7 @@ c
       doExp  = Expr.ne.' '
       if (.not.doMask .and. .not.doExp) call bug('f',
      *  'An expression (exp=) or mask (mask=) must be given')
-      if (Out.eq.' ') call bug('f',
+      if (outNam.eq.' ') call bug('f',
      *  'Output file must be given (out=)')
 c
 c  Parse the expression and mask.
@@ -200,7 +199,7 @@ c
       Zused = .false.
       nfiles = 0
       if (doExp) then
-        call ariComp(expr,paction,type,ExpBuf,Buflen,ExpRBuf,BufLen)
+        call ariComp(expr,paction,type,ExpBuf,BUFLEN,ExpRBuf,BUFLEN)
         if (type.eq.error) call bug('f',
      *       'Error parsing the expression: ' // expr)
         if (type.ne.vector) call bug('f',
@@ -209,7 +208,7 @@ c
       endif
 
       if (doMask) then
-        call ariComp(Mask,paction,type,MaskBuf,Buflen,MaskRBuf,BufLen)
+        call ariComp(Mask,paction,type,MaskBuf,BUFLEN,MaskRBuf,BUFLEN)
         if (type.eq.error) call bug('f',
      *        'Error parsing the mask expression: ' // mask)
         if (type.ne.vector) call bug('f',
@@ -220,15 +219,15 @@ c
 c  Get the region of interest, and finish with the key routines.
 c
       template = ' '
-      if (nfiles.gt.0)template = names(offset(1)+1:offset(2))
-      call BoxInput('region',template,boxes,maxBox)
+      if (nfiles.gt.0) template = names(offset(1)+1:offset(2))
+      call BoxInput('region',template,boxes,MAXBOX)
       call keyfin
 c
 c  If there are no input files, check that we know the image size.
 c
       if (nfiles.eq.0) then
         naxis = 1
-        do i = 1,maxnax
+        do i = 1, MAXNAX
           if (nsize(i).le.0) call bug('f','Image size is wrong')
           if (nsize(i).gt.1) naxis = i
         enddo
@@ -252,18 +251,18 @@ c  If there are input files, "and" all there flagging masks into
 c  regions where the computation is to take place.
 c
       if (.not.unmask) then
-        do i = 1,nfiles
+        do i = 1, nfiles
           if (naxes(i).lt.naxes(ref) .and. hdprsnt(lIn(i),'mask'))
      *      call bug('f','Cannot handle masks with options=grow')
-          call BoxMask(lIn(i),boxes,maxBox)
+          call BoxMask(lIn(i),boxes,MAXBOX)
         enddo
       endif
       doRuns = .not.BoxRect(boxes)
 
-      do i = 1,naxis
+      do i = 1, naxis
         nOut(i) = trc(i) - blc(i) + 1
       enddo
-      do i = naxis+1,maxnax
+      do i = naxis+1, MAXNAX
         nOut(i) = 1
         blc(i) = 1
         trc(i) = 1
@@ -271,8 +270,8 @@ c
 c
 c  Handle naxis > 4.
 c
-      do l = 5,naxis
-        if (nsize(l).gt.1)call bug('f','Too many dimensions for me')
+      do l = 5, naxis
+        if (nsize(l).gt.1) call bug('f','Too many dimensions for me')
         plane(l) = 1
       enddo
 c
@@ -284,7 +283,7 @@ c
 c
 c  Open the output and create the header.
 c
-      call xyopen(lOut,Out,'new',naxis,nOut)
+      call xyopen(lOut,outNam,'new',naxis,nOut)
       if (nfiles.gt.0) then
         call OldHdr(lIn(ref),lOut,naxis,nsize,blc,trc,version)
       else
@@ -296,43 +295,43 @@ c  The expression (if doExp) is in ExpBuf,RBuf.
 c  The mask expression (if doMask) is in MaskBuf,RBuf.
 c  The boxes specification (if doRuns) is in boxes.
 c
-      do l = 1,nOut(4)
+      do l = 1, nOut(4)
         Plane(4) = l + blc(4) - 1
-      do k = 1,nOut(3)
-        Plane(3) = k + blc(3) - 1
-        do i = 1,nfiles
-          if (naxes(i).gt.2)call xysetpl(lIn(i),naxes(i)-2,Plane(3))
+        do k = 1, nOut(3)
+          Plane(3) = k + blc(3) - 1
+          do i = 1, nfiles
+            if (naxes(i).gt.2) call xysetpl(lIn(i),naxes(i)-2,Plane(3))
+          enddo
+          call xysetpl(lOut,1,k)
+
+          call BoxRuns(max(naxis-2,1),Plane(3),' ',boxes,
+     *          Runs,MAXRUNS,nRuns,xblc,xtrc,yblc,ytrc)
+
+          if (doMask) then
+            npixels = Fill(Runs,nRuns)
+            if (npixels.gt.0) then
+              if (nMRB.gt.0) call MoveData(nMRB,MaskRBuf,RBuf(pnt))
+              call ariExec(vaction,npixels,MaskBuf,BUFLEN,RBuf(pnt),
+     *                                  RBufLen,Indx)
+              Indx = Indx + pnt - 1
+              call CompRuns(RBuf(Indx),
+     *                          Runs,MAXRUNS,nRuns,Scratch,MAXRUNS)
+            endif
+          endif
+          if (doMask .or. doRuns) call PutRuns(lOut,Runs,nRuns,
+     *         1-blc(1),1-blc(2),nOut(1),nOut(2))
+          if (doExp) then
+            npixels = Fill(Runs,nRuns)
+            if (npixels.gt.0) then
+              if (nERB.gt.0) call MoveData(nERB,ExpRBuf,RBuf(pnt))
+              call ariExec(vaction,npixels,ExpBuf,BUFLEN,RBuf(pnt),
+     *                                  RBufLen,Indx)
+              Indx = Indx + pnt - 1
+            endif
+            call PutPlane(lOut,Runs,nRuns,
+     *         1-blc(1),1-blc(2),nOut(1),nOut(2),RBuf(Indx),npixels)
+          endif
         enddo
-        call xysetpl(lOut,1,k)
-
-        call BoxRuns(max(naxis-2,1),Plane(3),' ',boxes,
-     *        Runs,MaxRuns,nRuns,xblc,xtrc,yblc,ytrc)
-
-        if (doMask) then
-          npixels = Fill(Runs,nRuns)
-          if (npixels.gt.0) then
-            if (nMRB.gt.0)call MoveData(MaskRBuf,nMRB,RBuf(pnt))
-            call ariExec(vaction,npixels,MaskBuf,BufLen,RBuf(pnt),
-     *                                RBufLen,Indx)
-            Indx = Indx + pnt - 1
-            call CompRuns(RBuf(Indx),
-     *                        Runs,maxRuns,nRuns,Scratch,MaxRuns)
-          endif
-        endif
-        if (doMask .or. doRuns) call PutRuns(lOut,Runs,nRuns,
-     *       1-blc(1),1-blc(2),nOut(1),nOut(2))
-        if (doExp) then
-          npixels = Fill(Runs,nRuns)
-          if (npixels.gt.0) then
-            if (nERB.gt.0)call MoveData(ExpRBuf,nERB,RBuf(pnt))
-            call ariExec(vaction,npixels,ExpBuf,BufLen,RBuf(pnt),
-     *                                RBufLen,Indx)
-            Indx = Indx + pnt - 1
-          endif
-          call PutPlane(lOut,Runs,nRuns,
-     *       1-blc(1),1-blc(2),nOut(1),nOut(2),RBuf(Indx),npixels)
-        endif
-      enddo
       enddo
 c
 c  Free up the allocated memory.
@@ -342,7 +341,7 @@ c
 c  Close all the files.
 c
       call xyclose(lOut)
-      do i = 1,nfiles
+      do i = 1, nfiles
         call xyclose(lIn(i))
       enddo
 
@@ -350,16 +349,16 @@ c
 
 c***********************************************************************
 
-      subroutine MoveData(In,n,Out)
+      subroutine MoveData(n,inMap,outMap)
 
       integer n
-      real In(n),Out(n)
+      real    inMap(n),outMap(n)
 c
 c-----------------------------------------------------------------------
       integer i
 c-----------------------------------------------------------------------
-      do i = 1,n
-        Out(i) = In(i)
+      do i = 1, n
+        outMap(i) = inMap(i)
       enddo
 
       end
@@ -400,7 +399,7 @@ c
 c
 c  Determine the output runs, and place them in the scratch buffer.
 c
-      do i = 1,NRuns
+      do i = 1, NRuns
         length = Runs(3,i) - Runs(2,i) + 1
         l = 0
         do while (l.lt.length)
@@ -427,7 +426,7 @@ c  Copy the output runs (in the scratch buffer) to the runs array.
 c
       if (nOut+1.gt.maxRuns) call bug('f',
      *           'Runs buffer overflow MAXRUNS)')
-      do i = 1,nOut
+      do i = 1, nOut
         Runs(1,i) = Scratch(1,i)
         Runs(2,i) = Scratch(2,i)
         Runs(3,i) = Scratch(3,i)
@@ -454,7 +453,7 @@ c-----------------------------------------------------------------------
       integer npixels,i
 c-----------------------------------------------------------------------
       npixels = 0
-      do i = 1,nRuns
+      do i = 1, nRuns
         npixels = npixels + Runs(3,i) - Runs(2,i) + 1
       enddo
 
@@ -465,57 +464,40 @@ c***********************************************************************
 
       subroutine OldHdr(lIn,lOut,naxis,n,blc,trc,version)
 
-      integer lIn,lOut
-      integer naxis,blc(naxis),trc(naxis),n(naxis)
+      integer   lIn, lOut
+      integer   naxis, n(naxis), blc(naxis), trc(naxis)
       character version*(*)
 
-c  Make the header of the output file. This is a carbon copy of the
+c  Make the header of the output file.  This is a carbon copy of the
 c  input, except that a history record is added.
 c
 c-----------------------------------------------------------------------
-      character card*80,txtblc*32,txttrc*32,key*8
-      integer i,lblc,ltrc
-      real def,crpix
-      integer nkeys
-      parameter (nkeys=47)
-      character keyw(nkeys)*8
-c
-c  Externals.
-c
+      integer   iax, lblc, ltrc
+      double precision crpix, def
+      character card*80, keyw*8, txtblc*32, txttrc*32
+
       character itoaf*2
-c
-      data keyw/   'bmaj    ','bmin    ','bpa     ','bunit   ',
-     *  'cdelt1  ','cdelt2  ','cdelt3  ','cdelt4  ','cdelt5  ',
-     *  'cdelt6  ','cdelt7  ',
-     *  'crval1  ','crval2  ','crval3  ','crval4  ','crval5  ',
-     *  'crval6  ','crval7  ',
-     *  'ctype1  ','ctype2  ','ctype3  ','ctype4  ','ctype5  ',
-     *  'ctype6  ','ctype7  ',
-     *  'obstime ','epoch   ','history ','llrot   ',
-     *  'ltype   ','lstart  ','lstep   ','lwidth  ','pbfwhm  ',
-     *  'instrume','niters  ','object  ','telescop','cellscal',
-     *  'restfreq','vobs    ','observer','obsra   ','pbtype  ',
-     *  'obsdec  ','btype   ','mostable'/
+      external  itoaf
 c-----------------------------------------------------------------------
-      do i = 1,nkeys
-        call hdcopy(lIn,lOut,keyw(i))
-      enddo
-c
-c  Write the reference pixel location.
-c
-      do i = 1,naxis
-        key = 'crpix'//itoaf(i)
-        if (i.le.2) then
-          def = n(i)/2 + 1
+c     Copy the header from the input map.
+      call headcopy(lIn, lOut, 0, 0, 0, 0)
+
+c     Rewrite the reference pixel location.
+      do iax = 1, naxis
+        keyw = 'crpix'//itoaf(iax)
+        if (iax.le.2) then
+          def = dble(n(iax)/2 + 1)
         else
-          def = 1
+          def = 1d0
         endif
-        call rdhdr(lIn,key,crpix,def)
-        call wrhdr(lOut,key,crpix-blc(i)+1)
+
+        call rdhdd(lIn,  keyw, crpix, def)
+        crpix = crpix - dble(blc(iax) - 1)
+        call wrhdd(lOut, keyw, crpix)
       enddo
 
       call hisopen(lOut,'append')
-      card = 'MATHS: Miriad '//version
+      card = 'MATHS: Miriad ' // version
       call hiswrite(lOut,card)
       call hisinput(lOut,'MATHS')
       call mitoaf(blc,naxis,txtblc,lblc)
@@ -531,34 +513,35 @@ c***********************************************************************
 
       subroutine NewHdr(lOut,naxis,Range,n,blc,version)
 
-      integer naxis,lOut,n(naxis),blc(naxis)
-      real Range(2,naxis)
+      integer   lOut, naxis, n(naxis), blc(naxis)
+      real      Range(2,naxis)
       character version*(*)
 
 c  Make the header of the output file. This is a carbon copy of the
 c  input, except that a history record is added.
 c
 c-----------------------------------------------------------------------
-      real Crval,Cdelt,Crpix
-      character card*80,num*2
-      integer i
-c
-c  Externals.
-c
-      character itoaf*2
+      integer   iax
+      double precision cdelt, crpix, crval
+      character card*80, num*1
+
+      character itoaf*1
+      external  itoaf
 c-----------------------------------------------------------------------
-      do i = 1,naxis
-        if (i.le.2) then
-          Crpix = n(i)/2 + 1 - blc(i) + 1
+      do iax = 1, naxis
+        if (iax.le.2) then
+          crpix = dble(n(iax)/2 + 1)
         else
-          Crpix = 1 - blc(i) + 1
+          crpix = 1d0
         endif
-        Cdelt = (Range(2,i)-Range(1,i))/(n(i)-1)
-        Crval = Range(1,i) + (Crpix-1)*Cdelt
-        num = itoaf(i)
-        call wrhdr(lOut,'crval'//num,Crval)
-        call wrhdr(lOut,'cdelt'//num,Cdelt)
-        call wrhdr(lOut,'crpix'//num,Crpix)
+        crpix = crpix - dble(blc(iax) - 1)
+
+        num = itoaf(iax)
+        cdelt = (Range(2,iax) - Range(1,iax)) / (n(iax)-1)
+        crval =  Range(1,iax) + (crpix-1)*cdelt
+        call wrhdr(lOut, 'crval'//num, crval)
+        call wrhdr(lOut, 'cdelt'//num, cdelt)
+        call wrhdr(lOut, 'crpix'//num, crpix)
       enddo
 
       call hisopen(lOut,'append')
@@ -589,10 +572,11 @@ c    value      Unused.
 c
 c-----------------------------------------------------------------------
       include 'maths.h'
+
       integer error,constant,scalar,vector
       parameter (error=0,constant=1,scalar=2,vector=3)
       integer i
-      integer nin(maxnax)
+      integer nin(MAXNAX)
       character umsg*64
       logical dogrow
 c
@@ -602,40 +586,40 @@ c
 c-----------------------------------------------------------------------
       if (symbol.eq.'x') then
         Xused = .true.
-        Indx = xval
+        Indx = XVAL
       else if (symbol.eq.'y') then
         Yused = .true.
-        Indx = yval
+        Indx = YVAL
       else if (symbol.eq.'z') then
         Zused = .true.
-        Indx = zval
+        Indx = ZVAL
 c
 c  Check if we already have this one open.
 c
       else
         Indx = 0
-        do i = 1,nfiles
-          if (symbol.eq.Names(Offset(i)+1:Offset(i+1)))Indx = i
+        do i = 1, nfiles
+          if (symbol.eq.Names(Offset(i)+1:Offset(i+1))) Indx = i
         enddo
 c
 c  If it was not found, open the file.
 c
         if (Indx.eq.0) then
-          if (nfiles.ge.maxfiles)call bug('f','Too many open files')
+          if (nfiles.ge.MAXFILES) call bug('f','Too many open files')
           nfiles = nfiles + 1
-          call xyopen(lIn(nfiles),Symbol,'old',maxnax,nin)
+          call xyopen(lIn(nfiles),Symbol,'old',MAXNAX,nin)
           naxes(nfiles) = 1
           if (nfiles.eq.1) then
-            do i = 1,maxnax
+            do i = 1, MAXNAX
               nsize(i) = nin(i)
-              if (nin(i).gt.1)naxes(nfiles) = i
+              if (nin(i).gt.1) naxes(nfiles) = i
             enddo
             call rdhdi(lIn(1),'naxis',naxis,0)
-            naxis = min(naxis, maxnax)
+            naxis = min(naxis, MAXNAX)
             Offset(1) = 0
             ref = 1
           else
-            do i = 1,maxnax
+            do i = 1, MAXNAX
               if (nin(i).gt.1) then
                 naxes(nfiles) = i
                 dogrow = naxes(ref).lt.i
@@ -653,7 +637,7 @@ c
                 ref = nfiles
                 nsize(i) = nin(i)
                 call rdhdi(lIn(nfiles),'naxis',naxis,naxes(nfiles))
-                naxis = min(naxis, maxnax)
+                naxis = min(naxis, MAXNAX)
               endif
             enddo
           endif
@@ -694,32 +678,32 @@ c-----------------------------------------------------------------------
 c
 c  Fill in Data if it corresponds to a value of x, y or z.
 c
-      if (Indx.eq.xval) then
+      if (Indx.eq.XVAL) then
         cdelt = (Range(2,1)-Range(1,1))/real(nsize(1)-1)
         crval = Range(1,1) - cdelt
         k = 1
-        do j = 1,nRuns
-          do i = Runs(2,j),Runs(3,j)
+        do j = 1, nRuns
+          do i = Runs(2,j), Runs(3,j)
             Data(k) = cdelt * i + crval
             k = k + 1
           enddo
         enddo
-      else if (Indx.eq.yval) then
+      else if (Indx.eq.YVAL) then
         cdelt = (Range(2,2)-Range(1,2))/real(nsize(2)-1)
         crval = Range(1,2) - cdelt
         k = 1
-        do j = 1,nRuns
+        do j = 1, nRuns
           temp = cdelt * Runs(1,j) + crval
-          do i = Runs(2,j),Runs(3,j)
+          do i = Runs(2,j), Runs(3,j)
             Data(k) = temp
             k = k + 1
           enddo
         enddo
-      else if (Indx.eq.zval) then
+      else if (Indx.eq.ZVAL) then
         cdelt = (Range(2,3)-Range(1,3))/real(nsize(3)-1)
         crval = Range(1,3) - cdelt
         temp = cdelt * Plane(3) + crval
-        do k = 1,N
+        do k = 1, N
           Data(k) = temp
         enddo
 c
