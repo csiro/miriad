@@ -94,7 +94,7 @@ c       only as many channels as there are planes in the model cube.
 c       The various uv variables that describe the windows are adjusted
 c       accordingly.  No default. 
 c
-c$Id: uvmodel.for,v 1.3 2010/08/27 08:10:12 cal103 Exp $
+c$Id: uvmodel.for,v 1.4 2010/08/27 08:26:17 cal103 Exp $
 c--
 c
 c  History:
@@ -116,7 +116,7 @@ c    rjs   1jul91 Corrected calculation of wwidth in the output file.
 c    mjs  04aug91 Replaced local maxants with maxdim.h MAXANT
 c    rjs  29aug91 Complete rework of WindUpd.
 c    nebk 29aug91 Make user specify an option.
-c    rjs   1nov91 Added options=mfs and polarized. Simple polarisation
+c    rjs   1nov91 Added options=mfs and polarized.  Simple polarisation
 c                 processing.
 c    rjs  29jan92 New call sequence to model.
 c    rjs  30mar92 Added option selradec.
@@ -162,8 +162,8 @@ c-----------------------------------------------------------------------
       character versan*80
 c-----------------------------------------------------------------------
       version = versan('uvmodel',
-     *                 '$Revision: 1.3 $',
-     *                 '$Date: 2010/08/27 08:10:12 $')
+     *                 '$Revision: 1.4 $',
+     *                 '$Date: 2010/08/27 08:26:17 $')
 
 c     Get the input parameters.
       call keyini
@@ -268,6 +268,10 @@ c     Reset the input file and set up for a copying.
       call VarInit(tVis,ltype)
       call VarOnit(tVis,tOut,ltype)
 
+      do pol = -8, 4
+        pols(pol) = 0
+      enddo
+
 c     Perform the copying.
       length = 5*nchan + NHEAD
       do i = 1, nvis
@@ -278,12 +282,13 @@ c     Perform the copying.
         call process(oper, buffer(1)*sigma, nchan, buffer(NHEAD+1),
      *               uvdata, flags)
 
-c       Copy polarisation info across.
+c       Copy polarisation info - npol here may be an upper limit.
         call uvrdvri(tVis,'npol',npol,0)
         if (npol.gt.0) then
           call uvputvri(tOut, 'npol', npol, 1)
           call uvrdvri (tVis, 'pol', pol, 1)
           call uvputvri(tOut, 'pol', pol, 1)
+          pols(pol) = 1
         endif
 
 c       Copy the variables and the data.
@@ -291,6 +296,13 @@ c       Copy the variables and the data.
         call uvwrite(tOut,preamble,uvdata,flags,nchan)
       enddo
       call scrclose(tScr)
+
+c     How many polarisations were there (assuming they don't vary)?
+      npol = 0
+      do pol = -8, 4
+        npol = npol + pols(pol)
+      enddo
+      call wrhdi(tOut, 'npol', npol)
 
 c     Write history.
       call hdcopy(tVis,tOut,'history')
