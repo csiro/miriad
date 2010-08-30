@@ -8,7 +8,7 @@ c= linmos - Linear mosaicing of datacubes
 c& rjs
 c: map combination
 c+
-c       LINMOS is a MIRIAD task which performs a simple linear mosaicing
+c       LINMOS is a MIRIAD task that performs a simple linear mosaicing
 c       of input cubes, to produce a single output cube.  If only a
 c       single input cube is given, LINMOS essentially does primary beam
 c       correction on this input.  When several, overlapping, inputs are
@@ -65,7 +65,7 @@ c                      giving the effective gain across the field.  If
 c                      options=taper is used, this will be a smooth
 c                      function.  Otherwise it will be 1 or 0 (blanked).
 c
-c$Id: linmos.for,v 1.8 2010/08/30 06:12:53 cal103 Exp $
+c$Id: linmos.for,v 1.9 2010/08/30 06:17:19 cal103 Exp $
 c--
 c
 c  History:
@@ -150,8 +150,8 @@ c-----------------------------------------------------------------------
       external  len1, versan
 c-----------------------------------------------------------------------
       version = versan ('linmos',
-     *                  '$Revision: 1.8 $',
-     *                  '$Date: 2010/08/30 06:12:53 $')
+     *                  '$Revision: 1.9 $',
+     *                  '$Date: 2010/08/30 06:17:19 $')
 c
 c  Get the input parameters, and do some checking.
 c
@@ -516,8 +516,8 @@ c           Weight by inverse variance.
 c           Accumulate data.
             Out(i,j) = Out(i,j) + wgt*In(i)
             Wts(i,j) = Wts(i,j) + wgt
-          enddo
- 10     enddo
+ 10       enddo
+        enddo
 c
 c  Save the output.
 c
@@ -805,7 +805,7 @@ c-----------------------------------------------------------------------
 c  Make up the header of the output file.
 c
 c  Input:
-c    tin        Handle of the input file, which is to be used as a
+c    tin        Handle of the input file which is to be used as a
 c               template.
 c    tout       Handle of the output file.
 c    nsize      Size of the input image.
