@@ -129,17 +129,17 @@ c                    and you must have reasonable parallactic angle
 c                    coverage.  This option can be used with "noxy", in
 c                    which case GPCAL solves for the offset of the
 c                    reference antenna.
-c         polref     Solve for the instrumental polarization leakage
-c                    of the X feed on the reference antenna. This can
-c                    be combined with ``nopol'', in which case GPCAL
-c                    solves for X feed of the reference antenna only.
-c         vsolve     Solve for the Stokes-V of the source. This is only
+c         polref     Solve for the instrumental polarization leakage of
+c                    the X feed on the reference antenna.  This can be
+c                    combined with "nopol", in which case GPCAL solves
+c                    for X feed of the reference antenna only.
+c         vsolve     Solve for the Stokes-V of the source.  This is only
 c                    possible for linear feeds and a preliminary leakage
-c                    solution for the observation already exists. This
+c                    solution for the observation already exists.  This
 c                    preliminary solution must be formed from a
 c                    calibrator with known Stokes-V.
 c
-c$Id: gpcal.for,v 1.5 2010/08/31 05:10:35 cal103 Exp $
+c$Id: gpcal.for,v 1.6 2010/08/31 08:20:33 cal103 Exp $
 c--
 c  History:
 c    rjs,nebk 1may91 Original version.
@@ -252,37 +252,37 @@ c      the amplitude solver.
 c    * Need a constant X/Y gain option.
 c-----------------------------------------------------------------------
       include 'gpcal.h'
+
       integer MAXITER
-      character version*(*)
       parameter (MAXITER=30)
-      parameter (version='Gpcal: version 1.0 30-Apr-09')
 
-      integer tIn
-      double precision interval(2), freq
-      real fac,flux(4),OldFlux(4),xyphase(MAXANT)
-      real pcent,epsi,epsi1,tol,ttol
-      integer refant,minant,nants,nbl,nxyphase,nsoln,niter,i,j,jmax
-      integer maxsoln,off
-      logical amphsol,polsol,xysol,xyvary,xyref,polref,qusolve,vsolve
-      logical defflux,usepol,useref,dopass,polcal,notrip,oldflx
-      logical circular,reset
-      character line*80,source*32,uvflags*8
+      logical   amphsol, circular, defflux, dopass, notrip, oldflx,
+     *          polcal, polref, polsol, qusolve, reset, usepol, useref,
+     *          vsolve, xyref, xysol, xyvary
+      integer   i, j, jmax, maxsoln, minant, nants, nbl, niter, nsoln,
+     *          nxyphase, off, refant, tIn
+      real      epsi, epsi1, fac, flux(4), oldFlux(4), pcent, tol,
+     *          ttol, xyphase(MAXANT)
+      double precision freq, interval(2)
+      character line*80, source*32, uvflags*8, version*72
 
+      logical present(MAXANT)
+      integer Count(MAXDBL)
+      real    SumS(MAXDBL),SumC(MAXDBL)
+      real    SumS2(MAXDBL),SumCS(MAXDBL)
       complex D(2,MAXANT),xyp(MAXANT),Gains(2,MAXDANTS)
       complex OldD(2,MAXANT),OldGains(2,MAXDANTS)
       complex Vis(4,MAXDBL),xypcorr,xypref
       complex VisCos(4,MAXDBL),VisSin(4,MAXDBL)
-      real SumS(MAXDBL),SumC(MAXDBL)
-      real SumS2(MAXDBL),SumCS(MAXDBL)
-      integer Count(MAXDBL)
       double precision time(MAXDSOLN)
-      logical present(MAXANT)
-c
-c  Externals.
-c
-      logical uvDatOpn,keyprsnt
-      character itoaf*3
+
+      logical   keyprsnt, uvDatOpn
+      character itoaf*3, versan*80
+      external  itoaf, keyprsnt, uvDatOpn
 c-----------------------------------------------------------------------
+      version = versan('gpcal',
+     *                 '$Revision: 1.6 $',
+     *                 '$Date: 2010/08/31 08:20:33 $')
 c
 c  Get inputs.
 c
@@ -322,7 +322,7 @@ c
 c
 c  Determine the polarisation solver to use.
 c
-      polcal = abs(flux(2))+abs(flux(3))+abs(flux(4)).gt.0
+      polcal = abs(flux(2))+abs(flux(3))+abs(flux(4)).gt.0.0
       usepol = (xysol .and. .not.xyvary) .or.
      *          polsol .or. qusolve .or. vsolve
       useref = (polref .and. .not.polsol) .or. (xyref .and. .not.usepol)
@@ -392,19 +392,17 @@ c
         endif
       enddo
 c
-c  Initialize the flux array
+c  Initialize the flux array.
 c
       if (defflux) then
         call getiquv(source,freq,oldflx,flux,defflux)
-        if (.not.defflux)
-     *        call bug('i','Source is a recognised flux calibrator')
       endif
 
       if (defflux .and. .not.qusolve) call bug('w',
      *  'It is unwise to omit OPTION=QUSOLVE when flux is unknown')
-      if (flux(1).le.0) call bug('f','Invalid total flux value')
-      pcent = sqrt(flux(2)**2 + flux(3)**2 + flux(4)**2)/flux(1)
-      if (polref .and. pcent.eq.0 .and. .not.qusolve) call bug('f',
+      if (flux(1).le.0.0) call bug('f','Invalid total flux value')
+      pcent = sqrt(flux(2)**2 + flux(3)**2 + flux(4)**2) / flux(1)
+      if (polref .and. pcent.eq.0.0 .and. .not.qusolve) call bug('f',
      *  'You must give values for Q,U,V to use option POLREF')
       if (polref .and. pcent.lt.0.05) call bug('w',
      *  'Source appears only weakly polarised')
@@ -416,7 +414,7 @@ c
 c  Iterate until we have converged.
 c
       niter = 0
-      epsi = tol + 1
+      epsi = tol + 1.0
       if (usepol .or. useref) then
         ttol = 0.01
       else
@@ -425,7 +423,7 @@ c
 
       do while (epsi.gt.tol .and. niter.lt.MAXITER)
         niter = niter + 1
-        epsi = 0
+        epsi = 0.0
         call CopyG(nants,nsoln,D,Gains,Flux,OldD,OldGains,OldFlux)
         ttol = max(0.3*ttol,0.5*tol)
 c
@@ -493,7 +491,7 @@ c
      *        ', Overall Solution Error:      ',epsi
           call output(line)
         else if (amphsol) then
-          epsi = 0
+          epsi = 0.0
         endif
       enddo
       if (niter.ge.MAXITER)
@@ -506,16 +504,16 @@ c
 c
 c  Tell about the source polarisation.
 c
-      write(line,'(a,f8.3)')'I flux density: ', flux(1)
+      write(line,'(a,f8.4)')'I flux density: ', flux(1)
       call writeo(tIn,line)
       if (qusolve) then
-        write(line,'(a,f8.3)')'Percent Q: ',100*flux(2)/flux(1)
+        write(line,'(a,f8.3)')'Percent Q:',100.0*flux(2)/flux(1)
         call writeo(tIn,line)
-        write(line,'(a,f8.3)')'Percent U: ',100*flux(3)/flux(1)
+        write(line,'(a,f8.3)')'Percent U:',100.0*flux(3)/flux(1)
         call writeo(tIn,line)
       endif
       if (vsolve) then
-        write(line,'(a,f8.3)')'Percent V: ',100*flux(4)/flux(1)
+        write(line,'(a,f8.3)')'Percent V:',100.0*flux(4)/flux(1)
         call writeo(tIn,line)
       endif
 c
@@ -855,7 +853,7 @@ c
           Indx(k) = 0
         enddo
 c
-c  Form the needed sums, and squeeze out unnecessary  baselines
+c  Form the needed sums, and squeeze out unnecessary baselines.
 c
         k = 0
         do j = 2, nants
@@ -1169,25 +1167,25 @@ c-----------------------------------------------------------------------
      *           + real(VC(m,k))*br(j,m,k) + aimag(VC(m,k))*bi(j,m,k)
      *           + real(VS(m,k))*cr(j,m,k) + aimag(VS(m,k))*ci(j,m,k)
             temp = temp -   (ar(0,m,k)*ar(j,m,k)
-     *                    +   br(0,m,k)*br(j,m,k)
-     *                    +   ai(0,m,k)*ai(j,m,k)
-     *                    +   bi(0,m,k)*bi(j,m,k)) * Count(k,0)
+     *                    +  br(0,m,k)*br(j,m,k)
+     *                    +  ai(0,m,k)*ai(j,m,k)
+     *                    +  bi(0,m,k)*bi(j,m,k)) * Count(k,0)
      *                  -   (cr(0,m,k)*cr(j,m,k)
-     *                    -   br(0,m,k)*br(j,m,k)
-     *                    +   ci(0,m,k)*ci(j,m,k)
-     *                    -   bi(0,m,k)*bi(j,m,k)) * SumS2(k,0)
+     *                    -  br(0,m,k)*br(j,m,k)
+     *                    +  ci(0,m,k)*ci(j,m,k)
+     *                    -  bi(0,m,k)*bi(j,m,k)) * SumS2(k,0)
      *                  -   (ar(0,m,k)*br(j,m,k)
-     *                    +   br(0,m,k)*ar(j,m,k)
-     *                    +   ai(0,m,k)*bi(j,m,k)
-     *                    +   bi(0,m,k)*ai(j,m,k)) * SumC(k,0)
+     *                    +  br(0,m,k)*ar(j,m,k)
+     *                    +  ai(0,m,k)*bi(j,m,k)
+     *                    +  bi(0,m,k)*ai(j,m,k)) * SumC(k,0)
             temp = temp -   (ar(0,m,k)*cr(j,m,k)
-     *                    +   cr(0,m,k)*ar(j,m,k)
-     *                    +   ai(0,m,k)*ci(j,m,k)
-     *                    +   ci(0,m,k)*ai(j,m,k)) * SumS(k,0)
+     *                    +  cr(0,m,k)*ar(j,m,k)
+     *                    +  ai(0,m,k)*ci(j,m,k)
+     *                    +  ci(0,m,k)*ai(j,m,k)) * SumS(k,0)
      *                  -   (br(0,m,k)*cr(j,m,k)
-     *                    +   cr(0,m,k)*br(j,m,k)
-     *                    +   bi(0,m,k)*ci(j,m,k)
-     *                    +   ci(0,m,k)*bi(j,m,k)) * SumCS(k,0)
+     *                    +  cr(0,m,k)*br(j,m,k)
+     *                    +  bi(0,m,k)*ci(j,m,k)
+     *                    +  ci(0,m,k)*bi(j,m,k)) * SumCS(k,0)
           enddo
         enddo
         b(jd) = temp
@@ -1201,25 +1199,25 @@ c-----------------------------------------------------------------------
           do m = 1, 4
             do k = 1, nbl
               temp = temp + (ar(i,m,k)*ar(j,m,k)
-     *                    +   br(i,m,k)*br(j,m,k)
-     *                    +   ai(i,m,k)*ai(j,m,k)
-     *                    +   bi(i,m,k)*bi(j,m,k)) * Count(k,0)
+     *                    +  br(i,m,k)*br(j,m,k)
+     *                    +  ai(i,m,k)*ai(j,m,k)
+     *                    +  bi(i,m,k)*bi(j,m,k)) * Count(k,0)
      *                    + (cr(i,m,k)*cr(j,m,k)
-     *                    -   br(i,m,k)*br(j,m,k)
-     *                    +   ci(i,m,k)*ci(j,m,k)
-     *                    -   bi(i,m,k)*bi(j,m,k)) * SumS2(k,0)
+     *                    -  br(i,m,k)*br(j,m,k)
+     *                    +  ci(i,m,k)*ci(j,m,k)
+     *                    -  bi(i,m,k)*bi(j,m,k)) * SumS2(k,0)
      *                    + (ar(i,m,k)*br(j,m,k)
-     *                    +   br(i,m,k)*ar(j,m,k)
-     *                    +   ai(i,m,k)*bi(j,m,k)
-     *                    +   bi(i,m,k)*ai(j,m,k)) * SumC(k,0)
+     *                    +  br(i,m,k)*ar(j,m,k)
+     *                    +  ai(i,m,k)*bi(j,m,k)
+     *                    +  bi(i,m,k)*ai(j,m,k)) * SumC(k,0)
               temp = temp + (ar(i,m,k)*cr(j,m,k)
-     *                    +   cr(i,m,k)*ar(j,m,k)
-     *                    +   ai(i,m,k)*ci(j,m,k)
-     *                    +   ci(i,m,k)*ai(j,m,k)) * SumS(k,0)
+     *                    +  cr(i,m,k)*ar(j,m,k)
+     *                    +  ai(i,m,k)*ci(j,m,k)
+     *                    +  ci(i,m,k)*ai(j,m,k)) * SumS(k,0)
      *                    + (br(i,m,k)*cr(j,m,k)
-     *                    +   cr(i,m,k)*br(j,m,k)
-     *                    +   bi(i,m,k)*ci(j,m,k)
-     *                    +   ci(i,m,k)*bi(j,m,k)) * SumCS(k,0)
+     *                    +  cr(i,m,k)*br(j,m,k)
+     *                    +  bi(i,m,k)*ci(j,m,k)
+     *                    +  ci(i,m,k)*bi(j,m,k)) * SumCS(k,0)
             enddo
           enddo
           A(id,jd) = temp
@@ -1359,8 +1357,10 @@ c  Output:
 c    a,b,c
 c-----------------------------------------------------------------------
       include 'gpcal.h'
+
       integer II,QQ,UU,VV
-      parameter (II=1,QQ=2,UU=3,VV=4)
+      parameter (II=1, QQ=2, UU=3, VV=4)
+
       integer i,j,k
       complex axx,bxx,cxx,ayy,byy,cyy,axy,bxy,cxy,ayx,byx,cyx
 c-----------------------------------------------------------------------
@@ -1378,18 +1378,18 @@ c-----------------------------------------------------------------------
         byx = flux(QQ) + cmplx(0.0,flux(UU))
         cyx = flux(UU) - cmplx(0.0,flux(QQ))
       else
-        axx =   flux(II)
-        bxx =   flux(QQ)
-        cxx =   flux(UU)
-        ayy =   flux(II)
-        byy = - flux(QQ)
-        cyy = - flux(UU)
+        axx =  flux(II)
+        bxx =  flux(QQ)
+        cxx =  flux(UU)
+        ayy =  flux(II)
+        byy = -flux(QQ)
+        cyy = -flux(UU)
         axy = -cmplx(0.0,flux(VV))
-        bxy =   flux(UU)
-        cxy = - flux(QQ)
-        ayx =   cmplx(0.0,flux(VV))
-        byx =   flux(UU)
-        cyx = - flux(QQ)
+        bxy =  flux(UU)
+        cxy = -flux(QQ)
+        ayx =  cmplx(0.0,flux(VV))
+        byx =  flux(UU)
+        cyx = -flux(QQ)
       endif
 c
 c  Do it now for each baseline.
@@ -2244,7 +2244,7 @@ c
         if (polsol) then
           do j = 1, nchan
             if (flag(j,XX) .and. flag(j,YY) .and.
-     *         flag(j,XY) .and. flag(j,YX)) then
+     *          flag(j,XY) .and. flag(j,YX)) then
               ncorr = ncorr + 1
               d(XX) = d(XX) + data(j,XX)
               d(YY) = d(YY) + data(j,YY)
@@ -2266,8 +2266,8 @@ c  Determine if we will accept this visibility.
 c
         call basant(preamble(4),i1,i2)
         accept = ncorr.gt.0 .and. i1.gt.0 .and. i1.le.nants .and.
-     *                          i2.gt.0 .and. i2.le.nants .and.
-     *                          i1.ne.i2
+     *                            i2.gt.0 .and. i2.le.nants .and.
+     *                            i1.ne.i2
 c
 c  If its a good record, process it.  Initialise a new scan slot if
 c  needed.
@@ -2372,8 +2372,8 @@ c  Accumulate all the sums into slot 0.
 c
       do j = 1, nbl
         Count(j,0) = Count(j,1)
-        SumS(j,0) = SumS(j,1)
-        SumC(j,0) = SumC(j,1)
+        SumS(j,0)  = SumS(j,1)
+        SumC(j,0)  = SumC(j,1)
         SumS2(j,0) = SumS2(j,1)
         SumCS(j,0) = SumCS(j,1)
       enddo
@@ -2398,8 +2398,8 @@ c
             b2 = (j-1)*(j-2)/2 + i
             b3 = (k-1)*(k-2)/2 + i
             trip = trip .or. (Count(b1,0).gt.0 .and.
-     *                      Count(b2,0).gt.0 .and.
-     *                      Count(b3,0).gt.0)
+     *                        Count(b2,0).gt.0 .and.
+     *                        Count(b3,0).gt.0)
           enddo
         enddo
       enddo
@@ -2450,13 +2450,15 @@ c
       endif
       if (missing) call bug('w',line)
       end
-************************************************************************
+
+*************************************************************** doaccept
+
       logical function doaccept(time,Count,n,nants,nbl,refant,minant)
 
       integer nants,nbl,refant,minant,n
       integer Count(nbl)
       double precision time
-
+c-----------------------------------------------------------------------
 c  Determine whether the reference antenna, and the minimum number of
 c  antennae are present in the data.
 c
@@ -2471,14 +2473,15 @@ c  Output:
 c    doaccept   True if we are to accept this solution interval.
 c-----------------------------------------------------------------------
       include 'gpcal.h'
+
       integer i,j,k,npresent,lnvis
       logical present(MAXANT)
       character string*32,nvis*8,line*80
-c
-c  Externals.
-c
-      integer len1
+
+      integer   len1
       character itoaf*8
+      external  itoaf, len1
+c-----------------------------------------------------------------------
 
       do k = 1, nants
         present(k) = .false.
@@ -2724,10 +2727,10 @@ c-----------------------------------------------------------------------
       integer n,i
 c-----------------------------------------------------------------------
       n = 0
-      Sum2 = 0
+      Sum2 = 0.0
       do i = 1, ngains
         t = real(Gains(i))**2 + aimag(Gains(i))**2
-        if (t.gt.0) then
+        if (t.gt.0.0) then
           Sum2 = Sum2 + t
           n = n + 1
         endif
@@ -2735,7 +2738,7 @@ c-----------------------------------------------------------------------
 c
 c  Return if all the gains are flagged bad.
 c
-      if (Sum2.eq.0) return
+      if (Sum2.eq.0.0) return
 c
 c  Scale the gains.
 c
@@ -2746,7 +2749,7 @@ c
 c
 c  Scale the fluxes.
 c
-      t = 1/(t*t)
+      t = 1.0 / (t*t)
       do i = 1, 4
         flux(i) = t*flux(i)
       enddo
@@ -2902,8 +2905,11 @@ c              value.
 c     defflux  True if the source was not found, and default of 1,0,0,0
 c              used.
 c-----------------------------------------------------------------------
-      integer ierr
-      character umsg*80,src*16
+      integer   ierr
+      character src*16, umsg*80
+
+      integer   len1
+      external  len1
 c-----------------------------------------------------------------------
       src = source
       if (src.eq.'1934-638' .or.
@@ -2911,30 +2917,40 @@ c-----------------------------------------------------------------------
      *    src.eq.'1939-637') then
         if (oldflux) then
           src = 'old1934'
-          call bug('w','Using post-Aug94 ATCA flux scale for 1934-638.')
+          call bug('w','Using pre-Aug94 ATCA flux scale for 1934-638.')
         else
-          call output('Using pre-Aug94 ATCA flux scale for 1934-638.')
+          src = '1934-638'
+          call output('Using post-Aug94 ATCA flux scale for 1934-638.')
         endif
       endif
 
       ierr = 2
       if (src.ne.' ') call calstoke(src,'i',freq,flux(1),1,ierr)
-      if (ierr.ne.2) then
-        defflux = .false.
-        call calstoke(src,'q',freq,flux(2),1,ierr)
-        call calstoke(src,'u',freq,flux(3),1,ierr)
-        call calstoke(src,'v',freq,flux(4),1,ierr)
-        umsg = 'Frequency extrapolation was needed to '//
-     *    'determine Stokes parameters of '//source
-        if (ierr.eq.1) call bug('w',umsg)
-        write(umsg,'(''Using IQUV = '',4(f8.4,'',''))') flux
-        call output(umsg)
-      else
-        defflux = .true.
+      defflux = ierr.eq.2
+
+      if (defflux) then
         flux(1) = 1.0
         flux(2) = 0.0
         flux(3) = 0.0
         flux(4) = 0.0
+
+      else
+        if (src.ne.'1934-638' .and. src.ne.'old1934') then
+          call output(src(1:len1(source)) //
+     *      ' is a recognised flux calibrator.')
+        endif
+
+        call calstoke(src,'q',freq,flux(2),1,ierr)
+        call calstoke(src,'u',freq,flux(3),1,ierr)
+        call calstoke(src,'v',freq,flux(4),1,ierr)
+        if (ierr.eq.1) then
+          call bug('w', 'Used frequency extrapolation to determine ' //
+     *      'Stokes parameters.')
+        endif
+
+        write(umsg, 10) flux, freq
+ 10     format('Using IQUV =',f8.4,3(',',f8.4),' at',f9.4,' GHz.')
+        call output(umsg)
       endif
 
       end
