@@ -97,6 +97,8 @@ c       log file consists of 5 columns, being the iteration number, the
 c       x and y pixel coordinate (in the output model; this goes from 1
 c       to N), the "I" component and the "I*alpha" component.  The
 c       default is to not create a log file.
+c
+c$Id: mfclean.for,v 1.3 2010/09/02 07:42:43 cal103 Exp $
 c--
 c  History:
 c    rjs   Nov89 - Original version.
@@ -161,9 +163,8 @@ c               between runs).  Specifying boxes in this way is
 c               reasonably concise for the programmer, and yet makes
 c               vectorisable code straightforward to write.
 c-----------------------------------------------------------------------
-      character version*(*)
-      parameter (version='MfClean: version 1.0 24-Jun-97')
       include 'maxdim.h'
+
       integer maxBeam,maxCmp1,maxCmp2,maxBox,maxRun,maxP
       parameter (maxCmp1=66000,maxCmp2=32000,maxP=257)
       parameter (maxBeam=maxP*maxP,maxBox=3*MAXDIM,maxRun=3*maxDim)
@@ -184,7 +185,7 @@ c-----------------------------------------------------------------------
       integer naxis,n1,n2,n1d,n2d,ic,jc,nx,ny,ntmp
       integer xmin,xmax,ymin,ymax,xoff,yoff,zoff
       character MapNam*64,BeamNam*64,ModelNam*64,OutNam*64,line*72
-      character logf*64
+      character logf*64, version*72
       integer lMap,lBeam,lModel,lOut
       integer nMap(3),nBeam(3),nModel(3),nOut(4)
       real EstASum
@@ -193,13 +194,15 @@ c-----------------------------------------------------------------------
       real dat(maxBuf)
       common dat
 
-c     Externals.
-      character itoaf*8
+      character itoaf*8, versan*80
+      external  itoaf, versan
 c-----------------------------------------------------------------------
+      version = versan('mfclean',
+     *                 '$Revision: 1.3 $',
+     *                 '$Date: 2010/09/02 07:42:43 $')
 c
 c  Get the input parameters.
 c
-      call output(version)
       call inputs(MapNam,BeamNam,ModelNam,OutNam,maxNiter,NegStop,
      *  Cutoff,Boxes,maxBox,MinPatch,Gain0,Gain1,Speed,mode,logf)
 c
@@ -455,7 +458,7 @@ c  Construct a header for the output file, and give some history
 c  information.
 c
       totNiter = totNiter + Niter
-      call Header(lMap,lOut,xmin,ymin,totNiter,version)
+      call mkHead(lMap,lOut,xmin,ymin,totNiter,version)
 c
 c  Close up the files. Ready to go home.
 c
@@ -796,12 +799,12 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine Header(lIn,lOut,xmin,ymin,Niter,version)
+      subroutine mkHead(lIn,lOut,xmin,ymin,Niter,version)
 
-      integer lIn,lOut,Niter,xmin,ymin
-      character version*(*)
+      integer   lIn, lOut, xmin, ymin, Niter
+      character version*72
 c-----------------------------------------------------------------------
-c Copy across the header to the model.
+c Copy the header to the model.
 c
 c  Inputs:
 c    lIn
@@ -810,51 +813,34 @@ c    xmin,ymin
 c    Niter
 c    version
 c-----------------------------------------------------------------------
-      integer i
-      real crpix1,crpix2
-      character line*72
-      integer nkeys
-      parameter (nkeys=33)
-      character keyw(nkeys)*8
+      double precision crpix
 
-c     Externals.
       character itoaf*8
-
-      data keyw/   'cdelt1  ','cdelt2  ','cdelt3  ','cdelt4  ',
-     *  'crpix3  ','crpix4  ','crval1  ','crval2  ','crval3  ',
-     *  'crval4  ','ctype1  ','ctype2  ','ctype3  ','ctype4  ',
-     *  'epoch   ','history ','instrume','lstart  ','cellscal',
-     *  'lstep   ','ltype   ','lwidth  ','object  ','obstime ',
-     *  'observer','telescop','obsra   ','pbtype  ',
-     *  'obsdec  ','restfreq','vobs    ','pbfwhm  ','btype   '/
+      external  itoaf
 c-----------------------------------------------------------------------
-c
-c  Fill in some parameters that will have changed between the input
-c  and output.
-c
-      call wrhda(lOut,'bunit','JY/PIXEL')
-      call rdhdr(lIn,'crpix1',crpix1,1.0)
-      call rdhdr(lIn,'crpix2',crpix2,1.0)
-      crpix1 = crpix1 - xmin + 1
-      crpix2 = crpix2 - ymin + 1
-      call wrhdr(lOut,'crpix1',crpix1)
-      call wrhdr(lOut,'crpix2',crpix2)
-      call wrhdi(lOut,'niters',Niter)
-c
-c  Copy unchanged keywords and add history.
-c
-      do i = 1, nkeys
-        call hdcopy(lIn, lOut, keyw(i))
-      enddo
-c
-c  Write crap to the history file, to attempt (ha!) to appease Neil.
-c  I will never be happy Robbie.
-c
-      call hisopen(lOut,'append')
-      line = 'MFCLEAN: Miriad '//version
-      call hiswrite(lOut,line)
-      call hisinput(lOut,'MFCLEAN')
-      call hiswrite(lOut,'MFCLEAN: Total Iterations = '//itoaf(Niter))
+c     Start by making a verbatim copy.
+      call headcopy(lIn, lOut, 0, 0, 0, 0)
+
+c     Update changed parameters.
+      if (xmin.ne.1) then
+        call rdhdd(lIn, 'crpix1', crpix, 1d0)
+        crpix = crpix - dble(xmin - 1)
+        call wrhdd(lOut, 'crpix1', crpix)
+      endif
+      if (ymin.ne.1) then
+        call rdhdd(lIn, 'crpix2', crpix, 1d0)
+        crpix = crpix - dble(ymin - 1)
+        call wrhdd(lOut, 'crpix2', crpix)
+      endif
+
+      call wrhda(lOut, 'bunit', 'JY/PIXEL')
+      call wrhdi(lOut, 'niters', Niter)
+
+c     Write history.
+      call hisopen(lOut, 'append')
+      call hiswrite(lOut, 'MFCLEAN: Miriad '//version)
+      call hisinput(lOut, 'MFCLEAN')
+      call hiswrite(lOut, 'MFCLEAN: Total Iterations = '//itoaf(Niter))
       call hisclose(lOut)
 
       end
