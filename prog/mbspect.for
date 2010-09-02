@@ -21,14 +21,14 @@ c       performed for the plot and/or log file).  This spectrum can be
 c       read back into MbSpect.
 c@ coord
 c       The position, in world coordinates, for which the spectrum is
-c       required, e.g. coord=12:00:13,-42:00:43. The cube must have
-c       an RA and a DEC axis. The pixel with the nearest position is
-c       chosen. The default is the centre of the image (not necessarily
+c       required, e.g. coord=12:00:13,-42:00:43.  The cube must have
+c       an RA and a DEC axis.  The pixel with the nearest position is
+c       chosen.  The default is the centre of the image (not necessarily
 c       the reference pixel).
 c@ width
 c       Two numbers, being the spatial width of the box in pixels (in RA
 c       and DEC) within which the spectrum is averaged (or integrated).
-c       Must be odd numbers. Default is 1,1.
+c       Must be odd numbers.  Default is 1,1.
 c@ xaxis
 c       The x-axis can be plotted as 'channel', 'frequency' ('FREQ'),
 c       'optical' velocity ('FELO'), 'radio' velocity ('VELO'), or the
@@ -45,9 +45,9 @@ c       X-axis range for plot.  The default is to self-scale to the
 c       region requested.  The units are km/s for velocity and MHz for
 c       frequency (i.e. not the normal miriad convention).
 c@ yrange
-c       Y-axis range for plot. The default is to self-scale.
+c       Y-axis range for plot.  The default is to self-scale.
 c@ hann
-c       Hanning smoothing length (an odd integer < 15). The default is
+c       Hanning smoothing length (an odd integer < 15).  The default is
 c       no smoothing (hann = 1).
 c@ order
 c       Order of optional robust (clipped polynomial) fit (0-10) to be
@@ -141,7 +141,7 @@ c@ comment
 c       A one-line comment which is written into the logfile and any
 c       plot.
 c
-c$Id: mbspect.for,v 1.8 2010/09/01 06:08:15 cal103 Exp $
+c$Id: mbspect.for,v 1.9 2010/09/02 06:33:35 cal103 Exp $
 c--
 c
 c  History:
@@ -163,34 +163,30 @@ c                  size maxnax, not of passed in naxis (illegal fortran)
 c    lss  28apr09  minicube option
 c-----------------------------------------------------------------------
       include 'maxdim.h'
-      integer maxco,maxnax,naxis,maxch
 
-      parameter (maxco=15,maxnax=3)
-      parameter (maxch=32)
+      integer MAXCO, MAXNAX, MAXCH
 
-      integer blc(maxnax),trc(maxnax),nsize(maxnax)
-      integer pblc(maxnax),ptrc(maxnax)
-      real wpix(maxdim),fit(maxdim),mask(2,maxch),profile(2)
-      real lab1,lab2
-      real spec(maxdim),chan(maxdim),value(maxdim),work(maxdim)
-      real work1(maxdim),weight(maxdim),work2(4*maxdim)
-      real coeffs(maxco),hwork(maxco),yrange(2),xrange(2),csize(2)
-      double precision restfreq, coord(2), scoord(3), dtrc(3),dtemp
-      double precision rcoord(3), etrc(3)
-      real xdmin, xdmax, ydmin, ydmax, fac, temp, clip(2)
-      real xv(2), yv(2), xw(2), yw(2), epoch, serr
-      real bmaj,bmin,bpa,cdelt1,cdelt2,cdelt3,cdeltr,cdeltd
-      integer lIn,lOut,raxis,daxis,vaxis,i,nsmth,nchan,iostat
-      integer width(2),poly,nmask,imax,jmax, ierr, j, k
-      logical none, deriv1, deriv2, histo, measure
-      logical pstyle1, pstyle2, posfit, subpoly, minicube
-      character*132 in,out,logf
-      character*64 xlabel,ylabel,device,xaxis,yaxis, cpoly
-      character title*130, line*72,comment*80, str*3, word*80
-      character*9 object,date,rctype*9,dctype*9,vctype*9
-      character*16 unit0
-      character ra1*13, ra2*13, dec1*13, dec2*13, fitnote*13
-      character version*80
+      parameter (MAXCO=15, MAXNAX=3, MAXCH=32)
+
+      logical   deriv1, deriv2, histo, measure, minicube, none, posfit,
+     *          pstyle1, pstyle2, subpoly
+      integer   blc(MAXNAX), daxis, i, ierr, imax, iostat, j, jmax, k,
+     *          lIn, lOut, naxis, nchan, nmask, nsize(MAXNAX), nsmth,
+     *          pblc(MAXNAX), poly, ptrc(MAXNAX), raxis, trc(MAXNAX),
+     *          vaxis, width(2)
+      real      bmaj, bmin, bpa, cdelt1, cdelt2, cdelt3, cdeltd, cdeltr,
+     *          chan(maxdim), clip(2), coeffs(MAXCO), csize(2), epoch,
+     *          fac, fit(maxdim), hwork(MAXCO), lab1, lab2,
+     *          mask(2,MAXCH), profile(2), serr, spec(maxdim), temp,
+     *          value(maxdim), weight(maxdim), work(maxdim),
+     *          work1(maxdim), work2(4*maxdim), wpix(maxdim), xbox(4),
+     *          xdmax, xdmin, xrange(2), xv(2), xw(2), ybox(4), ydmax,
+     *          ydmin, yrange(2), yv(2), yw(2)
+      double precision coord(2), pixcen(3), pixcrd(3), world(3)
+      character comment*80, cpoly*64, dec1*13, dec2*13, device*64,
+     *          in*132, logf*132, object*9, out*132, ra1*13, ra2*13,
+     *          str*3, txt*72, unit0*16, vctype*9, version*80,
+     *          xaxis*64, xlabel*64, yaxis*64, ylabel*64
 
       external  hangle, itoaf, keyprsnt, len1, pgbeg, rangle, versan
       logical   keyprsnt
@@ -199,11 +195,10 @@ c-----------------------------------------------------------------------
 c-----------------------------------------------------------------------
 c     Don't report the ID so that gif and ps output can be piped.
       version = versan ('-mbspect',
-     *                '$Revision: 1.8 $',
-     *                '$Date: 2010/09/01 06:08:15 $')
-c
-c  Get inputs
-c
+     *                  '$Revision: 1.9 $',
+     *                  '$Date: 2010/09/02 06:33:35 $')
+
+c     Get inputs.
       call keyini
       call keyf('in',in,' ')
       call keya('out',out,' ')
@@ -223,38 +218,38 @@ c
       call keyr('yrange',yrange(2),yrange(1))
       if (yrange(1).eq.yrange(2) .and. yrange(1).ne.0.0)
      *  call bug ('f', 'Invalid y-axis plot range')
-      call keyr('clip',clip(1),0.)
+      call keyr('clip',clip(1),0.0)
       if (keyprsnt('clip')) then
-        call keyr('clip',clip(2),0.)
+        call keyr('clip',clip(2),0.0)
       else
         clip(2) = abs(clip(1))
         clip(1) = -clip(2)
       endif
-      call mkeyr('mask',mask,2*maxch,nmask)
+      call mkeyr('mask',mask,2*MAXCH,nmask)
       if (mod(nmask,2).ne.0)
      *  call bug('f','Incomplete mask range given')
       nmask = nmask / 2
       call keyr('profile',profile(1),0.0)
       call keyr('profile',profile(2),profile(1))
       call keyi('hann',nsmth,1)
-      if (nsmth.gt.maxco) then
-        str = itoaf(maxco)
+      if (nsmth.gt.MAXCO) then
+        str = itoaf(MAXCO)
         call bug ('f', 'Hanning smoothing length must be <= '//str)
       endif
       call keya('order',cpoly,' ')
       if (cpoly.eq.' ') then
-         poly=-99
+        poly=-99
       else
-         read(cpoly, *, err=100) poly
-         if (cpoly(1:1).eq.'-') then
-           subpoly=.true.
-         else
-           subpoly=.false.
-         endif
-         goto 120
- 100     call bug('f', 'Order must be integer between -10 and 10')
- 120     poly=abs(poly)
-         if (poly.gt.10) goto 100
+        read(cpoly, *, err=100) poly
+        if (cpoly(1:1).eq.'-') then
+          subpoly=.true.
+        else
+          subpoly=.false.
+        endif
+        goto 120
+ 100    call bug('f', 'Order must be integer between -10 and 10')
+ 120    poly=abs(poly)
+        if (poly.gt.10) goto 100
       endif
       call getopt (deriv1, deriv2, histo, measure, pstyle1, pstyle2,
      *             posfit, minicube)
@@ -264,234 +259,208 @@ c
       call keya('log',logf,' ')
       comment = ' '
       do while (keyprsnt('comment'))
-          call keya('comment',word,' ')
-          comment = comment(1:len1(comment))//' '//word(1:len1(word))
+        call keya('comment', txt, ' ')
+        comment = comment(1:len1(comment)) // ' ' // txt(1:len1(txt))
       enddo
       call keyfin
-c
-c  Check inputs.
-c
+
+c     Check inputs.
       if (in.eq.' ') call bug('f','No input specified.')
       if (device.eq.' ' .and. logf.eq.' ' .and. out.eq.' ' .and.
      *  .not.measure) call bug('f',
      *  'None of out, device, log or options=measure'//
      *  ' specified')
-      call xyopen(lIn,in,'old',maxnax,nsize)
+      call xyopen(lIn,in,'old',MAXNAX,nsize)
       call rdhdi(lin,'naxis',naxis,0)
-      naxis = min(naxis,maxnax)
+      naxis = min(naxis,MAXNAX)
       if (nsize(1).gt.maxdim) call bug('f','Input file too big for me')
-c
-c  Find v-axis.
-c
-      call GetVaxis(lIn,vaxis,vctype)
-      if (vaxis.eq.0) call bug('f','Velocity axis was not found')
-c
-c  Find RA-axis.
-c
-      call GetRaxis(lIn,raxis,rctype)
-      if (raxis.eq.0) call bug('f','RA axis was not found')
-c
-c  Find DEC-axis.
-c
-      call GetDaxis(lIn,daxis,dctype)
-      if (raxis.eq.0) call bug('f','DEC axis was not found')
-c
-c  Find beam size
-c
-      call rdhdr(lIn,'bmaj',bmaj,0.)
-      call rdhdr(lIn,'bmin',bmin,0.)
-      call rdhdr(lIn,'bpa',bpa,0.)
-      call rdhdr(lIn,'cdelt'//itoaf(raxis),cdeltr,0.)
-      call rdhdr(lIn,'cdelt'//itoaf(daxis),cdeltd,0.)
-      call rdhdr(lIn,'cdelt1',cdelt1,0.)
-      call rdhdr(lIn,'cdelt2',cdelt2,0.)
-      call rdhdr(lIn,'cdelt3',cdelt3,0.)
-c
-c  Demand coordinate increments
-c
+
+c     Find longitude (RA), latitude (DEC), and spectral (Velocity) axes.
+      call coInit(lIn)
+      call coFindAx(lIn, 'longitude', raxis)
+      call coFindAx(lIn, 'latitude',  daxis)
+      call coFindAx(lIn, 'spectral',  vaxis)
+      if (raxis.eq.0) call bug('f','Longitude axis was not found')
+      if (daxis.eq.0) call bug('f','Latitude axis was not found')
+      if (vaxis.eq.0) call bug('f','Spectral axis was not found')
+      call rdhda(lIn, 'ctype'//itoaf(vaxis), vctype, ' ')
+
+c     Find beam size.
+      call rdhdr(lIn,'bmaj',bmaj,0.0)
+      call rdhdr(lIn,'bmin',bmin,0.0)
+      call rdhdr(lIn,'bpa',bpa,0.0)
+      call rdhdr(lIn,'cdelt'//itoaf(raxis),cdeltr,0.0)
+      call rdhdr(lIn,'cdelt'//itoaf(daxis),cdeltd,0.0)
+      call rdhdr(lIn,'cdelt1',cdelt1,0.0)
+      call rdhdr(lIn,'cdelt2',cdelt2,0.0)
+      call rdhdr(lIn,'cdelt3',cdelt3,0.0)
+
+c     Demand non-zero coordinate increments.
       if (cdelt1.eq.0.0 .or. cdelt2.eq.0.0 .or. cdelt3.eq.0.0) then
          call bug('f','coordinate increment is zero')
       endif
 
-c
-c  Mandatory for certain operations
-c
+c     Mandatory for certain operations.
       if (yaxis.eq.'sum' .or. yaxis.eq.'point') then
         if (bmaj.eq.0.0 .or. bmin.eq.0.0)
-     *   call bug('f','beam parameters not found')
+     *    call bug('f','Beam parameters not found')
       endif
-      if (yaxis.eq.'point') then
-c
-c  Only deal with circular beams just now
-c
-          if (bmaj.ne.bmin)
-     *     call bug('f','can only deal with circular beam')
-      endif
-c
-c  Find equinox
-c
-      call rdhdr(lin,'epoch',epoch,0.)
-c
-c  x-axis
-c
-      if (xaxis.eq.' ') xaxis=vctype(1:4)
 
-c
-c  Find region of interest
-c
-      call coInit(lIn)
-c
-c  No coordinates given (centre of image)
-c
+      if (yaxis.eq.'point') then
+c       Only deal with circular beams just now.
+        if (bmaj.ne.bmin)
+     *    call bug('f','can only deal with circular beam')
+      endif
+
+c     Find equinox.
+      call rdhdr(lin,'epoch',epoch,0.0)
+
+c     X-axis.
+      if (xaxis.eq.' ') xaxis = vctype(1:4)
+
+c     Find the pixel coordinate of the requested position.
       if (coord(1).eq.0d0 .or. coord(2).eq.0d0) then
+c       No coordinates given, use centre of image.
         do i = 1, 3
-           trc(i)=nint(nsize(i)/2.0+1.0)
-           blc(i)=trc(i)
-           dtrc(i)=dble(trc(i))
+          pixcen(i) = dble(nsize(i)/2 + 1)
         enddo
-        call coCvt(lIn,'ap/ap/ap',dtrc,'aw/aw/aw',scoord)
+        call coCvt(lIn,'ap/ap/ap',pixcen,'aw/aw/aw',world)
+        coord(1) = world(raxis)
+        coord(2) = world(daxis)
       else
-c
-c  Coordinate given
-c
-        scoord(raxis)=coord(1)
-        scoord(daxis)=coord(2)
-        scoord(vaxis)=0.0
-        call coCvt(lIn,'aw/aw/aw',scoord,'ap/ap/ap',dtrc)
-        do i = 1, 3
-           trc(i)=nint(dtrc(i))
-           blc(i)=trc(i)
-        enddo
+c       Coordinate given, get pixel coordinates.
+        world(raxis) = coord(1)
+        world(daxis) = coord(2)
+        world(vaxis) = 0.0
+        call coCvt(lIn,'aw/aw/aw',world,'ap/ap/ap',pixcen)
       endif
-c
-c  Formatted value for requested coordinate
-c
-      ra1=hangle(coord(1))
-      dec1=rangle(coord(2))
-c
-c  Formatted value for actual coordinate, if yaxis is sum or average
-c
-      if (yaxis.eq.'point' .and. (width(1).gt.1.0 .or.
-     *                            width(2).gt.1.0)) then
-         ra2=ra1
-         dec2=dec1
+
+c     Check that it's inside the cube.
+      if (nint(pixcen(raxis)).lt.1 .or.
+     *    nint(pixcen(raxis)).gt.nsize(raxis) .or.
+     *    nint(pixcen(daxis)).lt.1 .or.
+     *    nint(pixcen(daxis)).gt.nsize(daxis))
+     *  call bug('f','Requested region not inside cube')
+
+c     Formatted value for requested coordinate.
+      ra1  = ' ' // hangle(world(raxis))
+      dec1 = ' ' // rangle(world(daxis))
+
+c     Formatted value for actual coordinate, if yaxis is sum or average.
+      if (yaxis.eq.'point' .and.
+     *   (width(1).gt.1.0 .or. width(2).gt.1.0)) then
+         ra2  = ra1
+         dec2 = dec1
       else
         do i = 1, 3
-           rcoord(i)=0.0
-           etrc(i)=dble(trc(i))
+          pixcrd(i) = dble(nint(pixcen(i)))
         enddo
-        call coCvt(lIn,'ap/ap/ap',etrc,'aw/aw/aw',rcoord)
-        ra2=hangle(rcoord(raxis))
-        dec2=rangle(rcoord(daxis))
+        call coCvt(lIn,'ap/ap/ap',pixcrd,'aw/aw/aw',world)
+        ra2  = ' ' // hangle(world(raxis))
+        dec2 = ' ' // rangle(world(daxis))
       endif
-c
-c  Give box a spatial width
-c
-      blc(raxis)=blc(raxis)-width(1)/2
-      trc(raxis)=trc(raxis)+width(1)/2
-      blc(daxis)=blc(daxis)-width(2)/2
-      trc(daxis)=trc(daxis)+width(2)/2
-c
-c  Find pixel range for full spectral axis
-c
-      blc(vaxis)=1
-      trc(vaxis)=nsize(vaxis)
+
+
+c     Set spatial and spectral range.
+      blc(raxis) = nint(pixcen(raxis)) - width(1)/2
+      trc(raxis) = nint(pixcen(raxis)) + width(1)/2
+      blc(daxis) = nint(pixcen(daxis)) - width(2)/2
+      trc(daxis) = nint(pixcen(daxis)) + width(2)/2
+
+      blc(vaxis) = 1
+      trc(vaxis) = nsize(vaxis)
       if (xaxis.ne.'channel') call coVelSet(lIn, xaxis)
       if (xrange(1).ne.0.0 .or. xrange(2).ne.0.0) then
-         if (xaxis.eq.'frequency' .or. xaxis.eq.'FREQ') then
-            fac=1000.0
-         else
-            fac=1.0
-         endif
-         if (xaxis.eq.'channel') then
-            blc(vaxis)=int(xrange(1))
-            trc(vaxis)=int(xrange(2))
-         else
-            call coCvt1(lIn,vaxis,'aw',dble(xrange(1)/fac),'ap',dtemp)
-            blc(vaxis)=int(dtemp)
-            call coCvt1(lIn,vaxis,'aw',dble(xrange(2)/fac),'ap',dtemp)
-            trc(vaxis)=int(dtemp)
-            if (trc(vaxis).gt.blc(vaxis)) then
-               blc(vaxis)=blc(vaxis)+1
-            else
-               trc(vaxis)=trc(vaxis)+1
-            endif
-         endif
-      endif
-c
-c  Check if coordinate inside cubes
-c
-      if (nint(dtrc(raxis)).lt.1 .or.
-     *  nint(dtrc(raxis)).gt.nsize(raxis) .or.
-     *  nint(dtrc(daxis)).lt.1 .or.
-     *  nint(dtrc(daxis)).gt.nsize(daxis))
-     *  call bug('f','Requested region not inside cube')
-c
-c  Reset spatial boundaries if necessary
-c
-      if (blc(raxis).lt.1 .or. blc(daxis).lt.1 .or.
-     *   trc(raxis).gt.nsize(raxis) .or.
-     *   trc(daxis).gt.nsize(daxis))
-     * call bug('w', 'Region partially outside image - resetting'//
-     *          ' spatial boundary')
-      if (blc(raxis).lt.1) blc(raxis)=1
-      if (blc(daxis).lt.1) blc(daxis)=1
-      if (trc(raxis).gt.nsize(raxis)) trc(raxis)=nsize(raxis)
-      if (trc(daxis).gt.nsize(daxis)) trc(daxis)=nsize(daxis)
-c
-c  Reset spectral boundaries if invalid
-c
-      if (blc(vaxis).gt.trc(vaxis)) then
-        temp=blc(vaxis)
-        blc(vaxis)=trc(vaxis)
-        trc(vaxis)=temp
-      endif
-      if (blc(vaxis).lt.1 .or. trc(vaxis).gt.nsize(vaxis))
-     *   call bug('w', 'Region partially outside image - resetting'//
-     *          ' spectral boundary')
-      if (blc(vaxis).lt.1) blc(vaxis)=1
-      if (trc(vaxis).gt.nsize(vaxis)) trc(vaxis)=nsize(vaxis)
-
-c
-c  Find pixel range for spectral profile range
-c
-      do i = 1, 3
-        pblc(i)=blc(i)
-        ptrc(i)=trc(i)
-      enddo
-      if (profile(1).ne.0.0 .or. profile(2).ne.0.0) then
-        if (xrange(1).ne.0.0 .or. xrange(2).ne.0.0) then
-           if (xrange(2).gt.xrange(1)) then
-             if (profile(1).lt.xrange(1) .or. profile(2).gt.xrange(2))
-     *        call bug('f','Profile window extends beyond xrange')
-           else
-             if (profile(1).gt.xrange(1) .or. profile(2).lt.xrange(2))
-     *        call bug('f','Profile window extends beyond xrange')
-           endif
-         endif
-         if (xaxis.eq.'frequency' .or. xaxis.eq.'FREQ') then
-            fac=1000.0
-         else
-            fac=1.0
-         endif
-        if (xaxis.eq.'channel') then
-          pblc(vaxis)=int(profile(1))
-          ptrc(vaxis)=int(profile(2))
+        if (xaxis.eq.'frequency' .or. xaxis.eq.'FREQ') then
+          fac = 1000.0
         else
-          call coCvt1(lIn,vaxis,'aw',dble(profile(1)/fac),'ap',dtemp)
-          pblc(vaxis)=int(dtemp)
-          call coCvt1(lIn,vaxis,'aw',dble(profile(2)/fac),'ap',dtemp)
-          ptrc(vaxis)=int(dtemp)
-          if (ptrc(vaxis).gt.pblc(vaxis)) then
-            pblc(vaxis)=pblc(vaxis)+1
+          fac = 1.0
+        endif
+
+        if (xaxis.eq.'channel') then
+          blc(vaxis) = int(xrange(1))
+          trc(vaxis) = int(xrange(2))
+        else
+          call coCvt1(lIn,vaxis,'aw',dble(xrange(1)/fac),'ap',pixcrd)
+          blc(vaxis) = int(pixcrd(1))
+          call coCvt1(lIn,vaxis,'aw',dble(xrange(2)/fac),'ap',pixcrd)
+          trc(vaxis) = int(pixcrd(1))
+          if (trc(vaxis).gt.blc(vaxis)) then
+            blc(vaxis) = blc(vaxis) + 1
           else
-            ptrc(vaxis)=ptrc(vaxis)+1
+            trc(vaxis) = trc(vaxis) + 1
           endif
         endif
       endif
-c
-c  Reset spectral boundaries if invalid
-c
+
+
+c     Adjust ranges if necessary.
+      if (blc(raxis).lt.1 .or. blc(daxis).lt.1 .or.
+     *    trc(raxis).gt.nsize(raxis) .or.
+     *    trc(daxis).gt.nsize(daxis)) then
+        call bug('w', 'Region partially outside image - adjusting ' //
+     *                'spatial range')
+        if (blc(raxis).lt.1) blc(raxis) = 1
+        if (blc(daxis).lt.1) blc(daxis) = 1
+        if (trc(raxis).gt.nsize(raxis)) trc(raxis)=nsize(raxis)
+        if (trc(daxis).gt.nsize(daxis)) trc(daxis)=nsize(daxis)
+      endif
+
+      if (blc(vaxis).gt.trc(vaxis)) then
+c       Swap spectral limits.
+        temp = blc(vaxis)
+        blc(vaxis) = trc(vaxis)
+        trc(vaxis) = temp
+      endif
+
+      if (blc(vaxis).lt.1 .or. trc(vaxis).gt.nsize(vaxis)) then
+         call bug('w', 'Region partially outside image - adjusting ' //
+     *                 'spectral range')
+        if (blc(vaxis).lt.1) blc(vaxis) = 1
+        if (trc(vaxis).gt.nsize(vaxis)) trc(vaxis) = nsize(vaxis)
+      endif
+
+c     Find pixel range for spectral profile range.
+      do i = 1, 3
+        pblc(i) = blc(i)
+        ptrc(i) = trc(i)
+      enddo
+
+      if (profile(1).ne.0.0 .or. profile(2).ne.0.0) then
+        if (xrange(1).ne.0.0 .or. xrange(2).ne.0.0) then
+          if (xrange(2).gt.xrange(1)) then
+            if (profile(1).lt.xrange(1) .or. profile(2).gt.xrange(2))
+     *        call bug('f','Profile window extends beyond xrange')
+          else
+            if (profile(1).gt.xrange(1) .or. profile(2).lt.xrange(2))
+     *        call bug('f','Profile window extends beyond xrange')
+          endif
+        endif
+
+        if (xaxis.eq.'frequency' .or. xaxis.eq.'FREQ') then
+          fac = 1000.0
+        else
+          fac = 1.0
+        endif
+
+        if (xaxis.eq.'channel') then
+          pblc(vaxis) = int(profile(1))
+          ptrc(vaxis) = int(profile(2))
+        else
+          call coCvt1(lIn,vaxis,'aw',dble(profile(1)/fac),'ap',pixcrd)
+          pblc(vaxis) = int(pixcrd(1))
+          call coCvt1(lIn,vaxis,'aw',dble(profile(2)/fac),'ap',pixcrd)
+          ptrc(vaxis) = int(pixcrd(1))
+
+          if (ptrc(vaxis).gt.pblc(vaxis)) then
+            pblc(vaxis) = pblc(vaxis) + 1
+          else
+            ptrc(vaxis) = ptrc(vaxis) + 1
+          endif
+        endif
+      endif
+
+c     Reset spectral boundaries if invalid.
       if (pblc(vaxis).gt.ptrc(vaxis)) then
         temp=pblc(vaxis)
         pblc(vaxis)=ptrc(vaxis)
@@ -499,96 +468,79 @@ c
       endif
       if (pblc(vaxis).lt.1 .or. ptrc(vaxis).gt.nsize(vaxis))
      *   call bug('w', 'Region partially outside image - resetting'//
-     *          ' spectral boundary')
+     *            ' spectral boundary')
       if (pblc(vaxis).lt.1) pblc(vaxis)=1
       if (ptrc(vaxis).gt.nsize(vaxis)) ptrc(vaxis)=nsize(vaxis)
-c
-c  Set up the region of interest.
-c
+
+c     Set up the region of interest.
       nchan = trc(vaxis)-blc(vaxis)+1
-c
-c  Reject vaxis=2
-c
+
+c     Reject vaxis=2.
       if (vaxis.eq.2) then
         call bug('f','this image orientation is not implemented')
       endif
-c
-c  Fit for position
-c
+
+c     Fit for position.
       if (posfit) then
         if (width(1).le.1 .and. width(2).le.1) then
-           call bug('f','width parameter too small')
+          call bug('f','width parameter too small')
         endif
         if (vaxis.eq.3) then
-           imax=abs(ptrc(1)-pblc(1))+1
-           jmax=abs(ptrc(2)-pblc(2))+1
+          imax=abs(ptrc(1)-pblc(1))+1
+          jmax=abs(ptrc(2)-pblc(2))+1
         else
-           imax=abs(ptrc(2)-pblc(2))+1
-           jmax=abs(ptrc(3)-pblc(3))+1
+          imax=abs(ptrc(2)-pblc(2))+1
+          jmax=abs(ptrc(3)-pblc(3))+1
         endif
         call pfit(lIn,naxis,pblc,ptrc,nchan,vaxis,imax,jmax,
-     *            cdelt1,cdelt2,cdelt3,bmaj,bmin,bpa,dtrc,ra2,
+     *            cdelt1,cdelt2,cdelt3,bmaj,bmin,bpa,pixcen,ra2,
      *            dec2,none,ierr)
         if (none) call bug('f','No good pixels in selected region')
       endif
       call coFin(lIn)
-c
-c  Integrate the spectrum over the specified region.
-c
-      call vaxis13(lIn,naxis,dtrc,blc,trc,cdelt1,cdelt2,cdelt3,bmaj,
-     *           bmin,yaxis,nchan,vaxis,chan,spec,wpix,none)
+
+c     Integrate the spectrum over the specified region.
+      call vaxis13(lIn,naxis,pixcen,blc,trc,cdelt1,cdelt2,cdelt3,bmaj,
+     *             bmin,yaxis,nchan,vaxis,chan,spec,wpix,none)
       if (none) call bug('f','No good pixels in selected region')
-c
-c  Optionally Hanning smooth spectrum.
-c
+
+c     Optionally Hanning smooth spectrum..
       if (nsmth.ge.3) then
         call hcoeffs (nsmth, coeffs)
         call hannsm (nsmth, coeffs, nchan, spec, hwork)
       endif
-c
-c  mbspect title
-c
-      call imheader(lIn,object,restfreq,date)
-      title=' '
-c
-c  Get plot axes, convert units, and write labels.
-c
+
+c     Get plot axes, convert units, and write labels.
       call axes(lIn,vaxis,xaxis,yaxis,nchan,naxis,wpix,
      *          xlabel,ylabel,chan,value,spec,unit0)
-c
-c  Optionally take derivatives.
-c
+
+c     Optionally take derivatives.
       if (deriv1 .or. deriv2) call der (deriv1, nchan, spec, work)
-c
-c  Polynomal fit
-c
+
+c     Polynomal fit
       if (poly.ge.0) then
-         call polyfit(poly,nchan,value,work2,weight,mask,nmask,unit0,
+        call polyfit(poly,nchan,value,work2,weight,mask,nmask,unit0,
      *    spec,fit,serr)
       endif
-c
-c  Subtract fit now if required
-c
 
+c     Subtract fit now if required.
       if (poly.ge.0 .and. subpoly) then
-         do i = 1, nchan
-            spec(i)=spec(i)-fit(i)
-         enddo
+        do i = 1, nchan
+          spec(i)=spec(i)-fit(i)
+        enddo
       else
-         do i = 1, nchan
-            work(i)=clip(1)+fit(i)
-            work1(i)=clip(2)+fit(i)
-         enddo
+        do i = 1, nchan
+          work(i)=clip(1)+fit(i)
+          work1(i)=clip(2)+fit(i)
+        enddo
       endif
-c
-c  Open plot device if requested.
-c
+
+c     Open plot device if requested.
       if (device.ne.' ') then
         iostat = pgbeg(0,device,1,1)
         if (iostat.eq.0) call bug ('f', 'Error opening plot device')
-c
-c  Work out limits
-c
+
+c       Work out limits.
         if (xrange(1).ne.0.0 .or. xrange(2).ne.0.0) then
           xdmin = xrange(1)
           xdmax = xrange(2)
@@ -611,13 +563,11 @@ c
           ydmax = ydmax + 0.05 * (ydmax - ydmin)
           ydmin = ydmin - 0.05 * (ydmax - ydmin)
         endif
-c
-c  Make plots if requested.
-c
+
+c       Make plots if requested.
         call pgscf(2)
 
-c  Label sizes
-
+c       Label sizes.
         lab1=1.1
         if (pstyle1 .or. pstyle2) then
            lab2=1.1
@@ -637,130 +587,135 @@ c  Label sizes
 
         call pgswin (xdmin, xdmax, ydmin, ydmax)
         call pgbox('BCNTS1',0.0,0.0,'BCNTS',0.0,0.0)
-c         call pgenv (xdmin, xdmax, ydmin, ydmax, 0, 0)
+
         if (histo) then
-          call pgHline (nchan,value,spec,2.)
+          call pgHline (nchan,value,spec,2.0)
         else
           call pgline (nchan,value,spec)
         endif
+
         if (poly.ge.0) then
-           if (subpoly) then
-             call pgmove(xdmin,0.0)
-             call pgdraw(xdmax,0.0)
-             if (measure) then
-                call pgsls(2)
-                call pgmove(xdmin,clip(1))
-                call pgdraw(xdmax,clip(1))
-                call pgmove(xdmin,clip(2))
-                call pgdraw(xdmax,clip(2))
-                call pgsls(1)
-             endif
-           else
-             call pgsci(2+poly)
-             call pgline (nchan,value,fit)
-             call pgsci(1)
-             if (measure .and.
-     *          (clip(1).ne.0.0 .or. clip(2).ne.0.0)) then
-               call pgsls(2)
-               call pgline (nchan,value,work)
-               call pgline (nchan,value,work1)
-               call pgsls(1)
-             endif
-           endif
+          if (subpoly) then
+            call pgmove(xdmin,0.0)
+            call pgdraw(xdmax,0.0)
+            if (measure) then
+              call pgsls(2)
+              call pgmove(xdmin,clip(1))
+              call pgdraw(xdmax,clip(1))
+              call pgmove(xdmin,clip(2))
+              call pgdraw(xdmax,clip(2))
+              call pgsls(1)
+            endif
+          else
+            call pgsci(2+poly)
+            call pgline (nchan,value,fit)
+            call pgsci(1)
+            if (measure .and.
+     *         (clip(1).ne.0.0 .or. clip(2).ne.0.0)) then
+              call pgsls(2)
+              call pgline (nchan,value,work)
+              call pgline (nchan,value,work1)
+              call pgsls(1)
+            endif
+          endif
         endif
+
         if (nmask.gt.0) then
           call pgsls(2)
           do i = 1, nmask
-             call pgmove(mask(1,i),ydmin)
-             call pgdraw(mask(1,i),ydmax)
-             call pgmove(mask(2,i),ydmin)
-             call pgdraw(mask(2,i),ydmax)
+            call pgmove(mask(1,i),ydmin)
+            call pgdraw(mask(1,i),ydmax)
+            call pgmove(mask(2,i),ydmin)
+            call pgdraw(mask(2,i),ydmax)
           enddo
           call pgsls(1)
         endif
+
         if (measure .and.
      *     (profile(1).ne.0.0 .or. profile(2).ne.0.0)) then
-           call pgsci(2)
-           call pgsls(4)
-           call pgmove(profile(1),ydmin)
-           call pgdraw(profile(1),ydmax)
-           call pgmove(profile(2),ydmin)
-           call pgdraw(profile(2),ydmax)
-           call pgsls(1)
-           call pgsci(1)
+          call pgsci(2)
+          call pgsls(4)
+          call pgmove(profile(1),ydmin)
+          call pgdraw(profile(1),ydmax)
+          call pgmove(profile(2),ydmin)
+          call pgdraw(profile(2),ydmax)
+          call pgsls(1)
+          call pgsci(1)
         endif
 
-c  Axis labelling, except for options=pstyle2
+c       Axis labelling, except for options=pstyle2.
 
         if (.not.pstyle2) call pglab (xlabel,ylabel,' ')
-c
-c  Title and extra information
-c
 
+c       Title and extra information.
         call pgqvp(0,xv(1),xv(2),yv(1),yv(2))
         call pgqwin(xw(1),xw(2),yw(1),yw(2))
         call pgsvp(xv(1),xv(2),yv(2),1.0)
         call pgswin(0.0,1.0,0.0,1.0)
         call pgsch(lab2)
         if (pstyle1 .or. pstyle2) then
-           call pgptxt(0.5, 0.5, 0.0, 0.5,comment)
+          call pgptxt(0.5, 0.5, 0.0, 0.5,comment)
         else
-           call pgscf(1)
-           call pgtext(0.0,0.8,'Object: '//object)
-           call pgtext(0.0,0.6,'Requested: '//ra1//dec1)
-           fitnote=' '
-           if (posfit) then
-              if (ierr.eq.0) then
-                fitnote=' (fit)'
-              else
-                fitnote=' (fit failed)'
-              endif
-           endif
-           call pgtext(0.0,0.4,'Actual    : '//ra2//dec2//fitnote)
-           title='Equinox  :'
-           if (epoch.ne.0.0) then
-              if (epoch.eq.1950.0) then
-                title='Equinox  : B1950'
-              else if (epoch.eq.2000.0) then
-                title='Equinox  : J2000'
-              else
-                write(title(13:16), '(i4)') int(epoch)
-              endif
-           endif
-           call pgtext(0.0,0.2,title)
-           call pgptext(1.0,0.8,0.0,1.0,comment)
+          call pgqtxt(0.0, 0.0, 0.0, 0.0, 'Requested:', xbox, ybox)
+
+          call rdhda(lIn, 'object', object, ' ')
+          call pgptxt(xbox(4), 0.8, 0.0, 1.0, 'Object:')
+          call pgptxt(xbox(4), 0.8, 0.0, 0.0, ' ' // object)
+
+          call pgptxt(xbox(4), 0.6, 0.0, 1.0, 'Requested:')
+          call pgptxt(xbox(4), 0.6, 0.0, 0.0, ra1 // dec1)
+
+          txt = ' '
+          if (posfit) then
+            if (ierr.eq.0) then
+              txt = ' (fit)'
+            else
+              txt = ' (fit failed)'
+            endif
+          endif
+
+          call pgptxt(xbox(4), 0.4, 0.0, 1.0, 'Actual:')
+          call pgptxt(xbox(4), 0.4, 0.0, 0.0, ra2 // dec2 // txt)
+
+          if (epoch.ne.0.0) then
+            call pgptxt(xbox(4), 0.2, 0.0, 1.0, 'Equinox:')
+
+            if (epoch.eq.1950.0) then
+              call pgptxt(xbox(4), 0.2, 0.0, 0.0, ' B1950.0')
+            else if (epoch.eq.2000.0) then
+              call pgptxt(xbox(4), 0.2, 0.0, 0.0, ' J2000.0')
+            else
+              write(txt, '(i5)') int(epoch)
+              call pgptxt(xbox(4), 0.2, 0.0, 0.0, txt(1:5))
+            endif
+          endif
+
+          call pgptxt(1.0, 0.8, 0.0, 1.0, comment)
         endif
+
         call pgsvp(xv(1),xv(2),yv(1),yv(2))
         call pgswin(xw(1),xw(2),yw(1),yw(2))
-        call pgscf(2)
         call pgsch(1.0)
       endif
 
-c
-c  Subtract fit now if required
-c
-
+c     Subtract fit now if required.
       if (poly.ge.0 .and. .not.subpoly) then
-         do i = 1, nchan
-            spec(i)=spec(i)-fit(i)
-         enddo
+        do i = 1, nchan
+          spec(i)=spec(i)-fit(i)
+        enddo
       endif
-c
-c  Measure spectral parameters
-c
+
+c     Measure spectral parameters.
       if (measure) then
-         if (posfit) call output('#     ...updating position')
-         call vmom(nchan,value,spec,fit,xaxis,unit0,clip,
-     *             profile,work,work1,poly,subpoly,device,serr)
+        if (posfit) call output('#     ...updating position')
+        call vmom(nchan,value,spec,fit,xaxis,unit0,clip,
+     *            profile,work,work1,poly,subpoly,device,serr)
       endif
-c
-c  Close graphics
-c
+
+c     Close graphics.
       if (device.ne.' ')  call pgend
 
-c
-c  Write output miriad spectrum if desired.
-c
+c     Write output miriad spectrum if desired.
       if (out.ne.' ') then
         naxis=3
         nsize(1) = nchan
@@ -771,34 +726,32 @@ c
           nsize(2) = 1
           nsize(3) = 1
         endif
+
         call xyopen(lOut,out,'new',naxis,nsize)
-        call mbheader(lIn,lOut,coord,raxis,daxis,vaxis,blc,unit0)
+        call mkHead(lIn,lOut,raxis,daxis,vaxis,blc(vaxis),coord,unit0)
         do i = 1, nsize(2)
           do j = 1, nsize(3)
             k=1+(j-1)+(i-1)*nsize(3)
             call xywrite(lOut,k,spec)
           enddo
         enddo
-c
-c  Update history and close files.
-c
+
+c       Update history and close files.
         call Hisopen(lOut,'append')
         call HisWrite(lOut,'MbSpect: '//version)
         call HisInput(lOut,'MbSpect')
         call HisClose(lOut)
         call xyclose(lOut)
       endif
-c
-c  Write ascii spectrum if desired.
-c
+
+c     Write ascii spectrum if desired.
       if (logf.ne.' ') then
         call txtopen(lOut, logf, 'new', iostat)
         if (iostat.ne.0) call bug ('f', 'Error opening output file')
-        call txtwrite(lOut,'#'//title,1+len1(title),iostat)
         call txtwrite(lOut,'#File: '//In,7+len1(In),iostat)
-        line='#Robust polynomial order: none'
-        if (poly.ge.0) write(line(27:30),*) poly
-        call txtwrite(lOut,line(1:30),30,iostat)
+        txt = '#Robust polynomial order: none'
+        if (poly.ge.0) write(txt(27:30),*) poly
+        call txtwrite(lOut,txt(1:30),30,iostat)
         call txtwrite(lOut,'#Spectral  axis = '//xaxis(1:9),
      *                32,iostat)
         call txtwrite(lOut,'#Intensity axis = '//unit0,
@@ -807,132 +760,29 @@ c
         call txtwrite(lOut,'#  Channel     Spectral axis '//
      *     '   Intensity',41,iostat)
         do i = 1, nchan
-          write (line,'(1pe12.5, 3x, 1pe12.5, 3x, 1pe12.5)')
+          write (txt,'(1pe12.5, 3x, 1pe12.5, 3x, 1pe12.5)')
      *                                        chan(i),value(i),spec(i)
-          call txtwrite (lOut, line, 45, iostat)
+          call txtwrite (lOut, txt, 45, iostat)
           if (iostat.ne.0) call bug ('f', 'Error writing output file')
         enddo
         call txtclose(lOut)
       endif
-c
-c  All done.
-c
+
+c     All done.
       call xyclose(lIn)
 
       end
 
 c***********************************************************************
 
-      subroutine GetVaxis(lIn,vaxis,vctype)
-
-      integer   lIn, vaxis
-      character vctype*(*)
-c-----------------------------------------------------------------------
-c  Find the v-axis.
-c
-c  Inputs:
-c    lIn        The handle of the image.
-c  Output:
-c    vaxis      The velocity or frequency axis.
-c
-c                 03jul90 mchw.
-c-----------------------------------------------------------------------
-      integer axis,naxis
-      character*9 ctype
-
-      external  itoaf
-      character itoaf*1
-c-----------------------------------------------------------------------
-      vaxis = 0
-      call rdhdi(lIn,'naxis',naxis,1)
-
-      do axis = 1, naxis
-        call rdhda(lIn,'ctype'//itoaf(axis),ctype,' ')
-        if (ctype(1:4).eq.'VELO' .or.
-     *      ctype(1:4).eq.'FELO' .or.
-     *      ctype(1:4).eq.'FREQ') then
-          vaxis = axis
-          vctype = ctype
-        endif
-      enddo
-
-      end
-
-c***********************************************************************
-
-      subroutine GetRaxis(lIn,raxis,rctype)
-
-      integer lIn,raxis
-      character*(*) rctype
-c-----------------------------------------------------------------------
-c  Find the RA-axis.
-c
-c  Inputs:
-c    lIn        The handle of the image.
-c  Output:
-c    raxis      The RA axis.
-c
-c-----------------------------------------------------------------------
-      integer axis,naxis
-      character*9 ctype
-
-      external  itoaf
-      character itoaf*1
-c-----------------------------------------------------------------------
-      raxis = 0
-      call rdhdi(lIn,'naxis',naxis,1)
-      do axis = 1, naxis
-        call rdhda(lIn,'ctype'//itoaf(axis),ctype,' ')
-        if (ctype(1:2).eq.'RA') then
-          raxis = axis
-          rctype = ctype
-        endif
-      enddo
-      end
-
-c***********************************************************************
-
-      subroutine GetDaxis(lIn,daxis,dctype)
-
-      integer lIn,daxis
-      character*(*) dctype
-c-----------------------------------------------------------------------
-c  Find the DEC-axis.
-c
-c  Inputs:
-c    lIn        The handle of the image.
-c  Output:
-c    daxis      The DEC axis.
-c
-c-----------------------------------------------------------------------
-      integer axis,naxis
-      character*9 ctype
-
-      character itoaf*1
-      external  itoaf
-c-----------------------------------------------------------------------
-      daxis = 0
-      call rdhdi(lIn,'naxis',naxis,1)
-      do axis = 1, naxis
-        call rdhda(lIn,'ctype'//itoaf(axis),ctype,' ')
-        if (ctype(1:3).eq.'DEC') then
-          daxis = axis
-          dctype = ctype
-        endif
-      enddo
-
-      end
-
-c***********************************************************************
-
       subroutine pfit(lIn,naxis,blc,trc,nchan,vaxis,imax,jmax,
-     *                cdelt1,cdelt2,cdelt3,bmaj,bmin,bpa,dtrc,rac,
+     *                cdelt1,cdelt2,cdelt3,bmaj,bmin,bpa,pixcen,rac,
      *                dec,none,ierr)
 
       integer lIn,naxis,blc(naxis),trc(naxis),nchan,vaxis
       integer imax,jmax
       real bmaj,bmin,bpa,cdelt1,cdelt2,cdelt3
-      double precision dtrc(*)
+      double precision pixcen(*)
       character rac*13,dec*13
       logical none
 c-----------------------------------------------------------------------
@@ -952,7 +802,7 @@ c    cdelt3     Increment on 3-axis
 c    bmaj,bmin,bpa Beam parameters
 c
 c  Output:
-c    dtrc       Fitted position in pixel coordinates
+c    pixcen     Fitted position in pixel coordinates
 c    rac        Fitted RA (formatted)
 c    dec        Fitted DEC (formatted)
 c    none       True if no good pixels selected
@@ -964,7 +814,7 @@ c-----------------------------------------------------------------------
 
       real buf(maxdim),pmom(imax,jmax)
       real tmp, flux
-      double precision xmom(maxnax), coord(maxnax), dwtrc(3)
+      double precision xmom(MAXNAX), coord(MAXNAX), dwtrc(3)
       character line*80
       logical flags(maxdim), flagpos
       integer i,j,k, indx, jndx, kndx, i1,i2
@@ -1210,11 +1060,11 @@ c
         rac=ract
         dec=dect
         if (vaxis.eq.3) then
-           dtrc(1)=dwtrc(1)
-           dtrc(2)=dwtrc(2)
+           pixcen(1) = dwtrc(1)
+           pixcen(2) = dwtrc(2)
         else
-           dtrc(2)=dwtrc(2)
-           dtrc(3)=dwtrc(3)
+           pixcen(2) = dwtrc(2)
+           pixcen(3) = dwtrc(3)
         endif
       endif
 
@@ -1255,13 +1105,13 @@ c-----------------------------------------------------------------------
 
 c***********************************************************************
 
-      subroutine vaxis13(lIn,naxis,dtrc,blc,trc,cdelt1,cdelt2,cdelt3,
+      subroutine vaxis13(lIn,naxis,pixcen,blc,trc,cdelt1,cdelt2,cdelt3,
      *             bmaj,bmin,yaxis,nchan,vaxis,chan,spec,wpix,none)
 
       integer lIn,naxis,blc(naxis),trc(naxis),nchan,vaxis
       real chan(nchan),spec(nchan),wpix(nchan)
       real dr,dd,fac,bmaj,bmin,cdelt1,cdelt2,cdelt3
-      double precision dtrc(*)
+      double precision pixcen(*)
       character*(*) yaxis
       logical none
 c-----------------------------------------------------------------------
@@ -1271,7 +1121,7 @@ c  Inputs:
 c    lIn        The handle of the image.
 c    naxis      Number of image axes.
 c    yaxis      Can be 'average', 'sum' or 'point'
-c    dtrc       Pixel position of object of interest (yaxis='point')
+c    pixcen     Pixel position of object of interest (yaxis='point')
 c    blc,trc    Corners of region of interest.
 c    cdelt1     Axis 1 increment (radians if spatial axis)
 c    cdelt2     Axis 2 increment
@@ -1292,7 +1142,7 @@ c-----------------------------------------------------------------------
       integer i,j,k,indx
 c-----------------------------------------------------------------------
       do i = 1, nchan
-        spec(i)  = 0.0
+        spec(i) = 0.0
         chan(i) = i + blc(vaxis) -1
         wpix(i) = 0.0
       enddo
@@ -1307,11 +1157,11 @@ c-----------------------------------------------------------------------
             if (flags(i)) then
               if (yaxis.eq.'point') then
                 if (vaxis.eq.3) then
-                  dr=(real(i)-real(dtrc(1)))*cdelt1
-                  dd=(real(j)-real(dtrc(2)))*cdelt2
+                  dr = (real(i) - real(pixcen(1)))*cdelt1
+                  dd = (real(j) - real(pixcen(2)))*cdelt2
                 else
-                  dr=(real(j)-real(dtrc(2)))*cdelt2
-                  dd=(real(k)-real(dtrc(3)))*cdelt3
+                  dr = (real(j) - real(pixcen(2)))*cdelt2
+                  dd = (real(k) - real(pixcen(3)))*cdelt3
                 endif
                 fac=exp(-2.0*log(4.0)*(dr**2+dd**2)/(bmaj*bmin))
               else
@@ -1401,7 +1251,7 @@ c
         if (xaxis.eq.'FREQ' .or. xaxis.eq.'frequency') then
            value(i) = 1000.0*dtemp
         elseif(xaxis.eq.'channel') then
-           value(i)=chan(i)
+           value(i) = chan(i)
         else
            value(i) = dtemp
         endif
@@ -1450,31 +1300,6 @@ c  Shouldn't get here now - disallowed
         unit0=bunit(1:len1(bunit))//'*pix'
         ylabel = 'Total Intensity ('//unit0//' x pixels)'
       endif
-
-      end
-
-c***********************************************************************
-
-      subroutine ImHeader(lIn,object,restfreq,date)
-
-      integer lIn
-      character*9 object,date
-      double precision restfreq
-c-----------------------------------------------------------------------
-c  Get image header items 'object' 'restfreq' and 'date-obs' from image.
-c
-c  Input:
-c    lIn        The handle of the Image.
-c  Output:
-c    object     The object or source name.
-c    restfreq   The restfreq of the observations, in GHz.
-c    date       The date of the observations.
-c
-c                       mchw june 1990
-c-----------------------------------------------------------------------
-      call rdhda(lIn,'object',object,' ')
-      call rdhda(lIn,'date-obs',date,' ')
-      call rdhdd(lIn,'restfreq',restfreq,0d0)
 
       end
 
@@ -2300,108 +2125,52 @@ c
 
 c***********************************************************************
 
-      subroutine mbheader(lIn,lOut,coord,raxis,daxis,vaxis,blc,unit0)
-      integer lin,lOut,raxis,daxis,vaxis,blc(*)
+      subroutine mkHead(lIn,lOut,raxis,daxis,vaxis,vblc,coord,bunit)
+
+      integer   lin, lOut, raxis, daxis, vaxis, vblc
       double precision coord(*)
-      character*(*) unit0
+      character bunit*(*)
 c-----------------------------------------------------------------------
-c  Copy keywords to output file.
+c  Create the header for the output file.
 c
 c  Inputs:
 c    lIn,lOut   Handle of input and output files.
-c    raxis      RA axis on input cube
-c    daxis      DEC axis on input cube
-c    vaxis      vel axis on input cube
-c    blc        bottom left corner of sub-cube
-c    unit0      Intensity axis
+c    raxis      RA axis on input cube.
+c    daxis      DEC axis on input cube.
+c    vaxis      Velocity axis on input cube.
+c    vblc       First pixel of velocity axis.
+c    bunit      Brightness units.
 c-----------------------------------------------------------------------
-      character atemp*16,ctype*10,cin*2,cout*2,unit1*16
-      double precision rtemp,cdelt,crval,crpix
-      integer i,k
+      integer   axmap(3), blc(3)
 
-      external  hdprsnt, itoaf, len1
-      logical   hdprsnt
       integer   len1
       character itoaf*2
-
-c     Be careful that nkeys and nckeys match the number of keywords.
-      integer nkeys,nckeys
-      parameter (nkeys=23, nckeys=5)
-      character keyw(nkeys)*8, ckeyw(nckeys)*5
-
-      data keyw/   'bmaj    ','bmin    ','bpa     ',
-     *  'obstime ','epoch   ','history ',
-     *  'ltype   ','lstart  ','lstep   ','lwidth  ','pbfwhm  ',
-     *  'instrume','niters  ','object  ','telescop','pbtype  ',
-     *  'restfreq','vobs    ','observer','obsra   ',
-     *  'obsdec  ','mostable','cellscal'/
+      external  itoaf, len1
 c-----------------------------------------------------------------------
-c  Keyword values that must be changed as they are passed from in to
-c  out.
-c
-      data ckeyw/'ctype','cdelt','crval','crpix','crota'/
-c
-c  Copy across unchanged header keywords.
-c
-      do i = 1, nkeys
-        call hdcopy(lin,lout,keyw(i))
-      enddo
-c
-c  Handle keywords that must be moved to another axis.
-c
-       cin = itoaf(vaxis)
-       cout = itoaf(1)
-       atemp = ckeyw(1)//cin
-       call rdhda(lin,ckeyw(1)//cin,atemp,' ')
-       if (atemp.ne.' ') call wrhda(lout,ckeyw(1)//cout,atemp)
-       do k = 2, nckeys
-         atemp = ckeyw(k)//cin
-         if (hdprsnt(lin,atemp)) then
-            call rdhdd(lin,ckeyw(k)//cin,rtemp,0d0)
-c
-c  Create new reference pixel if output spectrum is shorter than input
-c
-            if (k.eq.4) rtemp=rtemp-real(blc(vaxis))+1.0
-            call wrhdd(lout,ckeyw(k)//cout,rtemp)
-          endif
-       enddo
-c
-c  Special cases: the crpixes will change if the user uses a subcube.
-c
-c           if(hdprsnt(lin,'crpix'//cin)) then
-c             call rdhdd(lin,'crpix'//cin,rtemp,0.0d0)
-c             rtemp = rtemp - dble(blc(i)) + 1
-c             call wrhdd(lout,'crpix'//cout,rtemp)
-c           endif
-c         endif
-c       enddo
-c
-c  bunit
-c
-      unit1=unit0
-      if (unit1.eq.'Jy/b') unit1='JY/BEAM'
-      if (unit1.eq.'Jy') unit1='JY'
-      call wrhda(lout,'bunit',unit1(1:len1(unit1)))
-c
-c  Write out RA and DEC for the dummy axes.
-c
-      cin = itoaf(raxis)
-      call rdhdd(lin,'crpix'//cin, crpix, 1d0)
-      call rdhdd(lin,'cdelt'//cin, cdelt, 1d0)
-      call rdhdd(lin,'crval'//cin, crval, 0d0)
-      call rdhda(lin,'ctype'//cin, ctype, ' ')
-      call wrhdd(lout,'crpix2', 1d0)
-      call wrhdd(lout,'cdelt2', cdelt)
-      call wrhdd(lout,'crval2', coord(1))
-      call wrhda(lout,'ctype2', ctype)
-      cin = itoaf(daxis)
-      call rdhdd(lin,'crpix'//cin, crpix, 1d0)
-      call rdhdd(lin,'cdelt'//cin, cdelt, 1d0)
-      call rdhdd(lin,'crval'//cin, crval, 0d0)
-      call rdhda(lin,'ctype'//cin, ctype, ' ')
-      call wrhdd(lout,'crpix3', 1d0)
-      call wrhdd(lout,'cdelt3', cdelt)
-      call wrhdd(lout,'crval3', coord(2))
-      call wrhda(lout,'ctype3', ctype)
+c     Copy the header with axis permutation and partial subimaging.
+      axmap(1) = vaxis
+      axmap(2) = raxis
+      axmap(3) = daxis
+
+      blc(1) = vblc
+      blc(2) = 1
+      blc(3) = 1
+
+      call headcopy(lIn, lOut, axmap, 3, blc, 0)
+
+c     Fix the RA and DEC axes.
+      call wrhdd(lout, 'crpix2', 1d0)
+      call wrhdd(lout, 'crval2', coord(1))
+      call wrhdd(lout, 'crpix3', 1d0)
+      call wrhdd(lout, 'crval3', coord(2))
+
+c     Fix the brightness units.
+      if (bunit.eq.'Jy/b') then
+        call wrhda(lout, 'bunit', 'JY/BEAM')
+      else if (bunit.eq.'Jy') then
+        call wrhda(lout, 'bunit', 'JY')
+      else
+        call wrhda(lout, 'bunit', bunit(1:len1(bunit)))
+      endif
 
       end
