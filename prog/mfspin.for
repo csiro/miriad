@@ -61,6 +61,8 @@ c       of a Q and a U model, the output can be two names.  The first is
 c       the linearly polarized intensity spectral index image, and the
 c       second will receive an estimate of the rotation measure (units
 c       of rad/m**2).
+c
+c$Id: mfspin.for,v 1.3 2010/09/06 07:06:25 cal103 Exp $
 c--
 c
 c  History:
@@ -77,36 +79,34 @@ c    rjs  26nov97  Increase MAXRUNS.
 c-----------------------------------------------------------------------
       include 'maxdim.h'
       include 'mirconst.h'
-      character version*(*)
-      integer nP,PolQ,PolU,PolV
-      integer MAXRUNS
-      parameter (MAXRUNS=30*MAXDIM,nP=11)
-      parameter (version='MfSpin: version 26-Nov-97')
-      parameter (PolQ=2,PolU=3,PolV=4)
 
-      real dat(MAXBUF)
+      integer   MAXRUNS, nP, POLQ, POLU, POLV
+      parameter (MAXRUNS=30*MAXDIM, NP=11)
+      parameter (POLQ=2, POLU=3 ,POLV=4)
+
+      logical   doQU, NeedFwhm,pbcorr,twoclip
+      integer   Alpha1, Alpha2, Flux1, Flux2, Gaus, handle, lBeam,
+     *          lMod1, lMod2, mBeam, mModel, nBeam, nModel, nPd, npix,
+     *          nruns, nsize(3), pol1, pol2, Runs(3,MAXRUNS), xBeam,
+     *          yBeam
+      real      cdelt1, cdelt2, clip(2), crpix1, crpix2, dat(MAXBUF),
+     *          fwhm1, fwhm2, nu0, pa, Patch(NP*NP)
+      character beam*64, line*72, modl1*64, modl2*64, out1*64, out2*64,
+     *          pbtype*16, version*72
+
+      integer   nextpow2
+      logical   keyprsnt
+      character versan*80
+      external  keyprsnt, nextpow2, versan
+
       common dat
-
-      character beam*64,modl1*64,modl2*64,out1*64,out2*64
-      logical NeedFwhm,pbcorr,twoclip,doQU
-      integer nsize(3),pol1,pol2
-      integer mBeam,nBeam,mModel,nModel,nPd
-      integer Runs(3,MAXRUNS),nruns,npix
-      integer lBeam,lMod1,lMod2,xBeam,yBeam
-      integer Flux1,Flux2,Alpha1,Alpha2,Gaus,handle
-      character line*72,pbtype*16
-      real Patch(nP*nP)
-      real fwhm1,fwhm2,pa
-      real clip(2),cdelt1,cdelt2,crpix1,crpix2,nu0
-
-c     Externals.
-      integer nextpow2
-      logical keyprsnt
 c-----------------------------------------------------------------------
+      version = versan('mfspin',
+     *                 '$Revision: 1.3 $',
+     *                 '$Date: 2010/09/06 07:06:25 $')
 c
 c  Get the input parameters.
 c
-      call output(version)
       call keyini
       call keya('model',modl1,' ')
       call keya('model',modl2,' ')
@@ -134,8 +134,8 @@ c
       if (Out1.eq.' ')  call bug('f','Output map name missing')
       doQU = Modl2.ne.' '
 
-      fwhm1 = fwhm1 * pi / 180 / 3600
-      fwhm2 = fwhm2 * pi / 180 / 3600
+      fwhm1 = fwhm1 * AS2R
+      fwhm2 = fwhm2 * AS2R
       NeedFwhm = fwhm1*fwhm2.eq.0
       if (Beam.eq.' ' .and. NeedFwhm)
      *  call bug('f','Either beam or fwhm must be given')
@@ -153,7 +153,7 @@ c
         if (fwhm1*fwhm2.le.0) then
           if (max(mBeam,nBeam).gt.maxdim)
      *    call bug('f','Beam is too big for me to handle')
-          nPd = min(nP,mBeam,nBeam)
+          nPd = min(NP,mBeam,nBeam)
           nPd = nPd - mod(nPd+1,2)
           call rdhdr(lBeam,'cdelt1',cdelt1,0.0)
           call rdhdr(lBeam,'cdelt2',cdelt2,0.0)
@@ -172,8 +172,8 @@ c
 c  Keep the user awake with spurious information.
 c
       write(line,'(a,f6.2,a,f6.2,a)')
-     *   'Using gaussian beam fwhm of',(3600*180/pi)*fwhm1,' by',
-     *   (3600*180/pi)*fwhm2,' arcsec.'
+     *   'Using Gaussian beam fwhm of',fwhm1*R2AS,' by',fwhm2*R2AS,
+     *   ' arcsec.'
       call output(line)
       write(line,'(a,f6.1,a)')'Position angle: ',pa,' degrees.'
       call output(line)
@@ -189,7 +189,7 @@ c
       call GetInfo(lMod1,mModel,nModel,
      *  pol1,nu0,cdelt1,cdelt2,crpix1,crpix2)
       twoclip = twoclip .or.
-     *          (pol1.eq.PolQ .or. pol1.eq.PolU .or. Pol1.eq.PolV)
+     *          (pol1.eq.POLQ .or. pol1.eq.POLU .or. Pol1.eq.POLV)
 c
 c  If there is a second model, open it, etc.
 c
@@ -208,11 +208,11 @@ c
 c
 c  Final checks for sensibleness.
 c
-        if (pol1.ne.PolQ .and. pol2.ne.PolU) call bug('f',
+        if (pol1.ne.POLQ .and. pol2.ne.POLU) call bug('f',
      *    'The two models do not seem to be Q and U')
         if (Out2.ne.' ' .and. nu0.le.0) call bug('f',
      *    'Unable to determine reference frequency')
-      else if (pol1.eq.PolQ .or. pol1.eq.PolU) then
+      else if (pol1.eq.POLQ .or. pol1.eq.POLU) then
         call bug('w',
      *    'Spectral index of a linearly polarised map is meaningless')
       endif
@@ -415,7 +415,7 @@ c
           call rdhdr(tmod,'crval'//num,crval,1.0)
           call rdhdr(tmod,'crpix'//num,crpix,1.0)
           call rdhdr(tmod,'cdelt'//num,cdelt,1.0)
-          value = nint(crval + (1-crpix)*cdelt)
+          value = nint(crval + (1.0-crpix)*cdelt)
           if (ctype(1:4).eq.'FREQ') then
             nu0 = value
           else
@@ -685,23 +685,11 @@ c    pbcorr     Primary beam corrected?
 c    si         Spectral index map?
 c-----------------------------------------------------------------------
       include 'mirconst.h'
-      integer i,nsize(4),naxis,lOut
+
+      integer   lOut, naxis, nsize(4)
       character line*72
-      integer nkeys
-      parameter (nkeys=35)
-      character keyw(nkeys)*8
-      data keyw/   'cdelt1  ','cdelt2  ','cdelt3  ','cdelt4  ',
-     *             'crval1  ','crval2  ','crval3  ','crval4  ',
-     *             'crpix1  ','crpix2  ','crpix3  ','crpix4  ',
-     *             'ctype1  ','ctype2  ','ctype3  ','ctype4  ',
-     *  'obstime ','epoch   ','instrume','niters  ','object  ',
-     *  'ltype   ','lstart  ','lwidth  ','lstep   ','pbfwhm  ',
-     *  'telescop','history ','restfreq','vobs    ','observer',
-     *  'obsra   ','obsdec  ','cellscal','pbtype  '/
 c-----------------------------------------------------------------------
-c
-c  Open the output.
-c
+c     Open the output.
       nsize(1) = nx
       nsize(2) = ny
       nsize(3) = 1
@@ -709,26 +697,23 @@ c
       call rdhdi(lModel,'naxis',naxis,2)
       naxis = min(naxis,4)
       call xyopen(lOut,Out,'new',naxis,nsize)
-c
-c  Write out the data.
-c
+
+c     Write out the data.
       call putplane(lOut,Runs,nRuns,0,0,nx,ny,Data,npix)
       call putruns(lOut,Runs,nRuns,0,0,nx,ny)
-c
-c  Copy keywords across, which have not changed.
-c
-      do i = 1, nkeys
-        call hdcopy(lModel,lOut,keyw(i))
-      enddo
+
+c     Make a verbatim copy of the header.
+      call headcopy(lModel, lOut, 0, 0, 0, 0)
+
+c     Update items that have changed.
       if (si) then
         call wrbtype(lOut,'spectral_index')
       else
         call wrbtype(lOut,'rotation_measure')
         call wrhda(lOut,'bunit','RAD/M/M')
       endif
-c
-c  Write the history file.
-c
+
+c     Write the history file.
       call hisopen(lOut,'append')
       line = 'MFSPIN: Miriad '//version
       call hiswrite(lOut,line)
@@ -737,16 +722,17 @@ c
       call wrhdr(lOut,'bmaj', fwhm1)
       call wrhdr(lOut,'bmin', fwhm2)
       call wrhdr(lOut,'bpa',  pa)
-      write (line, 100) fwhm1*3600*180/pi,fwhm2*3600*180/pi,pa
+      write (line, 100) fwhm1*R2AS, fwhm2*R2AS, pa
 100   format ('MFSPIN: Beam = ', 1pe10.3, ' x ', 1pe10.3,
      *        ' arcsec, pa = ', 1pe10.3, ' degrees')
       call hiswrite(lOut,line)
+
       if (pbcorr .and. si) then
         line = 'MFSPIN: Corrected with primary beam type '//pbtype
         call hiswrite(lOut,line)
       endif
-      call hisclose(lOut)
 
+      call hisclose(lOut)
       call xyclose(lOut)
 
       end
@@ -768,13 +754,14 @@ c  Output:
 c    Beam         The output beam.
 c-----------------------------------------------------------------------
       include 'mirconst.h'
+
       integer i,j
-      real theta,s2,c2,sxx,syy,sxy,a,b,t
+      real    theta,s2,c2,sxx,syy,sxy,a,b,t
 c-----------------------------------------------------------------------
 c
 c  Determine the beam.
 c
-      theta = pi/180.0 * pa
+      theta = pa * D2R
       s2 = -sin(2*theta)
       c2 = -cos(2*theta)
       a = 4*log(2.0)/(fwhm1*fwhm1)
@@ -883,9 +870,10 @@ c    Pa         Position angle, in degrees, measured east of north.
 c
 c-----------------------------------------------------------------------
       include 'mirconst.h'
+      include 'mfspin.h'
+
       integer MaxIter
       parameter (MaxIter=100)
-      include 'mfspin.h'
       real X(3),dx(3),aa(3*3),t1,t2
       real f(nPM*nPM),fp(nPM*nPM),dfdx(3*nPM*nPM)
       integer ifail,k,i,j
@@ -932,9 +920,9 @@ c
       fwhm1 = sqrt(4*log(2.0)/fwhm1)
       fwhm2 = sqrt(4*log(2.0)/fwhm2)
       if (x(3).ne.0.0) then
-        pa = 90.0 / pi * atan2(-x(3),x(1)-x(2))
+        pa = 0.5 * atan2(-x(3),x(1)-x(2)) * R2D
       else
-        pa = 0.
+        pa = 0.0
       endif
 
       end
