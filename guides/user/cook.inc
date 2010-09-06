@@ -4538,6 +4538,12 @@ although they can be 4\%\ under bad conditions. Typically these are quite
 constant with time, with similar values resulting from observations
 several months apart. However they are modestly frequency dependent.
 
+This task will scale the average flux of the entire band to the known flux
+of 1934-638 at the centre frequency of the band. This is not guaranteed to
+produce a correct flux scaling at this point. It is very important to remember
+that \task{mfboot} will be required later in the procedure to ensure that the
+flux scaling is accurate.
+
 Tasks appropriate to examine the effectiveness of the calibration are
 \task{uvplt} (to generate plots of the calibrated data -- remember that many
 \miriad\ tasks apply any available calibration by default) and \task{gpplt}
@@ -4639,11 +4645,11 @@ make it clear what the calibration has achieved to this point.
  & {\bf Shape}    & {\bf Slope}    & {\bf Scaling} & {\bf Solution}\\
 \hline
 Bandpass calibrator (not flux) & Correct & Incorrect & Incorrect & No\\
-Bandpass calibrator (is flux)  & Correct & Correct & Correct & No\\
-Flux calibrator (not bandpass) & Correct & Incorrect & Correct & No\\
+Bandpass calibrator (is flux)  & Correct & Correct & Incorrect & No\\
+Flux calibrator (not bandpass) & Correct & Incorrect & Incorrect & No\\
 Flux calibrator (planet)       & Correct & Incorrect & Incorrect & No\\
 Phase calibrator (not flux)    & Correct & Incorrect & Incorrect & Yes\\
-Phase calibrator (is flux)     & Correct & Correct & Correct & Yes\\
+Phase calibrator (is flux)     & Correct & Incorrect & Incorrect & Yes\\
 \hline
 \end{tabular}
 \end{center}
@@ -4651,8 +4657,8 @@ Phase calibrator (is flux)     & Correct & Correct & Correct & Yes\\
 The goal is to get the phase calibrator calibrated such that it has the correct
 bandpass shape and slope, the correct flux scaling, and a useful phase solution.
 If you are lucky enough to have been observing 1934-638 as a phase calibrator,
-then congratulations, you have finished your calibration, and you can skip to 
-step~\ref{copyprogram}.
+then you have almost finished your calibration, and you can skip to 
+step~\ref{scalingslope}.
 
 Before we go any further, we should understand what exactly we mean by each
 calibration.
@@ -4679,7 +4685,8 @@ for the amplitude of a source for which it does not have flux density informatio
 it assumes that the rms gain amplitudes are 1, and determines the calibrator flux
 density accordingly. While this will be a decent assumption if during array calibration
 you set the amplitude calibration with 1934-638, it is not guaranteed to be
-correct.
+correct. The amount of flagging present through the band can also affect the flux
+scale after execution of \task{gpcal}.
 
 \item Phase Solution: The phases (or more accurately, the complex gains) of the
 cross-correlations will change with time due to atmospheric conditions, system
@@ -4872,10 +4879,10 @@ which is close to the flux calibrator's observation.  Tasks \task{uvplt} and
 \task{varplt} can plot source elevation as a function of time. 
 
 
-Task \task{gpboot} can optionally correct the \MM{XY} phases of the
-phase calibrator, assuming that the \MM{XY} phases of the primary are correct,
-and that the \MM{XY} phases are constant.  Given \MM{XY} phase strategy
-that you should have already followed, this is not recommended.
+% Task \task{gpboot} can optionally correct the \MM{XY} phases of the
+% phase calibrator, assuming that the \MM{XY} phases of the primary are correct,
+% and that the \MM{XY} phases are constant.  Given \MM{XY} phase strategy
+% that you should have already followed, this is not recommended.
 
 \begin{center}
 \begin{tabular}{|l|l|}
@@ -4884,7 +4891,7 @@ that you should have already followed, this is not recommended.
 \hline
 vis=0220-349.5500 & Specify phase calibrator.\\
 cal=1934-638.5500 & Specify flux calibrator.\\
-options=noxy      & Do not make XY phase corrections.\\
+% options=noxy      & Do not make XY phase corrections.\\
 \hline
 \end{tabular}
 \end{center}
@@ -4929,19 +4936,20 @@ exercise for the reader.
  & {\bf Bandpass} & {\bf Bandpass} & {\bf Flux}    & {\bf Phase}\\
  & {\bf Shape}    & {\bf Slope}    & {\bf Scaling} & {\bf Solution}\\
 \hline
-Flux calibrator (is bandpass)  & Correct & Correct   & Correct & No\\
-Flux calibrator (not bandpass) & Correct & Incorrect & Correct & No\\
+Flux calibrator (is bandpass)  & Correct & Correct   & Incorrect & No\\
+Flux calibrator (not bandpass) & Correct & Incorrect & Incorrect & No\\
 Flux calibrator (planet)       & Correct & Incorrect & Incorrect & No\\
 Phase calibrator (flux is a planet) & Correct & Incorrect & Incorrect & Yes\\
-Phase calibrator (flux is not a planet) & Correct & Incorrect & Correct & Yes\\
+Phase calibrator (flux is not a planet) & Correct & Incorrect & Incorrect & Yes\\
 \hline
 \end{tabular}
 \end{center}
 
-\item \index{calibration, bandpass slope}\index{mfboot}\index{calibration, planet flux}
-At this point in the calibration, we need to at least correct the bandpass slope
-of the phase calibrator, and if the flux calibrator is a planet, then
-we also need to correct the flux scaling. This step will accomplish both,
+\item \label{scalingslope}
+\index{calibration, bandpass slope}\index{mfboot}\index{calibration, planet flux}
+At this point in the calibration, we need to correct both the bandpass slope
+of the phase calibrator, and the flux scaling.
+This step will accomplish both,
 using the task \task{mfboot}.
 
 For a known flux calibrator, be it a point source or a planet, \task{mfboot}
