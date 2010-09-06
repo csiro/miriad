@@ -139,7 +139,7 @@ c                    solution for the observation already exists.  This
 c                    preliminary solution must be formed from a
 c                    calibrator with known Stokes-V.
 c
-c$Id: gpcal.for,v 1.6 2010/08/31 08:20:33 cal103 Exp $
+c$Id: gpcal.for,v 1.7 2010/09/06 01:58:35 wie017 Exp $
 c--
 c  History:
 c    rjs,nebk 1may91 Original version.
@@ -227,6 +227,7 @@ c                    circularly polarised feeds.  Better handling of
 c                    effect of large XY phase errors on leakages in the
 c                    iteration process.  Add (and correct!) misc
 c                    comments to the code.
+c    mhw     03sep10 Use mean freq of all data used for flux cal
 c
 c  Miscellaneous notes:
 c ---------------------
@@ -281,8 +282,8 @@ c-----------------------------------------------------------------------
       external  itoaf, keyprsnt, uvDatOpn
 c-----------------------------------------------------------------------
       version = versan('gpcal',
-     *                 '$Revision: 1.6 $',
-     *                 '$Date: 2010/08/31 08:20:33 $')
+     *                 '$Revision: 1.7 $',
+     *                 '$Date: 2010/09/06 01:58:35 $')
 c
 c  Get inputs.
 c
@@ -2188,8 +2189,9 @@ c               Accumulated statistics.
 c-----------------------------------------------------------------------
       include 'gpcal.h'
       integer i,j,k,l,i1,i2,bl,totvis,ngood,nauto,nchan,nbad,n,nread
-      integer ncorr,nr,b1,b2,b3
-      double precision preamble(4),tfirst,tlast,epsi
+      integer ncorr,nr,b1,b2,b3,nfreq
+      double precision preamble(4),tfirst,tlast,dfreq
+      double precision sfreq(MAXCHAN)
       real Cos2Chi,Sin2Chi,chi
       logical accept,flag(MAXCHAN,4),okscan,trip,tied(MAXANT),ok
       logical missing
@@ -2208,7 +2210,7 @@ c
 c  Get the source and frequency of the first data.
 c
       call uvrdvra(tIn,'source',source,' ')
-      call uvfit1(tIn,'frequency',nchan,freq,epsi)
+c      call uvfit1(tIn,'frequency',nchan,freq,epsi)
       call defsmodl(tIn)
 c
 c  Get the data. Read the remaining correlations for this record.
@@ -2223,8 +2225,12 @@ c
       ngood = 0
       nbad = 0
       nauto = 0
+      freq = 0
+      nfreq = 0
       do while (nchan.gt.0)
+        dfreq=0
         totvis = totvis + 1
+        call uvinfo(tIn,'sfreq',sfreq)
 c
 c  Read the other polarisations and determine the overall flags.
 c
@@ -2250,6 +2256,7 @@ c
               d(YY) = d(YY) + data(j,YY)
               d(XY) = d(XY) + data(j,XY)
               d(YX) = d(YX) + data(j,YX)
+              dfreq=dfreq+log(sfreq(j))
             endif
           enddo
         else
@@ -2258,6 +2265,7 @@ c
               ncorr = ncorr + 1
               d(XX) = d(XX) + data(j,XX)
               d(YY) = d(YY) + data(j,YY)
+              dfreq=dfreq+log(sfreq(j))
             endif
           enddo
         endif
@@ -2330,6 +2338,8 @@ c
           SumCS(bl,nsoln) = SumCS(bl,nsoln) + ncorr * Cos2Chi*Sin2Chi
           SumS2(bl,nsoln) = SumS2(bl,nsoln) + ncorr * Sin2Chi*Sin2Chi
           n = n + 1
+          nfreq = nfreq + ncorr
+          freq = freq + dfreq
         else if (i1.eq.i2) then
           nauto = nauto + 1
         else
@@ -2353,6 +2363,7 @@ c
 c
 c  Tell the user whats what.
 c
+      freq = exp(freq/nfreq)
       call output('Number of solution intervals: '//itoaf(nsoln))
       call output('Total visibilities read: '//itoaf(totvis))
       if (nauto.ne.0)
